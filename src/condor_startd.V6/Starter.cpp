@@ -249,7 +249,7 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 				// insert every attr that's not in the ignored_attr_list
 			if (!ignored_attr_list->contains(lhstr)) {
 				pCopy = tree->Copy();
-				ad->Insert(lhstr, pCopy);
+				ad->Insert(lhstr, pCopy, false);
 				if (strncasecmp(lhstr, "Has", 3) == MATCH) {
 					list->append(lhstr);
 				}
@@ -259,13 +259,13 @@ Starter::publish( ClassAd* ad, amask_t mask, StringList* list )
 				// no list of attrs to ignore - fallback on old behavior
 			if( strncasecmp(lhstr, "Has", 3) == MATCH ) {
 				pCopy = tree->Copy();
-				ad->Insert( lhstr, pCopy );
+				ad->Insert( lhstr, pCopy, false );
 				if( list ) {
 					list->append( lhstr );
 				}
 			} else if( strncasecmp(lhstr, "Java", 4) == MATCH ) {
 				pCopy = tree->Copy();
-				ad->Insert( lhstr, pCopy );
+				ad->Insert( lhstr, pCopy, false);
 			}
 		}
 	}
@@ -426,6 +426,7 @@ Starter::reallykill( int signo, int type )
 				// stale NFS mount.  So, we can at least EXCEPT with a
 				// more specific error message.
 		case ESTALE:
+			(void)first_time; // Shut the compiler up
 			EXCEPT( "Condor binaries are on a stale NFS mount.  Aborting." );
 			break;
 #else
@@ -635,7 +636,7 @@ Starter::exited(int status)
 		jobAd->Assign(ATTR_IMAGE_SIZE, 0);
 		jobAd->Assign(ATTR_JOB_CMD, "boinc");
 		MyString gjid;
-		gjid.sprintf("%s#%d#%d#%d", get_local_hostname().Value(), 
+		gjid.formatstr("%s#%d#%d#%d", get_local_hostname().Value(), 
 					 now, 1, now);
 		jobAd->Assign(ATTR_GLOBAL_JOB_ID, gjid);
 	}
@@ -1320,7 +1321,7 @@ Starter::startKillTimer( void )
 		// we keep trying.
 	s_kill_tid = 
 		daemonCore->Register_Timer( tmp_killing_timeout,
-									max(1,tmp_killing_timeout),
+									std::max(1,tmp_killing_timeout),
 						(TimerHandlercpp)&Starter::sigkillStarter,
 						"sigkillStarter", this );
 	if( s_kill_tid < 0 ) {

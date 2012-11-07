@@ -1,33 +1,34 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:Configuring-Condor}Configuration}
+\section{\label{sec:Configuring-HTCondor}Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{Condor!configuration}
+\index{HTCondor!configuration}
 \index{configuration}
 
-This section describes how to configure all parts of the Condor
+This section describes how to configure all parts of the HTCondor
 system.  General information about the configuration
 files and their syntax is followed by a description of
 settings that affect all
-Condor daemons and tools.
+HTCondor daemons and tools.
 The 
-settings that control the policy under which Condor will start,
+settings that control the policy under which HTCondor will start,
 suspend, resume, vacate or kill jobs
 are described in 
-section~\ref{sec:Configuring-Policy} on Startd Policy Configuration. 
+section~\ref{sec:Configuring-Policy} on Policy Configuration for the
+\Condor{startd}. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Intro-to-Config-Files}Introduction to
 Configuration Files} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The Condor configuration files are used to customize how Condor
+The HTCondor configuration files are used to customize how HTCondor
 operates at a given site.  The basic configuration as shipped with
-Condor works well for most sites.
+HTCondor works well for most sites.
 
-Each Condor program will, as part of its initialization process,
+Each HTCondor program will, as part of its initialization process,
 configure itself by calling a library routine which parses the
-various configuration files that might be used including pool-wide,
+various configuration files that might be used, including pool-wide,
 platform-specific, and machine-specific configuration files.
 Environment variables may also contribute to the configuration.
 
@@ -35,7 +36,7 @@ The result of configuration is a list of key/value pairs.
 Each key is a configuration variable name,
 and each value is a string literal
 that may utilize macro substitution (as defined below).
-Some configuration variables are evaluated by Condor as ClassAd
+Some configuration variables are evaluated by HTCondor as ClassAd
 expressions; some are not.  Consult the documentation for each specific
 case.  Unless otherwise noted, configuration values that are expected
 to be numeric or boolean constants may be any valid ClassAd expression
@@ -61,7 +62,7 @@ The order in which the (multiple) configuration files are parsed
 is designed to ensure the security of the system.
 Attributes which must be set a specific way 
 must appear in the last file to be parsed.
-This prevents both the naive and the malicious Condor user 
+This prevents both the naive and the malicious HTCondor user 
 from subverting the system through its configuration.
 The order in which items are parsed is
 \begin{enumerate}
@@ -74,7 +75,7 @@ The locations for these files are as given in
 section~\ref{sec:Config-File-Locations} on
 page~\pageref{sec:Config-File-Locations}.
 
-Some Condor tools utilize environment variables to set their
+Some HTCondor tools utilize environment variables to set their
 configuration.
 These tools search for specifically-named environment variables.
 The variables are prefixed by the string \MacroNI{\_CONDOR\_}
@@ -162,8 +163,8 @@ Recursively defined macros such as
 A = $(B)
 B = $(A)
 \end{verbatim}
-are not allowed.
-They create definitions that Condor refuses to parse. 
+are \emph{not} allowed.
+They create definitions that HTCondor refuses to parse. 
 
 All entries in a configuration file must have an operator,
 which will be an equals sign (\verb@=@).
@@ -175,7 +176,7 @@ will be ignored.
 The following two-line example treats the first line as a comment,
 and correctly handles the second line.
 \begin{verbatim}
-[Condor Settings]
+[HTCondor Settings]
 my_classad = [ foo=bar ]
 \end{verbatim}
 
@@ -190,7 +191,7 @@ and the period (\verb@.@) character.
 For configuration variables defined this way,
 the value is applied to the specific subsystem.
 For example,
-the ports that Condor may use can be restricted to a range 
+the ports that HTCondor may use can be restricted to a range 
 using the \MacroNI{HIGHPORT} and \MacroNI{LOWPORT} configuration
 variables.
 
@@ -208,7 +209,7 @@ For example, it makes no sense to define
 since the \Condor{negotiator} daemon does not use the
 \MacroNI{MASTER\_UPDATE\_INTERVAL} variable.
 
-It makes little sense to do so, but Condor will configure
+It makes little sense to do so, but HTCondor will configure
 correctly with a definition such as
 \begin{verbatim}
   MASTER.MASTER_UPDATE_INTERVAL = 60
@@ -276,7 +277,7 @@ except for those specified separately.
 Note that the example \MacroNI{SCHEDD\_NAME} and \MacroNI{SPOOL} are
 specific to the \Condor{schedd} daemon, as opposed to a different daemon
 such as the \Condor{startd}.
-Other Condor daemons using this feature will
+Other HTCondor daemons using this feature will
 have different requirements for which parameters need to be
 specified individually.  This example works for the \Condor{schedd},
 and more local configuration can, and likely would be specified.
@@ -294,7 +295,7 @@ the \Attr{XYZZY} \Condor{schedd} configuration variable
 \subsubsection{\label{sec:Other-Syntax}Comments and Line Continuations}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-A Condor configuration file may contain comments and
+An HTCondor configuration file may contain comments and
 line continuations.
 A comment is any line beginning with a pound character (\verb@#@).
 A continuation is any entry that continues across multiples lines.
@@ -310,7 +311,7 @@ and
   ADMIN_MACHINES = condor.cs.wisc.edu, raven.cs.wisc.edu, \
   stork.cs.wisc.edu, ostrich.cs.wisc.edu, \
   bigbird.cs.wisc.edu
-  HOSTALLOW_ADMIN = $(ADMIN_MACHINES)
+  HOSTALLOW_ADMINISTRATOR = $(ADMIN_MACHINES)
 \end{verbatim}
 
 Note that a line continuation character may currently be used within
@@ -320,18 +321,17 @@ configuration variable \MacroNI{FOO}:
   # This comment includes the following line, so FOO is NOT set \
   FOO = BAR
 \end{verbatim}
-It is a poor idea to use this functionality, as it is likely to
-stop working in future Condor releases.
+It is a poor idea to use this functionality.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Program-Defined-Macros}Executing a Program to Produce Configuration Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Instead of reading from a file,
-Condor may run a program to obtain configuration macros.
+HTCondor may run a program to obtain configuration macros.
 The vertical bar character (\Bar) as the last character defining
 a file name provides the syntax necessary to tell 
-Condor to run a program.
+HTCondor to run a program.
 This syntax may only be used in the definition of
 the \Env{CONDOR\_CONFIG} environment variable,
 or the \Macro{LOCAL\_CONFIG\_FILE} configuration variable.
@@ -361,9 +361,9 @@ so only one may be specified.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Macros-Requiring-Restart}Macros That Will Require a Restart When Changed}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{configuration change requiring a restart of Condor}
+\index{configuration change requiring a restart of HTCondor}
 When any of the following listed configuration variables are changed,
-Condor must be restarted.
+HTCondor must be restarted.
 Reconfiguration using \Condor{reconfig} will not be enough.
 
 \begin{itemize}
@@ -385,14 +385,14 @@ Reconfiguration using \Condor{reconfig} will not be enough.
 
 \index{configuration!pre-defined macros}
 \index{configuration file!pre-defined macros}
-Condor provides pre-defined macros that help configure Condor.
+HTCondor provides pre-defined macros that help configure HTCondor.
 Pre-defined macros are listed as \MacroUNI{macro\_name}.
 
 This first set are entries whose values are determined at
 run time and cannot be overwritten.  These are inserted automatically by
 the library routine which parses the configuration files.
 This implies that a change to the underlying value of any of these
-variables will require a full restart of Condor in order to use
+variables will require a full restart of HTCondor in order to use
 the changed value.
 \begin{description}
   
@@ -403,7 +403,7 @@ the changed value.
   
 \label{param:Hostname}
 \item[\MacroU{HOSTNAME}]
-  The host name of the local machine (no domain name).
+  The host name of the local machine, \emph{without} a domain name.
   
 \label{param:IpAddress}
 \item[\MacroU{IP\_ADDRESS}]
@@ -412,17 +412,17 @@ the changed value.
 \label{param:Tilde}
 \item[\MacroU{TILDE}]
   The full path to the
-  home directory of the Unix user condor, if such a user exists on the
+  home directory of the Unix user \Login{condor}, if such a user exists on the
   local machine.
 
-  \label{sec:Condor-Subsystem-Names}
+  \label{sec:HTCondor-Subsystem-Names}
   \index{configuration file!subsystem names}
 \label{param:Subsystem}
 \item[\MacroU{SUBSYSTEM}]
   The subsystem
   name of the daemon or tool that is evaluating the macro.
   This is a unique string which identifies a given daemon within the
-  Condor system.  The possible subsystem names are:
+  HTCondor system.  The possible subsystem names are:
 
   \index{subsystem names}
   \index{macro!subsystem names}
@@ -465,7 +465,7 @@ determined automatically at run time but which can be overwritten.
 \label{param:Arch}
 \item[\MacroU{ARCH}]
   Defines the string
-  used to identify the architecture of the local machine to Condor.
+  used to identify the architecture of the local machine to HTCondor.
   The \Condor{startd} will advertise itself with this attribute so
   that users can submit binaries compiled for a given platform and
   force them to run on the correct machines.  \Condor{submit} will
@@ -479,8 +479,8 @@ determined automatically at run time but which can be overwritten.
 \label{param:OpSys}
 \item[\MacroU{OPSYS}]
   Defines the string used to identify the operating system
-  of the local machine to Condor.
-  If it is not defined in the configuration file, Condor will
+  of the local machine to HTCondor.
+  If it is not defined in the configuration file, HTCondor will
   automatically insert the operating system of this machine as
   determined by \Prog{uname}.
 
@@ -490,7 +490,7 @@ determined automatically at run time but which can be overwritten.
 
 \label{param:OpSysAndVer}
 \item[\MacroU{OPSYS\_AND\_VER}]
-  Defines the string used prior to Condor version 7.7.2 as \MacroUNI{OPSYS}.
+  Defines the string used prior to HTCondor version 7.7.2 as \MacroUNI{OPSYS}.
 
 \label{param:UnameArch}
 \item[\MacroU{UNAME\_ARCH}]
@@ -523,7 +523,7 @@ determined automatically at run time but which can be overwritten.
 \item[\MacroU{USERNAME}]
   The user name of the UID of the daemon or tool.
   For daemons started as root, but running under another UID
-  (typically the user condor), this will be the other UID.
+  (typically the user \Login{condor}), this will be the other UID.
 
 \label{param:FilesystemDomain}
 \item[\MacroU{FILESYSTEM\_DOMAIN}]
@@ -531,7 +531,7 @@ determined automatically at run time but which can be overwritten.
   qualified host name of the machine it is evaluated on.  See
   section~\ref{sec:Shared-Filesystem-Config-File-Entries}, Shared
   File System Configuration File Entries for the full description of
-  its use and under what conditions you would want to change it.
+  its use and under what conditions it could be desirable to change it.
 
 \label{param:UIDDomain}
 \item[\MacroU{UID\_DOMAIN}]
@@ -544,8 +544,6 @@ determined automatically at run time but which can be overwritten.
 
 Since \MacroUNI{ARCH} and \MacroUNI{OPSYS} will automatically be set to the
 correct values, we recommend that you do not overwrite them.
-Only do so if you know what you are doing.
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -554,7 +552,7 @@ Only do so if you know what you are doing.
 
 \index{configuration file!\$ENV definition}
 \index{\$ENV!in configuration file}
-References to the Condor process's environment are allowed in the
+References to the HTCondor process's environment are allowed in the
 configuration files.
 Environment references use the \Macro{ENV} macro and are of the form:
 \begin{verbatim}
@@ -564,8 +562,8 @@ For example,
 \begin{verbatim}
   A = $ENV(HOME)
 \end{verbatim}
-binds \MacroNI{A} to the value of the HOME environment variable.
-Environment references are not currently used in standard Condor
+binds \MacroNI{A} to the value of the \Env{HOME} environment variable.
+Environment references are not currently used in standard HTCondor
 configurations.
 However, they can sometimes be useful in custom configurations.
 
@@ -607,12 +605,12 @@ See section~\ref{sec:randomintegerusage} on
 page~\pageref{sec:randomintegerusage}
 for an actual use of this specialized macro.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Condor-wide-Config-File-Entries}Condor-wide Configuration File Entries} 
+\subsection{\label{sec:HTCondor-wide-Config-File-Entries}HTCondor-wide Configuration File Entries} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{configuration!Condor-wide configuration variables}
+\index{configuration!HTCondor-wide configuration variables}
 
-This section describes settings which affect all parts of the Condor
+This section describes settings which affect all parts of the HTCondor
 system. 
 Other system-wide settings can be found in
 section~\ref{sec:Network-Related-Config-File-Entries} on
@@ -631,7 +629,7 @@ File System Configuration File Entries''.
   \MacroUNI{CONDOR\_HOST} would not be needed.  Some
   of the host-based security macros use \MacroUNI{CONDOR\_HOST} by
   default.  See section~\ref{sec:Host-Security}, on Setting up
-  IP/host-based security in Condor for details.
+  IP/host-based security in HTCondor for details.
   
 \label{param:CollectorHost}
 \item[\Macro{COLLECTOR\_HOST}]
@@ -681,15 +679,15 @@ File System Configuration File Entries''.
 
 \label{param:CondorViewHost}
 \item[\Macro{CONDOR\_VIEW\_HOST}]
-  A list of CondorView servers, separated by commas and/or spaces.
-  Each CondorView server is denoted by the host name of the machine
+  A list of HTCondorView servers, separated by commas and/or spaces.
+  Each HTCondorView server is denoted by the host name of the machine
   it is running on, optionally appended by a colon and the port number.
   This service is optional, and requires additional configuration 
   to enable it.  There is no default value for
   \MacroNI{CONDOR\_VIEW\_HOST}.  If \MacroNI{CONDOR\_VIEW\_HOST} is not
-  defined, no CondorView server is used.
-  See section~\ref{sec:Contrib-CondorView-Install} on
-  page~\pageref{sec:Contrib-CondorView-Install} for more details.
+  defined, no HTCondorView server is used.
+  See section~\ref{sec:Contrib-HTCondorView-Install} on
+  page~\pageref{sec:Contrib-HTCondorView-Install} for more details.
 
 \label{param:ScheddHost}
 \item[\Macro{SCHEDD\_HOST}]
@@ -705,7 +703,7 @@ File System Configuration File Entries''.
 \label{param:ReleaseDir}
 \item[\Macro{RELEASE\_DIR}]
   The full path to
-  the Condor release directory, which holds the \File{bin},
+  the HTCondor release directory, which holds the \File{bin},
   \File{etc}, \File{lib}, and \File{sbin} directories.  Other macros
   are defined relative to this one.  There is no default value for
   \Macro{RELEASE\_DIR}.
@@ -713,14 +711,14 @@ File System Configuration File Entries''.
 \label{param:Bin}
 \item[\Macro{BIN}]
   This directory points to the
-  Condor directory where user-level programs are installed.  It is
+  HTCondor directory where user-level programs are installed.  It is
   usually defined relative to the \MacroUNI{RELEASE\_DIR} macro.
   There is no default value for \Macro{BIN}.
   
 \label{param:Lib}
 \item[\Macro{LIB}]
   This directory points to the
-  Condor directory where libraries used to link jobs for Condor's
+  HTCondor directory where libraries used to link jobs for HTCondor's
   standard universe are stored.  The \Condor{compile} program uses
   this macro to find these libraries, so it must be defined for
   \Condor{compile} to function.  \MacroUNI{LIB} is usually defined
@@ -730,13 +728,13 @@ File System Configuration File Entries''.
 \label{param:LibExec}
 \item[\Macro{LIBEXEC}]
   This directory points
-  to the Condor directory where support commands that Condor
+  to the HTCondor directory where support commands that HTCondor
   needs will be placed.
   Do not add this directory to a user or system-wide path.
 
 \label{param:Include}
 \item[\Macro{INCLUDE}]
-  This directory points to the Condor directory where header files reside.
+  This directory points to the HTCondor directory where header files reside.
   \MacroUNI{INCLUDE} would usually be defined relative to
   the \MacroUNI{RELEASE\_DIR} configuration macro.
   There is no default value, but
@@ -748,16 +746,16 @@ File System Configuration File Entries''.
 \label{param:Sbin}
 \item[\Macro{SBIN}]
   This directory points to the
-  Condor directory where Condor's system binaries (such as the
-  binaries for the Condor daemons) and administrative tools are
+  HTCondor directory where HTCondor's system binaries (such as the
+  binaries for the HTCondor daemons) and administrative tools are
   installed.  Whatever directory \MacroU{SBIN} points to ought
-  to be in the \Env{PATH} of users acting as Condor
+  to be in the \Env{PATH} of users acting as HTCondor
   administrators.  \Macro{SBIN} has no default value.
 
 \label{param:LocalDir}
 \item[\Macro{LOCAL\_DIR}]
   The location of the
-  local Condor directory on each machine in your pool.  One common
+  local HTCondor directory on each machine in your pool.  One common
   option is to use the condor user's home directory which may be
   specified with \MacroUNI{TILDE}.  There is no default value for
   \Macro{LOCAL\_DIR}.  For example:
@@ -782,10 +780,10 @@ File System Configuration File Entries''.
 \label{param:Log}
 \item[\Macro{LOG}]
   Used to specify the
-  directory where each Condor daemon writes its log files.  The names
+  directory where each HTCondor daemon writes its log files.  The names
   of the log files themselves are defined with other macros, which use
   the \MacroUNI{LOG} macro by default.  The log directory also acts as
-  the current working directory of the Condor daemons as the run, so
+  the current working directory of the HTCondor daemons as the run, so
   if one of them should produce a core file for any reason, it would
   be placed in the directory defined by this macro.  \MacroNI{LOG} is
   required to be defined.  Normally, \MacroUNI{LOG} is defined in
@@ -793,7 +791,7 @@ File System Configuration File Entries''.
 
 \label{param:Run}
 \item[\Macro{RUN}]
-  A path and directory name to be used by the Condor init script to 
+  A path and directory name to be used by the HTCondor init script to 
   specify the directory where the \Condor{master} should write its process ID
   (PID) file. 
   The default if not defined is \MacroUNI{LOG}.
@@ -808,7 +806,7 @@ File System Configuration File Entries''.
   from a given machine will be store in that machine's spool
   directory.  Therefore, you will want to ensure that the spool
   directory is located on a partition with enough disk space.  If a
-  given machine is only set up to execute Condor jobs and not submit
+  given machine is only set up to execute HTCondor jobs and not submit
   them, it would not need a spool directory (or this macro defined).
   There is no default value for \Macro{SPOOL}, and the \Condor{schedd}
   will not function without it \Macro{SPOOL} defined.  Normally,
@@ -817,7 +815,7 @@ File System Configuration File Entries''.
 \label{param:Execute}
 \item[\Macro{EXECUTE}]
   This directory acts as
-  a place to create the scratch directory of any Condor job that is executing
+  a place to create the scratch directory of any HTCondor job that is executing
   on
   the local machine.  The scratch directory is the destination of
   any input files that were specified for transfer.  It also serves
@@ -888,7 +886,7 @@ File System Configuration File Entries''.
   otherwise reside in one or more files as described here.
   If \MacroNI{LOCAL\_CONFIG\_FILE} is not defined, no local configuration
   files are processed.  For more information on this, see
-  section~\ref{sec:Multiple-Platforms} about Configuring Condor for
+  section~\ref{sec:Multiple-Platforms} about Configuring HTCondor for
   Multiple Platforms on page~\pageref{sec:Multiple-Platforms}.
 
   If all files in a directory are local configuration files to be processed,
@@ -898,7 +896,7 @@ File System Configuration File Entries''.
 \label{param:RequireLocalConfigFile}
 \item[\Macro{REQUIRE\_LOCAL\_CONFIG\_FILE}]
   A boolean value that defaults to \Expr{True}.
-  When \Expr{True}, Condor exits with an error,
+  When \Expr{True}, HTCondor exits with an error,
   if any file listed in \MacroNI{LOCAL\_CONFIG\_FILE} cannot be read.
   A value of \Expr{False} allows local configuration files to be missing.
   This is most useful for sites that have 
@@ -935,25 +933,25 @@ File System Configuration File Entries''.
 
 \label{param:CondorIds}
 \item[\Macro{CONDOR\_IDS}]
-  The User ID (UID) and Group ID (GID) pair that the Condor daemons
+  The User ID (UID) and Group ID (GID) pair that the HTCondor daemons
   should run as, if the daemons are spawned as root.
   This value can also be specified in the \Env{CONDOR\_IDS}
   environment variable.
-  If the Condor daemons are not started as root, then neither this
+  If the HTCondor daemons are not started as root, then neither this
   \MacroNI{CONDOR\_IDS} configuration macro nor the \Env{CONDOR\_IDS}
   environment variable are used.
   The value is given by two integers, separated by a period.  For
   example, \verb@CONDOR_IDS = 1234.1234@.
   If this pair is not specified in either the configuration file or in the
-  environment, and the Condor daemons are spawned as root,
-  then Condor will
+  environment, and the HTCondor daemons are spawned as root,
+  then HTCondor will
   search for a \verb@condor@ user on the system, and run as that user's
   UID and GID.
-  See section~\ref{sec:uids} on UIDs in Condor for more details.
+  See section~\ref{sec:uids} on UIDs in HTCondor for more details.
 
 \label{param:CondorAdmin}
 \item[\Macro{CONDOR\_ADMIN}]
-  The email address that Condor will send mail to if something goes wrong in
+  The email address that HTCondor will send mail to if something goes wrong in
   the pool.  For example, if a daemon crashes, the \Condor{master}
   can send an \Term{obituary} to this address with the last few lines
   of that daemon's log file and a brief message that describes what
@@ -963,37 +961,37 @@ File System Configuration File Entries''.
 \label{param:SubsysAdminEmail}
 \item[\MacroB{<SUBSYS>\_ADMIN\_EMAIL}]
 \index{SUBSYS\_ADMIN\_EMAIL macro@\texttt{<SUBSYS>\_ADMIN\_EMAIL} macro}
-  The email address that Condor will send mail to if something goes wrong
+  The email address that HTCondor will send mail to if something goes wrong
   with the named \MacroNI{<SUBSYS>}.  Identical to \MacroNI{CONDOR\_ADMIN},
   but done on a per subsystem basis. There is no default value.
   
 \label{param:CondorSupportEmail}
 \item[\Macro{CONDOR\_SUPPORT\_EMAIL}]
-  The email address to be included at the bottom of all email Condor
-  sends out under the label ``Email address of the local Condor
+  The email address to be included at the bottom of all email HTCondor
+  sends out under the label ``Email address of the local HTCondor
   administrator:''.  
-  This is the address where Condor users at your site should send
-  their questions about Condor and get technical support.
-  If this setting is not defined, Condor will use the address
+  This is the address where HTCondor users at your site should send
+  their questions about HTCondor and get technical support.
+  If this setting is not defined, HTCondor will use the address
   specified in \MacroNI{CONDOR\_ADMIN} (described above).
 
 \label{param:EmailSignature}
 \item[\Macro{EMAIL\_SIGNATURE}]
-  Every e-mail sent by Condor includes a short signature line appended
+  Every e-mail sent by HTCondor includes a short signature line appended
   to the body.  By default, this signature includes the URL to the
-  global Condor project website.  
+  global HTCondor project website.  
   When set, this variable defines an alternative signature line to be
   used instead of the default. 
   Note that the value can only be one line in length.
   This variable could be used to direct users
   to look at local web site with information specific to the installation
-  of Condor.
+  of HTCondor.
 
 \label{param:Mail}
 \item[\Macro{MAIL}]
   The full path to a mail
   sending program that uses \Opt{-s} to specify a subject for the
-  message.  On all platforms, the default shipped with Condor should
+  message.  On all platforms, the default shipped with HTCondor should
   work.  Only if you installed things in a non-standard location on
   your system would you need to change this setting.  There is no
   default value for \MacroNI{MAIL}, and the \Condor{schedd} will not
@@ -1016,7 +1014,7 @@ File System Configuration File Entries''.
 \label{param:ReservedSwap}
 \item[\Macro{RESERVED\_SWAP}]
   The amount of swap space in Mbytes to reserve for this machine.
-  Condor will not start up more \Condor{shadow} processes if the
+  HTCondor will not start up more \Condor{shadow} processes if the
   amount of free swap space on this machine falls below this level.
   The default value is 0, which disables this check.
   It is anticipated that this configuration variable will no longer
@@ -1027,7 +1025,7 @@ File System Configuration File Entries''.
 \label{param:ReservedDisk}
 \item[\Macro{RESERVED\_DISK}]
   Determines how much disk space you want to reserve for your own machine.
-  When Condor is reporting the amount of free disk space in a given
+  When HTCondor is reporting the amount of free disk space in a given
   partition on your machine, it will always subtract this amount.  An
   example is the \Condor{startd}, which advertises the amount of free
   space in the \MacroUNI{EXECUTE} directory.  The default value of
@@ -1035,7 +1033,7 @@ File System Configuration File Entries''.
   
 \label{param:Lock}
 \item[\Macro{LOCK}]
-  Condor needs to create
+  HTCondor needs to create
   lock files to synchronize access to various log files.  Because of
   problems with network file systems and file locking over
   the years, we \emph{highly} recommend that you put these lock
@@ -1043,7 +1041,7 @@ File System Configuration File Entries''.
   \MacroUNI{LOCAL\_DIR} on a local partition, be sure to change this
   entry.
 
-  Whatever user or group Condor is running as needs to have
+  Whatever user or group HTCondor is running as needs to have
   write access to this directory.  If you are not running as root, this
   is whatever user you started up the \Condor{master} as.  If you are
   running as root, and there is a condor account, it is most
@@ -1052,8 +1050,8 @@ File System Configuration File Entries''.
   \index{environment variables!CONDOR\_IDS@\texttt{CONDOR\_IDS}}
   \index{CONDOR\_IDS@\texttt{CONDOR\_IDS}!environment variable}
   environment variable, or whatever you define in the
-  \MacroNI{CONDOR\_IDS} setting in the Condor config files.
-  See section~\ref{sec:uids} on UIDs in Condor for details.
+  \MacroNI{CONDOR\_IDS} setting in the HTCondor config files.
+  See section~\ref{sec:uids} on UIDs in HTCondor for details.
 
   If no value for \MacroNI{LOCK} is provided, the value of \MacroNI{LOG}
   is used.
@@ -1062,8 +1060,8 @@ File System Configuration File Entries''.
 \label{param:History}
 \item[\Macro{HISTORY}]
   Defines the
-  location of the Condor history file, which stores information about
-  all Condor jobs that have completed on a given machine.  This macro
+  location of the HTCondor history file, which stores information about
+  all HTCondor jobs that have completed on a given machine.  This macro
   is used by both the \Condor{schedd} which appends the information
   and \Condor{history}, the user-level program used to view
   the history file.
@@ -1128,23 +1126,23 @@ File System Configuration File Entries''.
 \label{param:DefaultDomainName}
 \item[\Macro{DEFAULT\_DOMAIN\_NAME}]
   The value to be appended to a machine's host name,
-  representing a domain name, which Condor then uses
+  representing a domain name, which HTCondor then uses
   to form a fully qualified host name.
   This is required if there is no fully qualified host name 
   in file \File{/etc/hosts} or in NIS.
   Set the value in the global configuration file,
-  as Condor may depend on knowing this value in order to locate
+  as HTCondor may depend on knowing this value in order to locate
   the local configuration file(s).
   The default value as given in the sample configuration file of
-  the Condor download is bogus, and must be changed.
+  the HTCondor download is bogus, and must be changed.
   If this variable is removed from the global configuration file,
-  or if the definition is empty, then Condor attempts to discover
+  or if the definition is empty, then HTCondor attempts to discover
   the value.
 
 \label{param:NoDNS}
 \item[\Macro{NO\_DNS}]
   A boolean value that defaults to \Expr{False}.
-  When \Expr{True}, Condor constructs host names using the host's IP address
+  When \Expr{True}, HTCondor constructs host names using the host's IP address
   together with the value defined for \MacroNI{DEFAULT\_DOMAIN\_NAME}. 
 
 \label{param:CMIPAddr}
@@ -1158,17 +1156,17 @@ File System Configuration File Entries''.
   % Described in default config file: NO
   % Defined in the default config file: NO
   % Default definition in config file: N/A
-  % Result if not defined or RHS is empty: Condor performs above algorithm
+  % Result if not defined or RHS is empty: HTCondor performs above algorithm
 
 \label{param:EmailDomain}
 \item[\Macro{EMAIL\_DOMAIN}]
   By default, if a user does not specify \AdAttr{notify\_user} in the
-  submit description file, any email Condor sends about that job will
+  submit description file, any email HTCondor sends about that job will
   go to "username@UID\_DOMAIN".
   If your machines all share a common UID domain (so that you would
   set \MacroNI{UID\_DOMAIN} to be the same across all machines in your
   pool), but email to user@UID\_DOMAIN is not the right place for
-  Condor to send email for your site, you can define the default
+  HTCondor to send email for your site, you can define the default
   domain to use for email.
   A common example would be to set \MacroNI{EMAIL\_DOMAIN} to the fully
   qualified host name of each machine in your pool, so users submitting
@@ -1185,7 +1183,7 @@ File System Configuration File Entries''.
   % Defined in the default config file: NO
   % Default definition in config file: bogus
   % Result if not defined or RHS is empty: 
-  %	Condor will try to use the notify_user attribute email in the job ad.
+  %	HTCondor will try to use the notify_user attribute email in the job ad.
   %	If that is not present, then it will use the UID_DOMAIN embedded in
   %	the job ad.
   %	If that is not present, then it will use the UID_DOMAIN found in the
@@ -1195,25 +1193,25 @@ File System Configuration File Entries''.
   
 \label{param:CreateCoreFiles}
 \item[\Macro{CREATE\_CORE\_FILES}]
-  Defines whether or not Condor daemons are to
+  Defines whether or not HTCondor daemons are to
   create a core file in the \Macro{LOG} directory
   if something really bad happens.  It is
   used to set
   the resource limit for the size of a core file.  If not defined,
   it leaves in place whatever limit was in effect
-  when the Condor daemons (normally the \Condor{master}) were started.
-  This allows Condor to inherit the default system core file generation
+  when the HTCondor daemons (normally the \Condor{master}) were started.
+  This allows HTCondor to inherit the default system core file generation
   behavior at start up.  For Unix operating systems, this behavior can
   be inherited from the parent shell, or specified in a shell script
-  that starts Condor.
+  that starts HTCondor.
   If this parameter is set and \Expr{True}, the limit is increased to
   the maximum.  If it is set to \Expr{False}, the limit is set at 0
   (which means that no core files are created).  Core files
-  greatly help the Condor developers debug any problems you might be
+  greatly help the HTCondor developers debug any problems you might be
   having.  By using the parameter, you do not have to worry about
   tracking down where in your boot scripts you need to set the core
-  limit before starting Condor. You set the parameter
-  to whatever behavior you want Condor to enforce.  This parameter
+  limit before starting HTCondor. You set the parameter
+  to whatever behavior you want HTCondor to enforce.  This parameter
   defaults to undefined to allow the initial operating system default
   value to take precedence, 
   and is commented out in the default configuration file. 
@@ -1225,14 +1223,14 @@ File System Configuration File Entries''.
 
 \label{param:CkptProbe}
 \item[\Macro{CKPT\_PROBE}]
-  Defines the path and executable name of the helper process Condor will use to
+  Defines the path and executable name of the helper process HTCondor will use to
   determine information for the \Attr{CheckpointPlatform} attribute
   in the machine's ClassAd. 
   The default value is \File{\$(LIBEXEC)/condor\_ckpt\_probe}.
 
 \label{param:AbortOnException}
 \item[\Macro{ABORT\_ON\_EXCEPTION}]
-  When Condor programs detect a fatal internal exception, they
+  When HTCondor programs detect a fatal internal exception, they
   normally log an error message and exit.  If you have turned on
   \Macro{CREATE\_CORE\_FILES}, in some cases you may also want to turn
   on \Macro{ABORT\_ON\_EXCEPTION} so that core files are generated
@@ -1263,17 +1261,17 @@ File System Configuration File Entries''.
 
 \label{param:PasswdCacheRefresh}
 \item[\Macro{PASSWD\_CACHE\_REFRESH}]
-  Condor can cause NIS servers to become overwhelmed by queries for uid
+  HTCondor can cause NIS servers to become overwhelmed by queries for uid
   and group information in large pools. In order to avoid this problem,
-  Condor caches UID and group information internally. This integer value allows
-  pool administrators to specify (in seconds) how long Condor should wait
+  HTCondor caches UID and group information internally. This integer value allows
+  pool administrators to specify (in seconds) how long HTCondor should wait
   until refreshes a cache entry. The default is set to 300 seconds, or
   5 minutes, plus a random number of seconds between 0 and 60 to avoid
   having lots of processes refreshing at the same time.
   This means that if a pool administrator updates the user
   or group database (for example, \File{/etc/passwd} or \File{/etc/group}),
   it can take up
-  to 6 minutes before Condor will have the updated information. This
+  to 6 minutes before HTCondor will have the updated information. This
   caching feature can be disabled by setting the refresh interval to
   0. In addition, the cache can also be flushed explicitly by running
   the command \Condor{reconfig}.
@@ -1286,7 +1284,7 @@ File System Configuration File Entries''.
 
 \label{param:SysapiGetLoadavg}
 \item[\Macro{SYSAPI\_GET\_LOADAVG}]
-  If set to False, then Condor will not attempt to compute the load average
+  If set to False, then HTCondor will not attempt to compute the load average
   on the system, and instead will always report the system load average
   to be 0.0.  Defaults to True.
 
@@ -1302,11 +1300,11 @@ File System Configuration File Entries''.
 
 \label{param:WantUDPCommandSocket}
 \item[\Macro{WANT\_UDP\_COMMAND\_SOCKET}]
-  This setting, added in version 6.9.5, controls if Condor daemons
+  This setting, added in version 6.9.5, controls if HTCondor daemons
   should create a UDP command socket in addition to the TCP command
   socket (which is required).
   The default is \Expr{True}, and modifying it requires restarting all
-  Condor daemons, not just a \Condor{reconfig} or SIGHUP.
+  HTCondor daemons, not just a \Condor{reconfig} or SIGHUP.
 
   Normally, updates sent to the \Condor{collector} use UDP, in
   addition to certain keep alive messages and other non-essential
@@ -1348,6 +1346,13 @@ File System Configuration File Entries''.
   page~\pageref{sec:windows-scripts-as-executables} for a more complete
   description.
 
+\label{param:EnableClassadCaching}
+\item[\Macro{ENABLE\_CLASSAD\_CACHING}]
+  A boolean value that controls the caching of ClassAds.
+  Caching saves memory when a Condor process contains
+  many ClassAds with the same expressions.
+  The default value is \Expr{False}, which disables caching.
+
 \label{param:StrictClassadEvaluation}
 \item[\Macro{STRICT\_CLASSAD\_EVALUATION}]
   A boolean value that controls how ClassAd expressions are evaluated. 
@@ -1366,7 +1371,7 @@ File System Configuration File Entries''.
   
 \label{param:CondorFsync}
 \item[\Macro{CONDOR\_FSYNC}]
-  A boolean value that controls whether Condor calls fsync when
+  A boolean value that controls whether HTCondor calls fsync when
   writing the user job and transaction logs.  Setting this value to false
   will disable calls to fsync, which can help performance for schedd
   log writes at the cost of some durability of the log contents should
@@ -1380,10 +1385,10 @@ File System Configuration File Entries''.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!daemon logging configuration variables}
-These entries control how and where the Condor daemons write to log
+These entries control how and where the HTCondor daemons write to log
 files.  Many of the entries in this section represents multiple
 macros. There is one for each subsystem (listed
-in section~\ref{sec:Condor-Subsystem-Names}).
+in section~\ref{sec:HTCondor-Subsystem-Names}).
 The macro name for each substitutes \MacroNI{<SUBSYS>} with the name
 of the subsystem corresponding to the daemon.
 \begin{description}
@@ -1500,10 +1505,10 @@ of the subsystem corresponding to the daemon.
   On non-POSIX-compliant file systems, 
   it is possible for the characters in log messages from multiple processes
   sharing the same log to be interleaved, unless locking is used.
-  Since Condor does not support sharing of debug logs between
+  Since HTCondor does not support sharing of debug logs between
   processes running on different machines, many non-POSIX-compliant
   file systems will still avoid interleaved messages without requiring
-  Condor to use a lock.  Tests of AFS and NFS have
+  HTCondor to use a lock.  Tests of AFS and NFS have
   not revealed any problems when appending to the log without locking.
 
 \label{param:EnableUserlogLocking}
@@ -1511,7 +1516,7 @@ of the subsystem corresponding to the daemon.
   When \Expr{True} (the default value),
   a user's job log (as specified in a submit description file)
   will be locked before being written to.
-  If \Expr{False}, Condor will not lock the file before writing.
+  If \Expr{False}, HTCondor will not lock the file before writing.
 
 \label{param:NewLocking}
 \item[\Macro{CREATE\_LOCKS\_ON\_LOCAL\_DISK}]
@@ -1562,7 +1567,7 @@ of the subsystem corresponding to the daemon.
 \item[\MacroB{<SUBSYS>\_DEBUG}]
 \index{SUBSYS\_DEBUG macro@\texttt{<SUBSYS>\_DEBUG} macro}
   All of the
-  Condor daemons can produce different levels of output depending on
+  HTCondor daemons can produce different levels of output depending on
   how much information is desired.  The various levels of
   verbosity for a given daemon are determined by this macro.  All
   daemons have the default level \Dflag{ALWAYS}, and log messages for
@@ -1609,7 +1614,7 @@ of the subsystem corresponding to the daemon.
     \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_PRIV@\texttt{D\_PRIV}}
     This flag provides log
     messages about the \Term{privilege state} switching that the daemons
-    do.  See section~\ref{sec:uids} on UIDs in Condor for details.
+    do.  See section~\ref{sec:uids} on UIDs in HTCondor for details.
 
   \label{dflag:command}
   \item[\Dflag{COMMAND}]
@@ -1631,7 +1636,7 @@ of the subsystem corresponding to the daemon.
     The \Condor{startd} keeps track
     of the load average on the machine where it is running.  Both the
     general system load average, and the load average being generated by
-    Condor's activity there are determined.
+    HTCondor's activity there are determined.
     With this flag set, the \Condor{startd}
     will log a message with the current state of both of these
     load averages whenever it computes them.  This flag only affects the
@@ -1685,17 +1690,17 @@ of the subsystem corresponding to the daemon.
   \item[\Dflag{NETWORK}]
     \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_NETWORK@\texttt{D\_NETWORK}}
     When this flag is set,
-    all Condor daemons will log a message on every TCP accept, connect,
+    all HTCondor daemons will log a message on every TCP accept, connect,
     and close, and on every UDP send and receive.  This flag is not
     yet fully supported in the \Condor{shadow}.
 
   \label{dflag:hostname}
   \item[\Dflag{HOSTNAME}]
     \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_HOSTNAME@\texttt{D\_HOSTNAME}}
-    When this flag is set, the Condor daemons and/or tools will print
+    When this flag is set, the HTCondor daemons and/or tools will print
     verbose messages explaining how they resolve host names, domain
     names, and IP addresses.
-    This is useful for sites that are having trouble getting Condor to
+    This is useful for sites that are having trouble getting HTCondor to
     work because of problems with DNS, NIS or other host name resolving
     systems in use.
 
@@ -1703,7 +1708,7 @@ of the subsystem corresponding to the daemon.
   \item[\Dflag{CKPT}]
     \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_CKPT@\texttt{D\_CKPT}}
     When this flag is set,
-    the Condor process checkpoint support code, which is linked into a STANDARD 
+    the HTCondor process checkpoint support code, which is linked into a STANDARD 
     universe user job, will output some low-level details about the checkpoint
     procedure into the \MacroUNI{SHADOW\_LOG}.
 
@@ -1721,7 +1726,7 @@ of the subsystem corresponding to the daemon.
   \label{dflag:procfamily}
   \item[\Dflag{PROCFAMILY}]
     \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_PROCFAMILY@\texttt{D\_PROCFAMILY}}
-    Condor often times needs to manage an entire family of processes, (that
+    HTCondor often times needs to manage an entire family of processes, (that
     is, a 
     process and all descendants of that process).  This debug flag will 
     turn on debugging output for the management of families of processes.
@@ -1736,7 +1741,7 @@ of the subsystem corresponding to the daemon.
   \label{dflag:protocol}
   \item[\Dflag{PROTOCOL}]
     \index{SUBSYS\_DEBUG macro levels@\texttt{<SUBSYS>\_DEBUG} macro levels!D\_PROTOCOL@\texttt{D\_PROTOCOL}}
-    Enable debug messages relating to the protocol for Condor's matchmaking and
+    Enable debug messages relating to the protocol for HTCondor's matchmaking and
     resource claiming framework.
     
   \label{dflag:pid}
@@ -1745,9 +1750,9 @@ of the subsystem corresponding to the daemon.
     This flag is different from the other flags, because it is
     used to change the formatting of all log messages that are printed,
     as opposed to specifying what kinds of messages should be printed.
-    If \Dflag{PID} is set, Condor will always print out the process
+    If \Dflag{PID} is set, HTCondor will always print out the process
     identifier (PID) of the process writing each line to the log file.
-    This is especially helpful for Condor daemons that can fork
+    This is especially helpful for HTCondor daemons that can fork
     multiple helper-processes (such as the \Condor{schedd} or
     \Condor{collector}) so the log file will clearly show which thread
     of execution is generating each log message.
@@ -1758,11 +1763,11 @@ of the subsystem corresponding to the daemon.
     This flag is different from the other flags, because it is
     used to change the formatting of all log messages that are printed,
     as opposed to specifying what kinds of messages should be printed.
-    If \Dflag{FDS} is set, Condor will always print out the file descriptor
+    If \Dflag{FDS} is set, HTCondor will always print out the file descriptor
     that the open of the log file was allocated by the operating system.
-    This can be helpful in debugging Condor's use of system file
+    This can be helpful in debugging HTCondor's use of system file
     descriptors as it will generally track the number of file descriptors
-    that Condor has open.
+    that HTCondor has open.
 
   \label{dflag:category}
   \item[\Dflag{CATEGORY}]
@@ -1790,7 +1795,7 @@ of the subsystem corresponding to the daemon.
 \item[\Macro{TOOL\_DEBUG}]
   Uses the same values (debugging levels) as \MacroNI{<SUBSYS>\_DEBUG} to
   describe the amount of debugging information sent to \File{stderr} 
-  for Condor tools.
+  for HTCondor tools.
 
 \end{description}
 
@@ -1880,7 +1885,7 @@ but across all users and user's jobs.
 
 \label{param:EventLogFsync}
 \item[\Macro{EVENT\_LOG\_FSYNC}]
-  A boolean value that controls whether Condor will perform an
+  A boolean value that controls whether HTCondor will perform an
   \Procedure{fsync} after writing each event to the event log.
   When \Expr{True},
   an \Procedure{fsync} operation is performed after each event.
@@ -1895,7 +1900,7 @@ but across all users and user's jobs.
   When \Expr{True},
   the event log (as specified by \MacroNI{EVENT\_LOG})
   will be locked before being written to.
-  When \Expr{False}, Condor does not lock the file before writing.
+  When \Expr{False}, HTCondor does not lock the file before writing.
 
 \label{param:EventLogUseXML}
 \item[\Macro{EVENT\_LOG\_USE\_XML}]
@@ -1925,7 +1930,7 @@ but across all users and user's jobs.
 \index{configuration!DaemonCore configuration variables}
 Please read section~\ref{sec:DaemonCore} for details
 on DaemonCore.  There are certain configuration file settings that
-DaemonCore uses which affect all Condor daemons (except the checkpoint
+DaemonCore uses which affect all HTCondor daemons (except the checkpoint
 server, standard universe shadow, and standard universe starter, none of
 which use DaemonCore).
 \begin{description}
@@ -1933,9 +1938,9 @@ which use DaemonCore).
 \label{param:HostAllow}
 \item[\Macro{HOSTALLOW\Dots}]
   All macros that begin with either \Macro{HOSTALLOW} or
-  \Macro{HOSTDENY} are settings for Condor's host-based security.
+  \Macro{HOSTDENY} are settings for HTCondor's host-based security.
   See section~\ref{sec:Host-Security} on Setting up
-  IP/host-based security in Condor for details on these
+  IP/host-based security in HTCondor for details on these
   macros and how to configure them.
 
 \label{param:EnableRuntimeConfig}
@@ -1944,8 +1949,8 @@ which use DaemonCore).
   dynamically setting run time configuration values, and which only affect
   the in-memory configuration variables.
   Because of the potential security implications of this feature, by
-  default, Condor daemons will not honor these requests.
-  To use this functionality, Condor administrators must specifically
+  default, HTCondor daemons will not honor these requests.
+  To use this functionality, HTCondor administrators must specifically
   enable it by setting \MacroNI{ENABLE\_RUNTIME\_CONFIG} to \Expr{True}, and
   specify what configuration variables can be changed using the
   \MacroNI{SETTABLE\_ATTRS\Dots} family of configuration options.
@@ -1955,13 +1960,13 @@ which use DaemonCore).
 \item[\Macro{ENABLE\_PERSISTENT\_CONFIG}]
   The \Condor{config\_val} tool has a \Opt{-set} option for
   dynamically setting persistent configuration values.
-  These values override options in the normal Condor configuration
+  These values override options in the normal HTCondor configuration
   files.
   Because of the potential security implications of this feature, by
-  default, Condor daemons will not honor these requests.
-  To use this functionality, Condor administrators must specifically
+  default, HTCondor daemons will not honor these requests.
+  To use this functionality, HTCondor administrators must specifically
   enable it by setting \MacroNI{ENABLE\_PERSISTENT\_CONFIG} to \Expr{True},
-  creating a directory where the Condor daemons will hold these
+  creating a directory where the HTCondor daemons will hold these
   dynamically-generated persistent configuration files (declared using
   \MacroNI{PERSISTENT\_CONFIG\_DIR}, described below) and specify what
   configuration variables can be changed using the
@@ -1974,13 +1979,13 @@ which use DaemonCore).
   persistent configuration files (used to support
   \Condor{config\_val} \Opt{-set})
   This directory should \Bold{only} be writable by root, or the user
-  the Condor daemons are running as (if non-root).
+  the HTCondor daemons are running as (if non-root).
   There is no default, administrators that wish to use this
   functionality must create this directory and define this setting.
-  This directory must not be shared by multiple Condor installations,
-  though it can be shared by all Condor daemons on the same host.
+  This directory must not be shared by multiple HTCondor installations,
+  though it can be shared by all HTCondor daemons on the same host.
   Keep in mind that this directory should not be placed on an NFS
-  mount where ``root-squashing'' is in effect, or else Condor daemons
+  mount where ``root-squashing'' is in effect, or else HTCondor daemons
   running as root will not be able to write to them.
   A directory (only writable by root) on the local file system is
   usually the best location for this directory.
@@ -1992,7 +1997,7 @@ which use DaemonCore).
   configuration values that can be changed using the \Condor{config\_val} 
   command.
   Section~\ref{sec:Host-Security} on Setting up
-  IP/Host-Based Security in Condor for details on these
+  IP/Host-Based Security in HTCondor for details on these
   macros and how to configure them.  
   In particular, section~\ref{sec:Host-Security}
   on page~\pageref{sec:Host-Security} contains details specific to
@@ -2001,7 +2006,7 @@ which use DaemonCore).
 \label{param:ShutdownGracefulTimeout}
 \item[\Macro{SHUTDOWN\_GRACEFUL\_TIMEOUT}]
   Determines how long
-  Condor will allow daemons try their graceful shutdown methods
+  HTCondor will allow daemons try their graceful shutdown methods
   before they do a hard shutdown.  It is defined in terms of seconds.
   The default is 1800 (30 minutes).
 
@@ -2014,7 +2019,7 @@ which use DaemonCore).
   \index{configuration macro!\texttt{COLLECTOR\_ADDRESS\_FILE}}
   A complete path to a file that is to contain an
   IP address and port number for a daemon. 
-  Every Condor daemon that uses
+  Every HTCondor daemon that uses
   DaemonCore has a command port where commands are sent.
   The IP/port of the daemon is put in that daemon's ClassAd,
   so that other machines in the pool can query the
@@ -2040,7 +2045,7 @@ which use DaemonCore).
   
   The macro is named by substituting \MacroNI{<SUBSYS>}
   with the appropriate subsystem string as defined in
-  section~\ref{sec:Condor-Subsystem-Names}.
+  section~\ref{sec:HTCondor-Subsystem-Names}.
   
 \label{param:SubsysDaemonAdFile}
 \item[\MacroB{<SUBSYS>\_DAEMON\_AD\_FILE}]
@@ -2068,7 +2073,7 @@ which use DaemonCore).
 
   The macro is named by substituting \MacroNI{<SUBSYS>}
   with the appropriate subsystem string as defined in
-  section~\ref{sec:Condor-Subsystem-Names}.
+  section~\ref{sec:HTCondor-Subsystem-Names}.
 
   \MacroNI{<SUBSYS>\_EXPRS} is a historic setting that functions identically to
   \MacroNI{<SUBSYS>\_ATTRS}. Use \MacroNI{<SUBSYS>\_ATTRS}.
@@ -2101,7 +2106,7 @@ which use DaemonCore).
 
 \label{param:DaemonShutdown}
 \item[\Macro{DAEMON\_SHUTDOWN}]
-  Starting with Condor version 6.9.3, whenever a daemon is about to
+  Starting with HTCondor version 6.9.3, whenever a daemon is about to
   publish a ClassAd update to the \Condor{collector}, it will evaluate
   this expression.
   If it evaluates to \Expr{True}, the daemon will gracefully shut itself down,
@@ -2122,11 +2127,11 @@ which use DaemonCore).
   \end{verbatim}
   Normally, these expressions would not be necessary, so if not
   defined, they default to FALSE.
-  One possible use case is for Condor glide-in, to have the
+  One possible use case is for HTCondor glide-in, to have the
   \Condor{startd} shut itself down if it has not been claimed by a job
   after a certain period of time.
 
-  \Note This functionality does not work in conjunction with Condor's
+  \Note This functionality does not work in conjunction with HTCondor's
   high-availability support (see section~\ref{sec:high-availability}
   on page~\pageref{sec:high-availability} for more information).
   If you enable high-availability for a particular daemon, you should
@@ -2140,20 +2145,20 @@ which use DaemonCore).
 
 \label{param:UseCloneToCreateProcesses}
 \item[\Macro{USE\_CLONE\_TO\_CREATE\_PROCESSES}]
-  A boolean value that controls how a Condor daemon creates a new process on
+  A boolean value that controls how an HTCondor daemon creates a new process on
   Linux platforms. If set to the default value of \Expr{True},
   the \Expr{clone} system call is used. Otherwise, the \Expr{fork} system
   call is used. \Expr{clone} provides scalability improvements for daemons
   using a large amount of memory, for example, a \Condor{schedd} with a lot of
   jobs in the queue. Currently, the use of \Expr{clone} is available on
   Linux systems.  If
-  Condor detects that it is running under the \Prog{valgrind} analysis tools,
+  HTCondor detects that it is running under the \Prog{valgrind} analysis tools,
   this setting is ignored and treated as \Expr{False}, to work around
   incompatibilities.
 
 \label{param:NotRespondingTimeout}
 \item[\Macro{NOT\_RESPONDING\_TIMEOUT}]
-  When a Condor daemon's parent process is another Condor daemon, 
+  When an HTCondor daemon's parent process is another HTCondor daemon, 
   the child daemon will
   periodically send a short message to its parent stating that it is alive
   and well. If the parent does not hear from the child for a while,
@@ -2214,7 +2219,7 @@ which use DaemonCore).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!network-related configuration variables}
 
-More information about networking in Condor can be found in
+More information about networking in HTCondor can be found in
 section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
 
 \begin{description}
@@ -2222,11 +2227,11 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
 \label{param:BindAllInterfaces}
 \item[\Macro{BIND\_ALL\_INTERFACES}]
   For systems with multiple network interfaces, if this configuration
-  setting is \Expr{False}, Condor will only bind network sockets to 
+  setting is \Expr{False}, HTCondor will only bind network sockets to 
   the IP address specified with
   \MacroNI{NETWORK\_INTERFACE} (described below).  If set to \Expr{True},
-  the default value, Condor will listen on all interfaces.
-  However, currently Condor is still only able to advertise a single
+  the default value, HTCondor will listen on all interfaces.
+  However, currently HTCondor is still only able to advertise a single
   IP address, even if it is listening on multiple interfaces.  By
   default, it will advertise the IP address of the network interface
   used to contact the collector, since this is the most likely to be
@@ -2238,7 +2243,7 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
 
 \label{param:CcbAddress}
 \item[\Macro{CCB\_ADDRESS}] This is the address of a
-  \Condor{collector} that will serve as this daemon's Condor
+  \Condor{collector} that will serve as this daemon's HTCondor
   Connection Broker (CCB).  Multiple addresses may be listed
   (separated by commas and/or spaces) for redundancy.  The CCB server
   must authorize this daemon at DAEMON level for this configuration to
@@ -2260,7 +2265,7 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
 
 \label{param:UseSharedPort}
 \item[\Macro{USE\_SHARED\_PORT}] A boolean value that
-  specifies whether a Condor process should rely on
+  specifies whether an HTCondor process should rely on
   \Condor{shared\_port} for receiving incoming connections.  
   Under Unix, write access to the location defined by 
   \Macro{DAEMON\_SOCKET\_DIR} is required for this to take
@@ -2279,14 +2284,14 @@ is used.
 
 \label{param:MaxFileDescriptors}
 \item[\Macro{MAX\_FILE\_DESCRIPTORS}] Under Unix, this specifies the
-maximum number of file descriptors to allow the Condor daemon to use.
+maximum number of file descriptors to allow the HTCondor daemon to use.
 File descriptors are a system resource used for open files and for
-network connections.  Condor daemons that make many simultaneous
+network connections.  HTCondor daemons that make many simultaneous
 network connections may require an increased number of file
 descriptors.  For example, see page~\pageref{sec:CCB} for information
 on file descriptor requirements of CCB.  Changes to this configuration
-variable require a restart of Condor in order to take effect.  Also note
-that only if Condor is running as root will it be able to increase the
+variable require a restart of HTCondor in order to take effect.  Also note
+that only if HTCondor is running as root will it be able to increase the
 limit above the hard limit (on maximum open files) that it inherits.
 
 \label{param:NetworkInterface}
@@ -2320,7 +2325,7 @@ limit above the hard limit (on maximum open files) that it inherits.
   \MacroNI{NETWORK\_INTERFACE}.
 
   If \MacroNI{BIND\_ALL\_INTERFACES} is \Expr{False},
-  then \MacroNI{NETWORK\_INTERFACE} specifies which IP address Condor
+  then \MacroNI{NETWORK\_INTERFACE} specifies which IP address HTCondor
   should use for all incoming and outgoing communication.
   If more than one IP address matches the value, 
   then the IP address that is
@@ -2329,21 +2334,21 @@ limit above the hard limit (on maximum open files) that it inherits.
   private address space, or a loopback address, in that order of
   preference.
 
-  More information about configuring Condor on machines with multiple
+  More information about configuring HTCondor on machines with multiple
   network interfaces can be found in
   section~\ref{sec:Multiple-Interfaces} on
   page~\pageref{sec:Multiple-Interfaces}.
 
 \label{param:PrivateNetworkName}
 \item[\Macro{PRIVATE\_NETWORK\_NAME}]
-  If two Condor daemons are trying to communicate with each other, and
+  If two HTCondor daemons are trying to communicate with each other, and
   they both belong to the same private network, this setting will
   allow them to communicate directly using the private network
   interface, instead of having to use CCB or to go through a public IP address.
   Each private network should be assigned a unique network name.
   This string can have any form, but it must be unique for a
   particular private network.
-  If another Condor daemon or tool is configured with the same
+  If another HTCondor daemon or tool is configured with the same
   \MacroNI{PRIVATE\_NETWORK\_NAME}, it will attempt to contact this
   daemon using its private network address.
   Even for sites using CCB, this is an important optimization, since
@@ -2367,8 +2372,8 @@ limit above the hard limit (on maximum open files) that it inherits.
 \item[\Macro{PRIVATE\_NETWORK\_INTERFACE}]
   For systems with multiple network interfaces, if this configuration
   setting and \MacroNI{PRIVATE\_NETWORK\_NAME} are both defined,
-  Condor daemons will advertise some additional attributes in their
-  ClassAds to help other Condor daemons and tools in the same private
+  HTCondor daemons will advertise some additional attributes in their
+  ClassAds to help other HTCondor daemons and tools in the same private
   network to communicate directly.
 
   \MacroNI{PRIVATE\_NETWORK\_INTERFACE} defines what IP address
@@ -2377,7 +2382,7 @@ limit above the hard limit (on maximum open files) that it inherits.
   a given multi-homed machine should use for the private network.
   The asterisk (\verb|*|) may be used as a wild card character within either
   the IP address or the device name.
-  If another Condor daemon or tool is configured with the same
+  If another HTCondor daemon or tool is configured with the same
   \MacroNI{PRIVATE\_NETWORK\_NAME}, it will attempt to contact this
   daemon using the IP address specified here.
   The syntax for specifying an IP address is identical to 
@@ -2396,12 +2401,12 @@ limit above the hard limit (on maximum open files) that it inherits.
   public address of this daemon.  If a host name is specified, be aware
   that it will be resolved to an IP address by this daemon, not by the clients
   wishing to connect to it.  It is the IP address that is advertised, not
-  the host name.  This setting is useful if Condor on this
+  the host name.  This setting is useful if HTCondor on this
   host may be reached through a NAT or firewall by connecting to an
   IP address that forwards connections to this host.  It
   is assumed that the port number on the \MacroNI{TCP\_FORWARDING\_HOST}
   that forwards to this host is the same port number assigned to
-  Condor on this host.  This option could also be used when ssh port
+  HTCondor on this host.  This option could also be used when ssh port
   forwarding is being used.  In this case, the incoming addresses
   of connections to this daemon will appear as though they are coming
   from the forwarding host rather than from the real remote host, so any
@@ -2415,7 +2420,7 @@ limit above the hard limit (on maximum open files) that it inherits.
   \MacroNI{TCP\_FORWARDING\_HOST} is defined or
   \MacroNI{NET\_REMAP\_ENABLE} is \Expr{True}, this setting has no effect and
   the behavior is as though it had been set to \Expr{False}.  When \Expr{True},
-  IP addresses published by Condor daemons are automatically rewritten to
+  IP addresses published by HTCondor daemons are automatically rewritten to
   match the IP address of the network interface used to make the
   publication.  For example, if the \Condor{schedd} advertises itself to
   two pools via flocking, and the \Condor{collector} for one pool is reached
@@ -2424,14 +2429,14 @@ limit above the hard limit (on maximum open files) that it inherits.
   network interface, the IP address published by the \Condor{schedd}
   daemon will match the address of the respective network interfaces
   used in the two cases.  The intention is to make it easier for
-  Condor daemons to operate in a multi-homed environment.
+  HTCondor daemons to operate in a multi-homed environment.
 
 \label{param:HighPort}
 \item[\Macro{HIGHPORT}]
-  Specifies an upper limit of given port numbers for Condor to use,
-  such that Condor is restricted to a range of port numbers.
-  If this macro is not explicitly specified, then Condor will
-  not restrict the port numbers that it uses. Condor will use
+  Specifies an upper limit of given port numbers for HTCondor to use,
+  such that HTCondor is restricted to a range of port numbers.
+  If this macro is not explicitly specified, then HTCondor will
+  not restrict the port numbers that it uses. HTCondor will use
   system-assigned port numbers.
   For this macro to work, both \MacroNI{HIGHPORT} and
   \MacroNI{LOWPORT} (given below) must be defined.
@@ -2439,15 +2444,15 @@ limit above the hard limit (on maximum open files) that it inherits.
   % Described in default config file: YES
   % Defined in the default config file: NO
   % Default definition in config file: bogus
-  % Result if not defined or RHS is empty: Condor uses any ports available,
+  % Result if not defined or RHS is empty: HTCondor uses any ports available,
   % regardless of the LOWPORT setting
 
 \label{param:LowPort}
 \item[\Macro{LOWPORT}]
-  Specifies a lower limit of given port numbers for Condor to use,
-  such that Condor is restricted to a range of port numbers.
-  If this macro is not explicitly specified, then Condor will
-  not restrict the port numbers that it uses. Condor will use
+  Specifies a lower limit of given port numbers for HTCondor to use,
+  such that HTCondor is restricted to a range of port numbers.
+  If this macro is not explicitly specified, then HTCondor will
+  not restrict the port numbers that it uses. HTCondor will use
   system-assigned port numbers.
   For this macro to work, both \MacroNI{HIGHPORT} (given above) and
   \MacroNI{LOWPORT} must be defined.
@@ -2455,14 +2460,14 @@ limit above the hard limit (on maximum open files) that it inherits.
   % Described in default config file: YES
   % Defined in the default config file: NO
   % Default definition in config file: bogus
-  % Result if not defined or RHS is empty: Condor uses any ports available,
+  % Result if not defined or RHS is empty: HTCondor uses any ports available,
   % regardless of the HIGHPORT setting
 
 \label{param:InLowPort}
 \item[\Macro{IN\_LOWPORT}]
   An integer value that specifies a lower limit of given port numbers
-  for Condor to use on incoming connections (ports for listening),
-  such that Condor is restricted to a range of port numbers.
+  for HTCondor to use on incoming connections (ports for listening),
+  such that HTCondor is restricted to a range of port numbers.
   This range implies the use of both \MacroNI{IN\_LOWPORT} and
   \MacroNI{IN\_HIGHPORT}.
   A range of port numbers less than 1024 may be used for daemons 
@@ -2477,8 +2482,8 @@ limit above the hard limit (on maximum open files) that it inherits.
 \label{param:InHighPort}
 \item[\Macro{IN\_HIGHPORT}]
   An integer value that specifies an upper limit of given port numbers
-  for Condor to use on incoming connections (ports for listening),
-  such that Condor is restricted to a range of port numbers.
+  for HTCondor to use on incoming connections (ports for listening),
+  such that HTCondor is restricted to a range of port numbers.
   This range implies the use of both \MacroNI{IN\_LOWPORT} and
   \MacroNI{IN\_HIGHPORT}.
   A range of port numbers less than 1024 may be used for daemons 
@@ -2493,8 +2498,8 @@ limit above the hard limit (on maximum open files) that it inherits.
 \label{param:OutLowPort}
 \item[\Macro{OUT\_LOWPORT}]
   An integer value that specifies a lower limit of given port numbers
-  for Condor to use on outgoing connections,
-  such that Condor is restricted to a range of port numbers.
+  for HTCondor to use on outgoing connections,
+  such that HTCondor is restricted to a range of port numbers.
   This range implies the use of both \MacroNI{OUT\_LOWPORT} and
   \MacroNI{OUT\_HIGHPORT}.
   A range of port numbers less than 1024 is inappropriate, as
@@ -2506,8 +2511,8 @@ limit above the hard limit (on maximum open files) that it inherits.
 \label{param:OutHighPort}
 \item[\Macro{OUT\_HIGHPORT}]
   An integer value that specifies an upper limit of given port numbers
-  for Condor to use on outgoing connections,
-  such that Condor is restricted to a range of port numbers.
+  for HTCondor to use on outgoing connections,
+  such that HTCondor is restricted to a range of port numbers.
   This range implies the use of both \MacroNI{OUT\_LOWPORT} and
   \MacroNI{OUT\_HIGHPORT}.
   A range of port numbers less than 1024 is inappropriate, as
@@ -2587,9 +2592,9 @@ limit above the hard limit (on maximum open files) that it inherits.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{configuration!shared file system configuration variables}
 
-These macros control how Condor interacts with various shared and
+These macros control how HTCondor interacts with various shared and
 network file systems.  If you are using AFS as your shared file system,
-be sure to read section~\ref{sec:Condor-AFS} on Using Condor with
+be sure to read section~\ref{sec:HTCondor-AFS} on Using HTCondor with
 AFS.
 For information on submitting jobs under shared file systems,
 see
@@ -2603,7 +2608,7 @@ section~\ref{sec:shared-fs}.
   If the \MacroUNI{UID\_DOMAIN}
   on the submitting machine is different than
   the \MacroUNI{UID\_DOMAIN}
-  on the machine that runs a job, then Condor runs
+  on the machine that runs a job, then HTCondor runs
   the job as the user \Login{nobody}.
   For example, if the submit machine has
   a \MacroUNI{UID\_DOMAIN} of
@@ -2613,17 +2618,17 @@ section~\ref{sec:shared-fs}.
   the two \MacroUNI{UID\_DOMAIN}s are not the same.
   If the \MacroUNI{UID\_DOMAIN}
   is the same on both the submit and execute machines,
-  then Condor will run the job as the user that submitted the job.
+  then HTCondor will run the job as the user that submitted the job.
 
   A further check attempts to assure that the submitting
   machine can not lie about its \MacroNI{UID\_DOMAIN}.
-  Condor compares the 
+  HTCondor compares the 
   submit machine's claimed value for \MacroNI{UID\_DOMAIN}
   to its fully qualified name.
   If the two do not end the same, then the submit machine
   is presumed to be lying about its \MacroNI{UID\_DOMAIN}.
-  In this case, Condor will run the job as user \Login{nobody}.
-  For example, a job submission to the Condor pool at the UW Madison
+  In this case, HTCondor will run the job as user \Login{nobody}.
+  For example, a job submission to the HTCondor pool at the UW Madison
   from flippy.example.com, claiming a \MacroNI{UID\_DOMAIN} of
   of cs.wisc.edu,
   will run the job as the user \Login{nobody}.
@@ -2638,7 +2643,7 @@ section~\ref{sec:shared-fs}.
 
   Also see \MacroNI{SOFT\_UID\_DOMAIN}
   below for information about one more check
-  that Condor performs before running a job as a given user.
+  that HTCondor performs before running a job as a given user.
 
   A few details:
 
@@ -2647,7 +2652,7 @@ section~\ref{sec:shared-fs}.
   but it is a gaping security hole. It is not recommended.
 
   An administrator can also leave \MacroNI{UID\_DOMAIN} undefined.
-  This will force Condor to always run jobs as user \Login{nobody}.
+  This will force HTCondor to always run jobs as user \Login{nobody}.
   Running standard universe jobs as user \Login{nobody} enhances
   security and should cause no problems, because the jobs use remote
   I/O to access all of their files.
@@ -2656,7 +2661,7 @@ section~\ref{sec:shared-fs}.
   to be marked as world readable/writable so the user \Login{nobody} can access
   them.
 
-  When Condor sends e-mail about a job, Condor sends the e-mail to
+  When HTCondor sends e-mail about a job, HTCondor sends the e-mail to
   %% This is the wrong LaTeX  macro to use, but we don't have a correct one.
   \File{user@\$(UID\_DOMAIN)}.
   If \MacroNI{UID\_DOMAIN}
@@ -2665,7 +2670,7 @@ section~\ref{sec:shared-fs}.
 
 \label{param:TrustUidDomain}
 \item[\Macro{TRUST\_UID\_DOMAIN}]
-  As an added security precaution when Condor is about to spawn a job,
+  As an added security precaution when HTCondor is about to spawn a job,
   it ensures that the \MacroNI{UID\_DOMAIN} of a given
   submit machine is a substring of that machine's fully-qualified
   host name.
@@ -2674,9 +2679,9 @@ section~\ref{sec:shared-fs}.
   In these cases, administrators may wish to use names to describe the
   UID domains which are not substrings of the host names of the
   machines.
-  For this to work, Condor must not do this regular security check.
+  For this to work, HTCondor must not do this regular security check.
   If the \MacroNI{TRUST\_UID\_DOMAIN} setting is defined to \Expr{True},
-  Condor will not perform this test, and will trust whatever
+  HTCondor will not perform this test, and will trust whatever
   \MacroNI{UID\_DOMAIN} is presented by the submit machine when trying
   to spawn a job, instead of making sure the submit machine's host name
   matches the \MacroNI{UID\_DOMAIN}.
@@ -2691,20 +2696,20 @@ section~\ref{sec:shared-fs}.
 \label{param:SoftUidDomain}
 \item[\Macro{SOFT\_UID\_DOMAIN}]
   A boolean variable that defaults to \Expr{False} when not defined.
-  When Condor is about to run a job as a particular user 
+  When HTCondor is about to run a job as a particular user 
   (instead of as user \Login{nobody}),
   it verifies that the UID given for the user is in the
   password file and actually matches the given user name.
   However, under installations that do not have every user
   in every machine's password file,
   this check will fail and the execution attempt will be aborted.
-  To cause Condor not to do
+  To cause HTCondor not to do
   this check, set this configuration variable to \Expr{True}.
-  Condor will then run the job under the user's UID.
+  HTCondor will then run the job under the user's UID.
 
 \label{param:SlotNUser}
 \item[\Macro{SLOT<N>\_USER}]
-  The name of a user for Condor to use instead of
+  The name of a user for HTCondor to use instead of
   user nobody,
   as part of a solution that plugs a security hole whereby
   a lurker process can prey on a subsequent job run as user name nobody. 
@@ -2738,11 +2743,11 @@ section~\ref{sec:shared-fs}.
   jobs on the execute machine and which will never be used for more
   than one job at a time.  The default matches no account name.  If
   you have configured \MacroNI{SLOT<N>\_USER} to be a \emph{different}
-  account for each Condor slot, and no non-condor processes will ever be
+  account for each HTCondor slot, and no non-condor processes will ever be
   run by these accounts, then this pattern should match the names of
   all \MacroNI{SLOT<N>\_USER} accounts.  Jobs run under a dedicated
-  execute account are reliably tracked by Condor, whereas other jobs,
-  may spawn processes that Condor fails to detect.  Therefore, a
+  execute account are reliably tracked by HTCondor, whereas other jobs,
+  may spawn processes that HTCondor fails to detect.  Therefore, a
   dedicated execution account provides more reliable tracking of CPU
   usage by the job and it also guarantees that when the job exits, no
   ``lurker'' processes are left behind.  When the job exits, condor
@@ -2772,7 +2777,7 @@ Tracking process family by login "cndrusr1"
   \MacroNI{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} instead.
 
   A boolean value that defaults to \Expr{False}.  When \Expr{True},
-  Condor knows that all jobs are being run by dedicated execution
+  HTCondor knows that all jobs are being run by dedicated execution
   accounts (whether they are running as the job owner or as nobody or as
   \MacroNI{SLOT<N>\_USER}).  Therefore, when the job exits, all processes
   running under the same account will be killed.
@@ -2790,19 +2795,19 @@ Tracking process family by login "cndrusr1"
   % NO LONGER TRUE
   % Vanilla Unix jobs currently require a shared file system in order to
   % share any data files or see the output of the program.
-  % Condor decides if there is a shared filesystem by comparing the values
+  % HTCondor decides if there is a shared filesystem by comparing the values
   % of 
   % \MacroUNI{FILESYSTEM\_DOMAIN}
   % of both the submitting and execute machines.
   % If the values are the same,
-  % Condor assume there is a shared file system.
-  % Condor implements the check
+  % HTCondor assume there is a shared file system.
+  % HTCondor implements the check
   % by extending the Requirements for your job.
   % You can see these requirements by using the \oArg{-v} argument
   % to \Condor{submit}.
 
   Note that this implementation is not ideal: machines may share some
-  file systems but not others. Condor currently has no way to express
+  file systems but not others. HTCondor currently has no way to express
   this automatically. You can express the need to use a
   particular file system by adding additional attributes to your machines
   and submit files, similar to the example given in 
@@ -2812,7 +2817,7 @@ Tracking process family by login "cndrusr1"
   certain software packages.
 
   Note that if you do not set 
-  \MacroUNI{FILESYSTEM\_DOMAIN}, Condor defaults
+  \MacroUNI{FILESYSTEM\_DOMAIN}, HTCondor defaults
   to setting the macro's value to be the fully qualified host name
   of the local machine.
   Since each machine will have a different
@@ -2828,17 +2833,17 @@ Tracking process family by login "cndrusr1"
 \label{param:ReserveAfsCache}
 \item[\Macro{RESERVE\_AFS\_CACHE}]
   If your machine is running AFS and the AFS cache lives on the same
-  partition as the other Condor directories, and you want Condor to
+  partition as the other HTCondor directories, and you want HTCondor to
   reserve the space that your AFS cache is configured to use, set this
   macro to \Expr{True}.  It defaults to \Expr{False}.
   
 \label{param:UseNfs}
 \item[\Macro{USE\_NFS}]
   This macro influences
-  how Condor jobs running in the standard universe access their
-  files.  By default, Condor will redirect the file I/O requests
+  how HTCondor jobs running in the standard universe access their
+  files.  By default, HTCondor will redirect the file I/O requests
   of standard universe jobs from the executing machine to the submitting
-  machine.  So, as a Condor job migrates around
+  machine.  So, as an HTCondor job migrates around
   the network, the file system always appears to be identical to the
   file system where the job was submitted.  However, consider the case
   where a user's data files are sitting on an NFS server. The machine
@@ -2848,12 +2853,12 @@ Tracking process family by login "cndrusr1"
   all of the program's I/O is being sent over the network twice.
   
   If this configuration variable is \Expr{True}, 
-  then Condor will attempt to read/write files directly on the 
+  then HTCondor will attempt to read/write files directly on the 
   executing machine without redirecting I/O back to the submitting
   machine, if both the submitting machine and the machine running the job
   are both accessing the same NFS servers (\emph{if} they are both in the
   same \MacroUNI{FILESYSTEM\_DOMAIN} and in the same \MacroUNI{UID\_DOMAIN},
-  as described above).  The result is I/O performed by Condor standard
+  as described above).  The result is I/O performed by HTCondor standard
   universe jobs is only sent over the network once.  
   While sending all file operations over the network twice might sound
   really bad, unless you are operating over networks where bandwidth
@@ -2862,9 +2867,9 @@ Tracking process family by login "cndrusr1"
   some (fairly rare) situations where this scheme can break down.
   
   Setting \MacroUNI{USE\_NFS} to \Expr{False} is always safe.  It may result
-  in slightly more network traffic, but Condor jobs are most often heavy
+  in slightly more network traffic, but HTCondor jobs are most often heavy
   on CPU and light on I/O.  It also ensures that a remote
-  standard universe Condor job will always use Condor's remote system
+  standard universe HTCondor job will always use HTCondor's remote system
   calls mechanism to reroute I/O and therefore see the exact same
   file system that the user sees on the machine where she/he submitted
   the job.
@@ -2880,7 +2885,7 @@ Tracking process family by login "cndrusr1"
   \emph{then} the job will access files using a local system call,
   without redirecting them to the submitting machine (with
   NFS).  Otherwise, the system call will get routed back to the
-  submitting machine using Condor's remote system call mechanism.
+  submitting machine using HTCondor's remote system call mechanism.
   \Note When submitting a vanilla job, \Condor{submit} will, by default,
   append requirements to the Job ClassAd that specify the machine to run
   the job must be in the same \MacroUNI{FILESYSTEM\_DOMAIN} and the same
@@ -2903,7 +2908,7 @@ Tracking process family by login "cndrusr1"
 \label{param:UseAfs}
 \item[\Macro{USE\_AFS}]
   If your machines have AFS,
-  this macro determines whether Condor will use remote system calls for
+  this macro determines whether HTCondor will use remote system calls for
   standard universe jobs to send I/O requests to the submit machine,
   or if it should use local file access on the execute machine (which
   will then use AFS to get to the submitter's files).  Read the
@@ -2912,10 +2917,10 @@ Tracking process family by login "cndrusr1"
   
   One important difference between \MacroUNI{USE\_NFS} and
   \MacroUNI{USE\_AFS} is the AFS cache.  With \MacroUNI{USE\_AFS} set to
-  \Expr{True}, the remote Condor job executing on some machine will start
+  \Expr{True}, the remote HTCondor job executing on some machine will start
   modifying the AFS cache, possibly evicting the machine owner's
   files from the cache to make room for its own.  Generally speaking,
-  since we try to minimize the impact of having a Condor job run on a
+  since we try to minimize the impact of having an HTCondor job run on a
   given machine, we do not recommend using this setting.
 
   While sending all file operations over the network twice might sound
@@ -2925,13 +2930,13 @@ Tracking process family by login "cndrusr1"
   some (fairly rare) situations where this scheme can break down.
   
   Setting \MacroUNI{USE\_AFS} to \Expr{False} is always safe.  It may result
-  in slightly more network traffic, but Condor jobs are usually heavy
+  in slightly more network traffic, but HTCondor jobs are usually heavy
   on CPU and light on I/O.  \Expr{False} ensures that a remote
-  standard universe Condor job will always see the exact same
+  standard universe HTCondor job will always see the exact same
   file system that the user on sees on the machine where he/she
   submitted the job.  Plus, it will ensure that the machine where the
   job executes does not have its AFS cache modified as a result of
-  the Condor job being there.  
+  the HTCondor job being there.  
   
   However, things may be different at your site, which is why the
   setting is there.
@@ -2943,7 +2948,7 @@ Tracking process family by login "cndrusr1"
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!checkpoint server configuration variables}
-These macros control whether or not Condor uses a checkpoint server.
+These macros control whether or not HTCondor uses a checkpoint server.
 This section
 describes the settings that the checkpoint server itself needs defined. 
 See section~\ref{sec:Ckpt-Server} on Installing a Checkpoint Server
@@ -3072,7 +3077,7 @@ These macros control the \Condor{master}.
   determines what daemons the \Condor{master} will start and keep its
   watchful eyes on.  The list is a comma or space separated list of
   subsystem names (listed in
-  section~\ref{sec:Condor-Subsystem-Names}).  For example,
+  section~\ref{sec:HTCondor-Subsystem-Names}).  For example,
 \begin{verbatim}
   DAEMON_LIST = MASTER, STARTD, SCHEDD
 \end{verbatim}
@@ -3092,14 +3097,14 @@ These macros control the \Condor{master}.
 \label{param:DCDaemonList}
 \item[\Macro{DC\_DAEMON\_LIST}]
   A list delimited by commas and/or spaces that
-  lists the daemons in \MacroNI{DAEMON\_LIST} which use the Condor
+  lists the daemons in \MacroNI{DAEMON\_LIST} which use the HTCondor
   DaemonCore library.  The \Condor{master} must differentiate between
   daemons that use DaemonCore and those that do not,
   so it uses the appropriate inter-process communication mechanisms.
-  This list currently includes all Condor daemons except the checkpoint server
+  This list currently includes all HTCondor daemons except the checkpoint server
   by default.
 
-  As of Condor version 7.2.1, a daemon may be appended to the default
+  As of HTCondor version 7.2.1, a daemon may be appended to the default
   \MacroNI{DC\_DAEMON\_LIST} value by placing the plus character
   (\verb@+@) before the first entry in the \MacroNI{DC\_DAEMON\_LIST} 
   definition.
@@ -3123,7 +3128,7 @@ These macros control the \Condor{master}.
 
   The macro is named by substituting \MacroNI{<SUBSYS>}
   with the appropriate subsystem string as defined in
-  section~\ref{sec:Condor-Subsystem-Names}.
+  section~\ref{sec:HTCondor-Subsystem-Names}.
 
 \label{param:DaemonNameEnvironment}
 \item[\Macro{<DaemonName>\_ENVIRONMENT}]
@@ -3162,7 +3167,7 @@ These macros control the \Condor{master}.
 
   The macro is named by substituting \MacroNI{<SUBSYS>}
   with the appropriate subsystem string as defined in
-  section~\ref{sec:Condor-Subsystem-Names}.
+  section~\ref{sec:HTCondor-Subsystem-Names}.
 
 \label{param:SubsysUserid}
 \item[\MacroB{<SUBSYS>\_USERID}]
@@ -3196,7 +3201,7 @@ NEGOTIATOR_USERID = condor
   In addition to the daemons
   defined in \MacroUNI{DAEMON\_LIST}, the \Condor{master} also starts up
   a special process, \Condor{preen} to clean out junk files that have
-  been left laying around by Condor.  This macro determines where the
+  been left laying around by HTCondor.  This macro determines where the
   \Condor{master} finds the \Condor{preen} binary.
   If this macro is set to nothing, \Condor{preen} will not run.
 
@@ -3238,7 +3243,7 @@ NEGOTIATOR_USERID = condor
   If this setting is defined and set to \Expr{False}
   when the \Condor{master} starts up, the first
   thing it will do is exit.  This appears strange, but perhaps you
-  do not want Condor to run on certain machines in your pool, yet
+  do not want HTCondor to run on certain machines in your pool, yet
   the boot scripts for your entire pool are handled by a centralized
   This is
   an entry you would most likely find in a local configuration file,
@@ -3297,7 +3302,7 @@ NEGOTIATOR_USERID = condor
   outright.  It is defined in seconds and defaults to 300 (5 minutes).
 
 \label{param:MasterShutdownProgram}
-\item[\Macro{MASTER\_SHUTDOWN\_$<$Name$>$}]
+\item[\Macro{MASTER\_SHUTDOWN\_<Name>}]
   A full path and file name of
   a program that the \Condor{master} is to execute
   via the Unix \Procedure{execl} call, 
@@ -3305,11 +3310,11 @@ NEGOTIATOR_USERID = condor
   instead of the normal call to \Procedure{exit}.
   Multiple programs to execute may be defined with multiple entries,
   each with a unique \MacroNI{Name}.
-  These macros have no affect on a
+  These macros have no effect on a
   \Condor{master} unless \Condor{set\_shutdown} is run.  
   The \MacroNI{Name} specified as an argument to the \Condor{set\_shutdown}
   program must match the \MacroNI{Name} portion of one of these
-  \MacroNI{MASTER\_SHUTDOWN\_$<$Name$>$} macros; if not, the
+  \MacroNI{MASTER\_SHUTDOWN\_<Name>} macros; if not, the
   \Condor{master} will log an error and ignore the command.  If a
   match is found, the \Condor{master} will attempt to verify the
   program, and it will store the path and program name.  When the
@@ -3464,16 +3469,16 @@ will not want to change them for any reason.
   A defined \MacroNI{MASTER\_NAME} is presumed to be of the form
   \verb$identifying-string@full.host.name$.
   If the string does not include an \verb$@$ sign,
-  Condor appends one, followed by the fully qualified host name
+  HTCondor appends one, followed by the fully qualified host name
   of the local machine.
   The \verb$identifying-string$ portion may contain any
   alphanumeric ASCII characters or punctuation marks, except the \verb$@$ sign.
   We recommend that the string does not contain the \verb$:$ (colon)
   character, since that might cause problems with certain tools.
-  Previous to Condor 7.1.1, when the string included
-  an \verb$@$ sign, Condor replaced whatever followed the \verb$@$
+  Previous to HTCondor 7.1.1, when the string included
+  an \verb$@$ sign, HTCondor replaced whatever followed the \verb$@$
   sign with the fully qualified host name of the local machine.
-  Condor does not modify any portion of the string, if it
+  HTCondor does not modify any portion of the string, if it
   contains an \verb$@$ sign.
   This is useful for remote job submissions under the high availability
   of the job queue.
@@ -3484,7 +3489,7 @@ will not want to change them for any reason.
   defined with \MacroNI{MASTER\_NAME} takes precedence over the
   \Macro{SCHEDD\_NAME} setting (see section~\ref{param:ScheddName} on
   page~\pageref{param:ScheddName}). 
-  Since Condor makes the assumption that there is only one
+  Since HTCondor makes the assumption that there is only one
   instance of the \Condor{startd} running on a machine,
   the \MacroNI{MASTER\_NAME} is not automatically propagated to the
   \Condor{startd}.
@@ -3494,8 +3499,8 @@ will not want to change them for any reason.
   the \Condor{startd} daemons
   (this is done automatically in the case of \Condor{glidein}).
 
-  If a Condor daemon (master, schedd or startd) has been given a
-  unique name, all Condor tools that need to contact that daemon can
+  If an HTCondor daemon (master, schedd or startd) has been given a
+  unique name, all HTCondor tools that need to contact that daemon can
   be told what name to use via the \Opt{-name} command-line option.
 
 
@@ -3517,7 +3522,7 @@ will not want to change them for any reason.
 
 \label{param:SecondaryCollectorList}
 \item[\Macro{SECONDARY\_COLLECTOR\_LIST}]
-  This macro has been removed as of Condor version 6.9.3.
+  This macro has been removed as of HTCondor version 6.9.3.
   Use the \Macro{COLLECTOR\_HOST} configuration variable, which may define a
   list of \Condor{collector} daemons.
 
@@ -3545,7 +3550,7 @@ will not want to change them for any reason.
 \label{param:AddWindowsFirewallException}
 \item[\Macro{ADD\_WINDOWS\_FIREWALL\_EXCEPTION}]
   When set to \Expr{False}, the
-  \Condor{master} will not automatically add Condor to the Windows
+  \Condor{master} will not automatically add HTCondor to the Windows
   Firewall list of trusted applications. Such trusted applications can
   accept incoming connections without interference from the firewall. This
   only affects machines running Windows XP SP2 or higher. The default
@@ -3557,23 +3562,23 @@ will not want to change them for any reason.
   the number of times the \Condor{master} will retry to add
   firewall exceptions.
   When a Windows machine boots
-  up, Condor starts up by default as well. Under certain conditions, the
+  up, HTCondor starts up by default as well. Under certain conditions, the
   \Condor{master} may have difficulty adding exceptions to the Windows
   Firewall because of a delay in other services starting up.
   Examples of services that may possibly be slow are the 
   SharedAccess service, the Netman service, or the Workstation service.
   This configuration variable allows administrators to set the number of
   times (once every 10 seconds) that the \Condor{master} will retry
-  to add firewall exceptions. A value of 0 means that Condor will
+  to add firewall exceptions. A value of 0 means that HTCondor will
   retry indefinitely.
 
 \label{param:UseProcessGroups} 
 \item[\Macro{USE\_PROCESS\_GROUPS}]
   A boolean value that defaults to \Expr{True}.  When \Expr{False},
-  Condor daemons on Unix machines will \emph{not} create new sessions
-  or process groups. Condor uses processes groups to help it track the
+  HTCondor daemons on Unix machines will \emph{not} create new sessions
+  or process groups. HTCondor uses processes groups to help it track the
   descendants of processes it creates. This can cause problems when
-  Condor is run under another job execution system (e.g. Condor Glidein).
+  HTCondor is run under another job execution system (e.g. HTCondor Glidein).
 
 \end{description}
 
@@ -3583,10 +3588,10 @@ Configuration File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!condor\_startd configuration variables}
-\Note If you are running Condor on a multi-CPU machine, be sure
+\Note If you are running HTCondor on a multi-CPU machine, be sure
 to also read section~\ref{sec:Configuring-SMP} on
 page~\pageref{sec:Configuring-SMP} which describes how to set up and
-configure Condor on SMP machines.
+configure HTCondor on SMP machines.
 
 These settings control general operation of the \Condor{startd}.
 Examples using these configuration macros,
@@ -3600,7 +3605,7 @@ Configuring The Startd Policy.
 \item[\Macro{START}]
   A boolean expression
   that, when \Expr{True}, indicates that the machine is willing
-  to start running a Condor job.
+  to start running an HTCondor job.
   \MacroNI{START} is considered when the \Condor{negotiator} daemon
   is considering evicting the job to replace it with one that will
   generate a better rank for the \Condor{startd} daemon,
@@ -3609,14 +3614,14 @@ Configuring The Startd Policy.
 \label{param:Suspend}
 \item[\Macro{SUSPEND}]
   A boolean expression that, when \Expr{True},
-  causes Condor to suspend running a Condor job.
+  causes HTCondor to suspend running an HTCondor job.
   The machine may still be claimed, but the job makes no further
-  progress, and Condor does not generate a load on the machine.
+  progress, and HTCondor does not generate a load on the machine.
 
 \label{param:Preempt}
 \item[\Macro{PREEMPT}]
   A boolean expression that, when \Expr{True},
-  causes Condor to stop a currently running job once
+  causes HTCondor to stop a currently running job once
   \Macro{MAXJOBRETIREMENTTIME} has expired.  This expression is not
   evaluated if \MacroNI{WANT\_SUSPEND} is \Expr{True}.
 
@@ -3673,12 +3678,12 @@ WANT_HOLD_REASON = \
 \label{param:Continue}
 \item[\Macro{CONTINUE}]
   A boolean expression that, when \Expr{True},
-  causes Condor to continue the execution of a suspended job.
+  causes HTCondor to continue the execution of a suspended job.
 
 \label{param:Kill}
 \item[\Macro{KILL}]
   A boolean expression that, when \Expr{True},
-  causes Condor to immediately stop the
+  causes HTCondor to immediately stop the
   execution of a vacating job, without delay.
   The job is hard-killed, so any attempt by the job to checkpoint or
   clean up will be aborted.  This expression should normally be
@@ -3688,7 +3693,7 @@ WANT_HOLD_REASON = \
 
 \label{param:PeriodicCheckpoint}
 \item[\Macro{PERIODIC\_CHECKPOINT}]
-  A boolean expression that, when \Expr{True}, causes Condor to
+  A boolean expression that, when \Expr{True}, causes HTCondor to
   initiate a checkpoint of the currently running job. This setting
   applies to all standard universe jobs and to vm universe jobs
   that have set \SubmitCmd{vm\_checkpoint} to \Expr{True}
@@ -3696,7 +3701,7 @@ WANT_HOLD_REASON = \
 
 \label{param:Rank}
 \item[\Macro{RANK}]
-  A floating point value that Condor uses to compare potential jobs.
+  A floating point value that HTCondor uses to compare potential jobs.
   A larger value for a specific job ranks that job above
   others with lower values for \MacroNI{RANK}.
 
@@ -3728,7 +3733,7 @@ WANT_HOLD_REASON = \
 \label{param:WantSuspend}
 \item[\Macro{WANT\_SUSPEND}]
   A boolean expression that, when \Expr{True},
-  tells Condor to evaluate the \MacroNI{SUSPEND} expression to decide
+  tells HTCondor to evaluate the \MacroNI{SUSPEND} expression to decide
   whether to suspend a running job.  When \Expr{True}, the \MacroNI{PREEMPT}
   expression is not evaluated.
   When not explicitly set, the \Condor{startd} exits with an error.
@@ -3738,7 +3743,7 @@ WANT_HOLD_REASON = \
 \label{param:WantVacate}
 \item[\Macro{WANT\_VACATE}]
   A boolean expression that, when \Expr{True}, defines that a preempted
-  Condor job is to be vacated, instead of killed.  This means the
+  HTCondor job is to be vacated, instead of killed.  This means the
   job will be soft-killed and given time to checkpoint or clean up.
   The amount of time given depends on \Macro{MachineMaxVacateTime}
   and \Macro{KILL}.
@@ -4005,13 +4010,13 @@ WANT_HOLD_REASON = \
 \item[\Macro{STARTD\_CLAIM\_ID\_FILE}]
   This macro controls what file names are used if the above
   \MacroNI{STARTD\_SHOULD\_WRITE\_CLAIM\_ID\_FILE} is true.  By
-  default, Condor will write the ClaimId into a file in the
+  default, HTCondor will write the ClaimId into a file in the
   \MacroU{LOG} directory called \File{.startd\_claim\_id.slotX}, where
   \verb@X@ is the value of \Attr{SlotID}, the integer that
   identifies a given slot on the system, or \verb@1@ on a
   single-slot machine.
   If you define your own value for this setting, you should provide a
-  full path, and Condor will automatically append the \verb@.slotX@
+  full path, and HTCondor will automatically append the \verb@.slotX@
   portion of the file name.
 
 \label{param:SlotWeight}
@@ -4029,11 +4034,11 @@ WANT_HOLD_REASON = \
 \item[\Macro{NUM\_CPUS}]
   An integer value, which can be used to lie to the \Condor{startd} daemon
   about how many CPUs a machine has.
-  When set, it overrides the value determined with Condor's 
+  When set, it overrides the value determined with HTCondor's 
   automatic computation of the number of CPUs in the machine.
-  Lying in this way can allow multiple Condor jobs to run on a
+  Lying in this way can allow multiple HTCondor jobs to run on a
   single-CPU machine, by having that machine treated like an SMP
-  machine with multiple CPUs, which could have different Condor jobs
+  machine with multiple CPUs, which could have different HTCondor jobs
   running on each one.
   Or, an SMP machine may advertise more slots than it has CPUs.
   However, lying in this manner will hurt the performance of the jobs,
@@ -4066,7 +4071,7 @@ WANT_HOLD_REASON = \
 \label{param:MaxNumCpus}
 \item[\Macro{MAX\_NUM\_CPUS}]
   An integer value used as a ceiling for the number of CPUs detected
-  by Condor on a machine.
+  by HTCondor on a machine.
   This value is ignored if \MacroNI{NUM\_CPUS} is set.
   If set to zero, there is no ceiling. 
   If not defined, the default value is zero, and thus there is no ceiling. 
@@ -4081,7 +4086,7 @@ WANT_HOLD_REASON = \
 
 \label{param:CountHyperthreadCpus}
 \item[\Macro{COUNT\_HYPERTHREAD\_CPUS}]
-  This macro controls how Condor sees hyper threaded
+  This macro controls how HTCondor sees hyper threaded
   processors. When set to \Expr{True} (the default), it includes virtual CPUs in
   the default value of \MacroNI{NUM\_CPUS}. On dedicated cluster nodes, 
   counting virtual CPUs can sometimes improve total throughput at the expense 
@@ -4090,19 +4095,19 @@ WANT_HOLD_REASON = \
 
 \label{param:Memory}
 \item[\Macro{MEMORY}]
-  Normally, Condor will automatically detect the amount of physical
+  Normally, HTCondor will automatically detect the amount of physical
   memory available on your machine.  Define \MacroNI{MEMORY} to tell
-  Condor how much physical memory (in MB) your machine has, overriding
-  the value Condor computes automatically.  The actual amount of memory
-  detected by Condor is always available in the pre-defined configuration
+  HTCondor how much physical memory (in MB) your machine has, overriding
+  the value HTCondor computes automatically.  The actual amount of memory
+  detected by HTCondor is always available in the pre-defined configuration
   macro \Macro{DETECTED\_MEMORY}.
 
 \label{param:ReservedMemory}
 \item[\Macro{RESERVED\_MEMORY}]
-  How much memory would you like reserved from Condor?  By default,
-  Condor considers all the physical memory of your machine as
-  available to be used by Condor jobs.  If \MacroNI{RESERVED\_MEMORY} is
-  defined, Condor subtracts it from the amount of memory it advertises
+  How much memory would you like reserved from HTCondor?  By default,
+  HTCondor considers all the physical memory of your machine as
+  available to be used by HTCondor jobs.  If \MacroNI{RESERVED\_MEMORY} is
+  defined, HTCondor subtracts it from the amount of memory it advertises
   as available.
 
 \label{param:StartdName}
@@ -4115,7 +4120,7 @@ WANT_HOLD_REASON = \
   Different names will distinguish the two daemons.
   See the description of \MacroNI{MASTER\_NAME} in
   section~\ref{param:MasterName} on page~\pageref{param:MasterName}
-  for defaults and composition of valid Condor daemon names.
+  for defaults and composition of valid HTCondor daemon names.
 
 \label{param:RunBenchmarks}
 \item[\Macro{RUNBENCHMARKS}]
@@ -4137,7 +4142,7 @@ WANT_HOLD_REASON = \
 \label{param:StartdNoclaimShutdown}
 \item[\Macro{STARTD\_NOCLAIM\_SHUTDOWN}]
   The number of seconds to run without receiving a claim before
-  shutting Condor down on this machine.  Defaults to unset, which
+  shutting HTCondor down on this machine.  Defaults to unset, which
   means to never shut down.  This is primarily intended for \condor{glidein}.
   Use in other situations is not recommended.
 
@@ -4163,7 +4168,7 @@ WANT_HOLD_REASON = \
   string \Expr{Percent},
   and the string \Expr{/sec} is replaced by the string \Expr{\_Per\_Sec}.
 
-  Condor expects that the hive identifier, 
+  HTCondor expects that the hive identifier, 
   which is the first element in the full path given by a key name,
   will be the valid abbreviation.
   Here is a list of abbreviations:
@@ -4206,29 +4211,38 @@ WANT_HOLD_REASON = \
 \item[\Macro{MOUNT\_UNDER\_SCRATCH}]
   A comma separated list of directories. 
   For each directory in the list, 
-  Condor creates a directory in the job's temporary scratch directory,
-  but make it available at the given name using bind mounts.
+  HTCondor creates a directory in the job's temporary scratch directory 
+  with that name,
+  and makes it available at the given name using bind mounts.
   This is available on Linux systems which provide bind mounts 
   and per-process tree mount tables,
-  such as Red Hat Enterprise Linux 5.
+  such as Red Hat Enterprise Linux 5.  
+  A bind mount is like a symbolic link,
+  but is not globally visible to all processes.
+  It is only visible to the job and the job's child processes.
   As an example:
 \begin{verbatim}
   MOUNT_UNDER_SCRATCH = /tmp,/var/tmp
 \end{verbatim}
-  The job will think that it sees the usual \File{/tmp} and \File{/var/tmp}
-  directories, 
-  but they will actually exist as subdirectories in 
-  the job's temporary scratch directory. 
+  The job will see the usual \File{/tmp} and \File{/var/tmp}
+  directories, but when accessing files via these paths, the
+  system will redirect the access. 
+  The resultant files will actually end up in directories named 
+  \File{tmp} or \File{var/tmp}
+  under the the job's temporary scratch directory. 
   This is useful, because the job's scratch directory will be cleaned up 
-  after the job completes,
+  after the job completes, 
+  two concurrent jobs will not interfere with each other,
   and because jobs will not be able to fill up the real \File{/tmp} directory. 
+  Another use case might be for home directories, which some jobs might want
+  to write to, but that should be cleaned up after each job run.
 
 \end{description}
 
 These macros control if the \Condor{startd} daemon should perform
 backfill computations whenever resources would otherwise be idle.  
 See section~\ref{sec:Backfill} on page~\pageref{sec:Backfill} on
-Configuring Condor for Running Backfill Jobs for details.
+Configuring HTCondor for Running Backfill Jobs for details.
 
 \begin{description}
 
@@ -4255,14 +4269,14 @@ Configuring Condor for Running Backfill Jobs for details.
   
 \label{param:StartBackfill}
 \item[\Macro{START\_BACKFILL}]
-  A boolean expression that is evaluated whenever a Condor resource is in the
+  A boolean expression that is evaluated whenever an HTCondor resource is in the
   Unclaimed/Idle state and the \MacroNI{ENABLE\_BACKFILL} expression
   is \Expr{True}.  
   If \MacroNI{START\_BACKFILL} evaluates to \Expr{True}, the machine
   will enter the Backfill state and attempt to spawn a backfill
   computation. 
   This expression is analogous to the \Macro{START} expression that
-  controls when a Condor resource is available to run normal Condor
+  controls when an HTCondor resource is available to run normal HTCondor
   jobs.
   The default value is \Expr{False} (which means do not spawn a
   backfill job even if the machine is idle and
@@ -4275,7 +4289,7 @@ Configuring Condor for Running Backfill Jobs for details.
 
 \label{param:EvictBackfill}
 \item[\Macro{EVICT\_BACKFILL}]
-  A boolean expression that is evaluated whenever a Condor resource is in the
+  A boolean expression that is evaluated whenever an HTCondor resource is in the
   Backfill state which, when \Expr{True}, indicates the machine should
   immediately kill the currently running backfill computation and
   return to the Owner state.
@@ -4302,17 +4316,17 @@ SMP Machines for details.
 
 \label{param:StartdResourcePrefix}
 \item[\Macro{STARTD\_RESOURCE\_PREFIX}] 
-  A string which specifies what prefix to give the unique Condor
+  A string which specifies what prefix to give the unique HTCondor
   resources that are advertised on SMP machines.
-  Previously, Condor used the term \Term{virtual machine} to describe
-  these resources, so the default value for this setting was ``vm''.
-  However, to avoid confusion with other kinds of virtual machines
-  (the ones created using tools like VMware or Xen), the old
-  \Term{virtual machine} terminology has been changed, and we now use
+  Previously, HTCondor used the term \Term{virtual machine} to describe
+  these resources, so the default value for this setting was \Expr{vm}.
+  However, to avoid confusion with other kinds of virtual machines,
+  such as the ones created using tools like VMware or Xen, the old
+  \Term{virtual machine} terminology has been changed, and has become
   the term \Term{slot}.
-  Therefore, the default value of this prefix is now ``slot''.
-  If sites want to keep using ``vm'', or prefer something other
-  ``slot'', this setting enables sites to define what string the
+  Therefore, the default value of this prefix is now \Expr{slot}.
+  If sites want to continue using \Expr{vm}, or prefer something other
+  \Expr{slot}, this setting enables sites to define what string the
   \Condor{startd} will use to name the individual resources on an SMP
   machine.
 
@@ -4337,10 +4351,10 @@ SMP Machines for details.
   time since the \Condor{startd} was spawned, plus the value of this macro.
   It defaults to 1200 seconds (20 minutes). 
   We do this because if the slot is configured not to care
-  about keyboard activity, we want it to be available to Condor jobs
+  about keyboard activity, we want it to be available to HTCondor jobs
   as soon as the \Condor{startd} starts up, instead of having to wait for 15
   minutes or more (which is the default time a machine must be idle
-  before Condor will start a job).
+  before HTCondor will start a job).
   If you do not want this boost, set the value to 0.  
   If you change your START expression to require more than 15 minutes
   before a job starts, but you still want jobs to start right away on
@@ -4376,7 +4390,7 @@ SMP Machines for details.
 The following settings control the number of slots reported
 for a given SMP host, and what attributes each one has.  
 They are only needed if you do not want to have an SMP machine report
-to Condor with a separate slot for each CPU, with all
+to HTCondor with a separate slot for each CPU, with all
 shared system resources evenly divided among them.
 Please read section~\ref{sec:SMP-Divide} on
 page~\pageref{sec:SMP-Divide} for details on how to properly configure
@@ -4392,9 +4406,9 @@ change to take effect (for example, using
 \Code{condor\_restart -startd}).
 
 \Note Prior to version 6.9.3, any settings that included the term
-``slot'' used to use ``virtual machine'' or ``vm''.
-If you're looking for information about one of these older settings,
-search for the corresponding attribute names using ``slot'', instead.
+\Expr{slot} used to use virtual machine or \Expr{vm}.
+If searching for information about one of these older settings,
+search for the corresponding attribute names using \Expr{slot}, instead.
 
 \begin{description}
 
@@ -4436,6 +4450,21 @@ search for the corresponding attribute names using ``slot'', instead.
   leftover resources.
   In doing so, the \Condor{schedd} can claim multiple dynamic slots 
   without waiting for a negotiation cycle.
+
+\label{param:MachineResourceNames}
+\item[\Macro{MACHINE\_RESOURCE\_NAMES}]
+  A comma and/or space separated list of resource names that represent
+  custom resources specific to a machine.
+  These resources are further intended to be statically divided or
+  partitioned, and these resource names identify the configuration variables
+  that define the partitioning.
+
+\label{param:MachineResourceResourcename}
+\item[\Macro{MACHINE\_RESOURCE\_<name>}]
+  An integer that specifies the quantity of the customized local machine
+  resource available for an SMP machine.
+  The portion of this configuration variable's name identified with
+  \Expr{<name>} is as defined in \Macro{MACHINE\_RESOURCE\_NAMES}.
 
 \label{param:MustModifyRequestExprs}
 \item[\Macro{MUST\_MODIFY\_REQUEST\_EXPRS}]
@@ -4480,7 +4509,7 @@ search for the corresponding attribute names using ``slot'', instead.
 \label{param:NumSlotsTypeN}
 \item[\Macro{NUM\_SLOTS\_TYPE\_<N>}]
   This macro controls how many of a given slot type
-  are actually reported to Condor.
+  are actually reported to HTCondor.
   There is no default.
 
 \label{param:NumSlots}
@@ -4490,19 +4519,19 @@ search for the corresponding attribute names using ``slot'', instead.
   type settings described above are not being used.
   The default is one slot for each CPU.
   This setting can be used to reserve some CPUs on an SMP which would
-  not be reported to the Condor pool.
+  not be reported to the HTCondor pool.
   This value cannot be used to
-  make Condor advertise more slots than there are CPUs on the machine.
+  make HTCondor advertise more slots than there are CPUs on the machine.
   To do that, use \Macro{NUM\_CPUS}.
 
 \label{param:AllowVMCruft}
 \item[\Macro{ALLOW\_VM\_CRUFT}]
-  A boolean value that Condor sets and uses internally, currently
+  A boolean value that HTCondor sets and uses internally, currently
   defaulting to \Expr{True}.  When \Expr{True},
-  Condor looks for configuration variables named with the
+  HTCondor looks for configuration variables named with the
   previously used string \MacroNI{VM} after searching unsuccessfully
   for variables named with the currently used string \MacroNI{SLOT}.
-  When \Expr{False}, Condor does \emph{not} look for variables named
+  When \Expr{False}, HTCondor does \emph{not} look for variables named
   with the previously used string \MacroNI{VM} after searching
   unsuccessfully for the string \MacroNI{SLOT}. 
 
@@ -4587,8 +4616,9 @@ Power Management for more details.
   If used, a value 300 (5 minutes) is recommended.
 
   As a special case, the interval is ignored when the 
-  machine has just returned from a low power state (excluding 
-  shutdown (5)).  In order to avoid machines from volleying between 
+  machine has just returned from a low power state, 
+  excluding \Expr{"SHUTDOWN"}.
+  In order to avoid machines from volleying between 
   a running state and a low power state, an hour of uptime is enforced
   after a machine has been woken.  After the hour has passed,
   regular checks resume.
@@ -4596,41 +4626,41 @@ Power Management for more details.
 \label{param:Hibernate}
 \item[\Macro{HIBERNATE}]
   A string expression that represents lower power state.  When this
-  state name evaluates to a valid non-``NONE'' state (see below),
-  causes Condor to put the machine into the specified low power state.
+  state name evaluates to a valid state other than \Expr{"NONE"},
+  causes HTCondor to put the machine into the specified low power state.
   The following names are supported
   (and are not case sensitive):
 
   \begin{itemize}
-  \item[] "NONE", "0": No-op: do not enter a low power state
-  \item[] "S1",   "1", "STANDBY", "SLEEP": On Windows, this is Sleep (standby)
-  \item[] "S2",   "2": On Windows, this is Sleep (standby)
-  \item[] "S3",   "3", "RAM", "MEM", "SUSPEND": On Windows, this is Sleep (standby)
-  \item[] "S4",   "4", "DISK", "HIBERNATE": Hibernate
-  \item[] "S5",   "5", "SHUTDOWN", "OFF": Shutdown (soft-off)
+  \item[] \Expr{"NONE"}, \Expr{"0"}: No-op; do not enter a low power state
+  \item[] \Expr{"S1"},   \Expr{"1"}, \Expr{"STANDBY"}, \Expr{"SLEEP"}: On Windows, this is Sleep (standby)
+  \item[] \Expr{"S2"},   \Expr{"2"}: On Windows, this is Sleep (standby)
+  \item[] \Expr{"S3"},   \Expr{"3"}, \Expr{"RAM"}, \Expr{"MEM"}, \Expr{"SUSPEND"}: On Windows, this is Sleep (standby)
+  \item[] \Expr{"S4"},   \Expr{"4"}, \Expr{"DISK"}, \Expr{"HIBERNATE"}: Hibernate
+  \item[] \Expr{"S5"},   \Expr{"5"}, \Expr{"SHUTDOWN"}, \Expr{"OFF"}: Shutdown (soft-off)
   \end{itemize}
   
   The \MacroNI{HIBERNATE} expression is written in terms of the S-states
   as defined in the Advanced Configuration and Power Interface 
-  (ACPI) specification.  The S-states take the form S$n$, where $n$ is 
-  an integer in the range $0$ to $5$, inclusive.  The number that results 
+  (ACPI) specification.  The S-states take the form S<n>, where <n> is 
+  an integer in the range 0 to 5, inclusive.  The number that results 
   from evaluating the expression determines which S-state to enter. The 
-  $n$ from S$n$ notation was adopted because at this junction in time 
+  notation was adopted because
   it appears to be the standard naming scheme for power states on several
-  popular Operating Systems, including various flavors of Windows and Linux
-  distributions.  The other strings ("RAM", "DISK", etc.) are
-  provided for ease of configuration.
+  popular operating systems, including various flavors of Windows and Linux
+  distributions.  The other strings, such as \Expr{"RAM"} and \Expr{"DISK"},
+  are provided for ease of configuration.
 
   Since this expression is evaluated in the context of each slot on the
   machine, any one slot has veto power over the other slots.  If the 
-  evaluation of \MacroNI{HIBERNATE} in one slot evaluates to "NONE"
-  or "0", then the machine will not be placed into a low power
+  evaluation of \MacroNI{HIBERNATE} in one slot evaluates to \Expr{"NONE"}
+  or \Expr{"0"}, then the machine will not be placed into a low power
   state.  On the other 
   hand, if all slots evaluate to a non-zero value, but differ in value, 
   then the largest value is used as the representative power state.
 
   Strings that do not match any in the table above are treated as
-  "NONE".
+  \Expr{"NONE"}.
 
 \label{param:Unhibernate}
 \item[\Macro{UNHIBERNATE}]
@@ -4665,7 +4695,7 @@ Power Management for more details.
   in the detection of low power states and switching to the low power states.
   The default value is \File{\$(LIBEXEC)/power\_state}.  
   A default executable in that location which meets these specifications is
-  shipped with Condor. 
+  shipped with HTCondor. 
 
   The \Condor{startd} initially invokes this plug-in with both the
   value defined for \MacroNI{HIBERNATION\_PLUGIN\_ARGS}
@@ -4680,7 +4710,7 @@ Power Management for more details.
   the configuration variable \MacroNI{HIBERNATE}.
   The optional attribute \Attr{HibernationMethod} specifies a string 
   which describes the mechanism used by the plug-in.
-  The default Linux plug-in shipped with Condor will produce 
+  The default Linux plug-in shipped with HTCondor will produce 
   one of the strings
   \verb@NONE@, \verb@/sys@, \verb@/proc@, or \verb@pm-utils@.
   The optional attribute \Attr{HibernationRawMask}
@@ -4711,9 +4741,9 @@ Power Management for more details.
 \label{param:LinuxHibernationMethod}
 \item[\Macro{LINUX\_HIBERNATION\_METHOD}]
   A string that can be used to override the default search used by
-  Condor on Linux platforms to detect the hibernation method to use.
+  HTCondor on Linux platforms to detect the hibernation method to use.
   This is used by the default hibernation plug-in executable that is
-  shipped with Condor.  The default behavior orders its search with:
+  shipped with HTCondor.  The default behavior orders its search with:
   \begin{enumerate}
   \item Detect and use the \Prog{pm-utils} command line tools.
     The corresponding string is defined with \verb@"pm-utils"@. 
@@ -4838,7 +4868,7 @@ These macros control the \Condor{schedd}.
 \item[\Macro{STARTER\_LOCAL}]
   The complete path and executable name of the \Condor{starter} to
   run for \SubmitCmd{local} universe jobs.  This variable's value
-  is defined in the initial configuration provided with Condor as
+  is defined in the initial configuration provided with HTCondor as
   \footnotesize
   \begin{verbatim}
   STARTER_LOCAL = $(SBIN)/condor_starter
@@ -4846,7 +4876,7 @@ These macros control the \Condor{schedd}.
   \normalsize
   This variable would only be modified or hand added into 
   the configuration for a pool to be upgraded from one
-  running a version of Condor that existed before the
+  running a version of HTCondor that existed before the
   \SubmitCmd{local} universe to one that includes the
   \SubmitCmd{local} universe, but without utilizing the newer, provided
   configuration files.
@@ -5145,10 +5175,10 @@ MAX_JOBS_RUNNING	= \
   causing keep alive messages to be sent from the \Condor{startd} to the
   \Condor{schedd} by TCP during a claim.
   When \Expr{False}, the \Condor{schedd} daemon sends keep alive signals
-  to the the \Condor{startd}, reversing the direction.
-  If both \Condor{startd} and \Condor{schedd} daemons are Condor version 7.5.4
+  to the \Condor{startd}, reversing the direction.
+  If both \Condor{startd} and \Condor{schedd} daemons are HTCondor version 7.5.4
   or more recent, this variable is only used by the \Condor{schedd} daemon.
-  For earlier Condor versions, the variable must be set to the same value,
+  For earlier HTCondor versions, the variable must be set to the same value,
   and it must be set for both daemons.
 
 \label{param:RequestClaimTimeout}
@@ -5241,14 +5271,29 @@ MAX_JOBS_RUNNING	= \
   are given \Term{super-user access} to the job queue, meaning that they can
   modify or delete the job ClassAds of other users.  When not on this list,
   users can only modify or delete their own ClassAds from the job queue.
-  Whatever user name corresponds with the UID that Condor is running as --
+  Whatever user name corresponds with the UID that HTCondor is running as --
   usually user \Login{condor} --
   will automatically be included in this list,
-  because that is needed for Condor's proper functioning.
-  See section~\ref{sec:uids} on UIDs in Condor for more details on this.
+  because that is needed for HTCondor's proper functioning.
+  See section~\ref{sec:uids} on UIDs in HTCondor for more details on this.
   By default, the Unix user \Login{root} and the Windows user 
   \Login{administrator} are given the ability to remove other user's jobs,
   in addition to user \Login{condor}.
+
+\label{param:QueueSuperUserMayImpersonate}
+\item[\Macro{QUEUE\_SUPER\_USER\_MAY\_IMPERSONATE}]
+  A regular expression that matches the user names 
+  (that is, job owner names) 
+  that the queue super user may impersonate when managing jobs.
+  When not set, the default behavior is to allow impersonation of any
+  user who has had a job in the queue during the life of the \Condor{schedd}.
+  For proper functioning of the \Condor{shadow}, the \Condor{gridmanager}, and
+  the \Condor{job\_router}, this expression, if set, must match the owner
+  names of all jobs that these daemons will manage.  
+  Note that a regular expression that matches only part of the user name 
+  is still considered a match.  
+  If acceptance of partial matches is not desired, 
+  the regular expression should begin with \verb|^| and end with \verb|$|.
 
 \label{param:SystemJobMachineAttrs}
 \item[\Macro{SYSTEM\_JOB\_MACHINE\_ATTRS}]
@@ -5301,7 +5346,7 @@ MAX_JOBS_RUNNING	= \
 
   See the description of \MacroNI{MASTER\_NAME} in
   section~\ref{param:MasterName} on page~\pageref{param:MasterName}
-  for defaults and composition of valid Condor daemon names.
+  for defaults and composition of valid HTCondor daemon names.
   Also, note that if the \MacroNI{MASTER\_NAME} setting is defined for
   the \Condor{master} that spawned a given \Condor{schedd}, that name
   will take precedence over whatever is defined in
@@ -5385,7 +5430,7 @@ MAX_JOBS_RUNNING	= \
   This macro determines the minimum period,
   in seconds, between evaluation of periodic job control expressions,
   such as periodic\_hold, periodic\_release, and periodic\_remove,
-  given by the user in a Condor submit file. By default, this value is
+  given by the user in an HTCondor submit file. By default, this value is
   60 seconds.  A value of 0 prevents the \Condor{schedd} from
   performing the periodic evaluations.
 
@@ -5394,8 +5439,8 @@ MAX_JOBS_RUNNING	= \
   This macro determines the maximum period,
   in seconds, between evaluation of periodic job control expressions,
   such as periodic\_hold, periodic\_release, and periodic\_remove,
-  given by the user in a Condor submit file. By default, this value is
-  1200 seconds.  If Condor is behind on processing events, the actual
+  given by the user in an HTCondor submit file. By default, this value is
+  1200 seconds.  If HTCondor is behind on processing events, the actual
   period between evaluations may be higher than specified.
 
 \label{param:PeriodicExprTimeslice}
@@ -5454,23 +5499,24 @@ SYSTEM_PERIODIC_HOLD = \
 \label{param:SystemPeriodicRelease}
 \item[\Macro{SYSTEM\_PERIODIC\_RELEASE}]
   This expression behaves identically
-  to the job expression \AdAttr{periodic\_release}, but it is evaluated by
+  to a job's definition of a \SubmitCmd{periodic\_release} expression
+  in a submit description file,
+  but it is evaluated by
   the \Condor{schedd} daemon individually for each job in the queue.
   It defaults to \Expr{False}.
-  When \Expr{True}, it causes a held job to return to the idle state.
+  When \Expr{True}, it causes a Held job to return to the Idle state.
   Here is an example
   that releases jobs from hold if they have tried to run less than 20
   times, have most recently been on hold for over 20 minutes, and have
-  gone on hold due to ``Connection timed out'' when trying to execute
+  gone on hold due to \Expr{Connection timed out} when trying to execute
   the job, because the file system containing the job's executable is
   temporarily unavailable.
 
 \footnotesize
 \begin{verbatim}
 SYSTEM_PERIODIC_RELEASE = \
-  (JobRunCount < 20 && CurrentTime - EnteredCurrentStatus > 1200 ) && ( \
-    (HoldReasonCode == 6 && HoldReasonSubCode == 110) \
-  )
+  (JobRunCount < 20 && (CurrentTime - EnteredCurrentStatus) > 1200 ) &&  \
+    (HoldReasonCode == 6 && HoldReasonSubCode == 110) 
 \end{verbatim} 
 \normalsize
 
@@ -5546,12 +5592,12 @@ SYSTEM_PERIODIC_REMOVE = \
 
 \label{param:ScheddBackupSpool}
 \item[\Macro{SCHEDD\_BACKUP\_SPOOL}]
-  This macro is used to enable the
-  \Condor{schedd} to make a backup of the job queue as it starts.  If
-  set to ``True'', the \Condor{schedd} will create host specific a
+  A boolean value that, when \Expr{True}, causes the
+  \Condor{schedd} to make a backup of the job queue as it starts.
+  When \Expr{True}, the \Condor{schedd} creates a host-specific
   backup of the current spool file to the spool directory.  This
-  backup file will be overwritten each time the \Condor{schedd}
-  starts.  \Macro{SCHEDD\_BACKUP\_SPOOL} defaults to ``False''.
+  backup file will be overwritten each time the \Condor{schedd} starts.
+  Defaults to \Expr{False}.
 
 \label{param:ScheddPreemptionRequirements}
 \item[\Macro{SCHEDD\_PREEMPTION\_REQUIREMENTS}]
@@ -5581,14 +5627,14 @@ SYSTEM_PERIODIC_REMOVE = \
 
 \label{param:PerJobHistoryDir}
 \item[\Macro{PER\_JOB\_HISTORY\_DIR}]
-  If set to a directory writable by the Condor user, when a job
-  leaves the \Condor{schedd}'s queue, a copy of its ClassAd will
-  be written in that directory.  The files are named ``history.''
-  with the job's cluster and process number appended.  For
-  example, job 35.2 will result in a file named ``history.35.2''.
-  Condor does not rotate or delete the files, so without an
-  external entity to clean the directory it can grow very large.
-  This option defaults to being unset.  When not set, no such
+  If set to a directory writable by the HTCondor user, when a job
+  leaves the \Condor{schedd}'s queue, a copy of the job's ClassAd will
+  be written in that directory.  The files are named \File{history},
+  with the job's cluster and process number appended.  
+  For example, job 35.2 will result in a file named \File{history.35.2}.
+  HTCondor does not rotate or delete the files, so without an
+  external entity to clean the directory, it can grow very large.
+  This option defaults to being unset.  When not set, no
   files are written.
 
 \label{param:DedicatedSchedulerUseFifo}
@@ -5631,7 +5677,7 @@ SYSTEM_PERIODIC_REMOVE = \
   default value of this variable is zero,
   which represents the behavior of having no maximum cluster id value. 
 
-  Note that Condor does not check for nor take responsibility for duplicate
+  Note that HTCondor does not check for nor take responsibility for duplicate
   cluster ids for queued jobs. 
   If \MacroNI{SCHEDD\_CLUSTER\_MAXIMUM\_VALUE} is set to a non-zero value,
   the system administrator is
@@ -5680,7 +5726,7 @@ SYSTEM_PERIODIC_REMOVE = \
 \label{param:ScheddJobQueueLogFlushDelay}
 \item[\Macro{SCHEDD\_JOB\_QUEUE\_LOG\_FLUSH\_DELAY}]
   An integer which specifies an upper bound in seconds on how long it
-  takes for changes to the job ClassAd to be visible to the Condor Job Router.
+  takes for changes to the job ClassAd to be visible to the HTCondor Job Router.
   The default is 5 seconds.
 
 \label{param:RotateHistoryDaily}
@@ -5931,7 +5977,7 @@ These settings affect the \Condor{starter}.
 
 \label{param:JobReniceIncrement}
 \item[\Macro{JOB\_RENICE\_INCREMENT}]
-  When the \Condor{starter} spawns a Condor job, it can do so with a
+  When the \Condor{starter} spawns an HTCondor job, it can do so with a
   \Term{nice-level}.
   A nice-level is a
   Unix mechanism that allows users to assign their own processes a lower 
@@ -5940,10 +5986,10 @@ These settings affect the \Condor{starter}.
   For machines with lots
   of real memory and swap space, such that the only scarce resource is CPU time,
   use this macro in conjunction with a policy that
-  allows Condor to always start jobs on the machines. 
-  Condor jobs would always run,
+  allows HTCondor to always start jobs on the machines. 
+  HTCondor jobs would always run,
   but interactive response on the machines would never suffer.
-  A user most likely will not notice Condor is
+  A user most likely will not notice HTCondor is
   running jobs.  See section~\ref{sec:Configuring-Policy} on
   Startd Policy Configuration for more details on setting up a
   policy for starting and stopping jobs on a given machine.
@@ -5995,58 +6041,63 @@ These settings affect the \Condor{starter}.
 
 \label{param:UserJobWrapper} 
 \item[\Macro{USER\_JOB\_WRAPPER}]
-  The full path to an executable or script.
-  This macro allows an administrator to specify a wrapper script to handle the
-  execution of all user jobs.  
-  If specified, Condor never directly executes a job, but instead
-  invokes the program specified by this macro.
+  The full path and file name of an executable or script.
+  If specified, HTCondor never directly executes a job, but instead
+  invokes this executable,
+  allowing an administrator to specify the executable (wrapper script) 
+  that will handle the execution of all user jobs.  
   The command-line arguments passed to this program will include the
-  full-path to the actual user job which should be executed, followed by all
+  full path to the actual user job which should be executed, followed by all
   the command-line parameters to pass to the user job.
-  This wrapper program must ultimately replace its image with the user job;
-  in other words,
-  it must \Procedure{exec} the user job, not \Procedure{fork} it.
+  This wrapper script must ultimately replace its image with the user job;
+  thus, it must \Procedure{exec} the user job, not \Procedure{fork} it.
 
-  For Bourne type shells (sh, bash, ksh), the last line should be:
+  For Bourne type shells (\Prog{sh}, \Prog{bash}, \Prog{ksh}), 
+  the last line should be:
 \begin{verbatim}
         exec "$@"
 \end{verbatim}
-  For the C type shells (csh, tcsh), the last line should be:
+  For the C type shells (\Prog{csh}, \Prog{tcsh}), the last line should be:
 \begin{verbatim}
         exec $*:q
 \end{verbatim}
 
-	These precise syntaxes are needed to correctly handle program arguments
-which contain white space.
-
+  This syntax is precise, to correctly handle program arguments
+  which contain white space characters.
 
   For Windows machines, the wrapper will either be
-  a batch script (with a file extension of \File{.bat} or \File{.cmd})
-  or an executable (with a file extension of \File{.exe} or \File{.com}).
+  a batch script with a file extension of \File{.bat} or \File{.cmd},
+  or an executable with a file extension of \File{.exe} or \File{.com}.
 
-  If the wrapper encounters an error, and is unable to run the user
-  job, it is important that the wrapper indicate this to the Condor system
-  so that Condor does not assign the exit code of the wrapper to the
-  user.  To do this, the wrapper should write a useful error message
-  to the file named in the environment variable \Env{\_CONDOR\_WRAPPER\_ERROR\_FILE},
-  and exit with a non-zero value.
-  If this file is created by the wrapper, Condor assumes that the wrapper
-  has failed, and will mark the job as idle in the queue, and try to 
-  re-run it.  The starter will also copy the contents of this file to
-  the starter log, so the administrator can debug the problem.
+  If the wrapper script encounters an error as it runs,
+  and it is unable to run the user job, 
+  it is important that the wrapper script indicate this to the HTCondor system
+  so that HTCondor does not assign the exit code of the wrapper script to the
+  job.  
+  To do this, the wrapper script should write a useful error message
+  to the file named in the environment variable 
+  \Env{\_CONDOR\_WRAPPER\_ERROR\_FILE},
+  and then the wrapper script should exit with a non-zero value.
+  If this file is created by the wrapper script, 
+  HTCondor assumes that the wrapper script has failed, 
+  and HTCondor will place the job back in the queue marking it as Idle, 
+  such that the job will again be run.
+  The \Condor{starter} will also copy the contents of this error file to
+  the \Condor{starter} log, so the administrator can debug the problem.
 
-  When a wrapper is in use, the executable of a job submission may be
-  kept relative and resolved by the user's path by setting:
+  When a wrapper script is in use, the executable of a job submission may be
+  specified by a relative path, as long as the submit description file
+  also contains:
 \begin{verbatim}
         +PreserveRelativeExecutable = True
 \end{verbatim}
-  in the job submission file.  If this is set, then the executable does
-  not need to be fully qualified, for example
+  For example,
 \begin{verbatim}
         # Let this executable be resolved by user's path in the wrapper
         cmd = sleep
+        +PreserveRelativeExecutable = True
 \end{verbatim}
-  As opposed to
+  Without this extra attribute:
 \begin{verbatim}
         # A typical fully-qualified executable path
         cmd = /bin/sleep
@@ -6055,12 +6106,14 @@ which contain white space.
 
 \label{param:UseVisibleDesktop} 
 \item[\Macro{USE\_VISIBLE\_DESKTOP}]
-  This setting is only meaningful on Windows machines.  If True, Condor will
+  This boolean variable is only meaningful on Windows machines.  
+  If \Expr{True}, HTCondor will
   allow the job to create windows on the desktop of the execute machine and
   interact with the job.  This is particularly useful for debugging why an
-  application will not run under Condor.  If False, Condor uses the default
+  application will not run under HTCondor.  
+  If \Expr{False}, HTCondor uses the default
   behavior of creating a new, non-visible desktop to run the job on.
-  See section~\ref{sec:platform-windows} for details on how Condor 
+  See section~\ref{sec:platform-windows} for details on how HTCondor 
   interacts with the desktop.
 
 \label{param:StarterJobEnvironment}
@@ -6090,7 +6143,7 @@ which contain white space.
 \item[\Macro{NAMED\_CHROOT}]
   A comma and/or space separated list of full paths to one or more directories,
   under which the \Condor{starter} may run a chroot-ed job.
-  This allows Condor to invoke \Procedure{chroot} before launching a job,
+  This allows HTCondor to invoke \Procedure{chroot} before launching a job,
   if the job requests such by defining the job ClassAd attribute
   \Attr{RequestedChroot} with a directory that matches one in this list.
   There is no default value for this variable.
@@ -6108,14 +6161,14 @@ which contain white space.
 \item[\Macro{ENFORCE\_CPU\_AFFINITY}]
   A boolean value that defaults to \Expr{False}.  When \Expr{False},
   the affinity of jobs and their descendants to a CPU is not enforced.
-  When \Expr{True}, Condor jobs and their descendants maintain their
+  When \Expr{True}, HTCondor jobs and their descendants maintain their
   affinity to a CPU.
   When \Expr{True}, more fine grained affinities may be specified with
   \MacroNI{SLOT<N>\_CPU\_AFFINITY}.
 
 \label{param:SlotNCpuAffinity} 
 \item[\Macro{SLOT<N>\_CPU\_AFFINITY}]
-  A comma separated list of cores to which a Condor job running on
+  A comma separated list of cores to which an HTCondor job running on
   a specific slot given by the value of \MacroNI{<N>} show affinity.
   Note that slots are numbered beginning with the value 1,
   while CPU cores are numbered beginning with the value 0.
@@ -6149,7 +6202,7 @@ which contain white space.
 \label{param:UsePSS} 
 \item[\Macro{USE\_PSS}]
   A boolean value, that when \Expr{True} causes the \Condor{starter} to
-  measure the PSS (Proportional Set Size) of each Condor job.
+  measure the PSS (Proportional Set Size) of each HTCondor job.
   The default value is \Expr{True}.
   When running many short lived jobs, performance problems in 
   the \Condor{procd} have been observed, and a setting of \Expr{False}
@@ -6264,7 +6317,7 @@ jobs at your site use the following macros:
 \Note The \Macro{APPEND\_RANK\_STANDARD} and 
 \Macro{APPEND\_RANK\_VANILLA} macros were called
 \Macro{APPEND\_PREF\_STANDARD} and
-\Macro{APPEND\_PREF\_VANILLA} in previous versions of Condor.
+\Macro{APPEND\_PREF\_VANILLA} in previous versions of HTCondor.
 
 In addition, you may provide default \AdAttr{Rank} expressions if your users
 do not specify their own with:
@@ -6298,7 +6351,7 @@ do not specify their own with:
 
 \label{param:DefaultBufferSize}
 \item[\Macro{DEFAULT\_IO\_BUFFER\_SIZE}]
-  Condor keeps a buffer of recently-used data for each file an
+  HTCondor keeps a buffer of recently-used data for each file an
   application opens.  This macro specifies the default maximum number
   of bytes to be buffered for each open file at the executing machine.
   The \Condor{status} \MacroNI{buffer\_size} command will override this
@@ -6308,9 +6361,9 @@ do not specify their own with:
 \label{param:DefaultBufferBlockSize}
 \item[\Macro{DEFAULT\_IO\_BUFFER\_BLOCK\_SIZE}] 
   When buffering is enabled,
-  Condor will attempt to consolidate small read and write operations
+  HTCondor will attempt to consolidate small read and write operations
   into large blocks.  This macro specifies the default block size
-  Condor will use.  The \Condor{status} \MacroNI{buffer\_block\_size}
+  HTCondor will use.  The \Condor{status} \MacroNI{buffer\_block\_size}
   command will override this default.  If this macro is undefined, a
   default size of 32 KB will be used.
 
@@ -6356,9 +6409,11 @@ do not specify their own with:
 
 \label{param:SubmitExprs}
 \item[\Macro{SUBMIT\_EXPRS}]
-  A comma-separated list of ClassAd attributes to be inserted into all 
-  the job ClassAds that \Condor{submit} creates.  This is equivalent
-  to the \verb@"+"@ syntax in a submit description file.
+  A comma-separated and/or space-separated 
+  list of ClassAd attribute names for which the attribute and value will
+  be inserted into all the job ClassAds that \Condor{submit} creates.  
+  In this way,
+  it is like the \verb@"+"@ syntax in a submit description file.
   Attributes defined in the submit description file with \verb@"+"@ will
   override attributes defined in the configuration file with
   \MacroNI{SUBMIT\_EXPRS}. 
@@ -6394,6 +6449,13 @@ do not specify their own with:
   A boolean value that defaults to \Expr{False}.
   When \Expr{True}, \Condor{submit} issues warnings when a job requests
   features that are no longer supported. 
+
+\label{param:InteractiveSubmitFile}
+\item[\Macro{INTERACTIVE\_SUBMIT\_FILE}]
+  The path and file name of a submit description file that \Condor{submit}
+  will use in the specification of an interactive job.
+  The default is \File{\MacroUNI{RELEASE\_DIR}/libexec/interactive.sub}
+  when not defined.
 
 \end{description}
 
@@ -6482,7 +6544,7 @@ These macros affect the \Condor{collector}.
   only machine ClassAds advertising the expected
   fixed port are accepted.  As a convenience, before evaluating the
   expression, some basic sanity checks are performed on the ClassAd to
-  ensure that all of the ClassAd attributes used by Condor to contain
+  ensure that all of the ClassAd attributes used by HTCondor to contain
   IP:port information are consistent.  To validate this
   information, the attribute to check is \AdAttr{TARGET.MyAddress}.
  
@@ -6501,32 +6563,32 @@ These macros affect the \Condor{collector}.
 \label{param:CondorDevelopers}
 \item[\Macro{CONDOR\_DEVELOPERS}]
   By default,
-  Condor will send e-mail once per week to this address with the output
+  HTCondor will send e-mail once per week to this address with the output
   of the \Condor{status} command, which lists how many machines
   are in the pool and how many are running jobs.  The default
   value of \Email{condor-admin@cs.wisc.edu} will send this report to
-  the Condor Team developers at the University of Wisconsin-Madison.
-  The Condor Team uses
+  the HTCondor Team developers at the University of Wisconsin-Madison.
+  The HTCondor Team uses
   these weekly status messages in order to have some idea as to how
-  many Condor pools exist in the world.  We appreciate
+  many HTCondor pools exist in the world.  We appreciate
   getting the reports, as this is one way we can convince funding
-  agencies that Condor is being used in the real world.  
-  If you do not wish this information to be sent to the Condor Team,
+  agencies that HTCondor is being used in the real world.  
+  If you do not wish this information to be sent to the HTCondor Team,
   explicitly set the value to \Expr{NONE} to disable this feature,
   or replace the
   address with a desired location.  
-  If undefined (commented out) in the configuration file, Condor follows
+  If undefined (commented out) in the configuration file, HTCondor follows
   its default behavior.
 
 \label{param:CollectorName}
 \item[\Macro{COLLECTOR\_NAME}]
   This macro is used to specify a short description of your pool.
   It should be about 20 characters long.  For example, the name of the
-  UW-Madison Computer Science Condor Pool is \AdStr{UW-Madison CS}.  
+  UW-Madison Computer Science HTCondor Pool is \AdStr{UW-Madison CS}.  
   While this macro might seem similar to \MacroNI{MASTER\_NAME} or
   \MacroNI{SCHEDD\_NAME}, it is unrelated.
   Those settings are used to uniquely identify (and locate) a specific
-  set of Condor daemons, if there are more than one running on the same
+  set of HTCondor daemons, if there are more than one running on the same
   machine.
   The \MacroNI{COLLECTOR\_NAME} setting is just used as a
   human-readable string to describe the pool, which is included in the
@@ -6541,11 +6603,11 @@ These macros affect the \Condor{collector}.
   the number of total machines, the number of jobs submitted, the
   number of machines running jobs, the host name of the central
   manager, and the \MacroUNI{COLLECTOR\_NAME}.  These
-  updates help the Condor Team see how Condor is being used around the world.
+  updates help the HTCondor Team see how HTCondor is being used around the world.
   By default, they will be sent to \File{condor.cs.wisc.edu}.
   To discontinue sending updates,
   explicitly set this macro to \Expr{NONE}. 
-  If undefined or commented out in the configuration file, Condor follows
+  If undefined or commented out in the configuration file, HTCondor follows
   its default behavior.
 
 \label{param:CollectorUpdateInterval}
@@ -6633,7 +6695,7 @@ These macros affect the \Condor{collector}.
   If enabled, the \Condor{collector} will insert several attributes
   into the ClassAds that it stores and sends.  ClassAds without the
   \Attr{UpdateSequenceNumber} and \Attr{DaemonStartTime} attributes will not
-  be counted, and will not have attributes inserted (all modern Condor
+  be counted, and will not have attributes inserted (all modern HTCondor
   daemons which publish ClassAds publish these attributes).
 
   \index{ClassAd attribute added by the condor\_collector!UpdatesTotal}
@@ -6746,7 +6808,7 @@ These macros affect the \Condor{collector}.
 
 \end{description}
 
-The following macros control where, when, and for how long Condor 
+The following macros control where, when, and for how long HTCondor 
 persistently stores absent ClassAds.
 See section~\ref{sec:Absent-Ads} on 
 page~\pageref{sec:Absent-Ads} for more details.
@@ -6805,7 +6867,7 @@ These macros affect the \Condor{negotiator}.
   that must pass before a new negotiation cycle may start.
   The default value is 20.
   \MacroNI{NEGOTIATOR\_CYCLE\_DELAY} is intended only for use by
-  Condor experts.
+  HTCondor experts.
 
 \label{param:NegotiatorTimeout}
 \item[\Macro{NEGOTIATOR\_TIMEOUT}]
@@ -6840,30 +6902,31 @@ These macros affect the \Condor{negotiator}.
 
 \label{param:DefaultPrioFactor} 
 \item[\Macro{DEFAULT\_PRIO\_FACTOR}]
-  This macro sets the priority factor for local users. See
-  section~\ref{sec:user-priority-explained}
-  on User Priorities for details.  Defaults to 1.
+  Sets the priority factor for local users, as described in
+  section~\ref{sec:UserPrio}.
+  Defaults to 1.0.
 
 \label{param:NiceUserPrioFactor} 
 \item[\Macro{NICE\_USER\_PRIO\_FACTOR}]
-  This macro sets the priority factor for nice users. See
-  section~\ref{sec:user-priority-explained}
-  on User Priorities for details.  Defaults to 10000000.
+  Sets the priority factor for nice users, as described in
+  section~\ref{sec:UserPrio}.
+  Defaults to 10000000.
 
 \label{param:RemotePrioFactor} 
 \item[\Macro{REMOTE\_PRIO\_FACTOR}]
-  This macro defines the priority factor for remote users (users who
-  who do not belong to the accountant's local domain - see
-  below). See section~\ref{sec:user-priority-explained}
-  on User Priorities for details.  Defaults to 10000.
+  Defines the priority factor for remote users,
+  which are those users who who do not belong to the local domain.
+  See section~\ref{sec:UserPrio} for details.  
+  Defaults to 10000.
 
 \label{param:AccountantLocalDomain} 
 \item[\Macro{ACCOUNTANT\_LOCAL\_DOMAIN}]
-  This macro is used to decide if a user is local or remote. A user
-  is considered to be in the local domain if the UID\_DOMAIN matches
-  the value of this macro. Usually, this macro is set
-  to the local UID\_DOMAIN. If it is not defined, all users are considered
-  local.
+  Describes the local UID domain.
+  This variable is used to decide if a user is local or remote. 
+  A user is considered to be in the local domain if their UID domain matches
+  the value of this variable. Usually, this variable is set
+  to the local UID domain. 
+  If not defined, all users are considered local.
 
 \label{param:MaxAccountantDatabaseSize}
 \item[\Macro{MAX\_ACCOUNTANT\_DATABASE\_SIZE}] 
@@ -6926,7 +6989,7 @@ These macros affect the \Condor{negotiator}.
   overall throughput.  For example, it is commonly used to minimize
   preemption, even if the job rank prefers a machine that is busy.  If
   undefined, this expression has no effect on the ranking of matches.
-  The standard configuration file shipped with Condor specifies an
+  The standard configuration file shipped with HTCondor specifies an
   expression to steer jobs away from busy resources:
 
 \begin{verbatim}
@@ -6974,7 +7037,7 @@ These macros affect the \Condor{negotiator}.
   but attributes of the currently running job that need to be accessed
   in \MacroNI{PREEMPTION\_REQUIREMENTS} can be placed in the machine ClassAd
   using \Macro{STARTD\_JOB\_EXPRS}.
-  If not explicitly set in the Condor configuration file, the default value
+  If not explicitly set in the HTCondor configuration file, the default value
   for this expression is \Expr{True}.
   \MacroNI{PREEMPTION\_REQUIREMENTS} should include the term 
   \Expr{(SubmitterGroup =?= RemoteGroup)} if a preemption policy that respects
@@ -7041,7 +7104,7 @@ These macros affect the \Condor{negotiator}.
   share of the pool should be.
  
   The name \MacroNI{NEGOTIATOR\_SLOT\_POOLSIZE\_CONSTRAINT} replaces
-  \MacroNI{GROUP\_DYNAMIC\_MACH\_CONSTRAINT} as of Condor version 7.7.3.
+  \MacroNI{GROUP\_DYNAMIC\_MACH\_CONSTRAINT} as of HTCondor version 7.7.3.
   Using the older name causes a warning to be logged, although the
   behavior is unchanged.
 
@@ -7104,7 +7167,7 @@ These macros affect the \Condor{negotiator}.
 
   The expressions inserted by the \Condor{negotiator} may be useful in 
   \Condor{startd} policy expressions,
-  when the \Condor{startd} belongs to multiple Condor pools.
+  when the \Condor{startd} belongs to multiple HTCondor pools.
 
 \label{param:NegotiatorMatchlistCaching}
 \item[\Macro{NEGOTIATOR\_MATCHLIST\_CACHING}]
@@ -7123,7 +7186,7 @@ These macros affect the \Condor{negotiator}.
   given resource to potentially match multiple times per \Condor{negotiator}
   pass, \MacroNI{NEGOTIATOR\_MATCHLIST\_CACHING} should be \Expr{False}.
   See section~\ref{sec:Grid-Matchmaking} on page~\pageref{sec:Grid-Matchmaking}
-  in the subsection on Advertising Grid Resources to Condor for an example.
+  in the subsection on Advertising Grid Resources to HTCondor for an example.
 
 \label{param:NegotiatorConsiderPreemption}
 \item[\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}]
@@ -7213,9 +7276,9 @@ The following configuration macros affect negotiation for group users.
   \end{verbatim}
   The group name must be specified in the \Macro{GROUP\_NAMES} list.
   \MoreTodo
-  %Condor does not verify that the
-  %quota value is reasonable, nor does Condor verify that all specified
-  %quotas are consistent.  This parameter is evaluated whenever Condor
+  %HTCondor does not verify that the
+  %quota value is reasonable, nor does HTCondor verify that all specified
+  %quotas are consistent.  This parameter is evaluated whenever HTCondor
   %negotiates for the group.  When both are defined, static quotas
   %supersede dynamic quotas.
 
@@ -7281,7 +7344,7 @@ The following configuration macros affect negotiation for group users.
   An example of the starvation problem is when there are a subset of machines 
   in a pool with large memory,
   and there are multiple job submitters who desire all of these machines.
-  Normally, Condor will decide how much of the full pool each person should get,
+  Normally, HTCondor will decide how much of the full pool each person should get,
   and then attempt to hand out that number of resources to each person. 
   Since the big memory machines are only a subset of pool, 
   it may happen that they are all given to the first person contacted, 
@@ -7326,7 +7389,7 @@ The following configuration macros affect negotiation for group users.
   A boolean value that defaults to \Expr{True}.
   When \Expr{True}, 
   the behavior of resource allocation when considering groups is
-  more like it was in the 7.4 stable series of Condor.
+  more like it was in the 7.4 stable series of HTCondor.
   In implementation, when \Expr{True}, the static quotas of subgroups
   will \emph{not} be scaled when the sum of these static quotas of subgroups
   sums to more than the group's static quota.
@@ -7334,6 +7397,16 @@ The following configuration macros affect negotiation for group users.
   unless the sum of subgroup quotas is considerably less than the group's
   quota, as scaling is currently based on the number of machines available,
   not assigned quotas (for static quotas).
+
+\label{param:GroupSeparator}
+\item[\Macro{GROUP\_SEPARATOR}]
+  A string value that contains the separator character used between
+accounting groups and the user name.  Defaults to \Expr{``.''} for
+backward compatibility.  In this example, the separator character is set
+to \Expr{``:''}, to allow the use of \Expr{``.''} in user names:
+\begin{verbatim}
+GROUP_SEPARATOR = ":"
+\end{verbatim}
 
 \end{description}
 
@@ -7344,9 +7417,9 @@ The following configuration macros affect negotiation for group users.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % \index{configuration!condor\_eventd configuration variables}
-% These macros affect the Condor Event daemon.  See
+% These macros affect the HTCondor Event daemon.  See
 % section~\ref{sec:EventD} on page~\pageref{sec:EventD} for an
-% introduction.  The eventd is not included in the main Condor binary
+% introduction.  The eventd is not included in the main HTCondor binary
 % distribution or installation procedure.  It can be installed as a
 % contrib module.
 % 
@@ -7435,10 +7508,10 @@ Configuration File Macros}
   Specifies a log file for the \Condor{procd} to use.
   Note that by design, the \Condor{procd} does not
   include most of the other logic that is shared amongst the various
-  Condor daemons. This is because the \Condor{procd} is a component of
+  HTCondor daemons. This is because the \Condor{procd} is a component of
   the PrivSep Kernel (see Section~\ref{sec:PrivSep} for more information
   regarding privilege separation). This means that the \Condor{procd}
-  does not include the normal Condor logging subsystem, and thus 
+  does not include the normal HTCondor logging subsystem, and thus 
   multiple debug levels are not supported.
   \MacroNI{PROCD\_LOG} defaults to \File{\$(LOG)/ProcLog}.
   Note that enabling \Dflag{PROCFAMILY} in the debug level for any
@@ -7461,7 +7534,7 @@ Configuration File Macros}
 \item[\Macro{PROCD\_ADDRESS}]
   This specifies
   the address that the \Condor{procd} will use to receive requests
-  from other Condor daemons. On Unix, this should point to a file system
+  from other HTCondor daemons. On Unix, this should point to a file system
   location that can be used for a named pipe. On Windows, named pipes
   are also used but they do not exist in the file system. The default
   setting therefore depends on the platform: 
@@ -7476,7 +7549,7 @@ Configuration File Macros}
   which is further used by the \Condor{procd} to reliably track all
   processes associated with a job.
   When \Expr{True}, values for \MacroNI{MIN\_TRACKING\_GID} and 
-  \MacroNI{MAX\_TRACKING\_GID} must also be set, or Condor will abort,
+  \MacroNI{MAX\_TRACKING\_GID} must also be set, or HTCondor will abort,
   logging an error message.
   See section~\ref{sec:GroupTracking} on page~\pageref{sec:GroupTracking} for 
   a detailed description.
@@ -7513,7 +7586,7 @@ Configuration File Macros}
 Configuration File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  
-\index{Condor daemon!condor\_credd@\Condor{credd}}
+\index{HTCondor daemon!condor\_credd@\Condor{credd}}
 \index{daemon!condor\_credd@\Condor{credd}}
 \index{condor\_credd daemon}
 \index{configuration!condor\_credd configuration variables}
@@ -7585,12 +7658,12 @@ These macros affect the \Condor{gridmanager}.
 \item[\Macro{HOLD\_JOB\_IF\_CREDENTIAL\_EXPIRES}]
   True or False.  Defaults to True.
   If True, and for grid universe jobs only,
-  Condor-G will place a job on hold
+  HTCondor-G will place a job on hold
   \MacroNI{GRIDMANAGER\_MINIMUM\_PROXY\_TIME} seconds
   before the proxy expires.
   If False,
   the job will stay in the last known state,
-  and Condor-G will periodically check to see if the job's proxy has been
+  and HTCondor-G will periodically check to see if the job's proxy has been
   refreshed, at which point management of the job will resume.
 
 \label{param:GridmanagerContactScheddDelay}
@@ -7601,18 +7674,26 @@ These macros affect the \Condor{gridmanager}.
 \label{param:GridmanagerJobProbeInterval}
 \item[\Macro{GRIDMANAGER\_JOB\_PROBE\_INTERVAL}]
   The number of seconds between
-  active probes of the status of a submitted job.
-  The default is 5 minutes (300 seconds).
+  active probes for the status of a submitted job.
+  The default is 1 minute (60 seconds).
+  Intervals specific to grid types can be set by appending the
+  name of the grid type to the configuration variable name, as the example
+  \begin{verbatim}
+  GRIDMANAGER_JOB_PROBE_INTERVAL_GT5 = 300
+  \end{verbatim}
 
-\label{param:CondorJobPollInterval}
-\item[\Macro{CONDOR\_JOB\_POLL\_INTERVAL}]
-  After a condor grid type job is submitted,
-  how often (in seconds) the \Condor{gridmanager}
-  should probe the remote \Condor{schedd} to check the jobs status.  
-  This defaults to 300 seconds (5 minutes).
-  Setting this to a lower number will decrease latency (Condor will discover
-  that a job has finished more quickly), but will increase network traffic.
-
+\label{param:GridmanagerJobProbeRate}
+\item[\Macro{GRIDMANAGER\_JOB\_PROBE\_RATE}]
+  The maximum number of job status probes per second that will be
+  issued to a given remote resource.
+  The time between status probes for individual jobs may be lengthened
+  beyond \Macro{GRIDMANAGER\_JOB\_PROBE\_INTERVAL} to enforce this rate.
+  The default is 5 probes per second.
+  Rates specific to grid types can be set by appending the
+  name of the grid type to the configuration variable name, as the example
+  \begin{verbatim}
+  GRIDMANAGER_JOB_PROBE_RATE_GT5 = 15
+  \end{verbatim}
 
 \label{param:GridmanagerResourceProbeInterval}
 \item[\Macro{GRIDMANAGER\_RESOURCE\_PROBE\_INTERVAL}]
@@ -7633,23 +7714,31 @@ These macros affect the \Condor{gridmanager}.
   resource, once the \Condor{gridmanager} has no active jobs
   on that resource.
   An active job is a grid universe job that is in the queue,
-  but is not in the HELD state.
+  for which \Attr{JobStatus} is anything other than Held. 
   Defaults to 300 seconds.
 
 \label{param:GridmanagerMaxSubmittedJobsPerResource}
 \item[\Macro{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE}]
   An integer value that limits the number of jobs
   that a \Condor{gridmanager} daemon will submit to a resource.
-  It is useful for controlling the number of \Prog{jobmanager}
-  processes running on the front-end node of a cluster.
-  This number may be exceeded, if it is reduced through the use
-  of \Condor{reconfig} while the \Condor{gridmanager} is running,
-  or if the \Condor{gridmanager} receives new
-  jobs from the \Condor{schedd} that were already submitted
-  (that is, their \MacroNI{GridJobId} is not undefined).
-  In these cases, submitted jobs will not be killed,
-  but no new jobs can be submitted until the number of submitted
-  jobs falls below the current limit.
+  A comma-separated list of pairs that follows this integer limit
+  will specify limits for specific remote resources.
+  Each pair is a host name and the job limit for that host.
+  Consider the example:
+  \footnotesize
+  \begin{verbatim}
+  GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE = 200, foo.edu, 50, bar.com, 100
+  \end{verbatim}
+  \normalsize
+  In this example, all resources have a job limit of 200, except foo.edu,
+  which has a limit of 50, and bar.com, which has a limit of 100.
+
+  Limits specific to grid types can be set by appending the
+  name of the grid type to the configuration variable name, as the example
+  \begin{verbatim}
+  GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_CREAM = 300
+  \end{verbatim}
+  In this example, the job limit for all CREAM resources is 300.
   Defaults to 1000.
 
 \label{param:GridmanagerMaxJobmanagersPerResource}
@@ -7657,10 +7746,10 @@ These macros affect the \Condor{gridmanager}.
   For grid jobs of type \SubmitCmd{gt2}, limits the number of globus-job-manager
   processes that the \Condor{gridmanager} lets run at a time on
   the remote head node. Allowing too many globus-job-managers to run
-  causes severe load on the headnote, possibly making it
+  causes severe load on the head note, possibly making it
   non-functional.
   This number may be exceeded if it is reduced through the use
-  of \Condor{reconfig} while the \Condor{gridmanager} is running
+  of \Condor{reconfig} while the \Condor{gridmanager} is running,
   or if some globus-job-managers take a few extra seconds to exit.
   The value 0 means there is no limit. The default value is 10.
 
@@ -7698,7 +7787,7 @@ These macros affect the \Condor{gridmanager}.
   two phase commit timeout to Globus for gt2 jobs only.
   This maps directly to the \texttt{two\_phase} setting in the Globus RSL.
 
-% configuration variable introduced into Condor due to Globus a GAHP
+% configuration variable introduced into HTCondor due to Globus a GAHP
 % bug.  Users with Globus where this bug has been fixed should never
 % use nor even know about this configuration variable.
 % \label{param:GridmanagerRestartOnAnyDownResources} 
@@ -7711,7 +7800,7 @@ These macros affect the \Condor{gridmanager}.
 % all machine need to appear to be down to trigger a restart of the GAHP
 % server.
 
-% configuration variable introduced into Condor due to Globus a GAHP
+% configuration variable introduced into HTCondor due to Globus a GAHP
 % bug.  Users with Globus where this bug has been fixed should never
 % use nor even know about this configuration variable.
 %\label{param:GridmanagerMaxTimeDownResources} 
@@ -7741,7 +7830,7 @@ These macros affect the \Condor{gridmanager}.
 
 \label{param:CGAHPLog}
 \item[\Macro{C\_GAHP\_LOG}]
-  The complete path and file name of the Condor GAHP server's log.
+  The complete path and file name of the HTCondor GAHP server's log.
   There is no default value. The expected location as defined
   in the example configuration is \File{/temp/CGAHPLog.\MacroUNI{USERNAME}}.
 
@@ -7751,7 +7840,7 @@ These macros affect the \Condor{gridmanager}.
 
 \label{param:CGAHPWorkerThreadLog}
 \item[\Macro{C\_GAHP\_WORKER\_THREAD\_LOG}]
-  The complete path and file name of the Condor GAHP worker process' log.
+  The complete path and file name of the HTCondor GAHP worker process' log.
   There is no default value.
   The expected location as defined in the example configuration is
   \File{/temp/CGAHPWorkerLog.\MacroUNI{USERNAME}}.
@@ -7769,12 +7858,12 @@ These macros affect the \Condor{gridmanager}.
   The complete path to the directory containing the Glite software.
   There is no default value. The expected location as given
   in the example configuration is \File{\MacroUNI{LIB}/glite}.
-  The necessary Glite software is included with Condor,
+  The necessary Glite software is included with HTCondor,
   and is required for pbs and lsf jobs.
 
 \label{param:CondorGAHP}
 \item[\Macro{CONDOR\_GAHP}]
-  The complete path and file name of the Condor GAHP executable.
+  The complete path and file name of the HTCondor GAHP executable.
   There is no default value. The expected location as given
   in the example configuration is \File{\MacroUNI{SBIN}/condor\_c-gahp}.
 
@@ -7803,7 +7892,7 @@ These macros affect the \Condor{gridmanager}.
   The use of the configuration variable \MacroNI{BATCH\_GAHP}
   is preferred and encouraged,
   as this variable may no longer be supported in a future
-  version of Condor.
+  version of HTCondor.
   A value given with this configuration variable will override
   a value specified by \MacroNI{BATCH\_GAHP},
   and the value specified by \MacroNI{BATCH\_GAHP} is the default
@@ -7815,7 +7904,7 @@ These macros affect the \Condor{gridmanager}.
   The use of the configuration variable \MacroNI{BATCH\_GAHP}
   is preferred and encouraged,
   as this variable may no longer be supported in a future
-  version of Condor.
+  version of HTCondor.
   A value given with this configuration variable will override
   a value specified by \MacroNI{BATCH\_GAHP},
   and the value specified by \MacroNI{BATCH\_GAHP} is the default
@@ -7855,7 +7944,7 @@ These macros affect the \Condor{gridmanager}.
   The use of the configuration variable \MacroNI{BATCH\_GAHP}
   is preferred and encouraged,
   as this variable may no longer be supported in a future
-  version of Condor.
+  version of HTCondor.
   A value given with this configuration variable will override
   a value specified by \MacroNI{BATCH\_GAHP},
   and the value specified by \MacroNI{BATCH\_GAHP} is the default
@@ -7926,7 +8015,7 @@ These macros affect the \Condor{job\_router} daemon.
   surround the right hand side of this definition with double quotes,
   and use single quotes around individual arguments that contain spaces.
   This is the same as when dealing with spaces within job arguments
-  in a Condor submit description file. 
+  in an HTCondor submit description file. 
 
 \label{param:JobRouterEntriesRefresh}
 \item[\Macro{JOB\_ROUTER\_ENTRIES\_REFRESH}]
@@ -7938,7 +8027,7 @@ These macros affect the \Condor{job\_router} daemon.
   when a \Condor{reconfig} command is invoked 
   or when the \Condor{job\_router} daemon restarts.
 
-\label{JobRouterLock}
+\label{param:JobRouterLock}
 \item[\Macro{JOB\_ROUTER\_LOCK}] This specifies the name of a lock
  file that is used to ensure that multiple instances of
  \condor{job\_router} never run with the same
@@ -7946,7 +8035,7 @@ These macros affect the \Condor{job\_router} daemon.
  same name could lead to mismanagement of routed jobs.  The default
  value is \verb@$(LOCK)/$(JOB_ROUTER_NAME)Lock@.
 
-\label{JobRouterSourceJobConstraint}
+\label{param:JobRouterSourceJobConstraint}
 \item[\Macro{JOB\_ROUTER\_SOURCE\_JOB\_CONSTRAINT}]
   Specifies a global \Attr{Requirements} expression that must be true
   for all newly routed jobs,
@@ -7957,14 +8046,14 @@ These macros affect the \Condor{job\_router} daemon.
  does not match \Macro{JOB\_ROUTER\_NAME}.  When not running as root,
  it also avoids routing jobs belonging to other users.
 
-\label{JobRouterMaxJobs}
+\label{param:JobRouterMaxJobs}
 \item[\Macro{JOB\_ROUTER\_MAX\_JOBS}]
   An integer value representing the maximum number of jobs that may be routed,
   summed over all routes.
   The default value is -1, which means an unlimited number of jobs
   may be routed.
 
-\label{MaxJobMirrorUpdateLag}
+\label{param:MaxJobMirrorUpdateLag}
 \item[\Macro{MAX\_JOB\_MIRROR\_UPDATE\_LAG}]
   An integer value that administrators will rarely consider changing,
   representing the maximum number of
@@ -7979,7 +8068,7 @@ These macros affect the \Condor{job\_router} daemon.
   the \Condor{job\_router} daemon acts presuming the expected event
   will never occur.
 
-\label{JobRouterPollingPeriod}
+\label{param:JobRouterPollingPeriod}
 \item[\Macro{JOB\_ROUTER\_POLLING\_PERIOD}]
   An integer value representing the number of seconds
   between cycles in the \Condor{job\_router} daemon's task loop.
@@ -7992,13 +8081,13 @@ These macros affect the \Condor{job\_router} daemon.
   routing latency is no problem, increasing this value to a few
   hundred seconds would be reasonable.
 
-\label{JobRouterName}
+\label{param:JobRouterName}
 \item[\Macro{JOB\_ROUTER\_NAME}]
   A unique identifier utilized to name multiple instances of
   the \Condor{job\_router} daemon on the same machine.
   Each instance must have a different name,
   or all but the first to start up will refuse to run.
-  The default is "jobrouter".
+  The default is \AdStr{jobrouter}.
 
   Changing this value when routed jobs already exist is not currently
   gracefully handled.  However, it can be done if one also uses
@@ -8014,7 +8103,7 @@ condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
   RoutedBy '"insert_new_name"'
 \end{verbatim}
 
-\label{JobRouterReleaseOnHold}
+\label{param:JobRouterReleaseOnHold}
 \item[\Macro{JOB\_ROUTER\_RELEASE\_ON\_HOLD}]
   A boolean value that defaults to \Expr{True}.
   It controls how the \Condor{job\_router} handles the routed copy when it
@@ -8023,6 +8112,68 @@ condor_qedit -constraint 'RoutedBy == "insert_old_name"' \
   ClassAd in the same state as when claimed.  When \Expr{False},
   the \Condor{job\_router} does not attempt to reset the original job
   ClassAd to a pre-claimed state upon yielding control of the job.
+
+\label{param:JobRouterSchedd1Spool}
+\item[\Macro{JOB\_ROUTER\_SCHEDD1\_SPOOL}]
+  The path to the spool directory for the \Condor{schedd} serving as the
+  source of jobs for routing.  If not specified, this defaults to
+  \MacroUNI{SPOOL}.  
+  If specified, this parameter must point to the spool directory of 
+  the \Condor{schedd} identified by \MacroNI{JOB\_ROUTER\_SCHEDD1\_NAME}.
+
+\label{param:JobRouterSchedd2Spool}
+\item[\Macro{JOB\_ROUTER\_SCHEDD2\_SPOOL}]
+  The path to the spool directory for the \Condor{schedd} to which the
+  routed copy of the jobs are submitted.  If not specified, this defaults to
+  \MacroUNI{SPOOL}.  
+  If specified, this parameter must point to the spool directory of 
+  the \Condor{schedd} identified by \MacroNI{JOB\_ROUTER\_SCHEDD2\_NAME}.
+  Note that when \Condor{job\_router} is running as \Login{root} and is
+  submitting routed jobs to a different \Condor{schedd} than the
+  source \Condor{schedd}, it is required that \Condor{job\_router}
+  have permission to impersonate the job owners of the routed jobs.
+  It is therefore usually necessary to configure
+  \Macro{QUEUE\_SUPER\_USER\_MAY\_IMPERSONATE} in the configuration
+  of the target \Condor{schedd}.
+
+\label{param:JobRouterSchedd1Name}
+\item[\Macro{JOB\_ROUTER\_SCHEDD1\_NAME}]
+  The advertised daemon name of the \Condor{schedd} serving as the
+  source of jobs for routing.  If not specified, this defaults to the
+  local \Condor{schedd}.  If specified, this parameter must name the
+  same \Condor{schedd} whose spool is configured in
+  \MacroNI{JOB\_ROUTER\_SCHEDD1\_SPOOL}.  If the named \Condor{schedd} is
+  not advertised in the local pool, \Macro{JOB\_ROUTER\_SCHEDD1\_POOL}
+  will also need to be set.
+
+\label{param:JobRouterSchedd2Name}
+\item[\Macro{JOB\_ROUTER\_SCHEDD2\_NAME}]
+  The advertised daemon name of the \Condor{schedd} to which the
+  routed copy of the jobs are submitted.  If not specified, this defaults to
+  the local \Condor{schedd}.  If specified, this parameter must name the
+  same \Condor{schedd} whose spool is configured in
+  \MacroNI{JOB\_ROUTER\_SCHEDD2\_SPOOL}.  If the named \Condor{schedd} is
+  not advertised in the local pool, \Macro{JOB\_ROUTER\_SCHEDD2\_POOL}
+  will also need to be set.
+  Note that when \Condor{job\_router} is running as \Login{root} and is
+  submitting routed jobs to a different \Condor{schedd} than the
+  source \Condor{schedd}, it is required that \Condor{job\_router}
+  have permission to impersonate the job owners of the routed jobs.
+  It is therefore usually necessary to configure
+  \Macro{QUEUE\_SUPER\_USER\_MAY\_IMPERSONATE} in the configuration
+  of the target \Condor{schedd}.
+
+\label{param:JobRouterSchedd1Pool}
+\item[\Macro{JOB\_ROUTER\_SCHEDD1\_POOL}]
+  The Condor pool (\Condor{collector} address) of the \Condor{schedd} 
+  serving as the source of jobs for routing.
+  If not specified, defaults to the local pool.
+
+\label{param:JobRouterSchedd2Pool}
+\item[\Macro{JOB\_ROUTER\_SCHEDD2\_POOL}]
+  The Condor pool (\Condor{collector} address) of the \Condor{schedd}
+  to which the routed copy of the jobs are submitted.
+  If not specified, defaults to the local pool.
 
 \end{description}
 
@@ -8148,8 +8299,8 @@ These macros affect the Grid Monitor.
   This parameter only affects grid jobs of type \SubmitCmd{gt2}.
   The variable \MacroNI{GRID\_MONITOR} must also be correctly configured.
   Defaults to \Expr{True}.
-  See section~\ref{sec:Condor-G-GridMonitor} on
-  page~\pageref{sec:Condor-G-GridMonitor}
+  See section~\ref{sec:HTCondor-G-GridMonitor} on
+  page~\pageref{sec:HTCondor-G-GridMonitor}
   for more information.
 
 \label{param:GridMonitor}
@@ -8167,11 +8318,11 @@ These macros affect the Grid Monitor.
   Defaults to 300 (5 minutes).  Increasing this number
   will improve the ability of the Grid Monitor to survive in the face of
   transient problems,
-  but will also increase the time before Condor notices a problem.
+  but will also increase the time before HTCondor notices a problem.
 
 \label{param:GridMonitorRetryDuration}
 \item[\Macro{GRID\_MONITOR\_RETRY\_DURATION}]
-  When Condor-G attempts to start the Grid Monitor at a particular
+  When HTCondor-G attempts to start the Grid Monitor at a particular
   site, it will wait this many seconds to start hearing from the
   Grid Monitor. Defaults to 900 (15 minutes).  If this duration
   passes without success, the Grid Monitor will be disabled for the
@@ -8203,7 +8354,7 @@ Entries Relating to Grid Usage and Glidein}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!grid and glidein configuration variables}
-These macros affect the Condor's usage of grid resources
+These macros affect the HTCondor's usage of grid resources
 and glidein.
 \begin{description}
 \label{param:GlideinServerURLS}
@@ -8231,11 +8382,11 @@ Entries for DAGMan}
 
 \index{configuration!DAGMan configuration variables}
 These macros affect the operation of DAGMan and DAGMan
-jobs within Condor.
+jobs within HTCondor.
 
 \Bold{Note}: Many, if not all, of these configuration variables will
 be most appropriately set on a per DAG basis, rather than in the
-global Condor configuration files.  Per DAG configuration is explained
+global HTCondor configuration files.  Per DAG configuration is explained
 in section~\ref{sec:DAG-configuration}.
 
 \begin{description}
@@ -8353,7 +8504,7 @@ in section~\ref{sec:DAG-configuration}.
 \label{param:DAGManMaxJobsSubmitted}
 \item[\Macro{DAGMAN\_MAX\_JOBS\_SUBMITTED}]
   An integer value that controls the maximum number of node jobs within the
-  DAG that will  be submitted to Condor at one time.  Note that this
+  DAG that will  be submitted to HTCondor at one time.  Note that this
   variable has the same functionality as the \OptArg{-maxjobs} 
   command line option to \Condor{submit\_dag}.
   If both the command line option and the
@@ -8386,9 +8537,9 @@ in section~\ref{sec:DAG-configuration}.
   For completeness, here is the definition for historical purposes: 
   A boolean value that controls
   whether \Condor{dagman} aborts or continues with a DAG
-  in the rare case that Condor erroneously executes
+  in the rare case that HTCondor erroneously executes
   the job within a DAG node more than once.
-  A bug in Condor very occasionally causes a job to run twice.
+  A bug in HTCondor very occasionally causes a job to run twice.
   Running a job twice is contrary to the semantics of a DAG.
   The configuration macro \MacroNI{DAGMAN\_IGNORE\_DUPLICATE\_JOB\_EXECUTION}
   determines whether  \Condor{dagman} considers this a fatal error or not.
@@ -8402,7 +8553,7 @@ in section~\ref{sec:DAG-configuration}.
 
   This configuration macro is to remain at its default value 
   except in the case
-  where a site encounters the Condor bug in which DAG job nodes
+  where a site encounters the HTCondor bug in which DAG job nodes
   are executed twice,
   and where it is certain
   that having a DAG job node run twice will not corrupt the DAG.
@@ -8461,7 +8612,7 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManCondorSubmitExe}
 \item[\Macro{DAGMAN\_CONDOR\_SUBMIT\_EXE}]
-  The executable that \Condor{dagman} will use to submit Condor jobs.
+  The executable that \Condor{dagman} will use to submit HTCondor jobs.
   If not defined, \Condor{dagman} looks for \Condor{submit} in the path.
 
 \label{param:DAGManStorkSubmitExe}
@@ -8471,7 +8622,7 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManCondorRmExe}
 \item[\Macro{DAGMAN\_CONDOR\_RM\_EXE}]
-  The executable that \Condor{dagman} will use to remove Condor jobs.
+  The executable that \Condor{dagman} will use to remove HTCondor jobs.
   If not defined, \Condor{dagman} looks for \Condor{rm} in the path.
 
 \label{param:DAGManStorkRmExe}
@@ -8491,8 +8642,9 @@ in section~\ref{sec:DAG-configuration}.
 \item[\Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}]
   A boolean value that controls whether \Condor{dagman} prohibits
   node job submit description files with user log files on NFS.
-  This value is ignored if \MacroNI{CREATE\_LOCKS\_ON\_LOCAL\_DISK} is true and
-  \MacroNI{ENABLE\_USERLOG\_LOCKING} is true.
+  This value is ignored if \MacroNI{CREATE\_LOCKS\_ON\_LOCAL\_DISK} is 
+  \Expr{True} and
+  \MacroNI{ENABLE\_USERLOG\_LOCKING} is \Expr{True}.
   If a DAG references such a submit description file and
   \MacroNI{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR} is \Expr{True},
   the DAG will abort during the initialization process. 
@@ -8565,9 +8717,9 @@ in section~\ref{sec:DAG-configuration}.
 \label{param:DAGManAbortOnScarySubmit}
   A boolean value that controls whether to abort a DAG upon detection of
   a scary submit event.
-  An example of a scary submit event is one in which the Condor ID
+  An example of a scary submit event is one in which the HTCondor ID
   does not match the expected value.
-  Note that in all Condor versions prior to 6.9.3,
+  Note that in all HTCondor versions prior to 6.9.3,
   \Condor{dagman} did \emph{not} abort a DAG upon detection of
   a scary submit event.
   This behavior is what now happens if
@@ -8625,7 +8777,7 @@ in section~\ref{sec:DAG-configuration}.
 \item[\Macro{DAGMAN\_WRITE\_PARTIAL\_RESCUE}]
   A boolean value that controls whether \Condor{dagman} writes a partial
   or a full DAG file as a Rescue DAG.  
-  As of Condor version 7.2.2, writing a partial DAG is preferred.
+  As of HTCondor version 7.2.2, writing a partial DAG is preferred.
   If not defined, \MacroNI{DAGMAN\_WRITE\_PARTIAL\_RESCUE} defaults to
   \Expr{True}.
 
@@ -8723,7 +8875,7 @@ in section~\ref{sec:DAG-configuration}.
   A boolean value defining whether \Condor{dagman} will still attempt
   to run a node job, even if errors are detected in the user log
   specification.  This setting has an effect only on nodes that are
-  Stork jobs (not Condor jobs).  The default value if not defined is
+  Stork jobs (not HTCondor jobs).  The default value if not defined is
   \Expr{False}.
 
 \label{param:DAGManUseStrict}
@@ -8759,14 +8911,28 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGmanAlwaysUseNodeLog}
 \item[\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG}]
-  A boolean value defining whether \Condor{dagman} watches for events in the
-  default node log--that is, the value of \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}.
-  The boolean value defaults to true.  If set to true, then \Condor{dagman}
-  writes POST script terminate events to the default log, and not to the user log
-  specified in the submit file; \Condor{dagman} will also only read events from
-  the default log file.  This must be set to false if a \Condor{dagman} from
-  version 7.9.0 or later is submitting jobs to a \Condor{schedd} that is older
-  than version 7.9.0.
+  A boolean value defining whether \Condor{dagman} watches for events in its
+  default node log.
+  The default log is defined by the value of \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}.
+  The default value is \Expr{True}.
+  If \Expr{True},
+  then \Condor{dagman} writes POST script terminate events to the default log,
+  and not to the user log specified in the submit description file.
+  \Condor{dagman} will also only read events from the default log file.
+  This variable must be \Expr{False} if \Condor{dagman} from Condor
+  version 7.9.0 or later is submitting jobs to a \Condor{schedd} daemon
+  or using a \Condor{submit} executable that is older than Condor version 7.9.0.
+
+\label{param:DAGmanSuppressNotification}
+\item[\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION}]
+	A boolean value defining whether jobs submitted by \Condor{dagman} will use
+	email notification when certain events occur.  If set to true, then all jobs
+	submitted by \Condor{dagman} will have ``notification = never'' set. This does 
+    not affect the notification of the \Condor{dagman} job itself. A user could set
+	this flag to true, then would only receive one notification when the \Condor{dagman}
+	job completes, rather than thousands of notifications from the jobs submitted by
+	\Condor{dagman}. This flag defaults to true, meaning that no job notification will
+	be sent for a job submitted by \Condor{dagman}.
 
 \end{description}
 
@@ -8776,7 +8942,7 @@ Relating to Security}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!security configuration variables}
-These macros affect the secure operation of Condor.
+These macros affect the secure operation of HTCondor.
 Many of these macros are described in
 section~\ref{sec:Security} on Security.
 
@@ -8860,7 +9026,7 @@ section~\ref{sec:Security} on Security.
   A complete path and file name to the
   X.509 certificate to be used in GSI authentication.
   If this configuration variable is not defined, and
-  \MacroNI{GSI\_DAEMON\_DIRECTORY} is defined, then Condor uses
+  \MacroNI{GSI\_DAEMON\_DIRECTORY} is defined, then HTCondor uses
   \MacroNI{GSI\_DAEMON\_DIRECTORY} to construct the path and file name as
   \begin{verbatim}
   GSI_DAEMON_CERT  = $(GSI_DAEMON_DIRECTORY)/hostcert.pem
@@ -8871,7 +9037,7 @@ section~\ref{sec:Security} on Security.
   A complete path and file name to the
   X.509 private key to be used in GSI authentication.
   If this configuration variable is not defined, and
-  \MacroNI{GSI\_DAEMON\_DIRECTORY} is defined, then Condor uses
+  \MacroNI{GSI\_DAEMON\_DIRECTORY} is defined, then HTCondor uses
   \MacroNI{GSI\_DAEMON\_DIRECTORY} to construct the path and file name as
   \begin{verbatim}
   GSI_DAEMON_KEY  = $(GSI_DAEMON_DIRECTORY)/hostkey.pem
@@ -8884,7 +9050,7 @@ section~\ref{sec:Security} on Security.
   The files in this directory are the public keys and signing policies
   of the trusted certification authorities.
   If this configuration variable is not defined, and
-  \MacroNI{GSI\_DAEMON\_DIRECTORY} is defined, then Condor uses
+  \MacroNI{GSI\_DAEMON\_DIRECTORY} is defined, then HTCondor uses
   \MacroNI{GSI\_DAEMON\_DIRECTORY} to construct the directory path as
   \begin{verbatim}
   GSI_DAEMON_TRUSTED_CA_DIR  = $(GSI_DAEMON_DIRECTORY)/certificates
@@ -8897,9 +9063,17 @@ section~\ref{sec:Security} on Security.
   When this configuration variable is defined, use of this proxy
   takes precedence over use of a certificate and key.
 
+\label{param:GSIAuthzConf}
+\item[\Macro{GSI\_AUTHZ\_CONF}]
+  A complete path and file name of the
+  Globus mapping library that looks for the mapping call out configuration.
+  There is no default value; as such, HTCondor uses the environment
+  variable \Env{GSI\_AUTHZ\_CONF} when this variable is not defined.
+  Setting this variable to \Expr{/dev/null} disables callouts.
+
 \label{param:DelegateJobGSICredentials} 
 \item[\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS}]
-  A boolean value that defaults to \Expr{True} for Condor version 6.7.19
+  A boolean value that defaults to \Expr{True} for HTCondor version 6.7.19
   and more recent versions.
   When \Expr{True}, a job's GSI X.509 credentials are delegated,
   instead of being copied.
@@ -8907,7 +9081,7 @@ section~\ref{sec:Security} on Security.
 
 \label{param:DelegateFullJobGSICredentials} 
 \item[\Macro{DELEGATE\_FULL\_JOB\_GSI\_CREDENTIALS}]
-  A boolean value that controls whether Condor will delegate a full or limited
+  A boolean value that controls whether HTCondor will delegate a full or limited
   GSI X.509 proxy.  
   The default value of \Expr{False} indicates the limited GSI X.509 proxy.
 
@@ -8921,7 +9095,7 @@ section~\ref{sec:Security} on Security.
   The job may override this configuration setting by using the
   \SubmitCmd{delegate\_job\_GSI\_credentials\_lifetime} submit file
   command.  This configuration variable currently only applies to
-  proxies delegated for non-grid jobs and Condor-C jobs.  It does not
+  proxies delegated for non-grid jobs and HTCondor-C jobs.  It does not
   currently apply to globus grid jobs, which always behave as though
   the value is 0.
   This variable has no effect if \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS}
@@ -8948,7 +9122,7 @@ section~\ref{sec:Security} on Security.
 \item[\Macro{GRIDMAP}]
   The complete path and file name of the Globus Gridmap file.
   The Gridmap file is used to map
-  X.509 distinguished names to Condor user ids.
+  X.509 distinguished names to HTCondor user ids.
 
 \label{param:SecDefaultSessionDuration}
 \MacroIndex{SEC\_DEFAULT\_SESSION\_DURATION}
@@ -9047,7 +9221,7 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
 
 \label{param:SecDefaultAuthenticationTimeout}
 \item[\Macro{SEC\_DEFAULT\_AUTHENTICATION\_TIMEOUT}]
-  The length of time in seconds that Condor should attempt
+  The length of time in seconds that HTCondor should attempt
   authenticating network connections before giving up.
   The default is 20 seconds.
   Like other security settings, the portion of the configuration variable
@@ -9235,7 +9409,7 @@ Relating to Virtual Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!virtual machine configuration variables}
-These macros affect how Condor runs \SubmitCmd{vm} universe jobs on
+These macros affect how HTCondor runs \SubmitCmd{vm} universe jobs on
 a matched machine within the pool.
 They specify items related to the \Condor{vm-gahp}.
 
@@ -9287,7 +9461,7 @@ They specify items related to the \Condor{vm-gahp}.
 \label{param:VMGAHPReqTimeout}
 \item[\Macro{VM\_GAHP\_REQ\_TIMEOUT}]
   An integer number of seconds that defaults to 300 (five minutes),
-  representing the amount of time Condor will wait for a command issued
+  representing the amount of time HTCondor will wait for a command issued
   from the \Condor{starter} to the \Condor{vm-gahp} to be completed.
   When a command times out, an error is reported to the \Condor{startd}.
 
@@ -9297,13 +9471,13 @@ They specify items related to the \Condor{vm-gahp}.
   representing the amount of time the \Condor{startd} waits after a
   virtual machine error as reported by the \Condor{starter},
   and before checking a final time on the status of the virtual machine.
-  If the check fails, Condor disables starting any new vm universe jobs
+  If the check fails, HTCondor disables starting any new vm universe jobs
   by removing the \Attr{VM\_Type} attribute from the machine ClassAd.
 
 \label{param:VMSoftSuspend}
 \item[\Macro{VM\_SOFT\_SUSPEND}]
   A boolean value that defaults to \Expr{False},
-  causing Condor to free the memory of a vm universe job when
+  causing HTCondor to free the memory of a vm universe job when
   the job is suspended.
   When \Expr{True}, the memory is not freed.
 
@@ -9417,7 +9591,7 @@ virtual machine software.
 \item[\Macro{VMWARE\_LOCAL\_SETTINGS\_FILE}]
   The complete path and file name to a file, whose contents will be
   inserted into the VMware description file (i.e., the .vmx file) before
-  Condor starts the virtual machine. This parameter is optional.
+  HTCondor starts the virtual machine. This parameter is optional.
 
 \end{description}
 
@@ -9433,10 +9607,10 @@ virtual machine software.
 
 \end{description}
 
-The following two macros affect the configuration of Condor where Condor is
+The following two macros affect the configuration of HTCondor where HTCondor is
 running on a host machine, the host machine is running an
 inner virtual machine,
-and Condor is also running on that inner virtual machine.
+and HTCondor is also running on that inner virtual machine.
 These two variables have nothing to do with the \SubmitCmd{vm}
 universe.
 
@@ -9459,7 +9633,7 @@ Relating to High Availability}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!high availability configuration variables}
-These macros affect the high availability operation of Condor.
+These macros affect the high availability operation of HTCondor.
 
 \begin{description}
 \label{param:MasterHAList}
@@ -9469,7 +9643,7 @@ These macros affect the high availability operation of Condor.
   However, the \MacroNI{MASTER\_HA\_LIST} daemons are run in a
   \emph{High Availability} mode.
   The list is a comma or space separated list of subsystem names
-  (as listed in section~\ref{sec:Condor-Subsystem-Names}).
+  (as listed in section~\ref{sec:HTCondor-Subsystem-Names}).
   For example,
   \begin{verbatim}
         MASTER_HA_LIST = SCHEDD
@@ -9598,7 +9772,7 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
 
   The macro is named by substituting \MacroNI{<SUBSYS>}
   with the appropriate subsystem string as defined in
-  section~\ref{sec:Condor-Subsystem-Names}.
+  section~\ref{sec:HTCondor-Subsystem-Names}.
 
 
 \label{param:HADList}
@@ -9634,10 +9808,10 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
 
 \label{param:HADControllee}
 \item[\Macro{HAD\_CONTROLLEE}]
-  This macro is used to specify the name of the daemon which the
+  This variable is used to specify the name of the daemon which the
   \Condor{had} daemon controls.   This name should match the daemon
-  name in the \Condor{master}'s \MacroNI{DAEMON\_LIST}.  The default
-  value of \MacroNI{HAD\_CONTROLLEE} is ``NEGOTIATOR''.
+  name in the \Condor{master} daemon's \MacroNI{DAEMON\_LIST} definition.  
+  The default value is \Expr{NEGOTIATOR}.
 
 \label{param:HADConnectionTimeout}
 \item[\Macro{HAD\_CONNECTION\_TIMEOUT}]
@@ -9647,7 +9821,7 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
   is the detection mechanism for the failure of a central
   manager machine.
   For a LAN, a recommended value is 2 seconds.
-  The use of authentication (by Condor) increases the connection
+  The use of authentication (by HTCondor) increases the connection
   time.
   The default value is 5 seconds.
   If this value is set too low,
@@ -9789,7 +9963,7 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
 \label{param:Transferer}
 \item[\Macro{TRANSFERER}]
   The full path and file name of the \Condor{transferer} executable.
-  Versions of Condor previous to 7.2.2 hard coded the location
+  Versions of HTCondor previous to 7.2.2 hard coded the location
   as \File{\MacroUNI{RELEASE\_DIR}/sbin/condor\_transferer}.
   This is now the default value.
   The future default value is likely to change, 
@@ -9820,7 +9994,7 @@ MASTER_NEGOTIATOR_CONTROLLER = HAD
 Configuration File Macros}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  
-In some cases, Condor can autonomously refresh GSI certificate proxies
+In some cases, HTCondor can autonomously refresh GSI certificate proxies
 via \Prog{MyProxy}, available from
 \URL{http://myproxy.ncsa.uiuc.edu/}.
 
@@ -9833,7 +10007,7 @@ via \Prog{MyProxy}, available from
   \Prog{MyProxy} software.  Often, it is necessary to wrap the actual
   executable with a script that sets the environment, such as the
   \MacroNI{LD\_LIBRARY\_PATH}, correctly.  If this macro is defined,
-  Condor-G and \Condor{credd} will have the capability to autonomously
+  HTCondor-G and \Condor{credd} will have the capability to autonomously
   refresh proxy certificates.  By default, this macro is undefined.
 
 \end{description}
@@ -9848,14 +10022,14 @@ Configuration File Macros Affecting APIs}
 \label{param:EnableSoap}
 \item[\Macro{ENABLE\_SOAP}]
   A boolean value that defaults to \Expr{False}.
-  When \Expr{True}, Condor daemons will respond to HTTP PUT commands
+  When \Expr{True}, HTCondor daemons will respond to HTTP PUT commands
   as if they were SOAP calls. When \Expr{False},
   all HTTP PUT commands are denied.
 
 \label{param:EnableWebServer}
 \item[\Macro{ENABLE\_WEB\_SERVER}]
   A boolean value that defaults to \Expr{False}.
-  When \Expr{True}, Condor daemons will respond to HTTP GET commands,
+  When \Expr{True}, HTCondor daemons will respond to HTTP GET commands,
   and send the static files sitting in the subdirectory defined
   by the configuration variable \MacroNI{WEB\_ROOT\_DIR}.
   In addition, web commands are considered a READ command,
@@ -9901,7 +10075,7 @@ Configuration File Macros Affecting APIs}
 
   The macro is named by substituting \MacroNI{<SUBSYS>}
   with the appropriate subsystem string as defined in
-  section~\ref{sec:Condor-Subsystem-Names}.
+  section~\ref{sec:HTCondor-Subsystem-Names}.
 
 \label{param:SoapSSLServerKeyfile}
 \item[\Macro{SOAP\_SSL\_SERVER\_KEYFILE}]
@@ -10041,7 +10215,7 @@ Relating to \Condor{ssh\_to\_job}}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!condor\_ssh\_to\_job configuration variables}
-These macros affect how Condor deals with \Condor{ssh\_to\_job},
+These macros affect how HTCondor deals with \Condor{ssh\_to\_job},
 a tool that allows users to interactively debug jobs.  
 With these configuration variables, 
 the administrator can control who can use the tool,
@@ -10121,7 +10295,7 @@ section~\ref{man-condor-ssh-to-job}.
   Enclose the entire arguments string in double quote marks.
   Individual arguments may be quoted with single quotes,
   using the same syntax as
-  for arguments in a Condor submit description file.
+  for arguments in an HTCondor submit description file.
   Within the arguments, 
   the characters \verb@%f@ are replaced by the path to the \Prog{sshd}
   configuration file
@@ -10152,7 +10326,7 @@ section~\ref{man-condor-ssh-to-job}.
   to generate an ssh key.
   Enclose the entire arguments string in double quotes.
   Individual arguments may be quoted with single quotes, using the same
-  syntax as for arguments in a Condor submit description file.
+  syntax as for arguments in an HTCondor submit description file.
   Within the arguments, 
   the characters \verb@%f@ are replaced by the path to the key file to be
   generated,
@@ -10226,7 +10400,7 @@ for details on how to do this.
   A string representing the command line invoked by \Condor{rooster}
   that is to wake up a machine.
   The command and any arguments should be enclosed in double quote marks,
-  the same as \SubmitCmd{arguments} syntax in a Condor submit description file.
+  the same as \SubmitCmd{arguments} syntax in an HTCondor submit description file.
   The default value is \verb@"$(BIN)/condor_power -d -i"@.
   The command is expected to read
   from its standard input a ClassAd representing the offline machine.
@@ -10258,7 +10432,7 @@ see~\pageref{sec:shared-port-daemon}.
 
 \label{param:DaemonSocketDir}
 \item[\Macro{DAEMON\_SOCKET\_DIR}] This specifies the directory where
- Unix versions of Condor daemons will create named sockets so that incoming
+ Unix versions of HTCondor daemons will create named sockets so that incoming
  connections can be forwarded to them by \Condor{shared\_port}.  If
  this directory does not exist, it will be created. The maximum length
  of named socket paths plus names is restricted by the operating system,
@@ -10266,8 +10440,8 @@ see~\pageref{sec:shared-port-daemon}.
 
 Write access to this directory grants permission to receive
  connections through the shared port.  By default, the directory is
- created to be owned by Condor and is made to be only writable by
- Condor.  One possible reason to broaden access to this directory is
+ created to be owned by HTCondor and is made to be only writable by
+ HTCondor.  One possible reason to broaden access to this directory is
  if execute nodes are accessed via CCB and the submit node is behind a
  firewall with only one open port (the port assigned to
  \Condor{shared\_port}).  In this case, commands that interact with
@@ -10293,7 +10467,7 @@ SHARED_PORT_ARGS = -p 4080
 \end{verbatim}
 
 If no port is specified, a port will be dynamically chosen; it may be
- different each time Condor is started.
+ different each time HTCondor is started.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -10302,7 +10476,7 @@ If no port is specified, a port will be dynamically chosen; it may be
 \index{configuration!hook configuration variables}
 \index{Job Router}
 
-These macros control the various hooks that interact with Condor.
+These macros control the various hooks that interact with HTCondor.
 Currently, there are two independent sets of hooks.
 One is a set of fetch work hooks, some of which are invoked by
 the \Condor{startd} to optionally fetch work,
@@ -10477,7 +10651,7 @@ section~\ref{sec:JobRouter} on page~\pageref{sec:JobRouter}.
 \end{description}
 
 The following macros describe the \Term{Daemon ClassAd Hook}
-capabilities of Condor.  
+capabilities of HTCondor.  
 The Daemon ClassAd Hook mechanism is used to run executables (called jobs) 
 directly from the \Condor{startd} and \Condor{schedd} daemons.
 The output from the jobs is incorporated into the machine ClassAd
@@ -10490,8 +10664,8 @@ on page~\pageref{sec:daemon-classad-hooks}.
 \label{param:StartdCronName}
 \label{param:ScheddCronName}
 \item[\Macro{STARTD\_CRON\_NAME} and \Macro{SCHEDD\_CRON\_NAME}]
-  These variables will be honored through Condor versions 7.6,
-  and support will be removed in Condor version 7.7.
+  These variables will be honored through HTCondor versions 7.6,
+  and support will be removed in HTCondor version 7.7.
   They are no longer documented as to their usage.
 
   Defines a logical name to be used in the formation of related
@@ -10527,7 +10701,7 @@ on page~\pageref{sec:daemon-classad-hooks}.
   automatically publish a new update to the \Condor{collector} after
   any of the jobs produce output.
   Beware that enabling this setting can greatly increase the network
-  traffic in a Condor pool, especially when many modules are
+  traffic in an HTCondor pool, especially when many modules are
   executed, or if the period in which they run is short.
   There are three possible (case insensitive) values for this
   variable: 
@@ -10565,7 +10739,7 @@ on page~\pageref{sec:daemon-classad-hooks}.
        and \Macro{SCHEDD\_CRON\_<JobName>\_PREFIX}
        and \Macro{BENCHMARKS\_<JobName>\_PREFIX}]
   Specifies a string which is prepended by
-  Condor to all attribute names that the job generates.
+  HTCondor to all attribute names that the job generates.
   The use of prefixes avoids the conflicts that would be caused by
   attributes of the same name generated and utilized by different jobs.
   For example, if a module prefix is \verb@xyz_@,
@@ -10809,8 +10983,8 @@ These macros are utilized only on Windows platforms.
 
 \label{param:WindowsRmdir}
 \item[\Macro{WINDOWS\_RMDIR}] The complete path and executable name of the
-  Condor version of the built-in \Prog{rmdir} program.
-  The Condor version will not fail when the directory contains files that have
+  HTCondor version of the built-in \Prog{rmdir} program.
+  The HTCondor version will not fail when the directory contains files that have
   ACLs that deny the SYSTEM process delete access.
   If not defined, the built-in Windows \Prog{rmdir} program is invoked,
   and a value defined for \Macro{WINDOWS\_RMDIR\_OPTIONS} is ignored.
@@ -10843,7 +11017,7 @@ discussion of \Condor{defrag} may be found in section~\ref{sec:SMP-defrag}.
   Different names will distinguish the two daemons.
   See the description of \MacroNI{MASTER\_NAME} in
   section~\ref{param:MasterName} on page~\pageref{param:MasterName}
-  for defaults and composition of valid Condor daemon names.
+  for defaults and composition of valid HTCondor daemon names.
 
 \label{param:DefragDrainingMachinesPerHour}
 \item[\Macro{DEFRAG\_DRAINING\_MACHINES\_PER\_HOUR}] A floating point
@@ -10870,6 +11044,12 @@ discussion of \Condor{defrag} may be found in section~\ref{sec:SMP-defrag}.
   is matched if \emph{any} of its slots match this expression. 
   Machines are automatically excluded if they are already draining,
   or if they match \Macro{DEFRAG\_WHOLE\_MACHINE\_EXPR}.
+
+\label{param:DefragCancelRequirements}
+\item[\Macro{DEFRAG\_CANCEL\_REQUIREMENTS}] An expression that specifies
+  which draining machines should have draining be canceled.  This defaults
+  to \MacroU{DEFRAG\_WHOLE\_MACHINE\_EXPR}.  This could be used to drain
+  partial rather than whole machines.
 
 \label{param:DefragRank}
 \item[\Macro{DEFRAG\_RANK}] An expression that specifies which machines

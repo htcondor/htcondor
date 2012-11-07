@@ -1,30 +1,30 @@
 \begin{ManPage}{\label{man-condor-master}\Condor{master}}{1}
-{The master Condor Daemon}
+{The master HTCondor Daemon}
 
-\index{Condor commands!condor\_master}
+\index{HTCondor commands!condor\_master}
 \index{daemon!condor\_master@\Condor{master}}
 \index{condor\_master daemon}
-\index{Condor daemon!condor\_master@\Condor{master}}
+\index{HTCondor daemon!condor\_master@\Condor{master}}
 \Synopsis \SynProg{\Condor{master}}
 
 \Description 
 
 This daemon is responsible for keeping all the
-rest of the Condor daemons running on each machine in your pool.  It  
+rest of the HTCondor daemons running on each machine in your pool.  It  
 spawns the other daemons, and periodically checks to see if there are
 new binaries installed for any of them.  If there are,
 the \Condor{master} will restart the affected daemons.
 In addition, if any daemon crashes, the
-\Condor{master} will send e-mail to the Condor Administrator of your pool and 
+\Condor{master} will send e-mail to the HTCondor Administrator of your pool and 
 restart the daemon.  The \Condor{master} also supports various
 administrative commands that let you start, stop or reconfigure
 daemons remotely.  The \Condor{master} will run on every machine in 
-your Condor pool, regardless of what functions each machine are
+your HTCondor pool, regardless of what functions each machine are
 performing.
 
-Section~\ref{sec:Condor-Daemons} in the Administrator's Manual
+Section~\ref{sec:HTCondor-Daemons} in the Administrator's Manual
 has more information
-about the \Condor{master} and other Condor daemons.
+about the \Condor{master} and other HTCondor daemons.
 See Section~\ref{sec:DaemonCore-Arguments}
 for documentation on
 command line arguments for \Condor{master}.

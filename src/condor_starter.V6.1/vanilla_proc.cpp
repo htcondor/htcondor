@@ -117,7 +117,7 @@ VanillaProc::StartJob()
 			if ( MATCH == strcasecmp ( 
 					CONDOR_EXEC, 
 					condor_basename ( jobname.Value () ) ) ) {
-				filename.sprintf ( "condor_exec%s", extension );
+				filename.formatstr ( "condor_exec%s", extension );
 				if (rename(CONDOR_EXEC, filename.Value()) != 0) {
 					dprintf (D_ALWAYS, "VanillaProc::StartJob(): ERROR: "
 							"failed to rename executable from %s to %s\n", 
@@ -180,17 +180,17 @@ VanillaProc::StartJob()
 	//
 	fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 15);
 
-	char const *dedicated_account = Starter->jic->getExecuteAccountIsDedicated();
+	m_dedicated_account = Starter->jic->getExecuteAccountIsDedicated();
 	if( ThisProcRunsAlongsideMainProc() ) {
 			// If we track a secondary proc's family tree (such as
 			// sshd) using the same dedicated account as the job's
 			// family tree, we could end up killing the job when we
 			// clean up the secondary family.
-		dedicated_account = NULL;
+		m_dedicated_account = NULL;
 	}
-	if (dedicated_account) {
+	if (m_dedicated_account) {
 			// using login-based family tracking
-		fi.login = dedicated_account;
+		fi.login = m_dedicated_account;
 			// The following message is documented in the manual as the
 			// way to tell whether the dedicated execution account
 			// configuration is being used.
@@ -230,10 +230,10 @@ VanillaProc::StartJob()
 			// Note: Starter is a global variable from os_proc.cpp
 		Starter->jic->machClassAd()->EvalString(ATTR_NAME, NULL, starter_name);
 		ASSERT (starter_name.size());
-		cgroup_uniq.sprintf("%s_%s", execute_str.c_str(), starter_name.c_str());
+		cgroup_uniq.formatstr("%s_%s", execute_str.c_str(), starter_name.c_str());
 		const char dir_delim[2] = {DIR_DELIM_CHAR, '\0'};
 		cgroup_uniq.replaceString(dir_delim, "_");
-		cgroup_str.sprintf("%s%ccondor%s", cgroup_base.c_str(), DIR_DELIM_CHAR,
+		cgroup_str.formatstr("%s%ccondor%s", cgroup_base.c_str(), DIR_DELIM_CHAR,
 			cgroup_uniq.Value());
 		cgroup = cgroup_str.Value();
 		ASSERT (cgroup != NULL);
@@ -498,8 +498,25 @@ VanillaProc::JobReaper(int pid, int status)
 	dprintf(D_FULLDEBUG,"Inside VanillaProc::JobReaper()\n");
 
 	if (pid == JobPid) {
-			// Make sure that nothing was left behind.
-		daemonCore->Kill_Family(JobPid);
+
+			// To make sure that no job processes are still lingering
+			// on the machine, call Kill_Family().
+			//
+			// HOWEVER, iff we are tracking process families via a
+			// dedicated execute account, we want to delay killing until
+			// there is only one job under the starter.  We do this to
+			// prevent the starter from killing the SSH daemon early, and
+			// therefore effectively killing any ssh_to_job session as soon
+			// as the job exits on machine configured with a dedicated
+			// execute account.
+		if ( !m_dedicated_account || Starter->numberOfJobs() == 1 )
+		{
+			dprintf(D_PROCFAMILY,"About to call Kill_Family()\n");
+			daemonCore->Kill_Family(JobPid);
+		} else {
+			dprintf(D_PROCFAMILY,
+				"Postponing call to Kill_Family() (perhaps due to ssh_to_job)\n");
+		}
 
 			// Record final usage stats for this process family, since
 			// once the reaper returns, the family is no longer

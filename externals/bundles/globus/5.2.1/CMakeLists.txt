@@ -32,7 +32,38 @@ if (WITH_GLOBUS)
 			set( GLOBUS_FLAVOR gcc32dbg )
 		endif()
 
-		condor_pre_external( GLOBUS globus-5.2.1 "lib;include" "done")
+		condor_pre_external( GLOBUS globus-5.2.1-p1 "lib;include" "done")
+
+		# GNU libtool isn't included in Mac OS 10.8, but Globus
+		# needs libltdl. Build it and install it in the Globus
+		# install location. Then add it to the include and link paths.
+		# (For our 10.7 binaries to run on 10.6 or 10.8, we can't
+		#  use the OS's libltdl. So always build our own on Darwin.)
+		if ( DARWIN )
+			condor_pre_external( LIBTOOL libtool-2.4.2 "lib;include" "done")
+
+			ExternalProject_Add(libtool
+					#-- Download Step ----------
+					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/libtool-2.4.2.tar.gz ${CMD_TERM}
+					DOWNLOAD_DIR ${LIBTOOL_STAGE}/dl
+					URL http://parrot.cs.wisc.edu/externals/libtool-2.4.2.tar.gz
+					#--Configure step ----------
+					CONFIGURE_COMMAND cd libtool-2.4.2 && ./configure --prefix=${GLOBUS_INSTALL_LOC}
+					#--Build Step ----------
+					BUILD_COMMAND cd libtool-2.4.2 && make
+					BUILD_IN_SOURCE 1
+					#--install Step ----------
+					INSTALL_DIR ${GLOBUS_INSTALL_LOC}
+					INSTALL_COMMAND cd libtool-2.4.2 && make install )
+
+			condor_post_external( libtool OFF OFF )
+			set( GLOBUS_DEPENDS ${LIBTOOL_REF} )
+			set( GLOBUS_FLAGS CPPFLAGS=-I${GLOBUS_INSTALL_LOC}/include LDFLAGS=-L${GLOBUS_INSTALL_LOC}/lib )
+		else()
+			set( GLOBUS_DEPENDS "" )
+			set( GLOBUS_FLAGS "" )
+		endif()
+
 
 		set (GLOBUS_PATCH patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins.patch -p0 &&
 						patch -i ${CMAKE_CURRENT_SOURCE_DIR}/mac_openssl.patch -p0 &&
@@ -49,11 +80,15 @@ if (WITH_GLOBUS)
 						sed -e 's/tcp/popen/g' tcp/Makefile.in >popen/Makefile.in )
 
 		if(DARWIN)
-			set ( GLOBUS_PATCH ${GLOBUS_PATCH} && cd ../../../../../ && patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins-2.patch -p0 )
+			set ( GLOBUS_PATCH ${GLOBUS_PATCH} &&
+				cd ../../../../../ &&
+				patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins-2.patch -p0 &&
+				patch -i ${CMAKE_CURRENT_SOURCE_DIR}/mac_environ.patch -p0 )
 		endif()
 
 		# honestly the build of globus is one of the strangest things I have ever seen and it makes no sense to me.
 		ExternalProject_Add(globus
+							DEPENDS ${GLOBUS_DEPENDS}
 							#-- Download Step ----------
 							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/globus-5.2.1.tar.gz ${CMD_TERM}
 							DOWNLOAD_DIR ${GLOBUS_STAGE}/dl
@@ -66,7 +101,7 @@ if (WITH_GLOBUS)
 							./configure --prefix=${GLOBUS_INSTALL_LOC} --with-flavor=${GLOBUS_FLAVOR}pthr
 							#--Build Step ----------
 							BUILD_COMMAND cd gt5.2.1-all-source-installer &&
-								make gpt globus_gssapi_error globus-resource-management-sdk globus-data-management-sdk &&
+								${GLOBUS_FLAGS} make gpt globus_gssapi_error globus-resource-management-sdk globus-data-management-sdk &&
 								cd ${GLOBUS_INSTALL_LOC}/include/globus/ && ln -s ${GLOBUS_FLAVOR}pthr/globus_config.h .
 							BUILD_IN_SOURCE 1
 							#--install Step ----------
@@ -75,7 +110,7 @@ if (WITH_GLOBUS)
 
 			## Set all the config information
 			if ( LINUX )
-				set (GLOBUS_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_common.so;${LIBLTDL_PATH}")
+				set (GLOBUS_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_common.so;${HAVE_LIBLTDL}")
 			elseif( DARWIN )
 				set (GLOBUS_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_common.dylib")
 			else()

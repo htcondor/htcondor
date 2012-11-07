@@ -245,7 +245,7 @@ void Job::Dump ( const Dag *dag ) const {
     for (int i = 0 ; i < 3 ; i++) {
         dprintf( D_ALWAYS, "%15s: ", queue_t_names[i] );
 
-		set<JobID_t>::const_iterator qit;
+		std::set<JobID_t>::const_iterator qit;
 		for (qit = _queues[i].begin(); qit != _queues[i].end(); qit++) {
 			Job *node = dag->Dag::FindNodeByNodeID( *qit );
 			dprintf( D_ALWAYS | D_NOHEADER, "%s, ", node->GetJobName() );
@@ -400,7 +400,7 @@ Job::CanAddParent( Job* parent, MyString &whynot )
 		// future once we figure out the right way for the DAG to
 		// respond...
 	if( _Status != STATUS_READY && parent->GetStatus() != STATUS_DONE ) {
-		whynot.sprintf( "%s child may not be given a new %s parent",
+		whynot.formatstr( "%s child may not be given a new %s parent",
 						this->GetStatusName(), parent->GetStatusName() );
 		return false;
 	}
@@ -482,7 +482,7 @@ Job::TerminateFailure()
 bool
 Job::Add( const queue_t queue, const JobID_t jobID )
 {
-	pair<set<JobID_t>::iterator, bool> ret;
+	std::pair<std::set<JobID_t>::iterator, bool> ret;
 
 	ret = _queues[queue].insert(jobID);
 
@@ -516,7 +516,7 @@ Job::AddScript( bool post, const char *cmd, MyString &whynot )
 		return false;
 	}
 	if( post ? _scriptPost : _scriptPre ) {
-		whynot.sprintf( "%s script already assigned (%s)",
+		whynot.formatstr( "%s script already assigned (%s)",
 						post ? "POST" : "PRE", GetPreScriptName() );
 		return false;
 	}
@@ -542,7 +542,7 @@ bool
 Job::AddPreSkip( int exitCode, MyString &whynot )
 {
 	if( exitCode < PRE_SKIP_MIN || exitCode > PRE_SKIP_MAX ) {
-		whynot.sprintf( "PRE_SKIP exit code must be between %d and %d\n",
+		whynot.formatstr( "PRE_SKIP exit code must be between %d and %d\n",
 			PRE_SKIP_MIN, PRE_SKIP_MAX );
 		return false;
 	}
@@ -580,7 +580,7 @@ Job::GetStatusName() const
 bool
 Job::HasChild( Job* child ) {
 	JobID_t cid;
-	set<JobID_t>::iterator it;
+	std::set<JobID_t>::iterator it;
 
 	if( !child ) {
 		return false;
@@ -599,7 +599,7 @@ Job::HasChild( Job* child ) {
 bool
 Job::HasParent( Job* parent ) {
 	JobID_t pid;
-	set<JobID_t>::iterator it;
+	std::set<JobID_t>::iterator it;
 
 	if( !parent ) {
 		return false;
@@ -868,7 +868,7 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
 					"ERROR: Unable to monitor log file for node %s",
 					GetJobName() );
-		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
+		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText().c_str() );
 		LogMonitorFailed();
 		EXCEPT( "Fatal log file monitoring error!\n" );
 		return false;
@@ -905,7 +905,7 @@ Job::UnmonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		errstack.pushf( "DAGMan::Job", DAGMAN_ERR_LOG_FILE,
 					"ERROR: Unable to unmonitor log " "file for node %s",
 					GetJobName() );
-		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText() );
+		debug_printf( DEBUG_QUIET, "%s\n", errstack.getFullText().c_str() );
 		EXCEPT( "Fatal log file monitoring error!\n" );
 	}
 
@@ -1014,8 +1014,8 @@ Job::GetPreSkip() const
 void
 Job::FixPriority(Dag& dag)
 {
-	set<JobID_t> parents = GetQueueRef(Q_PARENTS);
-	for(set<JobID_t>::iterator p = parents.begin(); p != parents.end(); ++p){
+	std::set<JobID_t> parents = GetQueueRef(Q_PARENTS);
+	for(std::set<JobID_t>::iterator p = parents.begin(); p != parents.end(); ++p){
 		Job* parent = dag.FindNodeByNodeID(*p);
 		if( parent->_hasNodePriority ) {
 			// Nothing to do if parent priority is small

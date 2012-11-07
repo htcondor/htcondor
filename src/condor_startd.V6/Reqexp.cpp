@@ -33,11 +33,11 @@ Reqexp::Reqexp( Resource* res_ip )
 	this->rip = res_ip;
 	MyString tmp;
 
-	tmp.sprintf("%s = (%s) && (%s)", 
+	tmp.formatstr("%s = (%s) && (%s)", 
 		ATTR_REQUIREMENTS, "START", ATTR_IS_VALID_CHECKPOINT_PLATFORM );
 
 	if( Resource::STANDARD_SLOT != rip->get_feature() ) {
-		tmp.sprintf_cat( " && (%s)", ATTR_WITHIN_RESOURCE_LIMITS );
+		tmp.formatstr_cat( " && (%s)", ATTR_WITHIN_RESOURCE_LIMITS );
 	}
 
 	origreqexp = strdup( tmp.Value() );
@@ -61,7 +61,7 @@ Reqexp::compute( amask_t how_much )
 			free( origstart );
 		}
 
-		str.sprintf( "%s = %s", ATTR_START, start );
+		str.formatstr( "%s = %s", ATTR_START, start );
 
 		origstart = strdup( str.Value() );
 
@@ -79,7 +79,7 @@ Reqexp::compute( amask_t how_much )
 		if (vcp != NULL) {
 			/* Use whatever the config file says */
 
-			str.sprintf("%s = %s", ATTR_IS_VALID_CHECKPOINT_PLATFORM, vcp);
+			str.formatstr("%s = %s", ATTR_IS_VALID_CHECKPOINT_PLATFORM, vcp);
 
 			m_origvalidckptpltfrm = strdup( str.Value() );
 
@@ -116,7 +116,7 @@ Reqexp::compute( amask_t how_much )
 			  ")"
 			")";
 			
-			str.sprintf( "%s = %s", ATTR_IS_VALID_CHECKPOINT_PLATFORM, 
+			str.formatstr( "%s = %s", ATTR_IS_VALID_CHECKPOINT_PLATFORM, 
 				default_vcp_expr);
 
 			m_origvalidckptpltfrm = strdup( str.Value() );
@@ -223,9 +223,9 @@ Reqexp::publish( ClassAd* ca, amask_t /*how_much*/ /*UNUSED*/ )
 	switch( rstate ) {
 	case ORIG_REQ:
 		ca->Insert( origstart );
-		tmp.sprintf( "%s", origreqexp );
+		tmp.formatstr( "%s", origreqexp );
 		ca->Insert( tmp.Value() );
-		tmp.sprintf( "%s", m_origvalidckptpltfrm );
+		tmp.formatstr( "%s", m_origvalidckptpltfrm );
 		ca->Insert( tmp.Value() );
 		if( Resource::STANDARD_SLOT != rip->get_feature() ) {
 			ca->AssignExpr( ATTR_WITHIN_RESOURCE_LIMITS,
@@ -233,13 +233,13 @@ Reqexp::publish( ClassAd* ca, amask_t /*how_much*/ /*UNUSED*/ )
 		}
 		break;
 	case UNAVAIL_REQ:
-		tmp.sprintf( "%s = False", ATTR_REQUIREMENTS );
+		tmp.formatstr( "%s = False", ATTR_REQUIREMENTS );
 		ca->Insert( tmp.Value() );
 		break;
 	case COD_REQ:
-		tmp.sprintf( "%s = True", ATTR_RUNNING_COD_JOB );
+		tmp.formatstr( "%s = True", ATTR_RUNNING_COD_JOB );
 		ca->Insert( tmp.Value() );
-		tmp.sprintf( "%s = False && %s", ATTR_REQUIREMENTS,
+		tmp.formatstr( "%s = False && %s", ATTR_REQUIREMENTS,
 				 ATTR_RUNNING_COD_JOB );
 		ca->Insert( tmp.Value() );
 		break;

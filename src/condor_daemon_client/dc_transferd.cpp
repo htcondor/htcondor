@@ -90,7 +90,7 @@ DCTransferD::setup_treq_channel(ReliSock **treq_sock_ptr,
 		// First, if we're not already authenticated, force that now. 
 	if (!forceAuthentication( rsock, errstack )) {
 		dprintf( D_ALWAYS, "DCTransferD::setup_treq_channel() authentication "
-				"failure: %s\n", errstack->getFullText() );
+				"failure: %s\n", errstack->getFullText().c_str() );
 		errstack->push("DC_TRANSFERD", 1, 
 			"Failed to authenticate properly.");
 		return false;
@@ -149,7 +149,7 @@ DCTransferD::upload_job_files(int JobAdsArrayLen, ClassAd* JobAdsArray[],
 		// First, if we're not already authenticated, force that now. 
 	if (!forceAuthentication( rsock, errstack )) {
 		dprintf( D_ALWAYS, "DCTransferD::upload_job_files() authentication "
-				"failure: %s\n", errstack->getFullText() );
+				"failure: %s\n", errstack->getFullText().c_str() );
 		errstack->push("DC_TRANSFERD", 1, 
 			"Failed to authenticate properly.");
 		return false;
@@ -320,7 +320,7 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 		// First, if we're not already authenticated, force that now. 
 	if (!forceAuthentication( rsock, errstack )) {
 		dprintf( D_ALWAYS, "DCTransferD::download_job_files() authentication "
-				"failure: %s\n", errstack->getFullText() );
+				"failure: %s\n", errstack->getFullText().c_str() );
 		errstack->push("DC_TRANSFERD", 1, 
 			"Failed to authenticate properly.");
 		return false;
@@ -403,7 +403,7 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 						new_attr_name++;
 							// insert attribute
 						pTree = tree->Copy();
-						jad.Insert(new_attr_name, pTree);
+						jad.Insert(new_attr_name, pTree, false);
 					}
 				}	// while next expr
 		

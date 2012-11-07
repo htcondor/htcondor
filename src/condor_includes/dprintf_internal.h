@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2012, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -17,17 +17,32 @@
  *
  ***************************************************************/
 
+#ifndef __dprintf_internal_h_
+#define __dprintf_internal_h_
+
 // This #define doesn't actually do anything. This value needs to be
 // defined before any system header files are included in the source file
 // to have any effect.
 #include <string>
 #include <map>
+#if _MSC_VER && (_MSC_VER < 1600)
+typedef _Longlong int64_t;
+#else
+#include <stdint.h>
+#endif
+#include <ctime>
+
+struct DebugFileInfo;
+
+typedef void (*DprintfFuncPtr)(int, int, time_t, struct tm*, const char*, DebugFileInfo*);
+
 enum DebugOutput
 {
 	FILE_OUT,
 	STD_OUT,
 	STD_ERR,
-	OUTPUT_DEBUG_STR
+	OUTPUT_DEBUG_STR,
+	SYSLOG
 };
 
 /* future
@@ -59,13 +74,27 @@ struct DebugFileInfo
 	int maxLogNum;
 	bool want_truncate;
 	bool accepts_all;
-	DebugFileInfo() : outputTarget(FILE_OUT), debugFP(0), choice(0), maxLog(0), maxLogNum(0), want_truncate(false), accepts_all(false) {}
+	bool dont_panic;
+	void *userData;
+	DebugFileInfo() :
+			outputTarget(FILE_OUT),
+			debugFP(0),
+			choice(0),
+			maxLog(0),
+			maxLogNum(0),
+			want_truncate(false),
+			accepts_all(false),
+			dont_panic(false),
+			userData(NULL),
+			dprintfFunc(NULL)
+			{}
 	DebugFileInfo(const DebugFileInfo &dfi) : outputTarget(dfi.outputTarget), debugFP(NULL), choice(dfi.choice),
-		logPath(dfi.logPath), maxLog(dfi.maxLog), maxLogNum(dfi.maxLogNum),
-		want_truncate(dfi.want_truncate), accepts_all(dfi.accepts_all) {}
+		logPath(dfi.logPath), maxLog(dfi.maxLog), maxLogNum(dfi.maxLogNum), want_truncate(dfi.want_truncate),
+		accepts_all(dfi.accepts_all), dont_panic(dfi.dont_panic), dprintfFunc(dfi.dprintfFunc) {}
 	DebugFileInfo(const dprintf_output_settings&);
 	~DebugFileInfo();
 	bool MatchesCatAndFlags(int cat_and_flags) const;
+	DprintfFuncPtr dprintfFunc;
 };
 
 struct dprintf_output_settings
@@ -81,4 +110,17 @@ struct dprintf_output_settings
 
 	dprintf_output_settings() : choice(0), maxLog(0), maxLogNum(0), want_truncate(false), accepts_all(false), HeaderOpts(0), VerboseCats(0) {}
 };
+
+void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_info);
+
+const char* _format_global_header(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm);
+//Global dprint functions meant as fallbacks.
+void _dprintf_global_func(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, const char* message, DebugFileInfo* dbgInfo);
+
+#ifdef WIN32
+//Output to dbg string
+void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, const char* message, DebugFileInfo* dbgInfo);
+#endif
+
+#endif
 

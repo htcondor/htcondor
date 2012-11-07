@@ -34,14 +34,14 @@ my $HAS_NMICONF = $INC{"NmiConf.pm"};
 use vars qw/ $opt_build $opt_test
     $opt_help $opt_debug $opt_notify $opt_notify_fail_only $opt_platforms $opt_nmi_glue 
     $opt_workspace $opt_git
-    $opt_tag $opt_module $opt_nmiconf $opt_desc $opt_append
+    $opt_tag $opt_module $opt_nmiconf $opt_desc $opt_append $opt_importance
     $opt_submit_xtests $opt_configure $opt_src_tag $opt_other_tag
     $opt_nightly $opt_externals $opt_without_tests
     $opt_clear_externals_cache $opt_use_externals_cache
     $opt_clear_externals_cache_weekly $opt_clear_externals_cache_daily
     $opt_externals_only $opt_release_only $opt_version_buildid
     $opt_build_args
-	$opt_skip_doc $opt_sha1
+	$opt_skip_doc $opt_sha1 $opt_private_build
     $opt_buildid $opt_test_src $opt_test_timeout $opt_test_class
     $opt_input_platform $opt_tests_at_once
     /;
@@ -174,6 +174,9 @@ my $nmi_submit;
 # only used by nmi_submit, but set still have to find them) 
 my $condor_bin;
 
+# Whether or not the build should be private.  default: NO
+my $private_build;
+
 ######################################################################
 # Actual work of the script
 ######################################################################
@@ -213,7 +216,7 @@ foreach $tag (sort keys %tags ) {
 
 	# Uses SubmitInfo.pm to get configuration info.
    	getSubmitInfoNew( $tag, $opt_src_tag );
-   	$cmdfile = createSubmitFilesNew( $tag, $opt_src_tag, $opt_other_tag );
+   	$cmdfile = createSubmitFilesNew( $tag, $opt_src_tag, $opt_other_tag, $opt_importance );
    	submitRun( $cmdfile, $tag );
 }
 
@@ -328,6 +331,7 @@ sub parseOptions
            'nmiconf=s'     => \$opt_nmiconf,
            'desc=s'        => \$opt_desc,
            'append=s'      => \$opt_append,
+           'importance=i'  => \$opt_importance,
            'submit-xtests!' => \$opt_submit_xtests,
 		   # This next option is poorly used and should be removed/redone.
 		   # It is used in build/platform_post to pass stuff to the test
@@ -353,6 +357,7 @@ sub parseOptions
            'add-build-args=s' => \$opt_build_args,
 		   'skip-doc' => \$opt_skip_doc,
 		   'sha1=s' => \$opt_sha1,
+		   'private-build:s' => \$opt_private_build,
 # test-specific options
            'buildid=i'     => \$opt_buildid,
            'test-src=s'    => \$opt_test_src,
@@ -582,6 +587,10 @@ sub parseOptions
             printUsage( 1 );
         }
     }
+
+	if( defined($opt_private_build) ) {
+		$private_build = $opt_private_build;
+	}
 }
 
 # TODO: this should be more clear about the required vs. optional
@@ -840,7 +849,7 @@ sub removeDuplicates
 
 sub createSubmitFilesNew
 {
-    my ( $tag, $srctag, $othertag ) = @_;
+    my ( $tag, $srctag, $othertag, $importance ) = @_;
     my $module;
     my @fetch_files;
     my $cmdfile = "cmdfile";
@@ -900,12 +909,31 @@ sub createSubmitFilesNew
 		writeTestGlueNew( *CMDFILE );
     }
 
+	# Not all builds should be public (e.g. security releases).  Set the flag
+	# if defined
+	if (defined($private_build)) {
+		my $private_username;
+		if ($private_build ne "") {
+			$private_username = $private_build;
+		} else {
+			$private_username = "condor-team";
+		}
+
+		print "PRIVATE BUILD: $private_username\n";
+		print CMDFILE "private_web_users = " . $private_username . "\n";
+	} else {
+		print "PUBLIC BUILD\n";
+	}
+
+
 	# Sometimes builds and tests get backed up.  If so, we would 
 	# like to eventually run all the jobs, but we'd like to see results from
 	# newer ones first.  Setting the user job prio to the Qdate should
 	# help with this.
 
-	print CMDFILE "+priority = ", time, "\n";
+	my $job_prio = time;
+	if (defined($importance)) { $job_prio = $job_prio + ($importance * 3600); }
+	print CMDFILE "+priority = $job_prio\n";
 
 	close CMDFILE;
     return $cmdfile;

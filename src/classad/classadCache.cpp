@@ -202,7 +202,7 @@ public:
 };
 
 
-static ClassAdCache * _cache = 0;
+static classad_shared_ptr<ClassAdCache> _cache;
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -246,7 +246,7 @@ ExprTree * CachedExprEnvelope::cache (std::string & pName, ExprTree * pTree)
 	switch (nk)
 	{
 	  case EXPR_ENVELOPE:
-	     pRet = pTree->Copy();
+	     pRet = pTree;
 	  break;
 	  
 	  case EXPR_LIST_NODE:
@@ -265,7 +265,7 @@ ExprTree * CachedExprEnvelope::cache (std::string & pName, ExprTree * pTree)
 	    pNewEnv->nodeKind = EXPR_ENVELOPE;
 	    if (!_cache)
 	    {
-	      _cache = new ClassAdCache();
+	      _cache.reset( new ClassAdCache() );
 	    }
 
 	    pNewEnv->m_pLetter = _cache->cache( pName, szValue, pTree);
@@ -287,7 +287,7 @@ CachedExprEnvelope * CachedExprEnvelope::check_hit (string & szName, const strin
 
    if (!_cache)
    {
-	_cache = new ClassAdCache();
+	_cache.reset(new ClassAdCache());
    }
 
    pCacheData cache_check = _cache->cache( szName, szValue, 0);

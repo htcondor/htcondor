@@ -94,7 +94,7 @@ DCMsg::name()
 	m_cmd_str = getCommandString( m_cmd );
 	if( !m_cmd_str ) {
 		std::string buf;
-		sprintf(buf,"command %d",m_cmd);
+		formatstr(buf,"command %d",m_cmd);
 		m_cmd_str = buf.c_str();
 	}
 	return m_cmd_str;
@@ -122,7 +122,7 @@ DCMsg::cancelMessage(char const *reason)
 	if( !reason ) {
 		reason = "operation was canceled";
 	}
-	addError( CEDAR_ERR_CANCELED, reason );
+	addError( CEDAR_ERR_CANCELED, "%s", reason );
 
 	if( m_messenger.get() ) {
 		m_messenger->cancelMessage( this );
@@ -217,7 +217,7 @@ DCMsg::reportFailure( DCMessenger *messenger )
 	dprintf( debug_level, "Failed to send %s to %s: %s\n",
 			 name(),
 			 messenger->peerDescription(),
-			 m_errstack.getFullText() );
+			 m_errstack.getFullText().c_str() );
 }
 
 void
@@ -231,7 +231,7 @@ DCMsg::addError( int code, char const *format, ... )
 	va_end(args);
 }
 
-char const *
+std::string
 DCMsg::getErrorStackText()
 {
 	return m_errstack.getFullText();
@@ -464,7 +464,7 @@ void DCMessenger::startReceiveMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 	msg->setMessenger( this );
 
 	std::string name;
-	sprintf(name, "DCMessenger::receiveMsgCallback %s", msg->name());
+	formatstr(name, "DCMessenger::receiveMsgCallback %s", msg->name());
 
 	incRefCount();
 
@@ -756,7 +756,7 @@ ChildAliveMsg::messageSendFailed( DCMessenger *messenger )
 			messenger->peerDescription(),
 			m_tries,
 			m_max_tries,
-			getErrorStackText());
+			getErrorStackText().c_str());
 
 	if( m_tries < m_max_tries ) {
 		if( getDeadlineExpired() ) {

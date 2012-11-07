@@ -46,13 +46,22 @@
 #include "string_list.h"
 #include "condor_version.h"
 #include "subsystem_info.h"
-#include "condor_xml_classads.h"
 #include "condor_open.h"
 #include "condor_sockaddr.h"
+#include "condor_id.h"
+#include "userlog_to_classads.h"
 #include "ipv6_hostname.h"
 #include <map>
 #include <vector>
 #include "../classad_analysis/analysis.h"
+
+/*
+#ifndef WIN32
+#include <sys/types.h>
+#include <unistd.h>
+#include <pwd.h>
+#endif
+*/
 
 #ifdef HAVE_EXT_POSTGRESQL
 #include "sqlquery.h"
@@ -77,6 +86,8 @@ enum {
 	/* talk directly to the schedd */
 	DIRECT_SCHEDD = 4
 };
+
+struct 	PrioEntry { MyString name; float prio; };
 
 #ifdef WIN32
 static int getConsoleWindowSize(int * pHeight = NULL) {
@@ -127,7 +138,8 @@ static void init_output_mask();
 /* a type used to point to one of the above two functions */
 typedef bool (*show_queue_fp)(const char* v1, const char* v2, const char* v3, const char* v4, bool useDB);
 
-static bool read_classad_file(const char *filename, ClassAdList &classads);
+static bool read_classad_file(const char *filename, ClassAdList &classads, ClassAdFileParseHelper* pparse_help, const char * constr);
+static int read_userprio_file(const char *filename, ExtArray<PrioEntry> & prios);
 
 /* convert the -direct aqrgument prameter into an enum */
 unsigned int process_direct_argument(char *arg);
@@ -166,6 +178,13 @@ static 	int malformed, running, idle, held, suspended, completed, removed;
 
 static  char *jobads_file = NULL;
 static  char *machineads_file = NULL;
+static  char *userprios_file = NULL;
+
+static  char *userlog_file = NULL;
+
+// Constraint on JobIDs for faster filtering
+// a list and not set since we expect a very shallow depth
+static std::vector<CondorID> constrID;
 
 static	CondorQ 	Q;
 static	QueryResult result;
@@ -281,12 +300,11 @@ static  List<const char> mask_head; // The list of headings for the mask entries
 static CollectorList * Collectors = NULL;
 
 // for run failure analysis
-static  int			findSubmittor( char * );
+static  int			findSubmittor( const char * );
 static	void 		setupAnalysis();
-static 	void		fetchSubmittorPrios();
+static 	int			fetchSubmittorPriosFromNegotiator(ExtArray<PrioEntry> & prios);
 static	void		doRunAnalysis( ClassAd*, Daemon* );
 static	const char *doRunAnalysisToBuffer( ClassAd*, Daemon* );
-struct 	PrioEntry { MyString name; float prio; };
 static  bool        better_analyze = false;
 static	bool		run = false;
 static	bool		goodput = false;
@@ -342,6 +360,80 @@ static void freeConnectionStrings() {
 	}
 }
 
+class CondorQClassAdFileParseHelper : public compat_classad::ClassAdFileParseHelper
+{
+ public:
+	virtual int PreParse(std::string & line, ClassAd & ad, FILE* file);
+	virtual int OnParseError(std::string & line, ClassAd & ad, FILE* file);
+	std::string schedd_name;
+	std::string schedd_addr;
+};
+
+// this method is called before each line is parsed. 
+// return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
+int CondorQClassAdFileParseHelper::PreParse(std::string & line, ClassAd & /*ad*/, FILE* /*file*/)
+{
+	// treat blank lines as delimiters.
+	if (line.size() <= 0) {
+		return 2; // end of classad.
+	}
+
+	// standard delimitors are ... and ***
+	if (starts_with(line,"\n") || starts_with(line,"...") || starts_with(line,"***")) {
+		return 2; // end of classad.
+	}
+
+	// the normal output of condor_q -long is "-- schedd-name <addr>"
+	// we want to treat that as a delimiter, and also capture the schedd name and addr
+	if (starts_with(line, "-- ")) {
+		if (starts_with(line.substr(3), "Schedd:")) {
+			schedd_name = line.substr(3+8);
+			size_t ix1 = schedd_name.find_first_of(": \t\n");
+			if (ix1 != string::npos) {
+				size_t ix2 = schedd_name.find_first_not_of(": \t\n", ix1);
+				if (ix2 != string::npos) {
+					schedd_addr = schedd_name.substr(ix2);
+					ix2 = schedd_addr.find_first_of(" \t\n");
+					if (ix2 != string::npos) {
+						schedd_addr = schedd_addr.substr(0,ix2);
+					}
+				}
+				schedd_name = schedd_name.substr(0,ix1);
+			}
+		}
+		return 2;
+	}
+
+
+	// check for blank lines or lines whose first character is #
+	// tell the parser to skip those lines, otherwise tell the parser to
+	// parse the line.
+	for (size_t ix = 0; ix < line.size(); ++ix) {
+		if (line[ix] == '#' || line[ix] == '\n')
+			return 0; // skip this line, but don't stop parsing.
+		if (line[ix] != ' ' && line[ix] != '\t')
+			break;
+	}
+	return 1; // parse this line
+}
+
+// this method is called when the parser encounters an error
+// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
+int CondorQClassAdFileParseHelper::OnParseError(std::string & line, ClassAd & ad, FILE* file)
+{
+	// when we get a parse error, skip ahead to the start of the next classad.
+	int ee = this->PreParse(line, ad, file);
+	while (1 == ee) {
+		if ( ! readLine(line, file, false) || feof(file)) {
+			ee = 2;
+			break;
+		}
+		ee = this->PreParse(line, ad, file);
+	}
+	return ee;
+}
+
+
 #ifdef HAVE_EXT_POSTGRESQL
 /* this function for checking whether database can be used for querying in local machine */
 static bool checkDBconfig() {
@@ -379,8 +471,6 @@ static bool checkDBconfig() {
 }
 #endif /* HAVE_EXT_POSTGRESQL */
 
-extern 	"C"	int		Termlog;
-
 int main (int argc, char **argv)
 {
 	ClassAd		*ad;
@@ -417,7 +507,7 @@ int main (int argc, char **argv)
 	// Since we are assuming that we want to talk to a DB in the normal
 	// case, this will ensure that we don't try to when loading the job queue
 	// classads from file.
-	if (jobads_file != NULL) {
+	if ((jobads_file != NULL) || (userlog_file != NULL)) {
 		useDB = FALSE;
 	}
 
@@ -428,6 +518,11 @@ int main (int argc, char **argv)
 	// check if analysis is required
 	if( better_analyze ) {
 		setupAnalysis();
+		if ((jobads_file != NULL || userlog_file != NULL)) {
+			retval = show_queue(scheddAddr, scheddName, "Unknown", "Unknown", FALSE);
+			freeConnectionStrings();
+			exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
+		}
 	}
 
 	// if we haven't figured out what to do yet, just display the
@@ -480,7 +575,7 @@ int main (int argc, char **argv)
            	// to the schedd time's out and the user gets nothing
            	// useful printed out. Therefore, we use show_queue,
            	// which fetches all of the ads, then analyzes them. 
-			if ( (unbuffered || verbose || better_analyze || jobads_file) && !g_stream_results ) {
+			if ( (unbuffered || verbose || better_analyze || jobads_file || userlog_file) && !g_stream_results ) {
 				sqfp = show_queue;
 			} else {
 				sqfp = show_queue_buffered;
@@ -720,7 +815,7 @@ int main (int argc, char **argv)
 		useDB = FALSE;
 		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, &scheddAddr)  &&
 				 ad->LookupString(ATTR_NAME, &scheddName)		&& 
-				 ad->LookupString(ATTR_MACHINE, scheddMachine) &&
+				ad->LookupString(ATTR_MACHINE, scheddMachine, sizeof(scheddMachine)) &&
 				 ad->LookupString(ATTR_VERSION, scheddVersion) ) ) 
 		{
 			/* something is wrong with this schedd/quill ad, try the next one */
@@ -945,10 +1040,9 @@ processCommandLineArguments (int argc, char *argv[])
 	int i, cluster, proc;
 	char *arg, *at, *daemonname;
 	const char * pcolon;
-	param_functions *p_funcs = NULL;
 
 	bool custom_attributes = false;
-	attrs.initializeFromString("ClusterId\nProcId\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs");
+	attrs.initializeFromString("ClusterId\nProcId\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs\nJobDescription");
 
 	for (i = 1; i < argc; i++)
 	{
@@ -957,16 +1051,17 @@ processCommandLineArguments (int argc, char *argv[])
 			if( sscanf( argv[i], "%d.%d", &cluster, &proc ) == 2 ) {
 				sprintf( constraint, "((%s == %d) && (%s == %d))",
 					ATTR_CLUSTER_ID, cluster, ATTR_PROC_ID, proc );
-                                Q.addOR( constraint );
-   
+				Q.addOR( constraint );
 				Q.addDBConstraint(CQ_CLUSTER_ID, cluster);
 				Q.addDBConstraint(CQ_PROC_ID, proc);
+				constrID.push_back(CondorID(cluster,proc,-1));
 				summarize = 0;
 			} 
 			else if( sscanf ( argv[i], "%d", &cluster ) == 1 ) {
 				sprintf( constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster );
 				Q.addOR( constraint );
-   				Q.addDBConstraint(CQ_CLUSTER_ID, cluster);
+				Q.addDBConstraint(CQ_CLUSTER_ID, cluster);
+				constrID.push_back(CondorID(cluster,-1,-1));
 				summarize = 0;
 			} 
 			else if( Q.add( CQ_OWNER, argv[i] ) != Q_OK ) {
@@ -1050,7 +1145,6 @@ processCommandLineArguments (int argc, char *argv[])
 				}
 				exit( 1 );
 			}
-			Termlog = 1;
 			set_debug_flags( argv[i], 0 );
 		} 
 		else
@@ -1335,7 +1429,7 @@ processCommandLineArguments (int argc, char *argv[])
 					opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
 					mask_head.Append(hd);
 				}
-				else if (flabel) { lbl.sprintf("%s = ", argv[i]); wid = 0; opts = 0; }
+				else if (flabel) { lbl.formatstr("%s = ", argv[i]); wid = 0; opts = 0; }
 				lbl += fCapV ? "%V" : "%v";
 				mask.registerFormat(lbl.Value(), wid, opts, argv[i]);
 			}
@@ -1364,7 +1458,7 @@ processCommandLineArguments (int argc, char *argv[])
 		else
 		if (match_prefix( arg, "run")) {
 			std::string expr;
-			sprintf( expr, "%s == %d || %s == %d || %s == %d", ATTR_JOB_STATUS, RUNNING,
+			formatstr( expr, "%s == %d || %s == %d || %s == %d", ATTR_JOB_STATUS, RUNNING,
 					 ATTR_JOB_STATUS, TRANSFERRING_OUTPUT, ATTR_JOB_STATUS, SUSPENDED );
 			Q.addAND( expr.c_str() );
 			run = true;
@@ -1429,9 +1523,7 @@ processCommandLineArguments (int argc, char *argv[])
 		else
 		if( match_prefix( arg, "debug" ) ) {
 			// dprintf to console
-			Termlog = 1;
-			p_funcs = get_param_functions();
-			dprintf_config ("TOOL", p_funcs);
+			dprintf_set_tool_debug("TOOL", 0);
 		}
 		else
 		if (match_prefix(arg,"io")) {
@@ -1459,24 +1551,42 @@ processCommandLineArguments (int argc, char *argv[])
 			expert = true;
 			attrs.clearAll();
 		}
-        else if (match_prefix(arg, "jobads")) {
+		else if (match_prefix(arg, "jobads")) {
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -jobads require filename\n");
+				fprintf( stderr, "Error: Argument -jobads requires a filename\n");
 				exit(1);
 			} else {
-                i++;
-                jobads_file = strdup(argv[i]);
-            }
-        }
-        else if (match_prefix(arg, "machineads")) {
+				i++;
+				jobads_file = strdup(argv[i]);
+			}
+		}
+		else if (match_prefix(arg, "userlog")) {
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -machineads require filename\n");
+				fprintf( stderr, "Error: Argument -userlog requires a filename\n");
 				exit(1);
 			} else {
-                i++;
-                machineads_file = strdup(argv[i]);
-            }
-        }
+				i++;
+				userlog_file = strdup(argv[i]);
+			}
+		}
+		else if (match_prefix(arg, "machineads")) {
+			if (argc <= i+1) {
+				fprintf( stderr, "Error: Argument -machineads requires a filename\n");
+				exit(1);
+			} else {
+				i++;
+				machineads_file = strdup(argv[i]);
+			}
+		}
+		else if (is_arg_colon_prefix(arg, "userprios", &pcolon, 5)) {
+			if (argc <= i+1) {
+				fprintf( stderr, "Error: Argument -userprios requires a filename\n");
+				exit(1);
+			} else {
+				i++;
+				userprios_file = strdup(argv[i]);
+			}
+		}
 #ifdef HAVE_EXT_POSTGRESQL
 		else if (match_prefix(arg, "avgqueuetime")) {
 				/* if user want average wait time, we will perform direct DB query */
@@ -1685,10 +1795,17 @@ bufferJobShort( ClassAd *ad ) {
 
 	MyString args_string;
 	ArgList::GetArgsStringForDisplay(ad,&args_string);
-	if (!args_string.IsEmpty()) {
-		buffer.sprintf( "%s %s", condor_basename(cmd), args_string.Value() );
+
+	std::string description;
+
+	ad->EvalString(ATTR_JOB_DESCRIPTION, NULL, description);
+	if ( !description.empty() ){
+		buffer.formatstr("%s", description.c_str());
+	}
+	else if (!args_string.IsEmpty()) {
+		buffer.formatstr( "%s %s", condor_basename(cmd), args_string.Value() );
 	} else {
-		buffer.sprintf( "%s", condor_basename(cmd) );
+		buffer.formatstr( "%s", condor_basename(cmd) );
 	}
 	free(cmd);
 	utime = job_time(utime,ad);
@@ -1715,8 +1832,10 @@ bufferJobShort( ClassAd *ad ) {
 	}
 
 	sprintf( return_buff,
-			 widescreen ? "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %s\n"
-			            : "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %-18.18s\n",
+			 widescreen ? description.empty() ? "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %s\n"
+			                                   : "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f (%s)\n"
+			            : description.empty() ? "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %-18.18s\n"
+				                           : "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f (%-17.17s)\n",
 			 cluster,
 			 proc,
 			 format_owner( owner, ad ),
@@ -1779,7 +1898,7 @@ format_remote_host (char *, AttrList *ad)
 
 	int universe = CONDOR_UNIVERSE_STANDARD;
 	ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
-	if (universe == CONDOR_UNIVERSE_SCHEDULER &&
+	if (((universe == CONDOR_UNIVERSE_SCHEDULER) || (universe == CONDOR_UNIVERSE_LOCAL)) &&
 		addr.from_sinful(scheddAddr) == true) {
 		MyString hostname = get_hostname(addr);
 		if (hostname.Length() > 0) {
@@ -1789,15 +1908,15 @@ format_remote_host (char *, AttrList *ad)
 			return unknownHost;
 		}
 	} else if (universe == CONDOR_UNIVERSE_GRID) {
-		if (ad->LookupString(ATTR_GRID_RESOURCE,host_result) == 1 )
+		if (ad->LookupString(ATTR_GRID_RESOURCE,host_result, sizeof(host_result)) == 1 )
 			return host_result;
-		else if (ad->LookupString(ATTR_EC2_REMOTE_VM_NAME,host_result) == 1)
+		else if (ad->LookupString(ATTR_EC2_REMOTE_VM_NAME,host_result,sizeof(host_result)) == 1)
 			return host_result;
 		else
 			return unknownHost;
 	}
 
-	if (ad->LookupString(ATTR_REMOTE_HOST, host_result) == 1) {
+	if (ad->LookupString(ATTR_REMOTE_HOST, host_result, sizeof(host_result)) == 1) {
 		if( is_valid_sinful(host_result) && 
 			addr.from_sinful(host_result) == true ) {
 			MyString hostname = get_hostname(addr);
@@ -2245,6 +2364,7 @@ usage (const char *myName)
 		"\t\t-xml\t\t\tDisplay entire classads, but in XML\n"
 		"\t\t-attributes X,Y,...\tAttributes to show in -xml and -long\n"
 		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
+		"\t\t-autoformat:[V,ntlh] <attr> [attr2 [attr3 ...]]\t\t    Print attr(s) with automatic formatting\n"
 		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
 		"\t\t-run\t\t\tGet information about running jobs\n"
 		"\t\t-hold\t\t\tGet information about jobs on hold\n"
@@ -2257,6 +2377,7 @@ usage (const char *myName)
 		"\t\t-expert\t\t\tDisplay shorter error messages\n"
 		"\t\t-constraint <expr>\tAdd constraint on classads\n"
 		"\t\t-jobads <file>\t\tFile of job ads to display\n"
+		"\t\t-userlog <file>\t\tFile of user log to display\n"
 		"\t\t-machineads <file>\tFile of machine ads for analysis\n"
 #ifdef HAVE_EXT_POSTGRESQL
 		"\t\t-direct <rdbms | schedd>\n"
@@ -2312,11 +2433,9 @@ void full_header(bool useDB,char const *quill_name,char const *db_ipAddr, char c
 	}
 	if( use_xml ) {
 			// keep this consistent with AttrListList::fPrintAttrListList()
-		ClassAdXMLUnparser  unparser;
-		MyString xml;
-		unparser.SetUseCompactSpacing(false);
-		unparser.AddXMLFileHeader(xml);
-		printf("%s\n", xml.Value());
+		std::string xml;
+		AddClassAdXMLFileHeader(xml);
+		printf("%s\n", xml.c_str());
 	}
 }
 
@@ -2691,7 +2810,7 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 			fprintf( stderr, 
 					"\n-- Failed to fetch ads from db [%s] at database "
 					"server %s\n%s\n",
-					db_name, db_ipAddr, errstack.getFullText(true) );
+					db_name, db_ipAddr, errstack.getFullText(true).c_str() );
 
 			if(dbconn) {
 				free(dbconn);
@@ -2735,7 +2854,7 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 				default:
 					fprintf(stderr,
 						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
-						scheddAddress, scheddMachine, errstack.getFullText(true) );
+						scheddAddress, scheddMachine, errstack.getFullText(true).c_str() );
 			}
 
 			return false;
@@ -2803,11 +2922,9 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 		}
 		if( use_xml ) {
 				// keep this consistent with AttrListList::fPrintAttrListList()
-			ClassAdXMLUnparser  unparser;
-			MyString xml;
-			unparser.SetUseCompactSpacing(false);
-			unparser.AddXMLFileFooter(xml);
-			printf("%s\n", xml.Value());
+			std::string xml;
+			AddClassAdXMLFileFooter(xml);
+			printf("%s\n", xml.c_str());
 		}
 	}
 
@@ -2930,10 +3047,10 @@ process_buffer_line( ClassAd *job )
 	}
 
 	if (use_xml) {
-		MyString s;
+		std::string s;
 		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
 		job->sPrintAsXML(s,attr_white_list);
-		tempCPS->string = strnewp( s.Value() );
+		tempCPS->string = strnewp( s.c_str() );
 	} else if( verbose ) {
 		MyString s;
 		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
@@ -2993,14 +3110,49 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 
 	char *lastUpdate=NULL;
 
-    if (jobads_file != NULL) {
+	// setup constraint variables to use in some of the later code.
+	const char * constr = NULL;
+	CondorID * JobIds = NULL;
+	int cJobIds = constrID.size();
+	if (cJobIds > 0) JobIds = &constrID[0];
+
+	std::string constr_string; // to hold the return from ExprTreeToString()
+	ExprTree *tree = NULL;
+	Q.rawQuery(tree);
+	if (tree) {
+		constr_string = ExprTreeToString(tree);
+		constr = constr_string.c_str();
+		delete tree;
+	}
+
+	bool analyze_no_schedd = false;
+	CondorQClassAdFileParseHelper jobads_file_parse_helper;
+	if (jobads_file != NULL) {
 		/* get the "q" from the job ads file */
-        if (!read_classad_file(jobads_file, jobs)) {
+		if (!read_classad_file(jobads_file, jobs, &jobads_file_parse_helper, constr)) {
+			return false;
+		}
+		// if we are doing analysis, print out the schedd name and address
+		// that we got from the classad file.
+		if (better_analyze && ! jobads_file_parse_helper.schedd_name.empty()) {
+			scheddName    = jobads_file_parse_helper.schedd_name.c_str();
+			scheddAddress = jobads_file_parse_helper.schedd_addr.c_str();
+			scheddMachine = "Unknown";
+			scheddVersion = "";
+			analyze_no_schedd = true;
+			}
+		
+		/* The variable UseDB should be false in this branch since it was set 
+			in main() because jobads_file had a good value. */
+
+    } else if (userlog_file != NULL) {
+        if (!userlog_to_classads(userlog_file, jobs, JobIds, cJobIds, constr)) {
+            fprintf(stderr, "Can't open user log: %s\n", userlog_file);
             return false;
         }
 		
 		/* The variable UseDB should be false in this branch since it was set 
-			in main() because jobads_file had a good value. */
+			in main() because userlog_file had a good value. */
 
     } else {
 		/* else get the job queue either from quill or the schedd. */
@@ -3027,7 +3179,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 			if( Q.fetchQueueFromDB(jobs, lastUpdate, dbconn, &errstack) != Q_OK ) {
 				fprintf( stderr,
 						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
-						db_ipAddr, db_name, errstack.getFullText(true) );
+						db_ipAddr, db_name, errstack.getFullText(true).c_str() );
 				if(dbconn) {
 					free(dbconn);
 				}
@@ -3056,7 +3208,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 				default:
 					fprintf(stderr,
 						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
-						scheddAddress, scheddMachine, errstack.getFullText(true) );
+						scheddAddress, scheddMachine, errstack.getFullText(true).c_str() );
 			}
 			return false;
 			}
@@ -3074,7 +3226,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 		if (useDB) {
 			printf ("\n\n-- Quill: %s : %s : %s\n", quill_name, 
 					db_ipAddr, db_name);
-		} else if( querySchedds ) {
+		} else if (querySchedds || analyze_no_schedd) {
 			printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddress);
 		} else {
 			printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
@@ -3082,11 +3234,12 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 		}
 
 		Daemon schedd_daemon(DT_SCHEDD,scheddName,pool ? pool->addr() : NULL);
-		schedd_daemon.locate();
+		if ( ! analyze_no_schedd)
+			schedd_daemon.locate();
 
 		jobs.Open();
 		while( ( job = jobs.Next() ) ) {
-			doRunAnalysis( job, &schedd_daemon );
+			doRunAnalysis( job, analyze_no_schedd ? NULL : &schedd_daemon );
 		}
 		jobs.Close();
 
@@ -3279,12 +3432,17 @@ setupAnalysis()
 	char		buffer[64];
 	char		*preq;
 	ClassAd		*ad;
-	char		remoteUser[128];
+	string		remoteUser;
 	int			index;
+
+	
+	if (verbose) {
+		fprintf(stderr, "Fetching machine ads for analysis...");
+	}
 
 	// fetch startd ads
     if (machineads_file != NULL) {
-        if (!read_classad_file(machineads_file, startdAds)) {
+        if (!read_classad_file(machineads_file, startdAds, NULL, NULL)) {
             exit ( 1 );
         }
     } else {
@@ -3295,14 +3453,42 @@ setupAnalysis()
         }
     }
 
-	// fetch submittor prios
-	fetchSubmittorPrios();
+	if (verbose) {
+		fprintf(stderr, "Done.\nFound %d machines ads.\n", startdAds.Length());
+	}
+
+	if (verbose) {
+		fprintf(stderr, "Fetching user priorities for analysis...");
+	}
+
+	int cPrios = 0;
+	if (userprios_file != NULL) {
+		cPrios = read_userprio_file(userprios_file, prioTable);
+		if (cPrios < 0) {
+			PRAGMA_REMIND("TJ: don't exit here, just analyze without userprio information")
+			exit (1);
+		}
+	} else {
+		// fetch submittor prios
+		cPrios = fetchSubmittorPriosFromNegotiator(prioTable);
+		if (cPrios < 0) {
+			PRAGMA_REMIND("TJ: don't exit here, just analyze without userprio information")
+			exit(1);
+		}
+	}
+
+	if (verbose) {
+		fprintf(stderr, "Done.\nFound %d submitters\n", cPrios);
+	} else if (cPrios <= 0) {
+		printf( "Warning:  Found no submitters\n" );
+	}
+
 
 	// populate startd ads with remote user prios
 	startdAds.Open();
 	while( ( ad = startdAds.Next() ) ) {
 		if( ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) {
-			if( ( index = findSubmittor( remoteUser ) ) != -1 ) {
+			if( ( index = findSubmittor( remoteUser.c_str() ) ) != -1 ) {
 				sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , 
 							prioTable[index].prio );
 				ad->Insert( buffer );
@@ -3348,14 +3534,13 @@ setupAnalysis()
 }
 
 
-static void
-fetchSubmittorPrios()
+static int
+fetchSubmittorPriosFromNegotiator(ExtArray<PrioEntry> & prios)
 {
 	AttrList	al;
 	char  	attrName[32], attrPrio[32];
   	char  	name[128];
   	float 	priority;
-	int		i = 1;
 
 	Daemon	negotiator( DT_NEGOTIATOR, NULL, pool ? pool->addr() : NULL );
 
@@ -3365,7 +3550,7 @@ fetchSubmittorPrios()
 	if (!(sock = negotiator.startCommand( GET_PRIORITY, Stream::reli_sock, 0))) {
 		fprintf( stderr, "Error: Could not connect to negotiator (%s)\n",
 				 negotiator.fullHostname() );
-		exit( 1 );
+		return -1;
 	}
 
 	sock->end_of_message();
@@ -3374,30 +3559,101 @@ fetchSubmittorPrios()
 		fprintf( stderr, 
 				 "Error:  Could not get priorities from negotiator (%s)\n",
 				 negotiator.fullHostname() );
-		exit( 1 );
+		return -1;
 	}
 	sock->close();
 	delete sock;
 
 
-	i = 1;
-	while( i ) {
-    	sprintf( attrName , "Name%d", i );
-    	sprintf( attrPrio , "Priority%d", i );
+	int cPrios = 0;
+	while( true ) {
+		sprintf( attrName , "Name%d", cPrios+1 );
+		sprintf( attrPrio , "Priority%d", cPrios+1 );
 
-    	if( !al.LookupString( attrName, name ) || 
+		if( !al.LookupString( attrName, name, sizeof(name) ) || 
 			!al.LookupFloat( attrPrio, priority ) )
-            break;
+			break;
 
-		prioTable[i-1].name = name;
-		prioTable[i-1].prio = priority;
-		i++;
+		prios[cPrios].name = name;
+		prios[cPrios].prio = priority;
+		++cPrios;
 	}
 
-	if( i == 1 ) {
-		printf( "Warning:  Found no submitters\n" );
-	}
+	return cPrios;
 }
+
+// parse lines of the form "attrNNNN = value" and return attr, NNNN and value as separate fields.
+static int parse_userprio_line(const char * line, std::string & attr, std::string & value)
+{
+	int id = 0;
+
+	// skip over the attr part
+	const char * p = line;
+	while (*p && isspace(*p)) ++p;
+
+	// parse prefixNNN and set id=NNN and attr=prefix
+	const char * pattr = p;
+	while (*p) {
+		if (isdigit(*p)) {
+			attr.assign(pattr, p-pattr);
+			id = atoi(p);
+			while (isdigit(*p)) ++p;
+			break;
+		} else if  (isspace(*p)) {
+			break;
+		}
+		++p;
+	}
+	if (id <= 0)
+		return -1;
+
+	// parse = with or without whitespace.
+	while (isspace(*p)) ++p;
+	if (*p != '=')
+		return -1;
+	++p;
+	while (isspace(*p)) ++p;
+
+	// parse value, remove "" from around strings 
+	if (*p == '"')
+		value.assign(p+1,strlen(p)-2);
+	else
+		value = p;
+	return id;
+}
+
+static int read_userprio_file(const char *filename, ExtArray<PrioEntry> & prios)
+{
+	int cPrios = 0;
+
+	FILE *file = safe_fopen_wrapper_follow(filename, "r");
+	if (file == NULL) {
+		fprintf(stderr, "Can't open file of user priorities: %s\n", filename);
+		return -1;
+	} else {
+		while (const char * line = getline(file)) {
+			std::string attr, value;
+			int id = parse_userprio_line(line, attr, value);
+			if (id <= 0) {
+				// there are valid attributes that we want to ignore that return -1 from
+				// this call, so just skip them
+				continue;
+			}
+
+			if (attr == "Priority") {
+				float priority = atof(value.c_str());
+				prios[id].prio = priority;
+				cPrios = MAX(cPrios, id);
+			} else if (attr == "Name") {
+				prios[id].name = value;
+				cPrios = MAX(cPrios, id);
+			}
+		}
+		fclose(file);
+	}
+	return cPrios;
+}
+
 
 
 static void
@@ -3410,7 +3666,7 @@ static const char *
 doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 {
 	char	owner[128];
-	char	remoteUser[128];
+	string	remoteUser;
 	char	buffer[128];
 	int		index;
 	ClassAd	*offer;
@@ -3443,7 +3699,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		snprintf( return_buff, sizeof(return_buff), "%s", buf.Value() );
 	}
 
-	if( !request->LookupString( ATTR_OWNER , owner ) ) return "Nothing here.\n";
+	if( !request->LookupString( ATTR_OWNER , owner, sizeof(owner) ) ) return "Nothing here.\n";
 	if( !request->LookupInteger( ATTR_NICE_USER , niceUser ) ) niceUser = 0;
 
 	if( ( index = findSubmittor( fixSubmittorName( owner, niceUser ) ) ) < 0 ) 
@@ -3509,9 +3765,8 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 
 	while( ( offer = startdAds.Next() ) ) {
 		// 0.  info from machine
-		remoteUser[0] = '\0';
 		totalMachines++;
-		offer->LookupString( ATTR_NAME , buffer );
+		offer->LookupString( ATTR_NAME , buffer, sizeof(buffer) );
 		if( verbose ) sprintf( return_buff, "%-15.15s ", buffer );
 
 		// 1. Request satisfied? 
@@ -3610,7 +3865,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 									"%sCan preempt %s, but failed "
 									"PREEMPTION_REQUIREMENTS test\n",
 									return_buff,
-									remoteUser);
+									 remoteUser.c_str());
 						}
 						continue;
 					} else {
@@ -3618,7 +3873,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 						if( verbose ) {
 							sprintf( return_buff,
 								"%sAvailable (can preempt %s)\n",
-								return_buff, remoteUser);
+									 return_buff, remoteUser.c_str());
 						}
 						available++;
 					}
@@ -3648,7 +3903,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 			if( verbose ) {
 				sprintf( return_buff,
 					"%sInsufficient priority to preempt %s\n" , 
-					return_buff, remoteUser );
+						 return_buff, remoteUser.c_str() );
 			}
 			continue;
 		}
@@ -3814,7 +4069,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 
 
 static int
-findSubmittor( char *name ) 
+findSubmittor( const char *name ) 
 {
 	MyString 	sub(name);
 	int			last = prioTable.getlast();
@@ -3865,36 +4120,86 @@ fixSubmittorName( char *name, int niceUser )
 	return NULL;
 }
 
-static bool read_classad_file(const char *filename, ClassAdList &classads)
-{
-    int is_eof, is_error, is_empty;
-    bool success;
-    ClassAd *classad;
-    FILE *file;
 
-    file = safe_fopen_wrapper_follow(filename, "r");
-    if (file == NULL) {
-        fprintf(stderr, "Can't open file of job ads: %s\n", filename);
+static bool read_classad_file(const char *filename, ClassAdList &classads, ClassAdFileParseHelper* pparse_help, const char * constr)
+{
+	bool success = false;
+
+	FILE* file = safe_fopen_wrapper_follow(filename, "r");
+	if (file == NULL) {
+		fprintf(stderr, "Can't open file of job ads: %s\n", filename);
 		return false;
-    } else {
-        do {
-            classad = new ClassAd(file, "\n", is_eof, is_error, is_empty);
-            if (!is_error && !is_empty) {
-                classads.Insert(classad);
-            }
-			else {
+	} else {
+#if 1
+		CondorClassAdFileParseHelper generic_helper("\n");
+		if ( ! pparse_help)
+			pparse_help = &generic_helper;
+
+		for (;;) {
+			ClassAd* classad = new ClassAd();
+
+			int error;
+			bool is_eof;
+			int cAttrs = classad->InsertFromFile(file, is_eof, error, pparse_help);
+
+			bool include_classad = cAttrs > 0 && error >= 0;
+			if (include_classad && constr) {
+				classad::Value result;
+				if (classad->EvaluateExpr(constr,result)) {
+					if ( ! result.IsBooleanValueEquiv(include_classad)) {
+						include_classad = false;
+					}
+				}
+			}
+			if (include_classad) {
+				classads.Insert(classad);
+			} else {
 				delete classad;
 			}
-        } while (!is_eof && !is_error);
-        if (is_error) {
-            success = false;
-        } else {
-            success = true;
-        }
+
+			if (is_eof) {
+				success = true;
+				break;
+			}
+			if (error < 0) {
+				success = false;
+				break;
+			}
+		}
+#else
+		int is_eof, is_error, is_empty;
+		int cEmpty = 0;
+		do {
+			classad = new ClassAd(file, "\n", is_eof, is_error, is_empty);
+			include_classad = !is_error && !is_empty;
+			if (constr) {
+				classad::Value result;
+				if (classad->EvaluateExpr(constr,result)) {
+					if ( ! result.IsBooleanValueEquiv(include_classad)) {
+						include_classad=false;
+					}
+				}
+			}
+			if (include_classad) {
+				classads.Insert(classad);
+			} else {
+				delete classad;
+			}
+
+		} while (!is_eof && !is_error);
+
+		if (is_error) {
+			success = false;
+		} else {
+			success = true;
+		}
+#endif
+
 		fclose(file);
-    }
-    return success;
+	}
+	return success;
 }
+
 
 #ifdef HAVE_EXT_POSTGRESQL
 
@@ -4034,11 +4339,11 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
 		bool exhausted = false;
 		ad->LookupBool("SwapSpaceExhausted", exhausted);
 		if (exhausted) {
-			result_buf.sprintf_cat("WARNING -- this schedd is not running jobs because it believes that doing so\n");
-			result_buf.sprintf_cat("           would exhaust swap space and cause thrashing.\n");
-			result_buf.sprintf_cat("           Set RESERVED_SWAP to 0 to tell the scheduler to skip this check\n");
-			result_buf.sprintf_cat("           Or add more swap space.\n");
-			result_buf.sprintf_cat("           The analysis code does not take this into consideration\n");
+			result_buf.formatstr_cat("WARNING -- this schedd is not running jobs because it believes that doing so\n");
+			result_buf.formatstr_cat("           would exhaust swap space and cause thrashing.\n");
+			result_buf.formatstr_cat("           Set RESERVED_SWAP to 0 to tell the scheduler to skip this check\n");
+			result_buf.formatstr_cat("           Or add more swap space.\n");
+			result_buf.formatstr_cat("           The analysis code does not take this into consideration\n");
 		}
 
 		int maxJobsRunning 	= -1;
@@ -4049,9 +4354,9 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
 
 		if ((maxJobsRunning > -1) && (totalRunningJobs > -1) && 
 			(maxJobsRunning == totalRunningJobs)) { 
-			result_buf.sprintf_cat("WARNING -- this schedd has hit the MAX_JOBS_RUNNING limit of %d\n", maxJobsRunning);
-			result_buf.sprintf_cat("       to run more concurrent jobs, raise this limit in the config file\n");
-			result_buf.sprintf_cat("       NOTE: the matchmaking analysis does not take the limit into consideration\n");
+			result_buf.formatstr_cat("WARNING -- this schedd has hit the MAX_JOBS_RUNNING limit of %d\n", maxJobsRunning);
+			result_buf.formatstr_cat("       to run more concurrent jobs, raise this limit in the config file\n");
+			result_buf.formatstr_cat("       NOTE: the matchmaking analysis does not take the limit into consideration\n");
 		}
 
 		int status = -1;
@@ -4083,10 +4388,10 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
 
 				int req = 0;
 				if( !ad->EvalBool(schedd_requirements_attr,job,req) ) {
-					result_buf.sprintf_cat("WARNING -- this schedd's policy %s failed to evalute for this job.\n",schedd_requirements_expr.Value());
+					result_buf.formatstr_cat("WARNING -- this schedd's policy %s failed to evalute for this job.\n",schedd_requirements_expr.Value());
 				}
 				else if( !req ) {
-					result_buf.sprintf_cat("WARNING -- this schedd's policy %s evalutes to false for this job.\n",schedd_requirements_expr.Value());
+					result_buf.formatstr_cat("WARNING -- this schedd's policy %s evalutes to false for this job.\n",schedd_requirements_expr.Value());
 				}
 			}
 		}

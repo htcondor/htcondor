@@ -24,7 +24,6 @@
 #include "condor_classad.h"
 #include "named_classad.h"
 #include <list>
-using namespace std;
 
 class NamedClassAdList
 {
@@ -46,7 +45,7 @@ class NamedClassAdList
 	int	Publish( ClassAd *ad );
 
   protected:
-	list<NamedClassAd*>		m_ads;
+	std::list<NamedClassAd*>		m_ads;
 
 };
 

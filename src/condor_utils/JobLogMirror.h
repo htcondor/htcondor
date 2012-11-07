@@ -27,7 +27,9 @@
 
 class JobLogMirror: public Service {
 public:
-	JobLogMirror(ClassAdLogConsumer *consumer);
+	JobLogMirror(ClassAdLogConsumer *consumer,char const *_alt_spool_param=NULL);
+	~JobLogMirror();
+
 	void init();
 	void config();
 	void stop();
@@ -35,6 +37,7 @@ public:
 
 private:
 	ClassAdLogReader job_log_reader;
+	std::string alt_spool_param;
 
 	int log_reader_polling_timer;
 	int log_reader_polling_period;

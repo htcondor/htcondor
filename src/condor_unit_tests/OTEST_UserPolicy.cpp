@@ -2263,7 +2263,7 @@ static bool test_firing_reason_undefined_timer_remove() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("The job attribute %s expression 'DoesNotExist' evaluated to"
+	reason.formatstr("The job attribute %s expression 'DoesNotExist' evaluated to"
 		" UNDEFINED", ATTR_TIMER_REMOVE_CHECK);
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
@@ -2294,7 +2294,7 @@ static bool test_firing_reason_undefined_periodic_hold() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("The job attribute %s expression 'DoesNotExist' evaluated to"
+	reason.formatstr("The job attribute %s expression 'DoesNotExist' evaluated to"
 		" UNDEFINED", ATTR_PERIODIC_HOLD_CHECK);
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
@@ -2325,7 +2325,7 @@ static bool test_firing_reason_undefined_periodic_release() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("The job attribute %s expression 'DoesNotExist' evaluated to"
+	reason.formatstr("The job attribute %s expression 'DoesNotExist' evaluated to"
 		" UNDEFINED", ATTR_PERIODIC_RELEASE_CHECK);
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
@@ -2356,7 +2356,7 @@ static bool test_firing_reason_undefined_periodic_remove() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("The job attribute %s expression 'DoesNotExist' evaluated to"
+	reason.formatstr("The job attribute %s expression 'DoesNotExist' evaluated to"
 		" UNDEFINED", ATTR_PERIODIC_REMOVE_CHECK);
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
@@ -2387,7 +2387,7 @@ static bool test_firing_reason_undefined_on_exit_hold() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("The job attribute %s expression 'DoesNotExist' evaluated to"
+	reason.formatstr("The job attribute %s expression 'DoesNotExist' evaluated to"
 		" UNDEFINED", ATTR_ON_EXIT_HOLD_CHECK);
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
@@ -2418,7 +2418,7 @@ static bool test_firing_reason_undefined_on_exit_remove() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("The job attribute %s expression 'DoesNotExist' evaluated to"
+	reason.formatstr("The job attribute %s expression 'DoesNotExist' evaluated to"
 		" UNDEFINED", ATTR_ON_EXIT_REMOVE_CHECK);
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
@@ -2449,7 +2449,7 @@ static bool test_firing_reason_only_timer_remove() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("The job attribute %s expression '0' evaluated to "
+	reason.formatstr("The job attribute %s expression '0' evaluated to "
 		"TRUE", ATTR_TIMER_REMOVE_CHECK);
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
@@ -2479,7 +2479,7 @@ static bool test_firing_reason_only_periodic_hold() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("The job attribute %s expression 'true' evaluated to "
+	reason.formatstr("The job attribute %s expression 'true' evaluated to "
 		"TRUE", ATTR_PERIODIC_HOLD_CHECK);
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
@@ -2510,7 +2510,7 @@ static bool test_custom_firing_reason_only_periodic_hold() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("Custom reason");
+	reason.formatstr("Custom reason");
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
 	UserPolicy policy;
@@ -2539,7 +2539,7 @@ static bool test_firing_reason_only_periodic_release() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("The job attribute %s expression 'true' evaluated to "
+	reason.formatstr("The job attribute %s expression 'true' evaluated to "
 		"TRUE", ATTR_PERIODIC_RELEASE_CHECK);
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
@@ -2570,7 +2570,7 @@ static bool test_custom_firing_reason_only_periodic_release() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("Custom reason");
+	reason.formatstr("Custom reason");
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
 	UserPolicy policy;
@@ -2599,7 +2599,7 @@ static bool test_firing_reason_only_periodic_remove() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("The job attribute %s expression 'true' evaluated to "
+	reason.formatstr("The job attribute %s expression 'true' evaluated to "
 		"TRUE", ATTR_PERIODIC_REMOVE_CHECK);
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
@@ -2630,7 +2630,7 @@ static bool test_custom_firing_reason_only_periodic_remove() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("Custom reason");
+	reason.formatstr("Custom reason");
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
 	UserPolicy policy;
@@ -2687,7 +2687,7 @@ static bool test_firing_reason_exit_timer_remove() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("The job attribute %s expression '0' evaluated to TRUE", 
+	reason.formatstr("The job attribute %s expression '0' evaluated to TRUE", 
 		ATTR_TIMER_REMOVE_CHECK);
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
@@ -2717,7 +2717,7 @@ static bool test_firing_reason_exit_periodic_hold() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("The job attribute %s expression 'true' evaluated to TRUE", 
+	reason.formatstr("The job attribute %s expression 'true' evaluated to TRUE", 
 		ATTR_PERIODIC_HOLD_CHECK);
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
@@ -2747,7 +2747,7 @@ static bool test_firing_reason_exit_periodic_release() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("The job attribute %s expression 'true' evaluated to TRUE", 
+	reason.formatstr("The job attribute %s expression 'true' evaluated to TRUE", 
 		ATTR_PERIODIC_RELEASE_CHECK);
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
@@ -2777,7 +2777,7 @@ static bool test_firing_reason_exit_periodic_remove() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("The job attribute %s expression 'true' evaluated to TRUE", 
+	reason.formatstr("The job attribute %s expression 'true' evaluated to TRUE", 
 		ATTR_PERIODIC_REMOVE_CHECK);
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
@@ -2807,7 +2807,7 @@ static bool test_firing_reason_exit_on_exit_hold() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("The job attribute %s expression 'true' evaluated to TRUE", 
+	reason.formatstr("The job attribute %s expression 'true' evaluated to TRUE", 
 		ATTR_ON_EXIT_HOLD_CHECK);
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
@@ -2838,7 +2838,7 @@ static bool test_custom_firing_reason_exit_on_exit_hold() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("Custom reason");
+	reason.formatstr("Custom reason");
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
 	UserPolicy policy;
@@ -2867,7 +2867,7 @@ static bool test_firing_reason_exit_on_exit_remove() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("The job attribute %s expression 'true' evaluated to TRUE",
+	reason.formatstr("The job attribute %s expression 'true' evaluated to TRUE",
 		ATTR_ON_EXIT_REMOVE_CHECK);
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
@@ -2898,7 +2898,7 @@ static bool test_custom_firing_reason_exit_on_exit_remove() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("Custom reason");
+	reason.formatstr("Custom reason");
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
 	UserPolicy policy;
@@ -2928,7 +2928,7 @@ static bool test_firing_reason_exit_false() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("The job attribute %s expression 'false' evaluated to FALSE",
+	reason.formatstr("The job attribute %s expression 'false' evaluated to FALSE",
 		ATTR_ON_EXIT_REMOVE_CHECK);
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
@@ -3039,7 +3039,7 @@ static bool test_remove_macro_firing_reason() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("The system macro SYSTEM_PERIODIC_REMOVE expression 'true' "
+	reason.formatstr("The system macro SYSTEM_PERIODIC_REMOVE expression 'true' "
 		"evaluated to TRUE");
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
@@ -3150,7 +3150,7 @@ static bool test_release_macro_firing_reason() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("The system macro SYSTEM_PERIODIC_RELEASE expression 'true' "
+	reason.formatstr("The system macro SYSTEM_PERIODIC_RELEASE expression 'true' "
 		"evaluated to TRUE");
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());
@@ -3261,7 +3261,7 @@ static bool test_hold_macro_firing_reason() {
 	unparser.Unparse(classad_string, ad);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string.c_str());
-	reason.sprintf("The system macro SYSTEM_PERIODIC_HOLD expression 'true' "
+	reason.formatstr("The system macro SYSTEM_PERIODIC_HOLD expression 'true' "
 		"evaluated to TRUE");
 	emit_output_expected_header();
 	emit_retval("%s", reason.Value());

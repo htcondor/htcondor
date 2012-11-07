@@ -330,9 +330,9 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 		}
 
 		MyString tmp_str;
-		tmp_str.sprintf("%d", (int)vmgahp_user_uid);
+		tmp_str.formatstr("%d", (int)vmgahp_user_uid);
 		job_env->SetEnv("VMGAHP_USER_UID", tmp_str.Value());
-		tmp_str.sprintf("%d", (int)vmgahp_user_gid);
+		tmp_str.formatstr("%d", (int)vmgahp_user_gid);
 		job_env->SetEnv("VMGAHP_USER_GID", tmp_str.Value());
 	}
 #endif
@@ -800,7 +800,7 @@ VMGahpServer::write_line(const char *command)
 	}
 
 	MyString debug;
-	debug.sprintf( "'%s'", command );
+	debug.formatstr( "'%s'", command );
 	dprintf( D_FULLDEBUG, "VMGAHP[%d] <- %s\n", m_vmgahp_pid,
 			debug.Value() );
 
@@ -819,7 +819,7 @@ VMGahpServer::write_line(const char *command, int req, const char *args)
 	}
 
 	MyString buf;
-	buf.sprintf(" %d ",req);
+	buf.formatstr(" %d ",req);
 	if( daemonCore->Write_Pipe(m_vmgahp_writefd,command,strlen(command)) <= 0 ) {
 		dprintf( D_ALWAYS, "VMGAHP write line(%s) Error\n", command);
 		return false;
@@ -841,9 +841,9 @@ VMGahpServer::write_line(const char *command, int req, const char *args)
 
 	MyString debug;
 	if( args ) {
-		debug.sprintf( "'%s%s%s'", command, buf.Value(), args );
+		debug.formatstr( "'%s%s%s'", command, buf.Value(), args );
 	} else {
-		debug.sprintf( "'%s%s'", command, buf.Value() );
+		debug.formatstr( "'%s%s'", command, buf.Value() );
 	}
 	dprintf( D_FULLDEBUG, "VMGAHP[%d] <- %s\n", m_vmgahp_pid,
 			debug.Value() );
@@ -1368,7 +1368,7 @@ VMGahpServer::publishVMClassAd(const char *workingdir)
 
 	// Send Working directory
 	MyString vmAttr;
-	vmAttr.sprintf("VM_WORKING_DIR = \"%s\"", workingdir);
+	vmAttr.formatstr("VM_WORKING_DIR = \"%s\"", workingdir);
 
 	if ( write_line( vmAttr.Value() ) == false ) {
 		return false;
@@ -1413,7 +1413,7 @@ VMGahpServer::publishVMClassAd(const char *workingdir)
 			continue;
 		}
 
-		vmAttr.sprintf( "%s = %s", name, ExprTreeToString( expr ) );
+		vmAttr.formatstr( "%s = %s", name, ExprTreeToString( expr ) );
 
 		if ( write_line( vmAttr.Value() ) == false ) {
 			return false;
@@ -1498,12 +1498,12 @@ VMGahpServer::killVM(void)
 #if !defined(WIN32)
 	if( can_switch_ids() ) {
 		MyString tmp_str;
-		tmp_str.sprintf("%d", (int)get_condor_uid());
+		tmp_str.formatstr("%d", (int)get_condor_uid());
 		SetEnv("VMGAHP_USER_UID", tmp_str.Value());
 	}
 	else if (Starter->condorPrivSepHelper() != NULL) {
 		MyString tmp_str;
-		tmp_str.sprintf("%d", (int)Starter->condorPrivSepHelper()->get_uid());
+		tmp_str.formatstr("%d", (int)Starter->condorPrivSepHelper()->get_uid());
 		SetEnv("VMGAHP_USER_UID", tmp_str.Value());
 	}
 #endif

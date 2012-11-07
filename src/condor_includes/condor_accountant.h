@@ -87,8 +87,10 @@ public:
   void ReportLimits(AttrList *attrList);
 
   ClassAd* ReportState(bool rollup = false);
-  AttrList* ReportState(const MyString& CustomerName, int * NumResources = NULL, float * NumResourcesRW = NULL);
-                                                
+  AttrList* ReportState(const MyString& CustomerName);
+
+  void CheckResources(const string& CustomerName, int& NumResources, float& NumResourcesRW);
+
   void DisplayLog();
   void DisplayMatches();
 
@@ -154,6 +156,8 @@ private:
 
   GroupEntry* hgq_root_group;
   map<string, GroupEntry*, ci_less> hgq_submitter_group_map;
+
+  string group_separator;
 
   //--------------------------------------------------------
   // Static values

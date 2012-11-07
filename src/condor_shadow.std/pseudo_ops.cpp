@@ -149,33 +149,18 @@ int
 pseudo_shell( char *command, int /*len*/ )
 {
 	int rval;
-	int terrno;
 
 	dprintf( D_SYSCALLS, "\tcommand = \"%s\"\n", command );
-
-	/* This feature of Condor is sort of a security hole, um, maybe
-		a big security hole, so by default, if this is not
-		defined by the condor admin, do NOT run the command. */
-
-	if (param_boolean_crufty("SHADOW_ALLOW_UNSAFE_REMOTE_EXEC", false)) {
-		dprintf(D_SYSCALLS, 
-			"\tThe CONDOR_shell remote system call is currently disabled.\n");
-		dprintf(D_SYSCALLS, 
-			"\tTo enable it, please use SHADOW_ALLOW_UNSAFE_REMOTE_EXEC.\n");
-		rval = -1;
-		errno = ENOSYS;
-		return rval;
-	}
 
 	rval = -1;
 	errno = ENOSYS;
 
-	rval = system(command);
-	
-	terrno = errno;
-	errno = terrno;
-
 	return rval;
+
+	/* This feature of Condor is sort of a security hole, um, maybe
+		a big security hole, so let's just never do it.  As far as
+		we know, nobody uses this.  */
+
 }
 
 /*
@@ -1856,7 +1841,7 @@ JobPreCkptServerScheddNameChange()
 {
 	char job_version[150];
 	job_version[0] = '\0';
-	if (JobAd && JobAd->LookupString(ATTR_VERSION, job_version)) {
+	if (JobAd && JobAd->LookupString(ATTR_VERSION, job_version, sizeof(job_version))) {
 		CondorVersionInfo ver(job_version, "JOB");
 		if (ver.built_since_version(6,2,0) &&
 			ver.built_since_date(11,16,2000)) {
@@ -2184,7 +2169,7 @@ pseudo_register_syscall_version( const char *job_version )
 	buf += shadow_version;
 	buf += "\n\nYou must do one of the following:\n\n";
 
-	line.sprintf(
+	line.formatstr(
 		"1) Remove your job (\"condor_rm %d.%d\"), re-link it with a\n",
 		 Proc->id.cluster, Proc->id.proc );
 	buf += line;
@@ -2197,7 +2182,7 @@ pseudo_register_syscall_version( const char *job_version )
 		"of the condor_shadow program on your submit machine.\n"
 		"In this case, once the compatible shadow is in place, you\n";
 
-	line.sprintf( "can release your job with \"condor_release %d.%d\".\n",
+	line.formatstr( "can release your job with \"condor_release %d.%d\".\n",
 			 Proc->id.cluster, Proc->id.proc );
 	buf += line;
 

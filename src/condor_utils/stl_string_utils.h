@@ -26,19 +26,19 @@
 #include "condor_header_features.h"
 #include "MyString.h"
 
-// sprintf() will try to write to a fixed buffer first, for reasons of 
+// formatstr() will try to write to a fixed buffer first, for reasons of 
 // efficiency.  This is the size of that buffer.
 #define STL_STRING_UTILS_FIXBUF 500
 
 // Analogous to standard sprintf(), but writes to std::string 's', and is
 // memory/buffer safe.
-int sprintf(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
-int sprintf(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
+int formatstr(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
+int formatstr(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 
 // Appending versions of above.
 // These return number of new chars appended.
-int sprintf_cat(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
-int sprintf_cat(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
+int formatstr_cat(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
+int formatstr_cat(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 
 // comparison ops between the two houses divided
 bool operator==(const MyString& L, const std::string& R);
@@ -61,10 +61,17 @@ bool operator>=(const std::string& L, const MyString& R);
 void assign(std::string& dst, const MyString& src);
 void assign(MyString& dst, const std::string& src);
 
+// to replace MyString with std::string we need a compatible read-line function
+bool readLine(std::string& dst, FILE *fp, bool append);
+
 bool chomp(std::string &str);
 void trim(std::string &str);
 void lower_case(std::string &str);
 void upper_case(std::string &str);
+
+// returns true if pre is non-empty and str is the same as pre up to pre.size()
+bool starts_with(const std::string& str, const std::string& pre);
+bool starts_with_ignore_case(const std::string& str, const std::string& pre);
 
 void Tokenize(const MyString &str);
 void Tokenize(const std::string &str);

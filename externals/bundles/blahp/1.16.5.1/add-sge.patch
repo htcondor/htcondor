@@ -13,8 +13,8 @@
  #
 +# SGE Configuration
 +#
-+sge_root=
-+sge_cell=
++sge_root=$SGE_ROOT
++sge_cellname=$SGE_CELL
 +
 +
 +#

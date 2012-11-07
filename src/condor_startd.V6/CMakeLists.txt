@@ -33,5 +33,3 @@ if (LINUX AND GLOBUS_FOUND)
   condor_exe(condor_glexec_wrapper "glexec_wrapper.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS};${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND}" OFF )
   install (FILES glexec_starter_setup.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 endif()
-
-

@@ -1,6 +1,6 @@
 #
 # This is the default job submit file used by
-# "condor_submit -interactive". Essnetially, it runs
+# "condor_submit -interactive". Essentially, it runs
 # /bin/sleep on the execute node for 3 minutes. The idea
 # is to run some job that uses no cpu/memory just just until the ssh
 # client connects. 
@@ -27,5 +27,4 @@ transfer_executable = false
 copy_to_spool = false
 notification = never
 priority = 1000
-should_transfer_files = NO
 queue

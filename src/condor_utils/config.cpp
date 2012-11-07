@@ -75,7 +75,9 @@ condor_isidchar(int c)
 
 // Magic macro to represent a dollar sign, i.e. $(DOLLAR)="$"
 #define DOLLAR_ID "DOLLAR"
-
+// The length of the DOLLAR_ID string
+// Should probably use constexpr here when we use C++11 in earnest
+#define DOLLAR_ID_LEN (6)
 
 int is_valid_param_name(const char *name)
 {
@@ -646,11 +648,12 @@ expand_macro( const char *value,
 			all_done = false;
 			tvalue = getenv(name);
 			if( tvalue == NULL ) {
-				EXCEPT("Can't find %s in environment!",name);
+				//EXCEPT("Can't find %s in environment!",name);
+				tvalue = "UNDEFINED";		
 			}
 
-			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
-											  strlen(right) + 1));
+			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
+
 			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
 			FREE( tmp );
 			tmp = rval;
@@ -1041,7 +1044,8 @@ tryagain:
 							// we treat it like anything else, and it is up
 							// to the caller to advance search_pos, so we
 							// don't run into the literal $$ again.
-						if ( !self && strncasecmp(name,DOLLAR_ID,namelen) == MATCH ) {
+						if ( !self && namelen == DOLLAR_ID_LEN &&
+								strncasecmp(name,DOLLAR_ID,namelen) == MATCH ) {
 							tvalue = name;
 							goto tryagain;
 						}

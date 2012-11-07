@@ -329,7 +329,7 @@ VMUniverseMgr::publish( ClassAd* ad, amask_t  /*mask*/ )
 			ad->Assign(ATTR_VM_NETWORKING, m_vm_networking); 
 		}else {
 			ExprTree * pTree =  expr->Copy();
-			ad->Insert(attr_name, pTree);
+			ad->Insert(attr_name, pTree, false);
 		}
 	}
 
@@ -418,7 +418,7 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* vmtype)
 #if !defined(WIN32)
 	if( can_switch_ids() ) {
 		MyString tmp_str;
-		tmp_str.sprintf("%d", (int)get_condor_uid());
+		tmp_str.formatstr("%d", (int)get_condor_uid());
 		SetEnv("VMGAHP_USER_UID", tmp_str.Value());
 	}
 #endif
@@ -688,7 +688,7 @@ VMUniverseMgr::freeVM(pid_t s_pid)
 
 	MyString pid_dir;
 	Directory execute_dir(info->m_execute_dir.Value(), PRIV_ROOT);
-	pid_dir.sprintf("dir_%ld", (long)s_pid);
+	pid_dir.formatstr("dir_%ld", (long)s_pid);
 
 	if( execute_dir.Find_Named_Entry( pid_dir.Value() ) ) {
 		// starter didn't exit cleanly,
@@ -882,7 +882,7 @@ VMUniverseMgr::killVM(const char *matchstring)
 #if !defined(WIN32)
 	if( can_switch_ids() ) {
 		MyString tmp_str;
-		tmp_str.sprintf("%d", (int)get_condor_uid());
+		tmp_str.formatstr("%d", (int)get_condor_uid());
 		SetEnv("VMGAHP_USER_UID", tmp_str.Value());
 	}
 #endif
@@ -922,7 +922,7 @@ VMUniverseMgr::killVM(VMStarterInfo *info)
 	MyString matchstring;
 	MyString workingdir;
 
-	workingdir.sprintf("%s%cdir_%ld", info->m_execute_dir.Value(),
+	workingdir.formatstr("%s%cdir_%ld", info->m_execute_dir.Value(),
 	                   DIR_DELIM_CHAR, (long)info->m_pid);
 
 	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM) == 0)) {

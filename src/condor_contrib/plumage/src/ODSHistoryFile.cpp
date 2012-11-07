@@ -33,20 +33,41 @@
 
 // local includes
 #include "ODSHistoryFile.h"
-#include "ODSHistoryUtils.h"
-
-const char DB_NAME[] = "condor_jobs.history";
+#include "ODSHistoryProcessors.h"
+#include "ODSDBNames.h"
+#include "ODSUtils.h"
 
 using namespace std;
 using namespace mongo;
 using namespace bson;
 using namespace plumage::etl;
+using namespace plumage::history;
+using namespace plumage::util;
+
+extern ODSMongodbOps* writer;
+
+ODSMongodbOps* 
+getWriter()
+{
+    if (!writer) {
+        HostAndPort hap = getDbHostPort("PLUMAGE_DB_HOST","PLUMAGE_DB_PORT");
+        writer = new ODSMongodbOps(DB_JOBS_HISTORY);
+        if (!writer->init(hap.toString())) {
+            dprintf(D_ALWAYS,"ODSHistoryFile: unable to configure new database connection!\n");
+            delete writer;
+            writer = NULL;
+        }
+        else {
+            addJobIndices(writer);
+        }
+    }
+    return writer;
+}
 
 ODSHistoryFile::ODSHistoryFile(const string name):
 	m_name(name),
 	m_stat(NULL),
-	m_file(NULL),
-	m_writer(NULL)
+	m_file(NULL)
 {
 }
 
@@ -83,12 +104,13 @@ ODSHistoryFile::operator=(const ODSHistoryFile &base)
 		if (!init(errstack)) {
 			// XXX: Should throw an exception here
 			dprintf ( D_ALWAYS, "ODSHistoryFile::operator=: %s\n",
-					errstack.getFullText(true));		
+					errstack.getFullText(true).c_str());		
 		}
 	}
 
 	return *this;
 }
+
 
 bool
 ODSHistoryFile::init(CondorError &errstack)
@@ -121,13 +143,6 @@ ODSHistoryFile::init(CondorError &errstack)
 					   m_name.c_str(), errno, strerror(errno));
 		return false;
 	}
-	
-	m_writer = new ODSMongodbOps(DB_NAME);
-    if (!m_writer->init("localhost")) {
-        errstack.pushf("ODSHistoryFile::init", 5,
-                       "Unable to init ODS writer\n");
-        return false;
-    }
 
 	return true;
 }
@@ -183,19 +198,18 @@ ODSHistoryFile::poll(CondorError &/*errstack*/)
 
         // TODO: write the ad to db here
         BSONObjBuilder key;
-        int cluster, proc;
-        if (ad.LookupInteger(ATTR_CLUSTER_ID,cluster)) {
-            key.append(ATTR_CLUSTER_ID, cluster);
-        }
-        if (ad.LookupInteger(ATTR_PROC_ID,proc)) {
-            key.append(ATTR_PROC_ID, proc);
+        string gjid;
+        if (ad.LookupString(ATTR_GLOBAL_JOB_ID,gjid)) {
+            key.append(ATTR_GLOBAL_JOB_ID, gjid);
         }
 
-        if (!m_writer->updateAd(key,&ad)) {
-            dprintf(D_ALWAYS, "ODSHistoryFile::poll: unable to write history job ad to ODS for '%d.%d'\n");
+        ODSMongodbOps* my_writer = getWriter();
+
+        if (my_writer && my_writer->updateAd(key,&ad)) {
+            dprintf(D_FULLDEBUG, "ODSHistoryFile::poll: recorded job class ad for '%s'\n", gjid.c_str());
         }
         else {
-            dprintf(D_FULLDEBUG, "ODSHistoryFile::poll: recorded job class ad for '%d.%d'\n", cluster,proc);
+            dprintf(D_ALWAYS, "ODSHistoryFile::poll: unable to write history job ad to ODS for '%s'\n",gjid.c_str());
         }
         
 		// record these so we know where we are?

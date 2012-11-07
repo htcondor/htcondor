@@ -78,10 +78,10 @@ SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
 		}
 
 		if( !sequence ) {
-			m_local_id.sprintf("%lu_%04hx",(unsigned long)getpid(),rand_tag);
+			m_local_id.formatstr("%lu_%04hx",(unsigned long)getpid(),rand_tag);
 		}
 		else {
-			m_local_id.sprintf("%lu_%04hx_%u",(unsigned long)getpid(),rand_tag,sequence);
+			m_local_id.formatstr("%lu_%04hx_%u",(unsigned long)getpid(),rand_tag,sequence);
 		}
 
 		sequence++;
@@ -242,7 +242,7 @@ SharedPortEndpoint::CreateListener()
 		return true;
 	}
 
-	m_full_name.sprintf(
+	m_full_name.formatstr(
 		"%s%c%s",m_socket_dir.Value(),DIR_DELIM_CHAR,m_local_id.Value());
 
 	pipe_end = CreateNamedPipe(
@@ -277,7 +277,7 @@ SharedPortEndpoint::CreateListener()
 	m_listener_sock.close();
 	m_listener_sock.assign(sock_fd);
 
-	m_full_name.sprintf(
+	m_full_name.formatstr(
 		"%s%c%s",m_socket_dir.Value(),DIR_DELIM_CHAR,m_local_id.Value());
 
 	struct sockaddr_un named_sock_addr;
@@ -1024,7 +1024,7 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 bool
 SharedPortEndpoint::serialize(MyString &inherit_buf,int &inherit_fd)
 {
-	inherit_buf.sprintf_cat("%s*",m_full_name.Value());
+	inherit_buf.formatstr_cat("%s*",m_full_name.Value());
 #ifdef WIN32
 	/*
 	Serializing requires acquiring the handles of the respective pipes and seeding them into
@@ -1038,7 +1038,7 @@ SharedPortEndpoint::serialize(MyString &inherit_buf,int &inherit_fd)
 		dprintf(D_ALWAYS, "SharedPortEndpoint: Failed to duplicate named pipe for inheritance.\n");
 		return false;
 	}
-	inherit_buf.sprintf_cat("%d", to_child);
+	inherit_buf.formatstr_cat("%d", to_child);
 #else
 	inherit_fd = m_listener_sock.get_file_desc();
 	ASSERT( inherit_fd != -1 );
@@ -1058,7 +1058,7 @@ SharedPortEndpoint::deserialize(char *inherit_buf)
 	char *ptr;
 	ptr = strchr(inherit_buf,'*');
 	ASSERT( ptr );
-	m_full_name.sprintf("%.*s",(int)(ptr-inherit_buf),inherit_buf);
+	m_full_name.formatstr("%.*s",(int)(ptr-inherit_buf),inherit_buf);
 	inherit_buf = ptr+1;
 
 	m_local_id = condor_basename( m_full_name.Value() );
@@ -1170,7 +1170,7 @@ SharedPortEndpoint::UseSharedPort(MyString *why_not,bool already_open)
 		}
 
 		if( !cached_result && why_not ) {
-			why_not->sprintf("cannot write to %s: %s",
+			why_not->formatstr("cannot write to %s: %s",
 						   socket_dir.Value(),
 						   strerror(errno));
 		}

@@ -2051,6 +2051,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=accountant,Accountant
 id=95
 
+[GROUP_SEPARATOR]
+aliases=
+default=.
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Group Name Separator Character
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=accountant,Accountant,condor_submit
+id=777
+
 [PRIORITY_HALFLIFE]
 aliases=
 default=86400
@@ -5428,6 +5444,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=classad,ast
 id=314
 
+[ENABLE_CLASSAD_CACHING]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Enable ClassAd Caching
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=classad
+id=315
+
 [QUILL_MAINTAIN_DB_CONN]
 aliases=
 default=true
@@ -8118,6 +8150,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,qmgmt
 id=491
 
+[QUEUE_SUPER_USER_MAY_IMPERSONATE]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Queue Super Users
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=schedd,qmgmt
+id=491
+
 [QUEUE_ALL_USERS_TRUSTED]
 aliases=
 default=false
@@ -8344,7 +8392,7 @@ id=505
 
 [LOCAL_UNIV_EXECUTE]
 aliases=
-default=
+default=$(SPOOL)/local_univ_execute
 version=0.0.0
 range=.*
 state=default
@@ -10056,7 +10104,7 @@ url=
 tags=parrot
 id=602
 
-[DELEGATE_JOB_GSI_CREDENTIALS_RENEWAL]
+[DELEGATE_JOB_GSI_CREDENTIALS_REFRESH]
 aliases=
 default=0.25
 version=0.0.0
@@ -10066,7 +10114,7 @@ type=double
 is_macro=false
 reconfig=true
 customization=seldom
-friendly_name=Delegate Job GSI Credentials Renewal
+friendly_name=Delegate Job GSI Credentials Refresh
 usage=
 url=
 tags=
@@ -10233,6 +10281,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=defrag
 id=602
 
+[DEFRAG_CANCEL_REQUIREMENTS]
+aliases=
+default=$(DEFRAG_WHOLE_MACHINE_EXPR)
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=defrag
+id=602
+
 [DEFRAG_WHOLE_MACHINE_EXPR]
 aliases=
 default=Cpus == TotalCpus && Offline=!=True
@@ -10375,22 +10439,6 @@ friendly_name=Collector Log
 usage=Log files
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=defrag,log
-id=550
-
-[JOB_QUEUE_LOG]
-aliases=
-default=$(SPOOL)/job_queue.log
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Job Queue Log file
-usage=Job Queue File
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=log
 id=550
 
 [DEFRAG_UPDATE_INTERVAL]
@@ -10603,7 +10651,7 @@ id=608
 
 [MODIFY_REQUEST_EXPR_REQUESTMEMORY]
 aliases=
-default=quantize(RequestMemory,{TotalSlotMemory / TotalSlotCpus / 4})
+default=quantize(RequestMemory,{128})
 version=7.7.6
 range=.*
 state=default
@@ -10696,3 +10744,35 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=submit
 id=612
+
+[MAX_GLOBAL_JOB_PRIOS]
+aliases=
+default=500
+version=7.9.1
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Maximum size of JobPrioArray in submitter ad
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=schedd
+id=613
+
+[USE_GLOBAL_JOB_PRIOS]
+aliases=
+default=false
+version=7.9.1
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Consider job priorities across multiple schedds
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=schedd
+id=614

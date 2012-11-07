@@ -165,7 +165,7 @@ HookClientMgr::reaperIgnore(int exit_pid, int exit_status)
 		// Some hook that we don't care about the output for just
 		// exited.  All we need is to print a log message (if that).
 	MyString status_txt;
-	status_txt.sprintf("Hook (pid %d) ", exit_pid);
+	status_txt.formatstr("Hook (pid %d) ", exit_pid);
 	statusString(exit_status, status_txt);
 	dprintf(D_FULLDEBUG, "%s\n", status_txt.Value());
 	return TRUE;

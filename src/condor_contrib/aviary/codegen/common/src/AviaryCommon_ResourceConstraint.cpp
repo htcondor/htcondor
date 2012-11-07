@@ -6,8 +6,28 @@
          * This file was auto-generated from WSDL
          * by the Apache Axis2/C version: SNAPSHOT  Built on : Mar 10, 2008 (08:35:52 GMT+00:00)
          */
+        
+            #include "AviaryCommon_ResourceConstraint.h"
+          
 
-        #include "AviaryCommon_ResourceConstraint.h"
+       #ifdef __GNUC__
+       # if __GNUC__ >= 4
+       #pragma GCC diagnostic ignored "-Wcast-qual"
+       #pragma GCC diagnostic ignored "-Wshadow"
+       #pragma GCC diagnostic ignored "-Wunused-parameter"
+       #pragma GCC diagnostic ignored "-Wunused-variable"
+       #pragma GCC diagnostic ignored "-Wunused-value"
+       #pragma GCC diagnostic ignored "-Wwrite-strings"
+       #  if __GNUC_MINOR__ >= 6
+       #pragma GCC diagnostic ignored "-Wenum-compare"
+       #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+       #  endif
+       #  if __GNUC_MINOR__ >= 7
+       #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+       #  endif
+       # endif
+       #endif
+        
         #include <Environment.h>
         #include <WSFError.h>
 
@@ -55,7 +75,17 @@
         }
         AviaryCommon::ResourceConstraint::~ResourceConstraint()
         {
-            if (property_Type) delete property_Type;
+            resetAll();
+        }
+
+        bool WSF_CALL AviaryCommon::ResourceConstraint::resetAll()
+        {
+            //calls reset method for all the properties owned by this method which are pointers.
+
+            
+             resetType();//AviaryCommon::ResourceConstraintType
+            return true;
+
         }
 
         

@@ -104,6 +104,8 @@ const char* priv_identifier( priv_state s );
 #if !defined(WIN32)
 uid_t get_condor_uid(void);
 gid_t get_condor_gid(void);
+// returns true if condor uid is already known and sets uid and gid
+bool get_condor_uid_if_inited(uid_t &uid,gid_t &gid);
 uid_t get_user_uid(void);
 gid_t get_user_gid(void);
 uid_t get_file_owner_uid(void);

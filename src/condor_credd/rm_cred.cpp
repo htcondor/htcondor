@@ -76,8 +76,7 @@ int main(int argc, char **argv)
 	break;
       case 'd':
 	  // dprintf to console
-	  Termlog = 1;
-	  dprintf_config ("TOOL", get_param_functions());
+	  dprintf_set_tool_debug("TOOL", 0);
 	break;
       case 'n':
 	if( !(--argc) || !(*(++ptr)) ) {
@@ -132,7 +131,7 @@ int main(int argc, char **argv)
 
 	if (dc_credd.removeCredential(cred_name, errstack)) {
 		fprintf (stderr, "Unable to remove credential '%s'\n%s\n",
-				cred_name, errstack.getFullText(true));
+				cred_name, errstack.getFullText(true).c_str());
 		return 1;
 	}
 

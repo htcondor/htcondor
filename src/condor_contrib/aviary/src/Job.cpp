@@ -453,14 +453,14 @@ void
     const char* fName = m_he.file.c_str();
     if ( ! ( hFile = safe_fopen_wrapper ( fName, "r" ) ) )
     {
-		sprintf(_text,"unable to open history file '%s'", m_he.file.c_str());
+		formatstr(_text,"unable to open history file '%s'", m_he.file.c_str());
         dprintf ( D_ALWAYS, "%s\n",_text.c_str());
 		_ad.Assign("JOB_AD_ERROR",_text.c_str());
 		return;
     }
     if ( fseek ( hFile , m_he.start , SEEK_SET ) )
     {
-		sprintf(_text,"bad seek in '%s' at index %d", m_he.file.c_str(),m_he.start);
+		formatstr(_text,"bad seek in '%s' at index %ld", m_he.file.c_str(),m_he.start);
         dprintf ( D_ALWAYS, "%s\n",_text.c_str());
 		_ad.Assign("JOB_AD_ERROR",_text.c_str());
         return;
@@ -473,21 +473,21 @@ void
 	// we might not have our original history file anymore
     if ( error )
     {
-		sprintf(_text,"malformed ad for job '%s' in file '%s'",m_job->getKey(), m_he.file.c_str());
+		formatstr(_text,"malformed ad for job '%s' in file '%s'",m_job->getKey(), m_he.file.c_str());
         dprintf ( D_FULLDEBUG, "%s\n", _text.c_str());
 		_ad.Assign("JOB_AD_ERROR",_text.c_str());
 		return;
     }
     if ( empty )
     {
-		sprintf(_text,"empty ad for job '%s' in '%s'", m_job->getKey(),m_he.file.c_str());
+		formatstr(_text,"empty ad for job '%s' in '%s'", m_job->getKey(),m_he.file.c_str());
         dprintf ( D_FULLDEBUG,"%s\n", _text.c_str());
 		_ad.Assign("JOB_AD_ERROR",_text.c_str());
 		return;
     }
 
 	if (!_ad.CopyFrom(myJobAd)) {
-		sprintf(_text,"problem copying contents of history ClassAd for '%s'",m_job->getKey());
+		formatstr(_text,"problem copying contents of history ClassAd for '%s'",m_job->getKey());
 		dprintf ( D_ALWAYS, "%s\n",_text.c_str());
 		_ad.Assign("JOB_AD_ERROR",_text.c_str());
 	}
@@ -607,46 +607,53 @@ Job::updateSubmission ( int cluster, const char* owner )
 void
 Job::setSubmission ( const char* _subName, int cluster )
 {
-	const char* owner = NULL;
+    const char* owner = NULL;
 
-	// need to see if someone has left us an owner
-	OwnerlessClusterType::const_iterator it = g_ownerless_clusters.find ( cluster );
-	if ( g_ownerless_clusters.end() != it )
-	{
-		owner = ( *it ).second.c_str() ;
-	}
+    // need to see if someone has left us an owner
+    OwnerlessClusterType::const_iterator it = g_ownerless_clusters.find ( cluster );
+    if ( g_ownerless_clusters.end() != it )
+    {
+        owner = ( *it ).second.c_str() ;
+    }
 
-	SubmissionCollectionType::const_iterator element = g_submissions.find ( _subName );
-	SubmissionObject *submission;
-	if ( g_submissions.end() == element )
-	{
-		submission = new SubmissionObject ( _subName, owner );
-		g_submissions[strdup ( _subName ) ] = submission;
-	}
-	else
-	{
-		submission = ( *element ).second;
-	}
-	m_submission = submission;
+    SubmissionCollectionType::const_iterator element = g_submissions.find ( _subName );
+    SubmissionObject *submission;
+    int qdate = this->getQDate();
+    if ( g_submissions.end() == element )
+    {
+        submission = new SubmissionObject ( _subName, owner );
+        g_submissions[strdup ( _subName ) ] = submission;
+        submission->setOldest(qdate);
+        g_qdate_submissions.insert(make_pair(qdate,submission));
+    }
+    else
+    {
+        submission = ( *element ).second;
+        // update our qdate index collection also
+        SubmissionMultiIndexType::iterator qdate_it;
+        qdate_it = g_qdate_submissions.find(qdate);
+        if (qdate_it!=g_qdate_submissions.end()) {
+            // are we updating for an older qdate or a qdate collision
+            // with another submission (multimap)?
+            if (strcmp(qdate_it->second->getName(),_subName)==0 && qdate_it->second->getOldest() > qdate) {
+                g_qdate_submissions.erase(qdate_it);
+                g_qdate_submissions.insert(make_pair(qdate,submission));
+            }
+        }
+    }
+    m_submission = submission;
+    m_submission->setOldest(qdate);
+    m_submission->increment(this);
 
-	m_submission->increment(this);
-
-	if (owner) {
-		// ensure that the submission has an owner
-		m_submission->setOwner ( owner );
-		g_ownerless_clusters.erase ( cluster );
-	}
-	else {
-		// add it to our list to be updated for owner
-		g_ownerless_submissions[cluster] = m_submission;
-	}
-
-	// update the overall submission qdate
-	int qdate = this->getQDate();
-	m_submission->setOldest(qdate);
-	
-	// update our qdate index collection
-	g_qdate_submissions.insert(make_pair(qdate,submission));
+    if (owner) {
+        // ensure that the submission has an owner
+        m_submission->setOwner ( owner );
+        g_ownerless_clusters.erase ( cluster );
+    }
+    else {
+        // add it to our list to be updated for owner
+        g_ownerless_submissions[cluster] = m_submission;
+    }
 
 }
 

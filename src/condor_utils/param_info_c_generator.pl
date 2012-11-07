@@ -65,6 +65,7 @@ use warnings;
 no warnings 'closure';
 use Data::Dumper;
 use Getopt::Std;
+use Storable qw(dclone);
 
 # Global variables. The first three are used internally by &parse, 
 # and the %options is set immediately after execution with the command 
@@ -116,7 +117,7 @@ use constant { RECONSTITUTE_TEMPLATE_FUNC =>
 '
 };
 
-use constant { RECONSTITUTE_TEMPLATE => 
+use constant { RECONSTITUTE_TEMPLATE_OLD => 
 'static const param_info_%typequal% param_def_info_%parameter_var% = {
 	{%parameter_name%, %default%, %version%, 
 	%friendly_name%, %usage%,
@@ -127,26 +128,70 @@ use constant { RECONSTITUTE_TEMPLATE =>
 '
 };
 
+use constant { RECONSTITUTE_TEMPLATE =>
+'
+static const char PVAR_%parameter_var%_default [] = %default%;
+'
+};
+
 use constant { RECONSTITUTE_TEMPLATE_WIN => 
-'static const param_info_%typequal% param_def_info_%parameter_var% = {
-	{%parameter_name%, 
+'
 #ifdef WIN32
-	%win32_default%,
+	static const char PVAR_%parameter_var%_default [] = %win32_default%;
 #else	
-	%default%, 
+	static const char PVAR_%parameter_var%_default [] = %default%;
 #endif
-	%version%, 
-	%friendly_name%, %usage%,
-	%url%, %tags%,
-	%type%, %state%, %customization%, %reconfig%, %is_macro%, 
+'
+};
+
+use constant { PARAM_INIT_HEADER =>
+'void
+param_info_init()
+{
+    static int done_once = 0;
+
+    // guard against multiple initializations of the default table.
+    if (done_once == 1) {
+        return;
+    }
+    done_once = 1;
+
+    param_info_hash_create(&param_info);
+
+	param_info_storage_t tmp;
+'
+};
+use constant { PARAM_INIT_INFO =>
+'
+    tmp.type_string.hdr.name = %parameter_name%;
+    tmp.type_string.hdr.str_val = %default%;
+    tmp.type_string.hdr.type = %type%;
+    tmp.type_string.hdr.default_valid = %def_valid%;
+    tmp.type_string.hdr.range_valid = %range_valid%;
+    %cooked_values%
+	param_info_hash_insert(param_info, &tmp);
+'
+};
+use constant { PARAM_INIT_INFO_WIN =>
+'
+	tmp.type_string.hdr.name = %parameter_name%;
+	tmp.type_string.hdr.type = %type%;
+	tmp.type_string.hdr.range_valid = %range_valid%;
 #ifdef WIN32
-	%win_valid%, %range_valid%},
-	%win_cooked_values%
-#else	
-	%def_valid%, %range_valid%},
-	%cooked_values%, 
+	tmp.type_string.hdr.str_val = %win32_default%;
+	tmp.type_string.hdr.default_valid = %win_valid%;
+#else
+	tmp.type_string.hdr.str_val = %default%;
+	tmp.type_string.hdr.default_valid = %def_valid%;
 #endif
-	};
+    param_info_hash_insert(param_info, &tmp);
+'
+};
+
+use constant { PARAM_INIT_FOOTER =>
+'
+    param_info_hash_optimize(param_info);
+}
 '
 };
 
@@ -331,8 +376,9 @@ sub reconstitute {
 	
 	# Here we have the main logic of this function.
 	begin_output(); # opening the file, and beginning output
+	continue_output("#include \"param_info.h\"\n");
 	
-	my @var_names;
+	my @var_info;
 	
 	# Loop through each of the parameters in the structure passed as an argument
 	while(my ($param_name, $sub_structure) = each %{$structure}){
@@ -356,23 +402,24 @@ sub reconstitute {
 		my $win_cooked_values = "";
 		my $typequal_ranged = "";
 		my $cooked_range = "";
-		my $range_max = "";
 		my $nix_default = $sub_structure->{'default'};
 		my $win_default = $sub_structure->{'win32_default'};
 		my $def_valid = (defined $nix_default && $nix_default ne "") ? "1" : "0";
 		my $win_valid = (defined $win_default && $win_default ne "") ? "1" : "0";
 		my $range_valid = "0";
 		my $var_name = $param_name;
-		
+		my $range_type = "";
 		$var_name =~ s/\./_/g;
-		push @var_names, $var_name;
 		
 		print Dumper($sub_structure) if $options{debug};
 		
 		# Loop through each of the properties in the hash specifying property 
 		# rules. (This hash is defined at the top of this file and it details 
 		# how every property should be treated).
-		while(my($name, $info) = each %{$property_types}){
+		
+		#while(my($name, $info) = each %{$property_types}){
+		for my $name ( sort keys %{$property_types} ){
+			my $info = $property_types->{$name};
 			# unless the $sub_structure contains the property or if that property
 			# is optional, summon an error. 
 			unless(defined $sub_structure->{$name} or $info->{'optional'}){
@@ -387,11 +434,12 @@ sub reconstitute {
 			if ($name eq "type")
 			{
 				$typequal = do_one_property($sub_structure,$info,$name); 
+                #print "type1: ".($type_subs->{$info->{type}})."\n";
+                #print "type: ".($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}))."\n";
 				
 				# Integer parameters
 				if ($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}) eq "PARAM_TYPE_INT")
 				{
-					$range_max = "INT_MAX";
 				    $cooked_values = $nix_default;
 					if ($cooked_values =~ /^[0-9\-\*\/\(\) \t]*$/) {
 					    $def_valid = "1";
@@ -411,6 +459,7 @@ sub reconstitute {
 							$win_cooked_values = "0";
 							$win_valid = "0";
 						}
+						$win_cooked_values = "tmp.type_int.int_val = ".$win_cooked_values.";";
 					}
 									    
 					if ($nix_default eq "") {
@@ -418,6 +467,7 @@ sub reconstitute {
 								"a default!\n";
 					}
 					#print "$param_name cooked is $cooked_values\n";
+					$cooked_values = "tmp.type_int.int_val = ".$cooked_values.";";
 				}
 
 				# Boolean parameters
@@ -441,13 +491,14 @@ sub reconstitute {
 							$win_cooked_values = "0";
 							$win_valid = "0";
 						}
+						$win_cooked_values = "tmp.type_int.int_val = ".$win_cooked_values.";";
 					}
+					$cooked_values = "tmp.type_int.int_val = ".$cooked_values.";";
 				}
 
 				# Double parameters
 				if ($type_subs->{$info->{type}}(exists $sub_structure->{type} ? $sub_structure->{type} : $default_structure->{type}) eq "PARAM_TYPE_DOUBLE")
 				{
-					$range_max = "DBL_MAX";
 				    $cooked_values = $nix_default;
 					if ($cooked_values =~ /^[0-9\.\-eE+\*\/\(\) \t]*$/) {
 						$def_valid = "1";
@@ -465,12 +516,14 @@ sub reconstitute {
 							#print "$param_name default is expression $win_cooked_values\n";
 							$win_cooked_values = "0";
 							$win_valid = "0";
-						}				    
+						}
+						$win_cooked_values = "tmp.type_double.dbl_val = ".$win_cooked_values.";";				    
 					}
 					if ($nix_default eq "") {
 						print "ERROR: Double parameter $param_name needs " .
 								"a default!\n";
 					}
+					$cooked_values = "tmp.type_double.dbl_val = ".$cooked_values.";";
 				}
 			}
 			
@@ -481,6 +534,12 @@ sub reconstitute {
 			#
 			if ($name eq "range")
 			{
+				if (($sub_structure->{"type"}) eq "int") {
+					$range_type = "PARAM_TYPE_INT";
+				} else {
+					$range_type = "PARAM_TYPE_DOUBLE";
+				}
+                #print "range_type: $range_type\n";
 				my $range_raw = ".*";
 				if (exists $sub_structure->{'range'}) {
 				   $range_raw = $sub_structure->{'range'};
@@ -491,8 +550,29 @@ sub reconstitute {
 					if ($range_raw =~ /^[0-9\.\-eE+, \t]*$/)
 					{
 						#print "$param_name range is numeric $range_raw\n";
-						$typequal_ranged = "_ranged";	
-						$cooked_range = ", ".$range_raw;
+						my @range_list = split(/,/, $range_raw);
+						$typequal_ranged = "_ranged";
+						if ($range_type eq "PARAM_TYPE_DOUBLE") {
+							$cooked_range = "\n\ttmp.type_double_ranged.dbl_min = ".$range_list[0].";\n";
+						} else {
+							$cooked_range = "\n\ttmp.type_int_ranged.int_min = ".$range_list[0].";\n";
+							#print "$param_name range min is ".$range_list[0]."\n";
+						}
+						if (scalar(@range_list) > 1 && length($range_list[1]) > 0) {
+							if ($range_type eq "PARAM_TYPE_DOUBLE") {
+								$cooked_range .= "\ttmp.type_double_ranged.dbl_max = ".$range_list[1].";\n";
+							} else {
+								$cooked_range .= "\ttmp.type_int_ranged.int_max = ".$range_list[1].";\n";
+								#print "$param_name range max is ".$range_list[1]."\n";
+							}
+						} else {
+							if ($range_type eq "PARAM_TYPE_DOUBLE") {
+								$cooked_range .= "\ttmp.type_double_ranged.dbl_max = DBL_MAX;\n";
+							} else {
+								$cooked_range .= "\ttmp.type_int_ranged.int_max = INT_MAX;\n";
+								#print "$param_name range default max \n";
+							}
+						}
 						$range_valid = "1";
 					}
 					else
@@ -501,14 +581,6 @@ sub reconstitute {
 					}
 				}
 			}
-		}
-		
-		# if cooked_range ends in a ,  then the max value is missing, so
-		# append $range_max
-		#
-		if ($cooked_range =~ /,$/) {
-			$cooked_range = $cooked_range.$range_max;
-			#print "$param_name range is $cooked_range\n";
 		}
 		
 		$replace{"%def_valid%"} = $def_valid;
@@ -522,20 +594,27 @@ sub reconstitute {
 		    $replace{"%win32_default%"} = '"'.escape($win_default).'"';
 			$replace{"%win_valid%"} = $win_valid;
 			$replace{"%win_cooked_values%"} = $win_cooked_values.$cooked_range;
-			continue_output(replace_by_hash(\%replace, RECONSTITUTE_TEMPLATE_WIN));
+			#continue_output(replace_by_hash(\%replace, RECONSTITUTE_TEMPLATE_WIN));
 		} else {
-			continue_output(replace_by_hash(\%replace, RECONSTITUTE_TEMPLATE));
+			#continue_output(replace_by_hash(\%replace, RECONSTITUTE_TEMPLATE));
 		}
+		push @var_info, dclone(\%replace);
 	}
 	
-	# output a sorted table of pointers to the param_info_t structures
-	# we will use this to do a binary lookup of the parameter by name.
-	#
-	continue_output("\n\nstatic const param_info_t * g_param_info_init_table[] = {\n");
-	for(sort @var_names) {
-		continue_output("	&param_def_info_$_.hdr,\n");
+	# Output the table into a function.
+	# Why a function instead of as symbols?  Because the function goes into
+	# the text segment (increasing the sharing for the shadow).  Getting
+	# structs into the read-only data segment is difficult.
+	continue_output(PARAM_INIT_HEADER);
+	for (@var_info) {
+		my %temp = %{$_};
+		if (exists $temp{"%win32_default%"}) {
+			continue_output(replace_by_hash($_, PARAM_INIT_INFO_WIN));
+		} else {
+			continue_output(replace_by_hash($_, PARAM_INIT_INFO));
+		}
 	}
-	continue_output("\n};");
+	continue_output(PARAM_INIT_FOOTER);
 	
 	# wrap things up. 
 	end_output();

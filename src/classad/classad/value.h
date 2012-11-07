@@ -23,6 +23,7 @@
 
 #include "classad/common.h"
 #include "classad/util.h"
+#include "classad/classad_stl.h"
 
 
 namespace classad {
@@ -47,7 +48,8 @@ class Value
 		/** An absolute time value */ 			ABSOLUTE_TIME_VALUE = 1<<6,
 		/** A string value */ 					STRING_VALUE        = 1<<7,
 		/** A classad value */ 					CLASSAD_VALUE       = 1<<8,
-		/** An expression list value */     	LIST_VALUE 			= 1<<9
+		/** A list value (not owned here)*/	            LIST_VALUE 			= 1<<9,
+		/** A list value (owned via shared_ptr)*/     	SLIST_VALUE 		= 1<<10
 		};
 
 			/// Number factors
@@ -107,8 +109,17 @@ class Value
 		*/
 		void SetErrorValue(void);
 
-		/** Sets an expression list value; previous value discarded. You still own the ExprList:: it 
-            is not owned by the Value class, so it is your responsibility to delete it. 
+		/** Sets an expression list value; previous value discarded. Unlike the
+			version of this function that takes a raw ExprList pointer, this one
+			takes (shared) ownership over the list.  This list will be deleted
+			when the last copy of this shared_ptr goes away.
+			@param l The list value.
+		*/
+		void SetListValue(classad_shared_ptr<ExprList> l);
+
+		/** Sets an expression list value; previous value discarded. Unlike the
+			version of this function that takes a shared_ptr, you still own the ExprList:: it 
+			is not owned by the Value class, so it is your responsibility to delete it. 
 			@param l The list value.
 		*/
 		void SetListValue(ExprList* l);
@@ -223,15 +234,23 @@ class Value
 		*/
 		inline bool IsListValue(const ExprList*& l) const;
 		/** Checks if the value is an expression list. The ExprList returned is 
-            the original list put into the ClassAd, so you only own it if you own 
-            the original.
+			the original list put into the Value, so you only own it if you own 
+			the original.  If the original was put into this Value as a shared_ptr,
+			the shared_ptr still owns it (i.e. don't delete this pointer or
+			make a new shared_ptr for it).  Consider using IsSListValue() instead.
 			@param l The expression list if the value is an expression list. 
 			@return true iff the value is an expression list.
 		*/
 		inline bool IsListValue(ExprList*& l);
-		/** Checks if the value is an expression list. The ExprList returned is 
-            the original list put into the ClassAd, so you only own it if you own 
-            the original.
+		/** Checks if the value is an expression list.
+			@param l A shared_ptr to the expression list if the value is an expression list.
+			         Note that if the list was not set via a shared_ptr, a copy of the
+			         list will be made and this Value will convert from type LIST_VALUE
+			         to SLIST_VALUE as a side-effect.
+			@return true iff the value is an expression list
+		*/
+		bool IsSListValue(classad_shared_ptr<ExprList>& l);
+		/** Checks if the value is an expression list.
 			@return true iff the value is an expression list.
 		*/
 		inline bool IsListValue() const;
@@ -324,6 +343,7 @@ class Value
 			long long		integerValue;
 			double 			realValue;
 			ExprList        *listValue;
+			classad_shared_ptr<ExprList> *slistValue;
 			ClassAd			*classadValue;
 			double			relTimeValueSecs;
 			abstime_t		*absTimeValueSecs;
@@ -395,6 +415,9 @@ IsListValue( const ExprList *&l) const
     if (valueType == LIST_VALUE) {
         l = listValue;
         return true;
+    } else if (valueType == SLIST_VALUE) {
+        l = slistValue->get();
+        return true;
     } else {
         return false;
     }
@@ -406,6 +429,9 @@ IsListValue( ExprList *&l)
     if (valueType == LIST_VALUE) {
         l = listValue;
         return true;
+    } else if (valueType == SLIST_VALUE) {
+        l = slistValue->get();
+        return true;
     } else {
         return false;
     }
@@ -414,7 +440,7 @@ IsListValue( ExprList *&l)
 inline bool Value::
 IsListValue () const
 {
-	return (valueType == LIST_VALUE);
+	return (valueType == LIST_VALUE || valueType == SLIST_VALUE);
 }
 
 

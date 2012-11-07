@@ -24,9 +24,9 @@ if (WINDOWS)
 				"${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND}"
 				ON )
 				
-else(WINDOWS)
+else()
 
-	if ( HAVE_EXT_CLASSADS AND WANT_FULL_DEPLOYMENT )
+	if ( WANT_FULL_DEPLOYMENT )
 
 		file( GLOB CREDRMVSRCS *_cred* )
 		condor_glob( CREDDHDRS CREDDSRCS "${CREDRMVSRCS}" )
@@ -38,7 +38,7 @@ else(WINDOWS)
 		
 	else ()
 
-		message(STATUS "NOTE: *credd* targets will not be built HAVE_EXT_GLOBUS=${HAVE_EXT_GLOBUS} && HAVE_EXT_CLASSADS=${HAVE_EXT_CLASSADS}")
+		message(STATUS "NOTE: *credd* targets will not be built WANT_FULL_DEPLOYMENT=FALSE")
 
 	endif()
 	

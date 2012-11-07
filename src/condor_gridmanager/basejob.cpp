@@ -674,7 +674,7 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad, bool full_ad )
 
 			if ( (expr = new_ad->LookupExpr( held_removed_update_attrs[i] )) != NULL ) {
 				ExprTree * pTree = expr->Copy();
-				jobAd->Insert( held_removed_update_attrs[i], pTree );
+				jobAd->Insert( held_removed_update_attrs[i], pTree, false );
 			} else {
 				jobAd->Delete( held_removed_update_attrs[i] );
 			}
@@ -970,12 +970,18 @@ WriteUserLog*
 InitializeUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	MyString userLogFile;
+	MyString userLogFile, dagmanNodeLog;
 	std::string gjid;
 	bool use_xml = false;
+	std::vector<const char*> logfiles;
 
-	if( !getPathToUserLog(job_ad, userLogFile) ) {
-		// User doesn't want a log
+	if( getPathToUserLog(job_ad, userLogFile) ) {
+		logfiles.push_back(userLogFile.Value());
+	}
+	if( getPathToUserLog(job_ad, dagmanNodeLog, ATTR_DAGMAN_WORKFLOW_LOG) ) {                   
+		logfiles.push_back(dagmanNodeLog.Value());
+	}
+	if(logfiles.empty()) {
 		return NULL;
 	}
 
@@ -985,7 +991,7 @@ InitializeUserLog( ClassAd *job_ad )
 	job_ad->LookupBool( ATTR_ULOG_USE_XML, use_xml );
 
 	WriteUserLog *ULog = new WriteUserLog();
-	ULog->initialize(userLogFile.Value(), cluster, proc, 0, gjid.c_str());
+	ULog->initialize(logfiles, cluster, proc, 0, gjid.c_str());
 	ULog->setUseXML( use_xml );
 	return ULog;
 }
@@ -1011,7 +1017,7 @@ WriteExecuteEventToUserLog( ClassAd *job_ad )
 
 	hostname[0] = '\0';
 	job_ad->LookupString( ATTR_GRID_RESOURCE, hostname,
-						  sizeof(hostname) - 1 );
+						  sizeof(hostname) );
 
 	ExecuteEvent event;
 	event.setExecuteHost( hostname );
@@ -1050,7 +1056,7 @@ WriteAbortEventToUserLog( ClassAd *job_ad )
 
 	removeReason[0] = '\0';
 	job_ad->LookupString( ATTR_REMOVE_REASON, removeReason,
-						   sizeof(removeReason) - 1 );
+						   sizeof(removeReason) );
 
 	event.setReason( removeReason );
 

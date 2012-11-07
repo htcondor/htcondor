@@ -325,7 +325,7 @@ stats_entry_recent<Probe> * DaemonCore::Stats::AddSample(const char * name, int 
    stats_entry_recent<Probe> * probe = Pool.GetProbe< stats_entry_recent<Probe> >(name);
    if ( ! probe) {
        MyString attr;
-       attr.sprintf("Recent%s",name);
+       attr.formatstr("Recent%s",name);
        cleanStringForUseAsAttr(attr);
        int as_pub = as | stats_entry_recent<Probe>::PubValueAndRecent;
        probe = Pool.NewProbe< stats_entry_recent<Probe> >(name, attr.Value()+6, as_pub);
@@ -351,7 +351,7 @@ double DaemonCore::Stats::AddRuntimeSample(const char * name, int as, double bef
 void* DaemonCore::Stats::New(const char * category, const char * name, int as)
 {
    MyString attr;
-   attr.sprintf("DC%s_%s", category, name);
+   attr.formatstr("DC%s_%s", category, name);
    cleanStringForUseAsAttr(attr);
 
    void * ret = NULL;

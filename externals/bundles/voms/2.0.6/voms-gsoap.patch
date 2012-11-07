@@ -1,0 +1,55 @@
+diff -ur voms-2.0.6.orig/src/server/Makefile.am voms-2.0.6/src/server/Makefile.am
+--- voms-2.0.6.orig/src/server/Makefile.am	2011-04-27 15:14:41.000000000 +0200
++++ voms-2.0.6/src/server/Makefile.am	2011-05-30 11:50:48.147654668 +0200
+@@ -9,14 +9,31 @@
+ 	attribute.h \
+ 	uuid.c \
+ 	uuid.h \
+-	attribute.cc \
++	attribute.cc
++nodist_voms_SOURCES = \
+ 	soapC.c \
+-	stdsoap2.c
++	soapH.h \
++	soapStub.h
+ 
+-EXTRA_DIST = soapH.h soapdefs.h stdsoap2.h soapStub.h
++vomsd.$(OBJEXT) vomsd-rest.$(OBJEXT): soapH.h
++voms-vomsd.$(OBJEXT) voms-vomsd-rest.$(OBJEXT): soapH.h
++soapH.h soapStub.h: soapC.c
+ 
+-#	$(top_builddir)/src/sslutils/libssl_utils_nog.la 
++soapC.c: VOMSAC.h
++	soapcpp2 -c VOMSAC.h
+ 
++VOMSAC.h: VOMSAC.wsdl
++	wsdl2h -c VOMSAC.wsdl
++
++EXTRA_DIST = VOMSAC.wsdl
++
++CLEANFILES = soap* VOMSAC.h
++
++GSOAP_CFLAGS = $(shell pkg-config --cflags gsoapssl) -DHAVE_OPENSSL_SSL_H
++GSOAP_LIBS = -lgsoapssl
++
++voms_CFLAGS = $(GSOAP_CFLAGS)
++voms_CXXFLAGS = $(GSOAP_CFLAGS)
+ voms_LDADD = \
+ 	$(top_builddir)/src/socklib/libsock_nog.la \
+ 	$(top_builddir)/src/common/libutilities_nog.la \
+@@ -25,14 +42,11 @@
+ 	$(top_builddir)/src/replib/librep.la \
+ 	$(top_builddir)/src/log/liblog.la \
+ 	$(top_builddir)/src/api/ccapi/libvomsapi.la \
+-	$(OPENSSL_LIBS) $(EXPAT_LIBS) -ldl
+-
+-voms_LDFLAGS =
++	$(GSOAP_LIBS) $(OPENSSL_LIBS) $(EXPAT_LIBS) -ldl
+ 
+ AM_CPPFLAGS = \
+ 	-I$(top_srcdir)/src/include \
+ 	-I$(top_srcdir)/src/api/ccapi \
+-  -DWITH_SOAPDEFS_H \
+ 	$(NO_GLOBUS_FLAGS)
+ 
+ endif

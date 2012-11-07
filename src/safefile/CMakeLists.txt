@@ -19,26 +19,6 @@ if(WINDOWS)
 	file(GLOB SAFE_OPEN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/safe_open.* ${CMAKE_CURRENT_SOURCE_DIR}/safe_fopen.*)
 else()
 	file(GLOB SAFE_OPEN_SRC ${CMAKE_CURRENT_SOURCE_DIR}/safe_open.* ${CMAKE_CURRENT_SOURCE_DIR}/safe_fopen.* ${CMAKE_CURRENT_SOURCE_DIR}/safe_is_path_trusted.* ${CMAKE_CURRENT_SOURCE_DIR}/safe_id_range_list.c ${CMAKE_CURRENT_BINARY_DIR}/safe_id_range_list.h)
-	
-#	add_custom_command( OUTPUT config.h safe_id_range_list.h
-#						WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-#						COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/configure
-#						ARGS --srcdir=${CMAKE_CURRENT_SOURCE_DIR}
-#						COMMAND rm
-#						ARGS -f ${CMAKE_CURRENT_BINARY_DIR}/config.h
-#						)
-#	add_custom_target(  configure_safefile
-#						ALL
-#						DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/safe_id_range_list.h
-#						)
-
-	exec_program(${CMAKE_CURRENT_SOURCE_DIR}/configure ${CMAKE_CURRENT_BINARY_DIR}
-               ARGS --srcdir=${CMAKE_CURRENT_SOURCE_DIR} && rm -f ${CMAKE_CURRENT_BINARY_DIR}/config.h 
-			   RETURN_VALUE retval)
-	if (retval)
-		message(FATAL_ERROR "Running configure in safefile library failed")
-	endif(retval)
-
 endif()
 set(SAFE_OPEN_SRC ${SAFE_OPEN_SRC} PARENT_SCOPE)
 

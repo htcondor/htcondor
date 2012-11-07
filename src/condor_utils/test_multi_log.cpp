@@ -52,8 +52,7 @@ void PrintEvent(ULogEvent *event);
 int main(int argc, char **argv)
 {
 		// Set up the dprintf stuff...
-	Termlog = true;
-	dprintf_config("test_multi_log", get_param_functions());
+	dprintf_set_tool_debug("test_multi_log", 0);
 	set_debug_flags(NULL, D_ALWAYS);
 
 	int		result = 0;
@@ -692,7 +691,7 @@ monitorLogFile( ReadMultipleUserLogs &reader, const char *logfile,
 	CondorError errstack;
 	if ( !reader.monitorLogFile( logfile, truncateIfFirst, errstack ) ) {
 		printf( "Error monitoring log file %s: %s\n", logfile,
-					errstack.getFullText() );
+					errstack.getFullText().c_str() );
 		return false;
 	}
 
@@ -706,7 +705,7 @@ unmonitorLogFile( ReadMultipleUserLogs &reader, const char *logfile )
 	CondorError errstack;
 	if ( !reader.unmonitorLogFile( logfile, errstack ) ) {
 		printf( "Error unmonitoring log file %s: %s\n", logfile,
-					errstack.getFullText() );
+					errstack.getFullText().c_str() );
 		return false;
 	}
 

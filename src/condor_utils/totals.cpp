@@ -142,7 +142,7 @@ displayTotals (FILE *file, int keyLength)
 	{
 		fprintf (file, "%*.*s", keyLength, keyLength, keys[k]);
 		allTotals.lookup(MyString(keys[k]), ct);
-		free((void *)keys[k]);
+		free((void *)const_cast<char*>(keys[k]));
 		ct->displayInfo(file);
 	}
 	delete [] keys;
@@ -180,7 +180,7 @@ update (ClassAd *ad)
 {
 	char state[32];
 
-	if (!ad->LookupString (ATTR_STATE, state)) return 0;
+	if (!ad->LookupString (ATTR_STATE, state, sizeof(state))) return 0;
 	switch (string_to_state (state))
 	{
 		case owner_state: 		owner++; 		break;
@@ -249,7 +249,7 @@ update (ClassAd *ad)
 	State s;
 
 	// if ATTR_STATE is not found, abort this ad
-	if (!ad->LookupString (ATTR_STATE, state)) return 0;
+	if (!ad->LookupString (ATTR_STATE, state, sizeof(state))) return 0;
 
 	// for the other attributes, assume zero if absent
 	if (!ad->LookupInteger(ATTR_MEMORY,attrMem)) { badAd = true; attrMem  = 0;}
@@ -285,7 +285,7 @@ displayHeader(FILE *file)
 void StartdServerTotal::
 displayInfo (FILE *file, int)
 {
-	fprintf (file, "%9d %5d %11"PRIu64" %11"PRIu64" %11"PRIu64" %11"PRIu64"\n",
+	fprintf (file, "%9d %5d %11" PRIu64" %11" PRIu64" %11" PRIu64" %11" PRIu64"\n",
 		 machines, avail, (PRIu64_t)memory,
 			 (PRIu64_t)disk, (PRIu64_t)condor_mips, (PRIu64_t)kflops);
 }
@@ -335,7 +335,7 @@ displayHeader(FILE *file)
 void StartdRunTotal::
 displayInfo (FILE *file, int)
 {
-	fprintf (file, "%9d  %11"PRIu64"  %11"PRIu64"   %-.3f\n",
+	fprintf (file, "%9d  %11" PRIu64"  %11" PRIu64"   %-.3f\n",
 		 machines, (PRIu64_t)condor_mips, (PRIu64_t)kflops, 
 			 (machines > 0) ? float(loadavg/machines) : 0);
 }
@@ -364,7 +364,7 @@ update( ClassAd *ad )
 
 	machines ++;
 
-	if( !ad->LookupString( ATTR_STATE , stateStr ) ) return false;
+	if( !ad->LookupString( ATTR_STATE , stateStr, sizeof(stateStr) ) ) return false;
 	state = string_to_state( stateStr );
 	switch( state ) {
 		case owner_state	:	owner++;		break;
@@ -648,7 +648,7 @@ displayHeader(FILE *file)
 void CkptSrvrNormalTotal::
 displayInfo (FILE *file, int tl)
 {
-	if (tl) fprintf (file, "%8d %11"PRIu64"\n",
+	if (tl) fprintf (file, "%8d %11" PRIu64"\n",
 					 numServers, (PRIu64_t) disk);
 }
 
@@ -705,22 +705,22 @@ makeKey (MyString &key, ClassAd *ad, ppOption ppo)
 		case PP_STARTD_RUN:
 		case PP_STARTD_COD:
 		case PP_STARTD_SERVER:
-			if (!ad->LookupString(ATTR_ARCH, p1) || 
-				!ad->LookupString(ATTR_OPSYS, p2))
+			if (!ad->LookupString(ATTR_ARCH, p1, sizeof(p1)) || 
+				!ad->LookupString(ATTR_OPSYS, p2, sizeof(p2)))
 					return 0;
 			sprintf(buf, "%s/%s", p1, p2);
 			key = buf;
 			return 1;
 
 		case PP_STARTD_STATE:
-			if( !ad->LookupString( ATTR_ACTIVITY , p1 ) )
+			if( !ad->LookupString( ATTR_ACTIVITY , p1, sizeof(p1) ) )
 				return 0;
 			sprintf( buf, "%s", p1 );
 			key = buf;
 			return 1;
 
 		case PP_SCHEDD_SUBMITTORS:
-			if (!ad->LookupString(ATTR_NAME, p1)) return 0;
+			if (!ad->LookupString(ATTR_NAME, p1, sizeof(p1))) return 0;
 			key = p1;
 			return 1;
 

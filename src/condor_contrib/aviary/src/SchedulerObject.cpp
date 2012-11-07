@@ -230,7 +230,7 @@ SchedulerObject::submit(AttributeMapType &jobAdMap, std::string &id, std::string
 	::SetAttribute(cluster, proc, ATTR_CLUSTER_ID, buf);
 	snprintf(buf, 22, "%d", proc);
 	::SetAttribute(cluster, proc, ATTR_PROC_ID, buf);
-	snprintf(buf, 22, "%d", time(NULL));
+	snprintf(buf, 22, "%ld", time(NULL));
 	::SetAttribute(cluster, proc, ATTR_Q_DATE, buf);
 
 		// Could check for some invalid attributes, e.g
@@ -250,7 +250,7 @@ SchedulerObject::submit(AttributeMapType &jobAdMap, std::string &id, std::string
 	//tmp.sprintf("%s#%d.%d", Name, cluster, proc);
 	// we have other API compositions for job id and submission id
 	// so let's return raw cluster.proc
-	tmp.sprintf("%d.%d", cluster, proc);
+	tmp.formatstr("%d.%d", cluster, proc);
 	id = tmp.Value();
 
 	return true;
@@ -263,7 +263,7 @@ SchedulerObject::setAttribute(std::string key,
 							  std::string &text)
 {
 	PROC_ID id = getProcByString(key.c_str());
-	if (id.cluster < 0 || id.proc < 0) {
+	if (id.cluster <= 0 || id.proc < 0) {
 		dprintf(D_FULLDEBUG, "SetAttribute: Failed to parse id: %s\n", key.c_str());
 		text = "Invalid Id";
 		return false;
@@ -303,7 +303,7 @@ bool
 SchedulerObject::hold(std::string key, std::string &reason, std::string &text)
 {
 	PROC_ID id = getProcByString(key.c_str());
-	if (id.cluster < 0 || id.proc < 0) {
+	if (id.cluster <= 0 || id.proc < 0) {
 		dprintf(D_FULLDEBUG, "Hold: Failed to parse id: %s\n", key.c_str());
 		text = "Invalid Id";
 		return false;
@@ -329,7 +329,7 @@ bool
 SchedulerObject::release(std::string key, std::string &reason, std::string &text)
 {
 	PROC_ID id = getProcByString(key.c_str());
-	if (id.cluster < 0 || id.proc < 0) {
+	if (id.cluster <= 0 || id.proc < 0) {
 		dprintf(D_FULLDEBUG, "Release: Failed to parse id: %s\n", key.c_str());
 		text = "Invalid Id";
 		return false;
@@ -353,7 +353,7 @@ bool
 SchedulerObject::remove(std::string key, std::string &reason, std::string &text)
 {
 	PROC_ID id = getProcByString(key.c_str());
-	if (id.cluster < 0 || id.proc < 0) {
+	if (id.cluster <= 0 || id.proc < 0) {
 		dprintf(D_FULLDEBUG, "Remove: Failed to parse id: %s\n", key.c_str());
 		text = "Invalid Id";
 		return false;
@@ -372,10 +372,10 @@ SchedulerObject::remove(std::string key, std::string &reason, std::string &text)
 }
 
 bool
-SchedulerObject::suspend(std::string key, std::string &reason, std::string &text)
+SchedulerObject::suspend(std::string key, std::string &/*reason*/, std::string &text)
 {
 	PROC_ID id = getProcByString(key.c_str());
-	if (id.cluster < 0 || id.proc < 0) {
+	if (id.cluster <= 0 || id.proc < 0) {
 		dprintf(D_FULLDEBUG, "Remove: Failed to parse id: %s\n", key.c_str());
 		text = "Invalid Id";
 		return false;
@@ -387,10 +387,10 @@ SchedulerObject::suspend(std::string key, std::string &reason, std::string &text
 }
 
 bool
-SchedulerObject::_continue(std::string key, std::string &reason, std::string &text)
+SchedulerObject::_continue(std::string key, std::string &/*reason*/, std::string &text)
 {
 	PROC_ID id = getProcByString(key.c_str());
-	if (id.cluster < 0 || id.proc < 0) {
+	if (id.cluster <= 0 || id.proc < 0) {
 		dprintf(D_FULLDEBUG, "Remove: Failed to parse id: %s\n", key.c_str());
 		text = "Invalid Id";
 		return false;

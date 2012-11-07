@@ -39,7 +39,7 @@ if ( WITH_BLAHP )
 		endif()
 
 
-		condor_pre_external( BLAHP blahp-1.16.5.1-p3 "lib;include" "done")
+		condor_pre_external( BLAHP blahp-1.16.5.1-p6 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${BLAHP_DEPENDS}
@@ -58,9 +58,13 @@ if ( WITH_BLAHP )
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/add-condor.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-completion.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-qdel.patch -p0 &&
+							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-status.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/shared-fs.patch -p0 &&
+							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/shared-dir.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/config-paths.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/escape-args.patch -p0 &&
+							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/condor-history.patch -p0 &&
+							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/submit-l.patch -p0 &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/classads.m4 org.glite.ce.blahp/project &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/${GLOBUS_M4_FILE} org.glite.ce.blahp/project/globus.m4 &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/glite.m4 org.glite.ce.blahp/project.&&
@@ -88,8 +92,11 @@ if ( WITH_BLAHP )
 		install ( DIRECTORY ${BLAHP_INSTALL_LOC}/opt/glite DESTINATION ${C_LIBEXEC} USE_SOURCE_PERMISSIONS )
 		install ( CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ../../lib ${CMAKE_INSTALL_PREFIX}/${C_LIBEXEC}/glite/lib)" )
 		if ( CONDOR_STRIP_PACKAGES AND NOT CONDOR_PACKAGE_BUILD )
-			file( GLOB StripFiles "${CMAKE_INSTALL_PREFIX}/${C_LIBEXEC}/glite/bin/[bBt]*" )
-			install( CODE "execute_process(COMMAND strip ${StripFiles})" )
+			# Strip the libraries manually.
+			# Since cmake didn't create the libraries
+			# itself, it doesn't know to strip them.
+			install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIBEXEC}/glite/bin/. -name [bBt]*[^h]
+				COMMAND xargs strip)" )
 		endif()
 
 		condor_post_external( blahp OFF OFF )

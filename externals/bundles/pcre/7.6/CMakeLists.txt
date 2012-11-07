@@ -93,7 +93,9 @@ if ( NOT PROPER AND NOT LINUX )
 
 else( NOT PROPER AND NOT LINUX )
 
-	find_multiple( "pcre" PCRE_FOUND )
+        if (HAVE_PCRE_H OR HAVE_PCRE_PCRE_H)
+            find_multiple( "pcre" PCRE_FOUND )
+        endif()
 
 endif( NOT PROPER AND NOT LINUX )
 

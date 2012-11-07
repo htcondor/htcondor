@@ -205,7 +205,7 @@ darwin_NSGetExecutablePath_getExecPath( char* buf, size_t* bufsize )
 int
 darwin_NSGetArgv_getExecPath( char* buf, size_t* bufsize )
 {
-	int len = MAXPATHLEN;
+	size_t len = MAXPATHLEN;
 	int argc = 0;
     char *path;
     char **ptr;

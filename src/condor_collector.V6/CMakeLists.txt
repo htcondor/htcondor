@@ -23,13 +23,19 @@ if (NOT WIN_EXEC_NODE_ONLY)
 
 	## create targets
 	file( GLOB collectorRmvElements Example* )
+
+	condor_selective_glob( "collector_stats.*;collector_engine.*;view_server.*;collector.*" CollectorLibSrcs)
+	condor_static_lib ( collectorlib "${CollectorLibSrcs}")
+
 	condor_daemon ( collector
-					"${collectorRmvElements}"
-					"${CONDOR_LIBS};${GSOAP_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${ZLIB_FOUND};${CONDOR_QMF}"
+					"${collectorRmvElements};${CollectorLibSrcs}"
+					"${CONDOR_LIBS};${GSOAP_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${ZLIB_FOUND};${CONDOR_QMF};collectorlib"
 					${C_SBIN}
 					ON )
 	if (HAVE_EXT_GSOAP)
 		install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/condorCollector.wsdl DESTINATION ${C_LIB}/webservice )
 	endif(HAVE_EXT_GSOAP)
+
+	add_subdirectory(tests)
 
 endif(NOT WIN_EXEC_NODE_ONLY)

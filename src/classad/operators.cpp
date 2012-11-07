@@ -186,7 +186,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 		return SIG_CHLD1;
 	} else if (op == UNARY_PLUS_OP) {
 		if (vt1 == Value::BOOLEAN_VALUE || vt1 == Value::STRING_VALUE || 
-			vt1 == Value::LIST_VALUE || vt1 == Value::CLASSAD_VALUE || 
+			val1.IsListValue() || vt1 == Value::CLASSAD_VALUE || 
 			vt1 == Value::ABSOLUTE_TIME_VALUE) {
 			result.SetErrorValue();
 		} else {
@@ -289,7 +289,7 @@ _doOperation (OpKind op, Value &val1, Value &val2, Value &val3,
 			}
 
 			return( SIG_CHLD1 | SIG_CHLD2 );
-		} else if (vt1 == Value::LIST_VALUE && vt2 == Value::INTEGER_VALUE) {
+		} else if ( val1.IsListValue() && vt2 == Value::INTEGER_VALUE) {
 				// TODO index should to changed to a long long
 				//   (and ExprListIterator::ToNth() converted)
 				//    or the value from val2 needs to be capped
@@ -591,8 +591,8 @@ _Flatten( EvalState &state, Value &val, ExprTree *&tree, int *opPtr ) const
 					
 	// any op that got past the above is binary, commutative and associative
 	// Flatten sub expressions
-	if( child1 && !child1->Flatten( state, val1, fChild1, &childOp1 ) ||
-		child2 && !child2->Flatten( state, val2, fChild2, &childOp2 ) ) {
+	if( ( child1 && !child1->Flatten( state, val1, fChild1, &childOp1 ) ) ||
+		( child2 && !child2->Flatten( state, val2, fChild2, &childOp2 ) ) ) {
 		delete fChild1;
 		delete fChild2;
 		tree = NULL;
@@ -850,6 +850,7 @@ doComparison (OpKind op, Value &v1, Value &v2, Value &result)
 			return( SIG_CHLD1 | SIG_CHLD2 );
 
 		case Value::LIST_VALUE:
+		case Value::SLIST_VALUE:
 		case Value::CLASSAD_VALUE:
 			result.SetErrorValue();
 			return( SIG_CHLD1 | SIG_CHLD2 );

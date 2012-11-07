@@ -1,24 +1,15 @@
 #!/bin/bash
 
-conf=$HOME/.rcondor/rcondor.conf
+real0=`readlink -e "$0"`
+swdir=`dirname "$real0"`
 
-if [ ! -f $conf ]; then
-  echo "rcondor: config file does not exist: $conf" >&2  
-  exit 1
+confscript="$swdir/rcondor_config.source"
+if [ ! -f "$confscript" ]; then
+  echo -e "rcondor: improper installation, missing $confscript" >&2
+  exit 2
 fi
 
-# parse config file
-usr_host=`awk -F = '/^ *USR_HOST *=/ {print $2}' "$conf"`
-usr_host=`echo $usr_host` # strip whitespaces
-local=`awk -F = '/^ *LOCAL *=/ {print $2}' "$conf"`
-local=`echo $local`
-remote=`awk -F = '/^ *REMOTE *=/ {print $2}' "$conf"`
-remote=`echo $remote`
+source "$confscript"
 
-# make sure config values are nonzero length
-if [ -z "$usr_host" ] || [ -z "$local" ] || [ -z "$remote" ]; then
-  echo "rcondor_mnt: error parsing rcondor.conf" >&2
-  exit 1
-fi
-
-sshfs "$usr_host:$remote" "$local"
+echo "Creating mountpoint $localraw"
+$sshfs "$usr_host:$remote" "$local"

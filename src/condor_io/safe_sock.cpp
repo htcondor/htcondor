@@ -386,7 +386,7 @@ int SafeSock::put_bytes(const void *data, int sz)
     // Check to see if we need to encrypt
     // This works only because putn will actually put all 
     if (get_encryption()) {
-        if (!wrap((unsigned char *)data, sz, dta , l_out)) { 
+        if (!wrap((unsigned char *)const_cast<void*>(data), sz, dta , l_out)) { 
             dprintf(D_SECURITY, "Encryption failed\n");
             return -1;  // encryption failed!
         }
@@ -586,6 +586,8 @@ int SafeSock::handle_incoming_packet()
 	int received;
 	_condorInMsg *tempMsg, *delMsg, *prev = NULL;
 	time_t curTime;
+
+    addr_changed(); // Not yet, but it is about to
 
 	if( _msgReady ) {
 		char const *existing_msg_type;

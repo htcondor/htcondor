@@ -88,6 +88,8 @@ ppOption	ppStyle	= PP_NOTSET;
 int			wantOnlyTotals 	= 0;
 int			summarySize = -1;
 bool        expert = false;
+bool		wide_display = false; // when true, don't truncate field data
+bool		invalid_fields_empty = false; // when true, print "" instead of "[?]" for missing data
 Mode		mode	= MODE_NOTSET;
 int			diagnose = 0;
 char*		direct = NULL;
@@ -455,7 +457,7 @@ main (int argc, char *argv[])
         if (Q_OK != q) {
                 // we can always provide these messages:
 	        fprintf( stderr, "Error: %s\n", getStrQueryResult(q) );
-		fprintf( stderr, "%s\n", errstack.getFullText(true) );
+		fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 
 	        if ((NULL != requested_daemon) && ((Q_NO_COLLECTOR_HOST == q) || (requested_daemon->type() == DT_COLLECTOR))) {
                         // Specific long message if connection to collector failed.
@@ -561,20 +563,27 @@ usage ()
 		"\t-sort <expr>\t\tSort entries by expressions\n"
 		"\t-total\t\t\tDisplay totals only\n"
 		"\t-verbose\t\tSame as -long\n"
+		"\t-wide\t\t\tdon't truncate data to fit in 80 columns.\n"
 		"\t-xml\t\t\tDisplay entire classads, but in XML\n"
 		"\t-attributes X,Y,...\tAttributes to show in -xml or -long \n"
 		"\t-expert\t\t\tDisplay shorter error messages\n"
 		"    and [custom-opts ...] are one or more of\n"
 		"\t-constraint <const>\tAdd constraint on classads\n"
 		"\t-format <fmt> <attr>\tRegister display format and attribute\n"
-		"\t-target filename\tIf -format is used, the option target classad\n",
+		"\t-autoformat:[V,ntlh] <attr> [attr2 [attr3 ...]]\t    Print attr(s) with automatic formatting\n"
+		"\t\tV\tUse %%V formatting\n"
+		"\t\t,\tComma separated (default is space separated)\n"
+		"\t\tt\tTab separated\n"
+		"\t\tn\tNewline after each attribute\n"
+		"\t\tl\tLabel each value\n"
+		"\t\th\tHeadings\n"
+		"\t-target filename\tIf -format or -af is used, the option target classad\n",
 		myName);
 }
 
 void
 firstPass (int argc, char *argv[])
 {
-	param_functions *p_funcs;
 	int had_pool_error = 0;
 	int had_direct_error = 0;
 	int had_statistics_error = 0;
@@ -649,6 +658,10 @@ firstPass (int argc, char *argv[])
 				++i;
 			}
 		} else
+		if (matchPrefix (argv[i], "-wide", 3)) {
+			wide_display = true; // when true, don't truncate field data
+			//invalid_fields_empty = true;
+		} else
 		if (matchPrefix (argv[i], "-target", 5)) {
 			if( !argv[i+1] ) {
 				fprintf( stderr, "%s: -target requires one additional argument\n",
@@ -692,9 +705,7 @@ firstPass (int argc, char *argv[])
 		} else
 		if (matchPrefix (argv[i], "-debug", 3)) {
 			// dprintf to console
-			Termlog = 1;
-			p_funcs = get_param_functions();
-			dprintf_config ("TOOL", p_funcs);
+			dprintf_set_tool_debug("TOOL", 0);
 		} else
 		if (matchPrefix (argv[i], "-help", 2)) {
 			usage ();
@@ -840,18 +851,18 @@ firstPass (int argc, char *argv[])
             ss.expr = sortExpr;
 
             ss.arg = argv[i];
-            sprintf(ss.keyAttr, "CondorStatusSortKey%d", jsort);
-            sprintf(ss.keyExprAttr, "CondorStatusSortKeyExpr%d", jsort);
+            formatstr(ss.keyAttr, "CondorStatusSortKey%d", jsort);
+            formatstr(ss.keyExprAttr, "CondorStatusSortKeyExpr%d", jsort);
 
 			string exprString;
-			sprintf(exprString, "MY.%s < TARGET.%s", ss.keyAttr.c_str(), ss.keyAttr.c_str());
+			formatstr(exprString, "MY.%s < TARGET.%s", ss.keyAttr.c_str(), ss.keyAttr.c_str());
 			if (ParseClassAdRvalExpr(exprString.c_str(), sortExpr)) {
                 fprintf(stderr, "Error:  Parse error of: %s\n", exprString.c_str());
                 exit(1);
 			}
 			ss.exprLT = sortExpr;
 
-			sprintf(exprString, "MY.%s == TARGET.%s", ss.keyAttr.c_str(), ss.keyAttr.c_str());
+			formatstr(exprString, "MY.%s == TARGET.%s", ss.keyAttr.c_str(), ss.keyAttr.c_str());
 			if (ParseClassAdRvalExpr(exprString.c_str(), sortExpr)) {
                 fprintf(stderr, "Error:  Parse error of: %s\n", exprString.c_str());
                 exit(1);
@@ -1006,7 +1017,7 @@ secondPass (int argc, char *argv[])
 					opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
 					pm_head.Append(hd);
 				}
-				else if (flabel) { lbl.sprintf("%s = ", argv[i]); wid = 0; opts = 0; }
+				else if (flabel) { lbl.formatstr("%s = ", argv[i]); wid = 0; opts = 0; }
 				lbl += fCapV ? "%V" : "%v";
 				if (diagnose) {
 					printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for [%s]\n",

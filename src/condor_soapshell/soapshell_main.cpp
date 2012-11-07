@@ -389,7 +389,7 @@ do_process_request(const ClassAd *inputAd, ClassAd *resultAd, const int req_numb
 	if ( JobPid == FALSE ) {
 		JobPid = -1;
 		MyString errormsg;
-		errormsg.sprintf("Create_Process failed %s",create_process_error ? create_process_error : "");
+		errormsg.formatstr("Create_Process failed %s",create_process_error ? create_process_error : "");
 		handle_process_request_error(errormsg.Value(),req_number,resultAd);
 		return;
 	}

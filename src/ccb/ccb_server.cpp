@@ -42,7 +42,7 @@ CCBIDFromString(CCBID &ccbid,char const *ccbid_str)
 static char const *
 CCBIDToString(CCBID ccbid,MyString &ccbid_str)
 {
-	ccbid_str.sprintf("%lu",ccbid);
+	ccbid_str.formatstr("%lu",ccbid);
 	return ccbid_str.Value();
 }
 
@@ -60,7 +60,7 @@ CCBIDFromContactString(CCBID &ccbid,char const *ccb_contact)
 static void
 CCBIDToContactString(char const *my_address,CCBID ccbid,MyString &ccb_contact)
 {
-	ccb_contact.sprintf("%s#%lu",my_address,ccbid);
+	ccb_contact.formatstr("%s#%lu",my_address,ccbid);
 }
 
 CCBServer::CCBServer():
@@ -135,7 +135,7 @@ CCBServer::InitAndReconfig()
 	sinful.setPrivateAddr(NULL);
 	sinful.setCCBContact(NULL);
 	ASSERT( sinful.getSinful() && sinful.getSinful()[0] == '<' );
-	m_address.sprintf("%s",sinful.getSinful()+1);
+	m_address.formatstr("%s",sinful.getSinful()+1);
 	if( m_address[m_address.Length()-1] == '>' ) {
 		m_address.setChar(m_address.Length()-1,'\0');
 	}
@@ -163,7 +163,7 @@ CCBServer::InitAndReconfig()
 		char *spool = param("SPOOL");
 		ASSERT( spool );
 		Sinful my_addr( daemonCore->publicNetworkIpAddr() );
-		m_reconnect_fname.sprintf("%s%c%s-%s.ccb_reconnect",
+		m_reconnect_fname.formatstr("%s%c%s-%s.ccb_reconnect",
 			spool,
 			DIR_DELIM_CHAR,
 			my_addr.getHost() ? my_addr.getHost() : "localhost",
@@ -259,7 +259,7 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 	MyString name;
 	if( msg.LookupString(ATTR_NAME,name) ) {
 			// target daemon name is purely for debugging purposes
-		name.sprintf_cat(" on %s",sock->peer_description());
+		name.formatstr_cat(" on %s",sock->peer_description());
 		sock->set_peer_description(name.Value());
 	}
 
@@ -345,7 +345,7 @@ CCBServer::HandleRequest(int cmd,Stream *stream)
 	MyString name;
 	if( msg.LookupString(ATTR_NAME,name) ) {
 			// client name is purely for debugging purposes
-		name.sprintf_cat(" on %s",sock->peer_description());
+		name.formatstr_cat(" on %s",sock->peer_description());
 		sock->set_peer_description(name.Value());
 	}
 	MyString target_ccbid_str;
@@ -386,7 +386,7 @@ CCBServer::HandleRequest(int cmd,Stream *stream)
 			sock->peer_description(), target_ccbid_str.Value());
 
 		MyString error_msg;
-		error_msg.sprintf(
+		error_msg.formatstr(
 			"CCB server rejecting request for ccbid %s because no daemon is "
 			"currently registered with that id "
 			"(perhaps it recently disconnected).", target_ccbid_str.Value());
@@ -1149,7 +1149,7 @@ CCBServer::SaveAllReconnectInfo()
 	}
 
 	MyString orig_reconnect_fname = m_reconnect_fname;
-	m_reconnect_fname.sprintf_cat(".new");
+	m_reconnect_fname.formatstr_cat(".new");
 
 	if( !OpenReconnectFile() ) {
 		m_reconnect_fname = orig_reconnect_fname;

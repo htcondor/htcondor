@@ -187,7 +187,7 @@ MgmtScheddPlugin::initialize()
 			EXCEPT("%s on job is missing or not an integer", ATTR_JOB_STATUS);
 		}
 
-		key.sprintf("%d.%d", id.cluster, id.proc);
+		key.formatstr("%d.%d", id.cluster, id.proc);
 
 		processJob(key.Value(), ATTR_JOB_STATUS, value);
 
@@ -390,10 +390,10 @@ MgmtScheddPlugin::processJob(const char *key,
 
 		// XXX: Use the jobAd instead of GetAttribute below, gets us $$() expansion
 
-	MyString submissionName;
-	if (GetAttributeString(id.cluster, id.proc,
-						   ATTR_JOB_SUBMISSION,
-						   submissionName) < 0) {
+    MyString submissionName;
+    char* val = NULL;
+    if ( (GetAttributeString(id.cluster, id.proc,ATTR_JOB_SUBMISSION,submissionName) < 0) 
+        && (GetAttributeExprNew(id.cluster, id.proc, ATTR_JOB_SUBMISSION,&val) < 0) ) {
 			// Provide a default name for the Submission
 
 			// If we are a DAG node, we default to our DAG group
@@ -413,10 +413,10 @@ MgmtScheddPlugin::processJob(const char *key,
 					// wrong if the DAGMan job didn't use the
 					// default, but it is better to be wrong than
 					// to fail entirely, which is the alternative.
-				submissionName.sprintf("%s#%d", Name, dagman.cluster);
+				submissionName.formatstr("%s#%d", Name, dagman.cluster);
 			}
 		} else {
-			submissionName.sprintf("%s#%d", Name, id.cluster);
+			submissionName.formatstr("%s#%d", Name, id.cluster);
 		}
 
 		MyString tmp;
@@ -427,6 +427,7 @@ MgmtScheddPlugin::processJob(const char *key,
 					 ATTR_JOB_SUBMISSION,
 					 tmp.Value());
 	}
+    if (val) free (val);
 
 		// The ATTR_JOB_SUBMISSION has been set, if we aren't
 		// publishing submissions ourselve we can stop here.

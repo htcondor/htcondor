@@ -324,7 +324,6 @@ main( int argc, char *argv[] )
 	char *cmd_str, **tmp;
 	int size;
 	int rc;
-	param_functions *p_funcs = NULL;
 
 #ifndef WIN32
 	// Ignore SIGPIPE so if we cannot connect to a daemon we do not
@@ -506,9 +505,7 @@ main( int argc, char *argv[] )
 			break;
 		case 'd':
 			if (!(*tmp)[2] || (*tmp)[2] == 'e') {
-				Termlog = 1;
-				p_funcs = get_param_functions();
-				dprintf_config ("TOOL", p_funcs);
+				dprintf_set_tool_debug("TOOL", 0);
 			} else if ((*tmp)[2] == 'a')  {
 				subsys_check( MyName );
 					// We got a "-daemon", make sure we've got 
@@ -1175,7 +1172,7 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 		delete collectors;
 	}
 	if( q_result != Q_OK ) {
-		fprintf( stderr, "%s\n", errstack.getFullText(true) );
+		fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 		fprintf( stderr, "ERROR: can't connect to %s\n",
 				 pool ? pool->idStr() : "local collector" );
 		had_error = true;
@@ -1392,7 +1389,7 @@ doCommand( Daemon* d )
 					my_cmd = VACATE_CLAIM_FAST;
 				}
 				if (!d->startCommand(my_cmd, &sock, 0, &errstack)) {
-					fprintf(stderr, "ERROR\n%s\n", errstack.getFullText(true));
+					fprintf(stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str());
 				}
 				if( !sock.code(name) || !sock.end_of_message() ) {
 					fprintf( stderr, "Can't send %s command to %s\n", 
@@ -1416,7 +1413,7 @@ doCommand( Daemon* d )
 					// we've got a specific slot, so send the claim after
 					// the command.
 				if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
-					fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true));
+					fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str());
 				}
 				if( !sock.code(name) || !sock.end_of_message() ) {
 					fprintf( stderr, "Can't send %s command to %s\n",
@@ -1439,7 +1436,7 @@ doCommand( Daemon* d )
 				my_cmd = DAEMON_OFF_PEACEFUL;
 			}
 			if( !d->startCommand( my_cmd, &sock, 0, &errstack) ) {
-				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
+				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str() );
 			}
 			if( !sock.code( psubsys ) || !sock.end_of_message() ) {
 				fprintf( stderr, "Can't send %s command to %s\n",
@@ -1453,7 +1450,7 @@ doCommand( Daemon* d )
 
 		case DAEMON_ON:
 			if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
-				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
+				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str() );
 			}
 			if( !sock.code( psubsys ) || !sock.end_of_message() ) {
 				fprintf( stderr, "Can't send %s command to %s\n",
@@ -1509,7 +1506,7 @@ doCommand( Daemon* d )
 		{
 			char	*pexec = const_cast<char *>(exec_program); 
 			if( !d->startCommand(my_cmd, &sock, 0, &errstack) ) {
-				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
+				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str() );
 			}
 			if( !sock.code( pexec ) || !sock.end_of_message() ) {
 				fprintf( stderr, "Can't send %s command to %s\n",
@@ -1528,7 +1525,7 @@ doCommand( Daemon* d )
 
 		if( !done ) {
 			if( !d->sendCommand(my_cmd, &sock, 0, &errstack) ) {
-				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
+				fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str() );
 				fprintf( stderr, "Can't send %s command to %s\n",
 							 cmdToStr(my_cmd), d->idStr() );
 				all_good = false;
@@ -1666,7 +1663,7 @@ handleSquawk( char *line, char *addr ) {
 		Daemon d( DT_ANY, addr );
 		CondorError errstack;
         if (!d.startCommand(DUMP_STATE, &sock, 0, &errstack)) {
-			fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
+			fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str() );
 		}
 
 		sock.decode();
@@ -1698,7 +1695,7 @@ handleSquawk( char *line, char *addr ) {
 		Daemon d( DT_ANY, addr );
 		CondorError errstack;
 		if (!d.startCommand (DC_RAISESIGNAL, &sock, 0, &errstack)) {
-			fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true) );
+			fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str() );
 		}
 
 		sock.encode();
@@ -1723,7 +1720,7 @@ handleSquawk( char *line, char *addr ) {
 		Daemon d( DT_ANY, addr );
 		CondorError errstack;
 		if (!d.startCommand ( command, &sock, 0, &errstack)) {
-			fprintf( stderr, "%s\n", errstack.getFullText(true) );
+			fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 		}
 		sock.encode();
 		while( (token = strtok(NULL, " ")) ) {

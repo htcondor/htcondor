@@ -207,7 +207,7 @@ VirshType::Shutdown()
 
 				// delete the checkpoint timestamp file
 				MyString tmpfilename;
-				tmpfilename.sprintf("%s%c%s", m_workingpath.Value(),
+				tmpfilename.formatstr("%s%c%s", m_workingpath.Value(),
 						DIR_DELIM_CHAR, XEN_CKPT_TIMESTAMP_FILE);
 				unlink(tmpfilename.Value());
 
@@ -1272,7 +1272,7 @@ XenType::killVMFast(const char* vmname)
 void
 VirshType::makeNameofSuspendfile(MyString& name)
 {
-	name.sprintf("%s%c%s", m_workingpath.Value(), DIR_DELIM_CHAR,
+	name.formatstr("%s%c%s", m_workingpath.Value(), DIR_DELIM_CHAR,
 			XEN_MEM_SAVED_FILE);
 }
 
@@ -1364,7 +1364,7 @@ VirshType::findCkptConfigAndSuspendFile(MyString &vmconfig, MyString &suspendfil
 	if( filelist_contains_file( XEN_CONFIG_FILE_NAME,
 				&m_transfer_intermediate_files, true) ) {
 		// There is a vm config file for checkpointed files
-		tmpconfig.sprintf("%s%c%s",m_workingpath.Value(),
+		tmpconfig.formatstr("%s%c%s",m_workingpath.Value(),
 				DIR_DELIM_CHAR, XEN_CONFIG_FILE_NAME);
 	}
 
@@ -1626,7 +1626,7 @@ bool XenType::CreateConfigFile()
 
 	// create a vm config file
 	MyString tmp_config_name;
-	tmp_config_name.sprintf("%s%c%s",m_workingpath.Value(),
+	tmp_config_name.formatstr("%s%c%s",m_workingpath.Value(),
 			DIR_DELIM_CHAR, XEN_CONFIG_FILE_NAME);
 
 	vmprintf(D_ALWAYS, "CreateXenVMConfigFile\n");
@@ -1735,7 +1735,7 @@ KVMType::CreateConfigFile()
 
 	// create a vm config file
 	MyString tmp_config_name;
-	tmp_config_name.sprintf("%s%c%s",m_workingpath.Value(),
+	tmp_config_name.formatstr("%s%c%s",m_workingpath.Value(),
 			DIR_DELIM_CHAR, XEN_CONFIG_FILE_NAME);
 
 	vmprintf(D_ALWAYS, "CreateKvmVMConfigFile\n");

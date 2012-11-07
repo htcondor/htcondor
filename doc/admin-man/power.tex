@@ -5,10 +5,10 @@
 \index{green computing|(}
 \index{offline machine}
 
-Condor supports placing machines in low power states.
+HTCondor supports placing machines in low power states.
 A machine in the low power state is identified as being offline.
 Power setting decisions are based upon  
-Condor configuration.
+HTCondor configuration.
 
 Power conservation is relevant when machines are not in heavy use,
 or when there are known periods of low activity within the pool.
@@ -18,7 +18,7 @@ or when there are known periods of low activity within the pool.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{power management!entering a low power state}
 
-By default, Condor does not do power management.
+By default, HTCondor does not do power management.
 When desired, the ability to place a machine into a low
 power state is accomplished through configuration.
 This occurs when all slots on a machine agree that a low power state
@@ -107,12 +107,12 @@ then the largest magnitude value is chosen.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{power management!leaving a low power state}
 
-The Condor command line tool \Condor{power} may wake a machine
+The HTCondor command line tool \Condor{power} may wake a machine
 from a low power state by 
 sending a UDP Wake On LAN (WOL) packet.  See the \Condor{power} manual page on
 page~\pageref{man-condor-power}.
 
-\index{Condor daemon!condor\_rooster@\Condor{rooster}}
+\index{HTCondor daemon!condor\_rooster@\Condor{rooster}}
 \index{daemon!condor\_rooster@\Condor{rooster}}
 \index{condor\_rooster daemon}
 To automatically call \Condor{power} under specific conditions,
@@ -151,16 +151,16 @@ The methods:
 \begin{enumerate}
 \item \Prog{pm-utils} is a set of command line tools which can be used to
   detect and switch power states.
-  In Condor, this is defined by the string \verb@"pm-utils"@.
+  In HTCondor, this is defined by the string \verb@"pm-utils"@.
 \item The directory in the virtual file system \File{/sys/power} 
   contains virtual files that can be used to detect and set the power states.
-  In Condor, this is defined by the string \verb@"/sys"@.
+  In HTCondor, this is defined by the string \verb@"/sys"@.
 \item The directory in the virtual file system \File{/proc/acpi} 
   contains virtual files that can be used to detect and set the power states.
-  In Condor, this is defined by the string \verb@"/proc"@.
+  In HTCondor, this is defined by the string \verb@"/proc"@.
 \end{enumerate}
 
-By default, the Condor attempts to detect the method
+By default, the HTCondor attempts to detect the method
 to use in the order shown.  The first method detected as usable
 on the system is chosen.
 
@@ -187,13 +187,13 @@ subsystem's log configuration.
 
 If after a suitable amount of time,
 a Windows machine has not entered the expected power state,
-then Condor is having difficulty exercising the operating system's
+then HTCondor is having difficulty exercising the operating system's
 low power capabilities.  
 While the cause will be specific to the machine's hardware,
 it may also be due to improperly configured software.  
 For hardware difficulties,
 the likely culprit is the configuration within the machine's BIOS,
-for which Condor can offer little guidance.
+for which HTCondor can offer little guidance.
 For operating system difficulties,
 the Vista \Prog{powercfg} tool can be used to discover the available 
 power states on the machine.

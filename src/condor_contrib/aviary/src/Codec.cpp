@@ -80,7 +80,7 @@ BaseCodec::addAttributeToMap (ClassAd& ad, const char* name, AttributeMapType& _
             int i;
             value.IsIntegerValue (i);
             string i_str;
-            sprintf(i_str,"%d",i);
+            formatstr(i_str,"%d",i);
             _map[key] = new AviaryAttribute(AviaryAttribute::INTEGER_TYPE,i_str.c_str());
             break;
         }
@@ -89,7 +89,7 @@ BaseCodec::addAttributeToMap (ClassAd& ad, const char* name, AttributeMapType& _
             double d;
             value.IsRealValue(d);
             string d_str;
-            sprintf(d_str,"%f",d);
+            formatstr(d_str,"%f",d);
             _map[key] = new AviaryAttribute(AviaryAttribute::FLOAT_TYPE,d_str.c_str());
             break;
         }

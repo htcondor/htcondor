@@ -142,7 +142,7 @@ bool GlobusResource::Init()
 	}
 
 	std::string gahp_name;
-	sprintf( gahp_name, "GT2/%s", proxyFQAN );
+	formatstr( gahp_name, "GT2/%s", proxyFQAN );
 
 	gahp = new GahpClient( gahp_name.c_str() );
 
@@ -219,7 +219,7 @@ const char *GlobusResource::CanonicalName( const char *name )
 
 	parse_resource_manager_string( name, &host, &port, NULL, NULL );
 
-	sprintf( canonical, "%s:%s", host, *port ? port : "2119" );
+	formatstr( canonical, "%s:%s", host, *port ? port : "2119" );
 
 	free( host );
 	free( port );
@@ -232,7 +232,7 @@ const char *GlobusResource::HashName( const char *resource_name,
 {
 	static std::string hash_name;
 
-	sprintf( hash_name, "gt2 %s#%s", resource_name, proxy_subject );
+	formatstr( hash_name, "gt2 %s#%s", resource_name, proxy_subject );
 
 	return hash_name.c_str();
 }
@@ -256,12 +256,26 @@ void GlobusResource::PublishResourceAd( ClassAd *resource_ad )
 	resource_ad->Assign( "RestartJobmanagersWanted", restartJMsWanted.Number() );
 }
 
-void GlobusResource::UnregisterJob( GlobusJob *job )
+void GlobusResource::UnregisterJob( BaseJob *base_job )
 {
+	GlobusJob* job = dynamic_cast<GlobusJob*>( base_job );
+
 	JMComplete( job );
 
 	BaseResource::UnregisterJob( job );
 		// This object may be deleted now. Don't do anything below here!
+}
+
+void GlobusResource::SetJobPollInterval()
+{
+	if ( m_isGt5 ) {
+		BaseResource::SetJobPollInterval();
+	} else {
+		m_jobPollInterval = (submitJMsAllowed.Length() + restartJMsAllowed.Length()) / m_paramJobPollRate;
+		if ( m_jobPollInterval < m_paramJobPollInterval ) {
+			m_jobPollInterval = m_paramJobPollInterval;
+		}
+	}
 }
 
 bool GlobusResource::RequestJM( GlobusJob *job, bool is_submit )
@@ -290,6 +304,7 @@ bool GlobusResource::RequestJM( GlobusJob *job, bool is_submit )
 		if ( submitJMsAllowed.Length() + restartJMsAllowed.Length() <
 			 submitJMLimit + restartJMLimit ) {
 			submitJMsAllowed.Append( job );
+			SetJobPollInterval();
 			return true;
 		} else {
 			submitJMsWanted.Append( job );
@@ -313,6 +328,7 @@ bool GlobusResource::RequestJM( GlobusJob *job, bool is_submit )
 		if ( submitJMsAllowed.Length() + restartJMsAllowed.Length() <
 			 submitJMLimit + restartJMLimit ) {
 			restartJMsAllowed.Append( job );
+			SetJobPollInterval();
 			return true;
 		} else {
 			restartJMsWanted.Append( job );
@@ -361,6 +377,8 @@ void GlobusResource::JMComplete( GlobusJob *job )
 				queued_job->SetEvaluateState();
 			}
 		}
+
+		SetJobPollInterval();
 	} else {
 		// We only have to check the Wanted queues if the job wasn't in
 		// the Allowed queues
@@ -373,6 +391,7 @@ void GlobusResource::JMAlreadyRunning( GlobusJob *job )
 {
 	if ( !m_isGt5 ) {
 		restartJMsAllowed.Append( job );
+		SetJobPollInterval();
 	}
 }
 
@@ -713,7 +732,7 @@ GlobusResource::CleanupMonitorJob()
 	if ( monitorDirectory ) {
 		std::string tmp_dir;
 
-		sprintf( tmp_dir, "%s.remove", monitorDirectory );
+		formatstr( tmp_dir, "%s.remove", monitorDirectory );
 
 		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'rename' ignored.
 		rename( monitorDirectory, tmp_dir.c_str() );
@@ -754,7 +773,7 @@ GlobusResource::SubmitMonitorJob()
 	g_MonitorUID++;
 	std::string buff;
 
-	sprintf( buff, "%s/grid-monitor.%s.%d", GridmanagerScratchDir,
+	formatstr( buff, "%s/grid-monitor.%s.%d", GridmanagerScratchDir,
 				  resourceName, g_MonitorUID );
 	monitorDirectory = strdup( buff.c_str() );
 
@@ -767,10 +786,10 @@ GlobusResource::SubmitMonitorJob()
 		return false;
 	}
 
-	sprintf( buff, "%s/grid-monitor-job-status", monitorDirectory );
+	formatstr( buff, "%s/grid-monitor-job-status", monitorDirectory );
 	monitorJobStatusFile = strdup( buff.c_str() );
 
-	sprintf( buff, "%s/grid-monitor-log", monitorDirectory );
+	formatstr( buff, "%s/grid-monitor-log", monitorDirectory );
 	monitorLogFile = strdup( buff.c_str() );
 
 
@@ -809,13 +828,13 @@ GlobusResource::SubmitMonitorJob()
 	monitorGahp->setMode( GahpClient::normal );
 
 	const char *gassServerUrl = monitorGahp->getGlobusGassServerUrl();
-	sprintf( RSL, "&(executable=%s%s)(stdout=%s%s)(arguments='--dest-url=%s%s')",
+	formatstr( RSL, "&(executable=%s%s)(stdout=%s%s)(arguments='--dest-url=%s%s')",
 				 gassServerUrl, monitor_executable, gassServerUrl,
 				 monitorLogFile, gassServerUrl, monitorJobStatusFile );
 
 	free( monitor_executable );
 
-	sprintf( contact, "%s/jobmanager-fork", resourceName );
+	formatstr( contact, "%s/jobmanager-fork", resourceName );
 
 	std::string job_contact;
 	rc = monitorGahp->globus_gram_client_job_request( contact.c_str(),

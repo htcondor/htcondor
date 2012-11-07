@@ -1232,7 +1232,7 @@ QuillErrCode TTManager::insertMachines(AttrList *ad) {
 				return QUILL_FAILURE;
 			}		 
 		}
-		bulk.sprintf_cat("%s\t%s\n", aName.Value(), aVal.Value());
+		bulk.formatstr_cat("%s\t%s\n", aName.Value(), aVal.Value());
 		}
 
 	}

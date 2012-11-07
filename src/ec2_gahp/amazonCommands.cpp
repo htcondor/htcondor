@@ -155,17 +155,13 @@ bool readShortFile( const std::string & fileName, std::string & contents ) {
 // We also make extensive use of this function in the XML parsing code,
 // for pretty much exactly the same reason.
 //
-size_t appendToString( void * ptr, size_t size, size_t nmemb, void * str ) {
+size_t appendToString( const void * ptr, size_t size, size_t nmemb, void * str ) {
     if( size == 0 || nmemb == 0 ) { return 0; }
     
-    char * ucptr = (char *)ptr;
-    char last = ucptr[ (size * nmemb) - 1 ];
-    ucptr[ (size * nmemb) - 1 ] = '\0';
+    std::string source( (const char *)ptr, size * nmemb );
     std::string * ssptr = (std::string *)str;
-    ssptr->append( ucptr );
-    (*ssptr) += last;
-    ucptr[ (size * nmemb) - 1 ] = last;
-    
+    ssptr->append( source );
+
     return (size * nmemb);
 }
 
@@ -203,13 +199,13 @@ bool AmazonRequest::SendRequest() {
     //
     // While we're at it, extract "the value of the Host header in lowercase"
     // and the "HTTP Request URI" from the service URL.  The service URL must
-    // be of the form '[http[s]|x509]://hostname[:port][/path]*'.
+    // be of the form '[http[s]|x509|euca3[s]]://hostname[:port][/path]*'.
     Regex r; int errCode = 0; const char * errString = 0;
     bool patternOK = r.compile( "([^:]+)://(([^/]+)(/.*)?)", & errString, & errCode );
     assert( patternOK );
     ExtArray<MyString> groups(5);
     bool matchFound = r.match( this->serviceURL.c_str(), & groups );
-    if( (! matchFound) || (groups[1] != "http" && groups[1] != "https" && groups[1] != "x509" ) ) {
+    if( (! matchFound) || (groups[1] != "http" && groups[1] != "https" && groups[1] != "x509" && groups[1] != "euca3" && groups[1] != "euca3s" ) ) {
         this->errorCode = "E_INVALID_SERVICE_URL";
         this->errorMessage = "Failed to parse service URL.";
         dprintf( D_ALWAYS, "Failed to match regex against service URL '%s'.\n", serviceURL.c_str() );
@@ -224,6 +220,13 @@ bool AmazonRequest::SendRequest() {
                     & tolower );
     std::string httpRequestURI = groups[4];
     if( httpRequestURI.empty() ) { httpRequestURI = "/"; }
+
+    //
+    // Eucalyptus 3 bombs if it sees this attribute.
+    //
+    if( protocol == "euca3" || protocol == "euca3s" ) {
+        query_parameters.erase( "InstanceInitiatedShutdownBehavior" );
+    }
 
     //
     // The AWSAccessKeyId is just the contents of this->accessKeyFile,
@@ -324,7 +327,7 @@ bool AmazonRequest::SendRequest() {
     unsigned int mdLength = 0;
     unsigned char messageDigest[EVP_MAX_MD_SIZE];
     const unsigned char * hmac = HMAC( EVP_sha256(), saKey.c_str(), saKey.length(),
-        (unsigned char *)stringToSign.c_str(), stringToSign.length(), messageDigest, & mdLength );
+        (const unsigned char *)stringToSign.c_str(), stringToSign.length(), messageDigest, & mdLength );
     if( hmac == NULL ) {
         this->errorCode = "E_INTERNAL";
         this->errorMessage = "Unable to calculate query signature (SHA256 HMAC).";
@@ -341,6 +344,10 @@ bool AmazonRequest::SendRequest() {
     canonicalizedQueryString += "&Signature=" + amazonURLEncode( signatureInBase64 );
     std::string finalURI;
     if( protocol == "x509" ) {
+        finalURI = "https://" + hostAndPath + "?" + canonicalizedQueryString;
+    } else if( protocol == "euca3" ) {
+        finalURI = "http://" + hostAndPath + "?" + canonicalizedQueryString;
+    } else if( protocol == "euca3s" ) {
         finalURI = "https://" + hostAndPath + "?" + canonicalizedQueryString;
     } else {
         finalURI = this->serviceURL + "?" + canonicalizedQueryString;
@@ -564,7 +571,7 @@ void vmStartESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
 void vmStartCDH( void * vUserData, const XML_Char * cdata, int len ) {
     vmStartUD * vsud = (vmStartUD *)vUserData;
     if( vsud->inInstanceId ) {
-        appendToString( (void *)cdata, len, 1, (void *) & vsud->instanceID );
+        appendToString( (const void *)cdata, len, 1, (void *) & vsud->instanceID );
     }
 }
 
@@ -1369,7 +1376,7 @@ void vmStatusCDH( void * vUserData, const XML_Char * cdata, int len ) {
     vmStatusUD * vsud = (vmStatusUD *)vUserData;
 
     if( vsud->inGroup ) {
-        appendToString( (void *)cdata, len, 1, (void *) & vsud->currentSecurityGroup );
+        appendToString( (const void *)cdata, len, 1, (void *) & vsud->currentSecurityGroup );
         return;
     }
 
@@ -1419,7 +1426,7 @@ void vmStatusCDH( void * vUserData, const XML_Char * cdata, int len ) {
             return;
     }
 
-    appendToString( (void *)cdata, len, 1, (void *)targetString );
+    appendToString( (const void *)cdata, len, 1, (void *)targetString );
 }
 
 void vmStatusEEH( void * vUserData, const XML_Char * name ) {
@@ -1609,7 +1616,7 @@ void createKeypairESH( void * vUserData, const XML_Char * name, const XML_Char *
 void createKeypairCDH( void * vUserData, const XML_Char * cdata, int len ) {
     privateKeyUD * pkud = (privateKeyUD *)vUserData;
     if( pkud->inKeyMaterial ) {
-        appendToString( (void *)cdata, len, 1, (void *) & pkud->keyMaterial );
+        appendToString( (const void *)cdata, len, 1, (void *) & pkud->keyMaterial );
     }
 }
 
@@ -1762,7 +1769,7 @@ void keypairNamesESH( void * vUserData, const XML_Char * name, const XML_Char **
 void keypairNamesCDH( void * vUserData, const XML_Char * cdata, int len ) {
     keyNamesUD * knud = (keyNamesUD *)vUserData;
     if( knud->inKeyName ) {
-        appendToString( (void *)cdata, len, 1, (void *) & knud->keyName );
+        appendToString( (const void *)cdata, len, 1, (void *) & knud->keyName );
     }
 }
 

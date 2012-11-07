@@ -373,18 +373,18 @@ Daemon::idStr( void )
 	std::string buf;
 	if( _is_local ) {
 		ASSERT( dt_str );
-		sprintf( buf, "local %s", dt_str );
+		formatstr( buf, "local %s", dt_str );
 	} else if( _name ) {
 		ASSERT( dt_str );
-		sprintf( buf, "%s %s", dt_str, _name );
+		formatstr( buf, "%s %s", dt_str, _name );
 	} else if( _addr ) {
 		ASSERT( dt_str );
 		Sinful sinful(_addr);
 		sinful.clearParams(); // too much info is ugly
-		sprintf( buf, "%s at %s", dt_str,
+		formatstr( buf, "%s at %s", dt_str,
 					 sinful.getSinful() ? sinful.getSinful() : _addr );
 		if( _full_hostname ) {
-			sprintf_cat( buf, " (%s)", _full_hostname );
+			formatstr_cat( buf, " (%s)", _full_hostname );
 		}
 	} else {
 		return "unknown daemon";
@@ -694,7 +694,7 @@ Daemon::sendCommand( int cmd, Sock* sock, int sec, CondorError* errstack, char c
 	}
 	if( ! sock->end_of_message() ) {
 		std::string err_buf;
-		sprintf( err_buf, "Can't send eom for %d to %s", cmd,  
+		formatstr( err_buf, "Can't send eom for %d to %s", cmd,  
 				 idStr() );
 		newError( CA_COMMUNICATION_ERROR, err_buf.c_str() );
 		return false;
@@ -712,7 +712,7 @@ Daemon::sendCommand( int cmd, Stream::stream_type st, int sec, CondorError* errs
 	}
 	if( ! tmp->end_of_message() ) {
 		std::string err_buf;
-		sprintf( err_buf, "Can't send eom for %d to %s", cmd,  
+		formatstr( err_buf, "Can't send eom for %d to %s", cmd,  
 				 idStr() );
 		newError( CA_COMMUNICATION_ERROR, err_buf.c_str() );
 		delete tmp;
@@ -787,14 +787,14 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 			err_msg += "CA_AUTH_CMD";
 		}
 		err_msg += "): ";
-		err_msg += errstack.getFullText();
+		err_msg += errstack.getFullText().c_str();
 		newError( CA_COMMUNICATION_ERROR, err_msg.c_str() );
 		return false;
 	}
 	if( force_auth ) {
 		CondorError e;
 		if( ! forceAuthentication(cmd_sock, &e) ) {
-			newError( CA_NOT_AUTHENTICATED, e.getFullText() );
+			newError( CA_NOT_AUTHENTICATED, e.getFullText().c_str() );
 			return false;
 		}
 	}
@@ -1049,7 +1049,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 		// If we were not passed a name or an addr, check the
 		// config file for a subsystem_HOST, e.g. SCHEDD_HOST=XXXX
 	if( ! _name  && !_pool ) {
-		sprintf( buf, "%s_HOST", _subsys );
+		formatstr( buf, "%s_HOST", _subsys );
 		char *specified_host = param( buf.c_str() );
 		if ( specified_host ) {
 				// Found an entry.  Use this name.
@@ -1095,7 +1095,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 						 "finding IP address\n", host );
 				if (!get_fqdn_and_ip_from_hostname(host, fqdn, hostaddr)) {
 					// With a hostname, this is a fatal Daemon error.
-					sprintf( buf, "unknown host %s", host );
+					formatstr( buf, "unknown host %s", host );
 					newError( CA_LOCATE_FAILED, buf.c_str() );
 					if (host) free( host );
 
@@ -1222,12 +1222,12 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 				  machine all reporting to the same collector.
 				  -Derek Wright 2005-03-09
 				*/
-			sprintf( buf, "%s == \"%s\"", ATTR_MACHINE, _full_hostname ); 
+			formatstr( buf, "%s == \"%s\"", ATTR_MACHINE, _full_hostname ); 
 			query.addANDConstraint( buf.c_str() );
 		} else if ( _type == DT_GENERIC ) {
 			query.setGenericQueryType(_subsys);
 		} else if ( _name ) {
-			sprintf( buf, "%s == \"%s\"", ATTR_NAME, _name ); 
+			formatstr( buf, "%s == \"%s\"", ATTR_NAME, _name ); 
 			query.addANDConstraint( buf.c_str() );
 		} else {
 			if ( ( _type != DT_NEGOTIATOR ) && ( _type != DT_LEASE_MANAGER) ) {
@@ -1245,7 +1245,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 		CondorError errstack;
 		if (collectors->query (query, ads) != Q_OK) {
 			delete collectors;
-			newError( CA_LOCATE_FAILED, errstack.getFullText() );
+			newError( CA_LOCATE_FAILED, errstack.getFullText().c_str() );
 			return false;
 		};
 		delete collectors;
@@ -1255,7 +1255,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 		if(!scan) {
 			dprintf( D_ALWAYS, "Can't find address for %s %s\n",
 					 daemonString(_type), _name ? _name : "" );
-			sprintf( buf, "Can't find address for %s %s", 
+			formatstr( buf, "Can't find address for %s %s", 
 						 daemonString(_type), _name ? _name : "" );
 			newError( CA_LOCATE_FAILED, buf.c_str() );
 			return false; 
@@ -1339,7 +1339,7 @@ Daemon::getCmInfo( const char* subsys )
 			// this is just a fancy wrapper for param()...
 		char *hostnames = getCmHostFromConfig( subsys );
 		if(!hostnames) {
-			sprintf( buf, "%s address or hostname not specified in config file",
+			formatstr( buf, "%s address or hostname not specified in config file",
 					 subsys ); 
 			newError( CA_LOCATE_FAILED, buf.c_str() );
 			_is_configured = false;
@@ -1368,7 +1368,7 @@ Daemon::getCmInfo( const char* subsys )
 	}
 
 	if( ! host || !host[0]) {
-		sprintf( buf, "%s address or hostname not specified in config file",
+		formatstr( buf, "%s address or hostname not specified in config file",
 				 subsys ); 
 		newError( CA_LOCATE_FAILED, buf.c_str() );
 		_is_configured = false;
@@ -1396,7 +1396,7 @@ Daemon::findCmDaemon( const char* cm_name )
 
 	if( !sinful.valid() || !sinful.getHost() ) {
 		dprintf( D_ALWAYS, "Invalid address: %s\n", cm_name );
-		sprintf( buf, "%s address or hostname not specified in config file",
+		formatstr( buf, "%s address or hostname not specified in config file",
 				 _subsys ); 
 		newError( CA_LOCATE_FAILED, buf.c_str() );
 		_is_configured = false;
@@ -1441,7 +1441,7 @@ Daemon::findCmDaemon( const char* cm_name )
 
 
 	if ( !host ) {
-		sprintf( buf, "%s address or hostname not specified in config file",
+		formatstr( buf, "%s address or hostname not specified in config file",
 				 _subsys ); 
 		newError( CA_LOCATE_FAILED, buf.c_str() );
 		_is_configured = false;
@@ -1461,7 +1461,7 @@ Daemon::findCmDaemon( const char* cm_name )
 		int ret = get_fqdn_and_ip_from_hostname(host, fqdn, saddr);
 		if (!ret) {
 				// With a hostname, this is a fatal Daemon error.
-			sprintf( buf, "unknown host %s", host );
+			formatstr( buf, "unknown host %s", host );
 			newError( CA_LOCATE_FAILED, buf.c_str() );
 			free( host );
 
@@ -1687,7 +1687,7 @@ Daemon::readAddressFile( const char* subsys )
 	MyString buf;
 	bool rval = false;
 
-	sprintf( param_name, "%s_ADDRESS_FILE", subsys );
+	formatstr( param_name, "%s_ADDRESS_FILE", subsys );
 	addr_file = param( param_name.c_str() );
 	if( ! addr_file ) {
 		return false;
@@ -1751,7 +1751,7 @@ Daemon::readLocalClassAd( const char* subsys )
 	ClassAd *adFromFile;
 	std::string param_name;
 
-	sprintf( param_name, "%s_DAEMON_AD_FILE", subsys );
+	formatstr( param_name, "%s_DAEMON_AD_FILE", subsys );
 	addr_file = param( param_name.c_str() );
 	if( ! addr_file ) {
 		return false;
@@ -1814,7 +1814,7 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 	initStringFromAd( ad, ATTR_NAME, &_name );
 
 		// construct the IP_ADDR attribute
-	sprintf( buf, "%sIpAddr", _subsys );
+	formatstr( buf, "%sIpAddr", _subsys );
 	if ( ad->LookupString( buf.c_str(), buf2 ) ) {
 		New_addr( strnewp( buf2.c_str() ) );
 		found_addr = true;
@@ -1833,7 +1833,7 @@ Daemon::getInfoFromAd( const ClassAd* ad )
 	} else {
 		dprintf( D_ALWAYS, "Can't find address in classad for %s %s\n",
 				 daemonString(_type), _name ? _name : "" );
-		sprintf( buf, "Can't find address in classad for %s %s",
+		formatstr( buf, "Can't find address in classad for %s %s",
 					 daemonString(_type), _name ? _name : "" );
 		newError( CA_LOCATE_FAILED, buf.c_str() );
 
@@ -1878,7 +1878,7 @@ Daemon::initStringFromAd( const ClassAd* ad, const char* attrname, char** value 
 		dprintf( D_ALWAYS, "Can't find %s in classad for %s %s\n",
 				 attrname, daemonString(_type),
 				 _name ? _name : "" );
-		sprintf( buf, "Can't find %s in classad for %s %s",
+		formatstr( buf, "Can't find %s in classad for %s %s",
 					 attrname, daemonString(_type),
 					 _name ? _name : "" );
 		newError( CA_LOCATE_FAILED, buf.c_str() );
@@ -1950,7 +1950,7 @@ Daemon::New_addr( char* str )
 								// [TODO]
 								// if priv address is an IPv6 address,
 								// it should be <[%s]> form
-							sprintf(buf,"<%s>",priv_addr);
+							formatstr(buf,"<%s>",priv_addr);
 							priv_addr = buf.c_str();
 						}
 						delete [] _addr;
@@ -2121,7 +2121,7 @@ getCmHostFromConfig( const char * subsys )
 	char* host = NULL;
 
 		// Try the config file for a subsys-specific hostname 
-	sprintf( buf, "%s_HOST", subsys );
+	formatstr( buf, "%s_HOST", subsys );
 	host = param( buf.c_str() );
 	if( host ) {
 		if( host[0] ) {
@@ -2137,7 +2137,7 @@ getCmHostFromConfig( const char * subsys )
 	}
 
 		// Try the config file for a subsys-specific IP addr 
-	sprintf( buf, "%s_IP_ADDR", subsys );
+	formatstr( buf, "%s_IP_ADDR", subsys );
 	host = param( buf.c_str() );
 	if( host ) {
 		if( host[0] ) {

@@ -20,11 +20,6 @@ if(WINDOWS)
 
 	file (GLOB RmdirFiles condor_rmdir.* main.* common.h bprint.* harylist.*)
 	
-	# these commands to build with libctiny instead of the standard c-runtime.
-    #condor_glob ( libcHdrs libcSrcs "${RmdirFiles}" )
-	#condor_static_lib ( libctiny "${libcHdrs};${libcSrcs}" )
-	#condor_exe( condor_rmdir "${RmdirFiles}" ${C_BIN} "libctiny" OFF )
-	
 	condor_exe( condor_rmdir "${RmdirFiles}" ${C_BIN} "" OFF )
 
 

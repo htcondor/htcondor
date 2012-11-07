@@ -33,8 +33,8 @@
 
 static bool test_sprintf_string(void);
 static bool test_sprintf_MyString(void);
-static bool test_sprintf_cat_string(void);
-static bool test_sprintf_cat_MyString(void);
+static bool test_formatstr_cat_string(void);
+static bool test_formatstr_cat_MyString(void);
 static bool test_comparison_ops_lhs_string(void);
 static bool test_comparison_ops_lhs_MyString(void);
 static bool test_lower_case_empty(void);
@@ -69,8 +69,8 @@ bool FTEST_stl_string_utils(void) {
 	driver.register_function(test_comparison_ops_lhs_MyString);
 	driver.register_function(test_sprintf_string);
 	driver.register_function(test_sprintf_MyString);
-	driver.register_function(test_sprintf_cat_string);
-	driver.register_function(test_sprintf_cat_MyString);
+	driver.register_function(test_formatstr_cat_string);
+	driver.register_function(test_formatstr_cat_MyString);
 	driver.register_function(test_lower_case_empty);
 	driver.register_function(test_lower_case_non_empty);
 	driver.register_function(test_upper_case_empty);
@@ -108,7 +108,7 @@ static bool test_sprintf_string() {
     nchars = STL_STRING_UTILS_FIXBUF / 2;
     src="";
     for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
-    rchars = sprintf(dst, "%s", src.c_str());
+    rchars = formatstr(dst, "%s", src.c_str());
     if (dst != src) {
 		FAIL;        
     }
@@ -119,7 +119,7 @@ static bool test_sprintf_string() {
     nchars = STL_STRING_UTILS_FIXBUF - 1;
     src="";
     for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
-    rchars = sprintf(dst, "%s", src.c_str());
+    rchars = formatstr(dst, "%s", src.c_str());
     if (dst != src) {
 		FAIL;        
     }
@@ -130,7 +130,7 @@ static bool test_sprintf_string() {
     nchars = STL_STRING_UTILS_FIXBUF;
     src="";
     for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
-    rchars = sprintf(dst, "%s", src.c_str());
+    rchars = formatstr(dst, "%s", src.c_str());
     if (dst != src) {
 		FAIL;        
     }
@@ -141,7 +141,7 @@ static bool test_sprintf_string() {
     nchars = STL_STRING_UTILS_FIXBUF + 1;
     src="";
     for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
-    rchars = sprintf(dst, "%s", src.c_str());
+    rchars = formatstr(dst, "%s", src.c_str());
     if (dst != src) {
 		FAIL;        
     }
@@ -152,7 +152,7 @@ static bool test_sprintf_string() {
     nchars = STL_STRING_UTILS_FIXBUF * 2;
     src="";
     for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
-    rchars = sprintf(dst, "%s", src.c_str());
+    rchars = formatstr(dst, "%s", src.c_str());
     if (dst != src) {
 		FAIL;        
     }
@@ -174,7 +174,7 @@ static bool test_sprintf_MyString() {
     nchars = STL_STRING_UTILS_FIXBUF / 2;
     src="";
     for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
-    rchars = sprintf(dst, "%s", src.Value());
+    rchars = formatstr(dst, "%s", src.Value());
     if (dst != src) {
 		FAIL;        
     }
@@ -185,7 +185,7 @@ static bool test_sprintf_MyString() {
     nchars = STL_STRING_UTILS_FIXBUF - 1;
     src="";
     for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
-    rchars = sprintf(dst, "%s", src.Value());
+    rchars = formatstr(dst, "%s", src.Value());
     if (dst != src) {
 		FAIL;        
     }
@@ -196,7 +196,7 @@ static bool test_sprintf_MyString() {
     nchars = STL_STRING_UTILS_FIXBUF;
     src="";
     for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
-    rchars = sprintf(dst, "%s", src.Value());
+    rchars = formatstr(dst, "%s", src.Value());
     if (dst != src) {
 		FAIL;        
     }
@@ -207,7 +207,7 @@ static bool test_sprintf_MyString() {
     nchars = STL_STRING_UTILS_FIXBUF + 1;
     src="";
     for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
-    rchars = sprintf(dst, "%s", src.Value());
+    rchars = formatstr(dst, "%s", src.Value());
     if (dst != src) {
 		FAIL;        
     }
@@ -218,7 +218,7 @@ static bool test_sprintf_MyString() {
     nchars = STL_STRING_UTILS_FIXBUF * 2;
     src="";
     for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
-    rchars = sprintf(dst, "%s", src.Value());
+    rchars = formatstr(dst, "%s", src.Value());
     if (dst != src) {
 		FAIL;        
     }
@@ -229,11 +229,11 @@ static bool test_sprintf_MyString() {
 	PASS;
 }
 
-static bool test_sprintf_cat_string() {
-    emit_test("Test sprintf_cat overloading for std::string");
+static bool test_formatstr_cat_string() {
+    emit_test("Test formatstr_cat overloading for std::string");
 
     std::string s = "foo";
-    int r = sprintf_cat(s, "%s", "bar");
+    int r = formatstr_cat(s, "%s", "bar");
     if (s != "foobar") {
 		FAIL;        
     }
@@ -244,11 +244,11 @@ static bool test_sprintf_cat_string() {
 	PASS;
 }
 
-static bool test_sprintf_cat_MyString() {
-    emit_test("Test sprintf_cat overloading for MyString");
+static bool test_formatstr_cat_MyString() {
+    emit_test("Test formatstr_cat overloading for MyString");
 
     MyString s = "foo";
-    int r = sprintf_cat(s, "%s", "bar");
+    int r = formatstr_cat(s, "%s", "bar");
     if (s != "foobar") {
 		FAIL;        
     }

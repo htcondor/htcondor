@@ -52,20 +52,22 @@ my %defines = (
 # autoflush our STDOUT
 $| = 1;
 
-if ($ENV{NMI_PLATFORM} =~ /winnt/) {
+if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     $ENV{PATH} = "C:\\Program Files\\CMake 2.8\\bin;$ENV{VS90COMNTOOLS}..\\IDE;$ENV{VS90COMNTOOLS}..\\..\\VC\\BIN;$ENV{PATH}";
     $externals_loc   = "c:/temp/condor";
     #$ENV{CONDOR_BLD_EXTERNAL_STAGE} = "$externals_loc";
 } else {
 	$ENV{PATH} ="$ENV{PATH}:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
 }
-if ($ENV{NMI_PLATFORM} =~ /macos/) {
+if ($ENV{NMI_PLATFORM} =~ /macos/i) {
     # Bad hack for now. By default, cmake will use gcc and c++ for the
     # C and C++ compilers. On newer macs, these invoke different 
     # compilers (llvm gnu and clang, respectively). Setting CC and CXX
     # is the best way to pick a consistent set of compilers.
     $ENV{CC} = "gcc";
     $ENV{CXX} = "g++";
+    # Build binaries that will work on Mac OS X 10.6 and later.
+    $ENV{MACOSX_DEPLOYMENT_TARGET} = "10.6";
 }
 print "------------------------- ENV DUMP ------------------------\n";
 foreach my $key ( sort {uc($a) cmp uc($b)} (keys %ENV) ) {
@@ -81,7 +83,7 @@ print "Configure args: " . join(' ', @ARGV) . "\n";
 ######################################################################
 
 # See gt 2344 for this block of code
-if ($ENV{NMI_PLATFORM} =~ /winnt/) {
+if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	# Terrible hack for now. The real solution is $installcmakecmd should
 	# be a batch file which forms the same work as the unix side. And then
 	# only the else case in this 'if' gets run. This if would then appear
@@ -106,7 +108,7 @@ system("$cmake --version");
 ######################################################################
 # figure out if we have access to ANALYZE option of VC++
 ######################################################################
-if ($ENV{NMI_PLATFORM} =~ /winnt/) {
+if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     my $prefast = `cl -?`;
     if ($prefast =~ /analyze/) { $prefast = 1; } else { $prefast = 0; }
     print "PREFAST = $prefast\n";
@@ -163,7 +165,7 @@ if ( defined( $opt_use_externals_cache ) ) {
 
 	if ( defined($opt_clear_externals_cache) ) {
 
-		if ($ENV{NMI_PLATFORM} =~ /winnt/) {
+		if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 			print "deleting externals cache\n";
 			$exit_status = system("rd /s/q \"$externals_loc\"");
 			if( $exit_status ) {

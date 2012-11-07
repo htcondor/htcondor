@@ -109,11 +109,11 @@ Condor_Auth_Passwd::fetchLogin()
 	
 		// decide the login name we will try to authenticate with.  
 	if ( is_root() ) {
-		login.sprintf("%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
+		login.formatstr("%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
 	} else {
 		// for now, always use the POOL_PASSWORD_USERNAME.  at some
 		// point this code should call my_username() my_domainname().
-		login.sprintf("%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
+		login.formatstr("%s@%s",POOL_PASSWORD_USERNAME,getLocalDomain());
 	}
 
 	return strdup( login.Value() );
@@ -261,8 +261,8 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk)
     if( !seed_ka || !seed_kb || !ka || !kb ) {
 		if(seed_ka) free(seed_ka);
 		if(seed_kb) free(seed_kb);
-		if(ka) free((void *)ka);
-		if(kb) free((void *)kb);
+		if(ka) free((void *)const_cast<unsigned char*>(ka));
+		if(kb) free((void *)const_cast<unsigned char*>(kb));
         dprintf(D_SECURITY, "Can't authenticate: malloc error.\n");
         return false;
     }
@@ -273,11 +273,11 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk)
     sk->len = strlen(const_cast<char *>(sk->shared_key));
 
 		// Generate the shared keys K and K'
-    hmac((unsigned char *)sk->shared_key, sk->len, 
+    hmac((unsigned char *)const_cast<char*>(sk->shared_key), sk->len,
 		 seed_ka, AUTH_PW_KEY_LEN, 
 		 const_cast<unsigned char *>(ka), &ka_len );
 
-    hmac((unsigned char *)sk->shared_key, sk->len, 
+    hmac((unsigned char *)const_cast<char*>(sk->shared_key), sk->len,
 		 seed_kb, AUTH_PW_KEY_LEN, 
 		 const_cast<unsigned char *>(kb), &kb_len );
 
@@ -844,16 +844,16 @@ Condor_Auth_Passwd::destroy_sk(struct sk_buf *sk)
 {
     if(sk->shared_key) {
 		spc_memset(sk->shared_key, 0, sk->len);
-        free((void *)sk->shared_key);
+        free((void *)const_cast<char*>(sk->shared_key));
     }
 	if(sk->ka) {
 		spc_memset(sk->ka, 0, sk->ka_len);
-		free((void *)sk->ka);
+		free((void *)const_cast<unsigned char*>(sk->ka));
 		sk->ka_len = 0;
 	}
 	if(sk->kb) {
 		spc_memset(sk->kb, 0, sk->kb_len);
-		free((void *)sk->kb);
+		free((void *)const_cast<unsigned char*>(sk->kb));
 		sk->kb_len = 0;
 	}
 	init_sk(sk);

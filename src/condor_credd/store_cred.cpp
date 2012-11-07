@@ -42,6 +42,8 @@ char * prompt_password (const char *);
 char * stdin_password (const char *);
 bool read_file (const char * filename, char *& data, int & size);
 
+static int Termlog = 0;
+
 void
 version()
 {
@@ -113,7 +115,6 @@ int main(int argc, char **argv)
 
 					// dprintf to console
 				Termlog = 1;
-				dprintf_config ("TOOL", get_param_functions());
 
 				break;
 			case 'S':
@@ -195,6 +196,8 @@ int main(int argc, char **argv)
 			}
 		} //fi
 	} //rof
+
+	if(Termlog) dprintf_set_tool_debug("TOOL", 0);
 
 	if (( cred_file_name == NULL ) || (cred_type == 0)) {
 		fprintf ( stderr, "Credential filename or type not specified\n");
@@ -279,7 +282,7 @@ int main(int argc, char **argv)
 		printf ("Credential submitted successfully\n");
 	} else {
 		fprintf (stderr, "Unable to submit credential\n%s\n",
-				 errstack.getFullText(true));
+				 errstack.getFullText(true).c_str());
 		return 1;
 	}
 

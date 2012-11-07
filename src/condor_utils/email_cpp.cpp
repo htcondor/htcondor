@@ -143,10 +143,10 @@ construct_custom_attributes( MyString &attributes, ClassAd* job_ad )
 			continue;
 		}
 		if( first_time ) {
-			attributes.sprintf_cat( "\n\n" );
+			attributes.formatstr_cat( "\n\n" );
 			first_time = false;
 		}
-		attributes.sprintf_cat( "%s = %s\n", tmp, ExprTreeToString(expr_tree) );
+		attributes.formatstr_cat( "%s = %s\n", tmp, ExprTreeToString(expr_tree) );
 	}
     return;
 }
@@ -304,7 +304,7 @@ Email::open_stream( ClassAd* ad, int exit_reason, const char* subject )
 	ad->LookupInteger( ATTR_PROC_ID, proc );
 
 	MyString full_subject;
-	full_subject.sprintf( "Condor Job %d.%d", cluster, proc );
+	full_subject.formatstr( "Condor Job %d.%d", cluster, proc );
 	if( subject ) {
 		full_subject += " ";
 		full_subject += subject;

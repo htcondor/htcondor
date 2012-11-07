@@ -54,9 +54,6 @@
 
 extern const char *_condor_DebugFlagNames[];
 
-FILE *debug_lock(int debug_flags, const char *mode, int force_lock);
-void debug_unlock(int debug_flags);
-
 static FILE *debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool dont_panic);
 static void debug_unlock_it(struct DebugFileInfo* it);
 static FILE *open_debug_file(struct DebugFileInfo* it, const char flags[], bool dont_panic);
@@ -66,10 +63,9 @@ static void debug_open_lock(void);
 static void debug_close_lock(void);
 static FILE *preserve_log_file(struct DebugFileInfo* it, bool dont_panic);
 
-FILE *debug_lock(int debug_level, const char *mode, int force_lock);
 FILE *open_debug_file( int debug_level, const char flags[] );
-void debug_unlock(int debug_level);
-void preserve_log_file(int debug_level);
+
+//void preserve_log_file(int debug_level);
 void _condor_set_debug_flags( const char *strflags, int cat_and_flags );
 static void _condor_save_dprintf_line( int flags, const char* fmt, va_list args );
 void _condor_dprintf_saved_lines( void );
@@ -88,7 +84,7 @@ extern unsigned int DebugHeaderOptions;	// for D_FID, D_PID, D_NOHEADER & D_
 extern DebugOutputChoice DebugBasic;   /* Bits to look for in dprintf */
 extern DebugOutputChoice DebugVerbose; /* verbose bits for dprintf */
 //extern  int		DebugFlags;
-extern param_functions *dprintf_param_funcs;
+//extern param_functions *dprintf_param_funcs;
 
 /*
    This is a global flag that tells us if we've successfully ran
@@ -106,10 +102,10 @@ static int DebugLockDelay = 0; /* seconds spent waiting for lock */
 static time_t DebugLockDelayPeriodStarted = 0;
 
 /*
- * On Windows we have the ability to hold open the handle/FD to the
- * log file.  On Linux this is not enabled because of the hard global
- * limit to FDs.  Windows can open as many as you want short of running
- * out of physical resources like memory.
+ * We have the ability to hold log files open between writes. This has
+ * caused some grief with respect to log rotation on Linux because two
+ * processes have open FDs to the same file and may attempt to rotate
+ * in succession.
  */
 std::vector<DebugFileInfo> * DebugLogs = NULL;
 /*
@@ -182,7 +178,7 @@ int InDBX = 0;
 
 DebugFileInfo::~DebugFileInfo()
 {
-	if(debugFP)
+	if(outputTarget == FILE_OUT && debugFP)
 	{
 		fclose(debugFP);
 		debugFP = NULL;
@@ -217,36 +213,17 @@ static char *formatTimeHeader(struct tm *tm) {
 	return timebuf;
 }
 
-/* _condor_dfprintf_va
- * This function is used internally by the dprintf system wherever
- * it wants to write directly to the open debug log.
- *
- * Since this function is called from a code path that is already
- * not reentrant, this function itself does not bother to try
- * to be reentrant.  Specifically, it uses static buffers.  If we
- * ever do reenter this function it is assumed that the program
- * will abort before returning to the prior call to this function.
- *
- * The caller of this function should not assume that args can be
- * used again on systems where va_copy is required.  If the caller
- * wishes to use args again, the caller should therefore pass in
- * a copy of the args.
- */
-static void
-_condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, FILE *fp, const char* fmt, va_list args )
+const char* _format_global_header(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm)
 {
-		// static buffer to avoid frequent memory allocation
 	static char *buf = NULL;
 	static int buflen = 0;
-
 	int bufpos = 0;
 	int rc = 0;
 	int sprintf_errno = 0;
+
 	int my_pid;
 	int my_tid;
-	int start_pos;
-	FILE *local_fp;
-	int fopen_rc = 1;
+	FILE* local_fp = NULL;
 
 #ifdef D_CATEGORY_MASK
 	hdr_flags |= (cat_and_flags & ~D_CATEGORY_RESERVED_MASK);
@@ -265,28 +242,33 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct 
 			if( rc < 0 ) {
 				sprintf_errno = errno;
 			}
+			//formatter << "(" << (int)clock_now << ") ";
 		} else {
 			rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s", formatTimeHeader(tm));
 			if( rc < 0 ) {
 				sprintf_errno = errno;
 			}
+			//formatter << formatTimeHeader(tm);
 		}
 
 		if (hdr_flags & D_FDS) {
 			//Regardless of whether we're keeping the log file open our not, we open
 			//the NULL file for the FD number.
-			if( (local_fp=safe_fopen_wrapper_follow(NULL_FILE,"rN",0644)) == NULL )
+			local_fp=safe_fopen_wrapper_follow(NULL_FILE,"rN",0644);
+			if(local_fp == NULL )
 			{
-				local_fp = fp;
-				fopen_rc = 0;
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "(fd:0) " );
+				if( rc < 0 ) {
+					sprintf_errno = errno;
+				}
 			}
-			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(fd:%d) ", fileno(local_fp) );
-			if( rc < 0 ) {
-				sprintf_errno = errno;
-			}
-			if(fopen_rc)
+			else
 			{
-				fopen_rc = fclose_wrapper(local_fp, FCLOSE_RETRY_MAX);
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "(fd:%d) ", fileno(local_fp) );
+				if( rc < 0 ) {
+					sprintf_errno = errno;
+				}
+				fclose_wrapper(local_fp, FCLOSE_RETRY_MAX);
 			}
 		}
 
@@ -296,6 +278,7 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct 
 #else
 			my_pid = (int) getpid();
 #endif
+			//formatter << "(pid:" << my_pid << ") ";
 			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(pid:%d) ", my_pid );
 			if( rc < 0 ) {
 				sprintf_errno = errno;
@@ -309,6 +292,7 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct 
 			if( rc < 0 ) {
 				sprintf_errno = errno;
 			}
+			//formatter << "(tid:" << my_tid << ") ";
 		}
 
 #ifdef D_LEVEL //  with the switch from flags to enum, this code doesn't work anymore.
@@ -338,36 +322,64 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct 
 #ifdef D_CAT
 		if ((hdr_flags & D_CAT) && /*cat > 0 &&*/ cat < D_CATEGORY_COUNT) {
 			char verbosity[10] = "";
+			int sprintf_error = 0;
 			if (cat_and_flags & (D_VERBOSE_MASK | D_FULLDEBUG)) {
 				int verb = 1 + ((cat_and_flags & D_VERBOSE_MASK) >> 8);
 				if (cat_and_flags & D_FULLDEBUG) verb = 2;
-				sprintf(verbosity, ":%d", verb);
+				sprintf_error = sprintf(verbosity, ":%d", verb);
+				if(sprintf_error < 0)
+				{
+					_condor_dprintf_exit(sprintf_error, "Error writing to debug header\n");	
+				}
 			}
-			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(%s%s) ", 
-					_condor_DebugFlagNames[cat], verbosity);
-			if( rc < 0 ) {
-				sprintf_errno = errno;
-			}
+			rc = sprintf_realloc(&buf, &bufpos, &buflen, "(%s%s)", _condor_DebugFlagNames[cat], verbosity);
+			if (rc < 0) sprintf_errno = errno;
+			//formatter << "(" << _condor_DebugFlagNames[cat] << verbosity << ") ";
 		}
 #endif
 
 		if( DebugId ) {
+			//(*DebugId)( formatter );
 			rc = (*DebugId)( &buf, &bufpos, &buflen );
 			if( rc < 0 ) {
 				sprintf_errno = errno;
 			}
 		}
 	}
-
-	if( sprintf_errno != 0 ) {
-		_condor_dprintf_exit(sprintf_errno, "Error writing to debug header\n");	
+	else
+	{
+		return NULL;
 	}
 
-	rc = vsprintf_realloc( &buf, &bufpos, &buflen, fmt, args );
+	//message.insert(0, formatter.str());
+	if( sprintf_errno != 0 ) {
+		_condor_dprintf_exit(sprintf_errno, "Error writing to debug header\n");
+	}
 
-		/* printf returns < 0 on error */
+	//rc = vsprintf_realloc( &buf, &bufpos, &buflen, "%s", message.c_str() );
+	return buf;
+}
+
+void
+_dprintf_global_func(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, const char* message, DebugFileInfo* dbgInfo)
+{
+	int start_pos = 0;
+	int bufpos = 0;
+	int rc = 0;
+	static char* buffer = NULL;
+	static int buflen = 0;
+	//debug_lock_it(dbgInfo, NULL, 0);
+	const char* header = _format_global_header(cat_and_flags, hdr_flags, clock_now, tm);
+	if(header)
+	{
+		rc = sprintf_realloc(&buffer, &bufpos, &buflen, "%s", header);
+		if (rc < 0) {
+			_condor_dprintf_exit(errno, "Error writing to debug header\n");	
+		}
+	}
+	rc = sprintf_realloc(&buffer, &bufpos, &buflen, "%s", message);
 	if (rc < 0) {
-		_condor_dprintf_exit(errno, "Error writing to debug buffer\n");	
+		_condor_dprintf_exit(errno, "Error writing to debug message\n");	
 	}
 
 		// We attempt to write the log record with one call to
@@ -377,18 +389,50 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct 
 		// signals, we should not need to loop here on EINTR,
 		// but we do anyway in case one of the exotic signals
 		// that we are not blocking interrupts us.
-	start_pos = 0;
 	while( start_pos<bufpos ) {
-		rc = write( fileno(fp),
-					buf+start_pos,
+		rc = write( fileno(dbgInfo->debugFP),
+					buffer+start_pos,
 					bufpos-start_pos );
 		if( rc > 0 ) {
 			start_pos += rc;
 		}
 		else if( errno != EINTR ) {
-			_condor_dprintf_exit(errno, "Error writing debug log\n");	
+			_condor_dprintf_exit(errno, "Error writing debug log\n");
 		}
 	}
+}
+
+/* _condor_dfprintf_va
+ * This function is used internally by the dprintf system wherever
+ * it wants to write directly to the open debug log.
+ *
+ * Since this function is called from a code path that is already
+ * not reentrant, this function itself does not bother to try
+ * to be reentrant.  Specifically, it uses static buffers.  If we
+ * ever do reenter this function it is assumed that the program
+ * will abort before returning to the prior call to this function.
+ *
+ * The caller of this function should not assume that args can be
+ * used again on systems where va_copy is required.  If the caller
+ * wishes to use args again, the caller should therefore pass in
+ * a copy of the args.
+ */
+
+static void
+_condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, DebugFileInfo *dbgInfo, const char* fmt, va_list args )
+{
+		// static buffer to avoid frequent memory allocation
+	static char *buf = NULL;
+	static int buflen = 0;
+	int bufpos = 0;
+	int rc = 0;
+
+	rc = vsprintf_realloc( &buf, &bufpos, &buflen, fmt, args );
+	if (rc < 0) {
+		_condor_dprintf_exit(errno, "Error writing to debug buffer\n");	
+	}
+
+	dbgInfo->dprintfFunc(cat_and_flags, hdr_flags, clock_now, tm, buf, dbgInfo);
 }
 
 /* _condor_dfprintf
@@ -396,7 +440,7 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct 
  * it wants to write directly to the open debug log.
  */
 static void
-_condor_dfprintf( FILE *fp, const char* fmt, ... )
+_condor_dfprintf( struct DebugFileInfo* it, const char* fmt, ... )
 {
 	struct tm *tm=0;
 	time_t clock_now;
@@ -409,7 +453,7 @@ _condor_dfprintf( FILE *fp, const char* fmt, ... )
 	}
 
     va_start( args, fmt );
-	_condor_dfprintf_va(D_ALWAYS, DebugHeaderOptions, clock_now,tm,fp,fmt,args);
+	_condor_dfprintf_va(D_ALWAYS, DebugHeaderOptions, clock_now,tm,it,fmt,args);
     va_end( args );
 }
 
@@ -430,6 +474,9 @@ struct tm *localtime();
 void
 _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 {
+	static char* message_buffer = NULL;
+	static int buflen = 0;
+	int bufpos = 0;
 	struct tm *tm=0;
 	time_t clock_now;
 #if !defined(WIN32)
@@ -552,15 +599,18 @@ _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 			/* registered for other debug levels */
 		if(!DebugLogs->size())
 		{
-			FILE * debug_file_ptr = stderr;
+			DebugFileInfo backup;
+			backup.debugFP = stderr;
+			backup.dprintfFunc = _dprintf_global_func;
 #ifdef va_copy
 			va_list copyargs;
 			va_copy(copyargs, args);
-			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,debug_file_ptr,fmt,copyargs);
+			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&backup,fmt,copyargs);
 			va_end(copyargs);
 #else
-			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,debug_file_ptr,fmt,args);
+			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&backup,fmt,args);
 #endif
+			backup.debugFP = NULL;
 		}
 
 		unsigned int basic_flag = (cat_and_flags & D_FULLDEBUG) ? 0 : (1<<(cat_and_flags&D_CATEGORY_MASK));
@@ -577,37 +627,39 @@ _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 			// for log files other than the first one, dont panic if we
 			// fail to write to the file.
 			PRAGMA_REMIND("TJ: move dont_panic flag into debug output vector")
-			bool dont_panic = (ixOutput > 0) || DebugContinueOnOpenFailure;
+			//bool dont_panic = (ixOutput > 0) || DebugContinueOnOpenFailure;
 
 			/* Open and lock the log file */
-			FILE * debug_file_ptr = NULL;
 			bool   funlock_it = false;
 			switch ((*it).outputTarget) {
-				case STD_ERR: debug_file_ptr = stderr; break;
-				case STD_OUT: debug_file_ptr = stdout; break;
+				case STD_ERR: it->debugFP = stderr; break;
+				case STD_OUT: it->debugFP = stdout; break;
 				default:
 				case FILE_OUT:
-					debug_file_ptr = debug_lock_it(&(*it), NULL, 0, dont_panic);
+					debug_lock_it(&(*it), NULL, 0, it->dont_panic);
 					funlock_it = true;
 					break;
 			   #ifdef WIN32
 				case OUTPUT_DEBUG_STR:
-
-					continue;
 					break;
 			   #endif
 			}
-
-			if (debug_file_ptr) {
+			int rc = 0;
 #ifdef va_copy
-				va_list copyargs;
-				va_copy(copyargs, args);
-				_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,debug_file_ptr,fmt,copyargs);
-				va_end(copyargs);
+			va_list copyargs;
+			va_copy(copyargs, args);
+//			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&(*it),fmt,copyargs);
+			rc = vsprintf_realloc(&message_buffer, &bufpos, &buflen, fmt, copyargs);
+			va_end(copyargs);
 #else
-				_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,debug_file_ptr,fmt,args);
+			//_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&(*it),fmt,args);
+			rc = vsprintf_realloc(&message_buffer, &bufpos, &buflen, fmt, args);
 #endif
+			if (rc < 0) {
+				_condor_dprintf_exit(errno, "Error writing to debug buffer\n");	
 			}
+			
+			it->dprintfFunc(cat_and_flags, DebugHeaderOptions, clock_now, tm, message_buffer, &(*it));
 			if (funlock_it) {
 				debug_unlock_it(&(*it));
 			}
@@ -741,7 +793,9 @@ debug_open_lock(void)
 	if ( DebugLockIsMutex == -1 ) {
 #ifdef WIN32
 		// Use a mutex by default on Win32
-		DebugLockIsMutex = dprintf_param_funcs->param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
+		//DebugLockIsMutex = dprintf_param_funcs->param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
+PRAGMA_REMIND("Figure out better way of doing this without relying on param!!!!")
+		DebugLockIsMutex = TRUE;
 #else
 		// Use file locking by default on Unix.  We should 
 		// call param_boolean_int here, but since locking via
@@ -813,32 +867,6 @@ double dprintf_get_lock_delay(void) {
 		return 0;
 	}
 	return ((double)DebugLockDelay)/(now-DebugLockDelayPeriodStarted);
-}
-
-PRAGMA_REMIND("TJ: can we kill this? or maybe fix it so it doesn't assume debug_flags == debug_file_index")
-FILE *
-debug_lock(int debug_flags, const char *mode, int force_lock)
-{
-	DebugOutputChoice choice(debug_flags);
-
-	for(std::vector<DebugFileInfo>::iterator it = DebugLogs->begin(); it < DebugLogs->end(); it++)
-	{
-		/*
-		 * debug_level is being treated by the caller as an INDEX into
-		 * the DebugLogs vector, this it nuts, but it works as long as
-		 * each file has a unique set of flags which is true for now...
-		 */
-		if (it->choice != choice)
-			continue;
-
-		// for log files other than the first one, dont panic if we
-		// fail to write to the file.
-		bool dont_panic = (it->choice != 0) || DebugContinueOnOpenFailure;
-
-		return debug_lock_it(&(*it), mode, force_lock, dont_panic);
-	}
-
-	return stderr;
 }
 
 static FILE *
@@ -957,7 +985,7 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 		// Probably format should be %ld, and we should cast to
 		// long int, but I'm afraid of changing the output format.
 		// wenger 2009-02-24.
-		_condor_dfprintf(debug_file_ptr, "MaxLog = %lld, length = %lld\n", (long long)it->maxLog, (long long)length);
+		_condor_dfprintf(it, "MaxLog = %lld, length = %lld\n", (long long)it->maxLog, (long long)length);
 		
 		debug_file_ptr = preserve_log_file(it, dont_panic);
 	}
@@ -1030,26 +1058,6 @@ debug_close_all_files()
 	}
 }
 
-PRAGMA_REMIND("TJ: can we kill this, or fix it so it doesn't assume debug_flags == debug_file_index")
-void
-debug_unlock(int debug_flags)
-{
-	DebugOutputChoice choice(debug_flags);
-
-	for(std::vector<DebugFileInfo>::iterator it = DebugLogs->begin(); it < DebugLogs->end(); it++)
-	{
-		/*
-		 * debug_level is being treated by the caller as an INDEX into
-		 * the DebugLogs vector, this it nuts, but it works as long as
-		 * each file has a unique set of flags which is true for now...
-		 */
-		if (it->choice != choice)
-			continue;
-		debug_unlock_it(&(*it));
-		break;
-	}
-}
-
 static void
 debug_unlock_it(struct DebugFileInfo* it)
 {
@@ -1109,7 +1117,7 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic)
 	(void)setBaseName(filePath.c_str());
 	timestamp = createRotateFilename(NULL, it->maxLogNum);
 	(void)sprintf( old, "%s.%s", filePath.c_str() , timestamp);
-	_condor_dfprintf( debug_file_ptr, "Saving log file to \"%s\"\n", old );
+	_condor_dfprintf( it, "Saving log file to \"%s\"\n", old );
 	(void)fflush( debug_file_ptr );
 
 	fclose_wrapper( debug_file_ptr, FCLOSE_RETRY_MAX );
@@ -1187,28 +1195,27 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic)
 	}
 
 	if ( !still_in_old_file ) {
-		_condor_dfprintf (debug_file_ptr, "Now in new log file %s\n", it->logPath.c_str());
+		_condor_dfprintf (it, "Now in new log file %s\n", it->logPath.c_str());
 	}
 
 	// We may have a message left over from the succeeded rename after which the file
 	// may have been recreated by another process. Tell user about it.
 	if (file_there > 0) {
-		_condor_dfprintf(debug_file_ptr, "WARNING: %s", msg_buf);
+		_condor_dfprintf(it, "WARNING: %s", msg_buf);
 	}
 
 	if ( failed_to_rotate || rename_failed ) {
-		_condor_dfprintf(debug_file_ptr,"WARNING: Failed to rotate log into file %s!\n",old);
+		_condor_dfprintf(it,"WARNING: Failed to rotate log into file %s!\n",old);
 		if( rename_failed ) {
-			_condor_dfprintf(debug_file_ptr,"Likely cause is that another Condor process rotated the file at the same time.\n");
+			_condor_dfprintf(it,"Likely cause is that another Condor process rotated the file at the same time.\n");
 		}
 		else {
-			_condor_dfprintf(debug_file_ptr,"       Perhaps someone is keeping log files open???");
+			_condor_dfprintf(it,"       Perhaps someone is keeping log files open???");
 		}
 	}
 	
 	_set_priv(priv, __FILE__, __LINE__, 0);
 	cleanUp(it->maxLogNum);
-	(*it).debugFP = debug_file_ptr;
 
 	return debug_file_ptr;
 }
@@ -1313,6 +1320,10 @@ open_debug_file(struct DebugFileInfo* it, const char flags[], bool dont_panic)
 	char msg_buf[DPRINTF_ERR_MAX];
 	int save_errno;
 	std::string filePath = (*it).logPath;
+	struct DebugFileInfo* dFIptr = it;
+
+	struct DebugFileInfo stderrBackup(*it);
+	stderrBackup.debugFP = NULL;
 
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 
@@ -1327,10 +1338,9 @@ open_debug_file(struct DebugFileInfo* it, const char flags[], bool dont_panic)
 			_condor_fd_panic( __LINE__, __FILE__ );
 		}
 #endif
-		if (fp == NULL) {
-			fp = stderr;
-		}
-		_condor_dfprintf( fp, "Can't open \"%s\"\n", filePath.c_str() );
+		dFIptr = &stderrBackup;
+		stderrBackup.debugFP = stderr;
+		_condor_dfprintf( dFIptr, "Can't open \"%s\"\n", filePath.c_str() );
 		if( ! dont_panic ) {
 			snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n",
 					 filePath.c_str() );
@@ -1340,10 +1350,13 @@ open_debug_file(struct DebugFileInfo* it, const char flags[], bool dont_panic)
 			}
 		}
 		// fp is guaranteed to be NULL here.
+		stderrBackup.debugFP = NULL;
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
 	it->debugFP = fp;
+
+	stderrBackup.debugFP = NULL;
 
 	return fp;
 }
@@ -1787,8 +1800,8 @@ safe_async_simple_fwrite_fd(int fd,char const *msg,unsigned int *args,unsigned i
 void
 dprintf_dump_stack(void) {
 	priv_state	orig_priv_state;
-	int orig_euid;
-	int orig_egid;
+	uid_t orig_euid;
+	uid_t orig_egid;
 	int fd;
 	void *trace[50];
 	int trace_size;
@@ -1815,20 +1828,42 @@ dprintf_dump_stack(void) {
 		orig_euid = geteuid();
 		orig_egid = getegid();
 		orig_priv_state = get_priv_state();
+		bool did_seteuid = false;
+		bool create_log = true;
 		if( orig_priv_state != PRIV_CONDOR ) {
-				// To keep things simple, rather than trying to become
-				// the correct condor id, just switch to our real
-				// user id, which is probably either the same as
-				// our effective id (no-op) or root.
-			setegid(getgid());
-			seteuid(getuid());
+			uid_t condor_uid = 0;
+			gid_t condor_gid = 0;
+			if( get_condor_uid_if_inited(condor_uid,condor_gid) ) {
+				did_seteuid = (setegid(condor_gid) == 0)
+				           || (seteuid(condor_uid) == 0);
+			}
+			else if( orig_euid != getuid() || orig_egid != getgid() ) {
+				// To keep things simple, we do not bother trying to
+				// find out the correct condor uid if it is not
+				// already known.  Just use our real user id, which is
+				// probably either the same as our effective id
+				// (no-op) or root.
+
+				did_seteuid = (setegid(getgid()) == 0)
+				           || (seteuid(getuid()) == 0);
+					// Do not open with O_CREAT in this case, so
+					// we don't leave behind a file owned by root,
+					// which could cause the daemon to fail to
+					// restart.  This means we will fail to log
+					// the backtrace if we get here and the log
+					// file does not already exist.
+				create_log = false;
+			}
 		}
 
-		fd = safe_open_wrapper_follow(DebugLogs->begin()->logPath.c_str(),O_APPEND|O_WRONLY|O_CREAT,0644);
+		fd = safe_open_wrapper_follow(DebugLogs->begin()->logPath.c_str(),O_APPEND|O_WRONLY|(create_log ? O_CREAT : 0),0644);
 
-		if( orig_priv_state != PRIV_CONDOR ) {
-			setegid(orig_egid);
-			seteuid(orig_euid);
+		if( did_seteuid ) {
+			if (0 != setegid(orig_egid) ||
+			    0 != seteuid(orig_euid)) {
+				// what can we do about this???
+				args[0] = 0; // do something harmless and pointless so that fedora shuts up.
+			}
 		}
 
 		if( fd==-1 ) {
@@ -1875,5 +1910,13 @@ bool debug_open_fds(std::map<int,bool> &open_fds)
 void
 dprintf_dump_stack(void) {
 		// this platform does not support backtrace()
+}
+#endif
+
+#ifdef WIN32
+void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, const char* message, DebugFileInfo* dbgInfo)
+{
+	_format_global_header(cat_and_flags,hdr_flags,clock_now,tm);
+	OutputDebugStringA(message);
 }
 #endif

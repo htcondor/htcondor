@@ -83,10 +83,15 @@ static const char *GMStateNames[] = {
 #define REMOTE_STATE_PREPARED		"PREPARED"
 #define REMOTE_STATE_SUBMITTING		"SUBMITTING"
 #define REMOTE_STATE_INLRMS_R		"INLRMS: R"
+#define REMOTE_STATE_INLRMS_R2		"INLRMS:R"
 #define REMOTE_STATE_INLRMS_Q		"INLRMS: Q"
+#define REMOTE_STATE_INLRMS_Q2		"INLRMS:Q"
 #define REMOTE_STATE_INLRMS_S		"INLRMS: S"
+#define REMOTE_STATE_INLRMS_S2		"INLRMS:S"
 #define REMOTE_STATE_INLRMS_E		"INLRMS: E"
+#define REMOTE_STATE_INLRMS_E2		"INLRMS:E"
 #define REMOTE_STATE_INLRMS_O		"INLRMS: O"
+#define REMOTE_STATE_INLRMS_O2		"INLRMS:O"
 #define REMOTE_STATE_KILLING		"KILLING"
 #define REMOTE_STATE_EXECUTED		"EXECUTED"
 #define REMOTE_STATE_FINISHING		"FINISHING"
@@ -119,9 +124,6 @@ void NordugridJobReconfig()
 {
 	int tmp_int;
 
-	tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 5 * 60 );
-	NordugridJob::setProbeInterval( tmp_int );
-
 	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 5 * 60 );
 	NordugridJob::setGahpCallTimeout( tmp_int );
 
@@ -153,7 +155,6 @@ BaseJob *NordugridJobCreate( ClassAd *jobad )
 	return (BaseJob *)new NordugridJob( jobad );
 }
 
-int NordugridJob::probeInterval = 300;	// default value
 int NordugridJob::submitInterval = 300;	// default value
 int NordugridJob::gahpCallTimeout = 300;	// default value
 int NordugridJob::maxConnectFailures = 3;	// default value
@@ -193,7 +194,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
 	if ( jobProxy == NULL ) {
 		if ( error_string == "" ) {
-			sprintf( error_string, "%s is not set in the job ad",
+			formatstr( error_string, "%s is not set in the job ad",
 								  ATTR_X509_USER_PROXY );
 		}
 		goto error_exit;
@@ -215,7 +216,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	gahp_path = NULL;
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
+	jobAd->LookupString( ATTR_GRID_RESOURCE, buff, sizeof(buff) );
 	if ( buff[0] != '\0' ) {
 		const char *token;
 
@@ -223,7 +224,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 
 		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "nordugrid" ) ) {
-			sprintf( error_string, "%s not of type nordugrid",
+			formatstr( error_string, "%s not of type nordugrid",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
@@ -232,13 +233,13 @@ NordugridJob::NordugridJob( ClassAd *classad )
 		if ( token && *token ) {
 			resourceManagerString = strdup( token );
 		} else {
-			sprintf( error_string, "%s missing server name",
+			formatstr( error_string, "%s missing server name",
 								  ATTR_GRID_RESOURCE );
 			goto error_exit;
 		}
 
 	} else {
-		sprintf( error_string, "%s is not set in the job ad",
+		formatstr( error_string, "%s is not set in the job ad",
 							  ATTR_GRID_RESOURCE );
 		goto error_exit;
 	}
@@ -248,7 +249,7 @@ NordugridJob::NordugridJob( ClassAd *classad )
 	myResource->RegisterJob( this );
 
 	buff[0] = '\0';
-	jobAd->LookupString( ATTR_GRID_JOB_ID, buff );
+	jobAd->LookupString( ATTR_GRID_JOB_ID, buff, sizeof(buff) );
 	if ( strrchr( buff, ' ' ) ) {
 		SetRemoteJobId( strrchr( buff, ' ' ) + 1 );
 		myResource->AlreadySubmitted( this );
@@ -523,13 +524,14 @@ void NordugridJob::doEvaluateState()
 					probeNow = false;
 				}
 /*
-				if ( now >= lastProbeTime + probeInterval ) {
+				int probe_interval = myResource->GetJobPollInterval();
+				if ( now >= lastProbeTime + probe_interval ) {
 					gmState = GM_PROBE_JOB;
 					break;
 				}
 				unsigned int delay = 0;
-				if ( (lastProbeTime + probeInterval) > now ) {
-					delay = (lastProbeTime + probeInterval) - now;
+				if ( (lastProbeTime + probe_interval) > now ) {
+					delay = (lastProbeTime + probe_interval) - now;
 				}				
 				daemonCore->Reset_Timer( evaluateStateTid, delay );
 */
@@ -569,7 +571,7 @@ void NordugridJob::doEvaluateState()
 		case GM_EXIT_INFO: {
 			std::string filter;
 			StringList reply;
-			sprintf( filter, "nordugrid-job-globalid=gsiftp://%s:2811/jobs/%s",
+			formatstr( filter, "nordugrid-job-globalid=gsiftp://%s:2811/jobs/%s",
 							resourceManagerString, remoteJobId );
 
 			rc = gahp->nordugrid_ldap_query( resourceManagerString, "mds-vo-name=local,o=grid", filter.c_str(), "nordugrid-job-usedcputime,nordugrid-job-usedwalltime,nordugrid-job-exitcode", reply );
@@ -829,7 +831,7 @@ void NordugridJob::doEvaluateState()
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
 				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
-									 sizeof(holdReason) - 1 );
+									 sizeof(holdReason) );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.c_str(),
 							 sizeof(holdReason) - 1 );
@@ -890,7 +892,7 @@ void NordugridJob::SetRemoteJobId( const char *job_id )
 
 	std::string full_job_id;
 	if ( job_id ) {
-		sprintf( full_job_id, "nordugrid %s %s", resourceManagerString,
+		formatstr( full_job_id, "nordugrid %s %s", resourceManagerString,
 							 job_id );
 	}
 	BaseJob::SetRemoteJobId( full_job_id.c_str() );
@@ -921,7 +923,7 @@ std::string *NordugridJob::buildSubmitRSL()
 
 	//Start off the RSL
 	attr_value = param( "FULL_HOSTNAME" );
-	sprintf( *rsl, "&(savestate=yes)(action=request)(hostname=%s)", attr_value );
+	formatstr( *rsl, "&(savestate=yes)(action=request)(hostname=%s)", attr_value );
 	free( attr_value );
 	attr_value = NULL;
 
@@ -945,7 +947,7 @@ std::string *NordugridJob::buildSubmitRSL()
 		if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
 			dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
 					procID.cluster, procID.proc, arg_errors.Value());
-			sprintf(errorString,"Failed to read job arguments: %s\n",
+			formatstr(errorString,"Failed to read job arguments: %s\n",
 					arg_errors.Value());
 			delete rsl;
 			return NULL;
@@ -957,7 +959,7 @@ std::string *NordugridJob::buildSubmitRSL()
 					dprintf(D_ALWAYS,
 							"(%d.%d) Failed to get job arguments: %s\n",
 							procID.cluster,procID.proc,arg_errors.Value());
-					sprintf(errorString,"Failed to get job arguments: %s\n",
+					formatstr(errorString,"Failed to get job arguments: %s\n",
 							arg_errors.Value());
 					delete rsl;
 					return NULL;
@@ -1006,7 +1008,7 @@ std::string *NordugridJob::buildSubmitRSL()
 			*rsl += "(";
 			*rsl += condor_basename(file);
 			if ( IsUrl( file ) ) {
-				sprintf_cat( *rsl, " \"%s\")", file );
+				formatstr_cat( *rsl, " \"%s\")", file );
 			} else {
 				*rsl += " \"\")";
 			}
@@ -1049,7 +1051,7 @@ std::string *NordugridJob::buildSubmitRSL()
 			*rsl += "(";
 			*rsl += condor_basename(file);
 			if ( IsUrl( local_file ) ) {
-				sprintf_cat( *rsl, " \"%s\")", local_file );
+				formatstr_cat( *rsl, " \"%s\")", local_file );
 			} else {
 				*rsl += " \"\")";
 			}
@@ -1113,9 +1115,9 @@ StringList *NordugridJob::buildStageInList()
 	tmp_list->rewind();
 	while ( ( filename = tmp_list->next() ) ) {
 		if ( filename[0] == '/' || IsUrl( filename ) ) {
-			sprintf( buf, "%s", filename );
+			formatstr( buf, "%s", filename );
 		} else {
-			sprintf( buf, "%s%s", iwd.c_str(), filename );
+			formatstr( buf, "%s%s", iwd.c_str(), filename );
 		}
 		stage_list->append( buf.c_str() );
 	}
@@ -1201,7 +1203,7 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list )
 			 || IsUrl( local_name.Value() ) ) {
 			buff = local_name;
 		} else {
-			sprintf( buff, "%s%s", iwd.c_str(), local_name.Value() );
+			formatstr( buff, "%s%s", iwd.c_str(), local_name.Value() );
 		}
 		stage_local_list->append( buff.c_str() );
 	}
@@ -1221,7 +1223,9 @@ void NordugridJob::NotifyNewRemoteStatus( const char *status )
 
 		if ( condorState == IDLE &&
 			 ( remoteJobState == REMOTE_STATE_INLRMS_R ||
+			   remoteJobState == REMOTE_STATE_INLRMS_R2 ||
 			   remoteJobState == REMOTE_STATE_INLRMS_E ||
+			   remoteJobState == REMOTE_STATE_INLRMS_E2 ||
 			   remoteJobState == REMOTE_STATE_EXECUTED ||
 			   remoteJobState == REMOTE_STATE_FINISHING ||
 			   remoteJobState == REMOTE_STATE_FINISHED ||
@@ -1229,7 +1233,9 @@ void NordugridJob::NotifyNewRemoteStatus( const char *status )
 			JobRunning();
 		} else if ( condorState == RUNNING &&
 					( remoteJobState == REMOTE_STATE_INLRMS_Q ||
-					  remoteJobState == REMOTE_STATE_INLRMS_S ) ) {
+					  remoteJobState == REMOTE_STATE_INLRMS_Q2 ||
+					  remoteJobState == REMOTE_STATE_INLRMS_S ||
+					  remoteJobState == REMOTE_STATE_INLRMS_S2 ) ) {
 			JobIdle();
 		}
 	}

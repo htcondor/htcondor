@@ -26,7 +26,6 @@
 #include "condor_daemon_core.h"
 #include "basename.h"
 #include "spooled_job_files.h"
-#include "condor_xml_classads.h"
 
 #include "gridmanager.h"
 #include "unicorejob.h"
@@ -93,7 +92,10 @@ void UnicoreJobReconfig()
 {
 	int tmp_int;
 
-	tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 5 * 60 );
+	tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL_UNICORE", -1 );
+	if ( tmp_int <= 0 ) {
+		tmp_int = param_integer( "GRIDMANAGER_JOB_PROBE_INTERVAL", 5 * 60 );
+	}
 	UnicoreJob::setProbeInterval( tmp_int );
 
 	tmp_int = param_integer( "GRIDMANAGER_GAHP_CALL_TIMEOUT", 5 * 60 );
@@ -122,16 +124,16 @@ BaseJob *UnicoreJobCreate( ClassAd *jobad )
 void
 UnicoreJob::UnicoreGahpCallbackHandler( const char *update_ad_string )
 {
-	ClassAd *update_ad = NULL;
+	ClassAd *update_ad = new ClassAd();
 	std::string job_id;
-	ClassAdXMLParser xml_parser;
+	classad::ClassAdXMLParser xml_parser;
 	UnicoreJob *job = NULL;
 
 	dprintf( D_FULLDEBUG, "UnicoreGahpCallbackHandler: got job callback: %s\n",
 			 update_ad_string );
 
-	update_ad = xml_parser.ParseClassAd( update_ad_string );
-	if ( update_ad == NULL ) {
+	if ( !xml_parser.ParseClassAd( update_ad_string, *update_ad ) ) {
+		delete update_ad;
 		dprintf( D_ALWAYS, "UnicoreGahpCallbackHandler: unparsable ad\n" );
 		return;
 	}
@@ -165,7 +167,7 @@ UnicoreJob::UnicoreGahpCallbackHandler( const char *update_ad_string )
 	update_ad->ResetExpr();
 	while ( update_ad->NextExpr( new_name, new_expr ) ) {
 		ExprTree * pTree = new_expr->Copy();
-		job->newRemoteStatusAd->Insert( new_name, pTree );
+		job->newRemoteStatusAd->Insert( new_name, pTree, false );
 	}
 
 	job->SetEvaluateState();
@@ -230,7 +232,7 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 
 		token = GetNextToken( " ", false );
 		if ( !token || strcasecmp( token, "unicore" ) ) {
-			sprintf( error_string, "%s not of type unicore", ATTR_GRID_JOB_ID );
+			formatstr( error_string, "%s not of type unicore", ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
 
@@ -238,7 +240,7 @@ UnicoreJob::UnicoreJob( ClassAd *classad )
 		GetNextToken( " ", false );
 		token = GetNextToken( " ", false );
 		if ( !token ) {
-			sprintf( error_string, "%s missing job ID",
+			formatstr( error_string, "%s missing job ID",
 								  ATTR_GRID_JOB_ID );
 			goto error_exit;
 		}
@@ -372,7 +374,7 @@ void UnicoreJob::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
-			rc = gahp->unicore_job_recover( submitAd->Value() );
+			rc = gahp->unicore_job_recover( submitAd->c_str() );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
@@ -421,7 +423,7 @@ void UnicoreJob::doEvaluateState()
 					gmState = GM_HOLD;
 					break;
 				}
-				rc = gahp->unicore_job_create( submitAd->Value(),
+				rc = gahp->unicore_job_create( submitAd->c_str(),
 											   &job_contact );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -441,7 +443,7 @@ void UnicoreJob::doEvaluateState()
 					dprintf(D_ALWAYS,"(%d.%d) unicore_job_create() failed\n",
 							procID.cluster, procID.proc);
 					dprintf(D_ALWAYS,"(%d.%d)    submitAd='%s'\n",
-							procID.cluster, procID.proc,submitAd->Value());
+							procID.cluster, procID.proc,submitAd->c_str());
 					if ( job_contact ) {
 						free( job_contact );
 					}
@@ -678,7 +680,7 @@ if ( unicoreState != COMPLETED ) {
 				holdReason[0] = '\0';
 				holdReason[sizeof(holdReason)-1] = '\0';
 				jobAd->LookupString( ATTR_HOLD_REASON, holdReason,
-									 sizeof(holdReason) - 1 );
+									 sizeof(holdReason) );
 				if ( holdReason[0] == '\0' && errorString != "" ) {
 					strncpy( holdReason, errorString.c_str(),
 							 sizeof(holdReason) - 1 );
@@ -736,7 +738,7 @@ BaseResource *UnicoreJob::GetResource()
 void UnicoreJob::UpdateUnicoreState( const char *update_ad_string )
 {
 	ClassAd *update_ad;
-	ClassAdXMLParser xml_parser;
+	classad::ClassAdXMLParser xml_parser;
 
 	if ( update_ad_string == NULL ) {
 		dprintf( D_ALWAYS, "(%d.%d) Received NULL unicore status ad string\n",
@@ -744,7 +746,11 @@ void UnicoreJob::UpdateUnicoreState( const char *update_ad_string )
 		return;
 	}
 
-	update_ad = xml_parser.ParseClassAd( update_ad_string );
+	update_ad = new ClassAd();
+	if ( !xml_parser.ParseClassAd( update_ad_string, *update_ad ) ) {
+		delete update_ad;
+		update_ad = NULL;
+	}
 
 	UpdateUnicoreState( update_ad );
 
@@ -808,16 +814,16 @@ void UnicoreJob::SetRemoteJobId( const char *job_id )
 
 	std::string full_job_id;
 	if ( job_id ) {
-		sprintf( full_job_id, "%s %s", resourceName, job_id );
+		formatstr( full_job_id, "%s %s", resourceName, job_id );
 	}
 	BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }
 
-MyString *UnicoreJob::buildSubmitAd()
+std::string *UnicoreJob::buildSubmitAd()
 {
 //	ClassAd submit_ad;
-	ClassAdXMLUnparser xml_unp;
-	MyString *ad_string;
+	classad::ClassAdXMLUnParser xml_unp;
+	std::string *ad_string;
 
 /*
 	ExprTree *expr;
@@ -855,12 +861,10 @@ MyString *UnicoreJob::buildSubmitAd()
 	}
 */
 
-	xml_unp.SetUseCompactSpacing( true );
-	xml_unp.SetOutputType( false );
-	xml_unp.SetOutputTargetType( false );
-	ad_string = new MyString;
-//	xml_unp.Unparse( &submit_ad, *ad_string );
-xml_unp.Unparse( jobAd, *ad_string );
+	xml_unp.SetCompactSpacing( true );
+	ad_string = new std::string;
+//	xml_unp.Unparse( *ad_string, &submit_ad );
+	xml_unp.Unparse( *ad_string, jobAd );
 
 	return ad_string;
 }

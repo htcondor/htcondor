@@ -24,10 +24,15 @@ if (NOT WINDOWS)
     if (NOT PROPER) 
         set (BOOST_COMPONENTS thread) 
     else()
-        dprint("TSTCLAIR: Add support for internal unit testing") 
-        #set (BOOST_COMPONENTS test)
+
+	if (BUILD_TESTING) 
+	  set (BOOST_COMPONENTS unit_test_framework ${BOOST_COMPONENTS})
+	endif()
+
     endif()
 
+    # The following is helpful if you are trying to debug cmake find module
+    #  set (Boost_DEBUG TRUE)
     find_package( Boost 1.33.1 COMPONENTS ${BOOST_COMPONENTS} )
 
     # always prefer system libraries where possible
@@ -65,26 +70,40 @@ endif( NOT WINDOWS )
 # we only use our version of boost if the system is not good enough
 if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 
-	condor_pre_external( BOOST boost_1_49_0 "lib;include" "include/boost")
-	
 	if (WINDOWS)
 	  # need to expand the configure and
-	  set(TOOLSET msvc)
-	  set(JAM_EXT bat)
+	  set(TOOLSET msvc-${MSVCVERNUM})
+	  set(BOOTSTRAP call bootstrap.bat )
 	  set(EXEC .\\)
+
+	  set(BUILD_OPTIONS )
+	  set(INCLUDE_LOC include/boost_1_49)
 	else()
 
-            if (DARWIN)
-	  	set(TOOLSET darwin)
-	    else()
+		set(BUILD_OPTIONS --layout=system variant=release)
+
+	if (DARWIN)
+		if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+			set(TOOLSET clang-darwin)
+		else()
+			set(TOOLSET darwin)
+		endif()
+		if (cxx_11)
+			set(BUILD_OPTIONS ${BUILD_OPTIONS} "cxxflags=-std=c++11 -stdlib=libc++" "linkflags=-std=c++11 -stdlib=libc++")
+		endif()
+	else()
 		set(TOOLSET gcc)
-	    endif()
+	endif()
 
-            set(JAM_EXT sh)
-            set(EXEC ./)
-        endif()
+		set(INCLUDE_LOC include)
+        set(BOOTSTRAP ./bootstrap.sh )
+        set(EXEC ./)
+	endif()
 
-	set(BOOST_MIN_BUILD_DEP --with-thread)
+	set(BOOST_FILENAME boost_1_49_0)
+	condor_pre_external( BOOST ${BOOST_FILENAME}-p2 "lib;${INCLUDE_LOC}" "done")
+
+	set(BOOST_MIN_BUILD_DEP --with-thread --with-test)
 	set(BOOST_PATCH echo "nothing")
 	set(BOOST_INSTALL echo "nothing")
 	unset(BOOST_INCLUDE)
@@ -92,27 +111,27 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 	# so the idea of privately staging boost is silly.
 	ExternalProject_Add(boost
 		#-- Download Step ----------
-		 DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${BOOST_VER}.tar.gz ${CMD_TERM}
+		 DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${BOOST_FILENAME}.tar.gz ${CMD_TERM}
 		 DOWNLOAD_DIR ${BOOST_STAGE}/dl
-		 URL http://parrot.cs.wisc.edu/externals/${BOOST_VER}.tar.gz
+		 URL http://parrot.cs.wisc.edu/externals/${BOOST_FILENAME}.tar.gz
 		#--Patch step ----------
 		 PATCH_COMMAND ${BOOST_PATCH}
 		#--Configure step ----------
-		 CONFIGURE_COMMAND cd ${BOOST_VER} ${CMD_TERM}
-		 ./bootstrap.${JAM_EXT} --prefix=${BOOST_INSTALL_LOC}
+		 CONFIGURE_COMMAND cd ${BOOST_FILENAME} ${CMD_TERM} ${BOOTSTRAP} --prefix=${BOOST_INSTALL_LOC} ${CMD_TERM} echo "Configure complete"
 		#--Build Step ----------
-		BUILD_COMMAND cd ${BOOST_VER} &&
-		${EXEC}bjam ${BOOST_MIN_BUILD_DEP} --layout=system --prefix=${BOOST_INSTALL_LOC} --libdir=${BOOST_INSTALL_LOC}/lib define=BOOST_HAS_THREADS link=static variant=release toolset=${TOOLSET} install
+		BUILD_COMMAND cd ${BOOST_FILENAME} ${CMD_TERM} ${EXEC}bjam ${BOOST_MIN_BUILD_DEP} --prefix=${BOOST_INSTALL_LOC} --libdir=${BOOST_INSTALL_LOC}/lib define=BOOST_HAS_THREADS ${BUILD_OPTIONS} toolset=${TOOLSET} link=static install
 		BUILD_IN_SOURCE 1
 		#--install Step ----------
 		INSTALL_DIR ${BOOST_INSTALL_LOC}
-		INSTALL_COMMAND cd ${BOOST_VER} && ${BOOST_INSTALL} )
+		INSTALL_COMMAND touch ${BOOST_INSTALL_LOC}/done )
 				  	
 	if (WINDOWS)
 		set(BOOST_ROOT ${BOOST_INSTALL_LOC} PARENT_SCOPE)
-	endif()
-
-	condor_post_external( boost "include" "lib" )
+		set(BOOST_SHORTVER 1_49 PARENT_SCOPE)
+		condor_post_external( boost "include/boost-1_49" "lib" )
+	else()
+		condor_post_external( boost "include" "lib" )
+	endif()	
 
 endif()
 
@@ -123,5 +142,5 @@ if (BOOST_VER)
 	set( BOOST_VER ${BOOST_VER} PARENT_SCOPE )
 	set( BOOST_INCLUDE ${BOOST_INCLUDE} PARENT_SCOPE )
 else(BOOST_VER)
-	message (FATAL_ERROR "boost not found, and required for build")
+	message (WARNING "**boost not found **, unit tests will NOT be built.")
 endif(BOOST_VER)

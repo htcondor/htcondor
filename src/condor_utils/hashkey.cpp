@@ -33,9 +33,9 @@
 void AdNameHashKey::sprint (MyString &s)
 {
 	if (ip_addr.Length() )
-		s.sprintf( "< %s , %s >", name.Value(), ip_addr.Value() );
+		s.formatstr( "< %s , %s >", name.Value(), ip_addr.Value() );
 	else
-		s.sprintf( "< %s >", name.Value() );
+		s.formatstr( "< %s >", name.Value() );
 }
 
 bool operator== (const AdNameHashKey &lhs, const AdNameHashKey &rhs)
@@ -142,7 +142,6 @@ adLookup( const char *ad_type,
 		}
 	}
 
-	buf[sizeof(buf)-1] = '\0';
 	string = buf;
 
 	return rval;
@@ -432,8 +431,8 @@ void
 HashString::Build( const AdNameHashKey &hk )
 {
 	if ( hk.ip_addr.Length() ) {
-		sprintf( "< %s , %s >", hk.name.Value(), hk.ip_addr.Value() );
+		formatstr( "< %s , %s >", hk.name.Value(), hk.ip_addr.Value() );
 	} else {
-		sprintf( "< %s >", hk.name.Value() );
+		formatstr( "< %s >", hk.name.Value() );
 	}
 }

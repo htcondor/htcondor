@@ -75,10 +75,10 @@ ToolDaemonProc::StartJob()
 	const char* base = NULL;
 	base = condor_basename( tmp );
 	if( Starter->jic->iwdIsChanged() ) {
-		DaemonNameStr.sprintf( "%s%c%s", Starter->GetWorkingDir(),
+		DaemonNameStr.formatstr( "%s%c%s", Starter->GetWorkingDir(),
 							   DIR_DELIM_CHAR, base );
 	} else if( ! fullpath(tmp) ) {
-		DaemonNameStr.sprintf( "%s%c%s", job_iwd, DIR_DELIM_CHAR, tmp );
+		DaemonNameStr.formatstr( "%s%c%s", job_iwd, DIR_DELIM_CHAR, tmp );
 	} else {
 		DaemonNameStr = tmp;
 	}
@@ -259,12 +259,12 @@ ToolDaemonProc::StartJob()
 	//
 	FamilyInfo fi;
 	fi.max_snapshot_interval = 15;
-	char const *dedicated_account = NULL;
+	m_dedicated_account = NULL;
 	if (job_universe != CONDOR_UNIVERSE_LOCAL) {
-		dedicated_account = Starter->jic->getExecuteAccountIsDedicated();
+		m_dedicated_account = Starter->jic->getExecuteAccountIsDedicated();
 	}
-	if (dedicated_account) {
-		fi.login = dedicated_account;
+	if (m_dedicated_account) {
+		fi.login = m_dedicated_account;
 		dprintf(D_FULLDEBUG,
 		        "Tracking process family by login \"%s\"\n",
 		        fi.login);
@@ -310,7 +310,7 @@ ToolDaemonProc::StartJob()
 		JobPid = -1;
 		if( create_process_error ) {
 			MyString err_msg;
-			err_msg.sprintf( "Failed to execute '%s': %s",
+			err_msg.formatstr( "Failed to execute '%s': %s",
 							 args_string.Value(), create_process_error );
 			Starter->jic->notifyStarterError( err_msg.Value(), true, CONDOR_HOLD_CODE_FailedToCreateProcess, create_process_errno );
 		}

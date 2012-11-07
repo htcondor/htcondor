@@ -161,7 +161,7 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 	if( client_name[0] ) {
 		MyString client_buf(client_name);
 			// client name is purely for debugging purposes
-		client_buf.sprintf_cat(" on %s",sock->peer_description());
+		client_buf.formatstr_cat(" on %s",sock->peer_description());
 		sock->set_peer_description(client_buf.Value());
 	}
 
@@ -170,7 +170,7 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 		sock->set_deadline_timeout( deadline );
 
 		if( IsDebugLevel( D_NETWORK ) ) {
-			deadline_desc.sprintf(" (deadline %ds)", deadline);
+			deadline_desc.formatstr(" (deadline %ds)", deadline);
 		}
 	}
 

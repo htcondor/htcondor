@@ -20,7 +20,7 @@
 ## Ok, so in exorcising the unholy daemons in the test goop
 ## all file generation & manipulation is done in a configure step
 ## vs. a target. As a result I no longer use safe_append.
-if (BUILD_TESTS)
+if (BUILD_TESTING)
 
 	##########################################################
 	# vars and settings
@@ -146,15 +146,10 @@ if (BUILD_TESTS)
 	# platform specific tests
 	if(LINUX)
 
-		# Openssl on rhel3 doesn't have EVP_sha256(),
-		# which the ec2_gahp uses.
-		if ( NOT ${SYSTEM_NAME} MATCHES "rhel3" )
-			condor_pl_test( job_ec2_basic "EC2 Query API test" "quick;full;quicknolink" )
-		endif()
-
+		condor_pl_test( job_ec2_basic "EC2 Query API test" "quick;full;quicknolink" )
 		condor_pl_test(lib_procapi_pidtracking-byenv "Slow Termination Child Cleanup Test" "core;quick;full;quicknolink")
 		#condor_pl_test(job_core_shadow-lessthan-memlimit_van "Make sure the shadow stays below memory limit" "core;quick;full;quicknolink")
-		if ( WITH_LIBDELTACLOUD AND NOT ${SYSTEM_NAME} MATCHES "rhel3" )
+		if ( WITH_LIBDELTACLOUD )
 			# This test fails everywhere
 			#condor_pl_test(job_deltacloud_basic "Deltacloud test" "core;quick;full;quicknolink")
 		endif()
@@ -166,18 +161,17 @@ if (BUILD_TESTS)
 		condor_pl_test(job_core_rmkillsig_sched "Scheduler: Verify the  remove_kill_sig" "core;quick;full;quicknolink")
 	endif()
 
-	if(NOT HPUX)
-		condor_pl_test(fetch_work-basic "work fetch smoke test" "core;quick;quicknolink")
-		if(HAVE_EXT_OPENSSL)
-			condor_pl_test(lib_auth_protocol-ssl "SSL authentication test" "core;quick;full;quicknolink")
-		endif()
-		#condor_pl_test(lib_auth_protocol-pw "PW authentication test" "core;quick;full;quicknolink")
-		#condor_pl_test(lib_auth_protocol-gsi "GSI authentication test" "core;quick;full;quicknolink")
-		condor_pl_test(job_dagman_large_dag "Test large DAG w/ recovery mode" "dagman;quick;full;quicknolink")
-		condor_pl_test(lib_shared_port_van "Test of shared port feature." "core;quick;full;quicknolink")
-		condor_pl_test(lib_shared_port-collector_van "Test of shared port feature with collector usage." "core;quick;full;quicknolink")
-		condor_pl_test(lib_shared_port-check-ports_van "Test of shared port feature with respect to open ports." "core;quick;full;quicknolink")
+
+	condor_pl_test(fetch_work-basic "work fetch smoke test" "core;quick;quicknolink")
+	if(HAVE_EXT_OPENSSL)
+		condor_pl_test(lib_auth_protocol-ssl "SSL authentication test" "core;quick;full;quicknolink")
 	endif()
+	#condor_pl_test(lib_auth_protocol-pw "PW authentication test" "core;quick;full;quicknolink")
+	#condor_pl_test(lib_auth_protocol-gsi "GSI authentication test" "core;quick;full;quicknolink")
+	condor_pl_test(job_dagman_large_dag "Test large DAG w/ recovery mode" "dagman;quick;full;quicknolink")
+	condor_pl_test(lib_shared_port_van "Test of shared port feature." "core;quick;full;quicknolink")
+	condor_pl_test(lib_shared_port-collector_van "Test of shared port feature with collector usage." "core;quick;full;quicknolink")
+	condor_pl_test(lib_shared_port-check-ports_van "Test of shared port feature with respect to open ports." "core;quick;full;quicknolink")
 
 	if (NOT AIX)
 	  condor_pl_test(lib_procapi_pidtracking-snapshot "Fast Termination Child Cleanup Test" "core;quick;full;quicknolink")
@@ -290,7 +284,8 @@ if (BUILD_TESTS)
 	condor_pl_test(job_dagman_final-H "Simple Dagman Final Node H" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_final-I "Simple Dagman Final Node I" "core;dagman;quick;full;quicknolink")
 	##### generic lib tests
-	condor_pl_test(lib_classads "Run Classad Unit Tests" "core;quick;full;quicknolink")
+	# TSTCLAIR: I can not move the "condor_unit_tests" into the actual unit_test b/c it depends 
+	# on condor_config ++ deps. 
 	condor_pl_test(lib_unit_tests "Run Unit Tests Tests" "core;quick;full;quicknolink")
 	condor_pl_test(lib_auth_config "Run Authorization Config Tests" "core;quick;full;quicknolink")
 	condor_pl_test(lib_auth_protocol-fs "FS authentication test" "core;quick;full;quicknolink")
@@ -330,7 +325,7 @@ if (BUILD_TESTS)
 	condor_pl_test(cmd_q_shows-format "Condor_q shows format" "core;quick;full;quicknolink")
 	condor_pl_test(file_transfer_submit "condor_submit file transfer" "core;quick;full;quicknolink")
 
-	if (LINUX AND NOT ${SYSTEM_NAME} MATCHES "rhel3")
+	if (LINUX)
           condor_pl_test(cmd_ssh_to_job_van "condor_ssh_to_job" "core;quick;full;quicknolink")
 	endif()
         condor_pl_test(cmd_drain "condor_drain" "core;quick;full;quicknolink")
@@ -476,6 +471,7 @@ if (BUILD_TESTS)
 	condor_pl_test(cmd_wait_shows-timeout "" "quick;full")
 	condor_pl_test(job_dagman_fullremove "Ensure a removed dag is completely removed" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_basic "Basic one node dag" "dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_local "Test local universe under DAGMan" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_dont_use_default_node_log "Test for DAGMAN_ALWAYS_USE_NODE_LOG" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_maxpostscripts "Check that throttling by post scripts works" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_maxprescripts "Check that throttling by pre scripts works" "dagman;quick;full;quicknolink")
@@ -525,6 +521,9 @@ if (BUILD_TESTS)
 	condor_pl_test(job_dagman_loglink "Test node job user logs as symlinks" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_global_event_log-A "Test behavior in presence of global event log" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_global_event_log-B "Test behavior in presence of global event log" "dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_condor_restart "Make sure DAG runs survive across condor restart" "dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_suppress_notification "Make sure DAG suppresses notification" "dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_suppress_notification-cmd_line "Make sure DAG respects -dont_suppress_notification command line flag" "dagman;quick;full;quicknolink")
 	#condor_pl_test(perf_jobs_sue_10_10_30_van "Generated jobs performance test" "performance;long")
 	#condor_pl_test(perf_xfer_deb_10_10_30_van "Generated transfer performance test" "performance;long")
 	condor_pl_test(job_filexfer_sandbox-empty_van "Are job sandboxes with bad permissions cleaned up?" "framework;quick;full;quicknolink")
@@ -544,4 +543,4 @@ if (BUILD_TESTS)
 		condor_pl_test(soap_job_tests "Soap: currently 10 different interface tests" "core;quick;full;quicknolink")
 	endif()
 
-endif(BUILD_TESTS)
+endif(BUILD_TESTING)

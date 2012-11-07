@@ -453,7 +453,7 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 				// comparing paths to the log files.  wenger 2004-05-27.
 			CondorError errstack;
 			if ( !makePathAbsolute( logFileName, errstack ) ) {
-				dprintf(D_ALWAYS, "%s\n", errstack.getFullText());
+				dprintf(D_ALWAYS, "%s\n", errstack.getFullText().c_str());
 				return "";
 			}
 		}
@@ -569,7 +569,7 @@ MultiLogFiles::readFile(char const *filename,std::string& buf)
 
 	int fd = safe_open_wrapper_follow(filename, O_RDONLY);
 	if (fd < 0) {
-		rtnVal.sprintf("error opening submit file %s: %s",
+		rtnVal.formatstr("error opening submit file %s: %s",
 				filename, strerror(errno) );
 		dprintf(D_ALWAYS, "%s\n", rtnVal.Value() );
 		return rtnVal;
@@ -585,7 +585,7 @@ MultiLogFiles::readFile(char const *filename,std::string& buf)
             break;
         }
         else {
-            rtnVal.sprintf("failed to read submit file %s: %s",
+            rtnVal.formatstr("failed to read submit file %s: %s",
 					filename, strerror(errno) );
 			dprintf(D_ALWAYS, "%s\n", rtnVal.Value() );
 			close(fd);
@@ -648,7 +648,7 @@ MultiLogFiles::loadLogFileNamesFromStorkSubFile(
 		// reject empty log file names
 		if ( logfile.empty() ) {
 			unparser.Unparse( unparsed, &ad);
-			rtnVal.sprintf("Stork job specifies null log file:%s",
+			rtnVal.formatstr("Stork job specifies null log file:%s",
 					unparsed.c_str() );
 			return rtnVal;
 		}
@@ -656,7 +656,7 @@ MultiLogFiles::loadLogFileNamesFromStorkSubFile(
 		// reject log file names with embedded macros
 		if ( logfile.find('$') != std::string::npos) {
 			unparser.Unparse( unparsed, &ad);
-			rtnVal.sprintf("macros not allowed in Stork log file names:%s",
+			rtnVal.formatstr("macros not allowed in Stork log file names:%s",
 					unparsed.c_str() );
 			return rtnVal;
 		}
@@ -666,7 +666,7 @@ MultiLogFiles::loadLogFileNamesFromStorkSubFile(
 		if ( ! fullpath(logfile.c_str() ) ) {
 			MyString	currentDir;
 			if ( ! condor_getcwd(currentDir) ) {
-				rtnVal.sprintf("condor_getcwd() failed with errno %d (%s)",
+				rtnVal.formatstr("condor_getcwd() failed with errno %d (%s)",
 						errno, strerror(errno));
 				dprintf(D_ALWAYS, "ERROR: %s at %s:%d\n", rtnVal.Value(),
 						__FILE__, __LINE__);
@@ -979,7 +979,7 @@ GetFileID( const MyString &filename, MyString &fileID,
 					filename.Value() );
 		return false;
 	}
-	fileID.sprintf( "%llu:%llu", (unsigned long long)swrap.GetBuf()->st_dev,
+	fileID.formatstr( "%llu:%llu", (unsigned long long)swrap.GetBuf()->st_dev,
 				(unsigned long long)swrap.GetBuf()->st_ino );
 #endif
 

@@ -44,7 +44,7 @@ class GlobusResource : public BaseResource
 	bool Init();
 	const char *ResourceType();
 	void Reconfig();
-	void UnregisterJob( GlobusJob *job );
+	void UnregisterJob( BaseJob *job );
 
 	bool IsGt5() { return m_isGt5; }
 
@@ -87,6 +87,8 @@ class GlobusResource : public BaseResource
 
 		// This is the gram job contact string for the grid monitor job.
 	char *monitorGramJobId;
+
+	virtual void SetJobPollInterval();
 
  private:
 	void DoPing( time_t& ping_delay, bool& ping_complete,

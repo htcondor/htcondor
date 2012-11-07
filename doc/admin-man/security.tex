@@ -1,45 +1,45 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:Security}Security}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{security!in Condor|(}
+\index{security!in HTCondor|(}
 
-Security in Condor is a broad issue, with many aspects to consider.
-Because Condor's main purpose is to allow users to run arbitrary code
+Security in HTCondor is a broad issue, with many aspects to consider.
+Because HTCondor's main purpose is to allow users to run arbitrary code
 on large numbers of computers, it is important to try to limit who can
-access a Condor pool and what privileges they have when using the
+access an HTCondor pool and what privileges they have when using the
 pool.  This section covers these topics.
 
 There is a distinction between the
-kinds of resource attacks Condor can defeat,
-and the kinds of attacks Condor cannot defeat.
-Condor cannot
+kinds of resource attacks HTCondor can defeat,
+and the kinds of attacks HTCondor cannot defeat.
+HTCondor cannot
 prevent security breaches of users that can elevate their privilege to
 the root or administrator account.
-Condor does not run user jobs in
+HTCondor does not run user jobs in
 sandboxes (standard universe jobs are a partial exception to this),
-so Condor cannot defeat all malicious actions by user jobs.
+so HTCondor cannot defeat all malicious actions by user jobs.
 An example of a malicious job is
 one that launches a distributed denial of service attack.
-Condor assumes that users are trustworthy.
-Condor can prevent unauthorized access to the Condor pool,
+HTCondor assumes that users are trustworthy.
+HTCondor can prevent unauthorized access to the HTCondor pool,
 to help ensure that only trusted users have access to the pool.
-In addition, Condor provides encryption and
-integrity checking, to ensure that data (both Condor's data and user
+In addition, HTCondor provides encryption and
+integrity checking, to ensure that data (both HTCondor's data and user
 jobs' data) has not been examined or tampered with while in transit.
 
 Broadly speaking, the aspects of security in
-Condor may be categorized and described: 
+HTCondor may be categorized and described: 
 
 \begin{description}
 
 \item[Users] Authorization or capability in an operating system is
 based on a process owner.
-Both those that submit jobs and Condor daemons
+Both those that submit jobs and HTCondor daemons
 become process owners.
-The Condor system prefers that Condor daemons are run as the user
+The HTCondor system prefers that HTCondor daemons are run as the user
 \Login{root}, while other common operations are owned by a
-user of Condor.
-Operations that do not belong to either \Login{root} or a Condor user
+user of HTCondor.
+Operations that do not belong to either \Login{root} or an HTCondor user
 are often owned by the \Login{condor} user.
 See Section~\ref{sec:uids} for more detail.
 
@@ -47,23 +47,23 @@ See Section~\ref{sec:uids} for more detail.
 Proper identification of a user is accomplished by the
 process of authentication.
 It attempts to distinguish between real users and impostors.
-By default, Condor's authentication uses the user id (UID)
+By default, HTCondor's authentication uses the user id (UID)
 to determine identity,
-but Condor can choose among a variety of authentication mechanisms,
+but HTCondor can choose among a variety of authentication mechanisms,
 including the stronger  authentication methods Kerberos and GSI.
 
 \item[Authorization] Authorization specifies who is allowed
 to do what.
 Some users are allowed to submit jobs,
-while other users are allowed administrative privileges over Condor itself.
-Condor provides authorization on either a per-user or on
+while other users are allowed administrative privileges over HTCondor itself.
+HTCondor provides authorization on either a per-user or on
 a per-machine basis.
 
-\item[Privacy] Condor may encrypt data sent across the network, which
+\item[Privacy] HTCondor may encrypt data sent across the network, which
 prevents others from viewing the data.
 With persistence and sufficient computing power,
 decryption is possible. 
-Condor can encrypt the data sent for internal communication, 
+HTCondor can encrypt the data sent for internal communication, 
 as well as user data, such as files and executables.
 Encryption operates on network
 transmissions: unencrypted data is stored on disk.
@@ -71,7 +71,7 @@ transmissions: unencrypted data is stored on disk.
 \item[Integrity] 
 The  \Term{man-in-the-middle} attack tampers with data
 without the awareness of either side of the communication.
-Condor's integrity check sends additional cryptographic data
+HTCondor's integrity check sends additional cryptographic data
 to verify that network data transmissions have not been
 tampered with.
 Note that the integrity information is only for network
@@ -82,19 +82,19 @@ information.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Config-Security}Condor's Security Model}
+\subsection{\label{sec:Config-Security}HTCondor's Security Model}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-At the heart of Condor's security model is the notion that 
+At the heart of HTCondor's security model is the notion that 
 communications are subject to various security checks. 
-A request from one Condor daemon to another may require
+A request from one HTCondor daemon to another may require
 authentication to prevent subversion of the system.
-A request from a user of Condor may need to be denied
+A request from a user of HTCondor may need to be denied
 due to the confidential nature of the request.
 The security model handles these example situations
 and many more.
 
-Requests to Condor are
+Requests to HTCondor are
 categorized into groups of \Term{access levels},
 based on the type of operation requested.
 The user of a specific request must be authorized at
@@ -107,20 +107,20 @@ such as shutting down or restarting of a daemon
 require an \DCPerm{ADMINISTRATOR} access level.
 See
 Section~\ref{sec:Security-Authorization}
-for a full list of Condor's access levels and their meanings.
+for a full list of HTCondor's access levels and their meanings.
 
-There are two sides to any communication or command invocation in Condor.
+There are two sides to any communication or command invocation in HTCondor.
 One side is identified as the \Term{client},
 and the other side is identified as the \Term{daemon}.
 The client is the party that initiates the command,
 and the daemon is the party that processes the command and responds.
 In some cases it is easy to distinguish the
 client from the daemon, while in other cases it is not as easy.
-Condor tools such as \Condor{submit} and \Condor{config\_val} are clients.
+HTCondor tools such as \Condor{submit} and \Condor{config\_val} are clients.
 They send commands to daemons and act as clients in all their communications.
 For example, the \Condor{submit} command communicates
 with the \Condor{schedd}.
-Behind the scenes, Condor daemons also communicate with each other;
+Behind the scenes, HTCondor daemons also communicate with each other;
 in this case the daemon initiating the command plays the role of the client.
 For instance,
 the \Condor{negotiator} daemon acts as a client when contacting the
@@ -129,19 +129,19 @@ Once a match has been found,
 the \Condor{schedd} daemon acts as a client and contacts the
 \Condor{startd} daemon.
 
-Condor's security model
+HTCondor's security model
 is implemented using configuration.
-Commands in Condor are executed over TCP/IP network connections.
-While network communication enables Condor to manage
+Commands in HTCondor are executed over TCP/IP network connections.
+While network communication enables HTCondor to manage
 resources that are distributed across an organization (or beyond),
 it also brings in security challenges.
-Condor must have ways of ensuring that commands are being sent
+HTCondor must have ways of ensuring that commands are being sent
 by trustworthy users.
 Jobs that are operating on sensitive data must be allowed to use
 encryption such that the data is not seen by outsiders.
 Jobs may need assurance that data has not been tampered with.
 These issues
-can be addressed with Condor's authentication,
+can be addressed with HTCondor's authentication,
 encryption, and integrity features.
 
 
@@ -159,7 +159,7 @@ a \DCPerm{READ} or both a
 \begin{description}
 
 \item[\DCPerm{READ}] \label{sec-level-read} This access level
-   can obtain or read information about Condor.
+   can obtain or read information about HTCondor.
    Examples that require only \DCPerm{READ} access are
    viewing the status of the pool with \Condor{status}, 
    checking a job queue with \Condor{q},
@@ -168,24 +168,24 @@ a \DCPerm{READ} or both a
    changes, and it does not allow job submission.
 
 \item[\DCPerm{WRITE}] \label{sec-level-write} This access level is
-   required to send (write) information to Condor. Examples that
+   required to send (write) information to HTCondor. Examples that
    require \DCPerm{WRITE} access are job submission with
    \Condor{submit} and advertising a machine so it appears in the pool
    (this is usually done automatically by the \Condor{startd} daemon).
    The \DCPerm{WRITE} level of access implies \DCPerm{READ} access. 
 
 \item[\DCPerm{ADMINISTRATOR}] \label{sec-level-administrator} This
-   access level has additional Condor
+   access level has additional HTCondor
    administrator rights to the pool.  It includes the ability to
    change user priorities with the command \Condor{userprio},
-   as well as the ability to turn Condor on and off
+   as well as the ability to turn HTCondor on and off
    (as with the commands \Condor{on} and \Condor{off}).
    The \DCPerm{ADMINISTRATOR} level of access implies both
    \DCPerm{READ} and \DCPerm{WRITE} access.
 
 \item[\DCPerm{SOAP}] \label{sec-level-soap} This
    access level is required for the authorization of any party that will 
-   use the Web Services (SOAP) interface to Condor.
+   use the Web Services (SOAP) interface to HTCondor.
    It is not a general access level to be used with the variety
    of configuration variables for authentication, encryption,
    and integrity checks.
@@ -194,30 +194,30 @@ a \DCPerm{READ} or both a
    required to modify a daemon's configuration using
    the \Condor{config\_val} command.
    By default, this level of access can
-   change any configuration parameters of a Condor pool,
+   change any configuration parameters of an HTCondor pool,
    except those specified in
    the \File{condor\_config.root} configuration file.
    The \DCPerm{CONFIG} level of access implies \DCPerm{READ} access. 
 
 \item[\DCPerm{OWNER}] \label{sec-level-owner} This level of access is
    required for commands that the owner of a machine (any local user)
-   should be able to use, in addition to the Condor administrators.
+   should be able to use, in addition to the HTCondor administrators.
    An example that requires the \DCPerm{OWNER} access level is
    the \Condor{vacate} command.
    The command causes the \Condor{startd} daemon to vacate any
-   Condor job currently running on a machine.
+   HTCondor job currently running on a machine.
    The owner of that machine should be able to cause the removal
    of a job running on the machine.
 
 \item[\DCPerm{DAEMON}] \label{sec-level-daemon} This access level
    is used for commands that are internal to the operation of
-   Condor.  An example of this internal operation is when the
+   HTCondor.  An example of this internal operation is when the
    \Condor{startd} daemon sends
    its ClassAd updates to the \Condor{collector} daemon (which may be
    more specifically controlled by the \DCPerm{ADVERTISE\_STARTD}
    access level).
    Authorization at this access level should only be given to
-   the user account under which the Condor daemons run.
+   the user account under which the HTCondor daemons run.
    The \DCPerm{DAEMON} level of access implies both
    \DCPerm{READ} and \DCPerm{WRITE} access.  Any setting for this access
    level that is not defined will default to the corresponding setting
@@ -255,8 +255,8 @@ a \DCPerm{READ} or both a
 \item[\DCPerm{CLIENT}] \label{sec-level-client} This access level is
    different from all the others.  Whereas all of the other access levels
    refer to the security policy for accepting connections \emph{from} others,
-   the \DCPerm{CLIENT} access level applies when a Condor daemon or tool is
-   connecting \emph{to} some other Condor daemon.  In other words, it specifies
+   the \DCPerm{CLIENT} access level applies when an HTCondor daemon or tool is
+   connecting \emph{to} some other HTCondor daemon.  In other words, it specifies
    the policy of the client that is initiating the operation, rather than
    the server that is being contacted.
 
@@ -359,7 +359,7 @@ The command which \Condor{reschedule} sends to
 
   The commands which write information into the job queue (such as
   \Condor{submit} and \Condor{hold}).  
-  Note that for most commands which attempt to write to the job queue, Condor
+  Note that for most commands which attempt to write to the job queue, HTCondor
   will perform an additional user-level authentication step.  
   This additional user-level authentication prevents, for example, an
   ordinary user from removing a different user's jobs.
@@ -375,7 +375,7 @@ The command from any
  limit the level of trust that the \Condor{schedd} must have for the
  \Condor{startd}.  Success of these commands is only possible if the
  \Condor{startd} knows the secret claim id, so effectively, authorization for
- these commands is more specific than Condor's general security model
+ these commands is more specific than HTCondor's general security model
  implies.  The \Condor{schedd} \emph{automatically} grants the
  \Condor{startd} \DCPerm{READ} access for the duration of the claim.
  Therefore, if one desires to only authorize specific execute
@@ -401,26 +401,26 @@ access:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Because of the wide range of environments and security demands necessary,
-Condor must be flexible.
+HTCondor must be flexible.
 Configuration provides this flexibility.
-The process by which Condor determines the security settings that will
+The process by which HTCondor determines the security settings that will
 be used when a connection is established is called
 \Term{security negotiation}.
 Security negotiation's primary purpose is to determine which
 of the features of authentication, encryption, and integrity checking
 will be enabled for a connection.
-In addition, since Condor supports multiple
+In addition, since HTCondor supports multiple
 technologies for authentication and encryption,
 security negotiation also
 determines which technology is chosen for the connection.
 
 %The issue of allowing flexible configuration of security options is
-%complicated by the fact that Condor components that wish to interact
+%complicated by the fact that HTCondor components that wish to interact
 %may be configured to use different security options. This should not
 %preclude the interaction from taking place. Pretend Frida, an
-%aggressive cycle-scavenger, runs a variety of Condor tools from her
+%aggressive cycle-scavenger, runs a variety of HTCondor tools from her
 %workstation.  She would prefer not to use authentication as part of
-%her interactions with Condor (because she thinks it's a waste of
+%her interactions with HTCondor (because she thinks it's a waste of
 %CPU). A \Condor{schedd} that she submits jobs to, however, refuses to
 %accept any job unless it can be sure of the submitter's identity, and
 %thus wishes to force authentication. Given the \Condor{schedd}'s
@@ -432,7 +432,7 @@ Security negotiation is a completely separate process from
 matchmaking, and should not be confused with any specific function of
 the \Condor{negotiator} daemon. 
 Security negotiation occurs when one
-Condor daemon or tool initiates communication with another Condor daemon,
+HTCondor daemon or tool initiates communication with another HTCondor daemon,
 to determine the security settings by which the communication will
 be ruled.
 The \Condor{negotiator} daemon does negotiation,
@@ -506,12 +506,12 @@ sets:
 \begin{verbatim}
     SEC_DEFAULT_AUTHENTICATION = REQUIRED
 \end{verbatim}
-When Frida submits her jobs, Condor's security negotiation determines
+When Frida submits her jobs, HTCondor's security negotiation determines
 that authentication will be used, and allows the command to continue.
 This example illustrates the point that the most restrictive
 security policy sets the levels of security enforced.
 There is actually more to the understanding of this scenario.
-Some Condor commands, such as the use of \Condor{submit}
+Some HTCondor commands, such as the use of \Condor{submit}
 to submit jobs \emph{always} require
 authentication of the submitter, no matter what the policy says. 
 This is because the identity
@@ -778,14 +778,16 @@ These variables list the authentication methods that are available
 to be used.
 The ordering of the list defines preference;
 the first item in the list indicates the highest preference.
-Defined values are
+As not all of the authentication methods work on Windows platforms, 
+which ones do \emph{not} work on Windows are indicated in 
+the following list of defined values:
 \begin{verbatim}
-    GSI
+    GSI       (not available on Windows platforms)
     SSL
     KERBEROS
     PASSWORD
-    FS
-    FS_REMOTE
+    FS        (not available on Windows platforms)
+    FS_REMOTE (not available on Windows platforms)
     NTSSPI
     CLAIMTOBE
     ANONYMOUS
@@ -829,7 +831,7 @@ details.
 
 If the configuration for a machine does not define any variable
 for \MacroNI{SEC\_<access-level>\_AUTHENTICATION},
-then Condor uses a default value of \verb@OPTIONAL@.
+then HTCondor uses a default value of \verb@OPTIONAL@.
 Authentication will be required for
 any operation which modifies the job queue,
 such as \Condor{qedit} and \Condor{rm}.
@@ -845,15 +847,15 @@ This default value for a Windows machine is
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{authentication!GSI}
 The GSI (Grid Security Infrastructure) protocol provides
-an avenue for Condor to do
+an avenue for HTCondor to do
 PKI-based (Public Key Infrastructure) authentication using X.509
 certificates. 
 The basics of GSI are well-documented elsewhere, such as
 \URL{http://www.globus.org/}. 
 
 A simple introduction to this type of authentication
-defines Condor's use of terminology,
-and it illuminates the needed items that Condor must access to
+defines HTCondor's use of terminology,
+and it illuminates the needed items that HTCondor must access to
 do this authentication.
 Assume that 
 A authenticates to B.
@@ -877,24 +879,24 @@ a key, and optionally, a proxy.
 A separate directory has one or more files that become the list of
 trusted CAs.
 
-Allowing Condor to do this GSI authentication
+Allowing HTCondor to do this GSI authentication
 requires knowledge of the locations of
 the client A's certificate and the daemon B's list of
 trusted CAs.
 When one side of the communication (as either client A or daemon B)
-is a Condor daemon, these locations are determined
+is an HTCondor daemon, these locations are determined
 by configuration or by default locations.
 When one side of the communication (as a client A)
-is a user of Condor (the process owner of a Condor tool,
+is a user of HTCondor (the process owner of an HTCondor tool,
 for example \Condor{submit}), these locations are determined by the
 pre-set values of environment variables or by default locations.
 
 \begin{description}
-\item[GSI certificate locations for Condor daemons]
+\item[GSI certificate locations for HTCondor daemons]
 
-For a Condor daemon, the certificate may be a single host certificate,
+For an HTCondor daemon, the certificate may be a single host certificate,
 \index{host certificate}
-and all Condor daemons on the same machine may share the same certificate.
+and all HTCondor daemons on the same machine may share the same certificate.
 In some cases, the certificate can also be copied to other machines,
 where local copies are necessary.
 This may occur only in cases where a single host certificate can
@@ -910,7 +912,7 @@ through configuration uses the following precedence.
 Configuration variable \Macro{GSI\_DAEMON\_DIRECTORY} gives the complete
 path name to the directory that contains the certificate, key,
 and directory with trusted CAs.
-Condor uses this directory as follows in its construction of the following
+HTCondor uses this directory as follows in its construction of the following
 configuration variables:
 \footnotesize
 \begin{verbatim}
@@ -959,15 +961,15 @@ GSI_DAEMON_NAME = /X.509/name/of/server/1,/X.509/name/of/server/2,...
 \end{verbatim}
 \normalsize
 
-Condor will also need a way to map an X.509 distinguished
-name to a Condor user id.
+HTCondor will also need a way to map an X.509 distinguished
+name to an HTCondor user id.
 There are two ways to accomplish this mapping.
 For a first way to specify the mapping, see
 section~\ref{sec:Security-Unified-Map-File}
-to use Condor's unified map file.
+to use HTCondor's unified map file.
 The second way to do the mapping is within
 an administrator-maintained GSI-specific file called an X.509 map file,
-mapping from X.509 Distinguished Name (DN) to Condor user id.
+mapping from X.509 Distinguished Name (DN) to HTCondor user id.
 It is similar to a Globus grid map file, except that it is only used for
 mapping to a user id, not for authorization. 
 If the user names in the
@@ -978,7 +980,7 @@ Entries (lines) in the file each contain two items.
 The first item in an entry is the 
 X.509 certificate subject name, and it is enclosed in double quote marks
 (using the character \verb@"@).
-The second item is the Condor user id.
+The second item is the HTCondor user id.
 The two items in an entry are separated by tab or space character(s).
 Here is an example of an entry in an X.509 map file.
 Entries must be on a single line; this example is broken
@@ -991,16 +993,16 @@ OU=Computer Sciences Department/CN=Alice Smith" asmith
 \end{verbatim}
 \normalsize
 
-Condor finds the map file in one of three ways.
+HTCondor finds the map file in one of three ways.
 If the configuration variable \Macro{GRIDMAP} is defined,
 it gives the full path name to the map file.
 When not defined,
-Condor looks for the map file in 
+HTCondor looks for the map file in 
 \begin{verbatim}
 $(GSI_DAEMON_DIRECTORY)/grid-mapfile
 \end{verbatim}
 If \Macro{GSI\_DAEMON\_DIRECTORY} is not defined,
-then the third place Condor looks for the map file is given by
+then the third place HTCondor looks for the map file is given by
 \begin{verbatim}
 /etc/grid-security/grid-mapfile
 \end{verbatim}
@@ -1040,7 +1042,7 @@ Environment variables give the location of necessary items.
 \item
 Without environment variables to give locations of necessary
 certificate information,
-Condor uses a default directory for the user.
+HTCondor uses a default directory for the user.
 This directory is given by 
 \begin{verbatim}
 $(HOME)/.globus
@@ -1093,14 +1095,14 @@ only specific communications.
 
 The macro \MacroNI{GSI\_DAEMON\_DIRECTORY} is specified
 to give
-Condor a single place to find the daemon's certificate.
+HTCondor a single place to find the daemon's certificate.
 This path may be a directory on a shared file system such as AFS. 
 Alternatively, this path name can point to 
 local copies of the certificate stored
 in a local file system.
 
 The macro \MacroNI{GRIDMAP} specifies the file
-to use for mapping GSI names to user names within Condor.  For example,
+to use for mapping GSI names to user names within HTCondor.  For example,
 it might look like this:
 
 \footnotesize
@@ -1122,7 +1124,7 @@ SSL authentication is similar to GSI authentication,
 but without GSI's delegation (proxy) capabilities.
 SSL utilizes X.509 certificates.
 
-All SSL authentication is mutual authentication in Condor.
+All SSL authentication is mutual authentication in HTCondor.
 This means that when SSL authentication is used and when one process
 communicates with another, each process must be able to verify the
 signature on the certificate presented by the other process.  
@@ -1169,11 +1171,11 @@ must be prepared using the OpenSSL \Code{c\_rehash} utility.
 
 If Kerberos is used for authentication,
 then a mapping from a
-Kerberos domain (called a realm) to a Condor UID domain is necessary.
+Kerberos domain (called a realm) to an HTCondor UID domain is necessary.
 There are two ways to accomplish this mapping.
 For a first way to specify the mapping, see
 section~\ref{sec:Security-Unified-Map-File}
-to use Condor's unified map file.
+to use HTCondor's unified map file.
 A second way to specify the mapping defines
 the configuration variable
 \Macro{KERBEROS\_MAP\_FILE}
@@ -1198,8 +1200,8 @@ Here are two lines from a map file to use as an example:
 If a \MacroNI{KERBEROS\_MAP\_FILE}
 configuration variable is defined and set,
 then all permitted realms must be explicitly mapped.
-If no map file is specified, then Condor assumes that the
-Kerberos realm is the same as the Condor UID domain.
+If no map file is specified, then HTCondor assumes that the
+Kerberos realm is the same as the HTCondor UID domain.
 
 \index{authentication!Kerberos principal}
 The configuration variable
@@ -1210,14 +1212,14 @@ then the default value used is \verb@host@.
 A principal specifies a unique name to which a set of credentials
 may be assigned.
 
-Condor takes the specified (or default) principal and appends
+HTCondor takes the specified (or default) principal and appends
 a slash character, the host name, an '@' (at sign character),
 and the Kerberos realm.
 As an example, the configuration
 \begin{verbatim}
 KERBEROS_SERVER_PRINCIPAL = condor-daemon
 \end{verbatim}
-results in Condor's use of
+results in HTCondor's use of
 \begin{verbatim}
 condor-daemon/the.host.name@YOUR.KERB.REALM
 \end{verbatim}
@@ -1241,7 +1243,7 @@ requires access to various files that
 usually are only accessible by the root user.
 At this time,
 the only supported way to use KERBEROS authentication on Unix platforms
-is to start daemons Condor as user \Login{root}.
+is to start daemons HTCondor as user \Login{root}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Password-Authentication} Password Authentication}
@@ -1261,7 +1263,7 @@ must be stored on the daemon's local machine.
 On Unix, the password
 will be placed in a file defined by the configuration variable
 \Macro{SEC\_PASSWORD\_FILE}. This file will be accessible only by the
-UID that Condor is started as.  On Windows, the same secure password
+UID that HTCondor is started as.  On Windows, the same secure password
 store that is used for user passwords will be used for the pool
 password (see section \ref{sec:windows-sps}).
 
@@ -1293,13 +1295,13 @@ It is also possible to set the pool password remotely, but this is
 recommended only if it can be done over an encrypted channel.  This is
 possible on Windows, for example, in an environment where common
 accounts exist across all the machines in the pool. In this case,
-\verb@ALLOW_CONFIG@ can be set to allow the Condor administrator (who
+\verb@ALLOW_CONFIG@ can be set to allow the HTCondor administrator (who
 in this example has an account \Login{condor} common to all machines in
 the pool) to set the password from the central manager as follows.
 \begin{verbatim}
 ALLOW_CONFIG = condor@mydomain/$(CONDOR_HOST)
 \end{verbatim}
-The Condor administrator then executes
+The HTCondor administrator then executes
 \begin{verbatim}
 condor_store_cred -c -n host.mydomain add
 \end{verbatim}
@@ -1309,7 +1311,7 @@ Since the \Login{condor} account exists on both the central manager and
 authenticate and encrypt the connection.  \Condor{store\_cred} will
 warn and prompt for cancellation, if the channel is not encrypted for
 whatever reason (typically because common accounts do not exist or
-Condor's security is misconfigured).
+HTCondor's security is misconfigured).
 
 When a daemon is authenticated using a pool password, its security
 principle is \verb|condor_pool@$(UID_DOMAIN)|, where
@@ -1332,7 +1334,7 @@ another method such as \verb@FS@.
 \item[Example Security Configuration Using Pool Password]
 \index{security!sample configuration using pool password}
 The following example configuration uses pool password authentication and
-network message integrity checking for all communication between Condor
+network message integrity checking for all communication between HTCondor
 daemons.
 
 \begin{verbatim}
@@ -1444,7 +1446,7 @@ computers.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Claim To Be authentication accepts any identity claimed by the client.
 As such, it does not authenticate.
-It is included in Condor and in the list of authentication methods
+It is included in HTCondor and in the list of authentication methods
 for testing purposes only.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1452,7 +1454,7 @@ for testing purposes only.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Anonymous authentication causes authentication to be skipped entirely.
 As such, it does not authenticate.
-It is included in Condor and in the list of authentication methods
+It is included in HTCondor and in the list of authentication methods
 for testing purposes only.
 
 \index{authentication|)}
@@ -1462,8 +1464,8 @@ for testing purposes only.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{security!unified map file}
 
-Condor's unified map file allows the mappings
-from authenticated names to a Condor canonical user name
+HTCondor's unified map file allows the mappings
+from authenticated names to an HTCondor canonical user name
 to be specified as a single list within a single file. 
 The location of the unified map file is defined 
 by the configuration variable
@@ -1476,7 +1478,7 @@ Each line contains 3 fields, separated by white space
 \item{The name of the authentication method to which the mapping applies.}
 \item{A regular expression representing the authenticated name
 to be mapped.}
-\item{The canonical Condor user name.}
+\item{The canonical HTCondor user name.}
 \end{enumerate}
 
 Allowable authentication method names are the same as used to define
@@ -1495,7 +1497,7 @@ as repeated here:
 \end{verbatim}
 
 The fields that represent an authenticated name and the canonical
-Condor user name may utilize regular expressions as defined 
+HTCondor user name may utilize regular expressions as defined 
 by PCRE (Perl-Compatible Regular Expressions).
 Due to this, more than one line (mapping) within the unified
 map file may match.
@@ -1507,7 +1509,7 @@ entire expression can be surrounded by double quote marks. If a
 double quote character also needs to appear in such an expression, it
 is preceded by a backslash.
 
-The default behavior of Condor when no map file is specified is to
+The default behavior of HTCondor when no map file is specified is to
 do the following mappings, with some additional logic noted below:
 \begin{verbatim}
 FS (.*) \1
@@ -1521,7 +1523,7 @@ PASSWORD (.*) \1
 \end{verbatim}
 
 For GSI (or SSL), the special name \MacroNI{GSS\_ASSIST\_GRIDMAP} instructs 
-Condor to use the GSI grid map file (configured with \Macro{GRIDMAP}
+HTCondor to use the GSI grid map file (configured with \Macro{GRIDMAP}
 as shown in section~\ref{sec:GSI-Authentication}) to do the mapping.
 If no mapping can be found for GSI (with or without the use of
 \MacroNI{GSS\_ASSIST\_GRIDMAP}), the user is mapped to \verb|gsi@unmapped|.
@@ -1782,7 +1784,7 @@ An initial implementation provided authorization
 based on hosts (machines), while the current implementation
 relies on user-based authorization.
 Section~\ref{sec:Host-Security}
-on Setting Up IP/Host-Based Security in Condor describes the
+on Setting Up IP/Host-Based Security in HTCondor describes the
 previous implementation.
 This IP/Host-Based security still exists, and it can be used,
 but significantly stronger and more flexible
@@ -1794,7 +1796,7 @@ This section discusses user-based authorization.
 %\index{ macro@\texttt{} macro}
 %\index{configuration macro!\texttt{}}
 
-The authorization portion of the security of a Condor pool is
+The authorization portion of the security of an HTCondor pool is
 based on a set of configuration macros.
 The macros list which user will be authorized
 to issue what request given a specific access level.
@@ -1802,7 +1804,7 @@ When a daemon is to be authorized, its user name is the
 login under which the daemon is executed.
 
 These configuration macros define a set of users that will be
-allowed to (or denied from) carrying out various Condor commands.
+allowed to (or denied from) carrying out various HTCondor commands.
 Each access level may have its own list of authorized users.
 A complete list of the authorization macros:
 \index{ALLOW\_READ macro@\texttt{ALLOW\_READ} macro}
@@ -1857,7 +1859,7 @@ A complete list of the authorization macros:
 \end{verbatim}
 
 In addition, the following are used to control authorization of
-specific types of Condor daemons when advertising themselves to the
+specific types of HTCondor daemons when advertising themselves to the
 pool.  If unspecified, these default to the broader
 \MacroNI{ALLOW\_DAEMON} and \MacroNI{DENY\_DAEMON} settings.
 
@@ -2142,7 +2144,7 @@ of why the request was denied is printed in the log file of the daemon
 that denied the request.  The line in the log file contains the words
 \verb|PERMISSION DENIED|.
 
-To get Condor to generate a similar explanation of why requests are
+To get HTCondor to generate a similar explanation of why requests are
 accepted, add \Macro{D\_SECURITY} to the daemon's debug options (and
 restart or reconfig the daemon).  The line in the log file for these
 cases will contain the words \verb|PERMISSION GRANTED|.  If you do not
@@ -2150,11 +2152,11 @@ want to see a full explanation but just want to see when requests
 are made, add \Macro{D\_COMMAND} to the daemon's debug options.
 
 If the authorization policy makes use of host or domain names, then
-be aware that Condor depends on DNS to map IP addresses to names.  The
+be aware that HTCondor depends on DNS to map IP addresses to names.  The
 security and accuracy of your DNS service is therefore a requirement.
 Typos in DNS mappings are an occasional source of unexpected behavior.
 If the authorization policy is not behaving as expected, carefully compare
-the names in the policy with the host names Condor mentions in the
+the names in the policy with the host names HTCondor mentions in the
 explanations of why requests are granted or denied.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2163,21 +2165,21 @@ explanations of why requests are granted or denied.
 \index{security!sessions}
 \index{sessions}
 
-To set up and configure secure communications in Condor,
+To set up and configure secure communications in HTCondor,
 authentication, encryption, and integrity checks can be used.  
 However, these come at a cost: performing strong authentication can
 take a significant amount of time, and  generating the cryptographic
 keys for encryption and integrity checks can take a significant amount
 of processing power. 
 
-The Condor system makes many network connections between different
+The HTCondor system makes many network connections between different
 daemons.  
 If each one of these was to be authenticated,
 and new keys were generated for each connection,
-Condor would not be able to scale well.  
-Therefore, Condor uses the concept of \Term{sessions} to cache
+HTCondor would not be able to scale well.  
+Therefore, HTCondor uses the concept of \Term{sessions} to cache
 relevant security information for future use and greatly speed up the
-establishment of secure communications between the various Condor
+establishment of secure communications between the various HTCondor
 daemons.
 
 A new session is established the first time a connection is made from one daemon to another.
@@ -2209,23 +2211,23 @@ It is strongly recommended that if \emph{you have authentication turned
 on, you should also turn on integrity and/or encryption}.
 
 The configuration parameter \MacroNI{SEC\_DEFAULT\_NEGOTIATION} will allow
-a user to set the default level of secure sessions in Condor.
+a user to set the default level of secure sessions in HTCondor.
 Like other security settings, the possible values for this parameter can be
 \verb@REQUIRED@, \verb@PREFERRED@, \verb@OPTIONAL@,
 or \verb@NEVER@.
 If you disable sessions and you have authentication turned
 on, then most authentication (other than commands like
-\Condor{submit}) will fail because Condor requires sessions when you
+\Condor{submit}) will fail because HTCondor requires sessions when you
 have security turned on. 
-On the other hand, if you are not using strong security in Condor, but
+On the other hand, if you are not using strong security in HTCondor, but
 you are relying on the default host-based security, turning off
 sessions may be useful in certain situations. These might include debugging problems
 with the security session management or slightly decreasing the memory
 consumption of the daemons, which keep track of the sessions in use. 
 
 Session lifetimes for specific daemons are already properly configured in the default installation
-of Condor.
-Condor tools such as \Condor{q} and \Condor{status} create a
+of HTCondor.
+HTCondor tools such as \Condor{q} and \Condor{status} create a
 session that expires after one minute. 
 Theoretically they should not create a session at all,
 because the
@@ -2242,11 +2244,11 @@ but this is not recommended.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Host-Security}Host-Based Security in
-Condor} 
+HTCondor} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{security!host-based}
 
-This section describes the mechanisms for setting up Condor's
+This section describes the mechanisms for setting up HTCondor's
 host-based security.
 This is now an outdated form of implementing security
 levels for machine access.
@@ -2255,24 +2257,24 @@ If used at the same time as the user-based authorization,
 the two specifications are merged together.
 
 The host-based security paradigm allows control over which machines can
-join a Condor pool, which machines can find out information about
+join an HTCondor pool, which machines can find out information about
 your pool, and which machines within a pool can perform
-administrative commands.  By default, Condor is configured to allow
+administrative commands.  By default, HTCondor is configured to allow
 anyone to view or join a pool. It is recommended that this parameter is changed
 to only allow access from machines that you trust.
 
-This section discusses how the host-based security works inside Condor.
+This section discusses how the host-based security works inside HTCondor.
 It lists the different levels of access and what
-parts of Condor use which levels.
+parts of HTCondor use which levels.
 There is a description of how to configure
 a pool to grant or deny certain levels of access to various
 machines.
 Configuration examples and the settings of configuration variables
 using the \Condor{config\_val} command complete this section.
 
-Inside the Condor daemons or tools that use DaemonCore (see
+Inside the HTCondor daemons or tools that use DaemonCore (see
 section~\ref{sec:DaemonCore} for details), most
-tasks are accomplished by sending commands to another Condor daemon.
+tasks are accomplished by sending commands to another HTCondor daemon.
 These commands are represented by an integer value to specify which command
 is being requested, followed
 by any optional information that the protocol requires at that point
@@ -2281,7 +2283,7 @@ When the daemons start up,
 they will register which commands they are willing to accept, what to
 do with arriving commands, and the access level required for
 each command.
-When a command request is received by a daemon, Condor identifies the  access level
+When a command request is received by a daemon, HTCondor identifies the  access level
 required and checks the IP address of the sender to verify that
 it satisfies the allow/deny settings
 from the configuration file.
@@ -2301,21 +2303,21 @@ bar's configuration file access list (not the other way around).
 
 
 The following are the various access levels that commands within
-Condor can be registered with:
+HTCondor can be registered with:
 
 \begin{description}
 
 \item[\DCPerm{READ}] \label{dcperm:read} Machines with \DCPerm{READ}
-   access can read information from the Condor daemons.  For example, they can
+   access can read information from the HTCondor daemons.  For example, they can
    view the status of the pool, see the job queue(s), and view user
    permissions.  \DCPerm{READ} access does not allow a machine to
    alter any information, and does not allow
    job submission. A machine listed
-   with \DCPerm{READ} permission will be unable join a Condor pool; the machine can
+   with \DCPerm{READ} permission will be unable join an HTCondor pool; the machine can
    only view information about the pool.
 
 \item[\DCPerm{WRITE}] \label{dcperm:write} Machines with
-   \DCPerm{WRITE} access can write information to the Condor daemons.
+   \DCPerm{WRITE} access can write information to the HTCondor daemons.
    Most important for granting a machine with this access is that the machine
    will be able to join a pool since they are allowed to send ClassAd
    updates to the central manager.
@@ -2331,32 +2333,32 @@ Condor can be registered with:
    periodically checkpoint, even if the users do not have an account on the
    machine where the jobs execute.
 
-   \textbf{IMPORTANT:} For a machine to join a Condor pool, the machine must
+   \textbf{IMPORTANT:} For a machine to join an HTCondor pool, the machine must
    have both \DCPerm{WRITE} permission \textbf{AND} \DCPerm{READ} permission.
    \DCPerm{WRITE} permission is not enough.
 
 \item[\DCPerm{ADMINISTRATOR}] \label{dcperm:administrator} Machines
-   with \DCPerm{ADMINISTRATOR} access are granted additional Condor
+   with \DCPerm{ADMINISTRATOR} access are granted additional HTCondor
    administrator rights to the pool.  This includes the ability to
    change user priorities with the command \Condor{userprio},
-   and the ability to turn Condor on and off
-   (with the command \Code{\Condor{off} \Sinful{machine}}).
+   and the ability to turn HTCondor on and off
+   using \Condor{on} and  \Condor{off}.
    It is recommended that few machines be granted administrator access in a pool;
-   typically these are the machines that are used by Condor and system
+   typically these are the machines that are used by HTCondor and system
    administrators as their primary workstations,
    or the machines running as the pool's central manager.
 
    \textbf{IMPORTANT:} Giving \DCPerm{ADMINISTRATOR} privileges to a machine
    grants administrator access for the pool to
    \textbf{ANY USER} on that machine. This includes any
-   users who can run Condor jobs on that machine.
+   users who can run HTCondor jobs on that machine.
    It is recommended that \DCPerm{ADMINISTRATOR} access is granted with due diligence.
 
 \item[\DCPerm{OWNER}] \label{dcperm:owner} This level of access is
    required for commands that the owner of a machine (any local user)
-   should be able to use, in addition to the Condor administrators.
+   should be able to use, in addition to the HTCondor administrators.
    For example, the \Condor{vacate} command causes the
-   \Condor{startd} daemon to vacate any running Condor job.
+   \Condor{startd} daemon to vacate any running HTCondor job.
    It requires \DCPerm{OWNER} permission,
    so that any user logged into a local machine
    can issue a \Condor{vacate} command.
@@ -2384,13 +2386,13 @@ Condor can be registered with:
 
 \item[\DCPerm{DAEMON}] \label{dcperm:daemon} This access level
    is used for commands that are internal to the operation of
-   Condor.  An example of this internal operation is when the
+   HTCondor.  An example of this internal operation is when the
    \Condor{startd} daemon sends
    its ClassAd updates to the \Condor{collector} daemon (which may be
    more specifically controlled by the \DCPerm{ADVERTISE\_STARTD}
    access level).
    Authorization at this access level should only be given to
-   hosts that actually run Condor in your pool.
+   hosts that actually run HTCondor in your pool.
    The \DCPerm{DAEMON} level of access implies both
    \DCPerm{READ} and \DCPerm{WRITE} access.  Any setting for this access
    level that is not defined will default to the corresponding setting
@@ -2417,8 +2419,8 @@ Condor can be registered with:
 \item[\DCPerm{CLIENT}] \label{dcperm:client} This access level is
    different from all the others.  Whereas all of the other access levels
    refer to the security policy for accepting connections \emph{from} others,
-   the \DCPerm{CLIENT} access level applies when a Condor daemon or tool is
-   connecting \emph{to} some other Condor daemon.  In other words, it specifies
+   the \DCPerm{CLIENT} access level applies when an HTCondor daemon or tool is
+   connecting \emph{to} some other HTCondor daemon.  In other words, it specifies
    the policy of the client that is initiating the operation, rather than
    the server that is being contacted.
 
@@ -2511,7 +2513,7 @@ This is how most people would intuitively expect it to work.
 In addition, the above access levels may be specified on a
 per-daemon basis, instead of machine-wide for all daemons.
 Do this with the subsystem string (described in
-section~\ref{sec:Condor-Subsystem-Names} on Subsystem Names),
+section~\ref{sec:HTCondor-Subsystem-Names} on Subsystem Names),
 which is one of: \Expr{STARTD}, \Expr{SCHEDD}, \Expr{MASTER}, \Expr{NEGOTIATOR},
 or \Expr{COLLECTOR}.
 For example, to grant different read access for the \Condor{schedd}:
@@ -2610,40 +2612,40 @@ ALLOW_OWNER = $(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
 \index{security!changing the configuration}
 
 A new security feature introduced in
-Condor version 6.3.2 enables more fine-grained control over the
+HTCondor version 6.3.2 enables more fine-grained control over the
 configuration settings that can be modified remotely with the
 \Condor{config\_val} command.
 The manual page for \Condor{config\_val} on
 page~\pageref{man-condor-config-val} details how to use 
 \Condor{config\_val} to modify configuration settings remotely. 
 Since certain configuration attributes can have a large impact on the 
-functioning of the Condor system and the security of the machines in a
-Condor pool, it is important to restrict the ability to change
+functioning of the HTCondor system and the security of the machines in an
+HTCondor pool, it is important to restrict the ability to change
 attributes remotely.
 
 For each security access level described,
-the Condor
+the HTCondor
 administrator can define which configuration settings a host at that
 access level is allowed to change.
 Optionally, the administrator can define separate lists of settable
-attributes for each Condor daemon, or the administrator
+attributes for each HTCondor daemon, or the administrator
 can define one list that is used by all daemons.
 
 For each command that requests a change in configuration setting,
-Condor searches all the different possible security access
+HTCondor searches all the different possible security access
 levels to see which, if any, the request satisfies.
 (Some hosts can qualify for multiple access levels. For example, any
 host with \DCPerm{ADMINISTRATOR} permission probably has
 \DCPerm{WRITE} permission also).
 Within the qualified access level,
-Condor searches for the list of attributes that may be modified.
+HTCondor searches for the list of attributes that may be modified.
 If the request is covered by the list,
 the request will be granted.
 If not covered, the request will be refused.
 
-The default configuration shipped with Condor is exceedingly
+The default configuration shipped with HTCondor is exceedingly
 restrictive.
-Condor users or administrators cannot set
+HTCondor users or administrators cannot set
 configuration values from remote hosts with \Condor{config\_val}.
 Enabling this feature requires a change to the
 settings in the configuration file.
@@ -2652,21 +2654,21 @@ Grant access only for attributes which you need to be able to modify
 in this manner, and grant access only at the most restrictive
 security level possible.
 
-The most secure use of this feature allows Condor users to set
-attributes in the configuration file which are not used by Condor
+The most secure use of this feature allows HTCondor users to set
+attributes in the configuration file which are not used by HTCondor
 directly.
-These are custom attributes published by various Condor
+These are custom attributes published by various HTCondor
 daemons with the \MacroNI{<SUBSYS>\_ATTRS} setting described in
 section~\ref{param:SubsysAttrs} on page~\pageref{param:SubsysAttrs}.
-It is secure to grant access only to modify attributes that are used by Condor
+It is secure to grant access only to modify attributes that are used by HTCondor
 to publish information.
 Granting access to modify
-settings used to control the behavior of Condor is
+settings used to control the behavior of HTCondor is
 not secure.
 The goal is to
 ensure no
 one can use the power to change configuration attributes to compromise 
-the security of your Condor pool.
+the security of your HTCondor pool.
 
 The control lists are defined by configuration settings that contain 
 \Macro{SETTABLE\_ATTRS} in their name.
@@ -2687,13 +2689,13 @@ Examples include \DCPerm{WRITE}, \DCPerm{OWNER}, and \DCPerm{CONFIG}.
 The \verb@<SUBSYS>@ is an optional portion of the name. 
 It can be used to
 define separate rules for which configuration attributes can be set
-for each kind of Condor daemon (for example, 
+for each kind of HTCondor daemon (for example, 
 \Expr{STARTD}, \Expr{SCHEDD}, and \Expr{MASTER}).
 There are many configuration settings that can be defined differently
 for each daemon that use this \verb@<SUBSYS>@ naming convention.
-See section~\ref{sec:Condor-Subsystem-Names} on
-page~\pageref{sec:Condor-Subsystem-Names} for a list.
-If there is no daemon-specific value for a given daemon, Condor will
+See section~\ref{sec:HTCondor-Subsystem-Names} on
+page~\pageref{sec:HTCondor-Subsystem-Names} for a list.
+If there is no daemon-specific value for a given daemon, HTCondor will
 look for \Macro{SETTABLE\_ATTRS\_<PERMISSION-LEVEL>}.
 
 Each control list is defined by a comma-separated list of attribute
@@ -2708,7 +2710,7 @@ Some examples of valid definitions of control lists with explanations:
 Grant unlimited access to modify configuration attributes
 to any request that came from a machine in the \DCPerm{CONFIG} access
 level. 
-This was the default behavior before Condor version 6.3.2.
+This was the default behavior before HTCondor version 6.3.2.
 
 \item \begin{verbatim}SETTABLE_ATTRS_ADMINISTRATOR = *_DEBUG, MAX_*_LOG\end{verbatim} 
 Grant access to change any configuration setting that ended
@@ -2723,12 +2725,12 @@ attribute that came from a host with \DCPerm{OWNER} access.
 By default, \DCPerm{OWNER} covers any request originating from the
 local host, plus any machines listed in the \DCPerm{ADMINISTRATOR}
 level.
-Therefore, any Condor job would qualify for OWNER access to the
+Therefore, any HTCondor job would qualify for OWNER access to the
 machine where it is running. 
 So, this setting would allow any process running on a given host,
-including a Condor job, to modify the \MacroNI{HasDataSet} variable for
+including an HTCondor job, to modify the \MacroNI{HasDataSet} variable for
 that host. 
-\MacroNI{HasDataSet} is not used by Condor, it is an invented attribute
+\MacroNI{HasDataSet} is not used by HTCondor, it is an invented attribute
 included in the \Macro{STARTD\_ATTRS} setting in order for this
 example to make sense.
 
@@ -2736,18 +2738,18 @@ example to make sense.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:security-networks}Using 
-Condor w/ Firewalls, Private Networks, and NATs}
+HTCondor w/ Firewalls, Private Networks, and NATs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This topic is now addressed in more detail in
 section~\ref{sec:Networking}, which explains network communication in
-Condor.
+HTCondor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:uids}User Accounts in Condor on Unix Platforms}
+\subsection{\label{sec:uids}User Accounts in HTCondor on Unix Platforms}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{UIDs in Condor|(}
+\index{UIDs in HTCondor|(}
 
 On a Unix system,
 UIDs (User IDentification numbers) form part of an operating system's
@@ -2769,7 +2771,7 @@ This UID of the program's owner is called an effective UID.
 \index{UID!effective}
 
 %GID (group identification)
-Condor works most smoothly when its daemons run as \Login{root}.
+HTCondor works most smoothly when its daemons run as \Login{root}.
 The daemons then have the ability to switch their 
 effective UIDs at will.
 When the daemons run as \Login{root},
@@ -2782,17 +2784,17 @@ the user \Login{condor}'s home directory resides on an NFS server.
 \Login{root} can not normally access NFS files.
 
 If there is no \Login{condor} user and group on the system, an
-administrator can specify which UID and GID the Condor daemons should
+administrator can specify which UID and GID the HTCondor daemons should
 use when they do not need root privileges in two ways:
 either with the \Env{CONDOR\_IDS} environment variable or the
 \Macro{CONDOR\_IDS} configuration variable.
 In either case, the value should be the UID integer, followed by a
 period, followed by the GID integer.
-For example, if a Condor administrator does not want to create a
-\Login{condor} user, and instead wants their Condor daemons to run as
+For example, if an HTCondor administrator does not want to create a
+\Login{condor} user, and instead wants their HTCondor daemons to run as
 the \Login{daemon} user (a common non-root user for system daemons to
 execute as), the \Login{daemon} user's UID was 2, and group
-\Login{daemon} had a GID of 2, the corresponding setting in the Condor
+\Login{daemon} had a GID of 2, the corresponding setting in the HTCondor
 configuration file would be \Expr{CONDOR\_IDS = 2.2}.
 
 On a machine where a job is submitted,
@@ -2810,7 +2812,7 @@ all remote system calls are performed under the owner's UID
 and GID.
 This ensures that as the job executes,
 it can access only files that its owner could access if the job
-were running locally, without Condor.
+were running locally, without HTCondor.
 
 On the machine where the job executes, the 
 job runs either as the submitting user or as user \Login{nobody},
@@ -2829,48 +2831,48 @@ and the user is not in the execute machine's password file,
 then the job execution attempt will be aborted.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Non-Root}Running Condor as Non-Root}
+\subsubsection{\label{sec:Non-Root}Running HTCondor as Non-Root}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-While we strongly recommend starting up the Condor daemons as \Login{root},
+While we strongly recommend starting up the HTCondor daemons as \Login{root},
 we understand that it is not always possible to do so.
-The main problems of not running Condor daemons as \Login{root}
-appear when one Condor installation is shared by many users on a
+The main problems of not running HTCondor daemons as \Login{root}
+appear when one HTCondor installation is shared by many users on a
 single machine, or if machines are set up to only execute
-Condor jobs.  With a submit-only installation for a
+HTCondor jobs.  With a submit-only installation for a
 single user, there is no need for or benefit from running as
 \Login{root}.
 
-The effects of Condor of running both with and without root access
+The effects of HTCondor of running both with and without root access
 are classified for each daemon:
 
 \begin{description}
 
-\item[\Condor{startd}] A Condor machine set up to execute jobs where the
+\item[\Condor{startd}] An HTCondor machine set up to execute jobs where the
    \Condor{startd} is not started as \Login{root}
-   relies on the good will of the Condor users to agree to the policy
+   relies on the good will of the HTCondor users to agree to the policy
    configured for the \Condor{startd} to enforce for starting, suspending,
-   vacating, and killing Condor jobs. 
+   vacating, and killing HTCondor jobs. 
    When the \Condor{startd} is started
    as \Login{root}, however, these policies may be enforced regardless of
-   malicious users.  By running as \Login{root}, the Condor daemons run with a
-   different UID than the Condor job. 
+   malicious users.  By running as \Login{root}, the HTCondor daemons run with a
+   different UID than the HTCondor job. 
    The user's job is started as either the UID of the user who submitted
    it, or as user \Login{nobody}, depending on the \Macro{UID\_DOMAIN}
    settings.
-   Therefore, the Condor job cannot do anything to the Condor daemons.
+   Therefore, the HTCondor job cannot do anything to the HTCondor daemons.
    Without starting the daemons as \Login{root}, all
-   processes started by Condor, including the user's job, run with
+   processes started by HTCondor, including the user's job, run with
    the same UID. Only \Login{root} can switch UIDs.
    Therefore, a user's job could kill the \Condor{startd} and
    \Condor{starter}. By doing so, the user's job avoids
    getting suspended or vacated.
    This is nice for the job, as it obtains unlimited access to the
    machine, but it is awful for the machine owner or administrator.
-   If there is trust of the users submitting jobs to Condor,
+   If there is trust of the users submitting jobs to HTCondor,
    this might not be a concern.  
    However, to ensure that the policy chosen is
-   enforced by Condor, the \Condor{startd} should be
+   enforced by HTCondor, the \Condor{startd} should be
    started as \Login{root}.
 
    In addition, some system information cannot be obtained without
@@ -2885,7 +2887,7 @@ are classified for each daemon:
    On Linux, this information is available without root access,
    so it is not a concern on those platforms.
 
-   If all of Condor cannot be run as \Login{root}, at least consider
+   If all of HTCondor cannot be run as \Login{root}, at least consider
    installing the \Condor{startd} as setuid root.  That
    would solve both problems.  Barring that,
    install it as a setgid sys or kmem program,
@@ -2932,27 +2934,27 @@ are classified for each daemon:
 
 \end{description}
 
-If Condor is not run as root, then choose almost any user name.
+If HTCondor is not run as root, then choose almost any user name.
 A common choice is to set up and use the \Login{condor} user; this
 simplifies the setup,
-because Condor will look for its configuration
+because HTCondor will look for its configuration
 files in the \Login{condor} user's directory.
 If \Login{condor} is not selected,
 then the configuration must be placed properly such that
-Condor can find its configuration files. 
+HTCondor can find its configuration files. 
 
 If users will be submitting jobs as a user different than the user
-Condor is running as (perhaps you are running as the \Login{condor} user and
+HTCondor is running as (perhaps you are running as the \Login{condor} user and
 users are submitting as themselves), then users have to be careful to
 only have file permissions properly set up to be accessible by the
-user Condor is using. In practice, this means creating world-writable
-directories for output from Condor jobs.  This creates a potential
+user HTCondor is using. In practice, this means creating world-writable
+directories for output from HTCondor jobs.  This creates a potential
 security risk, in that any user on the machine where the job is
 submitted can alter the data, remove it, or do other undesirable
 things.  It is only acceptable in an environment where users can trust
 other users.
 
-Normally, users without \Login{root} access who wish to use Condor on their
+Normally, users without \Login{root} access who wish to use HTCondor on their
 machines create a \File{condor} home directory somewhere within their
 own accounts and start up the daemons (to run with the UID of the
 user).  As in the case where the daemons run as user \Login{condor}, there is
@@ -2960,23 +2962,23 @@ no ability to switch UIDs or GIDs.  The daemons run as the UID and GID
 of the user who started them.  On a machine where jobs are submitted,
 the \Condor{shadow} daemons all run as this same user. 
 But, if other
-users are using Condor on the machine in this environment, the
+users are using HTCondor on the machine in this environment, the
 \Condor{shadow} daemons for these other users' jobs execute with the
 UID of the user who started the daemons.  This is a security risk,
-since the Condor job of the other user has access to all the files and
+since the HTCondor job of the other user has access to all the files and
 directories of the user who started the daemons.  Some installations
 have this level of trust, but others do not.  Where this level of
 trust does not exist, it is best to set up a \Login{condor} account and group,
-or to have each user start up their own Personal Condor submit
+or to have each user start up their own Personal HTCondor submit
 installation.
 
-When a machine is an execution site for a Condor job, the Condor job
+When a machine is an execution site for an HTCondor job, the HTCondor job
 executes with the UID of the user who started the \Condor{startd}
 daemon.  This is also potentially a security risk, which is why we do
 not recommend starting up the execution site daemons as a regular
 user.  Use either \Login{root} or a user
 such as \Login{condor} that exists
-only to run Condor jobs.
+only to run HTCondor jobs.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:RunAsNobody}Running Jobs as the Nobody User}
@@ -2985,39 +2987,39 @@ only to run Condor jobs.
 \index{UID!potential risk running jobs as user nobody}
 \index{security!running jobs as user nobody}
 
-Under Unix, Condor runs jobs either as the user that submitted the
-jobs, or as the user called \Login{nobody}.  Condor uses user
+Under Unix, HTCondor runs jobs either as the user that submitted the
+jobs, or as the user called \Login{nobody}.  HTCondor uses user
 \Login{nobody} if the value of the \MacroNI{UID\_DOMAIN} configuration
 variable of the submitting and executing machines are different or if
 \Macro{STARTER\_ALLOW\_RUNAS\_OWNER} is false or if the job ClassAd
-contains \Attr{RunAsOwner}=False.  Under Windows, Condor by default
+contains \Attr{RunAsOwner}=False.  Under Windows, HTCondor by default
 runs jobs under a dynamically created local account that exists for
 the duration of the job, but it can optionally run the job as the user
 account that owns the job if \Macro{STARTER\_ALLOW\_RUNAS\_OWNER} is
 True and the job contains \Attr{RunAsOwner}=True.
 
-When Condor cleans up after executing a vanilla universe job, it does
+When HTCondor cleans up after executing a vanilla universe job, it does
 the best that it can by deleting all of the processes started by the
 job.  During the life of the job, it also does its best to track the
 CPU usage of all processes created by the job.  There are a variety of
-mechanisms used by Condor to detect all such processes, but, in
+mechanisms used by HTCondor to detect all such processes, but, in
 general, the only foolproof mechanism is for the job to run under a
 dedicated execution account (as it does under Windows by default).
-With all other mechanisms, it is possible to fool Condor, and leave
-processes behind after Condor has cleaned up.  In the case of a shared
+With all other mechanisms, it is possible to fool HTCondor, and leave
+processes behind after HTCondor has cleaned up.  In the case of a shared
 account, such as the Unix user \Login{nobody}, it is possible for the
 job to leave a lurker process lying in wait for the next job run as
 \Login{nobody}.  The lurker process may prey maliciously on the next
 \Login{nobody} user job, wreaking havoc.
 
-Condor could prevent this problem by simply killing all processes run by
+HTCondor could prevent this problem by simply killing all processes run by
 the \Login{nobody} user, but this would annoy many system administrators.
-The \Login{nobody} user is often used for non-Condor system processes.
-It may also be used by other Condor jobs running on the same machine, if
+The \Login{nobody} user is often used for non-HTCondor system processes.
+It may also be used by other HTCondor jobs running on the same machine, if
 it is a multi-processor machine.
 
-Condor provides a two-part solution to this difficulty.
-First, create user accounts specifically for Condor to use instead
+HTCondor provides a two-part solution to this difficulty.
+First, create user accounts specifically for HTCondor to use instead
 of user \Login{nobody}.
 These can be low-privilege accounts,
 as the \Login{nobody} user is.
@@ -3027,9 +3029,9 @@ This prevents malicious behavior between
 processes running on distinct slots.
 Section ~\ref{sec:Configuring-SMP} details slots.
 For a sample machine with two compute slots,
-create two users that are intended only to be used by Condor.
+create two users that are intended only to be used by HTCondor.
 As an example, call them \Login{cndrusr1} and \Login{cndrusr2}.
-Tell Condor about these users
+Tell HTCondor about these users
 with the \Macro{SLOT<N>\_USER} configuration variables,
 where \MacroNI{<N>} is replaced with the slot number.
 In this example:
@@ -3039,8 +3041,8 @@ In this example:
    SLOT2_USER = cndrusr2
 \end{verbatim}
 
-Then tell Condor that these accounts are intended only to be used by Condor,
-so Condor can kill all the processes belonging to these users upon
+Then tell HTCondor that these accounts are intended only to be used by HTCondor,
+so HTCondor can kill all the processes belonging to these users upon
 job completion.
 The configuration variable \Macro{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP}
 is introduced and set to a regular expression that matches the account
@@ -3050,7 +3052,7 @@ names we have just created.
    DEDICATED_EXECUTE_ACCOUNT_REGEXP = cndrusr[0-9]+
 \end{verbatim}
 
-Finally, tell Condor not to run jobs as the job owner:
+Finally, tell HTCondor not to run jobs as the job owner:
 
 \begin{verbatim}
    STARTER_ALLOW_RUNAS_OWNER = False
@@ -3095,7 +3097,7 @@ Tracking process family by login "cndrusr1"
 Every executing process has a notion of its current working directory.
 This is the directory that acts as the base for all file system
 access. 
-There are two current working directories for any Condor job:
+There are two current working directories for any HTCondor job:
 one where the job is submitted and a
 second where the job executes.
 When a user submits a job,
@@ -3114,13 +3116,13 @@ This is particularly relevant for standard universe jobs,
 since file system
 access for the job goes through the \Condor{shadow} daemon, and
 therefore all accesses behave as if they were executing without
-Condor.
+HTCondor.
 
 There is also an execute-side current working directory.
 For standard universe jobs,
 it is set to the
-\File{execute} subdirectory of Condor's home directory.
-This directory is world-writable, since a Condor job usually runs as user
+\File{execute} subdirectory of HTCondor's home directory.
+This directory is world-writable, since an HTCondor job usually runs as user
 \Login{nobody}.
 Normally, standard universe jobs would never access this directory,
 since all I/O system calls are passed back to the
@@ -3136,9 +3138,9 @@ sends e-mail to the job owner announcing the core file, and provides a
 pointer to where
 the core file resides in the submit-side current working directory.
 
-\index{UIDs in Condor|)}
+\index{UIDs in HTCondor|)}
 
 
 \input{admin-man/privsep.tex}
 
-\index{security!in Condor|)}
+\index{security!in HTCondor|)}

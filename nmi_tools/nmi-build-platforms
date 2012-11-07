@@ -1,28 +1,31 @@
 # One platform per line.  Comments (starting with #) and blank lines are ignored.
 
 # Officially supported platforms
-x86_64_deb_5.0
-x86_64_deb_6.0
-x86_64_macos_10.7
-x86_64_rhap_5.7
-x86_64_rhap_6.3
-x86_64_winnt_6.1
-x86_rhap_5.8
-x86_rhap_6.3
+x86_64_Debian5
+x86_64_Debian6
+x86_64_MacOSX7
+x86_64_RedHat5
+x86_64_RedHat6
+x86_64_Windows7
+#x86_Debian5
+x86_Debian6
+x86_RedHat5
+x86_RedHat6
 
 # This Windows machine has only 2 slots so we are only building on master currently
-x86_winnt_5.1
+x86_WindowsXP
 
 # We want to build all branches on Fedora because it is our "warning check" platform
-x86_64_fedora_15
-x86_64_fedora_16
+x86_64_Fedora16
+x86_64_Fedora17
 
 # We might as well build on SL
-x86_64_sl_6.2
-x86_sl_5.8
+x86_64_SL6
+x86_SL5
 
 # These are NMI requested platforms.  We only need to build these on master since
 # NMI will only take releases from our master branch.
-x86_64_sol_5.11
-x86_64_ubuntu_10.04.4
-x86_freebsd_7.4
+x86_64_Solaris11
+x86_64_Ubuntu10
+#x86_64_Ubuntu12
+x86_FreeBSD7

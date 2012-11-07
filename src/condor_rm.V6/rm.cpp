@@ -175,7 +175,6 @@ main( int argc, char *argv[] )
 	DCCollector* pool = NULL;
 	char* scheddName = NULL;
 	char* scheddAddr = NULL;
-	param_functions *p_funcs = NULL;
 
 		// Initialize our global variables
 	has_constraint = false;
@@ -246,9 +245,7 @@ main( int argc, char *argv[] )
 		if( arg[0] == '-' ) {
             if (match_prefix(arg, "-debug")) {
 				// dprintf to console
-				Termlog = 1;
-				p_funcs = get_param_functions();
-				dprintf_config ("TOOL", p_funcs);
+				dprintf_set_tool_debug("TOOL", 0);
             } else if (match_prefix(arg, "-constraint")) {
 				args[nArgs] = arg;
 				nArgs++;
@@ -468,7 +465,7 @@ main( int argc, char *argv[] )
 		CondorError errstack;
 		ClassAd* result_ad = doWorkByList( job_ids, &errstack );
 		if (had_error) {
-			fprintf( stderr, "%s\n", errstack.getFullText(true) );
+			fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 		}
 		printNewMessages( result_ad, job_ids );
 		delete( result_ad );
@@ -480,7 +477,7 @@ main( int argc, char *argv[] )
 		Daemon  my_schedd(DT_SCHEDD, NULL, NULL);
 		CondorError errstack;
 		if (!my_schedd.sendCommand(RESCHEDULE, Stream::safe_sock, 0, &errstack)) {
-			fprintf( stderr, "%s\n", errstack.getFullText(true) );
+			fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 		}
 	}
 
@@ -620,7 +617,7 @@ procArg(const char* arg)
 		// delete the cluster
 		{
 			CondorError errstack;
-			constraint.sprintf( "%s == %d", ATTR_CLUSTER_ID, c );
+			constraint.formatstr( "%s == %d", ATTR_CLUSTER_ID, c );
 			if( doWorkByConstraint(constraint.Value(), &errstack) ) {
 				fprintf( stdout, 
 						 "Cluster %d %s.\n", c,
@@ -630,7 +627,7 @@ procArg(const char* arg)
 						 "has been removed locally (remote state unknown)" :
 						 actionWord(mode,true) );
 			} else {
-				fprintf( stderr, "%s\n", errstack.getFullText(true) );
+				fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 				if (had_error)
 				{
 					fprintf( stderr, 
@@ -665,7 +662,7 @@ procArg(const char* arg)
 	// process by user name
 	else {
 		CondorError errstack;
-		constraint.sprintf("%s == \"%s\"", ATTR_OWNER, arg );
+		constraint.formatstr("%s == \"%s\"", ATTR_OWNER, arg );
 		if( doWorkByConstraint(constraint.Value(), &errstack) ) {
 			fprintf( stdout, "User %s's job(s) %s.\n", arg,
 					 (mode == JA_REMOVE_JOBS) ?
@@ -674,7 +671,7 @@ procArg(const char* arg)
 					 "have been removed locally (remote state unknown)" :
 					 actionWord(mode,true) );
 		} else {
-			fprintf( stderr, "%s\n", errstack.getFullText(true) );
+			fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 			if (had_error)
 			{
 				fprintf( stderr, 
@@ -749,7 +746,7 @@ handleAll()
 				 "removed locally (remote state unknown)" :
 				 actionWord(mode,true) );
 	} else {
-		fprintf( stderr, "%s\n", errstack.getFullText(true) );
+		fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 		if (had_error)
 		{
 			fprintf( stderr, "Could not %s all jobs.\n",
@@ -777,7 +774,7 @@ handleConstraints( void )
 				 actionWord(mode,true) );
 
 	} else {
-		fprintf( stderr, "%s\n", errstack.getFullText(true) );
+		fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
 		if (had_error)
 		{
 			fprintf( stderr, 

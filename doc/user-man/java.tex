@@ -4,23 +4,23 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Java}
 
-Condor allows users to access a wide variety of
+HTCondor allows users to access a wide variety of
 machines distributed around the world.
 The Java Virtual Machine (JVM)
 \index{Java Virtual Machine}
 \index{JVM}
 provides a uniform platform on any machine, regardless of the
 machine's architecture or operating system.
-The Condor Java universe brings together these
+The HTCondor Java universe brings together these
 two features to create a distributed, homogeneous computing environment.
 
-Compiled Java programs can be submitted to Condor, and Condor
+Compiled Java programs can be submitted to HTCondor, and HTCondor
 can execute the programs on any machine in the pool that will run
 the Java Virtual Machine.
 
 
 The \Condor{status} command can be used to see a list of
-machines in the pool for which Condor can use the Java Virtual
+machines in the pool for which HTCondor can use the Java Virtual
 Machine.
 
 \footnotesize
@@ -39,12 +39,12 @@ slot2@bio.cs.wisc. Sun Micros 1.6.0_ Unclaimed Idle     0.000   118  7+03:13:28
 
 If there is no output from the
 \Condor{status} command,
-then Condor does not know the location details of the Java Virtual
+then HTCondor does not know the location details of the Java Virtual
 Machine on machines in the pool,
 or no machines have Java correctly installed.
 In this case,
 contact your system administrator or see section \ref{sec:java-install}
-for more information on getting Condor to work together
+for more information on getting HTCondor to work together
 with Java.
 
 %%%%%
@@ -70,7 +70,7 @@ accomplished with the command
 javac Hello.java
 \end{verbatim}
 
-Submission to Condor requires a submit description file.
+Submission to HTCondor requires a submit description file.
 If submitting where files are accessible using a
 shared file system,
 this simple submit description file works:
@@ -120,7 +120,7 @@ the submit description file becomes:
   when_to_transfer_output = ON_EXIT
   queue
 \end{verbatim}
-For more information about using Condor's file transfer mechanisms,
+For more information about using HTCondor's file transfer mechanisms,
 see section~\ref{sec:file-transfer}.
 
 To submit the job, where the submit description file
@@ -166,7 +166,7 @@ A JAR can be created with:
 \end{verbatim}
 \normalsize
 
-Condor must then be told where to find the JAR as well
+HTCondor must then be told where to find the JAR as well
 as to use the JAR. 
 The JAR file that contains the entry point
 is specified with the \SubmitCmd{executable} command.
@@ -182,7 +182,7 @@ jar_files = Library.jar
 
 Note that the JVM must know whether it is receiving JAR files
 or class files.
-Therefore, Condor must also be informed, in order to pass the
+Therefore, HTCondor must also be informed, in order to pass the
 information on to the JVM.
 That is why there is a difference in submit description file commands
 for the two ways of specifying files (\SubmitCmd{transfer\_input\_files}
@@ -198,7 +198,7 @@ jar_files = sortmerge.jar,statemap.jar
 \end{verbatim}
 
 \item[Using a third-party JAR file.]
-As Condor requires that all JAR files (third-party or not)
+As HTCondor requires that all JAR files (third-party or not)
 be available,
 specification of a third-party JAR file is no different than
 other JAR files.
@@ -231,7 +231,7 @@ With this option,
 the Java virtual machine discovers the main class to run 
 from the contents of the Manifest file,
 which is bundled within the JAR file.  
-Condor's \SubmitCmd{java} universe does not support this discovery,
+HTCondor's \SubmitCmd{java} universe does not support this discovery,
 so before submitting the job,
 the name of the main class must be identified.
 
@@ -250,7 +250,7 @@ the equivalent version after discovery might look like
 The specified value for \verb@TheMainClass@
 can be discovered by unjarring the JAR file,
 and looking for the MainClass definition in the Manifest file.
-Use that definition in the Condor submit description file.
+Use that definition in the HTCondor submit description file.
 Partial contents of that file Java universe submit file will appear as
 
 \begin{verbatim}
@@ -285,10 +285,10 @@ arguments = hpc.CondorDriver
 
 \item[JVM-version specific features.]
 If the program uses Java features found only in certain
-JVMs, then the Java application submitted to Condor
+JVMs, then the Java application submitted to HTCondor
 must only run on those machines within the
 pool that run the needed JVM.
-Inform Condor by adding a \Code{requirements}
+Inform HTCondor by adding a \Code{requirements}
 statement to the submit description file.
 For example, to require version 3.2, add to the submit description
 file:
@@ -298,16 +298,16 @@ requirements = (JavaVersion=="3.2")
 \end{verbatim}
 
 \item[Benchmark speeds.]
-Each machine with Java capability in a Condor pool
+Each machine with Java capability in an HTCondor pool
 will execute a benchmark to determine its speed.
-The benchmark is taken when Condor is started on
+The benchmark is taken when HTCondor is started on
 the machine, and it uses the SciMark2
 (\URL{http://math.nist.gov/scimark2}) benchmark.
 The result of the benchmark is held as an attribute
 within the 
 machine ClassAd.
 The attribute is called \AdAttr{JavaMFlops}.
-Jobs that are run under the Java universe (as all other Condor jobs)
+Jobs that are run under the Java universe (as all other HTCondor jobs)
 may prefer or require a machine of a specific speed
 by setting \AdAttr{rank} or \AdAttr{requirements} in
 the submit description file.
@@ -327,7 +327,7 @@ java_vm_args = -DMyProperty=Value -verbose:gc -Xmx1024m
 
 These options are those which go after the java command, but before
 the user's main class.  Do not use this to set the classpath, as
-Condor handles that itself.  Setting these options is useful for
+HTCondor handles that itself.  Setting these options is useful for
 setting system properties, system assertions and debugging certain
 kinds of problems.
 
@@ -339,7 +339,7 @@ kinds of problems.
 
 \index{Chirp}
 If a job has more sophisticated I/O requirements that cannot
-be met by Condor's file transfer mechanism,
+be met by HTCondor's file transfer mechanism,
 then the Chirp facility may provide a solution.
 Chirp has two advantages over simple, whole-file transfers.
 First, it permits the input files to be decided upon at run-time
@@ -360,7 +360,7 @@ and \Code{ChirpOutputStream} instead of \Code{FileInputStream} and
 These classes are completely documented
 \index{Software Developer's Kit!Chirp}
 \index{SDK!Chirp}
-in the Condor Software Developer's Kit (SDK).
+in the HTCondor Software Developer's Kit (SDK).
 Here is a simple code example:
 
 \begin{verbatim}
@@ -398,7 +398,7 @@ To perform UNIX-like I/O with Chirp,
 create a \Code{ChirpClient} object.
 This object supports familiar operations such as \Code{open}, \Code{read},
 \Code{write}, and \Code{close}.
-Exhaustive detail of the methods may be found in the Condor 
+Exhaustive detail of the methods may be found in the HTCondor 
 SDK, but here is a brief example:
 
 \begin{verbatim}
@@ -435,7 +435,7 @@ public class TestChirp {
 Regardless of which I/O style, 
 the Chirp library must be specified and included with the job.
 The Chirp JAR (\Code{Chirp.jar})
-is found in the \File{lib} directory of the Condor installation.
+is found in the \File{lib} directory of the HTCondor installation.
 Copy it into your working directory in order to
 compile the program after modification to use Chirp I/O.
 

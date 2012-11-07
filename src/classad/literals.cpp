@@ -431,7 +431,7 @@ findOffset(time_t epochsecs)
 Literal* Literal::
 MakeLiteral( const Value& val, Value::NumberFactor f ) 
 {
-	if(val.GetType()==Value::CLASSAD_VALUE && val.GetType()==Value::LIST_VALUE){
+	if(val.GetType()==Value::CLASSAD_VALUE || val.GetType()==Value::LIST_VALUE || val.GetType()==Value::SLIST_VALUE){
 		CondorErrno = ERR_BAD_VALUE;
 		CondorErrMsg = "list and classad values are not literals";
 		return( NULL );

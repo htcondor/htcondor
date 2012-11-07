@@ -59,26 +59,3 @@ void build_job_env(Env &job_env, const ClassAd & ad, bool using_file_transfer)
 	}
 }
 
-#if 0
-static int Insert(ClassAd & ad, const char * lhs, const char * rhs) {
-	MyString s;
-	s.sprintf("%s=\"%s\"",lhs,rhs);
-	return ad.Insert(s.Value());
-}
-
-int main() {
-	ClassAd ad;
-	Insert(ad,ATTR_JOB_IWD,"/path/to/iwd");
-	Insert(ad,ATTR_X509_USER_PROXY,"/path/bob");
-	StringMap sm = build_job_env(ad);
-
-	sm.startIterations();
-	MyString key,value;
-	while(sm.iterate(key,value)) {
-		printf("%s=%s\n",key.Value(), value.Value());
-	}
-
-	
-	return 0;
-}
-#endif

@@ -1,5 +1,5 @@
 \begin{ManPage}{\label{man-condor-submit}\Condor{submit}}{1}
-{Queue jobs for execution under Condor}
+{Queue jobs for execution under HTCondor}
 \Synopsis \SynProg{\Condor{submit}}
 \oOpt{-verbose}
 \oOpt{-unused}
@@ -14,19 +14,20 @@
 \Lbr\Opt{-append} \Arg{command} \Opt{\Dots}\Rbr 
 \oOpt{-spool}
 \oOptArg{-dump}{filename}
+\oOpt{-interactive}
 \oArg{submit description file}
 
-\index{Condor commands!condor\_submit}
+\index{HTCondor commands!condor\_submit}
 \index{condor\_submit command}
 
 \Description
 
 \Condor{submit} is the program for submitting jobs for execution
-under Condor.
+under HTCondor.
 \Condor{submit} requires a submit description file which contains commands
 to direct the queuing of jobs.
 One submit description file may contain
-specifications for the queuing of many Condor jobs at once.
+specifications for the queuing of many HTCondor jobs at once.
 A single invocation of \Condor{submit} may cause one or
 more clusters.
 A cluster is a set of jobs
@@ -37,8 +38,8 @@ multiple jobs as a single cluster because:
 \begin{itemize}
 \item Only one copy of the checkpoint file is needed to 
 represent all jobs in a cluster until they begin execution.
-\item There is much less overhead involved for Condor to start the next
-job in a cluster than for Condor to start a new cluster.  This can make
+\item There is much less overhead involved for HTCondor to start the next
+job in a cluster than for HTCondor to start a new cluster.  This can make
 a big difference when submitting lots of short jobs.
 \end{itemize}
 
@@ -51,7 +52,7 @@ See specifics for this attribute
 in the Appendix on page~\pageref{sec:Job-ClassAd-Attributes}.
 
 Note that submission of jobs from a Windows machine requires
-a stashed password to allow Condor to impersonate the user submitting
+a stashed password to allow HTCondor to impersonate the user submitting
 the job.
 To stash a password, use the \Condor{store\_cred} command.
 See the manual page at
@@ -63,10 +64,6 @@ Placing the backslash at the end of a line causes the current line's command
 to be continued with the next line of the file.
 Submit description files may contain comments.
 A comment is any line beginning with a pound character (\verb@#@). 
-
-Here is a list of
-the commands that may be placed in the submit description file
-to direct the submission of a job.
 
 \begin{Options}
 
@@ -135,9 +132,13 @@ files for completed jobs need to be retrieved with \Condor{transfer\_data}.}
 \OptItem{\OptArg{-dump}{filename}}{Sends all ClassAds to the specified
   file, instead of to the \Condor{schedd}.}
 
-\OptItem{\Arg{submit description file}}{The pathname to the submit description
-file. If this optional argument is missing or equal to ``-'', then the commands
-are taken from standard input.}
+\OptItem{\Opt{-interactive}}{Use of this option is not yet written.
+  }
+
+\OptItem{\Arg{submit description file}}{The path and file name of 
+the submit description file. 
+If this optional argument is missing or is the dash character (Expr{-}),
+then the commands are taken from standard input.}
 
 \end{Options}
 
@@ -155,7 +156,7 @@ non-zero value upon failure.
 
 \begin{itemize} 
 \item{Submit Description File Example 1:} This example queues three jobs for
-execution by Condor. The first will be given command line arguments of
+execution by HTCondor. The first will be given command line arguments of
 \Arg{15} and \Arg{2000}, and it will write its standard output
 to \File{foo.out1}.
 The second will be given command line arguments of 
@@ -201,7 +202,7 @@ appear in \File{foo.error}.
 example queues 150
 runs of program \Prog{foo} which must have been compiled and linked for
 an Intel x86 processor running RHEL 3.
-Condor will not attempt
+HTCondor will not attempt
 to run the processes on machines which have less than 32 Megabytes of
 physical memory, and it will run them on machines which have at least 64
 Megabytes, if such machines are available.
@@ -211,7 +212,7 @@ of this program (process 0).
 Stdin, stdout, and stderr will refer to
 \File{in.1}, \File{out.1}, and \File{err.1} for process 1, and so forth.
 A log file containing entries
-about where and when Condor runs, takes checkpoints, and migrates processes
+about where and when HTCondor runs, takes checkpoints, and migrates processes
 in this cluster will be written into file \File{foo.log}.
 
 \footnotesize
@@ -299,7 +300,7 @@ in the submit description file causes this to happen.
 \GenRem
 \begin{itemize}
 
-\item For security reasons, Condor will refuse to run any jobs submitted
+\item For security reasons, HTCondor will refuse to run any jobs submitted
 by user root (UID = 0) or by a user whose default group is group wheel
 (GID = 0). Jobs submitted by user root or a user with a default group of
 wheel will appear to sit forever in the queue in an idle state. 
@@ -310,11 +311,11 @@ less than 4096 characters in length; otherwise, \Condor{submit} gives a
 warning message but the jobs will not execute properly. 
 
 \item Somewhat understandably, behavior gets bizarre if the user makes
-the mistake of requesting multiple Condor jobs to write to the
+the mistake of requesting multiple HTCondor jobs to write to the
 same file, and/or if the user alters any files that need to be accessed
-by a Condor job which is still in the queue.
+by an HTCondor job which is still in the queue.
 For example, the compressing of data or
-output files before a Condor job has completed is a common mistake.
+output files before an HTCondor job has completed is a common mistake.
 
 \item To disable checkpointing for Standard Universe jobs, include the
 line:
@@ -325,7 +326,7 @@ in the submit description file before the queue command(s).
 \end{itemize}
 
 \SeeAlso
-Condor User Manual
+HTCondor User Manual
 
 \end{ManPage}
 

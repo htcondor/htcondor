@@ -1184,9 +1184,9 @@ int generate_sinful(char* buf, int len, const char* ip, int port) {
 MyString generate_sinful(const char* ip, int port) {
 	MyString buf;
 	if (strchr(ip, ':')) {
-		buf.sprintf("<[%s]:%d>", ip, port);
+		buf.formatstr("<[%s]:%d>", ip, port);
 	} else {
-		buf.sprintf("<%s:%d>", ip, port);
+		buf.formatstr("<%s:%d>", ip, port);
 	}
 	return buf;
 }

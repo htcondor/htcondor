@@ -93,8 +93,7 @@ main(int argc, char* argv[])
   myDistro->Init( argc, argv );
 
   config();
-  Termlog = 1;
-  dprintf_config("TOOL", get_param_functions());
+  dprintf_set_tool_debug("TOOL", 0);
 
   for(i=1; i<argc; i++) {
 

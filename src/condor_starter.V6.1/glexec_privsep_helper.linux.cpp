@@ -119,7 +119,7 @@ GLExecPrivSepHelper::run_script(ArgList& args,MyString &error_desc)
 		        args.GetArg(0),
 		        ret,
 		        str.Value());
-		error_desc.sprintf_cat("%s exited with status %d and the following output: %s",
+		error_desc.formatstr_cat("%s exited with status %d and the following output: %s",
 				       condor_basename(args.GetArg(0)),
 				       ret,
 				       str.Value());
@@ -156,11 +156,11 @@ GLExecPrivSepHelper::initialize(const char* proxy, const char* sandbox)
 	if (libexec == NULL) {
 		EXCEPT("GLExec: LIBEXEC not defined");
 	}
-	m_setup_script.sprintf("%s/condor_glexec_setup", libexec);
-	m_run_script.sprintf("%s/condor_glexec_run", libexec);
-	m_wrapper_script.sprintf("%s/condor_glexec_job_wrapper", libexec);
-	m_proxy_update_script.sprintf("%s/condor_glexec_update_proxy", libexec);
-	m_cleanup_script.sprintf("%s/condor_glexec_cleanup", libexec);
+	m_setup_script.formatstr("%s/condor_glexec_setup", libexec);
+	m_run_script.formatstr("%s/condor_glexec_run", libexec);
+	m_wrapper_script.formatstr("%s/condor_glexec_job_wrapper", libexec);
+	m_proxy_update_script.formatstr("%s/condor_glexec_update_proxy", libexec);
+	m_cleanup_script.formatstr("%s/condor_glexec_cleanup", libexec);
 	free(libexec);
 
 	m_sandbox_owned_by_user = false;
@@ -324,7 +324,7 @@ GLExecPrivSepHelper::create_process(const char* path,
 	FamilyInfo fi;
 	FamilyInfo* fi_ptr = (family_info != NULL) ? family_info : &fi;
 	MyString proxy_path;
-	proxy_path.sprintf("%s.condor/%s", m_sandbox, m_proxy);
+	proxy_path.formatstr("%s.condor/%s", m_sandbox, m_proxy);
 	fi_ptr->glexec_proxy = proxy_path.Value();
 
 		// At the very least, we need to pass the condor daemon's
@@ -441,7 +441,7 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 							"GLEXEC: glexec call exited with status %d\n",
 							status);
 					if( error_msg ) {
-						error_msg->sprintf_cat(
+						error_msg->formatstr_cat(
 							" glexec call exited with status %d",
 							status);
 					}
@@ -452,7 +452,7 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 							"GLEXEC: glexec call exited via signal %d\n",
 							sig);
 					if( error_msg ) {
-						error_msg->sprintf_cat(
+						error_msg->formatstr_cat(
 							" glexec call exited via signal %d",
 							sig);
 					}
@@ -603,7 +603,7 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 		err[bytes] = '\0';
 		dprintf(D_ALWAYS, "GLEXEC: error from wrapper: %s\n", err);
 		if( error_msg ) {
-			error_msg->sprintf_cat("glexec_job_wrapper error: %s", err);
+			error_msg->formatstr_cat("glexec_job_wrapper error: %s", err);
 		}
 			// prevent higher-level code from thinking this was a syscall error
 		errno = 0;

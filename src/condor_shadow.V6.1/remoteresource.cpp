@@ -718,7 +718,7 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 			MyString filetrans_claimid;
 				// prepend something to the claim id so that the session id
 				// is different for file transfer than for the claim session
-			filetrans_claimid.sprintf("filetrans.%s",claim_id);
+			filetrans_claimid.formatstr("filetrans.%s",claim_id);
 			m_filetrans_session = ClaimIdParser(filetrans_claimid.Value());
 
 				// Get rid of session parameters set by startd.
@@ -1077,7 +1077,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	classad::ExprTree * tree = update_ad->Lookup(ATTR_MEMORY_USAGE);
 	if( tree ) {
 		tree = tree->Copy();
-		jobAd->Insert(ATTR_MEMORY_USAGE, tree);
+		jobAd->Insert(ATTR_MEMORY_USAGE, tree, false);
 	}
 
 	if( update_ad->LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, float_value) ) { 
@@ -1356,12 +1356,9 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 	event.sent_bytes = recv_bytes - last_recv_bytes;
 	last_recv_bytes = recv_bytes;
 
-	for(std::vector<WriteUserLog*>::iterator p = shadow->uLog.begin();
-			p != shadow->uLog.end(); ++p) {
-		if( !(*p)->writeEventNoFsync(&event, jobAd) ) {
-			dprintf( D_ALWAYS, "Unable to log ULOG_CHECKPOINTED event\n" );
-			rval = false;
-		}
+	if( !shadow->uLog.writeEventNoFsync(&event, jobAd) ) {
+		dprintf( D_ALWAYS, "Unable to log ULOG_CHECKPOINTED event\n" );
+		rval = false;
 	}
 
 	// Now, update our in-memory copy of the job ClassAd
@@ -1435,14 +1432,10 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 bool
 RemoteResource::writeULogEvent( ULogEvent* event )
 {
-	bool ret = true;
-	for(std::vector<WriteUserLog*>::iterator p = shadow->uLog.begin();
-			p != shadow->uLog.end(); ++p) {
-		if( !(*p)->writeEvent(event, jobAd) ) {
-			ret = false;
-		}
+	if( !shadow->uLog.writeEvent(event, jobAd) ) {
+		return false;
 	}
-	return ret;
+	return true;
 }
 
 
@@ -1920,7 +1913,7 @@ RemoteResource::requestReconnect( void )
 	char* value = NULL;
 	jobAd->LookupString(ATTR_TRANSFER_KEY,&value);
 	if (value) {
-		msg.sprintf("%s=\"%s\"",ATTR_TRANSFER_KEY,value);
+		msg.formatstr("%s=\"%s\"",ATTR_TRANSFER_KEY,value);
 		req.Insert(msg.Value());
 		free(value);
 		value = NULL;
@@ -1930,7 +1923,7 @@ RemoteResource::requestReconnect( void )
 	}
 	jobAd->LookupString(ATTR_TRANSFER_SOCKET,&value);
 	if (value) {
-		msg.sprintf("%s=\"%s\"",ATTR_TRANSFER_SOCKET,value);
+		msg.formatstr("%s=\"%s\"",ATTR_TRANSFER_SOCKET,value);
 		req.Insert(msg.Value());
 		free(value);
 		value = NULL;
@@ -2168,7 +2161,7 @@ RemoteResource::checkX509Proxy( void )
 	// this allows us to use the attributes in job policy (periodic_hold, etc.)
 
 	// first, do the DN and expiration time, which all proxies have
-	char* proxy_subject = x509_proxy_subject_name(proxy_path.Value());
+	char* proxy_subject = x509_proxy_identity_name(proxy_path.Value());
 	time_t proxy_expiration_time = x509_proxy_expiration_time(proxy_path.Value());
 	jobAd->Assign(ATTR_X509_USER_PROXY_SUBJECT, proxy_subject);
 	jobAd->Assign(ATTR_X509_USER_PROXY_EXPIRATION, proxy_expiration_time);

@@ -189,7 +189,7 @@ SubmissionObject::GetJobSummaries ( Variant::List &jobs,
 			NULL
 			};
 
-	constraint.sprintf("%s == \"%s\"",
+	constraint.formatstr("%s == \"%s\"",
 					   ATTR_JOB_SUBMISSION, this->m_name.c_str());
 
 	dprintf(D_FULLDEBUG,"GetJobSummaries for submission: %s\n",constraint.Value());

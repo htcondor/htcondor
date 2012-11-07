@@ -4,6 +4,12 @@
 #include "condor_netaddr.h"
 #include "ipv6_hostname.h"
 
+typedef union sockaddr_storage_ptr_u {
+        const struct sockaddr     *raw;
+        struct sockaddr_in  *in;
+        struct sockaddr_in6 *in6;
+} sockaddr_storage_ptr;
+
 condor_sockaddr condor_sockaddr::null;
 
 void condor_sockaddr::clear()
@@ -46,11 +52,13 @@ condor_sockaddr::condor_sockaddr(const in6_addr& in6, unsigned short port)
 
 condor_sockaddr::condor_sockaddr(const sockaddr* sa)
 {
+	sockaddr_storage_ptr sock_address;
+	sock_address.raw = sa;
 	if (sa->sa_family == AF_INET) {
-		sockaddr_in* sin = (sockaddr_in*)sa;
+		sockaddr_in* sin = sock_address.in;
 		init(sin->sin_addr.s_addr, sin->sin_port);
 	} else if (sa->sa_family == AF_INET6) {
-		sockaddr_in6* sin6 = (sockaddr_in6*)sa;
+		sockaddr_in6* sin6 = sock_address.in6;
 		v6 = *sin6;
 	} else {
 		clear();
@@ -160,10 +168,10 @@ MyString condor_sockaddr::to_sinful() const
 		return ret;
 
 	if (is_ipv4()) {
-		ret.sprintf("<%s:%d>", tmp, ntohs(v4.sin_port));
+		ret.formatstr("<%s:%d>", tmp, ntohs(v4.sin_port));
 	}
 	else if (is_ipv6()) {
-		ret.sprintf("<[%s]:%d>", tmp, ntohs(v6.sin6_port));
+		ret.formatstr("<[%s]:%d>", tmp, ntohs(v6.sin6_port));
 	}
 
 	return ret;
@@ -281,9 +289,9 @@ bool condor_sockaddr::from_sinful(const char* sinful)
 	return true;
 }
 
-sockaddr* condor_sockaddr::to_sockaddr() const
+const sockaddr* condor_sockaddr::to_sockaddr() const
 {
-	return (sockaddr*)&storage;
+	return (const sockaddr*)&storage;
 }
 
 socklen_t condor_sockaddr::get_socklen() const
@@ -355,7 +363,7 @@ const char* condor_sockaddr::to_ip_string(char* buf, int len) const
 			//
 			// These reliance should be corrected at some point.
 			// hopefully, at IPv6-Phase3
-		uint32_t* addr = (uint32_t*)&v6.sin6_addr;
+		const uint32_t* addr = (const uint32_t*)&v6.sin6_addr;
 		if (addr[0] == 0 && addr[1] == 0 && addr[2] == ntohl(0xffff)) {
 			return inet_ntop(AF_INET, (const void*)&addr[3], buf, len);
 		}

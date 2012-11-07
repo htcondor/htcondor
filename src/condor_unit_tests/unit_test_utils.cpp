@@ -57,18 +57,18 @@ bool vsprintfHelper(MyString* str, const char* format, ...) {
 	bool toReturn;
 
 	va_start(args, format);
-	toReturn = str->vsprintf(format, args);
+	toReturn = str->vformatstr(format, args);
 	va_end(args);
 
 	return toReturn;
 }
 
-bool vsprintf_catHelper(MyString* str, const char* format, ...) {
+bool vformatstr_catHelper(MyString* str, const char* format, ...) {
 	va_list args;
 	bool toReturn;
 
 	va_start(args, format);
-	toReturn = str->vsprintf_cat(format, args);
+	toReturn = str->vformatstr_cat(format, args);
 	va_end(args);
 
 	return toReturn;
@@ -232,11 +232,11 @@ void get_tm(ISO8601Type type, const struct tm &time, MyString* str)
 {
 	if(str) {
 		if (type == ISO8601_DateOnly) {
-			str->sprintf("%d-%d-%d", time.tm_year, time.tm_mon, time.tm_mday);
+			str->formatstr("%d-%d-%d", time.tm_year, time.tm_mon, time.tm_mday);
 		} else if (type == ISO8601_TimeOnly) {
-			str->sprintf("%d:%d:%d", time.tm_hour, time.tm_min, time.tm_sec);
+			str->formatstr("%d:%d:%d", time.tm_hour, time.tm_min, time.tm_sec);
 		} else {
-			str->sprintf("%d-%d-%dT%d:%d:%d",
+			str->formatstr("%d-%d-%dT%d:%d:%d",
 						 time.tm_year, time.tm_mon, time.tm_mday,
 						 time.tm_hour, time.tm_min, time.tm_sec);
 		}
@@ -289,7 +289,7 @@ bool user_policy_ad_checker(ClassAd* ad,
 void insert_into_ad(ClassAd* ad, const char* attribute, const char* value) {
 	MyString buf;
 
-	buf.sprintf("%s = %s", attribute, value);
+	buf.formatstr("%s = %s", attribute, value);
 	ad->Insert(buf.Value());
 }
 

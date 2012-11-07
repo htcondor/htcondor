@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
 		char* my_name = my_username();	
 		char* my_domain = my_domainname();
 
-		my_full_name.sprintf("%s@%s", my_name, my_domain);
+		my_full_name.formatstr("%s@%s", my_name, my_domain);
 		if ( my_name) { free(my_name); }
 		if ( my_domain) { free(my_domain); }
 		my_name = my_domain = NULL;
@@ -133,7 +133,7 @@ int main(int argc, char *argv[]) {
 				goto cleanup;
 			}
 		}
-		my_full_name.sprintf(POOL_PASSWORD_USERNAME "@%s", domain);
+		my_full_name.formatstr(POOL_PASSWORD_USERNAME "@%s", domain);
 		free(domain);
 	} else {
 			// username was specified on the command line
@@ -284,7 +284,6 @@ bool
 parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 
 	int i;
-	param_functions *p_funcs = NULL;
 	opts->mode = 0;
 	opts->pw[0] = opts->pw[MAX_PASSWORD_LENGTH] = '\0';
 	opts->username[0] = opts->username[MAX_PASSWORD_LENGTH] = '\0';
@@ -452,9 +451,7 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 					break;
 #endif
 				case 'd':
-					Termlog = 1;
-					p_funcs = get_param_functions();
-					dprintf_config ("TOOL", p_funcs);
+					dprintf_set_tool_debug("TOOL", 0);
 					break;
 				case 'h':
 					opts->help = true;

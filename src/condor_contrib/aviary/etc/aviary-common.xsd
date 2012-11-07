@@ -105,8 +105,12 @@
 		<xs:sequence>
 			<xs:element name="name" type="xs:string" minOccurs="0"/>
 			<xs:element name="owner" type="xs:string" minOccurs="0"/>
-			<xs:element name="qdate" type="xs:int" minOccurs="0"/>
+			<xs:element name="qdate" type="xs:int" minOccurs="0"/>			
 		</xs:sequence>
+        <!-- where this submission was created in the condor space -->
+        <!-- TODO: tactical hiding for backward compat, revisit -->
+        <xs:attribute name="pool" type="xs:string"/>
+        <xs:attribute name="scheduler" type="xs:string"/>
 	</xs:complexType>
 	<xs:complexType name="JobID">
 		<xs:sequence>
@@ -206,7 +210,7 @@
 	<xs:complexType name="ResourceLocation">
 		<xs:sequence>
 			<xs:element name="id" type="tns:ResourceID"/>
-			<xs:element name="location" type="xs:anyURI" minOccurs="0" maxOccurs="unbounded"/>			
+			<xs:element name="location" type="xs:anyURI" minOccurs="0" maxOccurs="unbounded"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:simpleType name="ScanMode">

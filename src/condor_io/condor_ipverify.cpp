@@ -379,7 +379,7 @@ IpVerify::UserHashToString(UserHash_t *user_hash, MyString &result)
 		if( users ) {
 			users->rewind();
 			while( (user=users->next()) ) {
-				result.sprintf_cat(" %s/%s",
+				result.formatstr_cat(" %s/%s",
 								   user,
 								   host.Value());
 			}
@@ -394,7 +394,7 @@ IpVerify::AuthEntryToString(const in6_addr & host, const char * user, perm_mask_
 		// to print IPv4 address neatly.
 	char buf[INET6_ADDRSTRLEN];
 	memset((void*)buf, 0, sizeof(buf));
-	uint32_t* addr = (uint32_t*)&host;
+	const uint32_t* addr = (const uint32_t*)&host;
 		// checks if IPv4-mapped-IPv6 address
 	
 	const char* ret = NULL;
@@ -413,7 +413,7 @@ IpVerify::AuthEntryToString(const in6_addr & host, const char * user, perm_mask_
 
 	MyString mask_str;
 	PermMaskToString( mask, mask_str );
-	result.sprintf("%s/%s: %s", /* NOTE: this does not need a '\n', all the call sites add one. */
+	result.formatstr("%s/%s: %s", /* NOTE: this does not need a '\n', all the call sites add one. */
 			user ? user : "(null)",
 			buf,
 			mask_str.Value() );
@@ -495,26 +495,18 @@ ExpandHostAddresses(char const *host,StringList *list)
 void
 IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
 {
-    NetStringList * whichHostList = NULL;
-    UserHash_t * whichUserHash = NULL;
-    StringList * slist;
-
     assert(pentry);
 
-    if (whichHostList == NULL) {
-        whichHostList = new NetStringList();
-    }
-    if (whichUserHash == NULL) {
-        whichUserHash = new UserHash_t(1024, compute_host_hash);
-    }
+	NetStringList * whichHostList = new NetStringList();
+    UserHash_t * whichUserHash = new UserHash_t(1024, compute_host_hash);
 
-    slist = new StringList(list);
+    StringList slist(list);
 	char *entry, * host, * user;
-	slist->rewind();
-	while ( (entry=slist->next()) ) {
+	slist.rewind();
+	while ( (entry=slist.next()) ) {
 		if (!*entry) {
 			// empty string?
-			slist->deleteCurrent();
+			slist.deleteCurrent();
 			continue;
 		}
 		split_entry(entry, &host, &user);
@@ -555,7 +547,6 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
         pentry->deny_hosts = whichHostList;
         pentry->deny_users = whichUserHash;
     }
-    delete slist;
 }
 
 void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
@@ -720,11 +711,11 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 		MyString id;
 		int count;
 		if ( who != TotallyWild ) {
-			id_with_ip.sprintf("%s/%s", who, ip_str);
+			id_with_ip.formatstr("%s/%s", who, ip_str);
 			id = who;
 			if ( hpt->lookup(id, count) != -1 )	{
 				if( allow_reason ) {
-					allow_reason->sprintf(
+					allow_reason->formatstr(
 						"%s authorization has been made automatic for %s",
 						PermString(perm), id.Value() );
 				}
@@ -732,7 +723,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 			}
 			if ( hpt->lookup(id_with_ip, count) != -1 ) {
 				if( allow_reason ) {
-					allow_reason->sprintf(
+					allow_reason->formatstr(
 						"%s authorization has been made automatic for %s",
 						PermString(perm), id_with_ip.Value() );
 				}
@@ -742,7 +733,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 		id = ip_str;
 		if ( hpt->lookup(id, count) != -1 ) {
 			if( allow_reason ) {
-				allow_reason->sprintf(
+				allow_reason->formatstr(
 					"%s authorization has been made automatic for %s",
 					PermString(perm), id.Value() );
 			}
@@ -754,7 +745,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 			// allow if no HOSTALLOW_* or HOSTDENY_* restrictions 
 			// specified.
 		if( allow_reason ) {
-			allow_reason->sprintf(
+			allow_reason->formatstr(
 				"%s authorization policy allows access by anyone",
 				PermString(perm));
 		}
@@ -764,7 +755,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 	if ( PermTypeArray[perm]->behavior == USERVERIFY_DENY ) {
 			// deny
 		if( deny_reason ) {
-			deny_reason->sprintf(
+			deny_reason->formatstr(
 				"%s authorization policy denies all access",
 				PermString(perm));
 		}
@@ -773,12 +764,12 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 		
 	if( LookupCachedVerifyResult(perm,sin6_addr,who,mask) ) {
 		if( deny_reason && (mask&deny_mask(perm)) ) {
-			deny_reason->sprintf(
+			deny_reason->formatstr(
 				"cached result for %s; see first case for the full reason",
 				PermString(perm));
 		}
 		else if( allow_reason && (mask&allow_mask(perm)) ) {
-			allow_reason->sprintf(
+			allow_reason->formatstr(
 				"cached result for %s; see first case for the full reason",
 				PermString(perm));
 		}
@@ -801,7 +792,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 		if ( !(mask&deny_resolved) && lookup_user_ip_deny(perm,who,ipstr)) {
 			mask |= deny_mask(perm);
 			if( deny_reason ) {
-				deny_reason->sprintf(
+				deny_reason->formatstr(
 					"%s authorization policy denies IP address %s",
 					PermString(perm), addr.to_ip_string().Value() );
 			}
@@ -810,7 +801,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 		if ( !(mask&allow_resolved) && lookup_user_ip_allow(perm,who,ipstr)) {
 			mask |= allow_mask(perm);
 			if( allow_reason ) {
-				allow_reason->sprintf(
+				allow_reason->formatstr(
 					"%s authorization policy allows IP address %s",
 					PermString(perm), addr.to_ip_string().Value() );
 			}
@@ -830,7 +821,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 			if ( !(mask&deny_resolved) && lookup_user_host_deny(perm,who,thehost) ) {
 				mask |= deny_mask(perm);
 				if( deny_reason ) {
-					deny_reason->sprintf(
+					deny_reason->formatstr(
 						"%s authorization policy denies hostname %s",
 						PermString(perm), thehost );
 				}
@@ -839,7 +830,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 			if ( !(mask&allow_resolved) && lookup_user_host_allow(perm,who,thehost) ) {
 				mask |= allow_mask(perm);
 				if( allow_reason ) {
-					allow_reason->sprintf(
+					allow_reason->formatstr(
 						"%s authorization policy allows hostname %s",
 						PermString(perm), thehost );
 				}
@@ -859,7 +850,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 			if ( PermTypeArray[perm]->behavior == USERVERIFY_ONLY_DENIES ) {
 				dprintf(D_SECURITY,"IPVERIFY: %s at %s not matched to deny list, so allowing.\n",who, addr.to_sinful().Value());
 				if( allow_reason ) {
-					allow_reason->sprintf(
+					allow_reason->formatstr(
 						"%s authorization policy does not deny, so allowing",
 						PermString(perm));
 				}
@@ -877,7 +868,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 						dprintf(D_SECURITY,"IPVERIFY: allowing %s at %s for %s because %s is allowed\n",who, addr.to_sinful().Value(),PermString(perm),PermString(*parent_perms));
 						if( allow_reason ) {
 							MyString tmp = *allow_reason;
-							allow_reason->sprintf(
+							allow_reason->formatstr(
 								"%s is implied by %s; %s",
 								PermString(perm),
 								PermString(*parent_perms),
@@ -898,7 +889,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 							// In case the reason we didn't match is
 							// because of a typo or a DNS problem, record
 							// all the hostnames we searched for.
-						deny_reason->sprintf(
+						deny_reason->formatstr(
 							"%s authorization policy contains no matching "
 							"ALLOW entry for this request"
 							"; identifiers used for this host: %s, hostname size = %lu, "
@@ -918,7 +909,7 @@ IpVerify::Verify( DCpermission perm, const condor_sockaddr& addr, const char * u
 			// of typo or DNS problem), record all the hostnames we
 			// searched for.
 			if( allow_reason && !peer_description.IsEmpty() ) {
-				allow_reason->sprintf_cat(
+				allow_reason->formatstr_cat(
 					"; identifiers used for this remote host: %s",
 					peer_description.Value());
 			}

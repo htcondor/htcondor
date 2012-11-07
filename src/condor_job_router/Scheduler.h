@@ -27,8 +27,8 @@
 
 class Scheduler: virtual public JobLogMirror {
 public:
-	Scheduler(NewClassAdJobLogConsumer *_consumer):
-		JobLogMirror(_consumer),
+	Scheduler(NewClassAdJobLogConsumer *_consumer,char const *_alt_spool_param=NULL):
+		JobLogMirror(_consumer,_alt_spool_param),
 		m_consumer(_consumer)
 	{ }
 

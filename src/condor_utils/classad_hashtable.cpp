@@ -22,14 +22,9 @@
 
 #include "classad_hashtable.h"
 
-void HashKey::sprint(char *s)
-{
-	strcpy(s, key);
-}
-
 void HashKey::sprint(MyString &s)
 {
-	s.sprintf("%s", key);
+	s.formatstr("%s", key);
 }
 
 HashKey& HashKey::operator= (const HashKey& from)

@@ -28,7 +28,7 @@
 #include "CondorError.h"
 
 namespace plumage {
-namespace etl {
+namespace history {
     
 struct HistoryEntry {
     std::string file;
@@ -60,8 +60,6 @@ private:
     ODSHistoryEntryType m_entries;
 	StatStructType *m_stat;
 	FILE *m_file;
-    
-    ODSMongodbOps* m_writer;
 
 };
 

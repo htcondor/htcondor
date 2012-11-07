@@ -8,11 +8,11 @@
 \ToolDebugOption
 \ToolWhere
 
-\index{Condor commands!condor\_vacate}
+\index{HTCondor commands!condor\_vacate}
 \index{condor\_vacate command}
 
 \Description
-\Condor{vacate} causes Condor to checkpoint any running jobs
+\Condor{vacate} causes HTCondor to checkpoint any running jobs
 on a set of machines
 and force the jobs to vacate the machine.
 The job(s) remains in
@@ -21,17 +21,17 @@ the submitting machine's job queue.
 Given the (default) \Opt{-graceful} option,
 a job running under the standard universe
 will first produce a checkpoint and then the job will be killed.
-Condor will then restart the job somewhere else, using the checkpoint to
+HTCondor will then restart the job somewhere else, using the checkpoint to
 continue from where it left off.
 A job running under the vanilla universe
-is killed, and Condor
+is killed, and HTCondor
 restarts the job from the beginning somewhere else.
 \Condor{vacate} has no effect on a machine with 
-no Condor job currently running. 
+no HTCondor job currently running. 
 
 There is generally no need for the user or administrator to explicitly run
 \Condor{vacate}.
-Condor takes care of jobs in this way
+HTCondor takes care of jobs in this way
 automatically following the policies given in configuration files.   
 
 \begin{Options}

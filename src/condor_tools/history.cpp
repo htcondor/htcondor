@@ -33,9 +33,10 @@
 #include "iso_dates.h"
 #include "basename.h" // for condor_dirname
 #include "match_prefix.h"
-#include "condor_xml_classads.h"
 #include "subsystem_info.h"
 #include "historyFileFinder.h"
+#include "condor_id.h"
+#include "userlog_to_classads.h"
 
 #include "history_utils.h"
 #include "backward_file_reader.h"
@@ -48,18 +49,22 @@
 
 #define NUM_PARAMETERS 3
 
+static int getConsoleWindowSize(int * pHeight = NULL);
 void Usage(char* name, int iExitCode=1);
 
 void Usage(char* name, int iExitCode) 
 {
 	printf ("Usage: %s [options]\n\twhere [options] are\n"
 		"\t\t-help\t\t\tThis screen\n"
-		"\t\t-f <file>\t\tRead history data from specified file\n"
+		"\t\t-file <file>\t\tRead history data from specified file\n"
+		"\t\t-userlog <file>\tRead job data specified userlog file\n"
 		"\t\t-backwards\t\tList jobs in reverse chronological order\n"
 		"\t\t-forwards\t\tList jobs in chronological order\n"
 		"\t\t-match <number>\t\tLimit the number of jobs displayed\n"
-		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"		
-		"\t\t-l\t\t\tVerbose output (entire classads)\n"
+		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
+		"\t\t-autoformat <attr1> [<attr2 ...]\tPrint attr using automating formatting\n"
+		"\t\t-long\t\t\tVerbose output (entire classads)\n"
+		"\t\t-wide\t\t\tDon't truncate fields to fit into screen width\n"
 		"\t\t-constraint <expr>\tAdd constraint on classads\n"
 #ifdef HAVE_EXT_POSTGRESQL
 		"\t\t-name <schedd-name>\tRead history data from Quill database\n"
@@ -80,9 +85,12 @@ static bool checkDBconfig();
 static	QueryResult result;
 #endif /* HAVE_EXT_POSTGRESQL */
 
-static void readHistoryFromFiles(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
+static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr, bool read_backwards);
+static void printJobAds(ClassAdList & jobs);
+
+static int parse_autoformat_arg(int argc, char* argv[], int ixArg, const char *popts, AttrListPrintMask & print_mask, List<const char> & print_head);
 
 
 //------------------------------------------------------------------------
@@ -92,9 +100,12 @@ static	CondorQuery	quillQuery(QUILL_AD);
 static	ClassAdList	quillList;
 static  bool longformat=false;
 static  bool use_xml=false;
+static  bool wide_format=false;
+static  int  wide_format_width = 0;
 static  bool customFormat=false;
 static  bool backwards=true;
 static  AttrListPrintMask mask;
+static  List<const char> headings; // The list of headings for the mask entries
 static int cluster=-1, proc=-1;
 static int specifiedMatch = 0, matchCount = 0;
 
@@ -119,10 +130,11 @@ main(int argc, char* argv[])
   char *completedsince = NULL;
   char *owner=NULL;
   bool readfromfile = false;
+  bool fileisuserlog = false;
 
   char* JobHistoryFileName=NULL;
   char *dbIpAddr=NULL, *dbName=NULL,*queryPassword=NULL;
-  param_functions *p_funcs = NULL;
+  const char * pcolon=NULL;
 
 
   std::string constraint;
@@ -159,6 +171,16 @@ main(int argc, char* argv[])
     else if (is_dash_arg_prefix(argv[i],"nobackwards",3) ||
 			 is_dash_arg_prefix(argv[i],"forwards",4)) {
         backwards=FALSE;
+    }
+
+    else if (is_dash_arg_prefix(argv[i],"wide",1)) {
+        wide_format=TRUE;
+        //wide_format_width = 100;
+    }
+	// backward compat hack to get to old, not AttrPrintMask formatting code
+	else if (is_dash_arg_prefix(argv[i],"wid:80",1)) {
+        wide_format=FALSE;
+        wide_format_width = 80; 
     }
 
     else if (is_dash_arg_prefix(argv[i],"match",1)) {
@@ -211,11 +233,19 @@ main(int argc, char* argv[])
     }
 #endif /* HAVE_EXT_POSTGRESQL */
     else if (is_dash_arg_prefix(argv[i],"file",1)) {
+		PRAGMA_REMIND("tj: change -file to 2 char match after 7.9 series ends.")
 		if (i+1==argc || JobHistoryFileName) break;
 		i++;
 		JobHistoryFileName=argv[i];
 		readfromfile = true;
     }
+	else if (is_dash_arg_prefix(argv[i],"userlog",1)) {
+		if (i+1==argc || JobHistoryFileName) break;
+		i++;
+		JobHistoryFileName=argv[i];
+		readfromfile = true;
+		fileisuserlog = true;
+	}
     else if (is_dash_arg_prefix(argv[i],"help",1)) {
 		Usage(argv[0],0);
     }
@@ -232,9 +262,24 @@ main(int argc, char* argv[])
 		customFormat = true;
 		i += 2;
     }
+	else if (*(argv[i]) == '-' && 
+				(is_arg_colon_prefix(argv[i]+1,"af", &pcolon, 2) ||
+				 is_arg_colon_prefix(argv[i]+1,"autoformat", &pcolon, 5))) {
+		// make sure we have at least one argument to autoformat
+		if (argc <= i+1 || *(argv[i+1]) == '-') {
+			fprintf (stderr, "Error: Argument %s requires at last one attribute parameter\n", argv[i]);
+			fprintf(stderr, "\t\te.g. condor_history %s ClusterId\n", argv[i]);
+			exit(1);
+		}
+		if (pcolon) ++pcolon; // if there are options, skip over the colon to the options.
+		int ixNext = parse_autoformat_arg(argc, argv, i+1, pcolon, mask, headings);
+		if (ixNext > i)
+			i = ixNext-1;
+		customFormat = true;
+	}
     else if (is_dash_arg_prefix(argv[i],"constraint",1)) {
 		if (i+1==argc || constraint!="") break;
-		sprintf(constraint,"(%s)",argv[i+1]);
+		formatstr(constraint,"(%s)",argv[i+1]);
 		i++;
 		//readfromfile = true;
     }
@@ -263,7 +308,7 @@ main(int argc, char* argv[])
 			fprintf(stderr, "Error: Cannot provide both -constraint and <cluster>.<proc>\n");
 			break;
 		}
-		sprintf (constraint, "((%s == %d) && (%s == %d))", 
+		formatstr (constraint, "((%s == %d) && (%s == %d))", 
 				 ATTR_CLUSTER_ID, cluster,ATTR_PROC_ID, proc);
 		parameters[0] = &cluster;
 		parameters[1] = &proc;
@@ -277,7 +322,7 @@ main(int argc, char* argv[])
 			fprintf(stderr, "Error: Cannot provide both -constraint and <cluster>\n");
 			break;
 		}
-		sprintf (constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster);
+		formatstr (constraint, "(%s == %d)", ATTR_CLUSTER_ID, cluster);
 		parameters[0] = &cluster;
 #ifdef HAVE_EXT_POSTGRESQL
 		queryhor.setQuery(HISTORY_CLUSTER_HOR, parameters);
@@ -286,9 +331,7 @@ main(int argc, char* argv[])
     }
     else if (is_dash_arg_prefix(argv[i],"debug",1)) {
           // dprintf to console
-          Termlog = 1;
-		  p_funcs = get_param_functions();
-          dprintf_config ("TOOL", p_funcs);
+          dprintf_set_tool_debug("TOOL", 0);
     }
     else {
 		if (constraint!="") {
@@ -297,7 +340,7 @@ main(int argc, char* argv[])
 		}
 		owner = (char *) malloc(512 * sizeof(char));
 		sscanf(argv[i], "%s", owner);	
-		sprintf(constraint, "(%s == \"%s\")", ATTR_OWNER, owner);
+		formatstr(constraint, "(%s == \"%s\")", ATTR_OWNER, owner);
 		parameters[0] = owner;
 #ifdef HAVE_EXT_POSTGRESQL
 		queryhor.setQuery(HISTORY_OWNER_HOR, parameters);
@@ -428,7 +471,7 @@ main(int argc, char* argv[])
   }
   
   if(readfromfile == true) {
-      readHistoryFromFiles(JobHistoryFileName, constraint.c_str(), constraintExpr);
+      readHistoryFromFiles(fileisuserlog, JobHistoryFileName, constraint.c_str(), constraintExpr);
   }
   
   
@@ -442,6 +485,257 @@ main(int argc, char* argv[])
   return 0;
 }
 
+static bool diagnostic = false;
+
+static int parse_autoformat_arg(
+	int /*argc*/, 
+	char* argv[], 
+	int ixArg, 
+	const char *popts, 
+	AttrListPrintMask & print_mask,
+	List<const char> & print_head)
+{
+	bool flabel = false;
+	bool fCapV  = false;
+	bool fheadings = false;
+	const char * pcolpre = " ";
+	const char * pcolsux = NULL;
+	if (popts) {
+		while (*popts) {
+			switch (*popts)
+			{
+				case ',': pcolsux = ","; break;
+				case 'n': pcolsux = "\n"; break;
+				case 't': pcolpre = "\t"; break;
+				case 'l': flabel = true; break;
+				case 'V': fCapV = true; break;
+				case 'h': fheadings = true; break;
+			}
+			++popts;
+		}
+	}
+	print_mask.SetAutoSep(NULL, pcolpre, pcolsux, "\n");
+
+	while (argv[ixArg] && *(argv[ixArg]) != '-') {
+
+		const char * parg = argv[ixArg];
+		const char * pattr = parg;
+		void * cust_fmt = NULL;
+		FormatKind cust_kind = PRINTF_FMT;
+
+		// If the attribute/expression begins with # treat it as a magic
+		// identifier for one of the derived fields that we normally display.
+		if (*parg == '#') {
+			/*
+			++parg;
+			if (MATCH == strcasecmp(parg, "SLOT") || MATCH == strcasecmp(parg, "SlotID")) {
+				cust_fmt = (void*)format_slot_id;
+				cust_kind = INT_CUSTOM_FMT;
+				pattr = ATTR_SLOT_ID;
+				App.projection.AppendArg(pattr);
+				App.projection.AppendArg(ATTR_SLOT_DYNAMIC);
+				App.projection.AppendArg(ATTR_NAME);
+			} else if (MATCH == strcasecmp(parg, "PID")) {
+				cust_fmt = (void*)format_jobid_pid;
+				cust_kind = STR_CUSTOM_FMT;
+				pattr = ATTR_JOB_ID;
+				App.projection.AppendArg(pattr);
+			} else if (MATCH == strcasecmp(parg, "PROGRAM")) {
+				cust_fmt = (void*)format_jobid_program;
+				cust_kind = STR_CUSTOM_FMT;
+				pattr = ATTR_JOB_ID;
+				App.projection.AppendArg(pattr);
+			} else if (MATCH == strcasecmp(parg, "RUNTIME")) {
+				cust_fmt = (void*)format_int_runtime;
+				cust_kind = INT_CUSTOM_FMT;
+				pattr = ATTR_TOTAL_JOB_RUN_TIME;
+				App.projection.AppendArg(pattr);
+			} else {
+				parg = argv[ixArg];
+			}
+			*/
+		}
+
+		/*
+		if ( ! cust_fmt) {
+			ClassAd ad;
+			StringList attributes;
+			if(!ad.GetExprReferences(parg, attributes, attributes)) {
+				fprintf( stderr, "Error:  Parse error of: %s\n", parg);
+				exit(1);
+			}
+
+			attributes.rewind();
+			while (const char *str = attributes.next()) {
+				App.projection.AppendArg(str);
+			}
+		}
+		*/
+
+		MyString lbl = "";
+		int wid = 0;
+		int opts = FormatOptionNoTruncate;
+		if (fheadings || print_head.Length() > 0) {
+			const char * hd = fheadings ? parg : "(expr)";
+			wid = 0 - (int)strlen(hd);
+			opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
+			print_head.Append(hd);
+		}
+		else if (flabel) { lbl.formatstr("%s = ", parg); wid = 0; opts = 0; }
+
+		lbl += fCapV ? "%V" : "%v";
+		if (diagnostic) {
+			printf ("Arg %d --- register format [%s] width=%d, opt=0x%x for %x[%s]\n",
+				ixArg, lbl.Value(), wid, opts, (int)(long long)cust_fmt, pattr);
+		}
+		if (cust_fmt) {
+			switch (cust_kind) {
+				case INT_CUSTOM_FMT:
+					print_mask.registerFormat(NULL, wid, opts, (IntCustomFmt)cust_fmt, pattr);
+					break;
+				case FLT_CUSTOM_FMT:
+					print_mask.registerFormat(NULL, wid, opts, (FloatCustomFmt)cust_fmt, pattr);
+					break;
+				case STR_CUSTOM_FMT:
+					print_mask.registerFormat(NULL, wid, opts, (StringCustomFmt)cust_fmt, pattr);
+					break;
+				default:
+					print_mask.registerFormat(lbl.Value(), wid, opts, pattr);
+					break;
+			}
+		} else {
+			print_mask.registerFormat(lbl.Value(), wid, opts, pattr);
+		}
+		++ixArg;
+	}
+	return ixArg;
+}
+
+#ifdef WIN32
+static int getConsoleWindowSize(int * pHeight /*= NULL*/) {
+	CONSOLE_SCREEN_BUFFER_INFO ws;
+	if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ws)) {
+		if (pHeight)
+			*pHeight = (int)(ws.srWindow.Bottom - ws.srWindow.Top)+1;
+		return (int)ws.dwSize.X;
+	}
+	return 80;
+}
+#else
+#include <sys/ioctl.h>
+static int getConsoleWindowSize(int * pHeight /*= NULL*/) {
+    struct winsize ws;
+	if (0 == ioctl(0, TIOCGWINSZ, &ws)) {
+		//printf ("lines %d\n", ws.ws_row);
+		//printf ("columns %d\n", ws.ws_col);
+		if (pHeight)
+			*pHeight = (int)ws.ws_row;
+		return (int) ws.ws_col;
+	}
+	return 80;
+}
+#endif
+
+static const char *
+format_hist_runtime (int /*unused_utime*/, AttrList * ad, Formatter & /*fmt*/)
+{
+	double utime;
+	if(!ad->EvalFloat(ATTR_JOB_REMOTE_WALL_CLOCK,NULL,utime)) {
+		if(!ad->EvalFloat(ATTR_JOB_REMOTE_USER_CPU,NULL,utime)) {
+			utime = 0;
+		}
+	}
+	return format_time((time_t)utime);
+}
+
+static const char *
+format_int_date(int date, AttrList * /*ad*/, Formatter & /*fmt*/)
+{
+	return format_date(date);
+}
+
+static const char *
+format_int_job_status(int status, AttrList * /*ad*/, Formatter & /*fmt*/)
+{
+	const char * ret = " ";
+	switch( status ) 
+	{
+	case IDLE:      ret = "I"; break;
+	case RUNNING:   ret = "R"; break;
+	case COMPLETED: ret = "C"; break;
+	case REMOVED:   ret = "X"; break;
+	case TRANSFERRING_OUTPUT: ret = ">"; break;
+	}
+	return ret;
+}
+
+static const char *
+format_job_id(int cluster, AttrList * ad, Formatter & /*fmt*/)
+{
+	static MyString ret;
+	ret = "";
+	int proc;
+	if( ! ad->EvalInteger(ATTR_PROC_ID,NULL,proc)) proc = 0;
+	ret.formatstr("%4d.%-3d", cluster, proc);
+	return ret.Value();
+}
+
+static const char *
+format_job_cmd_and_args(char * cmd, AttrList * ad, Formatter & /*fmt*/)
+{
+	static MyString ret;
+	ret = cmd;
+
+	char * args;
+	if (ad->EvalString (ATTR_JOB_ARGUMENTS1, NULL, &args) || 
+		ad->EvalString (ATTR_JOB_ARGUMENTS2, NULL, &args)) {
+		ret += " ";
+		ret += args;
+		free(args);
+	}
+	return ret.Value();
+}
+
+static void AddPrintColumn(const char * heading, int width, int opts, const char * expr)
+{
+	headings.Append(heading);
+
+	int wid = width ? width : strlen(heading);
+	mask.registerFormat("%v", wid, opts, expr);
+}
+
+static void AddPrintColumn(const char * heading, int width, int opts, const char * attr, StringCustomFmt fmt)
+{
+	headings.Append(heading);
+
+	int wid = width ? width : strlen(heading);
+	mask.registerFormat(NULL, wid, opts, fmt, attr);
+}
+
+static void AddPrintColumn(const char * heading, int width, int opts, const char * attr, IntCustomFmt fmt)
+{
+	headings.Append(heading);
+
+	int wid = width ? width : strlen(heading);
+	mask.registerFormat(NULL, wid, opts, fmt, attr);
+}
+
+// setup display mask for default output
+static void init_default_custom_format()
+{
+	mask.SetAutoSep(NULL, " ", NULL, "\n");
+
+	int opts = wide_format ? (FormatOptionNoTruncate | FormatOptionAutoWidth) : 0;
+	AddPrintColumn(" ID",        -7, FormatOptionNoTruncate, ATTR_CLUSTER_ID, format_job_id);
+	AddPrintColumn("OWNER",     -14, FormatOptionAutoWidth | opts, ATTR_OWNER);
+	AddPrintColumn("SUBMITTED",  11,    0, ATTR_Q_DATE, format_int_date);
+	AddPrintColumn("RUN_TIME",   12,    0, ATTR_CLUSTER_ID, format_hist_runtime);
+	AddPrintColumn("ST",         -2,    0, ATTR_JOB_STATUS, format_int_job_status);
+	AddPrintColumn("COMPLETED",  11,    0, ATTR_COMPLETION_DATE, format_int_date);
+	AddPrintColumn("CMD",       -15, FormatOptionLeftAlign | FormatOptionNoTruncate, ATTR_JOB_CMD, format_job_cmd_and_args);
+
+	customFormat = TRUE;
+}
 
 //------------------------------------------------------------------------
 
@@ -569,16 +863,42 @@ static char * getDBConnStr(char *&quillName,
 
 // Read the history from the specified history file, or from all the history files.
 // There are multiple history files because we do rotation. 
-static void readHistoryFromFiles(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
+static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
 {
-    // Print header
-    if ((!longformat) && (!customFormat)) {
-        short_header();
-    }
+	// Print header
+	if ( ! longformat) {
+		if ( ! customFormat) {
+			// hack to get backward-compatible formatting
+			if ( ! wide_format && 80 == wide_format_width) 
+				short_header();
+			else {
+				init_default_custom_format();
+				if ( ! wide_format || 0 != wide_format_width) {
+					int console_width = wide_format_width; 
+					if (console_width <= 0) console_width = getConsoleWindowSize()-1; // -1 because we get double spacing if we use the full width.
+					if (console_width < 0) console_width = 1024;
+					mask.SetOverallWidth(console_width);
+				}
+			}
+		}
+		if (customFormat && headings.Length() > 0) {
+			mask.display_Headings(stdout, headings);
+		}
+	}
 
     if (JobHistoryFileName) {
-        // If the user specified the name of the file to read, we read that file only.
-        readHistoryFromFileEx(JobHistoryFileName, constraint, constraintExpr, backwards);
+        if (fileisuserlog) {
+            ClassAdList jobs;
+            if ( ! userlog_to_classads(JobHistoryFileName, jobs, NULL, 0, constraint)) {
+                fprintf(stderr, "Error: Can't open userlog %s\n", JobHistoryFileName);
+                exit(1);
+            }
+            printJobAds(jobs);
+            jobs.Clear();
+        } else {
+            // If the user specified the name of the file to read, we read that file only.
+            readHistoryFromFileEx(JobHistoryFileName, constraint, constraintExpr, backwards);
+        }
     } else {
         // The user didn't specify the name of the file to read, so we read
         // the history file, and any backups (rotated versions). 
@@ -784,10 +1104,9 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 
 
 	if(longformat && use_xml) {
-		ClassAdXMLUnparser unparser;
-		MyString out;
-		unparser.AddXMLFileHeader(out);
-		printf("%s\n", out.Value());
+		std::string out;
+		AddClassAdXMLFileHeader(out);
+		printf("%s\n", out.c_str());
 	}
 
     while(!EndFlag) {
@@ -868,10 +1187,9 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
         }
     }
 	if(longformat && use_xml) {
-		ClassAdXMLUnparser unparser;
-		MyString out;
-		unparser.AddXMLFileFooter(out);
-		printf("%s\n", out.Value());
+		std::string out;
+		AddClassAdXMLFileFooter(out);
+		printf("%s\n", out.c_str());
 	}
     fclose(LogFile);
     return;
@@ -894,6 +1212,26 @@ static bool starts_with(const char * p1, const char * p2, const char ** ppEnd = 
 	if (ppEnd)
 		*ppEnd = p1e;
 	return true;
+}
+
+// print a single job ad
+//
+static void printJob(ClassAd & ad)
+{
+	if (longformat) {
+		if (use_xml) {
+			ad.fPrintAsXML(stdout);
+		} else {
+			ad.fPrint(stdout);
+		}
+		printf("\n");
+	} else {
+		if (customFormat) {
+			mask.display(stdout, &ad);
+		} else {
+			displayJobShort(&ad);
+		}
+	}
 }
 
 // convert list of expressions into a classad
@@ -919,21 +1257,30 @@ static void printJobIfConstraint(std::vector<std::string> & exprs, const char* c
 	}
 
 	if (!constraint || constraint[0]=='\0' || EvalBool(&ad, constraintExpr)) {
-		if (longformat) {
-			if (use_xml) {
-				ad.fPrintAsXML(stdout);
-			} else {
-				ad.fPrint(stdout);
-			}
-			printf("\n");
-		} else {
-			if (customFormat) {
-				mask.display(stdout, &ad);
-			} else {
-				displayJobShort(&ad);
-			}
-		}
+		printJob(ad);
 		matchCount++; // if control reached here, match has occured
+	}
+}
+
+static void printJobAds(ClassAdList & jobs)
+{
+	if(longformat && use_xml) {
+		std::string out;
+		AddClassAdXMLFileHeader(out);
+		printf("%s\n", out.c_str());
+	}
+
+	jobs.Open();
+	ClassAd	*job;
+	while (( job = jobs.Next())) {
+		printJob(*job);
+	}
+	jobs.Close();
+
+	if(longformat && use_xml) {
+		std::string out;
+		AddClassAdXMLFileFooter(out);
+		printf("%s\n", out.c_str());
 	}
 }
 
@@ -961,10 +1308,9 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 	}
 
 	if(longformat && use_xml) {
-		ClassAdXMLUnparser unparser;
-		MyString out;
-		unparser.AddXMLFileHeader(out);
-		printf("%s\n", out.Value());
+		std::string out;
+		AddClassAdXMLFileHeader(out);
+		printf("%s\n", out.c_str());
 	}
 
 	std::string line;        // holds the current line from the log file.
@@ -1026,10 +1372,9 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 	}
 
 	if(longformat && use_xml) {
-		ClassAdXMLUnparser unparser;
-		MyString out;
-		unparser.AddXMLFileFooter(out);
-		printf("%s\n", out.Value());
+		std::string out;
+		AddClassAdXMLFileFooter(out);
+		printf("%s\n", out.c_str());
 	}
 	reader.Close();
 }

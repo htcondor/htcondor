@@ -127,11 +127,11 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 	MyString socket_dir;
 
 	SharedPortEndpoint::paramDaemonSocketDir(pipe_name);
-	pipe_name.sprintf_cat("%c%s",DIR_DELIM_CHAR,shared_port_id);
+	pipe_name.formatstr_cat("%c%s",DIR_DELIM_CHAR,shared_port_id);
 
 	MyString requested_by_buf;
 	if( !requested_by ) {
-		requested_by_buf.sprintf(
+		requested_by_buf.formatstr(
 			" as requested by %s", sock_to_pass->peer_description());
 		requested_by = requested_by_buf.Value();
 	}
@@ -246,11 +246,11 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 	MyString socket_dir;
 
 	SharedPortEndpoint::paramDaemonSocketDir(sock_name);
-	sock_name.sprintf_cat("%c%s",DIR_DELIM_CHAR,shared_port_id);
+	sock_name.formatstr_cat("%c%s",DIR_DELIM_CHAR,shared_port_id);
 
 	MyString requested_by_buf;
 	if( !requested_by ) {
-		requested_by_buf.sprintf(
+		requested_by_buf.formatstr(
 			" as requested by %s", sock_to_pass->peer_description());
 		requested_by = requested_by_buf.Value();
 	}

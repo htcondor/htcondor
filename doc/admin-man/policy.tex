@@ -15,15 +15,15 @@ through the \Condor{startd} daemon,
 implement a desired policy for when remote jobs should start, be
 suspended, (possibly) resumed, vacate (with a checkpoint) or be killed
 (no checkpoint).
-This policy is the heart of Condor's balancing act
+This policy is the heart of HTCondor's balancing act
 between the needs and wishes of resource owners (machine owners) and
-resource users (people submitting their jobs to Condor).
+resource users (people submitting their jobs to HTCondor).
 Please read
 this section carefully if you plan to change any of the settings
 described here, as a wrong setting can have a severe impact on
 either the owners of machines in your pool (they may
 ask to be removed from the pool entirely) or the users of your pool
-(they may stop using Condor).
+(they may stop using HTCondor).
 
 Before the details, there are a few things to note:
 \begin{itemize}
@@ -46,8 +46,8 @@ an SMP machine.
 \end{itemize}
 
 To define a policy, set expressions in
-the configuration file (see section~\ref{sec:Configuring-Condor} on
-Configuring Condor for an introduction to Condor's
+the configuration file (see section~\ref{sec:Configuring-HTCondor} on
+Configuring HTCondor for an introduction to HTCondor's
 configuration files).
 The expressions are evaluated in the context of the machine's ClassAd
 and a job ClassAd.
@@ -76,9 +76,9 @@ Startd ClassAd Attributes}
 
 \index{condor\_startd daemon@\Condor{startd} daemon}
 \index{daemon!condor\_startd@\Condor{startd}}
-\index{Condor daemon!condor\_startd@\Condor{startd}}
+\index{HTCondor daemon!condor\_startd@\Condor{startd}}
 The \Condor{startd} daemon represents the machine on which it is running to
-the Condor pool.  
+the HTCondor pool.  
 The daemon publishes characteristics about the
 machine in the machine's ClassAd to aid matchmaking with resource requests.
 The values of these attributes may be listed by using the command:
@@ -139,7 +139,7 @@ START =?= FALSE
 See a detailed discussion of the \MacroNI{IS\_OWNER} expression in
 section~\ref{sec:Owner-State}.  However, the machine locally
 evaluates the \MacroNI{IS\_OWNER} expression to determine if it is
-capable of running jobs for Condor.  Any job ClassAd attributes
+capable of running jobs for HTCondor.  Any job ClassAd attributes
 appearing in the \MacroNI{START} expression, and hence in the
 \MacroNI{IS\_OWNER} expression are undefined in this context, and may
 lead to unexpected behavior.  Whenever the \MacroNI{START} expression
@@ -150,7 +150,7 @@ only machine ClassAd attributes.
 \Note If you have machines with lots of real memory and swap space such
 that the only scarce resource is CPU time, consider
 defining \Macro{JOB\_RENICE\_INCREMENT} 
-so that Condor starts jobs on the machine with low priority.
+so that HTCondor starts jobs on the machine with low priority.
 Then, further configure to set up the machines with:
 \begin{verbatim}
         START = True
@@ -158,12 +158,12 @@ Then, further configure to set up the machines with:
         PREEMPT = False
         KILL = False
 \end{verbatim}
-In this way, Condor jobs always run and can never be kicked off
+In this way, HTCondor jobs always run and can never be kicked off
 from activity on the machine. 
 However, because they would run with ``nice priority'', interactive 
 response on the machines will not suffer.
-You probably would not notice Condor was running the jobs, 
-assuming you had enough free memory for the Condor jobs that there
+You probably would not notice HTCondor was running the jobs, 
+assuming you had enough free memory for the HTCondor jobs that there
 was little swapping.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -211,7 +211,7 @@ The following  is the default boolean expression for this
 policy.
 A \Attr{JobUniverse} value of 1 denotes the standard universe.
 This expression  may be
-overridden in the Condor configuration files.
+overridden in the HTCondor configuration files.
 
 \footnotesize
 \begin{verbatim}
@@ -261,7 +261,7 @@ These machines are owned by the 4 users
 coltrane, tyner, garrison, and jones,
 respectively.  
 
-Assume that there is a large Condor pool in the department,
+Assume that there is a large HTCondor pool in the department,
 and this small research group has spent a lot of money on really fast machines 
 for the group.
 As part of the larger pool, 
@@ -311,7 +311,7 @@ Suppose Elvin Jones submits a job.
 His job would match the \Expr{bass} machine,
 assuming \MacroNI{START} evaluated to \Expr{True} for him at that time.
 The \MacroNI{RANK} would numerically evaluate to 1.
-Therefore, the Elvin Jones job could preempt the Condor job currently running.
+Therefore, the Elvin Jones job could preempt the HTCondor job currently running.
 Further assume that later Jimmy Garrison submits a job.
 The \MacroNI{RANK} evaluates to 10 on machine \Expr{bass}, 
 since the boolean that matches gets multiplied by 10.
@@ -342,7 +342,7 @@ prefers John Coltrane's jobs over those with the largest
 This \MacroNI{RANK} does not work if a job is submitted with an image
 size of more $10^{12}$ Kbytes.
 However, with that size, this \MacroNI{RANK} expression
-preferring that job would not be Condor's
+preferring that job would not be HTCondor's
 only problem! 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -351,8 +351,8 @@ only problem!
 
 \index{state!of a machine}
 \index{machine state}
-A machine is assigned a \Term{state} by Condor.
-The state depends on whether or not the machine is available to run Condor
+A machine is assigned a \Term{state} by HTCondor.
+The state depends on whether or not the machine is available to run HTCondor
 jobs, and if so, what point in the negotiations has been reached.
 The possible states are
 
@@ -361,12 +361,12 @@ The possible states are
 \index{machine state!Owner}
 \index{owner state}
 \item[Owner] The machine is being used by the machine owner, and/or
-  is not available to run Condor jobs.
+  is not available to run HTCondor jobs.
   When the machine first starts up, it begins in this state.
   
 \index{machine state!Unclaimed}
 \index{unclaimed state}
-\item[Unclaimed] The machine is available to run Condor jobs, but it is
+\item[Unclaimed] The machine is available to run HTCondor jobs, but it is
   not currently doing so.
   
 \index{machine state!Matched}
@@ -394,7 +394,7 @@ The possible states are
 \index{backfill state}
 \item[Backfill] The machine is running a backfill computation while
   waiting for either the machine owner to come back or to be matched
-  with a Condor job.
+  with an HTCondor job.
   This state is only entered if the machine is specifically configured
   to enable backfill jobs.
 
@@ -435,8 +435,8 @@ The cause of each transition is described below.
 
 \item[A] The machine switches from Owner to Unclaimed whenever the
   \MacroNI{START} expression no longer locally evaluates to FALSE.
-  This indicates that the machine is potentially available to run a
-  Condor job.
+  This indicates that the machine is potentially available to run an
+  HTCondor job.
 
 \item[N] The machine switches from the Owner to the Drained state
   whenever draining of the machine is initiated,
@@ -451,14 +451,14 @@ The cause of each transition is described below.
 
 \item[B] The machine switches from Unclaimed back to Owner whenever the
   \MacroNI{START} expression locally evaluates to FALSE.
-  This indicates that the machine is unavailable to run a Condor job
+  This indicates that the machine is unavailable to run an HTCondor job
   and is in use by the resource owner.
 
 \item[C] The transition from Unclaimed to Matched happens whenever the
-  \Condor{negotiator} matches this resource with a Condor job.
+  \Condor{negotiator} matches this resource with an HTCondor job.
 
 \item[D] The transition from Unclaimed directly to Claimed also happens
-  if the \Condor{negotiator} matches this resource with a Condor job.
+  if the \Condor{negotiator} matches this resource with an HTCondor job.
   In this case the \Condor{schedd} receives the match and initiates
   the claiming protocol with the machine before the \Condor{startd}
   receives the match notification from the \Condor{negotiator}.
@@ -557,7 +557,7 @@ The cause of each transition is described below.
  
 \item[L] The transition from Backfill to Matched occurs whenever a
   resource running a backfill computation is matched with a
-  \Condor{schedd} that wants to run a Condor job.
+  \Condor{schedd} that wants to run an HTCondor job.
 
 \item[M] The transition from Backfill directly to Claimed is similar
   to the transition from Unclaimed directly to Claimed.
@@ -652,8 +652,8 @@ The following list describes all the possible state/activity pairs.
 \begin{description}
 \index{machine activity!Idle}
 \item[Idle] This is the only activity for Owner state.  As far as
-  Condor is concerned the machine is Idle, since it is not doing
-  anything for Condor.
+  HTCondor is concerned the machine is Idle, since it is not doing
+  anything for HTCondor.
 \end{description}
 
 \index{machine activity!Unclaimed}
@@ -661,7 +661,7 @@ The following list describes all the possible state/activity pairs.
 \begin{description}
   \item[Idle] This is the normal activity of Unclaimed machines.
     The machine is still Idle in that the machine owner is willing to
-    let Condor jobs run, but Condor is not using the
+    let HTCondor jobs run, but HTCondor is not using the
     machine for anything.
   
   \index{machine activity!Benchmarking}
@@ -674,7 +674,7 @@ The following list describes all the possible state/activity pairs.
 
 \item Matched
 \begin{description}
-  \item[Idle] When Matched, the machine is still Idle to Condor.
+  \item[Idle] When Matched, the machine is still Idle to HTCondor.
 \end{description}
 
 \item Claimed
@@ -688,14 +688,14 @@ The following list describes all the possible state/activity pairs.
 \index{machine activity!Busy}
 \item[Busy] Once a \Condor{starter} has been started and the claim is
   active, the machine moves to the Busy activity to signify that it is
-  doing something as far as Condor is concerned.
+  doing something as far as HTCondor is concerned.
   
 \index{machine activity!Suspended}
-\item[Suspended] If the job is suspended by Condor, the machine goes
+\item[Suspended] If the job is suspended by HTCondor, the machine goes
   into the Suspended activity.
   The match between the schedd and machine has not been broken (the
   claim is still valid), but the job is not making any progress and
-  Condor is no longer generating a load on the machine.
+  HTCondor is no longer generating a load on the machine.
 
 \index{machine activity!Retiring}
 \item[Retiring] When an active claim is about to be preempted for any
@@ -707,7 +707,7 @@ entered.
 \end{description}
 
 \item Preempting
-  The preempting state is used for evicting a Condor job from a given
+  The preempting state is used for evicting an HTCondor job from a given
   machine.
   When the machine enters the Preempting state, it checks the
   \MacroNI{WANT\_VACATE} expression to determine its activity.
@@ -736,7 +736,7 @@ entered.
 
 \item[Killing] The machine was running a backfill computation, but it
   is now killing the job to either return resources to the machine
-  owner, or to make room for a regular Condor job.
+  owner, or to make room for a regular HTCondor job.
 
 \end{description}
 
@@ -756,7 +756,7 @@ entered.
 Figure~\ref{fig:machine-activities} on
 page~\pageref{fig:machine-activities} gives the overall view of all
 machine states and activities and shows the possible transitions
-from one to another within the Condor system.  
+from one to another within the HTCondor system.  
 Each transition is labeled with a number on the diagram, and
 transition numbers referred to in this manual will be \Bold{bold}.  
 
@@ -771,7 +771,7 @@ transition numbers referred to in this manual will be \Bold{bold}.
 
 Various expressions are used to determine when and if many of these
 state and activity transitions occur.  Other transitions are initiated
-by parts of the Condor protocol (such as when the \Condor{negotiator}
+by parts of the HTCondor protocol (such as when the \Condor{negotiator}
 matches a machine with a schedd).  The following section describes the
 conditions that lead to the various state and activity transitions.
 
@@ -787,7 +787,7 @@ State and Activity Transitions}
 This section traces through all possible state and activity
 transitions within a machine and describes the conditions under which
 each one occurs.
-Whenever a transition occurs, Condor records when the machine entered its
+Whenever a transition occurs, HTCondor records when the machine entered its
 new activity and/or new state.
 These times are often used to write expressions that determine
 when further transitions occurred.
@@ -830,17 +830,17 @@ expression is FALSE.
 The Owner state represents a resource that is in use by its
 interactive owner (for example, if the keyboard is being used).
 The Unclaimed state represents a resource that is neither in use by
-its interactive user, nor the Condor system.
-From Condor's point of view, there is little difference between the
+its interactive user, nor the HTCondor system.
+From HTCondor's point of view, there is little difference between the
 Owner and Unclaimed states.
-In both cases, the resource is not currently in use by the Condor
+In both cases, the resource is not currently in use by the HTCondor
 system.
 However, if a job matches the resource's \MacroNI{START} expression, the
 resource is available to run a job, regardless of if it is in the
 Owner or Unclaimed state.
 The only differences between the two states are how the resource shows
 up in \Condor{status} and other reporting tools, and the fact that
-Condor will not run benchmarking on a resource in the Owner state.
+HTCondor will not run benchmarking on a resource in the Owner state.
 As long as the \MacroNI{IS\_OWNER} expression is TRUE, the machine is
 in the Owner State.
 When the \MacroNI{IS\_OWNER} expression is FALSE, the machine goes into
@@ -993,7 +993,7 @@ the slot transitions to Drained/Retiring (transition \Bold{37}).
 \index{machine state!Matched}
 \index{matched state}
 
-The Matched state is not very interesting to Condor.
+The Matched state is not very interesting to HTCondor.
 Noteworthy in this state is that the machine lies about its \MacroNI{START}
 expression while in this state and says that \Expr{Requirements} are
 \Expr{False} to prevent being matched again before it has been claimed.
@@ -1076,11 +1076,11 @@ rid of or temporarily suspend a running job.  Activity on the
 machine's console, load from other jobs, or shutdown of the startd via
 an administrative command are all possible sources of interference.
 Another one is the appearance of a higher priority claim to the
-machine by a different Condor user.
+machine by a different HTCondor user.
 
 Depending on the configuration, the startd may respond quite
 differently to activity on the machine, such as keyboard activity or
-demand for the cpu from processes that are not managed by Condor.  The
+demand for the cpu from processes that are not managed by HTCondor.  The
 startd can be configured to completely ignore such activity or to
 suspend the job or even to kill it.  A standard configuration for a desktop
 machine might be to go through
@@ -1277,8 +1277,8 @@ owner came back) or the Claimed/Idle state by transition \Bold{23}
 If the machine enters the Killing activity, (because either
 \MacroNI{WANT\_VACATE} was FALSE or the \MacroNI{KILL} expression evaluated
 to TRUE), it attempts to force the \Condor{starter} to immediately
-kill the underlying Condor job.
-Once the machine has begun to hard kill the Condor job, the
+kill the underlying HTCondor job.
+Once the machine has begun to hard kill the HTCondor job, the
 \Condor{startd} starts a timer, the length of which is defined by the
 \Macro{KILLING\_TIMEOUT} \label{param:KillingTimeout} macro.
 This macro is defined in seconds and defaults to 30.
@@ -1307,12 +1307,12 @@ machine will enter the Owner state (transition \Bold{25}).
 
 The Backfill state is used whenever the machine is performing low
 priority background tasks to keep itself busy.
-For more information about backfill support in Condor, see
+For more information about backfill support in HTCondor, see
 section~\ref{sec:Backfill} on page~\pageref{sec:Backfill}.
 This state is only used if the machine has been configured to enable
 backfill computation, if a specific backfill manager has been
 installed and configured, and if the machine is otherwise idle (not
-being used interactively or for regular Condor computations).
+being used interactively or for regular HTCondor computations).
 If the machine meets all these requirements, and the
 \MacroNI{START\_BACKFILL} expression evaluates to TRUE, the machine will
 move from the Unclaimed/Idle state to Backfill/Idle (transition
@@ -1321,7 +1321,7 @@ move from the Unclaimed/Idle state to Backfill/Idle (transition
 Once a machine is in Backfill/Idle, it will immediately attempt to
 spawn whatever backfill manager it has been configured to use
 (currently, only the BOINC client is supported as a backfill manager
-in Condor).
+in HTCondor).
 Once the BOINC client is running, the machine will enter
 Backfill/Busy (transition \Bold{26}) to indicate that it is now
 performing a backfill computation.
@@ -1344,7 +1344,7 @@ client (and return to Backfill/Busy via transition \Bold{26}).
 As the BOINC client is running a backfill computation, a number of
 events can occur that will drive the machine out of the Backfill
 state.
-The machine can get matched or claimed for a Condor job, interactive
+The machine can get matched or claimed for an HTCondor job, interactive
 users can start using the machine again, the machine might be evicted
 with \Condor{vacate}, or the \Condor{startd} might be shutdown.
 All of these events cause the \Condor{startd} to kill the BOINC client
@@ -1367,7 +1367,7 @@ client exits if \Condor{vacate} was used, or if the \Condor{startd} is
 being shutdown.
 
 When a machine running backfill jobs is matched with a requester that
-wants to run a Condor job, the machine will either enter the Matched
+wants to run an HTCondor job, the machine will either enter the Matched
 state, or go directly into Claimed/Idle.
 As with the case of a machine in Unclaimed/Idle (described above), the
 \Condor{negotiator} informs both the \Condor{startd} and the
@@ -1416,7 +1416,7 @@ It serves as a quick reference.
 \begin{description}
   
 \item[\Macro{START}] When TRUE, the machine is willing to spawn
-  a remote Condor job.
+  a remote HTCondor job.
   
 \item[\Macro{RUNBENCHMARKS}] While in the Unclaimed state, the machine
   will run benchmarks whenever TRUE.
@@ -1569,9 +1569,9 @@ policies.
 \subsubsection{\label{sec:Default-Policy}Default Policy Settings}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{policy!default with Condor}
-\index{Condor!default policy}
-These settings are the default as shipped with Condor.  They have been
+\index{policy!default with HTCondor}
+\index{HTCondor!default policy}
+These settings are the default as shipped with HTCondor.  They have been
 used for many years with no problems.  The vanilla expressions are
 identical to the regular ones. (They are not listed here.  If
 not defined, the standard expressions are used for vanilla jobs
@@ -1592,17 +1592,17 @@ clearly.
 \item[\MacroNI{LastCkpt}] Amount of time since the last periodic checkpoint.
 
 \item[\MacroNI{NonCondorLoadAvg}] The difference between the system load and
-  the Condor load (the load generated by everything but Condor).
+  the HTCondor load (the load generated by everything but HTCondor).
 
 \item[\MacroNI{BackgroundLoad}] Amount of background load permitted
-  on the machine and still start a Condor job.
+  on the machine and still start an HTCondor job.
 
 \item[\MacroNI{HighLoad}] If the \MacroUNI{NonCondorLoadAvg} goes over
-  this, the CPU is considered too busy, and eviction of the Condor
+  this, the CPU is considered too busy, and eviction of the HTCondor
   job should start. 
 
 \item[\MacroNI{StartIdleTime}] Amount of time the keyboard must to be idle
-  before Condor will start a job.
+  before HTCondor will start a job.
 
 \item[\MacroNI{ContinueIdleTime}] Amount of time the keyboard must to be idle
   before resumption of a suspended job.
@@ -1672,8 +1672,8 @@ Finally, definitions of the actual expressions.
 Start a job if 
 the keyboard has been idle long enough and
 the load average is low enough OR the machine is currently
-running a Condor job.
-Note that Condor would only run one job at a time.
+running an HTCondor job.
+Note that HTCondor would only run one job at a time.
 It just may prefer to run a different job, as defined by
 the machine rank or user priorities.
 \begin{verbatim}
@@ -1831,7 +1831,7 @@ Time of Day Policy}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{policy!time of day}
-Condor can be
+HTCondor can be
 configured to only run jobs at
 certain times of the day.
 In general, we discourage configuring a system like this, since you
@@ -1872,7 +1872,7 @@ Of course, you can fine-tune these settings by changing the definition
 of \Macro{AfterHours} and \Macro{WorkHours} for your site.
 
 Assuming you are using the default policy expressions discussed above,
-there are only a few minor changes required to force Condor jobs to
+there are only a few minor changes required to force HTCondor jobs to
 stay off of your machines during work hours:
 
 \begin{verbatim}
@@ -1931,7 +1931,7 @@ STARTD_ATTRS = IsDesktop
 
 # Only consider starting jobs if:
 # 1) the load average is low enough OR the machine is currently
-#    running a Condor job
+#    running an HTCondor job
 # 2) AND the user is not active (if a desktop)
 START = ( ($(CPUIdle) || (State != "Unclaimed" && State != "Owner")) \
           && (IsDesktop =!= True || (KeyboardIdle > $(StartIdleTime))) )
@@ -1995,14 +1995,14 @@ Disabling Preemption}
 
 \index{policy!disabling preemption}
 \index{preemption!disabling}
-Preemption can result in jobs being killed by Condor.  When this
+Preemption can result in jobs being killed by HTCondor.  When this
 happens, the jobs remain in the queue and will be automatically
 rescheduled.  We highly recommend designing jobs that work well in
 this environment, rather than simply disabling preemption.
 
 Planning for preemption makes jobs more robust in the face of other
 sources of failure.  One way to live happily with preemption is to use
-Condor's standard universe, which provides the ability to produce
+HTCondor's standard universe, which provides the ability to produce
 checkpoints.
 If a job is incompatible with the requirements of standard universe,
 the job can still gracefully shutdown and restart by intercepting the soft
@@ -2010,7 +2010,7 @@ kill signal.
 
 All that being said, there may be cases where it is appropriate
 to force 
-Condor to never kill jobs within some upper time limit.
+HTCondor to never kill jobs within some upper time limit.
 This can be achieved with the following policy in the configuration of
 the execute nodes:
 
@@ -2088,7 +2088,7 @@ CLAIM_WORKLIFE = 1200
 \end{verbatim}
 \normalsize
 
-Also be aware that in all versions of Condor prior to 6.8.1, it is
+Also be aware that in all versions of HTCondor prior to 6.8.1, it is
 not advisable to set \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} to False,
 because of a bug that can lead to some machines never being
 matched to jobs.
@@ -2109,7 +2109,7 @@ other task runs,
 and then unfreeze it so that it can continue on from where it left off.
 This does not require any special handling in the job,
 unlike most strategies that take checkpoints.
-However, it does require a special configuration of Condor.
+However, it does require a special configuration of HTCondor.
 This example implements a policy that allows the job to decide
 whether it should be evicted or suspended.
 The jobs announce their choice through the use of the invented
@@ -2161,9 +2161,9 @@ and it can try to run again in the future.
 \index{ClassAd functions!eval()}
 \footnotesize
 \begin{verbatim}
-# Lie to Condor, to achieve 2 slots for each real slot
+# Lie to HTCondor, to achieve 2 slots for each real slot
 NUM_CPUS = $(DETECTED_CORES)*2
-# There is no good way to tell Condor that the two slots should be treated
+# There is no good way to tell HTCondor that the two slots should be treated
 # as though they share the same real memory, so lie about how much
 # memory we have.
 MEMORY = $(DETECTED_MEMORY)*2
@@ -2204,7 +2204,7 @@ CONTINUE = ($(SUSPEND)) != True
 \normalsize
 
 Note that in this example, the job ClassAd attribute \Attr{IsSuspendableJob}
-has no special meaning to Condor.  It is an invented name chosen
+has no special meaning to HTCondor.  It is an invented name chosen
 for this example.
 To take advantage of the policy, a job that wishes to be suspended
 must submit the job so that this attribute is defined.
@@ -2212,3 +2212,26 @@ The following line should be placed in the job's submit description file:
 \begin{verbatim}
 +IsSuspendableJob = True
 \end{verbatim}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Interactive-Job-Policy}With Interactive Jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{policy!utilizing interactive jobs}
+
+Policy may be set based on whether a job is an interactive one or not.
+Each interactive job has the job ClassAd attribute
+\begin{verbatim}
+  InteractiveJob = True
+\end{verbatim}
+and this may be used to identify interactive jobs,
+distinguishing them from all other jobs.
+
+\MoreTodo
+
+% Initial thought as to an example
+%Use the \MacroNI{RANK} expression to give preference to running an 
+%interactive job on a particular slot.
+%As an example, presume that slot 1 prefers interactive jobs.
+%\begin{verbatim}
+%RANK = ( (MY.SlotID == 1) && (TARGET.InteractiveJob =?= True) )
+%\end{verbatim}

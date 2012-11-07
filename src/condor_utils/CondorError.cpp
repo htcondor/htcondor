@@ -22,6 +22,8 @@
 #include "condor_snutils.h"
 #include "condor_debug.h"
 
+#include <sstream>
+
 CondorError::CondorError() {
 	init();
 }
@@ -114,33 +116,31 @@ void CondorError::pushf( const char* the_subsys, int the_code, const char* the_f
 	va_end(ap);
 }
 
-const char*
+std::string
 CondorError::getFullText( bool want_newline )
 {
-	PRAGMA_REMIND("Why keep this static? -matt");
-	static std::string errbuf;
+	std::stringstream err_ss;
 	bool printed_one = false;
 
-	errbuf = "";
 	CondorError* walk = _next;
 	while (walk) {
 		if( printed_one ) {
 			if( want_newline ) {
-				errbuf += '\n';
+				err_ss << '\n';
 			} else {
-				errbuf += '|';
+				err_ss << '|';
 			}
 		} else {
 			printed_one = true;
 		}
-		errbuf += walk->_subsys;
-		errbuf += ':';
-		errbuf += walk->_code;
-		errbuf += ':';
-		errbuf += walk->_message;
+		err_ss << walk->_subsys;
+		err_ss << ':';
+		err_ss << walk->_code;
+		err_ss << ':';
+		err_ss << walk->_message;
 		walk = walk->_next;
 	}
-	return errbuf.c_str();
+	return err_ss.str();
 }
 
 const char*

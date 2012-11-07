@@ -30,7 +30,6 @@ CHECK_EVENTS_HASH_INSTANCE; // For the event checking code...
 int main(int argc, char **argv)
 {
 	int		result = 0;
-	param_functions *p_funcs = NULL;
 
 	if ( argc <= 1 || (argc >= 2 && !strcmp("-usage", argv[1])) ) {
 		printf("Usage: condor_check_userlogs <log file 1> "
@@ -39,9 +38,7 @@ int main(int argc, char **argv)
 	}
 
 		// Set up dprintf.
-	Termlog = true;
-	p_funcs = get_param_functions();
-	dprintf_config("condor_check_userlogs", p_funcs);
+	dprintf_set_tool_debug("condor_check_userlogs", 0);
 	set_debug_flags(NULL, D_ALWAYS);
 
 	StringList	logFiles;
@@ -57,7 +54,7 @@ int main(int argc, char **argv)
 		CondorError errstack;
 		if ( !ru.monitorLogFile( filestring, false, errstack ) ) {
 			fprintf( stderr, "Error monitoring log file %s: %s\n", filename,
-						errstack.getFullText() );
+						errstack.getFullText().c_str() );
 			result = 1;
 		}
 	}
@@ -147,7 +144,7 @@ int main(int argc, char **argv)
 		CondorError errstack;
 		if ( !ru.unmonitorLogFile( filestring, errstack ) ) {
 			fprintf( stderr, "Error unmonitoring log file %s: %s\n", filename,
-						errstack.getFullText() );
+						errstack.getFullText().c_str() );
 			result = 1;
 		}
 	}

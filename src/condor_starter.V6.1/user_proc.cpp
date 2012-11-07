@@ -49,6 +49,7 @@ UserProc::initialize( void )
 	exit_status = -1;
 	requested_exit = false;
 	m_proc_exited = false;
+	m_dedicated_account = NULL;
 	job_universe = 0;  // we'll fill in a real value if we can...
 	int i;
 	for(i=0;i<3;i++) {
@@ -118,7 +119,7 @@ UserProc::JobReaper(int pid, int status)
 
 	dprintf( D_FULLDEBUG, "Inside UserProc::JobReaper()\n" );
 
-	filename.sprintf("%s%c%s", dir, DIR_DELIM_CHAR, JOB_WRAPPER_FAILURE_FILE);
+	filename.formatstr("%s%c%s", dir, DIR_DELIM_CHAR, JOB_WRAPPER_FAILURE_FILE);
 	if (0 == access(filename.Value(), F_OK)) {
 		// The job wrapper failed, so read the contents of the file
 		// and EXCEPT, just as is done when an executable is unable
@@ -351,7 +352,7 @@ UserProc::getStdFile( std_file_type type,
 		StreamHandler *handler = new StreamHandler;
 		if( !handler->Init(filename, stream_name, is_output) ) {
 			MyString err_msg;
-			err_msg.sprintf( "unable to establish %s stream", phrase );
+			err_msg.formatstr( "unable to establish %s stream", phrase );
 			Starter->jic->notifyStarterError( err_msg.Value(), true,
 			    is_output ? CONDOR_HOLD_CODE_UnableToOpenOutputStream :
 			                CONDOR_HOLD_CODE_UnableToOpenInputStream, 0 );
@@ -448,7 +449,7 @@ UserProc::openStdFile( std_file_type type,
 		else {
 			phrase = "standard error";
 		}
-		err_msg.sprintf( "Failed to open '%s' as %s: %s (errno %d)",
+		err_msg.formatstr( "Failed to open '%s' as %s: %s (errno %d)",
 		                 filename.Value(),
 		                 phrase,
 		                 errno_str,

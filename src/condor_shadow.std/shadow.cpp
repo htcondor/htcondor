@@ -39,7 +39,6 @@
 #include "condor_holdcodes.h"
 #include "subsystem_info.h"
 #include "ipv6_hostname.h"
-#include <vector>
 
 #include "user_job_policy.h"
 
@@ -116,7 +115,7 @@ char *strcpy();
 #endif
 
 #include "write_user_log.h"
-std::vector<WriteUserLog*> ULog;
+WriteUserLog ULog;
 
 char * My_Filesystem_Domain;
 char * My_UID_Domain;
@@ -201,7 +200,7 @@ int JobExitStatus = 0;                 /* the job's exit status */
 int MaxDiscardedRunTime = 3600;
 
 extern "C" int ExceptCleanup(int,int,const char*);
-extern int Termlog;
+static int Termlog = 0;
 
 StdUnivSock	*sock_RSC1 = NULL, *RSC_ShadowInit(int rscsock, int errsock);
 StdUnivSock	*RSC_MyShadowInit(int rscsock, int errsock);
@@ -278,7 +277,7 @@ main(int argc, char *argv[] )
 
 	if( argc > 1 ) {
 		if( strcmp("-t",argv[1]) == MATCH ) {
-			Termlog++;
+			Termlog = 1;
 			argv++;
 			argc--;
 		}
@@ -299,7 +298,10 @@ main(int argc, char *argv[] )
 	*/ 
 	set_condor_priv();
 
-	dprintf_config( get_mySubSystem()->getName(), get_param_functions() );
+	if(Termlog)
+		dprintf_set_tool_debug(get_mySubSystem()->getName(), 0);
+	else
+		dprintf_config( get_mySubSystem()->getName() );
 	DebugId = whoami;
 
 	// create a database connection object
@@ -530,7 +532,7 @@ handle_terminate_pending()
 	WroteExecuteEvent  = TRUE;
 	// Restore a bunch of global variables hacked into the jobad.
 	JobAd->LookupInteger(ATTR_WAITPID_STATUS, JobStatus);
-	JobAd->LookupString(ATTR_TERMINATION_REASON, notification);
+	JobAd->LookupString(ATTR_TERMINATION_REASON, notification, sizeof(notification));
 	JobAd->LookupInteger(ATTR_TERMINATION_EXITREASON, ExitReason);
 	JobAd->LookupFloat(ATTR_BYTES_SENT, BytesSent);
 	JobAd->LookupFloat(ATTR_BYTES_RECVD, BytesRecvd);
@@ -776,7 +778,7 @@ bool periodic_policy(void)
 	result->EvalBool(ATTR_TAKE_ACTION, result, val);
 	if (val == 1)
 	{
-		result->LookupString(ATTR_USER_POLICY_FIRING_EXPR, buf);
+		result->LookupString(ATTR_USER_POLICY_FIRING_EXPR, buf, sizeof(buf));
 
 		result->LookupInteger(ATTR_USER_POLICY_ACTION, action);
 		switch(action)
@@ -843,7 +845,7 @@ void static_policy(void)
 	result->EvalBool(ATTR_TAKE_ACTION, result, val);
 	if (val == 1)
 	{
-		result->LookupString(ATTR_USER_POLICY_FIRING_EXPR, buf);
+		result->LookupString(ATTR_USER_POLICY_FIRING_EXPR, buf, sizeof(buf));
 
 		result->LookupInteger(ATTR_USER_POLICY_ACTION, action);
 		switch(action)
@@ -1100,7 +1102,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 							ATTR_JOB_COMMITTED_TIME, CommittedTime);
 
 			// if there is a core file, update that too.
-			if (JobAd->LookupString(ATTR_JOB_CORE_FILENAME, buf)) {
+			if (JobAd->LookupString(ATTR_JOB_CORE_FILENAME, buf, sizeof(buf))) {
 				SetAttributeString(Proc->id.cluster, Proc->id.proc,
 			   		ATTR_JOB_CORE_FILENAME, buf);
 			}
@@ -1139,7 +1141,7 @@ update_job_status( struct rusage *localp, struct rusage *remotep )
 			}
 
 			// store the reason why the job is marked completed.
-			if (JobAd->LookupString(ATTR_TERMINATION_REASON, buf)) {
+			if (JobAd->LookupString(ATTR_TERMINATION_REASON, buf, sizeof(buf))) {
 				SetAttributeString(Proc->id.cluster, Proc->id.proc,
 				   			ATTR_TERMINATION_REASON, buf);
 			}

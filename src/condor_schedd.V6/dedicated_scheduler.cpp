@@ -421,10 +421,10 @@ CandidateList::markScheduled()
 {
 	Rewind();
 	while (ClassAd *c = Next()) {
-		char buf[512];
+		std::string buf;
 		match_rec *mrec = dedicated_scheduler.getMrec(c, buf);
 		if( ! mrec) {
-			EXCEPT(" no match for %s, but listed as available", buf);
+			EXCEPT(" no match for %s, but listed as available", buf.c_str());
 		}
 		mrec->scheduled = true;
 	}
@@ -862,7 +862,7 @@ DedicatedScheduler::releaseClaim( match_rec* m_rec, bool use_tcp )
 	if( IsFulldebug(D_FULLDEBUG) ) { 
 		char name_buf[256];
 		name_buf[0] = '\0';
-		m_rec->my_match_ad->LookupString( ATTR_NAME, name_buf );
+		m_rec->my_match_ad->LookupString( ATTR_NAME, name_buf, sizeof(name_buf) );
 		dprintf( D_FULLDEBUG, "DedicatedScheduler: releasing claim on %s\n", 
 				 name_buf );
 	}
@@ -1314,7 +1314,7 @@ DedicatedScheduler::sortJobs( void )
 		std::string fifoConstraint;
 		// "JobUniverse == PARALLEL_UNIVERSE && JobStatus == HELD && HoldReasonCode == HOLD_SpoolingInput
 
-		sprintf(fifoConstraint, "%s == %d && %s == %d && %s == %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_PARALLEL, 
+		formatstr(fifoConstraint, "%s == %d && %s == %d && %s == %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_PARALLEL, 
 																ATTR_JOB_STATUS, HELD, 
 																ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput);
 		ClassAd *spoolingInJob = GetJobByConstraint(fifoConstraint.c_str());
@@ -1520,7 +1520,7 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 		// Make a new list to hold our resource classads.
 	resources = new ClassAdList;
 
-    constraint.sprintf("DedicatedScheduler == \"%s\"", name());
+    constraint.formatstr("DedicatedScheduler == \"%s\"", name());
 	query.addORConstraint( constraint.Value() );
 
 		// This should fill in resources with all the classads we care
@@ -1614,7 +1614,8 @@ DedicatedScheduler::sortResources( void )
 
         // getMrec from the dec sched -- won't have matches for non dedicated jobs
         match_rec* mrec = NULL;
-        if( ! (mrec = getMrec(res, NULL)) ) {
+	std::string buf;
+        if( ! (mrec = getMrec(res, buf)) ) {
 			// We don't have a match_rec for this resource yet, so
 			// put it in our unclaimed_resources list
 			unclaimed_resources->Append( res );
@@ -1634,7 +1635,7 @@ DedicatedScheduler::sortResources( void )
 
 			// If it is active, or on its way to becoming active,
 			// mark it as busy
-		if( (mrec->status == M_ACTIVE) ){
+		if( mrec->status == M_ACTIVE ){
 			busy_resources->Append( res );
 			continue;
 		}
@@ -2608,7 +2609,7 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 		// Foreach machine we've matched
 	while( (machine = idle_candidates->Next()) ) {
 		match_rec *mrec;
-		char buf[256];
+		std::string buf;
 
 			// Get the job for this machine
 		job = idle_candidates_jobs->Next();
@@ -2621,7 +2622,7 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 		if( ! (mrec = getMrec(machine, buf)) ) {
  			EXCEPT( "no match for %s in all_matches table, yet " 
  					"allocated to dedicated job %d.0!",
- 					buf, cluster ); 
+ 					buf.c_str(), cluster ); 
 		}
 			// and mark it scheduled & allocated
 		mrec->scheduled = true;
@@ -2693,13 +2694,13 @@ DedicatedScheduler::removeAllocation( shadow_rec* srec )
 		/* it may be that the mpi shadow crashed and left around a 
 		   file named 'procgroup' in the IWD of the job.  We should 
 		   check and delete it here. */
-	char pg_file[512];
+	std::string pg_file;
 	((*alloc->jobs)[0])->LookupString( ATTR_JOB_IWD, pg_file );  
-	strcat ( pg_file, "/procgroup" );
-	if ( unlink ( pg_file ) == -1 ) {
+	pg_file += "/procgroup";
+	if ( unlink ( pg_file.c_str() ) == -1 ) {
 		if ( errno != ENOENT ) {
 			dprintf ( D_FULLDEBUG, "Couldn't remove %s. errno %d.\n", 
-					  pg_file, errno );
+					  pg_file.c_str(), errno );
 		}
 	}
 
@@ -3109,7 +3110,7 @@ DedicatedScheduler::DelMrec( char const* id )
 	}
 
 		// Now, we can delete it from the main table hashed on name.
-	rec->my_match_ad->LookupString( ATTR_NAME, name_buf );
+	rec->my_match_ad->LookupString( ATTR_NAME, name_buf, sizeof(name_buf) );
 	HashKey key2( name_buf );
 	all_matches->remove(key2);
 
@@ -3250,7 +3251,7 @@ DedicatedScheduler::makeGenericAdFromJobAd(ClassAd *job)
 		// >= the duration of the job...
 
 	MyString buf;
-	buf.sprintf( "%s = (Target.DedicatedScheduler == \"%s\") && "
+	buf.formatstr( "%s = (Target.DedicatedScheduler == \"%s\") && "
 				 "(Target.RemoteOwner =!= \"%s\") && (%s)", 
 				 ATTR_REQUIREMENTS, name(), name(), rhs );
 	req->InsertOrUpdate( buf.Value() );
@@ -3289,7 +3290,8 @@ DedicatedScheduler::preemptResources() {
 	if( pending_preemptions->Length() > 0) {
 		pending_preemptions->Rewind();
 		while( ClassAd *machine = pending_preemptions->Next()) {
-			match_rec *mrec = getMrec(machine, NULL);
+			std::string buf;
+			match_rec *mrec = getMrec(machine, buf);
 			if( mrec) {
 				if( deactivateClaim(mrec)) {
 					char *s = NULL;
@@ -3321,7 +3323,7 @@ DedicatedScheduler::printSatisfaction( int cluster, CAList* idle,
 									   CAList* busy )
 {
 	MyString msg;
-	msg.sprintf( "Satisfied job %d with ", cluster );
+	msg.formatstr( "Satisfied job %d with ", cluster );
 	bool had_one = false;
 	if( idle && idle->Length() ) {
 		msg += idle->Length();
@@ -3413,7 +3415,7 @@ DedicatedScheduler::checkSanity( void )
 		if( tmp >= unused_timeout ) {
 			char namebuf[1024];
 			namebuf[0] = '\0';
-			mrec->my_match_ad->LookupString( ATTR_NAME, namebuf );
+			mrec->my_match_ad->LookupString( ATTR_NAME, namebuf, sizeof(namebuf) );
 			dprintf( D_ALWAYS, "Resource %s has been unused for %d seconds, "
 					 "limit is %d, releasing\n", namebuf, tmp,
 					 unused_timeout );
@@ -3493,25 +3495,16 @@ DedicatedScheduler::getUnusedTime( match_rec* mrec )
 
 
 match_rec*
-DedicatedScheduler::getMrec( ClassAd* ad, char* buf )
+DedicatedScheduler::getMrec( ClassAd* ad, std::string& buf )
 {
-	char my_buf[512];
-	char* match_name;
 	match_rec* mrec;
 
-	if( buf ) {
-		match_name = buf;
-	} else {
-		match_name = my_buf;
-	}
-	match_name[0] = '\0';
-
-	if( ! ad->LookupString(ATTR_NAME, match_name) ) {
+	if( ! ad->LookupString(ATTR_NAME, buf) ) {
 		dprintf( D_ALWAYS, "ERROR in DedicatedScheduler::getMrec(): "
 				 "No %s in ClassAd!\n", ATTR_NAME );
 		return NULL;
 	}
-	HashKey key(match_name);
+	HashKey key(buf.c_str());
 	if( all_matches->lookup(key, mrec) < 0 ) {
 		return NULL;
 	}
@@ -3552,7 +3545,7 @@ DedicatedScheduler::isPossibleToSatisfy( CAList* jobs, int max_hosts )
 				candidate_resources.DeleteCurrent();
 				matchCount++;
 				name_buf[0] = '\0';
-				candidate->LookupString( ATTR_NAME, name_buf );
+				candidate->LookupString( ATTR_NAME, name_buf, sizeof(name_buf) );
 				names.append( name_buf );
 				jobs->DeleteCurrent();
 
@@ -3735,7 +3728,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 	ads.Open();
 	while ((machine = ads.Next()) ) {
 		char buf[256];
-		machine->LookupString(ATTR_NAME, buf);
+		machine->LookupString(ATTR_NAME, buf, sizeof(buf));
 		dprintf(D_ALWAYS, "DedicatedScheduler found machine %s for possibly reconnection for job (%d.%d)\n", 
 				buf, id.cluster, id.proc);
 		machines.Append(machine);
@@ -4032,7 +4025,7 @@ findAvailTime( match_rec* mrec )
 		EXCEPT( "Unknown status in match rec %p (%d)", mrec, mrec->status );
 	}
 
-	resource->LookupString( ATTR_STATE, state );
+	resource->LookupString( ATTR_STATE, state, sizeof(state) );
 	s = string_to_state( state );
 	switch( s ) {
 
@@ -4049,7 +4042,7 @@ findAvailTime( match_rec* mrec )
 
 	case claimed_state:
 			// In the claimed_state, activity matters
-		resource->LookupString( ATTR_ACTIVITY, state );
+		resource->LookupString( ATTR_ACTIVITY, state, sizeof(state) );
 		act = string_to_activity( state );
 		if( act == idle_act ) {
 				// We're available now
@@ -4184,9 +4177,9 @@ void
 displayResource( ClassAd* ad, const char* str, int debug_level )
 {
 	char arch[128], opsys[128], name[128];
-	ad->LookupString( ATTR_NAME, name );
-	ad->LookupString( ATTR_OPSYS, opsys );
-	ad->LookupString( ATTR_ARCH, arch );
+	ad->LookupString( ATTR_NAME, name, sizeof(name) );
+	ad->LookupString( ATTR_OPSYS, opsys, sizeof(opsys) );
+	ad->LookupString( ATTR_ARCH, arch, sizeof(arch) );
 	dprintf( debug_level, "%s%s\t%s\t%s\n", str, opsys, arch, name );
 }
 

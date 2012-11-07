@@ -391,14 +391,16 @@ my_popenv_impl( const char *const args[],
 			   will fail if we don't have a ruid of 0 (root), but
 			   that's harmless.  also, note that we have to stash our
 			   effective uid, then switch our euid to 0 to be able to
-			   set our real uid/gid
+			   set our real uid/gid.
+			   We wrap some of the calls in if-statements to quiet some
+			   compilers that object to us not checking the return values.
 			*/
 		euid = geteuid();
 		egid = getegid();
-		seteuid( 0 );
+		if( seteuid( 0 ) ) { }
 		setgroups( 1, &egid );
-		setgid( egid );
-		setuid( euid );
+		if( setgid( egid ) ) { }
+		if( setuid( euid ) ) _exit(ENOEXEC); // Unsafe?
 
 			/* before we exec(), clear the signal mask and reset SIGPIPE
 			   to SIG_DFL
@@ -671,14 +673,16 @@ my_spawnv( const char* cmd, const char *const argv[] )
 			   it safely.  all of these calls will fail if we don't
 			   have a ruid of 0 (root), but that's harmless.  also,
 			   note that we have to stash our effective uid, then
-			   switch our euid to 0 to be able to set our real uid/gid 
+			   switch our euid to 0 to be able to set our real uid/gid.
+			   We wrap some of the calls in if-statements to quiet some
+			   compilers that object to us not checking the return values.
 			*/
 		euid = geteuid();
 		egid = getegid();
-		seteuid( 0 );
+		if( seteuid( 0 ) ) { }
 		setgroups( 1, &egid );
-		setgid( egid );
-		setuid( euid );
+		if( setgid( egid ) ) { }
+		if( setuid( euid ) ) _exit(ENOEXEC); // Unsafe?
 
 			/* Now it's safe to exec whatever we were given */
 		execv( cmd, const_cast<char *const*>(argv) );

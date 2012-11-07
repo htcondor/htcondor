@@ -191,20 +191,20 @@ static void setup() {
 	non_existent[13] = '\0';
 	non_existent_file[25] = '\0';
 
-	cut_assert_true( tmp.sprintf("testtmp%d", getpid()) );
+	cut_assert_true( tmp.formatstr("testtmp%d", getpid()) );
 	
 	//Get deep directories
 	for(int i = 0; i < 9; i++) {
-		cut_assert_true( deep_dir.sprintf_cat("%s%c", tmp.Value(),
+		cut_assert_true( deep_dir.formatstr_cat("%s%c", tmp.Value(),
 			DIR_DELIM_CHAR) );
 	}
-	cut_assert_true( deep_dir.sprintf_cat(tmp.Value()) );
+	cut_assert_true( deep_dir.formatstr_cat(tmp.Value()) );
 	
 	for(int i = 0; i < long_dir_depth - 1; i++) {
-		cut_assert_true( deep_dir_long.sprintf_cat("%s%c", long_dir,
+		cut_assert_true( deep_dir_long.formatstr_cat("%s%c", long_dir,
 						 DIR_DELIM_CHAR) );
 	}
-	cut_assert_true( deep_dir_long.sprintf_cat("%s", long_dir) );
+	cut_assert_true( deep_dir_long.formatstr_cat("%s", long_dir) );
 	
 	//Make some directories to test
 	for(int i = 0; i < 10; i++) {
@@ -374,7 +374,7 @@ static bool test_cd2tmpdir_dot_dot_back() {
 		"directory and then back to the original directory.");
 	const char* basename = condor_basename(original_dir.Value());
 	MyString path;
-	path.sprintf("%s%c%s", dotdot, DIR_DELIM_CHAR, basename);
+	path.formatstr("%s%c%s", dotdot, DIR_DELIM_CHAR, basename);
 	emit_input_header();
 	emit_param("Directory", "%s", path.Value());
 	emit_param("Error Message", "");
@@ -447,7 +447,7 @@ static bool test_cd2tmpdir_short() {
 	emit_param("Directory", "%s", tmp.Value());
 	emit_param("Error Message", "");
 	MyString temporary_dir, current_dir, expect_dir, err_msg;
-	expect_dir.sprintf("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR,
+	expect_dir.formatstr("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR,
 		tmp.Value());
 	emit_output_expected_header();
 	emit_retval("TRUE");
@@ -478,7 +478,7 @@ static bool test_cd2tmpdir_long() {
 	emit_param("Directory", "%s", long_dir);
 	emit_param("Error Message", "");
 	MyString temporary_dir, current_dir, expect_dir, err_msg;
-	expect_dir.sprintf("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR,
+	expect_dir.formatstr("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR,
 		long_dir);
 	emit_output_expected_header();
 	emit_retval("TRUE");
@@ -509,7 +509,7 @@ static bool test_cd2tmpdir_deep_short() {
 	emit_param("Directory", "%s", deep_dir.Value());
 	emit_param("Error Message", "");
 	MyString temporary_dir, current_dir, expect_dir, err_msg;
-	expect_dir.sprintf("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR,
+	expect_dir.formatstr("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR,
 		deep_dir.Value());
 	emit_output_expected_header();
 	emit_retval("TRUE");
@@ -540,7 +540,7 @@ static bool test_cd2tmpdir_deep_long() {
 	emit_param("Directory", "%s", deep_dir_long.Value());
 	emit_param("Error Message", "");
 	MyString temporary_dir, current_dir, expect_dir, err_msg;
-	expect_dir.sprintf("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR,
+	expect_dir.formatstr("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR,
 		deep_dir_long.Value());
 	emit_output_expected_header();
 	emit_retval("TRUE");
@@ -571,7 +571,7 @@ static bool test_cd2tmpdir_multiple() {
 	emit_param("Directory", "%s", tmp.Value());
 	emit_param("Error Message", "");
 	MyString temporary_dir, current_dir, expect_dir, err_msg;
-	expect_dir.sprintf("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR,
+	expect_dir.formatstr("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR,
 		deep_dir.Value());
 	emit_output_expected_header();
 	emit_retval("TRUE");
@@ -839,11 +839,11 @@ static bool test_cd2tmpdirfile_directory() {
 	emit_test("Test that Cd2TmpDirFile() returns true and changes the current "
 		"working directory for a valid file directory.");
 	MyString temporary_dir, current_dir, expect_dir, dir, err_msg;
-	dir.sprintf("%s%c%s", tmp.Value(), DIR_DELIM_CHAR, tmp.Value());
+	dir.formatstr("%s%c%s", tmp.Value(), DIR_DELIM_CHAR, tmp.Value());
 	emit_input_header();
 	emit_param("File Directory", "%s", dir.Value());
 	emit_param("Error Message", "");
-	expect_dir.sprintf("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR,
+	expect_dir.formatstr("%s%c%s", original_dir.Value(), DIR_DELIM_CHAR,
 		tmp.Value());
 	emit_output_expected_header();
 	emit_retval("TRUE");

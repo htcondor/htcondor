@@ -154,12 +154,12 @@ static bool sprintf_return_true(void);
 static bool vsprintf_empty(void);
 static bool vsprintf_non_empty(void);
 static bool vsprintf_return_true(void);
-static bool sprintf_cat_empty(void);
-static bool sprintf_cat_non_empty(void);
-static bool sprintf_cat_return_true(void);
-static bool vsprintf_cat_empty(void);
-static bool vsprintf_cat_non_empty(void);
-static bool vsprintf_cat_return_true(void);
+static bool formatstr_cat_empty(void);
+static bool formatstr_cat_non_empty(void);
+static bool formatstr_cat_return_true(void);
+static bool vformatstr_cat_empty(void);
+static bool vformatstr_cat_non_empty(void);
+static bool vformatstr_cat_return_true(void);
 static bool append_to_list_string_empty_empty(void);
 static bool append_to_list_string_empty_non_empty(void);
 static bool append_to_list_string_non_empty_empty(void);
@@ -376,12 +376,12 @@ bool OTEST_MyString(void) {
 	driver.register_function(vsprintf_empty);
 	driver.register_function(vsprintf_non_empty);
 	driver.register_function(vsprintf_return_true);
-	driver.register_function(sprintf_cat_empty);
-	driver.register_function(sprintf_cat_non_empty);
-	driver.register_function(sprintf_cat_return_true);
-	driver.register_function(vsprintf_cat_empty);
-	driver.register_function(vsprintf_cat_non_empty);
-	driver.register_function(vsprintf_cat_return_true);
+	driver.register_function(formatstr_cat_empty);
+	driver.register_function(formatstr_cat_non_empty);
+	driver.register_function(formatstr_cat_return_true);
+	driver.register_function(vformatstr_cat_empty);
+	driver.register_function(vformatstr_cat_non_empty);
+	driver.register_function(vformatstr_cat_return_true);
 	driver.register_function(append_to_list_string_empty_empty);
 	driver.register_function(append_to_list_string_empty_non_empty);
 	driver.register_function(append_to_list_string_non_empty_empty);
@@ -2523,7 +2523,7 @@ static bool replace_string_return_true() {
 static bool sprintf_empty() {
 	emit_test("Test sprintf() on an empty MyString.");
 	MyString a;
-	a.sprintf("%s %d", "happy", 3);
+	a.formatstr("%s %d", "happy", 3);
 	emit_input_header();
 	emit_param("STRING", "%s", "happy");
 	emit_param("INT", "%d", 3);
@@ -2541,7 +2541,7 @@ static bool sprintf_empty() {
 static bool sprintf_non_empty() {
 	emit_test("Test sprintf() on a non-empty MyString.");
 	MyString a("replace me!");
-	a.sprintf("%s %d", "sad", 5);
+	a.formatstr("%s %d", "sad", 5);
 	emit_input_header();
 	emit_param("STRING", "%s", "sad");
 	emit_param("INT", "%d", 5);
@@ -2558,7 +2558,7 @@ static bool sprintf_non_empty() {
 static bool sprintf_return_true() {
 	emit_test("Does sprintf() return true on success?");
 	MyString a;
-	bool res = a.sprintf("%s %d", "sad", 5);
+	bool res = a.formatstr("%s %d", "sad", 5);
 	emit_input_header();
 	emit_param("STRING", "%s", "sad");
 	emit_param("INT", "%d", 5);
@@ -2631,10 +2631,10 @@ static bool vsprintf_return_true() {
 
 
 
-static bool sprintf_cat_empty() {
-	emit_test("Test sprintf_cat() on an empty MyString.");
+static bool formatstr_cat_empty() {
+	emit_test("Test formatstr_cat() on an empty MyString.");
 	MyString a;
-	a.sprintf_cat("%s %d", "happy", 3);
+	a.formatstr_cat("%s %d", "happy", 3);
 	emit_input_header();
 	emit_param("STRING", "%s", "happy");
 	emit_param("INT", "%d", 3);
@@ -2649,10 +2649,10 @@ static bool sprintf_cat_empty() {
 }
 
 //in test_mystring.cpp 279
-static bool sprintf_cat_non_empty() {
-	emit_test("Test sprintf_cat() on a non-empty MyString.");
+static bool formatstr_cat_non_empty() {
+	emit_test("Test formatstr_cat() on a non-empty MyString.");
 	MyString a("sad 5");
-	a.sprintf_cat(" Luis Ocana");
+	a.formatstr_cat(" Luis Ocana");
 	emit_input_header();
 	emit_param("STRING", "%s", " Luis Ocana");
 	emit_output_expected_header();
@@ -2665,10 +2665,10 @@ static bool sprintf_cat_non_empty() {
 	PASS;
 }
 
-static bool sprintf_cat_return_true() {
-	emit_test("Does sprintf_cat() return true on success?");
+static bool formatstr_cat_return_true() {
+	emit_test("Does formatstr_cat() return true on success?");
 	MyString a;
-	bool res = a.sprintf_cat("%s %d", "sad", 5);
+	bool res = a.formatstr_cat("%s %d", "sad", 5);
 	emit_input_header();
 	emit_param("STRING", "%s", "sad");
 	emit_param("INT", "%d", 5);
@@ -2682,10 +2682,10 @@ static bool sprintf_cat_return_true() {
 	PASS;
 }
 
-static bool vsprintf_cat_empty() {
-	emit_test("Test vsprintf_cat() on an empty MyString.");
+static bool vformatstr_cat_empty() {
+	emit_test("Test vformatstr_cat() on an empty MyString.");
 	MyString* a = new MyString();
-	vsprintf_catHelper(a, "%s %d", "happy", 3);
+	vformatstr_catHelper(a, "%s %d", "happy", 3);
 	emit_input_header();
 	emit_param("STRING", "%s", "happy");
 	emit_param("INT", "%d", 3);
@@ -2701,10 +2701,10 @@ static bool vsprintf_cat_empty() {
 	PASS;
 }
 
-static bool vsprintf_cat_non_empty() {
-	emit_test("Test vsprintf_cat() on a non-empty MyString.");
+static bool vformatstr_cat_non_empty() {
+	emit_test("Test vformatstr_cat() on a non-empty MyString.");
 	MyString* a = new MyString("foo");
-	vsprintf_catHelper(a, "%s %d", "happy", 3);
+	vformatstr_catHelper(a, "%s %d", "happy", 3);
 	emit_input_header();
 	emit_param("STRING", "%s", "happy");
 	emit_param("INT", "%d", 3);
@@ -2720,10 +2720,10 @@ static bool vsprintf_cat_non_empty() {
 	PASS;
 }
 
-static bool vsprintf_cat_return_true() {
-	emit_test("Does vsprintf_cat() return true on success?");
+static bool vformatstr_cat_return_true() {
+	emit_test("Does vformatstr_cat() return true on success?");
 	MyString* a = new MyString();
-	bool res = vsprintf_catHelper(a, "%s %d", "happy", 3);
+	bool res = vformatstr_catHelper(a, "%s %d", "happy", 3);
 	emit_input_header();
 	emit_param("STRING", "%s", "happy");
 	emit_param("INT", "%d", 3);

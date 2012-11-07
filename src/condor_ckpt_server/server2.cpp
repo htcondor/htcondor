@@ -178,7 +178,7 @@ void Server::Init()
 	num_replicate_xfers = 0;
 
 	config();
-	dprintf_config( get_mySubSystem()->getName(), get_param_functions() );
+	dprintf_config( get_mySubSystem()->getName() );
 
 	set_condor_priv();
 
@@ -555,7 +555,7 @@ void Server::Execute()
 			if( kill(ppid,0) < 0 ) {
 				if( errno == ESRCH ) {
 					MyString msg;
-					msg.sprintf("Parent process %d has gone away", ppid);
+					msg.formatstr("Parent process %d has gone away", ppid);
 					NoMore(msg.Value());
 				}
 			}
@@ -1016,7 +1016,7 @@ void Server::ProcessServiceReq(int             req_id,
 										  service_req.owner_name, 
 										  service_req.file_name);
 				MyString key;
-				key.sprintf("%s/%s/%s", inet_ntoa(shadow_IP), 
+				key.formatstr("%s/%s/%s", inet_ntoa(shadow_IP), 
 						service_req.owner_name, service_req.file_name);
 				if (CkptClassAds) {
 					CkptClassAds->DestroyClassAd(key.Value());
@@ -1580,7 +1580,7 @@ void Server::ProcessStoreReq(int            req_id,
 				store_req.filename[len-4] = '\0';
 			}
 			MyString keybuf;
-			keybuf.sprintf( "%s/%s/%s", inet_ntoa(shadow_IP), store_req.owner,
+			keybuf.formatstr( "%s/%s/%s", inet_ntoa(shadow_IP), store_req.owner,
 					store_req.filename);
 			char const *key = keybuf.Value();
 			ClassAd *ad;
@@ -1588,11 +1588,11 @@ void Server::ProcessStoreReq(int            req_id,
 				if (!CkptClassAds->LookupClassAd(key, ad)) {
 					MyString buf;
 					CkptClassAds->NewClassAd(key, CKPT_FILE_ADTYPE, "0");
-					buf.sprintf( "\"%s\"", store_req.owner);
+					buf.formatstr( "\"%s\"", store_req.owner);
 					CkptClassAds->SetAttribute(key, ATTR_OWNER, buf.Value());
-					buf.sprintf( "\"%s\"", inet_ntoa(shadow_IP));
+					buf.formatstr( "\"%s\"", inet_ntoa(shadow_IP));
 					CkptClassAds->SetAttribute(key, ATTR_SHADOW_IP_ADDR, buf.Value());
-					buf.sprintf( "\"%s\"", store_req.filename);
+					buf.formatstr( "\"%s\"", store_req.filename);
 					CkptClassAds->SetAttribute(key, ATTR_FILE_NAME, buf.Value());
 				}
 				char size[40];
@@ -2230,7 +2230,7 @@ void Server::RemoveStaleCheckpointFiles(const char *directory)
 	next_time_to_remove_stale_ckpt_files =
 		time(NULL) + remove_stale_ckptfile_interval;
 
-	str.sprintf("Next stale checkpoint file check in %lu seconds.",
+	str.formatstr("Next stale checkpoint file check in %lu seconds.",
 		(unsigned long)remove_stale_ckptfile_interval);
 
 	Log(str.Value());
@@ -2252,14 +2252,14 @@ void Server::RemoveStaleCheckpointFilesRecurse(const char *path,
 	}
 
 	if (realpath(path, real_path) == 0) {
-		str.sprintf("Server::RemoveStaleCheckpointFilesRecurse(): Could "
+		str.formatstr("Server::RemoveStaleCheckpointFilesRecurse(): Could "
 			"not resolve %s into a real path: %d(%s). Ignoring.\n",
 			path, errno, strerror(errno));
 		return;
 	}
 
 	if (realpath(ckpt_server_dir, real_ckpt_server_dir) == 0) {
-		str.sprintf("Server::RemoveStaleCheckpointFilesRecurse(): Could "
+		str.formatstr("Server::RemoveStaleCheckpointFilesRecurse(): Could "
 			"not resolve %s into a real path: %d(%s). Strange..ignoring "
 			"remove request for file under this directory.\n",
 			path, errno, strerror(errno));
@@ -2282,7 +2282,7 @@ void Server::RemoveStaleCheckpointFilesRecurse(const char *path,
 		((strlen(real_path) > strlen(real_ckpt_server_dir)) && 
 			path[strlen(real_ckpt_server_dir)] != '/'))
 	{
-		str.sprintf(
+		str.formatstr(
 			"WARNING: "
 			"Server::RemoveStaleCheckpointFilesRecurse(): "
 			"path name %s, whose real path is %s, appears to be outside "

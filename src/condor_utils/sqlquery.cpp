@@ -244,14 +244,14 @@ createQueryString(query_types qtype, void **parameters) {
   MyString schedd_predicate_part = "";
   MyString schedd_predicate_hh = "";
   if (scheddname) { 
-	  schedd_predicate_full.sprintf_cat("WHERE scheddname = '%s'", scheddname);
-	  schedd_predicate_part.sprintf_cat("AND scheddname = '%s'", scheddname);
-	  schedd_predicate_hh.sprintf_cat("AND hh.scheddname = '%s'", scheddname);
+	  schedd_predicate_full.formatstr_cat("WHERE scheddname = '%s'", scheddname);
+	  schedd_predicate_part.formatstr_cat("AND scheddname = '%s'", scheddname);
+	  schedd_predicate_hh.formatstr_cat("AND hh.scheddname = '%s'", scheddname);
 
 	  if (jobqueuebirthdate) {
-		  schedd_predicate_full.sprintf_cat(" AND scheddbirthdate = %d", jobqueuebirthdate);
-		  schedd_predicate_part.sprintf_cat(" AND scheddbirthdate = %d", jobqueuebirthdate);
-		  schedd_predicate_hh.sprintf_cat(" AND hh.scheddbirthdate = %d", jobqueuebirthdate);
+		  schedd_predicate_full.formatstr_cat(" AND scheddbirthdate = %d", jobqueuebirthdate);
+		  schedd_predicate_part.formatstr_cat(" AND scheddbirthdate = %d", jobqueuebirthdate);
+		  schedd_predicate_hh.formatstr_cat(" AND hh.scheddbirthdate = %d", jobqueuebirthdate);
 	  }
   }
 

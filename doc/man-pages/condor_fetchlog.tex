@@ -12,12 +12,12 @@
 \Arg{machine-name}
 \Arg{subsystem[.extension]}
 
-\index{Condor commands!condor\_fetchlog}
+\index{HTCondor commands!condor\_fetchlog}
 \index{condor\_fetchlog command}
 
 \Description 
 
-\Condor{fetchlog} contacts Condor running on the machine specified by
+\Condor{fetchlog} contacts HTCondor running on the machine specified by
 \Arg{machine-name}, and asks it to return a log file from that
 machine.  Which log file is determined from
 the \Arg{subsystem[.extension]} argument.
@@ -28,7 +28,7 @@ machine in order to retrieve a daemon's log file.
 For security purposes of authentication and authorization, 
 this command requires an administrator's level of access.
 See section~\ref{sec:Config-Security} 
-on page~\pageref{sec:Config-Security} for more details about Condor's
+on page~\pageref{sec:Config-Security} for more details about HTCondor's
 security mechanisms.
 
 The \Arg{subsystem[.extension]} argument is utilized to construct
@@ -42,7 +42,7 @@ Typical strings for the argument \Arg{subsystem} are as given as
 possible values of the predefined configuration
 variable \MacroUNI{SUBSYSTEM}.
 See the definition in
-section~\ref{sec:Condor-Subsystem-Names}.  Note that access to any
+section~\ref{sec:HTCondor-Subsystem-Names}.  Note that access to any
 additional logs can be enabled by simply specifying the path to
 each log in the configuration file with a configuration parameter named
 \MacroNI{<NAME>\_LOG}, choosing an arbitrary unique name for each case.

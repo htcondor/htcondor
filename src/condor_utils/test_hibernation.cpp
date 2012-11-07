@@ -63,8 +63,7 @@ main(int argc, const char **argv)
 	config();
 
 		// Set up the dprintf stuff...
-	Termlog = true;
-	dprintf_config("TEST_NETWORK_ADAPTER", get_param_functions());
+	dprintf_set_tool_debug("TEST_NETWORK_ADAPTER", 0);
 
 	const char	*tmp;
 	int			 status = 0;
@@ -83,7 +82,7 @@ main(int argc, const char **argv)
 	}
 	else {
 		MyString	sinful;
-		sinful.sprintf( "<%s:1234>", opts.m_address );
+		sinful.formatstr( "<%s:1234>", opts.m_address );
 		printf( "Creating network adapter object for %s\n", sinful.Value() );
 		net = NetworkAdapterBase::createNetworkAdapter( sinful.Value() );
 	}

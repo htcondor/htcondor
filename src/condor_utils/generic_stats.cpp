@@ -42,7 +42,7 @@ void stats_entry_recent<T>::PublishDebug(ClassAd & ad, const char * pattr, int f
    str += this->value;
    str += " ";
    str += this->recent;
-   str.sprintf_cat(" {h:%d c:%d m:%d a:%d}", 
+   str.formatstr_cat(" {h:%d c:%d m:%d a:%d}", 
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
@@ -65,7 +65,7 @@ void stats_entry_recent<int64_t>::PublishDebug(ClassAd & ad, const char * pattr,
    str += (long)this->value;
    str += " ";
    str += (long)this->recent;
-   str.sprintf_cat(" {h:%d c:%d m:%d a:%d}", 
+   str.formatstr_cat(" {h:%d c:%d m:%d a:%d}", 
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
@@ -85,12 +85,12 @@ void stats_entry_recent<int64_t>::PublishDebug(ClassAd & ad, const char * pattr,
 template <>
 void stats_entry_recent<double>::PublishDebug(ClassAd & ad, const char * pattr, int flags) const {
    MyString str;
-   str.sprintf_cat("%g %g", this->value, this->recent);
-   str.sprintf_cat(" {h:%d c:%d m:%d a:%d}", 
+   str.formatstr_cat("%g %g", this->value, this->recent);
+   str.formatstr_cat(" {h:%d c:%d m:%d a:%d}", 
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
-         str.sprintf_cat(!ix ? "[%g" : (ix == this->buf.cMax ? "|%g" : ",%g"), this->buf.pbuf[ix]);
+         str.formatstr_cat(!ix ? "[%g" : (ix == this->buf.cMax ? "|%g" : ",%g"), this->buf.pbuf[ix]);
          }
       str += "]";
       }
@@ -108,11 +108,19 @@ void stats_entry_recent_histogram<T>::PublishDebug(ClassAd & ad, const char * pa
    this->value.AppendToString(str);
    str += ") (";
    this->recent.AppendToString(str);
-   str.sprintf_cat(") {h:%d c:%d m:%d a:%d}", 
+   str.formatstr_cat(") {h:%d c:%d m:%d a:%d}", 
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
-         str.sprintf_cat(!ix ? "[(" : (ix == this->buf.cMax ? ")|(" : ") ("));
+         // Note: this is tediously broken up into multiple lines because clang produces a format string
+         // warning otherwise.
+         if (!ix) {
+            str.formatstr_cat("[(");
+         } else if (ix == this->buf.cMax) {
+            str.formatstr_cat(")|(");
+         } else {
+            str.formatstr_cat(") (");
+            }
          this->buf.pbuf[ix].AppendToString(str);
          }
       str += ")]";
@@ -297,9 +305,9 @@ void stats_recent_counter_timer::Unpublish(ClassAd & ad, const char * pattr) con
 {
    ad.Delete(pattr);
    MyString attr;
-   attr.sprintf("Recent%s",pattr);
+   attr.formatstr("Recent%s",pattr);
    ad.Delete(attr.Value());
-   attr.sprintf("Recent%sRuntime",pattr);
+   attr.formatstr("Recent%sRuntime",pattr);
    ad.Delete(attr.Value());
    ad.Delete(attr.Value()+6); // +6 to skip "Recent" prefix
 }
@@ -401,31 +409,31 @@ double Probe::Std() const
 
 void ProbeToStringDebug(MyString & str, const Probe& probe)
 {
-   str.sprintf("%d M:%g m:%g S:%g s2:%g", 
+   str.formatstr("%d M:%g m:%g S:%g s2:%g", 
                probe.Count, probe.Max, probe.Min, probe.Sum, probe.SumSq);
 }
 
 int ClassAdAssign(ClassAd & ad, const char * pattr, const Probe& probe) 
 {
    MyString attr;
-   attr.sprintf("%sCount", pattr);
+   attr.formatstr("%sCount", pattr);
    ad.Assign(attr.Value(), probe.Count);
 
-   attr.sprintf("%sSum", pattr);
+   attr.formatstr("%sSum", pattr);
    int ret = ad.Assign(attr.Value(), probe.Sum);
 
    if (probe.Count > 0)
       {
-      attr.sprintf("%sAvg", pattr);
+      attr.formatstr("%sAvg", pattr);
       ad.Assign(attr.Value(), probe.Avg());
 
-      attr.sprintf("%sMin", pattr);
+      attr.formatstr("%sMin", pattr);
       ad.Assign(attr.Value(), probe.Min);
 
-      attr.sprintf("%sMax", pattr);
+      attr.formatstr("%sMax", pattr);
       ad.Assign(attr.Value(), probe.Max);
 
-      attr.sprintf("%sStd", pattr);
+      attr.formatstr("%sStd", pattr);
       ad.Assign(attr.Value(), probe.Std());
       }
    return ret;
@@ -435,25 +443,25 @@ template <> void stats_entry_recent<Probe>::Unpublish(ClassAd& ad, const char * 
 {
    MyString attr;
    ad.Delete(pattr);
-   attr.sprintf("Recent%s", pattr);
+   attr.formatstr("Recent%s", pattr);
    ad.Delete(attr.Value());
 
-   attr.sprintf("Recent%sCount", pattr);
+   attr.formatstr("Recent%sCount", pattr);
    ad.Delete(attr.Value());
    ad.Delete(attr.Value()+6);
-   attr.sprintf("Recent%sSum", pattr);
+   attr.formatstr("Recent%sSum", pattr);
    ad.Delete(attr.Value());
    ad.Delete(attr.Value()+6);
-   attr.sprintf("Recent%sAvg", pattr);
+   attr.formatstr("Recent%sAvg", pattr);
    ad.Delete(attr.Value());
    ad.Delete(attr.Value()+6);
-   attr.sprintf("Recent%sMin", pattr);
+   attr.formatstr("Recent%sMin", pattr);
    ad.Delete(attr.Value());
    ad.Delete(attr.Value()+6);
-   attr.sprintf("Recent%sMax", pattr);
+   attr.formatstr("Recent%sMax", pattr);
    ad.Delete(attr.Value());
    ad.Delete(attr.Value()+6);
-   attr.sprintf("Recent%sStd", pattr);
+   attr.formatstr("Recent%sStd", pattr);
    ad.Delete(attr.Value());
    ad.Delete(attr.Value()+6);
 }
@@ -481,7 +489,7 @@ template <> void stats_entry_recent<Probe>::Publish(ClassAd& ad, const char * pa
    if (flags & this->PubRecent) {
       MyString attr(pattr);
       if (flags & this->PubDecorateAttr) {
-         attr.sprintf("Recent%s", pattr);
+         attr.formatstr("Recent%s", pattr);
       }
       ClassAdAssign(ad, attr.Value(), recent); 
    }
@@ -496,13 +504,13 @@ void stats_entry_recent<Probe>::PublishDebug(ClassAd & ad, const char * pattr, i
    ProbeToStringDebug(var1, this->value);
    ProbeToStringDebug(var2, this->recent);
 
-   str.sprintf_cat("(%s) (%s)", var1.Value(), var2.Value());
-   str.sprintf_cat(" {h:%d c:%d m:%d a:%d}", 
+   str.formatstr_cat("(%s) (%s)", var1.Value(), var2.Value());
+   str.formatstr_cat(" {h:%d c:%d m:%d a:%d}", 
                    this->buf.ixHead, this->buf.cItems, this->buf.cMax, this->buf.cAlloc);
    if (this->buf.pbuf) {
       for (int ix = 0; ix < this->buf.cAlloc; ++ix) {
          ProbeToStringDebug(var1, this->buf.pbuf[ix]);
-         str.sprintf_cat(!ix ? "[%s" : (ix == this->buf.cMax ? "|%s" : ",%s"), var1.Value());
+         str.formatstr_cat(!ix ? "[%s" : (ix == this->buf.cMax ? "|%s" : ",%s"), var1.Value());
          }
       str += "]";
       }
@@ -849,7 +857,7 @@ StatisticsPool::~StatisticsPool()
       {
       pub.remove(name);
       if (item.fOwnedByPool && item.pattr)
-         free((void*)item.pattr);
+         free((void*)(const_cast<char*>(item.pattr)));
       }
 
    // then all of the probes. 
@@ -874,7 +882,7 @@ int StatisticsPool::RemoveProbe (const char * name)
    void * probe = item.pitem;
    bool fOwnedByPool = item.fOwnedByPool;
    if (fOwnedByPool) {
-      if (item.pattr) free((void*)item.pattr);
+      if (item.pattr) free((void*)(const_cast<char*>(item.pattr)));
    }
 
    // remove the probe from the pool (if it's still there)
@@ -1110,6 +1118,8 @@ void StatisticsPool::Unpublish(ClassAd & ad, const char * prefix) const
       }
 }
 
+template class stats_entry_recent<int>;
+template class stats_entry_recent_histogram<long>;
 
 // this function isn't called, its just here to force instantiation 
 // of template methods that aren't in the header file.

@@ -131,8 +131,8 @@ extern const char * const ATTR_VIEW_INFO;
 extern const char * const ATTR_VIEW_NAME;
 extern const char * const ATTR_XACTION_NAME;
 
-extern const char * const ATTR_REQUIREMENTS;
-extern const char * const ATTR_RANK;
+#define ATTR_REQUIREMENTS  "Requirements"
+#define ATTR_RANK  "Rank"
 
 #if defined(__cplusplus)
 struct CaseIgnLTStr {

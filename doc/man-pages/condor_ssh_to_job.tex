@@ -12,10 +12,11 @@
 \oOptArg{-keygen-options}{ssh-keygen-options}
 \oOptArg{-shells}{shell1,shell2,...}
 \oOpt{-auto-retry}
+\oOpt{-remove-on-interrupt}
 \Arg{cluster \Bar cluster.process \Bar cluster.process.node }
 \oArg{remote-command}
 
-\index{Condor commands!condor\_ssh\_to\_job}
+\index{HTCondor commands!condor\_ssh\_to\_job}
 \index{condor\_ssh\_to\_job command}
 
 \Description
@@ -25,7 +26,7 @@ The job is specified with the argument.
 If only the job \Arg{cluster} id is given,
 then the job \Arg{process} id defaults to the value 0.
 
-It is available in Unix Condor distributions, 
+It is available in Unix HTCondor distributions, 
 and it works for vanilla, vm, java, local, and parallel universe jobs.
 The user must be the owner of the job or must be a queue super user, 
 and both the \Condor{schedd} and \Condor{starter} daemons
@@ -47,7 +48,7 @@ PID of the process started when the job was launched,
 and it will be the first item in the list.
 It may contain additional PIDs of other processes that the job has created.
 
-The \Prog{ssh} session and all processes it creates are treated by Condor as
+The \Prog{ssh} session and all processes it creates are treated by HTCondor as
 though they are processes belonging to the job.
 If the slot is preempted or suspended,
 the \Prog{ssh} session is killed or suspended along with the job.
@@ -73,14 +74,14 @@ for details of the configuration variables related to \Condor{ssh\_to\_job}.
 
 An \Prog{ssh} session works by first authenticating and authorizing
 a secure connection between \Condor{ssh\_to\_job} and the \Condor{starter}
-daemon, using Condor protocols.
+daemon, using HTCondor protocols.
 The \Condor{starter} generates an ssh key
 pair and sends it securely to \Condor{ssh\_to\_job}.
 Then the \Condor{starter} spawns \Prog{sshd} in inetd mode with its
 stdin and stdout attached to the TCP connection from \Condor{ssh\_to\_job}.
 \Condor{ssh\_to\_job} acts as a proxy
 for the \Prog{ssh} client to communicate with \Prog{sshd},
-using the existing connection authorized by Condor.
+using the existing connection authorized by HTCondor.
 \emph{At no point is \Prog{sshd}
 listening on the network for connections or running with any privileges
 other than that of the user identity running the job.}
@@ -101,7 +102,7 @@ as installed in typical environments.
 It does not work on Windows platforms.
 If the \Prog{ssh} programs are installed in non-standard locations,
 then the paths to
-these programs will need to be customized within the Condor configuration.
+these programs will need to be customized within the HTCondor configuration.
 Versions of \Prog{ssh} other than \Prog{OpenSSH} may work,
 but they will likely
 require additional configuration of command-line arguments,
@@ -116,7 +117,7 @@ used by the \Condor{starter} to set up \Prog{sshd}.
   \ToolDebugDesc
   \OptItem{\OptArg{-name}{schedd-name}}{Specify an alternate \Condor{schedd},
     if the default (local) one is not desired.}
-  \OptItem{\OptArg{-pool}{pool-name}}{Specify an alternate Condor pool,
+  \OptItem{\OptArg{-pool}{pool-name}}{Specify an alternate HTCondor pool,
     if the default one is not desired.}
   \OptItem{\OptArg{-ssh}{ssh-command}}{Specify an alternate \Prog{ssh} program
     to run in place of \Prog{ssh}, for example \Prog{sftp} or \Prog{scp}.
@@ -142,6 +143,9 @@ used by the \Condor{starter} to set up \Prog{sshd}.
   \OptItem{\Opt{-auto-retry}}{Specifies that if the job is not yet running,
     \Condor{ssh\_to\_job} should keep trying periodically until it succeeds 
     or encounters some other error.}
+  \OptItem{\Opt{-remove-on-interrupt}}{If specified, attempt to remove the job
+    from the queue if \Condor{ssh\_to\_job} is interrupted via a ctrl-c or
+    otherwise terminated abnormally.}
   \OptItem{\Opt{-X}}{Enable X11 forwarding.}
 \end{Options}
 
@@ -193,9 +197,9 @@ arguments to \Condor{ssh\_to\_job}.
 \end{verbatim}
 \normalsize
 
-Note that \Condor{ssh\_to\_job} was added to Condor in version 7.3.  
+Note that \Condor{ssh\_to\_job} was added to HTCondor in version 7.3.  
 If  one uses \Condor{ssh\_to\_job} to connect to a job
-on an execute machine running a version of Condor older than the 7.3 series,
+on an execute machine running a version of HTCondor older than the 7.3 series,
 the command will fail with the error message
 \begin{verbatim}
 Failed to send CREATE_JOB_OWNER_SEC_SESSION to starter

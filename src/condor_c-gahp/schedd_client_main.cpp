@@ -162,7 +162,7 @@ Reconfig()
 		char *daemon_subjects = param( "GSI_DAEMON_NAME" );
 		if ( daemon_subjects ) {
 			std::string buff;
-			sprintf( buff, "%s,%s", daemon_subjects, proxySubjectName );
+			formatstr( buff, "%s,%s", daemon_subjects, proxySubjectName );
 			dprintf( D_ALWAYS, "Setting %s=%s\n", "GSI_DAEMON_NAME",
 					 buff.c_str() );
 				// We must use our daemon subsystem prefix in case the
@@ -215,7 +215,7 @@ main( int argc, char **argv )
 
 // This function is called by dprintf - always display our pid in our
 // log entries.
-extern "C"
+//extern "C"
 int
 display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {

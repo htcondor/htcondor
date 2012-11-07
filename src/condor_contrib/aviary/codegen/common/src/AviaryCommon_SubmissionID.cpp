@@ -6,8 +6,28 @@
          * This file was auto-generated from WSDL
          * by the Apache Axis2/C version: SNAPSHOT  Built on : Mar 10, 2008 (08:35:52 GMT+00:00)
          */
+        
+            #include "AviaryCommon_SubmissionID.h"
+          
 
-        #include "AviaryCommon_SubmissionID.h"
+       #ifdef __GNUC__
+       # if __GNUC__ >= 4
+       #pragma GCC diagnostic ignored "-Wcast-qual"
+       #pragma GCC diagnostic ignored "-Wshadow"
+       #pragma GCC diagnostic ignored "-Wunused-parameter"
+       #pragma GCC diagnostic ignored "-Wunused-variable"
+       #pragma GCC diagnostic ignored "-Wunused-value"
+       #pragma GCC diagnostic ignored "-Wwrite-strings"
+       #  if __GNUC_MINOR__ >= 6
+       #pragma GCC diagnostic ignored "-Wenum-compare"
+       #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+       #  endif
+       #  if __GNUC_MINOR__ >= 7
+       #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+       #  endif
+       # endif
+       #endif
+        
         #include <Environment.h>
         #include <WSFError.h>
 
@@ -37,9 +57,17 @@
         
             isValidQdate  = false;
         
+                    property_Pool;
+                
+            isValidPool  = false;
+        
+                    property_Scheduler;
+                
+            isValidScheduler  = false;
+        
         }
 
-       AviaryCommon::SubmissionID::SubmissionID(std::string arg_Name,std::string arg_Owner,int arg_Qdate)
+       AviaryCommon::SubmissionID::SubmissionID(std::string arg_Name,std::string arg_Owner,int arg_Qdate,std::string arg_Pool,std::string arg_Scheduler)
         {
              
                  property_Name;
@@ -52,15 +80,36 @@
             
             isValidQdate  = true;
             
+                 property_Pool;
+             
+            isValidPool  = true;
+            
+                 property_Scheduler;
+             
+            isValidScheduler  = true;
+            
                     property_Name = arg_Name;
             
                     property_Owner = arg_Owner;
             
                     property_Qdate = arg_Qdate;
             
+                    property_Pool = arg_Pool;
+            
+                    property_Scheduler = arg_Scheduler;
+            
         }
         AviaryCommon::SubmissionID::~SubmissionID()
         {
+            resetAll();
+        }
+
+        bool WSF_CALL AviaryCommon::SubmissionID::resetAll()
+        {
+            //calls reset method for all the properties owned by this method which are pointers.
+
+            
+            return true;
 
         }
 
@@ -72,6 +121,13 @@
           axiom_node_t *parent = *dp_parent;
           
           bool status = AXIS2_SUCCESS;
+          
+          axiom_attribute_t *parent_attri = NULL;
+          axiom_element_t *parent_element = NULL;
+          axis2_char_t *attrib_text = NULL;
+
+          axutil_hash_t *attribute_hash = NULL;
+
            
          const axis2_char_t* text_value = NULL;
          axutil_qname_t *mqname = NULL;
@@ -97,6 +153,9 @@
                       first_node = axiom_node_get_first_child(parent, Environment::getEnv());
                       
                     
+                 parent_element = (axiom_element_t *)axiom_node_get_data_element(parent, Environment::getEnv());
+                 attribute_hash = axiom_element_get_all_attributes(parent_element, Environment::getEnv());
+              
 
                      
                      /*
@@ -408,6 +467,102 @@
                      element_qname = NULL;
                   }
                  
+                
+                
+                  parent_attri = NULL;
+                  attrib_text = NULL;
+                  if(attribute_hash)
+                  {
+                       axutil_hash_index_t *hi;
+                       void *val;
+                       const void *key;
+
+                       for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
+                       {
+                           axutil_hash_this(hi, &key, NULL, &val);
+                           
+                           
+                               if(!strcmp((axis2_char_t*)key, "pool"))
+                             
+                               {
+                                   parent_attri = (axiom_attribute_t*)val;
+                                   break;
+                               }
+                       }
+                  }
+
+                  if(parent_attri)
+                  {
+                    attrib_text = axiom_attribute_get_value(parent_attri, Environment::getEnv());
+                  }
+                  else
+                  {
+                    /* this is hoping that attribute is stored in "pool", this happnes when name is in default namespace */
+                    attrib_text = axiom_element_get_attribute_value_by_name(parent_element, Environment::getEnv(), "pool");
+                  }
+
+                  if(attrib_text != NULL)
+                  {
+                      
+                      
+                           setPool(attrib_text);
+                        
+                    }
+                  
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
+                
+                
+                  parent_attri = NULL;
+                  attrib_text = NULL;
+                  if(attribute_hash)
+                  {
+                       axutil_hash_index_t *hi;
+                       void *val;
+                       const void *key;
+
+                       for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
+                       {
+                           axutil_hash_this(hi, &key, NULL, &val);
+                           
+                           
+                               if(!strcmp((axis2_char_t*)key, "scheduler"))
+                             
+                               {
+                                   parent_attri = (axiom_attribute_t*)val;
+                                   break;
+                               }
+                       }
+                  }
+
+                  if(parent_attri)
+                  {
+                    attrib_text = axiom_attribute_get_value(parent_attri, Environment::getEnv());
+                  }
+                  else
+                  {
+                    /* this is hoping that attribute is stored in "scheduler", this happnes when name is in default namespace */
+                    attrib_text = axiom_element_get_attribute_value_by_name(parent_element, Environment::getEnv(), "scheduler");
+                  }
+
+                  if(attrib_text != NULL)
+                  {
+                      
+                      
+                           setScheduler(attrib_text);
+                        
+                    }
+                  
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
           return status;
        }
 
@@ -441,6 +596,8 @@
         {
             
             
+               axiom_attribute_t *text_attri = NULL;
+             
              axis2_char_t *string_to_stream;
             
          
@@ -463,6 +620,14 @@
                     
                     axis2_char_t text_value_3[ADB_DEFAULT_DIGIT_LIMIT];
                     
+                    axis2_char_t *text_value_4;
+                    axis2_char_t *text_value_4_temp;
+                    
+                    axis2_char_t *text_value_5;
+                    axis2_char_t *text_value_5_temp;
+                    
+                axis2_char_t *text_value = NULL;
+             
                axis2_char_t *start_input_str = NULL;
                axis2_char_t *end_input_str = NULL;
                unsigned int start_input_str_len = 0;
@@ -484,6 +649,38 @@
             if(!parent_tag_closed)
             {
             
+                if(isValidPool)
+                {
+                
+                        p_prefix = NULL;
+                      
+                           text_value = (axis2_char_t*) AXIS2_MALLOC (Environment::getEnv()-> allocator, sizeof (axis2_char_t) *
+                                                            (5  + ADB_DEFAULT_NAMESPACE_PREFIX_LIMIT +
+                                                             axutil_strlen(property_Pool.c_str()) +
+                                                                axutil_strlen("pool")));
+                           sprintf(text_value, " %s%s%s=\"%s\"", p_prefix?p_prefix:"", (p_prefix && axutil_strcmp(p_prefix, ""))?":":"",
+                                                "pool", property_Pool.c_str());
+                           axutil_stream_write(stream, Environment::getEnv(), text_value, axutil_strlen(text_value));
+                           AXIS2_FREE(Environment::getEnv()-> allocator, text_value);
+                        
+                   }
+                   
+                if(isValidScheduler)
+                {
+                
+                        p_prefix = NULL;
+                      
+                           text_value = (axis2_char_t*) AXIS2_MALLOC (Environment::getEnv()-> allocator, sizeof (axis2_char_t) *
+                                                            (5  + ADB_DEFAULT_NAMESPACE_PREFIX_LIMIT +
+                                                             axutil_strlen(property_Scheduler.c_str()) +
+                                                                axutil_strlen("scheduler")));
+                           sprintf(text_value, " %s%s%s=\"%s\"", p_prefix?p_prefix:"", (p_prefix && axutil_strcmp(p_prefix, ""))?":":"",
+                                                "scheduler", property_Scheduler.c_str());
+                           axutil_stream_write(stream, Environment::getEnv(), text_value, axutil_strlen(text_value));
+                           AXIS2_FREE(Environment::getEnv()-> allocator, text_value);
+                        
+                   }
+                   
               string_to_stream = ">"; 
               axutil_stream_write(stream, Environment::getEnv(), string_to_stream, axutil_strlen(string_to_stream));
               tag_closed = 1;
@@ -678,6 +875,40 @@
                  } 
 
                  
+                    
+                    if(parent_tag_closed)
+                    {
+                       if(isValidPool)
+                       {
+                       
+                           p_prefix = NULL;
+                           ns1 = NULL;
+                         
+                           text_value = (axis2_char_t*)property_Pool.c_str();
+                           text_attri = axiom_attribute_create (Environment::getEnv(), "pool", text_value, ns1);
+                           axiom_element_add_attribute (parent_element, Environment::getEnv(), text_attri, parent);
+                        
+                      }
+                       
+                  }
+                
+                    
+                    if(parent_tag_closed)
+                    {
+                       if(isValidScheduler)
+                       {
+                       
+                           p_prefix = NULL;
+                           ns1 = NULL;
+                         
+                           text_value = (axis2_char_t*)property_Scheduler.c_str();
+                           text_attri = axiom_attribute_create (Environment::getEnv(), "scheduler", text_value, ns1);
+                           axiom_element_add_attribute (parent_element, Environment::getEnv(), text_attri, parent);
+                        
+                      }
+                       
+                  }
+                
 
             return parent;
         }
@@ -930,6 +1161,186 @@
            AviaryCommon::SubmissionID::setQdateNil()
            {
                return resetQdate();
+           }
+
+           
+
+            /**
+             * Getter for pool by  Property Number 4
+             */
+            std::string WSF_CALL
+            AviaryCommon::SubmissionID::getProperty4()
+            {
+                return getPool();
+            }
+
+            /**
+             * getter for pool.
+             */
+            std::string WSF_CALL
+            AviaryCommon::SubmissionID::getPool()
+             {
+                return property_Pool;
+             }
+
+            /**
+             * setter for pool
+             */
+            bool WSF_CALL
+            AviaryCommon::SubmissionID::setPool(
+                    const std::string  arg_Pool)
+             {
+                
+
+                if(isValidPool &&
+                        arg_Pool == property_Pool)
+                {
+                    
+                    return true;
+                }
+
+                
+                  if(arg_Pool.empty())
+                       
+                  {
+                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"pool is being set to NULL, but it is not a nullable element");
+                      return AXIS2_FAILURE;
+                  }
+                
+
+                
+                resetPool();
+
+                
+                        property_Pool = std::string(arg_Pool.c_str());
+                        isValidPool = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for pool
+            */
+           bool WSF_CALL
+           AviaryCommon::SubmissionID::resetPool()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+               isValidPool = false; 
+               return true;
+           }
+
+           /**
+            * Check whether pool is nill
+            */
+           bool WSF_CALL
+           AviaryCommon::SubmissionID::isPoolNil()
+           {
+               return !isValidPool;
+           }
+
+           /**
+            * Set pool to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryCommon::SubmissionID::setPoolNil()
+           {
+               return resetPool();
+           }
+
+           
+
+            /**
+             * Getter for scheduler by  Property Number 5
+             */
+            std::string WSF_CALL
+            AviaryCommon::SubmissionID::getProperty5()
+            {
+                return getScheduler();
+            }
+
+            /**
+             * getter for scheduler.
+             */
+            std::string WSF_CALL
+            AviaryCommon::SubmissionID::getScheduler()
+             {
+                return property_Scheduler;
+             }
+
+            /**
+             * setter for scheduler
+             */
+            bool WSF_CALL
+            AviaryCommon::SubmissionID::setScheduler(
+                    const std::string  arg_Scheduler)
+             {
+                
+
+                if(isValidScheduler &&
+                        arg_Scheduler == property_Scheduler)
+                {
+                    
+                    return true;
+                }
+
+                
+                  if(arg_Scheduler.empty())
+                       
+                  {
+                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"scheduler is being set to NULL, but it is not a nullable element");
+                      return AXIS2_FAILURE;
+                  }
+                
+
+                
+                resetScheduler();
+
+                
+                        property_Scheduler = std::string(arg_Scheduler.c_str());
+                        isValidScheduler = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for scheduler
+            */
+           bool WSF_CALL
+           AviaryCommon::SubmissionID::resetScheduler()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+               isValidScheduler = false; 
+               return true;
+           }
+
+           /**
+            * Check whether scheduler is nill
+            */
+           bool WSF_CALL
+           AviaryCommon::SubmissionID::isSchedulerNil()
+           {
+               return !isValidScheduler;
+           }
+
+           /**
+            * Set scheduler to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryCommon::SubmissionID::setSchedulerNil()
+           {
+               return resetScheduler();
            }
 
            

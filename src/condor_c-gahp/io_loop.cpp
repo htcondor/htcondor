@@ -58,7 +58,7 @@ PipeBuffer stdin_buffer;
 Worker workers[NUMBER_WORKERS];
 
 // this appears at the bottom of this file
-extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
+int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 
 #ifdef WIN32
 int STDIN_FILENO = fileno(stdin);
@@ -257,7 +257,7 @@ main_init( int argc, char ** const argv )
 	else {
 		char * c_gahp_name = param ("CONDOR_GAHP");
 		ASSERT (c_gahp_name);
-		sprintf(exec_name, "%s_worker_thread", c_gahp_name);
+		formatstr(exec_name, "%s_worker_thread", c_gahp_name);
 		free (c_gahp_name);
 	}
 
@@ -338,7 +338,7 @@ stdin_pipe_handler(Service*, int) {
 			if (strcasecmp (args.argv[0], GAHP_COMMAND_RESULTS) == 0) {
 					// Print number of results
 				std::string rn_buff;
-				sprintf( rn_buff, "%d", result_list.number() );
+				formatstr( rn_buff, "%d", result_list.number() );
 				const char * commands [] = {
 					GAHP_RESULT_SUCCESS,
 					rn_buff.c_str() };
@@ -768,8 +768,9 @@ main( int argc, char **argv )
 
 // This function is called by dprintf - always display our pid in our
 // log entries.
-extern "C"
+//extern "C"
 int
+//display_dprintf_header(char **buf,int *bufpos,int *buflen)
 display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
 	static pid_t mypid = 0;

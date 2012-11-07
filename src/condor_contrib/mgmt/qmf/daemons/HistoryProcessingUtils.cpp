@@ -76,7 +76,7 @@ process ( const HistoryEntry &entry )
 {
     MyString key;
 
-    key.sprintf ( "%d.%d", entry.cluster, entry.proc );
+    key.formatstr ( "%d.%d", entry.cluster, entry.proc );
 
     const char* key_cstr = key.StrDup();
 
@@ -140,7 +140,7 @@ ProcessHistoryDirectory()
         CondorError errstack;
         if ( !h_file.init ( errstack ) )
         {
-            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText() );
+            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText().c_str() );
             return;
         }
         errstack.clear();
@@ -236,7 +236,7 @@ ProcessCurrentHistory()
         force_reset = false;
         if ( !currentHistory.init ( errstack ) )
         {
-            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText() );
+            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText().c_str() );
             return;
         }
         ASSERT ( currentHistory.getId ( id ) );
@@ -273,7 +273,7 @@ ProcessCurrentHistory()
         currentHistory = HistoryFile ( currentHistoryFilename.Value() );
         if ( !currentHistory.init ( errstack ) )
         {
-            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText() );
+            dprintf ( D_ALWAYS, "%s\n", errstack.getFullText().c_str() );
             return;
         }
         ASSERT ( currentHistory.getId ( id ) );

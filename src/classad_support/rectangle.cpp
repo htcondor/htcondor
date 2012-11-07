@@ -905,6 +905,7 @@ GetIndexPrefix( Value::ValueType vt )
 			return 'e';
 		case Value::CLASSAD_VALUE:
 			return 'c';
+		case Value::SLIST_VALUE:
 		case Value::LIST_VALUE:
 			return 'l';
 		default:

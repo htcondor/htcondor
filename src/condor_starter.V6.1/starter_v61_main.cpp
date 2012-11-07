@@ -49,7 +49,7 @@ extern int Foreground;	// from daemoncore
 static bool is_gridshell = false;
 
 // this appears at the bottom of this file:
-extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
+int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 static char* dprintf_header = NULL;
 
 int my_argc;
@@ -148,7 +148,7 @@ printClassAd( void )
 	CondorError e;
 	ft.InitializePlugins(e);
 	if (e.code()) {
-		dprintf(D_ALWAYS, "WARNING: Initializing plugins returned: %s\n", e.getFullText());
+		dprintf(D_ALWAYS, "WARNING: Initializing plugins returned: %s\n", e.getFullText().c_str());
 	}
 
 	MyString method_list = ft.GetSupportedMethods();
@@ -168,7 +168,6 @@ static char* orig_cwd = NULL;
 void
 main_pre_dc_init( int argc, char* argv[] )
 {	
-	param_functions *p_funcs = NULL;
 		// figure out what get_mySubSystem() should be based on argv[0], or
 		// if we see "-gridshell" anywhere on the command-line
 	const char* base = condor_basename(argv[0]);
@@ -216,9 +215,7 @@ main_pre_dc_init( int argc, char* argv[] )
 			// cases.
 
 		//Termlog = 1;
-
-		p_funcs = get_param_functions();
-		dprintf_config(get_mySubSystem()->getName(), p_funcs);
+		dprintf_config(get_mySubSystem()->getName());
 
 		printClassAd();
 		exit(0);
@@ -751,7 +748,7 @@ main( int argc, char **argv )
 }
 
 
-extern "C" 
+//extern "C" 
 int
 display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {

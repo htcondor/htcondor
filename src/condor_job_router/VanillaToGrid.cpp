@@ -21,7 +21,6 @@
 #include "condor_debug.h"
 #include "MyString.h"
 #include "proc.h"
-#include "condor_new_classads.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "condor_universe.h"
@@ -124,7 +123,7 @@ bool VanillaToGrid::vanillaToGrid(classad::ClassAd * ad, int target_universe, co
 	}
 
 	ad->InsertAttr(ATTR_JOB_UNIVERSE, target_universe);
-	ad->Insert(remoteattr.Value(), olduniv);
+	ad->Insert(remoteattr.Value(), olduniv, false);
 		// olduniv is now controlled by ClassAd
 
 	if( target_universe == CONDOR_UNIVERSE_GRID ) {
@@ -264,7 +263,7 @@ static void set_job_status_held(classad::ClassAd const &orig,classad::ClassAd &u
 	classad::ExprTree * origexpr = update.Lookup(ATTR_RELEASE_REASON);
 	if(origexpr) {
 		classad::ExprTree * toinsert = origexpr->Copy(); 
-		update.Insert(ATTR_LAST_RELEASE_REASON, toinsert);
+		update.Insert(ATTR_LAST_RELEASE_REASON, toinsert, false);
 	}
 	update.Delete(ATTR_RELEASE_REASON);
 
@@ -375,7 +374,7 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 		classad::ExprTree * newgridexpr = newgrid.Lookup(attrs_to_copy[index]);
 		if( newgridexpr != NULL && (origexpr == NULL || ! (*origexpr == *newgridexpr) ) ) {
 			classad::ExprTree * toinsert = newgridexpr->Copy(); 
-			update.Insert(attrs_to_copy[index], toinsert);
+			update.Insert(attrs_to_copy[index], toinsert, false);
 		}
 	}
 
@@ -388,7 +387,7 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 			classad::ExprTree * newgridexpr = newgrid.Lookup(attr);
 			if( newgridexpr != NULL && (origexpr == NULL || ! (*origexpr == *newgridexpr) ) ) {
 				classad::ExprTree * toinsert = newgridexpr->Copy(); 
-				update.Insert(attr, toinsert);
+				update.Insert(attr, toinsert, false);
 			}
 		}
 	}

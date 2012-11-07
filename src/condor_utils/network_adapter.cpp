@@ -102,6 +102,7 @@ NetworkAdapterBase::createNetworkAdapter ( const char *sinful_or_name,
 
 	return adapter;
 #else
+	if (is_primary) {} // Fight compiler warnings!
 	return NULL;
 # endif
 

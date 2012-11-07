@@ -49,7 +49,7 @@ else {
     print "The _NMI_STEP_FAILED variable is not set\n";
 }
 
-if ($ENV{NMI_PLATFORM} =~ /winnt/) {
+if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     # We have to set the path differently in batlab 2011, for now we identify
     # the 2011 batlab by looking for machine names that begin with EXEC-
     if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {
@@ -78,7 +78,7 @@ if( ! -d $pub_dir ) {
 }
 
 # copy in the package targets
-if( $ENV{NMI_PLATFORM} =~ /winnt/ ) {
+if( $ENV{NMI_PLATFORM} =~ /_win/i ) {
 	# munge cleanup is needed only if cygwin is messing with ACLs.
 	# in new batlab, instead of cleaning up, just don't allow it.
 	if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {

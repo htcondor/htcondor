@@ -50,11 +50,11 @@ TransferQueueContactInfo::TransferQueueContactInfo(char const *str) {
 		if( !pos ) {
 			EXCEPT("Invalid transfer queue contact info: %s",str);
 		}
-		sprintf(name,"%.*s",(int)(pos-str),str);
+		formatstr(name,"%.*s",(int)(pos-str),str);
 		str = pos+1;
 
 		size_t len = strcspn(str,";");
-		sprintf(value,"%.*s",(int)len,str);
+		formatstr(value,"%.*s",(int)len,str);
 		str += len;
 		if( *str == ';' ) {
 			str++;
@@ -102,12 +102,14 @@ TransferQueueContactInfo::GetStringRepresentation(std::string &str) {
 	if( !m_unlimited_downloads ) {
 		limited_queues.append("download");
 	}
+	char *list_str = limited_queues.print_to_delimed_string(",");
 	str = "";
 	str += "limit=";
-	str += limited_queues.print_to_delimed_string(",");
+	str += list_str;
 	str += delim;
 	str += "addr=";
 	str += m_addr;
+	free(list_str);
 
 	return true;
 }
@@ -173,9 +175,9 @@ DCTransferQueue::RequestTransferQueueSlot(bool downloading,char const *fname,cha
 	m_xfer_queue_sock = reliSock( timeout, 0, &errstack, false, true );
 
 	if( !m_xfer_queue_sock ) {
-		sprintf(m_xfer_rejected_reason,
+		formatstr(m_xfer_rejected_reason,
 			"Failed to connect to transfer queue manager for job %s (%s): %s.",
-			jobid, fname, errstack.getFullText() );
+			jobid, fname, errstack.getFullText().c_str() );
 		error_desc = m_xfer_rejected_reason;
 		dprintf(D_ALWAYS,"%s\n",m_xfer_rejected_reason.c_str());
 		return false;
@@ -195,9 +197,9 @@ DCTransferQueue::RequestTransferQueueSlot(bool downloading,char const *fname,cha
 	{
 		delete m_xfer_queue_sock;
 		m_xfer_queue_sock = NULL;
-		sprintf(m_xfer_rejected_reason,
+		formatstr(m_xfer_rejected_reason,
 			"Failed to initiate transfer queue request for job %s (%s): %s.",
-			jobid, fname, errstack.getFullText() );
+			jobid, fname, errstack.getFullText().c_str() );
 		error_desc = m_xfer_rejected_reason;
 		dprintf(D_ALWAYS,"%s\n",m_xfer_rejected_reason.c_str());
 		return false;
@@ -216,7 +218,7 @@ DCTransferQueue::RequestTransferQueueSlot(bool downloading,char const *fname,cha
 
 	if( !msg.put(*m_xfer_queue_sock) || !m_xfer_queue_sock->end_of_message() )
 	{
-		sprintf(m_xfer_rejected_reason,
+		formatstr(m_xfer_rejected_reason,
 			"Failed to write transfer request to %s for job %s "
 			"(initial file %s).",
 			m_xfer_queue_sock->peer_description(),
@@ -273,7 +275,7 @@ DCTransferQueue::PollForTransferQueueSlot(int timeout,bool &pending,MyString &er
 	if( !msg.initFromStream(*m_xfer_queue_sock) ||
 		!m_xfer_queue_sock->end_of_message() )
 	{
-		sprintf(m_xfer_rejected_reason,
+		formatstr(m_xfer_rejected_reason,
 			"Failed to receive transfer queue response from %s for job %s "
 			"(initial file %s).",
 			m_xfer_queue_sock->peer_description(),
@@ -286,7 +288,7 @@ DCTransferQueue::PollForTransferQueueSlot(int timeout,bool &pending,MyString &er
 	if( !msg.LookupInteger(ATTR_RESULT,result) ) {
 		std::string msg_str;
 		msg.sPrint(msg_str);
-		sprintf(m_xfer_rejected_reason,
+		formatstr(m_xfer_rejected_reason,
 			"Invalid transfer queue response from %s for job %s (%s): %s",
 			m_xfer_queue_sock->peer_description(),
 			m_xfer_jobid.c_str(),
@@ -302,7 +304,7 @@ DCTransferQueue::PollForTransferQueueSlot(int timeout,bool &pending,MyString &er
 		m_xfer_queue_go_ahead = false;
 		std::string reason;
 		msg.LookupString(ATTR_ERROR_STRING,reason);
-		sprintf(m_xfer_rejected_reason,
+		formatstr(m_xfer_rejected_reason,
 			"Request to transfer files for %s (%s) was rejected by %s: %s",
 			m_xfer_jobid.c_str(), m_xfer_fname.c_str(),
 			m_xfer_queue_sock->peer_description(),
@@ -359,7 +361,7 @@ DCTransferQueue::CheckTransferQueueSlot()
 			// transfer queue manager has either died or taken away our
 			// transfer slot.
 
-		sprintf(m_xfer_rejected_reason,
+		formatstr(m_xfer_rejected_reason,
 			"Connection to transfer queue manager %s for %s has gone bad.",
 			m_xfer_queue_sock->peer_description(), m_xfer_fname.c_str());
 		dprintf(D_ALWAYS,"%s\n",m_xfer_rejected_reason.c_str());

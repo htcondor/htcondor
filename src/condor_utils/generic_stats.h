@@ -466,6 +466,7 @@ public:
    stats_entry_count() : value(0) {}
    T value;
    void Publish(ClassAd & ad, const char * pattr, int flags) const { 
+      (void)flags;
       ClassAdAssign(ad, pattr, value); 
       };
    void Unpublish(ClassAd & ad, const char * pattr) const {
@@ -569,7 +570,7 @@ public:
    void Unpublish(ClassAd & ad, const char * pattr) const {
       ad.Delete(pattr);
       MyString attr;
-      attr.sprintf("Recent%s", pattr);
+      attr.formatstr("Recent%s", pattr);
       ad.Delete(attr.Value());
       };
 
@@ -694,7 +695,7 @@ public:
    void Unpublish(ClassAd & ad, const char * pattr) const {
       ad.Delete(pattr);
       MyString attr;
-      attr.sprintf("Recent%s", pattr);
+      attr.formatstr("Recent%s", pattr);
       ad.Delete(attr.Value());
       };
 

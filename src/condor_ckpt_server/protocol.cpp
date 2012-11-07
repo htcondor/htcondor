@@ -1302,19 +1302,19 @@ void dump_pkt(char *netpkt, size_t size)
 		{	"0", "1", "2", "3", "4", "5", "6", "7",
 			"8", "9", "A", "B", "C", "D", "E", "F" };
 
-	str.sprintf("Netpkt dump: %u bytes\n", (unsigned int)size);
+	str.formatstr("Netpkt dump: %u bytes\n", (unsigned int)size);
 	Server::Log(str.Value());
 	for (r = 0; r < size; r++) {
 		val += lookup[((unsigned char)netpkt[r]) >> 4];
 		val += lookup[((unsigned char)netpkt[r]) & 0x0F];
 	}
 
-	str.sprintf("%s\n",val.Value());
+	str.formatstr("%s\n",val.Value());
 	Server::Log(str.Value());
 
 	val = "";
 	for (r = 0; r < size; r++) {
-		tmp.sprintf("[%u: ", (unsigned int)r);
+		tmp.formatstr("[%u: ", (unsigned int)r);
 		c = netpkt[r];
 		if (isprint(c)) {
 			tmp += c;
@@ -1325,6 +1325,6 @@ void dump_pkt(char *netpkt, size_t size)
 		val += tmp;
 	}
 
-	str.sprintf("%s\n",val.Value());
+	str.formatstr("%s\n",val.Value());
 	Server::Log(str.Value());
 }

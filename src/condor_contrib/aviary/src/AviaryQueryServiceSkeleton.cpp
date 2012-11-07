@@ -138,10 +138,13 @@ axutil_date_time_t* encodeDateTime(const time_t& ts) {
 
 void mapFieldsToSummary(const JobSummaryFields& fields, JobSummary* _summary) {
 
+	JobServerObject* jso = JobServerObject::getInstance();
 	// JobID should already been in our summary
 	SubmissionID* sid = new SubmissionID;
 	sid->setName(fields.submission_id);
 	sid->setOwner(fields.owner);
+	sid->setPool(jso->getPool());
+	sid->setScheduler(jso->getName());
 	_summary->getId()->setSubmission(sid);
 	// do date/time conversion
 	_summary->setQueued(encodeDateTime(fields.queued));
@@ -255,6 +258,7 @@ GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(w
 	}
 
 	for (SubmissionCollectionType::iterator i = sub_map.begin(); sub_map.end() != i; i++) {
+		JobServerObject* jso = JobServerObject::getInstance();
 		SubmissionSummary* summary = new SubmissionSummary;
 		SubmissionObject *submission = (*i).second;
 
@@ -263,6 +267,8 @@ GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(w
 			sid->setName(submission->getName());
 			sid->setOwner(submission->getOwner());
 			sid->setQdate(submission->getOldest());
+			sid->setPool(jso->getPool());
+			sid->setScheduler(jso->getName());
 			summary->setId(sid);
 			summary->setCompleted(submission->getCompleted().size());
 			summary->setHeld(submission->getHeld().size());
@@ -504,14 +510,17 @@ GetJobDataResponse* AviaryQueryServiceSkeleton::getJobData(wso2wsf::MessageConte
 }
 
 SubmissionID* makeSubmissionID(SubmissionObject* obj) {
+  JobServerObject* jso = JobServerObject::getInstance();
   SubmissionID* sub_id = new SubmissionID;
   sub_id->setName(obj->getName());
   sub_id->setOwner(obj->getOwner());
   sub_id->setQdate(obj->getOldest());
+  sub_id->setPool(jso->getPool());
+  sub_id->setScheduler(jso->getName());
   return sub_id;
 }
 
-bool qdateCompare(SubmissionIndexType::value_type& x, SubmissionIndexType::value_type& y) {
+bool qdateCompare(SubmissionMultiIndexType::value_type& x, SubmissionMultiIndexType::value_type& y) {
   return x.first <= y.first;
 }
 
@@ -522,10 +531,18 @@ GetSubmissionIDResponse* AviaryQueryServiceSkeleton::getSubmissionID(wso2wsf::Me
     ScanMode* mode = NULL;
     
     int size = _getSubmissionID->getSize();
+    int qdate;
     bool scan_back = false;
+
+    // some fast track stuff... should be empty together
+    if (g_qdate_submissions.empty() && g_submissions.empty()) {
+            response->setRemaining(0);
+            return response;
+    }
 
     if (!_getSubmissionID->isOffsetNil()) {
         offset = _getSubmissionID->getOffset();
+        qdate = offset->getQdate();
     }
     
     if (!_getSubmissionID->isModeNil()) {
@@ -534,11 +551,13 @@ GetSubmissionIDResponse* AviaryQueryServiceSkeleton::getSubmissionID(wso2wsf::Me
 
     // see if we are scanning using a qdate index
     if (!_getSubmissionID->isModeNil()) {
-        SubmissionIndexType::iterator it, start, last;
+
+        SubmissionMultiIndexType::iterator it, start, last;
         int i=0;
 
         scan_back = mode->getScanModeEnum() == ScanMode_BEFORE;
 
+        // BEFORE mode
         if (scan_back) {
             if (offset) {
                 start = max_element(
@@ -550,17 +569,20 @@ GetSubmissionIDResponse* AviaryQueryServiceSkeleton::getSubmissionID(wso2wsf::Me
                         );
             }
             else {
-                start = g_qdate_submissions.end();
+                start = --g_qdate_submissions.end();
             }
-            it=start;
-            do {
-                response->addIds(makeSubmissionID((*it).second));
-                i++;
-                last = it;
+            it=last=start;
+            if (qdate>=(*it).second->getOldest() && qdate>0)  {
+                do {
+                    response->addIds(makeSubmissionID((*it).second));
+                    i++;
+                    last = it;
+                }
+                while (g_qdate_submissions.begin()!=it-- && i<size);
             }
-            while (g_qdate_submissions.begin()!=it-- && i<size);
             response->setRemaining(distance(g_qdate_submissions.begin(),last));
         }
+        // AFTER mode
         else {
             if (offset) {
                 start = g_qdate_submissions.upper_bound(offset->getQdate());
@@ -568,11 +590,15 @@ GetSubmissionIDResponse* AviaryQueryServiceSkeleton::getSubmissionID(wso2wsf::Me
             else {
                 start = g_qdate_submissions.begin();
             }
-            for (it=start; it!=g_qdate_submissions.end() && i<size; it++) {
-                response->addIds(makeSubmissionID((*it).second));
-                i++;
+            it = --g_qdate_submissions.end();
+            // TODO: integer rollover, but interop of xsd:unsignedInt?
+            if (qdate<it->second->getOldest() && qdate<INT_MAX)  {
+                for (it=start; it!=g_qdate_submissions.end() && i<size; it++) {
+                    response->addIds(makeSubmissionID((*it).second));
+                    i++;
+                }
             }
-            response->setRemaining(distance(it,g_qdate_submissions.end()));
+            response->setRemaining(i?distance(it,g_qdate_submissions.end()):0);
         }
 
         return response;

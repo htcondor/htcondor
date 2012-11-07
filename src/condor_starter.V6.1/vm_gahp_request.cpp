@@ -200,7 +200,7 @@ VMGahpRequest::vmStart(const char *vm_type, const char *workingdir)
 	}
 
 	MyString reqline;
-	reqline.sprintf("%s", vm_type);
+	reqline.formatstr("%s", vm_type);
 
 	//Now sending a command to vm-gahp
 	//Req_id is gonna be set in nowPending function
@@ -306,7 +306,7 @@ VMGahpRequest::executeBasicCmd(const char *command, int vm_id)
 	}
 
 	MyString reqline;
-	reqline.sprintf("%d", vm_id);
+	reqline.formatstr("%d", vm_id);
 
 	//Now sending a command to vm-gahp
 	//Req_id is gonna be set in nowPending function

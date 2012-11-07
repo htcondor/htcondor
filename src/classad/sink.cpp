@@ -240,6 +240,7 @@ Unparse( string &buffer, const Value &val )
 			UnparseAux( buffer, attrs );
 			return;
 		}
+		case Value::SLIST_VALUE:
 		case Value::LIST_VALUE: {
 			const ExprList *el = NULL;
 			vector<ExprTree*> exprs;

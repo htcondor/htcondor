@@ -111,7 +111,7 @@ TransferD::process_active_shadow_request(TransferRequest *treq)
 	ftrans = new FileTransfer(); // when does this get deleted?
 	ASSERT( ftrans->Init(job_ad, false, PRIV_USER) == 1);
 	ftrans->RegisterCallback(
-		(FileTransferHandler)&TransferD::active_shadow_transfer_completed,this);
+		(FileTransferHandlerCpp)&TransferD::active_shadow_transfer_completed,this);
 	
 	ftrans->setPeerVersion( "6.9.0" ); /* XXX hack */
 

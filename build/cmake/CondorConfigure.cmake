@@ -16,11 +16,10 @@
  #
  ###############################################################
 
-
 # OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
   exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
-  if(${TEST_VER} MATCHES "10.[67]" AND ${SYS_ARCH} MATCHES "I386")
+  if(${TEST_VER} MATCHES "10.[678]" AND ${SYS_ARCH} MATCHES "I386")
 	set (SYS_ARCH "X86_64")
   endif()
 elseif(${OS_NAME} MATCHES "WIN")
@@ -34,6 +33,10 @@ elseif(${OS_NAME} MATCHES "WIN")
 	add_definitions(-DWINVER=_WIN32_WINNT_WINXP)
 	add_definitions(-DNTDDI_VERSION=NTDDI_WINXP)
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+	
+	if(MSVC11)
+		set(PREFER_CPP11 TRUE)
+	endif()
 
 	set(CMD_TERM \r\n)
 	set(C_WIN_BIN ${CONDOR_SOURCE_DIR}/msconfig) #${CONDOR_SOURCE_DIR}/build/backstage/win)
@@ -131,19 +134,14 @@ if( NOT WINDOWS)
 	find_path(HAVE_PCRE_H "pcre.h")
 	find_path(HAVE_PCRE_PCRE_H "pcre/pcre.h" )
 
-	find_library( ZLIB_FOUND z )
-	find_library( EXPAT_FOUND expat )
-	find_library( LIBUUID_FOUND uuid )
+        find_multiple( "z" ZLIB_FOUND)
+	find_multiple( "expat" EXPAT_FOUND )
+	find_multiple( "uuid" LIBUUID_FOUND )
 	find_library( HAVE_DMTCP dmtcpaware HINTS /usr/local/lib/dmtcp )
-	find_library( LIBRESOLV_PATH resolv )
-    if( NOT "${LIBRESOLV_PATH}" MATCHES "-NOTFOUND" )
-      set(HAVE_LIBRESOLV ON)
-    endif()
-	find_library( LIBDL_PATH dl )
-    if( NOT "${LIBDL_PATH}" MATCHES "-NOTFOUND" )
-      set(HAVE_LIBDL ON)
-    endif()
-	find_library( LIBLTDL_PATH ltdl )
+	find_multiple( "resolv" HAVE_LIBRESOLV )
+        find_multiple ("dl" HAVE_LIBDL )
+	find_multiple ("ltdl" HAVE_LIBLTDL )
+
 	check_library_exists(dl dlopen "" HAVE_DLOPEN)
 	check_symbol_exists(res_init "sys/types.h;netinet/in.h;arpa/nameser.h;resolv.h" HAVE_DECL_RES_INIT)
 	check_symbol_exists(MS_PRIVATE "sys/mount.h" HAVE_MS_PRIVATE)
@@ -256,18 +254,33 @@ if( NOT WINDOWS)
 	check_cxx_compiler_flag(-std=c++11 cxx_11)
 	if (cxx_11)
 
-		message(STATUS "***NOTE*** We've detected c++11 but our code base outside of classads needs love to support *** FOR SHAME!! ***")
-		#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+		# Clang requires some additional C++11 flags, as the default stdlib
+		# is from an old GCC version.
+		if ( ${OS_NAME} STREQUAL "DARWIN" AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -lc++")
+			set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -lc++")
+			set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} -lc++")
+			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lc++")
+		endif()
 
-		#check_cxx_source_compiles("
-		##include <unordered_map>
-		##include <memory>
-		#int main() {
-		#	std::unordered_map<int, int> ci;
-		#	std::shared_ptr<int> foo;
-		#	return 0;
-		#}
-		#" PREFER_CPP11 )
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
+		check_cxx_source_compiles("
+		#include <unordered_map>
+		#include <memory>
+		int main() {
+			std::unordered_map<int, int> ci;
+			std::shared_ptr<int> foo;
+			return 0;
+		}
+		" PREFER_CPP11 )
+
+		# Note - without adding -lc++ to the CXX flags, the linking of the test
+		# above will fail for clang.  It doesn't seem strictly necessary though,
+		# so we remove this afterward.
+		if ( ${OS_NAME} STREQUAL "DARWIN" AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
+			string(REPLACE "-lc++" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+		endif()
 
 	endif (cxx_11)
 
@@ -299,6 +312,7 @@ find_program(HAVE_VMWARE vmware)
 find_program(LN ln)
 find_program(LATEX2HTML latex2html)
 find_program(LATEX latex)
+find_program(HAVE_WGET wget)
 
 # Check for the existense of and size of various types
 check_type_size("id_t" ID_T)
@@ -348,12 +362,6 @@ if (${OS_NAME} STREQUAL "SUNOS")
 elseif(${OS_NAME} STREQUAL "LINUX")
 
 	set(LINUX ON)
-
-	if ( ${SYSTEM_NAME} MATCHES "rhel3" )
-		set(CMAKE_PREFIX_PATH /usr/kerberos)
-		include_directories(/usr/kerberos/include)
-	endif()
-
 	set( CONDOR_BUILD_SHARED_LIBS TRUE )
 
 	set(DOES_SAVE_SIGSTATE ON)
@@ -365,8 +373,12 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	check_include_files("linux/nfsd/const.h" HAVE_LINUX_NFSD_CONST_H)
 	check_include_files("linux/personality.h" HAVE_LINUX_PERSONALITY_H)
 	check_include_files("linux/sockios.h" HAVE_LINUX_SOCKIOS_H)
+	check_include_files("X11/Xlib.h" HAVE_XLIB_H)
 
-	find_library(HAVE_X11 X11)
+	if (HAVE_XLIB_H)
+	  find_library(HAVE_X11 X11)
+	endif()
+
 	dprint("Threaded functionality only enable in Linux and Windows")
 	set(HAS_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 	set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
@@ -392,14 +404,6 @@ elseif(${OS_NAME} STREQUAL "DARWIN")
 	find_library( IOKIT_FOUND IOKit )
 	find_library( COREFOUNDATION_FOUND CoreFoundation )
 	set(CMAKE_STRIP ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_strip CACHE FILEPATH "Command to remove sybols from binaries" FORCE)
-elseif(${OS_NAME} STREQUAL "HPUX")
-	set(HPUX ON)
-	set(DOES_SAVE_SIGSTATE ON)
-	set(NEEDS_64BIT_STRUCTS ON)
-elseif(${OS_NAME} STREQUAL "HPUX")
-	set(HPUX ON)
-	set(DOES_SAVE_SIGSTATE ON)
-	set(NEEDS_64BIT_STRUCTS ON)
 endif()
 
 ##################################################
@@ -412,8 +416,7 @@ option(HAVE_JOB_HOOKS "Enable job hook functionality" ON)
 option(HAVE_BACKFILL "Compiling support for any backfill system" ON)
 option(HAVE_BOINC "Compiling support for backfill with BOINC" ON)
 option(SOFT_IS_HARD "Enable strict checking for WITH_<LIB>" OFF)
-option(BUILD_TESTS "Will build internal test applications" ON)
-option(WANT_CONTRIB "Enable quill functionality" OFF)
+option(WANT_CONTRIB "Enable building of contrib modules" OFF)
 option(WANT_FULL_DEPLOYMENT "Install condors deployment scripts, libs, and includes" ON)
 option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
@@ -468,13 +471,12 @@ else()
 endif()
 
 #####################################
-# KBDD option
-if (NOT HPUX)
-	option(HAVE_SHARED_PORT "Support for condor_shared_port" ON)
-	if (NOT WINDOWS)
-		set (HAVE_SCM_RIGHTS_PASSFD ON)
-	endif()
-endif(NOT HPUX)
+# Shared port option
+option(HAVE_SHARED_PORT "Support for condor_shared_port" ON)
+if (NOT WINDOWS)
+	set (HAVE_SCM_RIGHTS_PASSFD ON)
+endif()
+
 
 #####################################
 # ssh_to_job option
@@ -491,9 +493,9 @@ if ( HAVE_SSH_TO_JOB )
     endif()
 endif()
 
-if (BUILD_TESTS)
+if (BUILD_TESTING)
 	set(TEST_TARGET_DIR ${CMAKE_BINARY_DIR}/src/condor_tests)
-endif(BUILD_TESTS)
+endif(BUILD_TESTING)
 
 ##################################################
 ##################################################
@@ -505,6 +507,14 @@ endif(BUILD_TESTS)
 if (NOT PROPER)
 	message(STATUS "********* Building with UW externals *********")
 	cmake_minimum_required(VERSION 2.8)
+	
+	# perform a quick check for wget b/c without it you're hosed. 
+	 if ((${HAVE_WGET} STREQUAL "HAVE_WGET-NOTFOUND"))
+	    message (FATAL "You are trying to perform a UW-Build without wget, EPIC FAIL! ")
+	 else ()
+	    dprint("wget = ${HAVE_WGET}")
+	 endif()
+
 endif()
 
 option(CACHED_EXTERNALS "enable/disable cached externals" OFF)
@@ -516,6 +526,7 @@ if (NOT EXTERNAL_STAGE)
 		set (EXTERNAL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/bld_external)
 	endif()
 endif()
+
 if (WINDOWS)
 	string (REPLACE "\\" "/" EXTERNAL_STAGE "${EXTERNAL_STAGE}")
 endif()
@@ -526,7 +537,9 @@ if (NOT EXISTS ${EXTERNAL_STAGE})
 endif()
 
 ###########################################
+if (NOT MSVC11)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.49.0)
+endif()
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p1)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
@@ -534,20 +547,13 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
-#add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/hadoop/0.21.0)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/postgresql/8.2.3-p1)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
 
 if (NOT WINDOWS)
 
-	if (${SYSTEM_NAME} MATCHES "rhel3")
-		# The new version of 2011.05.24-r31 doesn't compile on rhel3/x86_64
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/0.2)
-	else ()
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/2011.05.24-r31)
-	endif()
-
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/2011.05.24-r31)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
@@ -557,7 +563,7 @@ if (NOT WINDOWS)
 	# globus is an odd *beast* which requires a bit more config.
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.2.1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/blahp/1.16.5.1)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/1.9.10_4)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.0.6)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.12.1_14)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/wso2/2.1.0)
 
@@ -626,6 +632,13 @@ configure_file(${CONDOR_SOURCE_DIR}/src/condor_includes/config.h.cmake ${CMAKE_C
 exec_program ( ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.tmp ${CMAKE_CURRENT_BINARY_DIR}/src/condor_includes/config.h )
 add_definitions(-DHAVE_CONFIG_H)
 
+# We could run the safefile configure script each time with cmake - or we could just fix the one usage of configure.
+if (NOT WINDOWS)
+    execute_process( COMMAND sed "s|#undef id_t|#cmakedefine ID_T\\n#if !defined(ID_T)\\n#define id_t uid_t\\n#endif|" ${CONDOR_SOURCE_DIR}/src/safefile/safe_id_range_list.h.in OUTPUT_FILE ${CMAKE_CURRENT_BINARY_DIR}/src/safefile/safe_id_range_list.h.in.tmp  )
+    configure_file( ${CONDOR_BINARY_DIR}/src/safefile/safe_id_range_list.h.in.tmp ${CMAKE_CURRENT_BINARY_DIR}/src/safefile/safe_id_range_list.h.tmp_out)
+    exec_program ( ${CMAKE_COMMAND} ARGS -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/src/safefile/safe_id_range_list.h.tmp_out ${CMAKE_CURRENT_BINARY_DIR}/src/safefile/safe_id_range_list.h )
+endif()
+
 ###########################################
 # include and link locations
 include_directories( ${CONDOR_EXTERNAL_INCLUDE_DIRS} )
@@ -679,6 +692,9 @@ if (CONDOR_CXX_FLAGS)
 endif()
 
 if(MSVC)
+	#disable autolink settings 
+	add_definitions(-DBOOST_ALL_NO_LIB)
+
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /FC")      # use full paths names in errors and warnings
 	if(MSVC_ANALYZE)
 		# turn on code analysis. 
@@ -705,6 +721,30 @@ else(MSVC)
 	if (cxx_Wall)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 	endif(cxx_Wall)
+
+	# Added to help make resulting libcondor_utils smaller.
+	#check_cxx_compiler_flag(-fno-exceptions no_exceptions)
+	#if (no_exceptions)
+	#	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
+	#	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fno-exceptions")
+	#endif(no_exceptions)
+	#check_cxx_compiler_flag(-Os cxx_Os)
+	#if (cxx_Os)
+	#	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Os")
+	#	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Os")
+	#endif(cxx_Os)
+
+	dprint("TSTCLAIR - DISABLING -flto b/c of gcc failure in koji try again later")
+	#if (CMAKE_CXX_COMPILER_VERSION STRGREATER "4.7.0" OR CMAKE_CXX_COMPILER_VERSION STREQUAL "4.7.0")
+	#   
+	#  check_cxx_compiler_flag(-flto cxx_lto)
+	#  if (cxx_lto)
+	#	  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -flto")
+	#	  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -flto")
+	#  endif(cxx_lto)
+	#else()
+	#  dprint("skipping cxx_lto flag check")
+	#endif()
 
 	check_cxx_compiler_flag(-W cxx_W)
 	if (cxx_W)
@@ -764,17 +804,17 @@ else(MSVC)
 		if (cxx_fstack_protector)
 			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector")
 		endif(cxx_fstack_protector)
-
-		check_cxx_compiler_flag(-fnostack-protector cxx_fnostack_protector)
-		if (cxx_fnostack_protector)
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fnostack-protector")
-		endif(cxx_fnostack_protector)
 	endif(NOT AIX)
 
-	check_cxx_compiler_flag(-rdynamic cxx_rdynamic)
-	if (cxx_rdynamic)
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -rdynamic")
-	endif(cxx_rdynamic)
+	# Clang on Mac OS X doesn't support -rdynamic, but the
+	# check below claims it does. This is probably because the compiler
+	# just prints a warning, rather than failing.
+	if ( NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
+		check_cxx_compiler_flag(-rdynamic cxx_rdynamic)
+		if (cxx_rdynamic)
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -rdynamic")
+		endif(cxx_rdynamic)
+	endif()
 
 	if (LINUX)
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--warn-once -Wl,--warn-common")
@@ -818,8 +858,10 @@ else(MSVC)
 
 	add_definitions(-D${SYS_ARCH}=${SYS_ARCH})
 
-	# b/c we don't do anything c++ specific copy flags for c-compilation
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS}")
+	# copy in C only flags into CMAKE_C_FLAGS
+	string(REPLACE "-std=c++11" "" CMAKE_C_FLAGS ${CMAKE_CXX_FLAGS})
+	# Only relevant for clang / Mac OS X
+	string(REPLACE "-stdlib=libc++" "" CMAKE_C_FLAGS ${CMAKE_C_FLAGS})
 
 endif(MSVC)
 

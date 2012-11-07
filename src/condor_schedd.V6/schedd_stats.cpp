@@ -621,7 +621,7 @@ ScheddOtherStats * ScheddOtherStatsMgr::Matches(ClassAd & ad, time_t updateTime)
 			ASSERT(po2);
 			po->sets[str] = po2;
 
-			po2->prefix.sprintf("%s_%s_", po->prefix.Value(), str.c_str());
+			po2->prefix.formatstr("%s_%s_", po->prefix.Value(), str.c_str());
 			cleanStringForUseAsAttr(po2->prefix, '_', false);
 
 			po2->stats.Init(true);

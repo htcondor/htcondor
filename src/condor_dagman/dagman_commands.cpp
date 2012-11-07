@@ -77,9 +77,9 @@ AddNode( Dag *dag, Job::job_type_t type, const char *name,
 		return false;
 	}
 	if( done && isFinal) {
-		failReason.sprintf( "Warning: FINAL Job %s cannot be set to DONE\n",
+		failReason.formatstr( "Warning: FINAL Job %s cannot be set to DONE\n",
 					name );
-        debug_printf( DEBUG_QUIET, failReason.Value() );
+        debug_printf( DEBUG_QUIET, "%s", failReason.Value() );
 		(void)check_warning_strictness( DAG_STRICT_1, false );
 		done = false;
 	}
@@ -148,13 +148,13 @@ IsValidNodeName( Dag *dag, const char *name, MyString &whynot )
 		return false;
 	}
 	if( isReservedWord( name ) ) {
-		whynot.sprintf( "invalid node name: '%s' is a DAGMan reserved word",
+		whynot.formatstr( "invalid node name: '%s' is a DAGMan reserved word",
 					name );
 		return false;
 	}
 	ASSERT( dag != NULL );
 	if( dag->NodeExists( name ) ) {
-		whynot.sprintf( "node name '%s' already exists in DAG", name );
+		whynot.formatstr( "node name '%s' already exists in DAG", name );
 		return false;
 	}
 	return true;

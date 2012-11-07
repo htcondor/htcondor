@@ -773,7 +773,7 @@ bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg,int num_fds)
 			return false;
 		}
 		if(msg) {
-			msg->sprintf( "file descriptor safety level exceeded: "
+			msg->formatstr( "file descriptor safety level exceeded: "
 			              " limit %d, "
 			              " registered socket count %d, "
 			              " fd %d",
@@ -1713,7 +1713,7 @@ int DaemonCore::Create_Pipe( int *pipe_ends,
 #ifdef WIN32
 	static unsigned pipe_counter = 0;
 	MyString pipe_name;
-	pipe_name.sprintf("\\\\.\\pipe\\condor_pipe_%u_%u", GetCurrentProcessId(), pipe_counter++);
+	pipe_name.formatstr("\\\\.\\pipe\\condor_pipe_%u_%u", GetCurrentProcessId(), pipe_counter++);
 	return Create_Named_Pipe(pipe_ends,
 		can_register_read,
 		can_register_write,
@@ -1798,9 +1798,9 @@ int DaemonCore::Create_Named_Pipe( int *pipe_ends,
 
 	// Shut the compiler up
 	// These parameters are needed on Windows
-	can_register_read = can_register_read;
-	can_register_write = can_register_write;
-	psize = psize;
+	(void)can_register_read;
+	(void)can_register_write;
+	(void)psize;
 
 	bool failed = false;
 	int filedes[2];
@@ -1868,10 +1868,10 @@ int DaemonCore::Inherit_Pipe(int fd, bool is_write, bool can_register, bool nonb
 #else
 		// Shut the compiler up
 		// These parameters are needed on Windows
-	is_write = is_write;
-	can_register = can_register;
-	nonblocking = nonblocking;
-	psize = psize;
+	(void)is_write;
+	(void)can_register;
+	(void)nonblocking;
+	(void)psize;
 
 	pipe_handle = fd;
 #endif
@@ -2262,7 +2262,7 @@ DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int /* len */ ) {
 		return -1;
 	}
 	pidinfo->pipe_buf[0] = new MyString;
-	*pidinfo->pipe_buf[0] = (char*)buffer;
+	*pidinfo->pipe_buf[0] = (const char*)buffer;
 	daemonCore->Register_Pipe(pidinfo->std_pipes[0], "DC stdin pipe", static_cast<PipeHandlercpp>(&DaemonCore::PidEntry::pipeFullWrite), "Guarantee all data written to pipe", pidinfo, HANDLE_WRITE);
 	return 0;
 }
@@ -2466,7 +2466,7 @@ MyString DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authentica
 				(!comTable[i].force_authentication || is_authenticated))
 			{
 				char const *comma = res.Length() ? "," : "";
-				res.sprintf_cat( "%s%i", comma, comTable[i].num );
+				res.formatstr_cat( "%s%i", comma, comTable[i].num );
 			}
 		}
 	}
@@ -2804,7 +2804,7 @@ DaemonCore::reconfig(void) {
 	// a daemon core parent.
 	if ( ppid && m_want_send_child_alive ) {
 		MyString buf;
-		buf.sprintf("%s_NOT_RESPONDING_TIMEOUT",get_mySubSystem()->getName());
+		buf.formatstr("%s_NOT_RESPONDING_TIMEOUT",get_mySubSystem()->getName());
 		max_hang_time = param_integer(buf.Value(),-1);
 		if( max_hang_time == (unsigned int)-1 ) {
 			max_hang_time = param_integer("NOT_RESPONDING_TIMEOUT",0);
@@ -5309,6 +5309,8 @@ enum {
         STACK_GROWS_UP,
         STACK_GROWS_DOWN
 };
+
+#if HAVE_CLONE
 static int stack_direction(volatile int *ptr=NULL) {
     volatile int location;
     if(!ptr) return stack_direction(&location);
@@ -5318,6 +5320,7 @@ static int stack_direction(volatile int *ptr=NULL) {
 
     return STACK_GROWS_DOWN;
 }
+#endif
 
 pid_t CreateProcessForkit::clone_safe_getpid() {
 #if HAVE_CLONE
@@ -6197,7 +6200,7 @@ int DaemonCore::Create_Process(
 		goto wrapup;
 	}
 
-	inheritbuf.sprintf("%lu ",(unsigned long)mypid);
+	inheritbuf.formatstr("%lu ",(unsigned long)mypid);
 
 		// true = Give me a real local address, circumventing
 		//  CCB's trickery if present.  As this address is
@@ -6643,7 +6646,7 @@ int DaemonCore::Create_Process(
 		/** surround the executable name with quotes or you'll 
 			have problems when the execute directory contains 
 			spaces! */
-		strArgs.sprintf ( 
+		strArgs.formatstr ( 
 			"\"%s\"",
 			executable );
 		
@@ -6676,7 +6679,7 @@ int DaemonCore::Create_Process(
 		
 		/** next, stuff the extra cmd.exe args in with 
 			the arguments */
-		strArgs.sprintf ( 
+		strArgs.formatstr ( 
 			"\"%s\" /Q /C \"%s\"",
 			systemshell,
 			executable );
@@ -6750,7 +6753,7 @@ int DaemonCore::Create_Process(
 
 				/** add the script to the command-line. The 
 					executable is actually the script. */
-				strArgs.sprintf (
+				strArgs.formatstr (
 					"\"%s\" \"%s\"",
 					interpreter, 
 					executable );
@@ -7038,7 +7041,7 @@ int DaemonCore::Create_Process(
 		if( stat(cwd, &stat_struct) == -1 ) {
 			return_errno = errno;
             if (NULL != err_return_msg) {
-                err_return_msg->sprintf("Cannot access specified iwd \"%s\"", cwd);
+                err_return_msg->formatstr("Cannot access specified iwd \"%s\"", cwd);
             }
 			dprintf( D_ALWAYS, "Create_Process: "
 					 "Cannot access specified iwd \"%s\": "
@@ -7068,7 +7071,7 @@ int DaemonCore::Create_Process(
 				goto wrapup;
 			}
 
-			executable_fullpath_buf.sprintf("%s/%s", currwd.Value(), executable);
+			executable_fullpath_buf.formatstr("%s/%s", currwd.Value(), executable);
 			executable_fullpath = executable_fullpath_buf.Value();
 
 				// Finally, log it
@@ -8078,7 +8081,7 @@ DaemonCore::Inherit( void )
 			}
 			IpVerify* ipv = getSecMan()->getIpVerify();
 			MyString id;
-			id.sprintf("%s", CONDOR_PARENT_FQU);
+			id.formatstr("%s", CONDOR_PARENT_FQU);
 			ipv->PunchHole(DAEMON, id);
 		}
 	}
@@ -8907,7 +8910,7 @@ int DaemonCore::HandleChildAliveCommand(int, Stream* stream)
 			last_email = time(NULL);
 
 			std::string subject;
-			sprintf(subject,"Condor process reports long locking delays!");
+			formatstr(subject,"Condor process reports long locking delays!");
 
 			FILE *mailer = email_admin_open(subject.c_str());
 			if( mailer ) {
@@ -9516,7 +9519,7 @@ DaemonCore::CheckConfigAttrSecurity( const char* name, Sock* sock )
 			// level.
 
 		MyString command_desc;
-		command_desc.sprintf("remote config %s",name);
+		command_desc.formatstr("remote config %s",name);
 
 		if( Verify(command_desc.Value(),(DCpermission)i, sock->peer_addr(), sock->getFullyQualifiedUser())) {
 				// now we can see if the specific attribute they're
@@ -9845,7 +9848,7 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd,char const *fname)
 
     if( fname ) {
 		MyString newLocalAdFile;
-		newLocalAdFile.sprintf("%s.new",fname);
+		newLocalAdFile.formatstr("%s.new",fname);
         if( (AD_FILE = safe_fopen_wrapper_follow(newLocalAdFile.Value(), "w")) ) {
             daemonAd->fPrint(AD_FILE);
             fclose( AD_FILE );
@@ -10073,7 +10076,7 @@ DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
 	bytes = daemonCore->Read_Pipe(pipe_fd, buf, max_read_bytes);
 	if (bytes > 0) {
 		// Actually read some data, so append it to our MyString.
-		// First, null-terminate the buffer so that sprintf_cat()
+		// First, null-terminate the buffer so that formatstr_cat()
 		// doesn't go berserk. This is always safe since buf was
 		// created on the stack with 1 extra byte, just in case.
 		buf[bytes] = '\0';
@@ -10104,12 +10107,11 @@ int
 DaemonCore::PidEntry::pipeFullWrite(int fd)
 {
 	int bytes_written = 0;
-	void* data_left = NULL;
 	int total_len = 0;
 
 	if (pipe_buf[0] != NULL)
 	{
-		data_left = (void*)(((const char*) pipe_buf[0]->Value()) + stdin_offset);
+		const void* data_left = (const void*)(((const char*) pipe_buf[0]->Value()) + stdin_offset);
 		total_len = pipe_buf[0]->Length();
 		bytes_written = daemonCore->Write_Pipe(fd, data_left, total_len - stdin_offset);
 		dprintf(D_DAEMONCORE, "DaemonCore::PidEntry::pipeFullWrite: Total bytes to write = %d, bytes written this pass = %d\n", total_len, bytes_written);

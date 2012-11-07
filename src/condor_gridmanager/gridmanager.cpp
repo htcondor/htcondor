@@ -144,7 +144,7 @@ static int tSetAttributeString(int cluster, int proc,
 	const char * attr_name, const char * attr_value)
 {
 	std::string tmp;
-	sprintf(tmp, "\"%s\"", attr_value);
+	formatstr(tmp, "\"%s\"", attr_value);
 	return SetAttribute( cluster, proc, attr_name, tmp.c_str());
 }
 
@@ -540,15 +540,15 @@ initJobExprs()
 	static bool done = false;
 	if(done) { return; }
 
-	sprintf(expr_matched_or_undef, "(%s =!= %s)", ATTR_JOB_MATCHED, expr_false);
-	sprintf(expr_managed, "(%s =?= \"%s\")", ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
-	sprintf(expr_not_managed, "(%s =!= \"%s\")", ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
-	sprintf(expr_not_held, "(%s != %d)", ATTR_JOB_STATUS, HELD);
-	sprintf(expr_schedd_job_constraint, "(%s)", ScheddJobConstraint);
+	formatstr(expr_matched_or_undef, "(%s =!= %s)", ATTR_JOB_MATCHED, expr_false);
+	formatstr(expr_managed, "(%s =?= \"%s\")", ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
+	formatstr(expr_not_managed, "(%s =!= \"%s\")", ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
+	formatstr(expr_not_held, "(%s != %d)", ATTR_JOB_STATUS, HELD);
+	formatstr(expr_schedd_job_constraint, "(%s)", ScheddJobConstraint);
 	// The gridmanager never wants to see this job again.
 	// It should be in the process of leaving the queue.
-	sprintf(expr_completely_done, "(%s =?= \"%s\")", ATTR_JOB_MANAGED, MANAGED_DONE);
-	sprintf(expr_not_completely_done, "(%s =!= \"%s\")", ATTR_JOB_MANAGED, MANAGED_DONE);
+	formatstr(expr_completely_done, "(%s =?= \"%s\")", ATTR_JOB_MANAGED, MANAGED_DONE);
+	formatstr(expr_not_completely_done, "(%s =!= \"%s\")", ATTR_JOB_MANAGED, MANAGED_DONE);
 
 	done = true;
 }
@@ -603,7 +603,7 @@ doContactSchedd()
 
 		pendingScheddVacates.startIterations();
 		while ( pendingScheddVacates.iterate( curr_request ) != 0 ) {
-			sprintf( buff, "%d.%d", curr_request.job->procID.cluster,
+			formatstr( buff, "%d.%d", curr_request.job->procID.cluster,
 						  curr_request.job->procID.proc );
 			job_ids.append( buff.c_str() );
 		}
@@ -617,13 +617,13 @@ doContactSchedd()
 
 		rval = ScheddObj->vacateJobs( &job_ids, VACATE_FAST, &errstack );
 		if ( rval == NULL ) {
-			sprintf( error_str, "vacateJobs returned NULL, CondorError: %s!",
-							   errstack.getFullText() );
+			formatstr( error_str, "vacateJobs returned NULL, CondorError: %s!",
+							   errstack.getFullText().c_str() );
 			goto contact_schedd_failure;
 		} else {
 			pendingScheddVacates.startIterations();
 			while ( pendingScheddVacates.iterate( curr_request ) != 0 ) {
-				sprintf( buff, "job_%d_%d", curr_request.job->procID.cluster,
+				formatstr( buff, "job_%d_%d", curr_request.job->procID.cluster,
 							  curr_request.job->procID.proc );
 				if ( !rval->LookupInteger( buff.c_str(), result ) ) {
 					dprintf( D_FULLDEBUG, "vacateJobs returned malformed ad\n" );
@@ -1125,19 +1125,19 @@ contact_schedd_next_add_job:
 		firstScheddContact = false;
 		addJobsSignaled = false;
 	} else {
-		sprintf( error_str, "Schedd connection error during Add/RemoveJobs at line %d!", failure_line_num );
+		formatstr( error_str, "Schedd connection error during Add/RemoveJobs at line %d!", failure_line_num );
 		goto contact_schedd_failure;
 	}
 
 	if ( update_jobs_complete == true ) {
 		updateJobsSignaled = false;
 	} else {
-		sprintf( error_str, "Schedd connection error during dirty attribute update at line %d!", failure_line_num );
+		formatstr( error_str, "Schedd connection error during dirty attribute update at line %d!", failure_line_num );
 		goto contact_schedd_failure;
 	}
 
 	if ( schedd_updates_complete == false ) {
-		sprintf( error_str, "Schedd connection error during updates at line %d!", failure_line_num );
+		formatstr( error_str, "Schedd connection error during updates at line %d!", failure_line_num );
 		goto contact_schedd_failure;
 	}
 
@@ -1149,7 +1149,7 @@ contact_schedd_next_add_job:
 		dirty_job_ids.rewind();
 		rval = ScheddObj->clearDirtyAttrs( &dirty_job_ids, &errstack );
 		if ( rval == NULL ) {
-			dprintf(D_ALWAYS, "Failed to notify schedd to clear dirty attributes.  CondorError: %s\n", errstack.getFullText() );
+			dprintf(D_ALWAYS, "Failed to notify schedd to clear dirty attributes.  CondorError: %s\n", errstack.getFullText().c_str() );
 		}
 		delete rval;
 	}

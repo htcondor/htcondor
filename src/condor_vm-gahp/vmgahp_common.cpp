@@ -353,7 +353,7 @@ write_to_daemoncore_pipe(const char* fmt, ... )
 	MyString output;
 	va_list args;
 	va_start(args, fmt);
-	output.vsprintf(fmt, args);
+	output.vformatstr(fmt, args);
 	write_to_daemoncore_pipe(vmgahp_stdout_pipe, 
 			output.Value(), output.Length());
 	va_end(args);
@@ -529,7 +529,7 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	char buff[1024];
 	StringList *my_cmd_out = cmd_out;
 
-	priv_state prev = PRIV_UNKNOWN;
+	priv_state prev = get_priv_state();
 
 	int stdout_pipes[2];
 	int stdin_pipes[2];
@@ -549,13 +549,14 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 #endif
 		break;
 	default:
-		// Stay as Condor user
-		;
+		// Stay as Condor user, this should be a no-op
+		prev = set_condor_priv();
 	}
 #if defined(WIN32)
 	if((cmd_in != NULL) || (cmd_err != NULL))
 	  {
 	    vmprintf(D_ALWAYS, "Invalid use of systemCommand() in Windows.\n");
+	    set_priv( prev );
 	    return -1;
 	  }
 	//if ( use_privsep ) {
@@ -571,6 +572,7 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	if((cmd_err != NULL) && merge_stderr_with_stdout)
 	  {
 	    vmprintf(D_ALWAYS, "Invalid use of systemCommand().\n");
+	    set_priv( prev );
 	    return -1;
 	  }
 
@@ -583,6 +585,7 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	  {
 	    vmprintf(D_ALWAYS, "Error creating pipe: %s\n", strerror(errno));
 		deleteStringArray( args_array );
+	    set_priv( prev );
 	    return -1;
 	  }
 	if(pipe(stdout_pipes) < 0)
@@ -591,6 +594,7 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	    close(stdin_pipes[0]);
 	    close(stdin_pipes[1]);
 		deleteStringArray( args_array );
+	    set_priv( prev );
 	    return -1;
 	  }
 
@@ -605,6 +609,7 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	      close(stdout_pipes[0]);
 	      close(stdout_pipes[1]);
 		  deleteStringArray( args_array );
+	      set_priv( prev );
 	      return -1;
 	    }
 	}
@@ -619,6 +624,7 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 		close(stdout_pipes[0]);
 		close(stdout_pipes[1]);
 		deleteStringArray( args_array );
+		set_priv( prev );
 		return -1;
 	      }
 	  }
@@ -636,6 +642,7 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 			close(error_pipe[1]);
 		}
 		deleteStringArray( args_array );
+		set_priv( prev );
 	    return -1;
 	  }
 	if(pid == 0)
@@ -653,12 +660,24 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	      }
 
 
+			/* to be safe, we want to switch our real uid/gid to our
+			   effective uid/gid (shedding any privledges we've got).
+			   we also want to drop any supplimental groups we're in.
+			   we want to run this popen()'ed thing as our effective
+			   uid/gid, dropping the real uid/gid.  all of these calls
+			   will fail if we don't have a ruid of 0 (root), but
+			   that's harmless.  also, note that we have to stash our
+			   effective uid, then switch our euid to 0 to be able to
+			   set our real uid/gid.
+			   We wrap some of the calls in if-statements to quiet some
+			   compilers that object to us not checking the return values.
+			*/
 	    uid_t euid = geteuid();
 	    gid_t egid = getegid();
-	    seteuid( 0 );
+	    if ( seteuid( 0 ) ) { }
 	    setgroups( 1, &egid );
-	    setgid( egid );
-	    setuid( euid );
+	    if ( setgid( egid ) ) { }
+	    if ( setuid( euid ) ) _exit(ENOEXEC); // Unsafe?
 	    
 	    install_sig_handler(SIGPIPE, SIG_DFL);
 	    sigset_t sigs;
@@ -698,6 +717,7 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 	    fclose(fp);
 		fclose(fp_for_stdin);
 		deleteStringArray( args_array );
+		set_priv( prev );
 		return -1;
 	      }
 	  }
@@ -726,6 +746,7 @@ int systemCommand( ArgList &args, priv_state priv, StringList *cmd_out, StringLi
 			fclose(childerr);
 		}
 		deleteStringArray( args_array );
+		set_priv( prev );
 	    return -1;
 	  }
 	}

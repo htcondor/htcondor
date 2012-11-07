@@ -205,7 +205,7 @@ bool CreamResource::Init()
 		// TODO This assumes that at least one CreamJob has already
 		// initialized the gahp server. Need a better solution.
 	std::string gahp_name;
-	sprintf( gahp_name, "CREAM/%s/%s", proxySubject, proxyFirstFQAN );
+	formatstr( gahp_name, "CREAM/%s/%s", proxySubject, proxyFirstFQAN );
 
 	gahp = new GahpClient( gahp_name.c_str() );
 
@@ -243,7 +243,7 @@ bool CreamResource::Init()
 		pool_name = strdup( "NoPool" );
 	}
 
-	sprintf( m_leaseId, "Condor#%s#%s#%s", myUserName, ScheddName, pool_name );
+	formatstr( m_leaseId, "Condor#%s#%s#%s", myUserName, ScheddName, pool_name );
 
 	free( pool_name );
 
@@ -294,14 +294,17 @@ const char *CreamResource::HashName( const char *resource_name,
 {
 	static std::string hash_name;
 
-	sprintf( hash_name, "cream %s#%s#%s", resource_name, proxy_subject,
+	formatstr( hash_name, "cream %s#%s#%s", resource_name, proxy_subject,
 			 proxy_first_fqan );
 
 	return hash_name.c_str();
 }
 
-void CreamResource::RegisterJob( CreamJob *job )
+void CreamResource::RegisterJob( BaseJob *base_job )
 {
+	CreamJob* job = dynamic_cast<CreamJob*>( base_job );
+	ASSERT( job );
+
 	int job_lease;
 	if ( m_sharedLeaseExpiration == 0 ) {
 		if ( job->jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION, job_lease ) ) {
@@ -322,8 +325,11 @@ void CreamResource::RegisterJob( CreamJob *job )
 	BaseResource::RegisterJob( job );
 }
 
-void CreamResource::UnregisterJob( CreamJob *job )
+void CreamResource::UnregisterJob( BaseJob *base_job )
 {
+	CreamJob *job = dynamic_cast<CreamJob*>( base_job );
+	ASSERT( job );
+
 	if ( job->delegatedCredentialURI != NULL ) {
 		bool delete_deleg = true;
 		CreamJob *next_job;
@@ -508,11 +514,11 @@ dprintf(D_FULLDEBUG,"    new delegation\n");
 #ifdef WIN32
 				struct _timeb timebuffer;
 				_ftime( &timebuffer );
-				sprintf( delegation_uri, "%d.%d", timebuffer.time, timebuffer.millitm );
+				formatstr( delegation_uri, "%d.%d", timebuffer.time, timebuffer.millitm );
 #else
 				struct timeval tv;
 				gettimeofday( &tv, NULL );
-				sprintf( delegation_uri, "%d.%d", (int)tv.tv_sec, (int)tv.tv_usec );
+				formatstr( delegation_uri, "%d.%d", (int)tv.tv_sec, (int)tv.tv_usec );
 #endif
 			}
 
@@ -661,12 +667,6 @@ void CreamResource::DoPing( time_t& ping_delay, bool& ping_complete,
 	}
 }
 
-
-
-int CreamResource::BatchStatusInterval() const
-{
-	return CreamJob::probeInterval;
-}
 
 CreamResource::BatchStatusResult CreamResource::StartBatchStatus()
 {

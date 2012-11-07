@@ -181,6 +181,12 @@ private:
 	std::string m_cgroup_string;
 	CgroupManager &m_cm;
 	static long clock_tick;
+	static bool have_warned_about_memsw;
+	// Sometimes Condor doesn't successfully clear out the cgroup from the
+	// previous run.  Hence, we subtract off any CPU usage found at the
+	// start of the job.
+	long m_initial_user_cpu;
+	long m_initial_sys_cpu;
 
 	int count_tasks_cgroup();
 	int aggregate_usage_cgroup_blockio(ProcFamilyUsage*);
@@ -189,6 +195,7 @@ private:
 	int spree_cgroup(int);
 	int migrate_to_cgroup(pid_t);
 	void update_max_image_size_cgroup();
+	int get_cpu_usage_cgroup(long &user_cpu, long &sys_cpu);
 #endif
 };
 

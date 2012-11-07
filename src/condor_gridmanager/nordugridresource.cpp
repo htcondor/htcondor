@@ -38,7 +38,7 @@ const char *NordugridResource::HashName( const char *resource_name,
 {
 	static std::string hash_name;
 
-	sprintf( hash_name, "nordugrid %s#%s", resource_name, 
+	formatstr( hash_name, "nordugrid %s#%s", resource_name, 
 					   proxy_subject ? proxy_subject : "NULL" );
 
 	return hash_name.c_str();
@@ -77,7 +77,7 @@ NordugridResource::NordugridResource( const char *resource_name,
 	gahp = NULL;
 
 	std::string buff;
-	sprintf( buff, "NORDUGRID/%s", proxyFQAN );
+	formatstr( buff, "NORDUGRID/%s", proxyFQAN );
 
 	gahp = new GahpClient( buff.c_str() );
 	gahp->setNotificationTimerId( pingTimerId );
@@ -175,7 +175,7 @@ void NordugridResource::DoJobStatus()
 		 m_jobStatusActive == false ) {
 			// No jobs or we can't talk to the resource, so no point
 			// in polling
-		daemonCore->Reset_Timer( m_jobStatusTid, NordugridJob::probeInterval );
+		daemonCore->Reset_Timer( m_jobStatusTid, m_paramJobPollInterval );
 		return;
 	}
 
@@ -202,7 +202,7 @@ void NordugridResource::DoJobStatus()
 		}
 
 		std::string filter;
-		sprintf( filter, "(&(objectclass=nordugrid-job)(nordugrid-job-globalowner=%s))", proxySubject );
+		formatstr( filter, "(&(objectclass=nordugrid-job)(nordugrid-job-globalowner=%s))", proxySubject );
 		int rc = m_statusGahp->nordugrid_ldap_query( ldap_server.c_str(), "mds-vo-name=local,o=grid", filter.c_str(), "nordugrid-job-globalid,nordugrid-job-status",
 													 results );
 		if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
@@ -252,7 +252,7 @@ void NordugridResource::DoJobStatus()
 				if ( next_job_id && next_status ) {
 					int rc2;
 					NordugridJob *job;
-					sprintf( key, "nordugrid %s %s", resourceName,
+					formatstr( key, "nordugrid %s %s", resourceName,
 							 strrchr( next_job_id, '/' ) + 1 );
 					rc2 = BaseJob::JobsByRemoteId.lookup( HashKey( key.c_str() ),
 														  (BaseJob*&)job );
@@ -270,6 +270,6 @@ void NordugridResource::DoJobStatus()
 
 		dprintf( D_FULLDEBUG, "ldap poll complete: %s\n", resourceName );
 
-		daemonCore->Reset_Timer( m_jobStatusTid, NordugridJob::probeInterval );
+		daemonCore->Reset_Timer( m_jobStatusTid, m_paramJobPollInterval );
 	}
 }

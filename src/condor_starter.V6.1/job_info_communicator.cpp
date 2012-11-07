@@ -568,7 +568,7 @@ JobInfoCommunicator::checkDedicatedExecuteAccounts( char const *name )
 
 		// force the matching of the whole string
 	MyString full_pattern;
-	full_pattern.sprintf("^%s$",pattern_string);
+	full_pattern.formatstr("^%s$",pattern_string);
 
 	Regex re;
 	char const *errstr = NULL;

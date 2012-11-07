@@ -43,8 +43,8 @@ struct GahpProxyInfo
 
 typedef void (* unicore_gahp_callback_func_t)(const char *update_ad_string);
 
-static const char *GAHPCLIENT_DEFAULT_SERVER_ID = "DEFAULT";
-static const char *GAHPCLIENT_DEFAULT_SERVER_PATH = "DEFAULT";
+#define GAHPCLIENT_DEFAULT_SERVER_ID "DEFAULT"
+#define GAHPCLIENT_DEFAULT_SERVER_PATH "DEFAULT"
 
 // Additional error values that GAHP calls can return
 ///
@@ -443,6 +443,16 @@ class GahpClient : public Service {
 
 		int
 		blah_job_refresh_proxy(const char *job_id, const char *proxy_file);
+
+		int
+		blah_download_sandbox(const char *sandbox_id, const ClassAd *job_ad,
+							  std::string &sandbox_path);
+
+		int
+		blah_upload_sandbox(const char *sandbox_id, const ClassAd *job_ad);
+
+		int
+		blah_destroy_sandbox(const char *sandbox_id, const ClassAd *job_ad);
 
 		int
 		nordugrid_submit(const char *hostname, const char *rsl, char *&job_id);

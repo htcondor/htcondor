@@ -59,7 +59,6 @@ main(int argc, char *argv[])
 	bool UseConstraint = false;
 	MyString schedd_name;
 	MyString pool_name;
-	param_functions *p_funcs;
 
 	myDistro->Init( argc, argv );
 	config();
@@ -75,9 +74,7 @@ main(int argc, char *argv[])
 	// if -debug is present, it must be first. sigh.
 	if (argv[nextarg][0] == '-' && argv[nextarg][1] == 'd') {
 		// output dprintf messages to stderror at TOOL_DEBUG level
-		Termlog = 1;
-		p_funcs = get_param_functions();
-		dprintf_config ("TOOL", p_funcs);
+		dprintf_set_tool_debug("TOOL", 0);
 		nextarg++;
 	}
 
@@ -165,12 +162,12 @@ main(int argc, char *argv[])
 			}
 			UseConstraint = false;
 		} else {
-			constraint.sprintf("(%s == %d)", ATTR_CLUSTER_ID, cluster);
+			constraint.formatstr("(%s == %d)", ATTR_CLUSTER_ID, cluster);
 			UseConstraint = true;
 		}
 		nextarg++;
 	} else {
-		constraint.sprintf("(%s == \"%s\")", ATTR_OWNER, argv[nextarg]);
+		constraint.formatstr("(%s == \"%s\")", ATTR_OWNER, argv[nextarg]);
 		nextarg++;
 		UseConstraint = true;
 	}

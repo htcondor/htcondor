@@ -376,7 +376,7 @@ class BaseShadow : public Service
 	virtual int exitCode( void ) = 0;
 
 		// make UserLog static so it can be accessed by EXCEPTION handler
-	static std::vector<WriteUserLog*> uLog;
+	static WriteUserLog uLog;
 
 	void evalPeriodicUserPolicy( void );
 

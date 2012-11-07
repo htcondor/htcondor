@@ -7,7 +7,7 @@
 \ToolDebugOption
 \ToolWhere
 
-\index{Condor commands!condor\_checkpoint}
+\index{HTCondor commands!condor\_checkpoint}
 \index{condor\_checkpoint command}
 
 \Description
@@ -32,12 +32,12 @@ If the job being checkpointed is running under the standard universe,
 the job produces a checkpoint and then continues running
 on the same machine.
 If the job is running under another universe,
-or if there is currently no Condor job
+or if there is currently no HTCondor job
 running on that host, then \Condor{checkpoint} has no effect. 
 
 There is generally no need for the user or administrator to explicitly
 run \Condor{checkpoint}.
-Taking checkpoints of running Condor jobs is
+Taking checkpoints of running HTCondor jobs is
 handled automatically following the policies
 stated in the configuration files. 
 

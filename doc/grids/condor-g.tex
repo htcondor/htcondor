@@ -1,10 +1,10 @@
-\index{Condor-G|(}
+\index{HTCondor-G|(}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Condor-G}Condor-G, the gt2, and gt5 Grid Types}
+\subsection{\label{sec:HTCondor-G}HTCondor-G, the gt2, and gt5 Grid Types}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor-G is the name given to Condor when \SubmitCmd{grid}
+HTCondor-G is the name given to HTCondor when \SubmitCmd{grid}
 \SubmitCmd{universe} jobs are sent to grid resources utilizing
 Globus software for job execution.
 The Globus Toolkit provides a framework for building grid systems
@@ -13,29 +13,29 @@ See the Globus Alliance web page at
 \URL{http://www.globus.org}
 for descriptions and details of the Globus software.
 
-Condor provides the same job management capabilities for Condor-G
+HTCondor provides the same job management capabilities for HTCondor-G
 jobs as for other jobs.
-From Condor, a user may effectively submit jobs, manage jobs,
+From HTCondor, a user may effectively submit jobs, manage jobs,
 and have jobs execute on widely distributed machines.
 
-% Condor-G is a ``window to the grid.''
-% The function of Condor-G becomes clear
-% with a brief overview of the software that forms a Condor pool.
-% For this discussion, the software of a Condor pool is divided
+% HTCondor-G is a ``window to the grid.''
+% The function of HTCondor-G becomes clear
+% with a brief overview of the software that forms an HTCondor pool.
+% For this discussion, the software of an HTCondor pool is divided
 % into two parts.
 % The first part does job management.
 % It keeps track of a user's jobs.
-% You can ask the job management part of Condor to show
+% You can ask the job management part of HTCondor to show
 % you the job queue, to submit new jobs to the system,
 % to put jobs on hold,
 % and to request information about jobs that have completed.
-% The other part of the Condor software
+% The other part of the HTCondor software
 % does resource management.
 % It keeps track of which machines are available to run jobs,
 % how the available machines should be utilized given all the users
 % who want to run jobs on them,
 % and when a machine is no longer available.
-% Condor-G works with grid resources, allowing users to
+% HTCondor-G works with grid resources, allowing users to
 % effectively submit jobs, manage jobs, and have jobs execute
 % on widely distributed machines.
 
@@ -44,30 +44,30 @@ and have jobs execute on widely distributed machines.
 % A machine with the resource management part installed 
 % is called an execute machine.
 % Each machine may have one part or both.
-% Condor-G is the job management part of Condor.
-% \index{Condor-G!functionality}
-% Condor-G lets you submit jobs into a queue,
+% HTCondor-G is the job management part of HTCondor.
+% \index{HTCondor-G!functionality}
+% HTCondor-G lets you submit jobs into a queue,
 % have a log detailing the life cycle of your jobs,
 % manage your input and output files,
 % along with everything else you expect from a job queuing system.
 
-% Condor-G is a program that manages both a queue of jobs
+% HTCondor-G is a program that manages both a queue of jobs
 % and the resources from one or more sites where those jobs can execute. 
 % For some of these jobs,
 % it communicates with these resources and transfers files
 % to and from these resources using Globus mechanisms.
-% (In particular, Condor-G uses the GRAM protocol for job submission,
+% (In particular, HTCondor-G uses the GRAM protocol for job submission,
 % and it runs a local GASS server for file transfers).
 
-It may appear that Condor-G is a simple replacement
+It may appear that HTCondor-G is a simple replacement
 for the Globus Toolkit's \Prog{globusrun} command.
-However, Condor-G does much more.
+However, HTCondor-G does much more.
 It allows the submission of many jobs at once,
 along with the monitoring of those jobs with a convenient interface.
 There is notification when jobs complete or fail
 and maintenance of Globus credentials
 that may expire while a job is running.
-On top of this, Condor-G is a fault-tolerant system;
+On top of this, HTCondor-G is a fault-tolerant system;
 if a machine crashes,
 all of these functions are again available as the machine returns.
 
@@ -83,10 +83,10 @@ all of these functions are again available as the machine returns.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Condor-G-Limits}Limitations of Condor-G}
+\subsubsection{\label{sec:HTCondor-G-Limits}Limitations of HTCondor-G}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % This subsubsection used to reside in the file limitations.tex.
-\index{Condor-G!limitations}
+\index{HTCondor-G!limitations}
 Submitting jobs to run under the grid universe has not yet
 been perfected.
 The following is a list of known limitations:
@@ -100,6 +100,6 @@ Job exit codes are not available when using
 Windows support is not yet available.
 \end{enumerate}
 
-\index{Condor-G|)}
+\index{HTCondor-G|)}
 
 

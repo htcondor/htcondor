@@ -35,6 +35,19 @@ namespace classad {
 // semantics. It will be removed without warning in a future release.
 bool _useOldClassAdSemantics = false;
 
+// Should parsed expressions be cached and shared between multiple ads.
+// The default is false.
+static bool doExpressionCaching = false;
+
+void ClassAdSetExpressionCaching(bool do_caching) {
+	doExpressionCaching = do_caching;
+}
+
+bool ClassAdGetExpressionCaching()
+{
+	return doExpressionCaching;
+}
+
 // This is probably not the best place to put these. However, 
 // I am reconsidering how we want to do errors, and this may all
 // change in any case. 
@@ -380,12 +393,13 @@ DeepInsertAttr( ExprTree *scopeExpr, const string &name, const string &value )
 }
 // --- end string attribute insertion
 
-bool ClassAd::Insert( std::string& serialized_nvp)
+bool ClassAd::Insert( const std::string& serialized_nvp)
 {
 
   bool bRet = false;
   string name, szValue;
   size_t pos, npos, vpos;
+  size_t bpos = 0;
   
   // comes in as "name = value" "name= value" or "name =value"
   npos=pos=serialized_nvp.find("=");
@@ -393,22 +407,43 @@ bool ClassAd::Insert( std::string& serialized_nvp)
   // only try to process if the string is valid 
   if ( pos != string::npos  )
   {
-    if (serialized_nvp[pos-1] == ' ')
+    while (npos > 0 && serialized_nvp[npos-1] == ' ')
     {
       npos--;
     }
-    name = serialized_nvp.substr(0, npos);
+    while (bpos < npos && serialized_nvp[bpos] == ' ')
+    {
+      bpos++;
+    }
+    name = serialized_nvp.substr(bpos, npos - bpos);
 
     vpos=pos+1;
-    if (serialized_nvp[vpos] == ' ')
+    while (serialized_nvp[vpos] == ' ')
     {
       vpos++;
     }
 
     szValue = serialized_nvp.substr(vpos);
 
+	if ( name[0] == '\'' ) {
+		// We don't handle quoted attribute names for caching here.
+		// Hand the name-value-pair off to the parser as a one-attribute
+		// ad and merge the results into this ad.
+		ClassAdParser parser;
+		ClassAd new_ad;
+		name = "[" + serialized_nvp + "]";
+		if ( parser.ParseClassAd( name, new_ad, true ) ) {
+			return Update( new_ad );
+		} else {
+			return false;
+		}
+	}
+
     // here is the special logic to check
-    CachedExprEnvelope * cache_check = CachedExprEnvelope::check_hit( name, szValue );
+    CachedExprEnvelope * cache_check = NULL;
+	if ( doExpressionCaching ) {
+		cache_check = CachedExprEnvelope::check_hit( name, szValue );
+	}
     if ( cache_check ) 
     {
 	ExprTree * in = cache_check;
@@ -466,7 +501,7 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree *& pRef, bool cache 
 		return( false );
 	}
 
-	if (cache)
+	if (doExpressionCaching && cache)
 	{
 	  tree = CachedExprEnvelope::cache(szName, pRef);
 	  // what goes in may be destroyed in preference for cache.
@@ -1054,19 +1089,36 @@ EvaluateAttrBool( const string &attr, bool &b ) const
 	return( EvaluateAttr( attr, val ) && val.IsBooleanValue( b ) );
 }
 
+#if 0
+// disabled (see header)
 bool ClassAd::
 EvaluateAttrClassAd( const string &attr, ClassAd *&classad ) const
 {
 	Value val;
+		// TODO: filter out shared_ptr<ClassAd> values that would
+		// go out of scope here (if such a thing is ever added),
+		// or return a shared_ptr and make a copy here of the
+		// ClassAd if it is not already managed by a shared_ptr.
 	return( EvaluateAttr( attr, val ) && val.IsClassAdValue( classad ) );
 }
+#endif
 
+#if 0
+// disabled (see header)
 bool ClassAd::
 EvaluateAttrList( const string &attr, ExprList *&l ) const
 {
     Value val;
-	return( EvaluateAttr( attr, val ) && val.IsListValue( l ) );
+		// This version of EvaluateAttrList() can only succeed
+		// if the result is LIST_VALUE, not SLIST_VALUE, because
+		// the shared_ptr<ExprList> goes out of scope before
+		// returning to the caller.  Either do as below and filter
+		// out SLIST_VALUE, or return a shared_ptr and create a
+		// copy of the list here if it is not already managed
+		// by a shared_ptr.
+	return( EvaluateAttr( attr, val ) && val.GetType() == LIST_VALUE && val.IsListValue( l ) );
 }
+#endif
 
 bool ClassAd::
 GetExternalReferences( const ExprTree *tree, References &refs, bool fullNames )

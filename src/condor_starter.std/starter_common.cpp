@@ -168,7 +168,7 @@ init_logging()
 
 	if( param_boolean_crufty( "STARTER_LOCAL_LOGGING", true ) ) {
 			// Use regular, local logging.
-		dprintf_config( get_mySubSystem()->getName(), get_param_functions() );// Log file on local machine 
+		dprintf_config( get_mySubSystem()->getName() );// Log file on local machine 
 	} else {
 			// Set up to do logging through the shadow
 		close( fileno(stderr) );
@@ -333,10 +333,10 @@ void
 setSlotEnv( Env* env_obj ) {
 	// add name of SMP slot (from startd) into environment
 	MyString slot_env;
-	slot_env.sprintf("_CONDOR_SLOT=%s", SlotName.Value());
+	slot_env.formatstr("_CONDOR_SLOT=%s", SlotName.Value());
 	env_obj->SetEnv(slot_env.Value());
 	if (param_boolean("ALLOW_VM_CRUFT", false)) {
-		slot_env.sprintf("CONDOR_VM=%s", SlotName.Value());
+		slot_env.formatstr("CONDOR_VM=%s", SlotName.Value());
 		env_obj->SetEnv(slot_env.Value());
 	}
 }

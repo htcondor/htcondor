@@ -1,0 +1,2 @@
+Job     NODERET         job_dagman_suppress_notification-cmd_line-node.cmd
+Script POST NODERET     ./job_dagman_suppress_notification-post-allow.pl $RETURN $JOBID

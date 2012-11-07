@@ -4,7 +4,7 @@
 \index{Job monitor}
 \index{viewing!log files}
 
-The Condor Job Monitor is a Java application designed to allow users to 
+The HTCondor Job Monitor is a Java application designed to allow users to 
 view user log files. 
 It is identified as the Contrib Module called log\_viewer. 
 
@@ -16,12 +16,12 @@ efficient progress, whereas a job which appears predominantly black has received
 \subsection{\label{sec:transition-states}Transition States}
 
 A transition state is the state of a job at any time.  It is called a "transition" because it is defined by the two events which bookmark it.  There are two basic transition states: running and idle. 
-An idle job typically is a job which has just been submitted into the Condor pool and is waiting to be matched with an appropriate machine or a job which has vacated from a machine and has been
+An idle job typically is a job which has just been submitted into the HTCondor pool and is waiting to be matched with an appropriate machine or a job which has vacated from a machine and has been
 returned to the pool.  A running job, by contrast, is a job which is making active progress. 
 
 Advanced users may want a visual distinction between two types of running transitions: "goodput" or "badput".  Goodput is the transition state preceding an eventual job completion or
 checkpoint.  Badput is the transition state preceding a non-checkpointed eviction event.  Note that "badput" is potentially a misleading nomenclature; a job which is not checkpointed by the
-Condor program may checkpoint itself or make progress in some other way.  To view these two transition as distinct transitions, select the appropriate option from the "View" menu. 
+HTCondor program may checkpoint itself or make progress in some other way.  To view these two transition as distinct transitions, select the appropriate option from the "View" menu. 
 
 
 \subsection{\label{sec:events}Events}

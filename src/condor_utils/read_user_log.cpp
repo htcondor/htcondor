@@ -25,7 +25,6 @@
 #include <time.h>
 #include "MyString.h"
 #include "condor_uid.h"
-#include "condor_xml_classads.h"
 #include "condor_config.h"
 #include "stat_wrapper.h"
 #include "file_lock.h"
@@ -1013,7 +1012,7 @@ ReadUserLog::readEvent( ULogEvent *& event, bool *try_again )
 	} else {
 		outcome = ULOG_NO_EVENT;
 		if ( try_again ) {
-			try_again = false;
+			*try_again = false;
 		}
 	}
 	return outcome;
@@ -1022,7 +1021,7 @@ ReadUserLog::readEvent( ULogEvent *& event, bool *try_again )
 ULogEventOutcome
 ReadUserLog::readEventXML( ULogEvent *& event )
 {
-	ClassAdXMLParser xmlp;
+	classad::ClassAdXMLParser xmlp;
 
 	// we obtain a write lock here not because we want to write
 	// anything, but because we want to ensure we don't read
@@ -1039,8 +1038,11 @@ ReadUserLog::readEventXML( ULogEvent *& event )
   		return ULOG_UNK_ERROR;
   	}
 
-	ClassAd* eventad;
-	eventad = xmlp.ParseClassAd(m_fp);
+	ClassAd* eventad = new ClassAd();
+	if ( !xmlp.ParseClassAd(m_fp, *eventad) ) {
+		delete eventad;
+		eventad = NULL;
+	}
 
 	Unlock( true );
 

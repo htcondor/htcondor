@@ -228,7 +228,7 @@ char *
 GridUniverseLogic::scratchFilePath(gman_node_t *gman_node)
 {
 	MyString filename;
-	filename.sprintf("%s%p.%d",scratch_prefix,
+	filename.formatstr("%s%p.%d",scratch_prefix,
 					gman_node,daemonCore->getpid());
 	char *prefix = temp_dir_path();
 	ASSERT(prefix);
@@ -267,10 +267,10 @@ GridUniverseLogic::GManagerReaper(Service *,int pid, int exit_status)
 	if(gman_node) { owner_safe = owner; }
 	else { owner_safe = "Unknown"; }
 	if ( WIFEXITED( exit_status ) ) {
-		exit_reason.sprintf( "with return code %d",
+		exit_reason.formatstr( "with return code %d",
 							 WEXITSTATUS( exit_status ) );
 	} else {
-		exit_reason.sprintf( "due to %s",
+		exit_reason.formatstr( "due to %s",
 							 daemonCore->GetExceptionString( exit_status ) );
 	}
 	dprintf(D_ALWAYS, "condor_gridmanager (PID %d, owner %s) exited %s.\n",
@@ -365,7 +365,7 @@ GridUniverseLogic::lookupGmanByOwner(const char* owner, const char* attr_value,
 		owner_key += attr_value;
 	}
 	if (cluster) {
-		owner_key.sprintf_cat( "-%d.%d", cluster, proc );
+		owner_key.formatstr_cat( "-%d.%d", cluster, proc );
 	}
 
 	if (!gman_pid_table) {
@@ -469,11 +469,11 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 	}
 	MyString constraint;
 	if ( !attr_name  ) {
-		constraint.sprintf("(%s=?=\"%s\"&&%s==%d)",
+		constraint.formatstr("(%s=?=\"%s\"&&%s==%d)",
 						   ATTR_OWNER,owner,
 						   ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GRID);
 	} else {
-		constraint.sprintf("(%s=?=\"%s\"&&%s=?=\"%s\"&&%s==%d)",
+		constraint.formatstr("(%s=?=\"%s\"&&%s=?=\"%s\"&&%s==%d)",
 						   ATTR_OWNER,owner,
 						   attr_name,attr_value,
 						   ATTR_JOB_UNIVERSE,CONDOR_UNIVERSE_GRID);
@@ -483,7 +483,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 
 	MyString full_owner_name(owner);
 	if ( domain && *domain ) {
-		full_owner_name.sprintf_cat( "@%s", domain );
+		full_owner_name.formatstr_cat( "@%s", domain );
 	}
 	args.AppendArg("-o");
 	args.AppendArg(full_owner_name.Value());
@@ -614,7 +614,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		owner_key += attr_value;
 	}
 	if (cluster) {
-		owner_key.sprintf_cat( "-%d.%d", cluster, proc );
+		owner_key.formatstr_cat( "-%d.%d", cluster, proc );
 	}
 
 	ASSERT( gman_pid_table->insert(owner_key,gman_node) == 0 );

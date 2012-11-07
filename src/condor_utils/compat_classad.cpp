@@ -23,7 +23,6 @@
 #include "classad_oldnew.h"
 #include "condor_attributes.h"
 #include "classad/xmlSink.h"
-#include "condor_xml_classads.h"
 #include "condor_config.h"
 #include "Regex.h"
 #include "classad/classadCache.h"
@@ -58,6 +57,8 @@ Reconfig()
 	m_strictEvaluation = param_boolean( "STRICT_CLASSAD_EVALUATION", false );
 	classad::_useOldClassAdSemantics = !m_strictEvaluation;
 
+	classad::ClassAdSetExpressionCaching( param_boolean( "ENABLE_CLASSAD_CACHING", false ) );
+
 	char *new_libs = param( "CLASSAD_USER_LIBS" );
 	if ( new_libs ) {
 		StringList new_libs_list( new_libs );
@@ -90,8 +91,8 @@ void getTheMyRef( classad::ClassAd *ad )
 	//}
 
 	if ( !ClassAd::m_strictEvaluation ) {
-		ExprTree * pExpr=0;
-		ad->Insert( "my", (pExpr=classad::AttributeReference::MakeAttributeReference( NULL, "self" ) ) );
+		ExprTree * pExpr=classad::AttributeReference::MakeAttributeReference( NULL, "self" );
+		ad->Insert( "my", pExpr );
 	}
 }
 
@@ -283,7 +284,7 @@ bool stringListSummarize_func( const char *name,
 	if ( is_real ) {
 		result.SetRealValue( accumulator );
 	} else {
-		result.SetIntegerValue( (int)accumulator );
+		result.SetIntegerValue( (long long)accumulator );
 	}
 
 	return true;
@@ -481,7 +482,7 @@ bool splitAt_func( const char * name,
 		second.SetStringValue(str.substr(ix+1));
 	}
 
-	classad::ExprList *lst = new classad::ExprList();
+	classad_shared_ptr<classad::ExprList> lst( new classad::ExprList() );
 	ASSERT(lst);
 	lst->push_back(classad::Literal::MakeLiteral(first));
 	lst->push_back(classad::Literal::MakeLiteral(second));
@@ -780,6 +781,123 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 	}
 }
 
+// this method is called before each line is parsed. 
+// return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
+int CondorClassAdFileParseHelper::PreParse(std::string & line, ClassAd & /*ad*/, FILE* /*file*/)
+{
+	// if this line matches the ad delimitor, tell the parser to stop parsing
+	if (starts_with(line, ad_delimitor))
+		return 2; //end-of-classad
+
+	// check for blank lines or lines whose first character is #
+	// tell the parse to skip those lines, otherwise tell the parser to
+	// parse the line.
+	for (size_t ix = 0; ix < line.size(); ++ix) {
+		if (line[ix] == '#' || line[ix] == '\n')
+			return 0; // skip this line, but don't stop parsing.
+		if (line[ix] != ' ' && line[ix] != '\t')
+			return 1; // parse this line
+	}
+	return 1; // parse this line.
+}
+
+// this method is called when the parser encounters an error
+// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
+int CondorClassAdFileParseHelper::OnParseError(std::string & line, ClassAd & /*ad*/, FILE* file)
+{
+		// print out where we barfed to the log file
+	dprintf(D_ALWAYS,"failed to create classad; bad expr = '%s'\n",
+			line.c_str());
+
+	// read until delimitor or EOF; whichever comes first
+	line = "";
+	while ( ! starts_with(line, ad_delimitor)) {
+		if (feof(file))
+			break;
+		if ( ! readLine(line, file, false))
+			break;
+	}
+	return -1; // abort
+}
+
+// returns number of attributes added to the ad
+int ClassAd::
+InsertFromFile(FILE* file, /*out*/ bool& is_eof, /*out*/ int& error, ClassAdFileParseHelper* phelp /*=NULL*/)
+{
+	int cAttrs = 0;
+	std::string buffer;
+
+	while( 1 ) {
+
+			// get a line from the file
+		if ( ! readLine(buffer, file, false)) {
+			is_eof = feof(file);
+			error = is_eof ? 0 : errno;
+			return cAttrs;
+		}
+
+		// if there is a helper, give the helper first crack at the line
+		// otherwise set ee to decide what to do with this line.
+		int ee = 1;
+		if (phelp) {
+			ee = phelp->PreParse(buffer, *this, file);
+		} else {
+			// default is to skip blank lines and comment lines
+			for (size_t ix = 0; ix < buffer.size(); ++ix) {
+				if (buffer[ix] == '#' || buffer[ix] == '\n') {
+					ee = 0; // skip blank line or comment
+					break;
+				}
+				// ignore leading whitespace.
+				if (buffer[ix] == ' ' || buffer[ix] == '\t') {
+					continue;
+				}
+				ee = 1; // 1 is parse
+				break;
+			}
+		}
+		if (ee == 0) // comment or blank line, skip it and read the next
+			continue;
+		if (ee != 1) { // 1 is parse, <0, is abort, >1 is end_of_ad
+			error = (ee < 0) ? ee : 0;
+			is_eof = feof(file);
+			return cAttrs;
+		}
+
+		// Insert the string into the classad
+		if (Insert(buffer.c_str()) !=  0) {
+			++cAttrs;
+		} else {
+			ee = -1;
+			if (phelp) {
+				ee = phelp->OnParseError(buffer, *this, file);
+				if (1 == ee) {
+					// buffer has (presumably) been modified, re-try parsing.
+					// but only retry once.
+					if (Insert(buffer.c_str()) != 0) {
+						++cAttrs;
+					} else {
+						ee = phelp->OnParseError(buffer, *this, file);
+						if (1 == ee) ee = -1;  // treat another attempt to reparse as a failure.
+					}
+				}
+			}
+
+			// the value of ee tells us whether to quit or keep going or
+			// < 0 is abort
+			//   0 is skip line - keep going
+			//   1 is line was parsed, keep going
+			// > 1 is end-of-ad, quit the loop
+			if (ee < 0 || ee > 1) {
+				error = ee > 1 ? 0 : ee;
+				is_eof = feof(file);
+				return cAttrs;
+			}
+		}
+	}
+}
+
+
 bool ClassAd::
 ClassAdAttributeIsPrivate( char const *name )
 {
@@ -822,17 +940,7 @@ ClassAd::Insert( const char *str )
 		// We need to convert the escaping from old to new style before
 		// handing the expression to the new ClassAds parser.
 	string newAdStr;
-	for ( int i = 0; str[i] != '\0'; i++ ) {
-        if (str[i] == '\\') {
-			if ( ( str[i + 1] != '"') ||
-				 ((str[i + 1] == '"') && IsStringEnd(str + i,2) )  )
-			{
-				newAdStr.append( 1, '\\' );
-			}
-		}
-		newAdStr.append( 1, str[i] );
-	}
-	//newAdStr += "]";
+	ConvertEscapingOldToNew( str, newAdStr );
 	
 	if (!classad::ClassAd::Insert(newAdStr))
 	{
@@ -854,7 +962,7 @@ AssignExpr(char const *name,char const *value)
 	if ( !par.ParseExpression( ConvertEscapingOldToNew( value ), expr, true ) ) {
 		return FALSE;
 	}
-	if ( !Insert( name, expr ) ) {
+	if ( !Insert( name, expr, false ) ) {
 		delete expr;
 		return FALSE;
 	}
@@ -890,16 +998,16 @@ Assign(char const *name,char const *value)
 //  ExprTree* ClassAd::
 //  Lookup(const char*) const{}
 
-int ClassAd::
-LookupString( const char *name, char *value ) const 
-{
-	string strVal;
-	if( !EvaluateAttrString( string( name ), strVal ) ) {
-		return 0;
-	}
-	strcpy( value, strVal.c_str( ) );
-	return 1;
-} 
+//int ClassAd::
+//LookupString( const char *name, char *value ) const 
+//{
+//	string strVal;
+//	if( !EvaluateAttrString( string( name ), strVal ) ) {
+//		return 0;
+//	}
+//	strcpy( value, strVal.c_str( ) );
+//	return 1;
+//} 
 
 int ClassAd::
 LookupString(const char *name, char *value, int max_len) const
@@ -909,6 +1017,7 @@ LookupString(const char *name, char *value, int max_len) const
 		return 0;
 	}
 	strncpy( value, strVal.c_str( ), max_len );
+	if ( value && max_len && value[max_len - 1] ) value[max_len - 1] = '\0';
 	return 1;
 }
 
@@ -970,12 +1079,32 @@ LookupInteger( const char *name, int &value ) const
 }
 
 int ClassAd::
-LookupInteger( const char *name, int64_t &value ) const
+LookupInteger( const char *name, long &value ) const 
 {
 	bool    boolVal;
 	int     haveInteger;
 	string  sName(name);
-	int		tmp_val;
+	long	tmp_val;
+
+	if( EvaluateAttrInt(sName, tmp_val ) ) {
+		value = tmp_val;
+		haveInteger = TRUE;
+	} else if( EvaluateAttrBool(sName, boolVal ) ) {
+		value = boolVal ? 1 : 0;
+		haveInteger = TRUE;
+	} else {
+		haveInteger = FALSE;
+	}
+	return haveInteger;
+}
+
+int ClassAd::
+LookupInteger( const char *name, long long &value ) const 
+{
+	bool    boolVal;
+	int     haveInteger;
+	string  sName(name);
+	long long	tmp_val;
 
 	if( EvaluateAttrInt(sName, tmp_val ) ) {
 		value = tmp_val;
@@ -993,7 +1122,7 @@ int ClassAd::
 LookupFloat( const char *name, float &value ) const
 {
 	double  doubleVal;
-	int     intVal;
+	long long intVal;
 	int     haveFloat;
 
 	if(EvaluateAttrReal( string( name ), doubleVal ) ) {
@@ -1009,9 +1138,28 @@ LookupFloat( const char *name, float &value ) const
 }
 
 int ClassAd::
+LookupFloat( const char *name, double &value ) const
+{
+	double  doubleVal;
+	long long intVal;
+	int     haveFloat;
+
+	if(EvaluateAttrReal( string( name ), doubleVal ) ) {
+		haveFloat = TRUE;
+		value = doubleVal;
+	} else if(EvaluateAttrInt( string( name ), intVal ) ) {
+		haveFloat = TRUE;
+		value = (double)intVal;
+	} else {
+		haveFloat = FALSE;
+	}
+	return haveFloat;
+}
+
+int ClassAd::
 LookupBool( const char *name, int &value ) const
 {
-	int   intVal;
+	long long intVal;
 	bool  boolVal;
 	int haveBool;
 	string sName;
@@ -1033,7 +1181,7 @@ LookupBool( const char *name, int &value ) const
 int ClassAd::
 LookupBool( const char *name, bool &value ) const
 {
-	int   intVal;
+	long long intVal;
 	bool  boolVal;
 	int haveBool;
 	string sName;
@@ -1162,7 +1310,7 @@ EvalString(const char *name, classad::ClassAd *target, std::string & value)
 }
 
 int ClassAd::
-EvalInteger (const char *name, classad::ClassAd *target, int &value)
+EvalInteger (const char *name, classad::ClassAd *target, long long &value)
 {
 	int rc = 0;
 	classad::Value val;
@@ -1194,17 +1342,17 @@ EvalInteger (const char *name, classad::ClassAd *target, int &value)
 	if ( 1 == rc ) 
 	{
 	  double doubleVal;
-	  int intVal;
+	  long long intVal;
 	  bool boolVal;
 
 	  if( val.IsRealValue( doubleVal ) ) {
-	    value = ( int )doubleVal;
+	    value = ( long long )doubleVal;
 	  }
 	  else if( val.IsIntegerValue( intVal ) ) {
 	    value = intVal;
 	  }
 	  else if( val.IsBooleanValue( boolVal ) ) {
-	    value = ( int )boolVal;
+	    value = ( long long )boolVal;
 	  }
 	  else 
 	  { 
@@ -1223,7 +1371,7 @@ EvalFloat (const char *name, classad::ClassAd *target, double &value)
 	int rc = 0;
 	classad::Value val;
 	double doubleVal;
-	int intVal;
+	long long intVal;
 	bool boolVal;
 
 	if( target == this || target == NULL ) {
@@ -1291,7 +1439,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 	int rc = 0;
 	classad::Value val;
 	double doubleVal;
-	int intVal;
+	long long intVal;
 	bool boolVal;
 
 	if( target == this || target == NULL ) {
@@ -1382,7 +1530,7 @@ initFromString( char const *str,MyString *err_msg )
 
 		if (!Insert(exprbuf)) {
 			if( err_msg ) {
-				err_msg->sprintf("Failed to parse ClassAd expression: '%s'",
+				err_msg->formatstr("Failed to parse ClassAd expression: '%s'",
 					exprbuf);
 			} else {
 				dprintf(D_ALWAYS,"Failed to parse ClassAd expression: '%s'\n",
@@ -1501,7 +1649,7 @@ sPrint( MyString &output, StringList *attr_white_list )
 				 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
 				value = "";
 				unp.Unparse( value, itr->second );
-				output.sprintf_cat( "%s = %s\n", itr->first.c_str(),
+				output.formatstr_cat( "%s = %s\n", itr->first.c_str(),
 									value.c_str() );
 			}
 		}
@@ -1515,7 +1663,7 @@ sPrint( MyString &output, StringList *attr_white_list )
 			 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
 			value = "";
 			unp.Unparse( value, itr->second );
-			output.sprintf_cat( "%s = %s\n", itr->first.c_str(),
+			output.formatstr_cat( "%s = %s\n", itr->first.c_str(),
 								value.c_str() );
 		}
 	}
@@ -2048,7 +2196,7 @@ CopyAttribute( char const *target_attr, char const *source_attr,
 	classad::ExprTree *e = source_ad->Lookup( source_attr );
 	if ( e ) {
 		e = e->Copy();
-		Insert( target_attr, e );
+		Insert( target_attr, e, false );
 	} else {
 		Delete( target_attr );
 	}
@@ -2064,31 +2212,47 @@ fPrintAsXML(FILE *fp, StringList *attr_white_list)
         return FALSE;
     }
 
-    MyString out;
+    std::string out;
     sPrintAsXML(out,attr_white_list);
-    fprintf(fp, "%s", out.Value());
+    fprintf(fp, "%s", out.c_str());
     return TRUE;
 }
 
 int ClassAd::
 sPrintAsXML(MyString &output, StringList *attr_white_list)
 {
-	ClassAdXMLUnparser  unparser;
-	MyString            xml;
-	unparser.SetUseCompactSpacing(false);
-	unparser.Unparse(this, xml, attr_white_list);
-	output += xml;
-	return TRUE;
+	std::string std_output;
+	int rc = sPrintAsXML(std_output, attr_white_list);
+	output += std_output;
+	return rc;
 }
 
 int ClassAd::
 sPrintAsXML(std::string &output, StringList *attr_white_list)
 {
-	ClassAdXMLUnparser  unparser;
-	MyString            xml;
-	unparser.SetUseCompactSpacing(false);
-	unparser.Unparse(this, xml, attr_white_list);
-	output += xml.Value();
+	classad::ClassAdXMLUnParser unparser;
+	std::string xml;
+
+	unparser.SetCompactSpacing(false);
+	if ( attr_white_list ) {
+		ClassAd tmp_ad;
+		classad::ExprTree *expr;
+		const char *attr;
+		attr_white_list->rewind();
+		while( (attr = attr_white_list->next()) ) {
+			if ( (expr = this->Lookup( attr )) ) {
+				tmp_ad.Insert( attr, expr, false );
+			}
+		}
+		unparser.Unparse( xml, &tmp_ad );
+		attr_white_list->rewind();
+		while( (attr = attr_white_list->next()) ) {
+			tmp_ad.Remove( attr );
+		}
+	} else {
+		unparser.Unparse( xml, this );
+	}
+	output += xml;
 	return TRUE;
 }
 ///////////// end XML functions /////////
@@ -2144,8 +2308,8 @@ void ClassAd::ChainCollapse()
             tmpExprTree = tmpExprTree->Copy(); 
             ASSERT(tmpExprTree); 
 
-            //K, it's clear. Insert it!
-            Insert((*itr).first, tmpExprTree);
+            //K, it's clear. Insert it, but don't try to 
+            Insert((*itr).first, tmpExprTree, false);
         }
     }
 }
@@ -2814,7 +2978,7 @@ static void InitTargetAttrLists()
 
 	tmp = param( "STARTD_RESOURCE_PREFIX" );
 	if ( tmp ) {
-		buff.sprintf( "%s*", tmp );
+		buff.formatstr( "%s*", tmp );
 		machine_attrs_strlist.append( buff.Value() );
 		free( tmp );
 	} else {
@@ -2847,10 +3011,10 @@ static void InitTargetAttrLists()
 		tmp_strlist.clearAll();
 	}
 
-	buff.sprintf( "%s*", ATTR_LAST_MATCH_LIST_PREFIX );
+	buff.formatstr( "%s*", ATTR_LAST_MATCH_LIST_PREFIX );
 	job_attrs_strlist.append( buff.Value() );
 
-	buff.sprintf( "%s*", ATTR_NEGOTIATOR_MATCH_EXPR );
+	buff.formatstr( "%s*", ATTR_NEGOTIATOR_MATCH_EXPR );
 	job_attrs_strlist.append( buff.Value() );
 
 	tmp = param( "TARGET_JOB_ATTRS" );
@@ -2872,8 +3036,7 @@ static void InitTargetAttrLists()
 }
 #endif
 
-classad::ExprTree *AddTargetRefs( classad::ExprTree *tree,
-								  TargetAdType /*target_type*/ )
+classad::ExprTree *AddTargetRefs( classad::ExprTree *tree, TargetAdType /*target_type*/ )
 {
 	// Disable AddTargetRefs for now
 	return tree->Copy();

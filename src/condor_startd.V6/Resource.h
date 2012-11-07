@@ -92,8 +92,8 @@ public:
 	void	change_state( State s ) {r_state->change(s);};
 	void	change_state( Activity a) {r_state->change(a);};
 	void	change_state( State s , Activity a ) {r_state->change(s, a);};
-	State		state( void )		{return r_state->state();};
-	Activity	activity( void )	{return r_state->activity();};
+	State		state( void ) const    {return r_state->state();};
+	Activity	activity( void ) const {return r_state->activity();};
 	void		eval_state( void )		{r_state->eval();};
 		// does this resource need polling frequency for compute/eval?
 	bool	needsPolling( void );
@@ -317,6 +317,30 @@ private:
 #endif /* HAVE_JOB_HOOKS */
 
 };
+
+
+/* Initialize resource for this claim/job
+
+Arguments
+
+- rip - Input: Resource this job has been matched to.
+
+- req_classad - Input: The ClassAd for the job to run
+
+- leftover_claim - Output: If a partitionable slot was carved up,
+  this will hold the claim to the leftovers.  Otherwise, it will be
+  unchanged.
+
+Return
+
+Returns the Resource the job will actually be running on.  It does not need to
+be deleted.  The returned Resource might be different than the Resource passed
+in!  In particular, if the passed in Resource is a partitionable slow, we will
+carve out a new dynamic slot for his job.
+
+The job may be rejected, in which case the returned Resource will be null.
+*/
+Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &leftover_claim);
 
 
 #endif /* _STARTD_RESOURCE_H */

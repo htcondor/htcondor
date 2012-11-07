@@ -70,14 +70,11 @@ int submitDag( SubmitDagShallowOptions &shallowOpts );
 //---------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
-	param_functions *p_funcs = NULL;
 	printf("\n");
 
 		// Set up the dprintf stuff to write to stderr, so that Condor
 		// libraries which use it will write to the right place...
-	Termlog = true;
-	p_funcs = get_param_functions();
-	dprintf_config("condor_submit_dag", p_funcs); 
+	dprintf_set_tool_debug("TOOL", 0);
 	set_debug_flags(NULL, D_ALWAYS | D_NOHEADER);
 	config();
 
@@ -721,6 +718,9 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 	args.AppendArg(deepOpts.autoRescue);
 	args.AppendArg("-DoRescueFrom");
 	args.AppendArg(deepOpts.doRescueFrom);
+	if(!deepOpts.always_use_node_log) {
+		args.AppendArg("-dont_use_default_node_log");
+	}
 
 	shallowOpts.dagFiles.rewind();
 	while ( (dagFile = shallowOpts.dagFiles.next()) != NULL ) {
@@ -765,6 +765,14 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 	if(deepOpts.useDagDir)
 	{
 		args.AppendArg("-UseDagDir");
+	}
+	if(deepOpts.suppress_notification)
+	{
+		args.AppendArg("-Suppress_notification");
+	}
+	else
+	{
+		args.AppendArg("-Dont_Suppress_notification");
 	}
 
 	args.AppendArg("-CsdVersion");
@@ -1103,6 +1111,18 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			{
 				shallowOpts.bPostRun = false;
 			}
+			else if ( (strArg.find("-dont_use_default_node_log") != -1) )
+			{
+				deepOpts.always_use_node_log = false;
+			}
+			else if ( (strArg.find("-suppress_notification") != -1) )
+			{
+				deepOpts.suppress_notification = true;
+			}
+			else if ( (strArg.find("-dont_suppress_notification") != -1) )
+			{
+				deepOpts.suppress_notification = false;
+			}
 			else if ( parsePreservedArgs( strArg, iArg, argc, argv,
 						shallowOpts) )
 			{
@@ -1242,5 +1262,8 @@ int printUsage(int iExitCode)
 	printf("    -DumpRescue         (DAGMan dumps rescue DAG and exits)\n");
 	printf("    -valgrind           (create submit file to run valgrind on DAGMan)\n");
 	printf("    -priority <priority> (jobs will run with this priority by default)\n");
+	printf("    -dont_use_default_node_log (Restore pre-7.9.0 behavior of using UserLog only)\n");
+	printf("    -suppress_notification (Set \"notification = never\" in all jobs submitted by this DAGMan)\n");
+	printf("    -dont_suppress_notification (Allow jobs to specify notification)\n");
 	exit(iExitCode);
 }

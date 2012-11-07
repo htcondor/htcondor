@@ -31,6 +31,16 @@
 #define   NI_MAXHOST 1025
 #endif
 
+typedef union sockaddr_storage_ptr_u {
+	struct sockaddr    *raw;
+	struct sockaddr_in *in;
+} sockaddr_storage_ptr;
+
+typedef union in_addr_ptr_u {
+	const char         *as_char;
+	struct in_addr     *in;
+} in_addr_ptr;
+
 /* SPECIAL NAMES:
  *
  * If NO_DNS is configured we do some special name/ip handling. IP
@@ -157,7 +167,9 @@ condor_gethostbyname_ipv6(const char* name) {
         }
         // pick only IPv4 address
         if (iter->ai_addr && iter->ai_addr->sa_family == AF_INET) {
-            struct sockaddr_in* _sin = (struct sockaddr_in*)iter->ai_addr;
+            sockaddr_storage_ptr sock_address;
+            sock_address.raw = iter->ai_addr;
+            struct sockaddr_in* _sin = sock_address.in;
             memcpy(&addr_list[addrcount], &_sin->sin_addr, sizeof(struct in_addr));
             h_addr_list[addrcount] = (char*)&addr_list[addrcount];
             addrcount++;
@@ -225,7 +237,9 @@ condor_gethostbyaddr_ipv6(const char *addr, SOCKET_LENGTH_TYPE len, int type) {
 
 	memset(&sinaddr, 0, sizeof(sinaddr));
 	sinaddr.sin_family = type;
-	sinaddr.sin_addr = *(const struct in_addr*)addr;
+	in_addr_ptr in_address_ptr;
+	in_address_ptr.as_char = addr;
+	sinaddr.sin_addr = *(in_address_ptr.in);
 
 #ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
 	sinaddr.sin_len = sizeof(struct sockaddr_in);
@@ -399,7 +413,9 @@ convert_ip_to_hostname(const char *addr,
 	if (NULL != (default_domain_name = param("DEFAULT_DOMAIN_NAME"))) {
 		int h_name_len;
 		int i;
-		strncpy(h_name, inet_ntoa(*((struct in_addr *) addr)), maxlen - 1);
+		in_addr_ptr in_address_ptr;
+		in_address_ptr.as_char = addr;
+		strncpy(h_name, inet_ntoa(*(in_address_ptr.in)), maxlen - 1);
 		for (i = 0; h_name[i]; i++) {
 			if ('.' == h_name[i]) {
 				h_name[i] = '-';

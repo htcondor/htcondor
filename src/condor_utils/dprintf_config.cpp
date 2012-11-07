@@ -28,16 +28,11 @@
 #include "condor_debug.h"
 #include "condor_string.h" 
 #include "condor_sys_types.h"
+#include "condor_config.h"
 #include "dprintf_internal.h"
-
-#if HAVE_BACKTRACE
-#include "sig_install.h"
-#endif
 
 #include <string>
 using std::string;
-
-int		Termlog = 0;
 
 //extern int		DebugFlags;
 //#ifdef D_CATEGORY_MASK
@@ -45,15 +40,14 @@ int		Termlog = 0;
 //#else
 //extern FILE		*DebugFPs[D_NUMLEVELS+1];
 //#endif
-extern std::vector<DebugFileInfo> *DebugLogs;
+
 extern char		*DebugLock;
 #ifdef D_CATEGORY_MASK
 extern const char		*_condor_DebugFlagNames[D_CATEGORY_COUNT];
 #else
 extern const char		*_condor_DebugFlagNames[D_NUMLEVELS];
 #endif
-extern int		_condor_dprintf_works;
-extern time_t	DebugLastMod;
+
 extern int		DebugUseTimestamps;
 extern int		DebugContinueOnOpenFailure;
 extern int		log_keep_open;
@@ -62,40 +56,8 @@ extern int		DebugLockIsMutex;
 extern char*	DebugLogDir;
 
 extern void		_condor_set_debug_flags( const char *strflags, int cat_and_flags );
-extern void		_condor_dprintf_saved_lines( void );
-extern bool debug_check_it(struct DebugFileInfo& it, bool fTruncate, bool dont_panic);
 
-param_functions *dprintf_param_funcs = NULL;
-
-#if HAVE_BACKTRACE
-static void
-sig_backtrace_handler(int signum)
-{
-	dprintf_dump_stack();
-
-		// terminate for the same reason.
-	struct sigaction sa;
-	sa.sa_handler = SIG_DFL;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = 0;
-	sigaction(signum, &sa, NULL);
-	sigprocmask(SIG_SETMASK, &sa.sa_mask, NULL);
-
-	raise(signum);
-}
-
-static void
-install_backtrace_handler(void)
-{
-	sigset_t fullset;
-	sigfillset( &fullset );
-	install_sig_handler_with_mask(SIGSEGV, &fullset, sig_backtrace_handler);
-	install_sig_handler_with_mask(SIGABRT, &fullset, sig_backtrace_handler);
-	install_sig_handler_with_mask(SIGILL, &fullset, sig_backtrace_handler);
-	install_sig_handler_with_mask(SIGFPE, &fullset, sig_backtrace_handler);
-	install_sig_handler_with_mask(SIGBUS, &fullset, sig_backtrace_handler);
-}
-#endif
+//param_functions *dprintf_param_funcs = NULL;
 
 int
 dprintf_config_ContinueOnFailure ( int fContinue )
@@ -106,7 +68,74 @@ dprintf_config_ContinueOnFailure ( int fContinue )
 }
 
 int
-dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_output_settings *p_info /* = NULL*/, int c_info /*= 0*/)
+dprintf_config_tool(const char* subsys, int /*flags*/)
+{
+	char *pval = NULL;
+	char pname[ BUFSIZ ];
+	unsigned int HeaderOpts = 0;
+	DebugOutputChoice verbose = 0;
+
+	PRAGMA_REMIND("TJ: allow callers of dprintf_config_tool to pass logging verbosity and flags");
+
+	dprintf_output_settings tool_output;
+	tool_output.choice = 1<<D_ALWAYS | 1<<D_ERROR;
+	tool_output.accepts_all = true;
+	
+	/*
+	** First, add the debug flags that are shared by everyone.
+	*/
+	pval = param("ALL_DEBUG");//dprintf_param_funcs->param("ALL_DEBUG");
+	if( pval ) {
+		_condor_parse_merge_debug_flags( pval, 0, HeaderOpts, tool_output.choice, verbose);
+		free( pval );
+	}
+
+	/*
+	**  Then, add flags set by the subsys_DEBUG parameters
+	*/
+	(void)sprintf(pname, "%s_DEBUG", subsys);
+	pval = param(pname);//dprintf_param_funcs->param(pname);
+	if ( ! pval) {
+		pval = param("DEFAULT_DEBUG");//dprintf_param_funcs->param("DEFAULT_DEBUG");
+	}
+	if( pval ) {
+		_condor_parse_merge_debug_flags( pval, 0, HeaderOpts, tool_output.choice, verbose);
+		free( pval );
+	}
+
+	/*
+	If LOGS_USE_TIMESTAMP is enabled, we will print out Unix timestamps
+	instead of the standard date format in all the log messages
+	*/
+	DebugUseTimestamps = param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );//dprintf_param_funcs->param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );
+	if (DebugUseTimestamps) HeaderOpts |= D_TIMESTAMP;
+	char * time_format = param( "DEBUG_TIME_FORMAT" );//dprintf_param_funcs->param( "DEBUG_TIME_FORMAT" );
+	if (time_format) {
+		if(DebugTimeFormat)
+			free(DebugTimeFormat);
+		DebugTimeFormat = time_format;
+		// Skip enclosing quotes
+		if (*time_format == '"') {
+			DebugTimeFormat = strdup(&time_format[1]);
+			free(time_format);
+			char * p = DebugTimeFormat;
+			while (*p++) {
+				if (*p == '"') *p = '\0';
+			}
+		}
+	}
+
+	tool_output.logPath = "2>";
+	tool_output.HeaderOpts = HeaderOpts;
+	tool_output.VerboseCats = verbose;
+
+	dprintf_set_outputs(&tool_output, 1);
+
+	return 0;
+}
+
+int
+dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = NULL*/, int c_info /*= 0*/)
 {
 	char pname[ BUFSIZ ];
 	char *pval = NULL;
@@ -131,6 +160,7 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_out
 	 * the data structure out from under dprintf.  It is also to prevent transfer of ownership/
 	 * responsibility for the block of memory used to store the function pointers.
 	 */
+	/*
 	if(!dprintf_param_funcs)
 		dprintf_param_funcs = new param_functions();
 	if(p_funcs)
@@ -140,12 +170,12 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_out
 		dprintf_param_funcs->set_param_wo_default_func(p_funcs->get_param_wo_default_func());
 		dprintf_param_funcs->set_param_int_func(p_funcs->get_param_int_func());
 	}
-
+	*/
 
 	/*
 	** First, add the debug flags that are shared by everyone.
 	*/
-	pval = dprintf_param_funcs->param("ALL_DEBUG");
+	pval = param("ALL_DEBUG");//dprintf_param_funcs->param("ALL_DEBUG");
 	if( pval ) {
 		_condor_parse_merge_debug_flags( pval, 0, HeaderOpts, DebugParams[0].choice, verbose);
 		free( pval );
@@ -155,9 +185,9 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_out
 	**  Then, add flags set by the subsys_DEBUG parameters
 	*/
 	(void)sprintf(pname, "%s_DEBUG", subsys);
-	pval = dprintf_param_funcs->param(pname);
+	pval = param(pname);//dprintf_param_funcs->param(pname);
 	if ( ! pval) {
-		pval = dprintf_param_funcs->param("DEFAULT_DEBUG");
+		pval = param("DEFAULT_DEBUG");//dprintf_param_funcs->param("DEFAULT_DEBUG");
 	}
 	if( pval ) {
 		_condor_parse_merge_debug_flags( pval, 0, HeaderOpts, DebugParams[0].choice, verbose);
@@ -166,7 +196,7 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_out
 
 	if(DebugLogDir)
 		free(DebugLogDir);
-	DebugLogDir = dprintf_param_funcs->param( "LOG" );
+	DebugLogDir = param( "LOG" );//dprintf_param_funcs->param( "LOG" );
 
 	PRAGMA_REMIND("TJ: dprintf_config should not set globals if p_info != NULL")
 #ifdef WIN32
@@ -176,9 +206,9 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_out
 		 * 2) O_APPEND doesn't guarantee atomic writes in Windows
 		 */
 	DebugShouldLockToAppend = 1;
-	DebugLockIsMutex = dprintf_param_funcs->param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
+	DebugLockIsMutex = param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);//dprintf_param_funcs->param_boolean_int("FILE_LOCK_VIA_MUTEX", TRUE);
 #else
-	DebugShouldLockToAppend = dprintf_param_funcs->param_boolean_int("LOCK_DEBUG_LOG_TO_APPEND",0);
+	DebugShouldLockToAppend = param_boolean_int("LOCK_DEBUG_LOG_TO_APPEND",0);
 	DebugLockIsMutex = FALSE;
 #endif
 
@@ -186,7 +216,7 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_out
 	if (DebugLock) {
 		free(DebugLock);
 	}
-	DebugLock = dprintf_param_funcs->param(pname);
+	DebugLock = param(pname);//dprintf_param_funcs->param(pname);
 
 #ifndef WIN32
 	if((strcmp(subsys, "SHADOW") == 0) || (strcmp(subsys, "GRIDMANAGER") == 0))
@@ -197,16 +227,16 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_out
 
 	if(!DebugLock) {
 		(void)sprintf(pname, "%s_LOG_KEEP_OPEN", subsys);
-		log_keep_open = dprintf_param_funcs->param_boolean_int(pname, log_open_default);
+		log_keep_open = param_boolean_int(pname, log_open_default);//dprintf_param_funcs->param_boolean_int(pname, log_open_default);
 	}
 
 	/*
 	If LOGS_USE_TIMESTAMP is enabled, we will print out Unix timestamps
 	instead of the standard date format in all the log messages
 	*/
-	DebugUseTimestamps = dprintf_param_funcs->param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );
+	DebugUseTimestamps = param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );//dprintf_param_funcs->param_boolean_int( "LOGS_USE_TIMESTAMP", FALSE );
 	if (DebugUseTimestamps) HeaderOpts |= D_TIMESTAMP;
-	char * time_format = dprintf_param_funcs->param( "DEBUG_TIME_FORMAT" );
+	char * time_format = param( "DEBUG_TIME_FORMAT" );//dprintf_param_funcs->param( "DEBUG_TIME_FORMAT" );
 	if (time_format) {
 		if(DebugTimeFormat)
 			free(DebugTimeFormat);
@@ -248,23 +278,20 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_out
 		char *logPathParam = NULL;
 		if(debug_level == D_ALWAYS)
 		{
-			if (Termlog) {
-				logPath = "2>";
+
+			logPathParam = param(pname);//dprintf_param_funcs->param(pname);
+			if (logPathParam) {
+				logPath.insert(0, logPathParam);
 			} else {
-				logPathParam = dprintf_param_funcs->param(pname);
-				if (logPathParam) {
-					logPath.insert(0, logPathParam);
-				} else {
-					// No default value found, so use $(LOG)/$(SUBSYSTEM)Log
-					char *lsubsys = dprintf_param_funcs->param("SUBSYSTEM");
-					if ( ! DebugLogDir || ! lsubsys) {
-						EXCEPT("Unable to find LOG or SUBSYSTEM.\n");
-					}
-
-					sprintf(logPath, "%s%c%sLog", DebugLogDir, DIR_DELIM_CHAR, lsubsys);
-
-					free(lsubsys);
+				// No default value found, so use $(LOG)/$(SUBSYSTEM)Log
+				char *lsubsys = param("SUBSYSTEM");//dprintf_param_funcs->param("SUBSYSTEM");
+				if ( ! DebugLogDir || ! lsubsys) {
+					EXCEPT("Unable to find LOG or SUBSYSTEM.\n");
 				}
+
+				formatstr(logPath, "%s%c%sLog", DebugLogDir, DIR_DELIM_CHAR, lsubsys);
+
+				free(lsubsys);
 			}
 
 			DebugParams[0].accepts_all = true;
@@ -282,7 +309,7 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_out
 			// incorrect default value, I'm gonna use
 			// param_without_default.
 			// tristan 5/29/09
-			logPathParam = dprintf_param_funcs->param_without_default(pname);
+			logPathParam = param_without_default(pname);//dprintf_param_funcs->param_without_default(pname);
 			if(logPathParam)
 				logPath.insert(0, logPathParam);
 
@@ -321,7 +348,7 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_out
 		}
 
 		(void)sprintf(pname, "TRUNC_%s_LOG_ON_OPEN", subsys_and_level.c_str());
-		DebugParams[param_index].want_truncate = dprintf_param_funcs->param_boolean_int(pname, DebugParams[param_index].want_truncate) ? 1 : 0;
+		DebugParams[param_index].want_truncate = param_boolean_int(pname, DebugParams[param_index].want_truncate) ? 1 : 0;//dprintf_param_funcs->param_boolean_int(pname, DebugParams[param_index].want_truncate) ? 1 : 0;
 
 		PRAGMA_REMIND("TJ: move initialization of DebugLock")
 		if (debug_level == D_ALWAYS) {
@@ -340,7 +367,7 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_out
 			bool r = lex_cast(pval, maxlog);
 			if (!r || (maxlog < 0)) {
 				std::string m;
-				sprintf(m, "Invalid config %s = %s: %s must be an integer literal >= 0\n", pname, pval, pname);
+				formatstr(m, "Invalid config %s = %s: %s must be an integer literal >= 0\n", pname, pval, pname);
 				_condor_dprintf_exit(EINVAL, m.c_str());
 			}
 			DebugParams[param_index].maxLog = maxlog;
@@ -380,130 +407,5 @@ dprintf_config( const char *subsys, param_functions *p_funcs, struct dprintf_out
 		dprintf_set_outputs(&DebugParams[0], DebugParams.size());
 	}
 	return 0;
-}
-
-void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_info)
-{
-	static int first_time = 1;
-
-	std::vector<DebugFileInfo> *debugLogsOld = DebugLogs;
-	DebugLogs = new std::vector<DebugFileInfo>();
-
-	/*
-	**  We want to initialize this here so if we reconfig and the
-	**	debug flags have changed, we actually use the new
-	**  flags.  -Derek Wright 12/8/97
-	*/
-	DebugBasic = 1<<D_ALWAYS | 1<<D_ERROR;
-	DebugVerbose = 0;
-	DebugHeaderOptions = 0;
-
-	if ( ! p_info || ! c_info || p_info[0].logPath == "2>" || p_info[0].logPath == "CON:" || p_info[0].logPath == "\\dev\\tty") {
-		Termlog = true;
-	} else {
-		// DebugShouldLockToAppend = p_info[0].lock_to_append;
-	}
-
-	/*
-	**	If this is not going to the terminal, pick up the name
-	**	of the log file, maximum log size, and the name of the
-	**	lock file (if it is specified).
-	*/
-	if ( ! Termlog )
-	{
-		std::vector<DebugFileInfo>::iterator it;	//iterator indicating the file we got to.
-		for (int ii = 0; ii < c_info; ++ii)
-		{
-			std::string logPath = p_info[ii].logPath;
-
-			if(!logPath.empty())
-			{
-				// merge flags if we see the same log file name more than once.
-				// we don't really expect this to happen, but things get wierd of
-				// it does happen and we don't check for it.
-				//
-				for(it = DebugLogs->begin(); it != DebugLogs->end(); ++it)
-				{
-					if(it->logPath != logPath)
-						continue;
-					it->choice |= p_info[ii].choice;
-					break;
-				}
-
-				if(it == DebugLogs->end()) // We did not find the logPath in our DebugLogs
-				{
-					it = DebugLogs->insert(DebugLogs->end(),p_info[ii]);
-					it->outputTarget = ((ii == 0) && Termlog) ? STD_OUT : FILE_OUT;
-					it->logPath = logPath;
-				}
-
-				if (ii == 0) {
-					if(first_time) {
-						struct stat stat_buf;
-						if ( stat( logPath.c_str(), &stat_buf ) >= 0 ) {
-							DebugLastMod = stat_buf.st_mtime > stat_buf.st_ctime ? stat_buf.st_mtime : stat_buf.st_ctime;
-						} else {
-							DebugLastMod = -errno;
-						}
-					}
-					PRAGMA_REMIND("TJ: fix this when choice includes verbose.")
-					DebugBasic = p_info[0].choice;
-					DebugVerbose = p_info[0].VerboseCats;
-					DebugHeaderOptions = p_info[0].HeaderOpts;
-				}
-
-				// check to see if we can open the log file.
-				bool dont_panic = true;
-				bool fOk = debug_check_it(*it, (first_time && it->want_truncate), dont_panic);
-				if( ! fOk && ii == 0 )
-				{
-			       #ifdef WIN32
-					/*
-					** If we could not open the log file, we might want to keep running anyway.
-					** If we do, then set the log filename to NUL so we don't keep trying
-					** (and failing) to open the file.
-					*/
-					if (DebugContinueOnOpenFailure) 
-					{
-						// change the debug file to point to the NUL device.
-						it->logPath.insert(0, NULL_FILE);
-					} else
-			       #endif
-					{
-						EXCEPT("Cannot open log file '%s'", logPath.c_str());
-					}
-				}
-			}
-		}
-	} else {
-
-		if (p_info && (c_info > 0)) {
-			PRAGMA_REMIND("TJ: fix this when choice includes verbose.")
-			DebugBasic = p_info[0].choice;
-			DebugVerbose = p_info[0].VerboseCats;
-			DebugHeaderOptions = p_info[0].HeaderOpts;
-		}
-
-#if !defined(WIN32)
-		setlinebuf( stderr );
-#endif
-
-		(void)fflush( stderr );	/* Don't know why we need this, but if not here
-							   the first couple dprintf don't come out right */
-	}
-
-	first_time = 0;
-	_condor_dprintf_works = 1;
-
-#if HAVE_BACKTRACE
-	install_backtrace_handler();
-#endif
-
-	if(debugLogsOld)
-	{
-		delete debugLogsOld;
-	}
-
-	_condor_dprintf_saved_lines();
 }
 

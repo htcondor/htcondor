@@ -4,7 +4,7 @@
 \index{parallel universe|(}
 \index{MPI application}
 
-Condor's Parallel universe supports a wide variety of parallel
+HTCondor's parallel universe supports a wide variety of parallel
 programming environments, and it encompasses the execution 
 of MPI jobs.
 It supports jobs which need to be co-scheduled.
@@ -12,19 +12,19 @@ A co-scheduled job has
 more than one process that must be running at the same time on different
 machines to work correctly.
 The parallel universe supersedes the mpi universe.
-The mpi universe eventually will be removed from Condor.
+The mpi universe eventually will be removed from HTCondor.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:parallel-setup}Prerequisites to Running Parallel Jobs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor must be configured such that resources (machines) running
+HTCondor must be configured such that resources (machines) running
 parallel jobs are dedicated.  
 \index{scheduling!dedicated}
-Note that \Term{dedicated} has a very specific meaning in Condor:
+Note that \Term{dedicated} has a very specific meaning in HTCondor:
 dedicated
-machines never vacate their executing Condor jobs,
+machines never vacate their executing HTCondor jobs,
 should the machine's interactive owner return.
 This is implemented by running a single dedicated scheduler
 process on a machine in the pool,
@@ -38,7 +38,7 @@ If the dedicated scheduler cannot use a machine for a
 configurable amount of time, it will release its claim on the machine,
 making it available again for the opportunistic scheduler.
 
-Since Condor does not ordinarily run this way, (Condor usually uses
+Since HTCondor does not ordinarily run this way, (HTCondor usually uses
 opportunistic scheduling), dedicated machines must be specially
 configured.  Section~\ref{sec:Config-Dedicated-Jobs} of the
 Administrator's Manual describes the necessary configuration and
@@ -62,7 +62,7 @@ Note that the job likely consists of more than one process,
 each to be executed on a separate machine.
 The first process (machine) invoked is treated
 different than the others.
-When this first process exits, Condor shuts down all the others,
+When this first process exits, HTCondor shuts down all the others,
 even if they have not yet completed their execution.
 
 An overly simplified submit description file for a parallel universe
@@ -80,7 +80,7 @@ queue
 \end{verbatim}
 
 This job specifies the \SubmitCmd{universe} as \SubmitCmd{parallel}, letting
-Condor know that dedicated resources are required.  The
+HTCondor know that dedicated resources are required.  The
 \SubmitCmd{machine\_count} command identifies the number of machines
 required by the job. 
 
@@ -155,7 +155,7 @@ input and output files.
 This example presumes a shared file system across all the machines
 claimed for the parallel universe job. 
 Where no shared file system is either available or guaranteed,
-use Condor's file transfer mechanism,
+use HTCondor's file transfer mechanism,
 as described in section~\ref{sec:file-transfer}
 on page~\pageref{sec:file-transfer}.
 This example uses the file transfer mechanism.
@@ -234,30 +234,30 @@ could satisfy the requirements.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:parallel-mpi-submit}MPI Applications Within Condor's Parallel Universe}
+\subsection{\label{sec:parallel-mpi-submit}MPI Applications Within HTCondor's Parallel Universe}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{parallel universe!running MPI applications}
 \index{MPI application}
 
 MPI applications utilize a single executable that is invoked in order to
 execute in parallel on one or more machines. 
-Condor's parallel universe provides the environment within
+HTCondor's parallel universe provides the environment within
 which this executable is executed in parallel.
 However, the various implementations of MPI
 (for example, LAM or MPICH) require further framework items within
 a system-wide environment.
-Condor supports this necessary framework through 
+HTCondor supports this necessary framework through 
 user visible and modifiable scripts.
-An MPI implementation-dependent script becomes the Condor job.
+An MPI implementation-dependent script becomes the HTCondor job.
 The script sets up the extra, necessary framework,
 and then invokes the MPI application's executable.
 
-Condor provides these scripts in the
+HTCondor provides these scripts in the
 \File{\MacroUNI{RELEASE\_DIR}/etc/examples}
 directory.
 The script for the LAM implementation is \File{lamscript}.
 The script for the MPICH implementation is \File{mp1script}.
-Therefore, a Condor submit description file for these
+Therefore, an HTCondor submit description file for these
 implementations would appear similar to:
 
 \begin{verbatim}
@@ -297,7 +297,7 @@ The \SubmitCmd{executable} is the MPI implementation-dependent script.
 The first argument to the script is the MPI application's 
 executable.
 Further arguments to the script are the MPI application's arguments.
-Condor must transfer this executable;
+HTCondor must transfer this executable;
 do this with the \SubmitCmd{transfer\_input\_files} command.
 
 For other implementations of MPI,
@@ -320,13 +320,13 @@ The machine name and MPI rank are given to the submit machine.
 %on each node we submit to.  This script generates ssh keys, to enable
 %password-less remote execution, start an sshd daemon, and send the
 %names and rank (node number) back to the submit directory.  Thus, for
-%each Condor job submitted, the scripts set up an ad-hoc MPI
+%each HTCondor job submitted, the scripts set up an ad-hoc MPI
 %environment, which is torn down at the end of the job run.  This ssh
 %script is a common requirement for running MPI jobs, so we have
 %factored it out into a common script, which is called from each of the
 %MPI-specific scripts.  After the ssh script has been started, the
 %MPI-specific script runs, starts the rest of the MPI job by looking at
-%its arguments, and waits for the MPI job to finish.  Condor provides
+%its arguments, and waits for the MPI job to finish.  HTCondor provides
 %the ssh script, and example MPI scripts for both LAM and MPICH.  The
 %former is named ``lamscript'', and the latter ``mp1script''.  The
 %first argument to each script is the name of the real MPI executable,
@@ -338,7 +338,7 @@ The machine name and MPI rank are given to the submit machine.
 %transfer.
 
 The \Prog{sshd.sh} script requires the definition of
-two Condor configuration variables.
+two HTCondor configuration variables.
 Configuration variable \Macro{CONDOR\_SSHD} is an absolute path to
 an implementation of \Prog{sshd}.
 \Prog{sshd.sh} has been tested with \Prog{openssh} version 3.9,
@@ -360,13 +360,13 @@ if the user's login shell is the Bourne or compatible shell.
 These MPI jobs operate as all parallel universe jobs do.
 The default policy is that when the first node exits,
 the whole job is considered done, 
-and Condor kills all other running nodes in that parallel job.
+and HTCondor kills all other running nodes in that parallel job.
 Alternatively, a parallel universe job that sets the attribute
 \begin{verbatim}
 +ParallelShutdownPolicy = "WAIT_FOR_ALL"
 \end{verbatim}
 in its submit description file changes the policy,
-such that Condor will wait until every node in the parallel 
+such that HTCondor will wait until every node in the parallel 
 job has completed to consider the job finished. 
 
 \index{parallel universe|)}

@@ -43,4 +43,7 @@ bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target 
 
 void AttrList_setPublishServerTime( bool publish );
 
+void AddClassAdXMLFileHeader(std::string &buffer);
+void AddClassAdXMLFileFooter(std::string &buffer);
+
 #endif

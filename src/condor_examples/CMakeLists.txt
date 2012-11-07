@@ -37,6 +37,7 @@ install (FILES
 		condor_config.local.ckpt.server
 		condor_config.local.ha_condor_had
 		condor_config.generic
+		condor_config.generic.redhat
 		condor_config.local.dedicated.resource
 		condor_config.local.view_server
 		#condor_config.generic.debian.patch
@@ -45,6 +46,7 @@ install (FILES
 		#condor_config.generic.rpm.patch
 		#condor_config.local.generic
 		condor.init
+		condor.plist
 		DESTINATION ${C_ETC_EXAMPLES})
 
 install (FILES

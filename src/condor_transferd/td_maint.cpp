@@ -52,11 +52,11 @@ TransferD::dump_state_handler(int  /*cmd*/, Stream *sock)
 	dprintf(D_ALWAYS, "Got a DUMP_STATE!\n");
 
 	// what uid am I running under?
-	tmp.sprintf("Uid = %d", getuid());
+	tmp.formatstr("Uid = %d", getuid());
 	state.InsertOrUpdate(tmp.Value());
 
 	// count how many pending requests I've had
-	tmp.sprintf("OutstandingTransferRequests = %d", m_treqs.getNumElements());
+	tmp.formatstr("OutstandingTransferRequests = %d", m_treqs.getNumElements());
 	state.InsertOrUpdate(tmp.Value());
 
 	// add more later
