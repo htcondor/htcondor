@@ -62,6 +62,7 @@ def print_full_ad(classad):
     for key, value in sorted(classad.items()):
         if str(key) != '_id':
             print key,'=',value
+    print
     return True
 
 def build_query(opts):
