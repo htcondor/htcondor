@@ -1253,12 +1253,12 @@ void EC2Job::doEvaluateState()
                     lastProbeTime = enteredCurrentGmState;
                 }
 
-                if( now >= lastProbeTime + probeInterval ) {
+                if( now >= lastProbeTime + myResource->GetJobPollInterval() ) {
                     gmState = GM_SPOT_QUERY;
                     break;
                 } else {
                     // Why is this more complicated in GM_SUBMITTED?
-                    unsigned int delay = (lastProbeTime + probeInterval) - now;
+                    unsigned int delay = (lastProbeTime + myResource->GetJobPollInterval()) - now;
                     daemonCore->Reset_Timer( evaluateStateTid, delay );
                 }
                 break;

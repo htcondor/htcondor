@@ -6940,7 +6940,7 @@ int GahpClient::ec2_spot_start( std::string service_url,
     }
     
     if( check_pending_timeout( command, arguments ) ) {
-        sprintf( error_string, "%s timed out", command );
+		formatstr( error_string, "%s timed out", command );
         return GAHPCLIENT_COMMAND_TIMED_OUT;
     }
     
@@ -7015,7 +7015,7 @@ int GahpClient::ec2_spot_stop(  std::string service_url,
     }
 
     if( check_pending_timeout( command, arguments ) ) {
-        sprintf( error_string, "%s timed out", command );
+		formatstr( error_string, "%s timed out", command );
         return GAHPCLIENT_COMMAND_TIMED_OUT;
     }
     
@@ -7090,7 +7090,7 @@ int GahpClient::ec2_spot_status(    std::string service_url,
     }
 
     if( check_pending_timeout( command, arguments ) ) {
-        sprintf( error_string, "%s timed out", command );
+		formatstr( error_string, "%s timed out", command );
         return GAHPCLIENT_COMMAND_TIMED_OUT;
     }
     
@@ -7162,7 +7162,7 @@ int GahpClient::ec2_spot_status_all(    std::string service_url,
     }
     
     if( check_pending_timeout( command, arguments ) ) {
-        sprintf( error_string, "%s timed out", command );
+		formatstr( error_string, "%s timed out", command );
         return GAHPCLIENT_COMMAND_TIMED_OUT;
     }
     
