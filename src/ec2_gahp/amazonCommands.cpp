@@ -450,11 +450,11 @@ bool AmazonRequest::SendRequest() {
         }
     }
 
-    if( CAPath.empty() ) {
-        CAPath = "/etc/grid-security/certificates";
+    // FIXME: Update documentation to reflect no hardcoded default.
+    if( ! CAPath.empty() ) {
+        dprintf( D_FULLDEBUG, "Setting CA path to '%s'\n", CAPath.c_str() );
+        SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAPATH, CAPath.c_str() );
     }
-    dprintf( D_FULLDEBUG, "Setting CA path to '%s'\n", CAPath.c_str() );
-    SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAPATH, CAPath.c_str() );
         
     if( ! CAFile.empty() ) {
         dprintf( D_FULLDEBUG, "Setting CA file to '%s'\n", CAFile.c_str() );
