@@ -743,9 +743,9 @@ void vmSpotESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
 void vmSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
     vmSpotUD * vsud = (vmSpotUD *)vUserData;
     if( vsud->inInstanceId ) {
-        appendToString( (void *)cdata, len, 1, (void *) & vsud->instanceID );
+        appendToString( (const void *)cdata, len, 1, (void *) & vsud->instanceID );
     } else if( vsud->inSpotRequestId ) {
-        appendToString( (void *)cdata, len, 1, (void *) & vsud->spotRequestID );
+        appendToString( (const void *)cdata, len, 1, (void *) & vsud->spotRequestID );
     }
 }
 
@@ -1139,7 +1139,7 @@ void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
             break;
     }
     
-    appendToString( (void *)cdata, len, 1, (void *)targetString );
+    appendToString( (const void *)cdata, len, 1, (void *)targetString );
 }
 
 void vmStatusSpotEEH( void * vUserData, const XML_Char * name ) {
