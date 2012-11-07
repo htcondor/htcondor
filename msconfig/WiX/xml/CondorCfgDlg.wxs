@@ -3,11 +3,11 @@
   <Fragment>
     <UI>
       <Dialog Id="CondorCfgDlg" Width="370" Height="270" Title="[ProductName] [Setup]" NoMinimize="yes">
-        <Control Id="CollectorLabel" Type="Text" X="45" Y="73" Width="220" Height="15" TabSkip="no" Text="&amp;Condor Central Manager IP:" />
+        <Control Id="CollectorLabel" Type="Text" X="45" Y="73" Width="220" Height="15" TabSkip="no" Text="&amp;HTCondor Central Manager IP:" />
         <Control Id="CollectorEdit" Type="Edit" X="45" Y="85" Width="220" Height="18" Property="CONDOR_HOST" Text="{80}" />
         <Control Id="BrokerLabel" Type="Text" X="45" Y="110" Width="220" Height="15" TabSkip="no" Text="&amp;Z-Change Me:" />
         <Control Id="BrokerEdit" Type="Edit" X="45" Y="122" Width="220" Height="18" Property="Z_CHANGE_ME" Text="{80}" />
-        <Control Id="AdminLabel" Type="Text" X="45" Y="147" Width="220" Height="15" TabSkip="no" Text="&amp;Condor Admin Email Address:" />
+        <Control Id="AdminLabel" Type="Text" X="45" Y="147" Width="220" Height="15" TabSkip="no" Text="&amp;HTCondor Admin Email Address:" />
         <Control Id="AdminEdit" Type="Edit" X="45" Y="159" Width="220" Height="16" Property="ADMIN_EMAIL" Text="{80}"/>
         <Control Id="SMTPLabel" Type="Text" X="45" Y="184" Width="220" Height="15" TabSkip="no" Text="&amp;Outgoing SMTP server:" />
         <Control Id="SMTPEdit" Type="Edit" X="45" Y="196" Width="220" Height="16" Property="SMTP" Text="{80}"/>
@@ -22,11 +22,11 @@
         </Control>
         <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
         <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes">
-          <Text>Please enter the following condor config data</Text>
+          <Text>Please enter the following HTCondor config data</Text>
         </Control>
         <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
         <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes">
-          <Text>{\WixUI_Font_Title}Condor Configuration</Text>
+          <Text>{\WixUI_Font_Title}HTCondor Configuration</Text>
         </Control>
         <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
       </Dialog>
