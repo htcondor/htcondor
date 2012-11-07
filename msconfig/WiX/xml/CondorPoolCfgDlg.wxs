@@ -4,10 +4,10 @@
     <UI>
       <Dialog Id="CondorPoolCfgDlg" Width="370" Height="270" Title="[ProductName] [Setup]" NoMinimize="yes">
         <Control Id="InstructionNEWPOOL" Type="Text" X="55" Y="53" Width="75" Height="15" Text="Choose install type:"/>
-        <Control Id="RadioNEWPOOL" Type="RadioButtonGroup" X="130" Y="53" Width="290" Height="26" TabSkip="no" Property="NEWPOOL" Text="New or Existing Condor Pool?">
+        <Control Id="RadioNEWPOOL" Type="RadioButtonGroup" X="130" Y="53" Width="290" Height="26" TabSkip="no" Property="NEWPOOL" Text="New or Existing HTCondor Pool?">
           <RadioButtonGroup Property="NEWPOOL">
-            <RadioButton Value="Y" X="0" Y="0" Width="120" Height="13" Text="Create a new Condor Pool."/>
-            <RadioButton Value="N" X="0" Y="13" Width="120" Height="13" Text="Join an existing Condor Pool."/>
+            <RadioButton Value="Y" X="0" Y="0" Width="120" Height="13" Text="Create a new HTCondor Pool."/>
+            <RadioButton Value="N" X="0" Y="13" Width="140" Height="13" Text="Join an existing HTCondor Pool."/>
           </RadioButtonGroup>
           <Property Id="NEWPOOL" Value="N" />
         </Control>
@@ -32,11 +32,11 @@
         </Control>
         <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
         <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes">
-          <Text>Please enter the following condor config data</Text>
+          <Text>Please enter the following HTCondor config data</Text>
         </Control>
         <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
         <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes">
-          <Text>{\WixUI_Font_Title}New or Existing Condor Pool?</Text>
+          <Text>{\WixUI_Font_Title}New or Existing HTCondor Pool?</Text>
         </Control>
         <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
       </Dialog>
