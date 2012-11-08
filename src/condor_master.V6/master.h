@@ -82,7 +82,9 @@ public:
 	void	InitParams();
 
 	int		SetupController( void );
+	int		DetachController( void );
 	int		RegisterControllee( class daemon * );
+	void		DeregisterControllee( class daemon * );
 
 	bool	IsHA( void ) { return is_ha; };
 
@@ -161,6 +163,7 @@ public:
 	void	DaemonsOff( int fast = 0 );
 	void	DaemonsOffPeaceful();
 	void 	StartAllDaemons();
+	int 	StartDaemonHere(class daemon *);
 	void	StopAllDaemons();
 	void	StopFastAllDaemons();
 	void	StopDaemon( char* name );
