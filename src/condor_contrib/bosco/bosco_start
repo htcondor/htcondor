@@ -13,7 +13,7 @@ if [ ! -e $bosco_passwd_file ]; then
     condor_store_cred -p $random_string -f $bosco_passwd_file
 
     # Change the ownership of the normal passwdfile to the user in CONDOR_IDS
-    chown `condor_config_val CONDOR_IDS` $bosco_passwd_file
+    chown `condor_config_val CONDOR_IDS | sed 's/\./:/'` $bosco_passwd_file
 fi
 
 if [ ! -e $bosco_passwd_file.daemon ]; then

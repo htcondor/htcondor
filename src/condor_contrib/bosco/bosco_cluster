@@ -517,7 +517,9 @@ done
 ################################################################
 
 # Shift away the "--"
-shift
+if [ `uname` != "Darwin" ] ; then
+    shift
+fi
 if [ "x$1" == "x" ]; then
     echo "Warning: No batch system specified, defaulting to PBS"
     echo "If this is incorrect, rerun the command with the batch system specified"
@@ -569,11 +571,10 @@ fi
 
 
 # Transfer the public key to the remote host
-# ssh-copy-id is available on el5 from openssh-clients
 echo "Enter the password to copy the ssh keys to $remote_host:"
-ssh-copy-id -i $bosco_key $remote_host > /dev/null
+cat ${bosco_key}.pub | ssh $remote_host "umask 077; test -d ~/.ssh || mkdir ~/.ssh ; cat >> ~/.ssh/authorized_keys"
 if [ $? -ne 0 ]; then
-    echo "Error running ssh-copy-id.  Please make sure you password is correct."
+    echo "Error copying BOSCO key.  Please make sure you password is correct."
     exit 1
 fi
 
