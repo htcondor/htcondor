@@ -1112,7 +1112,6 @@ daemon::Exited( int status )
 	}
 
 		// Kill any controllees I might have
-dprintf(D_FULLDEBUG, "Exited with %d controllees\n", num_controllees);
 	for( int num = 0;  num < num_controllees;  num++ ) {
 		dprintf( D_ALWAYS, "Killing %s's controllee (%s)\n",
 				 name_in_config_file,
@@ -1616,7 +1615,7 @@ daemon::DeregisterControllee( class daemon *controllee )
 	bool found = false;
 
 	for ( int num = 0; num < num_controllees; ++num ) {
-		if( strncmp(controllee->name_in_config_file, controllees[num]->name_in_config_file, strlen(controllees[num]->name_in_config_file)) == 0 ) {
+		if( strcmp(controllee->name_in_config_file, controllees[num]->name_in_config_file) == 0 ) {
 			controllees[num] = NULL;
 			found = true;
 		}
