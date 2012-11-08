@@ -732,6 +732,9 @@ rsync -aq $bosco_passwd_file $remote_host:$remote_glite_dir/etc 2>/dev/null
 # Add the cluster to the cluster list
 add_cluster_to_list $remote_host $max_queued $cluster_type
 
+# Removing temporary directory
+rm -rf $tmp_dir 2>/dev/null
+
 echo "Installation complete"
 
 stop_ssh
