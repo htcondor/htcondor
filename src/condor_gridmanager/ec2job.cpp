@@ -878,7 +878,7 @@ void EC2Job::doEvaluateState()
 						gmState = GM_HOLD;
 						break;
 					} else {
-						if ( returnStatus.number() == 0 ) {
+                        if ( returnStatus.number() == 0 ) {
 							// The instance has been purged, act like we
 							// got back 'terminated'
 							returnStatus.append( m_remoteJobId.c_str() );
@@ -930,54 +930,70 @@ void EC2Job::doEvaluateState()
                             SetRemoteVMName( public_dns.c_str() );
                         }
 
-                        dprintf( D_ALWAYS, "DEBUG: srCode = %s (assuming 'NULL')\n", srCode.c_str() );
+                        // dprintf( D_ALWAYS, "DEBUG: srCode = %s (assuming 'NULL')\n", srCode.c_str() );
                         if( srCode != "NULL" ) {
                             // Send the user a copy of the reason code.
-                            // FIXME: jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, srCode.c_str() );
-                            
-                            // The semantics for each code listed on
-                            // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-ItemType-StateReasonType.html
-                            // should be considered..
-                            
-                            //
-                            // Many of the codes should result in the job going
-                            // on hold, because they represent permanent problems
-                            // with the job (and we need to tell the user), or
-                            // temporary problems with the service (and we need
-                            // to rate-limit the retries?).  However, we've
-                            // decided that using OnExitRemove and/or job
-                            // postscripts in DAGMan will suffice, given the
-                            // attribute updated above, to determine if the
-                            // job should be resubmitted if the instance
-                            // died because of the spot price going up.  Aside
-                            // from that, we should probably treat the user
-                            // terminating the instance as a normal exit, which also
-                            // means we don't need to worry about reading 
-                            // that result code if we just terminated it because
-                            // the user removed the job.
-                            //
-                            
-                            if( srCode == "Server.SpotInstanceTermination" ) {
-                                // ATTR_EXIT_CODE is declared but not defined.
-                                jobAd->Assign( ATTR_ON_EXIT_CODE, 1 );
-                            }
-                            
+                            jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, srCode.c_str() );                            
                             requestScheddUpdate( this, false );
+                            
+                            //
+                            // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-ItemType-StateReasonType.html
+                            // defines the state [transition] reason codes.
+                            //
+                            // We consider the following reasons to be normal
+                            // termination conditions:
+                            //
+                            // - Client.InstanceInitiatedShutdown 
+                            // - Client.UserInitiatedShutdown
+                            // - Server.SpotInstanceTermination 
+                            //
+                            // the last because the user will be able to ask
+                            // Condor, via on_exit_remove (and the attribute
+                            // updated above), to resubmit the job.
+                            //
+                            // We consider the following reasons to be abnormal
+                            // termination conditions, and thus put the job
+                            // on hold:
+                            //
+                            // - Server.InternalError
+                            // - Server.InsufficientInstanceCapacity
+                            // - Client.VolumeLimitExceeded 
+                            // - Client.InternalError
+                            // - Client.InvalidSnapshot.NotFound 
+                            //
+                            // The first three are likely to be transient; if
+                            // the distinction becomes important, we can add
+                            // it later.
+                            //
+                            
+                            if(
+                                 srCode == "Client.InstanceInitiatedShutdown"
+                              || srCode == "Client.UserInitiatedShutdown"
+                              || srCode == "Server.SpotInstanceTermination" ) {
+                                // Normal instance terminations are normal.
+                            } else if(
+                                 srCode == "Server.InternalError"
+                              || srCode == "Server.InsufficientInstanceCapacity"
+                              || srCode == "Client.VolumeLimitExceeded"
+                              || srCode == "Client.InternalError"
+                              || srCode == "Client.InvalidSnapshot.NotFound" ) {
+                                // Put abnormal instance terminations on hold.
+                                formatstr( errorString, "Abnormal instance termination: %s.\n", srCode.c_str() );
+                                dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
+                                gmState = GM_HOLD;
+                                break;
+                            } else {
+                                // Treat all unrecognized reasons as abnormal.
+                                formatstr( errorString, "Unrecognized reason for instance termination: %s.  Treating as abnormal.\n", srCode.c_str() );
+                                dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
+                                gmState = GM_HOLD;
+                                break;
+                            }
                         }
-
-                        //
-                        // The state reason code is the fourth entry in the
-                        // returnStatus, but may be null.  Add a field to the
-                        // job ad to store it, if not.  Set the [research
-                        // needed: job exit code?] as semantically appropriate,
-                        // based on the code.  Do NOT block for this schedd
-                        // update; the state reason does not change recovery.
-                        //
-
 					}
-
-					lastProbeTime = now;
-					gmState = GM_SUBMITTED;
+					
+                    lastProbeTime = now;
+                    gmState = GM_SUBMITTED;
 				}
 
 				break;				
