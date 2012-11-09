@@ -1,4 +1,3 @@
-
 Summary:        @CPACK_RPM_PACKAGE_SUMMARY@
 Name:           @CPACK_RPM_PACKAGE_NAME@
 Version:        @CPACK_RPM_PACKAGE_VERSION@
@@ -9,10 +8,12 @@ Vendor:         @CPACK_RPM_PACKAGE_VENDOR@
 URL:		@CPACK_RPM_PACKAGE_URL@
 
 Requires(pre): @CPACK_RPM_SHADOW_PACKAGE@
+Requires(pre):/usr/sbin/semanage
 Requires(post):/sbin/chkconfig
 Requires(preun):/sbin/chkconfig
 Requires(preun):/sbin/service
 Requires(postun):/sbin/service
+
 
 #Do not reorder these prefixes
 Prefix: /etc
