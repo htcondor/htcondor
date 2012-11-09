@@ -111,13 +111,6 @@ for details of this and other bugs fixed.
 
 \begin{itemize}
 
-\item \Condor{submit} now supports first-class syntax for specifying
-accounting groups, via the 'group' and 'group\_user' commands.  The
-separator character between group name and user name on internal
-representations is now configurable with \Macro{GROUP\_SEPARATOR}.
-Refer to section~\ref{sec:group-accounting} for more information.
-\Ticket{2728}
-
 \item \Condor{job\_router} can now submit the routed copy of jobs to a
 different \Condor{schedd} than the one that serves as the source of
 jobs to be routed.  The spool directories of the two
