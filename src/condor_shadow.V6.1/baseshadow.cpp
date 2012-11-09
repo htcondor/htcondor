@@ -850,15 +850,27 @@ void BaseShadow::initUserLog()
 		if( !uLog.initialize (owner.Value(), domain.Value(), logfiles,
 				cluster, proc, 0, gjid)) {
 			MyString hold_reason;
-			hold_reason.formatstr(
-					"Failed to initialize user log to %s or %s", logfilename.Value(),
-						dagmanLogFile.Value());
+			hold_reason.formatstr("Failed to initialize user log to %s or %s",
+				logfilename.Value(), dagmanLogFile.Value());
 			dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
-			holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_UnableToInitUserLog,0);
-			// holdJobAndExit() should not return, but just in case it does EXCEPT
+			holdJobAndExit(hold_reason.Value(),
+					CONDOR_HOLD_CODE_UnableToInitUserLog,0);
+				// holdJobAndExit() should not return, but just in case it does
+				// EXCEPT
 			EXCEPT("Failed to initialize user log: %s",hold_reason.Value());
 		}
-		uLog.setUseXML(jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml) && use_xml);
+		uLog.setUseXML(jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml) &&
+			use_xml);
+		if(logfiles.size() > 1) {
+			MyString msk;
+			jobAd->LookupString(ATTR_DAGMAN_WORKFLOW_MASK, msk);
+			Tokenize(msk.Value());
+			dprintf(D_FULLDEBUG, "Mask is \"%s\"\n", msk.Value());
+			while(const char* mask = GetNextToken(",",true)) {
+				dprintf(D_FULLDEBUG, "Adding \"%s\" to mask\n",mask);
+				uLog.AddToMask(ULogEventNumber(atoi(mask)));
+			}
+		}
 	} else {
 		dprintf(D_FULLDEBUG, "no %s found\n", ATTR_ULOG_FILE);
 		dprintf(D_FULLDEBUG, "and no %s found\n", ATTR_DAGMAN_WORKFLOW_LOG);
