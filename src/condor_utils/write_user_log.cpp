@@ -1382,18 +1382,20 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 	// write ulog event
 	if ( m_userlog_enable ) {
 		for(std::vector<log_file>::iterator p = logs.begin(); p != logs.end(); ++p) {
-			// Check our mask vector for the event
-			// If we have a mask, the event must be in the mask to write the event.
 			if( !p->fp || !p->lock) {
 				if(p->fp) {
 					dprintf( D_ALWAYS, "WriteUserLog: No user log lock!\n" );
 				}
 				continue;
 			}
+				// Check our mask vector for the event
+				// If we have a mask, the event must be in the mask to write the event.
 			if( p != logs.begin() && !mask.empty()){
 				std::vector<ULogEventNumber>::iterator pp =
 					std::find(mask.begin(),mask.end(),event->eventNumber);	
 				if(pp == mask.end()) {
+					dprintf( D_FULLDEBUG, "Did not find %d in the mask, so do not write this event.\n",
+						event->eventNumber );
 					break; // We are done caring about this event
 				}
 			}

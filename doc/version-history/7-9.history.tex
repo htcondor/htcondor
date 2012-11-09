@@ -98,6 +98,11 @@ configuration knob, \Macro{JOB\_DEFAULT\_NOTIFICATION}, so that admins can
 change the default according to their preference.
 \Ticket{2155}
 
+\item \Condor{schedd} and \Condor{shadow} were not respecting the
+\Macro{DAGManNodesMask} attribute. This caused extra events to be written to
+the DAGMan node log.
+\Ticket{3311}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
