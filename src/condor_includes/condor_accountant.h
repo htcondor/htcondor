@@ -157,8 +157,6 @@ private:
   GroupEntry* hgq_root_group;
   map<string, GroupEntry*, ci_less> hgq_submitter_group_map;
 
-  string group_separator;
-
   //--------------------------------------------------------
   // Static values
   //--------------------------------------------------------
