@@ -689,6 +689,8 @@ if [ "x$url" == "x" ]; then
     fi
 fi    
 
+echo "Downloading BOSCO from $url"
+
 # Create a tmp dir, download the files and rsync them to the remote system
 # A download to the remote system would be faster but we cannot count on ports different form the SSH one
 # OS X mktemp requires a template
