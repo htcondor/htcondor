@@ -78,7 +78,7 @@ private:
 	std::string m_internal_pipe;
 	std::string m_external_pipe;
 	condor_sockaddr m_internal_address, m_external_address;
-	MyString m_internal_address_str;
+	std::string m_internal_address_str;
 	int m_sock;
 	bool m_created_pipe;
 	classad::ClassAd m_statistics;
@@ -87,7 +87,7 @@ private:
 	int m_p2c[2], m_c2p[2];
 
 	// Lock for IP address
-	std::auto_ptr<IPLock> m_iplock;
+	std::auto_ptr<IPLock> m_iplock_external, m_iplock_internal;
 };
 
 #endif

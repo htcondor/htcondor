@@ -15,7 +15,8 @@ NetworkNamespaceManager::NetworkNamespaceManager() :
 	m_state(UNCREATED), m_network_namespace(""),
 	m_internal_pipe(""), m_external_pipe(""),
 	m_sock(-1), m_created_pipe(false),
-	m_iplock(NULL)
+	m_iplock_external(NULL),
+	m_iplock_internal(NULL)
 	{
 		//PluginManager<NetworkManager>::registerPlugin(this);
 		dprintf(D_FULLDEBUG, "Initialized a NetworkNamespaceManager plugin.\n");
@@ -60,19 +61,29 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace) {
 	{
 		dprintf(D_FULLDEBUG, "Parameter NAT_NETWORK is not specified; using default %s.\n", network_spec.c_str());
 	}
-	m_iplock.reset(new IPLock(network_spec));
-	if (!m_iplock->Lock(m_external_address))
+	m_iplock_external.reset(new IPLock(network_spec));
+	m_iplock_internal.reset(new IPLock(network_spec));
+	if (!m_iplock_external->Lock(m_external_address))
 	{
-		dprintf(D_ALWAYS, "Unable to lock an IP address to use.\n");
+		dprintf(D_ALWAYS, "Unable to lock an external IP address to use.\n");
 		m_state = FAILED;
 		return 1;
 	}
-	dprintf(D_ALWAYS, "Using address %s for external portion of NAT.\n", m_external_address.to_ip_string().Value());
+	if (!m_iplock_internal->Lock(m_internal_address))
+	{
+		dprintf(D_ALWAYS, "Unable to lock an internal IP address for use.\n");
+		m_state = FAILED;
+		return 1;
+	}
+	dprintf(D_FULLDEBUG, "Using address %s for external portion of NAT.\n", m_external_address.to_ip_string().Value());
+	dprintf(D_FULLDEBUG, "Using address %s for internal portion of NAT.\n", m_internal_address.to_ip_string().Value());
+	m_internal_address_str = m_internal_address.to_ip_string();
 
 	ArgList args;
 	std::string external_address = m_external_address.to_ip_string();
 	args.AppendArg(namespace_script);
 	args.AppendArg(external_address.c_str());
+	args.AppendArg(m_internal_address_str.c_str());
 	args.AppendArg(m_network_namespace);
 	args.AppendArg(m_external_pipe);
 	dprintf(D_FULLDEBUG, "NetworkNamespaceManager nat setup: %s %s %s %s\n", namespace_script, external_address.c_str(), m_network_namespace.c_str(), m_external_pipe.c_str());
@@ -82,27 +93,6 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace) {
 		dprintf(D_ALWAYS, "NetworkNamespaceManager::CreateNamespace: my_popen failure on %s: (errno=%d) %s\n", args.GetArg(0), errno, strerror(errno));
 		m_state = FAILED;
 		return 1;
-	}
-
-	while (m_internal_address_str.readLine(fp, true));
-	int ret = my_pclose(fp);
-	m_internal_address_str.trim();
-	if (ret) {
-		dprintf(D_ALWAYS, "NetworkNamespaceManager::CreateNamespace: %s "
-			"exited with status %d and following output: %s\n",
-			 args.GetArg(0), ret, m_internal_address_str.Value());
-		m_state = FAILED;
-		return ret;
-	} else {
-		dprintf(D_FULLDEBUG, "NetworkNamespaceManager::CreateNamespace script succeeded.\n");
-	}
-
-	if (!m_internal_address.from_ip_string(m_internal_address_str)) {
-		dprintf(D_ALWAYS, "NetworkNamespaceManager::CreateNamespace: Invalid IP %s for internal namespace.\n", m_internal_address_str.Value());
-		m_state = FAILED;
-		return 1;
-	} else {
-		dprintf(D_FULLDEBUG, "NetworkNamespaceManager::CreateNamespace: Internal address string %s.\n", m_internal_address_str.Value());
 	}
 
 	m_state = CREATED;
@@ -185,14 +175,14 @@ int NetworkNamespaceManager::PostForkChild() {
 	// This is why we saved the IPv4 address in m_internal_address_str instead of just
 	// recreating it from m_internal_address
 	int sock;
-	dprintf(D_FULLDEBUG, "Child proceeding to configure networking for address %s.\n", m_internal_address_str.Value());
+	dprintf(D_FULLDEBUG, "Child proceeding to configure networking for address %s.\n", m_internal_address_str.c_str());
 	if ((sock = create_socket()) < 0) {
 		dprintf(D_ALWAYS, "Unable to create socket to talk to kernel for child.\n");
 		rc = 1;
 		goto failed_socket;
 	}
-	if (add_address(sock, m_internal_address_str.Value(), m_internal_pipe.c_str())) {
-		dprintf(D_ALWAYS, "Unable to add address %s to %s.\n", m_internal_address_str.Value(), m_internal_pipe.c_str());
+	if (add_address(sock, m_internal_address_str.c_str(), m_internal_pipe.c_str())) {
+		dprintf(D_ALWAYS, "Unable to add address %s to %s.\n", m_internal_address_str.c_str(), m_internal_pipe.c_str());
 		rc = 2;
 		goto finalize_child;
 	}
@@ -201,13 +191,13 @@ int NetworkNamespaceManager::PostForkChild() {
 		rc = 3;
 		goto finalize_child;
 	}
-	if (add_local_route(sock, m_internal_address_str.Value(), m_internal_pipe.c_str(), 24)) {
-		dprintf(D_ALWAYS, "Unable to add local route via %s\n", m_internal_address_str.Value());
+	if (add_local_route(sock, m_internal_address_str.c_str(), m_internal_pipe.c_str(), 24)) {
+		dprintf(D_ALWAYS, "Unable to add local route via %s\n", m_internal_address_str.c_str());
 		rc = 4;
 		goto finalize_child;
 	}
-	if (add_default_route(sock, m_internal_address_str.Value())) {
-		dprintf(D_ALWAYS, "Unable to add default route via %s\n", m_internal_address_str.Value());
+	if (add_default_route(sock, m_internal_address_str.c_str())) {
+		dprintf(D_ALWAYS, "Unable to add default route via %s\n", m_internal_address_str.c_str());
 		rc = 5;
 		goto finalize_child;
 	}
@@ -352,7 +342,8 @@ int NetworkNamespaceManager::Cleanup(const std::string &) {
 		rc = rc3;
 	}
 
-	m_iplock.reset(NULL);
+	m_iplock_external.reset(NULL);
+	m_iplock_internal.reset(NULL);
 
 	return rc2 ? rc2 : rc;
 }
@@ -364,6 +355,7 @@ int NetworkNamespaceManager::RunCleanupScript() {
 	args.AppendArg(namespace_script);
 	args.AppendArg(m_network_namespace);
 	args.AppendArg(m_external_pipe);
+	args.AppendArg(m_internal_address_str);
 
 	FILE *fp = my_popen(args, "r", TRUE);
 	if (fp == NULL) {

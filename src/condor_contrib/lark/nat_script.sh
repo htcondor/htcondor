@@ -1,7 +1,7 @@
 #!/bin/sh
 
-if [ $# -ne 3 ]; then
-  echo "Usage: nat_script.sh <IP address> <JOB ID> <outer dev>"
+if [ $# -ne 4 ]; then
+  echo "Usage: nat_script.sh <internal IPv4 address> <external IPv4 address> <JOB ID> <outer dev>"
   exit 1
 fi
 
@@ -10,10 +10,11 @@ ON_CAMPUS="129.93.0.0/16"
 
 JOB_OUTER_IP=$1
 JOB_OUTER_PREFIX="$JOB_OUTER_IP/24"
-JOB_INNER_IP="192.168.181.2"
+JOB_INNER_IP=192.168.181.7
+JOB_INNER_IP=$2
 
-JOBID="$2"
-DEV="$3"
+JOBID="$3"
+DEV="$4"
 
 # Minimal configuration of iptables rules in the system chains
 #iptables -t nat -A POSTROUTING -o $PUBLIC_DEV -j MASQUERADE || exit 2
@@ -33,8 +34,8 @@ iptables -A $JOBID ! -i $DEV -o $DEV -m state --state RELATED,ESTABLISHED ! --sr
 # Drop everything else
 iptables -A $JOBID -j REJECT || exit 5
 
-echo "ifconfig $DEV $JOB_OUTER_PREFIX up" > /tmp/foo
-ifconfig $DEV $JOB_OUTER_PREFIX up || exit 6
-
-echo $JOB_INNER_IP
+#ifconfig $DEV $JOB_OUTER_PREFIX up || exit 6
+ip addr add $JOB_OUTER_IP/255.255.255.255 dev $DEV || exit 6
+ip link set dev $DEV up || exit 7
+route add $JOB_INNER_IP/32 gw $JOB_OUTER_IP || exit 8
 

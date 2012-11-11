@@ -389,10 +389,13 @@ VanillaProc::StartJob()
 
 	std::string network_name = "";
 	if (param_boolean("USE_NETWORK_NAMESPACES", false)) {
-		std::stringstream namespace_name_ss;
-		namespace_name_ss << "slot";
-		namespace_name_ss << (Starter->getMySlotNumber());
-		network_name = namespace_name_ss.str();
+		std::string starter_name;
+		Starter->jic->machClassAd()->EvalString(ATTR_NAME, NULL, starter_name);
+		std::string network_name = starter_name.substr(0, starter_name.find("@"));
+		if (network_name.size() == 0) {
+			dprintf(D_ALWAYS, "Unable to determine starter slot name.\n");
+			return FALSE;
+		}
 		int rc = NetworkPluginManager::PrepareNetwork(network_name);
 		if (rc) {
 			dprintf(D_ALWAYS, "Failed to prepare network namespace - bailing.\n");
