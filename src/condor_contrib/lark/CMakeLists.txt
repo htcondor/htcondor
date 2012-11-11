@@ -17,7 +17,7 @@
  # 
  ############################################################### 
 
-option(WITH_LARK "Support for Lark network tools" ON)
+option(WITH_LARK "Support for Lark network tools" OFF)
 
 if ( WITH_LARK )
 
