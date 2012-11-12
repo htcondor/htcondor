@@ -69,7 +69,7 @@ class IdleGlideins(AvailableGlideins):
 
 class IdleJobs(AvailableGlideins):
     
-    command = "condor_q -name %s -const '(GlideinJob =!= true) &&  (JobStatus == 1) && (JobUniverse == 5)' -format '<glidein owner=\"%s\"/>' 'Owner'"
+    command = "condor_q -name %s -const '(GlideinJob =!= true) &&  (JobStatus == 1) && (JobUniverse == 5)' -format '<glidein owner=\"%%s\"/>' 'Owner'"
 
     def __init__(self, schedd):
         super(IdleJobs, self).__init__()
