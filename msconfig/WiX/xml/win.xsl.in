@@ -11,7 +11,7 @@
        Id="@CPACK_WIX_PRODUCT_GUID@" Name="@CPACK_PACKAGE_FILE_NAME@"
        Language="1033" Version="@CPACK_PACKAGE_VERSION@"
        Manufacturer="@CPACK_PACKAGE_VENDOR@" UpgradeCode="EA1CEE00-C44F-4BC4-8035-440AA32C1F33">
-        <Package InstallerVersion="300" Compressed="yes"/>
+        <Package InstallerVersion="405" Compressed="yes"/>
         <Media Id="1" Cabinet="media1.cab" EmbedCab="yes"/>
         <!-- Always force the root drive to be C: -->
         <Directory Id="TARGETDIR" Name="SourceDir">
