@@ -1828,11 +1828,24 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 	filesize_t execsz = 0;
 	char buf[200];
 
+	// if we are using PrivSep, gathering disk usage will fail (for now)
+	// so don't bother.  so let's find out if we are.  ZKM TODO
+	CondorPrivSepHelper* privsep_helper = Starter->condorPrivSepHelper();
+
+	// if we are using PrivSep, do print a message, one time, saying that disk
+	// usage info is unavailable.
+	static bool printed_message = false;
+	if (privsep_helper && !printed_message) {
+		dprintf(D_ALWAYS, "PRIVSEP is enabled, so we will NOT attempt to gather disk usage.\n");
+		printed_message = true;
+	}
+
+	// if we're not using PrivSep, and
 	// if there is a filetrans object, then let's send the current
 	// size of the starter execute directory back to the shadow.  this
 	// way the ATTR_DISK_USAGE will be updated, and we won't end
 	// up on a machine without enough local disk space.
-	if ( filetrans ) {
+	if ( filetrans && (privsep_helper == NULL)) {
 		// make sure this computation is done with user priv, since that who
 		// owns the directory and it may not be world-readable
 		Directory starter_dir( Starter->GetWorkingDir(), PRIV_USER );
