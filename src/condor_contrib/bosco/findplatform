@@ -29,6 +29,7 @@ BIT32="32bit"
 BIT64="64bit"
 
 INSTALLER_NAME="boscoinstaller"
+SYSINSTALLER_NAME="boscomuinstaller"
 
 def findversion_mac(detail=False):
   # system_profiler -detailLevel mini SPSoftwareDataType | grep "System Version"
@@ -142,7 +143,7 @@ def findversion_detail():
       return findversion_debian(True)
   return UNKNOWN
 
-def install(platform, options=None):
+def install(platform, multiuser=False, options=None):
   """Install BOSCO for the platform"""
   import tempfile
   import urllib2
@@ -183,7 +184,11 @@ def install(platform, options=None):
     if options:
       options_list =  " ".join(options)
     if not options_list:
-      print "Installing BOSCO in ~/bosco"
+      if multiuser:
+        options_list = "--prefix=/opt/bosco"
+        print "Installing BOSCO in /opt/bosco"
+      else:
+        print "Installing BOSCO in ~/bosco"
     else:
       print "Installing BOSCO with: ./bosco_install %s" % options_list
     cmd_list = [#"curl -s -o %s/bosco-download.tar.gz %s" % (tmp_dir, URL_DICT[platform]),
@@ -211,9 +216,13 @@ def install(platform, options=None):
    
 if __name__ == "__main__":
   # invoked as installer (INSTALLER_NAME [install options])
-  if os.path.basename(sys.argv[0])==INSTALLER_NAME:
+  tmp_basename = os.path.basename(sys.argv[0])
+  if tmp_basename==INSTALLER_NAME or tmp_basename==SYSINSTALLER_NAME:
     res = findversion()
-    install(res, sys.argv[1:])
+    if tmp_basename==SYSINSTALLER_NAME:
+      install(res, True, sys.argv[1:])
+    else:
+      install(res, False, sys.argv[1:])
     sys.exit(0)
   # install parameter separation
   my_par = sys.argv[1:]
@@ -262,7 +271,7 @@ if __name__ == "__main__":
     else:
       res = findversion()
     if opts.install:
-      install(res, install_par)
+      install(res, False, install_par)
       sys.exit(0)
     elif opts.url:
       print URL_DICT[res]

@@ -105,6 +105,37 @@ ssh_upload_and_run () {
     return $cmd_ec
 }
 
+ssh_find_remote () {
+    # Last attempt to find remote platform
+    # More imprecise than findplatform but may succeed when upload fails (e.g. multiple login nodes in DNS RR)
+    # 1. remote host
+    remote_host=$1
+    findplatform_path=$2
+    # if .. else .. only from Python 2.5, no RH5 support
+    #ssh uc3-sub /usr/bin/python -c \"import platform\; mydist = platform.dist\(\)\; print \'DEB6\' if mydist[0]==\'debian\' and mydist[1].startswith\(\'6.\'\) else \(\'RH5\' if mydist[1].startswith\(\'5.\'\) else \'RH6\' if mydist[1].startswith\(\'6.\'\) else \'UNKNOWN\'\) if mydist[0]==\'redhat\'  else \'UNKNOWN\'\"
+    cmd_out=`ssh $remote_host "python -c \"import sys; print sys.platform\"" 2>/dev/null`
+    if [ $? -eq 0 -a "x$cmd_out" == "xdarwin" ]; then
+        # assume all Mac OK
+        echo "`$findplatform_path --url --force MAC`"
+        return 0
+    fi
+    cmd_out=`ssh $remote_host "python -c \"import platform; mydist = platform.dist(); print '%s%s' % (mydist[0], mydist[1][0])\"" 2>/dev/null`
+    if [ $? -eq 0 ]; then
+        # check for linux
+        case "$cmd_out" in 
+            redhat5) echo "`$findplatform_path --url --force RH5`"
+                       ;;
+            redhat6) echo "`$findplatform_path --url --force RH6`"
+                       ;;
+            debian6) echo "`$findplatform_path --url --force DEB6`"
+                       ;;
+            *) ;; 
+        esac
+        return 0
+    fi
+    return 1
+}
+
 check_cluster_list () {
     # $1 = cluster to check for
     remote_host=$1
@@ -649,10 +680,16 @@ fi
 
 url=`ssh_upload_and_run $remote_host $TMP_INSTALL $findplatform_path --url`
 if [ "x$url" == "x" ]; then
-    echo "BOSCO is not supporting the remote platform."
-    echo "Aborting installation to $remote_host."
-    exit 1
+    # Attempt in a different way
+    url=`ssh_find_remote $remote_host $findplatform_path`
+    if [ "x$url" == "x" ]; then
+        echo "BOSCO is not supporting the remote platform."
+        echo "Aborting installation to $remote_host."
+        exit 1
+    fi
 fi    
+
+echo "Downloading BOSCO from $url"
 
 # Create a tmp dir, download the files and rsync them to the remote system
 # A download to the remote system would be faster but we cannot count on ports different form the SSH one
@@ -731,6 +768,9 @@ rsync -aq $bosco_passwd_file $remote_host:$remote_glite_dir/etc 2>/dev/null
 
 # Add the cluster to the cluster list
 add_cluster_to_list $remote_host $max_queued $cluster_type
+
+# Removing temporary directory
+rm -rf $tmp_dir 2>/dev/null
 
 echo "Installation complete"
 
