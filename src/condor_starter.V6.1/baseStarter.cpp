@@ -222,8 +222,15 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 				 "Failed to initialize JobInfoCommunicator, aborting\n" );
 		return false;
 	}
+
 	// jic already assumed to be nonzero above
+	//
+	// also, the jic->init call above has set up the user priv state via
+	// initUserPriv, so we can safely use it now, and we should so that we can
+	// actually do this in the user-owned execute dir.
+	priv_state rl_p = set_user_priv();
 	sysapi_set_resource_limits(jic->getStackSize());
+	set_priv (rl_p);
 
 		// Now, ask our JobInfoCommunicator to setup the environment
 		// where our job is going to execute.  This might include
@@ -1378,10 +1385,15 @@ CStarter::createTempExecuteDir( void )
 
 	CondorPrivSepHelper* cpsh = condorPrivSepHelper();
 	if (cpsh != NULL) {
+		// ZKM TODO FIX
+		// the privsep switchboard ALWAYS creates directories with
+		// permissions 0755.  that change goes deeper than anything
+		// i want to do in this first round of fixes.
 		cpsh->initialize_sandbox(WorkingDir.Value());
 		WriteAdFiles();
 	} else {
-		if( mkdir(WorkingDir.Value(), 0777) < 0 ) {
+		// we can only get here if we are not using PrivSep.
+		if( mkdir(WorkingDir.Value(), 0700) < 0 ) {
 			dprintf( D_FAILURE|D_ALWAYS,
 			         "couldn't create dir %s: %s\n",
 			         WorkingDir.Value(),
@@ -1481,7 +1493,12 @@ CStarter::createTempExecuteDir( void )
 
 #endif /* WIN32 */
 
-	if( chdir(WorkingDir.Value()) < 0 ) {
+	// switch to user priv -- it's the owner of the directory we just made
+	priv_state ch_p = set_user_priv();
+	int chdir_result = chdir(WorkingDir.Value());
+	set_priv( ch_p );
+
+	if( chdir_result < 0 ) {
 		dprintf( D_FAILURE|D_ALWAYS, "couldn't move to %s: %s\n", WorkingDir.Value(),
 				 strerror(errno) ); 
 		set_priv( priv );

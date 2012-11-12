@@ -3679,7 +3679,9 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 	// modification times to spool_time.  this essentially builds a catalog
 	// that mimics old behavior.
 	//
-	Directory file_iterator(iwd);
+	// make sure this iteration is done as the actual owner of the directory,
+	// as it may not be world-readable.
+	Directory file_iterator(iwd, PRIV_USER);
 	const char * f = NULL;
 	while( (f = file_iterator.Next()) ) {
 		if (!file_iterator.IsDirectory()) {
