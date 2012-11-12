@@ -1377,6 +1377,58 @@ File System Configuration File Entries''.
   log writes at the cost of some durability of the log contents should
   there be a power or hardware failure.  This value is true by default.
 
+\label{param:StatisticsToPublish}
+\item[\Macro{STATISTICS\_TO\_PUBLISH}]
+  A comma and/or space separated list that identifies which daemons are to
+  publish Statistics attributes in their ClassAds, as well as a level of
+  verbosity to identify which attributes to include and which to omit from
+  the ClassAd. 
+  The syntax defines the two aspects by separating them with a colon;
+  the first aspect defines which daemon is to publish the statistics,
+  and the second aspect defines the verbosity.
+  This first aspect may be \Expr{SCHEDD} or \Expr{SCHEDULER} to publish
+  Statistics attributes in the ClassAd of the \Condor{schedd}.
+  Or, it may be \Expr{DC} or \Expr{DAEMONCORE} to publish 
+  DaemonCore statistics.
+  After the colon may be the value \Expr{0}, \Expr{1}, \Expr{2}, or \Expr{3}.
+  A value of  \Expr{0} turns off the publishing of any Statistics attributes.
+  A value of  \Expr{1} is the default level, where some Statistics attributes
+  are published and others are omitted.
+  A value of  \Expr{2} is the verbose level, where all Statistics attributes
+  are published.
+  A value of  \Expr{3} is the super verbose level, which is currently unused,
+  but intended to be all Statistics attributes published at the verbose
+  level plus extra information.
+  As an example, to cause a verbose setting of the publication of Statistics
+  attributes for the \Condor{schedd}:
+\begin{verbatim}
+  STATISTICS_TO_PUBLISH = SCHEDD:2
+\end{verbatim}
+  
+\label{param:StatisticsWindowSeconds}
+\item[\Macro{STATISTICS\_WINDOW\_SECONDS}]
+  An integer value that controls the time window size, in seconds, for
+  collecting windowed daemon statistics (by convention, windowed statistics
+  typically are of the form 'RecentXxx').  Any data contributing to a
+  windowed statistic that is older than this number of seconds is dropped
+  from the statistic.  For example if \Macro{STATISTICS\_WINDOW\_SECONDS} = 300, then
+  any jobs submitted more than 300 seconds ago are not counted in the windowed
+  statistic \Attr{RecentJobsSubmitted}.  Defaults to 1200.
+
+  Configuration variables of the form \Macro{STATISTICS\_WINDOW\_SECONDS\_<collection>}
+  override the global setting for a particular statistic collection.  Collection names
+  currently implemented are 'DC' (or 'DAEMONCORE') and 'SCHEDD' (or 'SCHEDULER')
+
+\label{param:StatisticsWindowQuantum}
+\item[\Macro{STATISTICS\_WINDOW\_QUANTUM}]
+  An integer value that controls the time quantization, in seconds, for the data structures 
+  that maintain windowed statistics.  Defaults to 240.   Smaller values yield higher
+  time resolution and reduce 'sawtoothing' of windowed statistic values, at the expense of
+  requiring larger data structures for maintenance.
+
+  Configuration variables of the form \Macro{STATISTICS\_WINDOW\_QUANTUM\_<collection>}
+  override the global setting for a particular statistic collection.
+
 \end{description}
 
 
@@ -5743,39 +5795,6 @@ SYSTEM_PERIODIC_REMOVE = \
   in addition to the rotations that occur due to the definition of  
   \MacroNI{MAX\_HISTORY\_LOG} that rotate due to size.
 
-\label{param:StatisticsToPublish}
-\item[\Macro{STATISTICS\_TO\_PUBLISH}]
-  A comma and/or space separated list that identifies which daemons are to
-  publish Statistics attributes in their ClassAds, as well as a level of
-  verbosity to identify which attributes to include and which to omit from
-  the ClassAd. 
-  The syntax defines the two aspects by separating them with a colon;
-  the first aspect defines which daemon is to publish the statistics,
-  and the second aspect defines the verbosity.
-  This first aspect may be \Expr{SCHEDD} or \Expr{SCHEDULER} to publish
-  Statistics attributes in the ClassAd of the \Condor{schedd}.
-  Or, it may be \Expr{DC} or \Expr{DAEMONCORE} to publish 
-  DaemonCore statistics.
-  After the colon may be the value \Expr{0}, \Expr{1}, \Expr{2}, or \Expr{3}.
-  A value of  \Expr{0} turns off the publishing of any Statistics attributes.
-  A value of  \Expr{1} is the default level, where some Statistics attributes
-  are published and others are omitted.
-  A value of  \Expr{2} is the verbose level, where all Statistics attributes
-  are published.
-  A value of  \Expr{3} is the super verbose level, which is currently unused,
-  but intended to be all Statistics attributes published at the verbose
-  level plus extra information.
-  As an example, to cause a verbose setting of the publication of Statistics
-  attributes for the \Condor{schedd}:
-\begin{verbatim}
-  STATISTICS_TO_PUBLISH = SCHEDD:2
-\end{verbatim}
-  
-\label{param:StatisticsWindowSeconds}
-\item[\Macro{STATISTICS\_WINDOW\_SECONDS}]
-  The amount of time given in seconds defining the interval of time over
-  which \Condor{schedd} daemon Statistics attributes are quantized.
-  Defaults to 1200 seconds, which is 20 minutes.
 
 \label{param:ScheddCollectStatsForName}
 \item[\Macro{SCHEDD\_COLLECT\_STATS\_FOR\_<Name>}]
