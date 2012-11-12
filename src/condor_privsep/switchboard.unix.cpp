@@ -839,7 +839,9 @@ static void do_mkdir(configuration *c)
         fatal_error_exit(1, "error switching user to root");
     }
 
-    r = mkdir(dir_name, 0755);
+    // make the directory private by default.  ideally, the permissions to use
+    // should be a parameter that is passed in.  ZKM TODO
+    r = mkdir(dir_name, 0700);
     if (r == -1) {
         fatal_error_exit(1, "error creating directory %s", dir_name);
     }
