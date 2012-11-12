@@ -193,11 +193,11 @@ static int child_post_fork(void * info_ptr) {
 		goto finalize_child;
 	}
 
-	if (mount("sysfs", "/sys", "sysfs", 0, 0) == -1) {
+	/*if (mount("sysfs", "/sys", "sysfs", 0, 0) == -1) {
 		rc = errno;
 		fprintf(stderr, "Unable to remount /sys. (errno=%d) %s\n", errno, strerror(errno));
 		goto finalize_child;
-	}
+	}*/
 
 	// Manipulate our network configuration.
 	// Notice that we open a new socket to the kernel - this is because the
@@ -231,7 +231,9 @@ static int child_post_fork(void * info_ptr) {
 	sock = -1;
 
 	// Exec out.
-	rc = execl("/bin/sh", "sh", "-c", "date; ifconfig -a; route -n; curl 129.93.1.141;", (char *)0);
+	//rc = execl("/bin/sh", "sh", "-c", "date; ifconfig -a; route -n; curl 129.93.1.141;", (char *)0);
+	// Test for IPv6
+	rc = execl("/bin/sh", "sh", "-c", "date; ifconfig -a; route -n; curl 2600:901::5054:ff:fe28:4ae1;", (char *)0);
 	fprintf(stderr, "Failure to exec /bin/sh. (errno=%d) %s\n", errno, strerror(errno));
 
 finalize_child:
