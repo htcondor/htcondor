@@ -936,6 +936,13 @@ chown_func(const char *filename, const struct stat *buf, void *data)
        symlinks since their ownership is inconsequential.
     */
     if (safe_open_no_follow(filename, &fd, NULL) == -1) {
+		if( stat(filename, &stat_buf)==0 && stat_buf.st_uid == ids->uid && stat_buf.st_gid == ids->gid ) {
+				/* We don't have permission to open this file as
+				 * the source user, but it is already owned by
+				 * the target user, so all is well.
+				 */
+			return 0;
+		}
         return -1;
     }
     if (fd == -1) {

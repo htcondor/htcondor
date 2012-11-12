@@ -76,6 +76,10 @@ void GahpReconfig()
 	}
 }
 
+void GahpClient::setErrorString( const std::string & newErrorString ) {
+    error_string = newErrorString;
+}
+
 GahpServer *GahpServer::FindOrCreateGahpServer(const char *id,
 											   const char *path,
 											   const ArgList *args)
@@ -6098,7 +6102,7 @@ int GahpClient::ec2_vm_status( std::string service_url,
 	Gahp_Args* result = get_pending_result(command, buf);
 	
 	// we expect the following return:
-	//		seq_id 0 <instance_id> <status> <ami_id> <public_dns> <private_dns> <keypairname> <group> <group> <group> ... 
+	//		seq_id 0 <instance_id> <status> <ami_id> <state_reason_code> <public_dns> <private_dns> <keypairname> <group> <group> <group> ... 
 	//		seq_id 0
 	//		seq_id 1 error_code error_string
 	//		seq_id 1
@@ -6119,7 +6123,7 @@ int GahpClient::ec2_vm_status( std::string service_url,
 			error_code = strdup(result->argv[2]);
 			error_string = result->argv[3];
 		}
-		else if (result->argc == 5)
+		else if (result->argc == 6)
 		{
 			rc = atoi(result->argv[1]);
 			if (rc == 1) {
@@ -6139,7 +6143,7 @@ int GahpClient::ec2_vm_status( std::string service_url,
 				returnStatus.rewind();
 			}				
 		} 
-		else if (result->argc < 9) {
+		else if (result->argc < 10) {
 			EXCEPT( "Bad %s result", command );
 		} else {
 			rc = atoi(result->argv[1]);
@@ -6833,6 +6837,338 @@ int GahpClient::ec2_attach_volume(std::string service_url,
     return rc;
 
 }
+
+//
+// Spot instance support.
+//
+int GahpClient::ec2_spot_start( std::string service_url,
+                                std::string publickeyfile,
+                                std::string privatekeyfile,
+                                std::string ami_id,
+                                std::string spot_price,
+                                std::string keypair,
+                                std::string user_data,
+                                std::string user_data_file,
+                                std::string instance_type,
+                                std::string availability_zone,
+                                std::string vpc_subnet,
+                                std::string vpc_ip,
+                                std::string client_token,
+                                StringList & groupnames,
+                                char * & request_id,
+                                char * & error_code )
+{
+    static const char * command = "EC2_VM_START_SPOT";
+    
+    if( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+        return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+    }
+    
+    if( service_url.empty()
+     || publickeyfile.empty()
+     || privatekeyfile.empty()
+     || ami_id.empty()
+     || spot_price.empty() ) {
+        return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+    }
+
+    if( keypair.empty() ) { keypair = NULLSTRING; }    
+    if( user_data.empty() ) { user_data = NULLSTRING; }
+    if( user_data_file.empty() ) { user_data_file = NULLSTRING; }
+    if( instance_type.empty() ) { instance_type = NULLSTRING; }
+    if( availability_zone.empty() ) { availability_zone = NULLSTRING; }
+    if( vpc_subnet.empty() ) { vpc_subnet = NULLSTRING; }
+    if( vpc_ip.empty() ) { vpc_ip = NULLSTRING; }
+    if( client_token.empty() ) { client_token = NULLSTRING; }
+
+    std::string space = " ";
+    std::string requestLine;
+    requestLine += escapeGahpString( service_url ) + space;
+    requestLine += escapeGahpString( publickeyfile ) + space;
+    requestLine += escapeGahpString( privatekeyfile ) + space;
+    requestLine += escapeGahpString( ami_id ) + space;
+    requestLine += escapeGahpString( spot_price ) + space;
+    requestLine += escapeGahpString( keypair ) + space;
+    requestLine += escapeGahpString( user_data ) + space;
+    requestLine += escapeGahpString( user_data_file ) + space;
+    requestLine += escapeGahpString( instance_type ) + space;
+    requestLine += escapeGahpString( availability_zone ) + space;
+    requestLine += escapeGahpString( vpc_subnet ) + space;
+    requestLine += escapeGahpString( vpc_ip ) + space;
+    requestLine += escapeGahpString( client_token );
+    
+    const char * groupName = NULL;
+    for( groupnames.rewind(); groupName != NULL; groupName = groupnames.next() ) {
+        requestLine += space + groupName;
+    }
+    
+    const char * arguments = requestLine.c_str();
+    if( ! is_pending( command, arguments ) ) {
+        if( m_mode == results_only ) {
+            return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+        }
+        now_pending( command, arguments, deleg_proxy );
+    }
+    
+    Gahp_Args * result = get_pending_result( command, arguments );        
+    if( result ) {
+        int rc = 0;
+        switch( result->argc ) {
+            case 2:
+                rc = atoi( result->argv[1] );
+                if( rc == 0 ) { EXCEPT( "Bad %s result", command ); }
+                else { error_string = ""; }
+                break;
+
+            case 3:
+                rc = atoi( result->argv[1] );
+                request_id = strdup( result->argv[2] );
+                break;
+
+            case 4:
+                rc = atoi( result->argv[1] );
+                error_code = strdup( result->argv[2] );
+                error_string = result->argv[3];
+                break;
+
+            default:
+                EXCEPT( "Bad %s result", command );
+                break;
+        }
+        delete result;
+        return rc;
+    }
+    
+    if( check_pending_timeout( command, arguments ) ) {
+		formatstr( error_string, "%s timed out", command );
+        return GAHPCLIENT_COMMAND_TIMED_OUT;
+    }
+    
+    return GAHPCLIENT_COMMAND_PENDING;
+}    
+
+int GahpClient::ec2_spot_stop(  std::string service_url,
+                                std::string publickeyfile,
+                                std::string privatekeyfile,
+                                std::string request_id,
+                                char * & error_code )
+{
+    static const char * command = "EC2_VM_STOP_SPOT";
+    
+    if( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+        return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+    }
+
+    if( service_url.empty()
+     || publickeyfile.empty()
+     || privatekeyfile.empty()
+     || request_id.empty() ) {
+        return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+    }
+
+    std::string space = " ";
+    std::string requestLine;
+    requestLine += escapeGahpString( service_url ) + space;
+    requestLine += escapeGahpString( publickeyfile ) + space;
+    requestLine += escapeGahpString( privatekeyfile ) + space;
+    requestLine += escapeGahpString( request_id );
+
+    const char * arguments = requestLine.c_str();
+    if( ! is_pending( command, arguments ) ) {
+        if( m_mode == results_only ) {
+            return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+        }
+        now_pending( command, arguments, deleg_proxy );
+    }
+
+    Gahp_Args * result = get_pending_result( command, arguments );        
+    if( result ) {
+        // We expect results of the form
+        //      <request ID> 0
+        //      <request ID> 1
+        //      <request ID> 1 <error code> <error string>
+    
+        if( result->argc < 2 ) { EXCEPT( "Bad %s result", command ); }
+        int rc = atoi( result->argv[1] );
+    
+        switch( result->argc ) {
+            case 2:
+                if( rc != 0 ) { error_string = ""; }
+                break;
+            
+            case 4:
+                if( rc != 0 ) {
+                    error_code = strdup( result->argv[2] );
+                    error_string = result->argv[3];
+                } else {
+                    EXCEPT( "Bad %s result", command );
+                }
+                break;
+
+            default:
+                EXCEPT( "Bad %s result", command );
+                break;
+        }
+    
+        delete result;
+        return rc;
+    }
+
+    if( check_pending_timeout( command, arguments ) ) {
+		formatstr( error_string, "%s timed out", command );
+        return GAHPCLIENT_COMMAND_TIMED_OUT;
+    }
+    
+    return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int GahpClient::ec2_spot_status(    std::string service_url,
+                                    std::string publickeyfile,
+                                    std::string privatekeyfile,
+                                    std::string request_id,
+                                    StringList & returnStatus,
+                                    char * & error_code )
+{
+    static const char * command = "EC2_VM_STATUS_SPOT";
+
+    if( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+        return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+    }
+
+    if( service_url.empty()
+     || publickeyfile.empty()
+     || privatekeyfile.empty()
+     || request_id.empty() ) {
+        return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+    }
+
+    std::string space = " ";
+    std::string requestLine;
+    requestLine += escapeGahpString( service_url ) + space;
+    requestLine += escapeGahpString( publickeyfile ) + space;
+    requestLine += escapeGahpString( privatekeyfile ) + space;
+    requestLine += escapeGahpString( request_id );
+    
+    const char * arguments = requestLine.c_str();
+    if( ! is_pending( command, arguments ) ) {
+        if( m_mode == results_only ) {
+            return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+        }
+        now_pending( command, arguments, deleg_proxy );
+    }
+
+    Gahp_Args * result = get_pending_result( command, arguments );        
+    if( result ) {
+        // We expect results of the form
+        //      <request ID> 0 
+        //      <request ID> 0 (<SIR ID> <status> <ami ID> <instance ID|NULL>)+
+        //      <request ID> 1
+        //      <request ID> 1 <error code> <error string>
+        if( result->argc < 2 ) { EXCEPT( "Bad %s result", command ); }
+
+        int rc = atoi( result->argv[1] );
+        if( result->argc == 2 ) {
+            if( rc == 1 ) { error_string = ""; }
+        } else if( result->argc == 4 ) {
+            if( rc != 1 ) { EXCEPT( "Bad %s result", command ); }
+            error_code = strdup( result->argv[2] );
+            error_string = result->argv[3];
+        } else if( (result->argc - 2) % 4 == 0 ) {
+            for( int i = 2; i < result->argc; ++i ) {
+                if( strcmp( result->argv[i], NULLSTRING ) ) {
+                    returnStatus.append( strdup( result->argv[i] ) );
+                } else {
+                    returnStatus.append( strdup( "" ) );
+                }
+            }
+        } else {
+            EXCEPT( "Bad %s result", command );
+        }
+        
+        delete result;
+        return rc;
+    }
+
+    if( check_pending_timeout( command, arguments ) ) {
+		formatstr( error_string, "%s timed out", command );
+        return GAHPCLIENT_COMMAND_TIMED_OUT;
+    }
+    
+    return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int GahpClient::ec2_spot_status_all(    std::string service_url,
+                                        std::string publickeyfile,
+                                        std::string privatekeyfile,
+                                        StringList & returnStatus,
+                                        char * & error_code )
+{
+    static const char * command = "EC2_VM_STATUS_ALL_SPOT";
+
+    if( server->m_commands_supported->contains_anycase( command ) == FALSE ) {
+        return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+    }
+
+    if( service_url.empty()
+     || publickeyfile.empty()
+     || privatekeyfile.empty() ) {
+        return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+    }
+
+    std::string space = " ";
+    std::string requestLine;
+    requestLine += escapeGahpString( service_url ) + space;
+    requestLine += escapeGahpString( publickeyfile ) + space;
+    requestLine += escapeGahpString( privatekeyfile );
+    
+    const char * arguments = requestLine.c_str();
+    if( ! is_pending( command, arguments ) ) {
+        if( m_mode == results_only ) {
+            return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+        }
+        now_pending( command, arguments, deleg_proxy );
+    }
+
+    Gahp_Args * result = get_pending_result( command, arguments );        
+    if( result ) {
+        // We expect results of the form
+        //      <request ID> 0 
+        //      <request ID> 0 (<SIR ID> <status> <ami ID> <instance ID|NULL>)+
+        //      <request ID> 1
+        //      <request ID> 1 <error code> <error string>
+        if( result->argc < 2 ) { EXCEPT( "Bad %s result", command ); }
+
+        int rc = atoi( result->argv[1] );
+        if( result->argc == 2 ) {
+            if( rc == 1 ) { error_string = ""; }
+        } else if( result->argc == 4 ) {
+            if( rc != 1 ) { EXCEPT( "Bad %s result", command ); }
+            error_code = strdup( result->argv[2] );
+            error_string = result->argv[3];
+        } else if( (result->argc - 2) % 4 == 0 ) {
+            for( int i = 2; i < result->argc; ++i ) {
+                if( strcmp( result->argv[i], NULLSTRING ) ) {
+                    returnStatus.append( strdup( result->argv[i] ) );
+                } else {
+                    returnStatus.append( strdup( "" ) );
+                }
+            }
+        } else {
+            EXCEPT( "Bad %s result", command );
+        }
+        
+        delete result;
+        return rc;
+    }
+    
+    if( check_pending_timeout( command, arguments ) ) {
+		formatstr( error_string, "%s timed out", command );
+        return GAHPCLIENT_COMMAND_TIMED_OUT;
+    }
+    
+    return GAHPCLIENT_COMMAND_PENDING;    
+}
+
 
 int GahpClient::dcloud_submit( const char *service_url,
 							   const char *username,

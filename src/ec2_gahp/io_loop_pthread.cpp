@@ -84,9 +84,19 @@ registerAllAmazonCommands(void)
 
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_START, 
 			AmazonVMStart::ioCheck, AmazonVMStart::workerFunction);
+    registerAmazonGahpCommand(AMAZON_COMMAND_VM_START_SPOT,
+            AmazonVMStartSpot::ioCheck, AmazonVMStartSpot::workerFunction);
 
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STOP, 
 			AmazonVMStop::ioCheck, AmazonVMStop::workerFunction);
+	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STOP_SPOT, 
+			AmazonVMStopSpot::ioCheck, AmazonVMStopSpot::workerFunction);
+
+    registerAmazonGahpCommand(AMAZON_COMMAND_VM_STATUS_SPOT,
+            AmazonVMStatusSpot::ioCheck, AmazonVMStatusSpot::workerFunction);
+
+    registerAmazonGahpCommand(AMAZON_COMMAND_VM_STATUS_ALL_SPOT,
+            AmazonVMStatusAllSpot::ioCheck, AmazonVMStatusAllSpot::workerFunction);
 
 	/*
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_REBOOT, 

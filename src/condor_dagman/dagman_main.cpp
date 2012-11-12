@@ -82,6 +82,8 @@ static void Usage() {
 			"\t\t[-Outfile_dir <directory>]\n"
 			"\t\t[-Update_submit]\n"
 			"\t\t[-Import_env]\n"
+			"\t\t[-Suppress_notification]\n"
+			"\t\t[-Dont_Suppress_notification]\n"
             "\twhere NAME is the name of your DAG.\n"
             "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
 	DC_Exit( EXIT_ERROR );
@@ -230,10 +232,21 @@ Dagman::Config()
 		m_user_log_scan_interval, 1, INT_MAX);
 	debug_printf( DEBUG_NORMAL, "DAGMAN_USER_LOG_SCAN_INTERVAL setting: %d\n",
 				m_user_log_scan_interval );
+
 	_defaultPriority = param_integer("DAGMAN_DEFAULT_PRIORITY", 0, INT_MIN,
 		INT_MAX, false);
-	_submitDagDeepOpts.always_use_node_log = param_boolean( "DAGMAN_ALWAYS_USE_NODE_LOG", true);
+	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_PRIORITY setting: %d\n",
+				_defaultPriority );
 
+	_submitDagDeepOpts.always_use_node_log = param_boolean( "DAGMAN_ALWAYS_USE_NODE_LOG", true);
+	debug_printf( DEBUG_NORMAL, "DAGMAN_ALWAYS_USE_NODE_LOG setting: %s\n",
+				_submitDagDeepOpts.always_use_node_log ? "True" : "False" );
+
+	_submitDagDeepOpts.suppress_notification = param_boolean(
+		"DAGMAN_SUPPRESS_NOTIFICATION",
+		_submitDagDeepOpts.suppress_notification);
+	debug_printf( DEBUG_NORMAL, "DAGMAN_SUPPRESS_NOTIFICATION setting: %s\n",
+		_submitDagDeepOpts.suppress_notification ? "True" : "False" );
 
 		// Event checking setup...
 
@@ -405,7 +418,10 @@ Dagman::Config()
 
 	_maxJobHolds = param_integer( "DAGMAN_MAX_JOB_HOLDS", _maxJobHolds,
 				0, 1000000 );
+	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_JOB_HOLDS setting: %d\n", _maxJobHolds );
+
 	_claim_hold_time = param_integer( "DAGMAN_HOLD_CLAIM_TIME", _claim_hold_time, 0, 3600);
+	debug_printf( DEBUG_NORMAL, "DAGMAN_HOLD_CLAIM_TIME setting: %d\n", _claim_hold_time );
 
 	char *debugSetting = param( "ALL_DEBUG" );
 	debug_printf( DEBUG_NORMAL, "ALL_DEBUG setting: %s\n",
@@ -740,6 +756,12 @@ void main_init (int argc, char ** const argv) {
                 Usage();
             }
 			dagman._submitDagDeepOpts.strNotification = argv[i];
+
+		} else if( !strcasecmp( "-suppress_notification",argv[i] ) ) {
+			dagman._submitDagDeepOpts.suppress_notification = true;
+
+		} else if( !strcasecmp( "-dont_suppress_notification",argv[i] ) ) {
+			dagman._submitDagDeepOpts.suppress_notification = false;
 
         } else if( !strcasecmp( "-dagman", argv[i] ) ) {
             i++;

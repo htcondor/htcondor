@@ -4,17 +4,17 @@
 
 \index{installation!checkpoint server}
 \index{checkpoint server!installation|(}
-\index{Condor daemon!condor\_ckpt\_server@\Condor{ckpt\_server}}
+\index{HTCondor daemon!condor\_ckpt\_server@\Condor{ckpt\_server}}
 \index{daemon!condor\_ckpt\_server@\Condor{ckpt\_server}}
 \index{condor\_ckpt\_server daemon}
 A Checkpoint Server maintains a repository for checkpoint files.
-Within Condor, checkpoints may be produced only for standard universe jobs.
+Within HTCondor, checkpoints may be produced only for standard universe jobs.
 Using checkpoint servers reduces the disk requirements of submitting
 machines in the pool, since the submitting machines no longer need to
 store checkpoint files locally.
 Checkpoint server machines should have a large amount of disk space
 available, and they should have a fast connection to machines
-in the Condor pool.
+in the HTCondor pool.
 
 If the spool directories are on a network file system, then
 checkpoint files will make two trips over the network: one between the
@@ -28,9 +28,9 @@ using multiple checkpoint servers, as discussed below.
 
 Note that it is a good idea to pick very stable machines for the checkpoint
 servers.
-If individual checkpoint servers crash, the Condor system will continue to
+If individual checkpoint servers crash, the HTCondor system will continue to
 operate, although poorly.  
-While the Condor system will recover from a checkpoint server crash
+While the HTCondor system will recover from a checkpoint server crash
 as best it can, there are two problems that can and will occur:
 \begin{enumerate}
 
@@ -139,7 +139,7 @@ checkpoint server machine.
 \end{description}
 
 The remainder of these variables are the checkpoint server-specific versions
-of the Condor logging entries, as described in
+of the HTCondor logging entries, as described in
 section~\ref{sec:Daemon-Logging-Config-File-Entries} on
 page~\pageref{sec:Daemon-Logging-Config-File-Entries}.
 \begin{description}
@@ -159,13 +159,13 @@ Currently, the only debug level supported is \Dflag{ALWAYS}.
 \item[Start the Checkpoint Server]
 
 To start the newly configured checkpoint server,
-restart Condor on that host to enable
+restart HTCondor on that host to enable
 the \Condor{master} to notice the new configuration.
 Do this by sending a \Condor{restart} command from any machine
 with administrator access to the pool.
 See section~\ref{sec:Host-Security} on
 page~\pageref{sec:Host-Security} for full details about IP/host-based
-security in Condor. 
+security in HTCondor. 
 
 Note that when the \Condor{ckpt\_server} starts up, it will immediately
 inspect any checkpoint files in the location described by the
@@ -210,11 +210,11 @@ Configuring the Pool to Use Multiple Checkpoint Servers}
 
 \index{checkpoint server!multiple servers}
 
-A Condor pool may use multiple checkpoint servers.
+An HTCondor pool may use multiple checkpoint servers.
 The deployment of
 checkpoint servers across the
 network improves the performance of checkpoint production.
-In this case, Condor machines are configured to send checkpoints to the
+In this case, HTCondor machines are configured to send checkpoints to the
 \emph{nearest} checkpoint server.
 There are two main performance benefits to deploying multiple checkpoint
 servers:
@@ -225,14 +225,14 @@ intelligent placement of checkpoint servers.
 dealing with checkpoints, and more time doing useful work,
 leading to jobs having a higher success rate before returning a
 machine to its owner, and workstation
-owners see Condor jobs leave their machines quicker.
+owners see HTCondor jobs leave their machines quicker.
 \end{itemize}
 
 With multiple checkpoint servers running in the pool, the
 following configuration changes are required to make them active.
 
 Set \Macro{USE\_CKPT\_SERVER} to \Expr{True} (the default) on all
-submitting machines where Condor jobs should use a checkpoint server.
+submitting machines where HTCondor jobs should use a checkpoint server.
 Additionally, variable \Macro{STARTER\_CHOOSES\_CKPT\_SERVER} should be set to
 \Expr{True} (the default) on these submitting machines.
 When \Expr{True}, this variable specifies that the checkpoint server
@@ -269,7 +269,7 @@ remove any previous checkpoints left on other servers.
 Note that if the configured checkpoint server is unavailable,
 the job will keep trying to contact that server.
 It will not use alternate checkpoint servers.
-This may change in future versions of Condor.
+This may change in future versions of HTCondor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{Checkpoint-Server-Domains} 
@@ -278,7 +278,7 @@ Checkpoint Server Domains}
 
 The configuration described in the previous section ensures that jobs
 will always write checkpoints to their nearest checkpoint server.  In
-some circumstances, it is also useful to configure Condor to localize
+some circumstances, it is also useful to configure HTCondor to localize
 checkpoint read transfers, which occur when the job restarts from its
 last checkpoint on a new machine.  To localize these transfers, 
 it is desired

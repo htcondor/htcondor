@@ -14,7 +14,7 @@
 \Condor{userlog} parses the information in job log files and displays
 summaries for each workstation allocation and for each job.  See the
 manual page for \Condor{submit} on page~\pageref{man-condor-submit} for
-instructions for specifying that Condor write a log file for your
+instructions for specifying that HTCondor write a log file for your
 jobs.
 
 If \Opt{-total} is not specified, \Condor{userlog} will first display
@@ -22,7 +22,7 @@ a record for each workstation allocation, which includes the following
 information:
 
 \begin{description}
-\item[Job] The cluster/process id of the Condor job.
+\item[Job] The cluster/process id of the HTCondor job.
 \item[Host] The host where the job ran.  By default, the host's IP
 address is displayed.  If \Opt{-hostname} is specified, the host name
 will be displayed instead.
@@ -70,7 +70,7 @@ Time.
 \Condor{userlog} will then display summary statistics per job:
 
 \begin{description}
-\item[Host/Job] The cluster/process id of the Condor job.
+\item[Host/Job] The cluster/process id of the HTCondor job.
 \item[Wall Time] The total workstation time (days+hours:minutes) allocated to
 this job.
 \item[Good Time] The total time (days+hours:minutes) allocated to this
@@ -105,7 +105,7 @@ jobs.
 \end{Options}
 
 \GenRem
-Since the Condor job log file format does not contain a year field in
+Since the HTCondor job log file format does not contain a year field in
 the timestamp, all entries are assumed to occur in the current year.
 Allocations which begin in one year and end in the next will be
 silently ignored.

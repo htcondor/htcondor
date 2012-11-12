@@ -27,6 +27,8 @@ using namespace compat_classad;
 namespace aviary {
 namespace locator {
 
+const char SEPARATOR[] = "#";
+
 struct Endpoint {
 	// properties
 	string      Name;

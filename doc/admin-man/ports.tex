@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Port-Details}Port Usage in Condor}
+\subsection{\label{sec:Port-Details}Port Usage in HTCondor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{port usage}
 
@@ -18,7 +18,7 @@ This means any special character is encoded with \Percent,
 followed by two hexadecimal digits specifying the ASCII value.
 Special characters are any non-alphanumeric character. 
 
-Condor currently recognizes the following parameters with an
+HTCondor currently recognizes the following parameters with an
 IPv4 port specification:
 \begin{description}
 \item[\Expr{CCBID}]
@@ -42,42 +42,42 @@ IPv4 port specification:
 \subsubsection{\label{sec:Ports-Standard}Default Port Usage}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Every Condor daemon listens on a network port for incoming commands.
+Every HTCondor daemon listens on a network port for incoming commands.
 (Using \Condor{shared\_port}, this port may be shared between multiple
 daemons.)
 Most daemons listen on a dynamically assigned port.
 In order to send a message,
-Condor daemons and tools locate the correct port to use
+HTCondor daemons and tools locate the correct port to use
 by querying the \Condor{collector},
 extracting the port number from the ClassAd.
 One of the attributes included in every daemon's ClassAd is the full
 IP address and port number upon which the daemon is listening.
 
 To access the \Condor{collector} itself,
-all Condor daemons and tools
+all HTCondor daemons and tools
 must know the port number  where the \Condor{collector} is listening.
 The \Condor{collector} is the only daemon with a well-known,
 fixed port.
-By default, Condor uses port 9618 for the \Condor{collector} daemon.
+By default, HTCondor uses port 9618 for the \Condor{collector} daemon.
 However, this port number can be changed (see below).
 
 As an optimization for daemons and tools communicating with another
 daemon that is running on the same host,
-each Condor daemon can be configured to
+each HTCondor daemon can be configured to
 write its IP address and port number into a well-known file.
 The file names are controlled using the \MacroB{<SUBSYS>\_ADDRESS\_FILE}
 configuration variables,
 as described in section~\ref{param:SubsysAddressFile} on
 page~\pageref{param:SubsysAddressFile}. 
 
-\Note In the 6.6 stable series, and Condor versions earlier than
+\Note In the 6.6 stable series, and HTCondor versions earlier than
 6.7.5, the \Condor{negotiator} also listened on a fixed, well-known
 port (the default was 9614).
 However, beginning with version 6.7.5, the \Condor{negotiator} behaves
-like all other Condor daemons, and publishes its own ClassAd to the
+like all other HTCondor daemons, and publishes its own ClassAd to the
 \Condor{collector} which includes the dynamically assigned port 
 the \Condor{negotiator} is listening on.
-All Condor tools and daemons that need to communicate with the
+All HTCondor tools and daemons that need to communicate with the
 \Condor{negotiator} will either use the
 \Macro{NEGOTIATOR\_ADDRESS\_FILE} or will query the
 \Condor{collector} for the \Condor{negotiator}'s ClassAd.
@@ -96,9 +96,9 @@ a Non Standard, Fixed Port for the \Condor{collector}}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{port usage!nonstandard ports for central managers}
 By default,
-Condor uses port 9618 for the \Condor{collector} daemon.
+HTCondor uses port 9618 for the \Condor{collector} daemon.
 To use a different port number for this daemon,
-the configuration variables that tell Condor these communication
+the configuration variables that tell HTCondor these communication
 details are modified.
 Instead of
 \begin{verbatim}
@@ -113,7 +113,7 @@ COLLECTOR_HOST = $(CONDOR_HOST):9650
 
 If a non standard port is defined, the same value of
 \MacroNI{COLLECTOR\_HOST} (including the port) must be used for all
-machines in the Condor pool.
+machines in the HTCondor pool.
 Therefore, this setting should be modified in the global
 configuration file (\File{condor\_config} file),
 or the value must be duplicated across
@@ -121,7 +121,7 @@ all configuration files in the pool if a single configuration file
 is not being shared.
 
 When querying the \Condor{collector} for a remote pool that is running
-on a non standard port, any Condor tool that accepts the \Opt{-pool}
+on a non standard port, any HTCondor tool that accepts the \Opt{-pool}
 argument can optionally be given a port number.  For example:
 \footnotesize
 \begin{verbatim}
@@ -142,11 +142,11 @@ to use a dynamically assigned port,
 as given out by the operating system.
 This prevents port conflicts with other services on the same machine.
 However, a dynamically assigned port is only to be used on
-single machine Condor pools,
+single machine HTCondor pools,
 and only if the
 \Macro{COLLECTOR\_ADDRESS\_FILE} 
 configuration variable has also been defined.
-This mechanism allows all of the Condor daemons and tools running on
+This mechanism allows all of the HTCondor daemons and tools running on
 the same machine to find the port upon which the \Condor{collector}
 daemon is listening,
 even when this port is not defined in the
@@ -159,7 +159,7 @@ The \MacroNI{COLLECTOR\_ADDRESS\_FILE}
 configuration variable must also be defined,
 as it provides a known file where the IP address
 and port information will be stored.
-All Condor clients know to look at the
+All HTCondor clients know to look at the
 information stored in this file.
 For example:
 \footnotesize
@@ -172,9 +172,9 @@ COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
 \Note Using a port of 0 for the \Condor{collector}
 and specifying a
 \MacroNI{COLLECTOR\_ADDRESS\_FILE}
-only works in Condor version 6.6.8 or later in the 6.6 stable series,
+only works in HTCondor version 6.6.8 or later in the 6.6 stable series,
 and in version 6.7.4 or later in the 6.7 development series.
-Do not attempt to do this with older versions of Condor.
+Do not attempt to do this with older versions of HTCondor.
 
 Configuration definition of \MacroNI{COLLECTOR\_ADDRESS\_FILE}
 is in section~\ref{param:SubsysAddressFile} on
@@ -192,27 +192,27 @@ page~\pageref{param:CollectorHost}.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{port usage!firewalls}
-If a Condor pool is completely behind a firewall,
+If an HTCondor pool is completely behind a firewall,
 then no special consideration or port usage is needed.
 However, if there is a firewall between the machines within
-a Condor pool, then
+an HTCondor pool, then
 configuration variables may be set to force the usage of
 specific ports, and to utilize a specific range of ports.
 
 By default,
-Condor uses port 9618 for the \Condor{collector} daemon,
+HTCondor uses port 9618 for the \Condor{collector} daemon,
 and dynamic (apparently random) ports for everything else.
 See section~\ref{sec:Ports-Dynamic-Collector},
 if a dynamically assigned port is desired for the
 \Condor{collector} daemon.
 
-All of the Condor daemons on a machine
+All of the HTCondor daemons on a machine
 may be configured to share a single
 port.  See section~\ref{sec:Config-shared-port} for more information.
 
 The configuration variables
 \Macro{HIGHPORT} and \Macro{LOWPORT} facilitate setting a restricted
-range of ports that Condor will use.
+range of ports that HTCondor will use.
 This may be useful when some machines are behind a firewall.
 The configuration macros
 \MacroNI{HIGHPORT} and \MacroNI{LOWPORT} 
@@ -221,7 +221,7 @@ The configuration variables are fully defined
 in section~\ref{sec:Network-Related-Config-File-Entries}.
 All of these ports must be greater than 0 and less than 65,536.
 Note that both \MacroNI{HIGHPORT} and \MacroNI{LOWPORT} must be at 
-least 1024 for Condor version 6.6.8.
+least 1024 for HTCondor version 6.6.8.
 In general, use ports greater than 1024,
 in order
 to avoid port conflicts with standard services on the machine.
@@ -229,7 +229,7 @@ Another reason for using ports greater than 1024 is that
 daemons and tools are often not run as \Login{root},
 and only \Login{root} may listen to a port lower than 1024.
 Also, the range must include enough ports that are not in use, 
-or Condor cannot work.
+or HTCondor cannot work.
 
 The range of ports assigned may be restricted based on 
 incoming (listening) and outgoing (connect) ports
@@ -291,9 +291,9 @@ executing at one time
 is a function of the number of reachable execute machines. 
 
 Also be aware that \MacroNI{HIGHPORT} and \MacroNI{LOWPORT}
-only impact dynamic port selection used by the Condor system,
-and they do not impact port selection used by jobs submitted to Condor.
-Thus, jobs submitted to Condor that may create
+only impact dynamic port selection used by the HTCondor system,
+and they do not impact port selection used by jobs submitted to HTCondor.
+Thus, jobs submitted to HTCondor that may create
 network connections may not work in a port restricted environment.
 For this reason, specifying \MacroNI{HIGHPORT} and \MacroNI{LOWPORT}
 is not going to produce the

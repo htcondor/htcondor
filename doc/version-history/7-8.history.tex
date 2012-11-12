@@ -8,7 +8,7 @@
 \section{\label{sec:History-7-8}Stable Release Series 7.8}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This is a stable release series of Condor.
+This is a stable release series of HTCondor.
 As usual, only bug fixes (and potentially, ports to new platforms)
 will be provided in future 7.8.x releases.
 New features will be added in the 7.9.x development series.
@@ -19,57 +19,14 @@ The details of each version are described below.
 \subsection*{\label{sec:New-7-8-7}Version 7.8.7}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{itemize}
-
-\item Condor version 7.8.7 not yet released.
-%\item Condor version 7.8.7 released on Month Date, 2012.
-
-\end{itemize}
-
-\noindent New Features:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-\noindent Bugs Fixed:
-
-\begin{itemize}
-
-\item Jobs that are submitted with the ``-spool'' option to \Condor{submit}
-will no longer be left indefinitely in hold state.  Instead the jobs will be
-removed if spooling fails, and will also periodically remove jobs that have
-been in hold state due to file transfer for at least twelve hours.
-\Ticket{3200}
-
-
-\end{itemize}
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-7-8-6}Version 7.8.6}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item Condor version 7.8.6 not yet released.
-%\item Condor version 7.8.6 released on Month Date, 2012.
+\item HTCondor version 7.8.7 not yet released.
+%\item HTCondor version 7.8.7 released on Month Date, 2012.
 
 \end{itemize}
-
 
 \noindent New Features:
 
@@ -91,7 +48,18 @@ been in hold state due to file transfer for at least twelve hours.
 
 \begin{itemize}
 
-	\item Fixed a problem where a ssh\_to\_job or interactive job session would be terminated prematurely if the execute machine was configured to track process trees via a dedicated login (aka \Macro{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} is being used).  \Ticket{3232}
+\item Jobs that were submitted with \Condor{submit} \Opt{-spool}
+and failed during submission were 
+left indefinitely in the queue in the Hold state.  
+This has been fixed, such that these jobs are removed from the queue.
+In addition, the \Condor{schedd} daemon will periodically 
+check for jobs that have
+been in Hold state due to failed file transfer for at least twelve hours;
+these jobs will be removed from the queue.
+\Ticket{3200}
+
+\item Fixed a problem where a ssh\_to\_job or interactive job session would be terminated prematurely if the execute machine was configured to track process trees via a dedicated login (aka \Macro{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} is being used).  
+\Ticket{3232}
 
 \item ClassAd functions int() and real() now ignore trailing characters
 when a string argument containing a valid number is given.
@@ -109,6 +77,11 @@ reason was, ``Proxy about to expire.''
 \item The configuration setting
 \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_REFRESH} had no effect.
 \Ticket{3282}
+
+\item When using privilege separation, jobs would be put on hold after
+they finished running if the working directory contained links to
+files that were not globally readable.
+\Ticket{2904}
 
 \end{itemize}
 
@@ -128,6 +101,33 @@ reason was, ``Proxy about to expire.''
 
 \end{itemize}
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-8-6}Version 7.8.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.8.6 released on October 25, 2012.
+
+\item \Security This version contains an important security bug fix.  See below
+for details of this and other bugs fixed.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item \Security Fixed a bug which allowed jobs submitted to the standard
+universe to escalate privilege on the submit machine and execute code as root.
+(CVE-2012-5390)
+
+\end{itemize}
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-8-5}Version 7.8.5}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -137,9 +137,6 @@ reason was, ``Proxy about to expire.''
 \begin{itemize}
 
 \item Condor version 7.8.5 released on October 22, 2012.
-
-\item \Security This version contains an important security bug fix.  See below
-for details of this and other bugs fixed.
 
 \end{itemize}
 
@@ -166,10 +163,6 @@ caused by a bug in the Condor version 7.8.4 \Condor{negotiator}.
 \noindent Bugs Fixed:
 
 \begin{itemize}
-
-\item \Security Fixed a bug which allowed jobs submitted to the standard
-universe to escalate privilege on the submit machine and execute code as root.
-(CVE-2012-5390)
 
 \item Fixed a problem with jobs that are submitted with
 \begin{verbatim}

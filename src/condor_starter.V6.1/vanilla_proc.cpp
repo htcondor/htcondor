@@ -226,7 +226,23 @@ VanillaProc::StartJob()
 	param(cgroup_base, "BASE_CGROUP", "");
 	MyString cgroup_str;
 	const char *cgroup = NULL;
-	if (cgroup_base.length()) {
+		/* Note on CONDOR_UNIVERSE_LOCAL - The cgroup setup code below
+		 *  requires a unique name for the cgroup. It relies on
+		 *  uniqueness of the MachineAd's Name
+		 *  attribute. Unfortunately, in the local universe the
+		 *  MachineAd (mach_ad elsewhere) is never populated, because
+		 *  there is no machine. As a result the ASSERT on
+		 *  starter_name fails. This means that the local universe
+		 *  will not work on any machine that has BASE_CGROUP
+		 *  configured. A potential workaround is to set
+		 *  STARTER.BASE_CGROUP on any machine that is also running a
+		 *  schedd, but that disables cgroup support from a
+		 *  co-resident startd. Instead, I'm disabling cgroup support
+		 *  from within the local universe until the intraction of
+		 *  local universe and cgroups can be properly worked
+		 *  out. -matt 7 nov '12
+		 */
+	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup_base.length()) {
 		MyString cgroup_uniq;
 		std::string starter_name, execute_str;
 		param(execute_str, "EXECUTE", "EXECUTE_UNKNOWN");
@@ -412,7 +428,8 @@ VanillaProc::StartJob()
 #if defined(HAVE_EXT_LIBCGROUP)
 
 	// Set fairshare limits.  Note that retval == 1 indicates success, 0 is failure.
-	if (cgroup && retval) {
+	// See Note near setup of param(BASE_CGROUP)
+	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup && retval) {
 		std::string mem_limit;
 		param(mem_limit, "MEMORY_LIMIT", "soft");
 		bool mem_is_soft = mem_limit == "soft";

@@ -1,6 +1,6 @@
 \begin{ManPage}{\label{man-condor-findhost}\Condor{findhost}}{1}
 {find machine(s) in the pool that 
-can be used with minimal impact on currently running Condor jobs
+can be used with minimal impact on currently running HTCondor jobs
 and best meet any specified constraints}
 \Synopsis \SynProg{\Condor{findhost}}
 \oOpt{-help}
@@ -10,14 +10,14 @@ and best meet any specified constraints}
 \oOptArg{-r}{r\_expr}
 \oOptArg{-p}{centralmanagerhostname}
 
-\index{Condor commands!condor\_findhost}
+\index{HTCondor commands!condor\_findhost}
 \index{condor\_findhost command}
 
 \Description
 
-\Condor{findhost} searches a Condor pool of machines for the
+\Condor{findhost} searches an HTCondor pool of machines for the
 best machine or machines that
-will have the minimum impact on running Condor jobs
+will have the minimum impact on running HTCondor jobs
 if the machine or machines are taken out of the pool.
 The search may be limited to the machine or machines 
 that match a set of constraints and rank expression.
@@ -57,13 +57,13 @@ within a pool that can be taken out of the pool with the least
 disturbance of the pool.
 
 An administrator should set preemption requirements for
-the Condor pool.
+the HTCondor pool.
 The expression 
 \begin{verbatim}
 (Interactive =?= TRUE )
 \end{verbatim}
 will let \Condor{findhost} know that it can claim a machine even
-if Condor would not normally preempt a job running on that machine.
+if HTCondor would not normally preempt a job running on that machine.
 
 \ExitStatus
 
@@ -94,6 +94,6 @@ condor_findhost -n 24 -c "kflops=?=undefined"
 %  -n num: Return num machines, where num is an integer greater than zero
 %  -c c_expr: Use c_expr as the constraint expression
 %  -r r_expr: Use r_expr as the rank expression
-%  -p pool: Contact the Condor pool "pool"
+%  -p pool: Contact the HTCondor pool "pool"
 %  -h: this screen
 

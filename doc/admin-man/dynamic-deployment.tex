@@ -5,55 +5,55 @@
 \index{deployment commands}
 
 Dynamic deployment is a mechanism that allows rapid, automated
-installation and start up of Condor resources on a given machine.
-In this way any machine can be added to a Condor pool.
+installation and start up of HTCondor resources on a given machine.
+In this way any machine can be added to an HTCondor pool.
 The dynamic
 deployment tool set also provides tools to remove a machine from the
 pool, without leaving residual effects on the machine such as leftover
 installations, log files, and working directories.
 
-\index{Condor commands!condor\_cold\_start}
+\index{HTCondor commands!condor\_cold\_start}
 Installation and start up is provided by \Condor{cold\_start}.
 The \Condor{cold\_start} program determines the operating system and
 architecture of the target machine, and transfers the correct
 installation package from an ftp, http, or grid ftp site.
 After transfer, it
-installs Condor and creates a local working
-directory for Condor to run in.  As a last step, \Condor{cold\_start}
-begins running Condor in a manner which allows for later easy and reliable
+installs HTCondor and creates a local working
+directory for HTCondor to run in.  As a last step, \Condor{cold\_start}
+begins running HTCondor in a manner which allows for later easy and reliable
 shut down.
 
-\index{Condor commands!condor\_cold\_stop}
+\index{HTCondor commands!condor\_cold\_stop}
 The program that reliably shuts down and uninstalls a previously
-dynamically installed Condor instance is \Condor{cold\_stop}.
+dynamically installed HTCondor instance is \Condor{cold\_stop}.
 \Condor{cold\_stop} begins by safely and reliably shutting off the
-running Condor installation.  It ensures that Condor has
+running HTCondor installation.  It ensures that HTCondor has
 completely shut down before continuing, and optionally ensures that
 there are no queued jobs at the site.
 Next, \Condor{cold\_stop}
-removes and optionally archives the Condor working directories,
+removes and optionally archives the HTCondor working directories,
 including the \File{log} directory. 
 These archives can be stored to a
 mounted file system or to a grid ftp site.
 As a last step,
-\Condor{cold\_stop} uninstalls the Condor executables and libraries.
+\Condor{cold\_stop} uninstalls the HTCondor executables and libraries.
 The end result is that the machine resources are left unchanged after
-a dynamic deployment of Condor leaves.
+a dynamic deployment of HTCondor leaves.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Configuration and Usage}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{dynamic deployment!configuration}
-Dynamic deployment is designed for the expert Condor user
+Dynamic deployment is designed for the expert HTCondor user
 and administrator.
 Tool design choices were made for functionality,
 not ease-of-use.
 
-Like every installation of Condor, a dynamically deployed installation
+Like every installation of HTCondor, a dynamically deployed installation
 relies on a configuration.
 To add a target
-machine to a previously created Condor pool,
+machine to a previously created HTCondor pool,
 the global configuration file for that pool is a good starting point.
 Modifications to that configuration can be made in a separate, 
 local configuration file used in the dynamic deployment.
@@ -64,7 +64,7 @@ is to be on a file system accessible by the target machine.
 There are some specific configuration variables that may be set for
 dynamic deployment.  
 A list of executables and directories which must be present
-for Condor to start on the target machine may be set with
+for HTCondor to start on the target machine may be set with
 the configuration variables \Macro{DEPLOYMENT\_REQUIRED\_EXECS} and
 \Macro{DEPLOYMENT\_REQUIRED\_DIRS}. 
 If defined and the comma-separated list of executables or directories are
@@ -73,14 +73,14 @@ Note this does not affect what is installed, only
 whether start up is successful. 
 
 A list of executables and directories which are recommended to be present
-for Condor to start on the target machine may be set with
+for HTCondor to start on the target machine may be set with
 the configuration variables \Macro{DEPLOYMENT\_RECOMMENDED\_EXECS} and
 \Macro{DEPLOYMENT\_RECOMMENDED\_DIRS}. 
 If defined and the comma-separated lists of executables or directories are
 not present, then \Condor{cold\_start} prints a warning message
 and continues.
 Here is a portion of the configuration relevant to
-a dynamic deployment of a Condor submit node:
+a dynamic deployment of a HTCondor submit node:
 
 \footnotesize
 \begin{verbatim}
@@ -94,7 +94,7 @@ DEPLOYMENT_RECOMMENDED_DIRS  = LIB, LIBEXEC
 \normalsize
 
 Additionally, the user must
-specify which Condor services will be started.  This is done through
+specify which HTCondor services will be started.  This is done through
 the \MacroNI{DAEMON\_LIST} configuration variable.  Another excerpt
 from a dynamic submit node deployment configuration:
 
@@ -105,13 +105,13 @@ DAEMON_LIST  = MASTER, SCHEDD
 \normalsize
 
 Finally, the location
-of the dynamically installed Condor executables is tricky to set,
+of the dynamically installed HTCondor executables is tricky to set,
 since the location is unknown before installation.
 Therefore,
 the variable \Macro{DEPLOYMENT\_RELEASE\_DIR} is defined in the environment.
-It corresponds to the location of the dynamic Condor installation.
+It corresponds to the location of the dynamic HTCondor installation.
 If, as is often the case, 
-the configuration file specifies the location of Condor executables in
+the configuration file specifies the location of HTCondor executables in
 relation to the \MacroNI{RELEASE\_DIR} variable, the configuration can
 be made dynamically deployable by setting \MacroNI{RELEASE\_DIR} to
 \MacroNI{DEPLOYMENT\_RELEASE\_DIR} as 
