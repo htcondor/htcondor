@@ -78,6 +78,11 @@ reason was, ``Proxy about to expire.''
 \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_REFRESH} had no effect.
 \Ticket{3282}
 
+\item When using privilege separation, jobs would be put on hold after
+they finished running if the working directory contained links to
+files that were not globally readable.
+\Ticket{2904}
+
 \end{itemize}
 
 \noindent Known Bugs:

@@ -132,7 +132,7 @@ struct SubmitDagDeepOptions
 		importEnv = false;
 		priority = 0;
 		always_use_node_log = true;
-		suppress_notification = false;
+		suppress_notification = true;
 	}
 };
 

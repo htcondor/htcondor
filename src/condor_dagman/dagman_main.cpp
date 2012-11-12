@@ -83,6 +83,7 @@ static void Usage() {
 			"\t\t[-Update_submit]\n"
 			"\t\t[-Import_env]\n"
 			"\t\t[-Suppress_notification]\n"
+			"\t\t[-Dont_Suppress_notification]\n"
             "\twhere NAME is the name of your DAG.\n"
             "\tdefault -Debug is -Debug %d\n", DEBUG_NORMAL);
 	DC_Exit( EXIT_ERROR );
@@ -758,6 +759,9 @@ void main_init (int argc, char ** const argv) {
 
 		} else if( !strcasecmp( "-suppress_notification",argv[i] ) ) {
 			dagman._submitDagDeepOpts.suppress_notification = true;
+
+		} else if( !strcasecmp( "-dont_suppress_notification",argv[i] ) ) {
+			dagman._submitDagDeepOpts.suppress_notification = false;
 
         } else if( !strcasecmp( "-dagman", argv[i] ) ) {
             i++;

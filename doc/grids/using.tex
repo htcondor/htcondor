@@ -64,16 +64,7 @@ batch system supported by Globus (examples are HTCondor, LSF, and PBS).
 
 \end{description}
 
-
-\begin{figure}[hbt]
-\centering
-\includegraphics{grids/gfig1.eps}
-\caption{\label{fig:condorg}HTCondor-G interaction with Globus-managed resources}
-\end{figure}
-
-Figure~\ref{fig:condorg} shows how HTCondor interacts with Globus software
-towards running jobs.
-The diagram is specific to the \SubmitCmd{gt2} type of grid.
+In its interaction with Globus software,
 HTCondor contains a GASS server, used to transfer the executable,
 \File{stdin}, \File{stdout}, and \File{stderr} to and from
 the remote job execution site.

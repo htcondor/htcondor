@@ -142,6 +142,7 @@ LocalUserLog::initFromJobAd( ClassAd* ad, const char* path_attr,
 				msk.Value());
 			Tokenize(msk.Value());
 			while(const char* mask = GetNextToken(",",true)) {
+				dprintf( D_FULLDEBUG, "Adding \"%s\" to the mask\n",mask);
 				mask_vec.push_back(ULogEventNumber(atoi(mask)));
 			}
 		}

@@ -96,7 +96,7 @@
             OnlyDetect="no"
             RemoveFeatures="ALL"
             />
-          <!--Newer version of Condor already installed-->
+          <!--Newer version of HTCondor already installed-->
           <UpgradeVersion
             Language="1033"
             Minimum="@CPACK_PACKAGE_VERSION@"
@@ -121,10 +121,10 @@
             />
         </Upgrade>
 
-        <CustomAction Id="PreventDowngrade" Error="Newer version of Condor already installed." />
+        <CustomAction Id="PreventDowngrade" Error="Newer version of HTCondor already installed." />
 
         <CustomAction Id="PreventUpgrade"
-                      Error="Condor cannot upgrade from the installed version due to issues with migrating the configuration.  Please backup the configuration and uninstall Condor first before attempting to install this version of Condor." />
+                      Error="HTCondor cannot upgrade from the installed version due to issues with migrating the configuration.  Please backup the configuration and uninstall HTCondor first before attempting to install this version of HTCondor." />
 
         <Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
 
@@ -292,8 +292,8 @@
         <!-- End custom actions and install sequence -->
 
         <!-- Feature Block e.g. ComponentRef's -->
-        <Feature Id="CondorWindows" Title="Condor Installation" Level="1" Display="expand">
-          <Feature Id="Installation" Title="Condor Installation Files" Level="1"  ConfigurableDirectory="INSTALLDIR">
+        <Feature Id="CondorWindows" Title="HTCondor Installation" Level="1" Display="expand">
+          <Feature Id="Installation" Title="HTCondor Installation Files" Level="1"  ConfigurableDirectory="INSTALLDIR">
             <xsl:apply-templates select="wix:Fragment" mode="CompRef"/>
             <!-- Import any merge references -->
             @WIX_MERGE_REFS@
@@ -304,7 +304,7 @@
             <ComponentRef Id="CreatingLogDir" />
           </Feature>
           <!-- Typical/Complete/Custom, below is complete. 
-          <Feature Id="Debugging Symbols" Title="Condor Debug Symbol Files" Description="Files used to debug Condor" Level='1000'>
+          <Feature Id="Debugging Symbols" Title="HTCondor Debug Symbol Files" Description="Files used to debug HTCondor" Level='1000'>
             <xsl:apply-templates select="wix:Fragment" mode="CompRef">
               <xsl:with-param name="ftype">pdb</xsl:with-param>
             </xsl:apply-templates>
@@ -380,9 +380,9 @@
             <xsl:copy-of select="@*"/>
             <FirewallException Id="FWX1" Name="condor_master.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" IgnoreFailure="yes"/>
           </xsl:copy>
-          <ServiceInstall Id="CondorService" Description="condor" DisplayName="condor" ErrorControl="normal"  Name="condor" Start="auto" Type="ownProcess" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
-          <ServiceControl Id="StartCondorService" Name="condor" Start="install" Wait="no" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
-          <ServiceControl Id="StopCondorService" Name="condor" Stop="both" Wait="yes" Remove="uninstall" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
+          <ServiceInstall Id="CondorService" Description="HTCondor" DisplayName="HTCondor" ErrorControl="normal"  Name="HTCondor" Start="auto" Type="ownProcess" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
+          <ServiceControl Id="StartCondorService" Name="HTCondor" Start="install" Wait="no" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
+          <ServiceControl Id="StopCondorService" Name="HTCondor" Stop="both" Wait="yes" Remove="uninstall" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
        </xsl:when>
        <xsl:when test="@Source = '$(var.Source)\bin\condor_schedd.exe'">
           <xsl:copy>

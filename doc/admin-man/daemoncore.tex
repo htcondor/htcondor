@@ -175,8 +175,9 @@ These arguments and what they do are described below:
   the output of the Unix \Prog{ps} command.
 
   Since daemons run with their current working directory set to the
-  value of \MacroNI{LOG}, if you don't specify a full path
-  (one that begins with a ``/''),
+  value of \MacroNI{LOG}, if a full path 
+  (one that begins with a slash character, \Expr{/})
+  is not specified,
   the file will be placed in the \MacroNI{LOG} directory.
 
 \item[-q] Quiet output; write less verbose error

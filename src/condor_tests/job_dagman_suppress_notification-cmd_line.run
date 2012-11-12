@@ -20,10 +20,10 @@
 
 use CondorTest;
 
-$cmd = 'job_dagman_suppress_notification.dag';
+$cmd = 'job_dagman_suppress_notification-cmd_line.dag';
 $testdesc =  'Condor submit dag - basic test of notification suppression command line - scheduler U';
 $testname = "job_dagman_suppress_notification-cmd_line";
-$dagman_args = "-verbose -suppress_notification";
+$dagman_args = "-verbose -dont_suppress_notification";
 
 my $killedchosen = 0;
 
@@ -75,12 +75,12 @@ if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
-	my $jobid = 2;
-	open JOBOUTPUT,"<job_dagman_suppress_notification-node.${jobid}.out" ||
-		die "Could not open job_dagman_suppress_notification-node.${jobid}.out\n";
-	
-	while(<JOBOUTPUT>){
-		die "output incorrect: $_" if(! /^Notification = Never/);
-	}
+# 	my $jobid = 2;
+# 	open JOBOUTPUT,"<job_dagman_suppress_notification-node.${jobid}.out" ||
+# 		die "Could not open job_dagman_suppress_notification-node.${jobid}.out\n";
+# 	
+# 	while(<JOBOUTPUT>){
+# 		die "output incorrect: $_" if(! /^Notification = Never/);
+# 	}
 	die "$testname: CondorTest::RunTest() failed\n";
 }

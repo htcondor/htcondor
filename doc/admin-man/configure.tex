@@ -6250,6 +6250,18 @@ Configuration File Entries}
   file, and if this variable is not defined, then
   the default universe for a job will be the vanilla universe.
 
+\label{param:JobDefaultNotification}
+\item[\Macro{JOB\_DEFAULT\_NOTIFICATION}]
+  The default notification for jobs. This value defaults to NEVER, so that
+  HTCondor will not send email about events for jobs. Must be one of the values
+  NEVER, ERROR, ALWAYS, or COMPLETE. As stated in the \Condor{submit} man page:
+  ``If defined by ALWAYS, the owner will be notified whenever the job produces a
+  checkpoint, as well as when the job completes. If defined by COMPLETE, the
+  owner will be notified when the job terminates. If defined by ERROR, the owner
+  will only be notified if the job terminates abnormally, or if the job is placed
+  on hold because of a failure, and not by user request. If defined by NEVER, the
+  owner will not receive e-mail, regardless to what happens to the job.''
+
 \label{param:JobDefaultRequestMemory}
 \item[\Macro{JOB\_DEFAULT\_REQUESTMEMORY}]
   The amount of memory in Mbytes to acquire for a job, 
@@ -8931,8 +8943,8 @@ in section~\ref{sec:DAG-configuration}.
     not affect the notification of the \Condor{dagman} job itself. A user could set
 	this flag to true, then would only receive one notification when the \Condor{dagman}
 	job completes, rather than thousands of notifications from the jobs submitted by
-	\Condor{dagman}. This flag defaults to false, meaning that job notification will
-	be under the control of the job submit file.
+	\Condor{dagman}. This flag defaults to true, meaning that no job notification will
+	be sent for a job submitted by \Condor{dagman}.
 
 \end{description}
 

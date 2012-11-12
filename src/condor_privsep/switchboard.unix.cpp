@@ -839,7 +839,9 @@ static void do_mkdir(configuration *c)
         fatal_error_exit(1, "error switching user to root");
     }
 
-    r = mkdir(dir_name, 0755);
+    // make the directory private by default.  ideally, the permissions to use
+    // should be a parameter that is passed in.  ZKM TODO
+    r = mkdir(dir_name, 0700);
     if (r == -1) {
         fatal_error_exit(1, "error creating directory %s", dir_name);
     }
@@ -936,6 +938,13 @@ chown_func(const char *filename, const struct stat *buf, void *data)
        symlinks since their ownership is inconsequential.
     */
     if (safe_open_no_follow(filename, &fd, NULL) == -1) {
+		if( stat(filename, &stat_buf)==0 && stat_buf.st_uid == ids->uid && stat_buf.st_gid == ids->gid ) {
+				/* We don't have permission to open this file as
+				 * the source user, but it is already owned by
+				 * the target user, so all is well.
+				 */
+			return 0;
+		}
         return -1;
     }
     if (fd == -1) {
