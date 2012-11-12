@@ -1177,7 +1177,7 @@ main( int argc, char *argv[] )
 
 	if ( !DumpClassAdToFile ) {
 		if (Quiet) {
-			fprintf(stdout, "Submitting job(s)\n");
+			fprintf(stdout, "Submitting job(s)");
 		}
 	} else {
 		fprintf(stdout, "Storing job ClassAd(s)");
