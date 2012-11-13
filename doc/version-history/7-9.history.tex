@@ -96,6 +96,13 @@ Refer to section~\ref{sec:group-accounting} for more information.
 
 \begin{itemize}
 
+\item (This feature was added in 7.9.1 but announced for 7.9.2.)  Add new
+protocols, \Expr{euca3://} and \Expr{euca3s://}, to EC2 grid type URLs.  
+Condor will not send resources addressed in this way the
+``InstanceInitiatedShutdownBehavior'' parameter, which would otherwise cause
+an error.
+\Ticket{2974}
+
 \item Added a ``-suppress\_notification'' command line flag and corresponding
 \Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} configuration macro to \Condor{dagman}.
 This enables a user of \Condor{dagman} to stop notification by email of job
@@ -186,6 +193,13 @@ for details of this and other bugs fixed.
 \noindent New Features:
 
 \begin{itemize}
+
+\item Add new
+protocols, \Expr{euca3://} and \Expr{euca3s://}, to EC2 grid type URLs.  
+Condor will not send resources addressed in this way the
+``InstanceInitiatedShutdownBehavior'' parameter, which would otherwise cause 
+an error.
+\Ticket{2974}
 
 \item \Condor{job\_router} can now submit the routed copy of jobs to a
 different \Condor{schedd} than the one that serves as the source of
