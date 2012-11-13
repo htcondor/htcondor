@@ -1152,8 +1152,19 @@ std::string EC2Job::build_keypair()
 
 	std::string key_pair;
 	sprintf( key_pair, "SSH_%s_%s", pool_name, job_id.c_str() );
-
 	free( pool_name );
+	
+    // Some EC2 implementations (OpenStack) restrict the keypair name to
+    // "alphanumeric character, spaces, dashes, and underscore."  Convert
+    // everything else to spaces, since we don't presently use them for
+    // anything.
+    
+    size_t loc = 0;
+    #define KEYPAIR_FILTER "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 -_"
+    while( (loc = key_pair.find_first_not_of( KEYPAIR_FILTER, loc )) != string::npos ) {
+        key_pair[loc] = ' ';
+    }        
+	
 	return key_pair;
 }
 
