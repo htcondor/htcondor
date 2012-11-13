@@ -55,6 +55,10 @@ ec2_access_key_id = /path/to/access.key
 ec2_secret_access_key = /path/to/secret.key
 \end{verbatim}
 
+If the EC2-compatible resource does not support the 
+``InstanceInitiatedShutdownBehavior'' parameter, use \Expr{euca3://} or
+\Expr{euca3s://} URLs instead.
+
 While both pairs of files may be associated with the same account, 
 the credentials are not the same.
 
