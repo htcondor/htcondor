@@ -1477,39 +1477,43 @@ main( int argc, char *argv[] )
 		// extern int mySortFunc(AttrList*,AttrList*,void*);
 		// result.Sort((SortFunctionType)mySortFunc);
 
-		// prettyPrint (result, &totals);
-		bool fFirstLine = true;
-		result.Open();
-		while (ClassAd	*ad = result.Next()) {
-			if (App.diagnostic) {
-				printf("    result Ad has %d attributes\n", ad->size());
-			}
-			if (App.show_full_ads) {
+		if (App.show_full_ads) {
+
+			result.Open();
+			while (ClassAd	*ad = result.Next()) {
 				ad->fPrint(stdout);
 				printf("\n");
-			} else {
-				if (fFirstLine) {
-					if (identify_schedd) {
-						printf("\n%s has %d job(s) running\n", addr, result.Length());
-					} else {
-						printf("\n");
-					}
+			}
+			result.Close();
 
-					// print the first line so that we get column widths.
-					char * tmp = App.print_mask.display(ad);
-					delete [] tmp;
-					// now print headings
-					App.print_mask.display_Headings(stdout, App.print_head);
-					//printf("\n");
-					fFirstLine = false;
+		} else if (result.Length() > 0) {
+
+			// render the data once to calcuate column widths.
+			result.Open();
+			while (ClassAd	*ad = result.Next()) {
+				delete [] App.print_mask.display(ad);
+			}
+			result.Close();
+
+			if (identify_schedd) {
+				printf("\n%s has %d job(s) running\n", addr, result.Length());
+			} else {
+				printf("\n");
+			}
+
+			// now print headings
+			App.print_mask.display_Headings(stdout, App.print_head);
+
+			// now render the data for real.
+			result.Open();
+			while (ClassAd	*ad = result.Next()) {
+				if (App.diagnostic) {
+					printf("    result Ad has %d attributes\n", ad->size());
 				}
-				// now print rows of data
 				App.print_mask.display (stdout, ad);
 			}
-		}
-		result.Close();
+			result.Close();
 
-		if ( ! fFirstLine) {
 			printf("\n");
 		}
 
