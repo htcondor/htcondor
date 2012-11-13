@@ -180,6 +180,7 @@ void DaemonCore::Stats::SetWindowSize(int window)
 void DaemonCore::Stats::Init() 
 { 
    Clear();
+   this->RecentWindowQuantum = configured_statistics_window_quantum();
    this->RecentWindowMax = this->RecentWindowQuantum; 
    this->PublishFlags    = -1;
 
