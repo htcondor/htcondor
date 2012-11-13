@@ -48,6 +48,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item HTCondor no longer generates SSH keypair names that are incompatible
+with OpenStack v4 (Essex).
+\Ticket{3060}
+
 \item Jobs that were submitted with \Condor{submit} \Opt{-spool}
 and failed during submission were 
 left indefinitely in the queue in the Hold state.  
