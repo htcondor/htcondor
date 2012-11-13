@@ -29,13 +29,16 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added a ``-suppress\_notification'' command line flag and corresponding
-\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} configuration macro to \Condor{dagman}.
-This enables a user of \Condor{dagman} to stop notification by email of job
+\item Added both a \Opt{-suppress\_notification},
+a \Opt{-dont\_suppress\_notification} command line option,
+and corresponding
+\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} configuration variable
+to \Condor{dagman} and \Condor{submit\_dag}.
+This enables a user of DAGMan to stop email notification of job
 events for jobs submitted by \Condor{dagman}. The value of
-\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} defaults to true, so that jobs submitted
-by \Condor{dagman} will not send email notification. Also added a
-``-dont\_suppress\_notification'' flag to override the default.
+\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} defaults to \Expr{True},
+so that jobs submitted
+by \Condor{dagman} will not send email notification. 
 \Ticket{3225}
 
 \item Changed the default job notification from Complete to Never. Added a new
