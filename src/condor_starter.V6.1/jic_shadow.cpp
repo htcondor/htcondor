@@ -741,10 +741,13 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 	updateStartd(&ad, true);
 
 	if( !had_hold ) {
-		if( REMOTE_CONDOR_job_exit(exit_status, reason, &ad) < 0 ) {    
+		if( REMOTE_CONDOR_job_exit(exit_status, reason, &ad) < 0) {
 			dprintf( D_ALWAYS, "Failed to send job exit status to shadow\n" );
-			job_cleanup_disconnected = true;
-			return false;
+			if (job_universe != CONDOR_UNIVERSE_PARALLEL)
+			{
+				job_cleanup_disconnected = true;
+				return false;
+			}
 		}
 	}
 
