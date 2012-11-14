@@ -1389,10 +1389,12 @@ CStarter::createTempExecuteDir( void )
 		// the privsep switchboard ALWAYS creates directories with
 		// permissions 0755.  that change goes deeper than anything
 		// i want to do in this first round of fixes.
+		dprintf( D_ALWAYS, "ZKM: right now: initialize_sandbox(%s)\n", WorkingDir.Value());
 		cpsh->initialize_sandbox(WorkingDir.Value());
 		WriteAdFiles();
 	} else {
 		// we can only get here if we are not using PrivSep.
+		dprintf( D_ALWAYS, "ZKM: right now: mkdir(%s, 0700)\n", WorkingDir.Value());
 		if( mkdir(WorkingDir.Value(), 0700) < 0 ) {
 			dprintf( D_FAILURE|D_ALWAYS,
 			         "couldn't create dir %s: %s\n",
