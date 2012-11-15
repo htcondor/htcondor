@@ -95,6 +95,10 @@ int privsep_launch_user_job(uid_t       uid,
 //
 bool privsep_create_dir(uid_t uid, const char* pathname);
 
+// report disk usage for a specific directory and user
+//
+bool privsep_get_dir_usage(uid_t uid, const char* pathname, off_t *usage);
+
 // remove a directory tree
 //
 bool privsep_remove_dir(const char* pathname);
