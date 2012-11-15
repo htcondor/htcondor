@@ -50,7 +50,7 @@ void privsep_get_switchboard_command(const char* op,
 
 // use the error pipe to a switchboard process to get its response
 //
-bool privsep_get_switchboard_response(FILE* err_fp);
+bool privsep_get_switchboard_response(FILE* err_fp, MyString *response = NULL);
 
 // the privsep_exec_set_* group of functions are for piping
 // information to a switchboard that has been spawned with the
@@ -94,6 +94,10 @@ int privsep_launch_user_job(uid_t       uid,
 // make a directory owned by the given user
 //
 bool privsep_create_dir(uid_t uid, const char* pathname);
+
+// report disk usage for a specific directory and user
+//
+bool privsep_get_dir_usage(uid_t uid, const char* pathname, off_t *usage);
 
 // remove a directory tree
 //

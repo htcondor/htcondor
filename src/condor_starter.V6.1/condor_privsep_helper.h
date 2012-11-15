@@ -49,6 +49,10 @@ public:
 	//
 	void initialize_sandbox(const char* path);
 
+	// report disk space used by sandbox dir
+	//
+	bool get_exec_dir_usage(off_t *usage);
+
 #if !defined(WIN32)
 	// get the initialized UID
 	//

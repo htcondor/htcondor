@@ -51,6 +51,7 @@ typedef struct string_list {
     char **list;
 } string_list;
 
+void nonfatal_write(const char *fmt, ...);
 void fatal_error_exit(int status, const char *fmt, ...);
 void setup_err_stream(int fd);
 int get_error_fd(void);

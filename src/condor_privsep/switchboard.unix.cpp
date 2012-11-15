@@ -33,6 +33,7 @@
 #include <sys/resource.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <inttypes.h>
 
 #include "safe.unix.h"
 #include "parse_config.unix.h"
@@ -910,6 +911,53 @@ static void do_rmdir(configuration *c)
     free(dir_name);
 }
 
+static int
+dirusage_func(const char *, const struct stat *stat_buf, void *data)
+{
+    int r = 0;
+	if (data == NULL) {
+		// should never happen.  return error
+		r = 1;
+	} else if (stat_buf == NULL) {
+		// should never happen.  return error
+		r = 1;
+	} else {
+		off_t file_size = stat_buf->st_size;
+		*((off_t*)data) += file_size;
+	}
+    return r;
+}
+
+static int do_dirusage(configuration *c)
+{
+    dir_cmd_params dir_cmd_conf;
+    char *dir_name;
+    int r;
+    struct stat stat_buf;
+
+    dir_name = do_common_dir_cmd_tasks(c, &dir_cmd_conf, 0, 0);
+
+    r = lstat(dir_name, &stat_buf);
+    if (r == -1) {
+        fatal_error_exit(1, "error stat'ing leaf dir (%s)", dir_name);
+    }
+
+    if (!S_ISDIR(stat_buf.st_mode)) {
+        fatal_error_exit(1, "leaf dir is not a directory (%s)", dir_name);
+    }
+
+    off_t total_size = 0;
+
+    r = safe_dir_walk(dir_name, dirusage_func, &total_size, 64);
+    if (r != 0) {
+        fatal_error_exit(1, "error in recursive delete of directory");
+    }
+    free(dir_name);
+
+    nonfatal_write("%ju", (intmax_t)total_size);
+    return 0;
+}
+
 typedef struct uid_pair {
     uid_t uid;
     gid_t gid;
@@ -1196,6 +1244,8 @@ static void do_command(const char *cmd, int cmd_fd, configuration *c)
         do_mkdir(c);
     } else if (!strcmp(cmd, "rmdir")) {
         do_rmdir(c);
+    } else if (!strcmp(cmd, "dirusage")) {
+        do_dirusage(c);
     } else if (!strcmp(cmd, "chowndir")) {
         do_chown_dir(c);
     } else {

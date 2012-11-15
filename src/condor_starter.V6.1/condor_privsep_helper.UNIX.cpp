@@ -110,6 +110,23 @@ CondorPrivSepHelper::initialize_sandbox(const char* path)
 	m_sandbox_initialized = true;
 }
 
+bool
+CondorPrivSepHelper::get_exec_dir_usage(off_t *usage)
+{
+	ASSERT(m_user_initialized);
+	ASSERT(m_sandbox_initialized);
+
+	dprintf(D_FULLDEBUG, "PrivSep: getting dirusage for %s\n", m_sandbox_path);
+
+	if (!privsep_get_dir_usage(m_uid, m_sandbox_path, usage)) {
+		dprintf(D_ALWAYS, "ERROR: PrivSep: failed dirusage for %i, %s\n",
+				m_uid, m_sandbox_path);
+		return false;
+	}
+
+	return true;
+}
+
 uid_t
 CondorPrivSepHelper::get_uid()
 {
