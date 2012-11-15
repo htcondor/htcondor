@@ -439,7 +439,7 @@ privsep_remove_dir(const char* pathname)
 }
 
 bool
-privsep_get_dir_usage(const char* pathname, off_t *total_size)
+privsep_get_dir_usage(uid_t uid, const char* pathname, off_t *total_size)
 {
 	// launch the privsep switchboard with the "dirusage" operation
 	//
@@ -458,6 +458,7 @@ privsep_get_dir_usage(const char* pathname, off_t *total_size)
 
 	// feed it the pathname via its input pipe
 	//
+	fprintf(in_fp, "user-uid = %i\n", uid);
 	fprintf(in_fp, "user-dir = %s\n", pathname);
 	fclose(in_fp);
 
