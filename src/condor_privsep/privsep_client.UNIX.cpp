@@ -156,7 +156,7 @@ privsep_get_switchboard_command(const char* op,
 }
 
 bool
-privsep_get_switchboard_response(FILE* err_fp)
+privsep_get_switchboard_response(FILE* err_fp, MyString *response)
 {
 	// first read everything off the error pipe and close
 	// the error pipe
@@ -165,9 +165,15 @@ privsep_get_switchboard_response(FILE* err_fp)
 	while (err.readLine(err_fp, true)) { }
 	fclose(err_fp);
 	
-	// if there was something there, print it out and return
-	// an indication that something went wrong
-	//
+	// if this is passed in, assume the caller will handle any
+	// error propagation, and we just succeed.
+	if (response) {
+		*response = err;
+		return true;
+	}
+
+	// if there was something there, print it out here (since no one captured
+	// the error message) and return false to indicate something went wrong.
 	if (err.Length() != 0) {
 		dprintf(D_ALWAYS,
 		        "privsep_get_switchboard_response: error received: %s",
@@ -242,11 +248,13 @@ privsep_launch_switchboard(const char* op, FILE*& in_fp, FILE*& err_fp)
 }
 
 static bool
-privsep_reap_switchboard(pid_t switchboard_pid, FILE* err_fp)
+privsep_reap_switchboard(pid_t switchboard_pid, FILE* err_fp, MyString *response)
 {
-	// first check the error pipe
-	//
-	bool error_received = !privsep_get_switchboard_response(err_fp);
+	// we always capture the response, so we can propagate or log it if needed
+	MyString real_response;
+
+	// read any data from the error pipe
+	privsep_get_switchboard_response(err_fp, &real_response);
 		
 	// now call waitpid on the switchboard pid
 	//
@@ -259,11 +267,50 @@ privsep_reap_switchboard(pid_t switchboard_pid, FILE* err_fp)
 		return false;
 	}
 	
-	// now return; the operation was a success if the return code
-	// was zero and no message was recieved
-	//
-	return (!error_received &&
-	        (WIFEXITED(status) && (WEXITSTATUS(status) == 0)));
+	// now we have both the exit status and result from the error pipe.  there
+	// are several possibilities here, so please listen closely as our options
+	// have recently changed.
+
+	// if the exit code was non-zero, or a signal, it is an error and we log it
+	// as such with the response.
+	bool exited_with_zero = (WIFEXITED(status) && (WEXITSTATUS(status) == 0));
+	if (!exited_with_zero) {
+		MyString err_msg;
+		if(WIFSIGNALED(status)) {
+			err_msg.formatstr("error received: exited with signal (%i) "
+					"and message (%s)", WTERMSIG(status), real_response.Value());
+		} else {
+			err_msg.formatstr("error received: exited with non-zero status (%i) "
+					"and message (%s)", WEXITSTATUS(status), real_response.Value());
+		}
+		dprintf (D_ALWAYS, "privsep_reap_switchboard: %s\n", err_msg.Value());
+		if(response) {
+			*response = err_msg;
+		}
+		return false;
+	}
+
+	// ALL CASES BELOW HERE ASSUME EXIT CODE WAS ZERO
+	ASSERT(exited_with_zero);
+	
+
+	// caller will handle response
+	if (response) {
+		// propagate the response to the caller and succeed
+		*response = real_response;
+		return true;
+	}
+
+	// nothing to propagate
+	if (real_response.Length() == 0) {
+		return true;
+	}
+
+	// there was a response to propagate but nothing to receive it.  log it and
+	// fail.
+	dprintf (D_ALWAYS, "privsep_reap_switchboard: unhandled message (%s)\n", real_response.Value());
+
+	return false;
 }
 
 void
@@ -360,7 +407,7 @@ privsep_create_dir(uid_t uid, const char* pathname)
 
 	// now reap it and return
 	//
-	return privsep_reap_switchboard(switchboard_pid, err_fp);
+	return privsep_reap_switchboard(switchboard_pid, err_fp, NULL);
 }
 
 bool
@@ -388,7 +435,49 @@ privsep_remove_dir(const char* pathname)
 
 	// now reap it and return
 	//
-	return privsep_reap_switchboard(switchboard_pid, err_fp);
+	return privsep_reap_switchboard(switchboard_pid, err_fp, NULL);
+}
+
+bool
+privsep_get_dir_usage(const char* pathname, off_t *total_size)
+{
+	// launch the privsep switchboard with the "dirusage" operation
+	//
+	FILE* in_fp = 0;
+	FILE* err_fp = 0;
+	pid_t switchboard_pid = privsep_launch_switchboard("dirusage",
+	                                                   in_fp,
+	                                                   err_fp);
+	if (switchboard_pid == 0) {
+		dprintf(D_ALWAYS, "privsep_get_dir_usage: "
+		                      "error launching switchboard\n");
+		if(in_fp) fclose(in_fp);
+		if(err_fp) fclose(err_fp);
+		return false;
+	}
+
+	// feed it the pathname via its input pipe
+	//
+	fprintf(in_fp, "user-dir = %s\n", pathname);
+	fclose(in_fp);
+
+	// now reap it and return
+	//
+	MyString total_usage_str;
+	bool rval = privsep_reap_switchboard(switchboard_pid, err_fp, &total_usage_str);
+	if (rval) {
+		// the call succeeded -- there should be a response for us.
+		intmax_t tval;
+		int r = sscanf(total_usage_str.Value(), "%ju", &tval);
+		if (r) {
+			*total_size = *((off_t*)&tval);
+			return true;
+		} else {
+			return false;
+		}
+	} else {
+		return false;
+	}
 }
 
 bool
@@ -418,5 +507,5 @@ privsep_chown_dir(uid_t target_uid, uid_t source_uid, const char* pathname)
 
 	// now reap it and return
 	//
-	return privsep_reap_switchboard(switchboard_pid, err_fp);
+	return privsep_reap_switchboard(switchboard_pid, err_fp, NULL);
 }

@@ -50,7 +50,7 @@ void privsep_get_switchboard_command(const char* op,
 
 // use the error pipe to a switchboard process to get its response
 //
-bool privsep_get_switchboard_response(FILE* err_fp);
+bool privsep_get_switchboard_response(FILE* err_fp, MyString *response = NULL);
 
 // the privsep_exec_set_* group of functions are for piping
 // information to a switchboard that has been spawned with the
