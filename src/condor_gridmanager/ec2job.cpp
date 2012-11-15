@@ -790,6 +790,16 @@ void EC2Job::doEvaluateState()
 					}
 				}
 
+				if ( remoteJobState != "" ) {
+					remoteJobState = "";
+					SetRemoteJobStatus( NULL );
+				}
+
+				if ( m_spot_request_id != "" ) {
+					m_spot_request_id = "";
+					jobAd->AssignExpr( ATTR_EC2_SPOT_REQUEST_ID, "Undefined" );
+				}
+
 				if ( wantRematch ) {
 					dprintf(D_ALWAYS, "(%d.%d) Requesting schedd to rematch job because %s==TRUE\n",
 						procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
@@ -823,11 +833,6 @@ void EC2Job::doEvaluateState()
 				if ( jobAd->NextDirtyExpr(name, expr) ) {
 					requestScheddUpdate( this, true );
 					break;
-				}
-
-				if ( remoteJobState != "" ) {
-					remoteJobState = "";
-					SetRemoteJobStatus( NULL );
 				}
 
 				submitLogged = false;
