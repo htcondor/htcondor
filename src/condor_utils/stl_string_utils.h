@@ -68,6 +68,8 @@ bool chomp(std::string &str);
 void trim(std::string &str);
 void lower_case(std::string &str);
 void upper_case(std::string &str);
+void title_case(std::string &str); // capitalize each word
+
 
 // returns true if pre is non-empty and str is the same as pre up to pre.size()
 bool starts_with(const std::string& str, const std::string& pre);

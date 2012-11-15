@@ -911,35 +911,43 @@ int getJobAdExitSignal(ClassAd *jad, int &exit_signal)
 static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd) 
 {
 	std::string resslist;
-	if ( ! jobAd->LookupString("PartitionableResources", resslist))
+	if ( ! jobAd->LookupString("ProvisionedResources", resslist))
 		resslist = "Cpus, Disk, Memory";
 
 	StringList reslist(resslist.c_str());
 	if (reslist.number() > 0) {
-		int64_t int64_value = 0;
 		ClassAd * puAd = new ClassAd();
 		puAd->Clear(); // get rid of default "CurrentTime = time()" value.
 
 		reslist.rewind();
-		char * resname = NULL;
-		while ((resname = reslist.next()) != NULL) {
-			MyString attr;
-			int64_value = -1;
-			attr.formatstr("%s", resname); // provisioned value
-			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
-				puAd->Assign(resname, int64_value);
-			} 
+		while (const char * resname = reslist.next()) {
+			std::string attr;
+			std::string res = resname;
+			title_case(res); // capitalize it to make it print pretty.
+			const int copy_ok = classad::Value::ERROR_VALUE | classad::Value::BOOLEAN_VALUE | classad::Value::INTEGER_VALUE | classad::Value::REAL_VALUE;
+			classad::Value value;
+			attr = res + "Provisioned";	 // provisioned value
+			if (jobAd->EvalAttr(attr.c_str(), NULL, value) && (value.GetType() & copy_ok) != 0) {
+				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
+				if (plit) {
+					puAd->Insert(resname, plit); // usage ad has attribs like they appear in Machine ad
+				}
+			}
 			// /*for debugging*/ else { puAd->Assign(resname, 42); }
-			int64_value = -2;
-			attr.formatstr("Request%s", resname);	// requested value
-			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
-				puAd->Assign(attr.Value(), int64_value);
+			attr = "Request"; attr += res;   	// requested value
+			if (jobAd->EvalAttr(attr.c_str(), NULL, value)&& (value.GetType() & copy_ok) != 0) {
+				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
+				if (plit) {
+					puAd->Insert(attr.c_str(), plit);
+				}
 			}
 			// /*for debugging*/ else { puAd->Assign(attr.Value(), 99); }
-			int64_value = -3;
-			attr.formatstr("%sUsage", resname); // usage value
-			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
-				puAd->Assign(attr.Value(), int64_value);
+			attr = res + "Usage"; // usage value
+			if (jobAd->EvalAttr(attr.c_str(), NULL, value) && (value.GetType() & copy_ok) != 0) {
+				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
+				if (plit) {
+					puAd->Insert(attr.c_str(), plit);
+				}
 			}
 		}
 		*ppusageAd = puAd;
