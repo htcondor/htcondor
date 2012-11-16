@@ -983,13 +983,13 @@ void EC2Job::doEvaluateState()
                               || srCode == "Client.InternalError"
                               || srCode == "Client.InvalidSnapshot.NotFound" ) {
                                 // Put abnormal instance terminations on hold.
-                                formatstr( errorString, "Abnormal instance termination: %s.\n", srCode.c_str() );
+                                formatstr( errorString, "Abnormal instance termination: %s.", srCode.c_str() );
                                 dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
                                 gmState = GM_HOLD;
                                 break;
                             } else {
                                 // Treat all unrecognized reasons as abnormal.
-                                formatstr( errorString, "Unrecognized reason for instance termination: %s.  Treating as abnormal.\n", srCode.c_str() );
+                                formatstr( errorString, "Unrecognized reason for instance termination: %s.  Treating as abnormal.", srCode.c_str() );
                                 dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
                                 gmState = GM_HOLD;
                                 break;
@@ -1131,17 +1131,12 @@ void EC2Job::doEvaluateState()
             // this occurs *after* we've saved the client token, so we
             // can never lose track of it.
             
-            // FIXME: Add the retry loop.
             case GM_SPOT_START: {
-                // Don't bother to do anything if we've been held or removed.
-                if( condorState == HELD || condorState == REMOVED ) {
-                    // Force GM_SUBMITTED (from GM_SPOT_CANCEL) to skip
-                    // an instance-status probe.
-                    dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_START + HELD|REMOVED = GM_SPOT_CANCEL\n" );
-                    remoteJobState = EC2_VM_STATE_TERMINATED;
-                    gmState = GM_SPOT_CANCEL;
-                    break;
-                }
+                // Because we can't (easily) check if we've already made
+                // a spot instance request, we can't check if the job's been
+                // held or removed here; we might leak a request.  Instead,
+                // the user will just have to wait until we get (or don't)
+                // a spot request ID.
             
                 // Why is this necessary?
                 m_ami_id = build_ami_id();
@@ -1203,6 +1198,10 @@ void EC2Job::doEvaluateState()
                                 procID.cluster, procID.proc, gahp_error_code,
                                 errorString.c_str() );
                     dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_START + <GAHP failure> = GM_HOLD\n" );
+                    
+                    // I make the argument that even if the user removed the
+                    // job, or put in on hold, before the spot instance
+                    // request failed, they should learn about the failure.
                     gmState = GM_HOLD;
                     break;
                 }
@@ -1247,6 +1246,10 @@ void EC2Job::doEvaluateState()
                     
                     // Clear the request ID, now that it's been cancelled.
                     m_spot_request_id.clear();
+                    
+                    // Since we know the request is gone, forget about it.
+                    jobAd->AssignExpr( ATTR_EC2_SPOT_REQUEST_ID, "Undefined" );
+                    requestScheddUpdate( this, false );
                     
                     // Rather than decide if we crashed after cancelling a
                     // request but before removing its ID from the job ad,
@@ -1332,7 +1335,7 @@ void EC2Job::doEvaluateState()
                     // all instances to see if we own any of them.)
                     errorString = "Spot request purged; an instance may still be running.";
                     dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
-                    dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_START + <spot purged> = GM_HOLD\n" );
+                    dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <spot purged> = GM_HOLD\n" );
                     gmState = GM_HOLD;
                     break;
                 }
@@ -1341,15 +1344,29 @@ void EC2Job::doEvaluateState()
                 // strings, AMI IDs (probably superflous), and instance IDs.
                 // There should only ever be one result when probing a job.
                 std::string status;
+                std::string requestID;
                 std::string instanceID;
                 returnStatus.rewind();
+                
+                // The GAHP client will EXCEPT() returnStatus.number()
+                // isn't 0 or a multiple 4.  (gahp-client.cpp:7070-86)
+                // Should we EXCEPT again here?
                 for( int i = 0; i < returnStatus.number(); i += 4 ) {
-                    std::string requestID = returnStatus.next();
+                    requestID = returnStatus.next();
                     status = returnStatus.next();
                     std::string launchGroup = returnStatus.next();
                     instanceID = returnStatus.next();
                     
                     if( requestID == m_spot_request_id ) { break; }
+                }
+                
+                // The single result should always be the job we asked about.
+                if( requestID != m_spot_request_id ) {
+                    formatstr( errorString, "GM_SPOT_QUERY asked about %s, got %s instead.", m_spot_request_id.c_str(), requestID.c_str() );
+                    dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
+                    dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <bogus query data> = GM_HOLD\n" );
+                    gmState = GM_HOLD;
+                    break;                    
                 }
                 
                 // If the request spawned an instance, we must save the
@@ -1379,18 +1396,41 @@ void EC2Job::doEvaluateState()
 
                 if( strcmp( m_failure_injection, "5" ) == 0 ) { status = "not-open"; }
 
-                // Is the SIR still valid?  The status must be one of 'active',
-                // 'cancelled', 'open', 'closed', or 'failed', and all 'active'
-                // requests have an instance ID.
-                if( status != "open" ) {
-                    dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <status != 'open'> = GM_DONE_SAVE\n" );
-                    gmState = GM_DONE_SAVE;
+                if( status == "open" ) {
+                    // Nothing interesting happened, so ask again latter.
+                    gmState = GM_SPOT_SUBMITTED;
+                    break;
+                } else if( status == "cancelled" ) {
+                    // We'll never see the cancelled state from GM_SPOT_CANCEL
+                    // because it exits the SPOT subgraph.  Thus, this cancel
+                    // must have come from the user (because we don't specify
+                    // a bid expiration date in any our requsts) -- or some
+                    // other person with the appropriate credentials.
+                    // 
+                    // For now, then, we'll put the job on hold, saying
+                    // "You, or somebody like you, cancelled this request."
+                    // 
+                    // I'll leave this case broken out in case we change
+                    // our minds later.
+                    formatstr( errorString, "You, or somebody like you, cancelled this request." );
+                    dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
+                    dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <cancelled> = GM_HOLD\n" );
+                    gmState = GM_HOLD;
+                    break;                    
+                } else {
+                    // We should notify the user about a 'failed' job.
+                    // The other possible status is 'closed', which we should
+                    // never see -- we don't submit requests with durations,
+                    // so they can't expire, and even if it somehow started
+                    // and finished instance while we weren't paying attention,
+                    // we still would have seen the instance ID already.
+                    formatstr( errorString, "Request status '%s' unexpected in GM_SPOT_QUERY.", status.c_str() );
+                    dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
+                    dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <unexpected state> = GM_HOLD\n" );
+                    gmState = GM_HOLD;
                     break;
                 }
                 
-                // If nothing interesting happened, wait a while before
-                // polling the job state again.
-                gmState = GM_SPOT_SUBMITTED;
                 } break;
 
             // If, during recovery of a spot request, we have a client token
