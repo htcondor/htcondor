@@ -1385,10 +1385,8 @@ CStarter::createTempExecuteDir( void )
 
 	CondorPrivSepHelper* cpsh = condorPrivSepHelper();
 	if (cpsh != NULL) {
-		// ZKM TODO FIX
-		// the privsep switchboard ALWAYS creates directories with
-		// permissions 0755.  that change goes deeper than anything
-		// i want to do in this first round of fixes.
+		// the privsep switchboard now ALWAYS creates directories with
+		// permissions 0700.
 		cpsh->initialize_sandbox(WorkingDir.Value());
 		WriteAdFiles();
 	} else {

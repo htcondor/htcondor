@@ -67,6 +67,35 @@ const id_t err_id = (id_t) -1;
 static FILE *err_stream = 0;
 
 /*
+ * nonfatal_write
+ *	This function tries to print a some information to the stream setup by
+ *	setup_err_stream or stderr if there is none.
+ * parameters
+ *	fmt, ...
+ *		format and parameters as expected by printf
+ * returns
+ *	nothing
+ */
+void nonfatal_write(const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+
+    if (!err_stream) {
+        err_stream = stderr;
+    }
+
+    vfprintf(err_stream, fmt, ap);
+    fputc('\n', err_stream);
+
+    /* could also call vsyslog here also */
+
+    va_end(ap);
+
+    fflush(err_stream);
+}
+
+/*
  * fatal_error_exit
  *	This function tries to print an error message to the error stream
  *	setup by setup_err_stream or stderr if there is none.  It then does

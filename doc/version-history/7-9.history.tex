@@ -106,13 +106,16 @@ Condor will not send resources addressed in this way the
 an error.
 \Ticket{2974}
 
-\item Added a ``-suppress\_notification'' command line flag and corresponding
-\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} configuration macro to \Condor{dagman}.
-This enables a user of \Condor{dagman} to stop notification by email of job
+\item Added both a \Opt{-suppress\_notification},
+a \Opt{-dont\_suppress\_notification} command line option,
+and corresponding
+\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} configuration variable
+to \Condor{dagman} and \Condor{submit\_dag}.
+This enables a user of DAGMan to stop email notification of job
 events for jobs submitted by \Condor{dagman}. The value of
-\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} defaults to true, so that jobs submitted
-by \Condor{dagman} will not send email notification. Also added a
-``-dont\_suppress\_notification'' flag to override the default.
+\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} defaults to \Expr{True},
+so that jobs submitted
+by \Condor{dagman} will not send email notification. 
 \Ticket{3225}
 
 \item Changed the default job notification from Complete to Never. Added a new
@@ -153,6 +156,14 @@ rather than its identity.
 In some instances, modifying \Env{LD\_LIBRARY\_PATH} can cause the
 batch system's command line tools to fail when run by the batch\_gahp.
 \Ticket{3317}
+
+\item The \Condor{shadow} would never print the allocated amount of
+partionable resources in the job log.
+\Ticket{3318}
+
+\item \Condor{who} would sometimes incorrectly display blank or partial
+values in the PROGRAM column.
+\Ticket{3314}
 
 \end{itemize}
 
@@ -244,7 +255,7 @@ other clients of the remote \Condor{schedd} to time out trying to get the
 \Ticket{2575}
 
 \item \Condor{history} and \Condor{q} can now be told to read job records
-from a user log instead of the parsing the history file or querying the
+from a user log, instead of parsing the history file or querying the
 \Condor{schedd}.  This can be used to monitor the status of jobs with
 reduced load on the \Condor{schedd}.
 \Ticket{3188}
