@@ -105,6 +105,34 @@ ssh_upload_and_run () {
     return $cmd_ec
 }
 
+
+display_dots () {
+    while [ 1 ]; do
+        echo -n "."
+        sleep 1
+    done
+
+}
+
+show_progress () {
+    message=$1
+    shift
+    command=$@
+
+    # Display the message & dots
+    echo -n $message
+    display_dots 2>/dev/null &
+    dots_pid=$!
+
+    # Run the command
+    $@
+    disown $dots_pid
+    kill -9 $dots_pid
+    echo ""
+
+}
+
+
 ssh_find_remote () {
     # Last attempt to find remote platform
     # More imprecise than findplatform but may succeed when upload fails (e.g. multiple login nodes in DNS RR)
@@ -695,8 +723,8 @@ echo "Downloading BOSCO from $url"
 # A download to the remote system would be faster but we cannot count on ports different form the SSH one
 # OS X mktemp requires a template
 tmp_dir=`mktemp -d /tmp/tmp.XXXXXXXX`
-curl -s -o $tmp_dir/bosco-download.tar.gz $url 
-tar xzf $tmp_dir/bosco-download.tar.gz -C $tmp_dir
+show_progress "Downloading bosco for $host" curl -s -o $tmp_dir/bosco-download.tar.gz $url 
+show_progress "Unpacking bosco" tar xzf $tmp_dir/bosco-download.tar.gz -C $tmp_dir
 archive_dir=`ls -d $tmp_dir/condor*`
 if [ $? -ne 0 ]; then
     echo "Unable to download and prepare BOSCO for remote installation."
@@ -733,13 +761,13 @@ else
 fi
 rsync -aq  $archive_dir/$libdir/libclassad.so* $remote_host:$remote_glite_dir/lib/ 2>/dev/null
 rsync -aq  $archive_dir/$libdir/libcondor_utils* $remote_host:$remote_glite_dir/lib/ 2>/dev/null
-rsync -aq  $archive_dir/$libdir/condor $remote_host:$remote_glite_dir/lib/ 2>/dev/null
+show_progress "Sending libraries to $host" rsync -aq  $archive_dir/$libdir/condor $remote_host:$remote_glite_dir/lib/ 2>/dev/null
 rsync -aq  $archive_dir/sbin/condor_ft-gahp $remote_host:$remote_glite_dir/bin 2>/dev/null
 
 # create the glidein
 export PYTHONPATH=`condor_config_val LIBEXEC`/campus_factory/python-lib
 export _campusfactory_GLIDEIN_DIRECTORY=`condor_config_val LIBEXEC`/campus_factory/share/glidein_jobs
-glidein_creation $remote_host $archive_dir --outputtar=$tmp_dir/glideinExec.tar.gz
+show_progress "Creating BOSCO for the WN's" glidein_creation $remote_host $archive_dir --outputtar=$tmp_dir/glideinExec.tar.gz
 rsync -aq  $tmp_dir/glideinExec.tar.gz $remote_host:$remote_base_dir_host/campus_factory/ 2>/dev/null
 
 
