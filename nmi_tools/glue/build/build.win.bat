@@ -121,7 +121,7 @@ set INCLUDE=%BUILD_ROOT%\src\condor_utils
 :: if its a full version number than use it. (we look for the "." after X)
 :: if it's a buildid, get the version number from the cmake files and then append it.
 set BUILDID=%2
-if NOT "%2"=="" ( "%BUILDID:~0,1%"=="-" set BUILDID=%BUILDID:~1% )
+:: if NOT "%2"=="" ( if "%BUILDID:~0,1%"=="-" set BUILDID=%BUILDID:~1% )
 if "%BUILDID:~1,1%"=="." (
    set BUILD_VERSION=%BUILDID%
    set BUILDID=
