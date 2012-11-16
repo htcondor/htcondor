@@ -373,7 +373,7 @@ End_of_Submit
     fi
 
     # Check if there is anything in the user log
-    echo -n "Checking for submission to remote pbs cluster (could take ~30 seconds)..."
+    echo -n "Checking for submission to remote $cluster_type cluster (could take ~30 seconds)..."
     counter=50
     submit_found=0
     while [ $counter -gt 0 ]
