@@ -4628,22 +4628,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=,
 id=264
 
-[NET_REMAP_ENABLE]
-aliases=
-default=false
-version=0.0.0
-range=.*
-state=default
-type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Net Remap Enable
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=,
-id=265
-
 [LOGS_USE_TIMESTAMP]
 aliases=
 default=false

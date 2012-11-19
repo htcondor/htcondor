@@ -1246,11 +1246,6 @@ main( int argc, char **argv )
     bool is_daemon = dc_args_is_background(argc, argv);
 #endif
 
-		// If we don't clear this, then we'll use the same CCB broker
-		// as our parent or previous incarnation. If there's a list of
-		// brokers, we want to choose from the whole list.
-	UnsetEnv( "NET_REMAP_ENABLE" );
-
 	set_mySubSystem( "MASTER", SUBSYSTEM_TYPE_MASTER );
 
 	dc_main_init = main_init;

@@ -2715,13 +2715,7 @@ DaemonCore::reconfig(void) {
 	InitSettableAttrsLists();
 
 #if HAVE_CLONE
-    if (param_boolean("NET_REMAP_ENABLE", false, false)) {
-		m_use_clone_to_create_processes = false;
-		dprintf(D_CONFIG, "NET_REMAP_ENABLE is TRUE, forcing USE_CLONE_TO_CREATE_PROCESSES to FALSE.\n");
-	}
-	else {
-		m_use_clone_to_create_processes = param_boolean("USE_CLONE_TO_CREATE_PROCESSES", true);
-	}
+	m_use_clone_to_create_processes = param_boolean("USE_CLONE_TO_CREATE_PROCESSES", true);
 	if (RUNNING_ON_VALGRIND) {
 		dprintf(D_ALWAYS, "Looks like we are under valgrind, forcing USE_CLONE_TO_CREATE_PROCESSES to FALSE.\n");
 		m_use_clone_to_create_processes = false;
