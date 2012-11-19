@@ -246,11 +246,13 @@ result_add_machine(classad::ClassAd resource) {
 
 
 bool ClassAdAnalyzer::
-AnalyzeJobReqToBuffer( ClassAd *request, ClassAdList &offers, string &buffer )
+AnalyzeJobReqToBuffer( ClassAd *request, ClassAdList &offers, string &buffer, std::string &pretty_req )
 {
 	ResourceGroup     rg;
     classad::ClassAd  *explicit_classad;
     bool              success;
+
+	pretty_req = "";
 
 		// create a ResourceGroup object for offer ClassAds
 	if( !MakeResourceGroup( offers, rg ) ) {
@@ -274,7 +276,7 @@ AnalyzeJobReqToBuffer( ClassAd *request, ClassAdList &offers, string &buffer )
       }
     }
 
-	success = AnalyzeJobReqToBuffer( explicit_classad, rg, buffer );
+	success = AnalyzeJobReqToBuffer( explicit_classad, rg, buffer, pretty_req );
 
     delete explicit_classad;
     return success;
@@ -324,7 +326,7 @@ AnalyzeJobAttrsToBuffer( ClassAd *request, ClassAdList &offers,
 
 
 bool ClassAdAnalyzer::
-AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string &buffer)
+AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string &buffer, string &pretty_req)
 {
 	if( !request ) {
 			// request is NULL;
@@ -374,15 +376,15 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 		t++;
 	}
 		// Print formatted req expression
-	buffer += "\n";
-	buffer += "The ";
-	buffer += ATTR_REQUIREMENTS; 
-	buffer += " expression for your job is:";
-	buffer += "\n";
-	buffer += "\n";
-	buffer += temp_buffer;
-	buffer += "\n";
-	buffer += "\n";
+	pretty_req += "\n";
+	pretty_req += "The ";
+	pretty_req += ATTR_REQUIREMENTS; 
+	pretty_req += " expression for your job is:";
+	pretty_req += "\n";
+	pretty_req += "\n";
+	pretty_req += temp_buffer;
+	pretty_req += "\n";
+	pretty_req += "\n";
 
 		// Try to flatten Requirements expression
 	mad.ReplaceLeftAd( request );
@@ -393,12 +395,12 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 
 		// Check if Requirements expression flattened to a literal value
 	if( !flatReqExpr ) {
-		buffer += "Job ClassAd "; 
-		buffer += ATTR_REQUIREMENTS; 
-		buffer += " expression evaluates to ";
+		pretty_req += "Job ClassAd "; 
+		pretty_req += ATTR_REQUIREMENTS; 
+		pretty_req += " expression evaluates to ";
 		pp.Unparse( buffer, val );
-		buffer += "\n";
-		buffer += "\n";
+		pretty_req += "\n";
+		pretty_req += "\n";
 		return true;
 	}
 

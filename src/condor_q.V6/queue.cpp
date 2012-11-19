@@ -305,7 +305,8 @@ static	void 		setupAnalysis();
 static 	int			fetchSubmittorPriosFromNegotiator(ExtArray<PrioEntry> & prios);
 static	void		doRunAnalysis( ClassAd*, Daemon* );
 static	const char *doRunAnalysisToBuffer( ClassAd*, Daemon* );
-static  bool        better_analyze = false;
+static	bool		better_analyze = false;
+static	int			analyze_detail_level = 0;
 static	bool		run = false;
 static	bool		goodput = false;
 static	char		*fixSubmittorName( char*, int );
@@ -520,7 +521,7 @@ int main (int argc, char **argv)
 		setupAnalysis();
 		if ((jobads_file != NULL || userlog_file != NULL)) {
 			retval = show_queue(scheddAddr, scheddName, "Unknown", "Unknown", FALSE);
-			freeConnectionStrings();
+ 			freeConnectionStrings();
 			exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 		}
 	}
@@ -1447,12 +1448,13 @@ processCommandLineArguments (int argc, char *argv[])
 			exit(0);
 		}
         else
-        if (match_prefix( arg, "better-analyze")
-			|| match_prefix( arg , "better-analyse")
-			|| match_prefix( arg , "analyze")
-			|| match_prefix( arg , "analyse")
+        if (is_arg_colon_prefix(arg, "better-analyze", &pcolon, 2)
+			|| is_arg_colon_prefix(arg, "better-analyse", &pcolon, 2)
+			|| is_arg_colon_prefix(arg, "analyze", &pcolon, 2)
+			|| is_arg_colon_prefix(arg, "analyse", &pcolon, 2)
 			) {
             better_analyze = true;
+			if (pcolon) { analyze_detail_level = atoi(++pcolon); }
 			attrs.clearAll();
         }
 		else
@@ -3654,7 +3656,887 @@ static int read_userprio_file(const char *filename, ExtArray<PrioEntry> & prios)
 	return cPrios;
 }
 
+#include "classad/classadCache.h" // for CachedExprEnvelope
 
+// AnalyzeThisSubExpr recursively walks an ExprTree and builds a vector of
+// this class, one entry for each clause of the ExprTree that deserves to be
+// separately evaluated. 
+//
+class AnalSubExpr {
+
+public:
+	// these members are set while parsing the SubExpr
+	classad::ExprTree *  tree; // this pointer is NOT owned by this class, and should not be freeed from here!!
+	int  depth;	   // nesting depth (parens only)
+	int  logic_op; // 0 = non-logic, 1=!, 2=||, 3=&&, 4=?:
+	int  ix_left;
+	int  ix_right;
+	int  ix_grip;
+	int  ix_effective;  // when this clause reduces down to exactly the same as another clause.
+	std::string label;
+
+	// these are used during iteration of Target ads against each of the sub-expressions
+	int  matches;
+	bool constant;
+	int  hard_value;  // if constant, this is set to the value
+	bool dont_care;
+	int  pruned_by;   // index of entry that set dont_care
+	std::string unparsed;
+
+	AnalSubExpr(classad::ExprTree * expr, const char * lbl, int dep, int logic=0)
+		: tree(expr)
+		, depth(dep)
+		, logic_op(logic)
+		, ix_left(-1)
+		, ix_right(-1)
+		, ix_grip(-1)
+		, ix_effective(-1)
+		, label(lbl)
+		, matches(0)
+		, constant(false)
+		, hard_value(-1)
+		, dont_care(false)
+		, pruned_by(-1)
+		{
+		};
+
+	void CheckIfConstant(ClassAd & ad)
+	{
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse(unparsed, tree);
+
+		StringList my;
+		StringList target;
+		ad.GetExprReferences(unparsed.c_str(), my, target);
+		constant = target.isEmpty();
+		if (constant) {
+			hard_value = 0;
+			bool bool_val = false;
+			classad::Value eval_result;
+			if (EvalExprTree(tree, &ad, NULL, eval_result)
+				&& eval_result.IsBooleanValue(bool_val)
+				&& bool_val) {
+				hard_value = 1;
+			}
+		}
+	};
+
+	const char * Label()
+	{
+		if (label.empty()) {
+			if (MakeLabel(label)) {
+				// nothing to do.
+			} else if ( ! unparsed.empty()) {
+				return unparsed.c_str();
+			} else {
+				return "empty";
+			}
+		}
+		return label.c_str();
+	}
+
+	bool MakeLabel(std::string & lbl)
+	{
+		if (logic_op) {
+			if (logic_op < 2)
+				formatstr(lbl, " ! [%d]", ix_left);
+			else if (logic_op > 3)
+				formatstr(lbl, "[%d] ? [%d] : [%d]", ix_left, ix_right, ix_grip);
+			else
+				formatstr(lbl, "[%d] %s [%d]", ix_left, (logic_op==2) ? "||" : "&&", ix_right);
+			return true;
+		}
+		return false;
+	}
+
+	// helper function that returns width-adjusted step numbers
+	const char * StepLabel(std::string & str, int index, int width=4) {
+		formatstr(str, "[%d]      ", index);
+		str.erase(width+2, string::npos);
+		return str.c_str();
+	}
+};
+
+// printf formatting helper for indenting
+#if 0 // indent using counted spaces
+static const char * GetIndentPrefix(int indent) {
+  #if 0
+	static std::string str = "                                            ";
+	while (str.size()/1 < indent) { str += "  "; }
+	return &str.c_str()[str.size() - 1*indent];
+  #else  // indent using N> 
+	static std::string str;
+	formatstr(str, "%d>     ", indent);
+	str.erase(5, string::npos);
+	return str.c_str();
+  #endif
+}
+#else
+static const char * GetIndentPrefix(int) { return ""; }
+#endif
+
+static std::string strStep;
+#define StepLbl(ii) subs[ii].StepLabel(strStep, ii, 3)
+
+int AnalyzeThisSubExpr(classad::ExprTree* expr, std::vector<AnalSubExpr> & clauses, bool must_store, int depth)
+{
+	classad::ExprTree::NodeKind kind = expr->GetKind( );
+	classad::ClassAdUnParser unparser;
+
+	bool show_work = false;
+	bool evaluate_logical = false;
+	int  child_depth = depth;
+	int  logic_op = 0;
+	bool push_it = must_store;
+	bool chatty = false;
+	const char * pop = "";
+	int ix_me = -1, ix_left = -1, ix_right = -1, ix_grip = -1;
+
+	std::string strLabel;
+
+	classad::ExprTree *left=NULL, *right=NULL, *gripping=NULL;
+	switch(kind) {
+		case classad::ExprTree::LITERAL_NODE: {
+			classad::Value val;
+			classad::Value::NumberFactor factor;
+			((classad::Literal*)expr)->GetComponents(val, factor);
+			unparser.UnparseAux(strLabel, val, factor);
+			if (chatty) {
+				printf("     %d:const : %s\n", kind, strLabel.c_str());
+			}
+			show_work = false;
+			break;
+		}
+
+		case classad::ExprTree::ATTRREF_NODE: {
+			bool absolute;
+			std::string strAttr; // simple attr, need unparse to get TARGET. or MY. prefix.
+			((classad::AttributeReference*)expr)->GetComponents(left, strAttr, absolute);
+			if (chatty) {
+				printf("     %d:attr  : %s %s at %p\n", kind, absolute ? "abs" : "ref", strAttr.c_str(), left);
+			}
+			if (absolute) {
+				left = NULL;
+			}
+			show_work = false;
+			break;
+		}
+
+		case classad::ExprTree::OP_NODE: {
+			classad::Operation::OpKind op = classad::Operation::__NO_OP__;
+			((classad::Operation*)expr)->GetComponents(op, left, right, gripping);
+			pop = "??";
+			if (op <= classad::Operation::__LAST_OP__) 
+				pop = unparser.opString[op];
+			if (chatty) {
+				printf("     %d:op    : %2d:%s %p %p %p\n", kind, op, pop, left, right, gripping);
+			}
+			if (op >= classad::Operation::__COMPARISON_START__ && op <= classad::Operation::__COMPARISON_END__) {
+				//show_work = true;
+				evaluate_logical = false;
+				push_it = true;
+			} else if (op >= classad::Operation::__LOGIC_START__ && op <= classad::Operation::__LOGIC_END__) {
+				//show_work = true;
+				evaluate_logical = true;
+				logic_op = 1 + (int)(op - classad::Operation::__LOGIC_START__);
+				push_it = true;
+			} else if (op == classad::Operation::PARENTHESES_OP){
+				child_depth += 1;
+			} else {
+				//show_work = false;
+			}
+			break;
+		}
+
+		case classad::ExprTree::FN_CALL_NODE: {
+			std::vector<classad::ExprTree*> args;
+			((classad::FunctionCall*)expr)->GetComponents(strLabel, args);
+			strLabel += "()";
+			if (chatty) {
+				printf("     %d:call  : %s() %d args\n", kind, strLabel.c_str(), (int)args.size());
+			}
+			break;
+		}
+
+		case classad::ExprTree::CLASSAD_NODE: {
+			vector< std::pair<string, classad::ExprTree*> > attrs;
+			((classad::ClassAd*)expr)->GetComponents(attrs);
+			if (chatty) {
+				printf("     %d:ad    : %d attrs\n", kind, (int)attrs.size());
+			}
+			break;
+		}
+
+		case classad::ExprTree::EXPR_LIST_NODE: {
+			vector<classad::ExprTree*> exprs;
+			((classad::ExprList*)expr)->GetComponents(exprs);
+			if (chatty) {
+				printf("     %d:list  : %d items\n", kind, (int)exprs.size());
+			}
+			break;
+		}
+		
+		case classad::ExprTree::EXPR_ENVELOPE: {
+			// recurse b/c we indirect for this element.
+			left = ((classad::CachedExprEnvelope*)expr)->get();
+			if (chatty) {
+				printf("     %d:env  :     %p \n", kind, left);
+			}
+			break;
+		}
+	}
+
+	if (left) ix_left = AnalyzeThisSubExpr(left, clauses, evaluate_logical, child_depth);
+	if (right) ix_right = AnalyzeThisSubExpr(right, clauses, evaluate_logical, child_depth);
+	if (gripping) ix_grip = AnalyzeThisSubExpr(gripping, clauses, evaluate_logical, child_depth);
+
+	if (push_it) {
+		if (left && ! right && ix_left >= 0) {
+			ix_me = ix_left;
+		} else {
+			ix_me = (int)clauses.size();
+			AnalSubExpr sub(expr, strLabel.c_str(), depth, logic_op);
+			sub.ix_left = ix_left;
+			sub.ix_right = ix_right;
+			sub.ix_grip = ix_grip;
+			clauses.push_back(sub);
+		}
+	} else if (left && ! right) {
+		ix_me = ix_left;
+	}
+
+	if (show_work) {
+
+		std::string strExpr;
+		unparser.Unparse(strExpr, expr);
+
+		if (evaluate_logical) {
+			printf("[%3d] %5s : [%3d] %s [%3d]\n", ix_me, "", ix_left, pop, ix_right);
+			if (chatty) {
+				printf("\t%s\n", strExpr.c_str());
+			}
+		} else {
+			printf("[%3d] %5s : %s\n", ix_me, "", strExpr.c_str());
+		}
+	}
+
+	return ix_me;
+}
+
+// recursively mark subexpressions as irrelevant
+//
+static void MarkIrrelevant(std::vector<AnalSubExpr> & subs, int index, std::string & irr_path, int at_index)
+{
+	if (index >= 0) {
+		subs[index].dont_care = true;
+		subs[index].pruned_by = at_index;
+		//printf("(%d:", index);
+		formatstr_cat(irr_path,"(%d:", index);
+		if (subs[index].ix_left >= 0)  MarkIrrelevant(subs, subs[index].ix_left, irr_path, at_index);
+		if (subs[index].ix_right >= 0) MarkIrrelevant(subs, subs[index].ix_right, irr_path, at_index);
+		if (subs[index].ix_grip >= 0)  MarkIrrelevant(subs, subs[index].ix_grip, irr_path, at_index);
+		formatstr_cat(irr_path,")");
+		//printf(")");
+	}
+}
+
+
+static void AnalyzePropagateConstants(std::vector<AnalSubExpr> & subs, bool show_work)
+{
+
+	// propagate hard true-false
+	for (int ix = 0; ix < (int)subs.size(); ++ix) {
+
+		int ix_effective = -1;
+		int ix_irrelevant = -1;
+
+		const char * pindent = GetIndentPrefix(subs[ix].depth);
+
+		// fixup logic_op entries, propagate hard true/false
+
+		if (subs[ix].logic_op) {
+			// unset, false, true, indeterminate, undefined, error, unset
+			static const char * truthy[] = {"?", "F", "T", "", "u", "e"};
+			int hard_left = 2, hard_right = 2, hard_grip = 2;
+			if (subs[ix].ix_left >= 0) {
+				int il = subs[ix].ix_left;
+				if (subs[il].constant) {
+					hard_left = subs[il].hard_value;
+				}
+			}
+			if (subs[ix].ix_right >= 0) {
+				int ir = subs[ix].ix_right;
+				if (subs[ir].constant) {
+					hard_right = subs[ir].hard_value;
+				}
+			}
+			if (subs[ix].ix_grip >= 0) {
+				int ig = subs[ix].ix_grip;
+				if (subs[ig].constant) {
+					hard_grip = subs[ig].hard_value;
+				}
+			}
+
+			switch (subs[ix].logic_op) {
+				case 1: { // ! 
+					formatstr(subs[ix].label, " ! [%d]%s", subs[ix].ix_left, truthy[hard_left+1]);
+					break;
+				}
+				case 2: { // || 
+					// true || anything is true
+					if (hard_left == 1 || hard_right == 1) {
+						subs[ix].constant = true;
+						subs[ix].hard_value = true;
+						// mark the non-constant irrelevant clause
+						if (hard_left == 1) {
+							subs[ix].ix_effective = ix_effective = subs[ix].ix_left;
+							ix_irrelevant = subs[ix].ix_right;
+						} else if (hard_right == 1) {
+							subs[ix].ix_effective = ix_effective = subs[ix].ix_right;
+							ix_irrelevant = subs[ix].ix_left;
+						}
+					} else
+					// false || false is false
+					if (hard_left == 0 && hard_right == 0) {
+						subs[ix].constant = true;
+						subs[ix].hard_value = false;
+					} else if (hard_left == 0) {
+						subs[ix].ix_effective = ix_effective = subs[ix].ix_right;
+					} else if (hard_right == 0) {
+						subs[ix].ix_effective = ix_effective = subs[ix].ix_left;
+					}
+					formatstr(subs[ix].label, "[%d]%s || [%d]%s", 
+					          subs[ix].ix_left, truthy[hard_left+1], 
+					          subs[ix].ix_right, truthy[hard_right+1]);
+					break;
+				}
+				case 3: { // &&
+					// false && anything is false
+					if (hard_left == 0 || hard_right == 0) {
+						subs[ix].constant = true;
+						subs[ix].hard_value = false;
+						// mark the non-constant irrelevant clause
+						if (hard_left == 0) {
+							subs[ix].ix_effective = ix_effective = subs[ix].ix_left;
+							ix_irrelevant = subs[ix].ix_right;
+						} else if (hard_right == 0) {
+							subs[ix].ix_effective = ix_effective = subs[ix].ix_right;
+							ix_irrelevant = subs[ix].ix_left;
+						}
+					} else
+					// true && true is true
+					if (hard_left == 1 && hard_right == 1) {
+						subs[ix].constant = true;
+						subs[ix].hard_value = true;
+					} else if (hard_left == 1) {
+						subs[ix].ix_effective = ix_effective = subs[ix].ix_right;
+					} else if (hard_right == 1) {
+						subs[ix].ix_effective = ix_effective = subs[ix].ix_left;
+					}
+					formatstr(subs[ix].label, "[%d]%s && [%d]%s", 
+					          subs[ix].ix_left, truthy[hard_left+1], 
+					          subs[ix].ix_right, truthy[hard_right+1]);
+					break;
+				}
+				case 4: { // ?:
+					if (hard_left == 0 || hard_left == 1) {
+						ix_effective = hard_left ? subs[ix].ix_right : subs[ix].ix_grip; 
+						subs[ix].ix_effective = ix_effective;
+						if ((ix_effective >= 0) && subs[ix_effective].constant) {
+							subs[ix].constant = true;
+							subs[ix].hard_value = subs[ix_effective].hard_value;
+						}
+						// mark the irrelevant clause
+						ix_irrelevant = hard_left ? subs[ix].ix_grip : subs[ix].ix_right;
+					}
+					formatstr(subs[ix].label, "[%d]%s ? [%d]%s : [%d]%s", 
+					          subs[ix].ix_left, truthy[hard_left+1], 
+					          subs[ix].ix_right, truthy[hard_right+1], 
+					          subs[ix].ix_grip, truthy[hard_grip+1]);
+					break;
+				}
+			}
+		}
+
+		// now walk effective expressions backward
+		std::string effective_path = "";
+		if (ix_effective >= 0) {
+			if (ix_irrelevant < 0) {
+				if (ix_effective == subs[ix].ix_left)
+					ix_irrelevant = subs[ix].ix_right;
+				if (ix_effective == subs[ix].ix_right)
+					ix_irrelevant = subs[ix].ix_left;
+			}
+			formatstr(effective_path, "%d->%d", ix, ix_effective);
+			while (subs[ix_effective].ix_effective >= 0) {
+				ix_effective = subs[ix_effective].ix_effective;
+				subs[ix].ix_effective = ix_effective;
+				formatstr_cat(effective_path, "->%d", ix_effective);
+			}
+		}
+
+		std::string irr_path = "";
+		if (ix_irrelevant >= 0) {
+			//printf("\tMarkIrrelevant(%d) by %d = ", ix_irrelevant, ix);
+			MarkIrrelevant(subs, ix_irrelevant, irr_path, ix);
+			//printf("\n");
+		}
+
+
+		if (show_work) {
+
+			const char * const_val = "";
+			if (subs[ix].constant)
+				const_val = subs[ix].hard_value ? "true" : "false";
+			if (ix_effective >= 0) {
+				printf("%s %5s\t%s%s\t is effectively %s e<%s>\n", 
+					   StepLbl(ix), const_val, pindent, subs[ix].Label(), subs[ix_effective].Label(), effective_path.c_str());
+			} else {
+				printf("%s %5s\t%s%s\n", StepLbl(ix), const_val, pindent, subs[ix].Label());
+			}
+			if (ix_irrelevant >= 0) {
+				printf("           \tpruning %s\n", irr_path.c_str());
+			}
+		}
+	} // check-if-constant
+}
+
+static const char * PrettyPrintExprTree(classad::ExprTree *tree, std::string & temp_buffer, int indent, int width)
+{
+	classad::ClassAdUnParser unparser;
+	unparser.Unparse(temp_buffer, tree);
+
+	if (indent > width)
+		indent = width*2/3;
+
+	std::string::iterator it, lastAnd, lineStart;
+	it = lastAnd = lineStart = temp_buffer.begin();
+	int indent_at_last_and = indent;
+	int pos = indent;  // we presume that the initial indent has already been printed by the caller.
+
+	char chPrev = 0;
+	while (it != temp_buffer.end()) {
+		if ((*it == '&' || *it == '|') && chPrev == *it) {
+			lastAnd = it + 1;
+			indent_at_last_and = indent;
+		}
+		else if (*it == '(') { indent += 2; }
+		else if (*it == ')') { indent -= 2; }
+		if (pos >= width) {
+			if (lastAnd != lineStart) {
+				temp_buffer.replace(lastAnd, lastAnd + 1, 1, '\n');
+				lineStart = lastAnd + 1;
+				lastAnd = lineStart;
+				pos = 0;
+				if (indent_at_last_and > 0) {
+					size_t cch = distance(temp_buffer.begin(), it);
+					temp_buffer.insert(lineStart, indent_at_last_and, ' ');
+					it = temp_buffer.begin() + cch + indent_at_last_and;
+					pos = indent_at_last_and;
+				}
+				indent_at_last_and = indent;
+			}
+		}
+		chPrev = *it;
+		++it;
+		++pos;
+	}
+	return temp_buffer.c_str();
+}
+
+static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & targets, std::string & return_buf, int detail_mask)
+{
+	bool show_work = (detail_mask & 0x100) != 0;
+
+	classad::ExprTree* exprReq = request->LookupExpr(ATTR_REQUIREMENTS);
+	if (exprReq) {
+
+		std::vector<AnalSubExpr> subs;
+		std::string strStep;
+		#define StepLbl(ii) subs[ii].StepLabel(strStep, ii, 3)
+
+		AnalyzeThisSubExpr(exprReq, subs, true, 0);
+
+		if (show_work) {
+			printf("\nEvaluate constants:\n");
+		}
+		// check of each sub-expression has any target references.
+		for (int ix = 0; ix < (int)subs.size(); ++ix) {
+			subs[ix].CheckIfConstant(*request);
+		}
+
+		AnalyzePropagateConstants(subs, show_work);
+
+		//
+		// now print out the strength-reduced expression
+		//
+		if (show_work) {
+			printf("\nReduced boolean expressions:\n");
+			for (int ix = 0; ix < (int)subs.size(); ++ix) {
+				const char * const_val = "";
+				if (subs[ix].constant)
+					const_val = subs[ix].hard_value ? "true" : "false";
+				std::string pruned = "";
+				if (subs[ix].dont_care) {
+					const_val = (subs[ix].constant) ? (subs[ix].hard_value ? "n/aT" : "n/aF") : "n/a";
+					formatstr(pruned, "\tpruned-by:%d", subs[ix].pruned_by);
+				}
+				if (subs[ix].ix_effective < 0) {
+					const char * pindent = GetIndentPrefix(subs[ix].depth);
+					printf("%s %5s\t%s%s%s\n", StepLbl(ix), const_val, pindent, subs[ix].Label(), pruned.c_str());
+				}
+			}
+		}
+
+			// propagate effectives back up the chain. 
+			//
+
+		if (show_work) {
+			printf("\nPropagate effectives:\n");
+		}
+		for (int ix = 0; ix < (int)subs.size(); ++ix) {
+			bool fchanged = false;
+			int jj = subs[ix].ix_left;
+			if ((jj >= 0) && (subs[jj].ix_effective >= 0)) {
+				subs[ix].ix_left = subs[jj].ix_effective;
+				fchanged = true;
+			}
+
+			jj = subs[ix].ix_right;
+			if ((jj >= 0) && (subs[jj].ix_effective >= 0)) {
+				subs[ix].ix_right = subs[jj].ix_effective;
+				fchanged = true;
+			}
+
+			jj = subs[ix].ix_grip;
+			if ((jj >= 0) && (subs[jj].ix_effective >= 0)) {
+				subs[ix].ix_grip = subs[jj].ix_effective;
+				fchanged = true;
+			}
+
+			if (fchanged) {
+				// force the label to be rebuilt.
+				std::string oldlbl = subs[ix].label;
+				if (oldlbl.empty()) oldlbl = "";
+				subs[ix].label.clear();
+				if (show_work) {
+					printf("%s   %s  is effectively  %s\n", StepLbl(ix), oldlbl.c_str(), subs[ix].Label());
+				}
+			}
+		}
+
+		if (show_work) {
+			printf("\nFinal expressions:\n");
+			for (int ix = 0; ix < (int)subs.size(); ++ix) {
+				const char * const_val = "";
+				if (subs[ix].constant)
+					const_val = subs[ix].hard_value ? "true" : "false";
+				if (subs[ix].ix_effective < 0 && ! subs[ix].dont_care) {
+					std::string altlbl;
+					//if ( ! subs[ix].MakeLabel(altlbl)) altlbl = "";
+					const char * pindent = GetIndentPrefix(subs[ix].depth);
+					printf("%s %5s\t%s%s\n", StepLbl(ix), const_val, pindent, subs[ix].Label() /*, altlbl.c_str()*/);
+				}
+			}
+		}
+		//////////////////////////////////////////////////////////////////////////////
+
+		//
+		//
+		// build counts of matching machines, render final output
+		//
+		if (show_work) {
+			printf("Evaluation against machine ads:\n");
+			printf(" Step  Slots   Condition\n");
+		}
+
+		return_buf = "        Slots"
+		             "\nStep   Matched  Condition"
+		             "\n-----  -------  ---------\n";
+		std::string linebuf;
+		for (int ix = 0; ix < (int)subs.size(); ++ix) {
+			if (subs[ix].ix_effective >= 0 || subs[ix].dont_care)
+				continue;
+
+			const char * pindent = GetIndentPrefix(subs[ix].depth);
+			const char * const_val = "";
+			if (subs[ix].constant) {
+				const_val = subs[ix].hard_value ? "true" : "false";
+				formatstr(linebuf, "%s %8s  %s%s\n", StepLbl(ix), const_val, pindent, subs[ix].Label());
+				return_buf += linebuf;
+				if (show_work) { printf("%s", linebuf.c_str()); }
+				continue;
+			}
+
+			subs[ix].matches = 0;
+
+			targets.Open();
+			while (ClassAd *target = targets.Next()) {
+
+				classad::Value eval_result;
+				bool bool_val;
+				if (EvalExprTree(subs[ix].tree, request, target, eval_result) && 
+					eval_result.IsBooleanValue(bool_val) && 
+					bool_val) {
+					subs[ix].matches += 1;
+				}
+			}
+			targets.Close();
+
+			formatstr(linebuf, "%s %8d  %s%s", StepLbl(ix), subs[ix].matches, pindent, subs[ix].Label());
+
+			bool append_pretty = false;
+			if (subs[ix].logic_op) {
+				append_pretty = (detail_mask & 3) == 3;
+				if (subs[ix].ix_left == ix-2 && subs[ix].ix_right == ix-1)
+					append_pretty = false;
+				if ((detail_mask & 4) != 0)
+					append_pretty = true;
+			}
+				
+			if (append_pretty) { 
+				std::string treebuf;
+				linebuf += " ( "; 
+				PrettyPrintExprTree(subs[ix].tree, treebuf, linebuf.size(), 100); 
+				linebuf += treebuf; 
+				linebuf += " )";
+			}
+
+			linebuf += "\n";
+			return_buf += linebuf;
+
+			if (show_work) { printf("%s", linebuf.c_str()); }
+		}
+	}
+}
+
+#if 0 // experimental code
+
+int EvalThisSubExpr(int & index, classad::ExprTree* expr, ClassAd *request, ClassAd *offer, std::vector<ExprTree*> & clauses, bool must_store)
+{
+	++index;
+
+	classad::ExprTree::NodeKind kind = expr->GetKind( );
+	classad::ClassAdUnParser unp;
+
+	bool evaluate = true;
+	bool evaluate_logical = false;
+	bool push_it = must_store;
+	bool chatty = false;
+	const char * pop = "??";
+	int ix_me = -1, ix_left = -1, ix_right = -1, ix_grip = -1;
+
+	classad::Operation::OpKind op = classad::Operation::__NO_OP__;
+	classad::ExprTree *left=NULL, *right=NULL, *gripping=NULL;
+	switch(kind) {
+		case classad::ExprTree::LITERAL_NODE: {
+			if (chatty) {
+				classad::Value val;
+				classad::Value::NumberFactor factor;
+				((classad::Literal*)expr)->GetComponents(val, factor);
+				std::string str;
+				unp.UnparseAux(str, val, factor);
+				printf("     %d:const : %s\n", kind, str.c_str());
+			}
+			evaluate = false;
+			break;
+		}
+
+		case classad::ExprTree::ATTRREF_NODE: {
+			bool	absolute;
+			std::string attrref;
+			((classad::AttributeReference*)expr)->GetComponents(left, attrref, absolute);
+			if (chatty) {
+				printf("     %d:attr  : %s %s at %p\n", kind, absolute ? "abs" : "ref", attrref.c_str(), left);
+			}
+			if (absolute) {
+				left = NULL;
+			}
+			evaluate = false;
+			break;
+		}
+
+		case classad::ExprTree::OP_NODE: {
+			((classad::Operation*)expr)->GetComponents(op, left, right, gripping);
+			pop = "??";
+			if (op <= classad::Operation::__LAST_OP__) 
+				pop = unp.opString[op];
+			if (chatty) {
+				printf("     %d:op    : %2d:%s %p %p %p\n", kind, op, pop, left, right, gripping);
+			}
+			if (op >= classad::Operation::__COMPARISON_START__ && op <= classad::Operation::__COMPARISON_END__) {
+				evaluate = true;
+				evaluate_logical = false;
+				push_it = true;
+			} else if (op >= classad::Operation::__LOGIC_START__ && op <= classad::Operation::__LOGIC_END__) {
+				evaluate = true;
+				evaluate_logical = true;
+				push_it = true;
+			} else {
+				evaluate = false;
+			}
+			break;
+		}
+
+		case classad::ExprTree::FN_CALL_NODE: {
+			std::string strName;
+			std::vector<ExprTree*> args;
+			((classad::FunctionCall*)expr)->GetComponents(strName, args);
+			if (chatty) {
+				printf("     %d:call  : %s() %d args\n", kind, strName.c_str(), args.size());
+			}
+			break;
+		}
+
+		case classad::ExprTree::CLASSAD_NODE: {
+			vector< std::pair<string, classad::ExprTree*> > attrs;
+			((classad::ClassAd*)expr)->GetComponents(attrs);
+			if (chatty) {
+				printf("     %d:ad    : %d attrs\n", kind, attrs.size());
+			}
+			//clauses.push_back(expr);
+			break;
+		}
+
+		case classad::ExprTree::EXPR_LIST_NODE: {
+			vector<classad::ExprTree*> exprs;
+			((classad::ExprList*)expr)->GetComponents(exprs);
+			if (chatty) {
+				printf("     %d:list  : %d items\n", kind, exprs.size());
+			}
+			//clauses.push_back(expr);
+			break;
+		}
+		
+		case classad::ExprTree::EXPR_ENVELOPE: {
+			// recurse b/c we indirect for this element.
+			left = ((classad::CachedExprEnvelope*)expr)->get();
+			if (chatty) {
+				printf("     %d:env  :     %p\n", kind, left);
+			}
+			break;
+		}
+	}
+
+	if (left) ix_left = EvalThisSubExpr(index, left, request, offer, clauses, evaluate_logical);
+	if (right) ix_right = EvalThisSubExpr(index, right, request, offer, clauses, evaluate_logical);
+	if (gripping) ix_grip = EvalThisSubExpr(index, gripping, request, offer, clauses, evaluate_logical);
+
+	if (push_it) {
+		if (left && ! right && ix_left >= 0) {
+			ix_me = ix_left;
+		} else {
+			ix_me = (int)clauses.size();
+			clauses.push_back(expr);
+			// TJ: for now, so I can see what's happening.
+			evaluate = true;
+		}
+	} else if (left && ! right) {
+		ix_me = ix_left;
+	}
+
+	if (evaluate) {
+
+		classad::Value eval_result;
+		bool           bool_val;
+		bool matches = false;
+		if (EvalExprTree(expr, request, offer, eval_result) && eval_result.IsBooleanValue(bool_val) && bool_val) {
+			matches = true;
+		}
+
+		std::string strExpr;
+		unp.Unparse(strExpr, expr);
+		if (evaluate_logical) {
+			//if (ix_left < 0)  { ix_left = (int)clauses.size(); clauses.push_back(left); }
+			//if (ix_right < 0) { ix_right = (int)clauses.size(); clauses.push_back(right); }
+			printf("[%3d] %5s : [%3d] %s [%3d]\n", ix_me, matches ? "1" : "0", 
+				   ix_left, pop, ix_right);
+			if (chatty) {
+				printf("\t%s\n", strExpr.c_str());
+			}
+		} else {
+			printf("[%3d] %5s : %s\n", ix_me, matches ? "1" : "0", strExpr.c_str());
+		}
+	}
+
+	return ix_me;
+}
+
+static void EvalRequirementsExpr(ClassAd *request, ClassAdList & offers, std::string & return_buf)
+{
+	classad::ExprTree* exprReq = request->LookupExpr(ATTR_REQUIREMENTS);
+	if (exprReq) {
+
+		std::vector<ExprTree*> clauses;
+
+		offers.Open();
+		while (ClassAd *offer = offers.Next()) {
+			int counter = 0;
+			EvalThisSubExpr(counter, exprReq, request, offer, clauses, true);
+
+			static bool there_can_be_only_one = true;
+			if (there_can_be_only_one)
+				break; // for now only do the first offer.
+		}
+		offers.Close();
+	}
+}
+
+#endif // experimental code above
+
+
+static void AddReferencedAttribsToBuffer(ClassAd * request, ClassAd * target, const char * pindent, std::string & return_buf)
+{
+	StringList refs;
+	StringList trefs;
+
+	request->GetExprReferences(ATTR_REQUIREMENTS,refs,trefs);
+	if ( ! refs.isEmpty() || ! trefs.isEmpty()) {
+		refs.rewind();
+		trefs.rewind();
+
+		if ( ! pindent) pindent = "";
+		std::string label;
+
+		AttrListPrintMask pm;
+		pm.SetAutoSep(NULL, "", "\n", "\n");
+		while(const char *attr = refs.next()) {
+			formatstr(label, "%s%s = %%V", pindent, attr);
+			if (0 == strcmp(attr, ATTR_REQUIREMENTS))
+				continue;
+			pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, attr);
+		}
+		if ( ! pm.IsEmpty()) {
+			char * temp = pm.display(request);
+			if (temp) {
+				return_buf += temp;
+				delete[] temp;
+			}
+		}
+
+		if (target) {
+			pm.clearFormats();
+			pm.SetAutoSep(NULL, "", "\n", "\n");
+			while(const char *attr = trefs.next()) {
+				formatstr(label, "%sTARGET.%s = %%V", pindent, attr);
+				pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, attr);
+			}
+
+			char * temp = pm.display(request, target);
+			if (temp) {
+				return_buf += "\n";
+				return_buf += pindent;
+				std::string name;
+				if ( ! target->LookupString(ATTR_NAME, name))
+					name = "Target";
+				return_buf += name;
+				return_buf += " has the following attributes:\n\n";
+				return_buf += temp;
+				delete[] temp;
+			}
+		}
+	}
+}
 
 static void
 doRunAnalysis( ClassAd *request, Daemon *schedd )
@@ -3979,17 +4861,60 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
         }
 	}
 
-    if (better_analyze) {
-        std::string buffer_string = "";
-        char ana_buffer[SHORT_BUFFER_SIZE];
-        
-        if( fReqConstraint > 0 ) {
-            analyzer.AnalyzeJobReqToBuffer( request, startdAds, buffer_string );
-            strncpy( ana_buffer, buffer_string.c_str( ), SHORT_BUFFER_SIZE );
-			ana_buffer[SHORT_BUFFER_SIZE-1] = '\0';
-            strcat( return_buff, ana_buffer );
-        }
-    }
+	if (better_analyze && (fReqConstraint > 0)) {
+
+		// first analyze the Requirements expression against the startd ads.
+		//
+		std::string subexpr_buf = "";
+		std::string pretty_req = "";
+		analyzer.AnalyzeJobReqToBuffer( request, startdAds, subexpr_buf, pretty_req );
+		if ((int)subexpr_buf.size() > SHORT_BUFFER_SIZE)
+		   subexpr_buf.erase(SHORT_BUFFER_SIZE, string::npos);
+
+		if (0 == analyze_detail_level) {
+			strcat(return_buff, pretty_req.c_str());
+		}
+		pretty_req = "";
+
+		if (analyze_detail_level > 0) {
+			classad::ExprTree* tree = request->LookupExpr(ATTR_REQUIREMENTS);
+			if (tree) {
+				int console_width = widescreen ? getConsoleWindowSize() : 80;
+				PrettyPrintExprTree(tree, pretty_req, 4, console_width-1);
+				strcat(return_buff, "\nThe Requirements expression for your job is:\n\n    ");
+				strcat(return_buff, pretty_req.c_str());
+				strcat(return_buff, "\n\n");
+				pretty_req = "";
+			}
+		}
+
+		// then capture the values of MY attributes refereced by the expression
+		// also capture the value of TARGET attributes if there is only a single ad.
+		if (analyze_detail_level > 0) {
+			std::string attrib_values = "";
+			attrib_values = "Your job defines the following attributes:\n\n";
+			ClassAd * ptarget = NULL;
+			if (startdAds.Length() == 1) { startdAds.Open(); ptarget = startdAds.Next(); }
+			AddReferencedAttribsToBuffer(request, ptarget, "    ", attrib_values);
+			if (startdAds.Length() == 1) { startdAds.Close(); }
+			strcat(return_buff, attrib_values.c_str());
+			strcat(return_buff, "\nThe Requirements expression for your job has these conditions:\n\n");
+		}
+
+		// write analysis of the requirements expression.
+
+		// TJ's experimental analysis (now with more anal)
+		if (analyze_detail_level > 1) {
+			std::string subexpr_detail;
+			AnalyzeRequirementsForEachTarget(request, startdAds, subexpr_detail, analyze_detail_level);
+			strcat(return_buff, subexpr_detail.c_str());
+			strcat(return_buff, "\nSuggestions:\n\n");
+		}
+
+		// write the analyzers analysis to the buffer
+		//
+		strcat(return_buff, subexpr_buf.c_str());
+	}
 
 	if( fOffConstraint == totalMachines ) {
         strcat(return_buff, "\nWARNING:  Be advised:\n   Request did not match any resource's constraints\n");
