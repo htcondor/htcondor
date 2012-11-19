@@ -410,7 +410,7 @@ void ConfigConvertDefaultIPToSocketIP()
 
 	if( !param_boolean("ENABLE_ADDRESS_REWRITING",true) ) {
 		enable_convert_default_IP_to_socket_IP = false;
-		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because ENABLE_ADDRESS_REWRITING is true.\n");
+		dprintf(D_FULLDEBUG,"Disabling ConvertDefaultIPToSocketIP() because ENABLE_ADDRESS_REWRITING is false.\n");
 	}
 }
 
