@@ -94,6 +94,15 @@ claiming a slot.  The behavior was always as though
 in communication errors for jobs running from multi-homed submit machines.
 \Ticket{3330}
 
+\item When using \Condor{defrag} or \Condor{drain}, a rare sequence of
+events could result in the \Condor{startd} exiting with the
+following error message:
+
+\begin{verbatim}
+ERROR "match_info() called with unexpected state (Drained)"
+\end{verbatim}
+\Ticket{3331}
+
 \end{itemize}
 
 \noindent Known Bugs:
