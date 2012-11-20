@@ -1826,18 +1826,15 @@ bool
 JICShadow::publishUpdateAd( ClassAd* ad )
 {
 	filesize_t execsz = 0;
-	char buf[200];
-
 
 	// if we are using PrivSep, we need to use that mechanism to calculate
 	// the disk usage, as we don't have privs to traverse the users's execute
 	// dir.
 	CondorPrivSepHelper* privsep_helper = Starter->condorPrivSepHelper();
 	if (privsep_helper) {
-		off_t total_usage;
+		off_t total_usage = 0;
 		if (privsep_helper->get_exec_dir_usage( &total_usage)) {
-			sprintf( buf, "%s=%lu", ATTR_DISK_USAGE, (unsigned long)total_usage); 
-			ad->InsertOrUpdate( buf );
+			ad->Assign(ATTR_DISK_USAGE, (unsigned long)((total_usage+1023)/1024) );
 		}
 	} else{
 		// if there is a filetrans object, then let's send the current
@@ -1849,8 +1846,7 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 			// owns the directory and it may not be world-readable
 			Directory starter_dir( Starter->GetWorkingDir(), PRIV_USER );
 			execsz = starter_dir.GetDirectorySize();
-			sprintf( buf, "%s=%lu", ATTR_DISK_USAGE, (long unsigned)((execsz+1023)/1024) ); 
-			ad->InsertOrUpdate( buf );
+			ad->Assign(ATTR_DISK_USAGE, (unsigned long)((execsz+1023)/1024) ); 
 		}
 	}
 
