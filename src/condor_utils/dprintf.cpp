@@ -332,7 +332,7 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, time_t clock
 					_condor_dprintf_exit(sprintf_error, "Error writing to debug header\n");	
 				}
 			}
-			rc = sprintf_realloc(&buf, &bufpos, &buflen, "(%s%s)", _condor_DebugFlagNames[cat], verbosity);
+			rc = sprintf_realloc(&buf, &bufpos, &buflen, "(%s%s) ", _condor_DebugFlagNames[cat], verbosity);
 			if (rc < 0) sprintf_errno = errno;
 			//formatter << "(" << _condor_DebugFlagNames[cat] << verbosity << ") ";
 		}
