@@ -368,8 +368,7 @@ main(int argc, const char **argv)
 	config();
 
 		// Set up the dprintf stuff...
-	Termlog = true;
-	dprintf_config("test_log_writer", get_param_functions());
+	dprintf_set_tool_debug("test_log_writer", 0);
 	set_debug_flags(NULL, D_ALWAYS);
 
 	bool			error = false;

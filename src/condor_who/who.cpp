@@ -961,8 +961,7 @@ void parse_args(int /*argc*/, char *argv[])
 			} else {
 				pflags = NULL;
 			}
-			Termlog = 1;
-			dprintf_config ("TOOL", get_param_functions());
+			dprintf_set_tool_debug("TOOL", 0);
 			set_debug_flags( pflags, D_NOHEADER | D_FULLDEBUG );
 			continue;
 		}

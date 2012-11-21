@@ -394,7 +394,7 @@ IpVerify::AuthEntryToString(const in6_addr & host, const char * user, perm_mask_
 		// to print IPv4 address neatly.
 	char buf[INET6_ADDRSTRLEN];
 	memset((void*)buf, 0, sizeof(buf));
-	uint32_t* addr = (uint32_t*)&host;
+	const uint32_t* addr = (const uint32_t*)&host;
 		// checks if IPv4-mapped-IPv6 address
 	
 	const char* ret = NULL;

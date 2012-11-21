@@ -180,8 +180,7 @@ bool SSHToJob::parseArgs(int argc,char **argv)
 
 		if( match_prefix( argv[nextarg], "-debug" ) ) {
 				// dprintf to console
-			Termlog = 1;
-			dprintf_config( "TOOL", get_param_functions() );
+			dprintf_set_tool_debug("TOOL", 0);
 			set_debug_flags(NULL, D_FULLDEBUG);
 			m_debug = true;
 		} else if( match_prefix( argv[nextarg], "-help" ) ) {

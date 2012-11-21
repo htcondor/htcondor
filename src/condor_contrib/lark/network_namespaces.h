@@ -24,10 +24,12 @@
 
 #include <string>
 #include <sys/types.h>
+#include <memory>
 
 #include "classad/classad.h"
 #include "condor_sockaddr.h"
 #include "NetworkPluginManager.h"
+#include "ip_lock.h"
 
 class NetworkNamespaceManager : public NetworkManager {
 
@@ -75,14 +77,17 @@ private:
 	std::string m_network_namespace;
 	std::string m_internal_pipe;
 	std::string m_external_pipe;
-	condor_sockaddr m_internal_address;
-	MyString m_internal_address_str;
+	condor_sockaddr m_internal_address, m_external_address;
+	std::string m_internal_address_str;
 	int m_sock;
 	bool m_created_pipe;
 	classad::ClassAd m_statistics;
 
 	// Synchronization pipes.
 	int m_p2c[2], m_c2p[2];
+
+	// Lock for IP address
+	std::auto_ptr<IPLock> m_iplock_external, m_iplock_internal;
 };
 
 #endif

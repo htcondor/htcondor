@@ -30,7 +30,10 @@
 #include "simple_arg.h"
 #include <stdio.h>
 #ifdef WIN32
+// condor_sys_nt.h and signal.h disagree on the value of SIGABRT, so just undef it in this code.
+#undef SIGABRT
 #include <signal.h>
+#undef SIGABRT
 #endif
 
 static const char *	VERSION = "0.9.5";
@@ -85,7 +88,6 @@ int
 main(int argc, const char **argv)
 {
 	set_debug_flags(NULL, D_ALWAYS);
-	param_functions *p_funcs = NULL;
 
 	set_mySubSystem( "TEST_LOG_READER", SUBSYSTEM_TYPE_TOOL );
 
@@ -94,9 +96,7 @@ main(int argc, const char **argv)
 	config();
 
 		// Set up the dprintf stuff...
-	Termlog = true;
-	p_funcs = get_param_functions();
-	dprintf_config("TEST_LOG_READER", p_funcs);
+	dprintf_set_tool_debug("TEST_LOG_READER", 0);
 
 	int		result = 0;
 	int		events = 0;

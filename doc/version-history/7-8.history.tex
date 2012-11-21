@@ -16,6 +16,48 @@ New features will be added in the 7.9.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-8-7}Version 7.8.7}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{itemize}
+
+\item Condor version 7.8.7 not yet released.
+%\item Condor version 7.8.7 released on Month Date, 2012.
+
+\end{itemize}
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Jobs that are submitted with the ``-spool'' option to \Condor{submit}
+will no longer be left indefinitely in hold state.  Instead the jobs will be
+removed if spooling fails, and will also periodically remove jobs that have
+been in hold state due to file transfer for at least twelve hours.
+\Ticket{3200}
+
+
+\end{itemize}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-8-6}Version 7.8.6}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -55,6 +97,19 @@ The details of each version are described below.
 when a string argument containing a valid number is given.
 \Ticket{3102}
 
+\item Contrary to the intended behavior, jobs run via glexec did not
+get put on hold shortly before their proxy expired.
+\Ticket{3283}
+
+\item Starting in 7.8.0, when using glexec, the job was put on hold
+shortly after the user's proxy was refreshed.  The stated hold
+reason was, ``Proxy about to expire.''
+\Ticket{3280}
+
+\item The configuration setting
+\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_REFRESH} had no effect.
+\Ticket{3282}
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -81,8 +136,10 @@ when a string argument containing a valid number is given.
 
 \begin{itemize}
 
-\item Condor version 7.8.5 not yet released.
-%\item Condor version 7.8.5 released on Month Date, 2012.
+\item Condor version 7.8.5 released on October 22, 2012.
+
+\item \Security This version contains an important security bug fix.  See below
+for details of this and other bugs fixed.
 
 \end{itemize}
 
@@ -109,6 +166,10 @@ caused by a bug in the Condor version 7.8.4 \Condor{negotiator}.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item \Security Fixed a bug which allowed jobs submitted to the standard
+universe to escalate privilege on the submit machine and execute code as root.
+(CVE-2012-5390)
 
 \item Fixed a problem with jobs that are submitted with
 \begin{verbatim}

@@ -215,7 +215,7 @@ main( int argc, char **argv )
 
 // This function is called by dprintf - always display our pid in our
 // log entries.
-extern "C"
+//extern "C"
 int
 display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
