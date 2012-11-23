@@ -436,11 +436,11 @@ VanillaProc::StartJob()
 
 		// Now, set the CPU shares
 		ClassAd * MachineAd = Starter->jic->machClassAd();
-		int slotWeight;
-		if (MachineAd->LookupInteger(ATTR_SLOT_WEIGHT, slotWeight)) {
-			climits.set_cpu_shares(slotWeight*100);
+		int numCores = 1;
+		if (MachineAd->LookupInteger(ATTR_CPUS, numCores)) {
+			climits.set_cpu_shares(numCores*100);
 		} else {
-			dprintf(D_FULLDEBUG, "Invalid value of SlotWeight in machine ClassAd; ignoring.\n");
+			dprintf(D_FULLDEBUG, "Invalid value of Cpus in machine ClassAd; ignoring.\n");
 		}
 	}
 
