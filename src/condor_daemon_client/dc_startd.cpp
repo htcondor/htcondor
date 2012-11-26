@@ -117,11 +117,7 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 
 	if( !sock->put_secret( m_claim_id.c_str() ) ||
 	    !m_job_ad.put( *sock ) ||
-<<<<<<< HEAD
-	    !sock->put( m_scheduler_addr.c_str() ) ||
-=======
 	    !sock->put( scheduler_addr_to_send.c_str() ) ||
->>>>>>> V7_8-branch
 	    !sock->put( m_alive_interval ) )
 	{
 		dprintf(failureDebugLevel(),
