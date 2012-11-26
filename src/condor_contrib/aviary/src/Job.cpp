@@ -630,15 +630,10 @@ Job::setSubmission ( const char* _subName, int cluster )
     {
         submission = ( *element ).second;
         // update our qdate index collection also
-        SubmissionMultiIndexType::iterator qdate_it;
-        qdate_it = g_qdate_submissions.find(qdate);
-        if (qdate_it!=g_qdate_submissions.end()) {
-            // are we updating for an older qdate or a qdate collision
-            // with another submission (multimap)?
-            if (strcmp(qdate_it->second->getName(),_subName)==0 && qdate_it->second->getOldest() > qdate) {
-                g_qdate_submissions.erase(qdate_it);
+        if (submission->getOldest() > qdate) {
+                // swap the old one out
+                g_qdate_submissions.erase(g_qdate_submissions.find(submission->getOldest()));
                 g_qdate_submissions.insert(make_pair(qdate,submission));
-            }
         }
     }
     m_submission = submission;

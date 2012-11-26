@@ -1836,6 +1836,10 @@ match_info( Resource* rip, char* id )
 			rval = FALSE;
 		}
 		break;
+	case drained_state:
+		dprintf( D_ALWAYS, "Got match while in Drained state; ignoring.\n" );
+		return TRUE;
+		break;
 	default:
 		EXCEPT( "match_info() called with unexpected state (%s)", 
 				state_to_string(rip->state()) );

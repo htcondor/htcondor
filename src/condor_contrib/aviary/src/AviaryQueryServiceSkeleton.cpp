@@ -524,6 +524,27 @@ bool qdateCompare(SubmissionMultiIndexType::value_type& x, SubmissionMultiIndexT
   return x.first <= y.first;
 }
 
+// need a way to step over qdate dupes when a specific offset comes in
+// treat name/owner as the secondary "key"
+bool advanceQdateIndex(SubmissionObject* index, SubmissionID* offset) {
+    bool advance = false;
+
+    // quick check
+    if (index->getOldest() != offset->getQdate()) {
+        return advance;
+    }
+
+    // now see how specific the offset is
+    if (!offset->isNameNil() && !offset->getName().empty()) {
+        advance = (index->getName() == offset->getName());
+    }
+    if (!offset->isOwnerNil() && !offset->getOwner().empty()) {
+        advance = (index->getOwner() == offset->getOwner());
+    }
+
+    return advance;
+}
+
 GetSubmissionIDResponse* AviaryQueryServiceSkeleton::getSubmissionID(wso2wsf::MessageContext* /*outCtx*/ ,GetSubmissionID* _getSubmissionID)
 {
     GetSubmissionIDResponse* response = new GetSubmissionIDResponse;
@@ -550,7 +571,7 @@ GetSubmissionIDResponse* AviaryQueryServiceSkeleton::getSubmissionID(wso2wsf::Me
     }
 
     // see if we are scanning using a qdate index
-    if (!_getSubmissionID->isModeNil()) {
+    if (mode) {
 
         SubmissionMultiIndexType::iterator it, start, last;
         int i=0;
@@ -574,8 +595,10 @@ GetSubmissionIDResponse* AviaryQueryServiceSkeleton::getSubmissionID(wso2wsf::Me
             it=last=start;
             if (qdate>=(*it).second->getOldest() && qdate>0)  {
                 do {
-                    response->addIds(makeSubmissionID((*it).second));
-                    i++;
+                    if (!advanceQdateIndex((*it).second,offset)) {
+                        response->addIds(makeSubmissionID((*it).second));
+                        i++;
+                    }
                     last = it;
                 }
                 while (g_qdate_submissions.begin()!=it-- && i<size);
@@ -591,11 +614,13 @@ GetSubmissionIDResponse* AviaryQueryServiceSkeleton::getSubmissionID(wso2wsf::Me
                 start = g_qdate_submissions.begin();
             }
             it = --g_qdate_submissions.end();
-            // TODO: integer rollover, but interop of xsd:unsignedInt?
+            // TODO: integer rollover, but interop of xsd unsignedInt?
             if (qdate<it->second->getOldest() && qdate<INT_MAX)  {
                 for (it=start; it!=g_qdate_submissions.end() && i<size; it++) {
-                    response->addIds(makeSubmissionID((*it).second));
-                    i++;
+                     if (!advanceQdateIndex((*it).second,offset)) {
+                        response->addIds(makeSubmissionID((*it).second));
+                        i++;
+                     }
                 }
             }
             response->setRemaining(i?distance(it,g_qdate_submissions.end()):0);
