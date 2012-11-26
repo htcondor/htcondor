@@ -140,18 +140,14 @@ user-man/dagman-diamond.eps: user-man/dagman-diamond.fig
 	rm -f $@
 	fig2dev -L eps -m .6 $< > $@
 
-user-man/dagman-node.eps: user-man/dagman-node.fig
-	rm -f $@
-	fig2dev -L eps -m .6 $< > $@
-
-figures: admin-man/states.eps admin-man/activities.eps admin-man/pool-arch.eps user-man/dagman-diamond.eps user-man/dagman-node.eps
+figures: admin-man/states.eps admin-man/activities.eps admin-man/pool-arch.eps user-man/dagman-diamond.eps 
 
 
 $(TARGETDIR):
 	mkdir $(TARGETDIR)
 
 clean:
-	rm -rf $(LOCALDIR) ref ref.new man user admin *.1 *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex user-man/dagman-diamond.eps user-man/dagman-node.eps admin-man/pool-arch.eps *.out
+	rm -rf $(LOCALDIR) ref ref.new man user admin *.1 *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex user-man/dagman-diamond.eps admin-man/pool-arch.eps *.out
 	cd makeman; make clean
 
 reallyclean: clean
