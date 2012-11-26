@@ -56,7 +56,7 @@ AviaryScheddPlugin::earlyInitialize()
 	if (skip) return; skip = true;
 
     string log_name("aviary_job.log");
-    string id_name("job"); id_name+=SEPARATOR; id_name+=getPoolName();
+    string id_name("job"); id_name+=SEPARATOR; id_name+=getScheddName();
     provider = AviaryProviderFactory::create(log_name,id_name,
 											 "SCHEDULER","JOB","services/job/");
     if (!provider) {
