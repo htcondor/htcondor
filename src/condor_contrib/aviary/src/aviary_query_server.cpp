@@ -74,7 +74,7 @@ void main_init(int /* argc */, char * /* argv */ [])
 	init_classad();
 
     string log_name("aviary_query.log");
-    string id_name("query"); id_name+=SEPARATOR; id_name+=getPoolName();
+    string id_name("query"); id_name+=SEPARATOR; id_name+=getScheddName();
     provider = AviaryProviderFactory::create(log_name,id_name,
 											 "CUSTOM",QUERY_SERVER, "services/query/");
     if (!provider) {

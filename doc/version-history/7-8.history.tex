@@ -87,6 +87,22 @@ they finished running if the working directory contained links to
 files that were not globally readable.
 \Ticket{2904}
 
+\item The configuration setting \MacroNI{ENABLE\_ADDRESS\_REWRITING}
+was not correctly applied to the \Condor{schedd} address when
+claiming a slot.  The behavior was always as though
+\MacroNI{ENABLE\_ADDRESS\_REWRITING} was false.  This could result
+in communication errors for jobs running from multi-homed submit machines.
+\Ticket{3330}
+
+\item When using \Condor{defrag} or \Condor{drain}, a rare sequence of
+events could result in the \Condor{startd} exiting with the
+following error message:
+
+\begin{verbatim}
+ERROR "match_info() called with unexpected state (Drained)"
+\end{verbatim}
+\Ticket{3331}
+
 \end{itemize}
 
 \noindent Known Bugs:
