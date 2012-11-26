@@ -207,20 +207,21 @@ check_cluster_list2 () {
 
 check_reverse_connectivity() {
     # check if the remote host can connect back
+    # Return 1 if the test fails (like most unix tools)
     # $1 = cluster to check for
     remote_host=$1
     myhost=`hostname`
     # try ping first
     ssh $remote_host ping -c 1 $myhost > /dev/null 2>/dev/null
-    if [ $? -eq 0 ]; then
-        return 0
+    if [ $? -ne 0 ]; then
+        return 1
     fi
     # test nc from remote_host to 11000 (bosco is started and default port is used)
     ssh $remote_host nc -z $myhost 11000 > /dev/null 2>/dev/null
-    if [ $? -eq 0 ]; then
-        return 0
+    if [ $? -ne 0 ]; then
+        return 1
     fi
-    return 1
+    return 0
 }
 
 
@@ -648,17 +649,11 @@ if [ $? -ne 0 ]; then
 fi
 
 # Test reverse connectivity from remote_host
-echo -n "Testing reverse connectivity..."
 check_reverse_connectivity $remote_host
 if [ $? -eq 0 ]; then
-    echo "Done!"
+    reverse_conn=1
 else
-    echo "Failed!"
-    echo "$remote_host was unable to connect to the BOSCO host."
-    echo "If the submit node is unable to connect back, the worker nodes are unlikely to be able to as required."
-    echo "Check if you have firewalls blocking the connection."
-    echo "Exiting, retry to add the cluster once you fix the problem."    
-    exit 1
+    reverse_conn=0
 fi
 
 if [ "$cluster_type" == "pbs" ]; then
@@ -691,7 +686,6 @@ if [ "x$glite_location" == "x" -o "x$release_dir" == "x" ]; then
     exit 1
 fi
 
-echo "Installing BOSCO on $remote_host..."
 
 # Find remote platform
 # TODO: add the possibility to force a specific platform for the remote system (./findplatform --force=RH5)
@@ -717,14 +711,13 @@ if [ "x$url" == "x" ]; then
     fi
 fi    
 
-echo "Downloading BOSCO from $url"
 
 # Create a tmp dir, download the files and rsync them to the remote system
 # A download to the remote system would be faster but we cannot count on ports different form the SSH one
 # OS X mktemp requires a template
 tmp_dir=`mktemp -d /tmp/tmp.XXXXXXXX`
-show_progress "Downloading bosco for $host" curl -s -o $tmp_dir/bosco-download.tar.gz $url 
-show_progress "Unpacking bosco" tar xzf $tmp_dir/bosco-download.tar.gz -C $tmp_dir
+show_progress "Downloading for $remote_host" curl -s -o $tmp_dir/bosco-download.tar.gz $url 
+show_progress "Unpacking" tar xzf $tmp_dir/bosco-download.tar.gz -C $tmp_dir
 archive_dir=`ls -d $tmp_dir/condor*`
 if [ $? -ne 0 ]; then
     echo "Unable to download and prepare BOSCO for remote installation."
@@ -761,7 +754,7 @@ else
 fi
 rsync -aq  $archive_dir/$libdir/libclassad.so* $remote_host:$remote_glite_dir/lib/ 2>/dev/null
 rsync -aq  $archive_dir/$libdir/libcondor_utils* $remote_host:$remote_glite_dir/lib/ 2>/dev/null
-show_progress "Sending libraries to $host" rsync -aq  $archive_dir/$libdir/condor $remote_host:$remote_glite_dir/lib/ 2>/dev/null
+show_progress "Sending libraries to $remote_host" rsync -aq  $archive_dir/$libdir/condor $remote_host:$remote_glite_dir/lib/ 2>/dev/null
 rsync -aq  $archive_dir/sbin/condor_ft-gahp $remote_host:$remote_glite_dir/bin 2>/dev/null
 
 # create the glidein
@@ -814,4 +807,20 @@ mv $tmpfile $condor_config_file
 chmod 644 $condor_config_file
 condor_reconfig 2>/dev/null 1>&2
 
+# Submission instructions
+cat << EOM
+The cluster $remote_host has been added to BOSCO
+It is available to run jobs submitted with the following values:
+> universe = grid
+> grid_resource = batch $cluster_type $remote_host
+EOM
+
+if [ "$reverse_conn" -eq "1" ]; then
+    cat << EOM
+OR to run load balanced job on all available clusters with:
+> universe = vanilla
+EOM
+
+
+fi
 
