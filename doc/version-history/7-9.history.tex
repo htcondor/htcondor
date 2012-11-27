@@ -126,13 +126,11 @@ configuration knob, \Macro{JOB\_DEFAULT\_NOTIFICATION}, so that admins can
 change the default according to their preference.
 \Ticket{2155}
 
-\item \Condor{schedd} and \Condor{shadow} were not respecting the
-\Macro{DAGManNodesMask} attribute. This caused extra events to be written to
-the DAGMan node log.
-\Ticket{3311}
-
-\item Remove spurious newline from output of \Condor{submit}
-\Ticket{3316}
+\item For platforms supporting cgroups,
+resource limits can now be applied per job,
+where a job may consist of multiple processes.
+See section~\ref{sec:Resource-Limits-Cgroup} for details.
+\Ticket{2734}
 
 \end{itemize}
 
@@ -140,13 +138,23 @@ the DAGMan node log.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable \Macro{MEMORY\_LIMIT}
+supports implementing memory resource limits on a per-job basis under cgroups.
+\Ticket{2734}
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item \Condor{schedd} and \Condor{shadow} were not respecting the
+\Macro{DAGManNodesMask} attribute. This caused extra events to be written to
+the DAGMan node log.
+\Ticket{3311}
+
+\item Remove spurious newline from output of \Condor{submit}
+\Ticket{3316}
 
 \item Fixed a bug that caused the \Condor{shadow} to set job attribute
 \Attr{X509UserProxySubject} to the wrong value when the job's X509
