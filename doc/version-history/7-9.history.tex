@@ -56,6 +56,12 @@ configuration knob, \Macro{JOB\_DEFAULT\_NOTIFICATION}, so that admins can
 change the default according to their preference.
 \Ticket{2155}
 
+\item For platforms supporting cgroups,
+resource limits can now be applied per job,
+where a job may consist of multiple processes.
+See section~\ref{sec:Resource-Limits-Cgroup} for details.
+\Ticket{2734}
+
 \item \Condor{schedd} and \Condor{shadow} were not respecting the
 \Macro{DAGManNodesMask} attribute. This caused extra events to be written to
 the DAGMan node log.
@@ -70,7 +76,9 @@ the DAGMan node log.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable \Macro{MEMORY\_LIMIT}
+supports implementing memory resource limits on a per-job basis under cgroups.
+\Ticket{2734}
 
 \end{itemize}
 
