@@ -163,19 +163,20 @@ contain
 \index{DAGManNodesLog!job ClassAd attribute}
 \item[\AdAttr{DAGManNodesLog}:] For a DAGMan node job only, gives the path to
 an event log used exclusively by DAGMan to monitor the state of the DAG's jobs.
-Note: events are written to this log file in addition to any log file
-specified in the job's submit file.
+Events are written to this log file in addition to any log file
+specified in the job's submit description file.
 
 %%% ClassAd attribute: DAGManNodesLog
 \index{ClassAd job attribute!DAGManNodesMask}
 \index{DAGManNodesMask!job ClassAd attribute}
 \item[\AdAttr{DAGManNodesMask}:] For a DAGMan node job only, 
 a comma-separated list of the event codes that should be written
-to the log specified by \Attr{DAGManNodesLog} 
-(the auxiliary log).  (All events not specified in the
-\Attr{DAGManNodesMask} string are not written to the auxiliary event log.)
+to the log specified by \Attr{DAGManNodesLog}, 
+known as the auxiliary log.
+All events not specified in the
+\Attr{DAGManNodesMask} string are not written to the auxiliary event log.
 The value of this attribute is determined
-by DAGMan, and is passed to the job via the \Condor{submit} command line.
+by DAGMan, and it is passed to the job via the \Condor{submit} command line.
 By default, the following events are written to the
 auxiliary job log:  
 \begin{itemize}
