@@ -102,11 +102,11 @@ Refer to section~\ref{sec:group-accounting} for more information.
 \item Added experimental support for EC2 spot instances.
 \Ticket{3209}
 
-\item (This feature was added in 7.9.1 but announced for 7.9.2.)  Add new
-protocols, \Expr{euca3://} and \Expr{euca3s://}, to EC2 grid type URLs.  
-Condor will not send resources addressed in this way the
-``InstanceInitiatedShutdownBehavior'' parameter, which would otherwise cause
-an error.
+\item (This feature was added in version 7.9.1.)  
+There are two new protocols for the submission of grid type EC2 jobs,
+\Expr{euca3://} and \Expr{euca3s://}.
+These protocols exist to work correctly when the resources do not support 
+the \Param{InstanceInitiatedShutdownBehavior} parameter.
 \Ticket{2974}
 
 \item Added both a \Opt{-suppress\_notification},
@@ -153,7 +153,7 @@ supports implementing memory resource limits on a per-job basis under cgroups.
 the DAGMan node log.
 \Ticket{3311}
 
-\item Remove spurious newline from output of \Condor{submit}
+\item Removed a spurious newline from the output of \Condor{submit}.
 \Ticket{3316}
 
 \item Fixed a bug that caused the \Condor{shadow} to set job attribute
@@ -219,11 +219,10 @@ for details of this and other bugs fixed.
 
 \begin{itemize}
 
-\item Add new
-protocols, \Expr{euca3://} and \Expr{euca3s://}, to EC2 grid type URLs.  
-Condor will not send resources addressed in this way the
-``InstanceInitiatedShutdownBehavior'' parameter, which would otherwise cause 
-an error.
+\item There are two new protocols for the submission of grid type EC2 jobs,
+\Expr{euca3://} and \Expr{euca3s://}.
+These protocols exist to work correctly when the resources do not support 
+the \Param{InstanceInitiatedShutdownBehavior} parameter.
 \Ticket{2974}
 
 \item \Condor{job\_router} can now submit the routed copy of jobs to a
