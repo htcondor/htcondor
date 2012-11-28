@@ -380,9 +380,9 @@
             <xsl:copy-of select="@*"/>
             <FirewallException Id="FWX1" Name="condor_master.exe" Scope="any" xmlns="http://schemas.microsoft.com/wix/FirewallExtension" IgnoreFailure="yes"/>
           </xsl:copy>
-          <ServiceInstall Id="CondorService" Description="HTCondor" DisplayName="HTCondor" ErrorControl="normal"  Name="HTCondor" Start="auto" Type="ownProcess" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
-          <ServiceControl Id="StartCondorService" Name="HTCondor" Start="install" Wait="no" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
-          <ServiceControl Id="StopCondorService" Name="HTCondor" Stop="both" Wait="yes" Remove="uninstall" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
+          <ServiceInstall Id="CondorService" Description="condor" DisplayName="condor" ErrorControl="normal"  Name="condor" Start="auto" Type="ownProcess" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
+          <ServiceControl Id="StartCondorService" Name="condor" Start="install" Wait="no" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
+          <ServiceControl Id="StopCondorService" Name="condor" Stop="both" Wait="yes" Remove="uninstall" xmlns="http://schemas.microsoft.com/wix/2006/wi" />
        </xsl:when>
        <xsl:when test="@Source = '$(var.Source)\bin\condor_schedd.exe'">
           <xsl:copy>
