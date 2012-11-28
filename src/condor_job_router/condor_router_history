@@ -131,7 +131,7 @@ try:
     for option,value in options:
         if option == "--help" or option == "-h":
             Usage()
-            sys.exit(0)
+            os._exit(0)
         if option == "--age":
             end_timestamp = time.time() - 3600*24*float(value)
         if option == "--start":
