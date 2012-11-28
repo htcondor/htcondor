@@ -77,7 +77,11 @@ description.
      \Arg{NumberOfJobs} is a positive integer. If the option is
      omitted, the number of idle jobs is unlimited.   Note that for
      this argument, each individual process within a cluster counts as a 
-     job, which is inconsistent with \OptArg{-maxjobs}.}
+     job, which is inconsistent with \OptArg{-maxjobs}. Note that
+     nothing special is done to the submit file: a ``queue 5000'' statement in
+     a submit file where \Arg{-maxidle} is set to 250 will result in a cluster
+     of 5000 new jobs being submitted to the schedd; in this case, \Condor{dagman}
+     will resume submitting jobs when the number of idle jobs falls below 250. }
   \OptItem{\OptArg{-maxjobs}{NumberOfJobs}}{Sets the maximum number of jobs
      within the DAG that will be submitted to HTCondor at one time.
      \Arg{NumberOfJobs} is a positive integer. If the option is
