@@ -134,9 +134,64 @@ int cleanup_chain(const char *chain);
  */
 int get_firewall_data(struct ipt_getinfo *info, struct ipt_get_entries **result_entries);
 
+/*
+ * Bridge helper functions.
+ */
+
+/*
+ * Open socket.
+ *
+ * Open a socket usable for talking to the kernel to create bridges.
+ *
+ * Returns the fd when the open was successful (it logs failures) and -1 on
+ * failure.
+ *
+ * The user is responsible for closing the socket when done.
+ */
+int open_bridge_socket();
+
+/*
+ * Create a bridge device.
+ *
+ * - bridge_name: String containing the bridge name; must be less than IFNAMSIZ
+ *   characters in length.
+ *
+ * Return 0 on success and non-zero on failure.
+ */
+int create_bridge(const char * bridge_name);
+
+/*
+ * Delete a bridge device.
+ *
+ * - bridge_name: String containing the bridge name; must be less than IFNAMSIZ
+ *   characters in length.
+ * 
+ * Return 0 on success and non-zero on failure.
+ */
+int delete_bridge(const char * bridge_name);
+
+/*
+ * Add a network interface to the bridge.
+ *
+ * - bridge_name: Name of the bridge device.
+ * - dev: Name of the device to add.
+ *
+ * Return 0 on success and non-zero on failure.
+ */
+int add_interface_to_bridge(const char *bridge_name, const char *dev);
+
+/*
+ * Delete a network interface from the bridge.
+ *
+ * - bridge_name: Name of the bridge device.
+ * - dev: Name of the device to delete.
+ *
+ * Return 0 on success and non-zero on failure.
+ */
+int delete_interface_from_bridge(const char *bridge_name, const char *dev);
+
 #endif
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
-
