@@ -210,20 +210,8 @@ Hopefully in future versions, the HTCondor package will include the
 \Prog{boinc\_client}, and there will be a way to automatically install
 and configure the BOINC software together with HTCondor.
 
-The \Prog{boinc\_client} executables can be obtained at one of the
-following locations:
-\begin{description}
-\item[\URL{http://boinc.berkeley.edu/download.php}]
-  This is the official BOINC download site, which provides binaries
-  for MacOS 10.3 or higher, Linux/x86, and Windows/x86.
-  From the download table, use the ``Recommended version'', and use 
-  the ``Core client only (command-line)'' package when available.
-
-\item[\URL{http://boinc.berkeley.edu/download\_other.php}]
-  This page contains links to sites that distribute
-  \Prog{boinc\_client} binaries for other platforms beyond the
-  officially supported ones.
-\end{description}
+The \Prog{boinc\_client} executables can be obtained at 
+\URL{http://boinc.berkeley.edu/download.php}.
 
 Once the BOINC client software has been downloaded, the
 \Prog{boinc\_client} binary should be placed in a location where the
@@ -258,7 +246,7 @@ Wisconsin at Milwaukee) HTCondor administrators should go to
 \URL{http://einstein.phys.uwm.edu/create\_account\_form.php}, fill in
 the web form, and generate a new Einstein@home identity.
 This identity takes the form of a project URL (such as
-\URL{http://einstein.phys.uwm.edu}) followed by an \Term{account key},
+http://einstein.phys.uwm.edu) followed by an \Term{account key},
 which is a long string of letters and numbers that is used as a unique
 identifier. 
 This URL and account key will be needed when configuring HTCondor to use
@@ -474,8 +462,10 @@ will write out the resulting account file to the local BOINC directory
 on the machine, and then future invocations of the
 \Prog{boinc\_client} will already be attached to the appropriate
 project(s).
-More information about participating in multiple BOINC projects can be
-found at \URL{http://boinc.berkeley.edu/multiple\_projects.php}.
+%  This link is no longer valid, and on the boinc web page,
+%  there does not seem to any other links that substitute.
+%More information about participating in multiple BOINC projects can be
+%found at \URL{http://boinc.berkeley.edu/multiple\_projects.php}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Backfill-BOINC-Windows}BOINC on Windows}
