@@ -41,16 +41,21 @@ list()
 {
     # Line looks like:
     # entry=user@host.edu max_queued=2000 cluster_type=pbs
-    # Check for the cluster_list file
+    # Check for the clusterlist file
+    # The exit code is the number of entries (lines)
+    let counter=0
     if [ -e $CLUSTERLIST_LOCATION ]; then
         while read line; do
             name=`expr "$line" : "entry=\(.*\) max"`
             type=`expr "$line" : ".*cluster_type=\(.*\)"`
             echo $name/$type
+            let counter+=1
         done < $CLUSTERLIST_LOCATION
     else
         echo "No clusters configured"
+        return 0
     fi
+    return $counter
 }
 
 
@@ -561,7 +566,11 @@ while true; do
     case "$1" in
         -h|--help) usage; exit 1; shift ;;
         -a|--add) remote_host=$2; shift 2; break ;;
-        -l|--list) list; exit 0 ;;
+        -l|--list) list 
+                   if [ $? -eq 0 ]; then
+                       exit 2
+                   fi
+                   exit 0 ;;
         -s|--status) get_status $2;  shift 2; exit 0 ;;
         -t|--test) test_cluster $2; shift 2; exit 0 ;;
         -r|--remove) remove_cluster $2; shift 2; exit 0;;

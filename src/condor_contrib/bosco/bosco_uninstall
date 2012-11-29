@@ -16,15 +16,20 @@ if [ $? != 0 ] ; then
     exit 1
 fi
 
-if [ "x$1" != "x--all" ]; then
-    echo "Removing all the installed clusters."
-    for i in `bosco_cluster --list`; do
-        echo "Removing $i"
-        bosco_cluster --remove $i
-    done
-
-    rm -rf $BOSCO_ENV_DIR
-    rm $BOSCO_SSH_KEY_FILES
+if [ "x$1" == "x--all" ]; then
+    echo "Removing the BOSCO key and all the installed clusters."
+    cluster_list=`bosco_cluster --list`
+    if [ $? -eq 2 ]; then
+        echo "No cluster installed"
+    else
+        for i in `bosco_cluster --list`; do
+            echo "Removing $i"
+            bosco_cluster --remove $i
+        done
+    fi
+    rm -rf $BOSCO_ENV_DIR  
+    # keys may not be there if no cluster has been installed
+    rm $BOSCO_SSH_KEY_FILES >& /dev/null
 fi
 
 
