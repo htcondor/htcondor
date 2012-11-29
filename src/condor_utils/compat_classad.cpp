@@ -1201,6 +1201,34 @@ LookupBool( const char *name, bool &value ) const
 }
 
 int ClassAd::
+EvalAttr( const char *name, classad::ClassAd *target, classad::Value & value)
+{
+	int rc = 0;
+
+	if( target == this || target == NULL ) {
+		getTheMyRef( this );
+		if( EvaluateAttr( name, value ) ) {
+			rc = 1;
+		}
+		releaseTheMyRef( this );
+		return rc;
+	}
+
+	getTheMatchAd( this, target );
+	if( this->Lookup( name ) ) {
+		if( this->EvaluateAttr( name, value ) ) {
+			rc = 1;
+		}
+	} else if( target->Lookup( name ) ) {
+		if( target->EvaluateAttr( name, value ) ) {
+			rc = 1;
+		}
+	}
+	releaseTheMatchAd();
+	return rc;
+}
+
+int ClassAd::
 EvalString( const char *name, classad::ClassAd *target, char *value )
 {
 	int rc = 0;

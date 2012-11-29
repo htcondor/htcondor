@@ -232,6 +232,23 @@ void lower_case( std::string &str )
 	}
 }
 
+void title_case( std::string &str )
+{
+	bool upper = true;
+	for ( unsigned int i = 0; i<str.length(); i++ ) {
+		if (upper) {
+			if ( str[i] >= 'a' && str[i] <= 'z' ) {
+				str[i] = _toupper( str[i] );
+			}
+		} else {
+			if ( str[i] >= 'A' && str[i] <= 'Z' ) {
+				str[i] = _tolower( str[i] );
+			}
+		}
+		upper = isspace(str[i]);
+	}
+}
+
 // returns true if pre is non-empty and str is the same as pre up to pre.size()
 bool starts_with(const std::string& str, const std::string& pre)
 {

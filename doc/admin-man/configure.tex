@@ -6103,6 +6103,21 @@ These settings affect the \Condor{starter}.
         cmd = /bin/sleep
 \end{verbatim}
 
+\label{param:MemoryLimit} 
+\item[\Macro{MEMORY\_LIMIT}]
+  A string with values of \Expr{hard}, \Expr{soft} and the default value
+  of \Expr{none}.
+  If set to \Expr{hard}, the cgroup-based limit on the total amount 
+  of physical memory used by the sum of all processes in the job 
+  will not be allowed to exceed the limit given by the cgroup memory
+  controller attribute memory.limit\_in\_bytes.
+  If the processes try to allocate more memory, 
+  the allocation will succeed, and virtual memory will be allocated, 
+  but no additional physical memory will be allocated.
+  If set to \Expr{soft}, the cgroup-based limit on the total amount 
+  of physical memory used by the sum of all processes in the job 
+  will be allowed to go over the limit, 
+  if there is free memory available on the system.
 
 \label{param:UseVisibleDesktop} 
 \item[\Macro{USE\_VISIBLE\_DESKTOP}]
@@ -6579,13 +6594,15 @@ These macros affect the \Condor{collector}.
   of the \Condor{status} command, which lists how many machines
   are in the pool and how many are running jobs.  The default
   value of \Email{condor-admin@cs.wisc.edu} will send this report to
-  the HTCondor Team developers at the University of Wisconsin-Madison.
-  The HTCondor Team uses
+  the Center for High Throughput Computing at 
+  the University of Wisconsin-Madison.
+  The Center for High Throughput Computing uses
   these weekly status messages in order to have some idea as to how
   many HTCondor pools exist in the world.  We appreciate
   getting the reports, as this is one way we can convince funding
   agencies that HTCondor is being used in the real world.  
-  If you do not wish this information to be sent to the HTCondor Team,
+  If you do not wish this information to be sent to 
+  the Center for High Throughput Computing,
   explicitly set the value to \Expr{NONE} to disable this feature,
   or replace the
   address with a desired location.  
@@ -6615,7 +6632,8 @@ These macros affect the \Condor{collector}.
   the number of total machines, the number of jobs submitted, the
   number of machines running jobs, the host name of the central
   manager, and the \MacroUNI{COLLECTOR\_NAME}.  These
-  updates help the HTCondor Team see how HTCondor is being used around the world.
+  updates help the Center for High Throughput Computing see how HTCondor 
+  is being used around the world.
   By default, they will be sent to \File{condor.cs.wisc.edu}.
   To discontinue sending updates,
   explicitly set this macro to \Expr{NONE}. 
@@ -8511,7 +8529,12 @@ in section~\ref{sec:DAG-configuration}.
   \MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} currently counts each individual
   process within a cluster as a job, which is inconsistent with
   \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED}.  The default is that there is
-  no limit on the maximum number of idle jobs.
+  no limit on the maximum number of idle jobs. Note that nothing special is 
+  done to the submit file: if a submit file has a ``queue 5000'' statement
+  and \Macro{DAGMAN\_MAX\_JOBS\_IDLE} is set to 250, this submit file will
+  result in 5000 jobs being submitted to the schedd, not 250; in this case, no
+  further jobs will then be submitted by \Condor{dagman} until the number of
+  idle jobs falls below 250.
 
 \label{param:DAGManMaxJobsSubmitted}
 \item[\Macro{DAGMAN\_MAX\_JOBS\_SUBMITTED}]
@@ -8937,14 +8960,17 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGmanSuppressNotification}
 \item[\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION}]
-	A boolean value defining whether jobs submitted by \Condor{dagman} will use
-	email notification when certain events occur.  If set to true, then all jobs
-	submitted by \Condor{dagman} will have ``notification = never'' set. This does 
-    not affect the notification of the \Condor{dagman} job itself. A user could set
-	this flag to true, then would only receive one notification when the \Condor{dagman}
-	job completes, rather than thousands of notifications from the jobs submitted by
-	\Condor{dagman}. This flag defaults to true, meaning that no job notification will
-	be sent for a job submitted by \Condor{dagman}.
+  A boolean value defining whether jobs submitted by \Condor{dagman} will use
+  email notification when certain events occur.  
+  If \Expr{True}, 
+  all jobs submitted by \Condor{dagman} will have the equivalent of the
+  submit command \Expr{notification = never} set. 
+  This does not affect the notification for events relating to 
+  the \Condor{dagman} job itself. 
+  Defaults to \Expr{True}, implementing behavior in which the user
+  receives one notification email when the \Condor{dagman} job completes,
+  rather than thousands of notifications from each of the jobs submitted by
+  \Condor{dagman}. 
 
 \end{description}
 

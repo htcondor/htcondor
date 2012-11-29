@@ -1826,21 +1826,30 @@ bool
 JICShadow::publishUpdateAd( ClassAd* ad )
 {
 	filesize_t execsz = 0;
-	char buf[200];
 
-	// if there is a filetrans object, then let's send the current
-	// size of the starter execute directory back to the shadow.  this
-	// way the ATTR_DISK_USAGE will be updated, and we won't end
-	// up on a machine without enough local disk space.
-	if ( filetrans ) {
-		// make sure this computation is done with user priv, since that who
-		// owns the directory and it may not be world-readable
-		Directory starter_dir( Starter->GetWorkingDir(), PRIV_USER );
-		execsz = starter_dir.GetDirectorySize();
-		sprintf( buf, "%s=%lu", ATTR_DISK_USAGE, (long unsigned)((execsz+1023)/1024) ); 
-		ad->InsertOrUpdate( buf );
-
+	// if we are using PrivSep, we need to use that mechanism to calculate
+	// the disk usage, as we don't have privs to traverse the users's execute
+	// dir.
+	CondorPrivSepHelper* privsep_helper = Starter->condorPrivSepHelper();
+	if (privsep_helper) {
+		off_t total_usage = 0;
+		if (privsep_helper->get_exec_dir_usage( &total_usage)) {
+			ad->Assign(ATTR_DISK_USAGE, (unsigned long)((total_usage+1023)/1024) );
+		}
+	} else{
+		// if there is a filetrans object, then let's send the current
+		// size of the starter execute directory back to the shadow.  this
+		// way the ATTR_DISK_USAGE will be updated, and we won't end
+		// up on a machine without enough local disk space.
+		if ( filetrans ) {
+			// make sure this computation is done with user priv, since that who
+			// owns the directory and it may not be world-readable
+			Directory starter_dir( Starter->GetWorkingDir(), PRIV_USER );
+			execsz = starter_dir.GetDirectorySize();
+			ad->Assign(ATTR_DISK_USAGE, (unsigned long)((execsz+1023)/1024) ); 
+		}
 	}
+
 	MyString spooled_files;
 	if( job_ad->LookupString(ATTR_SPOOLED_OUTPUT_FILES,spooled_files) && spooled_files.Length() > 0 )
 	{

@@ -4,7 +4,7 @@ VERLINE = $(shell grep set.VERSION ../CMakeLists.txt)
 VERTEMP = ${word 3,${subst ",,${subst ),,${subst (, ,${VERLINE}}}}}
 SUBDIR  = v$(VERTEMP)
 SUBVER  = V$(subst .,_,$(VERTEMP))
-MANDIR = /p/condor/public/html/manual/$(SUBDIR)
+MANDIR = /p/condor/public/html/htcondor/manual/$(SUBDIR)
 TARGETDIR = $(MANDIR).new
 LOCALDIR = ref-$(SUBDIR)
 MANPAGES = cleanup_release.html condor_advertise.html condor_checkpoint.html condor_check_userlogs.html condor_chirp.html condor_cod.html condor_cold_start.html condor_cold_stop.html condor_compile.html condor_config_bind.html condor_configure.html condor_config_val.html condor_dagman.html condor_fetchlog.html condor_findhost.html condor_gather_info.html condor_glidein.html condor_history.html condor_hold.html condor_load_history.html condor_master.html condor_off.html condor_on.html condor_power.html condor_preen.html condor_prio.html condor_qedit.html condor_q.html condor_reconfig.html condor_release.html condor_reschedule.html condor_restart.html condor_rm.html condor_router_history.html condor_procd.html condor_router_q.html condor_router_rm.html condor_run.html condor_set_shutdown.html condor_ssh_to_job.html condor_stats.html condor_status.html condor_store_cred.html condor_submit_dag.html condor_submit.html condor_transfer_data.html condor_updates_stats.html condor_userlog.html condor_userprio.html condor_vacate.html condor_vacate_job.html condor_version.html condor_wait.html filelock_midwife.html filelock_undertaker.html gidd_alloc.html install_release.html procd_ctl.html uniq_pid_midwife.html uniq_pid_undertaker.html condor_suspend.html condor_continue.html
@@ -86,8 +86,8 @@ ref.html: clean $(TARGETDIR)
 	latex $(LATEXARGS)  ref.tex
 	makeindex ref
 	latex $(LATEXARGS)  ref.tex
-	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
-	cd ref && perl -pi.bak -e 's,\<HEAD\>,<HEAD>\n<link rel="canonical" href="http://research.cs.wisc.edu/condor/manual/current/$$ARGV">\n,' condor_*.html
+	latex2html -address htcondor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
+	cd ref && perl -pi.bak -e 's,\<HEAD\>,<HEAD>\n<link rel="canonical" href="http://research.cs.wisc.edu/htcondor/manual/current/$$ARGV">\n,' condor_*.html
 	rm -f ref.dvi
 	mv ref condor-$(SUBVER)-Manual
 	tar cvf condor-$(SUBVER)-Manual.tar condor-$(SUBVER)-Manual
@@ -120,7 +120,7 @@ local.html: $(wildcard *.tex) $(wildcard */*.tex)
 	latex $(LATEXARGS)  ref.tex
 	makeindex ref
 	latex $(LATEXARGS)  ref.tex
-	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
+	latex2html -address htcondor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
 	rm -rf $(LOCALDIR)
 	mv    ref $(LOCALDIR)
 	touch local.html
@@ -140,39 +140,14 @@ user-man/dagman-diamond.eps: user-man/dagman-diamond.fig
 	rm -f $@
 	fig2dev -L eps -m .6 $< > $@
 
-user-man/dagman-node.eps: user-man/dagman-node.fig
-	rm -f $@
-	fig2dev -L eps -m .6 $< > $@
+figures: admin-man/states.eps admin-man/activities.eps admin-man/pool-arch.eps user-man/dagman-diamond.eps 
 
-figures: admin-man/states.eps admin-man/activities.eps admin-man/pool-arch.eps user-man/dagman-diamond.eps user-man/dagman-node.eps
-
-# commented out by Karen on Dec 14, 2010, as no one uses it, and it is wrong
-# for pulling manual pages.  Target 'just-man-pages' is used.
-#HTML_FOR_NROFF = $(shell \ls $(LOCALDIR)/condor_*.html)
-
-#nroff: local.html
-#	\rm -rf man
-#	mkdir man
-#	mkdir man/man1
-#	cd makeman && make clean
-#	cd makeman && make makeman
-#	cd ..
-#	for html in $(HTML_FOR_NROFF); do \
-		makeman/makeman -v -i $$html -s 1; \
-	done
-#	mv $(LOCALDIR)/*.1 man/man1/
-
-#ref.nroff: nroff $(TARGETDIR)
-#	rm -f condor-$(SUBVER)-man.tar.gz condor-$(SUBVER)-man.tar
-#	tar cf condor-$(SUBVER)-man.tar man
-#	gzip condor-$(SUBVER)-man.tar
-#	mv condor-$(SUBVER)-man.tar.gz $(TARGETDIR)
 
 $(TARGETDIR):
 	mkdir $(TARGETDIR)
 
 clean:
-	rm -rf $(LOCALDIR) ref ref.new man user admin *.1 *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex user-man/dagman-diamond.eps user-man/dagman-node.eps admin-man/pool-arch.eps *.out
+	rm -rf $(LOCALDIR) ref ref.new man user admin *.1 *.dvi *.ps *.html *.log *.aux *.toc *.pdf */*.log *.ind *.idx *.ilg timesfont.tex user-man/dagman-diamond.eps admin-man/pool-arch.eps *.out
 	cd makeman; make clean
 
 reallyclean: clean
@@ -195,7 +170,7 @@ just-man-pages:
 	ln -s symbol-html.tex symbol.tex
 	ln -s figuresizing-html.tex figuresizing.tex
 	cd makeman && make clean makeman
-	latex2html -address condor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons just-man-pages.tex
+	latex2html -address htcondor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons just-man-pages.tex
 	for html in $(MANPAGES); do \
 		thisfile=just-man-pages/$$html; \
 		makeman/makeman -v -i $$thisfile -s 1; \

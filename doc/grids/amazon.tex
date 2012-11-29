@@ -42,6 +42,7 @@ service (S3 or EBS) and be registered with EC2.
 In the submit description file,
 provide the identifier for the image using either \SubmitCmd{ec2\_ami\_id}.
 
+\index{grid type!ec2!authentication methods}
 This grid type requires access to user authentication information,
 in the form of path names to files containing the appropriate keys.
 
@@ -55,16 +56,21 @@ ec2_access_key_id = /path/to/access.key
 ec2_secret_access_key = /path/to/secret.key
 \end{verbatim}
 
-While both pairs of files may be associated with the same account, 
-the credentials are not the same.
+The \Expr{euca3://} and \Expr{euca3s://} protocols must use this 
+authentication method.
+These protocols exist to work correctly when the resources do not support
+the \Param{InstanceInitiatedShutdownBehavior} parameter.
 
 The second authentication method for the EC2 grid type is X.509.
 Specify the service with an \Expr{x509://} URL, 
 even if the URL was given in another form.  
 Use \SubmitCmd{ec2\_access\_key\_id} to 
 specify the path to the X.509 public key (certificate),
-and \SubmitCmd{ec2\_secret\_access\_key} specifies the path to the X.509 
-private key as in the following example:
+which is not the same as the built-in authentication's access key.
+\SubmitCmd{ec2\_secret\_access\_key} specifies the path to the X.509 
+private key,
+which is not the same as the built-in authentication's secret key.
+The following example illustrates the specification for X.509 authentication:
 
 \begin{verbatim}
 grid_resource = ec2 x509://service.example

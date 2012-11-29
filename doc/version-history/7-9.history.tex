@@ -29,13 +29,26 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added a ``-suppress\_notification'' command line flag and corresponding
-\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} configuration macro to \Condor{dagman}.
-This enables a user of \Condor{dagman} to stop notification by email of job
+\item Added experimental support for EC2 spot instances.
+\Ticket{3209}
+
+\item (This feature was added in version 7.9.1.)  
+There are two new protocols for the submission of grid type EC2 jobs,
+\Expr{euca3://} and \Expr{euca3s://}.
+These protocols exist to work correctly when the resources do not support 
+the \Param{InstanceInitiatedShutdownBehavior} parameter.
+\Ticket{2974}
+
+\item Added both a \Opt{-suppress\_notification},
+a \Opt{-dont\_suppress\_notification} command line option,
+and corresponding
+\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} configuration variable
+to \Condor{dagman} and \Condor{submit\_dag}.
+This enables a user of DAGMan to stop email notification of job
 events for jobs submitted by \Condor{dagman}. The value of
-\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} defaults to true, so that jobs submitted
-by \Condor{dagman} will not send email notification. Also added a
-``-dont\_suppress\_notification'' flag to override the default.
+\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} defaults to \Expr{True},
+so that jobs submitted
+by \Condor{dagman} will not send email notification. 
 \Ticket{3225}
 
 \item Changed the default job notification from Complete to Never. Added a new
@@ -43,13 +56,11 @@ configuration knob, \Macro{JOB\_DEFAULT\_NOTIFICATION}, so that admins can
 change the default according to their preference.
 \Ticket{2155}
 
-\item \Condor{schedd} and \Condor{shadow} were not respecting the
-\Macro{DAGManNodesMask} attribute. This caused extra events to be written to
-the DAGMan node log.
-\Ticket{3311}
-
-\item Remove spurious newline from output of \Condor{submit}
-\Ticket{3316}
+\item For platforms supporting cgroups,
+resource limits can now be applied per job,
+where a job may consist of multiple processes.
+See section~\ref{sec:Resource-Limits-Cgroup} for details.
+\Ticket{2734}
 
 \end{itemize}
 
@@ -57,13 +68,23 @@ the DAGMan node log.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable \Macro{MEMORY\_LIMIT}
+supports implementing memory resource limits on a per-job basis under cgroups.
+\Ticket{2734}
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item \Condor{schedd} and \Condor{shadow} were not respecting the
+\Macro{DAGManNodesMask} attribute. This caused extra events to be written to
+the DAGMan node log.
+\Ticket{3311}
+
+\item Removed a spurious newline from the output of \Condor{submit}.
+\Ticket{3316}
 
 \item Fixed a bug that caused the \Condor{shadow} to set job attribute
 \Attr{X509UserProxySubject} to the wrong value when the job's X509
@@ -76,6 +97,14 @@ rather than its identity.
 In some instances, modifying \Env{LD\_LIBRARY\_PATH} can cause the
 batch system's command line tools to fail when run by the batch\_gahp.
 \Ticket{3317}
+
+\item The \Condor{shadow} would never print the allocated amount of
+partionable resources in the job log.
+\Ticket{3318}
+
+\item \Condor{who} would sometimes incorrectly display blank or partial
+values in the PROGRAM column.
+\Ticket{3314}
 
 \end{itemize}
 
@@ -120,6 +149,12 @@ for details of this and other bugs fixed.
 
 \begin{itemize}
 
+\item There are two new protocols for the submission of grid type EC2 jobs,
+\Expr{euca3://} and \Expr{euca3s://}.
+These protocols exist to work correctly when the resources do not support 
+the \Param{InstanceInitiatedShutdownBehavior} parameter.
+\Ticket{2974}
+
 \item \Condor{job\_router} can now submit the routed copy of jobs to a
 different \Condor{schedd} than the one that serves as the source of
 jobs to be routed.  The spool directories of the two
@@ -160,7 +195,7 @@ other clients of the remote \Condor{schedd} to time out trying to get the
 \Ticket{2575}
 
 \item \Condor{history} and \Condor{q} can now be told to read job records
-from a user log instead of the parsing the history file or querying the
+from a user log, instead of parsing the history file or querying the
 \Condor{schedd}.  This can be used to monitor the status of jobs with
 reduced load on the \Condor{schedd}.
 \Ticket{3188}

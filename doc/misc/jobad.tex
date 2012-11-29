@@ -140,7 +140,8 @@ due to this job.
 \item[\AdAttr{DAGManJobId}:] For a DAGMan node job only,
 the \Attr{ClusterId} job ClassAd attribute
 of the \Condor{dagman} job which is the parent of this node job.
-It is only one layer deep for nested DAGs.
+For nested DAGs, this attribute holds only the \Attr{ClusterId} of
+the job's immediate parent.
 
 %%% ClassAd attribute: DAGParentNodeNames
 \index{ClassAd job attribute!DAGParentNodeNames}
@@ -162,28 +163,38 @@ contain
 \index{DAGManNodesLog!job ClassAd attribute}
 \item[\AdAttr{DAGManNodesLog}:] For a DAGMan node job only, gives the path to
 an event log used exclusively by DAGMan to monitor the state of the DAG's jobs.
+Events are written to this log file in addition to any log file
+specified in the job's submit description file.
 
 %%% ClassAd attribute: DAGManNodesLog
 \index{ClassAd job attribute!DAGManNodesMask}
 \index{DAGManNodesMask!job ClassAd attribute}
 \item[\AdAttr{DAGManNodesMask}:] For a DAGMan node job only, 
-controls which job user log
-events are appended to the log referred to by \Attr{DAGManNodesLog} 
-(the auxiliary log). 
-If the mask is empty or undefined, these events are written to the
+a comma-separated list of the event codes that should be written
+to the log specified by \Attr{DAGManNodesLog}, 
+known as the auxiliary log.
+All events not specified in the
+\Attr{DAGManNodesMask} string are not written to the auxiliary event log.
+The value of this attribute is determined
+by DAGMan, and it is passed to the job via the \Condor{submit} command line.
+By default, the following events are written to the
 auxiliary job log:  
 \begin{itemize}
  \item \Expr{Submit}, event code is 0
  \item \Expr{Execute}, event code is 1
+ \item \Expr{Executable error}, event code is 2
+ \item \Expr{Job evicted}, event code is 4
  \item \Expr{Job terminated}, event code is 5
+ \item \Expr{Shadow exception}, event code is 7
  \item \Expr{Job aborted}, event code is 9
+ \item \Expr{Job suspended}, event code is 10
+ \item \Expr{Job unsuspended}, event code is 11
  \item \Expr{Job held}, event code is 12
  \item \Expr{Job released}, event code is 13
  \item \Expr{Post script terminated}, event code is 16
+ \item \Expr{Globus submit}, event code is 17
+ \item \Expr{Grid submit}, event code is 27
 \end{itemize}
-Otherwise, this string is a comma-separated list of integer 
-user log event codes;
-only events found in the list are written to the auxiliary log. 
 If \Attr{DAGManNodesLog} is
 not defined, it has no effect. The value of \Attr{DAGManNodesMask} does not
 affect events recorded in the user log file referred to by \Attr{UserLog}.
@@ -648,7 +659,7 @@ in order to refresh an HTCondor job's initial working directory.
 The value will be \Expr{True}, unless a job explicitly adds this
 attribute, setting it to \Expr{False}.
 
-%%% ClassAd attriute: JobAdInformationAttrs
+%%% ClassAd attribute: JobAdInformationAttrs
 \index{ClassAd job attribute!JobAdInformationAttrs}
 \index{JobAdInformationAttrs!job ClassAd attribute}
 \label{JobAdInformationAttrs-job-attribute}
@@ -716,12 +727,12 @@ gracefully shut down.
 \index{ClassAd job attribute!JobNotification}
 \index{JobNotification!job ClassAd attribute}
 \item[\AdAttr{JobNotification}:] An integer indicating what events should
-be emailed to the user. The values below correspond to what the user enters in 
-the submit file for ``notification''
+be emailed to the user. The integer values correspond to the user 
+choices for the submit command \SubmitCmd{notification}.
 \begin{center}
 \begin{table}[hbt]
 \begin{tabular}{|p{2cm}p{10cm}|} \hline
-\emph{Value} & \emph{Status} \\ \hline \hline
+\emph{Value} & \emph{Notification value} \\ \hline \hline
 0 & Never \\ \hline
 1 & Always \\ \hline
 2 & Complete \\ \hline

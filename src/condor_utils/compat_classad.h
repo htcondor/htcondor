@@ -203,6 +203,14 @@ class ClassAd : public classad::ClassAd
 
 	int LookupBool(const char *name, bool &value) const;
 
+		/** Lookup and evaluate an attribute in the ClassAd whose type is not known
+		 *  @param name The name of the attribute
+		 *  @param target A ClassAd to resolve MY or other references
+		 *  @param value Where we the copy value
+		 *  @return 1 on success, 0 if the attribute doesn't exist
+		 */
+	int EvalAttr (const char *name, classad::ClassAd *target, classad::Value & value);
+
 		/** Lookup and evaluate an attribute in the ClassAd that is a string
 		 *  @param name The name of the attribute
 		 *  @param target A ClassAd to resolve MY or other references
@@ -490,6 +498,13 @@ class ClassAd : public classad::ClassAd
 	void _GetReferences(classad::ExprTree *tree,
 						StringList &internal_refs,
 						StringList &external_refs);
+
+	// poison Assign of ExprTree* type for public users
+	// otherwise the compiler will resolve against the bool overload 
+	// and quietly leak the tree.
+	int Assign(char const *name,classad::ExprTree * tree)
+	{ return Insert(name, tree) ? TRUE : FALSE; }
+
 };
 
 class ClassAdFileParseHelper

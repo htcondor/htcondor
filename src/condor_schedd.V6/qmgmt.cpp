@@ -3638,6 +3638,56 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					}
 				}
 			}
+
+			// copy provisioned resources from startd ad to job ad
+			std::string resslist;
+			if (startd_ad->LookupString(ATTR_MACHINE_RESOURCES, resslist)) {
+				expanded_ad->Assign("ProvisionedResources", resslist);
+			} else {
+				resslist = "Cpus, Disk, Memory";
+			}
+			StringList reslist(resslist.c_str());
+
+			reslist.rewind();
+			while (const char * resname = reslist.next()) {
+				std::string res = resname;
+				title_case(res); // capitalize it to make it print pretty.
+
+				std::string attr;
+				classad::Value val;
+				// mask of the types of values we should propagate into the expanded ad.
+				const int value_type_ok = classad::Value::ERROR_VALUE | classad::Value::BOOLEAN_VALUE | classad::Value::INTEGER_VALUE | classad::Value::REAL_VALUE;
+
+				// propagate Disk, Memory, etc attributes into the job ad
+				// as DiskProvisionedDisk, MemoryProvisioned, etc.  note that we 
+				// evaluate rather than lookup the value so we collapse expressions
+				// into literal values at this point.
+				if (ad->EvalAttr(resname, startd_ad, val)) {
+					classad::Value::ValueType vt = val.GetType();
+					if (vt & value_type_ok) {
+						classad::ExprTree * plit = classad::Literal::MakeLiteral(val);
+						if (plit) {
+							attr = res + "Provisioned";
+							expanded_ad->Insert(attr.c_str(), plit);
+						}
+					}
+				}
+
+				// evaluate RequestDisk, RequestMemory and convert to literal 
+				// values in the expanded job ad.
+				attr = "Request"; attr += res;
+				if (ad->EvalAttr(attr.c_str(), startd_ad, val)) {
+					classad::Value::ValueType vt = val.GetType();
+					if (vt & value_type_ok) {
+						classad::ExprTree * plit = classad::Literal::MakeLiteral(val);
+						if (plit) {
+							expanded_ad->Insert(attr.c_str(), plit);
+						}
+					}
+				}
+			}
+			// end copying provisioned resources from startd ad to job ad
+
 		}
 
 		if ( startd_ad && job_universe == CONDOR_UNIVERSE_GRID ) {

@@ -48,6 +48,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item HTCondor no longer generates SSH keypair names that are incompatible
+with OpenStack v4 (Essex).
+\Ticket{3060}
+
 \item Jobs that were submitted with \Condor{submit} \Opt{-spool}
 and failed during submission were 
 left indefinitely in the queue in the Hold state.  
@@ -82,6 +86,22 @@ reason was, ``Proxy about to expire.''
 they finished running if the working directory contained links to
 files that were not globally readable.
 \Ticket{2904}
+
+\item The configuration setting \MacroNI{ENABLE\_ADDRESS\_REWRITING}
+was not correctly applied to the \Condor{schedd} address when
+claiming a slot.  The behavior was always as though
+\MacroNI{ENABLE\_ADDRESS\_REWRITING} was false.  This could result
+in communication errors for jobs running from multi-homed submit machines.
+\Ticket{3330}
+
+\item When using \Condor{defrag} or \Condor{drain}, a rare sequence of
+events could result in the \Condor{startd} exiting with the
+following error message:
+
+\begin{verbatim}
+ERROR "match_info() called with unexpected state (Drained)"
+\end{verbatim}
+\Ticket{3331}
 
 \end{itemize}
 
