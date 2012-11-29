@@ -688,10 +688,10 @@ fi
 
 
 # Find remote platform
-# TODO: add the possibility to force a specific platform for the remote system (./findplatform --force=RH5)
-findplatform_path="`which findplatform`"
+# TODO: add the possibility to force a specific platform for the remote system (./bosco_findplatform --force=RH5)
+findplatform_path="`which bosco_findplatform`"
 if [ $? -ne 0 ]; then
-    echo "Unable to find the findplatform script."
+    echo "Unable to find the bosco_findplatform script."
     echo "Is BOSCO installed and setup correctly?"
     exit 1
 fi
