@@ -98,6 +98,31 @@ static  AttrListPrintMask mask;
 static int cluster=-1, proc=-1;
 static int specifiedMatch = 0, matchCount = 0;
 
+
+void check_format(const char * pFmt)
+{
+	unsigned int iLen = strlen(pFmt);
+	unsigned int iCntPercent=0;
+
+	for (unsigned int iCtr=0; iCtr<iLen; iCtr++)
+	{
+		if (pFmt[iCtr] == '%')
+		{
+			if ( (++iCntPercent) >1)
+			{
+				fprintf(stderr, "Only one %% operator is allowed per -format option\n");
+				exit(1);
+			}
+			if ( pFmt[iCtr+1] == '\0' || pFmt[iCtr+1] == 'n')
+			{
+				fprintf(stderr, "Invalid %% operator for -format\n");
+				exit(1);
+			}
+		}
+	}
+	
+} 
+
 int
 main(int argc, char* argv[])
 {
@@ -228,6 +253,8 @@ main(int argc, char* argv[])
 					"\t\te.g. condor_history -format '%%d' ClusterId\n");
 			exit(1);
 		}
+
+		check_format(argv[i + 1]);
 		mask.registerFormat(argv[i + 1], argv[i + 2]);
 		customFormat = true;
 		i += 2;
