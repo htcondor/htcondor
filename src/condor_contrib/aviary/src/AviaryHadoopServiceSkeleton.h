@@ -60,7 +60,7 @@
     
      #include <AviaryHadoop_StopDataNodeResponse.h>
     
-namespace com_redhat_grid_aviary_hadoop{
+namespace AviaryHadoop{
     
 
    /** we have to reserve some error codes for adb and for custom messages */

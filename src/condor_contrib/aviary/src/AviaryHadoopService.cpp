@@ -1,12 +1,18 @@
-
-
-        /**
-         * AviaryHadoopService.cpp
-         *
-         * This file was auto-generated from WSDL for "AviaryHadoopService|http://grid.redhat.com/aviary-hadoop/" service
-         * by the Apache Axis2 version: 1.0  Built on : Nov 08, 2012 (09:07:16 EST)
-         *  AviaryHadoopService
-         */
+/*
+ * Copyright 2009-2011 Red Hat, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
         #include "AviaryHadoopServiceSkeleton.h"
         #include "AviaryHadoopService.h"  
@@ -16,10 +22,20 @@
         #include <Environment.h>
         #include <axiom_soap.h>
 
+       #ifdef __GNUC__
+       #pragma GCC diagnostic ignored "-Wunused-variable"
+       #pragma GCC diagnostic ignored "-Wunused-value"
+       #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+       #pragma GCC diagnostic ignored "-Wunused-parameter"
+       #pragma GCC diagnostic ignored "-Wcast-qual"
+       #pragma GCC diagnostic ignored "-Wshadow"
+       #pragma GCC diagnostic ignored "-Wwrite-strings"
+       #pragma GCC diagnostic ignored "-Wenum-compare"
+       #endif
 
         using namespace wso2wsf;
         
-        using namespace com_redhat_grid_aviary_hadoop;
+        using namespace AviaryHadoop;
         
 
         /** Load the service into axis2 engine */
@@ -35,11 +51,11 @@
     }
 
 
-	bool WSF_CALL
+	void WSF_CALL
 	AviaryHadoopService::init()
 	{
 
-      return true;
+      return;
 	}
 
 

@@ -1,267 +1,186 @@
+/*
+ * Copyright 2009-2012 Red Hat, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-    /**
-     * AviaryHadoopServiceSkeleton.cpp
-     *
-     * This file was Auto-Generated from WSDL for "AviaryHadoopService|http://grid.redhat.com/aviary-hadoop/" service
-     * by the WSO2 WSF/CPP version:
-     * AviaryHadoopServiceSkeleton WSF/CPP Skeleton For the Service
-     */
+// condor includes
+#include "condor_common.h"
+#include "condor_config.h"
+#include "condor_attributes.h"
 
-     #include "AviaryHadoopServiceSkeleton.h"
+#include <time.h>
 
-    
-     #include <AviaryHadoop_StartTaskTracker.h>
-    
-     #include <AviaryHadoop_StartTaskTrackerResponse.h>
-    
-     #include <AviaryHadoop_StartDataNode.h>
-    
-     #include <AviaryHadoop_StartDataNodeResponse.h>
-    
-     #include <AviaryHadoop_GetTaskTracker.h>
-    
-     #include <AviaryHadoop_GetTaskTrackerResponse.h>
-    
-     #include <AviaryHadoop_StopJobTracker.h>
-    
-     #include <AviaryHadoop_StopJobTrackerResponse.h>
-    
-     #include <AviaryHadoop_GetJobTracker.h>
-    
-     #include <AviaryHadoop_GetJobTrackerResponse.h>
-    
-     #include <AviaryHadoop_StopTaskTracker.h>
-    
-     #include <AviaryHadoop_StopTaskTrackerResponse.h>
-    
-     #include <AviaryHadoop_StartNameNode.h>
-    
-     #include <AviaryHadoop_StartNameNodeResponse.h>
-    
-     #include <AviaryHadoop_GetDataNode.h>
-    
-     #include <AviaryHadoop_GetDataNodeResponse.h>
-    
-     #include <AviaryHadoop_StopNameNode.h>
-    
-     #include <AviaryHadoop_StopNameNodeResponse.h>
-    
-     #include <AviaryHadoop_GetNameNode.h>
-    
-     #include <AviaryHadoop_GetNameNodeResponse.h>
-    
-     #include <AviaryHadoop_StartJobTracker.h>
-    
-     #include <AviaryHadoop_StartJobTrackerResponse.h>
-    
-     #include <AviaryHadoop_StopDataNode.h>
-    
-     #include <AviaryHadoop_StopDataNodeResponse.h>
-    
-    using namespace com_redhat_grid_aviary_hadoop;
+extern bool qmgmt_all_users_trusted;
+
+// local includes
+#include "AviaryHadoopServiceSkeleton.h"
+#include <AviaryHadoop_StartTaskTracker.h>
+#include <AviaryHadoop_StartTaskTrackerResponse.h>
+#include <AviaryHadoop_StartDataNode.h>
+#include <AviaryHadoop_StartDataNodeResponse.h>
+#include <AviaryHadoop_GetTaskTracker.h>
+#include <AviaryHadoop_GetTaskTrackerResponse.h>
+#include <AviaryHadoop_StopJobTracker.h>
+#include <AviaryHadoop_StopJobTrackerResponse.h>
+#include <AviaryHadoop_GetJobTracker.h>
+#include <AviaryHadoop_GetJobTrackerResponse.h>
+#include <AviaryHadoop_StopTaskTracker.h>
+#include <AviaryHadoop_StopTaskTrackerResponse.h>
+#include <AviaryHadoop_StartNameNode.h>
+#include <AviaryHadoop_StartNameNodeResponse.h>
+#include <AviaryHadoop_GetDataNode.h>
+#include <AviaryHadoop_GetDataNodeResponse.h>
+#include <AviaryHadoop_StopNameNode.h>
+#include <AviaryHadoop_StopNameNodeResponse.h>
+#include <AviaryHadoop_GetNameNode.h>
+#include <AviaryHadoop_GetNameNodeResponse.h>
+#include <AviaryHadoop_StartJobTracker.h>
+#include <AviaryHadoop_StartJobTrackerResponse.h>
+#include <AviaryHadoop_StopDataNode.h>
+#include <AviaryHadoop_StopDataNodeResponse.h>
+#include "Codec.h"
+
+using namespace std;
+using namespace wso2wsf;
+using namespace AviaryHadoop;
+using namespace AviaryCommon;
+using namespace aviary::codec;
+using namespace compat_classad;
 
 
-		 
-        /**
-         * Auto generated function definition signature
-         * for "startTaskTracker|http://grid.redhat.com/aviary-hadoop/" operation.
-         * 
-         * @param _startTaskTracker of the AviaryHadoop::StartTaskTracker
-         *
-         * @return AviaryHadoop::StartTaskTrackerResponse*
-         */
-        AviaryHadoop::StartTaskTrackerResponse* AviaryHadoopServiceSkeleton::startTaskTracker(wso2wsf::MessageContext *outCtx ,AviaryHadoop::StartTaskTracker* _startTaskTracker)
+// TODO: ditch this when we're done
+Status* makeUnimplemented() {
+    Status* status = new Status(new StatusCodeType(StatusCodeType_UNIMPLEMENTED),NULL);
+    return status;
+}
 
-        {
-          /* TODO fill this with the necessary business logic */
-          return (AviaryHadoop::StartTaskTrackerResponse*)NULL;
-        }
-     
+StartNameNodeResponse* AviaryHadoopServiceSkeleton::startNameNode(MessageContext* /*outCtx*/ , StartNameNode* _startNameNode)
+{
+    /* TODO fill this with the necessary business logic */
+    StartNameNodeResponse* response = new StartNameNodeResponse;
+    HadoopStartResponse* hresp = new HadoopStartResponse;
+    hresp->setStatus(makeUnimplemented());
+    response->setStartNameNodeResponse(hresp);
+    return response;
+}
 
-		 
-        /**
-         * Auto generated function definition signature
-         * for "startDataNode|http://grid.redhat.com/aviary-hadoop/" operation.
-         * 
-         * @param _startDataNode of the AviaryHadoop::StartDataNode
-         *
-         * @return AviaryHadoop::StartDataNodeResponse*
-         */
-        AviaryHadoop::StartDataNodeResponse* AviaryHadoopServiceSkeleton::startDataNode(wso2wsf::MessageContext *outCtx ,AviaryHadoop::StartDataNode* _startDataNode)
+StopNameNodeResponse* AviaryHadoopServiceSkeleton::stopNameNode(MessageContext* /*outCtx*/ , StopNameNode* _stopNameNode)
+{
+    /* TODO fill this with the necessary business logic */
+    StopNameNodeResponse* response = new StopNameNodeResponse;
+    HadoopStopResponse* hresp = new HadoopStopResponse;
+    hresp->setStatus(makeUnimplemented());
+    response->setStopNameNodeResponse(hresp);
+    return response;
+}
 
-        {
-          /* TODO fill this with the necessary business logic */
-          return (AviaryHadoop::StartDataNodeResponse*)NULL;
-        }
-     
+GetNameNodeResponse* AviaryHadoopServiceSkeleton::getNameNode(MessageContext* /*outCtx*/ , GetNameNode* _getNameNode)
+{
+    /* TODO fill this with the necessary business logic */
+    GetNameNodeResponse* response = new GetNameNodeResponse;
+    HadoopQueryResponse* hresp = new HadoopQueryResponse;
+    hresp->setStatus(makeUnimplemented());
+    response->setGetNameNodeResponse(hresp);
+    return response;
+}
 
-		 
-        /**
-         * Auto generated function definition signature
-         * for "getTaskTracker|http://grid.redhat.com/aviary-hadoop/" operation.
-         * 
-         * @param _getTaskTracker of the AviaryHadoop::GetTaskTracker
-         *
-         * @return AviaryHadoop::GetTaskTrackerResponse*
-         */
-        AviaryHadoop::GetTaskTrackerResponse* AviaryHadoopServiceSkeleton::getTaskTracker(wso2wsf::MessageContext *outCtx ,AviaryHadoop::GetTaskTracker* _getTaskTracker)
+StartDataNodeResponse* AviaryHadoopServiceSkeleton::startDataNode(MessageContext* /*outCtx*/ , StartDataNode* _startDataNode)
+{
+    /* TODO fill this with the necessary business logic */
+    StartDataNodeResponse* response = new StartDataNodeResponse;
+    HadoopStartResponse* hresp = new HadoopStartResponse;
+    hresp->setStatus(makeUnimplemented());
+    response->setStartDataNodeResponse(hresp);
+    return response;
+}
 
-        {
-          /* TODO fill this with the necessary business logic */
-          return (AviaryHadoop::GetTaskTrackerResponse*)NULL;
-        }
-     
+StopDataNodeResponse* AviaryHadoopServiceSkeleton::stopDataNode(MessageContext* /*outCtx*/ , StopDataNode* _stopDataNode)
+{
+    /* TODO fill this with the necessary business logic */
+    StopDataNodeResponse* response = new StopDataNodeResponse;
+    HadoopStopResponse* hresp = new HadoopStopResponse;
+    hresp->setStatus(makeUnimplemented());
+    response->setStopDataNodeResponse(hresp);
+    return response;
+}
 
-		 
-        /**
-         * Auto generated function definition signature
-         * for "stopJobTracker|http://grid.redhat.com/aviary-hadoop/" operation.
-         * 
-         * @param _stopJobTracker of the AviaryHadoop::StopJobTracker
-         *
-         * @return AviaryHadoop::StopJobTrackerResponse*
-         */
-        AviaryHadoop::StopJobTrackerResponse* AviaryHadoopServiceSkeleton::stopJobTracker(wso2wsf::MessageContext *outCtx ,AviaryHadoop::StopJobTracker* _stopJobTracker)
+GetDataNodeResponse* AviaryHadoopServiceSkeleton::getDataNode(MessageContext* /*outCtx*/ , GetDataNode* _getDataNode)
+{
+    /* TODO fill this with the necessary business logic */
+    GetDataNodeResponse* response = new GetDataNodeResponse;
+    HadoopQueryResponse* hresp = new HadoopQueryResponse;
+    hresp->setStatus(makeUnimplemented());
+    response->setGetDataNodeResponse(hresp);
+    return response;
+}
 
-        {
-          /* TODO fill this with the necessary business logic */
-          return (AviaryHadoop::StopJobTrackerResponse*)NULL;
-        }
-     
+StartJobTrackerResponse* AviaryHadoopServiceSkeleton::startJobTracker(MessageContext* /*outCtx*/ , StartJobTracker* _startJobTracker)
+{
+    /* TODO fill this with the necessary business logic */
+    StartJobTrackerResponse* response = new StartJobTrackerResponse;
+    HadoopStartResponse* hresp = new HadoopStartResponse;
+    hresp->setStatus(makeUnimplemented());
+    response->setStartJobTrackerResponse(hresp);
+    return response;
+}
 
-		 
-        /**
-         * Auto generated function definition signature
-         * for "getJobTracker|http://grid.redhat.com/aviary-hadoop/" operation.
-         * 
-         * @param _getJobTracker of the AviaryHadoop::GetJobTracker
-         *
-         * @return AviaryHadoop::GetJobTrackerResponse*
-         */
-        AviaryHadoop::GetJobTrackerResponse* AviaryHadoopServiceSkeleton::getJobTracker(wso2wsf::MessageContext *outCtx ,AviaryHadoop::GetJobTracker* _getJobTracker)
+StopJobTrackerResponse* AviaryHadoopServiceSkeleton::stopJobTracker(MessageContext* /*outCtx*/ , StopJobTracker* _stopJobTracker)
+{
+    /* TODO fill this with the necessary business logic */
+    StopJobTrackerResponse* response = new StopJobTrackerResponse;
+    HadoopStopResponse* hresp = new HadoopStopResponse;
+    hresp->setStatus(makeUnimplemented());
+    response->setStopJobTrackerResponse(hresp);
+    return response;
+}
 
-        {
-          /* TODO fill this with the necessary business logic */
-          return (AviaryHadoop::GetJobTrackerResponse*)NULL;
-        }
-     
+GetJobTrackerResponse* AviaryHadoopServiceSkeleton::getJobTracker(MessageContext* /*outCtx*/ , GetJobTracker* _getJobTracker)
+{
+    /* TODO fill this with the necessary business logic */
+    GetJobTrackerResponse* response = new GetJobTrackerResponse;
+    HadoopQueryResponse* hresp = new HadoopQueryResponse;
+    hresp->setStatus(makeUnimplemented());
+    response->setGetJobTrackerResponse(hresp);
+    return response;
+}
 
-		 
-        /**
-         * Auto generated function definition signature
-         * for "stopTaskTracker|http://grid.redhat.com/aviary-hadoop/" operation.
-         * 
-         * @param _stopTaskTracker of the AviaryHadoop::StopTaskTracker
-         *
-         * @return AviaryHadoop::StopTaskTrackerResponse*
-         */
-        AviaryHadoop::StopTaskTrackerResponse* AviaryHadoopServiceSkeleton::stopTaskTracker(wso2wsf::MessageContext *outCtx ,AviaryHadoop::StopTaskTracker* _stopTaskTracker)
+StartTaskTrackerResponse* AviaryHadoopServiceSkeleton::startTaskTracker(MessageContext* /*outCtx*/ , StartTaskTracker* _startTaskTracker)
+{
+    /* TODO fill this with the necessary business logic */
+    StartTaskTrackerResponse* response = new StartTaskTrackerResponse;
+    HadoopStartResponse* hresp = new HadoopStartResponse;
+    hresp->setStatus(makeUnimplemented());
+    response->setStartTaskTrackerResponse(hresp);
+    return response;
+}
 
-        {
-          /* TODO fill this with the necessary business logic */
-          return (AviaryHadoop::StopTaskTrackerResponse*)NULL;
-        }
-     
+StopTaskTrackerResponse* AviaryHadoopServiceSkeleton::stopTaskTracker(MessageContext* /*outCtx*/ , StopTaskTracker* _stopTaskTracker)
+{
+    /* TODO fill this with the necessary business logic */
+    StopTaskTrackerResponse* response = new StopTaskTrackerResponse;
+    HadoopStopResponse* hresp = new HadoopStopResponse;
+    hresp->setStatus(makeUnimplemented());
+    response->setStopTaskTrackerResponse(hresp);
+    return response;
+}
 
-		 
-        /**
-         * Auto generated function definition signature
-         * for "startNameNode|http://grid.redhat.com/aviary-hadoop/" operation.
-         * 
-         * @param _startNameNode of the AviaryHadoop::StartNameNode
-         *
-         * @return AviaryHadoop::StartNameNodeResponse*
-         */
-        AviaryHadoop::StartNameNodeResponse* AviaryHadoopServiceSkeleton::startNameNode(wso2wsf::MessageContext *outCtx ,AviaryHadoop::StartNameNode* _startNameNode)
-
-        {
-          /* TODO fill this with the necessary business logic */
-          return (AviaryHadoop::StartNameNodeResponse*)NULL;
-        }
-     
-
-		 
-        /**
-         * Auto generated function definition signature
-         * for "getDataNode|http://grid.redhat.com/aviary-hadoop/" operation.
-         * 
-         * @param _getDataNode of the AviaryHadoop::GetDataNode
-         *
-         * @return AviaryHadoop::GetDataNodeResponse*
-         */
-        AviaryHadoop::GetDataNodeResponse* AviaryHadoopServiceSkeleton::getDataNode(wso2wsf::MessageContext *outCtx ,AviaryHadoop::GetDataNode* _getDataNode)
-
-        {
-          /* TODO fill this with the necessary business logic */
-          return (AviaryHadoop::GetDataNodeResponse*)NULL;
-        }
-     
-
-		 
-        /**
-         * Auto generated function definition signature
-         * for "stopNameNode|http://grid.redhat.com/aviary-hadoop/" operation.
-         * 
-         * @param _stopNameNode of the AviaryHadoop::StopNameNode
-         *
-         * @return AviaryHadoop::StopNameNodeResponse*
-         */
-        AviaryHadoop::StopNameNodeResponse* AviaryHadoopServiceSkeleton::stopNameNode(wso2wsf::MessageContext *outCtx ,AviaryHadoop::StopNameNode* _stopNameNode)
-
-        {
-          /* TODO fill this with the necessary business logic */
-          return (AviaryHadoop::StopNameNodeResponse*)NULL;
-        }
-     
-
-		 
-        /**
-         * Auto generated function definition signature
-         * for "getNameNode|http://grid.redhat.com/aviary-hadoop/" operation.
-         * 
-         * @param _getNameNode of the AviaryHadoop::GetNameNode
-         *
-         * @return AviaryHadoop::GetNameNodeResponse*
-         */
-        AviaryHadoop::GetNameNodeResponse* AviaryHadoopServiceSkeleton::getNameNode(wso2wsf::MessageContext *outCtx ,AviaryHadoop::GetNameNode* _getNameNode)
-
-        {
-          /* TODO fill this with the necessary business logic */
-          return (AviaryHadoop::GetNameNodeResponse*)NULL;
-        }
-     
-
-		 
-        /**
-         * Auto generated function definition signature
-         * for "startJobTracker|http://grid.redhat.com/aviary-hadoop/" operation.
-         * 
-         * @param _startJobTracker of the AviaryHadoop::StartJobTracker
-         *
-         * @return AviaryHadoop::StartJobTrackerResponse*
-         */
-        AviaryHadoop::StartJobTrackerResponse* AviaryHadoopServiceSkeleton::startJobTracker(wso2wsf::MessageContext *outCtx ,AviaryHadoop::StartJobTracker* _startJobTracker)
-
-        {
-          /* TODO fill this with the necessary business logic */
-          return (AviaryHadoop::StartJobTrackerResponse*)NULL;
-        }
-     
-
-		 
-        /**
-         * Auto generated function definition signature
-         * for "stopDataNode|http://grid.redhat.com/aviary-hadoop/" operation.
-         * 
-         * @param _stopDataNode of the AviaryHadoop::StopDataNode
-         *
-         * @return AviaryHadoop::StopDataNodeResponse*
-         */
-        AviaryHadoop::StopDataNodeResponse* AviaryHadoopServiceSkeleton::stopDataNode(wso2wsf::MessageContext *outCtx ,AviaryHadoop::StopDataNode* _stopDataNode)
-
-        {
-          /* TODO fill this with the necessary business logic */
-          return (AviaryHadoop::StopDataNodeResponse*)NULL;
-        }
-     
-
+GetTaskTrackerResponse* AviaryHadoopServiceSkeleton::getTaskTracker(MessageContext* /*outCtx*/ , GetTaskTracker* _getTaskTracker)
+{
+    /* TODO fill this with the necessary business logic */
+    GetTaskTrackerResponse* response = new GetTaskTrackerResponse;
+    HadoopQueryResponse* hresp = new HadoopQueryResponse;
+    hresp->setStatus(makeUnimplemented());
+    response->setGetTaskTrackerResponse(hresp);
+    return response;
+}

@@ -32,6 +32,8 @@ file( GLOB QUERY_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/query/src/*.cpp
 file( GLOB QUERY_SRCS ${CMAKE_CURRENT_SOURCE_DIR} AviaryQueryService*.cpp )
 file( GLOB LOCATOR_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/locator/src/*.cpp )
 file( GLOB LOCATOR_SRCS ${CMAKE_CURRENT_SOURCE_DIR} AviaryLocatorService*.cpp )
+file( GLOB HADOOP_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/hadoop/src/*.cpp )
+file( GLOB HADOOP_SRCS ${CMAKE_CURRENT_SOURCE_DIR} AviaryHadoopService*.cpp )
 
 if (WITH_OPENSSL)
     file( GLOB SSL_SRCS ${CMAKE_CURRENT_SOURCE_DIR} axis2_ssl_*.c Axis2SslProvider.cpp)
@@ -40,6 +42,9 @@ endif(WITH_OPENSSL)
 
 file( GLOB SCHED_PLUGIN_SRCS Codec.cpp AviaryUtils.cpp SchedulerObject.cpp
 			PROC_ID_comparator.cpp ${SOAP_SRCS} AviaryScheddPlugin*.cpp )
+
+file( GLOB HADOOP_PLUGIN_SRCS Codec.cpp AviaryUtils.cpp 
+            PROC_ID_comparator.cpp ${SOAP_SRCS} AviaryHadoopPlugin*.cpp )
 
 file( GLOB JOB_SERVER_SRCS aviary_query_server.cpp ${SOAP_SRCS}
 							SubmissionObject.cpp JobServerJobLogConsumer.cpp
@@ -62,6 +67,20 @@ target_link_libraries(aviary_job_axis -Wl,--whole-archive -lwso2_wsf -Wl,--no-wh
 condor_plugin( AviaryScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SCHED_PLUGIN_SRCS}" "${C_LIBEXEC}" "${WSO2_FOUND}" ON)
 # remove unresolved deps by copying in -laxis2_engine objects
 target_link_libraries(AviaryScheddPlugin-plugin -Wl,--whole-archive -laxis2_engine -Wl,--no-whole-archive)
+
+############################
+# hadoop plugin
+############################
+src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
+src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
+
+add_library (aviary_hadoop_axis SHARED ${COMMON_GEN_SRCS} ${HADOOP_GEN_SRCS} ${HADOOP_SRCS} Codec.cpp AviaryUtils.cpp )
+# remove unresolved deps by copying in -lwso2_wsf objects
+target_link_libraries(aviary_hadoop_axis -Wl,--whole-archive -lwso2_wsf -Wl,--no-whole-archive)
+
+condor_plugin( AviaryHadoopPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${HADOOP_PLUGIN_SRCS}" "${C_LIBEXEC}" "${WSO2_FOUND}" ON)
+# remove unresolved deps by copying in -laxis2_engine objects
+target_link_libraries(AviaryHadoopPlugin-plugin -Wl,--whole-archive -laxis2_engine -Wl,--no-whole-archive)
 
 ############################
 # query server (aka ye old job server)
@@ -120,3 +139,10 @@ install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-common.xsd
 				${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-locator.xsd
 				${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-locator.wsdl
 		DESTINATION ${C_SERVICES}/locator )
+
+install (TARGETS aviary_hadoop_axis DESTINATION ${C_SERVICES}/hadoop)
+install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../services/hadoop/services.xml DESTINATION ${C_SERVICES}/hadoop )
+install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-common.xsd
+                ${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-hadoop.xsd
+                ${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-hadoop.wsdl
+        DESTINATION ${C_SERVICES}/hadoop )
