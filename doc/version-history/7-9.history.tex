@@ -57,6 +57,10 @@ Refer to section~\ref{sec:group-accounting} for more information.
 
 \begin{itemize}
 
+\item A timer reset was added to the end of the negotiation cycle to reduce
+drift in the negotiation cycle delay.
+\Ticket{3332}
+
 \item The default for the undocumented configuration parameter
   \Macro{X\_RUNS\_HERE} was inverted from TRUE to FALSE with the
   release of 7.7.3. Its default has been reset to TRUE. When FALSE,
