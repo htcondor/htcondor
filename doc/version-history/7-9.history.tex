@@ -42,6 +42,18 @@ representations is now configurable with \Macro{GROUP\_SEPARATOR}.
 Refer to section~\ref{sec:group-accounting} for more information.
 \Ticket{2728}
 
+\item Round-robin scheduling is now used when there are multiple users
+waiting to transfer files in the limits set by
+\Macro{MAX\_CONCURRENT\_UPLOADS} and/or
+\Macro{MAX\_CONCURRENT\_DOWNLOADS}.  Previously, the file transfer
+queue was scheduled in first-in-first-out order, so one user with
+many files to transfer could delay other users for as long as it took
+to transfer those files.  Now, when choosing a new job to allow to
+transfer, the first job belonging to the user who has least
+recently been given an opportunity to transfer will be selected.
+The old behavior, or variations on the new behavior, can be achieved
+by configuring \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+\Ticket{3333}
 
 \end{itemize}
 

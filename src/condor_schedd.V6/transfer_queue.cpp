@@ -27,8 +27,9 @@
 #include "dc_transfer_queue.h"
 #include "condor_email.h"
 
-TransferQueueRequest::TransferQueueRequest(ReliSock *sock,char const *fname,char const *jobid,bool downloading,time_t max_queue_age):
+TransferQueueRequest::TransferQueueRequest(ReliSock *sock,char const *fname,char const *jobid,char const *queue_user,bool downloading,time_t max_queue_age):
 	m_sock(sock),
+	m_queue_user(queue_user),
 	m_jobid(jobid),
 	m_fname(fname),
 	m_downloading(downloading),
@@ -49,10 +50,11 @@ TransferQueueRequest::~TransferQueueRequest() {
 
 char const *
 TransferQueueRequest::Description() {
-	m_description.formatstr("%s %s job %s (initial file %s)",
+	m_description.formatstr("%s %s job %s for %s (initial file %s)",
 					m_sock ? m_sock->peer_description() : "",
 					m_downloading ? "downloading" : "uploading",
 					m_jobid.Value(),
+					m_queue_user.Value(),
 					m_fname.Value());
 	return m_description.Value();
 }
@@ -91,6 +93,9 @@ TransferQueueManager::TransferQueueManager() {
 	m_waiting_to_download = 0;
 	m_upload_wait_time = 0;
 	m_download_wait_time = 0;
+	m_round_robin_counter = 0;
+	m_round_robin_garbage_counter = 0;
+	m_round_robin_garbage_time = time(NULL);
 }
 
 TransferQueueManager::~TransferQueueManager() {
@@ -143,9 +148,11 @@ int TransferQueueManager::HandleRequest(int cmd,Stream *stream)
 	bool downloading = false;
 	MyString fname;
 	MyString jobid;
+	MyString queue_user;
 	if( !msg.LookupBool(ATTR_DOWNLOADING,downloading) ||
 		!msg.LookupString(ATTR_FILE_NAME,fname) ||
-		!msg.LookupString(ATTR_JOB_ID,jobid) )
+		!msg.LookupString(ATTR_JOB_ID,jobid) ||
+		!msg.LookupString(ATTR_USER,queue_user) )
 	{
 		MyString msg_str;
 		msg.sPrint(msg_str);
@@ -163,6 +170,7 @@ int TransferQueueManager::HandleRequest(int cmd,Stream *stream)
 			sock,
 			fname.Value(),
 			jobid.Value(),
+			queue_user.Value(),
 			downloading,
 			m_default_max_queue_age);
 
@@ -257,7 +265,62 @@ TransferQueueManager::TransferQueueChanged() {
 	m_check_queue_timer = daemonCore->Register_Timer(
 		0,(TimerHandlercpp)&TransferQueueManager::CheckTransferQueue,
 		"CheckTransferQueue",this);
-													 
+}
+
+int
+TransferQueueManager::GetRoundRobinRecency(const std::string &queue)
+{
+	std::map< std::string,unsigned int >::iterator it = m_round_robin_recency.find(queue);
+	if( it == m_round_robin_recency.end() ) {
+		return 0;
+	}
+	return it->second;
+}
+
+void
+TransferQueueManager::SetRoundRobinRecency(const std::string &queue)
+{
+	unsigned int old_counter = m_round_robin_counter;
+
+	m_round_robin_recency[queue] = ++m_round_robin_counter;
+
+		// clear history if the counter wraps, so we do not keep favoring those who have wrapped
+	if( m_round_robin_counter < old_counter ) {
+		m_round_robin_recency.clear();
+	}
+}
+
+void
+TransferQueueManager::CollectRoundRobinGarbage()
+{
+		// To prevent unbounded growth, remove entries in the round
+		// robin recency map that have not been touched in the past
+		// hour.
+
+	time_t now = time(NULL);
+	if( abs(now - m_round_robin_garbage_time) > 3600 ) {
+		int num_removed = 0;
+
+		for( std::map< std::string,unsigned int >::iterator it = m_round_robin_recency.begin();
+			 it != m_round_robin_recency.end(); )
+		{
+			if( it->second < m_round_robin_garbage_counter ) {
+					// increment the iterator before calling erase, while it is still valid
+				m_round_robin_recency.erase(it++);
+				++num_removed;
+			}
+			else {
+				++it;
+			}
+		}
+
+		if( num_removed ) {
+			dprintf(D_ALWAYS,"TransferQueueManager::CollectRoundRobinGarbage: removed %d entries.\n",num_removed);
+		}
+
+		m_round_robin_garbage_time = now;
+		m_round_robin_garbage_counter = m_round_robin_counter;
+	}
 }
 
 void
@@ -266,7 +329,6 @@ TransferQueueManager::CheckTransferQueue() {
 	int downloading = 0;
 	int uploading = 0;
 	bool clients_waiting = false;
-	int queue_position = 0;
 
 	m_check_queue_timer = -1;
 	m_waiting_to_upload = 0;
@@ -276,8 +338,6 @@ TransferQueueManager::CheckTransferQueue() {
 
 	m_xfer_queue.Rewind();
 	while( m_xfer_queue.Next(client) ) {
-		queue_position++;
-
 		if( client->m_gave_go_ahead ) {
 			if( client->m_downloading ) {
 				downloading += 1;
@@ -286,66 +346,111 @@ TransferQueueManager::CheckTransferQueue() {
 				uploading += 1;
 			}
 		}
-		else {
+	}
+
+		// schedule new transfers
+	while( uploading < m_max_uploads || m_max_uploads <= 0 ||
+		   downloading < m_max_downloads || m_max_downloads <= 0 )
+	{
+		TransferQueueRequest *best_client = NULL;
+		int best_recency = 0;
+
+		m_xfer_queue.Rewind();
+		while( m_xfer_queue.Next(client) ) {
+			if( client->m_gave_go_ahead ) {
+				continue;
+			}
 			if( (client->m_downloading && 
 				(downloading < m_max_downloads || m_max_downloads <= 0)) ||
 				((!client->m_downloading) &&
 				(uploading < m_max_uploads || m_max_uploads <= 0)) )
 			{
-				dprintf(D_FULLDEBUG,
-						"TransferQueueManager: sending GoAhead to %s.\n",
-						client->Description() );
-
-				if( !client->SendGoAhead() ) {
-					dprintf(D_FULLDEBUG,
-							"TransferQueueManager: failed to send GoAhead; "
-							"dequeueing %s.\n",
-							client->Description() );
-
-					delete client;
-					m_xfer_queue.DeleteCurrent();
-
-					TransferQueueChanged();
-
-					continue;
+				if( !best_client ) {
+					best_client = client;
+					best_recency = GetRoundRobinRecency(client->m_queue_user);
 				}
-				if( client->m_downloading ) {
-					downloading += 1;
+				else if( !best_client->m_downloading && client->m_downloading ) {
+					best_client = client;
+					best_recency = GetRoundRobinRecency(client->m_queue_user);
 				}
-				else {
-					uploading += 1;
+				else if( best_client->m_queue_user != client->m_queue_user ) {
+					int client_recency = GetRoundRobinRecency(client->m_queue_user);
+					if( best_recency > client_recency ) {
+						best_client = client;
+						best_recency = client_recency;
+					}
 				}
 			}
-			else if( queue_position == 1 ) {
-					// This request has not been granted, but it is at the
-					// front of the queue.  This shouldn't happen for simple
-					// upload/download requests, but for future generality, we
-					// check for this case and treat it appropriately.
-				dprintf(D_ALWAYS,"TransferQueueManager: forcibly "
-						"dequeueing entry for %s, "
-						"because it is at the front of the queue "
-						"but is still not allowed by the queue policy.\n",
-						client->Description());
-				delete client;
-				m_xfer_queue.DeleteCurrent();
-				TransferQueueChanged();
-				continue;
+		}
+
+		client = best_client;
+		if( !client ) {
+			break;
+		}
+
+		dprintf(D_FULLDEBUG,
+				"TransferQueueManager: sending GoAhead to %s.\n",
+				client->Description() );
+
+		if( !client->SendGoAhead() ) {
+			dprintf(D_FULLDEBUG,
+					"TransferQueueManager: failed to send GoAhead; "
+					"dequeueing %s.\n",
+					client->Description() );
+
+			delete client;
+			m_xfer_queue.Delete(client);
+
+			TransferQueueChanged();
+		}
+		else {
+			SetRoundRobinRecency(client->m_queue_user);
+			if( client->m_downloading ) {
+				downloading += 1;
 			}
 			else {
-				clients_waiting = true;
+				uploading += 1;
+			}
+		}
+	}
 
-				int age = time(NULL) - client->m_time_born;
-				if( client->m_downloading ) {
-					m_waiting_to_download++;
-					if( age > m_download_wait_time ) {
-						m_download_wait_time = age;
-					}
+
+		// now that we have finished scheduling new transfers,
+		// examine requests that are still waiting
+	m_xfer_queue.Rewind();
+	while( m_xfer_queue.Next(client) ) {
+		if( !client->m_gave_go_ahead
+			&& ( (client->m_downloading && downloading==0)
+ 			     || (!client->m_downloading && uploading==0) ) )
+		{
+				// This request has not been granted, but no requests
+				// are active.  This shouldn't happen for simple
+				// upload/download requests, but for future generality, we
+				// check for this case and treat it appropriately.
+			dprintf(D_ALWAYS,"TransferQueueManager: forcibly "
+					"dequeueing entry for %s, "
+					"because it is not allowed by the queue policy.\n",
+					client->Description());
+			delete client;
+			m_xfer_queue.DeleteCurrent();
+			TransferQueueChanged();
+			continue;
+		}
+
+		if( !client->m_gave_go_ahead ) {
+			clients_waiting = true;
+
+			int age = time(NULL) - client->m_time_born;
+			if( client->m_downloading ) {
+				m_waiting_to_download++;
+				if( age > m_download_wait_time ) {
+					m_download_wait_time = age;
 				}
-				else {
-					m_waiting_to_upload++;
-					if( age > m_upload_wait_time ) {
-						m_upload_wait_time = age;
-					}
+			}
+			else {
+				m_waiting_to_upload++;
+				if( age > m_upload_wait_time ) {
+					m_upload_wait_time = age;
 				}
 			}
 		}
@@ -422,6 +527,8 @@ TransferQueueManager::CheckTransferQueue() {
 			}
 		}
 	}
+
+	CollectRoundRobinGarbage();
 }
 
 bool

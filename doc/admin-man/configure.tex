@@ -5079,6 +5079,23 @@ MAX_JOBS_RUNNING	= \
   limit is reached, additional transfers will queue up and wait before
   proceeding.
 
+\label{param:TransferQueueNameExpr}
+\item[\Macro{TRANSFER\_QUEUE\_USER\_EXPR}]
+  This rarely configured expression specifies the username to be used
+  for round-robin scheduling in the file transfer queue.  Round-robin
+  scheduling is used when there are multiple jobs waiting to transfer
+  files within the limits set by \Macro{MAX\_CONCURRENT\_UPLOADS}
+  and/or \Macro{MAX\_CONCURRENT\_DOWNLOADS}.  When choosing a new job
+  to allow to transfer, the first job belonging to the transfer queue
+  user who has least recently been given an opportunity to transfer
+  will be selected.  By default, a transfer queue user is identified
+  as the job owner.  A different user name may be specified by
+  configuring \MacroNI{TRANSFER\_QUEUE\_USER\_EXPR} to a string
+  expression that is evaluated in the context of the job ad.  For
+  example, if this expression were set to a name that is the same for
+  all jobs, file transfers would be scheduled in first-in-first-out
+  order rather than round-robin by job owner.
+
 \label{param:ScheddQueryWorkers}
 \item[\Macro{SCHEDD\_QUERY\_WORKERS}]
   This specifies the maximum number of concurrent sub-processes that
