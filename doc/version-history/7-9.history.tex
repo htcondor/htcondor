@@ -395,6 +395,10 @@ in the ClassAd for all daemons would be reset to the current time when they are
 reconfigured.
 \Ticket{3235}
 
+\item Fixed a bug wherein the \Arg{-dont\_use\_default\_node\_log} command line flag
+to \Condor{submit\_dag} had no effect.
+\Ticket{3352}
+
 \item \Security Although not user-visible, 
 there were multiple updates that removed places
 in the code where potential buffer overruns could occur, 
