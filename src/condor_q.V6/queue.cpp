@@ -3681,6 +3681,7 @@ public:
 	int  hard_value;  // if constant, this is set to the value
 	bool dont_care;
 	int  pruned_by;   // index of entry that set dont_care
+	bool reported;
 	std::string unparsed;
 
 	AnalSubExpr(classad::ExprTree * expr, const char * lbl, int dep, int logic=0)
@@ -3697,6 +3698,7 @@ public:
 		, hard_value(-1)
 		, dont_care(false)
 		, pruned_by(-1)
+		, reported(false)
 		{
 		};
 
@@ -4149,165 +4151,206 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 	bool show_work = (detail_mask & 0x100) != 0;
 
 	classad::ExprTree* exprReq = request->LookupExpr(ATTR_REQUIREMENTS);
-	if (exprReq) {
+	if ( ! exprReq)
+		return;
 
-		std::vector<AnalSubExpr> subs;
-		std::string strStep;
-		#define StepLbl(ii) subs[ii].StepLabel(strStep, ii, 3)
+	std::vector<AnalSubExpr> subs;
+	std::string strStep;
+	#define StepLbl(ii) subs[ii].StepLabel(strStep, ii, 3)
 
-		AnalyzeThisSubExpr(exprReq, subs, true, 0);
+	AnalyzeThisSubExpr(exprReq, subs, true, 0);
 
-		if (show_work) {
-			printf("\nEvaluate constants:\n");
-		}
-		// check of each sub-expression has any target references.
+	if (show_work) {
+		printf("\nEvaluate constants:\n");
+	}
+	// check of each sub-expression has any target references.
+	for (int ix = 0; ix < (int)subs.size(); ++ix) {
+		subs[ix].CheckIfConstant(*request);
+	}
+
+	AnalyzePropagateConstants(subs, show_work);
+
+	//
+	// now print out the strength-reduced expression
+	//
+	if (show_work) {
+		printf("\nReduced boolean expressions:\n");
 		for (int ix = 0; ix < (int)subs.size(); ++ix) {
-			subs[ix].CheckIfConstant(*request);
-		}
-
-		AnalyzePropagateConstants(subs, show_work);
-
-		//
-		// now print out the strength-reduced expression
-		//
-		if (show_work) {
-			printf("\nReduced boolean expressions:\n");
-			for (int ix = 0; ix < (int)subs.size(); ++ix) {
-				const char * const_val = "";
-				if (subs[ix].constant)
-					const_val = subs[ix].hard_value ? "true" : "false";
-				std::string pruned = "";
-				if (subs[ix].dont_care) {
-					const_val = (subs[ix].constant) ? (subs[ix].hard_value ? "n/aT" : "n/aF") : "n/a";
-					formatstr(pruned, "\tpruned-by:%d", subs[ix].pruned_by);
-				}
-				if (subs[ix].ix_effective < 0) {
-					const char * pindent = GetIndentPrefix(subs[ix].depth);
-					printf("%s %5s\t%s%s%s\n", StepLbl(ix), const_val, pindent, subs[ix].Label(), pruned.c_str());
-				}
-			}
-		}
-
-			// propagate effectives back up the chain. 
-			//
-
-		if (show_work) {
-			printf("\nPropagate effectives:\n");
-		}
-		for (int ix = 0; ix < (int)subs.size(); ++ix) {
-			bool fchanged = false;
-			int jj = subs[ix].ix_left;
-			if ((jj >= 0) && (subs[jj].ix_effective >= 0)) {
-				subs[ix].ix_left = subs[jj].ix_effective;
-				fchanged = true;
-			}
-
-			jj = subs[ix].ix_right;
-			if ((jj >= 0) && (subs[jj].ix_effective >= 0)) {
-				subs[ix].ix_right = subs[jj].ix_effective;
-				fchanged = true;
-			}
-
-			jj = subs[ix].ix_grip;
-			if ((jj >= 0) && (subs[jj].ix_effective >= 0)) {
-				subs[ix].ix_grip = subs[jj].ix_effective;
-				fchanged = true;
-			}
-
-			if (fchanged) {
-				// force the label to be rebuilt.
-				std::string oldlbl = subs[ix].label;
-				if (oldlbl.empty()) oldlbl = "";
-				subs[ix].label.clear();
-				if (show_work) {
-					printf("%s   %s  is effectively  %s\n", StepLbl(ix), oldlbl.c_str(), subs[ix].Label());
-				}
-			}
-		}
-
-		if (show_work) {
-			printf("\nFinal expressions:\n");
-			for (int ix = 0; ix < (int)subs.size(); ++ix) {
-				const char * const_val = "";
-				if (subs[ix].constant)
-					const_val = subs[ix].hard_value ? "true" : "false";
-				if (subs[ix].ix_effective < 0 && ! subs[ix].dont_care) {
-					std::string altlbl;
-					//if ( ! subs[ix].MakeLabel(altlbl)) altlbl = "";
-					const char * pindent = GetIndentPrefix(subs[ix].depth);
-					printf("%s %5s\t%s%s\n", StepLbl(ix), const_val, pindent, subs[ix].Label() /*, altlbl.c_str()*/);
-				}
-			}
-		}
-		//////////////////////////////////////////////////////////////////////////////
-
-		//
-		//
-		// build counts of matching machines, render final output
-		//
-		if (show_work) {
-			printf("Evaluation against machine ads:\n");
-			printf(" Step  Slots   Condition\n");
-		}
-
-		return_buf = "        Slots"
-		             "\nStep   Matched  Condition"
-		             "\n-----  -------  ---------\n";
-		std::string linebuf;
-		for (int ix = 0; ix < (int)subs.size(); ++ix) {
-			if (subs[ix].ix_effective >= 0 || subs[ix].dont_care)
-				continue;
-
-			const char * pindent = GetIndentPrefix(subs[ix].depth);
 			const char * const_val = "";
-			if (subs[ix].constant) {
+			if (subs[ix].constant)
 				const_val = subs[ix].hard_value ? "true" : "false";
-				formatstr(linebuf, "%s %8s  %s%s\n", StepLbl(ix), const_val, pindent, subs[ix].Label());
-				return_buf += linebuf;
-				if (show_work) { printf("%s", linebuf.c_str()); }
-				continue;
+			std::string pruned = "";
+			if (subs[ix].dont_care) {
+				const_val = (subs[ix].constant) ? (subs[ix].hard_value ? "n/aT" : "n/aF") : "n/a";
+				formatstr(pruned, "\tpruned-by:%d", subs[ix].pruned_by);
 			}
-
-			subs[ix].matches = 0;
-
-			targets.Open();
-			while (ClassAd *target = targets.Next()) {
-
-				classad::Value eval_result;
-				bool bool_val;
-				if (EvalExprTree(subs[ix].tree, request, target, eval_result) && 
-					eval_result.IsBooleanValue(bool_val) && 
-					bool_val) {
-					subs[ix].matches += 1;
-				}
+			if (subs[ix].ix_effective < 0) {
+				const char * pindent = GetIndentPrefix(subs[ix].depth);
+				printf("%s %5s\t%s%s%s\n", StepLbl(ix), const_val, pindent, subs[ix].Label(), pruned.c_str());
 			}
-			targets.Close();
-
-			formatstr(linebuf, "%s %8d  %s%s", StepLbl(ix), subs[ix].matches, pindent, subs[ix].Label());
-
-			bool append_pretty = false;
-			if (subs[ix].logic_op) {
-				append_pretty = (detail_mask & 3) == 3;
-				if (subs[ix].ix_left == ix-2 && subs[ix].ix_right == ix-1)
-					append_pretty = false;
-				if ((detail_mask & 4) != 0)
-					append_pretty = true;
-			}
-				
-			if (append_pretty) { 
-				std::string treebuf;
-				linebuf += " ( "; 
-				PrettyPrintExprTree(subs[ix].tree, treebuf, linebuf.size(), 100); 
-				linebuf += treebuf; 
-				linebuf += " )";
-			}
-
-			linebuf += "\n";
-			return_buf += linebuf;
-
-			if (show_work) { printf("%s", linebuf.c_str()); }
 		}
 	}
+
+		// propagate effectives back up the chain. 
+		//
+
+	if (show_work) {
+		printf("\nPropagate effectives:\n");
+	}
+	for (int ix = 0; ix < (int)subs.size(); ++ix) {
+		bool fchanged = false;
+		int jj = subs[ix].ix_left;
+		if ((jj >= 0) && (subs[jj].ix_effective >= 0)) {
+			subs[ix].ix_left = subs[jj].ix_effective;
+			fchanged = true;
+		}
+
+		jj = subs[ix].ix_right;
+		if ((jj >= 0) && (subs[jj].ix_effective >= 0)) {
+			subs[ix].ix_right = subs[jj].ix_effective;
+			fchanged = true;
+		}
+
+		jj = subs[ix].ix_grip;
+		if ((jj >= 0) && (subs[jj].ix_effective >= 0)) {
+			subs[ix].ix_grip = subs[jj].ix_effective;
+			fchanged = true;
+		}
+
+		if (fchanged) {
+			// force the label to be rebuilt.
+			std::string oldlbl = subs[ix].label;
+			if (oldlbl.empty()) oldlbl = "";
+			subs[ix].label.clear();
+			if (show_work) {
+				printf("%s   %s  is effectively  %s\n", StepLbl(ix), oldlbl.c_str(), subs[ix].Label());
+			}
+		}
+	}
+
+	if (show_work) {
+		printf("\nFinal expressions:\n");
+		for (int ix = 0; ix < (int)subs.size(); ++ix) {
+			const char * const_val = "";
+			if (subs[ix].constant)
+				const_val = subs[ix].hard_value ? "true" : "false";
+			if (subs[ix].ix_effective < 0 && ! subs[ix].dont_care) {
+				std::string altlbl;
+				//if ( ! subs[ix].MakeLabel(altlbl)) altlbl = "";
+				const char * pindent = GetIndentPrefix(subs[ix].depth);
+				printf("%s %5s\t%s%s\n", StepLbl(ix), const_val, pindent, subs[ix].Label() /*, altlbl.c_str()*/);
+			}
+		}
+	}
+	//////////////////////////////////////////////////////////////////////////////
+
+	//
+	//
+	// build counts of matching machines, render final output
+	//
+	if (show_work) {
+		printf("Evaluation against machine ads:\n");
+		printf(" Step  Slots   Condition\n");
+	}
+
+	return_buf = "        Slots"
+	             "\nStep   Matched  Condition"
+	             "\n-----  -------  ---------\n";
+	std::string linebuf;
+	for (int ix = 0; ix < (int)subs.size(); ++ix) {
+		if (subs[ix].ix_effective >= 0 || subs[ix].dont_care)
+			continue;
+
+		const char * pindent = GetIndentPrefix(subs[ix].depth);
+		const char * const_val = "";
+		if (subs[ix].constant) {
+			const_val = subs[ix].hard_value ? "true" : "false";
+			formatstr(linebuf, "%s %8s  %s%s\n", StepLbl(ix), const_val, pindent, subs[ix].Label());
+			return_buf += linebuf;
+			if (show_work) { printf("%s", linebuf.c_str()); }
+			continue;
+		}
+
+		subs[ix].matches = 0;
+
+		targets.Open();
+		while (ClassAd *target = targets.Next()) {
+
+			classad::Value eval_result;
+			bool bool_val;
+			if (EvalExprTree(subs[ix].tree, request, target, eval_result) && 
+				eval_result.IsBooleanValue(bool_val) && 
+				bool_val) {
+				subs[ix].matches += 1;
+			}
+		}
+		targets.Close();
+
+		formatstr(linebuf, "%s %8d  %s%s", StepLbl(ix), subs[ix].matches, pindent, subs[ix].Label());
+
+		bool append_pretty = false;
+		if (subs[ix].logic_op) {
+			append_pretty = (detail_mask & 3) == 3;
+			if (subs[ix].ix_left == ix-2 && subs[ix].ix_right == ix-1)
+				append_pretty = false;
+			if ((detail_mask & 4) != 0)
+				append_pretty = true;
+		}
+			
+		if (append_pretty) { 
+			std::string treebuf;
+			linebuf += " ( "; 
+			PrettyPrintExprTree(subs[ix].tree, treebuf, linebuf.size(), 100); 
+			linebuf += treebuf; 
+			linebuf += " )";
+		}
+
+		linebuf += "\n";
+		return_buf += linebuf;
+
+		if (show_work) { printf("%s", linebuf.c_str()); }
+	}
+
+	// chase zeros back up the expression tree
+#if 0
+	show_work = (detail_mask & 8); // temporary
+	if (show_work) {
+		printf("\nCurrent Table:\nStep  -> Effec Depth Leaf D/C Matches\n");
+		for (int ix = 0; ix < (int)subs.size(); ++ix) {
+
+			int leaf = subs[ix].logic_op == 0;
+			printf("[%3d] -> [%3d] %5d %4d %3d %7d %s\n", ix, subs[ix].ix_effective, subs[ix].depth, leaf, subs[ix].dont_care, subs[ix].matches, subs[ix].Label());
+		}
+		printf("\n");
+		printf("\nChase Zeros:\nStep  -> Effec Depth Leaf Matches\n");
+	}
+	for (int ix = 0; ix < (int)subs.size(); ++ix) {
+		if (subs[ix].ix_effective >= 0 || subs[ix].dont_care)
+			continue;
+
+		int leaf = subs[ix].logic_op == 0;
+		if (leaf && subs[ix].matches == 0) {
+			if (show_work) {
+				printf("[%3d] -> [%3d] %5d %4d %7d %s\n", ix, subs[ix].ix_effective, subs[ix].depth, leaf, subs[ix].matches, subs[ix].Label());
+			}
+			for (int jj = ix+1; jj < (int)subs.size(); ++jj) {
+				if (subs[jj].matches != 0)
+					continue;
+				if (subs[jj].reported)
+					continue;
+				if ((subs[jj].ix_effective == ix) || subs[jj].ix_left == ix || subs[jj].ix_right == ix || subs[jj].ix_grip == ix) {
+					const char * pszop = "  \0 !\0||\0&&\0?:\0  \0"+subs[jj].logic_op*3;
+					printf("[%3d] -> [%3d] %5d %4s %7d %s\n", jj, subs[jj].ix_effective, subs[jj].depth, pszop, subs[jj].matches, subs[jj].Label());
+					subs[jj].reported = true;
+				}
+			}
+		}
+	}
+	if (show_work) {
+		printf("\n");
+	}
+#endif
+
 }
 
 #if 0 // experimental code
@@ -4568,6 +4611,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	int     fOffline        = 0;
 	int		available		= 0;
 	int		totalMachines	= 0;
+	bool	forceReqAnalyze = (analyze_detail_level & 4);
 
 	return_buff[0]='\0';
 
@@ -4603,7 +4647,8 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		sprintf( return_buff,
 			"---\n%03d.%03d:  Request is being serviced\n\n", cluster, 
 			proc );
-		return return_buff;
+		if ( ! forceReqAnalyze)
+			return return_buff;
 	}
 	if( jobState == HELD ) {
 		sprintf( return_buff,
@@ -4615,25 +4660,29 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 			size_t offset = strlen(return_buff);
 			snprintf( return_buff + offset, sizeof(return_buff)-offset, "Hold reason: %s\n\n", hold_reason.Value() );
 		}
-		return return_buff;
+		if ( ! forceReqAnalyze)
+			return return_buff;
 	}
 	if( jobState == REMOVED ) {
 		sprintf( return_buff,
 			"---\n%03d.%03d:  Request is removed.\n\n", cluster, 
 			proc );
-		return return_buff;
+		if ( ! forceReqAnalyze)
+			return return_buff;
 	}
 	if( jobState == COMPLETED ) {
 		sprintf( return_buff,
 			"---\n%03d.%03d:  Request is completed.\n\n", cluster, 
 			proc );
-		return return_buff;
+		if ( ! forceReqAnalyze)
+			return return_buff;
 	}
 	if ( jobMatched ) {
 		sprintf( return_buff,
 			"---\n%03d.%03d:  Request has been matched.\n\n", cluster, 
 			proc );
-		return return_buff;
+		if ( ! forceReqAnalyze)
+			return return_buff;
 	}
 
 	startdAds.Open();
@@ -4861,7 +4910,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
         }
 	}
 
-	if (better_analyze && (fReqConstraint > 0)) {
+	if (better_analyze && ((fReqConstraint > 0) || analyze_detail_level > 0)) {
 
 		// first analyze the Requirements expression against the startd ads.
 		//
