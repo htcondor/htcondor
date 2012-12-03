@@ -1235,7 +1235,7 @@ case CONDOR_getfile:
 		ASSERT( result );
 		
 		errno = 0;
-		fd = safe_open_wrapper_follow( path, O_RDONLY );
+		fd = safe_open_wrapper_follow( path, O_RDONLY | _O_BINARY );
 		if(fd >= 0) {
 			struct stat info;
 			stat(path, &info);
