@@ -385,6 +385,31 @@ a string taken from the definition of the submit description file command
 \SubmitCmd{ec2\_key\_pair}.
 Defines the key pair associated with the EC2 instance. 
 
+%%% ClassAd attribute: EC2SpotPrice
+\index{ClassAd job attribute!EC2SpotPrice}
+\index{EC2SpotPrice!job ClassAd attribute}
+\item[\AdAttr{EC2SpotPrice}:] 
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_spot\_price}.
+Defines the maximum amount (per hour) you're willing to pay to run this job.
+
+%%% ClassAd attribute: EC2SpotRequestID
+\index{ClassAd job attribute!EC2SpotRequestID}
+\index{EC2SpotRequestID!job ClassAd attribute}
+\item[\AdAttr{EC2SpotRequestID}:] 
+Used for grid type ec2 jobs;
+identifies the Spot Request HTCondor made on behalf of this job.
+
+%%% ClassAd attribute: EC2StatusReasonCode
+\index{ClassAd job attribute!EC2StatusReasonCode}
+\index{EC2StatusReasonCode!job ClassAd attribute}
+\item[\AdAttr{EC2StatusReasonCode}:] 
+Used for grid type ec2 jobs;
+reports the reason for most recent EC2-level state transition.  Can be used
+to determine (among other things) if a Spot Request was terminated because
+the spot price rose.
+
 %%% ClassAd attribute: EC2TagNames
 \index{ClassAd job attribute!EC2TagNames}
 \index{EC2TagNames!job ClassAd attribute}
