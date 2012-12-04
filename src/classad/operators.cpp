@@ -105,11 +105,14 @@ SameAs(const ExprTree *tree) const
 {
     bool is_same;
     const Operation *other_op;
-
-    if (tree->GetKind() != OP_NODE) {
+    const ExprTree * pSelfTree = tree->self();
+    
+    if (this == pSelfTree) {
+        is_same = true;
+    } else if (pSelfTree->GetKind() != OP_NODE) {
         is_same = false;
     } else {
-        other_op = (const Operation *) tree;
+        other_op = (const Operation *) pSelfTree;
         
         if (   operation == other_op->operation
             && SameChild(child1, other_op->child1)

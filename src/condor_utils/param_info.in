@@ -5414,7 +5414,7 @@ id=314
 
 [ENABLE_CLASSAD_CACHING]
 aliases=
-default=false
+default=true
 version=0.0.0
 range=.*
 state=default

@@ -159,14 +159,16 @@ SameAs(const ExprTree *tree) const
 {
     bool is_same;
 
-    if (this == tree) {
+    const ExprTree * pSelfTree = tree->self();
+    
+    if (this == pSelfTree) {
         is_same = true;
-   } else if (tree->GetKind() != CLASSAD_NODE) {
+    } else if (pSelfTree->GetKind() != CLASSAD_NODE) {
         is_same = false;
    } else {
        const ClassAd *other_classad;
 
-       other_classad = (const ClassAd *) tree;
+       other_classad = (const ClassAd *) pSelfTree;
 
        if (attrList.size() != other_classad->attrList.size()) {
            is_same = false;

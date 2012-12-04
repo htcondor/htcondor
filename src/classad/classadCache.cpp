@@ -334,7 +334,7 @@ ExprTree * CachedExprEnvelope::Copy( ) const
 	return ( pRet );
 }
 
-const ExprTree* CachedExprEnvelope::self()
+const ExprTree* CachedExprEnvelope::self() const
 {
 	return m_pLetter->pData;
 }
