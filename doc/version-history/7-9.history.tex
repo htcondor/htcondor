@@ -51,9 +51,10 @@ so that jobs submitted
 by \Condor{dagman} will not send email notification. 
 \Ticket{3225}
 
-\item Changed the default job notification from Complete to Never. Added a new
-configuration knob, \Macro{JOB\_DEFAULT\_NOTIFICATION}, so that admins can
-change the default according to their preference.
+\item The default for job notification email has changed
+from \Expr{Complete} to \Expr{Never}. 
+There is also a new configuration variable, \Macro{JOB\_DEFAULT\_NOTIFICATION},
+which permits administrators to change the default for all jobs.
 \Ticket{2155}
 
 \item For platforms supporting cgroups,
