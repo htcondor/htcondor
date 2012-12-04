@@ -39,17 +39,18 @@ These protocols exist to work correctly when the resources do not support
 the \Param{InstanceInitiatedShutdownBehavior} parameter.
 \Ticket{2974}
 
-\item Added both a \Opt{-suppress\_notification},
+\item (This feature was added in version 7.9.1.)  
+Added both a \Opt{-suppress\_notification},
 a \Opt{-dont\_suppress\_notification} command line option,
 and corresponding
 \Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} configuration variable
 to \Condor{dagman} and \Condor{submit\_dag}.
 This enables a user of DAGMan to stop email notification of job
 events for jobs submitted by \Condor{dagman}. The value of
-\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} defaults to \Expr{True},
+\MacroNI{DAGMAN\_SUPPRESS\_NOTIFICATION} defaults to \Expr{True},
 so that jobs submitted
 by \Condor{dagman} will not send email notification. 
-\Ticket{3225}
+\Ticket{3352}
 
 \item The default for job notification email has changed
 from \Expr{Complete} to \Expr{Never}. 
