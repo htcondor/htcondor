@@ -129,9 +129,10 @@ so that jobs submitted
 by \Condor{dagman} will not send email notification. 
 \Ticket{3225}
 
-\item Changed the default job notification from Complete to Never. Added a new
-configuration knob, \Macro{JOB\_DEFAULT\_NOTIFICATION}, so that admins can
-change the default according to their preference.
+\item The default for job notification email has changed
+from \Expr{Complete} to \Expr{Never}. 
+There is also a new configuration variable, \Macro{JOB\_DEFAULT\_NOTIFICATION},
+which permits administrators to change the default for all jobs.
 \Ticket{2155}
 
 \item For platforms supporting cgroups,
@@ -170,14 +171,14 @@ proxy file was updated. It set the value to be the proxy's subject name
 rather than its identity.
 \Ticket{3265}
 
-\item The batch\_gahp no longer modifies the environment variable
+\item The \Prog{batch\_gahp} no longer modifies the environment variable
 \Env{LD\_LIBRARY\_PATH}.
-In some instances, modifying \Env{LD\_LIBRARY\_PATH} can cause the
-batch system's command line tools to fail when run by the batch\_gahp.
+In some instances, modifying \Env{LD\_LIBRARY\_PATH} caused the
+batch system's command line tools to fail when run by the \Prog{batch\_gahp}.
 \Ticket{3317}
 
 \item The \Condor{shadow} would never print the allocated amount of
-partionable resources in the job log.
+partitionable resources in the job log.
 \Ticket{3318}
 
 \item \Condor{who} would sometimes incorrectly display blank or partial
