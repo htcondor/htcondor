@@ -103,6 +103,10 @@ ERROR "match_info() called with unexpected state (Drained)"
 \end{verbatim}
 \Ticket{3331}
 
+\item The \Condor{gridmanager} no longer crashes when a CREAM grid job
+is submitted with an X.509 proxy that doesn't have VOMS attributes.
+\Ticket{3356}
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -117,7 +121,10 @@ ERROR "match_info() called with unexpected state (Drained)"
 
 \begin{itemize}
 
-\item None.
+\item The manual incorrectly identified configuration variable
+\Macro{COLLECTOR\_PERSISTENT\_AD\_LOG} as \MacroNI{PERSISTENT\_AD\_LOG}.
+This has now been corrected throughout the manual.
+\Ticket{3205}
 
 \end{itemize}
 

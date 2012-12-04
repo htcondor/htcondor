@@ -4673,7 +4673,7 @@ Power Management for more details.
   \Attr{Unhibernate} expression of offline machine ClassAds.
   In addition, the collecting of offline machine ClassAds must be enabled
   for this expression to work.  The variable 
-  \Macro{PERSISTENT\_AD\_LOG} on page~\pageref{param:PersistentAdLog}
+  \Macro{COLLECTOR\_PERSISTENT\_AD\_LOG} on page~\pageref{param:CollectorPersistentAdLog}
   detailed on page~\pageref{param:OfflineLog} explains this.
   The special attribute
   \Attr{MachineLastMatchTime} is updated in the ClassAds of offline machines
@@ -4760,8 +4760,8 @@ Power Management for more details.
 
 \label{param:OfflineLog}
 \item[\Macro{OFFLINE\_LOG}]
-  This configuration variables is no longer used.
-  It has been replaced by \MacroNI{PERSISTENT\_AD\_LOG}.
+  This configuration variable is no longer used.
+  It has been replaced by \MacroNI{COLLECTOR\_PERSISTENT\_AD\_LOG}.
 
 \label{param:OfflineExpireAdsAfter}
 \item[\Macro{OFFLINE\_EXPIRE\_ADS\_AFTER}]
@@ -6864,8 +6864,8 @@ page~\pageref{sec:Absent-Ads} for more details.
   If 0, the ClassAds persist forever.  
   Defaults to 30 days.
 
-\label{param:PersisentAdLog}
-\item[\Macro{PERSISTENT\_AD\_LOG}]
+\label{param:CollectorPersisentAdLog}
+\item[\Macro{COLLECTOR\_PERSISTENT\_AD\_LOG}]
   The full path and file name of a file that stores machine ClassAds 
   for every hibernating or absent machine.  This forms a persistent storage
   of these ClassAds, in case the \Condor{collector} daemon crashes.
@@ -10402,7 +10402,7 @@ machine(s) that can read from the pool's \Condor{collector} daemon.
 
 For \Condor{rooster} to wake up hibernating machines, the collecting
 of offline machine ClassAds must be enabled.  See variable
-\Macro{PERSISTENT\_AD\_LOG} on page~\pageref{param:PersistentAdLog}
+\Macro{COLLECTOR\_PERSISTENT\_AD\_LOG} on page~\pageref{param:CollectorPersistentAdLog}
 for details on how to do this.
 
 \begin{description}
