@@ -43,7 +43,7 @@ endif(WITH_OPENSSL)
 file( GLOB SCHED_PLUGIN_SRCS Codec.cpp AviaryUtils.cpp SchedulerObject.cpp
 			PROC_ID_comparator.cpp ${SOAP_SRCS} AviaryScheddPlugin*.cpp )
 
-file( GLOB HADOOP_PLUGIN_SRCS Codec.cpp AviaryUtils.cpp 
+file( GLOB HADOOP_PLUGIN_SRCS Codec.cpp AviaryUtils.cpp HadoopObject.cpp
             PROC_ID_comparator.cpp ${SOAP_SRCS} AviaryHadoopPlugin*.cpp )
 
 file( GLOB JOB_SERVER_SRCS aviary_query_server.cpp ${SOAP_SRCS}

@@ -157,6 +157,7 @@ AviaryHadoopPlugin::update(int cmd, const ClassAd *ad)
 	switch (cmd) {
 	case UPDATE_SCHEDD_AD:
 		dprintf(D_FULLDEBUG, "Received UPDATE_SCHEDD_AD\n");
+        // TODO: anything useful to do with the daemon ad?
 		//schedulerObj->update(*ad);
 		break;
 	default:
@@ -282,52 +283,8 @@ AviaryHadoopPlugin::processJob(const char *key,
 		return false;
 	}
 
-		// Store two pieces of information in the Job, 1. the
-		// Submission's name, 2. the Submission's id
-		//
-		// Submissions indexed on their name, the id is present
-		// for reconstruction of the Submission
-
-		// XXX: Use the jobAd instead of GetAttribute below, gets us $$() expansion
-
-    MyString submissionName;
-    char* value = NULL;
-    if ( (GetAttributeString(id.cluster, id.proc,ATTR_JOB_SUBMISSION,submissionName) < 0) 
-        && (GetAttributeExprNew(id.cluster, id.proc, ATTR_JOB_SUBMISSION,&value) < 0) ) {
-        // Provide a default name for the Submission
-
-			// If we are a DAG node, we default to our DAG group
-		PROC_ID dagman;
-		if (GetAttributeInt(id.cluster, id.proc,
-							ATTR_DAGMAN_JOB_ID,
-							&dagman.cluster) >= 0) {
-			dagman.proc = 0;
-
-			if (GetAttributeString(dagman.cluster, dagman.proc,
-								   ATTR_JOB_SUBMISSION,
-								   submissionName) < 0) {
-					// This can only happen if the DAGMan job was
-					// removed, and we remained, which should not
-					// happen, but could. In such a case we are
-					// orphaned, and we'll make a guess. We'll be
-					// wrong if the DAGMan job didn't use the
-					// default, but it is better to be wrong than
-					// to fail entirely, which is the alternative.
-				submissionName.sprintf("%s#%d", Name, dagman.cluster);
-			}
-		} else {
-			submissionName.sprintf("%s#%d", Name, id.cluster);
-		}
-
-		MyString tmp;
-		tmp += "\"";
-		tmp += submissionName;
-		tmp += "\"";
-		SetAttribute(id.cluster, id.proc,
-					 ATTR_JOB_SUBMISSION,
-					 tmp.Value());
-	}
-    if (value) free (value);
+    // TODO: do some interesting Hadoop related stuff here maybe?
+    // Store Hadoop-specific attrs in job classads?
 
 	return true;
 }
