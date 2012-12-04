@@ -32,10 +32,19 @@
 			<xs:element name="ipc" type="xs:string" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
+	<xs:complexType name="HadoopNameNodeStart">
+		<xs:sequence>
+			<!-- path to a versioned Hadoop tar/zip binary dist file -->
+			<xs:element name="bin_file" type="xs:string" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
 	<xs:complexType name="HadoopStart">
 		<xs:sequence>
+			<!-- a dependent reference to another Hadoop entity in the cluster -->
 			<xs:element name="ref" type="hdp:HadoopID"/>
-			<xs:element name="count" type="xs:int"/>
+			<!-- path to a versioned Hadoop tar/zip binary dist file -->
+			<xs:element name="bin_file" type="xs:string" minOccurs="0"/>
+			<xs:element name="count" type="xs:int" minOccurs="0" default="1"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:complexType name="HadoopStartResponse">
@@ -82,7 +91,7 @@
 		</xs:sequence>
 	</xs:complexType>
 	<!-- NameNode -->
-	<xs:element name="StartNameNode"/>
+	<xs:element name="StartNameNode" type="hdp:HadoopNameNodeStart"/>
 	<xs:element name="StartNameNodeResponse" type="hdp:HadoopStartResponse"/>
 	<xs:element name="StopNameNode" type="hdp:HadoopStop"/>
 	<xs:element name="StopNameNodeResponse" type="hdp:HadoopStopResponse"/>

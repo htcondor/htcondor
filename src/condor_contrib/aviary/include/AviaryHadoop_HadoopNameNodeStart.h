@@ -1,28 +1,24 @@
 
-          #ifndef AviaryHadoop_STARTNAMENODE_H
-          #define AviaryHadoop_STARTNAMENODE_H
+          #ifndef AviaryHadoop_HADOOPNAMENODESTART_H
+          #define AviaryHadoop_HADOOPNAMENODESTART_H
         
       
        /**
-        * StartNameNode.h
+        * HadoopNameNodeStart.h
         *
         * This file was auto-generated from WSDL
         * by the Apache Axis2/Java version: 1.0  Built on : Nov 08, 2012 (09:07:42 EST)
         */
 
        /**
-        *  StartNameNode class
+        *  HadoopNameNodeStart class
         */
 
         namespace AviaryHadoop{
-            class StartNameNode;
+            class HadoopNameNodeStart;
         }
         
 
-        
-                #include "AviaryHadoop_HadoopNameNodeStart.h"
-              
-        #include <axutil_qname.h>
         
 
         #include <stdio.h>
@@ -35,22 +31,20 @@ namespace AviaryHadoop
         
         
 
-        class StartNameNode {
+        class HadoopNameNodeStart {
 
         private:
-             
-                axutil_qname_t* qname;
-            AviaryHadoop::HadoopNameNodeStart* property_StartNameNode;
+             std::string property_Bin_file;
 
                 
-                bool isValidStartNameNode;
+                bool isValidBin_file;
             
 
         /*** Private methods ***/
           
 
         bool WSF_CALL
-        setStartNameNodeNil();
+        setBin_fileNil();
             
 
 
@@ -60,30 +54,30 @@ namespace AviaryHadoop
         public:
 
         /**
-         * Constructor for class StartNameNode
+         * Constructor for class HadoopNameNodeStart
          */
 
-        StartNameNode();
+        HadoopNameNodeStart();
 
         /**
-         * Destructor StartNameNode
+         * Destructor HadoopNameNodeStart
          */
-        ~StartNameNode();
+        ~HadoopNameNodeStart();
 
 
        
 
         /**
-         * Constructor for creating StartNameNode
+         * Constructor for creating HadoopNameNodeStart
          * @param 
-         * @param StartNameNode AviaryHadoop::HadoopNameNodeStart*
-         * @return newly created StartNameNode object
+         * @param Bin_file std::string
+         * @return newly created HadoopNameNodeStart object
          */
-        StartNameNode(AviaryHadoop::HadoopNameNodeStart* arg_StartNameNode);
+        HadoopNameNodeStart(std::string arg_Bin_file);
         
 
         /**
-         * resetAll for StartNameNode
+         * resetAll for HadoopNameNodeStart
          */
         WSF_EXTERN bool WSF_CALL resetAll();
         
@@ -92,26 +86,26 @@ namespace AviaryHadoop
         
 
         /**
-         * Getter for StartNameNode. 
-         * @return AviaryHadoop::HadoopNameNodeStart*
+         * Getter for bin_file. 
+         * @return std::string*
          */
-        WSF_EXTERN AviaryHadoop::HadoopNameNodeStart* WSF_CALL
-        getStartNameNode();
+        WSF_EXTERN std::string WSF_CALL
+        getBin_file();
 
         /**
-         * Setter for StartNameNode.
-         * @param arg_StartNameNode AviaryHadoop::HadoopNameNodeStart*
+         * Setter for bin_file.
+         * @param arg_Bin_file std::string*
          * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setStartNameNode(AviaryHadoop::HadoopNameNodeStart*  arg_StartNameNode);
+        setBin_file(const std::string  arg_Bin_file);
 
         /**
-         * Re setter for StartNameNode
+         * Re setter for bin_file
          * @return true on success, false
          */
         WSF_EXTERN bool WSF_CALL
-        resetStartNameNode();
+        resetBin_file();
         
 
 
@@ -125,11 +119,11 @@ namespace AviaryHadoop
         
 
         /**
-         * Check whether StartNameNode is Nill
+         * Check whether bin_file is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
-        isStartNameNodeNil();
+        isBin_fileNil();
 
 
         
@@ -165,18 +159,18 @@ namespace AviaryHadoop
 
         /**
          * Serialize the ADB object to an xml
-         * @param StartNameNode_om_node node to serialize from
-         * @param StartNameNode_om_element parent element to serialize from
+         * @param HadoopNameNodeStart_om_node node to serialize from
+         * @param HadoopNameNodeStart_om_element parent element to serialize from
          * @param tag_closed Whether the parent tag is closed or not
          * @param namespaces hash of namespace uris to prefixes
          * @param next_ns_index an int which contains the next namespace index
          * @return axiom_node_t on success,NULL otherwise.
          */
         axiom_node_t* WSF_CALL
-        serialize(axiom_node_t* StartNameNode_om_node, axiom_element_t *StartNameNode_om_element, int tag_closed, axutil_hash_t *namespaces, int *next_ns_index);
+        serialize(axiom_node_t* HadoopNameNodeStart_om_node, axiom_element_t *HadoopNameNodeStart_om_element, int tag_closed, axutil_hash_t *namespaces, int *next_ns_index);
 
         /**
-         * Check whether the StartNameNode is a particle class (E.g. group, inner sequence)
+         * Check whether the HadoopNameNodeStart is a particle class (E.g. group, inner sequence)
          * @return true if this is a particle class, false otherwise.
          */
         bool WSF_CALL
@@ -191,11 +185,11 @@ namespace AviaryHadoop
         
 
         /**
-         * Getter for StartNameNode by property number (1)
-         * @return AviaryHadoop::HadoopNameNodeStart
+         * Getter for bin_file by property number (1)
+         * @return std::string
          */
 
-        AviaryHadoop::HadoopNameNodeStart* WSF_CALL
+        std::string WSF_CALL
         getProperty1();
 
     
@@ -203,6 +197,6 @@ namespace AviaryHadoop
 };
 
 }        
- #endif /* STARTNAMENODE_H */
+ #endif /* HADOOPNAMENODESTART_H */
     
 

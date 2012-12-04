@@ -40,6 +40,10 @@ namespace AviaryHadoop
 
                 
                 bool isValidRef;
+            std::string property_Bin_file;
+
+                
+                bool isValidBin_file;
             int property_Count;
 
                 
@@ -51,6 +55,10 @@ namespace AviaryHadoop
 
         bool WSF_CALL
         setRefNil();
+            
+
+        bool WSF_CALL
+        setBin_fileNil();
             
 
         bool WSF_CALL
@@ -81,10 +89,11 @@ namespace AviaryHadoop
          * Constructor for creating HadoopStart
          * @param 
          * @param Ref AviaryHadoop::HadoopID*
+         * @param Bin_file std::string
          * @param Count int
          * @return newly created HadoopStart object
          */
-        HadoopStart(AviaryHadoop::HadoopID* arg_Ref,int arg_Count);
+        HadoopStart(AviaryHadoop::HadoopID* arg_Ref,std::string arg_Bin_file,int arg_Count);
         
 
         /**
@@ -117,6 +126,30 @@ namespace AviaryHadoop
          */
         WSF_EXTERN bool WSF_CALL
         resetRef();
+        
+        
+
+        /**
+         * Getter for bin_file. 
+         * @return std::string*
+         */
+        WSF_EXTERN std::string WSF_CALL
+        getBin_file();
+
+        /**
+         * Setter for bin_file.
+         * @param arg_Bin_file std::string*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setBin_file(const std::string  arg_Bin_file);
+
+        /**
+         * Re setter for bin_file
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetBin_file();
         
         
 
@@ -159,6 +192,16 @@ namespace AviaryHadoop
          */
         bool WSF_CALL
         isRefNil();
+
+
+        
+
+        /**
+         * Check whether bin_file is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isBin_fileNil();
 
 
         
@@ -241,12 +284,23 @@ namespace AviaryHadoop
         
 
         /**
-         * Getter for count by property number (2)
+         * Getter for bin_file by property number (2)
+         * @return std::string
+         */
+
+        std::string WSF_CALL
+        getProperty2();
+
+    
+        
+
+        /**
+         * Getter for count by property number (3)
          * @return int
          */
 
         int WSF_CALL
-        getProperty2();
+        getProperty3();
 
     
 

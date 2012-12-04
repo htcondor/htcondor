@@ -21,8 +21,6 @@
 
 #include <time.h>
 
-extern bool qmgmt_all_users_trusted;
-
 // local includes
 #include "AviaryHadoopServiceSkeleton.h"
 #include <AviaryHadoop_StartTaskTracker.h>

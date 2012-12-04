@@ -47,6 +47,8 @@
         
             qname = NULL;
         
+                property_StartNameNode  = NULL;
+              
             isValidStartNameNode  = false;
         
                   qname =  axutil_qname_create (Environment::getEnv(),
@@ -56,10 +58,12 @@
                 
         }
 
-       AviaryHadoop::StartNameNode::StartNameNode(wso2wsf::OMElement* arg_StartNameNode)
+       AviaryHadoop::StartNameNode::StartNameNode(AviaryHadoop::HadoopNameNodeStart* arg_StartNameNode)
         {
              
                    qname = NULL;
+             
+               property_StartNameNode  = NULL;
              
             isValidStartNameNode  = true;
             
@@ -81,6 +85,7 @@
             //calls reset method for all the properties owned by this method which are pointers.
 
             
+             resetStartNameNode();//AviaryHadoop::HadoopNameNodeStart
           if(qname != NULL)
           {
             axutil_qname_free( qname, Environment::getEnv());
@@ -152,25 +157,39 @@
                                    is_early_node_valid = false;
                                    
                                    
+                                    while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                    {
+                                        current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                    }
+                                    if(current_node != NULL)
+                                    {
+                                        current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                        mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                    }
+                                   
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "StartNameNode", "http://hadoop.aviary.grid.redhat.com", NULL);
+                                 
 
-                           if ( 
-                                (current_node ))
+                           if (isParticle() ||  
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname))))
                            {
-                              if( current_node )
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname)))
                               {
                                 is_early_node_valid = true;
                               }
                               
-                                 
-                                      text_value = NULL; /* just to avoid warning */
-                                      
-                                        {
-                                          axiom_node_t *current_property_node = current_node;
-                                          current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                          axiom_node_detach(current_property_node, Environment::getEnv());
-                                          status = setStartNameNode(new OMElement(NULL,current_property_node));
-                                        }
-                                        
+                                 AviaryHadoop::HadoopNameNodeStart* element = new AviaryHadoop::HadoopNameNodeStart();
+
+                                      status =  element->deserialize(&current_node, &is_early_node_valid, false);
+                                      if(AXIS2_FAILURE == status)
+                                      {
+                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in building adb object for element StartNameNode");
+                                      }
+                                      else
+                                      {
+                                          status = setStartNameNode(element);
+                                      }
+                                    
                                  if(AXIS2_FAILURE ==  status)
                                  {
                                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for StartNameNode ");
@@ -244,8 +263,7 @@
                 axis2_char_t *qname_prefix = NULL;
                 axis2_char_t *p_prefix = NULL;
             
-                    axis2_char_t *text_value_1;
-                    axis2_char_t *text_value_1_temp;
+                    axis2_char_t text_value_1[ADB_DEFAULT_DIGIT_LIMIT];
                     
                axis2_char_t *start_input_str = NULL;
                axis2_char_t *end_input_str = NULL;
@@ -319,19 +337,18 @@
 
                     
                     
-                            sprintf(start_input_str, "<%s%sStartNameNode>",
+                            sprintf(start_input_str, "<%s%sStartNameNode",
                                  p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":""); 
                             
                         start_input_str_len = axutil_strlen(start_input_str);
                         sprintf(end_input_str, "</%s%sStartNameNode>",
                                  p_prefix?p_prefix:"",
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
-                    
-                                text_value_1 = NULL; /* just to bypass the warning unused variable */
-                                axiom_node_add_child(parent, Environment::getEnv(), property_StartNameNode->getAxiomNode());
-                              
+                    property_StartNameNode->serialize(current_node, parent_element,
+                                                                                 property_StartNameNode->isParticle() || true, namespaces, next_ns_index);
+                            
                      
                      AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
                      AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
@@ -360,7 +377,7 @@
             /**
              * Getter for StartNameNode by  Property Number 1
              */
-            wso2wsf::OMElement* WSF_CALL
+            AviaryHadoop::HadoopNameNodeStart* WSF_CALL
             AviaryHadoop::StartNameNode::getProperty1()
             {
                 return getStartNameNode();
@@ -369,7 +386,7 @@
             /**
              * getter for StartNameNode.
              */
-            wso2wsf::OMElement* WSF_CALL
+            AviaryHadoop::HadoopNameNodeStart* WSF_CALL
             AviaryHadoop::StartNameNode::getStartNameNode()
              {
                 return property_StartNameNode;
@@ -380,7 +397,7 @@
              */
             bool WSF_CALL
             AviaryHadoop::StartNameNode::setStartNameNode(
-                    wso2wsf::OMElement*  arg_StartNameNode)
+                    AviaryHadoop::HadoopNameNodeStart*  arg_StartNameNode)
              {
                 
 
@@ -430,6 +447,21 @@
 
 
                
+            
+                
+
+                if(property_StartNameNode != NULL)
+                {
+                   
+                   
+                         delete  property_StartNameNode;
+                     
+
+                   }
+
+                
+                
+                
                isValidStartNameNode = false; 
                return true;
            }
