@@ -659,31 +659,6 @@ HTCondor evicts the currently running job before proceeding
 with the shutdown.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{HTCondor does not stop the HTCondor jobs running on my Linux machine
-when I use my keyboard and mouse.  Is there a bug?}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Linux!keyboard and mouse activity}
-
-There is no bug in HTCondor.
-Unfortunately,
-recent Linux 2.4.x and all Linux 2.6.x kernels through 
-version 2.6.10
-do not post proper state information,
-such that HTCondor can detect keyboard and mouse activity.
-HTCondor 
-implements workarounds to piece together the needed
-state information for PS/2 devices.
-A better fix of the problem utilizes the 
-kernel patch linked to from the directions posted at
-\URL{http://www.cs.wisc.edu/condor/kernel.patch.html}.
-This patch works better for PS/2 devices, and
-may also work for USB devices.
-A future version of HTCondor will implement better recognition
-of USB devices,
-such that the kernel patch will also definitively work for USB devices.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{What signals get sent to my jobs when HTCondor needs to preempt or kill them, or when I remove them from the queue?  Can I tell HTCondor which signals to send?}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

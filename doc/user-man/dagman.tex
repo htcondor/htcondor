@@ -776,7 +776,12 @@ are ready nodes in the DAG.  Once some of the idle jobs start to
 run, \Condor{dagman} will resume submitting jobs.  Note that this
 parameter only limits the number of idle jobs submitted by a
 given instance of \Condor{dagman}. Idle jobs submitted by other sources
-(including other \Condor{dagman} runs) are ignored.
+(including other \Condor{dagman} runs) are ignored. Also, \Condor{dagman}
+does not do anything special to the submit file: if a submit file has a
+``queue 5000'' statement and a \Arg{-maxidle} argument of 250, \Condor{dagman}
+will submit the file, and a new cluster of 5000 jobs will be submitted to the
+schedd; in this case, not further jobs will be submitted by \Condor{dagman}
+until the number of idle jobs falls below 250. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Job Monitoring, Job Failure, and Job Removal}

@@ -91,7 +91,11 @@ output DAG input file lines as they are parsed
        \Arg{NumberOfJobs} is a positive integer.
        This command-line option to \Condor{submit\_dag} is passed to
        \Condor{dagman}.
-       If not specified, the number of idle jobs is unlimited.  }
+       If not specified, the number of idle jobs is unlimited. Note that
+       nothing special is done to the submit file: a ``queue 5000'' statement in
+       a submit file where \Arg{-maxidle} is set to 250 will result in a cluster
+       of 5000 new jobs being submitted to the schedd; in this case, \Condor{dagman}
+       will resume submitting jobs when the number of idle jobs falls below 250. }
     \OptItem{\OptArg{-maxjobs}{numberOfJobs}}{Sets the maximum number of 
        clusters
        within the DAG that will be submitted to HTCondor at one time.
