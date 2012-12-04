@@ -93,10 +93,10 @@ proxy file was updated. It set the value to be the proxy's subject name
 rather than its identity.
 \Ticket{3265}
 
-\item The batch\_gahp no longer modifies the environment variable
+\item The \Prog{batch\_gahp} no longer modifies the environment variable
 \Env{LD\_LIBRARY\_PATH}.
-In some instances, modifying \Env{LD\_LIBRARY\_PATH} can cause the
-batch system's command line tools to fail when run by the batch\_gahp.
+In some instances, modifying \Env{LD\_LIBRARY\_PATH} caused the
+batch system's command line tools to fail when run by the \Prog{batch\_gahp}.
 \Ticket{3317}
 
 \item The \Condor{shadow} would never print the allocated amount of
