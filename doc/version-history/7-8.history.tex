@@ -92,8 +92,11 @@ the job was put on hold shortly after the user's proxy was refreshed.
 The incorrect, but stated hold reason was, \Expr{"Proxy about to expire."}
 \Ticket{3280}
 
-\item The configuration setting
-\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_REFRESH} had no effect.
+\item The configuration variable
+\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_REFRESH} had no effect,
+as it was implemented using the incorrect variable name of
+\MacroNI{DELEGATE\_JOB\_GSI\_CREDENTIALS\_RENEWAL}.
+The implementation now uses the correct name.
 \Ticket{3282}
 
 \item When using privilege separation, jobs would be put on hold after
