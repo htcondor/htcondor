@@ -298,7 +298,9 @@ TransferQueueManager::CollectRoundRobinGarbage()
 		// hour.
 
 	time_t now = time(NULL);
-	if( abs(now - m_round_robin_garbage_time) > 3600 ) {
+		// use abs() here so big clock jumps do not cause long
+		// periods of no garbage collection
+	if( abs((int)(now - m_round_robin_garbage_time)) > 3600 ) {
 		int num_removed = 0;
 
 		for( std::map< std::string,unsigned int >::iterator it = m_round_robin_recency.begin();
