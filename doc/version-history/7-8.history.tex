@@ -71,7 +71,11 @@ been in Hold state due to failed file transfer for at least twelve hours;
 these jobs will be removed from the queue.
 \Ticket{3200}
 
-\item Fixed a problem where a ssh\_to\_job or interactive job session would be terminated prematurely if the execute machine was configured to track process trees via a dedicated login (aka \Macro{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} is being used).  
+\item Fixed a problem where an \Prog{ssh\_to\_job} or an interactive job 
+session would be terminated prematurely if the execute machine 
+was configured to track process trees via a dedicated login.
+That is, when configuration variable 
+\Macro{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} is being used.  
 \Ticket{3232}
 
 \item ClassAd functions int() and real() now ignore trailing characters
