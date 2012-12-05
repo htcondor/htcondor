@@ -491,7 +491,8 @@ bool AmazonRequest::SendRequest() {
     curl_easy_cleanup( curl );
     
     if( responseCode != 200 ) {
-        this->errorCode = "E_HTTP_RESPONSE_NOT_200";
+        // this->errorCode = "E_HTTP_RESPONSE_NOT_200";
+        sprintf( this->errorCode, "E_HTTP_RESPONSE_NOT_200 (%lu)", responseCode );
         this->errorMessage = resultString;
         dprintf( D_ALWAYS, "Query did not return 200 (%lu), failing.\n",
             responseCode );

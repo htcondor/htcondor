@@ -572,7 +572,8 @@ class GahpClient : public Service {
 
 		int ec2_ping( std::string service_url,
 					  std::string publickeyfile,
-					  std::string privatekeyfile );
+					  std::string privatekeyfile,
+					  char* & error_code );
 
 		int ec2_vm_create_keypair( std::string service_url,
 								   std::string publickeyfile,

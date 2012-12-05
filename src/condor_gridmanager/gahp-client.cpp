@@ -5989,7 +5989,8 @@ int GahpClient::ec2_vm_status( std::string service_url,
 // Ping to check if the server is alive
 int GahpClient::ec2_ping(std::string service_url,
 						 std::string publickeyfile,
-						 std::string privatekeyfile)
+						 std::string privatekeyfile,
+						 char *& error_code )
 {
 	// we can use "Status All" command to make sure EC2 Server is alive.
 	static const char* command = "EC2_VM_STATUS_ALL";
@@ -6023,6 +6024,12 @@ int GahpClient::ec2_ping(std::string service_url,
 	
 	if ( result ) {
 		int rc = atoi(result->argv[1]);
+		
+		if( result->argc == 4 ) {
+		    error_code = strdup( result->argv[2] );
+		    error_string = result->argv[3];
+		}
+		
 		delete result;
 		return rc;
 	}
