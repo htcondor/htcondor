@@ -32,6 +32,8 @@ file( GLOB QUERY_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/query/src/*.cpp
 file( GLOB QUERY_SRCS ${CMAKE_CURRENT_SOURCE_DIR} AviaryQueryService*.cpp )
 file( GLOB LOCATOR_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/locator/src/*.cpp )
 file( GLOB LOCATOR_SRCS ${CMAKE_CURRENT_SOURCE_DIR} AviaryLocatorService*.cpp )
+file( GLOB COLLECTOR_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../codegen/collector/src/*.cpp )
+file( GLOB COLLECTOR_SRCS ${CMAKE_CURRENT_SOURCE_DIR} AviaryCollectorService*.cpp )
 
 if (WITH_OPENSSL)
     file( GLOB SSL_SRCS ${CMAKE_CURRENT_SOURCE_DIR} axis2_ssl_*.c Axis2SslProvider.cpp)
@@ -48,6 +50,9 @@ file( GLOB JOB_SERVER_SRCS aviary_query_server.cpp ${SOAP_SRCS}
 
 file( GLOB LOCATOR_PLUGIN_SRCS AviaryUtils.cpp LocatorObject.cpp 
 			${SOAP_SRCS} AviaryLocatorPlugin*.cpp )
+
+file( GLOB COLLECTOR_PLUGIN_SRCS AviaryUtils.cpp CollectorObject.cpp 
+			${SOAP_SRCS} AviaryCollectorPlugin*.cpp )
 
 ############################
 # schedd plugin
@@ -86,6 +91,19 @@ target_link_libraries(aviary_locator_axis -Wl,--whole-archive -lwso2_wsf -Wl,--n
 target_link_libraries(aviary_locator_axis AviaryLocatorPlugin-plugin)
 
 ############################
+# collector plugin
+############################
+condor_plugin( AviaryCollectorPlugin-plugin "${COLLECTOR_REF};${COLLECTOR_PLUGIN_SRCS}" "${C_LIBEXEC}" "${WSO2_FOUND}" ON)
+# remove unresolved deps by copying in -laxis2_engine objects
+target_link_libraries(AviaryCollectorPlugin-plugin -Wl,--whole-archive -laxis2_engine -Wl,--no-whole-archive)
+
+add_library (aviary_collector_axis SHARED ${COMMON_GEN_SRCS} ${COLLECTOR_GEN_SRCS} ${COLLECTOR_SRCS})
+# remove unresolved deps by copying in -lwso2_wsf objects
+target_link_libraries(aviary_collector_axis -Wl,--whole-archive -lwso2_wsf -Wl,--no-whole-archive)
+# axis2 engine linking forcing our hand again
+target_link_libraries(aviary_collector_axis AviaryCollectorPlugin-plugin)
+
+############################
 # install targets && configure our axis2.xml for platform
 ############################
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/../etc/axis2.xml.in" "${CMAKE_CURRENT_BINARY_DIR}/../etc/axis2.xml" @ONLY)
@@ -120,3 +138,10 @@ install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-common.xsd
 				${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-locator.xsd
 				${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-locator.wsdl
 		DESTINATION ${C_SERVICES}/locator )
+
+install (TARGETS aviary_collector_axis DESTINATION ${C_SERVICES}/collector)
+install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../services/collector/services.xml DESTINATION ${C_SERVICES}/collector )
+install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-common.xsd
+				${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-collector.xsd
+				${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-collector.wsdl
+		DESTINATION ${C_SERVICES}/collector )
