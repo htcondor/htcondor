@@ -1,0 +1,42 @@
+<!-- This file was auto-generated from WSDL -->
+<!-- by the Apache Axis2 version: 1.0  Built on : Mar 02, 2011 (11:53:41 EST) -->
+<service name="AviaryCollector">
+<parameter name="ServiceClass" locked="xsd:false">aviary_collector_axis</parameter>
+<description>AviaryCollectorServiceService</description>
+<operation name="getAttributes" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">collector#attributes</parameter>
+</operation>
+<operation name="getCollector" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">collector#collector</parameter>
+</operation>
+<operation name="getMaster" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">collector#master</parameter>
+</operation>
+<operation name="getMasterID" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">collector#master#id</parameter>
+</operation>
+<operation name="getNegotiator" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">collector#negotiator</parameter>
+</operation>
+<operation name="getScheduler" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">collector#scheduler</parameter>
+</operation>
+<operation name="getSlot" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">collector#slot</parameter>
+</operation>
+<operation name="getSlotID" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">collector#slot#id</parameter>
+</operation>
+<operation name="getSubmitter" mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">collector#submitter</parameter>
+</operation>
+</service>
