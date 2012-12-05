@@ -194,16 +194,12 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	
 	m_vm_check_times = 0;
 
+	// Only generate a keypair if the user asked for one.
 	jobAd->LookupString( ATTR_EC2_KEY_PAIR, m_key_pair );
-	
-	if (m_key_pair.empty())
-	{
-	  m_should_gen_key_pair = true;
-	  if (!jobAd->LookupString( ATTR_EC2_KEY_PAIR_FILE, m_key_pair_file ))
-	  {
-	    m_key_pair_file = NULL_FILE;
-	  }
-	}
+	jobAd->LookupString( ATTR_EC2_KEY_PAIR_FILE, m_key_pair_file );
+	if( m_key_pair.empty() && ! m_key_pair_file.empty() ) {
+	    m_should_gen_key_pair = true;
+    }
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start (unless the job is already held).
