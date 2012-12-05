@@ -39,7 +39,7 @@ if ( WITH_BLAHP )
 		endif()
 
 
-		condor_pre_external( BLAHP blahp-1.16.5.1-p8 "lib;include" "done")
+		condor_pre_external( BLAHP blahp-1.16.5.1-p9 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${BLAHP_DEPENDS}
@@ -66,6 +66,7 @@ if ( WITH_BLAHP )
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/escape-args.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/condor-history.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/submit-l.patch -p0 &&
+							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/proxy-init.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/ld-library-path.patch -p0 &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/classads.m4 org.glite.ce.blahp/project &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/${GLOBUS_M4_FILE} org.glite.ce.blahp/project/globus.m4 &&

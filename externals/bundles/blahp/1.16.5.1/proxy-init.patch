@@ -1,0 +1,20 @@
+diff -u -r org.glite.ce.blahp/src/server.c org.glite.ce.blahp-1.16.5.1/src/server.c
+--- org.glite.ce.blahp/src/server.c	2011-09-15 07:39:39.000000000 -0500
++++ org.glite.ce.blahp-patched/src/server.c	2012-12-05 13:47:55.000000000 -0600
+@@ -2652,14 +2652,14 @@
+ 	if (seconds_left <= 0)
+ 	{
+ 		/* Something's wrong with the current proxy - use defaults */
+-		exe_command.command = make_message("%s/bin/grid-proxy-init -old -limited -cert %s -key %s -out %s",
++		exe_command.command = make_message("%s/bin/grid-proxy-init -limited -cert %s -key %s -out %s",
+ 	                          globuslocation, proxy_name, proxy_name, limit_command_output);
+ 	} 
+ 	else
+ 	{
+ 		hours_left = (int)(seconds_left/3600);
+ 		minutes_left = (int)((seconds_left%3600)/60) + 1;
+-		exe_command.command = make_message("%s/bin/grid-proxy-init -old -limited -valid %d:%d -cert %s -key %s -out %s",
++		exe_command.command = make_message("%s/bin/grid-proxy-init -limited -valid %d:%d -cert %s -key %s -out %s",
+ 	                          globuslocation, hours_left, minutes_left, proxy_name, proxy_name, limit_command_output);
+ 	}
+ 
