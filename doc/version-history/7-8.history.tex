@@ -48,6 +48,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item HTCondor now places EC2 jobs on hold when they fail to authenticate,
+rather than leaving them (and other jobs with the same authentication tokens)
+idle indefinitely.
+\Ticket{2274}
+
 \item HTCondor now only destroys the user's half of the SSH keypair
 when sure that the instance has terminated.  This prevents transient
 problems from rendering an instance permanently inaccessible.
