@@ -82,6 +82,11 @@ drift in the negotiation cycle delay.
 when submitting jobs to SGE.
 \Ticket{3350}
 
+\item On 32-bit platforms a \Macro{STARTER\_RLIMIT\_AS} value larger than 4096 could
+cause jobs to abort on startup.  Values larger than 2047 have no real meaning on 32-bit
+platforms, so values larger than 2047 are treated as no limit on 32-bit platforms.
+\Ticket{3309}
+
 \end{itemize}
 
 \noindent Known Bugs:
