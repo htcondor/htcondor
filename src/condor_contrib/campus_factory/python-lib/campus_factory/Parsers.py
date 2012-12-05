@@ -1,7 +1,6 @@
 import logging
 import xml.sax.handler
 import os
-from popen2 import Popen3
 from select import select
 
 from campus_factory.util.ExternalCommands import RunExternal

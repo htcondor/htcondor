@@ -5,6 +5,8 @@ from campus_factory.ClusterStatus import CondorConfig
 from optparse import OptionParser
 import os, sys, pwd
 
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 def add_options(parser):
 
