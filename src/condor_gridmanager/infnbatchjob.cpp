@@ -142,7 +142,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 {
 	std::string buff;
 	std::string error_string = "";
-	char *gahp_path;
+	char *gahp_path = NULL;
 	ArgList gahp_args;
 
 	gahpAd = NULL;
@@ -228,8 +228,13 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 			goto error_exit;
 		}
 	} else {
-		formatstr( buff, "%s_GAHP", batchType );
-		gahp_path = param(buff.c_str());
+		// CRUFT: BATCH_GAHP was added in 7.7.6.
+		//   Checking <batch-type>_GAHP should be removed at some
+		//   point in the future.
+		if ( strcasecmp( batchType, "condor" ) ) {
+			formatstr( buff, "%s_GAHP", batchType );
+			gahp_path = param(buff.c_str());
+		}
 		if ( gahp_path == NULL ) {
 			gahp_path = param( "BATCH_GAHP" );
 			if ( gahp_path == NULL ) {
