@@ -60,6 +60,11 @@ event, rather than trying once and exiting. \Condor{dagman} exits, writing
 a rescue DAG, if it is unable to write the event.
 \Ticket{965}
 
+\item The \Condor{gridmanager} now cleans up temporary files and directories
+that are sometimes left by the batch\_gahp when executing a grid-type
+\SubmitCmd{batch} job.
+\Ticket{3276}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
