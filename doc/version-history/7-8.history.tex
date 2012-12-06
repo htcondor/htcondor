@@ -138,6 +138,13 @@ of grid-type \SubmitCmd{batch} to submit jobs into an HTCondor pool.
 The \Condor{gridmanager} would attempt to use the wrong GAHP server.
 \Ticket{3364}
 
+\item The default for the undocumented configuration variable
+\Macro{X\_RUNS\_HERE} was inverted from \Expr{True} to \Expr{False}
+starting with the release of version 7.7.3. 
+Its default has been reset to \Expr{True}. 
+When \Expr{False}, the \Condor{master} will not start the \Condor{kbdd}.
+\Ticket{3343}
+
 \end{itemize}
 
 \noindent Known Bugs:

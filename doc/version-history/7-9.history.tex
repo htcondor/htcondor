@@ -216,6 +216,10 @@ In some instances, modifying \Env{LD\_LIBRARY\_PATH} caused the
 batch system's command line tools to fail when run by the \Prog{batch\_gahp}.
 \Ticket{3317}
 
+\item Grid-type \SubmitCmd{batch} jobs now work properly on machines
+where the gLite software has been installed.
+\Ticket{3269}
+
 \item The \Condor{shadow} would never print the allocated amount of
 partitionable resources in the job log.
 \Ticket{3318}
