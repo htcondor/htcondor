@@ -113,6 +113,11 @@ ssh_upload_and_run () {
 
 display_dots () {
     while [ 1 ]; do
+        # Get parent ID
+        ppid=`ps -p $$ -o ppid=`
+        if [ "$ppid" -eq 1 ]; then
+            exit
+        fi
         echo -n "."
         sleep 1
     done
