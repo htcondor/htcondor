@@ -129,6 +129,15 @@ ERROR "match_info() called with unexpected state (Drained)"
 is submitted with an X.509 proxy that doesn't have VOMS attributes.
 \Ticket{3356}
 
+\item \Condor{chirp} fetch could only transfer text files on Windows. It would
+truncate or corrupt binary files.
+\Ticket{3355}
+
+\item Fixed a bug in the \Condor{gridmanager} that prevented the use
+of grid-type \SubmitCmd{batch} to submit jobs into an HTCondor pool.
+The \Condor{gridmanager} would attempt to use the wrong GAHP server.
+\Ticket{3364}
+
 \end{itemize}
 
 \noindent Known Bugs:
