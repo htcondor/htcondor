@@ -22,10 +22,37 @@ endif( LINUX )
 
 if (WITH_LIBDELTACLOUD)
 
-	check_include_files("libdeltacloud/libdeltacloud.h" HAVE_DELTACLOUD_H)
-	if (HAVE_DELTACLOUD_H)
-	  find_multiple( "deltacloud" LIBDELTACLOUD_FOUND )
-	endif()
+	if ( NOT PROPER )
+
+		condor_pre_external( LIBDELTACLOUD libdeltacloud-0.9 "lib;include" "lib/libdeltacloud.a")
+
+		ExternalProject_Add(libdeltacloud
+				#-- Download Step ----------
+				DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${LIBDELTACLOUD_VER}.tar.gz ${CMD_TERM}
+				DOWNLOAD_DIR ${LIBDELTACLOUD_STAGE}/dl
+				URL http://parrot.cs.wisc.edu/externals/${LIBDELTACLOUD_VER}.tar.gz
+				#--Configure step ----------
+				CONFIGURE_COMMAND cd ${LIBDELTACLOUD_VER} && ./configure --prefix=${LIBDELTACLOUD_INSTALL_LOC}
+				#--Build Step ----------
+				BUILD_COMMAND cd ${LIBDELTACLOUD_VER} && make
+				BUILD_IN_SOURCE 1
+				#--install Step ----------
+				INSTALL_DIR ${LIBDELTACLOUD_INSTALL_LOC}
+				INSTALL_COMMAND cd ${LIBDELTACLOUD_VER} && make install )
+
+		# Set the target dependencies which the rest of condor depends on.
+		set(LIBDELTACLOUD_FOUND "${LIBDELTACLOUD_INSTALL_LOC}/lib/libdeltacloud.a")
+
+		condor_post_external( libdeltacloud include OFF )
+
+	else( NOT PROPER )
+
+		check_include_files("libdeltacloud/libdeltacloud.h" HAVE_DELTACLOUD_H)
+		if (HAVE_DELTACLOUD_H)
+			find_multiple( "deltacloud" LIBDELTACLOUD_FOUND )
+		endif()
+
+	endif( NOT PROPER )
 endif()
 
 if (LIBDELTACLOUD_FOUND)
