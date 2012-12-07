@@ -94,6 +94,8 @@ class INFNBatchJob : public BaseJob
 	ClassAd *buildTransferAd();
 	void CreateSandboxId();
 
+	const char *BlahpJobDir();
+
 		// If we're in the middle of a condor call that requires a ClassAd,
 		// the ad is stored here (so that we don't have to reconstruct the
 		// ad every time we test the call for completion). It should be

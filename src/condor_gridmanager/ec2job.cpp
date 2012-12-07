@@ -213,16 +213,12 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	
 	m_vm_check_times = 0;
 
+	// Only generate a keypair if the user asked for one.
 	jobAd->LookupString( ATTR_EC2_KEY_PAIR, m_key_pair );
-	
-	if (m_key_pair.empty())
-	{
-	  m_should_gen_key_pair = true;
-	  if (!jobAd->LookupString( ATTR_EC2_KEY_PAIR_FILE, m_key_pair_file ))
-	  {
-	    m_key_pair_file = NULL_FILE;
-	  }
-	}
+	jobAd->LookupString( ATTR_EC2_KEY_PAIR_FILE, m_key_pair_file );
+	if( m_key_pair.empty() && ! m_key_pair_file.empty() ) {
+	    m_should_gen_key_pair = true;
+    }
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start (unless the job is already held).
@@ -1083,7 +1079,6 @@ void EC2Job::doEvaluateState()
 				
 				
 			case GM_DELETE:
-			  
 				if (m_keypair_created)
 				{
 				  // Yes, now let's destroy the temporary keypair 
@@ -1096,21 +1091,36 @@ void EC2Job::doEvaluateState()
 					  break;
 				  }
 
-				  if (rc == 0) {
-					  
-					  // remove temporary keypair local output file
-					  if ( !remove_keypair_file(m_key_pair_file.c_str()) ) {
-						  dprintf(D_ALWAYS,"(%d.%d) job destroy keypair local file failed.\n", procID.cluster, procID.proc);
-					  }
-					  SetKeypairId( NULL );
-					  m_keypair_created = false;
+				  if( rc == 0 ) {
+					// Forget about the keypair.
+					SetKeypairId( NULL );
+					m_keypair_created = false;
+					
+					// Preserve the user's copy of the private key unless
+					// we're sure the instance is going away.  This will
+					// be overwritten on instance restart, if it occurs.
+					//
+					// Note that what we actually do here is check to see
+					// if the gridmanager will pay attention to the job the
+					// next time the gridmanager runs.  If it won't,
+					// we clean up.
+					//
+					// Except that, empirically, condor_rm doesn't clear
+					// the job ad.  *sigh* 
+					std::string gridJobID;
+					jobAd->LookupString( ATTR_GRID_JOB_ID, gridJobID );
+					if( gridJobID.empty() || condorState == REMOVED || condorState == COMPLETED ) {
+						// remove temporary keypair local output file
+						if ( !remove_keypair_file(m_key_pair_file.c_str()) ) {
+							dprintf(D_ALWAYS,"(%d.%d) job destroy keypair local file failed.\n", procID.cluster, procID.proc);
+						}
+					}
 				  } else {
 					  errorString = gahp->getErrorString();
 					  dprintf( D_ALWAYS,"(%d.%d) job destroy keypair failed: %s: %s\n",
 							  procID.cluster, procID.proc, gahp_error_code,
 							  errorString.c_str() );
 				  }
-				  
 				}
 								
 				// We are done with the job. Propagate any remaining updates

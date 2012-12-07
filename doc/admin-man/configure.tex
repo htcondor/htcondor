@@ -4725,7 +4725,7 @@ Power Management for more details.
   \Attr{Unhibernate} expression of offline machine ClassAds.
   In addition, the collecting of offline machine ClassAds must be enabled
   for this expression to work.  The variable 
-  \Macro{PERSISTENT\_AD\_LOG} on page~\pageref{param:PersistentAdLog}
+  \Macro{COLLECTOR\_PERSISTENT\_AD\_LOG} on page~\pageref{param:CollectorPersistentAdLog}
   detailed on page~\pageref{param:OfflineLog} explains this.
   The special attribute
   \Attr{MachineLastMatchTime} is updated in the ClassAds of offline machines
@@ -4812,8 +4812,8 @@ Power Management for more details.
 
 \label{param:OfflineLog}
 \item[\Macro{OFFLINE\_LOG}]
-  This configuration variables is no longer used.
-  It has been replaced by \MacroNI{PERSISTENT\_AD\_LOG}.
+  This configuration variable is no longer used.
+  It has been replaced by \MacroNI{COLLECTOR\_PERSISTENT\_AD\_LOG}.
 
 \label{param:OfflineExpireAdsAfter}
 \item[\Macro{OFFLINE\_EXPIRE\_ADS\_AFTER}]
@@ -5078,6 +5078,23 @@ MAX_JOBS_RUNNING	= \
   not apply to grid universe jobs or standard universe jobs.  When the
   limit is reached, additional transfers will queue up and wait before
   proceeding.
+
+\label{param:TransferQueueNameExpr}
+\item[\Macro{TRANSFER\_QUEUE\_USER\_EXPR}]
+  This rarely configured expression specifies the username to be used
+  for round-robin scheduling in the file transfer queue.  Round-robin
+  scheduling is used when there are multiple jobs waiting to transfer
+  files within the limits set by \Macro{MAX\_CONCURRENT\_UPLOADS}
+  and/or \Macro{MAX\_CONCURRENT\_DOWNLOADS}.  When choosing a new job
+  to allow to transfer, the first job belonging to the transfer queue
+  user who has least recently been given an opportunity to transfer
+  will be selected.  By default, a transfer queue user is identified
+  as the job owner.  A different user name may be specified by
+  configuring \MacroNI{TRANSFER\_QUEUE\_USER\_EXPR} to a string
+  expression that is evaluated in the context of the job ad.  For
+  example, if this expression were set to a name that is the same for
+  all jobs, file transfers would be scheduled in first-in-first-out
+  order rather than round-robin by job owner.
 
 \label{param:ScheddQueryWorkers}
 \item[\Macro{SCHEDD\_QUERY\_WORKERS}]
@@ -6122,6 +6139,21 @@ These settings affect the \Condor{starter}.
         cmd = /bin/sleep
 \end{verbatim}
 
+\label{param:MemoryLimit} 
+\item[\Macro{MEMORY\_LIMIT}]
+  A string with values of \Expr{hard}, \Expr{soft} and the default value
+  of \Expr{none}.
+  If set to \Expr{hard}, the cgroup-based limit on the total amount 
+  of physical memory used by the sum of all processes in the job 
+  will not be allowed to exceed the limit given by the cgroup memory
+  controller attribute memory.limit\_in\_bytes.
+  If the processes try to allocate more memory, 
+  the allocation will succeed, and virtual memory will be allocated, 
+  but no additional physical memory will be allocated.
+  If set to \Expr{soft}, the cgroup-based limit on the total amount 
+  of physical memory used by the sum of all processes in the job 
+  will be allowed to go over the limit, 
+  if there is free memory available on the system.
 
 \label{param:UseVisibleDesktop} 
 \item[\Macro{USE\_VISIBLE\_DESKTOP}]
@@ -6271,15 +6303,19 @@ Configuration File Entries}
 
 \label{param:JobDefaultNotification}
 \item[\Macro{JOB\_DEFAULT\_NOTIFICATION}]
-  The default notification for jobs. This value defaults to NEVER, so that
-  HTCondor will not send email about events for jobs. Must be one of the values
-  NEVER, ERROR, ALWAYS, or COMPLETE. As stated in the \Condor{submit} man page:
-  ``If defined by ALWAYS, the owner will be notified whenever the job produces a
-  checkpoint, as well as when the job completes. If defined by COMPLETE, the
-  owner will be notified when the job terminates. If defined by ERROR, the owner
-  will only be notified if the job terminates abnormally, or if the job is placed
-  on hold because of a failure, and not by user request. If defined by NEVER, the
-  owner will not receive e-mail, regardless to what happens to the job.''
+  The default that sets email notification for jobs. 
+  This variable defaults to \Expr{NEVER},
+  such that HTCondor will not send email about events for jobs. 
+  Possible values are
+  \Expr{NEVER}, \Expr{ERROR}, \Expr{ALWAYS}, or \Expr{COMPLETE}. 
+  If \Expr{ALWAYS}, the owner will be notified whenever the job produces a
+  checkpoint, as well as when the job completes. 
+  If \Expr{COMPLETE}, the owner will be notified when the job terminates.
+  If \Expr{ERROR}, the owner
+  will only be notified if the job terminates abnormally, 
+  or if the job is placed on hold because of a failure, 
+  and not by user request. 
+  If \Expr{NEVER}, the owner will not receive email. 
 
 \label{param:JobDefaultRequestMemory}
 \item[\Macro{JOB\_DEFAULT\_REQUESTMEMORY}]
@@ -6864,8 +6900,8 @@ page~\pageref{sec:Absent-Ads} for more details.
   If 0, the ClassAds persist forever.  
   Defaults to 30 days.
 
-\label{param:PersisentAdLog}
-\item[\Macro{PERSISTENT\_AD\_LOG}]
+\label{param:CollectorPersisentAdLog}
+\item[\Macro{COLLECTOR\_PERSISTENT\_AD\_LOG}]
   The full path and file name of a file that stores machine ClassAds 
   for every hibernating or absent machine.  This forms a persistent storage
   of these ClassAds, in case the \Condor{collector} daemon crashes.
@@ -8533,7 +8569,12 @@ in section~\ref{sec:DAG-configuration}.
   \MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} currently counts each individual
   process within a cluster as a job, which is inconsistent with
   \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED}.  The default is that there is
-  no limit on the maximum number of idle jobs.
+  no limit on the maximum number of idle jobs. Note that nothing special is 
+  done to the submit file: if a submit file has a ``queue 5000'' statement
+  and \Macro{DAGMAN\_MAX\_JOBS\_IDLE} is set to 250, this submit file will
+  result in 5000 jobs being submitted to the schedd, not 250; in this case, no
+  further jobs will then be submitted by \Condor{dagman} until the number of
+  idle jobs falls below 250.
 
 \label{param:DAGManMaxJobsSubmitted}
 \item[\Macro{DAGMAN\_MAX\_JOBS\_SUBMITTED}]
@@ -10397,7 +10438,7 @@ machine(s) that can read from the pool's \Condor{collector} daemon.
 
 For \Condor{rooster} to wake up hibernating machines, the collecting
 of offline machine ClassAds must be enabled.  See variable
-\Macro{PERSISTENT\_AD\_LOG} on page~\pageref{param:PersistentAdLog}
+\Macro{COLLECTOR\_PERSISTENT\_AD\_LOG} on page~\pageref{param:CollectorPersistentAdLog}
 for details on how to do this.
 
 \begin{description}

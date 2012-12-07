@@ -163,19 +163,20 @@ contain
 \index{DAGManNodesLog!job ClassAd attribute}
 \item[\AdAttr{DAGManNodesLog}:] For a DAGMan node job only, gives the path to
 an event log used exclusively by DAGMan to monitor the state of the DAG's jobs.
-Note: events are written to this log file in addition to any log file
-specified in the job's submit file.
+Events are written to this log file in addition to any log file
+specified in the job's submit description file.
 
-%%% ClassAd attribute: DAGManNodesLog
+%%% ClassAd attribute: DAGManNodesLogMask
 \index{ClassAd job attribute!DAGManNodesMask}
 \index{DAGManNodesMask!job ClassAd attribute}
 \item[\AdAttr{DAGManNodesMask}:] For a DAGMan node job only, 
 a comma-separated list of the event codes that should be written
-to the log specified by \Attr{DAGManNodesLog} 
-(the auxiliary log).  (All events not specified in the
-\Attr{DAGManNodesMask} string are not written to the auxiliary event log.)
+to the log specified by \Attr{DAGManNodesLog}, 
+known as the auxiliary log.
+All events not specified in the
+\Attr{DAGManNodesMask} string are not written to the auxiliary event log.
 The value of this attribute is determined
-by DAGMan, and is passed to the job via the \Condor{submit} command line.
+by DAGMan, and it is passed to the job via the \Condor{submit} command line.
 By default, the following events are written to the
 auxiliary job log:  
 \begin{itemize}
@@ -383,6 +384,31 @@ Used for grid type ec2 jobs;
 a string taken from the definition of the submit description file command
 \SubmitCmd{ec2\_key\_pair}.
 Defines the key pair associated with the EC2 instance. 
+
+%%% ClassAd attribute: EC2SpotPrice
+\index{ClassAd job attribute!EC2SpotPrice}
+\index{EC2SpotPrice!job ClassAd attribute}
+\item[\AdAttr{EC2SpotPrice}:] 
+Used for grid type ec2 jobs;
+a string taken from the definition of the submit description file command
+\SubmitCmd{ec2\_spot\_price}.
+Defines the maximum amount (per hour) you're willing to pay to run this job.
+
+%%% ClassAd attribute: EC2SpotRequestID
+\index{ClassAd job attribute!EC2SpotRequestID}
+\index{EC2SpotRequestID!job ClassAd attribute}
+\item[\AdAttr{EC2SpotRequestID}:] 
+Used for grid type ec2 jobs;
+identifies the Spot Request HTCondor made on behalf of this job.
+
+%%% ClassAd attribute: EC2StatusReasonCode
+\index{ClassAd job attribute!EC2StatusReasonCode}
+\index{EC2StatusReasonCode!job ClassAd attribute}
+\item[\AdAttr{EC2StatusReasonCode}:] 
+Used for grid type ec2 jobs;
+reports the reason for most recent EC2-level state transition.  Can be used
+to determine (among other things) if a Spot Request was terminated because
+the spot price rose.
 
 %%% ClassAd attribute: EC2TagNames
 \index{ClassAd job attribute!EC2TagNames}

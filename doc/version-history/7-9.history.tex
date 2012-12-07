@@ -42,6 +42,28 @@ representations is now configurable with \Macro{GROUP\_SEPARATOR}.
 Refer to section~\ref{sec:group-accounting} for more information.
 \Ticket{2728}
 
+\item Round-robin scheduling is now used when there are multiple users
+waiting to transfer files in the limits set by
+\Macro{MAX\_CONCURRENT\_UPLOADS} and/or
+\Macro{MAX\_CONCURRENT\_DOWNLOADS}.  Previously, the file transfer
+queue was scheduled in first-in-first-out order, so one user with
+many files to transfer could delay other users for as long as it took
+to transfer those files.  Now, when choosing a new job to allow to
+transfer, the first job belonging to the user who has least
+recently been given an opportunity to transfer will be selected.
+The old behavior, or variations on the new behavior, can be achieved
+by configuring \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+\Ticket{3333}
+
+\item \Condor{dagman} will now try twice to write a POST script terminate
+event, rather than trying once and exiting. \Condor{dagman} exits, writing
+a rescue DAG, if it is unable to write the event.
+\Ticket{965}
+
+\item The \Condor{gridmanager} now cleans up temporary files and directories
+that are sometimes left by the batch\_gahp when executing a grid-type
+\SubmitCmd{batch} job.
+\Ticket{3276}
 
 \end{itemize}
 
@@ -57,10 +79,23 @@ Refer to section~\ref{sec:group-accounting} for more information.
 
 \begin{itemize}
 
-\item The default for the undocumented configuration parameter
-  \Macro{X\_RUNS\_HERE} was inverted from TRUE to FALSE with the
-  release of 7.7.3. Its default has been reset to TRUE. When FALSE,
-  the \Condor{master} will not start the KBDD.
+\item A change was made to more accurately implement the
+minimum time defined by the configuration variable
+\Macro{NEGOTIATOR\_CYCLE\_DELAY}. 
+\Ticket{3332}
+
+\item The \Prog{batch\_gahp} is no longer dependent on the Perl module 
+\Code{XML::Simple} when submitting jobs to SGE.
+\Ticket{3350}
+
+\item The batch\_gahp now properly handles job X.509 proxies that aren't
+in the old proxy format.
+\Ticket{3362}
+
+\item On 32-bit platforms a \Macro{STARTER\_RLIMIT\_AS} value larger than 4096 could
+cause jobs to abort on startup.  Values larger than 2047 have no real meaning on 32-bit
+platforms, so values larger than 2047 are treated as no limit on 32-bit platforms.
+\Ticket{3309}
 
 \end{itemize}
 
@@ -99,40 +134,46 @@ Refer to section~\ref{sec:group-accounting} for more information.
 
 \begin{itemize}
 
+\item The permissions for the temporary execute directory of a job
+have been tightened for vanilla universe jobs, 
+such that only the owner of the job is allowed to see or
+modify the contents.
+\Ticket{3315}
+
 \item Added experimental support for EC2 spot instances.
 \Ticket{3209}
 
-\item (This feature was added in 7.9.1 but announced for 7.9.2.)  Add new
-protocols, \Expr{euca3://} and \Expr{euca3s://}, to EC2 grid type URLs.  
-Condor will not send resources addressed in this way the
-``InstanceInitiatedShutdownBehavior'' parameter, which would otherwise cause
-an error.
+\item (This feature was added in version 7.9.1.)  
+There are two new protocols for the submission of grid type EC2 jobs,
+\Expr{euca3://} and \Expr{euca3s://}.
+These protocols exist to work correctly when the resources do not support 
+the \Param{InstanceInitiatedShutdownBehavior} parameter.
 \Ticket{2974}
 
-\item Added both a \Opt{-suppress\_notification},
+\item (This feature was added in version 7.9.1.)  
+Added both a \Opt{-suppress\_notification},
 a \Opt{-dont\_suppress\_notification} command line option,
 and corresponding
 \Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} configuration variable
 to \Condor{dagman} and \Condor{submit\_dag}.
 This enables a user of DAGMan to stop email notification of job
 events for jobs submitted by \Condor{dagman}. The value of
-\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} defaults to \Expr{True},
+\MacroNI{DAGMAN\_SUPPRESS\_NOTIFICATION} defaults to \Expr{True},
 so that jobs submitted
 by \Condor{dagman} will not send email notification. 
-\Ticket{3225}
+\Ticket{3352}
 
-\item Changed the default job notification from Complete to Never. Added a new
-configuration knob, \Macro{JOB\_DEFAULT\_NOTIFICATION}, so that admins can
-change the default according to their preference.
+\item The default for job notification email has changed
+from \Expr{Complete} to \Expr{Never}. 
+There is also a new configuration variable, \Macro{JOB\_DEFAULT\_NOTIFICATION},
+which permits administrators to change the default for all jobs.
 \Ticket{2155}
 
-\item \Condor{schedd} and \Condor{shadow} were not respecting the
-\Macro{DAGManNodesMask} attribute. This caused extra events to be written to
-the DAGMan node log.
-\Ticket{3311}
-
-\item Remove spurious newline from output of \Condor{submit}
-\Ticket{3316}
+\item For platforms supporting cgroups,
+resource limits can now be applied per job,
+where a job may consist of multiple processes.
+See section~\ref{sec:Resource-Limits-Cgroup} for details.
+\Ticket{2734}
 
 \end{itemize}
 
@@ -140,7 +181,9 @@ the DAGMan node log.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable \Macro{MEMORY\_LIMIT}
+supports implementing memory resource limits on a per-job basis under cgroups.
+\Ticket{2734}
 
 \end{itemize}
 
@@ -148,20 +191,32 @@ the DAGMan node log.
 
 \begin{itemize}
 
+\item \Condor{schedd} and \Condor{shadow} were not respecting the
+\Macro{DAGManNodesMask} attribute. This caused extra events to be written to
+the DAGMan node log.
+\Ticket{3311}
+
+\item Removed a spurious newline from the output of \Condor{submit}.
+\Ticket{3316}
+
 \item Fixed a bug that caused the \Condor{shadow} to set job attribute
 \Attr{X509UserProxySubject} to the wrong value when the job's X509
 proxy file was updated. It set the value to be the proxy's subject name
 rather than its identity.
 \Ticket{3265}
 
-\item The batch\_gahp no longer modifies the environment variable
+\item The \Prog{batch\_gahp} no longer modifies the environment variable
 \Env{LD\_LIBRARY\_PATH}.
-In some instances, modifying \Env{LD\_LIBRARY\_PATH} can cause the
-batch system's command line tools to fail when run by the batch\_gahp.
+In some instances, modifying \Env{LD\_LIBRARY\_PATH} caused the
+batch system's command line tools to fail when run by the \Prog{batch\_gahp}.
 \Ticket{3317}
 
+\item Grid-type \SubmitCmd{batch} jobs now work properly on machines
+where the gLite software has been installed.
+\Ticket{3269}
+
 \item The \Condor{shadow} would never print the allocated amount of
-partionable resources in the job log.
+partitionable resources in the job log.
 \Ticket{3318}
 
 \item \Condor{who} would sometimes incorrectly display blank or partial
@@ -211,11 +266,10 @@ for details of this and other bugs fixed.
 
 \begin{itemize}
 
-\item Add new
-protocols, \Expr{euca3://} and \Expr{euca3s://}, to EC2 grid type URLs.  
-Condor will not send resources addressed in this way the
-``InstanceInitiatedShutdownBehavior'' parameter, which would otherwise cause 
-an error.
+\item There are two new protocols for the submission of grid type EC2 jobs,
+\Expr{euca3://} and \Expr{euca3s://}.
+These protocols exist to work correctly when the resources do not support 
+the \Param{InstanceInitiatedShutdownBehavior} parameter.
 \Ticket{2974}
 
 \item \Condor{job\_router} can now submit the routed copy of jobs to a
@@ -307,7 +361,7 @@ its daemon ClassAd.  This allows one to determine if a given
 
 \item Added the attribute \Attr{DAGManNodesMask} to control the verboseness of
 the log referred to by \Attr{DAGManNodesLog}.
-\Ticket{2807}
+\Ticket{3351}
 
 \item The new configuration variable
 \Macro{QUEUE\_SUPER\_USER\_MAY\_IMPERSONATE} specifies a regular
@@ -383,6 +437,10 @@ the call out mechanism is misconfigured or broken.
 in the ClassAd for all daemons would be reset to the current time when they are
 reconfigured.
 \Ticket{3235}
+
+\item Fixed a bug wherein the \Arg{-dont\_use\_default\_node\_log} command line flag
+to \Condor{submit\_dag} had no effect.
+\Ticket{3352}
 
 \item \Security Although not user-visible, 
 there were multiple updates that removed places

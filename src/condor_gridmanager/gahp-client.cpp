@@ -705,6 +705,16 @@ GahpServer::Startup()
 		free( tmp_char );
 	}
 
+	// GLOBUS_LOCATION needs to be set for the blahp; otherwise, it
+	// defaults to /opt/globus, which is likely never correct anymore
+	tmp_char = param( "GLOBUS_LOCATION" );
+	if ( tmp_char ) {
+		newenv.SetEnv( "GLOBUS_LOCATION", tmp_char );
+		free( tmp_char );
+	} else if ( getenv( "GLOBUS_LOCATION" ) == NULL ) {
+		newenv.SetEnv( "GLOBUS_LOCATION", "/usr" );
+	}
+
 	// For amazon ec2 ca authentication
 	tmp_char = param("SOAP_SSL_CA_FILE");
 	if( tmp_char ) {
@@ -6187,7 +6197,8 @@ int GahpClient::ec2_vm_status( std::string service_url,
 // Ping to check if the server is alive
 int GahpClient::ec2_ping(std::string service_url,
 						 std::string publickeyfile,
-						 std::string privatekeyfile)
+						 std::string privatekeyfile,
+						 char *& error_code )
 {
 	// we can use "Status All" command to make sure EC2 Server is alive.
 	static const char* command = "EC2_VM_STATUS_ALL";
@@ -6221,6 +6232,12 @@ int GahpClient::ec2_ping(std::string service_url,
 	
 	if ( result ) {
 		int rc = atoi(result->argv[1]);
+		
+		if( result->argc == 4 ) {
+		    error_code = strdup( result->argv[2] );
+		    error_string = result->argv[3];
+		}
+		
 		delete result;
 		return rc;
 	}

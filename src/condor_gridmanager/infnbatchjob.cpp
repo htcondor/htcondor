@@ -28,6 +28,7 @@
 #include "nullfile.h"
 #include "ipv6_hostname.h"
 #include "condor_netaddr.h"
+#include "directory.h"
 
 #include "gridmanager.h"
 #include "infnbatchjob.h"
@@ -76,6 +77,8 @@ static const char *GMStateNames[] = {
 
 #define JOB_STATE_UNKNOWN				-1
 #define JOB_STATE_UNSUBMITTED			0
+
+#define LINK_BUFSIZE 4096
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
@@ -142,7 +145,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 {
 	std::string buff;
 	std::string error_string = "";
-	char *gahp_path;
+	char *gahp_path = NULL;
 	ArgList gahp_args;
 
 	gahpAd = NULL;
@@ -228,8 +231,13 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 			goto error_exit;
 		}
 	} else {
-		formatstr( buff, "%s_GAHP", batchType );
-		gahp_path = param(buff.c_str());
+		// CRUFT: BATCH_GAHP was added in 7.7.6.
+		//   Checking <batch-type>_GAHP should be removed at some
+		//   point in the future.
+		if ( strcasecmp( batchType, "condor" ) ) {
+			formatstr( buff, "%s_GAHP", batchType );
+			gahp_path = param(buff.c_str());
+		}
 		if ( gahp_path == NULL ) {
 			gahp_path = param( "BATCH_GAHP" );
 			if ( gahp_path == NULL ) {
@@ -792,9 +800,11 @@ void INFNBatchJob::doEvaluateState()
 			gmState = GM_DELETE_SANDBOX;
 			} break;
 		case GM_DELETE_SANDBOX: {
-			// Delete the remote sandbox
+			// Clean up any files left behind by the job execution.
+
 			if ( myResource->GahpIsRemote() ) {
 
+				// Delete the remote sandbox
 				if ( gahpAd == NULL ) {
 					gahpAd = buildTransferAd();
 				}
@@ -818,7 +828,75 @@ void INFNBatchJob::doEvaluateState()
 					gmState = GM_HOLD;
 					break;
 				}
+
+			} else {
+
+#if !defined(WIN32)
+				// Local blahp
+				// Check whether the blahp left behind a job execute directory.
+				// The blahp's job wrapper should remove this directory
+				// after the job exits, but sometimes the directory gets
+				// left behind.
+				struct passwd *pw = getpwuid( get_user_uid() );
+				if ( pw && pw->pw_dir ) {
+					Directory dir( pw->pw_dir, PRIV_USER );
+					if ( dir.Find_Named_Entry( BlahpJobDir() ) ) {
+						if ( !dir.Remove_Current_File() ) {
+							dprintf( D_ALWAYS, "(%d.%d) Failed to remove blahp directory %s\n", procID.cluster, procID.proc, remoteSandboxId );
+						}
+					}
+
+					// Check whether the blahp left behind a proxy symlink.
+					// If a job has a proxy, the blahp creates a limited
+					// proxy from it and makes a symlink to the new file
+					// under ~/.blah_jobproxy_dir/.
+					// It often doesn't remove these files.
+					// Remove the symlink, and remove the limited proxy
+					// if it's in the spool directory.
+					// If the limited proxy isn't in the spool directory,
+					// then it might be shared by multiple jobs, so we
+					// need to leave it alone.
+					if ( jobAd->Lookup( ATTR_X509_USER_PROXY ) && remoteJobId ) {
+						set_user_priv();
+
+						const char *job_id = NULL;
+						const char *token = NULL;
+						StringList sl( remoteJobId, "/" );
+						sl.rewind();
+						while ( (token = sl.next()) ) {
+							job_id = token;
+						}
+						ASSERT( job_id );
+						std::string proxy;
+						formatstr( proxy, "%s/.blah_jobproxy_dir/%s.proxy",
+								   pw->pw_dir, job_id );
+						struct stat statbuf;
+						int rc = lstat( proxy.c_str(), &statbuf );
+						if ( rc < 0 ) {
+							proxy += ".norenew";
+							rc = lstat( proxy.c_str(), &statbuf );
+						}
+						if ( rc == 0 ) {
+							char target[LINK_BUFSIZE];
+							rc = readlink( proxy.c_str(), target, LINK_BUFSIZE );
+							if ( rc > 0 && rc < LINK_BUFSIZE ) {
+								target[rc] = '\0';
+
+								char *spooldir = param("SPOOL");
+								if ( !strncmp( spooldir, target, strlen( spooldir ) ) ) {
+									unlink( target );
+								}
+								free( spooldir );
+							}
+							unlink( proxy.c_str() );
+						}
+
+						set_condor_priv();
+					}
+				}
+#endif
 			}
+
 			SetRemoteIds( NULL, NULL );
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				gmState = GM_DELETE;
@@ -1151,6 +1229,8 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		}
 	}
 
+	submit_ad->Assign( "JobDirectory", BlahpJobDir() );
+
 		// CRUFT: In the current glite code, jobs have a grid-type of 'blah'
 		//   and the blahp looks at the attribute "gridtype" for 'pbs' or
 		//   'lsf'. Until the blahp changes to look at GridResource, set
@@ -1396,4 +1476,12 @@ void INFNBatchJob::CreateSandboxId()
 	free( pool_name );
 
 	SetRemoteSandboxId( unique_id.c_str() );
+}
+
+const char *INFNBatchJob::BlahpJobDir()
+{
+	static std::string dir;
+	ASSERT( remoteSandboxId );
+	formatstr( dir, "home_bl_%s", remoteSandboxId );
+	return dir.c_str();
 }
