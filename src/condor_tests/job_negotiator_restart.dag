@@ -1,0 +1,13 @@
+# Node A gets and resets the user's priority factor.
+Job A job_negotiator_restart-nodeAC.cmd
+Vars A nodename = "$(JOB)"
+
+# Node B restarts Condor.
+Job B job_negotiator_restart-nodeB.cmd
+Parent A child B
+
+# Node C gets the user's priority factor and makes sure it survives
+# across the restart.
+Job C job_negotiator_restart-nodeAC.cmd
+Vars C nodename = "$(JOB)"
+Parent B child C
