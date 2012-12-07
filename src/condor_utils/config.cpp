@@ -648,11 +648,12 @@ expand_macro( const char *value,
 			all_done = false;
 			tvalue = getenv(name);
 			if( tvalue == NULL ) {
-				EXCEPT("Can't find %s in environment!",name);
+				//EXCEPT("Can't find %s in environment!",name);
+				tvalue = "UNDEFINED";		
 			}
 
-			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) +
-											  strlen(right) + 1));
+			rval = (char *)MALLOC( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
+
 			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
 			FREE( tmp );
 			tmp = rval;

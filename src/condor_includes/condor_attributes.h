@@ -38,8 +38,6 @@
 // all compilers!), but the bloat is in the text segment - shared on all processes!
 
 #define ATTR_ABSENT                    "Absent"
-#define ATTR_GROUP  "Group"
-#define ATTR_GROUP_USER  "GroupUser"
 #define ATTR_ACCOUNTING_GROUP          "AccountingGroup"
 #define ATTR_ACTION_CONSTRAINT  "ActionConstraint"
 #define ATTR_ACTION_IDS  "ActionIds"
@@ -859,6 +857,10 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_EC2_VPC_IP  "EC2VpcIp"
 #define ATTR_EC2_TAG_NAMES  "EC2TagNames"
 #define ATTR_EC2_TAG_PREFIX  "EC2Tag"
+#define ATTR_EC2_SPOT_PRICE  "EC2SpotPrice"
+#define ATTR_EC2_SPOT_REQUEST_ID  "EC2SpotRequestID"
+#define ATTR_EC2_STATUS_REASON_CODE  "EC2StatusReasonCode"
+
 //************* End of changes for EC2 Jobs *****************//
 
 #define ATTR_REQUEST_CPUS  "RequestCpus"

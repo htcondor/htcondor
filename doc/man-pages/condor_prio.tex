@@ -1,5 +1,5 @@
 \begin{ManPage}{\label{man-condor-prio}\Condor{prio}}{1}
-{change priority of jobs in the Condor queue} 
+{change priority of jobs in the HTCondor queue} 
 \Synopsis \SynProg{\Condor{prio}}
 \OptArg{-p}{priority} $|$ \OptArg{+}{value} $|$ \OptArg{-}{value}
 \oOptArg{-n}{schedd\_name}
@@ -10,12 +10,12 @@
 \Lbr \OptArg{-pool}{pool\_name}  \OptArg{-n}{schedd\_name} \Rbr
 \Arg{cluster \Bar cluster.process \Bar username \Bar -a}
 
-\index{Condor commands!condor\_prio}
+\index{HTCondor commands!condor\_prio}
 \index{condor\_prio command}
 
 \Description
 
-\Condor{prio} changes the priority of one or more jobs in the Condor queue.
+\Condor{prio} changes the priority of one or more jobs in the HTCondor queue.
 If the job identification is given by \Arg{cluster.process},
 \Condor{prio} attempts to change the priority of the single job
 with job ClassAd attributes \Attr{ClusterId} and \Attr{ProcId}.

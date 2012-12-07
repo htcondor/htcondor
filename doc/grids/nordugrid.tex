@@ -10,7 +10,7 @@ the Advanced  Resource Connector (ARC).
 See the NorduGrid web page (\URL{http://www.nordugrid.org})
 for more information about NorduGrid software.
 
-Condor jobs may be submitted to
+HTCondor jobs may be submitted to
 NorduGrid resources using the \SubmitCmd{grid} universe.
 The \SubmitCmd{grid\_resource} command specifies the name of the
 NorduGrid resource as follows:
@@ -20,9 +20,6 @@ grid_resource = nordugrid ng.example.com
 
 NorduGrid uses X.509 credentials for authentication,
 usually in the form a proxy certificate. 
-For more information about proxies and certificates,
-please consult the Alliance PKI pages at
-\URL{http://archive.ncsa.uiuc.edu/SCD/Alliance/GridSecurity/}.
 \Condor{submit} looks in default locations for the proxy. 
 The submit description file command \SubmitCmd{x509userproxy}
 is used to give the full path name to the directory containing the proxy,
@@ -39,7 +36,7 @@ replaced with the Unix user id.
 NorduGrid uses RSL syntax to describe jobs.
 The submit description file command
 \SubmitCmd{nordugrid\_rsl}
-adds additional attributes to the job RSL that Condor
+adds additional attributes to the job RSL that HTCondor
 constructs. 
 The format this submit description file command is
 \begin{verbatim}

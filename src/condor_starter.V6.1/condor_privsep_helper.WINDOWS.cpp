@@ -69,6 +69,13 @@ CondorPrivSepHelper::initialize_sandbox(const char* path)
 }
 
 bool
+CondorPrivSepHelper::get_exec_dir_usage(off_t *usage)
+{
+	EXCEPT("CondorPrivSepHelper: Windows support not implemented");
+}
+
+
+bool
 CondorPrivSepHelper::chown_sandbox_to_user(PrivSepError &)
 {
 	EXCEPT("CondorPrivSepHelper: Windows support not implemented");

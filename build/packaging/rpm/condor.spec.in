@@ -10,9 +10,9 @@ URL:		@CPACK_RPM_PACKAGE_URL@
 
 Requires(pre): @CPACK_RPM_SHADOW_PACKAGE@
 Requires(post):/sbin/chkconfig
+Requires(post): /usr/sbin/selinuxenabled, /usr/sbin/semanage, /sbin/restorecon
 Requires(preun):/sbin/chkconfig
 Requires(preun):/sbin/service
-Requires(postun):/sbin/service
 
 #Do not reorder these prefixes
 Prefix: /etc
@@ -83,7 +83,7 @@ Buildroot:      @CPACK_RPM_DIRECTORY@/@CPACK_PACKAGE_FILE_NAME@
 @CPACK_RPM_INSTALL_FILES@
 
 
-%attr(6755,root,root) %_sbindir/condor_root_switchboard
+%attr(4755,root,root) %_sbindir/condor_root_switchboard
 
 %pre
 #Add condor group if not existed
@@ -146,18 +146,14 @@ fi
 #Add condor service
 /sbin/chkconfig --add condor
 /sbin/ldconfig
-test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
-if [ $? = 0 ]; then
-   semanage fcontext -a -t unconfined_execmem_exec_t $USR/sbin/condor_startd 2>&1| grep -v "already defined"
-   restorecon  $USR/sbin/condor_startd
+if /usr/sbin/selinuxenabled; then
+   /usr/sbin/semanage fcontext -a -t unconfined_execmem_exec_t $USR/sbin/condor_startd 2>&1| grep -v "already defined"
+   /sbin/restorecon  $USR/sbin/condor_startd
 fi
 exit 0
 
 
 %preun -n condor
-
-#Stop condor
-#/sbin/service condor stop >/dev/null 2>&1 || :
 
 #Stop and remove condor only when this is the last instance
 if [ $1 = 0 ]; then
@@ -183,11 +179,7 @@ fi
 
 
 %postun -n condor
-# We do not need to do anything, Condor will detec binary changes and restart itself automatically
-#Upgrading or remove but other version existed 
-#if [ "$1" -ge "1" ]; then  
-#  /sbin/service condor restart >/dev/null 2>&1 || :
-#fi
+# We do not need to do anything, Condor will detect binary changes and restart itself automatically
 /sbin/ldconfig
 
 

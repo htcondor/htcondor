@@ -3,14 +3,14 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{concurrency limits}
 
-Condor's implementation of the mechanism called \Term{concurrency limits}
+HTCondor's implementation of the mechanism called \Term{concurrency limits}
 allows an administrator to define and set integer limits on
 consumable resources.
 These limits are utilized during matchmaking, preventing matches when
 the resources are allocated.
 Typical uses of this mechanism will include
 the management of software licenses, database connections,
-and any other consumable resource external to Condor.
+and any other consumable resource external to HTCondor.
 
 Use of the concurrency limits mechanism requires configuration variables
 to set distinct limits,
@@ -101,5 +101,5 @@ is as strictly enforced \Bold{as possible}.
 In the presence of preemption and dropped updates from
 the \Condor{startd} daemon to the \Condor{collector} daemon,
 it is possible for the limit to be exceeded.
-Condor will never kill a job to free up a limit,
+HTCondor will never kill a job to free up a limit,
 including the case where a limit maximum is exceeded. 

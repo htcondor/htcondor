@@ -1,32 +1,32 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:History-Intro}Introduction to Condor Versions}
+\section{\label{sec:History-Intro}Introduction to HTCondor Versions}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This chapter provides descriptions of what features have been added or
-bugs fixed for each version of Condor.
-The first section describes the Condor version numbering scheme, what
+bugs fixed for each version of HTCondor.
+The first section describes the HTCondor version numbering scheme, what
 the numbers mean, and what the different \Term{release series} are.
 The rest of the sections each describe a specific release series, and
-all the Condor versions found in that series.
+all the HTCondor versions found in that series.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Version-Number-Scheme}
-Condor Version Number Scheme}
+HTCondor Version Number Scheme}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Starting with version 6.0.1, Condor adopted a new, hopefully easy to
+Starting with version 6.0.1, HTCondor adopted a new, hopefully easy to
 understand version numbering scheme.
-It reflects the fact that Condor is both a production system and a
+It reflects the fact that HTCondor is both a production system and a
 research project.
 The numbering scheme was primarily taken from the Linux kernel's
 version numbering, so if you are familiar with that, it should seem
 quite natural.
 
-There will usually be two Condor versions available at any given time,
+There will usually be two HTCondor versions available at any given time,
 the \Term{stable} version, and the \Term{development} version.
 Gone are the days of ``patch level 3'', ``beta2'', or any other random
 words in the version string.
-All versions of Condor now have exactly three numbers, separated by
+All versions of HTCondor now have exactly three numbers, separated by
 ``.''   
 
 \begin{itemize}
@@ -34,7 +34,7 @@ All versions of Condor now have exactly three numbers, separated by
 \item The first number represents the major version number, and will
 change very infrequently.
 
-\item \emph{The thing that determines whether a version of Condor is
+\item \emph{The thing that determines whether a version of HTCondor is
 \Term{stable} or \Term{development} is the second digit.
 Even numbers represent stable versions, while odd numbers represent
 development versions.}
@@ -49,17 +49,17 @@ defines a particular version in a given release series.
 \subsection{\label{sec:Stable-Series}The Stable Release Series}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-People expecting the stable, production Condor system should download
+People expecting the stable, production HTCondor system should download
 the stable version, denoted with an even number in the second digit of
 the version string.
 Most people are encouraged to use this version.  
-We will only offer our paid support for versions of Condor from the
+We will only offer our paid support for versions of HTCondor from the
 stable release series.
 
 \emph{On the stable series, new minor version releases will only
 be made for bug fixes and to support new platforms.}
 No new features will be added to the stable series.
-People are encouraged to install new stable versions of Condor when
+People are encouraged to install new stable versions of HTCondor when
 they appear, since they probably fix bugs you care about.
 Hopefully, there will not be many minor version releases for any given
 stable series.
@@ -84,13 +84,13 @@ they know they want features or bug fixes from the newer development
 version.
 
 \emph{Most sites will probably never want to install a development
-version of Condor for any reason.}
+version of HTCondor for any reason.}
 Only if you know what you are doing (and like pain), or were
-explicitly instructed to do so by someone on the Condor Team, should
+explicitly instructed to do so by someone on the HTCondor Team, should
 you install a development version at your site.
 
 After the feature set of the development series is satisfactory to the
-Condor Team, we will put a code freeze in place, and from that point
+HTCondor Team, we will put a code freeze in place, and from that point
 forward, only bug fixes will be made to that development series.
 When we have fully tested this version, we will release a new stable
 series, resetting the minor version number, and start work on a new

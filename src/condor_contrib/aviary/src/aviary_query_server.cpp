@@ -35,12 +35,14 @@
 #include "HistoryProcessingUtils.h"
 #include "Globals.h"
 #include "AviaryUtils.h"
+#include "LocatorObject.h"
 
 using namespace std;
 using namespace aviary::transport;
 using namespace aviary::query;
 using namespace aviary::history;
 using namespace aviary::util;
+using namespace aviary::locator;
 
 ClassAd	*ad = NULL;
 AviaryProvider* provider = NULL;
@@ -71,9 +73,9 @@ void main_init(int /* argc */, char * /* argv */ [])
 
 	init_classad();
 
-    string log_name;
-    formatstr(log_name,"aviary_query.log");
-    provider = AviaryProviderFactory::create(log_name,getScheddName(),
+    string log_name("aviary_query.log");
+    string id_name("query"); id_name+=SEPARATOR; id_name+=getScheddName();
+    provider = AviaryProviderFactory::create(log_name,id_name,
 											 "CUSTOM",QUERY_SERVER, "services/query/");
     if (!provider) {
         EXCEPT("Unable to configure AviaryProvider. Exiting...");

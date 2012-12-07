@@ -24,6 +24,9 @@
 #include "condor_sys_types.h"
 #include "condor_debug.h"
 #include "dprintf_internal.h"
+#if !defined(WIN32)
+#include "dprintf_syslog.h"
+#endif
 #include "condor_constants.h"
 
 #if HAVE_BACKTRACE
@@ -133,6 +136,14 @@ void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_inf
 					it->outputTarget = OUTPUT_DEBUG_STR;
 					it->dprintfFunc = dprintf_to_outdbgstr;
 				}
+#else
+				else if (logPath == "SYSLOG")
+				{
+					// Intention is to eventually user-selected
+					it->dprintfFunc = DprintfSyslog::Log;
+					it->outputTarget = SYSLOG;
+					it->userData = static_cast<void*>(DprintfSyslogFactory::NewLog(LOG_DAEMON));
+				}
 #endif
 				else
 				{
@@ -211,6 +222,16 @@ void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_inf
 
 	if(debugLogsOld)
 	{
+		
+		for (it = debugLogsOld->begin(); it != debugLogsOld->end(); it++)
+		{
+			if ((it->outputTarget == SYSLOG) && (it->userData))
+			{
+#if !defined(WIN32)
+				delete static_cast<DprintfSyslog*>(it->userData);
+#endif
+			}
+		}
 		delete debugLogsOld;
 	}
 

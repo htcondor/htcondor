@@ -141,6 +141,35 @@ int formatstr_cat(MyString& s, const char* format, ...) {
     return r;
 }
 
+// to replace MyString with std::string we need a compatible read-line function
+bool readLine(std::string& str, FILE *fp, bool append)
+{
+	bool first_time = true;
+
+	ASSERT( fp );
+
+	while( 1 ) {
+		char buf[1024];
+		if( ! fgets(buf, 1024, fp) ) {
+			if (first_time) {
+				return false;
+			}
+			return true;
+		}
+		if (first_time && !append) {
+			str = buf;
+			first_time = false;
+		} else {
+			str += buf;
+		}
+		if ((str.size() > 0) && (str[str.size()-1] == '\n')) {
+				// we found a newline, return success
+			return true;
+		}
+	}
+}
+
+
 bool chomp(std::string &str)
 {
 	bool chomped = false;
@@ -201,6 +230,64 @@ void lower_case( std::string &str )
 			str[i] = _tolower( str[i] );
 		}
 	}
+}
+
+void title_case( std::string &str )
+{
+	bool upper = true;
+	for ( unsigned int i = 0; i<str.length(); i++ ) {
+		if (upper) {
+			if ( str[i] >= 'a' && str[i] <= 'z' ) {
+				str[i] = _toupper( str[i] );
+			}
+		} else {
+			if ( str[i] >= 'A' && str[i] <= 'Z' ) {
+				str[i] = _tolower( str[i] );
+			}
+		}
+		upper = isspace(str[i]);
+	}
+}
+
+// returns true if pre is non-empty and str is the same as pre up to pre.size()
+bool starts_with(const std::string& str, const std::string& pre)
+{
+	size_t cp = pre.size();
+	if (cp <= 0)
+		return false;
+
+	size_t cs = str.size();
+	if (cs < cp)
+		return false;
+
+	for (size_t ix = 0; ix < cp; ++ix) {
+		if (str[ix] != pre[ix])
+			return false;
+	}
+	return true;
+}
+
+bool starts_with_ignore_case(const std::string& str, const std::string& pre)
+{
+	size_t cp = pre.size();
+	if (cp <= 0)
+		return false;
+
+	size_t cs = str.size();
+	if (cs < cp)
+		return false;
+
+	// to optimize for the case where str and pre are the same case,
+	// we first do a case-sensitive compare, and do case conversion only
+	// if the sensitive compare fails. this avoids branches when
+	// str and pre of the same case, which is the most likely scenario.
+	for (size_t ix = 0; ix < cp; ++ix) {
+		if (str[ix] != pre[ix]) {
+			if (_tolower(str[ix]) != _tolower(pre[ix]))
+				return false;
+		}
+	}
+	return true;
 }
 
 static char *tokenBuf = NULL;

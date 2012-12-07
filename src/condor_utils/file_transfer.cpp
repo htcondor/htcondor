@@ -3085,6 +3085,28 @@ FileTransfer::ObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool down
 	return result;
 }
 
+std::string
+FileTransfer::GetTransferQueueUser()
+{
+	std::string user;
+	ClassAd *job = GetJobAd();
+	if( job ) {
+		std::string user_expr;
+		if( param(user_expr,"TRANSFER_QUEUE_USER_EXPR",ATTR_USER) ) {
+			ExprTree *user_tree = NULL;
+			if( ParseClassAdRvalExpr( user_expr.c_str(), user_tree ) == 0 && user_tree ) {
+				classad::Value val;
+				const char *str = NULL;
+				if ( EvalExprTree(user_tree,job,NULL,val) && val.IsStringValue(str) )
+				{
+					user = str;
+				}
+				delete user_tree;
+			}
+		}
+	}
+	return user;
+}
 
 bool
 FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,char const *full_fname,bool &go_ahead_always,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc)
@@ -3096,6 +3118,8 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 		//extra time to reserve for sending msg to our file xfer peer
 	const int alive_slop = 20;
 	int min_timeout = 300;
+
+	std::string queue_user = GetTransferQueueUser();
 
 	s->decode();
 	if( !s->get(alive_interval) || !s->end_of_message() ) {
@@ -3124,7 +3148,7 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 	ASSERT( timeout > alive_slop );
 	timeout -= alive_slop;
 
-	if( !xfer_queue.RequestTransferQueueSlot(downloading,full_fname,m_jobid.Value(),timeout,error_desc) )
+	if( !xfer_queue.RequestTransferQueueSlot(downloading,full_fname,m_jobid.Value(),queue_user.c_str(),timeout,error_desc) )
 	{
 		go_ahead = GO_AHEAD_FAILED;
 	}
@@ -3679,7 +3703,9 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 	// modification times to spool_time.  this essentially builds a catalog
 	// that mimics old behavior.
 	//
-	Directory file_iterator(iwd);
+	// make sure this iteration is done as the actual owner of the directory,
+	// as it may not be world-readable.
+	Directory file_iterator(iwd, PRIV_USER);
 	const char * f = NULL;
 	while( (f = file_iterator.Next()) ) {
 		if (!file_iterator.IsDirectory()) {

@@ -447,11 +447,19 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		classad::ExprTree *tree = parser.ParseExpression(rlimit_expr);
 		if (tree) {
 			classad::Value val;
-			int result;
+			long long result;
 
 			if (EvalExprTree(tree, Starter->jic->machClassAd(), JobAd, val) && 
 				val.IsIntegerValue(result)) {
-					rlimit_as_hard_limit = ((long)result) * 1024 * 1024;
+					result *= 1024 * 1024; // convert to megabytes
+					rlimit_as_hard_limit = (long)result; // truncate for Create_Process
+					if (result > rlimit_as_hard_limit) {
+						// if truncation to long results in a change in the value, then
+						// the requested limit must be > 2 GB and we are on a 32 bit platform
+						// in that case, the requested limit is > than what the process can get anyway
+						// so just don't set a limit.
+						rlimit_as_hard_limit = 0;
+					}
 					dprintf(D_ALWAYS, "Setting job's virtual memory rlimit to %ld megabytes\n", rlimit_as_hard_limit);
 			} else {
 				dprintf(D_ALWAYS, "Can't evaluate STARTER_RLIMIT_AS expression %s\n", rlimit_expr);

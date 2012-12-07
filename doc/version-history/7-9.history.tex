@@ -8,19 +8,19 @@
 \section{\label{sec:History-7-9}Development Release Series 7.9}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This is the development release series of Condor.
+This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-7-9-2}Version 7.9.2}
+\subsection*{\label{sec:New-7-9-3}Version 7.9.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item Condor version 7.9.2 not yet released.
-%\item Condor version 7.9.2 released on Month Date, 2012.
+\item HTCondor version 7.9.3 not yet released.
+%\item HTCondor version 7.9.3 released on Month Date, 2012.
 
 \end{itemize}
 
@@ -29,7 +29,41 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Exposed the quantization level for windowed statistics to
+configuration with the parameter \Macro{STATISTICS\_WINDOW\_QUANTUM}.
+\Ticket{3288}
+
+\item \emph{This item is tentative, and must be reviewed or updated
+before release of 7.9.3.}
+\Condor{submit} now supports first-class syntax for specifying
+accounting groups, via the 'group' and 'group\_user' commands.  The
+separator character between group name and user name on internal
+representations is now configurable with \Macro{GROUP\_SEPARATOR}.
+Refer to section~\ref{sec:group-accounting} for more information.
+\Ticket{2728}
+
+\item Round-robin scheduling is now used when there are multiple users
+waiting to transfer files in the limits set by
+\Macro{MAX\_CONCURRENT\_UPLOADS} and/or
+\Macro{MAX\_CONCURRENT\_DOWNLOADS}.  Previously, the file transfer
+queue was scheduled in first-in-first-out order, so one user with
+many files to transfer could delay other users for as long as it took
+to transfer those files.  Now, when choosing a new job to allow to
+transfer, the first job belonging to the user who has least
+recently been given an opportunity to transfer will be selected.
+The old behavior, or variations on the new behavior, can be achieved
+by configuring \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+\Ticket{3333}
+
+\item \Condor{dagman} will now try twice to write a POST script terminate
+event, rather than trying once and exiting. \Condor{dagman} exits, writing
+a rescue DAG, if it is unable to write the event.
+\Ticket{965}
+
+\item The \Condor{gridmanager} now cleans up temporary files and directories
+that are sometimes left by the batch\_gahp when executing a grid-type
+\SubmitCmd{batch} job.
+\Ticket{3276}
 
 \end{itemize}
 
@@ -45,11 +79,149 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item A change was made to more accurately implement the
+minimum time defined by the configuration variable
+\Macro{NEGOTIATOR\_CYCLE\_DELAY}. 
+\Ticket{3332}
+
+\item The \Prog{batch\_gahp} is no longer dependent on the Perl module 
+\Code{XML::Simple} when submitting jobs to SGE.
+\Ticket{3350}
+
+\item The batch\_gahp now properly handles job X.509 proxies that aren't
+in the old proxy format.
+\Ticket{3362}
+
+\item On 32-bit platforms a \Macro{STARTER\_RLIMIT\_AS} value larger than 4096 could
+cause jobs to abort on startup.  Values larger than 2047 have no real meaning on 32-bit
+platforms, so values larger than 2047 are treated as no limit on 32-bit platforms.
+\Ticket{3309}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-9-2}Version 7.9.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 7.9.2 not yet released.
+%\item HTCondor version 7.9.2 released on Month Date, 2012.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item The permissions for the temporary execute directory of a job
+have been tightened for vanilla universe jobs, 
+such that only the owner of the job is allowed to see or
+modify the contents.
+\Ticket{3315}
+
+\item Added experimental support for EC2 spot instances.
+\Ticket{3209}
+
+\item (This feature was added in version 7.9.1.)  
+There are two new protocols for the submission of grid type EC2 jobs,
+\Expr{euca3://} and \Expr{euca3s://}.
+These protocols exist to work correctly when the resources do not support 
+the \Param{InstanceInitiatedShutdownBehavior} parameter.
+\Ticket{2974}
+
+\item (This feature was added in version 7.9.1.)  
+Added both a \Opt{-suppress\_notification},
+a \Opt{-dont\_suppress\_notification} command line option,
+and corresponding
+\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} configuration variable
+to \Condor{dagman} and \Condor{submit\_dag}.
+This enables a user of DAGMan to stop email notification of job
+events for jobs submitted by \Condor{dagman}. The value of
+\MacroNI{DAGMAN\_SUPPRESS\_NOTIFICATION} defaults to \Expr{True},
+so that jobs submitted
+by \Condor{dagman} will not send email notification. 
+\Ticket{3352}
+
+\item The default for job notification email has changed
+from \Expr{Complete} to \Expr{Never}. 
+There is also a new configuration variable, \Macro{JOB\_DEFAULT\_NOTIFICATION},
+which permits administrators to change the default for all jobs.
+\Ticket{2155}
+
+\item For platforms supporting cgroups,
+resource limits can now be applied per job,
+where a job may consist of multiple processes.
+See section~\ref{sec:Resource-Limits-Cgroup} for details.
+\Ticket{2734}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item The new configuration variable \Macro{MEMORY\_LIMIT}
+supports implementing memory resource limits on a per-job basis under cgroups.
+\Ticket{2734}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item \Condor{schedd} and \Condor{shadow} were not respecting the
+\Macro{DAGManNodesMask} attribute. This caused extra events to be written to
+the DAGMan node log.
+\Ticket{3311}
+
+\item Removed a spurious newline from the output of \Condor{submit}.
+\Ticket{3316}
+
 \item Fixed a bug that caused the \Condor{shadow} to set job attribute
 \Attr{X509UserProxySubject} to the wrong value when the job's X509
 proxy file was updated. It set the value to be the proxy's subject name
 rather than its identity.
 \Ticket{3265}
+
+\item The \Prog{batch\_gahp} no longer modifies the environment variable
+\Env{LD\_LIBRARY\_PATH}.
+In some instances, modifying \Env{LD\_LIBRARY\_PATH} caused the
+batch system's command line tools to fail when run by the \Prog{batch\_gahp}.
+\Ticket{3317}
+
+\item Grid-type \SubmitCmd{batch} jobs now work properly on machines
+where the gLite software has been installed.
+\Ticket{3269}
+
+\item The \Condor{shadow} would never print the allocated amount of
+partitionable resources in the job log.
+\Ticket{3318}
+
+\item \Condor{who} would sometimes incorrectly display blank or partial
+values in the PROGRAM column.
+\Ticket{3314}
 
 \end{itemize}
 
@@ -78,12 +250,14 @@ rather than its identity.
 
 \begin{itemize}
 
-\item Condor version 7.9.1 not yet released.
-%\item Condor version 7.9.1 released on Month Date, 2012.
+\item Condor version 7.9.1 released on October 22, 2012.
 
 \item Condor no longer looks for its main configuration file in the
 location \File{\MacroUNI{GLOBUS\_LOCATION}/etc/condor\_config}.
 \Ticket{2830}
+
+\item \Security This version contains an important security bug fix.  See below
+for details of this and other bugs fixed.
 
 \end{itemize}
 
@@ -92,12 +266,11 @@ location \File{\MacroUNI{GLOBUS\_LOCATION}/etc/condor\_config}.
 
 \begin{itemize}
 
-\item \Condor{submit} now supports first-class syntax for specifying
-accounting groups, via the 'group' and 'group\_user' commands.  The
-separator character between group name and user name on internal
-representations is now configurable with \Macro{GROUP\_SEPARATOR}.
-Refer to section~\ref{sec:group-accounting} for more information.
-\Ticket{2728}
+\item There are two new protocols for the submission of grid type EC2 jobs,
+\Expr{euca3://} and \Expr{euca3s://}.
+These protocols exist to work correctly when the resources do not support 
+the \Param{InstanceInitiatedShutdownBehavior} parameter.
+\Ticket{2974}
 
 \item \Condor{job\_router} can now submit the routed copy of jobs to a
 different \Condor{schedd} than the one that serves as the source of
@@ -132,31 +305,51 @@ of a machine that is in the Draining mode.  This can be used to effect
 partial draining of machines.
 \Ticket{2993}
 
-\item Communication between the \Condor{c-gahp} and \Condor{schedd} has
+\item Communication between the \Condor{c-gahp} and the \Condor{schedd} has
 been improved. A large number of Condor-C jobs should no longer cause
 other clients of the remote \Condor{schedd} to time out trying to get the
-\Condor{schedd}'s attention.
+\Condor{schedd} daemon's attention.
 \Ticket{2575}
 
 \item \Condor{history} and \Condor{q} can now be told to read job records
-from a userlog instead of the parsing the history file or querying the
+from a user log, instead of parsing the history file or querying the
 \Condor{schedd}.  This can be used to monitor the status of jobs with
 reduced load on the \Condor{schedd}.
 \Ticket{3188}
 
+\item Eucalyptus 3.x support has been added to the EC2 GAHP.
+\Ticket{2974}
+
+\item File transfer remaps now support remapping directories.
+\Ticket{3039}
+
+\item The \Condor{schedd} can now dynamically spawn a local \Condor{startd}
+to manage local universe jobs.
+\Ticket{3129}
+
 \item \Condor{q} \Opt{-jobads} will now respect the \Opt{-constraint} option.
 \Ticket{3191}
 
+\item Added BOSCO, a set of tools that makes it easy to use a Personal
+Condor to run jobs on remote batch systems without administrator
+assistance or manual installation of software on the remote systems.
+See \URL{https://twiki.grid.iu.edu/bin/view/CampusGrids/BoSCO} for more
+information about BOSCO.
+\Ticket{2421}
+
 \end{itemize}
+
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
 
-\item Dynamic slots now fill the values for attributes of the form TotalSlotXxx, 
-for configured local resources, in a way consistent with standard resources
-such as TotalSlotCpus.  Previously those values were all filled with zero on
-dynamic slots.
+\item Dynamic slots now fill the values for attributes of with names
+that begin with
+\Attr{TotalSlot}, 
+for configured local resources in a way consistent with standard resources
+such as \Attr{TotalSlotCpus}.
+Previously those values were all given the value zero on dynamic slots.
 \Ticket{3229}
 
 \item The \Condor{schedd} now advertises the value of configuration variable
@@ -168,7 +361,7 @@ its daemon ClassAd.  This allows one to determine if a given
 
 \item Added the attribute \Attr{DAGManNodesMask} to control the verboseness of
 the log referred to by \Attr{DAGManNodesLog}.
-\Ticket{2807}
+\Ticket{3351}
 
 \item The new configuration variable
 \Macro{QUEUE\_SUPER\_USER\_MAY\_IMPERSONATE} specifies a regular
@@ -180,7 +373,6 @@ proper functioning of the \Condor{shadow}, the \Condor{gridmanager}, and
 the \Condor{job\_router}, this expression, if set, must match the owner
 names of all jobs that these daemons will manage.
 \Ticket{3030}
-
 
 \item The new configuration variable \Macro{DEFRAG\_CANCEL\_REQUIREMENTS}
 is an expression that specifies which draining machines should have 
@@ -195,11 +387,34 @@ If \SubmitCmd{x509userproxy} is not set,
 then the proxy file will be looked for in the standard locations.
 \Ticket{3025}
 
-\item If \Condor{submit} with the \Opt{-interactive} option
-is interrupted (via ctrl-c for example) before the interactive job starts,
+\item If \Condor{submit} is used to submit an interactive job,
+and the job is interrupted before the interactive job starts,
 an attempt is made to immediately remove the interactive job from the queue.
 Similarly, \Condor{ssh\_to\_job} has a new option \Opt{-remove-on-interrupt}.
 \Ticket{3242}
+
+\item Changes to were made to the ClassAd machine attributes 
+\Attr{OpSys}, \Attr{OpSysVer}, \Attr{Distro}, as well as others,
+in order to do a better job of identifying the operating system.
+\Ticket{2366}
+
+\item \Macro{GRIDMANAGER\_MAX\_SUBMITTED\_JOBS\_PER\_RESOURCE} can now be a
+list, specifying different values for different hosts.
+\Ticket{3220}
+
+\item The new configuration parameter \Macro{GRIDMANAGER\_JOB\_PROBE\_RATE}
+limits the number of job status requests sent to each remote resource.
+\Ticket{3023}
+
+\item The default value of \Macro{GRIDMANAGER\_JOB\_PROBE\_INTERVAL} has
+changed from 300 to 60.
+\Ticket{3023}.
+
+\item The configuration parameters \Macro{CONDOR\_JOB\_POLL\_INTERVAL} and
+\Macro{INFN\_JOB\_POLL\_INTERVAL} should no longer be used. Use
+\Macro{GRIDMANAGER\_JOB\_PROBE\_INTERVAL\_CONDOR} and
+\Macro{GRIDMANAGER\_JOB\_PROBE\_INTERVAL\_BATCH} instead.
+\Ticket{3023}
 
 \end{itemize}
 
@@ -207,25 +422,46 @@ Similarly, \Condor{ssh\_to\_job} has a new option \Opt{-remove-on-interrupt}.
 
 \begin{itemize}
 
-\item Fixed a bug in all daemons wherein the \Attr{DaemonStartTime} attribute in
-the ad for all daemons would be reset to the current time when they are
+\item \Security Fixed a bug which allowed jobs submitted to the standard
+universe to escalate privilege on the submit machine and execute code as 
+\Login{root}.
+(CVE-2012-5390)
+\Ticket{3268}
+
+\item A fix only invokes Globus callouts when actually needed, 
+thereby avoiding a program segfault if
+the call out mechanism is misconfigured or broken.
+\Ticket{2104}
+
+\item Fixed a bug in all daemons wherein the \Attr{DaemonStartTime} attribute 
+in the ClassAd for all daemons would be reset to the current time when they are
 reconfigured.
 \Ticket{3235}
 
-\item \Security Although not user-visible, there were multiple updates to remove places
-in the code where potential buffer overruns could occur, thus removing
-potential attacks.  None were known to be exploitable.
+\item Fixed a bug wherein the \Arg{-dont\_use\_default\_node\_log} command line flag
+to \Condor{submit\_dag} had no effect.
+\Ticket{3352}
 
-\item \Security Although not user-visible, there were updates to the code to improve
-error checking of system calls, removing some potential security threats.  None
-were known to be exploitable.
+\item \Security Although not user-visible, 
+there were multiple updates that removed places
+in the code where potential buffer overruns could occur, 
+thus preventing potential attacks.  
+None of these overruns were known to be exploitable.
 
-\item \Security Although not user-visible, some code that was no longer used was removed.
-The presence of this code could have lead to a Denial-of-Service attack which
-would allow an attacker to stop another user's jobs from running.
+\item \Security Although not user-visible, 
+there were updates to the code to improve
+the error checking of system calls,
+thereby removing some potential security threats.  
+None were known to be exploitable.
 
-\item \Security Filesystem (FS) authentication was improved to check the UNIX permissions
-of the directory used for authentication.  Without this, an attacker may have
+\item \Security Although not user-visible, 
+removed some code that was no longer used.
+The presence of this code could have led to a Denial-of-Service attack,
+which would allow an attacker to stop another user's jobs from running.
+
+\item \Security Filesystem (FS) authentication was improved to check 
+the UNIX permissions of the directory used for authentication.  
+Without this, an attacker may have
 been able to impersonate another submitter on the same submit machine.
 
 \item The \Condor{negotiator} now checks the accountant log file for sanity
@@ -273,6 +509,10 @@ cream jobs to be held with a hold reason of
 \end{verbatim}
 \normalsize
 \Ticket{3234}
+
+\item Fixed a problem that could have caused the \Condor{collector} to crash
+when receiving an invalid packet.
+\Ticket{3161}
 
 \end{itemize}
 
@@ -551,5 +791,4 @@ been documented for Scientific Linux platforms.
 \Ticket{2366}
 
 \end{itemize}
-
 

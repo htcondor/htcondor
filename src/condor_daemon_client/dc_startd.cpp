@@ -105,6 +105,9 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 	m_startd_fqu = sock->getFullyQualifiedUser();
 	m_startd_ip_addr = sock->peer_ip_str();
 
+	std::string scheduler_addr_to_send = m_scheduler_addr;
+	ConvertDefaultIPToSocketIP(ATTR_SCHEDD_IP_ADDR,scheduler_addr_to_send,*sock);
+
 		// Insert an attribute in the request ad to inform the
 		// startd that this schedd is capable of understanding 
 		// the newer protocol where the claim response may send
@@ -114,7 +117,7 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 
 	if( !sock->put_secret( m_claim_id.c_str() ) ||
 	    !m_job_ad.put( *sock ) ||
-	    !sock->put( m_scheduler_addr.c_str() ) ||
+	    !sock->put( scheduler_addr_to_send.c_str() ) ||
 	    !sock->put( m_alive_interval ) )
 	{
 		dprintf(failureDebugLevel(),
@@ -739,7 +742,7 @@ DCStartd::vacateClaim( const char* name_vacate )
 		return false;
 	}
 
-	if( ! reli_sock.code((unsigned char *)name_vacate) ) {
+	if( ! reli_sock.code((unsigned char *)const_cast<char*>(name_vacate)) ) {
 		newError( CA_COMMUNICATION_ERROR,
 				  "DCStartd::vacateClaim: Failed to send Name to the startd" );
 		return false;
@@ -890,7 +893,7 @@ DCStartd::checkpointJob( const char* name_ckpt )
 	}
 
 		// Now, send the name
-	if( ! reli_sock.code((unsigned char *)name_ckpt) ) {
+	if( ! reli_sock.code((unsigned char *)const_cast<char*>(name_ckpt)) ) {
 		newError( CA_COMMUNICATION_ERROR,
 				  "DCStartd::checkpointJob: Failed to send Name to the startd" );
 		return false;

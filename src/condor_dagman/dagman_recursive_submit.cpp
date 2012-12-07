@@ -73,7 +73,11 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 
 	if (deepOpts.strNotification != "" ) {
 		args.AppendArg( "-notification" );
-		args.AppendArg( deepOpts.strNotification.Value() );
+		if(deepOpts.suppress_notification) {
+			args.AppendArg( "never" );
+		} else { 
+			args.AppendArg( deepOpts.strNotification.Value() );
+		}
 	}
 
 	if ( deepOpts.strDagmanPath != "" ) {
@@ -117,12 +121,20 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 	if ( deepOpts.updateSubmit ) {
 		args.AppendArg( "-update_submit" );
 	}
+
 	if( deepOpts.priority != 0) {
 		args.AppendArg( "-Priority" );
 		args.AppendArg( deepOpts.priority );
 	}
+
 	if( !deepOpts.always_use_node_log ) {
 		args.AppendArg( "-dont_use_default_node_log" );
+	}
+
+	if( deepOpts.suppress_notification ) {
+		args.AppendArg( "-suppress_notification" );
+	} else {
+		args.AppendArg( "-dont_suppress_notification" );
 	}
 
 	args.AppendArg( dagFile );

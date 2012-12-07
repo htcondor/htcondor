@@ -115,6 +115,7 @@ struct SubmitDagDeepOptions
 		// Set to false if this dagman is going to be communicating
 		// with pre-7.9.0 schedd/shadow/submit
 	bool always_use_node_log;		 	
+	bool suppress_notification;
 
 	SubmitDagDeepOptions() 
 	{ 
@@ -131,6 +132,7 @@ struct SubmitDagDeepOptions
 		importEnv = false;
 		priority = 0;
 		always_use_node_log = true;
+		suppress_notification = true;
 	}
 };
 

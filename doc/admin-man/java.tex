@@ -5,14 +5,14 @@
 \index{installation!Java}
 \index{Java}
 
-Compiled Java programs may be executed (under Condor) on
+Compiled Java programs may be executed (under HTCondor) on
 any
 execution site with a
 \index{Java Virtual Machine}
 \index{JVM}
 Java Virtual Machine (JVM).
 To do this,
-Condor must be informed of some details of the
+HTCondor must be informed of some details of the
 JVM installation.
 
 Begin by installing a Java distribution according to the vendor's
@@ -23,7 +23,7 @@ Your machine may have
 been delivered with a JVM already installed -- installed code
 is frequently found in \File{/usr/bin/java}.
 
-Condor's configuration includes the location of the installed
+HTCondor's configuration includes the location of the installed
 JVM.
 Edit the configuration file.
 Modify the \Macro{JAVA} entry to point to the JVM binary,
@@ -100,7 +100,7 @@ messages from the shell or Java will be printed
 on the error stream instead.
 
 The Sun JVM sets a value of 64 Mbytes for the Java Maxheap Argument,
-which Condor uses.
+which HTCondor uses.
 This value is often too small for the application.
 The administrator can change this value through configuration by setting
 a different value for \Macro{JAVA\_EXTRA\_ARGUMENTS}.

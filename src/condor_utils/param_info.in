@@ -2051,22 +2051,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=accountant,Accountant
 id=95
 
-[GROUP_SEPARATOR]
-aliases=
-default=.
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Group Name Separator Character
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=accountant,Accountant,condor_submit
-id=777
-
 [PRIORITY_HALFLIFE]
 aliases=
 default=86400
@@ -4643,22 +4627,6 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=,
 id=264
-
-[NET_REMAP_ENABLE]
-aliases=
-default=false
-version=0.0.0
-range=.*
-state=default
-type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Net Remap Enable
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=,
-id=265
 
 [LOGS_USE_TIMESTAMP]
 aliases=
@@ -10136,6 +10104,54 @@ url=
 tags=
 id=601
 
+[STATISTICS_WINDOW_QUANTUM]
+aliases=
+default=240
+version=0.0.0
+range=1,1000000000
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Size of Internal Statistics Ring Buffer In Seconds
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=scheduler
+id=602
+
+[STATISTICS_WINDOW_QUANTUM_DC]
+aliases=
+default=
+version=0.0.0
+range=1,1000000000
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Size of Internal Statistics Ring Buffer In Seconds for DaemonCore Stats
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=scheduler
+id=602
+
+[STATISTICS_WINDOW_QUANTUM_SCHEDD]
+aliases=
+default=
+version=0.0.0
+range=1,1000000000
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Size of Internal Statistics Ring Buffer In Seconds for Scheduler Stats
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=scheduler
+id=602
+
 [STATISTICS_WINDOW_SECONDS]
 aliases=
 default=1200
@@ -10154,11 +10170,11 @@ id=602
 
 [DCSTATISTICS_WINDOW_SECONDS]
 aliases=
-default=1200
+default=
 version=0.0.0
 range=1,1000000000
 state=default
-type=int
+type=string
 is_macro=false
 reconfig=true
 customization=seldom
@@ -10772,6 +10788,22 @@ is_macro=false
 reconfig=true
 customization=seldom
 friendly_name=Consider job priorities across multiple schedds
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=schedd
+id=614
+
+[TRANSFER_QUEUE_USER_EXPR]
+aliases=
+default=User
+version=7.9.1
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd

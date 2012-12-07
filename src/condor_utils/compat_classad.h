@@ -45,6 +45,8 @@ typedef enum {
 	TargetScheddAttrs
 } TargetAdType;
 
+class ClassAdFileParseHelper;
+
 class ClassAd : public classad::ClassAd
 {
  public:
@@ -60,7 +62,12 @@ class ClassAd : public classad::ClassAd
 		//@{
 
 		/** A constructor that reads old ClassAds from a FILE */
-	ClassAd(FILE*,const char*,int&,int&,int&);	// Constructor, read from file.
+	ClassAd(FILE*,const char*delim,int&isEOF,int&error,int&empty);	// Constructor, read from file.
+
+		/* helper for constructor that reads from file 
+		 * returns number of attributes added, 0 if none, -1 if parse error
+		 */
+	int InsertFromFile(FILE*, bool& is_eof, int& error, ClassAdFileParseHelper* phelp=NULL);
 
 		/* This is a pass-through to ClassAd::Insert(). Because we define
 		 * our own Insert() below, our parent's Insert() won't be found
@@ -195,6 +202,14 @@ class ClassAd : public classad::ClassAd
 		 */
 
 	int LookupBool(const char *name, bool &value) const;
+
+		/** Lookup and evaluate an attribute in the ClassAd whose type is not known
+		 *  @param name The name of the attribute
+		 *  @param target A ClassAd to resolve MY or other references
+		 *  @param value Where we the copy value
+		 *  @return 1 on success, 0 if the attribute doesn't exist
+		 */
+	int EvalAttr (const char *name, classad::ClassAd *target, classad::Value & value);
 
 		/** Lookup and evaluate an attribute in the ClassAd that is a string
 		 *  @param name The name of the attribute
@@ -483,6 +498,43 @@ class ClassAd : public classad::ClassAd
 	void _GetReferences(classad::ExprTree *tree,
 						StringList &internal_refs,
 						StringList &external_refs);
+
+	// poison Assign of ExprTree* type for public users
+	// otherwise the compiler will resolve against the bool overload 
+	// and quietly leak the tree.
+	int Assign(char const *name,classad::ExprTree * tree)
+	{ return Insert(name, tree) ? TRUE : FALSE; }
+
+};
+
+class ClassAdFileParseHelper
+{
+ public:
+	// Some compilers whine when you have virtual methods but not an
+	// explicit virtual destructor
+	virtual ~ClassAdFileParseHelper() {}
+	// return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
+	virtual int PreParse(std::string & line, ClassAd & ad, FILE* file)=0;
+	// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
+	virtual int OnParseError(std::string & line, ClassAd & ad, FILE* FILE)=0;
+};
+
+// this implements a classad file parse helper that
+// ignores lines of blanks and lines that begin with #, 
+// treats empty lines as class-ad record separators
+class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
+{
+ public:
+	// Some compilers whine when you have virtual methods but not an
+	// explicit virtual destructor
+	virtual ~CondorClassAdFileParseHelper() {}
+	// return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
+	virtual int PreParse(std::string & line, ClassAd & ad, FILE* file);
+	// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
+	virtual int OnParseError(std::string & line, ClassAd & ad, FILE* FILE);
+	CondorClassAdFileParseHelper(std::string delim) : ad_delimitor(delim) {};
+ private:
+	std::string ad_delimitor;
 };
 
 void getTheMyRef( classad::ClassAd *ad );

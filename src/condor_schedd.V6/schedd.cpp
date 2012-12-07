@@ -2731,7 +2731,19 @@ jobIsFinishedDone( int cluster, int proc, void*, int )
 	return DestroyProc( cluster, proc );
 }
 
-
+namespace {
+	void InitializeMask(WriteUserLog* ulog, int c, int p)
+	{
+		MyString msk;
+		GetAttributeString(c, p, ATTR_DAGMAN_WORKFLOW_MASK, msk);
+		dprintf( D_FULLDEBUG, "Mask is \"%s\"\n",msk.Value());
+		Tokenize(msk.Value());
+		while(const char* mask = GetNextToken(",",true)) {
+			dprintf( D_FULLDEBUG, "Adding \"%s\" to mask\n",mask);
+			ulog->AddToMask(ULogEventNumber(atoi(mask)));
+		}
+	}
+}
 // Initialize a WriteUserLog object for a given job and return a pointer to
 // the WriteUserLog object created.  This object can then be used to write
 // events and must be deleted when you're done.  This returns NULL if
@@ -2765,11 +2777,10 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_NT_DOMAIN, domain);
 	GetAttributeString(job_id.cluster, job_id.proc, ATTR_GLOBAL_JOB_ID, gjid);
 
-	for(std::vector<const char*>::iterator p = logfiles.begin(); p != logfiles.end();
-			++p) {
-		dprintf( D_FULLDEBUG, 
-				 "Writing record to user logfile=%s owner=%s\n",
-				 *p, owner.Value() );
+	for(std::vector<const char*>::iterator p = logfiles.begin();
+			p != logfiles.end(); ++p) {
+		dprintf( D_FULLDEBUG, "Writing record to user logfile=%s owner=%s\n",
+			*p, owner.Value() );
 	}
 
 	WriteUserLog* ULog=new WriteUserLog();
@@ -2777,7 +2788,10 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 		ATTR_ULOG_USE_XML, &use_xml) && 1 == use_xml);
 	ULog->setCreatorName( Name );
 	if (ULog->initialize(owner.Value(), domain.Value(), logfiles,
-		job_id.cluster, job_id.proc, 0, gjid.Value())) {
+			job_id.cluster, job_id.proc, 0, gjid.Value())) {
+		if(logfiles.size() > 1) {
+			InitializeMask(ULog,job_id.cluster, job_id.proc);
+		}
 		return ULog;
 	} else {
 			// If the user log is in the spool directory, try writing to
@@ -2787,14 +2801,18 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 		std::string SpoolDir(tmp);
 		SpoolDir += DIR_DELIM_CHAR;
 		free( tmp );
-		if ( !strncmp( SpoolDir.c_str(), logfilename.Value(), SpoolDir.length() ) &&
-			 ULog->initialize( logfiles, job_id.cluster, job_id.proc,
-				0, gjid.Value() ) ) {
+		if ( !strncmp( SpoolDir.c_str(), logfilename.Value(),
+					SpoolDir.length() ) && ULog->initialize( logfiles,
+					job_id.cluster, job_id.proc, 0, gjid.Value() ) ) {
+			if(logfiles.size() > 1) {
+				InitializeMask(ULog,job_id.cluster,job_id.proc);
+			}
 			return ULog;
 		}
 		for(std::vector<const char*>::iterator p = logfiles.begin();
 				p != logfiles.end(); ++p) {
-			dprintf ( D_ALWAYS, "WARNING: Invalid user log file specified: %s\n", *p);
+			dprintf ( D_ALWAYS, "WARNING: Invalid user log file specified: "
+				"%s\n", *p);
 		}
 		delete ULog;
 		return NULL;

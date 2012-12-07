@@ -30,7 +30,7 @@
 // transfer queue server's representation of a client
 class TransferQueueRequest {
  public:
-	TransferQueueRequest(ReliSock *sock,char const *fname,char const *jobid,bool downloading,time_t max_queue_age);
+	TransferQueueRequest(ReliSock *sock,char const *fname,char const *jobid,char const *queue_user,bool downloading,time_t max_queue_age);
 	~TransferQueueRequest();
 
 	char const *Description();
@@ -38,6 +38,7 @@ class TransferQueueRequest {
 	bool SendGoAhead(XFER_QUEUE_ENUM go_ahead=XFER_QUEUE_GO_AHEAD,char const *reason=NULL);
 
 	ReliSock *m_sock;
+	MyString m_queue_user;   // Name of file transfer queue user. (TRANSFER_QUEUE_USER_EXPR)
 	MyString m_jobid;   // For information purposes, the job associated with
 	                    // this file transfer.
 	MyString m_fname;   // File this client originally requested to transfer.
@@ -99,8 +100,17 @@ class TransferQueueManager: public Service {
 	int m_upload_wait_time;
 	int m_download_wait_time;
 
+	unsigned int m_round_robin_counter; // increments each time we send GoAhead to a client
+	std::map< std::string,unsigned int > m_round_robin_recency; // key = queue_user, value = round robin counter at time of last GoAhead
+
+	unsigned int m_round_robin_garbage_counter;
+	time_t m_round_robin_garbage_time;
+
 	bool AddRequest( TransferQueueRequest *client );
 	void RemoveRequest( TransferQueueRequest *client );
+	int GetRoundRobinRecency(const std::string &queue);
+	void SetRoundRobinRecency(const std::string &queue);
+	void CollectRoundRobinGarbage();
 };
 
 

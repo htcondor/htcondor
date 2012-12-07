@@ -6,9 +6,9 @@
 \index{grid computing!submitting jobs to Unicore}
 
 Unicore is a Java-based grid scheduling system.
-See \URL{http://unicore.sourceforge.net} for more information about Unicore.
+See \URL{http://www.unicore.eu/} for more information about Unicore.
 
-Condor jobs may be submitted to
+HTCondor jobs may be submitted to
 Unicore resources using the \SubmitCmd{grid} universe.
 The \SubmitCmd{grid\_resource} command specifies the name of the
 Unicore resource as follows:
@@ -16,9 +16,9 @@ Unicore resource as follows:
 grid_resource = unicore usite.example.com vsite
 \end{verbatim}
 \SubmitCmd{usite.example.com} is the host name of the Unicore gateway
-machine to which the Condor job is to be submitted.
+machine to which the HTCondor job is to be submitted.
 \SubmitCmd{vsite} is the name of the Unicore virtual resource to which
-the Condor job is to be submitted.
+the HTCondor job is to be submitted.
 
 Unicore uses certificates stored in a Java keystore file for
 authentication. 

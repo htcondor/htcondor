@@ -87,9 +87,8 @@ void init_local_hostname()
 	addrinfo_iterator ai;
 	ret = ipv6_getaddrinfo(hostname, NULL, ai);
 	if (ret) {
-			// write some error message
-		dprintf(D_HOSTNAME, "hostname %s cannot be resolved by getaddrinfo\n",
-				hostname);
+		dprintf(D_HOSTNAME, "ipv6_getaddrinfo() could not look up %s: %s (%d)\n", 
+			hostname, gai_strerror(ret), ret);
 		return;
 	}
 	
@@ -160,8 +159,10 @@ MyString get_fqdn_from_hostname(const MyString& hostname) {
 
 	if (!nodns_enabled()) {
 		addrinfo_iterator ai;
-		bool res  = ipv6_getaddrinfo(hostname.Value(), NULL, ai);
+		int res  = ipv6_getaddrinfo(hostname.Value(), NULL, ai);
 		if (res) {
+			dprintf(D_HOSTNAME, "ipv6_getaddrinfo() could not look up %s: %s (%d)\n", 
+				hostname.Value(), gai_strerror(res), res);
 			return ret;
 		}
 
@@ -212,8 +213,10 @@ int get_fqdn_and_ip_from_hostname(const MyString& hostname,
 		// to further seek fully-qualified domain name and corresponding
 		// ip address
 		addrinfo_iterator ai;
-		bool res  = ipv6_getaddrinfo(hostname.Value(), NULL, ai);
+		int res  = ipv6_getaddrinfo(hostname.Value(), NULL, ai);
 		if (res) {
+			dprintf(D_HOSTNAME, "ipv6_getaddrinfo() could not look up %s: %s (%d)\n", hostname.Value(),
+				gai_strerror(res), res);
 			return 0;
 		}
 
@@ -419,8 +422,10 @@ std::vector<condor_sockaddr> resolve_hostname(const MyString& hostname)
 std::vector<condor_sockaddr> resolve_hostname_raw(const MyString& hostname) {
 	std::vector<condor_sockaddr> ret;
 	addrinfo_iterator ai;
-	bool res  = ipv6_getaddrinfo(hostname.Value(), NULL, ai);
+	int res  = ipv6_getaddrinfo(hostname.Value(), NULL, ai);
 	if (res) {
+		dprintf(D_HOSTNAME, "ipv6_getaddrinfo() could not look up %s: %s (%d)\n", 
+			hostname.Value(), gai_strerror(res), res);
 		return ret;
 	}
 	

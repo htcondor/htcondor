@@ -1,0 +1,4 @@
+Job     NODERET         job_dagman_suppress_notification-cmd_line-node.cmd
+Script POST NODERET     ./job_dagman_suppress_notification-post-allow.pl $RETURN $JOBID
+Subdag External NODESUB job_dagman_suppress_notification-subdag-cmd_line.dag
+Parent NODERET Child NODESUB

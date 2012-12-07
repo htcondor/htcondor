@@ -2,18 +2,20 @@
 \subsection{\label{sec:Absent-Ads}Absent ClassAds}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{pool management!absent ClassAds}
+\index{absent ClassAd}
+\index{ClassAd!absent ClassAd}
 
-By default, Condor assumes that resources are transient: 
+By default, HTCondor assumes that resources are transient: 
 the \Condor{collector}
 will discard ClassAds older than \Macro{CLASSAD\_LIFETIME} seconds.
 Its default configuration value is 15 minutes, 
 and as such, the default value for \Macro{UPDATE\_INTERVAL} will 
-pass three times before Condor forgets about a resource.
+pass three times before HTCondor forgets about a resource.
 In some pools, especially those with dedicated resources, 
 this approach may make it unnecessarily difficult to determine 
 what the composition of the pool ought to be, 
 in the sense of knowing which machines would be in the pool,
-if Condor were properly functioning on all of them.
+if HTCondor were properly functioning on all of them.
 
 This assumption of transient machines can be modified by 
 the use of absent ClassAds.  
@@ -32,7 +34,7 @@ invalidate the absent machine ClassAd.
 Absent ClassAds, like offline ClassAds, 
 are stored to disk to ensure that they are remembered,
 even across \Condor{collector} crashes.
-The configuration variable \Macro{PERSISTENT\_AD\_LOG}
+The configuration variable \Macro{COLLECTOR\_PERSISTENT\_AD\_LOG}
 defines the file in which the ClassAds are stored,
 and replaces the no longer used variable \MacroNI{OFFLINE\_LOG}.
 Absent ClassAds are retained on disk as maintained by 
@@ -45,4 +47,4 @@ Absent ClassAds are only returned by the \Condor{collector} when
 using the \Opt{-collector} option to \Condor{status},
 or when the absent machine ClassAd attribute is mentioned on 
 the \Condor{status} command line.  
-This renders absent ClassAds invisible to the rest of the Condor infrastructure.
+This renders absent ClassAds invisible to the rest of the HTCondor infrastructure.

@@ -1,26 +1,26 @@
-\index{Condor-C|(}
+\index{HTCondor-C|(}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Condor-C}Condor-C, The condor Grid Type }
+\subsection{\label{sec:HTCondor-C}HTCondor-C, The condor Grid Type }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{grid computing!Condor-C}
-Condor-C allows jobs in one machine's job queue to
+\index{grid computing!HTCondor-C}
+HTCondor-C allows jobs in one machine's job queue to
 be moved to another machine's job queue.
 These machines may be far removed from each other,
 providing powerful grid computation mechanisms,
-while requiring only Condor software and its configuration.
+while requiring only HTCondor software and its configuration.
 
-Condor-C is highly resistant to network disconnections and machine failures on both the submission and remote sides.
+HTCondor-C is highly resistant to network disconnections and machine failures on both the submission and remote sides.
 An expected usage
-sets up Personal Condor on a laptop,
-submits some jobs that are sent to a Condor pool,
+sets up Personal HTCondor on a laptop,
+submits some jobs that are sent to an HTCondor pool,
 waits until the jobs are staged on the pool,
 then turns off the laptop.
 When the laptop reconnects at a later time,
 any results can be pulled back.
 
-Condor-C scales gracefully when compared with Condor's flocking
+HTCondor-C scales gracefully when compared with HTCondor's flocking
 mechanism.
 The machine upon which jobs are submitted
 maintains a single process and network connection to a remote machine,
@@ -28,11 +28,11 @@ without regard to the number
 of jobs queued or running.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Condor-C-Config}Condor-C Configuration}
+\subsubsection{\label{sec:HTCondor-C-Config}HTCondor-C Configuration}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Condor-C!configuration}
+\index{HTCondor-C!configuration}
 There are two aspects to configuration to enable the
-submission and execution of Condor-C jobs.
+submission and execution of HTCondor-C jobs.
 These two aspects correspond to the endpoints of the 
 communication: there is the machine from which jobs are
 submitted, and there is the remote machine upon which the
@@ -49,16 +49,16 @@ C_GAHP_WORKER_THREAD_LOG=/tmp/CGAHPWorkerLog.$(USERNAME)
 \end{verbatim}
 \normalsize
 
-\index{Condor GAHP}
+\index{HTCondor GAHP}
 \index{GAHP (Grid ASCII Helper Protocol)}
 The acronym GAHP stands for Grid ASCII Helper Protocol.
 A GAHP server provides grid-related services for a
 variety of underlying middle-ware systems.
 The configuration variable \Macro{CONDOR\_GAHP}
-gives a full path to the GAHP server utilized by Condor-C.
+gives a full path to the GAHP server utilized by HTCondor-C.
 The configuration variable \Macro{C\_GAHP\_LOG} defines
-the location of the log that the Condor GAHP server writes.
-The log for the Condor GAHP is written as the user on whose
+the location of the log that the HTCondor GAHP server writes.
+The log for the HTCondor GAHP is written as the user on whose
 behalf it is running; thus the
 \Macro{C\_GAHP\_LOG} configuration variable must point to a location the end
 user can write to.
@@ -82,7 +82,7 @@ This facilitates communication between the two machines.
 
 An important aspect of configuration is the security 
 configuration relating to authentication.
-Condor-C on the remote machine relies on an
+HTCondor-C on the remote machine relies on an
 authentication protocol to
 know the identity of the user under which to run a job.
 The following is a working example
@@ -102,11 +102,11 @@ GSI, SSL, KERBEROS, and FS.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Condor-C-Submit}Condor-C Job Submission}
+\subsubsection{\label{sec:HTCondor-C-Submit}HTCondor-C Job Submission}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Condor-C!job submission}
+\index{HTCondor-C!job submission}
 \index{universe!grid}
-Job submission of Condor-C jobs is the same as for any Condor job.
+Job submission of HTCondor-C jobs is the same as for any HTCondor job.
 The \SubmitCmd{universe} is \SubmitCmd{grid}.
 \SubmitCmd{grid\_resource} specifies the remote \Condor{schedd} daemon to which
 the job should be submitted, and its value consists of three fields.
@@ -130,7 +130,7 @@ a job.
 
 \footnotesize
 \begin{verbatim}
-# minimal submit description file for a Condor-C job
+# minimal submit description file for an HTCondor-C job
 universe = grid
 executable = myjob
 output = myoutput
@@ -168,7 +168,7 @@ As an example, a submit description file would ordinarily contain
 when_to_transfer_output = ON_EXIT
 \end{verbatim}
 \normalsize
-This must appear in the Condor-C job submit description file as
+This must appear in the HTCondor-C job submit description file as
 \footnotesize
 \begin{verbatim}
 +remote_WhenToTransferOutput = "ON_EXIT"
@@ -231,11 +231,11 @@ the two inserted ClassAds
 +remote_WhenToTransferOutput = "ON_EXIT"
 \end{verbatim}
 \normalsize
-are used to invoke Condor's file transfer mechanism. 
+are used to invoke HTCondor's file transfer mechanism. 
 
 
 
-As Condor-C is a recent addition to Condor,
+As HTCondor-C is a recent addition to HTCondor,
 the universes, associated integer assignments,
 and notes about the existence of functionality are given in 
 Table~\ref{working-remote-universes}.
@@ -244,7 +244,7 @@ submissions under the given universe have not yet
 been thoroughly tested.
 They may already work.
 
-% universes, and whether they work in Condor-C
+% universes, and whether they work in HTCondor-C
 % NEED TO UPDATE THIS TABLE FOR gt5 and cream
 \begin{center}
 \begin{table}[hbt]
@@ -266,7 +266,7 @@ java & 10 & untested \\ \hline
 parallel & 11 & untested \\ \hline
 local & 12 & works well \\ \hline
 \end{tabular}
-\caption{\label{working-remote-universes}Functionality of remote job universes with Condor-C}
+\caption{\label{working-remote-universes}Functionality of remote job universes with HTCondor-C}
 \end{table}
 \end{center}
 
@@ -294,7 +294,7 @@ grid_resource = condor schedd.example.comd machine1.example.com:12345
 
 File transfer of a job's executable, \File{stdin}, \File{stdout}, and
 \File{stderr} are automatic.
-When other files need to be transferred using Condor's file transfer
+When other files need to be transferred using HTCondor's file transfer
 mechanism
 (see section~\ref{sec:file-transfer} on page~\pageref{sec:file-transfer}),
 the mechanism is applied based on the resulting job universe on the
@@ -302,11 +302,11 @@ remote machine.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Condor-C-CrossPlatform}
-Condor-C Jobs Between Differing Platforms}
+\subsubsection{\label{sec:HTCondor-C-CrossPlatform}
+HTCondor-C Jobs Between Differing Platforms}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor-C jobs given to a remote machine running Windows
+HTCondor-C jobs given to a remote machine running Windows
 must specify the Windows domain of the remote machine.
 This is accomplished by defining a ClassAd attribute for the job.
 Where the Windows domain is different at the submit machine
@@ -320,12 +320,12 @@ A Windows machine not part of a domain
 defines the Windows domain as the machine name.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\subsubsection{\label{sec:Condor-C-Hops}Multiple Hops for Condor-C Jobs}
+%\subsubsection{\label{sec:HTCondor-C-Hops}Multiple Hops for HTCondor-C Jobs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % \Todo
 
 
-\index{Condor-C|)}
+\index{HTCondor-C|)}
 
 

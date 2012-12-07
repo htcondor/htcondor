@@ -8,7 +8,7 @@ Submitting Jobs Using a Shared File System}
 
 If vanilla, java, or parallel universe
 jobs are submitted without using the File Transfer mechanism, 
-Condor must use a shared file system to access input and output
+HTCondor must use a shared file system to access input and output
 files. 
 In this case, the job \emph{must} be able to access the data files
 from any machine on which it could potentially run.
@@ -19,7 +19,7 @@ and the job requires a particular data file called
 cardinal.cs.wisc.edu, the file \File{/u/p/s/psilord/data.txt} must be
 available through either NFS or AFS for the job to run correctly.
 
-Condor allows users to ensure their jobs have access to the right
+HTCondor allows users to ensure their jobs have access to the right
 shared files by using the \AdAttr{FileSystemDomain} and
 \AdAttr{UidDomain} machine ClassAd attributes.
 These attributes specify which machines have access to the same shared
@@ -30,11 +30,11 @@ Similarly, all machines that share the same user information (in
 particular, the same UID, which is important for file systems like
 NFS) are considered part of the same UID domain.
 
-The default configuration for Condor places each machine
+The default configuration for HTCondor places each machine
 in its own UID domain and file system domain, using the full host name of the
 machine as the name of the domains.
 So, if a pool \emph{does} have access to a shared file system,
-the pool administrator \emph{must} correctly configure Condor 
+the pool administrator \emph{must} correctly configure HTCondor 
 such that all
 the machines mounting the same files have the same
 \AdAttr{FileSystemDomain} configuration.
@@ -42,7 +42,7 @@ Similarly, all machines that share common user information must be
 configured to have the same \AdAttr{UidDomain} configuration.
 
 When a job relies on a shared file system,
-Condor uses the
+HTCondor uses the
 \AdAttr{requirements} expression to ensure that the job runs
 on a machine in the
 correct \AdAttr{UidDomain} and \AdAttr{FileSystemDomain}.
@@ -72,7 +72,7 @@ machine (jimi.cs.wisc.edu) which does not mount the shared file system
 But, she wants the jobs to be able to run on more than just her own
 machine (in particular, the compute cluster), so she puts the program
 and input files onto the shared file system.
-When she submits the jobs, she needs to tell Condor to send them to
+When she submits the jobs, she needs to tell HTCondor to send them to
 machines that have access to that shared data, so she specifies a
 different \AdAttr{requirements} expression than the default:
 \begin{verbatim}
@@ -80,19 +80,19 @@ different \AdAttr{requirements} expression than the default:
                   TARGET.FileSystemDomain == "cs.wisc.edu"
 \end{verbatim}
 
-\Warn If there is \emph{no} shared file system, or the Condor pool
+\Warn If there is \emph{no} shared file system, or the HTCondor pool
 administrator does not configure the \AdAttr{FileSystemDomain}
 setting correctly (the default is that each machine in a pool is in
 its own file system and UID domain), a user submits a job that cannot
 use remote system calls (for example, a vanilla universe job), and the
-user does not enable Condor's File Transfer mechanism, the job will
+user does not enable HTCondor's File Transfer mechanism, the job will
 \emph{only} run on the machine from which it was submitted.
 
 
 %%%%%%%%%%%% 
 \subsection{\label{sec:file-transfer}
 Submitting Jobs Without a Shared File System:
-Condor's File Transfer Mechanism} 
+HTCondor's File Transfer Mechanism} 
 %%%%%%%%%%%%
 
 \index{job!submission without a shared file system}
@@ -100,14 +100,14 @@ Condor's File Transfer Mechanism}
 \index{file transfer mechanism}
 \index{transferring files}
 
-Condor works well without a shared file system.
-The Condor file transfer mechanism permits the user to select which files are
+HTCondor works well without a shared file system.
+The HTCondor file transfer mechanism permits the user to select which files are
 transferred and under which circumstances.
-Condor can transfer any files needed by a job from
+HTCondor can transfer any files needed by a job from
 the machine where the job was submitted into a
 remote scratch directory on the machine where the
 job is to be executed.
-Condor executes the job
+HTCondor executes the job
 and transfers output back to the submitting machine.
 The user specifies which files and directories to transfer,
 and at what point the output files should be copied back to the
@@ -137,7 +137,7 @@ enables or disables the file transfer mechanism.
 The command takes on one of three possible values:
 \begin{enumerate}
 
-\item \verb@YES@: Condor transfers both the executable and the file
+\item \verb@YES@: HTCondor transfers both the executable and the file
 defined by the \SubmitCmd{input} command from the machine where the job is
 submitted to the remote machine where the job is to be executed.
 The file defined by the \SubmitCmd{output} command as well as any files
@@ -146,30 +146,30 @@ where the job was submitted.
 When they are transferred and the directory location of the files
 is determined by the command \SubmitCmd{when\_to\_transfer\_output}.
 
-\item \verb@IF_NEEDED@: Condor transfers files if the job is
+\item \verb@IF_NEEDED@: HTCondor transfers files if the job is
 matched with and to be executed on a machine in a
 different \Attr{FileSystemDomain} than the
 one the submit machine belongs to, the same as if 
 \verb@should_transfer_files = YES@.
 If the job is matched with a machine in the local \Attr{FileSystemDomain},
-Condor will not transfer files and relies
+HTCondor will not transfer files and relies
 on the shared file system.
 
-\item \verb@NO@: Condor's file transfer mechanism is disabled. 
+\item \verb@NO@: HTCondor's file transfer mechanism is disabled. 
 
 \end{enumerate}
 
-The \SubmitCmd{when\_to\_transfer\_output} command tells Condor when output
+The \SubmitCmd{when\_to\_transfer\_output} command tells HTCondor when output
 files are to be transferred back to the submit machine.
 The command takes on one of two possible values:
 
 \begin{enumerate}
-\item \verb@ON_EXIT@: Condor transfers the file defined by the
+\item \verb@ON_EXIT@: HTCondor transfers the file defined by the
 \SubmitCmd{output} command,
  as well as any other files in the remote scratch directory created by the job,
 back to the submit machine only when the job exits on its own.
 
-\item \verb@ON_EXIT_OR_EVICT@: Condor behaves the same as described
+\item \verb@ON_EXIT_OR_EVICT@: HTCondor behaves the same as described
 for the value \verb@ON_EXIT@ when the job exits on its own.
 However, if, and each time the job is evicted from a machine,
 \emph{files are transferred back at eviction time}.  The files that
@@ -189,7 +189,7 @@ using the files that are saved at eviction time.
 
 The files that are transferred back at eviction time are not stored in
 the location where the job's final output will be written when the job exits.
-Condor manages these files automatically,
+HTCondor manages these files automatically,
 so usually the only reason for a user to worry about them 
 is to make sure that there is enough space to store them.
 The files are stored on the submit machine in a temporary directory within the
@@ -234,7 +234,7 @@ Therefore, this combination is prohibited by \Condor{submit}.
 
 % transfers before execution
 If the file transfer mechanism is enabled,
-Condor will transfer the following files before the job
+HTCondor will transfer the following files before the job
 is run on a remote machine.
 \begin{enumerate}
   \item the executable, as defined with the \SubmitCmd{executable} command
@@ -245,7 +245,7 @@ is run on a remote machine.
 If the job requires other input files,
 the submit description file should utilize the
 \SubmitCmd{transfer\_input\_files} command.
-This comma-separated list specifies any other files or directories that Condor is to
+This comma-separated list specifies any other files or directories that HTCondor is to
 transfer to the remote scratch directory,
 to set up the execution environment for the job before it is run.
 These files are placed in the same directory as the job's executable.
@@ -263,14 +263,14 @@ and files \File{file1} and \File{file2}.
 
 % transfers back after execution
 If the file transfer mechanism is enabled,
-Condor will transfer the following files from the execute machine
+HTCondor will transfer the following files from the execute machine
 back to the submit machine after the job exits.
 \begin{enumerate}
   \item the output file, as defined with the \SubmitCmd{output} command
   \item the error file, as defined with the \SubmitCmd{error} command
   \item any files created by the job in the remote scratch directory;
 this only occurs for jobs other than \SubmitCmd{grid}
-universe, and for Condor-C \SubmitCmd{grid} universe jobs;
+universe, and for HTCondor-C \SubmitCmd{grid} universe jobs;
 directories created by the job within the remote scratch directory
 are ignored for this automatic detection of files to be transferred.
 \end{enumerate}
@@ -283,7 +283,7 @@ At the time the job is submitted, zero-length files are created
 on the submit machine, at the given path for the files defined by the  
 \SubmitCmd{output} and \SubmitCmd{error} commands.
 This permits job submission failure, if these files cannot be written by
-Condor.
+HTCondor.
 
 To \emph{restrict} the output files 
 or permit entire directory contents to be transferred,
@@ -291,7 +291,7 @@ specify the exact list with  \SubmitCmd{transfer\_output\_files}.
 Delimit the list of file names, directory names, or paths with commas.
 When this list is defined, and any of the files or directories
 do not exist as the job exits,
-Condor considers this an error, and places the job on hold.
+HTCondor considers this an error, and places the job on hold.
 When this list is defined, automatic detection of output files created by
 the job is disabled.
 Paths specified in this list refer to locations on the execute
@@ -306,7 +306,7 @@ are named using only the base name.
 Therefore, each output file or directory must have a different name,
 even if they originate from different paths.
 
-For \SubmitCmd{grid} universe jobs other than than Condor-C grid jobs,
+For \SubmitCmd{grid} universe jobs other than than HTCondor-C grid jobs,
 files to be transferred 
 (other than standard output and standard error)
 must be specified using \SubmitCmd{transfer\_output\_files}
@@ -388,7 +388,7 @@ if the submit command \SubmitCmd{initialdir} is not specified.
 \item Absolute.
 \end{enumerate}
 
-Before executing the program, Condor copies the
+Before executing the program, HTCondor copies the
 executable, an input file as specified
 by the submit command \SubmitCmd{input},
 along with any input files specified 
@@ -420,7 +420,7 @@ in a directory such as \File{/tmp},
 if this directory is guaranteed to exist and be
 accessible on all possible execute machines.
 However,
-Condor will not automatically
+HTCondor will not automatically
 transfer such files back after execution completes, nor will it clean
 up these files.
 
@@ -459,7 +459,7 @@ It will be transferred back into the directory \File{/scratch/test}.
 \footnotesize
 \begin{verbatim}
 # file name:  my_program.condor
-# Condor submit description file for my_program
+# HTCondor submit description file for my_program
 Executable      = my_program
 Universe        = vanilla
 Error           = logs/err.$(cluster)
@@ -487,7 +487,7 @@ instead of relative paths to the input files.
 \footnotesize
 \begin{verbatim}
 # file name:  my_program.condor
-# Condor submit description file for my_program
+# HTCondor submit description file for my_program
 Executable      = my_program
 Universe        = vanilla
 Error           = logs/err.$(cluster)
@@ -526,7 +526,7 @@ exists to make this example work correctly.
 \footnotesize
 \begin{verbatim}
 # file name:  my_program.condor
-# Condor submit description file for my_program
+# HTCondor submit description file for my_program
 Executable      = my_program
 Universe        = vanilla
 Error           = logs2/err.$(cluster)
@@ -563,7 +563,7 @@ flat, remote scratch directory on the execute machine.
 \footnotesize
 \begin{verbatim}
 # file name:  my_program.condor
-# Condor submit description file for my_program
+# HTCondor submit description file for my_program
 Executable      = my_program
 Universe        = vanilla
 Error           = logs/err.$(cluster)
@@ -597,7 +597,7 @@ absolute paths cannot work.
 \footnotesize
 \begin{verbatim}
 # file name:  my_program.condor
-# Condor submit description file for my_program
+# HTCondor submit description file for my_program
 Executable      = my_program
 Universe        = vanilla
 Error           = logs/err.$(cluster)
@@ -637,7 +637,7 @@ initial working directory as \File{/scratch/test/out1}.
 \footnotesize
 \begin{verbatim}
 # file name:  my_program.condor
-# Condor submit description file for my_program
+# HTCondor submit description file for my_program
 Executable      = my_program
 Universe        = vanilla
 Error           = logs/err.$(cluster)
@@ -659,7 +659,7 @@ Queue
 %%%%%%%%%%%%
 \subsubsection{Behavior for Error Cases}
 %%%%%%%%%%%%
-This section describes Condor's behavior for some error cases
+This section describes HTCondor's behavior for some error cases
 in dealing with the transfer of files.
 \begin{description}
 \item[Disk Full on Execute Machine]
@@ -668,7 +668,7 @@ in dealing with the transfer of files.
   if the disk is full on the execute machine,
   then the job is place on hold.
 \item[Error Creating Zero-Length Files on Submit Machine]
-  As a job is submitted, Condor creates zero-length files as placeholders
+  As a job is submitted, HTCondor creates zero-length files as placeholders
   on the submit machine for the files defined by 
   \SubmitCmd{output} and \SubmitCmd{error}.
   If these files cannot be created, then job submission fails.
@@ -701,7 +701,7 @@ in dealing with the transfer of files.
 
 Instead of file transfer that goes only between the submit machine
 and the execute machine,
-Condor has the ability to transfer files from a location specified
+HTCondor has the ability to transfer files from a location specified
 by a URL for a job's input file,
 or from the execute machine to a location specified by a URL
 for a job's output file(s).
@@ -710,7 +710,7 @@ as described in section~\ref{sec:URL-transfer}.
 
 The transfer of an input file is restricted to
 vanilla and vm universe jobs only.
-Condor's file transfer mechanism must be enabled.
+HTCondor's file transfer mechanism must be enabled.
 Therefore, the submit description file for the job will define both
 \SubmitCmd{should\_transfer\_files} and \SubmitCmd{when\_to\_transfer\_output}.
 In addition, the URL for any files specified with a URL are
@@ -730,7 +730,7 @@ The destination file is given by the file name within the URL.
 
 For the transfer of the entire contents of the output sandbox,
 which are all files that the job creates or modifies,
-Condor's file transfer mechanism must be enabled.
+HTCondor's file transfer mechanism must be enabled.
 In this sample portion of the submit description file,
 the first two commands explicitly enable file transfer,
 and the added \SubmitCmd{output\_destination} command provides
@@ -783,11 +783,11 @@ the clause \verb@(HasFileTransfer)@.
 \item 
 \verb@should_transfer_files = NO@ results in the addition of
   \verb@(TARGET.FileSystemDomain == MY.FileSystemDomain)@.
-  In addition, Condor automatically adds the
+  In addition, HTCondor automatically adds the
   \Attr{FileSystemDomain} attribute to the job ClassAd, with whatever
   string is defined for the \Condor{schedd} to which the job is
   submitted.
-  If the job is not using the file transfer mechanism, Condor assumes
+  If the job is not using the file transfer mechanism, HTCondor assumes
   it will need a shared file system, and therefore, a machine in the
   same \Attr{FileSystemDomain} as the submit machine.
 
@@ -797,18 +797,18 @@ the clause \verb@(HasFileTransfer)@.
   (HasFileTransfer || (TARGET.FileSystemDomain == MY.FileSystemDomain))
 \end{verbatim}
 \normalsize
-  If Condor will optionally transfer files, it must require
+  If HTCondor will optionally transfer files, it must require
   that the machine is \emph{either} capable of transferring files
   \emph{or} in the same file system domain.
 
 \end{enumerate}
 
 To ensure that the job is matched to a machine with enough local disk
-space to hold all the transferred files, Condor automatically adds the
+space to hold all the transferred files, HTCondor automatically adds the
 \Attr{DiskUsage} job attribute.
 This attribute includes the total
 size of the job's executable and all input files to be transferred.
-Condor then adds an additional clause to the \Attr{Requirements}
+HTCondor then adds an additional clause to the \Attr{Requirements}
 expression that states that the remote machine must have at least
 enough available disk space to hold all these files:
 \begin{verbatim}
