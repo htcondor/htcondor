@@ -24,6 +24,7 @@
 #include "AviaryHadoopPlugin.h"
 #include "AviaryProvider.h"
 #include "AviaryUtils.h"
+#include "HadoopObject.h"
 #include "LocatorObject.h"
 
 // Global from the condor_schedd, it's name
@@ -42,7 +43,7 @@ using namespace aviary::locator;
 // global SchedulerObject
 // TODO: convert to singleton
 AviaryProvider* provider = NULL;
-//SchedulerObject* schedulerObj = NULL;
+HadoopObject* hadoopObj = NULL;
 
 void
 AviaryHadoopPlugin::earlyInitialize()
@@ -56,14 +57,17 @@ AviaryHadoopPlugin::earlyInitialize()
 
     string log_name("aviary_hadoop.log");
     string id_name("hadoop"); id_name+=SEPARATOR; id_name+=getScheddName();
-    provider = AviaryProviderFactory::create(log_name,id_name,
-											 "SCHEDULER","HADOOP","services/hadoop/");
+    provider = AviaryProviderFactory::create(log_name,id_name,"SCHEDULER","HADOOP","services/hadoop/");
     if (!provider) {
         EXCEPT("Unable to configure AviaryProvider. Exiting...");
     }
 
-	//schedulerObj = SchedulerObject::getInstance();
-
+	////////////////////////////////////////////////////
+	// TSTCLAIR->PMACKINN
+	// TODO: I don't think this is even really needed, just following the pattern(s)
+	hadoopObj = HadoopObject::getInstance();
+	////////////////////////////////////////////////////
+	
 	dirtyJobs = new DirtyJobsType();
 
 	isHandlerRegistered = false;

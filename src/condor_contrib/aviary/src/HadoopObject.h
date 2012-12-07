@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef _SCHEDULEROBJECT_H
-#define _SCHEDULEROBJECT_H
+#ifndef _HADOOP_OBJECT_H
+#define _HADOOP_OBJECT_H
 
 // condor includes
 #include "condor_common.h"
@@ -60,6 +60,39 @@ struct HadoopStats {
     uint32_t    TotalRunningJobs;
 };
 
+typedef enum htype
+{
+    NAME_NODE=0,
+    DATA_NODE,
+    JOB_TRACKER,
+    TASK_TRACKER
+}tHadoopType;
+
+///< Input 
+typedef struct href
+{
+    string id;		///< ClusterId
+    string ipcid;	///< ipc url
+    tHadoopType type;    	 ///< input type
+}tHadoopRef;
+
+///< Initialization structure for starting a hadoop job
+typedef struct hinit
+{
+    string tarball;      ///< input tarball
+    unsigned int count;  ///< input count
+    tHadoopRef idref;    ///< input(ipcid)
+    string newcluster;	 ///< output new clusterid
+}tHadoopInit;
+
+typedef struct hstatus
+{
+    string owner;
+    int uptime;
+    string state;
+    
+}tHadoopJobStatus;
+
 const char * const ATTR_HADOOP_TYPE = "HadoopType";
 const char * const ATTR_NAME_NODE = "NameNode";
 const char * const ATTR_NAME_NODE_ADDRESS = "NameNodeAddress";
@@ -72,28 +105,53 @@ public:
 
 
 	void update(const ClassAd &ad);
-
-    static HadoopObject* getInstance();
+	static HadoopObject* getInstance();
 
 	const char* getPool() {return m_pool.c_str(); }
 	const char* getName() {return m_name.c_str(); }
 
+	/**
+	 * start() - Will attempt to start the appropriate hadoop job
+	 */
+	int start( tHadoopInit & hInit );
+
+	/**
+	 * stop() - Will stop a running instance.
+	 */
+	bool stop( const tHadoopRef & hRef );
+	
+	/**
+	 * status() - Will get the status results on a job
+	 */
+	bool status (const tHadoopRef & hRef, tHadoopJobStatus & hStatus);
+	
+	/**
+	 * Used to obtain some user readable error message
+	 */
+	void getLastError(string & szError) 
+	{ szError = m_lasterror;
+	  m_lasterror.clear();
+	}
+	
 	~HadoopObject();
 
 private:
     HadoopObject();
-	HadoopObject(HadoopObject const&);
-	HadoopObject& operator=(HadoopObject const&);
-
+    HadoopObject(HadoopObject const&);
+    HadoopObject& operator=(HadoopObject const&);
+    
     string m_pool;
     string m_name;
-	Codec* m_codec;
+    string m_lasterror;
+    Codec* m_codec;
     HadoopStats m_stats;
     static HadoopObject* m_instance;
 
+	//protected:
+	//void key();
 };
 
 
 }} /* aviary::hadoop */
 
-#endif /* _SCHEDULEROBJECT_H */
+#endif /* _HADOOP_OBJECT_H */
