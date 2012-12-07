@@ -831,6 +831,7 @@ void INFNBatchJob::doEvaluateState()
 
 			} else {
 
+#if !defined(WIN32)
 				// Local blahp
 				// Check whether the blahp left behind a job execute directory.
 				// The blahp's job wrapper should remove this directory
@@ -855,7 +856,6 @@ void INFNBatchJob::doEvaluateState()
 					// If the limited proxy isn't in the spool directory,
 					// then it might be shared by multiple jobs, so we
 					// need to leave it alone.
-#if !defined(WIN32)
 					if ( jobAd->Lookup( ATTR_X509_USER_PROXY ) && remoteJobId ) {
 						set_user_priv();
 
@@ -893,9 +893,8 @@ void INFNBatchJob::doEvaluateState()
 
 						set_condor_priv();
 					}
-#endif
 				}
-
+#endif
 			}
 
 			SetRemoteIds( NULL, NULL );
