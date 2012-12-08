@@ -37,7 +37,7 @@ public:
 
 	NetworkNamespaceManager();
 
-	int PrepareNetwork(const std::string &uniq_namespace);
+	int PrepareNetwork(const std::string &uniq_namespace, const classad::ClassAd& job_ad, classad::ClassAd &machine_ad);
 
 	/*
 	 * Functions to invoke for creating the child namespace

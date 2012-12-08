@@ -22,7 +22,7 @@ NetworkNamespaceManager::NetworkNamespaceManager() :
 		dprintf(D_FULLDEBUG, "Initialized a NetworkNamespaceManager plugin.\n");
 	}
 
-int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace) {
+int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, const classad::ClassAd &job_ad, classad::ClassAd &machine_ad) {
 	if (m_state != UNCREATED) {
 		dprintf(D_FULLDEBUG, "Internal bug: NetworkNamespaceManager::CreateNamespace has already been invoked.\n");
 		m_state = FAILED;
@@ -93,6 +93,29 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace) {
 		dprintf(D_ALWAYS, "NetworkNamespaceManager::CreateNamespace: my_popen failure on %s: (errno=%d) %s\n", args.GetArg(0), errno, strerror(errno));
 		m_state = FAILED;
 		return 1;
+	}
+
+	char out_buff[1024];
+	while (fgets(out_buff, 1024, fp) != NULL)
+		dprintf(D_FULLDEBUG, "NetworkNamespaceManager::CreateNamespace: NETWORK_NAMESPACE_CREATE_SCRIPT output: %s", out_buff);
+	int status = my_pclose(fp);
+	if (status == -1) {
+		dprintf(D_ALWAYS, "NetworkNamespaceManager::CreateNamespace: Error when running NETWORK_NAMESPACE_CREATE_SCRIPT (errno=%d) %s\n", errno, strerror(errno));
+	} else {
+		if (WIFEXITED(status)) {
+			if ((status = WEXITSTATUS(status))) {
+				dprintf(D_ALWAYS, "NetworkNamespaceManager::CreateNamespace NETWORK_NAMESPACE_CREATE_SCRIPT exited with status %d\n", status);
+				m_state = FAILED;
+				return 1;
+			} else {
+				dprintf(D_FULLDEBUG, "NetworkNamespaceManager::CreateNamespace NETWORK_NAMESPACE_CREATE_SCRIPT was successful.\n");
+			}
+		} else if (WIFSIGNALED(status)) {
+			status = WTERMSIG(status);
+			dprintf(D_ALWAYS, "NetworkNamespaceManager::CreateNamespace NETWORK_NAMESPACE_CREATE_SCRIPT terminated with signal %d\n", status);
+			m_state = FAILED;
+			return 1;
+		}
 	}
 
 	m_state = CREATED;
@@ -191,13 +214,13 @@ int NetworkNamespaceManager::PostForkChild() {
 		rc = 3;
 		goto finalize_child;
 	}
-	if (add_local_route(sock, m_internal_address_str.c_str(), m_internal_pipe.c_str(), 24)) {
+	/*if (add_local_route(sock, m_internal_address_str.c_str(), m_internal_pipe.c_str(), 24)) {
 		dprintf(D_ALWAYS, "Unable to add local route via %s\n", m_internal_address_str.c_str());
 		rc = 4;
 		goto finalize_child;
-	}
-	if (add_default_route(sock, m_internal_address_str.c_str())) {
-		dprintf(D_ALWAYS, "Unable to add default route via %s\n", m_internal_address_str.c_str());
+	}*/
+	if (add_default_route(sock, m_external_address.to_ip_string().Value())) {
+		dprintf(D_ALWAYS, "Unable to add default route via %s\n", m_external_address.to_ip_string().Value());
 		rc = 5;
 		goto finalize_child;
 	}
@@ -271,7 +294,7 @@ int NetworkNamespaceManager::PostForkParent(pid_t pid) {
 		while (((rc2 = read(m_c2p[0], &rc, sizeof(rc))) < 0) && (errno == EINTR)) {}
 		if (rc2 > 0) {
 			dprintf(D_ALWAYS, "Got error code from child: %d\n", rc);
-		} else if (errno != EPIPE) {
+		} else if ((errno) && (errno != EPIPE)) {
 			dprintf(D_ALWAYS, "Error reading from child: %s (errno=%d).\n", strerror(errno), errno);
 			rc = errno;
 		}
@@ -366,16 +389,23 @@ int NetworkNamespaceManager::RunCleanupScript() {
 		return 1;
 	}
 
-	MyString str;
-	while (str.readLine(fp, true));
-	int ret = my_pclose(fp);
-	str.trim();
-	if (ret) {
-		dprintf(D_ALWAYS, "NetworkNamespaceManager::Cleanup : %s "
-			"exited with status %d and following output: %s\n",
-			args.GetArg(0), ret, str.Value());
-		m_state = FAILED;
-		return ret;
+	char out_buff[1024];
+	while (fgets(out_buff, 1024, fp) != NULL)
+		dprintf(D_FULLDEBUG, "NetworkNamespaceManager::Cleanup: NETWORK_NAMESPACE_DELETE_SCRIPT output: %s", out_buff);
+	int status = my_pclose(fp);
+	if (status == -1) {
+		dprintf(D_ALWAYS, "NetworkNamespaceManager::Cleanup: Error when running NETWORK_NAMESPACE_DELETE_SCRIPT (errno=%d) %s\n", errno, strerror(errno));
+	} else {
+		if (WIFEXITED(status)) {
+			if ((status = WEXITSTATUS(status))) {
+				dprintf(D_ALWAYS, "NetworkNamespaceManager::Cleanup NETWORK_NAMESPACE_DELETE_SCRIPT exited with status %d\n", status);
+			} else {
+				dprintf(D_FULLDEBUG, "NetworkNamespaceManager::Cleanup NETWORK_NAMESPACE_DELETE_SCRIPT was successful.\n");
+			}
+		} else if (WIFSIGNALED(status)) {
+			status = WTERMSIG(status);
+			dprintf(D_ALWAYS, "NetworkNamespaceManager::Cleanup NETWORK_NAMESPACE_DELETE_SCRIPT terminated with signal %d\n", status);
+		}
 	}
 
 	return 0;

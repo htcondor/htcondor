@@ -36,28 +36,8 @@ static int child_post_fork(NetworkNamespaceManager &manager) {
 		goto finalize_child;
 	}
 
-	if (::unshare(CLONE_NEWNS) == -1)
-	{
-		fprintf(stderr, "Unable to unshare mount table (errno=%d, %s).\n", errno, strerror(errno));
-		rc = 5;
-		goto finalize_child;
-	}
-	// Remount /sys and /proc
-/*
-	if (mount("proc", "/proc", "proc", 0, 0) == -1) {
-		rc = errno;
-		fprintf(stderr, "Unable to remount /proc. (errno=%d) %s\n", errno, strerror(errno));
-		goto finalize_child;
-	}
-*/
-	if (mount("sysfs", "/sys", "sysfs", 0, 0) == -1) {
-		rc = errno;
-		fprintf(stderr, "Unable to remount /sys. (errno=%d) %s\n", errno, strerror(errno));
-		goto finalize_child;
-	}
-
 	// Exec out.
-	rc = execl("/bin/sh", "sh", "-c", "date; ifconfig -a; route -n; curl 129.93.1.141;", (char *)0);
+	rc = execl("/bin/sh", "sh", "-c", "date; ifconfig -a; route -n; ping 129.93.1.141 -c 10 && curl 129.93.1.141;", (char *)0);
 	fprintf(stderr, "Failure to exec /bin/sh. (errno=%d) %s\n", errno, strerror(errno));
 
 finalize_child:
@@ -68,6 +48,7 @@ int main(int argc, char * argv[])
 {
 	config();
 	dprintf_set_tool_debug("TOOL", 0);
+	dprintf(D_FULLDEBUG, "Running network namespace tester in debug mode.\n");
 
 	// Suppress unused param compiler warnings:
 	if (argc) {}
@@ -76,11 +57,22 @@ int main(int argc, char * argv[])
 	int child_status = 0;
 	pid_t fork_pid;
 
+	classad::ClassAd job_ad, machine_ad;
+
+	// Defaults for create / delete scripts.
+	// Only done for the test case.
+	std::string create_script;
+	if (!param(create_script, "NETWORK_NAMESPACE_CREATE_SCRIPT"))
+		param_insert("NETWORK_NAMESPACE_CREATE_SCRIPT", "./nat_script.sh");
+	if (!param(create_script, "NETWORK_NAMESPACE_DELETE_SCRIPT"))
+		param_insert("NETWORK_NAMESPACE_DELETE_SCRIPT", "./nat_delete_script.sh");
+
+
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 
 	NetworkNamespaceManager manager;
 
-	if (manager.PrepareNetwork("tester"))
+	if (manager.PrepareNetwork("tester", job_ad, machine_ad))
 	{
 		rc = 1;
 		fprintf(stderr, "Failed to prepare network!\n");

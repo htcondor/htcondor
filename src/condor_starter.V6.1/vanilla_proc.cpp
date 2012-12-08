@@ -404,7 +404,7 @@ VanillaProc::StartJob()
 	}
 
 	std::string network_name = "";
-	if (param_boolean("USE_NETWORK_NAMESPACES", false)) {
+	if (param_boolean("USE_NETWORK_NAMESPACES", false) && JobAd) {
 		std::string starter_name;
 		Starter->jic->machClassAd()->EvalString(ATTR_NAME, NULL, starter_name);
 		std::string network_name = starter_name.substr(0, starter_name.find("@"));
@@ -412,7 +412,7 @@ VanillaProc::StartJob()
 			dprintf(D_ALWAYS, "Unable to determine starter slot name.\n");
 			return FALSE;
 		}
-		int rc = NetworkPluginManager::PrepareNetwork(network_name);
+		int rc = NetworkPluginManager::PrepareNetwork(network_name, *JobAd, *(Starter->jic->machClassAd()));
 		if (rc) {
 			dprintf(D_ALWAYS, "Failed to prepare network namespace - bailing.\n");
 			rc = NetworkPluginManager::Cleanup(network_name);

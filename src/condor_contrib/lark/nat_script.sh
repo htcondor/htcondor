@@ -18,6 +18,7 @@ DEV="$4"
 
 # Minimal configuration of iptables rules in the system chains
 #iptables -t nat -A POSTROUTING -o $PUBLIC_DEV -j MASQUERADE || exit 2
+echo 1 > /proc/sys/net/ipv4/ip_forward || exit 2
 iptables -t nat -A POSTROUTING --src $JOB_INNER_IP ! --dst $JOB_INNER_IP -j MASQUERADE || exit 2
 iptables -N $JOBID || exit 2
 iptables -I FORWARD -i $DEV ! -o $DEV -g $JOBID || exit 2

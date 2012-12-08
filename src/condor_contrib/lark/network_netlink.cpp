@@ -285,7 +285,7 @@ int set_status(int sock, const char * eth, int status) {
  * Add a given IPv4 address to an ethernet device.
  */
 #define INET_LEN 4
-#define INET_PREFIX_LEN 32
+#define INET_PREFIX_LEN 24
 int add_address(int sock, const char * addr, const char * eth) {
 
 	/**
@@ -379,8 +379,7 @@ int add_address(int sock, const char * addr, const char * eth) {
 int add_local_route(int sock, const char * gw, const char * eth, int dst_len) {
 
 	// Equivalent to:
-	// ip route add default via 10.10.10.1
-	// internally, default = 0/0
+	// ip route add 10.10.10.1/24 via veth1
 	struct iovec iov[6];
 
 	unsigned char ipv4_addr[4];
@@ -456,12 +455,13 @@ int add_default_route(int sock, const char * gw) {
 	size_t dst_len = 0;
 
 	// TODO: ipv6 support
+	dprintf(D_FULLDEBUG, "Adding IP address %s\n", gw);
 	unsigned char ipv4_addr[4];
 	if (inet_pton(AF_INET, gw, (void *)&ipv4_addr) != 1) {
 		dprintf(D_ALWAYS, "Invalid IP address: %s\n", gw);
 		return 1;
 	}
-	ipv4_addr[3] = 1;
+	//ipv4_addr[3] = 1;
 
 	struct nlmsghdr nlmsghdr;
 	memset(&nlmsghdr, 0, sizeof(nlmsghdr));
