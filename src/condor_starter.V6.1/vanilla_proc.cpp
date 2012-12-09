@@ -412,7 +412,8 @@ VanillaProc::StartJob()
 			dprintf(D_ALWAYS, "Unable to determine starter slot name.\n");
 			return FALSE;
 		}
-		int rc = NetworkPluginManager::PrepareNetwork(network_name, *JobAd, *(Starter->jic->machClassAd()));
+		classad_shared_ptr<classad::ClassAd> machine_classad(Starter->jic->machClassAd());
+		int rc = NetworkPluginManager::PrepareNetwork(network_name, *JobAd, machine_classad);
 		if (rc) {
 			dprintf(D_ALWAYS, "Failed to prepare network namespace - bailing.\n");
 			rc = NetworkPluginManager::Cleanup(network_name);
