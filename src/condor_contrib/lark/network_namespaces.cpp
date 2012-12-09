@@ -15,7 +15,7 @@
 
 using namespace lark;
 
-static NetworkNamespaceManager instance;
+NetworkNamespaceManager * NetworkNamespaceManager::m_instance;
 
 NetworkNamespaceManager::NetworkNamespaceManager() :
 	m_state(UNCREATED), m_network_namespace(""),
@@ -25,6 +25,15 @@ NetworkNamespaceManager::NetworkNamespaceManager() :
 		//PluginManager<NetworkManager>::registerPlugin(this);
 		dprintf(D_FULLDEBUG, "Initialized a NetworkNamespaceManager plugin.\n");
 	}
+
+NetworkNamespaceManager&
+NetworkNamespaceManager::GetManager()
+{
+	if (m_instance == NULL) {
+		m_instance = new NetworkNamespaceManager();
+	}
+	return *m_instance;
+}
 
 int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, const classad::ClassAd & /*job_ad*/, classad_shared_ptr<classad::ClassAd> machine_ad) {
 	if (m_state != UNCREATED) {
@@ -111,6 +120,13 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, c
 		return 1;
 	}
 
+	// Configure some services provided the manager itself.
+	if (ConfigureNetworkAccounting(*machine_ad)) {
+		dprintf(D_ALWAYS, "Network accounting configuration failed.\n");
+		m_state = FAILED;
+		return 1;
+	}
+
 	// Run admin-provided configuration script.
 	const char * namespace_script = param("NETWORK_NAMESPACE_CREATE_SCRIPT");
 	if (namespace_script) {
@@ -121,7 +137,8 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, c
 		args.AppendArg(m_internal_address_str.c_str());
 		args.AppendArg(m_network_namespace);
 		args.AppendArg(m_external_pipe);
-		dprintf(D_FULLDEBUG, "NetworkNamespaceManager nat setup: %s %s %s %s\n", namespace_script, external_address.c_str(), m_network_namespace.c_str(), m_external_pipe.c_str());
+		dprintf(D_FULLDEBUG, "NetworkNamespaceManager nat setup: %s %s %s %s %s\n",
+			namespace_script, external_address.c_str(), m_internal_address_str.c_str(), m_network_namespace.c_str(), m_external_pipe.c_str());
 
 		NAMESPACE_STATE prior_state = m_state;
 		m_state = FAILED;
@@ -217,7 +234,7 @@ int NetworkNamespaceManager::PostForkChild() {
 		rc = 1;
 		goto failed_socket;
 	}
-	if (add_address(sock, m_internal_address_str.c_str(), m_internal_pipe.c_str())) {
+	if (add_address(sock, m_internal_address_str.c_str(), 24, m_internal_pipe.c_str())) {
 		dprintf(D_ALWAYS, "Unable to add address %s to %s.\n", m_internal_address_str.c_str(), m_internal_pipe.c_str());
 		rc = 2;
 		goto finalize_child;
@@ -392,13 +409,69 @@ int NetworkNamespaceManager::Cleanup(const std::string &) {
 int NetworkNamespaceManager::RunCleanupScript() {
 	const char * namespace_script = param("NETWORK_NAMESPACE_DELETE_SCRIPT");
 
-	ArgList args;
-	args.AppendArg(namespace_script);
-	args.AppendArg(m_network_namespace);
-	args.AppendArg(m_external_pipe);
-	args.AppendArg(m_internal_address_str);
-	RUN_ARGS_AND_LOG(NetworkNamespaceManager::Cleanup, NETWORK_NAMESPACE_DELETE_SCRIPT)
+	if (namespace_script) {
+		ArgList args;
+		args.AppendArg(namespace_script);
+		args.AppendArg(m_network_namespace);
+		args.AppendArg(m_external_pipe);
+		args.AppendArg(m_internal_address_str);
+		RUN_ARGS_AND_LOG(NetworkNamespaceManager::Cleanup, NETWORK_NAMESPACE_DELETE_SCRIPT)
+	}
 
+	return 0;
+}
+
+int NetworkNamespaceManager::ConfigureNetworkAccounting(const classad::ClassAd &machine_ad)
+{
+
+	// See if network accounting is requested; if not, return early.
+	bool request_accounting = false;
+	if (!machine_ad.EvaluateAttrBool(ATTR_NETWORK_ACCOUNTING, request_accounting) && !param_boolean(CONFIG_NETWORK_ACCOUNTING, request_accounting)) {
+		request_accounting = false;
+	}
+	if (!request_accounting) {
+		dprintf(D_FULLDEBUG, "Network accounting not requested.\n");
+		return 0;
+	}
+	dprintf(D_FULLDEBUG, "Configuring network accounting.\n");
+
+	// Count outgoing packets.  Equivalent to:
+	// iptables -A $JOBID -i $DEV ! -o $DEV -m comment --comment "Outgoing"
+	{
+	ArgList args;
+	args.AppendArg("iptables");
+	args.AppendArg("-A");
+	args.AppendArg(m_network_namespace.c_str());
+	args.AppendArg("-i");
+	args.AppendArg(m_external_pipe);
+	args.AppendArg("!");
+	args.AppendArg("-o");
+	args.AppendArg(m_external_pipe);
+	args.AppendArg("-m");
+	args.AppendArg("comment");
+	args.AppendArg("--comment");
+	args.AppendArg("Outgoing");
+	RUN_ARGS_AND_LOG(NetworkNamespaceManager::ConfigureNetworkAccounting, iptables_outgoing)
+	}
+
+	// Count incoming packets.  Equivalent to:
+	// iptables -A $JOBID ! -i $DEV -o $DEV -m comment --comment "Incoming"
+	{
+	ArgList args;
+	args.AppendArg("iptables");
+	args.AppendArg("-A");
+	args.AppendArg(m_network_namespace.c_str());
+	args.AppendArg("!");
+	args.AppendArg("-i");
+	args.AppendArg(m_external_pipe);
+	args.AppendArg("-o");
+	args.AppendArg(m_external_pipe);
+	args.AppendArg("-m");
+	args.AppendArg("comment");
+	args.AppendArg("--comment");
+	args.AppendArg("Incoming");
+	RUN_ARGS_AND_LOG(NetworkNamespaceManager::ConfigureNetworkAccounting, iptables_incoming)
+	}
 	return 0;
 }
 

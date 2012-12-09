@@ -4,10 +4,13 @@
 
 #include <string>
 
-#include "fcntl.h"
-#include "errno.h"
+#include <net/if.h>
+#include <fcntl.h>
+#include <errno.h>
 
 #include "nat_configuration.h"
+#include "network_manipulation.h"
+#include "network_namespaces.h"
 
 #include "popen_util.h"
 #include "condor_blkng_full_disk_io.h"
@@ -23,6 +26,11 @@ NATConfiguration::Setup()
 	std::string internal_ip;
 	if (!m_ad->EvaluateAttrString(ATTR_INTERNAL_ADDRESS_IPV4, internal_ip)) {
 		dprintf(D_ALWAYS, "Missing required ClassAd attribute " ATTR_INTERNAL_ADDRESS_IPV4 "\n");
+		return 1;
+	}
+	std::string external_ip;
+	if (!m_ad->EvaluateAttrString(ATTR_EXTERNAL_ADDRESS_IPV4, external_ip)) {
+		dprintf(D_ALWAYS, "Missing required ClassAd attribute " ATTR_EXTERNAL_ADDRESS_IPV4 "\n");
 		return 1;
 	}
 	std::string external_interface;
@@ -101,12 +109,71 @@ NATConfiguration::Setup()
 	args.AppendArg(chain_name.c_str());
 	RUN_ARGS_AND_LOG(NATConfiguration::Setup, iptables_established_connections)
 	}
+
+	// Manipulate the routing and state of the link.  Done internally; no callouts.
+	NetworkNamespaceManager & manager = NetworkNamespaceManager::GetManager();
+	fd = manager.GetNetlinkSocket();
+
+	// Add the address to the device
+	// ip addr add $JOB_OUTER_IP/255.255.255.255 dev $DEV
+	if (add_address(fd, external_ip.c_str(), 32, external_interface.c_str())) {
+		return 1;
+	}
+	// Enable the device
+	// ip link set dev $DEV up
+	if (set_status(fd, external_interface.c_str(), IFF_UP)) {
+		return 1;
+	}
+	// Add a default route
+	// route add $JOB_INNER_IP/32 gw $JOB_OUTER_IP
+	{
+	ArgList args;
+	args.AppendArg("route");
+	args.AppendArg("add");
+	args.AppendArg((internal_ip + "/32").c_str());
+	args.AppendArg("gw");
+	args.AppendArg(external_ip.c_str());
+	RUN_ARGS_AND_LOG(NATConfiguration::Setup, external_iface_route)
+	}
+
 	return 0;
 }
 
 int
 NATConfiguration::Cleanup()
 {
+	// Pull out attributes needed for cleanup.
+	std::string internal_ip;
+	if (!m_ad->EvaluateAttrString(ATTR_INTERNAL_ADDRESS_IPV4, internal_ip)) {
+		dprintf(D_ALWAYS, "Missing required ClassAd attribute " ATTR_INTERNAL_ADDRESS_IPV4 "\n");
+		return 1;
+	}
+	std::string chain_name;
+	if(!m_ad->EvaluateAttrString(ATTR_IPTABLE_NAME, chain_name)) {
+		dprintf(D_ALWAYS, "Missing required ClassAd attribute " ATTR_IPTABLE_NAME "\n");
+	}
+
+	// Remove address masquerade.  Equivalent to:
+	// iptables -t nat -D POSTROUTING --src $JOB_INNER_IP ! --dst $JOB_INNER_IP -j MASQUERADE
+	{
+	ArgList args;
+	args.AppendArg("iptables");
+	args.AppendArg("-t");
+	args.AppendArg("nat");
+	args.AppendArg("-D");
+	args.AppendArg("POSTROUTING");
+	args.AppendArg("--src");
+	args.AppendArg(internal_ip.c_str());
+	args.AppendArg("!");
+	args.AppendArg("--dst");
+	args.AppendArg(internal_ip.c_str());
+	args.AppendArg("-j");
+	args.AppendArg("MASQUERADE");
+	}
+
+	// Cleanup firewall
+	cleanup_chain(chain_name.c_str());
+
 	return 0;
 }
 

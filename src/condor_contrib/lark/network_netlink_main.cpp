@@ -60,18 +60,20 @@ int main(int argc, char * argv[])
 	classad::ClassAd job_ad;
 	classad_shared_ptr<classad::ClassAd> machine_ad_ptr(new classad::ClassAd);
 
+	machine_ad_ptr->InsertAttr(ATTR_NETWORK_ACCOUNTING, true);
+
 	// Defaults for create / delete scripts.
 	// Only done for the test case.
 	std::string create_script;
 	if (!param(create_script, "NETWORK_NAMESPACE_CREATE_SCRIPT"))
-		param_insert("NETWORK_NAMESPACE_CREATE_SCRIPT", "./nat_script.sh");
+		param_insert("NETWORK_NAMESPACE_CREATE_SCRIPT", "./lark_setup_script.sh");
 	if (!param(create_script, "NETWORK_NAMESPACE_DELETE_SCRIPT"))
-		param_insert("NETWORK_NAMESPACE_DELETE_SCRIPT", "./nat_delete_script.sh");
+		param_insert("NETWORK_NAMESPACE_DELETE_SCRIPT", "./lark_cleanup_script.sh");
 
 
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 
-	lark::NetworkNamespaceManager manager;
+	lark::NetworkNamespaceManager &manager = lark::NetworkNamespaceManager::GetManager();
 
 	if (manager.PrepareNetwork("tester", job_ad, machine_ad_ptr))
 	{

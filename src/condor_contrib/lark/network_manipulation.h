@@ -59,9 +59,15 @@ int set_status(int sock, const char * eth, int status);
  *
  * - sock: Netlink socket to the kernel
  * - addr: IPv4 address to add.
+ * - prefix_length: Length of netmask
  * - eth:  name of network device
+ *
+ * If the prefix_length is not equal to the address size (32 for IPv4, 128 for IPv6),
+ * the kernel will automatically setup a local route for the address and device.
+ *
+ * Returns 0 on success and non-zero on failure.
  */
-int add_address(int sock, const char * addr, const char * eth);
+int add_address(int sock, const char * addr, unsigned prefix_length, const char * eth);
 
 /*
  * Add a local route to a network device. Equivalent to:

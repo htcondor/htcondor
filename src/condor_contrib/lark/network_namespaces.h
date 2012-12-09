@@ -32,13 +32,14 @@
 
 #include "network_configuration.h"
 
+#define ATTR_NETWORK_ACCOUNTING "LarkNetworkAccounting"
+#define CONFIG_NETWORK_ACCOUNTING "LARK_NETWORK_ACCOUNTING"
+
 namespace lark {
 
 class NetworkNamespaceManager : public NetworkManager {
 
 public:
-
-	NetworkNamespaceManager();
 
 	int PrepareNetwork(const std::string &uniq_namespace, const classad::ClassAd& job_ad, classad_shared_ptr<classad::ClassAd> machine_ad);
 
@@ -63,9 +64,20 @@ public:
 	 */
 	int Cleanup(const std::string &);
 
-private:
+	/*
+	 * Returns the netlink kernel for talking to the kernel.
+	 */
+	int GetNetlinkSocket() const {return m_sock;};
 
-	int ConfigureNetworkAccounting(const classad::ClassAd &mach_ad);
+	/*
+	 * Get the current instance of the NetworkNamespaceManager
+	 */
+	static NetworkNamespaceManager &GetManager();
+
+private:
+	NetworkNamespaceManager();
+
+	int ConfigureNetworkAccounting(const classad::ClassAd &machine_ad);
 
 	int CreateNetworkPipe();
 	int RunCleanupScript();
@@ -92,6 +104,9 @@ private:
 	int m_p2c[2], m_c2p[2];
 
 	NetworkConfiguration *m_network_configuration;
+
+	// Singleton instance
+	static NetworkNamespaceManager *m_instance;
 };
 
 }

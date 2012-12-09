@@ -285,8 +285,7 @@ int set_status(int sock, const char * eth, int status) {
  * Add a given IPv4 address to an ethernet device.
  */
 #define INET_LEN 4
-#define INET_PREFIX_LEN 24
-int add_address(int sock, const char * addr, const char * eth) {
+int add_address(int sock, const char * addr, unsigned prefix_length, const char * eth) {
 
 	/**
 	 *  The message we send to the kernel will have four parts.  The netlink
@@ -306,6 +305,12 @@ int add_address(int sock, const char * addr, const char * eth) {
 	 *   offsets.
 	 *
 	 */
+	// TODO: adjust prefixes for IPv6
+	if ((prefix_length == 0) || (prefix_length > 32)) {
+		dprintf(D_ALWAYS, "Invalid IPv4 prefix: %u\n", prefix_length);
+		return 1;
+	}
+
 	struct iovec iov[4];
 
 	struct nlmsghdr nlmsghdr; memset(&nlmsghdr, 0, sizeof(struct nlmsghdr));
@@ -351,7 +356,7 @@ int add_address(int sock, const char * addr, const char * eth) {
 	// ethernet device to change.
 	struct ifaddrmsg info_msg; memset(&info_msg, 0, sizeof(struct ifaddrmsg));
 	info_msg.ifa_family = AF_INET; // Hardcode to IPv4 for now.
-	info_msg.ifa_prefixlen = INET_PREFIX_LEN; // Hardcoded to 32 bits for IPv4 - i.e., an address.
+	info_msg.ifa_prefixlen = prefix_length;
 	info_msg.ifa_index = if_nametoindex(eth);
 
 	iov[1].iov_base = &info_msg;
