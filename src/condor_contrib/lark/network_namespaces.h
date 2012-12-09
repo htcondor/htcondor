@@ -103,7 +103,7 @@ private:
 	// Synchronization pipes.
 	int m_p2c[2], m_c2p[2];
 
-	NetworkConfiguration *m_network_configuration;
+	std::auto_ptr<NetworkConfiguration> m_network_configuration;
 
 	// Singleton instance
 	static NetworkNamespaceManager *m_instance;

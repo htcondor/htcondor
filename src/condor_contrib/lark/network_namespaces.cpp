@@ -20,7 +20,8 @@ NetworkNamespaceManager * NetworkNamespaceManager::m_instance;
 NetworkNamespaceManager::NetworkNamespaceManager() :
 	m_state(UNCREATED), m_network_namespace(""),
 	m_internal_pipe(""), m_external_pipe(""),
-	m_sock(-1), m_created_pipe(false)
+	m_sock(-1), m_created_pipe(false),
+	m_network_configuration(NULL)
 	{
 		//PluginManager<NetworkManager>::registerPlugin(this);
 		dprintf(D_FULLDEBUG, "Initialized a NetworkNamespaceManager plugin.\n");
@@ -29,8 +30,9 @@ NetworkNamespaceManager::NetworkNamespaceManager() :
 NetworkNamespaceManager&
 NetworkNamespaceManager::GetManager()
 {
+	static NetworkNamespaceManager instance;
 	if (m_instance == NULL) {
-		m_instance = new NetworkNamespaceManager();
+		m_instance = &instance;
 	}
 	return *m_instance;
 }
@@ -70,8 +72,8 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, c
 	}
 
 	// Bootstrap network configuration
-	m_network_configuration = NetworkConfiguration::GetNetworkConfiguration(machine_ad);
-	if (!m_network_configuration) {
+	m_network_configuration.reset(NetworkConfiguration::GetNetworkConfiguration(machine_ad));
+	if (!m_network_configuration.get()) {
 		dprintf(D_ALWAYS, "Unable to create network configuration.\n");
 		m_state = FAILED;
 		return 1;
@@ -382,6 +384,7 @@ int NetworkNamespaceManager::Cleanup(const std::string &) {
 	if (rc4) {
 		dprintf(D_ALWAYS, "Unable to cleanup network configuration.\n");
 	}
+	m_network_configuration.reset(NULL);
 
 	int rc2;
 	rc2 = RunCleanupScript();

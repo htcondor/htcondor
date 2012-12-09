@@ -14,16 +14,17 @@ using namespace lark;
 int
 NetworkConfiguration::SelectAddresses()
 {
+	// TODO: Move this logic into AddressSelection
 	std::string address_type;
-	if (!m_ad->EvaluateAttrString("LarkAddressType", address_type)) {
+	if (!m_ad->EvaluateAttrString(ATTR_ADDRESS_TYPE, address_type)) {
 		address_type = "local";
 	}
 	if (address_type == "local") {
-		m_address_selector = new HostLocalAddressSelection(m_ad);
+		m_address_selector.reset(new HostLocalAddressSelection(m_ad));
 	} else if (address_type == "dhcp") {
-		m_address_selector = new DHCPAddressSelection(m_ad);
+		m_address_selector.reset(new DHCPAddressSelection(m_ad));
 	} else if (address_type == "static") {
-		m_address_selector = new StaticAddressSelection(m_ad);
+		m_address_selector.reset(new StaticAddressSelection(m_ad));
 	} else {
 		dprintf(D_ALWAYS, "Unknown address selector type: %s\n", address_type.c_str());
 		return 1;

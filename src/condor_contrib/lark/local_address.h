@@ -21,6 +21,8 @@ public:
 		  m_iplock_internal(NULL)
 		{}
 
+	virtual ~HostLocalAddressSelection() {}
+
 	virtual int SelectAddresses();
 
 private:

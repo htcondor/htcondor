@@ -15,6 +15,7 @@
 #define ATTR_NETWORK_TYPE "LarkNetworkType"
 #define ATTR_INTERNAL_INTERFACE "LarkInternalInterface"
 #define ATTR_EXTERNAL_INTERFACE "LarkExternalInterface"
+#define ATTR_ADDRESS_TYPE "LarkAddressType"
 
 #include <classad/classad_stl.h>
 
@@ -39,6 +40,8 @@ public:
 		: m_address_selector(NULL),
 		  m_ad(machine_ad)
 		{}
+
+	virtual ~NetworkConfiguration() {}
 
 	/*
 	 * Select an address for the job-specific internal and external device.
@@ -84,7 +87,7 @@ public:
 	static NetworkConfiguration * GetNetworkConfiguration(classad_shared_ptr<classad::ClassAd> machine_ad);
 
 private:
-	AddressSelection *m_address_selector;
+	std::auto_ptr<AddressSelection> m_address_selector;
 	classad_shared_ptr<classad::ClassAd> m_ad;
 };
 

@@ -18,6 +18,7 @@ namespace lark {
 class AddressSelection {
 
 public:
+	virtual ~AddressSelection() {}
 
 	/*
 	 * See notes in network_configuration.h for how this function should work.
