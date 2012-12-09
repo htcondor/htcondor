@@ -29,7 +29,10 @@
 #include "classad/classad.h"
 #include "condor_sockaddr.h"
 #include "NetworkPluginManager.h"
-#include "ip_lock.h"
+
+#include "network_configuration.h"
+
+namespace lark {
 
 class NetworkNamespaceManager : public NetworkManager {
 
@@ -37,7 +40,7 @@ public:
 
 	NetworkNamespaceManager();
 
-	int PrepareNetwork(const std::string &uniq_namespace, const classad::ClassAd& job_ad, classad::ClassAd &machine_ad);
+	int PrepareNetwork(const std::string &uniq_namespace, const classad::ClassAd& job_ad, classad_shared_ptr<classad::ClassAd> machine_ad);
 
 	/*
 	 * Functions to invoke for creating the child namespace
@@ -61,6 +64,8 @@ public:
 	int Cleanup(const std::string &);
 
 private:
+
+	int ConfigureNetworkAccounting(const classad::ClassAd &mach_ad);
 
 	int CreateNetworkPipe();
 	int RunCleanupScript();
@@ -86,9 +91,10 @@ private:
 	// Synchronization pipes.
 	int m_p2c[2], m_c2p[2];
 
-	// Lock for IP address
-	std::auto_ptr<IPLock> m_iplock_external, m_iplock_internal;
+	NetworkConfiguration *m_network_configuration;
 };
+
+}
 
 #endif
 

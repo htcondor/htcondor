@@ -5,6 +5,8 @@
 #include <string>
 #include <sys/types.h>
 
+#include <classad/classad_stl.h>
+
 #include "condor_uid.h"
 #include "PluginManager.h"
 
@@ -47,7 +49,7 @@ class NetworkManager {
 		 */
 		virtual int PrepareNetwork(const std::string & /*name*/,
 			const classad::ClassAd & /*job_ad*/,
-			classad::ClassAd & /*machine_ad*/) = 0;
+			classad_shared_ptr<classad::ClassAd> /*machine_ad*/) = 0;
 
 		/*
 		 * Called immediately before fork/clone in the parent process.
@@ -123,7 +125,7 @@ class NetworkPluginManager : public PluginManager<NetworkManager> {
 	public:
 		static int PrepareNetwork(const std::string & uniq_name,
 				const classad::ClassAd &job_ad,
-				classad::ClassAd &machine_ad) {
+				classad_shared_ptr<classad::ClassAd> machine_ad) {
  			NetworkManager *plugin;
 			SimpleList<NetworkManager *> plugins = getPlugins();
 			plugins.Rewind();

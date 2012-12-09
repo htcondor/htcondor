@@ -26,7 +26,7 @@ int handle_match(const unsigned char * rule_name, long long bytes_matched, void 
 	return 0;
 }
 
-static int child_post_fork(NetworkNamespaceManager &manager) {
+static int child_post_fork(lark::NetworkNamespaceManager &manager) {
 
 	int rc = 0;
 	if (manager.PostForkChild())
@@ -57,7 +57,8 @@ int main(int argc, char * argv[])
 	int child_status = 0;
 	pid_t fork_pid;
 
-	classad::ClassAd job_ad, machine_ad;
+	classad::ClassAd job_ad;
+	classad_shared_ptr<classad::ClassAd> machine_ad_ptr(new classad::ClassAd);
 
 	// Defaults for create / delete scripts.
 	// Only done for the test case.
@@ -70,9 +71,9 @@ int main(int argc, char * argv[])
 
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 
-	NetworkNamespaceManager manager;
+	lark::NetworkNamespaceManager manager;
 
-	if (manager.PrepareNetwork("tester", job_ad, machine_ad))
+	if (manager.PrepareNetwork("tester", job_ad, machine_ad_ptr))
 	{
 		rc = 1;
 		fprintf(stderr, "Failed to prepare network!\n");

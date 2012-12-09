@@ -4,33 +4,47 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_arglist.h"
-#include "my_popen.h"
+
+#include <classad/classad.h>
+#include <classad/classad_stl.h>
 
 #include "network_namespaces.h"
 #include "network_manipulation.h"
+#include "address_selection.h"
+#include "popen_util.h"
+
+using namespace lark;
 
 static NetworkNamespaceManager instance;
 
 NetworkNamespaceManager::NetworkNamespaceManager() :
 	m_state(UNCREATED), m_network_namespace(""),
 	m_internal_pipe(""), m_external_pipe(""),
-	m_sock(-1), m_created_pipe(false),
-	m_iplock_external(NULL),
-	m_iplock_internal(NULL)
+	m_sock(-1), m_created_pipe(false)
 	{
 		//PluginManager<NetworkManager>::registerPlugin(this);
 		dprintf(D_FULLDEBUG, "Initialized a NetworkNamespaceManager plugin.\n");
 	}
 
-int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, const classad::ClassAd &job_ad, classad::ClassAd &machine_ad) {
+int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, const classad::ClassAd & /*job_ad*/, classad_shared_ptr<classad::ClassAd> machine_ad) {
 	if (m_state != UNCREATED) {
 		dprintf(D_FULLDEBUG, "Internal bug: NetworkNamespaceManager::CreateNamespace has already been invoked.\n");
 		m_state = FAILED;
 		return 1;
 	}
+
+	if (!machine_ad.get()) {
+		m_state = FAILED;
+		return 1;
+	}
+
 	m_network_namespace = uniq_namespace;
+	machine_ad->InsertAttr(ATTR_IPTABLE_NAME, m_network_namespace);
+
 	m_internal_pipe = "i_" + m_network_namespace;
+	machine_ad->InsertAttr(ATTR_INTERNAL_INTERFACE, m_internal_pipe);
 	m_external_pipe = "e_" + m_network_namespace;
+	machine_ad->InsertAttr(ATTR_EXTERNAL_INTERFACE, m_external_pipe);
 
 	if ((m_sock = create_socket()) < 0) {
 		dprintf(D_ALWAYS, "Unable to create a socket to talk to the kernel for network namespaces.\n");
@@ -38,16 +52,7 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, c
 		return 1;
 	}
 
-	const char * namespace_script;
 	int rc = 0;
-
-	namespace_script = param("NETWORK_NAMESPACE_CREATE_SCRIPT");
-	if (!namespace_script)
-	{
-		dprintf(D_ALWAYS, "Parameter NETWORK_NAMESPACE_CREATE_SCRIPT is not specified.\n");
-		m_state = FAILED;
-		return 1;
-	}
 
 	if ((rc = CreateNetworkPipe())) {
 		dprintf(D_ALWAYS, "Unable to create a new set of network pipes; cannot create a namespace.\n");
@@ -55,67 +60,75 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, c
 		return rc;
 	}
 
-	// Grab an IP address for the external interface.
-	std::string network_spec;
-	if (!param(network_spec, "NAT_NETWORK", "192.168.181.0/255.255.255.0"))
-	{
-		dprintf(D_FULLDEBUG, "Parameter NAT_NETWORK is not specified; using default %s.\n", network_spec.c_str());
-	}
-	m_iplock_external.reset(new IPLock(network_spec));
-	m_iplock_internal.reset(new IPLock(network_spec));
-	if (!m_iplock_external->Lock(m_external_address))
-	{
-		dprintf(D_ALWAYS, "Unable to lock an external IP address to use.\n");
-		m_state = FAILED;
-		return 1;
-	}
-	if (!m_iplock_internal->Lock(m_internal_address))
-	{
-		dprintf(D_ALWAYS, "Unable to lock an internal IP address for use.\n");
-		m_state = FAILED;
-		return 1;
-	}
-	dprintf(D_FULLDEBUG, "Using address %s for external portion of NAT.\n", m_external_address.to_ip_string().Value());
-	dprintf(D_FULLDEBUG, "Using address %s for internal portion of NAT.\n", m_internal_address.to_ip_string().Value());
-	m_internal_address_str = m_internal_address.to_ip_string();
-
-	ArgList args;
-	std::string external_address = m_external_address.to_ip_string();
-	args.AppendArg(namespace_script);
-	args.AppendArg(external_address.c_str());
-	args.AppendArg(m_internal_address_str.c_str());
-	args.AppendArg(m_network_namespace);
-	args.AppendArg(m_external_pipe);
-	dprintf(D_FULLDEBUG, "NetworkNamespaceManager nat setup: %s %s %s %s\n", namespace_script, external_address.c_str(), m_network_namespace.c_str(), m_external_pipe.c_str());
-
-	FILE *fp = my_popen(args, "r", TRUE);
-	if (fp == NULL) {
-		dprintf(D_ALWAYS, "NetworkNamespaceManager::CreateNamespace: my_popen failure on %s: (errno=%d) %s\n", args.GetArg(0), errno, strerror(errno));
+	// Bootstrap network configuration
+	m_network_configuration = NetworkConfiguration::GetNetworkConfiguration(machine_ad);
+	if (!m_network_configuration) {
+		dprintf(D_ALWAYS, "Unable to create network configuration.\n");
 		m_state = FAILED;
 		return 1;
 	}
 
-	char out_buff[1024];
-	while (fgets(out_buff, 1024, fp) != NULL)
-		dprintf(D_FULLDEBUG, "NetworkNamespaceManager::CreateNamespace: NETWORK_NAMESPACE_CREATE_SCRIPT output: %s", out_buff);
-	int status = my_pclose(fp);
-	if (status == -1) {
-		dprintf(D_ALWAYS, "NetworkNamespaceManager::CreateNamespace: Error when running NETWORK_NAMESPACE_CREATE_SCRIPT (errno=%d) %s\n", errno, strerror(errno));
+	if (m_network_configuration->SelectAddresses()) {
+		dprintf(D_ALWAYS, "Failed to setup network addresses.\n");
+		m_state = FAILED;
+		return 1;
+	}
+
+	// Copy addresses from the machine classad to this class.
+	// TODO: Handle IPv6 addresses.
+	if (!machine_ad->EvaluateAttrString(ATTR_INTERNAL_ADDRESS_IPV4, m_internal_address_str)) {
+		dprintf(D_ALWAYS, "Network configuration did not result in a valid internal IPv4 address.\n");
+		m_state = FAILED;
+		return 1;
+	}
+	m_internal_address.from_ip_string(m_internal_address_str.c_str());
+	std::string external_address_str;
+	if (!machine_ad->EvaluateAttrString(ATTR_EXTERNAL_ADDRESS_IPV4, external_address_str)) {
+		dprintf(D_ALWAYS, "Network configuration did not result in a valid external IPv4 address.\n");
+		m_state = FAILED;
+		return 1;
+	}
+	m_external_address.from_ip_string(external_address_str.c_str());
+
+	// Create a chain for this starter.  Equivalent to:
+	// iptables -N $LarkIptableName
+	{
+		ArgList args;
+		args.AppendArg("iptables");
+		args.AppendArg("-N");
+		args.AppendArg(m_network_namespace.c_str());
+		dprintf(D_FULLDEBUG, "NetworkNamespaceManager iptables chain setup: iptables -N %s\n", m_network_namespace.c_str());
+		NAMESPACE_STATE prior_state = m_state;
+		m_state = FAILED;
+		RUN_ARGS_AND_LOG(NetworkNamespaceManager::CreateNamespace, iptables)
+		m_state = prior_state;
+	}
+
+	// Configure the network
+	if (m_network_configuration->Setup()) {
+		dprintf(D_ALWAYS, "Network configuration failed.\n");
+		m_state = FAILED;
+		return 1;
+	}
+
+	// Run admin-provided configuration script.
+	const char * namespace_script = param("NETWORK_NAMESPACE_CREATE_SCRIPT");
+	if (namespace_script) {
+		ArgList args;
+		std::string external_address = m_external_address.to_ip_string();
+		args.AppendArg(namespace_script);
+		args.AppendArg(external_address.c_str());
+		args.AppendArg(m_internal_address_str.c_str());
+		args.AppendArg(m_network_namespace);
+		args.AppendArg(m_external_pipe);
+		dprintf(D_FULLDEBUG, "NetworkNamespaceManager nat setup: %s %s %s %s\n", namespace_script, external_address.c_str(), m_network_namespace.c_str(), m_external_pipe.c_str());
+
+		NAMESPACE_STATE prior_state = m_state;
+		m_state = FAILED;
+		RUN_ARGS_AND_LOG(NetworkNamespaceManager::CreateNamespace, NETWORK_NAMESPACE_CREATE_SCRIPT)
+		m_state = prior_state;
 	} else {
-		if (WIFEXITED(status)) {
-			if ((status = WEXITSTATUS(status))) {
-				dprintf(D_ALWAYS, "NetworkNamespaceManager::CreateNamespace NETWORK_NAMESPACE_CREATE_SCRIPT exited with status %d\n", status);
-				m_state = FAILED;
-				return 1;
-			} else {
-				dprintf(D_FULLDEBUG, "NetworkNamespaceManager::CreateNamespace NETWORK_NAMESPACE_CREATE_SCRIPT was successful.\n");
-			}
-		} else if (WIFSIGNALED(status)) {
-			status = WTERMSIG(status);
-			dprintf(D_ALWAYS, "NetworkNamespaceManager::CreateNamespace NETWORK_NAMESPACE_CREATE_SCRIPT terminated with signal %d\n", status);
-			m_state = FAILED;
-			return 1;
-		}
+		dprintf(D_FULLDEBUG, "Parameter NETWORK_NAMESPACE_CREATE_SCRIPT is not specified.\n");
 	}
 
 	m_state = CREATED;
@@ -347,6 +360,12 @@ int NetworkNamespaceManager::Cleanup(const std::string &) {
 		return 0;
 	}
 
+	// Cleanup network configuration
+	int rc4 = m_network_configuration->Cleanup();
+	if (rc4) {
+		dprintf(D_ALWAYS, "Unable to cleanup network configuration.\n");
+	}
+
 	int rc2;
 	rc2 = RunCleanupScript();
 
@@ -365,10 +384,9 @@ int NetworkNamespaceManager::Cleanup(const std::string &) {
 		rc = rc3;
 	}
 
-	m_iplock_external.reset(NULL);
-	m_iplock_internal.reset(NULL);
-
-	return rc2 ? rc2 : rc;
+	// Prefer the network configuration error code, then the admin-provided script,
+	// then the result of attempting to delete the veth device.
+	return rc4 ? rc4 : (rc2 ? rc2 : rc);
 }
 
 int NetworkNamespaceManager::RunCleanupScript() {
@@ -379,34 +397,7 @@ int NetworkNamespaceManager::RunCleanupScript() {
 	args.AppendArg(m_network_namespace);
 	args.AppendArg(m_external_pipe);
 	args.AppendArg(m_internal_address_str);
-
-	FILE *fp = my_popen(args, "r", TRUE);
-	if (fp == NULL) {
-		dprintf(D_ALWAYS, "NetworkNamespaceManager::Cleanup : "
-			"my_popen failure on %s: (errno=%d) %s\n",
-			 args.GetArg(0), errno, strerror(errno));
-		m_state = FAILED;
-		return 1;
-	}
-
-	char out_buff[1024];
-	while (fgets(out_buff, 1024, fp) != NULL)
-		dprintf(D_FULLDEBUG, "NetworkNamespaceManager::Cleanup: NETWORK_NAMESPACE_DELETE_SCRIPT output: %s", out_buff);
-	int status = my_pclose(fp);
-	if (status == -1) {
-		dprintf(D_ALWAYS, "NetworkNamespaceManager::Cleanup: Error when running NETWORK_NAMESPACE_DELETE_SCRIPT (errno=%d) %s\n", errno, strerror(errno));
-	} else {
-		if (WIFEXITED(status)) {
-			if ((status = WEXITSTATUS(status))) {
-				dprintf(D_ALWAYS, "NetworkNamespaceManager::Cleanup NETWORK_NAMESPACE_DELETE_SCRIPT exited with status %d\n", status);
-			} else {
-				dprintf(D_FULLDEBUG, "NetworkNamespaceManager::Cleanup NETWORK_NAMESPACE_DELETE_SCRIPT was successful.\n");
-			}
-		} else if (WIFSIGNALED(status)) {
-			status = WTERMSIG(status);
-			dprintf(D_ALWAYS, "NetworkNamespaceManager::Cleanup NETWORK_NAMESPACE_DELETE_SCRIPT terminated with signal %d\n", status);
-		}
-	}
+	RUN_ARGS_AND_LOG(NetworkNamespaceManager::Cleanup, NETWORK_NAMESPACE_DELETE_SCRIPT)
 
 	return 0;
 }
