@@ -200,9 +200,10 @@ the DAGMan node log.
 \Ticket{3316}
 
 \item Fixed a bug that caused the \Condor{shadow} to set job attribute
-\Attr{X509UserProxySubject} to the wrong value when the job's X509
-proxy file was updated. It set the value to be the proxy's subject name
-rather than its identity.
+\Attr{X509UserProxySubject} to the wrong value when the job's X.509
+proxy file was updated. It incorrectly set the value to be 
+the proxy's subject name, rather than to the correct value, which is
+its identity.
 \Ticket{3265}
 
 \item The \Prog{batch\_gahp} no longer modifies the environment variable
