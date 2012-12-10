@@ -1433,6 +1433,8 @@ ResMgr::addResource( Resource *rip )
 		EXCEPT("Error: attempt to add a NULL resource\n");
 	}
 
+	calculateAffinityMask(rip);
+
 	new_resources = new Resource*[nresources + 1];
 	if( !new_resources ) {
 		EXCEPT("Failed to allocate memory for new resource\n");
@@ -1453,6 +1455,7 @@ ResMgr::addResource( Resource *rip )
 
 	resources = new_resources;
 	nresources++;
+
 }
 
 
@@ -1517,6 +1520,52 @@ ResMgr::removeResource( Resource* rip )
 	return true;
 }
 
+
+void
+ResMgr::calculateAffinityMask( Resource *rip) {
+	int firstCore = 0;
+	int numCores  = m_attr->num_real_cpus();
+	numCores -= firstCore;
+
+	int *coreOccupancy = new int[numCores];
+	for (int i = 0; i < numCores; i++) {
+		coreOccupancy[i] = 0;
+	}
+
+	// Invert the slots' affinity mask to figure out
+	// which cpu core is already used the least.
+
+	for( int i = 0; i < nresources; i++ ) {
+		std::list<int> *cores = resources[i]->get_affinity_set();
+		for (std::list<int>::iterator it = cores->begin();
+			 it != cores->end(); it++) {
+
+			int used_core_num = *it;
+			if (used_core_num < numCores) {
+				coreOccupancy[used_core_num]++;
+			}
+		}
+	}
+
+	int coresToAssign = rip->r_attr->num_cpus();
+	while (coresToAssign--) {
+		int leastUsedCore = 0;
+		int leastUsedCoreUsage = coreOccupancy[0];
+
+		for (int i = 0; i < numCores; i++) {
+			if (coreOccupancy[i] < leastUsedCoreUsage) {
+				leastUsedCore = i;
+				leastUsedCoreUsage = coreOccupancy[i];
+			}
+		}
+
+		rip->get_affinity_set()->push_back(leastUsedCore);
+		coreOccupancy[leastUsedCore]++;
+		dprintf(D_ALWAYS, "Setting cpu affinity for %s to cpu id %d\n", rip->r_name, leastUsedCore);
+	}
+
+	delete [] coreOccupancy;
+}
 
 void
 ResMgr::deleteResource( Resource* rip )

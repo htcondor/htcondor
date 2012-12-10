@@ -275,6 +275,7 @@ public:
 
 	void set_parent( Resource* rip );
 
+	std::list<int> *get_affinity_set() { return &m_affinity_mask;}
 private:
 	ResourceFeature m_resource_feature;
 
@@ -316,6 +317,7 @@ private:
 	bool	m_hook_keyword_initialized;
 #endif /* HAVE_JOB_HOOKS */
 
+	std::list<int> m_affinity_mask;
 };
 
 
