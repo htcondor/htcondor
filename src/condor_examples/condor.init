@@ -20,7 +20,7 @@
 # The program being managed
 prog=condor_master
 
-lockfile=/var/lock/subsys/$prog
+lockfile=/var/lock/subsys/condor
 pidfile=/var/run/condor/$prog.pid
 
 # Source function library
