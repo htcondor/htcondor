@@ -3,9 +3,11 @@
 #include <condor_debug.h>
 
 #include "network_configuration.h"
+#include "bridge_configuration.h"
 #include "nat_configuration.h"
 #include "address_selection.h"
 #include "local_address.h"
+#include "dhcp_address.h"
 
 #include <classad/classad.h>
 
@@ -44,6 +46,8 @@ NetworkConfiguration::GetNetworkConfiguration(classad_shared_ptr<classad::ClassA
 	}
 	if (configuration_type == "nat") {
 		return new NATConfiguration(machine_ad);
+	} else if (configuration_type == "bridge") {
+		return new BridgeConfiguration(machine_ad);
 	} else {
 		dprintf(D_ALWAYS, "Unknown configuration type \"%s\".\n", configuration_type.c_str());
 	}

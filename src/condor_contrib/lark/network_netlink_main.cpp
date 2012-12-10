@@ -69,7 +69,7 @@ int main(int argc, char * argv[])
 		static struct option long_options[] =
 		{
 			{"verbose", no_argument, &verbose_flag, 1},
-			{"bridge",  no_argument, &bridge_flag, 0},
+			{"bridge",  no_argument, &bridge_flag, 1},
 			{"internal_address", required_argument, 0, 'i'},
 			{"external_address", required_argument, 0, 'e'},
 			{0, 0, 0, 0}
@@ -129,6 +129,10 @@ int main(int argc, char * argv[])
 	if (!param(create_script, "NETWORK_NAMESPACE_DELETE_SCRIPT"))
 		param_insert("NETWORK_NAMESPACE_DELETE_SCRIPT", "./lark_cleanup_script.sh");
 
+	classad::PrettyPrint pp;
+	std::string ad_str;
+	pp.Unparse(ad_str, machine_ad_ptr.get());
+	dprintf(D_ALWAYS, "ClassAd contents: %s\n", ad_str.c_str());
 
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 

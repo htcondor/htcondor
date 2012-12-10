@@ -25,9 +25,3 @@ StaticAddressSelection::SelectAddresses()
 	return 0;
 }
 
-int
-DHCPAddressSelection::SelectAddresses()
-{
-	dprintf(D_ALWAYS, "Error - DHCP address selection is not yet implemented!\n");
-	return 1;
-}

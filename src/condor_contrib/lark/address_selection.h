@@ -27,25 +27,6 @@ public:
 };
 
 /*
- * Invoke an DHCP client.
- *
- * As a side-effect, may populate other attributes about the network
- * that can be used later
- */
-class DHCPAddressSelection : public AddressSelection {
-
-public:
-	DHCPAddressSelection(classad_shared_ptr<classad::ClassAd> machine_ad)
-		: m_ad(machine_ad)
-		{}
-
-	virtual int SelectAddresses();
-
-private:
-	classad_shared_ptr<classad::ClassAd> m_ad;
-};
-
-/*
  * Utilize a static IP address found in the classad
  * (possibly specified by the user).
  */

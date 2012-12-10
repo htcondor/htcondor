@@ -16,6 +16,7 @@
 #define ATTR_INTERNAL_INTERFACE "LarkInternalInterface"
 #define ATTR_EXTERNAL_INTERFACE "LarkExternalInterface"
 #define ATTR_ADDRESS_TYPE "LarkAddressType"
+#define ATTR_LARK_HOSTNAME "LarkHostname"
 
 #include <classad/classad_stl.h>
 
@@ -54,8 +55,15 @@ public:
 	 * - LarkOuterAddressIPv6: the IPv6 address in the external network namespace.  If left
 	 *   blank, SLAAC may be used.
 	 *
-	 *  Note this should be configuration-only: the NetworkNamespaceManager will
-	 *  look at the results and assign addresses at the appropriate time.
+	 * Note this should be configuration-only: the NetworkNamespaceManager will
+	 * look at the results and assign addresses at the appropriate time.
+	 *
+	 * If an IPv4 address cannot be determined, use 0.0.0.0; the manager will
+	 * take appropriate action.  An example of this case is DHCP; a DHCP address can
+	 * only be assigned on the internal device after bridging is configured.
+	 *
+	 * In the case of a bridge setup, we may decide to assign no address to the
+	 * external device.
 	 *
 	 * The following useful attributes may be present:
 	 * - LarkInnerDevice - the network device seen by the job.

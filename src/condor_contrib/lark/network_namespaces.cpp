@@ -221,6 +221,9 @@ int NetworkNamespaceManager::PostForkChild() {
 		return rc;
 	}
 
+	// Perform the child-side of the network setup.
+	//
+
         //
 	// Manipulate our network configuration in the child.
 	// Notice that we open a new socket to the kernel - this is because the
