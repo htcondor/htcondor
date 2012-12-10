@@ -74,7 +74,7 @@ target_link_libraries(AviaryScheddPlugin-plugin -Wl,--whole-archive -laxis2_engi
 src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
 src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 
-add_library (aviary_hadoop_axis SHARED ${COMMON_GEN_SRCS} ${HADOOP_GEN_SRCS} ${HADOOP_SRCS} Codec.cpp AviaryUtils.cpp )
+add_library (aviary_hadoop_axis SHARED ${COMMON_GEN_SRCS} ${HADOOP_GEN_SRCS} ${HADOOP_SRCS} Codec.cpp AviaryUtils.cpp HadoopObject.cpp )
 # remove unresolved deps by copying in -lwso2_wsf objects
 target_link_libraries(aviary_hadoop_axis -Wl,--whole-archive -lwso2_wsf -Wl,--no-whole-archive)
 
