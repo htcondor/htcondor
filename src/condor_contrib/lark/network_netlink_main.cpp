@@ -50,8 +50,6 @@ int main(int argc, char * argv[])
 {
 
 	// Suppress unused param compiler warnings:
-	if (argc) {}
-	if (argv) {}
 	int rc = 0;
 	int child_status = 0;
 	pid_t fork_pid;

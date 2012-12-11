@@ -7,8 +7,10 @@ namespace classad {
 }
 
 #define ATTR_DHCP_SERVER "LarkDHCPServer"
+#define ATTR_DHCP_GATEWAY "LarkDHCPRelay"
 #define ATTR_DHCP_LEASE "LarkDHCPLeaseLifetime"
 #define ATTR_DHCP_LEASE_START "LarkDHCPLeaseStart"
+#define ATTR_DHCP_TXID "LarkDHCPTransactionID"
 #define ATTR_GATEWAY "LarkGateway"
 #define ATTR_SUBNET_MASK "LarkSubnetMask"
 
@@ -17,6 +19,12 @@ namespace classad {
  */
 int
 dhcp_query(classad::ClassAd &machine_ad);
+
+/*
+ * Try to commit to a DHCP offer given by a server.
+ */
+int
+dhcp_commit(classad::ClassAd &machine_ad);
 
 /*
  * Try to renew a DHCP lease based on the information found in the machine ad
