@@ -18,7 +18,7 @@ DHCPAddressSelection::SelectAddresses()
 int
 DHCPAddressSelection::Setup()
 {
-	if (!dhcp_query(*m_ad)) {
+	if (dhcp_query(*m_ad)) {
 		return 1;
 	}
 	return 0;
@@ -27,8 +27,18 @@ DHCPAddressSelection::Setup()
 int
 DHCPAddressSelection::SetupPostFork()
 {
-	if (!dhcp_commit(*m_ad)) {
+	if (dhcp_commit(*m_ad)) {
 		return 1;
 	}
 	return 0;
 }
+
+int
+DHCPAddressSelection::Cleanup()
+{
+	if (dhcp_release(*m_ad)) {
+		return 1;
+	}
+	return 0;
+}
+

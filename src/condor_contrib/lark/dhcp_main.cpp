@@ -97,30 +97,31 @@ main(int argc, char * argv[])
 		goto failed_dhcp_client;
 	}
 
-	// Committing requires i_internal to actually be in a separate interface.
+	// Committing requires i_internal to actually be in a separate namespace.
 	// If you want to test that aspect, use network_netlink_main.cpp
+	// We just assume that the ACK comes back
 /*
-	// Assign address to internal interface.
-	// TODO: calculate correct subnet mask.
-	if (add_address(fd, client_ip.c_str(), 32, INTERNAL_IFACE)) {
-		dprintf(D_ALWAYS, "Failed to add address %s to interface " INTERNAL_IFACE ".\n", client_ip.c_str());
-		result = 1;
-		goto failed_assign_address;
-	}
 	// Commit to the address
 	if (dhcp_commit(machine_ad)) {
 		dprintf(D_ALWAYS, "Failed to DHCP ACK address %s to interface " INTERNAL_IFACE ".\n", client_ip.c_str());
 		result = 1;
 		goto failed_dhcp_commit;
 	}
-
-failed_dhcp_commit:
-failed_assign_address:
 */
+
+	sleep(1);
+
+	if (dhcp_release(machine_ad)) {
+		dprintf(D_ALWAYS, "DHCP release failed.\n");
+		result = 1;
+		goto failed_dhcp_release;
+	}
+
+failed_dhcp_release:
 failed_dhcp_client:
 failed_bridge:
 failed_set_status:
-//	delete_veth(fd, INTERNAL_IFACE);
+	delete_veth(fd, INTERNAL_IFACE);
 failed_create_veth:
 	close(fd);
 

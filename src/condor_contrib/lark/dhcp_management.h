@@ -24,5 +24,11 @@ dhcp_commit(classad::ClassAd &machine_ad);
 int
 dhcp_lease(classad::ClassAd &machine_ad);
 
+/*
+ * Release a DHCP lease.
+ */
+int
+dhcp_release(const classad::ClassAd &machine_ad);
+
 #endif
 

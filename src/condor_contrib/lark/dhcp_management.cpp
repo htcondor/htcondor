@@ -604,3 +604,97 @@ dhcp_commit (classad::ClassAd &machine_ad)
 	return 0;
 }
 
+int
+dhcp_release (const classad::ClassAd &machine_ad)
+{
+	long int txid;
+	if (!machine_ad.EvaluateAttrInt(ATTR_DHCP_TXID, txid)) {
+		dprintf(D_ALWAYS, "Missing DHCP transaction ID from ClassAd.\n");
+		return 1;
+	}
+
+	char mac_address[IFHWADDRLEN];
+	if (get_mac_address(machine_ad, mac_address)) {
+		dprintf(D_ALWAYS, "Unable to get mac address for internal device.\n");
+		return 1;
+	}
+
+	std::string internal_addr;
+	if (!machine_ad.EvaluateAttrString(ATTR_INTERNAL_ADDRESS_IPV4, internal_addr)) {
+		dprintf(D_ALWAYS, "Missing IPv4 address on internal interface in ClassAd.\n");
+		return 1;
+	}
+	struct in_addr ciaddr;
+	if (inet_pton(AF_INET, internal_addr.c_str(), &ciaddr) != 1) {
+		dprintf(D_ALWAYS, "Failed to convert %s to IPv4 address.\n", internal_addr.c_str());
+		return 1;
+	}
+        std::string server_addr;
+        if (!machine_ad.EvaluateAttrString(ATTR_DHCP_SERVER, server_addr)) {
+                dprintf(D_ALWAYS, "Missing DHCP server address in ClassAd.\n");
+                return 1;
+        }
+        struct in_addr siaddr;
+        if (inet_pton(AF_INET, server_addr.c_str(), &siaddr) != 1) {
+                dprintf(D_ALWAYS, "Failed to convert %s to IPv4 address.\n", server_addr.c_str());
+                return 1;
+        }
+        std::string gateway_addr;
+        if (!machine_ad.EvaluateAttrString(ATTR_DHCP_GATEWAY, gateway_addr)) {
+                dprintf(D_ALWAYS, "Missing DHCP relay address in ClassAd.\n");
+                return 1;
+        }
+        struct in_addr giaddr;
+        if (inet_pton(AF_INET, gateway_addr.c_str(), &giaddr) != 1) {
+                dprintf(D_ALWAYS, "Failed to convert %s to IPv4 address.\n", gateway_addr.c_str());
+                return 1;
+        }
+
+	DHCPPacket packet(txid, mac_address);
+	packet.m_ciaddr = ciaddr;
+	packet.m_siaddr = siaddr;
+	packet.m_giaddr = giaddr;
+
+	char packet_type = DHCPRELEASE;
+	char * req_iter = packet.setOption(NULL, '\x35', 1, &packet_type);
+	req_iter = packet.setOption(req_iter, '\x3d', IFHWADDRLEN, packet.m_mac_addr);
+	req_iter = packet.setOption(req_iter, '\x32', 4, (char*)&ciaddr.s_addr);
+	req_iter = packet.setOption(req_iter, '\x36', 4, (char*)&packet.m_siaddr.s_addr);
+
+	int fd = get_dhcp_socket();
+	if (fd == -1) {
+		dprintf(D_ALWAYS, "Failed to acquire a socket for DHCP communication.\n");
+		return 1;
+	}
+
+	struct iovec *iov;
+	size_t iov_len;
+	packet.makeIOV(iov, iov_len);
+
+	struct msghdr msg;
+	bzero(&msg, sizeof(msg));
+	struct sockaddr_in dest;
+	dest.sin_family = AF_INET;
+	dest.sin_addr.s_addr = siaddr.s_addr;
+	dest.sin_port = htons(67);
+	msg.msg_name = &dest;
+	msg.msg_namelen = sizeof(dest);
+	msg.msg_iov = iov;
+	msg.msg_iovlen = iov_len;
+	if (-1 == sendmsg(fd, &msg, 0)) {
+		dprintf(D_ALWAYS, "Failed to send DHCP release packet (errno=%d, %s)\n", errno, strerror(errno));
+		close(fd);
+		return errno;
+	}
+	close(fd);
+	return 0;
+}
+
+int
+dhcp_renew(classad::ClassAd &machine_ad)
+{
+	// The insight here is that the request/ACK sequence for renewing
+	// a lease is the same as for committing to a lease.
+	return dhcp_commit(machine_ad);
+}
+
