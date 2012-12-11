@@ -159,7 +159,7 @@ private:
 };
 
 static int
-get_mac_address(const classad::ClassAd &machine_ad, char result[IFHWADDRLEN])
+get_mac_address(classad::ClassAd &machine_ad, char result[IFHWADDRLEN])
 {
 	std::string interface_name;
 	if (!machine_ad.EvaluateAttrString(ATTR_INTERNAL_INTERFACE, interface_name)) {
@@ -169,6 +169,11 @@ get_mac_address(const classad::ClassAd &machine_ad, char result[IFHWADDRLEN])
 	if (interface_name.length() > IFNAMSIZ) {
 		dprintf(D_ALWAYS, "External interface name (%s) is too long.\n", interface_name.c_str());
 		return 1;
+	}
+	std::string cached_mac_address;
+	if (machine_ad.EvaluateAttrString(ATTR_DHCP_MAC, cached_mac_address) && cached_mac_address.length() >= IFHWADDRLEN) {
+		memcpy(result, cached_mac_address.c_str(), IFHWADDRLEN);
+		return 0;
 	}
 
 	int fd;
@@ -190,6 +195,11 @@ get_mac_address(const classad::ClassAd &machine_ad, char result[IFHWADDRLEN])
 	close(fd);
 
 	memcpy(result, iface_req.ifr_hwaddr.sa_data, IFHWADDRLEN);
+
+	char mac_address[IFHWADDRLEN+1];
+	mac_address[IFHWADDRLEN] = '\0';
+	memcpy(mac_address, iface_req.ifr_hwaddr.sa_data, IFHWADDRLEN);
+	machine_ad.InsertAttr(ATTR_DHCP_MAC, mac_address);
 
 	return 0;
 }
@@ -584,28 +594,39 @@ dhcp_commit (classad::ClassAd &machine_ad)
 	int fd = get_dhcp_socket();
 	if (fd == -1) return -1;
 
-	if (send_dhcp_request(fd, txid, mac_address, machine_ad)) {
-		dprintf(D_ALWAYS, "Failed to send DHCP request.\n");
-		close(fd);
-		return 1;
-	}
-	
-	int retval;
-	if ((retval = recv_dhcp_ack(fd, txid, mac_address, 4, machine_ad))) {
-		if (retval == -1) {
-			dprintf(D_ALWAYS, "DHCP server rejected our request with a NAK.\n");
-		} else {
-			dprintf(D_ALWAYS, "Failed to receive DHCP acknowledgement.\n");
+	for (int i=0; i<2; i++) {
+
+		if (send_dhcp_request(fd, txid, mac_address, machine_ad)) {
+			dprintf(D_ALWAYS, "Failed to send DHCP request.\n");
+			close(fd);
+			return 1;
 		}
-		close(fd);
-		return 1;
+
+		int retval;
+		if ((retval = recv_dhcp_ack(fd, txid, mac_address, 4, machine_ad))) {
+			if (retval == -1) {
+				dprintf(D_ALWAYS, "DHCP server rejected our request with a NAK.\n");
+			} else {
+				dprintf(D_ALWAYS, "Failed to receive DHCP acknowledgement; sleeping and trying again.\n");
+				//return 1; // TODO: fix below.
+				sleep(2);
+				close(fd);
+				fd = get_dhcp_socket();
+				continue;
+			}
+			close(fd);
+			return 1;
+		} else {
+			close(fd);
+			return 0;
+		}
 	}
 	close(fd);
-	return 0;
+	return 1;
 }
 
 int
-dhcp_release (const classad::ClassAd &machine_ad)
+dhcp_release (classad::ClassAd &machine_ad)
 {
 	long int txid;
 	if (!machine_ad.EvaluateAttrInt(ATTR_DHCP_TXID, txid)) {
@@ -686,6 +707,7 @@ dhcp_release (const classad::ClassAd &machine_ad)
 		close(fd);
 		return errno;
 	}
+	dprintf(D_FULLDEBUG, "Released IP address %s\n", internal_addr.c_str());
 	close(fd);
 	return 0;
 }

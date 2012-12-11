@@ -105,6 +105,8 @@ private:
 
 	std::auto_ptr<NetworkConfiguration> m_network_configuration;
 
+	classad_shared_ptr<classad::ClassAd> m_ad;
+
 	// Singleton instance
 	static NetworkNamespaceManager *m_instance;
 };

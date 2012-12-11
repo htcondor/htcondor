@@ -8,6 +8,7 @@
 #define ATTR_DHCP_LEASE "LarkDHCPLeaseLifetime"
 #define ATTR_DHCP_LEASE_START "LarkDHCPLeaseStart"
 #define ATTR_DHCP_TXID "LarkDHCPTransactionID"
+#define ATTR_DHCP_MAC  "LarkDHCPMacAddress"
 #define ATTR_GATEWAY "LarkGateway"
 #define ATTR_SUBNET_MASK "LarkSubnetMask"
 #define ATTR_INTERNAL_ADDRESS_IPV4 "LarkInnerAddressIPv4"
@@ -22,4 +23,7 @@
 #define ATTR_LARK_HOSTNAME "LarkHostname"
 #define ATTR_NETWORK_ACCOUNTING "LarkNetworkAccounting"
 #define CONFIG_NETWORK_ACCOUNTING "LARK_NETWORK_ACCOUNTING"
+#define LARK_BRIDGE_NAME "lark"
+#define ATTR_BRIDGE_DEVICE "LarkBridgeDevice"
+#define CONFIG_BRIDGE_DEVICE "LARK_BRIDGE_DEVICE"
 

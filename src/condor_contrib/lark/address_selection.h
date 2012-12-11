@@ -19,6 +19,24 @@ public:
 	 * See notes in network_configuration.h for how this function should work.
 	 */
 	virtual int SelectAddresses() = 0;
+
+	/*
+	 * Any setup the address selection utility may need to do after the
+	 * networking is configured.
+	 */
+	virtual int Setup() {return 0;}
+
+	/*
+	 * Any setup the address selection needs to do in the child process after
+	 * the fork.
+	 */
+	virtual int SetupPostFork() {return 0;}
+
+	/*
+	 * Any teardown activities to release the address.
+	 */
+	virtual int Cleanup() {return 0;}
+
 };
 
 /*

@@ -94,6 +94,9 @@ public:
 	 */
 	static NetworkConfiguration * GetNetworkConfiguration(classad_shared_ptr<classad::ClassAd> machine_ad);
 
+protected:
+	AddressSelection &GetAddressSelection() {return *m_address_selector;};
+
 private:
 	std::auto_ptr<AddressSelection> m_address_selector;
 	classad_shared_ptr<classad::ClassAd> m_ad;

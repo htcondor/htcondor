@@ -44,6 +44,9 @@ NATConfiguration::Setup()
 		dprintf(D_ALWAYS, "Missing required ClassAd attribute " ATTR_IPTABLE_NAME "\n");
 	}
 
+	// Record the external IP as the gateway to use for the internal device.
+	m_ad->InsertAttr(ATTR_GATEWAY, external_ip);
+
 	// Enable IP forwarding between devices.
 	int fd = open(IP_FORWARD_FILENAME, O_WRONLY);
 	if (fd == -1) {
@@ -171,9 +174,6 @@ NATConfiguration::Cleanup()
 	args.AppendArg("-j");
 	args.AppendArg("MASQUERADE");
 	}
-
-	// Cleanup firewall
-	cleanup_chain(chain_name.c_str());
 
 	return 0;
 }

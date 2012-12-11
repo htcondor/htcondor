@@ -21,7 +21,7 @@ NetworkNamespaceManager::NetworkNamespaceManager() :
 	m_state(UNCREATED), m_network_namespace(""),
 	m_internal_pipe(""), m_external_pipe(""),
 	m_sock(-1), m_created_pipe(false),
-	m_network_configuration(NULL)
+	m_network_configuration(NULL), m_ad()
 	{
 		//PluginManager<NetworkManager>::registerPlugin(this);
 		dprintf(D_FULLDEBUG, "Initialized a NetworkNamespaceManager plugin.\n");
@@ -48,6 +48,7 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, c
 		m_state = FAILED;
 		return 1;
 	}
+	m_ad = machine_ad;
 
 	m_network_namespace = uniq_namespace;
 	machine_ad->InsertAttr(ATTR_IPTABLE_NAME, m_network_namespace);
@@ -85,22 +86,6 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, c
 		return 1;
 	}
 
-	// Copy addresses from the machine classad to this class.
-	// TODO: Handle IPv6 addresses.
-	if (!machine_ad->EvaluateAttrString(ATTR_INTERNAL_ADDRESS_IPV4, m_internal_address_str)) {
-		dprintf(D_ALWAYS, "Network configuration did not result in a valid internal IPv4 address.\n");
-		m_state = FAILED;
-		return 1;
-	}
-	m_internal_address.from_ip_string(m_internal_address_str.c_str());
-	std::string external_address_str;
-	if (!machine_ad->EvaluateAttrString(ATTR_EXTERNAL_ADDRESS_IPV4, external_address_str)) {
-		dprintf(D_ALWAYS, "Network configuration did not result in a valid external IPv4 address.\n");
-		m_state = FAILED;
-		return 1;
-	}
-	m_external_address.from_ip_string(external_address_str.c_str());
-
 	// Create a chain for this starter.  Equivalent to:
 	// iptables -N $LarkIptableName
 	{
@@ -122,13 +107,22 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, c
 		return 1;
 	}
 
-	// Do this again - DHCP, for example, updates the internal address during setup.
+	// Copy addresses from the machine classad to this class.
+	// TODO: Handle IPv6 addresses.
+	if (!machine_ad->EvaluateAttrString(ATTR_INTERNAL_ADDRESS_IPV4, m_internal_address_str)) {
+		dprintf(D_ALWAYS, "Network configuration did not result in a valid internal IPv4 address.\n");
+		m_state = FAILED;
+		return 1;
+	}
 	m_internal_address.from_ip_string(m_internal_address_str.c_str());
+	std::string external_address_str;
 	if (!machine_ad->EvaluateAttrString(ATTR_EXTERNAL_ADDRESS_IPV4, external_address_str)) {
 		dprintf(D_ALWAYS, "Network configuration did not result in a valid external IPv4 address.\n");
 		m_state = FAILED;
 		return 1;
 	}
+	m_external_address.from_ip_string(external_address_str.c_str());
+
 
 	// Configure some services provided the manager itself.
 	if (ConfigureNetworkAccounting(*machine_ad)) {
@@ -147,7 +141,7 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, c
 		args.AppendArg(m_internal_address_str.c_str());
 		args.AppendArg(m_network_namespace);
 		args.AppendArg(m_external_pipe);
-		dprintf(D_FULLDEBUG, "NetworkNamespaceManager nat setup: %s %s %s %s %s\n",
+		dprintf(D_FULLDEBUG, "NetworkNamespaceManager admin setup script: %s %s %s %s %s\n",
 			namespace_script, external_address.c_str(), m_internal_address_str.c_str(), m_network_namespace.c_str(), m_external_pipe.c_str());
 
 		NAMESPACE_STATE prior_state = m_state;
@@ -194,6 +188,13 @@ int NetworkNamespaceManager::PreFork() {
 }
 
 int NetworkNamespaceManager::PostForkChild() {
+	std::string external_gw;
+
+	classad::PrettyPrint pp;
+	std::string ad_str;
+	pp.Unparse(ad_str, m_ad.get());
+	dprintf(D_FULLDEBUG, "Child network classad: \n%s\n", ad_str.c_str());
+
 	if (m_state == UNCREATED)
 		return 0;
 
@@ -247,11 +248,14 @@ int NetworkNamespaceManager::PostForkChild() {
 		rc = 1;
 		goto failed_socket;
 	}
+	// TODO: This hardcodes the prefix to 24; however, at least in the DHCP case, we can
+	// better determine the correct prefix.
 	if (add_address(sock, m_internal_address_str.c_str(), 24, m_internal_pipe.c_str())) {
 		dprintf(D_ALWAYS, "Unable to add address %s to %s.\n", m_internal_address_str.c_str(), m_internal_pipe.c_str());
 		rc = 2;
 		goto finalize_child;
 	}
+	dprintf(D_FULLDEBUG, "Added address %s to child interface.\n", m_internal_address_str.c_str());
 	if (set_status(sock, m_internal_pipe.c_str(), IFF_UP)) {
 		dprintf(D_ALWAYS, "Unable to bring up interface %s.\n", m_internal_pipe.c_str());
 		rc = 3;
@@ -263,14 +267,24 @@ int NetworkNamespaceManager::PostForkChild() {
 		rc = 4;
 		goto finalize_child;
 	}*/
-	if (add_default_route(sock, m_external_address.to_ip_string().Value())) {
-		dprintf(D_ALWAYS, "Unable to add default route via %s\n", m_external_address.to_ip_string().Value());
+
+	// The external gateway is stored in the classad because, for example, it is very
+	// different for DHCP versus NAT.
+	if (!m_ad->EvaluateAttrString(ATTR_GATEWAY, external_gw)) {
+		dprintf(D_FULLDEBUG, "Unable to determine gateway; using external IP address.\n");
+		external_gw = m_external_address.to_ip_string();
+	}
+
+	// The default route seems to get dropped for bridging while the interface is
+	// initializing.  Try again.
+	if (add_default_route(sock, external_gw.c_str())) {
+		dprintf(D_ALWAYS, "Unable to add default route via %s\n", external_gw.c_str());
 		rc = 5;
 		goto finalize_child;
 	}
 
 	if (m_network_configuration->SetupPostFork()) {
-		dprintf(D_ALWAYS, "Failed to create network configuraiton.\n");
+		dprintf(D_ALWAYS, "Failed to create network configuration.\n");
 		rc = 6;
 		goto finalize_child;
 	}
@@ -403,6 +417,9 @@ int NetworkNamespaceManager::Cleanup(const std::string &) {
 		dprintf(D_ALWAYS, "Unable to cleanup network configuration.\n");
 	}
 	m_network_configuration.reset(NULL);
+
+        // Cleanup firewall
+	cleanup_chain(m_network_namespace.c_str());
 
 	int rc2;
 	rc2 = RunCleanupScript();

@@ -460,7 +460,7 @@ int add_default_route(int sock, const char * gw) {
 	size_t dst_len = 0;
 
 	// TODO: ipv6 support
-	dprintf(D_FULLDEBUG, "Adding IP address %s\n", gw);
+	dprintf(D_FULLDEBUG, "Adding IP address %s as default gateway.\n", gw);
 	unsigned char ipv4_addr[4];
 	if (inet_pton(AF_INET, gw, (void *)&ipv4_addr) != 1) {
 		dprintf(D_ALWAYS, "Invalid IP address: %s\n", gw);

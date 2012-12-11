@@ -12,9 +12,8 @@
 #include "network_manipulation.h"
 #include "network_namespaces.h"
 
+#include "address_selection.h"
 #include "bridge_configuration.h"
-
-#define LARK_BRIDGE_NAME "lark"
 
 using namespace lark;
 
@@ -59,17 +58,31 @@ BridgeConfiguration::Setup() {
 		return 1;
 	}
 
-	return 1;
+	AddressSelection & address = GetAddressSelection();
+	address.Setup();
+
+	classad::PrettyPrint pp;
+	std::string ad_str;
+	pp.Unparse(ad_str, m_ad.get());
+	dprintf(D_FULLDEBUG, "After bridge setup, machine classad: \n%s\n", ad_str.c_str());
+
+	return 0;
 }
 
 int
 BridgeConfiguration::SetupPostFork()
 {
+	AddressSelection & address = GetAddressSelection();
+	address.SetupPostFork();
+
 	return 0;
 }
 
 int
 BridgeConfiguration::Cleanup() {
-	// TODO: release DHCP address.
-	return 1;
+	dprintf(D_FULLDEBUG, "Cleaning up network bridge configuration.\n");
+	AddressSelection & address = GetAddressSelection();
+	address.Cleanup();
+
+	return 0;
 }

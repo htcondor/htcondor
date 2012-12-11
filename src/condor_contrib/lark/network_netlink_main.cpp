@@ -38,7 +38,7 @@ static int child_post_fork(lark::NetworkNamespaceManager &manager) {
 	}
 
 	// Exec out.
-	rc = execl("/bin/sh", "sh", "-c", "date; ifconfig -a; route -n; ping 129.93.1.141 -c 10 && curl 129.93.1.141;", (char *)0);
+	rc = execl("/bin/sh", "sh", "-c", "date; ifconfig -a; route -n; ping 129.93.1.141 -c 20 && curl 129.93.1.141;", (char *)0);
 	fprintf(stderr, "Failure to exec /bin/sh. (errno=%d) %s\n", errno, strerror(errno));
 
 finalize_child:
@@ -61,7 +61,8 @@ int main(int argc, char * argv[])
 	int bridge_flag = 0;
 	int help_flag = 0;
 	int c;
-	std::string static_internal_address, static_external_address;
+	std::string static_internal_address, static_external_address, bridge_interface;
+
 	while (1) {
 		static struct option long_options[] =
 		{
@@ -69,10 +70,11 @@ int main(int argc, char * argv[])
 			{"bridge",  no_argument, &bridge_flag, 1},
 			{"internal_address", required_argument, 0, 'i'},
 			{"external_address", required_argument, 0, 'e'},
+			{"bridge_interface", required_argument, 0, 'b'},
 			{0, 0, 0, 0}
 		};
 		int option_index = 0;
-		c = getopt_long(argc, argv, "e:i:", long_options, &option_index);
+		c = getopt_long(argc, argv, "e:i:b:", long_options, &option_index);
 
 		if (c == -1) {
 			break;
@@ -89,18 +91,34 @@ int main(int argc, char * argv[])
 			static_address_flag = 1;
 			static_external_address = optarg;
 			break;
+		case 'b':
+			bridge_interface = optarg;
+			break;
 		case '?':
 			help_flag = 1;
 			break;
 		default:
-			abort();
+			printf("Unknown option: %c\n", c);
+			help_flag = 1;
+			break;
 		}
 	}
 	if (help_flag) {
+		printf("Usage: lark_network_namespace_tester [options]\n");
+		printf("Options:\n");
+		printf(" --verbose: Increase verbosity of output.\n");
+		printf(" --bridge:  Bridge job device (default is NAT).\n");
+		printf(" -i,--internal_address IPV4_ADDRESS: Internal address to use (default is to auto-detect)\n");
+		printf(" -e,--external_address IPV4_ADDRESS: External address to use (default is to auto-detect)\n");
+		printf(" -b,--bridge_interface IFACE: System interface to use as a bridge (required with the --bridge flag).\n");
 		return 0;
 	}
 
 	machine_ad_ptr->InsertAttr(ATTR_NETWORK_TYPE, bridge_flag ? "bridge" : "nat");
+	if (bridge_flag && bridge_interface.length()) {
+		machine_ad_ptr->InsertAttr(ATTR_BRIDGE_DEVICE, bridge_interface);
+	}
+
 	if (static_address_flag) {
 		machine_ad_ptr->InsertAttr(ATTR_ADDRESS_TYPE, "static");
 		machine_ad_ptr->InsertAttr(ATTR_INTERNAL_ADDRESS_IPV4, static_internal_address);

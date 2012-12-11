@@ -4,9 +4,6 @@
 
 #include "network_configuration.h"
 
-#define ATTR_BRIDGE_DEVICE "LarkBridgeDevice"
-#define CONFIG_BRIDGE_DEVICE "LARK_BRIDGE_DEVICE"
-
 namespace lark {
 
 class BridgeConfiguration : public NetworkConfiguration {

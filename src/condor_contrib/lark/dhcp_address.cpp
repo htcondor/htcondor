@@ -1,5 +1,8 @@
 
+#include "condor_common.h"
+
 #include <classad/classad.h>
+#include "condor_debug.h"
 
 #include "lark_attributes.h"
 #include "dhcp_address.h"
@@ -36,6 +39,7 @@ DHCPAddressSelection::SetupPostFork()
 int
 DHCPAddressSelection::Cleanup()
 {
+	dprintf(D_FULLDEBUG, "Releasing DHCP address.\n");
 	if (dhcp_release(*m_ad)) {
 		return 1;
 	}
