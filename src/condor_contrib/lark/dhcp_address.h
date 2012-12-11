@@ -21,7 +21,8 @@ public:
 
 	virtual int SelectAddresses();
 
-	int SelectAddressesPostBridge();
+	virtual int Setup();
+	virtual int SetupPostFork();
 
 private:
 	classad_shared_ptr<classad::ClassAd> m_ad;

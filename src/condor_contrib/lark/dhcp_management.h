@@ -6,14 +6,6 @@ namespace classad {
 	class ClassAd;
 }
 
-#define ATTR_DHCP_SERVER "LarkDHCPServer"
-#define ATTR_DHCP_GATEWAY "LarkDHCPRelay"
-#define ATTR_DHCP_LEASE "LarkDHCPLeaseLifetime"
-#define ATTR_DHCP_LEASE_START "LarkDHCPLeaseStart"
-#define ATTR_DHCP_TXID "LarkDHCPTransactionID"
-#define ATTR_GATEWAY "LarkGateway"
-#define ATTR_SUBNET_MASK "LarkSubnetMask"
-
 /*
  * Query a DHCP server based on the information found in the machine ad.
  */

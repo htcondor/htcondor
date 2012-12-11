@@ -18,6 +18,7 @@ public:
 		{}
 
 	virtual int Setup();
+	virtual int SetupPostFork();
 	virtual int Cleanup();
 
 private:

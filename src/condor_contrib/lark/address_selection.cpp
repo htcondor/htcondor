@@ -2,6 +2,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 
+#include "lark_attributes.h"
 #include "address_selection.h"
 
 #include <classad/classad.h>

@@ -9,8 +9,7 @@
 #include "condor_debug.h"
 #include <classad/classad.h>
 
-#include "network_configuration.h"
-#include "address_selection.h"
+#include "lark_attributes.h"
 
 #include "dhcp_management.h"
 

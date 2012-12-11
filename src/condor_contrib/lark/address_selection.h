@@ -4,11 +4,6 @@
 
 #include <classad/classad_stl.h>
 
-#define ATTR_INTERNAL_ADDRESS_IPV4 "LarkInnerAddressIPv4"
-#define ATTR_INTERNAL_ADDRESS_IPV6 "LarkInnerAddressIPv6"
-#define ATTR_EXTERNAL_ADDRESS_IPV4 "LarkExternalAddressIPv4"
-#define ATTR_EXTERNAL_ADDRESS_IPV6 "LarkExternalAddressIPv6"
-
 namespace classad {
 	class ClassAd;
 }

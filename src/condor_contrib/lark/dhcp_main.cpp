@@ -12,11 +12,10 @@
 #include "condor_config.h"
 #include "condor_uid.h"
 
+#include "lark_attributes.h"
 #include "popen_util.h"
-#include "network_configuration.h"
 #include "network_manipulation.h"
 #include "dhcp_management.h"
-#include "address_selection.h"
 
 #define EXTERNAL_IFACE "e_tester"
 #define INTERNAL_IFACE "i_tester"

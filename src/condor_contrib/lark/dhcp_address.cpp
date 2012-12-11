@@ -1,6 +1,7 @@
 
 #include <classad/classad.h>
 
+#include "lark_attributes.h"
 #include "dhcp_address.h"
 #include "dhcp_management.h"
 
@@ -15,10 +16,19 @@ DHCPAddressSelection::SelectAddresses()
 }
 
 int
-DHCPAddressSelection::SelectAddressesPostBridge()
+DHCPAddressSelection::Setup()
 {
 	if (!dhcp_query(*m_ad)) {
 		return 1;
 	}
-	return 1;
+	return 0;
+}
+
+int
+DHCPAddressSelection::SetupPostFork()
+{
+	if (!dhcp_commit(*m_ad)) {
+		return 1;
+	}
+	return 0;
 }

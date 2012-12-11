@@ -17,10 +17,9 @@
 #include <linux/if.h>
 #include <getopt.h>
 
+#include "lark_attributes.h"
 #include "network_manipulation.h"
 #include "network_namespaces.h"
-#include "network_configuration.h"
-#include "address_selection.h"
 
 int handle_match(const unsigned char * rule_name, long long bytes_matched, void * unused) {
         if (unused) {}

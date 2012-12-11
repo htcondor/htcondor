@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#include "lark_attributes.h"
 #include "nat_configuration.h"
 #include "network_manipulation.h"
 #include "network_namespaces.h"

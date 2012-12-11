@@ -8,9 +8,9 @@
 #include <classad/classad.h>
 #include <classad/classad_stl.h>
 
+#include "lark_attributes.h"
 #include "network_namespaces.h"
 #include "network_manipulation.h"
-#include "address_selection.h"
 #include "popen_util.h"
 
 using namespace lark;
@@ -118,6 +118,14 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, c
 	// Configure the network
 	if (m_network_configuration->Setup()) {
 		dprintf(D_ALWAYS, "Network configuration failed.\n");
+		m_state = FAILED;
+		return 1;
+	}
+
+	// Do this again - DHCP, for example, updates the internal address during setup.
+	m_internal_address.from_ip_string(m_internal_address_str.c_str());
+	if (!machine_ad->EvaluateAttrString(ATTR_EXTERNAL_ADDRESS_IPV4, external_address_str)) {
+		dprintf(D_ALWAYS, "Network configuration did not result in a valid external IPv4 address.\n");
 		m_state = FAILED;
 		return 1;
 	}
@@ -249,6 +257,7 @@ int NetworkNamespaceManager::PostForkChild() {
 		rc = 3;
 		goto finalize_child;
 	}
+	// This doesn't seem to be necessary if you provide a non-/32 netmask when creating the device.
 	/*if (add_local_route(sock, m_internal_address_str.c_str(), m_internal_pipe.c_str(), 24)) {
 		dprintf(D_ALWAYS, "Unable to add local route via %s\n", m_internal_address_str.c_str());
 		rc = 4;
@@ -257,6 +266,12 @@ int NetworkNamespaceManager::PostForkChild() {
 	if (add_default_route(sock, m_external_address.to_ip_string().Value())) {
 		dprintf(D_ALWAYS, "Unable to add default route via %s\n", m_external_address.to_ip_string().Value());
 		rc = 5;
+		goto finalize_child;
+	}
+
+	if (m_network_configuration->SetupPostFork()) {
+		dprintf(D_ALWAYS, "Failed to create network configuraiton.\n");
+		rc = 6;
 		goto finalize_child;
 	}
 

@@ -4,6 +4,7 @@
 
 #include <string>
 
+#include "lark_attributes.h"
 #include "local_address.h"
 
 using namespace lark;

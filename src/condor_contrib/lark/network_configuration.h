@@ -11,13 +11,6 @@
 #ifndef __network_configuration_h_
 #define __network_configuration_h_
 
-#define ATTR_IPTABLE_NAME "LarkIptableName"
-#define ATTR_NETWORK_TYPE "LarkNetworkType"
-#define ATTR_INTERNAL_INTERFACE "LarkInternalInterface"
-#define ATTR_EXTERNAL_INTERFACE "LarkExternalInterface"
-#define ATTR_ADDRESS_TYPE "LarkAddressType"
-#define ATTR_LARK_HOSTNAME "LarkHostname"
-
 #include <classad/classad_stl.h>
 
 namespace classad {
@@ -83,6 +76,13 @@ public:
 	 * This will be invoked by the NetworkNamespaceManager in PreFork.
 	 */
 	virtual int Setup() = 0;
+
+	/*
+	 * Setup the network configuration in the child namespace.
+	 * This will be invoked by the child after the default route and IP address
+	 * have been setup
+	 */
+	virtual int SetupPostFork() = 0;
 
 	/*
 	 * Cleanup any kernel data structures which are not cleaned up automatically.

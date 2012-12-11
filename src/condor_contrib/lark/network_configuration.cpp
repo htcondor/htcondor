@@ -2,6 +2,7 @@
 #include <condor_common.h>
 #include <condor_debug.h>
 
+#include "lark_attributes.h"
 #include "network_configuration.h"
 #include "bridge_configuration.h"
 #include "nat_configuration.h"

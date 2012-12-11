@@ -17,6 +17,8 @@ public:
 		{}
 
 	virtual int Setup();
+	// Post-fork setup is trivial for NAT.
+	virtual int SetupPostFork() {return 0;}
 	virtual int Cleanup();
 
 private:

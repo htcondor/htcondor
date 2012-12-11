@@ -1,14 +1,16 @@
 
 #include "condor_common.h"
 
+#include <net/if.h>
 #include <string>
 
 #include "condor_debug.h"
 #include "condor_config.h"
 #include <classad/classad.h>
 
-#include "network_configuration.h"
+#include "lark_attributes.h"
 #include "network_manipulation.h"
+#include "network_namespaces.h"
 
 #include "bridge_configuration.h"
 
@@ -47,7 +49,23 @@ BridgeConfiguration::Setup() {
 		return result;
 	}
 
+	// Manipulate the routing and state of the link.  Done internally; no callouts.
+	NetworkNamespaceManager & manager = NetworkNamespaceManager::GetManager();
+	int fd = manager.GetNetlinkSocket();
+
+	// Enable the device
+	// ip link set dev $DEV up
+	if (set_status(fd, external_device.c_str(), IFF_UP)) {
+		return 1;
+	}
+
 	return 1;
+}
+
+int
+BridgeConfiguration::SetupPostFork()
+{
+	return 0;
 }
 
 int
