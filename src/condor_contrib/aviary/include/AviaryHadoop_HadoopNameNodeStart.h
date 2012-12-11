@@ -38,6 +38,10 @@ namespace AviaryHadoop
 
                 
                 bool isValidBin_file;
+            std::string property_Owner;
+
+                
+                bool isValidOwner;
             
 
         /*** Private methods ***/
@@ -45,6 +49,10 @@ namespace AviaryHadoop
 
         bool WSF_CALL
         setBin_fileNil();
+            
+
+        bool WSF_CALL
+        setOwnerNil();
             
 
 
@@ -71,9 +79,10 @@ namespace AviaryHadoop
          * Constructor for creating HadoopNameNodeStart
          * @param 
          * @param Bin_file std::string
+         * @param Owner std::string
          * @return newly created HadoopNameNodeStart object
          */
-        HadoopNameNodeStart(std::string arg_Bin_file);
+        HadoopNameNodeStart(std::string arg_Bin_file,std::string arg_Owner);
         
 
         /**
@@ -107,6 +116,30 @@ namespace AviaryHadoop
         WSF_EXTERN bool WSF_CALL
         resetBin_file();
         
+        
+
+        /**
+         * Getter for owner. 
+         * @return std::string*
+         */
+        WSF_EXTERN std::string WSF_CALL
+        getOwner();
+
+        /**
+         * Setter for owner.
+         * @param arg_Owner std::string*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setOwner(const std::string  arg_Owner);
+
+        /**
+         * Re setter for owner
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetOwner();
+        
 
 
         /******************************* Checking and Setting NIL values *********************************/
@@ -124,6 +157,16 @@ namespace AviaryHadoop
          */
         bool WSF_CALL
         isBin_fileNil();
+
+
+        
+
+        /**
+         * Check whether owner is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isOwnerNil();
 
 
         
@@ -191,6 +234,17 @@ namespace AviaryHadoop
 
         std::string WSF_CALL
         getProperty1();
+
+    
+        
+
+        /**
+         * Getter for owner by property number (2)
+         * @return std::string
+         */
+
+        std::string WSF_CALL
+        getProperty2();
 
     
 

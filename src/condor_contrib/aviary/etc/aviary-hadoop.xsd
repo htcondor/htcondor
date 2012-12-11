@@ -36,6 +36,7 @@
 		<xs:sequence>
 			<!-- path to a versioned Hadoop tar/zip binary dist file -->
 			<xs:element name="bin_file" type="xs:string" minOccurs="0"/>
+			<xs:element name="owner" type="xs:string" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:complexType name="HadoopStart">
@@ -44,6 +45,7 @@
 			<xs:element name="ref" type="hdp:HadoopID"/>
 			<!-- path to a versioned Hadoop tar/zip binary dist file -->
 			<xs:element name="bin_file" type="xs:string" minOccurs="0"/>
+			<xs:element name="owner" type="xs:string" minOccurs="0"/>
 			<xs:element name="count" type="xs:int" minOccurs="0" default="1"/>
 		</xs:sequence>
 	</xs:complexType>

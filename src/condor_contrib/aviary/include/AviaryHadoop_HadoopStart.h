@@ -44,6 +44,10 @@ namespace AviaryHadoop
 
                 
                 bool isValidBin_file;
+            std::string property_Owner;
+
+                
+                bool isValidOwner;
             int property_Count;
 
                 
@@ -59,6 +63,10 @@ namespace AviaryHadoop
 
         bool WSF_CALL
         setBin_fileNil();
+            
+
+        bool WSF_CALL
+        setOwnerNil();
             
 
         bool WSF_CALL
@@ -90,10 +98,11 @@ namespace AviaryHadoop
          * @param 
          * @param Ref AviaryHadoop::HadoopID*
          * @param Bin_file std::string
+         * @param Owner std::string
          * @param Count int
          * @return newly created HadoopStart object
          */
-        HadoopStart(AviaryHadoop::HadoopID* arg_Ref,std::string arg_Bin_file,int arg_Count);
+        HadoopStart(AviaryHadoop::HadoopID* arg_Ref,std::string arg_Bin_file,std::string arg_Owner,int arg_Count);
         
 
         /**
@@ -154,6 +163,30 @@ namespace AviaryHadoop
         
 
         /**
+         * Getter for owner. 
+         * @return std::string*
+         */
+        WSF_EXTERN std::string WSF_CALL
+        getOwner();
+
+        /**
+         * Setter for owner.
+         * @param arg_Owner std::string*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setOwner(const std::string  arg_Owner);
+
+        /**
+         * Re setter for owner
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetOwner();
+        
+        
+
+        /**
          * Getter for count. 
          * @return int*
          */
@@ -202,6 +235,16 @@ namespace AviaryHadoop
          */
         bool WSF_CALL
         isBin_fileNil();
+
+
+        
+
+        /**
+         * Check whether owner is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isOwnerNil();
 
 
         
@@ -295,12 +338,23 @@ namespace AviaryHadoop
         
 
         /**
-         * Getter for count by property number (3)
+         * Getter for owner by property number (3)
+         * @return std::string
+         */
+
+        std::string WSF_CALL
+        getProperty3();
+
+    
+        
+
+        /**
+         * Getter for count by property number (4)
          * @return int
          */
 
         int WSF_CALL
-        getProperty3();
+        getProperty4();
 
     
 
