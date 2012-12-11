@@ -882,15 +882,15 @@ Assign(char const *name,char const *value)
 //  Lookup(const char*) const{}
 
 int ClassAd::
-LookupString( const char *name, char *value ) const 
-{
-	string strVal;
-	if( !EvaluateAttrString( string( name ), strVal ) ) {
-		return 0;
-	}
-	strcpy( value, strVal.c_str( ) );
-	return 1;
-} 
+//LookupString( const char *name, char *value ) const 
+//{
+//	string strVal;
+//	if( !EvaluateAttrString( string( name ), strVal ) ) {
+//		return 0;
+//	}
+//	strcpy( value, strVal.c_str( ) );
+//	return 1;
+//} 
 
 int ClassAd::
 LookupString(const char *name, char *value, int max_len) const
