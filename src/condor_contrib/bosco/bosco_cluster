@@ -245,7 +245,7 @@ add_cluster_to_list () {
     cluster_type=$3
     check_cluster_list2 $remote_host
     if [ $? -eq 0 ]; then
-        tmpfile=`mktemp`
+        tmpfile=`mktemp -t tmpclusterlist.XXXXXX`
         sed "/entry=$remote_host max_queued=.*/d" $CLUSTERLIST_LOCATION > tmpfile
         mv tmpfile $CLUSTERLIST_LOCATION
     fi
@@ -296,7 +296,7 @@ remove_cluster () {
     stop_ssh
 
     # Remove the host from the cluster list
-    tmpfile=`mktemp`
+    tmpfile=`mktemp -t tmpclusterlist.XXXXXX`
     sed "/$remote_host/d" $CLUSTERLIST_LOCATION > $tmpfile
     mv $tmpfile $CLUSTERLIST_LOCATION
 }
@@ -367,7 +367,7 @@ test_cluster () {
         echo "Tests FAILED!"
         exit 1
     fi
-    submit_dir=`mktemp -d -p $root_submit_dir`
+    submit_dir=`mktemp -d $root_submit_dir/boscotest.XXXXX`
     submit_file=$submit_dir/condor.submit
     log_file=$submit_dir/logfile
     test_stdout=$submit_dir/test.stdout
@@ -538,7 +538,7 @@ get_status () {
     check_cluster_list2 $remote_host "ve"
 
     # Print queue status
-    tmpfile=`mktemp`
+    tmpfile=`mktemp -t queustatustmp.XXXXX`
     start_ssh
     for i in "qstat -q" "showq" "condor_q"
     do
@@ -813,7 +813,7 @@ stop_ssh
 
 # Configure condor
 min_queue_size=`get_min_queue`
-tmpfile=`mktemp`
+tmpfile=`mktemp -t tmpconfigfile.XXXXX`
 condor_config_file=`condor_config_val LOCAL_CONFIG_FILE`
 sed "/GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE.*/d" $condor_config_file > $tmpfile
 echo "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE=$min_queue_size" >> $tmpfile
