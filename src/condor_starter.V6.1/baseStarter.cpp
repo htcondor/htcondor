@@ -1390,8 +1390,15 @@ CStarter::createTempExecuteDir( void )
 		cpsh->initialize_sandbox(WorkingDir.Value());
 		WriteAdFiles();
 	} else {
-		// we can only get here if we are not using PrivSep.
-		if( mkdir(WorkingDir.Value(), 0700) < 0 ) {
+		// we can only get here if we are not using *CONDOR* PrivSep.  but we
+		// might be using glexec.  glexec relies on being able to read the
+		// contents of the execute directory as a non-condor user, so in that
+		// case, use 0755.  for all other cases, use the more-restrictive 0700.
+		int dir_perms = 0700;
+		if(glexecPrivSepHelper()) {
+			dir_perms = 0755;
+		}
+		if( mkdir(WorkingDir.Value(), dir_perms) < 0 ) {
 			dprintf( D_FAILURE|D_ALWAYS,
 			         "couldn't create dir %s: %s\n",
 			         WorkingDir.Value(),
