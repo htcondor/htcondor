@@ -56,6 +56,8 @@
                 
             isValidOwner  = false;
         
+            isValidSubmitted  = false;
+        
             isValidUptime  = false;
         
                 property_State  = NULL;
@@ -68,7 +70,7 @@
         
         }
 
-       AviaryHadoop::HadoopQueryResult::HadoopQueryResult(AviaryHadoop::HadoopID* arg_Ref,std::string arg_Owner,int arg_Uptime,AviaryHadoop::HadoopStateType* arg_State,AviaryCommon::Status* arg_Status)
+       AviaryHadoop::HadoopQueryResult::HadoopQueryResult(AviaryHadoop::HadoopID* arg_Ref,std::string arg_Owner,int arg_Submitted,int arg_Uptime,AviaryHadoop::HadoopStateType* arg_State,AviaryCommon::Status* arg_Status)
         {
              
                property_Ref  = NULL;
@@ -78,6 +80,8 @@
                  property_Owner;
              
             isValidOwner  = true;
+            
+            isValidSubmitted  = true;
             
             isValidUptime  = true;
             
@@ -92,6 +96,8 @@
                     property_Ref = arg_Ref;
             
                     property_Owner = arg_Owner;
+            
+                    property_Submitted = arg_Submitted;
             
                     property_Uptime = arg_Uptime;
             
@@ -349,6 +355,89 @@
                                   }
                                   /* this is not a nillable element*/
 				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element owner missing");
+                                  return AXIS2_FAILURE;
+                              }
+                           
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
+
+                     
+                     /*
+                      * building submitted element
+                      */
+                     
+                     
+                     
+                                    /*
+                                     * because elements are ordered this works fine
+                                     */
+                                  
+                                   
+                                   if(current_node != NULL && is_early_node_valid)
+                                   {
+                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                       
+                                       
+                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                        {
+                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                        }
+                                        if(current_node != NULL)
+                                        {
+                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                        }
+                                       
+                                   }
+                                   is_early_node_valid = false;
+                                 
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "submitted", NULL, NULL);
+                                 
+
+                           if ( 
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("submitted", axiom_element_get_localname(current_element, Environment::getEnv())))))
+                           {
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("submitted", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              {
+                                is_early_node_valid = true;
+                              }
+                              
+                                 
+                                      text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
+                                      if(text_value != NULL)
+                                      {
+                                            status = setSubmitted(atoi(text_value));
+                                      }
+                                      
+                                      else
+                                      {
+                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element submitted");
+                                          status = AXIS2_FAILURE;
+                                      }
+                                      
+                                 if(AXIS2_FAILURE ==  status)
+                                 {
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for submitted ");
+                                     if(element_qname)
+                                     {
+                                         axutil_qname_free(element_qname, Environment::getEnv());
+                                     }
+                                     return AXIS2_FAILURE;
+                                 }
+                              }
+                           
+                              else if(!dont_care_minoccurs)
+                              {
+                                  if(element_qname)
+                                  {
+                                      axutil_qname_free(element_qname, Environment::getEnv());
+                                  }
+                                  /* this is not a nillable element*/
+				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element submitted missing");
                                   return AXIS2_FAILURE;
                               }
                            
@@ -663,6 +752,8 @@
                     
                     axis2_char_t text_value_5[ADB_DEFAULT_DIGIT_LIMIT];
                     
+                    axis2_char_t text_value_6[ADB_DEFAULT_DIGIT_LIMIT];
+                    
                axis2_char_t *start_input_str = NULL;
                axis2_char_t *end_input_str = NULL;
                unsigned int start_input_str_len = 0;
@@ -821,6 +912,63 @@
                        p_prefix = NULL;
                       
 
+                   if (!isValidSubmitted)
+                   {
+                      
+                            
+                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property submitted");
+                            return NULL;
+                          
+                   }
+                   else
+                   {
+                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (4 + axutil_strlen(p_prefix) + 
+                                  axutil_strlen("submitted"))); 
+                                 
+                                 /* axutil_strlen("<:>") + 1 = 4 */
+                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("submitted")));
+                                  /* axutil_strlen("</:>") + 1 = 5 */
+                                  
+                     
+
+                   
+                   
+                     
+                     /*
+                      * parsing submitted element
+                      */
+
+                    
+                    
+                            sprintf(start_input_str, "<%s%ssubmitted>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                            
+                        start_input_str_len = axutil_strlen(start_input_str);
+                        sprintf(end_input_str, "</%s%ssubmitted>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                        end_input_str_len = axutil_strlen(end_input_str);
+                    
+                               sprintf (text_value_3, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Submitted);
+                             
+                           axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_3, axutil_strlen(text_value_3));
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
+                           
+                     
+                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
+                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
+                 } 
+
+                 
+                       p_prefix = NULL;
+                      
+
                    if (!isValidUptime)
                    {
                       
@@ -861,11 +1009,11 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                               sprintf (text_value_3, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Uptime);
+                               sprintf (text_value_4, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Uptime);
                              
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           axutil_stream_write(stream, Environment::getEnv(), text_value_3, axutil_strlen(text_value_3));
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_4, axutil_strlen(text_value_4));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -1207,10 +1355,93 @@
            
 
             /**
-             * Getter for uptime by  Property Number 3
+             * Getter for submitted by  Property Number 3
              */
             int WSF_CALL
             AviaryHadoop::HadoopQueryResult::getProperty3()
+            {
+                return getSubmitted();
+            }
+
+            /**
+             * getter for submitted.
+             */
+            int WSF_CALL
+            AviaryHadoop::HadoopQueryResult::getSubmitted()
+             {
+                return property_Submitted;
+             }
+
+            /**
+             * setter for submitted
+             */
+            bool WSF_CALL
+            AviaryHadoop::HadoopQueryResult::setSubmitted(
+                    const int  arg_Submitted)
+             {
+                
+
+                if(isValidSubmitted &&
+                        arg_Submitted == property_Submitted)
+                {
+                    
+                    return true;
+                }
+
+                
+
+                
+                resetSubmitted();
+
+                
+                        property_Submitted = arg_Submitted;
+                        isValidSubmitted = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for submitted
+            */
+           bool WSF_CALL
+           AviaryHadoop::HadoopQueryResult::resetSubmitted()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+               isValidSubmitted = false; 
+               return true;
+           }
+
+           /**
+            * Check whether submitted is nill
+            */
+           bool WSF_CALL
+           AviaryHadoop::HadoopQueryResult::isSubmittedNil()
+           {
+               return !isValidSubmitted;
+           }
+
+           /**
+            * Set submitted to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryHadoop::HadoopQueryResult::setSubmittedNil()
+           {
+               return resetSubmitted();
+           }
+
+           
+
+            /**
+             * Getter for uptime by  Property Number 4
+             */
+            int WSF_CALL
+            AviaryHadoop::HadoopQueryResult::getProperty4()
             {
                 return getUptime();
             }
@@ -1290,10 +1521,10 @@
            
 
             /**
-             * Getter for state by  Property Number 4
+             * Getter for state by  Property Number 5
              */
             AviaryHadoop::HadoopStateType* WSF_CALL
-            AviaryHadoop::HadoopQueryResult::getProperty4()
+            AviaryHadoop::HadoopQueryResult::getProperty5()
             {
                 return getState();
             }
@@ -1402,10 +1633,10 @@
            
 
             /**
-             * Getter for status by  Property Number 5
+             * Getter for status by  Property Number 6
              */
             AviaryCommon::Status* WSF_CALL
-            AviaryHadoop::HadoopQueryResult::getProperty5()
+            AviaryHadoop::HadoopQueryResult::getProperty6()
             {
                 return getStatus();
             }

@@ -48,6 +48,10 @@ namespace AviaryHadoop
 
                 
                 bool isValidOwner;
+            int property_Submitted;
+
+                
+                bool isValidSubmitted;
             int property_Uptime;
 
                 
@@ -71,6 +75,10 @@ namespace AviaryHadoop
 
         bool WSF_CALL
         setOwnerNil();
+            
+
+        bool WSF_CALL
+        setSubmittedNil();
             
 
         bool WSF_CALL
@@ -110,12 +118,13 @@ namespace AviaryHadoop
          * @param 
          * @param Ref AviaryHadoop::HadoopID*
          * @param Owner std::string
+         * @param Submitted int
          * @param Uptime int
          * @param State AviaryHadoop::HadoopStateType*
          * @param Status AviaryCommon::Status*
          * @return newly created HadoopQueryResult object
          */
-        HadoopQueryResult(AviaryHadoop::HadoopID* arg_Ref,std::string arg_Owner,int arg_Uptime,AviaryHadoop::HadoopStateType* arg_State,AviaryCommon::Status* arg_Status);
+        HadoopQueryResult(AviaryHadoop::HadoopID* arg_Ref,std::string arg_Owner,int arg_Submitted,int arg_Uptime,AviaryHadoop::HadoopStateType* arg_State,AviaryCommon::Status* arg_Status);
         
 
         /**
@@ -172,6 +181,30 @@ namespace AviaryHadoop
          */
         WSF_EXTERN bool WSF_CALL
         resetOwner();
+        
+        
+
+        /**
+         * Getter for submitted. 
+         * @return int*
+         */
+        WSF_EXTERN int WSF_CALL
+        getSubmitted();
+
+        /**
+         * Setter for submitted.
+         * @param arg_Submitted int*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setSubmitted(const int  arg_Submitted);
+
+        /**
+         * Re setter for submitted
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetSubmitted();
         
         
 
@@ -272,6 +305,16 @@ namespace AviaryHadoop
          */
         bool WSF_CALL
         isOwnerNil();
+
+
+        
+
+        /**
+         * Check whether submitted is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isSubmittedNil();
 
 
         
@@ -385,7 +428,7 @@ namespace AviaryHadoop
         
 
         /**
-         * Getter for uptime by property number (3)
+         * Getter for submitted by property number (3)
          * @return int
          */
 
@@ -396,23 +439,34 @@ namespace AviaryHadoop
         
 
         /**
-         * Getter for state by property number (4)
-         * @return AviaryHadoop::HadoopStateType
+         * Getter for uptime by property number (4)
+         * @return int
          */
 
-        AviaryHadoop::HadoopStateType* WSF_CALL
+        int WSF_CALL
         getProperty4();
 
     
         
 
         /**
-         * Getter for status by property number (5)
+         * Getter for state by property number (5)
+         * @return AviaryHadoop::HadoopStateType
+         */
+
+        AviaryHadoop::HadoopStateType* WSF_CALL
+        getProperty5();
+
+    
+        
+
+        /**
+         * Getter for status by property number (6)
          * @return AviaryCommon::Status
          */
 
         AviaryCommon::Status* WSF_CALL
-        getProperty5();
+        getProperty6();
 
     
 
