@@ -144,7 +144,7 @@ use constant { RECONSTITUTE_TEMPLATE_WIN =>
 	%win_cooked_values%
 #else	
 	%def_valid%, %range_valid%},
-	%cooked_values%, 
+	%cooked_values%
 #endif
 	};
 '
