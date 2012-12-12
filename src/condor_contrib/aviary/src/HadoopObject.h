@@ -140,6 +140,8 @@ private:
     HadoopObject(HadoopObject const&);
     HadoopObject& operator=(HadoopObject const&);
     
+    bool status (ClassAd* cAd , tHadoopJobStatus & hStatus);
+    
     string m_pool;
     string m_name;
     string m_lasterror;

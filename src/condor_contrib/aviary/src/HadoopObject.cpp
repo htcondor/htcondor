@@ -348,28 +348,41 @@ bool HadoopObject::stop(const tHadoopRef & hRef)
     return true;
 }
 
-bool status (const PROC_ID & id , tHadoopJobStatus & hStatus, string & m_lasterror)
+
+bool HadoopObject::status (ClassAd* cAd , tHadoopJobStatus & hStatus)
 {
-    if (id.cluster <= 0 || id.proc < 0) {
-	dprintf(D_FULLDEBUG, "Remove: INVALID ID\n");
-	m_lasterror = "Invalid Id";
+    
+    int cluster=0, proc=0, JobStatus=0, EnteredStatus=0;
+
+    // so the following checks are pretty excessive and could likely be removed
+    if (!cAd->LookupString( ATTR_OWNER, hStatus.owner))
+    {
+	m_lasterror = "Could not find Owner";
 	return false;
     }
     
-    // we are not sending it through yet.
-    hStatus.owner = "condor";
+    if (!cAd->LookupInteger(ATTR_CLUSTER_ID, cluster))
+    {
+	m_lasterror = "Could not find cluster id";
+	return false;
+    }
+    
+    if (!cAd->LookupInteger(ATTR_PROC_ID, proc))
+    {
+	m_lasterror = "Could not find proc id";
+	return false;
+    }
+    
+    if (!cAd->LookupInteger(ATTR_JOB_STATUS, JobStatus))
+    {
+	m_lasterror = "Could not find job status";
+	return false;
+    }
+    
     hStatus.uptime = 0;
     
-    int JobStatus=0; 
-    int EnteredStatus=0;
-    if ( 0 > ::GetAttributeInt( id.cluster, id.proc, ATTR_JOB_STATUS, &JobStatus) )
-    {
-	dprintf(D_FULLDEBUG, "Remove: Failed to obtain JobStatus on: %d.%d\n", id.cluster, id.proc);
-	m_lasterror = "Could no obtain JobStatus";
-	return false;
-    }
+    sprintf(hStatus.idref.id,"%d.%d", cluster, proc);
     
-    // 
     switch (JobStatus)
     {
 	case 1:
@@ -377,7 +390,8 @@ bool status (const PROC_ID & id , tHadoopJobStatus & hStatus, string & m_lasterr
 	    break;
 	case 2:
 	    hStatus.state = "RUNNING";
-	    if ( 0 == ::GetAttributeInt( id.cluster, id.proc, ATTR_ENTERED_CURRENT_STATUS, &EnteredStatus))
+	    
+	    if ( cAd->LookupInteger(ATTR_ENTERED_CURRENT_STATUS, EnteredStatus) )
 	    {
 		hStatus.uptime=((int)time(NULL)-EnteredStatus);
 	    }
@@ -390,36 +404,86 @@ bool status (const PROC_ID & id , tHadoopJobStatus & hStatus, string & m_lasterr
 	    hStatus.state = "ERROR";
     }
     
+    
     return true;
     
 }
 
 bool HadoopObject::query (const tHadoopRef & hRef, std::vector<tHadoopJobStatus> & vhStatus)
-{
-    PROC_ID id = getProcByString( hRef.id.c_str() );
-    
+{   
     dprintf( D_FULLDEBUG, "Called HadoopObject::status()\n");
     
     vhStatus.clear();
+    ClassAdList cAdlist;
+    ClassAd* cAd;
+    string constraint;
     
     switch (hRef.type)
     {
 	case NAME_NODE:
 	    // just list all the name nodes
+	    constraint = "HadoopType =?= \"NameNode\"";
 	    break;
 	case DATA_NODE:
 	    // list all name nodes bound query on hRef.idref.id;
+	    constraint = "HadoopType =?= \"DataNode\"";
+	    
+	    if (hRef.id.length())
+	    {
+		
+		constraint+= " && NameNode =?= ";
+		constraint+= hRef.id;
+	    }
+	    
 	    break;
 	case JOB_TRACKER:
 	    //just list all job trackers.
+	    constraint = "HadoopType =?= \"JobTracker\"";
 	    break;
 	case TASK_TRACKER:
 	    // list all name nodes bound query on hRef.idref.id;
+	    constraint = "HadoopType =?= \"TaskTracker\"";
+	    
+	    if (hRef.id.length())
+	    {
+		
+		constraint+= " && JobTracker =?= ";
+		constraint+= hRef.id;
+	    }
 	    
 	    break;
     }
     
-    return true;
+    // get all adds that match the above constraint.
+    ::GetAllJobsByConstraint( constraint.c_str(), "",cAdlist);
+    
+    if ( cAdlist.Length()>0 )
+    {
+	cAdlist.Rewind();
+	
+	// loop through the adds and fill in the status information
+	// to pass back.
+	while ( 0 != (cAd=cAdlist.Next())  )
+	{
+	    tHadoopJobStatus hStatus;
+	    if ( status ( cAd, hStatus ) )
+	    {
+		// last error should be set.
+		vhStatus.push_back(hStatus);
+	    }
+	    else
+	    {
+		return false;
+	    }
+	}
+	
+	return true;
+    }
+    else
+    {
+	m_lasterror = "Empty query";
+	return false;
+    }
     
 }
 
