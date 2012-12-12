@@ -1395,9 +1395,11 @@ CStarter::createTempExecuteDir( void )
 		// contents of the execute directory as a non-condor user, so in that
 		// case, use 0755.  for all other cases, use the more-restrictive 0700.
 		int dir_perms = 0700;
+#if defined(LINUX)
 		if(glexecPrivSepHelper()) {
 			dir_perms = 0755;
 		}
+#endif
 		if( mkdir(WorkingDir.Value(), dir_perms) < 0 ) {
 			dprintf( D_FAILURE|D_ALWAYS,
 			         "couldn't create dir %s: %s\n",
