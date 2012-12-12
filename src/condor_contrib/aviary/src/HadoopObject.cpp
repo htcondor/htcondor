@@ -37,6 +37,13 @@ using namespace aviary::hadoop;
 using namespace aviary::util;
 using namespace aviary::codec;
 
+string quote_it (const char *  pszIn)
+{
+	string ret;
+	sprintf(ret,"\"%s\"", pszIn);
+	return ret;
+}
+
 HadoopObject* HadoopObject::m_instance = NULL;
 
 HadoopObject::HadoopObject()
@@ -141,57 +148,147 @@ int HadoopObject::start( tHadoopInit & hInit )
 	}
 
 	// now we will 
-	string hadoopType;
-	char * inputscript;
+	string hadoopType, inputscript, args;
+	MyString HTTPAddress, IPCAddress;
+	bool hasInputScript=false, bValidId=false;
+	string Iwd="/tmp";
+	PROC_ID id = getProcByString( hInit.idref.id.c_str() );
+	
+	
+	if (id.cluster > 0 && id.proc > 0) 
+	{
+	    bValidId = true;
+	    dprintf(D_FULLDEBUG, "Valid ClusterId Ref: %s\n", hInit.idref.id.c_str());
+	}
+	
+	args = hInit.tarball;
+	
 	switch (hInit.idref.type)
 	{
 	    case NAME_NODE:
 		hadoopType = ATTR_NAME_NODE;
-		inputscript = param("HADOOP_HDFS_NAMENODE_SCRIPT");
+		hasInputScript = param(inputscript, "HADOOP_HDFS_NAMENODE_SCRIPT");
 		::SetAttribute(cluster, proc, ATTR_RANK, "memory");
-		::SetAttribute(cluster, proc, ATTR_REQUEST_MEMORY, "Target.Memory");
-		break;
-	    case DATA_NODE:
-		hadoopType = ATTR_DATA_NODE; 
-		inputscript = param("HADOOP_HDFS_DATANODE_SCRIPT");
-		::SetAttribute(cluster, proc, ATTR_RANK, "disk");
-		::SetAttribute(cluster, proc, ATTR_REQUEST_DISK, "floor(.55 * Target.TotalDisk)");
+		::SetAttribute(cluster, proc, ATTR_REQUEST_MEMORY, "floor(.50 * Target.Memory)");  // TODO: --> Target.Memory
 		break;
 	    case JOB_TRACKER:
 		hadoopType = ATTR_JOB_TRACKER;
-		inputscript = param("HADOOP_HDFS_NAMENODE_SCRIPT");
-		::SetAttribute(cluster, proc, ATTR_RANK, "memory");
+		hasInputScript = param(inputscript, "HADOOP_MAPR_JOBTRACKER_SCRIPT");
+		::SetAttribute(cluster, proc, ATTR_RANK, "memory"); 
+		// fall through
+	    case DATA_NODE:
+		// special case case only a small part the rest is common.
+		if (hInit.idref.type == DATA_NODE)
+		{
+		    hadoopType = ATTR_DATA_NODE; 
+		    hasInputScript = param(inputscript, "HADOOP_HDFS_DATANODE_SCRIPT");
+		    ::SetAttribute(cluster, proc, ATTR_RANK, "disk");
+		    ::SetAttribute(cluster, proc, ATTR_REQUEST_DISK, "floor(.50 * Target.TotalDisk)");
+		}
+		
+		///////////////////////////////////////////////////////////////////////////////////////
+		// NOTE: This section is common to both JOB_TRACKER && DATA_NODES
+		// It could possibly be refactored into a function but it's not really pretty/clean.
+		if (bValidId)
+		{
+		    ::GetAttributeString( id.cluster, id.proc,  "NameNodeIPCAddress", IPCAddress);
+		    ::GetAttributeString( id.cluster, id.proc,  "NameNodeHTTPAddress", HTTPAddress);
+		    
+		    //TODO: there could be extra checks here.
+		    ::SetAttribute(cluster, proc, "NameNode", hInit.idref.id.c_str() );
+		}
+		else if (hInit.idref.ipcid.length())
+		{
+		    // TODO: there could be extra checks here, validate it's up. 
+		    IPCAddress = hInit.idref.ipcid.c_str();
+		    ::SetAttribute(cluster, proc, "NameNode", hInit.idref.ipcid.c_str() );
+		}
+		else
+		{
+		    AbortTransaction();
+		    m_lasterror = "No valid Name Node ";
+		    return false;
+		}
+		    
+		// not always valid
+		if ( HTTPAddress.Length() )
+		{
+		    ::SetAttribute(cluster, proc, "NameNodeHTTPAddress", quote_it(HTTPAddress.Value()).c_str() );
+		}
+		
+		args += " ";
+		args += IPCAddress.Value();
+		::SetAttribute(cluster, proc, "NameNodeIPCAddress", quote_it(IPCAddress.Value()).c_str());
+		///////////////////////////////////////////////////////////////////////////////////////
+		
 		break;
+	    
 	    case TASK_TRACKER:
+		
 		hadoopType = ATTR_TASK_TRACKER;
-		inputscript = param("HADOOP_HDFS_NAMENODE_SCRIPT");
+		hasInputScript = param(inputscript, "HADOOP_MAPR_TASKTRACKER_SCRIPT");
 		::SetAttribute(cluster, proc, ATTR_RANK, "Mips");
+		
+		if (bValidId)
+		{   
+		    ::GetAttributeString( id.cluster, id.proc,  "JobTrackerIPCAddress", IPCAddress);
+		    ::GetAttributeString( id.cluster, id.proc,  "JobTrackerHTTPAddress", HTTPAddress);
+		    
+		    //TODO: there could be extra checks here.
+		    ::SetAttribute(cluster, proc, "JobTracker", hInit.idref.id.c_str() );
+		}
+		else if (hInit.idref.ipcid.length())
+		{
+		    // TODO: there could be extra checks here, validate it's up. 
+		    IPCAddress = hInit.idref.ipcid.c_str();
+		    ::SetAttribute(cluster, proc, "JobTracker", hInit.idref.ipcid.c_str() );
+		}
+		else
+		{
+		    AbortTransaction();
+		    m_lasterror = "No valid Job Tracker ";
+		    return false;
+		}
+		    
+		// not always valid
+		if ( HTTPAddress.Length() )
+		{
+		    ::SetAttribute(cluster, proc, "JobTrackerHTTPAddress", quote_it(HTTPAddress.Value()).c_str() );
+		}
+		
+		args += " ";
+		args += IPCAddress.Value();
+		::SetAttribute(cluster, proc, "JobTrackerIPCAddress", quote_it(IPCAddress.Value()).c_str());
+		
 		break;
 	}
 
 	// verify that there is an input script, without it you won't get far.
-	if (!inputscript)
+	if (!hasInputScript)
 	{
 	    AbortTransaction();
 	    sprintf(m_lasterror, "Missing Script Input KNOB for type %s", hadoopType.c_str() );
 	    return false;
 	}
 
-	// TODO - Owner?
-	::SetAttribute(cluster, proc, ATTR_OWNER, "condor");
+	// TODO - Owner ?
+	::SetAttribute(cluster, proc, ATTR_OWNER, "\"condor\"");
 	
-	::SetAttribute(cluster, proc, ATTR_JOB_CMD, inputscript);
-	::SetAttribute(cluster, proc, "Args", hInit.tarball.c_str());
-	::SetAttribute(cluster, proc, ATTR_TRANSFER_INPUT_FILES, hInit.tarball.c_str());
-	::SetAttribute(cluster, proc, ATTR_HADOOP_TYPE, hadoopType.c_str() );
-	::SetAttribute(cluster, proc, ATTR_SHOULD_TRANSFER_FILES, "YES");
+	param(Iwd, "HADOOP_IWD", "/tmp");
+	::SetAttribute(cluster, proc, ATTR_JOB_IWD, quote_it(Iwd.c_str()).c_str() );
+	
+	::SetAttribute(cluster, proc, ATTR_JOB_CMD, quote_it(inputscript.c_str()).c_str());
+	::SetAttribute(cluster, proc, ATTR_JOB_ARGUMENTS1, quote_it(args.c_str()).c_str());
+	::SetAttribute(cluster, proc, ATTR_TRANSFER_INPUT_FILES, quote_it(hInit.tarball.c_str()).c_str());
+	::SetAttribute(cluster, proc, ATTR_HADOOP_TYPE, quote_it(hadoopType.c_str()).c_str() );
+	::SetAttribute(cluster, proc, ATTR_SHOULD_TRANSFER_FILES, quote_it("YES").c_str());
 	::SetAttribute(cluster, proc, ATTR_WANT_IO_PROXY, "true");
-	::SetAttribute(cluster, proc, ATTR_REQUIREMENTS, "( HasJava =?= TRUE ) && ( TARGET.OpSys == \"LINUX\" ) && ( TARGET.Disk >= RequestDisk ) && ( TARGET.Memory >= RequestMemory ) && ( TARGET.HasFileTransfer )");
+	::SetAttribute(cluster, proc, ATTR_REQUIREMENTS, "( HasJava =?= TRUE ) && ( TARGET.OpSys == \"LINUX\" ) && ( TARGET.Memory >= RequestMemory ) && ( TARGET.HasFileTransfer )");
 	
 	// TODO - Handle input & output files (kind of debugging only)
-	::SetAttribute(cluster, proc, ATTR_WHEN_TO_TRANSFER_OUTPUT, "ON_EXIT");
+	::SetAttribute(cluster, proc, ATTR_WHEN_TO_TRANSFER_OUTPUT, quote_it("ON_EXIT").c_str());
 	
-	::SetAttribute(cluster, proc, ATTR_KILL_SIG, "SIGTERM");
+	::SetAttribute(cluster, proc, ATTR_KILL_SIG, quote_it("SIGTERM").c_str());
 	
 	// EARLY SET: These attribute are set early so the incoming ad
 	// has a change to override them.
@@ -203,7 +300,6 @@ int HadoopObject::start( tHadoopInit & hInit )
 	::SetAttribute(cluster, proc, ATTR_IMAGE_SIZE, "0");            // int  
 	::SetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VANILLA );
 	::SetAttribute(cluster, proc, ATTR_CURRENT_HOSTS, "0"); // int
-
 
         // LATE SET: These attributes are set late, after the incoming
 	// ad, so they override whatever the incoming ad set.
@@ -252,14 +348,10 @@ bool HadoopObject::stop(const tHadoopRef & hRef)
     return true;
 }
 
-bool HadoopObject::status (const tHadoopRef & hRef, tHadoopJobStatus & hStatus)
+bool status (const PROC_ID & id , tHadoopJobStatus & hStatus, string & m_lasterror)
 {
-    PROC_ID id = getProcByString( hRef.id.c_str() );
-    
-    dprintf( D_FULLDEBUG, "Called HadoopObject::status()\n");
-    
     if (id.cluster <= 0 || id.proc < 0) {
-	dprintf(D_FULLDEBUG, "Remove: Failed to parse id: %s\n",  hRef.id.c_str());
+	dprintf(D_FULLDEBUG, "Remove: INVALID ID\n");
 	m_lasterror = "Invalid Id";
 	return false;
     }
@@ -272,7 +364,7 @@ bool HadoopObject::status (const tHadoopRef & hRef, tHadoopJobStatus & hStatus)
     int EnteredStatus=0;
     if ( 0 > ::GetAttributeInt( id.cluster, id.proc, ATTR_JOB_STATUS, &JobStatus) )
     {
-	dprintf(D_FULLDEBUG, "Remove: Failed to obtain JobStatus on: %s\n",  hRef.id.c_str());
+	dprintf(D_FULLDEBUG, "Remove: Failed to obtain JobStatus on: %d.%d\n", id.cluster, id.proc);
 	m_lasterror = "Could no obtain JobStatus";
 	return false;
     }
@@ -298,8 +390,37 @@ bool HadoopObject::status (const tHadoopRef & hRef, tHadoopJobStatus & hStatus)
 	    hStatus.state = "ERROR";
     }
     
+    return true;
+    
+}
+
+bool HadoopObject::query (const tHadoopRef & hRef, std::vector<tHadoopJobStatus> & vhStatus)
+{
+    PROC_ID id = getProcByString( hRef.id.c_str() );
+    
+    dprintf( D_FULLDEBUG, "Called HadoopObject::status()\n");
+    
+    vhStatus.clear();
+    
+    switch (hRef.type)
+    {
+	case NAME_NODE:
+	    // just list all the name nodes
+	    break;
+	case DATA_NODE:
+	    // list all name nodes bound query on hRef.idref.id;
+	    break;
+	case JOB_TRACKER:
+	    //just list all job trackers.
+	    break;
+	case TASK_TRACKER:
+	    // list all name nodes bound query on hRef.idref.id;
+	    
+	    break;
+    }
     
     return true;
+    
 }
 
 

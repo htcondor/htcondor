@@ -58,6 +58,7 @@ using namespace aviary::codec;
 using namespace aviary::hadoop;
 using namespace compat_classad;
 
+extern bool qmgmt_all_users_trusted;
 
 AviaryCommon::Status * setFailResponse()
 {
@@ -94,7 +95,9 @@ HadoopStartResponse* start (tHadoopInit & hInit, HadoopStart* pHS)
     hInit.idref.id = pHS->getRef()->getId();
     hInit.idref.ipcid = pHS->getRef()->getIpc();
     hInit.count = pHS->getCount();
-    
+
+    qmgmt_all_users_trusted = true;    
+
     if ( !ho->start( hInit ) )
     {
 	hresp->setStatus( setFailResponse() );
@@ -106,6 +109,7 @@ HadoopStartResponse* start (tHadoopInit & hInit, HadoopStart* pHS)
 	hresp->setRef(setHadoopID(hInit.idref));
 	hresp->setStatus( setOKResponse());
     }
+    qmgmt_all_users_trusted = false;
     
     return hresp;
 }
@@ -163,31 +167,39 @@ HadoopQueryResponse* query (tHadoopType qType, vector<HadoopID*>* refs)
     
     for (unsigned int iCtr=0; iCtr<refs->size(); iCtr++)
     {
-	HadoopQueryResult * hResult = new HadoopQueryResult;
-	tHadoopJobStatus hStatus;
+	std::vector<tHadoopJobStatus> hStatus;
 	tHadoopRef refId;
 	
 	refId.type = qType;
 	refId.id = (*refs)[iCtr]->getId();
 	refId.ipcid = (*refs)[iCtr]->getIpc(); 
 	
-	// so we create a new one to store the return results
-	hResult->setRef(setHadoopID(refId));
-	
-	if ( !ho->status( refId, hStatus ) )
+	if ( !ho->query( refId, hStatus ) )
 	{
+	    HadoopQueryResult * hResult = new HadoopQueryResult;
 	    bOK = false; 
-	    hResult->setStatus( setFailResponse() ) ;    
+	    hResult->setRef(setHadoopID(refId));
+	    hResult->setStatus( setFailResponse() ) ;  
+	    hresp->addResults(hResult);
 	}
 	else
 	{
-	    hResult->setOwner(hStatus.owner);
-	    hResult->setUptime(hStatus.uptime);
-	    hResult->setState(new HadoopStateType(hStatus.state));
-	    hResult->setStatus( setOKResponse() );
+	    // loop through the return results. for the query
+	    for (unsigned int jCtr=0; jCtr<hStatus.size(); jCtr++)
+	    {
+		HadoopQueryResult * hResult = new HadoopQueryResult;
+		
+		hResult->setRef(setHadoopID(hStatus[jCtr].idref));
+		hResult->setOwner(hStatus[jCtr].owner);
+		hResult->setUptime(hStatus[jCtr].uptime);
+		hResult->setState(new HadoopStateType(hStatus[jCtr].state));
+		hResult->setStatus( setOKResponse() );
+		
+		hresp->addResults(hResult);
+	    }
 	}
 	
-	hresp->addResults(hResult);
+	
     }
     
     // check complete status.
@@ -215,6 +227,8 @@ StartNameNodeResponse* AviaryHadoopServiceSkeleton::startNameNode(MessageContext
     hInit.tarball = _startNameNode->getStartNameNode()->getBin_file();
     hInit.count = 1;
     
+    qmgmt_all_users_trusted = true;
+    
     if ( !ho->start( hInit ) )
     {
 	hresp->setStatus( setFailResponse() );
@@ -225,6 +239,8 @@ StartNameNodeResponse* AviaryHadoopServiceSkeleton::startNameNode(MessageContext
 	hresp->setRef(setHadoopID(hInit.idref));
 	hresp->setStatus( setOKResponse());
     }
+    
+    qmgmt_all_users_trusted = false;
     
     response->setStartNameNodeResponse(hresp);
     return response;
