@@ -90,7 +90,7 @@ typedef struct hstatus
     string owner;
     int uptime;
     string state;
-    
+    tHadoopRef idref;
 }tHadoopJobStatus;
 
 const char * const ATTR_HADOOP_TYPE = "HadoopType";
@@ -123,7 +123,7 @@ public:
 	/**
 	 * status() - Will get the status results on a job
 	 */
-	bool status (const tHadoopRef & hRef, tHadoopJobStatus & hStatus);
+	bool query (const tHadoopRef & hRef, std::vector<tHadoopJobStatus> & vhStatus);
 	
 	/**
 	 * Used to obtain some user readable error message
@@ -139,6 +139,8 @@ private:
     HadoopObject();
     HadoopObject(HadoopObject const&);
     HadoopObject& operator=(HadoopObject const&);
+    
+    bool status (ClassAd* cAd , tHadoopJobStatus & hStatus);
     
     string m_pool;
     string m_name;
