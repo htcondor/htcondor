@@ -177,6 +177,8 @@ FileTransfer::FileTransfer()
 	m_sec_session_id = NULL;
 	I_support_filetransfer_plugins = false;
 	plugin_table = NULL;
+	MaxUploadBytes = -1;  // no limit by default
+	MaxDownloadBytes = -1;
 }
 
 FileTransfer::~FileTransfer()
@@ -1620,6 +1622,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 	int rc;
 	int reply = 0;
 	filesize_t bytes=0;
+	filesize_t peer_max_transfer_bytes=0;
 	MyString filename;;
 	MyString fullname;
 	char *tmp_buf = NULL;
@@ -1825,7 +1828,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				// peer to tell is that it is ready to send.
 			if( !peer_goes_ahead_always ) {
 
-				if( !ReceiveTransferGoAhead(s,fullname.Value(),true,peer_goes_ahead_always) ) {
+				if( !ReceiveTransferGoAhead(s,fullname.Value(),true,peer_goes_ahead_always,peer_max_transfer_bytes) ) {
 					dprintf(D_FULLDEBUG, "DoDownload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
@@ -1833,6 +1836,31 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 			s->decode();
 		}
+
+		filesize_t this_file_max_bytes = -1;
+		filesize_t max_bytes_slack = 65535;
+		if( MaxDownloadBytes < 0 ) {
+			this_file_max_bytes = -1; // no limit
+		}
+		else if( MaxDownloadBytes + max_bytes_slack >= *total_bytes ) {
+
+				// We have told the sender our limit, and a
+				// well-behaved sender will not send more than that.
+				// We give the sender a little slack, because there
+				// may be minor differences in how the sender and
+				// receiver account for the size of some things (like
+				// proxies and what-not).  It is best if the sender
+				// reaches the limit first, because that path has
+				// better error handling.  If instead the receiver
+				// hits its limit first, the connection is closed, and
+				// the sender will not understand why.
+
+			this_file_max_bytes = MaxDownloadBytes + max_bytes_slack - *total_bytes;
+		}
+		else {
+			this_file_max_bytes = 0;
+		}
+
 
 		// On WinNT and apparently, some Unix, too, even doing an
 		// fsync on the file does not get rid of the lazy-write
@@ -2015,9 +2043,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				}
 			}
 		} else if ( TransferFilePermissions ) {
-			rc = s->get_file_with_permissions( &bytes, fullname.Value() );
+			rc = s->get_file_with_permissions( &bytes, fullname.Value(), false, this_file_max_bytes );
 		} else {
-			rc = s->get_file( &bytes, fullname.Value() );
+			rc = s->get_file( &bytes, fullname.Value(), false, false, this_file_max_bytes );
 		}
 
 		elapsed = time(NULL)-start;
@@ -2061,6 +2089,16 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				// well defined in this case, so we can't report a specific
 				// error message.
 				try_again = true;
+				hold_code = CONDOR_HOLD_CODE_DownloadFileError;
+				hold_subcode = the_error;
+
+				if( rc == GET_FILE_MAX_BYTES_EXCEEDED ) {
+					try_again = false;
+					error_buf.formatstr_cat(": max total download bytes exceeded (max=%ld MB)",
+											(long int)(MaxDownloadBytes/1024/1024));
+					hold_code = CONDOR_HOLD_CODE_MaxTransferOutputSizeExceeded;
+					hold_subcode = 0;
+				}
 
 				dprintf(D_ALWAYS,"DoDownload: %s\n",error_buf.Value());
 
@@ -2532,6 +2570,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	int rc;
 	MyString fullname;
 	filesize_t bytes;
+	filesize_t peer_max_transfer_bytes = -1; // unlimited
 	bool is_the_executable;
 	bool upload_success = false;
 	bool do_download_ack = false;
@@ -2809,7 +2848,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			if( !peer_goes_ahead_always ) {
 					// Now wait for our peer to tell us it is ok for us to
 					// go ahead and send data.
-				if( !ReceiveTransferGoAhead(s,fullname.Value(),false,peer_goes_ahead_always) ) {
+				if( !ReceiveTransferGoAhead(s,fullname.Value(),false,peer_goes_ahead_always,peer_max_transfer_bytes) ) {
 					dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
@@ -2825,6 +2864,34 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			}
 
 			s->encode();
+		}
+
+		filesize_t this_file_max_bytes = -1;
+		filesize_t effective_max_upload_bytes = MaxUploadBytes;
+		bool using_peer_max_transfer_bytes = false;
+		if( peer_max_transfer_bytes >= 0 && (peer_max_transfer_bytes < effective_max_upload_bytes || effective_max_upload_bytes < 0) ) {
+				// For superior error handling, it is best for the
+				// uploading side to know about the downloading side's
+				// max transfer byte limit.  This prevents the
+				// uploading side from trying to send more than the
+				// maximum, which would cause the downloading side to
+				// close the connection, which would cause the
+				// uploading side to assume there was a communication
+				// error rather than an intentional stop.
+			effective_max_upload_bytes = peer_max_transfer_bytes;
+			using_peer_max_transfer_bytes = true;
+			dprintf(D_FULLDEBUG,"DoUpload: changing maximum upload MB from %ld to %ld at request of peer.\n",
+					(long int)(effective_max_upload_bytes >= 0 ? effective_max_upload_bytes/1024/1024 : effective_max_upload_bytes),
+					(long int)(peer_max_transfer_bytes/1024/1024));
+		}
+		if( effective_max_upload_bytes < 0 ) {
+			this_file_max_bytes = -1; // no limit
+		}
+		else if( effective_max_upload_bytes >= *total_bytes ) {
+			this_file_max_bytes = effective_max_upload_bytes - *total_bytes;
+		}
+		else {
+			this_file_max_bytes = 0;
 		}
 
 		if ( file_command == 999) {
@@ -2942,15 +3009,19 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				errno = EISDIR;
 			}
 		} else if ( TransferFilePermissions ) {
-			rc = s->put_file_with_permissions( &bytes, fullname.Value() );
+			rc = s->put_file_with_permissions( &bytes, fullname.Value(), this_file_max_bytes );
 		} else {
-			rc = s->put_file( &bytes, fullname.Value() );
+			rc = s->put_file( &bytes, fullname.Value(), 0, this_file_max_bytes );
 		}
 		if( rc < 0 ) {
 			int the_error = errno;
 			upload_success = false;
 			error_desc.formatstr("error sending %s",fullname.Value());
-			if((rc == PUT_FILE_OPEN_FAILED) || (rc == PUT_FILE_PLUGIN_FAILED)) {
+			if((rc == PUT_FILE_OPEN_FAILED) || (rc == PUT_FILE_PLUGIN_FAILED) || (rc == PUT_FILE_MAX_BYTES_EXCEEDED)) {
+				try_again = false; // put job on hold
+				hold_code = CONDOR_HOLD_CODE_UploadFileError;
+				hold_subcode = the_error;
+
 				if (rc == PUT_FILE_OPEN_FAILED) {
 					// In this case, put_file() has transmitted a zero-byte
 					// file in place of the failed one. This means there is an
@@ -2965,13 +3036,19 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 					if( fail_because_symlink_not_supported ) {
 						error_desc.formatstr_cat("; Transfer of symlinks to directories is not supported.");
 					}
+				} else if ( rc == PUT_FILE_MAX_BYTES_EXCEEDED ) {
+					StatInfo this_file_stat(fullname.Value());
+					filesize_t this_file_size = this_file_stat.GetFileSize();
+					error_desc.formatstr_cat(": max total %s bytes exceeded (max=%ld MB, this file=%ld MB)",
+											 using_peer_max_transfer_bytes ? "download" : "upload",
+											 (long int)(effective_max_upload_bytes/1024/1024),
+											 (long int)(this_file_size/1024/1024));
+					hold_code = using_peer_max_transfer_bytes ? CONDOR_HOLD_CODE_MaxTransferOutputSizeExceeded : CONDOR_HOLD_CODE_MaxTransferInputSizeExceeded;
+					the_error = 0;
 				} else {
 					// add on the error string from the errstack used
 					error_desc.formatstr_cat(": %s", errstack.getFullText().c_str());
 				}
-				try_again = false; // put job on hold
-				hold_code = CONDOR_HOLD_CODE_UploadFileError;
-				hold_subcode = the_error;
 
 				// We'll continue trying to transfer the rest of the files
 				// in question, but we'll record the information we need from
@@ -3191,6 +3268,9 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 
 		s->encode();
 		msg.Assign(ATTR_RESULT,go_ahead); // go ahead
+		if( downloading ) {
+			msg.Assign(ATTR_MAX_TRANSFER_BYTES,MaxDownloadBytes);
+		}
 		if( go_ahead < 0 ) {
 				// tell our peer what exactly went wrong
 			msg.Assign(ATTR_TRY_AGAIN,try_again);
@@ -3224,7 +3304,8 @@ FileTransfer::ReceiveTransferGoAhead(
 	Stream *s,
 	char const *fname,
 	bool downloading,
-	bool &go_ahead_always)
+	bool &go_ahead_always,
+	filesize_t &peer_max_transfer_bytes)
 {
 	bool try_again = true;
 	int hold_code = 0;
@@ -3249,7 +3330,7 @@ FileTransfer::ReceiveTransferGoAhead(
 	}
 	old_timeout = s->timeout(alive_interval + slop_time);
 
-	result = DoReceiveTransferGoAhead(s,fname,downloading,go_ahead_always,try_again,hold_code,hold_subcode,error_desc,alive_interval);
+	result = DoReceiveTransferGoAhead(s,fname,downloading,go_ahead_always,peer_max_transfer_bytes,try_again,hold_code,hold_subcode,error_desc,alive_interval);
 
 	s->timeout( old_timeout );
 
@@ -3269,6 +3350,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 	char const *fname,
 	bool downloading,
 	bool &go_ahead_always,
+	filesize_t &peer_max_transfer_bytes,
 	bool &try_again,
 	int &hold_code,
 	int &hold_subcode,
@@ -3307,6 +3389,11 @@ FileTransfer::DoReceiveTransferGoAhead(
 			hold_code = CONDOR_HOLD_CODE_InvalidTransferGoAhead;
 			hold_subcode = 1;
 			return false;
+		}
+
+		filesize_t mtb = peer_max_transfer_bytes;
+		if( msg.LookupInteger(ATTR_MAX_TRANSFER_BYTES,mtb) ) {
+			peer_max_transfer_bytes = mtb;
 		}
 
 		if( go_ahead == GO_AHEAD_UNDEFINED ) {
@@ -4316,3 +4403,14 @@ FileTransfer::GetJobAd() {
 	return &jobAd;
 }
 
+void
+FileTransfer::setMaxUploadBytes(filesize_t _MaxUploadBytes)
+{
+	MaxUploadBytes = _MaxUploadBytes;
+}
+
+void
+FileTransfer::setMaxDownloadBytes(filesize_t _MaxDownloadBytes)
+{
+	MaxDownloadBytes = _MaxDownloadBytes;
+}
