@@ -86,8 +86,10 @@ and in the ClassAd Language Reference Manual found on this web page.
 
 Some of the features of New ClassAds that are \emph{not} in Old ClassAds are
 lists, nested ads, time values, and matching groups of ads.
-HTCondor will avoid using these features until the 7.7.x development series,
+HTCondor has avoided using these features,
 as using them makes it difficult to interact with older versions of HTCondor.
+But users can start using them if they don't need to interact with
+versions of HTCondor older than 7.5.1.
 
 The syntax varies slightly between Old and New ClassAds.
 Here is an example ClassAd presented in both forms.
@@ -150,7 +152,7 @@ In order to mimic Old ClassAd semantics in this HTCondor version 7.5.1 release,
 all ClassAds have an explicit \Attr{CurrentTime} attribute,
 with a value of \Procedure{time}.
 
-In this HTCondor version 7.5.1 release, 
+In current versions of HTCondor, 
 New ClassAds will mimic the evaluation behavior of Old ClassAds.
 No configuration variables or submit description file contents should
 need to be changed.
