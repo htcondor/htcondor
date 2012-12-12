@@ -238,7 +238,7 @@ ClassAdLogParser::readLogEntry(int &op_type)
 #ifdef _NO_CONDOR_
 			syslog(LOG_ERR, "Failed fdopen() when recovering corrupt log file");
 #else
-			dprintf(D_ALWAYS, "Failed fdopen() when recovering corrupt log file");
+			dprintf(D_ALWAYS, "Failed fdopen() when recovering corrupt log file\n");
 #endif
 			return FILE_FATAL_ERROR;
 		}
@@ -255,7 +255,7 @@ ClassAdLogParser::readLogEntry(int &op_type)
 #ifdef _NO_CONDOR_
 				syslog(LOG_ERR, "Bad record with op=%d in corrupt logfile", op_type);
 #else
-				dprintf(D_ALWAYS, "Bad record with op=%d in corrupt logfile", op_type);
+				dprintf(D_ALWAYS, "Bad record with op=%d in corrupt logfile\n", op_type);
 #endif
 				return FILE_FATAL_ERROR;
 			}
@@ -270,7 +270,7 @@ ClassAdLogParser::readLogEntry(int &op_type)
 				   errno);
 #else
 			dprintf(D_ALWAYS,
-					"Failed recovering from corrupt file, errno=%d",
+					"Failed recovering from corrupt file, errno=%d\n",
 					errno);
 #endif
 			return FILE_FATAL_ERROR;
