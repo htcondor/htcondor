@@ -119,9 +119,10 @@ HadoopStopResponse* stop ( const vector<HadoopID *> * refs )
 {
     HadoopObject * ho = HadoopObject::getInstance();
     HadoopStopResponse* hresp = new HadoopStopResponse;
-    bool bOK = true;
+    bool bOK = false;
+    unsigned int iSize=(refs)?refs->size():0;
     
-    for (unsigned int iCtr=0; iCtr<refs->size(); iCtr++)
+    for (unsigned int iCtr=0; iCtr<iSize; iCtr++)
     {
 	tHadoopRef refId;
 	HadoopStopResult * hResult = new HadoopStopResult;
@@ -134,11 +135,11 @@ HadoopStopResponse* stop ( const vector<HadoopID *> * refs )
 	
 	if ( !ho->stop( refId ) )
 	{
-	    bOK = false; 
 	    hResult->setStatus( setFailResponse() ) ;    
 	}
 	else
 	{
+	    bOK = true;
 	    hResult->setStatus(setOKResponse());
 	}
 	
@@ -164,15 +165,20 @@ HadoopQueryResponse* query (tHadoopType qType, vector<HadoopID*>* refs)
     HadoopObject * ho = HadoopObject::getInstance();
     HadoopQueryResponse* hresp = new HadoopQueryResponse;
     bool bOK = true;
-    
-    for (unsigned int iCtr=0; iCtr<refs->size(); iCtr++)
+    unsigned int iSize=(refs)?refs->size():0;
+    unsigned int iCtr=0;
+
+    do
     {
 	std::vector<tHadoopJobStatus> hStatus;
 	tHadoopRef refId;
 	
 	refId.type = qType;
-	refId.id = (*refs)[iCtr]->getId();
-	refId.ipcid = (*refs)[iCtr]->getIpc(); 
+	if (refs)
+	{	
+		refId.id = (*refs)[iCtr]->getId();
+		refId.ipcid = (*refs)[iCtr]->getIpc(); 
+	}
 	
 	if ( !ho->query( refId, hStatus ) )
 	{
@@ -199,8 +205,9 @@ HadoopQueryResponse* query (tHadoopType qType, vector<HadoopID*>* refs)
 	    }
 	}
 	
-	
-    }
+	iCtr++;
+		
+    } while (iCtr<iSize);
     
     // check complete status.
     if (bOK)
@@ -212,6 +219,8 @@ HadoopQueryResponse* query (tHadoopType qType, vector<HadoopID*>* refs)
 	string szErr = "One or more query operations failed, check results";
 	hresp->setStatus(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("FAIL"),szErr));
     }
+
+    return hresp;
 }
 
 StartNameNodeResponse* AviaryHadoopServiceSkeleton::startNameNode(MessageContext* /*outCtx*/ , StartNameNode* _startNameNode)

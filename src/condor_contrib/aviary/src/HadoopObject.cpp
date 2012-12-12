@@ -404,17 +404,17 @@ bool HadoopObject::status (ClassAd* cAd , tHadoopJobStatus & hStatus)
 	    hStatus.state = "ERROR";
     }
     
-    
+    dprintf( D_FULLDEBUG, "Called HadoopObject::status() STATUS:%s, ID:%d.%d OWNER=%s\n", hStatus.state.c_str(), cluster, proc, hStatus.owner.c_str());   
+ 
     return true;
     
 }
 
 bool HadoopObject::query (const tHadoopRef & hRef, std::vector<tHadoopJobStatus> & vhStatus)
 {   
-    dprintf( D_FULLDEBUG, "Called HadoopObject::status()\n");
+    dprintf( D_FULLDEBUG, "Called HadoopObject::query()\n");
     
     vhStatus.clear();
-    ClassAdList cAdlist;
     ClassAd* cAd;
     string constraint;
     
@@ -455,35 +455,32 @@ bool HadoopObject::query (const tHadoopRef & hRef, std::vector<tHadoopJobStatus>
     }
     
     // get all adds that match the above constraint.
-    ::GetAllJobsByConstraint( constraint.c_str(), "",cAdlist);
-    
-    if ( cAdlist.Length()>0 )
-    {
-	cAdlist.Rewind();
-	
-	// loop through the adds and fill in the status information
-	// to pass back.
-	while ( 0 != (cAd=cAdlist.Next())  )
-	{
-	    tHadoopJobStatus hStatus;
-	    if ( status ( cAd, hStatus ) )
-	    {
-		// last error should be set.
-		vhStatus.push_back(hStatus);
-	    }
-	    else
-	    {
-		return false;
-	    }
-	}
-	
-	return true;
-    }
-    else
+    if ( 0 == ( cAd = ::GetJobByConstraint(constraint.c_str()) ) )
     {
 	m_lasterror = "Empty query";
-	return false;
+	dprintf( D_FULLDEBUG, "HadoopObject::status() - FAILED Constraint query\n");
+        return false;
+    } 
+    
+    // loop through the ads
+    while ( cAd )
+    {
+	tHadoopJobStatus hStatus;
+	if ( status ( cAd, hStatus ) )
+	{
+	   // last error should be set.
+	   vhStatus.push_back(hStatus);
+	}
+	else
+	{
+           dprintf( D_FULLDEBUG, "HadoopObject::status() - FAILED status parse\n");
+	   return false;
+	}
+	
+        cAd = ::GetNextJobByConstraint( constraint.c_str(), 0 );
     }
+    
+    return true;
     
 }
 
