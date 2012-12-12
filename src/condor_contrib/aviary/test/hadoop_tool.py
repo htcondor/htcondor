@@ -110,7 +110,7 @@ class HadoopCtrlCmd(cmd.Cmd):
                         return
         except Exception, e:
             print e
-        print result.code,":", result.text
+        print result.status.code,":", result.status.text
 
     def do_stop(self,line):
         "Stop a Hadoop Node/Tracker"
@@ -124,7 +124,7 @@ class HadoopCtrlCmd(cmd.Cmd):
                 result = func(refs)
         except Exception, e:
             print e
-        print result.code,":", result.text
+        print result.status.code,":", result.status.text
 
     def do_list(self,line):
         "List Hadoop Node/Tracker"
@@ -139,14 +139,20 @@ class HadoopCtrlCmd(cmd.Cmd):
         except Exception, e:
             print e
         self.print_query(result)
-        
+
+    def print_header(self):
+        print "ID".ljust(7),"SUBMITTED".ljust(27),"STATE".ljust(10),"UPTIME".ljust(10),"OWNER".ljust(16),"IPC"
+        return True
+
     def print_query(self, response):
         # TODO: give this a nice header
         if response:
+            self.print_header()
             for r in response.results:
-                print r
+                print str(r.ref.id).ljust(7),str(r.submitted).ljust(27),str(r.state).ljust(10), \
+                    str(r.uptime).ljust(10), str(r.owner).ljust(16), str(r.ref.ipc)
 
-class AviaryHadoopInterpreterTool(cmd.Cmd):
+class AviaryHadoopTool(cmd.Cmd):
     
     prompt = 'aviary> '
     host = DEFAULTS['host']
@@ -220,6 +226,6 @@ class AviaryHadoopInterpreterTool(cmd.Cmd):
 
 if __name__ == '__main__':
     if len(argv) > 1:
-        AviaryHadoopInterpreterTool().onecmd(' '.join(argv[1:]))
+        AviaryHadoopTool().onecmd(' '.join(argv[1:]))
     else:
-        AviaryHadoopInterpreterTool().cmdloop()
+        AviaryHadoopTool().cmdloop()
