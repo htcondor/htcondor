@@ -168,11 +168,12 @@ static  bool directDBquery = false;
 	failover semantics */
 static unsigned int direct = DIRECT_ALL;
 
-static 	int verbose = 0, summarize = 1, global = 0, show_io = 0, dag = 0, show_held = 0;
+static 	int dash_long = 0, summarize = 1, global = 0, show_io = 0, dag = 0, show_held = 0;
 static  int use_xml = 0;
 static  bool widescreen = false;
 static  bool unbuffered = false;
 static  bool expert = false;
+static  bool verbose = false; // note: this is !!NOT the same as -long !!!
 
 static 	int malformed, running, idle, held, suspended, completed, removed;
 
@@ -291,7 +292,9 @@ static  const char		*JOB_TIME = "RUN_TIME";
 static	bool		querySchedds 	= false;
 static	bool		querySubmittors = false;
 static	char		constraint[4096];
-static  const char *user_constraint; // just the constraint given by the user
+static  const char *user_job_constraint = NULL; // just the constraint given by the user
+static  const char *user_slot_constraint = NULL; // just the machine constraint given by the user
+static  bool        single_machine = false;
 static	DCCollector* pool = NULL; 
 static	char		*scheddAddr;	// used by format_remote_host()
 static	AttrListPrintMask 	mask;
@@ -303,9 +306,12 @@ static CollectorList * Collectors = NULL;
 static  int			findSubmittor( const char * );
 static	void 		setupAnalysis();
 static 	int			fetchSubmittorPriosFromNegotiator(ExtArray<PrioEntry> & prios);
-static	void		doRunAnalysis( ClassAd*, Daemon* );
-static	const char *doRunAnalysisToBuffer( ClassAd*, Daemon* );
+static	void		doJobRunAnalysis( ClassAd*, Daemon* );
+static	const char *doJobRunAnalysisToBuffer( ClassAd*, Daemon* );
+static	void		doSlotRunAnalysis( ClassAd*, ClassAdList & jobs, Daemon*, int console_width);
+static	const char *doSlotRunAnalysisToBuffer( ClassAd*, ClassAdList & jobs, Daemon*, int console_width);
 static	bool		better_analyze = false;
+static	bool		reverse_analyze = false;
 static	int			analyze_detail_level = 0;
 static	bool		run = false;
 static	bool		goodput = false;
@@ -576,7 +582,7 @@ int main (int argc, char **argv)
            	// to the schedd time's out and the user gets nothing
            	// useful printed out. Therefore, we use show_queue,
            	// which fetches all of the ads, then analyzes them. 
-			if ( (unbuffered || verbose || better_analyze || jobads_file || userlog_file) && !g_stream_results ) {
+			if ( (unbuffered || dash_long || better_analyze || jobads_file || userlog_file) && !g_stream_results ) {
 				sqfp = show_queue;
 			} else {
 				sqfp = show_queue_buffered;
@@ -870,7 +876,7 @@ int main (int argc, char **argv)
         // to the schedd time's out and the user gets nothing
         // useful printed out. Therefore, we use show_queue,
         // which fetches all of the ads, then analyzes them. 
-		if ( (unbuffered || verbose || better_analyze) && !g_stream_results ) {
+		if ( (unbuffered || dash_long || better_analyze) && !g_stream_results ) {
 			sqfp = show_queue;
 		} else {
 			sqfp = show_queue_buffered;
@@ -1077,31 +1083,31 @@ processCommandLineArguments (int argc, char *argv[])
 		// the '-' for prefix matches
 		arg = argv[i]+1;
 
-		if (match_prefix (arg, "wide")) {
+		if (is_arg_prefix (arg, "wide", 1)) {
 			widescreen = true;
 			continue;
 		}
-		//if (match_prefix (arg, "unbuf")) {
+		//if (is_arg_prefix (arg, "unbuf", 5)) {
 		//	unbuffered = true;
 		//	continue;
 		//}
-		if (match_prefix (arg, "long")) {
-			verbose = 1;
+		if (is_arg_prefix (arg, "long", 1)) {
+			dash_long = 1;
 			summarize = 0;
 		} 
 		else
-		if (match_prefix (arg, "xml")) {
+		if (is_arg_prefix (arg, "xml", 3)) {
 			use_xml = 1;
-			verbose = 1;
+			dash_long = 1;
 			summarize = 0;
 			customFormat = true;
 		}
 		else
-		if (match_prefix (arg, "pool")) {
+		if (is_arg_prefix (arg, "pool", 1)) {
 			if( pool ) {
 				delete pool;
 			}
-            if( ++i >= argc ) {
+			if( ++i >= argc ) {
 				fprintf( stderr,
 						 "Error: Argument -pool requires a hostname as an argument.\n" );
 				if (!expert) {
@@ -1133,10 +1139,10 @@ processCommandLineArguments (int argc, char *argv[])
 			Collectors->append ( new DCCollector( *pool ) );
 		} 
 		else
-		if (match_prefix (arg, "D")) {
+		if (is_arg_prefix (arg, "D", 1)) {
 			if( ++i >= argc ) {
 				fprintf( stderr, 
-						 "Error: Argument -D requires a list of flags as an argument.\n" );
+						 "Error: Argument -%s requires a list of flags as an argument.\n", arg );
 				if (!expert) {
 					printf("\n");
 					print_wrapped_text("Extra Info: You need to specify debug flags "
@@ -1149,7 +1155,7 @@ processCommandLineArguments (int argc, char *argv[])
 			set_debug_flags( argv[i], 0 );
 		} 
 		else
-		if (match_prefix (arg, "name")) {
+		if (is_arg_prefix (arg, "name", 1)) {
 
 			if (querySubmittors) {
 				// cannot query both schedd's and submittors
@@ -1200,7 +1206,7 @@ processCommandLineArguments (int argc, char *argv[])
 			querySchedds = true;
 		} 
 		else
-		if (match_prefix (arg, "direct")) {
+		if (is_arg_prefix (arg, "direct", 1)) {
 			/* check for one more argument */
 			if (argc <= i+1) {
 				fprintf( stderr, 
@@ -1212,7 +1218,7 @@ processCommandLineArguments (int argc, char *argv[])
 			i++;
 		}
 		else
-		if (match_prefix (arg, "submitter")) {
+		if (is_arg_prefix (arg, "submitter", 1)) {
 
 			if (querySchedds) {
 				// cannot query both schedd's and submittors
@@ -1289,23 +1295,32 @@ processCommandLineArguments (int argc, char *argv[])
 			querySubmittors = true;
 		}
 		else
-		if (match_prefix (arg, "constraint")) {
+		if (is_arg_prefix (arg, "constraint", 1)) {
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
 				fprintf( stderr, "Error: Argument -constraint requires "
 							"another parameter\n");
 				exit(1);
 			}
+			user_job_constraint = argv[++i];
+			summarize = 0;
 
-			if (Q.addAND (argv[++i]) != Q_OK) {
-				fprintf (stderr, "Error: Argument %d (%s)\n", i, argv[i]);
+			if (Q.addAND (user_job_constraint) != Q_OK) {
+				fprintf (stderr, "Error: Argument %d (%s)\n", i, user_job_constraint);
 				exit (1);
 			}
-			user_constraint = argv[i];
-			summarize = 0;
 		} 
 		else
-		if (match_prefix (arg, "address")) {
+		if (is_arg_prefix(arg, "machineconstraint", 8) || is_arg_prefix(arg, "mconstraint", 2)) {
+			// make sure we have at least one more argument
+			if (argc <= i+1) {
+				fprintf( stderr, "Error: Argument -%s requires another parameter\n", arg);
+				exit(1);
+			}
+			user_slot_constraint = argv[++i];
+		}
+		else
+		if (is_arg_prefix(arg, "address", 1)) {
 
 			if (querySubmittors) {
 				// cannot query both schedd's and submittors
@@ -1331,7 +1346,7 @@ processCommandLineArguments (int argc, char *argv[])
 			querySchedds = true;
 		} 
 		else
-		if( match_prefix( arg, "attributes" ) ) {
+		if (is_arg_prefix(arg, "attributes", 2)) {
 			if( argc <= i+1 ) {
 				fprintf( stderr, "Error: Argument -attributes requires "
 						 "a list of attributes to show\n" );
@@ -1350,7 +1365,7 @@ processCommandLineArguments (int argc, char *argv[])
 			i++;
 		}
 		else
-		if( match_prefix( arg, "format" ) ) {
+		if (is_arg_prefix(arg, "format", 1)) {
 				// make sure we have at least two more arguments
 			if( argc <= i+2 ) {
 				fprintf( stderr, "Error: Argument -format requires "
@@ -1370,8 +1385,8 @@ processCommandLineArguments (int argc, char *argv[])
 			i+=2;
 		}
 		else
-		if( is_arg_colon_prefix(arg, "autoformat", &pcolon, 5) || 
-			is_arg_colon_prefix(arg, "af", &pcolon, 2) ) {
+		if (is_arg_colon_prefix(arg, "autoformat", &pcolon, 5) || 
+			is_arg_colon_prefix(arg, "af", &pcolon, 2)) {
 				// make sure we have at least one more argument
 			if ( (i+1 >= argc)  || *(argv[i+1]) == '-') {
 				fprintf( stderr, "Error: Argument -autoformat requires "
@@ -1437,28 +1452,53 @@ processCommandLineArguments (int argc, char *argv[])
 			mask.SetAutoSep(NULL, pcolpre, pcolsux, "\n");
 			customFormat = true;
 			usingPrintMask = true;
+			// if autoformat list ends in a '-' without any characters after it, just eat the arg and keep going.
+			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
+				++i;
+			}
 		}
 		else
-		if (match_prefix (arg, "global")) {
+		if (is_arg_prefix (arg, "global", 1)) {
 			global = 1;
 		} 
 		else
-		if (match_prefix (arg, "help")) {
+		if (is_dash_arg_prefix (argv[i], "help", 1)) {
 			usage(argv[0]);
 			exit(0);
 		}
-        else
-        if (is_arg_colon_prefix(arg, "better-analyze", &pcolon, 2)
+		else
+		if (is_arg_colon_prefix(arg, "better-analyze", &pcolon, 2)
 			|| is_arg_colon_prefix(arg, "better-analyse", &pcolon, 2)
 			|| is_arg_colon_prefix(arg, "analyze", &pcolon, 2)
 			|| is_arg_colon_prefix(arg, "analyse", &pcolon, 2)
 			) {
-            better_analyze = true;
-			if (pcolon) { analyze_detail_level = atoi(++pcolon); }
+			better_analyze = true;
+			if (pcolon) { 
+				const char * pc;
+				if (is_arg_colon_prefix(pcolon+1, "reverse", &pc, 1)) {
+					reverse_analyze = true;
+					pcolon = pc;
+				}
+				PRAGMA_REMIND("TJ: analyze_detail_level should be enum rather than integer")
+				analyze_detail_level |= atoi(++pcolon); 
+			}
 			attrs.clearAll();
-        }
+		}
 		else
-		if (match_prefix( arg, "run")) {
+		if (is_arg_colon_prefix(arg, "reverse", &pcolon, 3)) {
+			reverse_analyze = true;
+			if (pcolon) { 
+				analyze_detail_level |= atoi(++pcolon); 
+			}
+		}
+		else
+		if (is_arg_prefix(arg, "verbose", 4)) {
+			// chatty output, mostly for for -analyze
+			// this is not the same as -long. 
+			verbose = true;
+		}
+		else
+		if (is_arg_prefix(arg, "run", 1)) {
 			std::string expr;
 			formatstr( expr, "%s == %d || %s == %d || %s == %d", ATTR_JOB_STATUS, RUNNING,
 					 ATTR_JOB_STATUS, TRANSFERRING_OUTPUT, ATTR_JOB_STATUS, SUSPENDED );
@@ -1469,7 +1509,7 @@ processCommandLineArguments (int argc, char *argv[])
 			attrs.append( ATTR_EC2_REMOTE_VM_NAME ); // for displaying HOST(s) in EC2
 		}
 		else
-		if (match_prefix( arg, "hold") || match_prefix( arg, "held")) {
+		if (is_arg_prefix(arg, "hold", 2) || is_arg_prefix( arg, "held", 2)) {
 			Q.add (CQ_STATUS, HELD);		
 			show_held = true;
 			widescreen = true;
@@ -1477,7 +1517,7 @@ processCommandLineArguments (int argc, char *argv[])
 			attrs.append( ATTR_HOLD_REASON );
 		}
 		else
-		if (match_prefix( arg, "goodput")) {
+		if (is_arg_prefix(arg, "goodput", 2)) {
 			// goodput and show_io require the same column
 			// real-estate, so they're mutually exclusive
 			goodput = true;
@@ -1488,17 +1528,17 @@ processCommandLineArguments (int argc, char *argv[])
 			attrs.append( ATTR_JOB_REMOTE_WALL_CLOCK );
 		}
 		else
-		if (match_prefix( arg, "cputime")) {
+		if (is_arg_prefix(arg, "cputime", 2)) {
 			cputime = true;
 			JOB_TIME = "CPU_TIME";
 		 	attrs.append( ATTR_JOB_REMOTE_USER_CPU );
 		}
 		else
-		if (match_prefix( arg, "currentrun")) {
+		if (is_arg_prefix(arg, "currentrun", 2)) {
 			current_run = true;
 		}
 		else
-		if (match_prefix( arg, "grid" ) ) {
+		if (is_arg_prefix(arg, "grid", 2 )) {
 			// grid is a superset of globus, so we can't do grid if globus has been specifed
 			if ( ! globus) {
 				dash_grid = true;
@@ -1510,7 +1550,7 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 		}
 		else
-		if( match_prefix( arg, "globus" ) ) {
+		if (is_arg_prefix(arg, "globus", 5 )) {
 			Q.addAND( "GlobusStatus =!= UNDEFINED" );
 			globus = true;
 			if (dash_grid) {
@@ -1523,12 +1563,15 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 		}
 		else
-		if( match_prefix( arg, "debug" ) ) {
+		if (is_arg_colon_prefix(arg, "debug", &pcolon, 3)) {
 			// dprintf to console
 			dprintf_set_tool_debug("TOOL", 0);
+			if (pcolon && pcolon[1]) {
+				set_debug_flags( ++pcolon, 0 );
+			}
 		}
 		else
-		if (match_prefix(arg,"io")) {
+		if (is_arg_prefix(arg, "io", 1)) {
 			// goodput and show_io require the same column
 			// real-estate, so they're mutually exclusive
 			show_io = true;
@@ -1540,7 +1583,7 @@ processCommandLineArguments (int argc, char *argv[])
 			attrs.append(ATTR_BUFFER_SIZE);
 			attrs.append(ATTR_BUFFER_BLOCK_SIZE);
 		}
-		else if( match_prefix( arg, "dag" ) ) {
+		else if (is_arg_prefix(arg, "dag", 2)) {
 			dag = true;
 			attrs.clearAll();
 			if( g_stream_results  ) {
@@ -1549,11 +1592,11 @@ processCommandLineArguments (int argc, char *argv[])
 				exit( 1 );
 			}
 		}
-		else if (match_prefix(arg, "expert")) {
+		else if (is_arg_prefix(arg, "expert", 1)) {
 			expert = true;
 			attrs.clearAll();
 		}
-		else if (match_prefix(arg, "jobads")) {
+		else if (is_arg_prefix(arg, "jobads", 1)) {
 			if (argc <= i+1) {
 				fprintf( stderr, "Error: Argument -jobads requires a filename\n");
 				exit(1);
@@ -1562,7 +1605,7 @@ processCommandLineArguments (int argc, char *argv[])
 				jobads_file = strdup(argv[i]);
 			}
 		}
-		else if (match_prefix(arg, "userlog")) {
+		else if (is_arg_prefix(arg, "userlog", 1)) {
 			if (argc <= i+1) {
 				fprintf( stderr, "Error: Argument -userlog requires a filename\n");
 				exit(1);
@@ -1571,7 +1614,7 @@ processCommandLineArguments (int argc, char *argv[])
 				userlog_file = strdup(argv[i]);
 			}
 		}
-		else if (match_prefix(arg, "machineads")) {
+		else if (is_arg_prefix(arg, "machineads", 1)) {
 			if (argc <= i+1) {
 				fprintf( stderr, "Error: Argument -machineads requires a filename\n");
 				exit(1);
@@ -1596,12 +1639,12 @@ processCommandLineArguments (int argc, char *argv[])
 			directDBquery =  true;
 		}
 #endif /* HAVE_EXT_POSTGRESQL */
-        else if (match_prefix(arg, "version")) {
+        else if (is_arg_prefix(arg, "version", 1)) {
 			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 			exit(0);
         }
 		else
-		if (match_prefix (arg, "stream")) {
+		if (is_arg_prefix (arg, "stream", 2)) {
 			g_stream_results = true;
 			if( dag ) {
 				fprintf( stderr, "-stream-results and -dag are incompatible\n" );
@@ -1617,7 +1660,7 @@ processCommandLineArguments (int argc, char *argv[])
 	}
 
 		//Added so -long or -xml can be listed before other options
-	if(verbose && !custom_attributes) {
+	if(dash_long && !custom_attributes) {
 		attrs.clearAll();
 	}
 }
@@ -2368,6 +2411,7 @@ usage (const char *myName)
 		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
 		"\t\t-autoformat:[V,ntlh] <attr> [attr2 [attr3 ...]]\t\t    Print attr(s) with automatic formatting\n"
 		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
+		"\t\t-reverse\t\tPerform schedulability analysis on machines\n"
 		"\t\t-run\t\t\tGet information about running jobs\n"
 		"\t\t-hold\t\t\tGet information about jobs on hold\n"
 		"\t\t-globus\t\t\tGet information about Condor-G jobs of type globus\n"
@@ -2377,10 +2421,12 @@ usage (const char *myName)
 		"\t\t-io\t\t\tShow information regarding I/O\n"
 		"\t\t-dag\t\t\tSort DAG jobs under their DAGMan\n"
 		"\t\t-expert\t\t\tDisplay shorter error messages\n"
-		"\t\t-constraint <expr>\tAdd constraint on classads\n"
+		"\t\t-constraint <expr>\tAdd constraint on job classads\n"
 		"\t\t-jobads <file>\t\tFile of job ads to display\n"
 		"\t\t-userlog <file>\t\tFile of user log to display\n"
 		"\t\t-machineads <file>\tFile of machine ads for analysis\n"
+		"\t\t-machineconstraint <expr>\tAnalyze machines matching the constraint\n"
+		"\t\t-userprios <file>\tFile of user priorities for analysis\n"
 #ifdef HAVE_EXT_POSTGRESQL
 		"\t\t-direct <rdbms | schedd>\n"
 		"\t\t\tPerform a direct query to the rdbms\n"
@@ -2400,7 +2446,7 @@ usage (const char *myName)
 
 void full_header(bool useDB,char const *quill_name,char const *db_ipAddr, char const *db_name,char const *lastUpdate, char const *scheddName, char const *scheddAddress,char const *scheddMachine)
 {
-	if (! customFormat && !verbose ) {
+	if (! customFormat && !dash_long ) {
 		if (useDB) {
 			printf ("\n\n-- Quill: %s : %s : %s : %s\n", quill_name, 
 					db_ipAddr, db_name, lastUpdate);
@@ -2851,7 +2897,7 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 			switch(fetchResult) {
 				case Q_PARSE_ERROR:
 				case Q_INVALID_CATEGORY:
-					fprintf(stderr, "\n-- Parse error in constraint expression \"%s\"\n", user_constraint);
+					fprintf(stderr, "\n-- Parse error in constraint expression \"%s\"\n", user_job_constraint);
 					break;
 				default:
 					fprintf(stderr,
@@ -3053,14 +3099,14 @@ process_buffer_line( ClassAd *job )
 		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
 		job->sPrintAsXML(s,attr_white_list);
 		tempCPS->string = strnewp( s.c_str() );
-	} else if( verbose ) {
+	} else if( dash_long ) {
 		MyString s;
 		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
 		job->sPrint(s,attr_white_list);
 		s += "\n";
 		tempCPS->string = strnewp( s.Value() );
 	} else if( better_analyze ) {
-		tempCPS->string = strnewp( doRunAnalysisToBuffer( job, g_cur_schedd_for_process_buffer_line ) );
+		tempCPS->string = strnewp( doJobRunAnalysisToBuffer( job, g_cur_schedd_for_process_buffer_line ) );
 	} else if ( show_io ) {
 		tempCPS->string = strnewp( buffer_io_display( job ) );
 	} else if ( usingPrintMask ) {
@@ -3099,7 +3145,6 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 	const char *query_password = 0;
 
 	ClassAdList jobs; 
-	ClassAd		*job;
 #if 0
 	static bool	setup_mask = false;
 #endif
@@ -3125,6 +3170,10 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 		constr_string = ExprTreeToString(tree);
 		constr = constr_string.c_str();
 		delete tree;
+	}
+
+	if (better_analyze && verbose) {
+		fprintf(stderr, "Fetching job ads for analysis...");
 	}
 
 	bool analyze_no_schedd = false;
@@ -3205,7 +3254,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 			switch(fetchResult) {
 				case Q_PARSE_ERROR:
 				case Q_INVALID_CATEGORY:
-					fprintf(stderr, "\n-- Parse error in constraint expression \"%s\"\n", user_constraint);
+					fprintf(stderr, "\n-- Parse error in constraint expression \"%s\"\n", user_job_constraint);
 					break;
 				default:
 					fprintf(stderr,
@@ -3219,11 +3268,15 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 
 		// sort jobs by (cluster.proc) if don't query database
 	if (!useDB) {
+		if (better_analyze && verbose) { fprintf(stderr, "Sorting..."); }
 		jobs.Sort( (SortFunctionType)JobSort );
 	}
 
 		// check if job is being analyzed
 	if( better_analyze ) {
+
+		if (verbose) { fprintf(stderr, "Done.\nFound %d job ads.\n", jobs.Length()); }
+
 			// print header
 		if (useDB) {
 			printf ("\n\n-- Quill: %s : %s : %s\n", quill_name, 
@@ -3239,11 +3292,25 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 		if ( ! analyze_no_schedd)
 			schedd_daemon.locate();
 
-		jobs.Open();
-		while( ( job = jobs.Next() ) ) {
-			doRunAnalysis( job, analyze_no_schedd ? NULL : &schedd_daemon );
+		if (reverse_analyze) {
+			int console_width = widescreen ? getConsoleWindowSize() : 80;
+			startdAds.Open();
+			if (analyze_detail_level <= 0) {
+				printf("%-24.24s %12.12s %12.12s %9.9s\n", "Slot", "Job", "Slot", "");
+				printf("%-24.24s %12.12s %12.12s %9.9s\n", "Name", "Requirements", "Requirements", "Total");
+				printf("%-24.24s %12.12s %12.12s %9.9s\n", "------------------------", "---------", "---------", "---------");
+			}
+			while (ClassAd *slot = startdAds.Next()) {
+				doSlotRunAnalysis(slot, jobs, analyze_no_schedd ? NULL : &schedd_daemon, console_width);
+			}
+			startdAds.Close();
+		} else {
+			jobs.Open();
+			while (ClassAd *job = jobs.Next()) {
+				doJobRunAnalysis(job, analyze_no_schedd ? NULL : &schedd_daemon);
+			}
+			jobs.Close();
 		}
-		jobs.Close();
 
 		if(lastUpdate) {
 			free(lastUpdate);
@@ -3269,7 +3336,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 			// initialize counters
 		malformed = idle = running = held = completed = suspended = 0;
 		
-		if( verbose || use_xml ) {
+		if( dash_long || use_xml ) {
 			StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
 			jobs.fPrintAttrListList( stdout, use_xml ? true : false, attr_white_list);
 		} else if( customFormat ) {
@@ -3395,14 +3462,14 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 		} else if( show_io ) {
 			short_header();
 			jobs.Open();
-			while( (job=jobs.Next()) ) {
+			while(ClassAd *job = jobs.Next()) {
 				io_display( job );
 			}
 			jobs.Close();
 		} else {
 			short_header();
 			jobs.Open();
-			while( (job=jobs.Next()) ) {
+			while(ClassAd *job = jobs.Next()) {
 				displayJobShort( job );
 			}
 			jobs.Close();
@@ -3425,6 +3492,17 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 	return true;
 }
 
+static bool is_slot_name(const char * psz)
+{
+	// if string contains only legal characters for a slotname, then assume it's a slotname.
+	// legal characters are a-zA-Z@_\.\-
+	while (*psz) {
+		if (*psz != '-' && *psz != '.' && *psz != '@' && *psz != '_' && ! isalnum(*psz))
+			return false;
+		++psz;
+	}
+	return true;
+}
 
 static void
 setupAnalysis()
@@ -3448,6 +3526,17 @@ setupAnalysis()
             exit ( 1 );
         }
     } else {
+		if (user_slot_constraint) {
+			if (is_slot_name(user_slot_constraint)) {
+				std::string str;
+				formatstr(str, "(%s==\"%s\") || (%s==\"%s\")",
+					      ATTR_NAME, user_slot_constraint, ATTR_MACHINE, user_slot_constraint);
+				query.addORConstraint (str.c_str());
+				single_machine = true;
+			} else {
+				query.addANDConstraint (user_slot_constraint);
+			}
+		}
         rval = Collectors->query (query, startdAds);
         if( rval != Q_OK ) {
             fprintf( stderr , "Error:  Could not fetch startd ads\n" );
@@ -4150,7 +4239,15 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 {
 	bool show_work = (detail_mask & 0x100) != 0;
 
-	classad::ExprTree* exprReq = request->LookupExpr(ATTR_REQUIREMENTS);
+	bool request_is_machine = false;
+	const char * attrConstraint = ATTR_REQUIREMENTS;
+	if (0 == strcmp(request->GetMyTypeName(),STARTD_ADTYPE)) {
+		attrConstraint = ATTR_START;
+		//attrConstraint = ATTR_REQUIREMENTS;
+		request_is_machine = true;
+	}
+
+	classad::ExprTree* exprReq = request->LookupExpr(attrConstraint);
 	if ( ! exprReq)
 		return;
 
@@ -4249,13 +4346,18 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 	// build counts of matching machines, render final output
 	//
 	if (show_work) {
-		printf("Evaluation against machine ads:\n");
-		printf(" Step  Slots   Condition\n");
+		if (request_is_machine) {
+			printf("Evaluation against job ads:\n");
+			printf(" Step  Jobs    Condition\n");
+		} else {
+			printf("Evaluation against machine ads:\n");
+			printf(" Step  Slots   Condition\n");
+		}
 	}
 
-	return_buf = "        Slots"
-	             "\nStep   Matched  Condition"
-	             "\n-----  -------  ---------\n";
+	return_buf = request_is_machine ? "        Jobs" : "        Slots";
+	return_buf += "\nStep   Matched  Condition"
+	              "\n-----  -------  ---------\n";
 	std::string linebuf;
 	for (int ix = 0; ix < (int)subs.size(); ++ix) {
 		if (subs[ix].ix_effective >= 0 || subs[ix].dont_care)
@@ -4528,67 +4630,99 @@ static void EvalRequirementsExpr(ClassAd *request, ClassAdList & offers, std::st
 #endif // experimental code above
 
 
-static void AddReferencedAttribsToBuffer(ClassAd * request, ClassAd * target, const char * pindent, std::string & return_buf)
+static void AddReferencedAttribsToBuffer(
+	ClassAd * request,
+	StringList & trefs, // out, returns target refs
+	const char * pindent,
+	std::string & return_buf)
 {
 	StringList refs;
-	StringList trefs;
+	trefs.clearAll();
 
 	request->GetExprReferences(ATTR_REQUIREMENTS,refs,trefs);
-	if ( ! refs.isEmpty() || ! trefs.isEmpty()) {
-		refs.rewind();
-		trefs.rewind();
+	if (refs.isEmpty() && trefs.isEmpty())
+		return;
 
-		if ( ! pindent) pindent = "";
+	refs.rewind();
+
+	if ( ! pindent) pindent = "";
+
+	AttrListPrintMask pm;
+	pm.SetAutoSep(NULL, "", "\n", "\n");
+	while(const char *attr = refs.next()) {
 		std::string label;
-
-		AttrListPrintMask pm;
-		pm.SetAutoSep(NULL, "", "\n", "\n");
-		while(const char *attr = refs.next()) {
-			formatstr(label, "%s%s = %%V", pindent, attr);
-			if (0 == strcmp(attr, ATTR_REQUIREMENTS))
-				continue;
-			pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, attr);
-		}
-		if ( ! pm.IsEmpty()) {
-			char * temp = pm.display(request);
-			if (temp) {
-				return_buf += temp;
-				delete[] temp;
-			}
-		}
-
-		if (target) {
-			pm.clearFormats();
-			pm.SetAutoSep(NULL, "", "\n", "\n");
-			while(const char *attr = trefs.next()) {
-				formatstr(label, "%sTARGET.%s = %%V", pindent, attr);
-				pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, attr);
-			}
-
-			char * temp = pm.display(request, target);
-			if (temp) {
-				return_buf += "\n";
-				return_buf += pindent;
-				std::string name;
-				if ( ! target->LookupString(ATTR_NAME, name))
-					name = "Target";
-				return_buf += name;
-				return_buf += " has the following attributes:\n\n";
-				return_buf += temp;
-				delete[] temp;
-			}
+		formatstr(label, "%s%s = %%V", pindent, attr);
+		if (0 == strcmp(attr, ATTR_REQUIREMENTS))
+			continue;
+		pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, attr);
+	}
+	if ( ! pm.IsEmpty()) {
+		char * temp = pm.display(request);
+		if (temp) {
+			return_buf += temp;
+			delete[] temp;
 		}
 	}
 }
 
-static void
-doRunAnalysis( ClassAd *request, Daemon *schedd )
+static void AddTargetReferencedAttribsToBuffer(
+	StringList & trefs, // out, returns target refs
+	ClassAd * request,
+	ClassAd * target,
+	const char * pindent,
+	std::string & return_buf)
 {
-	printf("%s", doRunAnalysisToBuffer( request, schedd ) );
+	trefs.rewind();
+
+	AttrListPrintMask pm;
+	pm.SetAutoSep(NULL, "", "\n", "\n");
+	while(const char *attr = trefs.next()) {
+		std::string label;
+		formatstr(label, "%sTARGET.%s = %%V", pindent, attr);
+		if (target->LookupExpr(attr)) {
+			pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, attr);
+		}
+	}
+	if (pm.IsEmpty())
+		return;
+
+	char * temp = pm.display(request, target);
+	if (temp) {
+		//return_buf += "\n";
+		//return_buf += pindent;
+		std::string name;
+		if ( ! target->LookupString(ATTR_NAME, name))
+			name = "Target";
+		return_buf += name;
+		return_buf += " has the following attributes:\n\n";
+		return_buf += temp;
+		delete[] temp;
+	}
+}
+
+static void
+doJobRunAnalysis( ClassAd *request, Daemon *schedd )
+{
+	printf("%s", doJobRunAnalysisToBuffer( request, schedd ) );
+}
+
+static void append_to_fail_list(std::string & list, const char * entry, size_t limit)
+{
+	if ( ! limit || list.size() < limit) {
+		if (list.size() > 1) { list += ", "; }
+		list += entry;
+	} else if (list.size() > limit) {
+		if (limit > 50) {
+			list.erase(limit-4);
+			list += "...";
+		} else {
+			list.erase(limit);
+		}
+	}
 }
 
 static const char *
-doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
+doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 {
 	char	owner[128];
 	string	remoteUser;
@@ -4705,10 +4839,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 			if( verbose ) sprintf( return_buff,
 				"%sFailed request constraint\n", return_buff );
 			fReqConstraint++;
-			if (fReqConstraint != 1) {
-				fReqConstraintStr += ", ";
-			} 
-			fReqConstraintStr += buffer;
+			append_to_fail_list(fReqConstraintStr, buffer, 1000);
 			continue;
 		} 
 
@@ -4716,20 +4847,14 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		if ( !IsAHalfMatch( offer, request ) ) {
 			if( verbose ) strcat( return_buff, "Failed offer constraint\n");
 			fOffConstraint++;
-			if (fOffConstraint != 1) {
-				fOffConstraintStr += ", ";
-			}
-			fOffConstraintStr += buffer;
+			append_to_fail_list(fOffConstraintStr, buffer, 1000);
 			continue;
 		}	
 
 		int offline = 0;
 		if( offer->EvalBool( ATTR_OFFLINE, NULL, offline ) && offline ) {
 			fOffline++;
-			if (fOffline != 1) {
-				fOfflineStr += ", ";
-			}
-			fOfflineStr += buffer;
+			append_to_fail_list(fOfflineStr, buffer, 1000);
 			continue;
 		}
 
@@ -4745,11 +4870,8 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 			} else {
 				// no remote user, but std rank condition failed
 			  if (last_rej_match_time != 0) {
-  				fRankCond++;
-				if (fRankCond != 1) {
-					fRankCondStr += ", ";
-				}
-				fRankCondStr += buffer;
+				fRankCond++;
+				append_to_fail_list(fRankCondStr, buffer, 1000);
 				if( verbose ) {
 					sprintf( return_buff,
 						"%sFailed rank condition: MY.Rank > MY.CurrentRank\n",
@@ -4760,7 +4882,8 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 			    sprintf( return_buff,
 				     "---\n%03d.%03d:  Request has not yet been considered by the matchmaker.\n\n", cluster,
 				     proc );
-			    return return_buff;
+				if ( ! forceReqAnalyze)
+					return return_buff;
 			  }
 			}
 		}
@@ -4787,10 +4910,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 						eval_result.IsBooleanValue(val) && !val ) 
 					{
 						fPreemptReqTest++;
-						if (fPreemptReqTest != 1) {
-							fPreemptReqTestStr += ", ";
-						}
-						fPreemptReqTestStr += buffer;
+						append_to_fail_list(fPreemptReqTestStr, buffer, 1000);
 						if( verbose ) {
 							sprintf( return_buff,
 									"%sCan preempt %s, but failed "
@@ -4820,17 +4940,15 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 				    sprintf( return_buff,
 					     "---\n%03d.%03d:  Request has not yet been considered by the matchmaker.\n\n", cluster,
 					     proc );
-				    return return_buff;
+					if ( ! forceReqAnalyze)
+						return return_buff;
 				  }
 				}
 			} 
 		} else {
 			// failed 4
 			fPreemptPrioCond++;
-			if (fPreemptPrioCond != 1) {
-				fPreemptPrioStr += ", ";
-			}
-			fPreemptPrioStr += buffer;
+			append_to_fail_list(fPreemptPrioStr, buffer, 1000);
 			if( verbose ) {
 				sprintf( return_buff,
 					"%sInsufficient priority to preempt %s\n" , 
@@ -4855,7 +4973,7 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		 "  %5d match but are serving users with a better priority in the pool%s %s\n"
 		 "  %5d match but reject the job for unknown reasons %s\n"
 		 "  %5d match but will not currently preempt their existing job %s\n"
-         "  %5d match but are currently offline %s\n"
+		 "  %5d match but are currently offline %s\n"
 		 "  %5d are available to run your job\n",
 		return_buff, cluster, proc, totalMachines,
 		fReqConstraint, verbose ? fReqConstraintStr.c_str() : "",
@@ -4942,11 +5060,20 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		if (analyze_detail_level > 0) {
 			std::string attrib_values = "";
 			attrib_values = "Your job defines the following attributes:\n\n";
-			ClassAd * ptarget = NULL;
-			if (startdAds.Length() == 1) { startdAds.Open(); ptarget = startdAds.Next(); }
-			AddReferencedAttribsToBuffer(request, ptarget, "    ", attrib_values);
-			if (startdAds.Length() == 1) { startdAds.Close(); }
+			StringList trefs;
+			AddReferencedAttribsToBuffer(request, trefs, "    ", attrib_values);
 			strcat(return_buff, attrib_values.c_str());
+			attrib_values = "";
+
+			if (single_machine || startdAds.Length() == 1) { 
+				startdAds.Open(); 
+				while (ClassAd * ptarget = startdAds.Next()) {
+					attrib_values = "\n";
+					AddTargetReferencedAttribsToBuffer(trefs, request, ptarget, "    ", attrib_values);
+					strcat(return_buff, attrib_values.c_str());
+				}
+				startdAds.Close();
+			}
 			strcat(return_buff, "\nThe Requirements expression for your job has these conditions:\n\n");
 		}
 
@@ -5041,6 +5168,98 @@ doRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	return return_buff;
 }
 
+static void
+doSlotRunAnalysis(ClassAd *slot, ClassAdList & jobs, Daemon *schedd, int console_width)
+{
+	printf("%s", doSlotRunAnalysisToBuffer(slot, jobs, schedd, console_width));
+}
+
+static const char *
+doSlotRunAnalysisToBuffer(ClassAd *slot, ClassAdList & jobs, Daemon * /*schedd*/, int console_width)
+{
+	return_buff[0] = 0;
+
+#if !defined(WANT_OLD_CLASSADS)
+	slot->AddTargetRefs(TargetJobAttrs);
+#endif
+
+	std::string slotname = "";
+	slot->LookupString(ATTR_NAME , slotname);
+
+	int offline = 0;
+	if (slot->EvalBool(ATTR_OFFLINE, NULL, offline) && offline) {
+		sprintf(return_buff, "%-24.24s  is offline\n", slotname.c_str());
+		return return_buff;
+	}
+
+	jobs.Open();
+
+	int totalJobs = 0;
+	int cReqConstraint = 0;
+	int cOffConstraint = 0;
+
+	while(ClassAd *job = jobs.Next()) {
+		// 0.  info from job
+		++totalJobs;
+
+		#if !defined(WANT_OLD_CLASSADS)
+		job->AddTargetRefs(TargetMachineAttrs);
+		#endif
+
+		// 1. Request satisfied? 
+		if (IsAHalfMatch(job, slot)) {
+			cReqConstraint++;
+			continue;
+		}
+
+		// 2. Offer satisfied? 
+		if (IsAHalfMatch(slot, job)) {
+			cOffConstraint++;
+			continue;
+		}
+	}
+
+	if (analyze_detail_level > 0) {
+		classad::ExprTree* tree = slot->LookupExpr(ATTR_START);
+		if (tree) {
+			static std::string prev_pretty_req;
+			std::string pretty_req = "";
+			PrettyPrintExprTree(tree, pretty_req, 4, console_width-1);
+
+			if (prev_pretty_req.empty() || prev_pretty_req != pretty_req) {
+				strcat(return_buff, "\nThe START expression for ");
+				strcat(return_buff, slotname.c_str());
+				strcat(return_buff, " is \n\n    ");
+				strcat(return_buff, pretty_req.c_str());
+				strcat(return_buff, "\n\n");
+				prev_pretty_req = pretty_req;
+			} else {
+				formatstr(pretty_req, "\nRequirements for %d out of %d jobs matches %s\nthe effective START expression matches:\n", cReqConstraint, totalJobs, slotname.c_str());
+				strcat(return_buff, pretty_req.c_str());
+			}
+			pretty_req = "";
+		}
+
+		std::string subexpr_detail;
+		AnalyzeRequirementsForEachTarget(slot, jobs, subexpr_detail, analyze_detail_level);
+		strcat(return_buff, subexpr_detail.c_str());
+
+		formatstr(subexpr_detail, "%-5.5s %8d\n", "[ALL]", cOffConstraint);
+		strcat(return_buff, subexpr_detail.c_str());
+
+	} else {
+		sprintf(return_buff, "%-24.24s %12d %12d %9d\n", slotname.c_str(), cReqConstraint, cOffConstraint, totalJobs);
+	}
+
+	if (better_analyze) {
+		std::string ana_buffer = "";
+		strcat(return_buff, ana_buffer.c_str());
+	}
+
+	jobs.Close();
+
+	return return_buff;
+}
 
 static int
 findSubmittor( const char *name ) 

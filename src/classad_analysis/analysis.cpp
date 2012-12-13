@@ -395,12 +395,12 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 
 		// Check if Requirements expression flattened to a literal value
 	if( !flatReqExpr ) {
-		pretty_req += "Job ClassAd "; 
-		pretty_req += ATTR_REQUIREMENTS; 
-		pretty_req += " expression evaluates to ";
+		buffer += "Job ClassAd "; 
+		buffer += ATTR_REQUIREMENTS; 
+		buffer += " expression evaluates to ";
 		pp.Unparse( buffer, val );
-		pretty_req += "\n";
-		pretty_req += "\n";
+		buffer += "\n";
+		buffer += "\n";
 		return true;
 	}
 
