@@ -93,6 +93,13 @@ HadoopStartResponse* start (tHadoopInit & hInit, HadoopStart* pHS)
     
     hInit.tarball = pHS->getBin_file();
     hInit.idref.id = pHS->getRef()->getId();
+    
+    // if ClusterId comes in without ProcId set it to zero
+    if ( hInit.idref.id.length() && !strstr( hInit.idref.id.c_str(), ".") )
+    {
+       hInit.idref.id +=".0";
+    }
+
     hInit.idref.ipcid = pHS->getRef()->getIpc();
     hInit.count = pHS->getCount();
 
@@ -100,14 +107,14 @@ HadoopStartResponse* start (tHadoopInit & hInit, HadoopStart* pHS)
 
     if ( !ho->start( hInit ) )
     {
-	hresp->setStatus( setFailResponse() );
+    hresp->setStatus( setFailResponse() );
     }
     else
     {
- 	hInit.idref.id = hInit.newcluster;
-	
-	hresp->setRef(setHadoopID(hInit.idref));
-	hresp->setStatus( setOKResponse());
+    hInit.idref.id = hInit.newcluster;
+    
+    hresp->setRef(setHadoopID(hInit.idref));
+    hresp->setStatus( setOKResponse());
     }
     qmgmt_all_users_trusted = false;
     
@@ -124,37 +131,37 @@ HadoopStopResponse* stop ( const vector<HadoopID *> * refs )
     
     for (unsigned int iCtr=0; iCtr<iSize; iCtr++)
     {
-	tHadoopRef refId;
-	HadoopStopResult * hResult = new HadoopStopResult;
-	
-	refId.id = (*refs)[iCtr]->getId();
-	refId.ipcid = (*refs)[iCtr]->getIpc(); 
-	
-	// so we create a new one to store the return results
-	hResult->setRef(setHadoopID(refId));
-	
-	if ( !ho->stop( refId ) )
-	{
-	    hResult->setStatus( setFailResponse() ) ;    
-	}
-	else
-	{
-	    bOK = true;
-	    hResult->setStatus(setOKResponse());
-	}
-	
-	hresp->addResults(hResult);
+    tHadoopRef refId;
+    HadoopStopResult * hResult = new HadoopStopResult;
+    
+    refId.id = (*refs)[iCtr]->getId();
+    refId.ipcid = (*refs)[iCtr]->getIpc(); 
+    
+    // so we create a new one to store the return results
+    hResult->setRef(setHadoopID(refId));
+    
+    if ( !ho->stop( refId ) )
+    {
+        hResult->setStatus( setFailResponse() ) ;    
+    }
+    else
+    {
+        bOK = true;
+        hResult->setStatus(setOKResponse());
+    }
+    
+    hresp->addResults(hResult);
     }
     
     // check complete status.
     if (bOK)
     {
-	hresp->setStatus(setOKResponse());
+        hresp->setStatus(setOKResponse());
     }
     else
     {
-	string szErr = "One or more stop operations failed, check results";
-	hresp->setStatus(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("FAIL"),szErr));
+        string szErr = "One or more stop operations failed, check results";
+        hresp->setStatus(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("FAIL"),szErr));
     }
     
     return hresp;
@@ -170,54 +177,55 @@ HadoopQueryResponse* query (tHadoopType qType, vector<HadoopID*>* refs)
 
     do
     {
-	std::vector<tHadoopJobStatus> hStatus;
-	tHadoopRef refId;
-	
-	refId.type = qType;
-	if (refs)
-	{	
-		refId.id = (*refs)[iCtr]->getId();
-		refId.ipcid = (*refs)[iCtr]->getIpc(); 
-	}
-	
-	if ( !ho->query( refId, hStatus ) )
-	{
-	    HadoopQueryResult * hResult = new HadoopQueryResult;
-	    bOK = false; 
-	    hResult->setRef(setHadoopID(refId));
-	    hResult->setStatus( setFailResponse() ) ;  
-	    hresp->addResults(hResult);
-	}
-	else
-	{
-	    // loop through the return results. for the query
-	    for (unsigned int jCtr=0; jCtr<hStatus.size(); jCtr++)
-	    {
-		HadoopQueryResult * hResult = new HadoopQueryResult;
-		
-		hResult->setRef(setHadoopID(hStatus[jCtr].idref));
-		hResult->setOwner(hStatus[jCtr].owner);
-		hResult->setUptime(hStatus[jCtr].uptime);
-		hResult->setState(new HadoopStateType(hStatus[jCtr].state));
-		hResult->setStatus( setOKResponse() );
-		
-		hresp->addResults(hResult);
-	    }
-	}
-	
-	iCtr++;
-		
+    std::vector<tHadoopJobStatus> hStatus;
+    tHadoopRef refId;
+    
+    refId.type = qType;
+    if (refs)
+    {   
+        refId.id = (*refs)[iCtr]->getId();
+        refId.ipcid = (*refs)[iCtr]->getIpc(); 
+    }
+    
+    if ( !ho->query( refId, hStatus ) )
+    {
+        HadoopQueryResult * hResult = new HadoopQueryResult;
+        bOK = false; 
+        hResult->setRef(setHadoopID(refId));
+        hResult->setStatus( setFailResponse() ) ;  
+        hresp->addResults(hResult);
+    }
+    else
+    {
+        // loop through the return results. for the query
+        for (unsigned int jCtr=0; jCtr<hStatus.size(); jCtr++)
+        {
+            HadoopQueryResult * hResult = new HadoopQueryResult;
+        
+            hResult->setRef(setHadoopID(hStatus[jCtr].idref));
+            hResult->setOwner(hStatus[jCtr].owner);
+            hResult->setSubmitted(hStatus[jCtr].qdate);
+            hResult->setUptime(hStatus[jCtr].uptime);
+            hResult->setState(new HadoopStateType(hStatus[jCtr].state));
+            hResult->setStatus( setOKResponse() );
+        
+            hresp->addResults(hResult);
+        }
+    }
+    
+    iCtr++;
+        
     } while (iCtr<iSize);
     
     // check complete status.
     if (bOK)
     {
-	hresp->setStatus(setOKResponse());
+        hresp->setStatus(setOKResponse());
     }
     else
     {
-	string szErr = "One or more query operations failed, check results";
-	hresp->setStatus(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("FAIL"),szErr));
+        string szErr = "One or more query operations failed, check results";
+        hresp->setStatus(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("FAIL"),szErr));
     }
 
     return hresp;
@@ -240,13 +248,13 @@ StartNameNodeResponse* AviaryHadoopServiceSkeleton::startNameNode(MessageContext
     
     if ( !ho->start( hInit ) )
     {
-	hresp->setStatus( setFailResponse() );
+        hresp->setStatus( setFailResponse() );
     }
     else
     {
-	hInit.idref.id = hInit.newcluster;
-	hresp->setRef(setHadoopID(hInit.idref));
-	hresp->setStatus( setOKResponse());
+        hInit.idref.id = hInit.newcluster;
+        hresp->setRef(setHadoopID(hInit.idref));
+        hresp->setStatus( setOKResponse());
     }
     
     qmgmt_all_users_trusted = false;

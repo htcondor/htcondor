@@ -71,9 +71,9 @@ typedef enum htype
 ///< Input 
 typedef struct href
 {
-    string id;		///< ClusterId
-    string ipcid;	///< ipc url
-    tHadoopType type;    	 ///< input type
+    string id;      ///< ClusterId
+    string ipcid;   ///< ipc url
+    tHadoopType type;        ///< input type
 }tHadoopRef;
 
 ///< Initialization structure for starting a hadoop job
@@ -82,7 +82,7 @@ typedef struct hinit
     string tarball;      ///< input tarball
     unsigned int count;  ///< input count
     tHadoopRef idref;    ///< input(ipcid)
-    string newcluster;	 ///< output new clusterid
+    string newcluster;   ///< output new clusterid
 }tHadoopInit;
 
 typedef struct hstatus
@@ -91,6 +91,7 @@ typedef struct hstatus
     int uptime;
     string state;
     tHadoopRef idref;
+    int qdate;
 }tHadoopJobStatus;
 
 const char * const ATTR_HADOOP_TYPE = "HadoopType";
@@ -104,43 +105,43 @@ class HadoopObject {
 public:
 
 
-	void update(const ClassAd &ad);
-	static HadoopObject* getInstance();
+    void update(const ClassAd &ad);
+    static HadoopObject* getInstance();
 
-	const char* getPool() {return m_pool.c_str(); }
-	const char* getName() {return m_name.c_str(); }
+    const char* getPool() {return m_pool.c_str(); }
+    const char* getName() {return m_name.c_str(); }
 
-	/**
-	 * start() - Will attempt to start the appropriate hadoop job
-	 */
-	int start( tHadoopInit & hInit );
+    /**
+     * start() - Will attempt to start the appropriate hadoop job
+     */
+    int start( tHadoopInit & hInit );
 
-	/**
-	 * stop() - Will stop a running instance.
-	 */
-	bool stop( const tHadoopRef & hRef );
-	
-	/**
-	 * status() - Will get the status results on a job
-	 */
-	bool query (const tHadoopRef & hRef, std::vector<tHadoopJobStatus> & vhStatus);
-	
-	/**
-	 * Used to obtain some user readable error message
-	 */
-	void getLastError(string & szError) 
-	{ szError = m_lasterror;
-	  m_lasterror.clear();
-	}
-	
-	~HadoopObject();
+    /**
+     * stop() - Will stop a running instance.
+     */
+    bool stop( const tHadoopRef & hRef );
+    
+    /**
+     * status() - Will get the status results on a job
+     */
+    bool query (const tHadoopRef & hRef, std::vector<tHadoopJobStatus> & vhStatus);
+    
+    /**
+     * Used to obtain some user readable error message
+     */
+    void getLastError(string & szError) 
+    { szError = m_lasterror;
+      m_lasterror.clear();
+    }
+    
+    ~HadoopObject();
 
 private:
     HadoopObject();
     HadoopObject(HadoopObject const&);
     HadoopObject& operator=(HadoopObject const&);
     
-    bool status (ClassAd* cAd , tHadoopJobStatus & hStatus);
+    bool status (ClassAd* cAd, const tHadoopType & type, tHadoopJobStatus & hStatus);
     
     string m_pool;
     string m_name;
@@ -149,8 +150,8 @@ private:
     HadoopStats m_stats;
     static HadoopObject* m_instance;
 
-	//protected:
-	//void key();
+    //protected:
+    //void key();
 };
 
 
