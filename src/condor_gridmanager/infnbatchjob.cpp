@@ -857,7 +857,7 @@ void INFNBatchJob::doEvaluateState()
 					// then it might be shared by multiple jobs, so we
 					// need to leave it alone.
 					if ( jobAd->Lookup( ATTR_X509_USER_PROXY ) && remoteJobId ) {
-						set_user_priv();
+						TemporaryPrivSentry sentry(PRIV_USER);
 
 						const char *job_id = NULL;
 						const char *token = NULL;
@@ -891,7 +891,6 @@ void INFNBatchJob::doEvaluateState()
 							unlink( proxy.c_str() );
 						}
 
-						set_condor_priv();
 					}
 				}
 #endif
