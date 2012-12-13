@@ -759,18 +759,10 @@ void INFNBatchJob::doEvaluateState()
 			gmState = GM_DONE_COMMIT;
 			} break;
 		case GM_DONE_COMMIT: {
-			// Tell the remote schedd it can remove the job from the queue.
+			// Tell the remote scheduler it can remove the job from the queue.
 
-			// Nothing to do for this job type
-			if ( condorState == COMPLETED || condorState == REMOVED ) {
-				// noop
-			} else {
-				// Clear the contact string here because it may not get
-				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
-				SetRemoteIds( NULL, NULL );
-				requestScheddUpdate( this, false );
-				myResource->CancelSubmit( this );
-			}
+			// Nothing to tell the blahp
+			// TODO Combine this state with GM_DELETE_SANDBOX
 			gmState = GM_DELETE_SANDBOX;
 			} break;
 		case GM_CANCEL: {
