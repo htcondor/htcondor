@@ -22,6 +22,7 @@ from suds.client import Client
 from sys import exit, argv
 from optparse import OptionParser
 from aviary.util import *
+from time import *
 import cmd
 import logging
 
@@ -153,7 +154,7 @@ class HadoopCtrlCmd(cmd.Cmd):
         text = ""
         try:
             text = ": "+status.text
-        except AttributeError as ae:
+        except Exception,e:
             pass
         print status.code,text
 
@@ -165,8 +166,8 @@ class HadoopCtrlCmd(cmd.Cmd):
         if response:
             self.print_header()
             for r in response.results:
-                print str(r.ref.id).ljust(7),str(r.submitted).ljust(27),str(r.state).ljust(10), \
-                    str(r.uptime).ljust(10), str(r.owner).ljust(16), str(r.ref.ipc)
+                print str(r.ref.id).ljust(7),str(ctime(r.submitted)).ljust(27),str(r.state).ljust(10), \
+                    str(strftime('%H:%M:%S',gmtime(r.uptime))).ljust(10), str(r.owner).ljust(16), str(r.ref.ipc)
 
 class AviaryHadoopTool(cmd.Cmd):
     
