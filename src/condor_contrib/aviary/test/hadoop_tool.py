@@ -58,12 +58,21 @@ class HadoopCtrlCmd(cmd.Cmd):
     aviary = None
     nodetype = None
     bin_file = None
+    owner = None
 
-    def __init__(self,wsdl,url,bin_file,nodetype):
+    def __init__(self,wsdl,url,bin_file,nodetype,owner):
         self.nodetype = nodetype
         if bin_file!='':
             self.bin_file = bin_file
         self.aviary = AviaryClient(wsdl,url)
+        self.owner = owner
+
+    def isFloatish(self,val):
+        try:
+            float(val)
+            return True
+        except:
+            return False
 
     def create_ref(self,val):
         new_ref = None
@@ -71,9 +80,9 @@ class HadoopCtrlCmd(cmd.Cmd):
         if "://" in val:
             new_ref = ref_client.factory.create("ns1:HadoopID")
             new_ref.ipc = val
-        elif val.isdigit():
+        elif self.isFloatish(val):
             new_ref = ref_client.factory.create("ns1:HadoopID")
-            new_ref.id = int(val)
+            new_ref.id = val
         else:
             print "invalid HadoopID specified:",val," Continuing..."
         return new_ref
@@ -100,17 +109,17 @@ class HadoopCtrlCmd(cmd.Cmd):
         try:
             if callable(func):
                 if is_nn:
-                    result = func(self.bin_file)
+                    result = func(self.bin_file,self.owner)
                 else:
                     ref = self.create_reflist(line)
                     if ref:
-                        result = func(ref[0],self.bin_file,count)
+                        result = func(ref[0],self.bin_file,self.owner,count)
                     else:
-                        print "you must supply a HadoopID (int or ipc uri)"
+                        print "you must supply a HadoopID (cluster.proc or ipc uri)"
                         return
         except Exception, e:
             print e
-        print result.status.code,":", result.status.text
+        result and self.print_status(result.status)
 
     def do_stop(self,line):
         "Stop a Hadoop Node/Tracker"
@@ -124,7 +133,7 @@ class HadoopCtrlCmd(cmd.Cmd):
                 result = func(refs)
         except Exception, e:
             print e
-        print result.status.code,":", result.status.text
+        result and self.print_status(result.status)
 
     def do_list(self,line):
         "List Hadoop Node/Tracker"
@@ -140,12 +149,19 @@ class HadoopCtrlCmd(cmd.Cmd):
             print e
         self.print_query(result)
 
+    def print_status(self,status):
+        text = ""
+        try:
+            text = ": "+status.text
+        except AttributeError as ae:
+            pass
+        print status.code,text
+
     def print_header(self):
         print "ID".ljust(7),"SUBMITTED".ljust(27),"STATE".ljust(10),"UPTIME".ljust(10),"OWNER".ljust(16),"IPC"
         return True
 
     def print_query(self, response):
-        # TODO: give this a nice header
         if response:
             self.print_header()
             for r in response.results:
@@ -160,7 +176,14 @@ class AviaryHadoopTool(cmd.Cmd):
     verbose = DEFAULTS['verbose']
     base_url = 'http://'+host+':'+port
     bin_file = ''
+    import pwd
+    owner =  pwd.getpwuid(os.getuid())[0]
     
+    def do_owner(self,line):
+        if line:
+            self.owner = line
+        print 'owner is:', self.owner
+
     def set_base_url(self):
         self.base_url = 'http://'+self.host+':'+self.port
     
@@ -181,7 +204,7 @@ class AviaryHadoopTool(cmd.Cmd):
     def do_url(self, line):
         "view/edit the base url for connect"
         print 'base url is:', self.base_url+DEFAULTS['service']
-        print 'use "host" and "port" to modify http target'
+        print 'use "host" and "port" to modify HTTP target'
 
     def do_file(self, line):
         "absolute path to a Hadoop binary distribution tar/zip"
@@ -201,25 +224,25 @@ class AviaryHadoopTool(cmd.Cmd):
             logging.getLogger('suds.client').setLevel(logging.DEBUG)
         print 'verbose:', self.verbose
 
-    _AVAILABLE_CMDS = ('namenode','datanode','jobtracker','tasktracker','host','port','url','file','verbose')
+    _AVAILABLE_CMDS = ('namenode','datanode','jobtracker','tasktracker','host','port','url','file','verbose','owner')
     def complete_node(self, text, line, begidx, endidx):
         return [i for i in _AVAILABLE_CMDS if i.startswith(text)]    
 
     def do_namenode(self, line):
         "process a NameNode command [start, stop, list]"
-        HadoopCtrlCmd(DEFAULTS['wsdl'],self.base_url+DEFAULTS['service'],self.bin_file,'NameNode').onecmd(line)
+        HadoopCtrlCmd(DEFAULTS['wsdl'],self.base_url+DEFAULTS['service'],self.bin_file,'NameNode',self.owner).onecmd(line)
 
     def do_datanode(self, line):
         "process a DataNode command [start, stop, list]"
-        HadoopCtrlCmd(DEFAULTS['wsdl'],self.base_url+DEFAULTS['service'],self.bin_file,'DataNode').onecmd(line)
+        HadoopCtrlCmd(DEFAULTS['wsdl'],self.base_url+DEFAULTS['service'],self.bin_file,'DataNode',self.owner).onecmd(line)
 
     def do_jobtracker(self, line):
         "process a JobTracker command [start, stop, list]"
-        HadoopCtrlCmd(DEFAULTS['wsdl'],self.base_url+DEFAULTS['service'],self.bin_file,'JobTracker').onecmd(line)
+        HadoopCtrlCmd(DEFAULTS['wsdl'],self.base_url+DEFAULTS['service'],self.bin_file,'JobTracker',self.owner).onecmd(line)
 
     def do_tasktracker(self, line):
         "process a TaskTracker command [start, stop, list]"
-        HadoopCtrlCmd(DEFAULTS['wsdl'],self.base_url+DEFAULTS['service'],self.bin_file,'TaskTracker').onecmd(line)
+        HadoopCtrlCmd(DEFAULTS['wsdl'],self.base_url+DEFAULTS['service'],self.bin_file,'TaskTracker',self.owner).onecmd(line)
 
     def do_EOF(self, line):
         return True
