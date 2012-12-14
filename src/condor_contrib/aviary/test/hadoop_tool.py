@@ -21,6 +21,7 @@ from suds import *
 from suds.client import Client
 from sys import exit, argv
 from optparse import OptionParser
+from subprocess import Popen, PIPE
 from aviary.util import *
 from time import *
 import cmd
@@ -102,7 +103,7 @@ class HadoopCtrlCmd(cmd.Cmd):
         count = 1
         is_nn = self.nodetype == "NameNode"
         if not is_nn:
-            count = raw_input('Count (default is 1): ')
+            count = raw_input('count (default is 1): ')
         result = None
         target_op = "start"+self.nodetype
         start_client = self.aviary.getClient(target_op)
@@ -208,6 +209,14 @@ class AviaryHadoopTool(cmd.Cmd):
         "view/edit the base url for connect"
         print 'base url is:', self.base_url+DEFAULTS['service']
         print 'use "host" and "port" to modify HTTP target'
+
+    def do_look(self, line):
+        "list candidate distribution files from local filesystem, e.g., look or look 1.0.1"
+        hadoop_look = "locate *hadoop*{0}*.gz *hadoop*{0}*.tgz *hadoop*{0}*.tar *hadoop*{0}*.zip".format(line or "")
+        hadoops = Popen(hadoop_look, shell=True, stdout=PIPE)
+        hits = sorted(hadoops.stdout.readlines())
+        for name in hits:
+            print name.rstrip('\n')
 
     def do_file(self, line):
         "absolute path to a Hadoop binary distribution tar/zip"
