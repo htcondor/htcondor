@@ -149,7 +149,7 @@ int HadoopObject::start( tHadoopInit & hInit )
 
     // now we will 
     string hadoopType, inputscript, args;
-    MyString HTTPAddress, IPCAddress;
+    MyString IPCAddress, HTTPAddress="";
     bool hasInputScript=false, bValidId=false;
     string Iwd="/tmp";
     int iStatus=1;
@@ -210,7 +210,7 @@ int HadoopObject::start( tHadoopInit & hInit )
         {
             // TODO: there could be extra checks here, validate it's up. 
             IPCAddress = hInit.idref.ipcid.c_str();
-            ::SetAttribute(cluster, proc, "NameNode", hInit.idref.ipcid.c_str() );
+            ::SetAttribute(cluster, proc, "NameNode", "0" );
         }
         else
         {
@@ -219,11 +219,7 @@ int HadoopObject::start( tHadoopInit & hInit )
             return false;
         }
             
-        // not always valid
-        if ( HTTPAddress.Length() )
-        {
-            ::SetAttribute(cluster, proc, "NameNodeHTTPAddress", quote_it(HTTPAddress.Value()).c_str() );
-        }
+        ::SetAttribute(cluster, proc, "NameNodeHTTPAddress", quote_it(HTTPAddress.Value()).c_str() );
         
         args += " ";
         args += IPCAddress.Value();
@@ -251,7 +247,7 @@ int HadoopObject::start( tHadoopInit & hInit )
         {
             // TODO: there could be extra checks here, validate it's up. 
             IPCAddress = hInit.idref.ipcid.c_str();
-            ::SetAttribute(cluster, proc, "JobTracker", hInit.idref.ipcid.c_str() );
+            ::SetAttribute(cluster, proc, "JobTracker", "0" );
         }
         else
         {
@@ -261,11 +257,7 @@ int HadoopObject::start( tHadoopInit & hInit )
             return false;
         }
             
-        // not always valid
-        if ( HTTPAddress.Length() )
-        {
-            ::SetAttribute(cluster, proc, "JobTrackerHTTPAddress", quote_it(HTTPAddress.Value()).c_str() );
-        }
+        ::SetAttribute(cluster, proc, "JobTrackerHTTPAddress", quote_it(HTTPAddress.Value()).c_str() );
         
         args += " ";
         args += IPCAddress.Value();
