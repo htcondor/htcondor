@@ -1000,20 +1000,27 @@ void EC2Job::doEvaluateState()
 				break;				
 				
 			case GM_CANCEL:
-
-				// need to call ec2_vm_stop(), it will only return
-				// STOP operation is success or failed
-				// ec2_vm_stop() will check the input arguments
-				rc = gahp->ec2_vm_stop(m_serviceUrl,
-									   m_public_key_file,
-									   m_private_key_file,
-									   m_remoteJobId,
-									   gahp_error_code);
+			    // Rather than duplicate code or cleverness in the spot
+			    // instance subgraph, just handle the case where we're
+			    // cancelling a spot request which has no corresponding
+			    // instance here.
+			    if( ! m_remoteJobId.empty() ) {
+    				// need to call ec2_vm_stop(), it will only return
+	    			// STOP operation is success or failed
+		    		// ec2_vm_stop() will check the input arguments
+			    	rc = gahp->ec2_vm_stop(m_serviceUrl,
+				    					   m_public_key_file,
+					    				   m_private_key_file,
+						    			   m_remoteJobId,
+							    		   gahp_error_code);
 			
-				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-					 rc == GAHPCLIENT_COMMAND_PENDING ) {
-					break;
-				} 
+    				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+	    				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+		    			break;
+			    	} 
+			    } else {
+			        rc = 0;
+			    }
 				
 				if ( rc == 0 ) {
 					if ( condorState == COMPLETED || condorState == REMOVED ) {
