@@ -308,9 +308,14 @@ int HadoopObject::start( tHadoopInit & hInit )
     ::SetAttribute(cluster, proc, ATTR_JOB_REMOTE_USER_CPU, "0.0"); // float
     ::SetAttribute(cluster, proc, ATTR_JOB_PRIO, "0");              // int
     ::SetAttribute(cluster, proc, ATTR_IMAGE_SIZE, "0");            // int  
-    ::SetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VANILLA );
-    ::SetAttribute(cluster, proc, ATTR_CURRENT_HOSTS, "0"); // int
+    ::SetAttributeInt(cluster, proc, ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_VANILLA );    
+    
+    // more stuff - without these our idle stats are whack
+    ::SetAttribute(cluster, proc, ATTR_MAX_HOSTS, "1");
+    ::SetAttribute(cluster, proc, ATTR_MIN_HOSTS, "1");
 
+    ::SetAttribute(cluster, proc, ATTR_CURRENT_HOSTS, "0"); // int
+    
         // LATE SET: These attributes are set late, after the incoming
     // ad, so they override whatever the incoming ad set.
     char buf[22]; // 22 is max size for an id, 2^32 + . + 2^32 + \0
