@@ -114,6 +114,16 @@ static int getConsoleWindowSize(int * pHeight = NULL) {
 }
 #endif
 
+static  int  testing_width = 0;
+static int getDisplayWidth() {
+	if (testing_width <= 0) {
+		testing_width = getConsoleWindowSize();
+		if (testing_width <= 0)
+			testing_width = 80;
+	}
+	return testing_width;
+}
+
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
 static  void processCommandLineArguments(int, char *[]);
@@ -1083,8 +1093,9 @@ processCommandLineArguments (int argc, char *argv[])
 		// the '-' for prefix matches
 		arg = argv[i]+1;
 
-		if (is_arg_prefix (arg, "wide", 1)) {
+		if (is_arg_colon_prefix (arg, "wide", &pcolon, 1)) {
 			widescreen = true;
+			if (pcolon) { testing_width = atoi(++pcolon); }
 			continue;
 		}
 		//if (is_arg_prefix (arg, "unbuf", 5)) {
@@ -2589,7 +2600,7 @@ static void init_output_mask()
 		return;
 	setup_mask = true;
 
-	int console_width = getConsoleWindowSize();
+	int console_width = getDisplayWidth();
 
 	const char * mask_headings = NULL;
 
@@ -3293,7 +3304,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 			schedd_daemon.locate();
 
 		if (reverse_analyze) {
-			int console_width = widescreen ? getConsoleWindowSize() : 80;
+			int console_width = widescreen ? getDisplayWidth() : 80;
 			startdAds.Open();
 			if (analyze_detail_level <= 0) {
 				printf("%-24.24s %12.12s %12.12s %9.9s\n", "Slot", "Job", "Slot", "");
@@ -4221,9 +4232,13 @@ static const char * PrettyPrintExprTree(classad::ExprTree *tree, std::string & t
 				pos = 0;
 				if (indent_at_last_and > 0) {
 					size_t cch = distance(temp_buffer.begin(), it);
+					size_t cchStart = distance(temp_buffer.begin(), lineStart);
 					temp_buffer.insert(lineStart, indent_at_last_and, ' ');
+					// it, lineStart & lastAnd can be invalid if the insert above reallocated the buffer.
+					// so we have to recreat them.
 					it = temp_buffer.begin() + cch + indent_at_last_and;
-					pos = indent_at_last_and;
+					lastAnd = lineStart = temp_buffer.begin() + cchStart;
+					pos = (int) distance(lineStart, it);
 				}
 				indent_at_last_and = indent;
 			}
@@ -4237,6 +4252,7 @@ static const char * PrettyPrintExprTree(classad::ExprTree *tree, std::string & t
 
 static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & targets, std::string & return_buf, int detail_mask)
 {
+	int console_width = widescreen ? getDisplayWidth() : 80;
 	bool show_work = (detail_mask & 0x100) != 0;
 
 	bool request_is_machine = false;
@@ -4402,7 +4418,7 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 		if (append_pretty) { 
 			std::string treebuf;
 			linebuf += " ( "; 
-			PrettyPrintExprTree(subs[ix].tree, treebuf, linebuf.size(), 100); 
+			PrettyPrintExprTree(subs[ix].tree, treebuf, linebuf.size(), console_width); 
 			linebuf += treebuf; 
 			linebuf += " )";
 		}
@@ -4745,7 +4761,7 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	int     fOffline        = 0;
 	int		available		= 0;
 	int		totalMachines	= 0;
-	bool	forceReqAnalyze = (analyze_detail_level & 4);
+	bool	forceReqAnalyze = (analyze_detail_level & 0x10);
 
 	return_buff[0]='\0';
 
@@ -5046,9 +5062,12 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		if (analyze_detail_level > 0) {
 			classad::ExprTree* tree = request->LookupExpr(ATTR_REQUIREMENTS);
 			if (tree) {
-				int console_width = widescreen ? getConsoleWindowSize() : 80;
-				PrettyPrintExprTree(tree, pretty_req, 4, console_width-1);
-				strcat(return_buff, "\nThe Requirements expression for your job is:\n\n    ");
+				int console_width = widescreen ? getDisplayWidth() : 80;
+				const int indent = 4;
+				PrettyPrintExprTree(tree, pretty_req, indent, console_width);
+				strcat(return_buff, "\nThe Requirements expression for your job is:\n\n");
+				std::string spaces; spaces.insert(0, indent, ' ');
+				strcat(return_buff, spaces.c_str());
 				strcat(return_buff, pretty_req.c_str());
 				strcat(return_buff, "\n\n");
 				pretty_req = "";
@@ -5057,7 +5076,7 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 
 		// then capture the values of MY attributes refereced by the expression
 		// also capture the value of TARGET attributes if there is only a single ad.
-		if (analyze_detail_level > 0) {
+		if (analyze_detail_level > 0 && ! (analyze_detail_level & 0x20)) {
 			std::string attrib_values = "";
 			attrib_values = "Your job defines the following attributes:\n\n";
 			StringList trefs;
@@ -5224,7 +5243,7 @@ doSlotRunAnalysisToBuffer(ClassAd *slot, ClassAdList & jobs, Daemon * /*schedd*/
 		if (tree) {
 			static std::string prev_pretty_req;
 			std::string pretty_req = "";
-			PrettyPrintExprTree(tree, pretty_req, 4, console_width-1);
+			PrettyPrintExprTree(tree, pretty_req, 4, console_width);
 
 			if (prev_pretty_req.empty() || prev_pretty_req != pretty_req) {
 				strcat(return_buff, "\nThe START expression for ");
