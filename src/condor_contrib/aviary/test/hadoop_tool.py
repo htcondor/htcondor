@@ -98,7 +98,7 @@ class HadoopCtrlCmd(cmd.Cmd):
         return ref_list
 
     def do_start(self,line):
-        "Start a Hadoop Node/Tracker"
+        "start a Hadoop Node/Tracker"
         count = 1
         is_nn = self.nodetype == "NameNode"
         if not is_nn:
@@ -123,7 +123,7 @@ class HadoopCtrlCmd(cmd.Cmd):
         result and self.print_status(result.status)
 
     def do_stop(self,line):
-        "Stop a Hadoop Node/Tracker"
+        "stop a Hadoop Node/Tracker"
         result = None
         target_op = "stop"+self.nodetype
         stop_client = self.aviary.getClient(target_op)
@@ -137,7 +137,7 @@ class HadoopCtrlCmd(cmd.Cmd):
         result and self.print_status(result.status)
 
     def do_list(self,line):
-        "List Hadoop Node/Tracker"
+        "list Hadoop Node/Tracker"
         result = None
         target_op = "get"+self.nodetype
         list_client = self.aviary.getClient(target_op)
@@ -160,6 +160,7 @@ class HadoopCtrlCmd(cmd.Cmd):
 
     def print_header(self):
         print "ID".ljust(7),"SUBMITTED".ljust(27),"STATE".ljust(10),"UPTIME".ljust(10),"OWNER".ljust(16),"IPC"
+        print "--".ljust(7),"---------".ljust(27),"-----".ljust(10),"------".ljust(10),"-----".ljust(16),"---"
         return True
 
     def print_query(self, response):
@@ -181,6 +182,7 @@ class AviaryHadoopTool(cmd.Cmd):
     owner =  pwd.getpwuid(os.getuid())[0]
     
     def do_owner(self,line):
+        "view/edit submitting owner name"
         if line:
             self.owner = line
         print 'owner is:', self.owner
@@ -225,25 +227,40 @@ class AviaryHadoopTool(cmd.Cmd):
             logging.getLogger('suds.client').setLevel(logging.DEBUG)
         print 'verbose:', self.verbose
 
-    _AVAILABLE_CMDS = ('namenode','datanode','jobtracker','tasktracker','host','port','url','file','verbose','owner')
-    def complete_node(self, text, line, begidx, endidx):
-        return [i for i in _AVAILABLE_CMDS if i.startswith(text)]    
+    _AVAILABLE_CMDS = ('start','stop','list')
+    def provide_cmds(self,text):
+        return [i for i in self._AVAILABLE_CMDS if i.startswith(text)]
+
+    def complete_namenode(self, text, line, begidx, endidx):
+        return self.provide_cmds(text)
+
+    def complete_datanode(self, text, line, begidx, endidx):
+        return self.provide_cmds(text)
+
+    def complete_jobtracker(self, text, line, begidx, endidx):
+        return self.provide_cmds(text)
+
+    def complete_tasktracker(self, text, line, begidx, endidx):
+        return self.provide_cmds(text)
+
+    def execute(self,nodetype,line):
+        HadoopCtrlCmd(DEFAULTS['wsdl'],self.base_url+DEFAULTS['service'],self.bin_file,nodetype,self.owner).onecmd(line)
 
     def do_namenode(self, line):
         "process a NameNode command [start, stop, list]"
-        HadoopCtrlCmd(DEFAULTS['wsdl'],self.base_url+DEFAULTS['service'],self.bin_file,'NameNode',self.owner).onecmd(line)
+        self.execute('NameNode',line)
 
     def do_datanode(self, line):
         "process a DataNode command [start, stop, list]"
-        HadoopCtrlCmd(DEFAULTS['wsdl'],self.base_url+DEFAULTS['service'],self.bin_file,'DataNode',self.owner).onecmd(line)
+        self.execute('DataNode',line)
 
     def do_jobtracker(self, line):
         "process a JobTracker command [start, stop, list]"
-        HadoopCtrlCmd(DEFAULTS['wsdl'],self.base_url+DEFAULTS['service'],self.bin_file,'JobTracker',self.owner).onecmd(line)
+        self.execute('JobTracker',line)
 
     def do_tasktracker(self, line):
         "process a TaskTracker command [start, stop, list]"
-        HadoopCtrlCmd(DEFAULTS['wsdl'],self.base_url+DEFAULTS['service'],self.bin_file,'TaskTracker',self.owner).onecmd(line)
+        self.execute('TaskTracker',line)
 
     def do_EOF(self, line):
         return True
