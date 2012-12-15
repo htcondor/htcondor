@@ -7,7 +7,7 @@
         * Attribute.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Sep 18, 2012 (08:44:08 EDT)
+        * by the Apache Axis2/Java version: 1.0  Built on : Nov 08, 2012 (09:07:42 EST)
         */
 
        /**
@@ -48,6 +48,10 @@ namespace AviaryCommon
 
                 
                 bool isValidValue;
+            std::string property_Desc;
+
+                
+                bool isValidDesc;
             
 
         /*** Private methods ***/
@@ -63,6 +67,10 @@ namespace AviaryCommon
 
         bool WSF_CALL
         setValueNil();
+            
+
+        bool WSF_CALL
+        setDescNil();
             
 
 
@@ -91,9 +99,10 @@ namespace AviaryCommon
          * @param Name std::string
          * @param Type AviaryCommon::AttributeType*
          * @param Value std::string
+         * @param Desc std::string
          * @return newly created Attribute object
          */
-        Attribute(std::string arg_Name,AviaryCommon::AttributeType* arg_Type,std::string arg_Value);
+        Attribute(std::string arg_Name,AviaryCommon::AttributeType* arg_Type,std::string arg_Value,std::string arg_Desc);
         
 
         /**
@@ -175,6 +184,30 @@ namespace AviaryCommon
         WSF_EXTERN bool WSF_CALL
         resetValue();
         
+        
+
+        /**
+         * Getter for desc. 
+         * @return std::string*
+         */
+        WSF_EXTERN std::string WSF_CALL
+        getDesc();
+
+        /**
+         * Setter for desc.
+         * @param arg_Desc std::string*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setDesc(const std::string  arg_Desc);
+
+        /**
+         * Re setter for desc
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetDesc();
+        
 
 
         /******************************* Checking and Setting NIL values *********************************/
@@ -212,6 +245,16 @@ namespace AviaryCommon
          */
         bool WSF_CALL
         isValueNil();
+
+
+        
+
+        /**
+         * Check whether desc is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isDescNil();
 
 
         
@@ -301,6 +344,17 @@ namespace AviaryCommon
 
         std::string WSF_CALL
         getProperty3();
+
+    
+        
+
+        /**
+         * Getter for desc by property number (4)
+         * @return std::string
+         */
+
+        std::string WSF_CALL
+        getProperty4();
 
     
 

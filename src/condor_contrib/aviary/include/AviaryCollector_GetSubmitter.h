@@ -20,6 +20,8 @@
         
 
         
+                #include "AviaryCommon_SubmitterID.h"
+              
         #include <axutil_qname.h>
         
 
@@ -38,7 +40,7 @@ namespace AviaryCollector
         private:
              
                 axutil_qname_t* qname;
-            std::vector<wso2wsf::OMElement*>* property_Ids;
+            std::vector<AviaryCommon::SubmitterID*>* property_Ids;
 
                 
                 bool isValidIds;
@@ -74,10 +76,10 @@ namespace AviaryCollector
         /**
          * Constructor for creating GetSubmitter
          * @param 
-         * @param Ids std::vector<wso2wsf::OMElement*>*
+         * @param Ids std::vector<AviaryCommon::SubmitterID*>*
          * @return newly created GetSubmitter object
          */
-        GetSubmitter(std::vector<wso2wsf::OMElement*>* arg_Ids);
+        GetSubmitter(std::vector<AviaryCommon::SubmitterID*>* arg_Ids);
         
 
         /**
@@ -91,19 +93,19 @@ namespace AviaryCollector
 
         /**
          * Getter for ids. Deprecated for array types, Use getIdsAt instead
-         * @return Array of wso2wsf::OMElement*s.
+         * @return Array of AviaryCommon::SubmitterID*s.
          */
-        WSF_EXTERN std::vector<wso2wsf::OMElement*>* WSF_CALL
+        WSF_EXTERN std::vector<AviaryCommon::SubmitterID*>* WSF_CALL
         getIds();
 
         /**
          * Setter for ids.Deprecated for array types, Use setIdsAt
          * or addIds instead.
-         * @param arg_Ids Array of wso2wsf::OMElement*s.
+         * @param arg_Ids Array of AviaryCommon::SubmitterID*s.
          * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setIds(std::vector<wso2wsf::OMElement*>*  arg_Ids);
+        setIds(std::vector<AviaryCommon::SubmitterID*>*  arg_Ids);
 
         /**
          * Re setter for ids
@@ -141,30 +143,30 @@ namespace AviaryCollector
         /**
          * Get the ith element of ids.
         * @param i index of the item to be obtained
-         * @return ith wso2wsf::OMElement* of the array
+         * @return ith AviaryCommon::SubmitterID* of the array
          */
-        WSF_EXTERN wso2wsf::OMElement* WSF_CALL
+        WSF_EXTERN AviaryCommon::SubmitterID* WSF_CALL
         getIdsAt(int i);
 
         /**
          * Set the ith element of ids. (If the ith already exist, it will be replaced)
          * @param i index of the item to return
-         * @param arg_Ids element to set wso2wsf::OMElement* to the array
-         * @return ith wso2wsf::OMElement* of the array
+         * @param arg_Ids element to set AviaryCommon::SubmitterID* to the array
+         * @return ith AviaryCommon::SubmitterID* of the array
          */
         WSF_EXTERN bool WSF_CALL
         setIdsAt(int i,
-                wso2wsf::OMElement* arg_Ids);
+                AviaryCommon::SubmitterID* arg_Ids);
 
 
         /**
          * Add to ids.
-         * @param arg_Ids element to add wso2wsf::OMElement* to the array
+         * @param arg_Ids element to add AviaryCommon::SubmitterID* to the array
          * @return true on success, false otherwise.
          */
         WSF_EXTERN bool WSF_CALL
         addIds(
-            wso2wsf::OMElement* arg_Ids);
+            AviaryCommon::SubmitterID* arg_Ids);
 
         /**
          * Get the size of the ids array.
@@ -287,10 +289,10 @@ namespace AviaryCollector
 
         /**
          * Getter for ids by property number (1)
-         * @return Array of wso2wsf::OMElement*s.
+         * @return Array of AviaryCommon::SubmitterIDs.
          */
 
-        std::vector<wso2wsf::OMElement*>* WSF_CALL
+        std::vector<AviaryCommon::SubmitterID*>* WSF_CALL
         getProperty1();
 
     

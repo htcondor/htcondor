@@ -58,7 +58,7 @@
                 
         }
 
-       AviaryCollector::GetSubmitter::GetSubmitter(std::vector<wso2wsf::OMElement*>* arg_Ids)
+       AviaryCollector::GetSubmitter::GetSubmitter(std::vector<AviaryCommon::SubmitterID*>* arg_Ids)
         {
              
                    qname = NULL;
@@ -85,7 +85,7 @@
             //calls reset method for all the properties owned by this method which are pointers.
 
             
-             resetIds();//wso2wsf::OMElement*
+             resetIds();//AviaryCommon::SubmitterID
           if(qname != NULL)
           {
             axutil_qname_free( qname, Environment::getEnv());
@@ -154,7 +154,7 @@
                     /*
                      * building Ids array
                      */
-                       std::vector<wso2wsf::OMElement*>* arr_list =new std::vector<wso2wsf::OMElement*>();
+                       std::vector<AviaryCommon::SubmitterID*>* arr_list =new std::vector<AviaryCommon::SubmitterID*>();
                    
 
                      
@@ -185,20 +185,20 @@
                                   
                                       is_early_node_valid = true;
                                       
-                                     
-                                          text_value = NULL; /* just to avoid warning */
+                                     AviaryCommon::SubmitterID* element = new AviaryCommon::SubmitterID();
                                           
-                                              if(axiom_node_get_first_child(current_node, Environment::getEnv()))
-                                              {
-                                                  axiom_node_t *current_property_node = axiom_node_get_first_child(current_node, Environment::getEnv());
-                                                  axiom_node_detach(current_property_node, Environment::getEnv());
-                                                  arr_list->push_back(new OMElement(NULL,current_property_node));
-                                              }
-                                              else
-                                              {
-                                                  status = setIds(NULL);
-                                              }
+                                          status =  element->deserialize(&current_node, &is_early_node_valid, false);
+                                          
+                                          if(AXIS2_FAILURE ==  status)
+                                          {
+					  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "failed in building element ids ");
+                                          }
+                                          else
+                                          {
+                                            arr_list->push_back(element);
                                             
+                                          }
+                                        
                                      if(AXIS2_FAILURE ==  status)
                                      {
                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in setting the value for ids ");
@@ -308,8 +308,7 @@
                int count = 0;
                void *element = NULL;
              
-                    axis2_char_t *text_value_1;
-                    axis2_char_t *text_value_1_temp;
+                    axis2_char_t text_value_1[ADB_DEFAULT_DIGIT_LIMIT];
                     
                axis2_char_t *start_input_str = NULL;
                axis2_char_t *end_input_str = NULL;
@@ -373,9 +372,10 @@
                      if (property_Ids != NULL)
                      {
                         
-                            sprintf(start_input_str, "<%s%sids>",
+
+                            sprintf(start_input_str, "<%s%sids",
                                  p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":""); 
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                             
                          start_input_str_len = axutil_strlen(start_input_str);
 
@@ -387,7 +387,7 @@
                          count = property_Ids->size();
                          for(i = 0; i < count; i++)
                          {
-                            wso2wsf::OMElement* element = (*property_Ids)[i];
+                            AviaryCommon::SubmitterID* element = (*property_Ids)[i];
 
                             if(NULL == element) 
                             {
@@ -401,16 +401,19 @@
                       */
 
                     
-                    
-                                std::string s = element->toString();
-                                text_value_1 = (axis2_char_t*)(s.c_str());
-                                
+                     
+                            if(!element->isParticle())
+                            {
                                 axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
-                                
-                                axutil_stream_write(stream, Environment::getEnv(), text_value_1, axutil_strlen(text_value_1));
-                                
+                            }
+                            element->serialize(current_node, parent_element,
+                                                                                 element->isParticle() || false, namespaces, next_ns_index);
+                            
+                            if(!element->isParticle())
+                            {
                                 axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
-                                
+                            }
+                            
                          }
                      }
                    
@@ -442,7 +445,7 @@
             /**
              * Getter for ids by  Property Number 1
              */
-            std::vector<wso2wsf::OMElement*>* WSF_CALL
+            std::vector<AviaryCommon::SubmitterID*>* WSF_CALL
             AviaryCollector::GetSubmitter::getProperty1()
             {
                 return getIds();
@@ -451,7 +454,7 @@
             /**
              * getter for ids.
              */
-            std::vector<wso2wsf::OMElement*>* WSF_CALL
+            std::vector<AviaryCommon::SubmitterID*>* WSF_CALL
             AviaryCollector::GetSubmitter::getIds()
              {
                 return property_Ids;
@@ -462,7 +465,7 @@
              */
             bool WSF_CALL
             AviaryCollector::GetSubmitter::setIds(
-                    std::vector<wso2wsf::OMElement*>*  arg_Ids)
+                    std::vector<AviaryCommon::SubmitterID*>*  arg_Ids)
              {
                 
                  int size = 0;
@@ -521,13 +524,13 @@
             /**
              * Get ith element of ids.
              */
-            wso2wsf::OMElement* WSF_CALL
+            AviaryCommon::SubmitterID* WSF_CALL
             AviaryCollector::GetSubmitter::getIdsAt(int i)
             {
-                wso2wsf::OMElement* ret_val;
+                AviaryCommon::SubmitterID* ret_val;
                 if(property_Ids == NULL)
                 {
-                    return (wso2wsf::OMElement*)0;
+                    return (AviaryCommon::SubmitterID*)0;
                 }
                 ret_val =   (*property_Ids)[i];
                 
@@ -540,9 +543,9 @@
              */
            bool WSF_CALL
             AviaryCollector::GetSubmitter::setIdsAt(int i,
-                    wso2wsf::OMElement* arg_Ids)
+                    AviaryCommon::SubmitterID* arg_Ids)
             {
-                 wso2wsf::OMElement* element;
+                 AviaryCommon::SubmitterID* element;
                 int size = 0;
 
                 int non_nil_count;
@@ -566,7 +569,7 @@
 
                 if(property_Ids == NULL)
                 {
-                    property_Ids = new std::vector<wso2wsf::OMElement*>();
+                    property_Ids = new std::vector<AviaryCommon::SubmitterID*>();
                 }
                 else{
                 /* check whether there already exist an element */
@@ -579,8 +582,7 @@
                           
                           
                           
-                                 // TODO Clear om Element
-                                 delete element;
+                                delete element;
                              
                         }
                         
@@ -607,7 +609,7 @@
              */
             bool WSF_CALL
             AviaryCollector::GetSubmitter::addIds(
-                    wso2wsf::OMElement* arg_Ids)
+                    AviaryCommon::SubmitterID* arg_Ids)
              {
 
                 
@@ -622,7 +624,7 @@
 
                 if(property_Ids == NULL)
                 {
-                    property_Ids = new std::vector<wso2wsf::OMElement*>();
+                    property_Ids = new std::vector<AviaryCommon::SubmitterID*>();
                 }
               
                property_Ids->push_back(arg_Ids);
@@ -669,10 +671,10 @@
                
                 if (property_Ids != NULL)
                 {
-                  std::vector<wso2wsf::OMElement*>::iterator it =  property_Ids->begin();
+                  std::vector<AviaryCommon::SubmitterID*>::iterator it =  property_Ids->begin();
                   for( ; it <  property_Ids->end() ; ++it)
                   {
-                     wso2wsf::OMElement* element = *it;
+                     AviaryCommon::SubmitterID* element = *it;
                 
             
                 
@@ -681,8 +683,7 @@
                 {
                    
                    
-                        delete element;
-                         element = NULL;
+                         delete  element;
                      
 
                    }
@@ -782,13 +783,13 @@
                 }
                  
                  /* check whether there already exist an element */
-                 wso2wsf::OMElement* element = (*property_Ids)[i];
+                 AviaryCommon::SubmitterID* element = (*property_Ids)[i];
                 if(NULL != element)
                 {
                   
                   
                   
-                     delete element;
+                        delete element;
                      
                  }
                  

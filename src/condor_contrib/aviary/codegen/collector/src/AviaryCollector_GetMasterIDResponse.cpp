@@ -60,7 +60,7 @@
                 
         }
 
-       AviaryCollector::GetMasterIDResponse::GetMasterIDResponse(std::vector<wso2wsf::OMElement*>* arg_Results,int arg_Remaining)
+       AviaryCollector::GetMasterIDResponse::GetMasterIDResponse(std::vector<AviaryCommon::Master*>* arg_Results,int arg_Remaining)
         {
              
                    qname = NULL;
@@ -91,7 +91,7 @@
             //calls reset method for all the properties owned by this method which are pointers.
 
             
-             resetResults();//wso2wsf::OMElement*
+             resetResults();//AviaryCommon::Master
           if(qname != NULL)
           {
             axutil_qname_free( qname, Environment::getEnv());
@@ -160,7 +160,7 @@
                     /*
                      * building Results array
                      */
-                       std::vector<wso2wsf::OMElement*>* arr_list =new std::vector<wso2wsf::OMElement*>();
+                       std::vector<AviaryCommon::Master*>* arr_list =new std::vector<AviaryCommon::Master*>();
                    
 
                      
@@ -191,20 +191,20 @@
                                   
                                       is_early_node_valid = true;
                                       
-                                     
-                                          text_value = NULL; /* just to avoid warning */
+                                     AviaryCommon::Master* element = new AviaryCommon::Master();
                                           
-                                              if(axiom_node_get_first_child(current_node, Environment::getEnv()))
-                                              {
-                                                  axiom_node_t *current_property_node = axiom_node_get_first_child(current_node, Environment::getEnv());
-                                                  axiom_node_detach(current_property_node, Environment::getEnv());
-                                                  arr_list->push_back(new OMElement(NULL,current_property_node));
-                                              }
-                                              else
-                                              {
-                                                  status = setResults(NULL);
-                                              }
+                                          status =  element->deserialize(&current_node, &is_early_node_valid, false);
+                                          
+                                          if(AXIS2_FAILURE ==  status)
+                                          {
+					  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "failed in building element results ");
+                                          }
+                                          else
+                                          {
+                                            arr_list->push_back(element);
                                             
+                                          }
+                                        
                                      if(AXIS2_FAILURE ==  status)
                                      {
                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in setting the value for results ");
@@ -397,8 +397,7 @@
                int count = 0;
                void *element = NULL;
              
-                    axis2_char_t *text_value_1;
-                    axis2_char_t *text_value_1_temp;
+                    axis2_char_t text_value_1[ADB_DEFAULT_DIGIT_LIMIT];
                     
                     axis2_char_t text_value_2[ADB_DEFAULT_DIGIT_LIMIT];
                     
@@ -464,9 +463,10 @@
                      if (property_Results != NULL)
                      {
                         
-                            sprintf(start_input_str, "<%s%sresults>",
+
+                            sprintf(start_input_str, "<%s%sresults",
                                  p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":""); 
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                             
                          start_input_str_len = axutil_strlen(start_input_str);
 
@@ -478,7 +478,7 @@
                          count = property_Results->size();
                          for(i = 0; i < count; i++)
                          {
-                            wso2wsf::OMElement* element = (*property_Results)[i];
+                            AviaryCommon::Master* element = (*property_Results)[i];
 
                             if(NULL == element) 
                             {
@@ -492,16 +492,19 @@
                       */
 
                     
-                    
-                                std::string s = element->toString();
-                                text_value_1 = (axis2_char_t*)(s.c_str());
-                                
+                     
+                            if(!element->isParticle())
+                            {
                                 axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
-                                
-                                axutil_stream_write(stream, Environment::getEnv(), text_value_1, axutil_strlen(text_value_1));
-                                
+                            }
+                            element->serialize(current_node, parent_element,
+                                                                                 element->isParticle() || false, namespaces, next_ns_index);
+                            
+                            if(!element->isParticle())
+                            {
                                 axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
-                                
+                            }
+                            
                          }
                      }
                    
@@ -590,7 +593,7 @@
             /**
              * Getter for results by  Property Number 1
              */
-            std::vector<wso2wsf::OMElement*>* WSF_CALL
+            std::vector<AviaryCommon::Master*>* WSF_CALL
             AviaryCollector::GetMasterIDResponse::getProperty1()
             {
                 return getResults();
@@ -599,7 +602,7 @@
             /**
              * getter for results.
              */
-            std::vector<wso2wsf::OMElement*>* WSF_CALL
+            std::vector<AviaryCommon::Master*>* WSF_CALL
             AviaryCollector::GetMasterIDResponse::getResults()
              {
                 return property_Results;
@@ -610,7 +613,7 @@
              */
             bool WSF_CALL
             AviaryCollector::GetMasterIDResponse::setResults(
-                    std::vector<wso2wsf::OMElement*>*  arg_Results)
+                    std::vector<AviaryCommon::Master*>*  arg_Results)
              {
                 
                  int size = 0;
@@ -669,13 +672,13 @@
             /**
              * Get ith element of results.
              */
-            wso2wsf::OMElement* WSF_CALL
+            AviaryCommon::Master* WSF_CALL
             AviaryCollector::GetMasterIDResponse::getResultsAt(int i)
             {
-                wso2wsf::OMElement* ret_val;
+                AviaryCommon::Master* ret_val;
                 if(property_Results == NULL)
                 {
-                    return (wso2wsf::OMElement*)0;
+                    return (AviaryCommon::Master*)0;
                 }
                 ret_val =   (*property_Results)[i];
                 
@@ -688,9 +691,9 @@
              */
            bool WSF_CALL
             AviaryCollector::GetMasterIDResponse::setResultsAt(int i,
-                    wso2wsf::OMElement* arg_Results)
+                    AviaryCommon::Master* arg_Results)
             {
-                 wso2wsf::OMElement* element;
+                 AviaryCommon::Master* element;
                 int size = 0;
 
                 int non_nil_count;
@@ -714,7 +717,7 @@
 
                 if(property_Results == NULL)
                 {
-                    property_Results = new std::vector<wso2wsf::OMElement*>();
+                    property_Results = new std::vector<AviaryCommon::Master*>();
                 }
                 else{
                 /* check whether there already exist an element */
@@ -727,8 +730,7 @@
                           
                           
                           
-                                 // TODO Clear om Element
-                                 delete element;
+                                delete element;
                              
                         }
                         
@@ -755,7 +757,7 @@
              */
             bool WSF_CALL
             AviaryCollector::GetMasterIDResponse::addResults(
-                    wso2wsf::OMElement* arg_Results)
+                    AviaryCommon::Master* arg_Results)
              {
 
                 
@@ -770,7 +772,7 @@
 
                 if(property_Results == NULL)
                 {
-                    property_Results = new std::vector<wso2wsf::OMElement*>();
+                    property_Results = new std::vector<AviaryCommon::Master*>();
                 }
               
                property_Results->push_back(arg_Results);
@@ -817,10 +819,10 @@
                
                 if (property_Results != NULL)
                 {
-                  std::vector<wso2wsf::OMElement*>::iterator it =  property_Results->begin();
+                  std::vector<AviaryCommon::Master*>::iterator it =  property_Results->begin();
                   for( ; it <  property_Results->end() ; ++it)
                   {
-                     wso2wsf::OMElement* element = *it;
+                     AviaryCommon::Master* element = *it;
                 
             
                 
@@ -829,8 +831,7 @@
                 {
                    
                    
-                        delete element;
-                         element = NULL;
+                         delete  element;
                      
 
                    }
@@ -930,13 +931,13 @@
                 }
                  
                  /* check whether there already exist an element */
-                 wso2wsf::OMElement* element = (*property_Results)[i];
+                 AviaryCommon::Master* element = (*property_Results)[i];
                 if(NULL != element)
                 {
                   
                   
                   
-                     delete element;
+                        delete element;
                      
                  }
                  

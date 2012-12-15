@@ -20,6 +20,8 @@
         
 
         
+                #include "AviaryCommon_Master.h"
+              
         #include <axutil_qname.h>
         
 
@@ -38,7 +40,7 @@ namespace AviaryCollector
         private:
              
                 axutil_qname_t* qname;
-            std::vector<wso2wsf::OMElement*>* property_Results;
+            std::vector<AviaryCommon::Master*>* property_Results;
 
                 
                 bool isValidResults;
@@ -82,11 +84,11 @@ namespace AviaryCollector
         /**
          * Constructor for creating GetMasterIDResponse
          * @param 
-         * @param Results std::vector<wso2wsf::OMElement*>*
+         * @param Results std::vector<AviaryCommon::Master*>*
          * @param Remaining int
          * @return newly created GetMasterIDResponse object
          */
-        GetMasterIDResponse(std::vector<wso2wsf::OMElement*>* arg_Results,int arg_Remaining);
+        GetMasterIDResponse(std::vector<AviaryCommon::Master*>* arg_Results,int arg_Remaining);
         
 
         /**
@@ -100,19 +102,19 @@ namespace AviaryCollector
 
         /**
          * Getter for results. Deprecated for array types, Use getResultsAt instead
-         * @return Array of wso2wsf::OMElement*s.
+         * @return Array of AviaryCommon::Master*s.
          */
-        WSF_EXTERN std::vector<wso2wsf::OMElement*>* WSF_CALL
+        WSF_EXTERN std::vector<AviaryCommon::Master*>* WSF_CALL
         getResults();
 
         /**
          * Setter for results.Deprecated for array types, Use setResultsAt
          * or addResults instead.
-         * @param arg_Results Array of wso2wsf::OMElement*s.
+         * @param arg_Results Array of AviaryCommon::Master*s.
          * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setResults(std::vector<wso2wsf::OMElement*>*  arg_Results);
+        setResults(std::vector<AviaryCommon::Master*>*  arg_Results);
 
         /**
          * Re setter for results
@@ -174,30 +176,30 @@ namespace AviaryCollector
         /**
          * Get the ith element of results.
         * @param i index of the item to be obtained
-         * @return ith wso2wsf::OMElement* of the array
+         * @return ith AviaryCommon::Master* of the array
          */
-        WSF_EXTERN wso2wsf::OMElement* WSF_CALL
+        WSF_EXTERN AviaryCommon::Master* WSF_CALL
         getResultsAt(int i);
 
         /**
          * Set the ith element of results. (If the ith already exist, it will be replaced)
          * @param i index of the item to return
-         * @param arg_Results element to set wso2wsf::OMElement* to the array
-         * @return ith wso2wsf::OMElement* of the array
+         * @param arg_Results element to set AviaryCommon::Master* to the array
+         * @return ith AviaryCommon::Master* of the array
          */
         WSF_EXTERN bool WSF_CALL
         setResultsAt(int i,
-                wso2wsf::OMElement* arg_Results);
+                AviaryCommon::Master* arg_Results);
 
 
         /**
          * Add to results.
-         * @param arg_Results element to add wso2wsf::OMElement* to the array
+         * @param arg_Results element to add AviaryCommon::Master* to the array
          * @return true on success, false otherwise.
          */
         WSF_EXTERN bool WSF_CALL
         addResults(
-            wso2wsf::OMElement* arg_Results);
+            AviaryCommon::Master* arg_Results);
 
         /**
          * Get the size of the results array.
@@ -330,10 +332,10 @@ namespace AviaryCollector
 
         /**
          * Getter for results by property number (1)
-         * @return Array of wso2wsf::OMElement*s.
+         * @return Array of AviaryCommon::Masters.
          */
 
-        std::vector<wso2wsf::OMElement*>* WSF_CALL
+        std::vector<AviaryCommon::Master*>* WSF_CALL
         getProperty1();
 
     
