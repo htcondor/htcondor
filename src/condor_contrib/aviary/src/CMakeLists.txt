@@ -117,8 +117,11 @@ install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-common.xsd
 			${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-query.wsdl
 		DESTINATION ${C_SERVICES}/query )
 
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/61aviary.config DESTINATION "${C_ETC_EXAMPLES}")
-file(GLOB TEST_SCRIPTS ${CMAKE_CURRENT_SOURCE_DIR}/../test/*.py)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/61aviary.config 
+${CMAKE_CURRENT_SOURCE_DIR}/../etc/62aviary-hadoop.config
+DESTINATION "${C_ETC_EXAMPLES}")
+
+file(GLOB TEST_SCRIPTS ${CMAKE_CURRENT_SOURCE_DIR}/../test/*.py ${CMAKE_CURRENT_SOURCE_DIR}/../test/*.sh)
 file(GLOB DAG_SCRIPTS ${CMAKE_CURRENT_SOURCE_DIR}/../test/dag/*)
 file(GLOB SUPPORT_SCRIPTS ${CMAKE_CURRENT_SOURCE_DIR}/../test/module/aviary/*)
 install(FILES ${TEST_SCRIPTS} DESTINATION ${C_LIB}/aviary PERMISSIONS ${CONDOR_SCRIPT_PERMS})
