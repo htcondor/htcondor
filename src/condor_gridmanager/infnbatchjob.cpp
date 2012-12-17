@@ -759,18 +759,10 @@ void INFNBatchJob::doEvaluateState()
 			gmState = GM_DONE_COMMIT;
 			} break;
 		case GM_DONE_COMMIT: {
-			// Tell the remote schedd it can remove the job from the queue.
+			// Tell the remote scheduler it can remove the job from the queue.
 
-			// Nothing to do for this job type
-			if ( condorState == COMPLETED || condorState == REMOVED ) {
-				// noop
-			} else {
-				// Clear the contact string here because it may not get
-				// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
-				SetRemoteIds( NULL, NULL );
-				requestScheddUpdate( this, false );
-				myResource->CancelSubmit( this );
-			}
+			// Nothing to tell the blahp
+			// TODO Combine this state with GM_DELETE_SANDBOX
 			gmState = GM_DELETE_SANDBOX;
 			} break;
 		case GM_CANCEL: {
@@ -831,6 +823,7 @@ void INFNBatchJob::doEvaluateState()
 
 			} else {
 
+#if !defined(WIN32)
 				// Local blahp
 				// Check whether the blahp left behind a job execute directory.
 				// The blahp's job wrapper should remove this directory
@@ -855,9 +848,8 @@ void INFNBatchJob::doEvaluateState()
 					// If the limited proxy isn't in the spool directory,
 					// then it might be shared by multiple jobs, so we
 					// need to leave it alone.
-#if !defined(WIN32)
 					if ( jobAd->Lookup( ATTR_X509_USER_PROXY ) && remoteJobId ) {
-						set_user_priv();
+						TemporaryPrivSentry sentry(PRIV_USER);
 
 						const char *job_id = NULL;
 						const char *token = NULL;
@@ -891,11 +883,9 @@ void INFNBatchJob::doEvaluateState()
 							unlink( proxy.c_str() );
 						}
 
-						set_condor_priv();
 					}
-#endif
 				}
-
+#endif
 			}
 
 			SetRemoteIds( NULL, NULL );

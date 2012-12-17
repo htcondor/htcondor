@@ -451,6 +451,8 @@ if (BUILD_TESTING)
 	condor_pl_test(job_core_max-running_local "Local: Max job running limit" "core;quick;full;quicknolink;local")
 	condor_pl_test(job_schedd_restart-holdjobs-ok "Held queue ok after schedd restart" "core;quick;full;quicknolink")
 	#condor_pl_test(job_schedd_restart-runningjobs-ok "Running queue ok after schedd restart" "core;quick;full;quicknolink")
+	# Uncomment this after review...
+	#condor_pl_test(job_negotiator_restart "Make user's priority factor survives across condor restart" "core;quick;full;quicknolink")
 	condor_pl_test(job_filexfer_base-input1_van "Vanilla: Tests input file does not make it with filetransfer off" "filexfer;quick;full;quicknolink")
 	# Turn this one back on in 7.7.2 after the file xfer kerfuffle is over
 	#condor_pl_test(job_filexfer_base-input4_van "Vanilla: Verifies submit fails with input list and with filetransfer off" "filexfer;quick;full;quicknolink")
