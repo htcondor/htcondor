@@ -282,9 +282,10 @@ int set_status(int sock, const char * eth, int status) {
 }
 
 /**
- * Add a given IPv4 address to an ethernet device.
+ * Add a given IP address (Support both IPv4 and IPv6) to an ethernet device.
  */
 #define INET_LEN 4
+#define INET6_LEN 16
 int add_address(int sock, const char * addr, unsigned prefix_length, const char * eth) {
 
 	/**
@@ -305,20 +306,15 @@ int add_address(int sock, const char * addr, unsigned prefix_length, const char 
 	 *   offsets.
 	 *
 	 */
-	// TODO: adjust prefixes for IPv6
-	if ((prefix_length == 0) || (prefix_length > 32)) {
-		dprintf(D_ALWAYS, "Invalid IPv4 prefix: %u\n", prefix_length);
-		return 1;
-	}
-
 	struct iovec iov[4];
 
 	struct nlmsghdr nlmsghdr; memset(&nlmsghdr, 0, sizeof(struct nlmsghdr));
 	// Compute the size of the packet (as it is fixed-size).  NLMSG_LENGTH is the
 	// aligned size of the nlmsghdr plus a body of one (struct ifaddrmsg).  We add
 	// a RTA packet too - RTA_LENGTH is the aligned size of the rtattr header and
-	// an IPv4 address.
-	nlmsghdr.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg)) + RTA_LENGTH(INET_LEN);
+	// an IPv4 address or an IPv6 address. The IP address length will be added after
+	// the IP address type is determined.
+	nlmsghdr.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
 	nlmsghdr.nlmsg_type = RTM_NEWADDR; // This message is requesting to add a new address.
 	// Flags are documented in /usr/include/linux/netlink.h, but copied here for completeness:
 	//   NLM_F_REQUEST - It is request message
@@ -330,18 +326,57 @@ int add_address(int sock, const char * addr, unsigned prefix_length, const char 
                                     // see an ordered sequence of netlink messages.
 	nlmsghdr.nlmsg_pid = 0; // The destination of the message - PID 0, the kernel.
 
+
+	// Add ipv6 support
+	unsigned char ipv4_addr[4];
+	unsigned char ipv6_addr[16];
+
+	// Check whether the input string is a valid IPv4 or IPv6 address
+	// Convert it into binary representation accordingly use inet_pton
+	// First try IPv4, then IPv6, set ipaddr_type accordingly.
+	
+	int ipaddr_type;
+	int return_value1 = inet_pton(AF_INET, addr, (void *)&ipv4_addr);
+	if(return_value1 == 1){
+		ipaddr_type = AF_INET;
+	}
+	else{
+		int return_value2 = inet_pton(AF_INET6, addr, (void *)&ipv6_addr);
+		if(return_value2 == 1){
+			ipaddr_type = AF_INET6;
+		}
+		else{
+			dprintf(D_ALWAYS, "Either invalid IPv4 or IPv6 address: %s\n", addr);
+			return 1;
+		}
+	}
+	
+
+	// check the validness for prefix for either IPv4 or IPv6
+	if(ipaddr_type == AF_INET){
+		if ((prefix_length == 0) || (prefix_length > 32)) {
+		dprintf(D_ALWAYS, "Invalid IPv4 prefix: %u\n", prefix_length);
+		return 1;
+	}
+	if(ipaddr_type == AF_INET6){
+		if ((prefix_length == 0) || (prefix_length > 128)) {
+		dprintf(D_ALWAYS, "Invalid IPv6 prefix: %u\n", prefix_length);
+		return 1;
+	}
+
+	// Update the length of the nlmsg according to ipaddr_type
+	if(ipaddr_type == AF_INET){
+		nlmsghdr.nlmsg_len += RTA_LENGTH(INET_LEN);
+	}
+	if(ipaddr_type == AF_INET6){
+		nlmsghdr.nlmsg_len += RTA_LENGTH(INET6_LEN);
+	}
+		
 	// The first element of the packet will be the header created above.
 	iov[0].iov_base = &nlmsghdr;
 	iov[0].iov_len = NLMSG_LENGTH(0);
 
-	// TODO: ipv6 support
-	unsigned char ipv4_addr[4];
-	// Take the string representing the IPv4 address and convert it into the
-	// 4-byte binary representation.
-	if (inet_pton(AF_INET, addr, (void *)&ipv4_addr) != 1) {
-		dprintf(D_ALWAYS, "Invalid IP address: %s\n", addr);
-		return 1;
-	}
+
 
 	unsigned eth_dev;
 	// Each ethernet device is represented internally by an unsigned int.  Convert
@@ -355,7 +390,12 @@ int add_address(int sock, const char * addr, unsigned prefix_length, const char 
 	// Specify the kind of address we will be adding, the netmask, and the 
 	// ethernet device to change.
 	struct ifaddrmsg info_msg; memset(&info_msg, 0, sizeof(struct ifaddrmsg));
-	info_msg.ifa_family = AF_INET; // Hardcode to IPv4 for now.
+	if(ipaddr_type == AF_INET){
+		info_msg.ifa_family = AF_INET;
+	}
+	if(ipaddr_type == AF_INET6){
+		info_msg.ifa_family = AF_INET6;
+	}
 	info_msg.ifa_prefixlen = prefix_length;
 	info_msg.ifa_index = if_nametoindex(eth);
 
@@ -368,13 +408,24 @@ int add_address(int sock, const char * addr, unsigned prefix_length, const char 
 	// a header and a fairly simple body.
 	struct rtattr rta;
 	rta.rta_type = IFA_LOCAL;
-	rta.rta_len = RTA_LENGTH(INET_LEN);
+	if(ipaddr_type == AF_INET){
+		rta.rta_len = RTA_LENGTH(INET_LEN);
+	}
+	if(ipaddr_type == AF_INET6){
+		rta.rta_len = RTA_LENGTH(INET6_LEN);
+	}	
 	iov[2].iov_base = &rta;
 	iov[2].iov_len = RTA_LENGTH(0);
 
-	// ipv4_addr is the binary encoding of the IPv4 address done above.
-	iov[3].iov_base = ipv4_addr;
-	iov[3].iov_len = RTA_ALIGN(INET_LEN);
+	// ipv4_addr and ipv6_addr are the binary encoding of the IPv4 address and IPv6 address done above respectively.
+	if(ipaddr_type == AF_INET){
+		iov[3].iov_base = ipv4_addr;
+		iov[3].iov_len = RTA_ALIGN(INET_LEN);
+	}
+	if(ipaddr_type == AF_INET6){
+		iov[3].iov_base = ipv6_addr;
+		iov[3].iov_len = RTA_ALIGN(INET6_LEN);
+	}
 
 	// Finally, send the constructed packet to the kernel and wait for a response. 
 	return send_and_ack(sock, iov, 4);
@@ -387,11 +438,27 @@ int add_local_route(int sock, const char * gw, const char * eth, int dst_len) {
 	// ip route add 10.10.10.1/24 via veth1
 	struct iovec iov[6];
 
+	// Add IPv6 Support
 	unsigned char ipv4_addr[4];
-	if (inet_pton(AF_INET, gw, (void *)&ipv4_addr) != 1) {
-		dprintf(D_ALWAYS, "Invalid IP address: %s\n", gw);
-		return 1;
+	unsigned char ipv6_addr[16];
+
+	int ipaddr_type;
+	int return_value1 = inet_pton(AF_INET, gw, (void *)&ipv4_addr);
+	if(return_value1 == 1){
+		ipaddr_type = AF_INET;
 	}
+	else{
+		int return_value2 = inet_pton(AF_INET6, gw, (void *)&ipv6_addr);
+		if(return_value2 == 1){
+			ipaddr_type = AF_INET6;
+		}
+		else{
+			dprintf(D_ALWAYS, "Either invalid IPv4 or IPv6 address: %s\n", gw);
+			return 1;
+		}
+	}
+
+	// Don't know how to deal with this part
 	if (dst_len == 24) {
 		ipv4_addr[3] = 0;
 	} else {
@@ -406,7 +473,7 @@ int add_local_route(int sock, const char * gw, const char * eth, int dst_len) {
 	}
 
 	struct nlmsghdr nlmsghdr; memset(&nlmsghdr, 0, sizeof(struct nlmsghdr));
-	nlmsghdr.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg)) + RTA_LENGTH(INET_LEN) + RTA_LENGTH(sizeof(unsigned));
+	nlmsghdr.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg)) + RTA_LENGTH((ipaddr_type == AF_INET) ? INET_LEN : INET6_LEN) + RTA_LENGTH(sizeof(unsigned));
 	nlmsghdr.nlmsg_type = RTM_NEWROUTE;
 	nlmsghdr.nlmsg_flags = NLM_F_REQUEST|NLM_F_CREATE|NLM_F_EXCL|NLM_F_ACK;
 	nlmsghdr.nlmsg_seq = ++seq;
@@ -416,7 +483,7 @@ int add_local_route(int sock, const char * gw, const char * eth, int dst_len) {
 	iov[0].iov_len = NLMSG_LENGTH(0);
 
 	struct rtmsg rtmsg; memset(&rtmsg, 0, sizeof(struct rtmsg));
-	rtmsg.rtm_family = AF_INET;
+	rtmsg.rtm_family = (ipaddr_type == AF_INET) ? AF_INET : AF_INET6;
 	rtmsg.rtm_dst_len = dst_len;
 	rtmsg.rtm_table = RT_TABLE_MAIN;
 	rtmsg.rtm_protocol = RTPROT_KERNEL;
@@ -428,13 +495,13 @@ int add_local_route(int sock, const char * gw, const char * eth, int dst_len) {
 
 	struct rtattr rta; memset(&rta, 0, sizeof(struct rtattr));
 	rta.rta_type = RTA_DST;
-	rta.rta_len = RTA_LENGTH(INET_LEN);
+	rta.rta_len = RTA_LENGTH((ipaddr_type == AF_INET) ? INET_LEN : INET6_LEN);
 
 	iov[2].iov_base = &rta;
 	iov[2].iov_len = RTA_LENGTH(0);
 
-	iov[3].iov_base = ipv4_addr;	
-	iov[3].iov_len = RTA_ALIGN(INET_LEN);
+	iov[3].iov_base = (ipaddr_type == AF_INET) ? ipv4_addr : ipv6_addr;	
+	iov[3].iov_len = RTA_ALIGN((ipaddr_type == AF_INET) ? INET_LEN : INET6_LEN);
 
 	struct rtattr rta2; memset(&rta2, 0, sizeof(struct rtattr));
 	rta2.rta_type = RTA_OIF;
@@ -459,18 +526,31 @@ int add_default_route(int sock, const char * gw) {
 	// Setup the dest address/prefix
 	size_t dst_len = 0;
 
-	// TODO: ipv6 support
+	// Add ipv6 support
 	dprintf(D_FULLDEBUG, "Adding IP address %s as default gateway.\n", gw);
 	unsigned char ipv4_addr[4];
-	if (inet_pton(AF_INET, gw, (void *)&ipv4_addr) != 1) {
-		dprintf(D_ALWAYS, "Invalid IP address: %s\n", gw);
-		return 1;
+	unsigned char ipv6_addr[16];
+
+	int ipaddr_type;
+	int return_value1 = inet_pton(AF_INET, gw, (void *)&ipv4_addr);
+	if(return_value1 == 1){
+		ipaddr_type = AF_INET;
+	}
+	else{
+		int return_value2 = inet_pton(AF_INET6, gw, (void *)&ipv6_addr);
+		if(return_value2 == 1){
+			ipaddr_type = AF_INET6;
+		}
+		else{
+			dprintf(D_ALWAYS, "Either invalid IPv4 or IPv6 address: %s\n", gw);
+			return 1;
+		}
 	}
 	//ipv4_addr[3] = 1;
 
 	struct nlmsghdr nlmsghdr;
 	memset(&nlmsghdr, 0, sizeof(nlmsghdr));
-	nlmsghdr.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg)) + RTA_LENGTH(INET_LEN);
+	nlmsghdr.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg)) + RTA_LENGTH((ipaddr_type==AF_INET) ? INET_LEN : INET6_LEN);
 	nlmsghdr.nlmsg_type = RTM_NEWROUTE;
 	nlmsghdr.nlmsg_flags = NLM_F_REQUEST|NLM_F_CREATE|NLM_F_EXCL|NLM_F_ACK;
 	nlmsghdr.nlmsg_seq = ++seq;
@@ -480,7 +560,7 @@ int add_default_route(int sock, const char * gw) {
 	iov[0].iov_len = NLMSG_LENGTH(0);
 
 	struct rtmsg rtmsg; memset(&rtmsg, 0, sizeof(struct rtmsg));
-	rtmsg.rtm_family = AF_INET;
+	rtmsg.rtm_family = (ipaddr_type == AF_INET) ? AF_INET : AF_INET6;
 	rtmsg.rtm_dst_len = dst_len;
 	rtmsg.rtm_table = RT_TABLE_MAIN;
 	rtmsg.rtm_protocol = RTPROT_BOOT;
@@ -492,13 +572,13 @@ int add_default_route(int sock, const char * gw) {
 
 	struct rtattr rta2; memset(&rta2, 0, sizeof(struct rtattr));
 	rta2.rta_type = RTA_GATEWAY;
-	rta2.rta_len = RTA_LENGTH(INET_LEN);
+	rta2.rta_len = RTA_LENGTH((ipaddr_type == AF_INET) ? INET_LEN : INET6_LEN);
 
 	iov[2].iov_base = &rta2;
 	iov[2].iov_len = RTA_LENGTH(0);
 
-	iov[3].iov_base = ipv4_addr;
-	iov[3].iov_len = RTA_ALIGN(INET_LEN);
+	iov[3].iov_base = (ipaddr_type == AF_INET) ? ipv4_addr : ipv6_addr;
+	iov[3].iov_len = RTA_ALIGN((ipaddr_type == AF_INET) ? INET_LEN : INET6_LEN);
 	return send_and_ack(sock, iov, 4);
 }
 

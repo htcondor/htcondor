@@ -998,7 +998,7 @@ Assign(char const *name,char const *value)
 //  ExprTree* ClassAd::
 //  Lookup(const char*) const{}
 
-//int ClassAd::
+int ClassAd::
 //LookupString( const char *name, char *value ) const 
 //{
 //	string strVal;
