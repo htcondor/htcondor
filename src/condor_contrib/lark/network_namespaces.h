@@ -29,15 +29,19 @@
 #include "classad/classad.h"
 #include "condor_sockaddr.h"
 #include "NetworkPluginManager.h"
-#include "ip_lock.h"
+
+#include "network_configuration.h"
+
+#define ATTR_NETWORK_ACCOUNTING "LarkNetworkAccounting"
+#define CONFIG_NETWORK_ACCOUNTING "LARK_NETWORK_ACCOUNTING"
+
+namespace lark {
 
 class NetworkNamespaceManager : public NetworkManager {
 
 public:
 
-	NetworkNamespaceManager();
-
-	int PrepareNetwork(const std::string &uniq_namespace);
+	int PrepareNetwork(const std::string &uniq_namespace, const classad::ClassAd& job_ad, classad_shared_ptr<classad::ClassAd> machine_ad);
 
 	/*
 	 * Functions to invoke for creating the child namespace
@@ -60,7 +64,20 @@ public:
 	 */
 	int Cleanup(const std::string &);
 
+	/*
+	 * Returns the netlink kernel for talking to the kernel.
+	 */
+	int GetNetlinkSocket() const {return m_sock;};
+
+	/*
+	 * Get the current instance of the NetworkNamespaceManager
+	 */
+	static NetworkNamespaceManager &GetManager();
+
 private:
+	NetworkNamespaceManager();
+
+	int ConfigureNetworkAccounting(const classad::ClassAd &machine_ad);
 
 	int CreateNetworkPipe();
 	int RunCleanupScript();
@@ -86,9 +103,15 @@ private:
 	// Synchronization pipes.
 	int m_p2c[2], m_c2p[2];
 
-	// Lock for IP address
-	std::auto_ptr<IPLock> m_iplock_external, m_iplock_internal;
+	std::auto_ptr<NetworkConfiguration> m_network_configuration;
+
+	classad_shared_ptr<classad::ClassAd> m_ad;
+
+	// Singleton instance
+	static NetworkNamespaceManager *m_instance;
 };
+
+}
 
 #endif
 

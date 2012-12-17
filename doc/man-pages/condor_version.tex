@@ -1,5 +1,5 @@
 \begin{ManPage}{\label{man-condor-version}\Condor{version}}{1}
-{print Condor version and platform information}
+{print HTCondor version and platform information}
 \Synopsis 
 \SynProg{\Condor{version}}
 \oOpt{-help}
@@ -9,13 +9,13 @@
 \oOpt{-opsys}
 \oOpt{-syscall}
 
-\index{Condor commands!condor\_version}
+\index{HTCondor commands!condor\_version}
 \index{condor\_version command}
 
 \Description
 
 With no arguments, \Condor{version} prints the
-currently installed Condor version number and platform information.
+currently installed HTCondor version number and platform information.
 The version number includes a build identification number, as well
 as the date built.
 
@@ -24,7 +24,7 @@ as the date built.
 \OptItem{\Opt{arch}}{Print this machine's ClassAd value for \AdAttr{Arch}}
 \OptItem{\Opt{opsys}}{Print this machine's ClassAd value for \AdAttr{OpSys}}
 \OptItem{\Opt{syscall}}{Get any requested version and/or platform
-   information from the \File{libcondorsyscall.a} that this Condor pool
+   information from the \File{libcondorsyscall.a} that this HTCondor pool
    is configured to use, instead of using the values that are compiled
    into the tool itself.
    This option may be used in combination with any

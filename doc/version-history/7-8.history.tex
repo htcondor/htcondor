@@ -8,7 +8,7 @@
 \section{\label{sec:History-7-8}Stable Release Series 7.8}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-This is a stable release series of Condor.
+This is a stable release series of HTCondor.
 As usual, only bug fixes (and potentially, ports to new platforms)
 will be provided in future 7.8.x releases.
 New features will be added in the 7.9.x development series.
@@ -19,57 +19,14 @@ The details of each version are described below.
 \subsection*{\label{sec:New-7-8-7}Version 7.8.7}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{itemize}
-
-\item Condor version 7.8.7 not yet released.
-%\item Condor version 7.8.7 released on Month Date, 2012.
-
-\end{itemize}
-
-\noindent New Features:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-\noindent Bugs Fixed:
-
-\begin{itemize}
-
-\item Jobs that are submitted with the ``-spool'' option to \Condor{submit}
-will no longer be left indefinitely in hold state.  Instead the jobs will be
-removed if spooling fails, and will also periodically remove jobs that have
-been in hold state due to file transfer for at least twelve hours.
-\Ticket{3200}
-
-
-\end{itemize}
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-7-8-6}Version 7.8.6}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item Condor version 7.8.6 not yet released.
-%\item Condor version 7.8.6 released on Month Date, 2012.
+\item HTCondor version 7.8.7 not yet released.
+%\item HTCondor version 7.8.7 released on Month Date, 2012.
 
 \end{itemize}
-
 
 \noindent New Features:
 
@@ -91,24 +48,102 @@ been in hold state due to file transfer for at least twelve hours.
 
 \begin{itemize}
 
-	\item Fixed a problem where a ssh\_to\_job or interactive job session would be terminated prematurely if the execute machine was configured to track process trees via a dedicated login (aka \Macro{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} is being used).  \Ticket{3232}
+\item HTCondor now places EC2 jobs on hold when they fail to authenticate,
+rather than leaving them (and other jobs with the same authentication tokens)
+idle indefinitely.
+\Ticket{2274}
 
-\item ClassAd functions int() and real() now ignore trailing characters
-when a string argument containing a valid number is given.
+\item HTCondor now only destroys the user's half of the SSH keypair
+when sure that the instance has terminated.  This prevents transient
+problems from rendering an instance permanently inaccessible.
+\Ticket{3289}
+
+\item HTCondor no longer generates an SSH keypair if the user did not
+request one.
+\Ticket{3061}
+
+\item HTCondor no longer generates SSH keypair names that are incompatible
+with OpenStack v4 (Essex).
+\Ticket{3060}
+
+\item Jobs that were submitted with \Condor{submit} \Opt{-spool}
+and failed during submission were 
+left indefinitely in the queue in the Hold state.  
+This has been fixed, such that these jobs are removed from the queue.
+In addition, the \Condor{schedd} daemon will periodically 
+check for jobs that have
+been in Hold state due to failed file transfer for at least twelve hours;
+these jobs will be removed from the queue.
+\Ticket{3200}
+
+\item Fixed a problem where an \Prog{ssh\_to\_job} or an interactive job 
+session would be terminated prematurely if the execute machine 
+was configured to track process trees via a dedicated login.
+That is, when configuration variable 
+\Macro{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} is being used.  
+\Ticket{3232}
+
+\item ClassAd functions \Procedure{int} and \Procedure{real} now ignore 
+trailing characters within
+a string argument that contains a valid number.
 \Ticket{3102}
 
-\item Contrary to the intended behavior, jobs run via glexec did not
+\item Contrary to the intended behavior, jobs run via \Prog{glexec} did not
 get put on hold shortly before their proxy expired.
 \Ticket{3283}
 
-\item Starting in 7.8.0, when using glexec, the job was put on hold
-shortly after the user's proxy was refreshed.  The stated hold
-reason was, ``Proxy about to expire.''
+\item Starting in version 7.8.0, when using \Prog{glexec}, 
+the job was put on hold shortly after the user's proxy was refreshed.
+The incorrect, but stated hold reason was, \Expr{"Proxy about to expire."}
 \Ticket{3280}
 
-\item The configuration setting
-\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_REFRESH} had no effect.
+\item The configuration variable
+\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_REFRESH} had no effect,
+as it was implemented using the incorrect variable name of
+\MacroNI{DELEGATE\_JOB\_GSI\_CREDENTIALS\_RENEWAL}.
+The implementation now uses the correct name.
 \Ticket{3282}
+
+\item When using privilege separation, jobs would be put on hold after
+they finished running if the working directory contained links to
+files that were not globally readable.
+\Ticket{2904}
+
+\item The configuration setting \MacroNI{ENABLE\_ADDRESS\_REWRITING}
+was not correctly applied to the \Condor{schedd} address when
+claiming a slot.  The behavior was always as though
+\MacroNI{ENABLE\_ADDRESS\_REWRITING} was false.  This could result
+in communication errors for jobs running from multi-homed submit machines.
+\Ticket{3330}
+
+\item When using \Condor{defrag} or \Condor{drain}, a rare sequence of
+events could result in the \Condor{startd} exiting with the
+following error message:
+
+\begin{verbatim}
+ERROR "match_info() called with unexpected state (Drained)"
+\end{verbatim}
+\Ticket{3331}
+
+\item The \Condor{gridmanager} no longer crashes when a CREAM grid job
+is submitted with an X.509 proxy that doesn't have VOMS attributes.
+\Ticket{3356}
+
+\item \Condor{chirp} fetch could only transfer text files on Windows. It would
+truncate or corrupt binary files.
+\Ticket{3355}
+
+\item Fixed a bug in the \Condor{gridmanager} that prevented the use
+of grid-type \SubmitCmd{batch} to submit jobs into an HTCondor pool.
+The \Condor{gridmanager} would attempt to use the wrong GAHP server.
+\Ticket{3364}
+
+\item The default for the undocumented configuration variable
+\Macro{X\_RUNS\_HERE} was inverted from \Expr{True} to \Expr{False}
+starting with the release of version 7.7.3. 
+Its default has been reset to \Expr{True}. 
+When \Expr{False}, the \Condor{master} will not start the \Condor{kbdd}.
+\Ticket{3343}
 
 \end{itemize}
 
@@ -124,9 +159,39 @@ reason was, ``Proxy about to expire.''
 
 \begin{itemize}
 
-\item None.
+\item The manual incorrectly identified configuration variable
+\Macro{COLLECTOR\_PERSISTENT\_AD\_LOG} as \MacroNI{PERSISTENT\_AD\_LOG}.
+This has now been corrected throughout the manual.
+\Ticket{3205}
 
 \end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-8-6}Version 7.8.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item Condor version 7.8.6 released on October 25, 2012.
+
+\item \Security This version contains an important security bug fix.  See below
+for details of this and other bugs fixed.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item \Security Fixed a bug which allowed jobs submitted to the standard
+universe to escalate privilege on the submit machine and execute code as root.
+(CVE-2012-5390)
+
+\end{itemize}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-8-5}Version 7.8.5}
@@ -137,9 +202,6 @@ reason was, ``Proxy about to expire.''
 \begin{itemize}
 
 \item Condor version 7.8.5 released on October 22, 2012.
-
-\item \Security This version contains an important security bug fix.  See below
-for details of this and other bugs fixed.
 
 \end{itemize}
 
@@ -166,10 +228,6 @@ caused by a bug in the Condor version 7.8.4 \Condor{negotiator}.
 \noindent Bugs Fixed:
 
 \begin{itemize}
-
-\item \Security Fixed a bug which allowed jobs submitted to the standard
-universe to escalate privilege on the submit machine and execute code as root.
-(CVE-2012-5390)
 
 \item Fixed a problem with jobs that are submitted with
 \begin{verbatim}

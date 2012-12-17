@@ -6,6 +6,7 @@
 
 #include <netinet/in.h>
 #include <net/if.h>
+#include <limits.h>
 #include <linux/netfilter_ipv4/ip_tables.h>
 #include <arpa/inet.h>
 

@@ -3,9 +3,9 @@
   <Fragment>
     <UI>
       <Dialog Id="CondorExecCfgDlg" Width="370" Height="270" Title="[ProductName] [Setup]" NoMinimize="yes">
-        <Control Id="DialogSUBMITJOBS" Type="CheckBox" X="130" Y="55" Width="290" Height="18" TabSkip="no" CheckBoxValue="Y" Property="SUBMITJOBS" Text="Submit jobs to Condor Pool" />
-        <Control Id ="InstructionRUNJOBS" Type="Text" X="10" Y="72" Width="120" Height="15" Text="When should Condor run jobs?" />
-        <Control Id="RadioRUNJOBS" Type="RadioButtonGroup" X="130" Y="72" Width="290" Height="50" TabSkip="no" Property="RUNJOBS" Text="When should Condor run jobs?">
+        <Control Id="DialogSUBMITJOBS" Type="CheckBox" X="130" Y="55" Width="290" Height="18" TabSkip="no" CheckBoxValue="Y" Property="SUBMITJOBS" Text="Submit jobs to HTCondor Pool" />
+        <Control Id ="InstructionRUNJOBS" Type="Text" X="10" Y="72" Width="120" Height="15" Text="When should HTCondor run jobs?" />
+        <Control Id="RadioRUNJOBS" Type="RadioButtonGroup" X="130" Y="72" Width="290" Height="50" TabSkip="no" Property="RUNJOBS" Text="When should HTCondor run jobs?">
           <RadioButtonGroup Property="RUNJOBS">
             <RadioButton Value="N" X="0" Y="0" Width="290" Height="12" Text="Do not run jobs on this machine."/>
             <RadioButton Value="A" X="0" Y="12" Width="290" Height="12" Text="Always run jobs and never suspend them."/>
@@ -38,7 +38,7 @@
         </Control>
         <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
         <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes">
-          <Text>Please enter the following condor config data</Text>
+          <Text>Please enter the following HTCondor config data</Text>
         </Control>
         <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
         <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes">

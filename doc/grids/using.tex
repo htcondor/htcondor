@@ -8,15 +8,15 @@ Given proper authentication, authorization to use a resource
 is required.
 Authorization is a policy that determines who is allowed to do what. 
 
-Condor (and Globus) utilize the following protocols and terminology.
-The protocols allow Condor to interact with grid machines toward
+HTCondor (and Globus) utilize the following protocols and terminology.
+The protocols allow HTCondor to interact with grid machines toward
 the end result of executing jobs.
 \begin{description}
 \item[GSI]
 \index{GSI (Grid Security Infrastructure)}
 The Globus Toolkit's Grid Security Infrastructure (GSI) provides essential
-\index{Condor-G!GSI}
-building blocks for other grid protocols and Condor-G.
+\index{HTCondor-G!GSI}
+building blocks for other grid protocols and HTCondor-G.
 This authentication and authorization system
 makes it possible to authenticate a user just once,
 using public key infrastructure (PKI) mechanisms to verify
@@ -26,19 +26,19 @@ diverse local credentials and authentication/authorization mechanisms that
 apply at each site. 
 \item[GRAM]
 The Grid Resource Allocation and Management (GRAM) protocol supports remote
-\index{Condor-G!GRAM}
+\index{HTCondor-G!GRAM}
 \index{GRAM (Grid Resource Allocation and Management)}
 submission of a computational request (for example, to run a program)
 to a remote computational resource,
 and it supports subsequent monitoring and control of the computation. 
-GRAM is the Globus protocol that Condor-G uses to talk to remote Globus
+GRAM is the Globus protocol that HTCondor-G uses to talk to remote Globus
   jobmanagers.
 \item[GASS]
 The Globus Toolkit's Global Access to Secondary Storage (GASS) service provides
-\index{Condor-G!GASS}
+\index{HTCondor-G!GASS}
 \index{GASS (Global Access to Secondary Storage)}
 mechanisms for transferring data to and from a remote HTTP, FTP, or GASS server. 
-GASS is used by Condor for the 
+GASS is used by HTCondor for the 
 \SubmitCmd{gt2} grid type
 to transfer a job's files
 to and from the machine where the job is submitted and the remote resource.
@@ -53,39 +53,30 @@ A gatekeeper is a software daemon executing on a remote machine on
 the grid.
 It is relevant only to the \SubmitCmd{gt2} grid type,
 and this daemon handles the initial communication between
-Condor and a remote resource.
+HTCondor and a remote resource.
 \item[jobmanager]
 A jobmanager is
 the Globus service that is initiated at a remote resource to submit,
 keep track of, and manage grid I/O for jobs running on 
 an underlying batch system.
 There is a specific jobmanager for each type of
-batch system supported by Globus (examples are Condor, LSF, and PBS).
+batch system supported by Globus (examples are HTCondor, LSF, and PBS).
 
 \end{description}
 
-
-\begin{figure}[hbt]
-\centering
-\includegraphics{grids/gfig1.eps}
-\caption{\label{fig:condorg}Condor-G interaction with Globus-managed resources}
-\end{figure}
-
-Figure~\ref{fig:condorg} shows how Condor interacts with Globus software
-towards running jobs.
-The diagram is specific to the \SubmitCmd{gt2} type of grid.
-Condor contains a GASS server, used to transfer the executable,
+In its interaction with Globus software,
+HTCondor contains a GASS server, used to transfer the executable,
 \File{stdin}, \File{stdout}, and \File{stderr} to and from
 the remote job execution site.
-Condor uses the GRAM protocol to contact the remote gatekeeper
+HTCondor uses the GRAM protocol to contact the remote gatekeeper
 and request that a new jobmanager be started.
 The GRAM protocol is also used to when monitoring the job's progress.
-Condor detects and intelligently handles cases
+HTCondor detects and intelligently handles cases
 such as if the remote resource crashes.
 
 There are now two different versions of the GRAM protocol in common
 usage: \SubmitCmd{gt2} and \SubmitCmd{gt5}.
-Condor supports both of them.
+HTCondor supports both of them.
 \begin{description}
 \item[gt2]
 This initial GRAM protocol is used in Globus Toolkit versions 1 and 2.
@@ -105,22 +96,22 @@ be more scalable and robust. It's usually referred to as GRAM5.
 
 \index{universe!grid, grid type gt2}
 \index{grid computing!submitting jobs to gt2}
-Condor-G supports submitting jobs to remote resources running
+HTCondor-G supports submitting jobs to remote resources running
 the Globus Toolkit's GRAM2 (or pre-WS GRAM) service. This flavor of GRAM
 is the most common.
-These Condor-G jobs are submitted the same as any other Condor job.
+These HTCondor-G jobs are submitted the same as any other HTCondor job.
 The \SubmitCmd{universe} is \SubmitCmd{grid},
 and the pre-web services GRAM protocol is specified by
 setting the type of grid as \SubmitCmd{gt2} in the \SubmitCmd{grid\_resource}
 command.
 
-\index{Condor-G!job submission}
-\index{Condor-G!proxy}
+\index{HTCondor-G!job submission}
+\index{HTCondor-G!proxy}
 \index{proxy}
-Under Condor, successful job submission to the \SubmitCmd{grid} 
+Under HTCondor, successful job submission to the \SubmitCmd{grid} 
 \SubmitCmd{universe} with \SubmitCmd{gt2}
 requires credentials.
-\index{Condor-G!X.509 certificate}
+\index{HTCondor-G!X.509 certificate}
 An X.509 certificate is used to create a proxy,
 and an account, authorization, or allocation to use a grid resource
 is required.
@@ -129,7 +120,7 @@ please consult the Globus page at
 
 \URL{http://www-unix.globus.org/toolkit/docs/4.0/security/key-index.html}
 
-Before submitting a job to Condor under the \SubmitCmd{grid} universe,
+Before submitting a job to HTCondor under the \SubmitCmd{grid} universe,
 use \Prog{grid-proxy-init} to create a proxy.
 
 Here is a simple submit description file.
@@ -150,7 +141,7 @@ The
 \SubmitCmd{executable}
 for this example is
 transferred from the local machine to the remote machine.
-By default, Condor transfers the executable, as well as any
+By default, HTCondor transfers the executable, as well as any
 files specified by an \SubmitCmd{input} command.
 Note that the executable must be compiled for its intended platform.
 
@@ -271,11 +262,11 @@ In this case, the
 command gives the path to the executable on the remote machine.
 
 A third example submits a Perl script to be run as a submitted
-Condor job.
+HTCondor job.
 The Perl script both lists and sets
 environment variables for a job.
 Save the following Perl script with the name \File{env-test.pl},
-to be used as a Condor job executable.
+to be used as an HTCondor job executable.
 
 \begin{verbatim}
 #!/usr/bin/env perl
@@ -331,22 +322,22 @@ zot = qux
 
 Of particular interest is the \Env{GLOBUS\_REMOTE\_IO\_URL}
 environment variable.
-Condor-G automatically starts up a GASS remote I/O
+HTCondor-G automatically starts up a GASS remote I/O
 server on the submit machine.
 Because of the potential for either side of the connection to fail,
 the URL for the server cannot be passed directly to the job.
 Instead, it is placed into a file, and the \Env{GLOBUS\_REMOTE\_IO\_URL}
 environment variable points to this file.
 Remote jobs can read this file and use the URL it contains
-to access the remote GASS server running inside Condor-G.
+to access the remote GASS server running inside HTCondor-G.
 If the location
-of the GASS server changes (for example, if Condor-G restarts),
-Condor-G will contact the Globus gatekeeper and update this file on
+of the GASS server changes (for example, if HTCondor-G restarts),
+HTCondor-G will contact the Globus gatekeeper and update this file on
 the machine where the job is running.
 It is therefore important that all accesses to
 the remote GASS server check this file for the latest location.
 
-The following example is a Perl script that uses the GASS server in Condor-G
+The following example is a Perl script that uses the GASS server in HTCondor-G
 to copy input files to the execute machine.
 In this example, the remote job
 counts the number of lines in a file.
@@ -379,7 +370,7 @@ exit 0;
 \normalsize
 
 The submit description file used to submit the Perl script as
-a Condor job appears as:
+an HTCondor job appears as:
 
 \footnotesize
 \begin{verbatim}
@@ -403,9 +394,9 @@ The command is of the form:
 x509userproxy = /path/to/proxy
 \end{verbatim}
 If this optional command is not present in the submit description file,
-then Condor-G checks the value of the environment variable
+then HTCondor-G checks the value of the environment variable
 \Env{X509\_USER\_PROXY} for the location of the proxy.
-If this environment variable is not present, then Condor-G
+If this environment variable is not present, then HTCondor-G
 looks for the proxy in the file
 \File{/tmp/x509up\_uXXXX},
 where the characters \verb@XXXX@ in this file name are
@@ -444,7 +435,7 @@ The configuration variable \Macro{GRIDMANAGER\_MAX\_JOBMANAGERS\_PER\_RESOURCE}
 is not applied (for gt5 jobs).
 \end{itemize}
 
-Normally, Condor will automatically detect whether a service is GRAM2 or
+Normally, HTCondor will automatically detect whether a service is GRAM2 or
 GRAM5 and interact with it accordingly. 
 It does not matter whether gt2 or gt5 is specified. 
 Disable this detection by setting
@@ -456,7 +447,7 @@ in the \SubmitCmd{grid\_resource} submit command.
 \subsubsection{\label{sec:My-Proxy}Credential Management with \Prog{MyProxy}}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{proxy!renewal with \Prog{MyProxy}}
-Condor-G can use \Prog{MyProxy}
+HTCondor-G can use \Prog{MyProxy}
 software to automatically renew GSI proxies for
 \SubmitCmd{grid}
 \SubmitCmd{universe} jobs with grid type
@@ -464,7 +455,7 @@ software to automatically renew GSI proxies for
 \Prog{MyProxy} is a software component developed at
 NCSA and used widely throughout the grid community.
 For more information see:
-\URL{http://myproxy.ncsa.uiuc.edu/}
+\URL{http://grid.ncsa.illinois.edu/myproxy/}
 
 Difficulties with proxy expiration occur in two cases.
 The first case are long running jobs, which do not complete
@@ -490,12 +481,12 @@ it is recommended that proxies have a short lifetime
 The \Prog{MyProxy} software generates proxies using credentials
 (a user certificate or a long-lived proxy) located on a secure
 \Prog{MyProxy} server.
-Condor-G talks to the MyProxy server,
+HTCondor-G talks to the MyProxy server,
 renewing a proxy as it is about to expire.
 Another advantage that this presents is it relieves the user
 from having to store a GSI user certificate and private key
 on the machine where jobs are submitted.
-This may be particularly important if a shared Condor-G
+This may be particularly important if a shared HTCondor-G
 submit machine is used by several users.
 
 In the a typical case, the following steps occur:
@@ -512,7 +503,7 @@ using
 \Prog{grid-proxy-init} or \Prog{myproxy-get-delegation}.
 
 \item{The user submits}
-a Condor-G job,
+an HTCondor-G job,
 specifying:
 \begin{description}
 \item{\Prog{MyProxy} server name (host:port)}
@@ -521,17 +512,17 @@ specifying:
 \end{description}
 
 \item{At the short-lived proxy expiration}
-Condor-G talks to
+HTCondor-G talks to
 the \Prog{MyProxy} server to refresh the proxy.
 
 \end{enumerate}
 
 
-Condor-G keeps track of the password to the \Prog{MyProxy} server
+HTCondor-G keeps track of the password to the \Prog{MyProxy} server
 for credential renewal.
-Although Condor-G tries to keep the password encrypted and secure,
+Although HTCondor-G tries to keep the password encrypted and secure,
 it is still possible (although highly unlikely) for the password
-to be intercepted from the Condor-G machine
+to be intercepted from the HTCondor-G machine
 (more precisely, from the machine that the
 \Condor{schedd} daemon that manages the grid universe jobs runs on,
 which may be distinct from the machine from where jobs are submitted).
@@ -603,14 +594,14 @@ to watch for the password.
 
 \end{enumerate}
 
-Currently, Condor-G calls the
+Currently, HTCondor-G calls the
 \Prog{myproxy-get-delegation} command-line tool,
 passing it the necessary arguments.
 The location of the
 \Prog{myproxy-get-delegation} executable is determined by the
 configuration variable
 \Macro{MYPROXY\_GET\_DELEGATION} in the configuration file
-on the Condor-G machine.
+on the HTCondor-G machine.
 This variable is read by the \Condor{gridmanager}.
 If
 \Prog{myproxy-get-delegation}

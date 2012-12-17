@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Config-Dedicated-Jobs}
-Condor's Dedicated Scheduling} 
+HTCondor's Dedicated Scheduling} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{dedicated scheduling}
 \index{MPI application!under the dedicated scheduler}
@@ -13,7 +13,7 @@ but parallel applications which do not require MPI can also be run
 with the dedicated scheduler.
 All jobs which use the parallel universe are routed to the dedicated scheduler
 within the \Condor{schedd} they were submitted to.  
-A default Condor installation
+A default HTCondor installation
 does not configure a dedicated scheduler; 
 the administrator must designate one or more \Condor{schedd} daemons
 to perform as dedicated scheduler.
@@ -23,8 +23,8 @@ to perform as dedicated scheduler.
 Selecting and Setting Up a Dedicated Scheduler}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-We recommend that you select a single machine within a 
-Condor pool to act as the dedicated scheduler.
+We recommend that you select a single machine within an 
+HTCondor pool to act as the dedicated scheduler.
 This becomes the machine from upon which all users submit their 
 parallel universe jobs.
 The perfect choice for the dedicated scheduler 
@@ -33,7 +33,7 @@ a dedicated cluster of compute nodes.
 For the pool without an obvious choice for a submit machine,
 choose a machine that all users can log into, as well as one
 that is likely to be up and running all the time.
-All of Condor's other resource requirements for a submit machine apply to
+All of HTCondor's other resource requirements for a submit machine apply to
 this machine, such as having enough disk space in the spool
 directory to hold jobs. See section~\ref{sec:Preparing-to-Install} on
 page~\pageref{sec:Preparing-to-Install} for details on these issues. 
@@ -66,7 +66,7 @@ STARTD_ATTRS = $(STARTD_ATTRS), DedicatedScheduler
 Substitute the host name of the dedicated scheduler
 machine for the string "\verb@full.host.name@". 
 
-If running personal Condor, the name of the scheduler includes
+If running personal HTCondor, the name of the scheduler includes
 the user name it was started as, so the configuration appears as:
 
 \begin{verbatim}
@@ -80,7 +80,7 @@ The resource must also be configured to prefer jobs from the dedicated
 scheduler over all other jobs.
 Therefore, configuration gives
 the dedicated scheduler of choice the highest rank.
-It is worth noting that Condor puts no other requirements on a
+It is worth noting that HTCondor puts no other requirements on a
 resource for it to be considered dedicated.  
 
 Job ClassAds from the dedicated scheduler 
@@ -208,7 +208,7 @@ only the highest ranked machines are taken.
 Note that preempting one node of a running MPI job requires killing
 the entire job on all of its nodes.  So, when preemption happens, it
 may end up freeing more machines than strictly speaking are needed.
-Also, as Condor cannot produce checkpoints for MPI jobs,
+Also, as HTCondor cannot produce checkpoints for MPI jobs,
 preempted jobs will be re-run, starting again from the beginning.
 Thus, the administrator should be careful when
 enabling dedicated preemption.  The following example shows how to

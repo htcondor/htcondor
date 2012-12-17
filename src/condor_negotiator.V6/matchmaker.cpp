@@ -1591,6 +1591,16 @@ negotiationTime ()
         }
     }
 
+    // Leave this in as an easter egg for dev/testing purposes.
+    // Like NEG_SLEEP, but this one is not dependent on getting into the
+    // negotiation loops to take effect.
+    int insert_duration = param_integer("INSERT_NEGOTIATOR_CYCLE_TEST_DURATION", 0);
+    if (insert_duration > 0) {
+        dprintf(D_ALWAYS, "begin sleep: %d seconds\n", insert_duration);
+        sleep(insert_duration);
+        dprintf(D_ALWAYS, "end sleep: %d seconds\n", insert_duration);
+    }
+
     // ----- Done with the negotiation cycle
     dprintf( D_ALWAYS, "---------- Finished Negotiation Cycle ----------\n" );
 
@@ -1617,6 +1627,11 @@ negotiationTime ()
 	if (param_boolean("NEGOTIATOR_UPDATE_AFTER_CYCLE", false)) {
 		updateCollector();
 	}
+
+    // reduce negotiator delay drift
+    daemonCore->Reset_Timer(negotiation_timerID, 
+                            std::max(cycle_delay,  NegotiatorInterval - negotiation_cycle_stats[0]->duration), 
+                            NegotiatorInterval);
 }
 
 

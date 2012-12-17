@@ -33,31 +33,35 @@
 \oOpt{-DumpRescue}
 \oOpt{-valgrind}
 \oOpt{-DontAlwaysRunPost}
-\Arg{DAGInputFile1}
-\oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
+\oOptArg{-priority}{number}
+\oOpt{-dont\_use\_default\_node\_log}
 \oOptArg{-schedd-daemon-ad-file}{FileName}
 \oOptArg{-schedd-address-file}{FileName}
+\oOpt{-suppress\_notification}
+\oOpt{-dont\_suppress\_notification}
+\Arg{DAGInputFile1}
+\oArg{{DAGInputFile2} \Dots {DAGInputFileN} }
 
-\index{Condor commands!condor\_submit\_dag}
+\index{HTCondor commands!condor\_submit\_dag}
 \index{condor\_submit\_dag command}
 
 \Description
 
 \Condor{submit\_dag} is the program for submitting a DAG (directed
-acyclic graph) of jobs for execution under Condor.
+acyclic graph) of jobs for execution under HTCondor.
 The program enforces the job dependencies defined
 in one or more \Arg{DAGInputFile}s.
 Each \Arg{DAGInputFile} contains commands
 to direct the submission of jobs implied by the nodes
-of a DAG to Condor.
-See the Condor User Manual, section~\ref{sec:DAGMan} for a complete
+of a DAG to HTCondor.
+See the HTCondor User Manual, section~\ref{sec:DAGMan} for a complete
 description.
 
 \begin{Options}
   \OptItem{\Opt{-help}}{Display usage information.}
   \OptItem{\Opt{-version}}{Display version information.}
-  \OptItem{\Opt{-no\_submit}}{Produce the Condor submit description file
-     for DAGMan, but do not submit DAGMan as a Condor job.}
+  \OptItem{\Opt{-no\_submit}}{Produce the HTCondor submit description file
+     for DAGMan, but do not submit DAGMan as an HTCondor job.}
   \OptItem{\Opt{-verbose}}{Cause \Condor{submit\_dag}
      to give verbose error messages.}
   \OptItem{\Opt{-force}}{Require \Condor{submit\_dag} to overwrite
@@ -76,9 +80,13 @@ description.
      \Arg{NumberOfJobs} is a positive integer. If the option is
      omitted, the number of idle jobs is unlimited.   Note that for
      this argument, each individual process within a cluster counts as a 
-     job, which is inconsistent with \OptArg{-maxjobs}.}
+     job, which is inconsistent with \OptArg{-maxjobs}. Note that
+     nothing special is done to the submit file: a ``queue 5000'' statement in
+     a submit file where \Arg{-maxidle} is set to 250 will result in a cluster
+     of 5000 new jobs being submitted to the schedd; in this case, \Condor{dagman}
+     will resume submitting jobs when the number of idle jobs falls below 250. }
   \OptItem{\OptArg{-maxjobs}{NumberOfJobs}}{Sets the maximum number of jobs
-     within the DAG that will be submitted to Condor at one time.
+     within the DAG that will be submitted to HTCondor at one time.
      \Arg{NumberOfJobs} is a positive integer. If the option is
      omitted, the default number of jobs is unlimited.  Note that for
      this argument, each cluster counts as one job, no matter how many
@@ -95,7 +103,7 @@ description.
      \Arg{NumberOfPOSTScripts} is a positive integer. If this option is
      omitted, the default number of POST scripts is unlimited.}
   \OptItem{\OptArg{-notification}{value}}{Sets the e-mail notification
-     for DAGMan itself. This information will be used within the Condor
+     for DAGMan itself. This information will be used within the HTCondor
      submit description file for DAGMan. This file is produced by
      \Condor{submit\_dag}. See \Opt{notification}
      within the section of submit description file commands in the
@@ -268,7 +276,22 @@ description.
      By default, \Condor{dagman} runs the
      POST script regardless of the return value of the PRE script. 
      Versions of \Condor{dagman} prior to 7.7.2 did not ignore the return
-     value and would not run the POST script if the PRE script failed.}
+     value and would not run the POST script if the PRE script failed.
+  }
+  \OptItem{\OptArg{-priority}{number}}{Sets the minimum job priority
+    of jobs submitted and running under the \Condor{dagman} job
+    submitted by this \Condor{submit\_dag} command.
+  }
+  \OptItem{\Opt{-dont\_use\_default\_node\_log}}{ Tells \Condor{dagman}
+     to use the file specified by the job ClassAd
+     attribute \Attr{UserLog} to monitor job status.
+     If this command line argument is used,
+     then the user log file cannot be defined with a macro.
+     This is necessary if using a \Condor{dagman} version of 7.9.0 or later
+% Any version prior to 7.9.0 will need this flag defined
+     and submitting to a \Condor{schedd} daemon that is earlier than 7.9.0,
+     including any in the 7.8 series of HTCondor releases.
+  }
   \OptItem{\OptArg{-schedd-daemon-ad-file}{FileName}}{
     Specifies a full path to a daemon ad file dropped by a \Condor{schedd}.
     Therefore this allows submission to a specific scheduler if several
@@ -276,17 +299,35 @@ description.
     The value for this argument defaults to the configuration attribute
     \MacroNI{SCHEDD\_DAEMON\_AD\_FILE}.
   }
-   \OptItem{\OptArg{-schedd-address-file}{FileName}}{
+  \OptItem{\OptArg{-schedd-address-file}{FileName}}{
     Specifies a full path to an address file dropped by a \Condor{schedd}.
     Therefore this allows submission to a specific scheduler if several
     are available without repeatedly querying the \Condor{collector}.
     The value for this argument defaults to the configuration attribute
     \MacroNI{SCHEDD\_ADDRESS\_FILE}.
   }
+  \OptItem{\Opt{-suppress\_notification}}{Causes jobs submitted
+    by \Condor{dagman} to not send email notification for events.
+    The same effect can be achieved by setting configuration variable
+    \Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} to \Expr{True}.
+    This command line option is independent of the
+    \Opt{-notification} command line option, 
+    which controls notification for the \Condor{dagman} job itself.
+  }
+   \OptItem{\Opt{-dont\_suppress\_notification}}{Causes jobs
+    submitted by \Condor{dagman} to defer to content within 
+    the submit description file when deciding to send
+    email notification for events. The same effect can be achieved by setting
+    configuration variable \Macro{DAGMAN\_SUPPRESS\_NOTIFICATION} to 
+    \Expr{False}.
+    This command line flag is independent of the \Opt{-notification} 
+    command line option, 
+    which controls notification for the \Condor{dagman} job itself. 
+    If both \Opt{-dont\_suppress\_notification} and 
+    \Opt{-suppress\_notification} are specified with the same command line,
+    the last argument is used.
+  }
   \end{Options}
-
-\SeeAlso
-Condor User Manual
 
 \ExitStatus
 

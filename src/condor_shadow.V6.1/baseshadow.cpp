@@ -850,15 +850,27 @@ void BaseShadow::initUserLog()
 		if( !uLog.initialize (owner.Value(), domain.Value(), logfiles,
 				cluster, proc, 0, gjid)) {
 			MyString hold_reason;
-			hold_reason.formatstr(
-					"Failed to initialize user log to %s or %s", logfilename.Value(),
-						dagmanLogFile.Value());
+			hold_reason.formatstr("Failed to initialize user log to %s or %s",
+				logfilename.Value(), dagmanLogFile.Value());
 			dprintf( D_ALWAYS, "%s\n",hold_reason.Value());
-			holdJobAndExit(hold_reason.Value(),CONDOR_HOLD_CODE_UnableToInitUserLog,0);
-			// holdJobAndExit() should not return, but just in case it does EXCEPT
+			holdJobAndExit(hold_reason.Value(),
+					CONDOR_HOLD_CODE_UnableToInitUserLog,0);
+				// holdJobAndExit() should not return, but just in case it does
+				// EXCEPT
 			EXCEPT("Failed to initialize user log: %s",hold_reason.Value());
 		}
-		uLog.setUseXML(jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml) && use_xml);
+		uLog.setUseXML(jobAd->LookupBool(ATTR_ULOG_USE_XML, use_xml) &&
+			use_xml);
+		if(logfiles.size() > 1) {
+			MyString msk;
+			jobAd->LookupString(ATTR_DAGMAN_WORKFLOW_MASK, msk);
+			Tokenize(msk.Value());
+			dprintf(D_FULLDEBUG, "Mask is \"%s\"\n", msk.Value());
+			while(const char* mask = GetNextToken(",",true)) {
+				dprintf(D_FULLDEBUG, "Adding \"%s\" to mask\n",mask);
+				uLog.AddToMask(ULogEventNumber(atoi(mask)));
+			}
+		}
 	} else {
 		dprintf(D_FULLDEBUG, "no %s found\n", ATTR_ULOG_FILE);
 		dprintf(D_FULLDEBUG, "and no %s found\n", ATTR_DAGMAN_WORKFLOW_LOG);
@@ -899,35 +911,43 @@ int getJobAdExitSignal(ClassAd *jad, int &exit_signal)
 static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd) 
 {
 	std::string resslist;
-	if ( ! jobAd->LookupString("PartitionableResources", resslist))
+	if ( ! jobAd->LookupString("ProvisionedResources", resslist))
 		resslist = "Cpus, Disk, Memory";
 
 	StringList reslist(resslist.c_str());
 	if (reslist.number() > 0) {
-		int64_t int64_value = 0;
 		ClassAd * puAd = new ClassAd();
 		puAd->Clear(); // get rid of default "CurrentTime = time()" value.
 
 		reslist.rewind();
-		char * resname = NULL;
-		while ((resname = reslist.next()) != NULL) {
-			MyString attr;
-			int64_value = -1;
-			attr.formatstr("%s", resname); // provisioned value
-			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
-				puAd->Assign(resname, int64_value);
-			} 
+		while (const char * resname = reslist.next()) {
+			std::string attr;
+			std::string res = resname;
+			title_case(res); // capitalize it to make it print pretty.
+			const int copy_ok = classad::Value::ERROR_VALUE | classad::Value::BOOLEAN_VALUE | classad::Value::INTEGER_VALUE | classad::Value::REAL_VALUE;
+			classad::Value value;
+			attr = res + "Provisioned";	 // provisioned value
+			if (jobAd->EvalAttr(attr.c_str(), NULL, value) && (value.GetType() & copy_ok) != 0) {
+				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
+				if (plit) {
+					puAd->Insert(resname, plit); // usage ad has attribs like they appear in Machine ad
+				}
+			}
 			// /*for debugging*/ else { puAd->Assign(resname, 42); }
-			int64_value = -2;
-			attr.formatstr("Request%s", resname);	// requested value
-			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
-				puAd->Assign(attr.Value(), int64_value);
+			attr = "Request"; attr += res;   	// requested value
+			if (jobAd->EvalAttr(attr.c_str(), NULL, value)&& (value.GetType() & copy_ok) != 0) {
+				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
+				if (plit) {
+					puAd->Insert(attr.c_str(), plit);
+				}
 			}
 			// /*for debugging*/ else { puAd->Assign(attr.Value(), 99); }
-			int64_value = -3;
-			attr.formatstr("%sUsage", resname); // usage value
-			if (jobAd->LookupInteger(attr.Value(), int64_value)) {
-				puAd->Assign(attr.Value(), int64_value);
+			attr = res + "Usage"; // usage value
+			if (jobAd->EvalAttr(attr.c_str(), NULL, value) && (value.GetType() & copy_ok) != 0) {
+				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
+				if (plit) {
+					puAd->Insert(attr.c_str(), plit);
+				}
 			}
 		}
 		*ppusageAd = puAd;

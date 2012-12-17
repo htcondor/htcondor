@@ -44,6 +44,11 @@
 
 #define NULLSTRING "NULL"
 
+const char * nullStringIfEmpty( const std::string & str ) {
+    if( str.empty() ) { return NULLSTRING; }
+    else { return str.c_str(); }
+}
+
 //
 // This function should not be called for anything in query_parameters,
 // except for by AmazonQuery::SendRequest().
@@ -150,17 +155,13 @@ bool readShortFile( const std::string & fileName, std::string & contents ) {
 // We also make extensive use of this function in the XML parsing code,
 // for pretty much exactly the same reason.
 //
-size_t appendToString( void * ptr, size_t size, size_t nmemb, void * str ) {
+size_t appendToString( const void * ptr, size_t size, size_t nmemb, void * str ) {
     if( size == 0 || nmemb == 0 ) { return 0; }
     
-    char * ucptr = (char *)ptr;
-    char last = ucptr[ (size * nmemb) - 1 ];
-    ucptr[ (size * nmemb) - 1 ] = '\0';
+    std::string source( (const char *)ptr, size * nmemb );
     std::string * ssptr = (std::string *)str;
-    ssptr->append( ucptr );
-    (*ssptr) += last;
-    ucptr[ (size * nmemb) - 1 ] = last;
-    
+    ssptr->append( source );
+
     return (size * nmemb);
 }
 
@@ -301,7 +302,6 @@ bool AmazonRequest::SendRequest() {
                              + valueOfHostHeaderInLowercase + "\n"
                              + httpRequestURI + "\n"
                              + canonicalizedQueryString;
-    // dprintf( D_ALWAYS, "DEBUG: stringToSign is '%s'\n", stringToSign.c_str() );
 
     // Step 3: "Calculate an RFC 2104-compliant HMAC with the string
     // you just created, your Secret Access Key as the key, and SHA256
@@ -321,22 +321,19 @@ bool AmazonRequest::SendRequest() {
             dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->secretKeyFile.c_str() );
             return false;
         }
-        // dprintf( D_ALWAYS, "DEBUG: '%s' (%d)\n", saKey.c_str(), saKey.length() );
         if( saKey[ saKey.length() - 1 ] == '\n' ) { saKey.erase( saKey.length() - 1 ); }
-        // dprintf( D_ALWAYS, "DEBUG: '%s' (%d)\n", saKey.c_str(), saKey.length() );
     }
     
     unsigned int mdLength = 0;
     unsigned char messageDigest[EVP_MAX_MD_SIZE];
     const unsigned char * hmac = HMAC( EVP_sha256(), saKey.c_str(), saKey.length(),
-        (unsigned char *)stringToSign.c_str(), stringToSign.length(), messageDigest, & mdLength );
+        (const unsigned char *)stringToSign.c_str(), stringToSign.length(), messageDigest, & mdLength );
     if( hmac == NULL ) {
         this->errorCode = "E_INTERNAL";
         this->errorMessage = "Unable to calculate query signature (SHA256 HMAC).";
         dprintf( D_ALWAYS, "Unable to calculate SHA256 HMAC to sign query, failing.\n" );
         return false;
     }
-    // dprintf( D_ALWAYS, "DEBUG: %d -> '%c'\n", mdLength, messageDigest[0] );
     
     // Step 4: "Convert the resulting value to base64."
     char * base64Encoded = condor_base64_encode( messageDigest, mdLength );
@@ -453,11 +450,11 @@ bool AmazonRequest::SendRequest() {
         }
     }
 
-    if( CAPath.empty() ) {
-        CAPath = "/etc/grid-security/certificates";
+    // FIXME: Update documentation to reflect no hardcoded default.
+    if( ! CAPath.empty() ) {
+        dprintf( D_FULLDEBUG, "Setting CA path to '%s'\n", CAPath.c_str() );
+        SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAPATH, CAPath.c_str() );
     }
-    dprintf( D_FULLDEBUG, "Setting CA path to '%s'\n", CAPath.c_str() );
-    SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAPATH, CAPath.c_str() );
         
     if( ! CAFile.empty() ) {
         dprintf( D_FULLDEBUG, "Setting CA file to '%s'\n", CAFile.c_str() );
@@ -507,7 +504,8 @@ bool AmazonRequest::SendRequest() {
     curl_easy_cleanup( curl );
     
     if( responseCode != 200 ) {
-        this->errorCode = "E_HTTP_RESPONSE_NOT_200";
+        // this->errorCode = "E_HTTP_RESPONSE_NOT_200";
+        formatstr( this->errorCode, "E_HTTP_RESPONSE_NOT_200 (%lu)", responseCode );
         this->errorMessage = resultString;
         dprintf( D_ALWAYS, "Query did not return 200 (%lu), failing.\n",
             responseCode );
@@ -515,6 +513,7 @@ bool AmazonRequest::SendRequest() {
         return false;
     }
     
+    dprintf( D_FULLDEBUG, "Response was '%s'\n", resultString.c_str() );
     return true;
 }
 
@@ -573,7 +572,7 @@ void vmStartESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
 void vmStartCDH( void * vUserData, const XML_Char * cdata, int len ) {
     vmStartUD * vsud = (vmStartUD *)vUserData;
     if( vsud->inInstanceId ) {
-        appendToString( (void *)cdata, len, 1, (void *) & vsud->instanceID );
+        appendToString( (const void *)cdata, len, 1, (void *) & vsud->instanceID );
     }
 }
 
@@ -620,7 +619,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     if( ! verify_min_number_args( argc, 14 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
         dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
-                 argc, 10, argv[0] );
+                 argc, 14, argv[0] );
         return false;
     }
 
@@ -713,6 +712,182 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
 
 // ---------------------------------------------------------------------------
 
+AmazonVMStartSpot::AmazonVMStartSpot() { }
+
+AmazonVMStartSpot::~AmazonVMStartSpot() { }
+
+struct vmSpotUD_t {
+    bool inInstanceId;
+    bool inSpotRequestId;
+    std::string & instanceID;
+    std::string & spotRequestID;
+
+    vmSpotUD_t( std::string & iid, std::string & srid ) : inInstanceId( false ), inSpotRequestId( false ), instanceID( iid ), spotRequestID( srid ) { }
+};
+typedef struct vmSpotUD_t vmSpotUD;
+
+//
+// Like the vsmStart*() functions, these assume we only ever get back
+// single-item response sets.  See the note above for a cleaner way of
+// handling multi-item response sets, should we ever need so to do.
+//
+
+void vmSpotESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
+    vmSpotUD * vsud = (vmSpotUD *)vUserData;
+    if( strcasecmp( (const char *)name, "instanceId" ) == 0 ) {
+        vsud->inInstanceId = true;
+    } else if( strcasecmp( (const char *)name, "spotInstanceRequestId" ) == 0 ) {
+        vsud->inSpotRequestId = true;
+    }
+}
+
+void vmSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
+    vmSpotUD * vsud = (vmSpotUD *)vUserData;
+    if( vsud->inInstanceId ) {
+        appendToString( (const void *)cdata, len, 1, (void *) & vsud->instanceID );
+    } else if( vsud->inSpotRequestId ) {
+        appendToString( (const void *)cdata, len, 1, (void *) & vsud->spotRequestID );
+    }
+}
+
+void vmSpotEEH( void * vUserData, const XML_Char * name ) {
+    vmSpotUD * vsud = (vmSpotUD *)vUserData;
+    if( strcasecmp( (const char *)name, "instanceId" ) == 0 ) {
+        vsud->inInstanceId = false;
+    } else if( strcasecmp( (const char *)name, "spotInstanceRequestId" ) == 0 ) {
+        vsud->inSpotRequestId = false;
+    }
+}
+
+bool AmazonVMStartSpot::SendRequest() {
+    bool result = AmazonRequest::SendRequest();
+    if ( result ) {
+        vmSpotUD vsud( this->instanceID, this->spotRequestID );
+        XML_Parser xp = XML_ParserCreate( NULL );
+        XML_SetElementHandler( xp, & vmSpotESH, & vmSpotEEH );
+        XML_SetCharacterDataHandler( xp, & vmSpotCDH );
+        XML_SetUserData( xp, & vsud );
+        XML_Parse( xp, this->resultString.c_str(), this->resultString.length(), 1 );
+        XML_ParserFree( xp );
+    } else {
+        if( this->errorCode == "E_CURL_IO" ) {
+            // To be on the safe side, if the I/O failed, make the gridmanager
+            // check to see the VM was started or not.
+            this->errorCode = "NEED_CHECK_VM_START"; 
+            return false;
+        }
+    }
+    return result;
+}
+
+bool AmazonVMStartSpot::workerFunction( char ** argv, int argc, std::string & result_string ) {
+    assert( strcmp( argv[0], "EC2_VM_START_SPOT" ) == 0 );
+    
+    // Uses the Query AP function 'RequestSpotInstances', as documented at
+    // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-RequestSpotInstances.html
+
+    int requestID;
+    get_int( argv[1], & requestID );
+    
+    if( ! verify_min_number_args( argc, 15 ) ) {
+        result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+        dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n", argc, 15, argv[0] );
+        return false;
+    }
+
+    // Fill in required attributes / parameters.
+    AmazonVMStartSpot vmSpotRequest;
+    vmSpotRequest.serviceURL = argv[2];
+    vmSpotRequest.accessKeyFile = argv[3];
+    vmSpotRequest.secretKeyFile = argv[4];
+    vmSpotRequest.query_parameters[ "Action" ] = "RequestSpotInstances";
+    vmSpotRequest.query_parameters[ "LaunchSpecification.ImageId" ] = argv[5];
+    vmSpotRequest.query_parameters[ "InstanceCount" ] = "1";
+    vmSpotRequest.query_parameters[ "SpotPrice" ] = argv[6];
+
+    // Optional attributes / parameters.
+    if( strcasecmp( argv[7], NULLSTRING ) ) {
+        vmSpotRequest.query_parameters[ "LaunchSpecification.KeyName" ] = argv[7];
+    }
+
+    if( strcasecmp( argv[10], NULLSTRING ) ) {
+        vmSpotRequest.query_parameters[ "LaunchSpecification.InstanceType" ] = argv[10];
+    } else {
+        vmSpotRequest.query_parameters[ "LaunchSpecification.InstanceType" ] = "m1.small";
+    }
+
+    if( strcasecmp( argv[11], NULLSTRING ) ) {
+        vmSpotRequest.query_parameters[ "LaunchSpecification.Placement.AvailabilityZone" ] = argv[11];
+    }
+
+    if( strcasecmp( argv[12], NULLSTRING ) ) {
+        vmSpotRequest.query_parameters[ "LaunchSpecification.SubnetId" ] = argv[12];
+    }
+    
+    if( strcasecmp( argv[13], NULLSTRING ) ) {
+        vmSpotRequest.query_parameters[ "LaunchSpecification.NetworkInterface.1.PrivateIpAddress" ] = argv[13];
+    }
+ 
+    // Use LaunchGroup, which we don't otherwise support, as an idempotence
+    // token, since RequestSpotInstances doesn't support ClientToken.
+    if( strcasecmp( argv[14], NULLSTRING ) ) {
+        vmSpotRequest.query_parameters[ "LaunchGroup" ] = argv[14];
+    }
+    
+    for( int i = 15; i < argc; ++i ) {
+        std::ostringstream groupName;
+        groupName << "LaunchSpecification.SecurityGroup." << (i - 14 + 1);
+        vmSpotRequest.query_parameters[ groupName.str() ] = argv[ i ];
+    }
+    
+    // Handle user data.
+    std::string buffer;
+    if( strcasecmp( argv[8], NULLSTRING ) ) {
+        buffer = argv[8];
+    }
+    if( strcasecmp( argv[9], NULLSTRING ) ) {
+        std::string udFileName = argv[9];
+        std::string udFileContents;
+        if( ! readShortFile( udFileName, udFileContents ) ) {
+            result_string = create_failure_result( requestID, "Failed to read userdata file.", "E_FILE_IO" );
+            dprintf( D_ALWAYS, "failed to read userdata file '%s'.\n", udFileName.c_str() ) ;
+            return false;
+        }
+        buffer += udFileContents;
+    }
+    if( ! buffer.empty() ) {
+        char * base64Encoded = condor_base64_encode( (const unsigned char *)buffer.c_str(), buffer.length() );
+        vmSpotRequest.query_parameters[ "LaunchSpecification.UserData" ] = base64Encoded;
+        free( base64Encoded );
+    }
+    
+    // Send the request.
+    if( ! vmSpotRequest.SendRequest() ) {
+        result_string = create_failure_result( requestID, vmSpotRequest.errorMessage.c_str(), vmSpotRequest.errorCode.c_str() ) ;
+    } else {
+        if( vmSpotRequest.spotRequestID.empty() ) {
+            dprintf( D_ALWAYS, "Got a result from endpoint that did not include a spot request ID, failing.  Response follows.\n" );
+            dprintf( D_ALWAYS, "-- RESPONSE BEGINS --\n" );
+            dprintf( D_ALWAYS, vmSpotRequest.resultString.c_str() );
+            dprintf( D_ALWAYS, "-- RESPONSE ENDS --\n" );
+            result_string = create_failure_result( requestID, "Could not find spot request ID in repsonse from server.  Check the EC2 GAHP log for details.", "E_NO_SPOT_REQUEST_ID" );
+            // We don't return false here, because this isn't an error;
+            // it's a failure, which the grid manager will handle.
+        } else {
+            StringList resultList;
+            resultList.append( vmSpotRequest.spotRequestID.c_str() );
+            // GM_SPOT_START -> GM_SPOT_SUBMITTED -> GM_SPOT_QUERY always
+            // happens, so simplify things and just don't report this.
+            // resultList.append( nullStringIfEmpty( vmSpotRequest.instanceID ) );
+            result_string = create_success_result( requestID, & resultList );
+        }
+    }
+
+    return true;
+} // end AmazonVMStartSpot::workerFunction()
+
+// ---------------------------------------------------------------------------
+
 AmazonVMStop::AmazonVMStop() { }
 
 AmazonVMStop::~AmazonVMStop() { }
@@ -759,14 +934,54 @@ bool AmazonVMStop::workerFunction(char **argv, int argc, std::string &result_str
 
 // ---------------------------------------------------------------------------
 
+AmazonVMStopSpot::AmazonVMStopSpot() { }
+
+AmazonVMStopSpot::~AmazonVMStopSpot() { }
+
+bool AmazonVMStopSpot::workerFunction( char ** argv, int argc, std::string & result_string ) {
+    assert( strcmp( argv[0], "EC2_VM_STOP_SPOT" ) == 0 );
+    
+    // Uses the Query API function 'CancelSpotInstanceRequests', documented at
+    // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-CancelSpotInstanceRequests.html
+    
+    int requestID;
+    get_int( argv[1], & requestID );
+
+    if( ! verify_min_number_args( argc, 6 ) ) {
+        result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+        dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+                 argc, 6, argv[0] );
+        return false;
+    }
+    
+    AmazonVMStopSpot terminationRequest;
+    terminationRequest.serviceURL = argv[2];
+    terminationRequest.accessKeyFile = argv[3];
+    terminationRequest.secretKeyFile = argv[4];
+    terminationRequest.query_parameters[ "Action" ] = "CancelSpotInstanceRequests";
+    //
+    // Rather than cancel the corresponding instance in this function,
+    // just have the grid manager call EC2_VM_STOP; that allows us to
+    // return two error messages for two activities.
+    //
+    terminationRequest.query_parameters[ "SpotInstanceRequestId.1" ] = argv[5];
+
+    if( ! terminationRequest.SendRequest() ) {
+        result_string = create_failure_result( requestID,
+            terminationRequest.errorMessage.c_str(),
+            terminationRequest.errorCode.c_str() );
+    } else {
+        result_string = create_success_result( requestID, NULL );
+    }
+    
+    return true;
+} // end AmazonVMStop::workerFunction()
+
+// ---------------------------------------------------------------------------
+
 AmazonVMStatus::AmazonVMStatus() { }
 
 AmazonVMStatus::~AmazonVMStatus() { }
-
-const char * nullStringIfEmpty( const std::string & str ) {
-    if( str.empty() ) { return NULLSTRING; }
-    else { return str.c_str(); }
-}    
 
 // Expecting:EC2_VM_STATUS <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>
 bool AmazonVMStatus::workerFunction(char **argv, int argc, std::string &result_string) {
@@ -812,6 +1027,9 @@ bool AmazonVMStatus::workerFunction(char **argv, int argc, std::string &result_s
                 resultList.append( asr.instance_id.c_str() );
                 resultList.append( asr.status.c_str() );
                 resultList.append( asr.ami_id.c_str() );
+                resultList.append( nullStringIfEmpty( asr.stateReasonCode ) );
+                
+                // if( ! asr.stateReasonCode.empty() ) { dprintf( D_ALWAYS, "DEBUG: Instance %s has status %s because %s\n", asr.instance_id.c_str(), asr.status.c_str(), asr.stateReasonCode.c_str() ); }
                 
                 if( strcasecmp( asr.status.c_str(), AMAZON_STATUS_RUNNING ) == 0 ) {
                     resultList.append( nullStringIfEmpty( asr.public_dns ) );
@@ -835,6 +1053,226 @@ bool AmazonVMStatus::workerFunction(char **argv, int argc, std::string &result_s
 
 // ---------------------------------------------------------------------------
 
+AmazonVMStatusSpot::AmazonVMStatusSpot() { }
+
+AmazonVMStatusSpot::~AmazonVMStatusSpot() { }
+
+struct vmStatusSpotUD_t {
+    enum vmStatusSpotTags_t {
+        NONE,
+        INSTANCE_ID,
+        STATUS,
+        LAUNCH_GROUP,
+        REQUEST_ID
+    };
+    typedef enum vmStatusSpotTags_t vmStatusSpotTags;
+
+    // The groupSet member of the launchSpecification also contains
+    // an 'item' member.  Do NOT stop looking for tags of interest
+    // (like the instance ID) because of them.  XPath is looking more
+    // and more tasty...
+    unsigned short inItem;
+    vmStatusSpotTags inWhichTag;
+    AmazonStatusSpotResult * currentResult;
+ 
+    std::vector< AmazonStatusSpotResult > & results;
+    
+    vmStatusSpotUD_t( std::vector< AmazonStatusSpotResult > & assrList ) :
+        inItem( 0 ),
+        inWhichTag( vmStatusSpotUD_t::NONE ),
+        currentResult( NULL ),
+        results( assrList ) { };
+};
+typedef struct vmStatusSpotUD_t vmStatusSpotUD;
+
+void vmStatusSpotESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
+    vmStatusSpotUD * vsud = (vmStatusSpotUD *)vUserData;
+
+    if( strcasecmp( (const char *)name, "item" ) == 0 ) {
+        if( vsud->inItem == 0 ) {
+            vsud->currentResult = new AmazonStatusSpotResult();
+            assert( vsud->currentResult != NULL );
+        }
+        vsud->inItem += 1;
+        return;
+    }
+    
+    if( strcasecmp( (const char *)name, "spotInstanceRequestId" ) == 0 ) {
+        vsud->inWhichTag = vmStatusSpotUD::REQUEST_ID;
+    } else if( strcasecmp( (const char *)name, "state" ) == 0 ) {
+        vsud->inWhichTag = vmStatusSpotUD::STATUS;
+    } else if( strcasecmp( (const char *)name, "instanceId" ) == 0 ) {
+        vsud->inWhichTag = vmStatusSpotUD::INSTANCE_ID;
+    } else if( strcasecmp( (const char *)name, "launchGroup" ) == 0 ) {
+        vsud->inWhichTag = vmStatusSpotUD::LAUNCH_GROUP;
+    } else {
+        vsud->inWhichTag = vmStatusSpotUD::NONE;
+    }
+}
+
+void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
+    vmStatusSpotUD * vsud = (vmStatusSpotUD *)vUserData;
+    if( vsud->inItem != 1 ) { return; }
+    
+    std::string * targetString = NULL;
+    switch( vsud->inWhichTag ) {
+        case vmStatusSpotUD::NONE:
+            return;
+
+        case vmStatusSpotUD::REQUEST_ID:
+            targetString = & vsud->currentResult->request_id;
+            break;
+        
+        case vmStatusSpotUD::STATUS:
+            targetString = & vsud->currentResult->status;
+            break;
+        
+        case vmStatusSpotUD::LAUNCH_GROUP:
+            targetString = & vsud->currentResult->launch_group;
+            break;
+        
+        case vmStatusSpotUD::INSTANCE_ID:
+            targetString = & vsud->currentResult->instance_id;
+            break;
+
+        default:
+            // This should never happen.
+            break;
+    }
+    
+    appendToString( (const void *)cdata, len, 1, (void *)targetString );
+}
+
+void vmStatusSpotEEH( void * vUserData, const XML_Char * name ) {
+    vmStatusSpotUD * vsud = (vmStatusSpotUD *)vUserData;
+
+    if( strcasecmp( (const char *)name, "item" ) == 0 ) {
+        if( vsud->inItem == 1 ) {
+            vsud->results.push_back( * vsud->currentResult );
+            delete vsud->currentResult;
+            vsud->currentResult = NULL;
+        }
+        
+        vsud->inItem -= 1;
+    }
+
+    vsud->inWhichTag = vmStatusSpotUD::NONE;
+}
+
+bool AmazonVMStatusSpot::SendRequest() {
+    bool result = AmazonRequest::SendRequest();
+    if( result ) {
+        vmStatusSpotUD vssud( this->spotResults );
+        XML_Parser xp = XML_ParserCreate( NULL );
+        XML_SetElementHandler( xp, & vmStatusSpotESH, & vmStatusSpotEEH );
+        XML_SetCharacterDataHandler( xp, & vmStatusSpotCDH );
+        XML_SetUserData( xp, & vssud );
+        XML_Parse( xp, this->resultString.c_str(), this->resultString.length(), 1 );
+        XML_ParserFree( xp );
+    }
+    return result;
+} // end AmazonVMStatusSpot::SendRequest()
+
+bool AmazonVMStatusSpot::workerFunction(char **argv, int argc, std::string &result_string) {
+    assert( strcmp( argv[0], "EC2_VM_STATUS_SPOT" ) == 0 );
+
+    // Uses the Query API function 'DescribeSpotInstanceRequests', as documented at
+    // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeSpotInstanceRequests.html
+
+    int requestID;
+    get_int( argv[1], & requestID );
+    
+    if( ! verify_min_number_args( argc, 6 ) ) {
+        result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+        dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+                 argc, 6, argv[0] );
+        return false;
+    }
+
+    AmazonVMStatusSpot statusRequest;
+    statusRequest.serviceURL = argv[2];
+    statusRequest.accessKeyFile = argv[3];
+    statusRequest.secretKeyFile = argv[4];
+    statusRequest.query_parameters[ "Action" ] = "DescribeSpotInstanceRequests";
+    statusRequest.query_parameters[ "SpotInstanceRequestId.1" ] = argv[5];
+
+    if( ! statusRequest.SendRequest() ) {
+        result_string = create_failure_result( requestID,
+            statusRequest.errorMessage.c_str(),
+            statusRequest.errorCode.c_str() );
+    } else {
+        if( statusRequest.spotResults.size() == 0 ) {
+            result_string = create_success_result( requestID, NULL );
+        } else {
+            // There should only ever be one result, but let's not worry.
+            StringList resultList;
+            for( unsigned i = 0; i < statusRequest.spotResults.size(); ++i ) {
+                AmazonStatusSpotResult & assr = statusRequest.spotResults[i];
+                resultList.append( assr.request_id.c_str() );
+                resultList.append( assr.status.c_str() );
+                resultList.append( assr.launch_group.c_str() );
+                resultList.append( nullStringIfEmpty( assr.instance_id ) );
+            }
+            result_string = create_success_result( requestID, & resultList );
+        }
+    }
+
+    return true;
+} // end AmazonVmStatusSpot::workerFunction()
+
+// ---------------------------------------------------------------------------
+
+AmazonVMStatusAllSpot::AmazonVMStatusAllSpot() { }
+
+AmazonVMStatusAllSpot::~AmazonVMStatusAllSpot( ) { }
+
+bool AmazonVMStatusAllSpot::workerFunction(char **argv, int argc, std::string &result_string) {
+    assert( strcmp( argv[0], "EC2_VM_STATUS_ALL_SPOT" ) == 0 );
+
+    // Uses the Query API function 'DescribeSpotInstanceRequests', as documented at
+    // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeSpotInstanceRequests.html
+
+    int requestID;
+    get_int( argv[1], & requestID );
+    
+    if( ! verify_min_number_args( argc, 5 ) ) {
+        result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+        dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+                 argc, 5, argv[0] );
+        return false;
+    }
+
+    AmazonVMStatusAllSpot statusRequest;
+    statusRequest.serviceURL = argv[2];
+    statusRequest.accessKeyFile = argv[3];
+    statusRequest.secretKeyFile = argv[4];
+    statusRequest.query_parameters[ "Action" ] = "DescribeSpotInstanceRequests";
+
+    if( ! statusRequest.SendRequest() ) {
+        result_string = create_failure_result( requestID,
+            statusRequest.errorMessage.c_str(),
+            statusRequest.errorCode.c_str() );
+    } else {
+        if( statusRequest.spotResults.size() == 0 ) {
+            result_string = create_success_result( requestID, NULL );
+        } else {
+            StringList resultList;
+            for( unsigned i = 0; i < statusRequest.spotResults.size(); ++i ) {
+                AmazonStatusSpotResult & assr = statusRequest.spotResults[i];
+                resultList.append( assr.request_id.c_str() );
+                resultList.append( assr.status.c_str() );
+                resultList.append( assr.launch_group.c_str() );
+                resultList.append( nullStringIfEmpty( assr.instance_id ) );
+            }
+            result_string = create_success_result( requestID, & resultList );
+        }
+    }
+
+    return true;
+} // end AmazonVmStatusAllSpot::workerFunction()
+
+// ---------------------------------------------------------------------------
+
 AmazonVMStatusAll::AmazonVMStatusAll() { }
 
 AmazonVMStatusAll::~AmazonVMStatusAll() { }
@@ -849,13 +1287,15 @@ struct vmStatusUD_t {
         PRIVATE_DNS,
         KEY_NAME,
         INSTANCE_TYPE,
-        GROUP_ID
+        GROUP_ID,
+        STATE_REASON_CODE
     };
     typedef enum vmStatusTags_t vmStatusTags;
 
     bool inInstancesSet;
     bool inInstance;
     bool inInstanceState;
+    bool inStateReason;
     vmStatusTags inWhichTag;
     AmazonStatusResult * currentResult;
     std::vector< AmazonStatusResult > & results;
@@ -869,6 +1309,7 @@ struct vmStatusUD_t {
         inInstancesSet( false ), 
         inInstance( false ),
         inInstanceState( false ),
+        inStateReason( false ),
         inWhichTag( vmStatusUD_t::NONE ), 
         currentResult( NULL ), 
         results( asrList ),
@@ -906,7 +1347,7 @@ void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
         }
         return;
     }
-    
+
     if( strcasecmp( (const char *)name, "instanceId" ) == 0 ) {
         vsud->inWhichTag = vmStatusUD::INSTANCE_ID;
     } else if( strcasecmp( (const char *)name, "imageId" ) == 0 ) {
@@ -922,8 +1363,13 @@ void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
     } else if( strcasecmp( (const char *)name, "instanceState" ) == 0 ) {
         vsud->inInstanceState = true;
         vsud->inWhichTag = vmStatusUD::NONE;
+    } else if( strcasecmp( (const char *)name, "stateReason" ) == 0 ) {
+        vsud->inStateReason = true;
+        vsud->inWhichTag = vmStatusUD::NONE;
     } else if( vsud->inInstanceState && strcasecmp( (const char *)name, "name" ) == 0 ) {
         vsud->inWhichTag = vmStatusUD::STATUS;
+    } else if( vsud->inStateReason && strcasecmp( (const char *)name, "code" ) == 0 )  {
+        vsud->inWhichTag = vmStatusUD::STATE_REASON_CODE;
     }
 }
 
@@ -931,7 +1377,7 @@ void vmStatusCDH( void * vUserData, const XML_Char * cdata, int len ) {
     vmStatusUD * vsud = (vmStatusUD *)vUserData;
 
     if( vsud->inGroup ) {
-        appendToString( (void *)cdata, len, 1, (void *) & vsud->currentSecurityGroup );
+        appendToString( (const void *)cdata, len, 1, (void *) & vsud->currentSecurityGroup );
         return;
     }
 
@@ -972,12 +1418,16 @@ void vmStatusCDH( void * vUserData, const XML_Char * cdata, int len ) {
             targetString = & vsud->currentResult->instancetype;
             break;
 
+        case vmStatusUD::STATE_REASON_CODE:
+            targetString = & vsud->currentResult->stateReasonCode;
+            break;
+
         default:
             /* This should never happen. */
             return;
     }
 
-    appendToString( (void *)cdata, len, 1, (void *)targetString );
+    appendToString( (const void *)cdata, len, 1, (void *)targetString );
 }
 
 void vmStatusEEH( void * vUserData, const XML_Char * name ) {
@@ -985,7 +1435,6 @@ void vmStatusEEH( void * vUserData, const XML_Char * name ) {
 
     if( vsud->inGroupSet ) {
         if( strcasecmp( (const char *)name, "groupId" ) == 0 ) {
-            // dprintf( D_ALWAYS, "DEBUG: adding '%s' to current security group list...\n", vsud->currentSecurityGroup.c_str() );
             vsud->currentSecurityGroups.push_back( vsud->currentSecurityGroup );
             vsud->currentSecurityGroup.erase();
             vsud->inGroup = false;
@@ -1015,6 +1464,11 @@ void vmStatusEEH( void * vUserData, const XML_Char * name ) {
 
     if( strcasecmp( (const char *)name, "instanceState" ) == 0 ) {
         vsud->inInstanceState = false;
+        return;
+    }
+
+    if( strcasecmp( (const char *)name, "stateReason" ) == 0 )  {
+        vsud->inStateReason = false;
         return;
     }
     
@@ -1073,22 +1527,7 @@ bool AmazonVMStatusAll::workerFunction(char **argv, int argc, std::string &resul
                 AmazonStatusResult & asr = saRequest.results[i];
                 resultList.append( asr.instance_id.c_str() );
                 resultList.append( asr.status.c_str() );
-                resultList.append( asr.ami_id.c_str() );
-                
-//                dprintf( D_ALWAYS, "DEBUG: '%s' '%s' '%s' '%s' '%s' '%s' '%s'\n",
-//                    asr.instance_id.c_str(),
-//                    asr.status.c_str(),
-//                    asr.ami_id.c_str(),
-//                    asr.private_dns.c_str(),
-//                    asr.public_dns.c_str(),
-//                    asr.keyname.c_str(),
-//                    asr.instancetype.c_str() );
-
-//                std::string sgList;
-//                for( unsigned j = 0; j < asr.securityGroups.size(); ++j ) {
-//                    sgList += "'" + asr.securityGroups[j] + "' ";
-//                }
-//                dprintf( D_ALWAYS, "DEBUG: with security group(s): %s\n", sgList.c_str() );
+                resultList.append( asr.ami_id.c_str() );                
             }
             result_string = create_success_result( requestID, & resultList );
         }
@@ -1178,7 +1617,7 @@ void createKeypairESH( void * vUserData, const XML_Char * name, const XML_Char *
 void createKeypairCDH( void * vUserData, const XML_Char * cdata, int len ) {
     privateKeyUD * pkud = (privateKeyUD *)vUserData;
     if( pkud->inKeyMaterial ) {
-        appendToString( (void *)cdata, len, 1, (void *) & pkud->keyMaterial );
+        appendToString( (const void *)cdata, len, 1, (void *) & pkud->keyMaterial );
     }
 }
 
@@ -1331,7 +1770,7 @@ void keypairNamesESH( void * vUserData, const XML_Char * name, const XML_Char **
 void keypairNamesCDH( void * vUserData, const XML_Char * cdata, int len ) {
     keyNamesUD * knud = (keyNamesUD *)vUserData;
     if( knud->inKeyName ) {
-        appendToString( (void *)cdata, len, 1, (void *) & knud->keyName );
+        appendToString( (const void *)cdata, len, 1, (void *) & knud->keyName );
     }
 }
 
@@ -1340,7 +1779,6 @@ void keypairNamesEEH( void * vUserData, const XML_Char * name ) {
     keyNamesUD * knud = (keyNamesUD *)vUserData;
     if( strcasecmp( (const char *)name, "KeyName" ) == 0 ) {
         knud->inKeyName = false;
-        // dprintf( D_ALWAYS, "DEBUG: found end of name '%s'\n", knud->keyName.c_str() );
         knud->keyNameList.append( knud->keyName.c_str() );
         knud->keyName.clear();
     }
@@ -1349,7 +1787,6 @@ void keypairNamesEEH( void * vUserData, const XML_Char * name ) {
 bool AmazonVMKeypairNames::SendRequest() {
     bool result = AmazonRequest::SendRequest();
     if( result ) {
-        // dprintf( D_ALWAYS, "DEBUG: '%s'\n", this->resultString.c_str() );
         keyNamesUD knud( this->keyNames );
         XML_Parser xp = XML_ParserCreate( NULL );
         XML_SetElementHandler( xp, & keypairNamesESH, & keypairNamesEEH );

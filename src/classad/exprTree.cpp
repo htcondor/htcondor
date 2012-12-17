@@ -154,13 +154,17 @@ Evaluate (EvalState &state, Value &val) const
 	double diff = 0;
 #ifndef WIN32
 	struct timeval begin, end;
-	gettimeofday(&begin, NULL);
+	if (state.debug) {
+		gettimeofday(&begin, NULL);
+	}
 #endif
 	bool eval = _Evaluate( state, val );
 #ifndef WIN32
-	gettimeofday(&end, NULL);
-	diff = (end.tv_sec + (end.tv_usec * 0.000001)) -
-		(begin.tv_sec + (begin.tv_usec * 0.000001));
+	if (state.debug) {
+		gettimeofday(&end, NULL);
+		diff = (end.tv_sec + (end.tv_usec * 0.000001)) -
+			(begin.tv_sec + (begin.tv_usec * 0.000001));
+	}
 #endif
 
 	if(state.debug && GetKind() != ExprTree::LITERAL_NODE &&
@@ -178,13 +182,17 @@ Evaluate( EvalState &state, Value &val, ExprTree *&sig ) const
 	double diff = 0;
 #ifndef WIN32
 	struct timeval begin, end;
-	gettimeofday(&begin, NULL);
+	if (state.debug) {
+		gettimeofday(&begin, NULL);
+	}
 #endif
 	bool eval = _Evaluate( state, val, sig );
 #ifndef WIN32
-	gettimeofday(&end, NULL);
-	diff = (end.tv_sec + (end.tv_usec * 0.000001)) -
-		(begin.tv_sec + (begin.tv_usec * 0.000001));
+	if (state.debug) {
+		gettimeofday(&end, NULL);
+		diff = (end.tv_sec + (end.tv_usec * 0.000001)) -
+			(begin.tv_sec + (begin.tv_usec * 0.000001));
+	}
 #endif
 
 	if(state.debug && GetKind() != ExprTree::LITERAL_NODE &&

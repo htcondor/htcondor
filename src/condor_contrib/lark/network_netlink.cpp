@@ -72,12 +72,12 @@ int create_socket() {
 }
 
 /**
- * Internal function - send a netlink message to the kernel.
+ * Send a netlink message to the kernel.
  * Appends the header for you - just input the raw data.
  *
  * Returns 0 on success, errno on failure.
  */
-static int send_to_kernel(int sock, struct iovec* iov, size_t ioveclen) {
+int send_to_kernel(int sock, struct iovec* iov, size_t ioveclen) {
 
 	if (sock < 0) {
 		dprintf(D_ALWAYS, "Invalid socket: %d.\n", sock);
@@ -104,7 +104,7 @@ static int send_to_kernel(int sock, struct iovec* iov, size_t ioveclen) {
 }
 
 // Forward decl
-int recv_message(int sock);
+static int recv_message(int sock);
 
 /**
  * Internal function - 
@@ -286,9 +286,7 @@ int set_status(int sock, const char * eth, int status) {
  */
 #define INET_LEN 4
 #define INET6_LEN 16
-#define INET_PREFIX_LEN 32
-#define INET6_PREFIX_LEN 128
-int add_address(int sock, const char * addr, const char * eth) {
+int add_address(int sock, const char * addr, unsigned prefix_length, const char * eth) {
 
 	/**
 	 *  The message we send to the kernel will have four parts.  The netlink
@@ -354,6 +352,18 @@ int add_address(int sock, const char * addr, const char * eth) {
 	}
 	
 
+	// check the validness for prefix for either IPv4 or IPv6
+	if(ipaddr_type == AF_INET){
+		if ((prefix_length == 0) || (prefix_length > 32)) {
+		dprintf(D_ALWAYS, "Invalid IPv4 prefix: %u\n", prefix_length);
+		return 1;
+	}
+	if(ipaddr_type == AF_INET6){
+		if ((prefix_length == 0) || (prefix_length > 128)) {
+		dprintf(D_ALWAYS, "Invalid IPv6 prefix: %u\n", prefix_length);
+		return 1;
+	}
+
 	// Update the length of the nlmsg according to ipaddr_type
 	if(ipaddr_type == AF_INET){
 		nlmsghdr.nlmsg_len += RTA_LENGTH(INET_LEN);
@@ -382,12 +392,11 @@ int add_address(int sock, const char * addr, const char * eth) {
 	struct ifaddrmsg info_msg; memset(&info_msg, 0, sizeof(struct ifaddrmsg));
 	if(ipaddr_type == AF_INET){
 		info_msg.ifa_family = AF_INET;
-		info_msg.ifa_prefixlen = INET_PREFIX_LEN;
 	}
 	if(ipaddr_type == AF_INET6){
 		info_msg.ifa_family = AF_INET6;
-		info_msg.ifa_prefixlen = INET6_PREFIX_LEN;
 	}
+	info_msg.ifa_prefixlen = prefix_length;
 	info_msg.ifa_index = if_nametoindex(eth);
 
 	iov[1].iov_base = &info_msg;
@@ -426,8 +435,7 @@ int add_address(int sock, const char * addr, const char * eth) {
 int add_local_route(int sock, const char * gw, const char * eth, int dst_len) {
 
 	// Equivalent to:
-	// ip route add default via 10.10.10.1
-	// internally, default = 0/0
+	// ip route add 10.10.10.1/24 via veth1
 	struct iovec iov[6];
 
 	// Add IPv6 Support
@@ -518,7 +526,8 @@ int add_default_route(int sock, const char * gw) {
 	// Setup the dest address/prefix
 	size_t dst_len = 0;
 
-	//Add ipv6 support
+	// Add ipv6 support
+	dprintf(D_FULLDEBUG, "Adding IP address %s as default gateway.\n", gw);
 	unsigned char ipv4_addr[4];
 	unsigned char ipv6_addr[16];
 
@@ -537,12 +546,7 @@ int add_default_route(int sock, const char * gw) {
 			return 1;
 		}
 	}
-	
-
-
-
-	// Not quite sure about this statement
-	ipv4_addr[3] = 1;
+	//ipv4_addr[3] = 1;
 
 	struct nlmsghdr nlmsghdr;
 	memset(&nlmsghdr, 0, sizeof(nlmsghdr));
@@ -621,7 +625,13 @@ int set_netns(int sock, const char * eth, pid_t pid) {
 	return send_and_ack(sock, iov, 4);
 }
 
-int recv_message(int sock) {
+/*
+ * Receive a message from netlink.
+ *
+ * Receives 
+ */
+static int
+recv_message(int sock) {
 
 	struct msghdr msghdr;
 	struct sockaddr_nl addr;
@@ -666,6 +676,10 @@ int recv_message(int sock) {
 			return 1;
 		}
 
+		// Ignore these messages - may be leftover from a bridge query.
+		if (nlmsghdr->nlmsg_type == RTM_NEWLINK || nlmsghdr->nlmsg_type == RTM_DELLINK) {
+			continue;
+		}
 		dprintf(D_ALWAYS, "Unknown message type: %d\n", nlmsghdr->nlmsg_type);
 		return 1;
 	}

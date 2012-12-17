@@ -747,7 +747,7 @@ define_sandbox_path(std::string sid, std::string &path)
 	// too many files.  in the year 2040, when 2^16 files exist in a single
 	// directory, feel free to extend this to 3, or (log_v2 n)
 	unsigned char hash_buf[MD5_DIGEST_LENGTH];
-	MD5((unsigned char*)(sid.c_str()), sid.length(), hash_buf);
+	MD5((unsigned char*)const_cast<char*>(sid.c_str()), sid.length(), hash_buf);
 
 	char c_hex_md5[MD5_DIGEST_LENGTH*2+1];
 	for (int i = 0; i < MD5_DIGEST_LENGTH; i++) {

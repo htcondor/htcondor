@@ -781,6 +781,123 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 	}
 }
 
+// this method is called before each line is parsed. 
+// return 0 to skip (is_comment), 1 to parse line, 2 for end-of-classad, -1 for abort
+int CondorClassAdFileParseHelper::PreParse(std::string & line, ClassAd & /*ad*/, FILE* /*file*/)
+{
+	// if this line matches the ad delimitor, tell the parser to stop parsing
+	if (starts_with(line, ad_delimitor))
+		return 2; //end-of-classad
+
+	// check for blank lines or lines whose first character is #
+	// tell the parse to skip those lines, otherwise tell the parser to
+	// parse the line.
+	for (size_t ix = 0; ix < line.size(); ++ix) {
+		if (line[ix] == '#' || line[ix] == '\n')
+			return 0; // skip this line, but don't stop parsing.
+		if (line[ix] != ' ' && line[ix] != '\t')
+			return 1; // parse this line
+	}
+	return 1; // parse this line.
+}
+
+// this method is called when the parser encounters an error
+// return 0 to skip and continue, 1 to re-parse line, 2 to quit parsing with success, -1 to abort parsing.
+int CondorClassAdFileParseHelper::OnParseError(std::string & line, ClassAd & /*ad*/, FILE* file)
+{
+		// print out where we barfed to the log file
+	dprintf(D_ALWAYS,"failed to create classad; bad expr = '%s'\n",
+			line.c_str());
+
+	// read until delimitor or EOF; whichever comes first
+	line = "";
+	while ( ! starts_with(line, ad_delimitor)) {
+		if (feof(file))
+			break;
+		if ( ! readLine(line, file, false))
+			break;
+	}
+	return -1; // abort
+}
+
+// returns number of attributes added to the ad
+int ClassAd::
+InsertFromFile(FILE* file, /*out*/ bool& is_eof, /*out*/ int& error, ClassAdFileParseHelper* phelp /*=NULL*/)
+{
+	int cAttrs = 0;
+	std::string buffer;
+
+	while( 1 ) {
+
+			// get a line from the file
+		if ( ! readLine(buffer, file, false)) {
+			is_eof = feof(file);
+			error = is_eof ? 0 : errno;
+			return cAttrs;
+		}
+
+		// if there is a helper, give the helper first crack at the line
+		// otherwise set ee to decide what to do with this line.
+		int ee = 1;
+		if (phelp) {
+			ee = phelp->PreParse(buffer, *this, file);
+		} else {
+			// default is to skip blank lines and comment lines
+			for (size_t ix = 0; ix < buffer.size(); ++ix) {
+				if (buffer[ix] == '#' || buffer[ix] == '\n') {
+					ee = 0; // skip blank line or comment
+					break;
+				}
+				// ignore leading whitespace.
+				if (buffer[ix] == ' ' || buffer[ix] == '\t') {
+					continue;
+				}
+				ee = 1; // 1 is parse
+				break;
+			}
+		}
+		if (ee == 0) // comment or blank line, skip it and read the next
+			continue;
+		if (ee != 1) { // 1 is parse, <0, is abort, >1 is end_of_ad
+			error = (ee < 0) ? ee : 0;
+			is_eof = feof(file);
+			return cAttrs;
+		}
+
+		// Insert the string into the classad
+		if (Insert(buffer.c_str()) !=  0) {
+			++cAttrs;
+		} else {
+			ee = -1;
+			if (phelp) {
+				ee = phelp->OnParseError(buffer, *this, file);
+				if (1 == ee) {
+					// buffer has (presumably) been modified, re-try parsing.
+					// but only retry once.
+					if (Insert(buffer.c_str()) != 0) {
+						++cAttrs;
+					} else {
+						ee = phelp->OnParseError(buffer, *this, file);
+						if (1 == ee) ee = -1;  // treat another attempt to reparse as a failure.
+					}
+				}
+			}
+
+			// the value of ee tells us whether to quit or keep going or
+			// < 0 is abort
+			//   0 is skip line - keep going
+			//   1 is line was parsed, keep going
+			// > 1 is end-of-ad, quit the loop
+			if (ee < 0 || ee > 1) {
+				error = ee > 1 ? 0 : ee;
+				is_eof = feof(file);
+				return cAttrs;
+			}
+		}
+	}
+}
+
+
 bool ClassAd::
 ClassAdAttributeIsPrivate( char const *name )
 {
@@ -1081,6 +1198,34 @@ LookupBool( const char *name, bool &value ) const
 		haveBool = false;
 	}
 	return haveBool;
+}
+
+int ClassAd::
+EvalAttr( const char *name, classad::ClassAd *target, classad::Value & value)
+{
+	int rc = 0;
+
+	if( target == this || target == NULL ) {
+		getTheMyRef( this );
+		if( EvaluateAttr( name, value ) ) {
+			rc = 1;
+		}
+		releaseTheMyRef( this );
+		return rc;
+	}
+
+	getTheMatchAd( this, target );
+	if( this->Lookup( name ) ) {
+		if( this->EvaluateAttr( name, value ) ) {
+			rc = 1;
+		}
+	} else if( target->Lookup( name ) ) {
+		if( target->EvaluateAttr( name, value ) ) {
+			rc = 1;
+		}
+	}
+	releaseTheMatchAd();
+	return rc;
 }
 
 int ClassAd::

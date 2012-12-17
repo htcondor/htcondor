@@ -1380,20 +1380,23 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 	}
 
 	// write ulog event
+	bool ret = true;
 	if ( m_userlog_enable ) {
 		for(std::vector<log_file>::iterator p = logs.begin(); p != logs.end(); ++p) {
-			// Check our mask vector for the event
-			// If we have a mask, the event must be in the mask to write the event.
 			if( !p->fp || !p->lock) {
 				if(p->fp) {
 					dprintf( D_ALWAYS, "WriteUserLog: No user log lock!\n" );
 				}
 				continue;
 			}
+				// Check our mask vector for the event
+				// If we have a mask, the event must be in the mask to write the event.
 			if( p != logs.begin() && !mask.empty()){
 				std::vector<ULogEventNumber>::iterator pp =
 					std::find(mask.begin(),mask.end(),event->eventNumber);	
 				if(pp == mask.end()) {
+					dprintf( D_FULLDEBUG, "Did not find %d in the mask, so do not write this event.\n",
+						event->eventNumber );
 					break; // We are done caring about this event
 				}
 			}
@@ -1401,6 +1404,7 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 					param_jobad) ) {
 				dprintf( D_ALWAYS, "ERROR: WriteUserLog: user doWriteEvent() failed on"
 					" normal log %s!\n", p->path.c_str() );
+				ret = false;
 			}
 			if( (p == logs.begin()) && param_jobad ) {
 					// The following should match ATTR_JOB_AD_INFORMATION_ATTRS
@@ -1418,9 +1422,9 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 	}
 
 	if ( written ) {
-		*written = true;
+		*written = ret;
 	}
-	return true;
+	return ret;
 }
 
 void

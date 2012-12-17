@@ -55,9 +55,11 @@ getWriter()
         if (!writer->init(hap.toString())) {
             dprintf(D_ALWAYS,"ODSHistoryFile: unable to configure new database connection!\n");
             delete writer;
-            return NULL;
+            writer = NULL;
         }
-        addJobIndices(writer);
+        else {
+            addJobIndices(writer);
+        }
     }
     return writer;
 }

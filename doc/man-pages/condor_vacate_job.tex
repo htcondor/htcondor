@@ -1,5 +1,5 @@
 \begin{ManPage}{\label{man-condor-vacate-job}\Condor{vacate\_job}}{1}
-{vacate jobs in the Condor queue from the hosts where they are running}
+{vacate jobs in the HTCondor queue from the hosts where they are running}
 \Synopsis \SynProg{\Condor{vacate\_job}}
 \ToolArgsBase
 
@@ -14,22 +14,22 @@ $|$ \OptArg{-constraint}{expression} \Dots
 \oOptnm{-fast}
 \ToolAll
 
-\index{Condor commands!condor\_vacate\_job}
+\index{HTCondor commands!condor\_vacate\_job}
 \index{condor\_vacate\_job command}
 
 \Description
 
-\Condor{vacate\_job} finds one or more jobs from the Condor job queue
+\Condor{vacate\_job} finds one or more jobs from the HTCondor job queue
 and vacates them from the host(s) where they are currently running.  
 The jobs remain in the job queue and return to the idle state.
 
 A job running under the standard universe will first produce a
 checkpoint and then the job will be killed.
-Condor will then restart the job somewhere else, using the checkpoint
+HTCondor will then restart the job somewhere else, using the checkpoint
 to continue from where it left off.
 A job running under any other universe will be sent a soft kill signal
 (SIGTERM by default, or whatever is defined as the \Attr{SoftKillSig}
-in the job ClassAd), and Condor will restart the job from the
+in the job ClassAd), and HTCondor will restart the job from the
 beginning somewhere else. 
 
 If the \Opt{-fast} option is used, the job(s) will be immediately killed,

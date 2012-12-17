@@ -2,39 +2,39 @@
 \subsection{\label{sec:GroupTracking}Group ID-Based Process Tracking} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-One function that Condor often must perform is keeping track of all
-processes created by a job. This is done so that Condor can provide
-resource usage statistics about jobs, and also so that Condor can properly
+One function that HTCondor often must perform is keeping track of all
+processes created by a job. This is done so that HTCondor can provide
+resource usage statistics about jobs, and also so that HTCondor can properly
 clean up any processes that jobs leave behind when they exit.
 
 In general, tracking process families is difficult to do reliably.
-By default Condor uses a combination of process parent-child
-relationships, process groups, and information that Condor places in a
+By default HTCondor uses a combination of process parent-child
+relationships, process groups, and information that HTCondor places in a
 job's environment to track process families on a best-effort
 basis. This usually works well, but it can falter for certain
 applications or for jobs that try to evade detection.
 
-Jobs that run with a user account dedicated for Condor's use
-can be reliably tracked, since all Condor needs to do is look for all
+Jobs that run with a user account dedicated for HTCondor's use
+can be reliably tracked, since all HTCondor needs to do is look for all
 processes running using the given account. Administrators must specify
-in Condor's configuration what accounts can be considered dedicated
+in HTCondor's configuration what accounts can be considered dedicated
 via the \Macro{DEDICATED\_EXECUTE\_ACCOUNT\_REGEXP} setting. See
 Section~\ref{sec:RunAsNobody} for further details.
 
 Ideally, jobs can be reliably tracked regardless of the user account
 they execute under. This can be accomplished with group ID-based
 tracking. This method of tracking requires that a range of dedicated
-\emph{group} IDs (GID) be set aside for Condor's use. The number of GIDs
+\emph{group} IDs (GID) be set aside for HTCondor's use. The number of GIDs
 that must be set aside for an execute machine is equal to its number
 of execution slots. GID-based tracking is only available on Linux, and
-it requires that Condor either runs as \Login{root} or uses privilege
+it requires that HTCondor either runs as \Login{root} or uses privilege
 separation (see Section~\ref{sec:PrivSep}).
 
 GID-based tracking works by placing a dedicated GID in the
 supplementary group list of a job's initial process. Since modifying
 the supplementary group ID list requires
 \Login{root} privilege, the job will not be able to create processes
-that go unnoticed by Condor.
+that go unnoticed by HTCondor.
 
 Once a suitable GID range has been set aside for process tracking,
 GID-based tracking can be enabled via the
@@ -58,78 +58,51 @@ GID-based process tracking requires use of the \Condor{procd}. If
 \MacroNI{USE\_GID\_PROCESS\_TRACKING} is true, the \Condor{procd} will
 be used regardless of the \Macro{USE\_PROCD} setting.  Changes to
 \MacroNI{MIN\_TRACKING\_GID} and \MacroNI{MAX\_TRACKING\_GID} require
-a full restart of Condor.
+a full restart of HTCondor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:CGroupTracking}Cgroup-Based Process Tracking} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{cgroup based process tracking}
 
-A new feature in Linux kernels version 2.6.24 and more recent kernels
-allows Condor to
-more accurately and safely manage jobs composed of sets of processes.
-This Linux feature is called Control Groups, or cgroups for short, and 
-it is available starting with RHEL 6, Debian 6, and related distributions.  
-Documentation about Linux kernel support for cgroups can be found in
-the Documentation directory in the kernel source code distribution.
+A new feature in Linux version 2.6.24 allows HTCondor to more accurately 
+and safely manage jobs composed of sets of processes.  This Linux 
+feature is called Control Groups, or cgroups for short, and it is 
+available starting with RHEL 6, Debian 6, and related distributions.  
+Documentation about Linux kernel support for cgroups can be found 
+in the Documentation directory in the kernel source code distribution.
 Another good reference is 
 \URL{http://docs.redhat.com/docs/en-US/Red\_Hat\_Enterprise\_Linux/6/html/Resource\_Management\_Guide/index.html}
 Even if cgroup support is built into the kernel, 
 many distributions do not install the cgroup tools by default.
-In order to use cgroups, 
-the tools must be installed.  
+In order to use cgroups, the tools must be installed.  
 On RPM-based systems, these can be installed with the command
 
 \begin{verbatim}
 yum install libcgroup\*
 \end{verbatim}
 
-Starting with Condor version 7.7.0, 
-the \Condor{starter} daemon can optionally use cgroups
-to accurately track all the processes started by a job, 
-even when quickly-exiting parent processes spawn many child processes.
-As with the GID-based tracking, 
-this is only implemented when a \Condor{procd} daemon is running.
-The Condor team recommends enabling this feature on Linux platforms 
-that support it.
-When cgroup tracking is enabled, 
-Condor is able to report a much more accurate
-measurement of the physical memory used by a set of processes.
+After these tools are installed, the cgconfig service needs to be
+running.  It parses the \File{/etc/cgconfig.conf} file, and makes
+appropriate mounts under \File{/cgroup}.  Before starting the cgconfig
+service, you will need to edit the file \File{/etc/cgconfig.conf} to
+add a group specific to HTCondor.
 
-Kernel cgroups are named in a virtual file system hierarchy. 
-Condor will put each
-running job on the execute node in a separate cgroup, 
-named using the job's attributes by \Expr{job\_<ClusterId>\_<ProcId>},
-where \Expr{<ClusterId>} is replaced by 
-the job ClassAd attribute \Attr{ClusterId},
-and \Expr{<ProcId>} is replaced by 
-the job ClassAd attribute \Attr{ProcId}.
-These directories will be under a base directory named 
-by the Condor configuration variable \Macro{BASE\_CGROUP}.  
-This variable has no default value, so if the variable is not set,
-cgroup tracking will not be used.  
-Unless there is a need for integration of Condor jobs with other
-cgroup-based tracking, 
-a good choice for \MacroNI{BASE\_CGROUP} location might be \File{/condor}. 
-
-Condor itself will not mount the virtual cgroup file systems.  
-This can either be done by hand at each system reboot, 
-by the \Prog{cgconfig} service 
-which reads a file called \File{/etc/cgconfig.conf}, 
-or automatically by the \Prog{systemd} service 
-on systems which use \Prog{systemd} instead of \Prog{init}.
-
-Here is an example of the contents of file \File{cgconfig.conf}:
+Here is an example of the contents of file \File{/etc/cgconfig.conf} with
+appropriate values for the HTCondor group:
 
 \begin{verbatim}
 mount {
-        cpuacct = /mnt/cgroups/cpuacct;
-        memory  = /mnt/cgroups/memory;
-        freezer = /mnt/cgroups/freezer;
-        blkio   = /mnt/cgroups/blkio;
+        cpu		= /cgroup/cpu;
+        cpuset	= /cgroup/cpuset;
+        cpuacct = /cgroup/cpuacct;
+        memory  = /cgroup/memory;
+        freezer = /cgroup/freezer;
+        blkio   = /cgroup/blkio;
 }
 
-group condor {
+group htcondor {
+		cpu {}
         cpuacct {}
         memory {}
         freezer {}
@@ -137,10 +110,43 @@ group condor {
 }
 \end{verbatim}
 
-If the mount command shows that no cgroup file systems are mounted, 
-then either the by hand method or the \Prog{cgconfig} service 
-will need to mount the four controllers which Condor needs:
-cpuacct, memory, freezer and blkio.  
+After the \File{/etc/cgconfig.conf} file has had the htcondor group
+added to it, add and start the cgconfig service by running
+
+\begin{verbatim}
+chkconfig --add cgconfig
+service cgconfig start
+\end{verbatim}
+
+When the cgconfig service is correctly running, the virtual filesystem
+mounted on \File{/cgroup} should have several subdirectories under it, and
+there should a an htcondor subdirectory under the directory \File{/cgroup/cpu}
+
+Starting with HTCondor version 7.7.0, 
+the \Condor{starter} daemon can optionally use cgroups
+to accurately track all the processes started by a job, 
+even when quickly-exiting parent processes spawn many child processes.
+As with the GID-based tracking, this is only implemented when a 
+\Condor{procd} daemon is running.  The HTCondor team recommends enabling 
+this feature on Linux platforms that support it.  When cgroup tracking is enabled, 
+HTCondor is able to report a much more accurate
+measurement of the physical memory used by a set of processes.
+
+To enable cgroup tracking in HTCondor, once cgroups have been enabled
+in the operating system, set the \Macro{BASE\_CGROUP} configuration
+variable to the string that matches the group name specified in the \File{/etc/cgconfig.conf}
+In the example above, "htcondor" is a good choice.  There is no default value
+for \Macro{BASE\_CGROUP}, and if left unset, cgroup tracking will not be used.
+
+Kernel cgroups are named in a virtual file system hierarchy. 
+HTCondor will put each running job on the execute node in a distinct cgroup.
+The name of this cgroup is the name of the execute directory for that \Condor{starter}, with
+slashes replaced by underscores, followed by the name and number of the slot.  So, for the
+memory controller, a job running on slot1 would have its cgroup located at
+\File{/cgroup/memory/htcondor/condor\_var\_lib\_condor\_execute\_slot1/}.  The \File{tasks}
+file in this directory will contain a list of all the processes in this cgroup, and
+many other files in this directory have useful information about resource usage
+of this cgroup.  See the kernel documentation for full details.
 
 Once cgroup-based tracking is configured, 
 usage should be invisible to the user and administrator.  

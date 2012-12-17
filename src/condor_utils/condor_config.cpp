@@ -499,65 +499,6 @@ condor_auth_config(int is_daemon)
 }
 
 void
-condor_net_remap_config( bool force_param )
-{
-    char *str = NULL;
-	if( ! force_param && getenv("NET_REMAP_ENABLE") ) {
-			/*
-			  this stuff is already set.  unless the caller is forcing
-			  us to call param() again (e.g. the master is trying to
-			  re-bind() if the CCB broker is down and it's got a list
-			  to try) we should return immediately and leave our
-			  environment alone.  this way, the master can choose what
-			  CCB broker to use for itself and all its children, even
-			  if there's a list and we're using $RANDOM_CHOICE().
-			*/
-		return;
-	}
-		
-		/*
-		  this method is only called if we're enabling a network remap
-		  service.  if we do, we always need to force condor to bind()
-		  to all interfaces (INADDR_ANY).  since we don't want to rely
-		  on users to set this themselves to get CCB working, we'll
-		  set it automatically.  the only harm of setting this is that
-		  we need Condor to automatically handle hostallow stuff for
-		  "localhost", or users need to add localhost to their
-		  hostallow settings as appropriate.  we can't rely on the
-		  later, and the former only works on some platforms.
-		  luckily, the automatic localhost stuff works on all
-		  platforms where CCB works (linux, and we hope, solaris), so
-		  it's safe to turn this on whenever we're using CCB
-		*/
-	insert( "BIND_ALL_INTERFACES", "TRUE", ConfigTab, TABLESIZE );
-	extra_info->AddInternalParam("BIND_ALL_INTERFACES");
-
-    // Env: the type of service
-    SetEnv( "NET_REMAP_ENABLE", "true");
-    str = param("NET_REMAP_SERVICE");
-    if (str) {
-	if (!strcasecmp(str, "DPF")) {
-            SetEnv( "DPF_ENABLE", "true" );
-            free(str);
-            str = NULL;
-            // Env: InAgent
-            if( (str = param("NET_REMAP_INAGENT")) ) {
-                SetEnv( "DPF_INAGENT", str );
-				free(str);
-				str = NULL;
-            }
-            // Env: Routing table
-            if( (str = param("NET_REMAP_ROUTE")) ) {
-                SetEnv( "DPF_ROUTE", str );
-				free(str);
-				str = NULL;
-            }
-        }
-    }
-}
-
-
-void
 real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 {
 	char* config_source = NULL;
@@ -713,13 +654,6 @@ real_config(char* host, int wantsQuiet, bool wantExtraInfo)
 	if(dirlist) { free(dirlist); dirlist = NULL; }
 	if(newdirlist) { free(newdirlist); newdirlist = NULL; }
 
-	// The following lines should be placed very carefully. Must be after
-	// global and local config sources being processed but before any
-	// call that may be interposed by CCB
-    if ( param_boolean("NET_REMAP_ENABLE", false) ) {
-        condor_net_remap_config();
-    }
-			
 		// Now, insert any macros defined in the environment.
 	char **my_environ = GetEnviron();
 	for( int i = 0; my_environ[i]; i++ ) {

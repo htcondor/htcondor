@@ -52,7 +52,7 @@ _TEST=$?
 if [ $_TEST -ne 0 ]
 then
 	echo ssh keygenerator $KEYGEN returned error $_TEST exiting
-	exit -1
+	exit 255
 fi
 
 idkey=$_CONDOR_SCRATCH_DIR/tmp/$_CONDOR_PROCNO.key
@@ -63,7 +63,7 @@ _TEST=$?
 if [ $_TEST -ne 0 ]
 then
 	echo ssh keygenerator $KEYGEN returned error $_TEST exiting
-	exit -1
+	exit 255
 fi
 
 # Send the identity keys back home
@@ -72,7 +72,7 @@ _TEST=$?
 if [ $_TEST -ne 0 ]
 then
 	echo error $_TEST chirp putting identity keys back
-	exit -1
+	exit 255
 fi
 
 # ssh needs full paths to all of its arguments
@@ -117,7 +117,7 @@ _TEST=$?
 if [ $_TEST -ne 0 ]
 then
 	echo error $_TEST chirp putting contact info back to submit machine
-	exit -1
+	exit 255
 fi
 
 # On the head node, grep for the contact file

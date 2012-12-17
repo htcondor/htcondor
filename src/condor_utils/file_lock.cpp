@@ -255,7 +255,7 @@ FileLock::initLockFile(bool useLiteralPath)
 	m_fd = rec_touch_file(m_path, 0666, 0777 ); 
 	if (m_fd < 0) {
 		if (!useLiteralPath) {
-			dprintf(D_FULLDEBUG, "FileLock::FileLock: Unable to create file path %s. Trying with default /tmp path.", m_path);
+			dprintf(D_FULLDEBUG, "FileLock::FileLock: Unable to create file path %s. Trying with default /tmp path.\n", m_path);
 			char *hPath = CreateHashName(m_orig_path, true);
 			SetPath(hPath);
 			delete []hPath;

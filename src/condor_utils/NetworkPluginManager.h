@@ -5,6 +5,8 @@
 #include <string>
 #include <sys/types.h>
 
+#include <classad/classad_stl.h>
+
 #include "condor_uid.h"
 #include "PluginManager.h"
 
@@ -38,10 +40,16 @@ class NetworkManager {
 		 * early failure too.
 		 *
 		 * - name: A unique name that the NetworkManager can use to identify this job.
+		 * - job_ad: A reference to the job's classad.
+		 * - machine_ad: A reference to the machine's classad.
+		 *
+		 * Note that the machine_ad is non-const and may be modified by the call.
 		 *
 		 * 0 on success, non-zero on failure.
 		 */
-		virtual int PrepareNetwork(const std::string & /*name*/) = 0;
+		virtual int PrepareNetwork(const std::string & /*name*/,
+			const classad::ClassAd & /*job_ad*/,
+			classad_shared_ptr<classad::ClassAd> /*machine_ad*/) = 0;
 
 		/*
 		 * Called immediately before fork/clone in the parent process.
@@ -115,7 +123,9 @@ class NetworkManager {
 class NetworkPluginManager : public PluginManager<NetworkManager> {
 
 	public:
-		static int PrepareNetwork(const std::string & uniq_name) {
+		static int PrepareNetwork(const std::string & uniq_name,
+				const classad::ClassAd &job_ad,
+				classad_shared_ptr<classad::ClassAd> machine_ad) {
  			NetworkManager *plugin;
 			SimpleList<NetworkManager *> plugins = getPlugins();
 			plugins.Rewind();
@@ -123,7 +133,8 @@ class NetworkPluginManager : public PluginManager<NetworkManager> {
 			while (plugins.Next(plugin)) {
 				int result;
 				dprintf(D_FULLDEBUG, "Calling PrepareNetwork\n");
-				if ((result = plugin->PrepareNetwork(uniq_name))) {
+				if ((result = plugin->PrepareNetwork(uniq_name,
+						job_ad, machine_ad))) {
 					return result;
 				}
 			}

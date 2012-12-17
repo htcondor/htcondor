@@ -17,12 +17,26 @@ extern "C" {
 // Forward decls
 struct ipt_getinfo;
 struct ipt_get_entries;
+struct iovec;
 
 /*
  * Create a socket to talk to the kernel via netlink
  * Returns the socket fd upon success, or -errno upon failure
  */
 int create_socket();
+
+/**
+ * Send a netlink message to the kernel.
+ * Appends the header for you - just input the raw data.
+ *
+ * - sock: Netlink socket to the kernel.
+ * - iov: An iovec array containing a message to send.
+ * - ioveclen: Length of the iov array.
+ *
+ * Returns 0 on success, errno on failure.
+ *
+ */
+int send_to_kernel(int sock, struct iovec* iov, size_t ioveclen);
 
 /*
  * Create a pair of virtual ethernet devices that act as pipes.  Equivalent to:
@@ -59,9 +73,15 @@ int set_status(int sock, const char * eth, int status);
  *
  * - sock: Netlink socket to the kernel
  * - addr: IPv4 address to add.
+ * - prefix_length: Length of netmask
  * - eth:  name of network device
+ *
+ * If the prefix_length is not equal to the address size (32 for IPv4, 128 for IPv6),
+ * the kernel will automatically setup a local route for the address and device.
+ *
+ * Returns 0 on success and non-zero on failure.
  */
-int add_address(int sock, const char * addr, const char * eth);
+int add_address(int sock, const char * addr, unsigned prefix_length, const char * eth);
 
 /*
  * Add a local route to a network device. Equivalent to:
@@ -134,9 +154,75 @@ int cleanup_chain(const char *chain);
  */
 int get_firewall_data(struct ipt_getinfo *info, struct ipt_get_entries **result_entries);
 
+/*
+ * Bridge helper functions.
+ */
+
+/*
+ * Open socket.
+ *
+ * Open a socket usable for talking to the kernel to create bridges.
+ *
+ * Returns the fd when the open was successful (it logs failures) and -1 on
+ * failure.
+ *
+ * The user is responsible for closing the socket when done.
+ */
+int open_bridge_socket();
+
+/*
+ * Create a bridge device.
+ *
+ * - bridge_name: String containing the bridge name; must be less than IFNAMSIZ
+ *   characters in length.
+ *
+ * Return 0 on success and non-zero on failure.
+ */
+int create_bridge(const char * bridge_name);
+
+/*
+ * Delete a bridge device.
+ *
+ * - bridge_name: String containing the bridge name; must be less than IFNAMSIZ
+ *   characters in length.
+ * 
+ * Return 0 on success and non-zero on failure.
+ */
+int delete_bridge(const char * bridge_name);
+
+/*
+ * Add a network interface to the bridge.
+ *
+ * - bridge_name: Name of the bridge device.
+ * - dev: Name of the device to add.
+ *
+ * Return 0 on success and non-zero on failure.
+ */
+int add_interface_to_bridge(const char *bridge_name, const char *dev);
+
+/*
+ * Delete a network interface from the bridge.
+ *
+ * - bridge_name: Name of the bridge device.
+ * - dev: Name of the device to delete.
+ *
+ * Return 0 on success and non-zero on failure.
+ */
+int delete_interface_from_bridge(const char *bridge_name, const char *dev);
+
+/*
+ * Wait for a bridge interface to go into forwarding state.
+ *
+ * - sock: Netlink socket to the kernel.
+ * - dev: Name of the device to wait on.
+ *
+ * Return 0 when the bridge is in the forwarding state or
+ * non-zero on failure.
+ */
+int wait_for_bridge_status(int sock, const char *dev);
+
 #endif
 
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
-

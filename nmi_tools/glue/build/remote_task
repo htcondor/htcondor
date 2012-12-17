@@ -139,7 +139,7 @@ elsif ($taskname eq $NATIVE_TASK) {
         $execstr = create_rpm();
     }
     elsif ($ENV{NMI_PLATFORM} =~ /_win/i) {
-        $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE 7.7.3-pre-";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE ";
     }
     else {
         print "We do not generate a native package for this platform.\n";
@@ -173,22 +173,24 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     # change exestr for Windows tasks.
     # build.win.bat uses BASE_DIR to setup some things.
     $ENV{BASE_DIR} = "$BaseDir";
-    if ($taskname eq $TAR_TASK) {
-        if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {
-           $execstr= "nmi_tools\\glue\\build\\build.win.bat BUILD";
-        } else {
-           $execstr= "nmi_tools\\glue\\build\\build.win.bat DEFAULT";
-        }
-    } elsif ($taskname eq $EXTERNALS_TASK) {
+
+    # get the build id out of the cmake args, we have to
+    # pass it to the ZIP and MSI building steps
+    #
+    my $cmake_args = get_cmake_args();
+    print "   cmake_args = $cmake_args\n";
+    my $buildid = "";
+    if ($cmake_args =~ /-DBUILDID:STRING=([0-9]+)/) { $buildid = $1; }
+    if ($taskname eq $EXTERNALS_TASK) {
         $execstr= "nmi_tools\\glue\\build\\build.win.bat EXTERNALS";
-    } elsif ($taskname eq $CHECK_TAR_TASK) {
-        my $cmake_args = get_cmake_args();
-        print "Windows CHECK_TAR (ZIP) task\n";
-        print "   cmake_args = $cmake_args\n";
-        $execstr= "nmi_tools\\glue\\build\\build.win.bat ZIP";
+    } elsif ($taskname eq $UNSTRIPPED_TASK) {
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat BUILD";
     } elsif ($taskname eq $NATIVE_TASK) {
         print "Windows NATIVE (MSI) task\n";
-        $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE $buildid";
+    } elsif ($taskname eq $TAR_TASK) {
+        print "Windows CREATE_TAR (ZIP) task\n";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat ZIP $buildid";
     }
 }
 else {

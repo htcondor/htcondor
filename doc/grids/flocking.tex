@@ -1,13 +1,13 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:Flocking}Connecting Condor Pools with Flocking}
+\section{\label{sec:Flocking}Connecting HTCondor Pools with Flocking}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{flocking}
-\index{Condor!flocking}
+\index{HTCondor!flocking}
 
-Flocking is Condor's way of allowing jobs that cannot immediately
+Flocking is HTCondor's way of allowing jobs that cannot immediately
 run (within the pool of machines where the job was
-submitted) to instead run on a different Condor pool. 
-If a machine within Condor pool A can send jobs to be run on Condor pool B,
+submitted) to instead run on a different HTCondor pool. 
+If a machine within HTCondor pool A can send jobs to be run on HTCondor pool B,
 then we say that jobs from machine A flock to pool B.
 Flocking can occur in a one way manner,
 such as jobs from machine A flocking to pool B,
@@ -16,10 +16,10 @@ Configuration variables allow the
 \Condor{schedd} daemon (which runs on each machine
 that may submit jobs) to implement flocking.
 
-\Note Flocking to pools which use Condor's high availability mechanims
-is not adviced in current verions of Condor.  See section
+\Note Flocking to pools which use HTCondor's high availability mechanims
+is not adviced in current verions of HTCondor.  See section
 ~\ref{sec:HA-negotiator} ``High Availability of the Central Manager''
-of the Condor manual for a discussion of these problems.
+of the HTCondor manual for a discussion of these problems.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

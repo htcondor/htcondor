@@ -1871,12 +1871,12 @@ ResMgr::check_use( void )
 int
 ownerStateCmp( const void* a, const void* b )
 {
-	Resource *rip1, *rip2;
+	const Resource *rip1, *rip2;
 	int val1, val2, diff;
 	float fval1, fval2;
 	State s;
-	rip1 = *((Resource**)a);
-	rip2 = *((Resource**)b);
+	rip1 = *((Resource* const *)a);
+	rip2 = *((Resource* const *)b);
 		// Since the State enum is already in the "right" order for
 		// this kind of sort, we don't need to do anything fancy, we
 		// just cast the state enum to an int and we're done.
@@ -1905,12 +1905,12 @@ ownerStateCmp( const void* a, const void* b )
 int
 claimedRankCmp( const void* a, const void* b )
 {
-	Resource *rip1, *rip2;
+	const Resource *rip1, *rip2;
 	int val1, val2, diff;
 	float fval1, fval2;
 	State s;
-	rip1 = *((Resource**)a);
-	rip2 = *((Resource**)b);
+	rip1 = *((Resource* const *)a);
+	rip2 = *((Resource* const *)b);
 
 	s = rip1->state();
 	val1 = (int)s;
@@ -1945,13 +1945,13 @@ claimedRankCmp( const void* a, const void* b )
 int
 newCODClaimCmp( const void* a, const void* b )
 {
-	Resource *rip1, *rip2;
+	const Resource *rip1, *rip2;
 	int val1, val2, diff;
 	int numCOD1, numCOD2;
 	float fval1, fval2;
 	State s;
-	rip1 = *((Resource**)a);
-	rip2 = *((Resource**)b);
+	rip1 = *((Resource* const *)a);
+	rip2 = *((Resource* const *)b);
 
 	numCOD1 = rip1->r_cod_mgr->numClaims();
 	numCOD2 = rip2->r_cod_mgr->numClaims();

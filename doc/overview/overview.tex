@@ -2,7 +2,7 @@
 \section{\label{sec:overview}High-Throughput Computing (HTC) and its Requirements}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{Condor!overview|(}
+\index{HTCondor!overview|(}
 \index{overview|(}
 For many research and engineering projects, the quality of the research
 or the product is heavily dependent upon the quantity of computing
@@ -66,23 +66,23 @@ busy doing other things (such as being away at lunch, in meetings,
 or at home sleeping). 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:what-is-condor}Condor's Power}
+\section{\label{sec:what-is-condor}HTCondor's Power}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Condor is a software system that creates a High-Throughput Computing
+HTCondor is a software system that creates a High-Throughput Computing
 (HTC) environment.
 It effectively utilizes the computing power of workstations that
 communicate over a network.
-Condor can manage a dedicated cluster of workstations.
+HTCondor can manage a dedicated cluster of workstations.
 Its power comes from the
 ability to effectively harness non-dedicated,
 preexisting resources under distributed ownership. 
 \index{distributed ownership!of machines}
 
-A user submits the job to Condor.
-Condor finds an available machine on the network and begins
+A user submits the job to HTCondor.
+HTCondor finds an available machine on the network and begins
 running the job on that machine.
-Condor has the capability to detect that a machine running a Condor job
+HTCondor has the capability to detect that a machine running a HTCondor job
 is no longer available (perhaps because the owner of the machine
 came back from lunch and started typing on the keyboard).
 It can checkpoint 
@@ -90,28 +90,28 @@ It can checkpoint
 the job and move (migrate)
 \index{migration}
 the jobs to a different machine which would otherwise be idle.
-Condor continues the job on the new machine from
+HTCondor continues the job on the new machine from
 precisely where it left off.
 
-In those cases where Condor can checkpoint and migrate a job,
-Condor makes it easy to maximize the number of machines which can run
+In those cases where HTCondor can checkpoint and migrate a job,
+HTCondor makes it easy to maximize the number of machines which can run
 a job.
 In this case, there is no requirement for machines to
 share file systems (for example, with NFS or AFS),
 so that machines across an entire enterprise can run a job,
 including machines in different administrative domains.
 
-Condor can be a real time saver when a job
+HTCondor can be a real time saver when a job
 must be run many (hundreds of) different times,
 \index{job!multiple data sets}
 perhaps with hundreds of different data sets.
-With one command, all of the hundreds of jobs are submitted to Condor.
-Depending upon the number of machines in the Condor pool,
+With one command, all of the hundreds of jobs are submitted to HTCondor.
+Depending upon the number of machines in the HTCondor pool,
 dozens or even hundreds of otherwise idle machines
 can be running the job at any given moment.
 
-Condor does not require an account (login) on machines where it runs a job.
-Condor can do this because of its \Term{remote system call}
+HTCondor does not require an account (login) on machines where it runs a job.
+HTCondor can do this because of its \Term{remote system call}
 \index{remote system call}
 technology,
 which traps
@@ -120,9 +120,9 @@ files.
 The calls are transmitted over the network to be performed on the machine
 where the job was submitted.
 
-\index{Condor!resource management}
+\index{HTCondor!resource management}
 \index{resource!management}
-Condor provides powerful resource management by
+HTCondor provides powerful resource management by
 match-making resource
 \index{matchmaking}
 owners with resource consumers.
@@ -132,13 +132,13 @@ systems attach properties to the job queues themselves,
 resulting in user confusion over which queue to use as well as administrative
 hassle in constantly adding and editing queue properties to satisfy user
 demands.
-Condor implements 
+HTCondor implements 
 \Term{ClassAds},
 \index{ClassAd}
 a clean design that simplifies the user's submission of jobs.
 
 ClassAds work in a fashion similar to the newspaper classified
-advertising want-ads. All machines in the Condor pool advertise their
+advertising want-ads. All machines in the HTCondor pool advertise their
 resource properties, both static and dynamic,
 such as available RAM memory, CPU type, CPU speed,
 virtual memory size, physical location, and current load average,
@@ -149,11 +149,11 @@ A user specifies a \Term{resource request} ad
 when submitting a job.
 The request defines both the required and a desired set of properties
 of the resource to run the job.
-Condor acts as a broker by matching and ranking resource
+HTCondor acts as a broker by matching and ranking resource
 offer ads with resource request ads, making certain that all
 requirements in both ads are satisfied.
 During this match-making process,
-Condor also considers several layers of priority values:
+HTCondor also considers several layers of priority values:
 the priority the user assigned to the resource request ad,
 the priority of the user which submitted the ad,
 and desire of
@@ -165,18 +165,18 @@ machines in the pool to accept certain types of ads over others.
 
 \begin{description}
 	\item[Checkpoint and Migration.] Where programs can be
-linked with Condor libraries, users of Condor may be assured that
+linked with HTCondor libraries, users of HTCondor may be assured that
 their jobs will eventually complete,
-even in the ever changing environment that Condor
+even in the ever changing environment that HTCondor
 utilizes.
-As a machine running a job submitted to Condor
+As a machine running a job submitted to HTCondor
 becomes unavailable,
 the job can be check pointed.
 \index{checkpoint}
 The job may continue after migrating 
 \index{migration}
 to another machine.
-Condor's checkpoint feature 
+HTCondor's checkpoint feature 
 \index{checkpoint!periodic}
 periodically checkpoints a job even in lieu of migration in order to
 safeguard the accumulated computation time on a job from being lost in the
@@ -184,26 +184,26 @@ event of a system failure, such as the machine being shutdown or a crash.
 	\item[Remote System Calls.] 
 \index{remote system call}
 Despite running jobs on remote machines,
-the Condor standard universe execution
+the HTCondor standard universe execution
 mode preserves the local execution environment
 via remote system calls. Users do not have to worry
 about making data files available to remote workstations or even
-obtaining a login account on remote workstations before Condor executes
-their programs there. The program behaves under Condor as if it were
+obtaining a login account on remote workstations before HTCondor executes
+their programs there. The program behaves under HTCondor as if it were
 running as the user that submitted the job on the workstation where it
 was originally submitted, no matter on which machine it really ends up
 executing on.
 	\item[No Changes Necessary to User's Source Code.] No special
-programming is required to use Condor.
-Condor is able to run non-interactive programs.
+programming is required to use HTCondor.
+HTCondor is able to run non-interactive programs.
 The checkpoint and migration of
-programs by Condor is transparent and automatic, as is the use of
+programs by HTCondor is transparent and automatic, as is the use of
 remote system calls.
 If these facilities are desired, the user only
 re-links the program.  The code is neither recompiled nor changed.
 	\item[Pools of Machines can be Hooked Together.] Flocking is
-a feature of Condor that allows jobs submitted within a first pool of
-Condor machines to execute on a second pool.
+a feature of HTCondor that allows jobs submitted within a first pool of
+HTCondor machines to execute on a second pool.
 The mechanism is flexible, following requests from the job
 submission,
 while allowing the second pool, or a subset of machines within
@@ -213,13 +213,13 @@ which jobs are executed.
 required by dependencies among jobs in a set is easily handled.
 The set of jobs is specified using a directed acyclic graph,
 where each job is a node in the graph.
-Jobs are submitted to Condor following the dependencies given
+Jobs are submitted to HTCondor following the dependencies given
 by the graph.
-	\item[Condor Enables Grid Computing.] As grid computing
-becomes a reality, Condor is already there.
-The technique of glidein allows jobs submitted to Condor
+	\item[HTCondor Enables Grid Computing.] As grid computing
+becomes a reality, HTCondor is already there.
+The technique of glidein allows jobs submitted to HTCondor
 to be executed on grid machines in various locations worldwide.
-As the details of grid computing evolve, so does Condor's
+As the details of grid computing evolve, so does HTCondor's
 ability, starting with Globus-controlled resources.
 	\item[Sensitive to the Desires of Machine Owners.] The
 owner of a machine has complete priority over the use
@@ -227,10 +227,10 @@ of the machine.
 An owner is generally happy to let others compute on
 the machine while it is idle, but wants it back
 promptly upon returning. The owner does not want to take special
-action to regain control. Condor handles this automatically. 
+action to regain control. HTCondor handles this automatically. 
 	\item[ClassAds.]The ClassAd mechanism 
 \index{ClassAd}
-in Condor provides an extremely
+in HTCondor provides an extremely
 flexible, expressive framework for matchmaking
 resource requests with resource offers.
 Users can easily request both job requirements and job desires.
@@ -241,13 +241,13 @@ A workstation owner
 can state a preference that the workstation runs jobs
 from a specified set of users. 
 The owner can also require that there be no interactive workstation
-activity detectable at certain hours before Condor could
+activity detectable at certain hours before HTCondor could
 start a job.
 Job requirements/preferences and resource availability constraints can be
 described in terms of powerful expressions, resulting in
-Condor's adaptation to nearly any desired policy. 
+HTCondor's adaptation to nearly any desired policy. 
 \end{description}
-\index{Condor!overview|)}
+\index{HTCondor!overview|)}
 \index{overview|)}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -256,20 +256,20 @@ Condor's adaptation to nearly any desired policy.
 
 \begin{description}
 
-\index{Condor!limitations, under UNIX}
-	\item[Limitations on Jobs which can Checkpointed] Although Condor can schedule and
-run any type of process, Condor does have some limitations on jobs that it can
+\index{HTCondor!limitations, under UNIX}
+	\item[Limitations on Jobs which can Checkpointed] Although HTCondor can schedule and
+run any type of process, HTCondor does have some limitations on jobs that it can
 transparently checkpoint and migrate:
 
 \input{user-man/limitations.tex}
 
-	Note: these limitations \emph{only} apply to jobs which Condor
+	Note: these limitations \emph{only} apply to jobs which HTCondor
 has been asked to transparently checkpoint.  If job checkpointing is not
 desired, the limitations above do not apply.
 
-	\item[Security Implications.] Condor does a significant amount of
+	\item[Security Implications.] HTCondor does a significant amount of
 	work to prevent security hazards, but loopholes are known to exist.
-	Condor can be instructed to run user programs only as the UNIX
+	HTCondor can be instructed to run user programs only as the UNIX
 	user nobody, a user login which traditionally has very 
 	restricted access.
 	But even with access solely as user nobody,
@@ -280,49 +280,49 @@ desired, the limitations above do not apply.
 	high concern, 
 	only machines where the UNIX user root on that machine can be
 	trusted should be admitted into the pool.
-	Condor provides the administrator with extensive security mechanisms 
+	HTCondor provides the administrator with extensive security mechanisms 
 	to enforce desired policies.
 
 	\item[Jobs Need to be Re-linked to get Checkpointing and Remote System Calls] Although 
 typically no source code changes are required,
-Condor requires
-that the jobs be re-linked with the Condor libraries to take
+HTCondor requires
+that the jobs be re-linked with the HTCondor libraries to take
 advantage of checkpointing and remote system calls. This often
 precludes commercial software binaries from taking advantage of these services
 because commercial packages rarely make their object code
 available. 
-Condor's other services are still available for these commercial packages.
+HTCondor's other services are still available for these commercial packages.
 
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{\label{sec:Availability}Availability}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{Condor!platforms available}
+\index{HTCondor!platforms available}
 \index{available platforms}
 \index{supported platforms}
 \index{platforms supported}
-Condor is currently available as a free download from the Internet via the World Wide Web at  
+HTCondor is currently available as a free download from the Internet via the World Wide Web at  
 URL \URL{http://www.cs.wisc.edu/condor/downloads-v2}.
-Binary distributions of this Condor \VersionNotice\ release
+Binary distributions of this HTCondor \VersionNotice\ release
 are available for the platforms 
 detailed in Table~\ref{table:supported-platforms}.  A platform is an 
 architecture/operating system combination.  
-Condor binaries are available for most major versions of Unix, as well as
+HTCondor binaries are available for most major versions of Unix, as well as
 Windows.  
 
 \index{clipped platform!definition of}
 \index{clipped platform!availability}
-In the table, \Term{clipped} means that Condor does not support
+In the table, \Term{clipped} means that HTCondor does not support
 checkpointing or remote system calls on the given platform. 
 This means that \Term{standard} universe jobs are not supported.
 Some clipped platforms will have further limitations with respect
 to supported universes.
 See section~\ref{sec:Choosing-Universe} on
 page~\pageref{sec:Choosing-Universe} for more details on job universes
-within Condor and their abilities and limitations.
+within HTCondor and their abilities and limitations.
 
-The Condor source code is available for 
+The HTCondor source code is available for 
 public download alongside the binary distributions.
 
 % Karen's table
@@ -344,7 +344,7 @@ Opteron x86\_64 & - Red Hat Enterprise Linux 5 \\
  & - Debian Linux 6.0 (squeeze) \\ \hline 
  & - Macintosh OS X 10.7 (clipped) \\ \hline
 \end{tabular}
-\caption{\label{table:supported-platforms}Supported platforms in Condor \VersionNotice}
+\caption{\label{table:supported-platforms}Supported platforms in HTCondor \VersionNotice}
 \end{table}
 \end{center}
 
@@ -352,19 +352,19 @@ Opteron x86\_64 & - Red Hat Enterprise Linux 5 \\
 \Note Other Linux distributions likely work, but are not tested
 or supported.
 
-For more platform-specific information about Condor's support for
+For more platform-specific information about HTCondor's support for
 various operating systems, see Chapter~\ref{platforms} on
 page~\pageref{platforms}. 
 
 
 
 Jobs submitted to the standard universe utilize \Condor{compile}
-to relink programs with libraries provided by Condor.
+to relink programs with libraries provided by HTCondor.
 Table~\ref{supported-compile} lists supported compilers by
 platform for this \VersionNotice\ release.
 Other compilers may work, but are not supported.
 
-\index{Condor commands!condor\_compile!list of supported compilers}
+\index{HTCondor commands!condor\_compile!list of supported compilers}
 \index{condor\_compile command!list of supported compilers}
 \index{compilers!supported with condor\_compile}
 
@@ -383,7 +383,7 @@ Debian Linux 5.0 (lenny) on x86 and x86\_64 & gcc, g++, gfortran & as shipped \\
 Debian Linux 6.0 (squeeze) on x86\_64 & gcc, g++, gfortran & as shipped \\ 
 \hline
 \end{tabular}
-\caption{\label{supported-compile}Supported compilers in Condor \VersionNotice}
+\caption{\label{supported-compile}Supported compilers in HTCondor \VersionNotice}
 \end{table}
 \end{center}
 
@@ -396,43 +396,43 @@ Debian Linux 6.0 (squeeze) on x86\_64 & gcc, g++, gfortran & as shipped \\
 \section{\label{contact-info}Contact Information}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{Condor!contact information}
-The latest software releases, publications/papers regarding Condor and other 
+\index{HTCondor!contact information}
+The latest software releases, publications/papers regarding HTCondor and other 
 High-Throughput Computing
-research can be found at the official web site for Condor at  
-\URL{http://www.cs.wisc.edu/condor}.
+research can be found at the official web site for HTCondor at  
+\URL{http://research.cs.wisc.edu/htcondor/}.
 
-\index{Condor!mailing lists}
+\index{HTCondor!mailing lists}
 \index{mailing lists}
-In addition, there is an e-mail list at condor-world@cs.wisc.edu.
-The Condor Team uses this e-mail list to announce new releases of
-Condor and other major Condor-related news items.
+In addition, there is an e-mail list at htcondor-world@cs.wisc.edu.
+The HTCondor Team uses this e-mail list to announce new releases of
+HTCondor and other major HTCondor-related news items.
 To subscribe or unsubscribe from the the list, follow the instructions at  
-\URL{http://www.cs.wisc.edu/condor/mail-lists/}.
+\URL{http://research.cs.wisc.edu/htcondor/mail-lists/}.
 Because many of us receive 
 too much e-mail as it is, you will be happy to know that the
-Condor World e-mail list group is 
+HTCondor World e-mail list group is 
 moderated, and only major announcements of wide interest are distributed.
 
 Our users support each other by belonging to an unmoderated mailing
-list targeted at solving problems with Condor.
-Condor team members attempt to monitor traffic to Condor Users,
+list targeted at solving problems with HTCondor.
+HTCondor team members attempt to monitor traffic to HTCondor Users,
 responding as they can. 
 Follow the instructions at
-\URL{http://www.cs.wisc.edu/condor/mail-lists/}.
+\URL{http://research.cs.wisc.edu/htcondor/mail-lists/}.
 
-Finally, you can reach the Condor Team directly.
-The Condor Team is comprised of the 
-developers and administrators of Condor at the University of Wisconsin-Madison.
-Condor questions, comments, pleas for help,
+Finally, you can reach the HTCondor Team directly.
+The HTCondor Team is comprised of the 
+developers and administrators of HTCondor at the University of Wisconsin-Madison.
+HTCondor questions, comments, pleas for help,
 and requests for commercial contract consultation or support 
 are all welcome;
 send Internet e-mail to
-\Email{condor-admin@cs.wisc.edu}.
+\Email{htcondor-admin@cs.wisc.edu}.
 Please include your name, organization, and telephone number in your message.
-If you are having trouble with Condor,
+If you are having trouble with HTCondor,
 please help us troubleshoot by including as much pertinent information
-as you can, including snippets of Condor log files. 
+as you can, including snippets of HTCondor log files. 
 
 \section{\label{privacy}Privacy Notice}
 
@@ -442,24 +442,24 @@ as you can, including snippets of Condor log files.
 %   http://www.cs.wisc.edu/condor/privacy.html
 %
 
-The Condor software periodically sends short messages
-to the Condor Project developers at the University of Wisconsin,
-reporting totals of machines and jobs in each running Condor system.
+The HTCondor software periodically sends short messages
+to the HTCondor Project developers at the University of Wisconsin,
+reporting totals of machines and jobs in each running HTCondor system.
 An example of such a message is given below.
 
-The Condor Project uses these collected reports to publish
-summary figures and tables, such as the total of Condor systems
-worldwide, or the geographic distribution of Condor systems.
-This information helps the Condor Project to understand
-the scale and composition of Condor in the real world
+The HTCondor Project uses these collected reports to publish
+summary figures and tables, such as the total of HTCondor systems
+worldwide, or the geographic distribution of HTCondor systems.
+This information helps the HTCondor Project to understand
+the scale and composition of HTCondor in the real world
 and improve the software accordingly.
 
-The Condor Project will not use these reports to publicly
-identify any Condor system or user without permission.
-The Condor software does not collect or report any personal
+The HTCondor Project will not use these reports to publicly
+identify any HTCondor system or user without permission.
+The HTCondor software does not collect or report any personal
 information about individual users.
 
-We hope that you will contribute to the development of Condor
+We hope that you will contribute to the development of HTCondor
 through this reporting feature.
 However, you are free to disable it at any time by
 changing the configuration variables \Macro{CONDOR\_DEVELOPERS}
@@ -469,12 +469,12 @@ both described in section \ref{param:CondorDevelopers} of this manual.
 Example of data reported:
 
 \begin{verbatim}
-This is an automated email from the Condor system
+This is an automated email from the HTCondor system
 on machine "your.condor.pool.com".  Do not reply.
 
 This Collector has the following IDs:
-    CondorVersion: 6.6.0 Nov 12 2003
-    CondorPlatform: INTEL-LINUX-GLIBC22
+    HTCondor: 6.6.0 Nov 12 2003
+    HTCondor: INTEL-LINUX-GLIBC22
 
                      Machines Owner Claimed Unclaimed Matched Preempting
 

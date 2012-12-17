@@ -7,12 +7,14 @@ if "~%1"=="~EXTERNALS" (
    @echo target=%1
 )
 
+
 @echo CD=%CD%
 @echo HOME=%HOME%
 @echo CONDOR_BLD_EXTERNAL_STAGE=%CONDOR_BLD_EXTERNAL_STAGE%
 @echo LIB=%LIB%
 @echo INCLUDE=%INCLUDE%
 @echo PATH=%PATH%
+@echo ARGS=%*
 
 REM use FOR to convert from linux path separators to windows path seps
 for %%I in ("%BASE_DIR%") do set BUILD_ROOT=%%~dpfI
@@ -114,12 +116,23 @@ if NOT "~%WIX_PATH%"=="~" set PATH=%PATH%;%WIX_PATH%
 set INCLUDE=%BUILD_ROOT%\src\condor_utils
 @echo INCLUDE=%INCLUDE%
 
-:: pick condor version out of cmake files
-if NOT "~%2"=="~" (
-   set BUILD_VERSION=%2
+:: the condor version or build id may be passed as arg 2
+:: %2 is either blank, a full version number (X.Y.Z) or the build id
+:: if its a full version number than use it. (we look for the "." after X)
+:: if it's a buildid, get the version number from the cmake files and then append it.
+set BUILDID=%2
+:: if NOT "%2"=="" ( if "%BUILDID:~0,1%"=="-" set BUILDID=%BUILDID:~1% )
+if "%BUILDID:~1,1%"=="." (
+   set BUILD_VERSION=%BUILDID%
+   set BUILDID=
 ) else (
-   for /f "tokens=2 delims=) " %%I in ('grep set.VERSION CMakeLists.txt') do SET BUILD_VERSION=%%~I
+   for /f "tokens=2 delims=) " %%I in ('grep set.VERSION CMakeLists.txt') do set BUILD_VERSION=%%~I
 )
+if NOT "%BUILD_VERSION%"=="" (
+  if NOT "%BUILDID%"=="" set BUILD_VERSION=%BUILD_VERSION%-%BUILDID%
+)
+@echo BUILDID=%BUILDID%
+@echo BUILD_VERSION=%BUILD_VERSION%
 
 @echo ----  build.win.bat ENVIRONMENT --------------------------------
 set
@@ -133,12 +146,13 @@ goto finis
 
 :ALL_BUILD
 :BUILD
+:: the Windows VM's have trouble with time sync, so touch all of the files to makes sure that they build.
 @echo the time is:
 time /t
 @echo experimental touching...
 dir CMakeLists.txt
 dir CMakeFiles\generate.stamp*
-for /F %%I in ('dir /b/s CMakeLists.*') do touch %%I
+for /F %%I in ('dir /b/s CMakeLists.*') do touch %%I    
 dir CMakeLists.txt
 dir CMakeFiles\generate.stamp*
 @echo cmake.exe . -G "Visual Studio 9 2008"
@@ -158,7 +172,7 @@ goto finis
 izip -r build_products.zip * -i *.cmake -i *.txt -i *.htm -i *.map -i *.vcproj -i *.sln -i *.log -i *.stamp* -i param_info* 
 @echo ZIPPING up release directory %BUILD_ROOT%\release_dir
 pushd %BUILD_ROOT%\release_dir
-izip -r ..\condor-%BUILD_VERSION%-winnt-x86.zip *
+izip -r ..\condor-%BUILD_VERSION%-Windows-x86.zip *
 dir .
 popd
 goto finis   
@@ -181,17 +195,16 @@ goto finis
 :MSI
 :MAKE_MSI
 :NATIVE
-@echo %BUILD_ROOT%\release_dir\etc\WiX\do_wix %BUILD_ROOT%\release_dir %BUILD_ROOT%\condor-%BUILD_VERSION%-winnt-x86.msi
-@echo TODO: fix so that do_wix.bat can run in NMI. %ERRORLEVEL%
-@echo on
-dir %BUILD_ROOT%\release_dir
-dir %BUILD_ROOT%
-@echo off
-:: reset set errorlevel to 0
+@echo %BUILD_ROOT%\release_dir\etc\WiX\do_wix %BUILD_ROOT%\release_dir %BUILD_ROOT%\condor-%BUILD_VERSION%-Windows-x86.msi
+::@echo on
+::dir %BUILD_ROOT%\release_dir
+::dir %BUILD_ROOT%
+::@echo off
+:: verify forces ERRORLEVEL to 0
 verify >NUL
-call %BUILD_ROOT%\release_dir\etc\WiX\do_wix.bat %BUILD_ROOT%\release_dir %BUILD_ROOT%\condor-%BUILD_VERSION%-winnt-x86.msi
+call %BUILD_ROOT%\release_dir\etc\WiX\do_wix.bat %BUILD_ROOT%\release_dir %BUILD_ROOT%\condor-%BUILD_VERSION%-Windows-x86.msi
 @echo ERRORLEVEL=%ERRORLEVEL%
-:: reset set errorlevel to 0
+:: verify forces ERORLEVEL to 0
 verify >NUL
 goto finis
 

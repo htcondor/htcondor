@@ -92,8 +92,8 @@ public:
 	void	change_state( State s ) {r_state->change(s);};
 	void	change_state( Activity a) {r_state->change(a);};
 	void	change_state( State s , Activity a ) {r_state->change(s, a);};
-	State		state( void )		{return r_state->state();};
-	Activity	activity( void )	{return r_state->activity();};
+	State		state( void ) const    {return r_state->state();};
+	Activity	activity( void ) const {return r_state->activity();};
 	void		eval_state( void )		{r_state->eval();};
 		// does this resource need polling frequency for compute/eval?
 	bool	needsPolling( void );

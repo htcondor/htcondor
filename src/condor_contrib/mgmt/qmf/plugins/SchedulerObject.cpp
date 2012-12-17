@@ -161,7 +161,7 @@ void SchedulerObject::useNewStats(const ClassAd &ad) {
 
     //INTEGER(JobsCompletedCum);
     if (ad.LookupInteger("JobsCompleted", jobs_completed)) {
-        mgmtObject->set_JobsCompletedCum((uint32_t) num);
+        mgmtObject->set_JobsCompletedCum((uint32_t) jobs_completed);
     } else {
         dprintf(D_FULLDEBUG, "Warning: Could not find attr 'JobsCompleted' for 'JobsCompletedCum'\n");
     }

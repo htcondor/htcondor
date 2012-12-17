@@ -34,7 +34,7 @@
 // we support multiple groupnames
 bool AmazonVMStart::ioCheck(char **argv, int argc)
 {
-	return verify_min_number_args(argc, 13) &&
+	return verify_min_number_args(argc, 14) &&
 		verify_request_id(argv[1]) &&
 		verify_string_name(argv[2]) &&
 		verify_string_name(argv[3]) &&
@@ -46,7 +46,32 @@ bool AmazonVMStart::ioCheck(char **argv, int argc)
 		verify_string_name(argv[9]) && 
 		verify_string_name(argv[10]) &&
 		verify_string_name(argv[11]) &&
-		verify_string_name(argv[12]);
+		verify_string_name(argv[12]) &&
+		verify_string_name(argv[13]);
+}
+
+// Expecting:EC2_VM_START_SPOT <req_id> 
+// <serviceurl> <accesskeyfile> <secretkeyfile>
+// <ami-id> <spot-price> <keypair> <userdata> <userdatafile> 
+//          <instancetype> <availability_zone> <vpc_subnet> <vpc_ip>
+//          <client-token> <groupname>*
+bool AmazonVMStartSpot::ioCheck(char **argv, int argc)
+{
+	return verify_min_number_args(argc, 15) &&
+		verify_request_id(argv[1]) &&
+		verify_string_name(argv[2]) &&
+		verify_string_name(argv[3]) &&
+		verify_string_name(argv[4]) &&
+		verify_string_name(argv[5]) &&
+		verify_string_name(argv[6]) &&
+		verify_string_name(argv[7]) &&
+		verify_string_name(argv[8]) &&
+		verify_string_name(argv[9]) && 
+		verify_string_name(argv[10]) &&
+		verify_string_name(argv[11]) &&
+		verify_string_name(argv[12]) &&
+		verify_string_name(argv[13]) &&
+		verify_string_name(argv[14]);
 }
 
 // Expecting:EC2_VM_STOP <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id>
@@ -69,6 +94,15 @@ bool AmazonVMStatus::ioCheck(char **argv, int argc)
 		verify_string_name(argv[3]) &&
 		verify_string_name(argv[4]) &&
 		verify_string_name(argv[5]);
+}
+
+bool AmazonVMStatusAllSpot::ioCheck(char **argv, int argc)
+{
+	return verify_min_number_args(argc, 5) &&
+		verify_request_id(argv[1]) &&
+		verify_string_name(argv[2]) &&
+		verify_string_name(argv[3]) &&
+		verify_string_name(argv[4]);
 }
 
 // Expecting:EC2_VM_ASSOCIATE_ADDRESS  <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <instance-id> <elastic-ip> 
