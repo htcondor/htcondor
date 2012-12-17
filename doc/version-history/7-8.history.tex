@@ -151,6 +151,10 @@ When \Expr{False}, the \Condor{master} will not start the \Condor{kbdd}.
 prevented the Condor service from being stopped during system shutdown.
 \Ticket{3368}
 
+\item The \Condor{master} would sometimes crash on reconfig when the
+High Availability configuration had changed. This crash has been fixed.
+\Ticket{3292}
+
 \end{itemize}
 
 \noindent Known Bugs:
