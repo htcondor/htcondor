@@ -109,10 +109,12 @@ they finished running if the working directory contained links to
 files that were not globally readable.
 \Ticket{2904}
 
-\item The configuration setting \MacroNI{ENABLE\_ADDRESS\_REWRITING}
+\item The configuration variable \MacroNI{ENABLE\_ADDRESS\_REWRITING}
 was not correctly applied to the \Condor{schedd} address when
-claiming a slot.  The behavior was always as though
-\MacroNI{ENABLE\_ADDRESS\_REWRITING} was false.  This could result
+claiming a slot.  
+The incorrect behavior observed was always as though
+\MacroNI{ENABLE\_ADDRESS\_REWRITING} was \Expr{False}.
+This could result
 in communication errors for jobs running from multi-homed submit machines.
 \Ticket{3330}
 
