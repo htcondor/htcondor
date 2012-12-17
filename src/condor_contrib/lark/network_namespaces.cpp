@@ -4,6 +4,7 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_arglist.h"
+#include "directory.h"
 
 #include <classad/classad.h>
 #include <classad/classad_stl.h>
@@ -37,6 +38,8 @@ NetworkNamespaceManager::GetManager()
 }
 
 int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, const classad::ClassAd & /*job_ad*/, classad_shared_ptr<classad::ClassAd> machine_ad) {
+	NetworkLock sentry;
+
 	if (m_state != UNCREATED) {
 		dprintf(D_FULLDEBUG, "Internal bug: NetworkNamespaceManager::CreateNamespace has already been invoked.\n");
 		m_state = FAILED;
@@ -173,6 +176,7 @@ int NetworkNamespaceManager::CreateNetworkPipe() {
 }
 
 int NetworkNamespaceManager::PreFork() {
+	NetworkLock sentry;
 	if (m_state == UNCREATED)
 		return 0;
 
@@ -300,6 +304,7 @@ failed_socket:
 }
 
 int NetworkNamespaceManager::PostForkParent(pid_t pid) {
+	NetworkLock sentry;
 	if (m_state == UNCREATED)
 		return 0;
 
@@ -361,7 +366,7 @@ int NetworkNamespaceManager::PostForkParent(pid_t pid) {
 		while (((rc2 = read(m_c2p[0], &rc, sizeof(rc))) < 0) && (errno == EINTR)) {}
 		if (rc2 > 0) {
 			dprintf(D_ALWAYS, "Got error code from child: %d\n", rc);
-		} else if ((errno) && (errno != EPIPE)) {
+		} else if ((rc2 == -1) && (errno) && (errno != EPIPE)) {
 			dprintf(D_ALWAYS, "Error reading from child: %s (errno=%d).\n", strerror(errno), errno);
 			rc = errno;
 		}
@@ -372,6 +377,7 @@ int NetworkNamespaceManager::PostForkParent(pid_t pid) {
 }
 
 int NetworkNamespaceManager::PerformJobAccounting(classad::ClassAd *classad) {
+	NetworkLock sentry;
 	if (m_state == UNCREATED)
 		return 0;
 
@@ -397,6 +403,7 @@ int NetworkNamespaceManager::JobAccountingCallback(const unsigned char * rule_na
 }
 
 int NetworkNamespaceManager::Cleanup(const std::string &) {
+	NetworkLock sentry;
 
 	// Try to only clean once.
 	if (m_state == CLEANED) {
@@ -519,3 +526,48 @@ int NetworkNamespaceManager::ConfigureNetworkAccounting(const classad::ClassAd &
 	return 0;
 }
 
+NetworkNamespaceManager::NetworkLock::NetworkLock() : m_fd(-1)
+{
+	std::string lock;
+	if (!param(lock, "Lock"))
+	{
+		dprintf(D_ALWAYS, "LOCK parameter not set.\n");
+	}
+	std::string lark_lock_dir = lock + "/lark";
+	if (!mkdir_and_parents_if_needed(lark_lock_dir.c_str(), S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, PRIV_ROOT))
+	{
+		dprintf(D_ALWAYS, "Error creating Lark network lock directory %s. (errno=%d, %s)\n", lark_lock_dir.c_str(), errno, strerror(errno));
+	}
+	std::string lark_lock = lark_lock_dir + "/network_lock";
+	int fd = open(lark_lock.c_str(), O_RDWR|O_CREAT|O_EXCL|O_CLOEXEC, S_IWUSR|S_IRUSR);
+	if ((fd < 0) && (errno != EEXIST))
+	{
+		dprintf(D_ALWAYS, "Error opening lock file %s. (errno=%d, %s)\n", lark_lock.c_str(), errno, strerror(errno));
+	}
+	else if ((fd < 0) && (errno == EEXIST))
+	{
+		fd = open(lark_lock.c_str(), O_RDWR|O_CREAT, S_IWUSR|S_IRUSR);
+		if (fd < 0)
+		{
+			dprintf(D_ALWAYS, "Error opening stale lock file %s. (errno=%d, %s)\n", lark_lock.c_str(), errno, strerror(errno));
+			return;
+		}
+	}
+	struct flock lock_info;
+	lock_info.l_type = F_WRLCK;
+	lock_info.l_whence = SEEK_SET;
+	lock_info.l_start = 0;
+	lock_info.l_len = 0;
+	lock_info.l_pid = 0;
+	if (fcntl(fd, F_SETLK, &lock_info) == -1)
+	{
+		dprintf(D_ALWAYS, "Error locking file %s. (errno=%d, %s)\n", lark_lock.c_str(), errno, strerror(errno));
+	}
+	m_fd = fd;
+}
+
+NetworkNamespaceManager::NetworkLock::~NetworkLock()
+{
+	if (m_fd != -1) close(m_fd);
+	m_fd = -1;
+}

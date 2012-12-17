@@ -111,6 +111,14 @@ private:
 
 	// Singleton instance
 	static NetworkNamespaceManager *m_instance;
+
+	class NetworkLock {
+		public:
+			NetworkLock();
+			~NetworkLock();
+		private:
+			int m_fd;
+	};
 };
 
 }
