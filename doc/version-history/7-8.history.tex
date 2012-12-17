@@ -56,12 +56,14 @@ rather than leaving them and other jobs with the same authentication tokens
 idle indefinitely.
 \Ticket{2274}
 
-\item HTCondor now only destroys the user's half of the SSH keypair
+\item For EC2 resource jobs within the grid universe,
+HTCondor now only destroys the user's half of the SSH keypair
 when sure that the instance has terminated.  This prevents transient
 problems from rendering an instance permanently inaccessible.
 \Ticket{3289}
 
-\item HTCondor no longer generates an SSH keypair if the user did not
+\item For EC2 resource jobs within the grid universe,
+HTCondor no longer generates an SSH keypair if the user did not
 request one.
 \Ticket{3061}
 
