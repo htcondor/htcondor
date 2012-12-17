@@ -23,7 +23,6 @@ NetworkNamespaceManager::NetworkNamespaceManager() :
 	m_sock(-1), m_created_pipe(false),
 	m_network_configuration(NULL), m_ad()
 	{
-		//PluginManager<NetworkManager>::registerPlugin(this);
 		dprintf(D_FULLDEBUG, "Initialized a NetworkNamespaceManager plugin.\n");
 	}
 
@@ -43,6 +42,7 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, c
 		m_state = FAILED;
 		return 1;
 	}
+	dprintf(D_FULLDEBUG, "Preparing network namespace manager.\n");
 
 	if (!machine_ad.get()) {
 		m_state = FAILED;
@@ -268,29 +268,9 @@ int NetworkNamespaceManager::PostForkChild() {
 		goto finalize_child;
 	}
 
-	// The external gateway is stored in the classad because, for example, it is very
-	// different for DHCP versus NAT.
-	if (!m_ad->EvaluateAttrString(ATTR_GATEWAY, external_gw)) {
-		dprintf(D_FULLDEBUG, "Unable to determine gateway; using external IP address.\n");
-		external_gw = m_external_address.to_ip_string();
-	}
-	{
-                ArgList args;
-                args.AppendArg("ip");
-                args.AppendArg("route");
-                args.AppendArg("add");
-                args.AppendArg("default");
-                args.AppendArg("dev");
-                args.AppendArg(m_internal_pipe.c_str());
-                RUN_ARGS_AND_LOG(NetworkNamespaceManager::Cleanup, NETWORK_NAMESPACE_DELETE_SCRIPT)
-	}
-/*	TODO: Doesn't work yet - dunno why.
-	if (add_default_route(sock, external_gw.c_str())) {
-		dprintf(D_ALWAYS, "Unable to add default route via %s\n", external_gw.c_str());
-		rc = 5;
-		goto finalize_child;
-	}
-*/
+	// Gateway setup is done in the network configuration code, as it is substantially
+	// different between NAT and bridge configurations.
+
 	m_sock = sock; // This way, the network configuration can reuse our socket.
 	if (m_network_configuration->SetupPostForkChild()) {
 		dprintf(D_ALWAYS, "Failed to create network configuration.\n");
@@ -397,7 +377,7 @@ int NetworkNamespaceManager::PerformJobAccounting(classad::ClassAd *classad) {
 
 	int rc = 0;
 	if (m_state == INTERNAL_CONFIGURED) {
-		dprintf(D_FULLDEBUG, "Polling netfilter for network statistics\n");
+		dprintf(D_FULLDEBUG, "Polling netfilter for network statistics on chain %s.\n", m_network_namespace.c_str());
 		rc = perform_accounting(m_network_namespace.c_str(), JobAccountingCallback, (void *)&m_statistics);
 	}
 	if (classad) {
@@ -435,11 +415,14 @@ int NetworkNamespaceManager::Cleanup(const std::string &) {
 	}
 
 	// Cleanup network configuration
-	int rc4 = m_network_configuration->Cleanup();
-	if (rc4) {
-		dprintf(D_ALWAYS, "Unable to cleanup network configuration.\n");
+	int rc4 = 0;
+	if (m_network_configuration.get()) {
+		rc4 = m_network_configuration->Cleanup();
+		if (rc4) {
+			dprintf(D_ALWAYS, "Unable to cleanup network configuration.\n");
+		}
+		m_network_configuration.reset(NULL);
 	}
-	m_network_configuration.reset(NULL);
 
         // Cleanup firewall
 	cleanup_chain(m_network_namespace.c_str());
@@ -487,8 +470,8 @@ int NetworkNamespaceManager::ConfigureNetworkAccounting(const classad::ClassAd &
 
 	// See if network accounting is requested; if not, return early.
 	bool request_accounting = false;
-	if (!machine_ad.EvaluateAttrBool(ATTR_NETWORK_ACCOUNTING, request_accounting) && !param_boolean(CONFIG_NETWORK_ACCOUNTING, request_accounting)) {
-		request_accounting = false;
+	if (!machine_ad.EvaluateAttrBool(ATTR_NETWORK_ACCOUNTING, request_accounting)) {
+		request_accounting = param_boolean(CONFIG_NETWORK_ACCOUNTING, false);
 	}
 	if (!request_accounting) {
 		dprintf(D_FULLDEBUG, "Network accounting not requested.\n");

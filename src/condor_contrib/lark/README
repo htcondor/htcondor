@@ -1,0 +1,46 @@
+
+Lark - Integrating HTCondor with the network
+
+This contrib consists of various tools and plugins to better integrate
+HTCondor with the network layer.  The ultimate goal is to make the HTCondor
+job addressable by the network layer, giving us the ability to make incorporate
+the network with scheduling policy.
+
+The code which became Lark initially focused on network accounting - having a
+to-the-byte record of the incoming and outgoing traffic of the job.  This was
+accomplished by providing each job with a private virtual ethernet interface,
+creating a NAT to the external network, and using iptables for accounting.
+
+The NAT code has recently been extended with layer 2 bridging and DHCP,
+allowing the job to be externally addressable.
+
+In this directory, we have the following tools:
+- lark_cleanup_firewall: A tool for removing all references to an iptables
+  chain.
+- lark_dhcp_client_tester: A tool for testing the built-in DHCP client used
+  by lark.
+- lark_dump_firewall: A tool for dumping all the rules in iptables; used to
+  debug our iptables parsing code.
+- lark_ip_lock_tester: A tool for testing the local POSIX locking of IP
+  addresses for the NAT mode.
+- lark_network_namespace_tester: A tool for testing the end-to-end networking
+  code; launches a small child job which performs basic network activity (curl,
+  ping).
+- lark_ns_exec_tester: A tool for launching processes in separate Linux
+  namespaces.  Useful for performing network manipulation by hand and trying
+  out new ideas.
+- lark-plugin.so: The plugin for enabling Lark support in the Condor starter.
+
+CONFIGURATION:
+To use Lark from Condor, add the following lines to your configuration:
+
+STARTER.PLUGINS = $(STARTER.PLUGINS) /usr/lib64/condor/plugins/lark-plugin.so
+USE_NETWORK_NAMESPACES = true
+
+(adjust as necessary for the location of the lark plugin).
+
+KNOWN ISSUES:
+- The bridge must be setup and configured beforehand when using bridging mode.
+- The bridge forwarding delay must be set to 0.
+- Network accounting does not work in bridge mode.
+

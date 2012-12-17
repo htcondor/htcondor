@@ -144,6 +144,25 @@ NATConfiguration::Setup()
 }
 
 int
+NATConfiguration::SetupPostForkChild()
+{
+	std::string external_gw;
+	if (!m_ad->EvaluateAttrString(ATTR_GATEWAY, external_gw)) {
+		dprintf(D_FULLDEBUG, "Missing required ClassAd attribute " ATTR_GATEWAY "\n");
+		return 1;
+	}
+	int err = 0;
+
+	NetworkNamespaceManager & manager = NetworkNamespaceManager::GetManager();
+	int sock = manager.GetNetlinkSocket();
+	if ((err = add_default_route(sock, external_gw.c_str()))) {
+		dprintf(D_ALWAYS, "Unable to add default route via %s; %d\n", external_gw.c_str(), err);
+		return err;
+	}
+	return err;
+}
+
+int
 NATConfiguration::Cleanup()
 {
 	// Pull out attributes needed for cleanup.

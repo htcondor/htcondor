@@ -22,6 +22,8 @@
 #ifndef __NETWORK_NAMESPACES_H
 #define __NETWORK_NAMESPACES_H
 
+#include "condor_common.h"
+
 #include <string>
 #include <sys/types.h>
 #include <memory>

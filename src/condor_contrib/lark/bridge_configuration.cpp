@@ -118,6 +118,23 @@ BridgeConfiguration::SetupPostForkParent()
 int
 BridgeConfiguration::SetupPostForkChild()
 {
+	std::string internal_device;
+	if (!m_ad->EvaluateAttrString(ATTR_INTERNAL_INTERFACE, internal_device)) {
+		dprintf(D_ALWAYS, "Required ClassAd attribute " ATTR_INTERNAL_INTERFACE " is missing.\n");
+		return 1;
+	}
+
+	{
+		ArgList args;
+		args.AppendArg("ip");
+		args.AppendArg("route");
+		args.AppendArg("add");
+		args.AppendArg("default");
+		args.AppendArg("dev");
+		args.AppendArg(internal_device.c_str());
+		RUN_ARGS_AND_LOG(NetworkNamespaceManager::Cleanup, NETWORK_NAMESPACE_DELETE_SCRIPT)
+	}
+
 	close(m_p2c[1]);
 	int err;
 	char go;
