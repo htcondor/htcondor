@@ -37,10 +37,14 @@ To use Lark from Condor, add the following lines to your configuration:
 STARTER.PLUGINS = $(STARTER.PLUGINS) /usr/lib64/condor/plugins/lark-plugin.so
 USE_NETWORK_NAMESPACES = true
 
-(adjust as necessary for the location of the lark plugin).
+(adjust as necessary for the location of the lark plugin).  If you would like
+the accounting to be enabled by default, add:
+
+LARK_NETWORK_ACCOUNTING = true
 
 KNOWN ISSUES:
 - The bridge must be setup and configured beforehand when using bridging mode.
 - The bridge forwarding delay must be set to 0.
 - Network accounting does not work in bridge mode.
+- DHCP lease renewal is not implemented.
 
