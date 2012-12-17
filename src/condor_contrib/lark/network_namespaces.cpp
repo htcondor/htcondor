@@ -256,17 +256,17 @@ int NetworkNamespaceManager::PostForkChild() {
 		goto finalize_child;
 	}
 	dprintf(D_FULLDEBUG, "Added address %s to child interface.\n", m_internal_address_str.c_str());
-	if (set_status(sock, m_internal_pipe.c_str(), IFF_UP)) {
-		dprintf(D_ALWAYS, "Unable to bring up interface %s.\n", m_internal_pipe.c_str());
-		rc = 3;
-		goto finalize_child;
-	}
 	// This doesn't seem to be necessary if you provide a non-/32 netmask when creating the device.
 	/*if (add_local_route(sock, m_internal_address_str.c_str(), m_internal_pipe.c_str(), 24)) {
 		dprintf(D_ALWAYS, "Unable to add local route via %s\n", m_internal_address_str.c_str());
 		rc = 4;
 		goto finalize_child;
 	}*/
+	if (set_status(sock, m_internal_pipe.c_str(), IFF_UP)) {
+		dprintf(D_ALWAYS, "Unable to bring up interface %s.\n", m_internal_pipe.c_str());
+		rc = 3;
+		goto finalize_child;
+	}
 
 	// The external gateway is stored in the classad because, for example, it is very
 	// different for DHCP versus NAT.
@@ -274,17 +274,33 @@ int NetworkNamespaceManager::PostForkChild() {
 		dprintf(D_FULLDEBUG, "Unable to determine gateway; using external IP address.\n");
 		external_gw = m_external_address.to_ip_string();
 	}
-
+	{
+                ArgList args;
+                args.AppendArg("ip");
+                args.AppendArg("route");
+                args.AppendArg("add");
+                args.AppendArg("default");
+                args.AppendArg("dev");
+                args.AppendArg(m_internal_pipe.c_str());
+                RUN_ARGS_AND_LOG(NetworkNamespaceManager::Cleanup, NETWORK_NAMESPACE_DELETE_SCRIPT)
+	}
+/*	TODO: Doesn't work yet - dunno why.
 	if (add_default_route(sock, external_gw.c_str())) {
 		dprintf(D_ALWAYS, "Unable to add default route via %s\n", external_gw.c_str());
 		rc = 5;
 		goto finalize_child;
 	}
-
+*/
 	m_sock = sock; // This way, the network configuration can reuse our socket.
 	if (m_network_configuration->SetupPostForkChild()) {
 		dprintf(D_ALWAYS, "Failed to create network configuration.\n");
 		rc = 6;
+		goto finalize_child;
+	}
+
+	if (set_status(sock, m_internal_pipe.c_str(), IFF_UP)) {
+		dprintf(D_ALWAYS, "Unable to bring up interface %s post-config.\n", m_internal_pipe.c_str());
+		rc = 7;
 		goto finalize_child;
 	}
 
@@ -488,10 +504,10 @@ int NetworkNamespaceManager::ConfigureNetworkAccounting(const classad::ClassAd &
 	args.AppendArg("-A");
 	args.AppendArg(m_network_namespace.c_str());
 	args.AppendArg("-i");
-	args.AppendArg(m_external_pipe);
+	args.AppendArg(m_external_pipe.c_str());
 	args.AppendArg("!");
 	args.AppendArg("-o");
-	args.AppendArg(m_external_pipe);
+	args.AppendArg(m_external_pipe.c_str());
 	args.AppendArg("-m");
 	args.AppendArg("comment");
 	args.AppendArg("--comment");
@@ -508,9 +524,9 @@ int NetworkNamespaceManager::ConfigureNetworkAccounting(const classad::ClassAd &
 	args.AppendArg(m_network_namespace.c_str());
 	args.AppendArg("!");
 	args.AppendArg("-i");
-	args.AppendArg(m_external_pipe);
+	args.AppendArg(m_external_pipe.c_str());
 	args.AppendArg("-o");
-	args.AppendArg(m_external_pipe);
+	args.AppendArg(m_external_pipe.c_str());
 	args.AppendArg("-m");
 	args.AppendArg("comment");
 	args.AppendArg("--comment");
