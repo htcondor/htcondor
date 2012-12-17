@@ -39,7 +39,6 @@ extern CStarter *Starter;
 JobInfoCommunicator::JobInfoCommunicator()
 {
 	job_ad = NULL;
-	mach_ad = NULL;
 	job_universe = CONDOR_UNIVERSE_VANILLA;
 	job_cluster = -1;
 	job_proc = -1;
@@ -75,9 +74,6 @@ JobInfoCommunicator::~JobInfoCommunicator()
 {
 	if( job_ad ) {
 		delete job_ad;
-	}
-	if( mach_ad ) {
-		delete mach_ad;
 	}
 	if( u_log ) {
 		delete u_log;
@@ -230,9 +226,14 @@ JobInfoCommunicator::jobClassAd( void )
 ClassAd*
 JobInfoCommunicator::machClassAd( void )
 {
-	return mach_ad;
+	return mach_ad_ptr.get();
 }
 
+classad_shared_ptr<ClassAd>
+JobInfoCommunicator::machClassAdSharedPtr( void )
+{
+	return mach_ad_ptr;
+}
 
 int
 JobInfoCommunicator::jobUniverse( void )
