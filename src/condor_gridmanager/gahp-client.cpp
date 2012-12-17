@@ -698,12 +698,14 @@ GahpServer::Startup()
 		newenv.SetEnv( "GLOBUS_TCP_SOURCE_RANGE", buff.c_str() );
 	}
 
+#if !defined(WIN32)
 	struct passwd *pw = getpwuid( get_user_uid() );
 	if ( pw && pw->pw_dir ) {
 		newenv.SetEnv( "HOME", pw->pw_dir );
 	} else {
 		dprintf( D_ALWAYS, "Failed to find user's home directory to set HOME for gahp\n" );
 	}
+#endif
 
 		// GLITE_LOCATION needs to be set for the blahp
 	tmp_char = param("GLITE_LOCATION");
