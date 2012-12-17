@@ -103,6 +103,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug wherein running the \Condor{suspend} command on a scheduler
+universe job would cause the \Condor{schedd} to crash.
+\Ticket{3259}
+
 \item HTCondor now places EC2 jobs on hold when they fail to authenticate,
 rather than leaving them (and other jobs with the same authentication tokens)
 idle indefinitely.
@@ -207,6 +211,8 @@ prevented the Condor service from being stopped during system shutdown.
 \item The \Condor{master} would sometimes crash on reconfig when the
 High Availability configuration had changed. This crash has been fixed.
 \Ticket{3292}
+
+\item Fixed a bug in the non-standard universe \Condor{shadow} that prevented parallel universe jobs from running when \verb|USE_NFS=True=| or \verb|USE_AFS=True=|. \Ticket{3361}
 
 \end{itemize}
 
