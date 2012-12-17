@@ -43,7 +43,7 @@ def create_suds_client(opts,wsdl,plugin_list):
 				transport = HTTPSFullCertTransport(opts.key,opts.cert,opts.root,opts.verify,timeout=int(opts.timeout)))
 		else:
 			client = Client(wsdl, plugins=plugin_list, timeout=int(opts.timeout))
-	except ValueError as ve:
+	except ValueError, ve:
 		print "option error:",ve
 		sys.exit(1)
 	# debug info
