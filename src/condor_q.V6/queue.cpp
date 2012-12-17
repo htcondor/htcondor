@@ -4203,6 +4203,10 @@ static void AnalyzePropagateConstants(std::vector<AnalSubExpr> & subs, bool show
 	} // check-if-constant
 }
 
+// insert spaces and \n into temp_buffer so that it will print out neatly on a display with the given width
+// spaces are added at the start of each newly created line for the given indet, 
+// but spaces are NOT added to the start of the input buffer.
+//
 static const char * PrettyPrintExprTree(classad::ExprTree *tree, std::string & temp_buffer, int indent, int width)
 {
 	classad::ClassAdUnParser unparser;
@@ -4215,21 +4219,41 @@ static const char * PrettyPrintExprTree(classad::ExprTree *tree, std::string & t
 	it = lastAnd = lineStart = temp_buffer.begin();
 	int indent_at_last_and = indent;
 	int pos = indent;  // we presume that the initial indent has already been printed by the caller.
+	bool was_and = false;
 
 	char chPrev = 0;
 	while (it != temp_buffer.end()) {
+
+		// as we iterate characters, keep track of the indent level
+		// and whether the current position is the 2nd character of && or ||
+		//
+		bool is_and = false;
 		if ((*it == '&' || *it == '|') && chPrev == *it) {
-			lastAnd = it + 1;
-			indent_at_last_and = indent;
+			is_and = true;
 		}
 		else if (*it == '(') { indent += 2; }
 		else if (*it == ')') { indent -= 2; }
+
+		// if the current position exceeds the width, we want to replace
+		// the character after the last && or || with a \n. We can count on
+		// the call putting a space after each && or ||, so replacing is safe.
+		// Note: this code may insert charaters into the stream, but will only do
+		// so BEFORE the current position, and it gurantees that the iterator
+		// will still point to the same character after the insert as it did before,
+		// so we don't loose our place.
+		//
 		if (pos >= width) {
 			if (lastAnd != lineStart) {
 				temp_buffer.replace(lastAnd, lastAnd + 1, 1, '\n');
 				lineStart = lastAnd + 1;
 				lastAnd = lineStart;
 				pos = 0;
+
+				// if we have to indent, we do that by inserting spaces at the start of line
+				// then we have to fixup iterators and position counters to account for
+				// the insertion. we do the fixup to avoid problems caused by std:string realloc
+				// as well as to avoid scanning any character in the input string more than once,
+				// which in turn guarantees that this code will always get to the end.
 				if (indent_at_last_and > 0) {
 					size_t cch = distance(temp_buffer.begin(), it);
 					size_t cchStart = distance(temp_buffer.begin(), lineStart);
@@ -4243,9 +4267,17 @@ static const char * PrettyPrintExprTree(classad::ExprTree *tree, std::string & t
 				indent_at_last_and = indent;
 			}
 		}
+		// was_and will be true if this is the character AFTER && or ||
+		// if it is, this is a potential place to put a \n, so remember it.
+		if (was_and) {
+			lastAnd = it;
+			indent_at_last_and = indent;
+		}
+
 		chPrev = *it;
 		++it;
 		++pos;
+		was_and = is_and;
 	}
 	return temp_buffer.c_str();
 }
