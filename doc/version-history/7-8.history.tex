@@ -48,6 +48,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug wherein running the \Condor{suspend} command on a scheduler
+universe job would cause the \Condor{schedd} to crash.
+\Ticket{3259}
+
 \item HTCondor now places EC2 jobs on hold when they fail to authenticate,
 rather than leaving them (and other jobs with the same authentication tokens)
 idle indefinitely.
