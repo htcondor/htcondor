@@ -17,12 +17,26 @@ extern "C" {
 // Forward decls
 struct ipt_getinfo;
 struct ipt_get_entries;
+struct iovec;
 
 /*
  * Create a socket to talk to the kernel via netlink
  * Returns the socket fd upon success, or -errno upon failure
  */
 int create_socket();
+
+/**
+ * Send a netlink message to the kernel.
+ * Appends the header for you - just input the raw data.
+ *
+ * - sock: Netlink socket to the kernel.
+ * - iov: An iovec array containing a message to send.
+ * - ioveclen: Length of the iov array.
+ *
+ * Returns 0 on success, errno on failure.
+ *
+ */
+int send_to_kernel(int sock, struct iovec* iov, size_t ioveclen);
 
 /*
  * Create a pair of virtual ethernet devices that act as pipes.  Equivalent to:
@@ -195,6 +209,17 @@ int add_interface_to_bridge(const char *bridge_name, const char *dev);
  * Return 0 on success and non-zero on failure.
  */
 int delete_interface_from_bridge(const char *bridge_name, const char *dev);
+
+/*
+ * Wait for a bridge interface to go into forwarding state.
+ *
+ * - sock: Netlink socket to the kernel.
+ * - dev: Name of the device to wait on.
+ *
+ * Return 0 when the bridge is in the forwarding state or
+ * non-zero on failure.
+ */
+int wait_for_bridge_status(int sock, const char *dev);
 
 #endif
 

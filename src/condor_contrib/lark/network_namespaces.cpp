@@ -275,15 +275,14 @@ int NetworkNamespaceManager::PostForkChild() {
 		external_gw = m_external_address.to_ip_string();
 	}
 
-	// The default route seems to get dropped for bridging while the interface is
-	// initializing.  Try again.
 	if (add_default_route(sock, external_gw.c_str())) {
 		dprintf(D_ALWAYS, "Unable to add default route via %s\n", external_gw.c_str());
 		rc = 5;
 		goto finalize_child;
 	}
 
-	if (m_network_configuration->SetupPostFork()) {
+	m_sock = sock; // This way, the network configuration can reuse our socket.
+	if (m_network_configuration->SetupPostForkChild()) {
 		dprintf(D_ALWAYS, "Failed to create network configuration.\n");
 		rc = 6;
 		goto finalize_child;
@@ -337,6 +336,8 @@ int NetworkNamespaceManager::PostForkParent(pid_t pid) {
 	
 	if ((rc = set_netns(m_sock, m_internal_pipe.c_str(), pid))) {
 		dprintf(D_ALWAYS, "Failed to send %s to network namespace %d.\n", m_internal_pipe.c_str(), pid);
+		m_state = FAILED;
+		return 1;
 	}
 
 	m_state = PASSED;
@@ -351,6 +352,12 @@ int NetworkNamespaceManager::PostForkParent(pid_t pid) {
 			dprintf(D_ALWAYS, "Error communicating with child: %s (errno=%d).\n", strerror(errno), errno);
 			rc = rc2;
 		}
+	}
+
+	if ((rc = m_network_configuration->SetupPostForkParent())) {
+		dprintf(D_ALWAYS, "Failed to configure network post-fork in parent %d.\n", rc);
+		m_state = FAILED;
+		return 1;
 	}
 
 	// Wait until the child's exec or error.

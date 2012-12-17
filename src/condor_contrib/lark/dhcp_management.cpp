@@ -42,7 +42,7 @@ public:
 		bzero(m_padding_202, 202);
 		}
 
-	int makeIOV(struct iovec *&iov, size_t &iov_len)
+	int makeIOV(struct iovec *&iov, size_t &iov_len, bool for_recv=false)
 	{
 		// See Figure 1 of RFC2131 for packet layout
 		iov_len = 12;
@@ -70,11 +70,18 @@ public:
 		m_iov[10].iov_base = &m_magic;
 		m_iov[10].iov_len = 4;
 		m_iov[11].iov_base = &m_options;
-		if (getOptionLength() < -1) {
-			computeLength();
+		if (for_recv)
+		{
+			m_iov[11].iov_len = 1024;
 		}
-		m_iov[11].iov_len = getOptionLength();
-
+		else
+		{
+			if (getOptionLength() < -1)
+			{
+				computeLength();
+			}
+			m_iov[11].iov_len = getOptionLength();
+		}
 		return 0;
 	}
 
@@ -154,7 +161,7 @@ public:
 	char m_magic[4];
 private:
 	char m_padding_202[202];
-	struct iovec m_iov[13];
+	struct iovec m_iov[12];
 
 };
 
@@ -281,7 +288,7 @@ send_dhcp_discovery(int fd, uint32_t txid, const char mac_address[IFHWADDRLEN])
 
 	struct msghdr msg;
 	bzero(&msg, sizeof(msg));
-	struct sockaddr_in dest;
+	struct sockaddr_in dest; bzero(&dest, sizeof(dest));
 	dest.sin_family = AF_INET;
 	dest.sin_addr.s_addr = INADDR_BROADCAST;
 	dest.sin_port = htons(67);
@@ -308,7 +315,7 @@ recv_dhcp_offer(int fd, uint32_t txid, char mac_addr[IFHWADDRLEN], unsigned secs
 	while (time(NULL) - starttime <= secs) {
 		struct iovec *iov;
 		size_t iov_len;
-		packet.makeIOV(iov, iov_len);
+		packet.makeIOV(iov, iov_len, true);
 		msg.msg_iov = iov;
 		msg.msg_iovlen = iov_len;
 		packet_size = recvmsg(fd, &msg, 0);
@@ -441,9 +448,11 @@ recv_dhcp_ack(int fd, uint32_t txid, const char mac_address[IFHWADDRLEN], unsign
 	while (time(NULL) - starttime <= secs) {
 		struct iovec *iov;
 		size_t iov_len;
-		packet.makeIOV(iov, iov_len);
+		packet.makeIOV(iov, iov_len, true);
+		bzero(&msg, sizeof(msg));
 		msg.msg_iov = iov;
 		msg.msg_iovlen = iov_len;
+		// TODO: make sure the returned msg_name is from the correct server.
 		packet_size = recvmsg(fd, &msg, 0);
 		if (packet_size == -1) {
 			if (errno == EINTR) continue;
@@ -694,7 +703,7 @@ dhcp_release (classad::ClassAd &machine_ad)
 
 	struct msghdr msg;
 	bzero(&msg, sizeof(msg));
-	struct sockaddr_in dest;
+	struct sockaddr_in dest; bzero(&dest, sizeof(dest));
 	dest.sin_family = AF_INET;
 	dest.sin_addr.s_addr = siaddr.s_addr;
 	dest.sin_port = htons(67);

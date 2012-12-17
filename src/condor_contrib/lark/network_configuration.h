@@ -78,11 +78,18 @@ public:
 	virtual int Setup() = 0;
 
 	/*
+	 * Setup the network configuration in the parent namespace.
+	 * This will be invoked by the parent after forking off the child, and
+	 * is unsynchronized with the child.
+	 */
+	virtual int SetupPostForkParent() = 0;
+
+	/*
 	 * Setup the network configuration in the child namespace.
 	 * This will be invoked by the child after the default route and IP address
-	 * have been setup
+	 * have been setup.
 	 */
-	virtual int SetupPostFork() = 0;
+	virtual int SetupPostForkChild() = 0;
 
 	/*
 	 * Cleanup any kernel data structures which are not cleaned up automatically.

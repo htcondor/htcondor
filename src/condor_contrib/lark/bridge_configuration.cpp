@@ -58,6 +58,11 @@ BridgeConfiguration::Setup() {
 		return 1;
 	}
 
+	if (pipe2(m_p2c, O_CLOEXEC)) {
+		dprintf(D_ALWAYS, "Failed to create bridge synchronization pipe (errno=%d, %s).\n", errno, strerror(errno));
+		return 1;
+	}
+
 	AddressSelection & address = GetAddressSelection();
 	address.Setup();
 
@@ -70,8 +75,45 @@ BridgeConfiguration::Setup() {
 }
 
 int
-BridgeConfiguration::SetupPostFork()
+BridgeConfiguration::SetupPostForkParent()
 {
+	close(m_p2c[0]); m_p2c[0] = -1;
+
+	std::string external_device;
+	if (!m_ad->EvaluateAttrString(ATTR_EXTERNAL_INTERFACE, external_device)) {
+		dprintf(D_ALWAYS, "Required ClassAd attribute " ATTR_EXTERNAL_INTERFACE " is missing.\n");
+		return 1;
+	}
+
+	// Wait for the bridge to come up.
+	int err;
+	NetworkNamespaceManager & manager = NetworkNamespaceManager::GetManager();
+        int fd = manager.GetNetlinkSocket();
+	if ((err = wait_for_bridge_status(fd, external_device.c_str()))) {
+		return err;
+	}
+
+	char go = 1;
+	while (((err = write(m_p2c[1], &go, 1)) < 0) && (errno == EINTR)) {}
+	if (err < 0) {
+		dprintf(D_ALWAYS, "Error writing to child for bridge sync (errno=%d, %s).\n", errno, strerror(errno));
+		return errno;
+	}
+	return 0;
+}
+
+int
+BridgeConfiguration::SetupPostForkChild()
+{
+	close(m_p2c[1]);
+	int err;
+	char go;
+	while (((err = read(m_p2c[0], &go, 1)) < 0) && (errno == EINTR)) {}
+	if (err < 0) {
+		dprintf(D_ALWAYS, "Error when waiting on parent (errno=%d, %s).\n", errno, strerror(errno));
+		return errno;
+	}
+
 	AddressSelection & address = GetAddressSelection();
 	address.SetupPostFork();
 
@@ -80,6 +122,10 @@ BridgeConfiguration::SetupPostFork()
 
 int
 BridgeConfiguration::Cleanup() {
+
+	if (m_p2c[0] >= 0) close(m_p2c[0]);
+	if (m_p2c[1] >= 0) close(m_p2c[1]);
+
 	dprintf(D_FULLDEBUG, "Cleaning up network bridge configuration.\n");
 	AddressSelection & address = GetAddressSelection();
 	address.Cleanup();

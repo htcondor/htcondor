@@ -72,12 +72,12 @@ int create_socket() {
 }
 
 /**
- * Internal function - send a netlink message to the kernel.
+ * Send a netlink message to the kernel.
  * Appends the header for you - just input the raw data.
  *
  * Returns 0 on success, errno on failure.
  */
-static int send_to_kernel(int sock, struct iovec* iov, size_t ioveclen) {
+int send_to_kernel(int sock, struct iovec* iov, size_t ioveclen) {
 
 	if (sock < 0) {
 		dprintf(D_ALWAYS, "Invalid socket: %d.\n", sock);
@@ -104,7 +104,7 @@ static int send_to_kernel(int sock, struct iovec* iov, size_t ioveclen) {
 }
 
 // Forward decl
-int recv_message(int sock);
+static int recv_message(int sock);
 
 /**
  * Internal function - 
@@ -545,7 +545,13 @@ int set_netns(int sock, const char * eth, pid_t pid) {
 	return send_and_ack(sock, iov, 4);
 }
 
-int recv_message(int sock) {
+/*
+ * Receive a message from netlink.
+ *
+ * Receives 
+ */
+static int
+recv_message(int sock) {
 
 	struct msghdr msghdr;
 	struct sockaddr_nl addr;
@@ -590,6 +596,10 @@ int recv_message(int sock) {
 			return 1;
 		}
 
+		// Ignore these messages - may be leftover from a bridge query.
+		if (nlmsghdr->nlmsg_type == RTM_NEWLINK || nlmsghdr->nlmsg_type == RTM_DELLINK) {
+			continue;
+		}
 		dprintf(D_ALWAYS, "Unknown message type: %d\n", nlmsghdr->nlmsg_type);
 		return 1;
 	}
