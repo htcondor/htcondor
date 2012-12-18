@@ -83,7 +83,7 @@ typedef AttributeMapType::const_iterator AttributeMapIterator;
 // intent is to sit above ClassAds but still interact with them;
 // base is suitable for SOAP, but QMF might need subclassing
 // with it's !!descriptors idiom
-class Codec {
+class ClassadCodec {
 public:
     virtual bool addAttributeToMap(ClassAd& ad, const char* name, AttributeMapType& _map) = 0;
     virtual bool classAdToMap(ClassAd &ad, AttributeMapType &_map) = 0;
@@ -105,7 +105,7 @@ public:
 //     Codec* m_codec;
 // };
 
-class BaseCodec: public Codec {
+class BaseCodec: public ClassadCodec {
 public:
     //friend class DefaultCodecFactory;
     virtual bool addAttributeToMap(ClassAd& ad, const char* name, AttributeMapType& _map);

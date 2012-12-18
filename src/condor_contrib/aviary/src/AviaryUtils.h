@@ -20,6 +20,9 @@
 // condor includes
 #include "condor_classad.h"
 
+// axis includes
+#include "axutil_date_time.h"
+
 using namespace std;
 using namespace compat_classad;
 
@@ -43,6 +46,8 @@ bool checkRequiredAttrs(ClassAd& ad, const char* attrs[], string& missing);
 bool isKeyword(const char* kw);
 
 bool isSubmissionChange(const char* attr);
+
+axutil_date_time_t* encodeDateTime(const time_t& ts, const axutil_env_t* env);
 
 }}
 

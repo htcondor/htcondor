@@ -21,7 +21,7 @@
 #include "Environment.h"
 
 // local includes
-#include "LocatorObject.h"
+#include "CollectorObject.h"
 #include "AviaryCollectorServiceSkeleton.h"
 #include <AviaryCollector_GetSlotID.h>
 #include <AviaryCollector_GetSlotIDResponse.h>
@@ -46,42 +46,12 @@ using namespace std;
 using namespace wso2wsf;
 using namespace AviaryCommon;
 using namespace AviaryCollector;
-
-
-GetSlotIDResponse* AviaryCollectorServiceSkeleton::getSlotID(MessageContext *outCtx ,GetSlotID* _getSlotID)
-{
-    /* TODO fill this with the necessary business logic */
-    return (GetSlotIDResponse*)NULL;
-}
-
-GetNegotiatorResponse* AviaryCollectorServiceSkeleton::getNegotiator(MessageContext *outCtx ,GetNegotiator* _getNegotiator)
-{
-    /* TODO fill this with the necessary business logic */
-    return (GetNegotiatorResponse*)NULL;
-}
-
-GetSubmitterResponse* AviaryCollectorServiceSkeleton::getSubmitter(MessageContext *outCtx ,GetSubmitter* _getSubmitter)
-{
-    /* TODO fill this with the necessary business logic */
-    return (GetSubmitterResponse*)NULL;
-}
-
-GetSlotResponse* AviaryCollectorServiceSkeleton::getSlot(MessageContext *outCtx ,GetSlot* _getSlot)
-{
-    /* TODO fill this with the necessary business logic */
-    return (GetSlotResponse*)NULL;
-}
+using namespace aviary::collector;
 
 GetAttributesResponse* AviaryCollectorServiceSkeleton::getAttributes(MessageContext *outCtx ,GetAttributes* _getAttributes)
 {
     /* TODO fill this with the necessary business logic */
     return (GetAttributesResponse*)NULL;
-}
-
-GetSchedulerResponse* AviaryCollectorServiceSkeleton::getScheduler(MessageContext *outCtx ,GetScheduler* _getScheduler)
-{
-    /* TODO fill this with the necessary business logic */
-    return (GetSchedulerResponse*)NULL;
 }
 
 GetCollectorResponse* AviaryCollectorServiceSkeleton::getCollector(MessageContext *outCtx ,GetCollector* _getCollector)
@@ -90,14 +60,54 @@ GetCollectorResponse* AviaryCollectorServiceSkeleton::getCollector(MessageContex
     return (GetCollectorResponse*)NULL;
 }
 
+GetMasterResponse* AviaryCollectorServiceSkeleton::getMaster(MessageContext *outCtx ,GetMaster* _getMaster)
+{
+    /* TODO fill this with the necessary business logic */
+    GetMasterResponse* response = new GetMasterResponse;
+    MasterSetType slot_set;
+    CollectorObject* co = CollectorObject::getInstance();
+    for (MasterMapType::iterator it = co->masters.begin(); co->masters.end() != it; it++) {
+    }
+    return response;
+}
+
 GetMasterIDResponse* AviaryCollectorServiceSkeleton::getMasterID(MessageContext *outCtx ,GetMasterID* _getMasterID)
 {
     /* TODO fill this with the necessary business logic */
     return (GetMasterIDResponse*)NULL;
 }
 
-GetMasterResponse* AviaryCollectorServiceSkeleton::getMaster(MessageContext *outCtx ,GetMaster* _getMaster)
+GetNegotiatorResponse* AviaryCollectorServiceSkeleton::getNegotiator(MessageContext *outCtx ,GetNegotiator* _getNegotiator)
 {
     /* TODO fill this with the necessary business logic */
-    return (GetMasterResponse*)NULL;
+    return (GetNegotiatorResponse*)NULL;
+}
+
+GetSlotResponse* AviaryCollectorServiceSkeleton::getSlot(MessageContext *outCtx ,GetSlot* _getSlot)
+{
+    /* TODO fill this with the necessary business logic */
+    GetSlotResponse* response = new GetSlotResponse;
+    SlotSetType slot_set;
+    CollectorObject* co = CollectorObject::getInstance();
+    SlotMapType& slot_map = co->slots;
+    return response;
+}
+
+GetSlotIDResponse* AviaryCollectorServiceSkeleton::getSlotID(MessageContext *outCtx ,GetSlotID* _getSlotID)
+{
+    /* TODO fill this with the necessary business logic */
+    return (GetSlotIDResponse*)NULL;
+}
+
+GetSchedulerResponse* AviaryCollectorServiceSkeleton::getScheduler(MessageContext *outCtx ,GetScheduler* _getScheduler)
+{
+    /* TODO fill this with the necessary business logic */
+    return (GetSchedulerResponse*)NULL;
+}
+
+
+GetSubmitterResponse* AviaryCollectorServiceSkeleton::getSubmitter(MessageContext *outCtx ,GetSubmitter* _getSubmitter)
+{
+    /* TODO fill this with the necessary business logic */
+    return (GetSubmitterResponse*)NULL;
 }

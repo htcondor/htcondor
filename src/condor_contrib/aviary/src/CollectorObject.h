@@ -62,23 +62,26 @@ public:
     void invalidateAll();
     
     static CollectorObject* getInstance();
-
-    CollectorObject();
     ~CollectorObject();
+
     string getPool();
     string getMyAddress() { return m_address; }
     void setMyAddress(const char* myaddr) { m_address = myaddr; }
 
+    // public for easy return of entire collection
+    CollectorMapType collectors;
+    MasterMapType masters;
+    NegotiatorMapType negotiators;
+    SchedulerMapType schedulers;
+    SlotMapType slots;
+    SubmitterMapType submitters;
+
 private:
-    CollectorMapType m_collectors;
-    MasterMapType m_masters;
-    NegotiatorMapType m_negotiators;
-    SchedulerMapType m_schedulers;
-    SlotMapType m_slots;
-    SubmitterMapType m_submitters;
     string m_address;
-    
     static CollectorObject* m_instance;
+    CollectorObject();
+    CollectorObject(CollectorObject const&);
+    CollectorObject& operator=(CollectorObject const&);
 
 };
 

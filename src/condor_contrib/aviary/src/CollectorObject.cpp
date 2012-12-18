@@ -39,13 +39,6 @@ using namespace std;
 using namespace aviary::collector;
 using namespace aviary::util;
 
-namespace aviary {
-namespace collector {
-
-CollectorObject collector;
-
-}}
-
 CollectorObject::CollectorObject ()
 {
     //
@@ -131,22 +124,22 @@ CollectorObject::update(int command, const ClassAd& ad)
     bool status = false;
     switch (command) {
         case UPDATE_COLLECTOR_AD:
-            status = updateCollectable<CollectorMapType,Collector>(ad, m_collectors);
+            status = updateCollectable<CollectorMapType,Collector>(ad, collectors);
             break;
         case UPDATE_MASTER_AD:
-            status = updateCollectable<MasterMapType,Master>(ad, m_masters);
+            status = updateCollectable<MasterMapType,Master>(ad, masters);
             break;
         case UPDATE_NEGOTIATOR_AD:
-            status = updateCollectable<NegotiatorMapType,Negotiator>(ad, m_negotiators);
+            status = updateCollectable<NegotiatorMapType,Negotiator>(ad, negotiators);
             break;
         case UPDATE_SCHEDD_AD:
-            status = updateCollectable<SchedulerMapType,Scheduler>(ad, m_schedulers);
+            status = updateCollectable<SchedulerMapType,Scheduler>(ad, schedulers);
             break;
         case UPDATE_STARTD_AD:
-            status = updateSlot(ad, m_slots);
+            status = updateSlot(ad, slots);
             break;
         case UPDATE_SUBMITTOR_AD:
-            status = updateCollectable<SubmitterMapType,Submitter>(ad, m_submitters);
+            status = updateCollectable<SubmitterMapType,Submitter>(ad, submitters);
             break;
         default:
             // fall through on unknown command
@@ -161,22 +154,22 @@ CollectorObject::invalidate(int command, const ClassAd& ad)
     bool status = false;
     switch (command) {
         case INVALIDATE_COLLECTOR_ADS:
-            status = invalidateCollectable<CollectorMapType>(ad, m_collectors);
+            status = invalidateCollectable<CollectorMapType>(ad, collectors);
             break;
         case INVALIDATE_MASTER_ADS:
-            status = invalidateCollectable<MasterMapType>(ad, m_masters);
+            status = invalidateCollectable<MasterMapType>(ad, masters);
             break;
         case INVALIDATE_NEGOTIATOR_ADS:
-            status = invalidateCollectable<NegotiatorMapType>(ad, m_negotiators);
+            status = invalidateCollectable<NegotiatorMapType>(ad, negotiators);
             break;
         case INVALIDATE_SCHEDD_ADS:
-            status = invalidateCollectable<SchedulerMapType>(ad, m_schedulers);
+            status = invalidateCollectable<SchedulerMapType>(ad, schedulers);
             break;
         case INVALIDATE_STARTD_ADS:
-            status = invalidateSlot(ad, m_slots);
+            status = invalidateSlot(ad, slots);
             break;
         case INVALIDATE_SUBMITTOR_ADS:
-            status = invalidateCollectable<SubmitterMapType>(ad, m_submitters);
+            status = invalidateCollectable<SubmitterMapType>(ad, submitters);
             break;
         default:
             // fall through on unknown command
@@ -213,36 +206,36 @@ void findCollectable(const string& name, bool grep, CollectableMapT& coll_map, C
 void
 CollectorObject::findCollector(const string& name, bool grep, CollectorSetType& coll_set) 
 {
-    findCollectable<CollectorMapType,CollectorSetType>(name, grep, m_collectors, coll_set);
+    findCollectable<CollectorMapType,CollectorSetType>(name, grep, collectors, coll_set);
 }
 
 void
 CollectorObject::findMaster(const string& name, bool grep, MasterSetType& master_set) 
 {
-    findCollectable<MasterMapType,MasterSetType>(name, grep, m_masters, master_set);
+    findCollectable<MasterMapType,MasterSetType>(name, grep, masters, master_set);
 }
 
 void
 CollectorObject::findNegotiator(const string& name, bool grep, NegotiatorSetType& neg_set) 
 {
-    findCollectable<NegotiatorMapType,NegotiatorSetType>(name, grep, m_negotiators, neg_set);
+    findCollectable<NegotiatorMapType,NegotiatorSetType>(name, grep, negotiators, neg_set);
 }
 
 void
 CollectorObject::findScheduler(const string& name, bool grep, SchedulerSetType& schedd_set) 
 {
-    findCollectable<SchedulerMapType,SchedulerSetType>(name, grep, m_schedulers, schedd_set);
+    findCollectable<SchedulerMapType,SchedulerSetType>(name, grep, schedulers, schedd_set);
 }
 
 void
 CollectorObject::findSlot(const string& name, bool grep, SlotSetType& slot_set) 
 {
-    findCollectable<SlotMapType,SlotSetType>(name, grep, m_slots, slot_set);
+    findCollectable<SlotMapType,SlotSetType>(name, grep, slots, slot_set);
     // TODO: associations?
 }
 
 void
 CollectorObject::findSubmitter(const string& name, bool grep, SubmitterSetType& subm_set) 
 {
-    findCollectable<SubmitterMapType,SubmitterSetType>(name, grep, m_submitters, subm_set);
+    findCollectable<SubmitterMapType,SubmitterSetType>(name, grep, submitters, subm_set);
 }

@@ -37,7 +37,7 @@ extern bool qmgmt_all_users_trusted;
 #include <AviaryJob_HoldJobResponse.h>
 #include <AviaryJob_SetJobAttribute.h>
 #include <AviaryJob_SetJobAttributeResponse.h>
-#include "Codec.h"
+#include "ClassadCodec.h"
 #include "SchedulerObject.h"
 #include "stl_string_utils.h"
 

@@ -22,7 +22,7 @@
 #include "condor_classad.h"
 
 // local includes
-#include "Codec.h"
+#include "ClassadCodec.h"
 
 using namespace std;
 using namespace compat_classad;
@@ -109,7 +109,7 @@ private:
 	string m_name;
 	string m_pool;
 	JobServerStats m_stats;
-	Codec* m_codec;
+	ClassadCodec* m_codec;
 
 	static JobServerObject* m_instance;
 

@@ -46,12 +46,12 @@ file( GLOB SCHED_PLUGIN_SRCS Codec.cpp AviaryUtils.cpp SchedulerObject.cpp
 file( GLOB JOB_SERVER_SRCS aviary_query_server.cpp ${SOAP_SRCS}
 							SubmissionObject.cpp JobServerJobLogConsumer.cpp
 							Job.cpp HistoryFile.cpp HistoryProcessingUtils.cpp Globals.cpp
-							Codec.cpp JobServerObject.cpp AviaryUtils.cpp )
+							ClassadCodec.cpp JobServerObject.cpp AviaryUtils.cpp )
 
 file( GLOB LOCATOR_PLUGIN_SRCS AviaryUtils.cpp LocatorObject.cpp 
 			${SOAP_SRCS} AviaryLocatorPlugin*.cpp )
 
-file( GLOB COLLECTOR_PLUGIN_SRCS AviaryUtils.cpp CollectorObject.cpp 
+file( GLOB COLLECTOR_PLUGIN_SRCS AviaryUtils.cpp CollectorObject.cpp CollectableCodec.cpp
 			${SOAP_SRCS} AviaryCollectorPlugin*.cpp )
 
 ############################
@@ -60,7 +60,7 @@ file( GLOB COLLECTOR_PLUGIN_SRCS AviaryUtils.cpp CollectorObject.cpp
 src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
 src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 
-add_library (aviary_job_axis SHARED ${COMMON_GEN_SRCS} ${JOB_GEN_SRCS} ${JOB_SRCS} Codec.cpp AviaryUtils.cpp SchedulerObject.cpp )
+add_library (aviary_job_axis SHARED ${COMMON_GEN_SRCS} ${JOB_GEN_SRCS} ${JOB_SRCS} ClassadCodec.cpp AviaryUtils.cpp SchedulerObject.cpp )
 # remove unresolved deps by copying in -lwso2_wsf objects
 target_link_libraries(aviary_job_axis -Wl,--whole-archive -lwso2_wsf -Wl,--no-whole-archive)
 

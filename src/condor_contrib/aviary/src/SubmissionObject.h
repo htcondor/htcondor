@@ -87,7 +87,7 @@ private:
 
 	string m_name;
 	string m_owner;
-	Codec* m_codec;
+	ClassadCodec* m_codec;
 
 };
 

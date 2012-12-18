@@ -33,7 +33,7 @@
 #include "JobServerObject.h"
 #include "AviaryConversionMacros.h"
 #include "AviaryUtils.h"
-#include "Codec.h"
+#include "ClassadCodec.h"
 #include "JobServerJobLogConsumer.h"
 #include "Globals.h"
 

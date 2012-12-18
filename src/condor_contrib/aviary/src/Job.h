@@ -31,7 +31,7 @@
 #include "condor_classad.h"
 
 // local includes
-#include "Codec.h"
+#include "ClassadCodec.h"
 #include "HistoryFile.h"
 #include "cmpstr.h"
 

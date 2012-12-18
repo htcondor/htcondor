@@ -187,3 +187,30 @@ bool aviary::util::isSubmissionChange(const char* attr) {
 	return false;
 }
 
+// unfortunately no convenience functions from WS02 for dateTime
+axutil_date_time_t* encodeDateTime(const time_t& ts, const axutil_env_t* env) {
+    struct tm the_tm;
+
+    // need the re-entrant version because axutil_date_time_create
+    // calls time() again and overwrites static tm
+    localtime_r(&ts,&the_tm);
+
+    axutil_date_time_t* time_value = NULL;
+    time_value = axutil_date_time_create(env);
+
+    if (!time_value)
+    {
+        return NULL;
+    }
+
+    // play their game with adjusting the year and month offset
+    axutil_date_time_set_date_time(time_value,env,
+                                   the_tm.tm_year+1900,
+                                   the_tm.tm_mon+1,
+                                   the_tm.tm_mday,
+                                   the_tm.tm_hour,
+                                   the_tm.tm_min,
+                                   the_tm.tm_sec,
+                                   0);
+    return time_value;
+};
