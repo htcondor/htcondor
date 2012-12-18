@@ -580,6 +580,12 @@ class GahpClient : public Service {
 							  StringList & returnStatus,
 							  char* & error_code );
 
+		int ec2_vm_status_all( std::string service_url,
+							   std::string publickeyfile,
+							   std::string privatekeyfile,
+							   StringList & returnStatus,
+							   char* & error_code );
+
 		int ec2_ping( std::string service_url,
 					  std::string publickeyfile,
 					  std::string privatekeyfile,

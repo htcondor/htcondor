@@ -154,6 +154,7 @@ class AmazonStatusResult {
 		std::string keyname;
 		std::string instancetype;
         std::string stateReasonCode;
+        std::string clientToken;
 
         std::vector< std::string > securityGroups;
 };

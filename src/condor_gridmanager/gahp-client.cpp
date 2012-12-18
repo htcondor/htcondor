@@ -6062,6 +6062,80 @@ int GahpClient::ec2_vm_stop( std::string service_url,
 	return GAHPCLIENT_COMMAND_PENDING;	
 }							
 
+// ...
+int GahpClient::ec2_vm_status_all( std::string service_url,
+                                   std::string publickeyfile,
+                                   std::string privatekeyfile,
+                                   StringList & returnStatus,
+                                   char* & error_code )
+{
+    static const char * command = "EC2_VM_STATUS_ALL";
+
+	// Generate request line
+	char* esc1 = strdup( escapeGahpString(service_url) );
+	char* esc2 = strdup( escapeGahpString(publickeyfile) );
+	char* esc3 = strdup( escapeGahpString(privatekeyfile) );
+	
+	std::string reqline;
+	formatstr(reqline, "%s %s %s", esc1, esc2, esc3 );
+	const char *buf = reqline.c_str();
+	
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+		
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+	
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+	
+	if ( result ) {
+		int rc = atoi(result->argv[1]);
+		
+		switch( result->argc ) {
+		    case 2:
+		        if( rc != 0 ) { EXCEPT( "Bad %s result", command ); }
+		        break;
+
+		    case 4:
+		        if( rc == 0 ) { EXCEPT( "Bad %s result", command ); }
+    		    error_code = strdup( result->argv[2] );
+	    	    error_string = result->argv[3];
+                break;
+
+            default:
+                if( (result->argc - 2) % 4 != 0 ) { EXCEPT( "Bad %s result", command ); }
+                for( int i = 2; i < result->argc; ++i ) {
+                    returnStatus.append( strdup( result->argv[i] ) );
+                }
+                returnStatus.rewind();
+                break;
+        }
+		
+		delete result;
+		return rc;
+	}
+	
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+} 
+
 
 // Check VM status
 int GahpClient::ec2_vm_status( std::string service_url,
