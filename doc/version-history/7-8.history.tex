@@ -160,7 +160,12 @@ prevented the Condor service from being stopped during system shutdown.
 High Availability configuration had changed. It no longer crashes.
 \Ticket{3292}
 
-\item Fixed a bug in the non-standard universe \Condor{shadow} that prevented parallel universe jobs from running when \verb|USE_NFS=True=| or \verb|USE_AFS=True=|. \Ticket{3361}
+\item Fixed a bug that caused the \Condor{starter} to crash 
+when \Condor{chirp} is used and there is a configuration variable
+setting of \Expr{USE\_NFS = True} or \Expr{USE\_AFS = True}.
+This will happen with parallel universe jobs,
+because the MPI scripts invoke \Condor{chirp}.
+\Ticket{3361}
 
 \end{itemize}
 
