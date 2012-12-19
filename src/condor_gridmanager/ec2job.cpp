@@ -436,6 +436,26 @@ void EC2Job::doEvaluateState()
 
 				errorString = "";
 
+                //
+                // Put the job on hold for auth failures, but only if
+                // we aren't trying to remove it.
+                //
+                if( ! myResource->didFirstPing() ) { break; }
+                if( myResource->hadAuthFailure() ) {
+                    if( condorState == REMOVED ) {
+                        gmState = GM_DELETE;
+                        break;
+                    } else {
+                        formatstr( errorString, "Failed to authenticate %s.",
+                                   myResource->authFailureMessage.c_str() );
+                        dprintf( D_ALWAYS, "(%d.%d) %s\n",
+                                 procID.cluster, procID.proc, errorString.c_str() );
+                        jobAd->Assign( ATTR_HOLD_REASON, errorString );
+                        gmState = GM_HOLD;
+                        break;
+                    }
+                }
+
                 // If we're not doing recovery, start with GM_CLEAR_REQUEST.
 				gmState = GM_CLEAR_REQUEST;
 
