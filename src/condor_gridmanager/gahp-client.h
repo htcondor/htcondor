@@ -183,6 +183,7 @@ class GahpServer : public Service {
 	char *binary_path;
 	ArgList binary_args;
 	char *my_id;
+	int m_ssh_forward_port;
 
 	char *globus_gass_server_url;
 	char *globus_gt2_gram_callback_contact;
@@ -307,6 +308,8 @@ class GahpClient : public Service {
 		const char *getErrorString();
 
 		const char *getVersion();
+
+		int getSshForwardPort() { return server->m_ssh_forward_port; }
 
 		//-----------------------------------------------------------
 		

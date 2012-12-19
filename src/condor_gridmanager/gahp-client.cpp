@@ -139,6 +139,7 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 	unicore_gahp_callback_func = NULL;
 	unicore_gahp_callback_reqid = 0;
 
+	m_ssh_forward_port = 0;
 	my_id = strdup(id);
 	binary_path = strdup(path);
 	if ( args != NULL ) {
@@ -316,7 +317,11 @@ GahpServer::Reaper(Service *,int pid,int status)
 
 	if ( dead_server ) {
 		formatstr_cat( buf, " unexpectedly" );
-		EXCEPT( "%s", buf.c_str() );
+		if ( dead_server->m_gahp_startup_failed ) {
+			dprintf( D_ALWAYS, "%s\n", buf.c_str() );
+		} else {
+			EXCEPT( "%s", buf.c_str() );
+		}
 	} else {
 		formatstr_cat( buf, "\n" );
 		dprintf( D_ALWAYS, "%s", buf.c_str() );
@@ -638,9 +643,9 @@ GahpServer::Startup()
 {
 	char *gahp_path = NULL;
 	ArgList gahp_args;
-	int stdin_pipefds[2];
-	int stdout_pipefds[2];
-	int stderr_pipefds[2];
+	int stdin_pipefds[2] = { -1, -1 };
+	int stdout_pipefds[2] = { -1, -1 };
+	int stderr_pipefds[2] = { -1, -1 };
 	int low_port;
 	int high_port;
 	Env newenv;
@@ -773,8 +778,7 @@ GahpServer::Startup()
 	{
 		dprintf(D_ALWAYS,"GahpServer::Startup - pipe() failed, errno=%d\n",
 			errno);
-		free( gahp_path );
-		return false;
+		goto error_exit;
 	}
 
 	int io_redirect[3];
@@ -798,21 +802,24 @@ GahpServer::Startup()
 	if ( m_gahp_pid == FALSE ) {
 		dprintf(D_ALWAYS,"Failed to start GAHP server (%s)\n",
 				gahp_path);
-		free( gahp_path );
 		m_gahp_pid = -1;
-		return false;
+		goto error_exit;
 	} else {
 		dprintf(D_ALWAYS,"GAHP server pid = %d\n",m_gahp_pid);
 	}
 
 	free( gahp_path );
+	gahp_path = NULL;
 
 		// Now that the GAHP server is running, close the sides of
 		// the pipes we gave away to the server, and stash the ones
 		// we want to keep in an object data member.
-	daemonCore->Close_Pipe( io_redirect[0] );
-	daemonCore->Close_Pipe( io_redirect[1] );
-	daemonCore->Close_Pipe( io_redirect[2] );
+	daemonCore->Close_Pipe( stdin_pipefds[0] );
+	stdin_pipefds[0] = -1;
+	daemonCore->Close_Pipe( stdout_pipefds[1] );
+	stdout_pipefds[1] = -1;
+	daemonCore->Close_Pipe( stderr_pipefds[1] );
+	stderr_pipefds[1] = -1;
 
 	m_gahp_errorfd = stderr_pipefds[0];
 	m_gahp_readfd = stdout_pipefds[0];
@@ -822,16 +829,15 @@ GahpServer::Startup()
 	if ( command_version() == false ) {
 		dprintf(D_ALWAYS,"Failed to read GAHP server version\n");
 		// consider this a bad situation...
-		m_gahp_startup_failed = true;
-		return false;
+		goto error_exit;
 	} else {
 		dprintf(D_FULLDEBUG,"GAHP server version: %s\n",m_gahp_version);
 	}
 
 		// Now see what commands this server supports.
 	if ( command_commands() == false ) {
-		m_gahp_startup_failed = true;
-		return false;
+		dprintf(D_ALWAYS, "Failed to query GAHP server commands\n");
+		goto error_exit;
 	}
 
 		// Try and use a reponse prefix, to shield against
@@ -873,6 +879,34 @@ GahpServer::Startup()
 	}
 
 	return true;
+
+ error_exit:
+	m_gahp_startup_failed = true;
+
+	free( gahp_path );
+	if ( stdin_pipefds[0] != -1 ) {
+		daemonCore->Close_Pipe( stdin_pipefds[0] );
+	}
+	if ( stdin_pipefds[1] != -1 ) {
+		daemonCore->Close_Pipe( stdin_pipefds[1] );
+	}
+	if ( stdout_pipefds[0] != -1 ) {
+		daemonCore->Close_Pipe( stdout_pipefds[0] );
+	}
+	if ( stdout_pipefds[1] != -1 ) {
+		daemonCore->Close_Pipe( stdout_pipefds[1] );
+	}
+	if ( stderr_pipefds[0] != -1 ) {
+		daemonCore->Close_Pipe( stderr_pipefds[0] );
+	}
+	if ( stderr_pipefds[1] != -1 ) {
+		daemonCore->Close_Pipe( stderr_pipefds[1] );
+	}
+	m_gahp_errorfd = -1;
+	m_gahp_readfd = -1;
+	m_gahp_writefd = -1;
+
+	return false;
 }
 
 bool
@@ -1408,6 +1442,15 @@ GahpServer::err_pipe_ready(int  /*pipe_end*/)
 			*newline = '\0';
 			dprintf( D_FULLDEBUG, "GAHP[%d] (stderr) -> %s%s\n", m_gahp_pid,
 					 m_gahp_error_buffer.c_str(), prev_line );
+			// For a gahp running over ssh with tunneling, look for a
+			// line declaring the listen port on the remote end.
+			// For correctness, we should be checking m_gahp_errorfd
+			// as well, but this should be one of the first lines in
+			// stderr and shouldn't be split across multiple reads.
+			if ( m_ssh_forward_port == 0 ) {
+				sscanf( prev_line, "Allocated port %d for remote forward to",
+						&m_ssh_forward_port );
+			}
 			prev_line = newline + 1;
 			m_gahp_error_buffer = "";
 
