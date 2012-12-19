@@ -16,13 +16,13 @@
  # 
  ############################################################### 
 
-if ( LINUX )
+if ( LINUX OR DARWIN )
 	if ( WANT_FULL_DEPLOYMENT )
 		option(WITH_BOSCO "Compiling with support for BOSCO" ON)
 	else( WANT_FULL_DEPLOYMENT )
 		option(WITH_BOSCO "Compiling with support for BOSCO" OFF)
 	endif( WANT_FULL_DEPLOYMENT )
-endif ( LINUX )
+endif ( LINUX OR DARWIN )
 
 if ( WITH_BOSCO )
 
@@ -32,5 +32,6 @@ if ( WITH_BOSCO )
 	install ( FILES bosco_start DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 	install ( FILES bosco_stop DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 	install ( FILES bosco_uninstall DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+	install ( FILES bosco_findplatform DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
 endif( WITH_BOSCO )

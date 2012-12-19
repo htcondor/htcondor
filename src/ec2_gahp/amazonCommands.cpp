@@ -1288,7 +1288,8 @@ struct vmStatusUD_t {
         KEY_NAME,
         INSTANCE_TYPE,
         GROUP_ID,
-        STATE_REASON_CODE
+        STATE_REASON_CODE,
+        CLIENT_TOKEN
     };
     typedef enum vmStatusTags_t vmStatusTags;
 
@@ -1370,6 +1371,8 @@ void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
         vsud->inWhichTag = vmStatusUD::STATUS;
     } else if( vsud->inStateReason && strcasecmp( (const char *)name, "code" ) == 0 )  {
         vsud->inWhichTag = vmStatusUD::STATE_REASON_CODE;
+    } else if( strcasecmp( (const char *)name, "clientToken" ) == 0 ) {
+        vsud->inWhichTag = vmStatusUD::CLIENT_TOKEN;
     }
 }
 
@@ -1420,6 +1423,10 @@ void vmStatusCDH( void * vUserData, const XML_Char * cdata, int len ) {
 
         case vmStatusUD::STATE_REASON_CODE:
             targetString = & vsud->currentResult->stateReasonCode;
+            break;
+
+        case vmStatusUD::CLIENT_TOKEN:
+            targetString = & vsud->currentResult->clientToken;
             break;
 
         default:
@@ -1528,6 +1535,7 @@ bool AmazonVMStatusAll::workerFunction(char **argv, int argc, std::string &resul
                 resultList.append( asr.instance_id.c_str() );
                 resultList.append( asr.status.c_str() );
                 resultList.append( asr.ami_id.c_str() );                
+                resultList.append( nullStringIfEmpty( asr.clientToken ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }

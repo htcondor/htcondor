@@ -584,10 +584,12 @@ A static quota specifies an integral numbers of machines (slots),
 independent of the size of the pool.
 A dynamic quota specifies a percentage of machines (slots) calculated
 based on the current number of machines in the pool.
-It is intended that only one of a static or a dynamic quota is defined 
-for a specified group.
-If both are defined, then the static quota is implemented, 
+It is intended that only one of static or a dynamic quotas are defined 
+for a specified group and for the pool.
+If both are defined for a group, then the static quota is implemented, 
 and the dynamic quota is ignored.
+The behavior is not defined and not documented
+for pools with both static and dynamic quotas defined.
 
 \begin{description}
 \item[Static Quotas]
@@ -696,8 +698,5 @@ and \Expr{project2} results in the truncated amount of 13 machines,
 with the 0.1818 + .6364 + .1818 = 1.0 remaining machine assigned to
 job submitters in the parent group, \Expr{group\_stat}. 
 
-
-\item[Mixed Quotas - Both Static and Dynamic]
 \end{description}
-\MoreTodo
 
