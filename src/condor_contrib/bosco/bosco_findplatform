@@ -1,0 +1,279 @@
+#!/usr/bin/python
+#Marco Mambelli - first version 10/8/2012 
+
+import sys
+import os
+import platform
+import optparse
+
+UNKNOWN="UNKNOWN"
+UNSUPPORTED="UNSUPPORTED"
+RH5="RH5"
+RH6="RH6"
+OSX="MAC"
+OSX_UNSUPPORTED="UNSUPPORTED"
+DEB6="DEB6"
+
+SUPPORTED_OSX = ['10.6', '10.7', '10.8']
+SUPPORTED_PLATFORMS = [ RH5, RH6, OSX, DEB6 ]
+
+# download URLs for the different platforms
+URL_DICT={
+  DEB6: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-1.1_beta2-x86_64_Debian6.tar.gz",
+  OSX: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-1.1_beta2-x86_64_MacOSX7.tar.gz",
+  RH5: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-1.1_beta2-x86_64_RedHat5.tar.gz",
+  RH6: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-1.1_beta2-x86_64_RedHat6.tar.gz",
+}
+
+BIT32="32bit"
+BIT64="64bit"
+
+INSTALLER_NAME="boscoinstaller"
+SYSINSTALLER_NAME="boscomuinstaller"
+
+def findversion_mac(detail=False):
+  # system_profiler -detailLevel mini SPSoftwareDataType | grep "System Version"
+  #      System Version: Mac OS X 10.6.8 (10K549)
+  #
+  import commands 
+  ec, out = commands.getstatusoutput('system_profiler -detailLevel mini SPSoftwareDataType | grep "System Version"')
+  retv = out.strip()[len("System Version:"):].strip()
+  if detail and ec==0:
+    return retv
+  if retv.startswith('Mac OS X 10.'):
+    version = [i.strip() for i in retv.strip()[len("Mac OS X "):].split('.')]
+    if '.'.join(version[:2]) in SUPPORTED_OSX:
+      return OSX
+    return OSX_UNSUPPORTED
+  return UNKNOWN
+
+def findversion_redhat(detail=False):
+  # content of /etc/redhat-release
+  #Scientific Linux release 6.2 (Carbon)
+  #Red Hat Enterprise Linux Server release 5.8 (Tikanga)
+  #Scientific Linux SL release 5.5 (Boron)
+  #CentOS release 4.2 (Final)
+  #
+  #Do we support FC:Fedora Core release 11 ... ?
+  #
+  # should I check that it is SL/RHEL/CentOS ? 
+  # no 
+  lines = open('/etc/redhat-release').readlines()
+  for line in lines:
+    if detail and 'release'in line:
+      return line
+    if 'release 5.' in line:
+      return RH5
+    if 'release 6.' in line:
+      return RH6
+    return UNSUPPORTED
+  return UNKNOWN
+
+def findversion_debian(detail=False):
+  """cat /etc/*release
+DISTRIB_ID=Ubuntu
+DISTRIB_RELEASE=11.10
+DISTRIB_CODENAME=oneiric
+DISTRIB_DESCRIPTION="Ubuntu 11.10"
+
+user@bellatrix:~$ lsb_release
+No LSB modules are available.
+
+user@bellatrix:~$ lsb_release -a  
+No LSB modules are available.
+
+Distributor ID:    Ubuntu
+Description:    Ubuntu 11.10
+Release:    11.10
+Codename:    oneiric       
+"""
+  retv=UNSUPPORTED
+  lines = open('/etc/lsb-release').readlines()
+  for line in lines:
+    if detail:
+       if 'DISTRIB_DESCRIPTION' in line:
+        return line[len('DISTRIB_DESCRIPTION='):]
+    if 'DISTRIB_ID' in line:
+      if not 'Debian' in line:
+        return UNSUPPORTED
+    if 'DISTRIB_RELEASE' in line:
+        if line[len('DISTRIB_RELEASE='):].startswith('6.'):
+          retv=DEB6
+  return retv
+
+def findversion():
+  if not os.name=='posix':
+    return UNSUPPORTED
+  if sys.platform=='darwin':
+    myver = platform.mac_ver()
+    if myver[0]:
+      if '.'.join(myver[0].split('.')[:2]) in SUPPORTED_OSX:
+        return OSX
+    return findversion_mac()
+  elif sys.platform.startswith('linux'):
+    # only 64 bit supported
+    if not platform.architecture()[0]=='64bit':
+      return UNSUPPORTED
+    # try first platform.dist, use it only for positive recognition
+    mydist = platform.dist()
+    if mydist[0]:
+      if mydist[0].lower()=='redhat':
+        if mydist[1].startswith('5.'):
+          return RH5
+        if mydist[1].startswith('6.'):
+          return RH6
+      if mydist[0].lower()=='debian':
+        if mydist[1].startswith('6.'):
+          return DEB6
+    if os.path.isfile('/etc/redhat-release'):
+      return findversion_redhat()
+    elif os.path.isfile('/etc/lsb-release'):
+      return findversion_debian()
+  return UNKNOWN
+
+def findversion_detail():
+  #if not os.name=='posix':
+  #  return UNKNOWN 
+  if sys.platform=='darwin':
+    return findversion_mac(True)
+  elif sys.platform.startswith('linux'):
+    if os.path.isfile('/etc/redhat-release'):
+      return findversion_redhat(True)
+    elif os.path.isfile('/etc/lsb-release'):
+      return findversion_debian(True)
+  return UNKNOWN
+
+def install(platform, multiuser=False, options=None):
+  """Install BOSCO for the platform"""
+  import tempfile
+  import urllib2
+  import shutil
+  import tarfile
+  import commands
+  # make tmp dir
+  if not platform in SUPPORTED_PLATFORMS:
+      print "You system is not supported. Aborting the installation."
+      sys.exit(1)
+  try:
+    tmp_dir = tempfile.mkdtemp() # create dir
+    # download bosco and save directly to file
+    condor_dir = ""
+    try:
+      print "Downloading BOSCO from %s" % URL_DICT[platform]
+      response = urllib2.urlopen(URL_DICT[platform])
+      fname = os.path.join(tmp_dir, 'bosco-download.tar.gz')
+      f = open(fname, 'wb')
+      shutil.copyfileobj(response, f)
+      f.close()
+      response.close() 
+      tar = tarfile.open(fname, "r")
+      for tarname in tar.getnames():
+        tar.extract(tarname, tmp_dir)
+      tar.close()
+      condor_dir_list = [i for i in os.listdir(tmp_dir) if i.startswith('condor')]
+    except:
+      (etype, evalue, etraceback) = sys.exc_info()
+      if evalue:
+        print evalue
+      condor_dir_list = []
+    if not condor_dir_list:
+      print "The download and extraction of BOSCO failed. Aborting the installation."
+      sys.exit(1)
+    # run bosco_install (pass parameters)
+    options_list = ""
+    if options:
+      options_list =  " ".join(options)
+    if not options_list:
+      if multiuser:
+        options_list = "--prefix=/opt/bosco"
+        print "Installing BOSCO in /opt/bosco"
+      else:
+        print "Installing BOSCO in ~/bosco"
+    else:
+      print "Installing BOSCO with: ./bosco_install %s" % options_list
+    cmd_list = [#"curl -s -o %s/bosco-download.tar.gz %s" % (tmp_dir, URL_DICT[platform]),
+                #"tar xzf %s/bosco-download.tar.gz -C %s" % (tmp_dir, tmp_dir),
+                "cd %s/%s; ./bosco_install %s" % (tmp_dir, condor_dir_list[0], options_list)
+               ]
+    for cmd in cmd_list:
+      ec, out = commands.getstatusoutput(cmd)
+      if ec != 0:
+        print "Error installing BOSCO"
+        print "Command %s failed:\n%s" % (cmd, out)
+        print "Aborting BOSCO installation"
+        sys.exit(1)
+      else:
+        print out
+  finally:
+    try:
+      shutil.rmtree(tmp_dir) # delete directory
+    except OSError, e:
+      if e.errno != 2: # code 2 - no such file or directory
+        raise
+  # rm itself and exit or not?  
+  print "Congratulations, you installed BOSCO succesfully!"
+  return
+   
+if __name__ == "__main__":
+  # invoked as installer (INSTALLER_NAME [install options])
+  tmp_basename = os.path.basename(sys.argv[0])
+  if tmp_basename==INSTALLER_NAME or tmp_basename==SYSINSTALLER_NAME:
+    res = findversion()
+    if tmp_basename==SYSINSTALLER_NAME:
+      install(res, True, sys.argv[1:])
+    else:
+      install(res, False, sys.argv[1:])
+    sys.exit(0)
+  # install parameter separation
+  my_par = sys.argv[1:]
+  install_par = None 
+  for i in range(1, len(sys.argv)):
+    if sys.argv[i]=='--':
+      my_par = sys.argv[1:i]
+      install_par = sys.argv[i+1:]
+  usage = '\n'.join(["Usage: %prog [options]",
+                     "       %prog --install [-- install options]",
+                     "       %s [install options]" % INSTALLER_NAME
+                    ]) 
+  parser = optparse.OptionParser(usage=usage)
+  parser.add_option('-u', '--url', help='return the download URL for the current platform', dest='url', \
+                    default=False, action='store_true')
+  parser.add_option('-b', '--bit', help='return if the architecture is 32bit or 64bit', dest='bit', \
+                    default=False, action='store_true')
+  parser.add_option('-f', '--full', help='return the full version string form the OS', dest='details', \
+                    default=False, action='store_true')
+  parser.add_option('--force', help='force a specific platform %s' % SUPPORTED_PLATFORMS, dest='force', \
+                    )
+  parser.add_option('-i', '--install', help='basic bosco installation for the current platform', dest='install', \
+                    default=False, action='store_true')
+  (opts, args) = parser.parse_args(my_par)
+  # options consistency
+  if opts.force and not opts.force in SUPPORTED_PLATFORMS:
+    print "The platform %s is not supported.\n" % opts.force
+    parser.print_help()
+    sys.exit(-1)
+  if opts.details and opts.bit:
+    print "Option full and bit are mutually exclusive\n"
+    parser.print_help()
+    sys.exit(-1)
+  # run
+  if opts.bit:
+    if platform.architecture()[0]=='64bit':
+      print BIT64
+    else:
+      print BIT32
+    sys.exit(0)
+  elif opts.details:
+    print findversion_detail()
+  else:
+    if opts.force:
+      res = opts.force
+    else:
+      res = findversion()
+    if opts.install:
+      install(res, False, install_par)
+      sys.exit(0)
+    elif opts.url:
+      print URL_DICT[res]
+    else:
+      print res

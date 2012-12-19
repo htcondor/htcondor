@@ -349,6 +349,7 @@ if ($opt_bosco && !defined($opt_prefix_dir)) {
 		die "Option --bosco can't find user's home directory!\n";
 	}
 	$opt_prefix_dir = $home . "/bosco";
+	$opt_local_dir = $opt_prefix_dir . "/local.bosco";
 }
 if (defined($opt_release_dir)) {
     # Install
