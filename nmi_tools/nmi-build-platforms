@@ -18,7 +18,6 @@ x86_WindowsXP
 # We want to build all branches on Fedora because it is our "warning check" platform
 x86_64_Fedora16
 x86_64_Fedora17
-x86_64_Fedora18
 
 # We might as well build on SL
 x86_64_SL6
@@ -29,4 +28,4 @@ x86_SL5
 x86_64_Solaris11
 x86_64_Ubuntu10
 #x86_64_Ubuntu12
-#x86_FreeBSD7
+x86_FreeBSD7
