@@ -356,14 +356,14 @@ int add_address(int sock, const char * addr, unsigned prefix_length, const char 
 	if(ipaddr_type == AF_INET){
 		if ((prefix_length == 0) || (prefix_length > 32)) {
 			dprintf(D_ALWAYS, "Invalid IPv4 prefix: %u\n", prefix_length);
+			return 1;
 		}
-		return 1;
 	}
 	if(ipaddr_type == AF_INET6){
 		if ((prefix_length == 0) || (prefix_length > 128)) {
 			dprintf(D_ALWAYS, "Invalid IPv6 prefix: %u\n", prefix_length);
+			return 1;
 		}
-		return 1;
 	}
 
 	// Update the length of the nlmsg according to ipaddr_type
