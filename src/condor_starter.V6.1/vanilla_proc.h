@@ -74,6 +74,7 @@ private:
 #if !defined(WIN32)
 	int m_escalation_tid;
 #endif
+	std::string m_network_name;
 };
 
 #endif
