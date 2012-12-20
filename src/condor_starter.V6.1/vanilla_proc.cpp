@@ -47,7 +47,8 @@ extern dynuser* myDynuser;
 
 extern CStarter *Starter;
 
-VanillaProc::VanillaProc(ClassAd* jobAd) : OsProc(jobAd)
+VanillaProc::VanillaProc(ClassAd* jobAd) : OsProc(jobAd),
+	m_network_name()
 {
 #if !defined(WIN32)
 	m_escalation_tid = -1;
@@ -413,6 +414,7 @@ VanillaProc::StartJob()
 			return FALSE;
 		}
 		classad_shared_ptr<classad::ClassAd> machine_classad = Starter->jic->machClassAdSharedPtr();
+		m_network_name = network_name;
 		int rc = NetworkPluginManager::PrepareNetwork(network_name, *JobAd, machine_classad);
 		if (rc) {
 			dprintf(D_ALWAYS, "Failed to prepare network namespace - bailing.\n");
@@ -571,13 +573,15 @@ VanillaProc::JobReaper(int pid, int status)
 			dprintf(D_ALWAYS, "error getting family usage for pid %d in "
 					"VanillaProc::JobReaper()\n", JobPid);
 		}
-		if (NetworkPluginManager::HasPlugins()) {
+		if (m_network_name.length() && NetworkPluginManager::HasPlugins()) {
 			// Call this before removing the statistics; PublishUpdateAd is called after JobReaper
 			NetworkPluginManager::PerformJobAccounting(NULL);
 			// TODO: cleanup correct namespace
-			int rc = NetworkPluginManager::Cleanup("");
+			int rc = NetworkPluginManager::Cleanup(m_network_name);
 			if (rc) {
 				dprintf(D_ALWAYS, "Failed to cleanup network namespace (rc=%d)\n", rc);
+			} else {
+				dprintf(D_FULLDEBUG, "Cleaned up network namespace %s.\n", m_network_name.c_str());
 			}
 		}
 	}

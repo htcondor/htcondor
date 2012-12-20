@@ -402,8 +402,9 @@ int NetworkNamespaceManager::JobAccountingCallback(const unsigned char * rule_na
 	return 0;
 }
 
-int NetworkNamespaceManager::Cleanup(const std::string &) {
+int NetworkNamespaceManager::Cleanup(const std::string & name) {
 	NetworkLock sentry;
+	dprintf(D_FULLDEBUG, "Cleaning up the network namespace %s.\n", name.c_str());
 
 	// Try to only clean once.
 	if (m_state == CLEANED) {
@@ -429,6 +430,8 @@ int NetworkNamespaceManager::Cleanup(const std::string &) {
 			dprintf(D_ALWAYS, "Unable to cleanup network configuration.\n");
 		}
 		m_network_configuration.reset(NULL);
+	} else {
+		dprintf(D_FULLDEBUG, "No network configuration to cleanup.\n");
 	}
 
         // Cleanup firewall

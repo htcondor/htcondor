@@ -195,6 +195,7 @@ NATConfiguration::Cleanup()
 	args.AppendArg(internal_ip.c_str());
 	args.AppendArg("-j");
 	args.AppendArg("MASQUERADE");
+	RUN_ARGS_AND_LOG(NATConfiguration::Cleanup, iptables_masquerade)
 	}
 
 	return 0;
