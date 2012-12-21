@@ -1958,6 +1958,7 @@ id=89
 [LIBEXEC]
 aliases=
 default=$(RELEASE_DIR)/libexec
+win32_default=$(BIN)
 version=0.0.0
 range=.*
 state=default
@@ -4775,6 +4776,7 @@ id=274
 [SBIN]
 aliases=
 default=$(RELEASE_DIR)/sbin
+win32_default=$(BIN)
 version=0.0.0
 range=.*
 state=default

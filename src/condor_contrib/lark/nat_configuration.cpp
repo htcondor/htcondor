@@ -42,6 +42,7 @@ NATConfiguration::Setup()
 	std::string chain_name;
 	if(!m_ad->EvaluateAttrString(ATTR_IPTABLE_NAME, chain_name)) {
 		dprintf(D_ALWAYS, "Missing required ClassAd attribute " ATTR_IPTABLE_NAME "\n");
+		return 1;
 	}
 
 	// Record the external IP as the gateway to use for the internal device.
@@ -121,11 +122,13 @@ NATConfiguration::Setup()
 	// Add the address to the device
 	// ip addr add $JOB_OUTER_IP/255.255.255.255 dev $DEV
 	if (add_address(fd, external_ip.c_str(), 32, external_interface.c_str())) {
+		dprintf(D_ALWAYS, "Failed to add external address.\n");
 		return 1;
 	}
 	// Enable the device
 	// ip link set dev $DEV up
 	if (set_status(fd, external_interface.c_str(), IFF_UP)) {
+		dprintf(D_ALWAYS, "Failed to set external device status.\n");
 		return 1;
 	}
 	// Add a default route
@@ -141,6 +144,25 @@ NATConfiguration::Setup()
 	}
 
 	return 0;
+}
+
+int
+NATConfiguration::SetupPostForkChild()
+{
+	std::string external_gw;
+	if (!m_ad->EvaluateAttrString(ATTR_GATEWAY, external_gw)) {
+		dprintf(D_FULLDEBUG, "Missing required ClassAd attribute " ATTR_GATEWAY "\n");
+		return 1;
+	}
+	int err = 0;
+
+	NetworkNamespaceManager & manager = NetworkNamespaceManager::GetManager();
+	int sock = manager.GetNetlinkSocket();
+	if ((err = add_default_route(sock, external_gw.c_str()))) {
+		dprintf(D_ALWAYS, "Unable to add default route via %s; %d\n", external_gw.c_str(), err);
+		return err;
+	}
+	return err;
 }
 
 int
@@ -173,6 +195,7 @@ NATConfiguration::Cleanup()
 	args.AppendArg(internal_ip.c_str());
 	args.AppendArg("-j");
 	args.AppendArg("MASQUERADE");
+	RUN_ARGS_AND_LOG(NATConfiguration::Cleanup, iptables_masquerade)
 	}
 
 	return 0;

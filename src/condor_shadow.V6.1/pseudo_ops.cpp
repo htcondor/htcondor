@@ -528,7 +528,7 @@ static int access_via_afs( const char * /* file */ )
 	my_fs_domain = param("FILESYSTEM_DOMAIN");
 	thisRemoteResource->getFilesystemDomain(remote_fs_domain);
 
-	if(!param_boolean_crufty("USE_AFS", false)) {
+	if(!param_boolean_crufty("NONSTD_USE_AFS", false)) {
 		dprintf( D_SYSCALLS, "\tnot configured to use AFS for file access\n" );
 		goto done;
 	}
@@ -579,7 +579,7 @@ static int access_via_nfs( const char * /* file */ )
 	thisRemoteResource->getUidDomain(remote_uid_domain);
 	thisRemoteResource->getFilesystemDomain(remote_fs_domain);
 
-	if( !param_boolean_crufty("USE_NFS", false) ) {
+	if( !param_boolean_crufty("NONSTD_USE_NFS", false) ) {
 		dprintf( D_SYSCALLS, "\tnot configured to use NFS for file access\n" );
 		goto done;
 	}

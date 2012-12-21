@@ -242,6 +242,7 @@ public:
 
 	bool typeNumCmp( int* a, int* b );
 
+	void calculateAffinityMask(Resource *rip);
 private:
 
 	Resource**	resources;		// Array of pointers to Resource objects

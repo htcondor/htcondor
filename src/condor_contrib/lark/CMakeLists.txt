@@ -21,7 +21,7 @@ option(WITH_LARK "Support for Lark network tools" OFF)
 
 if ( WITH_LARK )
 
-  condor_glob( LARKHDRS LARKSRCS "ns_exec.c;network_netlink_main.cpp;dump_firewall.c;cleanup_firewall.c;ip_lock_main.cpp;dhcp_main.cpp" )
+  condor_glob( LARKHDRS LARKSRCS "ns_exec.c;network_netlink_main.cpp;dump_firewall.c;cleanup_firewall.c;ip_lock_main.cpp;dhcp_main.cpp;bridge_netlink.c;lark_plugin.cpp" )
 
   condor_exe( lark_dump_firewall "dump_firewall.c;network_manipulation.h;network_netfilter.c" OFF "${CONDOR_LIBS}" OFF )
   condor_exe( lark_ns_exec_tester "ns_exec.c" OFF "${CONDOR_TOOL_LIBS}" OFF)
@@ -30,6 +30,6 @@ if ( WITH_LARK )
   condor_exe( lark_ip_lock_tester "ip_lock_main.cpp;ip_lock.cpp" OFF "${CONDOR_LIBS}" OFF )
   condor_exe( lark_dhcp_client_tester "dhcp_main.cpp;dhcp_management.cpp;dhcp_management.h;network_manipulation.h;network_netlink.cpp;bridge_manipulation.c;popen_util.h" OFF "${CONDOR_LIBS}" OFF )
 
-  condor_plugin( lark-plugin "${LARKHDRS};${LARKSRCS};network_namespaces.cpp" "${C_LIBEXEC}" "${CONDOR_TOOL_LIBS}" ON)
+  condor_plugin( lark-plugin "${LARKHDRS};${LARKSRCS};lark_plugin.cpp" "${C_LIBEXEC}" "${CONDOR_TOOL_LIBS}" ON)
 
 endif()

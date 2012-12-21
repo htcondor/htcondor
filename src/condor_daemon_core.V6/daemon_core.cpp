@@ -5342,12 +5342,6 @@ pid_t CreateProcessForkit::clone_safe_getppid() {
 pid_t CreateProcessForkit::fork_exec() {
 	pid_t newpid;
 
-	// The network manager has special synchronization, regardless of clone or fork.
-	if (NetworkPluginManager::PreFork()) {
-		dprintf(D_ALWAYS, "Preparation for clone failed in the network manager.\n");
-		return -1;
-	}
-
 #if HAVE_CLONE
 		// Why use clone() instead of fork?  In current versions of
 		// Linux, fork() is slower for processes with lots of memory
@@ -5366,8 +5360,6 @@ pid_t CreateProcessForkit::fork_exec() {
 	if( daemonCore->UseCloneToCreateProcesses() ) {
 		dprintf(D_FULLDEBUG,"Create_Process: using fast clone() "
 		                    "to create child process.\n");
-
-		bool killed_child = false;
 
 			// The stack size must be big enough for everything that
 			// happens in CreateProcessForkit::clone_fn().  In some
@@ -5403,31 +5395,27 @@ pid_t CreateProcessForkit::fork_exec() {
 		newpid = clone(
 			CreateProcessForkit::clone_fn,
 			child_stack_ptr,
-			(CLONE_VM|(NetworkPluginManager::HasPlugins() ? CLONE_VFORK : 0 )|SIGCHLD),
+			(CLONE_VM|CLONE_VFORK|SIGCHLD),
 			this );
 
-		if (NetworkPluginManager::HasPlugins()) {
-			// Always call PostClone*, even if priv state can't change.
-			if (NetworkPluginManager::PostForkParent(newpid)) {
-				kill(newpid, SIGKILL);
-				dprintf(D_ALWAYS, "Failed to alter the child (%d) network namespace in post-clone of parent.\n", newpid);
-			} else {
-				dprintf(D_FULLDEBUG, "Post-clone network namespace operation in parent successful.\n");
-			}
-		}
-
+			// Note that the network manager isn't attempted here.
 		exitCreateProcessChild();
+
+			// Since we used the CLONE_VFORK flag, the child has exited
+			// or called exec by now.
 
 			// restore state
 		dprintf_after_shared_mem_clone();
 
-		if (killed_child) {
-			dprintf(D_ALWAYS, "Killed child PID %d because network manager failed.\n", newpid);
-		}
-
 		return newpid;
 	}
 #endif /* HAVE_CLONE */
+
+        // The network manager has special synchronization, regardless of clone or fork.
+	if (NetworkPluginManager::PreFork()) {
+		dprintf(D_ALWAYS, "Preparation for clone failed in the network manager.\n");
+		return -1;
+	}
 
 	newpid = fork();
 	if( newpid == 0 ) {

@@ -4,6 +4,7 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_arglist.h"
+#include "directory.h"
 
 #include <classad/classad.h>
 #include <classad/classad_stl.h>
@@ -23,7 +24,6 @@ NetworkNamespaceManager::NetworkNamespaceManager() :
 	m_sock(-1), m_created_pipe(false),
 	m_network_configuration(NULL), m_ad()
 	{
-		//PluginManager<NetworkManager>::registerPlugin(this);
 		dprintf(D_FULLDEBUG, "Initialized a NetworkNamespaceManager plugin.\n");
 	}
 
@@ -38,11 +38,14 @@ NetworkNamespaceManager::GetManager()
 }
 
 int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, const classad::ClassAd & /*job_ad*/, classad_shared_ptr<classad::ClassAd> machine_ad) {
+	NetworkLock sentry;
+
 	if (m_state != UNCREATED) {
 		dprintf(D_FULLDEBUG, "Internal bug: NetworkNamespaceManager::CreateNamespace has already been invoked.\n");
 		m_state = FAILED;
 		return 1;
 	}
+	dprintf(D_FULLDEBUG, "Preparing network namespace manager.\n");
 
 	if (!machine_ad.get()) {
 		m_state = FAILED;
@@ -173,6 +176,7 @@ int NetworkNamespaceManager::CreateNetworkPipe() {
 }
 
 int NetworkNamespaceManager::PreFork() {
+	NetworkLock sentry;
 	if (m_state == UNCREATED)
 		return 0;
 
@@ -256,35 +260,31 @@ int NetworkNamespaceManager::PostForkChild() {
 		goto finalize_child;
 	}
 	dprintf(D_FULLDEBUG, "Added address %s to child interface.\n", m_internal_address_str.c_str());
-	if (set_status(sock, m_internal_pipe.c_str(), IFF_UP)) {
-		dprintf(D_ALWAYS, "Unable to bring up interface %s.\n", m_internal_pipe.c_str());
-		rc = 3;
-		goto finalize_child;
-	}
 	// This doesn't seem to be necessary if you provide a non-/32 netmask when creating the device.
 	/*if (add_local_route(sock, m_internal_address_str.c_str(), m_internal_pipe.c_str(), 24)) {
 		dprintf(D_ALWAYS, "Unable to add local route via %s\n", m_internal_address_str.c_str());
 		rc = 4;
 		goto finalize_child;
 	}*/
-
-	// The external gateway is stored in the classad because, for example, it is very
-	// different for DHCP versus NAT.
-	if (!m_ad->EvaluateAttrString(ATTR_GATEWAY, external_gw)) {
-		dprintf(D_FULLDEBUG, "Unable to determine gateway; using external IP address.\n");
-		external_gw = m_external_address.to_ip_string();
-	}
-
-	if (add_default_route(sock, external_gw.c_str())) {
-		dprintf(D_ALWAYS, "Unable to add default route via %s\n", external_gw.c_str());
-		rc = 5;
+	if (set_status(sock, m_internal_pipe.c_str(), IFF_UP)) {
+		dprintf(D_ALWAYS, "Unable to bring up interface %s.\n", m_internal_pipe.c_str());
+		rc = 3;
 		goto finalize_child;
 	}
+
+	// Gateway setup is done in the network configuration code, as it is substantially
+	// different between NAT and bridge configurations.
 
 	m_sock = sock; // This way, the network configuration can reuse our socket.
 	if (m_network_configuration->SetupPostForkChild()) {
 		dprintf(D_ALWAYS, "Failed to create network configuration.\n");
 		rc = 6;
+		goto finalize_child;
+	}
+
+	if (set_status(sock, m_internal_pipe.c_str(), IFF_UP)) {
+		dprintf(D_ALWAYS, "Unable to bring up interface %s post-config.\n", m_internal_pipe.c_str());
+		rc = 7;
 		goto finalize_child;
 	}
 
@@ -304,6 +304,7 @@ failed_socket:
 }
 
 int NetworkNamespaceManager::PostForkParent(pid_t pid) {
+	NetworkLock sentry;
 	if (m_state == UNCREATED)
 		return 0;
 
@@ -365,7 +366,7 @@ int NetworkNamespaceManager::PostForkParent(pid_t pid) {
 		while (((rc2 = read(m_c2p[0], &rc, sizeof(rc))) < 0) && (errno == EINTR)) {}
 		if (rc2 > 0) {
 			dprintf(D_ALWAYS, "Got error code from child: %d\n", rc);
-		} else if ((errno) && (errno != EPIPE)) {
+		} else if ((rc2 == -1) && (errno) && (errno != EPIPE)) {
 			dprintf(D_ALWAYS, "Error reading from child: %s (errno=%d).\n", strerror(errno), errno);
 			rc = errno;
 		}
@@ -376,12 +377,13 @@ int NetworkNamespaceManager::PostForkParent(pid_t pid) {
 }
 
 int NetworkNamespaceManager::PerformJobAccounting(classad::ClassAd *classad) {
+	NetworkLock sentry;
 	if (m_state == UNCREATED)
 		return 0;
 
 	int rc = 0;
 	if (m_state == INTERNAL_CONFIGURED) {
-		dprintf(D_FULLDEBUG, "Polling netfilter for network statistics\n");
+		dprintf(D_FULLDEBUG, "Polling netfilter for network statistics on chain %s.\n", m_network_namespace.c_str());
 		rc = perform_accounting(m_network_namespace.c_str(), JobAccountingCallback, (void *)&m_statistics);
 	}
 	if (classad) {
@@ -400,7 +402,9 @@ int NetworkNamespaceManager::JobAccountingCallback(const unsigned char * rule_na
 	return 0;
 }
 
-int NetworkNamespaceManager::Cleanup(const std::string &) {
+int NetworkNamespaceManager::Cleanup(const std::string & name) {
+	NetworkLock sentry;
+	dprintf(D_FULLDEBUG, "Cleaning up the network namespace %s.\n", name.c_str());
 
 	// Try to only clean once.
 	if (m_state == CLEANED) {
@@ -419,11 +423,16 @@ int NetworkNamespaceManager::Cleanup(const std::string &) {
 	}
 
 	// Cleanup network configuration
-	int rc4 = m_network_configuration->Cleanup();
-	if (rc4) {
-		dprintf(D_ALWAYS, "Unable to cleanup network configuration.\n");
+	int rc4 = 0;
+	if (m_network_configuration.get()) {
+		rc4 = m_network_configuration->Cleanup();
+		if (rc4) {
+			dprintf(D_ALWAYS, "Unable to cleanup network configuration.\n");
+		}
+		m_network_configuration.reset(NULL);
+	} else {
+		dprintf(D_FULLDEBUG, "No network configuration to cleanup.\n");
 	}
-	m_network_configuration.reset(NULL);
 
         // Cleanup firewall
 	cleanup_chain(m_network_namespace.c_str());
@@ -471,8 +480,8 @@ int NetworkNamespaceManager::ConfigureNetworkAccounting(const classad::ClassAd &
 
 	// See if network accounting is requested; if not, return early.
 	bool request_accounting = false;
-	if (!machine_ad.EvaluateAttrBool(ATTR_NETWORK_ACCOUNTING, request_accounting) && !param_boolean(CONFIG_NETWORK_ACCOUNTING, request_accounting)) {
-		request_accounting = false;
+	if (!machine_ad.EvaluateAttrBool(ATTR_NETWORK_ACCOUNTING, request_accounting)) {
+		request_accounting = param_boolean(CONFIG_NETWORK_ACCOUNTING, false);
 	}
 	if (!request_accounting) {
 		dprintf(D_FULLDEBUG, "Network accounting not requested.\n");
@@ -488,10 +497,10 @@ int NetworkNamespaceManager::ConfigureNetworkAccounting(const classad::ClassAd &
 	args.AppendArg("-A");
 	args.AppendArg(m_network_namespace.c_str());
 	args.AppendArg("-i");
-	args.AppendArg(m_external_pipe);
+	args.AppendArg(m_external_pipe.c_str());
 	args.AppendArg("!");
 	args.AppendArg("-o");
-	args.AppendArg(m_external_pipe);
+	args.AppendArg(m_external_pipe.c_str());
 	args.AppendArg("-m");
 	args.AppendArg("comment");
 	args.AppendArg("--comment");
@@ -508,9 +517,9 @@ int NetworkNamespaceManager::ConfigureNetworkAccounting(const classad::ClassAd &
 	args.AppendArg(m_network_namespace.c_str());
 	args.AppendArg("!");
 	args.AppendArg("-i");
-	args.AppendArg(m_external_pipe);
+	args.AppendArg(m_external_pipe.c_str());
 	args.AppendArg("-o");
-	args.AppendArg(m_external_pipe);
+	args.AppendArg(m_external_pipe.c_str());
 	args.AppendArg("-m");
 	args.AppendArg("comment");
 	args.AppendArg("--comment");
@@ -520,3 +529,48 @@ int NetworkNamespaceManager::ConfigureNetworkAccounting(const classad::ClassAd &
 	return 0;
 }
 
+NetworkNamespaceManager::NetworkLock::NetworkLock() : m_fd(-1)
+{
+	std::string lock;
+	if (!param(lock, "Lock"))
+	{
+		dprintf(D_ALWAYS, "LOCK parameter not set.\n");
+	}
+	std::string lark_lock_dir = lock + "/lark";
+	if (!mkdir_and_parents_if_needed(lark_lock_dir.c_str(), S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, PRIV_ROOT))
+	{
+		dprintf(D_ALWAYS, "Error creating Lark network lock directory %s. (errno=%d, %s)\n", lark_lock_dir.c_str(), errno, strerror(errno));
+	}
+	std::string lark_lock = lark_lock_dir + "/network_lock";
+	int fd = open(lark_lock.c_str(), O_RDWR|O_CREAT|O_EXCL|O_CLOEXEC, S_IWUSR|S_IRUSR);
+	if ((fd < 0) && (errno != EEXIST))
+	{
+		dprintf(D_ALWAYS, "Error opening lock file %s. (errno=%d, %s)\n", lark_lock.c_str(), errno, strerror(errno));
+	}
+	else if ((fd < 0) && (errno == EEXIST))
+	{
+		fd = open(lark_lock.c_str(), O_RDWR|O_CREAT, S_IWUSR|S_IRUSR);
+		if (fd < 0)
+		{
+			dprintf(D_ALWAYS, "Error opening stale lock file %s. (errno=%d, %s)\n", lark_lock.c_str(), errno, strerror(errno));
+			return;
+		}
+	}
+	struct flock lock_info;
+	lock_info.l_type = F_WRLCK;
+	lock_info.l_whence = SEEK_SET;
+	lock_info.l_start = 0;
+	lock_info.l_len = 0;
+	lock_info.l_pid = 0;
+	if (fcntl(fd, F_SETLK, &lock_info) == -1)
+	{
+		dprintf(D_ALWAYS, "Error locking file %s. (errno=%d, %s)\n", lark_lock.c_str(), errno, strerror(errno));
+	}
+	m_fd = fd;
+}
+
+NetworkNamespaceManager::NetworkLock::~NetworkLock()
+{
+	if (m_fd != -1) close(m_fd);
+	m_fd = -1;
+}

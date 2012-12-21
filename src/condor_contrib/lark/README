@@ -1,0 +1,81 @@
+
+Lark - Integrating HTCondor with the network
+
+This contrib consists of various tools and plugins to better integrate
+HTCondor with the network layer.  The ultimate goal is to make the HTCondor
+job addressable by the network layer, giving us the ability to make incorporate
+the network with scheduling policy.
+
+The code which became Lark initially focused on network accounting - having a
+to-the-byte record of the incoming and outgoing traffic of the job.  This was
+accomplished by providing each job with a private virtual ethernet interface,
+creating a NAT to the external network, and using iptables for accounting.
+
+The NAT code has recently been extended with layer 2 bridging and DHCP,
+allowing the job to be externally addressable.
+
+In this directory, we have the following tools:
+- lark_cleanup_firewall: A tool for removing all references to an iptables
+  chain.
+- lark_dhcp_client_tester: A tool for testing the built-in DHCP client used
+  by lark.
+- lark_dump_firewall: A tool for dumping all the rules in iptables; used to
+  debug our iptables parsing code.
+- lark_ip_lock_tester: A tool for testing the local POSIX locking of IP
+  addresses for the NAT mode.
+- lark_network_namespace_tester: A tool for testing the end-to-end networking
+  code; launches a small child job which performs basic network activity (curl,
+  ping).
+- lark_ns_exec_tester: A tool for launching processes in separate Linux
+  namespaces.  Useful for performing network manipulation by hand and trying
+  out new ideas.
+- lark-plugin.so: The plugin for enabling Lark support in the Condor starter.
+
+CONFIGURATION:
+To use Lark from Condor, add the following lines to your configuration:
+
+STARTER.PLUGINS = $(STARTER.PLUGINS) /usr/lib64/condor/plugins/lark-plugin.so
+USE_NETWORK_NAMESPACES = true
+
+(adjust as necessary for the location of the lark plugin).
+When USE_NETWORK_NAMESPACES is enabled, the default will to be use NAT-mode
+for each job.
+
+If you would like the accounting to be enabled by default, add:
+
+LARK_NETWORK_ACCOUNTING = true
+
+If NETWORK_NAMESPACE_CREATE_SCRIPT is set, Lark will attempt to execute it
+after the IP address has been configured.  It is invoked with four arguments:
+ 1) The external veth IPv4 address (may be 0.0.0.0 if in bridge mode).
+ 2) The internal veth IPv4 address (should never be 0.0.0.0).
+ 3) The name of the network namespace - Lark will create a iptables chain named
+    this beforehand and route all traffic through this chain.
+ 4) The name of the extsernal veth device.
+
+If NETWORK_NAMESPACE_DELETE_SCRIPT is set, Lark will attempt to execute it
+after the job finishes and it is time to cleanup.  It is invoked with three
+arguments:
+ 1) The iptables chain name.
+ 2) The external veth device name.
+ 3) The IPv4 address of the internal veth device.
+NOTE: The veth device will already be deleted prior to invoking this script 
+      if all the job processes have exited.  Some of your iptables and routing
+      entries created by the NETWORK_NAMESPACE_CREATE_SCRIPT may already have
+      been cleaned up by the kernel.  The veth device may still exist if there
+      were issues spawning the job.  This may get called multiple times and
+      it may get called even if NETWORK_NAMESPACE_CREATE_SCRIPT wasn't invoked.
+
+KNOWN ISSUES:
+- The bridge must be setup and configured beforehand when using bridging mode.
+- The bridge forwarding delay must be set to 0.
+- Network accounting does not work in bridge mode.
+- DHCP lease renewal is not implemented.
+- There is very limited policy; by default, the jobs will use NAT.  Bridge mode
+  is used if the job requests it.  We are working to implement a separate
+  policy-callout interface.  This will give the sysadmin more fine-grained
+  control over the Lark networking.
+- The admin-provided callout scripts will likely be changed in the future to
+  read the starter classad from stdin, rather than have fixed command-line
+  arguments
+

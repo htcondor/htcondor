@@ -38,7 +38,7 @@ static int child_post_fork(lark::NetworkNamespaceManager &manager) {
 	}
 
 	// Exec out.
-	rc = execl("/bin/sh", "sh", "-c", "date; ip link list; ifconfig -a; route -n; ping 129.93.1.141 -c 20 && curl 129.93.1.141;", (char *)0);
+	rc = execl("/bin/sh", "sh", "-c", "date; ip link list; ip addr list; ip route; iptables -L -v ; ping 129.93.1.141 -c 5 && curl 129.93.1.141; exit 0", (char *)0);
 	fprintf(stderr, "Failure to exec /bin/sh. (errno=%d) %s\n", errno, strerror(errno));
 
 finalize_child:

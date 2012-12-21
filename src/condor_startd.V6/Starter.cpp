@@ -864,6 +864,37 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 	env = &new_env;
 
 
+		// Build the affinity string to pass to the starter via env
+
+	std::string affinityString;
+	if (s_claim && s_claim->rip() && s_claim->rip()->get_affinity_set()) {
+		std::list<int> *l = s_claim->rip()->get_affinity_set();
+		bool needComma = false;
+		for (std::list<int>::iterator it = l->begin(); it != l->end(); it++) {
+			if (needComma) {
+				formatstr_cat(affinityString, ", %d", *it);
+			} else {
+				formatstr_cat(affinityString, "%d ", *it);
+				needComma = true;
+			}
+		}
+	}
+
+	int slotId = s_claim->rip()->r_sub_id;
+	if (slotId == 0) {
+		// Isn't a paritionable slot, use the main id
+		slotId = s_claim->rip()->r_id;
+	}
+	std::string affinityKnob;
+	formatstr(affinityKnob, "_CONDOR_SLOT%d_CPU_AFFINITY",  slotId);
+
+	if (param_boolean("ASSIGN_CPU_AFFINITY", false)) {
+		new_env.SetEnv(affinityKnob.c_str(), affinityString.c_str());
+		new_env.SetEnv("_CONDOR_ENFORCE_CPU_AFFINITY", "true");
+		dprintf(D_FULLDEBUG, "Setting affinity env to %s = %s\n", affinityKnob.c_str(), affinityString.c_str());
+	}
+
+
 	ReliSock child_job_update_sock;   // child inherits this socket
 	ASSERT( !s_job_update_sock );
 	s_job_update_sock = new ReliSock; // parent (yours truly) keeps this socket

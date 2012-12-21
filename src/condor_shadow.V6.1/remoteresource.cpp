@@ -1058,7 +1058,6 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	}
 
 	// Copy through Network* attributes
-#if defined(WITH_LARK)
 	ExprTree* expr;
 	const char * attr_name;
 	update_ad->ResetExpr();
@@ -1069,7 +1068,6 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			jobAd->CopyAttribute(attr_name, update_ad);
 		}
 	}
-#endif
 
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, float_value) ) {
 		remote_rusage.ru_stime.tv_sec = (int) float_value; 
