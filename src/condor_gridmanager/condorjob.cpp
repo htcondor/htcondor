@@ -749,7 +749,8 @@ void CondorJob::doEvaluateState()
 				gmState = GM_RELEASE_REMOTE_JOB;
 			} else if ( jobProxy &&
 						( lastProxyExpireTime < jobProxy->expiration_time ||
-						  delegatedProxyRenewTime < now ) ) {
+						  ( delegatedProxyRenewTime != 0 &&
+							delegatedProxyRenewTime < now ) ) ) {
 				int interval = param_integer( "GRIDMANAGER_PROXY_REFRESH_INTERVAL", 10*60 );
 				if ( now >= lastProxyRefreshAttempt + interval ) {
 					gmState = GM_REFRESH_PROXY;
