@@ -2814,6 +2814,22 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	}
 
 		//
+		// Print node counts.
+		//
+	fprintf( outfile, "\n" );
+	fprintf( outfile, "Nodes total: %d\n", NumNodes( true ) );
+	fprintf( outfile, "Nodes done: %d\n", NumNodesDone( true ) );
+	fprintf( outfile, "Nodes pre: %d\n", PreRunNodeCount() );
+	fprintf( outfile, "Nodes queued: %d\n", NumJobsSubmitted() );
+	fprintf( outfile, "Nodes post: %d\n", PostRunNodeCount() );
+	fprintf( outfile, "Nodes ready: %d\n", NumNodesReady() );
+	int unready = NumNodes( true )  - (NumNodesDone( true ) +
+				PreRunNodeCount() + NumJobsSubmitted() + PostRunNodeCount() +
+				NumNodesReady() + NumNodesFailed()  );
+	fprintf( outfile, "Nodes un-ready: %d\n", unready );
+	fprintf( outfile, "Nodes failed: %d\n", NumNodesFailed() );
+
+		//
 		// Print overall DAG status.
 		//
 	Job::status_t dagStatus = Job::STATUS_SUBMITTED;
