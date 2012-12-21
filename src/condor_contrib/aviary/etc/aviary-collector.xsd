@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 -->
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:coll="http://query.aviary.grid.redhat.com" xmlns:mrg="http://common.aviary.grid.redhat.com" targetNamespace="http://collector.aviary.grid.redhat.com">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:coll="http://collector.aviary.grid.redhat.com" xmlns:mrg="http://common.aviary.grid.redhat.com" targetNamespace="http://collector.aviary.grid.redhat.com">
 	<xs:import namespace="http://common.aviary.grid.redhat.com" schemaLocation="aviary-common.xsd"/>
 	<!-- declare  message-level elements using anonymous complex types for simpler generated types -->
 	<!-- use of refs, inheritance into anonymous types, etc. eschewed for simplicity and interop -->
@@ -167,7 +167,7 @@
 	<xs:element name="GetAttributes">
 		<xs:complexType>
 			<xs:sequence>
-				<xs:element name="ids" type="AttributeRequest" minOccurs="1" maxOccurs="unbounded"/>
+				<xs:element name="ids" type="coll:AttributeRequest" minOccurs="1" maxOccurs="unbounded"/>
 			</xs:sequence>
 			<xs:attribute name="valuesOnly" type="xs:boolean" default="false"/>
 		</xs:complexType>
@@ -175,7 +175,7 @@
 	<xs:element name="GetAttributesResponse">
 		<xs:complexType>
 			<xs:sequence>
-				<xs:element name="results" type="AttributeResponse" minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element name="results" type="coll:AttributeResponse" minOccurs="0" maxOccurs="unbounded"/>
 				<xs:element name="status" type="mrg:Status"/>
 			</xs:sequence>
 		</xs:complexType>

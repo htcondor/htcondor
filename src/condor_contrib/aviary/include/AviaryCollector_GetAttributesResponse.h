@@ -20,6 +20,8 @@
         
 
         
+                #include "AviaryCollector_AttributeResponse.h"
+              
                 #include "AviaryCommon_Status.h"
               
         #include <axutil_qname.h>
@@ -40,7 +42,7 @@ namespace AviaryCollector
         private:
              
                 axutil_qname_t* qname;
-            std::vector<wso2wsf::OMElement*>* property_Results;
+            std::vector<AviaryCollector::AttributeResponse*>* property_Results;
 
                 
                 bool isValidResults;
@@ -84,11 +86,11 @@ namespace AviaryCollector
         /**
          * Constructor for creating GetAttributesResponse
          * @param 
-         * @param Results std::vector<wso2wsf::OMElement*>*
+         * @param Results std::vector<AviaryCollector::AttributeResponse*>*
          * @param Status AviaryCommon::Status*
          * @return newly created GetAttributesResponse object
          */
-        GetAttributesResponse(std::vector<wso2wsf::OMElement*>* arg_Results,AviaryCommon::Status* arg_Status);
+        GetAttributesResponse(std::vector<AviaryCollector::AttributeResponse*>* arg_Results,AviaryCommon::Status* arg_Status);
         
 
         /**
@@ -102,19 +104,19 @@ namespace AviaryCollector
 
         /**
          * Getter for results. Deprecated for array types, Use getResultsAt instead
-         * @return Array of wso2wsf::OMElement*s.
+         * @return Array of AviaryCollector::AttributeResponse*s.
          */
-        WSF_EXTERN std::vector<wso2wsf::OMElement*>* WSF_CALL
+        WSF_EXTERN std::vector<AviaryCollector::AttributeResponse*>* WSF_CALL
         getResults();
 
         /**
          * Setter for results.Deprecated for array types, Use setResultsAt
          * or addResults instead.
-         * @param arg_Results Array of wso2wsf::OMElement*s.
+         * @param arg_Results Array of AviaryCollector::AttributeResponse*s.
          * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setResults(std::vector<wso2wsf::OMElement*>*  arg_Results);
+        setResults(std::vector<AviaryCollector::AttributeResponse*>*  arg_Results);
 
         /**
          * Re setter for results
@@ -176,30 +178,30 @@ namespace AviaryCollector
         /**
          * Get the ith element of results.
         * @param i index of the item to be obtained
-         * @return ith wso2wsf::OMElement* of the array
+         * @return ith AviaryCollector::AttributeResponse* of the array
          */
-        WSF_EXTERN wso2wsf::OMElement* WSF_CALL
+        WSF_EXTERN AviaryCollector::AttributeResponse* WSF_CALL
         getResultsAt(int i);
 
         /**
          * Set the ith element of results. (If the ith already exist, it will be replaced)
          * @param i index of the item to return
-         * @param arg_Results element to set wso2wsf::OMElement* to the array
-         * @return ith wso2wsf::OMElement* of the array
+         * @param arg_Results element to set AviaryCollector::AttributeResponse* to the array
+         * @return ith AviaryCollector::AttributeResponse* of the array
          */
         WSF_EXTERN bool WSF_CALL
         setResultsAt(int i,
-                wso2wsf::OMElement* arg_Results);
+                AviaryCollector::AttributeResponse* arg_Results);
 
 
         /**
          * Add to results.
-         * @param arg_Results element to add wso2wsf::OMElement* to the array
+         * @param arg_Results element to add AviaryCollector::AttributeResponse* to the array
          * @return true on success, false otherwise.
          */
         WSF_EXTERN bool WSF_CALL
         addResults(
-            wso2wsf::OMElement* arg_Results);
+            AviaryCollector::AttributeResponse* arg_Results);
 
         /**
          * Get the size of the results array.
@@ -332,10 +334,10 @@ namespace AviaryCollector
 
         /**
          * Getter for results by property number (1)
-         * @return Array of wso2wsf::OMElement*s.
+         * @return Array of AviaryCollector::AttributeResponses.
          */
 
-        std::vector<wso2wsf::OMElement*>* WSF_CALL
+        std::vector<AviaryCollector::AttributeResponse*>* WSF_CALL
         getProperty1();
 
     
