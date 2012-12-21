@@ -1,7 +1,6 @@
 import logging
 import xml.sax.handler
 import os
-from popen2 import Popen3
 from select import select
 
 from campus_factory.util.ExternalCommands import RunExternal
@@ -75,6 +74,10 @@ class IdleJobs(AvailableGlideins):
         super(IdleJobs, self).__init__()
         self.command = self.command % schedd
 
+class IdleLocalJobs(AvailableGlideins):
+    
+    command = "condor_q -const '(GlideinJob =!= true) &&  (JobStatus == 1) && (JobUniverse == 5)' -format '<glidein owner=\"%s\"/>' 'Owner'"
+        
 
 class FactoryID(AvailableGlideins):
     command = "condor_q -const '(IsUndefined(IsFactory) == FALSE)' -format '<factory id=\"%s\"/>' 'ClusterId'"

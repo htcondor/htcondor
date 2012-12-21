@@ -513,6 +513,21 @@ void INFNBatchJob::doEvaluateState()
 				m_filetrans->setPeerVersion( ver_info );
 			}
 
+			// If available, use SSH tunnel for file transfer connections.
+			// Take our sinful string and replace the IP:port with
+			// the one that should be used on the remote side for
+			// tunneling.
+			if ( m_xfer_gahp->getSshForwardPort() ) {
+				std::string new_addr;
+				const char *old_addr = daemonCore->InfoCommandSinfulString();
+				while ( *old_addr != '\0' && *old_addr != '?' && *old_addr != '>' ) {
+					old_addr++;
+				}
+				formatstr( new_addr, "<127.0.0.1:%d%s",
+						   m_xfer_gahp->getSshForwardPort(), old_addr );
+				gahpAd->Assign( ATTR_TRANSFER_SOCKET, new_addr );
+			}
+
 			std::string sandbox_path;
 			rc = m_xfer_gahp->blah_download_sandbox( remoteSandboxId, gahpAd,
 													 m_sandboxPath );
@@ -727,6 +742,21 @@ void INFNBatchJob::doEvaluateState()
 					m_filetrans->AddDownloadFilenameRemap( StderrRemapName,
 														   file.c_str() );
 				}
+			}
+
+			// If available, use SSH tunnel for file transfer connections.
+			// Take our sinful string and replace the IP:port with
+			// the one that should be used on the remote side for
+			// tunneling.
+			if ( m_xfer_gahp->getSshForwardPort() ) {
+				std::string new_addr;
+				const char *old_addr = daemonCore->InfoCommandSinfulString();
+				while ( *old_addr != '\0' && *old_addr != '?' && *old_addr != '>' ) {
+					old_addr++;
+				}
+				formatstr( new_addr, "<127.0.0.1:%d%s",
+						   m_xfer_gahp->getSshForwardPort(), old_addr );
+				gahpAd->Assign( ATTR_TRANSFER_SOCKET, new_addr );
 			}
 
 			rc = m_xfer_gahp->blah_upload_sandbox( remoteSandboxId, gahpAd );
@@ -1455,6 +1485,23 @@ void INFNBatchJob::CreateSandboxId()
 		pool_name = collectors.print_to_string();
 	} else {
 		pool_name = strdup( "NoPool" );
+	}
+
+	// The sandbox id becomes a directory on the remote side.
+	// Having ':', '?', ' ', or ',' in a path can mess up PBS and
+	// other systems, so we need to remove them.
+	for ( char *ptr = pool_name; *ptr != '\0'; ptr++ ) {
+		switch( *ptr ) {
+		case ':':
+			*ptr = '_';
+			break;
+		case '?':
+		case ',':
+		case ' ':
+		case '\t':
+			*ptr = '\0';
+			break;
+		}
 	}
 
 	// use "ATTR_GLOBAL_JOB_ID" to get unique global job id

@@ -9,6 +9,7 @@ from campus_factory.Parsers import IdleJobs
 from campus_factory.Parsers import FactoryID
 from campus_factory.Parsers import RunningGlideinsJobs
 from campus_factory.Parsers import RunningGlideins
+from campus_factory.Parsers import IdleLocalJobs
 from campus_factory.util.ExternalCommands import RunExternal
 
 from GlideinWMS.condorMonitor import CondorQ, CondorStatus
@@ -204,6 +205,11 @@ class ClusterStatus:
             idlejobs = IdleJobs(schedd)
             schedd_idlejobs = idlejobs.GetIdle()
             schedd_owner_idle[schedd] = idlejobs.GetOwnerIdle()
+        
+        # Also, always query the local schedd
+        idle_local_jobs = IdleLocalJobs()
+        idle_local_jobs.GetIdle()
+        schedd_owner_idle[""] = idle_local_jobs.GetOwnerIdle()
 
         return schedd_owner_idle
 

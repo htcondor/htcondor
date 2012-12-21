@@ -1546,6 +1546,7 @@ processCommandLineArguments (int argc, char *argv[])
 				attrs.append( ATTR_GRID_RESOURCE );
 				attrs.append( ATTR_GRID_JOB_STATUS );
 				attrs.append( ATTR_GLOBUS_STATUS );
+    			attrs.append( ATTR_EC2_REMOTE_VM_NAME );
 				Q.addAND( "JobUniverse == 9" );
 			}
 		}
@@ -1953,9 +1954,9 @@ format_remote_host (char *, AttrList *ad)
 			return unknownHost;
 		}
 	} else if (universe == CONDOR_UNIVERSE_GRID) {
-		if (ad->LookupString(ATTR_GRID_RESOURCE,host_result, sizeof(host_result)) == 1 )
+		if (ad->LookupString(ATTR_EC2_REMOTE_VM_NAME,host_result,sizeof(host_result)) == 1)
 			return host_result;
-		else if (ad->LookupString(ATTR_EC2_REMOTE_VM_NAME,host_result,sizeof(host_result)) == 1)
+		else if (ad->LookupString(ATTR_GRID_RESOURCE,host_result, sizeof(host_result)) == 1 )
 			return host_result;
 		else
 			return unknownHost;
@@ -2274,7 +2275,7 @@ format_gridType( int , AttrList * ad )
 #endif
 
 static const char *
-format_gridResource( char * grid_res, AttrList * /*ad*/, Formatter & /*fmt*/ )
+format_gridResource( char * grid_res, AttrList * ad, Formatter & /*fmt*/ )
 {
 	std::string grid_type;
 	std::string str = grid_res;
@@ -2319,19 +2320,21 @@ format_gridResource( char * grid_res, AttrList * /*ad*/, Formatter & /*fmt*/ )
 	mystr.replaceString(" ", "/");
 	mgr = mystr.Value();
 
-	static char result_str[1024];
-	//sprintf(result, " %-6.6s %-8.8s %-18.18s  ", grid_type.c_str(), mgr.c_str(), host.c_str());
-	//sprintf(result, " %-6s %-8s %18s  ", grid_type.c_str(), mgr.c_str(), host.c_str());
-	sprintf(result_str, "%s->%s %s", grid_type.c_str(), mgr.c_str(), host.c_str());
+    static char result_str[1024];
+    if( MATCH == grid_type.compare( "ec2" ) ) {
+        // mgr = str.substr( ixHost, ix3 - ixHost - 3 );
+        char rvm[MAXHOSTNAMELEN];
+        if( ad->LookupString( ATTR_EC2_REMOTE_VM_NAME, rvm, sizeof( rvm ) ) ) {
+            host = rvm;
+        }
+        
+        snprintf( result_str, 1024, "%s %s", grid_type.c_str(), host.c_str() );
+    } else {
+    	snprintf(result_str, 1024, "%s->%s %s", grid_type.c_str(), mgr.c_str(), host.c_str());
+    }
+        	
 	ix2 = strlen(result_str);
-	/*
-	while (ix2 < width) {
-		result[ix2++] = ' ';
-		result[ix2] = 0;
-	}
-	*/
 	if ( ! widescreen) ix2 = width;
-	//result[ix2++] = ' ';
 	result_str[ix2] = 0;
 	return result_str;
 }
