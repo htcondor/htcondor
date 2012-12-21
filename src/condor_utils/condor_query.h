@@ -175,6 +175,7 @@ class CondorQuery
 		// to be returned in the queried ads.
 		// If not set, all attributes are returned.
 	void setDesiredAttrs(char const * const *attrs);
+	void setDesiredAttrsExpr(const char *expr);
 
   private:
 		// These are unimplemented, so make them private so that they

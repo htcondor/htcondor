@@ -2844,6 +2844,18 @@ obtainAdsFromCollector (
         publicQuery.addORConstraint("(MyType == \"Machine\")");
     }
 
+	// If preemption is disabled, we only need a handful of attrs from claimed ads.
+	// Ask for that projection.
+
+	if (!ConsiderPreemption) {
+		const char *projectionString =
+			"ifThenElse(State == \"Claimed\",\"Name State Activity StartdIpAddr AccountingGroup Owner RemoteUser Requirements\",\"\") ";
+		publicQuery.setDesiredAttrsExpr(projectionString);
+
+		dprintf(D_ALWAYS, "Not considering preemption, therefore constraining idle machines with %s\n", projectionString);
+	}
+
+	
     CondorError errstack;
 	dprintf(D_ALWAYS, "  Getting Scheduler, Submitter and Machine ads ...\n");
 	result = collects->query (publicQuery, allAds, &errstack);
