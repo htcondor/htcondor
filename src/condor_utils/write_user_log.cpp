@@ -690,7 +690,7 @@ WriteUserLog::openGlobalLog( bool reopen, const UserLogHeader &header )
 		return false;
 	}
 	if (!m_global_lock->obtain(WRITE_LOCK) ) {
-		dprintf( D_ALWAYS, "ERROR WriteUserLog Failed to grab global event log lock\n" );
+		dprintf( D_ALWAYS, "WARNING WriteUserLog::openGlobalLog failed to obtain global event log lock, an event will not be written to the global event log\n" );
 		return false;
 	}
 
@@ -744,7 +744,7 @@ WriteUserLog::openGlobalLog( bool reopen, const UserLogHeader &header )
 
 
 	if (!m_global_lock->release() ) {
-		dprintf( D_ALWAYS, "ERROR WriteUserLog Failed to release global lock\n" );
+		dprintf( D_ALWAYS, "WARNING WriteUserLog::openGlobalLog failed to release global lock\n" );
 	}
 
 	set_priv( priv );
@@ -813,7 +813,7 @@ WriteUserLog::checkGlobalLogRotation( void )
 
 	// Get the rotation lock
 	if ( !m_rotation_lock->obtain( WRITE_LOCK ) ) {
-		dprintf( D_ALWAYS, "ERROR WriteUserLog Failed to get rotation lock\n" );
+		dprintf( D_ALWAYS, "WARNING WriteUserLog::checkGlobalLogRotation failed to get rotation lock, we may log to the wrong log for a period\n" );
 		return false;
 	}
 
@@ -1341,7 +1341,7 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 	// Open the global log
 	bool globalOpenError = false;
 	if ( !openGlobalLog(false) ) {
-		dprintf( D_ALWAYS, "ERROR: WriteUserLog: Failed to open global log!\n" );
+		dprintf( D_ALWAYS, "WARNING WriteUserLog::writeEvent failed to open global log! The global event log will be missing an event.\n" );
 		// We *don't* want to return here, so we at least try to write
 		// to the "normal" log (see gittrac #2858).
 		globalOpenError = true;
@@ -1357,8 +1357,7 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 	//TEMPTEMP -- don't try if we got a global open error
 	if ( !globalOpenError && !m_global_disable && m_global_path ) {
 		if ( ! doWriteGlobalEvent(event, param_jobad)  ) {
-			dprintf( D_ALWAYS, "ERROR: WriteUserLog: global doWriteEvent() failed on"
-				" global log!\n" );
+			dprintf( D_ALWAYS, "WARNING: WriteUserLog::writeEvent global doWriteEvent() failed on global log! The global event log will be missing an event.\n" );
 			// We *don't* want to return here, so we at least try to write
 			// to the "normal" log (see gittrac #2858).
 		}
@@ -1402,8 +1401,7 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 			}
 			if ( ! doWriteEvent(event, *p, false, false, (p == logs.begin()) && m_use_xml,
 					param_jobad) ) {
-				dprintf( D_ALWAYS, "ERROR: WriteUserLog: user doWriteEvent() failed on"
-					" normal log %s!\n", p->path.c_str() );
+				dprintf( D_ALWAYS, "WARNING: WriteUserLog::writeEvent user doWriteEvent() failed on normal log %s!\n", p->path.c_str() );
 				ret = false;
 			}
 			if( (p == logs.begin()) && param_jobad ) {
