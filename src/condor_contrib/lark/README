@@ -66,7 +66,7 @@ NOTE: The veth device will already be deleted prior to invoking this script
       were issues spawning the job.  This may get called multiple times and
       it may get called even if NETWORK_NAMESPACE_CREATE_SCRIPT wasn't invoked.
 
-KNOWN ISSUES:
+KNOWN ISSUES / TODO:
 - The bridge must be setup and configured beforehand when using bridging mode.
 - The bridge forwarding delay must be set to 0.
 - Network accounting does not work in bridge mode.
@@ -78,4 +78,6 @@ KNOWN ISSUES:
 - The admin-provided callout scripts will likely be changed in the future to
   read the starter classad from stdin, rather than have fixed command-line
   arguments
+- It would be convenient if the DHCP client could set the vendor-class-id
+  (DHCP option 60) in order for networks to "group" clients.
 
