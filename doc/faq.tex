@@ -1349,7 +1349,7 @@ them so that HTCondor can re-create them with the new template account.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 A single machine with HTCondor installed such that jobs may
 be submitted is the minimum software necessary.
-If matchmaking or glidein is desired,
+If matchmaking is desired,
 then a single machine must not only be running HTCondor
 such that jobs may be submitted,
 but also fill the role of a central manager.
@@ -1369,27 +1369,6 @@ By setting configuration variables within each pool,
 jobs may be executed on either cluster.
 See the manual section on flocking, section~\ref{sec:Flocking},
 for details.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{What is glidein?}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\index{glidein}
-Glidein provides a way to temporarily add a resource
-to a local HTCondor pool.
-Glidein uses Globus resource-management software to run jobs
-on the resource.
-Those jobs are initially portions of HTCondor
-software, such that HTCondor is running on the resource,
-configured to be part of the local pool.
-Then, HTCondor may execute the user's jobs.
-There are several benefits to working in this way.
-Standard universe jobs may be submitted to run on the resource.
-HTCondor can also dynamically schedule jobs across the grid.
-
-See the section on Glidein, section~\ref{sec:Glidein} of the manual
-for further information.
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{Using my Globus gatekeeper to submit jobs to the HTCondor pool
