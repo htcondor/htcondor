@@ -440,7 +440,7 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 		// Note that on Win32, we use this method as well if encryption 
 		// is required.
 		while (total < bytes_to_send &&
-			   (nrd = ::read(fd, buf, bytes_to_send-total < sizeof(buf) ? bytes_to_send-total : sizeof(buf))) > 0) {
+			   (nrd = ::read(fd, buf, (size_t)(bytes_to_send-total) < sizeof(buf) ? bytes_to_send-total : sizeof(buf))) > 0) {
 			if ((nbytes = put_bytes_nobuffer(buf, nrd, 0)) < nrd) {
 					// put_bytes_nobuffer() does the appropriate
 					// looping for us already, the only way this could
