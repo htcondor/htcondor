@@ -452,7 +452,7 @@ email_close(FILE *mailer)
 			free( temp );
 		}
 		fprintf( mailer, "The Official Condor Homepage is "
-				 "http://www.cs.wisc.edu/condor\n" );
+				 "http://www.cs.wisc.edu/htcondor\n" );
 	}
 
 	fflush(mailer);
