@@ -4107,8 +4107,9 @@ WANT_HOLD_REASON = \
 \item[\Macro{STARTD\_NOCLAIM\_SHUTDOWN}]
   The number of seconds to run without receiving a claim before
   shutting HTCondor down on this machine.  Defaults to unset, which
-  means to never shut down.  This is primarily intended for \condor{glidein}.
-  Use in other situations is not recommended.
+  means to never shut down.  
+  This is primarily intended to facilitate glidein;
+  use in other situations is not recommended.
 
 \label{param:StartdPublishWinreg}
 \item[\Macro{STARTD\_PUBLISH\_WINREG}]
