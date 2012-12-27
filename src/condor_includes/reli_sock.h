@@ -160,7 +160,7 @@ public:
 				  bool flush_buffers=false, bool append=false, filesize_t max_bytes=-1);
     /// returns <0 on failure, 0 for ok
 	//  See put_file() for the meaning of specific return codes.
-	int put_file_with_permissions( filesize_t *size, const char *source, filesize_t max_bytes=0);
+	int put_file_with_permissions( filesize_t *size, const char *source, filesize_t max_bytes=-1);
     /// returns <0 on failure, 0 for ok
 	//  failure codes: PUT_FILE_OPEN_FAILED  (errno contains specific error)
 	//                 PUT_FILE_MAX_BYTES_EXCEEDED
@@ -169,9 +169,9 @@ public:
 	// we can continue talking to the receiver, as though a file had
 	// been successfully sent.  In most cases, the next logical thing
 	// to do is to tell the receiver about the failure.
-	int put_file( filesize_t *size, const char *source, filesize_t offset=0, filesize_t max_bytes=0);
+	int put_file( filesize_t *size, const char *source, filesize_t offset=0, filesize_t max_bytes=-1);
     /// returns -1 on failure, 0 for ok
-	int put_file( filesize_t *size, int fd, filesize_t offset=0, filesize_t max_bytes=0 );
+	int put_file( filesize_t *size, int fd, filesize_t offset=0, filesize_t max_bytes=-1 );
 	/// returns -1 on failure, 0 for ok
 	int get_x509_delegation( filesize_t *size, const char *destination,
 							 bool flush_buffers=false );
