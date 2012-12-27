@@ -739,7 +739,7 @@ It does not account for memory that the job uses indirectly in the operating
 system's file system cache.
 
 In the Requirements expression above, 
-HTCondor added \Expr{(Memory * 1024) >= ImageSize)} on behalf of the job.
+HTCondor added \Expr{(Memory * 1024) >= ImageSize} on behalf of the job.
 To prevent HTCondor from doing this,
 provide your own expression about memory in the submit description file,
 as in this example:
