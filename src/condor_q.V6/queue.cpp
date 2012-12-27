@@ -114,6 +114,16 @@ static int getConsoleWindowSize(int * pHeight = NULL) {
 }
 #endif
 
+static  int  testing_width = 0;
+static int getDisplayWidth() {
+	if (testing_width <= 0) {
+		testing_width = getConsoleWindowSize();
+		if (testing_width <= 0)
+			testing_width = 80;
+	}
+	return testing_width;
+}
+
 extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
 static  void processCommandLineArguments(int, char *[]);
@@ -310,7 +320,7 @@ static	void		doJobRunAnalysis( ClassAd*, Daemon* );
 static	const char *doJobRunAnalysisToBuffer( ClassAd*, Daemon* );
 static	void		doSlotRunAnalysis( ClassAd*, ClassAdList & jobs, Daemon*, int console_width);
 static	const char *doSlotRunAnalysisToBuffer( ClassAd*, ClassAdList & jobs, Daemon*, int console_width);
-static	bool		better_analyze = false;
+static	int			better_analyze = false;
 static	bool		reverse_analyze = false;
 static	int			analyze_detail_level = 0;
 static	bool		run = false;
@@ -365,6 +375,47 @@ static void freeConnectionStrings() {
 		free(queryPassword);
 		queryPassword = NULL;
 	}
+}
+
+static int longest_slot_machine_name = 0;
+static int longest_slot_name = 0;
+
+// Sort Machine ads by Machine name first, then by slotid, then then by slot name
+int SlotSort(ClassAd *ad1, ClassAd *ad2, void *  /*data*/)
+{
+	std::string name1, name2;
+	if ( ! ad1->LookupString(ATTR_MACHINE, name1))
+		return 1;
+	if ( ! ad2->LookupString(ATTR_MACHINE, name2))
+		return 0;
+	
+	// opportunisticly capture the longest slot machine name.
+	longest_slot_machine_name = MAX(longest_slot_machine_name, (int)name1.size());
+	longest_slot_machine_name = MAX(longest_slot_machine_name, (int)name2.size());
+
+	int cmp = name1.compare(name2);
+	if (cmp < 0) return 1;
+	if (cmp > 0) return 0;
+
+	int slot1=0, slot2=0;
+	ad1->LookupInteger(ATTR_SLOT_ID, slot1);
+	ad2->LookupInteger(ATTR_SLOT_ID, slot2);
+	if (slot1 < slot2) return 1;
+	if (slot1 > slot2) return 0;
+
+	PRAGMA_REMIND("TJ: revisit this code to compare dynamic slot id once that exists");
+	// for now, the only way to get the dynamic slot id is to use the slot name.
+	name1.clear(); name2.clear();
+	if ( ! ad1->LookupString(ATTR_NAME, name1))
+		return 1;
+	if ( ! ad2->LookupString(ATTR_NAME, name2))
+		return 0;
+	// opportunisticly capture the longest slot name.
+	longest_slot_name = MAX(longest_slot_name, (int)name1.size());
+	longest_slot_name = MAX(longest_slot_name, (int)name2.size());
+	cmp = name1.compare(name2);
+	if (cmp < 0) return 1;
+	return 0;
 }
 
 class CondorQClassAdFileParseHelper : public compat_classad::ClassAdFileParseHelper
@@ -1041,6 +1092,27 @@ GetAllReferencesFromClassAdExpr(char const *expression,StringList &references)
 	ad.GetExprReferences(expression,references,references);
 }
 
+static int
+parse_analyze_detail(const char * pch, int current_detail_level)
+{
+	PRAGMA_REMIND("TJ: analyze_detail_level should be enum rather than integer")
+	int detail_level = 0;
+	int flg = 0;
+	while (int ch = *pch) {
+		++pch;
+		if (ch >= '0' && ch <= '9') {
+			flg *= 10;
+			flg += ch - '0';
+		} else if (ch == ',' || ch == '+') {
+			detail_level |= flg;
+			flg = 0;
+		}
+	}
+	if (0 == (detail_level | flg))
+		return 0;
+	return current_detail_level | detail_level | flg;
+}
+
 static void 
 processCommandLineArguments (int argc, char *argv[])
 {
@@ -1083,8 +1155,9 @@ processCommandLineArguments (int argc, char *argv[])
 		// the '-' for prefix matches
 		arg = argv[i]+1;
 
-		if (is_arg_prefix (arg, "wide", 1)) {
+		if (is_arg_colon_prefix (arg, "wide", &pcolon, 1)) {
 			widescreen = true;
+			if (pcolon) { testing_width = atoi(++pcolon); }
 			continue;
 		}
 		//if (is_arg_prefix (arg, "unbuf", 5)) {
@@ -1472,24 +1545,34 @@ processCommandLineArguments (int argc, char *argv[])
 			|| is_arg_colon_prefix(arg, "analyze", &pcolon, 2)
 			|| is_arg_colon_prefix(arg, "analyse", &pcolon, 2)
 			) {
-			better_analyze = true;
+			better_analyze = (arg[0] == 'b') ? 2 : true; // keep track of whether the specified analyze or better-analyze
 			if (pcolon) { 
 				const char * pc;
 				if (is_arg_colon_prefix(pcolon+1, "reverse", &pc, 1)) {
 					reverse_analyze = true;
 					pcolon = pc;
 				}
-				PRAGMA_REMIND("TJ: analyze_detail_level should be enum rather than integer")
-				analyze_detail_level |= atoi(++pcolon); 
+				if (pcolon) {
+					analyze_detail_level = parse_analyze_detail(++pcolon, analyze_detail_level);
+				}
 			}
 			attrs.clearAll();
 		}
 		else
 		if (is_arg_colon_prefix(arg, "reverse", &pcolon, 3)) {
-			reverse_analyze = true;
+			reverse_analyze = true; // modify analyze to be reverse analysis
 			if (pcolon) { 
-				analyze_detail_level |= atoi(++pcolon); 
+				analyze_detail_level |= parse_analyze_detail(++pcolon, analyze_detail_level);
 			}
+		}
+		else
+		if (is_arg_colon_prefix(arg, "reverse-analyze", &pcolon, 10)) {
+			reverse_analyze = true; // modify analyze to be reverse analysis
+			better_analyze = true;	// enable analysis
+			if (pcolon) { 
+				analyze_detail_level |= parse_analyze_detail(++pcolon, analyze_detail_level);
+			}
+			attrs.clearAll();
 		}
 		else
 		if (is_arg_prefix(arg, "verbose", 4)) {
@@ -1632,6 +1715,9 @@ processCommandLineArguments (int argc, char *argv[])
 				i++;
 				userprios_file = strdup(argv[i]);
 			}
+		}
+		else if (is_arg_colon_prefix(arg, "nouserprios", &pcolon, 7)) {
+			userprios_file = strdup("");
 		}
 #ifdef HAVE_EXT_POSTGRESQL
 		else if (match_prefix(arg, "avgqueuetime")) {
@@ -2400,50 +2486,54 @@ format_q_date (int d, AttrList *)
 static void
 usage (const char *myName)
 {
-	printf ("Usage: %s [options]\n\twhere [options] are\n"
-		"\t\t-global\t\t\tGet global queue\n"
-		"\t\t-debug\t\t\tDisplay debugging info to console\n"
-		"\t\t-submitter <submitter>\tGet queue of specific submitter\n"
-		"\t\t-help\t\t\tThis screen\n"
-		"\t\t-name <name>\t\tName of schedd\n"
-		"\t\t-pool <host>\t\tUse host as the central manager to query\n"
-		"\t\t-long\t\t\tVerbose output (entire classads)\n"
-		"\t\t-wide\t\t\tWidescreen output\n"
-		"\t\t-xml\t\t\tDisplay entire classads, but in XML\n"
-		"\t\t-attributes X,Y,...\tAttributes to show in -xml and -long\n"
-		"\t\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
-		"\t\t-autoformat:[V,ntlh] <attr> [attr2 [attr3 ...]]\t\t    Print attr(s) with automatic formatting\n"
-		"\t\t-analyze\t\tPerform schedulability analysis on jobs\n"
-		"\t\t-reverse\t\tPerform schedulability analysis on machines\n"
-		"\t\t-run\t\t\tGet information about running jobs\n"
-		"\t\t-hold\t\t\tGet information about jobs on hold\n"
-		"\t\t-globus\t\t\tGet information about Condor-G jobs of type globus\n"
-		"\t\t-goodput\t\tDisplay job goodput statistics\n"	
-		"\t\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
-		"\t\t-currentrun\t\tDisplay times only for current run\n"
-		"\t\t-io\t\t\tShow information regarding I/O\n"
-		"\t\t-dag\t\t\tSort DAG jobs under their DAGMan\n"
-		"\t\t-expert\t\t\tDisplay shorter error messages\n"
-		"\t\t-constraint <expr>\tAdd constraint on job classads\n"
-		"\t\t-jobads <file>\t\tFile of job ads to display\n"
-		"\t\t-userlog <file>\t\tFile of user log to display\n"
-		"\t\t-machineads <file>\tFile of machine ads for analysis\n"
-		"\t\t-machineconstraint <expr>\tAnalyze machines matching the constraint\n"
-		"\t\t-userprios <file>\tFile of user priorities for analysis\n"
+	printf ("Usage: %s [options]\n    where [options] are\n"
+		"\t-global\t\t\tGet global queue\n"
+		"\t-debug\t\t\tDisplay debugging info to console\n"
+		"\t-submitter <submitter>\tGet queue of specific submitter\n"
+		"\t-help\t\t\tThis screen\n"
+		"\t-name <name>\t\tName of schedd\n"
+		"\t-pool <host>\t\tUse host as the central manager to query\n"
+		"\t-long\t\t\tVerbose output (entire classads)\n"
+		"\t-wide\t\t\tWidescreen output\n"
+		"\t-xml\t\t\tDisplay entire classads, but in XML\n"
+		"\t-attributes X,Y,...\tAttributes to show in -xml and -long\n"
+		"\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
+		"\t-autoformat:[V,ntlh] <attr> [attr2 [attr3 ...]]\n"
+		"\t\t\t\tPrint attr(s) with automatic formatting\n"
+		"\t-analyze\t\tPerform schedulability analysis on jobs\n"
+		"\t-better-analyze\t\tPerform more detailed schedulability analysis\n"
+		"\t-reverse\t\tAnalyze machines rather than jobs\n"
+		"\t-run\t\t\tGet information about running jobs\n"
+		"\t-hold\t\t\tGet information about jobs on hold\n"
+		"\t-globus\t\t\tGet information about Condor-eG jobs of type globus\n"
+		"\t-goodput\t\tDisplay job goodput statistics\n"	
+		"\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
+		"\t-currentrun\t\tDisplay times only for current run\n"
+		"\t-io\t\t\tShow information regarding I/O\n"
+		"\t-dag\t\t\tSort DAG jobs under their DAGMan\n"
+		"\t-expert\t\t\tDisplay shorter error messages\n"
+		"\t-constraint <expr>\tAdd constraint on job classads\n"
+		"\t-jobads <file>\t\tFile of job ads to display\n"
+		"\t-userlog <file>\t\tFile of user log to display\n"
+		"\t-machineads <file>\tFile of machine ads for analysis\n"
+		"\t-machineconstraint <name> Specify machine name, slot name or\n"
+		"\t\t\t\tmachine constraint for analysis\n"
+		"\t-userprios <file>\tFile of user priorities for analysis\n"
+		"\t-nouserprios\t\tDon't consider user priorities during analysis\n"
 #ifdef HAVE_EXT_POSTGRESQL
-		"\t\t-direct <rdbms | schedd>\n"
-		"\t\t\tPerform a direct query to the rdbms\n"
-		"\t\t\tor to the schedd without falling back to the queue\n"
-		"\t\t\tlocation discovery algortihm, even in case of error\n"
-		"\t\t-avgqueuetime\t\tAverage queue time for uncompleted jobs\n"
+		"\t-direct <rdbms | schedd>\n"
+		"\t\tPerform a direct query to the rdbms\n"
+		"\t\tor to the schedd without falling back to the queue\n"
+		"\t\tlocation discovery algortihm, even in case of error\n"
+		"\t-avgqueuetime\t\tAverage queue time for uncompleted jobs\n"
 #endif
-		"\t\t-stream-results \tProduce output as ads are fetched\n"
-		"\t\t-version\t\tPrint the Condor Version and exit\n"
-		"\t\trestriction list\n"
-		"\twhere each restriction may be one of\n"
-		"\t\t<cluster>\t\tGet information about specific cluster\n"
-		"\t\t<cluster>.<proc>\tGet information about specific job\n"
-		"\t\t<owner>\t\t\tInformation about jobs owned by <owner>\n",
+		"\t-stream-results \tProduce output as ads are fetched\n"
+		"\t-version\t\tPrint the Condor Version and exit\n"
+		"\trestriction list\n"
+		"    where each restriction may be one of\n"
+		"\t<cluster>\t\tGet information about specific cluster\n"
+		"\t<cluster>.<proc>\tGet information about specific job\n"
+		"\t<owner>\t\t\tInformation about jobs owned by <owner>\n",
 			myName);
 }
 
@@ -2592,7 +2682,7 @@ static void init_output_mask()
 		return;
 	setup_mask = true;
 
-	int console_width = getConsoleWindowSize();
+	int console_width = getDisplayWidth();
 
 	const char * mask_headings = NULL;
 
@@ -3271,7 +3361,7 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 
 		// sort jobs by (cluster.proc) if don't query database
 	if (!useDB) {
-		if (better_analyze && verbose) { fprintf(stderr, "Sorting..."); }
+		if (better_analyze && verbose) { fprintf(stderr, "Sorting %d Jobs...", jobs.Length()); }
 		jobs.Sort( (SortFunctionType)JobSort );
 	}
 
@@ -3279,6 +3369,19 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 	if( better_analyze ) {
 
 		if (verbose) { fprintf(stderr, "Done.\nFound %d job ads.\n", jobs.Length()); }
+		if (reverse_analyze) { 
+			if (verbose) { fprintf(stderr, "Sorting %d Slots...", startdAds.Length()); }
+			longest_slot_machine_name = 0;
+			longest_slot_name = 0;
+			if (startdAds.Length() == 1) {
+				// if there is a single machine ad, then always do detailed reverse analyze.
+				if ( ! analyze_detail_level) analyze_detail_level = 1;
+			} else {
+				startdAds.Sort(SlotSort);
+			}
+			if (verbose) { fprintf(stderr, "Done, longest machine name %d, longest slot name %d\n", longest_slot_machine_name, longest_slot_name); }
+		}
+
 
 			// print header
 		if (useDB) {
@@ -3296,17 +3399,27 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 			schedd_daemon.locate();
 
 		if (reverse_analyze) {
-			int console_width = widescreen ? getConsoleWindowSize() : 80;
-			startdAds.Open();
-			if (analyze_detail_level <= 0) {
-				printf("%-24.24s %12.12s %12.12s %9.9s\n", "Slot", "Job", "Slot", "");
-				printf("%-24.24s %12.12s %12.12s %9.9s\n", "Name", "Requirements", "Requirements", "Total");
-				printf("%-24.24s %12.12s %12.12s %9.9s\n", "------------------------", "---------", "---------", "---------");
+			int console_width = widescreen ? getDisplayWidth() : 80;
+			if (startdAds.Length() <= 0) {
+				// print something out?
+			} else {
+				bool analStartExpr = (better_analyze == 2) || (analyze_detail_level > 0);
+				if ( ! analStartExpr) {
+					std::string fmt;
+					int name_width = MAX(longest_slot_machine_name+7, longest_slot_name);
+					formatstr(fmt, "%%-%d.%ds", MAX(name_width, 16), MAX(name_width, 16));
+					fmt += " %12.12s %12.12s %10.10s\n";
+
+					printf(fmt.c_str(), "", "Slot's Req ",  "Job's Req  ",    "Both   ");
+					printf(fmt.c_str(), "Name", "Matches Job", "Matches Slot", "Match %");
+					printf(fmt.c_str(), "------------------------", "------------", "------------", "----------");
+				}
+				startdAds.Open();
+				while (ClassAd *slot = startdAds.Next()) {
+					doSlotRunAnalysis(slot, jobs, analyze_no_schedd ? NULL : &schedd_daemon, console_width);
+				}
+				startdAds.Close();
 			}
-			while (ClassAd *slot = startdAds.Next()) {
-				doSlotRunAnalysis(slot, jobs, analyze_no_schedd ? NULL : &schedd_daemon, console_width);
-			}
-			startdAds.Close();
 		} else {
 			jobs.Open();
 			while (ClassAd *job = jobs.Next()) {
@@ -3551,48 +3664,54 @@ setupAnalysis()
 		fprintf(stderr, "Done.\nFound %d machines ads.\n", startdAds.Length());
 	}
 
-	if (verbose) {
-		fprintf(stderr, "Fetching user priorities for analysis...");
-	}
-
+	// fetch user priorities, and propagate the user priority values into the machine ad's
+	// we fetch user priorities either directly from the negotiator, or from a file
+	// treat a userprios_file of "" as a signal to ignore user priority.
+	//
 	int cPrios = 0;
-	if (userprios_file != NULL) {
-		cPrios = read_userprio_file(userprios_file, prioTable);
-		if (cPrios < 0) {
-			PRAGMA_REMIND("TJ: don't exit here, just analyze without userprio information")
-			exit (1);
+	if ( ! userprios_file || userprios_file[0] ) {
+		if (verbose) {
+			fprintf(stderr, "Fetching user priorities for analysis...");
 		}
-	} else {
-		// fetch submittor prios
-		cPrios = fetchSubmittorPriosFromNegotiator(prioTable);
-		if (cPrios < 0) {
-			PRAGMA_REMIND("TJ: don't exit here, just analyze without userprio information")
-			exit(1);
-		}
-	}
 
-	if (verbose) {
-		fprintf(stderr, "Done.\nFound %d submitters\n", cPrios);
-	} else if (cPrios <= 0) {
-		printf( "Warning:  Found no submitters\n" );
-	}
-
-
-	// populate startd ads with remote user prios
-	startdAds.Open();
-	while( ( ad = startdAds.Next() ) ) {
-		if( ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) {
-			if( ( index = findSubmittor( remoteUser.c_str() ) ) != -1 ) {
-				sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , 
-							prioTable[index].prio );
-				ad->Insert( buffer );
+		if (userprios_file != NULL) {
+			cPrios = read_userprio_file(userprios_file, prioTable);
+			if (cPrios < 0) {
+				PRAGMA_REMIND("TJ: don't exit here, just analyze without userprio information")
+				exit (1);
+			}
+		} else {
+			// fetch submittor prios
+			cPrios = fetchSubmittorPriosFromNegotiator(prioTable);
+			if (cPrios < 0) {
+				PRAGMA_REMIND("TJ: don't exit here, just analyze without userprio information")
+				exit(1);
 			}
 		}
-#if !defined(WANT_OLD_CLASSADS)
-		ad->AddTargetRefs( TargetJobAttrs );
-#endif
+
+		if (verbose) {
+			fprintf(stderr, "Done.\nFound %d submitters\n", cPrios);
+		} else if (cPrios <= 0) {
+			printf( "Warning:  Found no submitters\n" );
+		}
+
+
+		// populate startd ads with remote user prios
+		startdAds.Open();
+		while( ( ad = startdAds.Next() ) ) {
+			if( ad->LookupString( ATTR_REMOTE_USER , remoteUser ) ) {
+				if( ( index = findSubmittor( remoteUser.c_str() ) ) != -1 ) {
+					sprintf( buffer , "%s = %f" , ATTR_REMOTE_USER_PRIO , 
+								prioTable[index].prio );
+					ad->Insert( buffer );
+				}
+			}
+			#if !defined(WANT_OLD_CLASSADS)
+			ad->AddTargetRefs( TargetJobAttrs );
+			#endif
+		}
+		startdAds.Close();
 	}
-	startdAds.Close();
 	
 
 	// setup condition expressions
@@ -3872,7 +3991,7 @@ static const char * GetIndentPrefix(int) { return ""; }
 static std::string strStep;
 #define StepLbl(ii) subs[ii].StepLabel(strStep, ii, 3)
 
-int AnalyzeThisSubExpr(classad::ExprTree* expr, std::vector<AnalSubExpr> & clauses, bool must_store, int depth)
+int AnalyzeThisSubExpr(ClassAd *myad, classad::ExprTree* expr, std::vector<AnalSubExpr> & clauses, bool must_store, int depth)
 {
 	classad::ExprTree::NodeKind kind = expr->GetKind( );
 	classad::ClassAdUnParser unparser;
@@ -3882,7 +4001,7 @@ int AnalyzeThisSubExpr(classad::ExprTree* expr, std::vector<AnalSubExpr> & claus
 	int  child_depth = depth;
 	int  logic_op = 0;
 	bool push_it = must_store;
-	bool chatty = false;
+	bool chatty = (analyze_detail_level & 0x100) != 0;
 	const char * pop = "";
 	int ix_me = -1, ix_left = -1, ix_right = -1, ix_grip = -1;
 
@@ -3911,6 +4030,8 @@ int AnalyzeThisSubExpr(classad::ExprTree* expr, std::vector<AnalSubExpr> & claus
 			}
 			if (absolute) {
 				left = NULL;
+			} else if ( ! left && strAttr == "START") {
+				left = myad->LookupExpr(strAttr.c_str());
 			}
 			show_work = false;
 			break;
@@ -3949,6 +4070,11 @@ int AnalyzeThisSubExpr(classad::ExprTree* expr, std::vector<AnalSubExpr> & claus
 			if (chatty) {
 				printf("     %d:call  : %s() %d args\n", kind, strLabel.c_str(), (int)args.size());
 			}
+			if (must_store) {
+				std::string str;
+				unparser.Unparse(str, expr);
+				if ( ! str.empty()) strLabel = str;
+			}
 			break;
 		}
 
@@ -3980,9 +4106,9 @@ int AnalyzeThisSubExpr(classad::ExprTree* expr, std::vector<AnalSubExpr> & claus
 		}
 	}
 
-	if (left) ix_left = AnalyzeThisSubExpr(left, clauses, evaluate_logical, child_depth);
-	if (right) ix_right = AnalyzeThisSubExpr(right, clauses, evaluate_logical, child_depth);
-	if (gripping) ix_grip = AnalyzeThisSubExpr(gripping, clauses, evaluate_logical, child_depth);
+	if (left) ix_left = AnalyzeThisSubExpr(myad, left, clauses, evaluate_logical, child_depth);
+	if (right) ix_right = AnalyzeThisSubExpr(myad, right, clauses, evaluate_logical, child_depth);
+	if (gripping) ix_grip = AnalyzeThisSubExpr(myad, gripping, clauses, evaluate_logical, child_depth);
 
 	if (push_it) {
 		if (left && ! right && ix_left >= 0) {
@@ -4181,7 +4307,7 @@ static void AnalyzePropagateConstants(std::vector<AnalSubExpr> & subs, bool show
 
 			const char * const_val = "";
 			if (subs[ix].constant)
-				const_val = subs[ix].hard_value ? "true" : "false";
+				const_val = subs[ix].hard_value ? "always" : "never";
 			if (ix_effective >= 0) {
 				printf("%s %5s\t%s%s\t is effectively %s e<%s>\n", 
 					   StepLbl(ix), const_val, pindent, subs[ix].Label(), subs[ix_effective].Label(), effective_path.c_str());
@@ -4195,6 +4321,10 @@ static void AnalyzePropagateConstants(std::vector<AnalSubExpr> & subs, bool show
 	} // check-if-constant
 }
 
+// insert spaces and \n into temp_buffer so that it will print out neatly on a display with the given width
+// spaces are added at the start of each newly created line for the given indet, 
+// but spaces are NOT added to the start of the input buffer.
+//
 static const char * PrettyPrintExprTree(classad::ExprTree *tree, std::string & temp_buffer, int indent, int width)
 {
 	classad::ClassAdUnParser unparser;
@@ -4207,46 +4337,79 @@ static const char * PrettyPrintExprTree(classad::ExprTree *tree, std::string & t
 	it = lastAnd = lineStart = temp_buffer.begin();
 	int indent_at_last_and = indent;
 	int pos = indent;  // we presume that the initial indent has already been printed by the caller.
+	bool was_and = false;
 
 	char chPrev = 0;
 	while (it != temp_buffer.end()) {
+
+		// as we iterate characters, keep track of the indent level
+		// and whether the current position is the 2nd character of && or ||
+		//
+		bool is_and = false;
 		if ((*it == '&' || *it == '|') && chPrev == *it) {
-			lastAnd = it + 1;
-			indent_at_last_and = indent;
+			is_and = true;
 		}
 		else if (*it == '(') { indent += 2; }
 		else if (*it == ')') { indent -= 2; }
+
+		// if the current position exceeds the width, we want to replace
+		// the character after the last && or || with a \n. We can count on
+		// the call putting a space after each && or ||, so replacing is safe.
+		// Note: this code may insert charaters into the stream, but will only do
+		// so BEFORE the current position, and it gurantees that the iterator
+		// will still point to the same character after the insert as it did before,
+		// so we don't loose our place.
+		//
 		if (pos >= width) {
 			if (lastAnd != lineStart) {
 				temp_buffer.replace(lastAnd, lastAnd + 1, 1, '\n');
 				lineStart = lastAnd + 1;
 				lastAnd = lineStart;
 				pos = 0;
+
+				// if we have to indent, we do that by inserting spaces at the start of line
+				// then we have to fixup iterators and position counters to account for
+				// the insertion. we do the fixup to avoid problems caused by std:string realloc
+				// as well as to avoid scanning any character in the input string more than once,
+				// which in turn guarantees that this code will always get to the end.
 				if (indent_at_last_and > 0) {
 					size_t cch = distance(temp_buffer.begin(), it);
+					size_t cchStart = distance(temp_buffer.begin(), lineStart);
 					temp_buffer.insert(lineStart, indent_at_last_and, ' ');
+					// it, lineStart & lastAnd can be invalid if the insert above reallocated the buffer.
+					// so we have to recreat them.
 					it = temp_buffer.begin() + cch + indent_at_last_and;
-					pos = indent_at_last_and;
+					lastAnd = lineStart = temp_buffer.begin() + cchStart;
+					pos = (int) distance(lineStart, it);
 				}
 				indent_at_last_and = indent;
 			}
 		}
+		// was_and will be true if this is the character AFTER && or ||
+		// if it is, this is a potential place to put a \n, so remember it.
+		if (was_and) {
+			lastAnd = it;
+			indent_at_last_and = indent;
+		}
+
 		chPrev = *it;
 		++it;
 		++pos;
+		was_and = is_and;
 	}
 	return temp_buffer.c_str();
 }
 
 static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & targets, std::string & return_buf, int detail_mask)
 {
+	int console_width = widescreen ? getDisplayWidth() : 80;
 	bool show_work = (detail_mask & 0x100) != 0;
 
 	bool request_is_machine = false;
 	const char * attrConstraint = ATTR_REQUIREMENTS;
 	if (0 == strcmp(request->GetMyTypeName(),STARTD_ADTYPE)) {
-		attrConstraint = ATTR_START;
-		//attrConstraint = ATTR_REQUIREMENTS;
+		//attrConstraint = ATTR_START;
+		attrConstraint = ATTR_REQUIREMENTS;
 		request_is_machine = true;
 	}
 
@@ -4258,7 +4421,7 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 	std::string strStep;
 	#define StepLbl(ii) subs[ii].StepLabel(strStep, ii, 3)
 
-	AnalyzeThisSubExpr(exprReq, subs, true, 0);
+	AnalyzeThisSubExpr(request, exprReq, subs, true, 0);
 
 	if (show_work) {
 		printf("\nEvaluate constants:\n");
@@ -4278,7 +4441,7 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 		for (int ix = 0; ix < (int)subs.size(); ++ix) {
 			const char * const_val = "";
 			if (subs[ix].constant)
-				const_val = subs[ix].hard_value ? "true" : "false";
+				const_val = subs[ix].hard_value ? "always" : "never";
 			std::string pruned = "";
 			if (subs[ix].dont_care) {
 				const_val = (subs[ix].constant) ? (subs[ix].hard_value ? "n/aT" : "n/aF") : "n/a";
@@ -4333,7 +4496,7 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 		for (int ix = 0; ix < (int)subs.size(); ++ix) {
 			const char * const_val = "";
 			if (subs[ix].constant)
-				const_val = subs[ix].hard_value ? "true" : "false";
+				const_val = subs[ix].hard_value ? "always" : "never";
 			if (subs[ix].ix_effective < 0 && ! subs[ix].dont_care) {
 				std::string altlbl;
 				//if ( ! subs[ix].MakeLabel(altlbl)) altlbl = "";
@@ -4369,7 +4532,7 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 		const char * pindent = GetIndentPrefix(subs[ix].depth);
 		const char * const_val = "";
 		if (subs[ix].constant) {
-			const_val = subs[ix].hard_value ? "true" : "false";
+			const_val = subs[ix].hard_value ? "always" : "never";
 			formatstr(linebuf, "%s %8s  %s%s\n", StepLbl(ix), const_val, pindent, subs[ix].Label());
 			return_buf += linebuf;
 			if (show_work) { printf("%s", linebuf.c_str()); }
@@ -4405,7 +4568,7 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 		if (append_pretty) { 
 			std::string treebuf;
 			linebuf += " ( "; 
-			PrettyPrintExprTree(subs[ix].tree, treebuf, linebuf.size(), 100); 
+			PrettyPrintExprTree(subs[ix].tree, treebuf, linebuf.size(), console_width); 
 			linebuf += treebuf; 
 			linebuf += " )";
 		}
@@ -4655,7 +4818,7 @@ static void AddReferencedAttribsToBuffer(
 	while(const char *attr = refs.next()) {
 		std::string label;
 		formatstr(label, "%s%s = %%V", pindent, attr);
-		if (0 == strcmp(attr, ATTR_REQUIREMENTS))
+		if (0 == strcasecmp(attr, ATTR_REQUIREMENTS) || 0 == strcasecmp(attr, ATTR_START))
 			continue;
 		pm.registerFormat(label.c_str(), 0, FormatOptionNoTruncate, attr);
 	}
@@ -4694,8 +4857,15 @@ static void AddTargetReferencedAttribsToBuffer(
 		//return_buf += "\n";
 		//return_buf += pindent;
 		std::string name;
-		if ( ! target->LookupString(ATTR_NAME, name))
-			name = "Target";
+		if ( ! target->LookupString(ATTR_NAME, name)) {
+			int cluster=0, proc=0;
+			if (target->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
+				target->LookupInteger(ATTR_PROC_ID, proc);
+				formatstr(name, "Job %d.%d", cluster, proc);
+			} else {
+				name = "Target";
+			}
+		}
 		return_buf += name;
 		return_buf += " has the following attributes:\n\n";
 		return_buf += temp;
@@ -4748,7 +4918,10 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	int     fOffline        = 0;
 	int		available		= 0;
 	int		totalMachines	= 0;
-	bool	forceReqAnalyze = (analyze_detail_level & 4);
+	bool	alwaysReqAnalyze = (better_analyze == 2) || (analyze_detail_level & 0x10);
+	bool	analEachReqClause = (better_analyze == 2) || (analyze_detail_level > 1);
+	bool	useNewPrettyReq = true;
+	bool	showJobAttrs = (better_analyze == 2 || analyze_detail_level > 0) && ! (analyze_detail_level & 0x20);
 
 	return_buff[0]='\0';
 
@@ -4784,7 +4957,7 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		sprintf( return_buff,
 			"---\n%03d.%03d:  Request is being serviced\n\n", cluster, 
 			proc );
-		if ( ! forceReqAnalyze)
+		if ( ! alwaysReqAnalyze)
 			return return_buff;
 	}
 	if( jobState == HELD ) {
@@ -4797,28 +4970,28 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 			size_t offset = strlen(return_buff);
 			snprintf( return_buff + offset, sizeof(return_buff)-offset, "Hold reason: %s\n\n", hold_reason.Value() );
 		}
-		if ( ! forceReqAnalyze)
+		if ( ! alwaysReqAnalyze)
 			return return_buff;
 	}
 	if( jobState == REMOVED ) {
 		sprintf( return_buff,
 			"---\n%03d.%03d:  Request is removed.\n\n", cluster, 
 			proc );
-		if ( ! forceReqAnalyze)
+		if ( ! alwaysReqAnalyze)
 			return return_buff;
 	}
 	if( jobState == COMPLETED ) {
 		sprintf( return_buff,
 			"---\n%03d.%03d:  Request is completed.\n\n", cluster, 
 			proc );
-		if ( ! forceReqAnalyze)
+		if ( ! alwaysReqAnalyze)
 			return return_buff;
 	}
 	if ( jobMatched ) {
 		sprintf( return_buff,
 			"---\n%03d.%03d:  Request has been matched.\n\n", cluster, 
 			proc );
-		if ( ! forceReqAnalyze)
+		if ( ! alwaysReqAnalyze)
 			return return_buff;
 	}
 
@@ -4885,7 +5058,7 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 			    sprintf( return_buff,
 				     "---\n%03d.%03d:  Request has not yet been considered by the matchmaker.\n\n", cluster,
 				     proc );
-				if ( ! forceReqAnalyze)
+				if ( ! alwaysReqAnalyze)
 					return return_buff;
 			  }
 			}
@@ -4943,7 +5116,7 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 				    sprintf( return_buff,
 					     "---\n%03d.%03d:  Request has not yet been considered by the matchmaker.\n\n", cluster,
 					     proc );
-					if ( ! forceReqAnalyze)
+					if ( ! alwaysReqAnalyze)
 						return return_buff;
 				  }
 				}
@@ -5031,27 +5204,32 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
         }
 	}
 
-	if (better_analyze && ((fReqConstraint > 0) || analyze_detail_level > 0)) {
+	if (better_analyze && ((fReqConstraint > 0) || analyze_detail_level > 0 || alwaysReqAnalyze)) {
 
 		// first analyze the Requirements expression against the startd ads.
 		//
-		std::string subexpr_buf = "";
+		std::string suggest_buf = "";
 		std::string pretty_req = "";
-		analyzer.AnalyzeJobReqToBuffer( request, startdAds, subexpr_buf, pretty_req );
-		if ((int)subexpr_buf.size() > SHORT_BUFFER_SIZE)
-		   subexpr_buf.erase(SHORT_BUFFER_SIZE, string::npos);
+		analyzer.AnalyzeJobReqToBuffer( request, startdAds, suggest_buf, pretty_req );
+		if ((int)suggest_buf.size() > SHORT_BUFFER_SIZE)
+		   suggest_buf.erase(SHORT_BUFFER_SIZE, string::npos);
 
-		if (0 == analyze_detail_level) {
+		bool requirements_is_false = (suggest_buf == "Job ClassAd Requirements expression evaluates to false\n\n");
+
+		if ( ! useNewPrettyReq) {
 			strcat(return_buff, pretty_req.c_str());
 		}
 		pretty_req = "";
 
-		if (analyze_detail_level > 0) {
+		if (useNewPrettyReq) {
 			classad::ExprTree* tree = request->LookupExpr(ATTR_REQUIREMENTS);
 			if (tree) {
-				int console_width = widescreen ? getConsoleWindowSize() : 80;
-				PrettyPrintExprTree(tree, pretty_req, 4, console_width-1);
-				strcat(return_buff, "\nThe Requirements expression for your job is:\n\n    ");
+				int console_width = widescreen ? getDisplayWidth() : 80;
+				const int indent = 4;
+				PrettyPrintExprTree(tree, pretty_req, indent, console_width);
+				strcat(return_buff, "\nThe Requirements expression for your job is:\n\n");
+				std::string spaces; spaces.insert(0, indent, ' ');
+				strcat(return_buff, spaces.c_str());
 				strcat(return_buff, pretty_req.c_str());
 				strcat(return_buff, "\n\n");
 				pretty_req = "";
@@ -5060,7 +5238,7 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 
 		// then capture the values of MY attributes refereced by the expression
 		// also capture the value of TARGET attributes if there is only a single ad.
-		if (analyze_detail_level > 0) {
+		if (showJobAttrs) {
 			std::string attrib_values = "";
 			attrib_values = "Your job defines the following attributes:\n\n";
 			StringList trefs;
@@ -5077,22 +5255,21 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 				}
 				startdAds.Close();
 			}
-			strcat(return_buff, "\nThe Requirements expression for your job has these conditions:\n\n");
+			strcat(return_buff, "\n");
 		}
-
-		// write analysis of the requirements expression.
 
 		// TJ's experimental analysis (now with more anal)
-		if (analyze_detail_level > 1) {
+		if (analEachReqClause || requirements_is_false) {
 			std::string subexpr_detail;
 			AnalyzeRequirementsForEachTarget(request, startdAds, subexpr_detail, analyze_detail_level);
+			strcat(return_buff, "The Requirements expression for your job reduces to these conditions:\n\n");
 			strcat(return_buff, subexpr_detail.c_str());
-			strcat(return_buff, "\nSuggestions:\n\n");
 		}
 
-		// write the analyzers analysis to the buffer
+		// write the analysis/suggestions to the return buffer
 		//
-		strcat(return_buff, subexpr_buf.c_str());
+		strcat(return_buff, "\nSuggestions:\n\n");
+		strcat(return_buff, suggest_buf.c_str());
 	}
 
 	if( fOffConstraint == totalMachines ) {
@@ -5180,6 +5357,9 @@ doSlotRunAnalysis(ClassAd *slot, ClassAdList & jobs, Daemon *schedd, int console
 static const char *
 doSlotRunAnalysisToBuffer(ClassAd *slot, ClassAdList & jobs, Daemon * /*schedd*/, int console_width)
 {
+	bool analStartExpr = (better_analyze == 2) || (analyze_detail_level > 0);
+	bool showSlotAttrs = ! (analyze_detail_level & 0x20);
+
 	return_buff[0] = 0;
 
 #if !defined(WANT_OLD_CLASSADS)
@@ -5200,6 +5380,7 @@ doSlotRunAnalysisToBuffer(ClassAd *slot, ClassAdList & jobs, Daemon * /*schedd*/
 	int totalJobs = 0;
 	int cReqConstraint = 0;
 	int cOffConstraint = 0;
+	int cBothMatch = 0;
 
 	while(ClassAd *job = jobs.Next()) {
 		// 0.  info from job
@@ -5209,49 +5390,88 @@ doSlotRunAnalysisToBuffer(ClassAd *slot, ClassAdList & jobs, Daemon * /*schedd*/
 		job->AddTargetRefs(TargetMachineAttrs);
 		#endif
 
+		// 2. Offer satisfied? 
+		bool offer_match = IsAHalfMatch(slot, job);
+		if (offer_match) {
+			++cOffConstraint;
+		}
+
 		// 1. Request satisfied? 
 		if (IsAHalfMatch(job, slot)) {
-			cReqConstraint++;
-			continue;
+			++cReqConstraint;
+			if (offer_match) {
+				++cBothMatch;
+			}
 		}
 
-		// 2. Offer satisfied? 
-		if (IsAHalfMatch(slot, job)) {
-			cOffConstraint++;
-			continue;
-		}
 	}
 
-	if (analyze_detail_level > 0) {
-		classad::ExprTree* tree = slot->LookupExpr(ATTR_START);
+	if (analStartExpr) {
+
+		sprintf(return_buff, "\n-- Slot: %s : Analyzing matches for %d Jobs\n", slotname.c_str(), totalJobs);
+
+		std::string pretty_req = "";
+		static std::string prev_pretty_req;
+		classad::ExprTree* tree = slot->LookupExpr(ATTR_REQUIREMENTS);
 		if (tree) {
-			static std::string prev_pretty_req;
-			std::string pretty_req = "";
-			PrettyPrintExprTree(tree, pretty_req, 4, console_width-1);
+			PrettyPrintExprTree(tree, pretty_req, 4, console_width);
+
+			tree = slot->LookupExpr(ATTR_START);
+			if (tree) {
+				pretty_req += "\n\n    START is ";
+				PrettyPrintExprTree(tree, pretty_req, 4, console_width);
+			}
 
 			if (prev_pretty_req.empty() || prev_pretty_req != pretty_req) {
-				strcat(return_buff, "\nThe START expression for ");
-				strcat(return_buff, slotname.c_str());
-				strcat(return_buff, " is \n\n    ");
+				strcat(return_buff, "\nThe Requirements expression for this slot is\n\n    ");
 				strcat(return_buff, pretty_req.c_str());
 				strcat(return_buff, "\n\n");
-				prev_pretty_req = pretty_req;
-			} else {
-				formatstr(pretty_req, "\nRequirements for %d out of %d jobs matches %s\nthe effective START expression matches:\n", cReqConstraint, totalJobs, slotname.c_str());
-				strcat(return_buff, pretty_req.c_str());
+				// uncomment this line to print out Machine requirements only when it changes.
+				//prev_pretty_req = pretty_req;
 			}
 			pretty_req = "";
+
+			// then capture the values of MY attributes refereced by the expression
+			// also capture the value of TARGET attributes if there is only a single ad.
+			if (showSlotAttrs) {
+				std::string attrib_values = "";
+				attrib_values = "This slot defines the following attributes:\n\n";
+				StringList trefs;
+				AddReferencedAttribsToBuffer(slot, trefs, "    ", attrib_values);
+				strcat(return_buff, attrib_values.c_str());
+				attrib_values = "";
+
+				if (jobs.Length() == 1) { 
+					jobs.Open(); 
+					while (ClassAd * job = jobs.Next()) {
+						attrib_values = "\n";
+						AddTargetReferencedAttribsToBuffer(trefs, slot, job, "    ", attrib_values);
+						strcat(return_buff, attrib_values.c_str());
+					}
+					jobs.Close();
+				}
+				//strcat(return_buff, "\n");
+				strcat(return_buff, "\nThe Requirements expression for this slot reduces to these conditions:\n\n");
+			}
 		}
 
 		std::string subexpr_detail;
 		AnalyzeRequirementsForEachTarget(slot, jobs, subexpr_detail, analyze_detail_level);
 		strcat(return_buff, subexpr_detail.c_str());
 
-		formatstr(subexpr_detail, "%-5.5s %8d\n", "[ALL]", cOffConstraint);
-		strcat(return_buff, subexpr_detail.c_str());
+		//formatstr(subexpr_detail, "%-5.5s %8d\n", "[ALL]", cOffConstraint);
+		//strcat(return_buff, subexpr_detail.c_str());
+
+		formatstr(pretty_req, "\nThis slot satisfies the Job Requirements of %d out of these %d jobs\n", cBothMatch, cOffConstraint);
+		strcat(return_buff, pretty_req.c_str());
+		pretty_req = "";
 
 	} else {
-		sprintf(return_buff, "%-24.24s %12d %12d %9d\n", slotname.c_str(), cReqConstraint, cOffConstraint, totalJobs);
+		char fmt[sizeof("%-nnn.nnns %12d %12d %10.2f\n")];
+		int name_width = MAX(longest_slot_machine_name+7, longest_slot_name);
+		sprintf(fmt, "%%-%d.%ds", MAX(name_width, 16), MAX(name_width, 16));
+		strcat(fmt, " %12d %12d %10.2f\n");
+		sprintf(return_buff, fmt, slotname.c_str(), cOffConstraint, cReqConstraint, 100.0 * cBothMatch / totalJobs);
 	}
 
 	if (better_analyze) {
