@@ -190,6 +190,15 @@ class FileTransfer {
 
 	static bool SetServerShouldBlock( bool block );
 
+		// Stop accepting new transfer requests for this instance of
+		// the file transfer object.
+		// Also abort this object's active transfer, if any.
+	void stopServer();
+
+		// If this file transfer object has a transfer running in
+		// the background, kill it.
+	void abortActiveTransfer();
+
 	int Suspend();
 
 	int Continue();
@@ -290,6 +299,8 @@ class FileTransfer {
 	}
 
 	ClassAd *GetJobAd();
+
+	bool transferIsInProgress() { return ActiveTransferTid != -1; }
 
   protected:
 

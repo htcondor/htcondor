@@ -119,6 +119,10 @@ pseudo_get_job_info(ClassAd *&ad, bool &delete_ad)
 	the_ad->LookupInteger(ATTR_STAGE_IN_FINISH,spool_time);
 	thisRemoteResource->filetrans.Init( the_ad, false, PRIV_USER, spool_time != 0 );
 
+	if( !daemonCore->DoFakeCreateThread() ) {
+		thisRemoteResource->filetrans.SetServerShouldBlock(false);
+	}
+
 	int max_upload_mb = -1;
 	int max_download_mb = -1;
 	param_integer("MAX_TRANSFER_INPUT_MB",max_upload_mb,true,-1,false,INT_MIN,INT_MAX,the_ad);

@@ -183,7 +183,6 @@ UniShadow::cleanUp( void )
 	}
 }
 
-
 void
 UniShadow::gracefulShutDown( void )
 {

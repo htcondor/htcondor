@@ -186,12 +186,10 @@ FileTransfer::~FileTransfer()
 	if (daemonCore && ActiveTransferTid >= 0) {
 		dprintf(D_ALWAYS, "FileTransfer object destructor called during "
 				"active transfer.  Cancelling transfer.\n");
-		daemonCore->Kill_Thread(ActiveTransferTid);
-		TransThreadTable->remove(ActiveTransferTid);
-		ActiveTransferTid = -1;
+		abortActiveTransfer();
 	}
-	if (TransferPipe[0] >= 0) close(TransferPipe[0]);
-	if (TransferPipe[1] >= 0) close(TransferPipe[1]);
+	if (TransferPipe[0] >= 0) daemonCore->Close_Pipe(TransferPipe[0]);
+	if (TransferPipe[1] >= 0) daemonCore->Close_Pipe(TransferPipe[1]);
 	if (Iwd) free(Iwd);
 	if (ExecFile) free(ExecFile);
 	if (UserLogFile) free(UserLogFile);
@@ -219,23 +217,11 @@ FileTransfer::~FileTransfer()
 		delete last_download_catalog;
 	}
 	if (TransSock) free(TransSock);
-	if (TransKey) {
-		// remove our key from the hash table
-		if ( TranskeyTable ) {
-			MyString key(TransKey);
-			TranskeyTable->remove(key);
-			if ( TranskeyTable->getNumElements() == 0 ) {
-				// if hash table is empty, delete table as well
-				delete TranskeyTable;
-				TranskeyTable = NULL;
-				// delete our Thread table as well, which should be empty now
-				delete TransThreadTable;
-				TransThreadTable = NULL;
-			}
-		}		
-		// and free the key as well
-		free(TransKey);
-	}	
+	stopServer();
+	if( TransThreadTable && TransThreadTable->getNumElements() == 0 ) {
+		delete TransThreadTable;
+		TransThreadTable = NULL;
+	}
 #ifdef WIN32
 	if (perm_obj) delete perm_obj;
 #endif
@@ -1392,21 +1378,27 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 		// We don't do this until this late stage in the game, because
 		// in windows everything currently happens in the main thread.
 	if( transobject->TransferPipe[1] != -1 ) {
-		close(transobject->TransferPipe[1]);
+		daemonCore->Close_Pipe(transobject->TransferPipe[1]);
 		transobject->TransferPipe[1] = -1;
 	}
 
 	int n;
 
 	if(!read_failed) {
-		n = read( transobject->TransferPipe[0],
+		n = daemonCore->Read_Pipe( transobject->TransferPipe[0],
 				  (char *)&transobject->Info.bytes,
 				  sizeof( filesize_t) );
 		if(n != sizeof( filesize_t )) read_failed = true;
+		if( transobject->Info.type == DownloadFilesType ) {
+			transobject->bytesRcvd += transobject->Info.bytes;
+		}
+		else {
+			transobject->bytesSent += transobject->Info.bytes;
+		}
 	}
 
 	if(!read_failed) {
-		n = read( transobject->TransferPipe[0],
+		n = daemonCore->Read_Pipe( transobject->TransferPipe[0],
 				  (char *)&transobject->Info.try_again,
 				  sizeof( bool ) );
 		if(n != sizeof( bool )) read_failed = true;
@@ -1414,14 +1406,14 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 
 	
 	if(!read_failed) {
-		n = read( transobject->TransferPipe[0],
+		n = daemonCore->Read_Pipe( transobject->TransferPipe[0],
 				  (char *)&transobject->Info.hold_code,
 				  sizeof( int ) );
 		if(n != sizeof( int )) read_failed = true;
 	}
 
 	if(!read_failed) {
-		n = read( transobject->TransferPipe[0],
+		n = daemonCore->Read_Pipe( transobject->TransferPipe[0],
 				  (char *)&transobject->Info.hold_subcode,
 				  sizeof( int ) );
 		if(n != sizeof( int )) read_failed = true;
@@ -1429,7 +1421,7 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 
 	int error_len = 0;
 	if(!read_failed) {
-		n = read( transobject->TransferPipe[0],
+		n = daemonCore->Read_Pipe( transobject->TransferPipe[0],
 				  (char *)&error_len,
 				  sizeof( int ) );
 		if(n != sizeof( int )) read_failed = true;
@@ -1439,7 +1431,7 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 		char *error_buf = new char[error_len];
 		ASSERT(error_buf);
 
-		n = read( transobject->TransferPipe[0],
+		n = daemonCore->Read_Pipe( transobject->TransferPipe[0],
 			  error_buf,
 			  error_len );
 		if(n != error_len) read_failed = true;
@@ -1452,7 +1444,7 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 
 	int spooled_files_len = 0;
 	if(!read_failed) {
-		n = read( transobject->TransferPipe[0],
+		n = daemonCore->Read_Pipe( transobject->TransferPipe[0],
 				  (char *)&spooled_files_len,
 				  sizeof( int ) );
 		if(n != sizeof( int )) read_failed = true;
@@ -1462,7 +1454,7 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 		char *spooled_files_buf = new char[spooled_files_len];
 		ASSERT(spooled_files_buf);
 
-		n = read( transobject->TransferPipe[0],
+		n = daemonCore->Read_Pipe( transobject->TransferPipe[0],
 			  spooled_files_buf,
 			  spooled_files_len );
 		if(n != spooled_files_len) read_failed = true;
@@ -1482,7 +1474,7 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 		}
 	}
 
-	close(transobject->TransferPipe[0]);
+	daemonCore->Close_Pipe(transobject->TransferPipe[0]);
 	transobject->TransferPipe[0] = -1;
 
 	// If Download was successful (it returns 1 on success) and
@@ -1543,9 +1535,9 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 		ASSERT( daemonCore );
 
 		// make a pipe to communicate with our thread
-		if (pipe(TransferPipe) < 0) {
-			dprintf(D_ALWAYS, "pipe failed with errno %d in "
-					"FileTransfer::Upload\n", errno);
+		if (!daemonCore->Create_Pipe(TransferPipe)) {
+			dprintf(D_ALWAYS, "Create_Pipe failed in "
+					"FileTransfer::Upload\n");
 			return FALSE;
 		}
 
@@ -1562,6 +1554,9 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 			free(info);
 			return FALSE;
 		}
+		dprintf(D_FULLDEBUG,
+				"FileTransfer: created download transfer process with id %d\n",
+				ActiveTransferTid);
 		// daemonCore will free(info) when the thread exits
 		TransThreadTable->insert(ActiveTransferTid, this);
 
@@ -2452,9 +2447,9 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 		ASSERT( daemonCore );
 
 		// make a pipe to communicate with our thread
-		if (pipe(TransferPipe) < 0) {
-			dprintf(D_ALWAYS, "pipe failed with errno %d in "
-					"FileTransfer::Upload\n", errno);
+		if (!daemonCore->Create_Pipe(TransferPipe)) {
+			dprintf(D_ALWAYS, "Create_Pipe failed in "
+					"FileTransfer::Upload\n");
 			return FALSE;
 		}
 
@@ -2470,6 +2465,9 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 			ActiveTransferTid = -1;
 			return FALSE;
 		}
+		dprintf(D_FULLDEBUG,
+				"FileTransfer: created upload transfer process with id %d\n",
+				ActiveTransferTid);
 		// daemonCore will free(info) when the thread exits
 		TransThreadTable->insert(ActiveTransferTid, this);
 	}
@@ -2484,25 +2482,25 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 	bool write_failed = false;
 
 	if(!write_failed) {
-		n = write( TransferPipe[1],
+		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   (char *)&total_bytes,
 				   sizeof(filesize_t) );
 		if(n != sizeof(filesize_t)) write_failed = true;
 	}
 	if(!write_failed) {
-		n = write( TransferPipe[1],
+		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   (char *)&Info.try_again,
 				   sizeof(bool) );
 		if(n != sizeof(bool)) write_failed = true;
 	}
 	if(!write_failed) {
-		n = write( TransferPipe[1],
+		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   (char *)&Info.hold_code,
 				   sizeof(int) );
 		if(n != sizeof(int)) write_failed = true;
 	}
 	if(!write_failed) {
-		n = write( TransferPipe[1],
+		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   (char *)&Info.hold_subcode,
 				   sizeof(int) );
 		if(n != sizeof(int)) write_failed = true;
@@ -2512,13 +2510,13 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 		error_len++; //write the null too
 	}
 	if(!write_failed) {
-		n = write( TransferPipe[1],
+		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   (char *)&error_len,
 				   sizeof(int) );
 		if(n != sizeof(int)) write_failed = true;
 	}
 	if(!write_failed) {
-		n = write( TransferPipe[1],
+		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   Info.error_desc.Value(),
 				   error_len );
 		if(n != error_len) write_failed = true;
@@ -2529,13 +2527,13 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 		spooled_files_len++; //write the null too
 	}
 	if(!write_failed) {
-		n = write( TransferPipe[1],
+		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   (char *)&spooled_files_len,
 				   sizeof(int) );
 		if(n != sizeof(int)) write_failed = true;
 	}
 	if(!write_failed) {
-		n = write( TransferPipe[1],
+		n = daemonCore->Write_Pipe( TransferPipe[1],
 				   Info.spooled_files.Value(),
 				   spooled_files_len );
 		if(n != spooled_files_len) write_failed = true;
@@ -3555,6 +3553,39 @@ FileTransfer::ExitDoUpload(filesize_t *total_bytes, ReliSock *s, priv_state save
 	Info.error_desc = error_desc;
 
 	return rc;
+}
+
+void
+FileTransfer::stopServer()
+{
+	abortActiveTransfer();
+	if (TransKey) {
+		// remove our key from the hash table
+		if ( TranskeyTable ) {
+			MyString key(TransKey);
+			TranskeyTable->remove(key);
+			if ( TranskeyTable->getNumElements() == 0 ) {
+				// if hash table is empty, delete table as well
+				delete TranskeyTable;
+				TranskeyTable = NULL;
+			}
+		}		
+		// and free the key as well
+		free(TransKey);
+		TransKey = NULL;
+	}	
+}
+
+void
+FileTransfer::abortActiveTransfer()
+{
+	if( ActiveTransferTid != -1 ) {
+		ASSERT( daemonCore );
+		dprintf(D_ALWAYS,"FileTransfer: killing active transfer %d\n",ActiveTransferTid);
+		daemonCore->Kill_Thread(ActiveTransferTid);
+		TransThreadTable->remove(ActiveTransferTid);
+		ActiveTransferTid = -1;
+	}
 }
 
 int
