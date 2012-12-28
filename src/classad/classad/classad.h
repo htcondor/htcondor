@@ -688,7 +688,7 @@ e		*/
          *  @param name The attribute name
          *  @return true if the attribute is dirty, false otherwise
          */
-		bool        IsAttributeDirty(const std::string &name);
+		bool        IsAttributeDirty(const std::string &name) const;
 
 		typedef DirtyAttrList::iterator dirtyIterator;
         /** Return an interator to the first dirty attribute so all dirty attributes 
