@@ -265,8 +265,8 @@ int main( int argc, char *argv[] )
 			if( !ver || ver->built_since_version(7,7,3) ) {
 					// graceful hangup so the collector knows we are done
 				sock->encode();
-				command = DC_NOP;
-				sock->put(command);
+				int hangup_cmd = DC_NOP;
+				sock->put(hangup_cmd);
 				sock->end_of_message();
 			}
 
