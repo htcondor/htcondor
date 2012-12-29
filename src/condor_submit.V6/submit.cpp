@@ -298,6 +298,8 @@ const char	*TransferExecutable = "transfer_executable";
 const char	*TransferInput = "transfer_input";
 const char	*TransferOutput = "transfer_output";
 const char	*TransferError = "transfer_error";
+const char  *MaxTransferInputMB = "max_transfer_input_mb";
+const char  *MaxTransferOutputMB = "max_transfer_output_mb";
 
 const char	*EncryptInputFiles = "encrypt_input_files";
 const char	*EncryptOutputFiles = "encrypt_output_files";
@@ -2414,6 +2416,8 @@ SetImageSize()
 	buffer.formatstr( "%s = %" PRId64, ATTR_DISK_USAGE, disk_usage_kb );
 	InsertJobExpr (buffer);
 
+	InsertJobExprInt(ATTR_TRANSFER_INPUT_SIZE_MB, (executable_size_kb + TransferInputSizeKb)/1024);
+
 	// set an intial value for RequestMemory
 	tmp = condor_param(RequestMemory, ATTR_REQUEST_MEMORY);
 	if (tmp) {
@@ -2568,6 +2572,10 @@ calc_image_size_kb( const char *name)
 		// EXCEPT( "Cannot stat \"%s\"", name );
 		return 0;
 	}
+	if( buf.st_mode & S_IFDIR ) {
+		Directory dir(full_path(name));
+		return ((int64_t)dir.GetDirectorySize() + 1023) / 1024;
+	}
 	return ((int64_t)buf.st_size + 1023) / 1024;
 }
 
@@ -2668,6 +2676,16 @@ SetTransferFiles()
 		process_input_file_list(&input_file_list, &input_files, &in_files_specified);
 	}
 
+		// also account for the size of the stdin file, if any
+	bool transfer_stdin = true;
+	job->LookupBool(ATTR_TRANSFER_INPUT,transfer_stdin);
+	if( transfer_stdin ) {
+		std::string stdin_fname;
+		job->LookupString(ATTR_JOB_INPUT,stdin_fname);
+		if( !stdin_fname.empty() ) {
+			TransferInputSizeKb += calc_image_size_kb(stdin_fname.c_str());
+		}
+	}
 
 	macro_value = condor_param( TransferOutputFiles,
 								"TransferOutputFiles" ); 
@@ -3085,6 +3103,21 @@ SetTransferFiles()
 		}
 
 		check_open(output_file, O_WRONLY|O_CREAT|O_TRUNC );
+	}
+
+	char *MaxTransferInputExpr = condor_param(MaxTransferInputMB,ATTR_MAX_TRANSFER_INPUT_MB);
+	char *MaxTransferOutputExpr = condor_param(MaxTransferOutputMB,ATTR_MAX_TRANSFER_OUTPUT_MB);
+	if( MaxTransferInputExpr ) {
+		std::string max_expr;
+		formatstr(max_expr,"%s = %s",ATTR_MAX_TRANSFER_INPUT_MB,MaxTransferInputExpr);
+		InsertJobExpr(max_expr.c_str());
+		free( MaxTransferInputExpr );
+	}
+	if( MaxTransferOutputExpr ) {
+		std::string max_expr;
+		formatstr(max_expr,"%s = %s",ATTR_MAX_TRANSFER_OUTPUT_MB,MaxTransferOutputExpr);
+		InsertJobExpr(max_expr.c_str());
+		free( MaxTransferOutputExpr );
 	}
 }
 

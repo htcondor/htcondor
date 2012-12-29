@@ -183,6 +183,7 @@ int grid2vanilla(int argc, char **argv)
 	// Right. That was a silly amount of prep work.
 
 	// Update the original ad
+	n_ad_van.EnableDirtyTracking();
 	n_ad_van.ClearAllDirtyFlags();
 	if( ! update_job_status( n_ad_van, n_ad_grid) ) {
 		dprintf(D_ALWAYS, "Unable to update ad\n");

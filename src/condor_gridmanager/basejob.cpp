@@ -115,6 +115,7 @@ BaseJob::BaseJob( ClassAd *classad )
 	wantResubmit = 0;	// set if user wants to resubmit job via RESUBMIT_CHECK
 	jobAd->EvalBool(ATTR_GLOBUS_RESUBMIT_CHECK,NULL,wantResubmit);
 
+	jobAd->EnableDirtyTracking();
 	jobAd->ClearAllDirtyFlags();
 
 	jobLeaseSentExpiredTid = TIMER_UNSET;

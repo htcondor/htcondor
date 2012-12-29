@@ -16,10 +16,10 @@ Configuration variables allow the
 \Condor{schedd} daemon (which runs on each machine
 that may submit jobs) to implement flocking.
 
-\Note Flocking to pools which use HTCondor's high availability mechanims
-is not adviced in current verions of HTCondor.  See section
-~\ref{sec:HA-negotiator} ``High Availability of the Central Manager''
-of the HTCondor manual for a discussion of these problems.
+\Note Flocking to pools which use HTCondor's high availability mechanisms
+is not advised.
+See section ~\ref{sec:HA-negotiator} 
+for a discussion of the issues.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -125,10 +125,7 @@ separately, following the guidelines given.
 A particular job will only flock to another pool
 when it cannot currently run in the current pool.
 
-At one point, all jobs that utilized flocking were standard
-universe jobs.
-This is no longer the case.
-The submission of jobs under other universes must consider
+The submission of jobs other than standard universe jobs must consider
 the location of input, output and error files.
 The common case will be that machines within separate pools
 do not have a shared file system.

@@ -124,6 +124,15 @@ class FileTransfer {
 		       commands */
 	void setSecuritySession(char const *session_id);
 
+		/** Set limits on how much data will be sent/received per job
+			(i.e. per call to DoUpload() or DoDownload()).  The job is
+			put on hold if the limit is exceeded.  The files are sent
+			in the usual order, and the file that hit the limit will
+			be missing its tail.
+		 */
+	void setMaxUploadBytes(filesize_t MaxUploadBytes);
+	void setMaxDownloadBytes(filesize_t MaxUploadBytes);
+
 	/** @return 1 on success, 0 on failure */
 	int DownloadFiles(bool blocking=true);
 
@@ -367,6 +376,8 @@ class FileTransfer {
 	TransferQueueContactInfo m_xfer_queue_contact_info;
 	MyString m_jobid; // what job we are working on, for informational purposes
 	char *m_sec_session_id;
+	filesize_t MaxUploadBytes;
+	filesize_t MaxDownloadBytes;
 
 	// stores the path to the proxy after one is received
 	MyString LocalProxyName;
@@ -392,10 +403,10 @@ class FileTransfer {
 
 	// Receive message indicating that the peer is ready to receive the file
 	// and save failure information with SaveTransferInfo().
-	bool ReceiveTransferGoAhead(Stream *s,char const *fname,bool downloading,bool &go_ahead_always);
+	bool ReceiveTransferGoAhead(Stream *s,char const *fname,bool downloading,bool &go_ahead_always,filesize_t &peer_max_transfer_bytes);
 
 	// Receive message indicating that the peer is ready to receive the file.
-	bool DoReceiveTransferGoAhead(Stream *s,char const *fname,bool downloading,bool &go_ahead_always,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc, int alive_interval);
+	bool DoReceiveTransferGoAhead(Stream *s,char const *fname,bool downloading,bool &go_ahead_always,filesize_t &peer_max_transfer_bytes,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc, int alive_interval);
 
 	// Obtain permission to receive a file download and then tell our
 	// peer to go ahead and send it.

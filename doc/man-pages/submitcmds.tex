@@ -1090,6 +1090,41 @@ For more information about this and other settings related to
 transferring files, see section~\ref{sec:file-transfer} on
 page~\pageref{sec:file-transfer}.
 
+%%%%%%%%%%%%%%%%%%%
+%% max_transfer_input_mb
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!max\_transfer\_input\_mb}
+\item[max\_transfer\_input\_mb = $<$ClassAd Integer Expression$>$] 
+
+This integer expression specifies the maximum allowed total size in
+megabytes of the input files that are transferred for a job.  This
+expression does not apply to grid universe, standard universe, or
+files transferred via file transfer plugins.  The expression may refer
+to attributes of the job.  The special value -1 indicates no limit.
+If not set, the system setting \Macro{MAX\_TRANSFER\_INPUT\_MB} is
+used.  If the observed size of all input files at submit time is
+larger than the limit, the job will be immediately placed on hold with
+hold code 32.  If the job passes this initial test, but the size of
+the input files increases or the limit decreases so that the limit is
+violated, the job will be placed on hold at the time when the file
+transfer is attempted.
+
+\index{submit commands!max\_transfer\_output\_mb}
+\item[max\_transfer\_output\_mb = $<$ClassAd Integer Expression$>$] 
+
+This integer expression specifies the maximum allowed total size in
+megabytes of the output files that are transferred for a job.  This
+expression does not apply to grid universe, standard universe, or
+files transferred via file transfer plugins.  The expression may refer
+to attributes of the job.  The special value -1 indicates no limit.
+If not yset, the system setting \Macro{MAX\_TRANSFER\_OUTPUT\_MB} is
+used.  If the total size of the job's output files to be transferred
+is larger than the limit, the job will be placed on hold with hold
+code 33.  The output will be transferred up to the point when the
+limit is hit, so some files may be fully transferred, some partially,
+and some not at all.
+
 \end{description} 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

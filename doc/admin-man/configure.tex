@@ -2179,9 +2179,6 @@ which use DaemonCore).
   \end{verbatim}
   Normally, these expressions would not be necessary, so if not
   defined, they default to FALSE.
-  One possible use case is for HTCondor glide-in, to have the
-  \Condor{startd} shut itself down if it has not been claimed by a job
-  after a certain period of time.
 
   \Note This functionality does not work in conjunction with HTCondor's
   high-availability support (see section~\ref{sec:high-availability}
@@ -3546,10 +3543,9 @@ will not want to change them for any reason.
   the \MacroNI{MASTER\_NAME} is not automatically propagated to the
   \Condor{startd}.
   However, in situations where multiple \Condor{startd} daemons are
-  running on the same host (for example, when using \Condor{glidein}),
+  running on the same host,
   the \MacroNI{STARTD\_NAME} should be set to uniquely identify 
-  the \Condor{startd} daemons
-  (this is done automatically in the case of \Condor{glidein}).
+  the \Condor{startd} daemons.
 
   If an HTCondor daemon (master, schedd or startd) has been given a
   unique name, all HTCondor tools that need to contact that daemon can
@@ -3630,7 +3626,7 @@ will not want to change them for any reason.
   HTCondor daemons on Unix machines will \emph{not} create new sessions
   or process groups. HTCondor uses processes groups to help it track the
   descendants of processes it creates. This can cause problems when
-  HTCondor is run under another job execution system (e.g. HTCondor Glidein).
+  HTCondor is run under another job execution system.
 
 \end{description}
 
@@ -4195,8 +4191,9 @@ WANT_HOLD_REASON = \
 \item[\Macro{STARTD\_NOCLAIM\_SHUTDOWN}]
   The number of seconds to run without receiving a claim before
   shutting HTCondor down on this machine.  Defaults to unset, which
-  means to never shut down.  This is primarily intended for \condor{glidein}.
-  Use in other situations is not recommended.
+  means to never shut down.  
+  This is primarily intended to facilitate glidein;
+  use in other situations is not recommended.
 
 \label{param:StartdPublishWinreg}
 \item[\Macro{STARTD\_PUBLISH\_WINREG}]
@@ -5097,6 +5094,37 @@ MAX_JOBS_RUNNING	= \
   example, if this expression were set to a name that is the same for
   all jobs, file transfers would be scheduled in first-in-first-out
   order rather than round-robin by job owner.
+
+\label{param:MaxTransferInputMB}
+\item[\Macro{MAX\_TRANSFER\_INPUT\_MB}]
+  This integer expression specifies the maximum allowed total size in
+  megabytes of the input files that are transferred for a job.  This
+  expression does not apply to grid universe, standard universe, or
+  files transferred via file transfer plugins.  The expression may
+  refer to attributes of the job.  The special value -1 indicates no
+  limit.  The default is -1.  The job may override the system setting
+  by specifying its own limit using the \Attr{MaxTransferInputMB}
+  attribute.  If the observed size of all input files at submit time
+  is larger than the limit, the job will be immediately placed on hold
+  with hold code 32.  If the job passes this initial test, but the
+  size of the input files increases or the limit decreases so that the
+  limit is violated, the job will be placed on hold at the time when
+  the file transfer is attempted.
+
+\label{param:MaxTransferOutputMB}
+\item[\Macro{MAX\_TRANSFER\_OUTPUT\_MB}]
+  This integer expression specifies the maximum allowed total size in
+  megabytes of the output files that are transferred for a job.  This
+  expression does not apply to grid universe, standard universe, or
+  files transferred via file transfer plugins.  The expression may
+  refer to attributes of the job.  The special value -1 indicates no
+  limit.  The default is -1.  The job may override the system setting
+  by specifying its own limit using the \Attr{MaxTransferOutputMB}
+  attribute.  If the total size of the job's output files to be
+  transferred is larger than the limit, the job will be placed on hold
+  with hold code 33.  The output will be transferred up to the point
+  when the limit is hit, so some files may be fully transferred, some
+  partially, and some not at all.
 
 \label{param:ScheddQueryWorkers}
 \item[\Macro{SCHEDD\_QUERY\_WORKERS}]
@@ -6183,9 +6211,6 @@ These settings affect the \Condor{starter}.
   When \Expr{True},
   it causes jobs to inherit all environment variables from 
   the \Condor{starter}.
-  This is useful for glidein jobs that need to
-  access environment variables from the batch system running the glidein
-  daemons.
   When the user job and/or \MacroNI{STARTER\_JOB\_ENVIRONMENT} define
   an environment variable that is in the \Condor{starter}'s
   environment, the setting from the \Condor{starter}'s environment
@@ -8422,19 +8447,12 @@ These macros affect the Grid Monitor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Grid-Config-File-Entries}Configuration File
-Entries Relating to Grid Usage and Glidein}
+Entries Relating to Grid Usage}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{configuration!grid and glidein configuration variables}
-These macros affect the HTCondor's usage of grid resources
-and glidein.
+\index{configuration!grid configuration variables}
+These macros affect the HTCondor's usage of grid resources.
 \begin{description}
-\label{param:GlideinServerURLS}
-\item[\Macro{GLIDEIN\_SERVER\_URLS}]
-  A comma or space-separated list of URLs that contain the binaries
-  that must be copied by \Condor{glidein}.
-  There are no default values, but working URLs that copy from the UW site
-  are provided in the distributed sample configuration files.
 
 \label{param:GlexecJob}
 \item[\Macro{GLEXEC\_JOB}]
@@ -9389,18 +9407,20 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
   establish a strong security session between the execute and submit
   daemons without going through the usual security negotiation protocol.
   This is especially important when operating at large scale over high
-  latency networks (e.g. a glidein pool with one schedd and thousands of
-  startds on a network with 0.1 second round trip times).
+  latency networks (for example, on a pool with one \Condor{schedd} daemon
+  and thousands of \Condor{startd} daemons on a network with a 0.1 second 
+  round trip time).
 
   The default value for this configuration option is \Expr{False}.  To
   have any effect, it must be \Expr{True} in the configuration of both
-  the execute side (startd) as well as the submit side (schedd).  When
+  the execute side (\Condor{startd}) as well as the submit side 
+  (\Condor{schedd}).  When
   this authentication method is used, all other security negotiation
   between the submit and execute daemons is bypassed.  All inter-daemon
   communication between the submit and execute side will use the
-  startd's settings for \MacroNI{SEC\_DAEMON\_ENCRYPTION} and
+  \Condor{startd} daemon's settings for \MacroNI{SEC\_DAEMON\_ENCRYPTION} and
   \MacroNI{SEC\_DAEMON\_INTEGRITY}; the configuration of these values in
-  the schedd, shadow, and starter are ignored.
+  the \Condor{schedd}, \Condor{shadow}, and \Condor{starter} are ignored.
 
   Important: For strong security, at least one of the two, integrity or
   encryption, should be enabled in the startd configuration.  Also, some
@@ -9409,11 +9429,11 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
   is exchanged in matchmaking cannot be safely encrypted when transmitted
   over the network.
 
-  The schedd and shadow will be authenticated as
-  \verb|submit-side@matchsession| when they talk to the startd and
-  starter.  The startd and starter will be authenticated as
-  \verb|execute-side@matchsession| when they talk to the schedd and
-  shadow.  On the submit side, authorization of the execute side happens
+  The \Condor{schedd} and \Condor{shadow} will be authenticated as
+  \verb|submit-side@matchsession| when they talk to the \Condor{startd} and
+  \Condor{starter}.  The \Condor{startd} and \Condor{starter} will be authenticated as
+  \verb|execute-side@matchsession| when they talk to the \Condor{schedd} and
+  \Condor{shadow}.  On the submit side, authorization of the execute side happens
   automatically.  On the execute side, it is necessary to explicitly
   authorize the submit side.  Example:
 

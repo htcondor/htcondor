@@ -49,7 +49,17 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug that caused the \condor{gridmanager} to frequently
+delegate the X.509 proxy of grid-type condor jobs to the remote
+\condor{schedd} when the delegated proxy's lifetime isn't limited.
+That is, when parameter \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME}
+or job attribute \Attr{DelegateJobGSICredentialsLifetime} is set to 0.
+\Ticket{3395}
+
+\item Fixed a bug in \Condor{advertise} that could cause failure to
+publish ads to collectors other than the first collector in the
+list of collectors.
+\Ticket{3404}
 
 \end{itemize}
 
