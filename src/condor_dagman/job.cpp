@@ -825,6 +825,14 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		}
 	}
 
+		// Warn the user if the node's log file is in /tmp.
+	if ( logFileStr.find( "/tmp" ) == 0 ) {
+		debug_printf( DEBUG_QUIET, "Warning: "
+					"Log file %s for node %s is in /tmp\n",
+					logFileStr.c_str(), GetJobName() );
+        check_warning_strictness( usingDefault ? DAG_STRICT_2 : DAG_STRICT_1 );
+	}
+
 	if ( logFileStr == "" ) {
 		logFileStr = defaultNodeLog;
 		_useDefaultLog = true;
