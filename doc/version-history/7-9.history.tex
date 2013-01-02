@@ -29,9 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item When NEGOTIATOR\_CONSIDER\_PREEMPTION is false, the \Condor{negotiator}
-now fetches machine ads more quickly from the collector by skipping most
-attributes of the busy machines.  This can make negotiation much faster in
+\item When configuration variable \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}
+is \Expr{False}, the \Condor{negotiator}
+now fetches machine ClassAds more quickly from the \Condor{collector}
+ by skipping most attributes of the busy machines.  
+This can make negotiation much faster in
 a very large pool of mostly claimed machines.
 \Ticket{3366}
 
