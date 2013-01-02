@@ -28,7 +28,7 @@
 #define MAXSCHEDDLEN 255
 
 // This is for the getFilterAndProcess function
-typedef bool    (*process_function)(ClassAd *);
+typedef bool    (*condor_q_process_func)(void*, ClassAd *);
 
 /* a list of all types of direct DB query defined here */
 enum CondorQQueryType
@@ -91,11 +91,11 @@ class CondorQ
 	// from the local schedd
 	int fetchQueue (ClassAdList &, StringList &attrs, ClassAd * = 0, CondorError* errstack = 0);
 	int fetchQueueFromHost (ClassAdList &, StringList &attrs, const char * = 0, char const *schedd_version = 0,CondorError* errstack = 0);
-	int fetchQueueFromHostAndProcess ( const char *, StringList &attrs, process_function process_func, bool useFastPath, CondorError* errstack = 0);
+	int fetchQueueFromHostAndProcess ( const char *, StringList &attrs, condor_q_process_func process_func, void * process_func_data, bool useFastPath, CondorError* errstack = 0);
 	
 		// fetch the job ads from database 	
 	int fetchQueueFromDB (ClassAdList &, char *&lastUpdate, const char * = 0, CondorError* errstack = 0);
-	int fetchQueueFromDBAndProcess ( const char *, char *&lastUpdate, process_function process_func, CondorError* errstack = 0);
+	int fetchQueueFromDBAndProcess ( const char *, char *&lastUpdate, condor_q_process_func process_func, void * process_func_data, CondorError* errstack = 0);
 
 		// return the results from a DB query directly to user
 	void rawDBQuery(const char *, CondorQQueryType);
@@ -120,7 +120,7 @@ class CondorQ
 	
 	// helper functions
 	int getAndFilterAds( const char *, StringList &attrs, ClassAdList &, bool useAll );
-	int getFilterAndProcessAds( const char *, StringList &attrs, process_function, bool useAll );
+	int getFilterAndProcessAds( const char *, StringList &attrs, condor_q_process_func pfn, void * process_func_data, bool useAll );
 };
 
 int JobSort(ClassAd *job1, ClassAd *job2, void *data);
