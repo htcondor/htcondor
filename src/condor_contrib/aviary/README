@@ -1,16 +1,16 @@
-Aviary - Simplified RPC Interface for Condor
-............................................
+Aviary - Simplified RPC Interface for HTCondor
+..............................................
 
 Overview
 ========
 This contrib provides a simplified web service interface for job submission, 
 management, and queries. This interface was designed to abstract some of the 
-complexity of Condor while at the same time provide access through a 
+complexity of HTCondor while at the same time provide access through a 
 ubiquitous network transport such as HTTP. It currently uses SOAP for request 
-and response exchanges between the Condor Aviary-enabled components and generic 
+and response exchanges between the HTCondor Aviary-enabled components and generic 
 web service clients that can be developed using Java, Python, Ruby and other 
 languages. The target audience for Aviary are those developers who need to 
-quickly make use of Condor without having the time to consume the depth and 
+quickly make use of HTCondor without having the time to consume the depth and 
 breadth of knowledge associated with its entire HTC capabilities.
 
 Birdbath versus Aviary
@@ -22,7 +22,7 @@ are:
 	* The Aviary WSDL and XSD strives for simplicity while Birdbath offers a 
 	relatively fine-grained API
 	* Birdbath must be compiled into DaemonCore while Aviary is a contrib that 
-	can be mixed into existing deployments that support Condor dynamic library 
+	can be mixed into existing deployments that support HTCondor dynamic library 
 	plug-ins
 	* WS02 and Axis2/C are ASL2 while gSOAP uses an assortment of commercial, 
 	public, and GPL v2 licenses
@@ -44,18 +44,18 @@ The entities of this API are:
     * job - A job is the basic unit of work. It has a minimum set of attributes, 
     including the full path of the command to be executed, arguments to that 
     command, the owner of the job, and requirements that provide information to 
-    Condor for matching to a resource that can execute the job.
+    HTCondor for matching to a resource that can execute the job.
     * submission - A submission is an association of jobs under a common name 
     key, like "my_submission_for_today". Aviary can generate a submission name 
     if none is provided.
     * attribute - Attributes describe aspects of a job. Some attributes can be 
     set when the job is submitted or later edited when the job is still actively 
-    being processed in the Condor job queue. Condor will specify many job 
+    being processed in the HTCondor job queue. HTCondor will specify many job 
     attributes after a submission but a user can also provide their own custom 
     attributes if they are meaningful to the execution of the application that 
     is represented by a job.
     * resource - A resource is an addressable service that forms the some part 
-    of the Condor runtime. For example, a SCHEDULER or QUERY_SERVER.
+    of the HTCondor runtime. For example, a SCHEDULER or QUERY_SERVER.
 
 SOAP and WSDL
 =============
@@ -101,7 +101,7 @@ be generated.
 
 Source
 ------
-Aviary can be included in a Condor source build using the following variables 
+Aviary can be included in a HTCondor source build using the following variables 
 when cmake is invoked:
 
 	-DWANT_CONTRIB:BOOL=TRUE -DWITH_MANAGEMENT:BOOL=TRUE -DWITH_AVIARY:BOOL=TRUE
@@ -159,7 +159,7 @@ A unit of information that fully describes a job's identity:
     pass different arguments to the command, and in turn each job in the group 
     writes its output to a different file.
     * scheduler - A string that identifies where the job was submitted (schedd)
-    * pool - A string that identifies a particular Condor deployment (an arena 
+    * pool - A string that identifies a particular HTCondor deployment (an arena 
     of schedulers, job execution resources, and components that match jobs to 
     those resources).
 
@@ -173,21 +173,21 @@ A unit of information that describes a submission in two parts:
     such as "my_submission_04302011". Since submissions are open-ended, a user 
     could keep adding individual submissions to this aggregating name over time 
     even though the individual jobs may have been scheduled and executed at 
-    different times by Condor. For example, the jobs "1.0", "79.0", "2011.0" 
+    different times by HTCondor. For example, the jobs "1.0", "79.0", "2011.0" 
     could all be part of the submission named "my_submission_04302011".
     * owner - A string identifying the name of the original submitter.
 
 Attribute
 ---------
-An attribute is a type-coded piece of information used by Condor to evaluate, 
-organize and execute job matching and processing. Condor jobs have multiple 
+An attribute is a type-coded piece of information used by HTCondor to evaluate, 
+organize and execute job matching and processing. HTCondor jobs have multiple 
 attributes, some of which are specified by the user prior to submission and many 
-which are attached to a job by the Condor infrastructure when it is added to the 
-job queue. Indeed, a Condor job is the sum of its attributes. An attribute 
+which are attached to a job by the HTCondor infrastructure when it is added to the 
+job queue. Indeed, a HTCondor job is the sum of its attributes. An attribute 
 consists of:
 
     * name - A string denoting the name of this attribute. Names are either 
-    pre-defined names understood by the Condor infrastructure or a custom 
+    pre-defined names understood by the HTCondor infrastructure or a custom 
     attribute name.
     * type - An enumerated string with values STRING, INTEGER, FLOAT, 
     EXPRESSION, BOOLEAN
@@ -201,14 +201,14 @@ A job can be in one of several states:
     to a resource yet.
     * running - The job is assigned to a computational resource and executing 
     there.
-    * held - The job exists in the Condor job queue but is being held back from 
+    * held - The job exists in the HTCondor job queue but is being held back from 
     execution.
     * completed - The job ran to completion.
     * removed - The job was deleted from the job queue by a user.
 
 ResourceConstraint
 ------------------
-A ResourceConstraint is a basic quality that Condor should consider when 
+A ResourceConstraint is a basic quality that HTCondor should consider when 
 matching a new job to a resource. There are five enumerated basic constraints 
 defined in Aviary:
 
@@ -220,7 +220,7 @@ defined in Aviary:
     * MEMORY - expected total RAM required to run job
     * DISK - expected total  disk space to run job
     * FILESYSTEM - the domain name representing a uniformly mounted network file 
-    system, configured by a Condor administrator
+    system, configured by a HTCondor administrator
 
 Job Submission and Management
 =============================
@@ -240,11 +240,11 @@ Input:
     * requirements - an optional list of ResourceConstraints that specify what 
     type of resource this job should be targetted toward
     * extra - an optional list of Attributes that refine the submit request 
-    beyond the basic fields or supercede the Condor Attributes implied by the 
+    beyond the basic fields or supercede the HTCondor Attributes implied by the 
     other basic fields in this submit request
 Output: OK or error with diagnostic text if a problem was encountered	
 
-Experienced Condor users who are familiar with crafting specific attributes such 
+Experienced HTCondor users who are familiar with crafting specific attributes such 
 as complex Requirements can do so using the extra Attributes field in 
 conjunction with the allowOverrides XML attribute in the request.
 
@@ -268,22 +268,22 @@ Input: a single JobId and a remove reason (string)
 Output: OK, or error with text if job not found or parsed
 
 Removal of a job means that the job is prevented from executing to completion, 
-however its existence in the Condor job queue is still maintained as a matter of 
+however its existence in the HTCondor job queue is still maintained as a matter of 
 record.
 
 - setJobAttribute
 Input: a single JobId and a single Attribute
 Output: OK, or error with text if job not found or parsed
 
-Attributes are predefined by Condor or can be created by the user, for example, 
+Attributes are predefined by HTCondor or can be created by the user, for example, 
 using a name/type/value shorthand:
 
     * "JobPrio"/"INTEGER"/"2" - would be the shorthand for the job attribute 
-    predefined by Condor to control job priority, set to a value of 2 giving it 
+    predefined by HTCondor to control job priority, set to a value of 2 giving it 
     higher priority than the default priority of 0
     * "Recipe"/"STRING"/"secret sauce" - would be the shorthand for a custom 
     job attribute provided by a user, only meaningful to their application and 
-    irrelevant to the Condor infrastructure
+    irrelevant to the HTCondor infrastructure
 
 Job Data Queries
 ================
@@ -322,7 +322,7 @@ Output: returns all the Attributes for each JobId input, or an error indicating
 the job could not be parsed or found 
 
 This is a potentially expensive operation since one could request ALL the 
-attributes for ALL the jobs tracked in Condor; consider judicious use of 
+attributes for ALL the jobs tracked in HTCondor; consider judicious use of 
 summaries for select job sets instead if performance is a concern
 
 - getJobData
@@ -333,7 +333,7 @@ read from the front or back
 Output: the file content requested if successful
 
 Each job can specify an error file (ERR), a log file (LOG), or an output file 
-(OUT); the log file is used by Condor to monitor the progress of the job
+(OUT); the log file is used by HTCondor to monitor the progress of the job
 
 - getSubmissionSummaries
 
