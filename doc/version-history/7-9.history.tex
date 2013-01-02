@@ -88,9 +88,11 @@ commands by the same names.
 
 \begin{itemize}
 
-\item When NEGOTIATOR\_CONSIDER\_PREEMPTION is false, the \Condor{negotiator}
-now fetches machine ads more quickly from the collector by skipping most
-attributes of the busy machines.  This can make negotiation much faster in
+\item When configuration variable \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}
+is \Expr{False}, the \Condor{negotiator}
+now fetches machine ClassAds more quickly from the \Condor{collector}
+ by skipping most attributes of the busy machines.  
+This can make negotiation much faster in
 a very large pool of mostly claimed machines.
 \Ticket{3366}
 
@@ -121,8 +123,9 @@ by configuring \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 \Ticket{3333}
 
 \item \Condor{dagman} will now try twice to write a POST script terminate
-event, rather than trying once and exiting. \Condor{dagman} exits, writing
-a rescue DAG, if it is unable to write the event.
+event, rather than trying once and exiting. 
+If it is unable to write the event, \Condor{dagman} exits, 
+writing a Rescue DAG. 
 \Ticket{965}
 
 \item The \Condor{gridmanager} now cleans up temporary files and directories
@@ -181,7 +184,9 @@ platforms, so values larger than 2047 are treated as no limit on 32-bit platform
 
 \begin{itemize}
 
-\item None.
+\item Initial documentation for EC2 spot instances can be found
+in section~\ref{sec:spot-instances}.
+\Ticket{3209}
 
 \end{itemize}
 
