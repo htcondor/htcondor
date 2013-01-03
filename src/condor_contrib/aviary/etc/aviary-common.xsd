@@ -325,8 +325,8 @@
 	<xs:complexType name="Slot">
 		<xs:sequence>
 			<xs:element name="id" type="tns:ResourceID"/>
-			<xs:element name="slot_type" type="tns:SlotType" default="STATIC"/>
 			<xs:element name="status" type="tns:Status"/>
+			<xs:element name="slot_type" type="tns:SlotType" default="STATIC" minOccurs="0"/>
 			<xs:element name="summary" type="tns:SlotSummary" minOccurs="0"/>
 			<xs:element name="dynamic_slots" type="tns:Slot" minOccurs="0" maxOccurs="unbounded"/>
 		</xs:sequence>

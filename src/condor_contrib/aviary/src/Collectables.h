@@ -103,6 +103,7 @@ namespace collector {
     };
     
     struct Slot: public DaemonCollectable {
+        string SlotType;
         string Arch;
         string OpSys;
         string Activity;

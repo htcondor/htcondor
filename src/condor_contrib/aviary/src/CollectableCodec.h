@@ -26,6 +26,7 @@
 #include <AviaryCommon_Submitter.h>
 #include <AviaryCommon_Slot.h>
 #include <AviaryCommon_Submitter.h>
+#include <AviaryCommon_ResourceID.h>
 
 // internal rep
 #include "Collectables.h"
@@ -36,17 +37,19 @@ namespace collector {
 class CollectableCodec{
 
 public:
-    CollectableCodec(axutil_env_t* env) { m_env = env; }
-    AviaryCommon::Collector* encode(aviary::collector::Collector& in_);
-    AviaryCommon::Master* encode(aviary::collector::Master& in_);
-    AviaryCommon::Negotiator* encode(aviary::collector::Negotiator& in_);
-    AviaryCommon::Scheduler* encode(aviary::collector::Scheduler& in_);
-    AviaryCommon::Slot* encode(aviary::collector::Slot& in_);
-    AviaryCommon::Submitter* encode(aviary::collector::Submitter& in_);
+    CollectableCodec(const axutil_env_t* env) { m_env = env; }
+    AviaryCommon::Collector* encode(aviary::collector::Collector* in_);
+    AviaryCommon::Master* encode(aviary::collector::Master* in_);
+    AviaryCommon::Negotiator* encode(aviary::collector::Negotiator* in_);
+    AviaryCommon::Scheduler* encode(aviary::collector::Scheduler* in_);
+    AviaryCommon::Slot* encode(aviary::collector::Slot* in_);
+    AviaryCommon::Submitter* encode(aviary::collector::Submitter* in_);
 
 private:
+    AviaryCommon::ResourceID* createResourceID(DaemonCollectable* dc, const char* daemon_type);
+    
     // axis2c env ptr for utils
-    axutil_env_t* m_env;
+    const axutil_env_t* m_env;
     
 };
 

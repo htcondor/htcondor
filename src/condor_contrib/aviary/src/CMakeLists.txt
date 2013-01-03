@@ -51,7 +51,7 @@ file( GLOB JOB_SERVER_SRCS aviary_query_server.cpp ${SOAP_SRCS}
 file( GLOB LOCATOR_PLUGIN_SRCS AviaryUtils.cpp LocatorObject.cpp 
 			${SOAP_SRCS} AviaryLocatorPlugin*.cpp )
 
-file( GLOB COLLECTOR_PLUGIN_SRCS AviaryUtils.cpp CollectorObject.cpp CollectableCodec.cpp
+file( GLOB COLLECTOR_PLUGIN_SRCS AviaryUtils.cpp Collectables.cpp CollectorObject.cpp CollectableCodec.cpp
 			${SOAP_SRCS} AviaryCollectorPlugin*.cpp )
 
 ############################
@@ -93,7 +93,7 @@ target_link_libraries(aviary_locator_axis AviaryLocatorPlugin-plugin)
 ############################
 # collector plugin
 ############################
-condor_plugin( AviaryCollectorPlugin-plugin "${COLLECTOR_REF};${COLLECTOR_PLUGIN_SRCS}" "${C_LIBEXEC}" "${WSO2_FOUND}" ON)
+condor_plugin( AviaryCollectorPlugin-plugin "${COLLECTOR_REF};${COMMON_GEN_SRCS};${COLLECTOR_PLUGIN_SRCS}" "${C_LIBEXEC}" "${WSO2_FOUND}" ON)
 # remove unresolved deps by copying in -laxis2_engine objects
 target_link_libraries(AviaryCollectorPlugin-plugin -Wl,--whole-archive -laxis2_engine -Wl,--no-whole-archive)
 

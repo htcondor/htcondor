@@ -22,9 +22,9 @@
         
                 #include "AviaryCommon_ResourceID.h"
               
-                #include "AviaryCommon_SlotType.h"
-              
                 #include "AviaryCommon_Status.h"
+              
+                #include "AviaryCommon_SlotType.h"
               
                 #include "AviaryCommon_SlotSummary.h"
               
@@ -48,14 +48,14 @@ namespace AviaryCommon
 
                 
                 bool isValidId;
-            AviaryCommon::SlotType* property_Slot_type;
-
-                
-                bool isValidSlot_type;
             AviaryCommon::Status* property_Status;
 
                 
                 bool isValidStatus;
+            AviaryCommon::SlotType* property_Slot_type;
+
+                
+                bool isValidSlot_type;
             AviaryCommon::SlotSummary* property_Summary;
 
                 
@@ -74,11 +74,11 @@ namespace AviaryCommon
             
 
         bool WSF_CALL
-        setSlot_typeNil();
+        setStatusNil();
             
 
         bool WSF_CALL
-        setStatusNil();
+        setSlot_typeNil();
             
 
         bool WSF_CALL
@@ -113,13 +113,13 @@ namespace AviaryCommon
          * Constructor for creating Slot
          * @param 
          * @param Id AviaryCommon::ResourceID*
-         * @param Slot_type AviaryCommon::SlotType*
          * @param Status AviaryCommon::Status*
+         * @param Slot_type AviaryCommon::SlotType*
          * @param Summary AviaryCommon::SlotSummary*
          * @param Dynamic_slots std::vector<AviaryCommon::Slot*>*
          * @return newly created Slot object
          */
-        Slot(AviaryCommon::ResourceID* arg_Id,AviaryCommon::SlotType* arg_Slot_type,AviaryCommon::Status* arg_Status,AviaryCommon::SlotSummary* arg_Summary,std::vector<AviaryCommon::Slot*>* arg_Dynamic_slots);
+        Slot(AviaryCommon::ResourceID* arg_Id,AviaryCommon::Status* arg_Status,AviaryCommon::SlotType* arg_Slot_type,AviaryCommon::SlotSummary* arg_Summary,std::vector<AviaryCommon::Slot*>* arg_Dynamic_slots);
         
 
         /**
@@ -156,30 +156,6 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for slot_type. 
-         * @return AviaryCommon::SlotType*
-         */
-        WSF_EXTERN AviaryCommon::SlotType* WSF_CALL
-        getSlot_type();
-
-        /**
-         * Setter for slot_type.
-         * @param arg_Slot_type AviaryCommon::SlotType*
-         * @return true on success, false otherwise
-         */
-        WSF_EXTERN bool WSF_CALL
-        setSlot_type(AviaryCommon::SlotType*  arg_Slot_type);
-
-        /**
-         * Re setter for slot_type
-         * @return true on success, false
-         */
-        WSF_EXTERN bool WSF_CALL
-        resetSlot_type();
-        
-        
-
-        /**
          * Getter for status. 
          * @return AviaryCommon::Status*
          */
@@ -200,6 +176,30 @@ namespace AviaryCommon
          */
         WSF_EXTERN bool WSF_CALL
         resetStatus();
+        
+        
+
+        /**
+         * Getter for slot_type. 
+         * @return AviaryCommon::SlotType*
+         */
+        WSF_EXTERN AviaryCommon::SlotType* WSF_CALL
+        getSlot_type();
+
+        /**
+         * Setter for slot_type.
+         * @param arg_Slot_type AviaryCommon::SlotType*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setSlot_type(AviaryCommon::SlotType*  arg_Slot_type);
+
+        /**
+         * Re setter for slot_type
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetSlot_type();
         
         
 
@@ -342,21 +342,21 @@ namespace AviaryCommon
         
 
         /**
-         * Check whether slot_type is Nill
-         * @return true if the element is Nil, false otherwise
-         */
-        bool WSF_CALL
-        isSlot_typeNil();
-
-
-        
-
-        /**
          * Check whether status is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
         isStatusNil();
+
+
+        
+
+        /**
+         * Check whether slot_type is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isSlot_typeNil();
 
 
         
@@ -475,22 +475,22 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for slot_type by property number (2)
-         * @return AviaryCommon::SlotType
+         * Getter for status by property number (2)
+         * @return AviaryCommon::Status
          */
 
-        AviaryCommon::SlotType* WSF_CALL
+        AviaryCommon::Status* WSF_CALL
         getProperty2();
 
     
         
 
         /**
-         * Getter for status by property number (3)
-         * @return AviaryCommon::Status
+         * Getter for slot_type by property number (3)
+         * @return AviaryCommon::SlotType
          */
 
-        AviaryCommon::Status* WSF_CALL
+        AviaryCommon::SlotType* WSF_CALL
         getProperty3();
 
     

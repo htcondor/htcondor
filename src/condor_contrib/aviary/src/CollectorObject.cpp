@@ -39,6 +39,8 @@ using namespace std;
 using namespace aviary::collector;
 using namespace aviary::util;
 
+CollectorObject* CollectorObject::m_instance = NULL;
+
 CollectorObject::CollectorObject ()
 {
     //

@@ -188,7 +188,7 @@ bool aviary::util::isSubmissionChange(const char* attr) {
 }
 
 // unfortunately no convenience functions from WS02 for dateTime
-axutil_date_time_t* encodeDateTime(const time_t& ts, const axutil_env_t* env) {
+axutil_date_time_t* aviary::util::encodeDateTime(const time_t& ts, const axutil_env_t* env) {
     struct tm the_tm;
 
     // need the re-entrant version because axutil_date_time_create

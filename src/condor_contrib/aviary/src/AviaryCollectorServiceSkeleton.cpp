@@ -22,7 +22,9 @@
 
 // local includes
 #include "CollectorObject.h"
+#include "CollectableCodec.h"
 #include "AviaryCollectorServiceSkeleton.h"
+#include "Axis2SoapProvider.h"
 #include <AviaryCollector_GetSlotID.h>
 #include <AviaryCollector_GetSlotIDResponse.h>
 #include <AviaryCollector_GetNegotiator.h>
@@ -48,6 +50,20 @@ using namespace AviaryCommon;
 using namespace AviaryCollector;
 using namespace aviary::collector;
 
+extern aviary::soap::Axis2SoapProvider* provider;
+
+// generic load of results
+template <class AviaryCollectableT, class CollectableMapT, class ResponseT>
+void loadAllResults(CollectableMapT& cmt, ResponseT* response, string& error)
+{
+    for (typename CollectableMapT::iterator it = cmt.begin(); cmt.end() != it; it++) {
+        CollectableCodec codec(provider->getEnv());
+        AviaryCollectableT* _collectable = codec.encode(it->second);
+        _collectable->setStatus(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("OK"),error));
+        response->addResults(_collectable);
+    }
+}
+
 GetAttributesResponse* AviaryCollectorServiceSkeleton::getAttributes(MessageContext *outCtx ,GetAttributes* _getAttributes)
 {
     /* TODO fill this with the necessary business logic */
@@ -57,17 +73,24 @@ GetAttributesResponse* AviaryCollectorServiceSkeleton::getAttributes(MessageCont
 GetCollectorResponse* AviaryCollectorServiceSkeleton::getCollector(MessageContext *outCtx ,GetCollector* _getCollector)
 {
     /* TODO fill this with the necessary business logic */
-    return (GetCollectorResponse*)NULL;
+    GetCollectorResponse* response = new GetCollectorResponse;
+    string error;
+    CollectorObject* co = CollectorObject::getInstance();
+
+    loadAllResults<AviaryCommon::Collector,CollectorMapType,GetCollectorResponse>(co->collectors,response,error);
+
+    return response;
 }
 
 GetMasterResponse* AviaryCollectorServiceSkeleton::getMaster(MessageContext *outCtx ,GetMaster* _getMaster)
 {
     /* TODO fill this with the necessary business logic */
     GetMasterResponse* response = new GetMasterResponse;
-    MasterSetType slot_set;
+    string error;
     CollectorObject* co = CollectorObject::getInstance();
-    for (MasterMapType::iterator it = co->masters.begin(); co->masters.end() != it; it++) {
-    }
+    
+    loadAllResults<AviaryCommon::Master,MasterMapType,GetMasterResponse>(co->masters,response,error);
+    
     return response;
 }
 
@@ -80,16 +103,24 @@ GetMasterIDResponse* AviaryCollectorServiceSkeleton::getMasterID(MessageContext 
 GetNegotiatorResponse* AviaryCollectorServiceSkeleton::getNegotiator(MessageContext *outCtx ,GetNegotiator* _getNegotiator)
 {
     /* TODO fill this with the necessary business logic */
-    return (GetNegotiatorResponse*)NULL;
+    GetNegotiatorResponse* response = new GetNegotiatorResponse;
+    string error;
+    CollectorObject* co = CollectorObject::getInstance();
+    
+    loadAllResults<AviaryCommon::Negotiator,NegotiatorMapType,GetNegotiatorResponse>(co->negotiators,response,error);
+    
+    return response;
 }
 
 GetSlotResponse* AviaryCollectorServiceSkeleton::getSlot(MessageContext *outCtx ,GetSlot* _getSlot)
 {
     /* TODO fill this with the necessary business logic */
     GetSlotResponse* response = new GetSlotResponse;
-    SlotSetType slot_set;
+    string error;
     CollectorObject* co = CollectorObject::getInstance();
-    SlotMapType& slot_map = co->slots;
+    
+    loadAllResults<AviaryCommon::Slot,SlotMapType,GetSlotResponse>(co->slots,response,error);
+
     return response;
 }
 
@@ -102,12 +133,24 @@ GetSlotIDResponse* AviaryCollectorServiceSkeleton::getSlotID(MessageContext *out
 GetSchedulerResponse* AviaryCollectorServiceSkeleton::getScheduler(MessageContext *outCtx ,GetScheduler* _getScheduler)
 {
     /* TODO fill this with the necessary business logic */
-    return (GetSchedulerResponse*)NULL;
+    GetSchedulerResponse* response = new GetSchedulerResponse;
+    string error;
+    CollectorObject* co = CollectorObject::getInstance();
+    
+    loadAllResults<AviaryCommon::Scheduler,SchedulerMapType,GetSchedulerResponse>(co->schedulers,response,error);
+
+    return response;
 }
 
 
 GetSubmitterResponse* AviaryCollectorServiceSkeleton::getSubmitter(MessageContext *outCtx ,GetSubmitter* _getSubmitter)
 {
     /* TODO fill this with the necessary business logic */
-    return (GetSubmitterResponse*)NULL;
+    GetSubmitterResponse* response = new GetSubmitterResponse;
+    string error;
+    CollectorObject* co = CollectorObject::getInstance();
+    
+    loadAllResults<AviaryCommon::Submitter,SubmitterMapType,GetSubmitterResponse>(co->submitters,response,error);
+
+    return response;
 }

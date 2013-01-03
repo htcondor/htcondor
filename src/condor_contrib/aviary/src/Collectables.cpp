@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+// condor includes
+#include "condor_common.h"
+#include "stl_string_utils.h"
+
 // local includes
 #include "Collectables.h"
 #include "AviaryConversionMacros.h"
@@ -27,12 +31,13 @@ using namespace aviary::collector;
 void DaemonCollectable::update(const ClassAd& ad)
 {
     MGMT_DECLARATIONS;
+    DaemonCollectable& m_stats = *this;
     m_stats.Pool = getPoolName();
     STRING(Name);
     STRING(MyAddress);
     STRING(CondorPlatform);
     STRING(CondorVersion);
-    TIME_INTEGER(DaemonStartTime);
+    INTEGER(DaemonStartTime);
 }
 
 
@@ -40,6 +45,7 @@ void Collector::update(const ClassAd& ad)
 {
     MGMT_DECLARATIONS;
     DaemonCollectable::update(ad);
+    Collector& m_stats = *this;
     INTEGER(RunningJobs);
     INTEGER(IdleJobs);
     INTEGER(HostsTotal);
@@ -53,6 +59,7 @@ void Master::update(const ClassAd& ad)
 {
     MGMT_DECLARATIONS;
     DaemonCollectable::update(ad);
+    Master& m_stats = *this;
     STRING(Arch);
     STRING(OpSysLongName);
     INTEGER(RealUid);
@@ -62,23 +69,25 @@ void Negotiator::update(const ClassAd& ad)
 {
     MGMT_DECLARATIONS;
     DaemonCollectable::update(ad);
-    DOUBLE(MatchRate);
-    INTEGER(Matches);
-    INTEGER(Duration);
-    INTEGER(NumSchedulers);
-    INTEGER(ActiveSubmitterCount);
-    INTEGER(NumIdleJobs);
-    INTEGER(NumJobsConsidered);
-    INTEGER(Rejections);
-    INTEGER(TotalSlots);
-    INTEGER(CandidateSlots);
-    INTEGER(TrimmedSlots);
+    Negotiator& m_stats = *this;
+    DOUBLE2(LastNegotiationCycleMatchRate0,MatchRate);
+    INTEGER2(LastNegotiationCycleMatches0,Matches);
+    INTEGER2(LastNegotiationCycleDuration0,Duration);
+    INTEGER2(LastNegotiationCycleNumSchedulers0,NumSchedulers);
+    INTEGER2(LastNegotiationCycleActiveSubmitterCount0,ActiveSubmitterCount);
+    INTEGER2(LastNegotiationCycleNumIdleJobs0,NumIdleJobs);
+    INTEGER2(LastNegotiationCycleNumJobsConsidered0,NumJobsConsidered);
+    INTEGER2(LastNegotiationCycleRejections0,Rejections);
+    INTEGER2(LastNegotiationCycleTotalSlots0,TotalSlots);
+    INTEGER2(LastNegotiationCycleCandidateSlots0,CandidateSlots);
+    INTEGER2(LastNegotiationCycleTrimmedSlots0,TrimmedSlots);
 }
 
 void Scheduler::update(const ClassAd& ad)
 {
     MGMT_DECLARATIONS;
     DaemonCollectable::update(ad);
+    Scheduler& m_stats = *this;
     INTEGER(JobQueueBirthdate);
     INTEGER(MaxJobsRunning);
     INTEGER(NumUsers);
@@ -93,6 +102,9 @@ void Slot::update(const ClassAd& ad)
 {
     MGMT_DECLARATIONS;
     DaemonCollectable::update(ad);
+    Slot& m_stats = *this;
+    STRING(SlotType);
+    upper_case(SlotType);
     STRING(Arch);
     STRING(OpSys);
     STRING(Activity);
@@ -111,6 +123,7 @@ void Slot::update(const ClassAd& ad)
 void Submitter::update(const ClassAd& ad)
 {
     MGMT_DECLARATIONS;
+    Submitter& m_stats = *this;
     STRING(Name);
     STRING(Machine);
     STRING(ScheddName);

@@ -87,7 +87,8 @@ struct AviaryCollectorPlugin : public Service, CollectorPlugin
     shutdown()
     {
         dprintf(D_FULLDEBUG, "AviaryCollectorPlugin: shutting down...\n");
-        collector->invalidateAll();
+        // TODO: implement invalidateAll
+        //collector->invalidateAll();
     }
     
     void
@@ -120,7 +121,7 @@ struct AviaryCollectorPlugin : public Service, CollectorPlugin
             case UPDATE_STARTD_AD:
             case UPDATE_SUBMITTOR_AD:
                 dprintf(D_FULLDEBUG, "AviaryCollectorPlugin: Received %s\n",cmd_str.c_str());
-                if (param_boolean(param_ignore_str.c_str(), true)) {
+                if (param_boolean(param_ignore_str.c_str(), false)) {
                     dprintf(D_FULLDEBUG, "AviaryCollectorPlugin: Configured to ignore %s\n",cmd_str.c_str());
                     break;
                 }
