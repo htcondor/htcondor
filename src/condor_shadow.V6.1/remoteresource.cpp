@@ -291,8 +291,10 @@ RemoteResource::killStarter( bool graceful )
 		return false;
 	}
 
-		// stop any lingering file transfers, if any
-	abortFileTransfer();
+	if( !graceful ) {
+			// stop any lingering file transfers, if any
+		abortFileTransfer();
+	}
 
 	if( ! dc_startd->deactivateClaim(graceful,&claim_is_closing) ) {
 		shadow->dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
