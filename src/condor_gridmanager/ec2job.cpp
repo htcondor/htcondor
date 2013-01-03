@@ -56,6 +56,8 @@ using namespace std;
 #define GM_SPOT_QUERY                   14
 #define GM_SPOT_CHECK                   15
 
+#define GM_SEEK_INSTANCE_ID             16
+
 static const char *GMStateNames[] = {
 	"GM_INIT",
 	"GM_START_VM",
@@ -72,7 +74,8 @@ static const char *GMStateNames[] = {
 	"GM_SPOT_CANCEL",
 	"GM_SPOT_SUBMITTED",
 	"GM_SPOT_QUERY",
-	"GM_SPOT_CHECK"
+	"GM_SPOT_CHECK",
+	"GM_SEEK_INSTANCE_ID"
 };
 
 #define EC2_VM_STATE_RUNNING			"running"
@@ -213,16 +216,12 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	
 	m_vm_check_times = 0;
 
+	// Only generate a keypair if the user asked for one.
 	jobAd->LookupString( ATTR_EC2_KEY_PAIR, m_key_pair );
-	
-	if (m_key_pair.empty())
-	{
-	  m_should_gen_key_pair = true;
-	  if (!jobAd->LookupString( ATTR_EC2_KEY_PAIR_FILE, m_key_pair_file ))
-	  {
-	    m_key_pair_file = NULL_FILE;
-	  }
-	}
+	jobAd->LookupString( ATTR_EC2_KEY_PAIR_FILE, m_key_pair_file );
+	if( m_key_pair.empty() && ! m_key_pair_file.empty() ) {
+	    m_should_gen_key_pair = true;
+    }
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start (unless the job is already held).
@@ -437,6 +436,26 @@ void EC2Job::doEvaluateState()
 
 				errorString = "";
 
+                //
+                // Put the job on hold for auth failures, but only if
+                // we aren't trying to remove it.
+                //
+                if( ! myResource->didFirstPing() ) { break; }
+                if( myResource->hadAuthFailure() ) {
+                    if( condorState == REMOVED ) {
+                        gmState = GM_DELETE;
+                        break;
+                    } else {
+                        formatstr( errorString, "Failed to authenticate %s.",
+                                   myResource->authFailureMessage.c_str() );
+                        dprintf( D_ALWAYS, "(%d.%d) %s\n",
+                                 procID.cluster, procID.proc, errorString.c_str() );
+                        jobAd->Assign( ATTR_HOLD_REASON, errorString );
+                        gmState = GM_HOLD;
+                        break;
+                    }
+                }
+
                 // If we're not doing recovery, start with GM_CLEAR_REQUEST.
 				gmState = GM_CLEAR_REQUEST;
 
@@ -465,14 +484,36 @@ void EC2Job::doEvaluateState()
 	    			        gmState = GM_SPOT_CANCEL;
 	    			    }
 	    		    } else {
-      				    // Why doesn't this skip ssh keypair generation?
+	    		        // Because we have the client token, we know that
+	    		        // we still have the SSH keypair from the previous
+	    		        // execution of GM_SAVE_CLIENT_TOKEN.  We can therefore
+	    		        // jump directly to GM_START_VM, where (using the
+	    		        // client token), we will call RunInstances() 
+	    		        // idempotently.
            				gmState = GM_START_VM;
+	    		        
+	    		        // As an optimization, if we already have the instance
+	    		        // ID, we can jump directly to GM_SUBMITTED.  This
+	    		        // also allows us to avoid logging the submission and
+	    		        // execution events twice.
+	    		        //
+	    		        // FIXME: If a job were removed before we begin
+	    		        // recovery, would the execute event be logged twice?
 	    		    	if (!m_remoteJobId.empty()) {
 		    		    	submitLogged = true;
     		    			if ( condorState == RUNNING || condorState == COMPLETED ) {
 	    		    			executeLogged = true;
 		    		    	}
     			    		gmState = GM_SUBMITTED;
+	    			    } else if( condorState == REMOVED ) {
+	    			        // We don't know if the corresponding instance
+	    			        // exists or not.  Rather than unconditionally
+	    			        // create it (in GM_START_VM), check to see if
+	    			        // exists first.  While this may be more efficient,
+	    			        // the real benefit is that invalid jobs won't
+	    			        // stay on hold when the user removes them
+	    			        // (because we won't try to start them).
+	    			        gmState = GM_SEEK_INSTANCE_ID;
 	    			    }
                     }
                 }
@@ -1004,20 +1045,27 @@ void EC2Job::doEvaluateState()
 				break;				
 				
 			case GM_CANCEL:
-
-				// need to call ec2_vm_stop(), it will only return
-				// STOP operation is success or failed
-				// ec2_vm_stop() will check the input arguments
-				rc = gahp->ec2_vm_stop(m_serviceUrl,
-									   m_public_key_file,
-									   m_private_key_file,
-									   m_remoteJobId,
-									   gahp_error_code);
+			    // Rather than duplicate code or cleverness in the spot
+			    // instance subgraph, just handle the case where we're
+			    // cancelling a spot request which has no corresponding
+			    // instance here.
+			    if( ! m_remoteJobId.empty() ) {
+    				// need to call ec2_vm_stop(), it will only return
+	    			// STOP operation is success or failed
+		    		// ec2_vm_stop() will check the input arguments
+			    	rc = gahp->ec2_vm_stop(m_serviceUrl,
+				    					   m_public_key_file,
+					    				   m_private_key_file,
+						    			   m_remoteJobId,
+							    		   gahp_error_code);
 			
-				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-					 rc == GAHPCLIENT_COMMAND_PENDING ) {
-					break;
-				} 
+    				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+	    				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+		    			break;
+			    	} 
+			    } else {
+			        rc = 0;
+			    }
 				
 				if ( rc == 0 ) {
 					if ( condorState == COMPLETED || condorState == REMOVED ) {
@@ -1083,7 +1131,6 @@ void EC2Job::doEvaluateState()
 				
 				
 			case GM_DELETE:
-			  
 				if (m_keypair_created)
 				{
 				  // Yes, now let's destroy the temporary keypair 
@@ -1096,28 +1143,43 @@ void EC2Job::doEvaluateState()
 					  break;
 				  }
 
-				  if (rc == 0) {
-					  
-					  // remove temporary keypair local output file
-					  if ( !remove_keypair_file(m_key_pair_file.c_str()) ) {
-						  dprintf(D_ALWAYS,"(%d.%d) job destroy keypair local file failed.\n", procID.cluster, procID.proc);
-					  }
-					  SetKeypairId( NULL );
-					  m_keypair_created = false;
+				  if( rc == 0 ) {
+					// Forget about the keypair.
+					SetKeypairId( NULL );
+					m_keypair_created = false;
+					
+					// Preserve the user's copy of the private key unless
+					// we're sure the instance is going away.  This will
+					// be overwritten on instance restart, if it occurs.
+					//
+					// Note that what we actually do here is check to see
+					// if the gridmanager will pay attention to the job the
+					// next time the gridmanager runs.  If it won't,
+					// we clean up.
+					//
+					// Except that, empirically, condor_rm doesn't clear
+					// the job ad.  *sigh* 
+					std::string gridJobID;
+					jobAd->LookupString( ATTR_GRID_JOB_ID, gridJobID );
+					if( gridJobID.empty() || condorState == REMOVED || condorState == COMPLETED ) {
+						// remove temporary keypair local output file
+						if ( !remove_keypair_file(m_key_pair_file.c_str()) ) {
+							dprintf(D_ALWAYS,"(%d.%d) job destroy keypair local file failed.\n", procID.cluster, procID.proc);
+						}
+					}
 				  } else {
 					  errorString = gahp->getErrorString();
 					  dprintf( D_ALWAYS,"(%d.%d) job destroy keypair failed: %s: %s\n",
 							  procID.cluster, procID.proc, gahp_error_code,
 							  errorString.c_str() );
 				  }
-				  
 				}
 								
 				// We are done with the job. Propagate any remaining updates
 				// to the schedd, then delete this object.
 				DoneWithJob();
 				// This object will be deleted when the update occurs
-				break;							
+				break;
 
             //
             // Except for the three exceptions above (search for GM_SPOT),
@@ -1510,7 +1572,61 @@ void EC2Job::doEvaluateState()
                 // 
                 gmState = GM_SPOT_START;
                 } break;
+
+            case GM_SEEK_INSTANCE_ID: {
+                //
+                // During recovery, if we have a client token but not an
+                // instance ID, and we don't want to start a VM (that is,
+                // we're removing the job), we need to be able to check
+                // if our client token has a corresponding instance.
+                //
+                StringList returnStatus;
+                rc = gahp->ec2_vm_status_all(   m_serviceUrl,
+                                                m_public_key_file,
+                                                m_private_key_file,
+                                                returnStatus,
+                                                gahp_error_code );
+                if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED
+                 || rc == GAHPCLIENT_COMMAND_PENDING ) {
+                    break;
+                }
                 
+                if( rc != 0 ) {
+                    errorString = gahp->getErrorString();
+                    dprintf( D_ALWAYS, "(%d.%d) Attempt to locate job during recovery failed: %s: %s\n",
+                             procID.cluster, procID.proc, gahp_error_code,
+                             errorString.c_str() );
+                    gmState = GM_HOLD;
+                    break;
+                } else {
+                    ASSERT( returnStatus.number() % 4 == 0 );
+                    
+                    returnStatus.rewind();
+                    std::string instanceID;
+                    std::string iid, status, amiID, clientToken;
+                    for( int i = 0; i < returnStatus.number(); i += 4 ) {
+                        iid = returnStatus.next();
+                        status = returnStatus.next();
+                        amiID = returnStatus.next();
+                        clientToken = returnStatus.next();
+                        
+                        if( clientToken == m_client_token ) {
+                            instanceID = iid;
+                            break;
+                        }
+                    }
+                        
+                    if( ! instanceID.empty() ) {
+                        // Yes, this duplicates work, but it also ensures
+                        // that we do things like logging the submit and/or
+                        // execute events.
+                        gmState = GM_START_VM;
+                    } else {
+                        gmState = GM_DELETE;
+                    }
+                }
+                } break;
+                    
 			default:
 				EXCEPT( "(%d.%d) Unknown gmState %d!",
 						procID.cluster, procID.proc, gmState );

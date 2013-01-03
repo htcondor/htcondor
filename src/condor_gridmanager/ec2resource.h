@@ -62,13 +62,19 @@ public:
 
 	void PublishResourceAd( ClassAd *resource_ad );
 
+    bool hadAuthFailure() { return m_hadAuthFailure; }
+
+    std::string authFailureMessage;
+
 private:
 	void DoPing(time_t & ping_delay, 
 				bool & ping_complete, 
 				bool & ping_succeeded  );
 	
 	char* m_public_key_file;
-	char* m_private_key_file;	
+	char* m_private_key_file;
+
+	bool m_hadAuthFailure;
 };    
   
 #endif

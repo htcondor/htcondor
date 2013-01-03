@@ -57,7 +57,7 @@ class ClassAdAnalyzer
 		 *  @return true on success false on failure
 		 */
 	bool AnalyzeJobReqToBuffer( ClassAd *request, ClassAdList &offers,
-								std::string &buffer );
+								std::string &buffer, std::string &pretty_req);
 
 #if defined( COLLECTIONS )
 		/** Analyze a job ClassAd requirements expression.
@@ -111,7 +111,7 @@ class ClassAdAnalyzer
 	void result_add_explanation(classad_analysis::matchmaking_failure_kind mfk, ClassAd *resource);
 	void result_add_machine(classad::ClassAd resource);
 
-	bool AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, std::string &buffer );
+	bool AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, std::string &buffer, std::string &pretty_req );
 	bool AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers, std::string &buffer );
 
 	bool BuildBoolTable( MultiProfile *, ResourceGroup &, BoolTable &result );

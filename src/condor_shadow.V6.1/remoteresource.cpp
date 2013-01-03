@@ -93,6 +93,8 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	already_killed_fast = false;
 	m_want_chirp = false;
 	m_want_streaming_io = false;
+	m_attempt_shutdown_tid = -1;
+	m_started_attempting_shutdown = 0;
 }
 
 
@@ -128,6 +130,11 @@ RemoteResource::~RemoteResource()
 		if( m_filetrans_session.secSessionId() ) {
 			daemonCore->getSecMan()->invalidateKey( m_filetrans_session.secSessionId() );
 		}
+	}
+
+	if( m_attempt_shutdown_tid != -1 ) {
+		daemonCore->Cancel_Timer(m_attempt_shutdown_tid);
+		m_attempt_shutdown_tid = -1;
 	}
 }
 
@@ -284,6 +291,11 @@ RemoteResource::killStarter( bool graceful )
 		return false;
 	}
 
+	if( !graceful ) {
+			// stop any lingering file transfers, if any
+		abortFileTransfer();
+	}
+
 	if( ! dc_startd->deactivateClaim(graceful,&claim_is_closing) ) {
 		shadow->dprintf( D_ALWAYS, "RemoteResource::killStarter(): "
 						 "Could not send command to startd\n" );
@@ -391,6 +403,60 @@ RemoteResource::dprintfSelf( int debugLevel )
 	}
 }
 
+int
+RemoteResource::attemptShutdownTimeout()
+{
+	m_attempt_shutdown_tid = -1;
+	attemptShutdown();
+	return TRUE;
+}
+
+void
+RemoteResource::abortFileTransfer()
+{
+	filetrans.stopServer();
+	if( state == RR_PENDING_TRANSFER ) {
+		state = RR_FINISHED;
+	}
+}
+
+void
+RemoteResource::attemptShutdown()
+{
+	if( filetrans.transferIsInProgress() ) {
+			// This can happen if we process the job exit message
+			// before the file transfer reaper processes the exit of
+			// the file transfer process
+
+		if( m_attempt_shutdown_tid != -1 ) {
+			return;
+		}
+		if( m_started_attempting_shutdown == 0 ) {
+			m_started_attempting_shutdown = time(NULL);
+		}
+		int total_delay = time(NULL) - m_started_attempting_shutdown;
+		if( abs(total_delay) > 300 ) {
+				// Something is wrong.  We should not have had to wait this long
+				// for the file transfer reaper to finish.
+			dprintf(D_ALWAYS,"WARNING: giving up waiting for file transfer "
+					"to finish after %ds.  Shutting down shadow.\n",total_delay);
+		}
+		else {
+			m_attempt_shutdown_tid = daemonCore->Register_Timer(1, 0,
+				(TimerHandlercpp)&RemoteResource::attemptShutdownTimeout,
+				"attempt shutdown", this);
+			if( m_attempt_shutdown_tid != -1 ) {
+				dprintf(D_FULLDEBUG,"Delaying shutdown of shadow, because file transfer is still active.\n");
+				return;
+			}
+		}
+	}
+
+	abortFileTransfer();
+
+		// we call our shadow's shutdown method:
+	shadow->shutDown( exit_reason );
+}
 
 int
 RemoteResource::handleSysCalls( Stream * /* sock */ )
@@ -404,8 +470,7 @@ RemoteResource::handleSysCalls( Stream * /* sock */ )
 
 	if (do_REMOTE_syscall() < 0) {
 		shadow->dprintf(D_SYSCALLS,"Shadow: do_REMOTE_syscall returned < 0\n");
-			// we call our shadow's shutdown method:
-		shadow->shutDown( exit_reason );
+		attemptShutdown();
 		return KEEP_STREAM;
 	}
 	hadContact();
@@ -930,7 +995,12 @@ RemoteResource::setExitReason( int reason )
 	}
 
 	// record that this resource is really finished
-	setResourceState( RR_FINISHED );
+	if( filetrans.transferIsInProgress() ) {
+		setResourceState( RR_PENDING_TRANSFER );
+	}
+	else {
+		setResourceState( RR_FINISHED );
+	}
 }
 
 
@@ -1181,7 +1251,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 				// and we don't want to log any events here. 
 		}
 		free( job_state );
-		if( state == RR_PENDING_DEATH ) {
+		if( state == RR_PENDING_DEATH || state == RR_PENDING_TRANSFER ) {
 				// we're trying to shutdown, so don't bother recording
 				// what we just heard from the starter.  we're done
 				// dealing with this update.

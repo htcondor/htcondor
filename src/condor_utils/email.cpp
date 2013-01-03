@@ -439,7 +439,7 @@ email_close(FILE *mailer)
 		
 		/* Put a signature on the bottom of the email */
 		fprintf( mailer, "\n\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=\n" );
-		fprintf( mailer, "Questions about this message or Condor in general?\n" );
+		fprintf( mailer, "Questions about this message or HTCondor in general?\n" );
 
 			/* See if there's an address users should use for help */
 		temp = param( "CONDOR_SUPPORT_EMAIL" );
@@ -447,12 +447,12 @@ email_close(FILE *mailer)
 			temp = param( "CONDOR_ADMIN" );
 		}
 		if( temp ) {
-			fprintf( mailer, "Email address of the local Condor administrator: "
+			fprintf( mailer, "Email address of the local HTCondor administrator: "
 					 "%s\n", temp );
 			free( temp );
 		}
-		fprintf( mailer, "The Official Condor Homepage is "
-				 "http://www.cs.wisc.edu/condor\n" );
+		fprintf( mailer, "The Official HTCondor Homepage is "
+				 "http://www.cs.wisc.edu/htcondor\n" );
 	}
 
 	fflush(mailer);

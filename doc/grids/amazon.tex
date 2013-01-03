@@ -123,38 +123,47 @@ occurring first.  HTCondor performs the base64 encoding that EC2 expects on
 the data.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Amazon-submit}Using Spot Instances}
+\subsubsection{\label{sec:spot-instances}Using Spot Instances}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-EC2 jobs may also be submitted to clouds supporting spot instances.
-A spot instance differs from a conventional (dedicated) instance in two
-primary ways: first, its price varies according to demand; and second,
-the cloud provider may terminate it prematurely.  To start a spot instance,
-you specify a bid, the most you're willing to pay per hour to run the VM.
-To do so in HTCondor, use the submit file command \SubmitCmd{ec2\_spot\_price}.
-For example, the following bids 1.1 cents per hour (on Amazon\footnote{The EC2
-API does not specify how the cloud provider should interpret the bid.
-Empirically, Amazon uses fractional US dollars.}):
+EC2 jobs may also be submitted to clouds that support spot instances.
+A spot instance differs from a conventional, or dedicated, instance in two
+primary ways.
+First, the instance price varies according to demand.
+Second,
+the cloud provider may terminate the instance prematurely.
+To start a spot instance,
+the submitter specifies a bid,
+which represents the most the submitter is willing to pay per hour
+to run the VM.
+\index{submit commands!ec2\_spot\_price}
+Within HTCondor, the submit command \SubmitCmd{ec2\_spot\_price}
+specifies this floating point value.
+For example, 
+to bid 1.1 cents per hour on Amazon:
 
 \begin{verbatim}
 ec2_spot_price = 0.011
 \end{verbatim}
 
-Otherwise, the submit commands for a spot instance are identical to those
+Note that the EC2 API does not specify how the cloud provider 
+should interpret the bid.
+Empirically, Amazon uses fractional US dollars.
+
+Other submission details for a spot instance are identical to those
 for a dedicated instance.
 
-A spot instance will not necessarily begin immediately; instead, it will 
-begin as soon as the price drops below your bid.  Thus, spot instance jobs
-may stay in the idle state for much longer than dedicated instance jobs,
-as they wait for the price to drop.  Furthermore, if the price rises above
-the bid, the cloud service will terminate the instance.
+A spot instance will not necessarily begin immediately.
+Instead, 
+it will begin as soon as the price drops below the bid.
+Thus, spot instance jobs
+may remain in the idle state for much longer than dedicated instance jobs,
+as they wait for the price to drop.
+Furthermore, if the price rises above the bid, 
+the cloud service will terminate the instance.
 
-For more information about how HTCondor manages spot instance requests
-to preserve its usual job semantics, see the design document attached
-to \Ticket{3209}.
-
-For more information about Amazon's spot instances, see 
-\url{http://aws.amazon.com/ec2/spot-instances/}.
+More information about Amazon's spot instances is available at
+\URL{http://aws.amazon.com/ec2/spot-instances/}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

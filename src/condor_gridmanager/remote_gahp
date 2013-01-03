@@ -67,11 +67,18 @@ USAGE="Usage: $PROG_NAME [options] remote_hostname remote_cmd [remote options an
  --rgahp-script SCRIPT \tpath to script to start up blahp (~/.bosco/batch_gahp)\n \
  --help, -h \t\t\tprint this\n \
 "
-TEMP=`getopt -o +h --long help,rgahp-user:,rgahp-key:,rgahp-nokey,rgahp-pass:,rgahp-nopass,rgahp-script: -- "$@"`
+if [ `uname` = "Darwin" ] ; then
+    # Mac OS X doesn't have GNU getopt, so not fancy argument checking here
+    # TODO This means that the --rgahp-* options aren't supported on
+    #   Mac OS X. We should fix that sometime.
+    eval set -- -- "$@"
+else
+    TEMP=`getopt -o +h --long help,rgahp-user:,rgahp-key:,rgahp-nokey,rgahp-pass:,rgahp-nopass,rgahp-script: -- "$@"`
 
-if [ $? != 0 ] ; then echo -e "$USAGE" >&2 ; exit 1 ; fi
+    if [ $? != 0 ] ; then echo -e "$USAGE" >&2 ; exit 1 ; fi
 
-eval set -- "$TEMP"
+    eval set -- "$TEMP"
+fi
 
 # Remote hostname is mandatory
 # It is the first argument after the rgahp options
@@ -163,13 +170,38 @@ shift
 #echo "** Follows output of: ssh -o \"BatchMode yes\" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -c \"'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'\""
 if [ "${REMOTE_CMD}" = "batch_gahp" ] ; then
     ssh -o "BatchMode yes" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'GLITE_LOCATION=$REMOTE_GLITE $REMOTE_GLITE/bin/batch_gahp $*'"
+    SSH_STATUS=$?
 elif [ "${REMOTE_CMD}" = "condor_ft-gahp" ] ; then
-    ssh -o "BatchMode yes" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'CONDOR_CONFIG=$REMOTE_GLITE/etc/condor_config.ft-gahp $REMOTE_GLITE/bin/condor_ft-gahp -f $*'"
+    # We need to set up a tunnel from the remote machine for the file
+    # transfer TCP connections. If we knew that both sides were running
+    # OpenSSH 5.2p1 or later, we could have ssh pick the port on the
+    # remote end. But we don't, so we pick a random port and hope it's
+    # not already in use.
+    # We mimic the message that newer versions of OpenSSH print when
+    # binding a dynamic port for tunneling. The gridmanager looks for
+    # this message to know which port to tell the ft-gahp to use.
+    # If the local OpenSSH is 4.4p1 or later (we check for 5.0 or later
+    # for simplicity), then we can use ExitOnForwardFailure and try
+    # several random ports in case we get unlucky on the first attempt.
+    # We extract the IP and port on which the gridmanager can be
+    # contacted from $CONDOR_INHERIT.
+    GRIDMANAGER_ADDRESS=`echo "$CONDOR_INHERIT" | sed 's/[^<]*<\([^?>]*\).*/\1/'`
+    SSH_STATUS=255
+    if [[ `ssh -V 2>&1` =~ ^OpenSSH_[5-9].* ]] ; then
+        SSH_ARGS="-o ExitOnForwardFailure=yes"
+        tries=3
+    else
+        tries=1
+    fi
+    while ((tries-- > 0 && SSH_STATUS == 255)) ; do
+        let port=${RANDOM}+32768
+        ssh $SSH_ARGS -R $port:$GRIDMANAGER_ADDRESS -o "BatchMode yes" $REMOTE_USER@$REMOTE_HOSTNAME /bin/bash -l -c "'echo Allocated port $port for remote forward to 1>&2 ; CONDOR_CONFIG=$REMOTE_GLITE/etc/condor_config.ft-gahp $REMOTE_GLITE/bin/condor_ft-gahp -f $*'"
+        SSH_STATUS=$?
+    done
 else
     echo "Unknown remote command" 1>&2
+    SSH_STATUS=1
 fi
-
-SSH_STATUS=$?
 
 # kill the ssh-agent if it exists
 eval `ssh-agent -sk` 1>&2

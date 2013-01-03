@@ -689,6 +689,9 @@
 #define ATTR_TRANSFER_OUTPUT  "TransferOut"
 #define ATTR_TRANSFER_ERROR  "TransferErr"
 #define ATTR_TRANSFER_INPUT_FILES  "TransferInput"
+#define ATTR_TRANSFER_INPUT_SIZE_MB  "TransferInputSizeMB"
+#define ATTR_MAX_TRANSFER_INPUT_MB "MaxTransferInputMB"
+#define ATTR_MAX_TRANSFER_OUTPUT_MB "MaxTransferOutputMB"
 #define ATTR_TRANSFER_INTERMEDIATE_FILES  "TransferIntermediate"
 #define ATTR_TRANSFER_OUTPUT_FILES  "TransferOutput"
 #define ATTR_TRANSFER_OUTPUT_REMAPS  "TransferOutputRemaps"
@@ -987,6 +990,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SORT_EXPR_STRING "SortExprString"
 
 #define ATTR_QUERY_EXPIRES "Expires"
+#define ATTR_MAX_TRANSFER_BYTES "MaxTransferBytes"
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

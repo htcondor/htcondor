@@ -48,14 +48,27 @@ def parse_cproc(opts):
     return (opts.cproc,None)
     
 def print_header():
-    print "ID".ljust(7),"OWNER".ljust(16),"SUBMITTED".ljust(27),"RUN_TIME".ljust(10),"ST".ljust(3),"COMPLETED".ljust(27),"CMD"
+    print "ID".ljust(7),"OWNER".ljust(16),"SUBMITTED".ljust(27),"RUN_TIME".ljust(10),"ST".ljust(3),"COMPLETED/REMOVED".ljust(27),"CMD"
     return True
+
+def expected_field(item,name):
+    try:
+        return item[name]
+    except KeyError as ke:
+        return None
+
+def optional_field(item,name):
+    try:
+        return item[name]
+    except KeyError as ke:
+        return ""
     
 def print_summary(item):
     print str("%s.%s" % (item['ClusterId'],item['ProcId'])).ljust(7), \
                 str(item['Owner'].ljust(16)), str(ctime(item['QDate'])).ljust(27), \
-                str(strftime('%H:%M:%S', gmtime(item['RemoteWallClockTime']))).ljust(10), str(history_states[item['JobStatus']]).ljust(3), \
-                str(ctime(item['CompletionDate'])).ljust(27), str(item['Cmd']), str(item['Args'])
+                str(strftime('%H:%M:%S', gmtime(expected_field(item,'RemoteWallClockTime') or 0))).ljust(10), \
+                str(history_states[item['JobStatus']]).ljust(3), \
+                str(ctime(expected_field(item,'EnteredCurrentStatus') or 0)).ljust(27), str(item['Cmd']), optional_field(item,'Args')
     return True
 
 def print_full_ad(classad):
@@ -85,17 +98,13 @@ def print_history(opts):
     else:
         qdate_order = pymongo.DESCENDING
     matches = opts.match or 0 
-    try:
-        for item in db['history'].find(query).sort('QDate',qdate_order).limit(int(matches)):
-            opts.long and print_full_ad(item) or print_summary(item)
-    except (KeyError,TypeError,ValueError) as e:
-        print "Error in query: ", e
-        exit(1)
+    for item in db['history'].find(query).sort('QDate',qdate_order).limit(int(matches)):
+        opts.long and print_full_ad(item) or print_summary(item)
 
-parser = OptionParser(description='Query Condor ODS for job history')
+parser = OptionParser(description='Query HTCondor ODS for job history')
 parser.add_option('-s','--server', action="store", dest='server',
                     default='localhost',
-                    help='mongodb database server location: e.g., somehost, localhost:2012')
+                    help='mongodb database server location: e.g., somehost, localhost:27017')
 parser.add_option('-f','--forward', action="store_true", default=False, help='list jobs oldest-to-newest')
 parser.add_option('-m','--match', action="store", dest='match', help='limit the number of jobs displayed by <int>')
 parser.add_option('-l','--long', action="store_true", default=False, help='verbose output (entire classads)')

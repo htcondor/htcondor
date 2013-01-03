@@ -42,6 +42,9 @@ typedef enum {
 			confirmation that it's really dead.  This state is 
 		    skipped if the job exits on its own. */
 	RR_PENDING_DEATH,
+		/// Waiting for file transfer reaper to finish
+		/// before changing state to RR_FINISHED
+	RR_PENDING_TRANSFER,
 		/// After it has stopped (for whatever reason...)
 	RR_FINISHED,
 		/// Suspended at the execution site
@@ -480,6 +483,9 @@ class RemoteResource : public Service {
 
 	bool began_execution;
 
+	int m_attempt_shutdown_tid;
+	time_t m_started_attempting_shutdown;
+
 private:
 
 		/// Private helper methods for trying to reconnect
@@ -522,7 +528,9 @@ private:
 	void setRemoteProxyRenewTime(time_t expiration_time);
 	void setRemoteProxyRenewTime();
 	void startCheckingProxy();
-
+	int attemptShutdownTimeout();
+	void attemptShutdown();
+	void abortFileTransfer();
 };
 
 

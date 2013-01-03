@@ -1684,6 +1684,7 @@ static bool test_next_dirty_expr_clear() {
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
+	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
 	classad.ResetExpr();
 	const char* name;
@@ -1709,6 +1710,7 @@ static bool test_next_dirty_expr_insert() {
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
+	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
 	classad.ResetExpr();
 	classad.Insert("C = 3");
@@ -1736,6 +1738,7 @@ static bool test_next_dirty_expr_insert_two_calls() {
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
+	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
 	classad.ResetExpr();
 	classad.Insert("C = 3");
@@ -1763,6 +1766,7 @@ static bool test_next_dirty_expr_two_inserts_first() {
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
+	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
 	classad.ResetExpr();
 	classad.Insert("C = 3");
@@ -1790,6 +1794,7 @@ static bool test_next_dirty_expr_two_inserts_second() {
 		"two times.");
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
+	classad.EnableDirtyTracking();
 	classad.initFromString(classad_string, NULL);
 	classad.ClearAllDirtyFlags();
 	classad.ResetExpr();
@@ -1820,6 +1825,7 @@ static bool test_next_dirty_expr_two_inserts_third() {
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
+	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
 	classad.ResetExpr();
 	classad.Insert("C = 3");
@@ -1850,6 +1856,7 @@ static bool test_next_dirty_expr_two_inserts_clear() {
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
+	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
 	classad.ResetExpr();
 	classad.Insert("C = 3");
@@ -1879,6 +1886,7 @@ static bool test_next_dirty_expr_set_first() {
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
+	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
 	classad.ResetExpr();
 	classad.SetDirtyFlag("A", true);
@@ -1908,6 +1916,7 @@ static bool test_next_dirty_expr_set_second() {
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
+	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
 	classad.ResetExpr();
 	classad.SetDirtyFlag("A", true);
@@ -1937,6 +1946,7 @@ static bool test_get_dirty_flag_exists_dirty() {
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
+	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
 	classad.ResetExpr();
 	classad.SetDirtyFlag("A", true);
@@ -1967,6 +1977,7 @@ static bool test_get_dirty_flag_exists_not_dirty() {
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
+	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
 	classad.ResetExpr();
 	classad.SetDirtyFlag("A", true);
@@ -1997,6 +2008,7 @@ static bool test_get_dirty_flag_not_exist() {
 	const char* classad_string = "\tA = 1\n\t\tB = 2";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
+	classad.EnableDirtyTracking();
 	classad.ClearAllDirtyFlags();
 	classad.ResetExpr();
 	classad.SetDirtyFlag("A", true);

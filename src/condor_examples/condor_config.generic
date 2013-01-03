@@ -448,27 +448,6 @@ LOCK		= $(LOG)
 ##  want.
 #ABORT_ON_EXCEPTION = False
 
-##  Condor Glidein downloads binaries from a remote server for the
-##  machines into which you're gliding. This saves you from manually
-##  downloading and installing binaries for every architecture you
-##  might want to glidein to. The default server is one maintained at
-##  The University of Wisconsin. If you don't want to use the UW
-##  server, you can set up your own and change the following to
-##  point to it, instead.
-GLIDEIN_SERVER_URLS = \
-  http://www.cs.wisc.edu/condor/glidein/binaries
-
-## List the sites you want to GlideIn to on the GLIDEIN_SITES. For example, 
-## if you'd like to GlideIn to some Alliance GiB resources, 
-## uncomment the line below.
-## Make sure that $(GLIDEIN_SITES) is included in ALLOW_READ and
-## ALLOW_WRITE, or else your GlideIns won't be able to join your pool.
-## This is _NOT_ done for you by default, because it is an even better
-## idea to use a strong security method (such as GSI) rather than
-## host-based security for authorizing glideins.
-#GLIDEIN_SITES = *.ncsa.uiuc.edu, *.cs.wisc.edu, *.mcs.anl.gov 
-#GLIDEIN_SITES = 
-
 ##  If your site needs to use UID_DOMAIN settings (defined above) that
 ##  are not real Internet domains that match the hostnames, you can
 ##  tell Condor to trust whatever UID_DOMAIN a submit machine gives to

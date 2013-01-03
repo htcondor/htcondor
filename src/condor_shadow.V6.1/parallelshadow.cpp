@@ -559,7 +559,7 @@ ParallelShadow::shutDown( int exitReason )
 				// see if any are still running.  If so,
 				// just return, and wait for them all to go
 				if (r->getResourceState() != RR_FINISHED ) {
-				    dprintf( D_FULLDEBUG, "ParallelShadow::shutDown WAIT_FOR_ALL Not all resources have FINISHED");
+				    dprintf( D_FULLDEBUG, "ParallelShadow::shutDown WAIT_FOR_ALL Not all resources have FINISHED\n");
 				    return;
 				}
 			}

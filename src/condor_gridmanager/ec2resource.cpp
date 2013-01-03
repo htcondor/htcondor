@@ -84,6 +84,8 @@ EC2Resource::EC2Resource( const char *resource_name,
 	gahp->setNotificationTimerId( pingTimerId );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( EC2Job::gahpCallTimeout );
+	
+	m_hadAuthFailure = false;
 }
 
 
@@ -132,15 +134,30 @@ void EC2Resource::DoPing( time_t& ping_delay, bool& ping_complete, bool& ping_su
 	}
 	
 	ping_delay = 0;
-	
-	int rc = gahp->ec2_ping( resourceName, m_public_key_file, m_private_key_file );
+
+	char * error_code = NULL;	
+	int rc = gahp->ec2_ping( resourceName, m_public_key_file, m_private_key_file, error_code );
 
 	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 		ping_complete = false;
 	} 
 	else if ( rc != 0 ) {
 		ping_complete = true;
-		ping_succeeded = false;
+		
+		// If the service returns an authorization failure, that means
+		// the service is up, so return true.  Individual jobs with
+		// invalid authentication tokens will then go on hold, which is
+		// what we want (rather than saying idle).
+		if( error_code != NULL ) {
+			if( strstr( error_code, "(401)" ) != NULL ) {
+				ping_succeeded = true;
+				m_hadAuthFailure = true;
+				formatstr( authFailureMessage, "(%s): '%s'", error_code, gahp->getErrorString() );
+			}    		    
+			free( error_code );
+		} else {
+		    ping_succeeded = false;
+		}
 	} 
 	else {
 		ping_complete = true;

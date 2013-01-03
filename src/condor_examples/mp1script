@@ -1,7 +1,7 @@
 #!/bin/sh
 ##**************************************************************
 ##
-## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## Copyright (C) 1990-2012, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
 ## 
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -47,7 +47,7 @@ shift
 chmod +x $EXECUTABLE
 
 # Set this to the bin directory of MPICH installation
-MPDIR=/u/g/t/gthain/mpich-1.2.6/bin
+MPDIR=/home/user/local/mpich2-install/bin
 PATH=$MPDIR:.:$PATH
 export PATH
 
@@ -58,10 +58,10 @@ export CONDOR_CONTACT_FILE
 
 # The second field in the contact file is the machine name
 # that condor_ssh knows how to use
-sort -n +0 < $CONDOR_CONTACT_FILE | awk '{print $2}' > machines
+sort -n -k 1 < $CONDOR_CONTACT_FILE | awk '{print $2}' > machines
 
 ## run the actual mpijob
-mpirun -v -np $_CONDOR_NPROCS -machinefile machines $EXECUTABLE $@ 
+mpirun -np $_CONDOR_NPROCS -machinefile machines $EXECUTABLE $@ 
 
 sshd_cleanup
 rm -f machines

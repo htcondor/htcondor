@@ -12,6 +12,65 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-9-4}Version 7.9.4}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 7.9.4 not yet released.
+%\item HTCondor version 7.9.4 released on Month Date, 2012.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item The maximum total size of file transfers for a job may now be
+specified using the new configuration variables
+\Macro{MAX\_TRANSFER\_INPUT\_MB} and
+\Macro{MAX\_TRANSFER\_OUTPUT\_MB} and/or the new submit file
+commands by the same names.
+\Ticket{3333}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-9-3}Version 7.9.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -28,6 +87,14 @@ The details of each version are described below.
 \noindent New Features:
 
 \begin{itemize}
+
+\item When configuration variable \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}
+is \Expr{False}, the \Condor{negotiator}
+now fetches machine ClassAds more quickly from the \Condor{collector}
+ by skipping most attributes of the busy machines.  
+This can make negotiation much faster in
+a very large pool of mostly claimed machines.
+\Ticket{3366}
 
 \item Exposed the quantization level for windowed statistics to
 configuration with the parameter \Macro{STATISTICS\_WINDOW\_QUANTUM}.
@@ -55,6 +122,22 @@ The old behavior, or variations on the new behavior, can be achieved
 by configuring \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 \Ticket{3333}
 
+\item \Condor{dagman} will now try twice to write a POST script terminate
+event, rather than trying once and exiting. 
+If it is unable to write the event, \Condor{dagman} exits, 
+writing a Rescue DAG. 
+\Ticket{965}
+
+\item The \Condor{gridmanager} now cleans up temporary files and directories
+that are sometimes left by the \Prog{batch\_gahp} when executing a grid
+universe job of grid type \SubmitCmd{batch}.
+\Ticket{3276}
+
+\item Added counts of nodes in various states to the \Condor{dagman}
+node status file.  Refer to section~\ref{sec:DAG-node-status} for
+more information.
+\Ticket{2728}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -69,22 +152,24 @@ by configuring \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 
 \begin{itemize}
 
-\item A timer reset was added to the end of the negotiation cycle to reduce
-drift in the negotiation cycle delay.
+\item A change was made to more accurately implement the
+minimum time defined by the configuration variable
+\Macro{NEGOTIATOR\_CYCLE\_DELAY}. 
 \Ticket{3332}
 
-\item The default for the undocumented configuration parameter
-  \Macro{X\_RUNS\_HERE} was inverted from TRUE to FALSE with the
-  release of 7.7.3. Its default has been reset to TRUE. When FALSE,
-  the \Condor{master} will not start the KBDD.
-
-\item The batch\_gahp is no longer dependent on perl module XML::Simple
-when submitting jobs to SGE.
+\item The \Prog{batch\_gahp} is no longer dependent on the Perl module 
+\Code{XML::Simple} when submitting jobs to SGE.
 \Ticket{3350}
 
-\item On 32-bit platforms a \Macro{STARTER\_RLIMIT\_AS} value larger than 4096 could
-cause jobs to abort on startup.  Values larger than 2047 have no real meaning on 32-bit
-platforms, so values larger than 2047 are treated as no limit on 32-bit platforms.
+\item The \Prog{batch\_gahp} now properly handles job X.509 proxies that 
+are not in the old proxy format.
+\Ticket{3362}
+
+\item On 32-bit platforms,
+setting configuration variable \Macro{STARTER\_RLIMIT\_AS} to a value 
+larger than 4096 could cause jobs to abort on start up.
+Since values larger than 2047 have no real meaning on 32-bit platforms,
+the fix treats values larger than 2047 as no limit on 32-bit platforms.
 \Ticket{3309}
 
 \end{itemize}
@@ -101,7 +186,9 @@ platforms, so values larger than 2047 are treated as no limit on 32-bit platform
 
 \begin{itemize}
 
-\item None.
+\item Initial documentation for EC2 spot instances can be found
+in section~\ref{sec:spot-instances}.
+\Ticket{3209}
 
 \end{itemize}
 
@@ -114,8 +201,12 @@ platforms, so values larger than 2047 are treated as no limit on 32-bit platform
 
 \begin{itemize}
 
-\item HTCondor version 7.9.2 not yet released.
-%\item HTCondor version 7.9.2 released on Month Date, 2012.
+%\item HTCondor version 7.9.2 not yet released.
+\item HTCondor version 7.9.2 released on December 11, 2012.
+This release contains all of the bug fixes in the version 7.8.6 
+stable release,
+and most of the bug fixes in the
+soon to be released version 7.8.7 stable release.
 
 \end{itemize}
 
@@ -190,9 +281,10 @@ the DAGMan node log.
 \Ticket{3316}
 
 \item Fixed a bug that caused the \Condor{shadow} to set job attribute
-\Attr{X509UserProxySubject} to the wrong value when the job's X509
-proxy file was updated. It set the value to be the proxy's subject name
-rather than its identity.
+\Attr{X509UserProxySubject} to the wrong value when the job's X.509
+proxy file was updated. It incorrectly set the value to be 
+the proxy's subject name, rather than to the correct value, which is
+its identity.
 \Ticket{3265}
 
 \item The \Prog{batch\_gahp} no longer modifies the environment variable
@@ -200,6 +292,10 @@ rather than its identity.
 In some instances, modifying \Env{LD\_LIBRARY\_PATH} caused the
 batch system's command line tools to fail when run by the \Prog{batch\_gahp}.
 \Ticket{3317}
+
+\item Grid-type \SubmitCmd{batch} jobs now work properly on machines
+where the gLite software has been installed.
+\Ticket{3269}
 
 \item The \Condor{shadow} would never print the allocated amount of
 partitionable resources in the job log.

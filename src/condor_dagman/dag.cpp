@@ -1793,13 +1793,19 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 		ulog.initialize( std::vector<const char*>(1,s), job->_CondorID._cluster,
 			procID, subprocID, NULL );
 
-		if( !ulog.writeEvent( &e ) ) {
-			debug_printf( DEBUG_QUIET,
-					  	"Unable to log ULOG_POST_SCRIPT_TERMINATED event\n" );
-			  // Exit here, because otherwise we'll wait forever to see
-			  // the event that we just failed to write (see gittrac #934).
-			  // wenger 2009-11-12.
-			main_shutdown_rescue( EXIT_ERROR, DAG_STATUS_ERROR );
+		for(int write_attempts = 0;;++write_attempts) {
+			if( !ulog.writeEvent( &e ) ) {
+				if( write_attempts >= 2 ) {
+					debug_printf( DEBUG_QUIET,
+							"Unable to log ULOG_POST_SCRIPT_TERMINATED event\n" );
+					// Exit here, because otherwise we'll wait forever to see
+					// the event that we just failed to write (see gittrac #934).
+					// wenger 2009-11-12.
+					main_shutdown_rescue( EXIT_ERROR, DAG_STATUS_ERROR );
+				}
+			} else {
+				break;
+			}
 		}
 	}
 	return true;
@@ -2806,6 +2812,22 @@ Dag::DumpNodeStatus( bool held, bool removed )
 		fprintf( outfile, "JOB %s %s (%s)\n", node->GetJobName(),
 					statusStr, nodeNote );
 	}
+
+		//
+		// Print node counts.
+		//
+	fprintf( outfile, "\n" );
+	fprintf( outfile, "Nodes total: %d\n", NumNodes( true ) );
+	fprintf( outfile, "Nodes done: %d\n", NumNodesDone( true ) );
+	fprintf( outfile, "Nodes pre: %d\n", PreRunNodeCount() );
+	fprintf( outfile, "Nodes queued: %d\n", NumJobsSubmitted() );
+	fprintf( outfile, "Nodes post: %d\n", PostRunNodeCount() );
+	fprintf( outfile, "Nodes ready: %d\n", NumNodesReady() );
+	int unready = NumNodes( true )  - (NumNodesDone( true ) +
+				PreRunNodeCount() + NumJobsSubmitted() + PostRunNodeCount() +
+				NumNodesReady() + NumNodesFailed()  );
+	fprintf( outfile, "Nodes un-ready: %d\n", unready );
+	fprintf( outfile, "Nodes failed: %d\n", NumNodesFailed() );
 
 		//
 		// Print overall DAG status.

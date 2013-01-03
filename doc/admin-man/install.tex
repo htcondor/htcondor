@@ -24,9 +24,9 @@ Obtaining HTCondor}
 \index{Unix installation!download}
 \index{download}
 The first step to installing HTCondor is to download it from the HTCondor
-web site, \URL{http://www.cs.wisc.edu/condor}.
+web site, \URL{http://research.cs.wisc.edu/htcondor/}.
 The downloads are available from the downloads page,
-at \URL{http://www.cs.wisc.edu/condor/downloads/}.
+at \URL{http://research.cs.wisc.edu/htcondor/downloads/}.
 
 The platform-dependent HTCondor files are currently available from two sites.
 The main site is at the University of Wisconsin--Madison,
@@ -241,17 +241,17 @@ in the configuration file).
 Each should be owned by the user that HTCondor is to be run as.
 \index{owner!of directories}
 
-If you have a Unix user named condor with a local home directory on each
-machine, the \MacroNI{LOCAL\_DIR} could just be user condor's home
+If you have a Unix user named \Login{condor} with a local home directory on each
+machine, the \MacroNI{LOCAL\_DIR} could just be user \Login{condor}'s home
 directory (\MacroNI{LOCAL\_DIR} = \MacroUNI{TILDE} in the 
 configuration file).
 If this user's home directory is shared among all machines in your
 pool, you would want to create a directory for each host (named by
 host name) for the local directory (for example, \MacroNI{LOCAL\_DIR} =
 \MacroUNI{TILDE}/hosts/\MacroUNI{HOSTNAME}).  If you do not
-have a condor account on your machines, you can put these directories
+have a \Login{condor} account on your machines, you can put these directories
 wherever you'd like.
-However, where to place them will require some
+However, where to place the directories will require some
 thought, as each one has its own resource needs:
 
 \begin{description}
@@ -313,7 +313,7 @@ location.  However, if you take this approach, you will have to
 specify a local partition for the \File{lock} directory (see below).
 
 \index{Unix directory!\File{lock}}
-\item[lock] HTCondor uses a small number of lock files to synchronize
+\item[\File{lock}] HTCondor uses a small number of lock files to synchronize
 access to certain files that are shared between multiple daemons.
 Because of problems encountered with file locking and network
 file systems (particularly NFS), these lock files should be placed on a

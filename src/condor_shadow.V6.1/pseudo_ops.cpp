@@ -119,6 +119,28 @@ pseudo_get_job_info(ClassAd *&ad, bool &delete_ad)
 	the_ad->LookupInteger(ATTR_STAGE_IN_FINISH,spool_time);
 	thisRemoteResource->filetrans.Init( the_ad, false, PRIV_USER, spool_time != 0 );
 
+	if( !daemonCore->DoFakeCreateThread() ) {
+		thisRemoteResource->filetrans.SetServerShouldBlock(false);
+	}
+
+	int max_upload_mb = -1;
+	int max_download_mb = -1;
+	param_integer("MAX_TRANSFER_INPUT_MB",max_upload_mb,true,-1,false,INT_MIN,INT_MAX,the_ad);
+	param_integer("MAX_TRANSFER_OUTPUT_MB",max_download_mb,true,-1,false,INT_MIN,INT_MAX,the_ad);
+
+		// The job may override the system defaults for max transfer I/O
+	int ad_max_upload_mb = -1;
+	int ad_max_download_mb = -1;
+	if( the_ad->EvalInteger(ATTR_MAX_TRANSFER_INPUT_MB,NULL,ad_max_upload_mb) ) {
+		max_upload_mb = ad_max_upload_mb;
+	}
+	if( the_ad->EvalInteger(ATTR_MAX_TRANSFER_OUTPUT_MB,NULL,ad_max_download_mb) ) {
+		max_download_mb = ad_max_download_mb;
+	}
+
+	thisRemoteResource->filetrans.setMaxUploadBytes(max_upload_mb < 0 ? -1 : ((filesize_t)max_upload_mb)*1024*1024);
+	thisRemoteResource->filetrans.setMaxDownloadBytes(max_download_mb < 0 ? -1 : ((filesize_t)max_download_mb)*1024*1024);
+
 	// Add extra remaps for the canonical stdout/err filenames.
 	// If using the FileTransfer object, the starter will rename the
 	// stdout/err files, and we need to remap them back here.
@@ -528,7 +550,7 @@ static int access_via_afs( const char * /* file */ )
 	my_fs_domain = param("FILESYSTEM_DOMAIN");
 	thisRemoteResource->getFilesystemDomain(remote_fs_domain);
 
-	if(!param_boolean_crufty("USE_AFS", false)) {
+	if(!param_boolean_crufty("NONSTD_USE_AFS", false)) {
 		dprintf( D_SYSCALLS, "\tnot configured to use AFS for file access\n" );
 		goto done;
 	}
@@ -579,7 +601,7 @@ static int access_via_nfs( const char * /* file */ )
 	thisRemoteResource->getUidDomain(remote_uid_domain);
 	thisRemoteResource->getFilesystemDomain(remote_fs_domain);
 
-	if( !param_boolean_crufty("USE_NFS", false) ) {
+	if( !param_boolean_crufty("NONSTD_USE_NFS", false) ) {
 		dprintf( D_SYSCALLS, "\tnot configured to use NFS for file access\n" );
 		goto done;
 	}
