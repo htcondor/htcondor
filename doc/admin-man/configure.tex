@@ -6269,14 +6269,17 @@ These settings affect the \Condor{starter}.
 \label{param:StarterRlimitAs} 
 \item[ \Macro{STARTER\_RLIMIT\_AS}]
   An integer ClassAd expression, 
+  expressed in Mbytes,
   evaluated by the \Condor{starter} to set the \Code{RLIMIT\_AS} parameter
   of the \Procedure{setrlimit} system call.
   This limits the virtual memory size of each process in the user job.  
   The expression is
   evaluated in the context of both the machine and job ClassAds,
-  where the machine ClassAd is the \Expr{my} ClassAd,
-  and the job ClassAd is the \Expr{target} ClassAd.
+  where the machine ClassAd is the \Expr{MY.} ClassAd,
+  and the job ClassAd is the \Expr{TARGET.} ClassAd.
   There is no default value for this variable.
+  Since values larger than 2047 have no real meaning on 32-bit platforms,
+  values larger than 2047 result in no limit set on 32-bit platforms.
 
 \end{description}
 
