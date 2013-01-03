@@ -129,8 +129,8 @@ writing a Rescue DAG.
 \Ticket{965}
 
 \item The \Condor{gridmanager} now cleans up temporary files and directories
-that are sometimes left by the batch\_gahp when executing a grid-type
-\SubmitCmd{batch} job.
+that are sometimes left by the \Prog{batch\_gahp} when executing a grid
+universe job of grid type \SubmitCmd{batch}.
 \Ticket{3276}
 
 \item Added counts of nodes in various states to the \Condor{dagman}
@@ -161,13 +161,15 @@ minimum time defined by the configuration variable
 \Code{XML::Simple} when submitting jobs to SGE.
 \Ticket{3350}
 
-\item The batch\_gahp now properly handles job X.509 proxies that aren't
-in the old proxy format.
+\item The \Prog{batch\_gahp} now properly handles job X.509 proxies that 
+are not in the old proxy format.
 \Ticket{3362}
 
-\item On 32-bit platforms a \Macro{STARTER\_RLIMIT\_AS} value larger than 4096 could
-cause jobs to abort on startup.  Values larger than 2047 have no real meaning on 32-bit
-platforms, so values larger than 2047 are treated as no limit on 32-bit platforms.
+\item On 32-bit platforms,
+setting configuration variable \Macro{STARTER\_RLIMIT\_AS} to a value 
+larger than 4096 could cause jobs to abort on start up.
+Since values larger than 2047 have no real meaning on 32-bit platforms,
+the fix treats values larger than 2047 as no limit on 32-bit platforms.
 \Ticket{3309}
 
 \end{itemize}
