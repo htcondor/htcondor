@@ -19,10 +19,10 @@ SUPPORTED_PLATFORMS = [ RH5, RH6, OSX, DEB6 ]
 
 # download URLs for the different platforms
 URL_DICT={
-  DEB6: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-1.1_beta2-x86_64_Debian6.tar.gz",
-  OSX: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-1.1_beta2-x86_64_MacOSX7.tar.gz",
-  RH5: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-1.1_beta2-x86_64_RedHat5.tar.gz",
-  RH6: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-1.1_beta2-x86_64_RedHat6.tar.gz",
+  DEB6: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-1.1_beta3-x86_64_Debian6.tar.gz",
+  OSX: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-1.1_beta3-x86_64_MacOSX7.tar.gz",
+  RH5: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-1.1_beta3-x86_64_RedHat5.tar.gz",
+  RH6: "ftp://ftp.cs.wisc.edu/condor/bosco/latest/bosco-1.1_beta3-x86_64_RedHat6.tar.gz",
 }
 
 BIT32="32bit"
