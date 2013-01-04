@@ -44,7 +44,6 @@ if ( WITH_BLAHP )
 		ExternalProject_Add(blahp
 						DEPENDS ${BLAHP_DEPENDS}
 					    #-- Download Step ----------
-						DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/blahp-1.16.5.1.tar.gz ${CMD_TERM}
 					    DOWNLOAD_DIR ${BLAHP_STAGE}/dl
 						URL http://parrot.cs.wisc.edu/externals/blahp-1.16.5.1.tar.gz
 						#--Patch step ----------

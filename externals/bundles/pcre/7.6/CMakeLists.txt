@@ -41,7 +41,6 @@ if ( NOT PROPER AND NOT LINUX )
 
 	ExternalProject_Add(pcre
 						#-- Download Step ----------
-						DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${PCRE_VER}.tar.gz ${CMD_TERM}
 						DOWNLOAD_DIR ${PCRE_STAGE}/dl
 						URL http://parrot.cs.wisc.edu/externals/${PCRE_VER}.tar.gz
 						#--Patch step ----------

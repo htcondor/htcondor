@@ -35,7 +35,6 @@ if (WITH_COREDUMPER)
 
 		ExternalProject_Add(coredumper
 				    #-- Download Step ----------
-				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${COREDUMPER_VER}.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${COREDUMPER_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${COREDUMPER_VER}.tar.gz
 				    #--Configure step ----------

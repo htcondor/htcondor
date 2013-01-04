@@ -31,7 +31,6 @@ if (WITH_LIBCGROUP)
 
 		ExternalProject_Add( libcgroup
 				    #-- Download Step ----------
-				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${LIBCGROUP_VER}.tar.bz2 ${CMD_TERM}
 				    DOWNLOAD_DIR ${LIBCGROUP_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${LIBCGROUP_VER}.tar.bz2
 				    #--Configure step ----------

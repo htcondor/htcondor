@@ -56,7 +56,6 @@ if ( WITH_VOMS )
 		ExternalProject_Add(voms
 			DEPENDS ${GLOBUS_REF}
 			#-- Download Step ----------
-			DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/voms-2.0.6.tar.gz ${CMD_TERM}
 			DOWNLOAD_DIR ${VOMS_STAGE}/dl
 			URL http://parrot.cs.wisc.edu/externals/voms-2.0.6.tar.gz
 			#--Patch step ----------

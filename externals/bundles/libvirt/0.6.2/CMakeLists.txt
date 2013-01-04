@@ -40,7 +40,6 @@ if (WITH_LIBVIRT)
 		ExternalProject_Add(libvirt
 					DEPENDS ${LIBVIRT_DEPENDS}
 				    #-- Download Step ----------
-					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${LIBVIRT_REAL_VERSION}.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${LIBVIRT_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${LIBVIRT_REAL_VERSION}.tar.gz
 				    PATCH_COMMAND cd ${LIBVIRT_REAL_VERSION} && patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/no_gnutls.patch

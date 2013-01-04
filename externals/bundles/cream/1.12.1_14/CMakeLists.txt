@@ -33,7 +33,6 @@ if ( NOT PROPER )
 		condor_pre_external( CREAMSOAP gsoap_2.7.6b-p8 "lib;include" "done")
 		ExternalProject_Add(creamsoap
 				    #-- Download Step ----------
-				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/gsoap_2.7.6b.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${CREAMSOAP_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/gsoap_2.7.6b.tar.gz
 				    #--Patch step ----------
@@ -57,7 +56,6 @@ if ( NOT PROPER )
 		condor_pre_external( CARES c-ares-1.3.0-p8 "lib;include" "done")
 		ExternalProject_Add(cares
 				    #-- Download Step ----------
-					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/c-ares-1.3.0.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${CARES_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/c-ares-1.3.0.tar.gz
 				    #--Configure step ----------
@@ -76,7 +74,6 @@ if ( NOT PROPER )
 		condor_pre_external( LOG4CPP log4cpp-1.0-3 "lib;include" "lib/liblog4cpp.a")
 		ExternalProject_Add(log4cpp
 				    #-- Download Step ----------
-					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${LOG4CPP_VER}.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${LOG4CPP_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${LOG4CPP_VER}.tar.gz
 					#--Patch step ----------
@@ -105,7 +102,6 @@ if ( NOT PROPER )
 		ExternalProject_Add(gridsite
 				    DEPENDS ${GRIDSITE_DEPENDS}
 				    #-- Download Step ----------
-				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/gridsite-1.6.0.src.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${GRIDSITE_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/gridsite-1.6.0.src.tar.gz
 				    #--Configure step ----------
@@ -130,7 +126,6 @@ if ( NOT PROPER )
 		ExternalProject_Add(glite_security
 				    DEPENDS ${GLOBUS_REF} ${GRIDSITE_REF} ${CARES_REF}
 				    #-- Download Step ----------
-				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/org.glite.security.gss-2.0.1-1.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${GLITE_SECURITY_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/org.glite.security.gss-2.0.1-1.tar.gz
 				    #--Patch step ----------
@@ -161,7 +156,6 @@ if ( NOT PROPER )
 		ExternalProject_Add(cream_soap_plugin
 					DEPENDS ${CREAMSOAP_REF} ${GLITE_SECURITY_REF}
 				    #-- Download Step ----------
-					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/org.glite.security.gsoap-plugin-2.0.1-3.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${CREAM_SOAP_PLUGIN_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/org.glite.security.gsoap-plugin-2.0.1-3.tar.gz
 				    #--Configure step ----------
@@ -185,7 +179,6 @@ if ( NOT PROPER )
 		condor_pre_external( CREAM_WSDL org.glite.ce.wsdl-1.12.1-14-p8 "lib;include" "done")
 		ExternalProject_Add(cream_wsdl
 				    #-- Download Step ----------
-					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/org.glite.ce.wsdl-1.12.1-14.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${CREAM_WSDL_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/org.glite.ce.wsdl-1.12.1-14.tar.gz
 				    #--Configure step ----------
@@ -222,7 +215,6 @@ if ( NOT PROPER )
 		ExternalProject_Add(cream
 				    DEPENDS ${VOMS_REF} ${CREAMSOAP_REF} ${BOOST_REF} ${LOG4CPP_REF} ${GRIDSITE_REF} ${CARES_REF} ${CREAM_SOAP_PLUGIN_REF} ${CREAM_WSDL_REF}
 				    #-- Download Step -------
-				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/org.glite.ce.cream-client-api-c-1.12.1-14.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${CREAM_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/org.glite.ce.cream-client-api-c-1.12.1-14.tar.gz
 					#--Patch step ----------

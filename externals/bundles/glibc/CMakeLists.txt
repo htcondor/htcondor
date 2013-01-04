@@ -167,9 +167,6 @@ patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warning.
 
 	  ExternalProject_Add(glibc
 					  #-- Download Step ----------
-					  DOWNLOAD_COMMAND wget -N
-					  #http://parrot.cs.wisc.edu/externals/${GLIBC_TARNAME}.tar.gz ${CMD_TERM}
-					  http://parrot.cs.wisc.edu/externals/${GLIBC_TARNAME}.tar.gz ${CMD_TERM}
 					  DOWNLOAD_DIR ${GLIBC_STAGE}/dl
 					  URL http://parrot.cs.wisc.edu/externals/${GLIBC_TARNAME}.tar.gz
 					  #--Patch step ----------

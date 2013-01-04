@@ -79,7 +79,6 @@ if (WITH_KRB5)
 
 		ExternalProject_Add(krb5
 				    #-- Download Step ----------
-				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${KRB5_VER}.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${KRB5_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${KRB5_VER}.tar.gz
 				    #URL C:/Scratch/Build/test-externals/${KRB5_VER}.tar.gz

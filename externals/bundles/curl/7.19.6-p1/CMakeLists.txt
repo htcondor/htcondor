@@ -54,7 +54,6 @@ if (WITH_CURL)
 		ExternalProject_Add(curl
 							DEPENDS ${CURL_DEPENDS}
 							#-- Download Step ----------
-							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/curl-7.19.6.tar.gz ${CMD_TERM}
 							DOWNLOAD_DIR ${CURL_STAGE}/dl
 							URL http://parrot.cs.wisc.edu/externals/curl-7.19.6.tar.gz
 							#--Patch Step ----------

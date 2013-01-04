@@ -22,7 +22,6 @@ if ( NOT CLIPPED )
 
 	ExternalProject_Add(zlib
 			    #-- Download Step ----------
-				DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${ZLIB_VER}.tar.gz ${CMD_TERM}
 			    DOWNLOAD_DIR ${ZLIB_STAGE}/dl
 			    URL http://parrot.cs.wisc.edu/externals/${ZLIB_VER}.tar.gz
 			    #--Configure step ----------

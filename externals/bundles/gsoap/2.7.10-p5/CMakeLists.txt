@@ -60,7 +60,6 @@ if (WITH_GSOAP)
 		ExternalProject_Add( gsoap
 				    DEPENDS ${GSOAP_DEPENDS}
 				    #-- Download Step ----------
-				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/gsoap-2.7.10.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${GSOAP_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/gsoap-2.7.10.tar.gz
 					#--Patch step ----------

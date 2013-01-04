@@ -28,7 +28,6 @@ if (WITH_LIBDELTACLOUD)
 
 		ExternalProject_Add(libdeltacloud
 				#-- Download Step ----------
-				DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${LIBDELTACLOUD_VER}.tar.gz ${CMD_TERM}
 				DOWNLOAD_DIR ${LIBDELTACLOUD_STAGE}/dl
 				URL http://parrot.cs.wisc.edu/externals/${LIBDELTACLOUD_VER}.tar.gz
 				#--Configure step ----------
