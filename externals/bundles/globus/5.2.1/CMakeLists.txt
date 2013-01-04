@@ -80,8 +80,8 @@ if (WITH_GLOBUS)
 		endif()
 
 
-		set (GLOBUS_PATCH patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins.patch -p0 &&
-						patch -i ${CMAKE_CURRENT_SOURCE_DIR}/mac_openssl.patch -p0 &&
+		set (GLOBUS_PATCH patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins.patch -p0 &&
+						patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/mac_openssl.patch -p0 &&
 						cd gt5.2.1-all-source-installer/source-trees/xio/src/builtins &&
 						mkdir -p gsi popen &&
 						sed -e 's/globus_xio_gsi.h/globus_xio_gsi_driver.h/' ../../drivers/gsi/globus_i_xio_gsi.h >gsi/globus_i_xio_gsi.h &&
@@ -97,8 +97,8 @@ if (WITH_GLOBUS)
 		if(DARWIN)
 			set ( GLOBUS_PATCH ${GLOBUS_PATCH} &&
 				cd ../../../../../ &&
-				patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins-2.patch -p0 &&
-				patch -i ${CMAKE_CURRENT_SOURCE_DIR}/mac_environ.patch -p0 )
+				patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins-2.patch -p0 &&
+				patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/mac_environ.patch -p0 )
 		endif()
 
 		# honestly the build of globus is one of the strangest things I have ever seen and it makes no sense to me.

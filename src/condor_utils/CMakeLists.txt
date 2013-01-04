@@ -25,7 +25,7 @@ soap_helpers* test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_init.c )
 condor_glob( HeaderFiles SourceFiles "${RmvSrcs}" )
 
 ############ generate params
-add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/param_info_init.c
+add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/param_info_init.c ${CMAKE_CURRENT_BINARY_DIR}/param_info.c
                     COMMAND perl
                     ARGS ${CMAKE_CURRENT_SOURCE_DIR}/param_info_c_generator.pl -i ${CMAKE_CURRENT_SOURCE_DIR}/param_info.in -o ${CMAKE_CURRENT_BINARY_DIR}/param_info_init.c 
                     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/param_info.in ${CMAKE_CURRENT_SOURCE_DIR}/param_info_c_generator.pl)

@@ -27,9 +27,9 @@ if (WITH_OPENSSL)
 		condor_pre_external( OPENSSL openssl-0.9.8h "lib;include" "include/openssl/ssl.h")
 
 		if (WINDOWS)
-			set (OPENSSL_PATCH patch --binary -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/renegotiate.patch \r\n
-							   patch --binary -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/mk1mf.pl-0.9.8h-patch \r\n
-							   patch --binary -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/VC-32.pl-0.9.8h-patch )
+			set (OPENSSL_PATCH patch -N --binary -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/renegotiate.patch \r\n
+							   patch -N --binary -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/mk1mf.pl-0.9.8h-patch \r\n
+							   patch -N --binary -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/VC-32.pl-0.9.8h-patch )
 			set (OPENSSL_CONFIGURE perl Configure VC-WIN32 )
 			set (OPENSSL_MAKE  call ms/do_nt.bat \r\n
 							   nmake -f ms/ntdll.mak )
@@ -38,7 +38,7 @@ if (WITH_OPENSSL)
 								 cp -r inc32/* ${OPENSSL_INSTALL_LOC}/include \r\n
 								 cp ${CMAKE_CURRENT_SOURCE_DIR}/ossl_typ-post.h ${OPENSSL_INSTALL_LOC}/include/openssl/ossl_typ.h )
 		else(WINDOWS)
-			set (OPENSSL_PATCH patch --binary -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/renegotiate.patch &&
+			set (OPENSSL_PATCH patch -N --binary -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/renegotiate.patch &&
 							   sed 's/-fomit-frame-pointer//' Configure > Configure.new &&
 							   mv Configure.new Configure &&
 							   chmod a+rx Configure )

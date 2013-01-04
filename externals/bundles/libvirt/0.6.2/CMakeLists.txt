@@ -46,7 +46,7 @@ if (WITH_LIBVIRT)
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${LIBVIRT_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${LIBVIRT_REAL_VERSION}.tar.gz
-				    PATCH_COMMAND cd ${LIBVIRT_REAL_VERSION} && patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/no_gnutls.patch
+				    PATCH_COMMAND cd ${LIBVIRT_REAL_VERSION} && patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/no_gnutls.patch
 					#--Configure step ----------
 				    CONFIGURE_COMMAND cd ${LIBVIRT_REAL_VERSION} &&
 				    ./configure --prefix=${LIBVIRT_INSTALL_LOC} --without-python --without-xen --without-libvirtd --without-remote --without-test --without-uml --without-openvz --without-avahi --without-selinux --without-sasl ${LIBVIRT_CONFIGURE}

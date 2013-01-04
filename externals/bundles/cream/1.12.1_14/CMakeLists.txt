@@ -44,7 +44,7 @@ if ( NOT PROPER )
 				    DOWNLOAD_DIR ${CREAMSOAP_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/gsoap_2.7.6b.tar.gz
 				    #--Patch step ----------
-				    PATCH_COMMAND patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/gsoap_cast.patch
+				    PATCH_COMMAND patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/gsoap_cast.patch
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND cd gsoap-2.7 && ./configure --prefix=${CREAM_INSTALL_LOC}
 				    #--Build Step ----------
@@ -85,8 +85,8 @@ if ( NOT PROPER )
 				    DOWNLOAD_DIR ${LOG4CPP_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${LOG4CPP_VER}.tar.gz
 					#--Patch step ----------
-				    PATCH_COMMAND patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/log4errors.patch &&
-					  patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/log4configure.patch
+				    PATCH_COMMAND patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/log4errors.patch &&
+					  patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/log4configure.patch
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND cd log4cpp-1.0 && ./configure --prefix=${LOG4CPP_INSTALL_LOC}
 				    #--Build Step ----------
@@ -137,7 +137,7 @@ if ( NOT PROPER )
 				    DOWNLOAD_DIR ${GLITE_SECURITY_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/org.glite.security.gss-2.0.1-1.tar.gz
 				    #--Patch step ----------
-				    PATCH_COMMAND patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/gss_import.patch
+				    PATCH_COMMAND patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/gss_import.patch
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND echo "no config"
 				    #--Build Step ----------
@@ -200,10 +200,10 @@ if ( NOT PROPER )
 				    INSTALL_COMMAND cd org.glite.ce.wsdl && ln -fs share/wsdl ${CREAM_INSTALL_LOC}/interface && touch ${CREAM_WSDL_INSTALL_LOC}/done )
 		condor_post_external( cream_wsdl OFF OFF )
 
-		set (CREAM_PATCH patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/cream.patch &&
-				 patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/voms2.patch)
+		set (CREAM_PATCH patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/cream.patch &&
+				 patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/voms2.patch)
 		if (DARWIN)
-		  set (CREAM_PATCH ${CREAM_PATCH} && patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/bsd.patch && patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/macos.patch )
+		  set (CREAM_PATCH ${CREAM_PATCH} && patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/bsd.patch && patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/macos.patch )
 		endif(DARWIN)
 
 		if ( BUILDING_OPENSSL )
