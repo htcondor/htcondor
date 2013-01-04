@@ -24,9 +24,14 @@ if ( WITH_CREAM )
 
 if ( NOT PROPER )
 
-	set( KERBEROS_INCLUDE_FLAG "" )
 	if (NOT AUTOCONF OR NOT AUTOMAKE OR NOT LIBTOOLIZE)
 		message(FATAL_ERROR "Can't find autoconf, automake, or libtoolize, needed to build cream external!")
+	endif()
+
+	if (PREFER_CPP11)
+		set( CPP11_FLAG -std=c++11 )
+	else()
+		set( CPP11_FLAG "" )
 	endif()
 
 		# we define cream 1st because other externals will place bits there.
@@ -139,7 +144,7 @@ if ( NOT PROPER )
 				    BUILD_COMMAND cd org.glite.security.gss/src && 
 					  gcc -g -O0 -W -Wall
 					  -Wno-unused-parameter -I../interface
-					  -I${CREAM_INSTALL_LOC}/include ${KERBEROS_INCLUDE_FLAG} -I${GLOBUS_INSTALL_LOC}/include/globus -o glite_gss.thr.o -c glite_gss.c && 
+					  -I${CREAM_INSTALL_LOC}/include -I${GLOBUS_INSTALL_LOC}/include/globus -o glite_gss.thr.o -c glite_gss.c && 
 					  ar crv libglite_security_gss_${GLOBUS_FLAVOR}pthr.a glite_gss.thr.o &&
 					  ranlib libglite_security_gss_${GLOBUS_FLAVOR}pthr.a
 				    BUILD_IN_SOURCE 1
@@ -226,7 +231,7 @@ if ( NOT PROPER )
 				    CONFIGURE_COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/*.m4 org.glite.ce.cream-client-api-c/project &&    
 						cd org.glite.ce.cream-client-api-c &&
 						./bootstrap &&
-						CPPFLAGS=${KERBEROS_INCLUDE_FLAG} ./configure --prefix=${CREAM_INSTALL_LOC} --with-globus-prefix=${GLOBUS_INSTALL_LOC} --with-globus-thr-flavor=${GLOBUS_FLAVOR}pthr --with-globus-nothr-flavor=${GLOBUS_FLAVOR} ${OPENSSL_FLAG} --with-voms-prefix=${VOMS_INSTALL_LOC} --with-classads-prefix=${CLASSADS_INSTALL_LOC} --with-log4cpp-prefix=${LOG4CPP_INSTALL_LOC} --with-gsoap-location=${CREAM_INSTALL_LOC} --with-glite-location=${CREAM_INSTALL_LOC} --with-ce-wsdl-version=1.12.1 --with-delegation-wsdl-version=2.0.0 ${BOOST_PREFIX}
+						CPPFLAGS=${CPP11_FLAG} ./configure --prefix=${CREAM_INSTALL_LOC} --with-globus-prefix=${GLOBUS_INSTALL_LOC} --with-globus-thr-flavor=${GLOBUS_FLAVOR}pthr --with-globus-nothr-flavor=${GLOBUS_FLAVOR} ${OPENSSL_FLAG} --with-voms-prefix=${VOMS_INSTALL_LOC} --with-classads-prefix=${CLASSADS_INSTALL_LOC} --with-log4cpp-prefix=${LOG4CPP_INSTALL_LOC} --with-gsoap-location=${CREAM_INSTALL_LOC} --with-glite-location=${CREAM_INSTALL_LOC} --with-ce-wsdl-version=1.12.1 --with-delegation-wsdl-version=2.0.0 ${BOOST_PREFIX}
 				    #--Build Step ----------
 				    BUILD_COMMAND cd org.glite.ce.cream-client-api-c && make
 				    BUILD_IN_SOURCE 1

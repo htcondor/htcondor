@@ -32,6 +32,12 @@ if ( WITH_BLAHP )
 			message(FATAL_ERROR "Can't find autoconf, automake, or libtoolize, needed to build blahp external!")
 		endif()
 
+		if (PREFER_CPP11)
+			set( CPP11_FLAG -std=c++11 )
+		else()
+			set( CPP11_FLAG "-I${BOOST_INCLUDE}" )
+		endif()
+
 		if ( BUILDING_OPENSSL )
 			set( BLAHP_DEPENDS ${OPENSSL_REF} ${GLOBUS_REF} )
 			set( GLOBUS_M4_FILE globus.m4 )
@@ -79,7 +85,7 @@ if ( WITH_BLAHP )
 							mv org.glite.ce.blahp/config/blah.config.template org.glite.ce.blahp/config/batch_gahp.config.template
 						#--Configure step ----------
 						CONFIGURE_COMMAND cd org.glite.ce.blahp &&
-                                                        export CPPFLAGS=-I${BOOST_INCLUDE} &&
+                                                        export CPPFLAGS=${CPP11_FLAG} &&
 							./bootstrap && ./configure --with-classads-prefix=${CLASSADS_INSTALL_LOC}
 							${OPENSSL_FLAG}
 							--with-globus-prefix=${GLOBUS_INSTALL_LOC}
