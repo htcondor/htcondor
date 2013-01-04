@@ -28,6 +28,10 @@ if ( WITH_VOMS )
 
 	if (NOT PROPER)
 
+		if (NOT EXPAT_FOUND)
+			message(FATAL_ERROR "Can't find expat, needed to build voms external!")
+		endif()
+
 		if ( DARWIN )
 			set ( VOMS_PATCH cd voms-2.0.6 &&
 				patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/voms-gsoap.patch &&

@@ -28,6 +28,10 @@ if ( WITH_BLAHP )
 	if ( NOT PROPER )
 
 		########################################
+		if (NOT AUTOCONF OR NOT AUTOMAKE OR NOT LIBTOOLIZE)
+			message(FATAL_ERROR "Can't find autoconf, automake, or libtoolize, needed to build blahp external!")
+		endif()
+
 		if ( BUILDING_OPENSSL )
 			set( BLAHP_DEPENDS ${OPENSSL_REF} ${GLOBUS_REF} )
 			set( GLOBUS_M4_FILE globus.m4 )

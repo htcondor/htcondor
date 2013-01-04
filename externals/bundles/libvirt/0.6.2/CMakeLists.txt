@@ -26,6 +26,10 @@ if (WITH_LIBVIRT)
 
 	if ( NOT PROPER AND NOT LIBVIRT_FOUND )
 
+		if (NOT LIBXML2_FOUND)
+			message(FATAL_ERROR "Can't find libxml2, needed to build libvirt external!")
+		endif()
+
 		set (LIBVIRT_REAL_VERSION libvirt-0.6.2)
 
 		condor_pre_external( LIBVIRT ${LIBVIRT_REAL_VERSION}-p1 "lib;include" "lib/libvirt.a" )

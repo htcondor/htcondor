@@ -24,6 +24,22 @@ if (WITH_GLOBUS)
 
 	if (NOT PROPER)
 
+		if (NOT HAVE_LIBLTDL)
+			message(FATAL_ERROR "Can't find libltdl, needed to build globus external!")
+		endif()
+
+		execute_process(COMMAND perl -e "use Archive::Tar"
+				RESULT_VARIABLE TEST_RESULT )
+		if(NOT ${TEST_RESULT} MATCHES "0")
+			message(FATAL_ERROR "Missing perl module Archive::Tar, needed to build globus external!")
+		endif()
+
+		execute_process(COMMAND perl -e "use Digest::MD5"
+				RESULT_VARIABLE TEST_RESULT )
+		if(NOT ${TEST_RESULT} MATCHES "0")
+			message(FATAL_ERROR "Missing perl module Digest::MD5, needed to build globus external!")
+		endif()
+
 		if(${SYS_ARCH} MATCHES "IA64|X86_64")
 			set( GLOBUS_FLAVOR gcc64dbg )
 		elseif(AIX)

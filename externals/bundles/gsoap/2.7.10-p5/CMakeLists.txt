@@ -36,6 +36,10 @@ if (WITH_GSOAP)
 			set (GSOAP_INSTALL set PACKAGE_INSTALL_DIR=${GSOAP_INSTALL_LOC}\r\n
 			                   gmake -f Makefile.win32 install -C gsoap/src )
 		else()
+			if (NOT BISON OR NOT FLEX)
+				message(FATAL_ERROR "Can't find bison and flex, needed to build gsoap external!")
+			endif()
+
 			set (GSOAP_PATCH  patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/install_soapcpp2_wsdl2h_aux-2.7.10-Makefile.in.patch &&
 							  patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/fix_xlocale_insanity.patch &&
 							  patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/nmi_prereq_hack.patch &&

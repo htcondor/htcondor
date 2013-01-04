@@ -24,6 +24,10 @@ if (WITH_LIBDELTACLOUD)
 
 	if ( NOT PROPER )
 
+		if (NOT CURL_FOUND)
+			message(FATAL_ERROR "Can't find libcurl, needed to build libdeltacloud external!")
+		endif()
+
 		condor_pre_external( LIBDELTACLOUD libdeltacloud-0.9 "lib;include" "lib/libdeltacloud.a")
 
 		ExternalProject_Add(libdeltacloud

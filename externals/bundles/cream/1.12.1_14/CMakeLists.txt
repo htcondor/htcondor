@@ -25,6 +25,9 @@ if ( WITH_CREAM )
 if ( NOT PROPER )
 
 	set( KERBEROS_INCLUDE_FLAG "" )
+	if (NOT AUTOCONF OR NOT AUTOMAKE OR NOT LIBTOOLIZE)
+		message(FATAL_ERROR "Can't find autoconf, automake, or libtoolize, needed to build cream external!")
+	endif()
 
 		# we define cream 1st because other externals will place bits there.
 		condor_pre_external( CREAM org.glite.ce.cream-client-api-c-1.12.1-14-p8 "lib;include;include/glite/security;opt" "done")
