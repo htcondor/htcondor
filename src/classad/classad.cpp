@@ -115,7 +115,7 @@ CopyFrom( const ClassAd &ad )
 		chained_parent_ad = ad.chained_parent_ad;
 		alternateScope = ad.alternateScope;
 		
-		DisableDirtyTracking();
+		this->do_dirty_tracking = false;
 		for( itr = ad.attrList.begin( ); itr != ad.attrList.end( ); itr++ ) {
 			if( !( tree = itr->second->Copy( ) ) ) {
 				Clear( );
@@ -126,8 +126,12 @@ CopyFrom( const ClassAd &ad )
 			}
 			
 			Insert(itr->first, tree, false);
+			if (ad.do_dirty_tracking && ad.IsAttributeDirty(itr->first)) {
+				dirtyAttrList.insert(itr->first);
+			}
 		}
-		EnableDirtyTracking();
+
+		do_dirty_tracking = ad.do_dirty_tracking;
 	}
 	return succeeded;
 }
@@ -2042,7 +2046,7 @@ void ClassAd::MarkAttributeClean(const string &name)
 	return;
 }
 
-bool ClassAd::IsAttributeDirty(const string &name)
+bool ClassAd::IsAttributeDirty(const string &name) const
 {
 	bool is_dirty;
 

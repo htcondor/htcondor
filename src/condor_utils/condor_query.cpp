@@ -628,3 +628,9 @@ CondorQuery::setDesiredAttrs(char const * const *attrs)
 	::join_args(attrs,&val);
 	extraAttrs.Assign(ATTR_PROJECTION,val.Value());
 }
+
+void
+CondorQuery::setDesiredAttrsExpr(char const *expr)
+{
+	extraAttrs.AssignExpr(ATTR_PROJECTION,expr);
+}

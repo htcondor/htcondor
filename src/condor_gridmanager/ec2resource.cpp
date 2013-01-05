@@ -84,6 +84,8 @@ EC2Resource::EC2Resource( const char *resource_name,
 	gahp->setNotificationTimerId( pingTimerId );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( EC2Job::gahpCallTimeout );
+	
+	m_hadAuthFailure = false;
 }
 
 
@@ -149,6 +151,8 @@ void EC2Resource::DoPing( time_t& ping_delay, bool& ping_complete, bool& ping_su
 		if( error_code != NULL ) {
 			if( strstr( error_code, "(401)" ) != NULL ) {
 				ping_succeeded = true;
+				m_hadAuthFailure = true;
+				formatstr( authFailureMessage, "(%s): '%s'", error_code, gahp->getErrorString() );
 			}    		    
 			free( error_code );
 		} else {

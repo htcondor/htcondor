@@ -392,23 +392,24 @@ Defines the key pair associated with the EC2 instance.
 Used for grid type ec2 jobs;
 a string taken from the definition of the submit description file command
 \SubmitCmd{ec2\_spot\_price}.
-Defines the maximum amount (per hour) you're willing to pay to run this job.
+Defines the maximum amount per hour a job submitter is willing to 
+pay to run this job.
 
 %%% ClassAd attribute: EC2SpotRequestID
 \index{ClassAd job attribute!EC2SpotRequestID}
 \index{EC2SpotRequestID!job ClassAd attribute}
 \item[\AdAttr{EC2SpotRequestID}:] 
 Used for grid type ec2 jobs;
-identifies the Spot Request HTCondor made on behalf of this job.
+identifies the spot request HTCondor made on behalf of this job.
 
 %%% ClassAd attribute: EC2StatusReasonCode
 \index{ClassAd job attribute!EC2StatusReasonCode}
 \index{EC2StatusReasonCode!job ClassAd attribute}
 \item[\AdAttr{EC2StatusReasonCode}:] 
 Used for grid type ec2 jobs;
-reports the reason for most recent EC2-level state transition.  Can be used
-to determine (among other things) if a Spot Request was terminated because
-the spot price rose.
+reports the reason for the most recent EC2-level state transition.
+Can be used to determine if a spot request was terminated
+due to a rise in the spot price.
 
 %%% ClassAd attribute: EC2TagNames
 \index{ClassAd job attribute!EC2TagNames}
@@ -635,6 +636,8 @@ reason that a job was put on hold.
 25 & Invalid cron settings. \\ \hline
 26 & \Macro{SYSTEM\_PERIODIC\_HOLD} evaluated to true. \\ \hline
 27 & The system periodic job policy evaluated to undefined. \\ \hline
+32 & The maximum total input file transfer size was exceeded.  (See \Macro{MAX\_TRANSFER\_INPUT\_MB}.) \\ \hline
+33 & The maximum total output file transfer size was exceeded. (See \Macro{MAX\_TRANSFER\_OUTPUT\_MB}.) \\ \hline
 \end{tabular}
 \end{table}
 \end{center}
@@ -1425,6 +1428,52 @@ by job attribute \Attr{Out}.
 If \Expr{False}, no transfer takes place (remote to submit machine),
 and the name of the file is the file referred to
 by job attribute \Attr{Out}.
+
+%%% ClassAd attribute: TransferInputSizeMB
+\index{ClassAd job attribute!TransferInputSizeMB}
+\index{TransferInputSizeMB!job ClassAd attribute}
+\item[\AdAttr{TransferInputSizeMB}:]
+
+The total size in megabytes of input files to be transferred for the
+job.  Files transferred via file transfer plugins are not included.
+This attribute is automatically set by \Condor{submit}; jobs submitted
+via other submission methods, such as SOAP, may not define this
+attribute.
+
+%%% ClassAd attribute: MaxTransferInputMB
+\index{ClassAd job attribute!MaxTransferInputMB}
+\index{MaxTransferInputMB!job ClassAd attribute}
+\item[\AdAttr{MaxTransferInputMB}:]
+
+This integer expression specifies the maximum allowed total size in
+megabytes of the input files that are transferred for a job.  This
+expression does not apply to grid universe, standard universe, or
+files transferred via file transfer plugins.  The expression may refer
+to attributes of the job.  The special value -1 indicates no limit.
+If not set, the system setting \Macro{MAX\_TRANSFER\_INPUT\_MB} is
+used.  If the observed size of all input files at submit time is
+larger than the limit, the job will be immediately placed on hold with
+hold code 32.  If the job passes this initial test, but the size of
+the input files increases or the limit decreases so that the limit is
+violated, the job will be placed on hold at the time when the file
+transfer is attempted.
+
+%%% ClassAd attribute: MaxTransferOutputMB
+\index{ClassAd job attribute!MaxTransferOutputMB}
+\index{MaxTransferOutputMB!job ClassAd attribute}
+\item[\AdAttr{MaxTransferOutputMB}:]
+
+This integer expression specifies the maximum allowed total size in
+megabytes of the output files that are transferred for a job.  This
+expression does not apply to grid universe, standard universe, or
+files transferred via file transfer plugins.  The expression may refer
+to attributes of the job.  The special value -1 indicates no limit.
+If not yset, the system setting \Macro{MAX\_TRANSFER\_OUTPUT\_MB} is
+used.  If the total size of the job's output files to be transferred
+is larger than the limit, the job will be placed on hold with hold
+code 33.  The output will be transferred up to the point when the
+limit is hit, so some files may be fully transferred, some partially,
+and some not at all.
 
 %%% ClassAd attribute: UserLog
 \index{ClassAd job attribute!UserLog}

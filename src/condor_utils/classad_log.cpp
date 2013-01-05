@@ -528,6 +528,7 @@ ClassAdLog::ExamineTransaction(const char *key, const char *name, char *&val, Cl
 			if (!name) {
 				if ( !ad ) {
 					ad = new ClassAd;
+					ad->EnableDirtyTracking();
 					ASSERT(ad);
 				}
 				if (val) {
@@ -736,6 +737,7 @@ LogNewClassAd::Play(void *data_structure)
 	ClassAd	*ad = new ClassAd();
 	ad->SetMyTypeName(mytype);
 	ad->SetTargetTypeName(targettype);
+	ad->EnableDirtyTracking();
 	result = table->insert(HashKey(key), ad);
 
 #if defined(HAVE_DLOPEN)

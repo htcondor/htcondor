@@ -12,6 +12,65 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-9-4}Version 7.9.4}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 7.9.4 not yet released.
+%\item HTCondor version 7.9.4 released on Month Date, 2012.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item The maximum total size of file transfers for a job may now be
+specified using the new configuration variables
+\Macro{MAX\_TRANSFER\_INPUT\_MB} and
+\Macro{MAX\_TRANSFER\_OUTPUT\_MB} and/or the new submit file
+commands by the same names.
+\Ticket{3333}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-9-3}Version 7.9.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -28,6 +87,14 @@ The details of each version are described below.
 \noindent New Features:
 
 \begin{itemize}
+
+\item When configuration variable \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}
+is \Expr{False}, the \Condor{negotiator}
+now fetches machine ClassAds more quickly from the \Condor{collector}
+ by skipping most attributes of the busy machines.  
+This can make negotiation much faster in
+a very large pool of mostly claimed machines.
+\Ticket{3366}
 
 \item Exposed the quantization level for windowed statistics to
 configuration with the parameter \Macro{STATISTICS\_WINDOW\_QUANTUM}.
@@ -56,14 +123,20 @@ by configuring \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 \Ticket{3333}
 
 \item \Condor{dagman} will now try twice to write a POST script terminate
-event, rather than trying once and exiting. \Condor{dagman} exits, writing
-a rescue DAG, if it is unable to write the event.
+event, rather than trying once and exiting. 
+If it is unable to write the event, \Condor{dagman} exits, 
+writing a Rescue DAG. 
 \Ticket{965}
 
 \item The \Condor{gridmanager} now cleans up temporary files and directories
-that are sometimes left by the batch\_gahp when executing a grid-type
-\SubmitCmd{batch} job.
+that are sometimes left by the \Prog{batch\_gahp} when executing a grid
+universe job of grid type \SubmitCmd{batch}.
 \Ticket{3276}
+
+\item Added counts of nodes in various states to the \Condor{dagman}
+node status file.  Refer to section~\ref{sec:DAG-node-status} for
+more information.
+\Ticket{2728}
 
 \end{itemize}
 
@@ -88,13 +161,15 @@ minimum time defined by the configuration variable
 \Code{XML::Simple} when submitting jobs to SGE.
 \Ticket{3350}
 
-\item The batch\_gahp now properly handles job X.509 proxies that aren't
-in the old proxy format.
+\item The \Prog{batch\_gahp} now properly handles job X.509 proxies that 
+are not in the old proxy format.
 \Ticket{3362}
 
-\item On 32-bit platforms a \Macro{STARTER\_RLIMIT\_AS} value larger than 4096 could
-cause jobs to abort on startup.  Values larger than 2047 have no real meaning on 32-bit
-platforms, so values larger than 2047 are treated as no limit on 32-bit platforms.
+\item On 32-bit platforms,
+setting configuration variable \Macro{STARTER\_RLIMIT\_AS} to a value 
+larger than 4096 could cause jobs to abort on start up.
+Since values larger than 2047 have no real meaning on 32-bit platforms,
+the fix treats values larger than 2047 as no limit on 32-bit platforms.
 \Ticket{3309}
 
 \end{itemize}
@@ -111,7 +186,9 @@ platforms, so values larger than 2047 are treated as no limit on 32-bit platform
 
 \begin{itemize}
 
-\item None.
+\item Initial documentation for EC2 spot instances can be found
+in section~\ref{sec:spot-instances}.
+\Ticket{3209}
 
 \end{itemize}
 

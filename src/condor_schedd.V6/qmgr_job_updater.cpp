@@ -71,6 +71,7 @@ QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address,
 	// finally, clear all the dirty bits on this jobAd, so we only
 	// update the queue with things that have changed after this
 	// point. 
+	job_ad->EnableDirtyTracking();
 	job_ad->ClearAllDirtyFlags();
 }
 

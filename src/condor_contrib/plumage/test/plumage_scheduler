@@ -51,7 +51,7 @@ def print_stats(start,end,scheduler):
         print str(schedd['ts']-UTC_DIFF).ljust(30), str(schedd['trun']).ljust(8),str(schedd['tij']).ljust(8),\
             str(schedd['thj']).ljust(8),str(schedd['trem']).ljust(8)
 
-parser = OptionParser(description='Query Condor ODS for scheduler job totals')
+parser = OptionParser(description='Query HTCondor ODS for scheduler job totals')
 parser.add_option('-v','--verbose', action="store_true",default=False, help='enable logging')
 parser.add_option('-s','--server', action="store", dest='server',
                     default='localhost',

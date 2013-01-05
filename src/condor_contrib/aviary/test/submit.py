@@ -55,7 +55,7 @@ req1.type = 'OS'
 req1.value = 'LINUX'
 reqs = [ req1 ]
 
-# add extra Condor-specific or custom job attributes here
+# add extra HTCondor-specific or custom job attributes here
 extra1 = client.factory.create("ns0:Attribute")
 extra1.name = 'RECIPE'
 extra1.type = 'STRING'

@@ -75,6 +75,8 @@ class BaseResource : public Service
 	virtual void SetJobPollInterval();
 	int GetJobPollInterval() { return m_jobPollInterval; };
 
+    bool didFirstPing() { return firstPingDone; }
+
  protected:
 	void DeleteMe();
 
