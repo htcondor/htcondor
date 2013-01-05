@@ -56,6 +56,8 @@ after the IP address has been configured.  It is invoked with four arguments:
  3) The name of the network namespace - Lark will create a iptables chain named
     this beforehand and route all traffic through this chain.
  4) The name of the extsernal veth device.
+The stdin of the script is the job ad, a line consisting solely of "------",
+and then the machine ad.
 
 If NETWORK_NAMESPACE_DELETE_SCRIPT is set, Lark will attempt to execute it
 after the job finishes and it is time to cleanup.  It is invoked with three
@@ -69,6 +71,15 @@ NOTE: The veth device will already be deleted prior to invoking this script
       been cleaned up by the kernel.  The veth device may still exist if there
       were issues spawning the job.  This may get called multiple times and
       it may get called even if NETWORK_NAMESPACE_CREATE_SCRIPT wasn't invoked.
+The stdin of the script is the job ad, a line consisting solely of "------",
+and then the machine ad.
+
+An example of the stdin of one of the scripts is:
+[ ClusterID=123; Proc=0; ]
+------
+[ LarkAddressType = "local"; LarkExternalAddressIPv4 = "192.168.181.15"; LarkNetworkType = "nat"; LarkIptableName = "tester"; LarkInternalInterface = "i_tester"; LarkGateway = "192.168.181.15"; LarkExternalInterface = "e_tester"; LarkNetworkAccounting = true; LarkInnerAddressIPv4 = "192.168.181.16" ]
+
+An actual job and machine ad will contain many more attributes.
 
 *******************************************************************************
 STARTER ATTRIBUTES:
