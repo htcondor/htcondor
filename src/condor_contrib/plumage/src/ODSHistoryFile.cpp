@@ -202,6 +202,10 @@ ODSHistoryFile::poll(CondorError &/*errstack*/)
         if (ad.LookupString(ATTR_GLOBAL_JOB_ID,gjid)) {
             key.append(ATTR_GLOBAL_JOB_ID, gjid);
         }
+        else {
+            dprintf(D_ALWAYS, "ODSHistoryFile::poll: skipping suspicious ad in '%s', at line %lu\n",m_name.c_str(),stop);
+            continue;
+        }
 
         ODSMongodbOps* my_writer = getWriter();
 
