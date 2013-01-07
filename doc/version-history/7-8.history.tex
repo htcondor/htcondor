@@ -66,6 +66,12 @@ list of collectors.
 code. This has been fixed.
 \Ticket{3215}
 
+\item Fixed a bug that caused Cream grid jobs to become held with a
+HoldReason of ``CREAM error: Transfer failed: globus\_ftp\_client: 
+an invalid value for url was used'' when the jobs did not have any
+input or output files to transfer.
+\Ticket{3415}
+
 \end{itemize}
 
 \noindent Known Bugs:
