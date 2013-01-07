@@ -57,7 +57,7 @@ sub main {
 
 	# hack for our build system
 	# This #includes param_info_init.c
-	`touch param_info.c`;
+	#`touch param_info.c`;
 }
 ##########################################################################
 use strict;
