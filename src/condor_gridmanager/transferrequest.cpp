@@ -93,6 +93,12 @@ void TransferRequest::CheckRequest()
 		const char *first_src = m_src_urls.next();
 		const char *first_dst = m_dst_urls.next();
 
+		if ( !first_src || !first_dst ) {
+			m_status = TransferDone;
+			daemonCore->Reset_Timer( m_notify_tid, 0 );
+			return;
+		}
+
 		int rc = m_gahp->gridftp_transfer( first_src, first_dst );
 		if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
 			sprintf( m_errMsg, "Failed to start transfer request" );
