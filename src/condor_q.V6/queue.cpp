@@ -87,6 +87,8 @@ enum {
 	DIRECT_SCHEDD = 4
 };
 
+#define NO_SQFP
+
 struct 	PrioEntry { MyString name; float prio; };
 
 #ifdef WIN32
@@ -129,29 +131,34 @@ extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
 static  void processCommandLineArguments(int, char *[]);
 
 static  bool process_buffer_line_old(void*, ClassAd *);
-static  bool process_buffer_line_new(void*, ClassAd *);
-static  bool process_buffer_line_streaming(void*, ClassAd *);
+static  bool process_job_and_render_to_dag_map(void*, ClassAd *);
+static  bool process_and_print_job(void*, ClassAd *);
 typedef bool (* buffer_line_processor)(void*, ClassAd*);
 
 static 	void short_header (void);
 static 	void usage (const char *);
+#ifdef NO_SQFP
+#else
 static 	void io_display (ClassAd *);
-static 	char * buffer_io_display (ClassAd *);
 static 	void displayJobShort (ClassAd *);
+#endif
+static 	char * buffer_io_display (ClassAd *);
 static 	char * bufferJobShort (ClassAd *);
 
 /* if useDB is false, then v1 =scheddAddress, v2=scheddName, v3=scheddMachine, v4=scheddVersion;
    if useDB is true,  then v1 =quill_name,  v2=db_ipAddr,   v3=db_name, v4=db_password
 */
+static bool show_file_queue(const char* jobads, const char* userlog);
+static bool show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, bool useFastPath);
+#ifdef NO_SQFP
+#else
 static	bool show_any_queue (const char* v1, const char* v2, const char* v3, const char* v4, bool useDB);
 static	bool show_any_queue_buffered (const char* v1, const char* v2, const char* v3, const char* v4, bool useDB);
-static void init_output_mask();
-
-
 /* a type used to point to one of the above two functions */
 typedef bool (*show_any_queue_fp)(const char* v1, const char* v2, const char* v3, const char* v4, bool useDB);
-typedef bool (*show_db_queue_fp)(const char* quill_name, const char* db_ipAddr, const char* db_name, const char* db_password);
-typedef bool (*show_sch_queue_fp)(const char* scheddAddress, const char* scheddName, const char* scheddMachine, const char* scheddVersion);
+#endif
+
+static void init_output_mask();
 
 static bool read_classad_file(const char *filename, ClassAdList &classads, ClassAdFileParseHelper* pparse_help, const char * constr);
 static int read_userprio_file(const char *filename, ExtArray<PrioEntry> & prios);
@@ -186,8 +193,7 @@ static unsigned int direct = DIRECT_ALL;
 static 	int dash_long = 0, summarize = 1, global = 0, show_io = 0, dag = 0, show_held = 0;
 static  int use_xml = 0;
 static  bool widescreen = false;
-//static  bool unbuffered = false;
-static  int  use_old_code = false;
+static  int  use_old_code = true;
 static  bool expert = false;
 static  bool verbose = false; // note: this is !!NOT the same as -long !!!
 
@@ -558,11 +564,14 @@ int main (int argc, char **argv)
 	bool		first;
 	char		*scheddName=NULL;
 	char		scheddMachine[64];
+#ifdef NO_SQFP
+	bool        useFastScheddQuery = false;
+#else
 	MyString    scheddVersion;
+#endif
 	char		*tmp;
 	bool        useDB; /* Is there a database to query for a schedd */
 	int         retval = 0;
-	show_any_queue_fp sqfp;
 
 	Collectors = NULL;
 
@@ -600,7 +609,7 @@ int main (int argc, char **argv)
 	if( better_analyze ) {
 		setupAnalysis();
 		if ((jobads_file != NULL || userlog_file != NULL)) {
-			retval = show_any_queue(scheddAddr, scheddName, "Unknown", "Unknown", FALSE);
+			retval = show_file_queue(jobads_file, userlog_file);
  			freeConnectionStrings();
 			exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 		}
@@ -626,14 +635,21 @@ int main (int argc, char **argv)
 			} else {
 				sprintf( scheddMachine, "Unknown" );
 			}
+#ifdef NO_SQFP
+			if (schedd.version()) {
+				CondorVersionInfo v(schedd.version());
+				useFastScheddQuery = v.built_since_version(6,9,3);
+			}
+#else
 			if( (tmp = schedd.version()) ) {
 				scheddVersion = tmp;
 			}
 			else {
 				scheddVersion = "";
 			}
+#endif
 			
-			if ( directDBquery ) {				
+			if ( directDBquery ) {
 				/* perform direct DB query if indicated and exit */
 #ifdef HAVE_EXT_POSTGRESQL
 
@@ -651,16 +667,20 @@ int main (int argc, char **argv)
 
 			/* .. not a direct db query, so just happily continue ... */
 
+#ifdef NO_SQFP
+#else
 			// When we use the new analysis code, it can be really
 			// slow. Slow enough that show_queue_buffered()'s connection
 			// to the schedd times out and the user gets nothing
 			// useful printed out. Therefore, we use show_queue,
 			// which fetches all of the ads, then analyzes them.
+			show_any_queue_fp sqfp;
 			if ( (/*unbuffered ||*/ dash_long || better_analyze || jobads_file || userlog_file) && !g_stream_results ) {
 				sqfp = show_any_queue;
 			} else {
 				sqfp = show_any_queue_buffered;
 			}
+#endif
 			init_output_mask();
 			
 			/* When an installation has database parameters configured, 
@@ -681,8 +701,13 @@ int main (int argc, char **argv)
 					if (useDB) {
 
 						/* ask the database for the queue */
-
-						if ( (retval = sqfp( NULL, NULL, NULL, NULL, TRUE) ) ) {
+#ifdef NO_SQFP
+						retval = show_db_queue(NULL, NULL, NULL, NULL);
+						if (retval)
+#else
+						if ( (retval = sqfp( NULL, NULL, NULL, NULL, TRUE) ) )
+#endif
+						{
 							/* if the queue was retrieved, then I am done */
 							freeConnectionStrings();
 							exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
@@ -726,6 +751,14 @@ int main (int argc, char **argv)
 						strcpy(tmp_char, "Unknown");
 
 						/* query the quill daemon */
+#ifdef NO_SQFP
+						if (quill.locate() &&
+							(retval = show_schedd_queue(quill.addr(),
+								quill.name() ? quill.name() : "Unknown",
+								quill.fullHostname() ? quill.fullHostname() : "Unknown",
+								false))
+							)
+#else
 						if ( quill.locate() &&
 					 		( (retval = 
 					 			sqfp( quill.addr(), 
@@ -734,6 +767,7 @@ int main (int argc, char **argv)
 						  		(quill.fullHostname())?
 									(quill.fullHostname()):tmp_char,
 						  		NULL, FALSE) ) ) )
+#endif
 						{
 							/* if the queue was retrieved, then I am done */
 							freeConnectionStrings();
@@ -775,8 +809,12 @@ int main (int argc, char **argv)
 
 #endif /* HAVE_EXT_POSTGRESQL */
 				case DIRECT_SCHEDD:
+#ifdef NO_SQFP
+					retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine, useFastScheddQuery);
+#else
 					retval = sqfp(scheddAddr, scheddName, scheddMachine, 
 								  scheddVersion.Value(), FALSE);
+#endif
 			
 					/* Hopefully I got the queue from the schedd... */
 					freeConnectionStrings();
@@ -851,7 +889,7 @@ int main (int argc, char **argv)
 
 	// get the list of ads from the collector
 	if( querySchedds ) { 
-		result = Collectors->query ( scheddQuery, scheddList );		
+		result = Collectors->query ( scheddQuery, scheddList );
 	} else {
 		result = Collectors->query ( submittorQuery, scheddList );
 	}
@@ -884,7 +922,7 @@ int main (int argc, char **argv)
 
 	first = true;
 	// get queue from each ScheddIpAddr in ad
-	scheddList.Open();	
+	scheddList.Open();
 	while ((ad = scheddList.Next()))
 	{
 		/* default to true for remotely queryable */
@@ -895,9 +933,10 @@ int main (int argc, char **argv)
 		freeConnectionStrings();
 		useDB = FALSE;
 		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, &scheddAddr)  &&
-				 ad->LookupString(ATTR_NAME, &scheddName)		&& 
-				ad->LookupString(ATTR_MACHINE, scheddMachine, sizeof(scheddMachine)) &&
-				 ad->LookupString(ATTR_VERSION, scheddVersion) ) ) 
+				ad->LookupString(ATTR_NAME, &scheddName) &&
+				ad->LookupString(ATTR_MACHINE, scheddMachine, sizeof(scheddMachine))
+				)
+			)
 		{
 			/* something is wrong with this schedd/quill ad, try the next one */
 			continue;
@@ -945,16 +984,20 @@ int main (int argc, char **argv)
 #endif /* HAVE_EXT_POSTGRESQL */
 		}
 
+#ifdef NO_SQFP
+#else
         // When we use the new analysis code, it can be really
         // slow. Slow enough that show_queue_buffered()'s connection
         // to the schedd time's out and the user gets nothing
         // useful printed out. Therefore, we use show_queue,
         // which fetches all of the ads, then analyzes them. 
+		show_any_queue_fp sqfp;
 		if ( (/*unbuffered ||*/ dash_long || better_analyze) && !g_stream_results ) {
 			sqfp = show_any_queue;
 		} else {
 			sqfp = show_any_queue_buffered;
 		}
+#endif
 		init_output_mask();
 
 		/* When an installation has database parameters configured, it means 
@@ -968,8 +1011,13 @@ int main (int argc, char **argv)
 #ifdef HAVE_EXT_POSTGRESQL
 			case DIRECT_RDBMS:
 				if (useDB) {
+#ifdef NO_SQFP
+					retval = show_db_queue(quillName, dbIpAddr, dbName, queryPassword);
+					if (retval)
+#else
 					if ( (retval = sqfp(quillName, dbIpAddr, dbName, 
 										queryPassword, TRUE) ) )
+#endif
 					{
 						/* processed correctly, so do the next ad */
 						continue;
@@ -1014,9 +1062,15 @@ int main (int argc, char **argv)
 						schedd's ad had a quill name in it, the collector
 						didn't have a quill ad by that name. */
 
+#ifdef NO_SQFP
+					if((result2 == Q_OK) && quillAddr &&
+					   (retval = show_schedd_queue(quillAddr, quillName, quillMachine, false))
+					   )
+#else
 					if((result2 == Q_OK) && quillAddr &&
 			   			(retval = sqfp(quillAddr, quillName, quillMachine, 
 									   NULL, FALSE) ) )
+#endif
 					{
 						/* processed correctly, so do the next ad */
 						continue;
@@ -1072,7 +1126,17 @@ int main (int argc, char **argv)
 			case DIRECT_SCHEDD:
 				/* database not configured or could not be reached,
 					query the schedd daemon directly */
+#ifdef NO_SQFP
+				{
+				MyString scheddVersion;
+				ad->LookupString(ATTR_VERSION, scheddVersion);
+				CondorVersionInfo v(scheddVersion.Value());
+				useFastScheddQuery = v.built_since_version(6,9,3);
+				retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine, useFastScheddQuery);
+				}
+#else
 				retval = sqfp(scheddAddr, scheddName, scheddMachine, scheddVersion.Value(), FALSE);
+#endif
 
 				break;
 
@@ -1183,13 +1247,9 @@ processCommandLineArguments (int argc, char *argv[])
 			if (pcolon) { testing_width = atoi(++pcolon); }
 			continue;
 		}
-		//if (is_arg_prefix (arg, "unbuf", 5)) {
-		//	unbuffered = true;
-		//	continue;
-		//}
 		if (is_arg_colon_prefix (arg, "new", &pcolon, 3)) {
 			use_old_code = false;
-			if (pcolon) { use_old_code = atoi(++pcolon); }
+			if (pcolon) { use_old_code = (pcolon[1] == '0'); }
 			fprintf(stderr, "Using %s code\n", use_old_code ? "Old" : "New");
 			continue;
 		}
@@ -1865,11 +1925,19 @@ unsigned int process_direct_argument(char *arg)
 	return DIRECT_UNKNOWN;
 }
 
+#ifdef NO_SQFP
+#else
 static void
 io_display(ClassAd *ad)
 {
 	printf("%s", buffer_io_display( ad ) );
 }
+static void
+displayJobShort (ClassAd *ad)
+{ 
+	printf( "%s", bufferJobShort( ad ) );
+}
+#endif
 
 static char *
 buffer_io_display( ClassAd *ad )
@@ -1919,11 +1987,6 @@ buffer_io_display( ClassAd *ad )
 	return ( return_buff );
 }
 
-static void
-displayJobShort (ClassAd *ad)
-{ 
-	printf( "%s", bufferJobShort( ad ) );
-}
 
 static char *
 bufferJobShort( ClassAd *ad ) {
@@ -2590,42 +2653,13 @@ print_full_footer()
 	}
 }
 
-#if 1
 static void
 print_full_header(const char * source_label)
-#else
-void full_header(bool useDB,char const *quill_name,char const *db_ipAddr, char const *db_name,char const *lastUpdate, char const *scheddName, char const *scheddAddress,char const *scheddMachine)
-#endif
 {
 	if (! customFormat && !dash_long ) {
-#if 1
 		printf ("\n\n-- %s\n", source_label);
-#else
-		if (useDB) {
-			printf ("\n\n-- Quill: %s : %s : %s : %s\n", quill_name, 
-					db_ipAddr, db_name, lastUpdate);
-		} else if( querySchedds ) {
-			printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddress);
-		} else {
-			printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
-					scheddAddress, scheddMachine);	
-		}
-#endif
 			// Print the output header
 		if (usingPrintMask && mask_head.Length() > 0) {
-#if 0
-			if (mask_headings) {
-				List<const char> headings;
-				const char * pszz = mask_headings;
-				size_t cch = strlen(pszz);
-				while (cch > 0) {
-					headings.Append(pszz);
-					pszz += cch+1;
-					cch = strlen(pszz);
-				}
-				mask.display_Headings(stdout, headings);
-			} else 
-#endif
 			mask.display_Headings(stdout, mask_head);
 		} else {
 			short_header();
@@ -2912,6 +2946,114 @@ static void init_output_mask()
 	}
 }
 
+// Given a list of jobs, do analysis for each job and print out the results.
+//
+static bool
+print_jobs_analysis(ClassAdList & jobs, Daemon * pschedd_daemon)
+{
+	// note: pschedd_daemon may be NULL.
+
+		// check if job is being analyzed
+	ASSERT( better_analyze );
+
+	// build a job autocluster map
+	if (verbose) { fprintf(stderr, "\nBuilding autocluster map of %d Jobs...", jobs.Length()); }
+	JobClusterMap job_autoclusters;
+	buildJobClusterMap(jobs, ATTR_AUTO_CLUSTER_ID, job_autoclusters);
+	if (verbose) { fprintf(stderr, "\n%d autoclusters and %d Jobs with no autocluster\n", (int)job_autoclusters.size(), (int)job_autoclusters[-1].size()); }
+
+	if (reverse_analyze) { 
+		if (verbose) { fprintf(stderr, "Sorting %d Slots...", startdAds.Length()); }
+		longest_slot_machine_name = 0;
+		longest_slot_name = 0;
+		if (startdAds.Length() == 1) {
+			// if there is a single machine ad, then always do detailed reverse analyze.
+			if ( ! analyze_detail_level) analyze_detail_level = 1;
+		} else {
+			startdAds.Sort(SlotSort);
+		}
+		if (verbose) { fprintf(stderr, "Done, longest machine name %d, longest slot name %d\n", longest_slot_machine_name, longest_slot_name); }
+	}
+
+	if (reverse_analyze) {
+		int console_width = widescreen ? getDisplayWidth() : 80;
+		if (startdAds.Length() <= 0) {
+			// print something out?
+		} else {
+			bool analStartExpr = (better_analyze == 2) || (analyze_detail_level > 0);
+			if ( ! analStartExpr) {
+				std::string fmt;
+				int name_width = MAX(longest_slot_machine_name+7, longest_slot_name);
+				formatstr(fmt, "%%-%d.%ds", MAX(name_width, 16), MAX(name_width, 16));
+				fmt += " %12.12s %12.12s %10.10s\n";
+
+				printf(fmt.c_str(), "", "Slot's Req ",  "Job's Req  ",    "Both   ");
+				printf(fmt.c_str(), "Name", "Matches Job", "Matches Slot", "Match %");
+				printf(fmt.c_str(), "------------------------", "------------", "------------", "----------");
+			}
+			startdAds.Open();
+			while (ClassAd *slot = startdAds.Next()) {
+				doSlotRunAnalysis(slot, job_autoclusters, pschedd_daemon, console_width);
+			}
+			startdAds.Close();
+		}
+	} else {
+		if (summarize_anal) {
+			const char * fmt = "%-13s %7s %7s %9s %9s %9s %9s %9s %9s %9s\n";
+			printf(fmt, " JobId", "Cluster", "Members", "JobReq", "SlotReq", "UserPrio", "Unknown", "Preempt", "Offline", "Available");
+			printf(fmt, "-------------", "-------", "-------", "---------", "---------", "---------", "---------", "---------", "---------", "---------");
+		}
+
+		for (JobClusterMap::iterator it = job_autoclusters.begin(); it != job_autoclusters.end(); ++it) {
+			int cJobsInCluster = (int)it->second.size();
+			if (cJobsInCluster <= 0)
+				continue;
+
+			// for the the non-autocluster cluster, we have to eval these jobs individually
+			int cJobsToEval = (it->first == -1) ? cJobsInCluster : 1;
+			int cJobsToInc  = (it->first == -1) ? 1 : cJobsInCluster;
+			for (int ii = 0; ii < cJobsToEval; ++ii) {
+				ClassAd *job = it->second[ii];
+				if (summarize_anal) {
+					anaCounters ac;
+					doJobRunAnalysisToBuffer(job, ac, pschedd_daemon);
+					const char * fmt = "%13s %7d %7d %9d %9d %9d %9d %9d %9d %9d\n";
+					char achJobId[16];
+					int cluster_id = 0, proc_id = 0;
+					job->LookupInteger(ATTR_CLUSTER_ID, cluster_id);
+					job->LookupInteger(ATTR_PROC_ID, proc_id);
+					sprintf(achJobId, "%d.%03d", cluster_id, proc_id);
+					printf(fmt, achJobId, it->first, cJobsToInc,
+							ac.fReqConstraint,
+							ac.fOffConstraint,
+							ac.fPreemptPrioCond,
+							ac.fRankCond,
+							ac.fPreemptReqTest,
+							ac.fOffline,
+							ac.available );
+				} else {
+					doJobRunAnalysis(job, pschedd_daemon);
+				}
+			}
+		}
+	}
+
+	return true;
+}
+
+// callback function for processing a job from the Q query that just adds the 
+// job into a ClassAdList.
+static bool
+AddToClassAdList(void * pv, ClassAd *ad) {
+	ClassAdList * plist = (ClassAdList*)pv;
+	plist->Insert(ad);
+	// return false to indicate we took ownership of the ad 
+	// and it should NOT be deleted by the caller.
+	return false;
+}
+
+#ifdef NO_SQFP
+#else
 /* The parameters v1, v2, and v3 will be intepreted immediately on the top 
    of the function based on the value of useDB. For more details, please 
    refer to the prototype of this function on the top of this file 
@@ -2937,11 +3079,11 @@ show_queue_buffered(const char* scheddAddress, const char* scheddName, const cha
 
 	// tj: 2013 refactor---
 	// so we can compare the output of old vs. new code. keep both around for now.
-	buffer_line_processor pfnProcess = use_old_code ? process_buffer_line_old : process_buffer_line_new;
+	buffer_line_processor pfnProcess = use_old_code ? process_buffer_line_old : process_job_and_render_to_dag_map;
 	void *                pvProcess = NULL;
 
 	if( g_stream_results ) {
-		if ( ! use_old_code) { pfnProcess = process_buffer_line_streaming; }
+		if ( ! use_old_code) { pfnProcess = process_and_print_job; }
 		print_full_header(source_label.c_str());
 		//full_header(useDB,quill_name,db_ipAddr,db_name,lastUpdate,scheddName,scheddAddress,scheddMachine);
 	}
@@ -2995,7 +3137,6 @@ show_queue_buffered(const char* scheddAddress, const char* scheddName, const cha
 
 		ASSERT( ! g_stream_results);
 		print_full_header(source_label.c_str());
-		//full_header(useDB,quill_name,db_ipAddr,db_name,lastUpdate,scheddName,scheddAddress,scheddMachine);
 
 		print_dag_map(/*dag_map*/);
 
@@ -3013,35 +3154,54 @@ show_queue_buffered(const char* scheddAddress, const char* scheddName, const cha
 
 	return true;
 }
+#endif // NO_SQFP
 
-
+#ifdef HAVE_EXT_POSTGRESQL
 static bool
-show_dbqueue_buffered( const char* quill_name, const char* db_ipAddr, const char* db_name, const char* query_password)
+show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_name, const char* query_password)
 {
 		// initialize counters
 	idle = running = held = malformed = suspended = completed = removed = 0;
 
+	ClassAdList jobs;
+	CondorError errstack;
+
+#ifdef NO_SQFP
+#else
 	if( g_cur_schedd_for_process_buffer_line ) {
 		delete g_cur_schedd_for_process_buffer_line;
 		g_cur_schedd_for_process_buffer_line = NULL;
 	}
+#endif
 
 	std::string source_label;
 	formatstr(source_label, "Quill: %s : %s : %s : ", quill_name, db_ipAddr, db_name);
 
-	// tj: 2013 refactor---
-	// so we can compare the output of old vs. new code. keep both around for now.
-	buffer_line_processor pfnProcess = use_old_code ? process_buffer_line_old : process_buffer_line_new;
-	void *                pvProcess = NULL;
+	// choose a processing option for jobad's as the come off the wire.
+	// for -long -xml and -analyze, we need to save off the ad in a ClassAdList
+	// for -stream we print out the ad 
+	// and for everything else, we 
+	//
+	buffer_line_processor pfnProcess;
+	void *                pvProcess;
+	if (dash_long || better_analyze) {
+		pfnProcess = AddToClassAdList;
+		pvProcess = &jobs;
+	} else if (g_stream_results) {
+		pfnProcess = process_and_print_job;
+		pvProcess = NULL;
 
-	if( g_stream_results ) {
-		if ( ! use_old_code) { pfnProcess = process_buffer_line_streaming; }
+		// we are about to print out the jobads, so print an output header now.
 		print_full_header(source_label.c_str());
+	} else {
+		// tj: 2013 refactor---
+		// so we can compare the output of old vs. new code. keep both around for now.
+		pfnProcess = use_old_code ? process_buffer_line_old : process_job_and_render_to_dag_map;
+		pvProcess = &dag_map;
 	}
 
-	CondorError errstack;
+	// fetch queue directly from the database
 
-		/* get the job ads from database if database can be queried */
 #ifdef HAVE_EXT_POSTGRESQL
 
 		char *lastUpdate=NULL;
@@ -3077,47 +3237,71 @@ show_dbqueue_buffered( const char* quill_name, const char* db_ipAddr, const char
 		if (pfnProcess || pvProcess) {}
 #endif /* HAVE_EXT_POSTGRESQL */
 
-	// print out the dag_map, the dag_map will contain the rendered data if we didn't stream.
-	// so this code what actually prints out lines (or ads) to the screen in the normal case.
-	//
-	if (dag_map.size() > 0) {
+	// if we streamed, then the results have already been printed out.
+	// we just need to write the footer/summary
+	if (g_stream_results) {
+		print_full_footer();
+		return true;
+	}
 
-		// if outputing dag format, we want to build the parent child links in the dag map
-		// and then edit the text for jobs that are dag nodes.
-		if( dag ) {
-			linkup_dag_nodes_in_dag_map(/*dag_map, dag_cluster_map*/);
-			rewrite_output_for_dag_nodes_in_dag_map(/*dag_map*/);
-		}
-
-		ASSERT( ! g_stream_results);
+	if (better_analyze) {
 		print_full_header(source_label.c_str());
-		//full_header(useDB,quill_name,db_ipAddr,db_name,lastUpdate,scheddName,scheddAddress,scheddMachine);
+		return print_jobs_analysis(jobs, NULL);
+	}
 
+	// at this point we either have a populated jobs list, or a populated dag_map
+	// depending on which processing function we used in the query above.
+	// for -long -xml or -analyze, we should have jobs, but no dag_map
+
+	// if outputing dag format, we want to build the parent child links in the dag map
+	// and then edit the text for jobs that are dag nodes.
+	if (dag && (dag_map.size() > 0)) {
+		linkup_dag_nodes_in_dag_map(/*dag_map, dag_cluster_map*/);
+		rewrite_output_for_dag_nodes_in_dag_map(/*dag_map*/);
+	}
+
+	// we want a header for this schedd if we are not showing the global queue OR if there is any data
+	if ( ! global || dag_map.size() > 0 || jobs.Length() > 0) {
+		print_full_header(source_label.c_str());
+	}
+
+	// print out jobs, either from the dag_map, or the jobs list, we expect only
+	// one of these to be populated depending on which processing function we passed to the query
+	if (dag_map.size() > 0) {
 		print_dag_map(/*dag_map*/);
-
 		// free the strings in the dag_map
 		clear_dag_map(/*dag_map, dag_cluster_map*/);
+	} else {
+		jobs.Open();
+		while(ClassAd *job = jobs.Next()) {
+			process_and_print_job(NULL, job);
+		}
+		jobs.Close();
 	}
 
 	// print out summary line (if enabled) and/or xml closure
 	// we want to print out a footer if we printed any data, OR if this is not 
 	// a global query, so that the user can see that we did something.
 	//
-	if (g_stream_results || ! global || dag_map.size() > 0) {
+	if ( ! global || dag_map.size() > 0 || jobs.Length() > 0) {
 		print_full_footer();
 	}
 
 	return true;
 }
+#endif // HAVE_EXT_POSTGRESQL
 
+#ifdef NO_SQFP
+#else
 static bool
 show_any_queue_buffered(const char* v1, const char* v2, const char* v3, const char* v4, bool useDB)
 {
 	if (useDB) {
-		return show_dbqueue_buffered(v1, v2, v3, v4);
+		return show_db_queue_buffered(v1, v2, v3, v4);
 	}
 	return show_queue_buffered(v1, v2, v3);
 }
+#endif
 
 // tj: 2013 refactor---
 // so we can compare the output of old vs. new code. keep both around for now.
@@ -3257,49 +3441,58 @@ process_buffer_line_old(void *, ClassAd *job)
 	return true;
 }
 
-const char * print_job(ClassAd *job, std::string & result_text)
+static void count_job(ClassAd *job)
+{
+	int status = 0;
+	job->LookupInteger(ATTR_JOB_STATUS, status);
+	switch (status)
+	{
+		case IDLE:                ++idle;      break;
+		case TRANSFERRING_OUTPUT:
+		case RUNNING:             ++running;   break;
+		case SUSPENDED:           ++suspended; break;
+		case COMPLETED:           ++completed; break;
+		case REMOVED:             ++removed;   break;
+		case HELD:                ++held;      break;
+	}
+}
+
+
+static const char * render_job_text(ClassAd *job, std::string & result_text)
 {
 	if (use_xml) {
 		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
 		job->sPrintAsXML(result_text, attr_white_list);
-	} else if( dash_long ) {
+	} else if (dash_long) {
 		//MyString s;
 		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
 		job->sPrint(result_text, attr_white_list);
 		result_text += "\n";
-	} else if( better_analyze ) {
+	} else if (better_analyze) {
+#ifdef NO_SQFP
+		ASSERT(0); // should never get here.
+#else
 		anaCounters ac;
 		result_text += doJobRunAnalysisToBuffer( job, ac, g_cur_schedd_for_process_buffer_line );
-	} else if ( show_io ) {
-		result_text += buffer_io_display( job );
-	} else if ( usingPrintMask ) {
-		result_text += mask.display ( job );
+#endif
+	} else if (show_io) {
+		result_text += buffer_io_display(job);
+	} else if (usingPrintMask) {
+		result_text += mask.display(job);
 	} else {
-		result_text += bufferJobShort( job );
+		result_text += bufferJobShort(job);
 	}
 	return result_text.c_str();
 }
 
 static bool
-process_buffer_line_streaming(void *, ClassAd *job)
+process_and_print_job(void *, ClassAd *job)
 {
-	int status = 0;
-	job->LookupInteger( ATTR_JOB_STATUS, status );
-
-	switch (status)
-	{
-		case IDLE:                idle++;      break;
-		case TRANSFERRING_OUTPUT:
-		case RUNNING:             running++;   break;
-		case SUSPENDED:           suspended++; break;
-		case COMPLETED:           completed++; break;
-		case REMOVED:             removed++;   break;
-		case HELD:		          held++;	   break;
-	}
+	count_job(job);
 
 	std::string result_text;
-	print_job(job, result_text);
-	printf("%s",result_text.c_str());
+	render_job_text(job, result_text);
+	printf("%s", result_text.c_str());
 
 	// return true to free the job ad, since we didn't take ownership of it.
 	return true;
@@ -3412,26 +3605,14 @@ insert_job_output_into_dag_map(ClassAd * job, const char * job_output)
 }
 
 static bool
-process_buffer_line_new(void *,  ClassAd *job)
+process_job_and_render_to_dag_map(void *,  ClassAd *job)
 {
-	int status = 0;
-	job->LookupInteger( ATTR_JOB_STATUS, status );
-
-	switch (status)
-	{
-		case IDLE:                idle++;      break;
-		case TRANSFERRING_OUTPUT:
-		case RUNNING:             running++;   break;
-		case SUSPENDED:           suspended++; break;
-		case COMPLETED:           completed++; break;
-		case REMOVED:             removed++;   break;
-		case HELD:		          held++;	   break;
-	}
+	count_job(job);
 
 	ASSERT( ! g_stream_results);
 
 	std::string result_text;
-	print_job(job, result_text);
+	render_job_text(job, result_text);
 	insert_job_output_into_dag_map(job, result_text.c_str());
 
 	// process_buffer_line returns 1 so that the ad that is passed
@@ -3439,10 +3620,306 @@ process_buffer_line_new(void *,  ClassAd *job)
 	return true;
 }
 
+// query SCHEDD or QUILLD daemon for jobs. and then print out the desired job info.
+// this function handles -analyze, -streaming, -dag and all normal condor_q output
+// when the source is a SCHEDD or QUILLD.
+// TJ isn't sure that the QUILL daemon can use fast path, prior to the 2013 refactor, 
+// the old code didn't try.
+//
+static bool
+show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, bool useFastPath)
+{
+	// initialize counters
+	malformed = idle = running = held = completed = suspended = 0;
+
+	std::string source_label;
+	if (querySchedds) {
+		formatstr(source_label, "Schedd: %s : %s", scheddName, scheddAddress);
+	} else {
+		formatstr(source_label, "Submitter: %s : %s : %s", scheddName, scheddAddress, scheddMachine);
+	}
+
+	if (better_analyze && verbose) {
+		fprintf(stderr, "Fetching job ads for analysis...");
+	}
+
+	// fetch queue from schedd
+	ClassAdList jobs;  // this will get filled in for -long -xml and -analyze
+	CondorError errstack;
+
+	// choose a processing option for jobad's as the come off the wire.
+	// for -long -xml and -analyze, we need to save off the ad in a ClassAdList
+	// for -stream we print out the ad 
+	// and for everything else, we 
+	//
+	buffer_line_processor pfnProcess = NULL;
+	void *                pvProcess = NULL;
+	if (dash_long || better_analyze) {
+		pfnProcess = AddToClassAdList;
+		pvProcess = &jobs;
+	} else if (g_stream_results) {
+		pfnProcess = process_and_print_job;
+		// we are about to print out the jobads, so print an output header now.
+		print_full_header(source_label.c_str());
+	} else {
+		// tj: 2013 refactor---
+		// so we can compare the output of old vs. new code. keep both around for now.
+		pfnProcess = use_old_code ? process_buffer_line_old : process_job_and_render_to_dag_map;
+		pvProcess = &dag_map;
+	}
+
+	int fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, attrs, pfnProcess, pvProcess, useFastPath, &errstack);
+	if (fetchResult != Q_OK) {
+		// The parse + fetch failed, print out why
+		switch(fetchResult) {
+		case Q_PARSE_ERROR:
+		case Q_INVALID_CATEGORY:
+			fprintf(stderr, "\n-- Parse error in constraint expression \"%s\"\n", user_job_constraint);
+			break;
+		default:
+			fprintf(stderr,
+				"\n-- Failed to fetch ads from: %s : %s\n%s\n",
+				scheddAddress, scheddMachine, errstack.getFullText(true).c_str() );
+		}
+		return false;
+	}
+
+	// if we streamed, then the results have already been printed out.
+	// we just need to write the footer/summary
+	if (g_stream_results) {
+		print_full_footer();
+		return true;
+	}
+
+	if (better_analyze) {
+		if (verbose) { fprintf(stderr, "Sorting %d Jobs...", jobs.Length()); }
+		jobs.Sort(JobSort);
+		print_full_header(source_label.c_str());
+
+		PRAGMA_REMIND("TJ: shouldn't this be using scheddAddress instead of scheddName?")
+		Daemon schedd(DT_SCHEDD, scheddName, pool ? pool->addr() : NULL );
+
+		return print_jobs_analysis(jobs, &schedd);
+	}
+
+	// at this point we either have a populated jobs list, or a populated dag_map
+	// depending on which processing function we used in the query above.
+	// for -long -xml or -analyze, we should have jobs, but no dag_map
+
+	// if outputing dag format, we want to build the parent child links in the dag map
+	// and then edit the text for jobs that are dag nodes.
+	if (dag && (dag_map.size() > 0)) {
+		linkup_dag_nodes_in_dag_map(/*dag_map, dag_cluster_map*/);
+		rewrite_output_for_dag_nodes_in_dag_map(/*dag_map*/);
+	}
+
+	// we want a header for this schedd if we are not showing the global queue OR if there is any data
+	if ( ! global || dag_map.size() > 0 || jobs.Length() > 0) {
+		print_full_header(source_label.c_str());
+	}
+
+	// print out jobs, either from the dag_map, or the jobs list, we expect only
+	// one of these to be populated depending on which processing function we passed to the query
+	if (dag_map.size() > 0) {
+		print_dag_map(/*dag_map*/);
+		// free the strings in the dag_map
+		clear_dag_map(/*dag_map, dag_cluster_map*/);
+	} else {
+		jobs.Open();
+		while(ClassAd *job = jobs.Next()) {
+			process_and_print_job(NULL, job);
+		}
+		jobs.Close();
+	}
+
+	// print out summary line (if enabled) and/or xml closure
+	// we want to print out a footer if we printed any data, OR if this is not 
+	// a global query, so that the user can see that we did something.
+	//
+	if ( ! global || dag_map.size() > 0 || jobs.Length() > 0) {
+		print_full_footer();
+	}
+
+	return true;
+}
+
+// Read ads from a file, either in classad format, or userlog format.
+//
+static bool
+show_file_queue(const char* jobads, const char* userlog)
+{
+	// initialize counters
+	malformed = idle = running = held = completed = suspended = 0;
+
+	if (better_analyze && verbose) {
+		fprintf(stderr, "Fetching job ads for analysis...");
+	}
+
+	// setup constraint variables to use in some of the later code.
+	const char * constr = NULL;
+	std::string constr_string; // to hold the return from ExprTreeToString()
+	ExprTree *tree = NULL;
+	Q.rawQuery(tree);
+	if (tree) {
+		constr_string = ExprTreeToString(tree);
+		constr = constr_string.c_str();
+		delete tree;
+	}
+
+	if (better_analyze && verbose) {
+		fprintf(stderr, "Fetching job ads for analysis...");
+	}
+
+	ClassAdList jobs;
+	std::string source_label;
+
+	if (jobads != NULL) {
+		/* get the "q" from the job ads file */
+		CondorQClassAdFileParseHelper jobads_file_parse_helper;
+		if (!read_classad_file(jobads, jobs, &jobads_file_parse_helper, constr)) {
+			return false;
+		}
+		// if we are doing analysis, print out the schedd name and address
+		// that we got from the classad file.
+		if (better_analyze && ! jobads_file_parse_helper.schedd_name.empty()) {
+			const char *scheddName    = jobads_file_parse_helper.schedd_name.c_str();
+			const char *scheddAddress = jobads_file_parse_helper.schedd_addr.c_str();
+			formatstr(source_label, "Schedd: %s : %s", scheddName, scheddAddress);
+			}
+		
+		/* The variable UseDB should be false in this branch since it was set 
+			in main() because jobads_file had a good value. */
+
+	} else if (userlog != NULL) {
+		CondorID * JobIds = NULL;
+		int cJobIds = constrID.size();
+		if (cJobIds > 0) JobIds = &constrID[0];
+
+		if (!userlog_to_classads(userlog, jobs, JobIds, cJobIds, constr)) {
+			fprintf(stderr, "Can't open user log: %s\n", userlog);
+			return false;
+		}
+		formatstr(source_label, "Userlog: %s", userlog);
+	} else {
+		ASSERT(jobads != NULL || userlog != NULL);
+	}
+
+	if (better_analyze && verbose) { fprintf(stderr, "Sorting %d Jobs...", jobs.Length()); }
+	jobs.Sort(JobSort);
+
+	if (better_analyze) {
+		print_full_header(source_label.c_str());
+		return print_jobs_analysis(jobs, NULL);
+	}
+
+		// display the jobs from this submittor
+	if( jobs.MyLength() != 0 || !global ) {
+		print_full_header(source_label.c_str());
+
+		jobs.Open();
+		while(ClassAd *job = jobs.Next()) {
+			process_and_print_job(NULL, job);
+		}
+		jobs.Close();
+
+		print_full_footer();
+	}
+
+	return true;
+}
+
+#ifdef NO_SQFP
+#else
+static bool
+show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_name, const char* query_password)
+{
+	// initialize counters
+	malformed = idle = running = held = completed = suspended = 0;
+
+	std::string source_label;
+	formatstr(source_label, "Quill: %s : %s : %s : ", quill_name, db_ipAddr, db_name);
+
+	if (better_analyze && verbose) {
+		fprintf(stderr, "Fetching job ads for analysis...");
+	}
+
+	// get the job ads from a database if available
+	ClassAdList jobs;
+#ifdef HAVE_EXT_POSTGRESQL
+
+	CondorError errstack;
+	char *lastUpdate=NULL;
+	char *dbconn=NULL;
+	dbconn = getDBConnStr(quill_name, db_ipAddr, db_name, query_password);
+
+		// fetch queue from database
+	if( Q.fetchQueueFromDB(jobs, lastUpdate, dbconn, &errstack) != Q_OK ) {
+		fprintf( stderr,
+				"\n-- Failed to fetch ads from: %s : %s\n%s\n",
+				db_ipAddr, db_name, errstack.getFullText(true).c_str() );
+		if(dbconn) {
+			free(dbconn);
+		}
+		if(lastUpdate) {
+			free(lastUpdate);
+		}
+		return false;
+	}
+
+	if(dbconn) {
+		free(dbconn);
+	}
+	if(lastUpdate) {
+		source_label += lastUpdate;
+		free(lastUpdate);
+	}
+#else
+	if (query_password) {} /* Done to suppress set-but-not-used warnings */
+#endif /* HAVE_EXT_POSTGRESQL */
+
+
+	if (better_analyze) {
+		print_full_header(source_label.c_str());
+		return print_jobs_analysis(jobs, NULL);
+	}
+
+		// display the jobs from this submittor
+	if( jobs.MyLength() != 0 || !global ) {
+		print_full_header(source_label.c_str());
+
+		jobs.Open();
+		while(ClassAd *job = jobs.Next()) {
+			process_and_print_job(NULL, job);
+		}
+		jobs.Close();
+
+		print_full_footer();
+	}
+
+	return true;
+}
+#endif // NO_SQFP
+
 /* The parameters v1, v2, and v3 will be intepreted immediately on the top 
    of the function based on the value of useDB. For more details, please 
    refer to the prototype of this function on the top of this file 
 */
+#ifdef NO_SQFP
+#else
+#if 1
+static bool
+show_any_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool useDB )
+{
+	if (jobads_file || userlog_file)
+		return show_file_queue(jobads_file, userlog_file);
+
+	if (useDB)
+		return show_db_queue(v1, v2, v3, v4);
+
+	return show_schedd_queue(v1, v2, v3, v4);
+}
+#else
+
 static bool
 show_any_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool useDB )
 {
@@ -3807,17 +4284,8 @@ show_any_queue( const char* v1, const char* v2, const char* v3, const char* v4, 
 
 	return true;
 }
-
-/*
-static bool
-show_any_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool useDB )
-{
-	if (useDB) {
-		return show_db_queue(v1, v2, v3, v4);
-	}
-	return show_queue(v1, v2, v3, v4);
-}
-*/
+#endif
+#endif // NO_SQFP
 
 static bool is_slot_name(const char * psz)
 {
@@ -5135,6 +5603,7 @@ doJobRunAnalysisToBuffer( ClassAd *request, anaCounters & ac, Daemon *schedd )
 	request->AddTargetRefs( TargetMachineAttrs );
 #endif
 
+	PRAGMA_REMIND("TJ: move this code out of this function so it doesn't output once per job")
 	if( schedd ) {
 		MyString buf;
 		warnScheddLimits(schedd,request,buf);
