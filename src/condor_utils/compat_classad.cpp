@@ -666,6 +666,7 @@ ClassAd::ClassAd( const ClassAd &ad ) : classad::ClassAd(ad)
 	ResetName();
     ResetExpr();
 
+	EnableDirtyTracking();
 }
 
 ClassAd::ClassAd( const classad::ClassAd &ad )
@@ -691,6 +692,7 @@ ClassAd::ClassAd( const classad::ClassAd &ad )
 	ResetName();
     ResetExpr();
 
+	EnableDirtyTracking();
 }
 
 ClassAd::~ClassAd()
@@ -719,6 +721,7 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 	ResetName();
     ResetExpr();
 
+	EnableDirtyTracking();
 
 	nodeKind = CLASSAD_NODE;
 
