@@ -89,8 +89,9 @@ a one line summary of information as follows:
 %	S = suspended,
 	I = idle
         (waiting for a machine to execute on), C = completed, 
-        X = removed, and
-        > = transferring output. 
+        X = removed,
+        < = transferring input (or queued to do so), and
+        > = transferring output (or queued to do so). 
 \item[PRI] User specified priority of the job, ranges from -20 to +20, with 
 	higher numbers corresponding to greater priority. 
 \item[SIZE] The value of job ClassAd attribute \Attr{MemoryUsage} (in Mbytes),

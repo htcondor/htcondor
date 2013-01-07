@@ -533,6 +533,7 @@ private:
 	int attemptShutdownTimeout();
 	void attemptShutdown();
 	void abortFileTransfer();
+	int transferStatusUpdateCallback(FileTransfer *transobject);
 };
 
 

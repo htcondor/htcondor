@@ -1946,6 +1946,45 @@ RemoteResource::locateReconnectStarter( void )
 	return false;
 }
 
+int
+RemoteResource::transferStatusUpdateCallback(FileTransfer *transobject)
+{
+	ASSERT(jobAd);
+
+	FileTransfer::FileTransferInfo info = transobject->GetInfo();
+	dprintf(D_FULLDEBUG,"RemoteResource::transferStatusUpdateCallback(in_progress=%d)\n",info.in_progress);
+	if( !info.in_progress ) {
+			// this is the final update
+		if( m_attempt_shutdown_tid != -1 ) {
+				// expedite our next attempt to shut down
+			daemonCore->Reset_Timer(m_attempt_shutdown_tid,0);
+		}
+
+		if( info.type == FileTransfer::DownloadFilesType ) {
+			jobAd->Assign(ATTR_TRANSFERRING_OUTPUT,false);
+		}
+		else {
+			jobAd->Assign(ATTR_TRANSFERRING_INPUT,false);
+		}
+	}
+	else {
+		if( info.xfer_status == XFER_STATUS_QUEUED ) {
+			jobAd->Assign(ATTR_TRANSFER_QUEUED,true);
+		}
+		else if( info.xfer_status == XFER_STATUS_ACTIVE ) {
+			jobAd->Assign(ATTR_TRANSFER_QUEUED,false);
+		}
+		if( info.type == FileTransfer::DownloadFilesType ) {
+			jobAd->Assign(ATTR_TRANSFERRING_OUTPUT,true);
+		}
+		else {
+			jobAd->Assign(ATTR_TRANSFERRING_INPUT,true);
+		}
+	}
+	shadow->updateJobInQueue(U_PERIODIC);
+	return 0;
+}
+
 void
 RemoteResource::initFileTransfer()
 {
@@ -1959,6 +1998,11 @@ RemoteResource::initFileTransfer()
 	int spool_time = 0;
 	jobAd->LookupInteger(ATTR_STAGE_IN_FINISH,spool_time);
 	filetrans.Init( jobAd, false, PRIV_USER, spool_time != 0 );
+
+	filetrans.RegisterCallback(
+		(FileTransferHandlerCpp)&RemoteResource::transferStatusUpdateCallback,
+		this,
+		true);
 
 	if( !daemonCore->DoFakeCreateThread() ) {
 		filetrans.SetServerShouldBlock(false);

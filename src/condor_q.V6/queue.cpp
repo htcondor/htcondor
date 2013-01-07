@@ -1114,7 +1114,7 @@ processCommandLineArguments (int argc, char *argv[])
 	const char * pcolon;
 
 	bool custom_attributes = false;
-	attrs.initializeFromString("ClusterId\nProcId\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs\nJobDescription");
+	attrs.initializeFromString("ClusterId\nProcId\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs\nJobDescription\nTransferringInput\nTransferringOutput");
 
 	for (i = 1; i < argc; i++)
 	{
@@ -1950,6 +1950,18 @@ bufferJobShort( ClassAd *ad ) {
 			{
 				encoded_status = 'S';
 			}
+	}
+
+		// adjust status field to indicate file transfer status
+	int transferring_input = false;
+	int transferring_output = false;
+	ad->EvalBool(ATTR_TRANSFERRING_INPUT,NULL,transferring_input);
+	ad->EvalBool(ATTR_TRANSFERRING_OUTPUT,NULL,transferring_output);
+	if( transferring_input ) {
+		encoded_status = '<';
+	}
+	if( transferring_output ) {
+		encoded_status = '>';
 	}
 
 	sprintf( return_buff,

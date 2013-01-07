@@ -1459,6 +1459,38 @@ code 33.  The output will be transferred up to the point when the
 limit is hit, so some files may be fully transferred, some partially,
 and some not at all.
 
+%%% ClassAd attribute: TransferringInput
+\index{ClassAd job attribute!TransferringInput}
+\index{TransferringInput!job ClassAd attribute}
+\item[\AdAttr{TransferringInput}:]
+
+A boolean value that indicates whether the job is currently
+transferring input files.  The value is \Expr{Undefined} if the job is
+not scheduled to run or has not yet attempted to start transferring
+input.  When this value is \Expr{True}, to see whether the transfer is
+active or queued, check \AdAttr{TransferQueued}.
+
+%%% ClassAd attribute: TransferringOutput
+\index{ClassAd job attribute!TransferringOutput}
+\index{TransferringOutput!job ClassAd attribute}
+\item[\AdAttr{TransferringOutput}:]
+
+A boolean value that indicates whether the job is currently
+transferring output files.  The value is \Expr{Undefined} if the job
+is not scheduled to run or has not yet attempted to start transferring
+output.  When this value is \Expr{True}, to see whether the transfer
+is active or queued, check \AdAttr{TransferQueued}.
+
+%%% ClassAd attribute: TransferQueued
+\index{ClassAd job attribute!TransferQueued}
+\index{TransferQueued!job ClassAd attribute}
+\item[\AdAttr{TransferQueued}:]
+
+A boolean value that indicates whether the job is currently waiting to
+transfer files because of limits placed by
+\Macro{MAX\_CONCURRENT\_DOWNLOADS} or
+\Macro{MAX\_CONCURRENT\_UPLOADS}.
+
 %%% ClassAd attribute: UserLog
 \index{ClassAd job attribute!UserLog}
 \index{UserLog!job ClassAd attribute}
