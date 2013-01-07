@@ -689,6 +689,9 @@ e		*/
          *  @return true if the attribute is dirty, false otherwise
          */
 		bool        IsAttributeDirty(const std::string &name) const;
+	
+		/* Needed for backward compatibility */
+		bool		IsAttributeDirty(const std::string &name) {return IsAttributeDirty(name);}
 
 		typedef DirtyAttrList::iterator dirtyIterator;
         /** Return an interator to the first dirty attribute so all dirty attributes 
