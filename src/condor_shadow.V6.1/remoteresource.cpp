@@ -1946,6 +1946,57 @@ RemoteResource::locateReconnectStarter( void )
 	return false;
 }
 
+void
+RemoteResource::initFileTransfer()
+{
+		// FileTransfer now makes sure we only do Init() once.
+		//
+		// Tell the FileTransfer object to create a file catalog if
+		// the job's files are spooled. This prevents FileTransfer
+		// from listing unmodified input files as intermediate files
+		// that need to be transferred back from the starter.
+	ASSERT(jobAd);
+	int spool_time = 0;
+	jobAd->LookupInteger(ATTR_STAGE_IN_FINISH,spool_time);
+	filetrans.Init( jobAd, false, PRIV_USER, spool_time != 0 );
+
+	if( !daemonCore->DoFakeCreateThread() ) {
+		filetrans.SetServerShouldBlock(false);
+	}
+
+	int max_upload_mb = -1;
+	int max_download_mb = -1;
+	param_integer("MAX_TRANSFER_INPUT_MB",max_upload_mb,true,-1,false,INT_MIN,INT_MAX,jobAd);
+	param_integer("MAX_TRANSFER_OUTPUT_MB",max_download_mb,true,-1,false,INT_MIN,INT_MAX,jobAd);
+
+		// The job may override the system defaults for max transfer I/O
+	int ad_max_upload_mb = -1;
+	int ad_max_download_mb = -1;
+	if( jobAd->EvalInteger(ATTR_MAX_TRANSFER_INPUT_MB,NULL,ad_max_upload_mb) ) {
+		max_upload_mb = ad_max_upload_mb;
+	}
+	if( jobAd->EvalInteger(ATTR_MAX_TRANSFER_OUTPUT_MB,NULL,ad_max_download_mb) ) {
+		max_download_mb = ad_max_download_mb;
+	}
+
+	filetrans.setMaxUploadBytes(max_upload_mb < 0 ? -1 : ((filesize_t)max_upload_mb)*1024*1024);
+	filetrans.setMaxDownloadBytes(max_download_mb < 0 ? -1 : ((filesize_t)max_download_mb)*1024*1024);
+
+	// Add extra remaps for the canonical stdout/err filenames.
+	// If using the FileTransfer object, the starter will rename the
+	// stdout/err files, and we need to remap them back here.
+	std::string file;
+	if ( jobAd->LookupString( ATTR_JOB_OUTPUT, file ) &&
+		 strcmp( file.c_str(), StdoutRemapName ) ) {
+
+		filetrans.AddDownloadFilenameRemap( StdoutRemapName, file.c_str() );
+	}
+	if ( jobAd->LookupString( ATTR_JOB_ERROR, file ) &&
+		 strcmp( file.c_str(), StderrRemapName ) ) {
+
+		filetrans.AddDownloadFilenameRemap( StderrRemapName, file.c_str() );
+	}
+}
 
 void
 RemoteResource::requestReconnect( void )
@@ -1977,9 +2028,9 @@ RemoteResource::requestReconnect( void )
 		// from listing unmodified input files as intermediate files
 		// that need to be transferred back from the starter.
 	ASSERT(jobAd);
-	int spool_time = 0;
-	jobAd->LookupInteger(ATTR_STAGE_IN_FINISH,spool_time);
-	filetrans.Init( jobAd, true, PRIV_USER, spool_time != 0 );
+
+	initFileTransfer();
+
 	char* value = NULL;
 	jobAd->LookupString(ATTR_TRANSFER_KEY,&value);
 	if (value) {
@@ -2000,19 +2051,6 @@ RemoteResource::requestReconnect( void )
 	} else {
 		dprintf( D_ALWAYS,"requestReconnect(): failed to determine %s\n",
 			ATTR_TRANSFER_SOCKET );
-	}
-
-	// Add extra remaps for the canonical stdout/err filenames.
-	// If using the FileTransfer object, the starter will rename the
-	// stdout/err files, and we need to remap them back here.
-	std::string file;
-	if ( jobAd->LookupString( ATTR_JOB_OUTPUT, file ) &&
-		 strcmp( file.c_str(), StdoutRemapName ) ) {
-		filetrans.AddDownloadFilenameRemap( StdoutRemapName, file.c_str() );
-	}
-	if ( jobAd->LookupString( ATTR_JOB_ERROR, file ) &&
-		 strcmp( file.c_str(), StderrRemapName ) ) {
-		filetrans.AddDownloadFilenameRemap( StderrRemapName, file.c_str() );
 	}
 
 		// Use 30s timeout, because we don't want to block forever
