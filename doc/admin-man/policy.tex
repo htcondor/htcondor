@@ -2227,11 +2227,16 @@ and this may be used to identify interactive jobs,
 distinguishing them from all other jobs.
 
 As an example, presume that slot 1 prefers interactive jobs.
+Set the machine's \MacroNI{RANK} to show the preference:
+\footnotesize
 \begin{verbatim}
 RANK = ( (MY.SlotID == 1) && (TARGET.InteractiveJob =?= True) )
 \end{verbatim}
+\normalsize
 
-Or, if slot1 should be reserved for interactive jobs.
+Or, if slot 1 should be reserved for interactive jobs:
+\footnotesize
 \begin{verbatim}
 START = ( (MY.SlotID == 1) && (TARGET.InteractiveJob =?= True) )
 \end{verbatim}
+\normalsize
