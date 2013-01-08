@@ -132,21 +132,26 @@ files for completed jobs need to be retrieved with \Condor{transfer\_data}.}
 \OptItem{\OptArg{-dump}{filename}}{Sends all ClassAds to the specified
   file, instead of to the \Condor{schedd}.}
 
-\OptItem{\Opt{-interactive}}{The interactive flag to condor\_submit indicates
-the user wants to run an interactive shell on some execute machine in the pool.
- This is equivalent to creating a submit file with a vanilla universe
- sleep job, then running condor\_ssh\_to\_job by hand.  Without any additional
-arguments, \Condor{submit} with the -interactive flag creates a dummy
-vanilla universe job that sleeps, submits it to the local scheduler, waits
-for it to run, and launches condor\_ssh\_to\_job to run a shell.  If
-the user would like to run the shell on a machine that matches a particular
-Requirements expression, the -interactive feature can optionally take
-the name of a job description file as an argument.  In that case, the
-Requirements, Rank and other policy expressions specified in the job 
-description file are honored, but the executable and universe are 
-overwritten to be sleep and vanilla.  The job attribute InteractiveJob
-is set to true for startd policy usage.
-}
+\OptItem{\Opt{-interactive}}{Indicates
+  that the user wants to run an interactive shell on an execute machine 
+  in the pool.
+  This is equivalent to creating a submit description file 
+  of a vanilla universe sleep job, 
+  and then running \Condor{ssh\_to\_job} by hand.
+  Without any additional arguments, 
+  \Condor{submit} with the -interactive flag creates a dummy
+  vanilla universe job that sleeps, 
+  submits it to the local scheduler, 
+  waits for the job to run, 
+  and then launches \Condor{ssh\_to\_job} to run a shell.
+  If the user would like to run the shell on a machine that matches 
+  a particular \SubmitCmd{requirements} expression, 
+  the submit description file is specified, and it will contain the expression.
+  Note that all policy expressions specified in the submit 
+  description file are honored, but any \SubmitCmd{executable} or
+  \SubmitCmd{universe} commands are overwritten to be sleep and vanilla.
+  The job ClassAd attribute \Attr{InteractiveJob} is set to \Expr{True}
+  to identify interactive jobs for \Condor{startd} policy usage.  }
 
 \OptItem{\Arg{submit description file}}{The path and file name of 
 the submit description file. 
