@@ -119,6 +119,11 @@ the fix treats values larger than 2047 as no limit on 32-bit platforms.
 and sge grid jobs.
 \Ticket{3383}
 
+\item When doing remote pbs, lsf, or sge grid job submissions, the
+\Condor{gridmanager} now ensures that no unsual characters are used in
+the name of the job sandbox directory it creates.
+\Ticket{3294}
+
 \end{itemize}
 
 \noindent Known Bugs:
