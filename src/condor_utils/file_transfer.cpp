@@ -1466,6 +1466,8 @@ FileTransfer::ReadTransferPipeMsg()
 		}
 	}
 	else if( cmd == FINAL_UPDATE_XFER_PIPE_CMD ) {
+		Info.xfer_status = XFER_STATUS_DONE;
+
 		n = daemonCore->Read_Pipe( TransferPipe[0],
 								   (char *)&Info.bytes,
 								   sizeof( filesize_t) );

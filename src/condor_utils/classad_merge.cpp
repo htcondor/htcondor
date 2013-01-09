@@ -23,7 +23,8 @@
 #include "classad_merge.h"
 
 void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from, 
-				   bool merge_conflicts, bool mark_dirty)
+				   bool merge_conflicts, bool mark_dirty,
+				   bool keep_clean_when_possible)
 {
 
 	if (!merge_into || !merge_from) {
@@ -39,6 +40,26 @@ void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from,
 	while ( merge_from->NextExpr(name, expression) ) {
 
 		if (merge_conflicts || !merge_into->LookupExpr(name)) {
+			if( keep_clean_when_possible ) {
+				char *from_expr;
+				char *to_expr;
+				bool equiv=false;
+
+				if( (from_expr=merge_from->sPrintExpr(NULL,0,name)) &&
+					(to_expr=merge_into->sPrintExpr(NULL,0,name)) )
+				{
+					if( from_expr && to_expr && strcmp(from_expr,to_expr)==0 ) {
+						equiv=true;
+					}
+				}
+				free( from_expr );
+				free( to_expr );
+
+				if( equiv ) {
+					continue;
+				}
+			}
+
 			ExprTree  *copy_expression;
 
 			copy_expression = expression->Copy();
@@ -50,4 +71,9 @@ void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from,
 	}
 
 	return;
+}
+
+void MergeClassAdsCleanly(ClassAd *merge_into, ClassAd *merge_from)
+{
+	return MergeClassAds(merge_into,merge_from,true,true,true);
 }

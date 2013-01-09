@@ -1290,15 +1290,56 @@ BaseShadow::updateJobInQueue( update_t type )
 		// value hasn't changed, it won't show up as dirty and we
 		// won't actually connect to the job queue for it.  we do this
 		// here since we want it for all kinds of updates...
-	MyString buf;
-	buf.formatstr( "%s = %f", ATTR_BYTES_SENT, (prev_run_bytes_sent +
-											  bytesReceived()) );
-	jobAd->Insert( buf.Value() );
-	buf.formatstr( "%s = %f", ATTR_BYTES_RECVD, (prev_run_bytes_recvd +
-											   bytesSent()) );
-	jobAd->Insert( buf.Value() );
+	ClassAd ftAd;
+	ftAd.Assign(ATTR_BYTES_SENT, (prev_run_bytes_sent + bytesReceived()) );
+
+	ftAd.Assign(ATTR_BYTES_RECVD, (prev_run_bytes_recvd + bytesSent()) );
+
+	FileTransferStatus upload_status = XFER_STATUS_UNKNOWN;
+	FileTransferStatus download_status = XFER_STATUS_UNKNOWN;
+	getFileTransferStatus(upload_status,download_status);
+	switch(upload_status) {
+	case XFER_STATUS_UNKNOWN:
+		break;
+	case XFER_STATUS_QUEUED:
+		ftAd.Assign(ATTR_TRANSFER_QUEUED,true);
+		ftAd.Assign(ATTR_TRANSFERRING_INPUT,true);
+		break;
+	case XFER_STATUS_ACTIVE:
+		ftAd.Assign(ATTR_TRANSFER_QUEUED,false);
+		ftAd.Assign(ATTR_TRANSFERRING_INPUT,true);
+		break;
+	case XFER_STATUS_DONE:
+		ftAd.Assign(ATTR_TRANSFER_QUEUED,false);
+		ftAd.Assign(ATTR_TRANSFERRING_INPUT,false);
+		break;
+	}
+	switch(download_status) {
+	case XFER_STATUS_UNKNOWN:
+		break;
+	case XFER_STATUS_QUEUED:
+		ftAd.Assign(ATTR_TRANSFER_QUEUED,true);
+		ftAd.Assign(ATTR_TRANSFERRING_OUTPUT,true);
+		break;
+	case XFER_STATUS_ACTIVE:
+		ftAd.Assign(ATTR_TRANSFER_QUEUED,false);
+		ftAd.Assign(ATTR_TRANSFERRING_OUTPUT,true);
+		break;
+	case XFER_STATUS_DONE:
+		ftAd.Assign(ATTR_TRANSFER_QUEUED,false);
+		ftAd.Assign(ATTR_TRANSFERRING_OUTPUT,false);
+		break;
+	}
+
+	MergeClassAdsCleanly(jobAd,&ftAd);
 
 	ASSERT( job_updater );
+
+	if( type == U_PERIODIC ) {
+			// Make an update happen soon.
+		job_updater->resetUpdateTimer();
+		return true;
+	}
 
 		// Now that the ad is current, just let our QmgrJobUpdater
 		// object take care of the rest...

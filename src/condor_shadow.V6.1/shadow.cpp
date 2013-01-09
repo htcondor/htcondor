@@ -335,6 +335,11 @@ UniShadow::bytesReceived()
 	return remRes->bytesReceived();
 }
 
+void
+UniShadow::getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status)
+{
+	remRes->getFileTransferStatus(upload_status,download_status);
+}
 
 struct rusage
 UniShadow::getRUsage( void ) 

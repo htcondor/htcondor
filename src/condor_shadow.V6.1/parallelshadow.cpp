@@ -903,6 +903,26 @@ ParallelShadow::bytesReceived( void )
 	return total;
 }
 
+void
+ParallelShadow::getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status)
+{
+	MpiResource* mpi_res;
+	int i;
+	for( i=0; i<=ResourceList.getlast() ; i++ ) {
+		mpi_res = ResourceList[i];
+		FileTransferStatus this_upload_status = XFER_STATUS_UNKNOWN;
+		FileTransferStatus this_download_status = XFER_STATUS_UNKNOWN;
+		mpi_res->getFileTransferStatus(this_upload_status,this_download_status);
+
+		if( this_upload_status == XFER_STATUS_ACTIVE || upload_status == XFER_STATUS_UNKNOWN ) {
+			upload_status = this_upload_status;
+		}
+		if( this_download_status == XFER_STATUS_ACTIVE || download_status == XFER_STATUS_UNKNOWN ) {
+			download_status = this_download_status;
+		}
+	}
+}
+
 int
 ParallelShadow::getExitReason( void )
 {

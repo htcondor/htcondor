@@ -71,7 +71,8 @@ typedef int		(*FileTransferHandler)(FileTransfer *);
 enum FileTransferStatus {
 	XFER_STATUS_UNKNOWN,
 	XFER_STATUS_QUEUED,
-	XFER_STATUS_ACTIVE
+	XFER_STATUS_ACTIVE,
+	XFER_STATUS_DONE
 };
 
 

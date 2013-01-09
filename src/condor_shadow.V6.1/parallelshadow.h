@@ -91,6 +91,7 @@ class ParallelShadow : public BaseShadow
 
 	float bytesSent( void );
 	float bytesReceived( void );
+	void getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status);
 
 	bool exitedBySignal( void );
 
