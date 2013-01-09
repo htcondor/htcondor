@@ -8579,7 +8579,9 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		DeleteAttribute( cluster, proc, ATTR_REMOTE_SLOT_ID );
 		DeleteAttribute( cluster, proc, ATTR_REMOTE_VIRTUAL_MACHINE_ID ); // CRUFT
 		DeleteAttribute( cluster, proc, ATTR_DELEGATED_PROXY_EXPIRATION );
-
+		DeleteAttribute( cluster, proc, ATTR_TRANSFERRING_INPUT );
+		DeleteAttribute( cluster, proc, ATTR_TRANSFERRING_OUTPUT );
+		DeleteAttribute( cluster, proc, ATTR_TRANSFER_QUEUED );
 	} else {
 		dprintf( D_FULLDEBUG, "Job %d.%d has keepClaimAttributes set to true. "
 					    "Not removing %s and %s attributes.\n",

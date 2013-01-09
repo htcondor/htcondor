@@ -1408,26 +1408,48 @@ File System Configuration File Entries''.
 \label{param:StatisticsWindowSeconds}
 \item[\Macro{STATISTICS\_WINDOW\_SECONDS}]
   An integer value that controls the time window size, in seconds, for
-  collecting windowed daemon statistics (by convention, windowed statistics
-  typically are of the form 'RecentXxx').  Any data contributing to a
+  collecting windowed daemon statistics.
+  These statistics are, by convention, those attributes with names that 
+  are of the form \Attr{Recent<attrname>}.  Any data contributing to a
   windowed statistic that is older than this number of seconds is dropped
-  from the statistic.  For example if \Macro{STATISTICS\_WINDOW\_SECONDS} = 300, then
-  any jobs submitted more than 300 seconds ago are not counted in the windowed
-  statistic \Attr{RecentJobsSubmitted}.  Defaults to 1200.
+  from the statistic.  
+  For example, if \Expr{STATISTICS\_WINDOW\_SECONDS = 300},
+  then any jobs submitted more than 300 seconds ago are not counted 
+  in the windowed statistic \Attr{RecentJobsSubmitted}.  
+  Defaults to 1200 seconds, which is 20 minutes.
 
-  Configuration variables of the form \Macro{STATISTICS\_WINDOW\_SECONDS\_<collection>}
-  override the global setting for a particular statistic collection.  Collection names
-  currently implemented are 'DC' (or 'DAEMONCORE') and 'SCHEDD' (or 'SCHEDULER')
+  The window is broken into smaller time pieces called quantum.
+  The window advances one quantum at a time.
+
+\label{param:StatisticsWindowSecondsCollection}
+\item[\Macro{STATISTICS\_WINDOW\_SECONDS\_<collection>}]
+  The same as \MacroNI{STATISTICS\_WINDOW\_SECONDS}, 
+  but used to 
+  override the global setting for a particular statistic collection.  
+  Collection names currently implemented are \Expr{DC} or \Expr{DAEMONCORE}
+  and \Expr{SCHEDD} or \Expr{SCHEDULER}.
 
 \label{param:StatisticsWindowQuantum}
 \item[\Macro{STATISTICS\_WINDOW\_QUANTUM}]
-  An integer value that controls the time quantization, in seconds, for the data structures 
-  that maintain windowed statistics.  Defaults to 240.   Smaller values yield higher
-  time resolution and reduce 'sawtoothing' of windowed statistic values, at the expense of
-  requiring larger data structures for maintenance.
+  For experts only,
+  an integer value that controls the time quantization that form a
+  time window, 
+  in seconds, for the data structures that maintain windowed statistics.
+  Defaults to 240 seconds, which is 6 minutes.
+  This default is purposely set to be slightly smaller than the update
+  rate to the \Condor{collector}. 
+  Setting a smaller value than the default increases the memory requirement
+  for the statistics.
+  Graphing of statistics at the level of the quantum
+  expects to see counts that appear like a saw tooth. 
 
-  Configuration variables of the form \Macro{STATISTICS\_WINDOW\_QUANTUM\_<collection>}
-  override the global setting for a particular statistic collection.
+\label{param:StatisticsWindowQuantumCollection}
+\item[\Macro{STATISTICS\_WINDOW\_QUANTUM\_<collection>}]
+  The same as \MacroNI{STATISTICS\_WINDOW\_QUANTUM}, 
+  but used to 
+  override the global setting for a particular statistic collection.  
+  Collection names currently implemented are \Expr{DC} or \Expr{DAEMONCORE}
+  and \Expr{SCHEDD} or \Expr{SCHEDULER}.
 
 \end{description}
 
@@ -7498,16 +7520,6 @@ The following configuration macros affect negotiation for group users.
   quota, as scaling is currently based on the number of machines available,
   not assigned quotas (for static quotas).
 
-\label{param:GroupSeparator}
-\item[\Macro{GROUP\_SEPARATOR}]
-  A string value that contains the separator character used between
-accounting groups and the user name.  Defaults to \Expr{``.''} for
-backward compatibility.  In this example, the separator character is set
-to \Expr{``:''}, to allow the use of \Expr{``.''} in user names:
-\begin{verbatim}
-GROUP_SEPARATOR = ":"
-\end{verbatim}
-
 \end{description}
 
 % entire section commented out Nov 2005
@@ -9544,10 +9556,10 @@ They specify items related to the \Condor{vm-gahp}.
   It will be the value \verb@kvm@, \verb@xen@ or \verb@vmware@.
   There is no default value for this required configuration variable.
 
-\label{param:VMMaxMemory}
+\label{param:VMMemory}
 \item[\Macro{VM\_MEMORY}]
-  An integer to specify the maximum amount of memory in Mbytes
-  that will be allowed to the virtual machine program.
+  An integer specifying the maximum amount of memory in Mbytes
+  to be shared among the VM universe jobs run on this machine.
 
 \label{param:VMMaxNumber}
 \item[\Macro{VM\_MAX\_NUMBER}]

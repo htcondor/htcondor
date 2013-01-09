@@ -36,10 +36,14 @@ if (WITH_GSOAP)
 			set (GSOAP_INSTALL set PACKAGE_INSTALL_DIR=${GSOAP_INSTALL_LOC}\r\n
 			                   gmake -f Makefile.win32 install -C gsoap/src )
 		else()
-			set (GSOAP_PATCH  patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/install_soapcpp2_wsdl2h_aux-2.7.10-Makefile.in.patch &&
-							  patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/fix_xlocale_insanity.patch &&
-							  patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/nmi_prereq_hack.patch &&
-							  patch --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/openssl_1_0.patch)
+			if (NOT BISON OR NOT FLEX)
+				message(FATAL_ERROR "Can't find bison and flex, needed to build gsoap external!")
+			endif()
+
+			set (GSOAP_PATCH  patch -N --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/install_soapcpp2_wsdl2h_aux-2.7.10-Makefile.in.patch &&
+							  patch -N --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/fix_xlocale_insanity.patch &&
+							  patch -N --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/nmi_prereq_hack.patch &&
+							  patch -N --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/openssl_1_0.patch)
 			if(DARWIN AND cxx_11)
 				set (GSOAP_CONFIGURE ./configure --prefix=${GSOAP_INSTALL_LOC} --disable-dependency-tracking "CPPFLAGS=-I${OPENSSL_INSTALL_LOC}/include/" "CXXFLAGS=-std=c++11 -stdlib=libc++" )
 			else()
@@ -60,7 +64,6 @@ if (WITH_GSOAP)
 		ExternalProject_Add( gsoap
 				    DEPENDS ${GSOAP_DEPENDS}
 				    #-- Download Step ----------
-				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/gsoap-2.7.10.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${GSOAP_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/gsoap-2.7.10.tar.gz
 					#--Patch step ----------
@@ -111,7 +114,7 @@ if (WITH_GSOAP)
 		find_file(WSSEAPI wsseapi.cpp HINTS ${GSOAP_SHARE}/plugin/ )
 
 		exec_program ( cp
-					   ARGS ${GSOAP_SHARE}/plugin/wsseapi.c ${GSOAP_INSTALL_LOC}/src/wsseapi.cpp && patch -p3 ${GSOAP_INSTALL_LOC}/src/wsseapi.cpp ${CMAKE_CURRENT_SOURCE_DIR}/wsseapi.patch
+					   ARGS ${GSOAP_SHARE}/plugin/wsseapi.c ${GSOAP_INSTALL_LOC}/src/wsseapi.cpp && patch -N -p3 ${GSOAP_INSTALL_LOC}/src/wsseapi.cpp ${CMAKE_CURRENT_SOURCE_DIR}/wsseapi.patch
 					   RETURN_VALUE WSSEAPI_PATCH )
 		
 		dprint("WSSEAPI_PATCH = ${WSSEAPI_PATCH}")
@@ -137,7 +140,7 @@ if (WITH_GSOAP)
 
 			if (${WSSEAPI} STREQUAL "WSSEAPI-NOTFOUND" )
 
-			  command_target(cp_wsseapi cp "${GSOAP_SHARE}/plugin/wsseapi.c;${GSOAP_INSTALL_LOC}/src/wsseapi.cpp;&&;patch;-p3;${GSOAP_INSTALL_LOC}/src/wsseapi.cpp;${CMAKE_CURRENT_SOURCE_DIR}/wsseapi.patch" "${GSOAP_INSTALL_LOC}/src/wsseapi.cpp")
+			  command_target(cp_wsseapi cp "${GSOAP_SHARE}/plugin/wsseapi.c;${GSOAP_INSTALL_LOC}/src/wsseapi.cpp;&&;patch;-N;-p3;${GSOAP_INSTALL_LOC}/src/wsseapi.cpp;${CMAKE_CURRENT_SOURCE_DIR}/wsseapi.patch" "${GSOAP_INSTALL_LOC}/src/wsseapi.cpp")
 
 			  set(WSSEAPI ${GSOAP_INSTALL_LOC}/src/wsseapi.cpp)
 			  set(PRE_WSEAPPI_CPP ON PARENT_SCOPE)

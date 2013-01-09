@@ -111,7 +111,6 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 	# so the idea of privately staging boost is silly.
 	ExternalProject_Add(boost
 		#-- Download Step ----------
-		 DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${BOOST_FILENAME}.tar.gz ${CMD_TERM}
 		 DOWNLOAD_DIR ${BOOST_STAGE}/dl
 		 URL http://parrot.cs.wisc.edu/externals/${BOOST_FILENAME}.tar.gz
 		#--Patch step ----------

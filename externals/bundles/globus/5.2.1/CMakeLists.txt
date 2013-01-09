@@ -24,6 +24,22 @@ if (WITH_GLOBUS)
 
 	if (NOT PROPER)
 
+		if (NOT HAVE_LIBLTDL)
+			message(FATAL_ERROR "Can't find libltdl, needed to build globus external!")
+		endif()
+
+		execute_process(COMMAND perl -e "use Archive::Tar"
+				RESULT_VARIABLE TEST_RESULT )
+		if(NOT ${TEST_RESULT} MATCHES "0")
+			message(FATAL_ERROR "Missing perl module Archive::Tar, needed to build globus external!")
+		endif()
+
+		execute_process(COMMAND perl -e "use Digest::MD5"
+				RESULT_VARIABLE TEST_RESULT )
+		if(NOT ${TEST_RESULT} MATCHES "0")
+			message(FATAL_ERROR "Missing perl module Digest::MD5, needed to build globus external!")
+		endif()
+
 		if(${SYS_ARCH} MATCHES "IA64|X86_64")
 			set( GLOBUS_FLAVOR gcc64dbg )
 		elseif(AIX)
@@ -44,7 +60,6 @@ if (WITH_GLOBUS)
 
 			ExternalProject_Add(libtool
 					#-- Download Step ----------
-					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/libtool-2.4.2.tar.gz ${CMD_TERM}
 					DOWNLOAD_DIR ${LIBTOOL_STAGE}/dl
 					URL http://parrot.cs.wisc.edu/externals/libtool-2.4.2.tar.gz
 					#--Configure step ----------
@@ -65,8 +80,8 @@ if (WITH_GLOBUS)
 		endif()
 
 
-		set (GLOBUS_PATCH patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins.patch -p0 &&
-						patch -i ${CMAKE_CURRENT_SOURCE_DIR}/mac_openssl.patch -p0 &&
+		set (GLOBUS_PATCH patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins.patch -p0 &&
+						patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/mac_openssl.patch -p0 &&
 						cd gt5.2.1-all-source-installer/source-trees/xio/src/builtins &&
 						mkdir -p gsi popen &&
 						sed -e 's/globus_xio_gsi.h/globus_xio_gsi_driver.h/' ../../drivers/gsi/globus_i_xio_gsi.h >gsi/globus_i_xio_gsi.h &&
@@ -82,15 +97,14 @@ if (WITH_GLOBUS)
 		if(DARWIN)
 			set ( GLOBUS_PATCH ${GLOBUS_PATCH} &&
 				cd ../../../../../ &&
-				patch -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins-2.patch -p0 &&
-				patch -i ${CMAKE_CURRENT_SOURCE_DIR}/mac_environ.patch -p0 )
+				patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins-2.patch -p0 &&
+				patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/mac_environ.patch -p0 )
 		endif()
 
 		# honestly the build of globus is one of the strangest things I have ever seen and it makes no sense to me.
 		ExternalProject_Add(globus
 							DEPENDS ${GLOBUS_DEPENDS}
 							#-- Download Step ----------
-							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/globus-5.2.1.tar.gz ${CMD_TERM}
 							DOWNLOAD_DIR ${GLOBUS_STAGE}/dl
 							URL http://parrot.cs.wisc.edu/externals/globus-5.2.1.tar.gz
 							#--Patch step ----------

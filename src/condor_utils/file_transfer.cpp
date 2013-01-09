@@ -68,6 +68,9 @@ int FileTransfer::SequenceNum = 0;
 int FileTransfer::ReaperId = -1;
 bool FileTransfer::ServerShouldBlock = true;
 
+const int FINAL_UPDATE_XFER_PIPE_CMD = 1;
+const int IN_PROGRESS_UPDATE_XFER_PIPE_CMD = 0;
+
 class FileTransferItem {
 public:
 	FileTransferItem():
@@ -160,7 +163,9 @@ FileTransfer::FileTransfer()
 	ClientCallback = 0;
 	ClientCallbackCpp = 0;
 	ClientCallbackClass = NULL;
+	ClientCallbackWantsStatusUpdates = false;
 	TransferPipe[0] = TransferPipe[1] = -1;
+	registered_xfer_pipe = false;
 	bytesSent = 0.0;
 	bytesRcvd = 0.0;
 	m_final_transfer_flag = FALSE;
@@ -188,7 +193,13 @@ FileTransfer::~FileTransfer()
 				"active transfer.  Cancelling transfer.\n");
 		abortActiveTransfer();
 	}
-	if (TransferPipe[0] >= 0) daemonCore->Close_Pipe(TransferPipe[0]);
+	if (TransferPipe[0] >= 0) {
+		if( registered_xfer_pipe ) {
+			registered_xfer_pipe = false;
+			daemonCore->Cancel_Pipe(TransferPipe[0]);
+		}
+		daemonCore->Close_Pipe(TransferPipe[0]);
+	}
 	if (TransferPipe[1] >= 0) daemonCore->Close_Pipe(TransferPipe[1]);
 	if (Iwd) free(Iwd);
 	if (ExecFile) free(ExecFile);
@@ -1346,7 +1357,6 @@ int
 FileTransfer::Reaper(Service *, int pid, int exit_status)
 {
 	FileTransfer *transobject;
-	bool read_failed = false;
 	if (!TransThreadTable || TransThreadTable->lookup(pid,transobject) < 0) {
 		dprintf(D_ALWAYS, "unknown pid %d in FileTransfer::Reaper!\n", pid);
 		return FALSE;
@@ -1360,7 +1370,10 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 		transobject->Info.success = false;
 		transobject->Info.try_again = true;
 		transobject->Info.error_desc.formatstr("File transfer failed (killed by signal=%d)", WTERMSIG(exit_status));
-		read_failed = true; // do not try to read from the pipe
+		if( transobject->registered_xfer_pipe ) {
+			transobject->registered_xfer_pipe = false;
+			daemonCore->Cancel_Pipe(transobject->TransferPipe[0]);
+		}
 		dprintf( D_ALWAYS, "%s\n", transobject->Info.error_desc.Value() );
 	} else {
 		if( WEXITSTATUS(exit_status) != 0 ) {
@@ -1382,96 +1395,14 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 		transobject->TransferPipe[1] = -1;
 	}
 
-	int n;
-
-	if(!read_failed) {
-		n = daemonCore->Read_Pipe( transobject->TransferPipe[0],
-				  (char *)&transobject->Info.bytes,
-				  sizeof( filesize_t) );
-		if(n != sizeof( filesize_t )) read_failed = true;
-		if( transobject->Info.type == DownloadFilesType ) {
-			transobject->bytesRcvd += transobject->Info.bytes;
-		}
-		else {
-			transobject->bytesSent += transobject->Info.bytes;
-		}
+		// if we haven't already read the final status update, do it now
+	if( transobject->registered_xfer_pipe ) {
+		transobject->ReadTransferPipeMsg();
 	}
 
-	if(!read_failed) {
-		n = daemonCore->Read_Pipe( transobject->TransferPipe[0],
-				  (char *)&transobject->Info.try_again,
-				  sizeof( bool ) );
-		if(n != sizeof( bool )) read_failed = true;
-	}
-
-	
-	if(!read_failed) {
-		n = daemonCore->Read_Pipe( transobject->TransferPipe[0],
-				  (char *)&transobject->Info.hold_code,
-				  sizeof( int ) );
-		if(n != sizeof( int )) read_failed = true;
-	}
-
-	if(!read_failed) {
-		n = daemonCore->Read_Pipe( transobject->TransferPipe[0],
-				  (char *)&transobject->Info.hold_subcode,
-				  sizeof( int ) );
-		if(n != sizeof( int )) read_failed = true;
-	}
-
-	int error_len = 0;
-	if(!read_failed) {
-		n = daemonCore->Read_Pipe( transobject->TransferPipe[0],
-				  (char *)&error_len,
-				  sizeof( int ) );
-		if(n != sizeof( int )) read_failed = true;
-	}
-
-	if(!read_failed && error_len) {
-		char *error_buf = new char[error_len];
-		ASSERT(error_buf);
-
-		n = daemonCore->Read_Pipe( transobject->TransferPipe[0],
-			  error_buf,
-			  error_len );
-		if(n != error_len) read_failed = true;
-		if(!read_failed) {
-			transobject->Info.error_desc = error_buf;
-		}
-
-		delete [] error_buf;
-	}
-
-	int spooled_files_len = 0;
-	if(!read_failed) {
-		n = daemonCore->Read_Pipe( transobject->TransferPipe[0],
-				  (char *)&spooled_files_len,
-				  sizeof( int ) );
-		if(n != sizeof( int )) read_failed = true;
-	}
-
-	if(!read_failed && spooled_files_len) {
-		char *spooled_files_buf = new char[spooled_files_len];
-		ASSERT(spooled_files_buf);
-
-		n = daemonCore->Read_Pipe( transobject->TransferPipe[0],
-			  spooled_files_buf,
-			  spooled_files_len );
-		if(n != spooled_files_len) read_failed = true;
-		if(!read_failed) {
-			transobject->Info.spooled_files = spooled_files_buf;
-		}
-
-		delete [] spooled_files_buf;
-	}
-
-	if(read_failed) {
-		transobject->Info.success = false;
-		transobject->Info.try_again = true;
-		if( transobject->Info.error_desc.IsEmpty() ) {
-			transobject->Info.error_desc.formatstr("Failed to read status report from file transfer pipe (errno %d): %s",errno,strerror(errno));
-			dprintf(D_ALWAYS,"%s\n",transobject->Info.error_desc.Value());
-		}
+	if( transobject->registered_xfer_pipe ) {
+		transobject->registered_xfer_pipe = false;
+		daemonCore->Cancel_Pipe(transobject->TransferPipe[0]);
 	}
 
 	daemonCore->Close_Pipe(transobject->TransferPipe[0]);
@@ -1493,18 +1424,174 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 		sleep(1);
 	}
 
-	if (transobject->ClientCallback) {
-		dprintf(D_FULLDEBUG,
-				"Calling client FileTransfer handler function.\n");
-		(*(transobject->ClientCallback))(transobject);
-	}
-	if (transobject->ClientCallbackCpp) {
-		dprintf(D_FULLDEBUG,
-				"Calling client FileTransfer handler function.\n");
-		((transobject->ClientCallbackClass)->*(transobject->ClientCallbackCpp))(transobject);
-	}
+	transobject->callClientCallback();
 
 	return TRUE;
+}
+
+void
+FileTransfer::callClientCallback()
+{
+	if (ClientCallback) {
+		dprintf(D_FULLDEBUG,
+				"Calling client FileTransfer handler function.\n");
+		(*(ClientCallback))(this);
+	}
+	if (ClientCallbackCpp) {
+		dprintf(D_FULLDEBUG,
+				"Calling client FileTransfer handler function.\n");
+		((ClientCallbackClass)->*(ClientCallbackCpp))(this);
+	}
+}
+
+bool
+FileTransfer::ReadTransferPipeMsg()
+{
+	int n;
+
+	char cmd=0;
+	n = daemonCore->Read_Pipe( TransferPipe[0], &cmd, sizeof(cmd) );
+	if(n != sizeof( cmd )) goto read_failed;
+
+	if( cmd == IN_PROGRESS_UPDATE_XFER_PIPE_CMD ) {
+		int i=XFER_STATUS_UNKNOWN;
+		n = daemonCore->Read_Pipe( TransferPipe[0],
+								   (char *)&i,
+								   sizeof( int ) );
+		if(n != sizeof( int )) goto read_failed;
+		Info.xfer_status = (FileTransferStatus)i;
+
+		if( ClientCallbackWantsStatusUpdates ) {
+			callClientCallback();
+		}
+	}
+	else if( cmd == FINAL_UPDATE_XFER_PIPE_CMD ) {
+		n = daemonCore->Read_Pipe( TransferPipe[0],
+								   (char *)&Info.bytes,
+								   sizeof( filesize_t) );
+		if(n != sizeof( filesize_t )) goto read_failed;
+		if( Info.type == DownloadFilesType ) {
+			bytesRcvd += Info.bytes;
+		}
+		else {
+			bytesSent += Info.bytes;
+		}
+
+		n = daemonCore->Read_Pipe( TransferPipe[0],
+								   (char *)&Info.try_again,
+								   sizeof( bool ) );
+		if(n != sizeof( bool )) goto read_failed;
+
+	
+		n = daemonCore->Read_Pipe( TransferPipe[0],
+								   (char *)&Info.hold_code,
+								   sizeof( int ) );
+		if(n != sizeof( int )) goto read_failed;
+
+		n = daemonCore->Read_Pipe( TransferPipe[0],
+								   (char *)&Info.hold_subcode,
+								   sizeof( int ) );
+		if(n != sizeof( int )) goto read_failed;
+
+		int error_len = 0;
+		n = daemonCore->Read_Pipe( TransferPipe[0],
+								   (char *)&error_len,
+								   sizeof( int ) );
+		if(n != sizeof( int )) goto read_failed;
+
+		if(error_len) {
+			char *error_buf = new char[error_len];
+			ASSERT(error_buf);
+
+			n = daemonCore->Read_Pipe( TransferPipe[0],
+									   error_buf,
+									   error_len );
+			if(n != error_len) goto read_failed;
+			Info.error_desc = error_buf;
+
+			delete [] error_buf;
+		}
+
+		int spooled_files_len = 0;
+		n = daemonCore->Read_Pipe( TransferPipe[0],
+								   (char *)&spooled_files_len,
+								   sizeof( int ) );
+		if(n != sizeof( int )) goto read_failed;
+
+		if(spooled_files_len) {
+			char *spooled_files_buf = new char[spooled_files_len];
+			ASSERT(spooled_files_buf);
+
+			n = daemonCore->Read_Pipe( TransferPipe[0],
+									   spooled_files_buf,
+									   spooled_files_len );
+			if(n != spooled_files_len) goto read_failed;
+			Info.spooled_files = spooled_files_buf;
+
+			delete [] spooled_files_buf;
+		}
+
+		if( registered_xfer_pipe ) {
+			registered_xfer_pipe = false;
+			daemonCore->Cancel_Pipe(TransferPipe[0]);
+		}
+	}
+	else {
+		EXCEPT("Invalid file transfer pipe command %d\n",cmd);
+	}
+
+	return true;
+
+ read_failed:
+	Info.success = false;
+	Info.try_again = true;
+	if( Info.error_desc.IsEmpty() ) {
+		Info.error_desc.formatstr("Failed to read status report from file transfer pipe (errno %d): %s",errno,strerror(errno));
+		dprintf(D_ALWAYS,"%s\n",Info.error_desc.Value());
+	}
+	if( registered_xfer_pipe ) {
+		registered_xfer_pipe = false;
+		daemonCore->Cancel_Pipe(TransferPipe[0]);
+	}
+
+	return false;
+}
+
+void
+FileTransfer::UpdateXferStatus(FileTransferStatus status)
+{
+	if( Info.xfer_status != status ) {
+		bool write_failed = false;
+		if( TransferPipe[1] != -1 ) {
+			int n;
+			char cmd = IN_PROGRESS_UPDATE_XFER_PIPE_CMD;
+
+			n = daemonCore->Write_Pipe( TransferPipe[1],
+										&cmd,
+										sizeof(cmd) );
+			if(n != sizeof(cmd)) write_failed = true;
+
+			if(!write_failed) {
+				int i = status;
+				n = daemonCore->Write_Pipe( TransferPipe[1],
+											(char *)&i,
+											sizeof(int) );
+				if(n != sizeof(int)) write_failed = true;
+			}
+		}
+
+		if( !write_failed ) {
+			Info.xfer_status = status;
+		}
+	}
+}
+
+int
+FileTransfer::TransferPipeHandler(int p)
+{
+	ASSERT( p == TransferPipe[0] );
+
+	return ReadTransferPipeMsg();
 }
 
 int
@@ -1520,6 +1607,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 	Info.type = DownloadFilesType;
 	Info.success = true;
 	Info.in_progress = true;
+	Info.xfer_status = XFER_STATUS_UNKNOWN;
 	TransferStart = time(NULL);
 
 	if (blocking) {
@@ -1539,6 +1627,18 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 			dprintf(D_ALWAYS, "Create_Pipe failed in "
 					"FileTransfer::Upload\n");
 			return FALSE;
+		}
+
+		if (-1 == daemonCore->Register_Pipe(TransferPipe[0],
+											"Download Results",
+											(PipeHandlercpp)&FileTransfer::TransferPipeHandler,
+											"TransferPipeHandler",
+											this)) {
+			dprintf(D_ALWAYS,"FileTransfer::Upload() failed to register pipe.\n");
+			return FALSE;
+		}
+		else {
+			registered_xfer_pipe = true;
 		}
 
 		download_info *info = (download_info *)malloc(sizeof(download_info));
@@ -1831,6 +1931,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 			s->decode();
 		}
+
+		UpdateXferStatus(XFER_STATUS_ACTIVE);
 
 		filesize_t this_file_max_bytes = -1;
 		filesize_t max_bytes_slack = 65535;
@@ -2433,6 +2535,7 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 	Info.type = UploadFilesType;
 	Info.success = true;
 	Info.in_progress = true;
+	Info.xfer_status = XFER_STATUS_UNKNOWN;
 	TransferStart = time(NULL);
 
 	if (blocking) {
@@ -2451,6 +2554,18 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 			dprintf(D_ALWAYS, "Create_Pipe failed in "
 					"FileTransfer::Upload\n");
 			return FALSE;
+		}
+
+		if (-1 == daemonCore->Register_Pipe(TransferPipe[0],
+											"Upload Results",
+											(PipeHandlercpp)&FileTransfer::TransferPipeHandler,
+											"TransferPipeHandler",
+											this)) {
+			dprintf(D_ALWAYS,"FileTransfer::Upload() failed to register pipe.\n");
+			return FALSE;
+		}
+		else {
+			registered_xfer_pipe = true;
 		}
 
 		upload_info *info = (upload_info *)malloc(sizeof(upload_info));
@@ -2480,6 +2595,15 @@ FileTransfer::WriteStatusToTransferPipe(filesize_t total_bytes)
 {
 	int n;
 	bool write_failed = false;
+
+	if(!write_failed) {
+		char cmd = FINAL_UPDATE_XFER_PIPE_CMD;
+
+		n = daemonCore->Write_Pipe( TransferPipe[1],
+									&cmd,
+									sizeof(cmd) );
+		if(n != sizeof(cmd)) write_failed = true;
+	}
 
 	if(!write_failed) {
 		n = daemonCore->Write_Pipe( TransferPipe[1],
@@ -2864,6 +2988,8 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			s->encode();
 		}
 
+		UpdateXferStatus(XFER_STATUS_ACTIVE);
+
 		filesize_t this_file_max_bytes = -1;
 		filesize_t effective_max_upload_bytes = MaxUploadBytes;
 		bool using_peer_max_transfer_bytes = false;
@@ -3228,10 +3354,16 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 		go_ahead = GO_AHEAD_FAILED;
 	}
 
+	bool first_poll = true;
 	while(1) {
 		if( go_ahead == GO_AHEAD_UNDEFINED ) {
 			timeout = alive_interval - (time(NULL) - last_alive) - alive_slop;
 			if( timeout < min_timeout ) timeout = min_timeout;
+			if( first_poll ) {
+					// Use a short timeout on the first time, so we quickly report
+					// that the transfer is queued, if it is.
+				timeout = 5;
+			}
 			bool pending = true;
 			if( xfer_queue.PollForTransferQueueSlot(timeout,pending,error_desc) )
 			{
@@ -3288,6 +3420,8 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 		if( go_ahead != GO_AHEAD_UNDEFINED ) {
 			break;
 		}
+
+		UpdateXferStatus(XFER_STATUS_QUEUED);
 	}
 
 	if( go_ahead == GO_AHEAD_ALWAYS ) {
@@ -3410,6 +3544,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 			}
 
 			dprintf(D_FULLDEBUG,"Still waiting for GoAhead for %s.\n",fname);
+			UpdateXferStatus(XFER_STATUS_QUEUED);
 			continue;
 		}
 

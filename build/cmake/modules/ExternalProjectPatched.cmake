@@ -220,7 +220,7 @@ define_property(DIRECTORY PROPERTY "EP_PREFIX" INHERITED
 
 function(_ep_write_downloadfile_script script_filename remote local timeout)
   if(NOT timeout)
-    set(timeout 30)
+    set(timeout 300)
   endif()
 
   file(WRITE ${script_filename}
@@ -273,7 +273,7 @@ function(_ep_write_extractfile_script script_filename filename tmp directory)
   endif()
   
   if(args STREQUAL "" AND NOT filename MATCHES ".zip$")
-    message(SEND_ERROR "error: do not know how to extract '${filename}' -- known types are .tar, .zip, .tgz and .tar.gz")
+    message(SEND_ERROR "error: do not know how to extract '${filename}' -- known types are .bz2, .tar, .zip, .tgz and .tar.gz")
     return()
   endif()
 
@@ -733,7 +733,7 @@ function(_ep_add_download_command name)
       if("${url}" MATCHES "^[a-z]+://")
         # TODO: Should download and extraction be different steps?
         string(REGEX MATCH "[^/]*$" fname "${url}")
-        if(NOT "${fname}" MATCHES "\\.(tar|tgz|tar\\.gz)$")
+        if(NOT "${fname}" MATCHES "\\.(bz2|tar|tgz|tar\\.gz)$")
           message(FATAL_ERROR "Could not extract tarball filename from url:\n  ${url}")
         endif()
         set(file ${download_dir}/${fname})

@@ -291,6 +291,8 @@ class RemoteResource : public Service {
 
 	FileTransfer filetrans;
 
+	void initFileTransfer();
+
 	virtual void resourceExit( int reason_for_exit, int exit_status );
 
 	virtual void updateFromStarter( ClassAd* update_ad );
@@ -531,6 +533,7 @@ private:
 	int attemptShutdownTimeout();
 	void attemptShutdown();
 	void abortFileTransfer();
+	int transferStatusUpdateCallback(FileTransfer *transobject);
 };
 
 

@@ -28,25 +28,29 @@ if ( WITH_VOMS )
 
 	if (NOT PROPER)
 
+		if (NOT EXPAT_FOUND)
+			message(FATAL_ERROR "Can't find expat, needed to build voms external!")
+		endif()
+
 		if ( DARWIN )
 			set ( VOMS_PATCH cd voms-2.0.6 &&
-				patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/voms-gsoap.patch &&
+				patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/voms-gsoap.patch &&
 				rm src/server/stdsoap2.c src/server/stdsoap2.h src/server/soap* &&
 				touch -r src/utils/vomsfake.y src/utils/vomsparser.h &&
 				touch -r src/utils/vomsfake.y src/utils/vomsparser.c &&
 				touch -r src/utils/vomsfake.y src/utils/lex.yy.c &&
-				patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/globus_thread_h.patch &&
+				patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/globus_thread_h.patch &&
 				cp ${CMAKE_CURRENT_SOURCE_DIR}/dummy.c src/replib &&
-				patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/replib.patch )
+				patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/replib.patch )
 			set ( VOMS_GLOBUS_FLAG "" )
 		ELSE()
 			set ( VOMS_PATCH cd voms-2.0.6 &&
-				patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/voms-gsoap.patch &&
+				patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/voms-gsoap.patch &&
 				rm src/server/stdsoap2.c src/server/stdsoap2.h src/server/soap* &&
 				touch -r src/utils/vomsfake.y src/utils/vomsparser.h &&
 				touch -r src/utils/vomsfake.y src/utils/vomsparser.c &&
 				touch -r src/utils/vomsfake.y src/utils/lex.yy.c &&
-				patch -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/globus_thread_h.patch &&
+				patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/globus_thread_h.patch &&
 				./autogen.sh )
 			set ( VOMS_GLOBUS_FLAG --with-globus-prefix=${GLOBUS_INSTALL_LOC} )
 		ENDIF()
@@ -56,7 +60,6 @@ if ( WITH_VOMS )
 		ExternalProject_Add(voms
 			DEPENDS ${GLOBUS_REF}
 			#-- Download Step ----------
-			DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/voms-2.0.6.tar.gz ${CMD_TERM}
 			DOWNLOAD_DIR ${VOMS_STAGE}/dl
 			URL http://parrot.cs.wisc.edu/externals/voms-2.0.6.tar.gz
 			#--Patch step ----------

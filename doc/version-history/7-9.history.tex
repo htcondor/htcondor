@@ -96,10 +96,6 @@ This can make negotiation much faster in
 a very large pool of mostly claimed machines.
 \Ticket{3366}
 
-\item Exposed the quantization level for windowed statistics to
-configuration with the parameter \Macro{STATISTICS\_WINDOW\_QUANTUM}.
-\Ticket{3288}
-
 \item \emph{This item is tentative, and must be reviewed or updated
 before release of 7.9.3.}
 \Condor{submit} now supports first-class syntax for specifying
@@ -144,7 +140,13 @@ more information.
 
 \begin{itemize}
 
-\item None.
+\item The new expert-only configuration variable 
+\Macro{STATISTICS\_WINDOW\_QUANTUM}
+allows administrators to set the time interval, 
+known as a quantum, that divides a window over which statistics are
+kept into smaller pieces.  The window advances one quantum at a time. 
+\Ticket{3288}
+
 
 \end{itemize}
 

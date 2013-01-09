@@ -24,8 +24,6 @@ if ( WITH_UNICOREGAHP AND NOT PROPER )
 
 	ExternalProject_Add(unicoregahp
 			    #-- Download Step ----------
-				DOWNLOAD_COMMAND wget -N
-				http://parrot.cs.wisc.edu/externals/${UNICOREGAHP_VER}.tar.gz ${CMD_TERM}
 			    DOWNLOAD_DIR ${UNICOREGAHP_STAGE}/dl
 			    URL http://parrot.cs.wisc.edu/externals/${UNICOREGAHP_VER}.tar.gz
 				#--Configure step ----------

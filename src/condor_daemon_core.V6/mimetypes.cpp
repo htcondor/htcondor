@@ -59,6 +59,7 @@ struct mimetype {
 	const char * pmimetype; 
 };
 
+static
 struct mimetype *mime_lookup (const char *, unsigned int);
 
 extern "C" {
@@ -179,6 +180,7 @@ __inline
 __attribute__ ((__gnu_inline__))
 #endif
 #endif
+static
 struct mimetype *
 mime_lookup (register const char *str, register unsigned int len)
 {

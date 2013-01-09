@@ -133,6 +133,9 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_BLOCK_WRITE_KBYTES );
 	common_job_queue_attrs->insert( ATTR_BLOCK_READ_KBYTES );
 	common_job_queue_attrs->insert( ATTR_JOB_VM_CPU_UTILIZATION );
+	common_job_queue_attrs->insert( ATTR_TRANSFERRING_INPUT );
+	common_job_queue_attrs->insert( ATTR_TRANSFERRING_OUTPUT );
+	common_job_queue_attrs->insert( ATTR_TRANSFER_QUEUED );
 
 	hold_job_queue_attrs = new StringList();
 	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );

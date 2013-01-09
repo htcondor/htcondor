@@ -2226,12 +2226,17 @@ Each interactive job has the job ClassAd attribute
 and this may be used to identify interactive jobs,
 distinguishing them from all other jobs.
 
-\MoreTodo
+As an example, presume that slot 1 prefers interactive jobs.
+Set the machine's \MacroNI{RANK} to show the preference:
+\footnotesize
+\begin{verbatim}
+RANK = ( (MY.SlotID == 1) && (TARGET.InteractiveJob =?= True) )
+\end{verbatim}
+\normalsize
 
-% Initial thought as to an example
-%Use the \MacroNI{RANK} expression to give preference to running an 
-%interactive job on a particular slot.
-%As an example, presume that slot 1 prefers interactive jobs.
-%\begin{verbatim}
-%RANK = ( (MY.SlotID == 1) && (TARGET.InteractiveJob =?= True) )
-%\end{verbatim}
+Or, if slot 1 should be reserved for interactive jobs:
+\footnotesize
+\begin{verbatim}
+START = ( (MY.SlotID == 1) && (TARGET.InteractiveJob =?= True) )
+\end{verbatim}
+\normalsize
