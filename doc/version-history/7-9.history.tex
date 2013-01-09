@@ -88,6 +88,11 @@ commands by the same names.
 
 \begin{itemize}
 
+\item when the configuration variable \Macro{ASSIGN\_CPU\_AFFINITY}
+is set, the \Condor{startd} will automatically set the CPU affinity
+mask the job runs with, so that a multi-threaded job will not use
+more cores than the number it requests.
+
 \item When configuration variable \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}
 is \Expr{False}, the \Condor{negotiator}
 now fetches machine ClassAds more quickly from the \Condor{collector}
@@ -173,6 +178,15 @@ larger than 4096 could cause jobs to abort on start up.
 Since values larger than 2047 have no real meaning on 32-bit platforms,
 the fix treats values larger than 2047 as no limit on 32-bit platforms.
 \Ticket{3309}
+
+\item Fixed a bug that can cause proxy refresh to fail for pbs, lsf,
+and sge grid jobs.
+\Ticket{3383}
+
+\item When doing remote pbs, lsf, or sge grid job submissions, the
+\Condor{gridmanager} now ensures that no unsual characters are used in
+the name of the job sandbox directory it creates.
+\Ticket{3294}
 
 \end{itemize}
 
