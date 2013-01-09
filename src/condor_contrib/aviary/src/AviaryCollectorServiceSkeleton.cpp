@@ -52,105 +52,119 @@ using namespace aviary::collector;
 
 extern aviary::soap::Axis2SoapProvider* provider;
 
+typedef vector<string*> IDList;
+
 // generic load of results
-template <class AviaryCollectableT, class CollectableMapT, class ResponseT>
-void loadAllResults(CollectableMapT& cmt, ResponseT* response, string& error)
+template <class AviaryCollectableT, class CollectableMapT, class RequestT, class ResponseT>
+void loadResults(CollectableMapT& cmt, RequestT* request, ResponseT* response)
 {
-    for (typename CollectableMapT::iterator it = cmt.begin(); cmt.end() != it; it++) {
-        CollectableCodec codec(provider->getEnv());
-        AviaryCollectableT* _collectable = codec.encode(it->second);
-        _collectable->setStatus(new AviaryCommon::Status(new AviaryCommon::StatusCodeType("OK"),error));
-        response->addResults(_collectable);
+    bool summary = request->isIncludeSummariesNil() || request->getIncludeSummaries();
+    bool partials = request->isPartialMatchesNil() || request->getPartialMatches();
+    if (request->isIdsNil() || request->getIds()->size() == 0) {
+        for (typename CollectableMapT::iterator it = cmt.begin(); cmt.end() != it; it++) {
+            CollectableCodec codec(provider->getEnv());
+            AviaryCollectableT* _collectable = codec.encode(it->second);
+            Status* js = new Status;
+            js->setCode(new StatusCodeType("OK"));
+            _collectable->setStatus(js);
+            response->addResults(_collectable);
+        }
+    }
+    else {
+        IDList* id_list = request->getIds();
+        for (IDList::iterator it = id_list->begin(); id_list->end() != it; it++) {
+            
+        }
     }
 }
 
-GetAttributesResponse* AviaryCollectorServiceSkeleton::getAttributes(MessageContext *outCtx ,GetAttributes* _getAttributes)
+GetAttributesResponse* AviaryCollectorServiceSkeleton::getAttributes(MessageContext* /*outCtx*/ ,GetAttributes* _getAttributes)
 {
     /* TODO fill this with the necessary business logic */
     return (GetAttributesResponse*)NULL;
 }
 
-GetCollectorResponse* AviaryCollectorServiceSkeleton::getCollector(MessageContext *outCtx ,GetCollector* _getCollector)
+GetCollectorResponse* AviaryCollectorServiceSkeleton::getCollector(MessageContext* /*outCtx*/ ,GetCollector* _getCollector)
 {
     /* TODO fill this with the necessary business logic */
     GetCollectorResponse* response = new GetCollectorResponse;
     string error;
     CollectorObject* co = CollectorObject::getInstance();
 
-    loadAllResults<AviaryCommon::Collector,CollectorMapType,GetCollectorResponse>(co->collectors,response,error);
+    loadResults<AviaryCommon::Collector,CollectorMapType,GetCollector,GetCollectorResponse>(co->collectors,_getCollector,response);
 
     return response;
 }
 
-GetMasterResponse* AviaryCollectorServiceSkeleton::getMaster(MessageContext *outCtx ,GetMaster* _getMaster)
+GetMasterResponse* AviaryCollectorServiceSkeleton::getMaster(MessageContext* /*outCtx*/ ,GetMaster* _getMaster)
 {
     /* TODO fill this with the necessary business logic */
     GetMasterResponse* response = new GetMasterResponse;
     string error;
     CollectorObject* co = CollectorObject::getInstance();
     
-    loadAllResults<AviaryCommon::Master,MasterMapType,GetMasterResponse>(co->masters,response,error);
+    loadResults<AviaryCommon::Master,MasterMapType,GetMaster,GetMasterResponse>(co->masters,_getMaster,response);
     
     return response;
 }
 
-GetMasterIDResponse* AviaryCollectorServiceSkeleton::getMasterID(MessageContext *outCtx ,GetMasterID* _getMasterID)
+GetMasterIDResponse* AviaryCollectorServiceSkeleton::getMasterID(MessageContext* /*outCtx*/ ,GetMasterID* _getMasterID)
 {
     /* TODO fill this with the necessary business logic */
     return (GetMasterIDResponse*)NULL;
 }
 
-GetNegotiatorResponse* AviaryCollectorServiceSkeleton::getNegotiator(MessageContext *outCtx ,GetNegotiator* _getNegotiator)
+GetNegotiatorResponse* AviaryCollectorServiceSkeleton::getNegotiator(MessageContext* /*outCtx*/ ,GetNegotiator* _getNegotiator)
 {
     /* TODO fill this with the necessary business logic */
     GetNegotiatorResponse* response = new GetNegotiatorResponse;
     string error;
     CollectorObject* co = CollectorObject::getInstance();
     
-    loadAllResults<AviaryCommon::Negotiator,NegotiatorMapType,GetNegotiatorResponse>(co->negotiators,response,error);
+    loadResults<AviaryCommon::Negotiator,NegotiatorMapType,GetNegotiator,GetNegotiatorResponse>(co->negotiators,_getNegotiator,response);
     
     return response;
 }
 
-GetSlotResponse* AviaryCollectorServiceSkeleton::getSlot(MessageContext *outCtx ,GetSlot* _getSlot)
+GetSlotResponse* AviaryCollectorServiceSkeleton::getSlot(MessageContext* /*outCtx*/ ,GetSlot* _getSlot)
 {
     /* TODO fill this with the necessary business logic */
     GetSlotResponse* response = new GetSlotResponse;
     string error;
     CollectorObject* co = CollectorObject::getInstance();
     
-    loadAllResults<AviaryCommon::Slot,SlotMapType,GetSlotResponse>(co->slots,response,error);
+    loadResults<AviaryCommon::Slot,SlotMapType,GetSlot,GetSlotResponse>(co->slots,_getSlot,response);
 
     return response;
 }
 
-GetSlotIDResponse* AviaryCollectorServiceSkeleton::getSlotID(MessageContext *outCtx ,GetSlotID* _getSlotID)
+GetSlotIDResponse* AviaryCollectorServiceSkeleton::getSlotID(MessageContext* /*outCtx*/ ,GetSlotID* _getSlotID)
 {
     /* TODO fill this with the necessary business logic */
     return (GetSlotIDResponse*)NULL;
 }
 
-GetSchedulerResponse* AviaryCollectorServiceSkeleton::getScheduler(MessageContext *outCtx ,GetScheduler* _getScheduler)
+GetSchedulerResponse* AviaryCollectorServiceSkeleton::getScheduler(MessageContext* /*outCtx*/ ,GetScheduler* _getScheduler)
 {
     /* TODO fill this with the necessary business logic */
     GetSchedulerResponse* response = new GetSchedulerResponse;
     string error;
     CollectorObject* co = CollectorObject::getInstance();
     
-    loadAllResults<AviaryCommon::Scheduler,SchedulerMapType,GetSchedulerResponse>(co->schedulers,response,error);
+    loadResults<AviaryCommon::Scheduler,SchedulerMapType,GetScheduler,GetSchedulerResponse>(co->schedulers,_getScheduler,response);
 
     return response;
 }
 
 
-GetSubmitterResponse* AviaryCollectorServiceSkeleton::getSubmitter(MessageContext *outCtx ,GetSubmitter* _getSubmitter)
+GetSubmitterResponse* AviaryCollectorServiceSkeleton::getSubmitter(MessageContext* /*outCtx*/ ,GetSubmitter* _getSubmitter)
 {
     /* TODO fill this with the necessary business logic */
     GetSubmitterResponse* response = new GetSubmitterResponse;
     string error;
     CollectorObject* co = CollectorObject::getInstance();
     
-    loadAllResults<AviaryCommon::Submitter,SubmitterMapType,GetSubmitterResponse>(co->submitters,response,error);
+    loadResults<AviaryCommon::Submitter,SubmitterMapType,GetSubmitter,GetSubmitterResponse>(co->submitters,_getSubmitter,response);
 
     return response;
 }

@@ -42,6 +42,14 @@ namespace AviaryCollector
 
                 
                 bool isValidIds;
+            bool property_PartialMatches;
+
+                
+                bool isValidPartialMatches;
+            bool property_IncludeSummaries;
+
+                
+                bool isValidIncludeSummaries;
             
 
         /*** Private methods ***/
@@ -75,9 +83,11 @@ namespace AviaryCollector
          * Constructor for creating GetScheduler
          * @param 
          * @param Ids std::vector<std::string*>*
+         * @param PartialMatches bool
+         * @param IncludeSummaries bool
          * @return newly created GetScheduler object
          */
-        GetScheduler(std::vector<std::string*>* arg_Ids);
+        GetScheduler(std::vector<std::string*>* arg_Ids,bool arg_PartialMatches,bool arg_IncludeSummaries);
         
 
         /**
@@ -111,6 +121,54 @@ namespace AviaryCollector
          */
         WSF_EXTERN bool WSF_CALL
         resetIds();
+        
+        
+
+        /**
+         * Getter for partialMatches. 
+         * @return bool
+         */
+        WSF_EXTERN bool WSF_CALL
+        getPartialMatches();
+
+        /**
+         * Setter for partialMatches.
+         * @param arg_PartialMatches bool
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setPartialMatches(bool  arg_PartialMatches);
+
+        /**
+         * Re setter for partialMatches
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetPartialMatches();
+        
+        
+
+        /**
+         * Getter for includeSummaries. 
+         * @return bool
+         */
+        WSF_EXTERN bool WSF_CALL
+        getIncludeSummaries();
+
+        /**
+         * Setter for includeSummaries.
+         * @param arg_IncludeSummaries bool
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setIncludeSummaries(bool  arg_IncludeSummaries);
+
+        /**
+         * Re setter for includeSummaries
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetIncludeSummaries();
         
         /****************************** Get Set methods for Arrays **********************************/
         /************ Array Specific Operations: get_at, set_at, add, remove_at, sizeof *****************/
@@ -203,6 +261,40 @@ namespace AviaryCollector
 
         
 
+        /**
+         * Check whether partialMatches is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isPartialMatchesNil();
+
+
+        
+        /**
+         * Set partialMatches to Nill (same as using reset)
+         * @return true on success, false otherwise.
+         */
+        bool WSF_CALL
+        setPartialMatchesNil();
+        
+
+        /**
+         * Check whether includeSummaries is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isIncludeSummariesNil();
+
+
+        
+        /**
+         * Set includeSummaries to Nill (same as using reset)
+         * @return true on success, false otherwise.
+         */
+        bool WSF_CALL
+        setIncludeSummariesNil();
+        
+
         /*************************** Checking and Setting 'NIL' values in Arrays *****************************/
 
         /**
@@ -292,6 +384,28 @@ namespace AviaryCollector
 
         std::vector<std::string*>* WSF_CALL
         getProperty1();
+
+    
+        
+
+        /**
+         * Getter for partialMatches by property number (2)
+         * @return bool
+         */
+
+        bool WSF_CALL
+        getProperty2();
+
+    
+        
+
+        /**
+         * Getter for includeSummaries by property number (3)
+         * @return bool
+         */
+
+        bool WSF_CALL
+        getProperty3();
 
     
 

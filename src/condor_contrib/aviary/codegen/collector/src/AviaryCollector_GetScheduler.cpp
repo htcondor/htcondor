@@ -51,6 +51,10 @@
               
             isValidIds  = false;
         
+            isValidPartialMatches  = false;
+        
+            isValidIncludeSummaries  = false;
+        
                   qname =  axutil_qname_create (Environment::getEnv(),
                         "GetScheduler",
                         "http://collector.aviary.grid.redhat.com",
@@ -58,7 +62,7 @@
                 
         }
 
-       AviaryCollector::GetScheduler::GetScheduler(std::vector<std::string*>* arg_Ids)
+       AviaryCollector::GetScheduler::GetScheduler(std::vector<std::string*>* arg_Ids,bool arg_PartialMatches,bool arg_IncludeSummaries)
         {
              
                    qname = NULL;
@@ -67,12 +71,20 @@
              
             isValidIds  = true;
             
+            isValidPartialMatches  = true;
+            
+            isValidIncludeSummaries  = true;
+            
                  qname =  axutil_qname_create (Environment::getEnv(),
                        "GetScheduler",
                        "http://collector.aviary.grid.redhat.com",
                        NULL);
                
                     property_Ids = arg_Ids;
+            
+                    property_PartialMatches = arg_PartialMatches;
+            
+                    property_IncludeSummaries = arg_IncludeSummaries;
             
         }
         AviaryCollector::GetScheduler::~GetScheduler()
@@ -104,6 +116,13 @@
           axiom_node_t *parent = *dp_parent;
           
           bool status = AXIS2_SUCCESS;
+          
+          axiom_attribute_t *parent_attri = NULL;
+          axiom_element_t *parent_element = NULL;
+          axis2_char_t *attrib_text = NULL;
+
+          axutil_hash_t *attribute_hash = NULL;
+
            
          const axis2_char_t* text_value = NULL;
          axutil_qname_t *mqname = NULL;
@@ -150,6 +169,9 @@
                         return AXIS2_FAILURE;
                     }
                     
+                 parent_element = (axiom_element_t *)axiom_node_get_data_element(parent, Environment::getEnv());
+                 attribute_hash = axiom_element_get_all_attributes(parent_element, Environment::getEnv());
+              
                        { 
                     /*
                      * building Ids array
@@ -311,6 +333,116 @@
                      element_qname = NULL;
                   }
                  
+                
+                
+                  parent_attri = NULL;
+                  attrib_text = NULL;
+                  if(attribute_hash)
+                  {
+                       axutil_hash_index_t *hi;
+                       void *val;
+                       const void *key;
+
+                       for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
+                       {
+                           axutil_hash_this(hi, &key, NULL, &val);
+                           
+                           
+                               if(!strcmp((axis2_char_t*)key, "partialMatches"))
+                             
+                               {
+                                   parent_attri = (axiom_attribute_t*)val;
+                                   break;
+                               }
+                       }
+                  }
+
+                  if(parent_attri)
+                  {
+                    attrib_text = axiom_attribute_get_value(parent_attri, Environment::getEnv());
+                  }
+                  else
+                  {
+                    /* this is hoping that attribute is stored in "partialMatches", this happnes when name is in default namespace */
+                    attrib_text = axiom_element_get_attribute_value_by_name(parent_element, Environment::getEnv(), "partialMatches");
+                  }
+
+                  if(attrib_text != NULL)
+                  {
+                      
+                      
+                           if (!axutil_strcmp(attrib_text, "TRUE") || !axutil_strcmp(attrib_text, "true"))
+                           {
+                               setPartialMatches(true);
+                           }
+                           else
+                           {
+                               setPartialMatches(false);
+                           }
+                        
+                    }
+                  
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
+                
+                
+                  parent_attri = NULL;
+                  attrib_text = NULL;
+                  if(attribute_hash)
+                  {
+                       axutil_hash_index_t *hi;
+                       void *val;
+                       const void *key;
+
+                       for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
+                       {
+                           axutil_hash_this(hi, &key, NULL, &val);
+                           
+                           
+                               if(!strcmp((axis2_char_t*)key, "includeSummaries"))
+                             
+                               {
+                                   parent_attri = (axiom_attribute_t*)val;
+                                   break;
+                               }
+                       }
+                  }
+
+                  if(parent_attri)
+                  {
+                    attrib_text = axiom_attribute_get_value(parent_attri, Environment::getEnv());
+                  }
+                  else
+                  {
+                    /* this is hoping that attribute is stored in "includeSummaries", this happnes when name is in default namespace */
+                    attrib_text = axiom_element_get_attribute_value_by_name(parent_element, Environment::getEnv(), "includeSummaries");
+                  }
+
+                  if(attrib_text != NULL)
+                  {
+                      
+                      
+                           if (!axutil_strcmp(attrib_text, "TRUE") || !axutil_strcmp(attrib_text, "true"))
+                           {
+                               setIncludeSummaries(true);
+                           }
+                           else
+                           {
+                               setIncludeSummaries(false);
+                           }
+                        
+                    }
+                  
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
           return status;
        }
 
@@ -344,6 +476,10 @@
         {
             
             
+               axiom_attribute_t *text_attri = NULL;
+             
+             axis2_char_t *string_to_stream;
+            
          
          axiom_node_t *current_node = NULL;
          int tag_closed = 0;
@@ -363,6 +499,12 @@
                     axis2_char_t *text_value_1;
                     axis2_char_t *text_value_1_temp;
                     
+                    axis2_char_t text_value_2[ADB_DEFAULT_DIGIT_LIMIT];
+                    
+                    axis2_char_t text_value_3[ADB_DEFAULT_DIGIT_LIMIT];
+                    
+                axis2_char_t *text_value = NULL;
+             
                axis2_char_t *start_input_str = NULL;
                axis2_char_t *end_input_str = NULL;
                unsigned int start_input_str_len = 0;
@@ -394,6 +536,47 @@
                     data_source = axiom_data_source_create(Environment::getEnv(), parent, &current_node);
                     stream = axiom_data_source_get_stream(data_source, Environment::getEnv());
                   
+            if(!parent_tag_closed)
+            {
+            
+                if(isValidPartialMatches)
+                {
+                
+                        p_prefix = NULL;
+                      
+                           
+                           text_value = (axis2_char_t*)((property_PartialMatches)?"true":"false");
+                           string_to_stream = (axis2_char_t*) AXIS2_MALLOC (Environment::getEnv()-> allocator, sizeof (axis2_char_t) *
+                                                            (5  + ADB_DEFAULT_NAMESPACE_PREFIX_LIMIT +
+                                                             axutil_strlen(text_value) + 
+                                                             axutil_strlen("partialMatches")));
+                           sprintf(string_to_stream, " %s%s%s=\"%s\"", p_prefix?p_prefix:"", (p_prefix && axutil_strcmp(p_prefix, ""))?":":"",
+                                                "partialMatches",  text_value);
+                           axutil_stream_write(stream, Environment::getEnv(), string_to_stream, axutil_strlen(string_to_stream));
+                           AXIS2_FREE(Environment::getEnv()-> allocator, string_to_stream);
+                        
+                   }
+                   
+                if(isValidIncludeSummaries)
+                {
+                
+                        p_prefix = NULL;
+                      
+                           
+                           text_value = (axis2_char_t*)((property_IncludeSummaries)?"true":"false");
+                           string_to_stream = (axis2_char_t*) AXIS2_MALLOC (Environment::getEnv()-> allocator, sizeof (axis2_char_t) *
+                                                            (5  + ADB_DEFAULT_NAMESPACE_PREFIX_LIMIT +
+                                                             axutil_strlen(text_value) + 
+                                                             axutil_strlen("includeSummaries")));
+                           sprintf(string_to_stream, " %s%s%s=\"%s\"", p_prefix?p_prefix:"", (p_prefix && axutil_strcmp(p_prefix, ""))?":":"",
+                                                "includeSummaries",  text_value);
+                           axutil_stream_write(stream, Environment::getEnv(), string_to_stream, axutil_strlen(string_to_stream));
+                           AXIS2_FREE(Environment::getEnv()-> allocator, string_to_stream);
+                        
+                   }
+                   
+            }
+            
                        p_prefix = NULL;
                       
 
@@ -481,6 +664,44 @@
                  } 
 
                  
+                    
+                    if(parent_tag_closed)
+                    {
+                       if(isValidPartialMatches)
+                       {
+                       
+                           p_prefix = NULL;
+                           ns1 = NULL;
+                         
+                           
+                           text_value =  (axis2_char_t*)((property_PartialMatches)?axutil_strdup(Environment::getEnv(), "true"):axutil_strdup(Environment::getEnv(), "false"));
+                           text_attri = axiom_attribute_create (Environment::getEnv(), "partialMatches", text_value, ns1);
+                           axiom_element_add_attribute (parent_element, Environment::getEnv(), text_attri, parent);
+                           AXIS2_FREE(Environment::getEnv()->allocator, text_value);
+                        
+                      }
+                       
+                  }
+                
+                    
+                    if(parent_tag_closed)
+                    {
+                       if(isValidIncludeSummaries)
+                       {
+                       
+                           p_prefix = NULL;
+                           ns1 = NULL;
+                         
+                           
+                           text_value =  (axis2_char_t*)((property_IncludeSummaries)?axutil_strdup(Environment::getEnv(), "true"):axutil_strdup(Environment::getEnv(), "false"));
+                           text_attri = axiom_attribute_create (Environment::getEnv(), "includeSummaries", text_value, ns1);
+                           axiom_element_add_attribute (parent_element, Environment::getEnv(), text_attri, parent);
+                           AXIS2_FREE(Environment::getEnv()->allocator, text_value);
+                        
+                      }
+                       
+                  }
+                
                    if(namespaces)
                    {
                        axutil_hash_index_t *hi;
@@ -824,6 +1045,172 @@
                 
                 return AXIS2_SUCCESS;
 
+           }
+
+           
+
+            /**
+             * Getter for partialMatches by  Property Number 2
+             */
+            bool WSF_CALL
+            AviaryCollector::GetScheduler::getProperty2()
+            {
+                return getPartialMatches();
+            }
+
+            /**
+             * getter for partialMatches.
+             */
+            bool WSF_CALL
+            AviaryCollector::GetScheduler::getPartialMatches()
+             {
+                return property_PartialMatches;
+             }
+
+            /**
+             * setter for partialMatches
+             */
+            bool WSF_CALL
+            AviaryCollector::GetScheduler::setPartialMatches(
+                    bool  arg_PartialMatches)
+             {
+                
+
+                if(isValidPartialMatches &&
+                        arg_PartialMatches == property_PartialMatches)
+                {
+                    
+                    return true;
+                }
+
+                
+
+                
+                resetPartialMatches();
+
+                
+                        property_PartialMatches = arg_PartialMatches;
+                        isValidPartialMatches = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for partialMatches
+            */
+           bool WSF_CALL
+           AviaryCollector::GetScheduler::resetPartialMatches()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+               isValidPartialMatches = false; 
+               return true;
+           }
+
+           /**
+            * Check whether partialMatches is nill
+            */
+           bool WSF_CALL
+           AviaryCollector::GetScheduler::isPartialMatchesNil()
+           {
+               return !isValidPartialMatches;
+           }
+
+           /**
+            * Set partialMatches to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryCollector::GetScheduler::setPartialMatchesNil()
+           {
+               return resetPartialMatches();
+           }
+
+           
+
+            /**
+             * Getter for includeSummaries by  Property Number 3
+             */
+            bool WSF_CALL
+            AviaryCollector::GetScheduler::getProperty3()
+            {
+                return getIncludeSummaries();
+            }
+
+            /**
+             * getter for includeSummaries.
+             */
+            bool WSF_CALL
+            AviaryCollector::GetScheduler::getIncludeSummaries()
+             {
+                return property_IncludeSummaries;
+             }
+
+            /**
+             * setter for includeSummaries
+             */
+            bool WSF_CALL
+            AviaryCollector::GetScheduler::setIncludeSummaries(
+                    bool  arg_IncludeSummaries)
+             {
+                
+
+                if(isValidIncludeSummaries &&
+                        arg_IncludeSummaries == property_IncludeSummaries)
+                {
+                    
+                    return true;
+                }
+
+                
+
+                
+                resetIncludeSummaries();
+
+                
+                        property_IncludeSummaries = arg_IncludeSummaries;
+                        isValidIncludeSummaries = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for includeSummaries
+            */
+           bool WSF_CALL
+           AviaryCollector::GetScheduler::resetIncludeSummaries()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+               isValidIncludeSummaries = false; 
+               return true;
+           }
+
+           /**
+            * Check whether includeSummaries is nill
+            */
+           bool WSF_CALL
+           AviaryCollector::GetScheduler::isIncludeSummariesNil()
+           {
+               return !isValidIncludeSummaries;
+           }
+
+           /**
+            * Set includeSummaries to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryCollector::GetScheduler::setIncludeSummariesNil()
+           {
+               return resetIncludeSummaries();
            }
 
            

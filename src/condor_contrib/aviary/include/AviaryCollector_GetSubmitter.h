@@ -20,8 +20,6 @@
         
 
         
-                #include "AviaryCommon_SubmitterID.h"
-              
         #include <axutil_qname.h>
         
 
@@ -40,10 +38,18 @@ namespace AviaryCollector
         private:
              
                 axutil_qname_t* qname;
-            std::vector<AviaryCommon::SubmitterID*>* property_Ids;
+            std::vector<std::string*>* property_Ids;
 
                 
                 bool isValidIds;
+            bool property_PartialMatches;
+
+                
+                bool isValidPartialMatches;
+            bool property_IncludeSummaries;
+
+                
+                bool isValidIncludeSummaries;
             
 
         /*** Private methods ***/
@@ -76,10 +82,12 @@ namespace AviaryCollector
         /**
          * Constructor for creating GetSubmitter
          * @param 
-         * @param Ids std::vector<AviaryCommon::SubmitterID*>*
+         * @param Ids std::vector<std::string*>*
+         * @param PartialMatches bool
+         * @param IncludeSummaries bool
          * @return newly created GetSubmitter object
          */
-        GetSubmitter(std::vector<AviaryCommon::SubmitterID*>* arg_Ids);
+        GetSubmitter(std::vector<std::string*>* arg_Ids,bool arg_PartialMatches,bool arg_IncludeSummaries);
         
 
         /**
@@ -93,19 +101,19 @@ namespace AviaryCollector
 
         /**
          * Getter for ids. Deprecated for array types, Use getIdsAt instead
-         * @return Array of AviaryCommon::SubmitterID*s.
+         * @return Array of std::strings.
          */
-        WSF_EXTERN std::vector<AviaryCommon::SubmitterID*>* WSF_CALL
+        WSF_EXTERN std::vector<std::string*>* WSF_CALL
         getIds();
 
         /**
          * Setter for ids.Deprecated for array types, Use setIdsAt
          * or addIds instead.
-         * @param arg_Ids Array of AviaryCommon::SubmitterID*s.
+         * @param arg_Ids Array of std::strings.
          * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setIds(std::vector<AviaryCommon::SubmitterID*>*  arg_Ids);
+        setIds(std::vector<std::string*>*  arg_Ids);
 
         /**
          * Re setter for ids
@@ -113,6 +121,54 @@ namespace AviaryCollector
          */
         WSF_EXTERN bool WSF_CALL
         resetIds();
+        
+        
+
+        /**
+         * Getter for partialMatches. 
+         * @return bool
+         */
+        WSF_EXTERN bool WSF_CALL
+        getPartialMatches();
+
+        /**
+         * Setter for partialMatches.
+         * @param arg_PartialMatches bool
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setPartialMatches(bool  arg_PartialMatches);
+
+        /**
+         * Re setter for partialMatches
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetPartialMatches();
+        
+        
+
+        /**
+         * Getter for includeSummaries. 
+         * @return bool
+         */
+        WSF_EXTERN bool WSF_CALL
+        getIncludeSummaries();
+
+        /**
+         * Setter for includeSummaries.
+         * @param arg_IncludeSummaries bool
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setIncludeSummaries(bool  arg_IncludeSummaries);
+
+        /**
+         * Re setter for includeSummaries
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetIncludeSummaries();
         
         /****************************** Get Set methods for Arrays **********************************/
         /************ Array Specific Operations: get_at, set_at, add, remove_at, sizeof *****************/
@@ -143,30 +199,30 @@ namespace AviaryCollector
         /**
          * Get the ith element of ids.
         * @param i index of the item to be obtained
-         * @return ith AviaryCommon::SubmitterID* of the array
+         * @return ith std::string of the array
          */
-        WSF_EXTERN AviaryCommon::SubmitterID* WSF_CALL
+        WSF_EXTERN std::string WSF_CALL
         getIdsAt(int i);
 
         /**
          * Set the ith element of ids. (If the ith already exist, it will be replaced)
          * @param i index of the item to return
-         * @param arg_Ids element to set AviaryCommon::SubmitterID* to the array
-         * @return ith AviaryCommon::SubmitterID* of the array
+         * @param arg_Ids element to set std::string to the array
+         * @return ith std::string of the array
          */
         WSF_EXTERN bool WSF_CALL
         setIdsAt(int i,
-                AviaryCommon::SubmitterID* arg_Ids);
+                const std::string arg_Ids);
 
 
         /**
          * Add to ids.
-         * @param arg_Ids element to add AviaryCommon::SubmitterID* to the array
+         * @param arg_Ids element to add std::string to the array
          * @return true on success, false otherwise.
          */
         WSF_EXTERN bool WSF_CALL
         addIds(
-            AviaryCommon::SubmitterID* arg_Ids);
+            const std::string arg_Ids);
 
         /**
          * Get the size of the ids array.
@@ -203,6 +259,40 @@ namespace AviaryCollector
         isIdsNil();
 
 
+        
+
+        /**
+         * Check whether partialMatches is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isPartialMatchesNil();
+
+
+        
+        /**
+         * Set partialMatches to Nill (same as using reset)
+         * @return true on success, false otherwise.
+         */
+        bool WSF_CALL
+        setPartialMatchesNil();
+        
+
+        /**
+         * Check whether includeSummaries is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isIncludeSummariesNil();
+
+
+        
+        /**
+         * Set includeSummaries to Nill (same as using reset)
+         * @return true on success, false otherwise.
+         */
+        bool WSF_CALL
+        setIncludeSummariesNil();
         
 
         /*************************** Checking and Setting 'NIL' values in Arrays *****************************/
@@ -289,11 +379,33 @@ namespace AviaryCollector
 
         /**
          * Getter for ids by property number (1)
-         * @return Array of AviaryCommon::SubmitterIDs.
+         * @return Array of std::strings.
          */
 
-        std::vector<AviaryCommon::SubmitterID*>* WSF_CALL
+        std::vector<std::string*>* WSF_CALL
         getProperty1();
+
+    
+        
+
+        /**
+         * Getter for partialMatches by property number (2)
+         * @return bool
+         */
+
+        bool WSF_CALL
+        getProperty2();
+
+    
+        
+
+        /**
+         * Getter for includeSummaries by property number (3)
+         * @return bool
+         */
+
+        bool WSF_CALL
+        getProperty3();
 
     
 
