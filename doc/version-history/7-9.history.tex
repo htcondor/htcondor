@@ -29,6 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item when the configuration variable \Macro{ASSIGN\_CPU\_AFFINITY}
+is set, the \Condor{startd} will automatically set the CPU affinity
+mask the job runs with, so that a multi-threaded job will not use
+more cores than the number it requests.
+
 \item When configuration variable \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}
 is \Expr{False}, the \Condor{negotiator}
 now fetches machine ClassAds more quickly from the \Condor{collector}
