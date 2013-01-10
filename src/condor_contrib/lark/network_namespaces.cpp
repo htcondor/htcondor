@@ -629,7 +629,9 @@ NetworkNamespaceManager::NetworkLock::NetworkLock() : m_fd(-1)
 	lock_info.l_start = 0;
 	lock_info.l_len = 0;
 	lock_info.l_pid = 0;
-	if (fcntl(fd, F_SETLK, &lock_info) == -1)
+	int retval;
+	while (((retval = fcntl(fd, F_SETLKW, &lock_info)) == -1) && (errno == EINTR)) {}
+	if (retval == -1)
 	{
 		dprintf(D_ALWAYS, "Error locking file %s. (errno=%d, %s)\n", lark_lock.c_str(), errno, strerror(errno));
 	}
