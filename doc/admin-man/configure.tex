@@ -6244,6 +6244,15 @@ These settings affect the \Condor{starter}.
   This affinity list only takes effect if
   \Expr{ENFORCE\_CPU\_AFFINITY = True}.
 
+\label{param:AssignCpuAffinity} 
+\item[\Macro{ASSIGN\_CPU\_AFFINITY}]
+  A boolean expression that defaults to \Expr{False}.
+  When \Expr{True},
+  CPU affinity is automatically set and enforced to be one slot per core.
+  This permits affinity to work well with dynamic slots. 
+  Also when \Expr{True}, overrides any settings specified by
+  \MacroNI{ENFORCE\_CPU\_AFFINITY}.
+
 \label{param:EnableURLTransfers} 
 \item[\Macro{ENABLE\_URL\_TRANSFERS}]
   A boolean value that when \Expr{True} causes the \Condor{starter} for
