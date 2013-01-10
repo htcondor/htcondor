@@ -29,6 +29,13 @@ using namespace lark;
 int
 BridgeConfiguration::Setup() {
 
+	std::string bridge_name;
+	if (!m_ad->EvaluateAttrString(ATTR_BRIDGE_NAME, bridge_name) &&
+			!param(bridge_name, CONFIG_BRIDGE_NAME)) {
+		dprintf(D_FULLDEBUG, "Could not determine the bridge name from the configuration; using the default " LARK_BRIDGE_NAME ".");
+		bridge_name = LARK_BRIDGE_NAME;
+	}
+
 	std::string bridge_device;
 	if (!m_ad->EvaluateAttrString(ATTR_BRIDGE_DEVICE, bridge_device) &&
 			!param(bridge_device, CONFIG_BRIDGE_DEVICE)) {
@@ -46,18 +53,18 @@ BridgeConfiguration::Setup() {
 	}
 
 	int result;
-	if ((result = create_bridge(LARK_BRIDGE_NAME))) {
-		dprintf(D_ALWAYS, "Unable to create a bridge (" LARK_BRIDGE_NAME "); error=%d.\n", result);
+	if ((result = create_bridge(bridge_name.c_str()))) {
+		dprintf(D_ALWAYS, "Unable to create a bridge (%s); error=%d.\n", bridge_name.c_str(), result);
 		return result;
 	}
 
-	if ((result = add_interface_to_bridge(LARK_BRIDGE_NAME, bridge_device.c_str()))) {
-		dprintf(D_ALWAYS, "Unable to add device %s to bridge " LARK_BRIDGE_NAME "\n", bridge_device.c_str());
+	if ((result = add_interface_to_bridge(bridge_name.c_str(), bridge_device.c_str()))) {
+		dprintf(D_ALWAYS, "Unable to add device %s to bridge %s\n", bridge_name.c_str(), bridge_device.c_str());
 		return result;
 	}
 
-	if ((result = add_interface_to_bridge(LARK_BRIDGE_NAME, external_device.c_str()))) {
-		dprintf(D_ALWAYS, "Unable to add device %s to bridge " LARK_BRIDGE_NAME "\n", external_device.c_str());
+	if ((result = add_interface_to_bridge(bridge_name.c_str(), external_device.c_str()))) {
+		dprintf(D_ALWAYS, "Unable to add device %s to bridge %s\n", bridge_name.c_str(), external_device.c_str());
 		return result;
 	}
 
