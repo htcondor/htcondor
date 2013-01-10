@@ -408,7 +408,13 @@ VanillaProc::StartJob()
 	if (param_boolean("USE_NETWORK_NAMESPACES", false) && JobAd) {
 		std::string starter_name;
 		Starter->jic->machClassAd()->EvalString(ATTR_NAME, NULL, starter_name);
-		std::string network_name = starter_name.substr(0, starter_name.find("@"));
+		size_t at_pos = starter_name.find("@");
+		std::string network_name;
+		if (at_pos == std::string::npos) {
+			network_name = starter_name;
+		} else {
+			network_name = starter_name.substr(0, at_pos);
+		}
 		if (network_name.size() == 0) {
 			dprintf(D_ALWAYS, "Unable to determine starter slot name.\n");
 			return FALSE;

@@ -54,7 +54,13 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, c
 	m_ad = machine_ad;
 	m_job_ad.CopyFrom(job_ad);
 
-	m_network_namespace = uniq_namespace;
+	if (uniq_namespace.size() >= IF_NAMESIZE) {
+		// I probably can take IF_NAMESIZE bytes, but I'm being cautious here to avoid
+		// nul-terminated-buffer issues.
+		m_network_namespace = uniq_namespace.substr(0, IF_NAMESIZE-1);
+	} else {
+		m_network_namespace = uniq_namespace;
+	}
 	machine_ad->InsertAttr(ATTR_IPTABLE_NAME, m_network_namespace);
 
 	m_internal_pipe = "i_" + m_network_namespace;
