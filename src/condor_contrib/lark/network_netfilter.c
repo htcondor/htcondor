@@ -393,6 +393,7 @@ static int delete_rules(const struct ipt_getinfo *info, const struct ipt_get_ent
 	size_t idx, input_idx=0, output_idx=0;
 	unsigned int tmp_hook_entry[NF_INET_NUMHOOKS];
 	memcpy(tmp_hook_entry, info->hook_entry, sizeof(tmp_hook_entry[0])*NF_INET_NUMHOOKS);
+	memset(oentries->underflow, '\0', NF_IP_NUMHOOKS*sizeof(int));
 	while (1)
 	{
 		(*output_mappings)[input_idx] = output_idx;
@@ -410,34 +411,38 @@ static int delete_rules(const struct ipt_getinfo *info, const struct ipt_get_ent
 				if (tmp_hook_entry[idx] == offset)
 				{
 					oentries->hook_entry[idx] = ooffset;
+					//printf("Hook %lu start entry: %lu\n", idx, ooffset);
 				}
 				if (info->underflow[idx] == offset)
 				{
 					oentries->underflow[idx] = ooffset;
+					//printf("Hook %lu underflow entry: %lu\n", idx, ooffset);
 				}
 			}
 			output_idx++;
 			memcpy(oentry, entry, entry->next_offset);
+			int target = rule_has_jump_target(entry);
+			if (target >= 0)
+			{
+				//printf("Rule jump target = %d\n", target);
+				for (idx=0; idx<rules_count; idx++) if (new_offsets[2*idx] == (unsigned)target)
+				{
+					target = new_offsets[2*idx+1];
+					break;
+				}
+				//printf("Rule new jump target = %d\n", target);
+				set_rule_jump_target(oentry, target);
+			}
 			oentry->comefrom = oprevoffset;
 			//printf("Writing rule at entry %ld (size %d; comefrom %lu; original offset %lu).\n", ooffset, entry->next_offset, oprevoffset, offset);
 			oprevoffset = ooffset;
 			ooffset += entry->next_offset;
 			oentry = (struct ipt_entry *)((char *)oentries->entries + ooffset);
-			int target = rule_has_jump_target(entry);
-			if (target >= 0)
-			{
-				for (idx=0; idx<rules_count; idx++) if (new_offsets[2*idx] == offset)
-				{
-					target = new_offsets[2*idx+1];
-					break;
-				}
-				set_rule_jump_target(oentry, target);
-			}
 		}
 		else
 		{
 			for (idx=0; idx < NF_IP_NUMHOOKS; idx++) if (info->valid_hooks & (1 << idx)) {
-				// We will be deleting this rule.  The next one if the beginning of the chain.
+				// We will be deleting this rule.  The next one is the beginning of the chain.
 				if (tmp_hook_entry[idx] == offset)
 				{
 					tmp_hook_entry[idx] += entry->next_offset;
@@ -457,6 +462,7 @@ static int delete_rules(const struct ipt_getinfo *info, const struct ipt_get_ent
 	}
 	oentries->size = ooffset;
 	oentries->num_entries = output_idx;
+	//printf("Number of entries: %lu; size: %lu\n", output_idx, ooffset);
 
 	// Fill in the boundaries of the builtin tables.
 	strncpy(oentries->name, info->name, XT_TABLE_MAXNAMELEN);
