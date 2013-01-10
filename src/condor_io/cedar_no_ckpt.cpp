@@ -915,12 +915,16 @@ ReliSock::do_shared_port_local_connect( char const *shared_port_id, bool nonbloc
 		// to be the standard network interface, because localhost
 		// typically does not happen to be allowed in the authorization policy
 	const bool use_standard_interface = true;
+	std::string orig_connect_addr = get_connect_addr() ? get_connect_addr() : "";
 	if( !connect_socketpair(sock_to_pass,use_standard_interface) ) {
 		dprintf(D_ALWAYS,
 				"Failed to connect to loopback socket, so failing to connect via local shared port access to %s.\n",
 				peer_description());
 		return 0;
 	}
+		// restore the original connect address, which got overwritten
+		// in connect_socketpair()
+	set_connect_addr(orig_connect_addr.c_str());
 
 	char const *request_by = "";
 	if( !shared_port_client.PassSocket(&sock_to_pass,shared_port_id,request_by) ) {
@@ -976,10 +980,16 @@ Sock::get_sinful_public()
 			addr = addrs.front();
 		}
 		addr.set_port(get_port());
-		strncpy(_sinful_public_buf, addr.to_sinful().Value(), 
-				SINFUL_STRING_BUF_SIZE);
-		_sinful_public_buf[SINFUL_STRING_BUF_SIZE-1] = '\0';
-		return _sinful_public_buf;
+		_sinful_public_buf = addr.to_sinful().Value();
+
+		std::string alias;
+		if( param(alias,"HOST_ALIAS") ) {
+			Sinful s(_sinful_public_buf.c_str());
+			s.setAlias(alias.c_str());
+			_sinful_public_buf = s.getSinful();
+		}
+
+		return _sinful_public_buf.c_str();
 	}
 
 	return get_sinful();

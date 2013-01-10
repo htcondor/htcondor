@@ -55,6 +55,7 @@ Daemon::common_init() {
 	_is_configured = true;
 	_addr = NULL;
 	_name = NULL;
+	_alias = NULL;
 	_pool = NULL;
 	_version = NULL;
 	_platform = NULL;
@@ -200,6 +201,7 @@ Daemon::deepCopy( const Daemon &copy )
 		// which is exactly what we want everywhere in this method.
 
 	New_name( strnewp(copy._name) );
+	New_alias( strnewp(copy._alias) );
 	New_hostname( strnewp(copy._hostname) );
 	New_full_hostname( strnewp(copy._full_hostname) );
 	New_addr( strnewp(copy._addr) );
@@ -256,6 +258,7 @@ Daemon::~Daemon()
 		dprintf( D_HOSTNAME, " --- End of Daemon object info ---\n" );
 	}
 	if( _name ) delete [] _name;
+	if( _alias ) delete [] _alias;
 	if( _pool ) delete [] _pool;
 	if( _addr ) delete [] _addr;
 	if( _error ) delete [] _error;
@@ -1109,9 +1112,12 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 			} else return false;
 			buf = generate_sinful(hostaddr.to_ip_string().Value(), _port);
 			dprintf( D_HOSTNAME, "Found IP address and port %s\n", buf.c_str() );
-			New_addr( strnewp(buf.c_str()) );
 			if (fqdn.Length() > 0)
 				New_full_hostname(strnewp(fqdn.Value()));
+			if( host ) {
+				New_alias( strnewp(host) );
+			}
+			New_addr( strnewp(buf.c_str()) );
 		}
 
 		if (host) free( host );
@@ -1134,9 +1140,10 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 			newError( CA_LOCATE_FAILED, err_msg.c_str() );
 			return false;
 		}
-			// if it worked, we've not got the proper values for the
+			// if it worked, we've now got the proper values for the
 			// name (and the full hostname, since that's just the
 			// "host part" of the "name"...
+		New_alias( strnewp(get_host_part( _name )) );
 		New_name( tmp );
 		dprintf( D_HOSTNAME, "Using \"%s\" for name in Daemon object\n",
 				 tmp );
@@ -1475,8 +1482,11 @@ Daemon::findCmDaemon( const char* cm_name )
 		sinful.setHost(saddr.to_ip_string().Value());
 		dprintf( D_HOSTNAME, "Found IP address and port %s\n",
 				 sinful.getSinful() ? sinful.getSinful() : "NULL" );
-		New_addr( strnewp( sinful.getSinful() ) );
 		New_full_hostname(strnewp(fqdn.Value()));
+		if( host ) {
+			New_alias( strnewp(host) );
+		}
+		New_addr( strnewp( sinful.getSinful() ) );
 	}
 
 		// If the pool was set, we want to use _name for that, too. 
@@ -1991,8 +2001,31 @@ Daemon::New_addr( char* str )
 			// This address explicitly specifies that UDP is not supported
 			m_has_udp_command_port = false;
 		}
+		if( !sinful.getAlias() && _alias ) {
+			size_t len = strlen(_alias);
+				// If _alias is not equivalent to the canonical hostname,
+				// then stash it in the sinful address.  This is important
+				// in cases where we later verify that the certificate
+				// presented by the host we are connecting to matches
+				// the hostname we requested.
+			if( !_full_hostname || (strcmp(_alias,_full_hostname)!=0 && (strncmp(_alias,_full_hostname,len)!=0 || _full_hostname[len]!='.')) )
+			{
+				sinful.setAlias(_alias);
+				delete [] _addr;
+				_addr = strnewp( sinful.getSinful() );
+			}
+		}
 	}
 
+	if( _addr ) {
+		dprintf( D_HOSTNAME, "Daemon client (%s) address determined: "
+				 "name: \"%s\", pool: \"%s\", alias: \"%s\", addr: \"%s\"\n",
+				 daemonString(_type),
+				 _name ? _name : "NULL",
+				 _pool ? _pool : "NULL",
+				 _alias ? _alias : "NULL",
+				 _addr ? _addr : "NULL" );
+	}
 	return;
 }
 
@@ -2027,6 +2060,15 @@ Daemon::New_name( char* str )
 	return str;
 }
 
+const char*
+Daemon::New_alias( char *str )
+{
+	if( _alias ) {
+		delete [] _alias;
+	}
+	_alias = str;
+	return str;
+}
 
 char*
 Daemon::New_pool( char* str )

@@ -31,6 +31,7 @@
 #include "globus_utils.h"
 #include "condor_gssapi_openssl.h"
 #include "ipv6_hostname.h"
+#include "condor_sinful.h"
 
 #if defined(HAVE_EXT_VOMS)
 extern "C" {
@@ -874,6 +875,18 @@ bool Condor_Auth_X509::CheckServerName(char const *fqh,char const *ip,ReliSock *
 	OM_uint32 major_status = 0;
 	OM_uint32 minor_status = 0;
 
+	char const *connect_addr = sock->get_connect_addr();
+	std::string alias_buf;
+	if( connect_addr ) {
+		Sinful s(connect_addr);
+		char const *alias = s.getAlias();
+		if( alias ) {
+			dprintf(D_FULLDEBUG,"GSI host check: using host alias %s for %s %s\n",alias,fqh,sock->peer_ip_str());
+			alias_buf = alias;
+			fqh = alias_buf.c_str();
+		}
+	}
+
 	formatstr(connect_name,"%s/%s",fqh,sock->peer_ip_str());
 
 	gss_connect_name_buf.value = strdup(connect_name.c_str());
@@ -903,11 +916,11 @@ bool Condor_Auth_X509::CheckServerName(char const *fqh,char const *ip,ReliSock *
 
 	if( !name_equal ) {
 		std::string msg;
-		formatstr(msg,"We are trying to connect to a daemon with certificate DN (%s), but the host name in the certificate does not match any DNS name associated with the host to which we are connecting (host name is '%s', IP is '%s', Condor connection address is '%s').  Check that DNS is correctly configured.  If you wish to use a daemon certificate that does not match the daemon's host name, make GSI_SKIP_HOST_CHECK_CERT_REGEX match the DN, or disable all host name checks by setting GSI_SKIP_HOST_CHECK=true or by defining GSI_DAEMON_NAME.\n",
+		formatstr(msg,"We are trying to connect to a daemon with certificate DN (%s), but the host name in the certificate does not match any DNS name associated with the host to which we are connecting (host name is '%s', IP is '%s', Condor connection address is '%s').  Check that DNS is correctly configured.  If the certificate is for a DNS alias, configure HOST_ALIAS in the daemon's configuration.  If you wish to use a daemon certificate that does not match the daemon's host name, make GSI_SKIP_HOST_CHECK_CERT_REGEX match the DN, or disable all host name checks by setting GSI_SKIP_HOST_CHECK=true or by defining GSI_DAEMON_NAME.\n",
 				server_dn,
 				fqh,
 				ip,
-				sock->peer_description() );
+				connect_addr ? connect_addr : sock->peer_description() );
 		errstack->push("GSI", GSI_ERR_DNS_CHECK_ERROR, msg.c_str());
 	}
 	return name_equal != 0;
