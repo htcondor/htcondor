@@ -499,6 +499,10 @@ ProcFamilyProxy::start_procd()
 		}
 		args.AppendArg(glexec);
 		free(glexec);
+		int glexec_retries = param_integer("GLEXEC_RETRIES",3,0);
+		int glexec_retry_delay = param_integer("GLEXEC_RETRY_DELAY",5,0);
+		args.AppendArg(glexec_retries);
+		args.AppendArg(glexec_retry_delay);
 	}
 
 	// done constructing the argument list; now register a reaper for
