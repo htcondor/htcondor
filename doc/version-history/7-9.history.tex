@@ -88,10 +88,12 @@ commands by the same names.
 
 \begin{itemize}
 
-\item when the configuration variable \Macro{ASSIGN\_CPU\_AFFINITY}
-is set, the \Condor{startd} will automatically set the CPU affinity
-mask the job runs with, so that a multi-threaded job will not use
+\item When the new configuration variable \Macro{ASSIGN\_CPU\_AFFINITY}
+is set to \Expr{True}, 
+the \Condor{startd} will automatically set the CPU affinity
+mask jobs run with, so that a multi-threaded job will not use
 more cores than the number it requests.
+\Ticket{3348}
 
 \item When configuration variable \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}
 is \Expr{False}, the \Condor{negotiator}
