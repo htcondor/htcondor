@@ -41,8 +41,8 @@ void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from,
 
 		if (merge_conflicts || !merge_into->LookupExpr(name)) {
 			if( keep_clean_when_possible ) {
-				char *from_expr;
-				char *to_expr;
+				char *from_expr = NULL;
+				char *to_expr = NULL;
 				bool equiv=false;
 
 				if( (from_expr=merge_from->sPrintExpr(NULL,0,name)) &&
@@ -52,8 +52,8 @@ void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from,
 						equiv=true;
 					}
 				}
-				free( from_expr );
-				free( to_expr );
+				if( from_expr ) { free( from_expr ); from_expr = NULL; }
+				if( to_expr ) { free( to_expr ); to_expr = NULL; }
 
 				if( equiv ) {
 					continue;
