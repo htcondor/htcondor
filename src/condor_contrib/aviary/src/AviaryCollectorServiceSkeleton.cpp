@@ -61,9 +61,10 @@ void loadResults(CollectableMapT& cmt, RequestT* request, ResponseT* response)
     bool summary = request->isIncludeSummariesNil() || request->getIncludeSummaries();
     bool partials = request->isPartialMatchesNil() || request->getPartialMatches();
     if (request->isIdsNil() || request->getIds()->size() == 0) {
+        // return all results
         for (typename CollectableMapT::iterator it = cmt.begin(); cmt.end() != it; it++) {
             CollectableCodec codec(provider->getEnv());
-            AviaryCollectableT* _collectable = codec.encode(it->second);
+            AviaryCollectableT* _collectable = codec.encode(it->second,summary);
             Status* js = new Status;
             js->setCode(new StatusCodeType("OK"));
             _collectable->setStatus(js);
@@ -73,7 +74,31 @@ void loadResults(CollectableMapT& cmt, RequestT* request, ResponseT* response)
     else {
         IDList* id_list = request->getIds();
         for (IDList::iterator it = id_list->begin(); id_list->end() != it; it++) {
-            
+            // look for exact match on each supplied id
+            if (!partials) {
+                typename CollectableMapT::iterator mit = cmt.find(*(*it));
+                if (mit != cmt.end()) {
+                    CollectableCodec codec(provider->getEnv());
+                    AviaryCollectableT* _collectable = codec.encode(mit->second,summary);
+                    Status* js = new Status;
+                    js->setCode(new StatusCodeType("OK"));
+                    _collectable->setStatus(js);
+                    response->addResults(_collectable);
+                }
+            }
+            else {
+                // fuzzy matching...is the supplied id string in the full id name?
+                for (typename CollectableMapT::iterator mit = cmt.begin(); cmt.end() != mit; mit++) {
+                    if (string::npos != mit->first.find(*(*it))) {
+                        CollectableCodec codec(provider->getEnv());
+                        AviaryCollectableT* _collectable = codec.encode(mit->second,summary);
+                        Status* js = new Status;
+                        js->setCode(new StatusCodeType("OK"));
+                        _collectable->setStatus(js);
+                        response->addResults(_collectable);
+                    }
+                }
+            }
         }
     }
 }
@@ -155,7 +180,6 @@ GetSchedulerResponse* AviaryCollectorServiceSkeleton::getScheduler(MessageContex
 
     return response;
 }
-
 
 GetSubmitterResponse* AviaryCollectorServiceSkeleton::getSubmitter(MessageContext* /*outCtx*/ ,GetSubmitter* _getSubmitter)
 {

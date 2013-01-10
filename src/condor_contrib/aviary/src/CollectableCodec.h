@@ -38,12 +38,12 @@ class CollectableCodec{
 
 public:
     CollectableCodec(const axutil_env_t* env) { m_env = env; }
-    AviaryCommon::Collector* encode(aviary::collector::Collector* in_);
-    AviaryCommon::Master* encode(aviary::collector::Master* in_);
-    AviaryCommon::Negotiator* encode(aviary::collector::Negotiator* in_);
-    AviaryCommon::Scheduler* encode(aviary::collector::Scheduler* in_);
-    AviaryCommon::Slot* encode(aviary::collector::Slot* in_);
-    AviaryCommon::Submitter* encode(aviary::collector::Submitter* in_);
+    AviaryCommon::Collector* encode(aviary::collector::Collector* in_, bool add_summary=true);
+    AviaryCommon::Master* encode(aviary::collector::Master* in_, bool add_summary=true);
+    AviaryCommon::Negotiator* encode(aviary::collector::Negotiator* in_, bool add_summary=true);
+    AviaryCommon::Scheduler* encode(aviary::collector::Scheduler* in_, bool add_summary=true);
+    AviaryCommon::Slot* encode(aviary::collector::Slot* in_, bool add_summary=true);
+    AviaryCommon::Submitter* encode(aviary::collector::Submitter* in_, bool add_summary=true);
 
 private:
     AviaryCommon::ResourceID* createResourceID(DaemonCollectable* dc, const char* daemon_type);
