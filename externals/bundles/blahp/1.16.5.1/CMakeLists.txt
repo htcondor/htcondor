@@ -56,6 +56,7 @@ if ( WITH_BLAHP )
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/add-sge.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/sge-status.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/sge-status-fallback.patch -p0 &&
+							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/sge_helper.error-exit.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/add-condor.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-completion.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-qdel.patch -p0 &&
