@@ -1625,7 +1625,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 		ASSERT( daemonCore );
 
 		// make a pipe to communicate with our thread
-		if (!daemonCore->Create_Pipe(TransferPipe)) {
+		if (!daemonCore->Create_Pipe(TransferPipe,true)) {
 			dprintf(D_ALWAYS, "Create_Pipe failed in "
 					"FileTransfer::Upload\n");
 			return FALSE;
@@ -2552,7 +2552,7 @@ FileTransfer::Upload(ReliSock *s, bool blocking)
 		ASSERT( daemonCore );
 
 		// make a pipe to communicate with our thread
-		if (!daemonCore->Create_Pipe(TransferPipe)) {
+		if (!daemonCore->Create_Pipe(TransferPipe,true)) {
 			dprintf(D_ALWAYS, "Create_Pipe failed in "
 					"FileTransfer::Upload\n");
 			return FALSE;
