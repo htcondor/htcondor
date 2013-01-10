@@ -65,6 +65,7 @@ if ( WITH_BLAHP )
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/config-paths.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/escape-args.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/condor-history.patch -p0 &&
+							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/condor-status.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/submit-l.patch -p0 &&
 							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/ld-library-path.patch -p0 &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/classads.m4 org.glite.ce.blahp/project &&
