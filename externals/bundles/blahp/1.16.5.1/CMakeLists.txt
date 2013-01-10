@@ -65,6 +65,7 @@ if ( WITH_BLAHP )
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/add-sge.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/sge-status.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/sge-status-fallback.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/sge_helper.error-exit.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/add-condor.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-completion.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-qdel.patch -p0 &&
@@ -74,6 +75,7 @@ if ( WITH_BLAHP )
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/config-paths.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/escape-args.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/condor-history.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/condor-status.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/submit-l.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/proxy-init.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/ld-library-path.patch -p0 &&
