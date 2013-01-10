@@ -31,7 +31,9 @@
 #include "basename.h"
 
 GLExecPrivSepHelper::GLExecPrivSepHelper() :
-	 m_initialized(false),m_glexec(0),  m_sandbox(0), m_proxy(0),m_sandbox_owned_by_user(false)
+	m_initialized(false),m_glexec(0),  m_sandbox(0), m_proxy(0),m_sandbox_owned_by_user(false),
+	m_glexec_retries(0),m_glexec_retry_delay(0)
+
 {
 }
 
@@ -165,6 +167,9 @@ GLExecPrivSepHelper::initialize(const char* proxy, const char* sandbox)
 
 	m_sandbox_owned_by_user = false;
 
+	m_glexec_retries = param_integer("GLEXEC_RETRIES",3,0);
+	m_glexec_retry_delay = param_integer("GLEXEC_RETRY_DELAY",5,0);
+
 	m_initialized = true;
 }
 
@@ -187,6 +192,8 @@ GLExecPrivSepHelper::chown_sandbox_to_user(PrivSepError &err)
 	args.AppendArg(m_glexec);
 	args.AppendArg(m_proxy);
 	args.AppendArg(m_sandbox);
+	args.AppendArg(m_glexec_retries);
+	args.AppendArg(m_glexec_retry_delay);
 	MyString error_desc = "error changing sandbox ownership to the user: ";
 	int rc = run_script(args,error_desc);
 	if( rc != 0) {
@@ -219,6 +226,8 @@ GLExecPrivSepHelper::chown_sandbox_to_condor(PrivSepError &err)
 	args.AppendArg(m_glexec);
 	args.AppendArg(m_proxy);
 	args.AppendArg(m_sandbox);
+	args.AppendArg(m_glexec_retries);
+	args.AppendArg(m_glexec_retry_delay);
 	MyString error_desc = "error changing sandbox ownership to condor: ";
 	int rc = run_script(args,error_desc);
 	if( rc != 0) {
@@ -294,77 +303,124 @@ GLExecPrivSepHelper::create_process(const char* path,
 		modified_args.AppendArg(args.GetArg(i));
 	}
 
-	// setup a UNIX domain socket for communicating with
-	// condor_glexec_wrapper (see comment above feed_wrapper()
-	// for details
-	//
-	int sock_fds[2];
-	if (socketpair(PF_UNIX, SOCK_STREAM, 0, sock_fds) == -1)
-	{
-		dprintf(D_ALWAYS,
-		        "GLEXEC: socketpair error: %s\n",
-		        strerror(errno));
-		return false;
+	int glexec_errors = 0;
+	while(1) {
+		// setup a UNIX domain socket for communicating with
+		// condor_glexec_wrapper (see comment above feed_wrapper()
+		// for details
+		//
+		int sock_fds[2];
+		if (socketpair(PF_UNIX, SOCK_STREAM, 0, sock_fds) == -1)
+		{
+			dprintf(D_ALWAYS,
+			        "GLEXEC: socketpair error: %s\n",
+			        strerror(errno));
+			return false;
+		}
+		std_fds[0] = sock_fds[1];
+
+			// now create a pipe for receiving diagnostic stdout/stderr from glexec
+		int glexec_out_fds[2];
+		if (pipe(glexec_out_fds) < 0) {
+			dprintf(D_ALWAYS,
+					"GLEXEC: pipe() error: %s\n",
+					strerror(errno));
+			close(sock_fds[0]);
+			close(sock_fds[1]);
+			return false;
+		}
+		std_fds[1] = glexec_out_fds[1];
+		std_fds[2] = std_fds[1]; // collect glexec stderr and stdout together
+
+		FamilyInfo fi;
+		FamilyInfo* fi_ptr = (family_info != NULL) ? family_info : &fi;
+		MyString proxy_path;
+		proxy_path.sprintf("%s.condor/%s", m_sandbox, m_proxy);
+		fi_ptr->glexec_proxy = proxy_path.Value();
+
+			// At the very least, we need to pass the condor daemon's
+			// X509_USER_PROXY to condor_glexec_run.  Currently, we just
+			// pass all daemon environment.  We do _not_ run
+			// condor_glexec_run in the job environment, because that
+			// would be a security risk and would serve no purpose, since
+			// glexec cleanses the environment anyway.
+		dc_job_opts &= ~(DCJOBOPT_NO_ENV_INHERIT);
+
+		int pid = daemonCore->Create_Process(m_run_script.Value(),
+		                                     modified_args,
+		                                     PRIV_USER_FINAL,
+		                                     reaper_id,
+		                                     FALSE,
+		                                     NULL,
+		                                     iwd,
+		                                     fi_ptr,
+		                                     NULL,
+		                                     std_fds,
+		                                     NULL,
+		                                     nice_inc,
+		                                     NULL,
+		                                     dc_job_opts,
+		                                     core_size_ptr,
+											 NULL,
+											 NULL,
+											 error_msg);
+
+			// close our handle to glexec's end of the diagnostic output pipe
+		close(glexec_out_fds[1]);
+
+		MyString glexec_error_msg;
+		int glexec_rc = 0;
+		int ret_val = feed_wrapper(pid, sock_fds, env, dc_job_opts, job_std_fds, glexec_out_fds[0], &glexec_error_msg, &glexec_rc);
+
+			// if not closed in feed_wrapper, close the glexec error pipe now
+		if( glexec_out_fds[0] != -1 ) {
+			close(glexec_out_fds[0]);
+		}
+
+			// Unlike the other glexec operations where we handle
+			// glexec retry inside the helper script,
+			// condor_glexec_run cannot handle retry for us, because
+			// it must exec glexec rather than spawning it off in a
+			// new process.  Therefore, we handle here retries in case
+			// of transient errors.
+
+		if( ret_val != 0 ) {
+			return ret_val; // success
+		}
+		bool retry = true;
+		if( glexec_rc != 202 && glexec_rc != 203 ) {
+				// Either a non-transient glexec error, or some other
+				// non-glexec error.
+			retry = false;
+		}
+		else {
+			// This _could_ be a transient glexec issue, such as a
+			// communication error with GUMS, so retry up to some
+			// limit.
+			glexec_errors += 1;
+			if( glexec_errors > m_glexec_retries ) {
+				retry = false;
+			}
+		}
+
+		if( !retry ) {
+				// return the most recent glexec error output
+			if( error_msg ) {
+				error_msg->sprintf_cat(glexec_error_msg.Value());
+			}
+			return 0;
+		}
+			// truncated exponential backoff
+		int delay_rand = 1 + (get_random_int() % glexec_errors) % 100;
+		int delay = m_glexec_retry_delay * delay_rand;
+		dprintf(D_ALWAYS,"Glexec exited with status %d; retrying in %d seconds.\n",
+				glexec_rc, delay );
+		sleep(delay);
+			// now try again ...
 	}
-	std_fds[0] = sock_fds[1];
 
-		// now create a pipe for receiving diagnostic stdout/stderr from glexec
-	int glexec_out_fds[2];
-	if (pipe(glexec_out_fds) < 0) {
-		dprintf(D_ALWAYS,
-				"GLEXEC: pipe() error: %s\n",
-				strerror(errno));
-		close(sock_fds[0]);
-		close(sock_fds[1]);
-		return false;
-	}
-	std_fds[1] = glexec_out_fds[1];
-	std_fds[2] = std_fds[1]; // collect glexec stderr and stdout together
-
-	FamilyInfo fi;
-	FamilyInfo* fi_ptr = (family_info != NULL) ? family_info : &fi;
-	MyString proxy_path;
-	proxy_path.sprintf("%s.condor/%s", m_sandbox, m_proxy);
-	fi_ptr->glexec_proxy = proxy_path.Value();
-
-		// At the very least, we need to pass the condor daemon's
-		// X509_USER_PROXY to condor_glexec_run.  Currently, we just
-		// pass all daemon environment.  We do _not_ run
-		// condor_glexec_run in the job environment, because that
-		// would be a security risk and would serve no purpose, since
-		// glexec cleanses the environment anyway.
-	dc_job_opts &= ~(DCJOBOPT_NO_ENV_INHERIT);
-
-	int pid = daemonCore->Create_Process(m_run_script.Value(),
-	                                     modified_args,
-	                                     PRIV_USER_FINAL,
-	                                     reaper_id,
-	                                     FALSE,
-	                                     NULL,
-	                                     iwd,
-	                                     fi_ptr,
-	                                     NULL,
-	                                     std_fds,
-	                                     NULL,
-	                                     nice_inc,
-	                                     NULL,
-	                                     dc_job_opts,
-	                                     core_size_ptr,
-										 NULL,
-										 NULL,
-										 error_msg);
-
-		// close our handle to glexec's end of the diagnostic output pipe
-	close(glexec_out_fds[1]);
-
-	int ret_val = feed_wrapper(pid, sock_fds, env, dc_job_opts, job_std_fds, glexec_out_fds[0], error_msg);
-
-		// if not closed in feed_wrapper, close the glexec error pipe now
-	if( glexec_out_fds[0] != -1 ) {
-		close(glexec_out_fds[0]);
-	}
-
-	return ret_val;
+		// should never get here
+	return 0;
 }
 
 // we launch the job via a wrapper. the full chain of exec() calls looks
@@ -392,7 +448,8 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
                                   int dc_job_opts,
                                   int job_std_fds[3],
 								  int &glexec_err_fd,
-								  MyString *error_msg)
+								  MyString *error_msg,
+								  int *glexec_rc)
 {
 	// we can now close the end of the socket that we handed down
 	// to the wrapper; the other end we'll use to send stuff over
@@ -437,6 +494,8 @@ GLExecPrivSepHelper::feed_wrapper(int pid,
 			if (waitpid(pid,&glexec_status,0)==pid) {
 				if (WIFEXITED(glexec_status)) {
 					int status = WEXITSTATUS(glexec_status);
+					ASSERT( glexec_rc );
+					*glexec_rc = status;
 					dprintf(D_ALWAYS,
 							"GLEXEC: glexec call exited with status %d\n",
 							status);

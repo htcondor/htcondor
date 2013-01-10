@@ -10619,3 +10619,35 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd
 id=610
+
+[GLEXEC_RETRIES]
+aliases=
+default=3
+version=7.8.8
+range=0,
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=number of times to retry calls to glexec
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
+id=610
+
+[GLEXEC_RETRY_DELAY]
+aliases=
+default=5
+version=7.8.8
+range=0,
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=minimum time delay in exponential backoff
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
+id=610
