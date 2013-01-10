@@ -57,7 +57,8 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, c
 	if (uniq_namespace.size() >= IF_NAMESIZE) {
 		// I probably can take IF_NAMESIZE bytes, but I'm being cautious here to avoid
 		// nul-terminated-buffer issues.
-		m_network_namespace = uniq_namespace.substr(0, IF_NAMESIZE-1);
+		// -3 because we add the "e_" and "i_" prefixes later to the slot names.
+		m_network_namespace = uniq_namespace.substr(0, IF_NAMESIZE-3);
 	} else {
 		m_network_namespace = uniq_namespace;
 	}
