@@ -385,7 +385,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
 	}
 
-	if ( ((IsServer() && !simple_init) || (IsClient() && simple_init)) && 
+	if ( (IsServer() || (IsClient() && simple_init)) && 
 		 (Ad->LookupString(ATTR_JOB_CMD, buf, sizeof(buf)) == 1) ) 
 	{
 		// stash the executable name for comparison later, so
@@ -430,6 +430,8 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 		if ( xferExec && !InputFiles->file_contains(ExecFile) ) {
 			InputFiles->append(ExecFile);	
 		}	
+	} else if ( IsClient() && !simple_init ) {
+		ExecFile = strdup( CONDOR_EXEC );
 	}
 
 	// Set OutputFiles to be ATTR_SPOOLED_OUTPUT_FILES if specified, otherwise
@@ -2209,6 +2211,33 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
+		}
+
+		if ( ExecFile && !file_strcmp( condor_basename( ExecFile ), filename.Value() ) ) {
+				// We're receiving the executable, make sure execute
+				// bit is set
+				// TODO How should we modify the permisions of the
+				//   executable? Adding any group or world permissions
+				//   seems wrong. For now, behave the same way as the
+				//   starter.
+#if 0
+			struct stat stat_buf;
+			if ( stat( fullname.Value(), &stat_buf ) < 0 ) {
+				dprintf( D_ALWAYS, "Failed to stat executable %s, errno=%d (%s)\n",
+						 fullname.Value(), errno, strerror(errno) );
+			} else if ( ! (stat_buf.st_mode & S_IXUSR) ) {
+				stat_buf.st_mode |= S_IXUSR;
+				if ( chmod( fullname.Value(), stat_buf.st_mode ) < 0 ) {
+					dprintf( D_ALWAYS, "Failed to set execute bit on %s, errno=%d (%s)\n",
+							 fullname.Value(), errno, strerror(errno) );
+				}
+			}
+#else
+			if ( chmod( fullname.Value(), 0755 ) < 0 ) {
+				dprintf( D_ALWAYS, "Failed to set execute bit on %s, errno=%d (%s)\n",
+						 fullname.Value(), errno, strerror(errno) );
+			}
+#endif
 		}
 
 		if ( want_fsync ) {
