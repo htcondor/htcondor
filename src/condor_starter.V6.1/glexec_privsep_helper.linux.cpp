@@ -406,7 +406,7 @@ GLExecPrivSepHelper::create_process(const char* path,
 		if( !retry ) {
 				// return the most recent glexec error output
 			if( error_msg ) {
-				error_msg->sprintf_cat(glexec_error_msg.Value());
+				error_msg->formatstr_cat(glexec_error_msg.Value());
 			}
 			return 0;
 		}
