@@ -154,6 +154,11 @@ node status file.  Refer to section~\ref{sec:DAG-node-status} for
 more information.
 \Ticket{2728}
 
+\item When submitting jobs to a remote batch system (e.g. BOSCO), file
+transfer no longer requires a network connection from the remote machine
+back to the local one.
+\Ticket{3293}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -202,6 +207,15 @@ and sge grid jobs.
 \Condor{gridmanager} now ensures that no unsual characters are used in
 the name of the job sandbox directory it creates.
 \Ticket{3294}
+
+\item When a GAHP server fails to start, the \condor{gridmanager} now
+puts the affects jobs on hold.
+\Ticket{3301}
+
+\item Set \Env{GLOBUS\_LOCATION} in the environment of \Prog{batch\_gahp},
+allowing it to find proxy-management that it needs for jobs that have an
+X.509 proxy.
+\Ticket{3015}
 
 \end{itemize}
 
