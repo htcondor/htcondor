@@ -84,7 +84,8 @@ private:
 	                 int dc_job_opts,
 	                 int job_std_fds[3],
 					 int &glexec_err_fd,
-					 MyString *error_msg);
+					 MyString *error_msg,
+					 int *glexec_rc);
 
 	// set once we're initialized
 	//
@@ -113,6 +114,9 @@ private:
 	// tracks current ownership of the sandbox
 	//
 	bool m_sandbox_owned_by_user;
+
+	int m_glexec_retries;
+	int m_glexec_retry_delay;
 };
 
 #endif

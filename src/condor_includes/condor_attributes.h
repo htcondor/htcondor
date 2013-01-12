@@ -695,6 +695,9 @@
 #define ATTR_TRANSFER_INTERMEDIATE_FILES  "TransferIntermediate"
 #define ATTR_TRANSFER_OUTPUT_FILES  "TransferOutput"
 #define ATTR_TRANSFER_OUTPUT_REMAPS  "TransferOutputRemaps"
+#define ATTR_TRANSFERRING_INPUT "TransferringInput"
+#define ATTR_TRANSFERRING_OUTPUT "TransferringOutput"
+#define ATTR_TRANSFER_QUEUED "TransferQueued"
 #define ATTR_PRESERVE_RELATIVE_EXECUTABLE  "PreserveRelativeExecutable"
 #define ATTR_SPOOLED_OUTPUT_FILES  "SpooledOutputFiles"
 #define ATTR_ENCRYPT_INPUT_FILES  "EncryptInputFiles"
@@ -911,6 +914,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_RETRY  "Retry"
 #define ATTR_SSH_KEYGEN_ARGS  "SSHKeyGenArgs"
 #define ATTR_SOCK  "sock"
+#define ATTR_ALIAS "alias"
 #define ATTR_JOB_AD_INFORMATION_ATTRS  "JobAdInformationAttrs"
 
 #define ATTR_LAST_NEGOTIATION_CYCLE_TIME  "LastNegotiationCycleTime"

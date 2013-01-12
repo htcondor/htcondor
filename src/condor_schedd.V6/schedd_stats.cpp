@@ -97,6 +97,7 @@ void ScheddStatistics::Init(int fOtherPool)
 
    Clear();
    // default window size to 1 quantum, we may set it to something else later.
+   if ( ! this->RecentWindowQuantum) this->RecentWindowQuantum = 1;
    this->RecentWindowMax = this->RecentWindowQuantum;
 
    // insert static items into the stats pool so we can use the pool 
@@ -310,7 +311,9 @@ void ScheddOtherStatsMgr::Reconfig()
 				//
 				ScheddOtherStats* po2 = it->second;
 				po2->stats.PublishFlags = po->stats.PublishFlags;
-				if (po2->stats.RecentWindowMax != po->stats.RecentWindowMax) {
+				if (po2->stats.RecentWindowMax != po->stats.RecentWindowMax ||
+					po2->stats.RecentWindowQuantum != po->stats.RecentWindowQuantum) {
+					po2->stats.RecentWindowQuantum = po->stats.RecentWindowQuantum;
 					po2->stats.SetWindowSize(po->stats.RecentWindowMax);
 				}
 			}
@@ -635,6 +638,7 @@ ScheddOtherStats * ScheddOtherStatsMgr::Matches(ClassAd & ad, time_t updateTime)
 
 			po2->stats.Init(true);
 			po2->stats.PublishFlags = po->stats.PublishFlags;
+			po2->stats.RecentWindowQuantum = po->stats.RecentWindowQuantum;
 			po2->stats.SetWindowSize(po->stats.RecentWindowMax);
 			po2->lifetime = po->lifetime;
 

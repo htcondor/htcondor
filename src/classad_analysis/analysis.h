@@ -49,6 +49,12 @@ class ClassAdAnalyzer
 	~ClassAdAnalyzer( );
 
 	classad_analysis::job::result GetResult() { return (result_as_struct && m_result) ? *m_result : classad_analysis::job::result(); }
+	bool GetErrors(bool clear_errs=true, std::string * perrs = NULL) { 
+		bool had_errors = ! errstm.str().empty();
+		if (perrs) *perrs = errstm.str();
+		if (clear_errs) errstm.clear();
+		return had_errors;
+	}
 
 		/** Analyze a job ClassAd requirements expression.
 		 *	@param request The job ClassAd
@@ -102,6 +108,8 @@ class ClassAdAnalyzer
 	ExprTree* preempt_rank_condition;
 	ExprTree* preempt_prio_condition;
 	ExprTree* preemption_req;
+
+	std::stringstream errstm;
 
 	void ensure_result_initialized(classad::ClassAd *request);
 

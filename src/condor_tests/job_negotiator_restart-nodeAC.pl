@@ -20,7 +20,13 @@ while (<OUTPUT>) {
 close (OUTPUT) or die "condor_userprio failed: $?";
 
 if ($priofactor eq "") {
-	die "Unable to determine prio factor";
+        if ($ARGV[0] eq "A") {
+				# In nmi sometimes no job has run at this time, so there's
+				# no existing prio factor.  In which case, make one up
+                $priofactor = 7;
+        } else {
+                die "Unable to determine prio factor";
+        }
 }
 
 print "Priofactor is $priofactor\n";

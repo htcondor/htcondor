@@ -1,5 +1,8 @@
 #!/usr/bin/python
 
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 from campus_factory.util.DaemonWrangler import DaemonWrangler
 from campus_factory.ClusterStatus import CondorConfig
 from optparse import OptionParser

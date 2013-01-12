@@ -23,14 +23,21 @@
 
 static char* glexec_kill_path = NULL;
 static char* glexec_path = NULL;
+static char glexec_retries_str[50];
+static char glexec_retry_delay_str[50];
 
 void
-glexec_kill_init(char* glexec_kill, char* glexec)
+glexec_kill_init(char* glexec_kill, char* glexec, int glexec_retries, int glexec_retry_delay)
 {
 	glexec_kill_path = strdup(glexec_kill);
 	ASSERT(glexec_kill_path != NULL);
 	glexec_path = strdup(glexec);
 	ASSERT(glexec_path != NULL);
+	int rc;
+	rc = snprintf(glexec_retries_str,sizeof(glexec_retries_str),"%d",glexec_retries);
+	ASSERT( rc >= 1 && rc < (int)sizeof(glexec_retries_str) );
+	rc = snprintf(glexec_retry_delay_str,sizeof(glexec_retry_delay_str),"%d",glexec_retry_delay);
+	ASSERT( rc >= 1 && rc < (int)sizeof(glexec_retry_delay_str) );
 }
 
 bool
@@ -95,6 +102,8 @@ glexec_kill(char* proxy, pid_t target_pid, int sig)
 		                proxy,
 		                target_pid_str,
 		                sig_str,
+		                glexec_retries_str,
+		                glexec_retry_delay_str,
 		                NULL};
 		execv(glexec_kill_path, argv);
 		_exit(1);

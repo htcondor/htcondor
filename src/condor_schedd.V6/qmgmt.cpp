@@ -1057,6 +1057,48 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				}
 			}
 
+				// make file transfer status attributes sane in case
+				// we died while in the middle of transferring
+			int transferring_input = false;
+			int transferring_output = false;
+			int transfer_queued = false;
+			if( ad->LookupInteger(ATTR_TRANSFERRING_INPUT,transferring_input) ) {
+				if( job_status == RUNNING ) {
+					if( transferring_input ) {
+						ad->Assign(ATTR_TRANSFERRING_INPUT,false);
+						JobQueueDirty = true;
+					}
+				}
+				else {
+					ad->Delete(ATTR_TRANSFERRING_INPUT);
+					JobQueueDirty = true;
+				}
+			}
+			if( ad->LookupInteger(ATTR_TRANSFERRING_OUTPUT,transferring_output) ) {
+				if( job_status == RUNNING ) {
+					if( transferring_output ) {
+						ad->Assign(ATTR_TRANSFERRING_OUTPUT,false);
+						JobQueueDirty = true;
+					}
+				}
+				else {
+					ad->Delete(ATTR_TRANSFERRING_OUTPUT);
+					JobQueueDirty = true;
+				}
+			}
+			if( ad->LookupInteger(ATTR_TRANSFER_QUEUED,transfer_queued) ) {
+				if( job_status == RUNNING ) {
+					if( transfer_queued ) {
+						ad->Assign(ATTR_TRANSFER_QUEUED,false);
+						JobQueueDirty = true;
+					}
+				}
+				else {
+					ad->Delete(ATTR_TRANSFER_QUEUED);
+					JobQueueDirty = true;
+				}
+			}
+
 			// count up number of procs in cluster, update ClusterSizeHashTable
 			IncrementClusterSize(cluster_num);
 

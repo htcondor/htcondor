@@ -355,7 +355,8 @@ CondorQ::fetchQueueFromDB (ClassAdList &list,
 int
 CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 										StringList &attrs,
-										process_function process_func,
+										condor_q_process_func process_func,
+										void * process_func_data,
 										bool useFastPath,
 										CondorError* errstack)
 {
@@ -384,7 +385,7 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 	}
 
 	// get the ads and filter them
-	result = getFilterAndProcessAds (constraint, attrs, process_func, useFastPath);
+	result = getFilterAndProcessAds (constraint, attrs, process_func, process_func_data, useFastPath);
 
 	DisconnectQ (qmgr);
 	free( constraint );
@@ -394,13 +395,15 @@ CondorQ::fetchQueueFromHostAndProcess ( const char *host,
 int
 CondorQ::fetchQueueFromDBAndProcess ( const char *dbconn,
 									  char *&lastUpdate,
-									  process_function process_func,
+									  condor_q_process_func process_func,
+									  void * process_func_data,
 									  CondorError*  /*errstack*/ )
 {
 #ifndef HAVE_EXT_POSTGRESQL
 	(void) dbconn;
 	(void) lastUpdate;
 	(void) process_func;
+	(void) process_func_data;
 #else
 	int     		result;
 	JobQueueSnapshot	*jqSnapshot;
@@ -444,7 +447,7 @@ CondorQ::fetchQueueFromDBAndProcess ( const char *dbconn,
 	
 	while (ad != (ClassAd *) 0) {
 			// Process the data and insert it into the list
-		if ((*process_func) (ad) ) {
+		if ((*process_func) (ad, process_func_data) ) {
 			ad->Clear();
 			delete ad;
 		}
@@ -539,7 +542,8 @@ CondorQ::rawDBQuery(const char *dbconn, CondorQQueryType qType)
 int
 CondorQ::getFilterAndProcessAds( const char *constraint,
 								 StringList &attrs,
-								 process_function process_func,
+								 condor_q_process_func process_func,
+								 void * process_func_data,
 								 bool useAll )
 {
 	ClassAd *ad;
@@ -556,7 +560,7 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 				delete ad;
 				break;
 			}
-			if ( ( *process_func )( ad ) ) {
+			if ( ( *process_func )( process_func_data, ad ) ) {
 				delete(ad);
 			}
 		}
@@ -565,13 +569,13 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 	// slow case, using old protocol
 	if ((ad = GetNextJobByConstraint(constraint, 1)) != NULL) {
 		// Process the data and insert it into the list
-		if ( ( *process_func )( ad ) ) {
+		if ( ( *process_func )( process_func_data, ad ) ) {
 			delete(ad);
 		}
 
 		while((ad = GetNextJobByConstraint(constraint, 0)) != NULL) {
 			// Process the data and insert it into the list
-			if ( ( *process_func )( ad ) ) {
+			if ( ( *process_func )( process_func_data, ad ) ) {
 				delete(ad);
 			}
 		}

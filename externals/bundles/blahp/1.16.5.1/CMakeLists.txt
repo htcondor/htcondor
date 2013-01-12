@@ -28,6 +28,16 @@ if ( WITH_BLAHP )
 	if ( NOT PROPER )
 
 		########################################
+		if (NOT AUTOCONF OR NOT AUTOMAKE OR NOT LIBTOOLIZE)
+			message(FATAL_ERROR "Can't find autoconf, automake, or libtoolize, needed to build blahp external!")
+		endif()
+
+		if (PREFER_CPP11)
+			set( CPP11_FLAG -std=c++11 )
+		else()
+			set( CPP11_FLAG "-I${BOOST_INCLUDE}" )
+		endif()
+
 		if ( BUILDING_OPENSSL )
 			set( BLAHP_DEPENDS ${OPENSSL_REF} ${GLOBUS_REF} )
 			set( GLOBUS_M4_FILE globus.m4 )
@@ -39,44 +49,45 @@ if ( WITH_BLAHP )
 		endif()
 
 
-		condor_pre_external( BLAHP blahp-1.16.5.1-p10 "lib;include" "done")
+		condor_pre_external( BLAHP blahp-1.16.5.1-p11 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${BLAHP_DEPENDS}
 					    #-- Download Step ----------
-						DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/blahp-1.16.5.1.tar.gz ${CMD_TERM}
 					    DOWNLOAD_DIR ${BLAHP_STAGE}/dl
 						URL http://parrot.cs.wisc.edu/externals/blahp-1.16.5.1.tar.gz
 						#--Patch step ----------
-						PATCH_COMMAND patch -i ${CMAKE_CURRENT_SOURCE_DIR}/iclassad.patch -p0 &&
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/classad.patch -p0 &&
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/mtrace.patch -p0 &&
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/registry.patch -p0 && 
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/dl.patch -p0 &&
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/add-sge.patch -p0 &&
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/sge-status.patch -p0 &&
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/sge-status-fallback.patch -p0 &&
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/add-condor.patch -p0 &&
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-completion.patch -p0 &&
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-qdel.patch -p0 &&
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-status.patch -p0 &&
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/shared-fs.patch -p0 &&
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/shared-dir.patch -p0 &&
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/config-paths.patch -p0 &&
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/escape-args.patch -p0 &&
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/condor-history.patch -p0 &&
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/submit-l.patch -p0 &&
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/proxy-init.patch -p0 &&
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/ld-library-path.patch -p0 &&
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/run-dir.patch -p0 &&
+						PATCH_COMMAND patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/iclassad.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/classad.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/mtrace.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/registry.patch -p0 && 
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/dl.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/add-sge.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/sge-status.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/sge-status-fallback.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/sge_helper.error-exit.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/add-condor.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-completion.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-qdel.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-status.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/shared-fs.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/shared-dir.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/config-paths.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/escape-args.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/condor-history.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/condor-status.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/submit-l.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/proxy-tools.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/ld-library-path.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/run-dir.patch -p0 &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/classads.m4 org.glite.ce.blahp/project &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/${GLOBUS_M4_FILE} org.glite.ce.blahp/project/globus.m4 &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/glite.m4 org.glite.ce.blahp/project.&&
-							patch -i ${CMAKE_CURRENT_SOURCE_DIR}/name-change.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/name-change.patch -p0 &&
 							mv org.glite.ce.blahp/config/blah.config.template org.glite.ce.blahp/config/batch_gahp.config.template
 						#--Configure step ----------
 						CONFIGURE_COMMAND cd org.glite.ce.blahp &&
-                                                        export CPPFLAGS=-I${BOOST_INCLUDE} &&
+                                                        export CPPFLAGS=${CPP11_FLAG} &&
 							./bootstrap && ./configure --with-classads-prefix=${CLASSADS_INSTALL_LOC}
 							${OPENSSL_FLAG}
 							--with-globus-prefix=${GLOBUS_INSTALL_LOC}

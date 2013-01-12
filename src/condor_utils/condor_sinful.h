@@ -69,6 +69,9 @@ class Sinful {
 	// id of SharedPortEndpoint (i.e. basename of named socket)
 	char const *getSharedPortID() const;
 	void setSharedPortID(char const *contact);
+	// hostname alias
+	char const *getAlias() const;
+	void setAlias(char const *alias);
 	// is the noUDP flag set in this address?
 	bool noUDP() const;
 	void setNoUDP(bool flag);
@@ -91,6 +94,7 @@ class Sinful {
 	std::string m_sinful; // the sinful string "<host:port?params>"
 	std::string m_host;
 	std::string m_port;
+	std::string m_alias;
 	std::map<std::string,std::string> m_params; // key value pairs from params
 	bool m_valid;
 

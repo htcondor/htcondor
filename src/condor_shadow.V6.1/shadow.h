@@ -110,6 +110,7 @@ class UniShadow : public BaseShadow
 
 	float bytesSent();
 	float bytesReceived();
+	void getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status);
 
 	int updateFromStarter(int command, Stream *s);
 	int updateFromStarterClassAd(ClassAd* update_ad);

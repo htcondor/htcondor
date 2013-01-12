@@ -27,11 +27,14 @@ if (WITH_LIBCGROUP)
 
 	if ( NOT PROPER )
 
+		if (NOT HAVE_LIBPAM)
+			message(FATAL_ERROR "Can't find libpam, needed to build libcgroup external!")
+		endif()
+
 		condor_pre_external( LIBCGROUP libcgroup-0.37 "lib;include" "lib/libcgroup.a")
 
 		ExternalProject_Add( libcgroup
 				    #-- Download Step ----------
-				    DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${LIBCGROUP_VER}.tar.bz2 ${CMD_TERM}
 				    DOWNLOAD_DIR ${LIBCGROUP_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${LIBCGROUP_VER}.tar.bz2
 				    #--Configure step ----------

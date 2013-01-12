@@ -289,7 +289,13 @@ class RemoteResource : public Service {
 		/// The number of bytes received from this resource.
 	float bytesReceived();
 
+	void getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status);
+
 	FileTransfer filetrans;
+	FileTransferStatus m_upload_xfer_status;
+	FileTransferStatus m_download_xfer_status;
+
+	void initFileTransfer();
 
 	virtual void resourceExit( int reason_for_exit, int exit_status );
 
@@ -531,6 +537,7 @@ private:
 	int attemptShutdownTimeout();
 	void attemptShutdown();
 	void abortFileTransfer();
+	int transferStatusUpdateCallback(FileTransfer *transobject);
 };
 
 
