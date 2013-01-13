@@ -90,6 +90,7 @@ if(WINDOWS)
     set_property( TARGET utils_genparams PROPERTY FOLDER "libraries" )
 else()
     condor_selective_glob("dprintf_syslog*" ApiSrcs)
+    add_subdirectory(tests)
 endif()
 
 condor_static_lib( condorapi "${ApiSrcs}" )
