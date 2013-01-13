@@ -39,7 +39,7 @@ create_bridge(const char * bridge_name)
 		return errno;
 	}
 	close(fd);
-	return 0;
+	return errno;
 }
 
 int
@@ -66,7 +66,26 @@ add_interface_to_bridge(const char * bridge_name, const char * dev)
 		return errno;
 	}
 	close(fd);
-	return 0;
+	return errno;
+}
+
+int
+set_bridge_fd(const char * bridge_name, unsigned delay)
+{
+	struct ifreq ifr;
+	strncpy(ifr.ifr_name, bridge_name, IFNAMSIZ);
+	int ifindex = if_nametoindex(dev);
+	if (ifindex == 0) {
+		return ENODEV;
+	}
+
+	int fd;
+	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+		dprintf(D_FULLDEBUG, "Unable to create socket for bridge manipulation (errno=%d, %s).\n", errno, strerror(errno));
+		return errno;
+	}
+	BRCTL_SET_BRIDGE_FORWARD_DELAY
+	// TODO: What's the proper ioctl?
 }
 
 static int
@@ -243,8 +262,9 @@ wait_for_status(int fd, const char *link)
 		}
 		//dprintf(D_FULLDEBUG, "Finished parsing netlink message from kernel.\n");
 	}
-	dprintf(D_ALWAYS, "Error from netlink socket (errno=%d, %s).\n", errno, strerror(errno));
-	return -1;
+	if (errno != EAGAIN)
+		dprintf(D_ALWAYS, "Error from netlink socket (errno=%d, %s).\n", errno, strerror(errno));
+	return -errno;
 }
 
 int
@@ -263,13 +283,22 @@ wait_for_bridge_status(int fd, const char *link)
 		goto cleanup;
 	}
 
+	struct timeval timeout;
+	timeout.tv_sec = 1;
+	timeout.tv_usec = 0;
+	if (-1 == setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout))) {
+		dprintf(D_ALWAYS, "Unable to set socket receive timeout.\n");
+		goto cleanup;
+	}
+	// TODO: get forwarding delay from kernel and only wait for 2x that value
+
 	// Recieve messages from the kernel
 	while (retval != BR_STATE_FORWARDING) {
-		if ((retval = wait_for_status(fd, link)) < 0) {
+		if (((retval = wait_for_status(fd, link)) < 0) && (retval != -EAGAIN)) {
 			dprintf(D_ALWAYS, "Failed to get status from kernel.\n");
 			goto cleanup;
 		}
-		//dprintf(D_FULLDEBUG, "Link %s changed status to %s.\n", link, port_states[retval]);
+		dprintf(D_FULLDEBUG, "Link %s current status is %s.\n", link, port_states[retval]);
 	}
 	retval = 0;
 

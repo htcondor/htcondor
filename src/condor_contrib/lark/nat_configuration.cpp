@@ -158,7 +158,7 @@ NATConfiguration::SetupPostForkChild()
 
 	NetworkNamespaceManager & manager = NetworkNamespaceManager::GetManager();
 	int sock = manager.GetNetlinkSocket();
-	if ((err = add_default_route(sock, external_gw.c_str()))) {
+	if ((err = add_default_route(sock, external_gw.c_str(), ""))) {
 		dprintf(D_ALWAYS, "Unable to add default route via %s; %d\n", external_gw.c_str(), err);
 		return err;
 	}

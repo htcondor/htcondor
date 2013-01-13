@@ -102,7 +102,7 @@ int add_local_route(int sock, const char * gw, const char * eth, int dst_len);
  * - gw: IPv4 address of a gate
  * - eth: name of network device
  */
-int add_default_route(int sock, const char * gw);
+int add_default_route(int sock, const char * gw, const char * eth);
 
 /*
  * Send an ethernet device from the current network namespace to the one
