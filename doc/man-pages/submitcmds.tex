@@ -1991,10 +1991,10 @@ should be associated with the job.
 
 \index{submit commands!ec2\_spot\_price}
 \label{condor-submit-ec2-spot-price}
-\item[ec2\_spot\_price = <bid>]
+\item[ec2\_spot\_price = $<$bid$>$]
 For grid type \SubmitCmd{ec2} jobs, 
-specifies the Spot Instance bid, which is the most you're willing to pay
-per hour to run this job.
+specifies the spot instance bid, which is the most that the job submitter
+is willing to pay per hour to run this job.
 
 %%%%%%%%%%%%%%%%%%%
 %% ec2_tag_names
@@ -2937,32 +2937,6 @@ will instead use this string.
 A comma-separated list of attributes from the job ClassAd. These
 attributes and their values will be included in the e-mail notification
 of job completion.
-
-%%%%%%%%%%%%%%%%%%%
-%% group
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!group}
-\label{condor-submit-group}
-\item[group = $<$accounting-group-name$>$] 
-Causes jobs to negotiate under the given accounting group.  This value
-is recorded on the job ad as \AdAttr{Group}.
-See section~\ref{sec:group-accounting} for more information about 
-accounting groups.
-
-%%%%%%%%%%%%%%%%%%%
-%% group_user
-%%%%%%%%%%%%%%%%%%%
-
-\index{submit commands!group\_user}
-\label{condor-submit-group-user}
-\item[group\_user = $<$accounting-group-user-name$>$] 
-Sets the user name associated with the accounting group name for 
-resource usage accounting purposes.  If not set, 
-defaults to the value of \AdAttr{Owner}.  The group user value is
-recorded on the job ad as \AdAttr{GroupUser}.
-If an accounting group has not been set via the group command, 
-this command is ignored.
 
 %%%%%%%%%%%%%%%%%%%
 %% image_size

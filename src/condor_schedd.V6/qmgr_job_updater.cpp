@@ -133,6 +133,9 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_BLOCK_WRITE_KBYTES );
 	common_job_queue_attrs->insert( ATTR_BLOCK_READ_KBYTES );
 	common_job_queue_attrs->insert( ATTR_JOB_VM_CPU_UTILIZATION );
+	common_job_queue_attrs->insert( ATTR_TRANSFERRING_INPUT );
+	common_job_queue_attrs->insert( ATTR_TRANSFERRING_OUTPUT );
+	common_job_queue_attrs->insert( ATTR_TRANSFER_QUEUED );
 
 	hold_job_queue_attrs = new StringList();
 	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );
@@ -210,7 +213,6 @@ QmgrJobUpdater::resetUpdateTimer( void )
 {
 	if ( q_update_tid < 0 ) {
 		startUpdateTimer();
-		return;
 	}
 
 	int q_interval = param_integer( "SHADOW_QUEUE_UPDATE_INTERVAL", 15*60 );
@@ -315,6 +317,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 	case U_X509:
 		job_queue_attrs = x509_job_queue_attrs;
 		break;
+	case U_STATUS:
 	case U_PERIODIC:
 			// No special attributes needed...
 		break;
@@ -498,6 +501,10 @@ QmgrJobUpdater::watchAttribute( const char* attr, update_t type  )
 		break;
 	case U_X509:
 		job_queue_attrs = x509_job_queue_attrs;
+		break;
+	case U_STATUS:
+		EXCEPT( "Programmer error: QmgrJobUpdater::watchAttribute() called "
+				"with U_STATUS" );
 		break;
 	case U_PERIODIC:
 		EXCEPT( "Programmer error: QmgrJobUpdater::watchAttribute() called "

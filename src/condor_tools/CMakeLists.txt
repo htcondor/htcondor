@@ -65,6 +65,13 @@ if (NOT WINDOWS)
 		# This is wasteful, since we've already built three of these source
 		# files, but it's a lot simpler than figuring out how to link the
 		# object files.
+		set( _orig_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES} )
+		set( CMAKE_FIND_LIBRARY_SUFFIXES .a )
+		find_library( HAVE_STATIC_LIBDL dl )
+		set( CMAKE_FIND_LIBRARY_SUFFIXES ${_orig_CMAKE_FIND_LIBRARY_SUFFIXES} )
+		if (NOT HAVE_STATIC_LIBDL)
+			message( FATAL_ERROR "Can't find libdl.a, needed for condor_ckpt_probe" )
+		endif()
 		add_executable( condor_ckpt_probe probe_process.cpp ../condor_ckpt/maps.c ../condor_utils/condor_pers.cpp ../safefile/safe_open.cpp )
         set_property( TARGET condor_ckpt_probe PROPERTY COMPILE_FLAGS -static )
         set_property( TARGET condor_ckpt_probe PROPERTY LINK_FLAGS -static )

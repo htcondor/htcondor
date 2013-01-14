@@ -30,7 +30,7 @@ if (WITH_CURL)
 
 		if (WINDOWS)
 			set (CURL_PATCH pushd "lib" ${CMD_TERM}
-						patch --binary -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/Makefile.vc9.patch ${CMD_TERM}
+						patch -N --binary -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/Makefile.vc9.patch ${CMD_TERM}
 						popd)
 			set (CURL_CONFIGURE echo "Nothing to configure")
 			set (CURL_MAKE pushd "lib" ${CMD_TERM}
@@ -54,7 +54,6 @@ if (WITH_CURL)
 		ExternalProject_Add(curl
 							DEPENDS ${CURL_DEPENDS}
 							#-- Download Step ----------
-							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/curl-7.19.6.tar.gz ${CMD_TERM}
 							DOWNLOAD_DIR ${CURL_STAGE}/dl
 							URL http://parrot.cs.wisc.edu/externals/curl-7.19.6.tar.gz
 							#--Patch Step ----------

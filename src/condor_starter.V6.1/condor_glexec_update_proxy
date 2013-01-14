@@ -11,6 +11,9 @@ NEW_PROXY="$2"
 PROXY="$3"
 SANDBOX="$4"
 
+# NOTE: we do not handle glexec retries here because failure of this
+# operation is handled by the shadow.
+
 if [ $GLEXEC = - ]
 then
 	mv -f "$NEW_PROXY" "$SANDBOX/$PROXY"

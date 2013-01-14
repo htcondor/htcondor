@@ -125,7 +125,7 @@ class ExprTree
 		/**
 		 * Return a ptr to the raw exprtree below the interface
 		 */ 
-		virtual const ExprTree* self();
+		virtual const ExprTree* self() const;
 
 		/// A debugging method; send expression to stdout
 		void Puke( ) const;

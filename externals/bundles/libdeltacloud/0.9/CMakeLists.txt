@@ -24,11 +24,14 @@ if (WITH_LIBDELTACLOUD)
 
 	if ( NOT PROPER )
 
+		if (NOT CURL_FOUND)
+			message(FATAL_ERROR "Can't find libcurl, needed to build libdeltacloud external!")
+		endif()
+
 		condor_pre_external( LIBDELTACLOUD libdeltacloud-0.9 "lib;include" "lib/libdeltacloud.a")
 
 		ExternalProject_Add(libdeltacloud
 				#-- Download Step ----------
-				DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${LIBDELTACLOUD_VER}.tar.gz ${CMD_TERM}
 				DOWNLOAD_DIR ${LIBDELTACLOUD_STAGE}/dl
 				URL http://parrot.cs.wisc.edu/externals/${LIBDELTACLOUD_VER}.tar.gz
 				#--Configure step ----------

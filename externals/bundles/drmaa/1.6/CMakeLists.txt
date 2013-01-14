@@ -51,7 +51,6 @@ if ( WITH_DRMAA )
 
 	ExternalProject_Add(drmaa
 						#-- Download Step ----------
-						DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${DRMAA_VER}.tar.gz ${CMD_TERM}
 						DOWNLOAD_DIR ${DRMAA_STAGE}/dl
 						URL http://parrot.cs.wisc.edu/externals/${DRMAA_VER}.tar.gz
 						#--Configure step ----------

@@ -392,23 +392,24 @@ Defines the key pair associated with the EC2 instance.
 Used for grid type ec2 jobs;
 a string taken from the definition of the submit description file command
 \SubmitCmd{ec2\_spot\_price}.
-Defines the maximum amount (per hour) you're willing to pay to run this job.
+Defines the maximum amount per hour a job submitter is willing to 
+pay to run this job.
 
 %%% ClassAd attribute: EC2SpotRequestID
 \index{ClassAd job attribute!EC2SpotRequestID}
 \index{EC2SpotRequestID!job ClassAd attribute}
 \item[\AdAttr{EC2SpotRequestID}:] 
 Used for grid type ec2 jobs;
-identifies the Spot Request HTCondor made on behalf of this job.
+identifies the spot request HTCondor made on behalf of this job.
 
 %%% ClassAd attribute: EC2StatusReasonCode
 \index{ClassAd job attribute!EC2StatusReasonCode}
 \index{EC2StatusReasonCode!job ClassAd attribute}
 \item[\AdAttr{EC2StatusReasonCode}:] 
 Used for grid type ec2 jobs;
-reports the reason for most recent EC2-level state transition.  Can be used
-to determine (among other things) if a Spot Request was terminated because
-the spot price rose.
+reports the reason for the most recent EC2-level state transition.
+Can be used to determine if a spot request was terminated
+due to a rise in the spot price.
 
 %%% ClassAd attribute: EC2TagNames
 \index{ClassAd job attribute!EC2TagNames}
@@ -551,22 +552,6 @@ reported by the remote job management system.
 of the the submit description file command \SubmitCmd{grid\_resource}.
 It specifies the target grid type, plus additional parameters
 specific to the grid type.
-
-%%% ClassAd attribute: Group
-\index{ClassAd job attribute!Group}
-\index{Group!job ClassAd attribute}
-\item[\AdAttr{Group}:] The accounting group name, as set in the
-\Condor{submit} file via the group command.  This attribute
-is only present if an accounting group was requested by the
-submission. See section~\ref{sec:group-accounting} for more 
-information about accounting groups.
-
-%%% ClassAd attribute: GroupUser
-\index{ClassAd job attribute!GroupUser}
-\index{GroupUser!job ClassAd attribute}
-\item[\AdAttr{GroupUser}:] The user name associated with the
-accounting group.  This attribute is only present if an
-accounting group was requested by the submission.
 
 %%% ClassAd attribute: HoldKillSig
 \index{ClassAd job attribute!HoldKillSig}
@@ -1473,6 +1458,38 @@ is larger than the limit, the job will be placed on hold with hold
 code 33.  The output will be transferred up to the point when the
 limit is hit, so some files may be fully transferred, some partially,
 and some not at all.
+
+%%% ClassAd attribute: TransferringInput
+\index{ClassAd job attribute!TransferringInput}
+\index{TransferringInput!job ClassAd attribute}
+\item[\AdAttr{TransferringInput}:]
+
+A boolean value that indicates whether the job is currently
+transferring input files.  The value is \Expr{Undefined} if the job is
+not scheduled to run or has not yet attempted to start transferring
+input.  When this value is \Expr{True}, to see whether the transfer is
+active or queued, check \AdAttr{TransferQueued}.
+
+%%% ClassAd attribute: TransferringOutput
+\index{ClassAd job attribute!TransferringOutput}
+\index{TransferringOutput!job ClassAd attribute}
+\item[\AdAttr{TransferringOutput}:]
+
+A boolean value that indicates whether the job is currently
+transferring output files.  The value is \Expr{Undefined} if the job
+is not scheduled to run or has not yet attempted to start transferring
+output.  When this value is \Expr{True}, to see whether the transfer
+is active or queued, check \AdAttr{TransferQueued}.
+
+%%% ClassAd attribute: TransferQueued
+\index{ClassAd job attribute!TransferQueued}
+\index{TransferQueued!job ClassAd attribute}
+\item[\AdAttr{TransferQueued}:]
+
+A boolean value that indicates whether the job is currently waiting to
+transfer files because of limits placed by
+\Macro{MAX\_CONCURRENT\_DOWNLOADS} or
+\Macro{MAX\_CONCURRENT\_UPLOADS}.
 
 %%% ClassAd attribute: UserLog
 \index{ClassAd job attribute!UserLog}

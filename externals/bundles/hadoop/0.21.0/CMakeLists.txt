@@ -44,10 +44,9 @@ if ( NOT PROPER )
 		# a couple of odd things, this macro requires a configure and build command.  
 		ExternalProject_Add(hadoop
 					#-- Download Step ----------
-					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${HADOOP_VER}.tar.gz ${CMD_TERM}
 					DOWNLOAD_DIR ${HADOOP_STAGE}/dl
 					URL http://parrot.cs.wisc.edu/externals/${HADOOP_VER}.tar.gz
-					# PATCH_COMMAND patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/hadoop-0.20.0-patch
+					# PATCH_COMMAND patch -N -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/hadoop-0.20.0-patch
 					CONFIGURE_COMMAND echo "nothing to configure"
 					BUILD_COMMAND echo "nothing to build"
 					BUILD_IN_SOURCE 1

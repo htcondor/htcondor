@@ -36,13 +36,30 @@ specified using the new configuration variables
 commands by the same names.
 \Ticket{3333}
 
+\item The \Prog{batch\_gahp} no longer relies on programs
+\Prog{grid-proxy-info} and \Prog{grid-proxy-init} from The Globus
+Toolkit to handle the X.509 proxies of jobs.
+\Ticket{3431}
+
+\item When the job's executable is transferred, always set the execute
+bits on the copy.
+\Ticket{3028}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable \Macro{HOST\_ALIAS} specifies the
+  hostname that clients authenticating this daemon with GSI should
+  expect the daemon's certificate to match.  The alias is advertised
+  to the \Condor{collector} as part of the address of the daemon.
+  When this is not set, clients validate the daemon's certificate
+  hostname by matching it against DNS A records for the host they
+  are connected to.  See \Macro{GSI\_SKIP\_HOST\_CHECK} for ways
+  to disable this validation step.
+\Ticket{1605}
 
 \end{itemize}
 
@@ -88,15 +105,20 @@ commands by the same names.
 
 \begin{itemize}
 
-\item When NEGOTIATOR\_CONSIDER\_PREEMPTION is false, the \Condor{negotiator}
-now fetches machine ads more quickly from the collector by skipping most
-attributes of the busy machines.  This can make negotiation much faster in
+\item When the new configuration variable \Macro{ASSIGN\_CPU\_AFFINITY}
+is set to \Expr{True}, 
+the \Condor{startd} will automatically set the CPU affinity
+mask jobs run with, so that a multi-threaded job will not use
+more cores than the number it requests.
+\Ticket{3348}
+
+\item When configuration variable \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION}
+is \Expr{False}, the \Condor{negotiator}
+now fetches machine ClassAds more quickly from the \Condor{collector}
+ by skipping most attributes of the busy machines.  
+This can make negotiation much faster in
 a very large pool of mostly claimed machines.
 \Ticket{3366}
-
-\item Exposed the quantization level for windowed statistics to
-configuration with the parameter \Macro{STATISTICS\_WINDOW\_QUANTUM}.
-\Ticket{3288}
 
 \item \emph{This item is tentative, and must be reviewed or updated
 before release of 7.9.3.}
@@ -121,13 +143,14 @@ by configuring \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 \Ticket{3333}
 
 \item \Condor{dagman} will now try twice to write a POST script terminate
-event, rather than trying once and exiting. \Condor{dagman} exits, writing
-a rescue DAG, if it is unable to write the event.
+event, rather than trying once and exiting. 
+If it is unable to write the event, \Condor{dagman} exits, 
+writing a Rescue DAG. 
 \Ticket{965}
 
 \item The \Condor{gridmanager} now cleans up temporary files and directories
-that are sometimes left by the batch\_gahp when executing a grid-type
-\SubmitCmd{batch} job.
+that are sometimes left by the \Prog{batch\_gahp} when executing a grid
+universe job of grid type \SubmitCmd{batch}.
 \Ticket{3276}
 
 \item Added counts of nodes in various states to the \Condor{dagman}
@@ -135,13 +158,24 @@ node status file.  Refer to section~\ref{sec:DAG-node-status} for
 more information.
 \Ticket{2075}
 
+\item When submitting jobs to a remote batch system (for example, BOSCO),
+file transfer no longer requires a network connection from the remote machine
+back to the local one.
+\Ticket{3293}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
 
-\item None.
+\item The new expert-only configuration variable 
+\Macro{STATISTICS\_WINDOW\_QUANTUM}
+allows administrators to set the time interval, 
+known as a quantum, that divides a window over which statistics are
+kept into smaller pieces.  The window advances one quantum at a time. 
+\Ticket{3288}
+
 
 \end{itemize}
 
@@ -158,14 +192,35 @@ minimum time defined by the configuration variable
 \Code{XML::Simple} when submitting jobs to SGE.
 \Ticket{3350}
 
-\item The batch\_gahp now properly handles job X.509 proxies that aren't
-in the old proxy format.
+\item The \Prog{batch\_gahp} now properly handles job X.509 proxies that 
+are not in the old proxy format.
 \Ticket{3362}
 
-\item On 32-bit platforms a \Macro{STARTER\_RLIMIT\_AS} value larger than 4096 could
-cause jobs to abort on startup.  Values larger than 2047 have no real meaning on 32-bit
-platforms, so values larger than 2047 are treated as no limit on 32-bit platforms.
+\item On 32-bit platforms,
+setting configuration variable \Macro{STARTER\_RLIMIT\_AS} to a value 
+larger than 4096 could cause jobs to abort on start up.
+Since values larger than 2047 have no real meaning on 32-bit platforms,
+the fix treats values larger than 2047 as no limit on 32-bit platforms.
 \Ticket{3309}
+
+\item Fixed a bug that can cause proxy refresh to fail for pbs, lsf,
+and sge grid jobs.
+\Ticket{3383}
+
+\item When doing remote pbs, lsf, or sge grid job submissions, the
+\Condor{gridmanager} now ensures that no unusual characters are used in
+the name of the job sandbox directory it creates.
+\Ticket{3294}
+
+\item When a GAHP server fails to start, the \Condor{gridmanager} now
+puts the affected jobs on hold.
+\Ticket{3301}
+
+\item Environment variable \Env{GLOBUS\_LOCATION} is now set for
+\Prog{batch\_gahp},
+allowing it to find proxy management that it needs for jobs that have an
+X.509 proxy.
+\Ticket{3015}
 
 \end{itemize}
 
@@ -181,7 +236,9 @@ platforms, so values larger than 2047 are treated as no limit on 32-bit platform
 
 \begin{itemize}
 
-\item None.
+\item Initial documentation for EC2 spot instances can be found
+in section~\ref{sec:spot-instances}.
+\Ticket{3209}
 
 \end{itemize}
 

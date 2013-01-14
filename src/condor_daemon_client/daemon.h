@@ -527,6 +527,7 @@ protected:
 	char* _hostname;
 	char* _full_hostname;
 	char* _addr;
+	char* _alias;
 	bool m_has_udp_command_port;
 	char* _version;
 	char* _platform;
@@ -700,6 +701,7 @@ protected:
 	char* New_platform( char* );
 	void New_addr( char* );
 	char* New_pool( char* );
+	const char* New_alias( char* );
 
 		/**
 		   Set a string so we know what command we're inside for use

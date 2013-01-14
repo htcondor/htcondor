@@ -84,7 +84,7 @@ def print_series(start,end):
         print str(rec).ljust(30), str(len(total)).ljust(8), str(len(used)).ljust(8), str(len(unused)).ljust(8), \
                 str(len(owner)).ljust(8), "%.2f" % round(eff,2)
 
-parser = OptionParser(description='Query Condor ODS for utilization efficency')
+parser = OptionParser(description='Query HTCondor ODS for utilization efficency')
 parser.add_option('-v','--verbose', action="store_true",default=False, help='enable logging')
 parser.add_option('-s','--server', action="store", dest='server',
                     default='localhost',

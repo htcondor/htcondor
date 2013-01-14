@@ -94,7 +94,7 @@ protected:
 	 */
 	virtual ExprTree *Copy( ) const;
 	
-	virtual const ExprTree* self();
+	virtual const ExprTree* self() const;
 	
 	virtual void _SetParentScope( const ClassAd* );
 	virtual bool _Evaluate( EvalState& st, Value& v ) const;

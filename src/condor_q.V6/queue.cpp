@@ -128,25 +128,25 @@ extern 	"C" int SetSyscalls(int val){return val;}
 extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
 static  void processCommandLineArguments(int, char *[]);
 
-static  bool process_buffer_line( ClassAd * );
+//static  bool process_buffer_line_old(void*, ClassAd *);
+static  bool process_job_and_render_to_dag_map(void*, ClassAd *);
+static  bool process_and_print_job(void*, ClassAd *);
+typedef bool (* buffer_line_processor)(void*, ClassAd*);
 
 static 	void short_header (void);
 static 	void usage (const char *);
-static 	void io_display (ClassAd *);
 static 	char * buffer_io_display (ClassAd *);
-static 	void displayJobShort (ClassAd *);
 static 	char * bufferJobShort (ClassAd *);
 
-/* if useDB is false, then v1 =scheddAddress, v2=scheddName, v3=scheddMachine, v4=scheddVersion;
-   if useDB is true,  then v1 =quill_name,  v2=db_ipAddr,   v3=db_name, v4=db_password
-*/
-static	bool show_queue (const char* v1, const char* v2, const char* v3, const char* v4, bool useDB);
-static	bool show_queue_buffered (const char* v1, const char* v2, const char* v3, const char* v4, bool useDB);
+// functions to fetch job ads and print them out
+//
+static bool show_file_queue(const char* jobads, const char* userlog);
+static bool show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, bool useFastPath);
+#ifdef HAVE_EXT_POSTGRESQL
+static bool show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_name, const char* query_password);
+#endif
+
 static void init_output_mask();
-
-
-/* a type used to point to one of the above two functions */
-typedef bool (*show_queue_fp)(const char* v1, const char* v2, const char* v3, const char* v4, bool useDB);
 
 static bool read_classad_file(const char *filename, ClassAdList &classads, ClassAdFileParseHelper* pparse_help, const char * constr);
 static int read_userprio_file(const char *filename, ExtArray<PrioEntry> & prios);
@@ -181,7 +181,7 @@ static unsigned int direct = DIRECT_ALL;
 static 	int dash_long = 0, summarize = 1, global = 0, show_io = 0, dag = 0, show_held = 0;
 static  int use_xml = 0;
 static  bool widescreen = false;
-static  bool unbuffered = false;
+//static  int  use_old_code = true;
 static  bool expert = false;
 static  bool verbose = false; // note: this is !!NOT the same as -long !!!
 
@@ -190,6 +190,8 @@ static 	int malformed, running, idle, held, suspended, completed, removed;
 static  char *jobads_file = NULL;
 static  char *machineads_file = NULL;
 static  char *userprios_file = NULL;
+static  bool analyze_with_userprio = false;
+//static  bool analyze_dslots = false;
 
 static  char *userlog_file = NULL;
 
@@ -197,19 +199,15 @@ static  char *userlog_file = NULL;
 // a list and not set since we expect a very shallow depth
 static std::vector<CondorID> constrID;
 
+typedef std::map<int, std::vector<ClassAd *> > JobClusterMap;
+
 static	CondorQ 	Q;
 static	QueryResult result;
-
-#ifdef HAVE_EXT_POSTGRESQL
-static  QueryResult result2;
-#endif
 
 static	CondorQuery	scheddQuery(SCHEDD_AD);
 static	CondorQuery submittorQuery(SUBMITTOR_AD);
 
 static	ClassAdList	scheddList;
-
-static  Daemon *g_cur_schedd_for_process_buffer_line = NULL;
 
 static  ClassAdAnalyzer analyzer;
 
@@ -292,12 +290,31 @@ dag_cluster_map_type dag_cluster_map;
 clusterProcString::clusterProcString() : dagman_cluster_id(-1), dagman_proc_id(-1),
 	cluster(-1), proc(-1), string(0), parent(0) {}
 
+/* counters for job matchmaking analysis */
+typedef struct {
+	int fReqConstraint;   // # of machines that don't match job Requirements
+	int fOffConstraint;   // # of machines that match Job requirements, but refuse the job because of their own Requirements
+	int fPreemptPrioCond; // match but are serving users with a better priority in the pool
+	int fRankCond;        // match but reject the job for unknown reasons
+	int fPreemptReqTest;  // match but will not currently preempt their existing job
+	int fOffline;         // match but are currently offline
+	int available;        // are available to run your job
+	int totalMachines;
+	int machinesRunningJobs; // number of machines serving other users
+	int machinesRunningUsersJobs; 
+
+	void clear() { memset((void*)this, 0, sizeof(*this)); }
+} anaCounters;
+
+
 static	bool		usingPrintMask = false;
 static 	bool		customFormat = false;
 static  bool		cputime = false;
 static	bool		current_run = false;
-static 	bool		globus = false;
+static 	bool		dash_globus = false;
 static	bool		dash_grid = false;
+static	bool		dash_run = false;
+static	bool		dash_goodput = false;
 static  const char		*JOB_TIME = "RUN_TIME";
 static	bool		querySchedds 	= false;
 static	bool		querySubmittors = false;
@@ -316,25 +333,35 @@ static CollectorList * Collectors = NULL;
 static  int			findSubmittor( const char * );
 static	void 		setupAnalysis();
 static 	int			fetchSubmittorPriosFromNegotiator(ExtArray<PrioEntry> & prios);
-static	void		doJobRunAnalysis( ClassAd*, Daemon* );
-static	const char *doJobRunAnalysisToBuffer( ClassAd*, Daemon* );
-static	void		doSlotRunAnalysis( ClassAd*, ClassAdList & jobs, Daemon*, int console_width);
-static	const char *doSlotRunAnalysisToBuffer( ClassAd*, ClassAdList & jobs, Daemon*, int console_width);
+static	void		doJobRunAnalysis(ClassAd*, Daemon*, int details);
+static	const char *doJobRunAnalysisToBuffer(ClassAd*, anaCounters & ac, int details, bool noPrio, bool showMachines);
+static	void		doSlotRunAnalysis( ClassAd*, JobClusterMap & clusters, Daemon*, int console_width);
+static	const char *doSlotRunAnalysisToBuffer( ClassAd*, JobClusterMap & clusters, Daemon*, int console_width);
+static	void		buildJobClusterMap(ClassAdList & jobs, const char * attr, JobClusterMap & clusters);
 static	int			better_analyze = false;
 static	bool		reverse_analyze = false;
-static	int			analyze_detail_level = 0;
-static	bool		run = false;
-static	bool		goodput = false;
-static	char		*fixSubmittorName( char*, int );
+static	bool		summarize_anal = false;
+static  bool		summarize_with_owner = true;
+static  int			cOwnersOnCmdline = 0;
+static	const char	*fixSubmittorName( const char*, int );
 static	ClassAdList startdAds;
 static	ExprTree	*stdRankCondition;
 static	ExprTree	*preemptRankCondition;
 static	ExprTree	*preemptPrioCondition;
 static	ExprTree	*preemptionReq;
 static  ExtArray<PrioEntry> prioTable;
-#ifndef WIN32
-#endif
-	
+
+enum {
+	detail_analyze_each_sub_expr = 0x01, // analyze each sub expression, not just the top level ones.
+	detail_smart_unparse_expr    = 0x02, // show unparsed expressions at analyze step when needed
+	detail_always_unparse_expr   = 0x04, // always show unparsed expressions at each analyze step
+	detail_always_analyze_req    = 0x10, // always analyze requirements, (better analize does this)
+	detail_dont_show_job_attrs   = 0x20, // suppress display of job attributes in verbose analyze
+	detail_better                = 0x80, // -better rather than  -analyze was specified.
+	detail_diagnostic            = 0x100,// show steps of expression analysis
+};
+static	int			analyze_detail_level = 0; // one or more of detail_xxx enum values above.
+
 const int SHORT_BUFFER_SIZE = 8192;
 const int LONG_BUFFER_SIZE = 16384;	
 char return_buff[LONG_BUFFER_SIZE * 100];
@@ -535,11 +562,10 @@ int main (int argc, char **argv)
 	bool		first;
 	char		*scheddName=NULL;
 	char		scheddMachine[64];
-	MyString    scheddVersion;
+	bool        useFastScheddQuery = false;
 	char		*tmp;
 	bool        useDB; /* Is there a database to query for a schedd */
 	int         retval = 0;
-	show_queue_fp sqfp;
 
 	Collectors = NULL;
 
@@ -577,7 +603,7 @@ int main (int argc, char **argv)
 	if( better_analyze ) {
 		setupAnalysis();
 		if ((jobads_file != NULL || userlog_file != NULL)) {
-			retval = show_queue(scheddAddr, scheddName, "Unknown", "Unknown", FALSE);
+			retval = show_file_queue(jobads_file, userlog_file);
  			freeConnectionStrings();
 			exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 		}
@@ -603,14 +629,12 @@ int main (int argc, char **argv)
 			} else {
 				sprintf( scheddMachine, "Unknown" );
 			}
-			if( (tmp = schedd.version()) ) {
-				scheddVersion = tmp;
-			}
-			else {
-				scheddVersion = "";
+			if (schedd.version()) {
+				CondorVersionInfo v(schedd.version());
+				useFastScheddQuery = v.built_since_version(6,9,3);
 			}
 			
-			if ( directDBquery ) {				
+			if ( directDBquery ) {
 				/* perform direct DB query if indicated and exit */
 #ifdef HAVE_EXT_POSTGRESQL
 
@@ -628,16 +652,6 @@ int main (int argc, char **argv)
 
 			/* .. not a direct db query, so just happily continue ... */
 
-           	// When we use the new analysis code, it can be really
-           	// slow. Slow enough that show_queue_buffered()'s connection
-           	// to the schedd time's out and the user gets nothing
-           	// useful printed out. Therefore, we use show_queue,
-           	// which fetches all of the ads, then analyzes them. 
-			if ( (unbuffered || dash_long || better_analyze || jobads_file || userlog_file) && !g_stream_results ) {
-				sqfp = show_queue;
-			} else {
-				sqfp = show_queue_buffered;
-			}
 			init_output_mask();
 			
 			/* When an installation has database parameters configured, 
@@ -658,8 +672,9 @@ int main (int argc, char **argv)
 					if (useDB) {
 
 						/* ask the database for the queue */
-
-						if ( (retval = sqfp( NULL, NULL, NULL, NULL, TRUE) ) ) {
+						retval = show_db_queue(NULL, NULL, NULL, NULL);
+						if (retval)
+						{
 							/* if the queue was retrieved, then I am done */
 							freeConnectionStrings();
 							exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
@@ -703,14 +718,12 @@ int main (int argc, char **argv)
 						strcpy(tmp_char, "Unknown");
 
 						/* query the quill daemon */
-						if ( quill.locate() &&
-					 		( (retval = 
-					 			sqfp( quill.addr(), 
-						  		(quill.name())?
-									(quill.name()):tmp_char,
-						  		(quill.fullHostname())?
-									(quill.fullHostname()):tmp_char,
-						  		NULL, FALSE) ) ) )
+						if (quill.locate() &&
+							(retval = show_schedd_queue(quill.addr(),
+								quill.name() ? quill.name() : "Unknown",
+								quill.fullHostname() ? quill.fullHostname() : "Unknown",
+								false))
+							)
 						{
 							/* if the queue was retrieved, then I am done */
 							freeConnectionStrings();
@@ -752,8 +765,7 @@ int main (int argc, char **argv)
 
 #endif /* HAVE_EXT_POSTGRESQL */
 				case DIRECT_SCHEDD:
-					retval = sqfp(scheddAddr, scheddName, scheddMachine, 
-								  scheddVersion.Value(), FALSE);
+					retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine, useFastScheddQuery);
 			
 					/* Hopefully I got the queue from the schedd... */
 					freeConnectionStrings();
@@ -828,7 +840,7 @@ int main (int argc, char **argv)
 
 	// get the list of ads from the collector
 	if( querySchedds ) { 
-		result = Collectors->query ( scheddQuery, scheddList );		
+		result = Collectors->query ( scheddQuery, scheddList );
 	} else {
 		result = Collectors->query ( submittorQuery, scheddList );
 	}
@@ -861,7 +873,7 @@ int main (int argc, char **argv)
 
 	first = true;
 	// get queue from each ScheddIpAddr in ad
-	scheddList.Open();	
+	scheddList.Open();
 	while ((ad = scheddList.Next()))
 	{
 		/* default to true for remotely queryable */
@@ -872,9 +884,10 @@ int main (int argc, char **argv)
 		freeConnectionStrings();
 		useDB = FALSE;
 		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, &scheddAddr)  &&
-				 ad->LookupString(ATTR_NAME, &scheddName)		&& 
-				ad->LookupString(ATTR_MACHINE, scheddMachine, sizeof(scheddMachine)) &&
-				 ad->LookupString(ATTR_VERSION, scheddVersion) ) ) 
+				ad->LookupString(ATTR_NAME, &scheddName) &&
+				ad->LookupString(ATTR_MACHINE, scheddMachine, sizeof(scheddMachine))
+				)
+			)
 		{
 			/* something is wrong with this schedd/quill ad, try the next one */
 			continue;
@@ -922,16 +935,6 @@ int main (int argc, char **argv)
 #endif /* HAVE_EXT_POSTGRESQL */
 		}
 
-        // When we use the new analysis code, it can be really
-        // slow. Slow enough that show_queue_buffered()'s connection
-        // to the schedd time's out and the user gets nothing
-        // useful printed out. Therefore, we use show_queue,
-        // which fetches all of the ads, then analyzes them. 
-		if ( (unbuffered || dash_long || better_analyze) && !g_stream_results ) {
-			sqfp = show_queue;
-		} else {
-			sqfp = show_queue_buffered;
-		}
 		init_output_mask();
 
 		/* When an installation has database parameters configured, it means 
@@ -945,8 +948,8 @@ int main (int argc, char **argv)
 #ifdef HAVE_EXT_POSTGRESQL
 			case DIRECT_RDBMS:
 				if (useDB) {
-					if ( (retval = sqfp(quillName, dbIpAddr, dbName, 
-										queryPassword, TRUE) ) )
+					retval = show_db_queue(quillName, dbIpAddr, dbName, queryPassword);
+					if (retval)
 					{
 						/* processed correctly, so do the next ad */
 						continue;
@@ -985,15 +988,15 @@ int main (int argc, char **argv)
 
 			case DIRECT_QUILLD:
 				if (useDB) {
-					result2 = getQuillAddrFromCollector(quillName, quillAddr);
+					QueryResult result2 = getQuillAddrFromCollector(quillName, quillAddr);
 
 					/* if quillAddr is NULL, then while the collector's 
 						schedd's ad had a quill name in it, the collector
 						didn't have a quill ad by that name. */
 
 					if((result2 == Q_OK) && quillAddr &&
-			   			(retval = sqfp(quillAddr, quillName, quillMachine, 
-									   NULL, FALSE) ) )
+					   (retval = show_schedd_queue(quillAddr, quillName, quillMachine, false))
+					   )
 					{
 						/* processed correctly, so do the next ad */
 						continue;
@@ -1049,7 +1052,13 @@ int main (int argc, char **argv)
 			case DIRECT_SCHEDD:
 				/* database not configured or could not be reached,
 					query the schedd daemon directly */
-				retval = sqfp(scheddAddr, scheddName, scheddMachine, scheddVersion.Value(), FALSE);
+				{
+				MyString scheddVersion;
+				ad->LookupString(ATTR_VERSION, scheddVersion);
+				CondorVersionInfo v(scheddVersion.Value());
+				useFastScheddQuery = v.built_since_version(6,9,3);
+				retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine, useFastScheddQuery);
+				}
 
 				break;
 
@@ -1093,10 +1102,10 @@ GetAllReferencesFromClassAdExpr(char const *expression,StringList &references)
 }
 
 static int
-parse_analyze_detail(const char * pch, int current_detail_level)
+parse_analyze_detail(const char * pch, int current_details)
 {
 	PRAGMA_REMIND("TJ: analyze_detail_level should be enum rather than integer")
-	int detail_level = 0;
+	int details = 0;
 	int flg = 0;
 	while (int ch = *pch) {
 		++pch;
@@ -1104,13 +1113,13 @@ parse_analyze_detail(const char * pch, int current_detail_level)
 			flg *= 10;
 			flg += ch - '0';
 		} else if (ch == ',' || ch == '+') {
-			detail_level |= flg;
+			details |= flg;
 			flg = 0;
 		}
 	}
-	if (0 == (detail_level | flg))
+	if (0 == (details | flg))
 		return 0;
-	return current_detail_level | detail_level | flg;
+	return current_details | details | flg;
 }
 
 static void 
@@ -1121,7 +1130,7 @@ processCommandLineArguments (int argc, char *argv[])
 	const char * pcolon;
 
 	bool custom_attributes = false;
-	attrs.initializeFromString("ClusterId\nProcId\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs\nJobDescription");
+	attrs.initializeFromString("ClusterId\nProcId\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\nRemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs\nJobDescription\nTransferringInput\nTransferringOutput");
 
 	for (i = 1; i < argc; i++)
 	{
@@ -1143,10 +1152,13 @@ processCommandLineArguments (int argc, char *argv[])
 				constrID.push_back(CondorID(cluster,-1,-1));
 				summarize = 0;
 			} 
-			else if( Q.add( CQ_OWNER, argv[i] ) != Q_OK ) {
-				// this error doesn't seem very helpful... can't we say more?
-				fprintf( stderr, "Error: Argument %d (%s)\n", i, argv[i] );
-				exit( 1 );
+			else {
+				++cOwnersOnCmdline;
+				if( Q.add( CQ_OWNER, argv[i] ) != Q_OK ) {
+					// this error doesn't seem very helpful... can't we say more?
+					fprintf( stderr, "Error: Argument %d (%s)\n", i, argv[i] );
+					exit( 1 );
+				}
 			}
 			continue;
 		}
@@ -1160,10 +1172,14 @@ processCommandLineArguments (int argc, char *argv[])
 			if (pcolon) { testing_width = atoi(++pcolon); }
 			continue;
 		}
-		//if (is_arg_prefix (arg, "unbuf", 5)) {
-		//	unbuffered = true;
-		//	continue;
-		//}
+		/*
+		if (is_arg_colon_prefix (arg, "new", &pcolon, 3)) {
+			use_old_code = false;
+			if (pcolon) { use_old_code = (pcolon[1] == '0'); }
+			fprintf(stderr, "Using %s code\n", use_old_code ? "Old" : "New");
+			continue;
+		}
+		*/
 		if (is_arg_prefix (arg, "long", 1)) {
 			dash_long = 1;
 			summarize = 0;
@@ -1545,15 +1561,28 @@ processCommandLineArguments (int argc, char *argv[])
 			|| is_arg_colon_prefix(arg, "analyze", &pcolon, 2)
 			|| is_arg_colon_prefix(arg, "analyse", &pcolon, 2)
 			) {
-			better_analyze = (arg[0] == 'b') ? 2 : true; // keep track of whether the specified analyze or better-analyze
+			better_analyze = true;
+			if (arg[0] == 'b') { // if better, default to higher verbosity output.
+				analyze_detail_level |= detail_better | detail_analyze_each_sub_expr | detail_always_analyze_req;
+			}
 			if (pcolon) { 
-				const char * pc;
-				if (is_arg_colon_prefix(pcolon+1, "reverse", &pc, 1)) {
-					reverse_analyze = true;
-					pcolon = pc;
-				}
-				if (pcolon) {
-					analyze_detail_level = parse_analyze_detail(++pcolon, analyze_detail_level);
+				StringList opts(++pcolon, ",:");
+				opts.rewind();
+				while(const char *popt = opts.next()) {
+					//printf("parsing opt='%s'\n", popt);
+					if (is_arg_prefix(popt, "summary",1)) {
+						summarize_anal = true;
+						analyze_with_userprio = false;
+					} else if (is_arg_prefix(popt, "reverse",1)) {
+						reverse_analyze = true;
+						analyze_with_userprio = false;
+					} else if (is_arg_prefix(popt, "priority",2)) {
+						analyze_with_userprio = true;
+					//} else if (is_arg_prefix(popt, "dslots",2)) {
+					//	analyze_dslots = true;
+					} else {
+						analyze_detail_level = parse_analyze_detail(popt, analyze_detail_level);
+					}
 				}
 			}
 			attrs.clearAll();
@@ -1569,6 +1598,7 @@ processCommandLineArguments (int argc, char *argv[])
 		if (is_arg_colon_prefix(arg, "reverse-analyze", &pcolon, 10)) {
 			reverse_analyze = true; // modify analyze to be reverse analysis
 			better_analyze = true;	// enable analysis
+			analyze_with_userprio = false;
 			if (pcolon) { 
 				analyze_detail_level |= parse_analyze_detail(++pcolon, analyze_detail_level);
 			}
@@ -1586,7 +1616,7 @@ processCommandLineArguments (int argc, char *argv[])
 			formatstr( expr, "%s == %d || %s == %d || %s == %d", ATTR_JOB_STATUS, RUNNING,
 					 ATTR_JOB_STATUS, TRANSFERRING_OUTPUT, ATTR_JOB_STATUS, SUSPENDED );
 			Q.addAND( expr.c_str() );
-			run = true;
+			dash_run = true;
 			attrs.append( ATTR_REMOTE_HOST );
 			attrs.append( ATTR_JOB_UNIVERSE );
 			attrs.append( ATTR_EC2_REMOTE_VM_NAME ); // for displaying HOST(s) in EC2
@@ -1603,7 +1633,7 @@ processCommandLineArguments (int argc, char *argv[])
 		if (is_arg_prefix(arg, "goodput", 2)) {
 			// goodput and show_io require the same column
 			// real-estate, so they're mutually exclusive
-			goodput = true;
+			dash_goodput = true;
 			show_io = false;
 			attrs.append( ATTR_JOB_COMMITTED_TIME );
 			attrs.append( ATTR_SHADOW_BIRTHDATE );
@@ -1623,7 +1653,7 @@ processCommandLineArguments (int argc, char *argv[])
 		else
 		if (is_arg_prefix(arg, "grid", 2 )) {
 			// grid is a superset of globus, so we can't do grid if globus has been specifed
-			if ( ! globus) {
+			if ( ! dash_globus) {
 				dash_grid = true;
 				attrs.append( ATTR_GRID_JOB_ID );
 				attrs.append( ATTR_GRID_RESOURCE );
@@ -1636,7 +1666,7 @@ processCommandLineArguments (int argc, char *argv[])
 		else
 		if (is_arg_prefix(arg, "globus", 5 )) {
 			Q.addAND( "GlobusStatus =!= UNDEFINED" );
-			globus = true;
+			dash_globus = true;
 			if (dash_grid) {
 				dash_grid = false;
 			} else {
@@ -1659,7 +1689,7 @@ processCommandLineArguments (int argc, char *argv[])
 			// goodput and show_io require the same column
 			// real-estate, so they're mutually exclusive
 			show_io = true;
-			goodput = false;
+			dash_goodput = false;
 			attrs.append(ATTR_FILE_READ_BYTES);
 			attrs.append(ATTR_FILE_WRITE_BYTES);
 			attrs.append(ATTR_FILE_SEEK_COUNT);
@@ -1714,10 +1744,11 @@ processCommandLineArguments (int argc, char *argv[])
 			} else {
 				i++;
 				userprios_file = strdup(argv[i]);
+				analyze_with_userprio = true;
 			}
 		}
 		else if (is_arg_colon_prefix(arg, "nouserprios", &pcolon, 7)) {
-			userprios_file = strdup("");
+			analyze_with_userprio = false;
 		}
 #ifdef HAVE_EXT_POSTGRESQL
 		else if (match_prefix(arg, "avgqueuetime")) {
@@ -1832,11 +1863,6 @@ unsigned int process_direct_argument(char *arg)
 	return DIRECT_UNKNOWN;
 }
 
-static void
-io_display(ClassAd *ad)
-{
-	printf("%s", buffer_io_display( ad ) );
-}
 
 static char *
 buffer_io_display( ClassAd *ad )
@@ -1886,11 +1912,6 @@ buffer_io_display( ClassAd *ad )
 	return ( return_buff );
 }
 
-static void
-displayJobShort (ClassAd *ad)
-{ 
-	printf( "%s", bufferJobShort( ad ) );
-}
 
 static char *
 bufferJobShort( ClassAd *ad ) {
@@ -1963,6 +1984,18 @@ bufferJobShort( ClassAd *ad ) {
 			}
 	}
 
+		// adjust status field to indicate file transfer status
+	int transferring_input = false;
+	int transferring_output = false;
+	ad->EvalBool(ATTR_TRANSFERRING_INPUT,NULL,transferring_input);
+	ad->EvalBool(ATTR_TRANSFERRING_OUTPUT,NULL,transferring_output);
+	if( transferring_input ) {
+		encoded_status = '<';
+	}
+	if( transferring_output ) {
+		encoded_status = '>';
+	}
+
 	sprintf( return_buff,
 			 widescreen ? description.empty() ? "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f %s\n"
 			                                   : "%4d.%-3d %-14s %-11s %-12s %-2c %-3d %-4.1f (%s)\n"
@@ -1993,10 +2026,10 @@ static void
 short_header (void)
 {
 	printf( " %-7s %-14s ", "ID", dag ? "OWNER/NODENAME" : "OWNER" );
-	if( goodput ) {
+	if (dash_goodput) {
 		printf( "%11s %12s %-16s\n", "SUBMITTED", JOB_TIME,
 				"GOODPUT CPU_UTIL   Mb/s" );
-	} else if ( globus ) {
+	} else if (dash_globus) {
 		printf( "%-10s %-8s %-18s  %-18s\n", 
 				"STATUS", "MANAGER", "HOST", "EXECUTABLE" );
 	} else if ( dash_grid ) {
@@ -2007,7 +2040,7 @@ short_header (void)
 	} else if ( show_io ) {
 		printf( "%8s %8s %8s %10s %8s %8s\n",
 				"READ", "WRITE", "SEEK", "XPUT", "BUFSIZE", "BLKSIZE" );
-	} else if( run ) {
+	} else if( dash_run ) {
 		printf( "%11s %12s %-16s\n", "SUBMITTED", JOB_TIME, "HOST(S)" );
 	} else {
 		printf( "%11s %12s %-2s %-3s %-4s %-18s\n",
@@ -2482,7 +2515,7 @@ format_q_date (int d, AttrList *)
 	return format_date(d);
 }
 
-		
+
 static void
 usage (const char *myName)
 {
@@ -2537,35 +2570,35 @@ usage (const char *myName)
 			myName);
 }
 
-void full_header(bool useDB,char const *quill_name,char const *db_ipAddr, char const *db_name,char const *lastUpdate, char const *scheddName, char const *scheddAddress,char const *scheddMachine)
+static void
+print_full_footer()
+{
+	// If we want to summarize, do that too.
+	if( summarize ) {
+		printf( "\n%d jobs; "
+				"%d completed, %d removed, %d idle, %d running, %d held, %d suspended",
+				idle+running+held+malformed+suspended+completed+removed,
+				completed,removed,idle,running,held,suspended);
+		if (malformed>0) printf( ", %d malformed",malformed);
+		printf("\n");
+	}
+	if( use_xml ) {
+			// keep this consistent with AttrListList::fPrintAttrListList()
+		std::string xml;
+		AddClassAdXMLFileFooter(xml);
+		printf("%s\n", xml.c_str());
+	}
+}
+
+static void
+print_full_header(const char * source_label)
 {
 	if (! customFormat && !dash_long ) {
-		if (useDB) {
-			printf ("\n\n-- Quill: %s : %s : %s : %s\n", quill_name, 
-					db_ipAddr, db_name, lastUpdate);
-		} else if( querySchedds ) {
-			printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddress);
-		} else {
-			printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
-					scheddAddress, scheddMachine);	
-		}
+		printf ("\n\n-- %s\n", source_label);
 			// Print the output header
 		if (usingPrintMask && mask_head.Length() > 0) {
-#if 0
-			if (mask_headings) {
-				List<const char> headings;
-				const char * pszz = mask_headings;
-				size_t cch = strlen(pszz);
-				while (cch > 0) {
-					headings.Append(pszz);
-					pszz += cch+1;
-					cch = strlen(pszz);
-				}
-				mask.display_Headings(stdout, headings);
-			} else 
-#endif
 			mask.display_Headings(stdout, mask_head);
-		} else {
+		} else if ( ! better_analyze) {
 			short_header();
 		}
 	}
@@ -2580,7 +2613,8 @@ void full_header(bool useDB,char const *quill_name,char const *db_ipAddr, char c
 	}
 }
 
-void edit_string(clusterProcString *cps)
+static void
+edit_string(clusterProcString *cps)
 {
 	if(!cps->parent) {
 		return;	// Nothing to do
@@ -2655,25 +2689,84 @@ void edit_string(clusterProcString *cps)
 	delete[] cpss;
 }
 
-void write_node(clusterProcString* cps,int level)
+static void
+rewrite_output_for_dag_nodes_in_dag_map()
 {
-	if(cps->parent && level <= 0){
+	for(dag_map_type::iterator cps = dag_map.begin(); cps != dag_map.end(); ++cps) {
+		edit_string(cps->second);
+	}
+}
+
+// First Pass: Find all the DAGman nodes, and link them up
+// Assumptions of this code: DAG Parent nodes always
+// have cluster ids that are less than those of child
+// nodes. condor_dagman processes have ProcID == 0 (only one per
+// cluster)
+static void
+linkup_dag_nodes_in_dag_map()
+{
+	for(dag_map_type::iterator cps = dag_map.begin(); cps != dag_map.end(); ++cps) {
+		clusterProcString* cpps = cps->second;
+		if(cpps->dagman_cluster_id != cpps->cluster) {
+				// Its probably a DAGman job
+				// This next line is where we assume all condor_dagman
+				// jobs have ProcID == 0
+			clusterProcMapper parent_id(cpps->dagman_cluster_id);
+			dag_map_type::iterator dmp = dag_map.find(parent_id);
+			if( dmp != dag_map.end() ) { // found it!
+				cpps->parent = dmp->second;
+				dmp->second->children.push_back(cpps);
+			} else { // Now search dag_cluster_map
+					// Necessary to find children of dags
+					// which are themselves children (that is,
+					// subdags)
+				clusterIDProcIDMapper cipim(cpps->dagman_cluster_id);
+				dag_cluster_map_type::iterator dcmti = dag_cluster_map.find(cipim);
+				if(dcmti != dag_cluster_map.end() ) {
+					cpps->parent = dcmti->second;
+					dcmti->second->children.push_back(cpps);
+				}
+			}
+		}
+	}
+}
+
+static void print_dag_map_node(clusterProcString* cps,int level)
+{
+	if(cps->parent && level <= 0) {
 		return;
 	}
 	printf("%s",cps->string);
 	for(std::vector<clusterProcString*>::iterator p = cps->children.begin();
 			p != cps->children.end(); ++p) {
-		write_node(*p,level+1);
+		print_dag_map_node(*p,level+1);
 	}
 }
 
+static void print_dag_map()
+{
+	for(dag_map_type::iterator cps = dag_map.begin(); cps != dag_map.end(); ++cps) {
+		print_dag_map_node(cps->second,0);
+	}
+}
+
+static void clear_dag_map()
+{
+	for(std::map<clusterProcMapper,clusterProcString*,CompareProcMaps>::iterator
+			cps = dag_map.begin(); cps != dag_map.end(); ++cps) {
+		delete[] cps->second->string;
+		delete cps->second;
+	}
+	dag_map.clear();
+	dag_cluster_map.clear();
+}
 
 static void init_output_mask()
 {
 	// just  in case we re-enter this function, only setup the mask once
 	static bool	setup_mask = false;
 	// TJ: before my 2012 refactoring setup_mask didn't protect summarize, so I'm preserving that.
-	if ( run || goodput || globus || dash_grid ) 
+	if ( dash_run || dash_goodput || dash_globus || dash_grid ) 
 		summarize = false;
 	else if (customFormat && ! show_held)
 		summarize = false;
@@ -2686,7 +2779,7 @@ static void init_output_mask()
 
 	const char * mask_headings = NULL;
 
-	if ( run || goodput ) {
+	if (dash_run || dash_goodput) {
 		//mask.SetAutoSep("<","{","},",">\n"); // for testing.
 		mask.SetAutoSep(NULL," ",NULL,"\n");
 		mask.registerFormat ("%4d.", 5, FormatOptionAutoWidth | FormatOptionNoSuffix, ATTR_CLUSTER_ID);
@@ -2698,7 +2791,7 @@ static void init_output_mask()
 		mask.registerFormat (NULL,  12, 0, (FloatCustomFmt) format_cpu_time,
 							  ATTR_JOB_REMOTE_USER_CPU,
 							  "[??????????]");
-		if( run && !goodput ) {
+		if (dash_run && ! dash_goodput) {
 			mask_headings = (cputime) ? " ID\0 \0OWNER\0  SUBMITTED\0    CPU_TIME\0HOST(S)\0"
 			                          : " ID\0 \0OWNER\0. SUBMITTED\0    RUN_TIME\0HOST(S)\0";
 			//mask.registerFormat(" ", "*bogus*", " "); // force space
@@ -2724,7 +2817,7 @@ static void init_output_mask()
 		}
 		//mask.registerFormat("\n", "*bogus*", "\n");  // force newline
 		usingPrintMask = true;
-	} else if( globus ) {
+	} else if (dash_globus) {
 		mask_headings = " ID\0 \0OWNER\0STATUS\0MANAGER     HOST\0EXECUTABLE\0";
 		mask.SetAutoSep(NULL," ",NULL,"\n");
 		mask.registerFormat ("%4d.", 5, FormatOptionAutoWidth | FormatOptionNoSuffix, ATTR_CLUSTER_ID);
@@ -2790,163 +2883,222 @@ static void init_output_mask()
 	}
 }
 
-/* The parameters v1, v2, and v3 will be intepreted immediately on the top 
-   of the function based on the value of useDB. For more details, please 
-   refer to the prototype of this function on the top of this file 
-*/
-
+// Given a list of jobs, do analysis for each job and print out the results.
+//
 static bool
-show_queue_buffered( const char* v1, const char* v2, const char* v3, const char* v4, bool useDB )
+print_jobs_analysis(ClassAdList & jobs, const char * source_label, Daemon * pschedd_daemon)
 {
-	const char *scheddAddress = 0;
-	const char *scheddName = 0;
-	const char *scheddMachine = 0;
+	// note: pschedd_daemon may be NULL.
 
-	const char *quill_name = 0;
-	const char *db_ipAddr = 0;
-	const char *db_name = 0;
-	const char *query_password;
+		// check if job is being analyzed
+	ASSERT( better_analyze );
 
-	char *lastUpdate=NULL;
+	// build a job autocluster map
+	if (verbose) { fprintf(stderr, "\nBuilding autocluster map of %d Jobs...", jobs.Length()); }
+	JobClusterMap job_autoclusters;
+	buildJobClusterMap(jobs, ATTR_AUTO_CLUSTER_ID, job_autoclusters);
+	if (verbose) { fprintf(stderr, "\n%d autoclusters and %d Jobs with no autocluster\n", (int)job_autoclusters.size(), (int)job_autoclusters[-1].size()); }
 
-		/* intepret the parameters accordingly based on whether we are querying database */
-	if (useDB) {
-		quill_name = v1;
-		db_ipAddr = v2;
-		db_name = v3;		
-		query_password = v4;
+	if (reverse_analyze) { 
+		if (verbose) { fprintf(stderr, "Sorting %d Slots...", startdAds.Length()); }
+		longest_slot_machine_name = 0;
+		longest_slot_name = 0;
+		if (startdAds.Length() == 1) {
+			// if there is a single machine ad, then always do detailed reverse analyze.
+			if ( ! analyze_detail_level) analyze_detail_level = detail_analyze_each_sub_expr;
+		} else {
+			startdAds.Sort(SlotSort);
+		}
+		//if (verbose) { fprintf(stderr, "Done, longest machine name %d, longest slot name %d\n", longest_slot_machine_name, longest_slot_name); }
+	} else {
+		if (analyze_detail_level & detail_better) {
+			analyze_detail_level |= detail_analyze_each_sub_expr | detail_smart_unparse_expr | detail_always_analyze_req;
+		}
 	}
-	else {
-		scheddAddress = v1;
-		scheddName = v2;
-		scheddMachine = v3;
+
+	// print banner for this source of jobs.
+	printf ("\n\n-- %s\n", source_label);
+
+	if (reverse_analyze) {
+		int console_width = widescreen ? getDisplayWidth() : 80;
+		if (startdAds.Length() <= 0) {
+			// print something out?
+		} else {
+			bool analStartExpr = /*(better_analyze == 2) || */(analyze_detail_level > 0);
+			if (summarize_anal || ! analStartExpr) {
+				if (jobs.Length() <= 1) {
+					jobs.Open();
+					while (ClassAd *job = jobs.Next()) {
+						int cluster_id = 0, proc_id = 0;
+						job->LookupInteger(ATTR_CLUSTER_ID, cluster_id);
+						job->LookupInteger(ATTR_PROC_ID, proc_id);
+						printf("%d.%d: Analyzing matches for 1 job\n", cluster_id, proc_id);
+					}
+					jobs.Close();
+				} else {
+					int cNoAuto = (int)job_autoclusters[-1].size();
+					int cAutoclusters = (int)job_autoclusters.size()-1; // -1 because [-1] is not actually an autocluster
+					if (verbose) {
+						printf("Analyzing %d jobs in %d autoclusters\n", jobs.Length(), cAutoclusters+cNoAuto);
+					} else {
+						printf("Analyzing matches for %d jobs\n", jobs.Length());
+					}
+				}
+				std::string fmt;
+				int name_width = MAX(longest_slot_machine_name+7, longest_slot_name);
+				formatstr(fmt, "%%-%d.%ds", MAX(name_width, 16), MAX(name_width, 16));
+				fmt += " %4s %12.12s %12.12s %10.10s\n";
+
+				printf(fmt.c_str(), ""    , "Slot", "Slot's Req ", "  Job's Req ", "Both   ");
+				printf(fmt.c_str(), "Name", "Type", "Matches Job", "Matches Slot", "Match %");
+				printf(fmt.c_str(), "------------------------", "----", "------------", "------------", "----------");
+			}
+			startdAds.Open();
+			while (ClassAd *slot = startdAds.Next()) {
+				doSlotRunAnalysis(slot, job_autoclusters, pschedd_daemon, console_width);
+			}
+			startdAds.Close();
+		}
+	} else {
+		if (summarize_anal) {
+			if (single_machine) {
+				printf("%s: Analyzing matches for %d slots\n", user_slot_constraint, startdAds.Length());
+			} else {
+				printf("Analyzing matches for %d slots\n", startdAds.Length());
+			}
+			const char * fmt = "%-13s %12s %12s %11s %11s %10s %9s %s\n";
+			printf(fmt, "",              " Autocluster", "   Matches  ", "  Machine  ", "  Running  ", "  Serving ", "", "");
+			printf(fmt, " JobId",        "Members/Idle", "Requirements", "Rejects Job", " Users Job ", "Other User", "Available", summarize_with_owner ? "Owner" : "");
+			printf(fmt, "-------------", "------------", "------------", "-----------", "-----------", "----------", "---------", summarize_with_owner ? "-----" : "");
+		}
+
+		for (JobClusterMap::iterator it = job_autoclusters.begin(); it != job_autoclusters.end(); ++it) {
+			int cJobsInCluster = (int)it->second.size();
+			if (cJobsInCluster <= 0)
+				continue;
+
+			// for the the non-autocluster cluster, we have to eval these jobs individually
+			int cJobsToEval = (it->first == -1) ? cJobsInCluster : 1;
+			int cJobsToInc  = (it->first == -1) ? 1 : cJobsInCluster;
+			for (int ii = 0; ii < cJobsToEval; ++ii) {
+				ClassAd *job = it->second[ii];
+				if (summarize_anal) {
+					char achJobId[16], achAutocluster[16], achRunning[16];
+					int cluster_id = 0, proc_id = 0;
+					job->LookupInteger(ATTR_CLUSTER_ID, cluster_id);
+					job->LookupInteger(ATTR_PROC_ID, proc_id);
+					sprintf(achJobId, "%d.%d", cluster_id, proc_id);
+
+					string owner;
+					if (summarize_with_owner) job->LookupString(ATTR_OWNER, owner);
+					if (owner.empty()) owner = "";
+
+					int cIdle = 0, cRunning = 0;
+					for (int jj = 0; jj < cJobsToInc; ++jj) {
+						ClassAd * jobT = it->second[jj];
+						int jobState = 0;
+						if (jobT->LookupInteger(ATTR_JOB_STATUS, jobState)) {
+							if (IDLE == jobState) 
+								++cIdle;
+							else if (TRANSFERRING_OUTPUT == jobState || RUNNING == jobState || SUSPENDED == jobState)
+								++cRunning;
+						}
+					}
+
+					if (it->first >= 0) {
+						if (verbose) {
+							sprintf(achAutocluster, "%d:%d/%d", it->first, cJobsToInc, cIdle);
+						} else {
+							sprintf(achAutocluster, "%d/%d", cJobsToInc, cIdle);
+						}
+					} else {
+						achAutocluster[0] = 0;
+					}
+
+					anaCounters ac;
+					doJobRunAnalysisToBuffer(job, ac, detail_always_analyze_req, true, false);
+					const char * fmt = "%-13s %-12s %12d %11d %11s %10d %9d %s\n";
+
+					achRunning[0] = 0;
+					if (cRunning) { sprintf(achRunning, "%d/", cRunning); }
+					sprintf(achRunning+strlen(achRunning), "%d", ac.machinesRunningUsersJobs);
+
+					printf(fmt, achJobId, achAutocluster,
+							ac.totalMachines - ac.fReqConstraint,
+							ac.fOffConstraint,
+							achRunning,
+							ac.machinesRunningJobs - ac.machinesRunningUsersJobs,
+							ac.available,
+							owner.c_str());
+				} else {
+					bool alwaysReqAnalyze = /*(better_analyze == 2) ||*/ (analyze_detail_level & detail_always_analyze_req) != 0;
+					doJobRunAnalysis(job, pschedd_daemon, alwaysReqAnalyze);
+				}
+			}
+		}
 	}
 
+	return true;
+}
+
+// callback function for processing a job from the Q query that just adds the 
+// job into a ClassAdList.
+static bool
+AddToClassAdList(void * pv, ClassAd *ad) {
+	ClassAdList * plist = (ClassAdList*)pv;
+	plist->Insert(ad);
+	// return false to indicate we took ownership of the ad 
+	// and it should NOT be deleted by the caller.
+	return false;
+}
+
+#ifdef HAVE_EXT_POSTGRESQL
+static bool
+show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_name, const char* query_password)
+{
 		// initialize counters
 	idle = running = held = malformed = suspended = completed = removed = 0;
 
-#if 1
-#else
-	static bool	setup_mask = false;
-	if ( run || goodput ) {
-		summarize = false;
-		if (!setup_mask) {
-			mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
-			mask.registerFormat ("%-3d ", ATTR_PROC_ID);
-			mask.registerFormat ( (StringCustomFmt) format_owner,
-								  ATTR_OWNER, "[????????????] " );
-			mask.registerFormat(" ", "*bogus*", " ");  // force space
-			mask.registerFormat ( (IntCustomFmt) format_q_date,
-								  ATTR_Q_DATE, "[????????????]");
-			mask.registerFormat(" ", "*bogus*", " ");  // force space
-			mask.registerFormat ( (FloatCustomFmt) format_cpu_time,
-								  ATTR_JOB_REMOTE_USER_CPU,
-								  "[??????????]");
-			if( run && !goodput ) {
-				mask.registerFormat(" ", "*bogus*", " "); // force space
-				// We send in ATTR_OWNER since we know it is always
-				// defined, and we need to make sure
-				// format_remote_host() is always called. We are
-				// actually displaying ATTR_REMOTE_HOST if defined,
-				// but we play some tricks if it isn't defined.
-				mask.registerFormat ( (StringCustomFmt) format_remote_host,
-									  ATTR_OWNER, "[????????????????]");
-			} else {			// goodput
-				mask.registerFormat ( (IntCustomFmt) format_goodput,
-									  ATTR_JOB_STATUS,
-									  " [?????]");
-				mask.registerFormat ( (FloatCustomFmt) format_cpu_util,
-									  ATTR_JOB_REMOTE_USER_CPU,
-									  " [??????]");
-				mask.registerFormat ( (FloatCustomFmt) format_mbps,
-									  ATTR_BYTES_SENT,
-									  " [????]");
-			}
-			mask.registerFormat("\n", "*bogus*", "\n");  // force newline
-			setup_mask = true;
-			usingPrintMask = true;
-		}
-	} else if( globus ) {
-		summarize = false;
-		if (!setup_mask) {
-			mask.SetAutoSep(NULL," ",NULL,"\n");
-			mask.registerFormat ("%4d.", 5, FormatOptionAutoWidth | FormatOptionNoSuffix, ATTR_CLUSTER_ID);
-			mask.registerFormat ("%-3d ", 3, FormatOptionAutoWidth | FormatOptionNoPrefix,  ATTR_PROC_ID);
-			mask.registerFormat (NULL, -14, 0, format_owner_wide, ATTR_OWNER, "[?]" );
-			mask.registerFormat(NULL, -8, 0, (IntCustomFmt) format_globusStatus, ATTR_GLOBUS_STATUS, "[?]" );
-			if (widescreen) {
-				mask.registerFormat(NULL, -30, FormatOptionAutoWidth | FormatOptionNoTruncate, 
-					(StringCustomFmt)format_globusHostAndJM, ATTR_GRID_RESOURCE, "fork    [?????]" );
-				mask.registerFormat("%v", -18, FormatOptionAutoWidth | FormatOptionNoTruncate, ATTR_JOB_CMD );
-			} else {
-				mask.registerFormat(NULL, 30, 0, 
-					(StringCustomFmt)format_globusHostAndJM, ATTR_JOB_CMD, "fork    [?????]" );
-				mask.registerFormat("%-18.18s", ATTR_JOB_CMD);
-			}
-			setup_mask = true;
-			usingPrintMask = true;
-		}
-	} else if( dash_grid ) {
-		summarize = false;
-		if (!setup_mask) {
-			//mask.SetAutoSep("<","{","},",">\n"); // for testing.
-			mask.SetAutoSep(NULL," ",NULL,"\n");
-			mask.registerFormat ("%4d.", 5, FormatOptionAutoWidth | FormatOptionNoSuffix, ATTR_CLUSTER_ID);
-			mask.registerFormat ("%-3d", 3, FormatOptionAutoWidth | FormatOptionNoPrefix, ATTR_PROC_ID);
-			if (widescreen) {
-				mask.registerFormat (NULL, -14, FormatOptionAutoWidth | FormatOptionNoTruncate, format_owner_wide, ATTR_OWNER);
-				mask.registerFormat (NULL, -10, FormatOptionAutoWidth | FormatOptionNoTruncate, format_gridStatus, ATTR_JOB_STATUS);
-				mask.registerFormat (NULL, -30, FormatOptionAutoWidth | FormatOptionNoTruncate, format_gridResource, ATTR_GRID_RESOURCE);
-				mask.registerFormat (NULL, -18, FormatOptionAutoWidth | FormatOptionNoTruncate, format_gridJobId, ATTR_GRID_JOB_ID);
-			} else {
-				mask.registerFormat (NULL, -14, 0, format_owner_wide, ATTR_OWNER);
-				mask.registerFormat (NULL, -10,0, format_gridStatus, ATTR_JOB_STATUS);
-				mask.registerFormat ("%-30.30s", 0,0, format_gridResource, ATTR_GRID_RESOURCE);
-				mask.registerFormat ("%-18.18s", 0,0, format_gridJobId, ATTR_GRID_JOB_ID);
-			}
-			setup_mask = true;
-			usingPrintMask = true;
-		}
-	} else if ( show_held ) {
-		if (!setup_mask) {
-			mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
-			mask.registerFormat ("%-3d ", ATTR_PROC_ID);
-			mask.registerFormat ( (StringCustomFmt) format_owner,
-								  ATTR_OWNER, "[????????????] " );
-			mask.registerFormat(" ", "*bogus*", " ");  // force space
-			mask.registerFormat ( (IntCustomFmt) format_q_date,
-								  ATTR_ENTERED_CURRENT_STATUS, "[????????????]");
-			mask.registerFormat(" ", "*bogus*", " ");  // force space
-			mask.registerFormat( widescreen ? "%s\n" : "%-43.43s\n", ATTR_HOLD_REASON );
-			setup_mask = true;
-			usingPrintMask = true;
-		}
-	} else if ( customFormat ) {
-		summarize = false;
-	}
-#endif
-
-	if( g_cur_schedd_for_process_buffer_line ) {
-		delete g_cur_schedd_for_process_buffer_line;
-		g_cur_schedd_for_process_buffer_line = NULL;
-	}
-
-	if( g_stream_results ) {
-		full_header(useDB,quill_name,db_ipAddr,db_name,lastUpdate,scheddName,scheddAddress,scheddMachine);
-	}
-
+	ClassAdList jobs;
 	CondorError errstack;
 
-		/* get the job ads from database if database can be queried */
-	if (useDB) {
+	std::string source_label;
+	formatstr(source_label, "Quill: %s : %s : %s : ", quill_name, db_ipAddr, db_name);
+
+	// choose a processing option for jobad's as the come off the wire.
+	// for -long -xml and -analyze, we need to save off the ad in a ClassAdList
+	// for -stream we print out the ad 
+	// and for everything else, we 
+	//
+	buffer_line_processor pfnProcess;
+	void *                pvProcess;
+	if (dash_long || better_analyze) {
+		pfnProcess = AddToClassAdList;
+		pvProcess = &jobs;
+	} else if (g_stream_results) {
+		pfnProcess = process_and_print_job;
+		pvProcess = NULL;
+
+		// we are about to print out the jobads, so print an output header now.
+		print_full_header(source_label.c_str());
+	} else {
+		// tj: 2013 refactor---
+		// so we can compare the output of old vs. new code. keep both around for now.
+		pfnProcess = /*use_old_code ? process_buffer_line_old : */ process_job_and_render_to_dag_map;
+		pvProcess = &dag_map;
+	}
+
+	// fetch queue directly from the database
+
 #ifdef HAVE_EXT_POSTGRESQL
 
+		char *lastUpdate=NULL;
 		char *dbconn=NULL;
 		dbconn = getDBConnStr(quill_name, db_ipAddr, db_name, query_password);
 
 		if( Q.fetchQueueFromDBAndProcess( dbconn,
 											lastUpdate,
-											process_buffer_line,
+											pfnProcess, pvProcess,
 											&errstack) != Q_OK ) {
 			fprintf( stderr, 
 					"\n-- Failed to fetch ads from db [%s] at database "
@@ -2964,131 +3116,75 @@ show_queue_buffered( const char* v1, const char* v2, const char* v3, const char*
 		if(dbconn) {
 			free(dbconn);
 		}
+		if(lastUpdate) {
+			source_label += lastUpdate;
+			free(lastUpdate);
+		}
 #else
 		if (query_password) {} /* Done to suppress set-but-not-used warnings */
+		if (pfnProcess || pvProcess) {}
 #endif /* HAVE_EXT_POSTGRESQL */
+
+	// if we streamed, then the results have already been printed out.
+	// we just need to write the footer/summary
+	if (g_stream_results) {
+		print_full_footer();
+		return true;
+	}
+
+	if (better_analyze) {
+		print_full_header(source_label.c_str());
+		return print_jobs_analysis(jobs, NULL);
+	}
+
+	// at this point we either have a populated jobs list, or a populated dag_map
+	// depending on which processing function we used in the query above.
+	// for -long -xml or -analyze, we should have jobs, but no dag_map
+
+	// if outputing dag format, we want to build the parent child links in the dag map
+	// and then edit the text for jobs that are dag nodes.
+	if (dag && (dag_map.size() > 0)) {
+		linkup_dag_nodes_in_dag_map(/*dag_map, dag_cluster_map*/);
+		rewrite_output_for_dag_nodes_in_dag_map(/*dag_map*/);
+	}
+
+	// we want a header for this schedd if we are not showing the global queue OR if there is any data
+	if ( ! global || dag_map.size() > 0 || jobs.Length() > 0) {
+		print_full_header(source_label.c_str());
+	}
+
+	// print out jobs, either from the dag_map, or the jobs list, we expect only
+	// one of these to be populated depending on which processing function we passed to the query
+	if (dag_map.size() > 0) {
+		print_dag_map(/*dag_map*/);
+		// free the strings in the dag_map
+		clear_dag_map(/*dag_map, dag_cluster_map*/);
 	} else {
-			// fetch queue from schedd and stash it in output_buffer.
-		Daemon schedd(DT_SCHEDD, scheddName, pool ? pool->addr() : NULL );
-		const char *version = schedd.version();
-		bool useFastPath = false;
-		if (version) {
-			CondorVersionInfo v(version);
-			useFastPath = v.built_since_version(6,9,3);
+		jobs.Open();
+		while(ClassAd *job = jobs.Next()) {
+			process_and_print_job(NULL, job);
 		}
-
-			// stash the schedd daemon object for use by process_buffer_line
-		g_cur_schedd_for_process_buffer_line = new Daemon( schedd );
-
-		int fetchResult;
-		if( (fetchResult = Q.fetchQueueFromHostAndProcess( scheddAddress, attrs,
-											process_buffer_line,
-											useFastPath,
-											&errstack)) != Q_OK) {
-			
-			// The parse + fetch failed, print out why
-			switch(fetchResult) {
-				case Q_PARSE_ERROR:
-				case Q_INVALID_CATEGORY:
-					fprintf(stderr, "\n-- Parse error in constraint expression \"%s\"\n", user_job_constraint);
-					break;
-				default:
-					fprintf(stderr,
-						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
-						scheddAddress, scheddMachine, errstack.getFullText(true).c_str() );
-			}
-
-			return false;
-		}
+		jobs.Close();
 	}
 
-	// If this is a global, don't print anything if this schedd is empty.
-	// If this is NOT global, print out the header and footer to show that we
-	//    did something.
-	if (!global || dag_map.size() > 0 || g_stream_results) {
-		if( !g_stream_results ) {
-			full_header(useDB,quill_name,db_ipAddr,db_name,lastUpdate,scheddName,scheddAddress,scheddMachine);
-		}
-
-			// Assumptions of this code: DAG Parent nodes always
-			// have cluster ids that are less than those of child
-			// nodes. condor_dagman processes have ProcID == 0 (only one per
-			// cluster)
-
-			// First Pass: Find all the DAGman nodes, and link them up
-		if( dag ) {
-			for(dag_map_type::iterator cps = dag_map.begin(); cps != dag_map.end(); ++cps) {
-				clusterProcString* cpps = cps->second;
-				if(cpps->dagman_cluster_id != cpps->cluster) {
-						// Its probably a DAGman job
-						// This next line is where we assume all condor_dagman
-						// jobs have ProcID == 0
-					clusterProcMapper parent_id(cpps->dagman_cluster_id);
-					dag_map_type::iterator dmp = dag_map.find(parent_id);
-					if( dmp != dag_map.end() ) { // found it!
-						cpps->parent = dmp->second;
-						dmp->second->children.push_back(cpps);
-					} else { // Now search dag_cluster_map
-							// Necessary to find children of dags
-							// which are themselves children (that is,
-							// subdags)
-						clusterIDProcIDMapper cipim(cpps->dagman_cluster_id);
-						dag_cluster_map_type::iterator dcmti = dag_cluster_map.find(cipim);
-						if(dcmti != dag_cluster_map.end() ) {
-							cpps->parent = dcmti->second;
-							dcmti->second->children.push_back(cpps);
-						}
-					}
-				}
-			}
-
-				// Second pass: edit the strings
-			for(dag_map_type::iterator cps = dag_map.begin(); cps != dag_map.end(); ++cps) {
-				edit_string(cps->second);
-			}
-		}
-
-			// Third pass: write the strings
-		for(dag_map_type::iterator cps = dag_map.begin(); cps != dag_map.end(); ++cps) {
-			write_node(cps->second,0);
-		}
-		// If we want to summarize, do that too.
-		if( summarize ) {
-			printf( "\n%d jobs; "
-					"%d completed, %d removed, %d idle, %d running, %d held, %d suspended",
-					idle+running+held+malformed+suspended+completed+removed,
-					completed,removed,idle,running,held,suspended);
-			if (malformed>0) printf( ", %d malformed",malformed);
-           	printf("\n");
-		}
-		if( use_xml ) {
-				// keep this consistent with AttrListList::fPrintAttrListList()
-			std::string xml;
-			AddClassAdXMLFileFooter(xml);
-			printf("%s\n", xml.c_str());
-		}
+	// print out summary line (if enabled) and/or xml closure
+	// we want to print out a footer if we printed any data, OR if this is not 
+	// a global query, so that the user can see that we did something.
+	//
+	if ( ! global || dag_map.size() > 0 || jobs.Length() > 0) {
+		print_full_footer();
 	}
 
-	for(std::map<clusterProcMapper,clusterProcString*,CompareProcMaps>::iterator
-			cps = dag_map.begin(); cps != dag_map.end(); ++cps) {
-		delete[] cps->second->string;
-		delete cps->second;
-	}
-	dag_map.clear();
-	dag_cluster_map.clear();
-	if(lastUpdate) {
-		free(lastUpdate);
-	}
 	return true;
 }
+#endif // HAVE_EXT_POSTGRESQL
 
 
-// process_buffer_line returns 1 so that the ad that is passed
-// to it should be deleted.
-
-
+#if 0
+// tj: 2013 refactor---
+// so we can compare the output of old vs. new code. keep both around for now.
 static bool
-process_buffer_line( ClassAd *job )
+process_buffer_line_old(void *, ClassAd *job)
 {
 	int status = 0;
 
@@ -3101,7 +3197,7 @@ process_buffer_line( ClassAd *job )
 	switch (status)
 	{
 		case IDLE:                idle++;      break;
-		case TRANSFERRING_OUTPUT: 
+		case TRANSFERRING_OUTPUT:
 		case RUNNING:             running++;   break;
 		case SUSPENDED:           suspended++; break;
 		case COMPLETED:           completed++; break;
@@ -3112,9 +3208,9 @@ process_buffer_line( ClassAd *job )
 	// If it's not a DAGMan job (and this includes the DAGMan process
 	// itself), then set the dagman_cluster_id equal to cluster so that
 	// it sorts properly against dagman jobs.
-	char *dagman_job_string = NULL;
+	char dagman_job_string[32];
 	bool dci_initialized = false;
-	if (!job->LookupString(ATTR_DAGMAN_JOB_ID, &dagman_job_string)) {
+	if (!job->LookupString(ATTR_DAGMAN_JOB_ID, dagman_job_string, sizeof(dagman_job_string))) {
 			// we failed to find an DAGManJobId string attribute, 
 			// let's see if we find one that is an integer.
 		int temp_cluster = -1;
@@ -3160,7 +3256,6 @@ process_buffer_line( ClassAd *job )
 			tempCPS->dagman_proc_id = 0;
 			dci_initialized = true;
 		}
-		free(dagman_job_string);
 	}
 	if( !g_stream_results && dci_initialized ) {
 		clusterProcMapper cpm(*tempCPS);
@@ -3199,7 +3294,7 @@ process_buffer_line( ClassAd *job )
 		s += "\n";
 		tempCPS->string = strnewp( s.Value() );
 	} else if( better_analyze ) {
-		tempCPS->string = strnewp( doJobRunAnalysisToBuffer( job, g_cur_schedd_for_process_buffer_line ) );
+		ASSERT(0);
 	} else if ( show_io ) {
 		tempCPS->string = strnewp( buffer_io_display( job ) );
 	} else if ( usingPrintMask ) {
@@ -3217,45 +3312,320 @@ process_buffer_line( ClassAd *job )
 		delete tempCPS;
 		tempCPS = NULL;
 	}
+
+	// process_buffer_line returns 1 so that the ad that is passed
+	// to it should be deleted.
+	return true;
+}
+#endif
+
+static void count_job(ClassAd *job)
+{
+	int status = 0;
+	job->LookupInteger(ATTR_JOB_STATUS, status);
+	switch (status)
+	{
+		case IDLE:                ++idle;      break;
+		case TRANSFERRING_OUTPUT:
+		case RUNNING:             ++running;   break;
+		case SUSPENDED:           ++suspended; break;
+		case COMPLETED:           ++completed; break;
+		case REMOVED:             ++removed;   break;
+		case HELD:                ++held;      break;
+	}
+}
+
+
+static const char * render_job_text(ClassAd *job, std::string & result_text)
+{
+	if (use_xml) {
+		job->sPrintAsXML(result_text, attrs.isEmpty() ? NULL : &attrs);
+	} else if (dash_long) {
+		job->sPrint(result_text, attrs.isEmpty() ? NULL : &attrs);
+		result_text += "\n";
+	} else if (better_analyze) {
+		ASSERT(0); // should never get here.
+	} else if (show_io) {
+		result_text += buffer_io_display(job);
+	} else if (usingPrintMask) {
+		result_text += mask.display(job);
+	} else {
+		result_text += bufferJobShort(job);
+	}
+	return result_text.c_str();
+}
+
+static bool
+process_and_print_job(void *, ClassAd *job)
+{
+	count_job(job);
+
+	std::string result_text;
+	render_job_text(job, result_text);
+	printf("%s", result_text.c_str());
+
+	// return true to free the job ad, since we didn't take ownership of it.
 	return true;
 }
 
-/* The parameters v1, v2, and v3 will be intepreted immediately on the top 
-   of the function based on the value of useDB. For more details, please 
-   refer to the prototype of this function on the top of this file 
-*/
+// insert a line of formatted output into the dag_map, so we can print out
+// sorted results.
+//
 static bool
-show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool useDB )
+insert_job_output_into_dag_map(ClassAd * job, const char * job_output)
 {
-	const char *scheddAddress;
-	const char *scheddName;
-	const char *scheddMachine;
-	const char *scheddVersion;
+	clusterProcString * tempCPS = new clusterProcString;
+	job->LookupInteger( ATTR_CLUSTER_ID, tempCPS->cluster );
+	job->LookupInteger( ATTR_PROC_ID, tempCPS->proc );
 
-	const char *quill_name = 0;
-	const char *db_ipAddr = 0;
-	const char *db_name = 0;
-	const char *query_password = 0;
+	// If it's not a DAGMan job (and this includes the DAGMan process
+	// itself), then set the dagman_cluster_id equal to cluster so that
+	// it sorts properly against dagman jobs.
+	char dagman_job_string[32];
+	bool dci_initialized = false;
+	if (!job->LookupString(ATTR_DAGMAN_JOB_ID, dagman_job_string, sizeof(dagman_job_string))) {
+			// we failed to find an DAGManJobId string attribute,
+			// let's see if we find one that is an integer.
+		int temp_cluster = -1;
+		if (!job->LookupInteger(ATTR_DAGMAN_JOB_ID,temp_cluster)) {
+				// could not job DAGManJobId, so fall back on
+				// just the regular job id
+			tempCPS->dagman_cluster_id = tempCPS->cluster;
+			tempCPS->dagman_proc_id    = tempCPS->proc;
+			dci_initialized = true;
+		} else {
+				// in this case, we found DAGManJobId set as
+				// an integer, not a string --- this means it is
+				// the cluster id.
+			tempCPS->dagman_cluster_id = temp_cluster;
+			tempCPS->dagman_proc_id    = 0;
+			dci_initialized = true;
+		}
+	} else {
+		// We've gotten a string, probably something like "201.0"
+		// we want to convert it to the numbers 201 and 0. To be safe, we
+		// use atoi on either side of the period. We could just use
+		// sscanf, but I want to know each fail case, so I can set them
+		// to reasonable values.
+		char *loc_period = strchr(dagman_job_string, '.');
+		char *proc_string_start = NULL;
+		if (loc_period != NULL) {
+			*loc_period = 0;
+			proc_string_start = loc_period+1;
+		}
+		if (isdigit(*dagman_job_string)) {
+			tempCPS->dagman_cluster_id = atoi(dagman_job_string);
+			dci_initialized = true;
+		} else {
+			// It must not be a cluster id, because it's not a number.
+			tempCPS->dagman_cluster_id = tempCPS->cluster;
+			dci_initialized = true;
+		}
 
-	ClassAdList jobs; 
-#if 0
-	static bool	setup_mask = false;
-#endif
+		if (proc_string_start != NULL && isdigit(*proc_string_start)) {
+			tempCPS->dagman_proc_id = atoi(proc_string_start);
+			dci_initialized = true;
+		} else {
+			tempCPS->dagman_proc_id = 0;
+			dci_initialized = true;
+		}
+	}
 
-	/* assume this will be true. And it will be if we aren't using the DB */
-	scheddAddress = v1;
-	scheddName = v2;
-	scheddMachine = v3;		
-	scheddVersion = v4;
+	if ( ! dci_initialized) {
+		return false;
+	}
 
-	char *lastUpdate=NULL;
+	tempCPS->string = strnewp(job_output);
+	PRAGMA_REMIND("tj: change tempCPS->string to a set of fields, so we can set column widths based on data.")
+
+	// insert tempCPS (and job_output copy) into the dag_map.
+	// this transfers ownership of both allocations, they will be freed in the code
+	// that deletes the map.
+	clusterProcMapper cpm(*tempCPS);
+	std::pair<dag_map_type::iterator,bool> pp = dag_map.insert(
+		std::pair<clusterProcMapper,clusterProcString*>(
+			cpm, tempCPS ) );
+	if( !pp.second ) {
+		fprintf( stderr, "Error: Two clusters with the same ID.\n" );
+		fprintf( stderr, "tempCPS: %d %d %d %d\n", tempCPS->dagman_cluster_id,
+			tempCPS->dagman_proc_id, tempCPS->cluster, tempCPS->proc );
+		dag_map_type::iterator ppp = dag_map.find(cpm);
+		fprintf( stderr, "Comparing against: %d %d %d %d\n",
+			ppp->second->dagman_cluster_id, ppp->second->dagman_proc_id,
+			ppp->second->cluster, ppp->second->proc );
+		//tj: 2013 -don't abort without printing jobs
+		// exit( 1 );
+		//maybe we should toss tempCPS into an orphan list rather than simply leaking it?
+		return false;
+	}
+
+	// also insert into the dag_cluster_map
+	//
+	clusterIDProcIDMapper cipim(*tempCPS);
+	std::pair<dag_cluster_map_type::iterator,bool> pq = dag_cluster_map.insert(
+		std::pair<clusterIDProcIDMapper,clusterProcString*>(
+			cipim,tempCPS ) );
+	if( !pq.second ) {
+		fprintf( stderr, "Error: Clusters have nonunique IDs.\n" );
+		//tj: 2013 -don't abort without printing jobs
+		//exit( 1 );
+	}
+
+	return true;
+}
+
+static bool
+process_job_and_render_to_dag_map(void *,  ClassAd *job)
+{
+	count_job(job);
+
+	ASSERT( ! g_stream_results);
+
+	std::string result_text;
+	render_job_text(job, result_text);
+	insert_job_output_into_dag_map(job, result_text.c_str());
+
+	// process_buffer_line returns 1 so that the ad that is passed
+	// to it should be deleted.
+	return true;
+}
+
+// query SCHEDD or QUILLD daemon for jobs. and then print out the desired job info.
+// this function handles -analyze, -streaming, -dag and all normal condor_q output
+// when the source is a SCHEDD or QUILLD.
+// TJ isn't sure that the QUILL daemon can use fast path, prior to the 2013 refactor, 
+// the old code didn't try.
+//
+static bool
+show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, bool useFastPath)
+{
+	// initialize counters
+	malformed = idle = running = held = completed = suspended = 0;
+
+	std::string source_label;
+	if (querySchedds) {
+		formatstr(source_label, "Schedd: %s : %s", scheddName, scheddAddress);
+	} else {
+		formatstr(source_label, "Submitter: %s : %s : %s", scheddName, scheddAddress, scheddMachine);
+	}
+
+	if (better_analyze && verbose) {
+		fprintf(stderr, "Fetching job ads for analysis...");
+	}
+
+	// fetch queue from schedd
+	ClassAdList jobs;  // this will get filled in for -long -xml and -analyze
+	CondorError errstack;
+
+	// choose a processing option for jobad's as the come off the wire.
+	// for -long -xml and -analyze, we need to save off the ad in a ClassAdList
+	// for -stream we print out the ad 
+	// and for everything else, we 
+	//
+	buffer_line_processor pfnProcess = NULL;
+	void *                pvProcess = NULL;
+	if (dash_long || better_analyze) {
+		pfnProcess = AddToClassAdList;
+		pvProcess = &jobs;
+	} else if (g_stream_results) {
+		pfnProcess = process_and_print_job;
+		// we are about to print out the jobads, so print an output header now.
+		print_full_header(source_label.c_str());
+	} else {
+		// tj: 2013 refactor---
+		// so we can compare the output of old vs. new code. keep both around for now.
+		pfnProcess = /*use_old_code ? process_buffer_line_old : */ process_job_and_render_to_dag_map;
+		pvProcess = &dag_map;
+	}
+
+	int fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, attrs, pfnProcess, pvProcess, useFastPath, &errstack);
+	if (fetchResult != Q_OK) {
+		// The parse + fetch failed, print out why
+		switch(fetchResult) {
+		case Q_PARSE_ERROR:
+		case Q_INVALID_CATEGORY:
+			fprintf(stderr, "\n-- Parse error in constraint expression \"%s\"\n", user_job_constraint);
+			break;
+		default:
+			fprintf(stderr,
+				"\n-- Failed to fetch ads from: %s : %s\n%s\n",
+				scheddAddress, scheddMachine, errstack.getFullText(true).c_str() );
+		}
+		return false;
+	}
+
+	// if we streamed, then the results have already been printed out.
+	// we just need to write the footer/summary
+	if (g_stream_results) {
+		print_full_footer();
+		return true;
+	}
+
+	if (better_analyze) {
+		if (verbose) { fprintf(stderr, "Sorting %d Jobs...", jobs.Length()); }
+		jobs.Sort(JobSort);
+		
+		PRAGMA_REMIND("TJ: shouldn't this be using scheddAddress instead of scheddName?")
+		Daemon schedd(DT_SCHEDD, scheddName, pool ? pool->addr() : NULL );
+
+		return print_jobs_analysis(jobs, source_label.c_str(), &schedd);
+	}
+
+	// at this point we either have a populated jobs list, or a populated dag_map
+	// depending on which processing function we used in the query above.
+	// for -long -xml or -analyze, we should have jobs, but no dag_map
+
+	// if outputing dag format, we want to build the parent child links in the dag map
+	// and then edit the text for jobs that are dag nodes.
+	if (dag && (dag_map.size() > 0)) {
+		linkup_dag_nodes_in_dag_map(/*dag_map, dag_cluster_map*/);
+		rewrite_output_for_dag_nodes_in_dag_map(/*dag_map*/);
+	}
+
+	// we want a header for this schedd if we are not showing the global queue OR if there is any data
+	if ( ! global || dag_map.size() > 0 || jobs.Length() > 0) {
+		print_full_header(source_label.c_str());
+	}
+
+	// print out jobs, either from the dag_map, or the jobs list, we expect only
+	// one of these to be populated depending on which processing function we passed to the query
+	if (dag_map.size() > 0) {
+		print_dag_map(/*dag_map*/);
+		// free the strings in the dag_map
+		clear_dag_map(/*dag_map, dag_cluster_map*/);
+	} else {
+		jobs.Open();
+		while(ClassAd *job = jobs.Next()) {
+			process_and_print_job(NULL, job);
+		}
+		jobs.Close();
+	}
+
+	// print out summary line (if enabled) and/or xml closure
+	// we want to print out a footer if we printed any data, OR if this is not 
+	// a global query, so that the user can see that we did something.
+	//
+	if ( ! global || dag_map.size() > 0 || jobs.Length() > 0) {
+		print_full_footer();
+	}
+
+	return true;
+}
+
+// Read ads from a file, either in classad format, or userlog format.
+//
+static bool
+show_file_queue(const char* jobads, const char* userlog)
+{
+	// initialize counters
+	malformed = idle = running = held = completed = suspended = 0;
+
+	if (better_analyze && verbose) {
+		fprintf(stderr, "Fetching job ads for analysis...");
+	}
 
 	// setup constraint variables to use in some of the later code.
 	const char * constr = NULL;
-	CondorID * JobIds = NULL;
-	int cJobIds = constrID.size();
-	if (cJobIds > 0) JobIds = &constrID[0];
-
 	std::string constr_string; // to hold the return from ExprTreeToString()
 	ExprTree *tree = NULL;
 	Q.rawQuery(tree);
@@ -3269,344 +3639,63 @@ show_queue( const char* v1, const char* v2, const char* v3, const char* v4, bool
 		fprintf(stderr, "Fetching job ads for analysis...");
 	}
 
-	bool analyze_no_schedd = false;
-	CondorQClassAdFileParseHelper jobads_file_parse_helper;
-	if (jobads_file != NULL) {
+	ClassAdList jobs;
+	std::string source_label;
+
+	if (jobads != NULL) {
 		/* get the "q" from the job ads file */
-		if (!read_classad_file(jobads_file, jobs, &jobads_file_parse_helper, constr)) {
+		CondorQClassAdFileParseHelper jobads_file_parse_helper;
+		if (!read_classad_file(jobads, jobs, &jobads_file_parse_helper, constr)) {
 			return false;
 		}
 		// if we are doing analysis, print out the schedd name and address
 		// that we got from the classad file.
 		if (better_analyze && ! jobads_file_parse_helper.schedd_name.empty()) {
-			scheddName    = jobads_file_parse_helper.schedd_name.c_str();
-			scheddAddress = jobads_file_parse_helper.schedd_addr.c_str();
-			scheddMachine = "Unknown";
-			scheddVersion = "";
-			analyze_no_schedd = true;
+			const char *scheddName    = jobads_file_parse_helper.schedd_name.c_str();
+			const char *scheddAddress = jobads_file_parse_helper.schedd_addr.c_str();
+			formatstr(source_label, "Schedd: %s : %s", scheddName, scheddAddress);
 			}
 		
 		/* The variable UseDB should be false in this branch since it was set 
 			in main() because jobads_file had a good value. */
 
-    } else if (userlog_file != NULL) {
-        if (!userlog_to_classads(userlog_file, jobs, JobIds, cJobIds, constr)) {
-            fprintf(stderr, "Can't open user log: %s\n", userlog_file);
-            return false;
-        }
-		
-		/* The variable UseDB should be false in this branch since it was set 
-			in main() because userlog_file had a good value. */
+	} else if (userlog != NULL) {
+		CondorID * JobIds = NULL;
+		int cJobIds = constrID.size();
+		if (cJobIds > 0) JobIds = &constrID[0];
 
-    } else {
-		/* else get the job queue either from quill or the schedd. */
-
-		/* interpret the parameters accordingly based on whether
-			we are querying a database */
-		if (useDB) {
-			quill_name = v1;
-			db_ipAddr = v2;
-			db_name = v3;		
-			query_password = v4;
-		}
-
-		CondorError errstack;
-
-			/* get the job ads from a database if available */
-		if (useDB) {
-#ifdef HAVE_EXT_POSTGRESQL
-
-			char *dbconn=NULL;
-			dbconn = getDBConnStr(quill_name, db_ipAddr, db_name, query_password);
-
-				// fetch queue from database
-			if( Q.fetchQueueFromDB(jobs, lastUpdate, dbconn, &errstack) != Q_OK ) {
-				fprintf( stderr,
-						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
-						db_ipAddr, db_name, errstack.getFullText(true).c_str() );
-				if(dbconn) {
-					free(dbconn);
-				}
-				if(lastUpdate) {
-					free(lastUpdate);
-				}
-				return false;
-			}
-
-			if(dbconn) {
-				free(dbconn);
-			}
-#else
-			if (query_password) {} /* Done to suppress set-but-not-used warnings */
-#endif /* HAVE_EXT_POSTGRESQL */
-		} else {
-				// fetch queue from schedd	
-			int fetchResult;
-			if( (fetchResult = Q.fetchQueueFromHost(jobs, attrs,scheddAddress, scheddVersion, &errstack) != Q_OK)) {
-			// The parse + fetch failed, print out why
-			switch(fetchResult) {
-				case Q_PARSE_ERROR:
-				case Q_INVALID_CATEGORY:
-					fprintf(stderr, "\n-- Parse error in constraint expression \"%s\"\n", user_job_constraint);
-					break;
-				default:
-					fprintf(stderr,
-						"\n-- Failed to fetch ads from: %s : %s\n%s\n",
-						scheddAddress, scheddMachine, errstack.getFullText(true).c_str() );
-			}
+		if (!userlog_to_classads(userlog, jobs, JobIds, cJobIds, constr)) {
+			fprintf(stderr, "Can't open user log: %s\n", userlog);
 			return false;
-			}
 		}
+		formatstr(source_label, "Userlog: %s", userlog);
+	} else {
+		ASSERT(jobads != NULL || userlog != NULL);
 	}
 
-		// sort jobs by (cluster.proc) if don't query database
-	if (!useDB) {
-		if (better_analyze && verbose) { fprintf(stderr, "Sorting %d Jobs...", jobs.Length()); }
-		jobs.Sort( (SortFunctionType)JobSort );
-	}
+	if (better_analyze && verbose) { fprintf(stderr, "Sorting %d Jobs...", jobs.Length()); }
+	jobs.Sort(JobSort);
 
-		// check if job is being analyzed
-	if( better_analyze ) {
-
-		if (verbose) { fprintf(stderr, "Done.\nFound %d job ads.\n", jobs.Length()); }
-		if (reverse_analyze) { 
-			if (verbose) { fprintf(stderr, "Sorting %d Slots...", startdAds.Length()); }
-			longest_slot_machine_name = 0;
-			longest_slot_name = 0;
-			if (startdAds.Length() == 1) {
-				// if there is a single machine ad, then always do detailed reverse analyze.
-				if ( ! analyze_detail_level) analyze_detail_level = 1;
-			} else {
-				startdAds.Sort(SlotSort);
-			}
-			if (verbose) { fprintf(stderr, "Done, longest machine name %d, longest slot name %d\n", longest_slot_machine_name, longest_slot_name); }
-		}
-
-
-			// print header
-		if (useDB) {
-			printf ("\n\n-- Quill: %s : %s : %s\n", quill_name, 
-					db_ipAddr, db_name);
-		} else if (querySchedds || analyze_no_schedd) {
-			printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddress);
-		} else {
-			printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
-					scheddAddress, scheddMachine);	
-		}
-
-		Daemon schedd_daemon(DT_SCHEDD,scheddName,pool ? pool->addr() : NULL);
-		if ( ! analyze_no_schedd)
-			schedd_daemon.locate();
-
-		if (reverse_analyze) {
-			int console_width = widescreen ? getDisplayWidth() : 80;
-			if (startdAds.Length() <= 0) {
-				// print something out?
-			} else {
-				bool analStartExpr = (better_analyze == 2) || (analyze_detail_level > 0);
-				if ( ! analStartExpr) {
-					std::string fmt;
-					int name_width = MAX(longest_slot_machine_name+7, longest_slot_name);
-					formatstr(fmt, "%%-%d.%ds", MAX(name_width, 16), MAX(name_width, 16));
-					fmt += " %12.12s %12.12s %10.10s\n";
-
-					printf(fmt.c_str(), "", "Slot's Req ",  "Job's Req  ",    "Both   ");
-					printf(fmt.c_str(), "Name", "Matches Job", "Matches Slot", "Match %");
-					printf(fmt.c_str(), "------------------------", "------------", "------------", "----------");
-				}
-				startdAds.Open();
-				while (ClassAd *slot = startdAds.Next()) {
-					doSlotRunAnalysis(slot, jobs, analyze_no_schedd ? NULL : &schedd_daemon, console_width);
-				}
-				startdAds.Close();
-			}
-		} else {
-			jobs.Open();
-			while (ClassAd *job = jobs.Next()) {
-				doJobRunAnalysis(job, analyze_no_schedd ? NULL : &schedd_daemon);
-			}
-			jobs.Close();
-		}
-
-		if(lastUpdate) {
-			free(lastUpdate);
-		}
-		return true;
+	if (better_analyze) {
+		return print_jobs_analysis(jobs, source_label.c_str(), NULL);
 	}
 
 		// display the jobs from this submittor
 	if( jobs.MyLength() != 0 || !global ) {
-			// print header
-		if ( ! customFormat ) {
-			if (useDB) {
-				printf ("\n\n-- Quill: %s : %s : %s\n", quill_name, 
-						db_ipAddr, db_name);
-			} else if( querySchedds ) {
-				printf ("\n\n-- Schedd: %s : %s\n", scheddName, scheddAddress);
-			} else {
-				printf ("\n\n-- Submitter: %s : %s : %s\n", scheddName, 
-					scheddAddress, scheddMachine);	
-			}
-		}
+		print_full_header(source_label.c_str());
 
-			// initialize counters
-		malformed = idle = running = held = completed = suspended = 0;
-		
-		if( dash_long || use_xml ) {
-			StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
-			jobs.fPrintAttrListList( stdout, use_xml ? true : false, attr_white_list);
-		} else if( customFormat ) {
-			summarize = false;
-			if (mask_head.Length() > 0) {
-				mask.display( stdout, &jobs, NULL, &mask_head );
-			} else {
-				mask.display( stdout, &jobs);
-			}
-#if 1
-		} else if( globus || dash_grid || show_held || run || goodput ) {
-			init_output_mask();
-#if 0
-			if (mask_headings) {
-				List<const char> headings;
-				const char * pszz = mask_headings;
-				size_t cch = strlen(pszz);
-				while (cch > 0) {
-					headings.Append(pszz);
-					pszz += cch+1;
-					cch = strlen(pszz);
-				}
-				mask.display(stdout, &jobs, NULL, &headings);
-			} else
-#endif
-			mask.display(stdout, &jobs, NULL, &mask_head);
-#else
-		} else if( globus ) {
-			summarize = false;
-			printf( " %-7s %-14s %-11s %-8s %-18s  %-18s\n", 
-				"ID", "OWNER", "STATUS", "MANAGER", "HOST", "EXECUTABLE" );
-			if (!setup_mask) {
-				mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
-				mask.registerFormat ("%-3d ", ATTR_PROC_ID);
-				mask.registerFormat ( (StringCustomFmt) format_owner,
-									  ATTR_OWNER, "[????????????] " );
-				mask.registerFormat( (IntCustomFmt) format_globusStatus,
-									 ATTR_GLOBUS_STATUS, "[?????]" );
-				mask.registerFormat( (StringCustomFmt)
-									 format_globusHostAndJM,
-									 ATTR_JOB_CMD, "fork    [?????]" );
-				mask.registerFormat( widescreen ? "%s\n" : "%-18.18s\n", ATTR_JOB_CMD );
-				setup_mask = true;
-				usingPrintMask = true;
-			}
-			mask.display( stdout, &jobs );
-		} else if( dash_grid ) {
-			summarize = false;
-			printf( " %-7s %-14s %-10s  %-16s %-16s  %-18s\n", 
-				"ID", "OWNER", "STATUS", "GRID->MANAGER", "HOST", "GRID-JOB-ID" );
-			if (!setup_mask) {
-				mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
-				mask.registerFormat ("%-3d ", ATTR_PROC_ID);
-				mask.registerFormat (NULL, -14, 0, format_owner_wide, ATTR_OWNER, "[?]" );
-				mask.registerFormat( format_gridStatus, ATTR_JOB_STATUS, "[?????]" );
-				//mask.registerFormat( format_gridType, ATTR_JOB_STATUS, "[???]" );
-				mask.registerFormat( format_gridResource, ATTR_GRID_RESOURCE, "[??]->[??] [?????]" );
-				mask.registerFormat (widescreen ? "%s\n" : "%-18.18s\n", 0,0, format_gridJobId, ATTR_GRID_JOB_ID, "\n" );
-				setup_mask = true;
-				usingPrintMask = true;
-			}
-			mask.display( stdout, &jobs );
-		} else if ( show_held ) {
-			printf( " %-7s %-14s %11s %-30s\n", 
-				"ID", "OWNER", "HELD_SINCE", "HOLD_REASON" );
-			if (!setup_mask) {
-				mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
-				mask.registerFormat ("%-3d ", ATTR_PROC_ID);
-				mask.registerFormat ( (StringCustomFmt) format_owner,
-									  ATTR_OWNER, "[????????????] " );
-				mask.registerFormat(" ", "*bogus*", " ");  // force space
-				mask.registerFormat ( (IntCustomFmt) format_q_date,
-									  ATTR_ENTERED_CURRENT_STATUS, "[????????????]");
-				mask.registerFormat(" ", "*bogus*", " ");  // force space
-				mask.registerFormat( widescreen ? "%s\n" : "%-43.43s\n", ATTR_HOLD_REASON );
-				setup_mask = true;
-				usingPrintMask = true;
-			}
-			mask.display( stdout, &jobs );
-		} else if ( run || goodput ) {
-			summarize = false;
-			printf( " %-7s %-14s %11s %12s %-16s\n", "ID", "OWNER",
-					"SUBMITTED", JOB_TIME,
-					run ? "HOST(S)" : "GOODPUT CPU_UTIL   Mb/s" );
-			if (!setup_mask) {
-				mask.registerFormat ("%4d.", ATTR_CLUSTER_ID);
-				mask.registerFormat ("%-3d ", ATTR_PROC_ID);
-				mask.registerFormat ( (StringCustomFmt) format_owner,
-									  ATTR_OWNER, "[????????????] " );
-				mask.registerFormat(" ", "*bogus*", " ");  // force space
-				mask.registerFormat ( (IntCustomFmt) format_q_date,
-									  ATTR_Q_DATE, "[????????????]");
-				mask.registerFormat(" ", "*bogus*", " ");  // force space
-				mask.registerFormat ( (FloatCustomFmt) format_cpu_time,
-									  ATTR_JOB_REMOTE_USER_CPU,
-									  "[??????????]");
-				if ( run ) {
-					mask.registerFormat(" ", "*bogus*", " "); // force space
-					// We send in ATTR_OWNER since we know it is always
-					// defined, and we need to make sure
-					// format_remote_host() is always called. We are
-					// actually displaying ATTR_REMOTE_HOST if defined,
-					// but we play some tricks if it isn't defined.
-					mask.registerFormat ( (StringCustomFmt) format_remote_host,
-										  ATTR_OWNER, "[????????????????]");
-				} else {			// goodput
-					mask.registerFormat ( (IntCustomFmt) format_goodput,
-										  ATTR_JOB_STATUS,
-										  " [?????]");
-					mask.registerFormat ( (FloatCustomFmt) format_cpu_util,
-										  ATTR_JOB_REMOTE_USER_CPU,
-										  " [??????]");
-					mask.registerFormat ( (FloatCustomFmt) format_mbps,
-										  ATTR_BYTES_SENT,
-										  " [????]");
-				}
-				mask.registerFormat("\n", "*bogus*", "\n");  // force newline
-				setup_mask = true;
-				usingPrintMask = true;
-			}
-			mask.display(stdout, &jobs);
-#endif
-		} else if( show_io ) {
-			short_header();
-			jobs.Open();
-			while(ClassAd *job = jobs.Next()) {
-				io_display( job );
-			}
-			jobs.Close();
-		} else {
-			short_header();
-			jobs.Open();
-			while(ClassAd *job = jobs.Next()) {
-				displayJobShort( job );
-			}
-			jobs.Close();
+		jobs.Open();
+		while(ClassAd *job = jobs.Next()) {
+			process_and_print_job(NULL, job);
 		}
+		jobs.Close();
 
-		if( summarize ) {
-			printf( "\n%d jobs; "
-					"%d completed, %d removed, %d idle, %d running, %d held, %d suspended",
-					idle+running+held+malformed+suspended+completed+removed,
-					completed,removed,idle,running,held,suspended);
-			if (malformed>0) printf( ", %d malformed",malformed);
-
-            printf("\n");
-		}
+		print_full_footer();
 	}
 
-	if(lastUpdate) {
-		free(lastUpdate);
-	}
 	return true;
 }
+
 
 static bool is_slot_name(const char * psz)
 {
@@ -3669,7 +3758,7 @@ setupAnalysis()
 	// treat a userprios_file of "" as a signal to ignore user priority.
 	//
 	int cPrios = 0;
-	if ( ! userprios_file || userprios_file[0] ) {
+	if (userprios_file || analyze_with_userprio) {
 		if (verbose) {
 			fprintf(stderr, "Fetching user priorities for analysis...");
 		}
@@ -4001,7 +4090,7 @@ int AnalyzeThisSubExpr(ClassAd *myad, classad::ExprTree* expr, std::vector<AnalS
 	int  child_depth = depth;
 	int  logic_op = 0;
 	bool push_it = must_store;
-	bool chatty = (analyze_detail_level & 0x100) != 0;
+	bool chatty = (analyze_detail_level & detail_diagnostic) != 0;
 	const char * pop = "";
 	int ix_me = -1, ix_left = -1, ix_right = -1, ix_grip = -1;
 
@@ -4521,9 +4610,11 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 		}
 	}
 
-	return_buf = request_is_machine ? "        Jobs" : "        Slots";
-	return_buf += "\nStep   Matched  Condition"
-	              "\n-----  -------  ---------\n";
+	return_buf = request_is_machine ? 
+	                "       Clusters" 
+	              : "         Slots";
+	return_buf += "\nStep    Matched  Condition"
+	              "\n-----  --------  ---------\n";
 	std::string linebuf;
 	for (int ix = 0; ix < (int)subs.size(); ++ix) {
 		if (subs[ix].ix_effective >= 0 || subs[ix].dont_care)
@@ -4533,7 +4624,7 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 		const char * const_val = "";
 		if (subs[ix].constant) {
 			const_val = subs[ix].hard_value ? "always" : "never";
-			formatstr(linebuf, "%s %8s  %s%s\n", StepLbl(ix), const_val, pindent, subs[ix].Label());
+			formatstr(linebuf, "%s %9s  %s%s\n", StepLbl(ix), const_val, pindent, subs[ix].Label());
 			return_buf += linebuf;
 			if (show_work) { printf("%s", linebuf.c_str()); }
 			continue;
@@ -4554,7 +4645,7 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 		}
 		targets.Close();
 
-		formatstr(linebuf, "%s %8d  %s%s", StepLbl(ix), subs[ix].matches, pindent, subs[ix].Label());
+		formatstr(linebuf, "%s %9d  %s%s", StepLbl(ix), subs[ix].matches, pindent, subs[ix].Label());
 
 		bool append_pretty = false;
 		if (subs[ix].logic_op) {
@@ -4873,10 +4964,19 @@ static void AddTargetReferencedAttribsToBuffer(
 	}
 }
 
+
 static void
-doJobRunAnalysis( ClassAd *request, Daemon *schedd )
+doJobRunAnalysis(ClassAd *request, Daemon *schedd, int details)
 {
-	printf("%s", doJobRunAnalysisToBuffer( request, schedd ) );
+	PRAGMA_REMIND("TJ: move this code out of this function so it doesn't output once per job")
+	if (schedd) {
+		MyString buf;
+		warnScheddLimits(schedd, request, buf);
+		printf("%s", buf.Value());
+	}
+
+	anaCounters ac;
+	printf("%s", doJobRunAnalysisToBuffer(request, ac, details, false, verbose));
 }
 
 static void append_to_fail_list(std::string & list, const char * entry, size_t limit)
@@ -4886,7 +4986,7 @@ static void append_to_fail_list(std::string & list, const char * entry, size_t l
 		list += entry;
 	} else if (list.size() > limit) {
 		if (limit > 50) {
-			list.erase(limit-4);
+			list.erase(limit-3);
 			list += "...";
 		} else {
 			list.erase(limit);
@@ -4895,12 +4995,11 @@ static void append_to_fail_list(std::string & list, const char * entry, size_t l
 }
 
 static const char *
-doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
+doJobRunAnalysisToBuffer(ClassAd *request, anaCounters & ac, int details, bool noPrio, bool showMachines)
 {
 	char	owner[128];
-	string	remoteUser;
+	string  user;
 	char	buffer[128];
-	int		index;
 	ClassAd	*offer;
 	classad::Value	eval_result;
 	bool	val;
@@ -4908,42 +5007,26 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	int		jobState;
 	int		niceUser;
 	int		universe;
+	int		verb_width = 100;
 	int		jobMatched = false;
+	std::string job_status = "";
 
-	int 	fReqConstraint 	= 0;
-	int		fOffConstraint 	= 0;
-	int		fRankCond		= 0;
-	int		fPreemptPrioCond= 0;
-	int		fPreemptReqTest	= 0;
-	int     fOffline        = 0;
-	int		available		= 0;
-	int		totalMachines	= 0;
-	bool	alwaysReqAnalyze = (better_analyze == 2) || (analyze_detail_level & 0x10);
-	bool	analEachReqClause = (better_analyze == 2) || (analyze_detail_level > 1);
+	bool	alwaysReqAnalyze = (details & detail_always_analyze_req) != 0;
+	bool	analEachReqClause = /*(better_analyze == 2) ||*/ (details > 1);
 	bool	useNewPrettyReq = true;
-	bool	showJobAttrs = (better_analyze == 2 || analyze_detail_level > 0) && ! (analyze_detail_level & 0x20);
+	bool	showJobAttrs = analEachReqClause && ! (details & detail_dont_show_job_attrs);
+	bool	withoutPrio = false;
 
+	ac.clear();
 	return_buff[0]='\0';
 
 #if !defined(WANT_OLD_CLASSADS)
 	request->AddTargetRefs( TargetMachineAttrs );
 #endif
 
-	if( schedd ) {
-		MyString buf;
-		warnScheddLimits(schedd,request,buf);
-		snprintf( return_buff, sizeof(return_buff), "%s", buf.Value() );
-	}
-
 	if( !request->LookupString( ATTR_OWNER , owner, sizeof(owner) ) ) return "Nothing here.\n";
 	if( !request->LookupInteger( ATTR_NICE_USER , niceUser ) ) niceUser = 0;
-
-	if( ( index = findSubmittor( fixSubmittorName( owner, niceUser ) ) ) < 0 ) 
-		return "Nothing here.\n";
-
-	sprintf( buffer , "%s = %f" , ATTR_SUBMITTOR_PRIO , prioTable[index].prio );
-	request->Insert( buffer );
-
+	request->LookupString(ATTR_USER, user);
 
 	int last_match_time=0, last_rej_match_time=0;
 	request->LookupInteger(ATTR_LAST_MATCH_TIME, last_match_time);
@@ -4953,46 +5036,46 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	request->LookupInteger( ATTR_PROC_ID, proc );
 	request->LookupInteger( ATTR_JOB_STATUS, jobState );
 	request->LookupBool( ATTR_JOB_MATCHED, jobMatched );
-	if( jobState == RUNNING || jobState == TRANSFERRING_OUTPUT || jobState == SUSPENDED) {
-		sprintf( return_buff,
-			"---\n%03d.%03d:  Request is being serviced\n\n", cluster, 
-			proc );
-		if ( ! alwaysReqAnalyze)
-			return return_buff;
+	if (jobState == RUNNING || jobState == TRANSFERRING_OUTPUT || jobState == SUSPENDED) {
+		job_status = "Request is running.";
 	}
-	if( jobState == HELD ) {
-		sprintf( return_buff,
-			"---\n%03d.%03d:  Request is held.\n\n", cluster, 
-			proc );
+	if (jobState == HELD) {
+		job_status = "Request is held.";
 		MyString hold_reason;
 		request->LookupString( ATTR_HOLD_REASON, hold_reason );
 		if( hold_reason.Length() ) {
-			size_t offset = strlen(return_buff);
-			snprintf( return_buff + offset, sizeof(return_buff)-offset, "Hold reason: %s\n\n", hold_reason.Value() );
+			job_status += "\n\nHold reason: ";
+			job_status += hold_reason.Value();
 		}
-		if ( ! alwaysReqAnalyze)
-			return return_buff;
 	}
-	if( jobState == REMOVED ) {
-		sprintf( return_buff,
-			"---\n%03d.%03d:  Request is removed.\n\n", cluster, 
-			proc );
-		if ( ! alwaysReqAnalyze)
-			return return_buff;
+	if (jobState == REMOVED) {
+		job_status = "Request is removed.";
 	}
-	if( jobState == COMPLETED ) {
-		sprintf( return_buff,
-			"---\n%03d.%03d:  Request is completed.\n\n", cluster, 
-			proc );
-		if ( ! alwaysReqAnalyze)
-			return return_buff;
+	if (jobState == COMPLETED) {
+		job_status = "Request is completed.";
 	}
-	if ( jobMatched ) {
-		sprintf( return_buff,
-			"---\n%03d.%03d:  Request has been matched.\n\n", cluster, 
-			proc );
-		if ( ! alwaysReqAnalyze)
-			return return_buff;
+	if (jobMatched) {
+		job_status = "Request has been matched.";
+	}
+
+	// if we already figured out the job status, and we haven't been asked to analyze requirements anyway
+	// we are done.
+	if ( ! job_status.empty() && ! alwaysReqAnalyze) {
+		sprintf(return_buff, "---\n%03d.%03d:  %s\n\n" , cluster, proc, job_status.c_str());
+		return return_buff;
+	}
+
+	// 
+	int ixSubmittor = -1;
+	if (noPrio) {
+		withoutPrio = true;
+	} else {
+		findSubmittor(fixSubmittorName(user.c_str(), niceUser));
+		if (ixSubmittor < 0) {
+			withoutPrio = true;
+		} else {
+			request->Assign(ATTR_SUBMITTOR_PRIO, prioTable[ixSubmittor].prio);
+		}
 	}
 
 	startdAds.Open();
@@ -5006,75 +5089,87 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 
 	while( ( offer = startdAds.Next() ) ) {
 		// 0.  info from machine
-		totalMachines++;
+		ac.totalMachines++;
 		offer->LookupString( ATTR_NAME , buffer, sizeof(buffer) );
-		if( verbose ) sprintf( return_buff, "%-15.15s ", buffer );
+		//if( verbose ) { strcat(return_buff, buffer); strcat(return_buff, " "); }
 
 		// 1. Request satisfied? 
 		if( !IsAHalfMatch( request, offer ) ) {
-			if( verbose ) sprintf( return_buff,
-				"%sFailed request constraint\n", return_buff );
-			fReqConstraint++;
-			append_to_fail_list(fReqConstraintStr, buffer, 1000);
+			//if( verbose ) strcat(return_buff, "Failed request constraint\n");
+			ac.fReqConstraint++;
+			if (showMachines) append_to_fail_list(fReqConstraintStr, buffer, verb_width);
 			continue;
 		} 
 
 		// 2. Offer satisfied? 
 		if ( !IsAHalfMatch( offer, request ) ) {
-			if( verbose ) strcat( return_buff, "Failed offer constraint\n");
-			fOffConstraint++;
-			append_to_fail_list(fOffConstraintStr, buffer, 1000);
+			//if( verbose ) strcat( return_buff, "Failed offer constraint\n");
+			ac.fOffConstraint++;
+			if (showMachines) append_to_fail_list(fOffConstraintStr, buffer, verb_width);
 			continue;
 		}	
 
 		int offline = 0;
 		if( offer->EvalBool( ATTR_OFFLINE, NULL, offline ) && offline ) {
-			fOffline++;
-			append_to_fail_list(fOfflineStr, buffer, 1000);
+			ac.fOffline++;
+			if (showMachines) append_to_fail_list(fOfflineStr, buffer, verb_width);
 			continue;
 		}
 
 		// 3. Is there a remote user?
+		string remoteUser;
 		if( !offer->LookupString( ATTR_REMOTE_USER, remoteUser ) ) {
+			// no remote user
 			if( EvalExprTree( stdRankCondition, offer, request, eval_result ) &&
 				eval_result.IsBooleanValue(val) && val ) {
 				// both sides satisfied and no remote user
-				if( verbose ) sprintf( return_buff, "%sAvailable\n",
-					return_buff );
-				available++;
+				//if( verbose ) strcat(return_buff, "Available\n");
+				ac.available++;
 				continue;
 			} else {
-				// no remote user, but std rank condition failed
+				// no remote user and std rank condition failed
 			  if (last_rej_match_time != 0) {
-				fRankCond++;
-				append_to_fail_list(fRankCondStr, buffer, 1000);
-				if( verbose ) {
-					sprintf( return_buff,
-						"%sFailed rank condition: MY.Rank > MY.CurrentRank\n",
-						return_buff);
-				}
+				ac.fRankCond++;
+				if (showMachines) append_to_fail_list(fRankCondStr, buffer, verb_width);
+				//if( verbose ) strcat( return_buff, "Failed rank condition: MY.Rank > MY.CurrentRank\n");
 				continue;
 			  } else {
-			    sprintf( return_buff,
-				     "---\n%03d.%03d:  Request has not yet been considered by the matchmaker.\n\n", cluster,
-				     proc );
-				if ( ! alwaysReqAnalyze)
-					return return_buff;
+				ac.available++; // tj: is this correct?
+				PRAGMA_REMIND("TJ: move this out of the machine iteration loop?")
+				if (job_status.empty()) {
+					job_status = "Request has not yet been considered by the matchmaker.";
+				}
+				continue;
 			  }
 			}
 		}
 
+		// if we get to here, there is a remote user, if we don't have access to user priorities
+		// we can't decide whether we should be able to preempt other users, so we are done.
+		ac.machinesRunningJobs++;
+		if (withoutPrio) {
+			if (user == remoteUser) {
+				++ac.machinesRunningUsersJobs;
+			} else {
+				append_to_fail_list(fPreemptPrioStr, buffer, verb_width); // borrow preempt prio list
+			}
+			continue;
+		}
+
+		// machines running your jobs will never preempt for your job.
+		if (user == remoteUser) {
+			++ac.machinesRunningUsersJobs;
+
 		// 4. Satisfies preemption priority condition?
-		if( EvalExprTree( preemptPrioCondition, offer, request, eval_result ) &&
+		} else if( EvalExprTree( preemptPrioCondition, offer, request, eval_result ) &&
 			eval_result.IsBooleanValue(val) && val ) {
 
 			// 5. Satisfies standard rank condition?
 			if( EvalExprTree( stdRankCondition, offer , request , eval_result ) &&
 				eval_result.IsBooleanValue(val) && val )  
 			{
-				if( verbose )
-					sprintf( return_buff, "%sAvailable\n", return_buff );
-				available++;
+				//if( verbose ) strcat( return_buff, "Available\n");
+				ac.available++;
 				continue;
 			} else {
 				// 6.  Satisfies preemption rank condition?
@@ -5085,24 +5180,27 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 					if( EvalExprTree( preemptionReq, offer , request , eval_result ) &&
 						eval_result.IsBooleanValue(val) && !val ) 
 					{
-						fPreemptReqTest++;
-						append_to_fail_list(fPreemptReqTestStr, buffer, 1000);
+						ac.fPreemptReqTest++;
+						if (showMachines) append_to_fail_list(fPreemptReqTestStr, buffer, verb_width);
+						/*
 						if( verbose ) {
-							sprintf( return_buff,
+							sprintf_cat( return_buff,
 									"%sCan preempt %s, but failed "
 									"PREEMPTION_REQUIREMENTS test\n",
-									return_buff,
+									buffer,
 									 remoteUser.c_str());
 						}
+						*/
 						continue;
 					} else {
 						// not held
+						/*
 						if( verbose ) {
-							sprintf( return_buff,
-								"%sAvailable (can preempt %s)\n",
-									 return_buff, remoteUser.c_str());
+							sprintf_cat( return_buff,
+								"Available (can preempt %s)\n", remoteUser.c_str());
 						}
-						available++;
+						*/
+						ac.available++;
 					}
 				} else {
 					// failed 6 and 5, but satisfies 4; so have priority
@@ -5111,29 +5209,29 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 					// NOTE: In practice this often indicates some
 					// unknown problem.
 				  if (last_rej_match_time != 0) {
-					fRankCond++;
+					ac.fRankCond++;
 				  } else {
-				    sprintf( return_buff,
-					     "---\n%03d.%03d:  Request has not yet been considered by the matchmaker.\n\n", cluster,
-					     proc );
-					if ( ! alwaysReqAnalyze)
-						return return_buff;
+					if (job_status.empty()) {
+						job_status = "Request has not yet been considered by the matchmaker.";
+					}
 				  }
 				}
 			} 
 		} else {
-			// failed 4
-			fPreemptPrioCond++;
-			append_to_fail_list(fPreemptPrioStr, buffer, 1000);
+			ac.fPreemptPrioCond++;
+			append_to_fail_list(fPreemptPrioStr, buffer, verb_width);
+			/*
 			if( verbose ) {
-				sprintf( return_buff,
-					"%sInsufficient priority to preempt %s\n" , 
-						 return_buff, remoteUser.c_str() );
+				sprintf_cat( return_buff, "%nsufficient priority to preempt %s\n", remoteUser.c_str() );
 			}
+			*/
 			continue;
 		}
 	}
 	startdAds.Close();
+
+	if (summarize_anal)
+		return return_buff;
 
 	fReqConstraintStr += "]";
 	fOffConstraintStr += "]";
@@ -5142,23 +5240,58 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	fPreemptReqTestStr += "]";
 	fRankCondStr += "]";
 
-	sprintf( return_buff, 
-		 "%s---\n%03d.%03d:  Run analysis summary.  Of %d machines,\n"
+	if ( ! job_status.empty()) {
+		sprintf(return_buff, "---\n%03d.%03d:  %s\n\n" , cluster, proc, job_status.c_str());
+	}
+
+	if ( ! noPrio && ixSubmittor < 0) {
+		sprintf(return_buff+strlen(return_buff), "User priority for %s is not available, attempting to analyze without it.\n", user.c_str());
+	}
+
+	sprintf( return_buff + strlen(return_buff),
+		 "---\n%03d.%03d:  Run analysis summary.  Of %d machines,\n"
 		 "  %5d are rejected by your job's requirements %s\n"
-		 "  %5d reject your job because of their own requirements %s\n"
-		 "  %5d match but are serving users with a better priority in the pool%s %s\n"
-		 "  %5d match but reject the job for unknown reasons %s\n"
-		 "  %5d match but will not currently preempt their existing job %s\n"
-		 "  %5d match but are currently offline %s\n"
-		 "  %5d are available to run your job\n",
-		return_buff, cluster, proc, totalMachines,
-		fReqConstraint, verbose ? fReqConstraintStr.c_str() : "",
-		fOffConstraint, verbose ? fOffConstraintStr.c_str() : "",
-		fPreemptPrioCond, niceUser ? "(*)" : "", verbose ? fPreemptPrioStr.c_str() : "",
-		fRankCond, verbose ? fRankCondStr.c_str() : "",
-		fPreemptReqTest,  verbose ? fPreemptReqTestStr.c_str() : "",
-		fOffline, verbose ? fOfflineStr.c_str() : "",
-		available );
+		 "  %5d reject your job because of their own requirements %s\n",
+		cluster, proc, ac.totalMachines,
+		ac.fReqConstraint, showMachines  ? fReqConstraintStr.c_str() : "",
+		ac.fOffConstraint, showMachines ? fOffConstraintStr.c_str() : "");
+
+	if (withoutPrio) {
+		sprintf( return_buff + strlen(return_buff),
+			"  %5d match and are already running your jobs %s\n",
+			ac.machinesRunningUsersJobs, "");
+
+		sprintf( return_buff + strlen(return_buff),
+			"  %5d match but are serving other users %s\n",
+			ac.machinesRunningJobs - ac.machinesRunningUsersJobs, showMachines ? fPreemptPrioStr.c_str() : "");
+
+		if (ac.fOffline > 0) {
+			sprintf( return_buff + strlen(return_buff),
+				"  %5d match but are currently offline %s\n",
+				ac.fOffline, showMachines ? fOfflineStr.c_str() : "");
+		}
+
+		sprintf( return_buff + strlen(return_buff),
+			"  %5d are available to run your job\n",
+			ac.available );
+	} else {
+		sprintf( return_buff + strlen(return_buff),
+			 "  %5d match and are already running one of your jobs%s\n"
+			 "  %5d match but are serving users with a better priority in the pool%s %s\n"
+			 "  %5d match but reject the job for unknown reasons %s\n"
+			 "  %5d match but will not currently preempt their existing job %s\n"
+			 "  %5d match but are currently offline %s\n"
+			 "  %5d are available to run your job\n",
+			ac.machinesRunningUsersJobs, "",
+			ac.fPreemptPrioCond, niceUser ? "(*)" : "", showMachines ? fPreemptPrioStr.c_str() : "",
+			ac.fRankCond, showMachines ? fRankCondStr.c_str() : "",
+			ac.fPreemptReqTest,  showMachines ? fPreemptReqTestStr.c_str() : "",
+			ac.fOffline, showMachines ? fOfflineStr.c_str() : "",
+			ac.available );
+
+		sprintf(return_buff + strlen(return_buff), 
+			 "  %s has a priority of %9.3f\n", prioTable[ixSubmittor].name.Value(), prioTable[ixSubmittor].prio);
+	}
 
 	if (last_match_time) {
 		time_t t = (time_t)last_match_time;
@@ -5187,7 +5320,7 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 	}
 			
 
-	if( fReqConstraint == totalMachines ) {
+	if( ac.fReqConstraint == ac.totalMachines ) {
 		strcat( return_buff, "\nWARNING:  Be advised:\n");
 		strcat( return_buff, "   No resources matched request's constraints\n");
         if (!better_analyze) {
@@ -5204,12 +5337,13 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
         }
 	}
 
-	if (better_analyze && ((fReqConstraint > 0) || analyze_detail_level > 0 || alwaysReqAnalyze)) {
+	if (better_analyze && ((ac.fReqConstraint > 0) || alwaysReqAnalyze)) {
 
 		// first analyze the Requirements expression against the startd ads.
 		//
 		std::string suggest_buf = "";
 		std::string pretty_req = "";
+		analyzer.GetErrors(true); // true to clear errors
 		analyzer.AnalyzeJobReqToBuffer( request, startdAds, suggest_buf, pretty_req );
 		if ((int)suggest_buf.size() > SHORT_BUFFER_SIZE)
 		   suggest_buf.erase(SHORT_BUFFER_SIZE, string::npos);
@@ -5261,7 +5395,7 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		// TJ's experimental analysis (now with more anal)
 		if (analEachReqClause || requirements_is_false) {
 			std::string subexpr_detail;
-			AnalyzeRequirementsForEachTarget(request, startdAds, subexpr_detail, analyze_detail_level);
+			AnalyzeRequirementsForEachTarget(request, startdAds, subexpr_detail, details);
 			strcat(return_buff, "The Requirements expression for your job reduces to these conditions:\n\n");
 			strcat(return_buff, subexpr_detail.c_str());
 		}
@@ -5272,15 +5406,16 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 		strcat(return_buff, suggest_buf.c_str());
 	}
 
-	if( fOffConstraint == totalMachines ) {
+	if( ac.fOffConstraint == ac.totalMachines ) {
         strcat(return_buff, "\nWARNING:  Be advised:\n   Request did not match any resource's constraints\n");
 	}
 
     if (better_analyze) {
         std::string buffer_string = "";
         char ana_buffer[SHORT_BUFFER_SIZE];
-        if( fOffConstraint > 0 ) {
+        if( ac.fOffConstraint > 0 ) {
             buffer_string = "";
+            analyzer.GetErrors(true); // true to clear errors
             analyzer.AnalyzeJobAttrsToBuffer( request, startdAds, buffer_string );
             strncpy( ana_buffer, buffer_string.c_str( ), SHORT_BUFFER_SIZE);
 			ana_buffer[SHORT_BUFFER_SIZE-1] = '\0';
@@ -5349,16 +5484,16 @@ doJobRunAnalysisToBuffer( ClassAd *request, Daemon *schedd )
 }
 
 static void
-doSlotRunAnalysis(ClassAd *slot, ClassAdList & jobs, Daemon *schedd, int console_width)
+doSlotRunAnalysis(ClassAd *slot, JobClusterMap & clusters, Daemon *schedd, int console_width)
 {
-	printf("%s", doSlotRunAnalysisToBuffer(slot, jobs, schedd, console_width));
+	printf("%s", doSlotRunAnalysisToBuffer(slot, clusters, schedd, console_width));
 }
 
 static const char *
-doSlotRunAnalysisToBuffer(ClassAd *slot, ClassAdList & jobs, Daemon * /*schedd*/, int console_width)
+doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, Daemon * /*schedd*/, int console_width)
 {
-	bool analStartExpr = (better_analyze == 2) || (analyze_detail_level > 0);
-	bool showSlotAttrs = ! (analyze_detail_level & 0x20);
+	bool analStartExpr = /*(better_analyze == 2) ||*/ (analyze_detail_level > 0);
+	bool showSlotAttrs = ! (analyze_detail_level & detail_dont_show_job_attrs);
 
 	return_buff[0] = 0;
 
@@ -5375,40 +5510,59 @@ doSlotRunAnalysisToBuffer(ClassAd *slot, ClassAdList & jobs, Daemon * /*schedd*/
 		return return_buff;
 	}
 
-	jobs.Open();
+	const char * slot_type = "Stat";
+	bool is_dslot = false, is_pslot = false;
+	if (slot->LookupBool("DynamicSlot", is_dslot) && is_dslot) slot_type = "Dyn";
+	else if (slot->LookupBool("PartitionableSlot", is_pslot) && is_pslot) slot_type = "Part";
 
-	int totalJobs = 0;
+	int cTotalJobs = 0;
+	int cUniqueJobs = 0;
 	int cReqConstraint = 0;
 	int cOffConstraint = 0;
 	int cBothMatch = 0;
 
-	while(ClassAd *job = jobs.Next()) {
-		// 0.  info from job
-		++totalJobs;
+	ClassAdListDoesNotDeleteAds jobs;
+	for (JobClusterMap::iterator it = clusters.begin(); it != clusters.end(); ++it) {
+		int cJobsInCluster = (int)it->second.size();
+		if (cJobsInCluster <= 0)
+			continue;
 
-		#if !defined(WANT_OLD_CLASSADS)
-		job->AddTargetRefs(TargetMachineAttrs);
-		#endif
+		// for the the non-autocluster cluster, we have to eval these jobs individually
+		int cJobsToEval = (it->first == -1) ? cJobsInCluster : 1;
+		int cJobsToInc  = (it->first == -1) ? 1 : cJobsInCluster;
 
-		// 2. Offer satisfied? 
-		bool offer_match = IsAHalfMatch(slot, job);
-		if (offer_match) {
-			++cOffConstraint;
-		}
+		cTotalJobs += cJobsInCluster;
 
-		// 1. Request satisfied? 
-		if (IsAHalfMatch(job, slot)) {
-			++cReqConstraint;
+		for (int ii = 0; ii < cJobsToEval; ++ii) {
+			ClassAd *job = it->second[ii];
+
+			jobs.Insert(job);
+			cUniqueJobs += 1;
+
+			#if !defined(WANT_OLD_CLASSADS)
+			job->AddTargetRefs(TargetMachineAttrs);
+			#endif
+
+			// 2. Offer satisfied?
+			bool offer_match = IsAHalfMatch(slot, job);
 			if (offer_match) {
-				++cBothMatch;
+				cOffConstraint += cJobsToInc;
+			}
+
+			// 1. Request satisfied?
+			if (IsAHalfMatch(job, slot)) {
+				cReqConstraint += cJobsToInc;
+				if (offer_match) {
+					cBothMatch += cJobsToInc;
+				}
 			}
 		}
-
 	}
 
-	if (analStartExpr) {
+	if ( ! summarize_anal && analStartExpr) {
 
-		sprintf(return_buff, "\n-- Slot: %s : Analyzing matches for %d Jobs\n", slotname.c_str(), totalJobs);
+		sprintf(return_buff, "\n-- Slot: %s : Analyzing matches for %d Jobs in %d autoclusters\n", 
+				slotname.c_str(), cTotalJobs, cUniqueJobs);
 
 		std::string pretty_req = "";
 		static std::string prev_pretty_req;
@@ -5441,9 +5595,9 @@ doSlotRunAnalysisToBuffer(ClassAd *slot, ClassAdList & jobs, Daemon * /*schedd*/
 				strcat(return_buff, attrib_values.c_str());
 				attrib_values = "";
 
-				if (jobs.Length() == 1) { 
-					jobs.Open(); 
-					while (ClassAd * job = jobs.Next()) {
+				if (jobs.Length() == 1) {
+					jobs.Open();
+					while(ClassAd *job = jobs.Next()) {
 						attrib_values = "\n";
 						AddTargetReferencedAttribsToBuffer(trefs, slot, job, "    ", attrib_values);
 						strcat(return_buff, attrib_values.c_str());
@@ -5456,54 +5610,85 @@ doSlotRunAnalysisToBuffer(ClassAd *slot, ClassAdList & jobs, Daemon * /*schedd*/
 		}
 
 		std::string subexpr_detail;
-		AnalyzeRequirementsForEachTarget(slot, jobs, subexpr_detail, analyze_detail_level);
+		AnalyzeRequirementsForEachTarget(slot, (ClassAdList&)jobs, subexpr_detail, analyze_detail_level);
 		strcat(return_buff, subexpr_detail.c_str());
 
 		//formatstr(subexpr_detail, "%-5.5s %8d\n", "[ALL]", cOffConstraint);
 		//strcat(return_buff, subexpr_detail.c_str());
 
-		formatstr(pretty_req, "\nThis slot satisfies the Job Requirements of %d out of these %d jobs\n", cBothMatch, cOffConstraint);
+		formatstr(pretty_req, "\n%s: Run analysis summary of %d jobs.\n"
+			"%5d (%.2f %%) match both slot and job requirements.\n"
+			"%5d match the requirements of this slot.\n"
+			"%5d have job requirements that match this slot.\n",
+			slotname.c_str(), cTotalJobs,
+			cBothMatch, cTotalJobs ? (100.0 * cBothMatch / cTotalJobs) : 0.0,
+			cOffConstraint, 
+			cReqConstraint);
 		strcat(return_buff, pretty_req.c_str());
 		pretty_req = "";
 
 	} else {
-		char fmt[sizeof("%-nnn.nnns %12d %12d %10.2f\n")];
+		char fmt[sizeof("%-nnn.nnns %-4s %12d %12d %10.2f\n")];
 		int name_width = MAX(longest_slot_machine_name+7, longest_slot_name);
 		sprintf(fmt, "%%-%d.%ds", MAX(name_width, 16), MAX(name_width, 16));
-		strcat(fmt, " %12d %12d %10.2f\n");
-		sprintf(return_buff, fmt, slotname.c_str(), cOffConstraint, cReqConstraint, 100.0 * cBothMatch / totalJobs);
+		strcat(fmt, " %-4s %12d %12d %10.2f\n");
+		sprintf(return_buff, fmt, slotname.c_str(), slot_type, 
+				cOffConstraint, cReqConstraint, 
+				cTotalJobs ? (100.0 * cBothMatch / cTotalJobs) : 0.0);
 	}
+
+	jobs.Clear();
 
 	if (better_analyze) {
 		std::string ana_buffer = "";
 		strcat(return_buff, ana_buffer.c_str());
 	}
 
-	jobs.Close();
-
 	return return_buff;
 }
+
+static	void
+buildJobClusterMap(ClassAdList & jobs, const char * attr, JobClusterMap & autoclusters)
+{
+	autoclusters.clear();
+
+	jobs.Open();
+	while(ClassAd *job = jobs.Next()) {
+
+		int acid = -1;
+		if (job->LookupInteger(attr, acid)) {
+			//std::map<int, ClassAdListDoesNotDeleteAds>::iterator it;
+			autoclusters[acid].push_back(job);
+		} else {
+			// stick auto-clusterless jobs into the -1 slot.
+			autoclusters[-1].push_back(job);
+		}
+
+	}
+	jobs.Close();
+}
+
 
 static int
 findSubmittor( const char *name ) 
 {
 	MyString 	sub(name);
 	int			last = prioTable.getlast();
-	int			i;
 	
-	for( i = 0 ; i <= last ; i++ ) {
+	for(int i = 0 ; i <= last ; i++ ) {
 		if( prioTable[i].name == sub ) return i;
 	}
 
-	prioTable[i].name = sub;
-	prioTable[i].prio = 0.5;
+	//prioTable[last+1].name = sub;
+	//prioTable[last+1].prio = 0.5;
+	//return last+1;
 
-	return i;
+	return -1;
 }
 
 
-static char*
-fixSubmittorName( char *name, int niceUser )
+static const char*
+fixSubmittorName( const char *name, int niceUser )
 {
 	static 	bool initialized = false;
 	static	char * uid_domain = 0;
@@ -5546,7 +5731,6 @@ static bool read_classad_file(const char *filename, ClassAdList &classads, Class
 		fprintf(stderr, "Can't open file of job ads: %s\n", filename);
 		return false;
 	} else {
-#if 1
 		CondorClassAdFileParseHelper generic_helper("\n");
 		if ( ! pparse_help)
 			pparse_help = &generic_helper;
@@ -5582,34 +5766,6 @@ static bool read_classad_file(const char *filename, ClassAdList &classads, Class
 				break;
 			}
 		}
-#else
-		int is_eof, is_error, is_empty;
-		int cEmpty = 0;
-		do {
-			classad = new ClassAd(file, "\n", is_eof, is_error, is_empty);
-			include_classad = !is_error && !is_empty;
-			if (constr) {
-				classad::Value result;
-				if (classad->EvaluateExpr(constr,result)) {
-					if ( ! result.IsBooleanValueEquiv(include_classad)) {
-						include_classad=false;
-					}
-				}
-			}
-			if (include_classad) {
-				classads.Insert(classad);
-			} else {
-				delete classad;
-			}
-
-		} while (!is_eof && !is_error);
-
-		if (is_error) {
-			success = false;
-		} else {
-			success = true;
-		}
-#endif
 
 		fclose(file);
 	}
@@ -5813,3 +5969,4 @@ void warnScheddLimits(Daemon *schedd,ClassAd *job,MyString &result_buf) {
 		}
 	}
 }
+

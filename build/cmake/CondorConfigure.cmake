@@ -141,6 +141,12 @@ if( NOT WINDOWS)
 	find_multiple( "resolv" HAVE_LIBRESOLV )
         find_multiple ("dl" HAVE_LIBDL )
 	find_multiple ("ltdl" HAVE_LIBLTDL )
+	find_multiple( "pam" HAVE_LIBPAM )
+	find_program( BISON bison )
+	find_program( FLEX flex )
+	find_program( AUTOCONF autoconf )
+	find_program( AUTOMAKE automake )
+	find_program( LIBTOOLIZE libtoolize )
 
 	check_library_exists(dl dlopen "" HAVE_DLOPEN)
 	check_symbol_exists(res_init "sys/types.h;netinet/in.h;arpa/nameser.h;resolv.h" HAVE_DECL_RES_INIT)
@@ -312,7 +318,6 @@ find_program(HAVE_VMWARE vmware)
 find_program(LN ln)
 find_program(LATEX2HTML latex2html)
 find_program(LATEX latex)
-find_program(HAVE_WGET wget)
 
 # Check for the existense of and size of various types
 check_type_size("id_t" ID_T)
@@ -507,14 +512,6 @@ endif(BUILD_TESTING)
 if (NOT PROPER)
 	message(STATUS "********* Building with UW externals *********")
 	cmake_minimum_required(VERSION 2.8)
-	
-	# perform a quick check for wget b/c without it you're hosed. 
-	 if ((${HAVE_WGET} STREQUAL "HAVE_WGET-NOTFOUND"))
-	    message (FATAL "You are trying to perform a UW-Build without wget, EPIC FAIL! ")
-	 else ()
-	    dprint("wget = ${HAVE_WGET}")
-	 endif()
-
 endif()
 
 option(CACHED_EXTERNALS "enable/disable cached externals" OFF)

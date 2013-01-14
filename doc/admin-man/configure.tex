@@ -1408,26 +1408,48 @@ File System Configuration File Entries''.
 \label{param:StatisticsWindowSeconds}
 \item[\Macro{STATISTICS\_WINDOW\_SECONDS}]
   An integer value that controls the time window size, in seconds, for
-  collecting windowed daemon statistics (by convention, windowed statistics
-  typically are of the form 'RecentXxx').  Any data contributing to a
+  collecting windowed daemon statistics.
+  These statistics are, by convention, those attributes with names that 
+  are of the form \Attr{Recent<attrname>}.  Any data contributing to a
   windowed statistic that is older than this number of seconds is dropped
-  from the statistic.  For example if \Macro{STATISTICS\_WINDOW\_SECONDS} = 300, then
-  any jobs submitted more than 300 seconds ago are not counted in the windowed
-  statistic \Attr{RecentJobsSubmitted}.  Defaults to 1200.
+  from the statistic.  
+  For example, if \Expr{STATISTICS\_WINDOW\_SECONDS = 300},
+  then any jobs submitted more than 300 seconds ago are not counted 
+  in the windowed statistic \Attr{RecentJobsSubmitted}.  
+  Defaults to 1200 seconds, which is 20 minutes.
 
-  Configuration variables of the form \Macro{STATISTICS\_WINDOW\_SECONDS\_<collection>}
-  override the global setting for a particular statistic collection.  Collection names
-  currently implemented are 'DC' (or 'DAEMONCORE') and 'SCHEDD' (or 'SCHEDULER')
+  The window is broken into smaller time pieces called quantum.
+  The window advances one quantum at a time.
+
+\label{param:StatisticsWindowSecondsCollection}
+\item[\Macro{STATISTICS\_WINDOW\_SECONDS\_<collection>}]
+  The same as \MacroNI{STATISTICS\_WINDOW\_SECONDS}, 
+  but used to 
+  override the global setting for a particular statistic collection.  
+  Collection names currently implemented are \Expr{DC} or \Expr{DAEMONCORE}
+  and \Expr{SCHEDD} or \Expr{SCHEDULER}.
 
 \label{param:StatisticsWindowQuantum}
 \item[\Macro{STATISTICS\_WINDOW\_QUANTUM}]
-  An integer value that controls the time quantization, in seconds, for the data structures 
-  that maintain windowed statistics.  Defaults to 240.   Smaller values yield higher
-  time resolution and reduce 'sawtoothing' of windowed statistic values, at the expense of
-  requiring larger data structures for maintenance.
+  For experts only,
+  an integer value that controls the time quantization that form a
+  time window, 
+  in seconds, for the data structures that maintain windowed statistics.
+  Defaults to 240 seconds, which is 6 minutes.
+  This default is purposely set to be slightly smaller than the update
+  rate to the \Condor{collector}. 
+  Setting a smaller value than the default increases the memory requirement
+  for the statistics.
+  Graphing of statistics at the level of the quantum
+  expects to see counts that appear like a saw tooth. 
 
-  Configuration variables of the form \Macro{STATISTICS\_WINDOW\_QUANTUM\_<collection>}
-  override the global setting for a particular statistic collection.
+\label{param:StatisticsWindowQuantumCollection}
+\item[\Macro{STATISTICS\_WINDOW\_QUANTUM\_<collection>}]
+  The same as \MacroNI{STATISTICS\_WINDOW\_QUANTUM}, 
+  but used to 
+  override the global setting for a particular statistic collection.  
+  Collection names currently implemented are \Expr{DC} or \Expr{DAEMONCORE}
+  and \Expr{SCHEDD} or \Expr{SCHEDULER}.
 
 \end{description}
 
@@ -6253,6 +6275,15 @@ These settings affect the \Condor{starter}.
   This affinity list only takes effect if
   \Expr{ENFORCE\_CPU\_AFFINITY = True}.
 
+\label{param:AssignCpuAffinity} 
+\item[\Macro{ASSIGN\_CPU\_AFFINITY}]
+  A boolean expression that defaults to \Expr{False}.
+  When \Expr{True},
+  CPU affinity is automatically set and enforced to be one slot per core.
+  This permits affinity to work well with dynamic slots. 
+  Also when \Expr{True}, overrides any settings specified by
+  \MacroNI{ENFORCE\_CPU\_AFFINITY}.
+
 \label{param:EnableURLTransfers} 
 \item[\Macro{ENABLE\_URL\_TRANSFERS}]
   A boolean value that when \Expr{True} causes the \Condor{starter} for
@@ -6300,14 +6331,17 @@ These settings affect the \Condor{starter}.
 \label{param:StarterRlimitAs} 
 \item[ \Macro{STARTER\_RLIMIT\_AS}]
   An integer ClassAd expression, 
+  expressed in Mbytes,
   evaluated by the \Condor{starter} to set the \Code{RLIMIT\_AS} parameter
   of the \Procedure{setrlimit} system call.
   This limits the virtual memory size of each process in the user job.  
   The expression is
   evaluated in the context of both the machine and job ClassAds,
-  where the machine ClassAd is the \Expr{my} ClassAd,
-  and the job ClassAd is the \Expr{target} ClassAd.
+  where the machine ClassAd is the \Expr{MY.} ClassAd,
+  and the job ClassAd is the \Expr{TARGET.} ClassAd.
   There is no default value for this variable.
+  Since values larger than 2047 have no real meaning on 32-bit platforms,
+  values larger than 2047 result in no limit set on 32-bit platforms.
 
 \end{description}
 
@@ -7495,16 +7529,6 @@ The following configuration macros affect negotiation for group users.
   quota, as scaling is currently based on the number of machines available,
   not assigned quotas (for static quotas).
 
-\label{param:GroupSeparator}
-\item[\Macro{GROUP\_SEPARATOR}]
-  A string value that contains the separator character used between
-accounting groups and the user name.  Defaults to \Expr{``.''} for
-backward compatibility.  In this example, the separator character is set
-to \Expr{``:''}, to allow the use of \Expr{``.''} in user names:
-\begin{verbatim}
-GROUP_SEPARATOR = ":"
-\end{verbatim}
-
 \end{description}
 
 % entire section commented out Nov 2005
@@ -8463,6 +8487,21 @@ These macros affect the HTCondor's usage of grid resources.
 \item[\Macro{GLEXEC}]
   The full path and file name of the \Prog{glexec} executable.
 
+\label{param:GlexecRetries}
+\item[\Macro{GLEXEC}]
+An integer value that specifies the maximum number of times to retry a
+call to \Prog{glexec} when \Prog{glexec} exits with status 202 or 203,
+error codes that indicate a possible transient error condition.  The
+default number of retries is 3.
+
+\label{param:GlexecRetryDelay}
+\item[\Macro{GLEXEC\_RETRY\_DELAY}]
+An integer value that specifies the minimum number of seconds to wait
+between retries of a failed call to glexec.  The default is 5.  The
+actual delay to be used is determined by a random exponential backoff
+algorithm that chooses a delay with a minimum of
+\Macro{GLEXEC\_RETRY\_DELAY} and a maximum of 100 times that value.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -9113,6 +9152,16 @@ section~\ref{sec:Security} on Security.
   which will not match any certificates,
   even if they have an empty subject name.
 
+\label{param:HostAlias}
+\item[\Macro{HOST\_ALIAS}] specifies the
+  hostname that clients authenticating this daemon with GSI should
+  expect the daemon's certificate to match.  The alias is advertised
+  to the \Condor{collector} as part of the address of the daemon.
+  When this is not set, clients validate the daemon's certificate
+  hostname by matching it against DNS A records for the host they
+  are connected to.  See \Macro{GSI\_SKIP\_HOST\_CHECK} for ways
+  to disable this validation step.
+
 \label{param:GSIDaemonDirectory}
 \item[\Macro{GSI\_DAEMON\_DIRECTORY}]
   A directory name used in the
@@ -9541,10 +9590,10 @@ They specify items related to the \Condor{vm-gahp}.
   It will be the value \verb@kvm@, \verb@xen@ or \verb@vmware@.
   There is no default value for this required configuration variable.
 
-\label{param:VMMaxMemory}
+\label{param:VMMemory}
 \item[\Macro{VM\_MEMORY}]
-  An integer to specify the maximum amount of memory in Mbytes
-  that will be allowed to the virtual machine program.
+  An integer specifying the maximum amount of memory in Mbytes
+  to be shared among the VM universe jobs run on this machine.
 
 \label{param:VMMaxNumber}
 \item[\Macro{VM\_MAX\_NUMBER}]

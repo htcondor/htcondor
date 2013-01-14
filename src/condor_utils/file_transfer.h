@@ -68,8 +68,15 @@ typedef HashTable <MyString, MyString> PluginHashTable;
 typedef int		(Service::*FileTransferHandlerCpp)(FileTransfer *);
 typedef int		(*FileTransferHandler)(FileTransfer *);
 
+enum FileTransferStatus {
+	XFER_STATUS_UNKNOWN,
+	XFER_STATUS_QUEUED,
+	XFER_STATUS_ACTIVE,
+	XFER_STATUS_DONE
+};
 
-class FileTransfer {
+
+class FileTransfer: public Service {
 
   public:
 
@@ -145,22 +152,24 @@ class FileTransfer {
 			last transfer.  It is safe for the handler to deallocate the
 			FileTransfer object.
 		*/
-	void RegisterCallback(FileTransferHandler handler)
+	void RegisterCallback(FileTransferHandler handler, bool want_status_updates=false)
 		{ 
 			ClientCallback = handler; 
+			ClientCallbackWantsStatusUpdates = want_status_updates;
 		}
-	void RegisterCallback(FileTransferHandlerCpp handler, Service* handlerclass)
+	void RegisterCallback(FileTransferHandlerCpp handler, Service* handlerclass, bool want_status_updates=false)
 		{ 
 			ClientCallbackCpp = handler; 
 			ClientCallbackClass = handlerclass;
+			ClientCallbackWantsStatusUpdates = want_status_updates;
 		}
 
 	enum TransferType { NoType, DownloadFilesType, UploadFilesType };
 
 	struct FileTransferInfo {
 		FileTransferInfo() : bytes(0), duration(0), type(NoType),
-		    success(true), in_progress(false), try_again(true), hold_code(0),
-		    hold_subcode(0) {}
+		    success(true), in_progress(false), xfer_status(XFER_STATUS_UNKNOWN),
+			try_again(true), hold_code(0), hold_subcode(0) {}
 
 		void addSpooledFile(char const *name_in_spool);
 
@@ -169,6 +178,7 @@ class FileTransfer {
 		TransferType type;
 		bool success;
 		bool in_progress;
+		FileTransferStatus xfer_status;
 		bool try_again;
 		int hold_code;
 		int hold_subcode;
@@ -189,6 +199,15 @@ class FileTransfer {
 	static int Reaper(Service *, int pid, int exit_status);
 
 	static bool SetServerShouldBlock( bool block );
+
+		// Stop accepting new transfer requests for this instance of
+		// the file transfer object.
+		// Also abort this object's active transfer, if any.
+	void stopServer();
+
+		// If this file transfer object has a transfer running in
+		// the background, kill it.
+	void abortActiveTransfer();
 
 	int Suspend();
 
@@ -291,12 +310,17 @@ class FileTransfer {
 
 	ClassAd *GetJobAd();
 
+	bool transferIsInProgress() { return ActiveTransferTid != -1; }
+
   protected:
 
 	int Download(ReliSock *s, bool blocking);
 	int Upload(ReliSock *s, bool blocking);
 	static int DownloadThread(void *arg, Stream *s);
 	static int UploadThread(void *arg, Stream *s);
+	int TransferPipeHandler(int p);
+	bool ReadTransferPipeMsg();
+	void UpdateXferStatus(FileTransferStatus status);
 
 		/** Actually download the files.
 			@return -1 on failure, bytes transferred otherwise
@@ -350,9 +374,11 @@ class FileTransfer {
 	int ActiveTransferTid;
 	time_t TransferStart;
 	int TransferPipe[2];
+	bool registered_xfer_pipe;
 	FileTransferHandler ClientCallback;
 	FileTransferHandlerCpp ClientCallbackCpp;
 	Service* ClientCallbackClass;
+	bool ClientCallbackWantsStatusUpdates;
 	FileTransferInfo Info;
 	PluginHashTable* plugin_table;
 	bool I_support_filetransfer_plugins;
@@ -443,6 +469,8 @@ class FileTransfer {
 		// Returns true if specified path points into the spool directory.
 		// This does not do an existence check for the file.
 	bool outputFileIsSpooled(char const *fname);
+
+	void callClientCallback();
 };
 
 // returns 0 if no expiration
