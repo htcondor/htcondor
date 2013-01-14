@@ -1617,10 +1617,10 @@ void EC2Job::doEvaluateState()
                     }
                         
                     if( ! instanceID.empty() ) {
-                        // Yes, this duplicates work, but it also ensures
-                        // that we do things like logging the submit and/or
-                        // execute events.
-                        gmState = GM_START_VM;
+                        // Copied from the success case of GM_START_VM.
+                        SetInstanceId( instanceID.c_str() );
+                        WriteGridSubmitEventToUserLog( jobAd );
+                        gmState = GM_SAVE_INSTANCE_ID;
                     } else {
                         gmState = GM_DELETE;
                     }
