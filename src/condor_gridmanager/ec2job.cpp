@@ -442,7 +442,7 @@ void EC2Job::doEvaluateState()
                 //
                 if( ! myResource->didFirstPing() ) { break; }
                 if( myResource->hadAuthFailure() ) {
-                    if( condorState == REMOVED ) {
+                    if( condorState == REMOVED && m_client_token.empty() && m_remoteJobId.empty() ) {
                         gmState = GM_DELETE;
                         break;
                     } else {
@@ -450,7 +450,6 @@ void EC2Job::doEvaluateState()
                                    myResource->authFailureMessage.c_str() );
                         dprintf( D_ALWAYS, "(%d.%d) %s\n",
                                  procID.cluster, procID.proc, errorString.c_str() );
-                        jobAd->Assign( ATTR_HOLD_REASON, errorString );
                         gmState = GM_HOLD;
                         break;
                     }
