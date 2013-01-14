@@ -117,15 +117,16 @@ bool ExprList::
 SameAs(const ExprTree *tree) const
 {
     bool is_same;
-
-    if (this == tree) {
+    const ExprTree * pSelfTree = tree->self();
+    
+    if (this == pSelfTree) {
         is_same = true;
-    } else if (tree->GetKind() != EXPR_LIST_NODE) {
+    } else if (pSelfTree->GetKind() != EXPR_LIST_NODE) {
         is_same = false;
     } else {
         const ExprList *other_list;
 
-        other_list = (const ExprList *) tree;
+        other_list = (const ExprList *) pSelfTree;
 
         if (exprList.size() != other_list->exprList.size()) {
             is_same = false;

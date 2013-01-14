@@ -271,9 +271,9 @@ bool ExprTree::isClassad(ClassAd ** ptr)
 	return (bRet);
 }
 
-const ExprTree* ExprTree::self()
+const ExprTree* ExprTree::self() const
 {
-	ExprTree * pRet=this;
+	const ExprTree * pRet=this;
 	return (pRet);
 }
 
