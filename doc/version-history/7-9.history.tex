@@ -192,6 +192,18 @@ kept into smaller pieces.  The window advances one quantum at a time.
 
 \begin{itemize}
 
+\item Jobs of the EC2 grid type which make invalid requests of the
+service (for instance, specify a non-existent AMI) no longer go on
+hold when removed.
+\Ticket{3287}
+
+\item Jobs of the EC2 grid type which can't authenticate with the
+service no longer go on hold when removed.
+\Ticket{3387}
+
+\item Fixed a problem with glexec that caused jobs not to start due to permission errors on the execute directory.
+\Ticket{3369}
+
 \item A change was made to more accurately implement the
 minimum time defined by the configuration variable
 \Macro{NEGOTIATOR\_CYCLE\_DELAY}. 
