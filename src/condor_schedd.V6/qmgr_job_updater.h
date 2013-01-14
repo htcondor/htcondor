@@ -39,7 +39,8 @@ typedef enum {
 	U_REQUEUE,
 	U_EVICT,
 	U_CHECKPOINT,
-	U_X509
+	U_X509,
+	U_STATUS
 } update_t;
 
 

@@ -37,7 +37,7 @@ NetworkNamespaceManager::GetManager()
 	return *m_instance;
 }
 
-int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, const classad::ClassAd & /*job_ad*/, classad_shared_ptr<classad::ClassAd> machine_ad) {
+int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, const classad::ClassAd & job_ad, classad_shared_ptr<classad::ClassAd> machine_ad) {
 	NetworkLock sentry;
 
 	if (m_state != UNCREATED) {
@@ -52,8 +52,16 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, c
 		return 1;
 	}
 	m_ad = machine_ad;
+	m_job_ad.CopyFrom(job_ad);
 
-	m_network_namespace = uniq_namespace;
+	if (uniq_namespace.size() >= IF_NAMESIZE) {
+		// I probably can take IF_NAMESIZE bytes, but I'm being cautious here to avoid
+		// nul-terminated-buffer issues.
+		// -3 because we add the "e_" and "i_" prefixes later to the slot names.
+		m_network_namespace = uniq_namespace.substr(0, IF_NAMESIZE-3);
+	} else {
+		m_network_namespace = uniq_namespace;
+	}
 	machine_ad->InsertAttr(ATTR_IPTABLE_NAME, m_network_namespace);
 
 	m_internal_pipe = "i_" + m_network_namespace;
@@ -149,7 +157,40 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, c
 
 		NAMESPACE_STATE prior_state = m_state;
 		m_state = FAILED;
-		RUN_ARGS_AND_LOG(NetworkNamespaceManager::CreateNamespace, NETWORK_NAMESPACE_CREATE_SCRIPT)
+		FILE *fp = my_popen(args, "w", TRUE);
+		if (fp == NULL) {
+			dprintf(D_ALWAYS, "NetworkNamespaceManager::CreateNamespace: my_popen failure on %s: (errno=%d) %s\n", namespace_script, errno, strerror(errno));
+			return 1;
+		}
+		// TODO: log output of this script.  Probably means we can't use popen anymore
+		// TODO: Factor out the setup script into a separate method.
+		classad::ClassAdUnParser pp;
+		std::string job_ad_str;
+		pp.Unparse(job_ad_str, &job_ad);
+		// Ignore EOF and errors - the script may ignore the stdin and return prior to 
+		// us writing the complete ad.
+		fputs(job_ad_str.c_str(), fp);
+		fputs("\n------\n", fp);
+		std::string machine_ad_str;
+		pp.Unparse(machine_ad_str, machine_ad.get());
+		fputs(machine_ad_str.c_str(), fp);
+		fputs("\n", fp);
+		int status = my_pclose(fp);
+		if (status == -1) {
+			dprintf(D_ALWAYS, "NetworkNamespaceManager::CreateNamespace: Error when running %s (errno=%d) %s\n", namespace_script, errno, strerror(errno));
+		} else {
+			if (WIFEXITED(status)) {
+				if ((status = WEXITSTATUS(status))) {
+					dprintf(D_ALWAYS, "NetworkNamespaceManager::CreateNamespace: %s exited with status %d\n", namespace_script, status);
+					return status;
+				} else {
+					dprintf(D_FULLDEBUG, "NetworkNamespaceManager::CreateNamespace: %s was successful.\n", namespace_script);
+				}
+			} else if (WIFSIGNALED(status)) {
+				status = WTERMSIG(status);
+				dprintf(D_ALWAYS, "NetworkNamespaceManager::CreateNamespace: %s terminated with signal %d\n", namespace_script, status);
+			}
+		}
 		m_state = prior_state;
 	} else {
 		dprintf(D_FULLDEBUG, "Parameter NETWORK_NAMESPACE_CREATE_SCRIPT is not specified.\n");
@@ -469,7 +510,40 @@ int NetworkNamespaceManager::RunCleanupScript() {
 		args.AppendArg(m_network_namespace);
 		args.AppendArg(m_external_pipe);
 		args.AppendArg(m_internal_address_str);
-		RUN_ARGS_AND_LOG(NetworkNamespaceManager::Cleanup, NETWORK_NAMESPACE_DELETE_SCRIPT)
+		FILE *fp = my_popen(args, "w", TRUE);
+		if (fp == NULL) {
+			dprintf(D_ALWAYS, "NetworkNamespaceManager::DeleteNamespace: my_popen failure on %s: (errno=%d) %s\n", namespace_script, errno, strerror(errno));
+			return 1;
+		}
+		// TODO: log output of this script.  Probably means we can't use popen anymore
+		// TODO: Factor out the setup script into a separate method.
+		classad::ClassAdUnParser pp;
+		std::string job_ad_str;
+		pp.Unparse(job_ad_str, &m_job_ad);
+		// Ignore EOF and errors - the script may ignore the stdin and return prior to 
+		// us writing the complete ad.
+		fputs(job_ad_str.c_str(), fp);
+		fputs("\n------\n", fp);
+		std::string machine_ad_str;
+		pp.Unparse(machine_ad_str, m_ad.get());
+		fputs(machine_ad_str.c_str(), fp);
+		fputs("\n", fp);
+		int status = my_pclose(fp);
+		if (status == -1) {
+			dprintf(D_ALWAYS, "NetworkNamespaceManager::DeleteNamespace: Error when running %s (errno=%d) %s\n", namespace_script, errno, strerror(errno));
+		} else {
+			if (WIFEXITED(status)) {
+				if ((status = WEXITSTATUS(status))) {
+					dprintf(D_ALWAYS, "NetworkNamespaceManager::DeleteNamespace: %s exited with status %d\n", namespace_script, status);
+					return status;
+				} else {
+					dprintf(D_FULLDEBUG, "NetworkNamespaceManager::DeleteNamespace: %s was successful.\n", namespace_script);
+				}
+			} else if (WIFSIGNALED(status)) {
+				status = WTERMSIG(status);
+				dprintf(D_ALWAYS, "NetworkNamespaceManager::DeleteNamespace: %s terminated with signal %d\n", namespace_script, status);
+			}
+		}
 	}
 
 	return 0;
@@ -562,7 +636,9 @@ NetworkNamespaceManager::NetworkLock::NetworkLock() : m_fd(-1)
 	lock_info.l_start = 0;
 	lock_info.l_len = 0;
 	lock_info.l_pid = 0;
-	if (fcntl(fd, F_SETLK, &lock_info) == -1)
+	int retval;
+	while (((retval = fcntl(fd, F_SETLKW, &lock_info)) == -1) && (errno == EINTR)) {}
+	if (retval == -1)
 	{
 		dprintf(D_ALWAYS, "Error locking file %s. (errno=%d, %s)\n", lark_lock.c_str(), errno, strerror(errno));
 	}

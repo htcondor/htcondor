@@ -4,9 +4,8 @@ import os
 
 from campus_factory.ClusterStatus import ClusterStatus
 from campus_factory.OfflineAds.OfflineAds import OfflineAds
-from campus_factory.ClusterStatus import CondorConfig
 from campus_factory.util.ExternalCommands import RunExternal
-from campus_factory.util.CampusConfig import get_option, get_option_section
+import campus_factory.util.CampusConfig
 
 class ClusterPreferenceException(Exception):
     def __init__(self, value):
@@ -28,6 +27,12 @@ class Cluster:
         self.cluster_entry, self.cluster_type = self._ParseClusterId(cluster_unique)
         if self.cluster_type == None:
             self.cluster_type = "pbs"
+        
+        
+    def get_option(self, option, default=None):
+        
+        return campus_factory.util.CampusConfig.get_option(option, default, self.cluster_unique)
+        
         
     
     def _ParseClusterId(self, cluster_unique):
@@ -56,7 +61,7 @@ class Cluster:
             logging.info("Received None from idle glideins, going to try later")
             raise ClusterPreferenceException("Received None from idle glideins")
         logging.debug("Idle glideins = %i" % idleslots)
-        if idleslots >= int(get_option("MAXIDLEGLIDEINS", "5")):
+        if idleslots >= int(self.get_option("MAXIDLEGLIDEINS", "5")):
             logging.info("Too many idle glideins")
             raise ClusterPreferenceException("Too many idle glideins")
 
@@ -66,7 +71,7 @@ class Cluster:
             logging.info("Received None from idle glidein jobs, going to try later")
             raise ClusterPreferenceException("Received None from idle glidein jobs")
         logging.debug("Queued jobs = %i" % idlejobs)
-        if idlejobs >= int(get_option("maxqueuedjobs", "5")):
+        if idlejobs >= int(self.get_option("maxqueuedjobs", "5")):
             logging.info("Too many queued jobs")
             raise ClusterPreferenceException("Too many queued jobs")
 
@@ -96,13 +101,7 @@ class Cluster:
         
         return toSubmit
     
-    def _GetClusterSpecificConfig(self, option, default):
-        if get_option_section(self.cluster_unique, option):
-            return  get_option_section(self.cluster_unique, option)
-        elif get_option(option):
-            return get_option(option)
-        else:
-            return default
+
     
     def SubmitGlideins(self, numSubmit):
         """
@@ -111,7 +110,7 @@ class Cluster:
         @param numSubmit: The number of glideins to submit.
         """
         # Substitute values in submit file
-        filename = os.path.join(get_option("GLIDEIN_DIRECTORY"), "job.submit.template")
+        filename = os.path.join(self.get_option("GLIDEIN_DIRECTORY"), "job.submit.template")
 
         # Submit jobs
         for i in range(numSubmit):
@@ -129,25 +128,40 @@ class Cluster:
         
         # Get the cluster specific information
         # First, the cluster tmp directory
-        cluster_tmp = self._GetClusterSpecificConfig("worker_tmp", "/tmp")
-        remote_factory_location = self._GetClusterSpecificConfig("remote_factory", "~/bosco/campus_factory")
+        cluster_tmp = self.get_option("worker_tmp", "/tmp")
+        remote_factory_location = self.get_option("remote_factory", "~/bosco/campus_factory")
         
         # If we are submtiting to ourselves, then don't need remote cluster
-        if get_option("CONDOR_HOST") == self.cluster_unique:
+        if self.get_option("CONDOR_HOST") == self.cluster_unique:
             remote_cluster = ""
         else:
             remote_cluster = self.cluster_entry
         
+        # Get any custom attributes that are defined in the configuration
+        custom_options = {}
+        custom_options_raw = self.get_option("custom_condor_submit")
+        if (custom_options_raw is not None):
+            split_options = custom_options_raw.split(";")
+            for option in split_options:
+                (lside, rside) = option.split("=")
+                custom_options[lside.strip()] = rside.strip()
+                
+        
+        
         # TODO: These options should be moved to a better location
-        options = {"WN_TMP": cluster_tmp, \
-                   "GLIDEIN_HOST": get_option("COLLECTOR_HOST"), \
+        predetermined_options = {"WN_TMP": cluster_tmp, \
+                   "GLIDEIN_HOST": self.get_option("COLLECTOR_HOST"), \
                    "GLIDEIN_Site": self.cluster_unique, \
                    "BOSCOCluster": self.cluster_unique, \
                    "REMOTE_FACTORY": remote_factory_location, \
                    "REMOTE_CLUSTER": remote_cluster, \
                    "REMOTE_SCHEDULER": self.cluster_type, \
-                   "GLIDEIN_DIR": get_option("GLIDEIN_DIRECTORY"), \
-                   "PASSWDFILE_LOCATION": get_option("SEC_PASSWORD_FILE")}
+                   "GLIDEIN_DIR": self.get_option("GLIDEIN_DIRECTORY"), \
+                   "PASSWDFILE_LOCATION": self.get_option("SEC_PASSWORD_FILE")}
+        
+        # Combine the custom options with the pre-determined options.  Prefer
+        # custom options over pre-determined
+        options = dict(predetermined_options.items() + custom_options.items())
         
         options_str = ""
         for key in options.keys():

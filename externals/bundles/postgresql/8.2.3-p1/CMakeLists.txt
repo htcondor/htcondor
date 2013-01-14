@@ -47,7 +47,6 @@ if (WITH_POSTGRESQL)
 
 		ExternalProject_Add(postgresql
 							#-- Download Step ----------
-							DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${POSTGRESQL_VER}.tar.gz ${CMD_TERM}
 							DOWNLOAD_DIR ${POSTGRESQL_STAGE}/dl
 							URL http://parrot.cs.wisc.edu/externals/${POSTGRESQL_VER}.tar.gz
 							#--Configure step ----------

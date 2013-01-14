@@ -49,6 +49,12 @@ class ClassAdAnalyzer
 	~ClassAdAnalyzer( );
 
 	classad_analysis::job::result GetResult() { return (result_as_struct && m_result) ? *m_result : classad_analysis::job::result(); }
+	bool GetErrors(bool clear_errs=true, std::string * perrs = NULL) { 
+		bool had_errors = ! errstm.str().empty();
+		if (perrs) *perrs = errstm.str();
+		if (clear_errs) errstm.clear();
+		return had_errors;
+	}
 
 		/** Analyze a job ClassAd requirements expression.
 		 *	@param request The job ClassAd
@@ -57,7 +63,7 @@ class ClassAdAnalyzer
 		 *  @return true on success false on failure
 		 */
 	bool AnalyzeJobReqToBuffer( ClassAd *request, ClassAdList &offers,
-								std::string &buffer );
+								std::string &buffer, std::string &pretty_req);
 
 #if defined( COLLECTIONS )
 		/** Analyze a job ClassAd requirements expression.
@@ -103,6 +109,8 @@ class ClassAdAnalyzer
 	ExprTree* preempt_prio_condition;
 	ExprTree* preemption_req;
 
+	std::stringstream errstm;
+
 	void ensure_result_initialized(classad::ClassAd *request);
 
 	// wrapper functions to add information to the result only if we're generating one
@@ -111,7 +119,7 @@ class ClassAdAnalyzer
 	void result_add_explanation(classad_analysis::matchmaking_failure_kind mfk, ClassAd *resource);
 	void result_add_machine(classad::ClassAd resource);
 
-	bool AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, std::string &buffer );
+	bool AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, std::string &buffer, std::string &pretty_req );
 	bool AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers, std::string &buffer );
 
 	bool BuildBoolTable( MultiProfile *, ResourceGroup &, BoolTable &result );

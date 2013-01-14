@@ -26,6 +26,10 @@ if (WITH_LIBVIRT)
 
 	if ( NOT PROPER AND NOT LIBVIRT_FOUND )
 
+		if (NOT LIBXML2_FOUND)
+			message(FATAL_ERROR "Can't find libxml2, needed to build libvirt external!")
+		endif()
+
 		set (LIBVIRT_REAL_VERSION libvirt-0.6.2)
 
 		condor_pre_external( LIBVIRT ${LIBVIRT_REAL_VERSION}-p1 "lib;include" "lib/libvirt.a" )
@@ -40,10 +44,9 @@ if (WITH_LIBVIRT)
 		ExternalProject_Add(libvirt
 					DEPENDS ${LIBVIRT_DEPENDS}
 				    #-- Download Step ----------
-					DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${LIBVIRT_REAL_VERSION}.tar.gz ${CMD_TERM}
 				    DOWNLOAD_DIR ${LIBVIRT_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${LIBVIRT_REAL_VERSION}.tar.gz
-				    PATCH_COMMAND cd ${LIBVIRT_REAL_VERSION} && patch -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/no_gnutls.patch
+				    PATCH_COMMAND cd ${LIBVIRT_REAL_VERSION} && patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/no_gnutls.patch
 					#--Configure step ----------
 				    CONFIGURE_COMMAND cd ${LIBVIRT_REAL_VERSION} &&
 				    ./configure --prefix=${LIBVIRT_INSTALL_LOC} --without-python --without-xen --without-libvirtd --without-remote --without-test --without-uml --without-openvz --without-avahi --without-selinux --without-sasl ${LIBVIRT_CONFIGURE}

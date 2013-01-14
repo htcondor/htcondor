@@ -640,7 +640,7 @@ ClassAd::ClassAd()
 	ResetName();
     ResetExpr();
 
-	EnableDirtyTracking();
+	DisableDirtyTracking();
 }
 
 ClassAd::ClassAd( const ClassAd &ad ) : classad::ClassAd(ad)

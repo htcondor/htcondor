@@ -507,7 +507,7 @@ recv_dhcp_ack(int fd, uint32_t txid, const char mac_address[IFHWADDRLEN], unsign
 }
 
 static int
-get_dhcp_socket()
+get_dhcp_socket(const std::string &interface)
 {
 	// Query socket.
 	int fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -518,6 +518,11 @@ get_dhcp_socket()
 	int optval = 1;
 	if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &optval, sizeof(optval)) == -1) {
 		dprintf(D_ALWAYS, "Unable to enable broadcasting on DHCP query socket (errno=%d, %s).\n", errno, strerror(errno));
+		close(fd);
+		return -1;
+	}
+	if (interface.size() && setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, interface.c_str(), interface.size()) == -1) {
+		dprintf(D_ALWAYS, "Unable to bind DHCP socket to device %s (errno=%d, %s).\n", interface.c_str(), errno, strerror(errno));
 		close(fd);
 		return -1;
 	}
@@ -545,7 +550,11 @@ get_dhcp_socket()
 int
 dhcp_query(classad::ClassAd &machine_ad)
 {
-	int fd = get_dhcp_socket();
+	std::string device_name;
+	if (!machine_ad.EvaluateAttrString(ATTR_BRIDGE_DEVICE, device_name)) {
+		device_name = "";
+	}
+	int fd = get_dhcp_socket(device_name);
 	if (fd == -1) return -1; // get_dhcp_socket already logged error.
 
 	// Transaction ID
@@ -589,6 +598,13 @@ dhcp_query(classad::ClassAd &machine_ad)
 int
 dhcp_commit (classad::ClassAd &machine_ad)
 {
+
+	std::string interface_name;
+	if (!machine_ad.EvaluateAttrString(ATTR_INTERNAL_INTERFACE, interface_name)) {
+		dprintf(D_ALWAYS, "Required ClassAd attribute " ATTR_INTERNAL_INTERFACE " is missing.\n");
+		return 1;
+	}
+
 	char mac_address[IFHWADDRLEN];
 	if (get_mac_address(machine_ad, mac_address)) {
 		dprintf(D_ALWAYS, "Unable to get mac address for internal device.\n");
@@ -600,7 +616,7 @@ dhcp_commit (classad::ClassAd &machine_ad)
 		return 1;
 	}
 
-	int fd = get_dhcp_socket();
+	int fd = get_dhcp_socket(interface_name);
 	if (fd == -1) return -1;
 
 	for (int i=0; i<2; i++) {
@@ -620,7 +636,7 @@ dhcp_commit (classad::ClassAd &machine_ad)
 				//return 1; // TODO: fix below.
 				sleep(2);
 				close(fd);
-				fd = get_dhcp_socket();
+				fd = get_dhcp_socket(interface_name);
 				continue;
 			}
 			close(fd);
@@ -691,7 +707,12 @@ dhcp_release (classad::ClassAd &machine_ad)
 	req_iter = packet.setOption(req_iter, '\x32', 4, (char*)&ciaddr.s_addr);
 	req_iter = packet.setOption(req_iter, '\x36', 4, (char*)&packet.m_siaddr.s_addr);
 
-	int fd = get_dhcp_socket();
+	std::string device_name;
+	if (!machine_ad.EvaluateAttrString(ATTR_BRIDGE_DEVICE, device_name)) {
+		device_name = "";
+	}
+
+	int fd = get_dhcp_socket(device_name);
 	if (fd == -1) {
 		dprintf(D_ALWAYS, "Failed to acquire a socket for DHCP communication.\n");
 		return 1;

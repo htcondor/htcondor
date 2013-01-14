@@ -62,8 +62,8 @@ diff -u -r org.glite.ce.blahp/src/Makefile.am org.glite.ce.blahp.patched/src/Mak
 -blahpd_daemon_SOURCES = main_daemon.c $(common_sources)
 +batch_gahp_daemon_SOURCES = main_daemon.c $(common_sources)
  
--blahpd_LDADD = $(CLASSAD_LIBS)
-+batch_gahp_LDADD = $(CLASSAD_LIBS)
+-blahpd_LDADD = $(CLASSAD_LIBS) $(GLOBUS_GSS_NOTHR_LIBS) $(GLOBUS_SSL_NOTHR_LIBS)
++batch_gahp_LDADD = $(CLASSAD_LIBS) $(GLOBUS_GSS_NOTHR_LIBS) $(GLOBUS_SSL_NOTHR_LIBS)
  
 -blahpd_daemon_LDADD = $(blahpd_LDADD)
 +batch_gahp_daemon_LDADD = $(batch_gahp_LDADD)

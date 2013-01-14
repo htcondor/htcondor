@@ -32,8 +32,8 @@ if ( NOT PROPER AND NOT LINUX )
 	else()
 # I believe we only neede the longlong patch on HPUX, but not willing to turn it off and potentially
 # break other stuff just yet...
-		set (PCRE_PATCH  patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/longlong.patch &&
-						 patch -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/unittests.patch )
+		set (PCRE_PATCH  patch -N -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/longlong.patch &&
+						 patch -N -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/unittests.patch )
 		set (PCRE_CONFIGURE ./configure --prefix=${PCRE_INSTALL_LOC} --disable-cpp )
 		set (PCRE_MAKE make && make test )
 		set (PCRE_INSTALL make install )
@@ -41,7 +41,6 @@ if ( NOT PROPER AND NOT LINUX )
 
 	ExternalProject_Add(pcre
 						#-- Download Step ----------
-						DOWNLOAD_COMMAND wget -N http://parrot.cs.wisc.edu/externals/${PCRE_VER}.tar.gz ${CMD_TERM}
 						DOWNLOAD_DIR ${PCRE_STAGE}/dl
 						URL http://parrot.cs.wisc.edu/externals/${PCRE_VER}.tar.gz
 						#--Patch step ----------

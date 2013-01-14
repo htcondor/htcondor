@@ -27,7 +27,7 @@ from aviary.util import *
 # change these for other default locations and ports
 wsdl = 'file:/var/lib/condor/aviary/services/query/aviary-query.wsdl'
 
-parser = build_basic_parser('Reconcile job info between Condor and Aviary','http://localhost:9091/services/query/getJobStatus')
+parser = build_basic_parser('Reconcile job info between HTCondor and Aviary','http://localhost:9091/services/query/getJobStatus')
 (opts,args) =  parser.parse_args()
 
 client = create_suds_client(opts,wsdl,None)
@@ -56,12 +56,12 @@ live = sorted(cqproc.stdout.readline().split(','))
 del live[0]
 
 alljobs = sorted(set(history+live))
-print "Checking %d Condor jobs " % len(alljobs)
+print "Checking %d HTCondor jobs " % len(alljobs)
 for job in alljobs:
 	if not job in aviary_jobs:
 		print "No record of ", job
 
 if len(alljobs) == len(aviary_jobs):
-	print "All jobs in Condor accounted for in Aviary"
+	print "All jobs in HTCondor accounted for in Aviary"
 else:
 	print "Mismatch - inventory check failed"

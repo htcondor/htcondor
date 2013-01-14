@@ -16,19 +16,22 @@
  # 
  ############################################################### 
 
-if ( LINUX )
+if ( LINUX OR DARWIN )
 	if ( WANT_FULL_DEPLOYMENT )
 		option(WITH_CAMPUSFACTORY "Compiling with support for Campus Factory" ON)
 	else ( WANT_FULL_DEPLOYMENT )
 		option(WITH_CAMPUSFACTORY "Compiling with support for Campus Factory" OFF)
 	endif ( WANT_FULL_DEPLOYMENT )
-endif ( LINUX )
+endif ( LINUX OR DARWIN )
 
 if ( WITH_CAMPUSFACTORY )
 
 	install ( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python-lib DESTINATION ${C_LIBEXEC}/campus_factory USE_SOURCE_PERMISSIONS )
         install ( DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/share DESTINATION ${C_LIBEXEC}/campus_factory USE_SOURCE_PERMISSIONS )
-        install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/bin/campus_factory ${CMAKE_CURRENT_SOURCE_DIR}/bin/runfactory DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS}) 
+        install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/bin/campus_factory 
+                        ${CMAKE_CURRENT_SOURCE_DIR}/bin/runfactory 
+                        ${CMAKE_CURRENT_SOURCE_DIR}/bin/glidein_creation 
+                        DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS}) 
         install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/etc/campus_factory.conf DESTINATION ${C_LIBEXEC}/campus_factory/etc )
         install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/condor/condor_config.factory DESTINATION ${C_ETC_EXAMPLES} )
 		

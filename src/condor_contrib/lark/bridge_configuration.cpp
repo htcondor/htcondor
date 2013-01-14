@@ -16,6 +16,7 @@
 
 #include "address_selection.h"
 #include "bridge_configuration.h"
+#include "bridge_routing.h"
 #include "popen_util.h"
 
 // We had to redefine this function because linux/if.h and net/if.h
@@ -29,12 +30,23 @@ using namespace lark;
 int
 BridgeConfiguration::Setup() {
 
-	std::string bridge_device;
-	if (!m_ad->EvaluateAttrString(ATTR_BRIDGE_DEVICE, bridge_device) &&
-			!param(bridge_device, CONFIG_BRIDGE_DEVICE)) {
-		dprintf(D_ALWAYS, "Could not determine which device to use for the external bridge.\n");
-		return 1;
+	std::string bridge_name;
+	if (!m_ad->EvaluateAttrString(ATTR_BRIDGE_NAME, bridge_name) &&
+			!param(bridge_name, CONFIG_BRIDGE_NAME)) {
+		dprintf(D_FULLDEBUG, "Could not determine the bridge name from the configuration; using the default " LARK_BRIDGE_NAME ".");
+		bridge_name = LARK_BRIDGE_NAME;
 	}
+
+	std::string bridge_device;
+	if (!m_ad->EvaluateAttrString(ATTR_BRIDGE_DEVICE, bridge_device)) {
+		if (!param(bridge_device, CONFIG_BRIDGE_DEVICE)) {
+			dprintf(D_ALWAYS, "Could not determine which device to use for the external bridge.\n");
+			return 1;
+		} else {
+			m_ad->InsertAttr(ATTR_BRIDGE_DEVICE, bridge_device);
+		}
+	}
+	
 	std::string external_device;
 	if (!m_ad->EvaluateAttrString(ATTR_EXTERNAL_INTERFACE, external_device)) {
 		dprintf(D_ALWAYS, "Required ClassAd attribute " ATTR_EXTERNAL_INTERFACE " is missing.\n");
@@ -46,24 +58,38 @@ BridgeConfiguration::Setup() {
 	}
 
 	int result;
-	if ((result = create_bridge(LARK_BRIDGE_NAME))) {
-		dprintf(D_ALWAYS, "Unable to create a bridge (" LARK_BRIDGE_NAME "); error=%d.\n", result);
-		return result;
-	}
-
-	if ((result = add_interface_to_bridge(LARK_BRIDGE_NAME, bridge_device.c_str()))) {
-		dprintf(D_ALWAYS, "Unable to add device %s to bridge " LARK_BRIDGE_NAME "\n", bridge_device.c_str());
-		return result;
-	}
-
-	if ((result = add_interface_to_bridge(LARK_BRIDGE_NAME, external_device.c_str()))) {
-		dprintf(D_ALWAYS, "Unable to add device %s to bridge " LARK_BRIDGE_NAME "\n", external_device.c_str());
+	if ((result = create_bridge(bridge_name.c_str())) && (result != EEXIST)) {
+		dprintf(D_ALWAYS, "Unable to create a bridge (%s); error=%d.\n", bridge_name.c_str(), result);
 		return result;
 	}
 
 	// Manipulate the routing and state of the link.  Done internally; no callouts.
 	NetworkNamespaceManager & manager = NetworkNamespaceManager::GetManager();
 	int fd = manager.GetNetlinkSocket();
+
+	// We are responsible for creating the bridge.
+	if (result != EEXIST) {
+		if ((result = add_interface_to_bridge(bridge_name.c_str(), bridge_device.c_str()))) {
+			dprintf(D_ALWAYS, "Unable to add device %s to bridge %s\n", bridge_name.c_str(), bridge_device.c_str());
+			return result;
+		}
+		// TODO: Move IP addresses to bridge
+
+		if ((result = move_routes_to_bridge(fd, bridge_name.c_str(), bridge_device.c_str()))) {
+			dprintf(D_ALWAYS, "Failed to move routes from %s to bridge %s\n", bridge_device.c_str(), bridge_name.c_str());
+			return result;
+		}
+	}
+
+	if ((result = add_interface_to_bridge(bridge_name.c_str(), external_device.c_str()))) {
+		dprintf(D_ALWAYS, "Unable to add device %s to bridge %s\n", bridge_name.c_str(), external_device.c_str());
+		return result;
+	}
+
+	if ((m_has_default_route = interface_has_default_route(fd, bridge_name.c_str())) < 0) {
+		dprintf(D_ALWAYS, "Unable to determine if bridge %s has a default route.\n", bridge_name.c_str());
+		return m_has_default_route;
+	}
 
 	// Enable the device
 	// ip link set dev $DEV up
@@ -124,15 +150,22 @@ BridgeConfiguration::SetupPostForkChild()
 		return 1;
 	}
 
-	{
-		ArgList args;
-		args.AppendArg("ip");
-		args.AppendArg("route");
-		args.AppendArg("add");
-		args.AppendArg("default");
-		args.AppendArg("dev");
-		args.AppendArg(internal_device.c_str());
-		RUN_ARGS_AND_LOG(NetworkNamespaceManager::Cleanup, NETWORK_NAMESPACE_DELETE_SCRIPT)
+	// Manipulate the routing and state of the link.  Done internally; no callouts.
+	NetworkNamespaceManager & manager = NetworkNamespaceManager::GetManager();
+	int fd = manager.GetNetlinkSocket();
+
+	std::string gw = "0.0.0.0";
+	std::string dev = internal_device;
+	if (!m_has_default_route) {
+		if (!m_ad->EvaluateAttrString(ATTR_GATEWAY, gw)) {
+			dprintf(D_ALWAYS, "Required ClassAd attribute " ATTR_GATEWAY " is missing.\n");
+			return 1;
+		}
+		dev = "";
+	}
+	if (add_default_route(fd, gw.c_str(), dev.c_str())) {
+		dprintf(D_ALWAYS, "Failed to add default route.\n");
+		return 1;
 	}
 
 	close(m_p2c[1]);
@@ -140,7 +173,7 @@ BridgeConfiguration::SetupPostForkChild()
 	char go;
 	while (((err = read(m_p2c[0], &go, 1)) < 0) && (errno == EINTR)) {}
 	if (err < 0) {
-		dprintf(D_ALWAYS, "Error when waiting on parent (errno=%d, %s).\n", errno, strerror(errno));
+		dprintf(D_ALWAYS, "Error when kaiting on parent (errno=%d, %s).\n", errno, strerror(errno));
 		return errno;
 	}
 
@@ -176,7 +209,8 @@ BridgeConfiguration::Cleanup() {
 		return 1;
 	}
 
-	// Spoof ARP packet saying we are giving up the packet.
+	// Spoof ARP packet saying we are giving up the address.
+	// TODO: Verify this is actually working.
 	struct iovec iov[5];
 	short hwtype = htons(1); // Hardware type - Ethernet
 	iov[0].iov_base = &hwtype;

@@ -1,5 +1,7 @@
 
+*******************************************************************************
 Lark - Integrating HTCondor with the network
+*******************************************************************************
 
 This contrib consists of various tools and plugins to better integrate
 HTCondor with the network layer.  The ultimate goal is to make the HTCondor
@@ -31,7 +33,9 @@ In this directory, we have the following tools:
   out new ideas.
 - lark-plugin.so: The plugin for enabling Lark support in the Condor starter.
 
+*******************************************************************************
 CONFIGURATION:
+*******************************************************************************
 To use Lark from Condor, add the following lines to your configuration:
 
 STARTER.PLUGINS = $(STARTER.PLUGINS) /usr/lib64/condor/plugins/lark-plugin.so
@@ -52,6 +56,8 @@ after the IP address has been configured.  It is invoked with four arguments:
  3) The name of the network namespace - Lark will create a iptables chain named
     this beforehand and route all traffic through this chain.
  4) The name of the extsernal veth device.
+The stdin of the script is the job ad, a line consisting solely of "------",
+and then the machine ad.
 
 If NETWORK_NAMESPACE_DELETE_SCRIPT is set, Lark will attempt to execute it
 after the job finishes and it is time to cleanup.  It is invoked with three
@@ -65,8 +71,59 @@ NOTE: The veth device will already be deleted prior to invoking this script
       been cleaned up by the kernel.  The veth device may still exist if there
       were issues spawning the job.  This may get called multiple times and
       it may get called even if NETWORK_NAMESPACE_CREATE_SCRIPT wasn't invoked.
+The stdin of the script is the job ad, a line consisting solely of "------",
+and then the machine ad.
 
-KNOWN ISSUES:
+An example of the stdin of one of the scripts is:
+[ ClusterID=123; Proc=0; ]
+------
+[ LarkAddressType = "local"; LarkExternalAddressIPv4 = "192.168.181.15"; LarkNetworkType = "nat"; LarkIptableName = "tester"; LarkInternalInterface = "i_tester"; LarkGateway = "192.168.181.15"; LarkExternalInterface = "e_tester"; LarkNetworkAccounting = true; LarkInnerAddressIPv4 = "192.168.181.16" ]
+
+An actual job and machine ad will contain many more attributes.
+
+*******************************************************************************
+STARTER ATTRIBUTES:
+*******************************************************************************
+Attributes present in the starter's ClassAd determine the network configuration
+implemented by Lark.
+
+It is a goal of Lark to automatically insert the relevant attributes based on
+the job ad; this will allow users to request one of several job policies
+without needing to be exposed to the implementation details.
+
+For now, these can be set statically in the configuration file.  For each
+attributes mentioned below, add them to STARTD_ATTRS in the configuration file.
+
+For example, to use a bridged network device and DHCP, you may add the
+following to the configuration file.
+
+STARTD_ATTRS = LarkNetworkType, LarkAddressType, LarkBridgeDevice
+LarkNetworkType = "bridge"
+LarkBridgeDevice = "eth0"
+LarkAddressType = "dhcp"
+
+For a reference on the attributes we plan to implement, see:
+https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=NetworkRelatedPolicy
+
+All attributes require the "Lark" prefix for now.
+
+The implemented admin-configurable attributes are:
+- NetworkType: bridge, NAT
+- AddressType: local, dhcp, static
+- StartupScript, CleanupScript: Equivalent to NETWORK_NAMESPACE_CREATE_SCRIPT
+  and NETWORK_NAMESPACE_DELETE_SCRIPT above.
+- BridgeDevice
+- NetworkAccounting
+
+Attributes inserted by Lark:
+- IptableName
+- ExternalInterface
+- InternalInterface
+- IptableName
+
+*******************************************************************************
+KNOWN ISSUES / TODO:
+*******************************************************************************
 - The bridge must be setup and configured beforehand when using bridging mode.
 - The bridge forwarding delay must be set to 0.
 - Network accounting does not work in bridge mode.
@@ -78,4 +135,6 @@ KNOWN ISSUES:
 - The admin-provided callout scripts will likely be changed in the future to
   read the starter classad from stdin, rather than have fixed command-line
   arguments
+- It would be convenient if the DHCP client could set the vendor-class-id
+  (DHCP option 60) in order for networks to "group" clients.
 

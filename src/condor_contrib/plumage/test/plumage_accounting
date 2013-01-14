@@ -57,7 +57,7 @@ def print_user(start,end,user):
         print str(rec['ts']-UTC_DIFF).ljust(30), str(rec['prio']).ljust(10),str(rec['fac']).rjust(8),\
             str(rec['cq']).rjust(8),str(rec['ru']).rjust(8)
 
-parser = OptionParser(description='Query Condor ODS for accounting group data')
+parser = OptionParser(description='Query HTCondor ODS for accounting group data')
 parser.add_option('-v','--verbose', action="store_true",default=False, help='enable logging')
 parser.add_option('-s','--server', action="store", dest='server',
                     default='localhost',

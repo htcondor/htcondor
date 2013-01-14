@@ -20,7 +20,7 @@
 #ifndef _GLEXEC_KILL_H
 #define _GLEXEC_KILL_H
 
-void glexec_kill_init(char* glexec_kill, char* glexec);
+void glexec_kill_init(char* glexec_kill, char* glexec, int glexec_retries, int glexec_retry_delay);
 
 bool glexec_kill_check();
 

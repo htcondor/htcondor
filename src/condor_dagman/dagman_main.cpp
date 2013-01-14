@@ -437,6 +437,16 @@ Dagman::Config()
 		free( debugSetting );
 	}
 
+		// Check for the default/node/workflow log being in /tmp
+	if ( _defaultNodeLog &&
+				strstr( _defaultNodeLog, "/tmp" ) == _defaultNodeLog ) {
+		debug_printf( DEBUG_QUIET, "Warning: "
+					"DAGMAN_DEFAULT_NODE_LOG file %s is in /tmp\n",
+					_defaultNodeLog );
+		check_warning_strictness( _submitDagDeepOpts.always_use_node_log ?
+					DAG_STRICT_1 : DAG_STRICT_2 );
+	}
+
 	// enable up the debug cache if needed
 	if (debug_cache_enabled) {
 		debug_cache_set_size(debug_cache_size);

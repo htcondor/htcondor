@@ -769,26 +769,30 @@ Windows machines in our Computer Science Department HTCondor pool.
 
 \begin{itemize}
 
-\item On Unix, we recommend the creation of a ``\textit{condor}'' account
+\item On Unix, we recommend the creation of a \Login{condor} account
 when installing HTCondor.  On Windows, this is not necessary, as HTCondor is
 designed to run as a system service as user LocalSystem.
 
 \item On Unix, HTCondor finds the \File{condor\_config} main configuration
-file by looking in \Tilde condor, in /etc, or via an environment variable.
-On NT, the location of \File{condor\_config} file is determined
+file by looking in \Tilde condor, in \File{/etc}, 
+or via an environment variable.
+On Windows, the location of \File{condor\_config} file is determined
 via the registry key \File{HKEY\_LOCAL\_MACHINE/Software/Condor}.
-You can override this value by setting an environment variable named
+Override this value by setting an environment variable named
 \Env{CONDOR\_CONFIG}.
 
-\item On Unix, in the VANILLA universe at job vacate time HTCondor sends the
-job a softkill signal defined in the submit-description file (defaults to
-SIGTERM).  On NT, HTCondor sends a WM\_CLOSE message to the job at vacate
+\item On Unix, in the vanilla universe at job vacate time,
+HTCondor sends the
+job a softkill signal defined in the submit description file,
+which defaults to SIGTERM.
+On Windows, HTCondor sends a WM\_CLOSE message to the job at vacate
 time.
 
 \item On Unix, if one of the HTCondor daemons has a fault, a core file
-will be created in the \MacroUNI{Log} directory.  On HTCondor NT, a
-``core'' file will also be created, but instead of a memory dump of the
-process it will be a very short ASCII text file which describes what
+will be created in the \MacroUNI{Log} directory.  
+On Windows, a core file will also be created, 
+but instead of a memory dump of the process,
+it will be a very short ASCII text file which describes what
 fault occurred and where it happened.  This information can be used by
 the HTCondor developers to fix the problem.
 

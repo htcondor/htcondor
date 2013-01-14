@@ -809,6 +809,10 @@ SharedPortEndpoint::GetMyLocalAddress()
 		sinful.setPort("0");
 		sinful.setHost(my_ip_string());
 		sinful.setSharedPortID( m_local_id.Value() );
+		std::string alias;
+		if( param(alias,"HOST_ALIAS") ) {
+			sinful.setAlias(alias.c_str());
+		}
 		m_local_addr = sinful.getSinful();
 	}
 	return m_local_addr.Value();

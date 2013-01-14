@@ -1057,6 +1057,48 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				}
 			}
 
+				// make file transfer status attributes sane in case
+				// we died while in the middle of transferring
+			int transferring_input = false;
+			int transferring_output = false;
+			int transfer_queued = false;
+			if( ad->LookupInteger(ATTR_TRANSFERRING_INPUT,transferring_input) ) {
+				if( job_status == RUNNING ) {
+					if( transferring_input ) {
+						ad->Assign(ATTR_TRANSFERRING_INPUT,false);
+						JobQueueDirty = true;
+					}
+				}
+				else {
+					ad->Delete(ATTR_TRANSFERRING_INPUT);
+					JobQueueDirty = true;
+				}
+			}
+			if( ad->LookupInteger(ATTR_TRANSFERRING_OUTPUT,transferring_output) ) {
+				if( job_status == RUNNING ) {
+					if( transferring_output ) {
+						ad->Assign(ATTR_TRANSFERRING_OUTPUT,false);
+						JobQueueDirty = true;
+					}
+				}
+				else {
+					ad->Delete(ATTR_TRANSFERRING_OUTPUT);
+					JobQueueDirty = true;
+				}
+			}
+			if( ad->LookupInteger(ATTR_TRANSFER_QUEUED,transfer_queued) ) {
+				if( job_status == RUNNING ) {
+					if( transfer_queued ) {
+						ad->Assign(ATTR_TRANSFER_QUEUED,false);
+						JobQueueDirty = true;
+					}
+				}
+				else {
+					ad->Delete(ATTR_TRANSFER_QUEUED);
+					JobQueueDirty = true;
+				}
+			}
+
 			// count up number of procs in cluster, update ClusterSizeHashTable
 			IncrementClusterSize(cluster_num);
 
@@ -2889,7 +2931,27 @@ CommitTransaction(SetAttributeFlags_t flags /* = 0 */)
 				
 				dprintf(D_FULLDEBUG,"New job: %s, Duplicate Keys: %d, Total Keys: %d \n",key, iDup, iTotal);
 			}	
-			
+
+			int max_xfer_input_mb = -1;
+			param_integer("MAX_TRANSFER_INPUT_MB",max_xfer_input_mb,true,-1,false,INT_MIN,INT_MAX,procad);
+			filesize_t job_max_xfer_input_mb = 0;
+			if( procad->EvalInteger(ATTR_MAX_TRANSFER_INPUT_MB,NULL,job_max_xfer_input_mb) ) {
+				max_xfer_input_mb = job_max_xfer_input_mb;
+			}
+			if( max_xfer_input_mb >= 0 ) {
+				filesize_t xfer_input_size_mb = 0;
+				if( procad->EvalInteger(ATTR_TRANSFER_INPUT_SIZE_MB,NULL,xfer_input_size_mb) ) {
+					if( xfer_input_size_mb > max_xfer_input_mb ) {
+						std::string hold_reason;
+						formatstr(hold_reason,"%s (%d) is greater than %s (%d) at submit time",
+								  ATTR_TRANSFER_INPUT_SIZE_MB, (int)xfer_input_size_mb,
+								  "MAX_TRANSFER_INPUT_MB", (int)max_xfer_input_mb);
+						holdJob(cluster_id,proc_id,hold_reason.c_str(),
+								CONDOR_HOLD_CODE_MaxTransferInputSizeExceeded, 0);
+					}
+				}
+			}
+
 		}	// end of loop thru clusters
 	}	// end of if a new cluster(s) submitted
 

@@ -32,8 +32,18 @@
  *         merge_into classad	
  *  @param mark_dirty true to mark merged attributes as dirty, false
  *         to mark them as clean
+ *  @param keep_clean_when_possible - when true, compare values for each
+ *         attribute to be merged from the source into the destination,
+ *         and only merge if different.
  */
 void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from, 
-				   bool merge_conflicts, bool mark_dirty = true);
+				   bool merge_conflicts, bool mark_dirty = true, bool keep_clean_when_possible = false);
+
+/** Like MergeClassAds() with the following settings:
+ *  merge_conflicts = true
+ *  mark_dirty = true
+ *  keep_clean_when_possible=true
+ */
+void MergeClassAdsCleanly(ClassAd *merge_into, ClassAd *merge_from);
 
 #endif

@@ -1,4 +1,4 @@
-QMF Management Suite for Condor
+QMF Management Suite for HTCondor
 -------------------------------
 The Qpid Management Framework (QMF) is a distributed object management framework
 that uses Apache Qpid for its transport. It provides code-generation tools to
@@ -33,7 +33,7 @@ contrib.
 
 Building on Windows
 -------------------
-Due to the general lack of DLL support in the Condor core libraries,
+Due to the general lack of DLL support in the HTCondor core libraries,
 the management plugins cannot be dynamically loaded on Windows. The cmake files
 are already tuned to account for this so that the plugin logic is
 statically linked into their respsective daemons (e.g., condor_master,
@@ -42,7 +42,7 @@ required.
 
 Broker Setup
 ------------
-The plugins and job server daemon must be connected to a Qpid broker. In Condor
+The plugins and job server daemon must be connected to a Qpid broker. In HTCondor
 this broker is configured by:
  QMF_BROKER_HOST=<hostname/ip>
  QMF_BROKER_PORT=<broker port - internal default is 5672>

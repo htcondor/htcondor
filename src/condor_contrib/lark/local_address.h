@@ -5,8 +5,6 @@
 #include "address_selection.h"
 #include "ip_lock.h"
 
-#define CONFIG_LOCAL_NETWORK "LARK_LOCAL_NETWORK"
-
 namespace lark {
 /*
  * Provides an IPv4 address guaranteed to be local to this host.

@@ -1408,26 +1408,48 @@ File System Configuration File Entries''.
 \label{param:StatisticsWindowSeconds}
 \item[\Macro{STATISTICS\_WINDOW\_SECONDS}]
   An integer value that controls the time window size, in seconds, for
-  collecting windowed daemon statistics (by convention, windowed statistics
-  typically are of the form 'RecentXxx').  Any data contributing to a
+  collecting windowed daemon statistics.
+  These statistics are, by convention, those attributes with names that 
+  are of the form \Attr{Recent<attrname>}.  Any data contributing to a
   windowed statistic that is older than this number of seconds is dropped
-  from the statistic.  For example if \Macro{STATISTICS\_WINDOW\_SECONDS} = 300, then
-  any jobs submitted more than 300 seconds ago are not counted in the windowed
-  statistic \Attr{RecentJobsSubmitted}.  Defaults to 1200.
+  from the statistic.  
+  For example, if \Expr{STATISTICS\_WINDOW\_SECONDS = 300},
+  then any jobs submitted more than 300 seconds ago are not counted 
+  in the windowed statistic \Attr{RecentJobsSubmitted}.  
+  Defaults to 1200 seconds, which is 20 minutes.
 
-  Configuration variables of the form \Macro{STATISTICS\_WINDOW\_SECONDS\_<collection>}
-  override the global setting for a particular statistic collection.  Collection names
-  currently implemented are 'DC' (or 'DAEMONCORE') and 'SCHEDD' (or 'SCHEDULER')
+  The window is broken into smaller time pieces called quantum.
+  The window advances one quantum at a time.
+
+\label{param:StatisticsWindowSecondsCollection}
+\item[\Macro{STATISTICS\_WINDOW\_SECONDS\_<collection>}]
+  The same as \MacroNI{STATISTICS\_WINDOW\_SECONDS}, 
+  but used to 
+  override the global setting for a particular statistic collection.  
+  Collection names currently implemented are \Expr{DC} or \Expr{DAEMONCORE}
+  and \Expr{SCHEDD} or \Expr{SCHEDULER}.
 
 \label{param:StatisticsWindowQuantum}
 \item[\Macro{STATISTICS\_WINDOW\_QUANTUM}]
-  An integer value that controls the time quantization, in seconds, for the data structures 
-  that maintain windowed statistics.  Defaults to 240.   Smaller values yield higher
-  time resolution and reduce 'sawtoothing' of windowed statistic values, at the expense of
-  requiring larger data structures for maintenance.
+  For experts only,
+  an integer value that controls the time quantization that form a
+  time window, 
+  in seconds, for the data structures that maintain windowed statistics.
+  Defaults to 240 seconds, which is 6 minutes.
+  This default is purposely set to be slightly smaller than the update
+  rate to the \Condor{collector}. 
+  Setting a smaller value than the default increases the memory requirement
+  for the statistics.
+  Graphing of statistics at the level of the quantum
+  expects to see counts that appear like a saw tooth. 
 
-  Configuration variables of the form \Macro{STATISTICS\_WINDOW\_QUANTUM\_<collection>}
-  override the global setting for a particular statistic collection.
+\label{param:StatisticsWindowQuantumCollection}
+\item[\Macro{STATISTICS\_WINDOW\_QUANTUM\_<collection>}]
+  The same as \MacroNI{STATISTICS\_WINDOW\_QUANTUM}, 
+  but used to 
+  override the global setting for a particular statistic collection.  
+  Collection names currently implemented are \Expr{DC} or \Expr{DAEMONCORE}
+  and \Expr{SCHEDD} or \Expr{SCHEDULER}.
 
 \end{description}
 
@@ -2179,9 +2201,6 @@ which use DaemonCore).
   \end{verbatim}
   Normally, these expressions would not be necessary, so if not
   defined, they default to FALSE.
-  One possible use case is for HTCondor glide-in, to have the
-  \Condor{startd} shut itself down if it has not been claimed by a job
-  after a certain period of time.
 
   \Note This functionality does not work in conjunction with HTCondor's
   high-availability support (see section~\ref{sec:high-availability}
@@ -3546,10 +3565,9 @@ will not want to change them for any reason.
   the \MacroNI{MASTER\_NAME} is not automatically propagated to the
   \Condor{startd}.
   However, in situations where multiple \Condor{startd} daemons are
-  running on the same host (for example, when using \Condor{glidein}),
+  running on the same host,
   the \MacroNI{STARTD\_NAME} should be set to uniquely identify 
-  the \Condor{startd} daemons
-  (this is done automatically in the case of \Condor{glidein}).
+  the \Condor{startd} daemons.
 
   If an HTCondor daemon (master, schedd or startd) has been given a
   unique name, all HTCondor tools that need to contact that daemon can
@@ -3630,7 +3648,7 @@ will not want to change them for any reason.
   HTCondor daemons on Unix machines will \emph{not} create new sessions
   or process groups. HTCondor uses processes groups to help it track the
   descendants of processes it creates. This can cause problems when
-  HTCondor is run under another job execution system (e.g. HTCondor Glidein).
+  HTCondor is run under another job execution system.
 
 \end{description}
 
@@ -4195,8 +4213,9 @@ WANT_HOLD_REASON = \
 \item[\Macro{STARTD\_NOCLAIM\_SHUTDOWN}]
   The number of seconds to run without receiving a claim before
   shutting HTCondor down on this machine.  Defaults to unset, which
-  means to never shut down.  This is primarily intended for \condor{glidein}.
-  Use in other situations is not recommended.
+  means to never shut down.  
+  This is primarily intended to facilitate glidein;
+  use in other situations is not recommended.
 
 \label{param:StartdPublishWinreg}
 \item[\Macro{STARTD\_PUBLISH\_WINREG}]
@@ -4288,6 +4307,8 @@ WANT_HOLD_REASON = \
   and because jobs will not be able to fill up the real \File{/tmp} directory. 
   Another use case might be for home directories, which some jobs might want
   to write to, but that should be cleaned up after each job run.
+  The default value if not defined will be that no directories are mounted in
+  the job's temporary scratch directory.
 
 \end{description}
 
@@ -5095,6 +5116,37 @@ MAX_JOBS_RUNNING	= \
   example, if this expression were set to a name that is the same for
   all jobs, file transfers would be scheduled in first-in-first-out
   order rather than round-robin by job owner.
+
+\label{param:MaxTransferInputMB}
+\item[\Macro{MAX\_TRANSFER\_INPUT\_MB}]
+  This integer expression specifies the maximum allowed total size in
+  megabytes of the input files that are transferred for a job.  This
+  expression does not apply to grid universe, standard universe, or
+  files transferred via file transfer plugins.  The expression may
+  refer to attributes of the job.  The special value -1 indicates no
+  limit.  The default is -1.  The job may override the system setting
+  by specifying its own limit using the \Attr{MaxTransferInputMB}
+  attribute.  If the observed size of all input files at submit time
+  is larger than the limit, the job will be immediately placed on hold
+  with hold code 32.  If the job passes this initial test, but the
+  size of the input files increases or the limit decreases so that the
+  limit is violated, the job will be placed on hold at the time when
+  the file transfer is attempted.
+
+\label{param:MaxTransferOutputMB}
+\item[\Macro{MAX\_TRANSFER\_OUTPUT\_MB}]
+  This integer expression specifies the maximum allowed total size in
+  megabytes of the output files that are transferred for a job.  This
+  expression does not apply to grid universe, standard universe, or
+  files transferred via file transfer plugins.  The expression may
+  refer to attributes of the job.  The special value -1 indicates no
+  limit.  The default is -1.  The job may override the system setting
+  by specifying its own limit using the \Attr{MaxTransferOutputMB}
+  attribute.  If the total size of the job's output files to be
+  transferred is larger than the limit, the job will be placed on hold
+  with hold code 33.  The output will be transferred up to the point
+  when the limit is hit, so some files may be fully transferred, some
+  partially, and some not at all.
 
 \label{param:ScheddQueryWorkers}
 \item[\Macro{SCHEDD\_QUERY\_WORKERS}]
@@ -6181,9 +6233,6 @@ These settings affect the \Condor{starter}.
   When \Expr{True},
   it causes jobs to inherit all environment variables from 
   the \Condor{starter}.
-  This is useful for glidein jobs that need to
-  access environment variables from the batch system running the glidein
-  daemons.
   When the user job and/or \MacroNI{STARTER\_JOB\_ENVIRONMENT} define
   an environment variable that is in the \Condor{starter}'s
   environment, the setting from the \Condor{starter}'s environment
@@ -6225,6 +6274,15 @@ These settings affect the \Condor{starter}.
   while CPU cores are numbered beginning with the value 0.
   This affinity list only takes effect if
   \Expr{ENFORCE\_CPU\_AFFINITY = True}.
+
+\label{param:AssignCpuAffinity} 
+\item[\Macro{ASSIGN\_CPU\_AFFINITY}]
+  A boolean expression that defaults to \Expr{False}.
+  When \Expr{True},
+  CPU affinity is automatically set and enforced to be one slot per core.
+  This permits affinity to work well with dynamic slots. 
+  Also when \Expr{True}, overrides any settings specified by
+  \MacroNI{ENFORCE\_CPU\_AFFINITY}.
 
 \label{param:EnableURLTransfers} 
 \item[\Macro{ENABLE\_URL\_TRANSFERS}]
@@ -6273,14 +6331,17 @@ These settings affect the \Condor{starter}.
 \label{param:StarterRlimitAs} 
 \item[ \Macro{STARTER\_RLIMIT\_AS}]
   An integer ClassAd expression, 
+  expressed in Mbytes,
   evaluated by the \Condor{starter} to set the \Code{RLIMIT\_AS} parameter
   of the \Procedure{setrlimit} system call.
   This limits the virtual memory size of each process in the user job.  
   The expression is
   evaluated in the context of both the machine and job ClassAds,
-  where the machine ClassAd is the \Expr{my} ClassAd,
-  and the job ClassAd is the \Expr{target} ClassAd.
+  where the machine ClassAd is the \Expr{MY.} ClassAd,
+  and the job ClassAd is the \Expr{TARGET.} ClassAd.
   There is no default value for this variable.
+  Since values larger than 2047 have no real meaning on 32-bit platforms,
+  values larger than 2047 result in no limit set on 32-bit platforms.
 
 \end{description}
 
@@ -7468,16 +7529,6 @@ The following configuration macros affect negotiation for group users.
   quota, as scaling is currently based on the number of machines available,
   not assigned quotas (for static quotas).
 
-\label{param:GroupSeparator}
-\item[\Macro{GROUP\_SEPARATOR}]
-  A string value that contains the separator character used between
-accounting groups and the user name.  Defaults to \Expr{``.''} for
-backward compatibility.  In this example, the separator character is set
-to \Expr{``:''}, to allow the use of \Expr{``.''} in user names:
-\begin{verbatim}
-GROUP_SEPARATOR = ":"
-\end{verbatim}
-
 \end{description}
 
 % entire section commented out Nov 2005
@@ -8420,19 +8471,12 @@ These macros affect the Grid Monitor.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Grid-Config-File-Entries}Configuration File
-Entries Relating to Grid Usage and Glidein}
+Entries Relating to Grid Usage}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{configuration!grid and glidein configuration variables}
-These macros affect the HTCondor's usage of grid resources
-and glidein.
+\index{configuration!grid configuration variables}
+These macros affect the HTCondor's usage of grid resources.
 \begin{description}
-\label{param:GlideinServerURLS}
-\item[\Macro{GLIDEIN\_SERVER\_URLS}]
-  A comma or space-separated list of URLs that contain the binaries
-  that must be copied by \Condor{glidein}.
-  There are no default values, but working URLs that copy from the UW site
-  are provided in the distributed sample configuration files.
 
 \label{param:GlexecJob}
 \item[\Macro{GLEXEC\_JOB}]
@@ -8442,6 +8486,21 @@ and glidein.
 \label{param:Glexec}
 \item[\Macro{GLEXEC}]
   The full path and file name of the \Prog{glexec} executable.
+
+\label{param:GlexecRetries}
+\item[\Macro{GLEXEC}]
+An integer value that specifies the maximum number of times to retry a
+call to \Prog{glexec} when \Prog{glexec} exits with status 202 or 203,
+error codes that indicate a possible transient error condition.  The
+default number of retries is 3.
+
+\label{param:GlexecRetryDelay}
+\item[\Macro{GLEXEC\_RETRY\_DELAY}]
+An integer value that specifies the minimum number of seconds to wait
+between retries of a failed call to glexec.  The default is 5.  The
+actual delay to be used is determined by a random exponential backoff
+algorithm that chooses a delay with a minimum of
+\Macro{GLEXEC\_RETRY\_DELAY} and a maximum of 100 times that value.
 
 \end{description}
 
@@ -8564,15 +8623,18 @@ in section~\ref{sec:DAG-configuration}.
   allowed within the DAG before \Condor{dagman} temporarily stops
   submitting jobs.  Once idle jobs start to run, \Condor{dagman} will
   resume submitting jobs.  If both the command line option and the
-  configuration parameter are specified, the command line option overrides
+  configuration variable are specified, the command line option overrides
   the configuration variable.  Unfortunately,
   \MacroNI{DAGMAN\_MAX\_JOBS\_IDLE} currently counts each individual
   process within a cluster as a job, which is inconsistent with
   \MacroNI{DAGMAN\_MAX\_JOBS\_SUBMITTED}.  The default is that there is
-  no limit on the maximum number of idle jobs. Note that nothing special is 
-  done to the submit file: if a submit file has a ``queue 5000'' statement
-  and \Macro{DAGMAN\_MAX\_JOBS\_IDLE} is set to 250, this submit file will
-  result in 5000 jobs being submitted to the schedd, not 250; in this case, no
+  no limit on the maximum number of idle jobs. 
+  Note that nothing special is 
+  done to the submit description file.
+  If a submit description file contains \Expr{queue 5000}
+  and \Macro{DAGMAN\_MAX\_JOBS\_IDLE} is set to 250, 
+  this will result in 5000 jobs being submitted to the \Condor{schedd},
+  not 250; in this case, no
   further jobs will then be submitted by \Condor{dagman} until the number of
   idle jobs falls below 250.
 
@@ -9090,6 +9152,16 @@ section~\ref{sec:Security} on Security.
   which will not match any certificates,
   even if they have an empty subject name.
 
+\label{param:HostAlias}
+\item[\Macro{HOST\_ALIAS}] specifies the
+  hostname that clients authenticating this daemon with GSI should
+  expect the daemon's certificate to match.  The alias is advertised
+  to the \Condor{collector} as part of the address of the daemon.
+  When this is not set, clients validate the daemon's certificate
+  hostname by matching it against DNS A records for the host they
+  are connected to.  See \Macro{GSI\_SKIP\_HOST\_CHECK} for ways
+  to disable this validation step.
+
 \label{param:GSIDaemonDirectory}
 \item[\Macro{GSI\_DAEMON\_DIRECTORY}]
   A directory name used in the
@@ -9384,18 +9456,20 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
   establish a strong security session between the execute and submit
   daemons without going through the usual security negotiation protocol.
   This is especially important when operating at large scale over high
-  latency networks (e.g. a glidein pool with one schedd and thousands of
-  startds on a network with 0.1 second round trip times).
+  latency networks (for example, on a pool with one \Condor{schedd} daemon
+  and thousands of \Condor{startd} daemons on a network with a 0.1 second 
+  round trip time).
 
   The default value for this configuration option is \Expr{False}.  To
   have any effect, it must be \Expr{True} in the configuration of both
-  the execute side (startd) as well as the submit side (schedd).  When
+  the execute side (\Condor{startd}) as well as the submit side 
+  (\Condor{schedd}).  When
   this authentication method is used, all other security negotiation
   between the submit and execute daemons is bypassed.  All inter-daemon
   communication between the submit and execute side will use the
-  startd's settings for \MacroNI{SEC\_DAEMON\_ENCRYPTION} and
+  \Condor{startd} daemon's settings for \MacroNI{SEC\_DAEMON\_ENCRYPTION} and
   \MacroNI{SEC\_DAEMON\_INTEGRITY}; the configuration of these values in
-  the schedd, shadow, and starter are ignored.
+  the \Condor{schedd}, \Condor{shadow}, and \Condor{starter} are ignored.
 
   Important: For strong security, at least one of the two, integrity or
   encryption, should be enabled in the startd configuration.  Also, some
@@ -9404,11 +9478,11 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
   is exchanged in matchmaking cannot be safely encrypted when transmitted
   over the network.
 
-  The schedd and shadow will be authenticated as
-  \verb|submit-side@matchsession| when they talk to the startd and
-  starter.  The startd and starter will be authenticated as
-  \verb|execute-side@matchsession| when they talk to the schedd and
-  shadow.  On the submit side, authorization of the execute side happens
+  The \Condor{schedd} and \Condor{shadow} will be authenticated as
+  \verb|submit-side@matchsession| when they talk to the \Condor{startd} and
+  \Condor{starter}.  The \Condor{startd} and \Condor{starter} will be authenticated as
+  \verb|execute-side@matchsession| when they talk to the \Condor{schedd} and
+  \Condor{shadow}.  On the submit side, authorization of the execute side happens
   automatically.  On the execute side, it is necessary to explicitly
   authorize the submit side.  Example:
 
@@ -9516,10 +9590,10 @@ They specify items related to the \Condor{vm-gahp}.
   It will be the value \verb@kvm@, \verb@xen@ or \verb@vmware@.
   There is no default value for this required configuration variable.
 
-\label{param:VMMaxMemory}
+\label{param:VMMemory}
 \item[\Macro{VM\_MEMORY}]
-  An integer to specify the maximum amount of memory in Mbytes
-  that will be allowed to the virtual machine program.
+  An integer specifying the maximum amount of memory in Mbytes
+  to be shared among the VM universe jobs run on this machine.
 
 \label{param:VMMaxNumber}
 \item[\Macro{VM\_MAX\_NUMBER}]

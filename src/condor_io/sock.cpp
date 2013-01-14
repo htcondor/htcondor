@@ -35,6 +35,7 @@
 #include "authentication.h"
 #include "condor_sockfunc.h"
 #include "condor_ipv6.h"
+#include "condor_config.h"
 
 #ifdef HAVE_EXT_OPENSSL
 #include "condor_crypt_blowfish.h"
@@ -1806,8 +1807,8 @@ Sock::addr_changed()
     // either the peer's address or our address change, zap them all
     _my_ip_buf[0] = '\0';
     _peer_ip_buf[0] = '\0';
-    _sinful_self_buf[0] = '\0';
-    _sinful_public_buf[0] = '\0';
+    _sinful_self_buf.clear();
+    _sinful_public_buf.clear();
     _sinful_peer_buf[0] = '\0';
 }
 
@@ -1983,18 +1984,25 @@ Sock::my_ip_str()
 	return _my_ip_buf;
 }
 
-char *
+char const *
 Sock::get_sinful()
-{       
-    if( !_sinful_self_buf[0] ) {
+{
+    if( _sinful_self_buf.empty() ) {
 		condor_sockaddr addr;
 		int ret = condor_getsockname_ex(_sock, addr);
 		if (ret == 0) {
-			MyString sinful_self = addr.to_sinful();
-			strcpy(_sinful_self_buf, sinful_self.Value());
-    }
+			_sinful_self_buf = addr.to_sinful();
+
+			std::string alias;
+			if( param(alias,"HOST_ALIAS") ) {
+				Sinful s(_sinful_self_buf.c_str());
+				s.setAlias(alias.c_str());
+				_sinful_self_buf = s.getSinful();
+			}
+
+		}
 	}
-	return _sinful_self_buf;
+	return _sinful_self_buf.c_str();
 }
 
 char *

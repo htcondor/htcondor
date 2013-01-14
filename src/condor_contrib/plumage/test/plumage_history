@@ -101,7 +101,7 @@ def print_history(opts):
     for item in db['history'].find(query).sort('QDate',qdate_order).limit(int(matches)):
         opts.long and print_full_ad(item) or print_summary(item)
 
-parser = OptionParser(description='Query Condor ODS for job history')
+parser = OptionParser(description='Query HTCondor ODS for job history')
 parser.add_option('-s','--server', action="store", dest='server',
                     default='localhost',
                     help='mongodb database server location: e.g., somehost, localhost:27017')

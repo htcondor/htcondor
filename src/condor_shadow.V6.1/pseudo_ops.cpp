@@ -104,35 +104,7 @@ pseudo_get_job_info(ClassAd *&ad, bool &delete_ad)
 	the_ad = thisRemoteResource->getJobAd();
 	ASSERT( the_ad );
 
-		// FileTransfer now makes sure we only do Init() once.
-		//
-		// New for WIN32: want_check_perms = false.
-		// Since the shadow runs as the submitting user, we
-		// let the OS enforce permissions instead of relying on
-		// the pesky perm object to get it right.
-		//
-		// Tell the FileTransfer object to create a file catalog if
-		// the job's files are spooled. This prevents FileTransfer
-		// from listing unmodified input files as intermediate files
-		// that need to be transferred back from the starter.
-	int spool_time = 0;
-	the_ad->LookupInteger(ATTR_STAGE_IN_FINISH,spool_time);
-	thisRemoteResource->filetrans.Init( the_ad, false, PRIV_USER, spool_time != 0 );
-
-	// Add extra remaps for the canonical stdout/err filenames.
-	// If using the FileTransfer object, the starter will rename the
-	// stdout/err files, and we need to remap them back here.
-	std::string file;
-	if ( the_ad->LookupString( ATTR_JOB_OUTPUT, file ) &&
-		 strcmp( file.c_str(), StdoutRemapName ) ) {
-
-		thisRemoteResource->filetrans.AddDownloadFilenameRemap( StdoutRemapName, file.c_str() );
-	}
-	if ( the_ad->LookupString( ATTR_JOB_ERROR, file ) &&
-		 strcmp( file.c_str(), StderrRemapName ) ) {
-
-		thisRemoteResource->filetrans.AddDownloadFilenameRemap( StderrRemapName, file.c_str() );
-	}
+	thisRemoteResource->initFileTransfer();
 
 	Shadow->publishShadowAttrs( the_ad );
 

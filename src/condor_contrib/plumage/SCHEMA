@@ -1,4 +1,4 @@
-Plumage - NoSQL Operational Data Store for Condor
+Plumage - NoSQL Operational Data Store for HTCondor
 .................................................
 
 Schema for Data Samples
@@ -10,7 +10,7 @@ the raw ClassAd attributes in their entirety. However, there is a lightweight
 schema used to record the time-sampled copies of these values from the raw
 ClassAds. For the purposes of efficient indexing and storage, these key fields 
 are abbreviated to a few lower case letters. The following is a mapping of 
-these terse key names to their more familiar Condor ClassAd counterpart. 
+these terse key names to their more familiar HTCondor ClassAd counterpart. 
 
 In all cases, the type of the sampled attribute can be assumed to be the same 
 as its ClassAd counterpart.

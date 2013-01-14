@@ -79,6 +79,8 @@ static char* windows_softkill_binary = NULL;
 //
 static char* glexec_kill_path = NULL;
 static char* glexec_path = NULL;
+static int glexec_retries = 0;
+static int glexec_retry_delay = 0;
 #endif
 
 // Determines if the procd should assign GIDs to family groups internally using
@@ -119,7 +121,7 @@ usage(void)
 	"                         If -E is specified then procd_ctl must be used\n"
 	"                         to allocate gids which must then be in this\n"
 	"                         range.\n"
-	"  -I <glexec-kill-path> <glexec-path>\n"
+	"  -I <glexec-kill-path> <glexec-path> <glexec-retries> <glexec-retry-delay>\n"
 	"                         Specify the binary which will send a signal\n"
 	"                         to a pid and the glexec binary which will run\n"
 	"                         the program under the right priviledges.\n");
@@ -281,13 +283,17 @@ parse_command_line(int argc, char* argv[])
 			// glexec and kill script paths
 			//
 			case 'I':
-				if (index + 2 >= argc) {
-					fail_option_args("-I", 2);
+				if (index + 4 >= argc) {
+					fail_option_args("-I", 4);
 				}
 				index++;
 				glexec_kill_path = argv[index];
 				index++;
 				glexec_path = argv[index];
+				index++;
+				glexec_retries = atoi(argv[index]);
+				index++;
+				glexec_retry_delay = atoi(argv[index]);
 				break;
 #endif
 
@@ -455,7 +461,7 @@ main(int argc, char* argv[])
 	// initialize the glexec_kill module
 	//
 	if (glexec_kill_path != NULL) {
-		glexec_kill_init(glexec_kill_path, glexec_path);
+		glexec_kill_init(glexec_kill_path, glexec_path, glexec_retries, glexec_retry_delay);
 	}
 #endif
 

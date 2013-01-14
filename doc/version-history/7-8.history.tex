@@ -33,7 +33,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item When using \Prog{glexec}, HTCondor now automatically retries
+each \Prog{glexec} operation if \Prog{glexec} exits with an error
+code that is likely to be caused by a transient error, such as a
+communication error with the mapping service.  Previously, any
+\Prog{glexec} error would cause the job to be put on hold.  Now, the
+job will only go on hold if the maximum number of \Prog{glexec}
+retries is exceeded.
+\Ticket{2415}
 
 \end{itemize}
 
@@ -41,7 +48,20 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable \Macro{GLEXEC\_RETRIES} is an
+integer value that specifies the maximum number of times to retry a
+call to \Prog{glexec} when \Prog{glexec} exits with status 202 or
+203, error codes that indicate a possible transient error condition.
+The default number of retries is 3.
+\Ticket{2415}
+
+\item The new configuration variable \Macro{GLEXEC\_RETRY\_DELAY} is
+an integer value that specifies the minimum number of seconds to
+wait between retries of a failed call to glexec.  The default is 5.
+The actual delay to be used is determined by a random exponential
+backoff algorithm that chooses a delay with a minimum of
+\Macro{GLEXEC\_RETRY\_DELAY} and a maximum of 100 times that value.
+\Ticket{2415}
 
 \end{itemize}
 
@@ -49,7 +69,28 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug that caused the \condor{gridmanager} to frequently
+delegate the X.509 proxy of grid-type condor jobs to the remote
+\condor{schedd} when the delegated proxy's lifetime isn't limited.
+That is, when parameter \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME}
+or job attribute \Attr{DelegateJobGSICredentialsLifetime} is set to 0.
+\Ticket{3395}
+
+\item Fixed a bug in \Condor{advertise} that could cause failure to
+publish ads to collectors other than the first collector in the
+list of collectors.
+\Ticket{3404}
+
+\item (This bug was fixed in version 7.8.4)
+\Macro{ULOG\_JOB\_RECONNECT\_FAILED} events were not considered by the userlog
+code. This has been fixed.
+\Ticket{3215}
+
+\item Fixed a bug that caused Cream grid jobs to become held with a
+HoldReason of ``CREAM error: Transfer failed: globus\_ftp\_client: 
+an invalid value for url was used'' when the jobs did not have any
+input or output files to transfer.
+\Ticket{3415}
 
 \end{itemize}
 
@@ -78,8 +119,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 7.8.7 not yet released.
-%\item HTCondor version 7.8.7 released on Month Date, 2012.
+\item HTCondor version 7.8.7 released on December 18, 2012.
 
 \end{itemize}
 
@@ -103,17 +143,23 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug wherein running the \Condor{suspend} command on a scheduler
+universe job would cause the \Condor{schedd} to crash.
+\Ticket{3259}
+
 \item HTCondor now places EC2 jobs on hold when they fail to authenticate,
-rather than leaving them (and other jobs with the same authentication tokens)
+rather than leaving them and other jobs with the same authentication tokens
 idle indefinitely.
 \Ticket{2274}
 
-\item HTCondor now only destroys the user's half of the SSH keypair
+\item For EC2 resource jobs within the grid universe,
+HTCondor now only destroys the user's half of the SSH keypair
 when sure that the instance has terminated.  This prevents transient
 problems from rendering an instance permanently inaccessible.
 \Ticket{3289}
 
-\item HTCondor no longer generates an SSH keypair if the user did not
+\item For EC2 resource jobs within the grid universe,
+HTCondor no longer generates an SSH keypair if the user did not
 request one.
 \Ticket{3061}
 
@@ -164,10 +210,12 @@ they finished running if the working directory contained links to
 files that were not globally readable.
 \Ticket{2904}
 
-\item The configuration setting \MacroNI{ENABLE\_ADDRESS\_REWRITING}
+\item The configuration variable \MacroNI{ENABLE\_ADDRESS\_REWRITING}
 was not correctly applied to the \Condor{schedd} address when
-claiming a slot.  The behavior was always as though
-\MacroNI{ENABLE\_ADDRESS\_REWRITING} was false.  This could result
+claiming a slot.  
+The incorrect behavior observed was always as though
+\MacroNI{ENABLE\_ADDRESS\_REWRITING} was \Expr{False}.
+This could result
 in communication errors for jobs running from multi-homed submit machines.
 \Ticket{3330}
 
@@ -181,7 +229,7 @@ ERROR "match_info() called with unexpected state (Drained)"
 \Ticket{3331}
 
 \item The \Condor{gridmanager} no longer crashes when a CREAM grid job
-is submitted with an X.509 proxy that doesn't have VOMS attributes.
+is submitted with an X.509 proxy that does not have VOMS attributes.
 \Ticket{3356}
 
 \item \Condor{chirp} fetch could only transfer text files on Windows. It would
@@ -203,6 +251,17 @@ When \Expr{False}, the \Condor{master} will not start the \Condor{kbdd}.
 \item Fixed a bug in the init script for Red Hat derived Linux systems that
 prevented the Condor service from being stopped during system shutdown.
 \Ticket{3368}
+
+\item The \Condor{master} would sometimes crash on reconfiguration when the
+High Availability configuration had changed. It no longer crashes.
+\Ticket{3292}
+
+\item Fixed a bug that caused the \Condor{starter} to crash 
+when \Condor{chirp} is used and there is a configuration variable
+setting of \Expr{USE\_NFS = True} or \Expr{USE\_AFS = True}.
+This will happen with parallel universe jobs,
+because the MPI scripts invoke \Condor{chirp}.
+\Ticket{3361}
 
 \end{itemize}
 

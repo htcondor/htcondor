@@ -6,6 +6,8 @@ import logging
 import logging.handlers
 import os
 import signal
+import pwd
+import shutil
 
 from campus_factory.ClusterStatus import ClusterStatus
 from campus_factory.util.ExternalCommands import RunExternal
@@ -13,7 +15,7 @@ from campus_factory.OfflineAds.OfflineAds import OfflineAds
 from campus_factory.util.DaemonWrangler import DaemonWrangler
 from campus_factory.Cluster import *
 from campus_factory.util.StreamToLogger import StreamToLogger
-from campus_factory.util.CampusConfig import get_option, set_config_file
+from campus_factory.util.CampusConfig import get_option, set_config_file, set_option
 
 BOSCO_CLUSTERLIST = "~/.bosco/.clusterlist"
 
@@ -55,6 +57,10 @@ class Factory:
             sys.exit(1)
             
         self._SetLogging()
+        
+        if os.getuid() == 0 or get_option("factory_user"):
+            logging.info("Detected that factory should change user")
+            self._DropPriv()
        
         if  get_option("useoffline", "false").lower() == "true":
             self.UseOffline = True
@@ -70,19 +76,49 @@ class Factory:
         else:
             # Check for the bosco cluster command
             (stdout, stderr) = RunExternal("bosco_cluster -l")
-            if len(stdout) != 0:
+            if len(stdout) != 0 and stdout is not "No clusters configured":
                 logging.debug("Using the cluster list installed with BOSCO")
                 for cluster_id in stdout.split("\n"):
                     if len(cluster_id) > 0 and cluster_id != "":
                         self.cluster_list.append(Cluster(cluster_id, useOffline = self.UseOffline))
             else:
-                # Initialize as emtpy, which infers to submit 'here'
+                # Initialize as empty, which infers to submit 'here'
                 self.cluster_list = [ Cluster(get_option("CONDOR_HOST"), useOffline = self.UseOffline) ]
         
         # Tar up the executables
         wrangler = DaemonWrangler()
         wrangler.Package()
             
+
+    def _DropPriv(self):
+        factory_user = get_option("factory_user")
+        current_uid = os.getuid()
+        if factory_user is None:
+            logging.warning("factory_user is not set in campus factory config file")
+            if get_option("CONDOR_IDS"):
+                logging.info("CONDOR_IDS is set, will use for dropping privledge")
+                (factory_uid, factory_gid) = get_option("CONDOR_IDS").split(".")
+                factory_uid = int(factory_uid)
+                factory_gid = int(factory_gid)
+                factory_user = pwd.getpwuid(factory_uid).pw_name
+            elif current_uid == 0:
+                logging.error("We are running as root, which can not submit condor jobs.")
+                logging.error("Don't know who to drop privledges to.")
+                logging.error("I can't do my job!")
+                logging.error("Exiting...")
+                sys.exit(1)
+        else:
+            # If factory user is set
+            factory_uid = pwd.getpwnam(factory_user).pw_uid
+            factory_gid = pwd.getpwnam(factory_user).pw_gid
+            logging.debug("Using %i:%i for user:group" % (factory_uid, factory_gid))
+        
+        # Some parts of bosco need the HOME directory and USER to be defined
+        os.environ["HOME"] = pwd.getpwnam(factory_user).pw_dir
+        os.environ["USER"] = factory_user
+        os.setgid(factory_gid)
+        os.setuid(factory_uid)
+        
         
     def _SetLogging(self):
         """
@@ -268,9 +304,6 @@ class Factory:
             # Get schedd's to query
             if get_option("FLOCK_FROM"):
                 schedds = get_option("FLOCK_FROM").strip().split(",")
-            
-            # Add the local host to query
-            schedds.append(get_option("CONDOR_HOST"))
                             
             logging.debug("Schedds to query: %s" % str(schedds))
             

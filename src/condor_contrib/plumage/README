@@ -1,12 +1,12 @@
-Plumage - NoSQL Operational Data Store for Condor
+Plumage - NoSQL Operational Data Store for HTCondor
 .................................................
 
 Overview
 ========
-This contrib provides components for an ODS capability in Condor using the 
+This contrib provides components for an ODS capability in HTCondor using the 
 NoSQL database mongodb. The Quill contrib is a similar effort but based on a 
 RDBMS model. The essential design of Plumage is to capture the data traffic 
-emitted from the various Condor daemons and convert them from the ClassAd form
+emitted from the various HTCondor daemons and convert them from the ClassAd form
 into a document instance in a mongodb collection. Once converted, these ClassAd
 records can be queried simply and directly based on any attribute.
 
@@ -15,7 +15,7 @@ This contrib features two capabilities:
 the Machine and Submitter types. The plugin operates on a timer to take snapshots 
 of essential attributes at a configurable interval, and then write those values 
 also to a different mongodb collection.
-- a job collection daemon that monitors the Condor job queue log and history files.
+- a job collection daemon that monitors the HTCondor job queue log and history files.
 Finalized and complete job ads (i.e., Completed, Removed) are recorded to mongodb.  
 
 Installation
@@ -27,7 +27,7 @@ dependencies:
 - pymongo
 - python-dateutil
 
-Plumage can be included in a Condor source build using the following variables 
+Plumage can be included in a HTCondor source build using the following variables 
 when cmake is invoked:
 
 	-DWANT_CONTRIB:BOOL=TRUE -DWITH_MANAGEMENT:BOOL=TRUE -DWITH_PLUMAGE:BOOL=TRUE
@@ -37,17 +37,17 @@ directory where the view collector can write its standard stats files:
 
      sudo mkdir -p /var/lib/condor/ViewHist
 
-Note that the job history recording feature currently relies on the existing Condor 
+Note that the job history recording feature currently relies on the existing HTCondor 
 file-based job history mechanisms. The Plumage daemon is essentially performing ETL
-of those Condor history file pointed to by the $HISTORY config parameter. As such,
+of those HTCondor history file pointed to by the $HISTORY config parameter. As such,
 the schedd must be generating that history file for the Plumage ETL to work
-correctly. However, once the jobs are recorded to to mongodb, the Condor history file
+correctly. However, once the jobs are recorded to to mongodb, the HTCondor history file
 can be rolled over or removed.
 
 Configuration
 =============
 This initial release is as a plugin to the existing view collector so much of the
-Condor configuration relates to that of a standard view collector.
+HTCondor configuration relates to that of a standard view collector.
 
 # "real" Collector config ...
 ######################
@@ -103,7 +103,7 @@ The resource records show arch, OS, keyboard idle time, load average and state.
 
 Usage: plumage_stats [options]
 
-Query Condor ODS for statistics
+Query HTCondor ODS for statistics
 
 Options:
   -h, --help            show this help message and exit
@@ -194,9 +194,9 @@ to become available to the tool.
 
 Additional sample tools
 -----------------------
-plumage_accounting: Query Condor ODS for accounting group data
-plumage_scheduler: Query Condor ODS for scheduler job totals
-plumage_utilization: Query Condor ODS for utilization efficency
+plumage_accounting: Query HTCondor ODS for accounting group data
+plumage_scheduler: Query HTCondor ODS for scheduler job totals
+plumage_utilization: Query HTCondor ODS for utilization efficency
 
 Please the consult the help info (--help) for details on using each of these.
 
@@ -214,7 +214,7 @@ The mongodb database.collection for job history is 'condor_jobs.history'.
 
 Usage: plumage_history [options]
 
-Query Condor ODS for job history
+Query HTCondor ODS for job history
 
 Options:
   -h, --help            show this help message and exit
@@ -260,7 +260,7 @@ Example
 $ ./plumage_history_load -h
 Usage: ./plumage_history_load [-db <mongodb URL>] [-f <full path to condor history file>] [-h | -help]
         -db : the mongod connection URL (host[:port])
-        -f : full path to a specific Condor history file to load
+        -f : full path to a specific HTCondor history file to load
         -h | -help : this help message
 No arguments will load all the history and backup files from $HISTORY directory to a mongod server at $PLUMAGE_DB_HOST/_PORT.
 Duplicate jobs (same GlobalJobID) will be upserted (updated or added if missing).
