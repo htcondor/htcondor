@@ -107,6 +107,9 @@ kept into smaller pieces.  The window advances one quantum at a time.
 
 \begin{itemize}
 
+\item Fixed a problem with glexec that caused jobs not to start due to permission errors on the execute directory.
+\Ticket{3369}
+
 \item A change was made to more accurately implement the
 minimum time defined by the configuration variable
 \Macro{NEGOTIATOR\_CYCLE\_DELAY}. 
