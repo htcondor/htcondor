@@ -2585,4 +2585,5 @@ RoutedJob::SetDestJobAd(classad::ClassAd const *ad) {
 
 	ASSERT(dest_ad.CopyFromChain(*ad));
 	saw_dest_job = true;
+	dest_ad.EnableDirtyTracking();
 }
