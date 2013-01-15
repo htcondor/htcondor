@@ -39,6 +39,9 @@ DEFAULTS = {'wsdl':'file:/var/lib/condor/aviary/services/hadoop/aviary-hadoop.ws
             }
 plugins = []
 logging.basicConfig(level=logging.CRITICAL)
+#TODO: revisit
+cli_count = None
+cli_url = None
 
 class AviaryClient:
 
@@ -47,11 +50,11 @@ class AviaryClient:
 
     def __init__(self,wsdl,base_url):
         self.base_url = base_url
-        self.client = Client(wsdl)
+        self.client = create_suds_client(opts,wsdl,plugins)
 
     def getClient(self,url_suffix):
         if url_suffix:
-            url = self.base_url+url_suffix
+            url = cli_url+url_suffix if cli_url else self.base_url+url_suffix
             self.client.set_options(location=url)
         return self.client
 
@@ -103,7 +106,10 @@ class HadoopCtrlCmd(cmd.Cmd):
         count = 1
         is_nn = self.nodetype == "NameNode"
         if not is_nn:
-            count = raw_input('count (default is 1): ')
+            if cli_count:
+                count = cli_count
+            else:
+                count = raw_input('count (default is 1): ')
         result = None
         target_op = "start"+self.nodetype
         start_client = self.aviary.getClient(target_op)
@@ -276,6 +282,21 @@ class AviaryHadoopTool(cmd.Cmd):
 
 if __name__ == '__main__':
     if len(argv) > 1:
-        AviaryHadoopTool().onecmd(' '.join(argv[1:]))
+        parser = build_basic_parser('Control HTCondor Hadoop instances remotely via SOAP.','http://localhost:9090/services/hadoop/')
+        parser.add_option('--file', action="store", dest='hfile', help="full path to a hadoop binary distribution file on remote host")
+        parser.add_option('--count', action="store", dest='count', help="# of instances of node or tracker to start (ignored for namenode)")
+        (opts,args) =  parser.parse_args()
+        tool = AviaryHadoopTool()
+        if opts.verbose:
+            tool.do_verbose(True)
+        if opts.url:
+            cli_url = opts.url
+        if opts.hfile:
+            tool.do_file(opts.hfile)
+        if opts.count:
+            cli_count = opts.count
+        else:
+            cli_count = 1
+        tool.onecmd(' '.join(args))
     else:
         AviaryHadoopTool().cmdloop()
