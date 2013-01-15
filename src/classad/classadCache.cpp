@@ -339,6 +339,14 @@ const ExprTree* CachedExprEnvelope::self() const
 	return m_pLetter->pData;
 }
 
+/* This version is for shared-library compatibility.
+ * Remove it the next time we have to bump the ClassAds SO version.
+ */
+const ExprTree* CachedExprEnvelope::self()
+{
+	return m_pLetter->pData;
+}
+
 void CachedExprEnvelope::_SetParentScope( const ClassAd* )
 {
 	// nothing to do here already set @ base
