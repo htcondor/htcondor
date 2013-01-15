@@ -108,15 +108,16 @@ kept into smaller pieces.  The window advances one quantum at a time.
 \begin{itemize}
 
 \item Jobs of the EC2 grid type which make invalid requests of the
-service (for instance, specify a non-existent AMI) no longer go on
-hold when removed.
+service no longer go on hold when removed.
+An example of this is when a job specifies a nonexistent AMI. 
 \Ticket{3287}
 
-\item Jobs of the EC2 grid type which can't authenticate with the
+\item Jobs of the EC2 grid type which cannot authenticate with the
 service no longer go on hold when removed.
 \Ticket{3387}
 
-\item Fixed a problem with glexec that caused jobs not to start due to permission errors on the execute directory.
+\item Fixed a problem with \Prog{glexec} that caused jobs not to start 
+due to permission errors on the execute directory.
 \Ticket{3369}
 
 \item A change was made to more accurately implement the
