@@ -205,11 +205,25 @@ public:
    int cItems; // number of items currently in the ring buffer, grows with each Push() until it hits cMax
    T*  pbuf;   // allocated buffer for the ring.
 
+   // ring buffer accepts negative or positive indexes and interprets them modulo MaxSize()
+   // this[0] is the head item, and so is this[MaxSize()]
+   // this[-1] is the previous item, so is this[MaxSize()-1]
+   // this[1] is the last item in the ring, so is this[1-MaxSize()]
+   // when Length() < MaxSize(), only items between [0] and [-Length()] will contain valid data
+   // once Length() == MaxSize(), all indexes in the ring buffer are valid.
    T& operator[](int ix) { 
       // yes, we do want to segfault if pbuf==NULL
       MSC_SUPPRESS_WARNING_FOREVER(6011) // dereferencing null pointer.
       if ( ! pbuf || ! cMax) return pbuf[0];
-      return pbuf[(ixHead+ix+cMax) % cMax];
+
+      // pbuf[ixHead] is this[0], and we need to use only positive indexes into pbuf
+      // we achieve that for all positive values and reasonable negative values (0 to -cMax)
+      // by adding cMax before we mod. this is the expected case and is branch-free.
+      int ixmod = (ixHead+ix+cMax) % cMax;
+      // if the moded index is STILL negative, it must be now between 0 and -cMax, so just
+      // add and mod again. This branch should be seldom (never?) be taken.
+      if (ixmod < 0) ixmod = (ixmod+cMax) % cMax;
+      return pbuf[ixmod];
    }
 
    int Length() const { return cItems; } 
@@ -229,6 +243,7 @@ public:
       cMax = 0;
       cAlloc = 0;
       delete[] pbuf;
+      pbuf = NULL;
    }
 
    T Sum() {
@@ -241,22 +256,39 @@ public:
    bool SetSize(int cSize) {
 
       if (cSize < 0) return false;
+      if (cSize == 0) {
+         this->Free();
+         return true;
+      }
+
+      // quantize the requested size so that we don't have to reallocate as often
+      // if the size is changing by a small amount. (i.e. incrementing or decrementing)
+      const int cAlign = 5;
+      int cQuantizedSize = (cSize % cAlign) ? (cSize + cAlign - (cSize % cAlign)) : cSize;
+
+      // we must re-allocate and copy elements if the allocation size is changing
+      bool fMustCopy = false;
+      if ((cSize != cMax) && (cAlloc != cQuantizedSize))
+         fMustCopy = true;
 
       // if current items are outside of the new ring buffer from [0 to cSize]
       // then we have to copy items, so we might as well allocate a new buffer
       // even if we are shrinking.
-      bool fMustCopy = (cItems > 0) && (ixHead > cSize || ixHead - cItems + 1 < 0);
+      if ((cItems > 0) && (ixHead > cSize || ixHead - cItems + 1 < 0))
+         fMustCopy = true;
 
-      if ((cSize > cAlloc) || fMustCopy) {
-         const int cAlign = 16;
-         int cNew = !cAlloc ? cSize : cSize + (cAlign-1) - ((cSize) % cAlign);
+      // allocate a new buffer and copy items from the old buffer, note that
+      // we allocate the EXACT requested size the first time, but we use a
+      // quantized size when asked to grow or shrink the buffer.
+      if (fMustCopy) {
+         int cNew = !cAlloc ? cSize : cQuantizedSize;
          T* p = new T[cNew];
          if ( ! p) return false;
 
          // if there is an existing buffer copy items from it to the new buffer
          int cCopy = 0;
          if (pbuf) {
-            cCopy = cItems;
+            cCopy = MIN(cItems,cSize);
             for (int ix = 0; ix > 0 - cCopy; --ix)
                p[(ix+cCopy)%cSize] = (*this)[ix];
             delete[] pbuf;
@@ -265,9 +297,9 @@ public:
          pbuf    = p;
          cAlloc  = cNew;
          cMax    = cSize;
-         ixHead  = cCopy;
+         ixHead  = cCopy % cSize;
          cItems  = cCopy;
-   
+
       } else if (cSize < cMax) {
 
          // because of the mustcopy test above, we should only
@@ -637,10 +669,13 @@ public:
    }
 
    void SetWindowSize(int size) {
-      buf.SetSize(size);
+      if (buf.MaxSize() != size) {
+         buf.SetSize(size);
+         recent = buf.Sum(); // recalculate the recent sum in case the size changed.
+      }
    }
    void SetRecentMax(int cRecentMax) {
-      buf.SetSize(cRecentMax);
+      SetWindowSize(cRecentMax);
    }
 
    // operator overloads
