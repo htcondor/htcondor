@@ -1,13 +1,13 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Configuring-SMP}
-Configuring The \Condor{startd} for SMP Machines}
+Configuring the \Condor{startd} for Multi-Core Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{SMP machines!configuration|(}
-\index{partitioning SMP machines}
-This section describes how to configure the \Condor{startd} for SMP
-(Symmetric Multi-Processor) machines.
-Machines with more than one CPU may
+\index{multi-core machines!configuration|(}
+This section describes how to configure the \Condor{startd} for multi-core
+machines.
+Machines with more than one CPU or core may
 be configured to run more than one job at a time.
 As always, owners of the resources have great flexibility in defining
 the policy under which multiple jobs may run, suspend, vacate, etc.  
@@ -17,19 +17,20 @@ the policy under which multiple jobs may run, suspend, vacate, etc.
 How Shared Resources are Represented to HTCondor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The way SMP machines are represented to the HTCondor system is that
+The way multi-core machines are represented to the HTCondor system is that
 the shared resources are broken up into individual \Term{slots}.
 Each slot can be matched and claimed by users.
 Each slot is represented by an individual ClassAd.
 See the ClassAd reference in section~\ref{sec:classad-reference} for details. 
 In this way, each SMP machine will appear to the HTCondor system as
 a collection of separate slots.
-As an example, an SMP machine named
+As an example, a multi-core machine named
 \Expr{vulture.cs.wisc.edu} would appear to HTCondor as the
-multiple machines, named \Expr{slot1@example.com},
-\Expr{slot2@example.com},
-\Expr{slot3@example.com}, and so on.
+multiple machines, named \Expr{slot1@vulture.cs.wisc.edu},
+\Expr{slot2@vulture.cs.wisc.edu},
+\Expr{slot3@vulture.cs.wisc.edu}, and so on.
 
+\index{partitioning multi-core machines}
 The way that the \Condor{startd} breaks up the
 shared system resources into the different slots
 is configurable.
@@ -842,3 +843,4 @@ condor_status -l -any -constraint 'MyType == "Defrag"'
 \end{verbatim}
 
 \index{SMP machines!configuration|)}
+\index{multi-core machines!configuration|)}
