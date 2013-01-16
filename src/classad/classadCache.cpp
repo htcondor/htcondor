@@ -126,19 +126,23 @@ public:
 	{
 	  cache_iterator itr = m_Cache.find(szName);
 
-          // remove all conditional checks because they are always true.
-	  if (itr->second.size() == 1)
-          {
-            m_Cache.erase(itr);
-          }
-          else
-          {
-            value_iterator vtr = itr->second.find(szValue);
-            itr->second.erase(vtr);
+      if (itr != m_Cache.end())
+	  {
+		  if (itr->second.size() == 1)
+			  {
+				m_Cache.erase(itr);
+			  }
+			  else
+			  {
+				value_iterator vtr = itr->second.find(szValue);
+				itr->second.erase(vtr);
+		      }
+
+		  m_RemovalCount++;
+		  return (true);
 	  }
 
-	  m_RemovalCount++;
-	  return (true);
+	  return false;
 	} 
 	
 	///< dumps the contents of the cache to the file
@@ -226,9 +230,9 @@ CacheEntry::~CacheEntry()
 {
     if (pData)
     {
-        delete pData;
-        pData=0;
         _cache->flush(szName, szValue);
+		delete pData;
+        pData=0;
     }
 }
 
