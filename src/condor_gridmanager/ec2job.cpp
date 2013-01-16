@@ -78,11 +78,11 @@ static const char *GMStateNames[] = {
 	"GM_SEEK_INSTANCE_ID"
 };
 
-#define EC2_VM_STATE_RUNNING			"running"
-#define EC2_VM_STATE_PENDING			"pending"
-#define EC2_VM_STATE_SHUTTINGDOWN	"shutting-down"
-#define EC2_VM_STATE_TERMINATED		"terminated"
-
+#define EC2_VM_STATE_RUNNING            "running"
+#define EC2_VM_STATE_PENDING            "pending"
+#define EC2_VM_STATE_SHUTTINGDOWN       "shutting-down"
+#define EC2_VM_STATE_TERMINATED         "terminated"
+#define EC2_VM_STATE_SHUTOFF            "shutoff"
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
@@ -710,14 +710,23 @@ void EC2Job::doEvaluateState()
 				
 			
 			case GM_SUBMITTED:
+			    // An OpenStack-specific state where the VM is no longer
+			    // running, but it it retains its reserved resources.
+			    //
+			    // We simplify by considering this job complete and letting
+			    // it exit the queue.
+			    if( remoteJobState == EC2_VM_STATE_SHUTOFF ) {
+			        gmState = GM_CANCEL;
+			        break;
+			    }
 
 				if ( remoteJobState == EC2_VM_STATE_TERMINATED ) {
 					gmState = GM_DONE_SAVE;
-				} 
+				}
 
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_CANCEL;
-				} 
+				}
 				else {
 					if ( lastProbeTime < enteredCurrentGmState ) {
 						lastProbeTime = enteredCurrentGmState;
@@ -1067,7 +1076,10 @@ void EC2Job::doEvaluateState()
 			    }
 				
 				if ( rc == 0 ) {
-					if ( condorState == COMPLETED || condorState == REMOVED ) {
+				    // After we've terminated a 'shutoff' instance, it's done.
+				    if( remoteJobState == EC2_VM_STATE_SHUTOFF ) {
+				        gmState = GM_DONE_SAVE; 
+				    } else if( condorState == COMPLETED || condorState == REMOVED ) {
 						gmState = GM_DELETE;
 					} else {
 							// If the job was not Completed or Removed
