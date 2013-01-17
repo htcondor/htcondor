@@ -29,7 +29,7 @@ if (NOT WIN_EXEC_NODE_ONLY)
 
 	condor_daemon ( collector
 					"${collectorRmvElements};${CollectorLibSrcs}"
-					"${CONDOR_LIBS};${GSOAP_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${ZLIB_FOUND};${CONDOR_QMF};collectorlib"
+					"${CONDOR_LIBS};${GSOAP_FOUND};${ZLIB_FOUND};${CONDOR_QMF};collectorlib"
 					${C_SBIN}
 					ON )
 	if (HAVE_EXT_GSOAP)
