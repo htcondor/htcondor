@@ -220,18 +220,30 @@ check_reverse_connectivity() {
     # Return 1 if the test fails (like most unix tools)
     # $1 = cluster to check for
     remote_host=$1
-    myhost=`hostname`
-    # try ping first
-    ssh $remote_host ping -c 1 $myhost > /dev/null 2>/dev/null
-    if [ $? -ne 0 ]; then
+    
+    # Get the COLLECTOR_HOST value, strip out anything after the '?'
+    myhost=`condor_config_val COLLECTOR_HOST`
+    myhost=`echo $myhost | sed 's/\(.*\)[?|$].*/\1/'`
+    
+    # Create tmp file for the python script to test connectivity
+    tmpfile=`mktemp -t tmpreversetest.XXXXXX`
+    cat << EOF > $tmpfile
+#!/usr/bin/python
+import sys,socket
+(host,port)=sys.argv[1].split(":")
+s = socket.socket()
+s.connect((host,int(port)))
+EOF
+    
+    testout=`ssh_upload_and_run $remote_host DEFAULT $tmpfile $myhost`
+    testexit=$?
+    
+    if [ "$testexit" -eq "0" ]; then
+        return 0
+    else
         return 1
     fi
-    # test nc from remote_host to 11000 (bosco is started and default port is used)
-    ssh $remote_host nc -z $myhost 11000 > /dev/null 2>/dev/null
-    if [ $? -ne 0 ]; then
-        return 1
-    fi
-    return 0
+    
 }
 
 
