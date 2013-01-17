@@ -106,3 +106,11 @@ if ( LINUX AND NOT CONDOR_PACKAGE_BUILD )
 	# libcrypto files don't have owner write permission.
 	install( CODE "execute_process(COMMAND chmod -R u+w ${CMAKE_INSTALL_PREFIX}/lib/condor/)" )
 endif()
+
+############################################################
+# GPU Support
+############################################################
+if ( LINUX AND HAVE_LIBDL AND HAVE_DLFCN_H AND HAVE_DLOPEN )
+	condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_SBIN}
+	"${DL_FOUND}" OFF )
+endif()
