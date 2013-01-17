@@ -23,7 +23,8 @@
 #include <deque>
 #include <cstdlib>
 
-#define RING_BUFFER_UNIT_TESTING
+// disable the EXCEPT macro in generic stats so we can test it.
+#undef EXCEPT
 #include "generic_stats.h"
 
 #define BOOST_TEST_MAIN
@@ -31,7 +32,6 @@
 #include <boost/test/unit_test.hpp>
 
 #define BOOST_TEST_MODULE ring_buffer
-
 
 using std::deque;
 

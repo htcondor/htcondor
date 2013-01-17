@@ -274,7 +274,7 @@ public:
       // if current items are outside of the new ring buffer from [0 to cSize]
       // then we have to copy items, so we might as well allocate a new buffer
       // even if we are shrinking.
-      if ((cItems > 0) && (ixHead > cSize || ixHead - cItems + 1 < 0))
+      if ((cItems > 0) && (ixHead >= cSize || ixHead - cItems + 1 < 0))
          fMustCopy = true;
 
       // allocate a new buffer and copy items from the old buffer, note that
@@ -308,7 +308,7 @@ public:
          // we shouldn't need to correct ixHead or cItems, but
          // just to be careful, fix them up anyway.
          if (cItems > 0) {
-            ixHead = (ixHead + cSize) % cSize;
+            ixHead = ixHead % cSize;
             if (cItems > cSize) 
                cItems = cSize;
          }
