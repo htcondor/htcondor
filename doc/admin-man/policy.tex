@@ -5,7 +5,7 @@
 \section{\label{sec:Configuring-Policy}Policy Configuration for the \Condor{startd}}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\index{configuration!startd policy}
+\index{configuration!condor\_startd policy}
 \index{configuration!of machines, to implement a given policy}
 \index{startd!configuration}
 \index{daemon!condor\_startd@\Condor{startd}}
@@ -13,79 +13,50 @@ This section describes the configuration of machines,
 such that they,
 through the \Condor{startd} daemon,
 implement a desired policy for when remote jobs should start, be
-suspended, (possibly) resumed, vacate (with a checkpoint) or be killed
-(no checkpoint).
+suspended, (possibly) resumed, vacate (with a checkpoint) or be killed.
 This policy is the heart of HTCondor's balancing act
 between the needs and wishes of resource owners (machine owners) and
 resource users (people submitting their jobs to HTCondor).
 Please read
-this section carefully if you plan to change any of the settings
+this section carefully before changing any of the settings
 described here, as a wrong setting can have a severe impact on
-either the owners of machines in your pool (they may
-ask to be removed from the pool entirely) or the users of your pool
-(they may stop using HTCondor).
-
-Before the details, there are a few things to note:
-\begin{itemize}
-\item Much of this section refers to ClassAd expressions.
-Please read through section~\ref{sec:classad-reference} on
-ClassAd expressions before continuing.
-
-\item If defining the policy for an SMP machine
-(a multi-CPU machine),
-also read section~\ref{sec:Configuring-SMP} for specific information on
-configuring the \Condor{startd} daemon for SMP machines.  
-Each \Term{slot} represented by the \Condor{startd} daemon on an
-SMP machine has its own \Term{state} and \Term{activity}
-(as described below). 
-In the future, each slot will be able to have its
-own individual policy expressions defined.
-Within this manual section, the word ``machine''
-refers to an individual slot within
-an SMP machine.
-\end{itemize}
-
-To define a policy, set expressions in
-the configuration file (see section~\ref{sec:Configuring-HTCondor} on
-Configuring HTCondor for an introduction to HTCondor's
-configuration files).
-The expressions are evaluated in the context of the machine's ClassAd
-and a job ClassAd.
-The expressions can therefore reference attributes from either
-ClassAd. 
-See the unnumbered Appendix on page~\pageref{sec:Job-ClassAd-Attributes}
-for a list of job ClassAd attributes.
-See the unnumbered Appendix on page~\pageref{sec:Machine-ClassAd-Attributes}
-for a list of machine ClassAd attributes.
-The \MacroNI{START} expression is explained.
-It describes the conditions that must be met for a machine to
-start a job.
-The \MacroNI{RANK} expression for a machine is described.
-It allows the specification of
-the kinds of jobs a machine prefers to run.
-A final discussion details how the \Condor{startd} daemon works.
-Included are
-the machine \Term{states} and \Term{activities}, to give
-an idea of what is possible in policy decisions.
-Two example policy settings are presented.
+either the owners of machines in the pool or the users of your pool.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Startd-Attributes}
-Startd ClassAd Attributes}
+\subsection{\label{sec:Startd-Terminology}Terminology}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Understanding the configuration requires an understanding of
+ClassAd expressions,
+which are detailed in section~\ref{sec:classad-reference}.
 
 \index{condor\_startd daemon@\Condor{startd} daemon}
 \index{daemon!condor\_startd@\Condor{startd}}
 \index{HTCondor daemon!condor\_startd@\Condor{startd}}
+Each machine runs one \Condor{startd} daemon.
+Each machine may contain one or more cores (or CPUs).
+The HTCondor construct of a \Term{slot} describes the unit which
+is matched to a job.
+Each slot may contain one or more integer number of cores.
+Each slot is represented by its own machine ClassAd,
+distinguished by the machine ClassAd attribute \Attr{Name},
+which is of the form \Expr{slot<N>@hostname}.
+The value for \Expr{<N>} will also be defined with 
+machine ClassAd attribute \Attr{SlotID}.
+
+Each slot represented by the \Condor{startd} daemon 
+has its own \Term{state} and \Term{activity}.
+Policy expressions are propagated from the machine configuration
+by the \Condor{startd} daemon to each slot ClassAd.
+This requires configuration expressions to incorporate the \Attr{SlotID}
+attribute when writing policy on a per slot basis.
+
 The \Condor{startd} daemon represents the machine on which it is running to
 the HTCondor pool.  
 The daemon publishes characteristics about the
 machine in the machine's ClassAd to aid matchmaking with resource requests.
 The values of these attributes may be listed by using the command:
 \Prog{\condor{status} -l hostname}.
-On an SMP machine, the \Condor{startd} will break the machine up and advertise
-it as separate slots, each with its own name and ClassAd.
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Start-Expr}
@@ -1843,8 +1814,7 @@ you know the machines will be idle and when they will not be
 interrupted.
 
 To configure this kind of policy, you should use the \Attr{ClockMin}
-and \Attr{ClockDay} attributes, defined in
-section~\ref{sec:Startd-Attributes} on ``Startd ClassAd Attributes''.
+and \Attr{ClockDay} attributes.
 These are special attributes which are automatically inserted by the
 \Condor{startd} into its ClassAd, so you can always reference them in
 your policy expressions.
