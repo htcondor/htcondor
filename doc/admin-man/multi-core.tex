@@ -12,17 +12,10 @@ be configured to run more than one job at a time.
 As always, owners of the resources have great flexibility in defining
 the policy under which multiple jobs may run, suspend, vacate, etc.  
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:How-Resources-Represented}
-How Shared Resources are Represented to HTCondor}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-The way multi-core machines are represented to the HTCondor system is that
-the shared resources are broken up into individual \Term{slots}.
-Each slot can be matched and claimed by users.
-Each slot is represented by an individual ClassAd
-(see the ClassAd reference, section~\ref{sec:classad-reference}, for
-details). 
+Multi-core machines are represented to the HTCondor system as
+shared resources broken up into individual \Term{slots}.
+Each slot can be matched and claimed by users for jobs.
+Each slot is represented by an individual machine ClassAd
 In this way, each multi-core machine will appear to the HTCondor system as
 a collection of separate slots.  
 As an example, a multi-core machine named
@@ -35,24 +28,28 @@ slot3@vulture.cs.wisc.edu, and so on.
 The way that the \Condor{startd} breaks up the
 shared system resources into the different slots
 is configurable.
-All shared system resources (like RAM, disk space, swap space, etc.)
-can either be divided evenly among all the slots, with each
-CPU getting its own slot, or you can define your own
-\Term{slot types}, so that resources can be unevenly
-partitioned.  Regardless of the partitioning scheme used, it is important
-to remember the goal is to create a representative slot
-ClassAd, to be used for matchmaking with jobs.  HTCondor does not
+All shared system resources, such as RAM, disk space, and swap space,
+can be divided evenly among all the slots, with each
+core getting its own slot.
+Alternatively, 
+\Term{slot types} are defined by configuration, 
+so that resources can be unevenly divided.
+Regardless of the scheme used, it is important
+to remember that the goal is to create a representative slot ClassAd,
+to be used for matchmaking with jobs.
+HTCondor does not
 directly enforce slot shared resource allocations, and jobs
 are free to oversubscribe to shared resources.
 
-Consider an example where two slots are each defined with 50\Percent of
+Consider an example where two slots are each defined with 50\Percent\ of
 available RAM.  The resultant ClassAd for each slot will advertise one
 half the available RAM.  Users may submit jobs with RAM requirements
 that match these slots.  However, jobs run on either slot are free to
-consume more than 50\Percent of available RAM.  HTCondor will not
+consume more than 50\Percent\ of available RAM.  HTCondor will not
 directly enforce a RAM utilization limit on either slot.  If a shared
-resource enforcement capability is needed, it is possible to write a
-Startd policy that will evict a job that oversubscribes to shared
+resource enforcement capability is needed, 
+it is possible to write a
+policy that will evict a job that oversubscribes to shared
 resources, see section \ref{sec:Config-SMP-Policy}.
 
 The following section gives details on how to configure HTCondor to
@@ -60,9 +57,8 @@ divide the resources on an SMP machine into separate slots.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-Divide}
-Dividing System Resources in SMP Machines}
+Dividing System Resources in Multi-core Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{partitioning SMP machines}
 
 This section describes the settings that allow you to define your own
 slot types and to control how many slots of each
@@ -71,13 +67,6 @@ type are reported to HTCondor.
 There are two main ways to go about partitioning an SMP machine:
 
 \begin{description}
-
-\item[Define your own slot types.]
-  By defining your own types, you can specify what fraction of shared
-  system resources (CPU, RAM, swap space and disk space) go to each
-  slot.
-  Once you define your own types, you can control how many of each
-  type are reported at any given time.
 
 \item[Evenly divide all resources.]  
   If you do not define your own types, the \Condor{startd} will
@@ -88,24 +77,27 @@ There are two main ways to go about partitioning an SMP machine:
   slots are reported at a time.
   By default, all slots are reported to HTCondor.
 
-\end{description}
+  If you are not defining your own slot types, then all resources
+  are divided equally among the slots.
+  The number of slots within the SMP machine is the only attribute
+  that needs to be defined.
+  Its definition is accomplished by setting the configuration
+  variable \Macro{NUM\_SLOTS} to the
+  integer number of slots desired.
+  If variable \MacroNI{NUM\_SLOTS} is not defined,
+  it defaults to the number of CPUs within the SMP machine.
+  You cannot use \MacroNI{NUM\_SLOTS} to make HTCondor advertise more
+  slots than there are CPUs on the machine.
+  To do that, use \Macro{NUM\_CPUS}.
 
-The number of each type being
-reported can be changed at run-time, by issuing a reconfiguration
-command to
-the \Condor{startd} daemon (sending a SIGHUP or using \Condor{reconfig}).
-However, the definitions for the types themselves cannot be changed
-with reconfiguration.
-If you change any slot type definitions, you must use \Condor{restart}
-\begin{verbatim}
-condor_restart -startd
-\end{verbatim}
-for that change to take effect.
+\item[Define your own slot types.]
+  By defining your own types, you can specify what fraction of shared
+  system resources (CPU, RAM, swap space and disk space) go to each
+  slot.
+  Once you define your own types, you can control how many of each
+  type are reported at any given time.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Slot-Type-Define}
-Defining Slot Types}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 To define your own slot types, add configuration file
 parameters that list how much of each system resource you want in the
@@ -233,57 +225,49 @@ If this occurs, the \Condor{startd} daemon fails after writing
 a message to its log attempting to indicate the configuration
 requirements that it could not implement.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:Config-Slot-Number}
-Evenly Divided Resources}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The number of each type being
+reported can be changed at run-time, by issuing a reconfiguration
+command to
+the \Condor{startd} daemon (sending a SIGHUP or using \Condor{reconfig}).
+However, the definitions for the types themselves cannot be changed
+with reconfiguration.
+If you change any slot type definitions, you must use \Condor{restart}
+\begin{verbatim}
+condor_restart -startd
+\end{verbatim}
+for that change to take effect.
 
-If you are not defining your own slot types, then all resources
-are divided equally among the slots.
-The number of slots within the SMP machine is the only attribute
-that needs to be defined.
-Its definition is accomplished by setting the configuration
-variable \Macro{NUM\_SLOTS} to the
-integer number of slots desired.
-If variable \MacroNI{NUM\_SLOTS} is not defined,
-it defaults to the number of CPUs within the SMP machine.
-You cannot use \MacroNI{NUM\_SLOTS} to make HTCondor advertise more
-slots than there are CPUs on the machine.
-To do that, use \Macro{NUM\_CPUS}.
+\end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-SMP-Policy}
-Configuring Startd Policy for SMP Machines}
+Configuring for Multi-core Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!SMP machines}
-Section~\ref{sec:Configuring-Policy} details the Startd
-Policy Configuration.
-This section continues the discussion with respect to SMP machines.
-
-Each slot within an SMP machine is treated as an
+\index{configuration!multi-core machines}
+Each slot within a multi-core machine is treated as an
 independent machine,
-each with its own view of its machine state.
-There is a single set of policy expressions for the SMP machine
-as a whole.
-This policy may consider the slot state(s) in its expressions.
+each with its own view of its state as represented by the
+machine ClassAd attribute \Attr{State}.
+The policy expressions for the multi-core machine
+as a whole are propagated from the \Condor{startd}
+to the slot's machine ClassAd.
+This policy may consider a slot state(s) in its expressions.
 This makes some policies easy to set, but it makes
 other policies difficult or impossible to set.
 
 An easy policy to set
 configures how many of the slots
-notice console or tty activity on the SMP as a whole.
+notice console or tty activity on the multi-core machine as a whole.
 Slots that are not configured to notice any activity will report
-ConsoleIdle and KeyboardIdle times from when the
+\Attr{ConsoleIdle} and \Attr{KeyboardIdle} times from when the
 \Condor{startd} daemon was started,
 (plus a configurable number of seconds).
-With this, you can set up a multiple CPU machine with
-the default policy
-settings plus add that the keyboard and console noticed by only one
-slot.
-Assuming a reasonable load average (see
-section~\ref{sec:SMP-Load} below on ``Load Average for SMP
-Machines''), only the one slot will suspend or vacate its job
+A multi-core machine with the default policy
+settings can add the keyboard and console to be noticed by only one slot.
+Assuming a reasonable load average,
+only the one slot will suspend or vacate its job
 when the owner starts typing at their machine again.
 The rest of the slots could be matched with jobs and leave
 them running, even while the user was interactively using the
@@ -355,26 +339,27 @@ where \verb@(PolicyForSlot1)@ and \verb@(PolicyForSlot2)@ are the
 desired expressions for each slot.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:SMP-Load}
-Load Average for SMP Machines}
+\subsubsection{\label{sec:Multi-core-Load}
+Load Average for Multi-core Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Most operating systems define the load average for an SMP machine as
-the total load on all CPUs.
-For example, if you have a 4-CPU machine with 3 CPU-bound processes
-running at the same time, the load would be 3.0
+Most operating systems define the load average for a multi-core machine as
+the total load on all cores.
+For example, a 4-core machine with 3 CPU-bound processes
+running at the same time will have a load of 3.0.
 In HTCondor, we maintain this view of the total load average and publish
 it in all resource ClassAds as \Attr{TotalLoadAvg}.
 
-HTCondor also provides a per-CPU load average for SMP machines.
-This nicely represents the model that each node on an SMP is a slot,
+HTCondor also provides a per-core load average for multi-core machines.
+This nicely represents the model that each node on a multi-core machine
+is a slot,
 separate from the other nodes.
-All of the default, single-CPU policy expressions can be used directly
-on SMP machines, without modification, since the \Attr{LoadAvg} and
+All of the default, single-core policy expressions can be used directly
+on multi-core machines, without modification, since the \Attr{LoadAvg} and
 \Attr{CondorLoadAvg} attributes are the per-slot versions,
-not the total, SMP-wide versions.
+not the total, multi-core wide versions.
 
-The per-CPU load average on SMP machines is an HTCondor invention. 
+The per-core load average on multi-core machines is an HTCondor invention. 
 No system call exists to ask the operating system for this value.
 HTCondor already computes the load average generated by HTCondor on each
 slot.
@@ -392,16 +377,15 @@ Basically, HTCondor walks through all the slots and assigns out
 portions of the total load average to each one. 
 First, HTCondor assigns the known HTCondor load average to each node that
 is generating load.  
-If there's any load average left in the total system load, it is
-considered an owner load.
-Any slots HTCondor believes are in the Owner state (like
-ones that have keyboard activity), are the first to get assigned
-this owner load.
+If there is any load average left in the total system load, 
+it is considered an owner load.
+Any slots HTCondor believes are in the Owner state,
+such as ones that have keyboard activity,
+are the first to get assigned this owner load.
 HTCondor hands out owner load in increments of at most 1.0, so generally
 speaking, no slot has a load average above 1.0.
-If HTCondor runs out of total load average before it runs out of virtual
-machines, all the remaining machines believe that they have no load average
-at all.
+If HTCondor runs out of total load average before it runs out of slots,
+all the remaining machines believe that they have no load average at all.
 If, instead, HTCondor runs out of slots and it still has owner
 load remaining, HTCondor starts assigning that load to HTCondor nodes as
 well,
@@ -410,19 +394,20 @@ giving individual nodes with a load average higher than 1.0.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-logging}
-Debug logging in the SMP Startd}
+Debug Logging in the Multi-Core \Condor{startd} Daemon}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This section describes how the \Condor{startd} daemon
-handles its debugging messages for SMP machines.
+handles its debugging messages for multi-core machines.
 In general, a given log message will either be something that is
-machine-wide (like reporting the total system load average), or it
-will be specific to a given slot.
-Any log entrees specific to a slot have an extra
-header printed out in the entry: \texttt{slot\#:}.  
+machine-wide, 
+such as reporting the total system load average,
+or it will be specific to a given slot.
+Any log entries specific to a slot have an extra word 
+printed out in the entry with the slot number.  
 So, for example, here's the output about system resources that are
 being gathered (with \Dflag{FULLDEBUG} and \Dflag{LOAD} turned on) on
-a 2-CPU machine with no HTCondor activity, and the keyboard connected to
+a 2-core machine with no HTCondor activity, and the keyboard connected to
 both slots:
 \begin{verbatim}
 11/25 18:15 Swap space: 131064
@@ -456,9 +441,11 @@ job, it might look something like this:
 11/25 18:19 slot2: State: Claimed         Activity: Busy
 \end{verbatim}
 
-As you can see, shared system resources are printed without the header
-(like total swap space), and slot-specific messages (like the load
-average or state of each slot) get the special header appended.  
+Shared system resources are printed without the header,
+such as total swap space,
+and slot-specific messages,
+such as the load average or state of each slot,
+get the slot number appended.  
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -488,7 +475,7 @@ This will result in the \Condor{startd} ClassAd for
 slot1 defining values for
 \Attr{favorite\_color}, \Attr{favorite\_season},
 and \Attr{favorite\_movie}.
-slot2 will have values for
+Slot2 will have values for
 \Attr{favorite\_color}, \Attr{favorite\_season}, and \Attr{favorite\_song}.
 
 Attributes themselves in the \Expr{STARTD\_ATTRS} list
