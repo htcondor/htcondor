@@ -690,6 +690,11 @@ e		*/
          */
 		bool        IsAttributeDirty(const std::string &name) const;
 
+		/* Needed for backward compatibility
+		 * Remove it the next time we have to bump the ClassAds SO version.
+		 */
+		bool        IsAttributeDirty(const std::string &name) {return ((const ClassAd*)this)->IsAttributeDirty(name);}
+
 		typedef DirtyAttrList::iterator dirtyIterator;
         /** Return an interator to the first dirty attribute so all dirty attributes 
          * can be iterated through.

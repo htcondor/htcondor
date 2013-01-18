@@ -21,7 +21,7 @@ if (WINDOWS)
 	condor_exe( condor_credd
 				"credd.windows.cpp;credd.windows.h"
 				${C_SBIN}
-				"${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND}"
+				"${CONDOR_LIBS}"
 				ON )
 				
 else()
@@ -33,7 +33,7 @@ else()
 		condor_exe( condor_credd
 			"${CREDDHDRS};${CREDDSRCS}"
 			${C_SBIN}
-			"${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND}"
+			"${CONDOR_LIBS}"
 			OFF )
 		
 	else ()

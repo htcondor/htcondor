@@ -18,7 +18,6 @@
 
 
 if(NOT WIN_EXEC_NODE_ONLY)
-	set (GM_LINK_LIBS "${CONDOR_TOOL_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${COREDUMPER_FOUND}")
 
 	if ( LINUX )
 		file( GLOB RmvSrcs *_gahp_wrapper* )
@@ -31,9 +30,9 @@ if(NOT WIN_EXEC_NODE_ONLY)
 		if ( NOT LIBUUID_FOUND )
 			message(FATAL_ERROR "gridmanager requires uuid header/library")
 		endif()
-		condor_exe( condor_gridmanager "${GMHDRS};${GMSRCS}" ${C_SBIN} "${GM_LINK_LIBS};${LIBUUID_FOUND}" OFF )
+		condor_exe( condor_gridmanager "${GMHDRS};${GMSRCS}" ${C_SBIN} "${CONDOR_TOOL_LIBS};${LIBUUID_FOUND}" OFF )
 	else()
-		condor_exe( condor_gridmanager "${GMHDRS};${GMSRCS}" ${C_SBIN} "${GM_LINK_LIBS}" OFF )
+		condor_exe( condor_gridmanager "${GMHDRS};${GMSRCS}" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF )
 	endif()
 
 	if (NOT WINDOWS)
@@ -52,7 +51,7 @@ if(NOT WIN_EXEC_NODE_ONLY)
         endif()
 
         if (HAVE_EXT_UNICOREGAHP)
-            condor_exe( unicore_gahp "unicore_gahp_wrapper.cpp" ${C_SBIN} "${GM_LINK_LIBS}" OFF )
+            condor_exe( unicore_gahp "unicore_gahp_wrapper.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF )
         endif()
 
         if (HAVE_EXT_BLAHP)

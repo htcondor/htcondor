@@ -584,7 +584,7 @@ GetSubmissionIDResponse* AviaryQueryServiceSkeleton::getSubmissionID(wso2wsf::Me
                 start = max_element(
                             g_qdate_submissions.begin(),
                             g_qdate_submissions.upper_bound(
-                                offset->getQdate()
+                                qdate
                             ),
                             qdateCompare
                         );
@@ -608,7 +608,7 @@ GetSubmissionIDResponse* AviaryQueryServiceSkeleton::getSubmissionID(wso2wsf::Me
         // AFTER mode
         else {
             if (offset) {
-                start = g_qdate_submissions.upper_bound(offset->getQdate());
+                start = g_qdate_submissions.upper_bound(qdate);
             }
             else {
                 start = g_qdate_submissions.begin();
@@ -618,6 +618,9 @@ GetSubmissionIDResponse* AviaryQueryServiceSkeleton::getSubmissionID(wso2wsf::Me
             if (qdate<it->second->getOldest() && qdate<INT_MAX)  {
                 for (it=start; it!=g_qdate_submissions.end() && i<size; it++) {
                      if (!advanceQdateIndex((*it).second,offset)) {
+                         if ((*it).first != (*it).second->getOldest()) {
+                             dprintf(D_ALWAYS,"ERROR: submission id '%s', index=%d but qdate=%d\n",(*it).second->getName(),(*it).first,(*it).second->getOldest());
+                         }
                         response->addIds(makeSubmissionID((*it).second));
                         i++;
                      }

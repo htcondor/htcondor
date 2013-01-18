@@ -78,11 +78,11 @@ static const char *GMStateNames[] = {
 	"GM_SEEK_INSTANCE_ID"
 };
 
-#define EC2_VM_STATE_RUNNING			"running"
-#define EC2_VM_STATE_PENDING			"pending"
-#define EC2_VM_STATE_SHUTTINGDOWN	"shutting-down"
-#define EC2_VM_STATE_TERMINATED		"terminated"
-
+#define EC2_VM_STATE_RUNNING            "running"
+#define EC2_VM_STATE_PENDING            "pending"
+#define EC2_VM_STATE_SHUTTINGDOWN       "shutting-down"
+#define EC2_VM_STATE_TERMINATED         "terminated"
+#define EC2_VM_STATE_SHUTOFF            "shutoff"
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
@@ -442,7 +442,7 @@ void EC2Job::doEvaluateState()
                 //
                 if( ! myResource->didFirstPing() ) { break; }
                 if( myResource->hadAuthFailure() ) {
-                    if( condorState == REMOVED ) {
+                    if( condorState == REMOVED && m_client_token.empty() && m_remoteJobId.empty() ) {
                         gmState = GM_DELETE;
                         break;
                     } else {
@@ -450,7 +450,6 @@ void EC2Job::doEvaluateState()
                                    myResource->authFailureMessage.c_str() );
                         dprintf( D_ALWAYS, "(%d.%d) %s\n",
                                  procID.cluster, procID.proc, errorString.c_str() );
-                        jobAd->Assign( ATTR_HOLD_REASON, errorString );
                         gmState = GM_HOLD;
                         break;
                     }
@@ -711,14 +710,23 @@ void EC2Job::doEvaluateState()
 				
 			
 			case GM_SUBMITTED:
+			    // An OpenStack-specific state where the VM is no longer
+			    // running, but it it retains its reserved resources.
+			    //
+			    // We simplify by considering this job complete and letting
+			    // it exit the queue.
+			    if( remoteJobState == EC2_VM_STATE_SHUTOFF ) {
+			        gmState = GM_CANCEL;
+			        break;
+			    }
 
 				if ( remoteJobState == EC2_VM_STATE_TERMINATED ) {
 					gmState = GM_DONE_SAVE;
-				} 
+				}
 
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_CANCEL;
-				} 
+				}
 				else {
 					if ( lastProbeTime < enteredCurrentGmState ) {
 						lastProbeTime = enteredCurrentGmState;
@@ -1068,7 +1076,10 @@ void EC2Job::doEvaluateState()
 			    }
 				
 				if ( rc == 0 ) {
-					if ( condorState == COMPLETED || condorState == REMOVED ) {
+				    // After we've terminated a 'shutoff' instance, it's done.
+				    if( remoteJobState == EC2_VM_STATE_SHUTOFF ) {
+				        gmState = GM_DONE_SAVE; 
+				    } else if( condorState == COMPLETED || condorState == REMOVED ) {
 						gmState = GM_DELETE;
 					} else {
 							// If the job was not Completed or Removed
@@ -1617,10 +1628,10 @@ void EC2Job::doEvaluateState()
                     }
                         
                     if( ! instanceID.empty() ) {
-                        // Yes, this duplicates work, but it also ensures
-                        // that we do things like logging the submit and/or
-                        // execute events.
-                        gmState = GM_START_VM;
+                        // Copied from the success case of GM_START_VM.
+                        SetInstanceId( instanceID.c_str() );
+                        WriteGridSubmitEventToUserLog( jobAd );
+                        gmState = GM_SAVE_INSTANCE_ID;
                     } else {
                         gmState = GM_DELETE;
                     }

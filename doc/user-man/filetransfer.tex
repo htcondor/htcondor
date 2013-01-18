@@ -212,9 +212,8 @@ The default values for these two submit commands make sense as
 used together.
 If only \SubmitCmd{should\_transfer\_files} is set, 
 and set to the value \Expr{NO}, 
-then the default value for an unspecified 
-\SubmitCmd{when\_to\_transfer\_output} will be \Expr{NEVER}.
-Likewise,
+then no output files will be transferred, and the value of
+\SubmitCmd{when\_to\_transfer\_output} is irrelevant.
 If only \SubmitCmd{when\_to\_transfer\_output} is set,
 and set to the value \Expr{ON\_EXIT\_OR\_EVICT},
 then the default value for an unspecified

@@ -104,8 +104,7 @@ monitors them or not).
 
 \begin{itemize}
 
-\item HTCondor version 7.9.3 not yet released.
-%\item HTCondor version 7.9.3 released on Month Date, 2012.
+\item HTCondor version 7.9.3 released on January 16, 2013.
 
 \end{itemize}
 
@@ -128,15 +127,6 @@ now fetches machine ClassAds more quickly from the \Condor{collector}
 This can make negotiation much faster in
 a very large pool of mostly claimed machines.
 \Ticket{3366}
-
-\item \emph{This item is tentative, and must be reviewed or updated
-before release of 7.9.3.}
-\Condor{submit} now supports first-class syntax for specifying
-accounting groups, via the 'group' and 'group\_user' commands.  The
-separator character between group name and user name on internal
-representations is now configurable with \Macro{GROUP\_SEPARATOR}.
-Refer to section~\ref{sec:group-accounting} for more information.
-\Ticket{2728}
 
 \item Round-robin scheduling is now used when there are multiple users
 waiting to transfer files in the limits set by
@@ -192,6 +182,19 @@ kept into smaller pieces.  The window advances one quantum at a time.
 
 \begin{itemize}
 
+\item Jobs of the EC2 grid type which make invalid requests of the
+service no longer go on hold when removed.
+An example of this is when a job specifies a nonexistent AMI. 
+\Ticket{3287}
+
+\item Jobs of the EC2 grid type which cannot authenticate with the
+service no longer go on hold when removed.
+\Ticket{3387}
+
+\item Fixed a problem with \Prog{glexec} that caused jobs not to start 
+due to permission errors on the execute directory.
+\Ticket{3369}
+
 \item A change was made to more accurately implement the
 minimum time defined by the configuration variable
 \Macro{NEGOTIATOR\_CYCLE\_DELAY}. 
@@ -230,6 +233,11 @@ puts the affected jobs on hold.
 allowing it to find proxy management that it needs for jobs that have an
 X.509 proxy.
 \Ticket{3015}
+
+\item The installation RPM now requires Security Enhanced Linux (SELinux) 
+scripts at post install time,
+so that the scripts can set the appropriate security contexts.
+\Ticket{3313}
 
 \end{itemize}
 

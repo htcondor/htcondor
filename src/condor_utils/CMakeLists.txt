@@ -91,6 +91,7 @@ if(WINDOWS)
 else()
     condor_selective_glob("dprintf_syslog*" ApiSrcs)
 endif()
+add_subdirectory(tests)
 
 condor_static_lib( condorapi "${ApiSrcs}" )
 add_dependencies( condorapi condor_utils )
@@ -129,9 +130,9 @@ if (WANT_FULL_DEPLOYMENT)
 endif(WANT_FULL_DEPLOYMENT)
 
 add_definitions(-DENABLE_STATE_DUMP)
-condor_exe_test(test_log_reader "test_log_reader.cpp" "${CONDOR_TOOL_LIBS};${OPENSSL_FOUND};${KRB5_FOUND}") 
-condor_exe_test(test_log_reader_state "test_log_reader_state.cpp" "${CONDOR_TOOL_LIBS};${OPENSSL_FOUND};${KRB5_FOUND}")
-condor_exe_test(test_log_writer "test_log_writer.cpp" "${CONDOR_TOOL_LIBS};${OPENSSL_FOUND};${KRB5_FOUND}")
+condor_exe_test(test_log_reader "test_log_reader.cpp" "${CONDOR_TOOL_LIBS}")
+condor_exe_test(test_log_reader_state "test_log_reader_state.cpp" "${CONDOR_TOOL_LIBS}")
+condor_exe_test(test_log_writer "test_log_writer.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe_test(test_libcondorapi "test_libcondorapi.cpp" "condorapi")
 
 ##################################################

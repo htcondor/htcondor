@@ -277,6 +277,15 @@ const ExprTree* ExprTree::self() const
 	return (pRet);
 }
 
+/* This version is for shared-library compatibility.
+ * Remove it the next time we have to bump the ClassAds SO version.
+ */
+const ExprTree* ExprTree::self()
+{
+	const ExprTree * pRet=this;
+	return (pRet);
+}
+
 void ExprTree::
 Puke( ) const
 {
