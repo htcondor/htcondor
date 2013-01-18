@@ -555,7 +555,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 		nestedDagFile.replaceString( DAG_SUBMIT_FILE_SUFFIX, "" );
 		debug_printf( DEBUG_NORMAL, "Warning: the use of the JOB "
 					"keyword for nested DAGs is deprecated; please "
-					"use SUBDAG EXTERNAL instead" );
+					"use SUBDAG EXTERNAL instead\n" );
 		check_warning_strictness( DAG_STRICT_3 );
 	}
 
