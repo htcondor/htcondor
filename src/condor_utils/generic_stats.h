@@ -1059,7 +1059,9 @@ stats_histogram<T>& stats_histogram<T>::operator=(const stats_histogram<T>& sh)
       Clear();
    } else if(this != &sh) {
       if(this->cLevels > 0 && this->cLevels != sh.cLevels){
+#ifdef EXCEPT
          EXCEPT("Tried to assign different sized histograms\n");
+#endif
       return *this;
       } else if(this->cLevels == 0) {
          this->cLevels = sh.cLevels;
@@ -1072,7 +1074,9 @@ stats_histogram<T>& stats_histogram<T>::operator=(const stats_histogram<T>& sh)
          for(int i=0;i<=cLevels;++i){
             this->data[i] = sh.data[i];
             if(this->levels[i] < sh.levels[i] || this->levels[i] > sh.levels[i]){
+#ifdef EXCEPT
                EXCEPT("Tried to assign different levels of histograms\n");
+#endif
                return *this;
             }
          }
