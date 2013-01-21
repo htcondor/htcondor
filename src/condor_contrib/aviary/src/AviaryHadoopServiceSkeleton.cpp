@@ -91,7 +91,7 @@ HadoopStartResponse* start (tHadoopInit & hInit, HadoopStart* pHS)
     HadoopObject * ho = HadoopObject::getInstance();
     HadoopStartResponse* hresp = new HadoopStartResponse;
     
-    hInit.tarball = pHS->getBin_file();
+    hInit.idref.tarball = pHS->getBin_file();
     hInit.idref.id = pHS->getRef()->getId();
     
     // if ClusterId comes in without ProcId set it to zero
@@ -102,6 +102,7 @@ HadoopStartResponse* start (tHadoopInit & hInit, HadoopStart* pHS)
 
     hInit.idref.ipcid = pHS->getRef()->getIpc();
     hInit.count = pHS->getCount();
+    hInit.owner = pHS->getOwner();
 
     qmgmt_all_users_trusted = true;    
 
@@ -241,7 +242,7 @@ StartNameNodeResponse* AviaryHadoopServiceSkeleton::startNameNode(MessageContext
     
     // setup the initialization struct
     hInit.idref.type = NAME_NODE;
-    hInit.tarball = _startNameNode->getStartNameNode()->getBin_file();
+    hInit.idref.tarball = _startNameNode->getStartNameNode()->getBin_file();
     hInit.count = 1;
     
     qmgmt_all_users_trusted = true;

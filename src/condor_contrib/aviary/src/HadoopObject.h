@@ -71,18 +71,19 @@ typedef enum htype
 ///< Input 
 typedef struct href
 {
-    string id;      ///< ClusterId
-    string ipcid;   ///< ipc url
-    tHadoopType type;        ///< input type
+    string id;          ///< ClusterId
+    string ipcid;       ///< ipc url
+    tHadoopType type;   ///< input type
+    string tarball;      ///< input tarball
 }tHadoopRef;
 
 ///< Initialization structure for starting a hadoop job
 typedef struct hinit
 {
-    string tarball;      ///< input tarball
     unsigned int count;  ///< input count
     tHadoopRef idref;    ///< input(ipcid)
     string newcluster;   ///< output new clusterid
+    string owner;        ///< owner field
 }tHadoopInit;
 
 typedef struct hstatus
@@ -100,10 +101,16 @@ const char * const ATTR_NAME_NODE_ADDRESS = "NameNodeAddress";
 const char * const ATTR_DATA_NODE = "DataNode";
 const char * const ATTR_JOB_TRACKER = "JobTracker";
 const char * const ATTR_TASK_TRACKER = "TaskTracker";
+const char * const ATTR_HADOOP_BIN_VERSION = "HadoopVersion";
 
-class HadoopObject {
+const char * const HADOOP_NAMENODE_REQUIREMENTS="NAME_NODE_REQUIREMENTS";
+const char * const HADOOP_DATANODE_REQUIREMENTS="DATA_NODE_REQUIREMENTS";
+const char * const HADOOP_JOBTRACKER_REQUIREMENTS="JOB_TRACKER_REQUIREMENTS";
+const char * const HADOOP_TASKTRACKER_REQUIREMENTS="TASK_TRACKER_REQUIREMENTS";
+
+class HadoopObject 
+{
 public:
-
 
     void update(const ClassAd &ad);
     static HadoopObject* getInstance();
@@ -150,8 +157,6 @@ private:
     HadoopStats m_stats;
     static HadoopObject* m_instance;
 
-    //protected:
-    //void key();
 };
 
 

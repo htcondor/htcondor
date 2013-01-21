@@ -106,22 +106,22 @@ int HadoopObject::start( tHadoopInit & hInit )
 { 
     int cluster, proc;
     
-    dprintf( D_FULLDEBUG, "Called HadoopObject::start w/%s count:%d\n", hInit.tarball.c_str(), hInit.count );
+    dprintf( D_FULLDEBUG, "Called HadoopObject::start w/%s count:%d\n", hInit.idref.tarball.c_str(), hInit.count );
          
     // check input tarball.
-    if ( 0 == hInit.tarball.size() )
+    if ( 0 == hInit.idref.tarball.size() )
     {
-    char * binball = param("HADOOP_BIN_TARBALL");
-    if (!binball)
-    {
-        m_lasterror = "No hadoop tarball specified.";
-        return false;
-    }
-    else
-    {
-        hInit.tarball = binball;
-        delete binball;
-    }
+        char * binball = param("HADOOP_BIN_TARBALL");
+        if (!binball)
+        {
+            m_lasterror = "No hadoop tarball specified.";
+            return false;
+        }
+        else
+        {
+            hInit.idref.tarball = binball;
+            delete binball;
+        }
     }
     
     // Create transaction
@@ -154,7 +154,7 @@ int HadoopObject::start( tHadoopInit & hInit )
     string Iwd="/tmp";
     int iStatus=1;
     PROC_ID id = getProcByString( hInit.idref.id.c_str() );
-    
+    char * requirements = 0;
     
     if (id.cluster > 0 && id.proc >= 0) 
     {
@@ -165,22 +165,45 @@ int HadoopObject::start( tHadoopInit & hInit )
         dprintf(D_FULLDEBUG, "Valid ClusterId Ref: %s status: %d\n", hInit.idref.id.c_str(), iStatus);
     }
     
-    args = hInit.tarball;
+    args = hInit.idref.tarball;
     
     switch (hInit.idref.type)
     {
         case NAME_NODE:
         hadoopType = ATTR_NAME_NODE;
+        
         hasInputScript = param(inputscript, "HADOOP_HDFS_NAMENODE_SCRIPT");
         ::SetAttribute(cluster, proc, ATTR_RANK, "memory");
         ::SetAttribute(cluster, proc, ATTR_REQUEST_MEMORY, "floor(.50 * Target.Memory)");  // TODO: --> Target.Memory
-        ::SetAttribute(cluster, proc, ATTR_REQUIREMENTS, "( HasJava =?= TRUE ) && ( TARGET.OpSys == \"LINUX\" ) && ( TARGET.Memory >= RequestMemory ) && ( TARGET.HasFileTransfer )");
+        
+        requirements = param(HADOOP_NAMENODE_REQUIREMENTS);
+        if(requirements)
+        {
+            ::SetAttribute(cluster, proc, ATTR_REQUIREMENTS, requirements);
+            delete requirements;
+        }
+        else
+        {
+            ::SetAttribute(cluster, proc, ATTR_REQUIREMENTS, "( HasJava =?= TRUE ) && ( TARGET.OpSys == \"LINUX\" ) && ( TARGET.Memory >= RequestMemory ) && ( TARGET.HasFileTransfer )");
+        }
+        
         break;
         case JOB_TRACKER:
         hadoopType = ATTR_JOB_TRACKER;
         hasInputScript = param(inputscript, "HADOOP_MAPR_JOBTRACKER_SCRIPT");
         ::SetAttribute(cluster, proc, ATTR_RANK, "memory");
-        ::SetAttribute(cluster, proc, ATTR_REQUIREMENTS, "( HasJava =?= TRUE ) && ( TARGET.OpSys == \"LINUX\" ) && ( TARGET.HasFileTransfer )");
+        
+        requirements = param(HADOOP_JOBTRACKER_REQUIREMENTS);
+        if(requirements)
+        {
+            ::SetAttribute(cluster, proc, ATTR_REQUIREMENTS, requirements);
+            delete requirements;
+        }
+        else
+        {
+            ::SetAttribute(cluster, proc, ATTR_REQUIREMENTS, "( HasJava =?= TRUE ) && ( TARGET.OpSys == \"LINUX\" ) && ( TARGET.HasFileTransfer )");
+        }
+        
         // fall through
         case DATA_NODE:
         // special case case only a small part the rest is common.
@@ -189,10 +212,17 @@ int HadoopObject::start( tHadoopInit & hInit )
             hadoopType = ATTR_DATA_NODE; 
             hasInputScript = param(inputscript, "HADOOP_HDFS_DATANODE_SCRIPT");
             ::SetAttribute(cluster, proc, ATTR_RANK, "disk");
-            //::SetAttribute(cluster, proc, ATTR_REQUEST_DISK, "floor(.50 * Target.TotalDisk)");
-            ::SetAttribute(cluster, proc, ATTR_REQUIREMENTS, "( HasJava =?= TRUE ) && ( TARGET.OpSys == \"LINUX\" ) && ( TARGET.HasFileTransfer )");
-            //::SetAttribute(cluster, proc, ATTR_REQUIREMENTS, "( HasJava =?= TRUE ) && ( TARGET.OpSys == \"LINUX\" ) && ( TARGET.Disk >= RequestDisk ) && ( TARGET.HasFileTransfer )");
 
+            requirements = param(HADOOP_DATANODE_REQUIREMENTS);
+            if(requirements)
+            {
+                ::SetAttribute(cluster, proc, ATTR_REQUIREMENTS, requirements);
+                delete requirements;
+            }
+            else
+            {
+                ::SetAttribute(cluster, proc, ATTR_REQUIREMENTS, "( HasJava =?= TRUE ) && ( TARGET.OpSys == \"LINUX\" ) && ( TARGET.HasFileTransfer )");
+            }
         }
         
         ///////////////////////////////////////////////////////////////////////////////////////
@@ -233,7 +263,17 @@ int HadoopObject::start( tHadoopInit & hInit )
         hadoopType = ATTR_TASK_TRACKER;
         hasInputScript = param(inputscript, "HADOOP_MAPR_TASKTRACKER_SCRIPT");
         ::SetAttribute(cluster, proc, ATTR_RANK, "Mips");
-        ::SetAttribute(cluster, proc, ATTR_REQUIREMENTS, "( HasJava =?= TRUE ) && ( TARGET.OpSys == \"LINUX\" ) && ( TARGET.HasFileTransfer )");
+        
+        requirements = param(HADOOP_TASKTRACKER_REQUIREMENTS);
+        if(requirements)
+        {
+            ::SetAttribute(cluster, proc, ATTR_REQUIREMENTS, requirements);
+            delete requirements;
+        }
+        else
+        {
+            ::SetAttribute(cluster, proc, ATTR_REQUIREMENTS, "( HasJava =?= TRUE ) && ( TARGET.OpSys == \"LINUX\" ) && ( TARGET.HasFileTransfer )");
+        }
         
         if (bValidId && iStatus == RUNNING)
         {   
@@ -274,15 +314,16 @@ int HadoopObject::start( tHadoopInit & hInit )
         return false;
     }
 
-    // TODO - Owner ?
-    ::SetAttribute(cluster, proc, ATTR_OWNER, "\"condor\"");
+    // Set the owner attribute
+    ::SetAttribute(cluster, proc, ATTR_OWNER, quote_it(hInit.owner.c_str()).c_str());
     
     param(Iwd, "HADOOP_IWD", "/tmp");
     ::SetAttribute(cluster, proc, ATTR_JOB_IWD, quote_it(Iwd.c_str()).c_str() );
     
     ::SetAttribute(cluster, proc, ATTR_JOB_CMD, quote_it(inputscript.c_str()).c_str());
     ::SetAttribute(cluster, proc, ATTR_JOB_ARGUMENTS1, quote_it(args.c_str()).c_str());
-    ::SetAttribute(cluster, proc, ATTR_TRANSFER_INPUT_FILES, quote_it(hInit.tarball.c_str()).c_str());
+    ::SetAttribute(cluster, proc, ATTR_TRANSFER_INPUT_FILES, quote_it(hInit.idref.tarball.c_str()).c_str());
+    ::SetAttribute(cluster, proc, ATTR_HADOOP_BIN_VERSION, quote_it(hInit.idref.tarball.c_str()).c_str());
     ::SetAttribute(cluster, proc, ATTR_HADOOP_TYPE, quote_it(hadoopType.c_str()).c_str() );
     ::SetAttribute(cluster, proc, ATTR_SHOULD_TRANSFER_FILES, quote_it("YES").c_str());
     ::SetAttribute(cluster, proc, ATTR_WANT_IO_PROXY, "true");
@@ -383,6 +424,12 @@ bool HadoopObject::status (ClassAd* cAd, const tHadoopType & type, tHadoopJobSta
     if (!cAd->LookupInteger(ATTR_JOB_STATUS, JobStatus))
     {
     m_lasterror = "Could not find job status";
+    return false;
+    }
+    
+    if (!cAd->LookupString( ATTR_HADOOP_BIN_VERSION, hStatus.idref.tarball))
+    {
+    m_lasterror = "Could not find Hadoop Version";
     return false;
     }
     
