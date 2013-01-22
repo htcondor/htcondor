@@ -20,7 +20,7 @@ resource users (people submitting their jobs to HTCondor).
 Please read
 this section carefully before changing any of the settings
 described here, as a wrong setting can have a severe impact on
-either the owners of machines in the pool or the users of your pool.
+either the owners of machines in the pool or the users of the pool.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Startd-Terminology}Terminology}
@@ -44,19 +44,27 @@ which is of the form \Expr{slot<N>@hostname}.
 The value for \Expr{<N>} will also be defined with 
 machine ClassAd attribute \Attr{SlotID}.
 
-Each slot represented by the \Condor{startd} daemon 
-has its own \Term{state} and \Term{activity}.
-Policy expressions are propagated from the machine configuration
-by the \Condor{startd} daemon to each slot ClassAd.
+Each slot has its own machine ClassAd, and within that ClassAd,
+its own \Term{state} and \Term{activity}.
+Other policy expressions are propagated or inherited from the 
+machine configuration by the \Condor{startd} daemon,
+such that all slots have the same policy from the 
+machine configuration.
 This requires configuration expressions to incorporate the \Attr{SlotID}
-attribute when writing policy on a per slot basis.
+attribute when policy is intended to be individualized
+based on a slot.
+So, in this discussion of policy expressions,
+where a machine is referenced,  
+the policy can equally be applied to a slot.
 
 The \Condor{startd} daemon represents the machine on which it is running to
 the HTCondor pool.  
 The daemon publishes characteristics about the
 machine in the machine's ClassAd to aid matchmaking with resource requests.
 The values of these attributes may be listed by using the command:
-\Prog{\condor{status} -l hostname}.
+\begin{verbatim}
+  condor_status -l hostname
+\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Start-Expr}
@@ -66,7 +74,7 @@ The \MacroNI{START} expression}
 The most important expression to the \Condor{startd}
 is the \Macro{START} expression.  
 This expression describes the conditions that must be met for a
-machine to run a job. 
+machine or slot to run a job. 
 This expression can reference attributes
 in the machine's ClassAd (such as \Attr{KeyboardIdle} and \Attr{LoadAvg})
 and attributes in a job ClassAd (such as
@@ -78,16 +86,17 @@ determining the state and activity of a machine.
 The \Expr{Requirements} expression is used for
 matching machines with jobs.
 
-The \Condor{startd} defines the
+For platforms that support standard universe jobs,
+the \Condor{startd} defines the
 \Expr{Requirements} expression by logically \Bold{and}ing the 
 \MacroNI{START} expression and the \MacroNI{IS\_VALID\_CHECKPOINT\_PLATFORM}
 expression. 
 
 In situations where a machine wants to make itself
 unavailable for further matches, the \Expr{Requirements}
-expression is set to FALSE.  
-When the \MacroNI{START} expression locally evaluates to TRUE, the
-machine advertises the \Expr{Requirements} expression as TRUE and
+expression is set to \Expr{False}.  
+When the \MacroNI{START} expression locally evaluates to \Expr{True}, the
+machine advertises the \Expr{Requirements} expression as \Expr{True} and
 does not publish the \MacroNI{START} expression.
 
 Normally, the expressions in the machine ClassAd are evaluated against
@@ -96,13 +105,13 @@ a match, or against whatever request ClassAd currently has claimed the
 machine.  However, by locally evaluating an expression, the machine only
 evaluates the expression against its own ClassAd.  If an expression
 cannot be locally evaluated (because it references other expressions
-that are only found in a request ad, such as \Attr{Owner} or
+that are only found in a request ClassAd, such as \Attr{Owner} or
 \Attr{Imagesize}), the expression is (usually) undefined.
 See section~\ref{sec:classad-reference} for specifics on
 how undefined terms are handled in ClassAd expression evaluation. 
 
-A note of caution is in order when modifying the \MacroNI{START} to
-reference job ClassAd attributes.  The default \MacroNI{Is\_OWNER}
+A note of caution is in order when modifying the \MacroNI{START} expression to
+reference job ClassAd attributes.  The default \MacroNI{IS\_OWNER}
 expression is a function of the \MacroNI{START} expression
 \begin{verbatim}
 START =?= FALSE
@@ -124,17 +133,17 @@ defining \Macro{JOB\_RENICE\_INCREMENT}
 so that HTCondor starts jobs on the machine with low priority.
 Then, further configure to set up the machines with:
 \begin{verbatim}
-        START = True
-        SUSPEND = False
-        PREEMPT = False
-        KILL = False
+  START = True
+  SUSPEND = False
+  PREEMPT = False
+  KILL = False
 \end{verbatim}
 In this way, HTCondor jobs always run and can never be kicked off
 from activity on the machine. 
-However, because they would run with ``nice priority'', interactive 
-response on the machines will not suffer.
-You probably would not notice HTCondor was running the jobs, 
-assuming you had enough free memory for the HTCondor jobs that there
+However, because they would run with the low priority,
+interactive response on the machines will not suffer.
+A machine user probably would not notice that HTCondor was running the jobs, 
+assuming you had enough free memory for the HTCondor jobs such that there
 was little swapping.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -211,7 +220,9 @@ to allow the job to run.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Rank-Expression}
-The \Macro{RANK} expression}
+\index{RANK expression@\texttt{RANK} expression}
+\index{configuration macro!\texttt{RANK}}
+The \MacroNI{RANK} expression}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 A machine may be configured to prefer certain jobs over others
