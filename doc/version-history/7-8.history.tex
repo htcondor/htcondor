@@ -69,11 +69,12 @@ backoff algorithm that chooses a delay with a minimum of
 
 \begin{itemize}
 
-\item Fixed a bug that caused the \condor{gridmanager} to frequently
-delegate the X.509 proxy of grid-type condor jobs to the remote
-\condor{schedd} when the delegated proxy's lifetime isn't limited.
-That is, when parameter \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME}
-or job attribute \Attr{DelegateJobGSICredentialsLifetime} is set to 0.
+\item Fixed a bug that caused the \Condor{gridmanager} to frequently
+delegate the X.509 proxy for jobs of the condor grid type to the remote
+\Condor{schedd} when the delegated proxy's lifetime is not limited.
+This occurred when configuration variable
+\Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME}
+or job ClassAd attribute \Attr{DelegateJobGSICredentialsLifetime} was set to 0.
 \Ticket{3395}
 
 \item Fixed a bug in \Condor{advertise} that could cause failure to
