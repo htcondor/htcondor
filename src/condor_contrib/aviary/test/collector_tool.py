@@ -65,7 +65,7 @@ class CollectorCtrl:
         self.aviary = AviaryClient(wsdl,url)
 
     def execute(self,line):
-        result = None
+        response = None
         target_op = "get"+self.nodetype
         list_client = self.aviary.getClient(target_op)
         func = getattr(list_client.service, target_op, None)
