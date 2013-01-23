@@ -31,7 +31,8 @@
 
 FilesystemRemap::FilesystemRemap() :
 	m_mappings(),
-	m_mounts_shared()
+	m_mounts_shared(),
+	m_remap_proc(false)
 {
 	ParseMountinfo();
 	FixAutofsMounts();
@@ -145,6 +146,9 @@ int FilesystemRemap::PerformMappings() {
 			break;
 		}
 	}
+	if ((!retval) && m_remap_proc) {
+		retval = mount("proc", "/proc", "proc", 0, NULL);
+	}
 #endif
 	return retval;
 }
@@ -171,6 +175,10 @@ std::string FilesystemRemap::RemapDir(std::string target) {
 		}
 	}
 	return target;
+}
+
+void FilesystemRemap::RemapProc() {
+	m_remap_proc = true;
 }
 
 /*
