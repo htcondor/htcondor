@@ -88,6 +88,12 @@ public:
 	 */
 	std::string RemapFile(std::string);
 
+	/**
+	 * Indicate that we should remount /proc in the child process.
+	 * Necessary for PID namespaces.
+	 */
+	void RemapProc();
+
 private:
 
 	/**
@@ -112,6 +118,8 @@ private:
 	std::list<pair_strings> m_mappings;
 	std::list<pair_str_bool> m_mounts_shared;
 	std::list<pair_strings> m_mounts_autofs;
+
+	bool m_remap_proc;
 
 };
 

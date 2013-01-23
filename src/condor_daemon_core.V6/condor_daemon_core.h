@@ -194,6 +194,7 @@ struct FamilyInfo {
 	gid_t* group_ptr;
 #endif
 	const char* glexec_proxy;
+	bool want_pid_namespace;
 	const char* cgroup;
 
 	FamilyInfo() {
@@ -203,6 +204,7 @@ struct FamilyInfo {
 		group_ptr = NULL;
 #endif
 		glexec_proxy = NULL;
+		want_pid_namespace = false;
 		cgroup = NULL;
 	}
 };
