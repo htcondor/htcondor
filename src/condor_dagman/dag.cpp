@@ -1527,7 +1527,12 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 				// we could be smarter and move this test somewhere else,
 				// but I'm not going to deal with that right now.
 				// wenger 2009-05-27
-			if( dm.submit_delay == 0 && !didLogSleep ) {
+
+				// Okay, we're just going to skip the sleep if we're
+				// using the single workflow log file.  I think we
+				// shouldn't worry about being smart in any other cases.
+				// wenger 2013-01-24
+			if( !_use_default_node_log && dm.submit_delay == 0 && !didLogSleep ) {
 					// if we don't already have a submit_delay, sleep for one
 					// second here, so we can be sure that this job's submit
 					// event will be unambiguously later than the termination
