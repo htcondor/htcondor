@@ -24,13 +24,13 @@ multiple machines, named \Expr{slot1@vulture.cs.wisc.edu},
 \Expr{slot2@vulture.cs.wisc.edu},
 \Expr{slot3@vulture.cs.wisc.edu}, and so on.
 
-\index{partitioning multi-core machines}
+\index{dividing resources in  multi-core machines}
 The way that the \Condor{startd} breaks up the
 shared system resources into the different slots
 is configurable.
 All shared system resources, such as RAM, disk space, and swap space,
 can be divided evenly among all the slots, with each
-core getting its own slot.
+slot assigned one core.
 Alternatively, 
 \Term{slot types} are defined by configuration, 
 so that resources can be unevenly divided.
@@ -78,13 +78,13 @@ a multi-core machine:
   variable \Macro{NUM\_SLOTS} to the integer number of slots desired.
   If variable \MacroNI{NUM\_SLOTS} is not defined,
   it defaults to the number of cores within the machine.
-  You cannot use \MacroNI{NUM\_SLOTS} to make HTCondor advertise more
+  Variable \MacroNI{NUM\_SLOTS} may not be used to make HTCondor advertise more
   slots than there are cores on the machine.
-  To do that, use \Macro{NUM\_CPUS}.
+  The number of cores is defined by \Macro{NUM\_CPUS}.
 
-\item[Defining slot types.]
+\item[Define slot types.]
   Instead of an even division of resources per slot,
-  the machine may have definitions of slot types,
+  the machine may have definitions of \Term{slot types},
   where each type is provided with a fraction of shared system resources.
   Given the slot type definition, control how many of each
   type are reported at any given time with further configuration.
@@ -118,9 +118,9 @@ including the number of CPUS or cores.
 A comma separated list allows a fine tuning of
 the amounts for specific resources.
 
-The attributes that specify the number of CPUs
+The number of CPUs
 and the total amount of RAM in
-the machine do not change.
+the machine do not change over time.
 For these attributes, specify either absolute values or
 percentages of the total available amount (or \Expr{auto}).  
 For example, in a machine with 128 Mbytes of RAM,
@@ -135,17 +135,17 @@ all the following definitions result in the same allocation amount.
   SLOT_TYPE_1 = mem=auto
 \end{verbatim}
 
-Other attributes are dynamic, such as disk space and swap space.
-For these, specify a percentage or a fraction of the total
+Amounts of disk space and swap space are dynamic, as they change over time.
+For these, specify a percentage or fraction of the total
 value that is allocated to each slot, instead of specifying absolute values.
-As the total values of these resources change on the machine,
-each slot will take its fraction of the total and report that as its
+As the total values of these resources change on the machine, each
+slot will take its fraction of the total and report that as its
 available amount.
 
 The disk space allocated to each slot is taken from the disk partition
-containing the slots execute directory (configured with
-\MacroNI{EXECUTE} or \Macro{SLOT<N>\_EXECUTE}).  If every slot is in a
-different partition, then each one may be defined with up to
+containing the slot's \MacroNI{EXECUTE} or \Macro{SLOT<N>\_EXECUTE} directory.
+If every slot is in a different partition, 
+then each one may be defined with up to
 100\Percent\ for its disk share.  If some slots are in the same
 partition, then their total is not allowed to exceed 100\Percent.
 
@@ -164,11 +164,12 @@ The four attributes, with several examples of acceptable names for each:
 As an example, consider a
 machine with 4 cores and 256 Mbytes of RAM.
 Here are valid example slot type definitions. 
-Types 1-3 are all equivalent to each other, as are types 4-6.
-Note that this is not a real configuration, as all of these slot types together
-add up to more than 100\Percent\ of the various system resources.
-Also note that in a real configuration, you would need to also define
-\MacroNI{NUM\_SLOTS\_TYPE\_<N>} for each slot type.
+Types 1-3 are all equivalent to each other, as are types 4-6.  Note that
+in a real configuration, all of these slot types would not
+be used together,
+because they add up to more than 100\Percent\ of the various system resources.
+This configuration example also omits definitions of
+\MacroNI{NUM\_SLOTS\_TYPE\_<N>}, to define the number of each slot type.
 
 \begin{verbatim}
   SLOT_TYPE_1 = cpus=2, ram=128, swap=25%, disk=1/2
@@ -188,8 +189,9 @@ The default value for each resource share is \Expr{auto}.  The share
 may also be explicitly set to \Expr{auto}.  All slots with the value
 \Expr{auto} for a given type of resource will evenly divide
 whatever remains,
-after subtracting out whatever was explicitly
-allocated in other slot definitions.  For example, if one slot is
+after subtracting out explicitly
+allocated resources given in other slot definitions.  
+For example, if one slot is
 defined to use 10\Percent\ of the memory and the rest define it as
 \Expr{auto} (or leave it undefined), then the rest of the slots will
 evenly divide 90\Percent\ of the memory between themselves.
@@ -202,11 +204,6 @@ SLOT_TYPE_1 = cpus=1, ram=1/2, swap=50%
 
 SLOT_TYPE_1 = cpus=1, disk=auto, 50%
 \end{verbatim}
-
-The number of slots of each type is set with configuration variable
-\Macro{NUM\_SLOTS\_TYPE\_<N>},
-where \verb@<N>@ is the type as given in the
-\MacroNI{SLOT\_TYPE\_<N>} variable.
 
 Note that it is possible to set the configuration variables such
 that they specify an impossible configuration.
@@ -309,7 +306,7 @@ for that change to take effect.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Config-SMP-Policy}
-Configuring for Multi-core Machines}
+Configuration Specific to Multi-core Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{configuration!SMP machines}
@@ -331,14 +328,14 @@ notice console or tty activity on the multi-core machine as a whole.
 Slots that are not configured to notice any activity will report
 \Attr{ConsoleIdle} and \Attr{KeyboardIdle} times from when the
 \Condor{startd} daemon was started,
-(plus a configurable number of seconds).
+plus a configurable number of seconds.
 A multi-core machine with the default policy
 settings can add the keyboard and console to be noticed by only one slot.
 Assuming a reasonable load average,
 only the one slot will suspend or vacate its job
 when the owner starts typing at their machine again.
-The rest of the slots could be matched with jobs and leave
-them running, even while the user was interactively using the
+The rest of the slots could be matched with jobs and continue running them,
+even while the user was interactively using the
 machine. 
 If the default policy is used,
 all slots notice
@@ -349,59 +346,54 @@ currently running jobs would suspend or preempt.
 This example policy is
 controlled with the following configuration variables.
 \begin{itemize}
-\item \Macro{SLOTS\_CONNECTED\_TO\_CONSOLE}
-\item \Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD}
-\item \Macro{DISCONNECTED\_KEYBOARD\_IDLE\_BOOST}
+\item \Macro{SLOTS\_CONNECTED\_TO\_CONSOLE}, with definition at
+section~\ref{param:SlotsConnectedToConsole}
+\item \Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD}, with definition at
+section~\ref{param:SlotsConnectedToKeyboard}
+\item \Macro{DISCONNECTED\_KEYBOARD\_IDLE\_BOOST}, with definition at
+section~\ref{param:DisconnectedKeyboardIdleBoost}
 \end{itemize}
 
-These configuration variables are fully described in
-section~\ref{sec:Startd-Config-File-Entries} on
-page~\pageref{sec:Startd-Config-File-Entries} which lists all the
-configuration file settings for the \Condor{startd}.
-
-% Karen's edit goes to this line.
-% need discussion here about what canNOT be done given the single
-% set  of policy expressions.
-The configuration of slots allows each slot to advertise
-its own machine ClassAd.
-Yet, there is only one set of policy expressions for the SMP
-machine as a whole.
-This makes the implementation of certain types of policies impossible.
-While evaluating the state of one slot (within the SMP machine),
-the state of other slots (again within the SMP machine) are not
-available.
-Decisions for one slot cannot be based on what other machines within the SMP
-are doing.
+Each slot has its own machine ClassAd.
+Yet, the policy expressions for the multi-core machine are
+propagated and inherited from configuration of the \Condor{startd}.
+Therefore, the policy expressions for each slot are the same.
+This makes the implementation of certain types of policies impossible,
+because while evaluating the state of one slot within the multi-core machine,
+the state of other slots are not available.
+Decisions for one slot cannot be based on what other slots are doing.
 
 Specifically, the evaluation of a slot policy expression works in
 the following way.
 \begin{enumerate}
 \item 
-The configuration file specifies policy expressions that are shared among
-all of the slots on the SMP machine.
+The configuration file specifies policy expressions that are shared by
+all of the slots on the machine.
 \item 
 Each slot reads the configuration file and sets up its own machine ClassAd.
 \item 
 Each slot is now separate from the others.  It has a
-different state, a different machine ClassAd, and if there is a job
-running, a separate job ad.
+different ClassAd attribute \Attr{State},
+a different machine ClassAd, 
+and if there is a job running, a separate job ClassAd.
 Each slot periodically
-evaluates the policy expressions, changing its own state
-as necessary.
+evaluates the policy expressions, changing its own state as necessary.
 This occurs independently of the other slots on the machine.
 So, if the \Condor{startd} daemon is evaluating a policy expression
 on a specific slot,
 and the policy expression refers to \Attr{ProcID}, \Attr{Owner},
-or any attribute from a job ad,
+or any attribute from a job ClassAd,
 it \emph{always} refers to the ClassAd of the
 job running on the specific slot.
 \end{enumerate}
 
-To set a different policy for the slots within an SMP machine,
-a (\verb@SUSPEND@) policy will be of the form
+To set a different policy for the slots within a machine,
+incorporate the slot-specific machine ClassAd attribute \Attr{SlotID}.
+A \MacroNI{SUSPEND} policy that is different for each of the two slots
+will be of the form
 \begin{verbatim}
 SUSPEND = ( (SlotID == 1) && (PolicyForSlot1) ) || \
-            ( (SlotID == 2) && (PolicyForSlot2) )
+          ( (SlotID == 2) && (PolicyForSlot2) )
 \end{verbatim}
 where \verb@(PolicyForSlot1)@ and \verb@(PolicyForSlot2)@ are the
 desired expressions for each slot.
