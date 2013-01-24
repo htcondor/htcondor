@@ -571,7 +571,7 @@ favorite_season = "summer"
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-dynamicprovisioning}
-Dynamic \Condor{startd} Provisioning: Dynamic Slots}
+Dynamic Provisioning: Partitionable and Dynamic Slots}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{dynamic \Condor{startd} provisioning}
 \index{slots!dynamic \Condor{startd} provisioning}
@@ -580,12 +580,13 @@ Dynamic \Condor{startd} Provisioning: Dynamic Slots}
 \index{partitionable slots}
 
 \Term{Dynamic provisioning},
-also referred to as a partitionable \Condor{startd} or as dynamic slots,
-allows users to mark slots as partitionable. 
+also referred to as partitionable or dynamic slots,
+allows HTCondor to use the resources of a slot in a dynamic way;
+these slots may be partitioned. 
 This means that more than one job can occupy a single slot at any one time. 
-Typically, slots have a fixed set of resources,
-including the CPUs, memory and disk space. 
-By partitioning the slot, 
+As slots have a fixed set of resources,
+including the cores, memory and disk space, 
+by partitioning the slot, 
 these resources become more flexible and able to be better utilized.
 
 Dynamic provisioning provides powerful configuration
@@ -597,7 +598,8 @@ For example, for a large number of jobs requiring 1GB of memory,
 a pool might be split up into 1GB dynamic slots. 
 In this instance a job requiring 2GB of memory will be starved
 and unable to run.  A partial solution to this problem is provided
-by \Condor{defrag}, which is discussed in section~\ref{sec:SMP-defrag}.
+by defragmentation accomplished by the \Condor{defrag} daemon,
+as discussed in section~\ref{sec:SMP-defrag}.
 
 Here is an example that demonstrates how more than one job
 can be matched to a single slot using dynamic provisioning.
@@ -627,10 +629,16 @@ it breaks into Slot1\_1, Slot1\_2, etc., until the entire set of
 available resources have been consumed by jobs.
 
 To enable dynamic provisioning, 
-set the \Macro{SLOT\_TYPE\_<N>\_PARTITIONABLE} configuration variable 
+define a slot type with machine resources.
+Then,
+identify that slot type as partitionable by setting
+configuration variable 
+\Macro{SLOT\_TYPE\_<N>\_PARTITIONABLE} 
 to \Expr{True}.
-The string \MacroNI{N} within the configuration variable name
-is the slot number.  For the most common cases the machine should
+The value of \Expr{<N>} within the configuration variable name
+is the same value as in slot type definition configuration variable
+\MacroNI{SLOT\_TYPE\_<N>}.
+For the most common cases the machine should
 be configured for one slot, managing all the resources on the machine.
 To do so, set the following configuration variables:
 
