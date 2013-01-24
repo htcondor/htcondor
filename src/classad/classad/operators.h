@@ -114,6 +114,9 @@ class Operation : public ExprTree
         /// Assignment operator
         Operation &operator=(const Operation &op);
 
+		/// node type
+		virtual NodeKind GetKind (void) const { return OP_NODE; }
+
 		/** Factory method to create an operation expression node
 			@param kind The kind of operation.
 			@param e1 The first sub-expression child of the node.

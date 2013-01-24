@@ -720,8 +720,6 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
     ResetExpr();
 
 
-	nodeKind = CLASSAD_NODE;
-
 	int index;
 	MyString buffer;
 	int			delimLen = strlen( delimitor );

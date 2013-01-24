@@ -29,7 +29,6 @@ namespace classad {
 Operation::
 Operation ()
 {
-	nodeKind = OP_NODE;
 	operation = __NO_OP__;
 	child1    = NULL;
 	child2    = NULL;

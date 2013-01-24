@@ -35,7 +35,6 @@ static bool extractTimeZone(string &timeStr, int &tzhr, int &tzmin);
 Literal::
 Literal ()
 {
-	nodeKind = LITERAL_NODE;
 	factor = Value::NO_FACTOR;
 }
 

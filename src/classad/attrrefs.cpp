@@ -28,7 +28,6 @@ namespace classad {
 AttributeReference::
 AttributeReference()
 {
-	nodeKind = ATTRREF_NODE;
 	expr = NULL;
 	absolute = false;
 }
@@ -38,7 +37,6 @@ AttributeReference()
 AttributeReference::
 AttributeReference( ExprTree *tree, const string &attrname, bool absolut )
 {
-	nodeKind = ATTRREF_NODE;
 	attributeStr = attrname;
 	expr = tree;
 	absolute = absolut;

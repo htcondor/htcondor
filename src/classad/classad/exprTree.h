@@ -111,10 +111,10 @@ class ExprTree
 		virtual ExprTree *Copy( ) const = 0;
 
 		/** Gets the node kind of this expression node.
-			@return The node kind.
+			@return The node kind. Child nodes MUST implement this.
 			@see NodeKind
 		*/
-		NodeKind GetKind (void) const { return nodeKind; }
+		virtual NodeKind GetKind (void) const = 0;
 		
 		/**
 		 * To eliminate the mass of external checks to see if the ExprTree is 
@@ -177,7 +177,6 @@ class ExprTree
 		bool Evaluate( EvalState &, Value &, ExprTree *& ) const;
 
 		const ClassAd	*parentScope;
-		NodeKind		nodeKind;
 
 		enum {
 			EVAL_FAIL,

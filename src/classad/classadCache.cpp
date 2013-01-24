@@ -335,7 +335,6 @@ ExprTree * CachedExprEnvelope::cache (const std::string & pName, const std::stri
 			pszValue = &szUnparsedValue;
 		}
 	
-	    pNewEnv->nodeKind = EXPR_ENVELOPE;
 	    if (!_cache)
 	    {
 	      _cache.reset( new ClassAdCache() );
@@ -374,7 +373,6 @@ CachedExprEnvelope * CachedExprEnvelope::check_hit (string & szName, const strin
    if (cache_check)
    {
      pRet = new CachedExprEnvelope();
-     pRet->nodeKind = EXPR_ENVELOPE;
      pRet->m_pLetter = cache_check;
    }
 
@@ -406,7 +404,6 @@ ExprTree * CachedExprEnvelope::Copy( ) const
 	CachedExprEnvelope * pRet = new CachedExprEnvelope();
 	
 	// duplicate as little data as possible.
-	pRet->nodeKind = EXPR_ENVELOPE;
 	pRet->m_pLetter = this->m_pLetter;
 	pRet->parentScope = this->parentScope;
 	
