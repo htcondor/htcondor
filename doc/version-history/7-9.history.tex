@@ -60,6 +60,13 @@ collectors must configured with different values for configuration
 parameter \Macro{COLLECTOR\_NAME}.
 \Ticket{3467}
 
+% Depending on who wins the argument between Igor and TJ, this might go into
+% 7.8 series.  I think this is probably the right place for it, in 7.9. But
+% Kent, TJ, or Igor may well have other ideas
+\item \Condor{dagman} now will successfully set attributes for submitted jobs
+using the \Condor{submit} ``+$\langle$var$\rangle$'' syntax.
+\Ticket{3469}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:

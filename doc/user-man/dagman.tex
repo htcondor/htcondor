@@ -1228,6 +1228,19 @@ The resulting values passed to the NodeB executable are
 \end{verbatim}
 \normalsize
 
+The \Arg{macroname} may also begin with a `\Arg{+}' character, in which case it
+names a ClassAd attribute. For example, the
+\footnotesize
+\begin{verbatim}
+	Vars NodeE +A="\"bob\""
+\end{verbatim}
+\normalsize
+could use the following line in the HTCondor submit description file for NodeE:
+\footnotesize
+\begin{verbatim}
+	arguments = "$$([A])"
+\end{verbatim}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Setting Priorities for Nodes}
 \index{DAGMan input file!PRIORITY key word}

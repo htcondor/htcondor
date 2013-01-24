@@ -1204,7 +1204,9 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 
 		// copy name char-by-char until we hit a symbol or whitespace
 		// names are limited to alphanumerics and underscores
-		while( isalnum(*str) || *str == '_' ) {
+		int varnamestate = 0;
+		while( isalnum(*str) || *str == '_' || (varnamestate == 0 && *str == '+') ) {
+			varnamestate = 1;
 			varName += *str++;
 		}
 
