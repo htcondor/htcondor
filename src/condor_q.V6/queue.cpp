@@ -134,7 +134,8 @@ static  bool process_and_print_job(void*, ClassAd *);
 typedef bool (* buffer_line_processor)(void*, ClassAd*);
 
 static 	void short_header (void);
-static 	void usage (const char *);
+static 	void usage (const char *, int other=0);
+enum { usage_Universe=1, usage_JobStatus=2, usage_AllOther=0xFF };
 static 	char * buffer_io_display (ClassAd *);
 static 	char * bufferJobShort (ClassAd *);
 
@@ -1400,7 +1401,16 @@ processCommandLineArguments (int argc, char *argv[])
 			}
 		} 
 		else
-		if (is_arg_prefix(arg, "machineconstraint", 8) || is_arg_prefix(arg, "mconstraint", 2)) {
+		if (is_arg_prefix(arg, "slotconstraint", 5) || is_arg_prefix(arg, "mconstraint", 2)) {
+			// make sure we have at least one more argument
+			if (argc <= i+1) {
+				fprintf( stderr, "Error: Argument -%s requires another parameter\n", arg);
+				exit(1);
+			}
+			user_slot_constraint = argv[++i];
+		}
+		else
+		if (is_arg_prefix(arg, "machine", 2)) {
 			// make sure we have at least one more argument
 			if (argc <= i+1) {
 				fprintf( stderr, "Error: Argument -%s requires another parameter\n", arg);
@@ -1552,7 +1562,18 @@ processCommandLineArguments (int argc, char *argv[])
 		} 
 		else
 		if (is_dash_arg_prefix (argv[i], "help", 1)) {
-			usage(argv[0]);
+			int other = 0;
+			while ((i+1 < argc) && *(argv[i+1]) != '-') {
+				++i;
+				if (is_arg_prefix(argv[i], "universe", 3)) {
+					other |= usage_Universe;
+				} else if (is_arg_prefix(argv[i], "state", 2) || is_arg_prefix(argv[i], "status", 2)) {
+					other |= usage_JobStatus;
+				} else if (is_arg_prefix(argv[i], "all", 2)) {
+					other |= usage_AllOther;
+				}
+			}
+			usage(argv[0], other);
 			exit(0);
 		}
 		else
@@ -1728,9 +1749,9 @@ processCommandLineArguments (int argc, char *argv[])
 				userlog_file = strdup(argv[i]);
 			}
 		}
-		else if (is_arg_prefix(arg, "machineads", 1)) {
+		else if (is_arg_prefix(arg, "slotads", 1)) {
 			if (argc <= i+1) {
-				fprintf( stderr, "Error: Argument -machineads requires a filename\n");
+				fprintf( stderr, "Error: Argument -slotads requires a filename\n");
 				exit(1);
 			} else {
 				i++;
@@ -2517,42 +2538,14 @@ format_q_date (int d, AttrList *)
 
 
 static void
-usage (const char *myName)
+usage (const char *myName, int other)
 {
-	printf ("Usage: %s [options]\n    where [options] are\n"
-		"\t-global\t\t\tGet global queue\n"
-		"\t-debug\t\t\tDisplay debugging info to console\n"
+	printf ("Usage: %s [general-opts] [restriction-list] [output-opts | analyze-opts]\n", myName);
+	printf ("    [general-opts] are\n"
+		"\t-global\t\t\tQuery all Schedulers in this pool\n"
 		"\t-submitter <submitter>\tGet queue of specific submitter\n"
-		"\t-help\t\t\tThis screen\n"
-		"\t-name <name>\t\tName of schedd\n"
+		"\t-name <name>\t\tName of Scheduler\n"
 		"\t-pool <host>\t\tUse host as the central manager to query\n"
-		"\t-long\t\t\tVerbose output (entire classads)\n"
-		"\t-wide\t\t\tWidescreen output\n"
-		"\t-xml\t\t\tDisplay entire classads, but in XML\n"
-		"\t-attributes X,Y,...\tAttributes to show in -xml and -long\n"
-		"\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
-		"\t-autoformat:[V,ntlh] <attr> [attr2 [attr3 ...]]\n"
-		"\t\t\t\tPrint attr(s) with automatic formatting\n"
-		"\t-analyze\t\tPerform schedulability analysis on jobs\n"
-		"\t-better-analyze\t\tPerform more detailed schedulability analysis\n"
-		"\t-reverse\t\tAnalyze machines rather than jobs\n"
-		"\t-run\t\t\tGet information about running jobs\n"
-		"\t-hold\t\t\tGet information about jobs on hold\n"
-		"\t-globus\t\t\tGet information about Condor-eG jobs of type globus\n"
-		"\t-goodput\t\tDisplay job goodput statistics\n"	
-		"\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
-		"\t-currentrun\t\tDisplay times only for current run\n"
-		"\t-io\t\t\tShow information regarding I/O\n"
-		"\t-dag\t\t\tSort DAG jobs under their DAGMan\n"
-		"\t-expert\t\t\tDisplay shorter error messages\n"
-		"\t-constraint <expr>\tAdd constraint on job classads\n"
-		"\t-jobads <file>\t\tFile of job ads to display\n"
-		"\t-userlog <file>\t\tFile of user log to display\n"
-		"\t-machineads <file>\tFile of machine ads for analysis\n"
-		"\t-machineconstraint <name> Specify machine name, slot name or\n"
-		"\t\t\t\tmachine constraint for analysis\n"
-		"\t-userprios <file>\tFile of user priorities for analysis\n"
-		"\t-nouserprios\t\tDon't consider user priorities during analysis\n"
 #ifdef HAVE_EXT_POSTGRESQL
 		"\t-direct <rdbms | schedd>\n"
 		"\t\tPerform a direct query to the rdbms\n"
@@ -2560,14 +2553,70 @@ usage (const char *myName)
 		"\t\tlocation discovery algortihm, even in case of error\n"
 		"\t-avgqueuetime\t\tAverage queue time for uncompleted jobs\n"
 #endif
-		"\t-stream-results \tProduce output as ads are fetched\n"
-		"\t-version\t\tPrint the Condor Version and exit\n"
-		"\trestriction list\n"
-		"    where each restriction may be one of\n"
+		"\t-jobads <file>\t\tRead queue from a file of job ClassAds\n"
+		"\t-userlog <file>\t\tRead queue from a user log file\n"
+		"\t-constraint <expr>\tAdd constraint on job ClassAds\n"
+		"    [restriction-list] each restriction may be one of\n"
 		"\t<cluster>\t\tGet information about specific cluster\n"
 		"\t<cluster>.<proc>\tGet information about specific job\n"
-		"\t<owner>\t\t\tInformation about jobs owned by <owner>\n",
-			myName);
+		"\t<owner>\t\t\tInformation about jobs owned by <owner>\n"
+		"    [output-opts] are\n"
+		"\t-cputime\t\tDisplay CPU_TIME instead of RUN_TIME\n"
+		"\t-currentrun\t\tDisplay times only for current run\n"
+		"\t-debug\t\t\tDisplay debugging info to console\n"
+		"\t-dag\t\t\tSort DAG jobs under their DAGMan\n"
+		"\t-expert\t\t\tDisplay shorter error messages\n"
+		"\t-globus\t\t\tGet information about jobs of type globus\n"
+		"\t-goodput\t\tDisplay job goodput statistics\n"	
+		"\t-help [Universe|State]\tDisplay this screen, JobUniverses, JobStates\n"
+		"\t-hold\t\t\tGet information about jobs on hold\n"
+		"\t-io\t\t\tShow information regarding I/O\n"
+		"\t-run\t\t\tGet information about running jobs\n"
+		"\t-stream-results \tProduce output as jobs are fetched\n"
+		"\t-version\t\tPrint the Condor Version and exit\n"
+		"\t-wide\t\t\tWidescreen output\n"
+		"\t-autoformat[:V,ntlh] <attr> [attr2 [attr3 ...]]\n"
+		"\t\t\t\tPrint attr(s) with automatic formatting\n"
+		"\t-format <fmt> <attr>\tPrint attribute attr using format fmt\n"
+		"\t-long\t\t\tDisplay entire ClassAds\n"
+		"\t-xml\t\t\tDisplay entire ClassAds, but in XML\n"
+		"\t-attributes X,Y,...\tAttributes to show in -xml and -long\n"
+		"    [analyze-opts] are\n"
+		"\t-analyze[:<qual>]\tPerform matchmaking analysis on jobs\n"
+		"\t-better-analyze[:<qual>]\tPerform more detailed match analysis\n"
+		"\t    <qual> is a comma separated list of one or more of\n"
+		"\t    priority\tConsider user priority during analysis\n"
+		"\t    summary\tShow a one-line summary for each job or machine\n"
+		"\t    reverse\tAnalyze machines rather than jobs\n"
+		"\t-machine <name>\t\tMachine name or slot name for analysis\n"
+		"\t-mconstraint <expr>\tMachine constraint for analysis\n"
+		"\t-slotads <file>\t\tRead Machine ClassAds for analysis from <file>\n"
+		"\t\t\t\t<file> can be the output of condor_status -long\n"
+		"\t-userprios <file>\tRead user priorities for analysis from <file>\n"
+		"\t\t\t\t<file> can be the output of condor_userprio -l\n"
+		"\t-nouserprios\t\tDon't consider user priority during analysis\n"
+		"\t-reverse\t\tAnalyze Machine requirements against jobs\n"
+		"\t-verbose\t\tShow progress and machine names in results\n"
+		"\n"
+		);
+	if (other & usage_Universe) {
+		printf("    %s codes:\n", ATTR_JOB_UNIVERSE);
+		for (int uni = CONDOR_UNIVERSE_MIN+1; uni < CONDOR_UNIVERSE_MAX; ++uni) {
+			if (uni == CONDOR_UNIVERSE_PIPE) { // from PIPE -> Linda is obsolete.
+				uni = CONDOR_UNIVERSE_LINDA;
+				continue;
+			}
+			printf("\t%2d %s\n", uni, CondorUniverseNameUcFirst(uni));
+		}
+		printf("\n");
+	}
+	if (other & usage_JobStatus) {
+		printf("    %s codes:\n", ATTR_JOB_STATUS);
+		for (int st = JOB_STATUS_MIN; st <= JOB_STATUS_MAX; ++st) {
+			printf("\t%2d %c %s\n", st, encode_status(st), getJobStatusString(st));
+		}
+		printf("\n");
+	}
 }
 
 static void
@@ -3031,8 +3080,7 @@ print_jobs_analysis(ClassAdList & jobs, const char * source_label, Daemon * psch
 							ac.available,
 							owner.c_str());
 				} else {
-					bool alwaysReqAnalyze = /*(better_analyze == 2) ||*/ (analyze_detail_level & detail_always_analyze_req) != 0;
-					doJobRunAnalysis(job, pschedd_daemon, alwaysReqAnalyze);
+					doJobRunAnalysis(job, pschedd_daemon, analyze_detail_level);
 				}
 			}
 		}
@@ -4649,10 +4697,10 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 
 		bool append_pretty = false;
 		if (subs[ix].logic_op) {
-			append_pretty = (detail_mask & 3) == 3;
+			append_pretty = (detail_mask & detail_smart_unparse_expr) != 0;
 			if (subs[ix].ix_left == ix-2 && subs[ix].ix_right == ix-1)
 				append_pretty = false;
-			if ((detail_mask & 4) != 0)
+			if ((detail_mask & detail_always_unparse_expr) != 0)
 				append_pretty = true;
 		}
 			
@@ -5012,7 +5060,7 @@ doJobRunAnalysisToBuffer(ClassAd *request, anaCounters & ac, int details, bool n
 	std::string job_status = "";
 
 	bool	alwaysReqAnalyze = (details & detail_always_analyze_req) != 0;
-	bool	analEachReqClause = /*(better_analyze == 2) ||*/ (details > 1);
+	bool	analEachReqClause = (details & detail_analyze_each_sub_expr) != 0;
 	bool	useNewPrettyReq = true;
 	bool	showJobAttrs = analEachReqClause && ! (details & detail_dont_show_job_attrs);
 	bool	withoutPrio = false;
