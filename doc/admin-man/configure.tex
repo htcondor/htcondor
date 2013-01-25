@@ -3662,7 +3662,7 @@ Configuration File Macros}
 \Note If you are running HTCondor on a multi-CPU machine, be sure
 to also read section~\ref{sec:Configuring-SMP} on
 page~\pageref{sec:Configuring-SMP} which describes how to set up and
-configure HTCondor on SMP machines.
+configure HTCondor on multi-core machines.
 
 These settings control general operation of the \Condor{startd}.
 Examples using these configuration macros,
@@ -4108,10 +4108,10 @@ WANT_HOLD_REASON = \
   When set, it overrides the value determined with HTCondor's 
   automatic computation of the number of CPUs in the machine.
   Lying in this way can allow multiple HTCondor jobs to run on a
-  single-CPU machine, by having that machine treated like an SMP
+  single-CPU machine, by having that machine treated like a multi-core 
   machine with multiple CPUs, which could have different HTCondor jobs
   running on each one.
-  Or, an SMP machine may advertise more slots than it has CPUs.
+  Or, a multi-core machine may advertise more slots than it has CPUs.
   However, lying in this manner will hurt the performance of the jobs,
   since now multiple jobs will run on the same CPU,
   and the jobs will compete with each other.
@@ -4380,18 +4380,17 @@ Configuring HTCondor for Running Backfill Jobs for details.
 \end{description}
 
 
-These macros only apply to the \Condor{startd} daemon when it is running on an
-SMP machine. 
+These macros only apply to the \Condor{startd} daemon when it is running on 
+a multi-core machine. 
 See section~\ref{sec:Configuring-SMP} on
-page~\pageref{sec:Configuring-SMP} on Configuring The Startd for 
-SMP Machines for details.
+page~\pageref{sec:Configuring-SMP} for details.
 
 \begin{description}
 
 \label{param:StartdResourcePrefix}
 \item[\Macro{STARTD\_RESOURCE\_PREFIX}] 
   A string which specifies what prefix to give the unique HTCondor
-  resources that are advertised on SMP machines.
+  resources that are advertised on multi-core machines.
   Previously, HTCondor used the term \Term{virtual machine} to describe
   these resources, so the default value for this setting was \Expr{vm}.
   However, to avoid confusion with other kinds of virtual machines,
@@ -4401,7 +4400,7 @@ SMP Machines for details.
   Therefore, the default value of this prefix is now \Expr{slot}.
   If sites want to continue using \Expr{vm}, or prefer something other
   \Expr{slot}, this setting enables sites to define what string the
-  \Condor{startd} will use to name the individual resources on an SMP
+  \Condor{startd} will use to name the individual resources on a multi-core
   machine.
 
 \label{param:SlotsConnectedToConsole}
@@ -4432,7 +4431,7 @@ SMP Machines for details.
   If you do not want this boost, set the value to 0.  
   If you change your START expression to require more than 15 minutes
   before a job starts, but you still want jobs to start right away on
-  some of your SMP nodes, increase this macro's value.
+  some of your multi-core nodes, increase this macro's value.
 
 \label{param:StartdSlotAttrs}
 \item[\Macro{STARTD\_SLOT\_ATTRS}]
@@ -4462,8 +4461,8 @@ SMP Machines for details.
 \end{description}
 
 The following settings control the number of slots reported
-for a given SMP host, and what attributes each one has.  
-They are only needed if you do not want to have an SMP machine report
+for a given multi-core host, and what attributes each one has.  
+They are only needed if you do not want to have a multi-core machine report
 to HTCondor with a separate slot for each CPU, with all
 shared system resources evenly divided among them.
 Please read section~\ref{sec:SMP-Divide} on
@@ -4589,10 +4588,11 @@ search for the corresponding attribute names using \Expr{slot}, instead.
 \label{param:NumSlots}
 \item[\Macro{NUM\_SLOTS}]
   An integer value representing the number of slots reported when
-  the SMP machine is being evenly divided, and the slot
+  the multi-core machine is being evenly divided, and the slot
   type settings described above are not being used.
   The default is one slot for each CPU.
-  This setting can be used to reserve some CPUs on an SMP which would
+  This setting can be used to reserve some CPUs on a multi-core machine,
+  which would
   not be reported to the HTCondor pool.
   This value cannot be used to
   make HTCondor advertise more slots than there are CPUs on the machine.

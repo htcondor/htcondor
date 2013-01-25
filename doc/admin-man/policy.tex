@@ -1047,7 +1047,7 @@ If the machine owner starts typing on the console again,
 it is best to notice this as
 soon as possible to be able to start doing whatever 
 the machine owner wants at that point.
-For SMP machines, if any slot is in the Claimed state, the
+For multi-core machines, if any slot is in the Claimed state, the
 startd polls the machine frequently.
 If already polling one slot, it does not
 cost much to evaluate the state of all the slots at
@@ -1308,12 +1308,12 @@ Once the BOINC client is running, the machine will enter
 Backfill/Busy (transition \Bold{26}) to indicate that it is now
 performing a backfill computation.
 
-\Note On SMP machines, the \Condor{startd} will only spawn a single
+\Note On multi-core machines, the \Condor{startd} will only spawn a single
 instance of the BOINC client, even if multiple slots are
 available to run backfill jobs.
 Therefore, only the first machine to enter Backfill/Idle will cause a
 copy of the BOINC client to start running.
-If a given slot on an SMP enters the Backfill state and a
+If a given slot on a multi-core enters the Backfill state and a
 BOINC client is already running under this \Condor{startd}, the
 slot will immediately enter Backfill/Busy without waiting
 to spawn another copy of the BOINC client.
