@@ -102,8 +102,12 @@ class CollectorCtrl(cmd.Cmd):
         if response:
             for r in response:
                 print r.id
-                for attr in r.ad.attrs:
-                    print attr.name,"=",attr.value
+                if r.ad:
+                    for attr in r.ad.attrs:
+                        print attr.name,"=",attr.value
+                else:
+                    print "No attributes available"
+
 
     def default(self,line):
         response = None
