@@ -16,6 +16,7 @@
 
 // condor includes
 #include "condor_common.h"
+#include "condor_adtypes.h"
 
 // axis2 includes
 #include "Environment.h"
@@ -25,6 +26,7 @@
 #include "CollectableCodec.h"
 #include "AviaryCollectorServiceSkeleton.h"
 #include "Axis2SoapProvider.h"
+#include "AviaryUtils.h"
 #include <AviaryCollector_GetSlotID.h>
 #include <AviaryCollector_GetSlotIDResponse.h>
 #include <AviaryCollector_GetNegotiator.h>
@@ -49,10 +51,33 @@ using namespace wso2wsf;
 using namespace AviaryCommon;
 using namespace AviaryCollector;
 using namespace aviary::collector;
+using namespace aviary::util;
 
 extern aviary::soap::Axis2SoapProvider* provider;
 
 typedef vector<string*> IDList;
+typedef vector<AttributeRequest*> AttrRequestList;
+typedef vector<AttributeResponse*> AttrResponseList;
+
+typedef std::map<int,AdTypes> AdMapType;
+AdMapType ad_type_map;
+
+AdTypes mapAdTypetoResourceType(int res_type) {
+    AdTypes result = NO_AD;
+    if (ad_type_map.empty()) {
+        ad_type_map[ResourceType_ANY] =  ANY_AD;
+        ad_type_map[ResourceType_COLLECTOR] =  COLLECTOR_AD;
+        ad_type_map[ResourceType_MASTER] =  MASTER_AD;
+        ad_type_map[ResourceType_NEGOTIATOR] =  NEGOTIATOR_AD;
+        ad_type_map[ResourceType_SCHEDULER] =  SCHEDD_AD;
+        ad_type_map[ResourceType_SLOT] =  STARTD_AD;
+    }
+    map<int,AdTypes>::iterator it = ad_type_map.find(res_type);
+    if (it != ad_type_map.end()) {
+        result = (*it).second;
+    }
+    return result;
+}
 
 // generic load of results
 template <class AviaryCollectableT, class CollectableMapT, class RequestT, class ResponseT>
@@ -103,12 +128,6 @@ void loadResults(CollectableMapT& cmt, RequestT* request, ResponseT* response)
     }
 }
 
-GetAttributesResponse* AviaryCollectorServiceSkeleton::getAttributes(MessageContext* /*outCtx*/ ,GetAttributes* _getAttributes)
-{
-    /* TODO fill this with the necessary business logic */
-    return (GetAttributesResponse*)NULL;
-}
-
 GetCollectorResponse* AviaryCollectorServiceSkeleton::getCollector(MessageContext* /*outCtx*/ ,GetCollector* _getCollector)
 {
     /* TODO fill this with the necessary business logic */
@@ -131,12 +150,6 @@ GetMasterResponse* AviaryCollectorServiceSkeleton::getMaster(MessageContext* /*o
     loadResults<AviaryCommon::Master,MasterMapType,GetMaster,GetMasterResponse>(co->masters,_getMaster,response);
     
     return response;
-}
-
-GetMasterIDResponse* AviaryCollectorServiceSkeleton::getMasterID(MessageContext* /*outCtx*/ ,GetMasterID* _getMasterID)
-{
-    /* TODO fill this with the necessary business logic */
-    return (GetMasterIDResponse*)NULL;
 }
 
 GetNegotiatorResponse* AviaryCollectorServiceSkeleton::getNegotiator(MessageContext* /*outCtx*/ ,GetNegotiator* _getNegotiator)
@@ -163,12 +176,6 @@ GetSlotResponse* AviaryCollectorServiceSkeleton::getSlot(MessageContext* /*outCt
     return response;
 }
 
-GetSlotIDResponse* AviaryCollectorServiceSkeleton::getSlotID(MessageContext* /*outCtx*/ ,GetSlotID* _getSlotID)
-{
-    /* TODO fill this with the necessary business logic */
-    return (GetSlotIDResponse*)NULL;
-}
-
 GetSchedulerResponse* AviaryCollectorServiceSkeleton::getScheduler(MessageContext* /*outCtx*/ ,GetScheduler* _getScheduler)
 {
     /* TODO fill this with the necessary business logic */
@@ -191,4 +198,70 @@ GetSubmitterResponse* AviaryCollectorServiceSkeleton::getSubmitter(MessageContex
     loadResults<AviaryCommon::Submitter,SubmitterMapType,GetSubmitter,GetSubmitterResponse>(co->submitters,_getSubmitter,response);
 
     return response;
+}
+
+// ClassAd attribute queries
+GetAttributesResponse* AviaryCollectorServiceSkeleton::getAttributes(MessageContext* /*outCtx*/ ,GetAttributes* _getAttributes)
+{
+    /* TODO fill this with the necessary business logic */
+    GetAttributesResponse* response = new GetAttributesResponse;
+    string error;
+    CollectorObject* co = CollectorObject::getInstance();
+
+    AttrRequestList* attr_req_list = _getAttributes->getIds();
+
+    for (AttrRequestList::iterator it = attr_req_list->begin(); attr_req_list->end() != it; it++) {
+        AttributeRequest* attr_req = (*it);
+        ResourceID* res_id = attr_req->getId();
+        AttrResponseList attr_resp_list;
+        AdTypes res_type = mapAdTypetoResourceType(res_id->getResource()->getResourceTypeEnum());
+
+        AttributeMapType attr_map;
+        // if they have supplied attribute names pre-load our map
+        if (!attr_req->isNamesNil() && attr_req->getNames()!=0) {
+            vector<string*>* name_list = attr_req->getNames();
+            for (vector<string*>::iterator nit = name_list->begin();nit!=name_list->end();nit++) {
+                attr_map[*(*nit)] = NULL;
+            }
+        }
+
+        co->findAttribute(res_type, res_id->getName(), res_id->getAddress(),attr_map);
+        AviaryCommon::Attributes* attrs = new AviaryCommon::Attributes;
+        mapToXsdAttributes(attr_map,attrs);
+
+        AttributeResponse* attr_resp = new AttributeResponse;
+        // caa't rely on copy ctor for this
+        ResourceID* copy_res_id = new ResourceID;
+        copy_res_id->setResource(new ResourceType(res_id->getResource()->getResourceTypeEnum()));
+        if (!res_id->isPoolNil() && !res_id->getPool().empty()) {
+            copy_res_id->setPool(res_id->getPool());
+        }
+        copy_res_id->setName(res_id->getName());
+        copy_res_id->setAddress(res_id->getAddress());
+        if (!res_id->isSub_typeNil() && !res_id->getSub_type().empty()) {
+            copy_res_id->setSub_type(res_id->getSub_type());
+        }
+        copy_res_id->setBirthdate(res_id->getBirthdate());
+        attr_resp->setId(copy_res_id);
+        attr_resp->setAd(attrs);
+        Status* status = new Status;
+        status->setCode(new StatusCodeType("OK"));
+        attr_resp->setStatus(status);
+        response->addResults(attr_resp);
+    }
+
+    return response;
+}
+
+// id paging
+GetMasterIDResponse* AviaryCollectorServiceSkeleton::getMasterID(MessageContext* /*outCtx*/ ,GetMasterID* _getMasterID)
+{
+    /* TODO fill this with the necessary business logic */
+    return (GetMasterIDResponse*)NULL;
+}
+
+GetSlotIDResponse* AviaryCollectorServiceSkeleton::getSlotID(MessageContext* /*outCtx*/ ,GetSlotID* _getSlotID)
+{
+    /* TODO fill this with the necessary business logic */
+    return (GetSlotIDResponse*)NULL;
 }

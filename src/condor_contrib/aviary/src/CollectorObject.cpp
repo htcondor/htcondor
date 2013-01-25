@@ -23,6 +23,9 @@
 #include "condor_commands.h"
 #include "hashkey.h"
 #include "stl_string_utils.h"
+#include "hashkey.h"
+#include "../condor_collector.V6/collector.h"
+#include "condor_sinful.h"
 
 // C++ includes
 // enable for debugging classad to ostream
@@ -43,12 +46,12 @@ CollectorObject* CollectorObject::m_instance = NULL;
 
 CollectorObject::CollectorObject ()
 {
-    //
+    m_codec = new BaseCodec;
 }
 
 CollectorObject::~CollectorObject()
 {
-    //
+    delete m_codec;
 }
 
 CollectorObject* CollectorObject::getInstance()
@@ -240,4 +243,24 @@ void
 CollectorObject::findSubmitter(const string& name, bool grep, SubmitterSetType& subm_set) 
 {
     findCollectable<SubmitterMapType,SubmitterSetType>(name, grep, submitters, subm_set);
+}
+
+bool
+CollectorObject::findAttribute(AdTypes daemon_type, const string& name, const string& ip_addr, AttributeMapType& attr_map)
+{
+    // birdbath borrow
+    CollectorEngine& engine = CollectorDaemon::getCollector();
+    AdNameHashKey hash_key;
+    hash_key.name = name;
+    // grab the actual dotted quad
+    Sinful sin_str(ip_addr.c_str());
+    hash_key.ip_addr = sin_str.getHost();
+    ClassAd* ad = NULL;
+    ad = engine.lookup(daemon_type,hash_key);
+    if (ad) {
+        m_codec->classAdToMap(*ad,attr_map);
+        return true;
+    }
+
+    return false;
 }

@@ -164,8 +164,8 @@
 	<xs:complexType name="AttributeResponse">
 		<xs:sequence>
 			<xs:element name="id" type="mrg:ResourceID"/>
-			<xs:element name="attrs" type="mrg:Attribute" minOccurs="0" maxOccurs="unbounded"/>
-			<xs:element name="status" type="mrg:Status"/>
+            <xs:element name="status" type="mrg:Status"/>
+			<xs:element name="ad" type="mrg:Attributes" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:element name="GetAttributes">
@@ -180,7 +180,6 @@
 		<xs:complexType>
 			<xs:sequence>
 				<xs:element name="results" type="coll:AttributeResponse" minOccurs="0" maxOccurs="unbounded"/>
-				<xs:element name="status" type="mrg:Status"/>
 			</xs:sequence>
 		</xs:complexType>
 	</xs:element>

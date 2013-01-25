@@ -20,8 +20,14 @@
 // condor includes
 #include "condor_classad.h"
 
+// wso2 include
+#include "AviaryCommon_Attributes.h"
+
 // axis includes
 #include "axutil_date_time.h"
+
+// local includes
+#include "ClassadCodec.h"
 
 using namespace std;
 using namespace compat_classad;
@@ -48,6 +54,8 @@ bool isKeyword(const char* kw);
 bool isSubmissionChange(const char* attr);
 
 axutil_date_time_t* encodeDateTime(const time_t& ts, const axutil_env_t* env);
+
+void mapToXsdAttributes(const aviary::codec::AttributeMapType& _map, AviaryCommon::Attributes* _attrs);
 
 }}
 

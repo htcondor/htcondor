@@ -51,7 +51,7 @@ file( GLOB JOB_SERVER_SRCS aviary_query_server.cpp ${SOAP_SRCS}
 file( GLOB LOCATOR_PLUGIN_SRCS AviaryUtils.cpp LocatorObject.cpp 
 			${SOAP_SRCS} AviaryLocatorPlugin*.cpp )
 
-file( GLOB COLLECTOR_PLUGIN_SRCS AviaryUtils.cpp Collectables.cpp CollectorObject.cpp CollectableCodec.cpp
+file( GLOB COLLECTOR_PLUGIN_SRCS AviaryUtils.cpp Collectables.cpp CollectorObject.cpp CollectableCodec.cpp ClassadCodec.cpp
 			${SOAP_SRCS} AviaryCollectorPlugin*.cpp )
 
 ############################
@@ -74,7 +74,7 @@ target_link_libraries(AviaryScheddPlugin-plugin -Wl,--whole-archive -laxis2_engi
 add_library (aviary_query_axis SHARED ${COMMON_GEN_SRCS} ${QUERY_GEN_SRCS} ${QUERY_SRCS} )
 target_link_libraries (aviary_query_axis ${WSO2_FOUND})
 
-condor_exe( aviary_query_server "${JOB_SERVER_SRCS}"
+condor_exe( aviary_query_server "${COMMON_GEN_SRCS};${JOB_SERVER_SRCS}"
 			"${C_SBIN}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${WSO2_FOUND}" OFF )
 
 ############################

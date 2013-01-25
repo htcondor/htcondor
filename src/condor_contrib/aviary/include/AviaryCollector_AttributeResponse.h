@@ -22,9 +22,9 @@
         
                 #include "AviaryCommon_ResourceID.h"
               
-                #include "AviaryCommon_Attribute.h"
-              
                 #include "AviaryCommon_Status.h"
+              
+                #include "AviaryCommon_Attributes.h"
               
 
         #include <stdio.h>
@@ -44,14 +44,14 @@ namespace AviaryCollector
 
                 
                 bool isValidId;
-            std::vector<AviaryCommon::Attribute*>* property_Attrs;
-
-                
-                bool isValidAttrs;
             AviaryCommon::Status* property_Status;
 
                 
                 bool isValidStatus;
+            AviaryCommon::Attributes* property_Ad;
+
+                
+                bool isValidAd;
             
 
         /*** Private methods ***/
@@ -62,11 +62,11 @@ namespace AviaryCollector
             
 
         bool WSF_CALL
-        setAttrsNil();
+        setStatusNil();
             
 
         bool WSF_CALL
-        setStatusNil();
+        setAdNil();
             
 
 
@@ -93,11 +93,11 @@ namespace AviaryCollector
          * Constructor for creating AttributeResponse
          * @param 
          * @param Id AviaryCommon::ResourceID*
-         * @param Attrs std::vector<AviaryCommon::Attribute*>*
          * @param Status AviaryCommon::Status*
+         * @param Ad AviaryCommon::Attributes*
          * @return newly created AttributeResponse object
          */
-        AttributeResponse(AviaryCommon::ResourceID* arg_Id,std::vector<AviaryCommon::Attribute*>* arg_Attrs,AviaryCommon::Status* arg_Status);
+        AttributeResponse(AviaryCommon::ResourceID* arg_Id,AviaryCommon::Status* arg_Status,AviaryCommon::Attributes* arg_Ad);
         
 
         /**
@@ -106,7 +106,7 @@ namespace AviaryCollector
         WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
-        /******** Deprecated for array types, Use 'Getters and Setters for Arrays' instead ***********/
+        
         
 
         /**
@@ -134,31 +134,6 @@ namespace AviaryCollector
         
 
         /**
-         * Getter for attrs. Deprecated for array types, Use getAttrsAt instead
-         * @return Array of AviaryCommon::Attribute*s.
-         */
-        WSF_EXTERN std::vector<AviaryCommon::Attribute*>* WSF_CALL
-        getAttrs();
-
-        /**
-         * Setter for attrs.Deprecated for array types, Use setAttrsAt
-         * or addAttrs instead.
-         * @param arg_Attrs Array of AviaryCommon::Attribute*s.
-         * @return true on success, false otherwise
-         */
-        WSF_EXTERN bool WSF_CALL
-        setAttrs(std::vector<AviaryCommon::Attribute*>*  arg_Attrs);
-
-        /**
-         * Re setter for attrs
-         * @return true on success, false
-         */
-        WSF_EXTERN bool WSF_CALL
-        resetAttrs();
-        
-        
-
-        /**
          * Getter for status. 
          * @return AviaryCommon::Status*
          */
@@ -180,80 +155,34 @@ namespace AviaryCollector
         WSF_EXTERN bool WSF_CALL
         resetStatus();
         
-        /****************************** Get Set methods for Arrays **********************************/
-        /************ Array Specific Operations: get_at, set_at, add, remove_at, sizeof *****************/
-
-        /**
-         * E.g. use of get_at, set_at, add and sizeof
-         *
-         * for(i = 0; i < adb_element->sizeofProperty(); i ++ )
-         * {
-         *     // Getting ith value to property_object variable
-         *     property_object = adb_element->getPropertyAt(i);
-         *
-         *     // Setting ith value from property_object variable
-         *     adb_element->setPropertyAt(i, property_object);
-         *
-         *     // Appending the value to the end of the array from property_object variable
-         *     adb_element->addProperty(property_object);
-         *
-         *     // Removing the ith value from an array
-         *     adb_element->removePropertyAt(i);
-         *     
-         * }
-         *
-         */
-
         
-        
-        /**
-         * Get the ith element of attrs.
-        * @param i index of the item to be obtained
-         * @return ith AviaryCommon::Attribute* of the array
-         */
-        WSF_EXTERN AviaryCommon::Attribute* WSF_CALL
-        getAttrsAt(int i);
 
         /**
-         * Set the ith element of attrs. (If the ith already exist, it will be replaced)
-         * @param i index of the item to return
-         * @param arg_Attrs element to set AviaryCommon::Attribute* to the array
-         * @return ith AviaryCommon::Attribute* of the array
+         * Getter for ad. 
+         * @return AviaryCommon::Attributes*
+         */
+        WSF_EXTERN AviaryCommon::Attributes* WSF_CALL
+        getAd();
+
+        /**
+         * Setter for ad.
+         * @param arg_Ad AviaryCommon::Attributes*
+         * @return true on success, false otherwise
          */
         WSF_EXTERN bool WSF_CALL
-        setAttrsAt(int i,
-                AviaryCommon::Attribute* arg_Attrs);
-
+        setAd(AviaryCommon::Attributes*  arg_Ad);
 
         /**
-         * Add to attrs.
-         * @param arg_Attrs element to add AviaryCommon::Attribute* to the array
-         * @return true on success, false otherwise.
+         * Re setter for ad
+         * @return true on success, false
          */
         WSF_EXTERN bool WSF_CALL
-        addAttrs(
-            AviaryCommon::Attribute* arg_Attrs);
-
-        /**
-         * Get the size of the attrs array.
-         * @return the size of the attrs array.
-         */
-        WSF_EXTERN int WSF_CALL
-        sizeofAttrs();
-
-        /**
-         * Remove the ith element of attrs.
-         * @param i index of the item to remove
-         * @return true on success, false otherwise.
-         */
-        WSF_EXTERN bool WSF_CALL
-        removeAttrsAt(int i);
-
+        resetAd();
         
 
 
         /******************************* Checking and Setting NIL values *********************************/
-        /* Use 'Checking and Setting NIL values for Arrays' to check and set nil for individual elements */
+        
 
         /**
          * NOTE: set_nil is only available for nillable properties
@@ -272,16 +201,6 @@ namespace AviaryCollector
         
 
         /**
-         * Check whether attrs is Nill
-         * @return true if the element is Nil, false otherwise
-         */
-        bool WSF_CALL
-        isAttrsNil();
-
-
-        
-
-        /**
          * Check whether status is Nill
          * @return true if the element is Nil, false otherwise
          */
@@ -291,29 +210,13 @@ namespace AviaryCollector
 
         
 
-        /*************************** Checking and Setting 'NIL' values in Arrays *****************************/
+        /**
+         * Check whether ad is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isAdNil();
 
-        /**
-         * NOTE: You may set this to remove specific elements in the array
-         *       But you can not remove elements, if the specific property is declared to be non-nillable or sizeof(array) < minOccurs
-         */
-        
-        /**
-         * Check whether attrs is Nill at position i
-         * @param i index of the item to return.
-         * @return true if the value is Nil at position i, false otherwise
-         */
-        bool WSF_CALL
-        isAttrsNilAt(int i);
- 
-       
-        /**
-         * Set attrs to NILL at the  position i.
-         * @param i . The index of the item to be set Nill.
-         * @return true on success, false otherwise.
-         */
-        bool WSF_CALL
-        setAttrsNilAt(int i);
 
         
 
@@ -385,22 +288,22 @@ namespace AviaryCollector
         
 
         /**
-         * Getter for attrs by property number (2)
-         * @return Array of AviaryCommon::Attributes.
+         * Getter for status by property number (2)
+         * @return AviaryCommon::Status
          */
 
-        std::vector<AviaryCommon::Attribute*>* WSF_CALL
+        AviaryCommon::Status* WSF_CALL
         getProperty2();
 
     
         
 
         /**
-         * Getter for status by property number (3)
-         * @return AviaryCommon::Status
+         * Getter for ad by property number (3)
+         * @return AviaryCommon::Attributes
          */
 
-        AviaryCommon::Status* WSF_CALL
+        AviaryCommon::Attributes* WSF_CALL
         getProperty3();
 
     

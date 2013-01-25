@@ -20,11 +20,14 @@
 // condor includes
 #include "condor_common.h"
 #include "condor_classad.h"
+#include "condor_adtypes.h"
 
 #include "Collectables.h"
+#include "ClassadCodec.h"
 
 using namespace std;
 using namespace compat_classad;
+using namespace aviary::codec;
 
 namespace aviary {
 namespace collector {
@@ -48,13 +51,14 @@ class CollectorObject
 {
 public:
 
-    // RPC-facing method
+    // RPC-facing methods
     void findCollector(const string& name, bool grep, CollectorSetType& coll_set);
     void findMaster(const string& name, bool grep, MasterSetType& master_set);
     void findNegotiator(const string& name, bool grep, NegotiatorSetType& neg_set);
     void findScheduler(const string& name, bool grep, SchedulerSetType& schedd_set);
     void findSlot(const string& name, bool grep, SlotSetType& slot_set);
     void findSubmitter(const string& name, bool grep, SubmitterSetType& subm_set);
+    bool findAttribute(AdTypes daemon_type, const string& name, const string& ip_addr,AttributeMapType& attr_map);
 
     // daemonCore-facing methods
     bool update(int command, const ClassAd& ad);
@@ -82,6 +86,7 @@ private:
     CollectorObject();
     CollectorObject(CollectorObject const&);
     CollectorObject& operator=(CollectorObject const&);
+    BaseCodec* m_codec;
 
 };
 

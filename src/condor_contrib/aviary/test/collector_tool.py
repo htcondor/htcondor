@@ -26,6 +26,7 @@ from aviary.util import *
 from time import *
 import cmd
 import logging
+import pwd
 
 # mainly interactive script for querying a HTCondor Collector
 # using Aviary SOAP interface
@@ -39,6 +40,7 @@ DEFAULTS = {'wsdl':'file:/var/lib/condor/aviary/services/collector/aviary-collec
             }
 plugins = []
 logging.basicConfig(level=logging.CRITICAL)
+cli_url = None
 
 class AviaryClient:
 
@@ -55,7 +57,7 @@ class AviaryClient:
             self.client.set_options(location=url)
         return self.client
 
-class CollectorCtrl:
+class CollectorCtrl(cmd.Cmd):
     
     aviary = None
     nodetype = None
@@ -64,19 +66,80 @@ class CollectorCtrl:
         self.nodetype = nodetype
         self.aviary = AviaryClient(wsdl,url)
 
-    def execute(self,line):
+    def _strip_sinful(self,val):
+        stripped = val.replace('<','').replace('>','')
+        idx = stripped.rfind(':')
+        if idx>1:
+            stripped = stripped[:-(len(stripped)-idx)]
+        return stripped
+
+    def do_attributes(self,line):
         response = None
-        target_op = "get"+self.nodetype
-        list_client = self.aviary.getClient(target_op)
-        func = getattr(list_client.service, target_op, None)
+        the_client = None
+        op_args = []
+        args = line.split()
+        target_op = "getAttributes"
+        the_client = self.aviary.getClient(target_op)
+        for arg in args:
+            res_id = the_client.factory.create("ns1:ResourceID")
+            try:
+                if "/" not in arg:
+                    print "need a 'name/host ip address' from ResourceID to get attributes!"
+                    return
+                (res_id.name,res_id.address) = arg.split("/")
+                res_id.address = self._strip_sinful(res_id.address)
+            except (ValueError, AttributeError), e:
+                pass
+            res_id.resource = the_client.factory.create("ns1:ResourceType")
+            res_id.resource = self.nodetype.upper()
+            op_args.append({'id':res_id})
+        func = getattr(the_client.service, target_op, None)
         try:
             if callable(func):
-                response = func(line.split())
+                response = func(op_args)
         except Exception, e:
             print e
         if response:
             for r in response:
-                print r
+                print r.id
+                for attr in r.ad.attrs:
+                    print attr.name,"=",attr.value
+
+    def default(self,line):
+        response = None
+        clean_ids = []
+        dirty_ids = line.split()
+        for id in dirty_ids:
+            if "/" in id:
+                clean_ids.append(id.split('/')[0])
+            else:
+                clean_ids.append(id)
+        target_op = "get"+self.nodetype
+        the_client = self.aviary.getClient(target_op)
+        func = getattr(the_client.service, target_op, None)
+        try:
+            if callable(func):
+                response = func(clean_ids)
+        except Exception, e:
+            print e
+        if response:
+            for r in response:
+                print r.id.name+"/"+self._strip_sinful(r.id.address)
+                print str(r)+"\n"
+
+    def emptyline(self):
+        response = None
+        target_op = "get"+self.nodetype
+        the_client = self.aviary.getClient(target_op)
+        func = getattr(the_client.service, target_op, None)
+        try:
+            if callable(func):
+                response = func(None)
+        except Exception, e:
+            print e
+        if response:
+            for r in response:
+                print r.id.name+"/"+self._strip_sinful(r.id.address)
 
 class AviaryCollectorTool(cmd.Cmd):
     
@@ -86,7 +149,6 @@ class AviaryCollectorTool(cmd.Cmd):
     verbose = DEFAULTS['verbose']
     base_url = 'http://'+host+':'+port
     bin_file = ''
-    import pwd
     
     def set_base_url(self):
         self.base_url = 'http://'+self.host+':'+self.port
@@ -122,8 +184,12 @@ class AviaryCollectorTool(cmd.Cmd):
             logging.getLogger('suds.client').setLevel(logging.DEBUG)
         print 'verbose:', self.verbose
 
+    _AVAILABLE_CMDS = ('attributes','summary')
+    def completedefault(self, text, line, begidx, endidx):
+        return [i for i in self._AVAILABLE_CMDS if i.startswith(text)]
+
     def execute(self,nodetype,line):
-        CollectorCtrl(DEFAULTS['wsdl'],self.base_url+DEFAULTS['service'],nodetype).execute(line)
+        CollectorCtrl(DEFAULTS['wsdl'],self.base_url+DEFAULTS['service'],nodetype).onecmd(line)
 
     def do_collector(self, line):
         "list collector summaries"
@@ -154,6 +220,13 @@ class AviaryCollectorTool(cmd.Cmd):
 
 if __name__ == '__main__':
     if len(argv) > 1:
-        AviaryCollectorTool().onecmd(' '.join(argv[1:]))
+        parser = build_basic_parser('Retrieve HTCondor collector data remotely via SOAP.','http://localhost:9090/services/collector/')
+        (opts,args) =  parser.parse_args()
+        tool = AviaryCollectorTool()
+        if opts.verbose:
+            tool.do_verbose(True)
+        if opts.url:
+            cli_url = opts.url
+        tool.onecmd(' '.join(args))
     else:
         AviaryCollectorTool().cmdloop()
