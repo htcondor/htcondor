@@ -13,6 +13,8 @@ extern "C" {
 #define __NETWORK_MANIPULATION_H_
 
 #include <sys/types.h>
+#include <sys/socket.h>
+#include <linux/rtnetlink.h>
 
 // Forward decls
 struct ipt_getinfo;
@@ -220,6 +222,39 @@ int delete_interface_from_bridge(const char *bridge_name, const char *dev);
  * non-zero on failure.
  */
 int wait_for_bridge_status(int sock, const char *dev);
+
+/**
+ * Query the kernel for all routes.
+ * For each route returned, the buffer containing the route will be fed to the
+ * filter function specified.
+ *
+ * Returns 0 if all routes were successfully processed.
+ * Returns 1 otherwise.
+ *  - If the filter returns non-zero on a route, all subsequent routes are ignored.
+ */
+int get_routes(int sock, int (*filter)(struct nlmsghdr, struct rtmsg, struct rtattr *[RTA_MAX+1], void *), void * user_arg);
+
+/**
+ *  Query the kernel for all addresses.
+ *  For each address returned, the buffer containing the address will be fed to the
+ *  filter function specified.
+ *
+ *  Returns 0 if all addresses were successfully processed.
+ *  Returns 1 otherwise.
+ *   - If the filter returns non-zero on an address, all subsequent addresses are ignored.
+ */
+int get_addresses(int sock, int (*filter)(struct nlmsghdr, struct ifaddrmsg, struct rtattr *[IFA_MAX+1], void *), void * user_arg);
+
+/**
+ * Sends a message to the kernel; block until an ACK is recieved.
+ *
+ * Args:
+ * - sock: Netlink socket to the kernel.
+ * - iov: An array of struct iovec containing the message to send.
+ * - ioveclen: Length of the iov array.
+ * Returns 0 on success, errno on failure.
+ */
+int send_and_ack(int sock, struct iovec* iov, size_t ioveclen);
 
 #endif
 

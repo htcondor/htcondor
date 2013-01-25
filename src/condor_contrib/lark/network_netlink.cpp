@@ -107,12 +107,11 @@ int send_to_kernel(int sock, struct iovec* iov, size_t ioveclen) {
 static int recv_message(int sock);
 
 /**
- * Internal function - 
  * Sends a message to the kernel; block until an ACK is recieved.
  *
  * Returns 0 on success, errno on failure.
  */
-static int send_and_ack(int sock, struct iovec* iov, size_t ioveclen) {
+int send_and_ack(int sock, struct iovec* iov, size_t ioveclen) {
 
 	int rc;
 	if ((rc = send_to_kernel(sock, iov, ioveclen))) {
@@ -537,7 +536,7 @@ int add_default_route(int sock, const char * gw, const char * dev) {
 	if (dev && strlen(dev)) {
 		has_dev = 1;
 		if (!(eth_dev = if_nametoindex(dev))) {
-			dprintf(D_ALWAYS, "Unable to determine index of %s.\n", eth);
+			dprintf(D_ALWAYS, "Unable to determine index of %s.\n", dev);
 			return 1;
 	        }
 	}
@@ -594,7 +593,7 @@ int add_default_route(int sock, const char * gw, const char * dev) {
 	iov[1].iov_base = &rtmsg;
 	iov[1].iov_len = NLMSG_ALIGN(sizeof(struct rtmsg)); // Note: not sure if there's a better alignment here
 
-	rta_ctr = 2;
+	int rta_ctr = 2;
 
 	struct rtattr rta2; 
 	if (has_gw) {
@@ -675,18 +674,16 @@ int set_netns(int sock, const char * eth, pid_t pid) {
  * to manipulate the attributes than iterating through a huge switch statement.
  */
 static
-int parse_rtattr(struct rtattr *attr_table[], const struct iovec iov)
+int parse_rtattr(struct rtattr *attr_table[], struct rtattr * rta, size_t len, int max)
 {
-	memset(attr_table, 0, sizeof(struct rtattr*) * (RTA_MAX + 1));
-	struct rtattr *rta = RTM_RTA(iov.iov_base);
-	size_t len = iov.iov_len - sizeof(struct rtmsg);
+	memset(attr_table, 0, sizeof(struct rtattr*) * (max + 1));
 	while (RTA_OK(rta, len)) {
 		if ((rta->rta_type <= RTA_MAX) && (!attr_table[rta->rta_type]))
 			attr_table[rta->rta_type] = rta;
 		rta = RTA_NEXT(rta, len);
 	}
 	if (len) {
-		dprintf(D_FULLDEBUG, "Improperly formed route: %d, rta_len=%d\n", len, rta->rta_len);
+		dprintf(D_FULLDEBUG, "Improperly formed route: %lu, rta_len=%d\n", len, rta->rta_len);
 		return 1;
 	}
 	return 0;
@@ -716,7 +713,7 @@ int get_routes(int sock, int (*filter)(struct nlmsghdr, struct rtmsg, struct rta
 
 	struct rtmsg rtm; memset(&rtm, 0, sizeof(rtm));
 	rtm.rtm_flags = AF_INET;
-	rtm.rtm_flags = RTM_F_CLONED;
+	rtm.rtm_flags |= RTM_F_CLONED;
 	iov[1].iov_base = &rtm;
 	iov[1].iov_len = NLMSG_ALIGN(sizeof(struct rtmsg));
 
@@ -727,12 +724,12 @@ int get_routes(int sock, int (*filter)(struct nlmsghdr, struct rtmsg, struct rta
 	}
 
 	struct sockaddr_nl nladdr;
-	struct msghdr msg = {
-		.msg_name = &nladdr,
-		.msg_namelen = sizeof(nladdr),
-		.msg_iov = &iov,
-		.msg_iovlen = 2,
-	};
+	struct msghdr msg;
+	msg.msg_name = &nladdr;
+	msg.msg_namelen = sizeof(nladdr);
+	msg.msg_iov = iov;
+	msg.msg_iovlen = 2;
+
 	char msg_buffer[16*1024];
 	iov[1].iov_base = msg_buffer;
 	iov[1].iov_len = 16*1024;
@@ -751,15 +748,16 @@ int get_routes(int sock, int (*filter)(struct nlmsghdr, struct rtmsg, struct rta
 			return 1;
 		}
 
-		for (nlmsghdr = iov[0]; NLMSG_OK (nlmsghdr, iov[0].iov_len); nlmsghdr = NLMSG_NEXT (nlmsghdr, iov[0].iov_len)) {
+		struct nlmsghdr *nlmsghdr2;
+		for (nlmsghdr2 = (struct nlmsghdr *)iov[0].iov_base; NLMSG_OK(nlmsghdr2, iov[0].iov_len); nlmsghdr2 = NLMSG_NEXT(nlmsghdr2, iov[0].iov_len)) {
 
-			if (nlmsghdr->nlmsg_type == NLMSG_NOOP) {
+			if (nlmsghdr2->nlmsg_type == NLMSG_NOOP) {
 				dprintf(D_ALWAYS, "Ignoring message due to no-op.\n");
 				continue;
 			}
-			if (nlmsghdr->nlmsg_type == NLMSG_ERROR) {
-				struct nlmsgerr *err = (struct nlmsgerr*)NLMSG_DATA(nlmsghdr);
-				if (nlmsghdr->nlmsg_len < NLMSG_LENGTH(sizeof(struct nlmsgerr))) {
+			if (nlmsghdr2->nlmsg_type == NLMSG_ERROR) {
+				struct nlmsgerr *err = (struct nlmsgerr*)NLMSG_DATA(nlmsghdr2);
+				if (nlmsghdr2->nlmsg_len < NLMSG_LENGTH(sizeof(struct nlmsgerr))) {
 					dprintf(D_ALWAYS, "Error message truncated.\n");
 					return 1;
 				} else if (err->error) {
@@ -769,7 +767,7 @@ int get_routes(int sock, int (*filter)(struct nlmsghdr, struct rtmsg, struct rta
 				}
 				return 1;
 			}
-			if (nlmsghdr->nlmsg_type == NLMSG_DONE) {
+			if (nlmsghdr2->nlmsg_type == NLMSG_DONE) {
 				done = 1;
 			}
 			// We continue to recieve messages even if we failed in processing one of them.
@@ -778,22 +776,24 @@ int get_routes(int sock, int (*filter)(struct nlmsghdr, struct rtmsg, struct rta
 				continue;
 			}
 
-			if (nlmsghdr->nlmsg_type != RTM_NEWROUTE && nlmsghdr->nlmsg_type != RTM_DELROUTE) {
-				dprintf(D_FULLDEBUG, "Ignoring non-route message of type %d.\n", nlmsghdr->nlmsg_type);
+			if (nlmsghdr2->nlmsg_type != RTM_NEWROUTE && nlmsghdr2->nlmsg_type != RTM_DELROUTE) {
+				dprintf(D_FULLDEBUG, "Ignoring non-route message of type %d.\n", nlmsghdr2->nlmsg_type);
 				continue;
 			}
-			if (nlmsghdr->nlmsg_len < NLMSG_LENGTH(sizeof(struct rtmsg))) {
-				dprintf(D_FULLDEBUG, "Ignoring truncated route message of length %d.\n", nlmsghdr->nlmsg_len);
-				continue
+			if (nlmsghdr2->nlmsg_len < NLMSG_LENGTH(sizeof(struct rtmsg))) {
+				dprintf(D_FULLDEBUG, "Ignoring truncated route message of length %d.\n", nlmsghdr2->nlmsg_len);
+				continue;
 			}
-			struct rtmsg route_msg; memcpy(route_msg, iov[1].iov_base, sizeof(struct rtmsg));
+			struct rtmsg route_msg; memcpy(&route_msg, iov[1].iov_base, sizeof(struct rtmsg));
 			struct rtattr *attr_table[RTA_MAX+1];
-			if (parse_rtattr(attr_table, RTA_MAX, iov[1])) {
+			struct rtattr *rta = RTM_RTA(iov[1].iov_base);
+			size_t len = iov[1].iov_len - sizeof(struct rtmsg);
+			if (parse_rtattr(attr_table, rta, len, RTA_MAX)) {
 				had_filter_error = 1;
 				continue;
 			}
 
-			if (filter_result = (*filter)(nlmsghdr, route_msg, attr_table, user_arg)) {
+			if ((filter_result = (*filter)(*nlmsghdr2, route_msg, attr_table, user_arg))) {
 				had_filter_error = 1;
 			}
 		}
@@ -802,44 +802,120 @@ int get_routes(int sock, int (*filter)(struct nlmsghdr, struct rtmsg, struct rta
 	return 0;
 }
 
+
 /**
- * Detect if an interface has a default route.
+ * Query the kernel for all addresses.
+ * For each address returned, the buffer containing the address will be fed to the
+ * filter function specified.
+ *
+ * Returns 0 if all routes were successfully processed.
+ * Returns 1 otherwise.
+ *  - If the filter returns non-zero on an address, all subsequent addresses are ignored.
  */
-struct default_route_check_s {
-	int iface_id,
-	int has_default,
-};
+int get_addresses(int sock, int (*filter)(struct nlmsghdr, struct ifaddrmsg, struct rtattr *[IFA_MAX+1], void *), void * user_arg) {
 
-static int
-check_default_route(struct nlmsghdr nlmsghdr, struct rtmsg rtmsg, struct rtattr *attr_table[RTA_MAX+1], void *user_arg) {
-	struct default_route_check_s *arg = (struct default_route_check_s*)user_arg;
-	if (rtmsg->rtm_dst_len == 0 && attr_table[RTA_OIF] && 
-			(arg->iface_id == *(int*)RTA_DATA(attr_table[RTA_OIF]))) {
-		arg->has_default = 1;
+	struct iovec iov[2];
+
+	struct nlmsghdr nlmsghdr; memset(&nlmsghdr, 0, sizeof(nlmsghdr));
+	nlmsghdr.nlmsg_len = NLMSG_LENGTH(sizeof(struct rtmsg));
+	nlmsghdr.nlmsg_type = RTM_GETADDR;
+	nlmsghdr.nlmsg_flags = NLM_F_REQUEST|NLM_F_ROOT;
+	nlmsghdr.nlmsg_pid = 0;
+	nlmsghdr.nlmsg_seq = 0;
+	iov[0].iov_base = &nlmsghdr;
+	iov[0].iov_len = NLMSG_LENGTH(0);
+
+	struct rtmsg rtm; memset(&rtm, 0, sizeof(rtm));
+	rtm.rtm_flags = AF_INET;
+	rtm.rtm_flags |= RTM_F_CLONED;
+	iov[1].iov_base = &rtm;
+	iov[1].iov_len = NLMSG_ALIGN(sizeof(struct rtmsg));
+
+	int result;
+	if ((result = send_to_kernel(sock, iov, 2) < 0)) {
+		dprintf(D_ALWAYS, "Failed to query kernel for routes.\n");
+		return 1;
 	}
+
+	struct sockaddr_nl nladdr;
+	struct msghdr msg;
+	msg.msg_name = &nladdr;
+	msg.msg_namelen = sizeof(nladdr);
+	msg.msg_iov = iov;
+	msg.msg_iovlen = 2;
+
+	char msg_buffer[16*1024];
+	iov[1].iov_base = msg_buffer;
+	iov[1].iov_len = 16*1024;
+
+	int done = 0, had_filter_error = 0, filter_result = 0;
+	while (1) {
+		result = recvmsg(sock, &msg, 0);
+		if (result < 0) {
+			if (errno == EINTR || errno == EAGAIN)
+				continue;
+			dprintf(D_ALWAYS, "Error recieved from kernel (errno=%d, %s)\n", errno, strerror(errno));
+			return errno;
+		}
+		if (result == 0) {
+			dprintf(D_ALWAYS, "Unexpected EOF from kernel\n");
+			return 1;
+		}
+
+		struct nlmsghdr *nlmsghdr2;
+		for (nlmsghdr2 = (struct nlmsghdr *)iov[0].iov_base; NLMSG_OK(nlmsghdr2, iov[0].iov_len); nlmsghdr2 = NLMSG_NEXT(nlmsghdr2, iov[0].iov_len)) {
+
+			if (nlmsghdr2->nlmsg_type == NLMSG_NOOP) {
+				dprintf(D_ALWAYS, "Ignoring message due to no-op.\n");
+				continue;
+			}
+			if (nlmsghdr2->nlmsg_type == NLMSG_ERROR) {
+				struct nlmsgerr *err = (struct nlmsgerr*)NLMSG_DATA(nlmsghdr2);
+				if (nlmsghdr2->nlmsg_len < NLMSG_LENGTH(sizeof(struct nlmsgerr))) {
+					dprintf(D_ALWAYS, "Error message truncated.\n");
+					return 1;
+				} else if (err->error) {
+					dprintf(D_ALWAYS, "Error message back from netlink: %d %s\n", -err->error, strerror(-err->error));
+					errno = -err->error;
+					return errno;
+				}
+				return 1;
+			}
+			if (nlmsghdr2->nlmsg_type == NLMSG_DONE) {
+				done = 1;
+			}
+			// We continue to recieve messages even if we failed in processing one of them.
+			// This is so the next netlink user does not recieve unexpected messages.
+			if (had_filter_error) {
+				continue;
+			}
+
+			if (nlmsghdr2->nlmsg_type != RTM_NEWADDR && nlmsghdr2->nlmsg_type != RTM_DELADDR) {
+				dprintf(D_FULLDEBUG, "Ignoring non-address message of type %d.\n", nlmsghdr2->nlmsg_type);
+				continue;
+			}
+			if (nlmsghdr2->nlmsg_len < NLMSG_LENGTH(sizeof(struct ifaddrmsg))) {
+				dprintf(D_FULLDEBUG, "Ignoring truncated route message of length %d.\n", nlmsghdr2->nlmsg_len);
+				continue;
+			}
+			struct ifaddrmsg addr_msg; memcpy(&addr_msg, iov[1].iov_base, sizeof(struct ifaddrmsg));
+			struct rtattr *attr_table[IFA_MAX+1];
+			struct rtattr *rta = IFA_RTA(iov[1].iov_base);
+			size_t len = iov[1].iov_len - sizeof(struct ifaddrmsg);
+			if (parse_rtattr(attr_table, rta, len, IFA_MAX)) {
+				had_filter_error = 1;
+				continue;
+			}
+
+			if ((filter_result = (*filter)(*nlmsghdr2, addr_msg, attr_table, user_arg))) {
+				had_filter_error = 1;
+			}
+		}
+		if (done) break;
+	}
+	return 0;
 }
 
-int
-interface_has_default_route(int sock, const char * eth) {
-	if (!eth || !*eth) {
-		dprintf(D_ALWAYS, "Looking for default route on invalid interface");
-		return -1;
-	}
-	unsigned eth_dev;
-	if (!(eth_dev = if_nametoindex(eth))) {
-		dprintf(D_ALWAYS, "Unable to determine index of %s.\n", eth);
-		return -1;
-	}
-
-	struct default_route_check_s arg;
-	arg.iface_id = eth_dev;
-	arg.has_default = 0;
-	if (get_routes(sock, check_default_route, &arg)) {
-		dprintf(D_ALWAYS, "Error when searching for default route.\n");
-		return -1;
-	}
-	return arg.has_default;
-}
 
 /*
  * Receive a message from netlink.
@@ -872,7 +948,7 @@ recv_message(int sock) {
 	struct nlmsghdr *nlmsghdr;
 
 	while (1) {
-		len = recvmsg (sock, &msghdr, 0)
+		len = recvmsg(sock, &msghdr, 0);
 		if ((len < 0) && (errno == EINTR || errno == EAGAIN))
 			continue;
 		if (len < 0) {
@@ -883,7 +959,7 @@ recv_message(int sock) {
 			dprintf(D_ALWAYS, "Got EOF on netlink socket.\n");
 			return 1;
 		}
-		if (nladdr.nl_pid == 0)
+		if (addr.nl_pid == 0)
 			break;
 	}
 	if (len < 0)
