@@ -126,10 +126,13 @@ percentages of the total available amount (or \Expr{auto}).
 For example, in a machine with 128 Mbytes of RAM,
 all the following definitions result in the same allocation amount.
 \begin{verbatim}
-mem=64
-mem=1/2
-mem=50%
-mem=auto
+SLOT_TYPE_1 = mem=64
+
+SLOT_TYPE_1 = mem=1/2
+
+SLOT_TYPE_1 = mem=50%
+
+SLOT_TYPE_1 = mem=auto
 \end{verbatim}
 
 Amounts of disk space and swap space are dynamic, as they change over time.
@@ -146,7 +149,7 @@ then each one may be defined with up to
 100\Percent\ for its disk share.  If some slots are in the same
 partition, then their total is not allowed to exceed 100\Percent.
 
-The four attribute names are case insensitive when defining slot types.
+The four predefined attribute names are case insensitive when defining slot types.
 The first letter of the attribute name distinguishes between
 the attributes.
 The four attributes, with several examples of acceptable names for
