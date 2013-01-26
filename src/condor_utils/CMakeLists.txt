@@ -68,7 +68,26 @@ else()
 endif()
 set_target_properties( condor_utils PROPERTIES OUTPUT_NAME "${UTILS_LIB_NAME}" )
 
-target_link_libraries(condor_utils ${CLASSADS_FOUND} ${PCRE_FOUND} ${VOMS_FOUND} ${GLOBUS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${POSTGRESQL_FOUND})
+# Brain twister:
+#
+# If you dynamicly load a library which links against libcondor_utils (such as
+# a python module), the dprintf inside libcondor_utils will be linked against
+# the libc dprintf.  Hilarity ensues as internal condor functions use the libc
+# dprintf.
+#
+# The magic below will cause internal references to dprintf to be changed to
+# __wrap_dprintf, which is also provided by condor_utils.  Hence, when
+# dynamically loaded, Condor's __wrap_dprintf (identical to Condor's dprintf)
+# is used instead of libc's.  Condor's dprintf is still exported, meaning
+# linking executables against condor_utils still works.
+#
+# Voodoo, that's what this is.  Never overload libc functions!
+#
+if ( LINUX )
+  set_target_properties( condor_utils PROPERTIES LINK_FLAGS "-Wl,--wrap=dprintf" )
+endif()
+
+target_link_libraries(condor_utils ${CLASSADS_FOUND} ${PCRE_FOUND} ${VOMS_FOUND} ${GLOBUS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${POSTGRESQL_FOUND} ${COREDUMPER_FOUND} )
 if ( DARWIN )
 	target_link_libraries( condor_utils ${IOKIT_FOUND} ${COREFOUNDATION_FOUND} resolv )
 	add_custom_command( TARGET condor_utils
