@@ -94,6 +94,13 @@ public:
 	 */
 	void RemapProc();
 
+	/**
+	 * Configure a location to be exposed using Chirp IO in the job.
+	 * After forking, the job will see a FUSE mount that speaks Chirp
+	 * at the specified location.
+	 */
+	int AddRemoteIO(std::string &);
+
 private:
 
 	/**
@@ -118,6 +125,9 @@ private:
 	std::list<pair_strings> m_mappings;
 	std::list<pair_str_bool> m_mounts_shared;
 	std::list<pair_strings> m_mounts_autofs;
+
+	std::string m_remoteio;
+	std::string m_remoteiofuse;
 
 	bool m_remap_proc;
 

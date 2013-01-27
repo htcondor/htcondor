@@ -400,6 +400,26 @@ VanillaProc::StartJob()
 		}
 	}
 
+	// Allow the schedd submit directory to be mounted by the job
+	// Note that we hardcode the remote-IO string; there's no safe way to let the
+	// user specify this value.  Think how confused the sudo binary would be if we
+	// let the user remount /etc/sudoers.d.
+	// Later versions of Linux allow us to give up the ability to use setuid binaries
+	// in exchange for allowing users to mount arbitrary directories.  We can revisit
+	// this decision when those versions are in wider use.
+	std::string remoteio = "/condor";
+	bool want_remote_io;
+	if (param_boolean("ALLOW_REMOTE_IO_MOUNT", false) && JobAd->EvaluateAttrBool("WantRemoteIO", want_remote_io)) {
+		if (!fs_remap) {
+			fs_remap = new FilesystemRemap();
+		}
+		if (fs_remap->AddRemoteIO(remoteio)) {
+			free(fs_remap); fs_remap=NULL;
+			dprintf(D_ALWAYS, "Failed to add remote IO mapping to %s.\n", remoteio.c_str());
+			return FALSE;
+		}
+	}
+
 #if defined(LINUX)
 	// On Linux kernel 2.6.24 and later, we can give each
 	// job its own PID namespace

@@ -32,6 +32,8 @@
 FilesystemRemap::FilesystemRemap() :
 	m_mappings(),
 	m_mounts_shared(),
+	m_remoteio(),
+	m_remoteiofuse(),
 	m_remap_proc(false)
 {
 	ParseMountinfo();
@@ -106,6 +108,20 @@ int FilesystemRemap::CheckMapping(const std::string & mount_point) {
 #endif
 }
 
+int FilesystemRemap::AddRemoteIO(std::string &location) {
+#if defined(LINUX)
+	param(m_remoteiofuse, "REMOTEIO", "$(LIBEXEC)/condor_remoteio");
+	struct stat statbuf;
+	if (-1 == stat(m_remoteiofuse.c_str(), &statbuf)) {
+		dprintf(D_ALWAYS, "Remote IO requiested but the condor_remoteio binary (%s) was not found. (errno=%d, %s)\n", m_remoteiofuse.c_str(), errno, strerror(errno));
+		return -1;
+	}
+	m_remoteio = location;
+	dprintf(D_ALWAYS, "Will remap %s to Condor remote IO.\n", m_remoteio.c_str());
+#endif
+	return 0;
+}
+
 int FilesystemRemap::FixAutofsMounts() {
 #ifndef HAVE_UNSHARE
 	// An appropriate error message is printed in FilesystemRemap::CheckMapping;
@@ -144,6 +160,33 @@ int FilesystemRemap::PerformMappings() {
 			}
 		} else if ((retval = mount(it->first.c_str(), it->second.c_str(), NULL, MS_BIND, NULL))) {
 			break;
+		}
+	}
+	if ((!retval) && m_remoteio.size()) {
+		retval = mkdir_and_parents_if_needed(m_remoteio.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+		if (retval) {
+			errno = 0;
+			int pid = fork();
+			if (!pid) {
+				char *argv[5];
+				argv[0] = strdup("condor_remoteio");
+				argv[1] = strdup(m_remoteio.c_str());
+				argv[2] = strdup("-o");
+				argv[3] = strdup("nonempty");
+				argv[4] = NULL;
+				execv(m_remoteiofuse.c_str(), argv);
+				_exit(errno);
+			} else if (pid == -1) {
+				retval = errno;
+			} else {
+				int status;
+				errno = EINVAL;
+				retval = waitpid(pid, &status, 0);
+				retval = retval == pid ? 0 : -1;
+				if (!retval) {
+					retval = status;
+				}
+			}
 		}
 	}
 	if ((!retval) && m_remap_proc) {
