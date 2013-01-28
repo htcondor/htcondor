@@ -33,7 +33,8 @@ FilesystemRemap::FilesystemRemap() :
 	m_mappings(),
 	m_mounts_shared(),
 	m_remoteio(),
-	m_remoteiofuse(),
+	m_remoteio_fuse(),
+	m_remoteio_keyfile(),
 	m_remap_proc(false)
 {
 	ParseMountinfo();
@@ -108,15 +109,16 @@ int FilesystemRemap::CheckMapping(const std::string & mount_point) {
 #endif
 }
 
-int FilesystemRemap::AddRemoteIO(std::string &location) {
+int FilesystemRemap::AddRemoteIO(std::string &location, std::string &keyfile) {
 #if defined(LINUX)
-	param(m_remoteiofuse, "REMOTEIO", "$(LIBEXEC)/condor_remoteio");
+	param(m_remoteio_fuse, "REMOTEIO", "$(LIBEXEC)/condor_remoteio");
 	struct stat statbuf;
-	if (-1 == stat(m_remoteiofuse.c_str(), &statbuf)) {
-		dprintf(D_ALWAYS, "Remote IO requiested but the condor_remoteio binary (%s) was not found. (errno=%d, %s)\n", m_remoteiofuse.c_str(), errno, strerror(errno));
+	if (-1 == stat(m_remoteio_fuse.c_str(), &statbuf)) {
+		dprintf(D_ALWAYS, "Remote IO requiested but the condor_remoteio binary (%s) was not found. (errno=%d, %s)\n", m_remoteio_fuse.c_str(), errno, strerror(errno));
 		return -1;
 	}
 	m_remoteio = location;
+	m_remoteio_keyfile = keyfile;
 	dprintf(D_ALWAYS, "Will remap %s to Condor remote IO.\n", m_remoteio.c_str());
 #endif
 	return 0;
@@ -164,7 +166,15 @@ int FilesystemRemap::PerformMappings() {
 	}
 	if ((!retval) && m_remoteio.size()) {
 		retval = mkdir_and_parents_if_needed(m_remoteio.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+		// We need to remount /etc/mtab as read-only; otherwise, FUSE will attempt to write to mtab
+		// and other jobs will refuse to mount the remote IO.
 		if (retval) {
+			retval = mount("/etc/mtab", "/etc/mtab", NULL, MS_BIND, NULL) == -1 ? errno : 0;
+		}
+		if (!retval) {
+			retval = mount("/etc/mtab", "/etc/mtab", NULL, MS_BIND|MS_RDONLY|MS_REMOUNT, NULL) == -1 ? errno : 0;
+		}
+		if (!retval) {
 			errno = 0;
 			int pid = fork();
 			if (!pid) {
@@ -172,9 +182,9 @@ int FilesystemRemap::PerformMappings() {
 				argv[0] = strdup("condor_remoteio");
 				argv[1] = strdup(m_remoteio.c_str());
 				argv[2] = strdup("-o");
-				argv[3] = strdup("nonempty");
+				argv[3] = strdup(("keyfile="+m_remoteio_keyfile+",nonempty,allow_other,nocheck,nodev,nosuid").c_str());
 				argv[4] = NULL;
-				execv(m_remoteiofuse.c_str(), argv);
+				execv(m_remoteio_fuse.c_str(), argv);
 				_exit(errno);
 			} else if (pid == -1) {
 				retval = errno;

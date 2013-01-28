@@ -63,6 +63,7 @@ src/condor_amazon/
 src/condor_c-gahp/condor_c-gahp
 src/condor_c-gahp/condor_c-gahp_worker_thread
 src/condor_chirp/condor_chirp
+src/condor_chirp/condor_remoteio
 src/condor_ckpt_server/condor_ckpt_server
 src/condor_collector.V6/condor.xsd
 src/condor_collector.V6/condorCollector.nsmap

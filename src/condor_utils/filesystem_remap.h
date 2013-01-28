@@ -99,7 +99,7 @@ public:
 	 * After forking, the job will see a FUSE mount that speaks Chirp
 	 * at the specified location.
 	 */
-	int AddRemoteIO(std::string &);
+	int AddRemoteIO(std::string &, std::string &);
 
 private:
 
@@ -127,7 +127,8 @@ private:
 	std::list<pair_strings> m_mounts_autofs;
 
 	std::string m_remoteio;
-	std::string m_remoteiofuse;
+	std::string m_remoteio_fuse;
+	std::string m_remoteio_keyfile;
 
 	bool m_remap_proc;
 

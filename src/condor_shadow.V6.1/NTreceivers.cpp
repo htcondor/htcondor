@@ -1347,7 +1347,7 @@ case CONDOR_getlongdir:
 		
 		// Get directory's contents
 		while((next = directory.Next())) {
-			dprintf(D_ALWAYS, "next: %s\n", next);
+			//dprintf(D_ALWAYS, "next: %s\n", next);
 			msg.formatstr_cat("%s\n", next);
 			check.formatstr("%s%c%s", path, DIR_DELIM_CHAR, next);
 			rval = stat(check.Value(), &stat_buf);

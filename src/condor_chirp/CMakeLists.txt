@@ -27,6 +27,11 @@ endif()
 condor_exe( condor_chirp "condor_chirp.cpp" ${C_LIBEXEC}
 "chirp_client;${CONDOR_TOOL_LIBS}" OFF )
 
+condor_exe( condor_remoteio "remoteio.cpp;chirp_client.c" ${C_LIBEXEC} "" OFF )
+target_link_libraries( condor_remoteio "-lfuse" )
+# FUSE headers complain without this set.
+set_target_properties( condor_remoteio PROPERTIES COMPILE_FLAGS "-D_FILE_OFFSET_BITS=64" )
+
 install ( FILES Chirp.jar DESTINATION ${C_LIB} )
 
 if (WANT_FULL_DEPLOYMENT)

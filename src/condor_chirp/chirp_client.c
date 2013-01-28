@@ -147,6 +147,9 @@ shutdown_sockets()
 }
 #endif
 
+struct chirp_client *
+chirp_client_connect_via_path(const char * path);
+
 DLLEXPORT struct chirp_client * 
 chirp_client_connect_url( const char *url, const char **path_part)
 {
@@ -213,7 +216,7 @@ chirp_client_connect_url( const char *url, const char **path_part)
 	*path_part = url;
 
 	if(!host) { //URL must be in form 'chirp:path'
-		client = chirp_client_connect_default();
+		client = chirp_client_connect_via_path(url);
 	}
 	else {
 		client = chirp_client_connect(host,port);
@@ -223,8 +226,8 @@ chirp_client_connect_url( const char *url, const char **path_part)
 	return client;
 }
 
-DLLEXPORT struct chirp_client *
-chirp_client_connect_default()
+struct chirp_client *
+chirp_client_connect_via_path(const char * path)
 {
 	FILE *file;
 	int fields;
@@ -235,7 +238,7 @@ chirp_client_connect_default()
 	int port;
 	int result;
 
-	file = fopen("chirp.config","r");
+	file = fopen(path,"r");
 	if(!file) return 0;
 
 	fields = fscanf(file,"%s %d %s",host,&port,cookie);
@@ -258,6 +261,12 @@ chirp_client_connect_default()
 	}
 
 	return client;
+}
+
+DLLEXPORT struct chirp_client *
+chirp_client_connect_default()
+{
+	return chirp_client_connect_via_path("chirp.config");
 }
 
 #ifdef _MSC_VER
