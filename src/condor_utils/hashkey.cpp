@@ -310,7 +310,7 @@ bool
 makeCollectorAdHashKey (AdNameHashKey &hk, ClassAd *ad)
 {
 	hk.ip_addr = "";
-	return adLookup( "Collector", ad, ATTR_MACHINE, NULL, hk.name );
+	return adLookup( "Collector", ad, ATTR_NAME, ATTR_MACHINE, hk.name );
 }
 
 bool
