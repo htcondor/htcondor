@@ -506,49 +506,46 @@ also referred to as partitionable or dynamic slots,
 allows HTCondor to use the resources of a slot in a dynamic way;
 these slots may be partitioned. 
 This means that more than one job can occupy a single slot at any one time. 
-As slots have a fixed set of resources,
-including the cores, memory and disk space, 
-by partitioning the slot, 
-these resources become more flexible and able to be better utilized.
+Slots have a fixed set of resources which
+include the cores, memory and disk space. 
+By partitioning the slot, 
+the use of these resources becomes more flexible.
 
-Dynamic provisioning provides powerful configuration
-possibilities, and so should be used with care. 
-Specifically, while preemption occurs for each individual dynamic slot,
-it cannot occur directly for the partitionable slot, 
-or for groups of dynamic slots. 
-For example, for a large number of jobs requiring 1GB of memory,
-a pool might be split up into 1GB dynamic slots. 
-In this instance a job requiring 2GB of memory will be starved
-and unable to run.  A partial solution to this problem is provided
-by defragmentation accomplished by the \Condor{defrag} daemon,
-as discussed in section~\ref{sec:SMP-defrag}.
-
-Here is an example that demonstrates how more than one job
-can be matched to a single slot using dynamic provisioning.
-In this example, slot1 has the following resources:
+Here is an example that demonstrates how resources are divided
+as more than one job
+is or can be matched to a single slot.
+In this example, Slot1 is identified as a partitionable slot
+and has the following resources:
 \begin{description}
-  \item{cpu=10}
-  \item{memory=10240}
-  \item{disk=BIG}
+  \item{cpu = 10}
+  \item{memory = 10240}
+  \item{disk = BIG}
 \end{description}
 Assume that JobA is allocated to this slot.
 JobA includes the following requirements:
 \begin{description}
-  \item{cpu=3}
-  \item{memory=1024}
-  \item{disk=10240} 
+  \item{cpu = 3}
+  \item{memory = 1024}
+  \item{disk = 10240} 
 \end{description}
-The portion of the slot that is utilized is referred to as Slot1\_1,
-and after allocation, the slot advertises that it has
+The portion of the slot that is carved out is now
+known as a dynamic slot.
+This dynamic slot has its own machine ClassAd, 
+and its \Attr{Name} attribute
+distinguishes itself as a dynamic slot with incorporating the substring
+\Expr{Slot1\_1}.
+
+After allocation, the partitionable Slot1 advertises that it has
 the following resources still available:
 \begin{description}
-  \item{cpu=7}
-  \item{memory=9216}
-  \item{disk=BIG-10240}
+  \item{cpu = 7}
+  \item{memory = 9216}
+  \item{disk = BIG-10240}
 \end{description}
 As each new job is allocated to Slot1,
-it breaks into Slot1\_1, Slot1\_2, etc., until the entire set of
-available resources have been consumed by jobs.
+it breaks into \Expr{Slot1\_1}, \Expr{Slot1\_2}, \Expr{Slot1\_3} etc.,
+until the entire set of
+Slot1's available resources have been consumed by jobs.
 
 To enable dynamic provisioning, 
 define a slot type with machine resources.
@@ -582,17 +579,12 @@ request_disk = 10240
 queue 
 \end{verbatim}
 
-For each type of slot,
-the original, partitionable slot and the new smaller, dynamic slots,
-an attribute is added to identify it.
-The original slot,
-as defined at page~\pageref{PartitionableSlot-machine-attribute},
-will have an attribute stating 
+Each partitionable slot will have
+the ClassAd attribute
 \begin{verbatim}
   PartitionableSlot = True
 \end{verbatim}
-and the dynamic slots will have an attribute, 
-as defined at page~\pageref{DynamicSlot-machine-attribute},
+Each dynamic slot will have the ClassAd attribute 
 \begin{verbatim}
   DynamicSlot = True
 \end{verbatim}
@@ -600,12 +592,23 @@ These attributes may be used in a \MacroNI{START} expression for
 the purposes of creating detailed policies.
 
 A partitionable slot will always appear as though it is not running a job.
-It will eventually show as having no available resources, 
-which will prevent further matching to new jobs.
-Because it has been effectively broken up into smaller slots,
-these will show as running jobs directly.
-These dynamic slots can also be preempted in the same way as 
-nonpartitioned slots.
+If matched jobs consume all its resources,
+the partitionable slot  will eventually show as having no available resources; 
+this will prevent further matching of new jobs.
+The dynamic slots will show as running jobs.
+The dynamic slots can be preempted in the same way as all other slots.
+
+Dynamic provisioning provides powerful configuration
+possibilities, and so should be used with care. 
+Specifically, while preemption occurs for each individual dynamic slot,
+it cannot occur directly for the partitionable slot, 
+or for groups of dynamic slots. 
+For example, for a large number of jobs requiring 1GB of memory,
+a pool might be split up into 1GB dynamic slots. 
+In this instance a job requiring 2GB of memory will be starved
+and unable to run.  A partial solution to this problem is provided
+by defragmentation accomplished by the \Condor{defrag} daemon,
+as discussed in section~\ref{sec:SMP-defrag}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-resource-defaults}
