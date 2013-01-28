@@ -33,6 +33,17 @@
 using namespace std;
 using namespace classad;
 
+
+/////////////////////////////////////////////////////////////////
+// State Space for tests: 
+//
+// 1. Insertion only 
+// 2. Insertion and deleting 
+// 3. Insert + sort + lookup.  
+// 4. Insert + evaluate
+// 5. Insertion + random deletion 
+// 6. Insertion + queries. 
+
 /////////////////////////////////////////////////////////////////
 //BOOST_AUTO_TEST_SUITE( collector_auto )
 #define BOOST_TEST_MODULE GRNN test suite
