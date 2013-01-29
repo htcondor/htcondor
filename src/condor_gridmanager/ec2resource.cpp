@@ -60,8 +60,12 @@ EC2Resource* EC2Resource::FindOrCreateResource(const char * resource_name,
 
 
 EC2Resource::EC2Resource( const char *resource_name, 
-	const char * public_key_file, const char * private_key_file )
-	: BaseResource( resource_name )
+	const char * public_key_file, const char * private_key_file ) :
+		BaseResource( resource_name ),
+		jobsByInstanceID( hashFunction ),
+		spotJobsByRequestID( hashFunction ),
+		m_hadAuthFailure( false ),
+		m_checkSpotNext( false )
 {
 	// although no one will use resource_name, we still keep it for base class constructor
 	
@@ -80,12 +84,19 @@ EC2Resource::EC2Resource( const char *resource_name,
 	args.AppendArg("-f");
 
 	gahp = new GahpClient( EC2_RESOURCE_NAME, gahp_path, &args );
-	free(gahp_path);
 	gahp->setNotificationTimerId( pingTimerId );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( EC2Job::gahpCallTimeout );
-	
-	m_hadAuthFailure = false;
+
+	status_gahp = new GahpClient( EC2_RESOURCE_NAME, gahp_path, &args );
+
+	StartBatchStatusTimer();
+
+    status_gahp->setNotificationTimerId( BatchPollTid() );
+	status_gahp->setMode( GahpClient::normal );
+	status_gahp->setTimeout( EC2Job::gahpCallTimeout );
+
+	free(gahp_path);
 }
 
 
@@ -165,4 +176,136 @@ void EC2Resource::DoPing( time_t& ping_delay, bool& ping_complete, bool& ping_su
 	}
 
 	return;
+}
+
+EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
+    ASSERT( status_gahp );
+
+    // m_checkSpotNext starts out false
+    if( ! m_checkSpotNext ) {
+        StringList returnStatus;
+        char * errorCode = NULL;
+        int rc = status_gahp->ec2_vm_status_all( resourceName,
+                    m_public_key_file, m_private_key_file,
+                    returnStatus, errorCode );
+
+        if( rc == GAHPCLIENT_COMMAND_PENDING ) { return BSR_PENDING; }
+    
+        if( rc != 0 ) {
+            std::string errorString = status_gahp->getErrorString();
+            dprintf( D_ALWAYS, "Error doing batched EC2 status query: %s: %s.\n",
+                        errorCode, errorString.c_str() );
+            return BSR_ERROR;
+        }
+
+        //
+        // We have to let a job know if we can't find a status report for it.
+        //
+        List<EC2Job> myJobs;
+        EC2Job * nextJob = NULL;
+        jobsByInstanceID.startIterations();
+        while( jobsByInstanceID.iterate( nextJob ) ) {
+            myJobs.Append( nextJob );
+        }
+
+        returnStatus.rewind();
+        ASSERT( returnStatus.number() % 4 == 0 );
+        for( int i = 0; i < returnStatus.number(); i += 4 ) {
+            std::string instanceID = returnStatus.next();
+            std::string status = returnStatus.next();
+            std::string amiID = returnStatus.next();
+            std::string clientToken = returnStatus.next();
+       
+            // We can't use BaseJob::JobsByRemoteId because OpenStack doesn't
+            // include the client token in its status responses, and therefore
+            // we can't always fully reconstruct the remoteJobID used as the key.
+            EC2Job * job = NULL;
+            rc = jobsByInstanceID.lookup( HashKey( instanceID.c_str() ), job );
+            if( rc != 0 ) {
+                dprintf( D_FULLDEBUG, "Found unknown instance '%s'; skipping.\n", instanceID.c_str() );
+                continue;
+            }
+            ASSERT( job );
+        
+            dprintf( D_FULLDEBUG, "Found job object for '%s', updating status ('%s').\n", instanceID.c_str(), status.c_str() );
+            job->StatusUpdate( status.c_str() );
+            myJobs.Delete( job );
+        }
+    
+        myJobs.Rewind();
+        while( ( nextJob = myJobs.Next() ) ) {
+            dprintf( D_FULLDEBUG, "Informing job %p it got no status.\n", nextJob );
+            nextJob->StatusUpdate( NULL );
+        }
+    
+        // Don't ask for spot results unless we know about a spot job.  This
+        // should prevent us from breaking OpenStack.
+        if( spotJobsByRequestID.getNumElements() == 0 ) {
+            m_checkSpotNext = false;
+            return BSR_DONE;
+        } else {
+            m_checkSpotNext = true;
+        }
+    }
+    
+    if( m_checkSpotNext ) {
+        StringList spotReturnStatus;
+        char * spotErrorCode = NULL;
+        int spotRC = status_gahp->ec2_spot_status_all( resourceName,
+                        m_public_key_file, m_private_key_file,
+                        spotReturnStatus, spotErrorCode );
+
+        if( spotRC == GAHPCLIENT_COMMAND_PENDING ) { return BSR_PENDING; }
+
+        if( spotRC != 0 ) {
+            std::string errorString = status_gahp->getErrorString();
+            dprintf( D_ALWAYS, "Error doing batched EC2 spot status query: %s: %s.\n",
+                    spotErrorCode, errorString.c_str() );
+            return BSR_ERROR;
+        }
+
+        List<EC2Job> mySpotJobs;
+        EC2Job * nextSpotJob = NULL;
+        spotJobsByRequestID.startIterations();
+        while( spotJobsByRequestID.iterate( nextSpotJob ) ) {
+            mySpotJobs.Append( nextSpotJob );
+        }
+    
+        spotReturnStatus.rewind();
+        ASSERT( spotReturnStatus.number() % 4 == 0 );
+        for( int i = 0; i < spotReturnStatus.number(); i += 4 ) {
+            std::string requestID = spotReturnStatus.next();
+            std::string status = spotReturnStatus.next();
+            std::string launchGroup = spotReturnStatus.next();
+            std::string instanceID = spotReturnStatus.next();
+
+            EC2Job * spotJob = NULL;
+            spotRC = spotJobsByRequestID.lookup( HashKey( requestID.c_str() ), spotJob );
+            if( spotRC != 0 ) {
+                dprintf( D_FULLDEBUG, "Found unknown spot request '%s'; skipping.\n", requestID.c_str() );
+                continue;
+            }
+            ASSERT( spotJob );
+
+            dprintf( D_FULLDEBUG, "Found spot job object for '%s', updating status ('%s').\n", requestID.c_str(), status.c_str() );
+            spotJob->StatusUpdate( status.c_str() );
+            mySpotJobs.Delete( spotJob );
+        }
+
+        mySpotJobs.Rewind();
+        while( ( nextSpotJob = mySpotJobs.Next() ) ) {
+            dprintf( D_FULLDEBUG, "Informing spot job %p it got no status.\n", nextSpotJob );
+            nextSpotJob->StatusUpdate( NULL );
+        }
+        
+        m_checkSpotNext = false;
+        return BSR_DONE;
+    }
+
+    // This should never happen (but the compiler hates you).
+    return BSR_ERROR;
+}
+
+EC2Resource::BatchStatusResult EC2Resource::FinishBatchStatus() {
+    return StartBatchStatus();
 }
