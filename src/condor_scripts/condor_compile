@@ -387,10 +387,6 @@ if [ $myname = "gfortran" ]; then
 	invoke_linker $ARGS -B$CONDOR_LD_DIR/
 fi 
 
-if [ $myname = "ifort" ]; then
-	invoke_linker $ARGS -B$CONDOR_LD_DIR/
-fi 
-
 # Handle Portland compilers.
 # Notice that we explicitly do _not_ support Portland C++.
 # Their run-time support libraries conflict with libcondorc++support.a
