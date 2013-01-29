@@ -273,6 +273,7 @@ main(int argc, char* argv[])
   int SetLast=0;
   bool ResetAll=false;
   int GetResList=0;
+  int UserPrioFile=0;
   std::string pool;
   bool GroupRollup = false;
 
@@ -389,6 +390,11 @@ main(int argc, char* argv[])
     else if (IsArg(argv[i],"getreslist",6)) {
       if (argc-i<=1) usage(argv[0]);
       GetResList=i;
+      i+=1;
+    }
+    else if (IsArg(argv[i],"inputfile",2)) {
+      if (argc-i<=1) usage(argv[0]);
+      UserPrioFile=i;
       i+=1;
     }
     else if (IsArg(argv[i],"pool",1)) {
@@ -691,6 +697,42 @@ main(int argc, char* argv[])
     else PrintResList(ad);
   }
 
+  else if (UserPrioFile) {
+
+    const char * filename = argv[UserPrioFile+1];
+    FILE* file = safe_fopen_wrapper_follow(filename, "r");
+    if (file == NULL) {
+      fprintf(stderr, "Can't open file of userprio ads: %s\n", filename);
+      exit(1);
+    }
+
+    AttrList* ad=new AttrList();
+    bool is_eof = false; 
+    int error = 0;
+	if ( ! ad->InsertFromFile(file, is_eof, error) && error) {
+      fprintf(stderr, "Error %d reading userprio ads\n", error);
+      fclose(file);
+      exit(1);
+    }
+    fclose(file);
+
+    // if no details specified, show priorities
+    if ( ! DetailFlag) {
+       DetailFlag = DetailDefault;
+#ifdef DEBUG
+       DetailFlag |= DetailGroup;
+#endif
+    }
+    // if showing only prio, don't bother showing groups 
+    if ( ! (DetailFlag & ~DetailPrios) && GroupPrioIsMeaningless) {
+       if ( ! DashHier ) HierFlag = false;
+       HideGroups = !HierFlag;
+    }
+
+    if (LongFlag) ad->fPrint(stdout);
+    else ProcessInfo(ad,GroupRollup,HierFlag);
+
+  }
   else {  // list priorities
 
     Sock* sock;
@@ -1422,6 +1464,7 @@ static void usage(char* name) {
   fprintf( stderr, "usage: %s [options] [edit-option | display-options]\n"
      "\twhere [options] are\n"
      "\t\t-pool <host>\t\tUse host as the central manager to query\n"
+	 "\t\t-inputfile <file>\tDisplay priorities from <file>\n"
      "\t\t-help\t\t\tThis Screen\n"
      "\twhere [edit-option] is one of\n"
      "\t\t-resetusage <user>\tReset usage data for <user>\n"
@@ -1447,7 +1490,6 @@ static void usage(char* name) {
      "\t\t-grouporder\t\tDisplay groups first, then users\n"
      "\t\t-grouprollup\t\tGroup value are the sum of user values\n"
      "\t\t-long\t\t\tVerbose output (entire classads)\n"
-//     "\t\t-ads <file>\t\tFile of priority ads to display\n"
      , name );
   exit(1);
 }
