@@ -339,13 +339,13 @@ do
     if [ $# = 0 ]; then
 	break;
     fi
-    if [ $1 = "-c" ]; then
+    if [ "$1" = "-c" ]; then
 	exec $ARGS;
     fi
     if [ "$1" = "-lpthread" ]; then
 	print_warning=1
     fi
-    if [ "$1" = "-l" ] && [ $2 = "pthread" ]; then
+    if [ "$1" = "-l" ] && [ "$2" = "pthread" ]; then
 	print_warning=1
     fi
     shift
@@ -384,6 +384,10 @@ if [ $myname = "g77" ]; then
 fi 
 
 if [ $myname = "gfortran" ]; then
+	invoke_linker $ARGS -B$CONDOR_LD_DIR/
+fi 
+
+if [ $myname = "ifort" ]; then
 	invoke_linker $ARGS -B$CONDOR_LD_DIR/
 fi 
 
