@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+/*
+ * Copyright 2000-2012 Red Hat, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+<wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tns="http://grid.redhat.com/aviary-hadoop/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:hdp="http://hadoop.aviary.grid.redhat.com" xmlns:ns="http://common.aviary.grid.redhat.com" targetNamespace="http://grid.redhat.com/aviary-hadoop/" name="aviary-hadoop">
+	<wsdl:types>
+		<xsd:schema targetNamespace="http://grid.redhat.com/aviary-hadoop/">
+			<xsd:import schemaLocation="aviary-hadoop.xsd" namespace="http://hadoop.aviary.grid.redhat.com"/>
+		</xsd:schema>
+	</wsdl:types>
+	<wsdl:message name="StartNameNodeRequest">
+		<wsdl:part name="parameters" element="hdp:StartNameNode"/>
+	</wsdl:message>
+	<wsdl:message name="StartNameNodeResponse">
+		<wsdl:part name="parameters" element="hdp:StartNameNodeResponse"/>
+	</wsdl:message>
+	<wsdl:message name="StopNameNodeRequest">
+		<wsdl:part name="parameters" element="hdp:StopNameNode"/>
+	</wsdl:message>
+	<wsdl:message name="StopNameNodeResponse">
+		<wsdl:part name="parameters" element="hdp:StopNameNodeResponse"/>
+	</wsdl:message>
+	<wsdl:message name="GetNameNodeRequest">
+		<wsdl:part name="parameters" element="hdp:GetNameNode"/>
+	</wsdl:message>
+	<wsdl:message name="GetNameNodeResponse">
+		<wsdl:part name="parameters" element="hdp:GetNameNodeResponse"/>
+	</wsdl:message>
+	<wsdl:message name="StartDataNodeRequest">
+		<wsdl:part name="parameters" element="hdp:StartDataNode"/>
+	</wsdl:message>
+	<wsdl:message name="StartDataNodeResponse">
+		<wsdl:part name="parameters" element="hdp:StartDataNodeResponse"/>
+	</wsdl:message>
+	<wsdl:message name="StopDataNodeRequest">
+		<wsdl:part name="parameters" element="hdp:StopDataNode"/>
+	</wsdl:message>
+	<wsdl:message name="StopDataNodeResponse">
+		<wsdl:part name="parameters" element="hdp:StopDataNodeResponse"/>
+	</wsdl:message>
+	<wsdl:message name="GetDataNodeRequest">
+		<wsdl:part name="parameters" element="hdp:GetDataNode"/>
+	</wsdl:message>
+	<wsdl:message name="GetDataNodeResponse">
+		<wsdl:part name="parameters" element="hdp:GetDataNodeResponse"/>
+	</wsdl:message>
+	<wsdl:message name="StartJobTrackerRequest">
+		<wsdl:part name="parameters" element="hdp:StartJobTracker"/>
+	</wsdl:message>
+	<wsdl:message name="StartJobTrackerResponse">
+		<wsdl:part name="parameters" element="hdp:StartJobTrackerResponse"/>
+	</wsdl:message>
+	<wsdl:message name="StopJobTrackerRequest">
+		<wsdl:part name="parameters" element="hdp:StopJobTracker"/>
+	</wsdl:message>
+	<wsdl:message name="StopJobTrackerResponse">
+		<wsdl:part name="parameters" element="hdp:StopJobTrackerResponse"/>
+	</wsdl:message>
+	<wsdl:message name="GetJobTrackerRequest">
+		<wsdl:part name="parameters" element="hdp:GetJobTracker"/>
+	</wsdl:message>
+	<wsdl:message name="GetJobTrackerResponse">
+		<wsdl:part name="parameters" element="hdp:GetJobTrackerResponse"/>
+	</wsdl:message>
+	<wsdl:message name="StartTaskTrackerRequest">
+		<wsdl:part name="parameters" element="hdp:StartTaskTracker"/>
+	</wsdl:message>
+	<wsdl:message name="StartTaskTrackerResponse">
+		<wsdl:part name="parameters" element="hdp:StartTaskTrackerResponse"/>
+	</wsdl:message>
+	<wsdl:message name="StopTaskTrackerRequest">
+		<wsdl:part name="parameters" element="hdp:StopTaskTracker"/>
+	</wsdl:message>
+	<wsdl:message name="StopTaskTrackerResponse">
+		<wsdl:part name="parameters" element="hdp:StopTaskTrackerResponse"/>
+	</wsdl:message>
+	<wsdl:message name="GetTaskTrackerRequest">
+		<wsdl:part name="parameters" element="hdp:GetTaskTracker"/>
+	</wsdl:message>
+	<wsdl:message name="GetTaskTrackerResponse">
+		<wsdl:part name="parameters" element="hdp:GetTaskTrackerResponse"/>
+	</wsdl:message>
+	<wsdl:portType name="AviaryHadoop">
+		<wsdl:operation name="startNameNode">
+			<wsdl:input message="tns:StartNameNodeRequest"/>
+			<wsdl:output message="tns:StartNameNodeResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="stopNameNode">
+			<wsdl:input message="tns:StopNameNodeRequest"/>
+			<wsdl:output message="tns:StopNameNodeResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="getNameNode">
+			<wsdl:input message="tns:GetNameNodeRequest"/>
+			<wsdl:output message="tns:GetNameNodeResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="startDataNode">
+			<wsdl:input message="tns:StartDataNodeRequest"/>
+			<wsdl:output message="tns:StartDataNodeResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="stopDataNode">
+			<wsdl:input message="tns:StopDataNodeRequest"/>
+			<wsdl:output message="tns:StopDataNodeResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="getDataNode">
+			<wsdl:input message="tns:GetDataNodeRequest"/>
+			<wsdl:output message="tns:GetDataNodeResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="startJobTracker">
+			<wsdl:input message="tns:StartJobTrackerRequest"/>
+			<wsdl:output message="tns:StartJobTrackerResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="stopJobTracker">
+			<wsdl:input message="tns:StopJobTrackerRequest"/>
+			<wsdl:output message="tns:StopJobTrackerResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="getJobTracker">
+			<wsdl:input message="tns:GetJobTrackerRequest"/>
+			<wsdl:output message="tns:GetJobTrackerResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="startTaskTracker">
+			<wsdl:input message="tns:StartTaskTrackerRequest"/>
+			<wsdl:output message="tns:StartTaskTrackerResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="stopTaskTracker">
+			<wsdl:input message="tns:StopTaskTrackerRequest"/>
+			<wsdl:output message="tns:StopTaskTrackerResponse"/>
+		</wsdl:operation>
+		<wsdl:operation name="getTaskTracker">
+			<wsdl:input message="tns:GetTaskTrackerRequest"/>
+			<wsdl:output message="tns:GetTaskTrackerResponse"/>
+		</wsdl:operation>
+	</wsdl:portType>
+	<wsdl:binding name="AviaryHadoopSOAPBinding" type="tns:AviaryHadoop">
+		<soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+		<wsdl:operation name="startNameNode">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-hadoop/namenode/start"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="stopNameNode">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-hadoop/namenode/stop"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="getNameNode">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-hadoop/namenode/get"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="startDataNode">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-hadoop/datanode/start"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="stopDataNode">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-hadoop/datanode/stop"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="getDataNode">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-hadoop/datanode/get"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="startJobTracker">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-hadoop/jobtracker/start"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="stopJobTracker">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-hadoop/jobtracker/stop"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="getJobTracker">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-hadoop/jobtracker/get"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="startTaskTracker">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-hadoop/tasktracker/start"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="stopTaskTracker">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-hadoop/tasktracker/stop"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+		<wsdl:operation name="getTaskTracker">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-hadoop/tasktracker/get"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
+	</wsdl:binding>
+	<wsdl:service name="AviaryHadoopService">
+		<wsdl:port name="AviaryHadoopSOAPPort" binding="tns:AviaryHadoopSOAPBinding">
+			<soap:address location="http://localhost"/>
+		</wsdl:port>
+	</wsdl:service>
+</wsdl:definitions>
