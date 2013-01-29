@@ -685,6 +685,12 @@ One way of addressing the partitionable slot fragmentation problem is
 to periodically drain all jobs from fragmented machines so that they
 become defragmented.  
 The \Condor{defrag} daemon implements a configurable policy for doing that.
+Its implementation is targeted at machines configured to run whole-machine
+jobs and at machines that only have partitionable slots.
+The draining of a machine 
+configured to have both partitionable slots and static slots 
+would have a negative impact on single slot jobs running in static slots.
+
 To use this daemon,
 \MacroNI{DEFRAG} must be added to \MacroNI{DAEMON\_LIST},
 and the defragmentation policy must be configured.
