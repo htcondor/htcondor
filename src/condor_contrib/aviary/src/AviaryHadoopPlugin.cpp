@@ -118,7 +118,7 @@ AviaryHadoopPlugin::initialize()
             EXCEPT("%s on job is missing or not an integer", ATTR_JOB_STATUS);
         }
 
-        key.sprintf("%d.%d", id.cluster, id.proc);
+        key.formatstr("%d.%d", id.cluster, id.proc);
 
         processJob(key.Value(), ATTR_JOB_STATUS, value);
 

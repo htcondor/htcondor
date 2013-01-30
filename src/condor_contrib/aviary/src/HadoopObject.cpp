@@ -40,7 +40,7 @@ using namespace aviary::codec;
 string quote_it (const char *  pszIn)
 {
     string ret;
-    sprintf(ret,"\"%s\"", pszIn);
+    formatstr(ret,"\"%s\"", pszIn);
     return ret;
 }
 
@@ -97,9 +97,9 @@ HadoopObject::update(const ClassAd &ad)
     m_stats.System = m_stats.Machine;
 
     // debug
-    if (DebugFlags & D_FULLDEBUG) {
+    //if (DebugFlags & D_FULLDEBUG) {
         const_cast<ClassAd*>(&ad)->dPrint(D_FULLDEBUG|D_NOHEADER);
-    }
+    //}
 }
 
 int HadoopObject::start( tHadoopInit & hInit )
@@ -215,7 +215,7 @@ int HadoopObject::start( tHadoopInit & hInit )
         else
         {
             AbortTransaction();
-            sprintf ( m_lasterror, "Name Node %s Invalid or not running status %d", hInit.idref.id.c_str(), iStatus );
+            formatstr ( m_lasterror, "Name Node %s Invalid or not running status %d", hInit.idref.id.c_str(), iStatus );
             return false;
         }
             
@@ -253,7 +253,7 @@ int HadoopObject::start( tHadoopInit & hInit )
         {
             AbortTransaction();
             m_lasterror = "No valid Job Tracker ";
-            sprintf ( m_lasterror, "ID %s Invalid or not running status %d", hInit.idref.id.c_str(), iStatus );
+            formatstr ( m_lasterror, "ID %s Invalid or not running status %d", hInit.idref.id.c_str(), iStatus );
             return false;
         }
             
@@ -270,7 +270,7 @@ int HadoopObject::start( tHadoopInit & hInit )
     if (!hasInputScript)
     {
         AbortTransaction();
-        sprintf(m_lasterror, "Missing Script Input KNOB for type %s", hadoopType.c_str() );
+        formatstr(m_lasterror, "Missing Script Input KNOB for type %s", hadoopType.c_str() );
         return false;
     }
 
@@ -327,7 +327,7 @@ int HadoopObject::start( tHadoopInit & hInit )
     scheduler.needReschedule();
     
     // fill in the new cluster id
-    sprintf(hInit.newcluster,"%d",cluster);
+    formatstr(hInit.newcluster,"%d",cluster);
     
     return true;
     
@@ -388,7 +388,7 @@ bool HadoopObject::status (ClassAd* cAd, const tHadoopType & type, tHadoopJobSta
     
     hStatus.uptime = 0;
     
-    sprintf(hStatus.idref.id,"%d.%d", cluster, proc);
+    formatstr(hStatus.idref.id,"%d.%d", cluster, proc);
    
     cAd->LookupInteger( ATTR_Q_DATE, hStatus.qdate );
  
