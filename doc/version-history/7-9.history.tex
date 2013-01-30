@@ -91,6 +91,13 @@ See definition at section~\ref{param:DAGManUseStrict}.
 consistency when a single default/workflow log file is used.
 \Ticket{3456}
 
+\item Fixed a bug introduced in Condor 7.9.0 that caused the following
+parameters to not sort ads properly when they evaluated to True or False:
+\Macro{NEGOTIATOR\_PRE\_JOB\_RANK},
+\Macro{NEGOTIATOR\_POST\_JOB\_RANK}, \Macro{PREEMPTION\_RANK}, and
+\Macro{SCHEDD\_PREEMPTION\_RANK}.
+\Ticket{3468}
+
 \end{itemize}
 
 \noindent Known Bugs:
