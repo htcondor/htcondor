@@ -45,13 +45,13 @@ Toolkit to handle the X.509 proxies of jobs.
 bits on the copy.
 \Ticket{3028}
 
-\item \Condor{dagman} now issues a warning if any log file (either
-the default log file or the log file specified for a node job) is
-in \File{/tmp} (because this can cause DAGMan to fail).  This warning
-can be upgraded to a fatal error by setting the
-\MacroNI{DAGMAN\_USE\_STRICT} value to 1 (for log files that DAGMan
-actually monitors) or 2 (for all log files, whether DAGMan actually
-monitors them or not).
+\item By default, \Condor{dagman} now issues a fatal error
+if any log file, which is either
+the default log file or the log file specified for a node job,
+is in \File{/tmp}, because this can cause DAGMan to fail.
+This error can be downgraded to a warning by setting the
+configuration variable
+\MacroNI{DAGMAN\_USE\_STRICT} value to 0.
 \Ticket{1419}
 
 \item The \condor{collector} will accept and display collector ads for
