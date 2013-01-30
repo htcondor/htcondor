@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VisualStudioProject Keyword="Win32Proj" Version="9.00" ProjectType="Visual C++" Name="AviaryHadoopService" RootNamespace="service">
+<Platforms>
+<Platform Name="Win32"/>
+</Platforms>
+<ToolFiles/>
+<Configurations>
+<Configuration CharacterSet="1" IntermediateDirectory="$(ConfigurationName)" OutputDirectory="$(SolutionDir)$(ConfigurationName)" Name="Debug|Win32" ConfigurationType="2">
+<Tool Name="VCPreBuildEventTool"/>
+<Tool Name="VCCustomBuildTool"/>
+<Tool Name="VCXMLDataGeneratorTool"/>
+<Tool Name="VCWebServiceProxyGeneratorTool"/>
+<Tool Name="VCMIDLTool"/>
+<Tool DebugInformationFormat="4" Detect64BitPortabilityProblems="true" WarningLevel="3" UsePrecompiledHeader="0" RuntimeLibrary="3" BasicRuntimeChecks="3" MinimalRebuild="true" PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_DEPRECATE;AXIS2_DECLARE_EXPORT" Optimization="0" Name="VCCLCompilerTool" AdditionalIncludeDirectories=".;.\src;$(WSFCPP_HOME)\include;$(WSFCPP_HOME)\include\platforms"/>
+<Tool Name="VCManagedResourceCompilerTool"/>
+<Tool Name="VCResourceCompilerTool"/>
+<Tool Name="VCPreLinkEventTool"/>
+<Tool TargetMachine="1" SubSystem="1" GenerateDebugInformation="true" AdditionalLibraryDirectories="$(WSFCPP_HOME)\lib" LinkIncremental="2" AdditionalDependencies="wso2_wsf.lib wso2_wsf_security.lib axiom.lib axis2_engine.lib axutil.lib" Name="VCLinkerTool"/>
+<Tool Name="VCALinkTool"/>
+<Tool Name="VCManifestTool"/>
+<Tool Name="VCXDCMakeTool"/>
+<Tool Name="VCBscMakeTool"/>
+<Tool Name="VCFxCopTool"/>
+<Tool Name="VCAppVerifierTool"/>
+<Tool Name="VCWebDeploymentTool"/>
+<Tool Name="VCPostBuildEventTool"/>
+</Configuration>
+<Configuration WholeProgramOptimization="1" CharacterSet="1" IntermediateDirectory="$(ConfigurationName)" OutputDirectory="$(SolutionDir)$(ConfigurationName)" Name="Release|Win32" ConfigurationType="2">
+<Tool Name="VCPreBuildEventTool"/>
+<Tool Name="VCCustomBuildTool"/>
+<Tool Name="VCXMLDataGeneratorTool"/>
+<Tool Name="VCWebServiceProxyGeneratorTool"/>
+<Tool Name="VCMIDLTool"/>
+<Tool DebugInformationFormat="3" Detect64BitPortabilityProblems="true" WarningLevel="3" UsePrecompiledHeader="0" RuntimeLibrary="2" PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;_CRT_SECURE_NO_DEPRECATE;AXIS2_DECLARE_EXPORT" Name="VCCLCompilerTool" AdditionalIncludeDirectories=".;.\src;$(WSFCPP_HOME)\include;$(WSFCPP_HOME)\include\platforms"/>
+<Tool Name="VCManagedResourceCompilerTool"/>
+<Tool Name="VCResourceCompilerTool"/>
+<Tool Name="VCPreLinkEventTool"/>
+<Tool TargetMachine="1" EnableCOMDATFolding="2" OptimizeReferences="2" SubSystem="1" AdditionalLibraryDirectories="$(WSFCPP_HOME)\lib" GenerateDebugInformation="true" LinkIncremental="1" AdditionalDependencies="wso2_wsf.lib wso2_wsf_security.lib axiom.lib axis2_engine.lib axutil.lib" Name="VCLinkerTool"/>
+<Tool Name="VCALinkTool"/>
+<Tool Name="VCManifestTool"/>
+<Tool Name="VCXDCMakeTool"/>
+<Tool Name="VCBscMakeTool"/>
+<Tool Name="VCFxCopTool"/>
+<Tool Name="VCAppVerifierTool"/>
+<Tool Name="VCWebDeploymentTool"/>
+<Tool Name="VCPostBuildEventTool"/>
+</Configuration>
+</Configurations>
+<References/>
+<Files>
+<Filter Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx" Name="Source Files">
+<File RelativePath=".\AviaryHadoopService.cpp"/>
+<File RelativePath=".\AviaryHadoopServiceSkeleton.cpp"/>
+<File RelativePath=".\AviaryHadoopServiceMacro.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_StartTaskTracker.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_StartTaskTrackerResponse.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_StartDataNode.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_StartDataNodeResponse.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_GetTaskTracker.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_GetTaskTrackerResponse.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_StopJobTracker.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_StopJobTrackerResponse.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_GetJobTracker.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_GetJobTrackerResponse.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_StopTaskTracker.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_StopTaskTrackerResponse.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_StartNameNode.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_StartNameNodeResponse.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_GetDataNode.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_GetDataNodeResponse.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_StopNameNode.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_StopNameNodeResponse.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_GetNameNode.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_GetNameNodeResponse.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_StartJobTracker.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_StartJobTrackerResponse.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_StopDataNode.cpp"/>
+<File RelativePath=".\src\AviaryHadoop_StopDataNodeResponse.cpp"/>
+</Filter>
+<Filter Filter="h;hpp;hxx;hm;inl;inc;xsd" Name="Header Files">
+<File RelativePath=".\AviaryHadoopService.h"/>
+<File RelativePath=".\AviaryHadoopServiceSkeleton.h"/>
+<File RelativePath=".\src\AviaryHadoop_StartTaskTracker.h"/>
+<File RelativePath=".\src\AviaryHadoop_StartTaskTrackerResponse.h"/>
+<File RelativePath=".\src\AviaryHadoop_StartDataNode.h"/>
+<File RelativePath=".\src\AviaryHadoop_StartDataNodeResponse.h"/>
+<File RelativePath=".\src\AviaryHadoop_GetTaskTracker.h"/>
+<File RelativePath=".\src\AviaryHadoop_GetTaskTrackerResponse.h"/>
+<File RelativePath=".\src\AviaryHadoop_StopJobTracker.h"/>
+<File RelativePath=".\src\AviaryHadoop_StopJobTrackerResponse.h"/>
+<File RelativePath=".\src\AviaryHadoop_GetJobTracker.h"/>
+<File RelativePath=".\src\AviaryHadoop_GetJobTrackerResponse.h"/>
+<File RelativePath=".\src\AviaryHadoop_StopTaskTracker.h"/>
+<File RelativePath=".\src\AviaryHadoop_StopTaskTrackerResponse.h"/>
+<File RelativePath=".\src\AviaryHadoop_StartNameNode.h"/>
+<File RelativePath=".\src\AviaryHadoop_StartNameNodeResponse.h"/>
+<File RelativePath=".\src\AviaryHadoop_GetDataNode.h"/>
+<File RelativePath=".\src\AviaryHadoop_GetDataNodeResponse.h"/>
+<File RelativePath=".\src\AviaryHadoop_StopNameNode.h"/>
+<File RelativePath=".\src\AviaryHadoop_StopNameNodeResponse.h"/>
+<File RelativePath=".\src\AviaryHadoop_GetNameNode.h"/>
+<File RelativePath=".\src\AviaryHadoop_GetNameNodeResponse.h"/>
+<File RelativePath=".\src\AviaryHadoop_StartJobTracker.h"/>
+<File RelativePath=".\src\AviaryHadoop_StartJobTrackerResponse.h"/>
+<File RelativePath=".\src\AviaryHadoop_StopDataNode.h"/>
+<File RelativePath=".\src\AviaryHadoop_StopDataNodeResponse.h"/>
+</Filter>
+<Filter Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav" Name="Resource Files"/>
+</Files>
+<Globals/>
+</VisualStudioProject>

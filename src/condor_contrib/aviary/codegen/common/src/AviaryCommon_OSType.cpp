@@ -21,6 +21,7 @@
        #  if __GNUC_MINOR__ >= 6
        #pragma GCC diagnostic ignored "-Wenum-compare"
        #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+       #pragma GCC diagnostic ignored "-Wunused-but-set-parameter"
        #  endif
        #  if __GNUC_MINOR__ >= 7
        #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
