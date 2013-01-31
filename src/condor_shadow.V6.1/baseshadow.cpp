@@ -1541,14 +1541,10 @@ BaseShadow::handleUpdateJobAd( int sig )
 bool
 BaseShadow::jobWantsGracefulRemoval()
 {
-	bool job_wants_graceful_removal = false;
+	bool job_wants_graceful_removal = param_boolean("GRACEFULLY_REMOVE_JOBS", true);
 	ClassAd *thejobAd = getJobAd();
 	if( thejobAd ) {
-		if( param_boolean("JOBS_REQUEST_GRACEFUL_REMOVAL", false) ) {
-			thejobAd->LookupBool( ATTR_WANT_GRACEFUL_REMOVAL, job_wants_graceful_removal );
-		} else if( findSoftKillSig(thejobAd) != -1 || findRmKillSig(thejobAd) != -1 ) {
-			job_wants_graceful_removal = true;
-		}
+		thejobAd->LookupBool( ATTR_WANT_GRACEFUL_REMOVAL, job_wants_graceful_removal );
 	}
 	return job_wants_graceful_removal;
 }

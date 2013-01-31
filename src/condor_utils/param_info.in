@@ -10875,9 +10875,9 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd
 id=610
 
-[JOBS_REQUEST_GRACEFUL_REMOVAL]
+[GRACEFULLY_REMOVE_JOBS]
 aliases=
-default=false
+default=true
 version=7.9.0
 range=.*
 state=default
@@ -10885,7 +10885,7 @@ type=bool
 is_macro=false
 reconfig=true
 customization=seldom
-friendly_name=Allow jobs to determine if they want graceful removal if they define a custom kill signal
+friendly_name=Determines if jobs should be removed gracefully by default.
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,baseshadow
