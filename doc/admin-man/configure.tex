@@ -5121,15 +5121,19 @@ MAX_JOBS_RUNNING	= \
 \label{param:MaxTransferInputMB}
 \item[\Macro{MAX\_TRANSFER\_INPUT\_MB}]
   This integer expression specifies the maximum allowed total size in
-  megabytes of the input files that are transferred for a job.  This
-  expression does not apply to grid universe, standard universe, or
-  files transferred via file transfer plugins.  The expression may
-  refer to attributes of the job.  The special value -1 indicates no
-  limit.  The default is -1.  The job may override the system setting
+  Mbytes of the input files that are transferred for a job.  This
+  expression does \emph{not} apply to grid universe, standard universe, or
+  files transferred via file transfer plug-ins.  The expression may
+  refer to attributes of the job.  
+  The special value \Expr{-1} indicates no limit.
+  The default value is -1.
+  The job may override the system setting
   by specifying its own limit using the \Attr{MaxTransferInputMB}
-  attribute.  If the observed size of all input files at submit time
+  attribute.  
+  If the observed size of all input files at submit time
   is larger than the limit, the job will be immediately placed on hold
-  with hold code 32.  If the job passes this initial test, but the
+  with a \Attr{HoldReasonCode} value of 32.
+  If the job passes this initial test, but the
   size of the input files increases or the limit decreases so that the
   limit is violated, the job will be placed on hold at the time when
   the file transfer is attempted.
@@ -5137,15 +5141,18 @@ MAX_JOBS_RUNNING	= \
 \label{param:MaxTransferOutputMB}
 \item[\Macro{MAX\_TRANSFER\_OUTPUT\_MB}]
   This integer expression specifies the maximum allowed total size in
-  megabytes of the output files that are transferred for a job.  This
-  expression does not apply to grid universe, standard universe, or
-  files transferred via file transfer plugins.  The expression may
-  refer to attributes of the job.  The special value -1 indicates no
-  limit.  The default is -1.  The job may override the system setting
+  Mbytes of the output files that are transferred for a job.  This
+  expression does \emph{not} apply to grid universe, standard universe, or
+  files transferred via file transfer plug-ins.  
+  The expression may refer to attributes of the job.
+  The special value \Expr{-1} indicates no limit.  
+  The default value is -1.
+  The job may override the system setting
   by specifying its own limit using the \Attr{MaxTransferOutputMB}
   attribute.  If the total size of the job's output files to be
   transferred is larger than the limit, the job will be placed on hold
-  with hold code 33.  The output will be transferred up to the point
+  with a \Attr{HoldReasonCode} value of 33.
+  The output will be transferred up to the point
   when the limit is hit, so some files may be fully transferred, some
   partially, and some not at all.
 
