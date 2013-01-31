@@ -34,6 +34,7 @@ void DaemonCollectable::update(const ClassAd& ad)
     DaemonCollectable& m_stats = *this;
     m_stats.Pool = getPoolName();
     STRING(Name);
+    STRING(MyType);
     STRING(MyAddress);
     STRING(CondorPlatform);
     STRING(CondorVersion);
@@ -125,6 +126,7 @@ void Submitter::update(const ClassAd& ad)
     MGMT_DECLARATIONS;
     Submitter& m_stats = *this;
     STRING(Name);
+    STRING(MyType);
     STRING(Machine);
     STRING(ScheddName);
     INTEGER(RunningJobs);

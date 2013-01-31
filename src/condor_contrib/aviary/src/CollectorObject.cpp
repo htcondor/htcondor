@@ -80,9 +80,12 @@ bool updateCollectable(const ClassAd& ad, CollectablesT& collectables)
         CollectableT* collectable = new CollectableT;
         collectable->update(ad);
         collectables.insert(make_pair(name,collectable));
+        dprintf(D_FULLDEBUG, "Created new %s Collectable for '%s'\n",collectable->MyType.c_str(),collectable->Name.c_str());
     }
     else {
-        (*it).second->update(ad);
+        CollectableT* collectable = (*it).second;
+        collectable->update(ad);
+        dprintf(D_FULLDEBUG, "Updated %s Collectable '%s'\n",collectable->MyType.c_str(),collectable->Name.c_str());
     }
     return true;
 }
@@ -92,25 +95,40 @@ bool invalidateCollectable(const ClassAd& ad, CollectablesT& collectables)
 {
     string name;
     if (!ad.LookupString(ATTR_NAME,name)) {
+        dprintf(D_ALWAYS, "Unknown Collectable name for invalidation\n");
         return false;
     }
     typename CollectablesT::iterator it = collectables.find(name);
     if (it == collectables.end()) {
-       return false;
+        dprintf(D_ALWAYS, "No Collectable '%s' to invalidate\n",name.c_str());
+        return false;
     }
     else {
+        dprintf(D_FULLDEBUG, "Deleted %s Collectable for '%s'\n",(*it).second->MyType.c_str(),(*it).second->Name.c_str());
+        delete (*it).second;
         collectables.erase(it);
     }
     return true;
 }
 
 // slots are special due to their dynamic/partitionable links
+// and high volume
 bool updateSlot(const ClassAd& ad, SlotMapType& slots)
 {
     
     bool status = false;
     status = updateCollectable<SlotMapType,Slot>(ad, slots);
     //TODO: fix association with other slots
+    //TODO: update birthdate map
+    return status;
+}
+
+// masters like slots are high volume
+bool updateMaster(const ClassAd& ad, MasterMapType& masters)
+{
+    bool status = false;
+    status = updateCollectable<MasterMapType,Master>(ad, masters);
+    //TODO: update birthdate map
     return status;
 }
 
@@ -118,7 +136,16 @@ bool invalidateSlot(const ClassAd& ad, SlotMapType& slots)
 {
     bool status = false;
     status = invalidateCollectable<SlotMapType>(ad, slots);
-    // TODO: disassociate links to dynamic slots
+    //TODO: disassociate links to dynamic slots
+    //TODO: update birthdate map
+    return status;
+}
+
+bool invalidateMaster(const ClassAd& ad, MasterMapType& masters)
+{
+    bool status = false;
+    status = invalidateCollectable<MasterMapType>(ad, masters);
+    //TODO: update birthdate map
     return status;
 }
 
@@ -132,7 +159,7 @@ CollectorObject::update(int command, const ClassAd& ad)
             status = updateCollectable<CollectorMapType,Collector>(ad, collectors);
             break;
         case UPDATE_MASTER_AD:
-            status = updateCollectable<MasterMapType,Master>(ad, masters);
+            status = updateMaster(ad, masters);
             break;
         case UPDATE_NEGOTIATOR_AD:
             status = updateCollectable<NegotiatorMapType,Negotiator>(ad, negotiators);
@@ -162,7 +189,7 @@ CollectorObject::invalidate(int command, const ClassAd& ad)
             status = invalidateCollectable<CollectorMapType>(ad, collectors);
             break;
         case INVALIDATE_MASTER_ADS:
-            status = invalidateCollectable<MasterMapType>(ad, masters);
+            status = invalidateMaster(ad, masters);
             break;
         case INVALIDATE_NEGOTIATOR_ADS:
             status = invalidateCollectable<NegotiatorMapType>(ad, negotiators);
@@ -251,16 +278,44 @@ CollectorObject::findAttribute(AdTypes daemon_type, const string& name, const st
     // birdbath borrow
     CollectorEngine& engine = CollectorDaemon::getCollector();
     AdNameHashKey hash_key;
-    hash_key.name = name;
-    // grab the actual dotted quad
-    Sinful sin_str(ip_addr.c_str());
-    hash_key.ip_addr = sin_str.getHost();
+    // distill the daemon-specific hashkey using 
+    // the crazy legacy logic :-(
+    if (daemon_type == STARTD_AD || daemon_type == SCHEDD_AD) {
+            Sinful sin_str(ip_addr.c_str());
+            hash_key.name = name;
+            hash_key.ip_addr = sin_str.getHost();
+    }
+    else {
+        if (daemon_type == COLLECTOR_AD) {
+            size_t found = name.rfind("@");
+            if (found!=string::npos) {
+                hash_key.name = name.substr(found+1,name.length());
+            }
+        }
+        else {
+            hash_key.name = name;
+        }
+        hash_key.ip_addr = "";
+    }
+
     ClassAd* ad = NULL;
     ad = engine.lookup(daemon_type,hash_key);
     if (ad) {
-        m_codec->classAdToMap(*ad,attr_map);
+        if (attr_map.empty()) {
+            // load all the ad's attributes
+            m_codec->classAdToMap(*ad,attr_map);
+        }
+        else {
+            // pick off the attributes requested
+            for (AttributeMapIterator it = attr_map.begin(); it!=attr_map.end(); it++) {
+                m_codec->addAttributeToMap(*ad,(*it).first.c_str(),attr_map);
+            }
+        }
         return true;
     }
+
+    dprintf(D_FULLDEBUG, "Unable to find Collectable ClassAd for type '%s' using '%s' and '%s'\n",
+            AdTypeToString(daemon_type),hash_key.name.Value(),hash_key.ip_addr.Value());
 
     return false;
 }

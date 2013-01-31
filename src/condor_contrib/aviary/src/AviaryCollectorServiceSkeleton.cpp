@@ -18,6 +18,9 @@
 #include "condor_common.h"
 #include "condor_adtypes.h"
 
+// c++ includes
+#include <algorithm>
+
 // axis2 includes
 #include "Environment.h"
 
@@ -62,7 +65,9 @@ typedef vector<AttributeResponse*> AttrResponseList;
 typedef std::map<int,AdTypes> AdMapType;
 AdMapType ad_type_map;
 
-AdTypes mapAdTypetoResourceType(int res_type) {
+// private local impl START
+
+AdTypes mapResourceTypeToAdType(int res_type) {
     AdTypes result = NO_AD;
     if (ad_type_map.empty()) {
         ad_type_map[ResourceType_ANY] =  ANY_AD;
@@ -128,11 +133,148 @@ void loadResults(CollectableMapT& cmt, RequestT* request, ResponseT* response)
     }
 }
 
+template <class DateMapT>
+bool dateCompare(const DateMapT& x, const DateMapT& y) {
+  return x.first <= y.first;
+}
+
+// need a way to step over qdate dupes when a specific offset comes in
+// treat name/address as the secondary "key"
+bool advanceDateIndex(DaemonCollectable* index, ResourceID* offset) {
+    bool advance = false;
+
+    // quick check
+    if (index->DaemonStartTime != offset->getBirthdate()) {
+        return advance;
+    }
+
+    // now see how specific the offset is
+    if (!offset->isNameNil() && !offset->getName().empty()) {
+        advance = (index->Name == offset->getName());
+    }
+    if (!offset->isAddressNil() && !offset->getAddress().empty()) {
+        advance = (index->MyAddress == offset->getAddress());
+    }
+
+    return advance;
+}
+
+template <class CollectableBirthdateMapT, class CollectableMapT, class RequestT, class ResponseT>
+void pagedResults(CollectableBirthdateMapT& birthdate_map, CollectableMapT& collectable_map, 
+                  RequestT* request, ResponseT* response)
+{
+    ResourceID* offset = NULL;
+    ScanMode* mode = NULL;
+
+    int size = request->getSize();
+    int bdate;
+    bool scan_back = false;
+
+    // some fast track stuff... should be empty together
+    if (birthdate_map.empty() && collectable_map.empty()) {
+            response->setRemaining(0);
+            return;
+    }
+
+    if (!request->isOffsetNil()) {
+        offset = request->getOffset();
+        bdate = offset->getBirthdate();
+    }
+
+    if (!request->isModeNil()) {
+        mode = request->getMode();
+    }
+
+    // see if we are scanning using a qdate index
+    if (mode) {
+
+        typename CollectableBirthdateMapT::iterator it, start, last;
+        int i=0;
+
+        scan_back = mode->getScanModeEnum() == ScanMode_BEFORE;
+
+        // BEFORE mode
+        if (scan_back) {
+            if (offset) {
+                start = max_element(
+                            birthdate_map.begin(),
+                            birthdate_map.upper_bound(
+                                offset->getBirthdate()
+                            ),
+                            dateCompare<typename CollectableBirthdateMapT::value_type>
+                        );
+            }
+            else {
+                start = --birthdate_map.end();
+            }
+            it=last=start;
+            if (bdate>=(*it).second->DaemonStartTime && bdate>0)  {
+                do {
+                    if (!advanceDateIndex((*it).second,offset)) {
+                        CollectableCodec codec(provider->getEnv());
+                        response->addResults(codec.encode((*it).second,false));
+                        i++;
+                    }
+                    last = it;
+                }
+                while (birthdate_map.begin()!=it-- && i<size);
+            }
+            response->setRemaining(distance(birthdate_map.begin(),last));
+        }
+        // AFTER mode
+        else {
+            if (offset) {
+                start = birthdate_map.upper_bound(offset->getBirthdate());
+            }
+            else {
+                start = birthdate_map.begin();
+            }
+            it = --birthdate_map.end();
+            // TODO: integer rollover, but interop of xsd unsignedInt?
+            if (bdate<it->second->DaemonStartTime && bdate<INT_MAX)  {
+                for (it=start; it!=birthdate_map.end() && i<size; it++) {
+                     if (!advanceDateIndex((*it).second,offset)) {
+                        CollectableCodec codec(provider->getEnv());
+                        response->addResults(codec.encode((*it).second,false));
+                        i++;
+                     }
+                }
+            }
+            response->setRemaining(i?distance(it,birthdate_map.end()):0);
+        }
+
+        return;
+    }
+
+    // otherwise it is a lexical scan of the collectable
+    typename CollectableMapT::iterator it,start;
+    if (offset) {
+        start = collectable_map.find(offset->getName().c_str());
+    }
+    else {
+        start = collectable_map.begin();
+    }
+
+    // bi-directional iterator
+    int i=0;
+    for (it=start; it!=collectable_map.end() && i<size; it++)
+    {
+        CollectableCodec codec(provider->getEnv());
+        response->addResults(codec.encode((*it).second,false));
+        i++;
+    }
+
+    response->setRemaining(distance(it,collectable_map.end()));
+
+}
+
+// public RPC methods START
+
 GetCollectorResponse* AviaryCollectorServiceSkeleton::getCollector(MessageContext* /*outCtx*/ ,GetCollector* _getCollector)
 {
     /* TODO fill this with the necessary business logic */
     GetCollectorResponse* response = new GetCollectorResponse;
-    string error;
+
     CollectorObject* co = CollectorObject::getInstance();
 
     loadResults<AviaryCommon::Collector,CollectorMapType,GetCollector,GetCollectorResponse>(co->collectors,_getCollector,response);
@@ -144,7 +286,7 @@ GetMasterResponse* AviaryCollectorServiceSkeleton::getMaster(MessageContext* /*o
 {
     /* TODO fill this with the necessary business logic */
     GetMasterResponse* response = new GetMasterResponse;
-    string error;
+
     CollectorObject* co = CollectorObject::getInstance();
     
     loadResults<AviaryCommon::Master,MasterMapType,GetMaster,GetMasterResponse>(co->masters,_getMaster,response);
@@ -156,7 +298,7 @@ GetNegotiatorResponse* AviaryCollectorServiceSkeleton::getNegotiator(MessageCont
 {
     /* TODO fill this with the necessary business logic */
     GetNegotiatorResponse* response = new GetNegotiatorResponse;
-    string error;
+
     CollectorObject* co = CollectorObject::getInstance();
     
     loadResults<AviaryCommon::Negotiator,NegotiatorMapType,GetNegotiator,GetNegotiatorResponse>(co->negotiators,_getNegotiator,response);
@@ -168,7 +310,7 @@ GetSlotResponse* AviaryCollectorServiceSkeleton::getSlot(MessageContext* /*outCt
 {
     /* TODO fill this with the necessary business logic */
     GetSlotResponse* response = new GetSlotResponse;
-    string error;
+
     CollectorObject* co = CollectorObject::getInstance();
     
     loadResults<AviaryCommon::Slot,SlotMapType,GetSlot,GetSlotResponse>(co->slots,_getSlot,response);
@@ -180,7 +322,7 @@ GetSchedulerResponse* AviaryCollectorServiceSkeleton::getScheduler(MessageContex
 {
     /* TODO fill this with the necessary business logic */
     GetSchedulerResponse* response = new GetSchedulerResponse;
-    string error;
+
     CollectorObject* co = CollectorObject::getInstance();
     
     loadResults<AviaryCommon::Scheduler,SchedulerMapType,GetScheduler,GetSchedulerResponse>(co->schedulers,_getScheduler,response);
@@ -192,7 +334,7 @@ GetSubmitterResponse* AviaryCollectorServiceSkeleton::getSubmitter(MessageContex
 {
     /* TODO fill this with the necessary business logic */
     GetSubmitterResponse* response = new GetSubmitterResponse;
-    string error;
+
     CollectorObject* co = CollectorObject::getInstance();
     
     loadResults<AviaryCommon::Submitter,SubmitterMapType,GetSubmitter,GetSubmitterResponse>(co->submitters,_getSubmitter,response);
@@ -205,7 +347,7 @@ GetAttributesResponse* AviaryCollectorServiceSkeleton::getAttributes(MessageCont
 {
     /* TODO fill this with the necessary business logic */
     GetAttributesResponse* response = new GetAttributesResponse;
-    string error;
+
     CollectorObject* co = CollectorObject::getInstance();
 
     AttrRequestList* attr_req_list = _getAttributes->getIds();
@@ -214,7 +356,7 @@ GetAttributesResponse* AviaryCollectorServiceSkeleton::getAttributes(MessageCont
         AttributeRequest* attr_req = (*it);
         ResourceID* res_id = attr_req->getId();
         AttrResponseList attr_resp_list;
-        AdTypes res_type = mapAdTypetoResourceType(res_id->getResource()->getResourceTypeEnum());
+        AdTypes res_type = mapResourceTypeToAdType(res_id->getResource()->getResourceTypeEnum());
 
         AttributeMapType attr_map;
         // if they have supplied attribute names pre-load our map
@@ -225,29 +367,30 @@ GetAttributesResponse* AviaryCollectorServiceSkeleton::getAttributes(MessageCont
             }
         }
 
-        co->findAttribute(res_type, res_id->getName(), res_id->getAddress(),attr_map);
-        AviaryCommon::Attributes* attrs = new AviaryCommon::Attributes;
-        mapToXsdAttributes(attr_map,attrs);
+        if (co->findAttribute(res_type, res_id->getName(), res_id->getAddress(),attr_map)) {
+            AviaryCommon::Attributes* attrs = new AviaryCommon::Attributes;
+            mapToXsdAttributes(attr_map,attrs);
 
-        AttributeResponse* attr_resp = new AttributeResponse;
-        // caa't rely on copy ctor for this
-        ResourceID* copy_res_id = new ResourceID;
-        copy_res_id->setResource(new ResourceType(res_id->getResource()->getResourceTypeEnum()));
-        if (!res_id->isPoolNil() && !res_id->getPool().empty()) {
-            copy_res_id->setPool(res_id->getPool());
+            AttributeResponse* attr_resp = new AttributeResponse;
+            // caa't rely on copy ctor for this
+            ResourceID* copy_res_id = new ResourceID;
+            copy_res_id->setResource(new ResourceType(res_id->getResource()->getResourceTypeEnum()));
+            if (!res_id->isPoolNil() && !res_id->getPool().empty()) {
+                copy_res_id->setPool(res_id->getPool());
+            }
+            copy_res_id->setName(res_id->getName());
+            copy_res_id->setAddress(res_id->getAddress());
+            if (!res_id->isSub_typeNil() && !res_id->getSub_type().empty()) {
+                copy_res_id->setSub_type(res_id->getSub_type());
+            }
+            copy_res_id->setBirthdate(res_id->getBirthdate());
+            attr_resp->setId(copy_res_id);
+            attr_resp->setAd(attrs);
+            Status* status = new Status;
+            status->setCode(new StatusCodeType("OK"));
+            attr_resp->setStatus(status);
+            response->addResults(attr_resp);
         }
-        copy_res_id->setName(res_id->getName());
-        copy_res_id->setAddress(res_id->getAddress());
-        if (!res_id->isSub_typeNil() && !res_id->getSub_type().empty()) {
-            copy_res_id->setSub_type(res_id->getSub_type());
-        }
-        copy_res_id->setBirthdate(res_id->getBirthdate());
-        attr_resp->setId(copy_res_id);
-        attr_resp->setAd(attrs);
-        Status* status = new Status;
-        status->setCode(new StatusCodeType("OK"));
-        attr_resp->setStatus(status);
-        response->addResults(attr_resp);
     }
 
     return response;
@@ -257,11 +400,23 @@ GetAttributesResponse* AviaryCollectorServiceSkeleton::getAttributes(MessageCont
 GetMasterIDResponse* AviaryCollectorServiceSkeleton::getMasterID(MessageContext* /*outCtx*/ ,GetMasterID* _getMasterID)
 {
     /* TODO fill this with the necessary business logic */
-    return (GetMasterIDResponse*)NULL;
+    GetMasterIDResponse* response = new GetMasterIDResponse;
+
+    CollectorObject* co = CollectorObject::getInstance();
+
+    pagedResults<MasterDateMapType,MasterMapType,GetMasterID,GetMasterIDResponse>(co->master_ids,co->masters,_getMasterID,response);
+
+    return response;
 }
 
 GetSlotIDResponse* AviaryCollectorServiceSkeleton::getSlotID(MessageContext* /*outCtx*/ ,GetSlotID* _getSlotID)
 {
     /* TODO fill this with the necessary business logic */
-    return (GetSlotIDResponse*)NULL;
+    GetSlotIDResponse* response = new GetSlotIDResponse;
+
+    CollectorObject* co = CollectorObject::getInstance();
+
+    pagedResults<SlotDateMapType,SlotMapType,GetSlotID,GetSlotIDResponse>(co->slot_ids,co->slots,_getSlotID,response);
+
+    return response;
 }

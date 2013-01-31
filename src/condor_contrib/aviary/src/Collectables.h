@@ -31,6 +31,7 @@ namespace collector {
 
     struct Collectable{
         string Name;
+        string MyType;
         virtual void update(const ClassAd& ad) = 0;
     };
     

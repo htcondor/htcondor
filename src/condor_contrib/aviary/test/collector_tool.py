@@ -41,6 +41,7 @@ DEFAULTS = {'wsdl':'file:/var/lib/condor/aviary/services/collector/aviary-collec
 plugins = []
 logging.basicConfig(level=logging.CRITICAL)
 cli_url = None
+cli_names = None
 
 class AviaryClient:
 
@@ -74,12 +75,15 @@ class CollectorCtrl(cmd.Cmd):
         return stripped
 
     def do_attributes(self,line):
+        res_id = None
         response = None
         the_client = None
         op_args = []
+        names = []
+        if cli_names:
+            names = cli_names
         args = line.split()
-        target_op = "getAttributes"
-        the_client = self.aviary.getClient(target_op)
+        the_client = self.aviary.getClient("getAttributes")
         for arg in args:
             res_id = the_client.factory.create("ns1:ResourceID")
             try:
@@ -89,16 +93,18 @@ class CollectorCtrl(cmd.Cmd):
                 (res_id.name,res_id.address) = arg.split("/")
                 res_id.address = self._strip_sinful(res_id.address)
             except (ValueError, AttributeError), e:
-                pass
+                print e
             res_id.resource = the_client.factory.create("ns1:ResourceType")
             res_id.resource = self.nodetype.upper()
-            op_args.append({'id':res_id})
-        func = getattr(the_client.service, target_op, None)
+            op_args.append({'id':res_id, 'names':names})
+        if not res_id:
+            print "need at least one ResourceID name/host for attribute lookup"
+            return
         try:
-            if callable(func):
-                response = func(op_args)
+            response = the_client.service.getAttributes(op_args)
         except Exception, e:
             print e
+            return
         if response:
             for r in response:
                 print r.id
@@ -153,7 +159,8 @@ class AviaryCollectorTool(cmd.Cmd):
     verbose = DEFAULTS['verbose']
     base_url = 'http://'+host+':'+port
     bin_file = ''
-    
+    names = []
+
     def set_base_url(self):
         self.base_url = 'http://'+self.host+':'+self.port
     
@@ -188,7 +195,14 @@ class AviaryCollectorTool(cmd.Cmd):
             logging.getLogger('suds.client').setLevel(logging.DEBUG)
         print 'verbose:', self.verbose
 
-    _AVAILABLE_CMDS = ('attributes','summary')
+    def do_names(self, line):
+        "view/edit attribute names"
+        if line:
+            self.names = line.split(',')
+        cli_names = self.names
+        print cli_names
+
+    _AVAILABLE_CMDS = ('attributes')
     def completedefault(self, text, line, begidx, endidx):
         return [i for i in self._AVAILABLE_CMDS if i.startswith(text)]
 
@@ -223,14 +237,22 @@ class AviaryCollectorTool(cmd.Cmd):
         return True
 
 if __name__ == '__main__':
+
+    def names_callback(option, opt, value, parser):
+        setattr(parser.values, option.dest, value.split(','))
+
     if len(argv) > 1:
-        parser = build_basic_parser('Retrieve HTCondor collector data remotely via SOAP.','http://localhost:9090/services/collector/')
+        parser = build_basic_parser('Retrieve HTCondor collector data remotely via SOAP.','http://localhost:9000/services/collector/')
+        parser.add_option('-n','--names', type='string',
+                  action='callback', callback=names_callback, help="comma-separated list of attribute names to retrieve")
         (opts,args) =  parser.parse_args()
         tool = AviaryCollectorTool()
         if opts.verbose:
             tool.do_verbose(True)
         if opts.url:
             cli_url = opts.url
+        if opts.names:
+            cli_names = opts.names
         tool.onecmd(' '.join(args))
     else:
         AviaryCollectorTool().cmdloop()

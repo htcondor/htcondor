@@ -32,6 +32,9 @@ using namespace aviary::codec;
 namespace aviary {
 namespace collector {
 
+typedef multimap<int,Slot*> SlotDateMapType;
+typedef multimap<int,Master*> MasterDateMapType;
+
 typedef map<string,Collector*> CollectorMapType;
 typedef map<string,Master*> MasterMapType;
 typedef map<string,Negotiator*> NegotiatorMapType;
@@ -79,6 +82,9 @@ public:
     SchedulerMapType schedulers;
     SlotMapType slots;
     SubmitterMapType submitters;
+
+    SlotDateMapType slot_ids;
+    MasterDateMapType master_ids;
 
 private:
     string m_address;
