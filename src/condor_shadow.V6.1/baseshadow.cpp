@@ -1544,7 +1544,11 @@ BaseShadow::jobWantsGracefulRemoval()
 	bool job_wants_graceful_removal = false;
 	ClassAd *thejobAd = getJobAd();
 	if( thejobAd ) {
-		thejobAd->LookupBool( ATTR_WANT_GRACEFUL_REMOVAL, job_wants_graceful_removal );
+		if( param_boolean("JOBS_REQUEST_GRACEFUL_REMOVAL", false) ) {
+			thejobAd->LookupBool( ATTR_WANT_GRACEFUL_REMOVAL, job_wants_graceful_removal );
+		} else if( findSoftKillSig(thejobAd) != -1 || findRmKillSig(thejobAd) != -1 ) {
+			job_wants_graceful_removal = true;
+		}
 	}
 	return job_wants_graceful_removal;
 }
