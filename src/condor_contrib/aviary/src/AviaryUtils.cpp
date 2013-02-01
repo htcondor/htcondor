@@ -224,25 +224,31 @@ void aviary::util::mapToXsdAttributes(const aviary::codec::AttributeMapType& _ma
         AviaryAttribute* codec_attr = (AviaryAttribute*)(*i).second;
         AviaryCommon::Attribute* attr = new AviaryCommon::Attribute;
         attr->setName((*i).first);
-        AviaryCommon::AttributeType* attr_type = new AviaryCommon::AttributeType;
-        switch (codec_attr->getType()) {
-            case AviaryAttribute::INTEGER_TYPE:
-                attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_INTEGER);
-                break;
-            case AviaryAttribute::FLOAT_TYPE:
-                attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_FLOAT);
-                break;
-            case AviaryAttribute::STRING_TYPE:
-                attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_STRING);
-                break;
-            case AviaryAttribute::EXPR_TYPE:
-                attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_EXPRESSION);
-                break;
-            default:
-                attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_UNDEFINED);
+        AviaryCommon::AttributeType* attr_type = new AviaryCommon::AttributeType(AviaryCommon::AttributeType_UNDEFINED);
+        if (codec_attr) {
+            switch (codec_attr->getType()) {
+                case AviaryAttribute::INTEGER_TYPE:
+                    attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_INTEGER);
+                    break;
+                case AviaryAttribute::FLOAT_TYPE:
+                    attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_FLOAT);
+                    break;
+                case AviaryAttribute::STRING_TYPE:
+                    attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_STRING);
+                    break;
+                case AviaryAttribute::EXPR_TYPE:
+                    attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_EXPRESSION);
+                    break;
+                default:
+                    attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_UNDEFINED);
+            }
+            attr->setType(attr_type);
+            attr->setValue(codec_attr->getValue());
         }
-        attr->setType(attr_type);
-        attr->setValue(codec_attr->getValue());
+        else {
+            //unknown/undefined attribute
+            attr->setValue("UNDEFINED");
+        }
         _attrs->addAttrs(attr);
     }
 }

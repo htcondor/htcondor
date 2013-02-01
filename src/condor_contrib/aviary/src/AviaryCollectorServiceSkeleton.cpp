@@ -17,6 +17,7 @@
 // condor includes
 #include "condor_common.h"
 #include "condor_adtypes.h"
+#include "condor_attributes.h"
 
 // c++ includes
 #include <algorithm>
@@ -358,23 +359,39 @@ GetAttributesResponse* AviaryCollectorServiceSkeleton::getAttributes(MessageCont
         AttrResponseList attr_resp_list;
         AdTypes res_type = mapResourceTypeToAdType(res_id->getResource()->getResourceTypeEnum());
 
-        AttributeMapType attr_map;
+        AttributeMapType requested_attr_map,resource_attr_map;
         // if they have supplied attribute names pre-load our map
         if (!attr_req->isNamesNil() && attr_req->getNames()!=0) {
             vector<string*>* name_list = attr_req->getNames();
             for (vector<string*>::iterator nit = name_list->begin();nit!=name_list->end();nit++) {
-                attr_map[*(*nit)] = NULL;
+                requested_attr_map[*(*nit)] = NULL;
             }
         }
 
-        if (co->findAttribute(res_type, res_id->getName(), res_id->getAddress(),attr_map)) {
+        AttributeResponse* attr_resp = new AttributeResponse;
+        ResourceID* copy_res_id = new ResourceID;
+        copy_res_id->setResource(new ResourceType(res_id->getResource()->getResourceTypeEnum()));
+        if (co->findAttribute(res_type, res_id->getName(), res_id->getAddress(),
+                requested_attr_map,resource_attr_map)) {
             AviaryCommon::Attributes* attrs = new AviaryCommon::Attributes;
-            mapToXsdAttributes(attr_map,attrs);
+            mapToXsdAttributes(requested_attr_map,attrs);
 
-            AttributeResponse* attr_resp = new AttributeResponse;
-            // caa't rely on copy ctor for this
-            ResourceID* copy_res_id = new ResourceID;
-            copy_res_id->setResource(new ResourceType(res_id->getResource()->getResourceTypeEnum()));
+            // build from the resource id map in hand
+            copy_res_id->setPool(co->getPool());
+            copy_res_id->setName(resource_attr_map[ATTR_NAME]->getValue());
+            copy_res_id->setAddress(resource_attr_map[ATTR_MY_ADDRESS]->getValue());
+            if (!res_id->isSub_typeNil() && !res_id->getSub_type().empty()) {
+                copy_res_id->setSub_type(res_id->getSub_type());
+            }
+            copy_res_id->setBirthdate(atoi(resource_attr_map[ATTR_DAEMON_START_TIME]->getValue()));
+            attr_resp->setId(copy_res_id);
+            attr_resp->setAd(attrs);
+            Status* status = new Status;
+            status->setCode(new StatusCodeType("OK"));
+            attr_resp->setStatus(status);
+        }
+        else {
+            // no match so just reflect back the supplied fields we were given
             if (!res_id->isPoolNil() && !res_id->getPool().empty()) {
                 copy_res_id->setPool(res_id->getPool());
             }
@@ -383,14 +400,16 @@ GetAttributesResponse* AviaryCollectorServiceSkeleton::getAttributes(MessageCont
             if (!res_id->isSub_typeNil() && !res_id->getSub_type().empty()) {
                 copy_res_id->setSub_type(res_id->getSub_type());
             }
-            copy_res_id->setBirthdate(res_id->getBirthdate());
+            if (!res_id->isBirthdateNil()) {
+                copy_res_id->setBirthdate(res_id->getBirthdate());
+            }
             attr_resp->setId(copy_res_id);
-            attr_resp->setAd(attrs);
             Status* status = new Status;
-            status->setCode(new StatusCodeType("OK"));
+            status->setCode(new StatusCodeType("NO_MATCH"));
+            status->setText("no such resource");
             attr_resp->setStatus(status);
-            response->addResults(attr_resp);
         }
+        response->addResults(attr_resp);
     }
 
     return response;

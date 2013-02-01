@@ -102,17 +102,16 @@ class CollectorCtrl(cmd.Cmd):
             return
         try:
             response = the_client.service.getAttributes(op_args)
-        except Exception, e:
-            print e
-            return
-        if response:
             for r in response:
                 print r.id
-                if r.ad:
+                if r.status.code == "OK":
                     for attr in r.ad.attrs:
                         print attr.name,"=",attr.value
                 else:
-                    print "No attributes available"
+                    print r.status.code,r.status.text
+        except Exception, e:
+            print e
+            return
 
 
     def default(self,line):
@@ -130,12 +129,16 @@ class CollectorCtrl(cmd.Cmd):
         try:
             if callable(func):
                 response = func(clean_ids)
+            for r in response:
+                if r.status.code == "OK":
+                    if self.nodetype != "Submitter":
+                        print r.id.name+"/"+self._strip_sinful(r.id.address)
+                    print str(r)+"\n"
+                else:
+                    print r.status.code,r.status.text
         except Exception, e:
             print e
-        if response:
-            for r in response:
-                print r.id.name+"/"+self._strip_sinful(r.id.address)
-                print str(r)+"\n"
+            return
 
     def emptyline(self):
         response = None
@@ -145,11 +148,14 @@ class CollectorCtrl(cmd.Cmd):
         try:
             if callable(func):
                 response = func(None)
+            for r in response:
+                if self.nodetype != "Submitter":
+                    print r.id.name+"/"+self._strip_sinful(r.id.address)
+                else:
+                    print r.id.name
         except Exception, e:
             print e
-        if response:
-            for r in response:
-                print r.id.name+"/"+self._strip_sinful(r.id.address)
+            return
 
 class AviaryCollectorTool(cmd.Cmd):
     

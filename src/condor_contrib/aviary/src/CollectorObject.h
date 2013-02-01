@@ -61,7 +61,8 @@ public:
     void findScheduler(const string& name, bool grep, SchedulerSetType& schedd_set);
     void findSlot(const string& name, bool grep, SlotSetType& slot_set);
     void findSubmitter(const string& name, bool grep, SubmitterSetType& subm_set);
-    bool findAttribute(AdTypes daemon_type, const string& name, const string& ip_addr,AttributeMapType& attr_map);
+    bool findAttribute(AdTypes daemon_type, const string& name, const string& ip_addr,
+                       AttributeMapType& requested_attr_map, AttributeMapType& resource_attr_map);
 
     // daemonCore-facing methods
     bool update(int command, const ClassAd& ad);

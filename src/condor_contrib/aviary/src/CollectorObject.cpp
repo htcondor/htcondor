@@ -69,15 +69,17 @@ CollectorObject::getPool() {
 
 // private to impl
 template<class CollectablesT, class CollectableT>
-bool updateCollectable(const ClassAd& ad, CollectablesT& collectables)
+CollectableT* updateCollectable(const ClassAd& ad, CollectablesT& collectables)
 {
     string name;
+    CollectableT* collectable = NULL;
+
     if (!ad.LookupString(ATTR_NAME,name)) {
-        return false;
+        return NULL;
     }
     typename CollectablesT::iterator it = collectables.find(name);
     if (it == collectables.end()) {
-        CollectableT* collectable = new CollectableT;
+        collectable = new CollectableT;
         collectable->update(ad);
         collectables.insert(make_pair(name,collectable));
         dprintf(D_FULLDEBUG, "Created new %s Collectable for '%s'\n",collectable->MyType.c_str(),collectable->Name.c_str());
@@ -87,13 +89,16 @@ bool updateCollectable(const ClassAd& ad, CollectablesT& collectables)
         collectable->update(ad);
         dprintf(D_FULLDEBUG, "Updated %s Collectable '%s'\n",collectable->MyType.c_str(),collectable->Name.c_str());
     }
-    return true;
+    // return the ptr if caller wants to do something with collectable
+    return collectable;
 }
 
-template<class CollectablesT>
-bool invalidateCollectable(const ClassAd& ad, CollectablesT& collectables)
+template<class CollectablesT, class CollectableT>
+CollectableT* invalidateCollectable(const ClassAd& ad, CollectablesT& collectables)
 {
     string name;
+    CollectableT* collectable = NULL;
+
     if (!ad.LookupString(ATTR_NAME,name)) {
         dprintf(D_ALWAYS, "Unknown Collectable name for invalidation\n");
         return false;
@@ -105,10 +110,11 @@ bool invalidateCollectable(const ClassAd& ad, CollectablesT& collectables)
     }
     else {
         dprintf(D_FULLDEBUG, "Deleted %s Collectable for '%s'\n",(*it).second->MyType.c_str(),(*it).second->Name.c_str());
-        delete (*it).second;
+        //just erase...caller might need the ptr for other collections
+        collectable = (*it).second;
         collectables.erase(it);
     }
-    return true;
+    return collectable;
 }
 
 // slots are special due to their dynamic/partitionable links
@@ -116,35 +122,35 @@ bool invalidateCollectable(const ClassAd& ad, CollectablesT& collectables)
 bool updateSlot(const ClassAd& ad, SlotMapType& slots)
 {
     
-    bool status = false;
+    Slot* status = NULL;
     status = updateCollectable<SlotMapType,Slot>(ad, slots);
     //TODO: fix association with other slots
     //TODO: update birthdate map
-    return status;
+    return (status!=NULL);
 }
 
 // masters like slots are high volume
 bool updateMaster(const ClassAd& ad, MasterMapType& masters)
 {
-    bool status = false;
+    Master* status = NULL;
     status = updateCollectable<MasterMapType,Master>(ad, masters);
     //TODO: update birthdate map
-    return status;
+    return (status!=NULL);
 }
 
-bool invalidateSlot(const ClassAd& ad, SlotMapType& slots)
+Slot* invalidateSlot(const ClassAd& ad, SlotMapType& slots)
 {
-    bool status = false;
-    status = invalidateCollectable<SlotMapType>(ad, slots);
+    Slot* status = NULL;
+    status = invalidateCollectable<SlotMapType,Slot>(ad, slots);
     //TODO: disassociate links to dynamic slots
     //TODO: update birthdate map
     return status;
 }
 
-bool invalidateMaster(const ClassAd& ad, MasterMapType& masters)
+Master* invalidateMaster(const ClassAd& ad, MasterMapType& masters)
 {
-    bool status = false;
-    status = invalidateCollectable<MasterMapType>(ad, masters);
+    Master* status = NULL;
+    status = invalidateCollectable<MasterMapType,Master>(ad, masters);
     //TODO: update birthdate map
     return status;
 }
@@ -183,31 +189,31 @@ CollectorObject::update(int command, const ClassAd& ad)
 bool
 CollectorObject::invalidate(int command, const ClassAd& ad)
 {
-    bool status = false;
+    Collectable* status = NULL;
     switch (command) {
         case INVALIDATE_COLLECTOR_ADS:
-            status = invalidateCollectable<CollectorMapType>(ad, collectors);
+            status = invalidateCollectable<CollectorMapType,Collector>(ad, collectors);
             break;
         case INVALIDATE_MASTER_ADS:
             status = invalidateMaster(ad, masters);
             break;
         case INVALIDATE_NEGOTIATOR_ADS:
-            status = invalidateCollectable<NegotiatorMapType>(ad, negotiators);
+            status = invalidateCollectable<NegotiatorMapType,Negotiator>(ad, negotiators);
             break;
         case INVALIDATE_SCHEDD_ADS:
-            status = invalidateCollectable<SchedulerMapType>(ad, schedulers);
+            status = invalidateCollectable<SchedulerMapType,Scheduler>(ad, schedulers);
             break;
         case INVALIDATE_STARTD_ADS:
             status = invalidateSlot(ad, slots);
             break;
         case INVALIDATE_SUBMITTOR_ADS:
-            status = invalidateCollectable<SubmitterMapType>(ad, submitters);
+            status = invalidateCollectable<SubmitterMapType,Submitter>(ad, submitters);
             break;
         default:
             // fall through on unknown command
             break;
     }
-    return status;
+    return (status!=NULL);
 }
 
 // private to impl
@@ -273,7 +279,8 @@ CollectorObject::findSubmitter(const string& name, bool grep, SubmitterSetType& 
 }
 
 bool
-CollectorObject::findAttribute(AdTypes daemon_type, const string& name, const string& ip_addr, AttributeMapType& attr_map)
+CollectorObject::findAttribute(AdTypes daemon_type, const string& name, const string& ip_addr, 
+                               AttributeMapType& requested_attr_map, AttributeMapType& resource_attr_map)
 {
     // birdbath borrow
     CollectorEngine& engine = CollectorDaemon::getCollector();
@@ -301,16 +308,20 @@ CollectorObject::findAttribute(AdTypes daemon_type, const string& name, const st
     ClassAd* ad = NULL;
     ad = engine.lookup(daemon_type,hash_key);
     if (ad) {
-        if (attr_map.empty()) {
+        if (requested_attr_map.empty()) {
             // load all the ad's attributes
-            m_codec->classAdToMap(*ad,attr_map);
+            m_codec->classAdToMap(*ad,requested_attr_map);
         }
         else {
             // pick off the attributes requested
-            for (AttributeMapIterator it = attr_map.begin(); it!=attr_map.end(); it++) {
-                m_codec->addAttributeToMap(*ad,(*it).first.c_str(),attr_map);
+            for (AttributeMapIterator it = requested_attr_map.begin(); it!=requested_attr_map.end(); it++) {
+                m_codec->addAttributeToMap(*ad,(*it).first.c_str(),requested_attr_map);
             }
         }
+        // TODO: UGGGGLY extra lookups
+        m_codec->addAttributeToMap(*ad,ATTR_NAME,resource_attr_map);
+        m_codec->addAttributeToMap(*ad,ATTR_MY_ADDRESS,resource_attr_map);
+        m_codec->addAttributeToMap(*ad,ATTR_DAEMON_START_TIME,resource_attr_map);
         return true;
     }
 
