@@ -7,7 +7,7 @@
         * NegotiatorSummary.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Nov 08, 2012 (09:07:42 EST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jan 28, 2013 (03:27:15 EST)
         */
 
        /**
@@ -20,6 +20,8 @@
         
 
         
+        #include <axutil_date_time.h>
+          
 
         #include <stdio.h>
         #include <OMElement.h>
@@ -34,7 +36,11 @@ namespace AviaryCommon
         class NegotiatorSummary {
 
         private:
-             double property_Match_rate;
+             axutil_date_time_t* property_Latest_cycle;
+
+                
+                bool isValidLatest_cycle;
+            double property_Match_rate;
 
                 
                 bool isValidMatch_rate;
@@ -82,6 +88,10 @@ namespace AviaryCommon
 
         /*** Private methods ***/
           
+
+        bool WSF_CALL
+        setLatest_cycleNil();
+            
 
         bool WSF_CALL
         setMatch_rateNil();
@@ -150,6 +160,7 @@ namespace AviaryCommon
         /**
          * Constructor for creating NegotiatorSummary
          * @param 
+         * @param Latest_cycle axutil_date_time_t*
          * @param Match_rate double
          * @param Matches int
          * @param Duration int
@@ -163,7 +174,7 @@ namespace AviaryCommon
          * @param Trimmed_slots int
          * @return newly created NegotiatorSummary object
          */
-        NegotiatorSummary(double arg_Match_rate,int arg_Matches,int arg_Duration,int arg_Schedulers,int arg_Active_submitters,int arg_Idle_jobs,int arg_Jobs_considered,int arg_Rejections,int arg_Total_slots,int arg_Candidate_slots,int arg_Trimmed_slots);
+        NegotiatorSummary(axutil_date_time_t* arg_Latest_cycle,double arg_Match_rate,int arg_Matches,int arg_Duration,int arg_Schedulers,int arg_Active_submitters,int arg_Idle_jobs,int arg_Jobs_considered,int arg_Rejections,int arg_Total_slots,int arg_Candidate_slots,int arg_Trimmed_slots);
         
 
         /**
@@ -172,6 +183,30 @@ namespace AviaryCommon
         WSF_EXTERN bool WSF_CALL resetAll();
         
         /********************************** Class get set methods **************************************/
+        
+        
+
+        /**
+         * Getter for latest_cycle. 
+         * @return axutil_date_time_t*
+         */
+        WSF_EXTERN axutil_date_time_t* WSF_CALL
+        getLatest_cycle();
+
+        /**
+         * Setter for latest_cycle.
+         * @param arg_Latest_cycle axutil_date_time_t*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setLatest_cycle(axutil_date_time_t*  arg_Latest_cycle);
+
+        /**
+         * Re setter for latest_cycle
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetLatest_cycle();
         
         
 
@@ -449,6 +484,16 @@ namespace AviaryCommon
         
 
         /**
+         * Check whether latest_cycle is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isLatest_cycleNil();
+
+
+        
+
+        /**
          * Check whether match_rate is Nill
          * @return true if the element is Nil, false otherwise
          */
@@ -615,29 +660,29 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for match_rate by property number (1)
-         * @return double
+         * Getter for latest_cycle by property number (1)
+         * @return axutil_date_time_t*
          */
 
-        double WSF_CALL
+        axutil_date_time_t* WSF_CALL
         getProperty1();
 
     
         
 
         /**
-         * Getter for matches by property number (2)
-         * @return int
+         * Getter for match_rate by property number (2)
+         * @return double
          */
 
-        int WSF_CALL
+        double WSF_CALL
         getProperty2();
 
     
         
 
         /**
-         * Getter for duration by property number (3)
+         * Getter for matches by property number (3)
          * @return int
          */
 
@@ -648,7 +693,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for schedulers by property number (4)
+         * Getter for duration by property number (4)
          * @return int
          */
 
@@ -659,7 +704,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for active_submitters by property number (5)
+         * Getter for schedulers by property number (5)
          * @return int
          */
 
@@ -670,7 +715,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for idle_jobs by property number (6)
+         * Getter for active_submitters by property number (6)
          * @return int
          */
 
@@ -681,7 +726,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for jobs_considered by property number (7)
+         * Getter for idle_jobs by property number (7)
          * @return int
          */
 
@@ -692,7 +737,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for rejections by property number (8)
+         * Getter for jobs_considered by property number (8)
          * @return int
          */
 
@@ -703,7 +748,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for total_slots by property number (9)
+         * Getter for rejections by property number (9)
          * @return int
          */
 
@@ -714,7 +759,7 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for candidate_slots by property number (10)
+         * Getter for total_slots by property number (10)
          * @return int
          */
 
@@ -725,12 +770,23 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for trimmed_slots by property number (11)
+         * Getter for candidate_slots by property number (11)
          * @return int
          */
 
         int WSF_CALL
         getProperty11();
+
+    
+        
+
+        /**
+         * Getter for trimmed_slots by property number (12)
+         * @return int
+         */
+
+        int WSF_CALL
+        getProperty12();
 
     
 

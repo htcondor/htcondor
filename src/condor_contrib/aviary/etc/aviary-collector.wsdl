@@ -34,12 +34,12 @@
 	<wsdl:message name="GetMasterResponse">
 		<wsdl:part name="parameters" element="coll:GetMasterResponse"/>
 	</wsdl:message>
-    <wsdl:message name="GetMasterIDRequest">
-        <wsdl:part name="parameters" element="coll:GetMasterID"/>
-    </wsdl:message>
-    <wsdl:message name="GetMasterIDResponse">
-        <wsdl:part name="parameters" element="coll:GetMasterIDResponse"/>
-    </wsdl:message>
+	<wsdl:message name="GetMasterIDRequest">
+		<wsdl:part name="parameters" element="coll:GetMasterID"/>
+	</wsdl:message>
+	<wsdl:message name="GetMasterIDResponse">
+		<wsdl:part name="parameters" element="coll:GetMasterIDResponse"/>
+	</wsdl:message>
 	<wsdl:message name="GetNegotiatorRequest">
 		<wsdl:part name="parameters" element="coll:GetNegotiator"/>
 	</wsdl:message>
@@ -58,12 +58,12 @@
 	<wsdl:message name="GetSlotResponse">
 		<wsdl:part name="parameters" element="coll:GetSlotResponse"/>
 	</wsdl:message>
-    <wsdl:message name="GetSlotIDRequest">
-        <wsdl:part name="parameters" element="coll:GetSlotID"/>
-    </wsdl:message>
-    <wsdl:message name="GetSlotIDResponse">
-        <wsdl:part name="parameters" element="coll:GetSlotIDResponse"/>
-    </wsdl:message>
+	<wsdl:message name="GetSlotIDRequest">
+		<wsdl:part name="parameters" element="coll:GetSlotID"/>
+	</wsdl:message>
+	<wsdl:message name="GetSlotIDResponse">
+		<wsdl:part name="parameters" element="coll:GetSlotIDResponse"/>
+	</wsdl:message>
 	<wsdl:message name="GetSubmitterRequest">
 		<wsdl:part name="parameters" element="coll:GetSubmitter"/>
 	</wsdl:message>
@@ -85,10 +85,10 @@
 			<wsdl:input message="tns:GetMasterRequest"/>
 			<wsdl:output message="tns:GetMasterResponse"/>
 		</wsdl:operation>
-        <wsdl:operation name="getMasterID">
-            <wsdl:input message="tns:GetMasterIDRequest"/>
-            <wsdl:output message="tns:GetMasterIDResponse"/>
-        </wsdl:operation>
+		<wsdl:operation name="getMasterID">
+			<wsdl:input message="tns:GetMasterIDRequest"/>
+			<wsdl:output message="tns:GetMasterIDResponse"/>
+		</wsdl:operation>
 		<wsdl:operation name="getNegotiator">
 			<wsdl:input message="tns:GetNegotiatorRequest"/>
 			<wsdl:output message="tns:GetNegotiatorResponse"/>
@@ -101,10 +101,10 @@
 			<wsdl:input message="tns:GetSlotRequest"/>
 			<wsdl:output message="tns:GetSlotResponse"/>
 		</wsdl:operation>
-        <wsdl:operation name="getSlotID">
-            <wsdl:input message="tns:GetSlotIDRequest"/>
-            <wsdl:output message="tns:GetSlotIDResponse"/>
-        </wsdl:operation>
+		<wsdl:operation name="getSlotID">
+			<wsdl:input message="tns:GetSlotIDRequest"/>
+			<wsdl:output message="tns:GetSlotIDResponse"/>
+		</wsdl:operation>
 		<wsdl:operation name="getSubmitter">
 			<wsdl:input message="tns:GetSubmitterRequest"/>
 			<wsdl:output message="tns:GetSubmitterResponse"/>
@@ -134,15 +134,15 @@
 				<soap:body use="literal"/>
 			</wsdl:output>
 		</wsdl:operation>
-        <wsdl:operation name="getMasterID">
-            <soap:operation soapAction="http://grid.redhat.com/aviary-collector/master/id"/>
-            <wsdl:input>
-                <soap:body use="literal"/>
-            </wsdl:input>
-            <wsdl:output>
-                <soap:body use="literal"/>
-            </wsdl:output>
-        </wsdl:operation>
+		<wsdl:operation name="getMasterID">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-collector/master/id"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
 		<wsdl:operation name="getNegotiator">
 			<soap:operation soapAction="http://grid.redhat.com/aviary-collector/negotiator"/>
 			<wsdl:input>
@@ -170,15 +170,15 @@
 				<soap:body use="literal"/>
 			</wsdl:output>
 		</wsdl:operation>
-        <wsdl:operation name="getSlotID">
-            <soap:operation soapAction="http://grid.redhat.com/aviary-collector/slot/id"/>
-            <wsdl:input>
-                <soap:body use="literal"/>
-            </wsdl:input>
-            <wsdl:output>
-                <soap:body use="literal"/>
-            </wsdl:output>
-        </wsdl:operation>
+		<wsdl:operation name="getSlotID">
+			<soap:operation soapAction="http://grid.redhat.com/aviary-collector/slot/id"/>
+			<wsdl:input>
+				<soap:body use="literal"/>
+			</wsdl:input>
+			<wsdl:output>
+				<soap:body use="literal"/>
+			</wsdl:output>
+		</wsdl:operation>
 		<wsdl:operation name="getSubmitter">
 			<soap:operation soapAction="http://grid.redhat.com/aviary-collector/submitter"/>
 			<wsdl:input>

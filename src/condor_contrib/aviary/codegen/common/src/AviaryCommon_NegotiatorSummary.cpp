@@ -48,6 +48,10 @@
         {
 
         
+                property_Latest_cycle  = NULL;
+              
+            isValidLatest_cycle  = false;
+        
             isValidMatch_rate  = false;
         
             isValidMatches  = false;
@@ -72,9 +76,13 @@
         
         }
 
-       AviaryCommon::NegotiatorSummary::NegotiatorSummary(double arg_Match_rate,int arg_Matches,int arg_Duration,int arg_Schedulers,int arg_Active_submitters,int arg_Idle_jobs,int arg_Jobs_considered,int arg_Rejections,int arg_Total_slots,int arg_Candidate_slots,int arg_Trimmed_slots)
+       AviaryCommon::NegotiatorSummary::NegotiatorSummary(axutil_date_time_t* arg_Latest_cycle,double arg_Match_rate,int arg_Matches,int arg_Duration,int arg_Schedulers,int arg_Active_submitters,int arg_Idle_jobs,int arg_Jobs_considered,int arg_Rejections,int arg_Total_slots,int arg_Candidate_slots,int arg_Trimmed_slots)
         {
              
+               property_Latest_cycle  = NULL;
+             
+            isValidLatest_cycle  = true;
+            
             isValidMatch_rate  = true;
             
             isValidMatches  = true;
@@ -96,6 +104,8 @@
             isValidCandidate_slots  = true;
             
             isValidTrimmed_slots  = true;
+            
+                    property_Latest_cycle = arg_Latest_cycle;
             
                     property_Match_rate = arg_Match_rate;
             
@@ -130,6 +140,7 @@
             //calls reset method for all the properties owned by this method which are pointers.
 
             
+             resetLatest_cycle();//axutil_date_time_t*
             return true;
 
         }
@@ -170,7 +181,7 @@
 
                      
                      /*
-                      * building match_rate element
+                      * building latest_cycle element
                       */
                      
                      
@@ -189,6 +200,103 @@
                                         mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
                                     }
                                    
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "latest_cycle", NULL, NULL);
+                                 
+
+                           if ( 
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("latest_cycle", axiom_element_get_localname(current_element, Environment::getEnv())))))
+                           {
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("latest_cycle", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              {
+                                is_early_node_valid = true;
+                              }
+                              
+                                 
+                                      text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
+                                      if(text_value != NULL)
+                                      {
+                                          axutil_date_time_t* element = axutil_date_time_create(Environment::getEnv());
+                                          status = axutil_date_time_deserialize_date_time((axutil_date_time_t*)element, Environment::getEnv(),
+                                                                          text_value);
+                                          if(AXIS2_FAILURE ==  status)
+                                          {
+                                              if(element != NULL)
+                                              {
+                                                  axutil_date_time_free(element, Environment::getEnv());
+                                              }
+					                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI ,"failed in building element latest_cycle ");
+                                          }
+                                          else
+                                          {
+                                            status = setLatest_cycle(element);
+                                          }
+                                      }
+                                      
+                                      else
+                                      {
+				                            WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "NULL value is set to a non nillable element latest_cycle");
+                                            status = AXIS2_FAILURE;
+                                      }
+                                      
+                                 if(AXIS2_FAILURE ==  status)
+                                 {
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for latest_cycle ");
+                                     if(element_qname)
+                                     {
+                                         axutil_qname_free(element_qname, Environment::getEnv());
+                                     }
+                                     return AXIS2_FAILURE;
+                                 }
+                              }
+                           
+                              else if(!dont_care_minoccurs)
+                              {
+                                  if(element_qname)
+                                  {
+                                      axutil_qname_free(element_qname, Environment::getEnv());
+                                  }
+                                  /* this is not a nillable element*/
+				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element latest_cycle missing");
+                                  return AXIS2_FAILURE;
+                              }
+                           
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
+
+                     
+                     /*
+                      * building match_rate element
+                      */
+                     
+                     
+                     
+                                    /*
+                                     * because elements are ordered this works fine
+                                     */
+                                  
+                                   
+                                   if(current_node != NULL && is_early_node_valid)
+                                   {
+                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                       
+                                       
+                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                        {
+                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                        }
+                                        if(current_node != NULL)
+                                        {
+                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                        }
+                                       
+                                   }
+                                   is_early_node_valid = false;
+                                 
                                  element_qname = axutil_qname_create(Environment::getEnv(), "match_rate", NULL, NULL);
                                  
 
@@ -1118,7 +1226,8 @@
                 axis2_char_t *qname_prefix = NULL;
                 axis2_char_t *p_prefix = NULL;
             
-                    axis2_char_t text_value_1[ADB_DEFAULT_DIGIT_LIMIT];
+                    axis2_char_t *text_value_1;
+                    axis2_char_t *text_value_1_temp;
                     
                     axis2_char_t text_value_2[ADB_DEFAULT_DIGIT_LIMIT];
                     
@@ -1139,6 +1248,8 @@
                     axis2_char_t text_value_10[ADB_DEFAULT_DIGIT_LIMIT];
                     
                     axis2_char_t text_value_11[ADB_DEFAULT_DIGIT_LIMIT];
+                    
+                    axis2_char_t text_value_12[ADB_DEFAULT_DIGIT_LIMIT];
                     
                axis2_char_t *start_input_str = NULL;
                axis2_char_t *end_input_str = NULL;
@@ -1167,6 +1278,63 @@
             
             }
             
+                       p_prefix = NULL;
+                      
+
+                   if (!isValidLatest_cycle)
+                   {
+                      
+                            
+                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property latest_cycle");
+                            return NULL;
+                          
+                   }
+                   else
+                   {
+                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (4 + axutil_strlen(p_prefix) + 
+                                  axutil_strlen("latest_cycle"))); 
+                                 
+                                 /* axutil_strlen("<:>") + 1 = 4 */
+                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("latest_cycle")));
+                                  /* axutil_strlen("</:>") + 1 = 5 */
+                                  
+                     
+
+                   
+                   
+                     
+                     /*
+                      * parsing latest_cycle element
+                      */
+
+                    
+                    
+                            sprintf(start_input_str, "<%s%slatest_cycle>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                            
+                        start_input_str_len = axutil_strlen(start_input_str);
+                        sprintf(end_input_str, "</%s%slatest_cycle>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                        end_input_str_len = axutil_strlen(end_input_str);
+                    
+                          text_value_1 = axutil_date_time_serialize_date_time(property_Latest_cycle, Environment::getEnv());
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_1, axutil_strlen(text_value_1));
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
+                           
+                     
+                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
+                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
+                 } 
+
+                 
                        p_prefix = NULL;
                       
 
@@ -1210,11 +1378,11 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                               sprintf (text_value_1, "%f", (double)property_Match_rate);
+                               sprintf (text_value_2, "%f", (double)property_Match_rate);
                              
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           axutil_stream_write(stream, Environment::getEnv(), text_value_1, axutil_strlen(text_value_1));
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_2, axutil_strlen(text_value_2));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -1267,11 +1435,11 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                               sprintf (text_value_2, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Matches);
+                               sprintf (text_value_3, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Matches);
                              
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           axutil_stream_write(stream, Environment::getEnv(), text_value_2, axutil_strlen(text_value_2));
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_3, axutil_strlen(text_value_3));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -1324,11 +1492,11 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                               sprintf (text_value_3, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Duration);
+                               sprintf (text_value_4, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Duration);
                              
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           axutil_stream_write(stream, Environment::getEnv(), text_value_3, axutil_strlen(text_value_3));
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_4, axutil_strlen(text_value_4));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -1381,11 +1549,11 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                               sprintf (text_value_4, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Schedulers);
+                               sprintf (text_value_5, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Schedulers);
                              
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           axutil_stream_write(stream, Environment::getEnv(), text_value_4, axutil_strlen(text_value_4));
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_5, axutil_strlen(text_value_5));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -1438,11 +1606,11 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                               sprintf (text_value_5, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Active_submitters);
+                               sprintf (text_value_6, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Active_submitters);
                              
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           axutil_stream_write(stream, Environment::getEnv(), text_value_5, axutil_strlen(text_value_5));
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_6, axutil_strlen(text_value_6));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -1495,11 +1663,11 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                               sprintf (text_value_6, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Idle_jobs);
+                               sprintf (text_value_7, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Idle_jobs);
                              
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           axutil_stream_write(stream, Environment::getEnv(), text_value_6, axutil_strlen(text_value_6));
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_7, axutil_strlen(text_value_7));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -1552,11 +1720,11 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                               sprintf (text_value_7, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Jobs_considered);
+                               sprintf (text_value_8, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Jobs_considered);
                              
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           axutil_stream_write(stream, Environment::getEnv(), text_value_7, axutil_strlen(text_value_7));
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_8, axutil_strlen(text_value_8));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -1609,11 +1777,11 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                               sprintf (text_value_8, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Rejections);
+                               sprintf (text_value_9, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Rejections);
                              
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           axutil_stream_write(stream, Environment::getEnv(), text_value_8, axutil_strlen(text_value_8));
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_9, axutil_strlen(text_value_9));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -1666,11 +1834,11 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                               sprintf (text_value_9, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Total_slots);
+                               sprintf (text_value_10, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Total_slots);
                              
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           axutil_stream_write(stream, Environment::getEnv(), text_value_9, axutil_strlen(text_value_9));
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_10, axutil_strlen(text_value_10));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -1723,11 +1891,11 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                               sprintf (text_value_10, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Candidate_slots);
+                               sprintf (text_value_11, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Candidate_slots);
                              
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           axutil_stream_write(stream, Environment::getEnv(), text_value_10, axutil_strlen(text_value_10));
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_11, axutil_strlen(text_value_11));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -1780,11 +1948,11 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                               sprintf (text_value_11, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Trimmed_slots);
+                               sprintf (text_value_12, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Trimmed_slots);
                              
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           axutil_stream_write(stream, Environment::getEnv(), text_value_11, axutil_strlen(text_value_11));
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_12, axutil_strlen(text_value_12));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -1802,10 +1970,123 @@
         
 
             /**
-             * Getter for match_rate by  Property Number 1
+             * Getter for latest_cycle by  Property Number 1
+             */
+            axutil_date_time_t* WSF_CALL
+            AviaryCommon::NegotiatorSummary::getProperty1()
+            {
+                return getLatest_cycle();
+            }
+
+            /**
+             * getter for latest_cycle.
+             */
+            axutil_date_time_t* WSF_CALL
+            AviaryCommon::NegotiatorSummary::getLatest_cycle()
+             {
+                return property_Latest_cycle;
+             }
+
+            /**
+             * setter for latest_cycle
+             */
+            bool WSF_CALL
+            AviaryCommon::NegotiatorSummary::setLatest_cycle(
+                    axutil_date_time_t*  arg_Latest_cycle)
+             {
+                
+
+                if(isValidLatest_cycle &&
+                        arg_Latest_cycle == property_Latest_cycle)
+                {
+                    
+                    return true;
+                }
+
+                
+                  if(NULL == arg_Latest_cycle)
+                       
+                  {
+                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"latest_cycle is being set to NULL, but it is not a nullable element");
+                      return AXIS2_FAILURE;
+                  }
+                
+
+                
+                resetLatest_cycle();
+
+                
+                    if(NULL == arg_Latest_cycle)
+                         
+                {
+                    /* We are already done */
+                    return true;
+                }
+                
+                        property_Latest_cycle = arg_Latest_cycle;
+                        isValidLatest_cycle = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for latest_cycle
+            */
+           bool WSF_CALL
+           AviaryCommon::NegotiatorSummary::resetLatest_cycle()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+            
+                
+
+                if(property_Latest_cycle != NULL)
+                {
+                   
+                   
+                      axutil_date_time_free(property_Latest_cycle, Environment::getEnv());
+                         property_Latest_cycle = NULL;
+                     
+
+                   }
+
+                
+                
+                
+               isValidLatest_cycle = false; 
+               return true;
+           }
+
+           /**
+            * Check whether latest_cycle is nill
+            */
+           bool WSF_CALL
+           AviaryCommon::NegotiatorSummary::isLatest_cycleNil()
+           {
+               return !isValidLatest_cycle;
+           }
+
+           /**
+            * Set latest_cycle to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryCommon::NegotiatorSummary::setLatest_cycleNil()
+           {
+               return resetLatest_cycle();
+           }
+
+           
+
+            /**
+             * Getter for match_rate by  Property Number 2
              */
             double WSF_CALL
-            AviaryCommon::NegotiatorSummary::getProperty1()
+            AviaryCommon::NegotiatorSummary::getProperty2()
             {
                 return getMatch_rate();
             }
@@ -1885,10 +2166,10 @@
            
 
             /**
-             * Getter for matches by  Property Number 2
+             * Getter for matches by  Property Number 3
              */
             int WSF_CALL
-            AviaryCommon::NegotiatorSummary::getProperty2()
+            AviaryCommon::NegotiatorSummary::getProperty3()
             {
                 return getMatches();
             }
@@ -1968,10 +2249,10 @@
            
 
             /**
-             * Getter for duration by  Property Number 3
+             * Getter for duration by  Property Number 4
              */
             int WSF_CALL
-            AviaryCommon::NegotiatorSummary::getProperty3()
+            AviaryCommon::NegotiatorSummary::getProperty4()
             {
                 return getDuration();
             }
@@ -2051,10 +2332,10 @@
            
 
             /**
-             * Getter for schedulers by  Property Number 4
+             * Getter for schedulers by  Property Number 5
              */
             int WSF_CALL
-            AviaryCommon::NegotiatorSummary::getProperty4()
+            AviaryCommon::NegotiatorSummary::getProperty5()
             {
                 return getSchedulers();
             }
@@ -2134,10 +2415,10 @@
            
 
             /**
-             * Getter for active_submitters by  Property Number 5
+             * Getter for active_submitters by  Property Number 6
              */
             int WSF_CALL
-            AviaryCommon::NegotiatorSummary::getProperty5()
+            AviaryCommon::NegotiatorSummary::getProperty6()
             {
                 return getActive_submitters();
             }
@@ -2217,10 +2498,10 @@
            
 
             /**
-             * Getter for idle_jobs by  Property Number 6
+             * Getter for idle_jobs by  Property Number 7
              */
             int WSF_CALL
-            AviaryCommon::NegotiatorSummary::getProperty6()
+            AviaryCommon::NegotiatorSummary::getProperty7()
             {
                 return getIdle_jobs();
             }
@@ -2300,10 +2581,10 @@
            
 
             /**
-             * Getter for jobs_considered by  Property Number 7
+             * Getter for jobs_considered by  Property Number 8
              */
             int WSF_CALL
-            AviaryCommon::NegotiatorSummary::getProperty7()
+            AviaryCommon::NegotiatorSummary::getProperty8()
             {
                 return getJobs_considered();
             }
@@ -2383,10 +2664,10 @@
            
 
             /**
-             * Getter for rejections by  Property Number 8
+             * Getter for rejections by  Property Number 9
              */
             int WSF_CALL
-            AviaryCommon::NegotiatorSummary::getProperty8()
+            AviaryCommon::NegotiatorSummary::getProperty9()
             {
                 return getRejections();
             }
@@ -2466,10 +2747,10 @@
            
 
             /**
-             * Getter for total_slots by  Property Number 9
+             * Getter for total_slots by  Property Number 10
              */
             int WSF_CALL
-            AviaryCommon::NegotiatorSummary::getProperty9()
+            AviaryCommon::NegotiatorSummary::getProperty10()
             {
                 return getTotal_slots();
             }
@@ -2549,10 +2830,10 @@
            
 
             /**
-             * Getter for candidate_slots by  Property Number 10
+             * Getter for candidate_slots by  Property Number 11
              */
             int WSF_CALL
-            AviaryCommon::NegotiatorSummary::getProperty10()
+            AviaryCommon::NegotiatorSummary::getProperty11()
             {
                 return getCandidate_slots();
             }
@@ -2632,10 +2913,10 @@
            
 
             /**
-             * Getter for trimmed_slots by  Property Number 11
+             * Getter for trimmed_slots by  Property Number 12
              */
             int WSF_CALL
-            AviaryCommon::NegotiatorSummary::getProperty11()
+            AviaryCommon::NegotiatorSummary::getProperty12()
             {
                 return getTrimmed_slots();
             }

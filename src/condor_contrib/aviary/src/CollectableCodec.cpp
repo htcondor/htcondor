@@ -84,6 +84,7 @@ AviaryCommon::Negotiator* CollectableCodec::encode(aviary::collector::Negotiator
         summary->setDuration(in_->Duration);
         summary->setIdle_jobs(in_->NumIdleJobs);
         summary->setJobs_considered(in_->NumJobsConsidered);
+        summary->setLatest_cycle(encodeDateTime(in_->LastNegotiationCycleEnd,m_env));
         summary->setMatch_rate(in_->MatchRate);
         summary->setMatches(in_->Matches);
         summary->setRejections(in_->Rejections);

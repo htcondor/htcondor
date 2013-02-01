@@ -111,10 +111,10 @@
 			<xs:element name="owner" type="xs:string" minOccurs="0"/>
 			<xs:element name="qdate" type="xs:int" minOccurs="0"/>			
 		</xs:sequence>
-        <!-- where this submission was created in the condor space -->
-        <!-- TODO: tactical hiding for backward compat, revisit -->
-        <xs:attribute name="pool" type="xs:string"/>
-        <xs:attribute name="scheduler" type="xs:string"/>
+		<!-- where this submission was created in the condor space -->
+		<!-- TODO: tactical hiding for backward compat, revisit -->
+		<xs:attribute name="pool" type="xs:string"/>
+		<xs:attribute name="scheduler" type="xs:string"/>
 	</xs:complexType>
 	<xs:complexType name="JobID">
 		<xs:sequence>
@@ -260,6 +260,7 @@
 	</xs:complexType>
 	<xs:complexType name="NegotiatorSummary">
 		<xs:sequence>
+			<xs:element name="latest_cycle" type="xs:dateTime"/>
 			<xs:element name="match_rate" type="xs:double"/>
 			<xs:element name="matches" type="xs:int"/>
 			<xs:element name="duration" type="xs:int"/>

@@ -71,6 +71,7 @@ void Negotiator::update(const ClassAd& ad)
     MGMT_DECLARATIONS;
     DaemonCollectable::update(ad);
     Negotiator& m_stats = *this;
+    INTEGER2(LastNegotiationCycleEnd0,LastNegotiationCycleEnd);
     DOUBLE2(LastNegotiationCycleMatchRate0,MatchRate);
     INTEGER2(LastNegotiationCycleMatches0,Matches);
     INTEGER2(LastNegotiationCycleDuration0,Duration);

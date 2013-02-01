@@ -65,6 +65,7 @@ namespace collector {
     };
     
     struct Negotiator: public DaemonCollectable {
+        int LastNegotiationCycleEnd;
         double MatchRate;
         int Matches;
         int Duration;
