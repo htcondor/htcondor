@@ -1228,14 +1228,20 @@ The resulting values passed to the NodeB executable are
 \end{verbatim}
 \normalsize
 
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
+\item[VARS to define classad attributes]
+\end{description}
+
 The \Arg{macroname} may also begin with a `\Arg{+}' character, in which case it
-names a ClassAd attribute. For example, the
+names a ClassAd attribute. For example, the following VARS specification
 \footnotesize
 \begin{verbatim}
 	Vars NodeE +A="\"bob\""
 \end{verbatim}
 \normalsize
-could use the following line in the HTCondor submit description file for NodeE:
+would allow the HTCondor submit description file for NodeE to use
+the following line:
 \footnotesize
 \begin{verbatim}
 	arguments = "$$([A])"
