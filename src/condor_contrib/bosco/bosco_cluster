@@ -338,7 +338,12 @@ check_condor_q_classad () {
 
 
 test_cluster () {
-    remote_host=$1
+    if [ "x$1" != "x" ]; then
+        remote_host=$1
+    else
+        echo "ERROR - No remote host given for the test.  Please list one of the cluster you have added"
+        exit 1
+    fi
 
     # First, check if the cluster is in the clusterlist
     cluster_out=`grep "$remote_host" $CLUSTERLIST_LOCATION`
