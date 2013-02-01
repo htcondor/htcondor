@@ -39,8 +39,8 @@ when_to_transfer_output = ON_EXIT
 output = output
 error = error
 
-# Remove the job if it gets held for too long (1 day)
-PeriodicRemove = (JobStatus == 5 && time() - EnteredCurrentStatus > 3600*24*1)
+# Remove the job if it gets held for too long (1 hour)
+PeriodicRemove = (JobStatus == 5 && time() - EnteredCurrentStatus > 3600*1*1)
 GlobusRSL = 
 
 Grid_Resource = batch $(REMOTE_SCHEDULER) $(REMOTE_CLUSTER)
