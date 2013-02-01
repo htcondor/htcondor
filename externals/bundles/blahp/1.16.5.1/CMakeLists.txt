@@ -49,7 +49,7 @@ if ( WITH_BLAHP )
 		endif()
 
 
-		condor_pre_external( BLAHP blahp-1.16.5.1-p11 "lib;include" "done")
+		condor_pre_external( BLAHP blahp-1.16.5.1-p12 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${BLAHP_DEPENDS}
@@ -77,6 +77,7 @@ if ( WITH_BLAHP )
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/condor-history.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/condor-status.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/submit-l.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/slurm.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/proxy-tools.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/ld-library-path.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/run-dir.patch -p0 &&
