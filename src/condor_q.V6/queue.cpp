@@ -51,6 +51,7 @@
 #include "condor_id.h"
 #include "userlog_to_classads.h"
 #include "ipv6_hostname.h"
+#include "../condor_procapi/procapi.h" // for getting cpu time & process memory
 #include <map>
 #include <vector>
 #include "../classad_analysis/analysis.h"
@@ -192,6 +193,7 @@ static  char *jobads_file = NULL;
 static  char *machineads_file = NULL;
 static  char *userprios_file = NULL;
 static  bool analyze_with_userprio = false;
+static  bool dash_profile = false;
 //static  bool analyze_dslots = false;
 
 static  char *userlog_file = NULL;
@@ -378,7 +380,7 @@ StringList attrs(NULL, "\n");; // The list of attrs we want, "" for all
 
 bool g_stream_results = false;
 
-static void freeConnectionStrings() {
+static void freeConnectionStrings(bool for_exit=true) {
 	if(quillName) {
 		free(quillName);
 		quillName = NULL;
@@ -402,6 +404,10 @@ static void freeConnectionStrings() {
 	if(queryPassword) {
 		free(queryPassword);
 		queryPassword = NULL;
+	}
+	if (for_exit) {
+		startdAds.Clear();
+		scheddList.Clear();
 	}
 }
 
@@ -574,6 +580,8 @@ int main (int argc, char **argv)
 	myDistro->Init( argc, argv );
 	config();
 
+	classad::ClassAdSetExpressionCaching( param_boolean( "ENABLE_CLASSAD_CACHING", false ) );
+
 #ifdef HAVE_EXT_POSTGRESQL
 		/* by default check the configuration for local database */
 	useDB = checkDBconfig();
@@ -603,11 +611,13 @@ int main (int argc, char **argv)
 	// check if analysis is required
 	if( better_analyze ) {
 		setupAnalysis();
-		if ((jobads_file != NULL || userlog_file != NULL)) {
-			retval = show_file_queue(jobads_file, userlog_file);
- 			freeConnectionStrings();
-			exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
-		}
+	}
+
+	// if fetching jobads from a file or userlog, we don't need to init any daemon or database communication
+	if ((jobads_file != NULL || userlog_file != NULL)) {
+		retval = show_file_queue(jobads_file, userlog_file);
+		freeConnectionStrings();
+		exit(retval?EXIT_SUCCESS:EXIT_FAILURE);
 	}
 
 	// if we haven't figured out what to do yet, just display the
@@ -882,7 +892,7 @@ int main (int argc, char **argv)
 		int flag=1;
 #endif
 
-		freeConnectionStrings();
+		freeConnectionStrings(false);
 		useDB = FALSE;
 		if ( ! (ad->LookupString(ATTR_SCHEDD_IP_ADDR, &scheddAddr)  &&
 				ad->LookupString(ATTR_NAME, &scheddName) &&
@@ -1782,6 +1792,9 @@ processCommandLineArguments (int argc, char *argv[])
 			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 			exit(0);
         }
+		else if (is_arg_prefix(arg, "profile",4)) {
+			dash_profile = true;
+		}
 		else
 		if (is_arg_prefix (arg, "stream", 2)) {
 			g_stream_results = true;
@@ -2946,14 +2959,16 @@ print_jobs_analysis(ClassAdList & jobs, const char * source_label, Daemon * psch
 	if (verbose) { fprintf(stderr, "\nBuilding autocluster map of %d Jobs...", jobs.Length()); }
 	JobClusterMap job_autoclusters;
 	buildJobClusterMap(jobs, ATTR_AUTO_CLUSTER_ID, job_autoclusters);
-	if (verbose) { fprintf(stderr, "\n%d autoclusters and %d Jobs with no autocluster\n", (int)job_autoclusters.size(), (int)job_autoclusters[-1].size()); }
+	size_t cNoAuto = job_autoclusters[-1].size();
+	size_t cAuto = job_autoclusters.size()-1; // -1 because size() counts the entry at [-1]
+	if (verbose) { fprintf(stderr, "%d autoclusters and %d Jobs with no autocluster\n", (int)cAuto, (int)cNoAuto); }
 
 	if (reverse_analyze) { 
-		if (verbose) { fprintf(stderr, "Sorting %d Slots...", startdAds.Length()); }
+		if (verbose && (startdAds.Length() > 1)) { fprintf(stderr, "Sorting %d Slots...", startdAds.Length()); }
 		longest_slot_machine_name = 0;
 		longest_slot_name = 0;
 		if (startdAds.Length() == 1) {
-			// if there is a single machine ad, then always do detailed reverse analyze.
+			// if there is a single machine ad, then default to analysis
 			if ( ! analyze_detail_level) analyze_detail_level = detail_analyze_each_sub_expr;
 		} else {
 			startdAds.Sort(SlotSort);
@@ -2961,7 +2976,7 @@ print_jobs_analysis(ClassAdList & jobs, const char * source_label, Daemon * psch
 		//if (verbose) { fprintf(stderr, "Done, longest machine name %d, longest slot name %d\n", longest_slot_machine_name, longest_slot_name); }
 	} else {
 		if (analyze_detail_level & detail_better) {
-			analyze_detail_level |= detail_analyze_each_sub_expr | detail_smart_unparse_expr | detail_always_analyze_req;
+			analyze_detail_level |= detail_analyze_each_sub_expr | detail_always_analyze_req;
 		}
 	}
 
@@ -3557,9 +3572,12 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		formatstr(source_label, "Submitter: %s : %s : %s", scheddName, scheddAddress, scheddMachine);
 	}
 
-	if (better_analyze && verbose) {
-		fprintf(stderr, "Fetching job ads for analysis...");
+	if (verbose || dash_profile) {
+		fprintf(stderr, "Fetching job ads...");
 	}
+	size_t cbBefore = 0;
+	double tmBefore = 0;
+	if (dash_profile) { cbBefore = ProcAPI::getBasicUsage(getpid(), &tmBefore); }
 
 	// fetch queue from schedd
 	ClassAdList jobs;  // this will get filled in for -long -xml and -analyze
@@ -3609,9 +3627,23 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		return true;
 	}
 
+	if (dash_profile) {
+		double tmAfter = 0.0;
+		size_t cbAfter = ProcAPI::getBasicUsage(getpid(), &tmAfter);
+		fprintf(stderr, " %d ads (caching %s)", jobs.Length(), classad::ClassAdGetExpressionCaching() ? "ON" : "OFF");
+		fprintf(stderr, ", %.3f CPU-sec, %" PRId64 " bytes (from %" PRId64 " to %" PRId64 ")\n",
+			(tmAfter - tmBefore), (PRId64_t)(cbAfter - cbBefore), (PRId64_t)cbBefore, (PRId64_t)cbAfter);
+		tmBefore = tmAfter; cbBefore = cbAfter;
+	} else if (verbose) {
+		fprintf(stderr, " %d ads\n", jobs.Length());
+	}
+
 	if (better_analyze) {
-		if (verbose) { fprintf(stderr, "Sorting %d Jobs...", jobs.Length()); }
-		jobs.Sort(JobSort);
+		if (jobs.Length() > 1) {
+			if (verbose) { fprintf(stderr, "Sorting %d Jobs...", jobs.Length()); }
+			jobs.Sort(JobSort);
+			if (verbose) { fprintf(stderr, "\n"); }
+		}
 		
 		PRAGMA_REMIND("TJ: shouldn't this be using scheddAddress instead of scheddName?")
 		Daemon schedd(DT_SCHEDD, scheddName, pool ? pool->addr() : NULL );
@@ -3668,10 +3700,6 @@ show_file_queue(const char* jobads, const char* userlog)
 	// initialize counters
 	malformed = idle = running = held = completed = suspended = 0;
 
-	if (better_analyze && verbose) {
-		fprintf(stderr, "Fetching job ads for analysis...");
-	}
-
 	// setup constraint variables to use in some of the later code.
 	const char * constr = NULL;
 	std::string constr_string; // to hold the return from ExprTreeToString()
@@ -3683,9 +3711,13 @@ show_file_queue(const char* jobads, const char* userlog)
 		delete tree;
 	}
 
-	if (better_analyze && verbose) {
-		fprintf(stderr, "Fetching job ads for analysis...");
+	if (verbose || dash_profile) {
+		fprintf(stderr, "Fetching job ads...");
 	}
+
+	size_t cbBefore = 0;
+	double tmBefore = 0;
+	if (dash_profile) { cbBefore = ProcAPI::getBasicUsage(getpid(), &tmBefore); }
 
 	ClassAdList jobs;
 	std::string source_label;
@@ -3713,7 +3745,7 @@ show_file_queue(const char* jobads, const char* userlog)
 		if (cJobIds > 0) JobIds = &constrID[0];
 
 		if (!userlog_to_classads(userlog, jobs, JobIds, cJobIds, constr)) {
-			fprintf(stderr, "Can't open user log: %s\n", userlog);
+			fprintf(stderr, "\nCan't open user log: %s\n", userlog);
 			return false;
 		}
 		formatstr(source_label, "Userlog: %s", userlog);
@@ -3721,8 +3753,33 @@ show_file_queue(const char* jobads, const char* userlog)
 		ASSERT(jobads != NULL || userlog != NULL);
 	}
 
-	if (better_analyze && verbose) { fprintf(stderr, "Sorting %d Jobs...", jobs.Length()); }
-	jobs.Sort(JobSort);
+	if (dash_profile) {
+		double tmAfter = 0.0;
+		size_t cbAfter = ProcAPI::getBasicUsage(getpid(), &tmAfter);
+		fprintf(stderr, " %d ads (caching %s)", jobs.Length(), classad::ClassAdGetExpressionCaching() ? "ON" : "OFF");
+		fprintf(stderr, ", %.3f CPU-sec, %" PRId64 " bytes (from %" PRId64 " to %" PRId64 ")\n",
+			(tmAfter - tmBefore), (PRId64_t)(cbAfter - cbBefore), (PRId64_t)cbBefore, (PRId64_t)cbAfter);
+		tmBefore = tmAfter; cbBefore = cbAfter;
+	} else if (verbose) {
+		fprintf(stderr, " %d ads.\n", jobs.Length());
+	}
+
+	if (jobs.Length() > 1) {
+		if (verbose) { fprintf(stderr, "Sorting %d Jobs...", jobs.Length()); }
+		jobs.Sort(JobSort);
+
+		if (dash_profile) {
+			double tmAfter = 0.0;
+			size_t cbAfter = ProcAPI::getBasicUsage(getpid(), &tmAfter);
+			fprintf(stderr, " %.3f CPU-sec, %" PRId64 " bytes (from %" PRId64 " to %" PRId64 ")\n",
+				(tmAfter - tmBefore), (PRId64_t)(cbAfter - cbBefore), (PRId64_t)cbBefore, (PRId64_t)cbAfter);
+			tmBefore = tmAfter; cbBefore = cbAfter;
+		} else if (verbose) {
+			fprintf(stderr, "\n");
+		}
+	} else if (verbose) {
+		fprintf(stderr, "\n");
+	}
 
 	if (better_analyze) {
 		return print_jobs_analysis(jobs, source_label.c_str(), NULL);
@@ -3769,9 +3826,13 @@ setupAnalysis()
 	int			index;
 
 	
-	if (verbose) {
-		fprintf(stderr, "Fetching machine ads for analysis...");
+	if (verbose || dash_profile) {
+		fprintf(stderr, "Fetching Machine ads...");
 	}
+
+	double tmBefore = 0.0;
+	size_t cbBefore = 0;
+	if (dash_profile) { cbBefore = ProcAPI::getBasicUsage(getpid(), &tmBefore); }
 
 	// fetch startd ads
     if (machineads_file != NULL) {
@@ -3797,8 +3858,15 @@ setupAnalysis()
         }
     }
 
-	if (verbose) {
-		fprintf(stderr, "Done.\nFound %d machines ads.\n", startdAds.Length());
+	if (dash_profile) {
+		double tmAfter = 0.0;
+		size_t cbAfter = ProcAPI::getBasicUsage(getpid(), &tmAfter); 
+		fprintf(stderr, " %d ads (caching %s)", startdAds.Length(), classad::ClassAdGetExpressionCaching() ? "ON" : "OFF");
+		fprintf(stderr, ", %.3f CPU-sec, %" PRId64 " bytes (from %" PRId64 " to %" PRId64 ")\n",
+			(tmAfter - tmBefore), (PRId64_t)(cbAfter - cbBefore), (PRId64_t)cbBefore, (PRId64_t)cbAfter);
+		tmBefore = tmAfter; cbBefore = cbAfter;
+	} else if (verbose) {
+		fprintf(stderr, " %d ads.\n", startdAds.Length());
 	}
 
 	// fetch user priorities, and propagate the user priority values into the machine ad's
@@ -3807,8 +3875,8 @@ setupAnalysis()
 	//
 	int cPrios = 0;
 	if (userprios_file || analyze_with_userprio) {
-		if (verbose) {
-			fprintf(stderr, "Fetching user priorities for analysis...");
+		if (verbose || dash_profile) {
+			fprintf(stderr, "Fetching user priorities...");
 		}
 
 		if (userprios_file != NULL) {
@@ -3826,11 +3894,22 @@ setupAnalysis()
 			}
 		}
 
-		if (verbose) {
-			fprintf(stderr, "Done.\nFound %d submitters\n", cPrios);
-		} else if (cPrios <= 0) {
+		if (dash_profile) {
+			double tmAfter;
+			size_t cbAfter = ProcAPI::getBasicUsage(getpid(), &tmAfter); 
+			fprintf(stderr, " %d submitters", cPrios);
+			fprintf(stderr, ", %.3f CPU-sec, %" PRId64 " bytes (from %" PRId64 " to %" PRId64 ")\n",
+				(tmAfter - tmBefore), (PRId64_t)(cbAfter - cbBefore), (PRId64_t)cbBefore, (PRId64_t)cbAfter);
+			tmBefore = tmAfter; cbBefore = cbAfter;
+		}
+		else if (verbose) {
+			fprintf(stderr, " %d submitters\n", cPrios);
+		}
+		/* TJ: do we really want to do this??
+		if (cPrios <= 0) {
 			printf( "Warning:  Found no submitters\n" );
 		}
+		*/
 
 
 		// populate startd ads with remote user prios
@@ -4121,8 +4200,10 @@ static const char * GetIndentPrefix(int indent) {
 	return str.c_str();
   #endif
 }
+static const bool analyze_show_work = true;
 #else
 static const char * GetIndentPrefix(int) { return ""; }
+static const bool analyze_show_work = false;
 #endif
 
 static std::string strStep;
@@ -4133,7 +4214,7 @@ int AnalyzeThisSubExpr(ClassAd *myad, classad::ExprTree* expr, std::vector<AnalS
 	classad::ExprTree::NodeKind kind = expr->GetKind( );
 	classad::ClassAdUnParser unparser;
 
-	bool show_work = false;
+	bool show_work = analyze_show_work;
 	bool evaluate_logical = false;
 	int  child_depth = depth;
 	int  logic_op = 0;
@@ -4193,6 +4274,8 @@ int AnalyzeThisSubExpr(ClassAd *myad, classad::ExprTree* expr, std::vector<AnalS
 				logic_op = 1 + (int)(op - classad::Operation::__LOGIC_START__);
 				push_it = true;
 			} else if (op == classad::Operation::PARENTHESES_OP){
+				push_it = false;
+				evaluate_logical = true;
 				child_depth += 1;
 			} else {
 				//show_work = false;
@@ -4266,12 +4349,18 @@ int AnalyzeThisSubExpr(ClassAd *myad, classad::ExprTree* expr, std::vector<AnalS
 
 		std::string strExpr;
 		unparser.Unparse(strExpr, expr);
+		if (push_it) {
+			if (left && ! right && ix_left >= 0) {
+				printf("(---):");
+			} else {
+				printf("(%3d):", (int)clauses.size()-1);
+			}
+		} else { printf("      "); }
 
 		if (evaluate_logical) {
-			printf("[%3d] %5s : [%3d] %s [%3d]\n", ix_me, "", ix_left, pop, ix_right);
-			if (chatty) {
-				printf("\t%s\n", strExpr.c_str());
-			}
+			printf("[%3d] %5s : [%3d] %s [%3d] %s\n", 
+				   ix_me, "", ix_left, pop, ix_right,
+				   chatty ? strExpr.c_str() : "");
 		} else {
 			printf("[%3d] %5s : %s\n", ix_me, "", strExpr.c_str());
 		}
@@ -4540,7 +4629,7 @@ static const char * PrettyPrintExprTree(classad::ExprTree *tree, std::string & t
 static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & targets, std::string & return_buf, int detail_mask)
 {
 	int console_width = widescreen ? getDisplayWidth() : 80;
-	bool show_work = (detail_mask & 0x100) != 0;
+	bool show_work = (detail_mask & detail_diagnostic) != 0;
 
 	bool request_is_machine = false;
 	const char * attrConstraint = ATTR_REQUIREMENTS;
@@ -4558,12 +4647,30 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 	std::string strStep;
 	#define StepLbl(ii) subs[ii].StepLabel(strStep, ii, 3)
 
+	if (show_work) { printf("\nDump ExprTree in evaluation order\n"); }
+
 	AnalyzeThisSubExpr(request, exprReq, subs, true, 0);
 
-	if (show_work) {
-		printf("\nEvaluate constants:\n");
+	if (detail_mask & 0x200) {
+		printf("\nDump subs\n");
+		classad::ClassAdUnParser unparser;
+		for (int ix = 0; ix < (int)subs.size(); ++ix) {
+			printf("%p %2d %2d [%3d %3d %3d] %3d %d %d ", subs[ix].tree, subs[ix].depth, subs[ix].logic_op,
+				subs[ix].ix_left, subs[ix].ix_right, subs[ix].ix_grip,
+				subs[ix].ix_effective, (int)subs[ix].label.size(), (int)subs[ix].unparsed.size());
+			std::string lbl;
+			if (subs[ix].MakeLabel(lbl)) {
+			} else if (subs[ix].ix_left < 0) {
+				unparser.Unparse(lbl, subs[ix].tree);
+			} else {
+				lbl = "";
+			}
+			printf("%s\n", lbl.c_str());
+		}
 	}
+
 	// check of each sub-expression has any target references.
+	if (show_work) { printf("\nEvaluate constants:\n"); }
 	for (int ix = 0; ix < (int)subs.size(); ++ix) {
 		subs[ix].CheckIfConstant(*request);
 	}
@@ -4628,6 +4735,24 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 		}
 	}
 
+	if (detail_mask & 0x200) {
+		printf("\nDump subs\n");
+		classad::ClassAdUnParser unparser;
+		for (int ix = 0; ix < (int)subs.size(); ++ix) {
+			printf("[%3d] %2d %2d [%3d %3d %3d] %3d %d %d ", ix, subs[ix].depth, subs[ix].logic_op,
+				subs[ix].ix_left, subs[ix].ix_right, subs[ix].ix_grip,
+				subs[ix].ix_effective, (int)subs[ix].label.size(), (int)subs[ix].unparsed.size());
+			std::string lbl;
+			if (subs[ix].MakeLabel(lbl)) {
+			} else if (subs[ix].ix_left < 0) {
+				unparser.Unparse(lbl, subs[ix].tree);
+			} else {
+				lbl = "";
+			}
+			printf("%s\n", lbl.c_str());
+		}
+	}
+
 	if (show_work) {
 		printf("\nFinal expressions:\n");
 		for (int ix = 0; ix < (int)subs.size(); ++ix) {
@@ -4646,7 +4771,7 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 
 	//
 	//
-	// build counts of matching machines, render final output
+	// build counts of matching machines, notice which expressions match all or no machines
 	//
 	if (show_work) {
 		if (request_is_machine) {
@@ -4658,27 +4783,79 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 		}
 	}
 
-	return_buf = request_is_machine ? 
-	                "       Clusters" 
-	              : "         Slots";
-	return_buf += "\nStep    Matched  Condition"
-	              "\n-----  --------  ---------\n";
 	std::string linebuf;
 	for (int ix = 0; ix < (int)subs.size(); ++ix) {
 		if (subs[ix].ix_effective >= 0 || subs[ix].dont_care)
 			continue;
 
-		const char * pindent = GetIndentPrefix(subs[ix].depth);
-		const char * const_val = "";
 		if (subs[ix].constant) {
-			const_val = subs[ix].hard_value ? "always" : "never";
-			formatstr(linebuf, "%s %9s  %s%s\n", StepLbl(ix), const_val, pindent, subs[ix].Label());
-			return_buf += linebuf;
-			if (show_work) { printf("%s", linebuf.c_str()); }
+			if (show_work) {
+				const char * const_val = subs[ix].hard_value ? "always" : "never";
+				formatstr(linebuf, "%s %9s  %s%s\n", StepLbl(ix), const_val, GetIndentPrefix(subs[ix].depth), subs[ix].Label());
+				printf("%s", linebuf.c_str()); 
+			}
 			continue;
 		}
 
 		subs[ix].matches = 0;
+
+		// do short-circuit evaluation of && operations
+		int matches_all = targets.Length();
+		int ix_left = subs[ix].ix_left;
+		int ix_right = subs[ix].ix_right;
+		if (ix_left >= 0 && ix_right >= 0 && subs[ix].logic_op) {
+			int ix_effective = -1;
+			int ix_prune = -1;
+			const char * reason = "";
+			if (subs[ix].logic_op == 3) { // &&
+				reason = "&&";
+				if (subs[ix_left].matches == 0) {
+					ix_effective = ix_left;
+				} else if (subs[ix_right].matches == 0) {
+					ix_effective = ix_right;
+				}
+			} else if (subs[ix].logic_op == 2) { // || 
+				if (subs[ix_left].matches == matches_all) {
+					reason = "a||";
+					ix_effective = ix_left;
+					ix_prune = ix_right;
+				} else if (subs[ix_right].matches == matches_all) {
+					reason = "||a";
+					ix_effective = ix_right;
+					ix_prune = ix_left;
+				} else if (subs[ix_left].matches == 0 && subs[ix_right].matches != 0) {
+					reason = "0||";
+					ix_effective = ix_right;
+					ix_prune = ix_left;
+				} else if (subs[ix_left].matches != 0 && subs[ix_right].matches == 0) {
+					reason = "||0";
+					ix_effective = ix_left;
+					ix_prune = ix_right;
+				}
+			}
+
+			if (ix_prune >= 0) {
+				std::string irr_path = "";
+				MarkIrrelevant(subs, ix_prune, irr_path, ix);
+				if (show_work) { printf("pruning peer [%d] %s %s\n", ix_prune, reason, irr_path.c_str()); }
+			}
+
+			if (ix_effective >= 0) {
+				while(subs[ix_effective].ix_effective >= 0)
+					ix_effective = subs[ix_effective].ix_effective;
+				subs[ix].ix_effective = ix_effective;
+				if (show_work) { printf("pruning [%d] back to [%d] because %s\n", ix, ix_effective, reason); }
+			} else {
+				if (subs[ix_left].ix_effective >= 0) {
+					subs[ix].ix_left = subs[ix_left].ix_effective;
+					subs[ix].label.clear();
+				}
+				if (subs[ix_right].ix_effective >= 0) {
+					subs[ix].ix_right = subs[ix_right].ix_effective;
+					subs[ix].label.clear();
+				}
+			}
+		}
 
 		targets.Open();
 		while (ClassAd *target = targets.Next()) {
@@ -4692,6 +4869,102 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 			}
 		}
 		targets.Close();
+
+		// did the left or right path of a logic op dominate the result?
+		if (ix_left >= 0 && ix_right >= 0 && subs[ix].logic_op) {
+			int ix_effective = -1;
+			const char * reason = "";
+			if (subs[ix].logic_op == 3) { // &&
+				reason = "&&";
+				if (subs[ix_left].matches == subs[ix].matches) {
+					ix_effective = ix_left;
+					if (subs[ix_right].matches > subs[ix].matches) {
+						subs[ix_right].dont_care = true;
+						subs[ix_right].pruned_by = ix_left;
+						if (show_work) { printf("pruning peer [%d] because of &&>[%d]\n", ix_right, ix_left); }
+					}
+				} else if (subs[ix_right].matches == subs[ix].matches) {
+					ix_effective = ix_right;
+					if (subs[ix_left].matches > subs[ix].matches) {
+						subs[ix_left].dont_care = true;
+						subs[ix_left].pruned_by = ix_right;
+						if (show_work) { printf("pruning peer [%d] because of &&>[%d]\n", ix_left, ix_right); }
+					}
+				}
+			} else if (subs[ix].logic_op == 2) { // || 
+			}
+
+			if (ix_effective >= 0) {
+				while(subs[ix_effective].ix_effective >= 0)
+					ix_effective = subs[ix_effective].ix_effective;
+				subs[ix].ix_effective = ix_effective;
+				subs[ix].label.clear();
+				if (show_work) { printf("pruning [%d] back to [%d] because %s\n", ix, ix_effective, reason); }
+			} else {
+				if (subs[ix_left].ix_effective >= 0) {
+					subs[ix].ix_left = subs[ix_left].ix_effective;
+					subs[ix].label.clear();
+				}
+				if (subs[ix_right].ix_effective >= 0) {
+					subs[ix].ix_right = subs[ix_right].ix_effective;
+					subs[ix].label.clear();
+				}
+			}
+		}
+
+		if (show_work) { 
+			formatstr(linebuf, "%s %9d  %s%s\n", StepLbl(ix), subs[ix].matches, GetIndentPrefix(subs[ix].depth), subs[ix].Label());
+			printf("%s", linebuf.c_str()); 
+		}
+	}
+
+	if (detail_mask & 0x200) {
+		printf("\nDump subs\n");
+		classad::ClassAdUnParser unparser;
+		for (int ix = 0; ix < (int)subs.size(); ++ix) {
+			printf("[%3d] %2d %2d [%3d %3d %3d] %3d '%s' ", ix, subs[ix].depth, subs[ix].logic_op,
+				subs[ix].ix_left, subs[ix].ix_right, subs[ix].ix_grip,
+				subs[ix].ix_effective, subs[ix].label.empty() ? "" : subs[ix].label.c_str());
+			std::string lbl;
+			if (subs[ix].MakeLabel(lbl)) {
+			} else if (subs[ix].ix_left < 0) {
+				unparser.Unparse(lbl, subs[ix].tree);
+			} else {
+				lbl = "";
+			}
+			printf("%s\n", lbl.c_str());
+		}
+	}
+
+	//
+	// render final output
+	//
+	return_buf = request_is_machine ? 
+	                "       Clusters" 
+	              : "         Slots";
+	return_buf += "\nStep    Matched  Condition"
+	              "\n-----  --------  ---------\n";
+	for (int ix = 0; ix < (int)subs.size(); ++ix) {
+		bool skip_me = (subs[ix].ix_effective >= 0 || subs[ix].dont_care);
+		const char * prefix = "";
+		if (detail_mask & 0x40) {
+			prefix = "  ";
+			if (subs[ix].dont_care) prefix = "dk";
+			else if (subs[ix].ix_effective >= 0) prefix = "x ";
+		} else if (skip_me) {
+			continue;
+		}
+
+		const char * pindent = GetIndentPrefix(subs[ix].depth);
+		const char * const_val = "";
+		if (subs[ix].constant) {
+			const_val = subs[ix].hard_value ? "always" : "never";
+			formatstr(linebuf, "%s %9s  %s%s\n", StepLbl(ix), const_val, pindent, subs[ix].Label());
+			return_buf += prefix;
+			return_buf += linebuf;
+			if (show_work) { printf("%s", linebuf.c_str()); }
+			continue;
+		}
 
 		formatstr(linebuf, "%s %9d  %s%s", StepLbl(ix), subs[ix].matches, pindent, subs[ix].Label());
 
@@ -4713,9 +4986,8 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 		}
 
 		linebuf += "\n";
+		return_buf += prefix;
 		return_buf += linebuf;
-
-		if (show_work) { printf("%s", linebuf.c_str()); }
 	}
 
 	// chase zeros back up the expression tree
