@@ -97,6 +97,11 @@ input or output files to transfer.
 when the configuration variable \Macro{STATISTICS\_WINDOW\_SECONDS} was reduced.
 \Ticket{3443}
 
+\item Fixed a bug that could cause daemons using CCB to fail to reconnect to
+the CCB server after becoming disconnected.  This condition would cause the
+daemon to become unreachable via CCB until restarted.
+\Ticket{3476}
+
 \end{itemize}
 
 \noindent Known Bugs:
