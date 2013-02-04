@@ -74,6 +74,10 @@ class TestWithDaemons(unittest.TestCase):
         os.environ["_condor_COLLECTOR"] = os.path.join(os.getcwd(), "../../condor_collector.V6/condor_collector")
         os.environ["_condor_SCHEDD"] = os.path.join(os.getcwd(), "../../condor_schedd.V6/condor_schedd")
         os.environ["_condor_PROCD"] = os.path.join(os.getcwd(), "../../condor_procd/condor_procd")
+        os.environ["_condor_STARTD"] = os.path.join(os.getcwd(), "../../condor_startd.V6/condor_startd")
+        os.environ["_condor_STARTER"] = os.path.join(os.getcwd(), "../../condor_starter.V6.1/condor_starter")
+        os.environ["_condor_NEGOTIATOR"] = os.path.join(os.getcwd(), "../../condor_negotiator.V6/condor_negotiator")
+        os.environ["_condor_SHADOW"] = os.path.join(os.getcwd(), "../../condor_shadow.V6.1/condor_shadow")
         os.environ["_condor_CONDOR_HOST"] = socket.getfqdn()
         os.environ["_condor_LOCAL_DIR"] = testdir
         os.environ["_condor_LOG"] =  '$(LOCAL_DIR)/log'
@@ -84,6 +88,16 @@ class TestWithDaemons(unittest.TestCase):
         os.environ["_condor_MASTER_ADDRESS_FILE"] = "$(LOG)/.master_address"
         os.environ["_condor_COLLECTOR_ADDRESS_FILE"] = "$(LOG)/.collector_address"
         os.environ["_condor_SCHEDD_ADDRESS_FILE"] = "$(LOG)/.schedd_address"
+        os.environ["_condor_STARTD_ADDRESS_FILE"] = "$(LOG)/.startd_address"
+        os.environ["_condor_NEGOTIATOR_ADDRESS_FILE"] = "$(LOG)/.negotiator_address"
+        # Various required attributes for the startd
+        os.environ["_condor_START"] = "TRUE"
+        os.environ["_condor_SUSPEND"] = "FALSE"
+        os.environ["_condor_CONTINUE"] = "TRUE"
+        os.environ["_condor_PREEMPT"] = "FALSE"
+        os.environ["_condor_KILL"] = "FALSE"
+        os.environ["_condor_WANT_SUSPEND"] = "FALSE"
+        os.environ["_condor_WANT_VACATE"] = "FALSE"
         condor.reload_config()
         condor.SecMan().invalidateAllSessions()
 
@@ -185,10 +199,51 @@ class TestWithDaemons(unittest.TestCase):
         self.assertTrue("Foo" not in ads[0])
 
     def testScheddSubmit(self):
-        self.launch_daemons(["SCHEDD", "COLLECTOR"])
+        self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
+        output_file = os.path.join(testdir, "test.out")
+        if os.path.exists(output_file):
+            os.unlink(output_file)
         schedd = condor.Schedd()
         ad = classad.parse(open("tests/submit.ad"))
-        schedd.submit(ad)
+        ads = []
+        cluster = schedd.submit(ad, 1, False, ads)
+        #print ads[0]
+        for i in range(60):
+            ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
+            #print ads
+            if len(ads) == 0:
+                break
+            if i % 2 == 0:
+                schedd.reschedule()
+            time.sleep(1)
+        self.assertEquals(open(output_file).read(), "hello world\n");
+
+    def testScheddSubmitSpool(self):
+        self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
+        output_file = os.path.join(testdir, "test.out")
+        if os.path.exists(output_file):
+            os.unlink(output_file)
+        schedd = condor.Schedd()
+        ad = classad.parse(open("tests/submit.ad"))
+        result_ads = []
+        cluster = schedd.submit(ad, 1, True, result_ads)
+        #print result_ads[0]
+        schedd.spool(result_ads)
+        for i in range(60):
+            ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
+            #print ads
+            self.assertEquals(len(ads), 1)
+            if ads[0]["JobStatus"] == 4:
+                break
+            if i % 5 == 0:
+                schedd.reschedule()
+            time.sleep(1)
+        schedd.retrieve("ClusterId == %d" % cluster)
+        #print "Final status:", schedd.query("ClusterId == %d" % cluster)[0];
+        schedd.act(condor.JobAction.Remove, ["%d.0" % cluster])       
+        ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
+        self.assertEquals(len(ads), 0)
+        self.assertEquals(open(output_file).read(), "hello world\n");
 
 if __name__ == '__main__':
     unittest.main()

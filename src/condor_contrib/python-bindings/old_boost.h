@@ -23,3 +23,8 @@ inline boost::python::object py_import(boost::python::str name)
   return boost::python::object(module);
 }
 
+#define THROW_EX(exception, message) \
+    { \
+        PyErr_SetString(PyExc_ ##exception, message); \
+        throw_error_already_set(); \
+    }

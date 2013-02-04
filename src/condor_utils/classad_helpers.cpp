@@ -367,8 +367,13 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 
 	job_ad->AssignExpr( ATTR_REQUEST_MEMORY, "ifthenelse(MemoryUsage isnt undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)" );
 	job_ad->AssignExpr( ATTR_REQUEST_DISK, "DiskUsage" );
-	job_ad->AssignExpr( ATTR_DISK_USAGE, "1" );
-	job_ad->AssignExpr( ATTR_REQUEST_CPUS, "1" );
+	job_ad->Assign( ATTR_DISK_USAGE, 1 );
+	job_ad->Assign( ATTR_REQUEST_CPUS, 1 );
+
+	// Without these, the starter will not automatically remap the stdout/err (look at sha 422735d9)
+	// and possibly won't put them in the correct directory.
+	job_ad->Assign( ATTR_STREAM_OUTPUT, false );
+	job_ad->Assign( ATTR_STREAM_ERROR, false );
 
 	job_ad->Assign( ATTR_VERSION, CondorVersion() );
 	job_ad->Assign( ATTR_PLATFORM, CondorPlatform() );
