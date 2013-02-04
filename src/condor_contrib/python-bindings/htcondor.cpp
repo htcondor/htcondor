@@ -7,7 +7,7 @@
 using namespace boost::python;
 
 
-BOOST_PYTHON_MODULE(condor)
+BOOST_PYTHON_MODULE(htcondor)
 {
     scope().attr("__doc__") = "Utilities for interacting with the HTCondor system.";
 
