@@ -184,6 +184,12 @@ class TestWithDaemons(unittest.TestCase):
         self.assertEquals(ads[0]["Bar"], now)
         self.assertTrue("Foo" not in ads[0])
 
+    def testScheddSubmit(self):
+        self.launch_daemons(["SCHEDD", "COLLECTOR"])
+        schedd = condor.Schedd()
+        ad = classad.parse(open("tests/submit.ad"))
+        schedd.submit(ad)
+
 if __name__ == '__main__':
     unittest.main()
 

@@ -1,0 +1,6 @@
+[
+Err = "test.err";
+Out = "test.out";
+Cmd = "/bin/ps";
+Arguments = "faux";
+]

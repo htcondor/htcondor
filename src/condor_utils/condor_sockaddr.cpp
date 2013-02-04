@@ -236,7 +236,12 @@ bool condor_sockaddr::from_sinful(const char* sinful)
 	if ( *addr == ':' ) {
 		addr++;
 		port_begin = addr;
-		port_len = strspn(addr, "0123456789");
+		//port_len = strspn(addr, "0123456789");
+		// re-implemented without strspn as strspn causes valgrind
+		// errors on RHEL6.
+		const char * addr_ptr = addr;
+		port_len = 0;
+		while (*addr_ptr && isdigit(*addr_ptr++)) port_len++;
 		addr += port_len;
 	}
 	if ( *addr == '?' ) {

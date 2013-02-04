@@ -1,13 +1,21 @@
 
+#include "condor_common.h"
+
 #include "condor_attributes.h"
+#include "condor_universe.h"
 #include "condor_q.h"
 #include "condor_qmgr.h"
 #include "daemon.h"
 #include "daemon_types.h"
 #include "enum_utils.h"
 #include "dc_schedd.h"
+#include "classad_helpers.h"
+#include "condor_config.h"
+
+#include <classad/operators.h>
 
 #include <boost/python.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "old_boost.h"
 #include "classad_wrapper.h"
@@ -21,6 +29,75 @@ using namespace boost::python;
         result = schedd. action_name (&ids, reason_str.c_str(), NULL, AR_TOTALS); \
     else \
         result = schedd. action_name (constraint.c_str(), reason_str.c_str(), NULL, AR_TOTALS);
+
+#define ADD_REQUIREMENT(parm, value) \
+    if (boost::ifind_first(req_str, ATTR_ ##parm).begin() == req_str.end()) \
+    { \
+        classad::ExprTree * new_expr; \
+        parser.ParseExpression(value, new_expr); \
+        if (result.get()) \
+        { \
+            result.reset(classad::Operation::MakeOperation(classad::Operation::LOGICAL_AND_OP, result.release(), new_expr)); \
+        } \
+        else \
+        { \
+            result.reset(new_expr); \
+        } \
+        if (!result.get() || !new_expr) \
+        { \
+            PyErr_SetString(PyExc_RuntimeError, "Unable to add " #parm " requirements."); \
+            throw_error_already_set(); \
+        } \
+    }
+
+#define ADD_PARAM(parm) \
+    { \
+        const char *new_param = param(#parm); \
+        if (!new_param) \
+        { \
+            PyErr_SetString(PyExc_RuntimeError, "Unable to determine " #parm " param value."); \
+            throw_error_already_set(); \
+        } \
+        std::stringstream ss; \
+        ss << "TARGET." #parm " == \"" << new_param << "\""; \
+        ADD_REQUIREMENT(parm, ss.str()) \
+    }
+
+std::auto_ptr<ExprTree>
+make_requirements(ExprTree *reqs, ShouldTransferFiles_t stf)
+{
+    // Copied ideas from condor_submit.  Pretty lame.
+    classad::ClassAdUnParser printer;
+    classad::ClassAdParser parser;
+    std::string req_str;
+    printer.Unparse(req_str, reqs);
+    ExprTree *reqs_copy = NULL;
+    if (reqs)
+        reqs_copy = reqs->Copy();
+    if (!reqs_copy)
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Unable to create copy of requirements expression.");
+        throw_error_already_set();
+    }
+    std::auto_ptr<ExprTree> result(reqs_copy);
+    ADD_PARAM(OPSYS);
+    ADD_PARAM(ARCH);
+    switch (stf)
+    {
+    case STF_NO:
+        ADD_REQUIREMENT(FILE_SYSTEM_DOMAIN, "TARGET." ATTR_FILE_SYSTEM_DOMAIN " == MY." ATTR_FILE_SYSTEM_DOMAIN);
+        break;
+    case STF_YES:
+        ADD_REQUIREMENT(HAS_FILE_TRANSFER, "TARGET." ATTR_HAS_FILE_TRANSFER);
+        break;
+    case STF_IF_NEEDED:
+        ADD_REQUIREMENT(HAS_FILE_TRANSFER, "(TARGET." ATTR_HAS_FILE_TRANSFER " || (TARGET." ATTR_FILE_SYSTEM_DOMAIN " == MY." ATTR_FILE_SYSTEM_DOMAIN"))");
+        break;
+    }
+    ADD_REQUIREMENT(REQUEST_DISK, "TARGET.Disk >= " ATTR_REQUEST_DISK);
+    ADD_REQUIREMENT(REQUEST_MEMORY, "TARGET.Memory >= " ATTR_REQUEST_MEMORY);
+    return result;
+}
 
 struct Schedd {
 
@@ -107,6 +184,15 @@ struct Schedd {
             retval.append(wrapper);
         }
         return retval;
+    }
+
+    void reschedule()
+    {
+        DCSchedd schedd(m_addr.c_str());
+        Stream::stream_type st = schedd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
+        if (!schedd.sendCommand(RESCHEDULE, st, 0)) {
+            dprintf(D_ALWAYS, "Can't send RESCHEDULE command to schedd.\n" );
+        }
     }
 
     object actOnJobs(JobAction action, object job_spec, object reason=object())
@@ -232,7 +318,43 @@ struct Schedd {
             PyErr_SetString(PyExc_RuntimeError, "Failed to create new cluster.");
             throw_error_already_set();
         }
-        ClassAd ad; ad.CopyFrom(wrapper);
+        
+        ClassAd ad;
+        // Create a blank ad for job submission.
+        ClassAd *tmpad = CreateJobAd(NULL, CONDOR_UNIVERSE_VANILLA, "/bin/echo");
+        if (tmpad)
+        {
+            ad.CopyFrom(*tmpad);
+            delete tmpad;
+        }
+        else
+        {
+            PyErr_SetString(PyExc_RuntimeError, "Failed to create a new job ad.");
+            throw_error_already_set();
+        }
+        char path[4096];
+        if (getcwd(path, 4095))
+        {
+            ad.InsertAttr(ATTR_JOB_IWD, path);
+        }
+
+        // Copy the attributes specified by the invoker.
+        ad.Update(wrapper);
+
+        ShouldTransferFiles_t should = STF_IF_NEEDED;
+        std::string should_str;
+        if (ad.EvaluateAttrString(ATTR_SHOULD_TRANSFER_FILES, should_str))
+        {
+            if (should_str == "YES")
+                should = STF_YES;
+            else if (should_str == "NO")
+                should = STF_NO;
+        }
+
+        ExprTree *old_reqs = ad.Lookup(ATTR_REQUIREMENTS);
+        ExprTree *new_reqs = make_requirements(old_reqs, should).release();
+        ad.Insert(ATTR_REQUIREMENTS, new_reqs);
+
         for (int idx=0; idx<count; idx++)
         {
             int procid = NewProc (cluster);
@@ -258,6 +380,10 @@ struct Schedd {
             }
         }
 
+        if (param_boolean("SUBMIT_SEND_RESCHEDULE",true))
+        {
+            reschedule();
+        }
         return cluster;
     }
 
@@ -396,7 +522,8 @@ void export_schedd()
         .def("edit", &Schedd::edit, "Edit one or more jobs in the queue.\n"
             ":param job_spec: Either a list of jobs (CLUSTER.PROC) or a string containing a constraint to match jobs against.\n"
             ":param attr: Attribute name to edit.\n"
-            ":param value: The new value of the job attribute; should be a string (which will be converted to a ClassAds expression) or a ClassAds expression.");
+            ":param value: The new value of the job attribute; should be a string (which will be converted to a ClassAds expression) or a ClassAds expression.")
+        .def("reschedule", &Schedd::reschedule, "Send reschedule command to the schedd.\n");
         ;
 }
 
