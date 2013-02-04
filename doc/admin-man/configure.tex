@@ -10217,7 +10217,10 @@ SHARED_PORT_ARGS = -p 4080
 \end{verbatim}
 
 If no port is specified, a port will be dynamically chosen; it may be
- different each time HTCondor is started.
+different each time HTCondor is started.  In order to decrease the
+duration of possible communication errors resulting from HTCondor or just
+\Condor{shared\_port} itself restarting, it is recommended that a fixed
+port be used instead of a dynamic one.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
