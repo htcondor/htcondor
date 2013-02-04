@@ -1,0 +1,93 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{API-Python} Python Bindings}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{API!Python bindings}
+\index{Python bindings}
+
+The Python module provides bindings to the client-side APIs for HTCondor.  
+It tries to provide functionality similar to the HTCondor command line tools.
+Further improvements are planned for the difficult to use submission API.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{Python-ClassAd} ClassAd Module}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+This module attempts to wrap a C++ API that is
+far less formal when compared to the ClassAd language.
+
+Module functions:
+%
+%  NOTE FROM KAREN:  Yes, this formatting looks somewhat poor in both
+%  the html and pdf versions.  However, please do not change it, and
+%  carefully follow the existing formatting, as the LaTeX to pdf and
+%  LaTeX to html translators do quite different things for lists.  This
+%  particular formatting at least works in both versions.
+%
+\begin{description}
+\item [\Code{platform}]
+  Returns the platform of HTCondor this module is running on.
+  
+\item [\Code{version}]
+  Returns the version of HTCondor this module is linked against.
+
+\item [\Code{reload\_config}]
+  Reload the HTCondor configuration from disk.
+
+\item [\Code{send\_command}]
+  Send a command to an HTCondor daemon specified by a location ClassAd.
+
+  \Code{send\_command( ad, (DaemonCommands)dc, (str)target = None) : }
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{ad} A ClassAd specifying the location of the daemon; 
+      typically, found by using \Code{Collector.locate(...)}.
+      \item \Code{dc} A command type; 
+      must be a member of the enum \Code{DaemonCommands}.
+      \item \Code{target} Some commands require additional arguments; 
+      for example, sending \Code{DaemonOff} to a \Condor{master} requires 
+      one to specify which subsystem to turn off.  
+      If this parameter is given, the daemon is sent an additional argument.
+    \end{itemize}
+  \end{description}  
+
+\end{description}
+
+Module object:
+\begin{description}
+  \item[\Code{param}]
+  A dictionary-like object providing access to the configuration variables
+  in the current HTCondor configuration.
+\end{description}
+
+ClassAd Class functions:
+
+\begin{description}
+\item [\Code{parse}]
+  Parse input into a ClassAd.
+  \Code{parse( input )}
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{input} A string-like object or a file pointer. 
+    \end{itemize}
+    \item[ Return Value]
+      A ClassAd object.
+  \end{description}  
+
+\item [\Code{parseOld}]
+  Parse old ClassAd format input into a ClassAd.
+\end{description}
+ \MoreTodo
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{Python-OtherModule} Other Module}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The \Condor{schedd} class:
+\Todo
+
+The \Condor{collector} class:
+\Todo
+
+The class to access the internal security object:
+\Todo
