@@ -35,7 +35,7 @@ sub HELD{5};
 sub RUNNING{2};
 
 runcmd("rm -f $dontwatchlog");
-runcmd("rm -f job_dagman_done_use_default_node_log.log");
+runcmd("rm -f job_dagman_dont_use_default_node_log.log");
 runcmd("rm -f job_dagman_dont_use_default_node_log.dag.condor.sub");
 runcmd("rm -f job_dagman_dont_use_default_node_log.dag.dagman.log");
 runcmd("rm -f job_dagman_dont_use_default_node_log.dag.dagman.out");
