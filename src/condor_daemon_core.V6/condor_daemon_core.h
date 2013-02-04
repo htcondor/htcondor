@@ -1494,6 +1494,11 @@ class DaemonCore : public Service
 			shared port server.
 		*/
 	void ReloadSharedPortServerAddr();
+		/** Unset the shared port server address.
+			Called, for example, before the master starts up the
+			shared port server, to ensure a sensible parent address.
+		 */
+	void ClearSharedPortServerAddr();
 
 
 	//-----------------------------------------------------------------------------

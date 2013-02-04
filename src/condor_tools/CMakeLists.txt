@@ -111,6 +111,6 @@ endif()
 # GPU Support
 ############################################################
 if ( LINUX AND HAVE_LIBDL AND HAVE_DLFCN_H AND HAVE_DLOPEN )
-	condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_SBIN}
+	condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC}
 	"${DL_FOUND}" OFF )
 endif()
