@@ -1,6 +1,7 @@
 Config job_dagman_default_log.config
 
 Job NodeA job_dagman_default_log-nodeA.cmd Dir job_dagman_default_log-subdir
+Vars NodeA LogFile="job_dagman_default_log-nodeA.log"
 Script Pre NodeA job_dagman_default_log-nodeA-pre.pl
 Script Post NodeA job_dagman_default_log-nodeA-post.pl $RETURN
 

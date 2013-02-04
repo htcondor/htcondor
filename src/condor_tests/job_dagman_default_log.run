@@ -34,6 +34,7 @@ $dagman_args = "-verbose";
 
 @logfiles = ("job_dagman_default_log.dag.dagman.out");
 $nodelog = "job_dagman_default_log.test_node_log";
+$log_w_macro = "job_dagman_default_log-subdir/job_dagman_default_log-nodeA.log";
 
 my $dag_was_held = 0;
 my $dag_was_released = 0;
@@ -51,6 +52,9 @@ foreach $name (@logfiles) {
 }
 if (-e $nodelog) {
 	system("rm -f $nodelog");
+}
+if (-e $log_w_macro) {
+	system("rm -f $log_w_macro");
 }
 
 $abnormal = sub 
@@ -165,6 +169,10 @@ $success = sub
 		}
 	}
 	close(NODE_LOG);
+	if (! -e $log_w_macro) {
+		CondorTest::debug("Node job log file $log_w_macro does not exist\n",1);
+		$diditpass = 0;
+	}
 	if($passed == 1 and $state == 5) {
 		;
 	} else {
