@@ -9160,12 +9160,12 @@ section~\ref{sec:Security} on Security.
   even if they have an empty subject name.
 
 \label{param:HostAlias}
-\item[\Macro{HOST\_ALIAS}] specifies the
-  hostname that clients authenticating this daemon with GSI should
+\item[\Macro{HOST\_ALIAS}] Specifies the fully qualified
+  host name that clients authenticating this daemon with GSI should
   expect the daemon's certificate to match.  The alias is advertised
   to the \Condor{collector} as part of the address of the daemon.
   When this is not set, clients validate the daemon's certificate
-  hostname by matching it against DNS A records for the host they
+  host name by matching it against DNS A records for the host they
   are connected to.  See \Macro{GSI\_SKIP\_HOST\_CHECK} for ways
   to disable this validation step.
 
