@@ -765,6 +765,12 @@ SharedPortEndpoint::RetryInitRemoteAddress()
 }
 
 void
+SharedPortEndpoint::ClearSharedPortServerAddr()
+{
+	m_remote_addr = "";
+}
+
+void
 SharedPortEndpoint::ReloadSharedPortServerAddr()
 {
 	if( daemonCoreSockAdapter.isEnabled() ) {
