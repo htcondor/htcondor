@@ -9,7 +9,7 @@ It tries to provide functionality similar to the HTCondor command line tools.
 Further improvements are planned for the difficult to use submission API.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{Python-ClassAd} ClassAd Module}
+\subsection{\label{Python-OtherModule} Other Module}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 This module attempts to wrap a C++ API that is
 far less formal when compared to the ClassAd language.
@@ -35,7 +35,7 @@ Module functions:
 \item [\Code{send\_command}]
   Send a command to an HTCondor daemon specified by a location ClassAd.
 
-  \Code{send\_command( ad, (DaemonCommands)dc, (str)target = None) : }
+  \Code{send\_command( ad, (DaemonCommands)dc, (str)target = None)  }
   \begin{description}
     \item[ Parameters]
     \begin{itemize}
@@ -59,11 +59,30 @@ Module object:
   in the current HTCondor configuration.
 \end{description}
 
-ClassAd Class functions:
+The \Condor{schedd} class:
+\Todo
+
+The \Condor{collector} class:
+\Todo
+
+The class to access the internal security object:
+\Todo
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{Python-ClassAd} ClassAd Module}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The ClassAd module class provides a dictionary-like mechanism for interacting
+with the ClassAd language. 
+ClassAd objects implement the iterator interface to iterate 
+through the ClassAd's attributes.
+
+Module functions:
 
 \begin{description}
 \item [\Code{parse}]
   Parse input into a ClassAd.
+
   \Code{parse( input )}
   \begin{description}
     \item[ Parameters]
@@ -76,18 +95,168 @@ ClassAd Class functions:
 
 \item [\Code{parseOld}]
   Parse old ClassAd format input into a ClassAd.
+
+\item [\Code{version}]
+  Return the version of the linked ClassAd library.
 \end{description}
+
+Standard Python object methods for the ClassAd class:
+
+\begin{description}
+
+\item [\Code{\_\_init\_\_}]
+  Create a ClassAd object from a string.
+  The string must be formatted in the new ClassAd format.
+
+  \Code{\_\_init\_\_( str )}
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{str} A string formatted in the new ClassAd format. 
+    \end{itemize}
+    \item[ Return Value]
+      ?? .
+  \end{description}  
+
+\item [\Code{\_\_len\_\_}]
+  Returns the number of attributes in the ClassAd; 
+  allows \Code{len(object)} semantics for ClassAds.
+
+  \Code{\_\_len\_\_( )}
+  \begin{description}
+    \item[ Return Value]
+      Returns the integer number of attributes in the ClassAd.
+  \end{description}  
+
+\item [\Code{\_\_str\_\_}]
+  Converts the ClassAd to a string; the formatting style is new ClassAd,
+  with square brackets and semi-colons.  
+  For example, \Expr{[ Foo = "bar"; ]} may be returned.
+
+  \Code{\_\_str\_\_( )}
+  \begin{description}
+    \item[ Return Value]
+      Returns the converted string.
+  \end{description}  
+
+\end{description}
+
+The ClassAd object has the following dictionary-like methods:
+\begin{description}
+
+\item [\Code{items}]
+  Returns an iterator, where each item returned by the iterator 
+  is a tuple representing a pair (attribute,value) in the ClassAd object.
+
+  \Code{items( )}
+  \begin{description}
+    \item[ Return Value]
+      Returns an iterator of tuples.
+  \end{description}  
+
+\item [\Code{keys}]
+  Returns an iterator, where each item returned by the iterator 
+  is an attribute string in the ClassAd.
+
+  \Code{keys( )}
+  \begin{description}
+    \item[ Return Value]
+      Returns an iterator of strings.
+  \end{description}  
+
+\item [\Code{values}]
+  Returns an iterator, where each item returned by the iterator is a value 
+  in the ClassAd.  If the value is a literal, 
+  it will be cast to a native python object, 
+  so a ClassAd string will be returned as a Python string.
+  \Code{values( )}
+  \begin{description}
+    \item[ Return Value]
+      Returns an iterator of objects.
+  \end{description}  
+
+\item [\Code{\_\_getitem\_\_}]
+  Returns as an object the value corresponding to an attribute.
+
+  \Code{\_\_getitem\_\_( attr )}
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{attr} ?? . 
+    \end{itemize}
+    \item[ Return Value]
+      ClassAd values will be returned as Python objects; 
+      ClassAd expressions will be returned as \Code{ExprTree} objects.
+  \end{description}  
+
+\item [\Code{\_\_setitem\_\_}]
+  Sets the ClassAd attribute to the given value.
+  Python objects will be converted to ClassAd values; 
+  \Expr{ExprTree} objects will not be evaluated.
+
+  \Code{\_\_setitem\_\_( attr, value )}
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{attr} ?? . 
+      \item \Code{value} ?? . 
+    \end{itemize}
+    \item[ Return Value]
+      ClassAd values will be returned as Python objects; 
+      ClassAd expressions will be returned as \Code{ExprTree} objects.
+  \end{description}  
+
+
+\end{description}
+
+Additional methods:
+\begin{description}
+
+\item [\Code{eval}]
+  Evaluate the value given a ClassAd attribute.
+  Throws \Expr{ValueError} if unable to evaluate the object.
+
+  \Code{eval ( attr )}
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{attr} ?? . 
+    \end{itemize}
+    \item[ Return Value]
+      Returns the Python object corresponding to the evaluated ClassAd
+      attribute.
+  \end{description}  
+
+\item [\Code{lookup}]
+  Lookup the \Expr{ExprTree} object associated with the given attribute.
+  No attempt will be made to convert to a Python object.
+
+  \Code{lookup ( attr )}
+  \begin{description}
+    \item[ Parameters]
+    \begin{itemize}
+      \item \Code{attr} ?? . 
+    \end{itemize}
+    \item[ Return Value]
+      Returns an \Expr{ExprTree} object.
+  \end{description}  
+
+\item [\Code{printOld}]
+  Print the ClassAd in the old ClassAd format.
+
+  \Code{printOld( )}
+  \begin{description}
+    \item[ Return Value]
+      ?? Returns a string.
+  \end{description}  
+
+\end{description}
+
+%Class Object:
+%\begin{description}
+%  \item[\Code{ExprTree}]
+%  An object representing an expression in the ClassAd language.
+%\end{description}
+
+
  \MoreTodo
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{Python-OtherModule} Other Module}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-The \Condor{schedd} class:
-\Todo
-
-The \Condor{collector} class:
-\Todo
-
-The class to access the internal security object:
-\Todo
