@@ -22,6 +22,8 @@
         
                 #include "AviaryHadoop_HadoopID.h"
               
+                #include "AviaryHadoop_HadoopID.h"
+              
                 #include "AviaryHadoop_HadoopStateType.h"
               
                 #include "AviaryCommon_Status.h"
@@ -44,6 +46,10 @@ namespace AviaryHadoop
 
                 
                 bool isValidRef;
+            AviaryHadoop::HadoopID* property_Parent;
+
+                
+                bool isValidParent;
             std::string property_Owner;
 
                 
@@ -79,6 +85,10 @@ namespace AviaryHadoop
 
         bool WSF_CALL
         setRefNil();
+            
+
+        bool WSF_CALL
+        setParentNil();
             
 
         bool WSF_CALL
@@ -133,6 +143,7 @@ namespace AviaryHadoop
          * Constructor for creating HadoopQueryResult
          * @param 
          * @param Ref AviaryHadoop::HadoopID*
+         * @param Parent AviaryHadoop::HadoopID*
          * @param Owner std::string
          * @param Submitted int
          * @param Uptime int
@@ -142,7 +153,7 @@ namespace AviaryHadoop
          * @param Http std::string
          * @return newly created HadoopQueryResult object
          */
-        HadoopQueryResult(AviaryHadoop::HadoopID* arg_Ref,std::string arg_Owner,int arg_Submitted,int arg_Uptime,AviaryHadoop::HadoopStateType* arg_State,AviaryCommon::Status* arg_Status,std::string arg_Bin_file,std::string arg_Http);
+        HadoopQueryResult(AviaryHadoop::HadoopID* arg_Ref,AviaryHadoop::HadoopID* arg_Parent,std::string arg_Owner,int arg_Submitted,int arg_Uptime,AviaryHadoop::HadoopStateType* arg_State,AviaryCommon::Status* arg_Status,std::string arg_Bin_file,std::string arg_Http);
         
 
         /**
@@ -175,6 +186,30 @@ namespace AviaryHadoop
          */
         WSF_EXTERN bool WSF_CALL
         resetRef();
+        
+        
+
+        /**
+         * Getter for parent. 
+         * @return AviaryHadoop::HadoopID*
+         */
+        WSF_EXTERN AviaryHadoop::HadoopID* WSF_CALL
+        getParent();
+
+        /**
+         * Setter for parent.
+         * @param arg_Parent AviaryHadoop::HadoopID*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setParent(AviaryHadoop::HadoopID*  arg_Parent);
+
+        /**
+         * Re setter for parent
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetParent();
         
         
 
@@ -366,6 +401,16 @@ namespace AviaryHadoop
         
 
         /**
+         * Check whether parent is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isParentNil();
+
+
+        
+
+        /**
          * Check whether owner is Nill
          * @return true if the element is Nil, false otherwise
          */
@@ -503,29 +548,29 @@ namespace AviaryHadoop
         
 
         /**
-         * Getter for owner by property number (2)
-         * @return std::string
+         * Getter for parent by property number (2)
+         * @return AviaryHadoop::HadoopID
          */
 
-        std::string WSF_CALL
+        AviaryHadoop::HadoopID* WSF_CALL
         getProperty2();
 
     
         
 
         /**
-         * Getter for submitted by property number (3)
-         * @return int
+         * Getter for owner by property number (3)
+         * @return std::string
          */
 
-        int WSF_CALL
+        std::string WSF_CALL
         getProperty3();
 
     
         
 
         /**
-         * Getter for uptime by property number (4)
+         * Getter for submitted by property number (4)
          * @return int
          */
 
@@ -536,45 +581,56 @@ namespace AviaryHadoop
         
 
         /**
-         * Getter for state by property number (5)
-         * @return AviaryHadoop::HadoopStateType
+         * Getter for uptime by property number (5)
+         * @return int
          */
 
-        AviaryHadoop::HadoopStateType* WSF_CALL
+        int WSF_CALL
         getProperty5();
 
     
         
 
         /**
-         * Getter for status by property number (6)
-         * @return AviaryCommon::Status
+         * Getter for state by property number (6)
+         * @return AviaryHadoop::HadoopStateType
          */
 
-        AviaryCommon::Status* WSF_CALL
+        AviaryHadoop::HadoopStateType* WSF_CALL
         getProperty6();
 
     
         
 
         /**
-         * Getter for bin_file by property number (7)
-         * @return std::string
+         * Getter for status by property number (7)
+         * @return AviaryCommon::Status
          */
 
-        std::string WSF_CALL
+        AviaryCommon::Status* WSF_CALL
         getProperty7();
 
     
         
 
         /**
-         * Getter for http by property number (8)
+         * Getter for bin_file by property number (8)
          * @return std::string
          */
 
         std::string WSF_CALL
         getProperty8();
+
+    
+        
+
+        /**
+         * Getter for http by property number (9)
+         * @return std::string
+         */
+
+        std::string WSF_CALL
+        getProperty9();
 
     
 

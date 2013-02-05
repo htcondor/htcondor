@@ -52,6 +52,10 @@
               
             isValidRef  = false;
         
+                property_Parent  = NULL;
+              
+            isValidParent  = false;
+        
                     property_Owner;
                 
             isValidOwner  = false;
@@ -78,12 +82,16 @@
         
         }
 
-       AviaryHadoop::HadoopQueryResult::HadoopQueryResult(AviaryHadoop::HadoopID* arg_Ref,std::string arg_Owner,int arg_Submitted,int arg_Uptime,AviaryHadoop::HadoopStateType* arg_State,AviaryCommon::Status* arg_Status,std::string arg_Bin_file,std::string arg_Http)
+       AviaryHadoop::HadoopQueryResult::HadoopQueryResult(AviaryHadoop::HadoopID* arg_Ref,AviaryHadoop::HadoopID* arg_Parent,std::string arg_Owner,int arg_Submitted,int arg_Uptime,AviaryHadoop::HadoopStateType* arg_State,AviaryCommon::Status* arg_Status,std::string arg_Bin_file,std::string arg_Http)
         {
              
                property_Ref  = NULL;
              
             isValidRef  = true;
+            
+               property_Parent  = NULL;
+             
+            isValidParent  = true;
             
                  property_Owner;
              
@@ -111,6 +119,8 @@
             
                     property_Ref = arg_Ref;
             
+                    property_Parent = arg_Parent;
+            
                     property_Owner = arg_Owner;
             
                     property_Submitted = arg_Submitted;
@@ -137,6 +147,7 @@
 
             
              resetRef();//AviaryHadoop::HadoopID
+             resetParent();//AviaryHadoop::HadoopID
              resetState();//AviaryHadoop::HadoopStateType
              resetStatus();//AviaryCommon::Status
             return true;
@@ -240,6 +251,88 @@
                                   }
                                   /* this is not a nillable element*/
 				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element ref missing");
+                                  return AXIS2_FAILURE;
+                              }
+                           
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
+
+                     
+                     /*
+                      * building parent element
+                      */
+                     
+                     
+                     
+                                    /*
+                                     * because elements are ordered this works fine
+                                     */
+                                  
+                                   
+                                   if(current_node != NULL && is_early_node_valid)
+                                   {
+                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                       
+                                       
+                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                        {
+                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                        }
+                                        if(current_node != NULL)
+                                        {
+                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                        }
+                                       
+                                   }
+                                   is_early_node_valid = false;
+                                 
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "parent", NULL, NULL);
+                                 
+
+                           if (isParticle() ||  
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("parent", axiom_element_get_localname(current_element, Environment::getEnv())))))
+                           {
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("parent", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              {
+                                is_early_node_valid = true;
+                              }
+                              
+                                 AviaryHadoop::HadoopID* element = new AviaryHadoop::HadoopID();
+
+                                      status =  element->deserialize(&current_node, &is_early_node_valid, false);
+                                      if(AXIS2_FAILURE == status)
+                                      {
+                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in building adb object for element parent");
+                                      }
+                                      else
+                                      {
+                                          status = setParent(element);
+                                      }
+                                    
+                                 if(AXIS2_FAILURE ==  status)
+                                 {
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for parent ");
+                                     if(element_qname)
+                                     {
+                                         axutil_qname_free(element_qname, Environment::getEnv());
+                                     }
+                                     return AXIS2_FAILURE;
+                                 }
+                              }
+                           
+                              else if(!dont_care_minoccurs)
+                              {
+                                  if(element_qname)
+                                  {
+                                      axutil_qname_free(element_qname, Environment::getEnv());
+                                  }
+                                  /* this is not a nillable element*/
+				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element parent missing");
                                   return AXIS2_FAILURE;
                               }
                            
@@ -1033,10 +1126,10 @@
             
                     axis2_char_t text_value_1[ADB_DEFAULT_DIGIT_LIMIT];
                     
-                    axis2_char_t *text_value_2;
-                    axis2_char_t *text_value_2_temp;
+                    axis2_char_t text_value_2[ADB_DEFAULT_DIGIT_LIMIT];
                     
-                    axis2_char_t text_value_3[ADB_DEFAULT_DIGIT_LIMIT];
+                    axis2_char_t *text_value_3;
+                    axis2_char_t *text_value_3_temp;
                     
                     axis2_char_t text_value_4[ADB_DEFAULT_DIGIT_LIMIT];
                     
@@ -1044,11 +1137,13 @@
                     
                     axis2_char_t text_value_6[ADB_DEFAULT_DIGIT_LIMIT];
                     
-                    axis2_char_t *text_value_7;
-                    axis2_char_t *text_value_7_temp;
+                    axis2_char_t text_value_7[ADB_DEFAULT_DIGIT_LIMIT];
                     
                     axis2_char_t *text_value_8;
                     axis2_char_t *text_value_8_temp;
+                    
+                    axis2_char_t *text_value_9;
+                    axis2_char_t *text_value_9_temp;
                     
                axis2_char_t *start_input_str = NULL;
                axis2_char_t *end_input_str = NULL;
@@ -1141,6 +1236,67 @@
                        p_prefix = NULL;
                       
 
+                   if (!isValidParent)
+                   {
+                      
+                            
+                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property parent");
+                            return NULL;
+                          
+                   }
+                   else
+                   {
+                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (4 + axutil_strlen(p_prefix) + 
+                                  axutil_strlen("parent"))); 
+                                 
+                                 /* axutil_strlen("<:>") + 1 = 4 */
+                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("parent")));
+                                  /* axutil_strlen("</:>") + 1 = 5 */
+                                  
+                     
+
+                   
+                   
+                     
+                     /*
+                      * parsing parent element
+                      */
+
+                    
+                    
+                            sprintf(start_input_str, "<%s%sparent",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":""); 
+                            
+                        start_input_str_len = axutil_strlen(start_input_str);
+                        sprintf(end_input_str, "</%s%sparent>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                        end_input_str_len = axutil_strlen(end_input_str);
+                     
+                            if(!property_Parent->isParticle())
+                            {
+                                axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
+                            }
+                            property_Parent->serialize(current_node, parent_element,
+                                                                                 property_Parent->isParticle() || false, namespaces, next_ns_index);
+                            
+                            if(!property_Parent->isParticle())
+                            {
+                                axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
+                            }
+                            
+                     
+                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
+                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
+                 } 
+
+                 
+                       p_prefix = NULL;
+                      
+
                    if (!isValidOwner)
                    {
                       
@@ -1181,20 +1337,20 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                           text_value_2 = (axis2_char_t*)property_Owner.c_str();
+                           text_value_3 = (axis2_char_t*)property_Owner.c_str();
                            
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
                             
-                           text_value_2_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_2, true);
-                           if (text_value_2_temp)
+                           text_value_3_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_3, true);
+                           if (text_value_3_temp)
                            {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_2_temp, axutil_strlen(text_value_2_temp));
-                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_2_temp);
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_3_temp, axutil_strlen(text_value_3_temp));
+                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_3_temp);
                            }
                            else
                            {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_2, axutil_strlen(text_value_2));
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_3, axutil_strlen(text_value_3));
                            }
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
@@ -1248,11 +1404,11 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                               sprintf (text_value_3, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Submitted);
+                               sprintf (text_value_4, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Submitted);
                              
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           axutil_stream_write(stream, Environment::getEnv(), text_value_3, axutil_strlen(text_value_3));
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_4, axutil_strlen(text_value_4));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -1305,11 +1461,11 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                               sprintf (text_value_4, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Uptime);
+                               sprintf (text_value_5, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Uptime);
                              
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           axutil_stream_write(stream, Environment::getEnv(), text_value_4, axutil_strlen(text_value_4));
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_5, axutil_strlen(text_value_5));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -1484,20 +1640,20 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                           text_value_7 = (axis2_char_t*)property_Bin_file.c_str();
+                           text_value_8 = (axis2_char_t*)property_Bin_file.c_str();
                            
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
                             
-                           text_value_7_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_7, true);
-                           if (text_value_7_temp)
+                           text_value_8_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_8, true);
+                           if (text_value_8_temp)
                            {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_7_temp, axutil_strlen(text_value_7_temp));
-                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_7_temp);
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_8_temp, axutil_strlen(text_value_8_temp));
+                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_8_temp);
                            }
                            else
                            {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_7, axutil_strlen(text_value_7));
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_8, axutil_strlen(text_value_8));
                            }
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
@@ -1551,20 +1707,20 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                           text_value_8 = (axis2_char_t*)property_Http.c_str();
+                           text_value_9 = (axis2_char_t*)property_Http.c_str();
                            
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
                             
-                           text_value_8_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_8, true);
-                           if (text_value_8_temp)
+                           text_value_9_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_9, true);
+                           if (text_value_9_temp)
                            {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_8_temp, axutil_strlen(text_value_8_temp));
-                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_8_temp);
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_9_temp, axutil_strlen(text_value_9_temp));
+                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_9_temp);
                            }
                            else
                            {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_8, axutil_strlen(text_value_8));
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_9, axutil_strlen(text_value_9));
                            }
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
@@ -1695,10 +1851,122 @@
            
 
             /**
-             * Getter for owner by  Property Number 2
+             * Getter for parent by  Property Number 2
+             */
+            AviaryHadoop::HadoopID* WSF_CALL
+            AviaryHadoop::HadoopQueryResult::getProperty2()
+            {
+                return getParent();
+            }
+
+            /**
+             * getter for parent.
+             */
+            AviaryHadoop::HadoopID* WSF_CALL
+            AviaryHadoop::HadoopQueryResult::getParent()
+             {
+                return property_Parent;
+             }
+
+            /**
+             * setter for parent
+             */
+            bool WSF_CALL
+            AviaryHadoop::HadoopQueryResult::setParent(
+                    AviaryHadoop::HadoopID*  arg_Parent)
+             {
+                
+
+                if(isValidParent &&
+                        arg_Parent == property_Parent)
+                {
+                    
+                    return true;
+                }
+
+                
+                  if(NULL == arg_Parent)
+                       
+                  {
+                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"parent is being set to NULL, but it is not a nullable element");
+                      return AXIS2_FAILURE;
+                  }
+                
+
+                
+                resetParent();
+
+                
+                    if(NULL == arg_Parent)
+                         
+                {
+                    /* We are already done */
+                    return true;
+                }
+                
+                        property_Parent = arg_Parent;
+                        isValidParent = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for parent
+            */
+           bool WSF_CALL
+           AviaryHadoop::HadoopQueryResult::resetParent()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+            
+                
+
+                if(property_Parent != NULL)
+                {
+                   
+                   
+                         delete  property_Parent;
+                     
+
+                   }
+
+                
+                
+                
+               isValidParent = false; 
+               return true;
+           }
+
+           /**
+            * Check whether parent is nill
+            */
+           bool WSF_CALL
+           AviaryHadoop::HadoopQueryResult::isParentNil()
+           {
+               return !isValidParent;
+           }
+
+           /**
+            * Set parent to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryHadoop::HadoopQueryResult::setParentNil()
+           {
+               return resetParent();
+           }
+
+           
+
+            /**
+             * Getter for owner by  Property Number 3
              */
             std::string WSF_CALL
-            AviaryHadoop::HadoopQueryResult::getProperty2()
+            AviaryHadoop::HadoopQueryResult::getProperty3()
             {
                 return getOwner();
             }
@@ -1785,10 +2053,10 @@
            
 
             /**
-             * Getter for submitted by  Property Number 3
+             * Getter for submitted by  Property Number 4
              */
             int WSF_CALL
-            AviaryHadoop::HadoopQueryResult::getProperty3()
+            AviaryHadoop::HadoopQueryResult::getProperty4()
             {
                 return getSubmitted();
             }
@@ -1868,10 +2136,10 @@
            
 
             /**
-             * Getter for uptime by  Property Number 4
+             * Getter for uptime by  Property Number 5
              */
             int WSF_CALL
-            AviaryHadoop::HadoopQueryResult::getProperty4()
+            AviaryHadoop::HadoopQueryResult::getProperty5()
             {
                 return getUptime();
             }
@@ -1951,10 +2219,10 @@
            
 
             /**
-             * Getter for state by  Property Number 5
+             * Getter for state by  Property Number 6
              */
             AviaryHadoop::HadoopStateType* WSF_CALL
-            AviaryHadoop::HadoopQueryResult::getProperty5()
+            AviaryHadoop::HadoopQueryResult::getProperty6()
             {
                 return getState();
             }
@@ -2063,10 +2331,10 @@
            
 
             /**
-             * Getter for status by  Property Number 6
+             * Getter for status by  Property Number 7
              */
             AviaryCommon::Status* WSF_CALL
-            AviaryHadoop::HadoopQueryResult::getProperty6()
+            AviaryHadoop::HadoopQueryResult::getProperty7()
             {
                 return getStatus();
             }
@@ -2175,10 +2443,10 @@
            
 
             /**
-             * Getter for bin_file by  Property Number 7
+             * Getter for bin_file by  Property Number 8
              */
             std::string WSF_CALL
-            AviaryHadoop::HadoopQueryResult::getProperty7()
+            AviaryHadoop::HadoopQueryResult::getProperty8()
             {
                 return getBin_file();
             }
@@ -2265,10 +2533,10 @@
            
 
             /**
-             * Getter for http by  Property Number 8
+             * Getter for http by  Property Number 9
              */
             std::string WSF_CALL
-            AviaryHadoop::HadoopQueryResult::getProperty8()
+            AviaryHadoop::HadoopQueryResult::getProperty9()
             {
                 return getHttp();
             }
