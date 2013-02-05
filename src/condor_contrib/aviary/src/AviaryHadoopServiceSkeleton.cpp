@@ -210,6 +210,7 @@ HadoopQueryResponse* query (tHadoopType qType, vector<HadoopID*>* refs)
             HadoopQueryResult * hResult = new HadoopQueryResult;
         
             hResult->setRef(setHadoopID(hStatus[jCtr].idref));
+            hResult->setParent(setHadoopID(hStatus[jCtr].idparent));
             hResult->setBin_file(hStatus[jCtr].idref.tarball);
             hResult->setOwner(hStatus[jCtr].owner);
             hResult->setSubmitted(hStatus[jCtr].qdate);

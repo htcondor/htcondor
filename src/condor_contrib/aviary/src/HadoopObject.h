@@ -92,6 +92,7 @@ typedef struct hstatus
     int uptime;
     string state;
     tHadoopRef idref;
+    tHadoopRef idparent;
     int qdate;
     string http;
 }tHadoopJobStatus;

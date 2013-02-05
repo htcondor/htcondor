@@ -159,7 +159,10 @@ class HadoopCtrlCmd(cmd.Cmd):
                 result = func(refs)
         except Exception, e:
             print e
-        self.print_query(result)
+        if result != None:   
+            self.print_query(result)
+        else:
+            print "Failed call"
 
     def print_status(self,status):
         text = ""

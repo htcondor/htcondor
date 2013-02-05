@@ -237,7 +237,7 @@ int HadoopObject::start( tHadoopInit & hInit )
             ::GetAttributeString( id.cluster, id.proc,  "HTTPAddress", HTTPAddress);
             
             //TODO: there could be extra checks here.
-            ::SetAttribute(cluster, proc, "NameNode", hInit.idref.id.c_str() );
+            ::SetAttribute(cluster, proc, "NameNode", quote_it(hInit.idref.id.c_str()).c_str() );
         }
         else if (hInit.idref.ipcid.length())
         {
@@ -284,7 +284,7 @@ int HadoopObject::start( tHadoopInit & hInit )
             ::GetAttributeString( id.cluster, id.proc,  "HTTPAddress", HTTPAddress);
             
             //TODO: there could be extra checks here.
-            ::SetAttribute(cluster, proc, "JobTracker", hInit.idref.id.c_str() );
+            ::SetAttribute(cluster, proc, "JobTracker", quote_it(hInit.idref.id.c_str()).c_str() );
         }
         else if (hInit.idref.ipcid.length())
         {
@@ -468,19 +468,38 @@ bool HadoopObject::status (ClassAd* cAd, const tHadoopType & type, tHadoopJobSta
         hStatus.state = "ERROR";
     }
 
+    if (!cAd->LookupString( "IPCAddress", hStatus.idref.ipcid))
+    {
+       hStatus.idref.ipcid="N/A";
+    }
+    
+    // default the parent data
+    hStatus.idparent.ipcid="";
+    hStatus.idparent.id="";
+    
     switch (type)
     {
+        case DATA_NODE:
         case JOB_TRACKER:
-        case NAME_NODE:
-           cAd->LookupString(  "IPCAddress", hStatus.idref.ipcid);
+            cAd->LookupString("NameNodeIPCAddress", hStatus.idparent.ipcid);
+            cAd->LookupString("NameNode", hStatus.idparent.id);
+            break;
+        case TASK_TRACKER:
+            cAd->LookupString("JobTrackerIPCAddress", hStatus.idparent.ipcid);
+            cAd->LookupString("JobTracker", hStatus.idparent.id);
            break;
         default:
-          hStatus.idref.ipcid="N/A"; 
           break;
     }
 
     
-    dprintf( D_FULLDEBUG, "Called HadoopObject::status() STATUS:%s, ID:%d.%d OWNER=%s\n", hStatus.state.c_str(), cluster, proc, hStatus.owner.c_str());   
+    dprintf( D_FULLDEBUG, "Called HadoopObject::status() STATUS:%s, ID:%d.%d OWNER:%s PARENT:(%s,%s)\n", 
+             hStatus.state.c_str(), 
+             cluster, proc, 
+             hStatus.owner.c_str(),
+             hStatus.idparent.id.c_str(),
+             hStatus.idparent.ipcid.c_str()
+           );   
  
     return true;
     
