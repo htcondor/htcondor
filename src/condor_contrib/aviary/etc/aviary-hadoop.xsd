@@ -85,8 +85,8 @@
 			<xs:element name="uptime" type="xs:int"/>
 			<xs:element name="state" type="hdp:HadoopStateType"/>
 			<xs:element name="status" type="mrg:Status"/>
-            <xs:element name="bin_file" type="xs:string"/>
-            <xs:element name="http" type="xs:string"/>
+                        <xs:element name="bin_file" type="xs:string"/>
+                        <xs:element name="http" type="xs:string"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:complexType name="HadoopQueryResponse">

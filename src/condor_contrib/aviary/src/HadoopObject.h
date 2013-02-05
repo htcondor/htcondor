@@ -93,6 +93,7 @@ typedef struct hstatus
     string state;
     tHadoopRef idref;
     int qdate;
+    string http;
 }tHadoopJobStatus;
 
 const char * const ATTR_HADOOP_TYPE = "HadoopType";
@@ -102,6 +103,7 @@ const char * const ATTR_DATA_NODE = "DataNode";
 const char * const ATTR_JOB_TRACKER = "JobTracker";
 const char * const ATTR_TASK_TRACKER = "TaskTracker";
 const char * const ATTR_HADOOP_BIN_VERSION = "HadoopVersion";
+const char * const ATTR_HTTP_ADDRESS = "HTTPAddress";
 
 const char * const HADOOP_NAMENODE_REQUIREMENTS="NAME_NODE_REQUIREMENTS";
 const char * const HADOOP_DATANODE_REQUIREMENTS="DATA_NODE_REQUIREMENTS";

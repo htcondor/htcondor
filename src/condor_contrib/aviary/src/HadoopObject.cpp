@@ -106,7 +106,10 @@ int HadoopObject::start( tHadoopInit & hInit )
 { 
     int cluster, proc;
     
-    dprintf( D_FULLDEBUG, "Called HadoopObject::start w/%s count:%d\n", hInit.idref.tarball.c_str(), hInit.count );
+    dprintf( D_FULLDEBUG, "Called HadoopObject::start w/%s count:%d owner:(%s)\n", 
+             hInit.idref.tarball.c_str(), 
+             hInit.count, 
+             hInit.owner.c_str());
          
     // check input tarball.
     if ( 0 == hInit.idref.tarball.size() )
@@ -230,8 +233,8 @@ int HadoopObject::start( tHadoopInit & hInit )
         // It could possibly be refactored into a function but it's not really pretty/clean.
         if (bValidId && iStatus == RUNNING )
         {
-            ::GetAttributeString( id.cluster, id.proc,  "NameNodeIPCAddress", IPCAddress);
-            ::GetAttributeString( id.cluster, id.proc,  "NameNodeHTTPAddress", HTTPAddress);
+            ::GetAttributeString( id.cluster, id.proc,  "IPCAddress", IPCAddress);
+            ::GetAttributeString( id.cluster, id.proc,  "HTTPAddress", HTTPAddress);
             
             //TODO: there could be extra checks here.
             ::SetAttribute(cluster, proc, "NameNode", hInit.idref.id.c_str() );
@@ -277,8 +280,8 @@ int HadoopObject::start( tHadoopInit & hInit )
         
         if (bValidId && iStatus == RUNNING)
         {   
-            ::GetAttributeString( id.cluster, id.proc,  "JobTrackerIPCAddress", IPCAddress);
-            ::GetAttributeString( id.cluster, id.proc,  "JobTrackerHTTPAddress", HTTPAddress);
+            ::GetAttributeString( id.cluster, id.proc,  "IPCAddress", IPCAddress);
+            ::GetAttributeString( id.cluster, id.proc,  "HTTPAddress", HTTPAddress);
             
             //TODO: there could be extra checks here.
             ::SetAttribute(cluster, proc, "JobTracker", hInit.idref.id.c_str() );
@@ -438,6 +441,11 @@ bool HadoopObject::status (ClassAd* cAd, const tHadoopType & type, tHadoopJobSta
     formatstr(hStatus.idref.id,"%d.%d", cluster, proc);
    
     cAd->LookupInteger( ATTR_Q_DATE, hStatus.qdate );
+    
+    if (!cAd->LookupString( ATTR_HTTP_ADDRESS, hStatus.http))
+    {
+        hStatus.http="N/A";
+    }
  
     switch (JobStatus)
     {
@@ -462,11 +470,9 @@ bool HadoopObject::status (ClassAd* cAd, const tHadoopType & type, tHadoopJobSta
 
     switch (type)
     {
-        case NAME_NODE:
-           cAd->LookupString(  "NameNodeIPCAddress", hStatus.idref.ipcid);
-           break;
         case JOB_TRACKER:
-           cAd->LookupString(  "JobTrackerIPCAddress", hStatus.idref.ipcid);
+        case NAME_NODE:
+           cAd->LookupString(  "IPCAddress", hStatus.idref.ipcid);
            break;
         default:
           hStatus.idref.ipcid="N/A"; 
@@ -527,25 +533,25 @@ bool HadoopObject::query (const tHadoopRef & hRef, std::vector<tHadoopJobStatus>
     // get all adds that match the above constraint.
     if ( 0 == ( cAd = ::GetJobByConstraint(constraint.c_str()) ) )
     {
-    m_lasterror = "Empty query";
-    dprintf( D_FULLDEBUG, "HadoopObject::status() - FAILED Constraint query\n");
+        m_lasterror = "Empty query";
+        dprintf( D_FULLDEBUG, "HadoopObject::status() - FAILED Constraint query\n");
         return false;
     } 
     
     // loop through the ads
     while ( cAd )
     {
-    tHadoopJobStatus hStatus;
-    if ( status ( cAd, hRef.type, hStatus ) )
-    {
-       // last error should be set.
-       vhStatus.push_back(hStatus);
-    }
-    else
-    {
-           dprintf( D_FULLDEBUG, "HadoopObject::status() - FAILED status parse\n");
-       return false;
-    }
+        tHadoopJobStatus hStatus;
+        if ( status ( cAd, hRef.type, hStatus ) )
+        {
+            // last error should be set.
+            vhStatus.push_back(hStatus);
+        }
+        else
+        {
+            dprintf( D_FULLDEBUG, "HadoopObject::status() - FAILED status parse\n");
+            return false;
+        }
     
         cAd = ::GetNextJobByConstraint( constraint.c_str(), 0 );
     }

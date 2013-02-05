@@ -42,6 +42,7 @@ logging.basicConfig(level=logging.CRITICAL)
 #TODO: revisit
 cli_count = None
 cli_url = None
+opts = None
 
 class AviaryClient:
 
@@ -50,7 +51,10 @@ class AviaryClient:
 
     def __init__(self,wsdl,base_url):
         self.base_url = base_url
-        self.client = create_suds_client(opts,wsdl,plugins)
+        self.client = Client(wsdl)
+
+#TODO: This is broken        
+#self.client = create_suds_client(opts,wsdl,plugins)
 
     def getClient(self,url_suffix):
         if url_suffix:
@@ -165,17 +169,20 @@ class HadoopCtrlCmd(cmd.Cmd):
             pass
         print status.code,text
 
+# TODO this needs some love 
     def print_header(self):
-        print "ID".ljust(7),"SUBMITTED".ljust(27),"STATE".ljust(10),"UPTIME".ljust(10),"OWNER".ljust(16),"IPC"
-        print "--".ljust(7),"---------".ljust(27),"-----".ljust(10),"------".ljust(10),"-----".ljust(16),"---"
+        print "ID".ljust(7),"SUBMITTED".ljust(27),"STATE".ljust(10),"UPTIME".ljust(10),"OWNER".ljust(16),"IPC".ljust(20),"HTTP".ljust(20),"VERSION"
+        print "--".ljust(7),"---------".ljust(27),"-----".ljust(10),"------".ljust(10),"-----".ljust(16),"---".ljust(20),"----".ljust(20),"-------"
         return True
 
     def print_query(self, response):
-        if response:
+        if response.status.code == 'OK':
             self.print_header()
             for r in response.results:
                 print str(r.ref.id).ljust(7),str(ctime(r.submitted)).ljust(27),str(r.state).ljust(10), \
-                    str(strftime('%H:%M:%S',gmtime(r.uptime))).ljust(10), str(r.owner).ljust(16), str(r.ref.ipc)
+                    str(strftime('%H:%M:%S',gmtime(r.uptime))).ljust(10), str(r.owner).ljust(16), str(r.ref.ipc).ljust(20), str(r.http).ljust(20), str(r.bin_file)
+        else: 
+            print "Query Response:",str(response.status.code)
 
 class AviaryHadoopTool(cmd.Cmd):
     

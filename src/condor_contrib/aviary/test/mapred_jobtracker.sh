@@ -92,14 +92,14 @@ if [ $? -eq 0 ]; then
 fi
 
 # Record the port number where everyone can see it
-condor_chirp set_job_attr JobTrackerIPCAddress \"maprfs://$my_hostname:$IPC_PORT\"
+condor_chirp set_job_attr IPCAddress \"maprfs://$my_hostname:$IPC_PORT\"
 if [ $? -ne 0 ]; then
     echo "Failed to chirp update, exiting"
     term
     exit 1
 fi
 
-condor_chirp set_job_attr JobTrackerHTTPAddress \"http://$my_hostname:$HTTP_PORT\"
+condor_chirp set_job_attr HTTPAddress \"http://$my_hostname:$HTTP_PORT\"
 if [ $? -ne 0 ]; then
     echo "Failed to chirp update, exiting"
     term
