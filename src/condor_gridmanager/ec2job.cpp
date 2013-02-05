@@ -559,6 +559,12 @@ void EC2Job::doEvaluateState()
 				////////////////////////////////
 				// Here we create the keypair only 
 				// if we need to.  
+				
+                // If we did this before writing the client token, we could
+                // be sure that we the keypair ID we use later actually
+                // exists (even if we crashed between setting the ID
+                // in the job ad and succesfully generating the corresponding
+                // keypair).
 				if ( m_should_gen_key_pair && !m_keypair_created )
 				{	
 				    if (m_key_pair.empty())
@@ -1177,49 +1183,58 @@ void EC2Job::doEvaluateState()
 				
 				
 			case GM_DELETE:
-				if (m_keypair_created)
-				{
-				  // Yes, now let's destroy the temporary keypair 
-				  rc = gahp->ec2_vm_destroy_keypair(m_serviceUrl,
-								    m_public_key_file, 
-								    m_private_key_file, 
-								    m_key_pair, gahp_error_code);
+			    //
+			    // We can't just check m_keypair_created, because we may have
+			    // created the keypair in a proir instance (if this job was
+			    // recovered).  This means we leak keys, both on EC2 and on
+			    // disk.  We can't unconditionally delete keys on EC2 because
+			    // they might not be ours; and we can't delete keys on disk
+			    // until we know recovery is impossible (the user may want to
+			    // use them).
+			    //
+			    // However, if we modify condor_submit to prevent the non-
+			    // sensical case of setting both m_key_pair and m_key_pair_file,
+			    // (saying both to use a specific keypair and create a new
+			    // ones), we know that m_key_pair_file will only be set if
+			    // we (may) have created a new keypair.  Therefore, if
+			    // m_key_pair is set as well, we know it's the ID of keypair
+			    // we're responsible for cleaning up.
+			    //
+			    
+                if( ! m_key_pair_file.empty() ) {
+                    if( ! m_key_pair.empty() ) {
+                            rc = gahp->ec2_vm_destroy_keypair( m_serviceUrl,
+                                    m_public_key_file, m_private_key_file,
+		    	                    m_key_pair, gahp_error_code );
+    
+                        if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
+                            break;
+                        }
 
-				  if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
-					  break;
-				  }
+                        if( rc == 0 ) {
+                            // Forget about the keypair we just deleted.
+                            SetKeypairId( NULL );
+                        } else {
+                            errorString = gahp->getErrorString();
+                            dprintf( D_ALWAYS, "(%d.%d) job destroy keypair failed: %s: %s\n",
+                                procID.cluster, procID.proc, gahp_error_code,
+                                errorString.c_str() );
+                        }
+                    }
 
-				  if( rc == 0 ) {
-					// Forget about the keypair.
-					SetKeypairId( NULL );
-					m_keypair_created = false;
-					
-					// Preserve the user's copy of the private key unless
-					// we're sure the instance is going away.  This will
-					// be overwritten on instance restart, if it occurs.
-					//
-					// Note that what we actually do here is check to see
-					// if the gridmanager will pay attention to the job the
-					// next time the gridmanager runs.  If it won't,
-					// we clean up.
-					//
-					// Except that, empirically, condor_rm doesn't clear
-					// the job ad.  *sigh* 
-					std::string gridJobID;
-					jobAd->LookupString( ATTR_GRID_JOB_ID, gridJobID );
-					if( gridJobID.empty() || condorState == REMOVED || condorState == COMPLETED ) {
-						// remove temporary keypair local output file
-						if ( !remove_keypair_file(m_key_pair_file.c_str()) ) {
-							dprintf(D_ALWAYS,"(%d.%d) job destroy keypair local file failed.\n", procID.cluster, procID.proc);
-						}
-					}
-				  } else {
-					  errorString = gahp->getErrorString();
-					  dprintf( D_ALWAYS,"(%d.%d) job destroy keypair failed: %s: %s\n",
-							  procID.cluster, procID.proc, gahp_error_code,
-							  errorString.c_str() );
-				  }
-				}
+                    //
+                    // Because we may keep the keypair on disk, but not the
+                    // keypair on the server, don't depend on remembering
+                    // the keypair ID for cleaning up the keypair on disk.
+                    //
+                    if( condorState == REMOVED
+                      || condorState == COMPLETED
+                      || ( m_client_token.empty() && m_remoteJobId.empty() ) ) {
+                        if( ! remove_keypair_file( m_key_pair_file.c_str() ) ) {
+                            dprintf( D_ALWAYS, "(%d.%d) job destroy keypair local file failed.\n", procID.cluster, procID.proc );
+                        }
+                    }                        
+                }
 								
 				// We are done with the job. Propagate any remaining updates
 				// to the schedd, then delete this object.
