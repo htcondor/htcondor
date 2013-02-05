@@ -212,3 +212,4 @@ src/safefile/safe_id_range_list.h.tmp_out
 src/condor_tools/condor_gpu_discovery
 src/condor_utils/tests/_ring_buffer_tester
 src/condor_contrib/python-bindings/tests_tmp
+src/condor_contrib/python-bindings/test_driver

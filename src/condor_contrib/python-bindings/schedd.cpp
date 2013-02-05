@@ -1,13 +1,24 @@
 
+#include "condor_common.h"
+
 #include "condor_attributes.h"
+#include "condor_universe.h"
 #include "condor_q.h"
 #include "condor_qmgr.h"
 #include "daemon.h"
 #include "daemon_types.h"
 #include "enum_utils.h"
 #include "dc_schedd.h"
+#include "classad_helpers.h"
+#include "condor_config.h"
+#include "condor_holdcodes.h"
+#include "basename.h"
+
+#include <classad/operators.h>
 
 #include <boost/python.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/erase.hpp>
 
 #include "old_boost.h"
 #include "classad_wrapper.h"
@@ -21,6 +32,123 @@ using namespace boost::python;
         result = schedd. action_name (&ids, reason_str.c_str(), NULL, AR_TOTALS); \
     else \
         result = schedd. action_name (constraint.c_str(), reason_str.c_str(), NULL, AR_TOTALS);
+
+#define ADD_REQUIREMENT(parm, value) \
+    if (boost::ifind_first(req_str, ATTR_ ##parm).begin() == req_str.end()) \
+    { \
+        classad::ExprTree * new_expr; \
+        parser.ParseExpression(value, new_expr); \
+        if (result.get()) \
+        { \
+            result.reset(classad::Operation::MakeOperation(classad::Operation::LOGICAL_AND_OP, result.release(), new_expr)); \
+        } \
+        else \
+        { \
+            result.reset(new_expr); \
+        } \
+        if (!result.get() || !new_expr) \
+        { \
+            PyErr_SetString(PyExc_RuntimeError, "Unable to add " #parm " requirements."); \
+            throw_error_already_set(); \
+        } \
+    }
+
+#define ADD_PARAM(parm) \
+    { \
+        const char *new_param = param(#parm); \
+        if (!new_param) \
+        { \
+            PyErr_SetString(PyExc_RuntimeError, "Unable to determine " #parm " param value."); \
+            throw_error_already_set(); \
+        } \
+        std::stringstream ss; \
+        ss << "TARGET." #parm " == \"" << new_param << "\""; \
+        ADD_REQUIREMENT(parm, ss.str()) \
+    }
+
+void
+make_spool_remap(compat_classad::ClassAd& ad, const std::string &attr, const std::string &stream_attr, const std::string &working_name)
+{
+    bool stream_stdout = false;
+    ad.EvaluateAttrBool(stream_attr, stream_stdout);
+    std::string output;
+    if (ad.EvaluateAttrString(attr, output) && strcmp(output.c_str(),"/dev/null") != 0
+        && output.c_str() != condor_basename(output.c_str()) && !stream_stdout)
+    {
+        boost::algorithm::erase_all(output, "\\");
+        boost::algorithm::erase_all(output, ";");
+        boost::algorithm::erase_all(output, "=");
+        if (!ad.InsertAttr(attr, working_name))
+            THROW_EX(RuntimeError, "Unable to add file to remap.");
+        std::string output_remaps;
+        ad.EvaluateAttrString(ATTR_TRANSFER_OUTPUT_REMAPS, output_remaps);
+        if (output_remaps.size())
+            output_remaps += ";";
+        output_remaps += working_name;
+        output_remaps += "=";
+        output_remaps += output;
+        if (!ad.InsertAttr(ATTR_TRANSFER_OUTPUT_REMAPS, output_remaps))
+            THROW_EX(RuntimeError, "Unable to rewrite remaps.");
+    }
+}
+
+void
+make_spool(compat_classad::ClassAd& ad)
+{
+    if (!ad.InsertAttr(ATTR_JOB_STATUS, HELD))
+        THROW_EX(RuntimeError, "Unable to set job to hold.");
+    if (!ad.InsertAttr(ATTR_HOLD_REASON, "Spooling input data files"))
+        THROW_EX(RuntimeError, "Unable to set job hold reason.")
+    if (!ad.InsertAttr(ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput))
+        THROW_EX(RuntimeError, "Unable to set job hold code.")
+    std::stringstream ss;
+    ss << ATTR_JOB_STATUS << " == " << COMPLETED << " && ( ";
+    ss << ATTR_COMPLETION_DATE << "=?= UNDDEFINED || " << ATTR_COMPLETION_DATE << " == 0 || ";
+    ss << "((time() - " << ATTR_COMPLETION_DATE << ") < " << 60 * 60 * 24 * 10 << "))";
+    classad::ClassAdParser parser;
+    classad::ExprTree * new_expr;
+    parser.ParseExpression(ss.str(), new_expr);
+    if (!new_expr || !ad.Insert(ATTR_JOB_LEAVE_IN_QUEUE, new_expr))
+        THROW_EX(RuntimeError, "Unable to set " ATTR_JOB_LEAVE_IN_QUEUE);
+    make_spool_remap(ad, ATTR_JOB_OUTPUT, ATTR_STREAM_OUTPUT, "_condor_stdout");
+    make_spool_remap(ad, ATTR_JOB_ERROR, ATTR_STREAM_ERROR, "_condor_stderr");    
+}
+
+std::auto_ptr<ExprTree>
+make_requirements(ExprTree *reqs, ShouldTransferFiles_t stf)
+{
+    // Copied ideas from condor_submit.  Pretty lame.
+    classad::ClassAdUnParser printer;
+    classad::ClassAdParser parser;
+    std::string req_str;
+    printer.Unparse(req_str, reqs);
+    ExprTree *reqs_copy = NULL;
+    if (reqs)
+        reqs_copy = reqs->Copy();
+    if (!reqs_copy)
+    {
+        PyErr_SetString(PyExc_RuntimeError, "Unable to create copy of requirements expression.");
+        throw_error_already_set();
+    }
+    std::auto_ptr<ExprTree> result(reqs_copy);
+    ADD_PARAM(OPSYS);
+    ADD_PARAM(ARCH);
+    switch (stf)
+    {
+    case STF_NO:
+        ADD_REQUIREMENT(FILE_SYSTEM_DOMAIN, "TARGET." ATTR_FILE_SYSTEM_DOMAIN " == MY." ATTR_FILE_SYSTEM_DOMAIN);
+        break;
+    case STF_YES:
+        ADD_REQUIREMENT(HAS_FILE_TRANSFER, "TARGET." ATTR_HAS_FILE_TRANSFER);
+        break;
+    case STF_IF_NEEDED:
+        ADD_REQUIREMENT(HAS_FILE_TRANSFER, "(TARGET." ATTR_HAS_FILE_TRANSFER " || (TARGET." ATTR_FILE_SYSTEM_DOMAIN " == MY." ATTR_FILE_SYSTEM_DOMAIN"))");
+        break;
+    }
+    ADD_REQUIREMENT(REQUEST_DISK, "TARGET.Disk >= " ATTR_REQUEST_DISK);
+    ADD_REQUIREMENT(REQUEST_MEMORY, "TARGET.Memory >= " ATTR_REQUEST_MEMORY);
+    return result;
+}
 
 struct Schedd {
 
@@ -107,6 +235,15 @@ struct Schedd {
             retval.append(wrapper);
         }
         return retval;
+    }
+
+    void reschedule()
+    {
+        DCSchedd schedd(m_addr.c_str());
+        Stream::stream_type st = schedd.hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
+        if (!schedd.sendCommand(RESCHEDULE, st, 0)) {
+            dprintf(D_ALWAYS, "Can't send RESCHEDULE command to schedd.\n" );
+        }
     }
 
     object actOnJobs(JobAction action, object job_spec, object reason=object())
@@ -222,7 +359,7 @@ struct Schedd {
         return actOnJobs(action, job_spec, object("Python-initiated action."));
     }
 
-    int submit(ClassAdWrapper &wrapper, int count=1)
+    int submit(ClassAdWrapper &wrapper, int count=1, bool spool=false, object ad_results=object())
     {
         ConnectionSentry sentry(*this); // Automatically connects / disconnects.
 
@@ -232,7 +369,51 @@ struct Schedd {
             PyErr_SetString(PyExc_RuntimeError, "Failed to create new cluster.");
             throw_error_already_set();
         }
-        ClassAd ad; ad.CopyFrom(wrapper);
+        
+        ClassAd ad;
+        // Create a blank ad for job submission.
+        ClassAd *tmpad = CreateJobAd(NULL, CONDOR_UNIVERSE_VANILLA, "/bin/echo");
+        if (tmpad)
+        {
+            ad.CopyFrom(*tmpad);
+            delete tmpad;
+        }
+        else
+        {
+            PyErr_SetString(PyExc_RuntimeError, "Failed to create a new job ad.");
+            throw_error_already_set();
+        }
+        char path[4096];
+        if (getcwd(path, 4095))
+        {
+            ad.InsertAttr(ATTR_JOB_IWD, path);
+        }
+
+        // Copy the attributes specified by the invoker.
+        ad.Update(wrapper);
+
+        ShouldTransferFiles_t should = STF_IF_NEEDED;
+        std::string should_str;
+        if (ad.EvaluateAttrString(ATTR_SHOULD_TRANSFER_FILES, should_str))
+        {
+            if (should_str == "YES")
+                should = STF_YES;
+            else if (should_str == "NO")
+                should = STF_NO;
+        }
+
+        ExprTree *old_reqs = ad.Lookup(ATTR_REQUIREMENTS);
+        ExprTree *new_reqs = make_requirements(old_reqs, should).release();
+        ad.Insert(ATTR_REQUIREMENTS, new_reqs);
+
+        if (spool)
+            make_spool(ad);
+
+	bool keep_results = false;
+        extract<list> try_ad_results(ad_results);
+        if (try_ad_results.check())
+            keep_results = true;
+
         for (int idx=0; idx<count; idx++)
         {
             int procid = NewProc (cluster);
@@ -256,9 +437,55 @@ struct Schedd {
                     throw_error_already_set();
                 }
             }
+            if (keep_results)
+            {
+                boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
+                wrapper->CopyFrom(ad);
+                ad_results.attr("append")(wrapper);
+            }
         }
 
+        if (param_boolean("SUBMIT_SEND_RESCHEDULE",true))
+        {
+            reschedule();
+        }
         return cluster;
+    }
+
+    void spool(object jobs)
+    {
+        int len = py_len(jobs);
+        std::vector<compat_classad::ClassAd*> job_array;
+        std::vector<boost::shared_ptr<compat_classad::ClassAd> > job_tmp_array;
+        job_array.reserve(len);
+        job_tmp_array.reserve(len);
+        for (int i=0; i<len; i++)
+        {
+            ClassAdWrapper &wrapper = extract<ClassAdWrapper&>(jobs[i]);
+            boost::shared_ptr<compat_classad::ClassAd> tmp_ad(new compat_classad::ClassAd());
+            job_tmp_array.push_back(tmp_ad);
+            tmp_ad->CopyFrom(wrapper);
+            job_array[i] = job_tmp_array[i].get();
+        }
+        CondorError errstack;
+        bool result;
+        DCSchedd schedd(m_addr.c_str());
+        result = schedd.spoolJobFiles( len,
+                                       &job_array[0],
+                                       &errstack );
+        if (!result)
+        {
+            PyErr_SetString(PyExc_RuntimeError, errstack.getFullText(true).c_str());
+            throw_error_already_set();
+        }
+    }
+
+    void retrieve(std::string jobs)
+    {
+        CondorError errstack;
+        DCSchedd schedd(m_addr.c_str());
+        if (!schedd.receiveJobSandbox(jobs.c_str(), &errstack))
+            THROW_EX(RuntimeError, errstack.getFullText(true).c_str());
     }
 
     void edit(object job_spec, std::string attr, object val)
@@ -363,7 +590,7 @@ private:
 };
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(query_overloads, query, 0, 2);
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(submit_overloads, submit, 1, 2);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(submit_overloads, submit, 1, 4);
 
 void export_schedd()
 {
@@ -392,11 +619,18 @@ void export_schedd()
         .def("submit", &Schedd::submit, submit_overloads("Submit one or more jobs to the HTCondor schedd.\n"
             ":param ad: ClassAd describing job cluster.\n"
             ":param count: Number of jobs to submit to cluster.\n"
+            ":param spool: Set to true to spool files separately.\n"
+            ":param ad_results: If set to a list, the resulting ClassAds will be added to the list post-submit.\n"
             ":return: Newly created cluster ID."))
+        .def("spool", &Schedd::spool, "Spool a list of given ads to the remote HTCondor schedd.\n"
+            ":param ads: A python list containing one or more ads to spool.\n")
+        .def("retrieve", &Schedd::retrieve, "Retrieve the output sandbox from one or more jobs.\n"
+            ":param jobs: A expression string matching the list of job output sandboxes to retrieve.\n")
         .def("edit", &Schedd::edit, "Edit one or more jobs in the queue.\n"
             ":param job_spec: Either a list of jobs (CLUSTER.PROC) or a string containing a constraint to match jobs against.\n"
             ":param attr: Attribute name to edit.\n"
-            ":param value: The new value of the job attribute; should be a string (which will be converted to a ClassAds expression) or a ClassAds expression.");
+            ":param value: The new value of the job attribute; should be a string (which will be converted to a ClassAds expression) or a ClassAds expression.")
+        .def("reschedule", &Schedd::reschedule, "Send reschedule command to the schedd.\n");
         ;
 }
 

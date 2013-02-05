@@ -32,7 +32,7 @@
 #include "condor_config.h"
 #include "filename_tools.h"
 #include "proc.h"
-
+#include "condor_version.h"
 
 // Remove/replace characters from the string so it can be used as an attribute name
 // it changes the string that is passed to it.  first leading an trailing spaces
@@ -323,7 +323,7 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 
 	
 
-	job_ad->Assign( ATTR_IMAGE_SIZE, 0 );
+	job_ad->Assign( ATTR_IMAGE_SIZE, 100 );
 
 	job_ad->Assign( ATTR_JOB_IWD, "/tmp" );
 	job_ad->Assign( ATTR_JOB_INPUT, NULL_FILE );
@@ -364,6 +364,21 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_JOB_ARGUMENTS1, "" );
 
 	job_ad->Assign( ATTR_JOB_LEAVE_IN_QUEUE, false );
+
+	job_ad->AssignExpr( ATTR_REQUEST_MEMORY, "ifthenelse(MemoryUsage isnt undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)" );
+	job_ad->AssignExpr( ATTR_REQUEST_DISK, "DiskUsage" );
+	job_ad->Assign( ATTR_DISK_USAGE, 1 );
+	job_ad->Assign( ATTR_REQUEST_CPUS, 1 );
+
+	// Without these, the starter will not automatically remap the stdout/err (look at sha 422735d9)
+	// and possibly won't put them in the correct directory.
+	job_ad->Assign( ATTR_STREAM_OUTPUT, false );
+	job_ad->Assign( ATTR_STREAM_ERROR, false );
+
+	job_ad->Assign( ATTR_VERSION, CondorVersion() );
+	job_ad->Assign( ATTR_PLATFORM, CondorPlatform() );
+
+	job_ad->Assign( ATTR_Q_DATE, time(NULL) );
 
 	return job_ad;
 }

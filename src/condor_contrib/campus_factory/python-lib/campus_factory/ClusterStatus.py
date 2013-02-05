@@ -237,5 +237,9 @@ class ClusterStatus:
         return self.CountDict(self.GetCondorStatus(), IS_GLIDEIN = True)
 
     
-    
+    def GetHeldGlideins(self):
+        """
+        @return: int - number of idle glidein startds
+        """
+        return self.CountDict(self.GetCondorQ(), GlideinJob = True, JobStatus = 5)
     

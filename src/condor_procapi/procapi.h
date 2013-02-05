@@ -561,6 +561,12 @@ class ProcAPI {
   static int getPSSInfo( pid_t pid, procInfo& procInfo, int &status );
 #endif
 
+  /**
+    * Helper function for measuring code performance. get the cpu usage and 
+    * memory usage of the given process.
+    */
+  static size_t getBasicUsage(pid_t pid, double * puser_time, double * psys_time=NULL);
+
  private:
 
   /** Default constructor.  It's private so that no one really

@@ -126,9 +126,10 @@ ProfileExplain::
 	if( conflicts ) {
 		conflicts->Rewind( );
 		if( !conflicts->IsEmpty( ) ) {
-			while( !conflicts->AtEnd( ) ) {
-				delete conflicts->Current( );
+			IndexSet *pis=NULL;
+			while (conflicts->Next(pis)) {
 				conflicts->DeleteCurrent( );
+				delete pis;
 			}
 		}
 		delete conflicts;

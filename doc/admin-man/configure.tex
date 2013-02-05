@@ -3867,8 +3867,7 @@ WANT_HOLD_REASON = \
 \label{param:KillingTimeout}
 \item[\Macro{KILLING\_TIMEOUT}]
   The amount of time in seconds that the \Condor{startd} should wait after 
-  sending a job-defined signal and before forcibly killing the job.  
-  Applies to all job universes other than the standard universe.
+  sending a fast shutdown request to \Condor{starter} before forcibly killing the job and \Condor{starter}.  
   The default value is 30 seconds. 
 
 \label{param:PollingInterval}
@@ -5121,15 +5120,19 @@ MAX_JOBS_RUNNING	= \
 \label{param:MaxTransferInputMB}
 \item[\Macro{MAX\_TRANSFER\_INPUT\_MB}]
   This integer expression specifies the maximum allowed total size in
-  megabytes of the input files that are transferred for a job.  This
-  expression does not apply to grid universe, standard universe, or
-  files transferred via file transfer plugins.  The expression may
-  refer to attributes of the job.  The special value -1 indicates no
-  limit.  The default is -1.  The job may override the system setting
+  Mbytes of the input files that are transferred for a job.  This
+  expression does \emph{not} apply to grid universe, standard universe, or
+  files transferred via file transfer plug-ins.  The expression may
+  refer to attributes of the job.  
+  The special value \Expr{-1} indicates no limit.
+  The default value is -1.
+  The job may override the system setting
   by specifying its own limit using the \Attr{MaxTransferInputMB}
-  attribute.  If the observed size of all input files at submit time
+  attribute.  
+  If the observed size of all input files at submit time
   is larger than the limit, the job will be immediately placed on hold
-  with hold code 32.  If the job passes this initial test, but the
+  with a \Attr{HoldReasonCode} value of 32.
+  If the job passes this initial test, but the
   size of the input files increases or the limit decreases so that the
   limit is violated, the job will be placed on hold at the time when
   the file transfer is attempted.
@@ -5137,15 +5140,18 @@ MAX_JOBS_RUNNING	= \
 \label{param:MaxTransferOutputMB}
 \item[\Macro{MAX\_TRANSFER\_OUTPUT\_MB}]
   This integer expression specifies the maximum allowed total size in
-  megabytes of the output files that are transferred for a job.  This
-  expression does not apply to grid universe, standard universe, or
-  files transferred via file transfer plugins.  The expression may
-  refer to attributes of the job.  The special value -1 indicates no
-  limit.  The default is -1.  The job may override the system setting
+  Mbytes of the output files that are transferred for a job.  This
+  expression does \emph{not} apply to grid universe, standard universe, or
+  files transferred via file transfer plug-ins.  
+  The expression may refer to attributes of the job.
+  The special value \Expr{-1} indicates no limit.  
+  The default value is -1.
+  The job may override the system setting
   by specifying its own limit using the \Attr{MaxTransferOutputMB}
   attribute.  If the total size of the job's output files to be
   transferred is larger than the limit, the job will be placed on hold
-  with hold code 33.  The output will be transferred up to the point
+  with a \Attr{HoldReasonCode} value of 33.
+  The output will be transferred up to the point
   when the limit is hit, so some files may be fully transferred, some
   partially, and some not at all.
 
@@ -5529,6 +5535,18 @@ MAX_JOBS_RUNNING	= \
   managers of the remote pools must be configured to allow this
   \Condor{schedd} to join the pool (this requires \DCPerm{ADVERTISE\_SCHEDD}
   authorization level, which defaults to \DCPerm{WRITE}).
+
+\label{param:FlockIncrement}
+\item[\Macro{FLOCK\_INCREMENT}]
+  This configuration variable controls how quickly flocking to various
+  pools will occur.  The variable defaults to 1, meaning that pools will
+  be considered for flocking slowly: the first collector in
+  \Macro{FLOCK\_COLLECTOR\_HOSTS} will be considered for flocking, then
+  the second, and so on.  Setting this number to bigger than one will
+  cause more than one collector to be considered for flocking; setting
+  this number to 2, for example, will partition the
+  \Macro{FLOCK\_COLLECTOR\_HOSTS} into sets of 2 collectors, and each
+  set will be considered for flocking.
 
   \label{param:NegotiateAllJobsInCluster}
 \item[\Macro{NEGOTIATE\_ALL\_JOBS\_IN\_CLUSTER}]
@@ -6723,8 +6741,7 @@ These macros affect the \Condor{collector}.
   machine.
   The \MacroNI{COLLECTOR\_NAME} setting is just used as a
   human-readable string to describe the pool, which is included in the
-  updates set to the \MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR} (see
-  below). 
+  updates sent to the \MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR}.
 
 \label{param:CondorDevelopersCollector}
 \item[\Macro{CONDOR\_DEVELOPERS\_COLLECTOR}]
@@ -9028,7 +9045,7 @@ in section~\ref{sec:DAG-configuration}.
   \end{itemize}
   Using a strictness value greater than 0 may help find problems with
   a DAG that may otherwise escape notice.
-  The default value if not defined is 1 (changed from 0 in 7.9.4).
+  The default value if not defined is 1.
 
 \label{param:DAGmanAlwaysRunPost}
 \item[\Macro{DAGMAN\_ALWAYS\_RUN\_POST}]
@@ -9154,12 +9171,12 @@ section~\ref{sec:Security} on Security.
   even if they have an empty subject name.
 
 \label{param:HostAlias}
-\item[\Macro{HOST\_ALIAS}] specifies the
-  hostname that clients authenticating this daemon with GSI should
+\item[\Macro{HOST\_ALIAS}] Specifies the fully qualified
+  host name that clients authenticating this daemon with GSI should
   expect the daemon's certificate to match.  The alias is advertised
   to the \Condor{collector} as part of the address of the daemon.
   When this is not set, clients validate the daemon's certificate
-  hostname by matching it against DNS A records for the host they
+  host name by matching it against DNS A records for the host they
   are connected to.  See \Macro{GSI\_SKIP\_HOST\_CHECK} for ways
   to disable this validation step.
 
@@ -10620,7 +10637,10 @@ SHARED_PORT_ARGS = -p 4080
 \end{verbatim}
 
 If no port is specified, a port will be dynamically chosen; it may be
- different each time HTCondor is started.
+different each time HTCondor is started.  In order to decrease the
+duration of possible communication errors resulting from HTCondor or just
+\Condor{shared\_port} itself restarting, it is recommended that a fixed
+port be used instead of a dynamic one.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
