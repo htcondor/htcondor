@@ -1,3 +1,4 @@
+//TEMPTEMP -- make sure turning off the workflow log doesn't disable the *old* default log usage -- maybe add a corresponding test?
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -238,9 +239,10 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_PRIORITY setting: %d\n",
 				_defaultPriority );
 
-	_submitDagDeepOpts.always_use_node_log = param_boolean( "DAGMAN_ALWAYS_USE_NODE_LOG", true);
+	_submitDagDeepOpts.always_use_workflow_log = param_boolean( "DAGMAN_ALWAYS_USE_NODE_LOG", true);
 	debug_printf( DEBUG_NORMAL, "DAGMAN_ALWAYS_USE_NODE_LOG setting: %s\n",
-				_submitDagDeepOpts.always_use_node_log ? "True" : "False" );
+				_submitDagDeepOpts.always_use_workflow_log ? "True" : "False" );
+//TEMPTEMP -- maybe change this to DAGMAN_ALWAYS_USE_WORKFLOW_LOG, or deprectae DAGMAN_ALWAYS_USE_NODE_LOG and have a DAGMAN_ALWAYS_USE_WORKFLOW_LOG that can override it?
 
 	_submitDagDeepOpts.suppress_notification = param_boolean(
 		"DAGMAN_SUPPRESS_NOTIFICATION",
@@ -443,7 +445,7 @@ Dagman::Config()
 		debug_printf( DEBUG_QUIET, "Warning: "
 					"DAGMAN_DEFAULT_NODE_LOG file %s is in /tmp\n",
 					_defaultNodeLog );
-		check_warning_strictness( _submitDagDeepOpts.always_use_node_log ?
+		check_warning_strictness( _submitDagDeepOpts.always_use_workflow_log ?
 					DAG_STRICT_1 : DAG_STRICT_2 );
 	}
 
@@ -803,8 +805,9 @@ void main_init (int argc, char ** const argv) {
 			Usage();
 		}
 		dagman._submitDagDeepOpts.priority = atoi(argv[i]);
+		//TEMPTEMP -- change this flag?
 		} else if( !strcasecmp( "-dont_use_default_node_log", argv[i] ) ) {
-			dagman._submitDagDeepOpts.always_use_node_log = false;
+			dagman._submitDagDeepOpts.always_use_workflow_log = false;
         } else {
     		debug_printf( DEBUG_SILENT, "\nUnrecognized argument: %s\n",
 						argv[i] );

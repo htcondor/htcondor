@@ -65,8 +65,9 @@ public:
 			@return the log file name from the submit file if successful,
 				or "" if unsuccessful
 		 */
+		 //TEMPTEMP -- fix docs
     static MyString loadLogFileNameFromSubFile(const MyString &strSubFilename,
-			const MyString &directory, bool &isXml, bool usingDefaultLog);
+			const MyString &directory, bool &isXml, bool usingWorkflowLog);
 
 		/** Gets the specified value from a submit file (looking for the
 			syntax <keyword> = <value>).

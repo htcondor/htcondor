@@ -101,7 +101,9 @@ Job::~Job() {
 Job::Job( const job_type_t jobType, const char* jobName,
 			const char *directory, const char* cmdFile ) :
 	_jobType( jobType ), _preskip( PRE_SKIP_INVALID ),
-			_pre_status( NO_PRE_VALUE ), _final( false ), append_default_log(true)
+			_pre_status( NO_PRE_VALUE ), _final( false ),
+			//TEMPTEMP -- is this workflow or default???
+			append_workflow_log(true)
 {
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
@@ -204,6 +206,7 @@ bool Job::Remove (const queue_t queue, const JobID_t jobID)
 
 //---------------------------------------------------------------------------
 bool
+//TEMPTEMP -- is this default or workflow???
 Job::CheckForLogFile(bool usingDefault ) const
 {
 	bool tmpLogFileIsXml;
@@ -782,7 +785,8 @@ Job::SetDagFile(const char *dagFile)
 bool
 Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
-			bool recovery, const char *defaultNodeLog, bool usingDefault )
+			bool recovery, const char *defaultNodeLog,
+			bool usingWorkflowLog )
 {
 	debug_printf( DEBUG_DEBUG_2,
 				"Attempting to monitor log file for node %s\n",
@@ -801,8 +805,10 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 	if ( _jobType == TYPE_CONDOR ) {
 			// We check to see if the user has specified a log file
 			// If not, we give him a default
-    	MyString templogFileStr = MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
-					_directory, _logFileIsXml, usingDefault);
+    	MyString templogFileStr =
+					MultiLogFiles::loadLogFileNameFromSubFile( _cmdFile,
+					//TEMPTEMP -- what does usingWorkflowLog do here???
+					_directory, _logFileIsXml, usingWorkflowLog );
 		logFileStr = templogFileStr.Value();
 	} else {
 		StringList logFiles;
@@ -830,7 +836,8 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		debug_printf( DEBUG_QUIET, "Warning: "
 					"Log file %s for node %s is in /tmp\n",
 					logFileStr.c_str(), GetJobName() );
-        check_warning_strictness( usingDefault ? DAG_STRICT_2 : DAG_STRICT_1 );
+        check_warning_strictness( usingWorkflowLog ? DAG_STRICT_2 :
+					DAG_STRICT_1 );
 	}
 
 	if ( logFileStr == "" ) {
@@ -843,10 +850,10 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 		debug_printf( DEBUG_NORMAL, "Unable to get log file from "
 					"submit file %s (node %s); using default (%s)\n",
 					_cmdFile, GetJobName(), logFileStr.c_str() );
-		append_default_log = false;
+		append_workflow_log = false;
 	} else {
-		append_default_log = usingDefault;
-		if( append_default_log ) {
+		append_workflow_log = usingWorkflowLog;
+		if( append_workflow_log ) {
 				// DAGman is not going to look at the user-specified log.
 				// It will look at the defaultNode log.
 			logFileStr = defaultNodeLog;

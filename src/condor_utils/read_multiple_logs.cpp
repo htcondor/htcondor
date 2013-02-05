@@ -372,7 +372,8 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 // Note: this method should get speeded up (see Gnats PR 846).
 MyString
 MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
-		const MyString &directory, bool &isXml, bool usingDefaultNode)
+		//TEMPTEMP -- is this default or workflow?
+		const MyString &directory, bool &isXml, bool usingWorkflowLog)
 {
 	dprintf( D_FULLDEBUG, "MultiLogFiles::loadLogFileNameFromSubFile(%s, %s)\n",
 				strSubFilename.Value(), directory.Value() );
@@ -407,9 +408,9 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 			logFileName = tmpLogName;
 		}
 
-			// If we are using the default node log, we don't care
+			// If we are using the workflow log, we don't care
 			// about these
-		if( !usingDefaultNode ) {
+		if( !usingWorkflowLog ) {
 			MyString	tmpInitialDir = getParamFromSubmitLine(submitLine,
 					"initialdir");
 			if ( tmpInitialDir != "" ) {
@@ -423,12 +424,12 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 		}
 	}
 
-	if ( !usingDefaultNode ) {
+	if ( !usingWorkflowLog ) {
 			//
 			// Check for macros in the log file name -- we currently don't
 			// handle those.
 			//
-			// If we are using the default node, we don't need to check this
+			// If we are using the workflow log, we don't need to check this
 		if ( logFileName != "" ) {
 			if ( strstr(logFileName.Value(), "$(") ) {
 				dprintf(D_ALWAYS, "MultiLogFiles: macros ('$(...') not allowed "
@@ -439,7 +440,7 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 		}
 
 			// Do not need to prepend initialdir if we are using the 
-			// default node log
+			// workflow log file
 		if ( logFileName != "" ) {
 				// Prepend initialdir to log file name if log file name is not
 				// an absolute path.

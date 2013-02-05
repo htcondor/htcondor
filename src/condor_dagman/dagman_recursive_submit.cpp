@@ -127,7 +127,7 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 		args.AppendArg( deepOpts.priority );
 	}
 
-	if( !deepOpts.always_use_node_log ) {
+	if( !deepOpts.always_use_workflow_log ) {
 		args.AppendArg( "-dont_use_default_node_log" );
 	}
 

@@ -353,11 +353,13 @@ class Job {
 		@param recovery: whether we're in recovery mode
 		@param defaultNodeLog: the default log file to be used if the
 			node's submit file doesn't define a log file
+		TEMPTEMP -- add stuff here
 		@return true if successful, false if failed
 	*/
 	bool MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 				ReadMultipleUserLogs &storkLogReader, bool nfsIsError,
-				bool recovery, const char *defaultNodeLog, bool usingDefault );
+				bool recovery, const char *defaultNodeLog,
+				bool usingWorkflowLog );
 
 	/** Unmonitor this node's Condor or Stork log file with the
 		multiple log reader.  (Must be called after everything is done
@@ -493,7 +495,9 @@ class Job {
 		// (Note: we may need to track the hold state of each proc in a
 		// cluster separately to correctly deal with multi-proc clusters.)
 	int _jobProcsOnHold;
-	bool UseDefaultLog() const { return append_default_log; }
+	//TEMPTEMP -- change?
+	//TEMPTEMP -- hmm -- if this really refers to the *workflow* log, it shouldn't be a per-node parameter -- it's for the entire DAG
+	bool UseWorkflowLog() const { return append_workflow_log; }
 
 private:
 		// Mark this node as failed because of an error in monitoring
@@ -607,7 +611,8 @@ private:
 
 	// whether this is a final job
 	bool _final;
-	bool append_default_log;
+	//TEMPTEMP -- change?
+	bool append_workflow_log;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

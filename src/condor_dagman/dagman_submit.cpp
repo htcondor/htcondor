@@ -230,8 +230,10 @@ bool
 condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, MyString DAGParentNodeNames,
 			   List<MyString>* names, List<MyString>* vals,
-			   const char* directory, const char *defaultLog, bool appendDefaultLog,
-			   const char *logFile, bool prohibitMultiJobs, bool hold_claim )
+			   //TEMPTEMP -- change args here
+			   const char* directory, const char *defaultLog,
+			   bool appendWorkflowLog, const char *logFile,
+			   bool prohibitMultiJobs, bool hold_claim )
 {
 	TmpDir		tmpDir;
 	MyString	errMsg;
@@ -310,7 +312,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		// logFile is null here if there was a log specified
 		// in the submit file
 	if ( !logFile ) {
-		if( appendDefaultLog ) {
+		if( appendWorkflowLog ) {
 				// We need to append the DAGman default log file to
 				// the log file list
 			args.AppendArg( "-a" );

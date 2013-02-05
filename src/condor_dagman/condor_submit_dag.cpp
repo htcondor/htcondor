@@ -718,7 +718,7 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 	args.AppendArg(deepOpts.autoRescue);
 	args.AppendArg("-DoRescueFrom");
 	args.AppendArg(deepOpts.doRescueFrom);
-	if(!deepOpts.always_use_node_log) {
+	if(!deepOpts.always_use_workflow_log) {
 		args.AppendArg("-dont_use_default_node_log");
 	}
 
@@ -1113,7 +1113,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			}
 			else if ( (strArg.find("-dont_use_default_node_log") != -1) )
 			{
-				deepOpts.always_use_node_log = false;
+				deepOpts.always_use_workflow_log = false;
 			}
 			else if ( (strArg.find("-suppress_notification") != -1) )
 			{

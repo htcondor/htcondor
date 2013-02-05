@@ -126,7 +126,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_reject			  (false),
 	_alwaysRunPost		  (true),
 	_defaultPriority	  (0),
-	_use_default_node_log  (true)
+	_use_workflow_log  (true)
 {
 
 	// If this dag is a splice, then it may have been specified with a DIR
@@ -199,7 +199,7 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_haltFile = HaltFileName( _dagFiles.next() );
 	_dagStatus = DAG_STATUS_OK;
 	if( submitDagDeepOpts ) {
-		_use_default_node_log = submitDagDeepOpts->always_use_node_log;
+		_use_workflow_log = submitDagDeepOpts->always_use_workflow_log;
 	}
 	_nfsLogIsError = param_boolean( "DAGMAN_LOG_ON_NFS_IS_ERROR", true );
 	if(_nfsLogIsError) {
@@ -286,7 +286,8 @@ bool Dag::Bootstrap (bool recovery)
    		while( jobs.Next( job ) ) {
 			if ( job->CanSubmit() ) {
 				if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
-							_nfsLogIsError, recovery, _defaultNodeLog, _use_default_node_log ) ) {
+							_nfsLogIsError, recovery, _defaultNodeLog,
+							_use_workflow_log ) ) {
 					debug_cache_stop_caching();
 					_jobstateLog.WriteRecoveryFailure();
 					return false;
@@ -904,7 +905,8 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 				job->SetStatus( Job::STATUS_POSTRUN );
 				_postRunNodeCount++;
 				(void)job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
-						_nfsLogIsError, _recovery, _defaultNodeLog, _use_default_node_log );
+						_nfsLogIsError, _recovery, _defaultNodeLog,
+						_use_workflow_log );
 			} else {
 				(void)RunPostScript( job, _alwaysRunPost, 0 );
 			}
@@ -1532,7 +1534,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 				// using the single workflow log file.  I think we
 				// shouldn't worry about being smart in any other cases.
 				// wenger 2013-01-24
-			if( !_use_default_node_log && dm.submit_delay == 0 && !didLogSleep ) {
+			if( !_use_workflow_log && dm.submit_delay == 0 && !didLogSleep ) {
 					// if we don't already have a submit_delay, sleep for one
 					// second here, so we can be sure that this job's submit
 					// event will be unambiguously later than the termination
@@ -1714,7 +1716,7 @@ bool Dag::RunPostScript( Job *job, bool ignore_status, int status,
 	// We are told to ignore the result of the PRE script
 	job->SetStatus( Job::STATUS_POSTRUN );
 	if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr,
-			_nfsLogIsError, _recovery, _defaultNodeLog, _use_default_node_log ) ) {
+			_nfsLogIsError, _recovery, _defaultNodeLog, _use_workflow_log ) ) {
 		debug_printf(DEBUG_QUIET, "Unable to monitor user logfile for node %s\n",
 			job->GetJobName() );
 		debug_printf(DEBUG_QUIET, "Not running the POST script\n" );
@@ -1779,12 +1781,12 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 			// write to the user log also fails, and DAGMan hangs
 			// waiting for the event that wasn't written).
 		ulog.setEnableGlobalLog( false );
-		ulog.setUseXML( !_use_default_node_log && job->GetLogFileIsXml() );
+		ulog.setUseXML( !_use_workflow_log && job->GetLogFileIsXml() );
 			// For NOOP jobs, we need the proc and subproc values;
 			// for "real" jobs, they are not significant.
 		int procID = job->GetNoop() ? job->_CondorID._proc : 0;
 		int subprocID = job->GetNoop() ? job->_CondorID._subproc : 0;
-		const char* s = _use_default_node_log ? DefaultNodeLog() :
+		const char* s = _use_workflow_log ? DefaultNodeLog() :
 			job->GetLogFile();
 		if( !s ) { 
 				// User did not specify a log
@@ -2380,7 +2382,8 @@ Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 						// We need to monitor the log file for the node that's
 						// newly ready.
 					(void)child->MonitorLogFile( _condorLogRdr, _storkLogRdr,
-								_nfsLogIsError, recovery, _defaultNodeLog, _use_default_node_log);
+								_nfsLogIsError, recovery, _defaultNodeLog,
+								_use_workflow_log);
 				} else {
 						// If child has no more parents in its waiting queue,
 						// submit it.
@@ -2470,7 +2473,8 @@ Dag::RestartNode( Job *node, bool recovery )
 		// gets done during "normal" running.)
 		node->_CondorID = _defaultCondorId;
 		(void)node->MonitorLogFile( _condorLogRdr, _storkLogRdr,
-					_nfsLogIsError, recovery, _defaultNodeLog, _use_default_node_log );
+					_nfsLogIsError, recovery, _defaultNodeLog,
+					_use_workflow_log );
 	}
 }
 
@@ -3757,7 +3761,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 	}
 
 	if ( !node->MonitorLogFile( _condorLogRdr, _storkLogRdr, _nfsLogIsError,
-				_recovery, _defaultNodeLog, _use_default_node_log ) ) {
+				_recovery, _defaultNodeLog, _use_workflow_log ) ) {
 		return SUBMIT_RESULT_NO_SUBMIT;
 	}
 
@@ -3770,7 +3774,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 		// jobs because we can't specify the log file on the command
 		// line.  wenger 2009-08-14
 	if ( !_allowLogError && node->JobType() == Job::TYPE_STORK &&
-				!node->CheckForLogFile( _use_default_node_log ) ) {
+				!node->CheckForLogFile( _use_workflow_log ) ) {
 		debug_printf( DEBUG_NORMAL, "ERROR: No 'log =' value found in "
 					"submit file %s for node %s\n", node->GetCmdFile(),
 					node->GetJobName() );
@@ -3796,9 +3800,9 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 			if ( node->GetNoop() ) {
       			submit_success = fake_condor_submit( condorID,
 							node->GetJobName(), node->GetDirectory(),
-							_use_default_node_log ? DefaultNodeLog():
+							_use_workflow_log ? DefaultNodeLog():
 								node->GetLogFile() ,
-							!_use_default_node_log && node->GetLogFileIsXml() );
+							!_use_workflow_log && node->GetLogFileIsXml() );
 			} else {
 				const char *logFile = node->UsingDefaultLog() ?
 							DefaultNodeLog() : NULL;
@@ -3811,7 +3815,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 							node->GetJobName(), parents,
 							node->varNamesFromDag, node->varValsFromDag,
 							node->GetDirectory(), DefaultNodeLog(),
-							_use_default_node_log && node->UseDefaultLog(),
+							_use_workflow_log && node->UseWorkflowLog(),
 							logFile, ProhibitMultiJobs(),
 							node->NumChildren() > 0 && dm._claim_hold_time > 0);
 			}
@@ -3820,9 +3824,9 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 			if ( node->GetNoop() ) {
       			submit_success = fake_condor_submit( condorID,
 							node->GetJobName(), node->GetDirectory(),
-							_use_default_node_log ? DefaultNodeLog() :
+							_use_workflow_log ? DefaultNodeLog() :
 								node->GetLogFile(),
-							!_use_default_node_log && node->GetLogFileIsXml() );
+							!_use_workflow_log && node->GetLogFileIsXml() );
 
 			} else {
       			submit_success = stork_submit( dm, cmd_file.Value(), condorID,

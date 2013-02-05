@@ -42,6 +42,7 @@
 	@param names the names of any parameters for this node
 	@param vals the values of any parameters for this node
 	@param directory the directory in which to run this job
+	TEMPTEMP -- need fixes here
 	@param log file to force this job to use (should be null if submit
 		file specifies log file)
 	@return true on success, false on failure
@@ -53,8 +54,10 @@
 bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 					const char* DAGNodeName, MyString DAGParentNodeNames,
 					List<MyString>* names, List<MyString>* vals,
-					const char* directory, const char *defLog, bool useDefLog,
-					const char *logFile, bool prohibitMultiJobs, bool hold_claim );
+					const char* directory, const char *defaultLog,
+					//TEMPTEMP -- rename logFile?
+					bool appendWorkflowLog, const char *logFile,
+					bool prohibitMultiJobs, bool hold_claim );
 
 bool stork_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 				   const char* DAGNodeName, const char* directory );
