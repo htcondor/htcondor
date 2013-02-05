@@ -180,6 +180,7 @@ AmazonRequest::~AmazonRequest() { }
     } \
 }
 
+pthread_mutex_t globalCurlMutex = PTHREAD_MUTEX_INITIALIZER;
 bool AmazonRequest::SendRequest() {
     //
     // Every request must have the following parameters:
@@ -375,6 +376,25 @@ bool AmazonRequest::SendRequest() {
 
     char errorBuffer[CURL_ERROR_SIZE];
     rv = curl_easy_setopt( curl, CURLOPT_ERRORBUFFER, errorBuffer );
+    if( rv != CURLE_OK ) {
+        this->errorCode = "E_CURL_LIB";
+        this->errorMessage = "curl_easy_setopt( CURLOPT_ERRORBUFFER ) failed.";
+        dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_ERRORBUFFER ) failed (%d): '%s', failing.\n",
+            rv, curl_easy_strerror( rv ) );
+        return false;
+    }
+
+/*  // Useful for debuggery.  Could be rewritten with CURLOPT_DEBUGFUNCTION
+    // and dumped via dprintf() to allow control via EC2_GAHP_DEBUG.
+    rv = curl_easy_setopt( curl, CURLOPT_VERBOSE, 1 );
+    if( rv != CURLE_OK ) {
+        this->errorCode = "E_CURL_LIB";
+        this->errorMessage = "curl_easy_setopt( CURLOPT_VERBOSE ) failed.";
+        dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_VERBOSE ) failed (%d): '%s', failing.\n",
+            rv, curl_easy_strerror( rv ) );
+        return false;    
+    }
+*/
 
     rv = curl_easy_setopt( curl, CURLOPT_URL, finalURI.c_str() );
     if( rv != CURLE_OK ) {
@@ -479,7 +499,9 @@ bool AmazonRequest::SendRequest() {
     }
             
     amazon_gahp_release_big_mutex();
+    pthread_mutex_lock( & globalCurlMutex );
     rv = curl_easy_perform( curl );
+    pthread_mutex_unlock( & globalCurlMutex );
     amazon_gahp_grab_big_mutex();
     if( rv != 0 ) {
         this->errorCode = "E_CURL_IO";
