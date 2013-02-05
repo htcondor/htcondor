@@ -228,6 +228,13 @@ ULogEvent::ULogEvent(void)
 	(void) time ((time_t *)&eventclock);
 	tm = localtime ((time_t *)&eventclock);
 	eventTime = *tm;
+
+#ifdef ULOG_MICROSECONDS
+	::gettimeofday(&eventTimeval, 0);
+	tm = localtime(&eventTimeval.tv_sec);
+	eventTime = *tm;
+#endif
+
 	scheddname = NULL;
 	m_gjid = NULL;
 }
@@ -304,11 +311,20 @@ ULogEvent::writeHeader (FILE *file)
 	int       retval;
 
 	// write header
+#ifdef ULOG_MICROSECONDS
+	retval = fprintf (file, "%03d (%03d.%03d.%03d) %02d/%02d %02d:%02d:%02d.%06d ",
+					  eventNumber,
+					  cluster, proc, subproc,
+					  eventTime.tm_mon+1, eventTime.tm_mday,
+					  eventTime.tm_hour, eventTime.tm_min, eventTime.tm_sec, (int)eventTimeval.tv_usec);
+#else
 	retval = fprintf (file, "%03d (%03d.%03d.%03d) %02d/%02d %02d:%02d:%02d ",
 					  eventNumber,
 					  cluster, proc, subproc,
 					  eventTime.tm_mon+1, eventTime.tm_mday,
 					  eventTime.tm_hour, eventTime.tm_min, eventTime.tm_sec);
+
+#endif
 
 	// check if all fields were sucessfully written
 	if (retval < 0)
