@@ -2,6 +2,10 @@
 option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
 
 if ( LINUX AND WITH_PYTHON_BINDINGS )
+  configure_file (
+	"${PROJECT_SOURCE_DIR}/src/condor_contrib/python-bindings/test_driver.in"
+	"${CMAKE_CURRENT_BINARY_DIR}/test_driver"
+  )
 
   # The python header files themselves cause warnings due to redefining
   # standard symbols.  Hence, we suppress the conversion of warnings to errors

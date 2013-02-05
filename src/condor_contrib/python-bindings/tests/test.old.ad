@@ -49,7 +49,7 @@ WantCheckpoint = false
 ManagedManager = ""
 x509userproxysubject = "/DC=com/DC=DigiCert-Grid/O=Open Science Grid/OU=People/CN=Brian Bockelman"
 PeriodicRelease = false
-CondorVersion = "$CondorVersion: 7.9.5 Feb 05 2013 PRE-RELEASE-UWCS $"
+CondorVersion = "$CondorVersion: 7.9.4 Jan 03 2013 PRE-RELEASE-UWCS $"
 Out = "_condor_stdout"
 ShouldTransferFiles = "YES"
 DiskUsage = 100
