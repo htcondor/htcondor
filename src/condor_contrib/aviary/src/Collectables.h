@@ -100,6 +100,8 @@ namespace collector {
         int RunningJobs;
         int HeldJobs;
         int IdleJobs;
+        int JobQueueBirthdate;
+        string Owner;
         
         void update(const ClassAd& ad);
     };

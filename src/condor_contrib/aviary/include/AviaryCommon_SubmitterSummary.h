@@ -7,7 +7,7 @@
         * SubmitterSummary.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Nov 08, 2012 (09:07:42 EST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jan 28, 2013 (03:27:15 EST)
         */
 
        /**
@@ -20,6 +20,8 @@
         
 
         
+        #include <axutil_date_time.h>
+          
 
         #include <stdio.h>
         #include <OMElement.h>
@@ -46,6 +48,14 @@ namespace AviaryCommon
 
                 
                 bool isValidIdle;
+            axutil_date_time_t* property_Created;
+
+                
+                bool isValidCreated;
+            std::string property_Owner;
+
+                
+                bool isValidOwner;
             
 
         /*** Private methods ***/
@@ -61,6 +71,14 @@ namespace AviaryCommon
 
         bool WSF_CALL
         setIdleNil();
+            
+
+        bool WSF_CALL
+        setCreatedNil();
+            
+
+        bool WSF_CALL
+        setOwnerNil();
             
 
 
@@ -89,9 +107,11 @@ namespace AviaryCommon
          * @param Running int
          * @param Held int
          * @param Idle int
+         * @param Created axutil_date_time_t*
+         * @param Owner std::string
          * @return newly created SubmitterSummary object
          */
-        SubmitterSummary(int arg_Running,int arg_Held,int arg_Idle);
+        SubmitterSummary(int arg_Running,int arg_Held,int arg_Idle,axutil_date_time_t* arg_Created,std::string arg_Owner);
         
 
         /**
@@ -173,6 +193,54 @@ namespace AviaryCommon
         WSF_EXTERN bool WSF_CALL
         resetIdle();
         
+        
+
+        /**
+         * Getter for created. 
+         * @return axutil_date_time_t*
+         */
+        WSF_EXTERN axutil_date_time_t* WSF_CALL
+        getCreated();
+
+        /**
+         * Setter for created.
+         * @param arg_Created axutil_date_time_t*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setCreated(axutil_date_time_t*  arg_Created);
+
+        /**
+         * Re setter for created
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetCreated();
+        
+        
+
+        /**
+         * Getter for owner. 
+         * @return std::string*
+         */
+        WSF_EXTERN std::string WSF_CALL
+        getOwner();
+
+        /**
+         * Setter for owner.
+         * @param arg_Owner std::string*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setOwner(const std::string  arg_Owner);
+
+        /**
+         * Re setter for owner
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetOwner();
+        
 
 
         /******************************* Checking and Setting NIL values *********************************/
@@ -210,6 +278,26 @@ namespace AviaryCommon
          */
         bool WSF_CALL
         isIdleNil();
+
+
+        
+
+        /**
+         * Check whether created is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isCreatedNil();
+
+
+        
+
+        /**
+         * Check whether owner is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isOwnerNil();
 
 
         
@@ -299,6 +387,28 @@ namespace AviaryCommon
 
         int WSF_CALL
         getProperty3();
+
+    
+        
+
+        /**
+         * Getter for created by property number (4)
+         * @return axutil_date_time_t*
+         */
+
+        axutil_date_time_t* WSF_CALL
+        getProperty4();
+
+    
+        
+
+        /**
+         * Getter for owner by property number (5)
+         * @return std::string
+         */
+
+        std::string WSF_CALL
+        getProperty5();
 
     
 

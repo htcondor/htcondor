@@ -133,4 +133,8 @@ void Submitter::update(const ClassAd& ad)
     INTEGER(RunningJobs);
     INTEGER(HeldJobs);
     INTEGER(IdleJobs);
+    INTEGER(JobQueueBirthdate);
+
+    // infer the Owner from the local-part of Name
+    m_stats.Owner = Name.substr(0,Name.find('@'));
 }

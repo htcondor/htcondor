@@ -155,6 +155,8 @@ AviaryCommon::Submitter* CollectableCodec::encode(aviary::collector::Submitter* 
         summary->setHeld(in_->HeldJobs);
         summary->setIdle(in_->IdleJobs);
         summary->setRunning(in_->RunningJobs);
+        summary->setCreated(encodeDateTime(in_->JobQueueBirthdate,m_env));
+        summary->setOwner(in_->Owner);
         out_->setSummary(summary);
     }
     return out_;

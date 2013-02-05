@@ -344,6 +344,8 @@
 			<xs:element name="running" type="xs:int"/>
 			<xs:element name="held" type="xs:int"/>
 			<xs:element name="idle" type="xs:int"/>
+			<xs:element name="created" type="xs:dateTime"/>
+			<xs:element name="owner" type="xs:string"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:complexType name="Submitter">
