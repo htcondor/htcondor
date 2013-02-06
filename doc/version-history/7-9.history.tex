@@ -29,6 +29,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The EC2 GAHP now batches requests for status updates, significantly
+reducing its resource requirements.
+\Ticket{3436}
+
 \item The maximum total size of file transfers for a job may now be
 specified using the new configuration variables
 \Macro{MAX\_TRANSFER\_INPUT\_MB} and \Macro{MAX\_TRANSFER\_OUTPUT\_MB} 
@@ -99,6 +103,16 @@ See the definition at section~\ref{param:DAGManUseStrict}.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item When HTCondor creates a keypair at the job's request, it no
+longer fails to remove the private key from disk when the job leaves
+the queue.
+\Ticket{3477}
+
+\item The EC2 GAHP now recognizes OpenStack's ``shutoff'' state and
+terminates instances which enter it, preventing them from remaining
+in the queue forever.
+\Ticket{3367)
 
 \item \Condor{dagman} no longer does unnecessary sleeps for log file
 consistency when a single default/workflow log file is used.
