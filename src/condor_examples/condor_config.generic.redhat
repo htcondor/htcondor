@@ -830,7 +830,7 @@ UWCS_MaxJobRetirementTime = 0
 
 # How long to allow a job to vacate gracefully.  After this time,
 # the job is killed.
-MachineMaxVacateTime = $(MaxVacateTime) 
+MachineMaxVacateTime = $(KILLING_TIMEOUT)-1
 
 # Abort graceful eviction of a job, even though it has not
 # yet used all the time allotted by MachineMaxVacateTime.
