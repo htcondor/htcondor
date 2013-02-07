@@ -93,6 +93,20 @@ dprintf(int flags, const char* fmt, ...)
     va_end( args );
 }
 
+/*
+ * See the comments in CMakeLists.txt about the purpose of this function.
+ * This fixes issues with dynamically loading libcondor_utils when libc's
+ * dprintf resolves first.
+ */
+extern "C" {
+void __wrap_dprintf(int flags, const char * fmt, ...)
+{
+    va_list args;
+    va_start( args, fmt );
+    _condor_dprintf_va( flags, fmt, args );
+    va_end( args );
+}
+}
 
 /* parse debug flags, but don't set any of the debug global variables.
  *

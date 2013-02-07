@@ -25,5 +25,5 @@ set( CKPT_SERVER_UTIL_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/network2.cpp;${CMAKE_CUR
 if(STD_UNIVERSE)
 	condor_selective_glob("server_file*" unusedSrcs )
 	condor_glob( HeaderFiles SourceFiles "${ServerAPISrcs};${unusedSrcs}" )
-	condor_exe( condor_ckpt_server "${HeaderFiles};${SourceFiles}" ${C_SBIN} "${CONDOR_TOOL_LIBS};${OPENSSL_FOUND};${KRB5_FOUND};${PCRE_FOUND}" OFF )
+	condor_exe( condor_ckpt_server "${HeaderFiles};${SourceFiles}" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF )
 endif(STD_UNIVERSE)

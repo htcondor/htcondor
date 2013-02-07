@@ -444,7 +444,7 @@ MakeLiteral( const Value& val, Value::NumberFactor f )
 		return NULL;
 	}
 	lit->value.CopyFrom( val );
-	if( !val.IsNumber( ) ) f = Value::NO_FACTOR;
+	if( !val.IsIntegerValue() && !val.IsRealValue() ) f = Value::NO_FACTOR;
 	lit->factor = f;
 
 	return lit;
@@ -483,13 +483,16 @@ bool Literal::
 SameAs(const ExprTree *tree) const
 {
     bool    is_same;
-
-    if (tree->GetKind() != LITERAL_NODE) {
+    const ExprTree * pSelfTree = tree->self();
+    
+    if (this == pSelfTree) {
+        is_same = true;
+    } else if (pSelfTree->GetKind() != LITERAL_NODE) {
         is_same = false;
     } else {
         const Literal *other_literal;
         
-        other_literal = (const Literal *) tree;
+        other_literal = (const Literal *) pSelfTree;
         is_same = (   factor == other_literal->factor
                    && value.SameAs(other_literal->value));
     }

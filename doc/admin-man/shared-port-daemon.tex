@@ -10,7 +10,8 @@ responsible for creating a TCP listener port shared by all of the
 HTCondor daemons for which the configuration variable
 \Macro{USE\_SHARED\_PORT} is \Expr{True}.
 The \Condor{master} will invoke the \Condor{shared\_port} daemon
-if it is listed in \MacroNI{DAEMON\_LIST}.
+if it is listed in \MacroNI{DAEMON\_LIST}.  For further configuration
+options, such as specifying the port number to use, see page~\pageref{sec:Config-shared-port}.
 
 The main purpose of the \Condor{shared\_port} daemon is to reduce the
 number of ports that must be opened when HTCondor needs to be

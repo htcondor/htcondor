@@ -45,7 +45,6 @@ my $newrescuedag = $cmd . ".rescue" . ".new";
 
 my %subinfo;
 
-$ENV{_CONDOR_DAGMAN_OLD_RESCUE} = true;
 $ENV{_CONDOR_DAGMAN_AUTO_RESCUE} = false;
 
 $abnormal = sub 

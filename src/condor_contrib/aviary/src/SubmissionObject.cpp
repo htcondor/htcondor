@@ -36,7 +36,7 @@ using namespace aviary::util;
 SubmissionObject::SubmissionObject (
                                      const char *_name,
                                      const char *_owner ) :
-        ownerSet ( false ), m_oldest_qdate(time(NULL))
+        ownerSet ( false ), m_oldest_qdate(time(NULL)+hashFuncChars(_name))
 {
 	m_name = _name;
     if ( _owner )

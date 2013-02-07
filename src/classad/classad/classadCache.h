@@ -94,6 +94,11 @@ protected:
 	 */
 	virtual ExprTree *Copy( ) const;
 	
+	virtual const ExprTree* self() const;
+
+	/* This version is for shared-library compatibility.
+	 * Remove it the next time we have to bump the ClassAds SO version.
+	 */
 	virtual const ExprTree* self();
 	
 	virtual void _SetParentScope( const ClassAd* );

@@ -123,7 +123,7 @@ bool sysapi_get_network_device_info_raw(std::vector<NetworkDeviceInfo> &devices)
 		}
 		if( ip ) {
 			bool is_up = ifap->ifa_flags & IFF_UP;
-			dprintf(D_ALWAYS, "Enumerating interfaces: %s %s %s\n", name, ip, is_up?"up":"down");
+			dprintf(D_FULLDEBUG, "Enumerating interfaces: %s %s %s\n", name, ip, is_up?"up":"down");
 			NetworkDeviceInfo inf(name,ip,is_up);
 			devices.push_back(inf);
 		}

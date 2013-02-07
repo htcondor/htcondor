@@ -292,6 +292,18 @@ Sinful::getSharedPortID() const
 }
 
 void
+Sinful::setAlias(char const *alias)
+{
+	setParam(ATTR_ALIAS,alias);
+}
+
+char const *
+Sinful::getAlias() const
+{
+	return getParam(ATTR_ALIAS);
+}
+
+void
 Sinful::setPrivateAddr(char const *addr)
 {
 	setParam("PrivAddr",addr);

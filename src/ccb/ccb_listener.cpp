@@ -162,7 +162,7 @@ CCBListener::SendMsgToCCB(ClassAd &msg,bool blocking)
 bool
 CCBListener::WriteMsgToCCB(ClassAd &msg)
 {
-	if( !m_sock ) {
+	if( !m_sock || m_waiting_for_connect ) {
 		return false;
 	}
 
@@ -229,6 +229,11 @@ CCBListener::Disconnected()
 		daemonCore->Cancel_Socket( m_sock );
 		delete m_sock;
 		m_sock = NULL;
+	}
+
+	if( m_waiting_for_connect ) {
+		m_waiting_for_connect = false;
+		decRefCount();
 	}
 
 	m_waiting_for_registration = false;

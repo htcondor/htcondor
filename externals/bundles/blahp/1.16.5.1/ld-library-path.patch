@@ -1,6 +1,6 @@
 diff -u -r org.glite.ce.blahp/src/condor_create_log.c org.glite.ce.blahp-patched/src/condor_create_log.c
 --- org.glite.ce.blahp/src/condor_create_log.c	2010-03-17 08:19:34.000000000 -0500
-+++ org.glite.ce.blahp-patched/src/condor_create_log.c	2012-11-12 13:56:34.051269784 -0600
++++ org.glite.ce.blahp-patched/src/condor_create_log.c	2013-01-10 11:39:33.000000000 -0600
 @@ -78,6 +78,11 @@
                  acc_loc = DEFAULT_GLITE_LOCATION;
          }
@@ -22,9 +22,9 @@ diff -u -r org.glite.ce.blahp/src/condor_create_log.c org.glite.ce.blahp-patched
          blah_config_handle = config_read(NULL);
          if (blah_config_handle == NULL) 
 diff -u -r org.glite.ce.blahp/src/server.c org.glite.ce.blahp-patched/src/server.c
---- org.glite.ce.blahp/src/server.c	2011-09-15 07:39:39.000000000 -0500
-+++ org.glite.ce.blahp-patched/src/server.c	2012-11-12 13:52:33.750893748 -0600
-@@ -342,6 +342,11 @@
+--- org.glite.ce.blahp/src/server.c	2013-01-10 11:38:25.000000000 -0600
++++ org.glite.ce.blahp-patched/src/server.c	2013-01-10 11:42:35.000000000 -0600
+@@ -345,6 +345,11 @@
  		tmp_dir  = DEFAULT_TEMP_DIR;
  	}
  
@@ -36,7 +36,7 @@ diff -u -r org.glite.ce.blahp/src/server.c org.glite.ce.blahp-patched/src/server
  	needed_libs = make_message("%s/lib:%s/externals/lib:%s/lib:/opt/lcg/lib", result, result, getenv("GLOBUS_LOCATION") ? getenv("GLOBUS_LOCATION") : "/opt/globus");
  	old_ld_lib=getenv("LD_LIBRARY_PATH");
  	if(old_ld_lib)
-@@ -357,6 +362,7 @@
+@@ -360,6 +365,7 @@
  	}
  	else
  	 	 setenv("LD_LIBRARY_PATH",needed_libs,1);
@@ -44,3 +44,21 @@ diff -u -r org.glite.ce.blahp/src/server.c org.glite.ce.blahp-patched/src/server
  	
  	blah_script_location = strdup(blah_config_handle->bin_path);
  	blah_version = make_message(RCSID_VERSION, VERSION, "poly,new_esc_format");
+@@ -2013,11 +2019,17 @@
+ 		else
+ 			proxyFileNameNew = strdup(argv[CMD_SEND_PROXY_TO_WORKER_NODE_ARGS + MEXEC_PARAM_SRCPROXY + 1]);
+ 
++/* In the Condor build of the blahp, we can find all the libraries we need
++ * via the RUNPATH. GLOBUS_LOCATION is unlikely to be set, and /opt/globus
++ * is very unlikely to contain anything useful.
++ */
++#if 0
+ 		/* Add the globus library path */
+ 		ld_path = make_message("LD_LIBRARY_PATH=%s/lib",
+ 		                           getenv("GLOBUS_LOCATION") ? getenv("GLOBUS_LOCATION") : "/opt/globus");
+ 		push_env(&exe_command.environment, ld_path);
+ 		free(ld_path);
++#endif
+ 
+ 		delegate_switch = "";
+ 		if (config_test_boolean(config_get("blah_delegate_renewed_proxies",blah_config_handle)))

@@ -328,17 +328,37 @@ done
 # If we were passed a -c, we're not going to be used for linking, so
 # we don't have to do anything special to make sure our special ld is
 # used.  
+#
+# Create warning for pthreads in Standard Universe. Pth library must be installed
+# with the --enable-pthread flag. Pth seems to be the best Green Threads library
+# that does POSIX Thread (pthread) emulation as of 01/10/2013.
+print_warning=0
 NAME=$1
-while [ A = A ]
+for j_pthread in $(seq 1 $#)
 do
-	if [ $# = 0 ]; then
-		break;
-	fi
-	if [ $1 = "-c" ]; then
-		exec $ARGS;
-	fi
-	shift
+    if [ $# = 0 ]; then
+	break;
+    fi
+    if [ "$1" = "-c" ]; then
+	exec $ARGS;
+    fi
+    if [ "$1" = "-lpthread" ]; then
+	print_warning=1
+    fi
+    if [ "$1" = "-l" ] && [ "$2" = "pthread" ]; then
+	print_warning=1
+    fi
+    shift
 done
+if [ $print_warning -eq 1 ]; then
+    echo "WARNING: Using pthreads with condor_compile."
+    echo "WARNING: condor_compile must know how to find the Pth library."
+    echo "WARNING: Users should add /path/to/pth-library to the environment"
+    echo "WARNING: variable LD_LIBRARY_PATH or add -L/path/to/pth-library"
+    echo "WARNING: to the command line when invoking condor_compile."
+    echo "WARNING: Pth must be installed with the --enable-pthread"
+    echo "WARNING: flag. See Pth INSTALL file for more information."
+fi
 
 
 # If not fully installed, and we didn't see a -c, add options to force

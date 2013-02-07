@@ -279,7 +279,7 @@ public:
 	int get_port();
 
     /// sinful address of mypoint() in the form of "<a.b.c.d:pppp>"
-    char * get_sinful();
+    char const * get_sinful();
 
 	/// Sinful address for access from outside of our private network.
 	/// This takes into account TCP_FORWARDING_HOST.
@@ -507,10 +507,10 @@ private:
 	char _sinful_peer_buf[SINFUL_STRING_BUF_SIZE];
 
 	// Buffer to hold the sinful address of ourself
-	char _sinful_self_buf[SINFUL_STRING_BUF_SIZE];
+	std::string _sinful_self_buf;
 
 	// Buffer to hold the public sinful address of ourself
-	char _sinful_public_buf[SINFUL_STRING_BUF_SIZE];
+	std::string _sinful_public_buf;
 
 	// struct to hold state info for do_connect() method
 	struct connect_state_struct {

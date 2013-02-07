@@ -570,7 +570,14 @@ void Job::set ( const char *_name, const char *_value ) {
 	}
     // hack for late qdate
     if (m_submission) {
-        m_submission->setOldest(this->getQDate());
+        int job_qdate = this->getQDate();
+        int sub_qdate = m_submission->getOldest();
+        if (sub_qdate > job_qdate) {
+                // swap the old one out
+                g_qdate_submissions.erase(g_qdate_submissions.find(sub_qdate));
+                m_submission->setOldest(job_qdate);
+                g_qdate_submissions.insert(make_pair(job_qdate,m_submission));
+        }
     }
 }
 
@@ -633,6 +640,7 @@ Job::setSubmission ( const char* _subName, int cluster )
         if (submission->getOldest() > qdate) {
                 // swap the old one out
                 g_qdate_submissions.erase(g_qdate_submissions.find(submission->getOldest()));
+                submission->setOldest(qdate);
                 g_qdate_submissions.insert(make_pair(qdate,submission));
         }
     }

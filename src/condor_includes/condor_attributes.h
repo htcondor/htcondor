@@ -914,6 +914,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_RETRY  "Retry"
 #define ATTR_SSH_KEYGEN_ARGS  "SSHKeyGenArgs"
 #define ATTR_SOCK  "sock"
+#define ATTR_ALIAS "alias"
 #define ATTR_JOB_AD_INFORMATION_ATTRS  "JobAdInformationAttrs"
 
 #define ATTR_LAST_NEGOTIATION_CYCLE_TIME  "LastNegotiationCycleTime"

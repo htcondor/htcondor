@@ -611,7 +611,7 @@ AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers,
 	char suggest[64];
 
 	if( !( AnalyzeAttributes( request, offers, adExplain ) ) ) {
-		cerr << "error in AnalyzeAttributes" << endl << endl;
+		errstm << "error in AnalyzeAttributes" << endl << endl;
 	}
 
 		// get information from ClassAdExplain
@@ -735,16 +735,16 @@ AnalyzeExprToBuffer( classad::ClassAd *mainAd, classad::ClassAd *contextAd, stri
 	contextList.Append( copyContextAd );
 
 	if( !( rg.Init( contextList ) ) ) {
-		cerr << "problem adding job ad to ResourceGroup\n";
+		errstm << "problem adding job ad to ResourceGroup\n";
 	}
 	if( !( expr = mainAd->Lookup( attr ) ) ) {
-		cerr << "error looking up " << attr << " expression\n";
+		errstm << "error looking up " << attr << " expression\n";
         delete mp;
 		return false;
 	}
 	
 	if( !( mainAd->FlattenAndInline( expr, val, flatExpr ) ) ) {
-		cerr << "error flattening machine ad\n";
+		errstm << "error flattening machine ad\n";
         delete mp;
 		return false;
 	}
@@ -759,22 +759,22 @@ AnalyzeExprToBuffer( classad::ClassAd *mainAd, classad::ClassAd *contextAd, stri
 	}
 
 	if( !PruneDisjunction( flatExpr, prunedExpr ) ) {
-		cerr << "error pruning expression:\n";
+		errstm << "error pruning expression:\n";
 		pp.Unparse( tempBuff_s, flatExpr );
-		cerr << tempBuff_s << "\n";
+		errstm << tempBuff_s << "\n";
         delete mp;
 		return false;
 	}
 
 	if( !( BoolExpr::ExprToMultiProfile( prunedExpr, mp ) ) ) {
-		cerr << "error in ExprToMultiProfile\n";
+		errstm << "error in ExprToMultiProfile\n";
         delete mp;
 		return false;
 	}		
 	
 		// Do analysis
 	if( !SuggestCondition( mp, rg ) ) {
-		cerr << "error in SuggestCondition\n";
+		errstm << "error in SuggestCondition\n";
 	}
 	
 		// Print results
@@ -846,19 +846,19 @@ BuildBoolTable( MultiProfile *mp, ResourceGroup &rg, BoolTable &result )
 	int numContexts = 0;
 
 	if( !mp->GetNumberOfProfiles( numProfs ) ) {
-		cerr << "BuildBoolTable: error calling GetNumberOfProfiles" << endl;
+		errstm << "BuildBoolTable: error calling GetNumberOfProfiles" << endl;
 	}
 
 	if( !rg.GetNumberOfClassAds( numContexts ) ) {
-		cerr << "BuildBoolTable: error calling GetNumberOfClassAds" << endl;
+		errstm << "BuildBoolTable: error calling GetNumberOfClassAds" << endl;
 	}
 
 	if( !rg.GetClassAds( contexts ) ) {
-		cerr << "BuildBoolTable: error calling GetClassAds" << endl;
+		errstm << "BuildBoolTable: error calling GetClassAds" << endl;
 	}
 
 	if( !result.Init( numContexts, numProfs ) ) {
-		cerr << "BuildBoolTable: error calling BoolTable::Init" << endl;
+		errstm << "BuildBoolTable: error calling BoolTable::Init" << endl;
 	}
 
 	contexts.Rewind( );
@@ -963,7 +963,7 @@ bool ClassAdAnalyzer::
 SuggestCondition( MultiProfile *mp, ResourceGroup &rg )
 {
 	if( mp == NULL ) {
-		cerr << "SuggestCondition: tried to pass null MultiProfile"
+		errstm << "SuggestCondition: tried to pass null MultiProfile"
 			 << endl;
 		return false;
 	}
@@ -1004,7 +1004,7 @@ SuggestCondition( MultiProfile *mp, ResourceGroup &rg )
 	mp->Rewind( );
 	while( mp->NextProfile( currentProfile ) ) {
 		if( !SuggestConditionModify( currentProfile, rg ) ) {
-			cerr << "error in SuggestConditionModify" << endl;
+			errstm << "error in SuggestConditionModify" << endl;
 			return false;
 		}
 //		if( !SuggestConditionRemove( currentProfile, rg ) ) {
@@ -1097,7 +1097,7 @@ SuggestConditionRemove( Profile *p, ResourceGroup &rg )
 		// find first ABV with max frequency & max total true	
 		// set up ConditionExplains using ABV
 	if( !AnnotatedBoolVector::MostFreqABV( abvList, bestABV ) ) {
-		cerr << "Analysis::SuggestConditionRemove(): error - bad ABV" << endl;
+		errstm << "Analysis::SuggestConditionRemove(): error - bad ABV" << endl;
 		abvList.Rewind( );
 		while( abvList.Next( abv ) ) {
 			delete abv;
@@ -1498,7 +1498,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 
 		// get list of ClassAds from ResourceGroup
 	if( !( rg.GetClassAds( offerList ) ) ) {
-		cerr << "CA::AA: error with GetClassAds" << endl << endl;
+		errstm << "CA::AA: error with GetClassAds" << endl << endl;
 		return false;
 	}
 
@@ -1527,7 +1527,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 		currReq = new MultiProfile( );
 
 		if( !( reqExpr = offer->Lookup( ATTR_REQUIREMENTS ) ) ) {
-			cerr << "error looking up requirements" << endl << endl;
+			errstm << "error looking up requirements" << endl << endl;
             delete currReq;
 			reqList.Rewind( );
 			while( reqList.Next( currReq ) ) {
@@ -1538,7 +1538,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 
 		
 		if( !( offer->FlattenAndInline( reqExpr, val, flatReqExpr ) ) ) {
-			cerr << "error flattening request" << endl << endl;
+			errstm << "error flattening request" << endl << endl;
             delete currReq;
 			reqList.Rewind( );
 			while( reqList.Next( currReq ) ) {
@@ -1551,9 +1551,9 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 				// we have a non-literal boolean expression 
 
 			if( !( PruneDisjunction( flatReqExpr, prunedReqExpr ) ) ) {
-				cerr << "error pruning expression:" << endl;
+				errstm << "error pruning expression:" << endl;
 				pp.Unparse( buffer, flatReqExpr );
-				cerr << buffer << endl << endl;
+				errstm << buffer << endl << endl;
 				buffer = "";
 				delete flatReqExpr;
                 delete currReq;
@@ -1565,7 +1565,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 			}
 			
 			if( !( BoolExpr::ExprToMultiProfile( prunedReqExpr, currReq ) ) ) {
-				cerr << "error in ExprToMultiProfile" << endl << endl;
+				errstm << "error in ExprToMultiProfile" << endl << endl;
 				delete flatReqExpr;
 				delete prunedReqExpr;
 				delete currReq;
@@ -1585,7 +1585,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 
 				// we have a literal boolean expression
 			if( !( BoolExpr::ValToMultiProfile( val, currReq ) ) ) {
-				cerr << "error in ValToMultiProfile" << endl << endl;
+				errstm << "error in ValToMultiProfile" << endl << endl;
 				delete currReq;
 				reqList.Rewind( );
 				while( reqList.Next( currReq ) ) {
@@ -1684,7 +1684,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 
 				string currAttr;
 				if( !currCondition->GetAttr( currAttr ) ) {
-					cerr << "AA error: couldn't get attribute" << endl;
+					errstm << "AA error: couldn't get attribute" << endl;
 					exit(1);
 				}
 
@@ -1714,7 +1714,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 
 				BoolValue conditionValue;
 				if( !currCondition->EvalInContext( mad, ad, conditionValue) ) {
-					cerr << "AA error: BoolExpr::EvalInContext failed" << endl;
+					errstm << "AA error: BoolExpr::EvalInContext failed" << endl;
 					exit(1);
 				}
 
@@ -2079,21 +2079,21 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 	classad::PrettyPrint pp;
 	string buffer;
 	if( condition == NULL ) {
-		cerr << "Error: passed NULL Condition pointer to AddConstraint"
+		errstm << "Error: passed NULL Condition pointer to AddConstraint"
 			 << endl;
 		return false;
 	}
 
 	if( vr == NULL ) {
-		cerr << "Error: passed NULL ValueRange pointer to AddConstraint"
+		errstm << "Error: passed NULL ValueRange pointer to AddConstraint"
 			 << endl;
 		return false;
 	}
 
 	if( condition->IsComplex( ) && condition->HasMultipleAttrs( ) ) {
-		cerr << "AddConstraint: can't process complex Condition:" << endl;
+		errstm << "AddConstraint: can't process complex Condition:" << endl;
 		condition->ToString( buffer );
-		cerr << buffer << endl;
+		errstm << buffer << endl;
 		return false;
 	}
 
@@ -2138,15 +2138,15 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 				twoVals = true;
 			}
 			else {
-				cerr << "AddConstraint: can't process complex Condition"<<endl;
+				errstm << "AddConstraint: can't process complex Condition"<<endl;
 				pp.Unparse( buffer, val1 );
-				cerr << "val1 is " << buffer << endl;
+				errstm << "val1 is " << buffer << endl;
 				buffer = "";
 				pp.Unparse( buffer, val2 );
-				cerr << "val2 is " << buffer << endl;
+				errstm << "val2 is " << buffer << endl;
 				buffer = "";
                 condition->ToString( buffer );
-                cerr << buffer << endl;
+                errstm << buffer << endl;
                 return false;
 			}
 //			}
@@ -2230,7 +2230,7 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 				return true;
 			}
 			else {
-				cerr << "AddConstraint: error: boolean value expected"
+				errstm << "AddConstraint: error: boolean value expected"
 					 << endl;
 				return false;
 			}
@@ -2294,7 +2294,7 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 		default: {
 			string expr;
 			condition->ToString(expr);
-			cerr << "AddConstraint: Condition value not literal: '" << val << "' in '" << expr << "'" << endl;
+			errstm << "AddConstraint: Condition value not literal: '" << val << "' in '" << expr << "'" << endl;
 			return false;
 		}
 		}
@@ -2462,7 +2462,7 @@ bool ClassAdAnalyzer::
 PruneDisjunction( classad::ExprTree *expr, classad::ExprTree *&result )
 {
 	if( !expr ) {
-		cerr << "PD error: null expr" << endl; 
+		errstm << "PD error: null expr" << endl; 
 		return false;
 	}
 
@@ -2489,7 +2489,7 @@ PruneDisjunction( classad::ExprTree *expr, classad::ExprTree *&result )
 		}
 		else if( !( result=classad::Operation::MakeOperation( classad::Operation::PARENTHESES_OP,
 													 result, NULL, NULL ) ) ) {
-			cerr << "PD error: can't make Operation" << endl;
+			errstm << "PD error: can't make Operation" << endl;
 			return false;
 		}
 		else {
@@ -2514,7 +2514,7 @@ PruneDisjunction( classad::ExprTree *expr, classad::ExprTree *&result )
 		!newLeft || !newRight ||
 		!( result = classad::Operation::MakeOperation( classad::Operation::LOGICAL_OR_OP,
 											  newLeft, newRight, NULL ) ) ) {
-		cerr << "PD error: can't make Operation" << endl;
+		errstm << "PD error: can't make Operation" << endl;
 		return false;
 	}
 	return true;
@@ -2523,7 +2523,7 @@ PruneDisjunction( classad::ExprTree *expr, classad::ExprTree *&result )
 bool ClassAdAnalyzer::
 PruneConjunction( classad::ExprTree *expr, classad::ExprTree *&result ) {
 	if( !expr ) {
-		cerr << "PC error: null expr" << endl; 
+		errstm << "PC error: null expr" << endl; 
 		return false;
 	}
 
@@ -2550,7 +2550,7 @@ PruneConjunction( classad::ExprTree *expr, classad::ExprTree *&result ) {
 		}
 		else if( !( result=classad::Operation::MakeOperation( classad::Operation::PARENTHESES_OP,
 													 result, NULL, NULL ) ) ) {
-			cerr << "PC error: can't make Operation" << endl;
+			errstm << "PC error: can't make Operation" << endl;
 			return false;
 		}
 		else {
@@ -2579,7 +2579,7 @@ PruneConjunction( classad::ExprTree *expr, classad::ExprTree *&result ) {
 		!newLeft || !newRight  ||
 		!( result = classad::Operation::MakeOperation( classad::Operation::LOGICAL_AND_OP,
 											  newLeft, newRight, NULL ) ) ) {
-		cerr << "PC error: can't Make Operation" << endl;
+		errstm << "PC error: can't Make Operation" << endl;
 		return false;
 	}
 	return true;
@@ -2589,7 +2589,7 @@ bool ClassAdAnalyzer::
 PruneAtom( classad::ExprTree *expr, classad::ExprTree *&result )
 {
 	if( !expr ) {
-		cerr << "PA error: null expr" << endl; 
+		errstm << "PA error: null expr" << endl; 
 		return false;
 	}
 
@@ -2611,12 +2611,12 @@ PruneAtom( classad::ExprTree *expr, classad::ExprTree *&result )
 
 	if( op == classad::Operation::PARENTHESES_OP ) {
 		if( !PruneAtom( left, result ) ) {
-			cerr << "PA error: problem with expression in parens" << endl;
+			errstm << "PA error: problem with expression in parens" << endl;
 			return false;
 		}
 		else if( !( result=classad::Operation::MakeOperation(classad::Operation::PARENTHESES_OP, 
 													result, NULL, NULL ) ) ) {
-			cerr << "PA error: can't make Operation" << endl;
+			errstm << "PA error: can't make Operation" << endl;
 			return false;
 		}
 		else {
@@ -2633,14 +2633,14 @@ PruneAtom( classad::ExprTree *expr, classad::ExprTree *&result )
 	}
 
 	if( left == NULL || right == NULL ) {
-		cerr << "PA error: NULL ptr in expr" << endl;
+		errstm << "PA error: NULL ptr in expr" << endl;
 			// error: NULL ptr in expr
 		return false;
 	}
 
 	if( !( result = classad::Operation::MakeOperation( op, left->Copy( ), right->Copy(),
 											  NULL ) ) ) {
-		cerr << "PA error: can't make Operation" << endl;
+		errstm << "PA error: can't make Operation" << endl;
 		return false;
 	}
 
@@ -2652,7 +2652,7 @@ bool ClassAdAnalyzer::
 InDNF( classad::ExprTree * tree )
 {
 	if( tree == NULL ) {
-		cerr << "InDNF: tried to pass null pointer" << endl;
+		errstm << "InDNF: tried to pass null pointer" << endl;
 		return false;
 	}
 
@@ -2692,7 +2692,7 @@ bool ClassAdAnalyzer::
 IsAtomicBooleanFormula( classad::Operation *tree )
 {
 	if( tree == NULL ) {
-		cerr << "IsAtomicBooleanFormula: tried to pass null pointer" << endl;
+		errstm << "IsAtomicBooleanFormula: tried to pass null pointer" << endl;
 		return false;
 	}
 
@@ -2705,7 +2705,7 @@ bool ClassAdAnalyzer::
 PropagateNegation( classad::ExprTree *tree, classad::ExprTree *&result )
 {
 	if( tree == NULL ) {
-		cerr << "PropagateNegation: tried to pass null pointer" << endl;
+		errstm << "PropagateNegation: tried to pass null pointer" << endl;
 		return false;
 	}
 
@@ -2718,7 +2718,7 @@ bool ClassAdAnalyzer::
 ToDNF( classad::ExprTree *tree, classad::ExprTree *&result )
 {
 	if( tree == NULL ) {
-		cerr << "ToDNF: tried to pass null pointer" << endl;
+		errstm << "ToDNF: tried to pass null pointer" << endl;
 		return false;
 	}
 		// FINISH THIS CODE

@@ -19,4 +19,4 @@
 
 file( GLOB MasterRmvElements Example* )
 
-condor_daemon(master "${MasterRmvElements}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${CONDOR_QMF}" "${C_SBIN}" OFF)
+condor_daemon(master "${MasterRmvElements}" "${CONDOR_LIBS};${CONDOR_QMF}" "${C_SBIN}" OFF)

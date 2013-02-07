@@ -30,6 +30,7 @@
 #include "internet.h"
 #include "../condor_schedd.V6/qmgr_job_updater.h"
 #include "condor_update_style.h"
+#include "file_transfer.h"
 
 /* Forward declaration to prevent loops... */
 class RemoteResource;
@@ -237,6 +238,8 @@ class BaseShadow : public Service
 			@return number of bytes sent over the network.
 		*/
 	virtual float bytesReceived() { return 0.0; }
+
+	virtual void getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status) = 0;
 
 	virtual int getExitReason( void ) = 0;
 

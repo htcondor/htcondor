@@ -74,6 +74,17 @@ class Cluster:
         if idlejobs >= int(self.get_option("maxqueuedjobs", "5")):
             logging.info("Too many queued jobs")
             raise ClusterPreferenceException("Too many queued jobs")
+        
+        # Check for held jobs
+        heldjobs = self.status.GetHeldGlideins()
+        if heldjobs == None:
+            logging.info("Received None from held glidein jobs, going to try later")
+            raise ClusterPreferenceException("Received None from held glidein jobs")
+        logging.debug("Held jobs = %i" % heldjobs)
+        if heldjobs >= int(self.get_option("maxheldjobs", "5")):
+            logging.info("Too many held jobs for cluster %s" % self.cluster_unique)
+            raise ClusterPreferenceException("Too many held jobs")
+        
 
         return (idleslots, idlejobs)
 

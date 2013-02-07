@@ -95,6 +95,8 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	m_want_streaming_io = false;
 	m_attempt_shutdown_tid = -1;
 	m_started_attempting_shutdown = 0;
+	m_upload_xfer_status = XFER_STATUS_UNKNOWN;
+	m_download_xfer_status = XFER_STATUS_UNKNOWN;
 }
 
 
@@ -1346,7 +1348,7 @@ RemoteResource::recordSuspendEvent( ClassAd* update_ad )
 	// update the job in the queue
 	sprintf( tmp, "%s = %d", ATTR_JOB_STATUS , SUSPENDED );
 	jobAd->Insert( tmp );
-	shadow->updateJobInQueue(U_PERIODIC);
+	shadow->updateJobInQueue(U_STATUS);
 	
 	return rval;
 }
@@ -1401,7 +1403,7 @@ RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 	// update the job in the queue
 	sprintf( tmp, "%s = %d", ATTR_JOB_STATUS , RUNNING );
 	jobAd->Insert( tmp );
-	shadow->updateJobInQueue(U_PERIODIC);
+	shadow->updateJobInQueue(U_STATUS);
 
 	return rval;
 }
@@ -1946,6 +1948,13 @@ RemoteResource::locateReconnectStarter( void )
 	return false;
 }
 
+void
+RemoteResource::getFileTransferStatus(FileTransferStatus &upload_status,FileTransferStatus &download_status)
+{
+	upload_status = m_upload_xfer_status;
+	download_status = m_download_xfer_status;
+}
+
 int
 RemoteResource::transferStatusUpdateCallback(FileTransfer *transobject)
 {
@@ -1953,33 +1962,12 @@ RemoteResource::transferStatusUpdateCallback(FileTransfer *transobject)
 
 	FileTransfer::FileTransferInfo info = transobject->GetInfo();
 	dprintf(D_FULLDEBUG,"RemoteResource::transferStatusUpdateCallback(in_progress=%d)\n",info.in_progress);
-	if( !info.in_progress ) {
-			// this is the final update
-		if( m_attempt_shutdown_tid != -1 ) {
-				// expedite our next attempt to shut down
-			daemonCore->Reset_Timer(m_attempt_shutdown_tid,0);
-		}
 
-		if( info.type == FileTransfer::DownloadFilesType ) {
-			jobAd->Assign(ATTR_TRANSFERRING_OUTPUT,false);
-		}
-		else {
-			jobAd->Assign(ATTR_TRANSFERRING_INPUT,false);
-		}
+	if( info.type == FileTransfer::DownloadFilesType ) {
+		m_download_xfer_status = info.xfer_status;
 	}
 	else {
-		if( info.xfer_status == XFER_STATUS_QUEUED ) {
-			jobAd->Assign(ATTR_TRANSFER_QUEUED,true);
-		}
-		else if( info.xfer_status == XFER_STATUS_ACTIVE ) {
-			jobAd->Assign(ATTR_TRANSFER_QUEUED,false);
-		}
-		if( info.type == FileTransfer::DownloadFilesType ) {
-			jobAd->Assign(ATTR_TRANSFERRING_OUTPUT,true);
-		}
-		else {
-			jobAd->Assign(ATTR_TRANSFERRING_INPUT,true);
-		}
+		m_upload_xfer_status = info.xfer_status;
 	}
 	shadow->updateJobInQueue(U_PERIODIC);
 	return 0;

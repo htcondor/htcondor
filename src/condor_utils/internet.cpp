@@ -98,7 +98,13 @@ split_sin( const char *addr, char **host, char **port, char **params )
 
 	if( *addr == ':' ) {
 		addr++;
-		len = strspn(addr,"0123456789");
+		// len = strspn(addr,"0123456789");
+		// Reimplemented without strspn because strspn causes valgrind
+		// errors on RHEL6.
+		const char * addr_ptr = addr;
+		len = 0;
+		while (*addr_ptr && isdigit(*addr_ptr++)) len++;
+
 		if( port ) {
 			*port = (char *)malloc(len+1);
 			memcpy(*port,addr,len);

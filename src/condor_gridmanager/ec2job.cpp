@@ -78,11 +78,11 @@ static const char *GMStateNames[] = {
 	"GM_SEEK_INSTANCE_ID"
 };
 
-#define EC2_VM_STATE_RUNNING			"running"
-#define EC2_VM_STATE_PENDING			"pending"
-#define EC2_VM_STATE_SHUTTINGDOWN	"shutting-down"
-#define EC2_VM_STATE_TERMINATED		"terminated"
-
+#define EC2_VM_STATE_RUNNING            "running"
+#define EC2_VM_STATE_PENDING            "pending"
+#define EC2_VM_STATE_SHUTTINGDOWN       "shutting-down"
+#define EC2_VM_STATE_TERMINATED         "terminated"
+#define EC2_VM_STATE_SHUTOFF            "shutoff"
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
@@ -137,7 +137,7 @@ int EC2Job::maxRetryTimes = 3;
 
 MSC_DISABLE_WARNING(6262) // function uses more than 16k of stack
 EC2Job::EC2Job( ClassAd *classad )
-	: BaseJob( classad )
+	: BaseJob( classad ), probeNow( false )
 {
 dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	string error_string = "";
@@ -301,6 +301,13 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 										   m_public_key_file.c_str(),
 										   m_private_key_file.c_str() );
 	myResource->RegisterJob( this );
+	
+	// Registering the job isn't sufficient, because we need to be able
+	// find jobs which gain these IDs during execution.  If they already
+	// have one, we'll go into recovery, skipping the usual insert.
+	if( ! m_spot_request_id.empty() ) {
+        SetRequestID( m_spot_request_id.c_str() );
+    }
 
 	jobAd->LookupString( ATTR_GRID_JOB_ID, value );
 	if ( !value.empty() ) {
@@ -332,6 +339,8 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 
 	if ( !m_remoteJobId.empty() ) {
 		myResource->AlreadySubmitted( this );
+		// See comment above SetRequestID().
+		SetInstanceId( m_remoteJobId.c_str() );
 	}
 	
 	jobAd->LookupString( ATTR_GRID_JOB_STATUS, remoteJobState );
@@ -359,7 +368,15 @@ MSC_RESTORE_WARNING(6262) // function uses more than 16k of stack
 
 EC2Job::~EC2Job()
 {
-	if ( myResource ) myResource->UnregisterJob( this );
+	if ( myResource ) {
+	    myResource->UnregisterJob( this );
+	    if( ! m_spot_request_id.empty() ) {
+    	    myResource->spotJobsByRequestID.remove( HashKey( m_spot_request_id.c_str() ) );
+        }
+        if( ! m_remoteJobId.empty() ) {
+    	    myResource->jobsByInstanceID.remove( HashKey( m_remoteJobId.c_str() ) );
+        }
+    }
 	delete gahp;
 	delete m_group_names;
 }
@@ -442,7 +459,7 @@ void EC2Job::doEvaluateState()
                 //
                 if( ! myResource->didFirstPing() ) { break; }
                 if( myResource->hadAuthFailure() ) {
-                    if( condorState == REMOVED ) {
+                    if( condorState == REMOVED && m_client_token.empty() && m_remoteJobId.empty() ) {
                         gmState = GM_DELETE;
                         break;
                     } else {
@@ -450,7 +467,6 @@ void EC2Job::doEvaluateState()
                                    myResource->authFailureMessage.c_str() );
                         dprintf( D_ALWAYS, "(%d.%d) %s\n",
                                  procID.cluster, procID.proc, errorString.c_str() );
-                        jobAd->Assign( ATTR_HOLD_REASON, errorString );
                         gmState = GM_HOLD;
                         break;
                     }
@@ -504,6 +520,10 @@ void EC2Job::doEvaluateState()
     		    			if ( condorState == RUNNING || condorState == COMPLETED ) {
 	    		    			executeLogged = true;
 		    		    	}
+		    		    	// Do NOT set probeNow; if we're recovering from
+		    		    	// a queue with 5000 jobs, we'd hit the service
+		    		    	// with 5000 status update requests, which is
+		    		    	// precisely what we're trying to avoid.
     			    		gmState = GM_SUBMITTED;
 	    			    } else if( condorState == REMOVED ) {
 	    			        // We don't know if the corresponding instance
@@ -539,6 +559,12 @@ void EC2Job::doEvaluateState()
 				////////////////////////////////
 				// Here we create the keypair only 
 				// if we need to.  
+				
+                // If we did this before writing the client token, we could
+                // be sure that we the keypair ID we use later actually
+                // exists (even if we crashed between setting the ID
+                // in the job ad and succesfully generating the corresponding
+                // keypair).
 				if ( m_should_gen_key_pair && !m_keypair_created )
 				{	
 				    if (m_key_pair.empty())
@@ -702,24 +728,43 @@ void EC2Job::doEvaluateState()
 					break;
 				}
 				
+                // If we just now, for the first time, discovered
+                // an instance's ID, we don't presently know its
+                // address(es) (or hostnames).  It seems reasonable
+                // to learn this as quickly as possible.
+                probeNow = true;
+                    
 				if( ! m_spot_price.empty() ) {
 				    gmState = GM_SPOT_CANCEL;
-                } else {				    
+                } else {
     				gmState = GM_SUBMITTED;
                 }
 				break;
 				
 			
 			case GM_SUBMITTED:
+			    if( remoteJobState == EC2_VM_STATE_SHUTOFF ) {
+    			    // An OpenStack-specific state where the VM is no longer
+	    		    // running, but it it retains its reserved resources.
+		    	    //
+			        // We simplify by considering this job complete and letting
+			        // it exit the queue.
+			        gmState = GM_CANCEL;
+			        break;
+			    }
 
 				if ( remoteJobState == EC2_VM_STATE_TERMINATED ) {
 					gmState = GM_DONE_SAVE;
-				} 
+				}
 
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_CANCEL;
-				} 
+				}
 				else {
+				    // Don't go to GM probe until asked (when the remote
+				    // job status changes).
+				    if( ! probeNow ) { break; }
+				
 					if ( lastProbeTime < enteredCurrentGmState ) {
 						lastProbeTime = enteredCurrentGmState;
 					}
@@ -742,8 +787,7 @@ void EC2Job::doEvaluateState()
 						delay = (lastProbeTime + interval) - now;
 					}
 					daemonCore->Reset_Timer( evaluateStateTid, delay );
-				}			
-
+				}
 				break;
 				
 				
@@ -837,8 +881,7 @@ void EC2Job::doEvaluateState()
 				}
 
 				if ( m_spot_request_id != "" ) {
-					m_spot_request_id = "";
-					jobAd->AssignExpr( ATTR_EC2_SPOT_REQUEST_ID, "Undefined" );
+					SetRequestID( NULL );
 				}
 
 				if ( wantRematch ) {
@@ -892,6 +935,11 @@ void EC2Job::doEvaluateState()
 
 
 			case GM_PROBE_JOB:
+			    // Note that we do an individual-job probe because it can
+			    // return information (e.g., the public DNS name) that the
+			    // user should now about it.  It also simplifies the coding,
+			    // since the status-handling code can stay here.
+                probeNow = false;
 
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_SUBMITTED; // GM_SUBMITTED knows how to handle this
@@ -929,6 +977,8 @@ void EC2Job::doEvaluateState()
 							// got back 'terminated'
 							returnStatus.append( m_remoteJobId.c_str() );
 							returnStatus.append( EC2_VM_STATE_TERMINATED );
+							returnStatus.append( "dummy-ami-id" );
+							returnStatus.append( "dummy-sr-code" );
 						}
 
                         //
@@ -952,12 +1002,11 @@ void EC2Job::doEvaluateState()
                         
                         // Any remaining values are the security groups.
 
-						// if ec2 VM's state is "running" or beyond,
-						// change condor job status to Running.
-						if ( new_status != remoteJobState &&
-							 ( new_status == EC2_VM_STATE_RUNNING ||
-							   new_status == EC2_VM_STATE_SHUTTINGDOWN ||
-							   new_status == EC2_VM_STATE_TERMINATED ) ) 
+                        // We don't check for a status change, because this
+                        // state is now only entered if we had one.
+					    if( new_status == EC2_VM_STATE_RUNNING ||
+						    new_status == EC2_VM_STATE_SHUTTINGDOWN ||
+						    new_status == EC2_VM_STATE_TERMINATED )
 						{
 							JobRunning();
                             
@@ -1068,7 +1117,10 @@ void EC2Job::doEvaluateState()
 			    }
 				
 				if ( rc == 0 ) {
-					if ( condorState == COMPLETED || condorState == REMOVED ) {
+				    // After we've terminated a 'shutoff' instance, it's done.
+				    if( remoteJobState == EC2_VM_STATE_SHUTOFF ) {
+				        gmState = GM_DONE_SAVE; 
+				    } else if( condorState == COMPLETED || condorState == REMOVED ) {
 						gmState = GM_DELETE;
 					} else {
 							// If the job was not Completed or Removed
@@ -1131,49 +1183,58 @@ void EC2Job::doEvaluateState()
 				
 				
 			case GM_DELETE:
-				if (m_keypair_created)
-				{
-				  // Yes, now let's destroy the temporary keypair 
-				  rc = gahp->ec2_vm_destroy_keypair(m_serviceUrl,
-								    m_public_key_file, 
-								    m_private_key_file, 
-								    m_key_pair, gahp_error_code);
+			    //
+			    // We can't just check m_keypair_created, because we may have
+			    // created the keypair in a proir instance (if this job was
+			    // recovered).  This means we leak keys, both on EC2 and on
+			    // disk.  We can't unconditionally delete keys on EC2 because
+			    // they might not be ours; and we can't delete keys on disk
+			    // until we know recovery is impossible (the user may want to
+			    // use them).
+			    //
+			    // However, if we modify condor_submit to prevent the non-
+			    // sensical case of setting both m_key_pair and m_key_pair_file,
+			    // (saying both to use a specific keypair and create a new
+			    // ones), we know that m_key_pair_file will only be set if
+			    // we (may) have created a new keypair.  Therefore, if
+			    // m_key_pair is set as well, we know it's the ID of keypair
+			    // we're responsible for cleaning up.
+			    //
+			    
+                if( ! m_key_pair_file.empty() ) {
+                    if( ! m_key_pair.empty() ) {
+                            rc = gahp->ec2_vm_destroy_keypair( m_serviceUrl,
+                                    m_public_key_file, m_private_key_file,
+		    	                    m_key_pair, gahp_error_code );
+    
+                        if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
+                            break;
+                        }
 
-				  if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
-					  break;
-				  }
+                        if( rc == 0 ) {
+                            // Forget about the keypair we just deleted.
+                            SetKeypairId( NULL );
+                        } else {
+                            errorString = gahp->getErrorString();
+                            dprintf( D_ALWAYS, "(%d.%d) job destroy keypair failed: %s: %s\n",
+                                procID.cluster, procID.proc, gahp_error_code,
+                                errorString.c_str() );
+                        }
+                    }
 
-				  if( rc == 0 ) {
-					// Forget about the keypair.
-					SetKeypairId( NULL );
-					m_keypair_created = false;
-					
-					// Preserve the user's copy of the private key unless
-					// we're sure the instance is going away.  This will
-					// be overwritten on instance restart, if it occurs.
-					//
-					// Note that what we actually do here is check to see
-					// if the gridmanager will pay attention to the job the
-					// next time the gridmanager runs.  If it won't,
-					// we clean up.
-					//
-					// Except that, empirically, condor_rm doesn't clear
-					// the job ad.  *sigh* 
-					std::string gridJobID;
-					jobAd->LookupString( ATTR_GRID_JOB_ID, gridJobID );
-					if( gridJobID.empty() || condorState == REMOVED || condorState == COMPLETED ) {
-						// remove temporary keypair local output file
-						if ( !remove_keypair_file(m_key_pair_file.c_str()) ) {
-							dprintf(D_ALWAYS,"(%d.%d) job destroy keypair local file failed.\n", procID.cluster, procID.proc);
-						}
-					}
-				  } else {
-					  errorString = gahp->getErrorString();
-					  dprintf( D_ALWAYS,"(%d.%d) job destroy keypair failed: %s: %s\n",
-							  procID.cluster, procID.proc, gahp_error_code,
-							  errorString.c_str() );
-				  }
-				}
+                    //
+                    // Because we may keep the keypair on disk, but not the
+                    // keypair on the server, don't depend on remembering
+                    // the keypair ID for cleaning up the keypair on disk.
+                    //
+                    if( condorState == REMOVED
+                      || condorState == COMPLETED
+                      || ( m_client_token.empty() && m_remoteJobId.empty() ) ) {
+                        if( ! remove_keypair_file( m_key_pair_file.c_str() ) ) {
+                            dprintf( D_ALWAYS, "(%d.%d) job destroy keypair local file failed.\n", procID.cluster, procID.proc );
+                        }
+                    }                        
+                }
 								
 				// We are done with the job. Propagate any remaining updates
 				// to the schedd, then delete this object.
@@ -1246,10 +1307,9 @@ void EC2Job::doEvaluateState()
                 // it's not clear they're required to be distinguishable.
                 if( rc == 0 ) {
                     ASSERT( spot_request_id != NULL );
-                    m_spot_request_id = spot_request_id;
+
+                    SetRequestID( spot_request_id );
                     free( spot_request_id );
-                    
-                    jobAd->Assign( ATTR_EC2_SPOT_REQUEST_ID, m_spot_request_id );
                     requestScheddUpdate( this, false );
                     
                     gmState = GM_SPOT_SUBMITTED;
@@ -1306,11 +1366,8 @@ void EC2Job::doEvaluateState()
                         break;
                     }
                     
-                    // Clear the request ID, now that it's been cancelled.
-                    m_spot_request_id.clear();
-                    
                     // Since we know the request is gone, forget about it.
-                    jobAd->AssignExpr( ATTR_EC2_SPOT_REQUEST_ID, "Undefined" );
+                    SetRequestID( NULL );
                     requestScheddUpdate( this, false );
                     
                     // Rather than decide if we crashed after cancelling a
@@ -1320,6 +1377,9 @@ void EC2Job::doEvaluateState()
                     // instance ID, we know we're not done when we cancel it.
                 }
             
+                // Do NOT set probeNow here.  If we came from 
+                // GM_SAVE_INSTANCE_ID, it's already set.  If we came from
+                // recovery, see the argument in recovery as to why not.
                 gmState = GM_SUBMITTED;
                 break;
 
@@ -1333,6 +1393,10 @@ void EC2Job::doEvaluateState()
                     gmState = GM_SPOT_QUERY;
                     break;
                 }
+
+                // Don't go to GM probe until asked (when the remote
+                // job status changes).
+				if( ! probeNow ) { break; }
                 
                 // Always wait at least interval before probing. 
                 if( lastProbeTime < enteredCurrentGmState ) {
@@ -1351,6 +1415,8 @@ void EC2Job::doEvaluateState()
 
             // Alternates with GM_SPOT_SUBMITTED to watch for instance start.
             case GM_SPOT_QUERY: {
+                probeNow = false;
+            
                 // Send a command to the GAHP, or poll for its result(s).
                 StringList returnStatus;
                 rc = gahp->ec2_spot_status( m_serviceUrl,
@@ -1542,9 +1608,7 @@ void EC2Job::doEvaluateState()
                     std::string instanceID = returnStatus.next();
                     
                     if( launchGroup == m_client_token ) {
-                        m_spot_request_id = requestID;
-
-                        jobAd->Assign( ATTR_EC2_SPOT_REQUEST_ID, m_spot_request_id );
+                        SetRequestID( requestID.c_str() );
                         requestScheddUpdate( this, false );
 
                         if( ! instanceID.empty() ) {
@@ -1617,10 +1681,10 @@ void EC2Job::doEvaluateState()
                     }
                         
                     if( ! instanceID.empty() ) {
-                        // Yes, this duplicates work, but it also ensures
-                        // that we do things like logging the submit and/or
-                        // execute events.
-                        gmState = GM_START_VM;
+                        // Copied from the success case of GM_START_VM.
+                        SetInstanceId( instanceID.c_str() );
+                        WriteGridSubmitEventToUserLog( jobAd );
+                        gmState = GM_SAVE_INSTANCE_ID;
                     } else {
                         gmState = GM_DELETE;
                     }
@@ -1710,10 +1774,12 @@ void EC2Job::EC2SetRemoteJobId( const char *client_token, const char *instance_i
 	if ( client_token && client_token[0] ) {
 		formatstr( full_job_id, "ec2 %s %s", m_serviceUrl.c_str(), client_token );
 		if ( instance_id && instance_id[0] ) {
+			// We need this to do bulk status queries.
+			myResource->jobsByInstanceID.insert( HashKey( instance_id ), this );
 			formatstr_cat( full_job_id, " %s", instance_id );
 		}
 	}
-	BaseJob::SetRemoteJobId( full_job_id.c_str() );
+    BaseJob::SetRemoteJobId( full_job_id.c_str() );
 }
 
 
@@ -1981,4 +2047,40 @@ void EC2Job::associate_n_attach(StringList & returnStatus)
 			}
 		}
 	}
+}
+
+void EC2Job::StatusUpdate( const char * newStatus ) {
+    if( newStatus == NULL ) {
+        // This job wasn't in the batched update, so try looking for
+        // it individually, and letting GM_PROBE_JOB figure thins out.
+        probeNow = true;
+        SetEvaluateState();
+    } else if( SetRemoteJobStatus( newStatus ) ) {
+        // SetRemoteJobStatus() sets the last-update timestamp, but
+        // only returns true if the status has changed.
+        remoteJobState = newStatus;
+
+        probeNow = true;
+        SetEvaluateState();
+    }
+}
+
+// Take a const char * rather than a const std::string & because
+// std::string( NULL ) is probably the same as std::string( "" ),
+// but those two are not the same in ClassAds.
+void EC2Job::SetRequestID( const char * requestID ) {        
+    if( requestID == NULL ) {
+        if( ! m_spot_request_id.empty() ) {
+            // If the job is forgetting about its request ID, make sure that
+            // the resource does, as well; otherwise, we can have one job
+            // updates by both the dedicated and spot batch status processes.
+            myResource->spotJobsByRequestID.remove( HashKey( m_spot_request_id.c_str() ) );
+        }
+        jobAd->AssignExpr( ATTR_EC2_SPOT_REQUEST_ID, "Undefined" );
+        m_spot_request_id = std::string();
+    } else {
+        jobAd->Assign( ATTR_EC2_SPOT_REQUEST_ID, requestID );
+		myResource->spotJobsByRequestID.insert( HashKey( requestID ), this );
+		m_spot_request_id = requestID;
+    }
 }

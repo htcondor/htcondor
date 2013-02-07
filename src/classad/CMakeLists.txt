@@ -166,3 +166,6 @@ if (NOT PROPER)
 
 endif(NOT PROPER)
 
+if (TEST_CACHE)
+    add_subdirectory(tests)
+endif()
