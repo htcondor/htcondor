@@ -29,7 +29,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item When there are multiple users
+waiting to transfer files in the limits set by
+\Macro{MAX\_CONCURRENT\_UPLOADS} and/or
+\Macro{MAX\_CONCURRENT\_DOWNLOADS}, the scheduler now gives the users
+an equal share of the transfer slots.  How shares are counted can be
+configured with \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+\Ticket{3487}
 
 \end{itemize}
 

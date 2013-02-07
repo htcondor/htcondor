@@ -39,6 +39,7 @@ class TransferQueueRequest {
 
 	ReliSock *m_sock;
 	MyString m_queue_user;   // Name of file transfer queue user. (TRANSFER_QUEUE_USER_EXPR)
+	std::string m_up_down_queue_user; // queue user prefixed by "U" or "D" for upload/download
 	MyString m_jobid;   // For information purposes, the job associated with
 	                    // this file transfer.
 	MyString m_fname;   // File this client originally requested to transfer.
@@ -101,16 +102,29 @@ class TransferQueueManager: public Service {
 	int m_download_wait_time;
 
 	unsigned int m_round_robin_counter; // increments each time we send GoAhead to a client
-	std::map< std::string,unsigned int > m_round_robin_recency; // key = queue_user, value = round robin counter at time of last GoAhead
+
+	class TransferQueueUser {
+	public:
+		TransferQueueUser(): running(0), idle(0), recency(0) {}
+		bool Stale(unsigned int stale_recency) { return recency < stale_recency && running==0 && idle==0; }
+		unsigned int running;
+		unsigned int idle;
+		unsigned int recency; // round robin counter at time of last GoAhead
+	};
+	typedef std::map< std::string,TransferQueueUser > QueueUserMap;
+	QueueUserMap m_queue_users;      // key = up_down_queue_user, value = TransferQueueUser record
 
 	unsigned int m_round_robin_garbage_counter;
 	time_t m_round_robin_garbage_time;
 
 	bool AddRequest( TransferQueueRequest *client );
 	void RemoveRequest( TransferQueueRequest *client );
-	int GetRoundRobinRecency(const std::string &queue);
-	void SetRoundRobinRecency(const std::string &queue);
-	void CollectRoundRobinGarbage();
+
+	TransferQueueUser &GetUserRec(const std::string &user);
+	void SetRoundRobinRecency(const std::string &user);
+	void CollectUserRecGarbage();
+	void ClearRoundRobinRecency();
+	void ClearTransferCounts();
 };
 
 

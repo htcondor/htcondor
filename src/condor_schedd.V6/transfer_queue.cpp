@@ -38,6 +38,15 @@ TransferQueueRequest::TransferQueueRequest(ReliSock *sock,char const *fname,char
 	m_gave_go_ahead = false;
 	m_time_born = time(NULL);
 	m_time_go_ahead = 0;
+
+		// the up_down_queue_user name uniquely identifies the user and the direction of transfer
+	if( m_downloading ) {
+		m_up_down_queue_user = "D";
+	}
+	else {
+		m_up_down_queue_user = "U";
+	}
+	m_up_down_queue_user += m_queue_user;
 }
 
 TransferQueueRequest::~TransferQueueRequest() {
@@ -267,35 +276,35 @@ TransferQueueManager::TransferQueueChanged() {
 		"CheckTransferQueue",this);
 }
 
-int
-TransferQueueManager::GetRoundRobinRecency(const std::string &queue)
-{
-	std::map< std::string,unsigned int >::iterator it = m_round_robin_recency.find(queue);
-	if( it == m_round_robin_recency.end() ) {
-		return 0;
-	}
-	return it->second;
-}
-
 void
-TransferQueueManager::SetRoundRobinRecency(const std::string &queue)
+TransferQueueManager::SetRoundRobinRecency(const std::string &user)
 {
 	unsigned int old_counter = m_round_robin_counter;
 
-	m_round_robin_recency[queue] = ++m_round_robin_counter;
+	GetUserRec(user).recency = ++m_round_robin_counter;
 
 		// clear history if the counter wraps, so we do not keep favoring those who have wrapped
 	if( m_round_robin_counter < old_counter ) {
-		m_round_robin_recency.clear();
+		ClearRoundRobinRecency();
 	}
 }
 
 void
-TransferQueueManager::CollectRoundRobinGarbage()
+TransferQueueManager::ClearRoundRobinRecency()
 {
-		// To prevent unbounded growth, remove entries in the round
-		// robin recency map that have not been touched in the past
-		// hour.
+	for( QueueUserMap::iterator itr = m_queue_users.begin();
+		 itr != m_queue_users.end();
+		 itr++ )
+	{
+		itr->second.recency = 0;
+	}
+}
+
+void
+TransferQueueManager::CollectUserRecGarbage()
+{
+		// To prevent unbounded growth, remove user records that have
+		// not been touched in the past hour.
 
 	time_t now = time(NULL);
 		// use abs() here so big clock jumps do not cause long
@@ -303,25 +312,55 @@ TransferQueueManager::CollectRoundRobinGarbage()
 	if( abs((int)(now - m_round_robin_garbage_time)) > 3600 ) {
 		int num_removed = 0;
 
-		for( std::map< std::string,unsigned int >::iterator it = m_round_robin_recency.begin();
-			 it != m_round_robin_recency.end(); )
+		for( QueueUserMap::iterator itr = m_queue_users.begin();
+			 itr != m_queue_users.end(); )
 		{
-			if( it->second < m_round_robin_garbage_counter ) {
+			TransferQueueUser &u = itr->second;
+			if( u.Stale(m_round_robin_garbage_counter) ) {
 					// increment the iterator before calling erase, while it is still valid
-				m_round_robin_recency.erase(it++);
+				m_queue_users.erase(itr++);
 				++num_removed;
 			}
 			else {
-				++it;
+				++itr;
 			}
 		}
 
 		if( num_removed ) {
-			dprintf(D_ALWAYS,"TransferQueueManager::CollectRoundRobinGarbage: removed %d entries.\n",num_removed);
+			dprintf(D_ALWAYS,"TransferQueueManager::CollectUserRecGarbage: removed %d entries.\n",num_removed);
 		}
 
 		m_round_robin_garbage_time = now;
 		m_round_robin_garbage_counter = m_round_robin_counter;
+	}
+}
+
+TransferQueueManager::TransferQueueUser &
+TransferQueueManager::GetUserRec(const std::string &user)
+{
+	QueueUserMap::iterator itr;
+
+	itr = m_queue_users.find(user);
+	if( itr == m_queue_users.end() ) {
+		itr = m_queue_users.insert(QueueUserMap::value_type(user,TransferQueueUser())).first;
+	}
+	return itr->second;
+}
+
+void
+TransferQueueManager::ClearTransferCounts()
+{
+	m_waiting_to_upload = 0;
+	m_waiting_to_download = 0;
+	m_upload_wait_time = 0;
+	m_download_wait_time = 0;
+
+	for( QueueUserMap::iterator itr = m_queue_users.begin();
+		 itr != m_queue_users.end();
+		 itr++ )
+	{
+		itr->second.running = 0;
+		itr->second.idle = 0;
 	}
 }
 
@@ -333,14 +372,13 @@ TransferQueueManager::CheckTransferQueue() {
 	bool clients_waiting = false;
 
 	m_check_queue_timer = -1;
-	m_waiting_to_upload = 0;
-	m_waiting_to_download = 0;
-	m_upload_wait_time = 0;
-	m_download_wait_time = 0;
+
+	ClearTransferCounts();
 
 	m_xfer_queue.Rewind();
 	while( m_xfer_queue.Next(client) ) {
 		if( client->m_gave_go_ahead ) {
+			GetUserRec(client->m_up_down_queue_user).running++;
 			if( client->m_downloading ) {
 				downloading += 1;
 			}
@@ -348,7 +386,11 @@ TransferQueueManager::CheckTransferQueue() {
 				uploading += 1;
 			}
 		}
+		else {
+			GetUserRec(client->m_up_down_queue_user).idle++;
+		}
 	}
+
 
 		// schedule new transfers
 	while( uploading < m_max_uploads || m_max_uploads <= 0 ||
@@ -356,6 +398,7 @@ TransferQueueManager::CheckTransferQueue() {
 	{
 		TransferQueueRequest *best_client = NULL;
 		int best_recency = 0;
+		unsigned int best_running_count = 0;
 
 		m_xfer_queue.Rewind();
 		while( m_xfer_queue.Next(client) ) {
@@ -367,20 +410,34 @@ TransferQueueManager::CheckTransferQueue() {
 				((!client->m_downloading) &&
 				(uploading < m_max_uploads || m_max_uploads <= 0)) )
 			{
+				TransferQueueUser &this_user = GetUserRec(client->m_up_down_queue_user);
+				unsigned int this_user_active_count = this_user.running;
+				int this_user_recency = this_user.recency;
+
+				bool this_client_is_better = false;
 				if( !best_client ) {
-					best_client = client;
-					best_recency = GetRoundRobinRecency(client->m_queue_user);
+					this_client_is_better = true;
 				}
-				else if( !best_client->m_downloading && client->m_downloading ) {
-					best_client = client;
-					best_recency = GetRoundRobinRecency(client->m_queue_user);
-				}
-				else if( best_client->m_queue_user != client->m_queue_user ) {
-					int client_recency = GetRoundRobinRecency(client->m_queue_user);
-					if( best_recency > client_recency ) {
-						best_client = client;
-						best_recency = client_recency;
+				else if( best_client->m_downloading != client->m_downloading ) {
+						// effectively treat up/down queues independently
+					if( client->m_downloading ) {
+						this_client_is_better = true;
 					}
+				}
+				else if( best_running_count > this_user_active_count ) {
+						// prefer users with fewer active transfers
+						// (only counting transfers in one direction for this comparison)
+					this_client_is_better = true;
+				}
+				else if( best_recency > this_user_recency ) {
+						// if still tied: round robin
+					this_client_is_better = true;
+				}
+
+				if( this_client_is_better ) {
+					best_client = client;
+					best_running_count = this_user_active_count;
+					best_recency = this_user_recency;
 				}
 			}
 		}
@@ -406,7 +463,10 @@ TransferQueueManager::CheckTransferQueue() {
 			TransferQueueChanged();
 		}
 		else {
-			SetRoundRobinRecency(client->m_queue_user);
+			SetRoundRobinRecency(client->m_up_down_queue_user);
+			TransferQueueUser &user = GetUserRec(client->m_up_down_queue_user);
+			user.running += 1;
+			user.idle -= 1;
 			if( client->m_downloading ) {
 				downloading += 1;
 			}
@@ -530,7 +590,7 @@ TransferQueueManager::CheckTransferQueue() {
 		}
 	}
 
-	CollectRoundRobinGarbage();
+	CollectUserRecGarbage();
 }
 
 bool
