@@ -96,7 +96,13 @@
           axiom_node_t *output_header = NULL;
           axiom_node_t *header_base_node = NULL;
           axis2_msg_ctx_t *msg_ctx = NULL;
-          axiom_node_t* content_node = omEle->getAxiomNode();
+          axiom_node_t* content_node = NULL;
+          if (omEle) {
+              content_node = omEle->getAxiomNode();
+          }
+          else {
+              return NULL;
+          }
 
           
             AviaryHadoop::StartTaskTrackerResponse* ret_val1;
@@ -661,7 +667,13 @@
 		axiom_node_t *error_node = NULL;
 		axiom_element_t *error_ele = NULL;
         axutil_error_codes_t error_code;
-        axiom_node_t *node = omEle->getAxiomNode();
+        axiom_node_t *node = NULL;
+        if (omEle) {
+            node = omEle->getAxiomNode();
+        }
+        else {
+            node = axiom_node_create_from_buffer(Environment::getEnv(),"no SOAP body");
+        }
         error_code = (axutil_error_codes_t)Environment::getEnv()->error->error_number;
 
         if(error_code <= AVIARYHADOOPSERVICESKELETON_ERROR_NONE ||
