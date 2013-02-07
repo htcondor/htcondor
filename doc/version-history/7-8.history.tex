@@ -97,6 +97,16 @@ input or output files to transfer.
 when the configuration variable \Macro{STATISTICS\_WINDOW\_SECONDS} was reduced.
 \Ticket{3443}
 
+\item Fixed a bug that could cause daemons using CCB to fail to reconnect to
+the CCB server after becoming disconnected.  This condition would cause the
+daemon to become unreachable via CCB until restarted.
+\Ticket{3476}
+
+\item If \Condor{shared\_port} was using a dynamic port, and the
+master was using the shared port, then if \Condor{shared\_port} died, all
+subsequent attempts to restart it on a different port failed.
+\Ticket{3478}
+
 \end{itemize}
 
 \noindent Known Bugs:

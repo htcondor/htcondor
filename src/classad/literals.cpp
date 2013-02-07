@@ -444,7 +444,7 @@ MakeLiteral( const Value& val, Value::NumberFactor f )
 		return NULL;
 	}
 	lit->value.CopyFrom( val );
-	if( !val.IsNumber( ) ) f = Value::NO_FACTOR;
+	if( !val.IsIntegerValue() && !val.IsRealValue() ) f = Value::NO_FACTOR;
 	lit->factor = f;
 
 	return lit;

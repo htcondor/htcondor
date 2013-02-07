@@ -81,6 +81,7 @@ long ProcAPI::boottime_expiration = 0;
 #endif // LINUX
 #else // WIN32
 
+#include <psapi.h> // for GetProcessMemoryInfo
 #include "ntsysinfo.WINDOWS.h"
 static CSysinfo ntSysInfo;	// for getting parent pid on NT
 
@@ -211,6 +212,27 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 		// success
 	return PROCAPI_SUCCESS;
 }
+
+size_t ProcAPI::getBasicUsage(pid_t pid, double * puser_time, double * psys_time)
+{
+	int status;
+	procInfoRaw procRaw;
+	int retVal = ProcAPI::getProcInfoRaw(pid, procRaw, status);
+	if (retVal != 0){
+		//on failure, set everything to 0.
+		initProcInfoRaw(procRaw);
+	}
+
+	if (puser_time) {
+		*puser_time = procRaw.user_time_1 + (procRaw.user_time_2 * 1.0e-9);
+	}
+	if (psys_time) {
+		*psys_time = procRaw.sys_time_1 + (procRaw.sys_time_2 * 1.0e-9);
+	}
+
+	return (size_t)procRaw.imgsize * 1024;
+}
+
 
 /* Fills ProcInfoRaw with the following units:
    imgsize		: KB
@@ -577,6 +599,35 @@ ProcAPI::getPSSInfo( pid_t pid, procInfo& procRaw, int &status )
 	}
 }
 #endif
+
+size_t ProcAPI::getBasicUsage(pid_t pid, double * puser_time, double * psys_time)
+{
+	int status;
+	procInfoRaw procRaw;
+	int retVal = ProcAPI::getProcInfoRaw(pid, procRaw, status);
+	if (retVal != 0){
+		//on failure, set everything to 0.
+		initProcInfoRaw(procRaw);
+	}
+
+	long hertz = 1;
+# if defined(HZ)
+	hertz = HZ;
+# elif defined(_SC_CLK_TCK)
+	hertz = sysconf(_SC_CLK_TCK);
+# else
+#   error "Unable to determine system clock"
+# endif
+
+	if (puser_time) {
+		*puser_time = procRaw.user_time_1 / (double)hertz;
+	}
+	if (psys_time) {
+		*psys_time = procRaw.sys_time_1  / (double)hertz;
+	}
+
+	return (size_t)procRaw.imgsize * 1024;
+}
 
 /* Fills in procInfoRaw with the following units:
    imgsize		: kbytes
@@ -981,6 +1032,30 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	return PROCAPI_SUCCESS;
 }
 
+size_t ProcAPI::getBasicUsage(pid_t pid, double * puser_time, double * psys_time)
+{
+	int status;
+	procInfoRaw procRaw;
+	int retVal = ProcAPI::getProcInfoRaw(pid, procRaw, status);
+	if (retVal != 0){
+		//on failure, set everything to 0.
+		initProcInfoRaw(procRaw);
+	}
+
+	if (puser_time) {
+		*puser_time = procRaw.user_time_1;
+	}
+	if (psys_time) {
+		*psys_time = procRaw.sys_time_1;
+	}
+
+		// if the page size hasn't been found, get it
+	if( pagesize == 0 ) {	
+		pagesize = getpagesize() / 1024;  // pagesize is in k now
+	}
+	return (size_t)procRaw.imgsize * pagesize * 1024;
+}
+
 /* Fills in procInfoRaw with the following units:
    imgsize		: pages
    rssize		: pages
@@ -1127,6 +1202,25 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 #endif
 
 	return PROCAPI_SUCCESS;
+}
+
+size_t ProcAPI::getBasicUsage(pid_t pid, double * puser_time, double * psys_time)
+{
+	int status;
+	procInfoRaw procRaw;
+	int retVal = ProcAPI::getProcInfoRaw(pid, procRaw, status);
+	if (retVal != 0){
+		//on failure, set everything to 0.
+		initProcInfoRaw(procRaw);
+	}
+
+	if (puser_time) {
+		*puser_time = procRaw.user_time_1;
+	}
+	if (psys_time) {
+		*psys_time = procRaw.sys_time_1;
+	}
+	return (size_t)procRaw.imgsize;
 }
 
 /* Fills procInfoRaw with the following units:
@@ -1424,6 +1518,25 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 	return PROCAPI_SUCCESS;
 }
 
+size_t ProcAPI::getBasicUsage(pid_t pid, double * puser_time, double * psys_time)
+{
+	int status;
+	procInfoRaw procRaw;
+	int retVal = ProcAPI::getProcInfoRaw(pid, procRaw, status);
+	if (retVal != 0){
+		//on failure, set everything to 0.
+		initProcInfoRaw(procRaw);
+	}
+
+	if (puser_time) {
+		*puser_time = procRaw.user_time_1;
+	}
+	if (psys_time) {
+		*psys_time = procRaw.sys_time_1;
+	}
+	return (size_t)procRaw.imgsize;
+}
+
 int
 ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status ) 
 {
@@ -1609,6 +1722,49 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 						now_secs );
 
     return PROCAPI_SUCCESS;
+}
+
+size_t ProcAPI::getBasicUsage(pid_t pid, double * puser_time, double * psys_time)
+{
+	if (pid == getpid()) {
+		if (puser_time || psys_time) {
+			UINT64 ntCreate=0, ntExit=0, ntSys=0, ntUser=0; // nanotime. tick rate of 100 nanosec.
+			if ( ! GetProcessTimes(GetCurrentProcess(),
+									(FILETIME*)&ntCreate, (FILETIME*)&ntExit,
+									(FILETIME*)&ntSys, (FILETIME*)&ntUser)) {
+				ntSys = ntUser = 0;
+			}
+			if (puser_time) {
+				*puser_time = (double)ntUser / (double)(1000*1000*10); // convert to seconds
+			}
+			if (psys_time) {
+				*psys_time = (double)ntSys / (double)(1000*1000*10); // convert to seconds
+			}
+		}
+
+		PROCESS_MEMORY_COUNTERS_EX mem;
+		ZeroMemory(&mem, sizeof(mem));
+		if (GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&mem, sizeof(mem))) {
+			return mem.PrivateUsage;
+		}
+	}
+
+	int status;
+	procInfoRaw procRaw;
+	int retVal = ProcAPI::getProcInfoRaw(pid, procRaw, status);
+	if (retVal != 0){
+		if (puser_time) *puser_time = 0.0;
+		if (psys_time) *psys_time = 0.0;
+		return 0;
+	}
+
+	if (puser_time) {
+		*puser_time = (double)procRaw.user_time / procRaw.object_frequency;
+	}
+	if (psys_time) {
+		*psys_time = (double)procRaw.sys_time / procRaw.object_frequency;
+	}
+	return (size_t)procRaw.imgsize;
 }
 
 /* Fills in the procInfoRaw with the following units:

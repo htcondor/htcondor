@@ -12,6 +12,61 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-0}Version 7.9.5}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 7.9.5 not yet released.
+%\item HTCondor version 7.9.5 released on Month Date, 2013.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-9-4}Version 7.9.4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -29,15 +84,20 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The EC2 GAHP now batches requests for status updates, significantly
+reducing its resource requirements.
+\Ticket{3436}
+
 \item The maximum total size of file transfers for a job may now be
 specified using the new configuration variables
-\Macro{MAX\_TRANSFER\_INPUT\_MB} and
-\Macro{MAX\_TRANSFER\_OUTPUT\_MB} and/or the new submit file
-commands by the same names.
+\Macro{MAX\_TRANSFER\_INPUT\_MB} and \Macro{MAX\_TRANSFER\_OUTPUT\_MB} 
+and/or the new submit commands 
+\SubmitCmd{max\_transfer\_input\_mb} and
+\SubmitCmd{max\_transfer\_output\_mb}.
 \Ticket{3333}
 
 \item The \Prog{batch\_gahp} no longer relies on programs
-\Prog{grid-proxy-info} and \Prog{grid-proxy-init} from The Globus
+\Prog{grid-proxy-info} and \Prog{grid-proxy-init} from the Globus
 Toolkit to handle the X.509 proxies of jobs.
 \Ticket{3431}
 
@@ -45,20 +105,31 @@ Toolkit to handle the X.509 proxies of jobs.
 bits on the copy.
 \Ticket{3028}
 
-\item \Condor{dagman} now issues a warning if any log file (either
-the default log file or the log file specified for a node job) is
-in \File{/tmp} (because this can cause DAGMan to fail).  This warning
-can be upgraded to a fatal error by setting the
-\MacroNI{DAGMAN\_USE\_STRICT} value to 1 (for log files that DAGMan
-actually monitors) or 2 (for all log files, whether DAGMan actually
-monitors them or not).
+\item By default, \Condor{dagman} now issues a fatal error
+if any log file, which is either
+the default log file or the log file specified for a node job,
+is in \File{/tmp}, because this can cause DAGMan to fail.
+This error can be downgraded to a warning by setting the
+configuration variable
+\MacroNI{DAGMAN\_USE\_STRICT} value to 0.
 \Ticket{1419}
 
-\item The \condor{collector} will accept and display collector ads for
+\item The \Condor{collector} will accept and display collector ClassAds for
 multiple collectors from the same machine. For this to work, the
 collectors must configured with different values for configuration
-parameter \Macro{COLLECTOR\_NAME}.
+variable \MacroNI{COLLECTOR\_NAME}.
 \Ticket{3467}
+
+% Depending on who wins the argument between Igor and TJ, this might go into
+% 7.8 series.  I think this is probably the right place for it, in 7.9. But
+% Kent, TJ, or Igor may well have other ideas
+\item \Condor{dagman} now will successfully set attributes for submitted jobs
+using the \Condor{submit} ``+$\langle$var$\rangle$'' syntax.
+See section~\ref{dagman:VARS} for more details.
+\Ticket{3469}
+
+\item Introduced the \Macro{FLOCK\_INCREMENT} configuration variable, to allow
+administrators to more aggressively flock to remote collectors.
 
 \end{itemize}
 
@@ -67,18 +138,19 @@ parameter \Macro{COLLECTOR\_NAME}.
 \begin{itemize}
 
 \item The new configuration variable \Macro{HOST\_ALIAS} specifies the
-  hostname that clients authenticating this daemon with GSI should
+  fully qualified host name that clients authenticating this daemon with 
+  GSI should
   expect the daemon's certificate to match.  The alias is advertised
   to the \Condor{collector} as part of the address of the daemon.
   When this is not set, clients validate the daemon's certificate
-  hostname by matching it against DNS A records for the host they
+  host name by matching it against DNS A records for the host they
   are connected to.  See \Macro{GSI\_SKIP\_HOST\_CHECK} for ways
   to disable this validation step.
 \Ticket{1605}
 
 \item The configuration variable \MacroNI{DAGMAN\_USE\_STRICT} now
-defaults to a value of 1 rather than 0.
-See definition at section~\ref{param:DAGManUseStrict}.
+defaults to a value of 1, rather than 0.
+See the definition at section~\ref{param:DAGManUseStrict}.
 \Ticket{3418}
 
 \end{itemize}
@@ -87,9 +159,31 @@ See definition at section~\ref{param:DAGManUseStrict}.
 
 \begin{itemize}
 
+\item When HTCondor creates a keypair at the job's request, it no
+longer fails to remove the private key from disk when the job leaves
+the queue.
+\Ticket{3477}
+
+\item The EC2 GAHP now recognizes OpenStack's ``shutoff'' state and
+terminates instances which enter it, preventing them from remaining
+in the queue forever.
+\Ticket{3367)
+
 \item \Condor{dagman} no longer does unnecessary sleeps for log file
 consistency when a single default/workflow log file is used.
 \Ticket{3456}
+
+\item Fixed a bug introduced in HTCondor version 7.9.0 that caused 
+the following configuration variables to not sort ClassAds properly 
+when they evaluated to \Expr{True} or \Expr{False}:
+\Macro{NEGOTIATOR\_PRE\_JOB\_RANK},
+\Macro{NEGOTIATOR\_POST\_JOB\_RANK}, \Macro{PREEMPTION\_RANK}, and
+\Macro{SCHEDD\_PREEMPTION\_RANK}.
+\Ticket{3468}
+
+\item Fixed a bug that can cause grid universe jobs of type \Expr{batch}
+to fail when submitted to an HTCondor cluster with a large history file.
+\Ticket{3429}
 
 \end{itemize}
 

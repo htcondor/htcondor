@@ -54,6 +54,11 @@ class SharedPortEndpoint: Service {
 		// address.
 	void ReloadSharedPortServerAddr();
 
+		// Unset the shared port server's address.
+		// The address may be reset by a future call to
+		// ReloadSharedPortServerAddr(), which is called periodically.
+	void ClearSharedPortServerAddr();
+
 		// returns a contact string suitable for direct connection
 		// to this daemon from the same machine without going through
 		// SharedPortServer
