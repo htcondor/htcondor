@@ -522,14 +522,6 @@ bool HadoopObject::query (const tHadoopRef & hRef, std::vector<tHadoopJobStatus>
     case DATA_NODE:
         // list all name nodes bound query on hRef.idref.id;
         constraint = "HadoopType =?= \"DataNode\"";
-        
-        if (hRef.id.length())
-        {
-        
-        constraint+= " && NameNode =?= ";
-        constraint+= hRef.id;
-        }
-        
         break;
     case JOB_TRACKER:
         //just list all job trackers.
@@ -538,22 +530,47 @@ bool HadoopObject::query (const tHadoopRef & hRef, std::vector<tHadoopJobStatus>
     case TASK_TRACKER:
         // list all name nodes bound query on hRef.idref.id;
         constraint = "HadoopType =?= \"TaskTracker\"";
+        break;
+    }
+    
+    // if an id is given use, use reference id.
+    if (hRef.id.length())
+    {
+        size_t pos = hRef.id.find(".");
+        string cid,pid;
         
-        if (hRef.id.length())
+        if (pos != string::npos)
         {
-        
-        constraint+= " && JobTracker =?= ";
-        constraint+= hRef.id;
+            cid = hRef.id.substr(0,pos);
+            pid = hRef.id.substr(pos+1);
+        }
+        else 
+        {
+            cid = hRef.id;
         }
         
-        break;
+        constraint+= " && ClusterId =?= ";
+        constraint+=cid;
+        
+        if (pid.length())
+        {
+            constraint+= " && ProcId =?= ";
+            constraint+=pid;
+        }
+            
+    }
+    else if (hRef.ipcid.length())
+    {
+        // if not given a id but given an ipc, try that. 
+        constraint+= " && IPCAddress =?= ";
+        constraint+= hRef.ipcid;
     }
     
     // get all adds that match the above constraint.
     if ( 0 == ( cAd = ::GetJobByConstraint(constraint.c_str()) ) )
     {
         m_lasterror = "Empty query";
-        dprintf( D_FULLDEBUG, "HadoopObject::status() - FAILED Constraint query\n");
+        dprintf( D_FULLDEBUG, "HadoopObject::status() - FAILED Constraint query(%s)\n", constraint.c_str());
         return false;
     } 
     
