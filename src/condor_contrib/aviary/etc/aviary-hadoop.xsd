@@ -37,6 +37,7 @@
 			<!-- path to a versioned Hadoop tar/zip binary dist file -->
 			<xs:element name="bin_file" type="xs:string" minOccurs="0"/>
 			<xs:element name="owner" type="xs:string" minOccurs="0"/>
+			<xs:element name="description" type="xs:string" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:complexType name="HadoopStart">
@@ -46,6 +47,7 @@
 			<!-- path to a versioned Hadoop tar/zip binary dist file -->
 			<xs:element name="bin_file" type="xs:string" minOccurs="0"/>
 			<xs:element name="owner" type="xs:string" minOccurs="0"/>
+			<xs:element name="description" type="xs:string" minOccurs="0"/>
 			<xs:element name="count" type="xs:int" minOccurs="0" default="1"/>
 		</xs:sequence>
 	</xs:complexType>
@@ -82,6 +84,7 @@
 			<xs:element name="ref" type="hdp:HadoopID"/>
 			<xs:element name="parent" type="hdp:HadoopID"/>
 			<xs:element name="owner" type="xs:string"/>
+			<xs:element name="description" type="xs:string"/>
 			<xs:element name="submitted" type="xs:int"/>
 			<xs:element name="uptime" type="xs:int"/>
 			<xs:element name="state" type="hdp:HadoopStateType"/>

@@ -42,6 +42,10 @@ namespace AviaryHadoop
 
                 
                 bool isValidOwner;
+            std::string property_Description;
+
+                
+                bool isValidDescription;
             
 
         /*** Private methods ***/
@@ -53,6 +57,10 @@ namespace AviaryHadoop
 
         bool WSF_CALL
         setOwnerNil();
+            
+
+        bool WSF_CALL
+        setDescriptionNil();
             
 
 
@@ -80,9 +88,10 @@ namespace AviaryHadoop
          * @param 
          * @param Bin_file std::string
          * @param Owner std::string
+         * @param Description std::string
          * @return newly created HadoopNameNodeStart object
          */
-        HadoopNameNodeStart(std::string arg_Bin_file,std::string arg_Owner);
+        HadoopNameNodeStart(std::string arg_Bin_file,std::string arg_Owner,std::string arg_Description);
         
 
         /**
@@ -140,6 +149,30 @@ namespace AviaryHadoop
         WSF_EXTERN bool WSF_CALL
         resetOwner();
         
+        
+
+        /**
+         * Getter for description. 
+         * @return std::string*
+         */
+        WSF_EXTERN std::string WSF_CALL
+        getDescription();
+
+        /**
+         * Setter for description.
+         * @param arg_Description std::string*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setDescription(const std::string  arg_Description);
+
+        /**
+         * Re setter for description
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetDescription();
+        
 
 
         /******************************* Checking and Setting NIL values *********************************/
@@ -167,6 +200,16 @@ namespace AviaryHadoop
          */
         bool WSF_CALL
         isOwnerNil();
+
+
+        
+
+        /**
+         * Check whether description is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isDescriptionNil();
 
 
         
@@ -245,6 +288,17 @@ namespace AviaryHadoop
 
         std::string WSF_CALL
         getProperty2();
+
+    
+        
+
+        /**
+         * Getter for description by property number (3)
+         * @return std::string
+         */
+
+        std::string WSF_CALL
+        getProperty3();
 
     
 

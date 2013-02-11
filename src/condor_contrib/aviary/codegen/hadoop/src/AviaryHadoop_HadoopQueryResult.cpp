@@ -60,6 +60,10 @@
                 
             isValidOwner  = false;
         
+                    property_Description;
+                
+            isValidDescription  = false;
+        
             isValidSubmitted  = false;
         
             isValidUptime  = false;
@@ -82,7 +86,7 @@
         
         }
 
-       AviaryHadoop::HadoopQueryResult::HadoopQueryResult(AviaryHadoop::HadoopID* arg_Ref,AviaryHadoop::HadoopID* arg_Parent,std::string arg_Owner,int arg_Submitted,int arg_Uptime,AviaryHadoop::HadoopStateType* arg_State,AviaryCommon::Status* arg_Status,std::string arg_Bin_file,std::string arg_Http)
+       AviaryHadoop::HadoopQueryResult::HadoopQueryResult(AviaryHadoop::HadoopID* arg_Ref,AviaryHadoop::HadoopID* arg_Parent,std::string arg_Owner,std::string arg_Description,int arg_Submitted,int arg_Uptime,AviaryHadoop::HadoopStateType* arg_State,AviaryCommon::Status* arg_Status,std::string arg_Bin_file,std::string arg_Http)
         {
              
                property_Ref  = NULL;
@@ -96,6 +100,10 @@
                  property_Owner;
              
             isValidOwner  = true;
+            
+                 property_Description;
+             
+            isValidDescription  = true;
             
             isValidSubmitted  = true;
             
@@ -122,6 +130,8 @@
                     property_Parent = arg_Parent;
             
                     property_Owner = arg_Owner;
+            
+                    property_Description = arg_Description;
             
                     property_Submitted = arg_Submitted;
             
@@ -468,6 +478,141 @@
                                   }
                                   /* this is not a nillable element*/
 				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element owner missing");
+                                  return AXIS2_FAILURE;
+                              }
+                           
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
+
+                     
+                     /*
+                      * building description element
+                      */
+                     
+                     
+                     
+                                    /*
+                                     * because elements are ordered this works fine
+                                     */
+                                  
+                                   
+                                   if(current_node != NULL && is_early_node_valid)
+                                   {
+                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                       
+                                       
+                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                        {
+                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                        }
+                                        if(current_node != NULL)
+                                        {
+                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                        }
+                                       
+                                   }
+                                   is_early_node_valid = false;
+                                 
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "description", NULL, NULL);
+                                 
+
+                           if ( 
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("description", axiom_element_get_localname(current_element, Environment::getEnv())))))
+                           {
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("description", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              {
+                                is_early_node_valid = true;
+                              }
+                              
+                                 
+                                      text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
+                                      if(text_value != NULL)
+                                      {
+                                            status = setDescription(text_value);
+                                      }
+                                      
+                                      else
+                                      {
+                                            /*
+                                             * axis2_qname_t *qname = NULL;
+                                             * axiom_attribute_t *the_attri = NULL;
+                                             * 
+                                             * qname = axutil_qname_create(Environment::getEnv(), "nil", "http://www.w3.org/2001/XMLSchema-instance", "xsi");
+                                             * the_attri = axiom_element_get_attribute(current_element, Environment::getEnv(), qname);
+                                             */
+                                            /* currently thereis a bug in the axiom_element_get_attribute, so we have to go to this bad method */
+
+                                            axiom_attribute_t *the_attri = NULL;
+                                            axis2_char_t *attrib_text = NULL;
+                                            axutil_hash_t *attribute_hash = NULL;
+
+                                            attribute_hash = axiom_element_get_all_attributes(current_element, Environment::getEnv());
+
+                                            attrib_text = NULL;
+                                            if(attribute_hash)
+                                            {
+                                                 axutil_hash_index_t *hi;
+                                                 void *val;
+                                                 const void *key;
+                                        
+                                                 for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
+                                                 {
+                                                     axutil_hash_this(hi, &key, NULL, &val);
+                                                     
+                                                     if(strstr((axis2_char_t*)key, "nil|http://www.w3.org/2001/XMLSchema-instance"))
+                                                     {
+                                                         the_attri = (axiom_attribute_t*)val;
+                                                         break;
+                                                     }
+                                                 }
+                                            }
+
+                                            if(the_attri)
+                                            {
+                                                attrib_text = axiom_attribute_get_value(the_attri, Environment::getEnv());
+                                            }
+                                            else
+                                            {
+                                                /* this is hoping that attribute is stored in "http://www.w3.org/2001/XMLSchema-instance", this happnes when name is in default namespace */
+                                                attrib_text = axiom_element_get_attribute_value_by_name(current_element, Environment::getEnv(), "nil");
+                                            }
+
+                                            if(attrib_text && 0 == axutil_strcmp(attrib_text, "1"))
+                                            {
+                                                WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element description");
+                                                status = AXIS2_FAILURE;
+                                            }
+                                            else
+                                            {
+                                                /* after all, we found this is a empty string */
+                                                status = setDescription("");
+                                            }
+                                      }
+                                      
+                                 if(AXIS2_FAILURE ==  status)
+                                 {
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for description ");
+                                     if(element_qname)
+                                     {
+                                         axutil_qname_free(element_qname, Environment::getEnv());
+                                     }
+                                     return AXIS2_FAILURE;
+                                 }
+                              }
+                           
+                              else if(!dont_care_minoccurs)
+                              {
+                                  if(element_qname)
+                                  {
+                                      axutil_qname_free(element_qname, Environment::getEnv());
+                                  }
+                                  /* this is not a nillable element*/
+				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element description missing");
                                   return AXIS2_FAILURE;
                               }
                            
@@ -1131,7 +1276,8 @@
                     axis2_char_t *text_value_3;
                     axis2_char_t *text_value_3_temp;
                     
-                    axis2_char_t text_value_4[ADB_DEFAULT_DIGIT_LIMIT];
+                    axis2_char_t *text_value_4;
+                    axis2_char_t *text_value_4_temp;
                     
                     axis2_char_t text_value_5[ADB_DEFAULT_DIGIT_LIMIT];
                     
@@ -1139,11 +1285,13 @@
                     
                     axis2_char_t text_value_7[ADB_DEFAULT_DIGIT_LIMIT];
                     
-                    axis2_char_t *text_value_8;
-                    axis2_char_t *text_value_8_temp;
+                    axis2_char_t text_value_8[ADB_DEFAULT_DIGIT_LIMIT];
                     
                     axis2_char_t *text_value_9;
                     axis2_char_t *text_value_9_temp;
+                    
+                    axis2_char_t *text_value_10;
+                    axis2_char_t *text_value_10_temp;
                     
                axis2_char_t *start_input_str = NULL;
                axis2_char_t *end_input_str = NULL;
@@ -1364,6 +1512,73 @@
                        p_prefix = NULL;
                       
 
+                   if (!isValidDescription)
+                   {
+                      
+                            
+                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property description");
+                            return NULL;
+                          
+                   }
+                   else
+                   {
+                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (4 + axutil_strlen(p_prefix) + 
+                                  axutil_strlen("description"))); 
+                                 
+                                 /* axutil_strlen("<:>") + 1 = 4 */
+                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("description")));
+                                  /* axutil_strlen("</:>") + 1 = 5 */
+                                  
+                     
+
+                   
+                   
+                     
+                     /*
+                      * parsing description element
+                      */
+
+                    
+                    
+                            sprintf(start_input_str, "<%s%sdescription>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                            
+                        start_input_str_len = axutil_strlen(start_input_str);
+                        sprintf(end_input_str, "</%s%sdescription>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                        end_input_str_len = axutil_strlen(end_input_str);
+                    
+                           text_value_4 = (axis2_char_t*)property_Description.c_str();
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
+                           
+                            
+                           text_value_4_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_4, true);
+                           if (text_value_4_temp)
+                           {
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_4_temp, axutil_strlen(text_value_4_temp));
+                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_4_temp);
+                           }
+                           else
+                           {
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_4, axutil_strlen(text_value_4));
+                           }
+                           
+                           axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
+                           
+                     
+                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
+                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
+                 } 
+
+                 
+                       p_prefix = NULL;
+                      
+
                    if (!isValidSubmitted)
                    {
                       
@@ -1404,11 +1619,11 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                               sprintf (text_value_4, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Submitted);
+                               sprintf (text_value_5, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Submitted);
                              
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           axutil_stream_write(stream, Environment::getEnv(), text_value_4, axutil_strlen(text_value_4));
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_5, axutil_strlen(text_value_5));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -1461,11 +1676,11 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                               sprintf (text_value_5, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Uptime);
+                               sprintf (text_value_6, AXIS2_PRINTF_INT32_FORMAT_SPECIFIER, property_Uptime);
                              
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
-                           axutil_stream_write(stream, Environment::getEnv(), text_value_5, axutil_strlen(text_value_5));
+                           axutil_stream_write(stream, Environment::getEnv(), text_value_6, axutil_strlen(text_value_6));
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
@@ -1640,20 +1855,20 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                           text_value_8 = (axis2_char_t*)property_Bin_file.c_str();
+                           text_value_9 = (axis2_char_t*)property_Bin_file.c_str();
                            
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
                             
-                           text_value_8_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_8, true);
-                           if (text_value_8_temp)
+                           text_value_9_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_9, true);
+                           if (text_value_9_temp)
                            {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_8_temp, axutil_strlen(text_value_8_temp));
-                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_8_temp);
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_9_temp, axutil_strlen(text_value_9_temp));
+                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_9_temp);
                            }
                            else
                            {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_8, axutil_strlen(text_value_8));
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_9, axutil_strlen(text_value_9));
                            }
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
@@ -1707,20 +1922,20 @@
                                  (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
                         end_input_str_len = axutil_strlen(end_input_str);
                     
-                           text_value_9 = (axis2_char_t*)property_Http.c_str();
+                           text_value_10 = (axis2_char_t*)property_Http.c_str();
                            
                            axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
                            
                             
-                           text_value_9_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_9, true);
-                           if (text_value_9_temp)
+                           text_value_10_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_10, true);
+                           if (text_value_10_temp)
                            {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_9_temp, axutil_strlen(text_value_9_temp));
-                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_9_temp);
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_10_temp, axutil_strlen(text_value_10_temp));
+                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_10_temp);
                            }
                            else
                            {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_9, axutil_strlen(text_value_9));
+                               axutil_stream_write(stream, Environment::getEnv(), text_value_10, axutil_strlen(text_value_10));
                            }
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
@@ -2053,10 +2268,100 @@
            
 
             /**
-             * Getter for submitted by  Property Number 4
+             * Getter for description by  Property Number 4
+             */
+            std::string WSF_CALL
+            AviaryHadoop::HadoopQueryResult::getProperty4()
+            {
+                return getDescription();
+            }
+
+            /**
+             * getter for description.
+             */
+            std::string WSF_CALL
+            AviaryHadoop::HadoopQueryResult::getDescription()
+             {
+                return property_Description;
+             }
+
+            /**
+             * setter for description
+             */
+            bool WSF_CALL
+            AviaryHadoop::HadoopQueryResult::setDescription(
+                    const std::string  arg_Description)
+             {
+                
+
+                if(isValidDescription &&
+                        arg_Description == property_Description)
+                {
+                    
+                    return true;
+                }
+
+                
+                  if(arg_Description.empty())
+                       
+                  {
+                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"description is being set to NULL, but it is not a nullable element");
+                      return AXIS2_FAILURE;
+                  }
+                
+
+                
+                resetDescription();
+
+                
+                        property_Description = std::string(arg_Description.c_str());
+                        isValidDescription = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for description
+            */
+           bool WSF_CALL
+           AviaryHadoop::HadoopQueryResult::resetDescription()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+               isValidDescription = false; 
+               return true;
+           }
+
+           /**
+            * Check whether description is nill
+            */
+           bool WSF_CALL
+           AviaryHadoop::HadoopQueryResult::isDescriptionNil()
+           {
+               return !isValidDescription;
+           }
+
+           /**
+            * Set description to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryHadoop::HadoopQueryResult::setDescriptionNil()
+           {
+               return resetDescription();
+           }
+
+           
+
+            /**
+             * Getter for submitted by  Property Number 5
              */
             int WSF_CALL
-            AviaryHadoop::HadoopQueryResult::getProperty4()
+            AviaryHadoop::HadoopQueryResult::getProperty5()
             {
                 return getSubmitted();
             }
@@ -2136,10 +2441,10 @@
            
 
             /**
-             * Getter for uptime by  Property Number 5
+             * Getter for uptime by  Property Number 6
              */
             int WSF_CALL
-            AviaryHadoop::HadoopQueryResult::getProperty5()
+            AviaryHadoop::HadoopQueryResult::getProperty6()
             {
                 return getUptime();
             }
@@ -2219,10 +2524,10 @@
            
 
             /**
-             * Getter for state by  Property Number 6
+             * Getter for state by  Property Number 7
              */
             AviaryHadoop::HadoopStateType* WSF_CALL
-            AviaryHadoop::HadoopQueryResult::getProperty6()
+            AviaryHadoop::HadoopQueryResult::getProperty7()
             {
                 return getState();
             }
@@ -2331,10 +2636,10 @@
            
 
             /**
-             * Getter for status by  Property Number 7
+             * Getter for status by  Property Number 8
              */
             AviaryCommon::Status* WSF_CALL
-            AviaryHadoop::HadoopQueryResult::getProperty7()
+            AviaryHadoop::HadoopQueryResult::getProperty8()
             {
                 return getStatus();
             }
@@ -2443,10 +2748,10 @@
            
 
             /**
-             * Getter for bin_file by  Property Number 8
+             * Getter for bin_file by  Property Number 9
              */
             std::string WSF_CALL
-            AviaryHadoop::HadoopQueryResult::getProperty8()
+            AviaryHadoop::HadoopQueryResult::getProperty9()
             {
                 return getBin_file();
             }
@@ -2533,10 +2838,10 @@
            
 
             /**
-             * Getter for http by  Property Number 9
+             * Getter for http by  Property Number 10
              */
             std::string WSF_CALL
-            AviaryHadoop::HadoopQueryResult::getProperty9()
+            AviaryHadoop::HadoopQueryResult::getProperty10()
             {
                 return getHttp();
             }

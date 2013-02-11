@@ -54,6 +54,10 @@ namespace AviaryHadoop
 
                 
                 bool isValidOwner;
+            std::string property_Description;
+
+                
+                bool isValidDescription;
             int property_Submitted;
 
                 
@@ -93,6 +97,10 @@ namespace AviaryHadoop
 
         bool WSF_CALL
         setOwnerNil();
+            
+
+        bool WSF_CALL
+        setDescriptionNil();
             
 
         bool WSF_CALL
@@ -145,6 +153,7 @@ namespace AviaryHadoop
          * @param Ref AviaryHadoop::HadoopID*
          * @param Parent AviaryHadoop::HadoopID*
          * @param Owner std::string
+         * @param Description std::string
          * @param Submitted int
          * @param Uptime int
          * @param State AviaryHadoop::HadoopStateType*
@@ -153,7 +162,7 @@ namespace AviaryHadoop
          * @param Http std::string
          * @return newly created HadoopQueryResult object
          */
-        HadoopQueryResult(AviaryHadoop::HadoopID* arg_Ref,AviaryHadoop::HadoopID* arg_Parent,std::string arg_Owner,int arg_Submitted,int arg_Uptime,AviaryHadoop::HadoopStateType* arg_State,AviaryCommon::Status* arg_Status,std::string arg_Bin_file,std::string arg_Http);
+        HadoopQueryResult(AviaryHadoop::HadoopID* arg_Ref,AviaryHadoop::HadoopID* arg_Parent,std::string arg_Owner,std::string arg_Description,int arg_Submitted,int arg_Uptime,AviaryHadoop::HadoopStateType* arg_State,AviaryCommon::Status* arg_Status,std::string arg_Bin_file,std::string arg_Http);
         
 
         /**
@@ -234,6 +243,30 @@ namespace AviaryHadoop
          */
         WSF_EXTERN bool WSF_CALL
         resetOwner();
+        
+        
+
+        /**
+         * Getter for description. 
+         * @return std::string*
+         */
+        WSF_EXTERN std::string WSF_CALL
+        getDescription();
+
+        /**
+         * Setter for description.
+         * @param arg_Description std::string*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setDescription(const std::string  arg_Description);
+
+        /**
+         * Re setter for description
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetDescription();
         
         
 
@@ -421,6 +454,16 @@ namespace AviaryHadoop
         
 
         /**
+         * Check whether description is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isDescriptionNil();
+
+
+        
+
+        /**
          * Check whether submitted is Nill
          * @return true if the element is Nil, false otherwise
          */
@@ -570,18 +613,18 @@ namespace AviaryHadoop
         
 
         /**
-         * Getter for submitted by property number (4)
-         * @return int
+         * Getter for description by property number (4)
+         * @return std::string
          */
 
-        int WSF_CALL
+        std::string WSF_CALL
         getProperty4();
 
     
         
 
         /**
-         * Getter for uptime by property number (5)
+         * Getter for submitted by property number (5)
          * @return int
          */
 
@@ -592,45 +635,56 @@ namespace AviaryHadoop
         
 
         /**
-         * Getter for state by property number (6)
-         * @return AviaryHadoop::HadoopStateType
+         * Getter for uptime by property number (6)
+         * @return int
          */
 
-        AviaryHadoop::HadoopStateType* WSF_CALL
+        int WSF_CALL
         getProperty6();
 
     
         
 
         /**
-         * Getter for status by property number (7)
-         * @return AviaryCommon::Status
+         * Getter for state by property number (7)
+         * @return AviaryHadoop::HadoopStateType
          */
 
-        AviaryCommon::Status* WSF_CALL
+        AviaryHadoop::HadoopStateType* WSF_CALL
         getProperty7();
 
     
         
 
         /**
-         * Getter for bin_file by property number (8)
-         * @return std::string
+         * Getter for status by property number (8)
+         * @return AviaryCommon::Status
          */
 
-        std::string WSF_CALL
+        AviaryCommon::Status* WSF_CALL
         getProperty8();
 
     
         
 
         /**
-         * Getter for http by property number (9)
+         * Getter for bin_file by property number (9)
          * @return std::string
          */
 
         std::string WSF_CALL
         getProperty9();
+
+    
+        
+
+        /**
+         * Getter for http by property number (10)
+         * @return std::string
+         */
+
+        std::string WSF_CALL
+        getProperty10();
 
     
 
