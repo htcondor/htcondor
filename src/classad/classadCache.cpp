@@ -43,8 +43,8 @@ protected:
         typedef classad_unordered<std::string, pCacheEntry> AttrValues;
         typedef classad_unordered<std::string, pCacheEntry>::iterator value_iterator;
         
-	typedef classad_unordered<std::string, AttrValues, StringCaseIgnHash, CaseIgnEqStr> AttrCache;
-	typedef classad_unordered<std::string, AttrValues, StringCaseIgnHash, CaseIgnEqStr>::iterator cache_iterator;
+	typedef classad_unordered<std::string, AttrValues, ClassadAttrNameHash, CaseIgnEqStr> AttrCache;
+	typedef classad_unordered<std::string, AttrValues, ClassadAttrNameHash, CaseIgnEqStr>::iterator cache_iterator;
 
 	AttrCache m_Cache;		///< Data Store
 	unsigned long m_HitCount;	///< Hit Counter
