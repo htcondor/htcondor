@@ -84,11 +84,13 @@ typedef struct hinit
     tHadoopRef idref;    ///< input(ipcid)
     string newcluster;   ///< output new clusterid
     string owner;        ///< owner field
+    string description;  ///< description field
 }tHadoopInit;
 
 typedef struct hstatus
 {
     string owner;
+    string description;
     int uptime;
     string state;
     tHadoopRef idref;
@@ -105,6 +107,7 @@ const char * const ATTR_JOB_TRACKER = "JobTracker";
 const char * const ATTR_TASK_TRACKER = "TaskTracker";
 const char * const ATTR_HADOOP_BIN_VERSION = "HadoopVersion";
 const char * const ATTR_HTTP_ADDRESS = "HTTPAddress";
+const char * const ATTR_HADOOP_DESCRIPTION = "JobDescription";
 
 const char * const HADOOP_NAMENODE_REQUIREMENTS="NAME_NODE_REQUIREMENTS";
 const char * const HADOOP_DATANODE_REQUIREMENTS="DATA_NODE_REQUIREMENTS";

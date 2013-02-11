@@ -103,14 +103,9 @@ HadoopStartResponse* start (tHadoopInit & hInit, HadoopStart* pHS)
     hInit.idref.ipcid = pHS->getRef()->getIpc();
     hInit.count = pHS->getCount();
     hInit.owner = pHS->getOwner();
-    
-    //TODO: This should be temporary, it seems the hadoop_tool.py doesn't fill the owner
-    //if (0 == hInit.owner.length()) 
-    //{
-    //    hInit.owner = "condor";
-    //}
+    hInit.description = pHS->getDescription();
 
-    qmgmt_all_users_trusted = true;    
+    qmgmt_all_users_trusted = true;
 
     if ( !ho->start( hInit ) )
     {
@@ -213,6 +208,7 @@ HadoopQueryResponse* query (tHadoopType qType, vector<HadoopID*>* refs)
             hResult->setParent(setHadoopID(hStatus[jCtr].idparent));
             hResult->setBin_file(hStatus[jCtr].idref.tarball);
             hResult->setOwner(hStatus[jCtr].owner);
+            hResult->setDescription(hStatus[jCtr].description);
             hResult->setSubmitted(hStatus[jCtr].qdate);
             hResult->setUptime(hStatus[jCtr].uptime);
             hResult->setHttp(hStatus[jCtr].http);
@@ -254,14 +250,8 @@ StartNameNodeResponse* AviaryHadoopServiceSkeleton::startNameNode(MessageContext
     hInit.idref.tarball = _startNameNode->getStartNameNode()->getBin_file();
     hInit.count = 1;
     hInit.owner = _startNameNode->getStartNameNode()->getOwner();
-    
-    //TODO: This should be temporary, it seems the hadoop_tool.py doesn't fill the owner
-    //if (0 == hInit.owner.length()) 
-    //{
-    //    hInit.owner = "condor";
-    //}
-    
-    
+    hInit.description = _startNameNode->getStartNameNode()->getDescription();
+
     qmgmt_all_users_trusted = true;
     
     if ( !ho->start( hInit ) )

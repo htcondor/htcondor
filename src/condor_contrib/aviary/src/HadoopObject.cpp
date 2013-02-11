@@ -319,6 +319,7 @@ int HadoopObject::start( tHadoopInit & hInit )
 
     // Set the owner attribute
     ::SetAttribute(cluster, proc, ATTR_OWNER, quote_it(hInit.owner.c_str()).c_str());
+    ::SetAttribute(cluster, proc, ATTR_HADOOP_DESCRIPTION, quote_it(hInit.description.c_str()).c_str());
     
     param(Iwd, "HADOOP_IWD", "/tmp");
     ::SetAttribute(cluster, proc, ATTR_JOB_IWD, quote_it(Iwd.c_str()).c_str() );
@@ -435,10 +436,13 @@ bool HadoopObject::status (ClassAd* cAd, const tHadoopType & type, tHadoopJobSta
     m_lasterror = "Could not find Hadoop Version";
     return false;
     }
-    
-    hStatus.uptime = 0;
-    
+     
     formatstr(hStatus.idref.id,"%d.%d", cluster, proc);
+    
+    if (!cAd->LookupString( ATTR_HADOOP_DESCRIPTION, hStatus.description))
+    {
+        hStatus.description = "N/A";
+    }
    
     cAd->LookupInteger( ATTR_Q_DATE, hStatus.qdate );
     
@@ -447,6 +451,7 @@ bool HadoopObject::status (ClassAd* cAd, const tHadoopType & type, tHadoopJobSta
         hStatus.http="N/A";
     }
  
+    hStatus.uptime = 0;
     switch (JobStatus)
     {
     case 1:
