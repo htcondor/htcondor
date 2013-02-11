@@ -14,58 +14,51 @@ Further improvements are planned for the difficult to use submission API.
 This module attempts to wrap a C++ API that is
 far less formal when compared to the ClassAd language.
 
-Module functions:
-%
-%  NOTE FROM KAREN:  Yes, this formatting looks somewhat poor in both
-%  the html and pdf versions.  However, please do not change it, and
-%  carefully follow the existing formatting, as the LaTeX to pdf and
-%  LaTeX to html translators do quite different things for lists.  This
-%  particular formatting at least works in both versions.
-%
-\begin{description}
-\item [\Code{platform}]
-  Returns the platform of HTCondor this module is running on.
-  
-\item [\Code{version}]
-  Returns the version of HTCondor this module is linked against.
+\textbf{Module functions:}
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+\texttt{platform( )}
 
-\item [\Code{reload\_config}]
-  Reload the HTCondor configuration from disk.
+Returns the platform of HTCondor this module is running on.
+\\ \hline
+\texttt{version( )}
 
-\item [\Code{send\_command}]
-  Send a command to an HTCondor daemon specified by a location ClassAd.
+Returns the version of HTCondor this module is linked against. 
+\\ \hline
+\texttt{reload\_config( )}
 
-  \Code{send\_command( ad, (DaemonCommands)dc, (str)target = None)  }
-  \begin{description}
-    \item[ Parameters]
-    \begin{itemize}
-      \item \Code{ad} A ClassAd specifying the location of the daemon; 
-      typically, found by using \Code{Collector.locate(...)}.
-      \item \Code{dc} A command type; 
-      must be a member of the enum \Code{DaemonCommands}.
-      \item \Code{target} Some commands require additional arguments; 
-      for example, sending \Code{DaemonOff} to a \Condor{master} requires 
-      one to specify which subsystem to turn off.  
-      If this parameter is given, the daemon is sent an additional argument.
-    \end{itemize}
-  \end{description}  
+Reload the HTCondor configuration from disk. 
+\\ \hline
+\texttt{send\_command( ad, (DaemonCommands)dc, (str)target = None) }
 
-\end{description}
+Send a command to an HTCondor daemon specified by a location ClassAd. 
 
-Module object:
-\begin{description}
-  \item[\Code{param}]
-  A dictionary-like object providing access to the configuration variables
-  in the current HTCondor configuration.
-\end{description}
+\texttt{ad} is a ClassAd specifying the location of the daemon; 
+typically, found by using \texttt{Collector.locate(...)}.
 
-The \Condor{schedd} class:
+\texttt{dc} is a command type; must be a member of the enum 
+\texttt{DaemonCommands}. 
+
+\texttt{target} is an optional parameter, representing an additional command
+to send to a daemon.   Some commands require additional arguments; 
+for example, sending \texttt{DaemonOff} to a \Condor{master} requires 
+one to specify which subsystem to turn off. 
+\\ \hline
+
+\end{tabular}
+\end{flushleft}
+
+\textbf{The module object, \texttt{param}}, is
+a dictionary-like object providing access to the configuration variables
+in the current HTCondor configuration.
+
+\textbf{The \Condor{schedd} class:}
 \Todo
 
-The \Condor{collector} class:
+\textbf{The \Condor{collector} class:}
 \Todo
 
-The class to access the internal security object:
+\textbf{The class to access the internal security object:}
 \Todo
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -77,186 +70,189 @@ with the ClassAd language.
 ClassAd objects implement the iterator interface to iterate 
 through the ClassAd's attributes.
 
-Module functions:
+\textbf{Module functions:}
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+\texttt{parse( input )}
 
-\begin{description}
-\item [\Code{parse}]
-  Parse input into a ClassAd.
+Parse input into a ClassAd.  
+Returns a ClassAd object.
 
-  \Code{parse( input )}
-  \begin{description}
-    \item[ Parameters]
-    \begin{itemize}
-      \item \Code{input} A string-like object or a file pointer. 
-    \end{itemize}
-    \item[ Return Value]
-      A ClassAd object.
-  \end{description}  
+Parameter \texttt{input} is a string-like object or a file pointer.
+\\ \hline
 
-\item [\Code{parseOld}]
-  Parse old ClassAd format input into a ClassAd.
+\texttt{parseOld}
 
-\item [\Code{version}]
-  Return the version of the linked ClassAd library.
-\end{description}
+Parse old ClassAd format input into a ClassAd.
+\\ \hline
+\texttt{version}
 
-Standard Python object methods for the ClassAd class:
+Return the version of the linked ClassAd library.
+\\ \hline
 
-\begin{description}
-
-\item [\Code{\_\_init\_\_}]
-  Create a ClassAd object from a string.
-  The string must be formatted in the new ClassAd format.
-
-  \Code{\_\_init\_\_( str )}
-  \begin{description}
-    \item[ Parameters]
-    \begin{itemize}
-      \item \Code{str} A string formatted in the new ClassAd format. 
-    \end{itemize}
-    \item[ Return Value]
-      ?? .
-  \end{description}  
-
-\item [\Code{\_\_len\_\_}]
-  Returns the number of attributes in the ClassAd; 
-  allows \Code{len(object)} semantics for ClassAds.
-
-  \Code{\_\_len\_\_( )}
-  \begin{description}
-    \item[ Return Value]
-      Returns the integer number of attributes in the ClassAd.
-  \end{description}  
-
-\item [\Code{\_\_str\_\_}]
-  Converts the ClassAd to a string; the formatting style is new ClassAd,
-  with square brackets and semi-colons.  
-  For example, \Expr{[ Foo = "bar"; ]} may be returned.
-
-  \Code{\_\_str\_\_( )}
-  \begin{description}
-    \item[ Return Value]
-      Returns the converted string.
-  \end{description}  
-
-\end{description}
-
-The ClassAd object has the following dictionary-like methods:
-\begin{description}
-
-\item [\Code{items}]
-  Returns an iterator, where each item returned by the iterator 
-  is a tuple representing a pair (attribute,value) in the ClassAd object.
-
-  \Code{items( )}
-  \begin{description}
-    \item[ Return Value]
-      Returns an iterator of tuples.
-  \end{description}  
-
-\item [\Code{keys}]
-  Returns an iterator, where each item returned by the iterator 
-  is an attribute string in the ClassAd.
-
-  \Code{keys( )}
-  \begin{description}
-    \item[ Return Value]
-      Returns an iterator of strings.
-  \end{description}  
-
-\item [\Code{values}]
-  Returns an iterator, where each item returned by the iterator is a value 
-  in the ClassAd.  If the value is a literal, 
-  it will be cast to a native python object, 
-  so a ClassAd string will be returned as a Python string.
-  \Code{values( )}
-  \begin{description}
-    \item[ Return Value]
-      Returns an iterator of objects.
-  \end{description}  
-
-\item [\Code{\_\_getitem\_\_}]
-  Returns as an object the value corresponding to an attribute.
-
-  \Code{\_\_getitem\_\_( attr )}
-  \begin{description}
-    \item[ Parameters]
-    \begin{itemize}
-      \item \Code{attr} ?? . 
-    \end{itemize}
-    \item[ Return Value]
-      ClassAd values will be returned as Python objects; 
-      ClassAd expressions will be returned as \Code{ExprTree} objects.
-  \end{description}  
-
-\item [\Code{\_\_setitem\_\_}]
-  Sets the ClassAd attribute to the given value.
-  Python objects will be converted to ClassAd values; 
-  \Expr{ExprTree} objects will not be evaluated.
-
-  \Code{\_\_setitem\_\_( attr, value )}
-  \begin{description}
-    \item[ Parameters]
-    \begin{itemize}
-      \item \Code{attr} ?? . 
-      \item \Code{value} ?? . 
-    \end{itemize}
-    \item[ Return Value]
-      ClassAd values will be returned as Python objects; 
-      ClassAd expressions will be returned as \Code{ExprTree} objects.
-  \end{description}  
+\end{tabular}
+\end{flushleft}
 
 
-\end{description}
+\textbf{Standard Python object methods for the \Expr{ClassAd} class:}
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
 
-Additional methods:
-\begin{description}
+\texttt{\_\_init\_\_( str )}
 
-\item [\Code{eval}]
-  Evaluate the value given a ClassAd attribute.
-  Throws \Expr{ValueError} if unable to evaluate the object.
+Create a ClassAd object from string, \texttt{str}, passed as a parameter.
+The string must be formatted in the new ClassAd format.
+\\ \hline
+\texttt{\_\_len\_\_( )}
 
-  \Code{eval ( attr )}
-  \begin{description}
-    \item[ Parameters]
-    \begin{itemize}
-      \item \Code{attr} ?? . 
-    \end{itemize}
-    \item[ Return Value]
-      Returns the Python object corresponding to the evaluated ClassAd
-      attribute.
-  \end{description}  
+Returns the number of attributes in the ClassAd; 
+allows \texttt{len(object)} semantics for ClassAds.
+\\ \hline
+\texttt{\_\_str\_\_( )}
 
-\item [\Code{lookup}]
-  Lookup the \Expr{ExprTree} object associated with the given attribute.
-  No attempt will be made to convert to a Python object.
+Converts the ClassAd to a string and returns the string;
+the formatting style is new ClassAd,
+with square brackets and semicolons.
+For example, \Expr{[ Foo = "bar"; ]} may be returned.
 
-  \Code{lookup ( attr )}
-  \begin{description}
-    \item[ Parameters]
-    \begin{itemize}
-      \item \Code{attr} ?? . 
-    \end{itemize}
-    \item[ Return Value]
-      Returns an \Expr{ExprTree} object.
-  \end{description}  
-
-\item [\Code{printOld}]
-  Print the ClassAd in the old ClassAd format.
-
-  \Code{printOld( )}
-  \begin{description}
-    \item[ Return Value]
-      ?? Returns a string.
-  \end{description}  
-
-\end{description}
-
-%Class Object:
-%\begin{description}
-%  \item[\Code{ExprTree}]
-%  An object representing an expression in the ClassAd language.
-%\end{description}
+\\ \hline
+\end{tabular}
+\end{flushleft}
 
 
- \MoreTodo
+\textbf{The ClassAd object has the following dictionary-like methods:}
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+\texttt{items( )}
+
+Returns an iterator of tuples. Each item returned by the iterator 
+is a tuple representing a pair (attribute,value) in the ClassAd object.
+\\ \hline
+\texttt{values( )}
+
+Returns an iterator of objects. 
+Each item returned by the iterator is a value in the ClassAd. 
+
+If the value is a literal, 
+it will be cast to a native Python object, 
+so a ClassAd string will be returned as a Python string.
+\\ \hline
+\texttt{keys( )}
+
+Returns an iterator of strings. Each item returned by the iterator 
+is an attribute string in the ClassAd.
+\\ \hline
+\texttt{\_\_getitem( attr )}
+
+Returns (as an object) the value corresponding to the attribute
+\texttt{attr} passed as a parameter.
+
+ClassAd values will be returned as Python objects; 
+ClassAd expressions will be returned as \texttt{ExprTree} objects.
+\\ \hline
+\texttt{\_\_setitem\_\_( attr, value )}
+
+Sets the ClassAd attribute \texttt{attr} to the \texttt{value}.
+
+ClassAd values will be returned as Python objects; 
+ClassAd expressions will be returned as \texttt{ExprTree} objects.
+\\ \hline
+
+\end{tabular}
+\end{flushleft}
+
+
+\textbf{Additional methods:}
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+\texttt{eval( attr )}
+
+Evaluate the value given a ClassAd attribute \texttt{attr}.
+Throws \texttt{ValueError} if unable to evaluate the object.
+
+Returns the Python object corresponding to the evaluated ClassAd attribute.
+\\ \hline
+\texttt{lookup( attr )}
+
+Look up the \texttt{ExprTree} object associated with attribute \texttt{attr}.
+No attempt will be made to convert to a Python object.
+
+Returns an \texttt{ExprTree} object.
+\\ \hline
+\texttt{printOld( )}
+
+Print the ClassAd in the old ClassAd format. 
+
+Returns a string.
+\\ \hline
+\end{tabular}
+\end{flushleft}
+
+
+\textbf{The \Expr{ExprTree} class} object
+represents an expression in the ClassAd language.
+
+\textbf{\texttt{ExprTree} class methods:}
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+\texttt{\_\_init\_\_( str )}
+
+Parse the string \texttt{str} to create an \texttt{ExprTree}.
+\\ \hline
+\texttt{\_\_str\_\_( )}
+
+Represent and return the ClassAd expression as a string.
+\\ \hline
+\texttt{eval()}
+
+Evaluate the expression and return as a ClassAd value, 
+typically a Python object.
+\\ \hline
+\end{tabular}
+\end{flushleft}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{Python-ClassAd-Example} Sample Code using the ClassAd Module}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+This sample Python code illustrates interactions with the ClassAd Module. 
+
+\footnotesize
+\begin{verbatim}
+$ python
+Python 2.6.6 (r266:84292, Jun 18 2012, 09:57:52) 
+[GCC 4.4.6 20110731 (Red Hat 4.4.6-3)] on linux2
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import classad
+>>> ad = classad.ClassAd()
+>>> expr = classad.ExprTree("2+2")
+>>> ad["foo"] = expr
+>>> print ad["foo"].eval()
+4
+>>> ad["bar"] = 2.1
+>>> ad["baz"] = classad.ExprTree("time() + 4")
+>>> print list(ad)
+['bar', 'foo', 'baz']
+>>> print dict(ad.items())
+{'baz': time() + 4, 'foo': 2 + 2, 'bar': 2.100000000000000E+00}
+>>> print ad
+    [
+        bar = 2.100000000000000E+00; 
+        foo = 2 + 2; 
+        baz = time() + 4
+    ]
+>>> ad2=classad.parse(open("test_ad", "r"));
+>>> ad2["error"] = classad.Value.Error
+>>> ad2["undefined"] = classad.Value.Undefined
+>>> print ad2
+    [
+        error = error; 
+        bar = 2.100000000000000E+00; 
+        foo = 2 + 2; 
+        undefined = undefined; 
+        baz = time() + 4
+    ]
+>>> ad2["undefined"]
+classad.Value.Undefined
+
+\end{verbatim}
+\normalsize
