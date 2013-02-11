@@ -62,6 +62,30 @@ BOOST_AUTO_TEST_CASE( example_test )
     
     infile.open ("testdata.txt");
     
+#if 1
+    clock_t Start = clock();
+
+    while ( !infile.eof() )
+    {
+       getline( infile, szInput );
+
+        // This is the end of an add.
+        if (!szInput.length())
+        {
+            ads.push_back(pAd);
+            pAd.reset( new ClassAd );
+        }
+        else if ( !pAd->Insert(szInput) )
+        {
+            cout<<"BARFED ON:"<<szInput<<endl;
+            throw std::exception();
+        }
+    }
+    
+    cout<<"Clock Time:"<<(1.0*(clock() - Start))/CLOCKS_PER_SEC<<endl;
+
+    infile.close();
+#else
     while ( !infile.eof() )
     {
        getline( infile, szInput );
@@ -88,12 +112,12 @@ BOOST_AUTO_TEST_CASE( example_test )
     }
     
     cout<<"Clock Time:"<<(1.0*(clock() - Start))/CLOCKS_PER_SEC<<endl;
-
+    inputData.clear();
+#endif
     // enable this to look at the cache contents and debug data
     CachedExprEnvelope::_debug_dump_keys("output.txt");
     
     ads.clear();
-    inputData.clear();
     
     BOOST_CHECK_NO_THROW(); 
 }
