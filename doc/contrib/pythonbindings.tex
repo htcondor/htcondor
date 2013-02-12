@@ -53,13 +53,119 @@ a dictionary-like object providing access to the configuration variables
 in the current HTCondor configuration.
 
 \textbf{The \Condor{schedd} class:}
-\Todo
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+
+\texttt{\_\_init\_\_( classad )}
+
+Create an instance of the \texttt{Schedd} class.  
+The single, optional parameter, \texttt{classAd}, 
+describes the location of the remote \Condor{schedd} daemon.
+If the parameter is omitted, the local \Condor{schedd} daemon is used.
+\\ \hline
+\texttt{act( (JobAction)action, (object)job\_spec )}
+
+Change status of job(s) in the \Condor{schedd} daemon.
+The integer return value is a \texttt{ClassAd} object describing 
+the number of jobs changed.
+
+Parameter \texttt{action} is the action to perform; must be of the
+enum \texttt{JobAction}.
+
+Parameter \texttt{job\_spec} is the job specification.
+It can either be a list of job IDs or a string specifying a constraint 
+to match jobs.
+\\ \hline
+\texttt{edit( (object)job\_spec, (str)attr, (object)value)}
+
+Edit one or more jobs in the queue.
+
+Parameter \texttt{job\_spec} is either a list of jobs, 
+with each given as \texttt{ClusterId.ProcId} 
+or a string containing a constraint to match jobs against.
+
+Parameter \texttt{attr} is the attribute name of the attribute to edit.
+
+Parameter \texttt{value} is the new value of the job attribute. 
+It should be a string, which will be converted to a ClassAd expression,
+or an \texttt{ExprTree} object.
+\\ \hline
+\texttt{query( constraint = true, attr\_list = [] )}
+
+Query the \Condor{schedd} daemon for jobs.
+Returns a list of ClassAds representing the matching jobs,
+containing at least the requested attributes requested by the second parameter.
+
+The optional parameter \texttt{constraint} provides a constraint for 
+filtering out jobs.
+It defaults to \texttt{True}.
+
+Parameter \texttt{attr\_list} is a list of attributes for the \Condor{schedd}
+daemon to project along.  
+It defaults to having the \Condor{schedd} daemon return all attributes.
+\\ \hline
+\texttt{submit( ad, count = 1 )}
+
+Submit one or more jobs to the \Condor{schedd} daemon.
+Returns the newly created cluster ID.
+
+This method requires the invoker to provide a full ClassAd for the new job;
+such a ClassAd is much more complex than the contents of 
+a submit description file.
+To generate an example ClassAd, 
+take a sample submit description file and invoke 
+
+\texttt{condor\_submit -dump <filename> [cmdfile]}
+
+Then, load the resulting contents of <filename> into Python.
+
+The submission does not perform any file staging.  
+Thus, the current implementation's interface is only useful for submitting jobs 
+to the local \Condor{schedd} daemon.
+
+
+Parameter \texttt{ad} is the ClassAd describing the job cluster.
+
+Parameter \texttt{count} is the number of jobs to submit to the cluster.
+Defaults to 1.
+\\ \hline
+
+\end{tabular}
+\end{flushleft}
+\MoreTodo
 
 \textbf{The \Condor{collector} class:}
-\Todo
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+
+\texttt{\_\_init\_\_( pool = None )}
+\\ \hline
+\texttt{locate( (DaemonTypes)daemon\_type, (str)name)}
+\\ \hline
+\texttt{locateAll( (Collector)arg1, (DaemonTypes)arg2)}
+\\ \hline
+\texttt{query( (AdTypes)ad\_type, constraint=True, attrs=[])}
+\\ \hline
+\texttt{advertise( ad\_list, command=UPDATE\_AD\_GENERIC, use\_tcp = true)}
+\\ \hline
+
+\end{tabular}
+\end{flushleft}
+\MoreTodo
 
 \textbf{The class to access the internal security object:}
-\Todo
+
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+
+\texttt{\_\_init\_\_( )}
+\\ \hline
+\texttt{invalidateAllSessions( )}
+\\ \hline
+
+\end{tabular}
+\end{flushleft}
+\MoreTodo
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{Python-ClassAd} ClassAd Module}
