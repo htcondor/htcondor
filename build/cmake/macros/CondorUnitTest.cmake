@@ -29,6 +29,7 @@ MACRO (CONDOR_UNIT_TEST _CNDR_TARGET _SRCS _LINK_LIBS _BOOST_UT)
 		if (${_CNDR_TARGET}BOOST_UT)
 		
 		    include_directories(${BOOST_INCLUDE})
+			link_directories(${BOOST_LD})
 		    
 		endif() 
 		
@@ -55,7 +56,6 @@ MACRO (CONDOR_UNIT_TEST _CNDR_TARGET _SRCS _LINK_LIBS _BOOST_UT)
 		if ( ${_CNDR_TARGET}BOOST_UT )
 		
 		    if ( WINDOWS )
-			set_property( TARGET ${LOCAL_${_CNDR_TARGET}} PROPERTY FOLDER "tests" )
 			#windows will require runtime to match so make certain we link the right one.
 			target_link_libraries (${LOCAL_${_CNDR_TARGET}} optimized libboost_unit_test_framework-${MSVCVER}-mt-${BOOST_SHORTVER} )
 			target_link_libraries (${LOCAL_${_CNDR_TARGET}} debug libboost_unit_test_framework-${MSVCVER}-mt-gd-${BOOST_SHORTVER} ) 
@@ -68,6 +68,10 @@ MACRO (CONDOR_UNIT_TEST _CNDR_TARGET _SRCS _LINK_LIBS _BOOST_UT)
 		condor_set_link_libs( ${LOCAL_${_CNDR_TARGET}} "${_LINK_LIBS}" )
 
 		add_test ( ${LOCAL_${_CNDR_TARGET}}_unit_test ${LOCAL_${_CNDR_TARGET}} )
+
+		if ( WINDOWS )
+			set_property( TARGET ${LOCAL_${_CNDR_TARGET}} PROPERTY FOLDER "unit_tests" )
+		endif (WINDOWS)
 
 	endif()
 
