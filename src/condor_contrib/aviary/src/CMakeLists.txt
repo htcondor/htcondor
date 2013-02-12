@@ -40,8 +40,8 @@ if (WITH_OPENSSL)
     list(APPEND SOAP_SRCS ${SSL_SRCS} )
 endif(WITH_OPENSSL)
 
-file( GLOB SCHED_PLUGIN_SRCS Codec.cpp AviaryUtils.cpp SchedulerObject.cpp
-			PROC_ID_comparator.cpp ${SOAP_SRCS} AviaryScheddPlugin*.cpp )
+file( GLOB SCHED_PLUGIN_SRCS Codec.cpp AviaryUtils.cpp SchedulerObject.cpp ClassadCodec.cpp
+			PROC_ID_comparator.cpp AviaryScheddPlugin*.cpp )
 
 file( GLOB JOB_SERVER_SRCS aviary_query_server.cpp ${SOAP_SRCS}
 							SubmissionObject.cpp JobServerJobLogConsumer.cpp
@@ -49,10 +49,10 @@ file( GLOB JOB_SERVER_SRCS aviary_query_server.cpp ${SOAP_SRCS}
 							ClassadCodec.cpp JobServerObject.cpp AviaryUtils.cpp )
 
 file( GLOB LOCATOR_PLUGIN_SRCS AviaryUtils.cpp LocatorObject.cpp 
-			${SOAP_SRCS} AviaryLocatorPlugin*.cpp )
+			AviaryLocatorPlugin*.cpp )
 
 file( GLOB COLLECTOR_PLUGIN_SRCS AviaryUtils.cpp Collectables.cpp CollectorObject.cpp CollectableCodec.cpp ClassadCodec.cpp
-			${SOAP_SRCS} AviaryCollectorPlugin*.cpp )
+			AviaryCollectorPlugin*.cpp )
 
 ############################
 # schedd plugin
@@ -64,9 +64,11 @@ add_library (aviary_job_axis SHARED ${COMMON_GEN_SRCS} ${JOB_GEN_SRCS} ${JOB_SRC
 # remove unresolved deps by copying in -lwso2_wsf objects
 target_link_libraries(aviary_job_axis -Wl,--whole-archive -lwso2_wsf -Wl,--no-whole-archive)
 
-condor_plugin( AviaryScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SCHED_PLUGIN_SRCS}" "${C_LIBEXEC}" "${WSO2_FOUND}" ON)
+condor_plugin( AviaryScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${COMMON_GEN_SRCS};${SCHED_PLUGIN_SRCS}" "${C_LIBEXEC}" "${WSO2_FOUND}" ON)
 # remove unresolved deps by copying in -laxis2_engine objects
 target_link_libraries(AviaryScheddPlugin-plugin -Wl,--whole-archive -laxis2_engine -Wl,--no-whole-archive)
+# link externally to provider
+target_link_libraries(AviaryScheddPlugin-plugin aviary_axis_provider)
 
 ############################
 # query server (aka ye old job server)
@@ -77,10 +79,13 @@ target_link_libraries (aviary_query_axis ${WSO2_FOUND})
 condor_exe( aviary_query_server "${COMMON_GEN_SRCS};${JOB_SERVER_SRCS}"
 			"${C_SBIN}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${WSO2_FOUND}" OFF )
 
+# link provider as shared lib
+add_library (aviary_axis_provider SHARED ${SOAP_SRCS})
+
 ############################
 # locator plugin
 ############################
-condor_plugin( AviaryLocatorPlugin-plugin "${COLLECTOR_REF};${LOCATOR_PLUGIN_SRCS}" "${C_LIBEXEC}" "${WSO2_FOUND}" ON)
+condor_plugin( AviaryLocatorPlugin-plugin "${COLLECTOR_REF};${COMMON_GEN_SRCS};${LOCATOR_PLUGIN_SRCS}" "${C_LIBEXEC}" "${WSO2_FOUND}" ON)
 # remove unresolved deps by copying in -laxis2_engine objects
 target_link_libraries(AviaryLocatorPlugin-plugin -Wl,--whole-archive -laxis2_engine -Wl,--no-whole-archive)
 
@@ -89,6 +94,8 @@ add_library (aviary_locator_axis SHARED ${COMMON_GEN_SRCS} ${LOCATOR_GEN_SRCS} $
 target_link_libraries(aviary_locator_axis -Wl,--whole-archive -lwso2_wsf -Wl,--no-whole-archive)
 # axis2 engine linking forcing our hand again
 target_link_libraries(aviary_locator_axis AviaryLocatorPlugin-plugin)
+# link externally to provider
+target_link_libraries(AviaryLocatorPlugin-plugin aviary_axis_provider)
 
 ############################
 # collector plugin
@@ -102,6 +109,9 @@ add_library (aviary_collector_axis SHARED ${COMMON_GEN_SRCS} ${COLLECTOR_GEN_SRC
 target_link_libraries(aviary_collector_axis -Wl,--whole-archive -lwso2_wsf -Wl,--no-whole-archive)
 # axis2 engine linking forcing our hand again
 target_link_libraries(aviary_collector_axis AviaryCollectorPlugin-plugin)
+# link externally to provider
+target_link_libraries(AviaryCollectorPlugin-plugin aviary_axis_provider)
+
 
 ############################
 # install targets && configure our axis2.xml for platform
@@ -145,3 +155,5 @@ install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-common.xsd
 				${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-collector.xsd
 				${CMAKE_CURRENT_SOURCE_DIR}/../etc/aviary-collector.wsdl
 		DESTINATION ${C_SERVICES}/collector )
+
+install (TARGETS aviary_axis_provider DESTINATION ${C_LIB})
