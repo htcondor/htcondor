@@ -36,12 +36,13 @@ namespace soap {
 
 class Axis2SslProvider: public Axis2SoapProvider {
     public:
-        Axis2SslProvider(int _log_level=AXIS2_LOG_LEVEL_DEBUG, const char* _log_file=DEFAULT_LOG_FILE, const char* _repo_path=DEFAULT_REPO_FILE);
         ~Axis2SslProvider();
         bool init(int _port, int _read_timeout, std::string& _error);
         bool processRequest(std::string& _error);
 
     private:
+        friend class aviary::transport::AviaryProviderFactory;
+        Axis2SslProvider(int _log_level=AXIS2_LOG_LEVEL_DEBUG, const char* _log_file=DEFAULT_LOG_FILE, const char* _repo_path=DEFAULT_REPO_FILE);
         SSL_CTX* m_ctx;
         SSL* m_ssl;
         void* createServerConnection(axutil_env_t *thread_env, int socket);
