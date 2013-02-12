@@ -56,8 +56,8 @@ struct AviaryCollectorPlugin : public Service, CollectorPlugin
         }
         
         string log_name("aviary_collector.log");
-        string id_name("job"); id_name+=SEPARATOR; id_name+=getPoolName();
-        provider = AviaryProviderFactory::create(log_name, id_name,"COLLECTOR","","services/collector/");
+        string id_name("collector"); id_name+=SEPARATOR; id_name+=getPoolName();
+        provider = AviaryProviderFactory::create(log_name, id_name,"COLLECTOR","POOL","services/collector/");
         if (!provider) {
             EXCEPT("Unable to configure AviaryProvider. Exiting...");
         }

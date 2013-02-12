@@ -410,6 +410,14 @@ GetAttributesResponse* AviaryCollectorServiceSkeleton::getAttributes(MessageCont
             attr_resp->setStatus(status);
         }
         response->addResults(attr_resp);
+        
+        // cleanup after ourselves
+        for (aviary::codec::AttributeMapType::iterator it = requested_attr_map.begin();requested_attr_map.end() != it; it++) {
+            delete (*it).second;
+        }
+        for (aviary::codec::AttributeMapType::iterator it = resource_attr_map.begin();resource_attr_map.end() != it; it++) {
+            delete (*it).second;
+        }
     }
 
     return response;
