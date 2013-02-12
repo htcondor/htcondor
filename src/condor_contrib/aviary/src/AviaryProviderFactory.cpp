@@ -40,7 +40,8 @@ AviaryProviderFactory::create(const string& log_file,
     int port;
     string axis_error;
     char *tmp = NULL;
-	EndpointPublisher* ep = NULL;
+    EndpointPublisher* ep = NULL;
+    static int count = 0;
 
     // config then env for our all-important axis2 repo dir
     if ((tmp = param("WSFCPP_HOME"))) {
@@ -108,6 +109,8 @@ AviaryProviderFactory::create(const string& log_file,
         provider->setPublisher(ep);
         ep->start(param_integer("AVIARY_PUBLISH_INTERVAL", 10));
     }
+
+    dprintf(D_ALWAYS,"Aviary plugin count is %d\n",count++);
 
     return provider;
 }

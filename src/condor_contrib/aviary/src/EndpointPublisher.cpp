@@ -60,7 +60,7 @@ EndpointPublisher::init(const std::string& uri_suffix, bool for_ssl)
 
 	// grab an ephemeral port
 	ReliSock probe_sock;
-	if (-1 == probe_sock.bind(true)) {
+	if (-1 == probe_sock.bind(true,0)) {
 		dprintf(D_ALWAYS,"EndpointPublisher is unable to obtain ANY ephemeral port from configured range! " \
 			"Check configured values of LOWPORT,HIGHPORT.\n");
 		return false;
@@ -122,8 +122,8 @@ void
 EndpointPublisher::publish()
 {
 	// send our custom classad to location plugin
-	// in the collector
-	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_ad);
+	// in the collector but don't block
+	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_ad, NULL, true);
 }
 
 void

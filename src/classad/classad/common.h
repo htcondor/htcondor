@@ -154,15 +154,15 @@ struct ExprHash {
 	}
 };
 
-struct StringCaseIgnHash
+struct ClassadAttrNameHash
 {
 	inline size_t operator()( const std::string &s ) const {
-		unsigned long h = 0;
-		char const *ch;
-		for( ch = s.c_str(); *ch; ch++ ) {
-			h = 5*h + (unsigned char)tolower(*ch);
+		size_t h = 0;
+		unsigned char const *ch = (unsigned const char*)s.c_str();
+		for( ; *ch; ch++ ) {
+			h = 5*h + (*ch | 0x20);
 		}
-		return (size_t)h;
+		return h;
 	}
 
 };
