@@ -891,7 +891,11 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, int owner_num, int flock_level)
 struct OwnerSort {
 	bool operator()(const OwnerData& owner,const std::string& s) {
 		return owner.Name < s;
-	}	
+	}
+	// this one needed for Debug builds in VS 2008. for set_FlockLevel
+	bool operator()(const OwnerData& owner,const OwnerData& s) {
+		return owner.Name < s.Name;
+	}
 };
 
 

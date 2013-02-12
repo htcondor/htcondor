@@ -105,14 +105,18 @@ AviaryScheddPlugin::initialize()
 		PROC_ID id;
 		int value;
 
+		// schedd should ignore these if missing
 		if (!ad->LookupInteger(ATTR_CLUSTER_ID, id.cluster)) {
-			EXCEPT("%s on job is missing or not an integer", ATTR_CLUSTER_ID);
+			dprintf(D_ALWAYS,"%s on job is missing or not an integer\n", ATTR_CLUSTER_ID);
+			return;
 		}
 		if (!ad->LookupInteger(ATTR_PROC_ID, id.proc)) {
-			EXCEPT("%s on job is missing or not an integer", ATTR_PROC_ID);
+			dprintf(D_ALWAYS,"%s on job is missing or not an integer\n", ATTR_PROC_ID);
+			return;
 		}
 		if (!ad->LookupInteger(ATTR_JOB_STATUS, value)) {
-			EXCEPT("%s on job is missing or not an integer", ATTR_JOB_STATUS);
+			dprintf(D_ALWAYS,"%s on job is missing or not an integer\n", ATTR_JOB_STATUS);
+			return;
 		}
 
 		key.formatstr("%d.%d", id.cluster, id.proc);

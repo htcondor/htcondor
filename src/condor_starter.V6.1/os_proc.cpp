@@ -851,7 +851,11 @@ OsProc::ShutdownGraceful()
 		Continue();
 	}
 	requested_exit = true;
-	daemonCore->Send_Signal(JobPid, soft_kill_sig);
+	if ( findRmKillSig(JobAd) != -1 ) {
+		daemonCore->Send_Signal(JobPid, rm_kill_sig);
+	} else {
+		daemonCore->Send_Signal(JobPid, soft_kill_sig);
+	}
 	return false;	// return false says shutdown is pending	
 }
 

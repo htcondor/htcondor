@@ -69,17 +69,17 @@ template CLASS map<string, string>::iterator;
 #endif
 
 // attribute list
-template CLASS hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr>;
+template CLASS hash_map<string, ExprTree*, ClassadAttrNameHash, CaseIgnEqStr>;
 #ifdef DEREF_TYPEDEFS
-template CLASS __gnu_cxx::_Hashtable_iterator<pair< string, ExprTree*>, string, StringCaseIgnHash, 
+template CLASS __gnu_cxx::_Hashtable_iterator<pair< string, ExprTree*>, string, ClassadAttrNameHash,
        _Select1st<pair<string, ExprTree*> >, CaseIgnEqStr, 
        allocator<ExprTree*> >;
-template CLASS __gnu_cxx::_Hashtable_iterator<pair< string const, ExprTree*>, string const, StringCaseIgnHash, 
+template CLASS __gnu_cxx::_Hashtable_iterator<pair< string const, ExprTree*>, string const, ClassadAttrNameHash,
        _Select1st<pair<string const, ExprTree*> >, CaseIgnEqStr, 
        allocator<ExprTree*> >;
 #else
-template CLASS hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr>::iterator;
-template CLASS hash_map<string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr>::const_iterator;
+template CLASS hash_map<string, ExprTree*, ClassadAttrNameHash, CaseIgnEqStr>::iterator;
+template CLASS hash_map<string, ExprTree*, ClassadAttrNameHash, CaseIgnEqStr>::const_iterator;
 #endif
 
 template CLASS set<string, CaseIgnLTStr>;

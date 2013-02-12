@@ -29,7 +29,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item When there are multiple users
+waiting to transfer files in the limits set by
+\Macro{MAX\_CONCURRENT\_UPLOADS} and/or
+\Macro{MAX\_CONCURRENT\_DOWNLOADS}, the scheduler now gives the users
+an equal share of the transfer slots.  How shares are counted can be
+configured with \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+\Ticket{3487}
 
 \end{itemize}
 
@@ -167,7 +173,7 @@ the queue.
 \item The EC2 GAHP now recognizes OpenStack's ``shutoff'' state and
 terminates instances which enter it, preventing them from remaining
 in the queue forever.
-\Ticket{3367)
+\Ticket{3367}
 
 \item \Condor{dagman} no longer does unnecessary sleeps for log file
 consistency when a single default/workflow log file is used.
@@ -592,6 +598,9 @@ assistance or manual installation of software on the remote systems.
 See \URL{https://twiki.grid.iu.edu/bin/view/CampusGrids/BoSCO} for more
 information about BOSCO.
 \Ticket{2421}
+
+\item Restored the custom signal semantics present in 7.6.
+\Ticket{3470}
 
 \end{itemize}
 

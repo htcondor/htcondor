@@ -79,16 +79,18 @@ namespace soap {
 
 class Axis2SoapProvider: public aviary::transport::AviaryProvider {
     public:
-        Axis2SoapProvider(int _log_level=AXIS2_LOG_LEVEL_DEBUG, const char* _log_file=DEFAULT_LOG_FILE, const char* _repo_path=DEFAULT_REPO_FILE);
         ~Axis2SoapProvider();
         bool init(int _port, int _read_timeout, std::string& _error);
         SOCKET getListenerSocket();
         bool processRequest(std::string& _error);
-		void invalidate();
+        void invalidate();
 
-		const axutil_env_t* getEnv() {return m_env;}
+        const axutil_env_t* getEnv() {return m_env;}
 
     protected:
+        friend class aviary::transport::AviaryProviderFactory;
+        Axis2SoapProvider(int _log_level=AXIS2_LOG_LEVEL_DEBUG, const char* _log_file=DEFAULT_LOG_FILE, const char* _repo_path=DEFAULT_REPO_FILE);
+
         std::string m_log_file;
         std::string m_repo_path;
         axutil_log_levels_t m_log_level;
@@ -99,6 +101,7 @@ class Axis2SoapProvider: public aviary::transport::AviaryProvider {
         int m_http_socket_read_timeout;
         bool m_init;
 
+        axis2_http_svr_thread_t* createSocket(axutil_env_t* _env, int port);
         axis2_http_svr_thread_t* createReceiver(axutil_env_t* _env, axis2_transport_receiver_t* _server, std::string& _error);
         virtual void* createServerConnection(axutil_env_t *thread_env, SOCKET socket);
         virtual SOCKET processAccept();

@@ -138,6 +138,44 @@ Axis2SoapProvider::init(int _port, int _read_timeout, std::string& _error)
 
 }
 
+axis2_http_svr_thread_t *AXIS2_CALL
+Axis2SoapProvider::createSocket(
+    axutil_env_t * env,
+    int port)
+{
+    // keep this ptr around so we can
+    // just reuse the same static port
+    // for all Aviary plugins
+    static int well_known_port = -1;
+    static axis2_http_svr_thread_t *svr_thread = NULL;
+    if (svr_thread && well_known_port==port) {
+        return svr_thread;
+    }
+
+    svr_thread = (axis2_http_svr_thread_t *)AXIS2_MALLOC(env->allocator,
+        sizeof(axis2_http_svr_thread_t));
+
+    if(!svr_thread)
+    {
+        AXIS2_HANDLE_ERROR(env, AXIS2_ERROR_NO_MEMORY, AXIS2_FAILURE);
+        return NULL;
+    }
+
+    memset((void *)svr_thread, 0, sizeof(axis2_http_svr_thread_t));
+
+    svr_thread->port = port;
+    svr_thread->listen_socket = (int)axutil_network_handler_create_server_socket(env,svr_thread->port);
+    if(-1 == svr_thread->listen_socket)
+    {
+        AXIS2_LOG_DEBUG(env->log, AXIS2_LOG_SI, "Http server previously established on port %d",port);
+        axis2_http_svr_thread_free(svr_thread, env);
+        return NULL;
+    }
+
+    well_known_port = port;
+    return svr_thread;
+}
+
 axis2_http_svr_thread_t*
 Axis2SoapProvider::createReceiver(axutil_env_t* _env, axis2_transport_receiver_t* _server, std::string& /*_error */)
 {
@@ -146,7 +184,7 @@ Axis2SoapProvider::createReceiver(axutil_env_t* _env, axis2_transport_receiver_t
     axis2_http_worker_t *worker = NULL;
 
     server_impl = AXIS2_INTF_TO_IMPL(_server);
-    server_impl->svr_thread = axis2_http_svr_thread_create(_env, server_impl->port);
+    server_impl->svr_thread = this->createSocket(_env, server_impl->port);
 
     // shouldn't bother checking this for ST but we'll play along
     if(!server_impl->svr_thread) {
@@ -195,7 +233,7 @@ Axis2SoapProvider::processRequest(std::string& _error)
 
         if (INVALID_SOCKET == (socket = this->processAccept())) {
             _error = "Failed to accept connection";
-            return false;
+            return true;
         }
 
         if(!m_svr_thread->worker)
