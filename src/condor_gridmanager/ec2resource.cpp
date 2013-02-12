@@ -272,13 +272,15 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
         }
     
         spotReturnStatus.rewind();
-        ASSERT( spotReturnStatus.number() % 4 == 0 );
-        for( int i = 0; i < spotReturnStatus.number(); i += 4 ) {
+        ASSERT( spotReturnStatus.number() % 5 == 0 );
+        for( int i = 0; i < spotReturnStatus.number(); i += 5 ) {
+            // Note that we called 
             std::string requestID = spotReturnStatus.next();
-            std::string status = spotReturnStatus.next();
+            std::string state = spotReturnStatus.next();
             std::string launchGroup = spotReturnStatus.next();
             std::string instanceID = spotReturnStatus.next();
-
+            std::string statusCode = spotReturnStatus.next();
+            
             EC2Job * spotJob = NULL;
             spotRC = spotJobsByRequestID.lookup( HashKey( requestID.c_str() ), spotJob );
             if( spotRC != 0 ) {
@@ -287,8 +289,10 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
             }
             ASSERT( spotJob );
 
-            dprintf( D_FULLDEBUG, "Found spot job object for '%s', updating status ('%s').\n", requestID.c_str(), status.c_str() );
-            spotJob->StatusUpdate( status.c_str() );
+            if( ! statusCode.empty() ) { state = statusCode; }
+
+            dprintf( D_FULLDEBUG, "Found spot job object for '%s', updating status ('%s').\n", requestID.c_str(), state.c_str() );
+            spotJob->StatusUpdate( state.c_str() );
             mySpotJobs.Delete( spotJob );
         }
 

@@ -258,7 +258,12 @@ bool AmazonRequest::SendRequest() {
     //
     // This implementation was written against the 2010-11-15 documentation.
     //
-    query_parameters.insert( std::make_pair( "Version", "2010-11-15" ) );
+    // query_parameters.insert( std::make_pair( "Version", "2010-11-15" ) );
+    
+    // Upgrading (2012-10-01 is the oldest version that will work) allows us
+    // to report the Spot Instance 'status-code's, which are much more
+    // useful than the status codes.  *sigh*
+    query_parameters.insert( std::make_pair( "Version", "2012-10-01" ) );
 
     //
     // We're calculating the signature now. [YYYY-MM-DDThh:mm:ssZ]
@@ -1083,9 +1088,10 @@ struct vmStatusSpotUD_t {
     enum vmStatusSpotTags_t {
         NONE,
         INSTANCE_ID,
-        STATUS,
+        STATE,
         LAUNCH_GROUP,
-        REQUEST_ID
+        REQUEST_ID,
+        STATUS_CODE
     };
     typedef enum vmStatusSpotTags_t vmStatusSpotTags;
 
@@ -1094,6 +1100,8 @@ struct vmStatusSpotUD_t {
     // (like the instance ID) because of them.  XPath is looking more
     // and more tasty...
     unsigned short inItem;
+
+    bool inStatus;
     vmStatusSpotTags inWhichTag;
     AmazonStatusSpotResult * currentResult;
  
@@ -1101,6 +1109,7 @@ struct vmStatusSpotUD_t {
     
     vmStatusSpotUD_t( std::vector< AmazonStatusSpotResult > & assrList ) :
         inItem( 0 ),
+        inStatus( false ),
         inWhichTag( vmStatusSpotUD_t::NONE ),
         currentResult( NULL ),
         results( assrList ) { };
@@ -1122,11 +1131,15 @@ void vmStatusSpotESH( void * vUserData, const XML_Char * name, const XML_Char **
     if( strcasecmp( (const char *)name, "spotInstanceRequestId" ) == 0 ) {
         vsud->inWhichTag = vmStatusSpotUD::REQUEST_ID;
     } else if( strcasecmp( (const char *)name, "state" ) == 0 ) {
-        vsud->inWhichTag = vmStatusSpotUD::STATUS;
+        vsud->inWhichTag = vmStatusSpotUD::STATE;
     } else if( strcasecmp( (const char *)name, "instanceId" ) == 0 ) {
         vsud->inWhichTag = vmStatusSpotUD::INSTANCE_ID;
     } else if( strcasecmp( (const char *)name, "launchGroup" ) == 0 ) {
         vsud->inWhichTag = vmStatusSpotUD::LAUNCH_GROUP;
+    } else if( strcasecmp( (const char *)name, "status" ) == 0 ) {
+        vsud->inStatus = true;
+    } else if( vsud->inStatus && strcasecmp( (const char *)name, "code" ) == 0 ) {
+        vsud->inWhichTag = vmStatusSpotUD::STATUS_CODE;
     } else {
         vsud->inWhichTag = vmStatusSpotUD::NONE;
     }
@@ -1145,8 +1158,8 @@ void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
             targetString = & vsud->currentResult->request_id;
             break;
         
-        case vmStatusSpotUD::STATUS:
-            targetString = & vsud->currentResult->status;
+        case vmStatusSpotUD::STATE:
+            targetString = & vsud->currentResult->state;
             break;
         
         case vmStatusSpotUD::LAUNCH_GROUP:
@@ -1155,6 +1168,10 @@ void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
         
         case vmStatusSpotUD::INSTANCE_ID:
             targetString = & vsud->currentResult->instance_id;
+            break;
+
+        case vmStatusSpotUD::STATUS_CODE:
+            targetString = & vsud->currentResult->status_code;
             break;
 
         default:
@@ -1231,9 +1248,10 @@ bool AmazonVMStatusSpot::workerFunction(char **argv, int argc, std::string &resu
             for( unsigned i = 0; i < statusRequest.spotResults.size(); ++i ) {
                 AmazonStatusSpotResult & assr = statusRequest.spotResults[i];
                 resultList.append( assr.request_id.c_str() );
-                resultList.append( assr.status.c_str() );
+                resultList.append( assr.state.c_str() );
                 resultList.append( assr.launch_group.c_str() );
                 resultList.append( nullStringIfEmpty( assr.instance_id ) );
+                resultList.append( nullStringIfEmpty( assr.status_code.c_str() ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }
@@ -1282,9 +1300,10 @@ bool AmazonVMStatusAllSpot::workerFunction(char **argv, int argc, std::string &r
             for( unsigned i = 0; i < statusRequest.spotResults.size(); ++i ) {
                 AmazonStatusSpotResult & assr = statusRequest.spotResults[i];
                 resultList.append( assr.request_id.c_str() );
-                resultList.append( assr.status.c_str() );
+                resultList.append( assr.state.c_str() );
                 resultList.append( assr.launch_group.c_str() );
                 resultList.append( nullStringIfEmpty( assr.instance_id ) );
+                resultList.append( nullStringIfEmpty( assr.status_code.c_str() ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }

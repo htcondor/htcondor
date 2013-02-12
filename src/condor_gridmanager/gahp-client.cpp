@@ -7194,7 +7194,7 @@ int GahpClient::ec2_spot_status(    std::string service_url,
     if( result ) {
         // We expect results of the form
         //      <request ID> 0 
-        //      <request ID> 0 (<SIR ID> <status> <ami ID> <instance ID|NULL>)+
+        //      <request ID> 0 (<SIR ID> <status> <ami ID> <instance ID|NULL> <status code|NULL>)+
         //      <request ID> 1
         //      <request ID> 1 <error code> <error string>
         if( result->argc < 2 ) { EXCEPT( "Bad %s result", command ); }
@@ -7206,7 +7206,7 @@ int GahpClient::ec2_spot_status(    std::string service_url,
             if( rc != 1 ) { EXCEPT( "Bad %s result", command ); }
             error_code = strdup( result->argv[2] );
             error_string = result->argv[3];
-        } else if( (result->argc - 2) % 4 == 0 ) {
+        } else if( (result->argc - 2) % 5 == 0 ) {
             for( int i = 2; i < result->argc; ++i ) {
                 if( strcmp( result->argv[i], NULLSTRING ) ) {
                     returnStatus.append( strdup( result->argv[i] ) );
@@ -7266,7 +7266,7 @@ int GahpClient::ec2_spot_status_all(    std::string service_url,
     if( result ) {
         // We expect results of the form
         //      <request ID> 0 
-        //      <request ID> 0 (<SIR ID> <status> <ami ID> <instance ID|NULL>)+
+        //      <request ID> 0 (<SIR ID> <status> <ami ID> <instance ID|NULL> <status code|NULL>)+
         //      <request ID> 1
         //      <request ID> 1 <error code> <error string>
         if( result->argc < 2 ) { EXCEPT( "Bad %s result", command ); }
@@ -7278,7 +7278,7 @@ int GahpClient::ec2_spot_status_all(    std::string service_url,
             if( rc != 1 ) { EXCEPT( "Bad %s result", command ); }
             error_code = strdup( result->argv[2] );
             error_string = result->argv[3];
-        } else if( (result->argc - 2) % 4 == 0 ) {
+        } else if( (result->argc - 2) % 5 == 0 ) {
             for( int i = 2; i < result->argc; ++i ) {
                 if( strcmp( result->argv[i], NULLSTRING ) ) {
                     returnStatus.append( strdup( result->argv[i] ) );
