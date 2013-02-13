@@ -138,6 +138,13 @@ See section~\ref{dagman:VARS} for more details.
 \item Introduced the \Macro{FLOCK\_INCREMENT} configuration variable, to allow
 administrators to more aggressively flock to remote collectors.
 
+\item The HTCondor contrib now includes a set of Python bindings in
+two modules.
+The \Code{htcondor} module interacts with the \Condor{schedd} and 
+\Condor{collector} daemons. 
+The \Code{classad} module provides an interface to work with ClassAds.
+\Ticket{3407}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:

@@ -9,12 +9,12 @@ It tries to provide functionality similar to the HTCondor command line tools.
 Further improvements are planned for the difficult to use submission API.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{Python-OtherModule} Other Module}
+\subsection{\label{Python-OtherModule} \texttt{htcondor}  Module}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-This module attempts to wrap a C++ API that is
+The \texttt{htcondor} module attempts to wrap a C++ API that is
 far less formal when compared to the ClassAd language.
 
-\textbf{Module functions:}
+\textbf{\texttt{htcondor} module functions:}
 \begin{flushleft}
 \begin{tabular}{|p{14cm}|} \hline
 \texttt{platform( )}
@@ -155,7 +155,7 @@ must be of the enum \texttt{DaemonTypes}.
 Optional parameter \texttt{name} is the name of daemon to locate.  
 If not specified, it searches for the local daemon.
 \\ \hline
-\texttt{locateAll( (Collector)arg1, (DaemonTypes)arg2 )}
+\texttt{locateAll( (DaemonTypes)daemon\_type )}
 
 Query the \Condor{collector} daemon for all ClassAds of a particular type.
 Returns a list of matching ClassAds.
@@ -249,9 +249,9 @@ A list of actions that can be performed on a job in a \Condor{schedd}.
 \end{flushleft}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{Python-Example} Sample Code using the Python Module}
+\subsection{\label{Python-Example} Sample Code using the \texttt{htcondor} Python Module}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-This sample code illustrates interactions with the Python Module. 
+This sample code illustrates interactions with the \texttt{htcondor} Python Module. 
 
 \footnotesize
 \begin{verbatim}
@@ -326,12 +326,12 @@ ifthenelse(MemoryUsage isnt undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
 \subsection{\label{Python-ClassAd} ClassAd Module}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The ClassAd module class provides a dictionary-like mechanism for interacting
-with the ClassAd language. 
-ClassAd objects implement the iterator interface to iterate 
-through the ClassAd's attributes.
+The \texttt{classad} module class provides a dictionary-like mechanism 
+for interacting with the ClassAd language. 
+\texttt{classad} objects implement the iterator interface to iterate 
+through the \texttt{classad}'s attributes.
 
-\textbf{Module functions:}
+\textbf{\texttt{classad} module functions:}
 \begin{flushleft}
 \begin{tabular}{|p{14cm}|} \hline
 \texttt{parse( input )}
@@ -381,7 +381,7 @@ For example, \Expr{[ Foo = "bar"; ]} may be returned.
 \end{flushleft}
 
 
-\textbf{The ClassAd object has the following dictionary-like methods:}
+\textbf{The \texttt{classad} object has the following dictionary-like methods:}
 \begin{flushleft}
 \begin{tabular}{|p{14cm}|} \hline
 \texttt{items( )}
@@ -473,9 +473,9 @@ typically a Python object.
 \end{flushleft}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{Python-ClassAd-Example} Sample Code using the ClassAd Module}
+\subsection{\label{Python-ClassAd-Example} Sample Code using the \texttt{classad} Module}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-This sample Python code illustrates interactions with the ClassAd Module. 
+This sample Python code illustrates interactions with the \texttt{classad} module. 
 
 \footnotesize
 \begin{verbatim}
