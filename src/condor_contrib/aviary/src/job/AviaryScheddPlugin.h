@@ -29,7 +29,6 @@
 
 // local includes
 #include "SchedulerObject.h"
-#include "PROC_ID_comparator.h"
 
 
 namespace aviary {

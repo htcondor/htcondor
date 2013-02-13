@@ -25,7 +25,6 @@
 #include "AviaryProvider.h"
 #include "SchedulerObject.h"
 #include "AviaryUtils.h"
-#include "LocatorObject.h"
 
 // Global from the condor_schedd, it's name
 extern char * Name;
@@ -38,7 +37,6 @@ using namespace std;
 using namespace aviary::job;
 using namespace aviary::transport;
 using namespace aviary::util;
-using namespace aviary::locator;
 
 // global SchedulerObject
 // TODO: convert to singleton

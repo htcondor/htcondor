@@ -24,6 +24,7 @@
 
 // local includes
 #include "LocatorObject.h"
+#include "AviaryUtils.h"
 #include "AviaryLocatorServiceSkeleton.h"
 #include <AviaryLocator_Locate.h>
 #include <AviaryLocator_LocateResponse.h>
@@ -33,6 +34,7 @@ using namespace wso2wsf;
 using namespace AviaryCommon;
 using namespace AviaryLocator;
 using namespace aviary::locator;
+using namespace aviary::util;
 
 LocateResponse* AviaryLocatorServiceSkeleton::locate(wso2wsf::MessageContext* /*outCtx*/ , Locate* _locate)
 {
@@ -60,7 +62,7 @@ LocateResponse* AviaryLocatorServiceSkeleton::locate(wso2wsf::MessageContext* /*
 			ResourceID* resId = new ResourceID;
 			if (partials) {
 				// split off separators
-				resId->setName((*it).Name.substr((*it).Name.find(aviary::locator::SEPARATOR)+1));
+				resId->setName((*it).Name.substr((*it).Name.find(aviary::util::SEPARATOR)+1));
 			}
 			else {
 				resId->setName((*it).Name);

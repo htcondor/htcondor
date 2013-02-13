@@ -31,10 +31,15 @@ if (WITH_OPENSSL)
     list(APPEND SOAP_SRCS ${SSL_SRCS} )
 endif(WITH_OPENSSL)
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
+# link provider as shared lib
+add_library (aviary_axis_provider SHARED ${SOAP_SRCS})
+
 ############################
 # install targets && configure our axis2.xml for platform
 ############################
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/../../etc/axis2.xml.in" "${CMAKE_CURRENT_BINARY_DIR}/../etc/axis2.xml" @ONLY)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/../../etc/axis2.xml.in" "${CMAKE_CURRENT_BINARY_DIR}/../../etc/axis2.xml" @ONLY)
 install (FILES ${CMAKE_CURRENT_BINARY_DIR}/../../etc/axis2.xml DESTINATION ${CMAKE_INSTALL_PREFIX} )
 
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../etc/61aviary.config DESTINATION "${C_ETC_EXAMPLES}")
@@ -45,3 +50,5 @@ install(FILES ${TEST_SCRIPTS} DESTINATION ${C_LIB}/aviary PERMISSIONS ${CONDOR_S
 install(FILES ${DAG_SCRIPTS} DESTINATION ${C_LIB}/aviary/dag PERMISSIONS ${CONDOR_SCRIPT_PERMS})
 install(FILES ${SUPPORT_SCRIPTS} DESTINATION ${C_LIB}/aviary/module/aviary PERMISSIONS ${CONDOR_SCRIPT_PERMS})
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../README DESTINATION ${C_LIB}/aviary)
+
+install (TARGETS aviary_axis_provider DESTINATION ${C_LIB})

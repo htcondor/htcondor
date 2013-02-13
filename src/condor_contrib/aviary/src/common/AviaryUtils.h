@@ -26,6 +26,8 @@ using namespace compat_classad;
 namespace aviary {
 namespace util {
 
+const char SEPARATOR[] = "#";
+
 int getLogLevel();
 
 string getPoolName();

@@ -35,14 +35,12 @@
 #include "HistoryProcessingUtils.h"
 #include "Globals.h"
 #include "AviaryUtils.h"
-#include "LocatorObject.h"
 
 using namespace std;
 using namespace aviary::transport;
 using namespace aviary::query;
 using namespace aviary::history;
 using namespace aviary::util;
-using namespace aviary::locator;
 
 ClassAd	*ad = NULL;
 AviaryProvider* provider = NULL;
