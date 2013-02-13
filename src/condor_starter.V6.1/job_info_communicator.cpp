@@ -829,7 +829,21 @@ JobInfoCommunicator::setupJobEnvironment( void )
 			break;
 
 		case 0:    // Hook not configured
-				// Nothing to do, break out and finish.
+				// Call tryHookPrepareMachine here
+		{
+			int rval1 = m_hook_mgr->tryHookPrepareMachine();
+			if(rval1 == -1) { // Error
+				Starter->RemoteShutdownFast(0);
+				return;
+			}
+			if(rval1 == 0) { // Hook not configured
+				// Do nothing here, just break and call
+				// jobEnvironmentReady
+			}
+			if(rval1 == 1) {
+				return;
+			}
+		}	
 			break;
 
 		case 1:    // Spawned the hook.
