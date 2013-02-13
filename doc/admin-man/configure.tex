@@ -5538,15 +5538,16 @@ MAX_JOBS_RUNNING	= \
 
 \label{param:FlockIncrement}
 \item[\Macro{FLOCK\_INCREMENT}]
-  This configuration variable controls how quickly flocking to various
-  pools will occur.  The variable defaults to 1, meaning that pools will
-  be considered for flocking slowly: the first collector in
-  \Macro{FLOCK\_COLLECTOR\_HOSTS} will be considered for flocking, then
-  the second, and so on.  Setting this number to bigger than one will
-  cause more than one collector to be considered for flocking; setting
-  this number to 2, for example, will partition the
-  \Macro{FLOCK\_COLLECTOR\_HOSTS} into sets of 2 collectors, and each
-  set will be considered for flocking.
+  This integer value controls how quickly flocking to various
+  pools will occur.  It defaults to 1, meaning that pools will
+  be considered for flocking slowly. 
+  The first \Condor{collector} daemon listed in
+  \Macro{FLOCK\_COLLECTOR\_HOSTS} will be considered for flocking, and then
+  the second, and so on.  A larger value increases the number of 
+  \Condor{collector} daemons to be considered for flocking.
+  For example, a value of 2 will partition the
+  \Macro{FLOCK\_COLLECTOR\_HOSTS} into sets of 2 \Condor{collector} daemons,
+  and each set will be considered for flocking.
 
   \label{param:NegotiateAllJobsInCluster}
 \item[\Macro{NEGOTIATE\_ALL\_JOBS\_IN\_CLUSTER}]

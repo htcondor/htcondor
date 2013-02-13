@@ -74,9 +74,6 @@ left of the attribute name.
 See section~\ref{dagman:VARS} for more details.
 \Ticket{3469}
 
-\item Introduced the \Macro{FLOCK\_INCREMENT} configuration variable, to allow
-administrators to more aggressively flock to remote collectors.
-
 \item The HTCondor contrib now includes a set of Python bindings in
 two modules.
 The \Code{htcondor} module interacts with the \Condor{schedd} and 
@@ -89,6 +86,11 @@ The \Code{classad} module provides an interface to work with ClassAds.
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
+
+\item The new configuration variable \Macro{FLOCK\_INCREMENT} allows
+administrators to more aggressively flock to remote \Condor{collector} daemons,
+as more pools will be considered.
+\Ticket{3375}
 
 \item The new configuration variable \Macro{HOST\_ALIAS} specifies the
   fully qualified host name that clients authenticating this daemon with 
