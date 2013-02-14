@@ -32,9 +32,13 @@
 
 // local includes
 #include "AviaryUtils.h"
+#include "AviaryCommon_Attribute.h"
+#include "AviaryCommon_AttributeType.h"
 
 using namespace std;
 using namespace compat_classad;
+using namespace aviary::codec;
+using namespace AviaryCommon;
 
 const char* RESERVED[] = {"error", "false", "is", "isnt", "parent", "true","undefined", NULL};
 
@@ -187,3 +191,64 @@ bool aviary::util::isSubmissionChange(const char* attr) {
 	return false;
 }
 
+// unfortunately no convenience functions from WS02 for dateTime
+axutil_date_time_t* aviary::util::encodeDateTime(const time_t& ts, const axutil_env_t* env) {
+    struct tm the_tm;
+
+    // need the re-entrant version because axutil_date_time_create
+    // calls time() again and overwrites static tm
+    localtime_r(&ts,&the_tm);
+
+    axutil_date_time_t* time_value = NULL;
+    time_value = axutil_date_time_create(env);
+
+    if (!time_value)
+    {
+        return NULL;
+    }
+
+    // play their game with adjusting the year and month offset
+    axutil_date_time_set_date_time(time_value,env,
+                                   the_tm.tm_year+1900,
+                                   the_tm.tm_mon+1,
+                                   the_tm.tm_mday,
+                                   the_tm.tm_hour,
+                                   the_tm.tm_min,
+                                   the_tm.tm_sec,
+                                   0);
+    return time_value;
+};
+
+void aviary::util::mapToXsdAttributes(const aviary::codec::AttributeMapType& _map, AviaryCommon::Attributes* _attrs) {
+    for (AttributeMapIterator i = _map.begin(); _map.end() != i; i++) {
+        AviaryAttribute* codec_attr = (AviaryAttribute*)(*i).second;
+        AviaryCommon::Attribute* attr = new AviaryCommon::Attribute;
+        attr->setName((*i).first);
+        AviaryCommon::AttributeType* attr_type = new AviaryCommon::AttributeType(AviaryCommon::AttributeType_UNDEFINED);
+        if (codec_attr) {
+            switch (codec_attr->getType()) {
+                case AviaryAttribute::INTEGER_TYPE:
+                    attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_INTEGER);
+                    break;
+                case AviaryAttribute::FLOAT_TYPE:
+                    attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_FLOAT);
+                    break;
+                case AviaryAttribute::STRING_TYPE:
+                    attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_STRING);
+                    break;
+                case AviaryAttribute::EXPR_TYPE:
+                    attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_EXPRESSION);
+                    break;
+                default:
+                    attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_UNDEFINED);
+            }
+            attr->setType(attr_type);
+            attr->setValue(codec_attr->getValue());
+        }
+        else {
+            //unknown/undefined attribute
+            attr->setValue("UNDEFINED");
+        }
+        _attrs->addAttrs(attr);
+    }
+}

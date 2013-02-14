@@ -21,7 +21,7 @@
 #include "condor_qmgr.h"
 
 // local includes
-#include "Codec.h"
+#include "ClassadCodec.h"
 #include "AviaryUtils.h"
 
 using namespace compat_classad;

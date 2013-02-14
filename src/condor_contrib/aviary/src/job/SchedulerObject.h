@@ -22,7 +22,7 @@
 #include "condor_classad.h"
 
 // local includes
-#include "Codec.h"
+#include "ClassadCodec.h"
 #include "AviaryUtils.h"
 
 using namespace std;
@@ -90,7 +90,7 @@ private:
 
     string m_pool;
     string m_name;
-	Codec* m_codec;
+	ClassadCodec* m_codec;
     SchedulerStats m_stats;
     static SchedulerObject* m_instance;
 

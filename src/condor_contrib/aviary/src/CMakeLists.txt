@@ -1,6 +1,6 @@
  ###############################################################
  # 
- # Copyright 2011 Red Hat, Inc. 
+ # Copyright 2013 Red Hat, Inc. 
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -20,3 +20,4 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/common")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/job")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/query")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/locator")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/collector")

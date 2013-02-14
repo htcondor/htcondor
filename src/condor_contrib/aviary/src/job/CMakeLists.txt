@@ -21,12 +21,11 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../common)
 ############################
 # file target references.
 ############################
-file( GLOB COMMON_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../../codegen/common/src/*.cpp )
 file( GLOB JOB_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../../codegen/job/src/*.cpp )
 file( GLOB JOB_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/AviaryJobService*.cpp )
 
-file( GLOB SCHED_PLUGIN_SRCS ../common/Codec.cpp ../common/AviaryUtils.cpp SchedulerObject.cpp
-        PROC_ID_comparator.cpp ${SOAP_SRCS} AviaryScheddPlugin*.cpp )
+file( GLOB SCHED_PLUGIN_SRCS ../common/ClassadCodec.cpp ../common/AviaryUtils.cpp SchedulerObject.cpp
+        AviaryScheddPlugin*.cpp )
 
 
 ############################
@@ -35,16 +34,18 @@ file( GLOB SCHED_PLUGIN_SRCS ../common/Codec.cpp ../common/AviaryUtils.cpp Sched
 src_target_ref( condor_collector "hashkey" COLLECTOR_REF )
 src_target_ref( utils "set_user_priv_from_ad" UTILS_REF )
 
-add_library (aviary_job_axis SHARED ${COMMON_GEN_SRCS} ${JOB_GEN_SRCS} ${JOB_SRCS} 
-                ../common/Codec.cpp ../common/AviaryUtils.cpp SchedulerObject.cpp )
+add_library (aviary_job_axis SHARED ${JOB_GEN_SRCS} ${JOB_SRCS} 
+                ../common/ClassadCodec.cpp ../common/AviaryUtils.cpp SchedulerObject.cpp )
 # remove unresolved deps by copying in -lwso2_wsf objects
 target_link_libraries(aviary_job_axis -Wl,--whole-archive -lwso2_wsf -Wl,--no-whole-archive)
+target_link_libraries(aviary_job_axis aviary_wso2_common)
 
 condor_plugin( AviaryScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SCHED_PLUGIN_SRCS}" "${C_LIBEXEC}" "${WSO2_FOUND}" ON)
 # remove unresolved deps by copying in -laxis2_engine objects
 target_link_libraries(AviaryScheddPlugin-plugin -Wl,--whole-archive -laxis2_engine -Wl,--no-whole-archive)
-# link externally to provider
+# link externally to provider and common
 target_link_libraries(AviaryScheddPlugin-plugin aviary_axis_provider)
+target_link_libraries(AviaryScheddPlugin-plugin aviary_wso2_common)
 
 
 ############################

@@ -26,7 +26,6 @@
 #include "AviaryUtils.h"
 #include "AviaryConversionMacros.h"
 #include "SchedulerObject.h"
-#include "Codec.h"
 
 // Global Scheduler object, used for needReschedule
 extern Scheduler scheduler;

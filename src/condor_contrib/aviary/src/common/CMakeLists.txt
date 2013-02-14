@@ -25,6 +25,7 @@ endif ()
 # file target references.
 ############################
 file( GLOB SOAP_SRCS ${CMAKE_CURRENT_SOURCE_DIR} EndpointPublisher.cpp AviaryProviderFactory.cpp Axis2SoapProvider.cpp)
+file( GLOB COMMON_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../../codegen/common/src/*.cpp )
 
 if (WITH_OPENSSL)
     file( GLOB SSL_SRCS ${CMAKE_CURRENT_SOURCE_DIR} axis2_ssl_*.c Axis2SslProvider.cpp)
@@ -35,6 +36,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # link provider as shared lib
 add_library (aviary_axis_provider SHARED ${SOAP_SRCS})
+add_library (aviary_wso2_common SHARED ${COMMON_GEN_SRCS})
 
 ############################
 # install targets && configure our axis2.xml for platform
@@ -52,3 +54,4 @@ install(FILES ${SUPPORT_SCRIPTS} DESTINATION ${C_LIB}/aviary/module/aviary PERMI
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../README DESTINATION ${C_LIB}/aviary)
 
 install (TARGETS aviary_axis_provider DESTINATION ${C_LIB})
+install (TARGETS aviary_wso2_common DESTINATION ${C_LIB})

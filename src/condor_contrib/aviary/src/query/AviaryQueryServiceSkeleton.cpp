@@ -31,14 +31,12 @@
 #include <AviaryQuery_GetJobSummary.h>
 #include <AviaryQuery_GetJobSummaryResponse.h>
 #include <Axis2SoapProvider.h>
+#include "AviaryUtils.h"
 
 // condor includes
 #include "stl_string_utils.h"
 #include "proc.h"
 #include "condor_attributes.h"
-
-// axis includes
-#include "axutil_date_time.h"
 
 // c++ includes
 #include <algorithm>
@@ -47,6 +45,7 @@ using namespace std;
 using namespace AviaryQuery;
 using namespace AviaryCommon;
 using namespace aviary::query;
+using namespace aviary::util;
 
 struct cmpid {
 	bool operator()(const char *a, const char *b) const {
@@ -104,38 +103,6 @@ void createBadJobResponse(JobBase& jb, const char* job_id, const AviaryStatus& e
 	jb.setStatus(js);
 }
 
-// unfortunately no convenience functions from WS02 for dateTime
-axutil_date_time_t* encodeDateTime(const time_t& ts) {
-	struct tm the_tm;
-
-	// need the re-entrant version because axutil_date_time_create
-	// calls time() again and overwrites static tm
-	localtime_r(&ts,&the_tm);
-	// get our Axis2 env for the allocator
-	const axutil_env_t* env = provider->getEnv();
-
-	axutil_date_time_t* time_value = NULL;
-	time_value = axutil_date_time_create(env);
-
-	if (!time_value)
-    {
-        AXIS2_ERROR_SET(env->error, AXIS2_ERROR_NO_MEMORY, AXIS2_FAILURE);
-        AXIS2_LOG_ERROR(env->log, AXIS2_LOG_SI, "Out of memory");
-        return NULL;
-    }
-
-	// play their game with adjusting the year and month offset
-	axutil_date_time_set_date_time(time_value,env,
-								   the_tm.tm_year+1900,
-								   the_tm.tm_mon+1,
-								   the_tm.tm_mday,
-								   the_tm.tm_hour,
-								   the_tm.tm_min,
-								   the_tm.tm_sec,
-								   0);
-	return time_value;
-};
-
 void mapFieldsToSummary(const JobSummaryFields& fields, JobSummary* _summary) {
 
 	JobServerObject* jso = JobServerObject::getInstance();
@@ -147,8 +114,8 @@ void mapFieldsToSummary(const JobSummaryFields& fields, JobSummary* _summary) {
 	sid->setScheduler(jso->getName());
 	_summary->getId()->setSubmission(sid);
 	// do date/time conversion
-	_summary->setQueued(encodeDateTime(fields.queued));
-	_summary->setLast_update(encodeDateTime(fields.last_update));
+	_summary->setQueued(encodeDateTime(fields.queued,provider->getEnv()));
+	_summary->setLast_update(encodeDateTime(fields.last_update,provider->getEnv()));
 	JobStatusType* jst = new JobStatusType;
 	jst->setJobStatusType(getJobStatusString(fields.status));
 	_summary->setJob_status(jst);
@@ -167,34 +134,6 @@ void mapFieldsToSummary(const JobSummaryFields& fields, JobSummary* _summary) {
 	}
 	if (!fields.remove_reason.empty()) {
 		_summary->setRemoved(fields.remove_reason);
-	}
-}
-
-void mapToXsdAttributes(const aviary::codec::AttributeMapType& _map, AviaryCommon::Attributes* _attrs) {
-	for (AttributeMapIterator i = _map.begin(); _map.end() != i; i++) {
-		AviaryAttribute* codec_attr = (AviaryAttribute*)(*i).second;
-		AviaryCommon::Attribute* attr = new AviaryCommon::Attribute;
-		attr->setName((*i).first);
-		AviaryCommon::AttributeType* attr_type = new AviaryCommon::AttributeType;
-		switch (codec_attr->getType()) {
-			case AviaryAttribute::INTEGER_TYPE:
-				attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_INTEGER);
-				break;
-			case AviaryAttribute::FLOAT_TYPE:
-				attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_FLOAT);
-				break;
-			case AviaryAttribute::STRING_TYPE:
-				attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_STRING);
-				break;
-			case AviaryAttribute::EXPR_TYPE:
-				attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_EXPRESSION);
-				break;
-			default:
-				attr_type->setAttributeTypeEnum(AviaryCommon::AttributeType_UNDEFINED);
-		}
-		attr->setType(attr_type);
-		attr->setValue(codec_attr->getValue());
-		_attrs->addAttrs(attr);
 	}
 }
 

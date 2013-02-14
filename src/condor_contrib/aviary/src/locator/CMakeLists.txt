@@ -25,7 +25,7 @@ file( GLOB LOCATOR_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../../codegen/locator/sr
 file( GLOB LOCATOR_SRCS ${CMAKE_CURRENT_SOURCE_DIR} AviaryLocatorService*.cpp )
 
 file( GLOB LOCATOR_PLUGIN_SRCS ../common/AviaryUtils.cpp LocatorObject.cpp 
-            ${SOAP_SRCS} AviaryLocatorPlugin*.cpp )
+            AviaryLocatorPlugin*.cpp )
 
 ############################
 # locator plugin
@@ -34,13 +34,14 @@ condor_plugin( AviaryLocatorPlugin-plugin "${COLLECTOR_REF};${LOCATOR_PLUGIN_SRC
 # remove unresolved deps by copying in -laxis2_engine objects
 target_link_libraries(AviaryLocatorPlugin-plugin -Wl,--whole-archive -laxis2_engine -Wl,--no-whole-archive)
 
-add_library (aviary_locator_axis SHARED ${COMMON_GEN_SRCS} ${LOCATOR_GEN_SRCS} ${LOCATOR_SRCS})
+add_library (aviary_locator_axis SHARED ${LOCATOR_GEN_SRCS} ${LOCATOR_SRCS})
 # remove unresolved deps by copying in -lwso2_wsf objects
 target_link_libraries(aviary_locator_axis -Wl,--whole-archive -lwso2_wsf -Wl,--no-whole-archive)
 # axis2 engine linking forcing our hand again
 target_link_libraries(aviary_locator_axis AviaryLocatorPlugin-plugin)
-# link externally to provider
+# link externally to provider and common
 target_link_libraries(AviaryLocatorPlugin-plugin aviary_axis_provider)
+target_link_libraries(AviaryLocatorPlugin-plugin aviary_wso2_common)
 
 ############################
 # install target

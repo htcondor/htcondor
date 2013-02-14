@@ -24,19 +24,19 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../common)
 file( GLOB QUERY_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../../codegen/query/src/*.cpp )
 file( GLOB QUERY_SRCS ${CMAKE_CURRENT_SOURCE_DIR} AviaryQueryService*.cpp )
 
-file( GLOB JOB_SERVER_SRCS aviary_query_server.cpp ${SOAP_SRCS}
+file( GLOB JOB_SERVER_SRCS aviary_query_server.cpp 
             SubmissionObject.cpp JobServerJobLogConsumer.cpp
             Job.cpp HistoryFile.cpp HistoryProcessingUtils.cpp Globals.cpp
-            JobServerObject.cpp ../common/Codec.cpp  ../common/AviaryUtils.cpp )
+            JobServerObject.cpp ../common/ClassadCodec.cpp  ../common/AviaryUtils.cpp)
 
 ############################
 # query server
 ############################
-add_library (aviary_query_axis SHARED ${COMMON_GEN_SRCS} ${QUERY_GEN_SRCS} ${QUERY_SRCS} )
+add_library (aviary_query_axis SHARED ${QUERY_GEN_SRCS} ${QUERY_SRCS} )
 target_link_libraries (aviary_query_axis ${WSO2_FOUND})
 
 condor_exe( aviary_query_server "${JOB_SERVER_SRCS}" "${C_SBIN}" 
-    "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${WSO2_FOUND};aviary_axis_provider" OFF )
+    "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${GLOBUS_FOUND};${WSO2_FOUND};aviary_wso2_common;aviary_axis_provider" OFF )
 
 ############################
 # install target
