@@ -29,6 +29,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Per job PID namespaces are available for Linux RHEL 6 platforms.
+See section~\ref{sec:PIDNamespaces} for details.
+\Ticket{1959}
+
 \item The EC2 GAHP now batches requests for status updates, significantly
 reducing its resource requirements.
 \Ticket{3436}
@@ -86,6 +90,10 @@ The \Code{classad} module provides an interface to work with ClassAds.
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
+
+\item The new configuration variable \Macro{USE\_PID\_NAMESPACES}
+enables per job PID namespaces for Linux RHEL 6 platforms when \Expr{True}.
+\Ticket{1959}
 
 \item The new configuration variable \Macro{FLOCK\_INCREMENT} allows
 administrators to more aggressively flock to remote \Condor{collector} daemons,
