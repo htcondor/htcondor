@@ -1303,6 +1303,7 @@ negotiationTime ()
 
             group->quota = 0;
             group->requested = 0;
+            group->currently_requested = 0;
             group->allocated = 0;
             group->subtree_quota = 0;
             group->subtree_requested = 0;
@@ -1350,6 +1351,7 @@ negotiationTime ()
             int numrunning=0;
             ad->LookupInteger(ATTR_RUNNING_JOBS, numrunning);
             group->requested += numrunning + numidle;
+			group->currently_requested = group->requested;
         }
 
         // Any groups with autoregroup are allowed to also negotiate in root group ("none")
@@ -2245,6 +2247,7 @@ GroupEntry::GroupEntry():
     submitterAds(NULL),
     quota(0),
     requested(0),
+    currently_requested(0),
     allocated(0),
     subtree_quota(0),
     subtree_requested(0),

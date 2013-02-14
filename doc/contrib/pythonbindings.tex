@@ -9,12 +9,12 @@ It tries to provide functionality similar to the HTCondor command line tools.
 Further improvements are planned for the difficult to use submission API.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{Python-OtherModule} Other Module}
+\subsection{\label{Python-OtherModule} \texttt{htcondor}  Module}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-This module attempts to wrap a C++ API that is
+The \texttt{htcondor} module attempts to wrap a C++ API that is
 far less formal when compared to the ClassAd language.
 
-\textbf{Module functions:}
+\textbf{\texttt{htcondor} module functions:}
 \begin{flushleft}
 \begin{tabular}{|p{14cm}|} \hline
 \texttt{platform( )}
@@ -53,24 +53,285 @@ a dictionary-like object providing access to the configuration variables
 in the current HTCondor configuration.
 
 \textbf{The \Condor{schedd} class:}
-\Todo
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
 
-\textbf{The \Condor{collector} class:}
-\Todo
+\texttt{\_\_init\_\_( classad )}
 
-\textbf{The class to access the internal security object:}
-\Todo
+Create an instance of the \texttt{Schedd} class.  
+The single, optional parameter, \texttt{classAd}, 
+describes the location of the remote \Condor{schedd} daemon.
+If the parameter is omitted, the local \Condor{schedd} daemon is used.
+\\ \hline
+\texttt{act( (JobAction)action, (object)job\_spec )}
+
+Change status of job(s) in the \Condor{schedd} daemon.
+The integer return value is a \texttt{ClassAd} object describing 
+the number of jobs changed.
+
+Parameter \texttt{action} is the action to perform; must be of the
+enum \texttt{JobAction}.
+
+Parameter \texttt{job\_spec} is the job specification.
+It can either be a list of job IDs or a string specifying a constraint 
+to match jobs.
+\\ \hline
+\texttt{edit( (object)job\_spec, (str)attr, (object)value )}
+
+Edit one or more jobs in the queue.
+
+Parameter \texttt{job\_spec} is either a list of jobs, 
+with each given as \texttt{ClusterId.ProcId} 
+or a string containing a constraint to match jobs against.
+
+Parameter \texttt{attr} is the attribute name of the attribute to edit.
+
+Parameter \texttt{value} is the new value of the job attribute. 
+It should be a string, which will be converted to a ClassAd expression,
+or an \texttt{ExprTree} object.
+\\ \hline
+\texttt{query( constraint = true, attr\_list = [] )}
+
+Query the \Condor{schedd} daemon for jobs.
+Returns a list of ClassAds representing the matching jobs,
+containing at least the requested attributes requested by the second parameter.
+
+The optional parameter \texttt{constraint} provides a constraint for 
+filtering out jobs.
+It defaults to \texttt{True}.
+
+Parameter \texttt{attr\_list} is a list of attributes for the \Condor{schedd}
+daemon to project along.  
+It defaults to having the \Condor{schedd} daemon return all attributes.
+\\ \hline
+\texttt{submit( ad, count = 1 )}
+
+Submit one or more jobs to the \Condor{schedd} daemon.
+Returns the newly created cluster ID.
+
+This method requires the invoker to provide a full ClassAd for the new job;
+such a ClassAd is much more complex than the contents of 
+a submit description file.
+To generate an example ClassAd, 
+take a sample submit description file and invoke 
+
+\texttt{condor\_submit -dump <filename> [cmdfile]}
+
+Then, load the resulting contents of <filename> into Python.
+
+The submission does not perform any file staging.  
+Thus, the current implementation's interface is only useful for submitting jobs 
+to the local \Condor{schedd} daemon.
+
+
+Parameter \texttt{ad} is the ClassAd describing the job cluster.
+
+Parameter \texttt{count} is the number of jobs to submit to the cluster.
+Defaults to 1.
+\\ \hline
+
+\end{tabular}
+\end{flushleft}
+
+\textbf{The \texttt{Collector} class:}
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+
+\texttt{\_\_init\_\_( pool = None )}
+
+Create an instance of the \texttt{Collector} class.  
+
+The optional parameter \texttt{pool} is a string with host:port pair specified.
+If omitted, the local \Condor{schedd} daemon is used.
+\\ \hline
+\texttt{locate( (DaemonTypes)daemon\_type, (str)name )}
+
+Query the \Condor{collector} for a particular daemon.
+Returns The ClassAd of the requested daemon.
+
+Parameter \texttt{daemon\_type} is the type of daemon; 
+must be of the enum \texttt{DaemonTypes}. 
+
+Optional parameter \texttt{name} is the name of daemon to locate.  
+If not specified, it searches for the local daemon.
+\\ \hline
+\texttt{locateAll( (DaemonTypes)daemon\_type )}
+
+Query the \Condor{collector} daemon for all ClassAds of a particular type.
+Returns a list of matching ClassAds.
+
+Parameter \texttt{daemon\_type} is the type of daemon; 
+must be of the enum \texttt{DaemonTypes}. 
+
+\\ \hline
+\texttt{query( (AdTypes)ad\_type, constraint=True, attrs=[] )}
+
+Query the contents of a \Condor{collector} daemon.
+Returns a list of ClassAds that match the \texttt{constraint} parameter.
+
+Optional parameter \texttt{ad\_type} is the type of ClassAd to return,
+where the types are from the enum \texttt{AdTypes}.
+If not specified, the type will be \texttt{ANY\_AD}.
+
+Optional parameter \texttt{constraint} is a constraint for the ClassAd query.
+It defaults to \texttt{True}.
+
+Optional parameter \texttt{attrs} is a list of attributes.
+If specified, the returned ClassAds will be projected along these attributes.
+\\ \hline
+\texttt{advertise( ad\_list, command=UPDATE\_AD\_GENERIC, use\_tcp = True )}
+
+Advertise a list of ClassAds into the \Condor{collector}.
+
+Parameter \texttt{ad\_list} is the list of ClassAds to advertise.
+
+Optional parameter \texttt{command} is a command for the \Condor{collector}.
+It defaults to \texttt{UPDATE\_AD\_GENERIC}.
+Other commands, such as \texttt{UPDATE\_STARTD\_AD},
+may require reduced authorization levels.  
+
+Optional parameter \texttt{use\_tcp} causes updates to be sent via TCP.
+Defaults to \texttt{True}.
+\\ \hline
+
+\end{tabular}
+\end{flushleft}
+
+\textbf{The \texttt{SecMan} class accesses the internal security object.}
+Currently, the class only allows the developer to reset security sessions.
+If a security session becomes invalid, 
+for example if the remote daemon restarts and reuses the same port 
+and the client continues to use the session, 
+then all future commands will fail with strange connection errors.
+This is the only mechanism to invalidate in-memory sessions.
+
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+
+\texttt{\_\_init\_\_( )}
+
+Create a \texttt{SecMan} object.
+\\ \hline
+\texttt{invalidateAllSessions( )}
+
+Invalidate all security sessions.
+Any future connections to a daemon will cause a new security session 
+to be created.
+\\ \hline
+
+\end{tabular}
+\end{flushleft}
+
+\textbf{Module enums:}
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+
+\texttt{AdTypes}
+
+A list of types used as values for the \Attr{MyType} ClassAd attribute.  
+These types are only used by the HTCondor system, not the ClassAd language.
+Typically, these specify different kinds of daemons.
+\\ \hline
+\texttt{DaemonCommands}
+
+A list of commands which can be sent to a remote daemon.
+\\ \hline
+\texttt{DaemonTypes}
+
+A list of types of known HTCondor daemons.
+\\ \hline
+\texttt{JobAction}
+
+A list of actions that can be performed on a job in a \Condor{schedd}.
+\\ \hline
+
+\end{tabular}
+\end{flushleft}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{Python-Example} Sample Code using the \texttt{htcondor} Python Module}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+This sample code illustrates interactions with the \texttt{htcondor} Python Module. 
+
+\footnotesize
+\begin{verbatim}
+$ python
+Python 2.6.6 (r266:84292, Jun 18 2012, 09:57:52) 
+[GCC 4.4.6 20110731 (Red Hat 4.4.6-3)] on linux2
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import condor
+>>> import classad
+>>> coll = condor.Collector("red-condor.unl.edu")
+>>> results = coll.query(condor.AdTypes.Startd, "true", ["Name"])
+>>> len(results)
+3812
+>>> results[0]
+[ Name = "slot1@red-d20n35"; MyType = "Machine"; TargetType = "Job"; CurrentTime = time() ]
+>>> scheddAd = coll.locate(condor.DaemonTypes.Schedd, "red-gw1.unl.edu")
+>>> scheddAd["ScheddIpAddr"]
+'<129.93.239.132:53020>'
+>>> schedd = condor.Schedd(scheddAd)
+>>> results = schedd.query('Owner =?= "cmsprod088"', ["ClusterId", "ProcId"])
+>>> len(results)
+63
+>>> results[0]
+[ MyType = "Job"; TargetType = "Machine"; ServerTime = 1356722353; ClusterId = 674143; ProcId = 0; CurrentTime = time() ]
+>>> condor.param["COLLECTOR_HOST"]
+'hcc-briantest.unl.edu'
+>>> schedd = condor.Schedd() # Defaults to the local schedd.
+>>> results = schedd.query()
+>>> results[0]["RequestMemory"]
+ifthenelse(MemoryUsage isnt undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
+>>> results[0]["RequestMemory"].eval()
+1L
+>>> ad=classad.parse(open("test.submit.ad"))
+>>> print schedd.submit(ad, 2) # Submits two jobs in the cluster; edit test.submit.ad to preference.
+110
+>>> print schedd.act(condor.JobAction.Remove, ["111.0", "110.0"])'
+    [
+        TotalNotFound = 0; 
+        TotalPermissionDenied = 0; 
+        TotalAlreadyDone = 0; 
+        TotalJobAds = 2; 
+        TotalSuccess = 2; 
+        TotalChangedAds = 1; 
+        TotalBadStatus = 0; 
+        TotalError = 0
+    ]
+>>> print schedd.act(condor.JobAction.Hold, "Owner =?= \"bbockelm\"")'
+    [
+        TotalNotFound = 0; 
+        TotalPermissionDenied = 0; 
+        TotalAlreadyDone = 0; 
+        TotalJobAds = 2; 
+        TotalSuccess = 2; 
+        TotalChangedAds = 1; 
+        TotalBadStatus = 0; 
+        TotalError = 0
+    ]
+>>> schedd.edit('Owner =?= "bbockelm"', "Foo", classad.ExprTree('"baz"'))
+>>> schedd.edit(["110.0"], "Foo", '"bar"')
+>>> coll = condor.Collector()
+>>> master_ad = coll.locate(condor.DaemonTypes.Master)
+>>> condor.send_command(master_ad, condor.DaemonCommands.Reconfig) # Reconfigures the local master and all children
+>>> condor.version()
+'$CondorVersion: 7.9.4 Jan 02 2013 PRE-RELEASE-UWCS $'
+>>> condor.platform()
+'$CondorPlatform: X86_64-ScientificLinux_6.3 $'
+
+\end{verbatim}
+\normalsize
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{Python-ClassAd} ClassAd Module}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The ClassAd module class provides a dictionary-like mechanism for interacting
-with the ClassAd language. 
-ClassAd objects implement the iterator interface to iterate 
-through the ClassAd's attributes.
+The \texttt{classad} module class provides a dictionary-like mechanism 
+for interacting with the ClassAd language. 
+\texttt{classad} objects implement the iterator interface to iterate 
+through the \texttt{classad}'s attributes.
 
-\textbf{Module functions:}
+\textbf{\texttt{classad} module functions:}
 \begin{flushleft}
 \begin{tabular}{|p{14cm}|} \hline
 \texttt{parse( input )}
@@ -120,7 +381,7 @@ For example, \Expr{[ Foo = "bar"; ]} may be returned.
 \end{flushleft}
 
 
-\textbf{The ClassAd object has the following dictionary-like methods:}
+\textbf{The \texttt{classad} object has the following dictionary-like methods:}
 \begin{flushleft}
 \begin{tabular}{|p{14cm}|} \hline
 \texttt{items( )}
@@ -212,9 +473,9 @@ typically a Python object.
 \end{flushleft}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{Python-ClassAd-Example} Sample Code using the ClassAd Module}
+\subsection{\label{Python-ClassAd-Example} Sample Code using the \texttt{classad} Module}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-This sample Python code illustrates interactions with the ClassAd Module. 
+This sample Python code illustrates interactions with the \texttt{classad} module. 
 
 \footnotesize
 \begin{verbatim}
