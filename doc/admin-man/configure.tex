@@ -6366,6 +6366,12 @@ These settings affect the \Condor{starter}.
   Since values larger than 2047 have no real meaning on 32-bit platforms,
   values larger than 2047 result in no limit set on 32-bit platforms.
 
+\label{param:UsePidNamespaces} 
+\item[ \Macro{USE\_PID\_NAMESPACES}]
+  A boolean value that, when \Expr{True}, enables the use of per job PID
+  namespaces for HTCondor jobs run on Linux kernels.
+  Defaults to \Expr{False}.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
