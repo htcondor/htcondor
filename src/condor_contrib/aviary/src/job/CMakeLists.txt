@@ -43,6 +43,8 @@ target_link_libraries(aviary_job_axis -Wl,--whole-archive -lwso2_wsf -Wl,--no-wh
 condor_plugin( AviaryScheddPlugin-plugin "${COLLECTOR_REF};${UTILS_REF};${SCHED_PLUGIN_SRCS}" "${C_LIBEXEC}" "${WSO2_FOUND}" ON)
 # remove unresolved deps by copying in -laxis2_engine objects
 target_link_libraries(AviaryScheddPlugin-plugin -Wl,--whole-archive -laxis2_engine -Wl,--no-whole-archive)
+# link externally to provider
+target_link_libraries(AviaryScheddPlugin-plugin aviary_axis_provider)
 
 
 ############################

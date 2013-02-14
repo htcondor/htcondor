@@ -24,7 +24,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../common)
 file( GLOB LOCATOR_GEN_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/../../codegen/locator/src/*.cpp )
 file( GLOB LOCATOR_SRCS ${CMAKE_CURRENT_SOURCE_DIR} AviaryLocatorService*.cpp )
 
-file( GLOB LOCATOR_PLUGIN_SRCS AviaryUtils.cpp LocatorObject.cpp 
+file( GLOB LOCATOR_PLUGIN_SRCS ../common/AviaryUtils.cpp LocatorObject.cpp 
             ${SOAP_SRCS} AviaryLocatorPlugin*.cpp )
 
 ############################
@@ -39,6 +39,8 @@ add_library (aviary_locator_axis SHARED ${COMMON_GEN_SRCS} ${LOCATOR_GEN_SRCS} $
 target_link_libraries(aviary_locator_axis -Wl,--whole-archive -lwso2_wsf -Wl,--no-whole-archive)
 # axis2 engine linking forcing our hand again
 target_link_libraries(aviary_locator_axis AviaryLocatorPlugin-plugin)
+# link externally to provider
+target_link_libraries(AviaryLocatorPlugin-plugin aviary_axis_provider)
 
 ############################
 # install target
