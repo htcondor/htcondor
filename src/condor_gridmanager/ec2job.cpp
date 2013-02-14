@@ -1028,7 +1028,7 @@ void EC2Job::doEvaluateState()
                         // dprintf( D_ALWAYS, "DEBUG: srCode = %s (assuming 'NULL')\n", srCode.c_str() );
                         if( srCode != "NULL" ) {
                             // Send the user a copy of the reason code.
-                            jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, srCode.c_str() );                            
+                            jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, srCode.c_str() );
                             requestScheddUpdate( this, false );
                             
                             //
@@ -1468,22 +1468,25 @@ void EC2Job::doEvaluateState()
                     break;
                 }
                 
-                // Spot status results are 4-tuples of request IDs, status
-                // strings, AMI IDs (probably superflous), and instance IDs.
+                // Spot status results are 5-tuples of request IDs, status
+                // strings, AMI IDs (probably superflous), instance IDs,
+                // and status codes.
                 // There should only ever be one result when probing a job.
                 std::string status;
                 std::string requestID;
                 std::string instanceID;
+                std::string statusCode;
                 returnStatus.rewind();
                 
                 // The GAHP client will EXCEPT() returnStatus.number()
-                // isn't 0 or a multiple 4.  (gahp-client.cpp:7070-86)
+                // isn't 0 or a multiple of 5.  (gahp-client.cpp:7070-86)
                 // Should we EXCEPT again here?
-                for( int i = 0; i < returnStatus.number(); i += 4 ) {
+                for( int i = 0; i < returnStatus.number(); i += 5 ) {
                     requestID = returnStatus.next();
                     status = returnStatus.next();
                     std::string launchGroup = returnStatus.next();
                     instanceID = returnStatus.next();
+                    statusCode = returnStatus.next();
                     
                     if( requestID == m_spot_request_id ) { break; }
                 }
@@ -1495,6 +1498,16 @@ void EC2Job::doEvaluateState()
                     dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <bogus query data> = GM_HOLD\n" );
                     gmState = GM_HOLD;
                     break;                    
+                }
+                
+                //
+                // Now that we're sure we have the right status, update it.
+                //
+                remoteJobState = status;
+                SetRemoteJobStatus( status.c_str() );
+                
+                if( ! statusCode.empty() ) {
+                    SetRemoteJobStatus( statusCode.c_str() );
                 }
                 
                 // If the request spawned an instance, we must save the
@@ -1601,11 +1614,12 @@ void EC2Job::doEvaluateState()
                 // Look for the stray SIR.
                 int originalState = gmState;
                 returnStatus.rewind();
-                for( int i = 0; i < returnStatus.number(); i += 4 ) {
+                for( int i = 0; i < returnStatus.number(); i += 5 ) {
                     std::string requestID = returnStatus.next();
-                    std::string status = returnStatus.next();
+                    std::string state = returnStatus.next();
                     std::string launchGroup = returnStatus.next();
                     std::string instanceID = returnStatus.next();
+                    std::string statusCode = returnStatus.next();
                     
                     if( launchGroup == m_client_token ) {
                         SetRequestID( requestID.c_str() );
