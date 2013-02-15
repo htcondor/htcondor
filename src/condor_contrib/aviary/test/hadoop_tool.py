@@ -108,6 +108,7 @@ class HadoopCtrlCmd(cmd.Cmd):
     def do_start(self,line):
         "start a Hadoop Node/Tracker"
         count = 1
+        descript = "hadoop_tool.py"
         is_nn = self.nodetype == "NameNode"
         if not is_nn:
             if cli_count:
@@ -121,11 +122,11 @@ class HadoopCtrlCmd(cmd.Cmd):
         try:
             if callable(func):
                 if is_nn:
-                    result = func(self.bin_file,self.owner)
+                    result = func(self.bin_file,self.owner,descript)
                 else:
                     ref = self.create_reflist(line)
                     if ref:
-                        result = func(ref[0],self.bin_file,self.owner,count)
+                        result = func(ref[0],self.bin_file,self.owner,descript,count)
                     else:
                         print "you must supply a HadoopID (cluster.proc or ipc uri)"
                         return
