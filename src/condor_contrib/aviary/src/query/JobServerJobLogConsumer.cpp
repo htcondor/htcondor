@@ -33,6 +33,7 @@
 
 using namespace aviary::query;
 using namespace aviary::history;
+using namespace aviary::util;
 
 extern bool force_reset;
 
@@ -93,11 +94,11 @@ JobServerJobLogConsumer::NewClassAd(const char *_key,
 		}
 
 		PROC_ID proc = getProcByString(_key);
-		MyString cluster_key;
+		string cluster_key;
 
-		cluster_key.formatstr("0%d.-1", proc.cluster);
+		aviUtilFmt(cluster_key,"0%d.-1", proc.cluster);
 
-		const char *cluster_dup = cluster_key.StrDup();
+		const char *cluster_dup = strdup(cluster_key.c_str());
 		JobCollectionType::const_iterator element = g_jobs.find(cluster_dup);
         ClusterJobImpl* cluster_impl = NULL;
 

@@ -453,14 +453,14 @@ void
     const char* fName = m_he.file.c_str();
     if ( ! ( hFile = safe_fopen_wrapper ( fName, "r" ) ) )
     {
-		formatstr(_text,"unable to open history file '%s'", m_he.file.c_str());
+		aviUtilFmt(_text,"unable to open history file '%s'", m_he.file.c_str());
         dprintf ( D_ALWAYS, "%s\n",_text.c_str());
 		_ad.Assign("JOB_AD_ERROR",_text.c_str());
 		return;
     }
     if ( fseek ( hFile , m_he.start , SEEK_SET ) )
     {
-		formatstr(_text,"bad seek in '%s' at index %ld", m_he.file.c_str(),m_he.start);
+		aviUtilFmt(_text,"bad seek in '%s' at index %ld", m_he.file.c_str(),m_he.start);
         dprintf ( D_ALWAYS, "%s\n",_text.c_str());
 		_ad.Assign("JOB_AD_ERROR",_text.c_str());
         return;
@@ -473,21 +473,21 @@ void
 	// we might not have our original history file anymore
     if ( error )
     {
-		formatstr(_text,"malformed ad for job '%s' in file '%s'",m_job->getKey(), m_he.file.c_str());
+		aviUtilFmt(_text,"malformed ad for job '%s' in file '%s'",m_job->getKey(), m_he.file.c_str());
         dprintf ( D_FULLDEBUG, "%s\n", _text.c_str());
 		_ad.Assign("JOB_AD_ERROR",_text.c_str());
 		return;
     }
     if ( empty )
     {
-		formatstr(_text,"empty ad for job '%s' in '%s'", m_job->getKey(),m_he.file.c_str());
+		aviUtilFmt(_text,"empty ad for job '%s' in '%s'", m_job->getKey(),m_he.file.c_str());
         dprintf ( D_FULLDEBUG,"%s\n", _text.c_str());
 		_ad.Assign("JOB_AD_ERROR",_text.c_str());
 		return;
     }
 
 	if (!_ad.CopyFrom(myJobAd)) {
-		formatstr(_text,"problem copying contents of history ClassAd for '%s'",m_job->getKey());
+		aviUtilFmt(_text,"problem copying contents of history ClassAd for '%s'",m_job->getKey());
 		dprintf ( D_ALWAYS, "%s\n",_text.c_str());
 		_ad.Assign("JOB_AD_ERROR",_text.c_str());
 	}

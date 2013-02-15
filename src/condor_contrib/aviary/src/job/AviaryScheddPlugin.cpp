@@ -99,7 +99,7 @@ AviaryScheddPlugin::initialize()
 		// WalkJobQueue(int (*func)(ClassAd *))
 	ClassAd *ad = GetNextJob(1);
 	while (ad != NULL) {
-		MyString key;
+		string key;
 		PROC_ID id;
 		int value;
 
@@ -117,9 +117,9 @@ AviaryScheddPlugin::initialize()
 			return;
 		}
 
-		key.formatstr("%d.%d", id.cluster, id.proc);
+		aviUtilFmt(key,"%d.%d", id.cluster, id.proc);
 
-		processJob(key.Value(), ATTR_JOB_STATUS, value);
+		processJob(key.c_str(), ATTR_JOB_STATUS, value);
 
 		FreeJobAd(ad);
 		ad = GetNextJob(0);
@@ -294,6 +294,7 @@ AviaryScheddPlugin::processJob(const char *key,
 		// XXX: Use the jobAd instead of GetAttribute below, gets us $$() expansion
 
     MyString submissionName;
+    string sub_name;
     char* value = NULL;
     if ( (GetAttributeString(id.cluster, id.proc,ATTR_JOB_SUBMISSION,submissionName) < 0) 
         && (GetAttributeExprNew(id.cluster, id.proc, ATTR_JOB_SUBMISSION,&value) < 0) ) {
@@ -316,19 +317,21 @@ AviaryScheddPlugin::processJob(const char *key,
 					// wrong if the DAGMan job didn't use the
 					// default, but it is better to be wrong than
 					// to fail entirely, which is the alternative.
-				submissionName.formatstr("%s#%d", Name, dagman.cluster);
+                assign(sub_name,submissionName);
+				aviUtilFmt(sub_name,"%s#%d", Name, dagman.cluster);
 			}
 		} else {
-			submissionName.formatstr("%s#%d", Name, id.cluster);
+            assign(sub_name,submissionName);
+			aviUtilFmt(sub_name,"%s#%d", Name, id.cluster);
 		}
 
-		MyString tmp;
+		string tmp;
 		tmp += "\"";
-		tmp += submissionName;
+		tmp += sub_name;
 		tmp += "\"";
 		SetAttribute(id.cluster, id.proc,
 					 ATTR_JOB_SUBMISSION,
-					 tmp.Value());
+					 tmp.c_str());
 	}
     if (value) free (value);
 

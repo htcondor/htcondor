@@ -41,6 +41,7 @@ using namespace aviary::codec;
 using namespace AviaryCommon;
 
 const char* RESERVED[] = {"error", "false", "is", "isnt", "parent", "true","undefined", NULL};
+#define AVIARY_UTILS_FIXBUF 500
 
 typedef std::map<std::string,int> LogLevelMapType;
 LogLevelMapType log_level_map;
@@ -251,4 +252,67 @@ void aviary::util::mapToXsdAttributes(const aviary::codec::AttributeMapType& _ma
         }
         _attrs->addAttrs(attr);
     }
+}
+
+// too much pain with the 7.8/7.9 sprintf rename
+// make our own locally solely for std::string
+int aviary::util::aviUtilFmt(std::string& s, const char* format, ...) {
+    char fixbuf[AVIARY_UTILS_FIXBUF];
+    const int fixlen = sizeof(fixbuf)/sizeof(fixbuf[0]);
+    int n;
+    va_list  args,pargs;
+    va_start(pargs, format);
+
+    // Attempt to write to fixed buffer.  condor_snutils.{h,cpp}
+    // provides an implementation of vsnprintf() in windows, so this
+    // logic works cross platform 
+#if !defined(va_copy)
+    n = vsnprintf(fixbuf, fixlen, format, pargs);    
+#else
+    va_copy(args, pargs);
+    n = vsnprintf(fixbuf, fixlen, format, args);
+    va_end(args);
+#endif
+
+    // In this case, fixed buffer was sufficient so we're done.
+    // Return number of chars written.
+    if (n < fixlen) {
+        s = fixbuf;
+        return n;
+    }
+
+    // Otherwise, the fixed buffer was not large enough, but return from 
+    // vsnprintf() tells us how much memory we need now.
+    n += 1;
+    char* varbuf = NULL;
+    // Handle 'new' behavior mode of returning NULL or throwing exception
+    try {
+        varbuf = new char[n];
+    } catch (...) {
+        varbuf = NULL;
+    }
+    if (NULL == varbuf) EXCEPT("Failed to allocate char buffer of %d chars", n);
+
+    // re-print, using buffer of sufficient size
+#if !defined(va_copy)
+    int nn = vsnprintf(varbuf, n, format, pargs);
+#else
+    va_copy(args, pargs);
+    int nn = vsnprintf(varbuf, n, format, args);
+    va_end(args);
+#endif
+
+    // Sanity check.  This ought not to happen.  Ever.
+    if (nn >= n) EXCEPT("Insufficient buffer size (%d) for printing %d chars", n, nn);
+
+    // safe to do string assignment
+    s = varbuf;
+
+    // clean up our allocated buffer
+    delete[] varbuf;
+    
+    va_end(args);
+
+    // return number of chars written
+    return nn;
 }

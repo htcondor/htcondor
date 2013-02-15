@@ -39,7 +39,7 @@ using namespace aviary::codec;
 string quote_it (const char *  pszIn)
 {
     string ret;
-    formatstr(ret,"\"%s\"", pszIn);
+    aviUtilFmt(ret,"\"%s\"", pszIn);
     return ret;
 }
 
@@ -247,7 +247,7 @@ int HadoopObject::start( tHadoopInit & hInit )
         else
         {
             AbortTransaction();
-            formatstr ( m_lasterror, "Name Node %s Invalid or not running status %d", hInit.idref.id.c_str(), iStatus );
+            aviUtilFmt ( m_lasterror, "Name Node %s Invalid or not running status %d", hInit.idref.id.c_str(), iStatus );
             return false;
         }
             
@@ -295,7 +295,7 @@ int HadoopObject::start( tHadoopInit & hInit )
         {
             AbortTransaction();
             m_lasterror = "No valid Job Tracker ";
-            formatstr ( m_lasterror, "ID %s Invalid or not running status %d", hInit.idref.id.c_str(), iStatus );
+            aviUtilFmt ( m_lasterror, "ID %s Invalid or not running status %d", hInit.idref.id.c_str(), iStatus );
             return false;
         }
             
@@ -312,7 +312,7 @@ int HadoopObject::start( tHadoopInit & hInit )
     if (!hasInputScript)
     {
         AbortTransaction();
-        formatstr(m_lasterror, "Missing Script Input KNOB for type %s", hadoopType.c_str() );
+        aviUtilFmt(m_lasterror, "Missing Script Input KNOB for type %s", hadoopType.c_str() );
         return false;
     }
 
@@ -371,7 +371,7 @@ int HadoopObject::start( tHadoopInit & hInit )
     scheduler.needReschedule();
     
     // fill in the new cluster id
-    formatstr(hInit.newcluster,"%d",cluster);
+    aviUtilFmt(hInit.newcluster,"%d",cluster);
     
     return true;
     
@@ -436,7 +436,7 @@ bool HadoopObject::status (ClassAd* cAd, const tHadoopType & type, tHadoopJobSta
     return false;
     }
      
-    formatstr(hStatus.idref.id,"%d.%d", cluster, proc);
+    aviUtilFmt(hStatus.idref.id,"%d.%d", cluster, proc);
     
     if (!cAd->LookupString( ATTR_HADOOP_DESCRIPTION, hStatus.description))
     {

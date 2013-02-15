@@ -14,26 +14,25 @@
  * limitations under the License.
  */
 
+// condor includes
 #include "condor_common.h"
-
 #include "condor_config.h"
 #include "condor_debug.h"
-
 #include "condor_attributes.h"
-
 #include "directory.h"
 
-#include "HistoryFile.h"
-
-#include "HistoryProcessingUtils.h"
-
+// c++ includes
 #include <libgen.h> // dirname
-
 #include <string>
+
+// local includes
+#include "HistoryFile.h"
+#include "HistoryProcessingUtils.h"
+#include "AviaryUtils.h"
 
 #define HISTORY_INDEX_SUFFIX ".idx"
 using std::string;
-
+using namespace aviary::util;
 
 HistoryFile::HistoryFile(const string name):
 	m_name(name),
@@ -119,13 +118,13 @@ HistoryFile::init(CondorError &errstack)
 	}
 
 	// Store the index in history.INO.idx to handle renames
-	MyString tmp;
+	string tmp;
 	char *buf = strdup(m_name.c_str());
 	ASSERT(buf);
 	long unsigned int id;
 	ASSERT(getId(id));
-	tmp.formatstr("%s%shistory.%ld%s", dirname(buf), DIR_DELIM_STRING, id, HISTORY_INDEX_SUFFIX);
-	m_index_name = tmp.Value();
+	aviUtilFmt(tmp,"%s%shistory.%ld%s", dirname(buf), DIR_DELIM_STRING, id, HISTORY_INDEX_SUFFIX);
+	m_index_name = tmp.c_str();
 	free(buf);
 
 	const char *mode = "r+";

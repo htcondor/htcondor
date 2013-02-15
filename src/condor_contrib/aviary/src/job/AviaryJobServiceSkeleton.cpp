@@ -46,6 +46,7 @@ using namespace AviaryJob;
 using namespace AviaryCommon;
 using namespace aviary::codec;
 using namespace aviary::job;
+using namespace aviary::util;
 using namespace compat_classad;
 
 #define ATTR_COMP(X) 0==strcasecmp(attr_name,X)
@@ -102,7 +103,7 @@ buildBasicRequirements(ResourceConstraintVectorType* _constraints, string& _reqs
 					opsys = BASIC_WINOS_FORMAT;
 				}
 				else {
-					formatstr(opsys,BASIC_OS_FORMAT,rc->getValue().c_str());
+					aviUtilFmt(opsys,BASIC_OS_FORMAT,rc->getValue().c_str());
 				}
 				break;
             case ResourceConstraintType_DISK:
@@ -120,7 +121,7 @@ buildBasicRequirements(ResourceConstraintVectorType* _constraints, string& _reqs
 		}
 	}
 	// order is important! see BASIC_REQ_FORMAT above
-	formatstr(_reqs, BASIC_REQ_FORMAT, arch.c_str(), opsys.c_str(), disk.c_str(), memory.c_str(), filesystem.c_str());
+	aviUtilFmt(_reqs, BASIC_REQ_FORMAT, arch.c_str(), opsys.c_str(), disk.c_str(), memory.c_str(), filesystem.c_str());
 }
 
 bool

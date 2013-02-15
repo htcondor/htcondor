@@ -103,7 +103,7 @@ AviaryHadoopPlugin::initialize()
         // WalkJobQueue(int (*func)(ClassAd *))
     ClassAd *ad = GetNextJob(1);
     while (ad != NULL) {
-        MyString key;
+        string key;
         PROC_ID id;
         int value;
 
@@ -117,9 +117,9 @@ AviaryHadoopPlugin::initialize()
             EXCEPT("%s on job is missing or not an integer", ATTR_JOB_STATUS);
         }
 
-        key.formatstr("%d.%d", id.cluster, id.proc);
+        aviUtilFmt(key,"%d.%d", id.cluster, id.proc);
 
-        processJob(key.Value(), ATTR_JOB_STATUS, value);
+        processJob(key.c_str(), ATTR_JOB_STATUS, value);
 
         FreeJobAd(ad);
         ad = GetNextJob(0);

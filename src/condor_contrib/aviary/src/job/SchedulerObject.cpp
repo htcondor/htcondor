@@ -245,12 +245,12 @@ SchedulerObject::submit(AttributeMapType &jobAdMap, std::string &id, std::string
 
 		// 7. Return identifier
 		// TODO: dag ids?
-	MyString tmp;
+	string tmp;
 	//tmp.sprintf("%s#%d.%d", Name, cluster, proc);
 	// we have other API compositions for job id and submission id
 	// so let's return raw cluster.proc
-	tmp.formatstr("%d.%d", cluster, proc);
-	id = tmp.Value();
+	aviUtilFmt(tmp,"%d.%d", cluster, proc);
+	id = tmp.c_str();
 
 	return true;
 }

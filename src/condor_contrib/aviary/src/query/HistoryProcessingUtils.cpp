@@ -40,6 +40,7 @@
 #include <set>
 
 using namespace aviary::query;
+using namespace aviary::util;
 
 #define HISTORY_INDEX_SUFFIX ".idx"
 using namespace std;
@@ -66,11 +67,11 @@ static
 void
 process ( const HistoryEntry &entry )
 {
-    MyString key;
+    string key;
 
-    key.formatstr ( "%d.%d", entry.cluster, entry.proc );
+    aviUtilFmt(key,"%d.%d", entry.cluster, entry.proc );
 
-    const char* key_cstr = key.StrDup();
+    const char* key_cstr = strdup(key.c_str());
 
     HistoryJobImpl *hji = new HistoryJobImpl (entry);
 

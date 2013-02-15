@@ -59,6 +59,8 @@ axutil_date_time_t* encodeDateTime(const time_t& ts, const axutil_env_t* env);
 
 void mapToXsdAttributes(const aviary::codec::AttributeMapType& _map, AviaryCommon::Attributes* _attrs);
 
+int aviUtilFmt(std::string& s, const char* format, ...);
+
 }}
 
 #endif /* _AVIARYUTILS_H */
