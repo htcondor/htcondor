@@ -79,6 +79,11 @@ TransferQueueRequest::SendGoAhead(XFER_QUEUE_ENUM go_ahead,char const *reason) {
 		msg.Assign(ATTR_ERROR_STRING,reason);
 	}
 
+		// how often should transfer processes send a report of I/O activity
+		//   0 means never
+	int report_interval = param_integer("TRANSFER_IO_REPORT_INTERVAL",10,0);
+	msg.Assign(ATTR_REPORT_INTERVAL,report_interval);
+
 	if(!msg.put( *m_sock ) || !m_sock->end_of_message()) {
 		dprintf(D_ALWAYS,
 				"TransferQueueRequest: failed to send GoAhead to %s\n",
@@ -105,6 +110,10 @@ TransferQueueManager::TransferQueueManager() {
 	m_round_robin_counter = 0;
 	m_round_robin_garbage_counter = 0;
 	m_round_robin_garbage_time = time(NULL);
+	m_update_iostats_interval = 0;
+	m_update_iostats_timer = -1;
+
+	RegisterStats(NULL,m_iostats);
 }
 
 TransferQueueManager::~TransferQueueManager() {
@@ -119,6 +128,9 @@ TransferQueueManager::~TransferQueueManager() {
 	if( m_check_queue_timer != -1 ) {
 		daemonCore->Cancel_Timer( m_check_queue_timer );
 	}
+	if( m_update_iostats_timer != -1 ) {
+		daemonCore->Cancel_Timer( m_update_iostats_timer );
+	}
 }
 
 void
@@ -126,6 +138,38 @@ TransferQueueManager::InitAndReconfig() {
 	m_max_downloads = param_integer("MAX_CONCURRENT_DOWNLOADS",10,0);
 	m_max_uploads = param_integer("MAX_CONCURRENT_UPLOADS",10,0);
 	m_default_max_queue_age = param_integer("MAX_TRANSFER_QUEUE_AGE",3600*2,0);
+
+	m_update_iostats_interval = param_integer("TRANSFER_IO_REPORT_INTERVAL",10,0);
+	if( m_update_iostats_interval != 0 ) {
+		if( m_update_iostats_timer != -1 ) {
+			ASSERT( daemonCore->Reset_Timer_Period(m_update_iostats_timer,m_update_iostats_interval) == 0 );
+		}
+		else {
+			m_update_iostats_timer = daemonCore->Register_Timer(
+				m_update_iostats_interval,
+				m_update_iostats_interval,
+				(TimerHandlercpp)&TransferQueueManager::UpdateIOStats,
+				"UpdateIOStats",this);
+			ASSERT( m_update_iostats_timer != -1 );
+		}
+	}
+
+	std::string iostat_timespans;
+	param(iostat_timespans,"TRANSFER_IO_REPORT_TIMESPANS","1m:60 5m:300 1h:3600 1d:86400");
+
+	std::string iostat_timespans_err;
+	if( !ParseEMAHorizonConfiguration(iostat_timespans.c_str(),iostat_ema_horizons,iostat_timespans_err) ) {
+		EXCEPT("Error in TRANSFER_IO_REPORT_TIMESPANS=%s: %s",iostat_timespans.c_str(),iostat_timespans_err.c_str());
+	}
+
+	m_iostats.ConfigureEMAHorizons(iostat_ema_horizons);
+
+	for( QueueUserMap::iterator user_itr = m_queue_users.begin();
+		 user_itr != m_queue_users.end();
+		 ++user_itr )
+	{
+		user_itr->second.iostats.ConfigureEMAHorizons(iostat_ema_horizons);
+	}
 }
 
 void
@@ -211,8 +255,8 @@ TransferQueueManager::AddRequest( TransferQueueRequest *client ) {
 
 	int rc = daemonCore->Register_Socket(client->m_sock,
 		"<file transfer request>",
-		(SocketHandlercpp)&TransferQueueManager::HandleDisconnect,
-		"HandleDisconnect()", this, ALLOW);
+		(SocketHandlercpp)&TransferQueueManager::HandleReport,
+		"HandleReport()", this, ALLOW);
 
 	if( rc < 0 ) {
 		dprintf(D_ALWAYS,
@@ -231,22 +275,23 @@ TransferQueueManager::AddRequest( TransferQueueRequest *client ) {
 }
 
 int
-TransferQueueManager::HandleDisconnect( Stream *sock )
+TransferQueueManager::HandleReport( Stream *sock )
 {
 	TransferQueueRequest *client;
 	m_xfer_queue.Rewind();
 	while( m_xfer_queue.Next( client ) ) {
 		if( client->m_sock == sock ) {
-			dprintf(D_FULLDEBUG,
-					"TransferQueueManager: dequeueing %s.\n",
-					client->Description());
+			if( !client->ReadReport(this) ) {
+				dprintf(D_FULLDEBUG,
+						"TransferQueueManager: dequeueing %s.\n",
+						client->Description());
 
-			delete client;
-			m_xfer_queue.DeleteCurrent();
+				delete client;
+				m_xfer_queue.DeleteCurrent();
 
-			TransferQueueChanged();
-
-			return KEEP_STREAM; // we have already deleted socket
+				TransferQueueChanged();
+			}
+			return KEEP_STREAM;
 		}
 	}
 
@@ -263,6 +308,57 @@ TransferQueueManager::HandleDisconnect( Stream *sock )
 		   sock->peer_description(),
 		   clients.Value());
 	return FALSE; // close socket
+}
+
+bool
+TransferQueueRequest::ReadReport(TransferQueueManager *manager)
+{
+	MyString report;
+	m_sock->decode();
+	if( !m_sock->get(report) ||
+		!m_sock->end_of_message() )
+	{
+		return false;
+	}
+
+	if( report.IsEmpty() ) {
+		return false;
+	}
+
+	unsigned report_time;
+	unsigned report_interval_usec;
+	unsigned recent_bytes_sent;
+	unsigned recent_bytes_received;
+	unsigned recent_usec_file_read;
+	unsigned recent_usec_file_write;
+	unsigned recent_usec_net_read;
+	unsigned recent_usec_net_write;
+	IOStats iostats;
+
+	int rc = sscanf(report.Value(),"%u %u %u %u %u %u %u %u",
+					&report_time,
+					&report_interval_usec,
+					&recent_bytes_sent,
+					&recent_bytes_received,
+					&recent_usec_file_read,
+					&recent_usec_file_write,
+					&recent_usec_net_read,
+					&recent_usec_net_write);
+	if( rc != 8 ) {
+		dprintf(D_ALWAYS,"Failed to parse I/O report from file transfer worker %s: %s.\n",
+				m_sock->peer_description(),report.Value());
+		return false;
+	}
+
+	iostats.bytes_sent = (double)recent_bytes_sent;
+	iostats.bytes_received = (double)recent_bytes_received;
+	iostats.file_read = (double)recent_usec_file_read/1000000;
+	iostats.file_write = (double)recent_usec_file_write/1000000;
+	iostats.net_read = (double)recent_usec_net_read/1000000;
+	iostats.net_write = (double)recent_usec_net_write/1000000;
+
+	manager->AddRecentIOStats(iostats,m_up_down_queue_user);
+	return true;
 }
 
 void
@@ -300,8 +396,29 @@ TransferQueueManager::ClearRoundRobinRecency()
 	}
 }
 
+bool
+TransferQueueManager::TransferQueueUser::Stale(unsigned int stale_recency)
+{
+		// If this user has recently done anything, this record is not stale
+	if( !(recency < stale_recency && running==0 && idle==0) ) {
+		return false; // not stale
+	}
+		// Check for non-negligible iostat moving averages, so we
+		// don't lose interesting data about big I/O users.
+	if( iostats.bytes_sent.BiggestEMARate()     > 100000 ||
+		iostats.bytes_received.BiggestEMARate() > 100000 ||
+		iostats.file_read.BiggestEMARate()      > 0.1 ||
+		iostats.file_write.BiggestEMARate()     > 0.1 ||
+		iostats.net_read.BiggestEMARate()       > 0.1 ||
+		iostats.net_write.BiggestEMARate()      > 0.1 )
+	{
+		return false; // not stale
+	}
+	return true;
+}
+
 void
-TransferQueueManager::CollectUserRecGarbage()
+TransferQueueManager::CollectUserRecGarbage(ClassAd *unpublish_ad)
 {
 		// To prevent unbounded growth, remove user records that have
 		// not been touched in the past hour.
@@ -317,6 +434,7 @@ TransferQueueManager::CollectUserRecGarbage()
 		{
 			TransferQueueUser &u = itr->second;
 			if( u.Stale(m_round_robin_garbage_counter) ) {
+				UnregisterStats(itr->first.c_str(),u.iostats,unpublish_ad);
 					// increment the iterator before calling erase, while it is still valid
 				m_queue_users.erase(itr++);
 				++num_removed;
@@ -343,8 +461,84 @@ TransferQueueManager::GetUserRec(const std::string &user)
 	itr = m_queue_users.find(user);
 	if( itr == m_queue_users.end() ) {
 		itr = m_queue_users.insert(QueueUserMap::value_type(user,TransferQueueUser())).first;
+		itr->second.iostats.ConfigureEMAHorizons(iostat_ema_horizons);
+		RegisterStats(user.c_str(),itr->second.iostats);
 	}
 	return itr->second;
+}
+
+void
+TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unregister,ClassAd *unpublish_ad)
+{
+	std::string attr;
+	bool downloading = true;
+	bool uploading = true;
+	std::string user_attr;
+	if( user && user[0] ) {
+			// The first character of the up_down_user tells us if it is uploading or downloading
+		if( user[0] == 'U' ) downloading = false;
+		if( user[0] == 'D' ) uploading = false;
+		char const *at = strchr(user,'@');
+		if( at ) {
+			user_attr.append(user+1,at-(user+1));
+		}
+		else {
+			user_attr = user+1;
+		}
+		user_attr += "_";
+	}
+	if( downloading ) {
+		formatstr(attr,"%sFileTransferDownloadBytes",user_attr.c_str());
+		if( unregister ) {
+			StatPool.RemoveProbe(attr.c_str());
+			iostats.bytes_received.Unpublish(*unpublish_ad,attr.c_str());
+		}
+		else {
+			StatPool.AddProbe(attr.c_str(),&iostats.bytes_received);
+		}
+		formatstr(attr,"%sFileTransferFileWriteSeconds",user_attr.c_str());
+		if( unregister ) {
+			StatPool.RemoveProbe(attr.c_str());
+			iostats.file_write.Unpublish(*unpublish_ad,attr.c_str());
+		}
+		else {
+			StatPool.AddProbe(attr.c_str(),&iostats.file_write);
+		}
+		formatstr(attr,"%sFileTransferNetReadSeconds",user_attr.c_str());
+		if( unregister ) {
+			StatPool.RemoveProbe(attr.c_str());
+			iostats.net_read.Unpublish(*unpublish_ad,attr.c_str());
+		}
+		else {
+			StatPool.AddProbe(attr.c_str(),&iostats.net_read);
+		}
+	}
+	if( uploading ) {
+		formatstr(attr,"%sFileTransferUploadBytes",user_attr.c_str());
+		if( unregister ) {
+			StatPool.RemoveProbe(attr.c_str());
+			iostats.bytes_sent.Unpublish(*unpublish_ad,attr.c_str());
+		}
+		else {
+			StatPool.AddProbe(attr.c_str(),&iostats.bytes_sent);
+		}
+		formatstr(attr,"%sFileTransferFileReadSeconds",user_attr.c_str());
+		if( unregister ) {
+			StatPool.RemoveProbe(attr.c_str());
+			iostats.file_read.Unpublish(*unpublish_ad,attr.c_str());
+		}
+		else {
+			StatPool.AddProbe(attr.c_str(),&iostats.file_read);
+		}
+		formatstr(attr,"%sFileTransferNetWriteSeconds",user_attr.c_str());
+		if( unregister ) {
+			StatPool.RemoveProbe(attr.c_str());
+			iostats.net_write.Unpublish(*unpublish_ad,attr.c_str());
+		}
+		else {
+			StatPool.AddProbe(attr.c_str(),&iostats.net_write);
+		}
+	}
 }
 
 void
@@ -589,8 +783,6 @@ TransferQueueManager::CheckTransferQueue() {
 			}
 		}
 	}
-
-	CollectUserRecGarbage();
 }
 
 bool
@@ -601,4 +793,80 @@ TransferQueueManager::GetContactInfo(char const *command_sock_addr, std::string 
 		m_max_uploads == 0,
 		m_max_downloads == 0);
 	return contact.GetStringRepresentation(contact_str);
+}
+
+void
+IOStats::Add(IOStats &s) {
+	bytes_sent += s.bytes_sent.value;
+	bytes_received += s.bytes_received.value;
+	file_read += s.file_read.value;
+	file_write += s.file_write.value;
+	net_read += s.net_read.value;
+	net_write += s.net_write.value;
+}
+
+void
+IOStats::ConfigureEMAHorizons(stats_ema_list const &ema_list) {
+	bytes_sent.ConfigureEMAHorizons(ema_list);
+	bytes_received.ConfigureEMAHorizons(ema_list);
+	file_read.ConfigureEMAHorizons(ema_list);
+	file_write.ConfigureEMAHorizons(ema_list);
+	net_read.ConfigureEMAHorizons(ema_list);
+	net_write.ConfigureEMAHorizons(ema_list);
+}
+
+void
+TransferQueueManager::AddRecentIOStats(IOStats &s,const std::string up_down_queue_user)
+{
+	m_iostats.Add(s);
+	GetUserRec(up_down_queue_user).iostats.Add(s);
+}
+
+void
+TransferQueueManager::UpdateIOStats()
+{
+	StatPool.Advance(1);
+}
+
+void
+TransferQueueManager::publish(ClassAd *ad)
+{
+	dprintf(D_ALWAYS,"TransferQueueManager stats: active up=%d/%d down=%d/%d; waiting up=%d down=%d; wait time up=%ds down=%ds\n",
+			m_uploading,
+			m_max_uploads,
+			m_downloading,
+			m_max_downloads,
+			m_waiting_to_upload,
+			m_waiting_to_download,
+			m_upload_wait_time,
+			m_download_wait_time);
+
+	ad->Assign(ATTR_TRANSFER_QUEUE_NUM_UPLOADING,m_uploading);
+	ad->Assign(ATTR_TRANSFER_QUEUE_NUM_DOWNLOADING,m_downloading);
+	ad->Assign(ATTR_TRANSFER_QUEUE_MAX_UPLOADING,m_max_uploads);
+	ad->Assign(ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING,m_max_downloads);
+	ad->Assign(ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD,m_waiting_to_upload);
+	ad->Assign(ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD,m_waiting_to_download);
+	ad->Assign(ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME,m_upload_wait_time);
+	ad->Assign(ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME,m_download_wait_time);
+
+	int publish_flags = IF_BASICPUB;
+	StatPool.Publish(*ad,publish_flags);
+
+	char const *ema_horizon = m_iostats.bytes_sent.ShortestHorizonEMARateName();
+	if( ema_horizon ) {
+		dprintf(D_ALWAYS,"TransferQueueManager upload %s I/O load: %.0f bytes/s  %.3f disk load  %.3f net load\n",
+				ema_horizon,
+				m_iostats.bytes_sent.EMARate(ema_horizon),
+				m_iostats.file_read.EMARate(ema_horizon),
+				m_iostats.net_write.EMARate(ema_horizon));
+
+		dprintf(D_ALWAYS,"TransferQueueManager download %s I/O load: %.0f bytes/s  %.3f disk load  %.3f net load\n",
+				ema_horizon,
+				m_iostats.bytes_received.EMARate(ema_horizon),
+				m_iostats.file_write.EMARate(ema_horizon),
+				m_iostats.net_read.EMARate(ema_horizon));
+	}
+
+	CollectUserRecGarbage(ad);
 }

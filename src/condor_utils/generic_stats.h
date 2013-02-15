@@ -138,6 +138,7 @@ enum {
    IS_RCT         = 0x0600, // is stats_recent_counter_timer 
    IS_REPROBE     = 0x0700, // is stats_entry_recent<Probe> class
    IS_HISTOGRAM   = 0x0800, // is stats_entry_histgram class
+   IS_CLS_SUM_EMA_RATE = 0x1000, // is stats_entry_sum_ema_rate class
 
    // values above AS_TYPE_MASK are flags
    //
@@ -563,6 +564,148 @@ public:
    static const int unit = IS_CLS_ABS | stats_entry_type<T>::id;
    static void Delete(stats_entry_abs<T> * probe) { delete probe; }
    static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return (FN_STATS_ENTRY_UNPUBLISH)&stats_entry_abs<T>::Unpublish; };
+};
+
+// exponential moving average class
+class stats_ema {
+ public:
+	double ema;
+	time_t total_elapsed_time;
+	time_t horizon;
+	std::string horizon_name;
+
+	stats_ema(time_t the_horizon,char const *the_horizon_name):
+		ema(0.0), total_elapsed_time(0), horizon(the_horizon), horizon_name(the_horizon_name) {}
+
+	void Clear() {
+		ema = 0.0;
+		total_elapsed_time = 0;
+	}
+
+	void Update(double value,time_t interval) {
+		double alpha = 1.0 - exp(-(double)interval/this->horizon);
+		this->ema = alpha*value + (1.0-alpha)*ema;
+		this->total_elapsed_time += interval;
+	}
+
+	bool sameHorizon(stats_ema const &other) const {
+		return this->horizon == other.horizon && this->horizon_name == other.horizon_name;
+	}
+
+	bool insufficientData() const {
+		return total_elapsed_time < horizon;
+	}
+};
+
+// list of exponential moving averages
+typedef std::list<stats_ema> stats_ema_list;
+
+	// Parse exponential moving average list configuration string of the form
+	// "NAME1:HORIZON1 NAME2:HORIZON2 ..."
+	// Where each horizon is specified as an integer number of seconds
+	// Fills in ema_horizons, which can be fed to ConfigureEMAHorizons() of one or more
+	// instances of this class to allocate EMA variables.
+bool ParseEMAHorizonConfiguration(char const *ema_conf,stats_ema_list &ema_horizons,std::string &error_str);
+
+// use stats_entry_sum_ema_rate to compute a running sum and rate of growth.
+// The rate of growth is computed as an exponential moving average over
+// a set of time horizons, like linux load average.  The specific horizons
+// are configurable.  To avoid misinterpretation and clutter, only the EMAs
+// for which at least one full horizon has elapsed will be published.
+//
+// Example: track sum of bytes transferred since startup
+// and average bytes transferred per second over 1m, 5m, 1h, and 1d horizons.
+//
+template <class T> class stats_entry_sum_ema_rate : public stats_entry_count<T> {
+public:
+	stats_entry_sum_ema_rate() { Clear(); }
+
+	stats_ema_list ema;
+	time_t recent_start_time;
+	T recent_sum;
+
+	void Clear() {
+		this->value = 0;
+		this->recent_start_time = 0;
+		this->recent_start_time = time(NULL);
+		for(stats_ema_list::iterator ema_itr = ema.begin();
+			ema_itr != ema.end();
+			++ema_itr )
+		{
+			ema_itr->Clear();
+		}
+	}
+
+	T Set(T val) { 
+		this->recent_sum = val - this->value;
+		this->value = val;
+		return this->value;
+	}
+
+	T Add(T val) {
+		this->recent_sum += val;
+		this->value += val;
+		return this->value;
+	}
+
+		// update the exponential moving averages of the rate of growth
+	void Update(time_t now) {
+		time_t interval = now - this->recent_start_time;
+		double recent_rate = (double)this->recent_sum/interval;
+		this->recent_sum = 0;
+		this->recent_start_time = now;
+
+		for(stats_ema_list::iterator ema_itr = ema.begin();
+			ema_itr != ema.end();
+			++ema_itr )
+		{
+			ema_itr->Update(recent_rate,interval);
+		}
+	}
+
+		// Allocate variables to track exponential moving averages.
+		// Can be called to reconfigure or initialize this object.
+		// Args:
+		//   ema_horizons serves as a template; it can be created with ParseEMAHorizonConfiguration()
+	void ConfigureEMAHorizons(stats_ema_list const &ema_horizons);
+
+		// Return the biggest EMA rate value
+	double BiggestEMARate() const;
+
+		// Return the name of EMA value with the shortest horizon
+	char const *ShortestHorizonEMARateName() const;
+
+		// Return the named EMA rate value
+	double EMARate(char const *horizon_name) const;
+
+		// bits used in Publish() flags
+	static const int PubValue = 1;
+	static const int PubEMA = 2;
+	static const int PubDecorateAttr = 0x100;
+	static const int PubDecorateLoadAttr = 0x200;
+	static const int PubSuppressInsufficientDataEMA = 0x300;
+	static const int PubDefault = PubValue | PubEMA | PubDecorateAttr | PubDecorateLoadAttr | PubSuppressInsufficientDataEMA;
+
+	void Publish(ClassAd & ad, const char * pattr, int flags) const;
+	void Unpublish(ClassAd & ad, const char * pattr) const;
+
+		// We don't have a ring buffer, so cSlots has no meaning, but we still define AdvanceBy()
+		// so that our Update() function will get called automatically by the statistics pool.
+	void AdvanceBy(int cSlots) { 
+		if (cSlots <= 0) 
+			return;
+		Update( time(NULL) );
+	}
+
+		// operator overloads
+	stats_entry_sum_ema_rate<T>& operator=(T val)  { Set(val); return *this; }
+	stats_entry_sum_ema_rate<T>& operator+=(T val) { Add(val); return *this; }
+
+		// callback methods/fetchers for use by the StatisticsPool class
+	static const int unit = IS_CLS_SUM_EMA_RATE | stats_entry_type<T>::id;
+	static void Delete(stats_entry_sum_ema_rate<T> * probe) { delete probe; }
+	static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return (FN_STATS_ENTRY_UNPUBLISH)&stats_entry_sum_ema_rate<T>::Unpublish; };
+	static FN_STATS_ENTRY_ADVANCE GetFnAdvance() { return (FN_STATS_ENTRY_ADVANCE)&stats_entry_sum_ema_rate<T>::AdvanceBy; };
 };
 
 // use stats_entry_recent for values that are constantly increasing, such 

@@ -1118,6 +1118,181 @@ void StatisticsPool::Unpublish(ClassAd & ad, const char * prefix) const
       }
 }
 
+template <class T>
+void stats_entry_sum_ema_rate<T>::ConfigureEMAHorizons(stats_ema_list const &ema_horizons) {
+		// remove ema entries from the existing ema list that do not exist in ema_horizons
+	for(stats_ema_list::iterator old_ema_itr = ema.begin();
+		old_ema_itr != ema.end();)
+	{
+		bool found = 0;
+		for( stats_ema_list::const_iterator new_ema_itr = ema_horizons.begin();
+			 new_ema_itr != ema_horizons.end();
+			 ++new_ema_itr )
+		{
+			if( old_ema_itr->sameHorizon(*new_ema_itr) ) {
+				found = true;
+				break;
+			}
+		}
+		if( !found ) {
+			old_ema_itr = ema.erase(old_ema_itr);
+		}
+		else {
+			++old_ema_itr;
+		}
+	}
+
+		// add any entry that is in ema_horizons but not in the old ema list
+	for( stats_ema_list::const_iterator new_ema_itr = ema_horizons.begin();
+		 new_ema_itr != ema_horizons.end();
+		 ++new_ema_itr )
+	{
+		bool found = 0;
+		for( stats_ema_list::iterator old_ema_itr = ema.begin();
+			 old_ema_itr != ema.end();
+			 ++old_ema_itr )
+		{
+			if( old_ema_itr->sameHorizon(*new_ema_itr) ) {
+				found = true;
+				break;
+			}
+		}
+		if( !found ) {
+			ema.push_back( *new_ema_itr );
+		}
+	}
+}
+
+bool ParseEMAHorizonConfiguration(char const *ema_conf,stats_ema_list &ema_horizons,std::string &error_str) {
+		// expected format of ema_conf:
+		// "name1:horizon1 name2:horizon2 ..."
+		// Example: "1m:60 1h:3600 1d:86400"
+
+	ASSERT( ema_conf );
+	ema_horizons.clear();
+	while( *ema_conf ) {
+		while( isspace(*ema_conf) || *ema_conf == ',' ) ema_conf++;
+		if( *ema_conf == '\0' ) break;
+
+		char const *colon = strchr(ema_conf,':');
+		if( !colon ) {
+			error_str = "expecting NAME1:SECONDS1 NAME2:SECONDS2 ...";
+			return false;
+		}
+		std::string horizon_name;
+		horizon_name.append(ema_conf,colon-ema_conf);
+		char *horizon_end=NULL;
+		time_t horizon = (time_t)strtol(colon+1,&horizon_end,10);
+		if( horizon_end == colon+1 || (!isspace(*horizon_end) && *horizon_end != ',' && *horizon_end) ) {
+			error_str = "expecting NAME1:SECONDS1 NAME2:SECONDS2 ...";
+			return false;
+		}
+		ema_horizons.push_back(stats_ema(horizon,horizon_name.c_str()));
+
+		ema_conf = horizon_end;
+	}
+	return true;
+}
+
+template <class T>
+void stats_entry_sum_ema_rate<T>::Publish(ClassAd & ad, const char * pattr, int flags) const { 
+	if ( ! flags) flags = PubDefault;
+	if (flags & this->PubValue) {
+		ClassAdAssign(ad, pattr, this->value);
+	}
+	if (flags & this->PubEMA) {
+		for(stats_ema_list::const_iterator ema_itr = ema.begin();
+			ema_itr != ema.end();
+			++ema_itr )
+		{
+			if( (flags & PubSuppressInsufficientDataEMA) && ema_itr->insufficientData() ) {
+				continue;
+			}
+			if( !(flags & this->PubDecorateAttr) ) {
+				ClassAdAssign(ad, pattr, ema_itr->ema);
+			}
+			else {
+				std::string attr_name;
+				size_t pattr_len;
+				if( (flags & this->PubDecorateLoadAttr) && (pattr_len=strlen(pattr)) >= 7 && strcmp(pattr+pattr_len-7,"Seconds")==0 ) {
+						// Instead of reporting BlahSecondsPerSecond, report BlahLoad
+					formatstr(attr_name,"%.*sLoad_%s",(int)(pattr_len-7),pattr,ema_itr->horizon_name.c_str());
+				}
+				else {
+					formatstr(attr_name,"%sPerSecond_%s",pattr,ema_itr->horizon_name.c_str());
+				}
+				ClassAdAssign(ad, attr_name.c_str(), ema_itr->ema);
+			}
+		}
+	}
+}
+
+template <class T>
+void stats_entry_sum_ema_rate<T>::Unpublish(ClassAd & ad, const char * pattr) const {
+	ad.Delete(pattr);
+	for(stats_ema_list::const_iterator ema_itr = ema.begin();
+		ema_itr != ema.end();
+		++ema_itr )
+	{
+		std::string attr_name;
+		size_t pattr_len;
+		if( (pattr_len=strlen(pattr)) >= 7 && strcmp(pattr+pattr_len-7,"Seconds")==0 ) {
+			formatstr(attr_name,"%.*sLoad_%s",(int)(pattr_len-7),pattr,ema_itr->horizon_name.c_str());
+		}
+		else {
+			formatstr(attr_name,"%sPerSecond_%s",pattr,ema_itr->horizon_name.c_str());
+		}
+		ad.Delete(attr_name.c_str());
+	}
+}
+
+template <class T>
+double stats_entry_sum_ema_rate<T>::BiggestEMARate() const {
+	double biggest = 0.0;
+	bool first = true;
+	for(stats_ema_list::const_iterator ema_itr = ema.begin();
+		ema_itr != ema.end();
+		++ema_itr )
+	{
+		if( first || ema_itr->ema > biggest ) {
+			biggest = ema_itr->ema;
+			first = false;
+		}
+	}
+	return biggest;
+}
+
+template <class T>
+char const *stats_entry_sum_ema_rate<T>::ShortestHorizonEMARateName() const {
+	char const *shortest_horizon_name = NULL;
+	time_t shortest_horizon = 0;
+	bool first = true;
+	for(stats_ema_list::const_iterator ema_itr = ema.begin();
+		ema_itr != ema.end();
+		++ema_itr )
+	{
+		if( first || ema_itr->horizon > shortest_horizon ) {
+			shortest_horizon_name = ema_itr->horizon_name.c_str();
+			shortest_horizon = ema_itr->horizon;
+			first = false;
+		}
+	}
+	return shortest_horizon_name;
+}
+
+template <class T>
+double stats_entry_sum_ema_rate<T>::EMARate(char const *horizon_name) const {
+	for(stats_ema_list::const_iterator ema_itr = ema.begin();
+		ema_itr != ema.end();
+		++ema_itr )
+	{
+		if( ema_itr->horizon_name == horizon_name ) {
+			return ema_itr->ema;
+		}
+	}
+	return 0.0;
+}
+
 template class stats_entry_recent<int>;
 template class stats_entry_recent_histogram<long>;
 
@@ -1136,7 +1311,16 @@ void generic_stats_force_refs()
    stats_entry_recent_histogram< int64_t >* ph = new stats_entry_recent_histogram< int64_t >();
    stats_entry_recent_histogram< time_t >* pm = new stats_entry_recent_histogram< time_t >();
    stats_recent_counter_timer* pc = NULL;
+   stats_entry_sum_ema_rate<double> *ema = NULL;
+   ClassAd ad;
+   stats_ema_list ema_list;
 
+   ema->ConfigureEMAHorizons(ema_list);
+   ema->Publish(ad,NULL,0);
+   ema->Unpublish(ad,NULL);
+   ema->BiggestEMARate();
+   ema->ShortestHorizonEMARateName();
+   ema->EMARate(NULL);
    ph->value.set_levels(NULL, 0);
    ph->value.Add(1);
    ph->value.Remove(1);

@@ -962,6 +962,12 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD  "TransferQueueNumWaitingToDownload"
 #define ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME  "TransferQueueUploadWaitTime"
 #define ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME  "TransferQueueDownloadWaitTime"
+#define ATTR_FILE_TRANSFER_UPLOAD_BYTES_PER_SECOND "FileTransferUploadBytesPerSecond"
+#define ATTR_FILE_TRANSFER_DOWNLOAD_BYTES_PER_SECOND "FileTransferDownloadBytesPerSecond"
+#define ATTR_FILE_TRANSFER_UPLOAD_DISK_LOAD "FileTransferUploadDiskLoad"
+#define ATTR_FILE_TRANSFER_DOWNLOAD_DISK_LOAD "FileTransferDownloadDiskLoad"
+#define ATTR_FILE_TRANSFER_UPLOAD_NET_LOAD "FileTransferUploadNetLoad"
+#define ATTR_FILE_TRANSFER_DOWNLOAD_NET_LOAD "FileTransferDownloadNetLoad"
 #define ATTR_MACHINE_MAX_VACATE_TIME  "MachineMaxVacateTime"
 #define ATTR_JOB_MAX_VACATE_TIME  "JobMaxVacateTime"
 #define ATTR_WANT_GRACEFUL_REMOVAL  "WantGracefulRemoval"
@@ -995,6 +1001,8 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 
 #define ATTR_QUERY_EXPIRES "Expires"
 #define ATTR_MAX_TRANSFER_BYTES "MaxTransferBytes"
+
+#define ATTR_REPORT_INTERVAL "ReportInterval"
 
 // Enumerate the ones that can't be constant strings..
 typedef enum

@@ -124,6 +124,16 @@ DCTransferQueue::DCTransferQueue( TransferQueueContactInfo &contact_info )
 	m_xfer_queue_sock = NULL;
 	m_xfer_queue_pending = false;
 	m_xfer_queue_go_ahead = false;
+
+	m_last_report = 0;
+	m_next_report = 0;
+	m_report_interval = 0;
+	m_recent_bytes_sent = 0;
+	m_recent_bytes_received = 0;
+	m_recent_usec_file_read = 0;
+	m_recent_usec_file_write = 0;
+	m_recent_usec_net_read = 0;
+	m_recent_usec_net_write = 0;
 }
 
 DCTransferQueue::~DCTransferQueue( void )
@@ -314,6 +324,15 @@ DCTransferQueue::PollForTransferQueueSlot(int timeout,bool &pending,MyString &er
 		goto request_failed;
 	}
 
+	{
+		int report_interval = 0;
+		if( msg.LookupInteger(ATTR_REPORT_INTERVAL,report_interval) ) {
+			m_report_interval = (unsigned)report_interval;
+			m_last_report.getTime();
+			m_next_report = m_last_report.seconds() + m_report_interval;
+		}
+	}
+
 	m_xfer_queue_pending = false;
 	pending = m_xfer_queue_pending;
 	return true;
@@ -331,6 +350,9 @@ void
 DCTransferQueue::ReleaseTransferQueueSlot()
 {
 	if( m_xfer_queue_sock ) {
+		if( m_report_interval ) {
+			SendReport(time(NULL),true);
+		}
 		delete m_xfer_queue_sock;
 		m_xfer_queue_sock = NULL;
 	}
@@ -375,3 +397,48 @@ DCTransferQueue::CheckTransferQueueSlot()
 	return true;
 }
 
+void
+DCTransferQueue::SendReport(time_t now,bool disconnect)
+{
+	std::string report;
+	UtcTime now_usec;
+	now_usec.getTime();
+	long interval = now_usec.difference_usec(m_last_report);
+	if( interval < 0 ) {
+		interval = 0;
+	}
+	formatstr(report,"%u %u %u %u %u %u %u %u",
+			  (unsigned)now,
+			  (unsigned)interval,
+			  m_recent_bytes_sent,
+			  m_recent_bytes_received,
+			  m_recent_usec_file_read,
+			  m_recent_usec_file_write,
+			  m_recent_usec_net_read,
+			  m_recent_usec_net_write);
+
+	if( m_xfer_queue_sock ) {
+		m_xfer_queue_sock->encode();
+		if ( !m_xfer_queue_sock->put(report.c_str()) ||
+			 !m_xfer_queue_sock->end_of_message() )
+		{
+			dprintf(D_FULLDEBUG,"Failed to send transfer queue i/o report.\n");
+		}
+	}
+
+	if( disconnect ) {
+			// Tell the server we are done.
+		m_xfer_queue_sock->put("");
+		m_xfer_queue_sock->end_of_message();
+	}
+
+	m_recent_bytes_sent = 0;
+	m_recent_bytes_received = 0;
+	m_recent_usec_file_read = 0;
+	m_recent_usec_file_write = 0;
+	m_recent_usec_net_read = 0;
+	m_recent_usec_net_write = 0;
+
+	m_last_report = now_usec;
+	m_next_report = now + m_report_interval;
+}
