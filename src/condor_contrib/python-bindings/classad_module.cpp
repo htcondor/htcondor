@@ -83,6 +83,9 @@ void *convert_to_FILEptr(PyObject* obj) {
     return PyFile_Check(obj) ? PyFile_AsFile(obj) : 0;
 }
 
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(setdefault_overloads, setdefault, 1, 2);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(get_overloads, get, 1, 2);
+
 BOOST_PYTHON_MODULE(classad)
 {
     using namespace boost::python;
@@ -117,6 +120,8 @@ BOOST_PYTHON_MODULE(classad)
         .def("__len__", &ClassAdWrapper::size)
         .def("lookup", &ClassAdWrapper::LookupExpr, "Lookup an attribute and return a ClassAd expression.  This method will not attempt to evaluate it to a python object.")
         .def("printOld", &ClassAdWrapper::toOldString, "Represent this ClassAd as a string in the \"old ClassAd\" format.")
+        .def("get", &ClassAdWrapper::get, get_overloads("Retrieve a value from the ClassAd"))
+        .def("setdefault", &ClassAdWrapper::setdefault, setdefault_overloads("Set a default value for a ClassAd"))
         ;
 
     class_<ExprTreeHolder>("ExprTree", "An expression in the ClassAd language", init<std::string>())

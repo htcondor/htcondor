@@ -83,6 +83,21 @@ class TestClassad(unittest.TestCase):
         self.assertTrue(isinstance(ad.lookup("foo"), classad.ExprTree))
         self.assertEquals(ad.lookup("foo").eval(), classad.Value.Error)
 
+    def test_get(self):
+        ad = classad.ClassAd()
+        self.assertEquals(ad.get("foo"), None)
+        self.assertEquals(ad.get("foo", "bar"), "bar")
+        ad["foo"] = "baz"
+        self.assertEquals(ad.get("foo"), "baz")
+        self.assertEquals(ad.get("foo", "bar"), "baz")
+
+    def test_setdefault(self):
+        ad = classad.ClassAd()
+        self.assertEquals(ad.setdefault("foo", "bar"), "bar")
+        self.assertEquals(ad.get("foo"), "bar")
+        ad["bar"] = "baz"
+        self.assertEquals(ad.setdefault("bar", "foo"), "baz")
+
 if __name__ == '__main__':
     unittest.main()
 
