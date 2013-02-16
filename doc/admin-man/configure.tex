@@ -5541,15 +5541,16 @@ MAX_JOBS_RUNNING	= \
 
 \label{param:FlockIncrement}
 \item[\Macro{FLOCK\_INCREMENT}]
-  This configuration variable controls how quickly flocking to various
-  pools will occur.  The variable defaults to 1, meaning that pools will
-  be considered for flocking slowly: the first collector in
-  \Macro{FLOCK\_COLLECTOR\_HOSTS} will be considered for flocking, then
-  the second, and so on.  Setting this number to bigger than one will
-  cause more than one collector to be considered for flocking; setting
-  this number to 2, for example, will partition the
-  \Macro{FLOCK\_COLLECTOR\_HOSTS} into sets of 2 collectors, and each
-  set will be considered for flocking.
+  This integer value controls how quickly flocking to various
+  pools will occur.  It defaults to 1, meaning that pools will
+  be considered for flocking slowly. 
+  The first \Condor{collector} daemon listed in
+  \Macro{FLOCK\_COLLECTOR\_HOSTS} will be considered for flocking, and then
+  the second, and so on.  A larger value increases the number of 
+  \Condor{collector} daemons to be considered for flocking.
+  For example, a value of 2 will partition the
+  \Macro{FLOCK\_COLLECTOR\_HOSTS} into sets of 2 \Condor{collector} daemons,
+  and each set will be considered for flocking.
 
   \label{param:NegotiateAllJobsInCluster}
 \item[\Macro{NEGOTIATE\_ALL\_JOBS\_IN\_CLUSTER}]
@@ -6364,6 +6365,12 @@ These settings affect the \Condor{starter}.
   There is no default value for this variable.
   Since values larger than 2047 have no real meaning on 32-bit platforms,
   values larger than 2047 result in no limit set on 32-bit platforms.
+
+\label{param:UsePidNamespaces} 
+\item[ \Macro{USE\_PID\_NAMESPACES}]
+  A boolean value that, when \Expr{True}, enables the use of per job PID
+  namespaces for HTCondor jobs run on Linux kernels.
+  Defaults to \Expr{False}.
 
 \end{description}
 

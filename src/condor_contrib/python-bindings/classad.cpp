@@ -162,6 +162,33 @@ boost::python::object ClassAdWrapper::LookupWrap(const std::string &attr) const
     return result;
 }
 
+boost::python::object ClassAdWrapper::get(const std::string attr, boost::python::object default_result) const
+{
+    classad::ExprTree * expr = Lookup(attr);
+    if (!expr)
+    {
+        return default_result;
+    }
+    if (expr->GetKind() == classad::ExprTree::LITERAL_NODE) return EvaluateAttrObject(attr);
+    ExprTreeHolder holder(expr);
+    boost::python::object result(holder);
+    return result;
+}
+
+boost::python::object ClassAdWrapper::setdefault(const std::string attr, boost::python::object default_result)
+{
+    classad::ExprTree *expr = Lookup(attr);
+    if (!expr)
+    {
+        InsertAttrObject(attr, default_result);
+        return default_result;
+    }
+    if (expr->GetKind() == classad::ExprTree::LITERAL_NODE) return EvaluateAttrObject(attr);
+    ExprTreeHolder holder(expr);
+    boost::python::object result(holder);
+    return result;
+}
+
 boost::python::object ClassAdWrapper::LookupExpr(const std::string &attr) const
 {
     classad::ExprTree * expr = Lookup(attr);

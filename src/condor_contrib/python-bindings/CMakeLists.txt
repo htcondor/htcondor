@@ -1,5 +1,8 @@
 
-option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
+
+if (PYTHONLIBS_FOUND)
+    option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
+endif()
 
 if ( LINUX AND WITH_PYTHON_BINDINGS )
   configure_file (
@@ -14,7 +17,6 @@ if ( LINUX AND WITH_PYTHON_BINDINGS )
 
   set ( CMAKE_LIBRARY_PATH_ORIG ${CMAKE_LIBRARY_PATH} )
   set ( CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /usr/lib64 )
-  find_package(PythonLibs REQUIRED)
   set ( CMAKE_LIBRARY_PATH CMAKE_LIBRARY_PATH_ORIG)
 
   include_directories(${PYTHON_INCLUDE_DIRS})

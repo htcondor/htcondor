@@ -63,6 +63,10 @@ struct ClassAdWrapper : classad::ClassAd, boost::python::wrapper<classad::ClassA
 
     AttrItemIter endItems();
 
+    boost::python::object get(const std::string attr, boost::python::object result=boost::python::object()) const;
+
+    boost::python::object setdefault(const std::string attr, boost::python::object result=boost::python::object());
+
     ClassAdWrapper();
 
     ClassAdWrapper(const std::string &str);

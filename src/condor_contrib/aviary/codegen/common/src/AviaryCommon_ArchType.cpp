@@ -21,6 +21,7 @@
        #  if __GNUC_MINOR__ >= 6
        #pragma GCC diagnostic ignored "-Wenum-compare"
        #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+       #pragma GCC diagnostic ignored "-Wunused-but-set-parameter"
        #  endif
        #  if __GNUC_MINOR__ >= 7
        #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
@@ -304,6 +305,9 @@
                  if (axutil_strcmp(property_ArchType.c_str(), "X86_64") == 0)
                     return ArchType_X86_64;
              
+                 if (axutil_strcmp(property_ArchType.c_str(), "OTHER") == 0)
+                    return ArchType_OTHER;
+             
              
                  /* Error: none of the strings matched; invalid enum value */
                  return (ADBArchTypeEnum)-1;
@@ -335,6 +339,12 @@
                             
                             
                             property_ArchType = "X86_64";
+                          break;
+                     
+                       case ArchType_OTHER :
+                            
+                            
+                            property_ArchType = "OTHER";
                           break;
                      
                      
