@@ -1,4 +1,8 @@
 
+// Note - pyconfig.h must be included before condor_common to avoid
+// re-definition warnings.
+# include <pyconfig.h>
+
 #include "condor_common.h"
 
 #include <boost/python.hpp>

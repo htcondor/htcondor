@@ -1,4 +1,8 @@
 
+// Note - pyconfig.h must be included before condor_common to avoid
+// re-definition warnings.
+# include <pyconfig.h>
+
 #include <string>
 
 #include <classad/source.h>
