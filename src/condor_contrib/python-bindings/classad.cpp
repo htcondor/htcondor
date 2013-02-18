@@ -363,6 +363,6 @@ ClassAdWrapper::ClassAdWrapper(const std::string &str)
         boost::python::throw_error_already_set();
     }
     CopyFrom(*result);
-    result;
+    delete result;
 }
 

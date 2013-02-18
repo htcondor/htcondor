@@ -6,6 +6,12 @@ import unittest
 
 class TestClassad(unittest.TestCase):
 
+    def test_classad_constructor(self):
+        ad = classad.ClassAd('[foo = "1"; bar = 2]')
+        self.assertEquals(ad['foo'], "1")
+        self.assertEquals(ad['bar'], 2)
+        self.assertRaises(KeyError, ad.__getitem__, 'baz')
+
     def test_load_classad_from_file(self):
         ad = classad.parse(open("tests/test.ad"))
         self.assertEqual(ad["foo"], "bar")

@@ -197,7 +197,7 @@ bool userlog_to_classads(const char *filename, ClassAdList &classads, CondorID* 
 
 	{
 	  classad::Value v;
-	  int i;
+	  int i = 0;
 	  if (jobClassAd->EvaluateExpr("NumJobStarts+1",v) && v.IsIntegerValue(i)) {
 	    jobClassAd->InsertAttr("NumJobStarts",i);
 	  } else {
@@ -302,7 +302,7 @@ bool userlog_to_classads(const char *filename, ClassAdList &classads, CondorID* 
 	}
 	{
 	  classad::Value v;
-	  int i;
+	  int i = 0;
 	  if (jobClassAd->EvaluateExpr("TotalSuspensions+1",v) && v.IsIntegerValue(i)) {
 	    jobClassAd->InsertAttr("TotalSuspensions",i);
 	  } else {
@@ -464,7 +464,7 @@ bool userlog_to_classads(const char *filename, ClassAdList &classads, CondorID* 
       	jobClassAd->InsertAttr("HoldReasonSubCode",hold_event->getReasonSubCode());
 	if (hold_event->getReasonCode()!=1) {
 	  classad::Value v;
-	  int i;
+	  int i = 0;
 	  if (jobClassAd->EvaluateExpr("NumSystemHolds+1",v) && v.IsIntegerValue(i)) {
 	    jobClassAd->InsertAttr("NumSystemHolds",i);
 	  } else {
