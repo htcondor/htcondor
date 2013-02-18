@@ -85,7 +85,7 @@ The \Code{htcondor} module interacts with the \Condor{schedd} and
 The \Code{classad} module provides an interface to work with ClassAds.
 \Ticket{3407}
 
-\item We introduced \Condor{gpu_discovery}, a code that will obtain NVIDIA GPU
+\item We introduced \Condor{gpu\_discovery}, a code that will obtain NVIDIA GPU
 properties provided that the NVIDIA GPUs are correctly setup and that the
 correct NVIDIA libraries (CUDA Run Time and NVML) are installed.
 \Ticket{3386}
@@ -128,6 +128,11 @@ defaults to a value of 1, rather than 0.
 See the definition at section~\ref{param:DAGManUseStrict}.
 \Ticket{3418}
 
+\item The new configuration variable \Macro{GRACEFULLY\_REMOVE\_JOBS}
+is a boolean value that controls whether jobs to be removed are 
+gracefully removed.
+The default is to do graceful removal.
+\Ticket{3470}
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -163,6 +168,10 @@ to fail when submitted to an HTCondor cluster with a large history file.
 \item The interactive mode of \Condor{submit} would fail when used
 with a submit file containing the Arguments or Arguments2 keyword.
 \Ticket{3455}
+
+\item The semantics of signals sent to jobs were changed.
+They have been changed back to the semantics defined in version 7.6.   
+\Ticket{3470}
 
 \end{itemize}
 

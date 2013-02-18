@@ -5690,6 +5690,13 @@ SYSTEM_PERIODIC_REMOVE = \
   communicate with the central manager. The default value, if not
   specified, is 1200 (20 minutes).
 
+\label{param:GracefullyRemoveJobs}
+\item[\Macro{GRACEFULLY\_REMOVE\_JOBS}]
+  A boolean value that causes jobs to be gracefully removed when the
+  default value of \Expr{True}.
+  A submit description file command \SubmitCmd{want\_graceful\_removal}
+  overrides the value set for this configuration variable.
+
 \label{param:ScheddRoundAttr}
 \item[\Macro{SCHEDD\_ROUND\_ATTR\_<xxxx>}]
   This is used to round off attributes in
