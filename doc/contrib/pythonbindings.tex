@@ -4,15 +4,22 @@
 \index{API!Python bindings}
 \index{Python bindings}
 
-The Python module provides bindings to the client-side APIs for HTCondor.  
-It tries to provide functionality similar to the HTCondor command line tools.
-Further improvements are planned for the difficult to use submission API.
+The Python module provides bindings to the client-side APIs for HTCondor and
+the ClassAd language.
+
+These Python bindings depend on loading the HTCondor shared libraries; this
+means the same code is used here as the HTCondor client tools.  It is more
+efficient in terms of memory and CPU to utilize these bindings than to parse
+the output of the HTCondor client tools when writing applications in Python.
+
+Currently, the Python bindings are only available on Linux platforms.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{Python-OtherModule} \texttt{htcondor}  Module}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-The \texttt{htcondor} module attempts to wrap a C++ API that is
-far less formal when compared to the ClassAd language.
+The \texttt{htcondor} module provides a client interface to the various 
+HTCondor daemons. It tries to provide functionality similar to the HTCondor 
+command line tools.
 
 \textbf{\texttt{htcondor} module functions:}
 \begin{flushleft}
@@ -59,7 +66,8 @@ in the current HTCondor configuration.
 \texttt{\_\_init\_\_( classad )}
 
 Create an instance of the \texttt{Schedd} class.  
-The single, optional parameter, \texttt{classAd}, 
+
+Optional parameter \texttt{classad} 
 describes the location of the remote \Condor{schedd} daemon.
 If the parameter is omitted, the local \Condor{schedd} daemon is used.
 \\ \hline
@@ -104,14 +112,16 @@ Parameter \texttt{attr\_list} is a list of attributes for the \Condor{schedd}
 daemon to project along.  
 It defaults to having the \Condor{schedd} daemon return all attributes.
 \\ \hline
-\texttt{submit( ad, count = 1 )}
+\texttt{submit( ad, count = 1, spool = false, ad\_results = None )}
 
 Submit one or more jobs to the \Condor{schedd} daemon.
 Returns the newly created cluster ID.
 
-This method requires the invoker to provide a full ClassAd for the new job;
-such a ClassAd is much more complex than the contents of 
-a submit description file.
+This method requires the invoker to provide a ClassAd for the new job cluster;
+such a ClassAd contains attributes with different names than the commands in
+a submit description file.  As an example, the stdout file is referred to as
+\texttt{output} in the submit description file,
+but \texttt{Out} in the ClassAd.
 To generate an example ClassAd, 
 take a sample submit description file and invoke 
 
@@ -119,16 +129,34 @@ take a sample submit description file and invoke
 
 Then, load the resulting contents of <filename> into Python.
 
-The submission does not perform any file staging.  
-Thus, the current implementation's interface is only useful for submitting jobs 
-to the local \Condor{schedd} daemon.
-
-
 Parameter \texttt{ad} is the ClassAd describing the job cluster.
 
 Parameter \texttt{count} is the number of jobs to submit to the cluster.
 Defaults to 1.
+
+Parameter \texttt{spool} inserts the necessary attributes into the job for it
+to have the input files spooled to a remote \Condor{schedd} daemon.
+This parameter is necessary for jobs submitted to a remote \Condor{schedd}.
+
+Parameter \texttt{ad\_results}, if set to a list, 
+will contain the job ClassAds resulting from the job submission.
+These are useful for interacting with the job spool at a later time.
 \\ \hline
+\texttt{spool( ad\_list )}
+
+Spools the files specified in a list of job ClassAds to the \Condor{schedd}.
+Throws a RuntimeError exception if there are any errors.
+
+Parameter \texttt{ad\_list} is a list of ClassAds containing job descriptions;
+typically, this is the list filled by the \texttt{ad\_results} argument of the 
+\texttt{submit} method call.
+\\ \hline
+\texttt{retrieve( job\_spec )}
+
+Retrieve the output sandbox from one or more jobs.
+
+Parameter \texttt{job\_spec} is an expression string matching 
+the list of job output sandboxes to retrieve.
 
 \end{tabular}
 \end{flushleft}
@@ -141,13 +169,13 @@ Defaults to 1.
 
 Create an instance of the \texttt{Collector} class.  
 
-The optional parameter \texttt{pool} is a string with host:port pair specified.
+Optional parameter \texttt{pool} is a string with host:port pair specified.
 If omitted, the local \Condor{schedd} daemon is used.
 \\ \hline
 \texttt{locate( (DaemonTypes)daemon\_type, (str)name )}
 
 Query the \Condor{collector} for a particular daemon.
-Returns The ClassAd of the requested daemon.
+Returns the ClassAd of the requested daemon.
 
 Parameter \texttt{daemon\_type} is the type of daemon; 
 must be of the enum \texttt{DaemonTypes}. 
@@ -342,11 +370,11 @@ Returns a ClassAd object.
 Parameter \texttt{input} is a string-like object or a file pointer.
 \\ \hline
 
-\texttt{parseOld}
+\texttt{parseOld( )}
 
 Parse old ClassAd format input into a ClassAd.
 \\ \hline
-\texttt{version}
+\texttt{version( )}
 
 Return the version of the linked ClassAd library.
 \\ \hline
@@ -464,7 +492,7 @@ Parse the string \texttt{str} to create an \texttt{ExprTree}.
 
 Represent and return the ClassAd expression as a string.
 \\ \hline
-\texttt{eval()}
+\texttt{eval( )}
 
 Evaluate the expression and return as a ClassAd value, 
 typically a Python object.
