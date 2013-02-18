@@ -94,6 +94,7 @@
 #include "ClassAdLogPlugin.h"
 #endif
 #endif
+#include <algorithm>
 
 #if defined(WINDOWS) && !defined(MAXINT)
 	#define MAXINT INT_MAX
@@ -453,7 +454,6 @@ Scheduler::Scheduler() :
 
 	ShadowSizeEstimate = 0;
 
-	N_Owners = 0;
 	NegotiationRequestTime = 0;
 
 		//gotiator = NULL;
@@ -474,6 +474,7 @@ Scheduler::Scheduler() :
 	numShadows = 0;
 	FlockCollectors = NULL;
 	FlockNegotiators = NULL;
+	// MaxFlockLevel is the number of Collectors/Negotiators in the above list
 	MaxFlockLevel = 0;
 	FlockLevel = 0;
 	StartJobTimer=-1;
@@ -614,15 +615,6 @@ Scheduler::~Scheduler()
 	if ( checkContactQueue_tid != -1 && daemonCore ) {
 		daemonCore->Cancel_Timer(checkContactQueue_tid);
 	}
-
-	int i;
-	for( i=0; i<N_Owners; i++) {
-		if( Owners[i].Name ) { 
-			free( Owners[i].Name );
-			Owners[i].Name = NULL;
-		}
-	}
-
 	if (_gridlogic) {
 		delete _gridlogic;
 	}
@@ -817,16 +809,16 @@ Scheduler::check_claim_request_timeouts()
 bool
 Scheduler::fill_submitter_ad(ClassAd & pAd, int owner_num, int flock_level)
 {
-	const int i = owner_num;
 	const int dprint_level = D_FULLDEBUG;
+	OwnerData& owner = Owners[owner_num];
 	const bool want_dprintf = flock_level < 1; // dprintf if not flocking
 
-	if (Owners[i].FlockLevel >= flock_level) {
-		pAd.Assign(ATTR_IDLE_JOBS, Owners[i].JobsIdle);
+	if (owner.FlockLevel >= flock_level) {
+		pAd.Assign(ATTR_IDLE_JOBS, owner.JobsIdle);
 		if (want_dprintf)
-			dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_JOBS, Owners[i].JobsIdle);
-	} else if (Owners[i].OldFlockLevel >= flock_level ||
-				Owners[i].JobsRunning > 0) {
+			dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_JOBS, owner.JobsIdle);
+	} else if (owner.OldFlockLevel >= flock_level ||
+				owner.JobsRunning > 0) {
 		pAd.Assign(ATTR_IDLE_JOBS, (int)0);
 	} else {
 		// if we're no longer flocking with this pool and
@@ -835,26 +827,26 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, int owner_num, int flock_level)
 		return false;
 	}
 
-	pAd.Assign(ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
+	pAd.Assign(ATTR_RUNNING_JOBS, owner.JobsRunning);
 	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_RUNNING_JOBS, Owners[i].JobsRunning);
+		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_RUNNING_JOBS, owner.JobsRunning);
 
-	pAd.Assign(ATTR_IDLE_JOBS, Owners[i].JobsIdle);
+	pAd.Assign(ATTR_IDLE_JOBS, owner.JobsIdle);
 	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_JOBS, Owners[i].JobsIdle);
+		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_JOBS, owner.JobsIdle);
 
-	pAd.Assign(ATTR_HELD_JOBS, Owners[i].JobsHeld);
+	pAd.Assign(ATTR_HELD_JOBS, owner.JobsHeld);
 	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_HELD_JOBS, Owners[i].JobsHeld);
+		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_HELD_JOBS, owner.JobsHeld);
 
-	pAd.Assign(ATTR_FLOCKED_JOBS, Owners[i].JobsFlocked);
+	pAd.Assign(ATTR_FLOCKED_JOBS, owner.JobsFlocked);
 	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_FLOCKED_JOBS, Owners[i].JobsFlocked);
+		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_FLOCKED_JOBS, owner.JobsFlocked);
 
 	MyString str;
 	if ( param_boolean("USE_GLOBAL_JOB_PRIOS",false) ) {
 		int max_entries = param_integer("MAX_GLOBAL_JOB_PRIOS",500);
-		int num_prios = Owners[i].PrioSet.size();
+		int num_prios = owner.PrioSet.size();
 		if (num_prios > max_entries) {
 			pAd.Assign(ATTR_JOB_PRIO_ARRAY_OVERFLOW, num_prios);
 			if (want_dprintf)
@@ -867,8 +859,8 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, int owner_num, int flock_level)
 		// reverse iterator to go high to low prio
 		std::set<int>::reverse_iterator rit;
 		int num_entries = 0;
-		for (rit=Owners[i].PrioSet.rbegin();
-			 rit!=Owners[i].PrioSet.rend() && num_entries < max_entries;
+		for (rit=owner.PrioSet.rbegin();
+			 rit!=owner.PrioSet.rend() && num_entries < max_entries;
 			 ++rit)
 		{
 			if ( !str.IsEmpty() ) {
@@ -883,10 +875,10 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, int owner_num, int flock_level)
 			dprintf (dprint_level, "Changed attribute: %s = %s\n", ATTR_JOB_PRIO_ARRAY,str.Value());
 	}
 
-	str.formatstr("%s@%s", Owners[i].Name, UidDomain);
+	str.formatstr("%s@%s", owner.Name.c_str(), UidDomain);
 	pAd.Assign(ATTR_NAME, str.Value());
 	if (want_dprintf)
-		dprintf (dprint_level, "Changed attribute: %s = %s@%s\n", ATTR_NAME, Owners[i].Name, UidDomain);
+		dprintf (dprint_level, "Changed attribute: %s = %s@%s\n", ATTR_NAME, owner.Name.c_str(), UidDomain);
 
 	return true;
 }
@@ -895,17 +887,102 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, int owner_num, int flock_level)
 ** Examine the job queue to determine how many CONDOR jobs we currently have
 ** running, and how many individual users own them.
 */
+
+struct OwnerSort {
+	bool operator()(const OwnerData& owner,const std::string& s) {
+		return owner.Name < s;
+	}
+	// this one needed for Debug builds in VS 2008. for set_FlockLevel
+	bool operator()(const OwnerData& owner,const OwnerData& s) {
+		return owner.Name < s.Name;
+	}
+};
+
+
+void OwnerArray::set_FlockLevel(const OwnerArray& oldOwners)
+{
+	for(std::vector<OwnerData>::iterator oit = owners.begin();
+			oit != owners.end(); ++oit) {
+		std::vector<OwnerData>::const_iterator lb =
+			std::lower_bound(oldOwners.owners.begin(),
+				oldOwners.owners.end(),	oit->Name,OwnerSort());	
+		if(lb != oldOwners.owners.end() && lb->Name == oit->Name) {
+			oit->FlockLevel = lb->FlockLevel;
+			oit->OldFlockLevel = lb->OldFlockLevel;
+			if(oit->JobsIdle) {
+				oit->NegotiationTimestamp = lb->NegotiationTimestamp;
+			}
+		}
+	}
+}
+
+int OwnerData::flock_increment = 1;
+
+int OwnerData::inc_flocking(int max)
+{
+	int ret = FlockLevel;
+	FlockLevel += flock_increment;
+	if(FlockLevel > max) FlockLevel = max;
+	if(FlockLevel < 0) FlockLevel = 0; // Just in case
+	return ret;
+}
+
+void OwnerArray::updateFlockLevel(time_t curr, int interval, int max, int* fl)
+{
+	for(std::vector<OwnerData>::iterator oit = owners.begin();
+			oit != owners.end(); ++oit) {
+		if((curr - oit->NegotiationTimestamp > interval * 2) &&
+				oit->FlockLevel < max) {
+			int oldfl = oit->inc_flocking(max);
+			oit->NegotiationTimestamp = curr;
+			dprintf(D_ALWAYS,
+					"Increasing flock level for %s to %d due to lack"
+					" of activity from negotiator at level %d.\n",
+					oit->Name.c_str(), oit->FlockLevel, oldfl);
+		}
+		if(fl && oit->FlockLevel > *fl) {
+			*fl = oit->FlockLevel;
+		}
+	}
+}
+
+int OwnerArray::insert(const char*p)
+{
+	std::string name = (p?p:"");
+	std::vector<OwnerData>::iterator lb =
+		std::lower_bound(owners.begin(),owners.end(),name,OwnerSort());	
+	int ret = std::distance(owners.begin(),lb);
+	
+	// I should not need to do this check
+	// Apparently it is a bug in c++ library
+	// in g++ NWP 20130111
+	if(lb == owners.end()) {
+		owners.push_back(name);
+	} else if(lb->Name != name) { // No element with that name found
+		owners.insert(lb,name); // Implicit conversion
+	}
+	return ret;
+}
+
+int OwnerArray::find(const std::string& s) const
+{
+	int ret = -1;
+	std::vector<OwnerData>::const_iterator lb =
+		std::lower_bound(owners.begin(),owners.end(), s,OwnerSort());	
+	if(lb != owners.end() && lb->Name == s) {
+		ret = std::distance(owners.begin(),lb);
+	} 
+	return ret;
+}
+
 int
 Scheduler::count_jobs()
 {
 	ClassAd * cad = m_adSchedd;
-	int		i, j;
+	int	i;
 
 	 // copy owner data to old-owners table
-	ExtArray<OwnerData> OldOwners(Owners);
-	int Old_N_Owners=N_Owners;
-
-	N_Owners = 0;
+	OwnerArray OldOwners(Owners);
 	JobsRunning = 0;
 	JobsIdle = 0;
 	JobsHeld = 0;
@@ -920,20 +997,7 @@ Scheduler::count_jobs()
 	stats.JobsRunningSizes = 0;
 
 	// clear owner table contents
-	time_t current_time = time(0);
-	for ( i = 0; i < Owners.getsize(); i++) {
-		Owners[i].Name = NULL;
-		Owners[i].Domain = NULL;
-		Owners[i].JobsRunning = 0;
-		Owners[i].JobsIdle = 0;
-		Owners[i].JobsHeld = 0;
-		Owners[i].JobsFlocked = 0;
-		Owners[i].FlockLevel = 0;
-		Owners[i].OldFlockLevel = 0;
-		Owners[i].NegotiationTimestamp = current_time;
-		Owners[i].PrioSet.clear();
-	}
-
+	Owners.clear();
 	GridJobOwners.clear();
 
 		// Clear out the DedicatedScheduler's list of idle dedicated
@@ -958,48 +1022,17 @@ Scheduler::count_jobs()
 		int OwnerNum = insert_owner( rec->user );
 		if (at_sign) *at_sign = '@';
 		if (rec->shadowRec && !rec->pool) {
-			Owners[OwnerNum].JobsRunning++;
+			++Owners[OwnerNum].JobsRunning;
 		} else {				// in remote pool, so add to Flocked count
-			Owners[OwnerNum].JobsFlocked++;
+			++Owners[OwnerNum].JobsFlocked;
 			JobsFlocked++;
 		}
 	}
 
 	// set FlockLevel for owners
 	if (MaxFlockLevel) {
-		for ( i=0; i < N_Owners; i++) {
-			for ( j=0; j < Old_N_Owners; j++) {
-				if (!strcmp(OldOwners[j].Name,Owners[i].Name)) {
-					Owners[i].FlockLevel = OldOwners[j].FlockLevel;
-					Owners[i].OldFlockLevel = OldOwners[j].OldFlockLevel;
-						// Remember our last negotiation time if we have
-						// idle jobs, so we can determine if the negotiator
-						// is ignoring us and we should flock.  If we don't
-						// have any idle jobs, we leave NegotiationTimestamp
-						// at its initial value (the current time), since
-						// we don't want any negotiations, and thus we don't
-						// want to timeout and increase our flock level.
-					if (Owners[i].JobsIdle) {
-						Owners[i].NegotiationTimestamp =
-							OldOwners[j].NegotiationTimestamp;
-					}
-				}
-			}
-			// if this owner hasn't received a negotiation in a long time,
-			// then we should flock -- we need this case if the negotiator
-			// is down or simply ignoring us because our priority is so low
-			if ((current_time - Owners[i].NegotiationTimestamp >
-				 SchedDInterval.getDefaultInterval()*2) && (Owners[i].FlockLevel < MaxFlockLevel)) {
-				Owners[i].FlockLevel++;
-				Owners[i].NegotiationTimestamp = current_time;
-				dprintf(D_ALWAYS,
-						"Increasing flock level for %s to %d due to lack of activity from negotiator at level %d.\n",
-						Owners[i].Name, Owners[i].FlockLevel, Owners[i].FlockLevel-1);
-			}
-			if (Owners[i].FlockLevel > FlockLevel) {
-				FlockLevel = Owners[i].FlockLevel;
-			}
-		}
+		Owners.set_FlockLevel(OldOwners);
+		Owners.updateFlockLevel(time(0),SchedDInterval.getDefaultInterval(),MaxFlockLevel, &FlockLevel);
 	}
 
 	dprintf( D_FULLDEBUG, "JobsRunning = %d\n", JobsRunning );
@@ -1014,7 +1047,7 @@ Scheduler::count_jobs()
 			SchedUniverseJobsRunning );
 	dprintf( D_FULLDEBUG, "SchedUniverseJobsIdle = %d\n",
 			SchedUniverseJobsIdle );
-	dprintf( D_FULLDEBUG, "N_Owners = %d\n", N_Owners );
+	dprintf( D_FULLDEBUG, "N_Owners = %d\n", Owners.size() );
 	dprintf( D_FULLDEBUG, "MaxJobsRunning = %d\n", MaxJobsRunning );
 
 	// later when we compute job priorities, we will need PrioRec
@@ -1024,7 +1057,7 @@ Scheduler::count_jobs()
 	// growing PrioRec... Add 5 just to be sure... :^) -Todd 8/97
 	grow_prio_recs( JobsRunning + JobsIdle + 5 );
 	
-	cad->Assign(ATTR_NUM_USERS, N_Owners);
+	cad->Assign(ATTR_NUM_USERS, Owners.size());
 	cad->Assign(ATTR_MAX_JOBS_RUNNING, MaxJobsRunning);
 
 	cad->AssignExpr(ATTR_START_LOCAL_UNIVERSE, this->StartLocalUniverse);
@@ -1136,7 +1169,7 @@ Scheduler::count_jobs()
 	int num_updates = daemonCore->sendUpdates(UPDATE_SCHEDD_AD, cad, NULL, true);
 	dprintf( D_FULLDEBUG, 
 			 "Sent HEART BEAT ad to %d collectors. Number of submittors=%d\n",
-			 num_updates, N_Owners );   
+			 num_updates, Owners.size() );   
 
 	// send the schedd ad to our flock collectors too, so we will
 	// appear in condor_q -global and condor_status -schedd
@@ -1171,12 +1204,12 @@ Scheduler::count_jobs()
 	pAd.Assign(ATTR_SUBMITTER_TAG,HOME_POOL_SUBMITTER_TAG);
 
 	MyString submitter_name;
-	for ( i=0; i<N_Owners; i++) {
+	for ( i=0; i<Owners.size(); i++) {
 
 	  if ( !fill_submitter_ad(pAd,i) ) continue;
 
 	  dprintf( D_ALWAYS, "Sent ad to central manager for %s@%s\n", 
-			   Owners[i].Name, UidDomain );
+			   Owners[i].Name.c_str(), UidDomain );
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
@@ -1186,7 +1219,7 @@ Scheduler::count_jobs()
 		// Update collectors
 	  num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, &pAd, NULL, true);
 	  dprintf( D_ALWAYS, "Sent ad to %d collectors for %s@%s\n", 
-			   num_updates, Owners[i].Name, UidDomain );
+			   num_updates, Owners[i].Name.c_str(), UidDomain );
 	}
 
 	// update collector of the pools with which we are flocking, if
@@ -1205,7 +1238,7 @@ Scheduler::count_jobs()
 			if( ! (flock_col && flock_neg) ) { 
 				continue;
 			}
-			for (i=0; i < N_Owners; i++) {
+			for (i=0; i < Owners.size(); i++) {
 				Owners[i].JobsRunning = 0;
 				Owners[i].JobsFlocked = 0;
 			}
@@ -1230,7 +1263,7 @@ Scheduler::count_jobs()
 				}
 			}
 			// update submitter ad in this pool for each owner
-			for (i=0; i < N_Owners; i++) {
+			for (i=0; i < Owners.size(); i++) {
 
 				if ( !fill_submitter_ad(pAd,i,flock_level) ) {
 					// if we're no longer flocking with this pool and
@@ -1250,7 +1283,7 @@ Scheduler::count_jobs()
 
 	pAd.Delete(ATTR_SUBMITTER_TAG);
 
-	for (i=0; i < N_Owners; i++) {
+	for (i=0; i < Owners.size(); i++) {
 		Owners[i].OldFlockLevel = Owners[i].FlockLevel;
 	}
 
@@ -1285,30 +1318,21 @@ Scheduler::count_jobs()
  	// send ads for owner that don't have jobs idle
 	// This is done by looking at the old owners list and searching for owners
 	// that are not in the current list (the current list has only owners w/ idle jobs)
-	for ( i=0; i<Old_N_Owners; i++) {
-
-		// check that the old name is not in the new list
-		int k;
-		for(k=0; k<N_Owners;k++) {
-		  if (!strcmp(OldOwners[i].Name,Owners[k].Name)) break;
-		}
+	for ( i=0; i<OldOwners.size(); i++) {
 
 		// In case we want to update this ad, we have to build the submitter
-		// name string that we will be assigning with before we free the owner name.
-		submitter_name.formatstr("%s@%s", OldOwners[i].Name, UidDomain);
-
-		// Now that we've finished using OldOwners[i].Name, we can
-		// free it.
-		if ( OldOwners[i].Name ) {
-			free(OldOwners[i].Name);
-			OldOwners[i].Name = NULL;
+		// name string.
+		submitter_name.formatstr("%s@%s", OldOwners[i].Name.c_str(), UidDomain);
+		
+		// check that the old name is not in the new list
+		if (Owners.find(OldOwners[i].Name) != -1) {
+				// We found this OldOwner in the current
+				// Owners table, therefore, we don't want to send the
+				// submittor ad with 0 jobs, so we continue to the next
+				// entry in the OldOwner table.
+			continue;
 		}
 
-		  // If k < N_Owners, we found this OldOwner in the current
-		  // Owners table, therefore, we don't want to send the
-		  // submittor ad with 0 jobs, so we continue to the next
-		  // entry in the OldOwner table.
-		if (k<N_Owners) continue;
 
 		pAd.Assign(ATTR_NAME, submitter_name.Value());
 		dprintf (D_FULLDEBUG, "Changed attribute: %s = %s\n", ATTR_NAME, submitter_name.Value());
@@ -1426,10 +1450,10 @@ int Scheduler::make_ad_list(
    // put these ads into the list. 
 #if 1
    MyString submitter_name;
-   for (int ii = 0; ii < N_Owners; ++ii) {
+   for (int ii = 0; ii < Owners.size(); ++ii) {
       cad = new ClassAd();
       cad->ChainToAd(m_adBase);
-      submitter_name.formatstr("%s@%s", Owners[ii].Name, UidDomain);
+      submitter_name.formatstr("%s@%s", Owners[ii].Name.c_str(), UidDomain);
       cad->Assign(ATTR_NAME, submitter_name.Value());
       cad->Assign(ATTR_SUBMITTER_TAG,HOME_POOL_SUBMITTER_TAG);
 
@@ -1851,23 +1875,6 @@ service_this_universe(int universe, ClassAd* job)
 			}
 	}
 }
-
-int
-Scheduler::insert_owner(char const* owner)
-{
-	int		i;
-	for ( i=0; i<N_Owners; i++ ) {
-		if( strcmp(Owners[i].Name,owner) == 0 ) {
-			return i;
-		}
-	}
-
-	Owners[i].Name = strdup( owner );
-
-	N_Owners +=1;
-	return i;
-}
-
 
 static bool IsSchedulerUniverse( shadow_rec* srec );
 static bool IsLocalUniverse( shadow_rec* srec );
@@ -4988,11 +4995,11 @@ MainScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 void
 Scheduler::negotiationFinished( char const *owner, char const *remote_pool, bool satisfied )
 {
-	int owner_num;
-	for (owner_num = 0;
-		 owner_num < N_Owners && strcmp(Owners[owner_num].Name, owner);
-		 owner_num++) ;
-	if (owner_num == N_Owners) {
+	if(!owner) {
+		return;
+	}
+	int owner_num = Owners.find(owner);
+	if (owner_num == -1) {
 		dprintf(D_ALWAYS, "Can't find owner %s in Owners array!\n", owner);
 		return;
 	}
@@ -5043,7 +5050,7 @@ Scheduler::negotiationFinished( char const *owner, char const *remote_pool, bool
 		if (Owners[owner_num].FlockLevel < MaxFlockLevel &&
 		    Owners[owner_num].FlockLevel == flock_level)
 		{ 
-			Owners[owner_num].FlockLevel++;
+			Owners[owner_num].inc_flocking(MaxFlockLevel);
 			dprintf(D_ALWAYS,
 					"Increasing flock level for %s to %d.\n",
 					owner, Owners[owner_num].FlockLevel);
@@ -5355,10 +5362,8 @@ Scheduler::negotiate(int command, Stream* s)
 	// find owner in the Owners array
 	char *at_sign = strchr(owner, '@');
 	if (at_sign) *at_sign = '\0';
-	for (owner_num = 0;
-		 owner_num < N_Owners && strcmp(Owners[owner_num].Name, owner);
-		 owner_num++) ;
-	if (owner_num == N_Owners) {
+	owner_num = Owners.find(owner);
+	if (owner_num == -1) {
 		dprintf(D_ALWAYS, "Can't find owner %s in Owners array!\n", owner);
 		jobs = 0;
 		skip_negotiation = true;
@@ -10478,7 +10483,10 @@ Scheduler::Init()
 	char *flock_collector_hosts, *flock_negotiator_hosts;
 	flock_collector_hosts = param( "FLOCK_COLLECTOR_HOSTS" );
 	flock_negotiator_hosts = param( "FLOCK_NEGOTIATOR_HOSTS" );
-
+	OwnerData::flock_increment = param_integer( "FLOCK_INCREMENT", 1);
+	if(OwnerData::flock_increment <= 0) {
+		OwnerData::flock_increment = 1;
+	}
 	if( flock_collector_hosts ) {
 		if( FlockCollectors ) {
 			delete FlockCollectors;
@@ -11408,17 +11416,17 @@ Scheduler::invalidate_ads()
 		// Update collectors
 	daemonCore->sendUpdates(INVALIDATE_SCHEDD_ADS, cad, NULL, false);
 
-	if (N_Owners == 0) return;	// no submitter ads to invalidate
+	if (Owners.empty()) return;	// no submitter ads to invalidate
 
 		// Invalidate all our submittor ads.
 
 	cad->Assign( ATTR_SCHEDD_NAME, Name );
 	cad->Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr() );
 
-	for( i=0; i<N_Owners; i++ ) {
+	for( i=0; i<Owners.size(); i++ ) {
 		daemonCore->sendUpdates(INVALIDATE_SUBMITTOR_ADS, cad, NULL, false);
 		MyString owner;
-		owner.formatstr("%s@%s", Owners[i].Name, UidDomain);
+		owner.formatstr("%s@%s", Owners[i].Name.c_str(), UidDomain);
 		cad->Assign( ATTR_NAME, owner.Value() );
 
 		line.formatstr( "%s = TARGET.%s == \"%s\" && TARGET.%s == \"%s\"",
@@ -12069,7 +12077,7 @@ Scheduler::publish( ClassAd *cad ) {
 	cad->Assign( "JobsRunning", JobsRunning );
 	cad->Assign( "BadCluster", BadCluster );
 	cad->Assign( "BadProc", BadProc );
-	cad->Assign( "N_Owners", N_Owners );
+	cad->Assign( "N_Owners", Owners.size() );
 	cad->Assign( "NegotiationRequestTime", (int)NegotiationRequestTime  );
 	cad->Assign( "ExitWhenDone", ExitWhenDone );
 	cad->Assign( "StartJobTimer", StartJobTimer );

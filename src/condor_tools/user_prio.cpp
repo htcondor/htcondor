@@ -1,4 +1,4 @@
-/***************************************************************
+/*
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
@@ -58,11 +58,12 @@ enum {
    DetailSortKey   = 0x2000,
    DetailUseDeltaT = 0x4000,
    DetailOrder     = 0x8000,
+   DetailRequested = 0x10000,
    DetailPrios     = DetailPriority | DetailFactor | DetailRealPrio,
    DetailUsage     = DetailResUsed | DetailWtResUsed,
    DetailQuota2    = DetailEffQuota | DetailCfgQuota,
-   DetailQuotas    = DetailEffQuota | DetailCfgQuota | DetailTreeQuota | DetailSurplus,
-   DetailMost      = DetailCfgQuota | DetailSurplus | DetailPriority | DetailFactor | DetailUsage | DetailUseDeltaT,
+   DetailQuotas    = DetailEffQuota | DetailCfgQuota | DetailTreeQuota | DetailSurplus | DetailRequested,
+   DetailMost      = DetailCfgQuota | DetailSurplus | DetailPriority | DetailFactor | DetailUsage | DetailUseDeltaT | DetailRequested,
    DetailAll       = DetailMost | DetailQuotas | DetailPrios | DetailUseTime1 | DetailUseTime2,
    DetailDefault   = DetailMost // show this if none of the flags controlling details is set.
 };
@@ -81,6 +82,7 @@ struct LineRec {
   int Res;
   float wtRes;
   float AccUsage;
+  float Requested;
   float Factor;
   int BeginUsage;
   int LastUsage;
@@ -273,6 +275,7 @@ main(int argc, char* argv[])
   int SetLast=0;
   bool ResetAll=false;
   int GetResList=0;
+  int UserPrioFile=0;
   std::string pool;
   bool GroupRollup = false;
 
@@ -389,6 +392,11 @@ main(int argc, char* argv[])
     else if (IsArg(argv[i],"getreslist",6)) {
       if (argc-i<=1) usage(argv[0]);
       GetResList=i;
+      i+=1;
+    }
+    else if (IsArg(argv[i],"inputfile",2)) {
+      if (argc-i<=1) usage(argv[0]);
+      UserPrioFile=i;
       i+=1;
     }
     else if (IsArg(argv[i],"pool",1)) {
@@ -691,6 +699,42 @@ main(int argc, char* argv[])
     else PrintResList(ad);
   }
 
+  else if (UserPrioFile) {
+
+    const char * filename = argv[UserPrioFile+1];
+    FILE* file = safe_fopen_wrapper_follow(filename, "r");
+    if (file == NULL) {
+      fprintf(stderr, "Can't open file of userprio ads: %s\n", filename);
+      exit(1);
+    }
+
+    AttrList* ad=new AttrList();
+    bool is_eof = false; 
+    int error = 0;
+	if ( ! ad->InsertFromFile(file, is_eof, error) && error) {
+      fprintf(stderr, "Error %d reading userprio ads\n", error);
+      fclose(file);
+      exit(1);
+    }
+    fclose(file);
+
+    // if no details specified, show priorities
+    if ( ! DetailFlag) {
+       DetailFlag = DetailDefault;
+#ifdef DEBUG
+       DetailFlag |= DetailGroup;
+#endif
+    }
+    // if showing only prio, don't bother showing groups 
+    if ( ! (DetailFlag & ~DetailPrios) && GroupPrioIsMeaningless) {
+       if ( ! DashHier ) HierFlag = false;
+       HideGroups = !HierFlag;
+    }
+
+    if (LongFlag) ad->fPrint(stdout);
+    else ProcessInfo(ad,GroupRollup,HierFlag);
+
+  }
   else {  // list priorities
 
     Sock* sock;
@@ -806,7 +850,7 @@ static int CountElem(AttrList* ad)
 
 static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup)
 {
-  char  attrName[32], attrPrio[32], attrResUsed[32], attrWtResUsed[32], attrFactor[32], attrBeginUsage[32], attrAccUsage[42];
+  char  attrName[32], attrPrio[32], attrResUsed[32], attrWtResUsed[32], attrFactor[32], attrBeginUsage[32], attrAccUsage[42], attrRequested[32];
   char  attrLastUsage[32];
   MyString attrAcctGroup;
   MyString attrIsAcctGroup;
@@ -814,7 +858,7 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
   float priority, Factor, AccUsage = -1;
   int   resUsed = 0, BeginUsage = 0;
   int   LastUsage = 0;
-  float wtResUsed;
+  float wtResUsed, requested;
   MyString AcctGroup;
   bool IsAcctGroup;
   float effective_quota = 0, config_quota = 0, subtree_quota = 0;
@@ -829,9 +873,11 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
     LR[i-1].DisplayOrder = 0;
     LR[i-1].HasDetail = 0;
     LR[i-1].LastUsage=MinLastUsageTime;
+    LR[i-1].Requested=0.0;
     sprintf( attrName , "Name%d", i );
     sprintf( attrPrio , "Priority%d", i );
     sprintf( attrResUsed , "ResourcesUsed%d", i );
+    sprintf( attrRequested , "Requested%d", i );
     sprintf( attrWtResUsed , "WeightedResourcesUsed%d", i );
     sprintf( attrFactor , "PriorityFactor%d", i );
     sprintf( attrBeginUsage , "BeginUsageTime%d", i );
@@ -852,6 +898,7 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
           LR[i-1].HasDetail |= DetailRealPrio;
        }
 	if( ad->LookupFloat( attrAccUsage, AccUsage ) ) LR[i-1].HasDetail |= DetailUsage;
+	if( ad->LookupFloat( attrRequested, requested ) ) LR[i-1].HasDetail |= DetailRequested;
 	if( ad->LookupInteger( attrBeginUsage, BeginUsage ) ) LR[i-1].HasDetail |= DetailUseTime1;
 	if( ad->LookupInteger( attrLastUsage, LastUsage ) ) LR[i-1].HasDetail |= DetailUseTime2 | DetailUseDeltaT;
 	if( ad->LookupInteger( attrResUsed, resUsed ) ) LR[i-1].HasDetail |= DetailUsage;
@@ -944,6 +991,7 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
     LR[i-1].Priority=priority;
     LR[i-1].Res=resUsed;
     LR[i-1].wtRes=wtResUsed;
+    LR[i-1].Requested=requested;
     LR[i-1].Factor=Factor;
     LR[i-1].BeginUsage=BeginUsage;
     LR[i-1].LastUsage=LastUsage;
@@ -1143,6 +1191,7 @@ static const struct {
    { DetailUseTime1,  16, "Usage\0Start Time" },
    { DetailUseTime2,  16, "Last\0Usage Time" },
    { DetailUseDeltaT, 10, "Time Since\0Last Usage" },
+   { DetailRequested, 10, "Requested\0Resources" },
 };
 const int MAX_NAME_COLUMN_WIDTH = 99;
 
@@ -1327,6 +1376,8 @@ static void PrintInfo(AttrList* ad, LineRec* LR, int NumElem, bool HierFlag)
                break;
             case DetailResUsed:   FormatFloat(Line+ix, aCols[ii].width, 0, LR[j].wtRes);
                break;
+            case DetailRequested:    FormatFloat(Line+ix, aCols[ii].width, 0, LR[j].Requested);
+               break;
             case DetailWtResUsed: FormatFloat(Line+ix, aCols[ii].width, 2, LR[j].AccUsage/3600.0);
                break;
             case DetailUseTime1:  FormatDateTime(Line+ix, aCols[ii].width+1, LR[j].BeginUsage, "");
@@ -1422,6 +1473,7 @@ static void usage(char* name) {
   fprintf( stderr, "usage: %s [options] [edit-option | display-options]\n"
      "\twhere [options] are\n"
      "\t\t-pool <host>\t\tUse host as the central manager to query\n"
+	 "\t\t-inputfile <file>\tDisplay priorities from <file>\n"
      "\t\t-help\t\t\tThis Screen\n"
      "\twhere [edit-option] is one of\n"
      "\t\t-resetusage <user>\tReset usage data for <user>\n"
@@ -1447,7 +1499,6 @@ static void usage(char* name) {
      "\t\t-grouporder\t\tDisplay groups first, then users\n"
      "\t\t-grouprollup\t\tGroup value are the sum of user values\n"
      "\t\t-long\t\t\tVerbose output (entire classads)\n"
-//     "\t\t-ads <file>\t\tFile of priority ads to display\n"
      , name );
   exit(1);
 }

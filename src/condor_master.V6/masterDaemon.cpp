@@ -583,6 +583,17 @@ int daemon::RealStart( )
 		remove( m_after_startup_wait_for_file.Value() );
 	}
 
+	if( m_reload_shared_port_addr_after_startup ) {
+			// We removed the shared port server address file above.
+			// Now remove the cached result in memory.  This ensures
+			// that the parent address passed to shared_port does not
+			// reference an old instance of shared_port that is no
+			// longer listening on the specified port.  Instead, we
+			// want it to use the "local" address mode that uses the
+			// named socket directly.
+		daemonCore->ClearSharedPortServerAddr();
+	}
+
 		// We didn't want them to use root for any reason, but b/c of
 		// evil in the security code where we're looking up host certs
 		// in the keytab file, we still need root afterall. :(

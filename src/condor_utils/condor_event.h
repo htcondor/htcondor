@@ -203,6 +203,15 @@ class ULogEvent {
     /// The time this event occurred
     struct tm          eventTime;
 
+/*
+define ULOG_MICROSECONDS on linux to get microsecond resolution in the
+user log.  This is write only, and probably breaks compatability with
+log readers.
+*/
+
+#ifdef ULOG_MICROSECONDS
+	struct timeval     eventTimeval;
+#endif
     /// The cluster field of the Condor ID for this event
     int                cluster;
     /// The proc    field of the Condor ID for this event

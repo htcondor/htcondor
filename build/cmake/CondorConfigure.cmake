@@ -71,6 +71,7 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 
 ##################################################
 ##################################################
+include (FindPythonLibs)
 include (FindThreads)
 include (GlibcDetect)
 
@@ -134,12 +135,12 @@ if( NOT WINDOWS)
 	find_path(HAVE_PCRE_H "pcre.h")
 	find_path(HAVE_PCRE_PCRE_H "pcre/pcre.h" )
 
-        find_multiple( "z" ZLIB_FOUND)
+    find_multiple( "z" ZLIB_FOUND)
 	find_multiple( "expat" EXPAT_FOUND )
 	find_multiple( "uuid" LIBUUID_FOUND )
 	find_library( HAVE_DMTCP dmtcpaware HINTS /usr/local/lib/dmtcp )
 	find_multiple( "resolv" HAVE_LIBRESOLV )
-        find_multiple ("dl" HAVE_LIBDL )
+    find_multiple ("dl" HAVE_LIBDL )
 	find_multiple ("ltdl" HAVE_LIBLTDL )
 	find_multiple( "pam" HAVE_LIBPAM )
 	find_program( BISON bison )
@@ -534,9 +535,9 @@ if (NOT EXISTS ${EXTERNAL_STAGE})
 endif()
 
 ###########################################
-if (NOT MSVC11)
+#if (NOT MSVC11) 
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.49.0)
-endif()
+#endif()
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p1)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)

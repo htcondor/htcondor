@@ -12,6 +12,71 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-6-0}Version 7.9.5}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 7.9.5 not yet released.
+%\item HTCondor version 7.9.5 released on Month Date, 2013.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item When there are multiple users
+waiting to transfer files in the limits set by
+\Macro{MAX\_CONCURRENT\_UPLOADS} and/or
+\Macro{MAX\_CONCURRENT\_DOWNLOADS}, the scheduler now gives the users
+an equal share of the transfer slots.  How shares are counted can be
+configured with \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+\Ticket{3487}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item The EC2 GAHP now correctly parses XML namespaces (as returned, for
+instance, by some installations of Eucalyptus).  A related bug, which could
+cause HTCondor to put the job on hold, incorrectly believing that the cloud
+service had purged it, was also fixed.
+\Ticket{3492}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-9-4}Version 7.9.4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -29,15 +94,24 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Per job PID namespaces are available for Linux RHEL 6 platforms.
+See section~\ref{sec:PIDNamespaces} for details.
+\Ticket{1959}
+
+\item The EC2 GAHP now batches requests for status updates, significantly
+reducing its resource requirements.
+\Ticket{3436}
+
 \item The maximum total size of file transfers for a job may now be
 specified using the new configuration variables
-\Macro{MAX\_TRANSFER\_INPUT\_MB} and
-\Macro{MAX\_TRANSFER\_OUTPUT\_MB} and/or the new submit file
-commands by the same names.
+\Macro{MAX\_TRANSFER\_INPUT\_MB} and \Macro{MAX\_TRANSFER\_OUTPUT\_MB} 
+and/or the new submit commands 
+\SubmitCmd{max\_transfer\_input\_mb} and
+\SubmitCmd{max\_transfer\_output\_mb}.
 \Ticket{3333}
 
 \item The \Prog{batch\_gahp} no longer relies on programs
-\Prog{grid-proxy-info} and \Prog{grid-proxy-init} from The Globus
+\Prog{grid-proxy-info} and \Prog{grid-proxy-init} from the Globus
 Toolkit to handle the X.509 proxies of jobs.
 \Ticket{3431}
 
@@ -45,29 +119,124 @@ Toolkit to handle the X.509 proxies of jobs.
 bits on the copy.
 \Ticket{3028}
 
+\item By default, \Condor{dagman} now issues a fatal error
+if any log file, which is either
+the default log file or the log file specified for a node job,
+is in \File{/tmp}, because this can cause DAGMan to fail.
+This error can be downgraded to a warning by setting the
+configuration variable
+\MacroNI{DAGMAN\_USE\_STRICT} value to 0.
+\Ticket{1419}
+
+\item The \Condor{collector} will accept and display collector ClassAds for
+multiple collectors from the same machine. For this to work, the
+collectors must configured with different values for configuration
+variable \MacroNI{COLLECTOR\_NAME}.
+\Ticket{3467}
+
+% Depending on who wins the argument between Igor and TJ, this might go into
+% 7.8 series.  I think this is probably the right place for it, in 7.9. But
+% Kent, TJ, or Igor may well have other ideas
+\item \Condor{dagman} now will successfully set attributes for submitted jobs
+using the \Condor{submit} syntax of placing a \Expr{+} sign just to the
+left of the attribute name. 
+See section~\ref{dagman:VARS} for more details.
+\Ticket{3469}
+
+\item The HTCondor contrib now includes a set of Python bindings in
+two modules.
+The \Code{htcondor} module interacts with the \Condor{schedd} and 
+\Condor{collector} daemons. 
+The \Code{classad} module provides an interface to work with ClassAds.
+\Ticket{3407}
+
+\item We introduced \Condor{gpu\_discovery}, a code that will obtain NVIDIA GPU
+properties provided that the NVIDIA GPUs are correctly setup and that the
+correct NVIDIA libraries (CUDA Run Time and NVML) are installed.
+\Ticket{3386}
+
+\item When using \Condor{compile}, pthreads are not normally permitted to be used
+in standard universe jobs. However, \Condor{compile} will now tell a user that they
+should be linking to the GNU Pth library built with the \verb@--enable-pthread@
+flag. This will permit jobs that utilize pthreads to be built with \Condor{compile}.
+\Ticket{3319}
+
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
 
+\item The new configuration variable \Macro{USE\_PID\_NAMESPACES}
+enables per job PID namespaces for Linux RHEL 6 platforms when \Expr{True}.
+\Ticket{1959}
+
+\item The new configuration variable \Macro{FLOCK\_INCREMENT} allows
+administrators to more aggressively flock to remote \Condor{collector} daemons,
+as more pools will be considered.
+\Ticket{3375}
+
 \item The new configuration variable \Macro{HOST\_ALIAS} specifies the
-  hostname that clients authenticating this daemon with GSI should
+  fully qualified host name that clients authenticating this daemon with 
+  GSI should
   expect the daemon's certificate to match.  The alias is advertised
   to the \Condor{collector} as part of the address of the daemon.
   When this is not set, clients validate the daemon's certificate
-  hostname by matching it against DNS A records for the host they
+  host name by matching it against DNS A records for the host they
   are connected to.  See \Macro{GSI\_SKIP\_HOST\_CHECK} for ways
   to disable this validation step.
 \Ticket{1605}
 
+\item The configuration variable \MacroNI{DAGMAN\_USE\_STRICT} now
+defaults to a value of 1, rather than 0.
+See the definition at section~\ref{param:DAGManUseStrict}.
+\Ticket{3418}
+
+\item The new configuration variable \Macro{GRACEFULLY\_REMOVE\_JOBS}
+is a boolean value that controls whether jobs to be removed are 
+gracefully removed.
+The default is to do graceful removal.
+\Ticket{3470}
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item None.
+\item When HTCondor creates a keypair at the job's request, it no
+longer fails to remove the private key from disk when the job leaves
+the queue.
+\Ticket{3477}
+
+\item The EC2 GAHP now recognizes OpenStack's ``shutoff'' state and
+terminates instances which enter it, preventing them from remaining
+in the queue forever.
+\Ticket{3367}
+
+\item \Condor{dagman} no longer does unnecessary sleeps for log file
+consistency when a single default/workflow log file is used.
+\Ticket{3456}
+
+\item Fixed a bug introduced in HTCondor version 7.9.0 that caused 
+the following configuration variables to not sort ClassAds properly 
+when they evaluated to \Expr{True} or \Expr{False}:
+\Macro{NEGOTIATOR\_PRE\_JOB\_RANK},
+\Macro{NEGOTIATOR\_POST\_JOB\_RANK}, \Macro{PREEMPTION\_RANK}, and
+\Macro{SCHEDD\_PREEMPTION\_RANK}.
+\Ticket{3468}
+
+\item Fixed a bug that can cause grid universe jobs of type \Expr{batch}
+to fail when submitted to an HTCondor cluster with a large history file.
+\Ticket{3429}
+
+\item The interactive mode of \Condor{submit} would fail when used
+with a submit file containing the Arguments or Arguments2 keyword.
+\Ticket{3455}
+
+\item The semantics of signals sent to jobs were changed.
+They have been changed back to the semantics defined in version 7.6.   
+\Ticket{3470}
 
 \end{itemize}
 
@@ -95,8 +264,7 @@ bits on the copy.
 
 \begin{itemize}
 
-\item HTCondor version 7.9.3 not yet released.
-%\item HTCondor version 7.9.3 released on Month Date, 2012.
+\item HTCondor version 7.9.3 released on January 16, 2013.
 
 \end{itemize}
 
@@ -119,15 +287,6 @@ now fetches machine ClassAds more quickly from the \Condor{collector}
 This can make negotiation much faster in
 a very large pool of mostly claimed machines.
 \Ticket{3366}
-
-\item \emph{This item is tentative, and must be reviewed or updated
-before release of 7.9.3.}
-\Condor{submit} now supports first-class syntax for specifying
-accounting groups, via the 'group' and 'group\_user' commands.  The
-separator character between group name and user name on internal
-representations is now configurable with \Macro{GROUP\_SEPARATOR}.
-Refer to section~\ref{sec:group-accounting} for more information.
-\Ticket{2728}
 
 \item Round-robin scheduling is now used when there are multiple users
 waiting to transfer files in the limits set by
@@ -156,7 +315,7 @@ universe job of grid type \SubmitCmd{batch}.
 \item Added counts of nodes in various states to the \Condor{dagman}
 node status file.  Refer to section~\ref{sec:DAG-node-status} for
 more information.
-\Ticket{2728}
+\Ticket{2075}
 
 \item When submitting jobs to a remote batch system (for example, BOSCO),
 file transfer no longer requires a network connection from the remote machine
@@ -182,6 +341,19 @@ kept into smaller pieces.  The window advances one quantum at a time.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Jobs of the EC2 grid type which make invalid requests of the
+service no longer go on hold when removed.
+An example of this is when a job specifies a nonexistent AMI. 
+\Ticket{3287}
+
+\item Jobs of the EC2 grid type which cannot authenticate with the
+service no longer go on hold when removed.
+\Ticket{3387}
+
+\item Fixed a problem with \Prog{glexec} that caused jobs not to start 
+due to permission errors on the execute directory.
+\Ticket{3369}
 
 \item A change was made to more accurately implement the
 minimum time defined by the configuration variable
@@ -221,6 +393,11 @@ puts the affected jobs on hold.
 allowing it to find proxy management that it needs for jobs that have an
 X.509 proxy.
 \Ticket{3015}
+
+\item The installation RPM now requires Security Enhanced Linux (SELinux) 
+scripts at post install time,
+so that the scripts can set the appropriate security contexts.
+\Ticket{3313}
 
 \end{itemize}
 

@@ -962,6 +962,41 @@ job run uninterrupted before kicking it off when it is being preempted.
 This can only decrease the amount of time from what the corresponding
 startd expression allows.
 
+%%% ClassAd attribute: MaxTransferInputMB
+\index{ClassAd job attribute!MaxTransferInputMB}
+\index{MaxTransferInputMB!job ClassAd attribute}
+\item[\AdAttr{MaxTransferInputMB}:]
+This integer expression specifies the maximum allowed total size in
+Mbytes of the input files that are transferred for a job.  This
+expression does \emph{not} apply to grid universe, standard universe, or
+files transferred via file transfer plug-ins.  The expression may refer
+to attributes of the job.  The special value -1 indicates no limit.
+If not set, the system setting \Macro{MAX\_TRANSFER\_INPUT\_MB} is
+used.  If the observed size of all input files at submit time is
+larger than the limit, the job will be immediately placed on hold with
+a \Attr{HoldReasonCode} value of 32.
+If the job passes this initial test, but the size of
+the input files increases or the limit decreases so that the limit is
+violated, the job will be placed on hold at the time when the file
+transfer is attempted.
+
+%%% ClassAd attribute: MaxTransferOutputMB
+\index{ClassAd job attribute!MaxTransferOutputMB}
+\index{MaxTransferOutputMB!job ClassAd attribute}
+\item[\AdAttr{MaxTransferOutputMB}:]
+This integer expression specifies the maximum allowed total size in
+Mbytes of the output files that are transferred for a job.  This
+expression does \emph{not} apply to grid universe, standard universe, or
+files transferred via file transfer plug-ins.  The expression may refer
+to attributes of the job.  The special value -1 indicates no limit.
+If not set, the system setting \Macro{MAX\_TRANSFER\_OUTPUT\_MB} is
+used.  If the total size of the job's output files to be transferred
+is larger than the limit, the job will be placed on hold with 
+a \Attr{HoldReasonCode} value of 33.
+The output will be transferred up to the point when the
+limit is hit, so some files may be fully transferred, some partially,
+and some not at all.
+
 %%% ClassAd attribute: MemoryUsage
 \index{ClassAd job attribute!MemoryUsage}
 \index{MemoryUsage!job ClassAd attribute}
@@ -1399,6 +1434,16 @@ If \Expr{False}, then the job's input is taken from a file on the
 remote machine (pre-staged), and 
 the name of the file is given by the job attribute \Attr{In}.
 
+%%% ClassAd attribute: TransferInputSizeMB
+\index{ClassAd job attribute!TransferInputSizeMB}
+\index{TransferInputSizeMB!job ClassAd attribute}
+\item[\AdAttr{TransferInputSizeMB}:]
+The total size in Mbytes of input files to be transferred for the
+job.  Files transferred via file transfer plug-ins are not included.
+This attribute is automatically set by \Condor{submit}; jobs submitted
+via other submission methods, such as SOAP, may not define this
+attribute.
+
 %%% ClassAd attribute: TransferOut
 \index{ClassAd job attribute!TransferOut}
 \index{TransferOut!job ClassAd attribute}
@@ -1413,57 +1458,10 @@ If \Expr{False}, no transfer takes place (remote to submit machine),
 and the name of the file is the file referred to
 by job attribute \Attr{Out}.
 
-%%% ClassAd attribute: TransferInputSizeMB
-\index{ClassAd job attribute!TransferInputSizeMB}
-\index{TransferInputSizeMB!job ClassAd attribute}
-\item[\AdAttr{TransferInputSizeMB}:]
-
-The total size in megabytes of input files to be transferred for the
-job.  Files transferred via file transfer plugins are not included.
-This attribute is automatically set by \Condor{submit}; jobs submitted
-via other submission methods, such as SOAP, may not define this
-attribute.
-
-%%% ClassAd attribute: MaxTransferInputMB
-\index{ClassAd job attribute!MaxTransferInputMB}
-\index{MaxTransferInputMB!job ClassAd attribute}
-\item[\AdAttr{MaxTransferInputMB}:]
-
-This integer expression specifies the maximum allowed total size in
-megabytes of the input files that are transferred for a job.  This
-expression does not apply to grid universe, standard universe, or
-files transferred via file transfer plugins.  The expression may refer
-to attributes of the job.  The special value -1 indicates no limit.
-If not set, the system setting \Macro{MAX\_TRANSFER\_INPUT\_MB} is
-used.  If the observed size of all input files at submit time is
-larger than the limit, the job will be immediately placed on hold with
-hold code 32.  If the job passes this initial test, but the size of
-the input files increases or the limit decreases so that the limit is
-violated, the job will be placed on hold at the time when the file
-transfer is attempted.
-
-%%% ClassAd attribute: MaxTransferOutputMB
-\index{ClassAd job attribute!MaxTransferOutputMB}
-\index{MaxTransferOutputMB!job ClassAd attribute}
-\item[\AdAttr{MaxTransferOutputMB}:]
-
-This integer expression specifies the maximum allowed total size in
-megabytes of the output files that are transferred for a job.  This
-expression does not apply to grid universe, standard universe, or
-files transferred via file transfer plugins.  The expression may refer
-to attributes of the job.  The special value -1 indicates no limit.
-If not yset, the system setting \Macro{MAX\_TRANSFER\_OUTPUT\_MB} is
-used.  If the total size of the job's output files to be transferred
-is larger than the limit, the job will be placed on hold with hold
-code 33.  The output will be transferred up to the point when the
-limit is hit, so some files may be fully transferred, some partially,
-and some not at all.
-
 %%% ClassAd attribute: TransferringInput
 \index{ClassAd job attribute!TransferringInput}
 \index{TransferringInput!job ClassAd attribute}
 \item[\AdAttr{TransferringInput}:]
-
 A boolean value that indicates whether the job is currently
 transferring input files.  The value is \Expr{Undefined} if the job is
 not scheduled to run or has not yet attempted to start transferring
@@ -1474,7 +1472,6 @@ active or queued, check \AdAttr{TransferQueued}.
 \index{ClassAd job attribute!TransferringOutput}
 \index{TransferringOutput!job ClassAd attribute}
 \item[\AdAttr{TransferringOutput}:]
-
 A boolean value that indicates whether the job is currently
 transferring output files.  The value is \Expr{Undefined} if the job
 is not scheduled to run or has not yet attempted to start transferring

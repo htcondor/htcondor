@@ -180,6 +180,7 @@ AmazonRequest::~AmazonRequest() { }
     } \
 }
 
+pthread_mutex_t globalCurlMutex = PTHREAD_MUTEX_INITIALIZER;
 bool AmazonRequest::SendRequest() {
     //
     // Every request must have the following parameters:
@@ -257,7 +258,12 @@ bool AmazonRequest::SendRequest() {
     //
     // This implementation was written against the 2010-11-15 documentation.
     //
-    query_parameters.insert( std::make_pair( "Version", "2010-11-15" ) );
+    // query_parameters.insert( std::make_pair( "Version", "2010-11-15" ) );
+    
+    // Upgrading (2012-10-01 is the oldest version that will work) allows us
+    // to report the Spot Instance 'status-code's, which are much more
+    // useful than the status codes.  *sigh*
+    query_parameters.insert( std::make_pair( "Version", "2012-10-01" ) );
 
     //
     // We're calculating the signature now. [YYYY-MM-DDThh:mm:ssZ]
@@ -375,6 +381,25 @@ bool AmazonRequest::SendRequest() {
 
     char errorBuffer[CURL_ERROR_SIZE];
     rv = curl_easy_setopt( curl, CURLOPT_ERRORBUFFER, errorBuffer );
+    if( rv != CURLE_OK ) {
+        this->errorCode = "E_CURL_LIB";
+        this->errorMessage = "curl_easy_setopt( CURLOPT_ERRORBUFFER ) failed.";
+        dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_ERRORBUFFER ) failed (%d): '%s', failing.\n",
+            rv, curl_easy_strerror( rv ) );
+        return false;
+    }
+
+/*  // Useful for debuggery.  Could be rewritten with CURLOPT_DEBUGFUNCTION
+    // and dumped via dprintf() to allow control via EC2_GAHP_DEBUG.
+    rv = curl_easy_setopt( curl, CURLOPT_VERBOSE, 1 );
+    if( rv != CURLE_OK ) {
+        this->errorCode = "E_CURL_LIB";
+        this->errorMessage = "curl_easy_setopt( CURLOPT_VERBOSE ) failed.";
+        dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_VERBOSE ) failed (%d): '%s', failing.\n",
+            rv, curl_easy_strerror( rv ) );
+        return false;    
+    }
+*/
 
     rv = curl_easy_setopt( curl, CURLOPT_URL, finalURI.c_str() );
     if( rv != CURLE_OK ) {
@@ -479,7 +504,9 @@ bool AmazonRequest::SendRequest() {
     }
             
     amazon_gahp_release_big_mutex();
+    pthread_mutex_lock( & globalCurlMutex );
     rv = curl_easy_perform( curl );
+    pthread_mutex_unlock( & globalCurlMutex );
     amazon_gahp_grab_big_mutex();
     if( rv != 0 ) {
         this->errorCode = "E_CURL_IO";
@@ -537,6 +564,23 @@ bool AmazonRequest::SendRequest() {
  */
 
 /*
+ * Some versions (installations?) of Eucalyptus 3 return valid XML which
+ * places the tags we're expecting in the 'euca' namespace.  Rather than
+ * handle namespaces in each entity name comparison, use the following
+ * function to remove them.  If it becomes necessary, this function could
+ * be expanded to learn about namespaces as they're entered and exited
+ * and check that the namespace for any given entity name is, in fact,
+ * that of the EC2 API.  (If not, just returning the whole string will
+ * force the comparisons to fail.)
+ */
+const char * ignoringNameSpace( const XML_Char * entityName ) {
+    const char * entityNameString = (const char *)entityName;
+    const char * firstColon = strchr( entityNameString, ':' );
+    if( firstColon ) { return ++firstColon; }
+    else{ return entityNameString; }
+}
+
+/*
  * FIXME: None of the ::SendRequest() methods verify that the 200/OK
  * response they tried to parse contain(ed) the attribute(s) they
  * were looking for.  Although, strictly speaking, this is a server-
@@ -564,7 +608,7 @@ typedef struct vmStartUD_t vmStartUD;
 
 void vmStartESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
     vmStartUD * vsud = (vmStartUD *)vUserData;
-    if( strcasecmp( (const char *)name, "instanceId" ) == 0 ) {
+    if( strcasecmp( ignoringNameSpace( name ), "instanceId" ) == 0 ) {
         vsud->inInstanceId = true;
     }
 }
@@ -578,7 +622,7 @@ void vmStartCDH( void * vUserData, const XML_Char * cdata, int len ) {
 
 void vmStartEEH( void * vUserData, const XML_Char * name ) {
     vmStartUD * vsud = (vmStartUD *)vUserData;
-    if( strcasecmp( (const char *)name, "instanceId" ) == 0 ) {
+    if( strcasecmp( ignoringNameSpace( name ), "instanceId" ) == 0 ) {
         vsud->inInstanceId = false;
     }
 }
@@ -734,9 +778,9 @@ typedef struct vmSpotUD_t vmSpotUD;
 
 void vmSpotESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
     vmSpotUD * vsud = (vmSpotUD *)vUserData;
-    if( strcasecmp( (const char *)name, "instanceId" ) == 0 ) {
+    if( strcasecmp( ignoringNameSpace( name ), "instanceId" ) == 0 ) {
         vsud->inInstanceId = true;
-    } else if( strcasecmp( (const char *)name, "spotInstanceRequestId" ) == 0 ) {
+    } else if( strcasecmp( ignoringNameSpace( name ), "spotInstanceRequestId" ) == 0 ) {
         vsud->inSpotRequestId = true;
     }
 }
@@ -752,9 +796,9 @@ void vmSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
 
 void vmSpotEEH( void * vUserData, const XML_Char * name ) {
     vmSpotUD * vsud = (vmSpotUD *)vUserData;
-    if( strcasecmp( (const char *)name, "instanceId" ) == 0 ) {
+    if( strcasecmp( ignoringNameSpace( name ), "instanceId" ) == 0 ) {
         vsud->inInstanceId = false;
-    } else if( strcasecmp( (const char *)name, "spotInstanceRequestId" ) == 0 ) {
+    } else if( strcasecmp( ignoringNameSpace( name ), "spotInstanceRequestId" ) == 0 ) {
         vsud->inSpotRequestId = false;
     }
 }
@@ -1061,9 +1105,10 @@ struct vmStatusSpotUD_t {
     enum vmStatusSpotTags_t {
         NONE,
         INSTANCE_ID,
-        STATUS,
+        STATE,
         LAUNCH_GROUP,
-        REQUEST_ID
+        REQUEST_ID,
+        STATUS_CODE
     };
     typedef enum vmStatusSpotTags_t vmStatusSpotTags;
 
@@ -1072,6 +1117,8 @@ struct vmStatusSpotUD_t {
     // (like the instance ID) because of them.  XPath is looking more
     // and more tasty...
     unsigned short inItem;
+
+    bool inStatus;
     vmStatusSpotTags inWhichTag;
     AmazonStatusSpotResult * currentResult;
  
@@ -1079,6 +1126,7 @@ struct vmStatusSpotUD_t {
     
     vmStatusSpotUD_t( std::vector< AmazonStatusSpotResult > & assrList ) :
         inItem( 0 ),
+        inStatus( false ),
         inWhichTag( vmStatusSpotUD_t::NONE ),
         currentResult( NULL ),
         results( assrList ) { };
@@ -1088,7 +1136,7 @@ typedef struct vmStatusSpotUD_t vmStatusSpotUD;
 void vmStatusSpotESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
     vmStatusSpotUD * vsud = (vmStatusSpotUD *)vUserData;
 
-    if( strcasecmp( (const char *)name, "item" ) == 0 ) {
+    if( strcasecmp( ignoringNameSpace( name ), "item" ) == 0 ) {
         if( vsud->inItem == 0 ) {
             vsud->currentResult = new AmazonStatusSpotResult();
             assert( vsud->currentResult != NULL );
@@ -1097,14 +1145,18 @@ void vmStatusSpotESH( void * vUserData, const XML_Char * name, const XML_Char **
         return;
     }
     
-    if( strcasecmp( (const char *)name, "spotInstanceRequestId" ) == 0 ) {
+    if( strcasecmp( ignoringNameSpace( name ), "spotInstanceRequestId" ) == 0 ) {
         vsud->inWhichTag = vmStatusSpotUD::REQUEST_ID;
-    } else if( strcasecmp( (const char *)name, "state" ) == 0 ) {
-        vsud->inWhichTag = vmStatusSpotUD::STATUS;
-    } else if( strcasecmp( (const char *)name, "instanceId" ) == 0 ) {
+    } else if( strcasecmp( ignoringNameSpace( name ), "state" ) == 0 ) {
+        vsud->inWhichTag = vmStatusSpotUD::STATE;
+    } else if( strcasecmp( ignoringNameSpace( name ), "instanceId" ) == 0 ) {
         vsud->inWhichTag = vmStatusSpotUD::INSTANCE_ID;
-    } else if( strcasecmp( (const char *)name, "launchGroup" ) == 0 ) {
+    } else if( strcasecmp( ignoringNameSpace( name ), "launchGroup" ) == 0 ) {
         vsud->inWhichTag = vmStatusSpotUD::LAUNCH_GROUP;
+    } else if( strcasecmp( ignoringNameSpace( name ), "status" ) == 0 ) {
+        vsud->inStatus = true;
+    } else if( vsud->inStatus && strcasecmp( ignoringNameSpace( name ), "code" ) == 0 ) {
+        vsud->inWhichTag = vmStatusSpotUD::STATUS_CODE;
     } else {
         vsud->inWhichTag = vmStatusSpotUD::NONE;
     }
@@ -1123,8 +1175,8 @@ void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
             targetString = & vsud->currentResult->request_id;
             break;
         
-        case vmStatusSpotUD::STATUS:
-            targetString = & vsud->currentResult->status;
+        case vmStatusSpotUD::STATE:
+            targetString = & vsud->currentResult->state;
             break;
         
         case vmStatusSpotUD::LAUNCH_GROUP:
@@ -1133,6 +1185,10 @@ void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
         
         case vmStatusSpotUD::INSTANCE_ID:
             targetString = & vsud->currentResult->instance_id;
+            break;
+
+        case vmStatusSpotUD::STATUS_CODE:
+            targetString = & vsud->currentResult->status_code;
             break;
 
         default:
@@ -1146,7 +1202,7 @@ void vmStatusSpotCDH( void * vUserData, const XML_Char * cdata, int len ) {
 void vmStatusSpotEEH( void * vUserData, const XML_Char * name ) {
     vmStatusSpotUD * vsud = (vmStatusSpotUD *)vUserData;
 
-    if( strcasecmp( (const char *)name, "item" ) == 0 ) {
+    if( strcasecmp( ignoringNameSpace( name ), "item" ) == 0 ) {
         if( vsud->inItem == 1 ) {
             vsud->results.push_back( * vsud->currentResult );
             delete vsud->currentResult;
@@ -1209,9 +1265,10 @@ bool AmazonVMStatusSpot::workerFunction(char **argv, int argc, std::string &resu
             for( unsigned i = 0; i < statusRequest.spotResults.size(); ++i ) {
                 AmazonStatusSpotResult & assr = statusRequest.spotResults[i];
                 resultList.append( assr.request_id.c_str() );
-                resultList.append( assr.status.c_str() );
+                resultList.append( assr.state.c_str() );
                 resultList.append( assr.launch_group.c_str() );
                 resultList.append( nullStringIfEmpty( assr.instance_id ) );
+                resultList.append( nullStringIfEmpty( assr.status_code.c_str() ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }
@@ -1260,9 +1317,10 @@ bool AmazonVMStatusAllSpot::workerFunction(char **argv, int argc, std::string &r
             for( unsigned i = 0; i < statusRequest.spotResults.size(); ++i ) {
                 AmazonStatusSpotResult & assr = statusRequest.spotResults[i];
                 resultList.append( assr.request_id.c_str() );
-                resultList.append( assr.status.c_str() );
+                resultList.append( assr.state.c_str() );
                 resultList.append( assr.launch_group.c_str() );
                 resultList.append( nullStringIfEmpty( assr.instance_id ) );
+                resultList.append( nullStringIfEmpty( assr.status_code.c_str() ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }
@@ -1301,6 +1359,8 @@ struct vmStatusUD_t {
     AmazonStatusResult * currentResult;
     std::vector< AmazonStatusResult > & results;
 
+    unsigned short inItem;
+
     bool inGroupSet;
     bool inGroup;
     std::string currentSecurityGroup;
@@ -1314,6 +1374,7 @@ struct vmStatusUD_t {
         inWhichTag( vmStatusUD_t::NONE ), 
         currentResult( NULL ), 
         results( asrList ),
+        inItem( 0 ),
         inGroupSet( false ),
         inGroup( false ) { }
 };
@@ -1322,63 +1383,96 @@ typedef struct vmStatusUD_t vmStatusUD;
 void vmStatusESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
     vmStatusUD * vsud = (vmStatusUD *)vUserData;
 
-    if( strcasecmp( (const char *)name, "groupSet" ) == 0 ) {
-        vsud->currentSecurityGroups.clear();
-        vsud->inGroupSet = true;
-        return;
-    }
-
-    if( vsud->inGroupSet && strcasecmp( (const char *)name, "groupId" ) == 0 ) {
-        vsud->inGroup = true;
-        return;
-    }        
-
     if( ! vsud->inInstancesSet ) {
-        if( strcasecmp( (const char *)name, "instancesSet" ) == 0 ) {
+        if( strcasecmp( ignoringNameSpace( name ), "instancesSet" ) == 0 ) {
             vsud->inInstancesSet = true;
         }            
         return;
     } 
-    
+
     if( ! vsud->inInstance ) {
-        if( strcasecmp( (const char *)name, "item" ) == 0 ) {
+        if( strcasecmp( ignoringNameSpace( name ), "item" ) == 0 ) {
             vsud->currentResult = new AmazonStatusResult();
             assert( vsud->currentResult != NULL );
             vsud->inInstance = true;
+            vsud->inItem += 1;        
         }
         return;
     }
 
-    if( strcasecmp( (const char *)name, "instanceId" ) == 0 ) {
+    //
+    // If we get here, we're in an instance.
+    //
+
+    // We don't care about item tags inside an instance; we just need
+    // to make sure we know which one closes the instance's item tag.
+    if( strcasecmp( ignoringNameSpace( name ), "item" ) == 0 ) {
+        vsud->inItem += 1;
+        return;
+    }
+
+    if( strcasecmp( ignoringNameSpace( name ), "groupSet" ) == 0 ) {
+        vsud->currentSecurityGroups.clear();
+        vsud->inGroupSet = true;
+        return;
+    }
+    
+    //
+    // Check for any tags of interest in the group set.
+    //
+    if( vsud->inGroupSet ) {
+        if( strcasecmp( ignoringNameSpace( name ), "groupId" ) == 0 ) {
+            vsud->inGroup = true;
+            return;
+        }
+    }
+        
+    //
+    // Check for any tags of interest in the instance.
+    //
+    if( strcasecmp( ignoringNameSpace( name ), "instanceId" ) == 0 ) {
         vsud->inWhichTag = vmStatusUD::INSTANCE_ID;
-    } else if( strcasecmp( (const char *)name, "imageId" ) == 0 ) {
+    } else if( strcasecmp( ignoringNameSpace( name ), "imageId" ) == 0 ) {
         vsud->inWhichTag = vmStatusUD::AMI_ID;
-    } else if( strcasecmp( (const char *)name, "privateDnsName" ) == 0 ) {
+    } else if( strcasecmp( ignoringNameSpace( name ), "privateDnsName" ) == 0 ) {
         vsud->inWhichTag = vmStatusUD::PRIVATE_DNS;
-    } else if( strcasecmp( (const char *)name, "dnsName" ) == 0 ) {
+    } else if( strcasecmp( ignoringNameSpace( name ), "dnsName" ) == 0 ) {
         vsud->inWhichTag = vmStatusUD::PUBLIC_DNS;
-    } else if( strcasecmp( (const char *)name, "keyName" ) == 0 ) {
+    } else if( strcasecmp( ignoringNameSpace( name ), "keyName" ) == 0 ) {
         vsud->inWhichTag = vmStatusUD::KEY_NAME;
-    } else if( strcasecmp( (const char *)name, "instanceType" ) == 0 ) {
+    } else if( strcasecmp( ignoringNameSpace( name ), "instanceType" ) == 0 ) {
         vsud->inWhichTag = vmStatusUD::INSTANCE_TYPE;
-    } else if( strcasecmp( (const char *)name, "instanceState" ) == 0 ) {
-        vsud->inInstanceState = true;
-        vsud->inWhichTag = vmStatusUD::NONE;
-    } else if( strcasecmp( (const char *)name, "stateReason" ) == 0 ) {
-        vsud->inStateReason = true;
-        vsud->inWhichTag = vmStatusUD::NONE;
-    } else if( vsud->inInstanceState && strcasecmp( (const char *)name, "name" ) == 0 ) {
-        vsud->inWhichTag = vmStatusUD::STATUS;
-    } else if( vsud->inStateReason && strcasecmp( (const char *)name, "code" ) == 0 )  {
-        vsud->inWhichTag = vmStatusUD::STATE_REASON_CODE;
-    } else if( strcasecmp( (const char *)name, "clientToken" ) == 0 ) {
+    } else if( strcasecmp( ignoringNameSpace( name ), "clientToken" ) == 0 ) {
         vsud->inWhichTag = vmStatusUD::CLIENT_TOKEN;
+    // This is wrong, but Eucalyptus does it anyway.  Humour them.
+    } else if( strcasecmp( ignoringNameSpace( name ), "stateName" ) == 0 ) {
+        vsud->inWhichTag = vmStatusUD::STATUS;
+    //
+    // instanceState and stateReason share the 'code' tagname, but can't
+    // ever be nested, so we can use this simpler style to check for
+    // the tags we care about.
+    //
+    } else if( strcasecmp( ignoringNameSpace( name ), "instanceState" ) == 0 ) {
+        vsud->inWhichTag = vmStatusUD::NONE;
+        vsud->inInstanceState = true;
+    } else if( vsud->inInstanceState && strcasecmp( ignoringNameSpace( name ), "name" ) == 0 ) {
+        vsud->inWhichTag = vmStatusUD::STATUS;
+    } else if( strcasecmp( ignoringNameSpace( name ), "stateReason" ) == 0 ) {
+        vsud->inWhichTag = vmStatusUD::NONE;
+        vsud->inStateReason = true;
+    } else if( vsud->inStateReason && strcasecmp( ignoringNameSpace( name ), "code" ) == 0 )  {
+        vsud->inWhichTag = vmStatusUD::STATE_REASON_CODE;
     }
 }
 
 void vmStatusCDH( void * vUserData, const XML_Char * cdata, int len ) {
     vmStatusUD * vsud = (vmStatusUD *)vUserData;
 
+    //
+    // We could probably convert this into a tag type, but I think the logic
+    // is a little clearer if tag types are limited to direct children of
+    // the instance.
+    //
     if( vsud->inGroup ) {
         appendToString( (const void *)cdata, len, 1, (void *) & vsud->currentSecurityGroup );
         return;
@@ -1439,48 +1533,66 @@ void vmStatusCDH( void * vUserData, const XML_Char * cdata, int len ) {
 
 void vmStatusEEH( void * vUserData, const XML_Char * name ) {
     vmStatusUD * vsud = (vmStatusUD *)vUserData;
+    vsud->inWhichTag = vmStatusUD::NONE;
+
+    if( ! vsud->inInstancesSet ) {
+        return;
+    }
+    
+    if( strcasecmp( ignoringNameSpace( name ), "instancesSet" ) == 0 ) {
+        vsud->inInstancesSet = false;
+        return;
+    }
+    
+    if( ! vsud->inInstance ) {
+        return;
+    }
+    
+    if( strcasecmp( ignoringNameSpace( name ), "item" ) == 0 ) {
+        vsud->inItem -= 1;
+
+        if( vsud->inItem == 0 ) {
+            ASSERT( vsud->inGroupSet == false );
+            vsud->results.push_back( * vsud->currentResult );
+            delete vsud->currentResult;
+            vsud->currentResult = NULL;
+            vsud->inInstance = false;
+        }
+
+        return;
+    }
+
+    if( strcasecmp( ignoringNameSpace( name ), "groupSet" ) == 0 ) {
+        ASSERT( vsud->inGroupSet );
+        vsud->inGroupSet = false;
+
+        // Store the collected set of security groups.
+        vsud->currentResult->securityGroups = vsud->currentSecurityGroups;
+        return;
+    }
 
     if( vsud->inGroupSet ) {
-        if( strcasecmp( (const char *)name, "groupId" ) == 0 ) {
+        if( strcasecmp( ignoringNameSpace( name ), "groupId" ) == 0 ) {
+            // Store the security group in the current set.
             vsud->currentSecurityGroups.push_back( vsud->currentSecurityGroup );
             vsud->currentSecurityGroup.erase();
             vsud->inGroup = false;
             return;
-        } else if( strcasecmp( (const char *)name, "groupSet" ) == 0 ) {
-            vsud->inGroupSet = false;
-            return;
         }
     }
 
-    if( vsud->inInstance && strcasecmp( (const char *)name, "item" ) == 0 ) {
-        // We assume that the security group list (GroupItemType groupSet)
-        // always appears in the XML stream (in the reservationInfoType
-        // reservationSet) before the corresponding instancesSet.
-        vsud->currentResult->securityGroups = vsud->currentSecurityGroups;
-        vsud->results.push_back( * vsud->currentResult );
-        delete vsud->currentResult;
-        vsud->currentResult = NULL;
-        vsud->inInstance = false;
-        return;
-    }
-    
-    if( vsud->inInstancesSet && strcasecmp( (const char *)name, "instancesSet" ) == 0 ) {
-        vsud->inInstancesSet = false;
-        return;
-    }
-
-    if( strcasecmp( (const char *)name, "instanceState" ) == 0 ) {
+    if( strcasecmp( ignoringNameSpace( name ), "instanceState" ) == 0 ) {
+        ASSERT( vsud->inInstanceState );
         vsud->inInstanceState = false;
         return;
     }
 
-    if( strcasecmp( (const char *)name, "stateReason" ) == 0 )  {
+    if( strcasecmp( ignoringNameSpace( name ), "stateReason" ) == 0 ) {
+        ASSERT( vsud->inStateReason );
         vsud->inStateReason = false;
         return;
     }
-    
-    vsud->inWhichTag = vmStatusUD::NONE;
-} 
+}
 
 bool AmazonVMStatusAll::SendRequest() {
     bool result = AmazonRequest::SendRequest();
@@ -1617,7 +1729,7 @@ typedef struct privateKeyUD_t privateKeyUD;
 
 void createKeypairESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
     privateKeyUD * pkud = (privateKeyUD *)vUserData;
-    if( strcasecmp( (const char *)name, "keyMaterial" ) == 0 ) {
+    if( strcasecmp( ignoringNameSpace( name ), "keyMaterial" ) == 0 ) {
         pkud->inKeyMaterial = true;
     }
 }
@@ -1631,7 +1743,7 @@ void createKeypairCDH( void * vUserData, const XML_Char * cdata, int len ) {
 
 void createKeypairEEH( void * vUserData, const XML_Char * name ) {
     privateKeyUD * pkud = (privateKeyUD *)vUserData;
-    if( strcasecmp( (const char *)name, "keyMaterial" ) == 0 ) {
+    if( strcasecmp( ignoringNameSpace( name ), "keyMaterial" ) == 0 ) {
         pkud->inKeyMaterial = false;
     }    
 }
@@ -1769,7 +1881,7 @@ typedef struct keyNamesUD_t keyNamesUD;
 // EntityStartHandler
 void keypairNamesESH( void * vUserData, const XML_Char * name, const XML_Char ** ) {
     keyNamesUD * knud = (keyNamesUD *)vUserData;
-    if( strcasecmp( (const char *)name, "KeyName" ) == 0 ) {
+    if( strcasecmp( ignoringNameSpace( name ), "KeyName" ) == 0 ) {
         knud->inKeyName = true;
     }
 }
@@ -1785,7 +1897,7 @@ void keypairNamesCDH( void * vUserData, const XML_Char * cdata, int len ) {
 // EntityEndHandler
 void keypairNamesEEH( void * vUserData, const XML_Char * name ) {
     keyNamesUD * knud = (keyNamesUD *)vUserData;
-    if( strcasecmp( (const char *)name, "KeyName" ) == 0 ) {
+    if( strcasecmp( ignoringNameSpace( name ), "KeyName" ) == 0 ) {
         knud->inKeyName = false;
         knud->keyNameList.append( knud->keyName.c_str() );
         knud->keyName.clear();

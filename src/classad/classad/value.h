@@ -282,12 +282,15 @@ class Value
 			@return true iff the value is either undefined or error.
 		*/
 		inline bool IsExceptional() const;
-		/** Checks if the value is numerical. 
+		/** Checks if the value is numerical.
+			This includes booleans, which can be used in arithmetic.
 			@return true iff the value is a number
 		*/
 		bool IsNumber () const;
 		/** Checks if the value is numerical. If the value is a real, it is 
 				converted to an integer through truncation.
+				If the value is a boolean, it is converted to 0 (for False)
+				or 1 (for True).
 			@param i The integer value of the value if the value is a number.
 			If the type of i is smaller than a long long, the value
 			may be truncated.
@@ -298,6 +301,8 @@ class Value
 		bool IsNumber (long long &i) const;
 		/** Checks if the value is numerical. If the value is an integer, it 
 				is promoted to a real.
+				If the value is a bollean, it is converted to 0.0 (for False)
+				or 1.0 (for True).
 			@param r The real value of the value if the value is a number.
 			@return true iff the value is a number
 		*/

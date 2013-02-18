@@ -38,7 +38,7 @@ typedef std::map<const ClassAd*, References> PortReferences;
 #include "classad/rectangle.h"
 #endif
 
-typedef classad_unordered<std::string, ExprTree*, StringCaseIgnHash, CaseIgnEqStr> AttrList;
+typedef classad_unordered<std::string, ExprTree*, ClassadAttrNameHash, CaseIgnEqStr> AttrList;
 typedef std::set<std::string, CaseIgnLTStr> DirtyAttrList;
 
 void ClassAdLibraryVersion(int &major, int &minor, int &patch);
@@ -394,6 +394,8 @@ e		*/
 
 		/** Evaluates an attribute to an integer. If the attribute evaluated to 
 				a real, it is truncated to an integer.
+				If the value is a boolean, it is converted to 0 (for False)
+				or 1 (for True).
 			@param attr The name of the attribute.
 			@param intValue The value of the attribute.
 			If the type of intValue is smaller than a long long, the
@@ -406,6 +408,8 @@ e		*/
 
 		/** Evaluates an attribute to a real.  If the attribute evaluated to an 
 				integer, it is promoted to a real.
+				If the value is a boolean, it is converted to 0.0 (for False)
+				or 1.0 (for True).
 			@param attr The name of the attribute.
 			@param realValue The value of the attribute.
 			@return true if attrName evaluated to a number, false otherwise.
@@ -689,6 +693,11 @@ e		*/
          *  @return true if the attribute is dirty, false otherwise
          */
 		bool        IsAttributeDirty(const std::string &name) const;
+
+		/* Needed for backward compatibility
+		 * Remove it the next time we have to bump the ClassAds SO version.
+		 */
+		bool        IsAttributeDirty(const std::string &name) {return ((const ClassAd*)this)->IsAttributeDirty(name);}
 
 		typedef DirtyAttrList::iterator dirtyIterator;
         /** Return an interator to the first dirty attribute so all dirty attributes 

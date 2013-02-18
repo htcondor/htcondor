@@ -156,6 +156,10 @@ IsNumber (long long &i) const
 			i = (long long) realValue;	// truncation	
 			return true;
 
+		case BOOLEAN_VALUE:
+			i = booleanValue ? 1 : 0;
+			return true;
+
 		default:
 			return false;
 	}
@@ -172,6 +176,10 @@ IsNumber (double &r) const
 
 		case REAL_VALUE:
 			r = realValue;	
+			return true;
+
+		case BOOLEAN_VALUE:
+			r = booleanValue ? 1.0 : 0.0;
 			return true;
 
 		default:

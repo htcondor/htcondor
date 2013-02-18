@@ -555,7 +555,7 @@ parse_node( Dag *dag, Job::job_type_t nodeType,
 		nestedDagFile.replaceString( DAG_SUBMIT_FILE_SUFFIX, "" );
 		debug_printf( DEBUG_NORMAL, "Warning: the use of the JOB "
 					"keyword for nested DAGs is deprecated; please "
-					"use SUBDAG EXTERNAL instead" );
+					"use SUBDAG EXTERNAL instead\n" );
 		check_warning_strictness( DAG_STRICT_3 );
 	}
 
@@ -1203,8 +1203,19 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 		}
 
 		// copy name char-by-char until we hit a symbol or whitespace
-		// names are limited to alphanumerics and underscores
-		while( isalnum(*str) || *str == '_' ) {
+		// names are limited to alphanumerics and underscores (except
+		// that '+' is legal as the first character)
+		int varnamestate = 0; // 0 means not within a varname
+		while( isalnum(*str) || *str == '_' || *str == '+' ) {
+			if (*str == '+' ) {
+				if ( varnamestate != 0 ) {
+					debug_printf( DEBUG_QUIET,
+							"%s (line %d): '+' can only be first character of macroname (%s)\n",
+							filename, lineNumber, varName.Value() );
+					return false;
+				}
+			}
+			varnamestate = 1;
 			varName += *str++;
 		}
 
@@ -1214,13 +1225,19 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 				lineNumber, *str);
 			return false;
 		}
+
+		if ( varName == "+" ) {
+			debug_printf(DEBUG_QUIET,
+				"%s (line %d): macroname (%s) must contain at least one alphanumeric character\n",
+				filename, lineNumber, varName.Value() );
+			return false;
+		}
 		
 		// burn through any whitespace there may be afterwards
 		while(isspace(*str))
 			str++;
 		if(*str != '=') {
-			debug_printf(DEBUG_QUIET, "%s (line %d): No \"=\" for \"%s\"\n", filename,
-				lineNumber, varName.Value());
+			debug_printf( DEBUG_QUIET, "%s (line %d): Illegal character (%c) in or after macroname %s\n", filename, lineNumber, *str, varName.Value() );
 			return false;
 		}
 		str++;

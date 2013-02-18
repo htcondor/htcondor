@@ -53,6 +53,7 @@ public:
 	void SetClientToken( const char *client_token );
 	void EC2SetRemoteJobId( const char *client_token, const char *instance_id );
 	void SetRemoteVMName(const char * name);
+	void SetRequestID( const char * requestID );
 	
 	static int submitInterval;
 	static int gahpCallTimeout;
@@ -77,6 +78,8 @@ public:
 
 	EC2Resource *myResource;
 	GahpClient *gahp;
+
+    void StatusUpdate( const char * newStatus );
 
 private:
 	// create dynamic input parameters
@@ -124,6 +127,8 @@ private:
 
 	// print out error codes returned from grid_manager
 	void print_error_code( const char* error_code, const char* function_name );
+
+    bool probeNow;
 };
 
 #endif

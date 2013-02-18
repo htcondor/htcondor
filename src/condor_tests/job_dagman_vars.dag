@@ -24,5 +24,10 @@ Vars NodeD second="Andreas\\\"_Kloden"
 Vars NodeD third="\\Ivan_Basso"
 Vars NodeD misc="!@#$%^&*()_-=+=[]{}?"
 
+Job NodeE job_dagman_vars-attribute.cmd
+Vars NodeE nodename="$(JOB)"
+Vars NodeE +A="\"bob\""
+
 Parent NodeA Child NodeB NodeC
 Parent NodeB NodeC Child NodeD
+Parent NodeD Child NodeE 

@@ -52,7 +52,7 @@ static char* lockFileName = NULL;
 
 static Dagman dagman;
 
-strict_level_t Dagman::_strict = DAG_STRICT_0;
+strict_level_t Dagman::_strict = DAG_STRICT_1;
 
 //---------------------------------------------------------------------------
 static void Usage() {
@@ -277,7 +277,7 @@ Dagman::Config()
 		debug_printf( DEBUG_NORMAL, "Warning: "
 				"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION "
 				"is deprecated -- used DAGMAN_ALLOW_EVENTS instead\n" );
-		check_warning_strictness( DAG_STRICT_1 );
+		check_warning_strictness( DAG_STRICT_2 );
 	}
 
 		// Now get the new DAGMAN_ALLOW_EVENTS value -- that can override
@@ -494,7 +494,8 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 	}
 	inShutdownRescue = true;
 
-	dagman.dag->_dagStatus = dagStatus;
+		// If is here in case we get an error during parsing...
+	if ( dagman.dag ) dagman.dag->_dagStatus = dagStatus;
 	debug_printf( DEBUG_QUIET, "Aborting DAG...\n" );
 		// Avoid writing two different rescue DAGs if the "main" DAG and
 		// the final node (if any) both fail.
@@ -709,7 +710,7 @@ void main_init (int argc, char ** const argv) {
 			debug_printf( DEBUG_QUIET, "Warning: -NoEventChecks is "
 						"ignored; please use the DAGMAN_ALLOW_EVENTS "
 						"config parameter instead\n");
-			check_warning_strictness( DAG_STRICT_1 );
+			check_warning_strictness( DAG_STRICT_2 );
 
         } else if( !strcasecmp( "-AllowLogError", argv[i] ) ) {
 			dagman.allowLogError = true;

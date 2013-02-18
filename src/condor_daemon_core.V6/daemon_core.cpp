@@ -34,6 +34,7 @@
 #if HAVE_CLONE
 #include <sched.h>
 #include <sys/syscall.h>
+#include <sys/mount.h>
 #endif
 
 #if HAVE_RESOLV_H && HAVE_DECL_RES_INIT
@@ -112,6 +113,10 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 
 #if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
 #include <sched.h>
+#endif
+
+#if !defined(CLONE_NEWPID)
+#define CLONE_NEWPID 0x20000000
 #endif
 
 static const char* EMPTY_DESCRIP = "<NULL>";
@@ -1085,7 +1090,9 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 				// If SharedPortServer is not running yet, and an address
 				// that is local to this machine is good enough, then just
 				// get enough information to connect directly without going
-				// through SharedPortServer.
+				// through SharedPortServer.  This will only work if the
+				// process trying to connect to us has permission to open
+				// our named socket.
 			addr = m_shared_port_endpoint->GetMyLocalAddress();
 		}
 		if( addr ) {
@@ -2908,6 +2915,14 @@ DaemonCore::InitSharedPort(bool in_init_dc_command_socket)
 	}
 	else if( IsFulldebug(D_FULLDEBUG) ) {
 		dprintf(D_FULLDEBUG,"Not using shared port because %s\n",why_not.Value());
+	}
+}
+
+void
+DaemonCore::ClearSharedPortServerAddr()
+{
+	if( m_shared_port_endpoint ) {
+		m_shared_port_endpoint->ClearSharedPortServerAddr();
 	}
 }
 
@@ -5236,7 +5251,9 @@ public:
 	   m_affinity_mask(affinity_mask),
  	   m_fs_remap(fs_remap),
 	   m_wrote_tracking_gid(false),
-	   m_no_dprintf_allowed(false)
+	   m_no_dprintf_allowed(false),
+	   m_clone_newpid_pid(-1),
+	   m_clone_newpid_ppid(-1)
 	{
 	}
 
@@ -5298,6 +5315,10 @@ private:
 	bool m_wrote_tracking_gid;
 	bool m_no_dprintf_allowed;
 	priv_state m_priv_state;
+	pid_t m_clone_newpid_pid;
+	pid_t m_clone_newpid_ppid;
+
+	pid_t fork(int);
 };
 
 enum {
@@ -5324,7 +5345,19 @@ pid_t CreateProcessForkit::clone_safe_getpid() {
 		// the pid of the parent process (presumably due to internal
 		// caching in libc).  Therefore, use the syscall to get
 		// the answer directly.
-	return syscall(SYS_getpid);
+
+	int retval = syscall(SYS_getpid);
+
+		// If we were fork'd with CLONE_NEWPID, we think our PID is 1.
+		// In this case, ask the parent!
+	if (retval == 1) {
+		if (m_clone_newpid_pid == -1) {
+			EXCEPT("getpid is 1!");
+		}
+		retval = m_clone_newpid_pid;
+	}
+
+	return retval;
 #else
 	return ::getpid();
 #endif
@@ -5333,10 +5366,113 @@ pid_t CreateProcessForkit::clone_safe_getppid() {
 #if HAVE_CLONE
 		// See above comment for clone_safe_getpid() for explanation of
 		// why we need to do this.
-	return syscall(SYS_getppid);
+	
+	int retval = syscall(SYS_getppid);
+
+		// If ppid is 0, then either Condor is init (DEAR GOD) or we
+		// were created with CLONE_NEWPID; ask the parent!
+	if (retval == 0) {
+		if (m_clone_newpid_ppid == -1) {
+			EXCEPT("getppid is 0!");
+		}
+		retval = m_clone_newpid_ppid;
+	}
+
+	return retval;
 #else
 	return ::getppid();
 #endif
+}
+
+/**
+ * fork allows one to use certain clone syscall flags, but provides more
+ * familiar POSIX fork semantics.
+ * NOTES:
+ *   - We whitelist the flags you are allowed to pass.  Currently supported:
+ *     - CLONE_NEWPID.  Implies CLONE_NEWNS.
+ *       If the clone succeeds but the remount fails, the child calls _exit(1),
+ *       but the parent will return successfully.
+ *       It would be a simple fix to have the parent return the failure, if
+ *       someone desired.
+ *     Flags are whitelisted to help us adhere to the fork-like semantics (no
+ *     shared memory between parent and child, for example).  If you give other
+ *     flags, they are silently ignored.
+ *   - man pages indicate that clone on i386 is only fully functional when used
+ *     via ASM, not the vsyscall interface.  This doesn't appear to be relevant
+ *     to this particular use case.
+ *   - To avoid linking with pthreads (or copy/pasting lots of glibc code), I 
+ *     don't include integration with threads.  This means various threading
+ *     calls in the child may not function correctly (pre-exec; post-exec
+ *     should be fine), and pthreads might not notice when the child exits.
+ *     Traditional POSIX calls like wait will still function because the 
+ *     parent will receive the SIGCHLD.
+ *     This is simple to fix if someone desired, but I'd mostly rather not link
+ *     with pthreads.
+ */
+
+#define ALLOWED_FLAGS (SIGCHLD | CLONE_NEWPID | CLONE_NEWNS )
+
+pid_t CreateProcessForkit::fork(int flags) {
+
+    // If you don't need any fancy flags, just do the old boring POSIX call
+    if (flags == 0) {
+        return ::fork();
+    }
+
+#if HAVE_CLONE
+
+    int rw[2]; // Communication pipes for the CLONE_NEWPID case.
+
+    flags |= SIGCHLD; // The only necessary flag.
+    if (flags & CLONE_NEWPID) {
+        flags |= CLONE_NEWNS;
+	if (pipe(rw)) {
+		EXCEPT("UNABLE TO CREATE PIPE.");
+	}
+    }
+
+	// fork as root if we have our fancy flags.
+    priv_state orig_state = set_priv(PRIV_ROOT);
+    int retval = syscall(SYS_clone, ALLOWED_FLAGS & flags, 0, NULL, NULL);
+
+	// Child
+    if ((retval == 0) && (flags & CLONE_NEWPID)) {
+
+            // If we should have forked as non-root, make things in life final.
+        set_priv(orig_state);
+
+        if (full_read(rw[0], &m_clone_newpid_ppid, sizeof(pid_t)) != sizeof(pid_t)) {
+            EXCEPT("Unable to write into pipe.");
+        }
+        if (full_read(rw[0], &m_clone_newpid_pid, sizeof(pid_t)) != sizeof(pid_t)) {
+            EXCEPT("Unable to write into pipe.");
+        }
+
+	// Parent
+    } else if (retval > 0) {
+        set_priv(orig_state);
+	pid_t ppid = getpid(); // We are parent, so don't need clone_safe_pid.
+        if (full_write(rw[1], &ppid, sizeof(ppid)) != sizeof(ppid)) {
+            EXCEPT("Unable to write into pipe.");
+        }
+        if (full_write(rw[1], &retval, sizeof(ppid)) != sizeof(ppid)) {
+            EXCEPT("Unable to write into pipe.");
+        }
+    }
+	// retval=-1 falls through here.
+    if (flags & CLONE_NEWPID) {
+        close(rw[0]);
+        close(rw[1]);
+    }
+    return retval;
+
+#else
+
+    // Note we silently ignore flags if there's no clone on the platform.
+    return ::fork();
+
+#endif
+
 }
 
 pid_t CreateProcessForkit::fork_exec() {
@@ -5417,7 +5553,12 @@ pid_t CreateProcessForkit::fork_exec() {
 		return -1;
 	}
 
-	newpid = fork();
+	int fork_flags = 0;
+	if (m_family_info) {
+		fork_flags |= m_family_info->want_pid_namespace ? CLONE_NEWPID : 0;
+	}
+	newpid = this->fork(fork_flags);
+
 	if( newpid == 0 ) {
 			// in child
 		enterCreateProcessChild(this);

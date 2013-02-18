@@ -116,6 +116,8 @@ set( C_LIB32		lib)
 set( C_LIBEXEC		libexec )
 set( C_SBIN			sbin)
 
+set( C_PYTHONARCHLIB lib/python)
+
 set( C_INCLUDE		include)
 set( C_INCLUDE_PUBLIC		include)
 set( C_MAN			man)
@@ -259,6 +261,8 @@ elseif ( ${OS_NAME} MATCHES "WIN" )
 
 	# below are options an overrides to enable packge generation for rpm & deb
 elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
+
+	execute_process( COMMAND python -c "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_python_lib(1)[1:])" OUTPUT_VARIABLE C_PYTHONARCHLIB)
 
 	# it's a smaller subset easier to differentiate.
 	# check the operating system name

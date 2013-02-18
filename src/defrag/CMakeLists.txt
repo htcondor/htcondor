@@ -20,6 +20,6 @@ if (NOT WIN_EXEC_NODE_ONLY)
 
 	condor_selective_glob( "defrag*" DEFRAG )
 
-	condor_exe( condor_defrag "${DEFRAG}" ${C_LIBEXEC} "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}" OFF )
+	condor_exe( condor_defrag "${DEFRAG}" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 
 endif()

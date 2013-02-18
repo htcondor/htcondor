@@ -48,8 +48,9 @@
 	<xs:complexType name="Attribute">
 		<xs:sequence>
 			<xs:element name="name" type="xs:string"/>
-			<xs:element name="type" type="tns:AttributeType"/>
+			<xs:element name="type" type="tns:AttributeType" minOccurs="0"/>
 			<xs:element name="value" type="xs:string"/>
+			<xs:element name="desc" type="xs:string" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
 	<!-- might just want to use the following just for returning data like in getJobDetails -->
@@ -62,6 +63,8 @@
 		<xs:restriction base="xs:string">
 			<xs:enumeration value="LINUX"/>
 			<xs:enumeration value="WINDOWS"/>
+			<xs:enumeration value="OSX"/>
+			<xs:enumeration value="OTHER"/>
 			<!-- can expand later -->
 		</xs:restriction>
 	</xs:simpleType>
@@ -69,6 +72,7 @@
 		<xs:restriction base="xs:string">
 			<xs:enumeration value="INTEL"/>
 			<xs:enumeration value="X86_64"/>
+			<xs:enumeration value="OTHER"/>
 			<!-- can expand later -->
 		</xs:restriction>
 	</xs:simpleType>
@@ -107,10 +111,10 @@
 			<xs:element name="owner" type="xs:string" minOccurs="0"/>
 			<xs:element name="qdate" type="xs:int" minOccurs="0"/>			
 		</xs:sequence>
-        <!-- where this submission was created in the condor space -->
-        <!-- TODO: tactical hiding for backward compat, revisit -->
-        <xs:attribute name="pool" type="xs:string"/>
-        <xs:attribute name="scheduler" type="xs:string"/>
+		<!-- where this submission was created in the condor space -->
+		<!-- TODO: tactical hiding for backward compat, revisit -->
+		<xs:attribute name="pool" type="xs:string"/>
+		<xs:attribute name="scheduler" type="xs:string"/>
 	</xs:complexType>
 	<xs:complexType name="JobID">
 		<xs:sequence>
@@ -154,7 +158,7 @@
 			<xs:element name="removed" type="xs:string" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
-		<xs:complexType name="SubmissionSummary">
+	<xs:complexType name="SubmissionSummary">
 		<xs:sequence>
 			<xs:element name="id" type="tns:SubmissionID"/>
 			<xs:element name="status" type="tns:Status"/>
@@ -201,10 +205,12 @@
 	</xs:simpleType>
 	<xs:complexType name="ResourceID">
 		<xs:sequence>
-			<xs:element name="resource" type="tns:ResourceType"/>
+			<xs:element name="resource" type="tns:ResourceType" default="COLLECTOR"/>
 			<xs:element name="pool" type="xs:string" minOccurs="0"/>
 			<xs:element name="name" type="xs:string" minOccurs="0"/>
+			<xs:element name="address" type="xs:string" minOccurs="0"/>
 			<xs:element name="sub_type" type="xs:string" minOccurs="0"/>
+			<xs:element name="birthdate" type="xs:int" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:complexType name="ResourceLocation">
@@ -214,11 +220,139 @@
 		</xs:sequence>
 	</xs:complexType>
 	<xs:simpleType name="ScanMode">
-        <!-- a set of options for selecting how we scan a contiguous set of ids -->
-        <!-- only meaningful when used with an offset -->
 		<xs:restriction base="xs:string">
-            <xs:enumeration value="AFTER"/>
-            <xs:enumeration value="BEFORE"/>
-        </xs:restriction>
-    </xs:simpleType>
+			<xs:enumeration value="AFTER"/>
+			<xs:enumeration value="BEFORE"/>
+		</xs:restriction>
+		<!-- a set of options for selecting how we scan a contiguous set of ids -->
+		<!-- only meaningful when used with an offset -->
+	</xs:simpleType>
+	<xs:complexType name="CollectorSummary">
+		<xs:sequence>
+			<xs:element name="running_jobs" type="xs:int"/>
+			<xs:element name="idle_jobs" type="xs:int"/>
+			<xs:element name="total_hosts" type="xs:int"/>
+			<xs:element name="claimed_hosts" type="xs:int"/>
+			<xs:element name="unclaimed_hosts" type="xs:int"/>
+			<xs:element name="owner_hosts" type="xs:int"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Collector">
+		<xs:sequence>
+			<xs:element name="id" type="tns:ResourceID"/>
+			<xs:element name="status" type="tns:Status"/>
+			<xs:element name="summary" type="tns:CollectorSummary" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="MasterSummary">
+		<xs:sequence>
+			<xs:element name="arch" type="tns:ArchType"/>
+			<xs:element name="os" type="tns:OSType"/>
+			<xs:element name="real_uid" type="xs:int"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Master">
+		<xs:sequence>
+			<xs:element name="id" type="tns:ResourceID"/>
+			<xs:element name="status" type="tns:Status"/>
+			<xs:element name="summary" type="tns:MasterSummary" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="NegotiatorSummary">
+		<xs:sequence>
+			<xs:element name="latest_cycle" type="xs:dateTime"/>
+			<xs:element name="match_rate" type="xs:double"/>
+			<xs:element name="matches" type="xs:int"/>
+			<xs:element name="duration" type="xs:int"/>
+			<xs:element name="schedulers" type="xs:int"/>
+			<xs:element name="active_submitters" type="xs:int"/>
+			<xs:element name="idle_jobs" type="xs:int"/>
+			<xs:element name="jobs_considered" type="xs:int"/>
+			<xs:element name="rejections" type="xs:int"/>
+			<xs:element name="total_slots" type="xs:int"/>
+			<xs:element name="candidate_slots" type="xs:int"/>
+			<xs:element name="trimmed_slots" type="xs:int"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Negotiator">
+		<xs:sequence>
+			<xs:element name="id" type="tns:ResourceID"/>
+			<xs:element name="status" type="tns:Status"/>
+			<xs:element name="summary" type="tns:NegotiatorSummary" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="SchedulerSummary">
+		<xs:sequence>
+			<xs:element name="queue_created" type="xs:dateTime"/>
+			<xs:element name="max_jobs_running" type="xs:int"/>
+			<xs:element name="users" type="xs:int"/>
+			<xs:element name="ads" type="xs:int"/>
+			<xs:element name="running" type="xs:int"/>
+			<xs:element name="held" type="xs:int"/>
+			<xs:element name="idle" type="xs:int"/>
+			<xs:element name="removed" type="xs:int"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Scheduler">
+		<xs:sequence>
+			<xs:element name="id" type="tns:ResourceID"/>
+			<xs:element name="status" type="tns:Status"/>
+			<xs:element name="summary" type="tns:SchedulerSummary" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:simpleType name="SlotType">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="STATIC"/>
+			<xs:enumeration value="PARTITIONABLE"/>
+			<xs:enumeration value="DYNAMIC"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="SlotSummary">
+		<xs:sequence>
+			<xs:element name="arch" type="tns:ArchType"/>
+			<xs:element name="os" type="tns:OSType"/>
+			<xs:element name="activity" type="xs:string"/>
+			<xs:element name="state" type="xs:string"/>
+			<xs:element name="cpus" type="xs:int"/>
+			<xs:element name="disk" type="xs:int"/>
+			<xs:element name="memory" type="xs:int"/>
+			<xs:element name="swap" type="xs:int"/>
+			<xs:element name="mips" type="xs:int"/>
+			<xs:element name="load_avg" type="xs:double"/>
+			<xs:element name="start" type="xs:string"/>
+			<xs:element name="domain" type="xs:string"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Slot">
+		<xs:sequence>
+			<xs:element name="id" type="tns:ResourceID"/>
+			<xs:element name="status" type="tns:Status"/>
+			<xs:element name="slot_type" type="tns:SlotType" default="STATIC" minOccurs="0"/>
+			<xs:element name="summary" type="tns:SlotSummary" minOccurs="0"/>
+			<xs:element name="dynamic_slots" type="tns:Slot" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="SubmitterID">
+		<xs:sequence>
+			<xs:element name="name" type="xs:string" minOccurs="0"/>
+			<xs:element name="machine" type="xs:string" minOccurs="0"/>
+			<xs:element name="scheduler" type="xs:string" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="SubmitterSummary">
+		<xs:sequence>
+			<xs:element name="running" type="xs:int"/>
+			<xs:element name="held" type="xs:int"/>
+			<xs:element name="idle" type="xs:int"/>
+			<xs:element name="created" type="xs:dateTime"/>
+			<xs:element name="owner" type="xs:string"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Submitter">
+		<xs:sequence>
+			<xs:element name="id" type="tns:SubmitterID"/>
+			<xs:element name="status" type="tns:Status"/>
+			<xs:element name="summary" type="tns:SubmitterSummary" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
 </xs:schema>

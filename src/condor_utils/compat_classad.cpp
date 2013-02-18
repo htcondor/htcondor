@@ -666,7 +666,6 @@ ClassAd::ClassAd( const ClassAd &ad ) : classad::ClassAd(ad)
 	ResetName();
     ResetExpr();
 
-	EnableDirtyTracking();
 }
 
 ClassAd::ClassAd( const classad::ClassAd &ad )
@@ -692,7 +691,6 @@ ClassAd::ClassAd( const classad::ClassAd &ad )
 	ResetName();
     ResetExpr();
 
-	EnableDirtyTracking();
 }
 
 ClassAd::~ClassAd()
@@ -721,7 +719,6 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 	ResetName();
     ResetExpr();
 
-	EnableDirtyTracking();
 
 	nodeKind = CLASSAD_NODE;
 
@@ -3180,12 +3177,21 @@ void ConvertEscapingOldToNew( const char *str, std::string &buffer )
 			buffer.append( 1, '\\' );
 			str++;
 			if(  (str[0] != '"') ||
-				 ( (str[0] == '"') && IsStringEnd(str, 1) )   )
+				 ( /*(str[0] == '"') && */ IsStringEnd(str, 1) )   )
 			{
 				buffer.append( 1, '\\' );
 			}
 		}
 	}
+		// remove trailing whitespace
+	int ix = (int)buffer.size();
+	while (ix > 1) {
+		char ch = buffer[ix-1];
+		if (ch != ' ' && ch != '\t' && ch != '\r' && ch != '\n')
+			break;
+		--ix;
+	}
+	buffer.resize(ix);
 }
 
 // end functions
