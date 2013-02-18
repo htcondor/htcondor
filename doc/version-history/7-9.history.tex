@@ -51,7 +51,11 @@ configured with \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 
 \begin{itemize}
 
-\item None.
+\item The EC2 GAHP now correctly parses XML namespaces (as returned, for
+instance, by some installations of Eucalyptus).  A related bug, which could
+cause HTCondor to put the job on hold, incorrectly believing that the cloud
+service had purged it, was also fixed.
+\Ticket{3492}
 
 \end{itemize}
 
