@@ -465,10 +465,13 @@ bool ClassAd::Insert( const std::string& serialized_nvp)
 
       if ( newTree )
       {
-	if ( Insert( name, newTree ) ) 
-	{
-	  bRet = true;
-	}
+		// if caching is enabled, and we got to here then we know that the 
+		// cache doesn't already have an entry for this name:value, so add
+		// it to the cache now. 
+		if (doExpressionCaching) {
+			CachedExprEnvelope::cache(name, szValue, newTree);
+		}
+		bRet = Insert(name, newTree, false);
       }
 
     }
@@ -493,7 +496,10 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree *& pRef, bool cache 
 {
 	bool bRet = false;
 	ExprTree * tree = pRef;
-        std::string szName = attrName;
+	const std::string * pstrAttr = &attrName;
+#ifndef WIN32
+	std::string strName; // in case we want to insert attrName into the cache
+#endif
 	
 		// sanity checks
 	if( attrName.empty() ) {
@@ -509,7 +515,16 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree *& pRef, bool cache 
 
 	if (doExpressionCaching && cache)
 	{
-	  tree = CachedExprEnvelope::cache(szName, pRef);
+	  std::string empty; // an empty string to tell the cache to unparse the pRef
+#ifndef WIN32
+	  // when inserting an attrib into the cache, strName can get overwritten
+	  // by the string sharing code.  if it does we want to use strName from now on.
+	  strName = attrName; pstrAttr = &strName;
+	  tree = CachedExprEnvelope::cache(strName, empty, pRef);
+#else
+	  // std:string based string sharing is disabled on windows.
+	  tree = CachedExprEnvelope::cache(attrName, empty, pRef);
+#endif
 	  // what goes in may be destroyed in preference for cache.
 	  pRef = (ExprTree *)tree->self(); 
 	}
@@ -521,7 +536,7 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree *& pRef, bool cache 
 		tree->SetParentScope( this );
 				
 		pair<AttrList::iterator,bool> insert_result =
-			attrList.insert( AttrList::value_type(szName,tree) );
+			attrList.insert( AttrList::value_type(*pstrAttr,tree) );
 
 		if( !insert_result.second ) {
 				// replace existing value
@@ -529,7 +544,7 @@ bool ClassAd::Insert( const std::string& attrName, ExprTree *& pRef, bool cache 
 			insert_result.first->second = tree;
 		}
 
-		MarkAttributeDirty(szName);
+		MarkAttributeDirty(*pstrAttr);
 
 		bRet = true;
 	}

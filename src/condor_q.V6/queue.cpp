@@ -55,6 +55,7 @@
 #include <map>
 #include <vector>
 #include "../classad_analysis/analysis.h"
+#include "classad/classadCache.h" // for CachedExprEnvelope
 
 /*
 #ifndef WIN32
@@ -525,6 +526,19 @@ int CondorQClassAdFileParseHelper::OnParseError(std::string & line, ClassAd & ad
 	return ee;
 }
 
+static void
+profile_print(size_t & cbBefore, double & tmBefore, int cAds, bool fCacheStats=true)
+{
+       double tmAfter = 0.0;
+       size_t cbAfter = ProcAPI::getBasicUsage(getpid(), &tmAfter);
+       fprintf(stderr, " %d ads (caching %s)", cAds, classad::ClassAdGetExpressionCaching() ? "ON" : "OFF");
+       fprintf(stderr, ", %.3f CPU-sec, %" PRId64 " bytes (from %" PRId64 " to %" PRId64 ")\n",
+               (tmAfter - tmBefore), (PRId64_t)(cbAfter - cbBefore), (PRId64_t)cbBefore, (PRId64_t)cbAfter);
+       tmBefore = tmAfter; cbBefore = cbAfter;
+       if (fCacheStats) {
+               classad::CachedExprEnvelope::_debug_print_stats(stderr);
+       }
+}
 
 #ifdef HAVE_EXT_POSTGRESQL
 /* this function for checking whether database can be used for querying in local machine */
@@ -1792,8 +1806,19 @@ processCommandLineArguments (int argc, char *argv[])
 			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 			exit(0);
         }
-		else if (is_arg_prefix(arg, "profile",4)) {
+		else if (is_arg_colon_prefix(arg, "profile", &pcolon, 4)) {
 			dash_profile = true;
+			if (pcolon) {
+				StringList opts(++pcolon, ",:");
+				opts.rewind();
+				while (const char * popt = opts.next()) {
+					if (is_arg_prefix(popt, "on", 2)) {
+						classad::ClassAdSetExpressionCaching(true);
+					} else if (is_arg_prefix(popt, "off", 2)) {
+						classad::ClassAdSetExpressionCaching(false);
+					}
+				}
+			}
 		}
 		else
 		if (is_arg_prefix (arg, "stream", 2)) {
@@ -3628,12 +3653,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	}
 
 	if (dash_profile) {
-		double tmAfter = 0.0;
-		size_t cbAfter = ProcAPI::getBasicUsage(getpid(), &tmAfter);
-		fprintf(stderr, " %d ads (caching %s)", jobs.Length(), classad::ClassAdGetExpressionCaching() ? "ON" : "OFF");
-		fprintf(stderr, ", %.3f CPU-sec, %" PRId64 " bytes (from %" PRId64 " to %" PRId64 ")\n",
-			(tmAfter - tmBefore), (PRId64_t)(cbAfter - cbBefore), (PRId64_t)cbBefore, (PRId64_t)cbAfter);
-		tmBefore = tmAfter; cbBefore = cbAfter;
+		profile_print(cbBefore, tmBefore, jobs.Length());
 	} else if (verbose) {
 		fprintf(stderr, " %d ads\n", jobs.Length());
 	}
@@ -3754,12 +3774,7 @@ show_file_queue(const char* jobads, const char* userlog)
 	}
 
 	if (dash_profile) {
-		double tmAfter = 0.0;
-		size_t cbAfter = ProcAPI::getBasicUsage(getpid(), &tmAfter);
-		fprintf(stderr, " %d ads (caching %s)", jobs.Length(), classad::ClassAdGetExpressionCaching() ? "ON" : "OFF");
-		fprintf(stderr, ", %.3f CPU-sec, %" PRId64 " bytes (from %" PRId64 " to %" PRId64 ")\n",
-			(tmAfter - tmBefore), (PRId64_t)(cbAfter - cbBefore), (PRId64_t)cbBefore, (PRId64_t)cbAfter);
-		tmBefore = tmAfter; cbBefore = cbAfter;
+		profile_print(cbBefore, tmBefore, jobs.Length());
 	} else if (verbose) {
 		fprintf(stderr, " %d ads.\n", jobs.Length());
 	}
@@ -3769,11 +3784,7 @@ show_file_queue(const char* jobads, const char* userlog)
 		jobs.Sort(JobSort);
 
 		if (dash_profile) {
-			double tmAfter = 0.0;
-			size_t cbAfter = ProcAPI::getBasicUsage(getpid(), &tmAfter);
-			fprintf(stderr, " %.3f CPU-sec, %" PRId64 " bytes (from %" PRId64 " to %" PRId64 ")\n",
-				(tmAfter - tmBefore), (PRId64_t)(cbAfter - cbBefore), (PRId64_t)cbBefore, (PRId64_t)cbAfter);
-			tmBefore = tmAfter; cbBefore = cbAfter;
+			profile_print(cbBefore, tmBefore, jobs.Length(), false);
 		} else if (verbose) {
 			fprintf(stderr, "\n");
 		}
@@ -3859,12 +3870,7 @@ setupAnalysis()
     }
 
 	if (dash_profile) {
-		double tmAfter = 0.0;
-		size_t cbAfter = ProcAPI::getBasicUsage(getpid(), &tmAfter); 
-		fprintf(stderr, " %d ads (caching %s)", startdAds.Length(), classad::ClassAdGetExpressionCaching() ? "ON" : "OFF");
-		fprintf(stderr, ", %.3f CPU-sec, %" PRId64 " bytes (from %" PRId64 " to %" PRId64 ")\n",
-			(tmAfter - tmBefore), (PRId64_t)(cbAfter - cbBefore), (PRId64_t)cbBefore, (PRId64_t)cbAfter);
-		tmBefore = tmAfter; cbBefore = cbAfter;
+		profile_print(cbBefore, tmBefore, startdAds.Length());
 	} else if (verbose) {
 		fprintf(stderr, " %d ads.\n", startdAds.Length());
 	}
@@ -3895,12 +3901,7 @@ setupAnalysis()
 		}
 
 		if (dash_profile) {
-			double tmAfter;
-			size_t cbAfter = ProcAPI::getBasicUsage(getpid(), &tmAfter); 
-			fprintf(stderr, " %d submitters", cPrios);
-			fprintf(stderr, ", %.3f CPU-sec, %" PRId64 " bytes (from %" PRId64 " to %" PRId64 ")\n",
-				(tmAfter - tmBefore), (PRId64_t)(cbAfter - cbBefore), (PRId64_t)cbBefore, (PRId64_t)cbAfter);
-			tmBefore = tmAfter; cbBefore = cbAfter;
+			profile_print(cbBefore, tmBefore, cPrios);
 		}
 		else if (verbose) {
 			fprintf(stderr, " %d submitters\n", cPrios);

@@ -55,7 +55,11 @@ public:
 	 * cache () - will cache a copy of the pTree and return 
 	 * an indirect envelope
 	 */
-	static ExprTree * cache ( std::string & pName, ExprTree * pTree );
+#ifndef WIN32
+	static ExprTree * cache ( std::string & pName, const std::string & szValue, ExprTree * pTree );
+#else
+	static ExprTree * cache (const std::string & pName, const std::string & szValue, ExprTree * pTree);
+#endif
 	
 	/**
 	 * will check to see if we hit or not and return the value.
@@ -66,6 +70,7 @@ public:
 	 * will dump the cache contents to a file.
 	 */
 	static bool _debug_dump_keys(const std::string & szFile);
+	static void _debug_print_stats(FILE* fp);
 	
 	ExprTree * get();
 
