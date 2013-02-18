@@ -845,10 +845,6 @@ handle_nordugrid_submit( char **input_line )
 	gahp_printf("S\n");
 	gahp_sem_up(&print_control);
 
-	user_arg = malloc_user_arg( input_line, current_cred, input_line[2] );
-	user_arg->cmd_type = FtpCtrlCmd;
-	user_arg->first_callback = nordugrid_submit_start_callback;
-
 		/* modify the rsl */
 	{
 		char *str;
@@ -857,7 +853,16 @@ handle_nordugrid_submit( char **input_line )
 		globus_rsl_t *inputfiles_rsl = NULL;
 
 		rsl = globus_rsl_parse( input_line[3] );
-		assert( rsl != NULL );
+		if ( rsl == NULL ) {
+			char *esc = escape_err_msg( "Failed to parsed RSL" );
+			char *output = (char *) globus_libc_malloc( 10 + strlen( input_line[1] ) +
+														strlen( esc ) );
+			globus_libc_sprintf( output, "%s 1 NULL %s", input_line[1], esc );
+			globus_libc_free( esc );
+			enqueue_results( output );
+			all_args_free( input_line );
+			return 0;
+		}
 
 			/* add '(.gahp_complete "")' to inputfiles */
 		inputfiles_rsl = NULL;
@@ -892,6 +897,10 @@ handle_nordugrid_submit( char **input_line )
 		globus_libc_free( input_line[3] );
 		input_line[3] = str;
 	}
+
+	user_arg = malloc_user_arg( input_line, current_cred, input_line[2] );
+	user_arg->cmd_type = FtpCtrlCmd;
+	user_arg->first_callback = nordugrid_submit_start_callback;
 
 	begin_ftp_command( user_arg );
 
