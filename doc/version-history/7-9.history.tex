@@ -165,8 +165,8 @@ when they evaluated to \Expr{True} or \Expr{False}:
 to fail when submitted to an HTCondor cluster with a large history file.
 \Ticket{3429}
 
-\item The interactive mode of \Condor{submit} would fail when used
-with a submit file containing the Arguments or Arguments2 keyword.
+\item Corrected the submission of interactive jobs for cases 
+in which the submit description file specified \SubmitCmd{Arguments}.
 \Ticket{3455}
 
 \item The semantics of signals sent to jobs were changed.
