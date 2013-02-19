@@ -144,9 +144,9 @@ longer fails to remove the private key from disk when the job leaves
 the queue.
 \Ticket{3477}
 
-\item The EC2 GAHP now recognizes OpenStack's ``shutoff'' state and
-terminates instances which enter it, preventing them from remaining
-in the queue forever.
+\item The EC2 GAHP now recognizes the OpenStack \Code{shutoff} state and
+terminates instances which enter this state, 
+preventing the instances from remaining in the queue forever.
 \Ticket{3367}
 
 \item \Condor{dagman} no longer does unnecessary sleeps for log file
