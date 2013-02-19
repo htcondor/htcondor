@@ -712,7 +712,6 @@ int get_routes(int sock, int (*filter)(struct nlmsghdr, struct rtmsg, struct rta
 
 	struct rtmsg rtm; memset(&rtm, 0, sizeof(rtm));
 	rtm.rtm_flags = AF_INET;
-	rtm.rtm_flags |= RTM_F_CLONED;
 	iov[1].iov_base = &rtm;
 	iov[1].iov_len = NLMSG_ALIGN(sizeof(struct rtmsg));
 
@@ -774,6 +773,7 @@ int get_routes(int sock, int (*filter)(struct nlmsghdr, struct rtmsg, struct rta
 			}
 			if (nlmsghdr2->nlmsg_type == NLMSG_DONE) {
 				done = 1;
+				continue;
 			}
 			// We continue to recieve messages even if we failed in processing one of them.
 			// This is so the next netlink user does not recieve unexpected messages.
@@ -782,11 +782,11 @@ int get_routes(int sock, int (*filter)(struct nlmsghdr, struct rtmsg, struct rta
 			}
 
 			if (nlmsghdr2->nlmsg_type != RTM_NEWROUTE && nlmsghdr2->nlmsg_type != RTM_DELROUTE) {
-				dprintf(D_FULLDEBUG, "Ignoring non-route message of type %d.\n", nlmsghdr2->nlmsg_type);
+				dprintf(D_ALWAYS, "Ignoring non-route message of type %d.\n", nlmsghdr2->nlmsg_type);
 				continue;
 			}
 			if (nlmsghdr2->nlmsg_len < NLMSG_LENGTH(sizeof(struct rtmsg))) {
-				dprintf(D_FULLDEBUG, "Ignoring truncated route message of length %d.\n", nlmsghdr2->nlmsg_len);
+				dprintf(D_ALWAYS, "Ignoring truncated route message of length %d.\n", nlmsghdr2->nlmsg_len);
 				continue;
 			}
 			struct rtmsg route_msg; memcpy(&route_msg, NLMSG_DATA(nlmsghdr2), sizeof(struct rtmsg));
