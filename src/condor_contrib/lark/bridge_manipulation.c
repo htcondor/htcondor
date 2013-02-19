@@ -29,12 +29,33 @@ create_bridge(const char * bridge_name)
 
 	int fd;
 	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		dprintf(D_FULLDEBUG, "Unable to create socket for bridge manipulation (errno=%d, %s).\n", errno, strerror(errno));
+		dprintf(D_ALWAYS, "Unable to create socket for bridge manipulation (errno=%d, %s).\n", errno, strerror(errno));
 		return errno;
 	}
 	int ret = ioctl(fd, SIOCBRADDBR, brname);
 	if (ret < 0 && errno != EEXIST) {
-		dprintf(D_FULLDEBUG, "Error when creating bridge %s (errno=%d, %s).\n", bridge_name, errno, strerror(errno));
+		dprintf(D_ALWAYS, "Error when creating bridge %s (errno=%d, %s).\n", bridge_name, errno, strerror(errno));
+		close(fd);
+		return errno;
+	}
+	close(fd);
+	return errno;
+}
+
+int
+delete_bridge(const char * bridge_name)
+{
+	char brname[IFNAMSIZ];
+	strncpy(brname, bridge_name, IFNAMSIZ);
+
+	int fd;
+	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+		dprintf(D_ALWAYS, "Unable to create socket for bridge deletion (errno=%d, %s).\n", errno, strerror(errno));
+		return errno;
+	}
+	int ret = ioctl(fd, SIOCBRDELBR, brname);
+	if (ret < 0 && errno != EEXIST) {
+		dprintf(D_ALWAYS, "Error when deleting bridge %s (errno=%d, %s).\n", bridge_name, errno, strerror(errno));
 		close(fd);
 		return errno;
 	}

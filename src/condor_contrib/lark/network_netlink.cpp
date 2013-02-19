@@ -97,7 +97,7 @@ int send_to_kernel(int sock, struct iovec* iov, size_t ioveclen) {
 
 
 	if (sendmsg(sock, &msg, 0) < 0) {
-		dprintf(D_ALWAYS, "Unable to send create_veth message to kernel: %d %s\n", errno, strerror(errno));
+		dprintf(D_ALWAYS, "Unable to send message to kernel: %d %s\n", errno, strerror(errno));
 		return errno;
 	}
 	return 0;
@@ -683,7 +683,6 @@ int parse_rtattr(struct rtattr *attr_table[], struct rtattr * rta, size_t len, i
 		rta = RTA_NEXT(rta, len);
 	}
 	if (len) {
-		dprintf(D_FULLDEBUG, "Improperly formed route: %lu, rta_len=%d\n", len, rta->rta_len);
 		return 1;
 	}
 	return 0;
@@ -723,23 +722,28 @@ int get_routes(int sock, int (*filter)(struct nlmsghdr, struct rtmsg, struct rta
 		return 1;
 	}
 
-	struct sockaddr_nl nladdr;
-	struct msghdr msg;
+	struct sockaddr_nl nladdr; memset(&nladdr, 0, sizeof(nladdr));
+	struct msghdr msg; memset(&msg, 0, sizeof(msg));
 	msg.msg_name = &nladdr;
 	msg.msg_namelen = sizeof(nladdr);
 	msg.msg_iov = iov;
-	msg.msg_iovlen = 2;
+	msg.msg_iovlen = 1;
 
-	char msg_buffer[16*1024];
-	iov[1].iov_base = msg_buffer;
-	iov[1].iov_len = 16*1024;
+	char msg_buffer[16*1024]; memset(msg_buffer, 0, 16*1024);
+	iov[0].iov_base = msg_buffer;
+	iov[0].iov_len = 16*1024;
 
 	int done = 0, had_filter_error = 0, filter_result = 0;
-	while (1) {
+	while (1)
+	{
+		if (done) break;
+
 		result = recvmsg(sock, &msg, 0);
 		if (result < 0) {
 			if (errno == EINTR || errno == EAGAIN)
+			{
 				continue;
+			}
 			dprintf(D_ALWAYS, "Error recieved from kernel (errno=%d, %s)\n", errno, strerror(errno));
 			return errno;
 		}
@@ -749,7 +753,8 @@ int get_routes(int sock, int (*filter)(struct nlmsghdr, struct rtmsg, struct rta
 		}
 
 		struct nlmsghdr *nlmsghdr2;
-		for (nlmsghdr2 = (struct nlmsghdr *)iov[0].iov_base; NLMSG_OK(nlmsghdr2, iov[0].iov_len); nlmsghdr2 = NLMSG_NEXT(nlmsghdr2, iov[0].iov_len)) {
+		unsigned message_size = static_cast<unsigned>(result);
+		for (nlmsghdr2 = (struct nlmsghdr *)iov[0].iov_base; NLMSG_OK(nlmsghdr2, message_size); nlmsghdr2 = NLMSG_NEXT(nlmsghdr2, message_size)) {
 
 			if (nlmsghdr2->nlmsg_type == NLMSG_NOOP) {
 				dprintf(D_ALWAYS, "Ignoring message due to no-op.\n");
@@ -784,10 +789,10 @@ int get_routes(int sock, int (*filter)(struct nlmsghdr, struct rtmsg, struct rta
 				dprintf(D_FULLDEBUG, "Ignoring truncated route message of length %d.\n", nlmsghdr2->nlmsg_len);
 				continue;
 			}
-			struct rtmsg route_msg; memcpy(&route_msg, iov[1].iov_base, sizeof(struct rtmsg));
+			struct rtmsg route_msg; memcpy(&route_msg, NLMSG_DATA(nlmsghdr2), sizeof(struct rtmsg));
 			struct rtattr *attr_table[RTA_MAX+1];
-			struct rtattr *rta = RTM_RTA(iov[1].iov_base);
-			size_t len = iov[1].iov_len - sizeof(struct rtmsg);
+			struct rtattr *rta = RTM_RTA(NLMSG_DATA(nlmsghdr2));
+			size_t len = message_size - NLMSG_LENGTH(sizeof(struct rtmsg));
 			if (parse_rtattr(attr_table, rta, len, RTA_MAX)) {
 				had_filter_error = 1;
 				continue;
@@ -797,7 +802,6 @@ int get_routes(int sock, int (*filter)(struct nlmsghdr, struct rtmsg, struct rta
 				had_filter_error = 1;
 			}
 		}
-		if (done) break;
 	}
 	return 0;
 }
@@ -962,7 +966,6 @@ recv_message(int sock) {
 		if (addr.nl_pid == 0)
 			break;
 	}
-	if (len < 0)
 
 	for (nlmsghdr = (struct nlmsghdr *)buf; NLMSG_OK (nlmsghdr, len); nlmsghdr = NLMSG_NEXT (nlmsghdr, len)) {
 

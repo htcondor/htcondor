@@ -8,9 +8,12 @@
 
 int main(int argc, const char *argv[])
 {
+	dprintf_set_tool_debug("TOOL", 0);
+
 	if (argc != 3)
 	{
 		dprintf(D_ALWAYS, "Usage: %s <bridge_name> <ethernet_device>\n", argv[0]);
+		return 1;
 	}
 	const char *bridge_name = argv[1];
 	const char *bridge_device = argv[2];
@@ -34,14 +37,14 @@ int main(int argc, const char *argv[])
 	// We are responsible for creating the bridge.
 	if (result != EEXIST)
 	{
-		if ((result = add_interface_to_bridge(bridge_name, bridge_device)))
+/*		if ((result = add_interface_to_bridge(bridge_name, bridge_device)))
 		{
 			dprintf(D_ALWAYS, "Unable to add device %s to bridge %s\n", bridge_name, bridge_device);
 			delete_bridge(bridge_name);
 			return result;
 		}
-
-		if ((result = move_routes_to_bridge(fd, bridge_name, bridge_device)))
+*/
+		if ((result = move_routes_to_bridge(fd, bridge_device, bridge_name)))
 		{
 			dprintf(D_ALWAYS, "Failed to move routes from %s to bridge %s\n", bridge_device, bridge_name);
 			delete_bridge(bridge_name);

@@ -64,12 +64,23 @@ static int
 populate_route_info(route_info_t *r) {
 	if (!r)
 		return 1;
-	r->routes = (struct rtmsg*)malloc(5*sizeof(struct rtmsg*));
+	r->routes = (struct rtmsg*)malloc(5*sizeof(struct rtmsg));
+	if (!r->routes)
+	{
+		dprintf(D_ALWAYS, "Failed to allocate routes list.\n");
+		return 2;
+	}
 	r->route_len = 0;
 	r->route_alloc = 0;
 	r->attr_tables = (struct rtattr***)malloc(5*sizeof(struct rtattr **));
-	if (!r->routes || !r->attr_tables) {
-		return 1;
+	if (!r->attr_tables) {
+		dprintf(D_ALWAYS, "Failed to allocate route attribute list.\n");
+		return 3;
+	}
+	for (unsigned i=0; i<5; i++) {
+		r->attr_tables[i] = (struct rtattr**)calloc((RTA_MAX+1), sizeof(struct rtattr*));
+		if (!r->attr_tables[i])
+			return 1;
 	}
 	r->route_alloc = 5;
 	return 0;
@@ -107,6 +118,7 @@ add_route_info(route_info_t *route_info, struct rtmsg rtmsg, struct rtattr *attr
 
 int
 filter_routes(struct nlmsghdr, struct rtmsg rtmsg, struct rtattr *attr_table[RTA_MAX+1], void *user_arg) {
+
 	route_info_t *arg = (route_info_t *)user_arg;
 
 	if (!attr_table[RTA_OIF])
@@ -190,13 +202,14 @@ move_routes_to_bridge(int sock, const char * eth, const char * bridge)
 	}
 
 	route_info_t route_info;
-	if (!populate_route_info(&route_info)) {
+	if (populate_route_info(&route_info)) {
 		dprintf(D_ALWAYS, "Failed to allocate route info structures.\n");
 		return -1;
 	}
+	route_info.eth_dev = eth_dev;
 
 	// Build up a list of routes to copy over.
-	if (!get_routes(sock, filter_routes, &route_info)) {
+	if (get_routes(sock, filter_routes, &route_info)) {
 		dprintf(D_ALWAYS, "Failed to retrieve list of routes from kernel.\n");
 		free_route_info(&route_info);
 		return -1;
@@ -244,10 +257,15 @@ populate_addr_info(addr_info_t *a) {
 		return 1;
 	a->len = 0;
 	a->alloc = 0;
-	a->addrs = (struct ifaddrmsg *)malloc(5*sizeof(struct ifaddrmsg*));
+	a->addrs = (struct ifaddrmsg *)malloc(5*sizeof(struct ifaddrmsg));
 	a->attr_tables = (struct rtattr ***)malloc(5*sizeof(struct rtattr**));
 	if (!a->addrs || !a->attr_tables) {
 		return 1;
+	}
+	for (unsigned i=0; i<5; i++) {
+		a->attr_tables[i] = (struct rtattr**)calloc((IFA_MAX+1), sizeof(struct rtattr*));
+		if (!a->attr_tables[i+a->alloc])
+			return 1;
 	}
 	a->alloc = 5;
 	return 0;
@@ -364,18 +382,21 @@ move_addresses_to_bridge(int sock, const char *eth, const char *bridge) {
 	}
 
 	addr_info_t addr_info;
-	if (!populate_addr_info(&addr_info)) {
+	if (populate_addr_info(&addr_info)) {
 		dprintf(D_ALWAYS, "Failed to allocate address info structures.\n");
 		return -1;
 	}
 	addr_info.eth_dev = eth_dev;
 
 	// Build up a list of addresses to copy over.
-	if (!get_addresses(sock, filter_addresses, &addr_info)) {
+	if (get_addresses(sock, filter_addresses, &addr_info)) {
 		dprintf(D_ALWAYS, "Failed to retrieve list of addresses from kernel.\n");
 		free_addr_info(&addr_info);
 		return -1;
 	}
+
+	dprintf(D_ALWAYS, "Number of addresses on bridge device: %lu\n", addr_info.len);
+	return -1;
 
 	// Remove then add the list of addresses.
 	for (unsigned idx=0; idx<addr_info.len; idx++) {
