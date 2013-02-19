@@ -1,0 +1,54 @@
+<!-- This file was auto-generated from WSDL -->
+<!-- by the Apache Axis2 version: 1.0  Built on : Nov 08, 2012 (09:07:16 EST) -->
+<service name="AviaryHadoopService">
+<parameter name="ServiceClass" locked="xsd:false">aviary_hadoop_axis</parameter>
+<description>AviaryHadoopServiceService</description>
+<operation name="startTaskTracker"  mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">hadoop#tasktracker#start</parameter>
+</operation>
+<operation name="startDataNode"  mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">hadoop#datanode#start</parameter>
+</operation>
+<operation name="getTaskTracker"  mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">hadoop#tasktracker#get</parameter>
+</operation>
+<operation name="stopJobTracker"  mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">hadoop#jobtracker#stop</parameter>
+</operation>
+<operation name="getJobTracker"  mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">hadoop#jobtracker#get</parameter>
+</operation>
+<operation name="stopTaskTracker"  mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">hadoop#tasktracker#stop</parameter>
+</operation>
+<operation name="startNameNode"  mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">hadoop#namenode#start</parameter>
+</operation>
+<operation name="getDataNode"  mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">hadoop#datanode#get</parameter>
+</operation>
+<operation name="stopNameNode"  mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">hadoop#namenode#stop</parameter>
+</operation>
+<operation name="getNameNode"  mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">hadoop#namenode#get</parameter>
+</operation>
+<operation name="startJobTracker"  mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">hadoop#jobtracker#start</parameter>
+</operation>
+<operation name="stopDataNode"  mep="http://www.w3.org/2004/08/wsdl/in-out">
+<messageReceiver class="libwsf_cpp_msg_recv.so.0"/>
+<parameter name="wsamapping">hadoop#datanode#stop</parameter>
+</operation>
+</service>

@@ -377,6 +377,7 @@ Reconfiguration using \Condor{reconfig} will not be enough.
   \item \verb@PREEMPTION_REQUIREMENTS_STABLE@
   \item \verb@PRIVSEP_ENABLED@
   \item \verb@PROCD_ADDRESS@
+  \item \verb@SLOT_TYPE_<N>@
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -3661,7 +3662,7 @@ Configuration File Macros}
 \Note If you are running HTCondor on a multi-CPU machine, be sure
 to also read section~\ref{sec:Configuring-SMP} on
 page~\pageref{sec:Configuring-SMP} which describes how to set up and
-configure HTCondor on SMP machines.
+configure HTCondor on multi-core machines.
 
 These settings control general operation of the \Condor{startd}.
 Examples using these configuration macros,
@@ -3866,8 +3867,7 @@ WANT_HOLD_REASON = \
 \label{param:KillingTimeout}
 \item[\Macro{KILLING\_TIMEOUT}]
   The amount of time in seconds that the \Condor{startd} should wait after 
-  sending a job-defined signal and before forcibly killing the job.  
-  Applies to all job universes other than the standard universe.
+  sending a fast shutdown request to \Condor{starter} before forcibly killing the job and \Condor{starter}.  
   The default value is 30 seconds. 
 
 \label{param:PollingInterval}
@@ -4107,10 +4107,10 @@ WANT_HOLD_REASON = \
   When set, it overrides the value determined with HTCondor's 
   automatic computation of the number of CPUs in the machine.
   Lying in this way can allow multiple HTCondor jobs to run on a
-  single-CPU machine, by having that machine treated like an SMP
+  single-CPU machine, by having that machine treated like a multi-core 
   machine with multiple CPUs, which could have different HTCondor jobs
   running on each one.
-  Or, an SMP machine may advertise more slots than it has CPUs.
+  Or, a multi-core machine may advertise more slots than it has CPUs.
   However, lying in this manner will hurt the performance of the jobs,
   since now multiple jobs will run on the same CPU,
   and the jobs will compete with each other.
@@ -4379,18 +4379,17 @@ Configuring HTCondor for Running Backfill Jobs for details.
 \end{description}
 
 
-These macros only apply to the \Condor{startd} daemon when it is running on an
-SMP machine. 
+These macros only apply to the \Condor{startd} daemon when it is running on 
+a multi-core machine. 
 See section~\ref{sec:Configuring-SMP} on
-page~\pageref{sec:Configuring-SMP} on Configuring The Startd for 
-SMP Machines for details.
+page~\pageref{sec:Configuring-SMP} for details.
 
 \begin{description}
 
 \label{param:StartdResourcePrefix}
 \item[\Macro{STARTD\_RESOURCE\_PREFIX}] 
   A string which specifies what prefix to give the unique HTCondor
-  resources that are advertised on SMP machines.
+  resources that are advertised on multi-core machines.
   Previously, HTCondor used the term \Term{virtual machine} to describe
   these resources, so the default value for this setting was \Expr{vm}.
   However, to avoid confusion with other kinds of virtual machines,
@@ -4400,7 +4399,7 @@ SMP Machines for details.
   Therefore, the default value of this prefix is now \Expr{slot}.
   If sites want to continue using \Expr{vm}, or prefer something other
   \Expr{slot}, this setting enables sites to define what string the
-  \Condor{startd} will use to name the individual resources on an SMP
+  \Condor{startd} will use to name the individual resources on a multi-core
   machine.
 
 \label{param:SlotsConnectedToConsole}
@@ -4431,7 +4430,7 @@ SMP Machines for details.
   If you do not want this boost, set the value to 0.  
   If you change your START expression to require more than 15 minutes
   before a job starts, but you still want jobs to start right away on
-  some of your SMP nodes, increase this macro's value.
+  some of your multi-core nodes, increase this macro's value.
 
 \label{param:StartdSlotAttrs}
 \item[\Macro{STARTD\_SLOT\_ATTRS}]
@@ -4461,8 +4460,8 @@ SMP Machines for details.
 \end{description}
 
 The following settings control the number of slots reported
-for a given SMP host, and what attributes each one has.  
-They are only needed if you do not want to have an SMP machine report
+for a given multi-core host, and what attributes each one has.  
+They are only needed if you do not want to have a multi-core machine report
 to HTCondor with a separate slot for each CPU, with all
 shared system resources evenly divided among them.
 Please read section~\ref{sec:SMP-Divide} on
@@ -4588,10 +4587,11 @@ search for the corresponding attribute names using \Expr{slot}, instead.
 \label{param:NumSlots}
 \item[\Macro{NUM\_SLOTS}]
   An integer value representing the number of slots reported when
-  the SMP machine is being evenly divided, and the slot
+  the multi-core machine is being evenly divided, and the slot
   type settings described above are not being used.
   The default is one slot for each CPU.
-  This setting can be used to reserve some CPUs on an SMP which would
+  This setting can be used to reserve some CPUs on a multi-core machine,
+  which would
   not be reported to the HTCondor pool.
   This value cannot be used to
   make HTCondor advertise more slots than there are CPUs on the machine.
@@ -5103,32 +5103,39 @@ MAX_JOBS_RUNNING	= \
 \label{param:TransferQueueNameExpr}
 \item[\Macro{TRANSFER\_QUEUE\_USER\_EXPR}]
   This rarely configured expression specifies the username to be used
-  for round-robin scheduling in the file transfer queue.  Round-robin
-  scheduling is used when there are multiple jobs waiting to transfer
-  files within the limits set by \Macro{MAX\_CONCURRENT\_UPLOADS}
-  and/or \Macro{MAX\_CONCURRENT\_DOWNLOADS}.  When choosing a new job
-  to allow to transfer, the first job belonging to the transfer queue
-  user who has least recently been given an opportunity to transfer
-  will be selected.  By default, a transfer queue user is identified
-  as the job owner.  A different user name may be specified by
-  configuring \MacroNI{TRANSFER\_QUEUE\_USER\_EXPR} to a string
-  expression that is evaluated in the context of the job ad.  For
-  example, if this expression were set to a name that is the same for
-  all jobs, file transfers would be scheduled in first-in-first-out
-  order rather than round-robin by job owner.
+  for scheduling purposes in the file transfer queue.  The scheduler
+  attempts to give equal weight to each user when there are multiple
+  jobs waiting to transfer files within the limits set by
+  \Macro{MAX\_CONCURRENT\_UPLOADS} and/or
+  \Macro{MAX\_CONCURRENT\_DOWNLOADS}.  When choosing a new job to
+  allow to transfer, the first job belonging to the transfer queue
+  user who has least number of active transfers will be selected.
+  In case of a tie, the user who has least recently been given an
+  opportunity to start a transfer will be selected.  By default, a
+  transfer queue user is identified as the job owner.  A different
+  user name may be specified by configuring
+  \MacroNI{TRANSFER\_QUEUE\_USER\_EXPR} to a string expression that is
+  evaluated in the context of the job ad.  For example, if this
+  expression were set to a name that is the same for all jobs, file
+  transfers would be scheduled in first-in-first-out order rather than
+  equal share order.
 
 \label{param:MaxTransferInputMB}
 \item[\Macro{MAX\_TRANSFER\_INPUT\_MB}]
   This integer expression specifies the maximum allowed total size in
-  megabytes of the input files that are transferred for a job.  This
-  expression does not apply to grid universe, standard universe, or
-  files transferred via file transfer plugins.  The expression may
-  refer to attributes of the job.  The special value -1 indicates no
-  limit.  The default is -1.  The job may override the system setting
+  Mbytes of the input files that are transferred for a job.  This
+  expression does \emph{not} apply to grid universe, standard universe, or
+  files transferred via file transfer plug-ins.  The expression may
+  refer to attributes of the job.  
+  The special value \Expr{-1} indicates no limit.
+  The default value is -1.
+  The job may override the system setting
   by specifying its own limit using the \Attr{MaxTransferInputMB}
-  attribute.  If the observed size of all input files at submit time
+  attribute.  
+  If the observed size of all input files at submit time
   is larger than the limit, the job will be immediately placed on hold
-  with hold code 32.  If the job passes this initial test, but the
+  with a \Attr{HoldReasonCode} value of 32.
+  If the job passes this initial test, but the
   size of the input files increases or the limit decreases so that the
   limit is violated, the job will be placed on hold at the time when
   the file transfer is attempted.
@@ -5136,15 +5143,18 @@ MAX_JOBS_RUNNING	= \
 \label{param:MaxTransferOutputMB}
 \item[\Macro{MAX\_TRANSFER\_OUTPUT\_MB}]
   This integer expression specifies the maximum allowed total size in
-  megabytes of the output files that are transferred for a job.  This
-  expression does not apply to grid universe, standard universe, or
-  files transferred via file transfer plugins.  The expression may
-  refer to attributes of the job.  The special value -1 indicates no
-  limit.  The default is -1.  The job may override the system setting
+  Mbytes of the output files that are transferred for a job.  This
+  expression does \emph{not} apply to grid universe, standard universe, or
+  files transferred via file transfer plug-ins.  
+  The expression may refer to attributes of the job.
+  The special value \Expr{-1} indicates no limit.  
+  The default value is -1.
+  The job may override the system setting
   by specifying its own limit using the \Attr{MaxTransferOutputMB}
   attribute.  If the total size of the job's output files to be
   transferred is larger than the limit, the job will be placed on hold
-  with hold code 33.  The output will be transferred up to the point
+  with a \Attr{HoldReasonCode} value of 33.
+  The output will be transferred up to the point
   when the limit is hit, so some files may be fully transferred, some
   partially, and some not at all.
 
@@ -5529,6 +5539,19 @@ MAX_JOBS_RUNNING	= \
   \Condor{schedd} to join the pool (this requires \DCPerm{ADVERTISE\_SCHEDD}
   authorization level, which defaults to \DCPerm{WRITE}).
 
+\label{param:FlockIncrement}
+\item[\Macro{FLOCK\_INCREMENT}]
+  This integer value controls how quickly flocking to various
+  pools will occur.  It defaults to 1, meaning that pools will
+  be considered for flocking slowly. 
+  The first \Condor{collector} daemon listed in
+  \Macro{FLOCK\_COLLECTOR\_HOSTS} will be considered for flocking, and then
+  the second, and so on.  A larger value increases the number of 
+  \Condor{collector} daemons to be considered for flocking.
+  For example, a value of 2 will partition the
+  \Macro{FLOCK\_COLLECTOR\_HOSTS} into sets of 2 \Condor{collector} daemons,
+  and each set will be considered for flocking.
+
   \label{param:NegotiateAllJobsInCluster}
 \item[\Macro{NEGOTIATE\_ALL\_JOBS\_IN\_CLUSTER}]
   If this macro is set to False (the default), when the \Condor{schedd} fails
@@ -5669,6 +5692,13 @@ SYSTEM_PERIODIC_REMOVE = \
   both a submit and execute node to run jobs locally if it cannot
   communicate with the central manager. The default value, if not
   specified, is 1200 (20 minutes).
+
+\label{param:GracefullyRemoveJobs}
+\item[\Macro{GRACEFULLY\_REMOVE\_JOBS}]
+  A boolean value that causes jobs to be gracefully removed when the
+  default value of \Expr{True}.
+  A submit description file command \SubmitCmd{want\_graceful\_removal}
+  overrides the value set for this configuration variable.
 
 \label{param:ScheddRoundAttr}
 \item[\Macro{SCHEDD\_ROUND\_ATTR\_<xxxx>}]
@@ -6343,6 +6373,12 @@ These settings affect the \Condor{starter}.
   Since values larger than 2047 have no real meaning on 32-bit platforms,
   values larger than 2047 result in no limit set on 32-bit platforms.
 
+\label{param:UsePidNamespaces} 
+\item[ \Macro{USE\_PID\_NAMESPACES}]
+  A boolean value that, when \Expr{True}, enables the use of per job PID
+  namespaces for HTCondor jobs run on Linux kernels.
+  Defaults to \Expr{False}.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -6722,8 +6758,7 @@ These macros affect the \Condor{collector}.
   machine.
   The \MacroNI{COLLECTOR\_NAME} setting is just used as a
   human-readable string to describe the pool, which is included in the
-  updates set to the \MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR} (see
-  below). 
+  updates sent to the \MacroNI{CONDOR\_DEVELOPERS\_COLLECTOR}.
 
 \label{param:CondorDevelopersCollector}
 \item[\Macro{CONDOR\_DEVELOPERS\_COLLECTOR}]
@@ -9027,7 +9062,7 @@ in section~\ref{sec:DAG-configuration}.
   \end{itemize}
   Using a strictness value greater than 0 may help find problems with
   a DAG that may otherwise escape notice.
-  The default value if not defined is 0.
+  The default value if not defined is 1.
 
 \label{param:DAGmanAlwaysRunPost}
 \item[\Macro{DAGMAN\_ALWAYS\_RUN\_POST}]
@@ -9153,12 +9188,12 @@ section~\ref{sec:Security} on Security.
   even if they have an empty subject name.
 
 \label{param:HostAlias}
-\item[\Macro{HOST\_ALIAS}] specifies the
-  hostname that clients authenticating this daemon with GSI should
+\item[\Macro{HOST\_ALIAS}] Specifies the fully qualified
+  host name that clients authenticating this daemon with GSI should
   expect the daemon's certificate to match.  The alias is advertised
   to the \Condor{collector} as part of the address of the daemon.
   When this is not set, clients validate the daemon's certificate
-  hostname by matching it against DNS A records for the host they
+  host name by matching it against DNS A records for the host they
   are connected to.  See \Macro{GSI\_SKIP\_HOST\_CHECK} for ways
   to disable this validation step.
 
@@ -10619,7 +10654,10 @@ SHARED_PORT_ARGS = -p 4080
 \end{verbatim}
 
 If no port is specified, a port will be dynamically chosen; it may be
- different each time HTCondor is started.
+different each time HTCondor is started.  In order to decrease the
+duration of possible communication errors resulting from HTCondor or just
+\Condor{shared\_port} itself restarting, it is recommended that a fixed
+port be used instead of a dynamic one.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

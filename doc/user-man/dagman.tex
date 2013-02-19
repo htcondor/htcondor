@@ -1228,6 +1228,22 @@ The resulting values passed to the NodeB executable are
 \end{verbatim}
 \normalsize
 
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
+\item[Using VARS to define ClassAd attributes]
+\end{description}
+
+The \Arg{macroname} may also begin with a \Expr{+} character, in which case it
+names a ClassAd attribute. For example, the following VARS specification
+\begin{verbatim}
+  Vars NodeE +A="\"bob\""
+\end{verbatim}
+would allow the HTCondor submit description file for NodeE to use
+the following line:
+\begin{verbatim}
+  arguments = "$$([A])"
+\end{verbatim}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Setting Priorities for Nodes}
 \index{DAGMan input file!PRIORITY key word}

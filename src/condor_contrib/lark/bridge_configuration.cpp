@@ -33,7 +33,7 @@ BridgeConfiguration::Setup() {
 	std::string bridge_name;
 	if (!m_ad->EvaluateAttrString(ATTR_BRIDGE_NAME, bridge_name) &&
 			!param(bridge_name, CONFIG_BRIDGE_NAME)) {
-		dprintf(D_FULLDEBUG, "Could not determine the bridge name from the configuration; using the default " LARK_BRIDGE_NAME ".");
+		dprintf(D_FULLDEBUG, "Could not determine the bridge name from the configuration; using the default " LARK_BRIDGE_NAME ".\n");
 		bridge_name = LARK_BRIDGE_NAME;
 	}
 
@@ -71,12 +71,13 @@ BridgeConfiguration::Setup() {
 	if (result != EEXIST) {
 		if ((result = add_interface_to_bridge(bridge_name.c_str(), bridge_device.c_str()))) {
 			dprintf(D_ALWAYS, "Unable to add device %s to bridge %s\n", bridge_name.c_str(), bridge_device.c_str());
+			delete_bridge(bridge_name.c_str());
 			return result;
 		}
-		// TODO: Move IP addresses to bridge
 
-		if ((result = move_routes_to_bridge(fd, bridge_name.c_str(), bridge_device.c_str()))) {
+		if ((result = move_routes_to_bridge(fd, bridge_device.c_str(), bridge_name.c_str()))) {
 			dprintf(D_ALWAYS, "Failed to move routes from %s to bridge %s\n", bridge_device.c_str(), bridge_name.c_str());
+			delete_bridge(bridge_name.c_str());
 			return result;
 		}
 	}

@@ -7,7 +7,7 @@
         * ResourceID.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Sep 18, 2012 (08:44:08 EDT)
+        * by the Apache Axis2/Java version: 1.0  Built on : Nov 08, 2012 (09:07:42 EST)
         */
 
        /**
@@ -48,10 +48,18 @@ namespace AviaryCommon
 
                 
                 bool isValidName;
+            std::string property_Address;
+
+                
+                bool isValidAddress;
             std::string property_Sub_type;
 
                 
                 bool isValidSub_type;
+            int property_Birthdate;
+
+                
+                bool isValidBirthdate;
             
 
         /*** Private methods ***/
@@ -70,7 +78,15 @@ namespace AviaryCommon
             
 
         bool WSF_CALL
+        setAddressNil();
+            
+
+        bool WSF_CALL
         setSub_typeNil();
+            
+
+        bool WSF_CALL
+        setBirthdateNil();
             
 
 
@@ -99,10 +115,12 @@ namespace AviaryCommon
          * @param Resource AviaryCommon::ResourceType*
          * @param Pool std::string
          * @param Name std::string
+         * @param Address std::string
          * @param Sub_type std::string
+         * @param Birthdate int
          * @return newly created ResourceID object
          */
-        ResourceID(AviaryCommon::ResourceType* arg_Resource,std::string arg_Pool,std::string arg_Name,std::string arg_Sub_type);
+        ResourceID(AviaryCommon::ResourceType* arg_Resource,std::string arg_Pool,std::string arg_Name,std::string arg_Address,std::string arg_Sub_type,int arg_Birthdate);
         
 
         /**
@@ -187,6 +205,30 @@ namespace AviaryCommon
         
 
         /**
+         * Getter for address. 
+         * @return std::string*
+         */
+        WSF_EXTERN std::string WSF_CALL
+        getAddress();
+
+        /**
+         * Setter for address.
+         * @param arg_Address std::string*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setAddress(const std::string  arg_Address);
+
+        /**
+         * Re setter for address
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetAddress();
+        
+        
+
+        /**
          * Getter for sub_type. 
          * @return std::string*
          */
@@ -207,6 +249,30 @@ namespace AviaryCommon
          */
         WSF_EXTERN bool WSF_CALL
         resetSub_type();
+        
+        
+
+        /**
+         * Getter for birthdate. 
+         * @return int*
+         */
+        WSF_EXTERN int WSF_CALL
+        getBirthdate();
+
+        /**
+         * Setter for birthdate.
+         * @param arg_Birthdate int*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setBirthdate(const int  arg_Birthdate);
+
+        /**
+         * Re setter for birthdate
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetBirthdate();
         
 
 
@@ -250,11 +316,31 @@ namespace AviaryCommon
         
 
         /**
+         * Check whether address is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isAddressNil();
+
+
+        
+
+        /**
          * Check whether sub_type is Nill
          * @return true if the element is Nil, false otherwise
          */
         bool WSF_CALL
         isSub_typeNil();
+
+
+        
+
+        /**
+         * Check whether birthdate is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isBirthdateNil();
 
 
         
@@ -349,12 +435,34 @@ namespace AviaryCommon
         
 
         /**
-         * Getter for sub_type by property number (4)
+         * Getter for address by property number (4)
          * @return std::string
          */
 
         std::string WSF_CALL
         getProperty4();
+
+    
+        
+
+        /**
+         * Getter for sub_type by property number (5)
+         * @return std::string
+         */
+
+        std::string WSF_CALL
+        getProperty5();
+
+    
+        
+
+        /**
+         * Getter for birthdate by property number (6)
+         * @return int
+         */
+
+        int WSF_CALL
+        getProperty6();
 
     
 

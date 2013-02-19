@@ -205,6 +205,7 @@ BUCKET *ProcVars[ PROCVARSIZE ];
 MyString	DumpFileName;
 bool		DumpClassAdToFile = false;
 FILE		*DumpFile = NULL;
+bool		DumpFileIsStdout = 0;
 
 /*
 **	Names of possible CONDOR variables.
@@ -914,12 +915,13 @@ main( int argc, char *argv[] )
 
 	for( ptr=argv+1,argc--; argc > 0; argc--,ptr++ ) {
 		if( ptr[0][0] == '-' ) {
-#if !defined(WIN32)
+//tj: go ahead an parse this on windows, even though we can't currently support it.
+//#if !defined(WIN32)
 			if ( match_prefix( ptr[0], "-interactive" ) ) {
 				InteractiveJob = 1;
 				extraLines.Append( "+InteractiveJob=True" );
 			} else
-#endif
+//#endif
 			if ( match_prefix( ptr[0], "-verbose" ) ) {
 				Quiet = 0;
 			} else if ( match_prefix( ptr[0], "-disable" ) ) {
@@ -1027,6 +1029,8 @@ main( int argc, char *argv[] )
 				}
 				DumpFileName = *ptr;
 				DumpClassAdToFile = true;
+				if (DumpFileName == "-") 
+					DumpFileIsStdout = true;
 #if defined ( WIN32 )
 				// we don't really want to do this because there is no real 
 				// schedd to query the credentials from...
@@ -1154,7 +1158,7 @@ main( int argc, char *argv[] )
 		if ( !InteractiveSubmitFile ) {
 			extraLines.Append( "executable=/bin/sleep" );
 			extraLines.Append( "transfer_executable=false" );
-			extraLines.Append( "args=180" );
+			extraLines.Append( "arguments=180" );
 			extraLines.Append( "universe=vanilla" );
 		}
 	}
@@ -1181,12 +1185,9 @@ main( int argc, char *argv[] )
 		if (Quiet) {
 			fprintf(stdout, "Submitting job(s)");
 		}
-	} else {
+	} else if ( ! DumpFileIsStdout ) {
+		// get the file we are to dump the ClassAds to...
 		fprintf(stdout, "Storing job ClassAd(s)");
-	}
-
-	// open the file we are to dump the ClassAds to...
-	if ( DumpClassAdToFile ) {
 		if( (DumpFile=safe_fopen_wrapper_follow(DumpFileName.Value(),"w")) == NULL ) {
 			fprintf( stderr, "\nERROR: Failed to open file to dump ClassAds into (%s)\n",
 				strerror(errno));
@@ -1383,7 +1384,12 @@ main( int argc, char *argv[] )
 
 	// If this is an interactive job, spawn ssh_to_job -auto-retry -X, and also
 	// with pool and schedd names if they were passed into condor_submit
-#if !defined(WIN32)
+#ifdef WIN32
+	if (InteractiveJob &&  ClusterId != -1) {
+		fprintf( stderr, "ERROR: -interactive not supported on this platform.\n" );
+		exit(1);
+	}
+#else
 	if (InteractiveJob &&  ClusterId != -1) {
 		char jobid[40];
 		int i,j,rval;
@@ -6605,8 +6611,8 @@ queue(int num)
 		// ugly, here we should be using a derivation of Stream called File 
 		// which we would in turn serialize the job object to...)
 		if ( DumpClassAdToFile ) {
-			job->fPrint ( DumpFile );
-			fprintf ( DumpFile, "\n" );
+			job->fPrint ( DumpFileIsStdout ? stdout : DumpFile );
+			fprintf ( DumpFileIsStdout ? stdout : DumpFile, "\n" );
 		}
 
 		if ( ProcId == 0 ) {
@@ -6628,7 +6634,7 @@ queue(int num)
 		job = new ClassAd();
 		job_ad_saved = false;
 
-		if (Quiet) {
+		if (Quiet && ! DumpFileIsStdout) {
 			fprintf(stdout, ".");
 		}
 
@@ -7257,7 +7263,7 @@ usage()
 	fprintf( stderr, "	-spool\t\t\tspool all files to the schedd\n" );
 	fprintf( stderr, "	-password <password>\tspecify password to MyProxy server\n" );
 	fprintf( stderr, "	-pool <host>\t\tUse host as the central manager to query\n" );
-	fprintf( stderr, "	-dump <filename>\t\tWrite schedd bound ClassAds to this\n"
+	fprintf( stderr, "	-dump <filename>\tWrite schedd bound ClassAds to this\n"
 					 "                  \t\tfile rather than to the schedd itself\n" );
 	fprintf( stderr, "	-stm <method>\t\thow to move a sandbox into Condor\n" );
 	fprintf( stderr, "               \t\tAvailable methods:\n\n" );

@@ -40,11 +40,11 @@ class ClassAdCache
 {
 protected:
     
-        typedef classad_unordered<std::string, pCacheEntry, StringCaseIgnHash, CaseIgnEqStr> AttrValues;
-        typedef classad_unordered<std::string, pCacheEntry, StringCaseIgnHash, CaseIgnEqStr>::iterator value_iterator;
+        typedef classad_unordered<std::string, pCacheEntry> AttrValues;
+        typedef classad_unordered<std::string, pCacheEntry>::iterator value_iterator;
         
-	typedef classad_unordered<std::string, AttrValues, StringCaseIgnHash, CaseIgnEqStr> AttrCache;
-	typedef classad_unordered<std::string, AttrValues, StringCaseIgnHash, CaseIgnEqStr>::iterator cache_iterator;
+	typedef classad_unordered<std::string, AttrValues, ClassadAttrNameHash, CaseIgnEqStr> AttrCache;
+	typedef classad_unordered<std::string, AttrValues, ClassadAttrNameHash, CaseIgnEqStr>::iterator cache_iterator;
 
 	AttrCache m_Cache;		///< Data Store
 	unsigned long m_HitCount;	///< Hit Counter
@@ -64,7 +64,11 @@ public:
 	virtual ~ClassAdCache(){;};
 
 	///< cache's a local attribute->ExpTree
+#ifndef WIN32
 	pCacheData cache( std::string & szName, const std::string & szValue , ExprTree * pVal)
+#else
+	pCacheData cache(const std::string & szName, const std::string & szValue , ExprTree * pVal)
+#endif
 	{
 		pCacheData pRet;
 		
@@ -75,7 +79,9 @@ public:
 		{
                   bValidName = true;
                   value_iterator vtr = itr->second.find(szValue);
+                 #ifndef WIN32 // this just wastes time on windows
                   szName = itr->first;
+                 #endif
 
                   // check the value cache
                   if (vtr != itr->second.end())
@@ -126,19 +132,23 @@ public:
 	{
 	  cache_iterator itr = m_Cache.find(szName);
 
-          // remove all conditional checks because they are always true.
-	  if (itr->second.size() == 1)
-          {
-            m_Cache.erase(itr);
-          }
-          else
-          {
-            value_iterator vtr = itr->second.find(szValue);
-            itr->second.erase(vtr);
+      if (itr != m_Cache.end())
+	  {
+		  if (itr->second.size() == 1)
+			  {
+				m_Cache.erase(itr);
+			  }
+			  else
+			  {
+				value_iterator vtr = itr->second.find(szValue);
+				itr->second.erase(vtr);
+		      }
+
+		  m_RemovalCount++;
+		  return (true);
 	  }
 
-	  m_RemovalCount++;
-	  return (true);
+	  return false;
 	} 
 	
 	///< dumps the contents of the cache to the file
@@ -199,6 +209,59 @@ public:
 
 	  return (bRet);
 	}
+
+	///< dumps the contents of the cache to the file
+	void print_stats(FILE* fp)
+	{
+		double dHitRatio = 0.0;
+		double dMissRatio = 0.0;
+		unsigned long cTotalUseCount = 0;
+		unsigned long cMaxUseCount = 0;
+		unsigned long cTotalPruned = 0;
+		unsigned long cTotalValues = 0;
+		unsigned long cAttribs = 0;
+		unsigned long cSingletonValues = 0;
+		unsigned long cAttribsWithOnlySingletonValues = 0;
+		unsigned long cSingletonAttribs = 0;
+
+		if (m_HitCount+m_MissCount) {
+			double dTot = m_HitCount + m_MissCount;
+			dHitRatio = (100.0 * m_HitCount) / dTot;
+			dMissRatio = (100.0 * m_MissCount) / dTot;
+		}
+
+		cache_iterator itr = m_Cache.begin();
+		while (itr != m_Cache.end())
+		{
+			value_iterator vtr = itr->second.begin();
+
+			unsigned long cValues = 0;
+			unsigned long cMaxUse = 0;
+			while (vtr != itr->second.end())
+			{
+				unsigned long cUseCount = vtr->second.use_count();
+				if (cUseCount == 1) { ++cSingletonValues; }
+				cTotalUseCount += cUseCount;
+				if (cMaxUse < cUseCount) { cMaxUse = cUseCount; }
+
+				++cTotalValues;
+				++cValues;
+				vtr++;
+			}
+
+			if (cMaxUseCount < cMaxUse) { cMaxUseCount = cMaxUse; }
+			if (cMaxUse <= 1) { ++cAttribsWithOnlySingletonValues; }
+			if (cValues <= 1) { ++cSingletonAttribs; }
+
+			++cAttribs;
+			itr++;
+		}
+
+		fprintf( fp, "Attribs: %lu SingleUseAttribs: %lu AttribsWithOnlySingletons: %lu\n",  cAttribs, cSingletonAttribs, cAttribsWithOnlySingletonValues);
+		fprintf( fp, "Values: %lu SingleUseValues: %lu UseCountTot:%lu UseCountMax: %lu\n", cTotalValues, cSingletonValues, cTotalUseCount, cMaxUseCount);
+		fprintf( fp, "Hits:%lu (%.2f%%) Misses: %lu (%.2f%%) QueryMiss: %lu\n", m_HitCount,dHitRatio,m_MissCount,dMissRatio,m_MissCheck ); 
+	};
+
 };
 
 
@@ -226,9 +289,9 @@ CacheEntry::~CacheEntry()
 {
     if (pData)
     {
-        delete pData;
-        pData=0;
         _cache->flush(szName, szValue);
+		delete pData;
+        pData=0;
     }
 }
 
@@ -237,10 +300,14 @@ CachedExprEnvelope::~CachedExprEnvelope()
   // nothing to do shifted to the cache entry. 
 }
 
-ExprTree * CachedExprEnvelope::cache (std::string & pName, ExprTree * pTree)
+#ifndef WIN32
+ExprTree * CachedExprEnvelope::cache (std::string & pName, const std::string & szValue, ExprTree * pTree)
+#else
+ExprTree * CachedExprEnvelope::cache (const std::string & pName, const std::string & szValue, ExprTree * pTree)
+#endif
 {
 	ExprTree * pRet=pTree;
-	string szValue;
+	const std::string * pszValue = &szValue;
 	NodeKind nk = pTree->GetKind();
 	
 	switch (nk)
@@ -251,16 +318,22 @@ ExprTree * CachedExprEnvelope::cache (std::string & pName, ExprTree * pTree)
 	  
 	  case EXPR_LIST_NODE:
 	  case CLASSAD_NODE:
+#ifndef WIN32 // this just wastes time on windows.
 	    // for classads the values are already cached but we still should string space the name
 	    check_hit (pName, szValue);
+#endif
 	  break;
 	    
 	  default:
 	  {
 	    CachedExprEnvelope * pNewEnv = new CachedExprEnvelope();
 	
-            
-	    classad::val_str(szValue, pTree); 
+		// if no unparsed value was passed in, then unparse the passed-in ExprTree
+		std::string szUnparsedValue;
+		if (szValue.empty()) {
+			classad::val_str(szUnparsedValue, pTree);
+			pszValue = &szUnparsedValue;
+		}
 	
 	    pNewEnv->nodeKind = EXPR_ENVELOPE;
 	    if (!_cache)
@@ -268,7 +341,7 @@ ExprTree * CachedExprEnvelope::cache (std::string & pName, ExprTree * pTree)
 	      _cache.reset( new ClassAdCache() );
 	    }
 
-	    pNewEnv->m_pLetter = _cache->cache( pName, szValue, pTree);
+	    pNewEnv->m_pLetter = _cache->cache(pName, *pszValue, pTree);
 	    pRet = pNewEnv;
 	  }
 	}
@@ -278,7 +351,13 @@ ExprTree * CachedExprEnvelope::cache (std::string & pName, ExprTree * pTree)
 
 bool CachedExprEnvelope::_debug_dump_keys(const string & szFile)
 {
+  if ( ! _cache) return false;
   return _cache->dump_keys(szFile);
+}
+
+void CachedExprEnvelope::_debug_print_stats(FILE* fp)
+{
+  if (_cache) _cache->print_stats(fp);
 }
 
 CachedExprEnvelope * CachedExprEnvelope::check_hit (string & szName, const string& szValue)
@@ -334,6 +413,14 @@ ExprTree * CachedExprEnvelope::Copy( ) const
 	return ( pRet );
 }
 
+const ExprTree* CachedExprEnvelope::self() const
+{
+	return m_pLetter->pData;
+}
+
+/* This version is for shared-library compatibility.
+ * Remove it the next time we have to bump the ClassAds SO version.
+ */
 const ExprTree* CachedExprEnvelope::self()
 {
 	return m_pLetter->pData;

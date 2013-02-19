@@ -1,0 +1,4 @@
+#!/bin/sh
+
+PATH=$PWD/../../condor_collector.V6:$PWD/../../condor_schedd.V6:$PWD/../../condor_master.V6:$PWD/../../condor_tools:$PATH LD_LIBRARY_PATH=$PWD:$PWD/../../condor_utils:$PWD/../../classad:$PWD/../../../bld_external/classads-@PACKAGE_VERSION@/install/lib:$PWD/../../../release_dir/lib/condor PYTHONPATH=$PWD python "$@"
+

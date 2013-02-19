@@ -1,0 +1,547 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{API-Python} Python Bindings}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{API!Python bindings}
+\index{Python bindings}
+
+The Python module provides bindings to the client-side APIs for HTCondor and
+the ClassAd language.
+
+These Python bindings depend on loading the HTCondor shared libraries; this
+means the same code is used here as the HTCondor client tools.  It is more
+efficient in terms of memory and CPU to utilize these bindings than to parse
+the output of the HTCondor client tools when writing applications in Python.
+
+Currently, the Python bindings are only available on Linux platforms.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{Python-OtherModule} \texttt{htcondor}  Module}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+The \texttt{htcondor} module provides a client interface to the various 
+HTCondor daemons. It tries to provide functionality similar to the HTCondor 
+command line tools.
+
+\textbf{\texttt{htcondor} module functions:}
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+\texttt{platform( )}
+
+Returns the platform of HTCondor this module is running on.
+\\ \hline
+\texttt{version( )}
+
+Returns the version of HTCondor this module is linked against. 
+\\ \hline
+\texttt{reload\_config( )}
+
+Reload the HTCondor configuration from disk. 
+\\ \hline
+\texttt{send\_command( ad, (DaemonCommands)dc, (str)target = None) }
+
+Send a command to an HTCondor daemon specified by a location ClassAd. 
+
+\texttt{ad} is a ClassAd specifying the location of the daemon; 
+typically, found by using \texttt{Collector.locate(...)}.
+
+\texttt{dc} is a command type; must be a member of the enum 
+\texttt{DaemonCommands}. 
+
+\texttt{target} is an optional parameter, representing an additional command
+to send to a daemon.   Some commands require additional arguments; 
+for example, sending \texttt{DaemonOff} to a \Condor{master} requires 
+one to specify which subsystem to turn off. 
+\\ \hline
+
+\end{tabular}
+\end{flushleft}
+
+\textbf{The module object, \texttt{param}}, is
+a dictionary-like object providing access to the configuration variables
+in the current HTCondor configuration.
+
+\textbf{The \Condor{schedd} class:}
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+
+\texttt{\_\_init\_\_( classad )}
+
+Create an instance of the \texttt{Schedd} class.  
+
+Optional parameter \texttt{classad} 
+describes the location of the remote \Condor{schedd} daemon.
+If the parameter is omitted, the local \Condor{schedd} daemon is used.
+\\ \hline
+\texttt{act( (JobAction)action, (object)job\_spec )}
+
+Change status of job(s) in the \Condor{schedd} daemon.
+The integer return value is a \texttt{ClassAd} object describing 
+the number of jobs changed.
+
+Parameter \texttt{action} is the action to perform; must be of the
+enum \texttt{JobAction}.
+
+Parameter \texttt{job\_spec} is the job specification.
+It can either be a list of job IDs or a string specifying a constraint 
+to match jobs.
+\\ \hline
+\texttt{edit( (object)job\_spec, (str)attr, (object)value )}
+
+Edit one or more jobs in the queue.
+
+Parameter \texttt{job\_spec} is either a list of jobs, 
+with each given as \texttt{ClusterId.ProcId} 
+or a string containing a constraint to match jobs against.
+
+Parameter \texttt{attr} is the attribute name of the attribute to edit.
+
+Parameter \texttt{value} is the new value of the job attribute. 
+It should be a string, which will be converted to a ClassAd expression,
+or an \texttt{ExprTree} object.
+\\ \hline
+\texttt{query( constraint = true, attr\_list = [] )}
+
+Query the \Condor{schedd} daemon for jobs.
+Returns a list of ClassAds representing the matching jobs,
+containing at least the requested attributes requested by the second parameter.
+
+The optional parameter \texttt{constraint} provides a constraint for 
+filtering out jobs.
+It defaults to \texttt{True}.
+
+Parameter \texttt{attr\_list} is a list of attributes for the \Condor{schedd}
+daemon to project along.  
+It defaults to having the \Condor{schedd} daemon return all attributes.
+\\ \hline
+\texttt{submit( ad, count = 1, spool = false, ad\_results = None )}
+
+Submit one or more jobs to the \Condor{schedd} daemon.
+Returns the newly created cluster ID.
+
+This method requires the invoker to provide a ClassAd for the new job cluster;
+such a ClassAd contains attributes with different names than the commands in
+a submit description file.  As an example, the stdout file is referred to as
+\texttt{output} in the submit description file,
+but \texttt{Out} in the ClassAd.
+To generate an example ClassAd, 
+take a sample submit description file and invoke 
+
+\texttt{condor\_submit -dump <filename> [cmdfile]}
+
+Then, load the resulting contents of <filename> into Python.
+
+Parameter \texttt{ad} is the ClassAd describing the job cluster.
+
+Parameter \texttt{count} is the number of jobs to submit to the cluster.
+Defaults to 1.
+
+Parameter \texttt{spool} inserts the necessary attributes into the job for it
+to have the input files spooled to a remote \Condor{schedd} daemon.
+This parameter is necessary for jobs submitted to a remote \Condor{schedd}.
+
+Parameter \texttt{ad\_results}, if set to a list, 
+will contain the job ClassAds resulting from the job submission.
+These are useful for interacting with the job spool at a later time.
+\\ \hline
+\texttt{spool( ad\_list )}
+
+Spools the files specified in a list of job ClassAds to the \Condor{schedd}.
+Throws a RuntimeError exception if there are any errors.
+
+Parameter \texttt{ad\_list} is a list of ClassAds containing job descriptions;
+typically, this is the list filled by the \texttt{ad\_results} argument of the 
+\texttt{submit} method call.
+\\ \hline
+\texttt{retrieve( job\_spec )}
+
+Retrieve the output sandbox from one or more jobs.
+
+Parameter \texttt{job\_spec} is an expression string matching 
+the list of job output sandboxes to retrieve.
+
+\end{tabular}
+\end{flushleft}
+
+\textbf{The \texttt{Collector} class:}
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+
+\texttt{\_\_init\_\_( pool = None )}
+
+Create an instance of the \texttt{Collector} class.  
+
+Optional parameter \texttt{pool} is a string with host:port pair specified.
+If omitted, the local \Condor{schedd} daemon is used.
+\\ \hline
+\texttt{locate( (DaemonTypes)daemon\_type, (str)name )}
+
+Query the \Condor{collector} for a particular daemon.
+Returns the ClassAd of the requested daemon.
+
+Parameter \texttt{daemon\_type} is the type of daemon; 
+must be of the enum \texttt{DaemonTypes}. 
+
+Optional parameter \texttt{name} is the name of daemon to locate.  
+If not specified, it searches for the local daemon.
+\\ \hline
+\texttt{locateAll( (DaemonTypes)daemon\_type )}
+
+Query the \Condor{collector} daemon for all ClassAds of a particular type.
+Returns a list of matching ClassAds.
+
+Parameter \texttt{daemon\_type} is the type of daemon; 
+must be of the enum \texttt{DaemonTypes}. 
+
+\\ \hline
+\texttt{query( (AdTypes)ad\_type, constraint=True, attrs=[] )}
+
+Query the contents of a \Condor{collector} daemon.
+Returns a list of ClassAds that match the \texttt{constraint} parameter.
+
+Optional parameter \texttt{ad\_type} is the type of ClassAd to return,
+where the types are from the enum \texttt{AdTypes}.
+If not specified, the type will be \texttt{ANY\_AD}.
+
+Optional parameter \texttt{constraint} is a constraint for the ClassAd query.
+It defaults to \texttt{True}.
+
+Optional parameter \texttt{attrs} is a list of attributes.
+If specified, the returned ClassAds will be projected along these attributes.
+\\ \hline
+\texttt{advertise( ad\_list, command=UPDATE\_AD\_GENERIC, use\_tcp = True )}
+
+Advertise a list of ClassAds into the \Condor{collector}.
+
+Parameter \texttt{ad\_list} is the list of ClassAds to advertise.
+
+Optional parameter \texttt{command} is a command for the \Condor{collector}.
+It defaults to \texttt{UPDATE\_AD\_GENERIC}.
+Other commands, such as \texttt{UPDATE\_STARTD\_AD},
+may require reduced authorization levels.  
+
+Optional parameter \texttt{use\_tcp} causes updates to be sent via TCP.
+Defaults to \texttt{True}.
+\\ \hline
+
+\end{tabular}
+\end{flushleft}
+
+\textbf{The \texttt{SecMan} class accesses the internal security object.}
+Currently, the class only allows the developer to reset security sessions.
+If a security session becomes invalid, 
+for example if the remote daemon restarts and reuses the same port 
+and the client continues to use the session, 
+then all future commands will fail with strange connection errors.
+This is the only mechanism to invalidate in-memory sessions.
+
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+
+\texttt{\_\_init\_\_( )}
+
+Create a \texttt{SecMan} object.
+\\ \hline
+\texttt{invalidateAllSessions( )}
+
+Invalidate all security sessions.
+Any future connections to a daemon will cause a new security session 
+to be created.
+\\ \hline
+
+\end{tabular}
+\end{flushleft}
+
+\textbf{Module enums:}
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+
+\texttt{AdTypes}
+
+A list of types used as values for the \Attr{MyType} ClassAd attribute.  
+These types are only used by the HTCondor system, not the ClassAd language.
+Typically, these specify different kinds of daemons.
+\\ \hline
+\texttt{DaemonCommands}
+
+A list of commands which can be sent to a remote daemon.
+\\ \hline
+\texttt{DaemonTypes}
+
+A list of types of known HTCondor daemons.
+\\ \hline
+\texttt{JobAction}
+
+A list of actions that can be performed on a job in a \Condor{schedd}.
+\\ \hline
+
+\end{tabular}
+\end{flushleft}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{Python-Example} Sample Code using the \texttt{htcondor} Python Module}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+This sample code illustrates interactions with the \texttt{htcondor} Python Module. 
+
+\footnotesize
+\begin{verbatim}
+$ python
+Python 2.6.6 (r266:84292, Jun 18 2012, 09:57:52) 
+[GCC 4.4.6 20110731 (Red Hat 4.4.6-3)] on linux2
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import condor
+>>> import classad
+>>> coll = condor.Collector("red-condor.unl.edu")
+>>> results = coll.query(condor.AdTypes.Startd, "true", ["Name"])
+>>> len(results)
+3812
+>>> results[0]
+[ Name = "slot1@red-d20n35"; MyType = "Machine"; TargetType = "Job"; CurrentTime = time() ]
+>>> scheddAd = coll.locate(condor.DaemonTypes.Schedd, "red-gw1.unl.edu")
+>>> scheddAd["ScheddIpAddr"]
+'<129.93.239.132:53020>'
+>>> schedd = condor.Schedd(scheddAd)
+>>> results = schedd.query('Owner =?= "cmsprod088"', ["ClusterId", "ProcId"])
+>>> len(results)
+63
+>>> results[0]
+[ MyType = "Job"; TargetType = "Machine"; ServerTime = 1356722353; ClusterId = 674143; ProcId = 0; CurrentTime = time() ]
+>>> condor.param["COLLECTOR_HOST"]
+'hcc-briantest.unl.edu'
+>>> schedd = condor.Schedd() # Defaults to the local schedd.
+>>> results = schedd.query()
+>>> results[0]["RequestMemory"]
+ifthenelse(MemoryUsage isnt undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
+>>> results[0]["RequestMemory"].eval()
+1L
+>>> ad=classad.parse(open("test.submit.ad"))
+>>> print schedd.submit(ad, 2) # Submits two jobs in the cluster; edit test.submit.ad to preference.
+110
+>>> print schedd.act(condor.JobAction.Remove, ["111.0", "110.0"])'
+    [
+        TotalNotFound = 0; 
+        TotalPermissionDenied = 0; 
+        TotalAlreadyDone = 0; 
+        TotalJobAds = 2; 
+        TotalSuccess = 2; 
+        TotalChangedAds = 1; 
+        TotalBadStatus = 0; 
+        TotalError = 0
+    ]
+>>> print schedd.act(condor.JobAction.Hold, "Owner =?= \"bbockelm\"")'
+    [
+        TotalNotFound = 0; 
+        TotalPermissionDenied = 0; 
+        TotalAlreadyDone = 0; 
+        TotalJobAds = 2; 
+        TotalSuccess = 2; 
+        TotalChangedAds = 1; 
+        TotalBadStatus = 0; 
+        TotalError = 0
+    ]
+>>> schedd.edit('Owner =?= "bbockelm"', "Foo", classad.ExprTree('"baz"'))
+>>> schedd.edit(["110.0"], "Foo", '"bar"')
+>>> coll = condor.Collector()
+>>> master_ad = coll.locate(condor.DaemonTypes.Master)
+>>> condor.send_command(master_ad, condor.DaemonCommands.Reconfig) # Reconfigures the local master and all children
+>>> condor.version()
+'$CondorVersion: 7.9.4 Jan 02 2013 PRE-RELEASE-UWCS $'
+>>> condor.platform()
+'$CondorPlatform: X86_64-ScientificLinux_6.3 $'
+
+\end{verbatim}
+\normalsize
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{Python-ClassAd} ClassAd Module}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+The \texttt{classad} module class provides a dictionary-like mechanism 
+for interacting with the ClassAd language. 
+\texttt{classad} objects implement the iterator interface to iterate 
+through the \texttt{classad}'s attributes.
+
+\textbf{\texttt{classad} module functions:}
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+\texttt{parse( input )}
+
+Parse input into a ClassAd.  
+Returns a ClassAd object.
+
+Parameter \texttt{input} is a string-like object or a file pointer.
+\\ \hline
+
+\texttt{parseOld( )}
+
+Parse old ClassAd format input into a ClassAd.
+\\ \hline
+\texttt{version( )}
+
+Return the version of the linked ClassAd library.
+\\ \hline
+
+\end{tabular}
+\end{flushleft}
+
+
+\textbf{Standard Python object methods for the \Expr{ClassAd} class:}
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+
+\texttt{\_\_init\_\_( str )}
+
+Create a ClassAd object from string, \texttt{str}, passed as a parameter.
+The string must be formatted in the new ClassAd format.
+\\ \hline
+\texttt{\_\_len\_\_( )}
+
+Returns the number of attributes in the ClassAd; 
+allows \texttt{len(object)} semantics for ClassAds.
+\\ \hline
+\texttt{\_\_str\_\_( )}
+
+Converts the ClassAd to a string and returns the string;
+the formatting style is new ClassAd,
+with square brackets and semicolons.
+For example, \Expr{[ Foo = "bar"; ]} may be returned.
+
+\\ \hline
+\end{tabular}
+\end{flushleft}
+
+
+\textbf{The \texttt{classad} object has the following dictionary-like methods:}
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+\texttt{items( )}
+
+Returns an iterator of tuples. Each item returned by the iterator 
+is a tuple representing a pair (attribute,value) in the ClassAd object.
+\\ \hline
+\texttt{values( )}
+
+Returns an iterator of objects. 
+Each item returned by the iterator is a value in the ClassAd. 
+
+If the value is a literal, 
+it will be cast to a native Python object, 
+so a ClassAd string will be returned as a Python string.
+\\ \hline
+\texttt{keys( )}
+
+Returns an iterator of strings. Each item returned by the iterator 
+is an attribute string in the ClassAd.
+\\ \hline
+\texttt{\_\_getitem( attr )}
+
+Returns (as an object) the value corresponding to the attribute
+\texttt{attr} passed as a parameter.
+
+ClassAd values will be returned as Python objects; 
+ClassAd expressions will be returned as \texttt{ExprTree} objects.
+\\ \hline
+\texttt{\_\_setitem\_\_( attr, value )}
+
+Sets the ClassAd attribute \texttt{attr} to the \texttt{value}.
+
+ClassAd values will be returned as Python objects; 
+ClassAd expressions will be returned as \texttt{ExprTree} objects.
+\\ \hline
+
+\end{tabular}
+\end{flushleft}
+
+
+\textbf{Additional methods:}
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+\texttt{eval( attr )}
+
+Evaluate the value given a ClassAd attribute \texttt{attr}.
+Throws \texttt{ValueError} if unable to evaluate the object.
+
+Returns the Python object corresponding to the evaluated ClassAd attribute.
+\\ \hline
+\texttt{lookup( attr )}
+
+Look up the \texttt{ExprTree} object associated with attribute \texttt{attr}.
+No attempt will be made to convert to a Python object.
+
+Returns an \texttt{ExprTree} object.
+\\ \hline
+\texttt{printOld( )}
+
+Print the ClassAd in the old ClassAd format. 
+
+Returns a string.
+\\ \hline
+\end{tabular}
+\end{flushleft}
+
+
+\textbf{The \Expr{ExprTree} class} object
+represents an expression in the ClassAd language.
+
+\textbf{\texttt{ExprTree} class methods:}
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+\texttt{\_\_init\_\_( str )}
+
+Parse the string \texttt{str} to create an \texttt{ExprTree}.
+\\ \hline
+\texttt{\_\_str\_\_( )}
+
+Represent and return the ClassAd expression as a string.
+\\ \hline
+\texttt{eval( )}
+
+Evaluate the expression and return as a ClassAd value, 
+typically a Python object.
+\\ \hline
+\end{tabular}
+\end{flushleft}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{Python-ClassAd-Example} Sample Code using the \texttt{classad} Module}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+This sample Python code illustrates interactions with the \texttt{classad} module. 
+
+\footnotesize
+\begin{verbatim}
+$ python
+Python 2.6.6 (r266:84292, Jun 18 2012, 09:57:52) 
+[GCC 4.4.6 20110731 (Red Hat 4.4.6-3)] on linux2
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import classad
+>>> ad = classad.ClassAd()
+>>> expr = classad.ExprTree("2+2")
+>>> ad["foo"] = expr
+>>> print ad["foo"].eval()
+4
+>>> ad["bar"] = 2.1
+>>> ad["baz"] = classad.ExprTree("time() + 4")
+>>> print list(ad)
+['bar', 'foo', 'baz']
+>>> print dict(ad.items())
+{'baz': time() + 4, 'foo': 2 + 2, 'bar': 2.100000000000000E+00}
+>>> print ad
+    [
+        bar = 2.100000000000000E+00; 
+        foo = 2 + 2; 
+        baz = time() + 4
+    ]
+>>> ad2=classad.parse(open("test_ad", "r"));
+>>> ad2["error"] = classad.Value.Error
+>>> ad2["undefined"] = classad.Value.Undefined
+>>> print ad2
+    [
+        error = error; 
+        bar = 2.100000000000000E+00; 
+        foo = 2 + 2; 
+        undefined = undefined; 
+        baz = time() + 4
+    ]
+>>> ad2["undefined"]
+classad.Value.Undefined
+
+\end{verbatim}
+\normalsize

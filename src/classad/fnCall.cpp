@@ -254,13 +254,14 @@ SameAs(const ExprTree *tree) const
 {
     bool is_same;
     const FunctionCall *other_fn;
+    const ExprTree * pSelfTree = tree->self();
     
-    if (this == tree) {
+    if (this == pSelfTree) {
         is_same = true;
-    } else if (tree->GetKind() != FN_CALL_NODE) {
+    } else if (pSelfTree->GetKind() != FN_CALL_NODE) {
         is_same = false;
     } else {
-        other_fn = (const FunctionCall *) tree;
+        other_fn = (const FunctionCall *) pSelfTree;
         
         if (functionName == other_fn->functionName
             && function == other_fn->function

@@ -29,12 +29,33 @@ create_bridge(const char * bridge_name)
 
 	int fd;
 	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		dprintf(D_FULLDEBUG, "Unable to create socket for bridge manipulation (errno=%d, %s).\n", errno, strerror(errno));
+		dprintf(D_ALWAYS, "Unable to create socket for bridge manipulation (errno=%d, %s).\n", errno, strerror(errno));
 		return errno;
 	}
 	int ret = ioctl(fd, SIOCBRADDBR, brname);
 	if (ret < 0 && errno != EEXIST) {
-		dprintf(D_FULLDEBUG, "Error when creating bridge %s (errno=%d, %s).\n", bridge_name, errno, strerror(errno));
+		dprintf(D_ALWAYS, "Error when creating bridge %s (errno=%d, %s).\n", bridge_name, errno, strerror(errno));
+		close(fd);
+		return errno;
+	}
+	close(fd);
+	return errno;
+}
+
+int
+delete_bridge(const char * bridge_name)
+{
+	char brname[IFNAMSIZ];
+	strncpy(brname, bridge_name, IFNAMSIZ);
+
+	int fd;
+	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+		dprintf(D_ALWAYS, "Unable to create socket for bridge deletion (errno=%d, %s).\n", errno, strerror(errno));
+		return errno;
+	}
+	int ret = ioctl(fd, SIOCBRDELBR, brname);
+	if (ret < 0 && errno != EEXIST) {
+		dprintf(D_ALWAYS, "Error when deleting bridge %s (errno=%d, %s).\n", bridge_name, errno, strerror(errno));
 		close(fd);
 		return errno;
 	}
@@ -74,7 +95,7 @@ set_bridge_fd(const char * bridge_name, unsigned delay)
 {
 	struct ifreq ifr;
 	strncpy(ifr.ifr_name, bridge_name, IFNAMSIZ);
-	int ifindex = if_nametoindex(dev);
+	int ifindex = if_nametoindex(bridge_name);
 	if (ifindex == 0) {
 		return ENODEV;
 	}
@@ -84,8 +105,15 @@ set_bridge_fd(const char * bridge_name, unsigned delay)
 		dprintf(D_FULLDEBUG, "Unable to create socket for bridge manipulation (errno=%d, %s).\n", errno, strerror(errno));
 		return errno;
 	}
-	BRCTL_SET_BRIDGE_FORWARD_DELAY
-	// TODO: What's the proper ioctl?
+	unsigned long args[4] = { BRCTL_SET_BRIDGE_FORWARD_DELAY, delay, 0, 0 };
+	ifr.ifr_data = (char *) &args;
+
+	int ret = ioctl(fd, SIOCDEVPRIVATE, &ifr);
+	close(fd);
+	if (ret < 0) {
+		dprintf(D_ALWAYS, "Failed to set bridge %s forwarding delay to %u (errno=%d, %s).\n", bridge_name, delay, errno, strerror(errno));
+	}
+	return ret < 0 ? errno : 0;
 }
 
 static int
@@ -298,7 +326,10 @@ wait_for_bridge_status(int fd, const char *link)
 			dprintf(D_ALWAYS, "Failed to get status from kernel.\n");
 			goto cleanup;
 		}
-		dprintf(D_FULLDEBUG, "Link %s current status is %s.\n", link, port_states[retval]);
+		if ((retval >= 0) && (retval < 5))
+			dprintf(D_FULLDEBUG, "Link %s current status is %s.\n", link, port_states[retval]);
+		else
+			dprintf(D_FULLDEBUG, "Link %s current status is %d (unknown enum).\n", link, retval);
 	}
 	retval = 0;
 

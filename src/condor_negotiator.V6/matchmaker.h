@@ -68,6 +68,8 @@ struct GroupEntry {
     double quota;
     // slots requested: jobs submitted against this group
     double requested;
+    // slots requested, not mutated
+    double currently_requested;
     // slots allocated to this group by HGQ
     double allocated;
     // sum of slot quotas in this subtree

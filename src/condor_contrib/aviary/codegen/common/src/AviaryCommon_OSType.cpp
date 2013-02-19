@@ -21,6 +21,7 @@
        #  if __GNUC_MINOR__ >= 6
        #pragma GCC diagnostic ignored "-Wenum-compare"
        #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+       #pragma GCC diagnostic ignored "-Wunused-but-set-parameter"
        #  endif
        #  if __GNUC_MINOR__ >= 7
        #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
@@ -304,6 +305,12 @@
                  if (axutil_strcmp(property_OSType.c_str(), "WINDOWS") == 0)
                     return OSType_WINDOWS;
              
+                 if (axutil_strcmp(property_OSType.c_str(), "OSX") == 0)
+                    return OSType_OSX;
+             
+                 if (axutil_strcmp(property_OSType.c_str(), "OTHER") == 0)
+                    return OSType_OTHER;
+             
              
                  /* Error: none of the strings matched; invalid enum value */
                  return (ADBOSTypeEnum)-1;
@@ -335,6 +342,18 @@
                             
                             
                             property_OSType = "WINDOWS";
+                          break;
+                     
+                       case OSType_OSX :
+                            
+                            
+                            property_OSType = "OSX";
+                          break;
+                     
+                       case OSType_OTHER :
+                            
+                            
+                            property_OSType = "OTHER";
                           break;
                      
                      

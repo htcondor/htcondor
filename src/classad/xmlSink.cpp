@@ -113,7 +113,8 @@ Unparse(
 		}
 		
 		case ExprTree::EXPR_ENVELOPE: {
-			Unparse( buffer, ((CachedExprEnvelope*)tree)->get(),indent ); 
+			Unparse( buffer, ((CachedExprEnvelope*)tree)->get(),indent );
+			break; 
 		}
 		
 		default:

@@ -333,7 +333,7 @@ void ClassAdUnParser::
 UnparseAux( string &buffer, const Value &val, Value::NumberFactor factor )
 {
 	Unparse( buffer, val );
-	if( val.IsNumber( ) && factor != Value::NO_FACTOR ) {
+	if( ( val.IsIntegerValue() || val.IsRealValue() ) && factor != Value::NO_FACTOR ) {
 		buffer += (factor==Value::B_FACTOR)?"B"  :
 					(factor==Value::K_FACTOR)?"K": 
 					(factor==Value::M_FACTOR)?"M":

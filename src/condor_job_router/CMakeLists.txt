@@ -19,11 +19,9 @@
 
 if (NOT WIN_EXEC_NODE_ONLY)
 
-	set (JR_LINK_LIBS "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${CLASSADS_FOUND};${COREDUMPER_FOUND}")
-
 	condor_glob(JRHdrs JRSrcs "VanillaToGrid_main.cpp")
 
-	condor_exe( condor_job_router "${JRHdrs};${JRSrcs}" ${C_LIBEXEC} "${JR_LINK_LIBS}" OFF )
+	condor_exe( condor_job_router "${JRHdrs};${JRSrcs}" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 
 	if (WINDOWS)
 

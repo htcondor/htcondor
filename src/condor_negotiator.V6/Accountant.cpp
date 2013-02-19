@@ -1212,6 +1212,9 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, map<s
         if (cgrp->autoregroup) policy = "regroup";
         else if (cgrp->accept_surplus) policy = "byquota";
         ad->Assign(tmp.c_str(), policy);
+
+        formatstr(tmp, "Requested%d", gnum);
+        ad->Assign(tmp.c_str(), cgrp->currently_requested);
     }
 
     int ResourcesUsed = 0;

@@ -19,7 +19,7 @@
 
 file( GLOB starterRmvElements condor_rsh.cpp glexec_job_wrapper* )
 
-condor_daemon( starter "${starterRmvElements}" "${CONDOR_LIBS};${PCRE_FOUND};${OPENSSL_FOUND};${COREDUMPER_FOUND};${KRB5_FOUND};${LIBCGROUP_FOUND}" "${C_SBIN}" OFF)
+condor_daemon( starter "${starterRmvElements}" "${CONDOR_LIBS};${LIBCGROUP_FOUND}" "${C_SBIN}" OFF)
 
 if (HAVE_EXT_GLOBUS)
 	clone_install( condor_starter "${C_SBIN}" "condor_gridshell" "${C_SBIN}" )
@@ -30,7 +30,7 @@ install ( FILES scimark2lib.jar CondorJavaWrapper.class CondorJavaInfo.class DES
 
 if(LINUX AND WANT_GLEXEC)
 	install (FILES condor_glexec_setup condor_glexec_run condor_glexec_cleanup condor_glexec_kill condor_glexec_update_proxy DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-	condor_exe(condor_glexec_job_wrapper "glexec_job_wrapper.linux.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS};${KRB5_FOUND};${OPENSSL_FOUND};${PCRE_FOUND}" OFF)
+	condor_exe(condor_glexec_job_wrapper "glexec_job_wrapper.linux.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF)
 endif()
 
 if (HAVE_SSH_TO_JOB)

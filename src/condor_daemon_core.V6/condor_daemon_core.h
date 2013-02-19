@@ -194,6 +194,7 @@ struct FamilyInfo {
 	gid_t* group_ptr;
 #endif
 	const char* glexec_proxy;
+	bool want_pid_namespace;
 	const char* cgroup;
 
 	FamilyInfo() {
@@ -203,6 +204,7 @@ struct FamilyInfo {
 		group_ptr = NULL;
 #endif
 		glexec_proxy = NULL;
+		want_pid_namespace = false;
 		cgroup = NULL;
 	}
 };
@@ -1492,6 +1494,11 @@ class DaemonCore : public Service
 			shared port server.
 		*/
 	void ReloadSharedPortServerAddr();
+		/** Unset the shared port server address.
+			Called, for example, before the master starts up the
+			shared port server, to ensure a sensible parent address.
+		 */
+	void ClearSharedPortServerAddr();
 
 
 	//-----------------------------------------------------------------------------

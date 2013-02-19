@@ -334,7 +334,7 @@ ALLOW_READ_STARTD     = $(ALLOW_READ), $(FLOCK_FROM)
 ##  Checkpoint server:
 ##--------------------------------------------------------------------
 ##  Do you want to use a checkpoint server if one is available?  If a
-##  checkpoint server isn't available or USE_CKPT_SERVER is set to
+##  checkpoint server is not available or USE_CKPT_SERVER is set to
 ##  False, checkpoints will be written to the local SPOOL directory on
 ##  the submission machine.
 #USE_CKPT_SERVER	= True
@@ -398,25 +398,25 @@ ALLOW_READ_STARTD     = $(ALLOW_READ), $(FLOCK_FROM)
 #MAX_CONCURRENT_UPLOADS = 10
 
 ##  Condor needs to create a few lock files to synchronize access to
-##  various log files.  Because of problems we've had with network
+##  various log files.  Because of problems we had with network
 ##  filesystems and file locking over the years, we HIGHLY recommend
 ##  that you put these lock files on a local partition on each
 ##  machine.  If you don't have your LOCAL_DIR on a local partition,
 ##  be sure to change this entry.  Whatever user (or group) condor is
 ##  running as needs to have write access to this directory.  If
 ##  you're not running as root, this is whatever user you started up
-##  the condor_master as.  If you are running as root, and there's a
-##  condor account, it's probably condor.  Otherwise, it's whatever
+##  the condor_master as.  If you are running as root, and there is a
+##  condor account, it is probably condor.  Otherwise, it is whatever
 ##  you've set in the CONDOR_IDS environment variable.  See the Admin
 ##  manual for details on this.
 LOCK		= $(LOG)
 
 ##  If you don't use a fully qualified name in your /etc/hosts file
 ##  (or NIS, etc.) for either your official hostname or as an alias,
-##  Condor wouldn't normally be able to use fully qualified names in
+##  Condor would not normally be able to use fully qualified names in
 ##  places that it'd like to.  You can set this parameter to the
 ##  domain you'd like appended to your hostname, if changing your host
-##  information isn't a good option.  This parameter must be set in
+##  information is not a good option.  This parameter must be set in
 ##  the global config file (not the LOCAL_CONFIG_FILE from above). 
 #DEFAULT_DOMAIN_NAME = your.domain.name
 
@@ -435,7 +435,7 @@ LOCK		= $(LOG)
 ##  we don't do anything, and leave in place whatever limit was in
 ##  effect when you started the Condor daemons.  If this parameter is
 ##  set and "True", we increase the limit to as large as it gets.  If
-##  it's set to "False", we set the limit at 0 (which means that no
+##  it is set to "False", we set the limit at 0 (which means that no
 ##  core files are even created).  Core files greatly help the Condor
 ##  developers debug any problems you might be having.
 #CREATE_CORE_FILES	= True
@@ -500,7 +500,7 @@ LOCK		= $(LOG)
 ## credentials when sending them over the wire between daemons.
 ## Delegation can take up to a second, which is very slow when
 ## submitting a large number of jobs. Copying exposes the credential
-## to third parties if Condor isn't set to encrypt communications.
+## to third parties if Condor is not set to encrypt communications.
 ## By default, Condor will delegate rather than copy.
 #DELEGATE_JOB_GSI_CREDENTIALS = True
 
@@ -569,7 +569,7 @@ MAX_STARTER_LOG		= 1000000
 
 MAX_MASTER_LOG		= 1000000
 MASTER_DEBUG		= 
-##  When the master starts up, should it truncate it's log file?
+##  Truncates master log start up?
 #TRUNC_MASTER_LOG_ON_OPEN        = False
 
 MAX_JOB_ROUTER_LOG      = 1000000
@@ -1043,7 +1043,7 @@ RESERVED_DISK		= 5
 #HIGHPORT = 9700 
 #LOWPORT = 9600
 
-##  If a daemon doesn't respond for too long, do you want go generate
+##  If a daemon does not respond for too long, do you want go generate
 ##  a core file?  This basically controls the type of the signal
 ##  sent to the child process, and mostly affects the Condor Master
 #NOT_RESPONDING_WANT_CORE	= False
@@ -1122,7 +1122,7 @@ PREEN_ARGS			= -m -r
 #MASTER_UPDATE_INTERVAL		= 300
 
 ##  How often do you want the master to check the time stamps of the
-##  daemons it's running?  If any daemons have been modified, the
+##  running daemons?  If any daemons have been modified, the
 ##  master restarts them.
 #MASTER_CHECK_NEW_EXEC_INTERVAL	= 300
 
@@ -1223,8 +1223,8 @@ STARTD_ADDRESS_FILE	= $(LOG)/.startd_address
 
 ##  When a machine unclaimed, when should it run benchmarks?
 ##  LastBenchmark is initialized to 0, so this expression says as soon
-##  as we're unclaimed, run the benchmarks.  Thereafter, if we're
-##  unclaimed and it's been at least 4 hours since we ran the last
+##  as we're unclaimed, run the benchmarks.  Thereafter, if we are
+##  unclaimed and it has been at least 4 hours since we ran the last
 ##  benchmarks, run them again.  The startd keeps a weighted average
 ##  of the benchmark results to provide more accurate values.
 ##  Note, if you don't want any benchmarks run at all, either comment
@@ -1278,7 +1278,7 @@ benchmarks_kflops_job_load = 1.0
 ##  entry into the ClassAd.  In particular, ClassAds require double
 ##  quotes (") around your strings.  Numeric values can go in
 ##  directly, as can boolean expressions.  For example, if you wanted
-##  the startd to advertise its list of console devices, when it's
+##  the startd to advertise its list of console devices, when it is
 ##  configured to run benchmarks, and how often it sends updates to
 ##  the central manager, you'd have to define the following helper
 ##  macro:
@@ -1339,7 +1339,7 @@ STARTD_JOB_EXPRS = ImageSize, ExecutableSize, JobUniverse, NiceUser
 ##  Please read the section on "condor_startd Configuration File
 ##  Macros" in the Condor Administrators Manual for a further
 ##  discussion of this setting.  Its use is not recommended.  This
-##  must be an integer ("N" isn't a valid setting, that's just used to
+##  must be an integer ("N" is not a valid setting, that's just used to
 ##  represent the default).
 #NUM_CPUS = N
 
@@ -1347,7 +1347,7 @@ STARTD_JOB_EXPRS = ImageSize, ExecutableSize, JobUniverse, NiceUser
 ##  line out. You must restart the startd for this setting to take 
 ##  effect. If set to 0 or a negative number, it is ignored. 
 ##  By default, it is ignored. Otherwise, it must be a positive  
-##  integer ("N" isn't a valid setting, that's just used to
+##  integer ("N" is not a valid setting, that's just used to
 ##  represent the default).
 #MAX_NUM_CPUS = N
 
@@ -1413,14 +1413,14 @@ STARTD_JOB_EXPRS = ImageSize, ExecutableSize, JobUniverse, NiceUser
 ##  report to your pool (if less than the total number of CPUs).  This
 ##  setting is only considered if the "type" settings described above
 ##  are not in use.  By default, all CPUs are reported.  This setting
-##  must be an integer ("N" isn't a valid setting, that's just used to
+##  must be an integer ("N" is not a valid setting, that's just used to
 ##  represent the default).
 #NUM_SLOTS = N
 
 ##  How many of the slots the startd is representing should
 ##  be "connected" to the console (in other words, notice when there's
 ##  console activity)?  This defaults to all slots (N in a
-##  machine with N CPUs).  This must be an integer ("N" isn't a valid
+##  machine with N CPUs).  This must be an integer ("N" is not a valid
 ##  setting, that's just used to represent the default).
 #SLOTS_CONNECTED_TO_CONSOLE = N
 
@@ -1429,7 +1429,7 @@ STARTD_JOB_EXPRS = ImageSize, ExecutableSize, JobUniverse, NiceUser
 ##  as console activity).  Defaults to 1.
 #SLOTS_CONNECTED_TO_KEYBOARD = 1
 
-##  If there are slots that aren't connected to the
+##  If there are slots that are not connected to the
 ##  keyboard or the console (see the above two settings), the
 ##  corresponding idle time reported will be the time since the startd
 ##  was spawned, plus the value of this parameter.  It defaults to 20
@@ -1510,7 +1510,7 @@ SCHEDD_DAEMON_AD_FILE = $(SPOOL)/.schedd_classad
 #JOB_START_DELAY	= 2
 
 ##  How many concurrent sub-processes should the schedd spawn to handle
-##  queries?  (Unix only)
+##  queries?  (UNIX only)
 #SCHEDD_QUERY_WORKERS   = 3
 
 ##  How often should the schedd send a keep alive message to any
@@ -1633,10 +1633,10 @@ QUEUE_SUPER_USERS	= root, condor
 #STARTER_LOCAL_LOGGING	= TRUE
 
 ##  If the UID_DOMAIN settings match on both the execute and submit
-##  machines, but the UID of the user who submitted the job isn't in
+##  machines, but the UID of the user who submitted the job is not in
 ##  the passwd file of the execute machine, the starter will normally
 ##  exit with an error.  Do you want the starter to just start up the
-##  job with the specified UID, even if it's not in the passwd file?
+##  job with the specified UID, even if it is not in the passwd file?
 #SOFT_UID_DOMAIN	= FALSE
 
 ##  honor the run_as_owner option from the condor submit file.
@@ -1981,9 +1981,9 @@ CREDD_LOG			= $(LOG)/CredLog
 CREDD_DEBUG			= D_FULLDEBUG
 MAX_CREDD_LOG		= 4000000
 
-## The credential owner submits the credential.  This list specififies
+## The credential owner submits the credential.  This list specifies
 ## other user who are also permitted to see all credentials.  Defaults
-## to root on Unix systems, and Administrator on Windows systems.
+## to root on UNIX systems, and Administrator on Windows systems.
 #CRED_SUPER_USERS = 
 
 ## Credential storage location.  This directory must exist
@@ -2276,7 +2276,7 @@ MAX_VM_GAHP_LOG	= 1000000
 ## will occur.
 ## For VMware, we send SIGSTOP to a process for VM in order to 
 ## stop the VM temporarily and send SIGCONT to resume the VM.
-## For Xen, we pause CPU. Pausing CPU doesn't save the memory of VM 
+## For Xen, we pause CPU. Pausing CPU does not save the memory of VM 
 ## into a file. It only stops the execution of a VM temporarily.
 #VM_SOFT_SUSPEND = TRUE
 
@@ -2288,7 +2288,7 @@ MAX_VM_GAHP_LOG	= 1000000
 ## Notice: In VMware VM universe, "nobody" can not create a VMware VM. 
 ## So we need to define "VM_UNIV_NOBODY_USER" with a regular user. 
 ## For VMware, the user defined in "VM_UNIV_NOBODY_USER" must have a
-## home directory.  So SOFT_UID_DOMAIN doesn't work for VMware VM universe job.
+## home directory.  So SOFT_UID_DOMAIN does not work for VMware VM universe job.
 ## If neither "VM_UNIV_NOBODY_USER" nor "SLOTx_VMUSER"/"SLOTx_USER" is defined, 
 ## VMware VM universe job will run as "condor" instead of "nobody".
 ## As a result, the preference of local users for a VMware VM universe job

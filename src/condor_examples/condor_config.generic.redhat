@@ -356,7 +356,7 @@ ALLOW_READ_STARTD     = $(ALLOW_READ), $(FLOCK_FROM)
 ##  Checkpoint server:
 ##--------------------------------------------------------------------
 ##  Do you want to use a checkpoint server if one is available?  If a
-##  checkpoint server isn't available or USE_CKPT_SERVER is set to
+##  checkpoint server is not available or USE_CKPT_SERVER is set to
 ##  False, checkpoints will be written to the local SPOOL directory on
 ##  the submission machine.
 #USE_CKPT_SERVER	= True
@@ -420,15 +420,15 @@ ALLOW_READ_STARTD     = $(ALLOW_READ), $(FLOCK_FROM)
 #MAX_CONCURRENT_UPLOADS = 10
 
 ##  Condor needs to create a few lock files to synchronize access to
-##  various log files.  Because of problems we've had with network
+##  various log files.  Because of problems we had with network
 ##  filesystems and file locking over the years, we HIGHLY recommend
 ##  that you put these lock files on a local partition on each
 ##  machine.  If you don't have your LOCAL_DIR on a local partition,
 ##  be sure to change this entry.  Whatever user (or group) condor is
 ##  running as needs to have write access to this directory.  If
 ##  you're not running as root, this is whatever user you started up
-##  the condor_master as.  If you are running as root, and there's a
-##  condor account, it's probably condor.  Otherwise, it's whatever
+##  the condor_master as.  If you are running as root, and there is a
+##  condor account, it is probably condor.  Otherwise, it is whatever
 ##  you've set in the CONDOR_IDS environment variable.  See the Admin
 ##  manual for details on this.
 LOCK = /var/lock/condor
@@ -450,10 +450,10 @@ LOCAL_DISK_LOCK_DIR = $(LOCK)/local
 
 ##  If you don't use a fully qualified name in your /etc/hosts file
 ##  (or NIS, etc.) for either your official hostname or as an alias,
-##  Condor wouldn't normally be able to use fully qualified names in
+##  Condor would not normally be able to use fully qualified names in
 ##  places that it'd like to.  You can set this parameter to the
 ##  domain you'd like appended to your hostname, if changing your host
-##  information isn't a good option.  This parameter must be set in
+##  information is not a good option.  This parameter must be set in
 ##  the global config file (not the LOCAL_CONFIG_FILE from above). 
 #DEFAULT_DOMAIN_NAME = your.domain.name
 
@@ -472,7 +472,7 @@ LOCAL_DISK_LOCK_DIR = $(LOCK)/local
 ##  we don't do anything, and leave in place whatever limit was in
 ##  effect when you started the Condor daemons.  If this parameter is
 ##  set and "True", we increase the limit to as large as it gets.  If
-##  it's set to "False", we set the limit at 0 (which means that no
+##  it is set to "False", we set the limit at 0 (which means that no
 ##  core files are even created).  Core files greatly help the Condor
 ##  developers debug any problems you might be having.
 #CREATE_CORE_FILES	= True
@@ -538,7 +538,7 @@ TRUST_UID_DOMAIN = True
 ## credentials when sending them over the wire between daemons.
 ## Delegation can take up to a second, which is very slow when
 ## submitting a large number of jobs. Copying exposes the credential
-## to third parties if Condor isn't set to encrypt communications.
+## to third parties if Condor is not set to encrypt communications.
 ## By default, Condor will delegate rather than copy.
 #DELEGATE_JOB_GSI_CREDENTIALS = True
 
@@ -607,7 +607,7 @@ MAX_STARTER_LOG		= 1000000
 
 MAX_MASTER_LOG		= 1000000
 MASTER_DEBUG		= 
-##  When the master starts up, should it truncate it's log file?
+##  Truncates master log start up?
 #TRUNC_MASTER_LOG_ON_OPEN        = False
 
 MAX_JOB_ROUTER_LOG      = 1000000
@@ -621,9 +621,6 @@ SHARED_PORT_DEBUG       =
 
 MAX_HDFS_LOG            = 1000000
 HDFS_DEBUG              =
-
-MAX_TRIGGERD_LOG	= 1000000
-TRIGGERD_DEBUG        	=
 
 # High Availability Logs
 MAX_HAD_LOG		= 1000000
@@ -830,7 +827,7 @@ UWCS_MaxJobRetirementTime = 0
 
 # How long to allow a job to vacate gracefully.  After this time,
 # the job is killed.
-MachineMaxVacateTime = $(MaxVacateTime) 
+MachineMaxVacateTime = $(KILLING_TIMEOUT)-1
 
 # Abort graceful eviction of a job, even though it has not
 # yet used all the time allotted by MachineMaxVacateTime.
@@ -989,7 +986,6 @@ HAD_LOG		= $(LOG)/HADLog
 REPLICATION_LOG	= $(LOG)/ReplicationLog
 TRANSFERER_LOG	= $(LOG)/TransfererLog
 HDFS_LOG	= $(LOG)/HDFSLog
-TRIGGERD_LOG	= $(LOG)/TriggerLog
 
 ##  Lock files
 SHADOW_LOCK	= $(LOCK)/ShadowLock
@@ -1089,7 +1085,7 @@ RESERVED_DISK		= 5
 #HIGHPORT = 9700 
 #LOWPORT = 9600
 
-##  If a daemon doesn't respond for too long, do you want go generate
+##  If a daemon does not respond for too long, do you want go generate
 ##  a core file?  This basically controls the type of the signal
 ##  sent to the child process, and mostly affects the Condor Master
 #NOT_RESPONDING_WANT_CORE	= False
@@ -1111,7 +1107,7 @@ DAEMON_LIST			= MASTER, STARTD, SCHEDD
 #MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, \
 #VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, HAWKEYE, CREDD, HAD, \
 #DBMSD, QUILL, JOB_ROUTER, ROOSTER, LEASEMANAGER, HDFS, SHARED_PORT, \
-#DEFRAG, TRIGGERD
+#DEFRAG
 
 
 ##  Where are the binaries for these daemons?
@@ -1127,7 +1123,6 @@ ROOSTER                         = $(LIBEXEC)/condor_rooster
 HDFS				= $(SBIN)/condor_hdfs
 SHARED_PORT			= $(LIBEXEC)/condor_shared_port
 TRANSFERER			= $(LIBEXEC)/condor_transferer
-TRIGGERD			= $(sbin)/condor_triggerd
 DEFRAG                          = $(LIBEXEC)/condor_defrag
 
 ##  When the master starts up, it can place it's address (IP and port)
@@ -1168,7 +1163,7 @@ PREEN_ARGS			= -m -r
 #MASTER_UPDATE_INTERVAL		= 300
 
 ##  How often do you want the master to check the time stamps of the
-##  daemons it's running?  If any daemons have been modified, the
+##  running daemons?  If any daemons have been modified, the
 ##  master restarts them.
 #MASTER_CHECK_NEW_EXEC_INTERVAL	= 300
 
@@ -1271,8 +1266,8 @@ STARTD_ADDRESS_FILE	= $(LOG)/.startd_address
 
 ##  When a machine unclaimed, when should it run benchmarks?
 ##  LastBenchmark is initialized to 0, so this expression says as soon
-##  as we're unclaimed, run the benchmarks.  Thereafter, if we're
-##  unclaimed and it's been at least 4 hours since we ran the last
+##  as we're unclaimed, run the benchmarks.  Thereafter, if we are
+##  unclaimed and it has been at least 4 hours since we ran the last
 ##  benchmarks, run them again.  The startd keeps a weighted average
 ##  of the benchmark results to provide more accurate values.
 ##  Note, if you don't want any benchmarks run at all, either comment
@@ -1326,7 +1321,7 @@ benchmarks_kflops_job_load = 1.0
 ##  entry into the ClassAd.  In particular, ClassAds require double
 ##  quotes (") around your strings.  Numeric values can go in
 ##  directly, as can boolean expressions.  For example, if you wanted
-##  the startd to advertise its list of console devices, when it's
+##  the startd to advertise its list of console devices, when it is
 ##  configured to run benchmarks, and how often it sends updates to
 ##  the central manager, you'd have to define the following helper
 ##  macro:
@@ -1387,7 +1382,7 @@ STARTD_JOB_EXPRS = ImageSize, ExecutableSize, JobUniverse, NiceUser
 ##  Please read the section on "condor_startd Configuration File
 ##  Macros" in the Condor Administrators Manual for a further
 ##  discussion of this setting.  Its use is not recommended.  This
-##  must be an integer ("N" isn't a valid setting, that's just used to
+##  must be an integer ("N" is not a valid setting, that's just used to
 ##  represent the default).
 #NUM_CPUS = N
 
@@ -1395,7 +1390,7 @@ STARTD_JOB_EXPRS = ImageSize, ExecutableSize, JobUniverse, NiceUser
 ##  line out. You must restart the startd for this setting to take 
 ##  effect. If set to 0 or a negative number, it is ignored. 
 ##  By default, it is ignored. Otherwise, it must be a positive  
-##  integer ("N" isn't a valid setting, that's just used to
+##  integer ("N" is not a valid setting, that's just used to
 ##  represent the default).
 #MAX_NUM_CPUS = N
 
@@ -1461,14 +1456,14 @@ STARTD_JOB_EXPRS = ImageSize, ExecutableSize, JobUniverse, NiceUser
 ##  report to your pool (if less than the total number of CPUs).  This
 ##  setting is only considered if the "type" settings described above
 ##  are not in use.  By default, all CPUs are reported.  This setting
-##  must be an integer ("N" isn't a valid setting, that's just used to
+##  must be an integer ("N" is not a valid setting, that's just used to
 ##  represent the default).
 #NUM_SLOTS = N
 
 ##  How many of the slots the startd is representing should
 ##  be "connected" to the console (in other words, notice when there's
 ##  console activity)?  This defaults to all slots (N in a
-##  machine with N CPUs).  This must be an integer ("N" isn't a valid
+##  machine with N CPUs).  This must be an integer ("N" is not a valid
 ##  setting, that's just used to represent the default).
 #SLOTS_CONNECTED_TO_CONSOLE = N
 
@@ -1477,7 +1472,7 @@ STARTD_JOB_EXPRS = ImageSize, ExecutableSize, JobUniverse, NiceUser
 ##  as console activity).  Defaults to 1.
 #SLOTS_CONNECTED_TO_KEYBOARD = 1
 
-##  If there are slots that aren't connected to the
+##  If there are slots that are not connected to the
 ##  keyboard or the console (see the above two settings), the
 ##  corresponding idle time reported will be the time since the startd
 ##  was spawned, plus the value of this parameter.  It defaults to 20
@@ -1558,7 +1553,7 @@ SCHEDD_DAEMON_AD_FILE = $(SPOOL)/.schedd_classad
 #JOB_START_DELAY	= 2
 
 ##  How many concurrent sub-processes should the schedd spawn to handle
-##  queries?  (Unix only)
+##  queries?  (UNIX only)
 #SCHEDD_QUERY_WORKERS   = 3
 
 ##  How often should the schedd send a keep alive message to any
@@ -1681,10 +1676,10 @@ QUEUE_SUPER_USERS	= root, condor
 #STARTER_LOCAL_LOGGING	= TRUE
 
 ##  If the UID_DOMAIN settings match on both the execute and submit
-##  machines, but the UID of the user who submitted the job isn't in
+##  machines, but the UID of the user who submitted the job is not in
 ##  the passwd file of the execute machine, the starter will normally
 ##  exit with an error.  Do you want the starter to just start up the
-##  job with the specified UID, even if it's not in the passwd file?
+##  job with the specified UID, even if it is not in the passwd file?
 #SOFT_UID_DOMAIN	= FALSE
 
 ##  honor the run_as_owner option from the condor submit file.
@@ -2027,9 +2022,9 @@ CREDD_LOG			= $(LOG)/CredLog
 CREDD_DEBUG			= D_FULLDEBUG
 MAX_CREDD_LOG		= 4000000
 
-## The credential owner submits the credential.  This list specififies
+## The credential owner submits the credential.  This list specifies
 ## other user who are also permitted to see all credentials.  Defaults
-## to root on Unix systems, and Administrator on Windows systems.
+## to root on UNIX systems, and Administrator on Windows systems.
 #CRED_SUPER_USERS = 
 
 ## Credential storage location.  This directory must exist
@@ -2048,197 +2043,6 @@ CRED_STORE_DIR = $(LOCAL_DIR)/cred_dir
 ## condor-credd periodically checks remaining lifespan of stored
 ## credentials, at this interval.
 #CRED_CHECK_INTERVAL = 60
-
-##
-##--------------------------------------------------------------------
-##  Stork data placement server
-##--------------------------------------------------------------------
-##  Where is the Stork binary installed?
-STORK				= $(SBIN)/stork_server
-
-##  When Stork starts up, it can place it's address (IP and port)
-##  into a file.  This way, tools running on the local machine don't
-##  need an additional "-n host:port" command line option.  This
-##  feature can be turned off by commenting out this setting.
-STORK_ADDRESS_FILE = $(LOG)/.stork_address
-
-##  Specify a remote Stork server here,
-#STORK_HOST  = $(CONDOR_HOST):$(STORK_PORT)
-
-## STORK_LOG_BASE specifies the basename for heritage Stork log files.
-## Stork uses this macro to create the following output log files:
-## $(STORK_LOG_BASE): Stork server job queue classad collection
-## journal file.
-## $(STORK_LOG_BASE).history: Used to track completed jobs.
-## $(STORK_LOG_BASE).user_log: User level log, also used by DAGMan.
-STORK_LOG_BASE		= $(LOG)/Stork
-
-## Modern Condor DaemonCore logging feature.
-STORK_LOG = $(LOG)/StorkLog
-STORK_DEBUG = D_FULLDEBUG
-MAX_STORK_LOG = 4000000
-
-## Stork startup arguments
-## Start Stork on a well-known port.  Uncomment to to simplify
-## connecting to a remote Stork.  Note: that this interface may change
-## in a future release.
-#STORK_PORT			= 34048
-STORK_PORT			= 9621
-STORK_ARGS = -p $(STORK_PORT) -f -Serverlog $(STORK_LOG_BASE)
-
-## Stork environment.  Stork modules may require external programs and
-## shared object libraries.  These are located using the PATH and
-## LD_LIBRARY_PATH environments.  Further, some modules may require
-## further specific environments.  By default, Stork inherits a full
-## environment when invoked from condor_master or the shell.  If the
-## default environment is not adequate for all Stork modules, specify
-## a replacement environment here.  This environment will be set by
-## condor_master before starting Stork, but does not apply if Stork is
-## started directly from the command line.
-#STORK_ENVIRONMENT = TMP=/tmp;CONDOR_CONFIG=/special/config;PATH=/lib
-
-## Limits the number of concurrent data placements handled by Stork.
-#STORK_MAX_NUM_JOBS = 5
-
-## Limits the number of retries for a failed data placement.
-#STORK_MAX_RETRY = 5
-
-## Limits the run time for a data placement job, after which the
-## placement is considered failed.
-#STORK_MAXDELAY_INMINUTES = 10
-
-## Temporary credential storage directory used by Stork.
-#STORK_TMP_CRED_DIR = /tmp
-
-## Directory containing Stork modules.
-#STORK_MODULE_DIR = $(LIBEXEC)
-
-##
-##--------------------------------------------------------------------
-##  Quill Job Queue Mirroring Server
-##--------------------------------------------------------------------
-##  Where is the Quill binary installed and what arguments should be passed?
-QUILL = $(SBIN)/condor_quill
-#QUILL_ARGS =
-
-# Where is the log file for the quill daemon?
-QUILL_LOG = $(LOG)/QuillLog
-
-# The identification and location of the quill daemon for local clients.
-QUILL_ADDRESS_FILE = $(LOG)/.quill_address
-
-# If this is set to true, then the rest of the QUILL arguments must be defined
-# for quill to function. If it is False or left undefined, then quill will not
-# be consulted by either the scheduler or the tools, but in the case of a 
-# remote quill query where the local client has quill turned off, but the
-# remote client has quill turned on, things will still function normally.
-#QUILL_ENABLED = TRUE
-
-# 
-# If Quill is enabled, by default it will only mirror the current job
-# queue into the database. For historical jobs, and classads from other 
-# sources, the SQL Log must be enabled.
-#QUILL_USE_SQL_LOG=FALSE
-
-#
-# The SQL Log can be enabled on a per-daemon basis. For example, to collect
-# historical job information, but store no information about execute machines,
-# uncomment these two lines
-#QUILL_USE_SQL_LOG = FALSE 
-#SCHEDD.QUILL_USE_SQL_LOG = TRUE
-
-# This will be the name of a quill daemon using this config file. This name
-# should not conflict with any other quill name--or schedd name. 
-#QUILL_NAME = quill@postgresql-server.machine.com
-
-# The Postgreql server requires usernames that can manipulate tables. This will
-# be the username associated with this instance of the quill daemon mirroring
-# a schedd's job queue. Each quill daemon must have a unique username 
-# associated with it otherwise multiple quill daemons will corrupt the data
-# held under an identical user name.
-#QUILL_DB_NAME = name_of_db
-
-# The required password for the DB user which quill will use to read 
-# information from the database about the queue.
-#QUILL_DB_QUERY_PASSWORD = foobar
-
-# What kind of database server is this?
-# For now, only PGSQL is supported
-#QUILL_DB_TYPE = PGSQL
-
-# The machine and port of the postgres server.
-# Although this says IP Addr, it can be a DNS name. 
-# It must match whatever format you used for the .pgpass file, however
-#QUILL_DB_IP_ADDR = machine.domain.com:5432
-
-# The login to use to attach to the database for updating information.
-# There should be an entry in file $SPOOL/.pgpass that gives the password 
-# for this login id.
-#QUILL_DB_USER = quillwriter
-
-# Polling period, in seconds, for when quill reads transactions out of the
-# schedd's job queue log file and puts them into the database.
-#QUILL_POLLING_PERIOD = 10
-
-# Allows or disallows a remote query to the quill daemon and database
-# which is reading this log file. Defaults to true.
-#QUILL_IS_REMOTELY_QUERYABLE = TRUE
-
-# Add debugging flags to here if you need to debug quill for some reason.
-#QUILL_DEBUG = D_FULLDEBUG
-
-# Number of seconds the master should wait for the Quill daemon to respond 
-# before killing it. This number might need to be increased for very 
-# large logfiles.
-# The default is 3600 (one hour), but kicking it up to a few hours won't hurt
-#QUILL_NOT_RESPONDING_TIMEOUT = 3600
-
-# Should Quill hold open a database connection to the DBMSD? 
-# Each open connection consumes resources at the server, so large pools
-# (100 or more machines) should set this variable to FALSE. Note the
-# default is TRUE.
-#QUILL_MAINTAIN_DB_CONN = TRUE
-
-##
-##--------------------------------------------------------------------
-##  Database Management Daemon settings
-##--------------------------------------------------------------------
-##  Where is the DBMSd binary installed and what arguments should be passed?
-DBMSD = $(SBIN)/condor_dbmsd
-DBMSD_ARGS = -f
-
-# Where is the log file for the quill daemon?
-DBMSD_LOG = $(LOG)/DbmsdLog
-
-# Interval between consecutive purging calls (in seconds)
-#DATABASE_PURGE_INTERVAL = 86400
-
-# Interval between consecutive database reindexing operations
-# This is only used when dbtype = PGSQL
-#DATABASE_REINDEX_INTERVAL = 86400
-
-# Number of days before purging resource classad history
-# This includes things like machine ads, daemon ads, submitters
-#QUILL_RESOURCE_HISTORY_DURATION = 7
-
-# Number of days before purging job run information 
-# This includes job events, file transfers, matchmaker matches, etc
-# This does NOT include the final job ad. condor_history does not need
-# any of this information to work.
-#QUILL_RUN_HISTORY_DURATION = 7
-
-# Number of days before purging job classad history
-# This is the information needed to run condor_history
-#QUILL_JOB_HISTORY_DURATION = 3650
-
-# DB size threshold for warning the condor administrator. This is checked
-# after every purge. The size is given in gigabytes.
-#QUILL_DBSIZE_LIMIT = 20
-
-# Number of seconds the master should wait for the DBMSD to respond before 
-# killing it. This number might need to be increased for very large databases
-# The default is 3600 (one hour). 
-#DBMSD_NOT_RESPONDING_TIMEOUT = 3600
 
 ##
 ##--------------------------------------------------------------------
@@ -2322,7 +2126,7 @@ MAX_VM_GAHP_LOG	= 1000000
 ## will occur.
 ## For VMware, we send SIGSTOP to a process for VM in order to 
 ## stop the VM temporarily and send SIGCONT to resume the VM.
-## For Xen, we pause CPU. Pausing CPU doesn't save the memory of VM 
+## For Xen, we pause CPU. Pausing CPU does not save the memory of VM 
 ## into a file. It only stops the execution of a VM temporarily.
 #VM_SOFT_SUSPEND = TRUE
 
@@ -2334,7 +2138,7 @@ MAX_VM_GAHP_LOG	= 1000000
 ## Notice: In VMware VM universe, "nobody" can not create a VMware VM. 
 ## So we need to define "VM_UNIV_NOBODY_USER" with a regular user. 
 ## For VMware, the user defined in "VM_UNIV_NOBODY_USER" must have a
-## home directory.  So SOFT_UID_DOMAIN doesn't work for VMware VM universe job.
+## home directory.  So SOFT_UID_DOMAIN does not work for VMware VM universe job.
 ## If neither "VM_UNIV_NOBODY_USER" nor "SLOTx_VMUSER"/"SLOTx_USER" is defined, 
 ## VMware VM universe job will run as "condor" instead of "nobody".
 ## As a result, the preference of local users for a VMware VM universe job
@@ -2498,96 +2302,10 @@ SSH_TO_JOB_SSHD_CONFIG_TEMPLATE = $(ETC)/condor_ssh_to_job_sshd_config_template
 # %% --> %
 #SSH_TO_JOB_SSH_KEYGEN_ARGS = "-N '' -C '' -q -f %f -t rsa"
 
-######################################################################
 ##
-##  Condor HDFS
-##
-##  This is the default local configuration file for configuring Condor
-##  daemon responsible for running services related to hadoop 
-##  distributed storage system.  You should copy this file to the
-##  appropriate location and customize it for your needs.  
-##
-##  Unless otherwise specified, settings that are commented out show
-##  the defaults that are used if you don't define a value.  Settings
-##  that are defined here MUST BE DEFINED since they have no default
-##  value.
-##
-######################################################################
-
-######################################################################
-## FOLLOWING MUST BE CHANGED
-######################################################################
-
-## The location for hadoop installation directory. The default location
-## is under 'libexec' directory. The directory pointed by HDFS_HOME 
-## should contain a lib folder that contains all the required Jars necessary
-## to run HDFS name and data nodes. 
-#HDFS_HOME = $(RELEASE_DIR)/libexec/hdfs
-
-## The host and port for hadoop's name node. If this machine is the
-## name node (see HDFS_SERVICES) then the specified port will be used
-## to run name node. 
-HDFS_NAMENODE = hdfs://example.com:9000
-HDFS_NAMENODE_WEB = example.com:8000
-
-HDFS_BACKUPNODE = hdfs://example.com:50100
-HDFS_BACKUPNODE_WEB = example.com:50105
-
-## You need to pick one machine as name node by setting this parameter
-## to HDFS_NAMENODE. The remaining machines in a storage cluster will
-## act as data nodes (HDFS_DATANODE).
-HDFS_NODETYPE = HDFS_DATANODE
-
-## If machine is selected to be NameNode then by a role should defined.
-## If it selected to be DataNode then this parameter is ignored.
-## Available options:
-## ACTIVE: Active NameNode role (default value)
-## BACKUP: Always synchronized with the active NameNode state, thus 
-##         creating a backup of the namespace. Currently the NameNode
-##         supports one Backup node at a time.
-## CHECKPOINT: Periodically creates checkpoints of the namespace. 
-HDFS_NAMENODE_ROLE = ACTIVE
-
-## The two set of directories that are required by HDFS are for name 
-## node (HDFS_NAMENODE_DIR) and data node (HDFS_DATANODE_DIR). The 
-## directory for name node is only required for a machine running 
-## name node service and  is used to store critical meta data for 
-## files. The data node needs its directory to store file blocks and 
-## their replicas.
-HDFS_NAMENODE_DIR = /tmp/hadoop_name
-HDFS_DATANODE_DIR = /scratch/tmp/hadoop_data
-
-## Unlike name node address settings (HDFS_NAMENODE), that needs to be 
-## well known across the storage cluster, data node can run on any 
-## arbitrary port of given host.
-#HDFS_DATANODE_ADDRESS = 0.0.0.0:0
-
-####################################################################
-## OPTIONAL
-#####################################################################
-
-## Sets the log4j debug level. All the emitted debug output from HDFS
-## will go in 'hdfs.log' under $(LOG) directory.
-#HDFS_LOG4J=DEBUG
-
-## The access to HDFS services both name node and data node can be 
-## restricted by specifying IP/host based filters. By default settings
-## from ALLOW_READ/ALLOW_WRITE and DENY_READ/DENY_WRITE
-## are used to specify allow and deny list. The below two parameters can
-## be used to override these settings. Read the Condor manual for 
-## specification of these filters.
-## WARN: HDFS doesn't make any distinction between read or write based connection.
-#HDFS_ALLOW=*
-#HDFS_DENY=*
-
-#Fully qualified name for Name node and Datanode class.
-#HDFS_NAMENODE_CLASS=org.apache.hadoop.hdfs.server.namenode.NameNode
-#HDFS_DATANODE_CLASS=org.apache.hadoop.hdfs.server.datanode.DataNode
-#HDFS_DFSADMIN_CLASS=org.apache.hadoop.hdfs.tools.DFSAdmin
-
-## In case an old name for hdfs configuration files is required.
-#HDFS_SITE_FILE = hdfs-site.xml
-
+##--------------------------------------------------------------------
+##  Green computing defaults
+##--------------------------------------------------------------------
 UNHIBERNATE = CurrentTime - MachineLastMatchTime < 1200
 
 ##

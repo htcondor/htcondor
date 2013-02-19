@@ -136,9 +136,12 @@ show_progress () {
 
     # Run the command
     $@
+    exit_code=$?
     disown $dots_pid
     kill -9 $dots_pid
     echo ""
+    
+    return $exit_code
 
 }
 
@@ -220,18 +223,30 @@ check_reverse_connectivity() {
     # Return 1 if the test fails (like most unix tools)
     # $1 = cluster to check for
     remote_host=$1
-    myhost=`hostname`
-    # try ping first
-    ssh $remote_host ping -c 1 $myhost > /dev/null 2>/dev/null
-    if [ $? -ne 0 ]; then
+    
+    # Get the COLLECTOR_HOST value, strip out anything after the '?'
+    myhost=`condor_config_val COLLECTOR_HOST`
+    myhost=`echo $myhost | sed 's/\(.*\)[?|$].*/\1/'`
+    
+    # Create tmp file for the python script to test connectivity
+    tmpfile=`mktemp -t tmpreversetest.XXXXXX`
+    cat << EOF > $tmpfile
+#!/usr/bin/python
+import sys,socket
+(host,port)=sys.argv[1].split(":")
+s = socket.socket()
+s.connect((host,int(port)))
+EOF
+    
+    testout=`ssh_upload_and_run $remote_host DEFAULT $tmpfile $myhost`
+    testexit=$?
+    
+    if [ "$testexit" -eq "0" ]; then
+        return 0
+    else
         return 1
     fi
-    # test nc from remote_host to 11000 (bosco is started and default port is used)
-    ssh $remote_host nc -z $myhost 11000 > /dev/null 2>/dev/null
-    if [ $? -ne 0 ]; then
-        return 1
-    fi
-    return 0
+    
 }
 
 
@@ -326,7 +341,12 @@ check_condor_q_classad () {
 
 
 test_cluster () {
-    remote_host=$1
+    if [ "x$1" != "x" ]; then
+        remote_host=$1
+    else
+        echo "ERROR - No remote host given for the test.  Please list one of the cluster you have added"
+        exit 1
+    fi
 
     # First, check if the cluster is in the clusterlist
     cluster_out=`grep "$remote_host" $CLUSTERLIST_LOCATION`
@@ -747,43 +767,49 @@ fi
 remote_base_dir_root="bosco/cluster"
 remote_base_dir_default="$remote_base_dir_root/default"
 remote_base_dir_host="bosco"
+tmp_install_dir=`mktemp -d /tmp/tmp.XXXXXXXX`
+mkdir -p $tmp_install_dir/$remote_base_dir_host
+local_install_dir=$tmp_install_dir/$remote_base_dir_host
+
 # TODO: uncomment to enable subdirs
 #remote_base_dir_host="$remote_base_dir_root/$remote_host"
-remote_glite_dir="$remote_base_dir_host/glite"
-remote_sandbox_dir="$remote_base_dir_host/sandbox"
+remote_glite_dir="$local_install_dir/glite"
+mkdir -p $remote_glite_dir
+remote_sandbox_dir="$local_install_dir/sandbox"
+mkdir -p $remote_sandbox_dir
 
 #ssh $remote_host "mkdir -p bosco/glite/lib; mkdir -p bosco/glite/log; mkdir -p bosco/sandbox"
 # Make the necessary remote directories
-ssh $remote_host "mkdir -p $remote_glite_dir/lib; mkdir -p $remote_glite_dir/log; mkdir -p $remote_sandbox_dir"
+mkdir -p $remote_glite_dir/lib; mkdir -p $remote_glite_dir/log; mkdir -p $remote_sandbox_dir
 # TODO: uncomment to enable subdirs
 #ssh $remote_host "ln -sfn $remote_base_dir_host $remote_base_dir_default"
 
 
 # Copy over blahp
-rsync -aq $archive_dir/libexec/glite/[^l]* $remote_host:$remote_glite_dir/
+rsync -aq $archive_dir/libexec/glite/[^l]* $remote_glite_dir/
 if [ -d $archive_dir/lib64 ] ; then
     libdir=lib64
 else
     libdir=lib
 fi
-rsync -aq  $archive_dir/$libdir/libclassad.so* $remote_host:$remote_glite_dir/lib/ 2>/dev/null
-rsync -aq  $archive_dir/$libdir/libcondor_utils* $remote_host:$remote_glite_dir/lib/ 2>/dev/null
-show_progress "Sending libraries to $remote_host" rsync -aq  $archive_dir/$libdir/condor $remote_host:$remote_glite_dir/lib/ 2>/dev/null
-rsync -aq  $archive_dir/sbin/condor_ft-gahp $remote_host:$remote_glite_dir/bin 2>/dev/null
+rsync -aq  $archive_dir/$libdir/libclassad.so* $remote_glite_dir/lib/ 2>/dev/null
+rsync -aq  $archive_dir/$libdir/libcondor_utils* $remote_glite_dir/lib/ 2>/dev/null
+show_progress "Sending libraries to $remote_host" rsync -aq  $archive_dir/$libdir/condor $remote_glite_dir/lib/ 2>/dev/null
+rsync -aq  $archive_dir/sbin/condor_ft-gahp $remote_glite_dir/bin 2>/dev/null
 
 # create the glidein
 export PYTHONPATH=`condor_config_val LIBEXEC`/campus_factory/python-lib
 export _campusfactory_GLIDEIN_DIRECTORY=`condor_config_val LIBEXEC`/campus_factory/share/glidein_jobs
 show_progress "Creating BOSCO for the WN's" glidein_creation $remote_host $archive_dir --outputtar=$tmp_dir/glideinExec.tar.gz
-rsync -aq  $tmp_dir/glideinExec.tar.gz $remote_host:$remote_base_dir_host/campus_factory/ 2>/dev/null
+rsync -aq  $tmp_dir/glideinExec.tar.gz $local_install_dir/campus_factory/ 2>/dev/null
 
 
-ssh $remote_host "cat >$remote_glite_dir/etc/condor_config.ft-gahp" 2>/dev/null <<EOF
+cat >$remote_glite_dir/etc/condor_config.ft-gahp 2>/dev/null <<EOF
 BOSCO_SANDBOX_DIR=\$ENV(HOME)/$remote_sandbox_dir
-LOG=\$ENV(HOME)/$remote_glite_dir/log
+LOG=\$ENV(HOME)/$remote_base_dir_host/glite/log
 FT_GAHP_LOG=\$(LOG)/FTGahpLog
 SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD
-SEC_PASSWORD_FILE = \$ENV(HOME)/$remote_glite_dir/etc/passwdfile
+SEC_PASSWORD_FILE = \$ENV(HOME)/$remote_base_dir_host/glite/etc/passwdfile
 EOF
 
 # Generate the password file, if it doesn't already exist 
@@ -798,8 +824,11 @@ if [ ! -e $bosco_passwd_file ]; then
     random_string=`echo $RANDOM | $MD5SUM | awk '{print $1}'` 
     condor_store_cred -p $random_string -f $bosco_passwd_file 
 fi
-rsync -aq $bosco_passwd_file $remote_host:$remote_base_dir_host/campus_factory/share/glidein_jobs 2>/dev/null
-rsync -aq $bosco_passwd_file $remote_host:$remote_glite_dir/etc 2>/dev/null
+rsync -aq $bosco_passwd_file $local_install_dir/campus_factory/share/glidein_jobs 2>/dev/null
+rsync -aq $bosco_passwd_file $remote_glite_dir/etc 2>/dev/null
+
+# Do the actual rsync
+show_progress "Installing on cluster $remote_host" rsync -aq $local_install_dir $remote_host:
 
 # Add the cluster to the cluster list
 add_cluster_to_list $remote_host $max_queued $cluster_type

@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+/*
+ * Copyright 2000-2012 Red Hat, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:coll="http://collector.aviary.grid.redhat.com" xmlns:mrg="http://common.aviary.grid.redhat.com" targetNamespace="http://collector.aviary.grid.redhat.com">
+	<xs:import namespace="http://common.aviary.grid.redhat.com" schemaLocation="aviary-common.xsd"/>
+	<!-- declare  message-level elements using anonymous complex types for simpler generated types -->
+	<!-- use of refs, inheritance into anonymous types, etc. eschewed for simplicity and interop -->
+	<xs:element name="GetCollector">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ids" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="partialMatches" type="xs:boolean" default="true"/>
+			<xs:attribute name="includeSummaries" type="xs:boolean" default="true"/>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetCollectorResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="results" type="mrg:Collector" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetNegotiator">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ids" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="partialMatches" type="xs:boolean" default="true"/>
+			<xs:attribute name="includeSummaries" type="xs:boolean" default="true"/>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetNegotiatorResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="results" type="mrg:Negotiator" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetScheduler">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ids" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="partialMatches" type="xs:boolean" default="true"/>
+			<xs:attribute name="includeSummaries" type="xs:boolean" default="true"/>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetSchedulerResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="results" type="mrg:Scheduler" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetSubmitter">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ids" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="partialMatches" type="xs:boolean" default="true"/>
+			<xs:attribute name="includeSummaries" type="xs:boolean" default="true"/>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetSubmitterResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="results" type="mrg:Submitter" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<!-- Slot and Master are the resource types that most influence scale -->
+	<xs:element name="GetMaster">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ids" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="partialMatches" type="xs:boolean" default="true"/>
+			<xs:attribute name="includeSummaries" type="xs:boolean" default="true"/>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetMasterResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="results" type="mrg:Master" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetMasterID">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="size" type="xs:int"/>
+				<xs:element name="mode" type="mrg:ScanMode" minOccurs="0"/>
+				<!-- the resource id in the offset is our "iterator" pointer -->
+				<xs:element name="offset" type="mrg:ResourceID" minOccurs="0"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetMasterIDResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="results" type="mrg:Master" minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element name="remaining" type="xs:int"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetSlot">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ids" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="partialMatches" type="xs:boolean" default="true"/>
+			<xs:attribute name="includeSummaries" type="xs:boolean" default="true"/>
+			<xs:attribute name="includeDynamic" type="xs:boolean" default="true"/>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetSlotResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="results" type="mrg:Slot" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<!-- retrieving by page size and offset ONLY applies to STATIC and PARTITIONABLE slot types -->
+	<xs:element name="GetSlotID">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="size" type="xs:int"/>
+				<xs:element name="mode" type="mrg:ScanMode" minOccurs="0"/>
+				<!-- the resource id in the offset is our "iterator" pointer -->
+				<xs:element name="offset" type="mrg:ResourceID" minOccurs="0"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetSlotIDResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="results" type="mrg:Slot" minOccurs="0" maxOccurs="unbounded"/>
+				<xs:element name="remaining" type="xs:int"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:complexType name="AttributeRequest">
+		<xs:sequence>
+			<xs:element name="id" type="mrg:ResourceID"/>
+			<xs:element name="names" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="AttributeResponse">
+		<xs:sequence>
+			<xs:element name="id" type="mrg:ResourceID"/>
+            <xs:element name="status" type="mrg:Status"/>
+			<xs:element name="ad" type="mrg:Attributes" minOccurs="0"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="GetAttributes">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="ids" type="coll:AttributeRequest" minOccurs="1" maxOccurs="unbounded"/>
+			</xs:sequence>
+			<xs:attribute name="valuesOnly" type="xs:boolean" default="false"/>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="GetAttributesResponse">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="results" type="coll:AttributeResponse" minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>
