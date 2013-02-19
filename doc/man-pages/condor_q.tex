@@ -1,40 +1,14 @@
 \begin{ManPage}{\label{man-condor-q}\Condor{q}}{1}
 {Display information about jobs in queue}
 \Synopsis \SynProg{\Condor{q}}
-\oOpt{-help} 
+\oOpt{-help [Universe | State]} 
 
 \SynProg{\Condor{q}}
 \ToolDebugOption
-\oOpt{-global} 
-\oOptArg{-submitter}{submitter}
-\oOptArg{-name}{name} 
-\oOptArg{-pool}{centralmanagerhostname[:portnumber]}
-\oOpt{-analyze}
-\oOpt{-better-analyze}
-\oOpt{-run}
-\oOpt{-hold}
-\oOpt{-globus}
-\oOpt{-goodput}
-\oOpt{-io}
-\oOpt{-dag}
-\oOpt{-long}
-\oOpt{-xml}
-\oOptArg{-attributes} {Attr1 [,Attr2 \Dots]}
-\oOptArg{-format} {fmt attr}
-\oOptArg{-autoformat[:tn,lVh]}{attr1 [attr2 ...]}
-\oOpt{-cputime}
-\oOpt{-currentrun}
-\oOpt{-avgqueuetime}
-\oOptArg{-jobads}{file} 
-\oOptArg{-userlog}{file}
-\oOptArg{-machine}{name}
-\oOptArg{-mconstraint}{expression}
-\oOptArg{-slotads}{file}
-\oOptArg{-userprios}{file}
-\oOpt{-stream-results}
-\oOpt{-wide}
-\oArg{\{cluster \Bar cluster.process \Bar owner \Bar
-  \OptArg{-constraint}{expression} \Dots \} }
+\oArg{general options}
+\oArg{restriction list}
+\oArg{output options}
+\oArg{analyze options}
 
 \index{HTCondor commands!condor\_q}
 \index{condor\_q command}
@@ -42,17 +16,10 @@
 \Description
 \Condor{q} displays information about jobs in the HTCondor job queue.  By
 default, \Condor{q} queries the local job queue but this behavior may be 
-modified by specifying:
-\begin{itemize}
-	\item the \Opt{-global} option, which queries all job queues in the pool
-	\item a schedd name with the \Opt{-name} option, which causes the queue of 
-		the named schedd to be queried 
-	\item a submitter with the \Opt{-submitter} option, which causes all queues
-		of the named submitter to be queried
-\end{itemize}
+modified by specifying one of the general options.
 
 To restrict the display to jobs of interest, a list of zero or more 
-restrictions may be supplied.  Each restriction may be one of:
+restriction options may be supplied.  Each restriction may be one of:
 \begin{itemize}
 	\item a \Arg{cluster} and a \Arg{process} matches jobs which
 		belong to the specified cluster and have the specified process number
@@ -103,17 +70,17 @@ when the attribute is defined, and \Attr{ImageSize} (in Kbytes), otherwise.
 \item[CMD] The name of the executable. 
 \end{description}
 
-If the \Opt{-dag} option is specified, the OWNER column is replaced
+If the output option \Opt{-dag} is specified, the OWNER column is replaced
 with NODENAME for jobs started by the \Condor{dagman} instance.
 
-If the \Opt{-run} option is specified, the ST, PRI, SIZE, and CMD
+If the output option \Opt{-run} is specified, the ST, PRI, SIZE, and CMD
 columns are replaced with:
 
 \begin{description}
 \item[HOST(S)] The host where the job is running.
 \end{description}
 
-If the \Opt{-globus} option is specified, the ST, PRI, SIZE, and CMD
+If the output option \Opt{-globus} is specified, the ST, PRI, SIZE, and CMD
 columns are replaced with:
 \begin{description}
 \item[STATUS] The state that HTCondor believes the job is in.
@@ -150,7 +117,7 @@ Values may also be condor, lsf, or pbs.
 submit description file.
 \end{description}
 
-If the \Opt{-goodput} option is specified, the ST, PRI, SIZE, and CMD
+If the output option \Opt{-goodput} is specified, the ST, PRI, SIZE, and CMD
 columns are replaced with:
 
 \begin{description}
@@ -167,7 +134,7 @@ the job has not (yet) checkpointed, this column contains \texttt{[??????]}.
 run-time.
 \end{description}
 
-If the \Opt{-io} option is specified, the ST, PRI, SIZE, and CMD columns
+If the output option \Opt{-io} is specified, the ST, PRI, SIZE, and CMD columns
 are replaced with:
 
 \begin{description}
@@ -184,7 +151,7 @@ These fields are updated when a job produces a checkpoint or completes.
 If a job
 has not yet produced a checkpoint, this information is not available.
 
-If the \Opt{-cputime} option is specified, the RUN\_TIME 
+If the output option \Opt{-cputime} is specified, the RUN\_TIME 
 column is replaced with:
 
 \begin{description}
@@ -195,24 +162,30 @@ the current run is \emph{not} shown.  If the job has not produced a checkpoint,
 this column contains 0+00:00:00.)
 \end{description}
 
-The \Arg{-analyze} or \Arg{-better-analyze} options may be used to determine why certain jobs are not
+The \Arg{-analyze} or \Arg{-better-analyze} options may be used to determine 
+why certain jobs are not
 running by performing an analysis on a per machine basis for each machine in 
 the pool.  The reasons may vary among failed constraints, insufficient priority,
 resource owner preferences and prevention of preemption by the 
-\Macro{PREEMPTION\_REQUIREMENTS} expression.  If the \Arg{-verbose} option is specified 
+\Macro{PREEMPTION\_REQUIREMENTS} expression.  
+If the analyze option \Arg{-verbose} is specified 
 along with the \Arg{-analyze} option, the reason for failure is displayed on a 
-per machine basis. \Arg{-better-analyze} differs from \Arg{-analyze} in that it will
-do matchmaking analyisis on jobs even if they are currently running, or if the reason
-they are not running is not due to matchmaking.	 \Arg{-better-analyze} also produces
-more thourough analysis of complex Requirements and shows the values of relevent job
-ClassAd attributes.  When only a single machine is being analyzed via \Arg{-machine} or
-\Arg{-mconstraint} the values of relevant attributes of the machine ClassAd are also
-displayed.
+per machine basis. 
+\Arg{-better-analyze} differs from \Arg{-analyze} in that it will
+do matchmaking analyisis on jobs even if they are currently running, 
+or if the reason they are not running is not due to matchmaking.
+\Arg{-better-analyze} also produces
+more thourough analysis of complex Requirements and shows the values of 
+relevent job ClassAd attributes.  
+When only a single machine is being analyzed via \Arg{-machine} or
+\Arg{-mconstraint},
+the values of relevant attributes of the machine ClassAd are also displayed.
 
 \begin{Options}
-  \OptItem{\Opt{-help}}{Get a brief description of the supported options}
-  \OptItem{\Opt{-global}}{Get queues of all the submitters in the system}
   \ToolDebugDesc
+  \OptItem{\Opt{-help [Universe | State]}}{(output option) Print usage info, and 
+    additionally print job universes or job states.}
+  \OptItem{\Opt{-global}}{(general option) Queries all job queues in the pool.}
   \OptItem{\OptArg{-submitter}{submitter}}{List jobs of specific submitter 
     from all the queues in the pool}
   \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
@@ -241,7 +214,8 @@ displayed.
   \OptItem{\Opt{-dag}}{Display DAG node jobs under their \Condor{dagman} 
     instance. Child nodes are listed using indentation to show the structure
     of the DAG. }
-  \OptItem{\OptArg{-name}{name}}{Show only the job queue of the named schedd}
+  \OptItem{\OptArg{-name}{name}}{(general option) Query only the job queue 
+    of the named schedd}
   \OptItem{\Opt{-long}}{Display job ads in long format}
   \OptItem{\Opt{-xml}}{Display job ads  in XML format.
     The XML format is fully defined in the reference manual,
