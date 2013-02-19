@@ -90,10 +90,12 @@ properties provided that the NVIDIA GPUs are correctly setup and that the
 correct NVIDIA libraries (CUDA Run Time and NVML) are installed.
 \Ticket{3386}
 
-\item When using \Condor{compile}, pthreads are not normally permitted to be used
-in standard universe jobs. However, \Condor{compile} will now tell a user that they
-should be linking to the GNU Pth library built with the \verb@--enable-pthread@
-flag. This will permit jobs that utilize pthreads to be built with \Condor{compile}.
+\item When using \Condor{compile}, 
+Pthreads are not normally permitted to be used by standard universe jobs.
+However, \Condor{compile} will now tell a user that they
+should be linking to the GNU Pth library,
+which is  built with the \verb@--enable-pthread@ flag.
+This will permit jobs that use Pthreads to be built with \Condor{compile}.
 \Ticket{3319}
 
 
