@@ -24,6 +24,12 @@
 use strict;
 use warnings;
 
+use Getopt::Long;
+use vars qw/ $opt_coverity_analysis /;
+GetOptions(
+            'coverity-analysis' => \$opt_coverity_analysis,
+);
+
 my $EXTERNALS_TASK        = "remote_task.externals";
 my $TAR_TASK              = "remote_task.create_tar";
 my $CHECK_TAR_TASK        = "remote_task.check_tar";
@@ -31,6 +37,7 @@ my $UNSTRIPPED_TASK       = "remote_task.create_unstripped_tar";
 my $CHECK_UNSTRIPPED_TASK = "remote_task.check_unstripped_tar";
 my $NATIVE_TASK           = "remote_task.create_native";
 my $CHECK_NATIVE_TASK     = "remote_task.check_native";
+my $COVERITY_ANALYSIS     = "remote_task.coverity_analysis";
 
 # autoflush our STDOUT
 $| = 1;
@@ -60,6 +67,10 @@ else {
     print TASKLIST "$CHECK_NATIVE_TASK\n";
     print TASKLIST "$TAR_TASK\n";
     print TASKLIST "$CHECK_TAR_TASK\n";
+}
+
+if (defined($opt_coverity_analysis)) {
+    print TASKLIST "$COVERITY_ANALYSIS\n";
 }
 
 close (TASKLIST);

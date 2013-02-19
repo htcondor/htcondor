@@ -43,7 +43,7 @@ use vars qw/ $opt_build $opt_test
     $opt_build_args
 	$opt_skip_doc $opt_sha1 $opt_private_build
     $opt_buildid $opt_test_src $opt_test_timeout $opt_test_class
-    $opt_input_platform $opt_tests_at_once
+    $opt_input_platform $opt_tests_at_once $opt_coverity_analysis
     /;
 
 sub TRUE { 1; };
@@ -358,6 +358,7 @@ sub parseOptions
 		   'skip-doc' => \$opt_skip_doc,
 		   'sha1=s' => \$opt_sha1,
 		   'private-build:s' => \$opt_private_build,
+	   'coverity-analysis' => \$opt_coverity_analysis,
 # test-specific options
            'buildid=i'     => \$opt_buildid,
            'test-src=s'    => \$opt_test_src,
@@ -1345,6 +1346,10 @@ EOF
     print $fh "platform_post = nmi_tools/glue/build/platform_post\n";
 
 	print $fh "post_all = nmi_tools/glue/build/post_all\n";
+
+    if( defined($opt_coverity_analysis)) {
+    	print $fh "remote_declare_args = --coverity-analysis\n";
+    }
 
     if( defined($opt_use_externals_cache) ) {
 		$common_pre_args .= ' --use-externals-cache';
