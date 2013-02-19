@@ -82,7 +82,8 @@ const char ULogEventNumberNames[][30] = {
 	"ULOG_JOB_STATUS_KNOWN",		// Job status known
 	"ULOG_JOB_STAGE_IN",			// Job staging in input files
 	"ULOG_JOB_STAGE_OUT",			// Job staging out output files
-	"ULOG_ATTRIBUTE_UPDATE"			// Job attribute updated
+	"ULOG_ATTRIBUTE_UPDATE",			// Job attribute updated
+	"ULOG_PRESKIP"					// PRE_SKIP event for DAGMan
 };
 
 const char * const ULogEventOutcomeNames[] = {
@@ -206,6 +207,9 @@ instantiateEvent (ULogEventNumber event)
 
 	case ULOG_ATTRIBUTE_UPDATE:
 		return new AttributeUpdate;
+
+	case ULOG_PRESKIP:
+		return new PreSkipEvent;
 
 	default:
 		dprintf( D_ALWAYS, "Invalid ULogEventNumber: %d\n", event );
@@ -5878,5 +5882,120 @@ AttributeUpdate::setOldValue(const char* attr_value)
 	}
 	if (attr_value) {
 		old_value = strdup(attr_value);
+	}
+}
+
+
+PreSkipEvent::PreSkipEvent(void) : skipEventLogNotes(0)
+{
+	eventNumber = ULOG_PRESKIP;
+}
+
+PreSkipEvent::~PreSkipEvent(void)
+{
+	delete [] skipEventLogNotes;
+}
+
+int PreSkipEvent::readEvent (FILE *file)
+{
+	delete[] skipEventLogNotes;
+	skipEventLogNotes = NULL;
+	MyString line;
+	if( !line.readLine(file) ) {
+		return 0;
+	}
+	setSkipNote(line.Value()); // allocate memory
+
+	// check if event ended without specifying the DAG node.
+	// in this case, the submit host would be the event delimiter
+	if ( strncmp(skipEventLogNotes,"...",3)==0 ) {
+			// This should not happen. The event should have a 
+			// DAGMan node associated with it.
+		skipEventLogNotes[0] = '\0';
+		// Backup to leave event delimiter unread go past \n too
+		fseek( file, -4, SEEK_CUR );
+		return 0;
+	}
+	char s[8192];
+	
+	// This event must have a DAG Node attached to it.
+	fpos_t fpos;
+	fgetpos(file,&fpos);
+	if(!fgets(s,8192,file) || strcmp( s,"...\n" ) == 0 ) {
+		fsetpos(file,&fpos);
+		return 0;
+	}
+	char* newline = strchr(s,'\n');
+	if(newline) {
+		*newline = '\0';
+	}
+		// some users of this library (dagman) depend on whitespace
+		// being stripped from the beginning of the log notes field
+	char const *strip_s = s;
+	while( *strip_s && isspace(*strip_s) ) {
+		strip_s++;
+	}
+	char *p = s;
+		// Don't use strcpy because the strings "may not overlap"
+		// according to strcpy(3) man page
+	if (p != strip_s) {
+		while((*p++ = *strip_s++)) {}
+	}
+	delete [] skipEventLogNotes;
+	skipEventLogNotes = strnewp(s);
+	return ( !skipEventLogNotes || strlen(skipEventLogNotes) == 0 )?0:1;
+}
+
+int PreSkipEvent::writeEvent (FILE* file)
+{
+	int retval = fprintf (file, "PRE script return value is PRE_SKIP value\n");
+		// 
+	if (!skipEventLogNotes || retval < 0)
+	{
+		return 0;
+	}
+	retval = fprintf( file, "    %.8191s\n", skipEventLogNotes );
+	if( retval < 0 ) {
+		return 0;
+	}
+	return (1);
+}
+
+ClassAd* PreSkipEvent::toClassAd(void)
+{
+	ClassAd* myad = ULogEvent::toClassAd();
+	if( !myad ) return NULL;
+
+	if( skipEventLogNotes && skipEventLogNotes[0] ) {
+		if( !myad->InsertAttr("SkipEventLogNotes",skipEventLogNotes) ) return NULL;
+	}
+	return myad;
+}
+
+void PreSkipEvent::initFromClassAd(ClassAd* ad)
+{
+	ULogEvent::initFromClassAd(ad);
+
+	if( !ad ) return;
+	char* mallocstr = NULL;
+	ad->LookupString("SkipEventLogNotes", &mallocstr);
+	if( mallocstr ) {
+		setSkipNote(mallocstr);
+		free(mallocstr);
+		mallocstr = NULL;
+	}
+}
+
+void PreSkipEvent::setSkipNote(const char* s)
+{
+	if( skipEventLogNotes ) {
+		delete[] skipEventLogNotes;
+	}
+	if( s ) {
+		skipEventLogNotes = strnewp(s);
+		ASSERT( skipEventLogNotes );
+	}
+	else {
+		skipEventLogNotes = NULL;
 	}
 }

@@ -89,7 +89,8 @@ enum ULogEventNumber {
 	/** Job Status Known          */  ULOG_JOB_STATUS_KNOWN         = 30,
 	/** Job performing stage-in   */  ULOG_JOB_STAGE_IN				= 31,
 	/** Job performing stage-out  */  ULOG_JOB_STAGE_OUT			= 32,
-	/** Attribute updated  */	ULOG_ATTRIBUTE_UPDATE		= 33
+	/** Attribute updated  */	ULOG_ATTRIBUTE_UPDATE		= 33,
+	/** PRE_SKIP event for DAGMan */  ULOG_PRESKIP		=34
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];
@@ -1917,6 +1918,42 @@ class AttributeUpdate : public ULogEvent
 	char *old_value;
 };
 
+class PreSkipEvent : public ULogEvent
+{
+  public:
+    ///
+    PreSkipEvent(void);
+    ///
+    ~PreSkipEvent(void);
+
+    /** Read the body of the next Submit event.
+        @param file the non-NULL readable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int readEvent (FILE *);
+
+    /** Write the body of the next Submit event.
+        @param file the non-NULL writable log file
+        @return 0 for failure, 1 for success
+    */
+    virtual int writeEvent (FILE *);
+
+	/** Return a ClassAd representation of this PreSkipEvent.
+		@return NULL for failure, the ClassAd pointer otherwise
+	*/
+	virtual ClassAd* toClassAd(void);
+
+	/** Initialize from this ClassAd.
+		@param a pointer to the ClassAd to initialize from
+	*/
+	virtual void initFromClassAd(ClassAd* ad);
+	
+	void setSkipNote(const char*);
+
+    // dagman-supplied text to include in the log event
+	char* skipEventLogNotes;
+
+};
 
 #endif // __CONDOR_EVENT_H__
 

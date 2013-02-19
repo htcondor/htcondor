@@ -596,7 +596,6 @@ private:
 		// Skip the rest of the node (and consider it successful) if the
 		// PRE script exits with this value.  (-1 means undefined.)
 	int _preskip;
-	int _pre_status;
 
 	enum {
 		PRE_SKIP_INVALID = -1,

@@ -51,9 +51,9 @@ const char * Job::status_t_names[] = {
     "STATUS_READY    ",
     "STATUS_PRERUN   ",
     "STATUS_SUBMITTED",
-	"STATUS_POSTRUN  ",
+    "STATUS_POSTRUN  ",
     "STATUS_DONE     ",
-    "STATUS_ERROR    ",
+    "STATUS_ERROR    "
 };
 
 //---------------------------------------------------------------------------
@@ -101,7 +101,7 @@ Job::~Job() {
 Job::Job( const job_type_t jobType, const char* jobName,
 			const char *directory, const char* cmdFile ) :
 	_jobType( jobType ), _preskip( PRE_SKIP_INVALID ),
-			_pre_status( NO_PRE_VALUE ), _final( false ), append_default_log(true)
+			_final( false ), append_default_log(true)
 {
 	ASSERT( jobName != NULL );
 	ASSERT( cmdFile != NULL );
@@ -323,11 +323,14 @@ Job::GetStatus() const
 bool
 Job::SetStatus( status_t newStatus )
 {
-	 debug_printf( DEBUG_DEBUG_1, "Job(%s)::SetStatus(%s)\n",
-	 			GetJobName(), status_t_names[newStatus] );
+	debug_printf( DEBUG_DEBUG_1, "Job(%s)::_Status = %s\n",
+		GetJobName(), status_t_names[_Status] );
 
-		// TODO: add some state transition sanity-checking here?
+	debug_printf( DEBUG_DEBUG_1, "Job(%s)::SetStatus(%s)\n",
+		GetJobName(), status_t_names[newStatus] );
+	
 	_Status = newStatus;
+		// TODO: add some state transition sanity-checking here?
 	return true;
 }
 
@@ -468,14 +471,14 @@ Job::CanAddChild( Job* child, MyString &whynot )
 bool
 Job::TerminateSuccess()
 {
-	_Status = STATUS_DONE;
+	SetStatus( STATUS_DONE );
 	return true;
 } 
 
 bool
 Job::TerminateFailure()
 {
-	_Status = STATUS_ERROR;
+	SetStatus( STATUS_ERROR );
 	return true;
 } 
 
@@ -931,7 +934,7 @@ void
 Job::LogMonitorFailed()
 {
 	if ( _Status != Job::STATUS_ERROR ) {
-		_Status = Job::STATUS_ERROR;
+		SetStatus( Job::STATUS_ERROR );
 		snprintf( error_text, JOB_ERROR_TEXT_MAXLEN,
 					"Unable to monitor node job log file" );
 		retval = Dag::DAG_ERROR_LOG_MONITOR_ERROR;

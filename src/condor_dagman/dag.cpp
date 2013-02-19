@@ -638,6 +638,13 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 			case ULOG_JOB_RELEASED:
 				ProcessReleasedEvent(job);
 				break;
+			case ULOG_PRESKIP:
+				TerminateJob( job, recovery );
+				job->UnmonitorLogFile( _condorLogRdr, _storkLogRdr );
+				if(!recovery) {
+					--_preRunNodeCount;
+				}
+				break;
 
 			case ULOG_CHECKPOINTED:
 			case ULOG_IMAGE_SIZE:
@@ -715,6 +722,7 @@ void
 Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 	if( job ) {
+
 		DecrementJobCounts( job );
 
 		const JobTerminatedEvent * termEvent =
@@ -1278,7 +1286,8 @@ Dag::NodeExists( const char* nodeName ) const
 }
 
 //---------------------------------------------------------------------------
-Job * Dag::FindNodeByEventID (int logsource, const CondorID condorID) const {
+Job * Dag::FindNodeByEventID (int logsource, const CondorID condorID,
+		bool ispreskipEvent) const {
 	if ( condorID._cluster == -1 ) {
 		return NULL;
 	}
@@ -1315,7 +1324,9 @@ Job * Dag::FindNodeByEventID (int logsource, const CondorID condorID) const {
 				check_warning_strictness( DAG_STRICT_3 );
 			}
 		}
-		ASSERT( isNoop == node->GetNoop() );
+			// We are overloading the noop table so that PRESKIP nodes 
+			// will have isNoop == true here, but GetNoop() will return false
+		ASSERT( ispreskipEvent || isNoop == node->GetNoop() );
 	}
 
 	return node;
@@ -1643,12 +1654,33 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 			debug_printf( DEBUG_NORMAL, "PRE_SKIP return "
 					"value %d indicates we are done (successfully) with node %s\n",
 					job->retval, job->GetJobName() );
+				// Mark the node as a skipped node.
+			CondorID id;
+				// This might be the first time we watch the file, so we
+				// monitor it.
+			if ( !job->MonitorLogFile( _condorLogRdr, _storkLogRdr, _nfsLogIsError,
+					_recovery, _defaultNodeLog, _use_default_node_log ) ) {
+				return 0;
+			}
+				
+			if(!writePreSkipEvent( id, job, job->GetJobName(),
+					job->GetDirectory(), _use_default_node_log ? DefaultNodeLog():
+					job->GetLogFile() , !_use_default_node_log
+					&& job->GetLogFileIsXml() ) ) {
+				debug_printf( DEBUG_NORMAL, "Failed to write PRE_SKIP event for node %s\n",
+					job->GetJobName() );
+				main_shutdown_rescue( EXIT_ERROR, DAG_STATUS_ERROR );
+			}
+			job->SetStatus( Job::STATUS_PRERUN );
+			++_preRunNodeCount; // We are not running this again, but we want
+				// to keep the tables correct.  The log reading code will take 
+				// care of this in a moment.
+			job->_scriptPre->_done = TRUE; // So the pre script is not run again.
 			job->retval = 0; // Job _is_ successful!
 				// TEMP -- we probably need to write something to the
 				// jobstate.log file here, but JOB_SUCCESS is not the
 				// right thing.  wenger 2011-09-01
 			// _jobstateLog.WriteJobSuccessOrFailure( job );
-			TerminateJob( job, false, false );
 		}
 
 			// Check for POST script.
@@ -1737,13 +1769,20 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 	ASSERT( nodeName != NULL );
 	Job* job = FindNodeByName( nodeName );
 	ASSERT( job != NULL );
+	return PostScriptSubReaper( job, status );
+}
+
+int 
+Dag::PostScriptSubReaper( Job* job, int status )
+{
 	if ( job->GetStatus() != Job::STATUS_POSTRUN ) {
-		EXCEPT( "Node %s is not in POSTRUN state", job->GetJobName() );
+		EXCEPT( "Node %s is not in POSTRUN state",
+			job->GetJobName() );
 	}
 
 	PostScriptTerminatedEvent e;
 	
-	e.dagNodeName = strnewp( nodeName );
+	e.dagNodeName = strnewp( job->GetJobName() );
 
 	if( WIFSIGNALED( status ) ) {
 		debug_printf( DEBUG_QUIET, "POST script died on signal %d\n", status );
@@ -1773,6 +1812,9 @@ Dag::PostScriptReaper( const char* nodeName, int status )
 		ProcessPostTermEvent(&e, job, _recovery);
 	} else {
 
+		e.cluster = job->_CondorID._cluster;
+		e.proc = job->_CondorID._proc;
+		e.subproc = job->_CondorID._subproc;
 		WriteUserLog ulog;
 			// Disabling the global log (EventLog) fixes the main problem
 			// in gittrac #934 (if you can't write to the global log the
@@ -2294,6 +2336,8 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 	}
 
 		// Never mark a FINAL node as done.
+		// Also avoid a possible race condition where the job
+		// has been skipped but is not yet marked as DONE.
 	if ( node->GetStatus() == Job::STATUS_DONE && !node->GetFinal() ) {
 		fprintf(fp, "DONE %s\n", node->GetJobName() );
 	}
@@ -3449,14 +3493,15 @@ Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
 		// node, and we're done...
 
 	if( event->eventNumber != ULOG_SUBMIT ) {
-	  node = FindNodeByEventID( logsource, condorID );
+		
+	  node = FindNodeByEventID( logsource, condorID, event->eventNumber == ULOG_PRESKIP );
 	  if( node ) {
 	    return node;
 	  }
 	}
 
 		// if the job ID wasn't familiar and we didn't find a node
-		// above, there are three possibilites:
+		// above, there are at least four possibilites:
 		//	
 		// 1) it's the submit event for a node we just submitted, and
 		// we don't yet know the job ID; in this case, we look up the
@@ -3469,7 +3514,9 @@ Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
 		//
 		// 3) it's a job submitted by someone outside than this
 		// DAGMan, and can/should be ignored (we return NULL).
-
+		//
+		// 4) We are in recovery mode, and this is a job that was
+		// skipped because of the pre script return value
 	if( event->eventNumber == ULOG_SUBMIT ) {
 		const SubmitEvent* submit_event = (const SubmitEvent*)event;
 		if ( submit_event->submitEventLogNotes ) {
@@ -3517,7 +3564,39 @@ Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
 		node = FindNodeByName( pst_event->dagNodeName );
 		return node;
 	}
-
+	
+	if( event->eventNumber == ULOG_PRESKIP ) {
+		const PreSkipEvent* skip_event = (const PreSkipEvent*)event;
+		char nodeName[1024] = "";
+		if( !skip_event->skipEventLogNotes ) { 
+			debug_printf( DEBUG_NORMAL, "No DAG Node indicated in a PRE_SKIP event\n" );	
+			node = NULL;
+		} else if( sscanf( skip_event->skipEventLogNotes, "DAG Node: %1023s",
+				nodeName ) == 1) {
+			node = FindNodeByName( nodeName );
+			if( node ) {
+				node->_CondorID = condorID;
+					// Insert this node into the CondorID->node hash
+					// table if we don't already have it (e.g., recovery
+					// mode).  (In "normal" mode we should have already
+					// inserted it when we did the condor_submit.)
+				Job *tmpNode = NULL;
+				bool isNoop = JobIsNoop( condorID );
+				int id = GetIndexID( condorID );
+				HashTable<int, Job *> *ht =
+							GetEventIDHash( isNoop, logsource );
+				if ( ht->lookup(id, tmpNode) != 0 ) {
+						// Node not found.
+					int insertResult = ht->insert( id, node );
+					ASSERT( insertResult == 0 );
+				} else {
+						// Node was found.
+					ASSERT( tmpNode == node );
+				}
+			}
+		}
+		return node;
+	}
 	return node;
 }
 
@@ -3794,7 +3873,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
     	if( node->JobType() == Job::TYPE_CONDOR ) {
 	  		node->_submitTries++;
 			if ( node->GetNoop() ) {
-      			submit_success = fake_condor_submit( condorID,
+      			submit_success = fake_condor_submit( condorID, 0,
 							node->GetJobName(), node->GetDirectory(),
 							_use_default_node_log ? DefaultNodeLog():
 								node->GetLogFile() ,
@@ -3818,7 +3897,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
     	} else if( node->JobType() == Job::TYPE_STORK ) {
 	  		node->_submitTries++;
 			if ( node->GetNoop() ) {
-      			submit_success = fake_condor_submit( condorID,
+      			submit_success = fake_condor_submit( condorID, 0,
 							node->GetJobName(), node->GetDirectory(),
 							_use_default_node_log ? DefaultNodeLog() :
 								node->GetLogFile(),

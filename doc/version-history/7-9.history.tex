@@ -76,6 +76,10 @@ has been exceeded while negotiating with single \Condor{schedd}. This configurat
 variable used to only be effective if a submitter used multiple schedds.
 \Ticket{3504}
 
+\item \Condor{dagman} will now recover correctly in a DAG where a node has been 
+skipped because of a \Macro{PRE\_SKIP} has triggered.
+\Ticket{2966}
+
 \end{itemize}
 
 \noindent Known Bugs:
