@@ -126,7 +126,11 @@ BridgeConfiguration::Setup() {
 	}
 
 	AddressSelection & address = GetAddressSelection();
-	address.Setup();
+	if (address.Setup())
+	{
+		dprintf(D_ALWAYS, "Failed to get IP address setup.\n");
+		return 1;
+	}
 
 	classad::PrettyPrint pp;
 	std::string ad_str;
