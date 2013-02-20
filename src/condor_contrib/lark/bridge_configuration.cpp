@@ -68,16 +68,38 @@ BridgeConfiguration::Setup() {
 	int fd = manager.GetNetlinkSocket();
 
 	// We are responsible for creating the bridge.
-	if (result != EEXIST) {
-		if ((result = add_interface_to_bridge(bridge_name.c_str(), bridge_device.c_str()))) {
-			dprintf(D_ALWAYS, "Unable to add device %s to bridge %s\n", bridge_name.c_str(), bridge_device.c_str());
+	if (result != EEXIST)
+	{
+		if (set_status(fd, bridge_name.c_str(), IFF_UP))
+		{
+			delete_bridge(bridge_name.c_str());
+			return 1;
+		}
+		if ((result = set_bridge_fd(bridge_name.c_str(), 0)))
+		{
+			dprintf(D_ALWAYS, "Unable to set bridge %s forwarding delay to 0.\n", bridge_name.c_str());
 			delete_bridge(bridge_name.c_str());
 			return result;
 		}
 
+		if ((result = add_interface_to_bridge(bridge_name.c_str(), bridge_device.c_str()))) {
+			dprintf(D_ALWAYS, "Unable to add device %s to bridge %s\n", bridge_name.c_str(), bridge_device.c_str());
+			set_status(fd, bridge_name.c_str(), 0);
+			delete_bridge(bridge_name.c_str());
+			return result;
+		}
+		// If either of these fail, we likely knock the system off the network.
 		if ((result = move_routes_to_bridge(fd, bridge_device.c_str(), bridge_name.c_str()))) {
 			dprintf(D_ALWAYS, "Failed to move routes from %s to bridge %s\n", bridge_device.c_str(), bridge_name.c_str());
+			set_status(fd, bridge_name.c_str(), 0);
 			delete_bridge(bridge_name.c_str());
+			return result;
+		}
+		if ((result = move_addresses_to_bridge(fd, bridge_device.c_str(), bridge_name.c_str())))
+		{
+			dprintf(D_ALWAYS, "Failed to move addresses from %s to bridge %s.\n", bridge_device.c_str(), bridge_name.c_str());
+			// Bridge not deleted - we might be able to survive without moving the address.
+			//delete_bridge(bridge_name.c_str());
 			return result;
 		}
 	}

@@ -58,25 +58,19 @@ int main(int argc, const char *argv[])
 			delete_bridge(bridge_name);
 			return result;
 		}
-		// ip link set dev $DEV up
-/*		if (set_status(fd, bridge_device, IFF_UP)) {
-			delete_bridge(bridge_name);
-			return 1;
-		}
-
-		if ((result = wait_for_bridge_status(fd, bridge_device)))
-		{
-			dprintf(D_ALWAYS, "Unable to wait for bridged device %s to come up.\n", bridge_device);
-			delete_bridge(bridge_name);
-			return result;
-		}
-*/
 		if ((result = move_routes_to_bridge(fd, bridge_device, bridge_name)))
 		{
 			dprintf(D_ALWAYS, "Failed to move routes from %s to bridge %s\n", bridge_device, bridge_name);
 			delete_bridge(bridge_name);
 			return result;
 		}
+		if ((result = move_addresses_to_bridge(fd, bridge_device, bridge_name)))
+		{
+			dprintf(D_ALWAYS, "Failed to move addresses from %s to bridge %s.\n", bridge_device, bridge_name);
+			// Bridge not deleted - we might be able to survive without moving the address.
+			return result;
+		}
+
 		dprintf(D_ALWAYS, "Successfully moved bridge.\n");
 	}
 

@@ -389,7 +389,6 @@ add_addr_info(addr_info_t *addr_info, struct ifaddrmsg addrmsg, struct rtattr *a
 int
 filter_addresses(struct nlmsghdr, struct ifaddrmsg addrmsg, struct rtattr *attr_table[IFA_MAX+1], void *user_arg) {
 	addr_info_t *arg = (addr_info_t *)user_arg;
-
 	if (addrmsg.ifa_index != arg->eth_dev)
 		return 0;
 
@@ -438,6 +437,7 @@ iface_action(int sock, int action, struct ifaddrmsg *iface, struct rtattr *attr_
 	for (unsigned idx=0; idx<IFA_MAX; idx++) {
 		if (!attr_table[idx])
 			continue;
+		if (idx == IFA_UNSPEC) continue;
 		iov[2+attr_count].iov_base = attr_table[idx];
 		iov[2+attr_count].iov_len = attr_table[idx]->rta_len;
 		nlmsghdr.nlmsg_len += attr_table[idx]->rta_len;
@@ -479,9 +479,6 @@ move_addresses_to_bridge(int sock, const char *eth, const char *bridge) {
 		free_addr_info(&addr_info);
 		return -1;
 	}
-
-	dprintf(D_ALWAYS, "Number of addresses on bridge device: %lu\n", addr_info.len);
-	return -1;
 
 	// Remove then add the list of addresses.
 	for (unsigned idx=0; idx<addr_info.len; idx++) {
