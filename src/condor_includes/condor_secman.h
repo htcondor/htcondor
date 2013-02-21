@@ -37,6 +37,7 @@
 #include "KeyCache.h"
 // #include "condor_daemon_core.h"
 #include "classy_counted_ptr.h"
+#include "reli_sock.h"
 
 
 typedef void StartCommandCallbackType(bool success,Sock *sock,CondorError *errstack,void *misc_data);

@@ -183,41 +183,64 @@ the values of relevant attributes of the machine ClassAd are also displayed.
 
 \begin{Options}
   \ToolDebugDesc
-  \OptItem{\Opt{-help [Universe | State]}}{(output option) Print usage info, and 
-    additionally print job universes or job states.}
   \OptItem{\Opt{-global}}{(general option) Queries all job queues in the pool.}
-  \OptItem{\OptArg{-submitter}{submitter}}{List jobs of specific submitter 
-    from all the queues in the pool}
+  \OptItem{\OptArg{-submitter}{submitter}}{(general option) List jobs of 
+    a specific submitter.} 
+  \OptItem{\OptArg{-name}{name}}{(general option) Query only the job queue 
+    of the named \Condor{schedd} daemon. }
   \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
-    {Use the \Argnm{centralmanagerhostname} as 
-    the central manager to 
-    locate schedds. (The default is the \Macro{COLLECTOR\_HOST}
-    specified in the configuration file.}
-  \OptItem{\Opt{-analyze}}{Perform an analysis why the requested jobs are not running.
-    First a simple analysis determines if the job is not running because it isn't in
-    a runnable state.  If the job is in a runnable state, then this option is equivalent
-    to \Opt{-better-analyze}. }
-  \OptItem{\Opt{-better-analyze}}{Perform an analysis to determine how
-    many resources are available to run the requested jobs.  These results
-    are only meaningful for jobs using HTCondor's matchmaker.  This option
+    {(general option) Use the \Argnm{centralmanagerhostname} as 
+    the central manager to locate \Condor{schedd} daemons.
+    The default is the \MacroNI{COLLECTOR\_HOST},
+    as specified in the configuration.}
+  \OptItem{\Opt{-analyze[:<qual>]}}{(analyze option) Perform a matchmaking 
+    analysis on why the requested jobs are not running.
+    First a simple analysis determines if the job is not running 
+    due to not being in a runnable state.
+    If the job is in a runnable state, then this option is equivalent
+    to \Opt{-better-analyze}.
+    \Opt{<qual>} is a comma separated list containing one or more of
+
+    \textbf{priority} to consider user priority during the analysis
+
+    \textbf{summary} to show a one line summary for each job or machine
+
+    \textbf{reverse} to analyze machines, rather than jobs
+    }
+  \OptItem{\Opt{-better-analyze[:<qual>]}}{(analyze option) 
+    Perform a more detailed matchmaking analysis to determine how
+    many resources are available to run the requested jobs.
+    This option
     is never meaningful for Scheduler universe jobs and only meaningful
-    for grid universe jobs doing matchmaking.}
-  \OptItem{\Opt{-run}}{Get information about running jobs.}
-  \OptItem{\Opt{-hold}}{Get information about jobs in the hold state.
+    for grid universe jobs doing matchmaking.
+    \Opt{<qual>} is a comma separated list containing one or more of
+
+    \textbf{priority} to consider user priority during the analysis
+
+    \textbf{summary} to show a one line summary for each job or machine
+
+    \textbf{reverse} to analyze machines, rather than jobs
+    }
+  \OptItem{\Opt{-dag}}{(output option) Display DAG node jobs 
+    under their \Condor{dagman} instance. 
+    Child nodes are listed using indentation to show the structure
+    of the DAG. }
+  \OptItem{\Opt{-globus}}{(output option) Get information only about 
+    jobs submitted to grid resources described as \SubmitCmd{gt2}
+    or \SubmitCmd{gt5}.}
+  \OptItem{\Opt{-goodput}}{(output option) Display job goodput statistics.}
+  \OptItem{\Opt{-help [Universe | State]}}{(output option) Print usage info, 
+    and additionally print job universes or job states.}
+  \OptItem{\Opt{-hold}}{(output option) Get information about jobs in 
+    the hold state.
     Also displays the time the job was placed into the hold state
     and the reason why the job was placed in the hold state.}
-  \OptItem{\Opt{-globus}}{Get information only about jobs submitted
-    to grid resources described as \SubmitCmd{gt2}
-    or \SubmitCmd{gt5}.}
-  \OptItem{\Opt{-goodput}}{Display job goodput statistics.}
-  \OptItem{\Opt{-io}}{Display job input/output summaries.}
-  \OptItem{\Opt{-dag}}{Display DAG node jobs under their \Condor{dagman} 
-    instance. Child nodes are listed using indentation to show the structure
-    of the DAG. }
-  \OptItem{\OptArg{-name}{name}}{(general option) Query only the job queue 
-    of the named schedd}
-  \OptItem{\Opt{-long}}{Display job ads in long format}
-  \OptItem{\Opt{-xml}}{Display job ads  in XML format.
+  \OptItem{\Opt{-io}}{(output option) Display job input/output summaries.}
+  \OptItem{\Opt{-run}}{(output option) Get information about running jobs.}
+  \OptItem{\Opt{-long}}{(output option) Display entire job ClassAds 
+    in long format.}
+  \OptItem{\Opt{-xml}}{(output option) Display entire job ClassAds 
+    in XML format.
     The XML format is fully defined in the reference manual,
     obtained from the ClassAds web page, with a link at
     \URL{http://research.cs.wisc.edu/htcondor/research.html}.}

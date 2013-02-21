@@ -63,6 +63,8 @@ BEGIN_C_DECLS
 	*/
 const char* PermString( DCpermission perm );
 
+DCpermission getPermissionFromString( const char * permstring );
+
 END_C_DECLS
 
 #if defined(__cplusplus)

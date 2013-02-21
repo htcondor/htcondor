@@ -57,6 +57,11 @@ cause HTCondor to put the job on hold, incorrectly believing that the cloud
 service had purged it, was also fixed.
 \Ticket{3492}
 
+\item The \Condor{negotiator} now checks to see if \Macro{MAX\_TIME\_PER\_SUBMITTER}
+has been exceeded while negotiating with single \Condor{schedd}. This configuration
+variable used to only be effective if a submitter used multiple schedds.
+\Ticket{3504}
+
 \end{itemize}
 
 \noindent Known Bugs:

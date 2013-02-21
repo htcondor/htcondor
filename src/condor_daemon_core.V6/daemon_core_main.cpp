@@ -2370,6 +2370,51 @@ int dc_main( int argc, char** argv )
 								  (CommandHandler)handle_nop,
 								  "handle_nop()", 0, ALLOW );
 
+		// the next several commands are NOPs registered at all permission
+		// levels, for security testing and diagnostics.  for now they all
+		// invoke the same function, but how they are authorized before calling
+		// it may vary depending on the configuration
+	daemonCore->Register_Command( DC_NOP_READ, "DC_NOP_READ",
+								  (CommandHandler)handle_nop,
+								  "handle_nop()", 0, READ );
+
+	daemonCore->Register_Command( DC_NOP_WRITE, "DC_NOP_WRITE",
+								  (CommandHandler)handle_nop,
+								  "handle_nop()", 0, READ );
+
+	daemonCore->Register_Command( DC_NOP_NEGOTIATOR, "DC_NOP_NEGOTIATOR",
+								  (CommandHandler)handle_nop,
+								  "handle_nop()", 0, NEGOTIATOR );
+
+	daemonCore->Register_Command( DC_NOP_ADMINISTRATOR, "DC_NOP_ADMINISTRATOR",
+								  (CommandHandler)handle_nop,
+								  "handle_nop()", 0, ADMINISTRATOR );
+
+	daemonCore->Register_Command( DC_NOP_OWNER, "DC_NOP_OWNER",
+								  (CommandHandler)handle_nop,
+								  "handle_nop()", 0, OWNER );
+
+	daemonCore->Register_Command( DC_NOP_CONFIG, "DC_NOP_CONFIG",
+								  (CommandHandler)handle_nop,
+								  "handle_nop()", 0, CONFIG_PERM );
+
+	daemonCore->Register_Command( DC_NOP_DAEMON, "DC_NOP_DAEMON",
+								  (CommandHandler)handle_nop,
+								  "handle_nop()", 0, DAEMON );
+
+	daemonCore->Register_Command( DC_NOP_ADVERTISE_STARTD, "DC_NOP_ADVERTISE_STARTD",
+								  (CommandHandler)handle_nop,
+								  "handle_nop()", 0, ADVERTISE_STARTD_PERM );
+
+	daemonCore->Register_Command( DC_NOP_ADVERTISE_SCHEDD, "DC_NOP_ADVERTISE_SCHEDD",
+								  (CommandHandler)handle_nop,
+								  "handle_nop()", 0, ADVERTISE_SCHEDD_PERM );
+
+	daemonCore->Register_Command( DC_NOP_ADVERTISE_MASTER, "DC_NOP_ADVERTISE_MASTER",
+								  (CommandHandler)handle_nop,
+								  "handle_nop()", 0, ADVERTISE_MASTER_PERM );
+
+
 	daemonCore->Register_Command( DC_FETCH_LOG, "DC_FETCH_LOG",
 								  (CommandHandler)handle_fetch_log,
 								  "handle_fetch_log()", 0, ADMINISTRATOR );

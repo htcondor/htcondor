@@ -161,6 +161,7 @@ src/condor_tests/list_stduniv
 src/condor_tests/list_time
 src/condor_tools/condor
 src/condor_tools/condor_advertise
+src/condor_tools/condor_check_security
 src/condor_tools/condor_ckpt_probe
 src/condor_tools/condor_cod
 src/condor_tools/condor_config_val
