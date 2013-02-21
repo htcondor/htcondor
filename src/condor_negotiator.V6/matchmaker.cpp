@@ -3365,8 +3365,9 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 
 		if (currentTime >= deadline) {
 			dprintf (D_ALWAYS, 	
-			"    Reached spin deadline for %s after %d sec... stopping\n",
-				schedd_id.Value(), (int)(currentTime - beginTime));
+			"    Reached spin deadline for %s after %d sec... stopping\n       MAX_TIME_PER_SUBMITTER = %d sec, MAX_TIME_PER_PIESPIN = %d sec\n",
+				schedd_id.Value(), (int)(currentTime - beginTime),
+				MaxTimePerSubmitter, MaxTimePerSpin);
 			break;	// get out of the infinite for loop & stop negotiating
 		}
 
