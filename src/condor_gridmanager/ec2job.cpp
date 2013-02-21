@@ -83,6 +83,7 @@ static const char *GMStateNames[] = {
 #define EC2_VM_STATE_SHUTTINGDOWN       "shutting-down"
 #define EC2_VM_STATE_TERMINATED         "terminated"
 #define EC2_VM_STATE_SHUTOFF            "shutoff"
+#define EC2_VM_STATE_STOPPED            "stopped"
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
@@ -743,12 +744,25 @@ void EC2Job::doEvaluateState()
 				
 			
 			case GM_SUBMITTED:
-			    if( remoteJobState == EC2_VM_STATE_SHUTOFF ) {
-    			    // An OpenStack-specific state where the VM is no longer
-	    		    // running, but it it retains its reserved resources.
-		    	    //
+			    if( remoteJobState == EC2_VM_STATE_SHUTOFF 
+			     || remoteJobState == EC2_VM_STATE_STOPPED ) {
+			        // SHUTOFF is an OpenStack-specific state where the VM
+			        // is no longer running, but retains its reserved resources.
+			        //
 			        // We simplify by considering this job complete and letting
 			        // it exit the queue.
+			        //
+			        // According to Amazon's documentation, the stopped state
+			        // only occurs for EBS-backed instances for which the
+			        // parameter InstanceInstantiateShutdownBehavior is not
+			        // set to terminated.  OpenStack blithely ignores either
+			        // this parameter or this restriction, and so we can see
+			        // the stopped state.  For the present, our users just
+			        // want OpenStack instances to act like Amazon instances
+			        // when they shut themselves down, so we'll work-around
+			        // the OpenStack bug here -- doing exactly the same thing
+			        // as we do for the SHUTOFF state.
+			        //
 			        gmState = GM_CANCEL;
 			        break;
 			    }
@@ -1185,14 +1199,14 @@ void EC2Job::doEvaluateState()
 			case GM_DELETE:
 			    //
 			    // We can't just check m_keypair_created, because we may have
-			    // created the keypair in a proir instance (if this job was
+			    // created the keypair in a prior instance (if this job was
 			    // recovered).  This means we leak keys, both on EC2 and on
 			    // disk.  We can't unconditionally delete keys on EC2 because
 			    // they might not be ours; and we can't delete keys on disk
 			    // until we know recovery is impossible (the user may want to
 			    // use them).
 			    //
-			    // However, if we modify condor_submit to prevent the non-
+			    // However, since condor_submit does not permit the non-
 			    // sensical case of setting both m_key_pair and m_key_pair_file,
 			    // (saying both to use a specific keypair and create a new
 			    // ones), we know that m_key_pair_file will only be set if
