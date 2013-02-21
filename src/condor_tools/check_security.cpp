@@ -63,42 +63,42 @@ void print_useful_info(ClassAd *ad) {
 	MyString  val;
 
 	ad->LookupString("remoteversion", val);
-	printf("Remote Version: %s\n", val.Value());
+	printf("Remote Version:              %s\n", val.Value());
 	val = CondorVersion();
-	printf("Local  Version: %s\n", val.Value());
-
-	printf ("\n");
-
-	ad->LookupString("authentication", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
-		printf("Authentication: none\n");
-	} else {
-		ad->LookupString("authmethods", val);
-		printf("Authentication: %s\n", val.Value());
-	}
-
-	ad->LookupString("encryption", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
-		printf("Encryption:     none\n");
-	} else {
-		ad->LookupString("cryptomethods", val);
-		printf("Encryption:     %s\n", val.Value());
-	}
-
-	ad->LookupString("integrity", val);
-	if (strcasecmp(val.Value(), "no") == 0) {
-		printf("Integrity:      none\n");
-	} else {
-		printf("Integrity:      MD5\n");
-	}
+	printf("Local  Version:              %s\n", val.Value());
 
 	printf ("\n");
 
 	ad->LookupString("sid", val);
-	printf("Session ID:     %s\n", val.Value());
+	printf("Session ID:                  %s\n", val.Value());
+
+	ad->LookupString("encryption", val);
+	if (strcasecmp(val.Value(), "no") == 0) {
+		printf("Encryption:                  none\n");
+	} else {
+		ad->LookupString("cryptomethods", val);
+		printf("Encryption:                  %s\n", val.Value());
+	}
+
+	ad->LookupString("integrity", val);
+	if (strcasecmp(val.Value(), "no") == 0) {
+		printf("Integrity:                   none\n");
+	} else {
+		printf("Integrity:                   MD5\n");
+	}
+
+	ad->LookupString("authentication", val);
+	if (strcasecmp(val.Value(), "no") == 0) {
+		printf("Authentication:              none\n");
+	} else {
+		ad->LookupString("authmethods", val);
+		printf("Authenticated using:         %s\n", val.Value());
+		ad->LookupString("authmethodslist", val);
+		printf("All authentication methods:  %s\n", val.Value());
+	}
 
 	ad->LookupString("myremoteusername", val);
-	printf("Remote Mapping: %s\n", val.Value());
+	printf("Remote Mapping:              %s\n", val.Value());
 
 	printf ("\n");
 
@@ -130,7 +130,11 @@ void print_info(char * addr,  int cmd, CondorError *errstack) {
 
 	ClassAd *policy = k->policy();
 	print_useful_info(policy);
-	process_err_stack(errstack);
+
+	if (errstack->getFullText() != "") {
+		printf ("Information about authentication methods that were attempted but failed:\n");
+		process_err_stack(errstack);
+	}
 
 }
 
@@ -172,13 +176,13 @@ int getSomeCommandFromString ( char * cmdstring ) {
 	res = getPermissionFromString( cmdstring );
 	if (res != -1) {
 		res = getSampleCommand( res );
-		printf( "recognized %s as authorization level, using command %i.\n", cmdstring, res );
+		dprintf( D_ALWAYS, "recognized %s as authorization level, using command %i.\n", cmdstring, res );
 		return res;
 	}
 
 	res = getCommandNum( cmdstring );
 	if (res != -1) {
-		printf( "recognized %s as command name, using command %i.\n", cmdstring, res );
+		dprintf( D_ALWAYS, "recognized %s as command name, using command %i.\n", cmdstring, res );
 		return res;
 	}
 
@@ -187,7 +191,7 @@ int getSomeCommandFromString ( char * cmdstring ) {
 		char compare_conversion[20];
 		sprintf(compare_conversion, "%i", res);
 		if (strcmp(cmdstring, compare_conversion) == 0) {
-			printf( "recognized %i as command number.\n", res );
+			dprintf( D_ALWAYS, "recognized %i as command number.\n", res );
 			return res;
 		}
 	}
@@ -256,7 +260,7 @@ int main( int argc, char *argv[] )
 
 	// sanity check invocation
 	if(subcmd==-1) {
-		printf("Missing <authz-level | command-name | command-int> argument, defaulting to DC_NOP\n\n");
+		fprintf( stderr, "Missing <authz-level | command-name | command-int> argument, defaulting to DC_NOP\n\n");
 		subcmd = DC_NOP;
 	}
 
@@ -273,14 +277,14 @@ int main( int argc, char *argv[] )
 	if(address) {
 		daemon = new Daemon( DT_ANY, address, 0 );
 		if (!(daemon->locate())) {
-			printf("couldn't local %s!  check the -address argument.\n", address);
+			fprintf(stderr, "couldn't locate %s!  check the -address argument.\n", address);
 			exit(1);
 		}
 	} else {
-		printf("Missing -address argument, attempting to talk to local condor_master\n");
+		fprintf( stderr, "Missing -address argument, attempting to talk to local condor_master\n");
 		daemon = new Daemon( DT_MASTER, NULL, 0 );
 		if (!(daemon->locate())) {
-			printf("couldn't locate local master!  use the -address argument.\n");
+			fprintf(stderr, "couldn't locate local master!  use the -address argument.\n");
 			exit(1);
 		}
 	}
@@ -292,12 +296,10 @@ int main( int argc, char *argv[] )
 		sock->end_of_message();
 		delete sock;
 
-		printf("\nSUCCESS!\n\n");
 		print_info(daemon->addr(), subcmd, &errstack);
 
 		return_code = 0;
 	} else {
-		printf("\nFAILED!\n\n");
 		process_err_stack(&errstack);
 		return_code = 1;
 	}
