@@ -213,8 +213,8 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
         for( int i = 0; i < returnStatus.number(); i += 4 ) {
             std::string instanceID = returnStatus.next();
             std::string status = returnStatus.next();
-            std::string amiID = returnStatus.next();
-            std::string clientToken = returnStatus.next();
+            /* std::string amiID = */ returnStatus.next();
+            /* std::string clientToken = */ returnStatus.next();
        
             // We can't use BaseJob::JobsByRemoteId because OpenStack doesn't
             // include the client token in its status responses, and therefore
@@ -277,8 +277,8 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
             // Note that we called 
             std::string requestID = spotReturnStatus.next();
             std::string state = spotReturnStatus.next();
-            std::string launchGroup = spotReturnStatus.next();
-            std::string instanceID = spotReturnStatus.next();
+            /* std::string launchGroup = */ spotReturnStatus.next();
+            /* std::string instanceID = */ spotReturnStatus.next();
             std::string statusCode = spotReturnStatus.next();
             
             EC2Job * spotJob = NULL;
