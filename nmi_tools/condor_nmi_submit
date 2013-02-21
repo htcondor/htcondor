@@ -358,7 +358,7 @@ sub parseOptions
 		   'skip-doc' => \$opt_skip_doc,
 		   'sha1=s' => \$opt_sha1,
 		   'private-build:s' => \$opt_private_build,
-	   'coverity-analysis' => \$opt_coverity_analysis,
+		   'coverity-analysis' => \$opt_coverity_analysis,
 # test-specific options
            'buildid=i'     => \$opt_buildid,
            'test-src=s'    => \$opt_test_src,

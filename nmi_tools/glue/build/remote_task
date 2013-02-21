@@ -168,8 +168,8 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
     }
 } elsif ($taskname eq $COVERITY_ANALYSIS) {
 	print "Running Coverity analysis\n";
-	$ENV{PATH} = "$ENV{PATH}:/home/gthain/cov-sa-linux64-5.5.3/bin";
-	$execstr = "cd src && make clean && mkdir cov-data && cov-build --dir cov-data make -k ; cov-analyze --dir cov-data";
+	$ENV{PATH} = "$ENV{PATH}:/home/condorauto/cov-sa-linux64-5.5.3/bin";
+	$execstr = "cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --enable-constraint-fpp --dir ../public/cov-data";
 }
 
 
