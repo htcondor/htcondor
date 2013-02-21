@@ -998,8 +998,10 @@ int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key,
 		}
 
 		setFullyQualifiedUser(authob.getFullyQualifiedUser());
-		if( method_used ) {
-			if( authob.getMethodUsed() ) {
+
+		if( authob.getMethodUsed() ) {
+			setAuthenticationMethodUsed(authob.getMethodUsed());
+			if( method_used ) {
 				*method_used = strdup(authob.getMethodUsed());
 			}
 		}

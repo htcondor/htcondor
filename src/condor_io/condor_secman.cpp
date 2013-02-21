@@ -1969,6 +1969,17 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			}
 			m_sec_man.sec_copy_attribute( m_auth_info, post_auth_info, ATTR_SEC_TRIED_AUTHENTICATION );
 
+			// update the ad with the auth method actually used
+			if( m_sock->getAuthenticationMethodUsed() ) {
+				m_auth_info.Assign( ATTR_SEC_AUTHENTICATION_METHODS, m_sock->getAuthenticationMethodUsed() );
+			}
+			
+			// update the ad with the crypto method actually used
+			if( m_sock->getCryptoMethodUsed() ) {
+				m_auth_info.Assign( ATTR_SEC_CRYPTO_METHODS, m_sock->getCryptoMethodUsed() );
+			}
+			
+			
 			if (IsDebugVerbose(D_SECURITY)) {
 				dprintf (D_SECURITY, "SECMAN: policy to be cached:\n");
 				m_auth_info.dPrint(D_SECURITY);

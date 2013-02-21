@@ -56,6 +56,8 @@ Sock::Sock() : Stream() {
 	_fqu = NULL;
 	_fqu_user_part = NULL;
 	_fqu_domain_part = NULL;
+	_auth_method = NULL;
+	_crypto_method = NULL;
 	_tried_authentication = false;
 	ignore_connect_timeout = FALSE;		// Used by the HA Daemon
 	connect_state.connect_failed = false;
@@ -88,6 +90,8 @@ Sock::Sock(const Sock & orig) : Stream() {
 	_fqu = NULL;
 	_fqu_user_part = NULL;
 	_fqu_domain_part = NULL;
+	_auth_method = NULL;
+	_crypto_method = NULL;
 	_tried_authentication = false;
 	ignore_timeout_multiplier = orig.ignore_timeout_multiplier;
 	connect_state.connect_failed = false;
@@ -154,6 +158,14 @@ Sock::~Sock()
 	if ( connect_state.host ) free(connect_state.host);
 	if ( connect_state.connect_failure_reason) {
 		free(connect_state.connect_failure_reason);
+	}
+	if (_auth_method) {
+		free(_auth_method);
+		_auth_method = NULL;
+	}
+	if (_crypto_method) {
+		free(_crypto_method);
+		_crypto_method = NULL;
 	}
 	if (_fqu) {
 		free(_fqu);
@@ -2202,6 +2214,32 @@ int Sock::set_async_handler( CedarHandler *handler )
 #endif  /* of ifndef WIN32 for the async support */
 
 
+void Sock :: setAuthenticationMethodUsed(char const *auth_method)
+{
+	if( _auth_method ) {
+		free (_auth_method);
+	}
+	_auth_method = strdup(auth_method);
+}
+
+const char* Sock :: getAuthenticationMethodUsed() {
+	return _auth_method;
+}
+
+void Sock :: setCryptoMethodUsed(char const *crypto_method)
+{
+	if( _crypto_method ) {
+		free (_crypto_method);
+	}
+	_crypto_method = strdup(crypto_method);
+}
+
+const char* Sock :: getCryptoMethodUsed() {
+	return _crypto_method;
+}
+
+
+
 void Sock :: setFullyQualifiedUser(char const *fqu)
 {
 	if( fqu == _fqu ) { // special case
@@ -2374,9 +2412,11 @@ Sock::initialize_crypto(KeyInfo * key)
         {
 #ifdef HAVE_EXT_OPENSSL
         case CONDOR_BLOWFISH :
+			setCryptoMethodUsed("BLOWFISH");
             crypto_ = new Condor_Crypt_Blowfish(*key);
             break;
         case CONDOR_3DES:
+			setCryptoMethodUsed("3DES");
             crypto_ = new Condor_Crypt_3des(*key);
             break;
 #endif
