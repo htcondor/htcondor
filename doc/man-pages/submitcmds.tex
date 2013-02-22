@@ -1957,6 +1957,18 @@ Different services may offer different instance types,
 so no default value is set.
 
 %%%%%%%%%%%%%%%%%%%
+%% ec2_keypair
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_keypair}
+\item[ec2\_key\_pair = $<$ssh key-pair name$>$]
+For grid type \SubmitCmd{ec2} jobs, 
+specifies the name of an SSH key-pair that is already registered
+with the EC2 service.
+The associated private key can be used to \Prog{ssh} into the
+virtual machine once it is running.
+
+%%%%%%%%%%%%%%%%%%%
 %% ec2_keypair_file
 %%%%%%%%%%%%%%%%%%%
 
@@ -1967,6 +1979,8 @@ specifies the complete path and file name of a file into which
 HTCondor will write an SSH key for use with ec2 jobs. 
 The key can be used to \Prog{ssh} into the
 virtual machine once it is running.
+If \SubmitCmd{ec2\_keypair} is specified for a job,
+\SubmitCmd{ec2\_keypair\_file} is ignored.
 
 %%%%%%%%%%%%%%%%%%%
 %% ec2_secret_access_key
