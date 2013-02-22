@@ -44,7 +44,7 @@ format.
 Multiple \Opt{-format} options may be specified in the option list to display
 several attributes of the job.
 If neither \Opt{-long} or \Opt{-format} are specified, \Condor{q} displays a 
-a one line summary of information as follows:
+one line summary of information as follows:
 
 \begin{description}
 \item[ID] The cluster/process id of the condor job. 
@@ -162,23 +162,23 @@ the current run is \emph{not} shown.  If the job has not produced a checkpoint,
 this column contains 0+00:00:00.)
 \end{description}
 
-The \Arg{-analyze} or \Arg{-better-analyze} options may be used to determine 
+The \Opt{-analyze} or \Opt{-better-analyze} options may be used to determine 
 why certain jobs are not
 running by performing an analysis on a per machine basis for each machine in 
 the pool.  The reasons may vary among failed constraints, insufficient priority,
 resource owner preferences and prevention of preemption by the 
 \Macro{PREEMPTION\_REQUIREMENTS} expression.  
-If the analyze option \Arg{-verbose} is specified 
-along with the \Arg{-analyze} option, the reason for failure is displayed on a 
+If the analyze option \Opt{-verbose} is specified 
+along with the \Opt{-analyze} option, the reason for failure is displayed on a 
 per machine basis. 
-\Arg{-better-analyze} differs from \Arg{-analyze} in that it will
+\Opt{-better-analyze} differs from \Opt{-analyze} in that it will
 do matchmaking analysis on jobs even if they are currently running, 
 or if the reason they are not running is not due to matchmaking.
-\Arg{-better-analyze} also produces
+\Opt{-better-analyze} also produces
 more thorough analysis of complex Requirements and shows the values of 
 relevant job ClassAd attributes.  
-When only a single machine is being analyzed via \Arg{-machine} or
-\Arg{-mconstraint},
+When only a single machine is being analyzed via \Opt{-machine} or
+\Opt{-mconstraint},
 the values of relevant attributes of the machine ClassAd are also displayed.
 
 \begin{Options}
@@ -206,34 +206,6 @@ the values of relevant attributes of the machine ClassAd are also displayed.
     in the given user log, because it reduces the load on the \Condor{schedd}.
     A user log does not contain all of the job information, so some fields in
     the normal output of \Condor{q} will be blank.}
-  \OptItem{\Opt{-analyze[:<qual>]}}{(analyze option) Perform a matchmaking 
-    analysis on why the requested jobs are not running.
-    First a simple analysis determines if the job is not running 
-    due to not being in a runnable state.
-    If the job is in a runnable state, then this option is equivalent
-    to \Opt{-better-analyze}.
-    \Opt{<qual>} is a comma separated list containing one or more of
-
-    \textbf{priority} to consider user priority during the analysis
-
-    \textbf{summary} to show a one line summary for each job or machine
-
-    \textbf{reverse} to analyze machines, rather than jobs
-    }
-  \OptItem{\Opt{-better-analyze[:<qual>]}}{(analyze option) 
-    Perform a more detailed matchmaking analysis to determine how
-    many resources are available to run the requested jobs.
-    This option
-    is never meaningful for Scheduler universe jobs and only meaningful
-    for grid universe jobs doing matchmaking.
-    \Opt{<qual>} is a comma separated list containing one or more of
-
-    \textbf{priority} to consider user priority during the analysis
-
-    \textbf{summary} to show a one line summary for each job or machine
-
-    \textbf{reverse} to analyze machines, rather than jobs
-    }
   \OptItem{\Opt{-cputime}} {(output option) 
     Instead of wall-clock allocation time (RUN\_TIME), 
     display remote CPU time accumulated by the job to date in days,
@@ -248,6 +220,7 @@ the values of relevant attributes of the machine ClassAd are also displayed.
     under their \Condor{dagman} instance. 
     Child nodes are listed using indentation to show the structure
     of the DAG. }
+  \OptItem{\Opt{-expert}}{(output option) Display shorter error messages. }
   \OptItem{\Opt{-globus}}{(output option) Get information only about 
     jobs submitted to grid resources described as \SubmitCmd{gt2}
     or \SubmitCmd{gt5}.}
@@ -269,6 +242,7 @@ the values of relevant attributes of the machine ClassAd are also displayed.
     large numbers of jobs, but if \Condor{q} is paused while displaying
     results, this could result in a timeout in communication with
     \Condor{schedd}.}
+  \OptItem{\Opt{-version}}{(output option) Print the HTCondor version and exit.}
   \OptItem{\Opt{-wide}}{(output option) If this option is specified, 
     and the command portion
     of the output would cause the output to extend beyond 80 columns,
@@ -278,9 +252,9 @@ the values of relevant attributes of the machine ClassAd are also displayed.
     The XML format is fully defined in the reference manual,
     obtained from the ClassAds web page, with a link at
     \URL{http://research.cs.wisc.edu/htcondor/research.html}.}
-  \OptItem{\OptArg{-attributes}{Attr1 [,Attr2 \Dots]}}{(output option)
-    Explicitly list the 
-    attributes (by name, and in a comma separated list)
+  \OptItem{\OptArg{-attributes}{Attr1[,Attr2 \Dots]}}{(output option)
+    Explicitly list the attributes, 
+    by name in a comma separated list,
     which should be displayed when using the \Opt{-xml} or \Opt{-long} options.
     Limiting the number of attributes increases the efficiency of the query.}
   \OptItem{\OptArg{-format}{fmt attr}}{(output option) Display attribute or 
@@ -341,6 +315,34 @@ the values of relevant attributes of the machine ClassAd are also displayed.
     \textbf{h} print headings before the first line of output.
 
     The newline and comma characters may \emph{not} be used together.
+    }
+  \OptItem{\Opt{-analyze[:<qual>]}}{(analyze option) Perform a matchmaking 
+    analysis on why the requested jobs are not running.
+    First a simple analysis determines if the job is not running 
+    due to not being in a runnable state.
+    If the job is in a runnable state, then this option is equivalent
+    to \Opt{-better-analyze}.
+    \Opt{<qual>} is a comma separated list containing one or more of
+
+    \textbf{priority} to consider user priority during the analysis
+
+    \textbf{summary} to show a one line summary for each job or machine
+
+    \textbf{reverse} to analyze machines, rather than jobs
+    }
+  \OptItem{\Opt{-better-analyze[:<qual>]}}{(analyze option) 
+    Perform a more detailed matchmaking analysis to determine how
+    many resources are available to run the requested jobs.
+    This option
+    is never meaningful for Scheduler universe jobs and only meaningful
+    for grid universe jobs doing matchmaking.
+    \Opt{<qual>} is a comma separated list containing one or more of
+
+    \textbf{priority} to consider user priority during the analysis
+
+    \textbf{summary} to show a one line summary for each job or machine
+
+    \textbf{reverse} to analyze machines, rather than jobs
     }
   \OptItem{\OptArg{-machine}{name}}{(analyze option)
     When doing matchmaking analysis, 
