@@ -9250,9 +9250,8 @@ Scheduler::child_exit(int pid, int status)
 	srec = FindSrecByPid(pid);
 	ASSERT(srec);
 
-	if( srec->exit_already_handled ) {
 		if( srec->match ) {
-			if (srec->match->keep_while_idle == 0) {
+			if (srec->exit_already_handled && (srec->match->keep_while_idle == 0)) {
 				DelMrec( srec->match );
 			} else {
 				srec->match->status = M_CLAIMED;
@@ -9261,6 +9260,8 @@ Scheduler::child_exit(int pid, int status)
 				srec->match = NULL;
 			}
 		}
+
+	if( srec->exit_already_handled ) {
 		delete_shadow_rec( srec );
 		return;
 	}
