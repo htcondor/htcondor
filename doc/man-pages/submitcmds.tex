@@ -3376,6 +3376,7 @@ following \Arg{attribute} into the job ClassAd with the given
 \end{description} 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Starter pre and post scripts}
 \emph{PRE AND POST SCRIPTS IMPLEMENTED WITH SPECIALLY-NAMED ATTRIBUTES}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{description} 
@@ -3386,11 +3387,11 @@ following \Arg{attribute} into the job ClassAd with the given
 
 \label{man-condor-submit-prescript}
 \index{submit commands!+PreCmd}
-\item[+PreCmd = $<$executable$>$]
+\item[+PreCmd = $<``$executable''$>$]
 A vanilla universe job may specify that a script is to be run 
 on the execute machine before the job, and this is called a prescript.
-Definition of this specifically-named attribute causes the script,
-identified by path and file name to be executed. 
+Definition of this specifically-named attribute causes the script
+(identified by path and file name) to be executed. 
 The prescript could prepare or initialize the job.
 Note that this definition of a prescript is different from the PRE script 
 described in DAGMan.
@@ -3400,16 +3401,41 @@ so it must be entered into the \SubmitCmd{transfer\_input\_files} list,
 when file transfer is enabled.
 
 %%%%%%%%%%%%%%%%%%%
+%% +PreArgs
+%%%%%%%%%%%%%%%%%%%
+\label{man-condor-submit-preargs}
+\index{submit commands!+PreArgs}
+\item[+PreArgs = $<``$argument\_list''$>$]
+Arguments for the prescript, in the old syntax (see the section on
+the arguments command (~\ref{man-condor-submit-arguments}) for more
+details.
+
+%%%%%%%%%%%%%%%%%%%
+%% +PreArguments
+%%%%%%%%%%%%%%%%%%%
+\label{man-condor-submit-prearguments}
+\index{submit commands!+PreArguments}
+\item[+PreArguments = $<``$argument\_list''$>$]
+Arguments for the prescript, in the new syntax (except that double
+quotes must be escaped with a backslash instead of another double
+quote) (see the section on the arguments command
+(~\ref{man-condor-submit-arguments}) for more details.
+
+Note that if both +PreArgs and +PreArguments are specified, the
++PreArguments value is used and the +PreArgs value is ignored.
+
+
+%%%%%%%%%%%%%%%%%%%
 %% +PostCmd
 %%%%%%%%%%%%%%%%%%%
 
 \label{man-condor-submit-postscript}
 \index{submit commands!+PostCmd}
-\item[+PostCmd = $<$executable$>$]
+\item[+PostCmd = $<``$executable''$>$]
 A vanilla universe job may specify that a script is to be run 
 on the execute machine after the job exits, and this is called a postscript.
 Definition of this specifically-named attribute causes the script,
-identified by path and file name to be executed. 
+(identified by path and file name) to be executed. 
 The postscript is run if the job exits, but not if the job is evicted.
 Note that this definition of a postscript is different from the POST script 
 described in DAGMan.
@@ -3418,8 +3444,47 @@ as the main executable is,
 so it must be entered into the \SubmitCmd{transfer\_input\_files} list,
 when file transfer is enabled.
 
+%%%%%%%%%%%%%%%%%%%
+%% +PostArgs
+%%%%%%%%%%%%%%%%%%%
+\label{man-condor-submit-postargs}
+\index{submit commands!+PostArgs}
+\item[+PostArgs = $<``$argument\_list''$>$]
+Arguments for the postscript, in the old syntax (see the section on
+the arguments command (~\ref{man-condor-submit-arguments}) for more
+details.
+
+%%%%%%%%%%%%%%%%%%%
+%% +PostArguments
+%%%%%%%%%%%%%%%%%%%
+\label{man-condor-submit-postarguments}
+\index{submit commands!+PostArguments}
+\item[+PostArguments = $<``$argument\_list''$>$]
+Arguments for the postscript, in the new syntax (except that double
+quotes must be escaped with a backslash instead of another double
+quote) (see the section on the arguments command
+(~\ref{man-condor-submit-arguments}) for more details.
+
+Note that if both +PostArgs and +PostArguments are specified, the
++PostArguments value is used and the +PostArgs value is ignored.
+
+IMPORTANT NOTE:  if any of the pre/post script values are not enclosed
+in double quotes, they are silently ignored.
+
+Below is an example of the use of starter pre and post scripts:
+
+\begin{verbatim}
++PreCmd		= "my_pre"
++Preargs	= "pre\"arg1 prea'rg2"
++PostCmd	= "my_post"
++Postarguments	= "post\"arg1 'post''ar g2'"
+\end{verbatim}
+
 \end{description} 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\emph{MACROS AND COMMENTS}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \label{macro-in-submit-description-file}
 \index{macro!in submit description file}
