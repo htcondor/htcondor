@@ -41,6 +41,10 @@
 #include <resolv.h>
 #endif
 
+#if defined(LINUX)
+#include <sys/mount.h>
+#endif
+
 static const int DEFAULT_MAXCOMMANDS = 255;
 static const int DEFAULT_MAXSIGNALS = 99;
 static const int DEFAULT_MAXSOCKETS = 8;
@@ -6015,7 +6019,9 @@ void CreateProcessForkit::exec() {
         if (rc) 
         {
             rc = errno;
-            write(m_errorpipe[1], &errno, sizeof(errno));
+            if (write(m_errorpipe[1], &errno, sizeof(errno))){
+                dprintf(D_ALWAYS, "Failed in writing to m_errorpipe\n");
+            }
             _exit(rc); // b/c errno could have been overridden by write
         }
         
@@ -6027,7 +6033,9 @@ void CreateProcessForkit::exec() {
     if (m_fs_remap && !bOkToReMap) {
         dprintf(D_ALWAYS, "Can not remount filesystems because this system does can not have/allow unshare(2)\n");
         int rc = errno = ENOSYS;
-        write(m_errorpipe[1], &errno, sizeof(errno));
+        if (write(m_errorpipe[1], &errno, sizeof(errno))) {
+            dprintf(D_ALWAYS, "Failed in writing to m_errorpipe\n");
+        }
         _exit(rc);
     }
 
@@ -6035,7 +6043,9 @@ void CreateProcessForkit::exec() {
 	if (m_fs_remap && m_fs_remap->PerformMappings()) 
     {
         int rc = errno;
-		write(m_errorpipe[1], &errno, sizeof(errno));
+        if (write(m_errorpipe[1], &errno, sizeof(errno))) {
+            dprintf(D_ALWAYS, "Failed in writing to m_errorpipe\n");
+        }
         _exit(rc);
 	}
 
