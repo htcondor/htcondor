@@ -829,9 +829,6 @@ else(MSVC)
 
 	if ( NOT PROPER AND HAVE_LIBRESOLV )
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lresolv")
-		if (NOT DARWIN)
-			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lcrypt")
-		endif()
 	endif()
 
 	if (HAVE_PTHREADS)
