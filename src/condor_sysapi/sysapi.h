@@ -52,6 +52,7 @@ int sysapi_ncpus(void);
 /* get raw ncpus without making any calls to config system */
 void sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus);
 
+#if 0 // removed from condor_utils to reduce shadow memory use
 /* calculate the number of mips the machine is. Even though this is a user
 	thing and on platforms like NT it is done by hand, it goes in the sysapi.
 	The reasoning is that you are still asking for a fundamental parameter
@@ -63,6 +64,7 @@ int sysapi_mips(void);
 /* as above, but for kflops */
 int sysapi_kflops_raw(void);
 int sysapi_kflops(void);
+#endif
 
 /* return the idle time on the machine in the arguments */
 void sysapi_idle_time_raw(time_t *m_idle, time_t *m_console_idle);
