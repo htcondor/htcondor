@@ -1,0 +1,77 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+
+$cmd = 'job_starter_script-A.cmd';
+$testdesc =  'Test starter pre and post scripts - vanilla U';
+$testname = "job_starter_script-A";
+
+@expected_lines = ("Pre: <pre\"a1> <pre'a2> ",
+	"Job: <job\"a1> <job a2> <jo'ba3> ",
+	"Post: <post\"a1> <post'a 2> ");
+
+# Get rid of test output file if it exists.
+$testout = "job_starter_script-A.out2";
+runcmd("rm -f $testout") if (-e $testout);
+
+runcmd("rm -f job_starter_script-A.log") if (-e "job_starter_script-A.log");
+
+$success = sub {
+	CondorTest::debug("Executed successfully\n",1);
+	CondorTest::debug("Verifying output\n",1);
+	$diditpass = 1;
+
+	$canopen = open(OUT,"<$testout");
+	if( ! (defined $canopen)) {
+		CondorTest::debug("Can not open output file<$testout>:$!\n",1);
+		$diditpass = 0;
+	}
+
+	@lines = <OUT>;
+	$count = 0;
+	foreach $line (@lines) {
+		chomp $line;
+		if ($line eq $expected_lines[$count]) {
+			CondorTest::debug("$line\n",1);
+		} else {
+			CondorTest::debug("Expected <$expected_lines[$count]>; got <$line>\n",1);
+			$diditpass = 0;
+		}
+		$count++;
+	}
+
+	close(OUT);
+
+	if($diditpass == 0) {
+		die "All expected files and correct output failed\n";
+	}
+
+};
+
+CondorTest::RegisterExitedSuccess($testname, $success);
+if(CondorTest::RunTest($testname, $cmd, 0)) {
+	CondorTest::debug("$testname: SUCCESS\n",1);
+	exit(0);
+} else {
+	die "$testname: CondorTest::RunTest() failed\n";
+}
+
