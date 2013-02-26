@@ -8156,7 +8156,7 @@ These macros affect the HTCondor's usage of grid resources.
   The full path and file name of the \Prog{glexec} executable.
 
 \label{param:GlexecRetries}
-\item[\Macro{GLEXEC}]
+\item[\Macro{GLEXEC\_RETRIES}]
 An integer value that specifies the maximum number of times to retry a
 call to \Prog{glexec} when \Prog{glexec} exits with status 202 or 203,
 error codes that indicate a possible transient error condition.  The
@@ -8165,10 +8165,12 @@ default number of retries is 3.
 \label{param:GlexecRetryDelay}
 \item[\Macro{GLEXEC\_RETRY\_DELAY}]
 An integer value that specifies the minimum number of seconds to wait
-between retries of a failed call to glexec.  The default is 5.  The
-actual delay to be used is determined by a random exponential backoff
+between retries of a failed call to \Prog{glexec}.
+The default is 5 seconds.
+The actual delay to be used is determined by a random exponential backoff
 algorithm that chooses a delay with a minimum of
-\Macro{GLEXEC\_RETRY\_DELAY} and a maximum of 100 times that value.
+the value of \MacroNI{GLEXEC\_RETRY\_DELAY} 
+and a maximum of 100 times that value.
 
 \end{description}
 

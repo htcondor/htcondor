@@ -57,10 +57,12 @@ The default number of retries is 3.
 
 \item The new configuration variable \Macro{GLEXEC\_RETRY\_DELAY} is
 an integer value that specifies the minimum number of seconds to
-wait between retries of a failed call to glexec.  The default is 5.
+wait between retries of a failed call to \Prog{glexec}.
+The default is 5 seconds.
 The actual delay to be used is determined by a random exponential
 backoff algorithm that chooses a delay with a minimum of
-\Macro{GLEXEC\_RETRY\_DELAY} and a maximum of 100 times that value.
+the value of \MacroNI{GLEXEC\_RETRY\_DELAY} 
+and a maximum of 100 times that value.
 \Ticket{2415}
 
 \end{itemize}
