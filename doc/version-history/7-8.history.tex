@@ -57,10 +57,12 @@ The default number of retries is 3.
 
 \item The new configuration variable \Macro{GLEXEC\_RETRY\_DELAY} is
 an integer value that specifies the minimum number of seconds to
-wait between retries of a failed call to glexec.  The default is 5.
+wait between retries of a failed call to \Prog{glexec}.
+The default is 5 seconds.
 The actual delay to be used is determined by a random exponential
 backoff algorithm that chooses a delay with a minimum of
-\Macro{GLEXEC\_RETRY\_DELAY} and a maximum of 100 times that value.
+the value of \MacroNI{GLEXEC\_RETRY\_DELAY} 
+and a maximum of 100 times that value.
 \Ticket{2415}
 
 \end{itemize}
@@ -82,19 +84,24 @@ publish ClassAds to \Condor{collector} daemons other than the first
 one in the list of \Condor{collector} daemons.
 \Ticket{3404}
 
-\item (This bug was fixed in version 7.8.4)
-\Macro{ULOG\_JOB\_RECONNECT\_FAILED} events were not considered by the userlog
-code. This has been fixed.
+\item (This bug was fixed in HTCondor version 7.8.4.)
+\Condor{userlog} no longer ignores \Expr{ULOG\_JOB\_RECONNECT\_FAILED} events.
 \Ticket{3215}
 
-\item Fixed a bug that caused Cream grid jobs to become held with a
-HoldReason of ``CREAM error: Transfer failed: globus\_ftp\_client: 
-an invalid value for url was used'' when the jobs did not have any
-input or output files to transfer.
+\item Fixed a bug that caused cream grid jobs to become held with a
+\Attr{HoldReason} attribute stating
+\footnotesize
+\begin{verbatim}
+"CREAM error: Transfer failed: globus_ftp_client: 
+  an invalid value for url was used"
+\end{verbatim}
+\normalsize
+when the jobs did not have any input or output files to transfer.
 \Ticket{3415}
 
-\item Fixed a bug that could cause condor daemons to abort on \Condor{reconfig}
-when the configuration variable \Macro{STATISTICS\_WINDOW\_SECONDS} was reduced.
+\item Fixed a bug that could cause HTCondor daemons to abort on 
+\Condor{reconfig} when the value of configuration variable 
+\Macro{STATISTICS\_WINDOW\_SECONDS} was reduced.
 \Ticket{3443}
 
 \item Fixed a bug that could cause daemons using CCB to fail to reconnect to
