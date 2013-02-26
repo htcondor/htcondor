@@ -9250,17 +9250,20 @@ Scheduler::child_exit(int pid, int status)
 	srec = FindSrecByPid(pid);
 	ASSERT(srec);
 
-	if( srec->exit_already_handled ) {
 		if( srec->match ) {
-			if (srec->match->keep_while_idle == 0) {
+			if (srec->exit_already_handled && (srec->match->keep_while_idle == 0)) {
 				DelMrec( srec->match );
 			} else {
-				srec->match->status = M_CLAIMED;
-				srec->match->shadowRec = NULL;
-				srec->match->idle_timer_deadline = time(NULL) + srec->match->keep_while_idle;
-				srec->match = NULL;
+				if (srec->match->keep_while_idle > 0) {
+					srec->match->status = M_CLAIMED;
+					srec->match->shadowRec = NULL;
+					srec->match->idle_timer_deadline = time(NULL) + srec->match->keep_while_idle;
+					srec->match = NULL;
+				}
 			}
 		}
+
+	if( srec->exit_already_handled ) {
 		delete_shadow_rec( srec );
 		return;
 	}
