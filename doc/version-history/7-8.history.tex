@@ -82,9 +82,8 @@ publish ClassAds to \Condor{collector} daemons other than the first
 one in the list of \Condor{collector} daemons.
 \Ticket{3404}
 
-\item (This bug was fixed in version 7.8.4)
-\Macro{ULOG\_JOB\_RECONNECT\_FAILED} events were not considered by the userlog
-code. This has been fixed.
+\item (This bug was fixed in HTCondor version 7.8.4.)
+\Condor{userlog} no longer ignores \Expr{ULOG\_JOB\_RECONNECT\_FAILED} events.
 \Ticket{3215}
 
 \item Fixed a bug that caused Cream grid jobs to become held with a
