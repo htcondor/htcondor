@@ -88,10 +88,15 @@ one in the list of \Condor{collector} daemons.
 \Condor{userlog} no longer ignores \Expr{ULOG\_JOB\_RECONNECT\_FAILED} events.
 \Ticket{3215}
 
-\item Fixed a bug that caused Cream grid jobs to become held with a
-HoldReason of ``CREAM error: Transfer failed: globus\_ftp\_client: 
-an invalid value for url was used'' when the jobs did not have any
-input or output files to transfer.
+\item Fixed a bug that caused cream grid jobs to become held with a
+\Attr{HoldReason} attribute stating
+\footnotesize
+\begin{verbatim}
+"CREAM error: Transfer failed: globus_ftp_client: 
+  an invalid value for url was used"
+\end{verbatim}
+\normalsize
+when the jobs did not have any input or output files to transfer.
 \Ticket{3415}
 
 \item Fixed a bug that could cause condor daemons to abort on \Condor{reconfig}
