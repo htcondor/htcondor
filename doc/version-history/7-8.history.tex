@@ -99,8 +99,9 @@ one in the list of \Condor{collector} daemons.
 when the jobs did not have any input or output files to transfer.
 \Ticket{3415}
 
-\item Fixed a bug that could cause condor daemons to abort on \Condor{reconfig}
-when the configuration variable \Macro{STATISTICS\_WINDOW\_SECONDS} was reduced.
+\item Fixed a bug that could cause HTCondor daemons to abort on 
+\Condor{reconfig} when the value of configuration variable 
+\Macro{STATISTICS\_WINDOW\_SECONDS} was reduced.
 \Ticket{3443}
 
 \item Fixed a bug that could cause daemons using CCB to fail to reconnect to
