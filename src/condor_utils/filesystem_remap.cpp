@@ -79,10 +79,32 @@ int FilesystemRemap::CheckMapping(const std::string & mount_point) {
 		}
 	}
 
-	if (best_is_shared) 
-    {
-        dprintf(D_ALWAYS, "Current mount, %s, is shared.\n", best->c_str());
+	if (!best_is_shared) {
+		return 0;
 	}
+    
+#if !defined(HAVE_MS_SLAVE) && !defined(HAVE_MS_REC)
+    TemporaryPrivSentry sentry(PRIV_ROOT);
+	dprintf(D_ALWAYS, "Current mount, %s, is shared.\n", best->c_str());
+
+	// Re-mount the mount point as a bind mount, so we can subsequently
+	// re-mount it as private.
+	
+	if (mount(mount_point.c_str(), mount_point.c_str(), NULL, MS_BIND, NULL)) {	
+		dprintf(D_ALWAYS, "Marking %s as a bind mount failed. (errno=%d, %s)\n", mount_point.c_str(), errno, strerror(errno));
+		return -1;
+	}
+
+#ifdef HAVE_MS_PRIVATE
+	if (mount(mount_point.c_str(), mount_point.c_str(), NULL, MS_PRIVATE, NULL)) {
+		dprintf(D_ALWAYS, "Marking %s as a private mount failed. (errno=%d, %s)\n", mount_point.c_str(), errno, strerror(errno));
+		return -1;
+	} else {
+		dprintf(D_FULLDEBUG, "Marking %s as a private mount successful.\n", mount_point.c_str());
+	}
+#endif
+
+#endif
 
 	return 0;
 #endif
@@ -94,8 +116,7 @@ int FilesystemRemap::FixAutofsMounts() {
 	// Not doing anything here.
 	return -1;
 #else
-    
-    // TSTCLAIR: I DON'T THINK THIS IS NECESSARY... PLEASE EXPLAIN
+
 #ifdef HAVE_MS_SHARED
 	TemporaryPrivSentry sentry(PRIV_ROOT);
 	for (std::list<pair_strings>::const_iterator it=m_mounts_autofs.begin(); it != m_mounts_autofs.end(); it++) {
@@ -117,7 +138,6 @@ int FilesystemRemap::PerformMappings() {
 	int retval = 0;
 #if defined(LINUX)
 	std::list<pair_strings>::iterator it;
-    
 	for (it = m_mappings.begin(); it != m_mappings.end(); it++) {
 		if (strcmp(it->second.c_str(), "/") == 0) {
 			if ((retval = chroot(it->first.c_str()))) {
@@ -192,8 +212,6 @@ void FilesystemRemap::RemapProc() {
 }
 
 #define SHARED_STR "shared:"
-
-// TSTCLAIR: I DON'T THINK THIS FUNCTION IS NECESSARY... PLEASE EXPLAIN
 
 void FilesystemRemap::ParseMountinfo() {
 	MyString str, str2;

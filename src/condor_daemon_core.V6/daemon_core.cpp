@@ -41,10 +41,6 @@
 #include <resolv.h>
 #endif
 
-#if defined(LINUX)
-#include <sys/mount.h>
-#endif
-
 static const int DEFAULT_MAXCOMMANDS = 255;
 static const int DEFAULT_MAXSIGNALS = 99;
 static const int DEFAULT_MAXSOCKETS = 8;
@@ -6004,8 +6000,8 @@ void CreateProcessForkit::exec() {
         if ( ( rc = ::unshare(CLONE_NEWNS|CLONE_FS) ) ) {
             dprintf(D_ALWAYS, "Failed to unshare the mount namespace errno\n");
         }
+#if defined(HAVE_MS_SLAVE) && defined(HAVE_MS_REC)
         else {
-            
             ////////////////////////////////////////////////////////
             // slave mount hide the per-process hide the namespace
             // @ see http://timothysc.github.com/blog/2013/02/22/perprocess/
@@ -6014,6 +6010,7 @@ void CreateProcessForkit::exec() {
                 dprintf(D_ALWAYS, "Failed to unshare the mount namespace\n");
             }
         }
+#endif
         
         // common error handling
         if (rc) 
