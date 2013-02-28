@@ -258,6 +258,12 @@
 /* Define to 1 if the system has the MS_SHARED flag. */
 #cmakedefine HAVE_MS_SHARED 1
 
+/* Define to 1 if the system has the MS_SLAVE flag. */
+#cmakedefine HAVE_MS_SLAVE 1
+
+/* Define to 1 if the system has the MS_REC flag. */
+#cmakedefine HAVE_MS_REC 1
+
 /* Do we have the blahp external (used Imake)*/
 #cmakedefine HAVE_EXT_BLAHP 1
 

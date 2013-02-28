@@ -153,6 +153,8 @@ if( NOT WINDOWS)
 	check_symbol_exists(res_init "sys/types.h;netinet/in.h;arpa/nameser.h;resolv.h" HAVE_DECL_RES_INIT)
 	check_symbol_exists(MS_PRIVATE "sys/mount.h" HAVE_MS_PRIVATE)
 	check_symbol_exists(MS_SHARED  "sys/mount.h" HAVE_MS_SHARED)
+	check_symbol_exists(MS_SLAVE  "sys/mount.h" HAVE_MS_SLAVE)
+	check_symbol_exists(MS_REC  "sys/mount.h" HAVE_MS_REC)
 
 	check_function_exists("access" HAVE_ACCESS)
 	check_function_exists("clone" HAVE_CLONE)

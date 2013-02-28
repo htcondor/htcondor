@@ -5989,51 +5989,67 @@ void CreateProcessForkit::exec() {
 	// Now remount filesystems with fs_bind option, to give this
 	// process per-process tree mount table
 
-	// This requires rootly power
-	if (m_fs_remap) {
-		int ret = 0;
-		if (can_switch_ids()) {
-			m_priv_state = set_priv_no_memory_changes(PRIV_ROOT);
+	bool bOkToReMap=false;
 #ifdef HAVE_UNSHARE
-			int rc = ::unshare(CLONE_NEWNS|CLONE_FS);
-			if (rc) {
-				dprintf(D_ALWAYS, "Failed to unshare the mount namespace\n");
-				ret = write(m_errorpipe[1], &errno, sizeof(errno));
-				if (ret < 1) {
-					_exit(errno);
-				} else {
-					_exit(errno);
-				}
-			}
-#else
-			dprintf(D_ALWAYS, "Can not remount filesystems because this system does not have unshare(2)\n");
-			errno = ENOSYS;
-			ret = write(m_errorpipe[1], &errno, sizeof(errno));
-			if (ret < 1) {
-				_exit(errno);
-			} else {
-				_exit(errno);
-			}
+    if (can_switch_ids()) {
+        m_priv_state = set_priv_no_memory_changes(PRIV_ROOT);
+            
+        int rc =0;
+        
+        // unshare to create new PID namespace.
+        if ( ( rc = ::unshare(CLONE_NEWNS|CLONE_FS) ) ) {
+            dprintf(D_ALWAYS, "Failed to unshare the mount namespace errno\n");
+        }
+#if defined(HAVE_MS_SLAVE) && defined(HAVE_MS_REC)
+        else {
+            ////////////////////////////////////////////////////////
+            // slave mount hide the per-process hide the namespace
+            // @ see http://timothysc.github.com/blog/2013/02/22/perprocess/
+            ////////////////////////////////////////////////////////
+            if ( ( rc = ::mount("", "/", "dontcare", MS_REC|MS_SLAVE, "") ) ) {
+                dprintf(D_ALWAYS, "Failed to unshare the mount namespace\n");
+            }
+        }
 #endif
-		} else {
-			dprintf(D_ALWAYS, "Not remapping FS as requested, due to lack of privileges.\n");
-			m_fs_remap = NULL;
-		}
-	}
+        
+        // common error handling
+        if (rc) 
+        {
+            rc = errno;
+            if (write(m_errorpipe[1], &errno, sizeof(errno))){
+                dprintf(D_ALWAYS, "Failed in writing to m_errorpipe\n");
+            }
+            _exit(rc); // b/c errno could have been overridden by write
+        }
+        
+        bOkToReMap = true;
+    }
+#endif
 
-	if (m_fs_remap && m_fs_remap->PerformMappings()) {
-		int ret = write(m_errorpipe[1], &errno, sizeof(errno));
-		if (ret < 1) {
-			_exit(errno);
-		} else {
-			_exit(errno);
-		}
+    // This requires rootly power
+    if (m_fs_remap && !bOkToReMap) {
+        dprintf(D_ALWAYS, "Can not remount filesystems because this system does can not have/allow unshare(2)\n");
+        int rc = errno = ENOSYS;
+        if (write(m_errorpipe[1], &errno, sizeof(errno))) {
+            dprintf(D_ALWAYS, "Failed in writing to m_errorpipe\n");
+        }
+        _exit(rc);
+    }
+
+    // finally perform an extra mappings.
+	if (m_fs_remap && m_fs_remap->PerformMappings()) 
+    {
+        int rc = errno;
+        if (write(m_errorpipe[1], &errno, sizeof(errno))) {
+            dprintf(D_ALWAYS, "Failed in writing to m_errorpipe\n");
+        }
+        _exit(rc);
 	}
 
 	// And back to normal userness
-	if (m_fs_remap) {
-		set_priv_no_memory_changes( m_priv_state );
-	}
+	if (bOkToReMap) {
+        set_priv_no_memory_changes( m_priv_state );
+    }
 
 
 		/* Re-nice ourself */
