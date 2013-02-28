@@ -1503,9 +1503,25 @@ char *CreamJob::buildSubmitAd()
 	}
 
 		//ARGUMENTS
-	if (jobAd->LookupString(ATTR_JOB_ARGUMENTS1, tmp_str)) {
-		sprintf(buf, "%s = \"%s\"", ATTR_ARGS, tmp_str.c_str());
-		submitAd.Insert(buf.c_str());
+	ArgList args;
+	MyString arg_errors;
+	if( !args.AppendArgsFromClassAd( jobAd, &arg_errors ) ) {
+		dprintf( D_ALWAYS, "(%d.%d) Failed to read job arguments: %s\n",
+				 procID.cluster, procID.proc, arg_errors.Value());
+		sprintf( errorString, "Failed to read job arguments: %s\n",
+				   arg_errors.Value() );
+		return NULL;
+	}
+	if(args.Count() != 0) {
+		std::string args_str;
+		for(int i=0;i<args.Count();i++) {
+			if(i) {
+				args_str += ' ';
+			}
+			// TODO Add escaping of special characters
+			args_str += args.GetArg(i);
+		}
+		submitAd.Assign( ATTR_ARGS, args_str );
 	}
 	
 		//STDINPUT can be either be PRE-STAGED or TRANSFERED
