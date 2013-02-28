@@ -216,6 +216,12 @@ CStarter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 						  "START_SSHD",
 						  (CommandHandlercpp)&CStarter::startSSHD,
 						  "CStarter::startSSHD", this, READ );
+	daemonCore->
+		Register_Command( STARTER_PEEK,
+						"STARTER_PEEK",
+						(CommandHandlercpp)&CStarter::peek,
+						"CStarter::peek", this, READ );
+
 		// initialize our JobInfoCommunicator
 	if( ! jic->init() ) {
 		dprintf( D_ALWAYS, 
@@ -672,7 +678,7 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 }
 
 int
-CStarter::vSSHDFailed(Stream *s,bool retry,char const *fmt,va_list args)
+CStarter::vMessageFailed(Stream *s,bool retry, const std::string &prefix,char const *fmt,va_list args)
 {
 	MyString error_msg;
 	error_msg.vformatstr( fmt, args );
@@ -681,7 +687,7 @@ CStarter::vSSHDFailed(Stream *s,bool retry,char const *fmt,va_list args)
 		// followed by a newline, so strip off any trailing newline
 	error_msg.trim();
 
-	dprintf(D_ALWAYS,"START_SSHD failed: %s\n",error_msg.Value());
+	dprintf(D_ALWAYS,"%s failed: %s\n", prefix.c_str(), error_msg.Value());
 
 	ClassAd response;
 	response.Assign(ATTR_RESULT,false);
@@ -692,7 +698,7 @@ CStarter::vSSHDFailed(Stream *s,bool retry,char const *fmt,va_list args)
 
 	s->encode();
 	if( !response.put(*s) || !s->end_of_message() ) {
-		dprintf(D_ALWAYS,"Failed to send response to START_SSHD.\n");
+		dprintf(D_ALWAYS,"Failed to send response to %s.\n", prefix.c_str());
 	}
 
 	return FALSE;
@@ -703,7 +709,7 @@ CStarter::SSHDRetry(Stream *s,char const *fmt,...)
 {
 	va_list args;
 	va_start( args, fmt );
-	vSSHDFailed(s,true,fmt,args);
+	vMessageFailed(s, true, "START_SSHD", fmt, args);
 	va_end( args );
 
 	return FALSE;
@@ -713,10 +719,31 @@ CStarter::SSHDFailed(Stream *s,char const *fmt,...)
 {
 	va_list args;
 	va_start( args, fmt );
-	vSSHDFailed(s,false,fmt,args);
+	vMessageFailed(s, false, "START_SSHD", fmt, args);
 	va_end( args );
 
 	return FALSE;
+}
+
+int
+CStarter::PeekRetry(Stream *s,char const *fmt,...)
+{
+        va_list args;
+        va_start( args, fmt );
+        vMessageFailed(s, true, "PEEK", fmt, args);
+        va_end( args );
+
+        return FALSE;
+}
+int
+CStarter::PeekFailed(Stream *s,char const *fmt,...)
+{
+        va_list args;
+        va_start( args, fmt );
+        vMessageFailed(s, false, "PEEK", fmt, args);
+        va_end( args );
+
+        return FALSE;
 }
 
 // The following functions are only needed if SSH_TO_JOB is supported.
@@ -801,6 +828,365 @@ static bool extract_delimited_data(
 }
 
 #endif
+
+int
+CStarter::peek(int /*cmd*/, Stream *sock)
+{
+	// This command should only be allowed by the job owner.
+	MyString error_msg;
+	ReliSock *s = (ReliSock*)sock;
+	char const *fqu = s->getFullyQualifiedUser();
+	MyString job_owner;
+	getJobOwnerFQUOrDummy(job_owner);
+	if( !fqu || job_owner != fqu )
+	{
+		dprintf(D_ALWAYS, "Unauthorized attempt to peek at job logfiles by '%s'\n", fqu ? fqu : "");
+		return false;
+	}
+
+	compat_classad::ClassAd input;
+	s->decode();
+	if( !input.initFromStream(*s) || !s->end_of_message() ) {
+		dprintf(D_ALWAYS, "Failed to read request for peeking at logs.\n");
+		return false;
+	}
+
+	compat_classad::ClassAd *jobad = NULL;
+	compat_classad::ClassAd *machinead = NULL;
+        if( jic )
+	{
+                jobad = jic->jobClassAd();
+		machinead = jic->machClassAd();
+        }
+
+	bool enabled = param_boolean("ENABLE_PEEK_JOB",true,true,machinead,jobad);
+	if( !enabled ) {
+		return PeekFailed(s, "Rejecting request, because ENABLE_PEEK_JOB=false");
+	}
+
+	if( !jic || !jobad ) {
+		return PeekRetry(s, "Rejecting request, because job not yet initialized.");
+	}
+
+	if( !m_job_environment_is_ready ) {
+		// This can happen if file transfer is still in progress.
+		return PeekRetry(s, "Rejecting request, because the job execution environment is not yet ready.");
+	}
+	if( m_all_jobs_done ) {
+		return PeekFailed(s, "Rejecting request, because the job is finished.");
+	}
+ 
+	if( !jic->userPrivInitialized() ) {
+		return PeekRetry(s, "Rejecting request, because job execution account not yet established.");
+	}
+
+	ssize_t max_xfer = -1;
+	input.EvaluateAttrInt(ATTR_MAX_TRANSFER_BYTES, max_xfer);
+
+	// Ok, sanity checks pass.  Let's iterate through the files requested and make sure they are in the
+	// stagein / stageout list.
+	//
+	std::vector<ExprTree*> file_expr_list;
+	std::vector<ExprTree*> off_expr_list;
+	std::vector<std::string> file_list;
+	std::vector<off_t> offsets_list;
+
+	// Allow the user to request stdout/err explicitly instead of by name;
+	// this is done because HTCondor will sometimes rewrite the location of the stdout/err
+	// and we don't want to have to replicate that logic in the client.
+	bool transfer_stdout = false;
+	if (input.EvaluateAttrBool(ATTR_JOB_OUTPUT, transfer_stdout) && transfer_stdout)
+	{
+		std::string out;
+		if (jobad->EvaluateAttrString(ATTR_JOB_OUTPUT, out))
+		{
+			classad::Value value; value.SetIntegerValue(0);
+			file_expr_list.push_back(classad::Literal::MakeLiteral(value));
+			file_list.push_back(out);
+			off_t stdout_off = -1;
+			input.EvaluateAttrInt("OutOffset", stdout_off);
+			offsets_list.push_back(stdout_off);
+			value.SetIntegerValue(stdout_off);
+			off_expr_list.push_back(classad::Literal::MakeLiteral(value));
+		}
+	}
+	bool transfer_stderr = false;
+	if (input.EvaluateAttrBool(ATTR_JOB_ERROR, transfer_stderr) && transfer_stderr)
+	{
+		std::string err;
+		if (jobad->EvaluateAttrString(ATTR_JOB_ERROR, err))
+		{
+			classad::Value value; value.SetIntegerValue(1);
+			file_expr_list.push_back(classad::Literal::MakeLiteral(value));
+			file_list.push_back(err);
+			off_t stderr_off = -1;
+			input.EvaluateAttrInt("ErrOffset", stderr_off);
+			offsets_list.push_back(stderr_off);
+			value.SetIntegerValue(stderr_off);
+			off_expr_list.push_back(classad::Literal::MakeLiteral(value));
+		}
+	}
+
+	classad::Value transfer_list_value;
+	std::vector<std::string> transfer_list;
+	classad_shared_ptr<classad::ExprList> transfer_list_ptr;
+	if (input.EvaluateAttr("TransferFiles", transfer_list_value) && transfer_list_value.IsSListValue(transfer_list_ptr))
+	{
+		transfer_list.reserve(transfer_list_ptr->size());
+		for (classad::ExprList::const_iterator it = transfer_list_ptr->begin();
+			it != transfer_list_ptr->end();
+			it++)
+		{
+			std::string transfer_entry;
+			classad::Value transfer_value;
+			if (!(*it)->Evaluate(transfer_value) || !transfer_value.IsStringValue(transfer_entry))
+			{
+				return PeekFailed(s, "Could not evaluate transfer list.");
+			}
+			transfer_list.push_back(transfer_entry);
+		}
+	}
+
+	std::vector<off_t> transfer_offsets; transfer_offsets.reserve(transfer_list.size());
+	for (size_t idx = 0; idx < transfer_list.size(); idx++) transfer_offsets.push_back(-1);
+
+	if (input.EvaluateAttr("TransferOffsets", transfer_list_value) && transfer_list_value.IsSListValue(transfer_list_ptr))
+	{
+		size_t idx = 0;
+		for (classad::ExprList::const_iterator it = transfer_list_ptr->begin();
+			it != transfer_list_ptr->end() && idx < transfer_list.size();
+			it++, idx++)
+		{
+			classad::Value transfer_value;
+			off_t transfer_entry;
+			if ((*it)->Evaluate(transfer_value) && transfer_value.IsIntegerValue(transfer_entry))
+			{
+				transfer_offsets[idx] = transfer_entry;
+			}
+		}
+	}
+
+	bool missing = false;
+	std::vector<off_t>::const_iterator iter2 = transfer_offsets.begin();
+	for (std::vector<std::string>::const_iterator iter = transfer_list.begin();
+		!missing && (iter != transfer_list.end()) && (iter2 != transfer_offsets.end());
+		iter++, iter2++)
+	{
+		missing = true;
+		std::string filename;
+		if (jobad->EvaluateAttrString(ATTR_JOB_ERROR, filename) && (filename == *iter))
+		{
+			missing = false;
+			if (!transfer_stderr)
+			{
+				classad::Value value; value.SetStringValue(filename);
+				file_expr_list.push_back(classad::Literal::MakeLiteral(value));
+				file_list.push_back(filename);
+				value.SetIntegerValue(*iter2);
+				off_expr_list.push_back(classad::Literal::MakeLiteral(value));
+				offsets_list.push_back(*iter2);
+			}
+			continue;
+		}
+		if (jobad->EvaluateAttrString(ATTR_JOB_OUTPUT, filename) && (filename == *iter))
+		{
+			missing = false;
+			if (!transfer_stdout)
+			{
+				classad::Value value; value.SetStringValue(filename);
+				file_expr_list.push_back(classad::Literal::MakeLiteral(value));
+				file_list.push_back(filename);
+				value.SetIntegerValue(*iter2);
+				off_expr_list.push_back(classad::Literal::MakeLiteral(value));
+				offsets_list.push_back(*iter2);
+			}
+			continue;
+		}
+		std::string job_transfer_list;
+		bool found = false;
+		if (jobad->EvaluateAttrString(ATTR_TRANSFER_OUTPUT_FILES, job_transfer_list))
+		{
+			StringList job_sl(job_transfer_list.c_str());
+			job_sl.rewind();
+			const char *job_iter;
+			while ((job_iter = job_sl.next()))
+			{
+				if (strcmp(iter->c_str(), job_iter) == 0)
+				{
+					filename = job_iter;
+					found = true;
+					break;
+				}
+			}
+		}
+		if (found)
+		{
+			missing = false;
+			classad::Value value; value.SetStringValue(filename);
+			file_expr_list.push_back(classad::Literal::MakeLiteral(value));
+			value.SetIntegerValue(*iter2);
+			off_expr_list.push_back(classad::Literal::MakeLiteral(value));
+			file_list.push_back(*iter);
+			offsets_list.push_back(*iter2);
+		}
+		else
+		{
+			dprintf(D_FULLDEBUG, "File %s requested but not authorized to be sent.\n", filename.c_str());
+		}
+	}
+
+	std::string iwd;
+	jobad->EvaluateAttrString(ATTR_JOB_IWD, iwd);
+
+	// Calculate the offsets and sizes we think we are able to do
+	std::vector<size_t> file_sizes_list; file_sizes_list.reserve(file_list.size());
+	{
+	ssize_t remaining = max_xfer;
+	TemporaryPrivSentry sentry(PRIV_USER);
+	std::vector<off_t>::iterator it2 = offsets_list.begin();
+	unsigned idx = 0;
+	for (std::vector<std::string>::const_iterator it = file_list.begin();
+		it != file_list.end() && it2 != offsets_list.end();
+		it++, it2++, idx++)
+	{
+		size_t size = 0;
+		off_t offset = *it2;
+
+		std::string tmp_filename = *it;
+		if (tmp_filename.size() && (tmp_filename[0] != DIR_DELIM_CHAR))
+		{
+			tmp_filename = iwd + DIR_DELIM_CHAR + tmp_filename;
+		}
+
+		int fd = safe_open_wrapper_follow(tmp_filename.c_str(), O_RDONLY);
+		struct stat stat_buf;
+		if (fd < 0)
+		{
+			dprintf(D_ALWAYS, "Cannot open file %s for peeking at logs.\n", tmp_filename.c_str());
+		}
+		else if (fstat(fd, &stat_buf) < 0)
+		{
+			dprintf(D_ALWAYS, "Cannot stat file %s for peeking at logs.\n", it->c_str());
+		}
+		else
+		{
+			size = stat_buf.st_size;
+		}
+		close(fd);
+		if (offset > 0 && size < static_cast<size_t>(offset))
+		{
+			offset = size;
+			*it2 = offset;
+			classad::Value value; value.SetIntegerValue(*it2);
+			off_expr_list[idx] = classad::Literal::MakeLiteral(value);
+		}
+		if (remaining >= 0)
+		{
+			if (offset < 0)
+			{
+				remaining -= size;
+				if (remaining < 0)
+				{
+					size += remaining;
+					*it2 = -remaining;
+					remaining = 0;
+				}
+				else
+				{
+					*it2 = 0;
+				}
+				classad::Value value; value.SetIntegerValue(*it2);
+				off_expr_list[idx] = classad::Literal::MakeLiteral(value);
+			}
+			else
+			{
+				if (remaining > static_cast<ssize_t>(size) - offset)
+				{
+					size -= offset;
+					remaining -= size;
+				}
+				else
+				{
+					size = remaining;
+					remaining = 0;
+				}
+			}
+		}
+		else
+		{
+			size = -1;
+			if (*it2 < 0)
+			{
+				*it2 = 0;
+				classad::Value value; value.SetIntegerValue(*it2);
+				off_expr_list[idx] = classad::Literal::MakeLiteral(value);
+			}
+		}
+		file_sizes_list.push_back(size);
+	}
+	}
+
+	compat_classad::ClassAd reply;
+	reply.InsertAttr(ATTR_RESULT, true);
+	classad::ExprTree *list = classad::ExprList::MakeExprList(file_expr_list);
+	if (!reply.Insert("TransferFiles", list))
+	{
+		dprintf(D_ALWAYS, "Failed to add transfer files list.\n");
+		return false;
+	}
+	list = classad::ExprList::MakeExprList(off_expr_list);
+	if (!reply.Insert("TransferOffsets", list))
+	{
+		dprintf(D_ALWAYS, "Failed to add transfer offsets list.\n");
+		return false;
+	}
+	reply.dPrint(D_FULLDEBUG);
+
+	s->encode();
+	if (!reply.put(*s) || !s->end_of_message()) {
+		dprintf(D_ALWAYS, "Failed to send read request response for peeking at logs.\n");
+		return false;
+	}
+
+	size_t file_count = 0;
+	{
+	TemporaryPrivSentry sentry(PRIV_USER);
+	std::vector<off_t>::const_iterator it2 = offsets_list.begin();
+	std::vector<size_t>::const_iterator it3 = file_sizes_list.begin();
+	for (std::vector<std::string>::const_iterator it = file_list.begin();
+		it != file_list.end() && it2 != offsets_list.end() && it3 != file_sizes_list.end();
+		it++, it2++, it3++)
+	{
+		filesize_t size = -1;
+
+		std::string tmp_filename = *it;
+		if (tmp_filename.size() && (tmp_filename[0] != DIR_DELIM_CHAR))
+		{
+			tmp_filename = iwd + DIR_DELIM_CHAR + tmp_filename;
+		}
+		
+		int fd = safe_open_wrapper_follow(tmp_filename.c_str(), O_RDONLY);
+		if (fd < 0)
+		{
+			dprintf(D_ALWAYS, "Cannot open file %s for peeking at logs.\n", tmp_filename.c_str());
+			s->put_empty_file(&size);
+			continue;
+		}
+		
+		s->put_file(&size, fd, *it2, *it3);
+		close(fd);
+		if (size < 0 && size != PUT_FILE_MAX_BYTES_EXCEEDED)
+		{
+			dprintf(D_ALWAYS, "Failed to send file %s for peeking at logs (%ld).\n", it->c_str(), size);
+			continue;
+		}
+		file_count++;
+	}
+	}
+	s->code(file_count);
+	s->end_of_message();
+	return file_count == file_list.size();
+}
 
 int
 CStarter::startSSHD( int /*cmd*/, Stream* s )
