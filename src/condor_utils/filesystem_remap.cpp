@@ -83,9 +83,10 @@ int FilesystemRemap::CheckMapping(const std::string & mount_point) {
 		return 0;
 	}
     
+    dprintf(D_ALWAYS, "Current mount, %s, is shared.\n", best->c_str());
+    
 #if !defined(HAVE_MS_SLAVE) && !defined(HAVE_MS_REC)
     TemporaryPrivSentry sentry(PRIV_ROOT);
-	dprintf(D_ALWAYS, "Current mount, %s, is shared.\n", best->c_str());
 
 	// Re-mount the mount point as a bind mount, so we can subsequently
 	// re-mount it as private.
