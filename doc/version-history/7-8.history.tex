@@ -109,8 +109,9 @@ the CCB server after becoming disconnected.  This condition would cause the
 daemon to become unreachable via CCB until restarted.
 \Ticket{3476}
 
-\item If \Condor{shared\_port} was using a dynamic port, and the
-master was using the shared port, then if \Condor{shared\_port} died, all
+\item If \Condor{shared\_port} was using a dynamic port and the
+\Condor{master} was using the shared port, 
+then if \Condor{shared\_port} died, all
 subsequent attempts to restart it on a different port failed.
 \Ticket{3478}
 
