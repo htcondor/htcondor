@@ -1132,7 +1132,8 @@ void EC2Job::doEvaluateState()
 				
 				if ( rc == 0 ) {
 				    // After we've terminated a 'shutoff' instance, it's done.
-				    if( remoteJobState == EC2_VM_STATE_SHUTOFF ) {
+				    if( remoteJobState == EC2_VM_STATE_SHUTOFF 
+				     || remoteJobState == EC2_VM_STATE_STOPPED ) {
 				        gmState = GM_DONE_SAVE; 
 				    } else if( condorState == COMPLETED || condorState == REMOVED ) {
 						gmState = GM_DELETE;
