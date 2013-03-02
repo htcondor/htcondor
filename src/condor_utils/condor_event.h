@@ -89,8 +89,8 @@ enum ULogEventNumber {
 	/** Job Status Known          */  ULOG_JOB_STATUS_KNOWN         = 30,
 	/** Job performing stage-in   */  ULOG_JOB_STAGE_IN				= 31,
 	/** Job performing stage-out  */  ULOG_JOB_STAGE_OUT			= 32,
-	/** Attribute updated  */	ULOG_ATTRIBUTE_UPDATE		= 33,
-	/** PRE_SKIP event for DAGMan */  ULOG_PRESKIP		=34
+	/** Attribute updated  */         ULOG_ATTRIBUTE_UPDATE			= 33,
+	/** PRE_SKIP event for DAGMan */  ULOG_PRESKIP					= 34
 };
 
 /// For printing the enum value.  cout << ULogEventNumberNames[eventNumber];

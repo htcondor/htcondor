@@ -600,8 +600,7 @@ private:
 	enum {
 		PRE_SKIP_INVALID = -1,
 		PRE_SKIP_MIN = 0,
-		PRE_SKIP_MAX = 0xff,
-		NO_PRE_VALUE = -1
+		PRE_SKIP_MAX = 0xff
 	};
 
 	// whether this is a final job

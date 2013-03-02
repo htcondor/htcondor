@@ -18,8 +18,8 @@
 ##
 ##**************************************************************
 
-## This tests getting events in recovery mode that violate the
-## semantics of the DAG (see gittrac #622).
+## This tests recovery mode in combination with PRE_SKIP (see gittrac
+## #2966).
 
 ## Note: this is a bit of a tricky test -- the node C job actually
 ## puts DAGMan on hold and then releases it to force it into recovery
@@ -55,7 +55,8 @@ foreach $name (@logfiles) {
 	}
 }
 
-# Get rid of the first rescue DAG files if it exists.
+# Get rid of the first rescue DAG files if it exists.  (Note: the test
+# should not produce a rescue DAG.)
 if (-e $rescue_file) {
 	runcmd("rm -f $rescue_file");
 }

@@ -286,8 +286,7 @@ class Dag {
         @param condorID the CondorID of the job in the DAG
         @return address of Job object, or NULL if not found
     */
-    Job * FindNodeByEventID (int logsource, const CondorID condorID, 
-		bool ispreSkipEvent = false ) const;
+    Job * FindNodeByEventID (int logsource, const CondorID condorID ) const;
 
     /** Ask whether a node name exists in the DAG
         @param nodeName the name of the node in the DAG
