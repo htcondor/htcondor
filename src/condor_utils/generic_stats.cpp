@@ -1296,6 +1296,9 @@ double stats_entry_sum_ema_rate<T>::EMARate(char const *horizon_name) const {
 template class stats_entry_recent<int>;
 template class stats_entry_recent_histogram<long>;
 
+// Force instantiation
+template class stats_entry_sum_ema_rate<double>;
+
 // this function isn't called, its just here to force instantiation 
 // of template methods that aren't in the header file.
 //
