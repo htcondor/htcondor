@@ -185,6 +185,7 @@ class MyString
 
 	/** Appends the string version of the given long int */
 	MyString& operator+=(long l);
+	MyString& operator+=(long long l);
 
 	/** Appends the string version of the given double */
 	MyString& operator+=(double d);

@@ -361,6 +361,19 @@ MyString::operator+=( long l )
 }
 
 
+MyString&
+MyString::operator+=( long long l )
+{
+        const int bufLen = 64;
+        char tmp[bufLen];
+        ::snprintf( tmp, bufLen, "%lld", l );
+        int s_len = strlen( tmp );
+        ASSERT(s_len < bufLen);
+        append_str( tmp, s_len );
+        return *this;
+}
+
+
 MyString& 
 MyString::operator+=( double d )
 {

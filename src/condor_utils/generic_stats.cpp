@@ -1300,11 +1300,18 @@ double stats_entry_sum_ema_rate<T>::EMARate(char const *horizon_name) const {
 // objects could link against it.  That is not the correct way to do things
 // because the compiler could decide to inline class member functions and not
 // generate the functions for the object file.
-template class stats_entry_recent<int32_t>;
-template class stats_entry_recent<int64_t>;
+//
+// Note that we instantiate more than we have to on most platforms.  This is
+// because things like stats_entry_recent<time_t> may or may not be equal
+// to stats_entry_recent<int64_t>, depending on the platform.
+template class stats_entry_recent<long long>;
+template class stats_entry_recent<long>;
+template class stats_entry_recent<int>;
 template class stats_entry_recent<double>;
-template class stats_entry_recent_histogram<int32_t>;
-template class stats_entry_recent_histogram<int64_t>;
+template class stats_entry_recent_histogram<long long>;
+template class stats_entry_recent_histogram<long>;
+template class stats_entry_recent_histogram<int>;
+template class stats_entry_recent_histogram<double>;
 template class stats_entry_sum_ema_rate<double>;
 
 //
