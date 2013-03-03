@@ -1043,7 +1043,9 @@ public:
    // operator overloads
    Probe& operator+=(double val) { Add(val); return *this; }
    Probe& operator+=(const Probe & val) { Add(val); return *this; }
-   //Probe& operator-=(const Probe & val) { Remove(val); return *this; }
+   // NOT actually functional - however, this is necessary for template instantiation.
+   Probe& operator-=(const Probe & /*val*/) { return *this; }
+   Probe& operator-(const Probe & /*val*/) { return *this; }
 
    // comparison to int(0) is used to detect if the probe is 'empty'
    bool operator==(const int &ii) const { return ii ? false : this->Count == ii; }
