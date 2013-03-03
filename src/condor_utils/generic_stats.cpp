@@ -1293,70 +1293,19 @@ double stats_entry_sum_ema_rate<T>::EMARate(char const *horizon_name) const {
 	return 0.0;
 }
 
-template class stats_entry_recent<int>;
-template class stats_entry_recent_histogram<long>;
-
-// this function isn't called, its just here to force instantiation 
-// of template methods that aren't in the header file.
-//
-void generic_stats_force_refs()
-{
-   MyString str;
-
-   stats_entry_recent<int>* pi = NULL;
-   stats_entry_recent<long>* pl = NULL;
-   stats_entry_recent<int64_t>* pt = NULL;
-   stats_entry_recent<double>* pd = NULL;
-   stats_entry_recent<Probe>* pp = NULL;
-   stats_entry_recent_histogram< int64_t >* ph = new stats_entry_recent_histogram< int64_t >();
-   stats_entry_recent_histogram< time_t >* pm = new stats_entry_recent_histogram< time_t >();
-   stats_recent_counter_timer* pc = NULL;
-   stats_entry_sum_ema_rate<double> *ema = NULL;
-   ClassAd ad;
-   stats_ema_list ema_list;
-
-   ema->ConfigureEMAHorizons(ema_list);
-   ema->Publish(ad,NULL,0);
-   ema->Unpublish(ad,NULL);
-   ema->BiggestEMARate();
-   ema->ShortestHorizonEMARateName();
-   ema->EMARate(NULL);
-   ph->value.set_levels(NULL, 0);
-   ph->value.Add(1);
-   ph->value.Remove(1);
-   ph->value.AppendToString(str);
-
-   pm->value.set_levels(NULL, 0);
-   pm->value.Add(1);
-   pm->value.Remove(1);
-   pm->value.AppendToString(str);
-   
-
-   StatisticsPool dummy;
-   dummy.GetProbe<stats_entry_recent<int> >("");
-   dummy.GetProbe<stats_entry_recent<int64_t> >("");
-   dummy.GetProbe<stats_entry_recent<long> >("");
-   dummy.GetProbe<stats_entry_recent<double> >("");
-   dummy.GetProbe<stats_recent_counter_timer>("");
-
-   dummy.NewProbe<stats_entry_recent<int> >("");
-   dummy.NewProbe<stats_entry_recent<int64_t> >("");
-   dummy.NewProbe<stats_entry_recent<long> >("");
-   dummy.NewProbe<stats_entry_recent<double> >("");
-   dummy.NewProbe<stats_recent_counter_timer>("");
-   //dummy.Add<stats_entry_recent<int>*>("",0,pi,0,"",NULL);
-   //dummy.Add<stats_entry_recent<long>*>("",0,pl,0,"",NULL);
-   //dummy.Add<stats_entry_recent<int64_t>*>("",0,pt,0,"",NULL);
-   //dummy.Add<stats_recent_counter_timer*>("",0,pc,0,"",NULL);
-   dummy.AddProbe("",pi,NULL,0);
-   dummy.AddProbe("",pl,NULL,0);
-   dummy.AddProbe("",pt,NULL,0);
-   dummy.AddProbe("",pc,NULL,0);
-   dummy.AddProbe("",pd,NULL,0);
-   dummy.AddProbe("",pp,NULL,0);
-   dummy.AddProbe("",ph,NULL,0);
-   dummy.AddProbe("",pm,NULL,0);
-};
+// Force template instantiation
+// C++ note:
+// We used to have a dummy function that make various templated objects
+// in order to force the compiler to generate the template code so other
+// objects could link against it.  That is not the correct way to do things
+// because the compiler could decide to inline class member functions and not
+// generate the functions for the object file.
+template class stats_entry_recent<int32_t>;
+template class stats_entry_recent<int64_t>;
+template class stats_entry_recent<double>;
+template class stats_entry_recent_histogram<int32_t>;
+template class stats_entry_recent_histogram<int64_t>;
+template class stats_entry_sum_ema_rate<double>;
 
 //
 // This is how you use the generic_stats functions.
