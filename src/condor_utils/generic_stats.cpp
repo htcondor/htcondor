@@ -1308,6 +1308,7 @@ template class stats_entry_recent<long long>;
 template class stats_entry_recent<long>;
 template class stats_entry_recent<int>;
 template class stats_entry_recent<double>;
+template class stats_entry_recent<Probe>;
 template class stats_entry_recent_histogram<long long>;
 template class stats_entry_recent_histogram<long>;
 template class stats_entry_recent_histogram<int>;
