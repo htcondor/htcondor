@@ -216,3 +216,4 @@ src/condor_contrib/python-bindings/tests_tmp
 src/condor_contrib/python-bindings/test_driver
 src/classad/tests/with_cache
 src/classad/tests/without_cache
+src/condor_tools/condor_ping
