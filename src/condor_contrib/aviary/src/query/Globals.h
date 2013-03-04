@@ -37,15 +37,13 @@ namespace aviary {
 namespace query {
 
 typedef map<const char *, Job *, cmpstr> JobCollectionType;
-typedef map<const char *, SubmissionObject *, cmpstr> SubmissionCollectionType;
-typedef map<int, string> OwnerlessClusterType;
+typedef multimap<const char *, SubmissionObject *, cmpstr> SubmissionCollectionType;
 typedef map<int,SubmissionObject*> SubmissionIndexType;
 typedef multimap<int,SubmissionObject*> SubmissionMultiIndexType;
 
 extern JobCollectionType g_jobs;
 extern SubmissionCollectionType g_submissions;
-extern OwnerlessClusterType g_ownerless_clusters;
-extern SubmissionIndexType g_ownerless_submissions;
+extern SubmissionIndexType g_dirty_submissions;
 extern SubmissionMultiIndexType g_qdate_submissions;
 
 void global_reset();

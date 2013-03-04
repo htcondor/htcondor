@@ -214,41 +214,37 @@ void
 LiveJobImpl::set ( const char *_name, const char *_value )
 {
 
-    if ( strcasecmp ( _name, ATTR_JOB_SUBMISSION ) == 0 )
-    {
+    if ( strcasecmp ( _name, ATTR_JOB_SUBMISSION ) == 0 ) {
         string val = trimQuotes( _value );
         // grab the cluster from our key
         PROC_ID id = getProcByString(m_job->getKey());
-	if (m_job) {
-		m_job->setSubmission ( val.c_str(), id.cluster );
-	}
-    }
-
-    // our status is changing...decrement for old one
-    if ( strcasecmp ( _name, ATTR_JOB_STATUS ) == 0 )
-    {
-	if ( m_job )
-        {
-	    m_job->setStatus(this->getStatus());
-            m_job->decrementSubmission ();
+        if (m_job) {
+            m_job->processSubmission(id.cluster,val.c_str(),NULL);
         }
     }
 
-    if ( strcasecmp ( _name, ATTR_OWNER ) == 0 )
-    {
-	// need to leave an owner for this job
-	// to be picked up soon
-	// if we are in here, we don't have m_submission
-	PROC_ID id = getProcByString(m_job->getKey());
-	string val = trimQuotes( _value );
-	g_ownerless_clusters[id.cluster] = val;
-	m_job->updateSubmission(id.cluster,val.c_str());
+    // our status is changing...decrement for old one
+    if ( strcasecmp ( _name, ATTR_JOB_STATUS ) == 0 ) {
+        if ( m_job ) {
+                m_job->setStatus(this->getStatus());
+                m_job->decrementSubmission();
+            }
+    }
+
+    if ( strcasecmp ( _name, ATTR_OWNER ) == 0 ) {
+        // need to leave an owner for this job
+        // to be picked up soon
+        // if we are in here, we don't have m_submission
+        PROC_ID id = getProcByString(m_job->getKey());
+        string val = trimQuotes( _value );
+        if (m_job) {
+            m_job->processSubmission(id.cluster,NULL,val.c_str());
+        }
     }
 
     // parse the type
     ExprTree *expr;
-    if ( ParseClassAdRvalExpr ( _value, expr ) )
-    {
+    if ( ParseClassAdRvalExpr ( _value, expr ) ) {
         dprintf ( D_ALWAYS,
                   "error: parsing %s[%s] = %s, skipping\n",
                   m_job->getKey(), _name, _value );
@@ -257,8 +253,7 @@ LiveJobImpl::set ( const char *_name, const char *_value )
     // add this value to the classad
     classad::Value value;
     expr->Evaluate(value);
-    switch ( value.GetType() )
-    {
+    switch ( value.GetType() ) {
         case classad::Value::INTEGER_VALUE:
             int i;
             from_string<int> ( i, string ( _value ), dec );
@@ -279,11 +274,9 @@ LiveJobImpl::set ( const char *_name, const char *_value )
     delete expr; expr = NULL;
 
     // our status has changed...increment for new one
-    if ( strcasecmp ( _name, ATTR_JOB_STATUS ) == 0 )
-    {
-        if ( m_job )
-        {
-	    m_job->setStatus(this->getStatus());
+    if ( strcasecmp ( _name, ATTR_JOB_STATUS ) == 0 ) {
+        if ( m_job ) {
+            m_job->setStatus(this->getStatus());
             m_job->incrementSubmission ();
         }
     }
@@ -375,13 +368,12 @@ HistoryJobImpl::HistoryJobImpl ( const HistoryEntry& _he):
 	m_he(_he)
 {
     m_job = NULL;
-    g_ownerless_clusters[_he.cluster] = _he.owner;
     dprintf ( D_FULLDEBUG, "HistoryJobImpl created for '%d.%d'\n", _he.cluster, _he.proc );
 }
 
 HistoryJobImpl::~HistoryJobImpl ()
 {
-	dprintf ( D_FULLDEBUG, "HistoryJobImpl destroyed: key '%s'\n", m_job->getKey());
+    dprintf ( D_FULLDEBUG, "HistoryJobImpl destroyed: key '%s'\n", m_job->getKey());
 }
 
 int HistoryJobImpl::getStatus() const
@@ -396,12 +388,17 @@ int HistoryJobImpl::getCluster() const
 
 int HistoryJobImpl::getQDate() const
 {
-	return m_he.q_date;
+    return m_he.q_date;
 }
 
 const char* HistoryJobImpl::getSubmissionId() const
 {
-	return m_he.submission.c_str();
+    return m_he.submission.c_str();
+}
+
+const char* HistoryJobImpl::getOwner() const
+{
+    return m_he.owner.c_str();
 }
 
 void HistoryJobImpl::getSummary ( ClassAd& _ad ) const
@@ -519,39 +516,39 @@ Job::~Job() {
 
 void Job::setImpl (LiveJobImpl* lji)
 {
-	lji->setJob(this);
-	// probably shouldn't happen
-	if (m_live_job) {
-		delete m_live_job;
-	}
-	m_live_job = lji;
+    lji->setJob(this);
+    // probably shouldn't happen
+    if (m_live_job) {
+        delete m_live_job;
+    }
+    m_live_job = lji;
 
-	// status of a live job always has precedence
-	// so decrement if the history job got in ahead of it
-	if (m_history_job) {
-		m_status = m_history_job->getStatus();
-		m_submission->decrement(this);
-	}
-	m_status = m_live_job->getStatus();
+    // status of a live job always has precedence
+    // so decrement if the history job got in ahead of it
+    if (m_history_job) {
+        m_status = m_history_job->getStatus();
+        m_submission->decrement(this);
+    }
+    m_status = m_live_job->getStatus();
 }
 
 void Job::setImpl (HistoryJobImpl* hji)
 {
-	hji->setJob(this);
-	// probably shouldn't happen
-	if (m_history_job) {
-		delete m_history_job;
-	}
-	m_history_job = hji;
+    hji->setJob(this);
+    // probably shouldn't happen
+    if (m_history_job) {
+        delete m_history_job;
+    }
+    m_history_job = hji;
 
-	// stay away from extra inc/decs if the live job is still doing its thing
-	if (!m_submission) {
-		m_status = m_history_job->getStatus();
-		setSubmission(m_history_job->getSubmissionId(),m_history_job->getCluster());
-	}
+    // stay away from extra inc/decs if the live job is still doing its thing
+    if (!m_submission) {
+        m_status = m_history_job->getStatus();
+        processSubmission(m_history_job->getCluster(),m_history_job->getSubmissionId(),m_history_job->getOwner());
+    }
 
-	// call Destroy to see if we can clean up the live job
-	this->destroy();
+    // call Destroy to see if we can clean up the live job
+    this->destroy();
 }
 
 void Job::setStatus(int status)
@@ -568,15 +565,11 @@ void Job::set ( const char *_name, const char *_value ) {
 	if (m_live_job) {
 		m_live_job->set(_name,_value);
 	}
+
     // hack for late qdate
     if (m_submission) {
-        int job_qdate = this->getQDate();
-        int sub_qdate = m_submission->getOldest();
-        if (sub_qdate > job_qdate) {
-                // swap the old one out
-                g_qdate_submissions.erase(g_qdate_submissions.find(sub_qdate));
-                m_submission->setOldest(job_qdate);
-                g_qdate_submissions.insert(make_pair(job_qdate,m_submission));
+        if (strcmp(_name,ATTR_Q_DATE)==0) {
+            m_submission->setOldest(this->getQDate());
         }
     }
 }
@@ -600,64 +593,76 @@ void Job::decrementSubmission() {
 	}
 }
 
-void
-Job::updateSubmission ( int cluster, const char* owner )
-{
-	SubmissionIndexType::const_iterator it = g_ownerless_submissions.find ( cluster );
-	if ( g_ownerless_submissions.end() != it ) {
-		SubmissionObject* submission = (*it).second;
-		submission->setOwner(owner);
-		g_ownerless_submissions.erase(cluster);
-	}
+SubmissionObject* Job::findSubmission(const char* name, const char* owner) {
+    SubmissionObject* submission = NULL;
+    SubmissionCollectionType::const_iterator element = g_submissions.find (name);
+    // walk the existing multimap
+    while (g_submissions.end()!=element) {
+        if (owner && (0==strcmp((*element).second->getOwner(),owner))) {
+                submission = (*element).second;
+                break;
+        }
+        element++;
+    }
+    return submission;
 }
 
-void
-Job::setSubmission ( const char* _subName, int cluster )
-{
-    const char* owner = NULL;
+void Job::processSubmission(int cluster, const char* name, const char* owner) {
 
-    // need to see if someone has left us an owner
-    OwnerlessClusterType::const_iterator it = g_ownerless_clusters.find ( cluster );
-    if ( g_ownerless_clusters.end() != it )
-    {
-        owner = ( *it ).second.c_str() ;
-    }
-
-    SubmissionCollectionType::const_iterator element = g_submissions.find ( _subName );
-    SubmissionObject *submission;
+    SubmissionObject* sub = NULL;
     int qdate = this->getQDate();
-    if ( g_submissions.end() == element )
-    {
-        submission = new SubmissionObject ( _subName, owner );
-        g_submissions[strdup ( _subName ) ] = submission;
-        submission->setOldest(qdate);
-        g_qdate_submissions.insert(make_pair(qdate,submission));
+
+    // first check clean submissions (aka history jobs)
+    if (name && owner) {
+        sub = findSubmission(name,owner);
+        if (!sub) {
+            sub = new SubmissionObject(name,owner);
+            g_submissions.insert(make_pair(name,sub));
+            g_qdate_submissions.insert(make_pair(sub->getOldest(),sub));
+        }
+        this->m_submission = sub;
+        sub->setOldest(qdate);
+        sub->increment(this);
+        return;
     }
-    else
-    {
-        submission = ( *element ).second;
-        // update our qdate index collection also
-        if (submission->getOldest() > qdate) {
-                // swap the old one out
-                g_qdate_submissions.erase(g_qdate_submissions.find(submission->getOldest()));
-                submission->setOldest(qdate);
-                g_qdate_submissions.insert(make_pair(qdate,submission));
+
+    // from here it's live job submission building
+    if (!sub) {
+        SubmissionIndexType::iterator dsit = g_dirty_submissions.find(cluster);
+        //new cluster...must be dirty
+        if (dsit == g_dirty_submissions.end()) {
+            sub = new SubmissionObject(name,owner);
+            g_dirty_submissions.insert(make_pair(cluster,sub));
+        }
+        // existing cluster...add whatever we have to it
+        else {
+            sub = (*dsit).second;
+            // live job...update whichever we're missing
+            if (name) sub->setName(name);
+            if (owner) sub->setOwner(owner);
         }
     }
-    m_submission = submission;
-    m_submission->setOldest(qdate);
-    m_submission->increment(this);
 
-    if (owner) {
-        // ensure that the submission has an owner
-        m_submission->setOwner ( owner );
-        g_ownerless_clusters.erase ( cluster );
+    // see what we've got now
+    if (sub && sub->getName() && sub->getOwner()) {
+        // now complete, look again to see if we are an existing submission
+        const char* sub_name = sub->getName();
+        const char* sub_owner = sub->getOwner();
+        SubmissionObject* previous = NULL;
+        previous = findSubmission(sub_name,sub_owner);
+        if (previous) {
+            delete sub;
+            sub = previous;
+        }
+        else {
+            g_submissions.insert(make_pair(sub_name,sub));
+            g_qdate_submissions.insert(make_pair(sub->getOldest(),sub));
+            g_dirty_submissions.erase(cluster);
+        }
+        this->m_submission = sub;
+        sub->setOldest(qdate);
+        sub->increment(this);
     }
-    else {
-        // add it to our list to be updated for owner
-        g_ownerless_submissions[cluster] = m_submission;
-    }
-
 }
 
 bool ClusterJobImpl::destroy()
