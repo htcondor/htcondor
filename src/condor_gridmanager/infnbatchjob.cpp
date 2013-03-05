@@ -377,8 +377,10 @@ void INFNBatchJob::doEvaluateState()
 			if ( gahp->Startup() == false ) {
 				dprintf( D_ALWAYS, "(%d.%d) Error starting GAHP\n",
 						 procID.cluster, procID.proc );
+				std::string error_string = "Failed to start GAHP: ";
+				error_string += gahp->getGahpStderr();
 
-				jobAd->Assign( ATTR_HOLD_REASON, "Failed to start GAHP" );
+				jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
 				gmState = GM_HOLD;
 				break;
 			}
@@ -389,7 +391,10 @@ void INFNBatchJob::doEvaluateState()
 					dprintf( D_ALWAYS, "(%d.%d) Error starting transfer GAHP\n",
 							 procID.cluster, procID.proc );
 
-					jobAd->Assign( ATTR_HOLD_REASON, "Failed to start transfer GAHP" );
+					std::string error_string = "Failed to start transfer GAHP: ";
+					error_string += gahp->getGahpStderr();
+
+					jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
 					gmState = GM_HOLD;
 					break;
 				}
