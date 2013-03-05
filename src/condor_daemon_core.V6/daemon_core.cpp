@@ -2805,13 +2805,14 @@ DaemonCore::reconfig(void) {
 	// a daemon core parent.
 	if ( ppid && m_want_send_child_alive ) {
 		MyString buf;
+		int old_max_hang_time_raw = max_hang_time_raw;
 		buf.formatstr("%s_NOT_RESPONDING_TIMEOUT",get_mySubSystem()->getName());
-		max_hang_time = param_integer(buf.Value(),-1);
-		if( max_hang_time == (unsigned int)-1 ) {
-			max_hang_time = param_integer("NOT_RESPONDING_TIMEOUT",0);
-		}
-		if ( !max_hang_time ) {
-			max_hang_time = 60 * 60;	// default to 1 hour
+		max_hang_time_raw = param_integer(buf.Value(),param_integer("NOT_RESPONDING_TIMEOUT",3600,1),1);
+
+		if( max_hang_time_raw != old_max_hang_time_raw || send_child_alive_timer == -1 ) {
+			max_hang_time = max_hang_time_raw + timer_fuzz(max_hang_time_raw);
+				// timer_fuzz() should never make it <= 0
+			ASSERT( max_hang_time > 0 );
 		}
 		int old_child_alive_period = m_child_alive_period;
 		m_child_alive_period = (max_hang_time / 3) - 30;

@@ -3367,9 +3367,9 @@ id=175
 
 [NOT_RESPONDING_TIMEOUT]
 aliases=
-default=0
+default=3600
 version=0.0.0
-range=.*
+range=1,
 state=default
 type=int
 is_macro=false
