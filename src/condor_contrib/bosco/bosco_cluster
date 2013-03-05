@@ -142,7 +142,7 @@ show_progress () {
     dots_pid=$!
 
     # Run the command
-    $@
+    "$@"
     exit_code=$?
     disown $dots_pid
     kill -9 $dots_pid
@@ -852,18 +852,29 @@ rsync -aq $bosco_passwd_file $local_install_dir/campus_factory/share/glidein_job
 rsync -aq $bosco_passwd_file $remote_glite_dir/etc 2>/dev/null
 
 # Do the actual rsync
-show_progress "Installing on cluster $remote_host" rsync -aq -e \"ssh -o ControlMaster=auto -o ControlPath=$ssh_control_path\" $local_install_dir $remote_host:
+show_progress "Installing on cluster $remote_host" rsync -aq -e "ssh -o ControlMaster=auto -o ControlPath=$ssh_control_path" $local_install_dir $remote_host:
+exit_code=$?
+
 rm -rf $tmp_install_dir
+# Removing temporary directory
+rm -rf $tmp_dir 2>/dev/null
+
+stop_ssh
+
+# Detect an improper rsync exit code
+if [ "$exit_code" -ne "0" ]; then
+    echo "Unable to install on remote cluster..."
+    echo "Exiting"
+    exit 1
+fi
+
 
 # Add the cluster to the cluster list
 add_cluster_to_list $remote_host $max_queued $cluster_type
 
-# Removing temporary directory
-rm -rf $tmp_dir 2>/dev/null
-
 echo "Installation complete"
 
-stop_ssh
+
 
 # Configure condor
 min_queue_size=`get_min_queue`
