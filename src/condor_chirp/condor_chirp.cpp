@@ -388,6 +388,27 @@ int chirp_set_job_attr(int argc, char **argv) {
 }
 
 /*
+ * chirp_set_job_attr_volatile
+ * Do an update to the remote shadow.  The update is non-durable - it may be lost by the
+ * schedd, but it will consume less resources on the submit side.
+ */
+
+int chirp_set_job_attr_volatile(int argc, char **argv) {
+	if (argc != 4) {
+		printf("condor_chirp set_job_attr_volatile AttributeName AttributeValue\n");
+		printf("This will perform a non-durable update to the shadow; it consumes\n");
+		printf("less resources than set_job_attr, but may be lost.\n");
+		return -1;
+	}
+
+	struct chirp_client *client = 0;
+	CONNECT_STARTER(client);
+
+	int rval = chirp_client_set_job_attr_volatile(client, argv[2], argv[3]);
+	DISCONNECT_AND_RETURN(client, rval);
+}
+
+/*
  * chirp_ulog
  *
  */
@@ -886,6 +907,7 @@ void usage() {
 	printf("condor_chirp remove remote_file\n");
 	printf("condor_chirp get_job_attr job_attribute\n");
 	printf("condor_chirp set_job_attr job_attribute attribute_value\n");
+	printf("condor_chirp set_job_attr_volatile job_attribute attribute_value\n");
 	printf("condor_chirp ulog text\n");
 	printf("condor_chirp read [-offset offset] [-stride length skip] "
 		"remote_file length\n");
@@ -926,6 +948,8 @@ main(int argc, char **argv) {
 		ret_val = chirp_remove(argc, argv);
 	} else if (strcmp("get_job_attr", argv[1]) == 0) {
 		ret_val = chirp_get_job_attr(argc, argv);
+	} else if (strcmp("set_job_attr_volatile", argv[1]) == 0) {
+		ret_val = chirp_set_job_attr_volatile(argc, argv);
 	} else if (strcmp("set_job_attr", argv[1]) == 0) {
 		ret_val = chirp_set_job_attr(argc, argv);
 	} else if (strcmp("ulog", argv[1]) == 0) {

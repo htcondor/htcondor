@@ -1825,9 +1825,23 @@ JICShadow::setX509ProxyExpirationTimer()
 }
 
 
+void
+JICShadow::recordVolatileUpdate( const std::string &name, const classad::ExprTree &expr )
+{
+	// Note that the ClassAd takes ownership of the copy.
+	dprintf(D_FULLDEBUG, "Got a volatile update for attribute %s.\n", name.c_str());
+	classad::ExprTree *expr_copy = expr.Copy();
+	m_volatile_updates.Insert("Chirp" + name, expr_copy);
+}
+
+
 bool
 JICShadow::publishUpdateAd( ClassAd* ad )
 {
+	// These are updates taken from Chirp
+	ad->Update(m_volatile_updates);
+	m_volatile_updates.Clear();
+
 	filesize_t execsz = 0;
 
 	// if we are using PrivSep, we need to use that mechanism to calculate
@@ -2136,8 +2150,14 @@ JICShadow::initIOProxy( void )
 		// chirp is enabled
     bool enableIOProxy = true;
 	enableIOProxy = param_boolean("ENABLE_CHIRP", true);
-	
-	if (!enableIOProxy) {
+
+	bool enableUpdates = false;
+	enableUpdates = param_boolean("ENABLE_CHIRP_UPDATES", true);
+
+	bool enableFiles = false;
+	enableFiles = param_boolean("ENABLE_CHIRP_IO", true);
+
+	if (!enableIOProxy || (!enableUpdates && !enableFiles)) {
 		dprintf(D_ALWAYS, "ENABLE_CHIRP is false in config file, not enabling chirp\n");
 		return false;
 	}
@@ -2150,11 +2170,19 @@ JICShadow::initIOProxy( void )
 		dprintf( D_ALWAYS, "Job has %s=%s\n", ATTR_WANT_IO_PROXY,
 				 want_io_proxy ? "true" : "false" );
 	}
+	bool want_updates = false;
+	if (job_ad->EvaluateAttrBool(ATTR_WANT_REMOTE_UPDATES, want_updates) < 1 ) {
+		dprintf(D_FULLDEBUG, "JICShadow::initIOProxy(): "
+				"Job does not want remote updates.\n");
+	} else {
+		dprintf(D_ALWAYS, "Job has %s=%s\n", ATTR_WANT_REMOTE_UPDATES,
+				want_updates ? "true" : "false");
+	}
 
-	if( want_io_proxy || job_universe==CONDOR_UNIVERSE_JAVA ) {
+	if( want_io_proxy || want_updates || job_universe==CONDOR_UNIVERSE_JAVA ) {
 		io_proxy_config_file.formatstr( "%s%cchirp.config",
 				 Starter->GetWorkingDir(), DIR_DELIM_CHAR );
-		if( !io_proxy.init(io_proxy_config_file.Value()) ) {
+		if( !io_proxy.init(this, io_proxy_config_file.Value(), want_io_proxy, want_updates) ) {
 			dprintf( D_FAILURE|D_ALWAYS, 
 					 "Couldn't initialize IO Proxy.\n" );
 			return false;

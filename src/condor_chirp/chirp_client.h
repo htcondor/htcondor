@@ -171,6 +171,13 @@ DLLEXPORT int chirp_client_set_job_attr( struct chirp_client *c, const char *nam
   When running under Condor, set the value of a job ClassAd attribute.
 */
 
+DLLEXPORT int chirp_client_set_job_attr_volatile( struct chirp_client *c, const char *name, const char *expr );
+/*chirp_client_set_job_attr_volatile()
+  When running under HTCondor, set the value of a job ClassAd attribute to a given expression.
+  This variant of set_job_attr will not push the update immediately, but rather as a non-durable
+  update during the next communication between starter and shadow.
+*/
+
 DLLEXPORT int chirp_client_open( struct chirp_client *c, const char *path, const char *flags, int mode );
 /*chirp_client_open()
   Open a file through the chirp server.  Note that if you want to create a

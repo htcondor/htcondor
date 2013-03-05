@@ -238,6 +238,9 @@ public:
 		/* Update Job ClassAd with checkpoint info and log it */
 	void updateCkptInfo(void);
 
+		/* Record an attribute to update */
+	void recordVolatileUpdate( const std::string &name, const classad::ExprTree &expr );
+
 private:
 
 		// // // // // // // // // // // //
@@ -438,6 +441,7 @@ private:
 		/// hostname (or whatever the startd gave us) of our shadow 
 	char* m_shadow_name;
 
+	classad::ClassAd m_volatile_updates;
 	IOProxy io_proxy;
 
 	FileTransfer *filetrans;

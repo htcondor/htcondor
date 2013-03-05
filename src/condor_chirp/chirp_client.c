@@ -403,6 +403,12 @@ chirp_client_set_job_attr( struct chirp_client *c, const char *name, const char 
 }
 
 DLLEXPORT int
+chirp_client_set_job_attr_volatile( struct chirp_client *c, const char *name, const char *expr )
+{
+	return simple_command(c,"set_job_attr_volatile %s %s\n",name,expr);
+}
+
+DLLEXPORT int
 chirp_client_open( struct chirp_client *c, const char *path, const char *flags, int mode )
 {
 	int result = -1;
