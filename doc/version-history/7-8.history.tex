@@ -125,6 +125,11 @@ to be ignored if specified using the new quoting syntax in
 the submit description file.
 \Ticket{3473}
 
+\item Reduced the likelihood of a problem that caused the
+\Condor{master} to restart some of its children after a recent
+reconfig, because it incorrectly concluded that they were hung.
+\Ticket{3510}
+
 \end{itemize}
 
 \noindent Known Bugs:

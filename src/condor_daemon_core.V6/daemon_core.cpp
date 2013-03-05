@@ -2813,6 +2813,7 @@ DaemonCore::reconfig(void) {
 		if ( !max_hang_time ) {
 			max_hang_time = 60 * 60;	// default to 1 hour
 		}
+		int old_child_alive_period = m_child_alive_period;
 		m_child_alive_period = (max_hang_time / 3) - 30;
 		if ( m_child_alive_period < 1 )
 			m_child_alive_period = 1;
@@ -2838,7 +2839,11 @@ DaemonCore::reconfig(void) {
 				// sending this message, our parent will not kill us.
 				// (Commented out.  See reason above.)
 				// SendAliveToParent();
-		} else {
+		} else if( m_child_alive_period != old_child_alive_period ) {
+				// Our parent will not know about our new alive period
+				// until the next time we send it an ALIVE message, so
+				// we can't just increase the time to our next call
+				// without risking being killed as a hung child.
 			Reset_Timer(send_child_alive_timer, 1, m_child_alive_period);
 		}
 	}
