@@ -84,10 +84,11 @@ ssh_upload_and_run () {
     # 1. remote host
     # 2. start dir DEFAULT to use a temporary directory removed afterwards
     # 3. script name
-    # 4 to 7 optional parameters for the script
+    # All other arguments are sent on
     remote_host=$1
     start_dir=$2
     local_script=$3
+    shift 3
     # TODO: suppress banner printout  -o LogLevel=Error  does not work, 
     # redirect stderr to /dev/null suppresses errors as well
     if [ "x$start_dir" == "xDEFAULT" ]; then
@@ -97,7 +98,7 @@ ssh_upload_and_run () {
         ssh $remote_host "mkdir -p $start_dir" 
     fi
     scp $local_script $remote_host:$start_dir/bosco_run
-    cmd_out=`ssh $remote_host "cd $start_dir; chmod +x bosco_run; ./bosco_run $4 $5 $6 $7"  2>/dev/null`
+    cmd_out=`ssh $remote_host "cd $start_dir; chmod +x bosco_run; ./bosco_run $@"  2>/dev/null`
     #cmd_out=`ssh $remote_host "cd $start_dir; chmod +x bosco_run; ./bosco_run $4 $5 $6"`
     cmd_ec=$?
     if [ $cmd_ec -eq 0 ]; then
@@ -580,17 +581,20 @@ if [ `uname` = "Darwin" ] ; then
     # Mac OS X doesn't have GNU getopt, so not fancy argument checking here
     TEMP="$@"
 else
-    TEMP=`getopt -a -o a:ls:t:r:h --longoptions add:,list,status:,test:,remove:,help  -n 'bosco_cluster' -- "$@"`
+    TEMP=`getopt -a -o a:ls:t:r:hp: --longoptions add:,platform:,list,status:,test:,remove:,help  -n 'bosco_cluster' -- "$@"`
 
     if [ $? != 0 ]; then usage; echo "Terminating..." >&2; exit 1; fi
 fi
 
 eval set -- "$TEMP"
 
+platform_force=
+
 while true; do
     case "$1" in
         -h|--help) usage; exit 1; shift ;;
-        -a|--add) remote_host=$2; shift 2; break ;;
+        -p|--platform) platform_force=$2; shift 2;;
+        -a|--add) remote_host=$2; shift 2; break;;
         -l|--list) list 
                    if [ $? -eq 0 ]; then
                        exit 2
@@ -601,7 +605,7 @@ while true; do
         -r|--remove) remove_cluster $2; shift 2; exit 0;;
         
         --) echo "No command found" >&2; usage; exit 1;;
-        *) echo "Unknown option" >&2; usage; exit 1;;
+        *) echo "Unknown option: $1" >&2; usage; exit 1;;
     esac
 done
 
@@ -614,6 +618,9 @@ done
 if [ `uname` != "Darwin" ] ; then
     shift
 fi
+
+# $1 - The batch system
+
 if [ "x$1" == "x" ]; then
     echo "Warning: No batch system specified, defaulting to PBS"
     echo "If this is incorrect, rerun the command with the batch system specified"
@@ -627,6 +634,7 @@ else
         exit 1
     fi
 fi
+
 
 # Check if the cluster is already in the list
 check_cluster_list2 $remote_host
@@ -734,7 +742,12 @@ if [ "x$TMP_INSTALL" == "x" ]; then
     TMP_INSTALL="DEFAULT"
 fi
 
-url=`ssh_upload_and_run $remote_host $TMP_INSTALL $findplatform_path --url`
+if [ -z "${platform_force}" ]; then
+    url=`ssh_upload_and_run $remote_host $TMP_INSTALL $findplatform_path --url`
+else
+    url=`ssh_upload_and_run $remote_host $TMP_INSTALL $findplatform_path --url --force ${platform_force}`
+fi
+
 if [ "x$url" == "x" ]; then
     # Attempt in a different way
     url=`ssh_find_remote $remote_host $findplatform_path`
