@@ -54,7 +54,10 @@ account name.
 
 \begin{itemize}
 
-\item None.
+\item \Macro{NOT\_RESPONDING\_TIMEOUT} now internally adds some random skew
+to avoid synchronization of heartbeat messages, which can lead to UDP
+buffer overflow and incorrect determination that daemons are hung.
+\Ticket{3510}
 
 \end{itemize}
 
