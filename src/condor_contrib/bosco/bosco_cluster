@@ -10,6 +10,9 @@ PASSPHRASE_LOCATION=$HOME/.bosco/.pass
 # Bosco cluster list location
 CLUSTERLIST_LOCATION=$HOME/.bosco/.clusterlist
 
+# SSH Control Path
+ssh_control_path="/tmp/bosco_ssh_control.%r@%h:%p"
+
 # Executables
 TR=tr
 
@@ -72,6 +75,9 @@ start_ssh () {
     # Call the external program to do ssh-add
     bosco_ssh_start
     if [ $? -eq 0 ]; then
+        # Make a master ssh connection
+        ssh -o ControlMaster=auto -o "ControlPath=$ssh_control_path" -MNn $remote_host &
+        ssh_master_connection=$!
         return 0
     else
         return 1
@@ -98,7 +104,7 @@ ssh_upload_and_run () {
         ssh $remote_host "mkdir -p $start_dir" 
     fi
     scp $local_script $remote_host:$start_dir/bosco_run
-    cmd_out=`ssh $remote_host "cd $start_dir; chmod +x bosco_run; ./bosco_run $@"  2>/dev/null`
+    cmd_out=`ssh -o ControlMaster=auto -o "ControlPath=$ssh_control_path" $remote_host "cd $start_dir; chmod +x bosco_run; ./bosco_run $@"  2>/dev/null`
     #cmd_out=`ssh $remote_host "cd $start_dir; chmod +x bosco_run; ./bosco_run $4 $5 $6"`
     cmd_ec=$?
     if [ $cmd_ec -eq 0 ]; then
@@ -291,6 +297,11 @@ get_min_queue () {
 
 
 stop_ssh () {
+    # Shut down the master ssh socket
+    if [ "x$ssh_master_connection" != "x" ]; then
+        kill $ssh_master_connection
+    fi
+    
     # Shut down ssh-agent
     eval `ssh-agent -sk` > /dev/null
 }
@@ -701,7 +712,7 @@ fi
 if [ "$cluster_type" == "pbs" ]; then
     # Get the queue information
     echo -n "Detecting PBS cluster configuration..."
-    qmgr_out=`ssh $remote_host /bin/bash -c -i "'qmgr -c \"print server\"'" `
+    qmgr_out=`ssh -o ControlMaster=auto -o ControlPath=$ssh_control_path $remote_host /bin/bash -c -i "'qmgr -c \"print server\"'" `
 
     # Get the default queue
     default_queue=`expr "$qmgr_out" : '.*set server default_queue = \([a-zA-Z0-9_]*\)'`
@@ -841,7 +852,8 @@ rsync -aq $bosco_passwd_file $local_install_dir/campus_factory/share/glidein_job
 rsync -aq $bosco_passwd_file $remote_glite_dir/etc 2>/dev/null
 
 # Do the actual rsync
-show_progress "Installing on cluster $remote_host" rsync -aq $local_install_dir $remote_host:
+show_progress "Installing on cluster $remote_host" rsync -aq -e \"ssh -o ControlMaster=auto -o ControlPath=$ssh_control_path\" $local_install_dir $remote_host:
+rm -rf $tmp_install_dir
 
 # Add the cluster to the cluster list
 add_cluster_to_list $remote_host $max_queued $cluster_type
