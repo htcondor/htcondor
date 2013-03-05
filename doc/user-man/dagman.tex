@@ -2001,7 +2001,6 @@ Figure~\ref{fig:dagman-splice-s1} illustrates the resulting DAG.
   PARENT X2 CHILD B
 
   # END DAG FILE s1.dag
-
 \end{verbatim}
 
 \begin{figure}
@@ -2009,8 +2008,6 @@ Figure~\ref{fig:dagman-splice-s1} illustrates the resulting DAG.
 \includegraphics{user-man/splice-s1.eps}
 \caption{\label{fig:dagman-splice-s1} The DAG described by \File{s1.dag}.}
 \end{figure}
-
-
 
 The top level DAG in the hierarchy of this complex example
 is described by the DAG input file \File{toplevel.dag}.
@@ -2074,6 +2071,61 @@ will contain DIR specifications, so the rescue DAG must be run
 \emph{without} the \Arg{-usedagdir} argument.
 
 
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
+\item[Splices and the RETRY of a Node]
+\end{description}
+
+The nodes of a splice are incorporated into a top level DAG;
+these nodes are scoped and named.
+Once incorporated in this way, the splice name cannot be used
+to cause RETRY of what would be the entire splice.
+RETRY is applied on a node basis, not on a splice basis.
+
+Here is an example showing a RETRY that cannot work.
+\begin{verbatim}
+  # top level DAG input file
+  JOB    A a.sub
+  SPLICE B b.dag
+  PARENT A  CHILD B
+
+  # cannot work, as B is not a node in the DAG once
+  # splice B is incorporated
+  RETRY B
+\end{verbatim}
+
+To effect RETRY on a specific node within a splice,
+the scoped name may be used.
+However, this subverts the intent of using a splice.
+Here is a similar example, assuming that RETRY is desired
+on just node X within the subgraph described by splice B.
+\begin{verbatim}
+  # top level DAG input file
+  JOB    A a.sub
+  SPLICE B b.dag
+  PARENT A  CHILD B
+
+  # RETRY just node X within splice B;  assumes that
+  # this top level DAG knows the node name within B
+  RETRY B+X
+\end{verbatim}
+
+An alternative implementation when RETRY is desired on an
+entire subgraph of a DAG is to create and use a SUBDAG
+instead of a splice.
+This has the potential drawback of all SUBDAGs,
+in that the SUBDAG is its own distinct job,
+with its own instance of \Condor{dagman}.
+Here is the same example, now defining job B as a SUBDAG,
+and effecting RETRY on that SUBDAG.
+\begin{verbatim}
+  # top level DAG input file
+  JOB    A a.sub
+  SUBDAG EXTERNAL B b.dag
+  PARENT A  CHILD B
+
+  RETRY B 3
+\end{verbatim}
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
 \begin{description}
