@@ -229,10 +229,12 @@ FileTransfer::~FileTransfer()
 	}
 	if (TransSock) free(TransSock);
 	stopServer();
-	if( TransThreadTable && TransThreadTable->getNumElements() == 0 ) {
-		delete TransThreadTable;
-		TransThreadTable = NULL;
-	}
+	// Do not delete the TransThreadTable. There may be other FileTransfer
+	// objects out there planning to use it.
+	//if( TransThreadTable && TransThreadTable->getNumElements() == 0 ) {
+	//	delete TransThreadTable;
+	//	TransThreadTable = NULL;
+	//}
 #ifdef WIN32
 	if (perm_obj) delete perm_obj;
 #endif
