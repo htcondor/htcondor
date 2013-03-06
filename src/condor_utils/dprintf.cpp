@@ -52,7 +52,7 @@
 #include "log_rotate.h"
 #include "dprintf_internal.h"
 
-extern const char * const _condor_DebugFlagNames[];
+extern const char *_condor_DebugFlagNames[];
 
 static FILE *debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool dont_panic);
 static void debug_unlock_it(struct DebugFileInfo* it);

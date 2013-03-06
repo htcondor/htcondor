@@ -51,7 +51,7 @@ DebugOutputChoice DebugVerbose = 0;
 */
 int		_condor_dprintf_works = 0;
 
-const char * const _condor_DebugFlagNames[] = {
+const char *_condor_DebugFlagNames[] = {
 #if !defined D_CATEGORY_MASK
 	"D_ALWAYS", "D_SYSCALLS", "D_CKPT", "D_HOSTNAME", "D_PERF_TRACE", "D_LOAD",
 	"D_EXPR", "D_PROC", "D_JOB", "D_MACHINE", "D_FULLDEBUG", "D_NFS",

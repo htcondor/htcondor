@@ -43,9 +43,9 @@ using std::string;
 
 extern char		*DebugLock;
 #ifdef D_CATEGORY_MASK
-extern const char * const _condor_DebugFlagNames[D_CATEGORY_COUNT];
+extern const char		*_condor_DebugFlagNames[D_CATEGORY_COUNT];
 #else
-extern const char * const _condor_DebugFlagNames[D_NUMLEVELS];
+extern const char		*_condor_DebugFlagNames[D_NUMLEVELS];
 #endif
 
 extern int		DebugUseTimestamps;
