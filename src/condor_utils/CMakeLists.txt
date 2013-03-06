@@ -68,6 +68,15 @@ else()
 endif()
 set_target_properties( condor_utils PROPERTIES OUTPUT_NAME "${UTILS_LIB_NAME}" )
 
+# for linux also make a static version of condor_utils
+#
+if (LINUX OR DARWIN)
+   condor_static_lib( condor_utils_s "${HeaderFiles};${SourceFiles};${EXTRA_SRCS}" )
+   add_dependencies( condor_utils_s utils_genparams syscall_numbers )
+   set_target_properties( condor_utils_s PROPERTIES OUTPUT_NAME "${UTILS_LIB_NAME}" )
+endif(LINUX OR DARWIN)
+
+
 # Brain twister:
 #
 # If you dynamicly load a library which links against libcondor_utils (such as

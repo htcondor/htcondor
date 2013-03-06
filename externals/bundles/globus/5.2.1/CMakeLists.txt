@@ -123,6 +123,7 @@ if (WITH_GLOBUS)
 							INSTALL_COMMAND touch ${GLOBUS_INSTALL_LOC}/done)
 
 			## Set all the config information
+			set (GLOBUS_FOUND_STATIC "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_common.a;${HAVE_LIBLTDL}")
 			if ( LINUX )
 				set (GLOBUS_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_common.so;${HAVE_LIBLTDL}")
 			elseif( DARWIN )
@@ -232,6 +233,7 @@ if (WITH_GLOBUS)
 		set( HAVE_EXT_GLOBUS ON PARENT_SCOPE )
 		set( GLOBUS_FLAVOR ${GLOBUS_FLAVOR} PARENT_SCOPE )
 		set( GLOBUS_FOUND ${GLOBUS_FOUND} PARENT_SCOPE )
+		set( GLOBUS_FOUND_STATIC ${GLOBUS_FOUND_STATIC} PARENT_SCOPE )
 
 		if (GLOBUS_GRID_UNIVERSE_COMMON)
 			message( STATUS "(GLOBUS_GRID_UNIVERSE_COMMON=${GLOBUS_GRID_UNIVERSE_COMMON})" )

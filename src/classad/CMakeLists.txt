@@ -91,9 +91,11 @@ if (NOT WINDOWS)
   if ( LINUX OR DARWIN )
 	# set external reference to the shared library for linux
 	set (CLASSADS_FOUND classad)
+	set (CLASSADS_FOUND_STATIC classads)
   else()
 	# set external reference to the static library for non-linux
 	set (CLASSADS_FOUND classads)
+	set (CLASSADS_FOUND_STATIC classads)
   endif()
 
   ##condor_exe( classad_functional_tester "classad_functional_tester.cpp" ${C_BIN} "${CLASSADS_FOUND};${PCRE_FOUND};${DL_FOUND}" OFF)
@@ -115,8 +117,13 @@ else()
 	condor_selective_glob("attrrefs.cpp;common.cpp;collection*;classadCache.*;fnCall.cpp;expr*;indexfile*;lexer*;literals.cpp;matchClassad.cpp;classad.cpp;debug.cpp;operators.cpp;util.cpp;value.cpp;query.cpp;sink.cpp;source.cpp;transaction.cpp;view.cpp;xml*" ClassadSrcs)
 	add_library( classads STATIC ${ClassadSrcs} )
 	set (CLASSADS_FOUND classads)
+	set (CLASSADS_FOUND_STATIC classads)
 
 endif()
+
+set( CLASSADS_FOUND ${CLASSADS_FOUND} PARENT_SCOPE )
+set( CLASSADS_FOUND_STATIC ${CLASSADS_FOUND_STATIC} PARENT_SCOPE )
+
 
 condor_post_external( classads include OFF )
 

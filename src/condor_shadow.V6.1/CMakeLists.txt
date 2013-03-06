@@ -19,4 +19,8 @@
 
 ## Create targets
 file( GLOB shadowRmvElements Example* *.t.* )
+if (LINUX OR DARWIN)
+  condor_daemon( shadow_s "${shadowRmvElements}" "${CONDOR_LIBS_STATIC}" "${C_SBIN}" OFF )
+endif(LINUX OR DARWIN)
 condor_daemon( shadow "${shadowRmvElements}" "${CONDOR_LIBS}" "${C_SBIN}" OFF )
+
