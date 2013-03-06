@@ -119,53 +119,39 @@ CollectableT* invalidateCollectable(const ClassAd& ad, CollectablesT& collectabl
 
 // slots are special due to their dynamic/partitionable links
 // and high volume
-bool updateSlot(const ClassAd& ad, SlotMapType& slots)
+void updateSlotID(Slot* slot, SlotDateMapType& slot_ids)
 {
-    
-    Slot* status = NULL;
-    status = updateCollectable<SlotMapType,Slot>(ad, slots);
     //TODO: fix association with other slots
     //TODO: update birthdate map
-    return (status!=NULL);
+    if (slot) {
+        slot_ids.insert(make_pair(slot->DaemonStartTime,slot));
+    }
 }
 
-// masters like slots are high volume
-bool updateMaster(const ClassAd& ad, MasterMapType& masters)
+void invalidateSlotID(Slot* slot, SlotDateMapType& slot_ids)
 {
-    Master* status = NULL;
-    status = updateCollectable<MasterMapType,Master>(ad, masters);
-    //TODO: update birthdate map
-    return (status!=NULL);
-}
-
-Slot* invalidateSlot(const ClassAd& ad, SlotMapType& slots)
-{
-    Slot* status = NULL;
-    status = invalidateCollectable<SlotMapType,Slot>(ad, slots);
     //TODO: disassociate links to dynamic slots
     //TODO: update birthdate map
-    return status;
-}
-
-Master* invalidateMaster(const ClassAd& ad, MasterMapType& masters)
-{
-    Master* status = NULL;
-    status = invalidateCollectable<MasterMapType,Master>(ad, masters);
-    //TODO: update birthdate map
-    return status;
+    if (slot) {
+        slot_ids.erase(slot->DaemonStartTime);
+    }
 }
 
 // daemonCore methods
 bool
 CollectorObject::update(int command, const ClassAd& ad)
 {
-    bool status = false;
+    Collectable* status = NULL;
     switch (command) {
         case UPDATE_COLLECTOR_AD:
             status = updateCollectable<CollectorMapType,Collector>(ad, collectors);
             break;
         case UPDATE_MASTER_AD:
-            status = updateMaster(ad, masters);
+            status = updateCollectable<MasterMapType,Master>(ad, masters);
+            if (status) {
+                Master* master = static_cast<Master*>(status);
+                master_ids.insert(make_pair(master->DaemonStartTime,master));
+            }
             break;
         case UPDATE_NEGOTIATOR_AD:
             status = updateCollectable<NegotiatorMapType,Negotiator>(ad, negotiators);
@@ -174,7 +160,8 @@ CollectorObject::update(int command, const ClassAd& ad)
             status = updateCollectable<SchedulerMapType,Scheduler>(ad, schedulers);
             break;
         case UPDATE_STARTD_AD:
-            status = updateSlot(ad, slots);
+            status = updateCollectable<SlotMapType,Slot>(ad, slots);
+            updateSlotID(static_cast<Slot*>(status), slot_ids);
             break;
         case UPDATE_SUBMITTOR_AD:
             status = updateCollectable<SubmitterMapType,Submitter>(ad, submitters);
@@ -195,7 +182,7 @@ CollectorObject::invalidate(int command, const ClassAd& ad)
             status = invalidateCollectable<CollectorMapType,Collector>(ad, collectors);
             break;
         case INVALIDATE_MASTER_ADS:
-            status = invalidateMaster(ad, masters);
+            status = invalidateCollectable<MasterMapType,Master>(ad, masters);
             break;
         case INVALIDATE_NEGOTIATOR_ADS:
             status = invalidateCollectable<NegotiatorMapType,Negotiator>(ad, negotiators);
@@ -204,7 +191,8 @@ CollectorObject::invalidate(int command, const ClassAd& ad)
             status = invalidateCollectable<SchedulerMapType,Scheduler>(ad, schedulers);
             break;
         case INVALIDATE_STARTD_ADS:
-            status = invalidateSlot(ad, slots);
+            status = invalidateCollectable<SlotMapType,Slot>(ad, slots);
+            invalidateSlotID(static_cast<Slot*>(status), slot_ids);
             break;
         case INVALIDATE_SUBMITTOR_ADS:
             status = invalidateCollectable<SubmitterMapType,Submitter>(ad, submitters);
