@@ -1018,6 +1018,7 @@ debug_close_lock(void)
 			DebugUnlockBroken = 1;
 			_condor_dprintf_exit( flock_errno, msg_buf );
 		}
+		DebugIsLocked = 0;
 	}
 }
 
