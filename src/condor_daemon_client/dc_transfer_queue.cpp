@@ -424,12 +424,11 @@ DCTransferQueue::SendReport(time_t now,bool disconnect)
 		{
 			dprintf(D_FULLDEBUG,"Failed to send transfer queue i/o report.\n");
 		}
-	}
-
-	if( disconnect ) {
-			// Tell the server we are done.
-		m_xfer_queue_sock->put("");
-		m_xfer_queue_sock->end_of_message();
+		if( disconnect ) {
+				// Tell the server we are done.
+			m_xfer_queue_sock->put("");
+			m_xfer_queue_sock->end_of_message();
+		}
 	}
 
 	m_recent_bytes_sent = 0;
