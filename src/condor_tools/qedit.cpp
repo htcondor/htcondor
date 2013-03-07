@@ -107,6 +107,8 @@ main(int argc, char *argv[])
 		nextarg++;
 	}
 
+printf( "DIAG schedd_name: <%s>\n", schedd_name.Value() );//TEMPTEMP
+printf( "DIAG pool_name: <%s>\n", pool_name.Value() );//TEMPTEMP
 	DCSchedd schedd((schedd_name.Length() == 0) ? NULL : schedd_name.Value(),
 					(pool_name.Length() == 0) ? NULL   : pool_name.Value());
 	if ( schedd.locate() == false ) {
@@ -128,6 +130,8 @@ main(int argc, char *argv[])
 	}
 
 	// Open job queue 
+printf( "DIAG schedd.addr() <%s>\n", schedd.addr() );//TEMPTEMP
+printf( "DIAG schedd.version() <%s>\n", schedd.version() );//TEMPTEMP
 	q = ConnectQ( schedd.addr(), 0, false, NULL, NULL, schedd.version() );
 	if( !q ) {
 		fprintf( stderr, "Failed to connect to queue manager %s\n", 

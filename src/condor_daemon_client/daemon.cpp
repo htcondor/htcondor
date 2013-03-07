@@ -84,6 +84,7 @@ Daemon::Daemon( daemon_t tType, const char* tName, const char* tPool )
 		EXCEPT ( "Daemon constructor (type=COLLECTOR, name=NULL) called" );
 		}*/
 
+printf( "DIAG Daemon(0x%p)::Daemon(%d, %s, %s)\n", this, tType, tName, tPool );//TEMPTEMP
 	common_init();
 	_type = tType;
 
@@ -920,15 +921,19 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 bool
 Daemon::locate( void )
 {
+printf( "DIAG Daemon(0x%p)::locate()\n", this );//TEMPTEMP
 	bool rval=false;
 
 		// Make sure we only call locate() once.
 	if( _tried_locate ) {
+printf( "  DIAG 1010\n" );//TEMPTEMP
 			// If we've already been here, return whether we found
 			// addr or not, the best judge for if locate() worked.
 		if( _addr ) {
+printf( "  DIAG 1011\n" );//TEMPTEMP
 			return true;
 		} else {
+printf( "  DIAG 1012\n" );//TEMPTEMP
 			return false;
 		}
 	}
@@ -952,6 +957,7 @@ Daemon::locate( void )
 		rval = getDaemonInfo( CLUSTER_AD );
 		break;
 	case DT_SCHEDD:
+printf( "  DIAG 1020\n" );//TEMPTEMP
 		setSubsystem( "SCHEDD" );
 		rval = getDaemonInfo( SCHEDD_AD );
 		break;
@@ -1015,7 +1021,9 @@ Daemon::locate( void )
 		EXCEPT( "Unknown daemon type (%d) in Daemon::locate", (int)_type );
 	}
 
+printf( "  DIAG 1030\n" );//TEMPTEMP
 	if( ! rval) {
+printf( "  DIAG 1031\n" );//TEMPTEMP
 			// _error will already be set appropriately.
 		return false;
 	}
@@ -1027,7 +1035,9 @@ Daemon::locate( void )
 		// trim off the domain for _hostname.
 	initHostnameFromFull();
 
+printf( "  DIAG 1040\n" );//TEMPTEMP
 	if( _port <= 0 && _addr ) {
+printf( "  DIAG 1041\n" );//TEMPTEMP
 			// If we have the sinful string and no port, fill it in
 		_port = string_to_port( _addr );
 		dprintf( D_HOSTNAME, "Using port %d based on address \"%s\"\n",

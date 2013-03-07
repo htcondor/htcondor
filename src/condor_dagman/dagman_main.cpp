@@ -133,20 +133,15 @@ Dagman::Dagman() :
 	_maxJobHolds(100),
 	_runPost(true),
 	_defaultPriority(0),
-	_claim_hold_time(20)
+	_claim_hold_time(20),
+	_dagmanClassad(NULL)
 {
     debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
 }
 
-
 Dagman::~Dagman()
 {
-	// check if dag is NULL, since we may have 
-	// already delete'd it in the dag.CleanUp() method.
-	if ( dag != NULL ) {
-		delete dag;
-		dag = NULL;
-	}
+	CleanUp();
 }
 
 	// 
@@ -618,6 +613,9 @@ void main_init (int argc, char ** const argv) {
 		// get dagman job id from environment, if it's there
 		// (otherwise it will be set to "-1.-1.-1")
 	dagman.DAGManJobId.SetFromString( getenv( EnvGetName( ENV_ID ) ) );
+
+	dagman._dagmanClassad = new DagmanClassad( dagman.DAGManJobId );
+	//TEMPTEMP -- should we do an update here??
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Minimum legal version for a .condor.sub file to be compatible
@@ -1250,6 +1248,9 @@ print_status() {
 	debug_printf( DEBUG_VERBOSE, "%d job proc(s) currently held\n",
 				dagman.dag->NumHeldJobProcs() );
 	dagman.dag->PrintDeferrals( DEBUG_VERBOSE, false );
+
+	dagman._dagmanClassad->Update( total, done, pre, submitted, post,
+				ready, failed, unready );
 }
 
 void condor_event_timer () {
