@@ -633,7 +633,9 @@ void INFNBatchJob::doEvaluateState()
 				errorString = "Job removed from batch queue manually";
 				SetRemoteJobId( NULL );
 				gmState = GM_HOLD;
-			} else if ( jobProxy && remoteProxyExpireTime < jobProxy->expiration_time ) {
+			} else if ( !myResource->GahpIsRemote && jobProxy &&
+						remoteProxyExpireTime < jobProxy->expiration_time ) {
+				// The ft-gahp doesn't support forwarding a refreshed proxy
 					gmState = GM_REFRESH_PROXY;
 			} else {
 				if ( lastPollTime < enteredCurrentGmState ) {
