@@ -1027,6 +1027,16 @@ that this job is a \emph{nice} job, raising its user priority value,
 thus causing it to run on a machine only when no other HTCondor jobs want 
 the machine.
 
+%%% ClassAd attribute: Nonessential
+\index{ClassAd job attribute!Nonessential}
+\index{Nonessential!job ClassAd attribute}
+\item[\AdAttr{Nonessential}:]  A boolean value only relevant to grid universe
+jobs, which when \Expr{True} tells HTCondor to simply abort (remove) 
+any problematic job, instead of putting the job on hold.
+It is the equivalent of doing \Condor{rm} followed by 
+\Condor{rm} \Opt{-forcex} any time the job would have otherwise gone on hold. 
+If not explicitly set to \Expr{True}, the default value will be \Expr{False}.
+
 %%% ClassAd attribute: NTDomain
 \index{ClassAd job attribute!NTDomain}
 \index{NTDomain!job ClassAd attribute}
