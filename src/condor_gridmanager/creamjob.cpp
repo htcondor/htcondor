@@ -215,7 +215,6 @@ CreamJob::CreamJob( ClassAd *classad )
 	lastSubmitAttempt = 0;
 	numSubmitAttempts = 0;
 	jmProxyExpireTime = 0;
-	jmLifetime = 0;
 	resourceManagerString = NULL;
 	myResource = NULL;
 	jobProxy = NULL;
@@ -1174,7 +1173,6 @@ void CreamJob::doEvaluateState()
 			SetRemoteJobStatus( NULL );
 			gahpErrorString = "";
 			errorString = "";
-			jmLifetime = 0;
 			UpdateJobLeaseSent( -1 );
 			myResource->CancelSubmit( this );
 			if ( remoteJobId != NULL ) {

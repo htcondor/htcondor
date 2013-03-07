@@ -85,7 +85,6 @@ class CreamJob : public BaseJob
 	time_t lastSubmitAttempt;
 	int numSubmitAttempts;
 	time_t jmProxyExpireTime;
-	time_t jmLifetime;
 	char *resourceManagerString;
 	char *resourceBatchSystemString;
 	char *resourceQueueString;
