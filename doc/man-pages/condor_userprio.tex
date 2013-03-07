@@ -10,6 +10,9 @@
 \Description 
 \Condor{userprio} either modifies priority-related information
 or displays priority-related information.
+Displayed information comes from the accountant log,
+where the \Condor{negotiator} daemon stores historical usage information
+in the file at \File{\MacroUNI{SPOOL}/Accountantnew.log}.
 Which fields are displayed changes based on command line arguments.
 \Condor{userprio} with no arguments, 
 lists the active users along with their priorities,
