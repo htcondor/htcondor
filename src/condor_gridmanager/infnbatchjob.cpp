@@ -173,6 +173,11 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		jobAd->AssignExpr( ATTR_HOLD_REASON, "Undefined" );
 	}
 
+	int int_value = 0;
+	if ( jobAd->LookupInteger( ATTR_DELEGATED_PROXY_EXPIRATION, int_value ) ) {
+		remoteProxyExpireTime = (time_t)int_value;
+	}
+
 	buff = "";
 	jobAd->LookupString( ATTR_GRID_RESOURCE, buff );
 	if ( buff != "" ) {
@@ -588,6 +593,8 @@ void INFNBatchJob::doEvaluateState()
 				SetRemoteJobId( job_id_string );
 				if(jobProxy) {
 					remoteProxyExpireTime = jobProxy->expiration_time;
+					jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
+								   (int)remoteProxyExpireTime );
 				}
 				WriteGridSubmitEventToUserLog( jobAd );
 				gmState = GM_SUBMIT_SAVE;
@@ -704,6 +711,8 @@ void INFNBatchJob::doEvaluateState()
 					break;
 				}
 				remoteProxyExpireTime = jobProxy->expiration_time;
+				jobAd->Assign( ATTR_DELEGATED_PROXY_EXPIRATION,
+							   (int)remoteProxyExpireTime );
 				gmState = GM_SUBMITTED;
 			}
 		} break;
@@ -958,6 +967,11 @@ void INFNBatchJob::doEvaluateState()
 				JobEvicted();
 			}
 
+			if ( remoteProxyExpireTime != 0 ) {
+				remoteProxyExpireTime = 0;
+				jobAd->AssignExpr( ATTR_DELEGATED_PROXY_EXPIRATION, "Undefined" );
+			}
+
 			// If there are no updates to be done when we first enter this
 			// state, requestScheddUpdate will return done immediately
 			// and not waste time with a needless connection to the
@@ -975,7 +989,6 @@ void INFNBatchJob::doEvaluateState()
 				break;
 			}
 			m_sandboxPath = "";
-			remoteProxyExpireTime = 0;
 			submitLogged = false;
 			executeLogged = false;
 			submitFailedLogged = false;
