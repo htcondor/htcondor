@@ -774,18 +774,24 @@ As of HTCondor version 7.5.1,
 the HTCondor RPM installs into FHS locations.
 
 Yum repositories are at
- \URL{http://www.cs.wisc.edu/condor/yum/} .
+ \URL{http://research.cs.wisc.edu/htcondor/yum/} .
 The repositories are named to distinguish stable releases from
 development releases and by Red Hat version number. 
-The 4 repositories are:
+The 6 repositories are:
 \begin{itemize}
   \item \File{condor-stable-rhel4.repo}
   \item \File{condor-stable-rhel5.repo}
+  \item \File{condor-stable-rhel6.repo}
   \item \File{condor-development-rhel4.repo}
   \item \File{condor-development-rhel5.repo}
+  \item \File{condor-development-rhel6.repo}
 \end{itemize}
 
-Here are an ordered set of steps that get HTCondor running using the RPM.
+For HTCondor to work properly under RHEL5, 
+the Red Hat Network channel called \AdStr{RHEL Virtualization} 
+must be explicitly enabled.
+
+Here is an ordered set of steps that get HTCondor running using the RPM.
 \begin{enumerate}
 \item The HTCondor package will automatically add a \Login{condor} user/group,
 if it does not exist already.
@@ -799,7 +805,7 @@ This example is for the stable series, on RHEL 5.
 \footnotesize
 \begin{verbatim}
   cd /etc/yum.repos.d
-  wget http://www.cs.wisc.edu/condor/yum/repo.d/condor-stable-rhel5.repo
+  wget http://research.cs.wisc.edu/htcondor/yum/repo.d/condor-stable-rhel5.repo
 \end{verbatim}
 \normalsize
 Note that this step need be done only once;
@@ -849,10 +855,10 @@ As of HTCondor version 7.5.1,
 the HTCondor Debian package installs into FHS locations.
 
 The HTCondor APT repositories are specified at
- \URL{http://www.cs.wisc.edu/condor/debian/} .
+ \URL{http://research.cs.wisc.edu/htcondor/debian/} .
 See this web page for repository information.
 
-Here are an ordered set of steps that get HTCondor running.
+Here is an ordered set of steps that get HTCondor running.
 \begin{enumerate}
 \item The HTCondor package will automatically add a \Login{condor} user/group,
 if it does not exist already.
@@ -868,10 +874,10 @@ operating system-specific lines is in
 the file \File{/etc/apt/sources.list} .
 \footnotesize
 \begin{verbatim}
-deb http://www.cs.wisc.edu/condor/debian/stable/ etch contrib
-deb http://www.cs.wisc.edu/condor/debian/development/ etch contrib
-deb http://www.cs.wisc.edu/condor/debian/stable/ lenny contrib
-deb http://www.cs.wisc.edu/condor/debian/development/ lenny contrib
+deb http://research.cs.wisc.edu/htcondor/debian/stable/ lenny contrib
+deb http://research.cs.wisc.edu/htcondor/debian/development/ lenny contrib
+deb http://research.cs.wisc.edu/htcondor/debian/stable/ squeeze contrib
+deb http://research.cs.wisc.edu/htcondor/debian/development/ squeeze contrib
 \end{verbatim}
 \normalsize
 Note that this step need be done only once;
