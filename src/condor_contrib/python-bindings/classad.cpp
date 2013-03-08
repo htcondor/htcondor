@@ -71,7 +71,7 @@ boost::python::object ExprTreeHolder::Evaluate() const
     long long intvalue;
     bool boolvalue;
     double realvalue;
-    classad::ClassAd *advalue;
+    classad::ClassAd *advalue = NULL;
     boost::shared_ptr<ClassAdWrapper> wrap;
     PyObject* obj;
     classad_shared_ptr<classad::ExprList> exprlist;
