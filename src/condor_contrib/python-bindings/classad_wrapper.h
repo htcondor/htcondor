@@ -6,6 +6,8 @@
 #include <boost/python.hpp>
 #include <boost/iterator/transform_iterator.hpp>
 
+struct ExprTreeHolder;
+
 struct AttrPairToFirst :
   public std::unary_function<std::pair<std::string, classad::ExprTree*> const&, std::string>
 {
@@ -43,7 +45,7 @@ struct ClassAdWrapper : classad::ClassAd, boost::python::wrapper<classad::ClassA
 
     void InsertAttrObject( const std::string &attr, boost::python::object value);
 
-    boost::python::object LookupExpr(const std::string &attr) const;
+    ExprTreeHolder LookupExpr(const std::string &attr) const;
 
     std::string toRepr();
 
@@ -70,6 +72,10 @@ struct ClassAdWrapper : classad::ClassAd, boost::python::wrapper<classad::ClassA
     ClassAdWrapper();
 
     ClassAdWrapper(const std::string &str);
+
+    ClassAdWrapper(const boost::python::dict);
+
+    virtual ~ClassAdWrapper();
 };
 
 #endif
