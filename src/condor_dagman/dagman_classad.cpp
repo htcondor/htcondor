@@ -1,3 +1,4 @@
+//TEMPTEMP -- verify that I didn't make any unintended changes in the daemoncore files, etc.
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -28,16 +29,6 @@
 DagmanClassad::DagmanClassad( const CondorID &DAGManJobId )
 {
 	debug_printf( DEBUG_QUIET, "DagmanClassad::DagmanClassad()\n" );//TEMPTEMP
-	printf( "DIAG DagmanClassad::DagmanClassad()\n" );//TEMPTEMP
-
-	const char *tmp = param( "SCHEDD_ADDRESS_FILE" );//TEMPTEMP
-	printf( "DIAG SCHEDD_ADDRESS_FILE: <%s>\n", tmp );//TEMPTEMP
-	tmp = param( "SCHEDD_DAEMON_AD_FILE" );//TEMPTEMP
-	printf( "DIAG SCHEDD_DAEMON_AD_FILE: <%s>\n", tmp );//TEMPTEMP
-	tmp = param( "LOG" );//TEMPTEMP
-	printf( "DIAG LOG: <%s>\n", tmp );//TEMPTEMP
-	tmp = getenv( "_CONDOR_SCHEDD_ADDRESS_FILE" );
-	printf( "DIAG _CONDOR_SCHEDD_ADDRESS_FILE: <%s>\n", tmp );//TEMPTEMP
 
 	_valid = false;
 
@@ -46,11 +37,8 @@ DagmanClassad::DagmanClassad( const CondorID &DAGManJobId )
 	_dagmanId = DAGManJobId;
 
 #if 1 //TEMPTEMP
-	printf( "DIAG 2010\n" );//TEMPTEMP
 	_schedd = new DCSchedd( NULL, NULL );
-	printf( "DIAG 2011\n" );//TEMPTEMP
 	if ( !_schedd || !_schedd->locate() ) {
-	printf( "DIAG 2012\n" );//TEMPTEMP
 		const char *errMsg = _schedd ? _schedd->error() : "?";
 		debug_printf( DEBUG_QUIET,
 					"ERROR: can't find address of local schedd (%s)\n",
@@ -60,7 +48,6 @@ DagmanClassad::DagmanClassad( const CondorID &DAGManJobId )
 #endif //TEMPTEMP
 
 	_valid = true;
-	printf( "  DIAG end of DagmanClassad::DagmanClassad()\n" );//TEMPTEMP
 }
 
 //---------------------------------------------------------------------------
@@ -82,13 +69,9 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 	}
 
 		// Open job queue
-	printf( "DIAG 2110\n" );//TEMPTEMP
 	//TEMPTEMP -- might want to pass CondorError* (first NULL)
 	Qmgr_connection *queue = ConnectQ( _schedd->addr(), 0, false,
 				NULL, NULL, _schedd->version() );
-	//Qmgr_connection *queue = ConnectQ( "<128.105.167.40:54506>", 0, false,//TEMPTEMP!!!
-				//NULL, NULL, "<$CondorVersion: 7.9.5 Mar 06 2013 BuildID: UW_development PRE-RELEASE-UWCS $>" );//TEMPTEMP!!!!
-	printf( "DIAG 2111\n" );//TEMPTEMP
 	if ( !queue ) {
 		debug_printf( DEBUG_QUIET,
 					"ERROR: failed to connect to queue manager\n" );

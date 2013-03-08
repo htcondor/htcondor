@@ -39,7 +39,6 @@
 DCSchedd::DCSchedd( const char* the_name, const char* the_pool ) 
 	: Daemon( DT_SCHEDD, the_name, the_pool )
 {
-printf( "DIAG DCSchedd::DCSchedd()\n" );//TEMPTEMP
 }
 
 

@@ -534,9 +534,6 @@ set_log_dir()
 	if( !logDir ) {
 		return;
 	}
-//TEMPTEMP -- okay -- here in DAGMan we set LOG to "." (because of "-l ." in .condor.sub)
-//TEMPTEMP -- hmm -- if we don't set "-l ." in the .condor.sub file, DAGMan cds into the log directory and tries to open the dag file there!!!
-printf( "DIAG 3010 setting log dir to <%s>\n", logDir );//TEMPTEMP
 	config_insert( "LOG", logDir );
 	make_dir( logDir );
 }
@@ -654,7 +651,6 @@ handle_dynamic_dirs()
 	char buf[256];
 	sprintf( buf, "%s-%d", get_local_ipaddr().to_ip_string().Value(), mypid );
 
-printf( "DIAG 3110 setting log dir to <%s>\n", buf );//TEMPTEMP
 	set_dynamic_dir( "LOG", buf );
 	set_dynamic_dir( "SPOOL", buf );
 	set_dynamic_dir( "EXECUTE", buf );
@@ -1415,7 +1411,6 @@ dc_reconfig()
 
 		// If we're supposed to be using our own log file, reset that here. 
 	if( logDir ) {
-printf( "DIAG 3210\n" );//TEMPTEMP
 		set_log_dir();
 	}
 
@@ -1958,7 +1953,6 @@ int dc_main( int argc, char** argv )
 		// got to do that here, between where we config and where we
 		// setup logging.  Note: we also have to do this in reconfig.
 		if( logDir ) {
-printf( "DIAG 3310\n" );//TEMPTEMP
 			set_log_dir();
 		}
 
