@@ -794,17 +794,18 @@ remote_base_dir_host="bosco"
 tmp_install_dir=`mktemp -d /tmp/tmp.XXXXXXXX`
 mkdir -p $tmp_install_dir/$remote_base_dir_host
 local_install_dir=$tmp_install_dir/$remote_base_dir_host
+remote_sandbox_dir=$remote_base_dir_host/sandbox
 
 # TODO: uncomment to enable subdirs
 #remote_base_dir_host="$remote_base_dir_root/$remote_host"
 remote_glite_dir="$local_install_dir/glite"
 mkdir -p $remote_glite_dir
-remote_sandbox_dir="$local_install_dir/sandbox"
-mkdir -p $remote_sandbox_dir
+local_sandbox_dir="$local_install_dir/sandbox"
+mkdir -p $local_sandbox_dir
 
 #ssh $remote_host "mkdir -p bosco/glite/lib; mkdir -p bosco/glite/log; mkdir -p bosco/sandbox"
 # Make the necessary remote directories
-mkdir -p $remote_glite_dir/lib; mkdir -p $remote_glite_dir/log; mkdir -p $remote_sandbox_dir
+mkdir -p $remote_glite_dir/lib; mkdir -p $remote_glite_dir/log; mkdir -p $local_sandbox_dir
 # TODO: uncomment to enable subdirs
 #ssh $remote_host "ln -sfn $remote_base_dir_host $remote_base_dir_default"
 
