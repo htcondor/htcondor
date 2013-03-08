@@ -99,7 +99,7 @@ StarterHookMgr::initialize(ClassAd* job_ad)
 		dprintf(D_FULLDEBUG,
 				"Job does not define %s, not invoking any job hooks.\n",
 				ATTR_HOOK_KEYWORD);
-		return true;
+		//return true;
 	}
 	else {
 		dprintf(D_FULLDEBUG,
@@ -107,6 +107,7 @@ StarterHookMgr::initialize(ClassAd* job_ad)
 				ATTR_HOOK_KEYWORD, m_hook_keyword);
 	}
 	if (!reconfig()) return false;
+	if (!m_hook_prepare_machine && !tmp) return true;
 	return HookClientMgr::initialize();
 }
 
@@ -120,6 +121,8 @@ StarterHookMgr::reconfig()
     if (!getHookPath(HOOK_PREPARE_JOB, m_hook_prepare_job)) return false;
     if (!getHookPath(HOOK_UPDATE_JOB_INFO, m_hook_update_job_info)) return false;
     if (!getHookPath(HOOK_JOB_EXIT, m_hook_job_exit)) return false;
+	
+	m_hook_prepare_machine = param("STARTER_NETWORK_POLICY_SCRIPT_PATH");
 
 	m_hook_job_exit_timeout = getHookTimeout(HOOK_JOB_EXIT, 30);
 
@@ -192,12 +195,16 @@ StarterHookMgr::tryHookPrepareMachine()
 	MyString hook_stdin;
 	MyString job_classad_str;
 	MyString machine_classad_str;
+	MyString separator_line = MyString("----------\n");
 	ClassAd* job_ad = Starter->jic->jobClassAd();
 	job_ad->sPrint(job_classad_str);
 	ClassAd* machine_ad = Starter->jic->machClassAd();
 	machine_ad->sPrint(machine_classad_str);
 	
-	hook_stdin = job_classad_str + '\n' + machine_classad_str + '\n';
+	hook_stdin = job_classad_str + separator_line + machine_classad_str;
+	dprintf(D_FULLDEBUG, "The job classad is %s\n", job_classad_str.Value());
+	dprintf(D_FULLDEBUG, "The machine classad is %s\n", machine_classad_str.Value());
+	dprintf(D_FULLDEBUG, "The combined job and machine classad is %s\n", hook_stdin.Value());
 
 	HookClient* hook_client = new HookPrepareMachineClient(m_hook_prepare_machine);
 	
@@ -218,7 +225,7 @@ StarterHookMgr::tryHookPrepareMachine()
 		return -1;
 	}
 	
-	dprintf(D_FULLDEBUG, "HOOK_PREPARE_JOB (%s) invoked.\n", m_hook_prepare_machine);
+	dprintf(D_FULLDEBUG, "HOOK_PREPARE_MACHINE (%s) invoked.\n", m_hook_prepare_machine);
 	return 1;
 }
 
@@ -430,14 +437,18 @@ HookPrepareMachineClient::hookExited(int exit_status) {
                 updateAd.dPrint(D_FULLDEBUG);
                         // Insert each expr from the update ad into the machine ad
                 updateAd.ResetExpr();
+		ClassAd* job_ad = Starter->jic->jobClassAd();
                 ClassAd* machine_ad = Starter->jic->machClassAd();
                 const char *name;
                 ExprTree *et;
                 while (updateAd.NextExpr(name, et)) {
                         ExprTree *pCopy = et->Copy();
                         machine_ad->Insert(name, pCopy, false);
+			job_ad->Insert(name, pCopy, false);
                 }
-                dprintf(D_FULLDEBUG, "After Prepare machine hook: merged machine classad:\n");
+		dprintf(D_FULLDEBUG, "After prepare machine hook: merged job classad:\n");
+		job_ad->dPrint(D_FULLDEBUG);
+                dprintf(D_ALWAYS, "After Prepare machine hook: merged machine classad:\n");
                 machine_ad->dPrint(D_FULLDEBUG);
                 Starter->jobEnvironmentReady();
         }
