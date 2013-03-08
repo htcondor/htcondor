@@ -32,8 +32,6 @@
 #include "gahp-client.h"
 #include "transferrequest.h"
 
-#define JM_COMMIT_TIMEOUT	600
-
 class CreamResource;
 
 void CreamJobInit();
@@ -78,7 +76,6 @@ class CreamJob : public BaseJob
 	std::string remoteState;
 	std::string remoteStateFaultString;
 	CreamResource *myResource;
-	time_t lastProbeTime;
 	bool probeNow;
 	time_t enteredCurrentGmState;
 	time_t enteredCurrentRemoteState;
