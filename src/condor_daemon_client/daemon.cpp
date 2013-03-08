@@ -958,8 +958,10 @@ printf( "  DIAG 1012\n" );//TEMPTEMP
 		break;
 	case DT_SCHEDD:
 printf( "  DIAG 1020\n" );//TEMPTEMP
-		setSubsystem( "SCHEDD" );
+		setSubsystem( "SCHEDD" ); //TEMPTEMP -- does this conflict w/ daemoncore in dagman?
+printf( "  DIAG 1021\n" );//TEMPTEMP
 		rval = getDaemonInfo( SCHEDD_AD );
+printf( "  DIAG 1022\n" );//TEMPTEMP
 		break;
 	case DT_STARTD:
 		setSubsystem( "STARTD" );
@@ -1049,6 +1051,8 @@ printf( "  DIAG 1041\n" );//TEMPTEMP
 	if( ! _name && _is_local) {
 		_name = localName();
 	}
+printf( "  DIAG 1050 <%s>\n", addr() );//TEMPTEMP
+printf( "  DIAG 1051 <%s>\n", version() );//TEMPTEMP
 
 	return true;
 }
@@ -1074,32 +1078,40 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 	char				*host = NULL;
 	bool				nameHasPort = false;
 
+printf( "DIAG 1110\n" );//TEMPTEMP
 	if ( ! _subsys ) {
 		dprintf( D_ALWAYS, "Unable to get daemon information because no subsystem specified\n");
 		return false;
 	}
 
 	if( _addr && is_valid_sinful(_addr) ) {
+printf( "DIAG 1112\n" );//TEMPTEMP
 		dprintf( D_HOSTNAME, "Already have address, no info to locate\n" );
 		_is_local = false;
 		return true;
 	}
+printf( "DIAG 1113\n" );//TEMPTEMP
 
 		// If we were not passed a name or an addr, check the
 		// config file for a subsystem_HOST, e.g. SCHEDD_HOST=XXXX
 	if( ! _name  && !_pool ) {
+printf( "DIAG 1120\n" );//TEMPTEMP
 		formatstr( buf, "%s_HOST", _subsys );
+printf( "DIAG buf: <%s>\n", buf.c_str() );//TEMPTEMP
 		char *specified_host = param( buf.c_str() );
 		if ( specified_host ) {
+printf( "DIAG 1121\n" );//TEMPTEMP
 				// Found an entry.  Use this name.
 			_name = strnewp( specified_host );
-			dprintf( D_HOSTNAME, 
+			//TEMPTEMP dprintf( D_HOSTNAME, 
+			dprintf( D_ALWAYS,//TEMPTEMP
 					 "No name given, but %s defined to \"%s\"\n",
 					 buf.c_str(), specified_host );
 			free(specified_host);
 		}
 	}
 	if( _name ) {
+printf( "DIAG 1130\n" );//TEMPTEMP
 		// See if daemon name containts a port specification
 		_port = getPortFromAddr( _name );
 		if ( _port >= 0 ) {
@@ -1117,6 +1129,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 		// _name was explicitly specified as host:port, so this information can
 		// be used directly.  Further name resolution is not necessary.
 	if( nameHasPort ) {
+printf( "DIAG 1140\n" );//TEMPTEMP
 		condor_sockaddr hostaddr;
 		
 		dprintf( D_HOSTNAME, "Port %d specified in name\n", _port );
@@ -1163,6 +1176,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 		// Figure out if we want to find a local daemon or not, and
 		// fill in the various hostname fields.
 	} else if( _name ) {
+printf( "DIAG 1150\n" );//TEMPTEMP
 			// We were passed a name, so try to look it up in DNS to
 			// get the full hostname.
 
@@ -1210,6 +1224,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 			delete [] my_name;
 		}
 	} else if ( ( _type != DT_NEGOTIATOR ) && ( _type != DT_LEASE_MANAGER ) ) {
+printf( "DIAG 1160\n" );//TEMPTEMP
 			// We were passed neither a name nor an address, so use
 			// the local daemon, unless we're NEGOTIATOR, in which case
 			// we'll still query the collector even if we don't have the 
@@ -1225,9 +1240,12 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 		// Now that we have the real, full names, actually find the
 		// address of the daemon in question.
 
+printf( "DIAG 1170\n" );//TEMPTEMP
 	if( _is_local ) {
+printf( "DIAG 1171\n" );//TEMPTEMP
 		bool foundLocalAd = readLocalClassAd( _subsys );
 		if(!foundLocalAd) {
+printf( "DIAG 1172\n" );//TEMPTEMP
 			readAddressFile( _subsys );
 		}
 	}
@@ -1237,6 +1255,7 @@ Daemon::getDaemonInfo( AdTypes adtype, bool query_collector )
 	}
 
 	if( ! _addr ) {
+printf( "DIAG 1180\n" );//TEMPTEMP
 			// If we still don't have it (or it wasn't local), query
 			// the collector for the address.
 		CondorQuery			query(adtype);
@@ -1798,10 +1817,12 @@ Daemon::readLocalClassAd( const char* subsys )
 	std::string param_name;
 
 	formatstr( param_name, "%s_DAEMON_AD_FILE", subsys );
+printf( "DIAG 1310 <%s>\n", param_name.c_str() );
 	addr_file = param( param_name.c_str() );
 	if( ! addr_file ) {
 		return false;
 	}
+printf( "DIAG 1320 <%s>\n", addr_file );
 
 	dprintf( D_HOSTNAME, "Finding classad for local daemon, "
 			 "%s is \"%s\"\n", param_name.c_str(), addr_file );

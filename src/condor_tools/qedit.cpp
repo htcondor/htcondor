@@ -106,6 +106,11 @@ main(int argc, char *argv[])
 		pool_name = argv[nextarg];
 		nextarg++;
 	}
+        const char *tmp = param( "SCHEDD_ADDRESS_FILE" );//TEMPTEMP
+        printf( "DIAG SCHEDD_ADDRESS_FILE: <%s>\n", tmp );//TEMPTEMP
+        tmp = param( "SCHEDD_DAEMON_AD_FILE" );//TEMPTEMP 
+        printf( "DIAG SCHEDD_DAEMON_AD_FILE: <%s>\n", tmp );//TEMPTEMP
+
 
 printf( "DIAG schedd_name: <%s>\n", schedd_name.Value() );//TEMPTEMP
 printf( "DIAG pool_name: <%s>\n", pool_name.Value() );//TEMPTEMP

@@ -1,3 +1,4 @@
+//TEMPTEMP -- okay, I think the solution is to *always* set schedd_addr_file and schedd_classad_file in here; which would require a break in the condor_submit_dag/condor_dagman compatibility
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -85,6 +86,10 @@ int main(int argc, char *argv[])
 		// structures.
 	SubmitDagDeepOptions deepOpts;
 	SubmitDagShallowOptions shallowOpts;
+	//TEMPTEMP -- put shedd stuff into shallowOpts here
+	//TEMPTEMP -- need to explain why we're doing this...
+	shallowOpts.strScheddDaemonAdFile = param( "SCHEDD_DAEMON_AD_FILE" );
+	shallowOpts.strScheddAddressFile = param( "SCHEDD_ADDRESS_FILE" );
 	parseCommandLine(deepOpts, shallowOpts, argc, argv);
 
 	int tmpResult;
@@ -839,6 +844,7 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 	env.SetEnv("_CONDOR_DAGMAN_LOG", shallowOpts.strDebugLog.Value());
 	env.SetEnv("_CONDOR_MAX_DAGMAN_LOG=0");
 	if ( shallowOpts.strScheddDaemonAdFile != "" ) {
+//TEMPTEMP -- why do we set these in two different places?
 		env.SetEnv("_CONDOR_SCHEDD_DAEMON_AD_FILE",
 				   shallowOpts.strScheddDaemonAdFile.Value());
 	}
