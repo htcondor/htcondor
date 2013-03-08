@@ -712,7 +712,6 @@ int get_routes(int sock, int (*filter)(struct nlmsghdr, struct rtmsg, struct rta
 
 	struct rtmsg rtm; memset(&rtm, 0, sizeof(rtm));
 	rtm.rtm_flags = AF_INET;
-	rtm.rtm_flags |= RTM_F_CLONED;
 	iov[1].iov_base = &rtm;
 	iov[1].iov_len = NLMSG_ALIGN(sizeof(struct rtmsg));
 
@@ -774,6 +773,7 @@ int get_routes(int sock, int (*filter)(struct nlmsghdr, struct rtmsg, struct rta
 			}
 			if (nlmsghdr2->nlmsg_type == NLMSG_DONE) {
 				done = 1;
+				continue;
 			}
 			// We continue to recieve messages even if we failed in processing one of them.
 			// This is so the next netlink user does not recieve unexpected messages.
@@ -782,11 +782,11 @@ int get_routes(int sock, int (*filter)(struct nlmsghdr, struct rtmsg, struct rta
 			}
 
 			if (nlmsghdr2->nlmsg_type != RTM_NEWROUTE && nlmsghdr2->nlmsg_type != RTM_DELROUTE) {
-				dprintf(D_FULLDEBUG, "Ignoring non-route message of type %d.\n", nlmsghdr2->nlmsg_type);
+				dprintf(D_ALWAYS, "Ignoring non-route message of type %d.\n", nlmsghdr2->nlmsg_type);
 				continue;
 			}
 			if (nlmsghdr2->nlmsg_len < NLMSG_LENGTH(sizeof(struct rtmsg))) {
-				dprintf(D_FULLDEBUG, "Ignoring truncated route message of length %d.\n", nlmsghdr2->nlmsg_len);
+				dprintf(D_ALWAYS, "Ignoring truncated route message of length %d.\n", nlmsghdr2->nlmsg_len);
 				continue;
 			}
 			struct rtmsg route_msg; memcpy(&route_msg, NLMSG_DATA(nlmsghdr2), sizeof(struct rtmsg));
@@ -831,7 +831,6 @@ int get_addresses(int sock, int (*filter)(struct nlmsghdr, struct ifaddrmsg, str
 
 	struct rtmsg rtm; memset(&rtm, 0, sizeof(rtm));
 	rtm.rtm_flags = AF_INET;
-	rtm.rtm_flags |= RTM_F_CLONED;
 	iov[1].iov_base = &rtm;
 	iov[1].iov_len = NLMSG_ALIGN(sizeof(struct rtmsg));
 
@@ -841,19 +840,22 @@ int get_addresses(int sock, int (*filter)(struct nlmsghdr, struct ifaddrmsg, str
 		return 1;
 	}
 
-	struct sockaddr_nl nladdr;
-	struct msghdr msg;
+	struct sockaddr_nl nladdr; memset(&nladdr, 0, sizeof(nladdr));
+	struct msghdr msg; memset(&msg, 0, sizeof(msg));
 	msg.msg_name = &nladdr;
 	msg.msg_namelen = sizeof(nladdr);
 	msg.msg_iov = iov;
-	msg.msg_iovlen = 2;
+	msg.msg_iovlen = 1;
 
-	char msg_buffer[16*1024];
-	iov[1].iov_base = msg_buffer;
-	iov[1].iov_len = 16*1024;
+	char msg_buffer[16*1024]; memset(msg_buffer, 0, 16*1024);
+	iov[0].iov_base = msg_buffer;
+	iov[0].iov_len = 16*1024;
 
 	int done = 0, had_filter_error = 0, filter_result = 0;
-	while (1) {
+	while (1)
+	{
+		if (done) break;
+
 		result = recvmsg(sock, &msg, 0);
 		if (result < 0) {
 			if (errno == EINTR || errno == EAGAIN)
@@ -867,8 +869,9 @@ int get_addresses(int sock, int (*filter)(struct nlmsghdr, struct ifaddrmsg, str
 		}
 
 		struct nlmsghdr *nlmsghdr2;
-		for (nlmsghdr2 = (struct nlmsghdr *)iov[0].iov_base; NLMSG_OK(nlmsghdr2, iov[0].iov_len); nlmsghdr2 = NLMSG_NEXT(nlmsghdr2, iov[0].iov_len)) {
-
+		unsigned message_size = static_cast<unsigned>(result);
+		for (nlmsghdr2 = (struct nlmsghdr *)iov[0].iov_base; NLMSG_OK(nlmsghdr2, message_size); nlmsghdr2 = NLMSG_NEXT(nlmsghdr2, message_size))
+		{
 			if (nlmsghdr2->nlmsg_type == NLMSG_NOOP) {
 				dprintf(D_ALWAYS, "Ignoring message due to no-op.\n");
 				continue;
@@ -887,6 +890,7 @@ int get_addresses(int sock, int (*filter)(struct nlmsghdr, struct ifaddrmsg, str
 			}
 			if (nlmsghdr2->nlmsg_type == NLMSG_DONE) {
 				done = 1;
+				continue;
 			}
 			// We continue to recieve messages even if we failed in processing one of them.
 			// This is so the next netlink user does not recieve unexpected messages.
@@ -895,17 +899,17 @@ int get_addresses(int sock, int (*filter)(struct nlmsghdr, struct ifaddrmsg, str
 			}
 
 			if (nlmsghdr2->nlmsg_type != RTM_NEWADDR && nlmsghdr2->nlmsg_type != RTM_DELADDR) {
-				dprintf(D_FULLDEBUG, "Ignoring non-address message of type %d.\n", nlmsghdr2->nlmsg_type);
+				dprintf(D_ALWAYS, "Ignoring non-address message of type %d.\n", nlmsghdr2->nlmsg_type);
 				continue;
 			}
 			if (nlmsghdr2->nlmsg_len < NLMSG_LENGTH(sizeof(struct ifaddrmsg))) {
-				dprintf(D_FULLDEBUG, "Ignoring truncated route message of length %d.\n", nlmsghdr2->nlmsg_len);
+				dprintf(D_ALWAYS, "Ignoring truncated route message of length %d.\n", nlmsghdr2->nlmsg_len);
 				continue;
 			}
-			struct ifaddrmsg addr_msg; memcpy(&addr_msg, iov[1].iov_base, sizeof(struct ifaddrmsg));
+			struct ifaddrmsg addr_msg; memcpy(&addr_msg, NLMSG_DATA(nlmsghdr2), sizeof(struct ifaddrmsg));
 			struct rtattr *attr_table[IFA_MAX+1];
-			struct rtattr *rta = IFA_RTA(iov[1].iov_base);
-			size_t len = iov[1].iov_len - sizeof(struct ifaddrmsg);
+			struct rtattr *rta = IFA_RTA(NLMSG_DATA(nlmsghdr2));
+			size_t len = message_size - NLMSG_LENGTH(sizeof(struct ifaddrmsg));
 			if (parse_rtattr(attr_table, rta, len, IFA_MAX)) {
 				had_filter_error = 1;
 				continue;
@@ -915,7 +919,6 @@ int get_addresses(int sock, int (*filter)(struct nlmsghdr, struct ifaddrmsg, str
 				had_filter_error = 1;
 			}
 		}
-		if (done) break;
 	}
 	return 0;
 }

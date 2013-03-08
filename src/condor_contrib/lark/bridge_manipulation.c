@@ -321,6 +321,10 @@ wait_for_bridge_status(int fd, const char *link)
 	// TODO: get forwarding delay from kernel and only wait for 2x that value
 
 	// Recieve messages from the kernel
+	if ((retval >= 0) && (retval < 5))
+		dprintf(D_FULLDEBUG, "Link %s current status is %s.\n", link, port_states[retval]);
+	else
+		dprintf(D_FULLDEBUG, "Link %s current status is %d (unknown enum).\n", link, retval);
 	while (retval != BR_STATE_FORWARDING) {
 		if (((retval = wait_for_status(fd, link)) < 0) && (retval != -EAGAIN)) {
 			dprintf(D_ALWAYS, "Failed to get status from kernel.\n");
@@ -328,8 +332,10 @@ wait_for_bridge_status(int fd, const char *link)
 		}
 		if ((retval >= 0) && (retval < 5))
 			dprintf(D_FULLDEBUG, "Link %s current status is %s.\n", link, port_states[retval]);
-		else
+		else if (retval != -EAGAIN)
 			dprintf(D_FULLDEBUG, "Link %s current status is %d (unknown enum).\n", link, retval);
+		else
+			dprintf(D_FULLDEBUG, "Querying kernel again for device %s status.\n", link);
 	}
 	retval = 0;
 

@@ -5,6 +5,7 @@
 
 #include "condor_debug.h"
 #include <net/if.h>
+#include <netinet/in.h>
 #include <linux/rtnetlink.h>
 
 extern int seq;
@@ -27,6 +28,78 @@ check_default_route(struct nlmsghdr /*nlmsghdr*/, struct rtmsg rtmsg, struct rta
 		arg->has_default = 1;
 	}
 	return 0;
+}
+
+void
+print_route_info(struct rtmsg rtmsg, struct rtattr *attr_table[RTA_MAX+1])
+{
+	dprintf(D_ALWAYS, "Route information\n");
+	switch(rtmsg.rtm_family) {
+	case AF_INET:
+		dprintf(D_ALWAYS, "- IPv4 route.\n");
+		break;
+	case AF_INET6:
+		dprintf(D_ALWAYS, "- IPv6 route.\n");
+		break;
+	default:
+		dprintf(D_ALWAYS, "- Unknown family: %d.\n", rtmsg.rtm_family);
+	}
+	dprintf(D_ALWAYS, "- Source length: %d.\n", rtmsg.rtm_src_len);
+	dprintf(D_ALWAYS, "- Destination length: %d.\n", rtmsg.rtm_dst_len);
+	switch(rtmsg.rtm_scope) {
+	case RT_SCOPE_UNIVERSE:
+		dprintf(D_ALWAYS, "- Scope: Universe\n");
+		break;
+	case RT_SCOPE_NOWHERE:
+		dprintf(D_ALWAYS, "- Scope: nowhere\n");
+		break;
+	case RT_SCOPE_LINK:
+		dprintf(D_ALWAYS, "- Scope: link\n");
+		break;
+	case RT_SCOPE_HOST:
+		dprintf(D_ALWAYS, "- Scope: host\n");
+		break;
+	default:
+		dprintf(D_ALWAYS, "Unknown scope: %d.\n", rtmsg.rtm_scope);
+	}
+
+	char addr[256];
+	struct in_addr ipv4;
+	struct in6_addr ipv6;
+	void * ipaddr = rtmsg.rtm_family == AF_INET ? static_cast<void*>(&ipv4) : static_cast<void*>(&ipv6);
+	if ((attr_table[RTA_SRC]))
+	{
+		if (rtmsg.rtm_family == AF_INET)
+			memcpy(&ipv4.s_addr, RTA_DATA(attr_table[RTA_SRC]), sizeof(ipv4.s_addr));
+		else if (rtmsg.rtm_family == AF_INET6)
+			memcpy(&ipv6.s6_addr, RTA_DATA(attr_table[RTA_SRC]), sizeof(ipv6.s6_addr));
+		if (inet_ntop(rtmsg.rtm_family, ipaddr, addr, 256))
+			dprintf(D_ALWAYS, "- Source address: %s.\n", addr);
+		else
+			dprintf(D_ALWAYS, "- Source address: PARSE FAILED");
+	}
+	if ((attr_table[RTA_DST]))
+	{
+		if (rtmsg.rtm_family == AF_INET)
+			memcpy(&ipv4.s_addr, RTA_DATA(attr_table[RTA_DST]), sizeof(ipv4.s_addr));
+		else if (rtmsg.rtm_family == AF_INET6)
+			memcpy(&ipv6.s6_addr, RTA_DATA(attr_table[RTA_DST]), sizeof(ipv6.s6_addr));
+		if (inet_ntop(rtmsg.rtm_family, ipaddr, addr, 256))
+			dprintf(D_ALWAYS, "- Dest address: %s.\n", addr);
+		else
+			dprintf(D_ALWAYS, "- Dest address: PARSE FAILED");
+	}
+	if ((attr_table[RTA_GATEWAY]))
+	{
+		if (rtmsg.rtm_family == AF_INET)
+			memcpy(&ipv4.s_addr, RTA_DATA(attr_table[RTA_GATEWAY]), sizeof(ipv4.s_addr));
+		else if (rtmsg.rtm_family == AF_INET6)
+			memcpy(&ipv6.s6_addr, RTA_DATA(attr_table[RTA_GATEWAY]), sizeof(ipv6.s6_addr));
+		if (inet_ntop(rtmsg.rtm_family, ipaddr, addr, 256))
+			dprintf(D_ALWAYS, "- Gateway address: %s.\n", addr);
+		else
+			dprintf(D_ALWAYS, "- Gateway address: PARSE FAILED");
+	}
 }
 
 int
@@ -126,6 +199,7 @@ filter_routes(struct nlmsghdr, struct rtmsg rtmsg, struct rtattr *attr_table[RTA
 
 	int * oif = (int*)RTA_DATA(attr_table[RTA_OIF]);
 	if (*oif == arg->eth_dev) {
+		//print_route_info(rtmsg, attr_table);
 		add_route_info(arg, rtmsg, attr_table);
 	}
 	return 0;
@@ -172,6 +246,7 @@ route_action(int sock, int action, struct rtmsg *rtmsg, struct rtattr *attr_tabl
 	for (unsigned idx=0; idx<RTA_MAX; idx++) {
 		if (!attr_table[idx])
 			continue;
+		if (idx == RTA_UNSPEC) continue;
 		iov[2+attr_count].iov_base = attr_table[idx];
 		iov[2+attr_count].iov_len = attr_table[idx]->rta_len;
 		nlmsghdr.nlmsg_len += attr_table[idx]->rta_len;
@@ -216,16 +291,24 @@ move_routes_to_bridge(int sock, const char * eth, const char * bridge)
 	}
 
 	// Remove then add the list of routes.
+	dprintf(D_FULLDEBUG, "Count of routes on bridge device: %lu.\n", route_info.route_len);
 	for (unsigned idx=0; idx<route_info.route_len; idx++) {
 		struct rtmsg *rtmsg = route_info.routes + idx;
 		struct rtattr **attr_table = route_info.attr_tables[idx];
 
 		if (!attr_table[RTA_OIF]) continue;
+
+		int action_result = 0;
 		// Remove old route
-		if (!route_action(sock, RTM_DELROUTE, rtmsg, attr_table)) {
-			dprintf(D_ALWAYS, "Failed to delete routes.\n");
+		// Ignore ESRCH - that indicates the deleted route was not found.
+		if ((action_result = route_action(sock, RTM_DELROUTE, rtmsg, attr_table)) && (action_result != ESRCH)) {
+			dprintf(D_ALWAYS, "Failed to delete routes (%d).\n", action_result);
 			free_route_info(&route_info);
 			return -1;
+		}
+		if (action_result == ESRCH)
+		{
+			continue;
 		}
 
 		// Make route point at new bridge iface
@@ -233,7 +316,9 @@ move_routes_to_bridge(int sock, const char * eth, const char * bridge)
 		*oif = bridge_dev;
 
 		// Create new route.
-		if (!route_action(sock, RTM_NEWROUTE, rtmsg, attr_table)) {
+		// EEXIST indicates the route already exists - for example, this may be true if the kernel won the
+		// race to install the IPv6 link-local / host-local routes.
+		if ((action_result = route_action(sock, RTM_NEWROUTE, rtmsg, attr_table)) && (action_result != EEXIST)) {
 			dprintf(D_ALWAYS, "FATAL: Deleted old route but couldn't create new one.\n");
 			free_route_info(&route_info);
 			return -1;
@@ -304,7 +389,6 @@ add_addr_info(addr_info_t *addr_info, struct ifaddrmsg addrmsg, struct rtattr *a
 int
 filter_addresses(struct nlmsghdr, struct ifaddrmsg addrmsg, struct rtattr *attr_table[IFA_MAX+1], void *user_arg) {
 	addr_info_t *arg = (addr_info_t *)user_arg;
-
 	if (addrmsg.ifa_index != arg->eth_dev)
 		return 0;
 
@@ -353,6 +437,7 @@ iface_action(int sock, int action, struct ifaddrmsg *iface, struct rtattr *attr_
 	for (unsigned idx=0; idx<IFA_MAX; idx++) {
 		if (!attr_table[idx])
 			continue;
+		if (idx == IFA_UNSPEC) continue;
 		iov[2+attr_count].iov_base = attr_table[idx];
 		iov[2+attr_count].iov_len = attr_table[idx]->rta_len;
 		nlmsghdr.nlmsg_len += attr_table[idx]->rta_len;
@@ -395,17 +480,15 @@ move_addresses_to_bridge(int sock, const char *eth, const char *bridge) {
 		return -1;
 	}
 
-	dprintf(D_ALWAYS, "Number of addresses on bridge device: %lu\n", addr_info.len);
-	return -1;
-
 	// Remove then add the list of addresses.
 	for (unsigned idx=0; idx<addr_info.len; idx++) {
 		struct ifaddrmsg *addrmsg = addr_info.addrs + idx;
 		struct rtattr **attr_table = addr_info.attr_tables[idx];
 
+		int action_result = 0;
 		// Remove old route
-		if (!iface_action(sock, RTM_DELADDR, addrmsg, attr_table)) {
-			dprintf(D_ALWAYS, "Failed to delete routes.\n");
+		if ((action_result = iface_action(sock, RTM_DELADDR, addrmsg, attr_table))) {
+			dprintf(D_ALWAYS, "Failed to delete address (%d).\n", action_result);
 			free_addr_info(&addr_info);
 			return -1;
 		}
@@ -414,7 +497,7 @@ move_addresses_to_bridge(int sock, const char *eth, const char *bridge) {
 		addrmsg->ifa_index = bridge_dev;
 
 		// Create new address.
-		if (!iface_action(sock, RTM_NEWADDR, addrmsg, attr_table)) {
+		if (iface_action(sock, RTM_NEWADDR, addrmsg, attr_table)) {
 			dprintf(D_ALWAYS, "FATAL: Deleted old address but couldn't create new one.\n");
 			free_addr_info(&addr_info);
 			return -1;

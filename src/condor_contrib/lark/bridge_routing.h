@@ -34,6 +34,8 @@ move_routes_to_bridge(int sock, const char * eth, const char * bridge);
  * - bridge: Name of bridge;
  * Returns 0 on success, non-zero otherwise.
  */
+int
+move_addresses_to_bridge(int sock, const char * eth, const char * bridge);
 
 #endif
 

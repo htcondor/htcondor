@@ -173,6 +173,16 @@ int get_firewall_data(struct ipt_getinfo *info, struct ipt_get_entries **result_
 int open_bridge_socket();
 
 /*
+ * Set the forwarding delay for a bridge device.
+ *
+ * - bridge_name: Name of bridge advice to alter.
+ * - delay: New value of the delay.
+ *
+ * Return 0 on success and non-zero on failure.
+ */
+int set_bridge_fd(const char * bridge_name, unsigned delay);
+
+/*
  * Create a bridge device.
  *
  * - bridge_name: String containing the bridge name; must be less than IFNAMSIZ
