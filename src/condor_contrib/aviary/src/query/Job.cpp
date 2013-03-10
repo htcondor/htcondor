@@ -657,8 +657,9 @@ void Job::processSubmission(int cluster, const char* name, const char* owner) {
         else {
             g_submissions.insert(make_pair(sub_name,sub));
             g_qdate_submissions.insert(make_pair(sub->getOldest(),sub));
-            g_dirty_submissions.erase(cluster);
         }
+        // good to go
+        g_dirty_submissions.erase(cluster);
         this->m_submission = sub;
         sub->setOldest(qdate);
         sub->increment(this);
