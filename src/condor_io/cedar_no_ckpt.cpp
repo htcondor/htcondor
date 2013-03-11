@@ -272,7 +272,10 @@ ReliSock::get_file( filesize_t *size, int fd,
 	}
 
 	if (flush_buffers && fd != GET_FILE_NULL_FD ) {
-		condor_fsync(fd);
+		if (condor_fsync(fd) < 0) {
+			dprintf(D_ALWAYS, "get_file(): ERROR on fsync: %d\n", errno);
+			return -1;
+		}
 	}
 
 	if( fd == GET_FILE_NULL_FD ) {
