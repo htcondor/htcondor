@@ -727,6 +727,9 @@ class Dag {
 	*/
 	inline bool RunningFinalNode() { return _runningFinalNode; }
 
+		//TEMPTEMP -- document
+	bool Recovery() const { return _recovery; }
+
   private:
 
 	// If this DAG is a splice, then this is what the DIR was set to, it 

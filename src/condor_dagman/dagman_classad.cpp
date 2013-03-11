@@ -19,7 +19,6 @@
  ***************************************************************/
 
 #include "condor_common.h"
-#include "condor_config.h"//TEMPTEMP
 #include "dagman_classad.h"
 #include "dc_schedd.h"
 #include "condor_qmgr.h"
@@ -28,15 +27,12 @@
 //---------------------------------------------------------------------------
 DagmanClassad::DagmanClassad( const CondorID &DAGManJobId )
 {
-	debug_printf( DEBUG_QUIET, "DagmanClassad::DagmanClassad()\n" );//TEMPTEMP
-
 	_valid = false;
 
 	//TEMPTEMP -- check for -1.-1.-1 for &DAGManJobId
 
 	_dagmanId = DAGManJobId;
 
-#if 1 //TEMPTEMP
 	_schedd = new DCSchedd( NULL, NULL );
 	if ( !_schedd || !_schedd->locate() ) {
 		const char *errMsg = _schedd ? _schedd->error() : "?";
@@ -45,7 +41,6 @@ DagmanClassad::DagmanClassad( const CondorID &DAGManJobId )
 					errMsg );
 		return;
 	}
-#endif //TEMPTEMP
 
 	_valid = true;
 }
@@ -53,16 +48,17 @@ DagmanClassad::DagmanClassad( const CondorID &DAGManJobId )
 //---------------------------------------------------------------------------
 DagmanClassad::~DagmanClassad()
 {
-	debug_printf( DEBUG_QUIET, "DagmanClassad::~DagmanClassad()\n" );//TEMPTEMP
+	_valid = false;
+
+	delete _schedd;
 }
 
 //---------------------------------------------------------------------------
 void
 DagmanClassad::Update( int total, int done, int pre, int submitted,
-			int post, int ready, int failed, int unready )
+			int post, int ready, int failed, int unready, int dagStatus,
+			bool recovery )
 {
-	debug_printf( DEBUG_QUIET, "DagmanClassad::Update()\n" );//TEMPTEMP
-
 	if ( !_valid ) {
 		//TEMPTEMP -- debug output
 		return;
@@ -79,14 +75,16 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 	}
 
 	//TEMPTEMP -- parameterize attr names?
-	SetDagAttribute( "DAGNodesTotal", total );
-	SetDagAttribute( "DAGNodesDone", done );
-	SetDagAttribute( "DAGNodesPrerun", pre );
-	SetDagAttribute( "DAGNodesQueued", submitted );
-	SetDagAttribute( "DAGNodesPostrun", post );
-	SetDagAttribute( "DAGNodesReady", ready );
-	SetDagAttribute( "DAGNodesFailed", failed );
-	SetDagAttribute( "DAGNodesUnready", unready );
+	SetDagAttribute( "DAG_NodesTotal", total );
+	SetDagAttribute( "DAG_NodesDone", done );
+	SetDagAttribute( "DAG_NodesPrerun", pre );
+	SetDagAttribute( "DAG_NodesQueued", submitted );
+	SetDagAttribute( "DAG_NodesPostrun", post );
+	SetDagAttribute( "DAG_NodesReady", ready );
+	SetDagAttribute( "DAG_NodesFailed", failed );
+	SetDagAttribute( "DAG_NodesUnready", unready );
+	SetDagAttribute( "DAG_Status", dagStatus );
+	SetDagAttribute( "DAG_InRecovery", recovery );
 
 	if ( !DisconnectQ( queue ) ) {
 		debug_printf( DEBUG_QUIET,
@@ -99,10 +97,13 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 void
 DagmanClassad::SetDagAttribute( const char *attrName, int attrVal )
 {
-	//TEMPTEMP -- what about SetAttributeFlags_t?
 	if ( SetAttributeInt( _dagmanId._cluster, _dagmanId._proc,
-				attrName, attrVal ) != 0 ) {
-		debug_printf( DEBUG_QUIET,
-					"ERROR: failed to set attribute %s\n", attrName );
+				attrName, attrVal, SETDIRTY|SHOULDLOG ) != 0 ) {
+			// Try again without SETDIRTY|SHOULDLOG.
+		if ( SetAttributeInt( _dagmanId._cluster, _dagmanId._proc,
+					attrName, attrVal ) != 0 ) {
+			debug_printf( DEBUG_QUIET,
+						"ERROR: failed to set attribute %s\n", attrName );
+		}
 	}
 }

@@ -474,6 +474,7 @@ main_shutdown_fast()
 // this can be called by other functions, or by DC when the schedd is
 // shutdown gracefully
 void main_shutdown_graceful() {
+	print_status();
 	dagman.dag->DumpNodeStatus( true, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_RESTART );
 	dagman.CleanUp();
@@ -532,6 +533,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 			inShutdownRescue = false;
 			return;
 		}
+		print_status();
 		dagman.dag->DumpNodeStatus( false, true );
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	}
@@ -552,6 +554,7 @@ int main_shutdown_remove(Service *, int) {
 }
 
 void ExitSuccess() {
+	print_status();
 	dagman.dag->DumpNodeStatus( false, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_OKAY );
 	MSC_SUPPRESS_WARNING_FIXME(6031) // return falue of unlink ignored.
@@ -615,7 +618,6 @@ void main_init (int argc, char ** const argv) {
 	dagman.DAGManJobId.SetFromString( getenv( EnvGetName( ENV_ID ) ) );
 
 	dagman._dagmanClassad = new DagmanClassad( dagman.DAGManJobId );
-	//TEMPTEMP -- should we do an update here??
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Minimum legal version for a .condor.sub file to be compatible
@@ -1216,6 +1218,7 @@ void main_init (int argc, char ** const argv) {
             dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
             debug_error( 1, DEBUG_QUIET, "ERROR while bootstrapping\n");
         }
+		print_status();
     }
 
     debug_printf( DEBUG_VERBOSE, "Registering condor_event_timer...\n" );
@@ -1250,7 +1253,8 @@ print_status() {
 	dagman.dag->PrintDeferrals( DEBUG_VERBOSE, false );
 
 	dagman._dagmanClassad->Update( total, done, pre, submitted, post,
-				ready, failed, unready );
+				ready, failed, unready, dagman.dag->_dagStatus,
+				dagman.dag->Recovery() );
 }
 
 void condor_event_timer () {

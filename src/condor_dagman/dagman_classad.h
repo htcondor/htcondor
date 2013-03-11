@@ -31,10 +31,9 @@ class DagmanClassad {
 	DagmanClassad( const CondorID &DAGManJobId );
 	~DagmanClassad();
 
-	//TEMPTEMP -- add held?
-	//TEMPTEMP -- add DAG status?
 	void Update( int total, int done, int pre, int submitted, int post,
-				int ready, int failed, int unready );
+				int ready, int failed, int unready, int dagStatus,
+				bool recovery );
 
   private:
 	void SetDagAttribute( const char *attrName, int attrVal );
