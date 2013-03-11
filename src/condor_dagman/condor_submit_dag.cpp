@@ -1,4 +1,3 @@
-//TEMPTEMP -- okay, I think the solution is to *always* set schedd_addr_file and schedd_classad_file in here; which would require a break in the condor_submit_dag/condor_dagman compatibility
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -86,8 +85,15 @@ int main(int argc, char *argv[])
 		// structures.
 	SubmitDagDeepOptions deepOpts;
 	SubmitDagShallowOptions shallowOpts;
-	//TEMPTEMP -- put shedd stuff into shallowOpts here
-	//TEMPTEMP -- need to explain why we're doing this...
+
+		// We're setting strScheddDaemonAdFile and strScheddAddressFile
+		// here so that the classad updating feature (see gittrac #1782)
+		// works properly.  The problem is that the schedd daemon ad and
+		// address files are normally defined relative to the $LOG value.
+		// Because we specify a different log directory on the condor_dagman
+		// command line, if we don't set the values here, condor_dagman
+		// won't be able to find those files when it tries to communicate
+		/// with the schedd.  wenger 2013-03-11
 	shallowOpts.strScheddDaemonAdFile = param( "SCHEDD_DAEMON_AD_FILE" );
 	shallowOpts.strScheddAddressFile = param( "SCHEDD_ADDRESS_FILE" );
 	parseCommandLine(deepOpts, shallowOpts, argc, argv);

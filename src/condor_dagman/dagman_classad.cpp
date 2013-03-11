@@ -19,6 +19,7 @@
  ***************************************************************/
 
 #include "condor_common.h"
+#include "condor_attributes.h"
 #include "dagman_classad.h"
 #include "dc_schedd.h"
 #include "condor_qmgr.h"
@@ -28,8 +29,14 @@
 DagmanClassad::DagmanClassad( const CondorID &DAGManJobId )
 {
 	_valid = false;
+	_schedd = NULL;
 
-	//TEMPTEMP -- check for -1.-1.-1 for &DAGManJobId
+	CondorID defaultCondorId;
+	if ( DAGManJobId == defaultCondorId ) {
+		debug_printf( DEBUG_QUIET, "WARNING:  no Condor ID available for DAGMan; DAG status will not be reported to classad\n" );
+		check_warning_strictness( DAG_STRICT_3 );
+		return;
+	}
 
 	_dagmanId = DAGManJobId;
 
@@ -37,8 +44,9 @@ DagmanClassad::DagmanClassad( const CondorID &DAGManJobId )
 	if ( !_schedd || !_schedd->locate() ) {
 		const char *errMsg = _schedd ? _schedd->error() : "?";
 		debug_printf( DEBUG_QUIET,
-					"ERROR: can't find address of local schedd (%s)\n",
+					"WARNING: can't find address of local schedd for classad updates (%s)\n",
 					errMsg );
+		check_warning_strictness( DAG_STRICT_3 );
 		return;
 	}
 
@@ -59,37 +67,40 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 			int post, int ready, int failed, int unready, int dagStatus,
 			bool recovery )
 {
+
 	if ( !_valid ) {
-		//TEMPTEMP -- debug output
+		debug_printf( DEBUG_VERBOSE,
+					"Skipping classad update -- DagmanClassad object is invalid\n" );
 		return;
 	}
 
 		// Open job queue
-	//TEMPTEMP -- might want to pass CondorError* (first NULL)
+	CondorError errstack;
 	Qmgr_connection *queue = ConnectQ( _schedd->addr(), 0, false,
-				NULL, NULL, _schedd->version() );
+				&errstack, NULL, _schedd->version() );
 	if ( !queue ) {
 		debug_printf( DEBUG_QUIET,
-					"ERROR: failed to connect to queue manager\n" );
+					"WARNING: failed to connect to queue manager (%s)\n",
+					errstack.getFullText().c_str() );
+		check_warning_strictness( DAG_STRICT_3 );
 		return;
 	}
 
-	//TEMPTEMP -- parameterize attr names?
-	SetDagAttribute( "DAG_NodesTotal", total );
-	SetDagAttribute( "DAG_NodesDone", done );
-	SetDagAttribute( "DAG_NodesPrerun", pre );
-	SetDagAttribute( "DAG_NodesQueued", submitted );
-	SetDagAttribute( "DAG_NodesPostrun", post );
-	SetDagAttribute( "DAG_NodesReady", ready );
-	SetDagAttribute( "DAG_NodesFailed", failed );
-	SetDagAttribute( "DAG_NodesUnready", unready );
-	SetDagAttribute( "DAG_Status", dagStatus );
-	SetDagAttribute( "DAG_InRecovery", recovery );
+	SetDagAttribute( ATTR_DAG_NODES_TOTAL, total );
+	SetDagAttribute( ATTR_DAG_NODES_DONE, done );
+	SetDagAttribute( ATTR_DAG_NODES_PRERUN, pre );
+	SetDagAttribute( ATTR_DAG_NODES_QUEUED, submitted );
+	SetDagAttribute( ATTR_DAG_NODES_POSTRUN, post );
+	SetDagAttribute( ATTR_DAG_NODES_READY, ready );
+	SetDagAttribute( ATTR_DAG_NODES_FAILED, failed );
+	SetDagAttribute( ATTR_DAG_NODES_UNREADY, unready );
+	SetDagAttribute( ATTR_DAG_STATUS, dagStatus );
+	SetDagAttribute( ATTR_DAG_IN_RECOVERY, recovery );
 
 	if ( !DisconnectQ( queue ) ) {
 		debug_printf( DEBUG_QUIET,
-					"ERROR: queue transaction failed.  No attributes were set.\n" );
-		
+					"WARNING: queue transaction failed.  No attributes were set.\n" );
+		check_warning_strictness( DAG_STRICT_3 );
 	}
 }
 
@@ -103,7 +114,8 @@ DagmanClassad::SetDagAttribute( const char *attrName, int attrVal )
 		if ( SetAttributeInt( _dagmanId._cluster, _dagmanId._proc,
 					attrName, attrVal ) != 0 ) {
 			debug_printf( DEBUG_QUIET,
-						"ERROR: failed to set attribute %s\n", attrName );
+						"WARNING: failed to set attribute %s\n", attrName );
+			check_warning_strictness( DAG_STRICT_3 );
 		}
 	}
 }

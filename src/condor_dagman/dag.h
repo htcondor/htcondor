@@ -727,8 +727,10 @@ class Dag {
 	*/
 	inline bool RunningFinalNode() { return _runningFinalNode; }
 
-		//TEMPTEMP -- document
-	bool Recovery() const { return _recovery; }
+	/** Determine whether the DAG is in recovery mode.
+		@return true iff the DAG is in recovery mode
+	*/
+	inline bool Recovery() const { return _recovery; }
 
   private:
 
