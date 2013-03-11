@@ -863,6 +863,33 @@ handle_off_graceful( Service*, int, Stream* stream)
 	return TRUE;
 }
 
+class SigtermContinue {
+public:
+	static bool should_sigterm_continue() { return should_continue; };
+	static void sigterm_should_not_continue() { should_continue = false; }
+	static void sigterm_should_continue() { should_continue = true; }
+private:
+	static bool should_continue;
+};
+
+bool SigtermContinue::should_continue = false;
+
+
+static int
+handle_off_cancel( Service*, int, Stream* stream)
+{
+	if( !stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "handle_off_cancel: failed to read end of message\n");
+		return FALSE;
+	}
+	if (daemonCore) {
+		daemonCore->SetPeacefulShutdown( false );
+		SigtermContinue::sigterm_should_continue();
+		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+	}
+	return TRUE;
+}
+
 static int
 handle_off_peaceful( Service*, int, Stream* stream)
 {
@@ -894,6 +921,24 @@ handle_set_peaceful_shutdown( Service*, int, Stream* stream)
 		return FALSE;
 	}
 	daemonCore->SetPeacefulShutdown(true);
+	return TRUE;
+}
+
+static int
+handle_set_cancel_shutdown( Service*, int, Stream* stream)
+{
+	// If the master could send peaceful shutdown signals, it would
+	// not be necessary to have a message for turning on the peaceful
+	// shutdown toggle.  Since the master only sends fast and graceful
+	// shutdown signals, condor_off is responsible for first turning
+	// on peaceful shutdown in appropriate daemons.
+
+	if( !stream->end_of_message() ) {
+		dprintf( D_ALWAYS, "handle_set_cancel_shutdown: failed to read end of message\n");
+		return FALSE;
+	}
+	daemonCore->SetPeacefulShutdown( false );
+	SigtermContinue::sigterm_should_continue();
 	return TRUE;
 }
 
@@ -1479,13 +1524,14 @@ TimerHandler_main_shutdown_fast()
 int
 handle_dc_sigterm( Service*, int )
 {
-	static int been_here = FALSE;
-	if( been_here ) {
+		// Introduces a race condition.
+		// What if SIGTERM received while we are here?
+	if( !SigtermContinue::should_sigterm_continue() ) {
 		dprintf( D_FULLDEBUG, 
 				 "Got SIGTERM, but we've already done graceful shutdown.  Ignoring.\n" );
 		return TRUE;
 	}
-	been_here = TRUE;
+	SigtermContinue::sigterm_should_not_continue(); // After this
 
 	dprintf(D_ALWAYS, "Got SIGTERM. Performing graceful shutdown.\n");
 
@@ -2354,6 +2400,10 @@ int dc_main( int argc, char** argv )
 								  (CommandHandler)handle_off_graceful,
 								  "handle_off_graceful()", 0, ADMINISTRATOR );
 
+	daemonCore->Register_Command( DC_OFF_CANCEL, "DC_OFF_CANCEL",
+								  (CommandHandler)handle_off_cancel,
+								  "handle_off_cancel()", 0, ADMINISTRATOR );
+
 	daemonCore->Register_Command( DC_OFF_PEACEFUL, "DC_OFF_PEACEFUL",
 								  (CommandHandler)handle_off_peaceful,
 								  "handle_off_peaceful()", 0, ADMINISTRATOR );
@@ -2361,6 +2411,10 @@ int dc_main( int argc, char** argv )
 	daemonCore->Register_Command( DC_SET_PEACEFUL_SHUTDOWN, "DC_SET_PEACEFUL_SHUTDOWN",
 								  (CommandHandler)handle_set_peaceful_shutdown,
 								  "handle_set_peaceful_shutdown()", 0, ADMINISTRATOR );
+
+	daemonCore->Register_Command( DC_SET_CANCEL_SHUTDOWN, "DC_SET_CANCEL_SHUTDOWN",
+								  (CommandHandler)handle_set_cancel_shutdown,
+								  "handle_set_cancel_shutdown()", 0, ADMINISTRATOR );
 
 		// DC_NOP is for waking up select.  There is no need for
 		// security here, because anyone can wake up select anyway.
