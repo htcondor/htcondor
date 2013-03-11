@@ -1,0 +1,46 @@
+\begin{ManPage}{\label{man-condor-tail}\Condor{tail}}{1}
+{Display contents of a running job's file }
+\Synopsis \SynProg{\Condor{tail}}
+\oOpt{-help} | \oOpt{-version}
+
+\SynProg{\Condor{tail}}
+\oOptArg{-pool}{centralmanagerhostname\Lbr:portnumber\Rbr}
+\oOptArg{-name}{name}
+\oOpt{-debug}
+\oOpt{-maxbytes}
+\oOpt{-auto-retry}
+\oOpt{-follow}
+\Arg{job-ID}
+\oArg{-filename1}
+\oArg{, -filename2}
+\Dots
+
+\index{HTCondor commands!condor\_tail}
+\index{condor\_tail command}
+
+\Description
+
+\Condor{tail} does something.
+
+\begin{Options}
+    \OptItem{\Opt{-help}}{Display usage information and exit.}
+    \OptItem{\Opt{-version}}{Display version information and exit.}
+    \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
+        {Specify a pool by giving the
+        central manager's host name and an optional port number.}
+    \OptItem{\OptArg{-name}{name}}{Query the \Condor{schedd} daemon
+        identified with \Arg{name}.}
+    \OptItem{\Opt{-debug}}{Display extra debugging information.}
+    \OptItem{\OptArg{-maxbytes}{numbytes}}{Limits the maximum number of bytes
+        tranferred.  If not specified, the maximum number of bytes is 1024.}
+    \OptItem{\Opt{-auto-retry}}{Retry the tail of the file(s) if the job
+        is not yet running.}
+    \OptItem{\Opt{-follow}}{Does something.}
+\end{Options}
+
+\ExitStatus
+
+The exit status of \Condor{tail} is zero on success.
+
+\end{ManPage}
+
