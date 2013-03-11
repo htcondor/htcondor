@@ -143,7 +143,6 @@ sub cleanup
 {
 	# remove the scratch dir, sanity check too
 	if (-d $args{'_scratch'}) {
-		print "Cleaning up scratch space.\n";
 		die "I'm not going to remove /. Sorry." 
 			if ($args{'_scratch'} =~ /^\d*\/\d*$/g);
 		# also remove the scratch dir itself...
@@ -496,6 +495,7 @@ sub package_payload
 	# grab the only directory there.
 	$dir = `ls -1`;
 	chomp $dir;
+	print "\nCreating output file with all results in $dir.tar.gz\n";
 	system("tar czf $dir.tar.gz $dir > /dev/null 2>&1");
 	chdir($pwd);
 	system("mv $args{'scratch'}/../*.tar.gz .");
