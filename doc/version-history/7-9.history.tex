@@ -165,9 +165,12 @@ as it incorrectly believed that the cloud
 service had purged it.
 \Ticket{3492}
 
-\item The \Condor{negotiator} now checks to see if \Macro{MAX\_TIME\_PER\_SUBMITTER}
-has been exceeded while negotiating with single \Condor{schedd}. This configuration
-variable used to only be effective if a submitter used multiple schedds.
+\item The \Condor{negotiator} now checks to see if 
+the time set by configuration variable 
+\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SUBMITTER}
+has been exceeded while negotiating with a single \Condor{schedd} daemon.
+This configuration variable was previously only effective 
+if a submitter used multiple \Condor{schedd} daemons.
 \Ticket{3504}
 
 \item \Condor{dagman} will now recover correctly in a DAG where a node has been 
