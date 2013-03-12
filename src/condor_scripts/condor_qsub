@@ -323,7 +323,7 @@ parse_args() {
 		qsub_cmd=$qsub_file
 		qsub_new_command_line=""
 		pbs_regex='^#PBS '
-		sge_regex='^#SGE '
+		sge_regex='^#\$ '
 		qsub_new_command_line=""
 		while read qsub_file_line; do
 			# Check each line in the file to see if they start with #PBS or #SGE
