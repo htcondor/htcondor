@@ -39,6 +39,7 @@
 #include "unicorejob.h"
 #include "condorjob.h"
 #include "infnbatchjob.h"
+#include "boincjob.h"
 #include "condor_version.h"
 
 #include "ec2job.h"
@@ -381,6 +382,14 @@ Init()
 	new_type->ReconfigFunc = INFNBatchJobReconfig;
 	new_type->AdMatchFunc = INFNBatchJobAdMatch;
 	new_type->CreateFunc = INFNBatchJobCreate;
+	jobTypes.Append( new_type );
+
+	new_type = new JobType;
+	new_type->Name = strdup( "BOINC" );
+	new_type->InitFunc = BoincJobInit;
+	new_type->ReconfigFunc = BoincJobReconfig;
+	new_type->AdMatchFunc = BoincJobAdMatch;
+	new_type->CreateFunc = BoincJobCreate;
 	jobTypes.Append( new_type );
 
 	new_type = new JobType;

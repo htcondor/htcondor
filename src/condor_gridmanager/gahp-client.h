@@ -753,6 +753,33 @@ class GahpClient : public Service {
 						   const char *password,
 						   bool *autostart );
 
+		int boinc_ping( const char *service_url );
+
+		int boinc_submit( const char *service_url,
+						  const char *batch_name,
+						  <jobs>, <output> );
+
+		int boinc_query_batch( const char *service_url,
+							   const char *batch_name,
+							   <return lists of jobs and statuses> );
+
+		int boinc_fetch_output( const char *service_url,
+								const char *job_name,
+								const char *iwd,
+								const char *stderr,
+								<output files>,
+								<return exit status, etc> );
+
+		int boinc_abort_jobs( const char *service_url,
+							  StringList &job_names );
+
+		int boinc_retire_batch( const char *service_url,
+								const char *batch_name );
+
+		int boinc_set_lease( const char *service_url,
+							 const char *batch_name,
+							 time_t new_lease_time );
+
 #ifdef CONDOR_GLOBUS_HELPER_WANT_DUROC
 	// Not yet ready for prime time...
 	globus_duroc_control_barrier_release();

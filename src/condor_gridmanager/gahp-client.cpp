@@ -7999,3 +7999,276 @@ int GahpClient::dcloud_start_auto( const char *service_url,
 	// If we made it here, command is still pending...
 	return GAHPCLIENT_COMMAND_PENDING;
 }
+
+int boinc_ping( const char *service_url )
+{
+	static const char* command = "BOINC_PING";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	//if (!service_url) service_url=NULLSTRING;
+	//std::string reqline;
+	//char *esc1 = strdup( escapeGahpString(batch_name) );
+	//int x = formatstr( reqline, "%s", esc1 );
+	//free( esc1 );
+	//ASSERT( x > 0 );
+	//const char *buf = reqline.c_str();
+	const char *buf = NULL;
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending( command, buf ) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending( command, buf );
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if ( result->argc != 2 ) {
+			EXCEPT( "Bad %s Result", command );
+		}
+		int rc;
+		if ( strcmp( result->argv[1], NULLSTRING ) == 0 ) {
+			rc = 0;
+		} else {
+			rc = 1;
+			error_string = result->argv[1];
+		}
+
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout( command, buf ) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int boinc_submit( const char *service_url,
+				  const char *batch_name,
+				  <jobs>, <output> )
+{
+}
+
+int boinc_query_batch( const char *service_url,
+					   const char *batch_name,
+					   <return lists of jobs and statuses> )
+{
+}
+
+int boinc_fetch_output( const char *service_url,
+						const char *job_name,
+						const char *iwd,
+						const char *stderr,
+						<output files>,
+						<return exit status, etc> )
+{
+}
+
+int boinc_abort_jobs( const char *service_url,
+					  StringList &job_names> )
+{
+	static const char* command = "BOINC_ABORT_JOBS";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if (!service_url) service_url=NULLSTRING;
+	std::string reqline;
+	const char *name;
+	job_names.rewind();
+	while ( (name = job_names.next()) ) {
+		formatstr_cat( reqline, " %s", escapeGahpString( name ) );
+	}
+	const char *buf = reqline.c_str();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending( command, buf ) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending( command, buf );
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if ( result->argc != 2 ) {
+			EXCEPT( "Bad %s Result", command );
+		}
+		int rc;
+		if ( strcmp( result->argv[1], NULLSTRING ) == 0 ) {
+			rc = 0;
+		} else {
+			rc = 1;
+			error_string = result->argv[1];
+		}
+
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout( command, buf ) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int boinc_retire_batch( const char *service_url,
+						const char *batch_name )
+{
+	static const char* command = "BOINC_RETIRE_BATCH";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if (!service_url) service_url=NULLSTRING;
+	if (!batch_name) batch_name=NULLSTRING;
+	std::string reqline;
+	char *esc1 = strdup( escapeGahpString(batch_name) );
+	int x = formatstr( reqline, "%s", esc1 );
+	free( esc1 );
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending( command, buf ) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending( command, buf );
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if ( result->argc != 2 ) {
+			EXCEPT( "Bad %s Result", command );
+		}
+		int rc;
+		if ( strcmp( result->argv[1], NULLSTRING ) == 0 ) {
+			rc = 0;
+		} else {
+			rc = 1;
+			error_string = result->argv[1];
+		}
+
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout( command, buf ) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+int boinc_set_lease( const char *service_url,
+					 const char *batch_name,
+					 time_t new_lease_time )
+{
+	static const char* command = "BOINC_SET_LEASE";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if (!service_url) service_url=NULLSTRING;
+	if (!batch_name) batch_name=NULLSTRING;
+	std::string reqline;
+	char *esc1 = strdup( escapeGahpString(batch_name) );
+	int x = formatstr( reqline, "%s %d", esc1, new_lease_time );
+	free( esc1 );
+	ASSERT( x > 0 );
+	const char *buf = reqline.c_str();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending( command, buf ) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending( command, buf );
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if ( result->argc != 2 ) {
+			EXCEPT( "Bad %s Result", command );
+		}
+		int rc;
+		if ( strcmp( result->argv[1], NULLSTRING ) == 0 ) {
+			rc = 0;
+		} else {
+			rc = 1;
+			error_string = result->argv[1];
+		}
+
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout( command, buf ) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}

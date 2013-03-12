@@ -1999,6 +1999,7 @@ SetUniverse()
 				(strcasecmp (JobGridType, "ec2") == MATCH) ||
 				(strcasecmp (JobGridType, "deltacloud") == MATCH) ||
 				(strcasecmp (JobGridType, "unicore") == MATCH) ||
+				(strcasecmp (JobGridType, "boinc") == MATCH) ||
 				(strcasecmp (JobGridType, "cream") == MATCH)){
 				// We're ok	
 				// Values are case-insensitive for gridmanager, so we don't need to change case			
@@ -2010,7 +2011,7 @@ SetUniverse()
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
 				fprintf( stderr, "Must be one of: gt2, gt5, pbs, lsf, "
-						 "sge, nqs, condor, nordugrid, unicore, ec2, deltacloud, or cream\n" );
+						 "sge, nqs, condor, nordugrid, unicore, ec2, deltacloud, cream, or boinc\n" );
 				exit( 1 );
 			}
 		}			
