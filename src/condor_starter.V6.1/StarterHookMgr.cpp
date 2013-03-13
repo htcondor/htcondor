@@ -437,18 +437,18 @@ HookPrepareMachineClient::hookExited(int exit_status) {
                 updateAd.dPrint(D_FULLDEBUG);
                         // Insert each expr from the update ad into the machine ad
                 updateAd.ResetExpr();
-		ClassAd* job_ad = Starter->jic->jobClassAd();
-                ClassAd* machine_ad = Starter->jic->machClassAd();
+				ClassAd* job_ad = Starter->jic->jobClassAd();
+				ClassAd* machine_ad = Starter->jic->machClassAd();
                 const char *name;
                 ExprTree *et;
                 while (updateAd.NextExpr(name, et)) {
                         ExprTree *pCopy = et->Copy();
-                        machine_ad->Insert(name, pCopy, false);
-			job_ad->Insert(name, pCopy, false);
+						machine_ad->Insert(name, pCopy, false);
+						job_ad->Insert(name, pCopy, false);
                 }
-		dprintf(D_FULLDEBUG, "After prepare machine hook: merged job classad:\n");
-		job_ad->dPrint(D_FULLDEBUG);
-                dprintf(D_ALWAYS, "After Prepare machine hook: merged machine classad:\n");
+				dprintf(D_FULLDEBUG, "After prepare machine hook: merged job classad:\n");
+				job_ad->dPrint(D_FULLDEBUG);
+                dprintf(D_FULLDEBUG, "After Prepare machine hook: merged machine classad:\n");
                 machine_ad->dPrint(D_FULLDEBUG);
                 Starter->jobEnvironmentReady();
         }

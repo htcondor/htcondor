@@ -46,8 +46,15 @@ class TestWithDaemons(unittest.TestCase):
         os.environ["_condor_STARTER"] = os.path.join(os.getcwd(), "../../condor_starter.V6.1/condor_starter")
         os.environ["_condor_NEGOTIATOR"] = os.path.join(os.getcwd(), "../../condor_negotiator.V6/condor_negotiator")
         os.environ["_condor_SHADOW"] = os.path.join(os.getcwd(), "../../condor_shadow.V6.1/condor_shadow")
-	#os.environ["_condor_STARTER.PLUGINS"] = os.path.join(os.getcwd(), "../lark/lark-plugin.so")
-	#os.environ["_condor_USE_NETWORK_NAMESPACES"] = "TRUE"
+        os.environ["_condor_STARTER.PLUGINS"] = os.path.join(os.getcwd(), "../lark/lark-plugin.so")
+        os.environ["_condor_USE_NETWORK_NAMESPACES"] = "TRUE"
+        #os.environ["_condor_LARK_NETWORK_ACCOUNTING"] = "TRUE"
+        #now make the default configuration to be "bridge"
+        os.environ["_condor_STARTD_ATTRS"] = "LarkNetworkType, LarkAddressType, LarkBridgeDevice"
+        os.environ["_condor_LarkNetworkType"] = "bridge"
+        os.environ["_condor_LarkNetBridgeDevice"] = "eth0"
+        os.environ["_condor_LarkAddressType"] = "dhcp"
+
         os.environ["_condor_CONDOR_HOST"] = socket.getfqdn()
         os.environ["_condor_LOCAL_DIR"] = testdir
         os.environ["_condor_LOG"] =  '$(LOCAL_DIR)/log'
@@ -68,8 +75,8 @@ class TestWithDaemons(unittest.TestCase):
         os.environ["_condor_KILL"] = "FALSE"
         os.environ["_condor_WANT_SUSPEND"] = "FALSE"
         os.environ["_condor_WANT_VACATE"] = "FALSE"
-	# Remember to check the correctness of network policy script path defined
-	os.environ["_condor_STARTER_NETWORK_POLICY_SCRIPT_PATH"] = os.path.join(os.getcwd(), "../lark/LarkNetworkPolicy/lark_network_policy.py")
+        # Remember to check the correctness of network policy script path defined
+        os.environ["_condor_STARTER_NETWORK_POLICY_SCRIPT_PATH"] = os.path.join(os.getcwd(), "../lark/LarkNetworkPolicy/lark_network_policy.py")
         os.environ["_condor_STARTER_DEBUG"] = "D_FULLDEBUG"
         htcondor.reload_config()
         htcondor.SecMan().invalidateAllSessions()
@@ -154,15 +161,20 @@ class TestWithDaemons(unittest.TestCase):
             ads = schedd.query("ClusterId == %d" % cluster, ["LarkNetworkType"])
             print ads
             if len(ads) != 0:
-		if "LarkNetworkType" in ads[0].keys():
+                if "LarkNetworkType" in ads[0].keys():
                     break
             time.sleep(1)
-	#machine_ad = classad.parseOld(open(output_file, "r"))
-        job_ad = ads[0]
+        #machine_ad = classad.parseOld(open(output_file, "r"))
+        self.assertTrue(len(ads) == 1)
         self.assertTrue("LarkNetworkType" in ads[0].keys())
-	self.assertEquals(job_ad["LarkNetworkType"], "nat")
+        self.assertEquals(job_ad["LarkNetworkType"], "nat")
 
     def testNetworkAccounting(self):
+        jobqueue_log_dir = os.path.join(os.getcwd(), "tests_tmp/spool")
+        filelist = [f for f in os.listdir(jobqueue_log_dir) if f.startswith("job_queue.log")]
+        for f in filelist:
+            print "Removing", f
+            os.remove(os.path.join(jobqueue_log_dir, f))
         self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
         output_file = os.path.join(testdir, "lark_test_2.out")
         if os.path.exists(output_file):
@@ -180,7 +192,8 @@ class TestWithDaemons(unittest.TestCase):
                 schedd.reschedule()
             time.sleep(1)
         ads = schedd.query("ClusterId == %d" % cluster, [])
-        self.assertTrue("Network" in ads[0].keys())
+        print ads[0]
+        self.assertTrue("NetworkIncoming" in ads[0].keys() and ads[0]["NetworkIncoming"] > 0)
 		
 if __name__ == '__main__':
     unittest.main()

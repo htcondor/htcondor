@@ -1110,6 +1110,15 @@ EvaluateAttrBool( const string &attr, bool &b ) const
 	return( EvaluateAttr( attr, val ) && val.IsBooleanValue( b ) );
 }
 
+// EvaluateAttrBoolEquiv added for Lark code, can evaluate Integer value
+// to Boolean value
+bool ClassAd::
+EvaluateAttrBoolEquiv(const string &attr, bool &b) const
+{
+    Value val;
+    return (EvaluateAttr( attr, val) && val.IsBooleanValueEquiv( b ));
+}
+
 #if 0
 // disabled (see header)
 bool ClassAd::
