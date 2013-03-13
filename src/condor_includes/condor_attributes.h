@@ -999,7 +999,6 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SORT_EXPR "SortExpr"
 #define ATTR_SORT_EXPR_STRING "SortExprString"
 
-#define ATTR_QUERY_EXPIRES "Expires"
 #define ATTR_MAX_TRANSFER_BYTES "MaxTransferBytes"
 
 #define ATTR_REPORT_INTERVAL "ReportInterval"
