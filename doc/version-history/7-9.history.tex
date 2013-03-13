@@ -35,10 +35,6 @@ See details in the manual page at
 section~\ref{man-condor-tail}.
 \Ticket{3522}
 
-\item Allow the number of bits in a delegated proxy to be specified
-by the receiving side using \Macro{GSI\_DELEGATION\_KEYBITS}
-\Ticket{3503}
-
 \item When there are multiple users
 waiting to transfer files within the limits set by
 configuration variables
@@ -66,6 +62,11 @@ support for lists and sub-ClassAds.
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
 
 \begin{itemize}
+
+\item The new configuration variable \Macro{GSI\_DELEGATION\_KEYBITS}
+allows the number of bits in a delegated proxy to be specified
+by the receiving side.
+\Ticket{3503}
 
 \item When using file transfer concurrency limits, additional I/O
   usage statistics are now published in the ClassAd of the
@@ -164,7 +165,7 @@ buffer overflow and incorrect determination that daemons are hung.
 
 \item The EC2 GAHP now treats OpenStack's \Code{stopped} state as if it
 were \Code{shutoff}, terminating instances which enter this state and
-preventing them from remaining in the queue forever.
+preventing the instances from remaining in the queue forever.
 \Ticket{3507}
 
 \item Two EC2 GAHP bugs are fixed.

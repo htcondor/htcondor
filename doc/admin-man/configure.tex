@@ -9305,6 +9305,14 @@ section~\ref{sec:Security} on Security.
   the interval for checking the proxy should be,
   at most, half of the interval for refreshing it.
 
+\label{param:GSIDelegationKeybits}
+\item[\Macro{GSI\_DELEGATION\_KEYBITS}]
+  The integer number of bits in the GSI key.
+  If set to 0, the number of bits will be that preferred by the GSI library.
+  If set to less than 512, the value will be ignored, and the key size
+  will be 512 bits.
+  Setting the value greater than 4096 is likely to cause long compute times.
+  
 \label{param:GridMap}
 \item[\Macro{GRIDMAP}]
   The complete path and file name of the Globus Gridmap file.
