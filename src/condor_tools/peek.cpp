@@ -66,6 +66,7 @@ class HTCondorPeek : public PeekGetFD
 {
 public:
 	HTCondorPeek() :
+		m_id(),
 		m_transfer_stdout(false),
 		m_transfer_stderr(false),
 		m_auto_retry(false),
