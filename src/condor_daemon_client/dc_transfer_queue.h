@@ -75,6 +75,7 @@ class TransferQueueContactInfo {
 
 class DCTransferQueue : public Daemon {
 public:
+	DCTransferQueue( const class DCSchedd &schedd );
 	DCTransferQueue( TransferQueueContactInfo &contact_info );
 
 		/// Destructor
@@ -88,9 +89,14 @@ public:
 	bool RequestTransferQueueSlot(bool downloading,char const *fname,char const *jobid,char const *queue_user,int timeout,MyString &error_desc);
 
 		// See if we have been given permission to transfer currently
-		// requested file.  If transfers are unlimited, this does no
-		// work.  Call GoAheadAlways() to confirm whether we have GoAhead
-		// for one file or for unlimited files.
+		// requested file.  If transfers are unlimited, this is a no-op.
+		// Returns true if we have the go-ahead to transfer.
+		//         Call GoAheadAlways() to confirm whether we have GoAhead
+		//         for one file or for unlimited files.
+        // Returns false if we do not have the go-ahead.  Sets
+		// pending=true if we should keep trying.  Otherwise, it
+		// sets pending=false and sets error_desc to a description of
+		// the error that caused the request to fail.
 	bool PollForTransferQueueSlot(int timeout,bool &pending,MyString &error_desc);
 
 		// Remove current request for permission to transfer.
@@ -138,6 +144,8 @@ public:
 	unsigned m_recent_usec_file_write;
 	unsigned m_recent_usec_net_read;
 	unsigned m_recent_usec_net_write;
+
+	void Init();
 
 		// Verify that transfer queue server hasn't revoked our slot.
 	bool CheckTransferQueueSlot();

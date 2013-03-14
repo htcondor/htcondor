@@ -30,6 +30,7 @@
 #include "condor_claimid_parser.h"
 #include "authentication.h"
 #include "condor_attributes.h"
+#include "dc_transfer_queue.h"
 
 #include <boost/lexical_cast.hpp>
 
@@ -73,10 +74,13 @@ public:
 		m_success(false),
 		m_max_bytes(1024),
 		m_stdout_offset(-1),
-		m_stderr_offset(-1)
+		m_stderr_offset(-1),
+		m_xfer_q(NULL)
 	{}
 
-	virtual ~HTCondorPeek() {}
+	virtual ~HTCondorPeek() {
+		delete m_xfer_q;
+	}
 
 	bool parse_args(int argc, char *argv[]);
 	bool execute();
@@ -87,6 +91,8 @@ private:
 	bool execute_peek();
 	bool execute_peek_with_session();
 	bool create_session();
+	bool get_transfer_queue_slot();
+	void release_transfer_queue_slot();
 
 	std::string m_pool;
 	std::string m_name;
@@ -105,6 +111,7 @@ private:
 	std::string m_sec_session_id;
 	MyString m_starter_addr;
 	MyString m_starter_version;
+	DCTransferQueue *m_xfer_q;
 };
 
 bool
@@ -233,6 +240,8 @@ HTCondorPeek::create_session()
 		return false;
 	}
 
+	m_xfer_q = new DCTransferQueue( schedd );
+
 	MyString starter_claim_id;
 	MyString slot_name;
 	MyString error_msg;
@@ -286,13 +295,94 @@ HTCondorPeek::create_session()
 }
 
 bool
+HTCondorPeek::get_transfer_queue_slot()
+{
+	if( !m_xfer_q ) {
+		return true;
+	}
+
+	char jobid[PROC_ID_STR_BUFLEN];
+	ProcIdToStr(m_id,jobid);
+
+		// queue_user determines which transfer queue we line up in.
+		// Rather than using the same queue used by the shadow when it
+		// transfers files for this job, we use a queue that is
+		// specific to condor_tail for this user.  That way,
+		// interactive use does not have to wait behind a potentially
+		// large queue of shadow transfers.
+	std::string queue_user;
+	char const *username = get_real_username();
+	if( !username ) {
+		username = "unknown";
+	}
+	formatstr(queue_user,"%s:condor_tail",username);
+
+		// for logging purposes, tell the xfer queue which file we are
+		// initially accessing
+	char const *fname = "condor_tail";
+	if( m_transfer_stdout ) {
+		fname = "stdout";
+	}
+	else if( m_transfer_stderr ) {
+		fname = "stderr";
+	}
+	else if( m_filenames.size() > 0 ) {
+		fname = m_filenames[0].c_str();
+	}
+
+	dprintf(D_ALWAYS,"Requesting GoAhead from the transfer queue manager.\n");
+
+	int timeout = 60;
+	MyString error_msg;
+	if( !m_xfer_q->RequestTransferQueueSlot(true,fname,jobid,queue_user.c_str(),timeout,error_msg) ) {
+		std::cerr << error_msg.Value() << std::endl;
+		return false;
+	}
+
+	while( true ) {
+		bool pending = true;
+
+		if( !m_xfer_q->PollForTransferQueueSlot(timeout,pending,error_msg) && !pending ) {
+			std::cerr << error_msg.Value() << std::endl;
+			return false;
+		}
+
+		if( !pending ) break;
+	}
+
+	dprintf(D_ALWAYS,"Received GoAhead from the transfer queue manager.\n");
+	return true;
+}
+
+void
+HTCondorPeek::release_transfer_queue_slot()
+{
+	if( m_xfer_q ) {
+		m_xfer_q->ReleaseTransferQueueSlot();
+	}
+}
+
+bool
 HTCondorPeek::execute_peek()
 {
 	if (!m_sec_session_id.size() && !create_session())
 	{
 		return false;
 	}
-	return execute_peek_with_session();
+
+	if( !get_transfer_queue_slot() ) {
+		return false;
+	}
+
+	bool rc = execute_peek_with_session();
+
+		// When doing tail -f, it is tempting to hang onto the
+		// transfer queue slot, but during the time we are sleeping,
+		// we will be wasting it, possibly starving other transfers.
+		// Therefore, we release it here and get a new one next time.
+	release_transfer_queue_slot();
+
+	return rc;
 }
 
 bool
@@ -313,7 +403,7 @@ HTCondorPeek::execute_peek_with_session()
 	}
 
 	std::string error_msg_str;
-	if (!starter.peek(m_transfer_stdout, m_stdout_offset, m_transfer_stderr, m_stderr_offset, m_filenames, m_offsets, m_max_bytes, m_retry_sensible, *this, error_msg_str, 60, m_sec_session_id))
+	if (!starter.peek(m_transfer_stdout, m_stdout_offset, m_transfer_stderr, m_stderr_offset, m_filenames, m_offsets, m_max_bytes, m_retry_sensible, *this, error_msg_str, 60, m_sec_session_id, m_xfer_q))
 	{
 		if (!m_retry_sensible) {
 			if (m_success) return true; // If we've succeeded at least once, exit quietly - we probably couldn't reconnect to the starter because the job ended.

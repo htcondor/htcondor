@@ -446,7 +446,7 @@ bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_clien
 }
 
 bool
-DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stderr, ssize_t &stderr_offset, const std::vector<std::string> &filenames, std::vector<ssize_t> &offsets, size_t max_bytes, bool &retry_sensible, PeekGetFD &next, std::string &error_msg, unsigned timeout, const std::string &sec_session_id)
+DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stderr, ssize_t &stderr_offset, const std::vector<std::string> &filenames, std::vector<ssize_t> &offsets, size_t max_bytes, bool &retry_sensible, PeekGetFD &next, std::string &error_msg, unsigned timeout, const std::string &sec_session_id, DCTransferQueue *xfer_q)
 {
 	compat_classad::ClassAd ad;
 	ad.InsertAttr(ATTR_JOB_OUTPUT, transfer_stdout);
@@ -552,7 +552,7 @@ DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stde
 		}
 		int fd = next.getNextFD(filename);
 		filesize_t size;
-		sock.get_file(&size, fd, false, false, remaining);
+		sock.get_file(&size, fd, false, false, remaining, xfer_q);
 		if (size >= 0)
 		{
 			remaining -= max_bytes;

@@ -22,6 +22,7 @@
 #include "dc_transfer_queue.h"
 #include "condor_attributes.h"
 #include "selector.h"
+#include "dc_schedd.h"
 
 TransferQueueContactInfo::TransferQueueContactInfo() {
 	m_unlimited_uploads = true;
@@ -120,6 +121,21 @@ DCTransferQueue::DCTransferQueue( TransferQueueContactInfo &contact_info )
 	m_unlimited_uploads = contact_info.GetUnlimitedUploads();
 	m_unlimited_downloads = contact_info.GetUnlimitedDownloads();
 
+	Init();
+}
+
+DCTransferQueue::DCTransferQueue( const DCSchedd &schedd )
+	: Daemon( schedd )
+{
+	m_unlimited_uploads = false;
+	m_unlimited_downloads = false;
+
+	Init();
+}
+
+void
+DCTransferQueue::Init()
+{
 	m_xfer_downloading = false;
 	m_xfer_queue_sock = NULL;
 	m_xfer_queue_pending = false;
