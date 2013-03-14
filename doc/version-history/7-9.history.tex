@@ -223,6 +223,12 @@ buffer overflow and incorrect determination that daemons are hung.
 
 \begin{itemize}
 
+\item Fixed leaking mount points to the greater
+namespace when using features such as MOUNT_UNDER_SCRATCH 
+on filesystems that have been mounted with shared propagation 
+enabled. 
+\Ticket{3505}
+
 \item The EC2 GAHP now treats OpenStack's \Code{stopped} state as if it
 were \Code{shutoff}, terminating instances which enter this state and
 preventing the instances from remaining in the queue forever.
