@@ -1,9 +1,8 @@
-executable   = ./job_dagman_retry_recovery-nodeC.pl
-arguments    = $(DAGManJobId)
+executable   = ./job_dagman_classad-node.pl
+arguments    = $(DAGManJobId) $(NODE)
 universe     = scheduler
-output       = job_dagman_retry_recovery-nodeC.out
-error        = job_dagman_retry_recovery-nodeC.err
-log          = job_dagman_retry_recovery.log
+output       = job_dagman_classad-node$(NODE).out
+error        = job_dagman_classad-node$(NODE).err
 # Note: we need getenv = true for the node job to talk to the schedd of
 # the personal condor that's running the test.
 getenv       = true

@@ -28,7 +28,47 @@ $testdesc =  'Condor submit dag - classad status update test - scheduler U';
 $testname = "job_dagman_classad";
 $dagman_args = "-verbose";
 
-@outfiles = "job_dagman_final-A.nodes.out";
+@outfiles = ("job_dagman_classad-nodeNodeA.out",
+	"job_dagman_classad-nodeNodeB.out",
+	"job_dagman_classad-nodeNodeC.out");
+
+@lines0 = ("DAG_InRecovery = 0",
+	"DAG_NodesDone = 0",
+	"DAG_NodesFailed = 0",
+	"DAG_NodesPostrun = 0",
+	"DAG_NodesPrerun = 0",
+	"DAG_NodesQueued = 1",
+	"DAG_NodesReady = 0",
+	"DAG_NodesTotal = 3",
+	"DAG_NodesUnready = 2",
+	"DAG_Status = 0",
+	"Node NodeA succeeded");
+
+@lines1 = ("DAG_InRecovery = 0",
+	"DAG_NodesDone = 1",
+	"DAG_NodesFailed = 0",
+	"DAG_NodesPostrun = 0",
+	"DAG_NodesPrerun = 0",
+	"DAG_NodesQueued = 1",
+	"DAG_NodesReady = 0",
+	"DAG_NodesTotal = 3",
+	"DAG_NodesUnready = 1",
+	"DAG_Status = 0",
+	"Node NodeB succeeded");
+
+@lines2 = ("DAG_InRecovery = 0",
+	"DAG_NodesDone = 2",
+	"DAG_NodesFailed = 0",
+	"DAG_NodesPostrun = 0",
+	"DAG_NodesPrerun = 0",
+	"DAG_NodesQueued = 1",
+	"DAG_NodesReady = 0",
+	"DAG_NodesTotal = 3",
+	"DAG_NodesUnready = 0",
+	"DAG_Status = 0",
+	"Node NodeC succeeded");
+
+@all_lines = (\@lines0, \@lines1, \@lines2);
 
 my $killedchosen = 0;
 
@@ -38,10 +78,11 @@ sub HELD{5};
 sub RUNNING{2};
 
 # Get rid of any existing output files.
-#TEMPTEMP -- change
-#TEMPTEMP if (-e $outfile) {
-	#TEMPTEMP runcmd("rm -f $outfile");
-#TEMPTEMP }
+foreach $file (@outfiles) {
+	if (-e $file) {
+		runcmd("rm -f $file");
+	}
+}
 
 $abnormal = sub 
 {
@@ -76,7 +117,28 @@ $success = sub
 	CondorTest::debug("Verifying output\n",1);
 	$diditpass = 1;
 
-#TEMPTEMP -- checks here -- read each output file into string, grep for expected lines
+	$index = 0;
+	foreach $file (@outfiles) {
+		$canopen = open(OUT,"<$file");
+		if (! (defined $canopen)) {
+			CondorTest::debug("Can not open logfile<$file>:$!\n",1);
+			$diditpass = 0;
+		} else {
+			$contents = do { local $/; <OUT>; };
+
+			$lines = shift @all_lines;
+			foreach $line (@$lines) {
+				if ($contents =~ /$line/ ) {
+					CondorTest::debug("$file: $line\n",1);
+				} else {
+					CondorTest::debug("ERROR: $line not found in $file\n",1);
+					$diditpass = 0;
+				}
+			}
+		}
+		close(OUT);
+		$index++;
+	}
 
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
