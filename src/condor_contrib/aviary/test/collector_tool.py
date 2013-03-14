@@ -38,10 +38,20 @@ DEFAULTS = {'wsdl':'file:/var/lib/condor/aviary/services/collector/aviary-collec
             'service':'/services/collector/',
             'verbose': False
             }
-plugins = []
 logging.basicConfig(level=logging.CRITICAL)
 cli_url = None
 cli_names = None
+
+# full summaries for everything
+# optionally retrieve dynamic slots with partitionable slot summaries
+from suds.plugin import MessagePlugin
+from suds.sax.attribute import Attribute
+class SummaryPlugin(MessagePlugin):
+    def marshalled(self, context):
+        sj_body = context.envelope.getChild('Body')[0]
+        sj_body.attributes.append(Attribute("includeSummaries", "true"))
+        sj_body.attributes.append(Attribute("includeDynamic", "true"))
+plugin_list = [SummaryPlugin()]
 
 class AviaryClient:
 
@@ -50,7 +60,7 @@ class AviaryClient:
 
     def __init__(self,wsdl,base_url):
         self.base_url = base_url
-        self.client = Client(wsdl)
+        self.client = Client(wsdl,plugins=plugin_list)
 
     def getClient(self,url_suffix):
         if url_suffix:

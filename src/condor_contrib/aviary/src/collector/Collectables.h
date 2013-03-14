@@ -33,6 +33,7 @@ namespace collector {
         string Name;
         string MyType;
         virtual void update(const ClassAd& ad) = 0;
+        virtual ~Collectable() {};
     };
     
     struct DaemonCollectable: public Collectable {
