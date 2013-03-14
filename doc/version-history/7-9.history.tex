@@ -75,88 +75,30 @@ by the receiving side.
 \Ticket{3503}
 
 \item When using file transfer concurrency limits, additional I/O
-  usage statistics are now published in the ClassAd of the
-  \Condor{schedd}.  This includes the sum and rate of bytes
-  transferred as well as time spent reading and writing to files and
-  to the network.  These statistics are reported for the sum of all
-  users and individually for recently active users.  The ClassAd
-  attributes are described below.  Each of these may be prefixed by a
-  username (e.g. \AdAttr{username\_FileTransferUploadBytes}).  In this
-  case, it represents activity by the specified user.  The published
-  username is actually the file transfer queue name, as defined by
-  \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.  This expression defaults to
-  the name of the job owner.  The attributes that are rates have a
-  suffix that specifies the timespan of the exponential moving
-  average.  By default the timespans that are published are 1m, 5m,
-  1h, and 1d.  This can be changed by configuring
-  \Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}.  These attributes are only
-  reported once a full timespan has accumulated.
+usage statistics are now published as attributes in the ClassAd of the
+\Condor{schedd}.  This includes the sum and rate of bytes
+transferred as well as time spent reading and writing to files and
+to the network.  These statistics are reported for the sum of all
+users and individually for recently active users.  
+These ClassAd attributes are fully described 
+within the section on scheduler attributes at 
+section~\pageref{sec:FT-Scheduler-ClassAd-Attributes}.
+\Ticket{3496}
 
-\begin{description}
-
-\item[\AdAttr{FileTransferUploadBytes}] Total number of bytes uploaded
-  as input to jobs since this \Condor{schedd} was started.
-
-\item[\AdAttr{FileTransferUploadBytesPerSecond\_<timespan>}]
-  Exponential moving average over the specified timespan of the rate
-  at which bytes have been uploaded as input to jobs.
-
-\item[\AdAttr{FileTransferDownloadBytes}] Total number of bytes
-  downloaded as output from jobs since this \Condor{schedd} was
-  started.
-
-\item[\AdAttr{FileTransferDownloadBytesPerSecond\_<timespan>}]
-  Exponential moving average over the specified timespan of the rate
-  at which bytes have been downloaded as output from jobs.
-
-\item[\AdAttr{FileTransferFileReadSeconds}] Total number of
-  submit-side transfer process seconds spent reading from files to be
-  transferred as input to jobs since this \Condor{schedd} was started.
-
-\item[\AdAttr{FileTransferFileReadLoad\_<timespan>}] Exponential
-  moving average over the specified timespan of the rate at which
-  submit-side file transfer processes have spent time reading from
-  files to be transferred as input to jobs.  One file transfer process
-  spending nearly all of its time reading files will generate a load
-  close to 1.0.
-
-\item[\AdAttr{FileTransferFileWriteSeconds}] Total number of
-  submit-side transfer process seconds spent writing to files
-  transferred as output from jobs since this \Condor{schedd} was
-  started.
-
-\item[\AdAttr{FileTransferFileWriteLoad\_<timespan>}]
-  Exponential moving average over the specified timespan of the rate
-  at which submit-side file transfer processes have spent time writing to files
-  transferred as output from jobs.  One file transfer process spending
-  nearly all of its time writing to files will generate a load close
-  to 1.0.
-
-\item[\AdAttr{FileTransferNetReadSeconds}] Total number of submit-side
-  transfer process seconds spent reading from the network when
-  transferring output from jobs since this \Condor{schedd} was
-  started.
-
-\item[\AdAttr{FileTransferNetReadLoad\_<timespan>}] Exponential moving
-  average over the specified timespan of the rate at which submit-side
-  file transfer processes have spent time reading from the network
-  when transferring output from jobs.  One file transfer process
-  spending nearly all of its time reading from the network will
-  generate a load close to 1.0.
-
-\item[\AdAttr{FileTransferNetWriteSeconds}] Total number of
-  submit-side transfer process seconds spent writing to the network
-  when transferring input to jobs since this \Condor{schedd} was
-  started.
-
-\item[\AdAttr{FileTransferNetWriteLoad\_<timespan>}] Exponential
-  moving average over the specified timespan of the rate at which
-  submit-side file transfer processes have spent time writing to the
-  network when transferring input to jobs.  One file transfer process
-  spending nearly all of its time writing to the network will generate
-  a load close to 1.0.
-
-\end{description}
+\begin{itemize}
+  \item[\AdAttr{FileTransferUploadBytes}]
+  \item[\AdAttr{FileTransferUploadBytesPerSecond\_<timespan>}]
+  \item[\AdAttr{FileTransferDownloadBytes}]
+  \item[\AdAttr{FileTransferDownloadBytesPerSecond\_<timespan>}]
+  \item[\AdAttr{FileTransferFileReadSeconds}] 
+  \item[\AdAttr{FileTransferFileReadLoad\_<timespan>}] 
+  \item[\AdAttr{FileTransferFileWriteSeconds}] 
+  \item[\AdAttr{FileTransferFileWriteLoad\_<timespan>}]
+  \item[\AdAttr{FileTransferNetReadSeconds}] 
+  \item[\AdAttr{FileTransferNetReadLoad\_<timespan>}] 
+  \item[\AdAttr{FileTransferNetWriteSeconds}] 
+  \item[\AdAttr{FileTransferNetWriteLoad\_<timespan>}] 
+\end{itemize}
 
 \item \Macro{NOT\_RESPONDING\_TIMEOUT} now internally adds some random skew
 to avoid synchronization of heartbeat messages, which can lead to UDP
