@@ -72,8 +72,11 @@ class BoincResource : public BaseResource
 	char *serviceUri;
 	static int gahpCallTimeout;
 	GahpClient *gahp; // For pings.
-	GahpClient *status_gahp;
+	GahpClient *m_statusGahp;
 	GahpClient *m_leaseGahp;
+
+	std::list<BoincBatch *> m_batches
+	StringList m_statusBatches;
 
 protected:
 

@@ -44,6 +44,8 @@ struct GahpProxyInfo
 
 typedef void (* unicore_gahp_callback_func_t)(const char *update_ad_string);
 
+class BoincJob;
+
 #define GAHPCLIENT_DEFAULT_SERVER_ID "DEFAULT"
 #define GAHPCLIENT_DEFAULT_SERVER_PATH "DEFAULT"
 
@@ -757,18 +759,24 @@ class GahpClient : public Service {
 
 		int boinc_submit( const char *service_url,
 						  const char *batch_name,
-						  <jobs>, <output> );
+						  const std::vector<BoincJob *> &jobs );
 
+		typedef vector< pair< string, string > > BoincBatchResults;
+		typedef vector< BoincBatchResults > BoincQueryResults;
+//		typedef vector< vector< pair< string, string > > > BoincQueryResults;
 		int boinc_query_batch( const char *service_url,
-							   const char *batch_name,
-							   <return lists of jobs and statuses> );
+							   StringList &batch_names,
+							   BoincQueryResults &results );
 
+		typedef vector< pair< string, string> > BoincOutputFiles;
 		int boinc_fetch_output( const char *service_url,
 								const char *job_name,
 								const char *iwd,
 								const char *stderr,
-								<output files>,
-								<return exit status, etc> );
+								const BoincOutputFiles &output_files,
+								int &exit_status,
+								double &cpu_time,
+								double &wallclock_time );
 
 		int boinc_abort_jobs( const char *service_url,
 							  StringList &job_names );

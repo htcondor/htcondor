@@ -158,7 +158,7 @@ BoincJob::BoincJob( ClassAd *classad )
 	gmState = GM_INIT;
 	enteredCurrentGmState = time(NULL);
 	enteredCurrentRemoteState = time(NULL);
-	resourceManagerString = NULL;
+	m_serviceUrl = NULL;
 	myResource = NULL;
 	gahp = NULL;
 	connectFailureCount = 0;
@@ -201,15 +201,7 @@ BoincJob::BoincJob( ClassAd *classad )
 			/* TODO Make port and '/ce-cream/services/CREAM' optional */
 		token = GetNextToken( " ", false );
 		if ( token && *token ) {
-			// If the resource url is missing a scheme, insert one
-			if ( strncmp( token, "http://", 7 ) == 0 ||
-				 strncmp( token, "https://", 8 ) == 0 ) {
-				resourceManagerString = strdup( token );
-			} else {
-				std::string urlbuf;
-				formatstr( urlbuf, "https://%s", token );
-				resourceManagerString = strdup( urlbuf.c_str() );
-			}
+			m_serviceUrl = strdup( token );
 		} else {
 			formatstr( error_string, "%s missing BOINC Service URL",
 								  ATTR_GRID_RESOURCE );
@@ -243,7 +235,7 @@ BoincJob::BoincJob( ClassAd *classad )
 	}
 	
 		// Find/create an appropriate BoincResource for this job
-	myResource = BoincResource::FindOrCreateResource( resourceManagerString );
+	myResource = BoincResource::FindOrCreateResource( m_serviceUrl );
 	if ( myResource == NULL ) {
 		error_string = "Failed to initialize BoincResource object";
 		goto error_exit;
@@ -276,7 +268,7 @@ BoincJob::~BoincJob()
 	if ( myResource ) {
 		myResource->UnregisterJob( this );
 	}
-	free( resourceManagerString );
+	free( m_serviceUrl );
 	free( remoteBatchName );
 	free( remoteJobNmae );
 	delete gahp;
@@ -359,7 +351,7 @@ void BoincJob::doEvaluateState()
 			} else if ( wantResubmit || doResubmit ) {
 				gmState = GM_CLEAR_REQUEST;
 			} else {
-					// TODO we should save the cream job state in the job
+					// TODO we should save the boinc job state in the job
 					//   ad and use it to set submitLogged and
 					//   executeLogged here
 				submitLogged = true;
@@ -449,8 +441,17 @@ void BoincJob::doEvaluateState()
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_CANCEL;
 			} else {
+				int exit_status = 0;
+				double cpu_time = 0;
+				double wallclock_time = 0;
+				std::string iwd;
+				std::string stderr;
+				GahpClient::BoincOutputFiles outputs;
+				BuildOutputInfo( iwd, stderr, outputs );
 				// TODO: Assemble arguments for gahp command
-				rc = gahp->boinc_fetch_output( /* args */ );
+				rc = gahp->boinc_fetch_output( m_serviceUrl, remoteJobName,
+											   /*iwd*/, /*stderr*/, /*outputs*/,
+											   exit_status, cpu_time, wallclock_time );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -501,7 +502,9 @@ void BoincJob::doEvaluateState()
 			} break;
 		case GM_CANCEL: {
 			// We need to cancel the job submission.
-			rc = gahp->boinc_abort_jobs( /* list of single job */ );
+			StringList names;
+			names.append( remoteJobName );
+			rc = gahp->boinc_abort_jobs( m_serviceUrl, names );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
@@ -748,7 +751,7 @@ void BoincJob::SetRemoteBatchName( const char *batch_name )
 	}
 
 	if ( batch_name ) {
-		formatstr( full_name, "boinc %s %s %s", resourceManagerString,
+		formatstr( full_name, "boinc %s %s %s", m_serviceUrl,
 				   remoteBatchName, remoteJobName );
 	} else {
 		full_name = "";
@@ -804,3 +807,116 @@ void BoincJob::NewBoincState( const char *new_state )
 	}
 }
 
+void BoincJob::BuildOutputInfo( std::string &iwd, std::string &stderr,
+								GahpClient::BoincOutputFiles &outputs )
+{
+	std::string tmp_str;
+
+	iwd = "/";
+	jobAd->LookupString( ATTR_JOB_IWD, iwd );
+
+	stderr = NULL_FILE;
+	jobAd->LookupString( ATTR_JOB_ERROR, stderr );
+
+	if ( jobAd->LookupString( ATTR_TRANSFER_OUTPUT_FILES, tmp_str ) ) {
+		char *filename;
+		char *remaps = NULL;
+		MyString new_name;
+		jobAd->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, &remaps );
+
+		StringList output_files(tmp_str.c_str());
+		output_files.rewind();
+		while ( (filename = output_files.next()) != NULL ) {
+
+			new_name = condor_basename( filename );
+			if ( remaps ) {
+				filename_remap_find( remaps, filename, new_name );
+			}
+
+			outputs.push_back( pair<std::string,std::string>( filename, new_name.Value() ) );
+		}
+
+		free( remaps );
+
+		if ( jobAd->LookupString(ATTR_JOB_OUTPUT, tmp_str) &&
+			 tmp_str.length() && strcmp( tmp_str.c_str(), NULL_FILE ) ) {
+			// TODO should we check ATTR_TRANSFER_OUTPUT/ERROR?
+			outputs.push_back( pair<std::string,std::string>( condor_basename( tmp_str.c_str(), tmp_str ) ) );
+
+			if ( stderr != tmp_str ) {
+				outputs.push_back( pair<std::string,std::string>( condor_basename( stderr.c_str(), stderr ) ) );
+			}
+		}
+	}
+}
+
+std::string BoincJob::GetAppName()
+{
+	std::string name;
+	jobAd->LookupString( ATTR_JOB_CMD, name );
+	return name;
+}
+
+ArgList *BoincJob::GetArgs()
+{
+	ArgList *args = new ArgList();
+	MyString arg_errors;
+
+	if( !args.AppendArgsFromClassAd( jobAd, &arg_errors ) ) {
+		dprintf( D_ALWAYS, "(%d.%d) Failed to read job arguments: %s\n",
+				 procID.cluster, procID.proc, arg_errors.Value());
+	}
+
+	return args;
+}
+
+void BoincJob::GetInputFilenames( vector<pair<string, string> > &files )
+{
+	string tmp_str;
+	const char *filename;
+
+	files.clear();
+
+	jobAd->LookupString( ATTR_TRANSFER_INPUT_FILES, tmp_str );
+	StringList strlist( tmp_str.c_str() );
+
+	if ( jobAd->LookupString( ATTR_JOB_INPUT, tmp_str ) &&
+		 tmp_str.length() && strcmp( tmp_str.c_str(), NULL_FILE ) &&
+			 !strlist.contains( tmp_str.c_str() ) ) {
+		strlist.append( tmp_str.c_str() );
+	}
+
+
+	strlist.rewind();
+	while ( (filename = strlist.next()) != NULL ) {
+		files.push_back( pair<string, string>( filename, condor_basename(filename) ) );
+	}
+}
+
+void BoincJob::GetOutputFilenames( vector<string> &files )
+{
+	string tmp_str;
+
+	files.clear();
+	if ( jobAd->LookupString( ATTR_TRANSFER_OUTPUT_FILES, tmp_str ) ) {
+		StringList strlist( tmp_str.c_str() );
+		const char *filename;
+
+		if ( jobAd->LookupString(ATTR_JOB_OUTPUT, tmp_str ) &&
+			 tmp_str.length() && strcmp( tmp_str.c_str(), NULL_FILE ) &&
+			 !strlist.contains( tmp_str.c_str() ) ) {
+			strlist.append( tmp_str.c_str() );
+		}
+
+		if ( jobAd->LookupString(ATTR_JOB_ERROR, tmp_str ) &&
+			 tmp_str.length() && strcmp( tmp_str.c_str(), NULL_FILE ) &&
+			 !strlist.contains( tmp_str.c_str() ) ) {
+			strlist.append( tmp_str.c_str() );
+		}
+
+		strlist.rewind();
+		while ( (filename = strlist.next()) != NULL ) {
+			files.push_back( filename );
+		}
+	}
+}

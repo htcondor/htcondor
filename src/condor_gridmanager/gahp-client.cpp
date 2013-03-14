@@ -32,6 +32,7 @@
 
 #include "gahp-client.h"
 #include "gridmanager.h"
+#include "boincjob.h"
 
 
 #define NULLSTRING "NULL"
@@ -52,7 +53,7 @@ const int GahpServer::m_buffer_size = 4096;
 
 int GahpServer::m_reaperid = -1;
 
-const char *escapeGahpString(const std::string input);
+const char *escapeGahpString(const std::string &input);
 const char *escapeGahpString(const char * input);
 
 void GahpReconfig()
@@ -1276,7 +1277,7 @@ GahpServer::getPollInterval()
 }
 
 const char *
-escapeGahpString(const std::string input) 
+escapeGahpString(const std::string &input) 
 {
 	return escapeGahpString(input.empty() ? NULL : input.c_str());
 }
@@ -8000,7 +8001,7 @@ int GahpClient::dcloud_start_auto( const char *service_url,
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int boinc_ping( const char *service_url )
+int GahpClient::boinc_ping( const char *service_url )
 {
 	static const char* command = "BOINC_PING";
 
@@ -8062,29 +8063,284 @@ int boinc_ping( const char *service_url )
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int boinc_submit( const char *service_url,
-				  const char *batch_name,
-				  <jobs>, <output> )
+int GahpClient::boinc_submit( const char *service_url,
+							  const char *batch_name,
+							  const std::vector<BoincJob *> &jobs )
 {
+	static const char* command = "BOINC_SUBMIT";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+	ASSERT( !jobs.empty() );
+	int job_cnt = jobs.size();
+	BoincJob *job = jobs.front();
+
+		// Generate request line
+	if (!service_url) service_url=NULLSTRING;
+	if (!batch_name) batch_name=NULLSTRING;
+	std::string reqline;
+	reqline = escapeGahpString( batch_name );
+	formatstr_cat( reqline, " %s %d", escapeGahpString( job->GetAppName() ),
+				   job_cnt );
+	for ( vector<BoincJob*>::iterator itr = jobs.begin(); itr != jobs.end();
+		  itr++ ) {
+		ArgList *args_list = (*itr)->GetArgs();
+		char **args = args_list->GetStringArray();
+		int arg_cnt = args_list->Count();
+		formatstr_cat( reqline, " %d", arg_cnt );
+		for ( int i = 0; i < arg_cnt; i++ ) {
+			reqline += " ";
+			reqline += escapeGahpString( args[i] );
+		}
+		deleteStringArray( args );
+		delete args_list;
+
+		vector<pair<string, string> > inputs;
+		(*itr)->GetInputFilenames( inputs );
+		formatstr_cat( " %d", inputs.size() );
+		for ( vector<pair<string, string> >::iterator jtr = inputs.begin(),
+				  jtr != inputs.end(); jtr++ ) {
+			reqline += " ";
+			reqline += escapeGahpString( jtr->first );
+			reqline += " ";
+			reqline += escapeGahpString( jtr->second );
+		}
+	}
+
+	vector<string> outputs;
+	job->GetOutputFilenames( outputs );
+	if ( outputs.size() == 0 ) {
+		reqline += " ALL";
+	} else {
+		for ( vector<string>::iterator itr = outputs.begin();
+			  itr != outputs.end(); itr++ ) {
+			reqline += " ";
+			reqline += escapeGahpString( *itr );
+		}
+	}
+
+	const char *buf = reqline.c_str();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending( command, buf ) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending( command, buf );
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if ( result->argc != 2 ) {
+			EXCEPT( "Bad %s Result", command );
+		}
+		int rc;
+		if ( strcmp( result->argv[1], NULLSTRING ) == 0 ) {
+			rc = 0;
+		} else {
+			rc = 1;
+			error_string = result->argv[1];
+		}
+
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout( command, buf ) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int boinc_query_batch( const char *service_url,
-					   const char *batch_name,
-					   <return lists of jobs and statuses> )
+int GahpClient::boinc_query_batch( const char *service_url,
+								   StringList &batch_names,
+								   BoincQueryResults &results )
 {
+	static const char* command = "BOINC_QUERY_BATCH";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if (!service_url) service_url=NULLSTRING;
+	std::string reqline;
+	const char *name;
+	batch_names.rewind();
+	while ( (name = batch_names.next()) ) {
+		formatstr_cat( reqline, " %s", escapeGahpString( name ) );
+	}
+	const char *buf = reqline.c_str();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending( command, buf ) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending( command, buf );
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if ( result->argc < 2 ) {
+			EXCEPT( "Bad %s Result", command );
+		}
+		int rc;
+		if ( strcmp( result->argv[1], NULLSTRING ) == 0 ) {
+			rc = 0;
+		} else {
+			rc = 1;
+			error_string = result->argv[1];
+		}
+
+		if ( rc == 0 ) {
+			int i = 2;
+			int b = 0;
+			int j_cnt = 0;
+			while ( i < result->argc ) {
+				j_cnt = atoi(i);
+				i++;
+				results.push_back( vector< pair< string, string > >() );
+				for ( j = 0; j < j_cnt; j++ ) {
+					results[b].push_back( pair<string, string>( result->argv[i], result->argv[i+1] ) );
+					i += 2;
+				}
+				b++;
+			}
+		}
+
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout( command, buf ) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int boinc_fetch_output( const char *service_url,
-						const char *job_name,
-						const char *iwd,
-						const char *stderr,
-						<output files>,
-						<return exit status, etc> )
+int GahpClient::boinc_fetch_output( const char *service_url,
+									const char *job_name,
+									const char *iwd,
+									const char *stderr,
+									const GahpClieng::BoincOutputFiles &output_files,
+									int &exit_status,
+									double &cpu_time,
+									double &wallclock_time )
 {
+	static const char* command = "BOINC_ABORT_JOBS";
+
+		// Check if this command is supported
+	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
+		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+
+		// Generate request line
+	if (!service_url) service_url=NULLSTRING;
+	if (!job_name) job_name=NULLSTRING;
+	if (!iwd) iwd=NULLSTRING;
+	if (!stderr) stderr=NULLSTRING;
+	std::string reqline;
+	char *esc1 = strdup( escapeGahpString( job_name ) );
+	char *esc2 = strdup( escapeGahpString( iwd ) );
+	char *esc3 = strdup( escapeGahpString( stderr ) );
+	formatstr( reqline, "%s %s %s ", esc1, esc2, esc3 );
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+	if ( output_files.empty() ) {
+		reqline += "ALL";
+	} else {
+		formatstr_cat( reqline, "%d", output_files.size() );
+		for ( BoincOutputFiles::iterator itr = output_files.begin;
+			  itr != output_files.end(); itr++ ) {
+			reqline += " ";
+			reqline += escapeGahpString( itr->first );
+			reqline += " ";
+			reqline += escapeGahpString( itr->second );
+		}
+	}
+	const char *buf = reqline.c_str();
+
+		// Check if this request is currently pending.  If not, make
+		// it the pending request.
+	if ( !is_pending( command, buf ) ) {
+		// Command is not pending, so go ahead and submit a new one
+		// if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending( command, buf );
+	}
+
+		// If we made it here, command is pending.
+		
+		// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command,buf);
+	if ( result ) {
+		// command completed.
+		if ( result->argc < 2 ) {
+			EXCEPT( "Bad %s Result", command );
+		}
+		int rc;
+		if ( strcmp( result->argv[1], NULLSTRING ) != 0 ) {
+			rc = 1;
+			error_string = result->argv[1];
+		} else {
+			if ( result->argc != 5 ) {
+				EXCEPT( "Bad %s Result", command );
+			}
+			rc = 0;
+			exit_status = atoi( result->argv[2] );
+			cpu_time = atof( result->argv[3] );
+			wallclock_time = atof( result->argv[4] );
+		}
+
+		delete result;
+		return rc;
+	}
+
+		// Now check if pending command timed out.
+	if ( check_pending_timeout( command, buf ) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+		// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int boinc_abort_jobs( const char *service_url,
-					  StringList &job_names> )
+int GahpClient::boinc_abort_jobs( const char *service_url,
+								  StringList &job_names> )
 {
 	static const char* command = "BOINC_ABORT_JOBS";
 
@@ -8098,8 +8354,14 @@ int boinc_abort_jobs( const char *service_url,
 	std::string reqline;
 	const char *name;
 	job_names.rewind();
+	bool first_time = true;
 	while ( (name = job_names.next()) ) {
-		formatstr_cat( reqline, " %s", escapeGahpString( name ) );
+		if ( first_time ) {
+			formatstr_cat( reqline, "%s", escapeGahpString( name ) );
+			first_time = false;
+		} else {
+			formatstr_cat( reqline, " %s", escapeGahpString( name ) );
+		}
 	}
 	const char *buf = reqline.c_str();
 
@@ -8146,8 +8408,8 @@ int boinc_abort_jobs( const char *service_url,
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int boinc_retire_batch( const char *service_url,
-						const char *batch_name )
+int GahpClient::boinc_retire_batch( const char *service_url,
+									const char *batch_name )
 {
 	static const char* command = "BOINC_RETIRE_BATCH";
 
@@ -8209,9 +8471,9 @@ int boinc_retire_batch( const char *service_url,
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int boinc_set_lease( const char *service_url,
-					 const char *batch_name,
-					 time_t new_lease_time )
+int GahpClient::boinc_set_lease( const char *service_url,
+								 const char *batch_name,
+								 time_t new_lease_time )
 {
 	static const char* command = "BOINC_SET_LEASE";
 

@@ -51,6 +51,13 @@ class BoincJob : public BaseJob
 	BaseResource *GetResource();
 	void SetRemoteBatchName( const char *batch_name );
 
+	void BuildOutputInfo( std::string &iwd, std::string &stderr,
+						  GahpClient::BoincOutputFiles &outputs );
+	std::string GetAppName();
+	ArgList *GetArgs();
+	void GetInputFilenames( vector<pair<string, string> > &files );
+	void GetOutputFilenames( vector<string> &files );
+
 	static int gahpCallTimeout;
 	static int maxConnectFailures;
 
@@ -65,7 +72,7 @@ class BoincJob : public BaseJob
 	BoincResource *myResource;
 	time_t enteredCurrentGmState;
 	time_t enteredCurrentRemoteState;
-	char *resourceManagerString;
+	char *m_serviceUrl;
 	int connectFailureCount;
 
 	GahpClient *gahp;

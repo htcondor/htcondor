@@ -1677,13 +1677,14 @@ SetExecutable()
 	MyString	full_ename;
 	MyString buffer;
 
-	// In vm universe and ec2 grid jobs, 'Executable' parameter is not
-	// a real file but just the name of job.
+	// In vm universe and ec2/deltacloud/boinc grid jobs, 'Executable'
+	// parameter is not a real file but just the name of job.
 	if ( JobUniverse == CONDOR_UNIVERSE_VM ||
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   JobGridType != NULL &&
 		   ( strcasecmp( JobGridType, "ec2" ) == MATCH ||
-		     strcasecmp( JobGridType, "deltacloud" ) == MATCH ) ) ) {
+		     strcasecmp( JobGridType, "deltacloud" ) == MATCH ||
+			 strcasecmp( JobGridType, "boinc" ) == MATCH ) ) ) {
 		ignore_it = true;
 	}
 

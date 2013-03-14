@@ -48,7 +48,7 @@ HashTable <HashKey, BoincResource *>
 
 
 struct BoincBatch {
-	char *m_batch_name;
+	std::string m_batch_name;
 	bool m_submitted;
 	time_t m_lease_time;
 	std::string m_error_message;
@@ -108,6 +108,7 @@ BoincResource::~BoincResource()
 	delete gahp;
 	delete status_gahp;
 	delete m_leaseGahp;
+	// TODO need to clean up m_batches?
 }
 
 bool BoincResource::Init()
@@ -127,13 +128,13 @@ bool BoincResource::Init()
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
 
-	status_gahp = new GahpClient( gahp_name.c_str() );
+	m_statusGahp = new GahpClient( gahp_name.c_str() );
 
 	StartBatchStatusTimer();
 
-	status_gahp->setNotificationTimerId( BatchPollTid() );
-	status_gahp->setMode( GahpClient::normal );
-	status_gahp->setTimeout( gahpCallTimeout );
+	m_statusGahp->setNotificationTimerId( BatchPollTid() );
+	m_statusGahp->setMode( GahpClient::normal );
+	m_statusGahp->setTimeout( gahpCallTimeout );
 
 	m_leaseGahp = new GahpClient( gahp_name.c_str() );
 
@@ -165,7 +166,7 @@ void BoincResource::Reconfig()
 	BaseResource::Reconfig();
 
 	gahp->setTimeout( gahpCallTimeout );
-	status_gahp->setTimeout( gahpCallTimeout );
+	m_statusGahp->setTimeout( gahpCallTimeout );
 	m_leaseGahp->setTimeout( gahpCallTimeout );
 }
 
@@ -316,19 +317,56 @@ void BoincResource::DoPing( time_t& ping_delay, bool& ping_complete,
 
 BoincResource::BatchStatusResult BoincResource::StartBatchStatus()
 {
-	ASSERT(status_gahp);
+	for ( std::list<BoincBatch*>::iterator itr = m_batches.begin();
+		  itr != m_batches.end(); itr++ ) {
+		// TODO skip over batches we know aren't submitted?
+		m_statusBatches.insert( itr->m_batch_name );
+	}
 
-	// TODO perform batch query gahp command
-	//   when done, iterate over results
-	//   find each BoincJob and call NewBoincState()
+	return FinishBatchStatus();
 }
 
 BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 {
-	// As it happens, we can use the same code path
-	// for starting and finishing a batch status for
-	// CREAM jobs.  Indeed, doing so is simpler.
-	return StartBatchStatus();
+	GahpClient::BoincQueryResults results;
+	int rc = m_statusGahp->boinc_query_batch( resourceName, m_statusBatches,
+											  results );
+	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
+		return BSR_PENDING;
+	}
+	if ( rc != 0 ) {
+		// TODO Save error string for use in hold messages?
+		dprintf( D_ALWAYS, "Error getting BOINC status: %s\n",
+				 m_statusGahp->getErrorString() );
+		return BSR_ERROR;
+	}
+
+	// TODO We're not detecting missing jobs from batch results
+	//   Do we need to?
+	for ( GahpClient::BoincQueryResult::iterator i = results.begin(); i != results.end(); i++ ) {
+		for ( GahpClient::BoincBatchResults::iterator j = i->begin(); j != i->end(), j++ ) {
+			const char *job_id = strrchr( j->first.c_str(), '#' );
+			if ( job_id == NULL ) {
+				dprintf( D_ALWAYS, "Failed to find job id in '%s'\n", j->first.c_str() );
+				continue;
+			}
+			job_id++;
+			PROC_ID proc_id;
+			if ( sscanf( "%d.%d", &proc_id.cluster, &proc_id.proc ) != 2 ) {
+				dprintf( D_ALWAYS, "Failed to parse job id '%s'\n", j->first.c_str() );
+				continue;
+			}
+			BaseJob *base_job;
+			if ( BaseJob::JobsByProcId.lookup( procID, base_job ) != 0 ) {
+				CreamJob *cream_job = dynamic_cast<CreamJob*>( base_job );
+				ASSERT( cream_job != NULL );
+				cream_job->NewBoincState( j->second.c_str() );
+			}
+		}
+	}
+
+	m_statusBatches.clearAll();
+	return BSR_DONE;
 }
 
 GahpClient * BoincResource::BatchGahp() { return status_gahp; }
