@@ -38,7 +38,7 @@ class IOStats {
 	stats_entry_sum_ema_rate<double> net_write;
 
 	void Add(IOStats &s);
-	void ConfigureEMAHorizons(stats_ema_list const &ema_list);
+	void ConfigureEMAHorizons(classy_counted_ptr<stats_ema_config> config);
 };
 
 // transfer queue server's representation of a client
@@ -141,8 +141,11 @@ class TransferQueueManager: public Service {
 	IOStats m_iostats;
 	int m_update_iostats_interval;
 	int m_update_iostats_timer;
-	stats_ema_list iostat_ema_horizons;
-	StatisticsPool StatPool;
+	classy_counted_ptr<stats_ema_config> ema_config;
+	StatisticsPool m_stat_pool;           // aggregate stats
+	StatisticsPool m_per_queue_stat_pool; // per queue stats (by default there is a queue per user)
+	bool m_publish_per_queue_iostats;
+	bool m_published_per_queue_iostats;
 
 	bool AddRequest( TransferQueueRequest *client );
 	void RemoveRequest( TransferQueueRequest *client );

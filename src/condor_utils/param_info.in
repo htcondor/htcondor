@@ -10875,6 +10875,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd
 id=613
 
+[INDIVIDUAL_TRANSFER_IO_REPORT]
+aliases=
+default=true
+version=7.9.5
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Controls whether file transfer I/O statistics are published per transfer queue (user) or only the aggregate.
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=schedd
+id=612
+
 [GLEXEC_RETRIES]
 aliases=
 default=3
