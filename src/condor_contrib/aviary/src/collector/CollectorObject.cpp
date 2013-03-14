@@ -85,7 +85,7 @@ CollectableT* updateCollectable(const ClassAd& ad, CollectablesT& collectables)
         dprintf(D_FULLDEBUG, "Created new %s Collectable for '%s'\n",collectable->MyType.c_str(),collectable->Name.c_str());
     }
     else {
-        CollectableT* collectable = (*it).second;
+        collectable = (*it).second;
         collectable->update(ad);
         dprintf(D_FULLDEBUG, "Updated %s Collectable '%s'\n",collectable->MyType.c_str(),collectable->Name.c_str());
     }
@@ -117,24 +117,100 @@ CollectableT* invalidateCollectable(const ClassAd& ad, CollectablesT& collectabl
     return collectable;
 }
 
+ // find the partitionable for a given dynamic and attach it
+Slot* CollectorObject::findPartitionable(Slot* dslot) {
+    Slot* pslot = NULL;
+    string slota,slotb;
+
+    size_t found = dslot->Name.rfind("@");
+    if (found!=string::npos) {
+            slotb = dslot->Name.substr(found,dslot->Name.length());
+    }
+    found = dslot->Name.find("_");
+    if (found!=string::npos) {
+            slota = dslot->Name.substr(0,found);
+    }
+
+    SlotMapType::iterator it = stable_slots.find(slota+slotb);
+    if (it != stable_slots.end()) {
+        pslot = (*it).second;
+    }
+
+    return pslot;
+}
+
 // slots are special due to their dynamic/partitionable links
 // and high volume
-void updateSlotID(Slot* slot, SlotDateMapType& slot_ids)
+Slot* CollectorObject::updateSlot(const ClassAd& ad)
 {
     //TODO: fix association with other slots
     //TODO: update birthdate map
-    if (slot) {
-        slot_ids.insert(make_pair(slot->DaemonStartTime,slot));
+    Slot* slot = NULL;
+    bool is_dynamic;
+
+    ad.LookupBool(ATTR_SLOT_DYNAMIC,is_dynamic);
+
+    if (is_dynamic) {
+        slot = (Slot*)updateCollectable<SlotMapType,Slot>(ad, dynamic_slots);
+        Slot* pslot = findPartitionable(slot);
+        if (pslot) {
+            SlotDynamicType::iterator it = pslots.find(pslot->Name);
+            if (it != pslots.end()) {
+                (*it).second->insert(slot);
+            }
+            else {
+                SlotSetType* dslots = new SlotSetType;
+                dslots->insert(slot);
+                pslots.insert(make_pair(pslot->Name,dslots));
+            }
+        }
     }
+    else {
+        slot = (Slot*)updateCollectable<SlotMapType,Slot>(ad, stable_slots);
+        stable_slot_ids.insert(make_pair(slot->DaemonStartTime,slot));
+    }
+
+    return slot;
 }
 
-void invalidateSlotID(Slot* slot, SlotDateMapType& slot_ids)
+Slot* CollectorObject::invalidateSlot(const ClassAd& ad)
 {
     //TODO: disassociate links to dynamic slots
     //TODO: update birthdate map
-    if (slot) {
-        slot_ids.erase(slot->DaemonStartTime);
+    Slot* slot = NULL;
+    string name;
+
+    // we won't get ATTR_SLOT_DYNAMIC on the invalidate; need to key off name 
+    if (!ad.LookupString(ATTR_NAME,name)) {
+        dprintf(D_ALWAYS, "no name found for slot!\n");
+        return NULL;
     }
+
+    // crude check for dynamic
+    if (name.find("_")!=string::npos) {
+        slot = (Slot*)invalidateCollectable<SlotMapType,Slot>(ad, dynamic_slots);
+        Slot* pslot = findPartitionable(slot);
+        if (pslot) {
+            SlotDynamicType::iterator it = pslots.find(pslot->Name);
+            if (it != pslots.end()) {
+                (*it).second->erase(slot);
+                // don't clean up the set here
+                // might as well reuse for anticipated dslots
+            }
+        }
+    }
+    else {
+        slot = (Slot*)invalidateCollectable<SlotMapType,Slot>(ad, stable_slots);
+        stable_slot_ids.erase(slot->DaemonStartTime);
+        // don't know if we're a plsot or not, so blind check
+        SlotDynamicType::iterator it = pslots.find(slot->Name);
+        if (it != pslots.end()) {
+            delete (*it).second;
+            pslots.erase(slot->Name);
+        }
+    }
+
+    return slot;
 }
 
 // daemonCore methods
@@ -160,8 +236,7 @@ CollectorObject::update(int command, const ClassAd& ad)
             status = updateCollectable<SchedulerMapType,Scheduler>(ad, schedulers);
             break;
         case UPDATE_STARTD_AD:
-            status = updateCollectable<SlotMapType,Slot>(ad, slots);
-            updateSlotID(static_cast<Slot*>(status), slot_ids);
+            status = updateSlot(ad);
             break;
         case UPDATE_SUBMITTOR_AD:
             status = updateCollectable<SubmitterMapType,Submitter>(ad, submitters);
@@ -170,7 +245,7 @@ CollectorObject::update(int command, const ClassAd& ad)
             // fall through on unknown command
             break;
     }
-    return status;
+    return (status!=NULL);
 }
 
 bool
@@ -183,6 +258,10 @@ CollectorObject::invalidate(int command, const ClassAd& ad)
             break;
         case INVALIDATE_MASTER_ADS:
             status = invalidateCollectable<MasterMapType,Master>(ad, masters);
+            if (status) {
+                Master* master = static_cast<Master*>(status);
+                master_ids.erase(master->DaemonStartTime);
+            }
             break;
         case INVALIDATE_NEGOTIATOR_ADS:
             status = invalidateCollectable<NegotiatorMapType,Negotiator>(ad, negotiators);
@@ -191,17 +270,17 @@ CollectorObject::invalidate(int command, const ClassAd& ad)
             status = invalidateCollectable<SchedulerMapType,Scheduler>(ad, schedulers);
             break;
         case INVALIDATE_STARTD_ADS:
-            status = invalidateCollectable<SlotMapType,Slot>(ad, slots);
-            invalidateSlotID(static_cast<Slot*>(status), slot_ids);
+            status = invalidateSlot(ad);
             break;
         case INVALIDATE_SUBMITTOR_ADS:
             status = invalidateCollectable<SubmitterMapType,Submitter>(ad, submitters);
             break;
         default:
             // fall through on unknown command
-            break;
+            return false;
     }
-    return (status!=NULL);
+    if (status) delete status; status = NULL;
+    return (status==NULL);
 }
 
 // private to impl
@@ -256,7 +335,7 @@ CollectorObject::findScheduler(const string& name, bool grep, SchedulerSetType& 
 void
 CollectorObject::findSlot(const string& name, bool grep, SlotSetType& slot_set) 
 {
-    findCollectable<SlotMapType,SlotSetType>(name, grep, slots, slot_set);
+    findCollectable<SlotMapType,SlotSetType>(name, grep, stable_slots, slot_set);
     // TODO: associations?
 }
 

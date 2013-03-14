@@ -107,6 +107,7 @@ namespace collector {
     };
     
     struct Slot: public DaemonCollectable {
+        bool DynamicSlot;
         string SlotType;
         string Arch;
         string OpSys;
@@ -120,14 +121,6 @@ namespace collector {
         double LoadAvg;
         string Start;
         string FileSystemDomain;
-        
-        void update(const ClassAd& ad);
-    };
-    
-    typedef set<Slot*> DynamicSlotList;
-    
-    struct PartitionableSlot: public Slot {
-        DynamicSlotList m_dynamic_slots;
         
         void update(const ClassAd& ad);
     };

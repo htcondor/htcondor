@@ -16,6 +16,7 @@
 
 // condor includes
 #include "condor_common.h"
+#include "condor_attributes.h"
 #include "stl_string_utils.h"
 
 // local includes
@@ -110,6 +111,7 @@ void Slot::update(const ClassAd& ad)
     MGMT_DECLARATIONS;
     DaemonCollectable::update(ad);
     Slot& m_stats = *this;
+    ad.LookupBool(ATTR_SLOT_DYNAMIC,m_stats.DynamicSlot);
     STRING(SlotType);
     upper_case(SlotType);
     STRING(Arch);

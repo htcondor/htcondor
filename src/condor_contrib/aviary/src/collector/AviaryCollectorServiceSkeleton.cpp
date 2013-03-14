@@ -314,7 +314,7 @@ GetSlotResponse* AviaryCollectorServiceSkeleton::getSlot(MessageContext* /*outCt
 
     CollectorObject* co = CollectorObject::getInstance();
     
-    loadResults<AviaryCommon::Slot,SlotMapType,GetSlot,GetSlotResponse>(co->slots,_getSlot,response);
+    loadResults<AviaryCommon::Slot,SlotMapType,GetSlot,GetSlotResponse>(co->stable_slots,_getSlot,response);
 
     return response;
 }
@@ -443,7 +443,7 @@ GetSlotIDResponse* AviaryCollectorServiceSkeleton::getSlotID(MessageContext* /*o
 
     CollectorObject* co = CollectorObject::getInstance();
 
-    pagedResults<SlotDateMapType,SlotMapType,GetSlotID,GetSlotIDResponse>(co->slot_ids,co->slots,_getSlotID,response);
+    pagedResults<SlotDateMapType,SlotMapType,GetSlotID,GetSlotIDResponse>(co->stable_slot_ids,co->stable_slots,_getSlotID,response);
 
     return response;
 }
