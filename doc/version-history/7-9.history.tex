@@ -46,9 +46,10 @@ configured with \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 \Ticket{3487}
 
 \item When using the \Opt{-remote} or \Opt{-spool} options to
-\Condor{submit}, the job owner will be set by the \Condor{schedd} based
-on how you were authenticated. This will make it easier to submit jobs
-to a remote \Condor{schedd} where your credentials may map to a different
+\Condor{submit}, the job owner will now be set based
+upon how the job submitter was authenticated. 
+This will make it easier to submit jobs
+to a remote \Condor{schedd} where the credentials may map to a different
 account name.
 \Ticket{3370} 
 
