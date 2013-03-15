@@ -62,6 +62,7 @@ if ( WITH_BLAHP )
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/mtrace.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/registry.patch -p0 && 
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/dl.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/lsf-jobid.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/add-sge.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/sge-status.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/sge-status-fallback.patch -p0 &&
