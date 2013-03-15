@@ -360,15 +360,17 @@ CollectorObject::findAttribute(AdTypes daemon_type, const string& name, const st
             hash_key.ip_addr = sin_str.getHost();
     }
     else {
-        if (daemon_type == COLLECTOR_AD) {
-            size_t found = name.rfind("@");
-            if (found!=string::npos) {
-                hash_key.name = name.substr(found+1,name.length());
-            }
-        }
-        else {
+        // TODO: something fishy here...suddenly doesn't apply
+        // after earlier testing
+//         if (daemon_type == COLLECTOR_AD) {
+//             size_t found = name.rfind("@");
+//             if (found!=string::npos) {
+//                 hash_key.name = name.substr(found+1,name.length());
+//             }
+//         }
+//         else {
             hash_key.name = name;
-        }
+//         }
         hash_key.ip_addr = "";
     }
 
