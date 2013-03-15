@@ -177,6 +177,12 @@ if (BUILD_TESTING)
 	  condor_pl_test(lib_procapi_pidtracking-snapshot "Fast Termination Child Cleanup Test" "core;quick;full;quicknolink")
 	endif()
 
+	condor_pl_test(classad_cache-basic "classad-cache smoke test" "core;quick;full;quicknolink")
+	condor_pl_test(shadow_mem_usage-basic "report shadow memory use" "core;quick;full;quicknolink")
+	if (LINUX OR DARWIN)
+		condor_pl_test(shadow_s_mem_usage-basic "report static shadow memory use" "core;quick;full;quicknolink")
+	endif(LINUX OR DARWIN)
+
 	##########################################################
 	# feature specific tests
 	if (HAVE_VMWARE)
