@@ -659,10 +659,8 @@ fi
 
 # If the key doesn't exist, create it
 if [ ! -e $bosco_key ]; then
-    # Read in password for bosco key
-    stty -echo
-    read -p "Choose and enter a password for the bosco ssh key: " PASSPHRASE; echo
-    stty echo
+    # Generate a md5sum password
+    PASSPHRASE=`echo $RANDOM$RANDOM$RANDOM$RANDOM | $MD5SUM`
 
     # Output the password to a specially crafted file
     mkdir -p `dirname $PASSPHRASE_LOCATION`
@@ -670,11 +668,7 @@ if [ ! -e $bosco_key ]; then
     chmod go-rwx $PASSPHRASE_LOCATION
     
     # Check if the passphrase is empty
-    if [ "x$PASSPHRASE" == "x" ]; then
-        ssh-keygen -q -t rsa -f $bosco_key > /dev/null
-    else
-        ssh-keygen -q -t rsa -f $bosco_key -P $PASSPHRASE > /dev/null
-    fi   
+    ssh-keygen -q -t rsa -f $bosco_key -P $PASSPHRASE > /dev/null
  
     if [ $? -ne 0 ]; then
         echo "Error running keygen" >&2
