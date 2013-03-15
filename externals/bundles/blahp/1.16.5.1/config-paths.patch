@@ -1,6 +1,6 @@
-diff -u -r org.glite.ce.blahp/config/blah.config.template org.glite.ce.blahp.patched/config/blah.config.template
---- org.glite.ce.blahp/config/blah.config.template	2012-02-02 10:58:36.000000000 -0600
-+++ org.glite.ce.blahp.patched/config/blah.config.template	2012-02-02 10:59:15.000000000 -0600
+diff -u -r org.glite.ce.blahp/config/blah.config.template org.glite.ce.blahp-patched/config/blah.config.template
+--- org.glite.ce.blahp/config/blah.config.template	2013-03-15 14:14:34.000000000 -0500
++++ org.glite.ce.blahp-patched/config/blah.config.template	2013-03-15 14:15:44.000000000 -0500
 @@ -15,17 +15,17 @@
  blah_delegate_renewed_proxies=no
  
@@ -22,7 +22,7 @@ diff -u -r org.glite.ce.blahp/config/blah.config.template org.glite.ce.blahp.pat
  
  #If it is set to no blah scripts for PBS will not try to read 
  #locally from the logs if BLParser is not present
-@@ -61,7 +61,7 @@
+@@ -61,10 +61,10 @@
  ####
  
  #Path where LSF executables are located 
@@ -30,7 +30,11 @@ diff -u -r org.glite.ce.blahp/config/blah.config.template org.glite.ce.blahp.pat
 +lsf_binpath=`which bsub 2>/dev/null|sed 's|/[^/]*$||'`
  
  #Path where the LSF conf file is located ($lsf_confpath/lsf.conf)
- lsf_confpath=/etc
+-lsf_confpath=/etc
++lsf_confpath=${LSF_ENVDIR:-/etc}
+ 
+ #If it is set to yes blah does not check the jobid in the logfiles
+ lsf_nochecksubmission=
 @@ -124,7 +124,7 @@
  bnotifier_pidfile=/var/tmp/cream_tomcat_bnotifier.pid
  
