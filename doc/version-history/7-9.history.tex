@@ -200,6 +200,12 @@ grid type batch going to a remote cluster.
 and the machine doing the query had synchronized clocks.
 \Ticket{3360}
 
+\item Fixed a Linux platform bug in which mount points were leaked
+to the greater namespace when the configuration set
+\MacroNI{MOUNT\_UNDER\_SCRATCH} for file systems
+that have been mounted with shared propagation enabled.
+\Ticket{3505}
+
 \end{itemize}
 
 \noindent Known Bugs:
