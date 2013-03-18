@@ -141,7 +141,8 @@ could cause a crash when transferring files for grid universe jobs of
 grid type batch going to a remote cluster.
 \Ticket{3529}
 
-\item Fixed a bug where \Condor{status} queries would not work unless the \Condor{collector}
+\item Fixed a bug in which \Condor{status} queries would not work,
+with output of \AdStr{Access denied}, unless the \Condor{collector}
 and the machine doing the query had synchronized clocks.
 \Ticket{3360}
 
