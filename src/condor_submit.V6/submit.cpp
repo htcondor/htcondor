@@ -246,6 +246,7 @@ const char	*RequestMemory	= "request_memory";
 const char	*RequestDisk	= "request_disk";
 const std::string  RequestPrefix  = "request_";
 std::set<std::string> fixedReqRes;
+std::set<std::string> stringReqRes;
 
 const char	*Universe		= "universe";
 const char	*MachineCount	= "machine_count";
@@ -2556,6 +2557,12 @@ void SetRequestResources() {
         std::string val = condor_param(key.c_str());
         std::string assign;
         formatstr(assign, "%s%s = %s", ATTR_REQUEST_PREFIX, rname.c_str(), val.c_str());
+        
+        if (val[0]=='\"')
+        {
+            stringReqRes.insert(rname);
+        }
+        
         InsertJobExpr(assign.c_str()); 
     }
     hash_iter_delete(&it);
@@ -6910,7 +6917,10 @@ check_requirements( char const *orig, MyString &answer )
         // CamelCase it!
         *(rname.begin()) = toupper(*(rname.begin()));
         std::string clause;
-        formatstr(clause, " && (TARGET.%s%s >= %s%s)", "", rname.c_str(), ATTR_REQUEST_PREFIX, rname.c_str());
+        if (stringReqRes.count(rname) > 0)
+            formatstr(clause, " && regexp(%s%s, TARGET.%s)", ATTR_REQUEST_PREFIX, rname.c_str(), rname.c_str());
+        else
+            formatstr(clause, " && (TARGET.%s%s >= %s%s)", "", rname.c_str(), ATTR_REQUEST_PREFIX, rname.c_str());
         answer += clause;
     }
     hash_iter_delete(&it);
@@ -7365,6 +7375,7 @@ init_params()
     fixedReqRes.insert(RequestCpus);
     fixedReqRes.insert(RequestMemory);
     fixedReqRes.insert(RequestDisk);
+    stringReqRes.clear();
 }
 
 int

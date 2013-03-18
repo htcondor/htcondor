@@ -347,13 +347,13 @@ VanillaProc::StartJob()
     // End of chroot 
 
 
-    // Auto-fuse
+    // NAMED_MOUNTS
     {
         std::string requested_fuse, fexec, fmnt;
         // RequestedFuse='Name1' Debatable on if it should be a list.
-        JobAd->EvalString("RequestedFuse", NULL, requested_fuse);
+        JobAd->EvalString(ATTR_REQUEST_MNTS, NULL, requested_fuse);
         // NAMED_FUSE= 'Name1=Executable:/sand_box_mountpoint, Name2=Executable:/sand_box_mountpoint'
-        const char * allowed_fuse_mounts = param("NAMED_FUSE");
+        const char * allowed_fuse_mounts = param("NAMED_MOUNTS");
         
         if (requested_fuse.size()) 
         {
@@ -373,18 +373,18 @@ VanillaProc::StartJob()
                 const char * fuse_name = fuse_spec.GetNextToken("=", false);
                 // e.g 'Name1=Executable:/sand_box_mountpoint'
                 if ( fuse_name == NULL ) {
-                    dprintf(D_ALWAYS, "Invalid named fuse: %s\n", fuse_spec.Value());
+                    dprintf(D_ALWAYS, "Invalid named mount: %s\n", fuse_spec.Value());
                 }
                 else {
                     
-                    dprintf(D_FULLDEBUG, "Considering fuse %s.\n", fuse_name);
+                    dprintf(D_FULLDEBUG, "Considering mount %s.\n", fuse_name);
                     // Check to see if the names are = ?
                     if ( (strcmp(requested_fuse.c_str(), fuse_name) == 0)) 
                     {
                         const char * fuse_exec = fuse_spec.GetNextToken(":", false);
                         //'Executable:/sand_box_mountpoint'
                         if ( fuse_exec == NULL ) {
-                            dprintf(D_ALWAYS, "Invalid named fuse: %s\n", fuse_spec.Value());
+                            dprintf(D_ALWAYS, "Invalid named mount: %s\n", fuse_spec.Value());
                         }
                         else {
                             
@@ -411,20 +411,20 @@ VanillaProc::StartJob()
                 return FALSE;
             }
             
-            dprintf(D_FULLDEBUG, "Will attempt to set the fuse to %s.\n", requested_fuse.c_str());
+            dprintf(D_FULLDEBUG, "Will attempt to set the Mount to %s.\n", requested_fuse.c_str());
             
             if (!fs_remap) {
                 fs_remap = new FilesystemRemap();
             }
             
             // 
-            if ( fs_remap->AddFuseMapping( fexec, fmnt ) )
+            if ( fs_remap->AddNamedMapping( fexec, fmnt ) )
             {
-                dprintf(D_FULLDEBUG, "Failed to mount NAME_FUSE: %s.\n", requested_fuse.c_str());
+                dprintf(D_FULLDEBUG, "Failed to mount NAMED_MOUNT: %s.\n", requested_fuse.c_str());
                 return FALSE;
             }
             
-            dprintf(D_FULLDEBUG, "Adding Named Fuse Mapping [%s]: %s -> %s.\n", requested_fuse.c_str(),fexec.c_str(),fmnt.c_str());
+            dprintf(D_FULLDEBUG, "Adding Named Mount Mapping [%s]: %s -> %s.\n", requested_fuse.c_str(),fexec.c_str(),fmnt.c_str());
             
         }
         
