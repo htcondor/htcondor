@@ -152,6 +152,11 @@ to the greater namespace when the configuration set
 that have been mounted with shared propagation enabled.
 \Ticket{3505}
 
+\item Fixed a bug in the logging code that was causing grid universe batch jobs
+to abort and drop a dprintf error file during file transfer once the log had
+grown large enough to rotate.
+\Ticket{3528}
+
 \end{itemize}
 
 \noindent Known Bugs:
