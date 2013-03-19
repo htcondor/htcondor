@@ -876,10 +876,10 @@ bool SigtermContinue::should_continue = false;
 
 
 static int
-handle_off_cancel( Service*, int, Stream* stream)
+handle_off_force( Service*, int, Stream* stream)
 {
 	if( !stream->end_of_message() ) {
-		dprintf( D_ALWAYS, "handle_off_cancel: failed to read end of message\n");
+		dprintf( D_ALWAYS, "handle_off_force: failed to read end of message\n");
 		return FALSE;
 	}
 	if (daemonCore) {
@@ -925,7 +925,7 @@ handle_set_peaceful_shutdown( Service*, int, Stream* stream)
 }
 
 static int
-handle_set_cancel_shutdown( Service*, int, Stream* stream)
+handle_set_force_shutdown( Service*, int, Stream* stream)
 {
 	// If the master could send peaceful shutdown signals, it would
 	// not be necessary to have a message for turning on the peaceful
@@ -934,7 +934,7 @@ handle_set_cancel_shutdown( Service*, int, Stream* stream)
 	// on peaceful shutdown in appropriate daemons.
 
 	if( !stream->end_of_message() ) {
-		dprintf( D_ALWAYS, "handle_set_cancel_shutdown: failed to read end of message\n");
+		dprintf( D_ALWAYS, "handle_set_force_shutdown: failed to read end of message\n");
 		return FALSE;
 	}
 	daemonCore->SetPeacefulShutdown( false );
@@ -2400,9 +2400,9 @@ int dc_main( int argc, char** argv )
 								  (CommandHandler)handle_off_graceful,
 								  "handle_off_graceful()", 0, ADMINISTRATOR );
 
-	daemonCore->Register_Command( DC_OFF_CANCEL, "DC_OFF_CANCEL",
-								  (CommandHandler)handle_off_cancel,
-								  "handle_off_cancel()", 0, ADMINISTRATOR );
+	daemonCore->Register_Command( DC_OFF_FORCE, "DC_OFF_FORCE",
+								  (CommandHandler)handle_off_force,
+								  "handle_off_force()", 0, ADMINISTRATOR );
 
 	daemonCore->Register_Command( DC_OFF_PEACEFUL, "DC_OFF_PEACEFUL",
 								  (CommandHandler)handle_off_peaceful,
@@ -2412,9 +2412,9 @@ int dc_main( int argc, char** argv )
 								  (CommandHandler)handle_set_peaceful_shutdown,
 								  "handle_set_peaceful_shutdown()", 0, ADMINISTRATOR );
 
-	daemonCore->Register_Command( DC_SET_CANCEL_SHUTDOWN, "DC_SET_CANCEL_SHUTDOWN",
-								  (CommandHandler)handle_set_cancel_shutdown,
-								  "handle_set_cancel_shutdown()", 0, ADMINISTRATOR );
+	daemonCore->Register_Command( DC_SET_FORCE_SHUTDOWN, "DC_SET_FORCE_SHUTDOWN",
+								  (CommandHandler)handle_set_force_shutdown,
+								  "handle_set_force_shutdown()", 0, ADMINISTRATOR );
 
 		// DC_NOP is for waking up select.  There is no need for
 		// security here, because anyone can wake up select anyway.
