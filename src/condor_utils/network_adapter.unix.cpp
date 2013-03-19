@@ -267,3 +267,27 @@ UnixNetworkAdapter::derror( const char *label ) const
 			 "%s failed: %s (%d)\n",
 			 label, strerror(errno), errno );
 }
+
+MacAddressToHex(const char *hwaddr[IFNAMSIZ])
+{
+MemCopy( m_hw_addr, &(ifr.ifr_hwaddr.sa_data), 8 );
+
+char                    *str = m_hw_addr_str;
+unsigned                 len = 0;
+const unsigned   maxlen = sizeof(m_hw_addr_str)-1;
+
+*str = '\0';
+for( int i = 0;  i < 6;  i++ ) {
+char    tmp[4];
+snprintf( tmp, sizeof(tmp), "%02x", m_hw_addr[i] );
+len += strlen(tmp);
+ASSERT( len < maxlen );
+strcat( str, tmp );
+if ( i < 5 ) {
+len += 1;
+ASSERT( len < maxlen );
+strcat( str, ":" );
+}
+}
+}
+

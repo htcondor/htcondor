@@ -15,6 +15,8 @@
 #define ATTR_INTERNAL_ADDRESS_IPV6 "LarkInnerAddressIPv6"
 #define ATTR_EXTERNAL_ADDRESS_IPV4 "LarkExternalAddressIPv4"
 #define ATTR_EXTERNAL_ADDRESS_IPV6 "LarkExternalAddressIPv6"
+#define ATTR_INTERNAL_MAC "LarkInnerMacAddress"
+#define ATTR_EXTERNAL_MAC "LarkExternalMacAddress"
 #define ATTR_IPTABLE_NAME "LarkIptableName"
 #define ATTR_NETWORK_TYPE "LarkNetworkType"
 #define ATTR_INTERNAL_INTERFACE "LarkInternalInterface"
