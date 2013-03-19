@@ -39,7 +39,7 @@ void
 usage( char *cmd )
 {
 	fprintf(stderr,"Usage: %s [options] <job-id> [filename1[, filename2[, ...]]]\n",cmd);
-	fprintf(stderr,"View a file in a running job's sandbox.\n");
+	fprintf(stderr,"Tail a file in a running job's sandbox.\n");
 	fprintf(stderr,"The options are:\n");
 	fprintf(stderr,"    -help             Display options\n");
 	fprintf(stderr,"    -version          Display HTCondor version\n");
@@ -48,11 +48,12 @@ usage( char *cmd )
 	fprintf(stderr,"    -debug            Show extra debugging info\n");
 	fprintf(stderr,"    -maxbytes         The maximum number of bytes to transfer.  Defaults to 1024\n");
 	fprintf(stderr,"    -auto-retry       Auto retry if job is not running yet.\n");
-	fprintf(stderr,"    -f,-follow        Follow the contents ofafile.\n");
+	fprintf(stderr,"    -f,-follow        Follow the contents of a file.\n");
+	fprintf(stderr,"By default, only stdout is returned.\n");
 	fprintf(stderr,"The filename may be any file in the job's transfer_output_files.\n");
-	fprintf(stderr,"Alternately, you may specify one of the following options.\n");
-	fprintf(stderr,"    -stdout           Peek at the job's stdout\n");
-	fprintf(stderr,"    -stderr           Peek at the job's stderr\n\n");
+	fprintf(stderr,"You may also include the following options.\n");
+	fprintf(stderr,"    -no-stdout        Do not tail the job's stdout\n");
+	fprintf(stderr,"    -stderr           Tail at the job's stderr\n\n");
 }
 
 void
@@ -65,7 +66,7 @@ class HTCondorPeek : public PeekGetFD
 {
 public:
 	HTCondorPeek() :
-		m_transfer_stdout(false),
+		m_transfer_stdout(true),
 		m_transfer_stderr(false),
 		m_auto_retry(false),
 		m_retry_sensible(true),
@@ -74,7 +75,10 @@ public:
 		m_max_bytes(1024),
 		m_stdout_offset(-1),
 		m_stderr_offset(-1)
-	{}
+	{
+		m_id.cluster = -1;
+		m_id.proc = -1;
+	}
 
 	virtual ~HTCondorPeek() {}
 
@@ -154,8 +158,8 @@ HTCondorPeek::parse_args(int argc, char *argv[])
 			exit(0);
 		} else if(!strcmp(argv[i],"-debug")) {
 			dprintf_set_tool_debug("TOOL", 0);
-		} else if(!strcmp(argv[i],"-stdout")) {
-			m_transfer_stdout = true;
+		} else if(!strcmp(argv[i],"-no-stdout")) {
+			m_transfer_stdout = false;
 		} else if(!strcmp(argv[i],"-stderr")) {
 			m_transfer_stderr = true;
 		} else if (!strcmp(argv[i], "-f") || !strcmp(argv[i], "-follow")) {
