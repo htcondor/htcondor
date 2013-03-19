@@ -840,8 +840,8 @@ do_REMOTE_syscall()
 	  {
 		char *  attrname = 0;
 
-		assert( syscall_sock->code(attrname) );
-		assert( syscall_sock->end_of_message() );;
+		ASSERT( syscall_sock->code(attrname) );
+		ASSERT( syscall_sock->end_of_message() );;
 
 		errno = (condor_errno_t)0;
 		MyString expr;
@@ -855,15 +855,15 @@ do_REMOTE_syscall()
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		ASSERT( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			ASSERT( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( syscall_sock->put(expr.Value()) );
+			ASSERT( syscall_sock->put(expr.Value()) );
 		}
 		free( (char *)attrname );
-		assert( syscall_sock->end_of_message() );;
+		ASSERT( syscall_sock->end_of_message() );;
 		return 0;
 	}
 
@@ -872,9 +872,9 @@ do_REMOTE_syscall()
 		char *  attrname = 0;
 		char *  expr = 0;
 
-		assert( syscall_sock->code(expr) );
-		assert( syscall_sock->code(attrname) );
-		assert( syscall_sock->end_of_message() );;
+		ASSERT( syscall_sock->code(expr) );
+		ASSERT( syscall_sock->code(attrname) );
+		ASSERT( syscall_sock->end_of_message() );;
 
 		errno = (condor_errno_t)0;
 		if ( thisRemoteResource->allowRemoteWriteAttributeAccess(attrname) ) {
@@ -887,13 +887,13 @@ do_REMOTE_syscall()
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		ASSERT( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			ASSERT( syscall_sock->code(terrno) );
 		}
 		free( (char *)expr );
 		free( (char *)attrname );
-		assert( syscall_sock->end_of_message() );;
+		ASSERT( syscall_sock->end_of_message() );;
 		return 0;
 	}
 
@@ -901,8 +901,8 @@ do_REMOTE_syscall()
 	  {
 		char *  expr = 0;
 
-		assert( syscall_sock->code(expr) );
-		assert( syscall_sock->end_of_message() );;
+		ASSERT( syscall_sock->code(expr) );
+		ASSERT( syscall_sock->end_of_message() );;
 
 		errno = (condor_errno_t)0;
 		if ( thisRemoteResource->allowRemoteWriteAttributeAccess(ATTR_REQUIREMENTS) ) {
@@ -915,12 +915,12 @@ do_REMOTE_syscall()
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		ASSERT( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			ASSERT( syscall_sock->code(terrno) );
 		}
 		free( (char *)expr );
-		assert( syscall_sock->end_of_message() );;
+		ASSERT( syscall_sock->end_of_message() );;
 		return 0;
 	}
 	case CONDOR_get_sec_session_info:
@@ -938,9 +938,9 @@ do_REMOTE_syscall()
 				// always encrypt; we are exchanging super secret session keys
 			syscall_sock->set_crypto_mode(true);
 		}
-		assert( syscall_sock->code(starter_reconnect_session_info) );
-		assert( syscall_sock->code(starter_filetrans_session_info) );
-		assert( syscall_sock->end_of_message() );
+		ASSERT( syscall_sock->code(starter_reconnect_session_info) );
+		ASSERT( syscall_sock->code(starter_filetrans_session_info) );
+		ASSERT( syscall_sock->end_of_message() );
 
 		errno = (condor_errno_t)0;
 		rval = pseudo_get_sec_session_info(
@@ -956,21 +956,21 @@ do_REMOTE_syscall()
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, (int)terrno );
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		ASSERT( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			ASSERT( syscall_sock->code(terrno) );
 		}
 		else {
-			assert( syscall_sock->code(reconnect_session_id) );
-			assert( syscall_sock->code(reconnect_session_info) );
-			assert( syscall_sock->code(reconnect_session_key) );
+			ASSERT( syscall_sock->code(reconnect_session_id) );
+			ASSERT( syscall_sock->code(reconnect_session_info) );
+			ASSERT( syscall_sock->code(reconnect_session_key) );
 
-			assert( syscall_sock->code(filetrans_session_id) );
-			assert( syscall_sock->code(filetrans_session_info) );
-			assert( syscall_sock->code(filetrans_session_key) );
+			ASSERT( syscall_sock->code(filetrans_session_id) );
+			ASSERT( syscall_sock->code(filetrans_session_info) );
+			ASSERT( syscall_sock->code(filetrans_session_key) );
 		}
 
-		assert( syscall_sock->end_of_message() );
+		ASSERT( syscall_sock->end_of_message() );
 
 		if( !socket_default_crypto ) {
 			syscall_sock->set_crypto_mode( false );  // restore default
