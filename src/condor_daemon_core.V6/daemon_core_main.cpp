@@ -872,7 +872,7 @@ private:
 	static bool should_continue;
 };
 
-bool SigtermContinue::should_continue = false;
+bool SigtermContinue::should_continue = true;
 
 
 static int

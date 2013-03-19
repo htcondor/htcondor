@@ -29,6 +29,7 @@ enum DaemonCommands {
   DDC_OFF_GRACEFUL = DC_OFF_GRACEFUL,
   DDC_SET_PEACEFUL_SHUTDOWN = DC_SET_PEACEFUL_SHUTDOWN,
   DDC_SET_FORCE_SHUTDOWN = DC_SET_FORCE_SHUTDOWN,
+  DDC_OFF_FORCE = DC_OFF_FORCE,
   DDC_RECONFIG_FULL = DC_RECONFIG_FULL,
   DRESTART = RESTART,
   DRESTART_PEACEFUL = RESTART_PEACEFUL
@@ -119,8 +120,9 @@ export_dc_tool()
         .value("OffGraceful", DDC_OFF_GRACEFUL)
         .value("OffPeaceful", DDC_OFF_PEACEFUL)
         .value("OffFast", DDC_OFF_FAST)
+        .value("OffForce", DDC_OFF_FORCE)
         .value("SetPeacefulShutdown", DDC_SET_PEACEFUL_SHUTDOWN)
-        .value("SetCancelShutdown", DDC_SET_FORCE_SHUTDOWN)
+        .value("SetForceShutdown", DDC_SET_FORCE_SHUTDOWN)
         .value("Reconfig", DDC_RECONFIG_FULL)
         .value("Restart", DRESTART)
         .value("RestartPeacful", DRESTART_PEACEFUL)

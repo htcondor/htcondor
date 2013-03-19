@@ -264,7 +264,7 @@ cmdToStr( int c )
 	case DC_SET_PEACEFUL_SHUTDOWN:
 		return "Set-Peaceful-Shutdown";
 	case DC_SET_FORCE_SHUTDOWN:
-		return "Set-Cancel-Shutdown";
+		return "Set-Force-Shutdown";
 	case DAEMONS_ON:
 		return "Spawn-All-Daemons";
 	case DAEMON_ON:
@@ -812,10 +812,10 @@ main( int argc, char *argv[] )
 
 	if( (peaceful_shutdown || force_shutdown ) && real_dt == DT_MASTER ) {
 		if( (real_cmd == DAEMONS_OFF) ||
-				(real_cmd == DAEMON_OFF && subsys && !strcmp(subsys,"startd")) ||
-				(real_cmd == DAEMON_OFF && subsys && !strcmp(subsys,"schedd")) ||
-				(real_cmd == DC_OFF_GRACEFUL) ||
-				(real_cmd == RESTART)) {
+			(real_cmd == DAEMON_OFF && subsys && !strcmp(subsys,"startd")) ||
+			(real_cmd == DAEMON_OFF && subsys && !strcmp(subsys,"schedd")) ||
+			(real_cmd == DC_OFF_GRACEFUL) || (real_cmd == DC_OFF_FORCE) || 
+			(real_cmd == RESTART)) {
 
 			// Temporarily override globals so we can send a different command.
 			daemon_t orig_real_dt = real_dt;
@@ -1055,6 +1055,9 @@ computeRealAction( void )
 				// a DC_OFF_GRACEFUL, not a DAEMON_OFF 
 			if( dt == DT_MASTER ) {
 				real_cmd = DC_OFF_GRACEFUL;
+				if( force_shutdown ) {
+					real_cmd = DC_OFF_FORCE;
+				}
 			} else {
 				real_cmd = DAEMON_OFF;
 			}
@@ -1521,8 +1524,6 @@ doCommand( Daemon* d )
 				my_cmd = DC_OFF_FAST;
 			} else if( peaceful_shutdown ) {
 				my_cmd = DC_OFF_PEACEFUL;
-			} else if( force_shutdown ) {
-				my_cmd = DC_OFF_FORCE;
 			}
 			break;
 
