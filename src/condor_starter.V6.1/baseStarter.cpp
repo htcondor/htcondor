@@ -57,6 +57,12 @@ extern void main_shutdown_fast();
 const char* JOB_AD_FILENAME = ".job.ad";
 const char* MACHINE_AD_FILENAME = ".machine.ad";
 
+#ifdef WIN32
+// Note inversion of argument order...
+#define realpath(path,resolved_path) _fullpath((resolved_path),(path),_MAX_PATH)
+#endif
+
+
 /* CStarter class implementation */
 
 CStarter::CStarter()
