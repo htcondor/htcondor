@@ -553,7 +553,7 @@ DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stde
 		int fd = next.getNextFD(filename);
 		filesize_t size = -1;
 		int retval;
-		if ((retval = sock.get_file(&size, fd, false, false, remaining)) && (retval != GET_FILE_MAX_BYTES_EXCEEDED))
+		if ((retval = sock.get_file(&size, fd, false, false, remaining, xfer_q)) && (retval != GET_FILE_MAX_BYTES_EXCEEDED))
 		{
 			error_msg = "Internal error when transferring file " + filename;
 		}
