@@ -883,6 +883,16 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 	ssize_t max_xfer = -1;
 	input.EvaluateAttrInt(ATTR_MAX_TRANSFER_BYTES, max_xfer);
 
+	const char *jic_iwd = GetWorkingDir();
+	if (!jic_iwd) return PeekFailed(s, "Unknown job remote IWD.");
+	std::string iwd = jic_iwd;
+	std::vector<char> real_iwd; real_iwd.reserve(MAXPATHLEN+1);
+	if (!realpath(iwd.c_str(), &real_iwd[0]))
+	{
+		return PeekFailed(s, "Unable to resolve IWD %s to real path. (errno=%d, %s)", iwd.c_str(), errno, strerror(errno));
+	}
+	iwd = &real_iwd[0];
+
 	// Ok, sanity checks pass.  Let's iterate through the files requested and make sure they are in the
 	// stagein / stageout list.
 	//
@@ -1031,12 +1041,9 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 		}
 		else
 		{
-			dprintf(D_FULLDEBUG, "File %s requested but not authorized to be sent.\n", filename.c_str());
+			return PeekFailed(s, "File %s requested but not authorized to be sent.\n", iter->c_str());
 		}
 	}
-
-	std::string iwd;
-	jobad->EvaluateAttrString(ATTR_JOB_IWD, iwd);
 
 	// Calculate the offsets and sizes we think we are able to do
 	std::vector<size_t> file_sizes_list; file_sizes_list.reserve(file_list.size());
@@ -1044,25 +1051,35 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 	ssize_t remaining = max_xfer;
 	TemporaryPrivSentry sentry(PRIV_USER);
 	std::vector<off_t>::iterator it2 = offsets_list.begin();
+	std::vector<char> real_filename; real_filename.reserve(MAXPATHLEN+1);
 	unsigned idx = 0;
-	for (std::vector<std::string>::const_iterator it = file_list.begin();
+	for (std::vector<std::string>::iterator it = file_list.begin();
 		it != file_list.end() && it2 != offsets_list.end();
 		it++, it2++, idx++)
 	{
 		size_t size = 0;
 		off_t offset = *it2;
 
-		std::string tmp_filename = *it;
-		if (tmp_filename.size() && (tmp_filename[0] != DIR_DELIM_CHAR))
+		if (it->size() && ((*it)[0] != DIR_DELIM_CHAR))
 		{
-			tmp_filename = iwd + DIR_DELIM_CHAR + tmp_filename;
+			*it = iwd + DIR_DELIM_CHAR + *it;
 		}
+		if (!realpath(it->c_str(), &(real_filename[0])))
+		{
+			return PeekRetry(s, "Unable to resolve file %s to real path. (errno=%d, %s)", it->c_str(), errno, strerror(errno));
+		}
+		*it = &(real_filename[0]);
+		if (it->substr(0, iwd.size()) != iwd)
+		{
+			return PeekFailed(s, "Invalid symlink or filename (%s) outside sandbox (%s)", it->c_str(), iwd.c_str());
+		}
+		dprintf(D_FULLDEBUG, "Peeking at %s inside sandbox %s.\n", it->c_str(), iwd.c_str());
 
-		int fd = safe_open_wrapper_follow(tmp_filename.c_str(), O_RDONLY);
+		int fd = safe_open_wrapper(it->c_str(), O_RDONLY);
 		struct stat stat_buf;
 		if (fd < 0)
 		{
-			dprintf(D_ALWAYS, "Cannot open file %s for peeking at logs.\n", tmp_filename.c_str());
+			dprintf(D_ALWAYS, "Cannot open file %s for stat / peeking at logs (errno=%d, %s).\n", it->c_str(), errno, strerror(errno));
 		}
 		else if (fstat(fd, &stat_buf) < 0)
 		{
@@ -1131,18 +1148,18 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 	classad::ExprTree *list = classad::ExprList::MakeExprList(file_expr_list);
 	if (!reply.Insert("TransferFiles", list))
 	{
-		dprintf(D_ALWAYS, "Failed to add transfer files list.\n");
-		return false;
+		return PeekFailed(s, "Failed to add transfer files list.\n");
 	}
 	list = classad::ExprList::MakeExprList(off_expr_list);
 	if (!reply.Insert("TransferOffsets", list))
 	{
-		dprintf(D_ALWAYS, "Failed to add transfer offsets list.\n");
-		return false;
+		return PeekFailed(s, "Failed to add transfer offsets list.\n");
 	}
 	reply.dPrint(D_FULLDEBUG);
 
 	s->encode();
+	// From here on out, *always* send the same number of files as specified by
+	// the response ad, even if it means putting an empty file.
 	if (!reply.put(*s) || !s->end_of_message()) {
 		dprintf(D_ALWAYS, "Failed to send read request response for peeking at logs.\n");
 		return false;
@@ -1159,16 +1176,10 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 	{
 		filesize_t size = -1;
 
-		std::string tmp_filename = *it;
-		if (tmp_filename.size() && (tmp_filename[0] != DIR_DELIM_CHAR))
-		{
-			tmp_filename = iwd + DIR_DELIM_CHAR + tmp_filename;
-		}
-		
-		int fd = safe_open_wrapper_follow(tmp_filename.c_str(), O_RDONLY);
+		int fd = safe_open_wrapper(it->c_str(), O_RDONLY);
 		if (fd < 0)
 		{
-			dprintf(D_ALWAYS, "Cannot open file %s for peeking at logs.\n", tmp_filename.c_str());
+			dprintf(D_ALWAYS, "Cannot open file %s for peeking at logs (errno=%d, %s).\n", it->c_str(), errno, strerror(errno));
 			s->put_empty_file(&size);
 			continue;
 		}
@@ -1183,8 +1194,10 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 		file_count++;
 	}
 	}
-	s->code(file_count);
-	s->end_of_message();
+	if (!s->code(file_count) || !s->end_of_message())
+	{
+		dprintf(D_ALWAYS, "Failed to send file count %ld for peeking at logs.\n", file_count);
+	}
 	return file_count == file_list.size();
 }
 

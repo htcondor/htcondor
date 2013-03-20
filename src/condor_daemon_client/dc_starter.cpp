@@ -491,7 +491,7 @@ DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stde
 	}
 
 	if( !startCommand(STARTER_PEEK, &sock, timeout, NULL, NULL, false, sec_session_id.c_str()) ) {
-		error_msg = "Failed to send START_SSHD to starter";
+		error_msg = "Failed to send START_PEEK to starter";
 		return false;
 	}
 	sock.encode();
@@ -551,9 +551,13 @@ DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stde
 			if (xfer_fd == 1) filename = "_condor_stderr";
 		}
 		int fd = next.getNextFD(filename);
-		filesize_t size;
-		sock.get_file(&size, fd, false, false, remaining, xfer_q);
-		if (size >= 0)
+		filesize_t size = -1;
+		int retval;
+		if ((retval = sock.get_file(&size, fd, false, false, remaining)) && (retval != GET_FILE_MAX_BYTES_EXCEEDED))
+		{
+			error_msg = "Internal error when transferring file " + filename;
+		}
+		else if (size >= 0)
 		{
 			remaining -= max_bytes;
 			file_count++;
@@ -591,10 +595,12 @@ DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stde
 	}
 	if (file_count != remote_file_count)
 	{
-		error_msg = "Failed to open file(s) remotely";
+		std::stringstream ss;
+		ss << "Recieved " << file_count << " files, but remote side thought it sent " << remote_file_count << " files";
+		error_msg = ss.str();
 		return false;
 	}
-	if (((total_files != file_count) || (file_count != remote_file_count)) && !error_msg.size())
+	if ((total_files != file_count) && !error_msg.size())
 	{
 		error_msg = "At least one file transfer failed.";
 		return false;
