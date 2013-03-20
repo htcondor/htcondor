@@ -77,6 +77,7 @@ my $ReleaseCallback;
 my $JobErrCallback;
 my $TimedCallback;
 my $WantErrorCallback;
+my $ULogCallback;
 
 
 sub Reset
@@ -107,6 +108,7 @@ sub Reset
     undef $JobErrCallback;
     undef $TimedCallback;
     undef $WantErrorCallback;
+    undef $ULogCallback;
 }
 
 sub SetHandle
@@ -516,7 +518,11 @@ sub RegisterJobErr
     my $sub = shift || croak "missing argument";
     $JobErrCallback = $sub;
 }
-
+sub RegisterULog
+{
+    my $sub = shift || croak "missing argument";
+    $ULogCallback = $sub;
+}
 sub RegisterWantError
 {
     my $sub = shift || croak "missing argument";
@@ -982,6 +988,22 @@ sub Monitor
 	    # execute callback if one is registered
 	    &$JobErrCallback( %info )
 		if defined $JobErrCallback;
+	}
+#	008 (171.000.000) 06/15 14:49:45 user defined text
+	# 008: chirp ulog
+	elsif( $line =~ 
+		/^008\s+\((\d+)\.(\d+)\.\d+\)\s+([0-9\/]+)\s+([0-9:]+)\s*(.*)$/ )
+	{
+	    $info{'cluster'} = $1;
+	    $info{'job'} = $2;
+	    $info{'date'} = $3;
+	    $info{'time'} = $4;
+	    $info{'ulog'} = $5;
+
+	    debug( "Saw job ulog cluster $1 job $2 : $5\n" ,1);
+
+	    &$ULogCallback( %info )
+		if defined $ULogCallback;
 	}
     }
     return 1;

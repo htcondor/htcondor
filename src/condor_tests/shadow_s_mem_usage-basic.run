@@ -18,12 +18,18 @@
 ##
 ##**************************************************************
 
+use strict;
 use CondorTest;
 use Check::SimpleJob;
+
+my $testname = CondorTest::GetDefaultTestName();
+my $temptest = CondorTest::TempFileName("$testname");
 
 my $append_condor_config = '
   DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
   SHADOW = $(SBIN)/condor_shadow_s
+  ChirpPath = "$(LIBEXEC)/condor_chirp"
+  STARTD_ATTRS = $(STARTD_ATTRS) ChirpPath
 ';
 
 CondorTest::StartCondorWithParams(
@@ -32,19 +38,89 @@ CondorTest::StartCondorWithParams(
 
 # run a job and look at shadow memory usage
 my $append_submit_commands = '
-   +WantIOProxy = true
-   executable = x_shadow_mem_usage.pl
-   arguments = shadow_s
++WantIOProxy = true
+executable = x_shadow_mem_usage.pl
+output = ' . $testname . '.out
+error  = ' . $testname . '.err
 ';
-my $on_execute = sub {
-  my %info = @_; # contains cluster,job,sinful,host
-  CondorTest::debug("Job $info{cluster} Executing on $^O.. getting shadow memory usage",1);
-  CondorTest::runcmd("condor_who -verbose");
+
+my $on_ulog = sub {
+  my %info = @_; # contains cluster,job,date,time,ulog
+  CondorTest::debug("Job $info{cluster} ulog: $info{ulog}.\n",1);
+  my $text = $info{ulog};
+  if ($text =~ /shadow_pid\s*=\s*(\d+)/) {
+     my $pid = $1;
+     CondorTest::debug("Got shadow PID: $pid.\n",1);
+     # CondorTest::runcmd("cat /proc/$pid/smaps");
+     smap_sum_verbose($pid);
+  }
 };
+
 SimpleJob::RunCheck(
-  # append_submit_commands=>$append_submit_commands
-  # ,duration=>5
-  # ,on_execute=>$on_execute
+  append_submit_commands=>$append_submit_commands
+  , on_ulog=>$on_ulog
 );
 
 CondorTest::EndTest();
+
+# scan /proc/<PID>/smaps and add up dirty private pages.
+#
+sub smap_sum_verbose {
+
+   my $pid = shift;
+
+   my $lib = ""; my $perm; my $inode; my $exe;
+   #my $fd; my $addr1; my $addr2;
+   my %tot;
+   $tot{Heap} = 0;
+   $tot{Stack} = 0;
+   $tot{LibData} = 0;
+
+   open (SMAP, "</proc/$pid/smaps");
+   while (<SMAP>) {
+      if ($_ =~ /^([0-9A-Fa-f]+)-([0-9A-Fa-f]+)\s+(r[w-][x-]p)\s+(\S+\s+\S+)\s+(.*)$/) {
+
+         $perm = $3; # perm
+         $inode = $5; $lib=""; if ($inode =~ /^(\S+)\s+(.*)$/) { $inode = $1; $lib = $2; }
+         #$addr1 = $1; $addr2 = $2; $fd = $4;
+
+         if ( ! ($lib =~ /\.so/) && $lib =~ /condor_/) { $exe = $lib; }
+         #
+      } elsif ($_ =~ /^(\w+):\s+(\d+)/) {
+
+         my $n = $2;
+         $tot{$1} += $n;
+         if ($1 =~ /Private_Dirty/) { 
+            if ($perm eq "r--p") { $tot{LibRO} += $n; }
+            if ($lib eq "") { 
+               $tot{Anon} += $n;
+            } else {
+               if ($lib eq "[heap]") { $tot{Heap} += $n; }
+               elsif ($lib eq "[stack]") { $tot{Stack} += $n; }
+               elsif ($perm eq "rw-p") { $tot{LibData} += $n; }
+               
+               if ($lib =~ /condor_util/) { $tot{Utils} += $n; }
+               elsif ($lib =~ /condor_/)  { $tot{Exec} += $n; }
+               elsif ($lib =~ /condor/)   { 
+                  if ($lib =~ /globus|voms/) { $tot{Globus} += $n; }
+                  elsif ($lib =~ /classad/)  { $tot{Classad} += $n; }
+                  else                       { $tot{Other} += $n; }
+               } elsif ($lib =~ /lib/) { $tot{Other} += $n; }
+            }
+         }
+      }
+   } #while
+
+   my $lbl = $pid;
+   if ($exe) { 
+      $exe =~ s/.*\///g;
+      $lbl = "$pid:$exe";
+   }
+
+   print 'PID:Process            Total Dynamic =(Heap+Stack+Anon) LibRO LibData =(Exec+Utils+Clasad+Globus+System) Clean' . "\n";
+   printf "%-22.22s %5d %7d %6d %5d %5d %5d %7d %6d %5d %6d %6d %6d %6d\n", $lbl, 
+          $tot{Private_Dirty}, $tot{Heap}+$tot{Stack}+$tot{Anon}, $tot{Heap}, $tot{Stack}, $tot{Anon},
+          $tot{LibRO}, $tot{LibData}, $tot{Exec}, $tot{Utils}, $tot{Classad}, $tot{Globus}, $tot{System}+$tot{Other},
+          $tot{Private_Clean};
+}
+
