@@ -1438,6 +1438,7 @@ void nordugrid_stage_in_write_callback( void *arg,
 	user_arg_t *user_arg = (user_arg_t *)arg;
 	globus_result_t result;
 	int rc;
+	globus_off_t pos = 0;
 
 	if ( error != GLOBUS_SUCCESS ) {
 			/* What to do? */
@@ -1447,7 +1448,8 @@ void nordugrid_stage_in_write_callback( void *arg,
 		return;
 	}
 
-	assert( (globus_ssize_t)(offset + length) == lseek( user_arg->fd, 0, SEEK_CUR ) );
+	pos = lseek( user_arg->fd, 0, SEEK_CUR );
+	assert( pos == (offset + length) );
 
 	if ( eof ) {
 		free( buffer );
@@ -1672,6 +1674,7 @@ void nordugrid_stage_out2_read_callback( void *arg,
 	user_arg_t *user_arg = (user_arg_t *)arg;
 	globus_result_t result;
 	globus_size_t written = 0;
+	globus_off_t pos = 0;
 
 	if ( error != GLOBUS_SUCCESS ) {
 			/* What to do? */
@@ -1681,7 +1684,8 @@ void nordugrid_stage_out2_read_callback( void *arg,
 		return;
 	}
 
-	assert( offset == lseek( user_arg->fd, 0, SEEK_CUR ) );
+	pos = lseek( user_arg->fd, 0, SEEK_CUR );
+	assert( pos == offset );
 	while ( written < length ) {
 		int rc = write( user_arg->fd, buffer + written, length - written );
 		if ( rc < 0 ) {
@@ -2369,6 +2373,7 @@ void gridftp_transfer_write_callback( void *arg,
 	user_arg_t *user_arg = (user_arg_t *)arg;
 	globus_result_t result;
 	int rc;
+	globus_off_t pos = 0;
 
 	if ( error != GLOBUS_SUCCESS ) {
 			/* What to do? */
@@ -2378,7 +2383,8 @@ void gridftp_transfer_write_callback( void *arg,
 		return;
 	}
 
-	assert( (globus_ssize_t)(offset + length) == lseek( user_arg->fd, 0, SEEK_CUR ) );
+	pos = lseek( user_arg->fd, 0, SEEK_CUR );
+	assert( pos == (offset + length) );
 
 	if ( eof ) {
 		free( buffer );
@@ -2422,6 +2428,7 @@ void gridftp_transfer_read_callback( void *arg,
 	user_arg_t *user_arg = (user_arg_t *)arg;
 	globus_result_t result;
 	globus_size_t written = 0;
+	globus_off_t pos = 0;
 
 	if ( error != GLOBUS_SUCCESS ) {
 			/* What to do? */
@@ -2431,7 +2438,8 @@ void gridftp_transfer_read_callback( void *arg,
 		return;
 	}
 
-	assert( offset == lseek( user_arg->fd, 0, SEEK_CUR ) );
+	pos = lseek( user_arg->fd, 0, SEEK_CUR );
+	assert( pos == offset );
 	while ( written < length ) {
 		int rc = write( user_arg->fd, buffer + written, length - written );
 		if ( rc < 0 ) {
