@@ -208,23 +208,7 @@ UnixNetworkAdapter::setHwAddr( const struct ifreq &ifr )
 	resetHwAddr( );
 	MemCopy( m_hw_addr, &(ifr.ifr_hwaddr.sa_data), 8 );
 
-	char			*str = m_hw_addr_str;
-	unsigned		 len = 0;
-	const unsigned	 maxlen = sizeof(m_hw_addr_str)-1;
-
-	*str = '\0';
-	for( int i = 0;  i < 6;  i++ ) {
-		char	tmp[4];
-		snprintf( tmp, sizeof(tmp), "%02x", m_hw_addr[i] );
-		len += strlen(tmp);
-		ASSERT( len < maxlen );
-		strcat( str, tmp );
-		if ( i < 5 ) {
-			len += 1;
-			ASSERT( len < maxlen );
-			strcat( str, ":" );
-		}
-	}
+	MacAddressBinToHex(m_hw_addr, m_hw_addr_str);
 }
 void
 UnixNetworkAdapter::setIpAddr( const struct ifreq &ifr )
@@ -268,26 +252,51 @@ UnixNetworkAdapter::derror( const char *label ) const
 			 label, strerror(errno), errno );
 }
 
-MacAddressToHex(const char *hwaddr[IFNAMSIZ])
+void
+MacAddressBinToHex(const unsigned char hwaddr[8], char hwaddr_str[32])
 {
-MemCopy( m_hw_addr, &(ifr.ifr_hwaddr.sa_data), 8 );
 
-char                    *str = m_hw_addr_str;
-unsigned                 len = 0;
-const unsigned   maxlen = sizeof(m_hw_addr_str)-1;
+        char *str = hwaddr_str;
+        unsigned len = 0;
+        const unsigned  maxlen = sizeof(hwaddr_str)-1;
 
-*str = '\0';
-for( int i = 0;  i < 6;  i++ ) {
-char    tmp[4];
-snprintf( tmp, sizeof(tmp), "%02x", m_hw_addr[i] );
-len += strlen(tmp);
-ASSERT( len < maxlen );
-strcat( str, tmp );
-if ( i < 5 ) {
-len += 1;
-ASSERT( len < maxlen );
-strcat( str, ":" );
+        *str = '\0';
+        for( int i = 0;  i < 6;  i++ ) {
+                char tmp[4];
+                snprintf(tmp, sizeof(tmp), "%02x", hwaddr[i]);
+		printf("%s, %d\n", tmp, hwaddr[i]);
+                len += strlen(tmp);
+                ASSERT(len < maxlen);
+                strcat(str, tmp);
+                if (i < 5) {
+                        len += 1;
+                        ASSERT(len < maxlen);
+                        strcat(str, ":");
+                }
+        }
 }
-}
+
+bool
+MacAddressHexToBin(const char hwaddr_str[32], unsigned char hwaddr[8])
+{
+	const char *str = hwaddr_str;
+	hwaddr[0] = '\0';
+	for (int i = 0; i < 6; i++)
+	{
+		errno = 0;
+		long retval;
+		char * result_str;
+		if ((retval = strtol(str, &result_str, 16)) == 0 && errno)
+		{
+			return false;
+		}
+		str = result_str;
+		if (*str != '\0' && *str != ':') return false;
+		str++;
+		if (retval > 255 || retval < 0) return false;
+		hwaddr[i] = retval;
+		hwaddr[i+1] = '\0';
+	}
+	return true;
 }
 

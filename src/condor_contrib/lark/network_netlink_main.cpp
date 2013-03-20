@@ -20,6 +20,7 @@
 #include "lark_attributes.h"
 #include "network_manipulation.h"
 #include "network_namespaces.h"
+#include "network_adapter.unix.h"
 
 int handle_match(const unsigned char * rule_name, long long bytes_matched, void * unused) {
         if (unused) {}

@@ -129,9 +129,20 @@ int send_and_ack(int sock, struct iovec* iov, size_t ioveclen) {
 
 #define VETH "veth"
 #define VETH_LEN strlen(VETH)
-int create_veth(int sock, const char * veth0, const char * veth1) {
+int create_veth(int sock, const char * veth0, const char * veth1, const char *veth0_mac, const char *veth1_mac) {
 
 	struct iovec iov[12];
+
+	if (veth0_mac && strlen(veth0_mac) < 6)
+	{
+		dprintf(D_ALWAYS, "veth0 MAC address too short.\n");
+		return 1;
+	}
+	if (veth1_mac && strlen(veth1_mac) < 6)
+	{
+		dprintf(D_ALWAYS, "veth1 MAC address too short.\n");
+		return 1;
+	}
 
 	size_t veth0_len = strlen(veth0);
 	size_t veth1_len = strlen(veth1);
@@ -212,6 +223,10 @@ int create_veth(int sock, const char * veth0, const char * veth1) {
 	memcpy(veth1_copy, veth1, veth1_len);
 	iov[9].iov_base = veth1_copy;
 	iov[9].iov_len = RTA_ALIGN(veth1_len);
+
+	//if ()
+	//{
+	//}
 
 	struct rtattr rta6; memset(&rta6, 0, sizeof(struct rtattr));
 	rta6.rta_type = IFLA_IFNAME;

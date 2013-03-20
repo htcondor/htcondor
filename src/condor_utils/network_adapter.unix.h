@@ -147,4 +147,13 @@ protected:
 
 };
 
+// Translate between the binary and hex forms of the mac address
+//
+
+void
+MacAddressBinToHex(const unsigned char hwaddr[8], char hwaddr_str[32]);
+
+bool
+MacAddressHexToBin(const char hwaddr_str[32], unsigned char hwaddr[8]);
+
 #endif // _NETWORK_ADAPTER_UNIX_H_
