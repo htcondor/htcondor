@@ -1,4 +1,3 @@
-//TEMPTEMP -- verify that I didn't make any unintended changes in the daemoncore files, etc.
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -64,8 +63,8 @@ DagmanClassad::~DagmanClassad()
 //---------------------------------------------------------------------------
 void
 DagmanClassad::Update( int total, int done, int pre, int submitted,
-			int post, int ready, int failed, int unready, int dagStatus,
-			bool recovery )
+			int post, int ready, int failed, int unready,
+			Dag::dag_status dagStatus, bool recovery )
 {
 
 	if ( !_valid ) {
@@ -94,7 +93,7 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 	SetDagAttribute( ATTR_DAG_NODES_READY, ready );
 	SetDagAttribute( ATTR_DAG_NODES_FAILED, failed );
 	SetDagAttribute( ATTR_DAG_NODES_UNREADY, unready );
-	SetDagAttribute( ATTR_DAG_STATUS, dagStatus );
+	SetDagAttribute( ATTR_DAG_STATUS, (int)dagStatus );
 	SetDagAttribute( ATTR_DAG_IN_RECOVERY, recovery );
 
 	if ( !DisconnectQ( queue ) ) {

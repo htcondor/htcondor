@@ -850,7 +850,6 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 	env.SetEnv("_CONDOR_DAGMAN_LOG", shallowOpts.strDebugLog.Value());
 	env.SetEnv("_CONDOR_MAX_DAGMAN_LOG=0");
 	if ( shallowOpts.strScheddDaemonAdFile != "" ) {
-//TEMPTEMP -- why do we set these in two different places?
 		env.SetEnv("_CONDOR_SCHEDD_DAEMON_AD_FILE",
 				   shallowOpts.strScheddDaemonAdFile.Value());
 	}

@@ -23,25 +23,47 @@
 
 #include "condor_common.h"
 #include "condor_id.h"
+#include "dag.h"
 
 class DCSchedd;
 
 class DagmanClassad {
   public:
+	/** Constructor.
+	*/
 	DagmanClassad( const CondorID &DAGManJobId );
+	
+	/** Destructor.
+	*/
 	~DagmanClassad();
 
+	/** Update the status information in the DAGMan job's classad.
+		@param The total number of nodes
+		@param The number of nodes that are done
+		@param The number of nodes in the prerun state
+		@param The number of nodes submitted/queued
+		@param The number of nodes in the postrun state
+		@param The number of nodes that are ready (but not submitted, etc.)
+		@param The number of nodes that have failed
+		@param The number of nodes that are unready
+		@param The overall DAG status
+		@param Whether the DAG is in recovery mode
+	*/
 	void Update( int total, int done, int pre, int submitted, int post,
-				int ready, int failed, int unready, int dagStatus,
-				bool recovery );
+				int ready, int failed, int unready,
+				Dag::dag_status dagStatus, bool recovery );
 
   private:
 	void SetDagAttribute( const char *attrName, int attrVal );
 
+		// Whether this object is valid.
 	bool _valid;
 
+		// The Condor ID for this DAGMan -- that's the classad we'll
+		// update.
 	CondorID _dagmanId;
 
+		// The schedd we need to talk to to update the classad.
 	DCSchedd *_schedd;
 };
 
