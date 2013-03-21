@@ -320,9 +320,7 @@ public:
    }
 
    int Unexpected() {
-     #ifdef EXCEPT
       EXCEPT("Unexpected call to empty ring_buffer\n");
-     #endif
       return 0;
    }
 
@@ -1138,11 +1136,9 @@ public:
    T operator-=(T val) { return Remove(val); }
    stats_histogram& operator=(const stats_histogram<T>& sh);
    stats_histogram& operator=(int val) {
-     #ifdef EXCEPT
       if (val != 0) {
           EXCEPT("Clearing operation on histogram with non-zero value\n");
       }
-     #endif
       Clear();
       return *this;
    }
@@ -1193,20 +1189,14 @@ stats_histogram<T>& stats_histogram<T>::Accumulate(const stats_histogram<T>& sh)
    // to add histograms, they must both be the same size (and have the same
    // limits array as well, should we check that?)
    if (this->cLevels != sh.cLevels) {
-      #ifdef EXCEPT
        EXCEPT("attempt to add histogram of %d items to histogram of %d items\n",
               sh.cLevels, this->cLevels);
-      #else
        return *this;
-      #endif
    }
 
    if (this->levels != sh.levels) {
-      #ifdef EXCEPT
        EXCEPT("Histogram level pointers are not the same.\n");
-      #else
        return *this;
-      #endif
    }
 
    for (int i = 0; i <= cLevels; ++i) {
@@ -1224,9 +1214,7 @@ stats_histogram<T>& stats_histogram<T>::operator=(const stats_histogram<T>& sh)
       Clear();
    } else if(this != &sh) {
       if(this->cLevels > 0 && this->cLevels != sh.cLevels){
-#ifdef EXCEPT
          EXCEPT("Tried to assign different sized histograms\n");
-#endif
       return *this;
       } else if(this->cLevels == 0) {
          this->cLevels = sh.cLevels;
@@ -1239,9 +1227,7 @@ stats_histogram<T>& stats_histogram<T>::operator=(const stats_histogram<T>& sh)
          for(int i=0;i<=cLevels;++i){
             this->data[i] = sh.data[i];
             if(this->levels[i] < sh.levels[i] || this->levels[i] > sh.levels[i]){
-#ifdef EXCEPT
                EXCEPT("Tried to assign different levels of histograms\n");
-#endif
                return *this;
             }
          }
