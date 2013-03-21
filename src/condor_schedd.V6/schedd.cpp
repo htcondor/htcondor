@@ -1403,6 +1403,8 @@ int Scheduler::make_ad_list(
    // publish scheduler generic statistics
    stats.Publish(*cad, stats_config.Value());
 
+   m_xfer_queue_mgr.publish(cad, stats_config.Value());
+
    // publish daemon core stats
    daemonCore->publish(cad);
    daemonCore->dc_stats.Publish(*cad, stats_config.Value());

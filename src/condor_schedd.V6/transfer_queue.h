@@ -104,6 +104,8 @@ class TransferQueueManager: public Service {
 	int GetMaxDownloading() { return m_max_downloads; }
 
 	void publish(ClassAd *ad);
+	void publish(ClassAd *ad, char const *publish_config);
+	void publish(ClassAd *ad,int pubflags);
 
 	void AddRecentIOStats(IOStats &s,const std::string up_down_queue_user);
  private:
@@ -120,6 +122,13 @@ class TransferQueueManager: public Service {
 	int m_waiting_to_download;
 	int m_upload_wait_time;
 	int m_download_wait_time;
+
+	stats_entry_abs<int> m_uploading_stat;
+	stats_entry_abs<int> m_downloading_stat;
+	stats_entry_abs<int> m_waiting_to_upload_stat;
+	stats_entry_abs<int> m_waiting_to_download_stat;
+	stats_entry_abs<int> m_upload_wait_time_stat;
+	stats_entry_abs<int> m_download_wait_time_stat;
 
 	unsigned int m_round_robin_counter; // increments each time we send GoAhead to a client
 
@@ -142,10 +151,8 @@ class TransferQueueManager: public Service {
 	int m_update_iostats_interval;
 	int m_update_iostats_timer;
 	classy_counted_ptr<stats_ema_config> ema_config;
-	StatisticsPool m_stat_pool;           // aggregate stats
-	StatisticsPool m_per_queue_stat_pool; // per queue stats (by default there is a queue per user)
-	bool m_publish_per_queue_iostats;
-	bool m_published_per_queue_iostats;
+	StatisticsPool m_stat_pool;
+	int m_publish_flags;
 
 	bool AddRequest( TransferQueueRequest *client );
 	void RemoveRequest( TransferQueueRequest *client );
