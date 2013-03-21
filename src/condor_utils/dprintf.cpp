@@ -153,7 +153,11 @@ static	int DebugUnlockBroken = 0;
 #if !defined(WIN32) && defined(HAVE_PTHREADS)
 #include <pthread.h>
 static pthread_mutex_t _condor_dprintf_critsec = 
+#if defined(PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP)
 						PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+#else
+						PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
+#endif
 #endif
 #ifdef WIN32
 static CRITICAL_SECTION	*_condor_dprintf_critsec = NULL;

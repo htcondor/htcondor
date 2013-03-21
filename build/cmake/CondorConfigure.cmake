@@ -387,7 +387,7 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	  find_library(HAVE_X11 X11)
 	endif()
 
-	dprint("Threaded functionality only enable in Linux and Windows")
+	dprint("Threaded functionality only enabled in Linux, Windows, and Mac")
 	set(HAS_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 	set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 
@@ -412,6 +412,10 @@ elseif(${OS_NAME} STREQUAL "DARWIN")
 	find_library( IOKIT_FOUND IOKit )
 	find_library( COREFOUNDATION_FOUND CoreFoundation )
 	set(CMAKE_STRIP ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_strip CACHE FILEPATH "Command to remove sybols from binaries" FORCE)
+
+	dprint("Threaded functionality only enabled in Linux, Windows and Mac")
+	set(HAS_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
+	set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 endif()
 
 ##################################################
