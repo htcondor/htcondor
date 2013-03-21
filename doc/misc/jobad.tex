@@ -58,14 +58,6 @@ execution under HTCondor.
 \index{Cmd!job ClassAd attribute}
 \item[\AdAttr{Cmd}:]  The path to and the file name of the job to be executed.
 
-%%% ClassAd attribute: ConcurrencyLimits
-\index{ClassAd job attribute!ConcurrencyLimits}
-\index{ConcurrencyLimits!job ClassAd attribute}
-\item[\AdAttr{ConcurrencyLimits}:]  A string list,
-delimited by commas and space characters.
-The items in the list
-identify named resources that the job requires.
-
 %%% ClassAd attribute: CommittedTime
 \index{ClassAd job attribute!CommittedTime}
 \index{CommittedTime!job ClassAd attribute}
@@ -90,6 +82,14 @@ CommittedTime - CommittedSuspensionTime
 \AdAttr{SlotWeight} of the machine(s) that ran the job.  This relies
 on \AdAttr{SlotWeight} being listed in \Macro{SYSTEM\_JOB\_MACHINE\_ATTRS}.
 
+%%% ClassAd attribute: CommittedSuspensionTime
+\index{ClassAd job attribute!CommittedSuspensionTime}
+\index{CommittedSuspensionTime!job ClassAd attribute}
+\item[\AdAttr{CommittedSuspensionTime}:]  A running total of the number of
+seconds the job has spent in suspension during time in which the job was
+not evicted without a checkpoint.  This number is updated when the job is
+checkpointed and when it exits.
+
 %%% ClassAd attribute: CompletionDate
 \index{ClassAd job attribute!CompletionDate}
 \index{CompletionDate!job ClassAd attribute}
@@ -98,13 +98,13 @@ or the value 0 if the job has not yet completed.
 Measured in the
 number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
 
-%%% ClassAd attribute: CommittedSuspensionTime
-\index{ClassAd job attribute!CommittedSuspensionTime}
-\index{CommittedSuspensionTime!job ClassAd attribute}
-\item[\AdAttr{CommittedSuspensionTime}:]  A running total of the number of
-seconds the job has spent in suspension during time in which the job was
-not evicted without a checkpoint.  This number is updated when the job is
-checkpointed and when it exits.
+%%% ClassAd attribute: ConcurrencyLimits
+\index{ClassAd job attribute!ConcurrencyLimits}
+\index{ConcurrencyLimits!job ClassAd attribute}
+\item[\AdAttr{ConcurrencyLimits}:]  A string list,
+delimited by commas and space characters.
+The items in the list
+identify named resources that the job requires.
 
 %%% ClassAd attribute: CumulativeSlotTime
 \index{ClassAd job attribute!CumulativeSlotTime}
@@ -198,6 +198,23 @@ auxiliary job log:
 If \Attr{DAGManNodesLog} is
 not defined, it has no effect. The value of \Attr{DAGManNodesMask} does not
 affect events recorded in the user log file referred to by \Attr{UserLog}.
+
+%%% ClassAd attribute: DelegateJobGSICredentialsLifetime
+\index{ClassAd job attribute!DelegateJobGSICredentialsLifetime}
+\index{DelegateJobGSICredentialsLifetime!job ClassAd attribute}
+\item[\AdAttr{DelegateJobGSICredentialsLifetime}:]   
+An integer that specifies the maximum number of seconds for which
+delegated proxies should be valid.  The default behavior is determined
+by the configuration
+setting \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME}, which
+defaults to one day.  A value of 0 indicates that the delegated proxy
+should be valid for as long as allowed by the credential used to
+create the proxy.  This setting currently only applies to proxies
+delegated for non-grid jobs and HTCondor-C jobs.  It does not currently
+apply to globus grid jobs, which always behave as though this setting
+were 0.  This setting has no effect if the configuration
+setting \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS} is false, because in
+that case the job proxy is copied rather than delegated.
 
 %%% ClassAd attribute: DeltacloudAvailableActions
 \index{ClassAd job attribute!DeltacloudAvailableActions}
@@ -897,6 +914,13 @@ human-readable message about why the match failed.
 time when HTCondor-G last tried to find a match for the job,
 but failed to do so.
 
+%%% ClassAd attribute: LastRemotePool
+\index{ClassAd job attribute!LastRemotePool}
+\index{LastRemotePool!job ClassAd attribute}
+\item[\AdAttr{LastRemotePool}:]  The name of the \Condor{collector} of the pool
+in which a job ran via flocking in the most recent run attempt.  
+This attribute is not defined if the job did not run via flocking.
+
 %%% ClassAd attribute: LastSuspensionTime
 \index{ClassAd job attribute!LastSuspensionTime}
 \index{LastSuspensionTime!job ClassAd attribute}
@@ -1063,13 +1087,6 @@ submission into Globus.
 \Condor{schedd} each time the job is matched with a resource ad by the
 negotiator.
 
-%%% ClassAd attribute: NumJobStarts
-\index{ClassAd job attribute!NumJobStarts}
-\index{NumJobStarts!job ClassAd attribute}
-\item[\AdAttr{NumJobStarts}:]  An integer count of the number of times the
-  job started executing.
-  This is not (yet) defined for \SubmitCmd{standard} universe jobs.
-
 %%% ClassAd attribute: NumJobReconnects
 \index{ClassAd job attribute!NumJobReconnects}
 \index{NumJobReconnects!job ClassAd attribute}
@@ -1082,6 +1099,13 @@ negotiator.
   restart.
   This attribute is only defined for jobs that can reconnected:
   those in the \SubmitCmd{vanilla} and \SubmitCmd{java} universes.
+
+%%% ClassAd attribute: NumJobStarts
+\index{ClassAd job attribute!NumJobStarts}
+\index{NumJobStarts!job ClassAd attribute}
+\item[\AdAttr{NumJobStarts}:]  An integer count of the number of times the
+  job started executing.
+  This is not (yet) defined for \SubmitCmd{standard} universe jobs.
 
 %%% ClassAd attribute: NumPids
 \index{ClassAd job attribute!NumPids}
@@ -1229,16 +1253,9 @@ a job is to be executed on a remote machine.
 %%% ClassAd attribute: RemotePool
 \index{ClassAd job attribute!RemotePool}
 \index{RemotePool!job ClassAd attribute}
-\item[\AdAttr{RemotePool}:]  The name of the collector of the pool in which
-a job is running via flocking.  This attribute is not defined if the job
-is not running via flocking.
-
-%%% ClassAd attribute: LastRemotePool
-\index{ClassAd job attribute!LastRemotePool}
-\index{LastRemotePool!job ClassAd attribute}
-\item[\AdAttr{LastRemotePool}:]  The name of the collector of the pool in which
-a job ran via flocking in the most recent run attempt.  This attribute is not
-defined if the job did not run via flocking.
+\item[\AdAttr{RemotePool}:]  The name of the \Condor{collector} of the pool 
+in which a job is running via flocking.  
+This attribute is not defined if the job is not running via flocking.
 
 %%% ClassAd attribute: RemoteSysCpu
 \index{ClassAd job attribute!RemoteSysCpu}
@@ -1535,6 +1552,13 @@ This attribute only exists for jobs submitted from Windows machines.
 \item[\AdAttr{X509UserProxy}:]   
 The full path and file name of the file containing the X.509 user proxy.
 
+%%% ClassAd attribute: X509UserProxyEmail
+\index{ClassAd job attribute!X509UserProxyEmail}
+\index{X509UserProxyEmail!job ClassAd attribute}
+\item[\AdAttr{X509UserProxyEmail}:]   
+\item For a job with an X.509 proxy credential, this is the email
+address extracted from the proxy.
+
 %%% ClassAd attribute: X509UserProxyExpiration
 \index{ClassAd job attribute!X509UserProxyExpiration}
 \index{X509UserProxyExpiration!job ClassAd attribute}
@@ -1543,13 +1567,6 @@ For a job that defines the submit description file command
 \SubmitCmd{x509userproxy}, this is the time at which the indicated
 X.509 proxy credential will expire, measured in the
 number of seconds since the epoch (00:00:00 UTC, Jan 1, 1970).
-
-%%% ClassAd attribute: X509UserProxyEmail
-\index{ClassAd job attribute!X509UserProxyEmail}
-\index{X509UserProxyEmail!job ClassAd attribute}
-\item[\AdAttr{X509UserProxyEmail}:]   
-\item For a job with an X.509 proxy credential, this is the email
-address extracted from the proxy.
 
 %%% ClassAd attribute: X509UserProxyFirstFQAN
 \index{ClassAd job attribute!X509UserProxyFirstFQAN}
@@ -1592,23 +1609,6 @@ For a vanilla or grid universe job that defines the submit description
 file command \SubmitCmd{x509userproxy}, 
 this is the name of the VOMS virtual organization (VO) that 
 the user's credential is part of. 
-
-%%% ClassAd attribute: DelegateJobGSICredentialsLifetime
-\index{ClassAd job attribute!DelegateJobGSICredentialsLifetime}
-\index{DelegateJobGSICredentialsLifetime!job ClassAd attribute}
-\item[\AdAttr{DelegateJobGSICredentialsLifetime}:]   
-An integer that specifies the maximum number of seconds for which
-delegated proxies should be valid.  The default behavior is determined
-by the configuration
-setting \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME}, which
-defaults to one day.  A value of 0 indicates that the delegated proxy
-should be valid for as long as allowed by the credential used to
-create the proxy.  This setting currently only applies to proxies
-delegated for non-grid jobs and HTCondor-C jobs.  It does not currently
-apply to globus grid jobs, which always behave as though this setting
-were 0.  This setting has no effect if the configuration
-setting \Macro{DELEGATE\_JOB\_GSI\_CREDENTIALS} is false, because in
-that case the job proxy is copied rather than delegated.
 
 \end{description}
 
