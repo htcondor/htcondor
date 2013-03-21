@@ -5158,6 +5158,42 @@ MAX_JOBS_RUNNING	= \
   when the limit is hit, so some files may be fully transferred, some
   partially, and some not at all.
 
+\label{param:TransferIoReportInterval}
+\item[\Macro{TRANSFER\_IO\_REPORT\_INTERVAL}]
+  The sampling interval in seconds for collecting I/O statistics for
+  file transfer.  The default is 10 seconds.  To provide sufficient
+  resolution, the sampling interval should be small compared to the
+  smallest timespan that is configured in
+  \Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}.  The shorter the sampling
+  interval, the more overhead of data collection, which may slow down
+  the \Condor{schedd}.  See
+  page~\pageref{sec:FT-Scheduler-ClassAd-Attributes} for a description
+  of the published attributes.
+
+\label{param:TransferIoReportTimespans}
+\item[\Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}]
+  A string that specifies a list of timespans over which I/O
+  statistics are reported, using exponential moving averages (like the
+  1m, 5m, and 15m load averages in unix).  Each entry in the list
+  consists of a label followed by a colon followed by the number of
+  seconds over which the named timespan should extend.  The default is
+  \verb|1m:60 5m:300 1h:3600 1d:86400|.  To provide sufficient
+  resolution, the smallest reported timespan should be large compared
+  to the sampling interval, which is configured by
+  \Macro{TRANSFER\_IO\_REPORT\_INTERVAL}.  See
+  page~\pageref{sec:FT-Scheduler-ClassAd-Attributes} for a description
+  of the published attributes.
+
+\label{param:IndividualTransferIoReport}
+\item[\Macro{INDIVIDUAL\_TRANSFER\_IO\_REPORT}]
+  A boolean value that when true causes I/O statistics to be published
+  for individual transfer queues.  This setting is true by default.
+  There is one transfer queue per user in the default configuration of
+  \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.  Only the recently active
+  queues will be published.  See
+  page~\pageref{sec:FT-Scheduler-ClassAd-Attributes} for a description
+  of the published attributes.
+
 \label{param:ScheddQueryWorkers}
 \item[\Macro{SCHEDD\_QUERY\_WORKERS}]
   This specifies the maximum number of concurrent sub-processes that
