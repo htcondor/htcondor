@@ -1350,7 +1350,7 @@ File System Configuration File Entries''.
 \label{param:EnableClassadCaching}
 \item[\Macro{ENABLE\_CLASSAD\_CACHING}]
   A boolean value that controls the caching of ClassAds.
-  Caching saves memory when a Condor process contains
+  Caching saves memory when an HTCondor process contains
   many ClassAds with the same expressions.
   The default value is \Expr{False}, which disables caching.
 
@@ -1372,11 +1372,14 @@ File System Configuration File Entries''.
   
 \label{param:CondorFsync}
 \item[\Macro{CONDOR\_FSYNC}]
-  A boolean value that controls whether HTCondor calls fsync when
-  writing the user job and transaction logs.  Setting this value to false
-  will disable calls to fsync, which can help performance for schedd
-  log writes at the cost of some durability of the log contents should
-  there be a power or hardware failure.  This value is true by default.
+  A boolean value that controls whether HTCondor calls \Procedure{fsync} when
+  writing the user job and transaction logs.  
+  Setting this value to \Expr{False}
+  will disable calls to \Procedure{fsync}, 
+  which can help performance for \Condor{schedd}
+  log writes at the cost of some durability of the log contents,
+  should there be a power or hardware failure.  
+  The default value is \Expr{True}.
 
 \label{param:StatisticsToPublish}
 \item[\Macro{STATISTICS\_TO\_PUBLISH}]
@@ -5164,7 +5167,7 @@ MAX_JOBS_RUNNING	= \
   The sampling interval in seconds for collecting I/O statistics for
   file transfer.  The default is 10 seconds.  To provide sufficient
   resolution, the sampling interval should be small compared to the
-  smallest timespan that is configured in
+  smallest time span that is configured in
   \Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}.  The shorter the sampling
   interval, the more overhead of data collection, which may slow down
   the \Condor{schedd}.  See
@@ -5173,13 +5176,13 @@ MAX_JOBS_RUNNING	= \
 
 \label{param:TransferIoReportTimespans}
 \item[\Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}]
-  A string that specifies a list of timespans over which I/O
+  A string that specifies a list of time spans over which I/O
   statistics are reported, using exponential moving averages (like the
-  1m, 5m, and 15m load averages in unix).  Each entry in the list
+  1m, 5m, and 15m load averages in Unix).  Each entry in the list
   consists of a label followed by a colon followed by the number of
-  seconds over which the named timespan should extend.  The default is
+  seconds over which the named time span should extend.  The default is
   \verb|1m:60 5m:300 1h:3600 1d:86400|.  To provide sufficient
-  resolution, the smallest reported timespan should be large compared
+  resolution, the smallest reported time span should be large compared
   to the sampling interval, which is configured by
   \Macro{TRANSFER\_IO\_REPORT\_INTERVAL}.  See
   page~\pageref{sec:FT-Scheduler-ClassAd-Attributes} for a description
