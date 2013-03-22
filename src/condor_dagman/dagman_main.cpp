@@ -1252,9 +1252,11 @@ print_status() {
 				dagman.dag->NumHeldJobProcs() );
 	dagman.dag->PrintDeferrals( DEBUG_VERBOSE, false );
 
-	dagman._dagmanClassad->Update( total, done, pre, submitted, post,
-				ready, failed, unready, dagman.dag->_dagStatus,
-				dagman.dag->Recovery() );
+	if ( dagman._dagmanClassad ) {
+		dagman._dagmanClassad->Update( total, done, pre, submitted, post,
+					ready, failed, unready, dagman.dag->_dagStatus,
+					dagman.dag->Recovery() );
+	}
 }
 
 void condor_event_timer () {
