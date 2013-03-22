@@ -2764,6 +2764,7 @@ Dag::SetNodeStatusFileName( const char *statusFileName,
 	_minStatusUpdateTime = minUpdateTime;
 }
 
+//-------------------------------------------------------------------------
 /** Dump the node status.
 	@param whether the DAG has just been held
 	@param whether the DAG has just been removed

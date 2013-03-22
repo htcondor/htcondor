@@ -1,0 +1,10 @@
+Job NodeA job_dagman_classad-node.cmd
+Vars NodeA NODE="$(JOB)"
+
+Job NodeB job_dagman_classad-node.cmd
+Vars NodeB NODE="$(JOB)"
+Parent NodeA Child NodeB
+
+Job NodeC job_dagman_classad-node.cmd
+Vars NodeC NODE="$(JOB)"
+Parent NodeB Child NodeC
