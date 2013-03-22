@@ -75,7 +75,8 @@ public:
 		m_success(false),
 		m_max_bytes(1024),
 		m_stdout_offset(-1),
-		m_stderr_offset(-1)
+		m_stderr_offset(-1),
+		m_xfer_q(0)
 	{
 		m_id.cluster = -1;
 		m_id.proc = -1;
