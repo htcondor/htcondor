@@ -1390,7 +1390,8 @@ File System Configuration File Entries''.
   This first aspect may be \Expr{SCHEDD} or \Expr{SCHEDULER} to publish
   Statistics attributes in the ClassAd of the \Condor{schedd}.
   Or, it may be \Expr{DC} or \Expr{DAEMONCORE} to publish 
-  DaemonCore statistics.
+  DaemonCore statistics.  It may also be \Expr{TRANSFER} to publish
+  file transfer statics.
   After the colon may be the value \Expr{0}, \Expr{1}, \Expr{2}, or \Expr{3}.
   A value of  \Expr{0} turns off the publishing of any Statistics attributes.
   A value of  \Expr{1} is the default level, where some Statistics attributes
@@ -5181,16 +5182,6 @@ MAX_JOBS_RUNNING	= \
   resolution, the smallest reported timespan should be large compared
   to the sampling interval, which is configured by
   \Macro{TRANSFER\_IO\_REPORT\_INTERVAL}.  See
-  page~\pageref{sec:FT-Scheduler-ClassAd-Attributes} for a description
-  of the published attributes.
-
-\label{param:IndividualTransferIoReport}
-\item[\Macro{INDIVIDUAL\_TRANSFER\_IO\_REPORT}]
-  A boolean value that when true causes I/O statistics to be published
-  for individual transfer queues.  This setting is true by default.
-  There is one transfer queue per user in the default configuration of
-  \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.  Only the recently active
-  queues will be published.  See
   page~\pageref{sec:FT-Scheduler-ClassAd-Attributes} for a description
   of the published attributes.
 
