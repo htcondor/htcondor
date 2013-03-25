@@ -125,7 +125,33 @@ VMWARE_SCRIPT = $(SBIN)/condor_vm_vmware
 Note that an execute machine's \MacroNI{EXECUTE} variable should not
 contain any symbolic links in its path,
 if the machine is configured to run VMware \SubmitCmd{vm} universe jobs.
-See the FAQ entry in section~\ref{sec:vmware-symlink-bug} for details.
+Strange behavior has been noted when HTCondor tries to run a 
+\SubmitCmd{vm} universe VMware
+job using a path to a VMX file that contains a symbolic link.
+An example of an error message that may appear in such a job's user log:
+\begin{verbatim}
+Error from starter on master_vmuniverse_strtd@nostos.cs.wisc
+.edu: register(/scratch/gquinn/condor/git/CONDOR_SRC/src/con
+dor_tests/31426/31426vmuniverse/execute/dir_31534/vmN3hylp_c
+ondor.vmx) = 1/Error: Command failed: A file was not found/(
+ERROR) Can't create snapshot for vm(/scratch/gquinn/condor/g
+it/CONDOR_SRC/src/condor_tests/31426/31426vmuniverse/execute
+/dir_31534/vmN3hylp_condor.vmx)
+\end{verbatim}
+To work around this problem:
+\begin{itemize}
+\item If using file transfer
+(the submit description file contains
+\SubmitCmd{vmware\_should\_transfer\_files = true}),
+then modify any
+configuration variable \Macro{EXECUTE} values on all execute machines,
+such that they do not contain symbolic link path components.
+\item If using a shared file system, ensure that the
+submit description file command
+\SubmitCmd{vmware\_dir} does not use
+symbolic link path name components.
+\end{itemize}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Xen-Specific and KVM-Specific Configuration}
