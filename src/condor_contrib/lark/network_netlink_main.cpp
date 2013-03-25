@@ -15,6 +15,7 @@
 #include <sys/mount.h>
 #include <signal.h>
 #include <getopt.h>
+#include <time.h>
 
 #include "lark_attributes.h"
 #include "network_manipulation.h"
@@ -27,15 +28,22 @@ int handle_match(const unsigned char * rule_name, long long bytes_matched, void 
 	return 0;
 }
 
+static struct timespec g_starttime;
+
 static int child_post_fork(lark::NetworkNamespaceManager &manager) {
 
 	int rc = 0;
+	int diffms;
 	if (manager.PostForkChild())
 	{
 		fprintf(stderr, "Post-fork child process failed.\n");
 		rc = 4;
 		goto finalize_child;
 	}
+	struct timespec finishtime;
+	clock_gettime(CLOCK_MONOTONIC, &finishtime);
+	diffms = 1000*(finishtime.tv_sec - g_starttime.tv_sec) + (finishtime.tv_nsec - g_starttime.tv_nsec)/1e6;
+	fprintf(stdout, "Total startup time: %d ms\n", diffms);
 
 	// Exec out.
 	rc = execl("/bin/sh", "sh", "-c", "date; ip link list; ip addr list; ip route; iptables -L -v ; ping 129.93.1.141 -c 5 && curl 129.93.1.141; exit 0", (char *)0);
@@ -166,6 +174,8 @@ int main(int argc, char * argv[])
 	dprintf(D_ALWAYS, "ClassAd contents: %s\n", ad_str.c_str());
 
 	TemporaryPrivSentry sentry(PRIV_ROOT);
+
+	clock_gettime(CLOCK_MONOTONIC, &g_starttime);
 
 	lark::NetworkNamespaceManager &manager = lark::NetworkNamespaceManager::GetManager();
 

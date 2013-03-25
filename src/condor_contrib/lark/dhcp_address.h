@@ -26,6 +26,8 @@ public:
 
 	virtual int Cleanup();
 
+	static bool LeaseHasRemaining(classad::ClassAd &ad, unsigned remaining);
+
 private:
 	classad_shared_ptr<classad::ClassAd> m_ad;
 };

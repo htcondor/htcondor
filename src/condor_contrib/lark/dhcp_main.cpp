@@ -16,6 +16,7 @@
 #include "popen_util.h"
 #include "network_manipulation.h"
 #include "dhcp_management.h"
+#include "bridge_routing.h"
 
 #define EXTERNAL_IFACE "e_tester"
 #define INTERNAL_IFACE "i_tester"
@@ -68,28 +69,64 @@ main(int argc, char * argv[])
 	}
 
 	// Create and setup the bridge.
-	if (create_bridge(BRIDGE_NAME)) {
-		dprintf(D_ALWAYS, "Failed to create bridge " BRIDGE_NAME "\n");
+	int retval;
+	if ((retval = create_bridge(BRIDGE_NAME)) && (retval != EEXIST)) {
+		dprintf(D_ALWAYS, "Failed to create bridge %s (errno=%d, %s)\n", BRIDGE_NAME, retval, strerror(retval));
 		result = 1;
 		goto failed_bridge;
 	}
-	if (add_interface_to_bridge(BRIDGE_NAME, BRIDGE_IFACE)) {
-		dprintf(D_ALWAYS, "Failed to add " BRIDGE_IFACE " to bridge " BRIDGE_NAME "\n");
-		result = 1;
-		goto failed_bridge;
+	if (retval != EEXIST)
+	{
+		if (set_status(fd, BRIDGE_NAME, IFF_UP))
+		{
+			delete_bridge(BRIDGE_NAME);
+			result = 1;
+			goto failed_bridge;
+		}
+		if ((result = set_bridge_fd(BRIDGE_NAME, 0)))
+		{
+			dprintf(D_ALWAYS, "Unable to set bridge " BRIDGE_NAME " forwarding delay to 0.\n");
+			delete_bridge(BRIDGE_NAME);
+			result = 1;
+			goto failed_bridge;
+		}
+
+		if ((result = add_interface_to_bridge(BRIDGE_NAME, BRIDGE_IFACE))) {
+			dprintf(D_ALWAYS, "Unable to add device %s to bridge %s\n", BRIDGE_IFACE, BRIDGE_NAME);
+			set_status(fd, BRIDGE_NAME, 0);
+			delete_bridge(BRIDGE_NAME);
+			result = 1;
+			goto failed_bridge;
+		}
+		// If either of these fail, we likely knock the system off the network.
+		if ((result = move_routes_to_bridge(fd, BRIDGE_IFACE, BRIDGE_NAME))) {
+			dprintf(D_ALWAYS, "Failed to move routes from %s to bridge %s\n", BRIDGE_IFACE, BRIDGE_NAME);
+			set_status(fd, BRIDGE_NAME, 0);
+			delete_bridge(BRIDGE_NAME);
+			result = 1;
+			goto failed_bridge;
+		}
+		if ((result = move_addresses_to_bridge(fd, BRIDGE_IFACE, BRIDGE_NAME)))
+		{
+			dprintf(D_ALWAYS, "Failed to move addresses from %s to bridge %s.\n", BRIDGE_IFACE, BRIDGE_NAME);
+			result = 1;
+			goto failed_bridge;
+		}
 	}
-	if (add_interface_to_bridge(BRIDGE_NAME, EXTERNAL_IFACE)) {
-		dprintf(D_ALWAYS, "Failed to add " EXTERNAL_IFACE " to bridge " BRIDGE_NAME "\n");
+	if ((retval = add_interface_to_bridge(BRIDGE_NAME, EXTERNAL_IFACE))) {
+		dprintf(D_ALWAYS, "Failed to add " EXTERNAL_IFACE " to bridge " BRIDGE_NAME " (errno=%d, %s)\n", retval, strerror(retval));
 		result = 1;
 		goto failed_bridge;
 	}
 
 	// Run the DHCP clieant.
+	dprintf(D_ALWAYS, "Starting DHCP query.\n");
 	if (dhcp_query(machine_ad)) {
 		dprintf(D_ALWAYS, "DHCP client query failed.\n");
 		result = 1;
 		goto failed_dhcp_client;
 	}
+	dprintf(D_ALWAYS, "Finished DHCP query.\n");
 
 	if (!machine_ad.EvaluateAttrString(ATTR_INTERNAL_ADDRESS_IPV4, client_ip)) {
 		dprintf(D_ALWAYS, "DHCP client did not return an IP address for " INTERNAL_IFACE ".\n");

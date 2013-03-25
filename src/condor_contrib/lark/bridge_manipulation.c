@@ -24,6 +24,7 @@ extern int seq;
 int
 create_bridge(const char * bridge_name)
 {
+	errno = 0;
 	char brname[IFNAMSIZ];
 	strncpy(brname, bridge_name, IFNAMSIZ);
 
@@ -45,6 +46,7 @@ create_bridge(const char * bridge_name)
 int
 delete_bridge(const char * bridge_name)
 {
+	errno = 0;
 	char brname[IFNAMSIZ];
 	strncpy(brname, bridge_name, IFNAMSIZ);
 
@@ -66,6 +68,7 @@ delete_bridge(const char * bridge_name)
 int
 add_interface_to_bridge(const char * bridge_name, const char * dev)
 {
+	errno = 0;
 	struct ifreq ifr;
 	strncpy(ifr.ifr_name, bridge_name, IFNAMSIZ);
 

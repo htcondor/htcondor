@@ -2,7 +2,6 @@
 #include "condor_common.h"
 
 #include <string>
-#include <linux/if.h>
 #include <linux/if_ether.h>
 #include <linux/if_arp.h>
 
@@ -24,6 +23,7 @@
 extern "C" {
 extern unsigned int if_nametoindex (__const char *__ifname);
 }
+extern bool MacAddressHexToBin(const char *, unsigned char*);
 
 using namespace lark;
 
@@ -221,7 +221,8 @@ BridgeConfiguration::Cleanup() {
 	address.Cleanup();
 
 	std::string mac_addr;
-	if (!m_ad->EvaluateAttrString(ATTR_DHCP_MAC, mac_addr) || mac_addr.length() != IFHWADDRLEN) {
+	unsigned char mac_addr_char[IFHWADDRLEN];
+	if (!m_ad->EvaluateAttrString(ATTR_DHCP_MAC, mac_addr) || mac_addr.size() != 17 || !MacAddressHexToBin(mac_addr.c_str(), mac_addr_char)) {
 		dprintf(D_ALWAYS, "Required ClassAd attribute " ATTR_DHCP_MAC " is missing.\n");
 		return 1;
 	}
@@ -254,7 +255,7 @@ BridgeConfiguration::Cleanup() {
 	iov[3].iov_base = &optype;
 	iov[3].iov_len = 2;
 	char arp[20];
-	memcpy(arp, mac_addr.c_str(), IFHWADDRLEN); // Source HW addr.
+	memcpy(arp, mac_addr_char, IFHWADDRLEN); // Source HW addr.
 	memset(arp+6, 0, 4); // 0.0.0.0 IP address
 	memset(arp+10, 0xff, 6); // Dest HW addr - ff:ff:ff:ff:ff:ff
 	//memset(arp+16, 0xff, 4); // Dest protocol address - 255.255.255.255
