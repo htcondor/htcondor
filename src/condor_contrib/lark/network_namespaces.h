@@ -81,6 +81,10 @@ private:
 
 	int ConfigureNetworkAccounting(const classad::ClassAd &machine_ad);
 
+	static int OpenLarkLock(const std::string &dirname, const std::string &filename);
+	void RecordNewMac(const std::string &interface_name);
+	bool FetchMac(const std::string &interface_name, unsigned char *mac);
+
 	int CreateNetworkPipe();
 	int RunCleanupScript();
 	static int JobAccountingCallback(const unsigned char * rule_name, long long bytes, void * callback_data);

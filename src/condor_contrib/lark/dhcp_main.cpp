@@ -51,7 +51,7 @@ main(int argc, char * argv[])
 	}
 
 	// Create and enable the veth devices.
-	if (create_veth(fd, EXTERNAL_IFACE, INTERNAL_IFACE)) {
+	if (create_veth(fd, EXTERNAL_IFACE, INTERNAL_IFACE, NULL, NULL)) {
 		dprintf(D_ALWAYS, "Failed to create veth devices.\n");
 		result=1;
 		goto failed_create_veth;

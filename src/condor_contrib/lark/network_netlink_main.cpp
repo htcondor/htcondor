@@ -14,7 +14,6 @@
 #include <sys/wait.h>
 #include <sys/mount.h>
 #include <signal.h>
-#include <linux/if.h>
 #include <getopt.h>
 
 #include "lark_attributes.h"

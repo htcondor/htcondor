@@ -258,13 +258,12 @@ MacAddressBinToHex(const unsigned char hwaddr[8], char hwaddr_str[32])
 
         char *str = hwaddr_str;
         unsigned len = 0;
-        const unsigned  maxlen = sizeof(hwaddr_str)-1;
+        const unsigned  maxlen = 18;
 
         *str = '\0';
         for( int i = 0;  i < 6;  i++ ) {
                 char tmp[4];
                 snprintf(tmp, sizeof(tmp), "%02x", hwaddr[i]);
-		printf("%s, %d\n", tmp, hwaddr[i]);
                 len += strlen(tmp);
                 ASSERT(len < maxlen);
                 strcat(str, tmp);

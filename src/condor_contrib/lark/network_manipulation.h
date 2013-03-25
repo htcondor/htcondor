@@ -50,7 +50,7 @@ int send_to_kernel(int sock, struct iovec* iov, size_t ioveclen);
  * - veth0_mac: binary MAC address for veth0.  Must be at least 7 bytes long (nul-terminated).
  * - veth1_mac: binary MAC address for veth1.  Must be at least 7 bytes long (nul-terminated).
  */
-int create_veth(int sock, const char * veth0, const char * veth1, unsigned char *veth0_mac = NULL, unsigned char *veth1_mac = NULL);
+int create_veth(int sock, const char * veth0, const char * veth1, unsigned char *veth0_mac, unsigned char *veth1_mac);
 
 /*
  * Delete an ethernet device.  Equivalent to:
