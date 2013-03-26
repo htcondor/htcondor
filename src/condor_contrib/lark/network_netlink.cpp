@@ -723,7 +723,9 @@ int parse_rtattr(struct rtattr *attr_table[], struct rtattr * rta, size_t len, i
 	memset(attr_table, 0, sizeof(struct rtattr*) * (max + 1));
 	while (RTA_OK(rta, len)) {
 		if ((rta->rta_type <= RTA_MAX) && (!attr_table[rta->rta_type]))
+		{
 			attr_table[rta->rta_type] = rta;
+		}
 		rta = RTA_NEXT(rta, len);
 	}
 	if (len) {
@@ -874,7 +876,7 @@ int get_addresses(int sock, int (*filter)(struct nlmsghdr, struct ifaddrmsg, str
 	iov[0].iov_len = NLMSG_LENGTH(0);
 
 	struct rtmsg rtm; memset(&rtm, 0, sizeof(rtm));
-	rtm.rtm_flags = AF_INET;
+	rtm.rtm_flags = AF_INET; // |AF_INET6 -- once we're ready
 	iov[1].iov_base = &rtm;
 	iov[1].iov_len = NLMSG_ALIGN(sizeof(struct rtmsg));
 

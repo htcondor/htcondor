@@ -20,10 +20,22 @@ public:
 	virtual int SetupPostForkParent();
 	virtual int Cleanup();
 
+	static int GratuitousArp(const std::string &device);
+
+
 private:
+	static int GratuitousArpAddressCallback(struct nlmsghdr hdr, struct ifaddrmsg addr, struct rtattr ** attr, void * user_arg);
+
 	classad_shared_ptr<classad::ClassAd> m_ad;
 	int m_p2c[2];
 	int m_has_default_route;
+
+	struct GratuitousArpInfo
+	{
+		GratuitousArpInfo(unsigned idx) : m_callback_eth(idx) {}
+		std::vector<in_addr_t> m_callback_addresses;
+		unsigned m_callback_eth;
+	};
 };
 
 }

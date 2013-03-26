@@ -486,7 +486,7 @@ move_addresses_to_bridge(int sock, const char *eth, const char *bridge) {
 		struct rtattr **attr_table = addr_info.attr_tables[idx];
 
 		int action_result = 0;
-		// Remove old route
+		// Remove old address
 		if ((action_result = iface_action(sock, RTM_DELADDR, addrmsg, attr_table))) {
 			dprintf(D_ALWAYS, "Failed to delete address (%d).\n", action_result);
 			free_addr_info(&addr_info);

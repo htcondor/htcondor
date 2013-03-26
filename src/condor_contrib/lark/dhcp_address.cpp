@@ -51,6 +51,7 @@ DHCPAddressSelection::Setup()
 		{
 			dprintf(D_FULLDEBUG, "Using DHCP address from cache.\n");
 			m_ad->Update(*ad);
+			m_use_address_from_cache = true;
 			return 0;
 		}
 	}
@@ -64,7 +65,7 @@ DHCPAddressSelection::Setup()
 int
 DHCPAddressSelection::SetupPostFork()
 {
-	if (dhcp_commit(*m_ad)) {
+	if (!m_use_address_from_cache && dhcp_commit(*m_ad)) {
 		return 1;
 	}
 	return 0;

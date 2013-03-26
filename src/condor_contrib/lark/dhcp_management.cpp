@@ -285,6 +285,7 @@ send_dhcp_discovery(int fd, uint32_t txid, const char mac_address[IFHWADDRLEN])
 	iter = packet.setOption(iter, '\x3d', 6, mac_address);
 	static const char dhcp_request[] = {'\x03', '\x01', '\x0c', '\x0f'};
 	iter = packet.setOption(iter, '\x37', 4, dhcp_request);
+	iter = packet.setOption(iter, '\x3c', 4, "lark");
 	iter = packet.setOption(iter, '\xff', 0, NULL);
 	packet.m_flags = htons(32768);
 
@@ -421,6 +422,7 @@ send_dhcp_request(int fd, uint32_t txid, char mac_addr[IFHWADDRLEN], const class
 	req_iter = request_packet.setOption(req_iter, '\x3d', IFHWADDRLEN, request_packet.m_mac_addr);
 	req_iter = request_packet.setOption(req_iter, '\x32', 4, (char*)&ciaddr.s_addr);
 	req_iter = request_packet.setOption(req_iter, '\x36', 4, (char*)&request_packet.m_siaddr.s_addr);
+	req_iter = request_packet.setOption(req_iter, '\x3c', 4, "lark");
 
 	struct iovec *iov;
 	size_t iov_len;
@@ -712,6 +714,7 @@ dhcp_release (classad::ClassAd &machine_ad)
 	req_iter = packet.setOption(req_iter, '\x3d', IFHWADDRLEN, packet.m_mac_addr);
 	req_iter = packet.setOption(req_iter, '\x32', 4, (char*)&ciaddr.s_addr);
 	req_iter = packet.setOption(req_iter, '\x36', 4, (char*)&packet.m_siaddr.s_addr);
+	req_iter = packet.setOption(req_iter, '\x3c', 4, "lark");
 
 	std::string device_name;
 	if (!machine_ad.EvaluateAttrString(ATTR_BRIDGE_DEVICE, device_name)) {
