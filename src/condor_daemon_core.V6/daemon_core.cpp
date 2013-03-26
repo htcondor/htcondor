@@ -4200,7 +4200,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 int DaemonCore::HandleSigCommand(int command, Stream* stream) {
 	int sig = 0;
 
-	assert( command == DC_RAISESIGNAL );
+	ASSERT( command == DC_RAISESIGNAL );
 
 	// We have been sent a DC_RAISESIGNAL command
 
@@ -7613,7 +7613,7 @@ int DaemonCore::Create_Process(
 	/* add it to the pid table */
 	{
 	   int insert_result = pidTable->insert(newpid,pidtmp);
-	   assert( insert_result == 0);
+	   ASSERT( insert_result == 0);
 	}
 
 #if !defined(WIN32)
@@ -7945,7 +7945,7 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 	pidtmp->pid = tid;
 #endif
 	int insert_result = pidTable->insert(tid,pidtmp);
-	assert( insert_result == 0 );
+	ASSERT( insert_result == 0 );
 #ifdef WIN32
 	WatchPid(pidtmp);
 #endif
@@ -8118,7 +8118,7 @@ DaemonCore::Inherit( void )
 		pidtmp->deallocate = 0L;
 #endif
 		int insert_result = pidTable->insert(ppid,pidtmp);
-		assert( insert_result == 0 );
+		ASSERT( insert_result == 0 );
 #ifdef WIN32
 		if ( watch_ppid ) {
 			assert(pidtmp->hProcess);
@@ -8406,7 +8406,7 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 	bool first_time = true;
 
 
-	assert( sig == SIGCHLD );
+	ASSERT( sig == SIGCHLD );
 
 	for(;;) {
 		errno = 0;
