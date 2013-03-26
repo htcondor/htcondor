@@ -133,6 +133,50 @@ BridgeConfiguration::Setup() {
 		return 1;
 	}
 
+	int fd2 = open("/proc/sys/net/bridge/bridge-nf-call-iptables", O_RDWR);
+	if (fd2 != -1)
+	{
+		const char one[2] = "1";
+		if (full_write(fd2, one, 1) != 1)
+		{
+			dprintf(D_ALWAYS, "Failed to enable IPTables filtering for bridge.\n");
+		}
+	}
+	std::string internal_addr;
+	if (!m_ad->EvaluateAttrString(ATTR_INTERNAL_ADDRESS_IPV4, internal_addr))
+	{
+		dprintf(D_ALWAYS, "No IPV4 address found.\n");
+		return 1;
+	}
+	{
+	ArgList args;
+	args.AppendArg("iptables");
+	args.AppendArg("-I");
+	args.AppendArg("FORWARD");
+	args.AppendArg("-m");
+	args.AppendArg("physdev");
+	args.AppendArg("--physdev-is-bridged");
+	args.AppendArg("-s");
+	args.AppendArg(internal_addr);
+	args.AppendArg("-g");
+	args.AppendArg(chain_name);
+	RUN_ARGS_AND_LOG(BridgeConfiguration::Setup, iptables_established_connections)
+	}
+	{
+	ArgList args;
+	args.AppendArg("iptables");
+	args.AppendArg("-I");
+	args.AppendArg("FORWARD");
+	args.AppendArg("-m");
+	args.AppendArg("physdev");
+	args.AppendArg("--physdev-is-bridged");
+	args.AppendArg("-d");
+	args.AppendArg(internal_addr);
+	args.AppendArg("-g");
+	args.AppendArg(chain_name);
+	RUN_ARGS_AND_LOG(BridgeConfiguration::Setup, iptables_established_connections)
+	}
+
 	classad::PrettyPrint pp;
 	std::string ad_str;
 	pp.Unparse(ad_str, m_ad.get());
