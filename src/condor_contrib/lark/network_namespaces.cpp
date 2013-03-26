@@ -274,9 +274,22 @@ int NetworkNamespaceManager::CreateNetworkPipe() {
 	unsigned char *i_mac_char = FetchMac(m_internal_pipe, &(i_mac[0])) ? &(i_mac[0]) : NULL;
         if ((rc = create_veth(m_sock, m_external_pipe.c_str(), m_internal_pipe.c_str(), e_mac_char, i_mac_char)))
 	{
-                dprintf(D_ALWAYS, "Failed to create veth devices %s/%s.\n", m_external_pipe.c_str(), m_internal_pipe.c_str());
-                m_state = FAILED;
-		return rc;
+		if (rc == EEXIST)
+		{
+			int rc2;
+			if ((rc2 = delete_veth(m_sock, m_external_pipe.c_str()))  && (rc2 != ENODEV) && (rc2 != EINVAL)) {
+				dprintf(D_ALWAYS, "Failed to delete the veth interface; rc=%d\n", rc);
+				m_state = FAILED;
+				return rc2;
+			}
+			rc = create_veth(m_sock, m_external_pipe.c_str(), m_internal_pipe.c_str(), e_mac_char, i_mac_char);
+		}
+		if (rc)
+		{
+			dprintf(D_ALWAYS, "Failed to create veth devices %s/%s.\n", m_external_pipe.c_str(), m_internal_pipe.c_str());
+			m_state = FAILED;
+			return rc;
+		}
         }
 	m_created_pipe = true;
 
