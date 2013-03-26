@@ -4,10 +4,10 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <sys/socket.h>
-#include <net/if.h>
 
 #include "condor_debug.h"
 #include <classad/classad.h>
+#include "network_adapter.unix.h"
 
 #include "lark_attributes.h"
 
@@ -179,8 +179,12 @@ get_mac_address(classad::ClassAd &machine_ad, char result[IFHWADDRLEN])
 	}
 	std::string cached_mac_address;
 	if (machine_ad.EvaluateAttrString(ATTR_DHCP_MAC, cached_mac_address) && cached_mac_address.length() >= IFHWADDRLEN) {
-		memcpy(result, cached_mac_address.c_str(), IFHWADDRLEN);
-		return 0;
+		unsigned char mac_bin[IFHWADDRLEN];
+		if (MacAddressHexToBin(cached_mac_address.c_str(), mac_bin))
+		{
+			memcpy(result, mac_bin, IFHWADDRLEN);
+			return 0;
+		}
 	}
 
 	int fd;
@@ -203,10 +207,12 @@ get_mac_address(classad::ClassAd &machine_ad, char result[IFHWADDRLEN])
 
 	memcpy(result, iface_req.ifr_hwaddr.sa_data, IFHWADDRLEN);
 
-	char mac_address[IFHWADDRLEN+1];
+	unsigned char mac_address[IFHWADDRLEN+1];
 	mac_address[IFHWADDRLEN] = '\0';
 	memcpy(mac_address, iface_req.ifr_hwaddr.sa_data, IFHWADDRLEN);
-	machine_ad.InsertAttr(ATTR_DHCP_MAC, mac_address);
+	char mac_address_hex[18]; mac_address_hex[17] = '\0';
+	MacAddressBinToHex(mac_address, mac_address_hex);
+	machine_ad.InsertAttr(ATTR_DHCP_MAC, mac_address_hex);
 
 	return 0;
 }
@@ -279,6 +285,7 @@ send_dhcp_discovery(int fd, uint32_t txid, const char mac_address[IFHWADDRLEN])
 	iter = packet.setOption(iter, '\x3d', 6, mac_address);
 	static const char dhcp_request[] = {'\x03', '\x01', '\x0c', '\x0f'};
 	iter = packet.setOption(iter, '\x37', 4, dhcp_request);
+	iter = packet.setOption(iter, '\x3c', 4, "lark");
 	iter = packet.setOption(iter, '\xff', 0, NULL);
 	packet.m_flags = htons(32768);
 
@@ -309,7 +316,7 @@ recv_dhcp_offer(int fd, uint32_t txid, char mac_addr[IFHWADDRLEN], unsigned secs
 {
 	DHCPPacket packet(txid, mac_addr);
 
-	struct msghdr msg;
+	struct msghdr msg; memset(&msg, 0, sizeof(msg));
 	ssize_t packet_size;
 	time_t starttime = time(NULL);
 	while (time(NULL) - starttime <= secs) {
@@ -349,7 +356,7 @@ recv_dhcp_offer(int fd, uint32_t txid, char mac_addr[IFHWADDRLEN], unsigned secs
 		}
 		// At this point, we now believe this is a valid offer.  Populate the corresponding request packet.
 		packet.computeLength(packet_size);
-		char * iter;
+		char * iter = NULL;
 		char option;
 		size_t length;
 		char * value;
@@ -415,6 +422,7 @@ send_dhcp_request(int fd, uint32_t txid, char mac_addr[IFHWADDRLEN], const class
 	req_iter = request_packet.setOption(req_iter, '\x3d', IFHWADDRLEN, request_packet.m_mac_addr);
 	req_iter = request_packet.setOption(req_iter, '\x32', 4, (char*)&ciaddr.s_addr);
 	req_iter = request_packet.setOption(req_iter, '\x36', 4, (char*)&request_packet.m_siaddr.s_addr);
+	req_iter = request_packet.setOption(req_iter, '\x3c', 4, "lark");
 
 	struct iovec *iov;
 	size_t iov_len;
@@ -706,6 +714,7 @@ dhcp_release (classad::ClassAd &machine_ad)
 	req_iter = packet.setOption(req_iter, '\x3d', IFHWADDRLEN, packet.m_mac_addr);
 	req_iter = packet.setOption(req_iter, '\x32', 4, (char*)&ciaddr.s_addr);
 	req_iter = packet.setOption(req_iter, '\x36', 4, (char*)&packet.m_siaddr.s_addr);
+	req_iter = packet.setOption(req_iter, '\x3c', 4, "lark");
 
 	std::string device_name;
 	if (!machine_ad.EvaluateAttrString(ATTR_BRIDGE_DEVICE, device_name)) {

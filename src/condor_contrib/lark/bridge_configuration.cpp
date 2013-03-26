@@ -2,7 +2,6 @@
 #include "condor_common.h"
 
 #include <string>
-#include <linux/if.h>
 #include <linux/if_ether.h>
 #include <linux/if_arp.h>
 
@@ -24,6 +23,8 @@
 extern "C" {
 extern unsigned int if_nametoindex (__const char *__ifname);
 }
+extern void MacAddressBinToHex(const unsigned char *, char *);
+extern bool MacAddressHexToBin(const char *, unsigned char*);
 
 using namespace lark;
 
@@ -200,12 +201,14 @@ BridgeConfiguration::SetupPostForkChild()
 	char go;
 	while (((err = read(m_p2c[0], &go, 1)) < 0) && (errno == EINTR)) {}
 	if (err < 0) {
-		dprintf(D_ALWAYS, "Error when kaiting on parent (errno=%d, %s).\n", errno, strerror(errno));
+		dprintf(D_ALWAYS, "Error when waiting on parent (errno=%d, %s).\n", errno, strerror(errno));
 		return errno;
 	}
 
 	AddressSelection & address = GetAddressSelection();
 	address.SetupPostFork();
+
+	GratuitousArp(internal_device);
 
 	return 0;
 }
@@ -220,72 +223,157 @@ BridgeConfiguration::Cleanup() {
 	AddressSelection & address = GetAddressSelection();
 	address.Cleanup();
 
-	std::string mac_addr;
-	if (!m_ad->EvaluateAttrString(ATTR_DHCP_MAC, mac_addr) || mac_addr.length() != IFHWADDRLEN) {
-		dprintf(D_ALWAYS, "Required ClassAd attribute " ATTR_DHCP_MAC " is missing.\n");
-		return 1;
-	}
 	std::string bridge_device;
 	if (!m_ad->EvaluateAttrString(ATTR_BRIDGE_DEVICE, bridge_device)) {
 		dprintf(D_ALWAYS, "Required ClassAd attribute " ATTR_BRIDGE_DEVICE " is missing.\n");
 		return 1;
 	}
-	int dev_idx = if_nametoindex(bridge_device.c_str());	
-	if (dev_idx == 0) {
-		dprintf(D_ALWAYS, "Unknown device %s for sending ARP packets.\n", bridge_device.c_str());
+
+	GratuitousArp(bridge_device);
+	DIR *dirp = opendir(("/sys/class/net/" + bridge_device + "/brif").c_str());
+	struct dirent *dp;
+	while (dirp)
+	{
+		errno = 0;
+		if ((dp = readdir(dirp)) != NULL)
+		{
+			if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0)
+			{
+				continue;
+			}
+			GratuitousArp(dp->d_name);
+		} else {
+			closedir(dirp);
+			dirp = NULL;
+		}
+	}
+
+	return 0;
+}
+
+int BridgeConfiguration::GratuitousArpAddressCallback(struct nlmsghdr /*hdr*/, struct ifaddrmsg addr, struct rtattr ** attr, void * user_arg)
+{
+	GratuitousArpInfo *info = static_cast<GratuitousArpInfo*>(user_arg);
+	if (addr.ifa_index != info->m_callback_eth)
+	{
+		return 0;
+	}
+
+	if (addr.ifa_family == AF_INET && attr[IFLA_ADDRESS] && attr[IFLA_ADDRESS]->rta_len == RTA_LENGTH(sizeof(in_addr_t)))
+	{
+		in_addr_t saddr;
+		memcpy(&saddr, static_cast<char*>(RTA_DATA(attr[IFLA_ADDRESS]))+sizeof(RTA_LENGTH(0)), sizeof(in_addr_t));
+		info->m_callback_addresses.push_back(saddr);
+	}
+	return 0;
+}
+
+int BridgeConfiguration::GratuitousArp(const std::string &device)
+{
+	if (device.size() >= IFNAMSIZ)
+	{
+		dprintf(D_ALWAYS, "Device name too long for gratuitous ARP.\n");
 		return 1;
 	}
 
-	// Spoof ARP packet saying we are giving up the address.
-	// TODO: Verify this is actually working.
-	struct iovec iov[5];
-	short hwtype = htons(1); // Hardware type - Ethernet
-	iov[0].iov_base = &hwtype;
-	iov[0].iov_len = 2;
-	short pttype = htons(0x0800); // Protocol type - IPv4
-	iov[1].iov_base = &pttype;
-	iov[1].iov_len = 2;
-	char addrlen[2];
-	addrlen[0] = 6; // Hardware address length
-	addrlen[1] = 4; // Protocol address length
-	iov[2].iov_base = &addrlen;
-	iov[2].iov_len = 2;
-	short optype = htons(2); // Reply operation
-	iov[3].iov_base = &optype;
-	iov[3].iov_len = 2;
-	char arp[20];
-	memcpy(arp, mac_addr.c_str(), IFHWADDRLEN); // Source HW addr.
-	memset(arp+6, 0, 4); // 0.0.0.0 IP address
-	memset(arp+10, 0xff, 6); // Dest HW addr - ff:ff:ff:ff:ff:ff
-	//memset(arp+16, 0xff, 4); // Dest protocol address - 255.255.255.255
-	arp[16] = 129; arp[17] = 93; arp[18] = 244; arp[19] = 255;
-	iov[4].iov_base = &arp;
-	iov[4].iov_len = 20;
-	int fd = socket(AF_PACKET, SOCK_DGRAM, 0);
-	if (fd == -1) {
-		dprintf(D_ALWAYS, "Unable to create socket for ARP message (errno=%d, %s).\n", errno, strerror(errno));
-		return -1;
+	int fd;
+	if ((fd = socket(AF_PACKET, SOCK_DGRAM, 0)) == -1)
+	{
+		dprintf(D_ALWAYS, "Failed to create socket for retrieving hardware address (errno=%d, %s).\n", errno, strerror(errno));
+		return 1;
 	}
-	struct sockaddr_ll addr; bzero(&addr, sizeof(addr));
-	addr.sll_family = AF_PACKET;
-	addr.sll_protocol = ETH_P_ARP;
-	addr.sll_ifindex = dev_idx;
-	addr.sll_hatype = ARPOP_REPLY;
-	addr.sll_pkttype = PACKET_BROADCAST;
-	addr.sll_halen = IFHWADDRLEN;
-	char hwaddr[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-	memcpy(addr.sll_addr, hwaddr, IFHWADDRLEN);
-	union sockaddr_storage {struct sockaddr_ll *laddr; struct sockaddr *addr;} storage;
-	storage.laddr = &addr;
-	struct msghdr msg; bzero(&msg, sizeof(msg));
-	msg.msg_name = &addr;
-	msg.msg_namelen = sizeof(addr);
-	msg.msg_iov = iov;
-	msg.msg_iovlen = 5;
-	if (sendmsg(fd, &msg, 0) == -1) {
-		dprintf(D_ALWAYS, "Failed to send ARP message (errno=%d, %s).\n", errno, strerror(errno));
+
+	struct ifreq iface_req; memset(&iface_req, '\0', sizeof(iface_req));
+	strncpy(iface_req.ifr_name, device.c_str(), IFNAMSIZ);
+	if (-1 == ioctl(fd, SIOCGIFHWADDR, &iface_req))
+	{
+		dprintf(D_ALWAYS, "Error when retrieving hardware address (errno=%d, %s).\n", errno, strerror(errno));
 		close(fd);
 		return 1;
+	}
+	unsigned char mac_address[IFHWADDRLEN+1]; mac_address[IFHWADDRLEN] = '\0';
+	memcpy(mac_address, iface_req.ifr_hwaddr.sa_data, IFHWADDRLEN);
+
+	int dev_idx = if_nametoindex(device.c_str());	
+	if (dev_idx == 0) {
+		dprintf(D_ALWAYS, "Unknown device %s for sending ARP packets.\n", device.c_str());
+		close(fd);
+		return 1;
+	}
+
+        NetworkNamespaceManager & manager = NetworkNamespaceManager::GetManager();
+        int sock= manager.GetNetlinkSocket();
+	int retval;
+	GratuitousArpInfo info(dev_idx);
+	if ((retval = get_addresses(sock, &(BridgeConfiguration::GratuitousArpAddressCallback), &info)))
+	{
+		dprintf(D_ALWAYS, "Failed to get device %s addresses.\n", device.c_str());
+		close(fd);
+		return 1;
+	}
+
+	struct ifreq ifr; memset(&ifr, 0, sizeof(ifr));
+	ifr.ifr_ifindex = dev_idx;
+	strcpy(ifr.ifr_name, device.c_str());
+	ifr.ifr_flags = IFF_UP|IFF_BROADCAST|IFF_RUNNING|IFF_PROMISC|IFF_MULTICAST;
+
+	if ((retval = ioctl(fd, SIOCGIFFLAGS, &ifr)) == -1)
+	{
+		dprintf(D_ALWAYS, "Unable to set IO flags for ARP socket (errno=%d, %s).\n", errno, strerror(errno));
+		close(fd);
+		return 1;
+	}
+
+	for (std::vector<in_addr_t>::const_iterator it = info.m_callback_addresses.begin(); it != info.m_callback_addresses.end(); it++)
+	{
+		char ipaddr[INET_ADDRSTRLEN]; ipaddr[0] = '\0';
+		inet_ntop(AF_INET, &(*it), ipaddr, INET_ADDRSTRLEN);
+		char mac_address_hex[18]; mac_address_hex[17] = '\0';
+		MacAddressBinToHex(mac_address, mac_address_hex);
+		dprintf(D_FULLDEBUG, "Sending out gratuitous ARP for device %s; hwaddr %s, IP address %s.\n", device.c_str(), mac_address_hex, ipaddr);
+		// Gratuitous ARP packet to announce/re-affirm our presence.
+		struct iovec iov[5];
+		short hwtype = htons(1); // Hardware type - Ethernet
+		iov[0].iov_base = &hwtype;
+		iov[0].iov_len = 2;
+		short pttype = htons(0x0800); // Protocol type - IPv4
+		iov[1].iov_base = &pttype;
+		iov[1].iov_len = 2;
+		char addrlen[2];
+		addrlen[0] = 6; // Hardware address length
+		addrlen[1] = 4; // Protocol address length
+		iov[2].iov_base = &addrlen;
+		iov[2].iov_len = 2;
+		short optype = htons(1); // Request operation
+		iov[3].iov_base = &optype;
+		iov[3].iov_len = 2;
+		char arp[20];
+		memcpy(arp, mac_address, IFHWADDRLEN); // Source HW addr.
+		memcpy(arp+6, &(*it), 4);
+		memset(arp+10, 0xff, 6); // Dest HW addr - ff:ff:ff:ff:ff:ff
+		memcpy(arp+16, &(*it), 4);
+		iov[4].iov_base = &arp;
+		iov[4].iov_len = 20;
+
+		struct sockaddr_ll addr; bzero(&addr, sizeof(addr));
+		addr.sll_family = AF_PACKET;
+		addr.sll_protocol = htons(ETH_P_ARP);
+		addr.sll_ifindex = dev_idx;
+		addr.sll_hatype = ARPOP_REQUEST;
+		addr.sll_pkttype = PACKET_HOST;
+		addr.sll_halen = IFHWADDRLEN;
+		char hwaddr[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+		memcpy(addr.sll_addr, hwaddr, IFHWADDRLEN);
+		struct msghdr msg; bzero(&msg, sizeof(msg));
+		msg.msg_name = &addr;
+		msg.msg_namelen = sizeof(addr);
+		msg.msg_iov = iov;
+		msg.msg_iovlen = 5;
+		if (sendmsg(fd, &msg, 0) == -1) {
+			dprintf(D_ALWAYS, "Failed to send ARP message (errno=%d, %s).\n", errno, strerror(errno));
+			close(fd);
+			return 1;
+		}
 	}
 	close(fd);
 	return 0;

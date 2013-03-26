@@ -76,10 +76,14 @@ public:
 	 */
 	static NetworkNamespaceManager &GetManager();
 
+	static int OpenLarkLock(const std::string &dirname, const std::string &filename);
 private:
 	NetworkNamespaceManager();
 
 	int ConfigureNetworkAccounting(const classad::ClassAd &machine_ad);
+
+	void RecordNewMac(const std::string &interface_name);
+	bool FetchMac(const std::string &interface_name, unsigned char *mac);
 
 	int CreateNetworkPipe();
 	int RunCleanupScript();

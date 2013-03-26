@@ -1,6 +1,4 @@
 
-#include <net/if.h>
-
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_arglist.h"
@@ -12,6 +10,7 @@
 #include "lark_attributes.h"
 #include "network_namespaces.h"
 #include "network_manipulation.h"
+#include "network_adapter.unix.h"
 #include "popen_util.h"
 
 using namespace lark;
@@ -200,16 +199,95 @@ int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, c
 	return 0;
 }
 
+bool NetworkNamespaceManager::FetchMac(const std::string &interface_name, unsigned char *mac)
+{
+	int fd = OpenLarkLock("/mac_cache", interface_name);
+	if (fd == -1)
+	{
+		return false;
+	}
+	char mac_char[18]; mac_char[17] = '\0';
+	int retval;
+	if ((retval = full_read(fd, mac_char, 17)) < 0)
+	{
+		dprintf(D_ALWAYS, "Unable to read mac from cache (errno=%d, %s).\n", errno, strerror(errno));
+		close(fd);
+		return false;
+	}
+	mac_char[retval] = '\0';
+	close(fd);
+	unsigned char mac_bin_char[8];
+	if (!MacAddressHexToBin(mac_char, mac_bin_char))
+	{
+		dprintf(D_ALWAYS, "Unable to parse the cached mac address.\n");
+		return false;
+	}
+	mac_bin_char[7] = '\0';
+	memcpy(mac, mac_bin_char, 8);
+	return true;
+}
+
+void NetworkNamespaceManager::RecordNewMac(const std::string &interface_name)
+{
+	int fd;
+	struct ifreq iface_req;
+
+	if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+	{
+		dprintf(D_ALWAYS, "Failed to create socket for retrieving hardware address (errno=%d, %s).\n", errno, strerror(errno));
+		return;
+	}
+
+	memset(&iface_req, '\0', sizeof(iface_req));
+	strncpy(iface_req.ifr_name, interface_name.c_str(), IFNAMSIZ);
+	if (-1 == ioctl(fd, SIOCGIFHWADDR, &iface_req))
+	{
+		dprintf(D_ALWAYS, "Error when retrieving hardware address (errno=%d, %s).\n", errno, strerror(errno));
+		close(fd);
+		return;
+	}
+	close(fd);
+
+	char hw_addr_str[18]; hw_addr_str[17] = '\0';
+	unsigned char hw_addr[8]; hw_addr[6] = '\0';
+	memcpy(hw_addr, iface_req.ifr_hwaddr.sa_data, 6);
+	MacAddressBinToHex(hw_addr, hw_addr_str);
+
+	if ((fd = NetworkNamespaceManager::OpenLarkLock("/mac_cache", interface_name)) < 0)
+	{
+		dprintf(D_ALWAYS, "Error opening lock file $(LOCK)/lark/mac_cache/%s. (errno=%d, %s)\n", interface_name.c_str(), errno, strerror(errno));
+	}
+	if (full_write(fd, hw_addr_str, strlen(hw_addr_str)) < 0)
+	{
+		dprintf(D_ALWAYS, "Error writing MAC %s to lock file $(LOCK)/lark/mac_cache/%s. (errno=%d, %s)\n", hw_addr_str, interface_name.c_str(), errno, strerror(errno));
+	}
+	close(fd);
+}
+
 int NetworkNamespaceManager::CreateNetworkPipe() {
 	int rc;
 
 	m_internal_pipe = "i_" + m_network_namespace;
-        if ((rc = create_veth(m_sock, m_external_pipe.c_str(), m_internal_pipe.c_str()))) {
+
+	std::vector<unsigned char> e_mac, i_mac; e_mac.reserve(8); i_mac.reserve(8);
+	unsigned char *e_mac_char = FetchMac(m_external_pipe, &(e_mac[0])) ? &(e_mac[0]) : NULL;
+	unsigned char *i_mac_char = FetchMac(m_internal_pipe, &(i_mac[0])) ? &(i_mac[0]) : NULL;
+        if ((rc = create_veth(m_sock, m_external_pipe.c_str(), m_internal_pipe.c_str(), e_mac_char, i_mac_char)))
+	{
                 dprintf(D_ALWAYS, "Failed to create veth devices %s/%s.\n", m_external_pipe.c_str(), m_internal_pipe.c_str());
                 m_state = FAILED;
 		return rc;
         }
 	m_created_pipe = true;
+
+	if (!e_mac_char)
+	{
+		RecordNewMac(m_external_pipe);
+	}
+	if (!i_mac_char)
+	{
+		RecordNewMac(m_internal_pipe);
+	}
 
 	dprintf(D_FULLDEBUG, "Created a pair of veth devices (%s, %s).\n", m_external_pipe.c_str(), m_internal_pipe.c_str());
         
@@ -604,32 +682,30 @@ int NetworkNamespaceManager::ConfigureNetworkAccounting(const classad::ClassAd &
 	return 0;
 }
 
-NetworkNamespaceManager::NetworkLock::NetworkLock() : m_fd(-1)
+int
+NetworkNamespaceManager::OpenLarkLock(const std::string &dirname, const std::string &filename)
 {
 	std::string lock;
 	if (!param(lock, "Lock"))
 	{
 		dprintf(D_ALWAYS, "LOCK parameter not set.\n");
 	}
-	std::string lark_lock_dir = lock + "/lark";
+	std::string lark_lock_dir = lock + "/lark" + DIR_DELIM_STRING + dirname;
 	if (!mkdir_and_parents_if_needed(lark_lock_dir.c_str(), S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH, PRIV_ROOT))
 	{
 		dprintf(D_ALWAYS, "Error creating Lark network lock directory %s. (errno=%d, %s)\n", lark_lock_dir.c_str(), errno, strerror(errno));
+		return -1;
 	}
-	std::string lark_lock = lark_lock_dir + "/network_lock";
-	int fd = open(lark_lock.c_str(), O_RDWR|O_CREAT|O_EXCL|O_CLOEXEC, S_IWUSR|S_IRUSR);
+	std::string lark_lock = lark_lock_dir + DIR_DELIM_STRING + filename;
+	return open(lark_lock.c_str(), O_RDWR|O_CREAT|O_CLOEXEC, S_IWUSR|S_IRUSR);
+}
+
+NetworkNamespaceManager::NetworkLock::NetworkLock() : m_fd(-1)
+{
+	int fd = NetworkNamespaceManager::OpenLarkLock("/", "network_lock");
 	if ((fd < 0) && (errno != EEXIST))
 	{
-		dprintf(D_ALWAYS, "Error opening lock file %s. (errno=%d, %s)\n", lark_lock.c_str(), errno, strerror(errno));
-	}
-	else if ((fd < 0) && (errno == EEXIST))
-	{
-		fd = open(lark_lock.c_str(), O_RDWR|O_CREAT, S_IWUSR|S_IRUSR);
-		if (fd < 0)
-		{
-			dprintf(D_ALWAYS, "Error opening stale lock file %s. (errno=%d, %s)\n", lark_lock.c_str(), errno, strerror(errno));
-			return;
-		}
+		dprintf(D_ALWAYS, "Error opening $(LOCK)/lark/network_lock. (errno=%d, %s)\n", errno, strerror(errno));
 	}
 	struct flock lock_info;
 	lock_info.l_type = F_WRLCK;
@@ -641,7 +717,7 @@ NetworkNamespaceManager::NetworkLock::NetworkLock() : m_fd(-1)
 	while (((retval = fcntl(fd, F_SETLKW, &lock_info)) == -1) && (errno == EINTR)) {}
 	if (retval == -1)
 	{
-		dprintf(D_ALWAYS, "Error locking file %s. (errno=%d, %s)\n", lark_lock.c_str(), errno, strerror(errno));
+		dprintf(D_ALWAYS, "Error locking $(LOCK)/lark/network_lock. (errno=%d, %s)\n", errno, strerror(errno));
 	}
 	m_fd = fd;
 }

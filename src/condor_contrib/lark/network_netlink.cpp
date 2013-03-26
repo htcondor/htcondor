@@ -129,9 +129,9 @@ int send_and_ack(int sock, struct iovec* iov, size_t ioveclen) {
 
 #define VETH "veth"
 #define VETH_LEN strlen(VETH)
-int create_veth(int sock, const char * veth0, const char * veth1) {
+int create_veth(int sock, const char * veth0, const char * veth1, const char *veth0_mac, const char *veth1_mac) {
 
-	struct iovec iov[12];
+	struct iovec iov[16];
 
 	size_t veth0_len = strlen(veth0);
 	size_t veth1_len = strlen(veth1);
@@ -148,7 +148,8 @@ int create_veth(int sock, const char * veth0, const char * veth1) {
 	struct nlmsghdr nlmsghdr; memset(&nlmsghdr, 0, sizeof(struct nlmsghdr));
 	nlmsghdr.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg)) + RTA_LENGTH(0) + RTA_LENGTH(VETH_LEN) + 
 			RTA_LENGTH(0) + RTA_LENGTH(0) + NLMSG_ALIGN(sizeof(struct ifinfomsg)) + 
-			RTA_LENGTH(0) + RTA_ALIGN(veth1_len) + RTA_LENGTH(0) + RTA_ALIGN(veth0_len);
+			RTA_LENGTH(veth1_len) + (veth1_mac ? RTA_LENGTH(8) : 0) + 
+			RTA_LENGTH(veth0_len) + (veth0_mac ? RTA_LENGTH(8) : 0);
 	nlmsghdr.nlmsg_type = RTM_NEWLINK;
 	nlmsghdr.nlmsg_flags = NLM_F_REQUEST|NLM_F_CREATE|NLM_F_EXCL|NLM_F_ACK;
 	nlmsghdr.nlmsg_seq = ++seq;
@@ -158,6 +159,18 @@ int create_veth(int sock, const char * veth0, const char * veth1) {
 	iov[0].iov_len = NLMSG_LENGTH (0);
 
 	// Request the link
+	// Structure of message:
+	// netlink message:
+	//   - ifinfomsg
+	//   - rtattr IFLA_LINKINFO (0)
+	//     - rtattr IFLA_INFO_KIND (VETH_LEN)
+	//     - rtattr IFLA_INFO_DATA (0)
+	//       - rtattr VETH_INFO_PEER (0)
+	//         - ifinfomsg
+	//         - rtattr IFLA_IFNAME (veth1_len)
+	//         - rtattr IFLA_ADDRESS (optional, 8)
+	//   - rtattr IFLA_IFNAME (veth0_len)
+	//   - rtattr IFLA_ADDRESS (optional, 8)
 	struct ifinfomsg info_msg; memset(&info_msg, 0, sizeof(struct ifinfomsg));
 	info_msg.ifi_family = AF_UNSPEC;
 
@@ -166,7 +179,7 @@ int create_veth(int sock, const char * veth0, const char * veth1) {
 
 	struct rtattr rta; memset(&rta, 0, sizeof(struct rtattr));
 	rta.rta_type = IFLA_LINKINFO;
-	rta.rta_len = RTA_LENGTH(0) + RTA_LENGTH(VETH_LEN) + RTA_LENGTH(0) + RTA_LENGTH(0) + NLMSG_ALIGN(sizeof(struct ifinfomsg)) + RTA_LENGTH(0) + RTA_ALIGN(veth1_len);;
+	rta.rta_len = RTA_LENGTH(0) + RTA_LENGTH(VETH_LEN) + RTA_LENGTH(0) + RTA_LENGTH(0) + NLMSG_ALIGN(sizeof(struct ifinfomsg)) + RTA_LENGTH(veth1_len) + (veth1_mac ? RTA_LENGTH(8) : 0);
 	iov[2].iov_base = &rta;
 	iov[2].iov_len = RTA_LENGTH(0);
 
@@ -183,14 +196,14 @@ int create_veth(int sock, const char * veth0, const char * veth1) {
 
 	struct rtattr rta3; memset(&rta3, 0, sizeof(struct rtattr));
 	rta3.rta_type = IFLA_INFO_DATA;
-	rta3.rta_len = RTA_LENGTH(0) + RTA_LENGTH(0) + NLMSG_ALIGN(sizeof(struct ifinfomsg)) + RTA_LENGTH(0) + RTA_ALIGN(veth1_len);
+	rta3.rta_len = RTA_LENGTH(0) + RTA_LENGTH(0) + NLMSG_ALIGN(sizeof(struct ifinfomsg)) + RTA_LENGTH(veth1_len) + (veth1_mac ? RTA_LENGTH(8) : 0);
 
 	iov[5].iov_base = &rta3;
 	iov[5].iov_len = RTA_LENGTH(0);
 
 	struct rtattr rta4; memset(&rta4, 0, sizeof(struct rtattr));
 	rta4.rta_type =  VETH_INFO_PEER;
-	rta4.rta_len = RTA_LENGTH(0) + NLMSG_ALIGN(sizeof(struct ifinfomsg)) + RTA_LENGTH(0) + RTA_ALIGN(veth1_len);
+	rta4.rta_len = RTA_LENGTH(0) + NLMSG_ALIGN(sizeof(struct ifinfomsg)) + RTA_LENGTH(veth1_len) + (veth1_mac ? RTA_LENGTH(8) : 0);
 
 	iov[6].iov_base = &rta4;
 	iov[6].iov_len = RTA_LENGTH(0);
@@ -213,19 +226,50 @@ int create_veth(int sock, const char * veth0, const char * veth1) {
 	iov[9].iov_base = veth1_copy;
 	iov[9].iov_len = RTA_ALIGN(veth1_len);
 
+	unsigned extra_iov = 0;
+	char veth1_mac_copy[8]; memset(veth1_mac_copy, 0, 8);
 	struct rtattr rta6; memset(&rta6, 0, sizeof(struct rtattr));
-	rta6.rta_type = IFLA_IFNAME;
-	rta6.rta_len = RTA_LENGTH(veth0_len);
+	if (veth1_mac)
+	{
+		rta6.rta_type = IFLA_ADDRESS;
+		rta6.rta_len = RTA_LENGTH(6);
+		iov[10].iov_base = &rta6;
+		iov[10].iov_len = RTA_LENGTH(0);
+		
+		memcpy(veth1_mac_copy, veth1_mac, 6);
+		iov[11].iov_base = veth1_mac_copy;
+		iov[11].iov_len = RTA_ALIGN(8);
+		extra_iov += 2;
+	}
 
-	iov[10].iov_base = &rta6;
-	iov[10].iov_len = RTA_LENGTH(0);
+	struct rtattr rta7; memset(&rta7, 0, sizeof(struct rtattr));
+	rta7.rta_type = IFLA_IFNAME;
+	rta7.rta_len = RTA_LENGTH(veth0_len);
+
+	iov[10+extra_iov].iov_base = &rta7;
+	iov[10+extra_iov].iov_len = RTA_LENGTH(0);
 
 	char veth0_copy[IFNAMSIZ];
 	memcpy(veth0_copy, veth0, veth0_len);
-	iov[11].iov_base = veth0_copy;
-	iov[11].iov_len = RTA_ALIGN(veth0_len);
+	iov[11+extra_iov].iov_base = veth0_copy;
+	iov[11+extra_iov].iov_len = RTA_ALIGN(veth0_len);
 
-	return send_and_ack(sock, iov, 12);
+	char veth0_mac_copy[8]; memset(veth0_mac_copy, 0, 8);
+	struct rtattr rta8; memset(&rta8, 0, sizeof(struct rtattr));
+	if (veth0_mac)
+	{
+		rta8.rta_type = IFLA_ADDRESS;
+		rta8.rta_len = RTA_LENGTH(6);
+		iov[12+extra_iov].iov_base = &rta8;
+		iov[12+extra_iov].iov_len = RTA_LENGTH(0);
+
+		memcpy(veth0_mac_copy, veth0_mac, 6);
+		iov[13+extra_iov].iov_base = veth0_mac_copy;
+		iov[13+extra_iov].iov_len = RTA_ALIGN(8);
+		extra_iov += 2;
+	}
+
+	return send_and_ack(sock, iov, 12+extra_iov);
 }
 
 int delete_veth(int sock, const char * eth) {
@@ -679,7 +723,9 @@ int parse_rtattr(struct rtattr *attr_table[], struct rtattr * rta, size_t len, i
 	memset(attr_table, 0, sizeof(struct rtattr*) * (max + 1));
 	while (RTA_OK(rta, len)) {
 		if ((rta->rta_type <= RTA_MAX) && (!attr_table[rta->rta_type]))
+		{
 			attr_table[rta->rta_type] = rta;
+		}
 		rta = RTA_NEXT(rta, len);
 	}
 	if (len) {
@@ -830,7 +876,7 @@ int get_addresses(int sock, int (*filter)(struct nlmsghdr, struct ifaddrmsg, str
 	iov[0].iov_len = NLMSG_LENGTH(0);
 
 	struct rtmsg rtm; memset(&rtm, 0, sizeof(rtm));
-	rtm.rtm_flags = AF_INET;
+	rtm.rtm_flags = AF_INET; // |AF_INET6 -- once we're ready
 	iov[1].iov_base = &rtm;
 	iov[1].iov_len = NLMSG_ALIGN(sizeof(struct rtmsg));
 

@@ -16,7 +16,8 @@ class DHCPAddressSelection : public AddressSelection {
 
 public:
 	DHCPAddressSelection(classad_shared_ptr<classad::ClassAd> machine_ad)
-		: m_ad(machine_ad)
+		: m_ad(machine_ad),
+		  m_use_address_from_cache(false)
 		{}
 
 	virtual int SelectAddresses();
@@ -26,8 +27,11 @@ public:
 
 	virtual int Cleanup();
 
+	static bool LeaseHasRemaining(classad::ClassAd &ad, unsigned remaining);
+
 private:
 	classad_shared_ptr<classad::ClassAd> m_ad;
+	bool m_use_address_from_cache;
 };
 
 }

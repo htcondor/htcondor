@@ -124,7 +124,7 @@ Attributes inserted by Lark:
 *******************************************************************************
 KNOWN ISSUES / TODO:
 *******************************************************************************
-- The bridge must be setup and configured beforehand when using bridging mode.
+- The bridge is created automatically, but this is not heavily tested.
 - The bridge forwarding delay must be set to 0.
 - Network accounting does not work in bridge mode.
 - DHCP lease renewal is not implemented.

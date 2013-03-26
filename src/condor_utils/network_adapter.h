@@ -199,4 +199,8 @@ protected:
 
 };
 
+/***************************************************************
+ * Utilities for interacting with MAC addresses
+ ***************************************************************/
+
 #endif // _NETWORK_ADAPTER_BASE_H_

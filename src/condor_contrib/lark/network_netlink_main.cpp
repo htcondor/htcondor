@@ -14,12 +14,13 @@
 #include <sys/wait.h>
 #include <sys/mount.h>
 #include <signal.h>
-#include <linux/if.h>
 #include <getopt.h>
+#include <time.h>
 
 #include "lark_attributes.h"
 #include "network_manipulation.h"
 #include "network_namespaces.h"
+#include "network_adapter.unix.h"
 
 int handle_match(const unsigned char * rule_name, long long bytes_matched, void * unused) {
         if (unused) {}
@@ -27,15 +28,22 @@ int handle_match(const unsigned char * rule_name, long long bytes_matched, void 
 	return 0;
 }
 
+static struct timespec g_starttime;
+
 static int child_post_fork(lark::NetworkNamespaceManager &manager) {
 
 	int rc = 0;
+	int diffms;
 	if (manager.PostForkChild())
 	{
 		fprintf(stderr, "Post-fork child process failed.\n");
 		rc = 4;
 		goto finalize_child;
 	}
+	struct timespec finishtime;
+	clock_gettime(CLOCK_MONOTONIC, &finishtime);
+	diffms = 1000*(finishtime.tv_sec - g_starttime.tv_sec) + (finishtime.tv_nsec - g_starttime.tv_nsec)/1e6;
+	fprintf(stdout, "Total startup time: %d ms\n", diffms);
 
 	// Exec out.
 	rc = execl("/bin/sh", "sh", "-c", "date; ip link list; ip addr list; ip route; iptables -L -v ; ping 129.93.1.141 -c 5 && curl 129.93.1.141; exit 0", (char *)0);
@@ -61,6 +69,7 @@ int main(int argc, char * argv[])
 	int bridge_flag = 0;
 	int help_flag = 0;
 	int c;
+	std::string static_internal_mac, static_external_mac;
 	std::string static_internal_address, static_external_address, bridge_interface;
 
 	while (1) {
@@ -70,11 +79,13 @@ int main(int argc, char * argv[])
 			{"bridge",  no_argument, &bridge_flag, 1},
 			{"internal_address", required_argument, 0, 'i'},
 			{"external_address", required_argument, 0, 'e'},
+			{"internal_mac", required_argument, 0, 'm'},
+			{"external_mac", required_argument, 0, 'n'},
 			{"bridge_interface", required_argument, 0, 'b'},
 			{0, 0, 0, 0}
 		};
 		int option_index = 0;
-		c = getopt_long(argc, argv, "e:i:b:", long_options, &option_index);
+		c = getopt_long(argc, argv, "m:n:e:i:b:", long_options, &option_index);
 
 		if (c == -1) {
 			break;
@@ -83,6 +94,10 @@ int main(int argc, char * argv[])
 		switch (c) {
 		case 0:
 			break;
+		case 'm':
+			static_internal_mac = optarg;
+		case 'n':
+			static_external_mac = optarg;
 		case 'i':
 			static_address_flag = 1;
 			static_internal_address = optarg;
@@ -110,6 +125,8 @@ int main(int argc, char * argv[])
 		printf(" --bridge:  Bridge job device (default is NAT).\n");
 		printf(" -i,--internal_address IPV4_ADDRESS: Internal address to use (default is to auto-detect)\n");
 		printf(" -e,--external_address IPV4_ADDRESS: External address to use (default is to auto-detect)\n");
+		printf(" -m,--internal_mac MAC: Internal MAC address to use (default is to create a random MAC)\n");
+		printf(" -n,--external_mac MAC: External MAC address to use (default is to create a random MAC)\n");
 		printf(" -b,--bridge_interface IFACE: System interface to use as a bridge (required with the --bridge flag).\n");
 		return 0;
 	}
@@ -125,6 +142,13 @@ int main(int argc, char * argv[])
 		machine_ad_ptr->InsertAttr(ATTR_EXTERNAL_ADDRESS_IPV4, static_external_address);
 	} else {
 		machine_ad_ptr->InsertAttr(ATTR_ADDRESS_TYPE, bridge_flag ? "dhcp" : "local");
+	}
+
+	if (static_internal_mac.size()) {
+		machine_ad_ptr->InsertAttr(ATTR_INTERNAL_MAC, static_internal_mac);
+	}
+	if (static_external_mac.size()) {
+		machine_ad_ptr->InsertAttr(ATTR_EXTERNAL_MAC, static_external_mac);
 	}
 
 	config();
@@ -150,6 +174,8 @@ int main(int argc, char * argv[])
 	dprintf(D_ALWAYS, "ClassAd contents: %s\n", ad_str.c_str());
 
 	TemporaryPrivSentry sentry(PRIV_ROOT);
+
+	clock_gettime(CLOCK_MONOTONIC, &g_starttime);
 
 	lark::NetworkNamespaceManager &manager = lark::NetworkNamespaceManager::GetManager();
 
