@@ -5,6 +5,7 @@
 #include "old_boost.h"
 #include "classad_wrapper.h"
 #include "exprtree_wrapper.h"
+#include "classad_expr_return_policy.h"
 
 using namespace boost::python;
 
@@ -86,6 +87,8 @@ void *convert_to_FILEptr(PyObject* obj) {
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(setdefault_overloads, setdefault, 1, 2);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(get_overloads, get, 1, 2);
 
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(init_overloads, init, 0, 1);
+
 BOOST_PYTHON_MODULE(classad)
 {
     using namespace boost::python;
@@ -104,8 +107,9 @@ BOOST_PYTHON_MODULE(classad)
 
     class_<ClassAdWrapper, boost::noncopyable>("ClassAd", "A classified advertisement.")
         .def(init<std::string>())
+        .def(init<boost::python::dict>())
         .def("__delitem__", &ClassAdWrapper::Delete)
-        .def("__getitem__", &ClassAdWrapper::LookupWrap)
+        .def("__getitem__", &ClassAdWrapper::LookupWrap, condor::classad_expr_return_policy<>())
         .def("eval", &ClassAdWrapper::EvaluateAttrObject, "Evaluate the ClassAd attribute to a python object.")
         .def("__setitem__", &ClassAdWrapper::InsertAttrObject)
         .def("__str__", &ClassAdWrapper::toString)
@@ -118,7 +122,7 @@ BOOST_PYTHON_MODULE(classad)
         .def("values", boost::python::range(&ClassAdWrapper::beginValues, &ClassAdWrapper::endValues))
         .def("items", boost::python::range(&ClassAdWrapper::beginItems, &ClassAdWrapper::endItems))
         .def("__len__", &ClassAdWrapper::size)
-        .def("lookup", &ClassAdWrapper::LookupExpr, "Lookup an attribute and return a ClassAd expression.  This method will not attempt to evaluate it to a python object.")
+        .def("lookup", &ClassAdWrapper::LookupExpr, condor::classad_expr_return_policy<>(), "Lookup an attribute and return a ClassAd expression.  This method will not attempt to evaluate it to a python object.")
         .def("printOld", &ClassAdWrapper::toOldString, "Represent this ClassAd as a string in the \"old ClassAd\" format.")
         .def("get", &ClassAdWrapper::get, get_overloads("Retrieve a value from the ClassAd"))
         .def("setdefault", &ClassAdWrapper::setdefault, setdefault_overloads("Set a default value for a ClassAd"))
@@ -127,6 +131,7 @@ BOOST_PYTHON_MODULE(classad)
     class_<ExprTreeHolder>("ExprTree", "An expression in the ClassAd language", init<std::string>())
         .def("__str__", &ExprTreeHolder::toString)
         .def("__repr__", &ExprTreeHolder::toRepr)
+        .def("__getitem__", &ExprTreeHolder::getItem, condor::classad_expr_return_policy<>())
         .def("eval", &ExprTreeHolder::Evaluate)
         ;
 

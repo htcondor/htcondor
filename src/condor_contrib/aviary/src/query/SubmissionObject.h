@@ -61,9 +61,10 @@ public:
 	const JobSet & getTransferringOutput();
 	const JobSet & getSuspended();
 
-	void setOwner(const char *owner);
-	const char* getOwner() { return m_owner.c_str(); }
-	const char* getName() { return m_name.c_str(); }
+    void setName(const char* name);
+    void setOwner(const char* owner);
+	const char* getOwner() { return m_owner; }
+	const char* getName() { return m_name; }
 	void getJobSummaries(JobSummaryPairCollection& _jobs);
 
 	int getOldest();
@@ -82,12 +83,11 @@ private:
 	JobSet m_transferring_output;
 	JobSet m_suspended;
 
-	bool ownerSet;
-	int  m_oldest_qdate;
+    const char* m_name;
+    const char* m_owner;
+    int  m_oldest_qdate;
 
-	string m_name;
-	string m_owner;
-	ClassadCodec* m_codec;
+    ClassadCodec* m_codec;
 
 };
 

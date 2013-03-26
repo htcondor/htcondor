@@ -2406,7 +2406,6 @@ negotiateWithGroup ( int untrimmed_num_startds,
 	int         scheddAdsCountOrig;
 	int			totalTime;
 	int			num_idle_jobs;
-	time_t		startTime;
 
     int duration_phase3 = 0;
     time_t start_time_phase4 = time(NULL);
@@ -2626,7 +2625,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					"  Negotiating with %s skipped because no idle jobs\n",
 					scheddName.Value());
 				result = MM_DONE;
-			} else if (totalTime > MaxTimePerSubmitter) {
+			} else if (totalTime >= MaxTimePerSubmitter) {
 				dprintf(D_ALWAYS,
 					"  Negotiation with %s skipped because of time limits:\n",
 					scheddName.Value());
@@ -2640,7 +2639,9 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					result = MM_RESUME;
 				} else {
 					int numMatched = 0;
-					startTime = time(NULL);
+					int remainingTimeForThisSubmitter = MaxTimePerSubmitter - totalTime;
+					time_t startTime = time(NULL);
+					time_t deadline = startTime + MIN(MaxTimePerSpin, remainingTimeForThisSubmitter);
                     if (negotiation_cycle_stats[0]->active_submitters.count(scheddName.Value()) <= 0) {
                         negotiation_cycle_stats[0]->num_idle_jobs += num_idle_jobs;
                     }
@@ -2650,7 +2651,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
                                   submitterLimit, submitterLimitUnclaimed,
 								  startdAds, claimIds, 
 								  ignore_submitter_limit,
-                                  startTime, numMatched, pieLeft);
+								  deadline, numMatched, pieLeft);
 					updateNegCycleEndTime(startTime, schedd);
 				}
 			}
@@ -3207,7 +3208,7 @@ int Matchmaker::
 negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd, double priority,
 		   double submitterLimit, double submitterLimitUnclaimed,
 		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds, 
-		   bool ignore_schedd_limit, time_t startTime, 
+		   bool ignore_schedd_limit, time_t deadline,
 		   int& numMatched, double &pieLeft)
 {
 	ReliSock	*sock;
@@ -3215,6 +3216,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 	int			cluster, proc;
 	int			result;
 	time_t		currentTime;
+	time_t		beginTime = time(NULL);
 	ClassAd		request;
 	ClassAd*    offer = NULL;
 	bool		only_consider_startd_rank = false;
@@ -3361,10 +3363,11 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 
 		currentTime = time(NULL);
 
-		if( (currentTime - startTime) > MaxTimePerSpin) {
+		if (currentTime >= deadline) {
 			dprintf (D_ALWAYS, 	
-			"    Reached max time per spin: %d ... stopping\n", 
-				MaxTimePerSpin);
+			"    Reached spin deadline for %s after %d sec... stopping\n       MAX_TIME_PER_SUBMITTER = %d sec, MAX_TIME_PER_PIESPIN = %d sec\n",
+				schedd_id.Value(), (int)(currentTime - beginTime),
+				MaxTimePerSubmitter, MaxTimePerSpin);
 			break;	// get out of the infinite for loop & stop negotiating
 		}
 

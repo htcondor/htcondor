@@ -358,6 +358,8 @@ The \texttt{classad} module class provides a dictionary-like mechanism
 for interacting with the ClassAd language. 
 \texttt{classad} objects implement the iterator interface to iterate 
 through the \texttt{classad}'s attributes.
+The constructor can take a dictionary,
+and the object can take lists, dictionaries, and ClassAds as values.
 
 \textbf{\texttt{classad} module functions:}
 \begin{flushleft}
@@ -431,7 +433,14 @@ so a ClassAd string will be returned as a Python string.
 Returns an iterator of strings. Each item returned by the iterator 
 is an attribute string in the ClassAd.
 \\ \hline
-\texttt{\_\_getitem( attr )}
+\texttt{get( attr, value )}
+
+Behaves like the corresponding Python dictionary method.
+Given the \texttt{attr} as key, returns either the value of that key,
+or if the key is not in the object, returns \texttt{None} or
+the optional second parameter when specified.
+\\ \hline
+\texttt{\_\_getitem\_\_( attr )}
 
 Returns (as an object) the value corresponding to the attribute
 \texttt{attr} passed as a parameter.
@@ -445,6 +454,15 @@ Sets the ClassAd attribute \texttt{attr} to the \texttt{value}.
 
 ClassAd values will be returned as Python objects; 
 ClassAd expressions will be returned as \texttt{ExprTree} objects.
+\\ \hline
+\texttt{setdefault( attr, value )}
+
+Behaves like the corresponding Python dictionary method.
+If called with an attribute, \texttt{attr}, that is not set,
+it will set the attribute to the specified \texttt{value}.
+It returns the value of the attribute.  
+If called with an attribute that is already set,
+it does not change the object.
 \\ \hline
 
 \end{tabular}
@@ -542,6 +560,72 @@ Type "help", "copyright", "credits" or "license" for more information.
     ]
 >>> ad2["undefined"]
 classad.Value.Undefined
+
+\end{verbatim}
+\normalsize
+
+Here is an example that illustrates the dictionary properties of
+the constructor.
+\footnotesize
+\begin{verbatim}
+>>> classad.ClassAd({"foo": "bar"})
+[ foo = "bar" ]
+>>> ad = classad.ClassAd({"foo": [1, 2, 3]})
+>>> ad
+[ foo = { 1,2,3 } ]
+>>> ad["foo"][2]
+3L
+>>> ad = classad.ClassAd({"foo": {"bar": 1}})
+>>> ad
+[ foo = [ bar = 1 ] ]
+>>> ad["foo"]["bar"]
+1L
+
+\end{verbatim}
+\normalsize
+
+Here are examples that illustrate the \texttt{get} method.
+\footnotesize
+\begin{verbatim}
+
+
+>>> ad = classad.ClassAd({"foo": "bar"})
+>>> ad
+[ foo = "bar" ]
+>>> ad["foo"]
+'bar'
+>>> ad.get("foo")
+'bar'
+>>> ad.get("foo", 2)
+'bar'
+>>> ad.get("baz", 2)
+2
+>>> ad.get("baz")
+>>>
+
+\end{verbatim}
+\normalsize
+
+
+Here are examples that illustrate the \texttt{setdefault} method.
+\footnotesize
+\begin{verbatim}
+
+>>> ad = classad.ClassAd()
+>>> ad
+[  ]
+>>> ad["foo"]
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+KeyError: 'foo'
+>>> ad.setdefault("foo", 1)
+1
+>>> ad
+[ foo = 1 ]
+>>> ad.setdefault("foo", 2)
+1L
+>>> ad
+[ foo = 1 ]
 
 \end{verbatim}
 \normalsize

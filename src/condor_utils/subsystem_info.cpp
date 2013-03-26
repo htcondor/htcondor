@@ -226,7 +226,8 @@ void
 SubsystemInfoTable::addEntry( const SubsystemInfoLookup *entry )
 {
 	m_Table[m_Count] = entry;
-	assert ( ++m_Count < m_Size );
+	m_Count++;
+	assert ( m_Count < m_Size );
 }
 
 const SubsystemInfoLookup *

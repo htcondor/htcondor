@@ -2009,7 +2009,6 @@ Figure~\ref{fig:dagman-splice-s1} illustrates the resulting DAG.
   PARENT X2 CHILD B
 
   # END DAG FILE s1.dag
-
 \end{verbatim}
 
 \begin{figure}
@@ -2017,8 +2016,6 @@ Figure~\ref{fig:dagman-splice-s1} illustrates the resulting DAG.
 \includegraphics{user-man/splice-s1.eps}
 \caption{\label{fig:dagman-splice-s1} The DAG described by \File{s1.dag}.}
 \end{figure}
-
-
 
 The top level DAG in the hierarchy of this complex example
 is described by the DAG input file \File{toplevel.dag}.
@@ -2082,6 +2079,61 @@ will contain DIR specifications, so the rescue DAG must be run
 \emph{without} the \Arg{-usedagdir} argument.
 
 
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
+\item[Splices and the RETRY of a Node]
+\end{description}
+
+The nodes of a splice are incorporated into a top level DAG;
+these nodes are scoped and named.
+Once incorporated in this way, the splice name cannot be used
+to cause RETRY of what would be the entire splice.
+RETRY is applied on a node basis, not on a splice basis.
+
+Here is an example showing a RETRY that cannot work.
+\begin{verbatim}
+  # top level DAG input file
+  JOB    A a.sub
+  SPLICE B b.dag
+  PARENT A  CHILD B
+
+  # cannot work, as B is not a node in the DAG once
+  # splice B is incorporated
+  RETRY B
+\end{verbatim}
+
+To effect RETRY on a specific node within a splice,
+the scoped name may be used.
+However, this subverts the intent of using a splice.
+Here is a similar example, assuming that RETRY is desired
+on just node X within the subgraph described by splice B.
+\begin{verbatim}
+  # top level DAG input file
+  JOB    A a.sub
+  SPLICE B b.dag
+  PARENT A  CHILD B
+
+  # RETRY just node X within splice B;  assumes that
+  # this top level DAG knows the node name within B
+  RETRY B+X
+\end{verbatim}
+
+An alternative implementation when RETRY is desired on an
+entire subgraph of a DAG is to create and use a SUBDAG
+instead of a splice.
+This has the potential drawback of all SUBDAGs,
+in that the SUBDAG is its own distinct job,
+with its own instance of \Condor{dagman}.
+Here is the same example, now defining job B as a SUBDAG,
+and effecting RETRY on that SUBDAG.
+\begin{verbatim}
+  # top level DAG input file
+  JOB    A a.sub
+  SUBDAG EXTERNAL B b.dag
+  PARENT A  CHILD B
+
+  RETRY B 3
+\end{verbatim}
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
 \begin{description}
@@ -2967,6 +3019,56 @@ assuming the example \Arg{jobTag} field of \Expr{local}:
 \item RECOVERY\_FAILURE
 \end{itemize}
 \end{description}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:DAGStatusClassad}DAG Status Information in DAGMan's Classad}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!DAG status in DAGMan's classad}
+
+As of version 7.9.5 DAGMan puts information about the status of the DAG
+into its own classad.  This information is stored in the following classad
+attributes:
+
+\Opt{DAG\_NodesTotal}:  The total number of nodes in the DAG, including
+the FINAL node, if any.
+
+\Opt{DAG\_NodesDone}:  The number of nodes that have finished successfully
+(this means that the entire node has finished, not just the actual HTCondor
+job or jobs).
+
+\Opt{DAG\_NodesPrerun}:  The number of nodes for which a PRE script is
+running or has been deferred because of a PRE script throttle setting.
+
+\Opt{DAG\_NodesQueued}:  The number of nodes for which the actual HTCondor
+job or jobs are queued (whether they are actually running, or are idle,
+held, etc.).
+
+\Opt{DAG\_NodesPostrun}:  The number of nodes for which a POST script is
+running or has been deferred because of a POST script throttle setting.
+
+\Opt{DAG\_NodesReady}:  The number of nodes that are ready to run but
+which have not yet actually started running.
+
+\Opt{DAG\_NodesFailed}:  The number of nodes that have failed (including
+all retries, if any).
+
+\Opt{DAG\_NodesUnready}:  The number of nodes that are not ready to run
+(one or more of their parent nodes has not yet finished).
+
+\Opt{DAG\_Status}:  The overall status of the DAG, with the same values
+as the \Env{\$DAG\_STATUS} macro:
+\begin{itemize}
+\item 0: OK
+\item 1: error; an error condition different than those listed here
+\item 2: one or more nodes in the DAG have failed
+\item 3: the DAG has been aborted by an ABORT-DAG-ON specification
+\item 4: removed; the DAG has been removed by \Condor{rm}
+\item 5: cycle; a cycle was found in the DAG
+\item 6: halted; the DAG has been halted (see section ~\ref{sec:DagSuspend})
+\end{itemize}
+
+\Opt{DAG\_InRecovery}:  1 if the DAG is in recovery mode; 0 otherwise.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

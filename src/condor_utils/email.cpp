@@ -281,8 +281,9 @@ email_open_implementation( const char * final_args[])
 	}
 	else /* child mailer process */
 	{
-		static char pe_logname[256]; /* Sorry, putenv wants it this way */
-		static char pe_user[256];
+		/* Sorry, putenv wants it this way */
+		char *pe_logname = (char *)malloc(256);
+		char *pe_user = (char *)malloc(256);
 		const char *condor_name;
 		int i;
 

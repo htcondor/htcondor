@@ -149,18 +149,20 @@ public:
 	//                 GET_FILE_WRITE_FAILED (errno contains specific error)
 	//                 -1                    (all other errors)
 	int get_file_with_permissions(filesize_t *size, const char *desination,
-								  bool flush_buffers=false, filesize_t max_bytes=-1);
+								  bool flush_buffers=false, filesize_t max_bytes=-1,
+								  class DCTransferQueue *xfer_q=NULL);
     /// returns <0 on failure, 0 for ok
 	//  failure codes: GET_FILE_OPEN_FAILED  (errno contains specific error)
 	//                 -1                    (all other errors)
 	int get_file( filesize_t *size, const char *destination,
-				  bool flush_buffers=false, bool append=false, filesize_t max_bytes=-1);
+				  bool flush_buffers=false, bool append=false, filesize_t max_bytes=-1, class DCTransferQueue *xfer_q=NULL);
     /// returns -1 on failure, 0 for ok
 	int get_file( filesize_t *size, int fd,
-				  bool flush_buffers=false, bool append=false, filesize_t max_bytes=-1);
+				  bool flush_buffers=false, bool append=false, filesize_t max_bytes=-1, class DCTransferQueue *xfer_q=NULL);
     /// returns <0 on failure, 0 for ok
 	//  See put_file() for the meaning of specific return codes.
-	int put_file_with_permissions( filesize_t *size, const char *source, filesize_t max_bytes=-1);
+	int put_file_with_permissions( filesize_t *size, const char *source, filesize_t max_bytes=-1, class DCTransferQueue *xfer_q=NULL);
+	// xfer_q (if not NULL) is used to report i/o stats
     /// returns <0 on failure, 0 for ok
 	//  failure codes: PUT_FILE_OPEN_FAILED  (errno contains specific error)
 	//                 PUT_FILE_MAX_BYTES_EXCEEDED
@@ -169,9 +171,15 @@ public:
 	// we can continue talking to the receiver, as though a file had
 	// been successfully sent.  In most cases, the next logical thing
 	// to do is to tell the receiver about the failure.
-	int put_file( filesize_t *size, const char *source, filesize_t offset=0, filesize_t max_bytes=-1);
+	int put_file( filesize_t *size, const char *source, filesize_t offset=0, filesize_t max_bytes=-1, class DCTransferQueue *xfer_q=NULL );
     /// returns -1 on failure, 0 for ok
-	int put_file( filesize_t *size, int fd, filesize_t offset=0, filesize_t max_bytes=-1 );
+	int put_file( filesize_t *size, int fd, filesize_t offset=0, filesize_t max_bytes=-1, class DCTransferQueue *xfer_q=NULL );
+
+	// This is used internally to recover sanity on the stream after
+	// failing to open a file.  The remote side will see this as a zero-sized file.
+	// returns -1 on failure, 0 for ok
+	int put_empty_file( filesize_t *size );
+
 	/// returns -1 on failure, 0 for ok
 	int get_x509_delegation( filesize_t *size, const char *destination,
 							 bool flush_buffers=false );
@@ -258,11 +266,6 @@ protected:
 	int perform_authenticate( bool with_key, KeyInfo *& key, 
 							  const char* methods, CondorError* errstack,
 							  int auth_timeout, char **method_used );
-
-	// This is used internally to recover sanity on the stream after
-	// failing to open a file in put_file().
-	// returns -1 on failure, 0 for ok
-	int put_empty_file( filesize_t *size );
 
 
 	/*

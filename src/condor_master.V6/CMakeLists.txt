@@ -20,3 +20,6 @@
 file( GLOB MasterRmvElements Example* )
 
 condor_daemon(master "${MasterRmvElements}" "${CONDOR_LIBS};${CONDOR_QMF}" "${C_SBIN}" OFF)
+if (LINUX OR DARWIN)
+  condor_daemon(master_s "${MasterRmvElements}" "${CONDOR_LIBS_STATIC};${CONDOR_QMF}" "${C_SBIN}" OFF)
+endif(LINUX OR DARWIN)

@@ -25,6 +25,11 @@
 #include "condor_classad.h"
 #include "condor_io.h"
 
+class PeekGetFD
+{
+public:
+	virtual int getNextFD(const std::string &) = 0;
+};
 
 /** The subclass of the Daemon object for talking to a starter
 */
@@ -85,6 +90,8 @@ public:
 	bool createJobOwnerSecSession(int timeout,char const *job_claim_id,char const *starter_sec_session,char const *session_info,MyString &owner_claim_id,MyString &error_msg,MyString &starter_version,MyString &starter_addr);
 
 	bool startSSHD(char const *known_hosts_file,char const *private_client_key_file,char const *preferred_shells,char const *slot_name,char const *ssh_keygen_args,ReliSock &sock,int timeout,char const *sec_session_id,MyString &remote_user,MyString &error_msg,bool &retry_is_sensible);
+
+	bool peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stderr, ssize_t &stderr_offset, const std::vector<std::string> &filenames, std::vector<ssize_t> &offsets, size_t max_bytes, bool &retry_sensible, PeekGetFD &next, std::string &, unsigned, const std::string &, DCTransferQueue *xfer_q);
 
  private:
 	bool is_initialized;

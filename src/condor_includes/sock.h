@@ -326,6 +326,12 @@ public:
 
 	void setFullyQualifiedUser(char const *fqu);
 
+	void setAuthenticationMethodUsed(char const *auth_method);
+	const char *getAuthenticationMethodUsed();
+
+	void setCryptoMethodUsed(char const *crypto_method);
+	const char* getCryptoMethodUsed();
+
 		/// True if socket has tried to authenticate or socket is
 		/// using a security session that tried to authenticate.
 		/// Authentication may or may not have succeeded and
@@ -475,6 +481,8 @@ protected:
 	char *          _fqu;
 	char *          _fqu_user_part;
 	char *          _fqu_domain_part;
+	char *          _auth_method;
+	char *          _crypto_method;
 	bool            _tried_authentication;
 
 	bool ignore_connect_timeout;	// Used by HA Daemon

@@ -153,6 +153,8 @@ if( NOT WINDOWS)
 	check_symbol_exists(res_init "sys/types.h;netinet/in.h;arpa/nameser.h;resolv.h" HAVE_DECL_RES_INIT)
 	check_symbol_exists(MS_PRIVATE "sys/mount.h" HAVE_MS_PRIVATE)
 	check_symbol_exists(MS_SHARED  "sys/mount.h" HAVE_MS_SHARED)
+	check_symbol_exists(MS_SLAVE  "sys/mount.h" HAVE_MS_SLAVE)
+	check_symbol_exists(MS_REC  "sys/mount.h" HAVE_MS_REC)
 
 	check_function_exists("access" HAVE_ACCESS)
 	check_function_exists("clone" HAVE_CLONE)
@@ -385,7 +387,7 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	  find_library(HAVE_X11 X11)
 	endif()
 
-	dprint("Threaded functionality only enable in Linux and Windows")
+	dprint("Threaded functionality only enabled in Linux, Windows, and Mac")
 	set(HAS_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 	set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 
@@ -410,6 +412,10 @@ elseif(${OS_NAME} STREQUAL "DARWIN")
 	find_library( IOKIT_FOUND IOKit )
 	find_library( COREFOUNDATION_FOUND CoreFoundation )
 	set(CMAKE_STRIP ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_strip CACHE FILEPATH "Command to remove sybols from binaries" FORCE)
+
+	dprint("Threaded functionality only enabled in Linux, Windows and Mac")
+	set(HAS_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
+	set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 endif()
 
 ##################################################
@@ -683,9 +689,15 @@ endif()
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.
 # otherwise you will break due to stub collisions.
+set (CONDOR_LIBS_STATIC "condor_utils_s;classads;${VOMS_FOUND_STATIC};${GLOBUS_FOUND_STATIC};${EXPAT_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${POSTGRESQL_FOUND};${COREDUMPER_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND}")
 set (CONDOR_LIBS "condor_utils;${CLASSADS_FOUND};${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND};${COREDUMPER_FOUND}")
 set (CONDOR_TOOL_LIBS "condor_utils;${CLASSADS_FOUND};${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND};${COREDUMPER_FOUND}")
 set (CONDOR_SCRIPT_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+if (LINUX OR DARWIN)
+  set (CONDOR_LIBS_FOR_SHADOW "condor_utils_s;classads;${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${POSTGRESQL_FOUND};${COREDUMPER_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND}")
+else ()
+  set (CONDOR_LIBS_FOR_SHADOW "${CONDOR_LIBS}")
+endif ()
 
 message(STATUS "----- Begin compiler options/flags check -----")
 
@@ -833,9 +845,6 @@ else(MSVC)
 
 	if ( NOT PROPER AND HAVE_LIBRESOLV )
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lresolv")
-		if (NOT DARWIN)
-			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lcrypt")
-		endif()
 	endif()
 
 	if (HAVE_PTHREADS)

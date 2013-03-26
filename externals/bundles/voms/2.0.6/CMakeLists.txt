@@ -80,6 +80,7 @@ if ( WITH_VOMS )
 			INSTALL_COMMAND cd voms-2.0.6 && make install && touch ${VOMS_INSTALL_LOC}/done
 		)
 
+		set( VOMS_FOUND_STATIC "${VOMS_INSTALL_LOC}/lib/libvomsapi.a" )
 		if ( LINUX )
 			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/lib/libvomsapi.so" )
 		elseif ( DARWIN )
@@ -154,6 +155,7 @@ if ( WITH_VOMS )
 		message ( STATUS "external configured (VOMS_FOUND=${VOMS_FOUND})" )
 		set( HAVE_EXT_VOMS ON PARENT_SCOPE )
 		set( VOMS_FOUND ${VOMS_FOUND} PARENT_SCOPE )
+		set( VOMS_FOUND_STATIC ${VOMS_FOUND_STATIC} PARENT_SCOPE )
 	endif()
 
 endif()

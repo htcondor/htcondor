@@ -20,6 +20,12 @@
 #include "condor_common.h"
 #include "sysapi.h"
 #include <math.h>
+
+extern "C" {
+	int sysapi_mips_raw(void);
+	int sysapi_mips(void);
+}
+
 int
 main( int /*argc*/, const char * /*argv*/[] )
 {

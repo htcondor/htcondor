@@ -413,6 +413,13 @@ sub RegisterJobErr
 
     $test{$handle}{"RegisterJobErr"} = $function_ref;
 }
+sub RegisterULog
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterULog"} = $function_ref;
+}
 
 sub RegisterTimed
 {
@@ -945,6 +952,18 @@ sub CheckRegistrations
 	Condor::RegisterJobErr( sub {
 	    my %info = @_;
 	    die "$handle: FAILURE (job error -- see $info{'log'})\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterULog"} )
+    {
+	Condor::RegisterULog( $test{$handle}{"RegisterULog"} );
+    }
+    else
+    {
+	Condor::RegisterULog( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (job ulog)\n";
 	} );
     }
 

@@ -985,6 +985,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 	if( !daemonCore->CommandNumToTableIndex(m_auth_cmd,&cmd_index) ) {
 		dprintf(D_ALWAYS, "DC_AUTHENTICATE: UNREGISTERED COMMAND %d in Authenticate()\n",m_auth_cmd);
 		m_result = FALSE;
+		free( auth_methods );
 		return CommandProtocolFinished;
 	}
 

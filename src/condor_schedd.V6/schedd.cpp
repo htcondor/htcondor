@@ -1084,33 +1084,7 @@ Scheduler::count_jobs()
 
 	cad->Assign(ATTR_SCHEDD_SWAP_EXHAUSTED, (bool)SwapSpaceExhausted);
 
-	int num_uploading = m_xfer_queue_mgr.GetNumUploading();
-	int num_downloading = m_xfer_queue_mgr.GetNumDownloading();
-	int max_uploading = m_xfer_queue_mgr.GetMaxUploading();
-	int max_downloading = m_xfer_queue_mgr.GetMaxDownloading();
-	int num_waiting_to_upload = m_xfer_queue_mgr.GetNumWaitingToUpload();
-	int num_waiting_to_download = m_xfer_queue_mgr.GetNumWaitingToDownload();
-	int upload_wait_time = m_xfer_queue_mgr.GetUploadWaitTime();
-	int download_wait_time = m_xfer_queue_mgr.GetDownloadWaitTime();
-
-	dprintf(D_ALWAYS,"TransferQueueManager stats: active up=%d/%d down=%d/%d; waiting up=%d down=%d; wait time up=%ds down=%ds\n",
-			num_uploading,
-			max_uploading,
-			num_downloading,
-			max_downloading,
-			num_waiting_to_upload,
-			num_waiting_to_download,
-			upload_wait_time,
-			download_wait_time);
-
-	cad->Assign(ATTR_TRANSFER_QUEUE_NUM_UPLOADING,num_uploading);
-	cad->Assign(ATTR_TRANSFER_QUEUE_NUM_DOWNLOADING,num_downloading);
-	cad->Assign(ATTR_TRANSFER_QUEUE_MAX_UPLOADING,max_uploading);
-	cad->Assign(ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING,max_downloading);
-	cad->Assign(ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD,num_waiting_to_upload);
-	cad->Assign(ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD,num_waiting_to_download);
-	cad->Assign(ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME,upload_wait_time);
-	cad->Assign(ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME,download_wait_time);
+	m_xfer_queue_mgr.publish(cad);
 
 	// one last check for any newly-queued jobs
 	// this count is cumulative within the qmgmt package
@@ -1428,6 +1402,8 @@ int Scheduler::make_ad_list(
 
    // publish scheduler generic statistics
    stats.Publish(*cad, stats_config.Value());
+
+   m_xfer_queue_mgr.publish(cad, stats_config.Value());
 
    // publish daemon core stats
    daemonCore->publish(cad);
@@ -5039,10 +5015,10 @@ Scheduler::negotiationFinished( char const *owner, char const *remote_pool, bool
 	if( satisfied ) {
 		// We are out of jobs.  Stop flocking with less desirable pools.
 		if (Owners[owner_num].FlockLevel > flock_level ) {
-			Owners[owner_num].FlockLevel = flock_level;
 			dprintf(D_ALWAYS,
-					"Decreasing flock level for %s to %d.\n",
-					owner, Owners[owner_num].FlockLevel);
+					"Decreasing flock level for %s to %d from %d.\n",
+					owner, flock_level, Owners[owner_num].FlockLevel);
+			Owners[owner_num].FlockLevel = flock_level;
 		}
 
 		timeout(); // invalidate our ads immediately
@@ -5050,10 +5026,10 @@ Scheduler::negotiationFinished( char const *owner, char const *remote_pool, bool
 		if (Owners[owner_num].FlockLevel < MaxFlockLevel &&
 		    Owners[owner_num].FlockLevel == flock_level)
 		{ 
-			Owners[owner_num].inc_flocking(MaxFlockLevel);
+			int oldlevel = Owners[owner_num].inc_flocking(MaxFlockLevel);
 			dprintf(D_ALWAYS,
-					"Increasing flock level for %s to %d.\n",
-					owner, Owners[owner_num].FlockLevel);
+					"Increasing flock level for %s to %d from %d.\n",
+					owner, Owners[owner_num].FlockLevel,oldlevel);
 
 			timeout(); // flock immediately
 		}
@@ -9250,17 +9226,21 @@ Scheduler::child_exit(int pid, int status)
 	srec = FindSrecByPid(pid);
 	ASSERT(srec);
 
-	if( srec->exit_already_handled ) {
 		if( srec->match ) {
-			if (srec->match->keep_while_idle == 0) {
+			if (srec->exit_already_handled && (srec->match->keep_while_idle == 0)) {
 				DelMrec( srec->match );
 			} else {
-				srec->match->status = M_CLAIMED;
-				srec->match->shadowRec = NULL;
-				srec->match->idle_timer_deadline = time(NULL) + srec->match->keep_while_idle;
-				srec->match = NULL;
+				int exitstatus = WEXITSTATUS(status);
+				if ((srec->match->keep_while_idle > 0) && ((exitstatus == JOB_EXITED) || (exitstatus == JOB_SHOULD_REMOVE) || (exitstatus == JOB_KILLED))) {
+					srec->match->status = M_CLAIMED;
+					srec->match->shadowRec = NULL;
+					srec->match->idle_timer_deadline = time(NULL) + srec->match->keep_while_idle;
+					srec->match = NULL;
+				}
 			}
 		}
+
+	if( srec->exit_already_handled ) {
 		delete_shadow_rec( srec );
 		return;
 	}

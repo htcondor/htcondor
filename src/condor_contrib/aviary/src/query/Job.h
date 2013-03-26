@@ -110,7 +110,8 @@ class HistoryJobImpl: public JobImpl
         void getFullAd ( ClassAd& ) const;
         int  getCluster() const;
         const char* getSubmissionId () const;
-		int getQDate() const;
+        const char* getOwner () const;
+        int getQDate() const;
 
     private:
         HistoryEntry m_he;
@@ -138,8 +139,8 @@ class Job
         void set ( const char* , const char* );
         void remove ( const char* );
 
-        void setSubmission ( const char*, int );
-        void updateSubmission ( int, const char* );
+        SubmissionObject* findSubmission(const char*, const char*);
+        void processSubmission (int, const char*, const char*);
         void incrementSubmission();
         void decrementSubmission();
 

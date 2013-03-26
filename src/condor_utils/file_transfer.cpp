@@ -229,10 +229,12 @@ FileTransfer::~FileTransfer()
 	}
 	if (TransSock) free(TransSock);
 	stopServer();
-	if( TransThreadTable && TransThreadTable->getNumElements() == 0 ) {
-		delete TransThreadTable;
-		TransThreadTable = NULL;
-	}
+	// Do not delete the TransThreadTable. There may be other FileTransfer
+	// objects out there planning to use it.
+	//if( TransThreadTable && TransThreadTable->getNumElements() == 0 ) {
+	//	delete TransThreadTable;
+	//	TransThreadTable = NULL;
+	//}
 #ifdef WIN32
 	if (perm_obj) delete perm_obj;
 #endif
@@ -2144,9 +2146,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 				}
 			}
 		} else if ( TransferFilePermissions ) {
-			rc = s->get_file_with_permissions( &bytes, fullname.Value(), false, this_file_max_bytes );
+			rc = s->get_file_with_permissions( &bytes, fullname.Value(), false, this_file_max_bytes, &xfer_queue );
 		} else {
-			rc = s->get_file( &bytes, fullname.Value(), false, false, this_file_max_bytes );
+			rc = s->get_file( &bytes, fullname.Value(), false, false, this_file_max_bytes, &xfer_queue );
 		}
 
 		elapsed = time(NULL)-start;
@@ -3164,9 +3166,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 				errno = EISDIR;
 			}
 		} else if ( TransferFilePermissions ) {
-			rc = s->put_file_with_permissions( &bytes, fullname.Value(), this_file_max_bytes );
+			rc = s->put_file_with_permissions( &bytes, fullname.Value(), this_file_max_bytes, &xfer_queue );
 		} else {
-			rc = s->put_file( &bytes, fullname.Value(), 0, this_file_max_bytes );
+			rc = s->put_file( &bytes, fullname.Value(), 0, this_file_max_bytes, &xfer_queue );
 		}
 		if( rc < 0 ) {
 			int the_error = errno;

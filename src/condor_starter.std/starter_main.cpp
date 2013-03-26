@@ -1192,7 +1192,10 @@ init_environment_info()
 		free(my_uid_domain);
 	}
 
-	ckptpltfrm = sysapi_ckptpltfrm();
+    ckptpltfrm = param( ATTR_CHECKPOINT_PLATFORM );
+    if( ckptpltfrm == NULL ) {
+    	ckptpltfrm = sysapi_ckptpltfrm();
+    }    	
 	/* don't forget one more for the NULL which needs to go over as well */
 	REMOTE_CONDOR_register_ckpt_platform( ckptpltfrm, strlen(ckptpltfrm) + 1);
 

@@ -49,6 +49,7 @@ PLEASE NOTE: You can also just 'uncomment' one of the options below.
 #define UNROLL
 
 #include <stdio.h>
+#include <stdlib.h> // for malloc & free
 #include <math.h>
 #if !defined(WIN32)
 # include <unistd.h>
@@ -97,12 +98,15 @@ extern "C" void sysapi_internal_reconfig(void);
 int
 clinpack_kflops ( int ntimes )
 {
-   static REAL aa[200][200],a[200][201],b[200],x[200];
+   //static REAL aa[200][200],a[200][201],b[200],x[200];
+   static REAL *aa=NULL, *a=NULL, *b=NULL, *x=NULL;
+
    REAL cray,ops,total,norma,normx;
    REAL resid,residn,eps;
    REAL kf;
    double t1,tm,tm2;
-   static int ipvt[200],n,i,info,lda,ldaa,kflops;
+   //static int ipvt[200],n,i,info,lda,ldaa,kflops;
+   static int *ipvt=NULL,n,i,info,lda,ldaa,kflops;
 
 #if defined(WIN32)
    static float one_tick = .0001;
@@ -122,6 +126,25 @@ clinpack_kflops ( int ntimes )
    cray = .056; 
    n = 100;
 
+   // ntimes < 0 woudn't do a proper test, to treat it as a signal to free the buffers.
+   if (ntimes < 0) {
+     if (aa) {
+       free(aa);
+       aa = a = b = x = NULL; 
+       ipvt = NULL;
+     }
+     return -1;
+   } else {
+     if ( ! aa) {
+       aa = (REAL*)calloc(200*(200+201+1+1+1),sizeof(REAL));
+       if ( ! aa) return -1;
+
+       a = aa + (200*200);
+       b =  a + (200*201);
+       x =  b + 200;
+       ipvt = (int*)(x + 200);
+     }
+   }
 
 	ops = (2.0e0*(n*n*n))/3.0 + 2.0*(n*n);
 
@@ -1059,6 +1082,8 @@ kflops_raw( void )
 	printf( "quick=%d, loops=%d, time=%0.3fs\n",
 			quick_kflops, loops, t2-t1 );
 # endif
+
+	//clinpack_kflops(-1); // free the linpack static buffers.
 	return kflops;
 }
 

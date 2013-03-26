@@ -49,6 +49,8 @@ typedef set<Negotiator*> NegotiatorSetType;
 typedef set<Scheduler*> SchedulerSetType;
 typedef set<Slot*> SlotSetType;
 typedef set<Submitter*> SubmitterSetType;
+
+typedef map<string,SlotSetType*> SlotDynamicType;
     
 class CollectorObject
 {
@@ -68,7 +70,7 @@ public:
     bool update(int command, const ClassAd& ad);
     bool invalidate(int command, const ClassAd& ad);
     void invalidateAll();
-    
+
     static CollectorObject* getInstance();
     ~CollectorObject();
 
@@ -81,11 +83,16 @@ public:
     MasterMapType masters;
     NegotiatorMapType negotiators;
     SchedulerMapType schedulers;
-    SlotMapType slots;
+    SlotMapType stable_slots;
+    SlotMapType dynamic_slots;
     SubmitterMapType submitters;
 
-    SlotDateMapType slot_ids;
+    // birthdate indices for the prolific daemons
+    SlotDateMapType stable_slot_ids;
     MasterDateMapType master_ids;
+
+    // cross-reference for pslot to dslot
+    SlotDynamicType pslots;
 
 private:
     string m_address;
@@ -94,6 +101,10 @@ private:
     CollectorObject(CollectorObject const&);
     CollectorObject& operator=(CollectorObject const&);
     BaseCodec* m_codec;
+
+    Slot* updateSlot(const ClassAd& ad);
+    Slot* invalidateSlot(const ClassAd& ad);
+    Slot* findPartitionable(Slot* slot);
 
 };
 

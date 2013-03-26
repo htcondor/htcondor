@@ -31,6 +31,7 @@
 #include "condor_arglist.h"
 #include <map>
 #include <queue>
+#include <list>
 #include <string>
 
 
@@ -168,6 +169,7 @@ class GahpServer : public Service {
 	int m_gahp_writefd;
 	int m_gahp_errorfd;
 	std::string m_gahp_error_buffer;
+	std::list<std::string> m_gahp_error_list;
 	bool m_gahp_startup_failed;
 	char m_gahp_version[150];
 	StringList * m_commands_supported;
@@ -306,6 +308,7 @@ class GahpClient : public Service {
 		bool isInitialized() { return server->is_initialized; }
 
 		const char *getErrorString();
+		const char *getGahpStderr();
 
 		const char *getVersion();
 

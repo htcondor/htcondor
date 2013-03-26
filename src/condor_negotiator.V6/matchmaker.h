@@ -180,7 +180,7 @@ class Matchmaker : public Service
 		   double priority,
            double submitterLimit, double submitterLimitUnclaimed,
 		   ClassAdListDoesNotDeleteAds &startdAds, ClaimIdHash &claimIds, 
-		   bool ignore_schedd_limit, time_t startTime, 
+		   bool ignore_schedd_limit, time_t deadline,
            int& numMatched, double &pieLeft);
 
 		int negotiateWithGroup ( int untrimmed_num_startds,

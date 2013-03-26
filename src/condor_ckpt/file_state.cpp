@@ -113,7 +113,7 @@ here because the implementation is entirely private to this module.
 
 class CondorFilePointer {
 public:
-	CondorFilePointer( CondorFile *f, CondorFileInfo *i, int fl, char *n ) {
+	CondorFilePointer( CondorFile *f, CondorFileInfo *i, int fl, const char *n ) {
 		file = f;
 		info = i;
 		flags = fl;
@@ -293,7 +293,7 @@ have been opened, stop making info blocks (i.e. leaking memory,)
 and dump all of the rest into "everything else".
 */
 
-CondorFileInfo * CondorFileTable::make_info( char *logical_name )
+CondorFileInfo * CondorFileTable::make_info( const char *logical_name )
 {
 	CondorFileInfo *i;
 
@@ -706,7 +706,7 @@ int CondorFileTable::open( const char *logical_name, int flags, int mode )
 	return fd;
 }
 
-int CondorFileTable::install_special( int real_fd, char *kind )
+int CondorFileTable::install_special( int real_fd, const char *kind )
 {
 	int fd = find_empty();
 	if(fd<0) return -1;

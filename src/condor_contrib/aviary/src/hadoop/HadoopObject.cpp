@@ -318,6 +318,12 @@ int HadoopObject::start( tHadoopInit & hInit )
 
     // Set the owner attribute
     ::SetAttribute(cluster, proc, ATTR_OWNER, quote_it(hInit.owner.c_str()).c_str());
+    
+    if ( !hInit.description.length() )
+    {
+        hInit.description="N/A";
+    }
+    
     ::SetAttribute(cluster, proc, ATTR_HADOOP_DESCRIPTION, quote_it(hInit.description.c_str()).c_str());
     
     param(Iwd, "HADOOP_IWD", "/tmp");
@@ -497,12 +503,13 @@ bool HadoopObject::status (ClassAd* cAd, const tHadoopType & type, tHadoopJobSta
     }
 
     
-    dprintf( D_FULLDEBUG, "Called HadoopObject::status() STATUS:%s, ID:%d.%d OWNER:%s PARENT:(%s,%s)\n", 
+    dprintf( D_FULLDEBUG, "Called HadoopObject::status() STATUS:%s, ID:%d.%d OWNER:%s PARENT:(%s,%s) DESCRIPTION:%s\n", 
              hStatus.state.c_str(), 
              cluster, proc, 
              hStatus.owner.c_str(),
              hStatus.idparent.id.c_str(),
-             hStatus.idparent.ipcid.c_str()
+             hStatus.idparent.ipcid.c_str(), 
+             hStatus.description.c_str()
            );   
  
     return true;

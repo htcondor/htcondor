@@ -1345,6 +1345,7 @@ x509_receive_delegation( const char *destination_file,
 	globus_result_t result = GLOBUS_SUCCESS;
 	globus_gsi_cred_handle_t proxy_handle =  NULL;
 	globus_gsi_proxy_handle_t request_handle = NULL;
+	globus_gsi_proxy_handle_attrs_t handle_attrs = NULL;
 	char *buffer = NULL;
 	int buffer_len = 0;
 	char *destination_file_tmp = NULL;
@@ -1354,7 +1355,37 @@ x509_receive_delegation( const char *destination_file,
 		return -1;
 	}
 
-	result = globus_gsi_proxy_handle_init( &request_handle, NULL );
+	// see if we'd like the default attributes or something custom
+	int bits = param_integer("GSI_DELEGATION_KEYBITS", 0);
+	if (bits) {
+		// as of 2013-02-27, a bug in globus 5.2.1 causes a crash if bits
+		// is less than 512.  so we just make that the minimum.  there is no
+		// maximum, although setting it above 4096 could take a really long
+		// time to compute.  i would bet that in 20 years this comment is
+		// hilarious.
+		if (bits < 512) {
+			bits = 512;
+		}
+
+		result = globus_gsi_proxy_handle_attrs_init( &handle_attrs );
+		if ( result != GLOBUS_SUCCESS ) {
+			rc = -1;
+			error_line = __LINE__;
+			goto cleanup;
+		}
+
+		result = globus_gsi_proxy_handle_attrs_set_keybits( handle_attrs, bits );
+		if ( result != GLOBUS_SUCCESS ) {
+			rc = -1;
+			error_line = __LINE__;
+			goto cleanup;
+		}
+	}
+
+	// handle_attrs is either NULL (which is fine) or contains the above object
+	// specifying custom attributes.
+
+	result = globus_gsi_proxy_handle_init( &request_handle, handle_attrs );
 	if ( result != GLOBUS_SUCCESS ) {
 		rc = -1;
 		error_line = __LINE__;
@@ -1441,6 +1472,9 @@ x509_receive_delegation( const char *destination_file,
 	}
 	if ( buffer ) {
 		free( buffer );
+	}
+	if (handle_attrs) {
+		 globus_gsi_proxy_handle_attrs_destroy( handle_attrs );
 	}
 	if ( request_handle ) {
 		globus_gsi_proxy_handle_destroy( request_handle );

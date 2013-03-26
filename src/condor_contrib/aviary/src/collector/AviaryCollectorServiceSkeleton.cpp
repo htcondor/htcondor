@@ -273,7 +273,6 @@ void pagedResults(CollectableBirthdateMapT& birthdate_map, CollectableMapT& coll
 
 GetCollectorResponse* AviaryCollectorServiceSkeleton::getCollector(MessageContext* /*outCtx*/ ,GetCollector* _getCollector)
 {
-    /* TODO fill this with the necessary business logic */
     GetCollectorResponse* response = new GetCollectorResponse;
 
     CollectorObject* co = CollectorObject::getInstance();
@@ -285,7 +284,6 @@ GetCollectorResponse* AviaryCollectorServiceSkeleton::getCollector(MessageContex
 
 GetMasterResponse* AviaryCollectorServiceSkeleton::getMaster(MessageContext* /*outCtx*/ ,GetMaster* _getMaster)
 {
-    /* TODO fill this with the necessary business logic */
     GetMasterResponse* response = new GetMasterResponse;
 
     CollectorObject* co = CollectorObject::getInstance();
@@ -297,7 +295,6 @@ GetMasterResponse* AviaryCollectorServiceSkeleton::getMaster(MessageContext* /*o
 
 GetNegotiatorResponse* AviaryCollectorServiceSkeleton::getNegotiator(MessageContext* /*outCtx*/ ,GetNegotiator* _getNegotiator)
 {
-    /* TODO fill this with the necessary business logic */
     GetNegotiatorResponse* response = new GetNegotiatorResponse;
 
     CollectorObject* co = CollectorObject::getInstance();
@@ -309,19 +306,40 @@ GetNegotiatorResponse* AviaryCollectorServiceSkeleton::getNegotiator(MessageCont
 
 GetSlotResponse* AviaryCollectorServiceSkeleton::getSlot(MessageContext* /*outCtx*/ ,GetSlot* _getSlot)
 {
-    /* TODO fill this with the necessary business logic */
     GetSlotResponse* response = new GetSlotResponse;
 
     CollectorObject* co = CollectorObject::getInstance();
     
-    loadResults<AviaryCommon::Slot,SlotMapType,GetSlot,GetSlotResponse>(co->slots,_getSlot,response);
+    loadResults<AviaryCommon::Slot,SlotMapType,GetSlot,GetSlotResponse>(co->stable_slots,_getSlot,response);
+
+    // now attach dslots to any pslots if requested
+    // TODO: 2 pass
+    if (!_getSlot->isIncludeDynamicNil() && _getSlot->getIncludeDynamic()) {
+        vector<AviaryCommon::Slot*>* resp_pslots = response->getResults();
+        if (resp_pslots && !resp_pslots->empty()) {
+            for (vector<AviaryCommon::Slot*>::iterator it = resp_pslots->begin(); it != resp_pslots->end(); it++) {
+                if ((*it)->getSlot_type()->getSlotTypeEnum() == SlotType_PARTITIONABLE) {
+                    SlotDynamicType:: iterator pit = co->pslots.find((*it)->getId()->getName());
+                    if (pit != co->pslots.end()) {
+                        for (SlotSetType::iterator dit = (*pit).second->begin(); dit != (*pit).second->end(); dit++) {
+                                CollectableCodec codec(provider->getEnv());
+                                AviaryCommon::Slot* dslot = codec.encode((*dit),_getSlot->getIncludeSummaries());
+                                Status* js = new Status;
+                                js->setCode(new StatusCodeType("OK"));
+                                dslot->setStatus(js);
+                                (*it)->addDynamic_slots(dslot);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     return response;
 }
 
 GetSchedulerResponse* AviaryCollectorServiceSkeleton::getScheduler(MessageContext* /*outCtx*/ ,GetScheduler* _getScheduler)
 {
-    /* TODO fill this with the necessary business logic */
     GetSchedulerResponse* response = new GetSchedulerResponse;
 
     CollectorObject* co = CollectorObject::getInstance();
@@ -333,7 +351,6 @@ GetSchedulerResponse* AviaryCollectorServiceSkeleton::getScheduler(MessageContex
 
 GetSubmitterResponse* AviaryCollectorServiceSkeleton::getSubmitter(MessageContext* /*outCtx*/ ,GetSubmitter* _getSubmitter)
 {
-    /* TODO fill this with the necessary business logic */
     GetSubmitterResponse* response = new GetSubmitterResponse;
 
     CollectorObject* co = CollectorObject::getInstance();
@@ -346,7 +363,6 @@ GetSubmitterResponse* AviaryCollectorServiceSkeleton::getSubmitter(MessageContex
 // ClassAd attribute queries
 GetAttributesResponse* AviaryCollectorServiceSkeleton::getAttributes(MessageContext* /*outCtx*/ ,GetAttributes* _getAttributes)
 {
-    /* TODO fill this with the necessary business logic */
     GetAttributesResponse* response = new GetAttributesResponse;
 
     CollectorObject* co = CollectorObject::getInstance();
@@ -426,7 +442,6 @@ GetAttributesResponse* AviaryCollectorServiceSkeleton::getAttributes(MessageCont
 // id paging
 GetMasterIDResponse* AviaryCollectorServiceSkeleton::getMasterID(MessageContext* /*outCtx*/ ,GetMasterID* _getMasterID)
 {
-    /* TODO fill this with the necessary business logic */
     GetMasterIDResponse* response = new GetMasterIDResponse;
 
     CollectorObject* co = CollectorObject::getInstance();
@@ -438,12 +453,11 @@ GetMasterIDResponse* AviaryCollectorServiceSkeleton::getMasterID(MessageContext*
 
 GetSlotIDResponse* AviaryCollectorServiceSkeleton::getSlotID(MessageContext* /*outCtx*/ ,GetSlotID* _getSlotID)
 {
-    /* TODO fill this with the necessary business logic */
     GetSlotIDResponse* response = new GetSlotIDResponse;
 
     CollectorObject* co = CollectorObject::getInstance();
 
-    pagedResults<SlotDateMapType,SlotMapType,GetSlotID,GetSlotIDResponse>(co->slot_ids,co->slots,_getSlotID,response);
+    pagedResults<SlotDateMapType,SlotMapType,GetSlotID,GetSlotIDResponse>(co->stable_slot_ids,co->stable_slots,_getSlotID,response);
 
     return response;
 }

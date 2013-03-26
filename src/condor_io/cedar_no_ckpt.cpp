@@ -45,6 +45,7 @@
 #include "internet.h"
 #include "ipv6_hostname.h"
 #include "condor_fsync.h"
+#include "dc_transfer_queue.h"
 
 #ifdef WIN32
 #include <mswsock.h>	// For TransmitFile()
@@ -58,7 +59,8 @@ const int GET_FILE_NULL_FD = -10;
 
 int
 ReliSock::get_file( filesize_t *size, const char *destination,
-					bool flush_buffers, bool append, filesize_t max_bytes )
+					bool flush_buffers, bool append, filesize_t max_bytes,
+					DCTransferQueue *xfer_q)
 {
 	int fd;
 	int result;
@@ -90,7 +92,7 @@ ReliSock::get_file( filesize_t *size, const char *destination,
 
 			// In order to remain in a well-defined state on the wire
 			// protocol, read and throw away the file data.
-		result = get_file( size, GET_FILE_NULL_FD, flush_buffers, append, max_bytes );
+		result = get_file( size, GET_FILE_NULL_FD, flush_buffers, append, max_bytes, xfer_q );
 		if( result<0 ) {
 				// Failure to read (and throw away) data indicates that
 				// we are in an undefined state on the wire protocol
@@ -107,7 +109,7 @@ ReliSock::get_file( filesize_t *size, const char *destination,
 			 "get_file(): going to write to filename %s\n",
 			 destination);
 
-	result = get_file( size, fd,flush_buffers, append, max_bytes);
+	result = get_file( size, fd,flush_buffers, append, max_bytes, xfer_q);
 
 	if(::close(fd)!=0) {
 		dprintf(D_ALWAYS,
@@ -129,7 +131,8 @@ ReliSock::get_file( filesize_t *size, const char *destination,
 MSC_DISABLE_WARNING(6262) // function uses 64k of stack
 int
 ReliSock::get_file( filesize_t *size, int fd,
-					bool flush_buffers, bool append, filesize_t max_bytes )
+					bool flush_buffers, bool append, filesize_t max_bytes,
+					DCTransferQueue *xfer_q)
 {
 	char buf[65536];
 	filesize_t filesize, bytes_to_receive;
@@ -168,9 +171,20 @@ ReliSock::get_file( filesize_t *size, int fd,
 
 	// Now, read it all in & save it
 	while( total < bytes_to_receive ) {
+		UtcTime t1,t2;
+		if( xfer_q ) {
+			t1.getTime();
+		}
+
 		int	iosize =
 			(int) MIN( (filesize_t) sizeof(buf), bytes_to_receive - total );
 		int	nbytes = get_bytes_nobuffer( buf, iosize, 0 );
+
+		if( xfer_q ) {
+			t2.getTime();
+			xfer_q->AddUsecNetRead(t2.difference_usec(t1));
+		}
+
 		if ( nbytes <= 0 ) {
 			break;
 		}
@@ -221,6 +235,14 @@ ReliSock::get_file( filesize_t *size, int fd,
 				written += rval;
 			}
 		}
+		if( xfer_q ) {
+			t1.getTime();
+				// reuse t2 above as start time for file write
+			xfer_q->AddUsecFileWrite(t1.difference_usec(t2));
+			xfer_q->AddBytesReceived(written);
+			xfer_q->ConsiderSendingReport(t1.seconds());
+		}
+
 		total += written;
 		if( max_bytes >= 0 && total > max_bytes ) {
 
@@ -250,7 +272,10 @@ ReliSock::get_file( filesize_t *size, int fd,
 	}
 
 	if (flush_buffers && fd != GET_FILE_NULL_FD ) {
-		condor_fsync(fd);
+		if (condor_fsync(fd) < 0) {
+			dprintf(D_ALWAYS, "get_file(): ERROR on fsync: %d\n", errno);
+			return -1;
+		}
 	}
 
 	if( fd == GET_FILE_NULL_FD ) {
@@ -292,7 +317,7 @@ ReliSock::put_empty_file( filesize_t *size )
 }
 
 int
-ReliSock::put_file( filesize_t *size, const char *source, filesize_t offset, filesize_t max_bytes)
+ReliSock::put_file( filesize_t *size, const char *source, filesize_t offset, filesize_t max_bytes, DCTransferQueue *xfer_q)
 {
 	int fd;
 	int result;
@@ -320,7 +345,7 @@ ReliSock::put_file( filesize_t *size, const char *source, filesize_t offset, fil
 	dprintf( D_FULLDEBUG,
 			 "put_file: going to send from filename %s\n", source);
 
-	result = put_file( size, fd, offset, max_bytes );
+	result = put_file( size, fd, offset, max_bytes, xfer_q );
 
 	if (::close(fd) < 0) {
 		dprintf(D_ALWAYS,
@@ -334,7 +359,7 @@ ReliSock::put_file( filesize_t *size, const char *source, filesize_t offset, fil
 
 MSC_DISABLE_WARNING(6262) // function uses 64k of stack
 int
-ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_bytes )
+ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_bytes, DCTransferQueue *xfer_q )
 {
 	filesize_t	filesize;
 	filesize_t	total = 0;
@@ -419,9 +444,22 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 				return -1;
 			}
 
+			UtcTime t1;
+			t1.getTime();
+
 			// Now transmit file using special optimized Winsock call
-			if ( TransmitFile(_sock,(HANDLE)_get_osfhandle(fd),
-							  bytes_to_send,0,NULL,NULL,0) == FALSE ) {
+			bool transmit_success = TransmitFile(_sock,(HANDLE)_get_osfhandle(fd),bytes_to_send,0,NULL,NULL,0) != FALSE;
+
+			if( xfer_q ) {
+				UtcTime t2;
+				t2.getTime();
+					// We don't know how much of the time was spent reading
+					// from disk vs. writing to the network, so we just report
+					// it all as network i/o time.
+				xfer_q->AddUsecNetWrite(t2.difference_usec(t1));
+			}
+
+			if( !transmit_success ) {
 				dprintf(D_ALWAYS,
 						"ReliSock: put_file: TransmitFile() failed, errno=%d\n",
 						GetLastError() );
@@ -429,6 +467,10 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 			} else {
 				// Note that it's been sent, so that we don't try to below
 				total = bytes_to_send;
+				if( xfer_q ) {
+					xfer_q->AddBytesSent(bytes_to_send);
+					xfer_q->ConsiderSendingReport();
+				}
 			}
 		}
 #endif
@@ -439,8 +481,23 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 		// On Unix, always send the file using put_bytes_nobuffer().
 		// Note that on Win32, we use this method as well if encryption 
 		// is required.
-		while (total < bytes_to_send &&
-			   (nrd = ::read(fd, buf, (size_t)(bytes_to_send-total) < sizeof(buf) ? bytes_to_send-total : sizeof(buf))) > 0) {
+		while (total < bytes_to_send) {
+			UtcTime t1;
+			UtcTime t2;
+			if( xfer_q ) {
+				t1.getTime();
+			}
+
+			nrd = ::read(fd, buf, (size_t)(bytes_to_send-total) < sizeof(buf) ? bytes_to_send-total : sizeof(buf));
+
+			if( xfer_q ) {
+				t2.getTime();
+				xfer_q->AddUsecFileRead(t2.difference_usec(t1));
+			}
+
+			if( nrd <= 0) {
+				break;
+			}
 			if ((nbytes = put_bytes_nobuffer(buf, nrd, 0)) < nrd) {
 					// put_bytes_nobuffer() does the appropriate
 					// looping for us already, the only way this could
@@ -451,6 +508,14 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 						 "bytes (put_bytes_nobuffer() returned %d)\n",
 						 nrd, nbytes );
 				return -1;
+			}
+			if( xfer_q ) {
+					// reuse t2 from above to mark the start of the
+					// network op and t1 to mark the end
+				t1.getTime();
+				xfer_q->AddUsecNetWrite(t1.difference_usec(t2));
+				xfer_q->AddBytesSent(nbytes);
+				xfer_q->ConsiderSendingReport(t1.seconds());
 			}
 			total += nbytes;
 		}
@@ -495,7 +560,8 @@ int
 ReliSock::get_file_with_permissions( filesize_t *size, 
 									 const char *destination,
 									 bool flush_buffers,
-									 filesize_t max_bytes)
+									 filesize_t max_bytes,
+									 DCTransferQueue *xfer_q)
 {
 	int result;
 	condor_mode_t file_mode;
@@ -509,7 +575,7 @@ ReliSock::get_file_with_permissions( filesize_t *size,
 		return -1;
 	}
 
-	result = get_file( size, destination, flush_buffers, false, max_bytes );
+	result = get_file( size, destination, flush_buffers, false, max_bytes, xfer_q );
 
 	if ( result < 0 ) {
 		return result;
@@ -549,7 +615,7 @@ ReliSock::get_file_with_permissions( filesize_t *size,
 
 
 int
-ReliSock::put_file_with_permissions( filesize_t *size, const char *source, filesize_t max_bytes )
+ReliSock::put_file_with_permissions( filesize_t *size, const char *source, filesize_t max_bytes, DCTransferQueue *xfer_q )
 {
 	int result;
 	condor_mode_t file_mode;
@@ -600,7 +666,7 @@ ReliSock::put_file_with_permissions( filesize_t *size, const char *source, files
 		return -1;
 	}
 
-	result = put_file( size, source, 0, max_bytes );
+	result = put_file( size, source, 0, max_bytes, xfer_q );
 
 	return result;
 }

@@ -519,15 +519,19 @@ They need to be untarred, as
   tar xzf completename.tar.gz
 \end{verbatim}
 After untarring, the directory will have the Perl scripts
-\Condor{configure} and \Condor{install}, as well as a ``bin'', ``etc'',
-``examples'', ``include'', ``lib'', ``libexec'', ``man'', ``sbin'',
-``sql'' and ``src'' subdirectories.
+\Condor{configure} and \Condor{install}, as well as 
+\File{bin}, \File{etc}, \File{examples}, \File{include},
+\File{lib}, \File{libexec}, \File{man}, \File{sbin},
+\File{sql} and \File{src} subdirectories.
 
 \Condor{configure} and \Condor{install} are the same program, but have
 different default behaviors.  \Condor{install} is identical to
-running ``\Condor{configure} --install=.''.
-\Condor{configure} and \Condor{install} work on above directories
-(``sbin'', etc.).  As the names imply, \Condor{install} is used to
+running 
+\begin{verbatim}
+  condor_configure --install=.
+\end{verbatim}
+\Condor{configure} and \Condor{install} work on the named directories.
+As the names imply, \Condor{install} is used to
 install HTCondor, whereas \Condor{configure} is used to modify the
 configuration of an existing HTCondor install.
 
@@ -536,23 +540,30 @@ driven; it is not interactive.  Several command-line arguments are
 always needed with \Condor{configure} and \Condor{install}.
 The argument
 \begin{verbatim}
-  --install=/path/to/release.
+  --install=/path/to/release
 \end{verbatim}
-specifies the path to the HTCondor release directories (see above).
-The default for \Condor{install} is ``--install=.''.
+specifies the path to the HTCondor release directories.
+The default command-line argument for \Condor{install} is 
+\begin{verbatim}
+  --install=.
+\end{verbatim}
 The argument
-\begin{verbatim} --install-dir=directory \end{verbatim}
+\begin{verbatim}
+  --install-dir=<directory>
+\end{verbatim}
 or
-\begin{verbatim} --prefix=directory \end{verbatim}
+\begin{verbatim}
+  --prefix=<directory>
+\end{verbatim}
 specifies the path to the install directory.
 
 The argument
 \begin{verbatim}
---local-dir=directory
+  --local-dir=<directory>
 \end{verbatim}
 specifies the path to the local directory.
 
-The \Opt{--type} option to \Condor{configure}
+The \verb@--@\Opt{type} option to \Condor{configure}
 specifies one or more of the roles that a machine may take on
 within the HTCondor pool: central manager, submit or execute.
 These options are given in a comma separated list.
@@ -560,7 +571,7 @@ So, if a machine is both a submit and execute
 machine, 
 the proper command-line option is
 \begin{verbatim}
---type=manager,execute
+  --type=submit,execute
 \end{verbatim}
 
 Install HTCondor on the central manager machine first.  If HTCondor
@@ -580,8 +591,10 @@ submit machine:
 \end{verbatim}
 
 As in the above example, the central manager can also be a submit
-point or and execute machine, but this is only recommended for very
-small pools.  If this is the case, the \Opt{--type} option changes to
+point or an execute machine, but this is only recommended for very
+small pools.  If this is the case, the 
+\verb@--@\Opt{type}
+option changes to
 \Expr{manager,execute} or \Expr{manager,submit}  or 
 \Expr{manager,submit,execute}.
 
@@ -773,18 +786,24 @@ As of HTCondor version 7.5.1,
 the HTCondor RPM installs into FHS locations.
 
 Yum repositories are at
- \URL{http://www.cs.wisc.edu/condor/yum/} .
+ \URL{http://research.cs.wisc.edu/htcondor/yum/} .
 The repositories are named to distinguish stable releases from
 development releases and by Red Hat version number. 
-The 4 repositories are:
+The 6 repositories are:
 \begin{itemize}
   \item \File{condor-stable-rhel4.repo}
   \item \File{condor-stable-rhel5.repo}
+  \item \File{condor-stable-rhel6.repo}
   \item \File{condor-development-rhel4.repo}
   \item \File{condor-development-rhel5.repo}
+  \item \File{condor-development-rhel6.repo}
 \end{itemize}
 
-Here are an ordered set of steps that get HTCondor running using the RPM.
+For HTCondor to work properly under RHEL5, 
+the Red Hat Network channel called \AdStr{RHEL Virtualization} 
+must be explicitly enabled.
+
+Here is an ordered set of steps that get HTCondor running using the RPM.
 \begin{enumerate}
 \item The HTCondor package will automatically add a \Login{condor} user/group,
 if it does not exist already.
@@ -798,7 +817,7 @@ This example is for the stable series, on RHEL 5.
 \footnotesize
 \begin{verbatim}
   cd /etc/yum.repos.d
-  wget http://www.cs.wisc.edu/condor/yum/repo.d/condor-stable-rhel5.repo
+  wget http://research.cs.wisc.edu/htcondor/yum/repo.d/condor-stable-rhel5.repo
 \end{verbatim}
 \normalsize
 Note that this step need be done only once;
@@ -848,10 +867,10 @@ As of HTCondor version 7.5.1,
 the HTCondor Debian package installs into FHS locations.
 
 The HTCondor APT repositories are specified at
- \URL{http://www.cs.wisc.edu/condor/debian/} .
+ \URL{http://research.cs.wisc.edu/htcondor/debian/} .
 See this web page for repository information.
 
-Here are an ordered set of steps that get HTCondor running.
+Here is an ordered set of steps that get HTCondor running.
 \begin{enumerate}
 \item The HTCondor package will automatically add a \Login{condor} user/group,
 if it does not exist already.
@@ -867,10 +886,10 @@ operating system-specific lines is in
 the file \File{/etc/apt/sources.list} .
 \footnotesize
 \begin{verbatim}
-deb http://www.cs.wisc.edu/condor/debian/stable/ etch contrib
-deb http://www.cs.wisc.edu/condor/debian/development/ etch contrib
-deb http://www.cs.wisc.edu/condor/debian/stable/ lenny contrib
-deb http://www.cs.wisc.edu/condor/debian/development/ lenny contrib
+deb http://research.cs.wisc.edu/htcondor/debian/stable/ lenny contrib
+deb http://research.cs.wisc.edu/htcondor/debian/development/ lenny contrib
+deb http://research.cs.wisc.edu/htcondor/debian/stable/ squeeze contrib
+deb http://research.cs.wisc.edu/htcondor/debian/development/ squeeze contrib
 \end{verbatim}
 \normalsize
 Note that this step need be done only once;

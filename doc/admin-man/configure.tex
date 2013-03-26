@@ -1350,7 +1350,7 @@ File System Configuration File Entries''.
 \label{param:EnableClassadCaching}
 \item[\Macro{ENABLE\_CLASSAD\_CACHING}]
   A boolean value that controls the caching of ClassAds.
-  Caching saves memory when a Condor process contains
+  Caching saves memory when an HTCondor process contains
   many ClassAds with the same expressions.
   The default value is \Expr{False}, which disables caching.
 
@@ -1372,11 +1372,14 @@ File System Configuration File Entries''.
   
 \label{param:CondorFsync}
 \item[\Macro{CONDOR\_FSYNC}]
-  A boolean value that controls whether HTCondor calls fsync when
-  writing the user job and transaction logs.  Setting this value to false
-  will disable calls to fsync, which can help performance for schedd
-  log writes at the cost of some durability of the log contents should
-  there be a power or hardware failure.  This value is true by default.
+  A boolean value that controls whether HTCondor calls \Procedure{fsync} when
+  writing the user job and transaction logs.  
+  Setting this value to \Expr{False}
+  will disable calls to \Procedure{fsync}, 
+  which can help performance for \Condor{schedd}
+  log writes at the cost of some durability of the log contents,
+  should there be a power or hardware failure.  
+  The default value is \Expr{True}.
 
 \label{param:StatisticsToPublish}
 \item[\Macro{STATISTICS\_TO\_PUBLISH}]
@@ -1390,7 +1393,8 @@ File System Configuration File Entries''.
   This first aspect may be \Expr{SCHEDD} or \Expr{SCHEDULER} to publish
   Statistics attributes in the ClassAd of the \Condor{schedd}.
   Or, it may be \Expr{DC} or \Expr{DAEMONCORE} to publish 
-  DaemonCore statistics.
+  DaemonCore statistics.  It may also be \Expr{TRANSFER} to publish
+  file transfer statistics.
   After the colon may be the value \Expr{0}, \Expr{1}, \Expr{2}, or \Expr{3}.
   A value of  \Expr{0} turns off the publishing of any Statistics attributes.
   A value of  \Expr{1} is the default level, where some Statistics attributes
@@ -5158,6 +5162,32 @@ MAX_JOBS_RUNNING	= \
   when the limit is hit, so some files may be fully transferred, some
   partially, and some not at all.
 
+\label{param:TransferIoReportInterval}
+\item[\Macro{TRANSFER\_IO\_REPORT\_INTERVAL}]
+  The sampling interval in seconds for collecting I/O statistics for
+  file transfer.  The default is 10 seconds.  To provide sufficient
+  resolution, the sampling interval should be small compared to the
+  smallest time span that is configured in
+  \Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}.  The shorter the sampling
+  interval, the more overhead of data collection, which may slow down
+  the \Condor{schedd}.  See
+  page~\pageref{sec:FT-Scheduler-ClassAd-Attributes} for a description
+  of the published attributes.
+
+\label{param:TransferIoReportTimespans}
+\item[\Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}]
+  A string that specifies a list of time spans over which I/O
+  statistics are reported, using exponential moving averages (like the
+  1m, 5m, and 15m load averages in Unix).  Each entry in the list
+  consists of a label followed by a colon followed by the number of
+  seconds over which the named time span should extend.  The default is
+  \verb|1m:60 5m:300 1h:3600 1d:86400|.  To provide sufficient
+  resolution, the smallest reported time span should be large compared
+  to the sampling interval, which is configured by
+  \Macro{TRANSFER\_IO\_REPORT\_INTERVAL}.  See
+  page~\pageref{sec:FT-Scheduler-ClassAd-Attributes} for a description
+  of the published attributes.
+
 \label{param:ScheddQueryWorkers}
 \item[\Macro{SCHEDD\_QUERY\_WORKERS}]
   This specifies the maximum number of concurrent sub-processes that
@@ -7068,8 +7098,8 @@ These macros affect the \Condor{negotiator}.
 
 \label{param:DefaultPrioFactor} 
 \item[\Macro{DEFAULT\_PRIO\_FACTOR}]
-  Sets the priority factor for local users, as described in
-  section~\ref{sec:UserPrio}.
+  Sets the priority factor for local users as they first submit jobs,
+  as described in section~\ref{sec:UserPrio}.
   Defaults to 1.0.
 
 \label{param:NiceUserPrioFactor} 
@@ -8523,7 +8553,7 @@ These macros affect the HTCondor's usage of grid resources.
   The full path and file name of the \Prog{glexec} executable.
 
 \label{param:GlexecRetries}
-\item[\Macro{GLEXEC}]
+\item[\Macro{GLEXEC\_RETRIES}]
 An integer value that specifies the maximum number of times to retry a
 call to \Prog{glexec} when \Prog{glexec} exits with status 202 or 203,
 error codes that indicate a possible transient error condition.  The
@@ -8532,10 +8562,12 @@ default number of retries is 3.
 \label{param:GlexecRetryDelay}
 \item[\Macro{GLEXEC\_RETRY\_DELAY}]
 An integer value that specifies the minimum number of seconds to wait
-between retries of a failed call to glexec.  The default is 5.  The
-actual delay to be used is determined by a random exponential backoff
+between retries of a failed call to \Prog{glexec}.
+The default is 5 seconds.
+The actual delay to be used is determined by a random exponential backoff
 algorithm that chooses a delay with a minimum of
-\Macro{GLEXEC\_RETRY\_DELAY} and a maximum of 100 times that value.
+the value of \MacroNI{GLEXEC\_RETRY\_DELAY} 
+and a maximum of 100 times that value.
 
 \end{description}
 
@@ -9303,6 +9335,14 @@ section~\ref{sec:Security} on Security.
   the interval for checking the proxy should be,
   at most, half of the interval for refreshing it.
 
+\label{param:GSIDelegationKeybits}
+\item[\Macro{GSI\_DELEGATION\_KEYBITS}]
+  The integer number of bits in the GSI key.
+  If set to 0, the number of bits will be that preferred by the GSI library.
+  If set to less than 512, the value will be ignored, and the key size
+  will be 512 bits.
+  Setting the value greater than 4096 is likely to cause long compute times.
+  
 \label{param:GridMap}
 \item[\Macro{GRIDMAP}]
   The complete path and file name of the Globus Gridmap file.

@@ -16,6 +16,7 @@
 
 // condor includes
 #include "condor_common.h"
+#include "condor_attributes.h"
 #include "stl_string_utils.h"
 
 // local includes
@@ -25,8 +26,9 @@
 
 using namespace std;
 using namespace aviary::util;
-
 using namespace aviary::collector;
+
+static const char CONDOR_PLATFORM_FORMAT[] = "%*s %[^-]%*c%[^- ] %*s";
 
 void DaemonCollectable::update(const ClassAd& ad)
 {
@@ -61,8 +63,12 @@ void Master::update(const ClassAd& ad)
     MGMT_DECLARATIONS;
     DaemonCollectable::update(ad);
     Master& m_stats = *this;
-    STRING(Arch);
-    STRING(OpSysLongName);
+    // hack arch and opsys from platform
+    char arch[12];
+    char opsys[12];
+    sscanf(m_stats.CondorPlatform.c_str(),CONDOR_PLATFORM_FORMAT,arch,opsys);
+    Arch = arch;
+    OpSysLongName = opsys;
     INTEGER(RealUid);
 }
 
@@ -105,6 +111,7 @@ void Slot::update(const ClassAd& ad)
     MGMT_DECLARATIONS;
     DaemonCollectable::update(ad);
     Slot& m_stats = *this;
+    ad.LookupBool(ATTR_SLOT_DYNAMIC,m_stats.DynamicSlot);
     STRING(SlotType);
     upper_case(SlotType);
     STRING(Arch);

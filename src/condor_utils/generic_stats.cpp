@@ -1118,61 +1118,203 @@ void StatisticsPool::Unpublish(ClassAd & ad, const char * prefix) const
       }
 }
 
-template class stats_entry_recent<int>;
-template class stats_entry_recent_histogram<long>;
-
-// this function isn't called, its just here to force instantiation 
-// of template methods that aren't in the header file.
-//
-void generic_stats_force_refs()
+bool
+stats_ema_config::sameAs( stats_ema_config const *other )
 {
-   MyString str;
+	if( !other ) {
+		return false;
+	}
 
-   stats_entry_recent<int>* pi = NULL;
-   stats_entry_recent<long>* pl = NULL;
-   stats_entry_recent<int64_t>* pt = NULL;
-   stats_entry_recent<double>* pd = NULL;
-   stats_entry_recent<Probe>* pp = NULL;
-   stats_entry_recent_histogram< int64_t >* ph = new stats_entry_recent_histogram< int64_t >();
-   stats_entry_recent_histogram< time_t >* pm = new stats_entry_recent_histogram< time_t >();
-   stats_recent_counter_timer* pc = NULL;
+	horizon_config_list::const_iterator my_itr = horizons.begin();
+	horizon_config_list::const_iterator other_itr = other->horizons.begin();
+	while( my_itr != horizons.end() || other_itr != other->horizons.end() ) {
+		if( my_itr == horizons.end() || other_itr == other->horizons.end() ) {
+			return false; // unequal list length
+		}
+		if( my_itr->horizon != other_itr->horizon ) {
+			return false;
+		}
+		++my_itr;
+		++other_itr;
+	}
+	return true;
+}
 
-   ph->value.set_levels(NULL, 0);
-   ph->value.Add(1);
-   ph->value.Remove(1);
-   ph->value.AppendToString(str);
+template <class T>
+void stats_entry_sum_ema_rate<T>::ConfigureEMAHorizons(classy_counted_ptr<stats_ema_config> new_config) {
+	classy_counted_ptr<stats_ema_config> old_config(ema_config);
+	ema_config = new_config;
 
-   pm->value.set_levels(NULL, 0);
-   pm->value.Add(1);
-   pm->value.Remove(1);
-   pm->value.AppendToString(str);
-   
+	if( new_config->sameAs(old_config.get()) ) {
+		return;
+	}
 
-   StatisticsPool dummy;
-   dummy.GetProbe<stats_entry_recent<int> >("");
-   dummy.GetProbe<stats_entry_recent<int64_t> >("");
-   dummy.GetProbe<stats_entry_recent<long> >("");
-   dummy.GetProbe<stats_entry_recent<double> >("");
-   dummy.GetProbe<stats_recent_counter_timer>("");
+	stats_ema_list old_ema = ema;
+	ema.clear();
+	ema.resize(new_config->horizons.size());
 
-   dummy.NewProbe<stats_entry_recent<int> >("");
-   dummy.NewProbe<stats_entry_recent<int64_t> >("");
-   dummy.NewProbe<stats_entry_recent<long> >("");
-   dummy.NewProbe<stats_entry_recent<double> >("");
-   dummy.NewProbe<stats_recent_counter_timer>("");
-   //dummy.Add<stats_entry_recent<int>*>("",0,pi,0,"",NULL);
-   //dummy.Add<stats_entry_recent<long>*>("",0,pl,0,"",NULL);
-   //dummy.Add<stats_entry_recent<int64_t>*>("",0,pt,0,"",NULL);
-   //dummy.Add<stats_recent_counter_timer*>("",0,pc,0,"",NULL);
-   dummy.AddProbe("",pi,NULL,0);
-   dummy.AddProbe("",pl,NULL,0);
-   dummy.AddProbe("",pt,NULL,0);
-   dummy.AddProbe("",pc,NULL,0);
-   dummy.AddProbe("",pd,NULL,0);
-   dummy.AddProbe("",pp,NULL,0);
-   dummy.AddProbe("",ph,NULL,0);
-   dummy.AddProbe("",pm,NULL,0);
-};
+	for(size_t new_idx = new_config->horizons.size(); new_idx--; ) {
+		if( old_config.get() ) {
+			for(size_t old_idx = old_config->horizons.size(); old_idx--; ) {
+				if( old_config->horizons[old_idx].horizon == new_config->horizons[new_idx].horizon ) {
+					ema[new_idx] = old_ema[old_idx];
+					break;
+				}
+			}
+		}
+	}
+}
+
+void
+stats_ema_config::add(time_t horizon,char const *horizon_name)
+{
+	horizons.push_back( horizon_config(horizon,horizon_name) );
+}
+
+bool ParseEMAHorizonConfiguration(char const *ema_conf,classy_counted_ptr<stats_ema_config> &ema_horizons,std::string &error_str) {
+		// expected format of ema_conf:
+		// "name1:horizon1 name2:horizon2 ..."
+		// Example: "1m:60 1h:3600 1d:86400"
+
+	ASSERT( ema_conf );
+	ema_horizons = new stats_ema_config;
+
+	while( *ema_conf ) {
+		while( isspace(*ema_conf) || *ema_conf == ',' ) ema_conf++;
+		if( *ema_conf == '\0' ) break;
+
+		char const *colon = strchr(ema_conf,':');
+		if( !colon ) {
+			error_str = "expecting NAME1:SECONDS1 NAME2:SECONDS2 ...";
+			return false;
+		}
+		std::string horizon_name;
+		horizon_name.append(ema_conf,colon-ema_conf);
+		char *horizon_end=NULL;
+		time_t horizon = (time_t)strtol(colon+1,&horizon_end,10);
+		if( horizon_end == colon+1 || (!isspace(*horizon_end) && *horizon_end != ',' && *horizon_end) ) {
+			error_str = "expecting NAME1:SECONDS1 NAME2:SECONDS2 ...";
+			return false;
+		}
+		ema_horizons->add(horizon,horizon_name.c_str());
+
+		ema_conf = horizon_end;
+	}
+	return true;
+}
+
+template <class T>
+void stats_entry_sum_ema_rate<T>::Publish(ClassAd & ad, const char * pattr, int flags) const { 
+	if ( ! flags) flags = PubDefault;
+	if (flags & this->PubValue) {
+		ClassAdAssign(ad, pattr, this->value);
+	}
+	if (flags & this->PubEMA) {
+		for(size_t i = ema.size(); i--; ) {
+			stats_ema_config::horizon_config &config = ema_config->horizons[i];
+			if( (flags & PubSuppressInsufficientDataEMA) && ema[i].insufficientData(config) ) {
+				continue;
+			}
+			if( !(flags & this->PubDecorateAttr) ) {
+				ClassAdAssign(ad, pattr, ema[i].ema);
+			}
+			else {
+				std::string attr_name;
+				size_t pattr_len;
+				if( (flags & this->PubDecorateLoadAttr) && (pattr_len=strlen(pattr)) >= 7 && strcmp(pattr+pattr_len-7,"Seconds")==0 ) {
+						// Instead of reporting BlahSecondsPerSecond, report BlahLoad
+					formatstr(attr_name,"%.*sLoad_%s",(int)(pattr_len-7),pattr,config.horizon_name.c_str());
+				}
+				else {
+					formatstr(attr_name,"%sPerSecond_%s",pattr,config.horizon_name.c_str());
+				}
+				ClassAdAssign(ad, attr_name.c_str(), ema[i].ema);
+			}
+		}
+	}
+}
+
+template <class T>
+void stats_entry_sum_ema_rate<T>::Unpublish(ClassAd & ad, const char * pattr) const {
+	ad.Delete(pattr);
+	for(size_t i=ema.size(); i--;) {
+		stats_ema_config::horizon_config &config = ema_config->horizons[i];
+		std::string attr_name;
+		size_t pattr_len;
+		if( (pattr_len=strlen(pattr)) >= 7 && strcmp(pattr+pattr_len-7,"Seconds")==0 ) {
+			formatstr(attr_name,"%.*sLoad_%s",(int)(pattr_len-7),pattr,config.horizon_name.c_str());
+		}
+		else {
+			formatstr(attr_name,"%sPerSecond_%s",pattr,config.horizon_name.c_str());
+		}
+		ad.Delete(attr_name.c_str());
+	}
+}
+
+template <class T>
+double stats_entry_sum_ema_rate<T>::BiggestEMARate() const {
+	double biggest = 0.0;
+	bool first = true;
+	for(stats_ema_list::const_iterator ema_itr = ema.begin();
+		ema_itr != ema.end();
+		++ema_itr )
+	{
+		if( first || ema_itr->ema > biggest ) {
+			biggest = ema_itr->ema;
+			first = false;
+		}
+	}
+	return biggest;
+}
+
+template <class T>
+char const *stats_entry_sum_ema_rate<T>::ShortestHorizonEMARateName() const {
+	char const *shortest_horizon_name = NULL;
+	time_t shortest_horizon = 0;
+	bool first = true;
+	for(size_t i = ema.size(); i--; ) {
+		stats_ema_config::horizon_config &config = ema_config->horizons[i];
+		if( first || config.horizon < shortest_horizon ) {
+			shortest_horizon_name = config.horizon_name.c_str();
+			shortest_horizon = config.horizon;
+			first = false;
+		}
+	}
+	return shortest_horizon_name;
+}
+
+template <class T>
+double stats_entry_sum_ema_rate<T>::EMARate(char const *horizon_name) const {
+	for(size_t i = ema.size(); i--; ) {
+		stats_ema_config::horizon_config &config = ema_config->horizons[i];
+		if( config.horizon_name == horizon_name ) {
+			return ema[i].ema;
+		}
+	}
+	return 0.0;
+}
+
+// Force template instantiation
+// C++ note:
+// We used to have a dummy function that make various templated objects
+// in order to force the compiler to generate the template code so other
+// objects could link against it.  That is not the correct way to do things
+// because the compiler could decide to inline class member functions and not
+// generate the functions for the object file.
+//
+// Note that we instantiate more than we have to on most platforms.  This is
+// because things like stats_entry_recent<time_t> may or may not be equal
+// to stats_entry_recent<int64_t>, depending on the platform.
+template class stats_entry_recent<long long>;
+template class stats_entry_recent<long>;
+template class stats_entry_recent<int>;
+template class stats_entry_recent<double>;
+template class stats_entry_recent<Probe>;
+template class stats_entry_recent_histogram<long long>;
+template class stats_entry_recent_histogram<long>;
+template class stats_entry_recent_histogram<int>;
+template class stats_entry_recent_histogram<double>;
+template class stats_entry_sum_ema_rate<double>;
 
 //
 // This is how you use the generic_stats functions.

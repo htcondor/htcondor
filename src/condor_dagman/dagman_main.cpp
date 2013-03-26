@@ -44,8 +44,8 @@ void ExitSuccess();
 	// Note: these functions are declared 'extern "C"' where they're
 	// implemented; if we don't do that here we get a link failure
 	// (I think because of the name mangling).  wenger 2007-02-09.
-extern "C" void process_config_source( char* file, const char* name,
-			char* host, int required );
+//extern "C" void process_config_source( char* file, const char* name,
+//			char* host, int required );
 extern "C" bool is_piped_command(const char* filename);
 
 static char* lockFileName = NULL;
@@ -133,20 +133,15 @@ Dagman::Dagman() :
 	_maxJobHolds(100),
 	_runPost(true),
 	_defaultPriority(0),
-	_claim_hold_time(20)
+	_claim_hold_time(20),
+	_dagmanClassad(NULL)
 {
     debug_level = DEBUG_VERBOSE;  // Default debug level is verbose output
 }
 
-
 Dagman::~Dagman()
 {
-	// check if dag is NULL, since we may have 
-	// already delete'd it in the dag.CleanUp() method.
-	if ( dag != NULL ) {
-		delete dag;
-		dag = NULL;
-	}
+	CleanUp();
 }
 
 	// 
@@ -479,6 +474,7 @@ main_shutdown_fast()
 // this can be called by other functions, or by DC when the schedd is
 // shutdown gracefully
 void main_shutdown_graceful() {
+	print_status();
 	dagman.dag->DumpNodeStatus( true, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_RESTART );
 	dagman.CleanUp();
@@ -537,6 +533,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 			inShutdownRescue = false;
 			return;
 		}
+		print_status();
 		dagman.dag->DumpNodeStatus( false, true );
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	}
@@ -557,6 +554,7 @@ int main_shutdown_remove(Service *, int) {
 }
 
 void ExitSuccess() {
+	print_status();
 	dagman.dag->DumpNodeStatus( false, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_OKAY );
 	MSC_SUPPRESS_WARNING_FIXME(6031) // return falue of unlink ignored.
@@ -618,6 +616,8 @@ void main_init (int argc, char ** const argv) {
 		// get dagman job id from environment, if it's there
 		// (otherwise it will be set to "-1.-1.-1")
 	dagman.DAGManJobId.SetFromString( getenv( EnvGetName( ENV_ID ) ) );
+
+	dagman._dagmanClassad = new DagmanClassad( dagman.DAGManJobId );
 
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		// Minimum legal version for a .condor.sub file to be compatible
@@ -1218,6 +1218,7 @@ void main_init (int argc, char ** const argv) {
             dagman.dag->PrintReadyQ( DEBUG_DEBUG_1 );
             debug_error( 1, DEBUG_QUIET, "ERROR while bootstrapping\n");
         }
+		print_status();
     }
 
     debug_printf( DEBUG_VERBOSE, "Registering condor_event_timer...\n" );
@@ -1250,6 +1251,12 @@ print_status() {
 	debug_printf( DEBUG_VERBOSE, "%d job proc(s) currently held\n",
 				dagman.dag->NumHeldJobProcs() );
 	dagman.dag->PrintDeferrals( DEBUG_VERBOSE, false );
+
+	if ( dagman._dagmanClassad ) {
+		dagman._dagmanClassad->Update( total, done, pre, submitted, post,
+					ready, failed, unready, dagman.dag->_dagStatus,
+					dagman.dag->Recovery() );
+	}
 }
 
 void condor_event_timer () {

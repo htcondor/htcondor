@@ -1338,6 +1338,24 @@ GahpClient::getErrorString()
 }
 
 const char *
+GahpClient::getGahpStderr()
+{
+	static std::string output;
+
+	output = "";
+
+	for (std::list<std::string>::iterator it = server->m_gahp_error_list.begin();
+			it != server->m_gahp_error_list.end(); it++) {
+		output += *it;
+		output += "\\n";
+	}
+
+	return output.c_str();
+}
+
+
+
+const char *
 GahpClient::getVersion()
 {
 	return server->m_gahp_version;
@@ -1432,6 +1450,15 @@ GahpServer::err_pipe_ready(int  /*pipe_end*/)
 			*newline = '\0';
 			dprintf( D_FULLDEBUG, "GAHP[%d] (stderr) -> %s%s\n", m_gahp_pid,
 					 m_gahp_error_buffer.c_str(), prev_line );
+
+            // Add the stderr line to the gahp_error_queue
+            if (m_gahp_error_list.size() > 3) {
+                m_gahp_error_list.pop_front();
+            }
+            std::string errorline(m_gahp_error_buffer);
+            errorline += prev_line;
+            m_gahp_error_list.push_back(errorline);
+
 			// For a gahp running over ssh with tunneling, look for a
 			// line declaring the listen port on the remote end.
 			// For correctness, we should be checking m_gahp_errorfd

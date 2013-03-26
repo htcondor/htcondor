@@ -379,12 +379,12 @@ Owners of HTCondor jobs are notified by
 e-mail when certain events occur.
 If defined by \Arg{Always}, the owner will be notified
 whenever the job produces a checkpoint, as well as when the job completes.
-If defined by \Arg{Complete} (the default), the owner will
+If defined by \Arg{Complete}, the owner will
 be notified when the job terminates.
 If defined by \Arg{Error}, the owner will only be notified
 if the job terminates abnormally,
 or if the job is placed on hold because of a failure, and not by user request.
-If defined by \Arg{Never}, the owner will not receive e-mail,
+If defined by \Arg{Never} (the default), the owner will not receive e-mail,
 regardless to what happens to the job.
 The statistics included in the e-mail are documented in
 section~\ref{sec:job-completion} on
@@ -903,8 +903,7 @@ and transferred back when the job completes.
 This command is ignored if the job ClassAd attribute
 \Attr{TransferErr} is
 \Expr{False}.
-The default value is \Expr{True} in the grid
-universe and \Expr{False} otherwise.
+The default value is \Expr{False}.
 This command must be used in conjunction with 
 \SubmitCmd{error}, otherwise \File{stderr} will
 sent to \File{/dev/null} on Unix machines and
@@ -941,8 +940,7 @@ and transferred back when the job completes.
 This command is ignored if the job ClassAd attribute
 \Attr{TransferOut} is
 \Expr{False}.
-The default value is \Expr{True} in the grid
-universe and \Expr{False} otherwise.
+The default value is \Expr{False}.
 This command must be used in conjunction with 
 \SubmitCmd{output}, otherwise \File{stdout} will
 sent to \File{/dev/null} on Unix machines and
@@ -1157,7 +1155,7 @@ Defaults to \Expr{False}.
 \item[keep\_claim\_idle = $<$integer$>$] 
 An integer number of seconds
 that a job requests the \Condor{schedd} to wait before releasing its
-claim after the job exits.
+claim after the job exits or after the job is removed.
 
 The process by which the 
 \Condor{schedd} claims a \Condor{startd} is somewhat time-consuming.
@@ -1957,6 +1955,18 @@ Different services may offer different instance types,
 so no default value is set.
 
 %%%%%%%%%%%%%%%%%%%
+%% ec2_keypair
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!ec2\_keypair}
+\item[ec2\_key\_pair = $<$ssh key-pair name$>$]
+For grid type \SubmitCmd{ec2} jobs, 
+specifies the name of an SSH key-pair that is already registered
+with the EC2 service.
+The associated private key can be used to \Prog{ssh} into the
+virtual machine once it is running.
+
+%%%%%%%%%%%%%%%%%%%
 %% ec2_keypair_file
 %%%%%%%%%%%%%%%%%%%
 
@@ -1967,6 +1977,8 @@ specifies the complete path and file name of a file into which
 HTCondor will write an SSH key for use with ec2 jobs. 
 The key can be used to \Prog{ssh} into the
 virtual machine once it is running.
+If \SubmitCmd{ec2\_keypair} is specified for a job,
+\SubmitCmd{ec2\_keypair\_file} is ignored.
 
 %%%%%%%%%%%%%%%%%%%
 %% ec2_secret_access_key
@@ -3362,6 +3374,7 @@ following \Arg{attribute} into the job ClassAd with the given
 \end{description} 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{Starter pre and post scripts}
 \emph{PRE AND POST SCRIPTS IMPLEMENTED WITH SPECIALLY-NAMED ATTRIBUTES}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{description} 
@@ -3372,11 +3385,11 @@ following \Arg{attribute} into the job ClassAd with the given
 
 \label{man-condor-submit-prescript}
 \index{submit commands!+PreCmd}
-\item[+PreCmd = $<$executable$>$]
+\item[+PreCmd = \texttt{"}$<$executable$>$\texttt{"}]
 A vanilla universe job may specify that a script is to be run 
 on the execute machine before the job, and this is called a prescript.
 Definition of this specifically-named attribute causes the script,
-identified by path and file name to be executed. 
+identified by path and file name, to be executed. 
 The prescript could prepare or initialize the job.
 Note that this definition of a prescript is different from the PRE script 
 described in DAGMan.
@@ -3386,16 +3399,40 @@ so it must be entered into the \SubmitCmd{transfer\_input\_files} list,
 when file transfer is enabled.
 
 %%%%%%%%%%%%%%%%%%%
+%% +PreArgs
+%%%%%%%%%%%%%%%%%%%
+\label{man-condor-submit-preargs}
+\index{submit commands!+PreArgs}
+\item[+PreArgs = \texttt{"}$<$argument\_list$>$\texttt{"}]
+Defines command line arguments for the prescript, 
+presuming the old syntax, as defined at ~\ref{man-condor-submit-arguments}.
+
+%%%%%%%%%%%%%%%%%%%
+%% +PreArguments
+%%%%%%%%%%%%%%%%%%%
+\label{man-condor-submit-prearguments}
+\index{submit commands!+PreArguments}
+\item[+PreArguments = \texttt{"}$<$argument\_list$>$\texttt{"}]
+Defines command line arguments for the prescript, 
+presuming the new syntax as defined at ~\ref{man-condor-submit-arguments}.
+An exception to the syntax is that double
+quotes must be escaped with a backslash instead of another double
+quote. 
+
+Note that if both +PreArgs and +PreArguments are specified, the
++PreArguments value is used and the +PreArgs value is ignored.
+
+%%%%%%%%%%%%%%%%%%%
 %% +PostCmd
 %%%%%%%%%%%%%%%%%%%
 
 \label{man-condor-submit-postscript}
 \index{submit commands!+PostCmd}
-\item[+PostCmd = $<$executable$>$]
+\item[+PostCmd = \texttt{"}$<$executable$>$\texttt{"}]
 A vanilla universe job may specify that a script is to be run 
 on the execute machine after the job exits, and this is called a postscript.
 Definition of this specifically-named attribute causes the script,
-identified by path and file name to be executed. 
+identified by path and file name, to be executed. 
 The postscript is run if the job exits, but not if the job is evicted.
 Note that this definition of a postscript is different from the POST script 
 described in DAGMan.
@@ -3404,8 +3441,53 @@ as the main executable is,
 so it must be entered into the \SubmitCmd{transfer\_input\_files} list,
 when file transfer is enabled.
 
+%%%%%%%%%%%%%%%%%%%
+%% +PostArgs
+%%%%%%%%%%%%%%%%%%%
+\label{man-condor-submit-postargs}
+\index{submit commands!+PostArgs}
+\item[+PostArgs = \texttt{"}$<$argument\_list$>$\texttt{"}]
+Defines command line arguments for the postscript, 
+presuming the old syntax as defined at ~\ref{man-condor-submit-arguments}.
+
+%%%%%%%%%%%%%%%%%%%
+%% +PostArguments
+%%%%%%%%%%%%%%%%%%%
+\label{man-condor-submit-postarguments}
+\index{submit commands!+PostArguments}
+\item[+PostArguments = \texttt{"}$<$argument\_list$>$\texttt{"}]
+Defines command line arguments for the postscript, 
+presuming the new syntax as defined at
+(~\ref{man-condor-submit-arguments}.
+An exception to the syntax is that double
+quotes must be escaped with a backslash instead of another double
+quote mark.
+
+Note that if both +PostArgs and +PostArguments are specified, the
++PostArguments value is used and the +PostArgs value is ignored.
+
 \end{description} 
 
+If any of the prescript or postscript values are not enclosed
+in double quotes, they are silently ignored.
+
+Below is an example of the use of starter pre and post scripts:
+
+\begin{verbatim}
++PreCmd		= "my_pre"
++PreArgs	= "pre\"arg1 prea'rg2"
++PostCmd	= "my_post"
++PostArguments	= "post\"arg1 'post''ar g2'"
+\end{verbatim}
+
+For this example \Attr{PreArgs} generates a first argument of
+\verb@pre"a1"@ and a second argument of \verb@pre'a2@.
+\Attr{PostArguments} generates a first argument of
+\verb@post"a1@ and a second argument of \verb@post'a 2@.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\emph{MACROS AND COMMENTS}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \label{macro-in-submit-description-file}
 \index{macro!in submit description file}

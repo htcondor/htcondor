@@ -156,7 +156,7 @@ GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(w
 	if (_getSubmissionSummary->isIdsNil() || _getSubmissionSummary->getIds()->size() == 0) {
 		// no ids supplied...they get them all
 		for (SubmissionCollectionType::iterator i = g_submissions.begin(); g_submissions.end() != i; i++) {
-			sub_map[(*i).first] = (*i).second;
+			sub_map.insert(make_pair((*i).first,(*i).second));
 		}
 	}
 	else {
@@ -175,22 +175,26 @@ GetSubmissionSummaryResponse* AviaryQueryServiceSkeleton::getSubmissionSummary(w
             if (!sid_name.empty()) {
                 SubmissionCollectionType::iterator sct_it = g_submissions.find(sid_name.c_str());
                 if (sct_it != g_submissions.end()) {
-                    sub_map[(*sct_it).first] = (*sct_it).second;
+                    // potentially multiple owners
+                    while (sct_it != g_submissions.end() && 0==strcmp((*sct_it).first,sid_name.c_str())) {
+                        sub_map.insert(make_pair((*sct_it).first,(*sct_it).second));
+                        sct_it++;
+                    }
                 }
                 else {
                     // mark this as not matched when returning our results
-                    sub_map[(*sct_it).first] = NULL;
+                    sub_map.insert(make_pair((*sct_it).first,(SubmissionObject*)NULL));
                 }
             }
             else if (!sid_owner.empty()) {
                 for (SubmissionCollectionType::iterator i = g_submissions.begin(); g_submissions.end() != i; i++) {
                     if (0==strcmp(sid_owner.c_str(),(*i).second->getOwner())) {
-                        sub_map[(*i).first] = (*i).second;
+                        sub_map.insert(make_pair((*i).first,(*i).second));
                     }
                 }
                 if (sub_map.empty()) {
                     // no results for that owner
-                    sub_map[sid_owner.c_str()] = NULL;
+                    sub_map.insert(make_pair(sid_owner.c_str(),(SubmissionObject*)NULL));
                 }
             }
         }
@@ -575,6 +579,13 @@ GetSubmissionIDResponse* AviaryQueryServiceSkeleton::getSubmissionID(wso2wsf::Me
     SubmissionCollectionType::iterator it,start;
     if (offset) {
         start = g_submissions.find(offset->getName().c_str());
+        // potentially multiple owners
+        if (!offset->isOwnerNil() && !offset->getOwner().empty()) {
+            const char* owner = offset->getOwner().c_str();
+            while (start != g_submissions.end() && 0!=strcmp(owner,(*start).second->getOwner())) {
+                start++;
+            }
+        }
     }
     else {
         start = g_submissions.begin();
