@@ -5015,10 +5015,10 @@ Scheduler::negotiationFinished( char const *owner, char const *remote_pool, bool
 	if( satisfied ) {
 		// We are out of jobs.  Stop flocking with less desirable pools.
 		if (Owners[owner_num].FlockLevel > flock_level ) {
-			Owners[owner_num].FlockLevel = flock_level;
 			dprintf(D_ALWAYS,
-					"Decreasing flock level for %s to %d.\n",
-					owner, Owners[owner_num].FlockLevel);
+					"Decreasing flock level for %s to %d from %d.\n",
+					owner, flock_level, Owners[owner_num].FlockLevel);
+			Owners[owner_num].FlockLevel = flock_level;
 		}
 
 		timeout(); // invalidate our ads immediately
@@ -5026,10 +5026,10 @@ Scheduler::negotiationFinished( char const *owner, char const *remote_pool, bool
 		if (Owners[owner_num].FlockLevel < MaxFlockLevel &&
 		    Owners[owner_num].FlockLevel == flock_level)
 		{ 
-			Owners[owner_num].inc_flocking(MaxFlockLevel);
+			int oldlevel = Owners[owner_num].inc_flocking(MaxFlockLevel);
 			dprintf(D_ALWAYS,
-					"Increasing flock level for %s to %d.\n",
-					owner, Owners[owner_num].FlockLevel);
+					"Increasing flock level for %s to %d from %d.\n",
+					owner, Owners[owner_num].FlockLevel,oldlevel);
 
 			timeout(); // flock immediately
 		}
