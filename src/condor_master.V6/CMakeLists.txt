@@ -20,6 +20,8 @@
 file( GLOB MasterRmvElements Example* )
 
 condor_daemon(master "${MasterRmvElements}" "${CONDOR_LIBS};${CONDOR_QMF}" "${C_SBIN}" OFF)
-if (LINUX OR DARWIN)
+# We cannot make a proper static master as we don't have the static globus
+# libraries available
+if (NOT PROPER AND (LINUX OR DARWIN))
   condor_daemon(master_s "${MasterRmvElements}" "${CONDOR_LIBS_STATIC};${CONDOR_QMF}" "${C_SBIN}" OFF)
-endif(LINUX OR DARWIN)
+endif(NOT PROPER AND (LINUX OR DARWIN))
