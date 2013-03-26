@@ -88,7 +88,11 @@ MachAttributes::MachAttributes()
 	dprintf( D_FULLDEBUG, "Memory: Detected %d megs RAM\n", m_phys_mem );
 
 		// identification of the checkpointing platform signature
-	m_ckptpltfrm = strdup(sysapi_ckptpltfrm());
+    const char * ckptpltfrm = param( ATTR_CHECKPOINT_PLATFORM );
+	if( ckptpltfrm == NULL ) {
+    	ckptpltfrm = sysapi_ckptpltfrm();
+    }
+    m_ckptpltfrm = strdup( ckptpltfrm );
 
         // temporary attributes for raw utsname info
 	m_utsname_sysname = NULL;
@@ -422,7 +426,12 @@ MachAttributes::compute( amask_t how_much )
 		if (m_ckptpltfrm) {
 			free(m_ckptpltfrm);
 		}
-		m_ckptpltfrm = strdup(sysapi_ckptpltfrm());
+
+        const char * ckptpltfrm = param( ATTR_CHECKPOINT_PLATFORM );
+    	if( ckptpltfrm == NULL ) {
+        	ckptpltfrm = sysapi_ckptpltfrm();
+        }
+        m_ckptpltfrm = strdup( ckptpltfrm );
 
 		pair_strings_vector root_dirs = root_dir_list();
 		std::stringstream result;
