@@ -1090,12 +1090,13 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 		else if (fstat(fd, &stat_buf) < 0)
 		{
 			dprintf(D_ALWAYS, "Cannot stat file %s for peeking at logs.\n", it->c_str());
+			close(fd);
 		}
 		else
 		{
 			size = stat_buf.st_size;
+			close(fd);
 		}
-		close(fd);
 		if (offset > 0 && size < static_cast<size_t>(offset))
 		{
 			offset = size;
