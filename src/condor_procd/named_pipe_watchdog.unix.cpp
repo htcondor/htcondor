@@ -25,7 +25,7 @@
 bool
 NamedPipeWatchdog::initialize(const char* path)
 {
-	ASSERT(!m_initialized);
+	assert(!m_initialized);
 
 	m_pipe_fd = safe_open_wrapper_follow(path, O_RDONLY | O_NONBLOCK);
 	if (m_pipe_fd == -1) {
@@ -53,7 +53,7 @@ NamedPipeWatchdog::~NamedPipeWatchdog()
 int
 NamedPipeWatchdog::get_file_descriptor()
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	return m_pipe_fd;
 }

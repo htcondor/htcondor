@@ -75,10 +75,10 @@ LocalClient::LocalClient() :
 bool
 LocalClient::initialize(const char* pipe_addr)
 {
-	ASSERT(!m_initialized);
+	assert(!m_initialized);
 
 	m_pipe_addr = strdup(pipe_addr);
-	ASSERT(m_pipe_addr != NULL);
+	assert(m_pipe_addr != NULL);
 
 	m_initialized = true;
 	return true;
@@ -100,10 +100,10 @@ LocalClient::~LocalClient()
 bool
 LocalClient::start_connection(void* buffer, int len)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
     _lc_auto_save_runtime rt(pfc_lc_rt_start_connection);
 
-	ASSERT(m_pipe == INVALID_HANDLE_VALUE);
+	assert(m_pipe == INVALID_HANDLE_VALUE);
 	while (true) {
 		m_pipe = CreateFile(m_pipe_addr,                   // path to pipe
 		                    GENERIC_READ | GENERIC_WRITE,  // read-write access
@@ -137,7 +137,7 @@ LocalClient::start_connection(void* buffer, int len)
         pfc_lc_rt_write_pipe = rt.step();
 		return false;
 	}
-	ASSERT(bytes == len);
+	assert(bytes == len);
     pfc_lc_rt_write_pipe = rt.step();
 
 	return true;
@@ -146,10 +146,10 @@ LocalClient::start_connection(void* buffer, int len)
 void
 LocalClient::end_connection()
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
     _lc_auto_save_runtime rt(pfc_lc_rt_end_connection);
 
-	ASSERT(m_pipe != INVALID_HANDLE_VALUE);
+	assert(m_pipe != INVALID_HANDLE_VALUE);
 	CloseHandle(m_pipe);
 	m_pipe = INVALID_HANDLE_VALUE;
 }
@@ -157,7 +157,7 @@ LocalClient::end_connection()
 bool
 LocalClient::read_data(void* buffer, int len)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
     _lc_auto_save_runtime rt(pfc_lc_rt_read_data);
 
 	DWORD bytes;
@@ -165,7 +165,7 @@ LocalClient::read_data(void* buffer, int len)
 		dprintf(D_ALWAYS, "ReadFile error: %u\n", GetLastError());
 		return false;
 	}
-	ASSERT(bytes == len);
+	assert(bytes == len);
 
 	return true;
 }

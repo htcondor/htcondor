@@ -75,9 +75,6 @@ main(int argc, char* argv[])
 		return 1;
 	}
 
-	config();
-	dprintf_set_tool_debug("TOOL", 0);
-
 	int cmd_argc = argc - 1;
 	char** cmd_argv = argv + 1;
 
@@ -128,11 +125,8 @@ main(int argc, char* argv[])
 	// If a procd address wasn't specified on the command line, see if we
 	// have an entry in a config file to use.
 	if (procd_address == NULL) {
-		procd_address = param("PROCD_ADDRESS");
-		if (procd_address == NULL) {
-			fprintf(stderr, "error: PROCD_ADDRESS not defined\n");
-			return 1;
-		}
+		fprintf(stderr, "error: procd address (-A) not specified.\n");
+		return 1;
 	}
 
 	

@@ -43,7 +43,7 @@ named_pipe_make_client_addr(const char* orig_addr,
 	               MAX_INT_STR_LEN +
 	               1;
 	char* addr = new char[addr_len];
-	ASSERT(addr != NULL);
+	assert(addr != NULL);
 
 	// use snprintf to fill in the buffer
 	//
@@ -54,11 +54,13 @@ named_pipe_make_client_addr(const char* orig_addr,
 	                   pid,
 	                   serial_number);
 	if (ret < 0) {
-		EXCEPT("snprintf error: %s (%d)", strerror(errno), errno);
+		fprintf(stderr, "snprintf error: %s (%d)", strerror(errno), errno);
+		abort();
 	}
 	if (ret >= addr_len) {
-		EXCEPT("error: pid string would exceed %d chars",
+		fprintf(stderr, "error: pid string would exceed %d chars",
 		       MAX_INT_STR_LEN);
+		abort();
 	}
 
 	return addr;
@@ -71,7 +73,7 @@ named_pipe_make_watchdog_addr(const char* orig_path)
 {
 	size_t orig_path_len = strlen(orig_path);
 	char* watchdog_path = new char[orig_path_len + sizeof(WATCHDOG_SUFFIX)];
-	ASSERT(watchdog_path != NULL);
+	assert(watchdog_path != NULL);
 	strcpy(watchdog_path, orig_path);
 	strcpy(watchdog_path + orig_path_len, WATCHDOG_SUFFIX);
 
