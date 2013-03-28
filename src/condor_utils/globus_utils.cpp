@@ -1355,8 +1355,21 @@ x509_receive_delegation( const char *destination_file,
 		return -1;
 	}
 
-	// see if we'd like the default attributes or something custom
+	// see if we'd like the default number of bits or something custom
 	int bits = param_integer("GSI_DELEGATION_KEYBITS", 0);
+
+	// default for clock skew is currently (2013-03-27) 5 minutes, but allow
+	// that to be changed
+	int skew = param_integer("GSI_DELEGATION_CLOCK_SKEW_ALLOWABLE", 0);
+
+	// prepare any special attributes desired
+	result = globus_gsi_proxy_handle_attrs_init( &handle_attrs );
+	if ( result != GLOBUS_SUCCESS ) {
+		rc = -1;
+		error_line = __LINE__;
+		goto cleanup;
+	}
+
 	if (bits) {
 		// as of 2013-02-27, a bug in globus 5.2.1 causes a crash if bits
 		// is less than 512.  so we just make that the minimum.  there is no
@@ -1367,13 +1380,6 @@ x509_receive_delegation( const char *destination_file,
 			bits = 512;
 		}
 
-		result = globus_gsi_proxy_handle_attrs_init( &handle_attrs );
-		if ( result != GLOBUS_SUCCESS ) {
-			rc = -1;
-			error_line = __LINE__;
-			goto cleanup;
-		}
-
 		result = globus_gsi_proxy_handle_attrs_set_keybits( handle_attrs, bits );
 		if ( result != GLOBUS_SUCCESS ) {
 			rc = -1;
@@ -1382,8 +1388,14 @@ x509_receive_delegation( const char *destination_file,
 		}
 	}
 
-	// handle_attrs is either NULL (which is fine) or contains the above object
-	// specifying custom attributes.
+	if (skew) {
+		result = globus_gsi_proxy_handle_attrs_set_clock_skew_allowable( handle_attrs, skew );
+		if ( result != GLOBUS_SUCCESS ) {
+			rc = -1;
+			error_line = __LINE__;
+			goto cleanup;
+		}
+	}
 
 	result = globus_gsi_proxy_handle_init( &request_handle, handle_attrs );
 	if ( result != GLOBUS_SUCCESS ) {
