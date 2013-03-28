@@ -32,10 +32,16 @@ class BoincJob;
 
 struct BoincBatch;
 
+enum BoincSubmitResponse {
+	BoincSubmitWait,
+	BoincSubmitSuccess,
+	BoincSubmitFailure
+};
+
 class BoincResource : public BaseResource
 {
  protected:
-	BoincResource( const char *resource_name );
+	BoincResource( const char *resource_name, const char *authenticator );
 	~BoincResource();
 
  public:
@@ -49,34 +55,54 @@ class BoincResource : public BaseResource
 
 	void PublishResourceAd( ClassAd *resource_ad );
 
-	bool JoinBatch( std::string &batch_name, std::string &error_str );
-	int Submit( /* ... */ );
+	bool JoinBatch( BoincJob *job, std::string &batch_name,
+					std::string &error_str );
+	BoincSubmitResponse Submit( BoincJob *job, std::string &error_str );
 
-	static const char *CanonicalName( const char *name );
-	static const char *HashName( const char *resource_name );
+	static const char *HashName( const char *resource_name,
+								 const char *authenticator );
 
-	static BoincResource *FindOrCreateResource( const char *resource_name );
+	static BoincResource *FindOrCreateResource( const char *resource_name,
+												const char *authenticator );
 
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
 
+	static bool BatchReadyToSubmit( BoincBatch *batch, int *delay = NULL );
+
 	// This should be private, but BoincJob references it directly for now
 	static HashTable <HashKey, BoincResource *> ResourcesByName;
+
+	char *m_serviceUri;
+	char *m_authenticator;
 
  private:
 	void DoPing( time_t& ping_delay, bool& ping_complete,
 				 bool& ping_succeeded );
 
+	void UpdateBoincLeases();
+
 	bool initialized;
 
-	char *serviceUri;
+	void DoBatchSubmits();
+
 	static int gahpCallTimeout;
 	GahpClient *gahp; // For pings.
 	GahpClient *m_statusGahp;
 	GahpClient *m_leaseGahp;
+	GahpClient *m_submitGahp;
 
-	std::list<BoincBatch *> m_batches
+	// TODO add a ready-to-submit set?
+	//   This could avoid copious rechecks for whether a batch is ready
+	//   to be submitted.
+	//   Could instead add new BatchSubmitStatus BatchWaitingToSubmit
+	std::list<BoincBatch *> m_batches;
 	StringList m_statusBatches;
+	int m_leaseTid;
+	BoincBatch *m_activeLeaseBatch;
+	int m_activeLeaseTime;
+	int m_submitTid;
+	BoincBatch *m_activeSubmitBatch;
 
 protected:
 
@@ -84,8 +110,8 @@ protected:
 	BatchStatusResult FinishBatchStatus();
 	GahpClient * BatchGahp();
 
-	void DoUpdateSharedLease( time_t& update_delay, bool& update_complete, 
-							  bool& update_succeeded );
+//	void DoUpdateSharedLease( time_t& update_delay, bool& update_complete, 
+//							  bool& update_succeeded );
 };
 
 #endif

@@ -32,7 +32,9 @@
 #include <map>
 #include <queue>
 #include <list>
+#include <vector>
 #include <string>
+#include <utility>
 
 
 struct GahpProxyInfo
@@ -45,6 +47,7 @@ struct GahpProxyInfo
 typedef void (* unicore_gahp_callback_func_t)(const char *update_ad_string);
 
 class BoincJob;
+class BoincResource;
 
 #define GAHPCLIENT_DEFAULT_SERVER_ID "DEFAULT"
 #define GAHPCLIENT_DEFAULT_SERVER_PATH "DEFAULT"
@@ -139,6 +142,8 @@ class GahpServer : public Service {
 
 	void poll_real_soon();
 
+	bool useBoincResource( BoincResource *resource );
+	bool command_boinc_select_project( const char *url, const char *auth );
 
 	bool cacheProxyFromFile( GahpProxyInfo *new_proxy );
 	bool uncacheProxy( GahpProxyInfo *gahp_proxy );
@@ -197,6 +202,8 @@ class GahpServer : public Service {
 
 	unicore_gahp_callback_func_t unicore_gahp_callback_func;
 	int unicore_gahp_callback_reqid;
+
+	BoincResource *m_currentBoincResource;
 
 	GahpProxyInfo *master_proxy;
 	int proxy_check_tid;
@@ -303,6 +310,8 @@ class GahpClient : public Service {
 		void setNormalProxy( Proxy *proxy );
 
 		void setDelegProxy( Proxy *proxy );
+
+		void setBoincResource( BoincResource *server );
 
 		Proxy *getMasterProxy();
 
@@ -755,37 +764,32 @@ class GahpClient : public Service {
 						   const char *password,
 						   bool *autostart );
 
-		int boinc_ping( const char *service_url );
+		int boinc_ping();
 
-		int boinc_submit( const char *service_url,
-						  const char *batch_name,
-						  const std::vector<BoincJob *> &jobs );
+		int boinc_submit( const char *batch_name,
+						  const std::set<BoincJob *> &jobs );
 
-		typedef vector< pair< string, string > > BoincBatchResults;
-		typedef vector< BoincBatchResults > BoincQueryResults;
-//		typedef vector< vector< pair< string, string > > > BoincQueryResults;
-		int boinc_query_batch( const char *service_url,
-							   StringList &batch_names,
+		typedef std::vector< std::pair< std::string, std::string > > BoincBatchResults;
+		typedef std::vector< BoincBatchResults > BoincQueryResults;
+//		typedef std::vector< std::vector< std::pair< std::string, std::string > > > BoincQueryResults;
+		int boinc_query_batch( StringList &batch_names,
 							   BoincQueryResults &results );
 
-		typedef vector< pair< string, string> > BoincOutputFiles;
-		int boinc_fetch_output( const char *service_url,
-								const char *job_name,
+		typedef std::vector< std::pair< std::string, std::string> > BoincOutputFiles;
+		int boinc_fetch_output( const char *job_name,
 								const char *iwd,
 								const char *stderr,
+								bool transfer_all,
 								const BoincOutputFiles &output_files,
 								int &exit_status,
 								double &cpu_time,
 								double &wallclock_time );
 
-		int boinc_abort_jobs( const char *service_url,
-							  StringList &job_names );
+		int boinc_abort_jobs( StringList &job_names );
 
-		int boinc_retire_batch( const char *service_url,
-								const char *batch_name );
+		int boinc_retire_batch( const char *batch_name );
 
-		int boinc_set_lease( const char *service_url,
-							 const char *batch_name,
+		int boinc_set_lease( const char *batch_name,
 							 time_t new_lease_time );
 
 #ifdef CONDOR_GLOBUS_HELPER_WANT_DUROC
@@ -837,6 +841,7 @@ class GahpClient : public Service {
 		GahpProxyInfo *normal_proxy;
 		GahpProxyInfo *deleg_proxy;
 		GahpProxyInfo *pending_proxy;
+		BoincResource *m_boincResource;
 		std::string error_string;
 
 			// These data members all deal with the GAHP

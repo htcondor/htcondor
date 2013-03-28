@@ -34,6 +34,10 @@
 #include "gridmanager.h"
 #include "boincjob.h"
 
+using std::set;
+using std::vector;
+using std::pair;
+using std::string;
 
 #define NULLSTRING "NULL"
 #define GAHP_PREFIX "GAHP:"
@@ -124,6 +128,7 @@ GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
 	current_proxy = NULL;
 	skip_next_r = false;
 	m_deleteMeTid = TIMER_UNSET;
+	m_currentBoincResource = NULL;
 
 	next_reqid = 1;
 	rotated_reqids = false;
@@ -346,6 +351,7 @@ GahpClient::GahpClient(const char *id, const char *path, const ArgList *args)
 	user_timerid = -1;
 	normal_proxy = NULL;
 	deleg_proxy = NULL;
+	m_boincResource = NULL;
 	error_string = "";
 
 	server->AddGahpClient();
@@ -1254,6 +1260,59 @@ GahpServer::UnregisterProxy( Proxy *proxy )
 	}
 }
 
+bool
+GahpServer::useBoincResource( BoincResource *resource )
+{
+	if ( m_currentBoincResource == resource ) {
+		return true;
+	}
+
+	if ( command_boinc_select_project( resource->m_serviceUri,
+									   resource->m_authenticator ) ) {
+		m_currentBoincResource = resource;
+		return true;
+	} else {
+		return false;
+	}
+}
+
+bool
+GahpServer::command_boinc_select_project( const char *url, const char *auth )
+{
+	static const char *command = "USE_CACHED_PROXY";
+
+		// Check if this command is supported
+	if  ( m_commands_supported->contains_anycase( command ) == FALSE ) {
+		return false;
+	}
+
+	if ( url == NULL || auth == NULL ) {
+		return false;
+	}
+
+	std::string buf = command;
+	buf += " ";
+	buf += escapeGahpString( url );
+	buf += " ";
+	buf += escapeGahpString( auth );
+	write_line( buf.c_str() );
+
+	Gahp_Args result;
+	read_argv( result );
+	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
+		const char *reason;
+		if ( result.argc > 1 ) {
+			reason = result.argv[1];
+		} else {
+			reason = "Unspecified error";
+		}
+		dprintf( D_ALWAYS, "GAHP command '%s' failed: %s\n", command, reason );
+		return false;
+	}
+
+	return true;
+}
+
 void
 GahpServer::setPollInterval(unsigned int interval)
 {
@@ -1394,6 +1453,14 @@ GahpClient::setDelegProxy( Proxy *proxy )
 	GahpProxyInfo *gahp_proxy = server->RegisterProxy( proxy );
 	ASSERT(gahp_proxy);
 	deleg_proxy = gahp_proxy;
+}
+
+void GahpClient::setBoincResource( BoincResource *server )
+{
+	if ( pending_command && !pending_submitted_to_gahp ) {
+		dprintf( D_ALWAYS, "WARNING: Chaning BOINC server while command waiting to send to GAHP!\n" );
+	}
+	m_boincResource = server;
 }
 
 Proxy *
@@ -2333,6 +2400,13 @@ GahpClient::now_pending(const char *command,const char *buf,
 	if ( server->is_initialized == true && server->can_cache_proxies == true ) {
 		if ( server->useCachedProxy( pending_proxy ) != true ) {
 			EXCEPT( "useCachedProxy() failed!" );
+		}
+	}
+
+		// For Boinc, ensure the command is using the Boinc server it wants.
+	if ( m_boincResource ) {
+		if ( !server->useBoincResource( m_boincResource ) ) {
+			EXCEPT( "useBoincResource() failed!" );
 		}
 	}
 
@@ -8001,7 +8075,7 @@ int GahpClient::dcloud_start_auto( const char *service_url,
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int GahpClient::boinc_ping( const char *service_url )
+int GahpClient::boinc_ping()
 {
 	static const char* command = "BOINC_PING";
 
@@ -8011,13 +8085,6 @@ int GahpClient::boinc_ping( const char *service_url )
 	}
 
 		// Generate request line
-	//if (!service_url) service_url=NULLSTRING;
-	//std::string reqline;
-	//char *esc1 = strdup( escapeGahpString(batch_name) );
-	//int x = formatstr( reqline, "%s", esc1 );
-	//free( esc1 );
-	//ASSERT( x > 0 );
-	//const char *buf = reqline.c_str();
 	const char *buf = NULL;
 
 		// Check if this request is currently pending.  If not, make
@@ -8063,9 +8130,8 @@ int GahpClient::boinc_ping( const char *service_url )
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int GahpClient::boinc_submit( const char *service_url,
-							  const char *batch_name,
-							  const std::vector<BoincJob *> &jobs )
+int GahpClient::boinc_submit( const char *batch_name,
+							  const std::set<BoincJob *> &jobs )
 {
 	static const char* command = "BOINC_SUBMIT";
 
@@ -8076,16 +8142,14 @@ int GahpClient::boinc_submit( const char *service_url,
 
 	ASSERT( !jobs.empty() );
 	int job_cnt = jobs.size();
-	BoincJob *job = jobs.front();
 
 		// Generate request line
-	if (!service_url) service_url=NULLSTRING;
 	if (!batch_name) batch_name=NULLSTRING;
 	std::string reqline;
 	reqline = escapeGahpString( batch_name );
-	formatstr_cat( reqline, " %s %d", escapeGahpString( job->GetAppName() ),
+	formatstr_cat( reqline, " %s %d", escapeGahpString( (*jobs.begin())->GetAppName() ),
 				   job_cnt );
-	for ( vector<BoincJob*>::iterator itr = jobs.begin(); itr != jobs.end();
+	for ( set<BoincJob*>::iterator itr = jobs.begin(); itr != jobs.end();
 		  itr++ ) {
 		ArgList *args_list = (*itr)->GetArgs();
 		char **args = args_list->GetStringArray();
@@ -8100,25 +8164,13 @@ int GahpClient::boinc_submit( const char *service_url,
 
 		vector<pair<string, string> > inputs;
 		(*itr)->GetInputFilenames( inputs );
-		formatstr_cat( " %d", inputs.size() );
-		for ( vector<pair<string, string> >::iterator jtr = inputs.begin(),
+		formatstr_cat( reqline, " %d", inputs.size() );
+		for ( vector<pair<string, string> >::iterator jtr = inputs.begin();
 				  jtr != inputs.end(); jtr++ ) {
 			reqline += " ";
 			reqline += escapeGahpString( jtr->first );
 			reqline += " ";
 			reqline += escapeGahpString( jtr->second );
-		}
-	}
-
-	vector<string> outputs;
-	job->GetOutputFilenames( outputs );
-	if ( outputs.size() == 0 ) {
-		reqline += " ALL";
-	} else {
-		for ( vector<string>::iterator itr = outputs.begin();
-			  itr != outputs.end(); itr++ ) {
-			reqline += " ";
-			reqline += escapeGahpString( *itr );
 		}
 	}
 
@@ -8167,8 +8219,7 @@ int GahpClient::boinc_submit( const char *service_url,
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int GahpClient::boinc_query_batch( const char *service_url,
-								   StringList &batch_names,
+int GahpClient::boinc_query_batch( StringList &batch_names,
 								   BoincQueryResults &results )
 {
 	static const char* command = "BOINC_QUERY_BATCH";
@@ -8179,7 +8230,6 @@ int GahpClient::boinc_query_batch( const char *service_url,
 	}
 
 		// Generate request line
-	if (!service_url) service_url=NULLSTRING;
 	std::string reqline;
 	const char *name;
 	batch_names.rewind();
@@ -8221,10 +8271,10 @@ int GahpClient::boinc_query_batch( const char *service_url,
 			int b = 0;
 			int j_cnt = 0;
 			while ( i < result->argc ) {
-				j_cnt = atoi(i);
+				j_cnt = atoi( result->argv[i] );
 				i++;
 				results.push_back( vector< pair< string, string > >() );
-				for ( j = 0; j < j_cnt; j++ ) {
+				for ( int j = 0; j < j_cnt; j++ ) {
 					results[b].push_back( pair<string, string>( result->argv[i], result->argv[i+1] ) );
 					i += 2;
 				}
@@ -8247,11 +8297,11 @@ int GahpClient::boinc_query_batch( const char *service_url,
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int GahpClient::boinc_fetch_output( const char *service_url,
-									const char *job_name,
+int GahpClient::boinc_fetch_output( const char *job_name,
 									const char *iwd,
 									const char *stderr,
-									const GahpClieng::BoincOutputFiles &output_files,
+									bool transfer_all,
+									const GahpClient::BoincOutputFiles &output_files,
 									int &exit_status,
 									double &cpu_time,
 									double &wallclock_time )
@@ -8264,7 +8314,6 @@ int GahpClient::boinc_fetch_output( const char *service_url,
 	}
 
 		// Generate request line
-	if (!service_url) service_url=NULLSTRING;
 	if (!job_name) job_name=NULLSTRING;
 	if (!iwd) iwd=NULLSTRING;
 	if (!stderr) stderr=NULLSTRING;
@@ -8276,17 +8325,18 @@ int GahpClient::boinc_fetch_output( const char *service_url,
 	free( esc1 );
 	free( esc2 );
 	free( esc3 );
-	if ( output_files.empty() ) {
-		reqline += "ALL";
+	if ( transfer_all ) {
+		reqline += "ALL ";
 	} else {
-		formatstr_cat( reqline, "%d", output_files.size() );
-		for ( BoincOutputFiles::iterator itr = output_files.begin;
-			  itr != output_files.end(); itr++ ) {
-			reqline += " ";
-			reqline += escapeGahpString( itr->first );
-			reqline += " ";
-			reqline += escapeGahpString( itr->second );
-		}
+		reqline += "SOME ";
+	}
+	formatstr_cat( reqline, "%d", output_files.size() );
+	for ( BoincOutputFiles::const_iterator itr = output_files.begin();
+		  itr != output_files.end(); itr++ ) {
+		reqline += " ";
+		reqline += escapeGahpString( itr->first );
+		reqline += " ";
+		reqline += escapeGahpString( itr->second );
 	}
 	const char *buf = reqline.c_str();
 
@@ -8339,8 +8389,7 @@ int GahpClient::boinc_fetch_output( const char *service_url,
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int GahpClient::boinc_abort_jobs( const char *service_url,
-								  StringList &job_names> )
+int GahpClient::boinc_abort_jobs( StringList &job_names )
 {
 	static const char* command = "BOINC_ABORT_JOBS";
 
@@ -8350,7 +8399,6 @@ int GahpClient::boinc_abort_jobs( const char *service_url,
 	}
 
 		// Generate request line
-	if (!service_url) service_url=NULLSTRING;
 	std::string reqline;
 	const char *name;
 	job_names.rewind();
@@ -8408,8 +8456,7 @@ int GahpClient::boinc_abort_jobs( const char *service_url,
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int GahpClient::boinc_retire_batch( const char *service_url,
-									const char *batch_name )
+int GahpClient::boinc_retire_batch( const char *batch_name )
 {
 	static const char* command = "BOINC_RETIRE_BATCH";
 
@@ -8419,7 +8466,6 @@ int GahpClient::boinc_retire_batch( const char *service_url,
 	}
 
 		// Generate request line
-	if (!service_url) service_url=NULLSTRING;
 	if (!batch_name) batch_name=NULLSTRING;
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(batch_name) );
@@ -8471,8 +8517,7 @@ int GahpClient::boinc_retire_batch( const char *service_url,
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int GahpClient::boinc_set_lease( const char *service_url,
-								 const char *batch_name,
+int GahpClient::boinc_set_lease( const char *batch_name,
 								 time_t new_lease_time )
 {
 	static const char* command = "BOINC_SET_LEASE";
@@ -8483,11 +8528,10 @@ int GahpClient::boinc_set_lease( const char *service_url,
 	}
 
 		// Generate request line
-	if (!service_url) service_url=NULLSTRING;
 	if (!batch_name) batch_name=NULLSTRING;
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(batch_name) );
-	int x = formatstr( reqline, "%s %d", esc1, new_lease_time );
+	int x = formatstr( reqline, "%s %d", esc1, (int)new_lease_time );
 	free( esc1 );
 	ASSERT( x > 0 );
 	const char *buf = reqline.c_str();

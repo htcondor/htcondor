@@ -52,11 +52,11 @@ class BoincJob : public BaseJob
 	void SetRemoteBatchName( const char *batch_name );
 
 	void BuildOutputInfo( std::string &iwd, std::string &stderr,
+						  bool &transfer_all,
 						  GahpClient::BoincOutputFiles &outputs );
 	std::string GetAppName();
 	ArgList *GetArgs();
-	void GetInputFilenames( vector<pair<string, string> > &files );
-	void GetOutputFilenames( vector<string> &files );
+	void GetInputFilenames( std::vector<std::pair<std::string, std::string> > &files );
 
 	static int gahpCallTimeout;
 	static int maxConnectFailures;
