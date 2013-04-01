@@ -66,6 +66,7 @@ daemon_t real_dt = DT_NONE;
 DCCollector* pool = NULL;
 bool fast = false;
 bool peaceful_shutdown = false;
+bool force_shutdown = false;
 bool full = false;
 bool all = false;
 char* constraint = NULL;
@@ -117,6 +118,7 @@ usage( const char *str, int iExitCode )
 				 "(the default)" );
 		fprintf( stderr, "    -fast\t\tquickly shutdown daemons\n" );
 		fprintf( stderr, "    -peaceful\t\twait indefinitely for jobs to finish\n" );
+		fprintf( stderr, "    -force-graceful\t\tupgrade a peaceful shutdown to a graceful shutdown\n" );
 	}
 	if( cmd == VACATE_CLAIM ) {
 		fprintf( stderr, 
@@ -251,6 +253,7 @@ cmdToStr( int c )
 		return "Kill-All-Daemons-Peacefully";
 	case DAEMON_OFF:
 	case DC_OFF_GRACEFUL:
+	case DC_OFF_FORCE:
 		return "Kill-Daemon";
 	case DAEMON_OFF_FAST:
 	case DC_OFF_FAST:
@@ -260,6 +263,8 @@ cmdToStr( int c )
 		return "Kill-Daemon-Peacefully";
 	case DC_SET_PEACEFUL_SHUTDOWN:
 		return "Set-Peaceful-Shutdown";
+	case DC_SET_FORCE_SHUTDOWN:
+		return "Set-Force-Shutdown";
 	case DAEMONS_ON:
 		return "Spawn-All-Daemons";
 	case DAEMON_ON:
@@ -430,6 +435,7 @@ main( int argc, char *argv[] )
 			if((*tmp)[2] == 'e') { // -peaceful
 				peaceful_shutdown = true;
 				fast = false;
+				force_shutdown = false;
 				switch( cmd ) {
 				case DAEMONS_OFF:
 				case DC_OFF_GRACEFUL:
@@ -475,6 +481,7 @@ main( int argc, char *argv[] )
 				case 'a':
 					fast = true;
 					peaceful_shutdown = false;
+					force_shutdown = false;
 					switch( cmd ) {
 					case DAEMONS_OFF:
 					case DC_OFF_GRACEFUL:
@@ -483,6 +490,19 @@ main( int argc, char *argv[] )
 						break;
 					default:
 						fprintf( stderr, "ERROR: \"-fast\" "
+								 "is not valid with %s\n", MyName );
+						usage( NULL );
+					}
+					break;
+				case 'o': // -force-graceful
+					fast = false;
+					peaceful_shutdown = false;
+					force_shutdown = true;
+					switch( cmd ) {
+					case DAEMONS_OFF:
+						break;
+					default:
+						fprintf( stderr, "ERROR: \"-force-graceful\" "
 								 "is not valid with %s\n", MyName );
 						usage( NULL );
 					}
@@ -790,11 +810,11 @@ main( int argc, char *argv[] )
 	// relavent children.  Currently, only the startd and schedd have
 	// special peaceful behavior.
 
-	if( peaceful_shutdown && real_dt == DT_MASTER ) {
+	if( (peaceful_shutdown || force_shutdown ) && real_dt == DT_MASTER ) {
 		if( (real_cmd == DAEMONS_OFF) ||
 			(real_cmd == DAEMON_OFF && subsys && !strcmp(subsys,"startd")) ||
 			(real_cmd == DAEMON_OFF && subsys && !strcmp(subsys,"schedd")) ||
-			(real_cmd == DC_OFF_GRACEFUL) ||
+			(real_cmd == DC_OFF_GRACEFUL) || (real_cmd == DC_OFF_FORCE) || 
 			(real_cmd == RESTART)) {
 
 			// Temporarily override globals so we can send a different command.
@@ -803,8 +823,11 @@ main( int argc, char *argv[] )
 			int orig_cmd = cmd;
 			bool orig_IgnoreMissingDaemon = IgnoreMissingDaemon;
 
-			cmd = real_cmd = DC_SET_PEACEFUL_SHUTDOWN;
-
+			if( peaceful_shutdown ) {
+				cmd = real_cmd = DC_SET_PEACEFUL_SHUTDOWN;
+			} else if( force_shutdown ) {
+				cmd = real_cmd = DC_SET_FORCE_SHUTDOWN;
+			}
 			// do not abort if the child daemon is not there, because
 			// A) we have no reason to beleave that it _should_ be there
 			// B) if it should be there, the user will get an error when
@@ -1032,6 +1055,9 @@ computeRealAction( void )
 				// a DC_OFF_GRACEFUL, not a DAEMON_OFF 
 			if( dt == DT_MASTER ) {
 				real_cmd = DC_OFF_GRACEFUL;
+				if( force_shutdown ) {
+					real_cmd = DC_OFF_FORCE;
+				}
 			} else {
 				real_cmd = DAEMON_OFF;
 			}
@@ -1484,6 +1510,8 @@ doCommand( Daemon* d )
 					my_cmd = DC_OFF_FAST;
 				} else if( peaceful_shutdown ) {
 					my_cmd = DC_OFF_PEACEFUL;
+				} else if( force_shutdown ) {
+					my_cmd = DC_OFF_FORCE;
 				} else {
 					my_cmd = DC_OFF_GRACEFUL;
 				}
@@ -1542,10 +1570,9 @@ doCommand( Daemon* d )
 
 			// now, print out the right thing depending on what we did
 		if( my_cmd == DAEMON_ON || my_cmd == DAEMON_OFF || 
-			my_cmd == DAEMON_OFF_FAST || 
-			((my_cmd == DC_OFF_GRACEFUL || my_cmd == DC_OFF_FAST) && 
-			 real_dt == DT_MASTER) )
-		{
+				my_cmd == DAEMON_OFF_FAST || ((my_cmd == DC_OFF_GRACEFUL ||
+				my_cmd == DC_OFF_FAST || my_cmd == DC_OFF_FORCE) &&
+				real_dt == DT_MASTER) ) {
 			if( d_type == DT_ANY ) {
 				printf( "Sent \"%s\" command to %s\n",
 						cmdToStr(my_cmd), d->idStr() );
@@ -1566,14 +1593,13 @@ doCommand( Daemon* d )
 			printf( "Sent \"%s\" command to %s\n", cmdToStr(my_cmd), d->idStr() );
 		}
 		sock.close();
-	} while(d->nextValidCm() == true);
-	if( error == true ) {
+	} while( d->nextValidCm() );
+	if( error ) {
 		fprintf( stderr, "Can't connect to %s\n", d->idStr() );
 		all_good = false;
 		return;
 	}
 }
-
 
 void
 version()

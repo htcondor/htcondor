@@ -373,6 +373,8 @@ const int SHARED_PORT_PASS_SOCK = 76;
 #define DC_NOP_ADVERTISE_MASTER (DC_BASE+29)
 // leave 30-39 open -- zmiller
 #define DC_SEC_QUERY        (DC_BASE+40)
+#define DC_SET_FORCE_SHUTDOWN (DC_BASE+41)
+#define DC_OFF_FORCE       (DC_BASE+42)
 
 
 /*

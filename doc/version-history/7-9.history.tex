@@ -29,7 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Add a \Opt{-force-graceful} command-line option to \Condor{off}.  This
+will allow administrators to issue a graceful shutdown command, even after
+issuing a \Opt{-peaceful} command. Previously, a \Opt{-peaceful} \Condor{off}
+command would preclude a \Opt{-graceful} off command.
+\Ticket{2949}
 
 \end{itemize}
 
