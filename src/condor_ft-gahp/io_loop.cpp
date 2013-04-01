@@ -995,6 +995,8 @@ int upload_sandbox_reaper(Service*, int pid, int status) {
 		free( err_msg );
 	}
 
+	close( e.error_pipe );
+
 	// remove from the map
 	sandbox_map.erase(pid);
 
@@ -1028,6 +1030,8 @@ int destroy_sandbox_reaper(Service*, int pid, int status) {
 
 		free( err_msg );
 	}
+
+	close( e.error_pipe );
 
 	// remove from the map
 	sandbox_map.erase(pid);
