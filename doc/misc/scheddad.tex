@@ -780,7 +780,10 @@ reported once a full time span has accumulated.
   file transfer processes have spent time reading from the network
   when transferring output from jobs.  One file transfer process
   spending nearly all of its time reading from the network will
-  generate a load close to 1.0.
+  generate a load close to 1.0.  The reason a file transfer process may
+  spend a long time writing to the network could be a network
+  bottleneck on the path between the submit and execute machine.  It
+  could also be caused by slow reads from the disk on the execute side.
   The time spans that are published are configured by
   \Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}, which defaults to
   1m, 5m, 1h, and 1d.  When less than one full time span has
@@ -796,7 +799,10 @@ reported once a full time span has accumulated.
 \item[\AdAttr{FileTransferNetReadSeconds}] Total number of submit-side
   transfer process seconds spent reading from the network when
   transferring output from jobs since this \Condor{schedd} was
-  started.
+  started.  The reason a file transfer process may
+  spend a long time writing to the network could be a network
+  bottleneck on the path between the submit and execute machine.  It
+  could also be caused by slow reads from the disk on the execute side.
   If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
   for each active user, this attribute is also published prefixed by
   the user name, with the name
@@ -810,7 +816,10 @@ reported once a full time span has accumulated.
   submit-side file transfer processes have spent time writing to the
   network when transferring input to jobs.  One file transfer process
   spending nearly all of its time writing to the network will generate
-  a load close to 1.0.
+  a load close to 1.0.  The reason a file transfer process may spend
+  a long time writing to the network could be a network bottleneck on
+  the path between the submit and execute machine.  It could also be
+  caused by slow writes to the disk on the execute side.
   The time spans that are published are configured by
   \Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}, which defaults to
   1m, 5m, 1h, and 1d.  When less than one full time span has
@@ -826,7 +835,10 @@ reported once a full time span has accumulated.
 \item[\AdAttr{FileTransferNetWriteSeconds}] Total number of
   submit-side transfer process seconds spent writing to the network
   when transferring input to jobs since this \Condor{schedd} was
-  started.
+  started.  The reason a file transfer process may spend
+  a long time writing to the network could be a network bottleneck on
+  the path between the submit and execute machine.  It could also be
+  caused by slow writes to the disk on the execute side.
   The time spans that are published are configured by
   \Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}, which defaults to
   1m, 5m, 1h, and 1d.  When less than one full time span has
