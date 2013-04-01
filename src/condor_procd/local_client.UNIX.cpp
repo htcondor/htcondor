@@ -49,13 +49,13 @@ LocalClient::LocalClient() :
 bool
 LocalClient::initialize(const char* server_addr)
 {
-	ASSERT(!m_initialized);
+	assert(!m_initialized);
 
 	// first, connect to the server's "watchdog server" pipe
 	//
 	char* watchdog_addr = named_pipe_make_watchdog_addr(server_addr);
 	m_watchdog = new NamedPipeWatchdog;
-	ASSERT(m_watchdog != NULL);
+	assert(m_watchdog != NULL);
 	bool ok = m_watchdog->initialize(watchdog_addr);
 	delete[] watchdog_addr;
 	if (!ok) {
@@ -67,7 +67,7 @@ LocalClient::initialize(const char* server_addr)
 	// now, connect to the server's "command" pipe
 	//
 	m_writer = new NamedPipeWriter;
-	ASSERT(m_writer != NULL);
+	assert(m_writer != NULL);
 	if (!m_writer->initialize(server_addr)) {
 		delete m_writer;
 		m_writer = NULL;
@@ -120,12 +120,12 @@ LocalClient::~LocalClient()
 bool
 LocalClient::start_connection(void* payload_buf, int payload_len)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	// create a named pipe reader to receive the response
 	//
 	m_reader = new NamedPipeReader;
-	ASSERT(m_reader != NULL);
+	assert(m_reader != NULL);
 	if (!m_reader->initialize(m_addr)) {
 		dprintf(D_ALWAYS,
 		        "LocalClient: error initializing NamedPipeReader\n");
@@ -147,7 +147,7 @@ LocalClient::start_connection(void* payload_buf, int payload_len)
 	//
 	int msg_len = sizeof(pid_t) + sizeof(int) + payload_len;
 	char* msg_buf = new char[msg_len];
-	ASSERT(msg_buf != NULL);
+	assert(msg_buf != NULL);
 	char* ptr = msg_buf;
 	memcpy(ptr, &m_pid, sizeof(pid_t));
 	ptr += sizeof(pid_t);
@@ -171,9 +171,9 @@ LocalClient::start_connection(void* payload_buf, int payload_len)
 void
 LocalClient::end_connection()
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
-	ASSERT(m_reader != NULL);
+	assert(m_reader != NULL);
 	delete m_reader;
 	m_reader = NULL;
 }
@@ -181,6 +181,6 @@ LocalClient::end_connection()
 bool
 LocalClient::read_data(void* buffer, int len)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 	return m_reader->read_data(buffer, len);
 }

@@ -80,20 +80,20 @@ NamedPipeWriter::~NamedPipeWriter()
 void
 NamedPipeWriter::set_watchdog(NamedPipeWatchdog* watchdog)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 	m_watchdog = watchdog;
 }
 
 bool
 NamedPipeWriter::write_data(void* buffer, int len)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	// if we're writing to a pipe that has multiple writers,
 	// we need to make sure our messages are no larger than
 	// PIPE_BUF to guarantee atomic writes
 	//
-	ASSERT(len <= PIPE_BUF);
+	assert(len <= PIPE_BUF);
 
 	// if we have a watchdog, we don't go right into a blocking
 	// write. instead, we select with both the real pipe and the

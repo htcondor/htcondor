@@ -83,7 +83,7 @@ std::string amazonURLEncode( const std::string & input )
         } else {
             char percentEncode[4];
             int written = snprintf( percentEncode, 4, "%%%.2hhX", input[i] );
-            assert( written == 3 );
+            ASSERT( written == 3 );
             output.append( percentEncode );
         }
     }
@@ -203,7 +203,7 @@ bool AmazonRequest::SendRequest() {
     // be of the form '[http[s]|x509|euca3[s]]://hostname[:port][/path]*'.
     Regex r; int errCode = 0; const char * errString = 0;
     bool patternOK = r.compile( "([^:]+)://(([^/]+)(/.*)?)", & errString, & errCode );
-    assert( patternOK );
+    ASSERT( patternOK );
     ExtArray<MyString> groups(5);
     bool matchFound = r.match( this->serviceURL.c_str(), & groups );
     if( (! matchFound) || (groups[1] != "http" && groups[1] != "https" && groups[1] != "x509" && groups[1] != "euca3" && groups[1] != "euca3s" ) ) {

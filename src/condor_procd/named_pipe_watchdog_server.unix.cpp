@@ -26,7 +26,7 @@
 bool
 NamedPipeWatchdogServer::initialize(const char* path)
 {
-	ASSERT(!m_initialized);
+	assert(!m_initialized);
 
 	if (!named_pipe_create(path, m_read_fd, m_write_fd)) {
 		dprintf(D_ALWAYS,
@@ -36,7 +36,7 @@ NamedPipeWatchdogServer::initialize(const char* path)
 	}
 
 	m_path = strdup(path);
-	ASSERT(m_path != NULL);
+	assert(m_path != NULL);
 
 	m_initialized = true;
 
@@ -60,6 +60,6 @@ NamedPipeWatchdogServer::~NamedPipeWatchdogServer()
 char*
 NamedPipeWatchdogServer::get_path()
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 	return m_path;
 }
