@@ -596,13 +596,11 @@ private:
 		// Skip the rest of the node (and consider it successful) if the
 		// PRE script exits with this value.  (-1 means undefined.)
 	int _preskip;
-	int _pre_status;
 
 	enum {
 		PRE_SKIP_INVALID = -1,
 		PRE_SKIP_MIN = 0,
-		PRE_SKIP_MAX = 0xff,
-		NO_PRE_VALUE = -1
+		PRE_SKIP_MAX = 0xff
 	};
 
 	// whether this is a final job

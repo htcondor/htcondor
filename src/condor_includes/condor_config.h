@@ -332,6 +332,9 @@ BEGIN_C_DECLS
 	int  param_boolean_int_with_default( const char* name );
 	int  param_boolean_int_without_default( const char* name, int default_value );
 	
+	// Process an additional chunk of file
+	void process_config_source(const char*, const char*, const char*, int);
+
 	// Write out a config file of non-default values.
 	// Returns 0 on success and -1 on failure.
 	int write_config_file( const char* pathname );

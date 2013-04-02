@@ -1,40 +1,14 @@
 \begin{ManPage}{\label{man-condor-q}\Condor{q}}{1}
 {Display information about jobs in queue}
 \Synopsis \SynProg{\Condor{q}}
-\oOpt{-help} 
+\oOpt{-help [Universe | State]} 
 
 \SynProg{\Condor{q}}
 \ToolDebugOption
-\oOpt{-global} 
-\oOptArg{-submitter}{submitter}
-\oOptArg{-name}{name} 
-\oOptArg{-pool}{centralmanagerhostname[:portnumber]}
-\oOpt{-analyze}
-\oOpt{-better-analyze}
-\oOpt{-run}
-\oOpt{-hold}
-\oOpt{-globus}
-\oOpt{-goodput}
-\oOpt{-io}
-\oOpt{-dag}
-\oOpt{-long}
-\oOpt{-xml}
-\oOptArg{-attributes} {Attr1 [,Attr2 \Dots]}
-\oOptArg{-format} {fmt attr}
-\oOptArg{-autoformat[:tn,lVh]}{attr1 [attr2 ...]}
-\oOpt{-cputime}
-\oOpt{-currentrun}
-\oOpt{-avgqueuetime}
-\oOptArg{-jobads}{file} 
-\oOptArg{-userlog}{file}
-\oOptArg{-machine}{name}
-\oOptArg{-mconstraint}{expression}
-\oOptArg{-slotads}{file}
-\oOptArg{-userprios}{file}
-\oOpt{-stream-results}
-\oOpt{-wide}
-\oArg{\{cluster \Bar cluster.process \Bar owner \Bar
-  \OptArg{-constraint}{expression} \Dots \} }
+\oArg{general options}
+\oArg{restriction list}
+\oArg{output options}
+\oArg{analyze options}
 
 \index{HTCondor commands!condor\_q}
 \index{condor\_q command}
@@ -42,17 +16,10 @@
 \Description
 \Condor{q} displays information about jobs in the HTCondor job queue.  By
 default, \Condor{q} queries the local job queue but this behavior may be 
-modified by specifying:
-\begin{itemize}
-	\item the \Opt{-global} option, which queries all job queues in the pool
-	\item a schedd name with the \Opt{-name} option, which causes the queue of 
-		the named schedd to be queried 
-	\item a submitter with the \Opt{-submitter} option, which causes all queues
-		of the named submitter to be queried
-\end{itemize}
+modified by specifying one of the general options.
 
 To restrict the display to jobs of interest, a list of zero or more 
-restrictions may be supplied.  Each restriction may be one of:
+restriction options may be supplied.  Each restriction may be one of:
 \begin{itemize}
 	\item a \Arg{cluster} and a \Arg{process} matches jobs which
 		belong to the specified cluster and have the specified process number
@@ -77,7 +44,7 @@ format.
 Multiple \Opt{-format} options may be specified in the option list to display
 several attributes of the job.
 If neither \Opt{-long} or \Opt{-format} are specified, \Condor{q} displays a 
-a one line summary of information as follows:
+one line summary of information as follows:
 
 \begin{description}
 \item[ID] The cluster/process id of the condor job. 
@@ -103,17 +70,17 @@ when the attribute is defined, and \Attr{ImageSize} (in Kbytes), otherwise.
 \item[CMD] The name of the executable. 
 \end{description}
 
-If the \Opt{-dag} option is specified, the OWNER column is replaced
+If the output option \Opt{-dag} is specified, the OWNER column is replaced
 with NODENAME for jobs started by the \Condor{dagman} instance.
 
-If the \Opt{-run} option is specified, the ST, PRI, SIZE, and CMD
+If the output option \Opt{-run} is specified, the ST, PRI, SIZE, and CMD
 columns are replaced with:
 
 \begin{description}
 \item[HOST(S)] The host where the job is running.
 \end{description}
 
-If the \Opt{-globus} option is specified, the ST, PRI, SIZE, and CMD
+If the output option \Opt{-globus} is specified, the ST, PRI, SIZE, and CMD
 columns are replaced with:
 \begin{description}
 \item[STATUS] The state that HTCondor believes the job is in.
@@ -150,7 +117,7 @@ Values may also be condor, lsf, or pbs.
 submit description file.
 \end{description}
 
-If the \Opt{-goodput} option is specified, the ST, PRI, SIZE, and CMD
+If the output option \Opt{-goodput} is specified, the ST, PRI, SIZE, and CMD
 columns are replaced with:
 
 \begin{description}
@@ -167,7 +134,7 @@ the job has not (yet) checkpointed, this column contains \texttt{[??????]}.
 run-time.
 \end{description}
 
-If the \Opt{-io} option is specified, the ST, PRI, SIZE, and CMD columns
+If the output option \Opt{-io} is specified, the ST, PRI, SIZE, and CMD columns
 are replaced with:
 
 \begin{description}
@@ -184,7 +151,7 @@ These fields are updated when a job produces a checkpoint or completes.
 If a job
 has not yet produced a checkpoint, this information is not available.
 
-If the \Opt{-cputime} option is specified, the RUN\_TIME 
+If the output option \Opt{-cputime} is specified, the RUN\_TIME 
 column is replaced with:
 
 \begin{description}
@@ -195,63 +162,102 @@ the current run is \emph{not} shown.  If the job has not produced a checkpoint,
 this column contains 0+00:00:00.)
 \end{description}
 
-The \Arg{-analyze} or \Arg{-better-analyze} options may be used to determine why certain jobs are not
+The \Opt{-analyze} or \Opt{-better-analyze} options may be used to determine 
+why certain jobs are not
 running by performing an analysis on a per machine basis for each machine in 
 the pool.  The reasons may vary among failed constraints, insufficient priority,
 resource owner preferences and prevention of preemption by the 
-\Macro{PREEMPTION\_REQUIREMENTS} expression.  If the \Arg{-verbose} option is specified 
-along with the \Arg{-analyze} option, the reason for failure is displayed on a 
-per machine basis. \Arg{-better-analyze} differs from \Arg{-analyze} in that it will
-do matchmaking analyisis on jobs even if they are currently running, or if the reason
-they are not running is not due to matchmaking.	 \Arg{-better-analyze} also produces
-more thourough analysis of complex Requirements and shows the values of relevent job
-ClassAd attributes.  When only a single machine is being analyzed via \Arg{-machine} or
-\Arg{-mconstraint} the values of relevant attributes of the machine ClassAd are also
-displayed.
+\Macro{PREEMPTION\_REQUIREMENTS} expression.  
+If the analyze option \Opt{-verbose} is specified 
+along with the \Opt{-analyze} option, the reason for failure is displayed on a 
+per machine basis. 
+\Opt{-better-analyze} differs from \Opt{-analyze} in that it will
+do matchmaking analysis on jobs even if they are currently running, 
+or if the reason they are not running is not due to matchmaking.
+\Opt{-better-analyze} also produces
+more thorough analysis of complex Requirements and shows the values of 
+relevant job ClassAd attributes.  
+When only a single machine is being analyzed via \Opt{-machine} or
+\Opt{-mconstraint},
+the values of relevant attributes of the machine ClassAd are also displayed.
 
 \begin{Options}
-  \OptItem{\Opt{-help}}{Get a brief description of the supported options}
-  \OptItem{\Opt{-global}}{Get queues of all the submitters in the system}
   \ToolDebugDesc
-  \OptItem{\OptArg{-submitter}{submitter}}{List jobs of specific submitter 
-    from all the queues in the pool}
+  \OptItem{\Opt{-global}}{(general option) Queries all job queues in the pool.}
+  \OptItem{\OptArg{-submitter}{submitter}}{(general option) List jobs of 
+    a specific submitter.} 
+  \OptItem{\OptArg{-name}{name}}{(general option) Query only the job queue 
+    of the named \Condor{schedd} daemon. }
   \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
-    {Use the \Argnm{centralmanagerhostname} as 
-    the central manager to 
-    locate schedds. (The default is the \Macro{COLLECTOR\_HOST}
-    specified in the configuration file.}
-  \OptItem{\Opt{-analyze}}{Perform an analysis why the requested jobs are not running.
-    First a simple analysis determines if the job is not running because it isn't in
-    a runnable state.  If the job is in a runnable state, then this option is equivalent
-    to \Opt{-better-analyze}. }
-  \OptItem{\Opt{-better-analyze}}{Perform an analysis to determine how
-    many resources are available to run the requested jobs.  These results
-    are only meaningful for jobs using HTCondor's matchmaker.  This option
-    is never meaningful for Scheduler universe jobs and only meaningful
-    for grid universe jobs doing matchmaking.}
-  \OptItem{\Opt{-run}}{Get information about running jobs.}
-  \OptItem{\Opt{-hold}}{Get information about jobs in the hold state.
+    {(general option) Use the \Argnm{centralmanagerhostname} as 
+    the central manager to locate \Condor{schedd} daemons.
+    The default is the \MacroNI{COLLECTOR\_HOST},
+    as specified in the configuration.}
+  \OptItem{\OptArg{-jobads}{file}}{(general option) Display jobs from a list of
+    ClassAds from a file, instead of the real ClassAds from the
+    \Condor{schedd} daemon.
+    This is most useful for debugging purposes.
+    The ClassAds appear as if
+    \Condor{q} \Opt{-long} is used with the header stripped out.}
+  \OptItem{\OptArg{-userlog}{file}}{(general option) 
+    Display jobs, with job information coming from a user log,
+    instead of from the real ClassAds from the \Condor{schedd} daemon.
+    This is most useful for automated testing of the status of jobs known to be
+    in the given user log, because it reduces the load on the \Condor{schedd}.
+    A user log does not contain all of the job information, so some fields in
+    the normal output of \Condor{q} will be blank.}
+  \OptItem{\Opt{-cputime}} {(output option) 
+    Instead of wall-clock allocation time (RUN\_TIME), 
+    display remote CPU time accumulated by the job to date in days,
+    hours, minutes, and seconds.  If the job is currently running, time
+    accumulated during the current run is \emph{not} shown.}
+  \OptItem{\Opt{-currentrun}} {(output option)
+    Normally, RUN\_TIME contains all the time
+    accumulated during the current run plus all previous runs.  If this
+    option is specified, RUN\_TIME only displays the time accumulated so
+    far on this current run.}
+  \OptItem{\Opt{-dag}}{(output option) Display DAG node jobs 
+    under their \Condor{dagman} instance. 
+    Child nodes are listed using indentation to show the structure
+    of the DAG. }
+  \OptItem{\Opt{-expert}}{(output option) Display shorter error messages. }
+  \OptItem{\Opt{-globus}}{(output option) Get information only about 
+    jobs submitted to grid resources described as \SubmitCmd{gt2}
+    or \SubmitCmd{gt5}.}
+  \OptItem{\Opt{-goodput}}{(output option) Display job goodput statistics.}
+  \OptItem{\Opt{-help [Universe | State]}}{(output option) Print usage info, 
+    and additionally print job universes or job states.}
+  \OptItem{\Opt{-hold}}{(output option) Get information about jobs in 
+    the hold state.
     Also displays the time the job was placed into the hold state
     and the reason why the job was placed in the hold state.}
-  \OptItem{\Opt{-globus}}{Get information only about jobs submitted
-    to grid resources described as \SubmitCmd{gt2}
-    or \SubmitCmd{gt5}.}
-  \OptItem{\Opt{-goodput}}{Display job goodput statistics.}
-  \OptItem{\Opt{-io}}{Display job input/output summaries.}
-  \OptItem{\Opt{-dag}}{Display DAG node jobs under their \Condor{dagman} 
-    instance. Child nodes are listed using indentation to show the structure
-    of the DAG. }
-  \OptItem{\OptArg{-name}{name}}{Show only the job queue of the named schedd}
-  \OptItem{\Opt{-long}}{Display job ads in long format}
-  \OptItem{\Opt{-xml}}{Display job ads  in XML format.
+  \OptItem{\Opt{-io}}{(output option) Display job input/output summaries.}
+  \OptItem{\Opt{-long}}{(output option) Display entire job ClassAds 
+    in long format.}
+  \OptItem{\Opt{-run}}{(output option) Get information about running jobs.}
+  \OptItem{\Opt{-stream-results}}{(output option)
+    Display results as jobs are fetched
+    from the job queue rather than storing results in memory until all
+    jobs have been fetched.  This can reduce memory consumption when fetching
+    large numbers of jobs, but if \Condor{q} is paused while displaying
+    results, this could result in a timeout in communication with
+    \Condor{schedd}.}
+  \OptItem{\Opt{-version}}{(output option) Print the HTCondor version and exit.}
+  \OptItem{\Opt{-wide}}{(output option) If this option is specified, 
+    and the command portion
+    of the output would cause the output to extend beyond 80 columns,
+    display beyond the 80 columns. }
+  \OptItem{\Opt{-xml}}{(output option) Display entire job ClassAds 
+    in XML format.
     The XML format is fully defined in the reference manual,
     obtained from the ClassAds web page, with a link at
     \URL{http://research.cs.wisc.edu/htcondor/research.html}.}
-  \OptItem{\OptArg{-attributes}{Attr1 [,Attr2 \Dots]}}{Explicitly list the 
-  attributes (by name, and in a comma separated list)
-  which should be displayed when using the \Opt{-xml} or \Opt{-long} options.
-  Limiting the number of attributes increases the efficiency of the query.}
-  \OptItem{\OptArg{-format}{fmt attr}}{Display attribute or 
+  \OptItem{\OptArg{-attributes}{Attr1[,Attr2 \Dots]}}{(output option)
+    Explicitly list the attributes, 
+    by name in a comma separated list,
+    which should be displayed when using the \Opt{-xml} or \Opt{-long} options.
+    Limiting the number of attributes increases the efficiency of the query.}
+  \OptItem{\OptArg{-format}{fmt attr}}{(output option) Display attribute or 
     expression \Arg{attr} in format \Arg{fmt}.
     To display the attribute or expression the format must contain a single
     \Code{printf(3)}-style conversion specifier.
@@ -284,7 +290,7 @@ displayed.
     Include \Bs n to specify a line break. }
 
   \OptItem{\OptArg{-autoformat[:tn,lVh]}{attr1 [attr2 ...]}} {
-    (Custom option) Display machine ClassAd attribute values 
+    (output option) Display machine ClassAd attribute values 
     formatted in a default way according to their attribute types.  
     This option takes an arbitrary number of attribute names as arguments,
     and prints out their values.  It is like the \Opt{-format} option,
@@ -310,75 +316,60 @@ displayed.
 
     The newline and comma characters may \emph{not} be used together.
     }
-  \OptItem{\Opt{-cputime}} {Instead of wall-clock allocation time (RUN\_TIME), 
-    display remote CPU time accumulated by the job to date in days,
-    hours, minutes, and seconds.  (If the job is currently running, time
-    accumulated during the current run is \emph{not} shown.)}
-  \OptItem{\Opt{-currentrun}} {Normally, RUN\_TIME contains all the time
-    accumulated during the current run plus all previous runs.  If this
-    option is specified, RUN\_TIME only displays the time accumulated so
-    far on this current run.}
-  \OptItem{\Opt{-avgqueuetime}} {Display the average of time spent in the
-    queue, considering all jobs not completed (those that do not have
-    \Expr{JobStatus == 4} or \Expr{JobStatus == 3}.  }
-  \OptItem{\OptArg{-jobads}{file}}{Display jobs from a list of
-    ClassAds from a file, instead of the real ClassAds from the
-    \Condor{schedd} daemon.
-    This is most useful for debugging purposes.
-    The ClassAds appear as if
-    \Condor{q} \Opt{-l} is used with the header stripped out.}
-  \OptItem{\OptArg{-userlog}{file}}{Display jobs, with job information coming
-    from a user log,
-    instead of from the real ClassAds from the \Condor{schedd} daemon.
-    This is most useful for automated testing of the status of jobs known to be
-    in the given user log, because it reduces the load on the \Condor{schedd}.
-    A user log does not contain all of the job information, so some fields in
-    the normal output of \Condor{q} will be blank.}
-  \OptItem{\OptArg{-slotads}{file}}{When doing matchmaking analysis, use the
-    machine ads from the file instead of the ones from the
+  \OptItem{\Opt{-analyze[:<qual>]}}{(analyze option) Perform a matchmaking 
+    analysis on why the requested jobs are not running.
+    First a simple analysis determines if the job is not running 
+    due to not being in a runnable state.
+    If the job is in a runnable state, then this option is equivalent
+    to \Opt{-better-analyze}.
+    \Opt{<qual>} is a comma separated list containing one or more of
+
+    \textbf{priority} to consider user priority during the analysis
+
+    \textbf{summary} to show a one line summary for each job or machine
+
+    \textbf{reverse} to analyze machines, rather than jobs
+    }
+  \OptItem{\Opt{-better-analyze[:<qual>]}}{(analyze option) 
+    Perform a more detailed matchmaking analysis to determine how
+    many resources are available to run the requested jobs.
+    This option
+    is never meaningful for Scheduler universe jobs and only meaningful
+    for grid universe jobs doing matchmaking.
+    \Opt{<qual>} is a comma separated list containing one or more of
+
+    \textbf{priority} to consider user priority during the analysis
+
+    \textbf{summary} to show a one line summary for each job or machine
+
+    \textbf{reverse} to analyze machines, rather than jobs
+    }
+  \OptItem{\OptArg{-machine}{name}}{(analyze option)
+    When doing matchmaking analysis, 
+    analyze only machine ClassAds that have slot or machine names 
+    that match the given name. }
+  \OptItem{\OptArg{-mconstraint}{expression}}{(analyze option)
+    When doing matchmaking analysis, 
+    match only machine ClassAds which match the ClassAd expression constraint.}
+  \OptItem{\OptArg{-slotads}{file}}{(analyze option)
+    When doing matchmaking analysis, use the
+    machine ClassAds from the file instead of the ones from the
     \Condor{collector} daemon. 
     This is most useful for debugging purposes. 
     The ClassAds appear as if \Condor{status} \Opt{-long} is used.}
-  \OptItem{\OptArg{-machine}{name}}{When doing matchmaking analysis, analyze
-    only machine ads that have slot or machine names that match the given name. }
-  \OptItem{\OptArg{-mconstraint}{expression}}{When doing matchmaking analysis, 
-    match only machine CladdAd which match the ClassAd expression constraint.}
-  \OptItem{\OptArg{-userprios}{file}}{When doing matchmaking analysis with
+  \OptItem{\OptArg{-userprios}{file}}{(analyze option)
+    When doing matchmaking analysis with
     priority, read user priorities from the file rather than the ones from
     the \Condor{negotiator} daemon.
     This is most useful for debugging purposes or to
     speed up analysis in situations where the \Condor{negotiator} daemon is
     slow to respond to \Condor{userprio} requests.  The file should be in 
-    the format produced by \Condor{userprio} \Opt{-long}.
-    }
-  \OptItem{\Opt{-reverse}}{When used with \OptArg{-analyze} or \OptArg{-better-analyze}
-    The Requirements expression of machines are analyzed instead of the default
-    behavior which analyzes the Requirements of jobs.
-    }
-  \OptItem{\Opt{-verbose}}{When doing analysis, show progress and include
-    the names of specific machines in the output.
-    }
-  \OptItem{\Opt{-stream-results}}{Display results as jobs are fetched
-    from the job queue rather than storing results in memory until all
-    jobs have been fetched.  This can reduce memory consumption when fetching
-    large numbers of jobs, but if \Condor{q} is paused while displaying
-    results, this could result in a timeout in communication with
-    \Condor{schedd}.}
-  \OptItem{\Opt{-wide}}{If this option is specified, and the command portion
-    of the output would cause the output to extend beyond 80 columns,
-    display beyond the 80 columns. }
-  \OptItem{Restriction list}{The restriction list may have zero or more items,
-    each of which may be:
-        \begin{description}
-        \item[\Arg{cluster}] match all jobs belonging to cluster
-        \item[\Arg{cluster.proc}] match all jobs belonging to cluster with
-        a process number of \emph{proc}
-        \item[\OptArg{-constraint}{expression}] match all jobs which match
-        the ClassAd expression constraint
-        \end{description} 
-    A job matches the restriction list if it matches any restriction in the 
-    list  Additionally, if \Arg{owner} restrictions are supplied, the job
-    matches the list only if it also matches an \Arg{owner} restriction.}
+    the format produced by \Condor{userprio} \Opt{-long}.  }
+  \OptItem{\Opt{-reverse}}{(analyze option) 
+    Analyze machine requirements against jobs.  }
+  \OptItem{\Opt{-verbose}}{(analyze option) 
+    When doing analysis, show progress and include
+    the names of specific machines in the output.  }
 \end{Options}
 
 \GenRem
@@ -394,18 +385,21 @@ is strongly encouraged to use the \Opt{-format} option (described
 above, examples given below).
 
 Although \Arg{-analyze} provides a very good first approximation, the analyzer 
-cannot diagnose all possible situations because the analysis is based on 
+cannot diagnose all possible situations,
+because the analysis is based on 
 instantaneous and local information.  Therefore, there are some situations 
-(such as when several submitters are contending for resources, or if the pool 
-is rapidly changing state) which cannot be accurately diagnosed.
+such as when several submitters are contending for resources, or if the pool 
+is rapidly changing state which cannot be accurately diagnosed.
 
-\Arg{-goodput}, \Arg{-cputime}, and \Arg{-io} are most useful for STANDARD
+Options
+\Opt{-goodput}, \Opt{-cputime}, and \Opt{-io} are most useful for standard
 universe jobs, since they rely on values computed when a job
-checkpoints.
+produces a checkpoint.
 
-It is possible to to hold jobs that are in the X state, to avoid this it 
-is best to construct a \OptArg{-constraint}{expression} that contains
-'JobStatus != 3' if the user wishes to avoid this condition. 
+It is possible to to hold jobs that are in the X state.
+To avoid this it 
+is best to construct a \OptArg{-constraint}{expression} that option contains
+\Expr{JobStatus != 3} if the user wishes to avoid this condition. 
 
 \Examples
 

@@ -469,7 +469,7 @@ bool ClassAd::Insert( const std::string& serialized_nvp)
 		// cache doesn't already have an entry for this name:value, so add
 		// it to the cache now. 
 		if (doExpressionCaching) {
-			CachedExprEnvelope::cache(name, szValue, newTree);
+			newTree = CachedExprEnvelope::cache(name, szValue, newTree);
 		}
 		bRet = Insert(name, newTree, false);
       }

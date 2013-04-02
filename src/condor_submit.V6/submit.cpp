@@ -753,7 +753,11 @@ init_job_ad()
 	buffer.formatstr( "%s = 0", ATTR_COMPLETION_DATE);
 	InsertJobExpr (buffer);
 
-	buffer.formatstr( "%s = \"%s\"", ATTR_OWNER, owner);
+	if ( Remote ) {
+		buffer.formatstr( "%s = Undefined", ATTR_OWNER );
+	} else {
+		buffer.formatstr( "%s = \"%s\"", ATTR_OWNER, owner);
+	}
 	InsertJobExpr (buffer);
 
 #ifdef WIN32

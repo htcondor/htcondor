@@ -1,0 +1,17 @@
+config job_dagman_recovery_preskip.config
+
+Job A job_dagman_recovery_preskip-nodeA.cmd
+
+Job B1 job_dagman_recovery_preskip-nodeB.cmd
+Parent A Child B1
+Script Pre B1 job_dagman_recovery_preskip-nodeB-pre.pl
+Script Post B1 job_dagman_recovery_preskip-nodeB-post.pl
+Pre_Skip B1 4
+
+Job B2 job_dagman_recovery_preskip-nodeB.cmd
+Parent B1 Child B2
+Script Pre B2 job_dagman_recovery_preskip-nodeB-pre.pl
+Pre_Skip B2 4
+
+Job C job_dagman_recovery_preskip-nodeC.cmd
+Parent B2 Child C

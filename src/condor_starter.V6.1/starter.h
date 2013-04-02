@@ -266,10 +266,15 @@ public:
 
 	int createJobOwnerSecSession( int cmd, Stream* s );
 
-	int startSSHD( int /*cmd*/, Stream* s );
+	int startSSHD( int /*cmd*/, Stream* s );	
 	int SSHDFailed(Stream *s,char const *fmt,...) CHECK_PRINTF_FORMAT(3,4);
 	int SSHDRetry(Stream *s,char const *fmt,...) CHECK_PRINTF_FORMAT(3,4);
-	int vSSHDFailed(Stream *s,bool retry,char const *fmt,va_list args);
+	int vMessageFailed(Stream *s,bool retry, const std::string &, char const *fmt,va_list args);
+
+	int peek( int /*cmd*/, Stream* s );
+	int PeekFailed(Stream *s,char const *fmt,...) CHECK_PRINTF_FORMAT(3,4);
+	int PeekRetry(Stream *s,char const *fmt,...) CHECK_PRINTF_FORMAT(3,4);
+
 
 		/** This will return NULL if we're not using either
 		    PrivSep or GLExec */

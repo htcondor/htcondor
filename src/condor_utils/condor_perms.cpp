@@ -58,3 +58,17 @@ PermString( DCpermission perm )
 	return "Unknown";
 };
 
+
+DCpermission
+getPermissionFromString( const char * permstring )
+{
+	for ( DCpermission i = FIRST_PERM; i < LAST_PERM; i = NEXT_PERM(i) ) {
+		if (strcasecmp(permstring, PermString(i)) == 0) {
+			// match
+			return i;
+		}
+	}
+
+	return (DCpermission)-1;
+}
+

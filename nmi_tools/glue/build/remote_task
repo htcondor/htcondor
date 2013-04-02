@@ -43,6 +43,7 @@ my $UNSTRIPPED_TASK       = "remote_task.create_unstripped_tar";
 my $CHECK_UNSTRIPPED_TASK = "remote_task.check_unstripped_tar";
 my $NATIVE_TASK           = "remote_task.create_native";
 my $CHECK_NATIVE_TASK     = "remote_task.check_native";
+my $COVERITY_ANALYSIS     = "remote_task.coverity_analysis";
 
 my $taskname = "";
 my $execstr = "";
@@ -165,6 +166,10 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
         print "We do not generate a native package for this platform.\n";
         exit 0;
     }
+} elsif ($taskname eq $COVERITY_ANALYSIS) {
+	print "Running Coverity analysis\n";
+	$ENV{PATH} = "$ENV{PATH}:/home/condorauto/cov-sa-linux64-5.5.3/bin";
+	$execstr = "cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --enable-constraint-fpp --dir ../public/cov-data";
 }
 
 

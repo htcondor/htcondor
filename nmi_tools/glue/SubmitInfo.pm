@@ -383,7 +383,7 @@ our %submit_info = (
 	# Platform MacOSX
 	##########################################################################
 	
-	'x86_64_MacOSX7' => {
+	'x86_64_MacOSX' => {
 		'build' => {
 			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ ],
@@ -396,7 +396,9 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
-	'x86_64_macos_10.7'	=> 'x86_64_MacOSX7',
+	'x86_64_MacOSX7',	=> 'x86_64_MacOSX',
+	'x86_64_MacOSX8',	=> 'x86_64_MacOSX',
+	'x86_64_MacOSX9',	=> 'x86_64_MacOSX',
 
 
 	# These describe what a human, sadly, had to figure out about certain

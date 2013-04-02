@@ -303,7 +303,7 @@ ReliSock::put_bytes_nobuffer( char *buffer, int length, int send_size )
 {
 	int i, result, l_out;
 	int pagesize = 65536;  // Optimize large writes to be page sized.
-	unsigned char * cur;
+	char * cur;
 	unsigned char * buf = NULL;
         
 	// First, encrypt the data if necessary
@@ -312,13 +312,11 @@ ReliSock::put_bytes_nobuffer( char *buffer, int length, int send_size )
 			dprintf(D_SECURITY, "Encryption failed\n");
 			goto error;
 		}
+		cur = (char *)buf;
 	}
 	else {
-		buf = (unsigned char *) malloc(length);
-		memcpy(buf, buffer, length);
+		cur = buffer;
 	}
-
-	cur = buf;
 
 	// Tell peer how big the transfer is going to be, if requested.
 	// Note: send_size param is 1 (true) by default.
@@ -339,7 +337,7 @@ ReliSock::put_bytes_nobuffer( char *buffer, int length, int send_size )
 	{
 		// If there is less then a page left.
 		if( (length - i) < pagesize ) {
-			result = condor_write(peer_description(), _sock, (char *)cur, (length - i), _timeout);
+			result = condor_write(peer_description(), _sock, cur, (length - i), _timeout);
 			if( result < 0 ) {
                                 goto error;
 			}
@@ -347,7 +345,7 @@ ReliSock::put_bytes_nobuffer( char *buffer, int length, int send_size )
 			i += (length - i);
 		} else {  
 			// Send another page...
-			result = condor_write(peer_description(), _sock, (char *)cur, pagesize, _timeout);
+			result = condor_write(peer_description(), _sock, cur, pagesize, _timeout);
 			if( result < 0 ) {
                             goto error;
 			}
@@ -998,8 +996,10 @@ int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key,
 		}
 
 		setFullyQualifiedUser(authob.getFullyQualifiedUser());
-		if( method_used ) {
-			if( authob.getMethodUsed() ) {
+
+		if( authob.getMethodUsed() ) {
+			setAuthenticationMethodUsed(authob.getMethodUsed());
+			if( method_used ) {
 				*method_used = strdup(authob.getMethodUsed());
 			}
 		}

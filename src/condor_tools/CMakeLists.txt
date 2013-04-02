@@ -20,6 +20,7 @@ condor_exe(condor_cod "cod_tool.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_preen "preen.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_drain "drain.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_advertise "advertise.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_ping "ping.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_fetchlog "fetch_log.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_config_val "config_val.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_userprio "user_prio.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
@@ -29,6 +30,8 @@ condor_exe(condor_qedit "qedit.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 if (HAVE_SSH_TO_JOB)
 	condor_exe(condor_ssh_to_job "ssh_to_job.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 endif(HAVE_SSH_TO_JOB)
+
+condor_exe(condor_tail "peek.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 
 condor_exe(condor_transfer_data "transfer_data.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_version "version.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
@@ -111,6 +114,5 @@ endif()
 # GPU Support
 ############################################################
 if ( LINUX AND HAVE_LIBDL AND HAVE_DLFCN_H AND HAVE_DLOPEN )
-	condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC}
-	"${DL_FOUND}" OFF )
+	condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${HAVE_LIBDL}" OFF )
 endif()

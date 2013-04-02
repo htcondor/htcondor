@@ -27,37 +27,32 @@
 #include "SubmissionObject.h"
 #include "JobServerObject.h"
 #include "AviaryUtils.h"
+#include "Globals.h"
 
 using namespace std;
 using namespace aviary::query;
 using namespace aviary::codec;
 using namespace aviary::util;
 
-SubmissionObject::SubmissionObject (
-                                     const char *_name,
-                                     const char *_owner ) :
-        ownerSet ( false ), m_oldest_qdate(time(NULL)+hashFuncChars(_name))
+SubmissionObject::SubmissionObject ( const char* name,
+                                     const char* owner ) :
+        m_name(NULL),m_owner(NULL), m_oldest_qdate(time(NULL)+hashFuncChars(name))
 {
-	m_name = _name;
-    if ( _owner )
-    {
-        setOwner ( _owner );
-    }
-    else
-    {
-        setOwner ( "Unknown" );
-        ownerSet = false;
-    }
+
+    setName ( name );
+    setOwner ( owner );
 
     m_codec = new BaseCodec;
 
-    dprintf ( D_FULLDEBUG, "Created new SubmissionObject '%s' for '%s'\n", _name, _owner);
+    dprintf ( D_FULLDEBUG, "Created new SubmissionObject '%s' for '%s'\n", name, owner);
 }
 
 SubmissionObject::~SubmissionObject()
 {
-	dprintf ( D_FULLDEBUG, "SubmissionObject::~SubmissionObject for '%s'\n", m_name.c_str());
-	delete m_codec;
+    dprintf ( D_FULLDEBUG, "SubmissionObject::~SubmissionObject for '%s'\n", m_name);
+    if (m_codec) delete m_codec;
+    if (m_owner) free((void*)m_owner);
+    if (m_name) free((void*)m_name);
 }
 
 void
@@ -178,12 +173,20 @@ SubmissionObject::getSuspended()
 }
 
 void
-SubmissionObject::setOwner ( const char *_owner )
+SubmissionObject::setName ( const char* name )
 {
-    if (_owner && !ownerSet )
+    if (name)
     {
-        m_owner = _owner;
-        ownerSet = true;
+        m_name = strdup(name);
+    }
+}
+
+void
+SubmissionObject::setOwner ( const char *owner )
+{
+    if (owner)
+    {
+        m_owner = strdup(owner);
     }
 }
 
@@ -266,7 +269,13 @@ SubmissionObject::getOldest() {
 
 void
 SubmissionObject::setOldest(int qdate) {
-	if (qdate < m_oldest_qdate) {
-		m_oldest_qdate = qdate;
-	}
+    if (m_oldest_qdate > qdate) {
+        // swap the old one out
+        SubmissionMultiIndexType::iterator it = g_qdate_submissions.find(m_oldest_qdate);
+        if (it != g_qdate_submissions.end()) {
+            g_qdate_submissions.erase(m_oldest_qdate);
+            g_qdate_submissions.insert(make_pair(qdate,this));
+        }
+        m_oldest_qdate=qdate;
+    }
 }

@@ -665,6 +665,203 @@
   causes the \Condor{negotiator} daemon to send to this \Condor{schedd}
   daemon a full machine ClassAd corresponding to a matched job.
 
+\end{description}
+
+\label{sec:FT-Scheduler-ClassAd-Attributes}
+When using file transfer concurrency limits, 
+the following additional I/O usage statistics are published.
+These includes the sum and rate of bytes
+transferred as well as time spent reading and writing to files and
+to the network.  These statistics are reported for the sum of all
+users and may also be reported individually for recently active users
+by increasing the verbosity level \Expr{STATISTICS\_TO\_PUBLISH = TRANSFER:2}.
+Each of the per-user statistics is prefixed by a
+user name in the form \AdAttr{<username>\_FileTransferUploadBytes}.
+In this case, the attribute represents activity by the specified user.
+The published user name is actually the file transfer queue name, 
+as defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+This expression defaults to the name of the job owner.  
+The attributes that are rates have a
+suffix that specifies the time span of the exponential moving average.
+By default the time spans that are published are 1m, 5m, 1h, and 1d.
+This can be changed by configuring configuration variable
+\Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}.  These attributes are only
+reported once a full time span has accumulated.
+
+\begin{description}
+
+\index{ClassAd Scheduler attribute!FileTransferDownloadBytes}
+\item[\AdAttr{FileTransferDownloadBytes}] Total number of bytes
+  downloaded as output from jobs since this \Condor{schedd} was
+  started.
+  If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
+  for each active user, this attribute is also published prefixed by
+  the user name, with the name \AdAttr{<username>\_FileTransferDownloadBytes}.
+  The published user name is actually the file transfer queue name, as
+  defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+
+\index{ClassAd Scheduler attribute!FileTransferDownloadBytesPerSecond}
+\item[\AdAttr{FileTransferDownloadBytesPerSecond\_<timespan>}]
+  Exponential moving average over the specified time span of the rate
+  at which bytes have been downloaded as output from jobs.
+  The time spans that are published are configured by
+  \Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}, which defaults to
+  1m, 5m, 1h, and 1d.  When less than one full time span has
+  accumulated, the attribute is not published.
+  If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
+  for each active user, this attribute is also published prefixed by
+  the user name, with the name 
+  \AdAttr{<username>\_FileTransferDownloadBytesPerSecond\_<timespan>}.
+  The published user name is actually the file transfer queue name, as
+  defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+
+\index{ClassAd Scheduler attribute!FileTransferFileReadLoad}
+\item[\AdAttr{FileTransferFileReadLoad\_<timespan>}] Exponential
+  moving average over the specified time span of the rate at which
+  submit-side file transfer processes have spent time reading from
+  files to be transferred as input to jobs.  One file transfer process
+  spending nearly all of its time reading files will generate a load
+  close to 1.0.
+  The time spans that are published are configured by
+  \Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}, which defaults to
+  1m, 5m, 1h, and 1d.  When less than one full time span has
+  accumulated, the attribute is not published.
+  If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
+  for each active user, this attribute is also published prefixed by
+  the user name, with the name
+  \AdAttr{<username>\_FileTransferFileReadLoad\_<timespan>}.
+  The published user name is actually the file transfer queue name, as
+  defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+
+\index{ClassAd Scheduler attribute!FileTransferFileReadSeconds}
+\item[\AdAttr{FileTransferFileReadSeconds}] Total number of
+  submit-side transfer process seconds spent reading from files to be
+  transferred as input to jobs since this \Condor{schedd} was started.
+  If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
+  for each active user, this attribute is also published prefixed by
+  the user name, with the name
+  \AdAttr{<username>\_FileTransferFileReadSeconds}.
+  The published user name is actually the file transfer queue name, as
+  defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+
+\index{ClassAd Scheduler attribute!FileTransferFileWriteLoad}
+\item[\AdAttr{FileTransferFileWriteLoad\_<timespan>}]
+  Exponential moving average over the specified time span of the rate
+  at which submit-side file transfer processes have spent time writing to files
+  transferred as output from jobs.  One file transfer process spending
+  nearly all of its time writing to files will generate a load close
+  to 1.0.
+  The time spans that are published are configured by
+  \Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}, which defaults to
+  1m, 5m, 1h, and 1d.  When less than one full time span has
+  accumulated, the attribute is not published.
+  If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
+  for each active user, this attribute is also published prefixed by
+  the user name, with the name
+  \AdAttr{<username>\_FileTransferFileWriteLoad\_<timespan>}.
+  The published user name is actually the file transfer queue name, as
+  defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+
+\index{ClassAd Scheduler attribute!FileTransferFileWriteSeconds}
+\item[\AdAttr{FileTransferFileWriteSeconds}] Total number of
+  submit-side transfer process seconds spent writing to files
+  transferred as output from jobs since this \Condor{schedd} was
+  started.
+  If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
+  for each active user, this attribute is also published prefixed by
+  the user name, with the name
+  \AdAttr{<username>\_FileTransferFileWriteSeconds}.
+  The published user name is actually the file transfer queue name, as
+  defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+
+\index{ClassAd Scheduler attribute!FileTransferFileNetReadLoad}
+\item[\AdAttr{FileTransferNetReadLoad\_<timespan>}] Exponential moving
+  average over the specified time span of the rate at which submit-side
+  file transfer processes have spent time reading from the network
+  when transferring output from jobs.  One file transfer process
+  spending nearly all of its time reading from the network will
+  generate a load close to 1.0.
+  The time spans that are published are configured by
+  \Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}, which defaults to
+  1m, 5m, 1h, and 1d.  When less than one full time span has
+  accumulated, the attribute is not published.
+  If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
+  for each active user, this attribute is also published prefixed by
+  the user name, with the name
+  \AdAttr{<username>\_FileTransferNetReadLoad\_<timespan>}.
+  The published user name is actually the file transfer queue name, as
+  defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+
+\index{ClassAd Scheduler attribute!FileTransferNetReadSeconds}
+\item[\AdAttr{FileTransferNetReadSeconds}] Total number of submit-side
+  transfer process seconds spent reading from the network when
+  transferring output from jobs since this \Condor{schedd} was
+  started.
+  If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
+  for each active user, this attribute is also published prefixed by
+  the user name, with the name
+  \AdAttr{<username>\_FileTransferNetReadSeconds}.
+  The published user name is actually the file transfer queue name, as
+  defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+
+\index{ClassAd Scheduler attribute!FileTransferNetWriteLoad}
+\item[\AdAttr{FileTransferNetWriteLoad\_<timespan>}] Exponential
+  moving average over the specified time span of the rate at which
+  submit-side file transfer processes have spent time writing to the
+  network when transferring input to jobs.  One file transfer process
+  spending nearly all of its time writing to the network will generate
+  a load close to 1.0.
+  The time spans that are published are configured by
+  \Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}, which defaults to
+  1m, 5m, 1h, and 1d.  When less than one full time span has
+  accumulated, the attribute is not published.
+  If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
+  for each active user, this attribute is also published prefixed by
+  the user name, with the name
+  \AdAttr{<username>\_FileTransferNetWriteLoad\_<timespan>}.
+  The published user name is actually the file transfer queue name, as
+  defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+
+\index{ClassAd Scheduler attribute!FileTransferNetWriteSeconds}
+\item[\AdAttr{FileTransferNetWriteSeconds}] Total number of
+  submit-side transfer process seconds spent writing to the network
+  when transferring input to jobs since this \Condor{schedd} was
+  started.
+  The time spans that are published are configured by
+  \Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}, which defaults to
+  1m, 5m, 1h, and 1d.  When less than one full time span has
+  accumulated, the attribute is not published.
+  If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
+  for each active user, this attribute is also published prefixed by
+  the user name, with the name
+  \AdAttr{<username>\_FileTransferNetWriteSeconds}.
+  The published user name is actually the file transfer queue name, as
+  defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+
+\index{ClassAd Scheduler attribute!FileTransferUploadBytes}
+\item[\AdAttr{FileTransferUploadBytes}] Total number of bytes uploaded
+  as input to jobs since this \Condor{schedd} was started.
+  If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
+  for each active user, this attribute is also published prefixed by
+  the user name, with the name
+  \AdAttr{<username>\_FileTransferUploadBytes}.
+  The published user name is actually the file transfer queue name, as
+  defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+
+\index{ClassAd Scheduler attribute!FileTransferUploadBytesPerSecond}
+\item[\AdAttr{FileTransferUploadBytesPerSecond\_<timespan>}]
+  Exponential moving average over the specified time span of the rate
+  at which bytes have been uploaded as input to jobs.
+  The time spans that are published are configured by
+  \Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}, which defaults to
+  1m, 5m, 1h, and 1d.  When less than one full time span has
+  accumulated, the attribute is not published.
+  If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
+  for each active user, this attribute is also published prefixed by
+  the user name, with the name
+  \AdAttr{<username>\_FileTransferUploadBytesPerSecond\_<timespan>}.
+  The published user name is actually the file transfer queue name, as
+  defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 
 \end{description}
 

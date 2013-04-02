@@ -319,6 +319,7 @@ const int SHARED_PORT_PASS_SOCK = 76;
 #define STARTER_HOLD_JOB    (STARTER_COMMANDS_BASE+0)
 #define CREATE_JOB_OWNER_SEC_SESSION (STARTER_COMMANDS_BASE+1)
 #define START_SSHD (STARTER_COMMANDS_BASE+2)
+#define STARTER_PEEK (STARTER_COMMANDS_BASE+3)
 
 
 /*
@@ -358,6 +359,21 @@ const int SHARED_PORT_PASS_SOCK = 76;
 #define DC_TIME_OFFSET      (DC_BASE+17)
 #define DC_PURGE_LOG        (DC_BASE+18)
 #define DC_SHARE_SOCK       (DC_BASE+19)
+
+// these are all NOP but registered at different authz levels
+#define DC_NOP_READ         (DC_BASE+20)
+#define DC_NOP_WRITE        (DC_BASE+21)
+#define DC_NOP_NEGOTIATOR   (DC_BASE+22)
+#define DC_NOP_ADMINISTRATOR (DC_BASE+23)
+#define DC_NOP_OWNER        (DC_BASE+24)
+#define DC_NOP_CONFIG       (DC_BASE+25)
+#define DC_NOP_DAEMON       (DC_BASE+26)
+#define DC_NOP_ADVERTISE_STARTD (DC_BASE+27)
+#define DC_NOP_ADVERTISE_SCHEDD (DC_BASE+28)
+#define DC_NOP_ADVERTISE_MASTER (DC_BASE+29)
+// leave 30-39 open -- zmiller
+#define DC_SEC_QUERY        (DC_BASE+40)
+
 
 /*
 *** Log type supported by DC_FETCH_LOG

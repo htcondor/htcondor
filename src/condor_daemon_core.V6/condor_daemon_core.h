@@ -1910,7 +1910,8 @@ class DaemonCore : public Service
     int HandleChildAliveCommand(int command, Stream* stream);
     int HungChildTimeout();
     int SendAliveToParent();
-    unsigned int max_hang_time;
+    int max_hang_time;
+	int max_hang_time_raw;
 	int m_child_alive_period;
     int send_child_alive_timer;
 	bool m_want_send_child_alive;

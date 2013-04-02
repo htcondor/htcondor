@@ -274,9 +274,22 @@ int NetworkNamespaceManager::CreateNetworkPipe() {
 	unsigned char *i_mac_char = FetchMac(m_internal_pipe, &(i_mac[0])) ? &(i_mac[0]) : NULL;
         if ((rc = create_veth(m_sock, m_external_pipe.c_str(), m_internal_pipe.c_str(), e_mac_char, i_mac_char)))
 	{
-                dprintf(D_ALWAYS, "Failed to create veth devices %s/%s.\n", m_external_pipe.c_str(), m_internal_pipe.c_str());
-                m_state = FAILED;
-		return rc;
+		if (rc == EEXIST)
+		{
+			int rc2;
+			if ((rc2 = delete_veth(m_sock, m_external_pipe.c_str()))  && (rc2 != ENODEV) && (rc2 != EINVAL)) {
+				dprintf(D_ALWAYS, "Failed to delete the veth interface; rc=%d\n", rc);
+				m_state = FAILED;
+				return rc2;
+			}
+			rc = create_veth(m_sock, m_external_pipe.c_str(), m_internal_pipe.c_str(), e_mac_char, i_mac_char);
+		}
+		if (rc)
+		{
+			dprintf(D_ALWAYS, "Failed to create veth devices %s/%s.\n", m_external_pipe.c_str(), m_internal_pipe.c_str());
+			m_state = FAILED;
+			return rc;
+		}
         }
 	m_created_pipe = true;
 
@@ -642,18 +655,22 @@ int NetworkNamespaceManager::ConfigureNetworkAccounting(const classad::ClassAd &
 	}
 	dprintf(D_FULLDEBUG, "Configuring network accounting.\n");
 
+	std::string internal_addr;
+	if (!m_ad->EvaluateAttrString(ATTR_INTERNAL_ADDRESS_IPV4, internal_addr))
+	{
+		dprintf(D_ALWAYS, "No IPV4 address found for network accounting.\n");
+		return 1;
+	}
+
 	// Count outgoing packets.  Equivalent to:
 	// iptables -A $JOBID -i $DEV ! -o $DEV -m comment --comment "Outgoing"
 	{
 	ArgList args;
 	args.AppendArg("iptables");
 	args.AppendArg("-A");
-	args.AppendArg(m_network_namespace.c_str());
-	args.AppendArg("-i");
-	args.AppendArg(m_external_pipe.c_str());
-	args.AppendArg("!");
-	args.AppendArg("-o");
-	args.AppendArg(m_external_pipe.c_str());
+	args.AppendArg(m_network_namespace);
+	args.AppendArg("-s");
+	args.AppendArg(internal_addr);
 	args.AppendArg("-m");
 	args.AppendArg("comment");
 	args.AppendArg("--comment");
@@ -668,11 +685,8 @@ int NetworkNamespaceManager::ConfigureNetworkAccounting(const classad::ClassAd &
 	args.AppendArg("iptables");
 	args.AppendArg("-A");
 	args.AppendArg(m_network_namespace.c_str());
-	args.AppendArg("!");
-	args.AppendArg("-i");
-	args.AppendArg(m_external_pipe.c_str());
-	args.AppendArg("-o");
-	args.AppendArg(m_external_pipe.c_str());
+	args.AppendArg("-d");
+	args.AppendArg(internal_addr);
 	args.AppendArg("-m");
 	args.AppendArg("comment");
 	args.AppendArg("--comment");

@@ -57,4 +57,4 @@ install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../services/collector/services.xml
 install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../etc/aviary-common.xsd
         ${CMAKE_CURRENT_SOURCE_DIR}/../../etc/aviary-collector.xsd
         ${CMAKE_CURRENT_SOURCE_DIR}/../../etc/aviary-collector.wsdl
-        DESTINATION ${C_SERVICES}/../collector )
+        DESTINATION ${C_SERVICES}/collector )

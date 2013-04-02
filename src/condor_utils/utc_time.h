@@ -59,6 +59,15 @@ public:
 	double difference( const UtcTime* other_time ) const;
 	double difference( const UtcTime &other_time ) const;
 
+	long difference_usec( const UtcTime &other_time ) {
+		long diff = usec - other_time.usec;
+		long sec_diff = sec - other_time.sec;
+		if( sec_diff ) {
+			diff += sec_diff*1000000;
+		}
+		return diff;
+	}
+
 	static double getTimeDouble( void );
 
 private:

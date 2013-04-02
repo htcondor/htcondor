@@ -79,11 +79,14 @@ The effective user priority (EUP) of a user is used to determine
 how many resources that user may receive.
 The EUP is linearly related to the RUP
 by a \emph{priority factor} which may be defined on a per-user basis.
-Unless otherwise configured, the priority factor for all users is 1.0,
-and so the EUP is the same as the the RUP.
-However, if desired, the priority factors of
-specific users can be increased so that 
-some are served preferentially.
+Unless otherwise configured, 
+an initial priority factor for all users as they first submit jobs
+is set by the configuration variable \Macro{DEFAULT\_PRIO\_FACTOR},
+and defaults to the value 1.0.
+This default makes the EUP the same as the RUP.
+If desired, the priority factors of
+specific users can be increased using \Condor{userprio},
+so that some are served preferentially.
 
 The number of resources that a user may receive is inversely related
 to the ratio between the EUPs of submitting users.

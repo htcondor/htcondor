@@ -83,6 +83,7 @@ static const char *GMStateNames[] = {
 #define EC2_VM_STATE_SHUTTINGDOWN       "shutting-down"
 #define EC2_VM_STATE_TERMINATED         "terminated"
 #define EC2_VM_STATE_SHUTOFF            "shutoff"
+#define EC2_VM_STATE_STOPPED            "stopped"
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
@@ -743,12 +744,25 @@ void EC2Job::doEvaluateState()
 				
 			
 			case GM_SUBMITTED:
-			    if( remoteJobState == EC2_VM_STATE_SHUTOFF ) {
-    			    // An OpenStack-specific state where the VM is no longer
-	    		    // running, but it it retains its reserved resources.
-		    	    //
+			    if( remoteJobState == EC2_VM_STATE_SHUTOFF 
+			     || remoteJobState == EC2_VM_STATE_STOPPED ) {
+			        // SHUTOFF is an OpenStack-specific state where the VM
+			        // is no longer running, but retains its reserved resources.
+			        //
 			        // We simplify by considering this job complete and letting
 			        // it exit the queue.
+			        //
+			        // According to Amazon's documentation, the stopped state
+			        // only occurs for EBS-backed instances for which the
+			        // parameter InstanceInstantiateShutdownBehavior is not
+			        // set to terminated.  OpenStack blithely ignores either
+			        // this parameter or this restriction, and so we can see
+			        // the stopped state.  For the present, our users just
+			        // want OpenStack instances to act like Amazon instances
+			        // when they shut themselves down, so we'll work-around
+			        // the OpenStack bug here -- doing exactly the same thing
+			        // as we do for the SHUTOFF state.
+			        //
 			        gmState = GM_CANCEL;
 			        break;
 			    }
@@ -1118,7 +1132,8 @@ void EC2Job::doEvaluateState()
 				
 				if ( rc == 0 ) {
 				    // After we've terminated a 'shutoff' instance, it's done.
-				    if( remoteJobState == EC2_VM_STATE_SHUTOFF ) {
+				    if( remoteJobState == EC2_VM_STATE_SHUTOFF 
+				     || remoteJobState == EC2_VM_STATE_STOPPED ) {
 				        gmState = GM_DONE_SAVE; 
 				    } else if( condorState == COMPLETED || condorState == REMOVED ) {
 						gmState = GM_DELETE;
@@ -1184,58 +1199,75 @@ void EC2Job::doEvaluateState()
 				
 			case GM_DELETE:
 			    //
-			    // We can't just check m_keypair_created, because we may have
-			    // created the keypair in a proir instance (if this job was
-			    // recovered).  This means we leak keys, both on EC2 and on
-			    // disk.  We can't unconditionally delete keys on EC2 because
-			    // they might not be ours; and we can't delete keys on disk
-			    // until we know recovery is impossible (the user may want to
-			    // use them).
+			    // Clean up the keypair as late as possible -- that is, the
+			    // last time we see this job.  That's logically identical to
+			    // when we will never see the job again, and we can check
+			    // that by looking the the condorState and the job attributes
+			    // we (would) use for recovery.
 			    //
-			    // However, if we modify condor_submit to prevent the non-
-			    // sensical case of setting both m_key_pair and m_key_pair_file,
-			    // (saying both to use a specific keypair and create a new
-			    // ones), we know that m_key_pair_file will only be set if
-			    // we (may) have created a new keypair.  Therefore, if
-			    // m_key_pair is set as well, we know it's the ID of keypair
-			    // we're responsible for cleaning up.
-			    //
+                if( condorState == REMOVED
+                  || condorState == COMPLETED
+                  || ( m_client_token.empty() && m_remoteJobId.empty() ) ) {
+
+                    //
+                    // We can't just check m_keypair_created, because we may
+                    // have created the keypair in a prior gridmanager (if this
+                    // job was recovered).  This means we leak keys, both on
+                    // EC2 and on disk.  We can't unconditionally delete keys
+                    // on EC2 because they might not be ours; and we can't
+                    // delete keys on disk until we know recovery is
+                    // impossible (the user may want to use them).
+                    //
+                    // However, since condor_submit does not permit the non-
+                    // sensical case of setting both m_key_pair and 
+                    // m_key_pair_file, (saying both to use a specific keypair
+                    // and create a new one), we know that m_key_pair_file
+                    // will only be set if we (may) have created a new 
+                    // keypair.  Therefore, if m_key_pair is set as well, we 
+                    // know it's the ID of keypair we're responsible for
+                    // cleaning up.
+		    	    //
 			    
-                if( ! m_key_pair_file.empty() ) {
-                    if( ! m_key_pair.empty() ) {
+                    if( ! m_key_pair_file.empty() ) {
+                        if( ! m_key_pair.empty() ) {
                             rc = gahp->ec2_vm_destroy_keypair( m_serviceUrl,
                                     m_public_key_file, m_private_key_file,
 		    	                    m_key_pair, gahp_error_code );
     
-                        if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
-                            break;
-                        }
+                            if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
+                                break;
+                            }
+                            
+                            // If we don't remove the file until after we
+                            // remove the server-side copy, we'll try to delete
+                            // it twice, the first time before issuing the
+                            // command to the GAHP, the second after.
+                            if( ! remove_keypair_file( m_key_pair_file.c_str() ) ) {
+                                dprintf( D_ALWAYS, "(%d.%d) job destroy keypair local file (%s) failed.\n", procID.cluster, procID.proc, m_key_pair_file.c_str() );
+                            }
 
-                        if( rc == 0 ) {
-                            // Forget about the keypair we just deleted.
-                            SetKeypairId( NULL );
-                        } else {
-                            errorString = gahp->getErrorString();
-                            dprintf( D_ALWAYS, "(%d.%d) job destroy keypair failed: %s: %s\n",
-                                procID.cluster, procID.proc, gahp_error_code,
-                                errorString.c_str() );
+                            // In order for putting the job on hold to make
+                            // sense, we'd need to be sure that the gridmanager
+                            // saw the job again.  While we may not have the
+                            // original job information, if all we want to do
+                            // is try to remove the keypair again, we could
+                            // ask the gahp('s resource) where it lives and
+                            // cons up an artificial gridJobID, something like
+                            // 'ec2 URL remove-keypair', which we'd recognize
+                            // during recovery (initialization/parsing)
+                            // and react to appropriately -- since we haven't
+                            // deleted the keypair ID yet, it'll still be in
+                            // the job ad...
+                            if( rc != 0 ) {
+                                errorString = gahp->getErrorString();
+                                dprintf( D_ALWAYS, "(%d.%d) job destroy keypair (%s) failed: %s: %s\n",
+                                    procID.cluster, procID.proc, m_key_pair.c_str(),
+                                    gahp_error_code, errorString.c_str() );
+                            }
                         }
                     }
-
-                    //
-                    // Because we may keep the keypair on disk, but not the
-                    // keypair on the server, don't depend on remembering
-                    // the keypair ID for cleaning up the keypair on disk.
-                    //
-                    if( condorState == REMOVED
-                      || condorState == COMPLETED
-                      || ( m_client_token.empty() && m_remoteJobId.empty() ) ) {
-                        if( ! remove_keypair_file( m_key_pair_file.c_str() ) ) {
-                            dprintf( D_ALWAYS, "(%d.%d) job destroy keypair local file failed.\n", procID.cluster, procID.proc );
-                        }
-                    }                        
                 }
-								
+
 				// We are done with the job. Propagate any remaining updates
 				// to the schedd, then delete this object.
 				DoneWithJob();
@@ -1915,7 +1947,7 @@ bool EC2Job::remove_keypair_file(const char* filename)
 			// no need to delete it since it is /dev/null
 			return true;
 		} else {
-			if (remove(filename) == 0) 	
+			if (remove(filename) == 0)      
 				return true;
 			else 
 				return false;

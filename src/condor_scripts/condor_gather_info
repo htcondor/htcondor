@@ -143,7 +143,6 @@ sub cleanup
 {
 	# remove the scratch dir, sanity check too
 	if (-d $args{'_scratch'}) {
-		print "Cleaning up scratch space.\n";
 		die "I'm not going to remove /. Sorry." 
 			if ($args{'_scratch'} =~ /^\d*\/\d*$/g);
 		# also remove the scratch dir itself...
@@ -180,6 +179,20 @@ sub edate
 		$cmd = "%s";
 	}
 	return UnixDate($args{'edate'}, $cmd);
+}
+
+sub condor_history
+{
+	my $jobid = shift; # Must exist
+	my $output_file = shift; # Fully qualified when passed in...
+	my @cqargs = @_;
+	my $cmd;
+	die "No jobid for which to condor_history!" if !defined($jobid);
+
+	$cmd = "condor_history " . join(" ", @cqargs) . " $jobid " . 
+			"> $output_file 2>&1";
+
+	return system("$cmd");
 }
 
 sub condor_q
@@ -284,6 +297,14 @@ sub acquire_identity
 # ldd condor_schedd #
 #####################
  @{[`ldd \`condor_config_val SBIN\`/condor_schedd`]}
+#####################
+# uptime #
+#####################
+ @{[`uptime`]}
+#####################
+# free #
+#####################
+ @{[`free`]}
 EOF
 
 	close(FOUT);
@@ -348,8 +369,13 @@ sub acquire_job_userlog_lines
 	# #######
 	if (-z $tmpfile) {
 		system("echo No log file specified in job ad. > $output_file 2>&1");
-		rmtree("$tmpfile");
-		return;
+		print "Trying condor_history instead\n";
+		condor_history($jobid, $tmpfile, '-format "logfile: %s\n"', 'UserLog');
+		if (-z $tmpfile) {
+			print "Not in condor_history either, giving up on looking for logfile in all the wrong places\n";
+			rmtree("$tmpfile");
+			return;
+		}
 	}
 	
 	# #######
@@ -363,6 +389,9 @@ sub acquire_job_userlog_lines
 	}
 
 	($junk, $ulogfile) = ($lines[0] =~ m/(^logfile: )(.*)/);
+
+print "ulog file is $ulogfile\n";
+
 	if ($junk !~ /logfile: / || !defined($ulogfile)) {
 		system("echo Unexpected userlog path problem. See query file. " .
 					"> $output_file 2>&1");
@@ -385,32 +414,9 @@ sub acquire_job_userlog_lines
 	open(FOUT, ">$output_file") || 
 		die "Could not open log trace file $output_file: $!";
 
-	# XXX This assumes a well formed logfile. Yuck!
+	# Just copy the whole job user log even if it has other jobs in it
 	while(defined($line = <FIN>)) {
-		# Read the first line of the first event in the file.
-		# XXX Add time filtering to the events!
-
-		($cluster, $proc) = ($line =~ /^\d\d\d\s+\(0*(\d+)\.0*(\d+)/);
-		if (!defined($cluster) || !defined($proc)) {
-			system("echo Userlog file is malformed. See query file. " .
-						"> $output_file 2>&1");
-			close(FOUT);
-			close(FIN);
-			return;
-		}
-		$cluster =~ s/\s//;
-		$proc =~ s/\s//;
-
-		# read the body of the event, filtering it where it is supposed to go
-		if ("$cluster.$proc" eq $jobid) {
-				print FOUT "$line";
-		}
-		while(defined($line = <FIN>)) {
-			if ("$cluster.$proc" eq $jobid) {
-				print FOUT "$line";
-			}
-			last if ($line =~ /^\.\.\.$/);
-		}
+		print FOUT "$line";
 	}
 	close(FOUT);
 	close(FIN);
@@ -441,6 +447,21 @@ sub acquire_all_info_for_jobid
 	# Get the job ad.
 	# ##########
 	acquire_job_ad($jobid, "$jdir/job_ad", '-l');
+
+	# If condor_q -l output does not contain ^ClusterId, our job is missing, check history
+	open(CQF, "$jdir/job_ad") || die("Can't open $jdir/job_ad which I just created...\n");
+	my @cql = <CQF>;
+	close(CQF);
+
+	if ($#cql < 5) {
+		print "Job $jobid does not appear in condor_q output, looking in condor_history.\n";
+		condor_history($jobid, "$jdir/job_ad", '-l');
+		if ((-s "$jdir/job_ad") == 0) {
+			print "Job $jobid does not appear in condor_history either.\n";
+		} else {
+			print "Job $jobid is in condor_history output, using it.\n";
+		}
+	}
 
 	# ##########
 	# Do the analysis for the job
@@ -482,6 +503,7 @@ sub package_payload
 	# grab the only directory there.
 	$dir = `ls -1`;
 	chomp $dir;
+	print "\nCreating output file with all results in $dir.tar.gz\n";
 	system("tar czf $dir.tar.gz $dir > /dev/null 2>&1");
 	chdir($pwd);
 	system("mv $args{'scratch'}/../*.tar.gz .");

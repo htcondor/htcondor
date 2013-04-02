@@ -1,0 +1,231 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Condor;
+
+use Check::SimpleJob;
+
+Condor::DebugOn;
+Condor::DebugLevel(1);
+
+select STDERR; $|=1;
+select STDOUT; $|=1;
+
+my $append_condor_config = '
+C1=$(COLLECTOR)
+C2=$(COLLECTOR)
+C3=$(COLLECTOR)
+C4=$(COLLECTOR)
+C5=$(COLLECTOR)
+C1_ARGS = -local-name C1
+C2_ARGS = -local-name C2
+C3_ARGS = -local-name C3
+C4_ARGS = -local-name C4
+C5_ARGS = -local-name C5
+COLLECTOR.C1.COLLECTOR_NAME = C1
+COLLECTOR.C2.COLLECTOR_NAME = C2
+COLLECTOR.C3.COLLECTOR_NAME = C3
+COLLECTOR.C4.COLLECTOR_NAME = C4
+COLLECTOR.C5.COLLECTOR_NAME = C5
+N1=$(NEGOTIATOR)
+N2=$(NEGOTIATOR)
+N3=$(NEGOTIATOR)
+N4=$(NEGOTIATOR)
+N5=$(NEGOTIATOR)
+N1_ARGS = -local-name N1
+N2_ARGS = -local-name N2
+N3_ARGS = -local-name N3
+N4_ARGS = -local-name N4
+N5_ARGS = -local-name N5
+NEGOTIATOR.N1.NEGOTIATOR_LOG=$(LOG)/NegotiatorLog.N1
+NEGOTIATOR.N2.NEGOTIATOR_LOG=$(LOG)/NegotiatorLog.N2
+NEGOTIATOR.N3.NEGOTIATOR_LOG=$(LOG)/NegotiatorLog.N3
+NEGOTIATOR.N4.NEGOTIATOR_LOG=$(LOG)/NegotiatorLog.N4
+NEGOTIATOR.N5.NEGOTIATOR_LOG=$(LOG)/NegotiatorLog.N5
+NEGOTIATOR.N1.NEGOTIATOR_ADDRESS_FILE=$(LOG)/.negotiator_address.n1
+NEGOTIATOR.N2.NEGOTIATOR_ADDRESS_FILE=$(LOG)/.negotiator_address.n2
+NEGOTIATOR.N3.NEGOTIATOR_ADDRESS_FILE=$(LOG)/.negotiator_address.n3
+NEGOTIATOR.N4.NEGOTIATOR_ADDRESS_FILE=$(LOG)/.negotiator_address.n4
+NEGOTIATOR.N5.NEGOTIATOR_ADDRESS_FILE=$(LOG)/.negotiator_address.n5
+NEGOTIATOR.N1.SPOOL=$(SPOOL)/N1
+NEGOTIATOR.N2.SPOOL=$(SPOOL)/N2
+NEGOTIATOR.N3.SPOOL=$(SPOOL)/N3
+NEGOTIATOR.N4.SPOOL=$(SPOOL)/N4
+NEGOTIATOR.N5.SPOOL=$(SPOOL)/N5
+COLLECTOR.C1.COLLECTOR_LOG = $(LOG)/CollectorLog.C1
+COLLECTOR.C2.COLLECTOR_LOG = $(LOG)/CollectorLog.C2
+COLLECTOR.C3.COLLECTOR_LOG = $(LOG)/CollectorLog.C3
+COLLECTOR.C4.COLLECTOR_LOG = $(LOG)/CollectorLog.C4
+COLLECTOR.C5.COLLECTOR_LOG = $(LOG)/CollectorLog.C5
+FLOCK_COLLECTOR_HOSTS = $(FLOCK_TO)
+FLOCK_NEGOTIATOR_HOSTS = $(FLOCK_TO)
+DAEMON_LIST = $(DAEMON_LIST), C1, C2, C3, C4, C5
+COLLECTOR.C1.COLLECTOR_ADDRESS_FILE=$(LOG)/.collector_address.c1
+COLLECTOR.C2.COLLECTOR_ADDRESS_FILE=$(LOG)/.collector_address.c2
+COLLECTOR.C3.COLLECTOR_ADDRESS_FILE=$(LOG)/.collector_address.c3
+COLLECTOR.C4.COLLECTOR_ADDRESS_FILE=$(LOG)/.collector_address.c4
+COLLECTOR.C5.COLLECTOR_ADDRESS_FILE=$(LOG)/.collector_address.c5
+FLOCK_INCREMENT=2
+START1=$(STARTD)
+START2=$(STARTD)
+START3=$(STARTD)
+START4=$(STARTD)
+START5=$(STARTD)
+START1_ARGS= -local-name S1
+START2_ARGS= -local-name S2
+START3_ARGS= -local-name S3
+START4_ARGS= -local-name S4
+START5_ARGS= -local-name S5
+STARTD.S1.STARTD_ADDRESS_FILE=$(LOG)/.startd_address.start1
+STARTD.S2.STARTD_ADDRESS_FILE=$(LOG)/.startd_address.start2
+STARTD.S3.STARTD_ADDRESS_FILE=$(LOG)/.startd_address.start3
+STARTD.S4.STARTD_ADDRESS_FILE=$(LOG)/.startd_address.start4
+STARTD.S5.STARTD_ADDRESS_FILE=$(LOG)/.startd_address.start5
+DAEMON_LIST = $(DAEMON_LIST), START1, START2, START3, START4, START5, N1, N2, N3, N4, N5, C1, C2, C3, C4, C5
+DC_DAEMON_LIST = + C1, C2, C3, C4, C5, START1, START2, START3, START4, START5, N1, N2, N3, N4, N5
+STARTD.S1.STARTD_LOG=$(LOG)/StartdLog.Start1
+STARTD.S2.STARTD_LOG=$(LOG)/StartdLog.Start2
+STARTD.S3.STARTD_LOG=$(LOG)/StartdLog.Start3
+STARTD.S4.STARTD_LOG=$(LOG)/StartdLog.Start4
+STARTD.S5.STARTD_LOG=$(LOG)/StartdLog.Start5
+SCHEDD_DEBUG=D_FULLDEBUG
+';
+
+# Append the configuration above to our configuration and reconfig
+my $condor_local_config = `condor_config_val LOCAL_CONFIG_FILE`;
+open LOCAL_CONFIG, ">>$condor_local_config" || die "Could not append to the local config file $condor_local_config\n";
+print LOCAL_CONFIG "$append_condor_config\n";
+close LOCAL_CONFIG;
+runcmd ("condor_reconfig");
+
+# Wait until all our daemons start up
+# We see that they start up when they drop 
+# the address file.
+my $count_failures = 1;
+my $attempts = 0;
+my $daemon_address_files = {};
+while ($count_failures > 0) {
+	++$attempts;	
+	CondorTest::debug("Attempt number $attempts getting the configuration\n",3);
+	$count_failures = 0;
+	foreach my $ii (1..5) {
+		$daemon_address_files->{$ii} = {};
+		my $neg_file = `condor_config_val NEGOTIATOR.N${ii}.NEGOTIATOR_ADDRESS_FILE`;
+		chomp $neg_file;
+		CondorTest::debug("\$neg_file = $neg_file\n",3);
+		if(! -e $neg_file ) {
+			++$count_failures;
+		} else {
+			$daemon_address_files->{$ii}->{negotiator} = $neg_file;
+		}
+		my $coll_file = `condor_config_val COLLECTOR.C${ii}.COLLECTOR_ADDRESS_FILE`;
+		chomp $coll_file;
+		CondorTest::debug("\$coll_file = $coll_file\n",3);
+		if(! -e $coll_file ) {
+			++$count_failures;
+		} else {
+			$daemon_address_files->{$ii}->{collector} = $coll_file;
+		}
+		my $startd_file = `condor_config_val STARTD.S${ii}.STARTD_ADDRESS_FILE`;
+		chomp $startd_file;
+		CondorTest::debug("\$startd_file = $startd_file\n",3);
+		if(! -e $startd_file ) {
+			++$count_failures;
+		} else {
+			$daemon_address_files->{$ii}->{startd} = $startd_file;
+		}
+	}
+	if($count_failures > 0) {
+		sleep 10;
+	}
+}
+
+# Daemons have started up.
+# We need to get the collector host for each pool
+open LOCAL_CONFIG, ">>$condor_local_config" || die "Could not append to the local config file $condor_local_config\n";
+my $flock_string = "FLOCK_TO =";
+my $daemon_string;
+foreach my $ii (1..5) {
+	open COLL_ADDRESS_FILE, "<$daemon_address_files->{$ii}->{collector}" ||
+		die "Could not open collector address file $daemon_address_files->{$ii}->{collector}\n";
+	while(<COLL_ADDRESS_FILE>) {
+		chomp;
+		if(/^<.+>$/) {
+			my $line = $_;
+			$line =~ s/<|>//g;
+			$flock_string .= " $line";
+			$daemon_string .= "STARTD.S${ii}.COLLECTOR_HOST = $line\n";
+			$daemon_string .= "NEGOTIATOR.N${ii}.COLLECTOR_HOST = $line\n";
+		}
+	}
+	close COLL_ADDRESS_FILE;
+}
+
+my $flock_increment = 2;
+print LOCAL_CONFIG "$flock_string\n";
+print LOCAL_CONFIG "$daemon_string\n";
+print LOCAL_CONFIG "FLOCK_INCREMENT = $flock_increment\n";
+close LOCAL_CONFIG;
+
+# Now reconfig ... again.
+runcmd ("condor_reconfig");
+
+runcmd ("condor_submit job_aggressive_flocking.cmd");
+
+# Wait for our jobs to finish
+while(1) {
+	sleep 60;
+	my $results = runcmd ("condor_q -f \"%d\" JobStatus");
+	last if(scalar @{$results->{stdout}} ==  0);
+}
+
+my $schedlog = `condor_config_val SCHEDD_LOG`;
+
+CondorTest::debug("Output from Schedd log file:\n\n");
+open SCHEDLOG, "<$schedlog" || die "Cannot open ScheddLog file $schedlog\n";
+my @schedlog = <SCHEDLOG>;
+close SCHEDLOG;
+
+my $success = 0;
+my $checked_flock = undef;
+foreach (@schedlog) {
+	# We only need the first one
+	if(/Increasing flock level for .+ to (\d+) from (\d+)\./i) {
+		CondorTest::debug($_);
+		next if(defined $checked_flock);
+		my $newflocklevel = $1;
+		my $oldflocklevel = $2;
+		my $flockdiff = $newflocklevel - $oldflocklevel;
+		CondorTest::debug("\$flockdiff is $flockdiff and \$flock_increment is $flock_increment\n");
+		$success = 1 if ($flockdiff != $flock_increment);
+		if($success == 0) {
+			CondorTest::debug("They agree!\n");
+		} else {
+			CondorTest::debug("Boo! They do not agree.\n");
+		}
+		$checked_flock = 1;	
+	}
+}
+
+CondorTest::Cleanup();
+
+exit $success;

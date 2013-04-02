@@ -3367,9 +3367,9 @@ id=175
 
 [NOT_RESPONDING_TIMEOUT]
 aliases=
-default=0
+default=3600
 version=0.0.0
-range=.*
+range=1,
 state=default
 type=int
 is_macro=false
@@ -10838,6 +10838,38 @@ is_macro=false
 reconfig=true
 customization=seldom
 friendly_name=Maximum size of transferred output files
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=schedd
+id=613
+
+[TRANSFER_IO_REPORT_INTERVAL]
+aliases=
+default=10
+version=7.9.4
+range=0,
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Interval between reports from file transfer processes to the transfer queue manager
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=schedd
+id=613
+
+[TRANSFER_IO_REPORT_TIMESPANS]
+aliases=
+default=1m:60 5m:300 1h:3600 1d:86400
+version=7.9.4
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=List of timespans for reporting file transfer I/O statistics
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd

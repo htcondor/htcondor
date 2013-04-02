@@ -12,6 +12,61 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-9-6}Version 7.9.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 7.9.6 not yet released.
+%\item HTCondor version 7.9.6 released on Month Date, 2013.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-6-0}Version 7.9.5}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -29,13 +84,44 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The new command line tool \Condor{tail}
+displays files that are in the sandbox of a running job.
+See details in the manual page at
+section~\ref{man-condor-tail}.
+\Ticket{3522}
+
 \item When there are multiple users
-waiting to transfer files in the limits set by
+waiting to transfer files within the limits set by
+configuration variables
 \Macro{MAX\_CONCURRENT\_UPLOADS} and/or
-\Macro{MAX\_CONCURRENT\_DOWNLOADS}, the scheduler now gives the users
+\Macro{MAX\_CONCURRENT\_DOWNLOADS}, the scheduling algorithm
+now gives the users
 an equal share of the transfer slots.  How shares are counted can be
 configured with \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 \Ticket{3487}
+
+\item When using the \Opt{-remote} or \Opt{-spool} options to
+\Condor{submit}, the job owner will now be set based
+upon how the job submitter was authenticated. 
+This will make it easier to submit jobs
+to a remote \Condor{schedd} where the credentials may map to a different
+account name.
+\Ticket{3370} 
+
+\item New functions are available in the Python Bindings contrib module.
+ClassAds now more closely mimic Python dictionaries and provide
+support for lists and values that are ClassAds. 
+\Ticket{3494}
+
+\item If a job is submitted specifying \SubmitCmd{keep\_claim\_idle},
+the claim is kept not only when the job exits,
+but also when the job is removed.
+\Ticket{3491}
+
+\item \Condor{dagman} now reports the DAG status (total number of nodes,
+nodes queued, nodes finished, etc.) to its classad.  See
+section~\ref{sec:DAGStatusClassad} for more information.
+\Ticket{1782}
 
 \end{itemize}
 
@@ -43,7 +129,42 @@ configured with \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable \Macro{GSI\_DELEGATION\_KEYBITS}
+allows the number of bits in a delegated proxy to be specified
+by the receiving side.
+\Ticket{3503}
+
+\item When using file transfer concurrency limits, additional I/O
+usage statistics are now published as attributes in the ClassAd of the
+\Condor{schedd}.  This includes the sum and rate of bytes
+transferred as well as time spent reading and writing to files and
+to the network.  These statistics are reported for the sum of all
+users and, when increased verbosity is configured, individually for
+recently active users.  
+These ClassAd attributes are fully described 
+within the section on scheduler attributes at 
+section~\pageref{sec:FT-Scheduler-ClassAd-Attributes}.
+\Ticket{3496}
+
+\begin{itemize}
+  \item[\AdAttr{FileTransferUploadBytes}]
+  \item[\AdAttr{FileTransferUploadBytesPerSecond\_<timespan>}]
+  \item[\AdAttr{FileTransferDownloadBytes}]
+  \item[\AdAttr{FileTransferDownloadBytesPerSecond\_<timespan>}]
+  \item[\AdAttr{FileTransferFileReadSeconds}] 
+  \item[\AdAttr{FileTransferFileReadLoad\_<timespan>}] 
+  \item[\AdAttr{FileTransferFileWriteSeconds}] 
+  \item[\AdAttr{FileTransferFileWriteLoad\_<timespan>}]
+  \item[\AdAttr{FileTransferNetReadSeconds}] 
+  \item[\AdAttr{FileTransferNetReadLoad\_<timespan>}] 
+  \item[\AdAttr{FileTransferNetWriteSeconds}] 
+  \item[\AdAttr{FileTransferNetWriteLoad\_<timespan>}] 
+\end{itemize}
+
+\item \Macro{NOT\_RESPONDING\_TIMEOUT} now internally adds some random skew
+to avoid synchronization of heartbeat messages, which can lead to UDP
+buffer overflow and incorrect determination that daemons are hung.
+\Ticket{3510}
 
 \end{itemize}
 
@@ -51,11 +172,57 @@ configured with \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 
 \begin{itemize}
 
-\item The EC2 GAHP now correctly parses XML namespaces (as returned, for
-instance, by some installations of Eucalyptus).  A related bug, which could
-cause HTCondor to put the job on hold, incorrectly believing that the cloud
-service had purged it, was also fixed.
+\item The EC2 GAHP now treats OpenStack's \Code{stopped} state as if it
+were \Code{shutoff}, terminating instances which enter this state and
+preventing the instances from remaining in the queue forever.
+\Ticket{3507}
+
+\item Two EC2 GAHP bugs are fixed.
+It now correctly parses XML namespaces as returned for
+some installations of Eucalyptus.
+The second bug caused HTCondor to put the job on hold, 
+as it incorrectly believed that the cloud
+service had purged it.
 \Ticket{3492}
+
+\item The EC2 GAHP now reports the
+bidding status, defined at
+\URL{http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-spot-instances-bid-status.html},
+for spot instances. 
+\Ticket{3388}
+
+\item The \Condor{negotiator} now checks to see if 
+the time set by configuration variable 
+\Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SUBMITTER}
+has been exceeded while negotiating with a single \Condor{schedd} daemon.
+This configuration variable was previously only effective 
+if a submitter used multiple \Condor{schedd} daemons.
+\Ticket{3504}
+
+\item \Condor{dagman} will now recover correctly in a DAG where a node has been 
+skipped because of a \Macro{PRE\_SKIP} has triggered.
+\Ticket{2966}
+
+\item Fixed a bug in the \Condor{gridmanager} and \Condor{ft-gahp} that
+could cause a crash when transferring files for grid universe jobs of 
+grid type batch going to a remote cluster.
+\Ticket{3529}
+
+\item Fixed a bug in which \Condor{status} queries would not work,
+with output of \AdStr{Access denied}, unless the \Condor{collector}
+and the machine doing the query had synchronized clocks.
+\Ticket{3360}
+
+\item Fixed a Linux platform bug in which mount points were leaked
+to the greater namespace when the configuration set
+\MacroNI{MOUNT\_UNDER\_SCRATCH} for file systems
+that have been mounted with shared propagation enabled.
+\Ticket{3505}
+
+\item Fixed a bug in the logging code that was causing grid universe batch jobs
+to abort and drop a dprintf error file during file transfer once the log had
+grown large enough to rotate.
+\Ticket{3528}
 
 \end{itemize}
 
@@ -84,8 +251,7 @@ service had purged it, was also fixed.
 
 \begin{itemize}
 
-\item HTCondor version 7.9.4 not yet released.
-%\item HTCondor version 7.9.4 released on Month Date, 2012.
+\item HTCondor version 7.9.4 released on February 20, 2013.
 
 \end{itemize}
 
@@ -150,15 +316,12 @@ The \Code{htcondor} module interacts with the \Condor{schedd} and
 The \Code{classad} module provides an interface to work with ClassAds.
 \Ticket{3407}
 
-\item We introduced \Condor{gpu\_discovery}, a code that will obtain NVIDIA GPU
-properties provided that the NVIDIA GPUs are correctly setup and that the
-correct NVIDIA libraries (CUDA Run Time and NVML) are installed.
-\Ticket{3386}
-
-\item When using \Condor{compile}, pthreads are not normally permitted to be used
-in standard universe jobs. However, \Condor{compile} will now tell a user that they
-should be linking to the GNU Pth library built with the \verb@--enable-pthread@
-flag. This will permit jobs that utilize pthreads to be built with \Condor{compile}.
+\item When using \Condor{compile}, 
+Pthreads are not normally permitted to be used by standard universe jobs.
+However, \Condor{compile} will now tell a user that they
+should be linking to the GNU Pth library,
+which is  built with the \verb@--enable-pthread@ flag.
+This will permit jobs that use Pthreads to be built with \Condor{compile}.
 \Ticket{3319}
 
 
@@ -204,14 +367,14 @@ The default is to do graceful removal.
 
 \begin{itemize}
 
-\item When HTCondor creates a keypair at the job's request, it no
+\item When HTCondor creates a key pair at an EC2 job's request, it no
 longer fails to remove the private key from disk when the job leaves
 the queue.
 \Ticket{3477}
 
-\item The EC2 GAHP now recognizes OpenStack's ``shutoff'' state and
-terminates instances which enter it, preventing them from remaining
-in the queue forever.
+\item The EC2 GAHP now recognizes the OpenStack \Code{shutoff} state and
+terminates instances which enter this state, 
+preventing the instances from remaining in the queue forever.
 \Ticket{3367}
 
 \item \Condor{dagman} no longer does unnecessary sleeps for log file
@@ -230,8 +393,8 @@ when they evaluated to \Expr{True} or \Expr{False}:
 to fail when submitted to an HTCondor cluster with a large history file.
 \Ticket{3429}
 
-\item The interactive mode of \Condor{submit} would fail when used
-with a submit file containing the Arguments or Arguments2 keyword.
+\item Corrected the submission of interactive jobs for cases 
+in which the submit description file specified \SubmitCmd{Arguments}.
 \Ticket{3455}
 
 \item The semantics of signals sent to jobs were changed.

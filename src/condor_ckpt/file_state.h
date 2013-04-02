@@ -247,7 +247,7 @@ public:
 private:
 
 	int	resume( int fd );
-	int	install_special( int real_fd, char *kind );
+	int	install_special( int real_fd, const char *kind );
 	int	find_empty();
 	int	count_file_uses( CondorFile *f );
 	int	count_pointer_uses( CondorFilePointer *f );
@@ -263,7 +263,7 @@ private:
 	CondorFile * open_url( char const *url, int flags, int mode );
 	CondorFile * open_url_retry( char const *url, int flags, int mode );
 	CondorFile * open_file_unique( char *logical_name, int flags, int mode );
-	CondorFileInfo	* make_info( char *logical_name );
+	CondorFileInfo	* make_info( const char *logical_name );
 
 	CondorFilePointer	**pointers;
 	CondorFileInfo		*info_head;

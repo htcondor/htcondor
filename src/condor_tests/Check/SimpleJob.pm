@@ -31,7 +31,7 @@ $aborted = sub
 	die "Abort event NOT expected\n";
 };
 
-$execute = sub
+$dummy = sub
 {
 };
 
@@ -50,11 +50,13 @@ sub RunCheck
     my $should_transfer_files = $args{should_transfer_files} || "";
     my $when_to_transfer_output = $args{when_to_transfer_output} || "";
     my $duration = $args{duration} || "1";
-    my $execute_fn = $args{on_execute} || $execute;
+    my $execute_fn = $args{on_execute} || $dummy;
+    my $ulog_fn = $args{on_ulog} || $dummy;
 
     CondorTest::RegisterAbort( $testname, $aborted );
     CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
     CondorTest::RegisterExecute($testname, $execute_fn);
+    CondorTest::RegisterULog($testname, $ulog_fn);
     CondorTest::RegisterSubmit( $testname, $submitted );
 
     my $submit_fname = CondorTest::TempFileName("$testname.submit");

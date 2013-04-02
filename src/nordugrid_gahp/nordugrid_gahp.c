@@ -845,10 +845,6 @@ handle_nordugrid_submit( char **input_line )
 	gahp_printf("S\n");
 	gahp_sem_up(&print_control);
 
-	user_arg = malloc_user_arg( input_line, current_cred, input_line[2] );
-	user_arg->cmd_type = FtpCtrlCmd;
-	user_arg->first_callback = nordugrid_submit_start_callback;
-
 		/* modify the rsl */
 	{
 		char *str;
@@ -857,7 +853,16 @@ handle_nordugrid_submit( char **input_line )
 		globus_rsl_t *inputfiles_rsl = NULL;
 
 		rsl = globus_rsl_parse( input_line[3] );
-		assert( rsl != NULL );
+		if ( rsl == NULL ) {
+			char *esc = escape_err_msg( "Failed to parsed RSL" );
+			char *output = (char *) globus_libc_malloc( 10 + strlen( input_line[1] ) +
+														strlen( esc ) );
+			globus_libc_sprintf( output, "%s 1 NULL %s", input_line[1], esc );
+			globus_libc_free( esc );
+			enqueue_results( output );
+			all_args_free( input_line );
+			return 0;
+		}
 
 			/* add '(.gahp_complete "")' to inputfiles */
 		inputfiles_rsl = NULL;
@@ -892,6 +897,10 @@ handle_nordugrid_submit( char **input_line )
 		globus_libc_free( input_line[3] );
 		input_line[3] = str;
 	}
+
+	user_arg = malloc_user_arg( input_line, current_cred, input_line[2] );
+	user_arg->cmd_type = FtpCtrlCmd;
+	user_arg->first_callback = nordugrid_submit_start_callback;
 
 	begin_ftp_command( user_arg );
 
@@ -1429,6 +1438,7 @@ void nordugrid_stage_in_write_callback( void *arg,
 	user_arg_t *user_arg = (user_arg_t *)arg;
 	globus_result_t result;
 	int rc;
+	globus_off_t pos = 0;
 
 	if ( error != GLOBUS_SUCCESS ) {
 			/* What to do? */
@@ -1438,7 +1448,8 @@ void nordugrid_stage_in_write_callback( void *arg,
 		return;
 	}
 
-	assert( (globus_ssize_t)(offset + length) == lseek( user_arg->fd, 0, SEEK_CUR ) );
+	pos = lseek( user_arg->fd, 0, SEEK_CUR );
+	assert( pos == (offset + length) );
 
 	if ( eof ) {
 		free( buffer );
@@ -1663,6 +1674,7 @@ void nordugrid_stage_out2_read_callback( void *arg,
 	user_arg_t *user_arg = (user_arg_t *)arg;
 	globus_result_t result;
 	globus_size_t written = 0;
+	globus_off_t pos = 0;
 
 	if ( error != GLOBUS_SUCCESS ) {
 			/* What to do? */
@@ -1672,7 +1684,8 @@ void nordugrid_stage_out2_read_callback( void *arg,
 		return;
 	}
 
-	assert( offset == lseek( user_arg->fd, 0, SEEK_CUR ) );
+	pos = lseek( user_arg->fd, 0, SEEK_CUR );
+	assert( pos == offset );
 	while ( written < length ) {
 		int rc = write( user_arg->fd, buffer + written, length - written );
 		if ( rc < 0 ) {
@@ -2360,6 +2373,7 @@ void gridftp_transfer_write_callback( void *arg,
 	user_arg_t *user_arg = (user_arg_t *)arg;
 	globus_result_t result;
 	int rc;
+	globus_off_t pos = 0;
 
 	if ( error != GLOBUS_SUCCESS ) {
 			/* What to do? */
@@ -2369,7 +2383,8 @@ void gridftp_transfer_write_callback( void *arg,
 		return;
 	}
 
-	assert( (globus_ssize_t)(offset + length) == lseek( user_arg->fd, 0, SEEK_CUR ) );
+	pos = lseek( user_arg->fd, 0, SEEK_CUR );
+	assert( pos == (offset + length) );
 
 	if ( eof ) {
 		free( buffer );
@@ -2413,6 +2428,7 @@ void gridftp_transfer_read_callback( void *arg,
 	user_arg_t *user_arg = (user_arg_t *)arg;
 	globus_result_t result;
 	globus_size_t written = 0;
+	globus_off_t pos = 0;
 
 	if ( error != GLOBUS_SUCCESS ) {
 			/* What to do? */
@@ -2422,7 +2438,8 @@ void gridftp_transfer_read_callback( void *arg,
 		return;
 	}
 
-	assert( offset == lseek( user_arg->fd, 0, SEEK_CUR ) );
+	pos = lseek( user_arg->fd, 0, SEEK_CUR );
+	assert( pos == offset );
 	while ( written < length ) {
 		int rc = write( user_arg->fd, buffer + written, length - written );
 		if ( rc < 0 ) {

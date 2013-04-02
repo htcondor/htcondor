@@ -9,9 +9,11 @@ struct ExprTreeHolder
 {
     ExprTreeHolder(const std::string &str);
 
-    ExprTreeHolder(classad::ExprTree *expr);
+    ExprTreeHolder(classad::ExprTree *expr, bool owns=false);
 
     ~ExprTreeHolder();
+
+    bool ShouldEvaluate() const;
 
     boost::python::object Evaluate() const;
 
@@ -21,8 +23,11 @@ struct ExprTreeHolder
 
     classad::ExprTree *get();
 
+    boost::python::object getItem(ssize_t);
+
 private:
     classad::ExprTree *m_expr;
+    boost::shared_ptr<classad::ExprTree> m_refcount;
     bool m_owns;
 };
 
