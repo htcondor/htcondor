@@ -829,6 +829,9 @@ else(MSVC)
 
 	if (LINUX)
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--warn-once -Wl,--warn-common")
+		if ( "${CONDOR_PLATFORM}" STREQUAL "x86_64_Ubuntu12")
+			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-as-needed")
+		endif()
 	endif(LINUX)
 
 	if( HAVE_LIBDL AND NOT BSD_UNIX )
