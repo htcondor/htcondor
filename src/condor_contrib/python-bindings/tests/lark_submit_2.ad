@@ -5,6 +5,6 @@ Cmd = "/usr/bin/curl";
 Arguments = "www.google.com";
 InboundConnectivity = true;
 OutboundConnectivity = false;
-OnExitRemove = false;
+LeaveJobInQueue = true;
 NetworkAccounting = true;
 ]

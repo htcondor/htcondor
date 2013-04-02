@@ -50,10 +50,10 @@ class TestWithDaemons(unittest.TestCase):
         os.environ["_condor_USE_NETWORK_NAMESPACES"] = "TRUE"
         #os.environ["_condor_LARK_NETWORK_ACCOUNTING"] = "TRUE"
         #now make the default configuration to be "bridge"
-        os.environ["_condor_STARTD_ATTRS"] = "LarkNetworkType, LarkAddressType, LarkBridgeDevice"
-        os.environ["_condor_LarkNetworkType"] = "bridge"
-        os.environ["_condor_LarkNetBridgeDevice"] = "eth0"
-        os.environ["_condor_LarkAddressType"] = "dhcp"
+        #os.environ["_condor_STARTD_ATTRS"] = "LarkNetworkType, LarkAddressType, LarkBridgeDevice"
+        #os.environ["_condor_LarkNetworkType"] = "bridge"
+        #os.environ["_condor_LarkNetBridgeDevice"] = "eth0"
+        #os.environ["_condor_LarkAddressType"] = "dhcp"
 
         os.environ["_condor_CONDOR_HOST"] = socket.getfqdn()
         os.environ["_condor_LOCAL_DIR"] = testdir
@@ -194,7 +194,32 @@ class TestWithDaemons(unittest.TestCase):
         ads = schedd.query("ClusterId == %d" % cluster, [])
         print ads[0]
         self.assertTrue("NetworkIncoming" in ads[0].keys() and ads[0]["NetworkIncoming"] > 0)
-		
+
+    def testNetworkPolicyBridge(self):
+        jobqueue_log_dir = os.path.join(os.getcwd(), "tests_tmp/spool")
+        filelist = [f for f in os.listdir(jobqueue_log_dir) if f.startswith("job_queue.log")]
+        for f in filelist:
+            print "Removing", f
+            os.remove(os.path.join(jobqueue_log_dir, f))
+        self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
+        output_file = os.path.join(testdir, "lark_test_3.out")
+        if os.path.exists(output_file):
+            os.unlink(output_file)
+        schedd = htcondor.Schedd()
+        ad = classad.parse(open("tests/lark_submit_3.ad"))
+        ads = []
+        cluster = schedd.submit(ad, 1, False, ads)
+        for i in range(60):
+            ads = schedd.query("ClusterId == %d" % cluster, ["LarkNetworkType"])
+            print ads
+            if len(ads) != 0:
+                if "LarkNetworkType" in ads[0].keys():
+                    break
+            time.sleep(1)
+        self.assertTrue(len(ads) == 1)
+        self.assertTrue("LarkNetworkType" in ads[0].keys())
+        self.assertEquals(job_ad["LarkNetworkType"], "bridge")
+
 if __name__ == '__main__':
     unittest.main()
 

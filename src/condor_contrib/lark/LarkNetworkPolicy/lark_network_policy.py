@@ -46,8 +46,10 @@ if "NetworkAccounting" in job_ad.keys():
 
 if expr1.eval() == True and expr2.eval() == False:
 	machine_ad_update["LarkNetworkType"] = 'nat'
-elif expr1.eval() == True and expr2.eval() == True:
-	machine_ad_update["LarkNetworkType"] = 'bridge'
+if expr1.eval() == True and expr2.eval() == True:
+    machine_ad_update["LarkNetworkType"] = 'bridge'
+    machine_ad_update["LarkBridgeDevice"] = 'eth0'
+    machine_ad_update["LarkAddressType"] = 'dhcp'
 if expr3.eval() == True:
 	machine_ad_update["LarkNetworkAccounting"] = True
 
