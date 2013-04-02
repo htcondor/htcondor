@@ -1221,6 +1221,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		ATTR_TRANSFER_OUTPUT_REMAPS,
 		ATTR_JOB_IWD,
 		ATTR_GRID_RESOURCE,
+		ATTR_REQUEST_MEMORY,
 		NULL };		// list must end with a NULL
 
 	submit_ad = new ClassAd;
