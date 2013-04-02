@@ -16,7 +16,16 @@ of all the remote machines running a parallel or mpi universe job.
 %%% ClassAd attribute: Args
 \index{ClassAd job attribute!Args}
 \index{Args!job ClassAd attribute}
-\item[\AdAttr{Args}:]  String representing the arguments passed to the job.
+\item[\AdAttr{Args}:]  A string representing the command line arguments 
+passed to the job, when those arguments are specified using the
+\emph{old} syntax, as specified in section~\ref{man-condor-submit-arguments}.
+
+%%% ClassAd attribute: Arguments
+\index{ClassAd job attribute!Arguments}
+\index{Arguments!job ClassAd attribute}
+\item[\AdAttr{Arguments}:]  A string representing the command line arguments 
+passed to the job, when those arguments are specified using the
+\emph{new} syntax, as specified in section~\ref{man-condor-submit-arguments}.
 
 %%% ClassAd attribute: CkptArch
 \index{ClassAd job attribute!CkptArch}
