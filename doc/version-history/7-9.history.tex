@@ -129,9 +129,10 @@ the claim is kept not only when the job exits,
 but also when the job is removed.
 \Ticket{3491}
 
-\item \Condor{dagman} now reports the DAG status (total number of nodes,
-nodes queued, nodes finished, etc.) to its classad.  See
-section~\ref{sec:DAGStatusClassad} for more information.
+\item \Condor{dagman} now publishes in its own job ClassAd,
+attributes with the DAG status,
+such as total number of nodes, nodes queued, and nodes finished.
+See section~\ref{sec:DAGStatusClassad} for more information.
 \Ticket{1782}
 
 \end{itemize}
