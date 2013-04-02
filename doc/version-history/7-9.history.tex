@@ -29,6 +29,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item On Linux systems where cgroups are supported and enabled, the 
+condor\_starter will now detect and trap when a vanilla universe job 
+would otherwise be killed by the system Out Of Memory (OOM) killer.  
+This is especially likely when a job sets the RequestedMemory attribute 
+lower than needed.  The job will be put on hold.
+\Ticket{2944}
+
 \item Add a \Opt{-force-graceful} command-line option to \Condor{off}.  This
 will allow administrators to issue a graceful shutdown command, even after
 issuing a \Opt{-peaceful} command. Previously, a \Opt{-peaceful} \Condor{off}
