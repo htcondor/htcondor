@@ -56,7 +56,10 @@ command would preclude a \Opt{-graceful} off command.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug that could cause HTCondor-C jobs to fail when they are
+part of a DAG. The jobs would be held with a hold reason of
+``Failed to initialize user log to /dev/null or <DAG log path>''.
+\Ticket{3474}
 
 \end{itemize}
 
