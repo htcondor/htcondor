@@ -10922,3 +10922,35 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,baseshadow
 id=612
+
+[BASE_CGROUP]
+aliases=
+default=
+version=7.9.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Enables and names the base kernel cgroup for job management
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=starter
+id=613
+
+[MEMORY_LIMIT]
+aliases=
+default=none
+version=7.9.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Determines whether cgroup base memory enforcement should happen
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=starter
+id=614
