@@ -975,8 +975,7 @@ DedicatedScheduler::reaper( int pid, int status )
 
 	if( GetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
 						ATTR_JOB_STATUS, &q_status) < 0 ) {
-		EXCEPT( "ERROR no job status for %d.%d in "
-				"DedicatedScheduler::reaper()!",
+		dprintf(D_ALWAYS, "Job (%d.%d) for reaped shadow has already been removed.\n",
 				srec->job_id.cluster, srec->job_id.proc );
 	}
 
@@ -2688,19 +2687,6 @@ DedicatedScheduler::removeAllocation( shadow_rec* srec )
 		n = matches->getlast();
 		for( m=0 ; m <= n ; m++ ) {
 			deallocMatchRec( (*matches)[m] );
-		}
-	}
-
-		/* it may be that the mpi shadow crashed and left around a 
-		   file named 'procgroup' in the IWD of the job.  We should 
-		   check and delete it here. */
-	std::string pg_file;
-	((*alloc->jobs)[0])->LookupString( ATTR_JOB_IWD, pg_file );  
-	pg_file += "/procgroup";
-	if ( unlink ( pg_file.c_str() ) == -1 ) {
-		if ( errno != ENOENT ) {
-			dprintf ( D_FULLDEBUG, "Couldn't remove %s. errno %d.\n", 
-					  pg_file.c_str(), errno );
 		}
 	}
 
