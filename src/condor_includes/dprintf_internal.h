@@ -70,10 +70,12 @@ struct DebugFileInfo
 	FILE *debugFP;
 	DebugOutputChoice choice;
 	std::string logPath;
-	int64_t maxLog;
+	long long maxLog;
+	long long logZero;
 	int maxLogNum;
 	bool want_truncate;
 	bool accepts_all;
+	bool rotate_by_time; // when true, logMax is a time interval for rotation
 	bool dont_panic;
 	void *userData;
 	DebugFileInfo() :
@@ -81,16 +83,18 @@ struct DebugFileInfo
 			debugFP(0),
 			choice(0),
 			maxLog(0),
+			logZero(0),
 			maxLogNum(0),
 			want_truncate(false),
 			accepts_all(false),
+			rotate_by_time(false),
 			dont_panic(false),
 			userData(NULL),
 			dprintfFunc(NULL)
 			{}
 	DebugFileInfo(const DebugFileInfo &dfi) : outputTarget(dfi.outputTarget), debugFP(NULL), choice(dfi.choice),
-		logPath(dfi.logPath), maxLog(dfi.maxLog), maxLogNum(dfi.maxLogNum), want_truncate(dfi.want_truncate),
-		accepts_all(dfi.accepts_all), dont_panic(dfi.dont_panic), dprintfFunc(dfi.dprintfFunc) {}
+		logPath(dfi.logPath), maxLog(dfi.maxLog), logZero(dfi.logZero), maxLogNum(dfi.maxLogNum), want_truncate(dfi.want_truncate),
+		accepts_all(dfi.accepts_all), rotate_by_time(dfi.rotate_by_time), dont_panic(dfi.dont_panic), dprintfFunc(dfi.dprintfFunc) {}
 	DebugFileInfo(const dprintf_output_settings&);
 	~DebugFileInfo();
 	bool MatchesCatAndFlags(int cat_and_flags) const;
@@ -101,14 +105,19 @@ struct dprintf_output_settings
 {
 	DebugOutputChoice choice;
 	std::string logPath;
-	off_t maxLog;
+	long long logMax;  // max size/duration of a single log file
+	long long logZero; // when rotation is time based. this is time 0
 	int maxLogNum;
 	bool want_truncate;
 	bool accepts_all;
-	unsigned int HeaderOpts;  // temporary, should get folded into choice
+	bool rotate_by_time; // when true, logMax is a time interval for rotation
+	unsigned int HeaderOpts;
 	unsigned int VerboseCats; // temporary, should get folded into choice
 
-	dprintf_output_settings() : choice(0), maxLog(0), maxLogNum(0), want_truncate(false), accepts_all(false), HeaderOpts(0), VerboseCats(0) {}
+	dprintf_output_settings()
+		: choice(0), logMax(0), logZero(0), maxLogNum(0)
+		, want_truncate(false), accepts_all(false), rotate_by_time(false)
+		, HeaderOpts(0), VerboseCats(0) {}
 };
 
 void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_info);

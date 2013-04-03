@@ -34,20 +34,8 @@
 #include <string>
 using std::string;
 
-//extern int		DebugFlags;
-//#ifdef D_CATEGORY_MASK
-//extern int		DebugVerbose;
-//#else
-//extern FILE		*DebugFPs[D_NUMLEVELS+1];
-//#endif
-
 extern char		*DebugLock;
-#ifdef D_CATEGORY_MASK
-extern const char		*_condor_DebugFlagNames[D_CATEGORY_COUNT];
-#else
-extern const char		*_condor_DebugFlagNames[D_NUMLEVELS];
-#endif
-
+extern const char* const _condor_DebugCategoryNames[D_CATEGORY_COUNT];
 extern int		DebugUseTimestamps;
 extern int		DebugContinueOnOpenFailure;
 extern int		log_keep_open;
@@ -57,7 +45,6 @@ extern char*	DebugLogDir;
 
 extern void		_condor_set_debug_flags( const char *strflags, int cat_and_flags );
 
-//param_functions *dprintf_param_funcs = NULL;
 
 int
 dprintf_config_ContinueOnFailure ( int fContinue )
@@ -132,6 +119,55 @@ dprintf_config_tool(const char* subsys, int /*flags*/)
 	dprintf_set_outputs(&tool_output, 1);
 
 	return 0;
+}
+
+static bool parse_size_with_unit(
+	const char * input,
+	long long  & value,
+	bool       & is_time)
+{
+	value = 0;
+	std::stringstream ss(input);
+	ss >> value;
+	bool r = (ss.eof() && (0 == (ss.rdstate() & std::stringstream::failbit)));
+	if (r) return r;
+
+	std::string unit;
+	ss >> unit; // optional unit with optional leading whitespace
+	if (unit.length() > 0) {
+		int ch = unit[0];
+		int ch2 = (unit.length() > 1) ? toupper((int)unit[1]) : 0;
+		switch (toupper(ch)) {
+			case 'S': is_time = true; break;
+			case 'H': is_time = true; value *= 60*60; break;
+			case 'D': is_time = true; value *= 60*60*24; break;
+			case 'W': is_time = true; value *= 60*60*24*7; break;
+
+			case 'B': is_time = false; break;
+			case 'K': is_time = false; value *= 1024; break;
+			case 'G': is_time = false; value *= 1024*1024*1024; break;
+			case 'T': is_time = false; value *= (long long)1024*1024*1024*1024; break;
+
+			// M can be Mb or min
+			case 'M': {
+				if (ch2) {
+					if (ch2 == 'B') is_time = false;
+					else if (ch2 == 'I') is_time = true;
+					else return false;
+				} else {
+					if (ch == 'm') is_time = true;
+				}
+				if (is_time) value *= 60;
+				else value *= 1024*1024;
+				break;
+			}
+		}
+	}
+
+	ss >> std::ws; // consume trailing whitespce before testing for eof
+	r = (ss.eof() && (0 == (ss.rdstate() & std::stringstream::failbit)));
+	//bool r = lex_cast(pval, value);
+	return r;
 }
 
 int
@@ -256,7 +292,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 	**	pick up the name of the log file, maximum log size, and the name of the
 	**	lock file (if it is specified).
 	*/
-	for (int debug_level = 0; debug_level < (int)COUNTOF(_condor_DebugFlagNames); ++debug_level) {
+	for (int debug_level = 0; debug_level < (int)COUNTOF(_condor_DebugCategoryNames); ++debug_level) {
 
 		std::string logPath;
 		std::string subsys_and_level = subsys;
@@ -269,7 +305,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 			** first level-specific file goes into the other arrays at
 			** index 1
 			*/
-			subsys_and_level += _condor_DebugFlagNames[debug_level]+1;
+			subsys_and_level += _condor_DebugCategoryNames[debug_level]+1;
 			param_index = DebugParams.size();
 		}
 
@@ -296,8 +332,9 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 
 			DebugParams[0].accepts_all = true;
 			DebugParams[0].want_truncate = false;
+			DebugParams[0].rotate_by_time = false;
 			DebugParams[0].logPath = logPath;
-			DebugParams[0].maxLog = 1024*1024;
+			DebugParams[0].logMax = 1024*1024;
 			DebugParams[0].maxLogNum = 1;
 			DebugParams[0].HeaderOpts = HeaderOpts;
 			DebugParams[0].VerboseCats = verbose;
@@ -331,9 +368,10 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 				struct dprintf_output_settings info;
 				info.accepts_all = false;
 				info.want_truncate = false;
+				info.rotate_by_time = false;
 				info.choice = 1<<debug_level;
 				info.logPath = logPath;
-				info.maxLog = 1024*1024;
+				info.logMax = 1024*1024;
 				info.maxLogNum = 1;
 
 				DebugParams.push_back(info);
@@ -362,15 +400,16 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 		(void)sprintf(pname, "MAX_%s_LOG", subsys_and_level.c_str());
 		pval = param(pname);
 		if (pval != NULL) {
-			// because there is nothing like param_long_long() or param_off_t()
-			int64_t maxlog = 0;
-			bool r = lex_cast(pval, maxlog);
+			long long maxlog = 0;
+			bool unit_is_time = false;
+			bool r = parse_size_with_unit(pval, maxlog, unit_is_time);
 			if (!r || (maxlog < 0)) {
 				std::string m;
-				formatstr(m, "Invalid config %s = %s: %s must be an integer literal >= 0\n", pname, pval, pname);
+				formatstr(m, "Invalid config %s = %s: %s must be an integer literal >= 0 and may be followed by a units value\n", pname, pval, pname);
 				_condor_dprintf_exit(EINVAL, m.c_str());
 			}
-			DebugParams[param_index].maxLog = maxlog;
+			DebugParams[param_index].logMax = maxlog;
+			DebugParams[param_index].rotate_by_time = unit_is_time;
 			free(pval);
 		}
 
@@ -392,9 +431,10 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 		{
 			p_info[ii].accepts_all   = DebugParams[ii].accepts_all;
 			p_info[ii].want_truncate = DebugParams[ii].want_truncate;
+			p_info[ii].rotate_by_time = DebugParams[ii].rotate_by_time;
 			p_info[ii].choice        = DebugParams[ii].choice;
 			p_info[ii].logPath       = DebugParams[ii].logPath;
-			p_info[ii].maxLog        = DebugParams[ii].maxLog;
+			p_info[ii].logMax        = DebugParams[ii].logMax;
 			p_info[ii].maxLogNum     = DebugParams[ii].maxLogNum;
 			p_info[ii].HeaderOpts    = DebugParams[ii].HeaderOpts;
 			p_info[ii].VerboseCats   = DebugParams[ii].VerboseCats;

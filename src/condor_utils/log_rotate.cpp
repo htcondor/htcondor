@@ -39,7 +39,16 @@ int isInitialized = 0;
 int numLogs = 0;
 
 /** create an ISO timestamp string */
-static char *createTimestampString();
+static void createTimestampString(std::string & timestamp, time_t tt)
+{
+	struct tm *tm;
+	tm = localtime(&tt);
+
+	char buf[80];
+	strftime(buf, sizeof(buf), "%Y%m%dT%H%M%S", tm);
+
+	timestamp = buf;
+}
 
 #ifndef WIN32
 int scandirectory(const char *dir, struct dirent ***namelist,
@@ -120,30 +129,31 @@ void setBaseName(const char *baseName) {
 int
 rotateSingle()
 {
-	return rotateTimestamp("old", 1);
+	return rotateTimestamp("old", 1, 0);
 } 
 
 
 const char *
-createRotateFilename(const char *ending, int maxNum)
+createRotateFilename(const char *ending, int maxNum, time_t tt)
 {
-	const char *timeStamp;
+	static std::string timeStamp;
 	if (maxNum <= 1)
 		timeStamp = "old";
 	else 	
 	if (ending == NULL) {
-		timeStamp = createTimestampString();
+		createTimestampString(timeStamp, tt);
 	} else {
 		timeStamp = ending;
 	}
-	return timeStamp;
+	return timeStamp.c_str();
 }
 
+// rotate the current file to file.timestamp
 int
-rotateTimestamp(const char *timeStamp, int maxNum)
+rotateTimestamp(const char *timeStamp, int maxNum, time_t tt)
 {
 	int save_errno;
-	const char *ts = createRotateFilename(timeStamp, maxNum);
+	const char *ts = createRotateFilename(timeStamp, maxNum, tt);
 
 	// First, select a name for the rotated history file
 	char *rotated_log_name = (char*)malloc(strlen(logBaseName) + strlen(ts) + 2) ;
@@ -284,16 +294,4 @@ char *findOldest(char *dirName, int *count) {
 
 #endif
 
-char *createTimestampString() {
-	time_t clock_now;
-	struct tm *tm;
-	static char timebuf[80];
-	static char *timeFormat = 0;
-	timeFormat = strdup("%Y%m%dT%H%M%S");
-	memset((void*)&clock_now,0,sizeof(time_t)); 
-	(void)time(  &clock_now );
-	tm = localtime( &clock_now );	
-	strftime(timebuf, 80, timeFormat, tm);
-	return timebuf;
-}
 
