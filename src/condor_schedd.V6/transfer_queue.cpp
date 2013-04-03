@@ -856,7 +856,10 @@ TransferQueueManager::UpdateIOStats()
 void
 TransferQueueManager::publish(ClassAd *ad, char const *publish_config)
 {
-	int publish_flags = generic_stats_ParseConfigString(publish_config, "TRANSFER", NULL, m_publish_flags);
+	int publish_flags = m_publish_flags;
+	if (publish_config && publish_config[0]) {
+		publish_flags = generic_stats_ParseConfigString(publish_config, "TRANSFER", NULL, publish_flags);
+	}
 	publish(ad,publish_flags);
 }
 
