@@ -748,7 +748,7 @@ VanillaProc::setupOOMScore(int new_score)
 				errno, strerror(errno));
 			return 1;
 		} else {
-			int oom_score_fd = open("/proc/self/oom_adj", O_WRONLY | O_CLOEXEC);
+			oom_score_fd = open("/proc/self/oom_adj", O_WRONLY | O_CLOEXEC);
 			if (oom_score_fd == -1) {
 				dprintf(D_ALWAYS,
 					"Unable to open oom_adj for the starter: (errno=%u, %s)\n",
@@ -853,6 +853,7 @@ VanillaProc::setupOOMEvent(const std::string &cgroup_string)
 		dprintf(D_ALWAYS,
 			"Unable to open the OOM control file for writing for starter: %u %s\n",
 			errno, strerror(errno));
+		close(event_ctrl_fd);
 		return 1;
 	}
 	const char limits [] = "1";
