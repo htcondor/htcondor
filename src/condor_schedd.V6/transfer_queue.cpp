@@ -164,7 +164,7 @@ TransferQueueManager::InitAndReconfig() {
 	m_publish_flags = IF_BASICPUB;
 	std::string publish_config;
 	if( param(publish_config,"STATISTICS_TO_PUBLISH") ) {
-		m_publish_flags = generic_stats_ParseConfigString(publish_config.c_str(), "TRANSFER", NULL, m_publish_flags);
+		m_publish_flags = generic_stats_ParseConfigString(publish_config.c_str(), "TRANSFER", "TRANSFER", m_publish_flags);
 	}
 
 	std::string iostat_timespans;
@@ -858,7 +858,7 @@ TransferQueueManager::publish(ClassAd *ad, char const *publish_config)
 {
 	int publish_flags = m_publish_flags;
 	if (publish_config && publish_config[0]) {
-		publish_flags = generic_stats_ParseConfigString(publish_config, "TRANSFER", NULL, publish_flags);
+		publish_flags = generic_stats_ParseConfigString(publish_config, "TRANSFER", "TRANSFER", publish_flags);
 	}
 	publish(ad,publish_flags);
 }
