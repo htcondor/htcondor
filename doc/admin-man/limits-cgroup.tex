@@ -43,9 +43,9 @@ These
 two attributes are the cpu.shares attribute in the cpu controller, and one
 of two attributes in the memory controller, either memory.limit\_in\_bytes, or 
 memory.soft\_limit\_in\_bytes.  
-The configuration variable \Macro{MEMORY\_LIMIT} controls
+The configuration variable \Macro{CGROUP\_MEMORY\_LIMIT\_POLICY} controls
 whether the hard limit (the former) or the soft limit will be used.  
-If \MacroNI{MEMORY\_LIMIT} is set to the string \Expr{hard}, 
+If \MacroNI{CGROUP\_MEMORY\_LIMIT\_POLICY} is set to the string \Expr{hard}, 
 the hard limit will be used.
 If set to \Expr{soft}, the soft limit will be used.  
 Otherwise, no limit will be set if the value is \Expr{none}.

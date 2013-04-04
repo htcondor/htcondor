@@ -445,7 +445,7 @@ VanillaProc::StartJob()
 	// See Note near setup of param(BASE_CGROUP)
 	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup && retval) {
 		std::string mem_limit;
-		param(mem_limit, "MEMORY_LIMIT", "soft");
+		param(mem_limit, "CGROUP_MEMORY_LIMIT_POLICY", "soft");
 		bool mem_is_soft = mem_limit == "soft";
 		std::string cgroup_string = cgroup;
 		CgroupLimits climits(cgroup_string);
@@ -463,7 +463,7 @@ VanillaProc::StartJob()
 		} else if (mem_limit == "none") {
 			dprintf(D_FULLDEBUG, "Not enforcing memory soft limit.\n");
 		} else {
-			dprintf(D_ALWAYS, "Invalid value of MEMORY_LIMIT: %s.  Ignoring.\n", mem_limit.c_str());
+			dprintf(D_ALWAYS, "Invalid value of CGROUP_MEMORY_LIMIT_POLICY: %s.  Ignoring.\n", mem_limit.c_str());
 		}
 
 		// Now, set the CPU shares
