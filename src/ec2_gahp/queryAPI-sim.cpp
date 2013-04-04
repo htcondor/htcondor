@@ -763,7 +763,7 @@ std::string handleRequest( const std::string & request ) {
         if( std::string::npos == equalsIdx ) {
             std::ostringstream error;
             error << "Malformed URL '" << URL << "': attribute without value; failing" << std::endl;
-            fprintf( stderr, error.str().c_str() );
+            fprintf( stderr, "%s", error.str().c_str() );
             return constructReply( "HTTP/1.1 400 Bad Request", error.str() );
         }        
         std::string::size_type ampersandIdx = URL.find( "&", i + 1 );
@@ -794,7 +794,7 @@ std::string handleRequest( const std::string & request ) {
     if( simulatorActions.end() == ci ) {
         std::ostringstream error;
         error << "Action '" << action << "' not found." << std::endl;
-        fprintf( stderr, error.str().c_str() );
+        fprintf( stderr, "%s", error.str().c_str() );
         return constructReply( "HTTP/1.1 404 Not Found", error.str() );
     }
     
