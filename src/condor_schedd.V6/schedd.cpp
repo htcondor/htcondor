@@ -12214,6 +12214,8 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		goto error_wrapup;
 	}
 
+	audit_log( sock, "GET_JOB_CONNECT_INFO job %d.%d\n", jobid.cluster, jobid.proc );
+
 	input.LookupString(ATTR_SESSION_INFO,job_owner_session_info);
 
 	jobad = GetJobAd(jobid.cluster,jobid.proc);
@@ -12387,6 +12389,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	return TRUE;
 
  error_wrapup:
+	audit_log( sock, "GET_JOB_CONNECT_INFO failed: %s\n",error_msg.Value() );
 	dprintf(D_ALWAYS,"GET_JOB_CONNECT_INFO failed: %s\n",error_msg.Value());
 	reply.Assign(ATTR_RESULT,false);
 	reply.Assign(ATTR_ERROR_STRING,error_msg);
