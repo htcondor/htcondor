@@ -25,11 +25,11 @@
 // connection id from the relevant Sock object.
 // TODO This declaration may need to be moved elsewhere
 // TODO Do we like this name?
-// TODO Once we have a connection id in ReliSock, use that
+// TODO Once we have a connection id in Sock, use that
 #if defined(WIN32)
-#  define audit_log(sock, fmt, ...) dprintf(D_AUDIT, "%d " fmt, (sock)->isClient(), __VA_ARGS__)
+#  define audit_log(sock, fmt, ...) dprintf(D_AUDIT, "%d " fmt, (sock)->get_timeout_raw(), __VA_ARGS__)
 #else
-#  define audit_log(sock, fmt, ...) dprintf(D_AUDIT, "%d " fmt, (sock)->isClient(), ##__VA_ARGS__)
+#  define audit_log(sock, fmt, ...) dprintf(D_AUDIT, "%d " fmt, (sock)->get_timeout_raw(), ##__VA_ARGS__)
 #endif
 
 /*
