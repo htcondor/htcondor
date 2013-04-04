@@ -80,8 +80,8 @@ char * DebugLogDir = NULL; // set to the value of the $(LOG) macro
 
 extern	DLL_IMPORT_MAGIC int		errno;
 extern unsigned int DebugHeaderOptions;	// for D_FID, D_PID, D_NOHEADER & D_
-extern DebugOutputChoice DebugBasic;   /* Bits to look for in dprintf */
-extern DebugOutputChoice DebugVerbose; /* verbose bits for dprintf */
+extern DebugOutputChoice AnyDebugBasicListener; /* Bits to look for in dprintf */
+extern DebugOutputChoice AnyDebugBasicListener; /* verbose bits for dprintf */
 //extern  int		DebugFlags;
 //extern param_functions *dprintf_param_funcs;
 
@@ -305,7 +305,8 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, time_t clock
 					_condor_dprintf_exit(sprintf_error, "Error writing to debug header\n");	
 				}
 			}
-			rc = sprintf_realloc(&buf, &bufpos, &buflen, "(%s%s) ", _condor_DebugCategoryNames[cat], verbosity);
+			const char * orfail = (cat_and_flags & D_FAILURE) ? "|D_FAILURE" : "";
+			rc = sprintf_realloc(&buf, &bufpos, &buflen, "(%s%s%s) ", _condor_DebugCategoryNames[cat], verbosity, orfail);
 			if (rc < 0) sprintf_errno = errno;
 		}
 
@@ -336,7 +337,6 @@ _dprintf_global_func(int cat_and_flags, int hdr_flags, time_t clock_now, struct 
 	int rc = 0;
 	static char* buffer = NULL;
 	static int buflen = 0;
-	//debug_lock_it(dbgInfo, NULL, 0);
 	const char* header = _format_global_header(cat_and_flags, hdr_flags, clock_now, tm);
 	if(header)
 	{
@@ -476,7 +476,7 @@ _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 	} 
 
 		/* See if this is one of the messages we are logging */
-	if ( ! IsDebugCatAndVerbosity(cat_and_flags))
+	if ( ! IsDebugCatAndVerbosity(cat_and_flags) && ! (cat_and_flags & D_FAILURE))
 		return;
 
 
@@ -563,29 +563,39 @@ _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 			tm = localtime( &clock_now );
 		}
 	
+		#ifdef va_copy
+		va_list copyargs;
+		va_copy(copyargs, args);
+		int rc = vsprintf_realloc(&message_buffer, &bufpos, &buflen, fmt, copyargs);
+		va_end(copyargs);
+		#else
+		int rc = vsprintf_realloc(&message_buffer, &bufpos, &buflen, fmt, args);
+		#endif
+		if (rc < 0) {
+			_condor_dprintf_exit(errno, "Error writing to debug buffer\n");	
+		}
+
 			/* print debug message to catch-all debug file plus files */
 			/* registered for other debug levels */
 		if(!DebugLogs->size())
 		{
 			DebugFileInfo backup;
+			backup.outputTarget = STD_ERR;
 			backup.debugFP = stderr;
 			backup.dprintfFunc = _dprintf_global_func;
-#ifdef va_copy
-			va_list copyargs;
-			va_copy(copyargs, args);
-			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&backup,fmt,copyargs);
-			va_end(copyargs);
-#else
-			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&backup,fmt,args);
-#endif
-			backup.debugFP = NULL;
+			backup.dprintfFunc(cat_and_flags, DebugHeaderOptions, clock_now, tm, message_buffer, &backup);
+			backup.debugFP = NULL; // don't allow destructor to free stderr
 		}
 
 		unsigned int basic_flag = (cat_and_flags & D_FULLDEBUG) ? 0 : (1<<(cat_and_flags&D_CATEGORY_MASK));
 		unsigned int verbose_flag = 1<<(cat_and_flags&D_CATEGORY_MASK);
 		int ixOutput = 0;
 
-		PRAGMA_REMIND("TJ: fix this to work correctly for verbose")
+		// if the message is tagged as a failure message, then it is always in the D_ERROR category
+		// as well as whatever category it's currently in.
+		if (cat_and_flags & D_FAILURE) { basic_flag |= 1<<D_ERROR; }
+
+		PRAGMA_REMIND("TJ: fix this to distinguish between verbose:2 and verbose:3")
 		for(it = DebugLogs->begin(); it < DebugLogs->end(); it++, ++ixOutput)
 		{
 			unsigned int choice = (*it).choice;
@@ -611,20 +621,6 @@ _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 				case OUTPUT_DEBUG_STR:
 					break;
 			   #endif
-			}
-			int rc = 0;
-#ifdef va_copy
-			va_list copyargs;
-			va_copy(copyargs, args);
-//			_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&(*it),fmt,copyargs);
-			rc = vsprintf_realloc(&message_buffer, &bufpos, &buflen, fmt, copyargs);
-			va_end(copyargs);
-#else
-			//_condor_dfprintf_va(cat_and_flags,DebugHeaderOptions,clock_now,tm,&(*it),fmt,args);
-			rc = vsprintf_realloc(&message_buffer, &bufpos, &buflen, fmt, args);
-#endif
-			if (rc < 0) {
-				_condor_dprintf_exit(errno, "Error writing to debug buffer\n");	
 			}
 			
 			it->dprintfFunc(cat_and_flags, DebugHeaderOptions, clock_now, tm, message_buffer, &(*it));

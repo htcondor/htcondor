@@ -109,10 +109,10 @@ enum {
 // first re-definition pass.  add a separate set of flags for Verbose mode
 // for each category. 
 //
-#define IsDebugLevel(cat)    ((DebugBasic & (1<<(cat&D_CATEGORY_MASK))) != 0)
-#define IsDebugCategory(cat) ((DebugBasic & (1<<(cat&D_CATEGORY_MASK))) != 0)
-#define IsDebugVerbose(cat)  ((DebugVerbose & (1<<(cat&D_CATEGORY_MASK))) != 0)
-#define IsFulldebug(cat)     ((DebugBasic & D_FULLDEBUG) != 0 || IsDebugVerbose(cat))
+#define IsDebugLevel(cat)    ((AnyDebugBasicListener & (1<<(cat&D_CATEGORY_MASK))) != 0)
+#define IsDebugCategory(cat) ((AnyDebugBasicListener & (1<<(cat&D_CATEGORY_MASK))) != 0)
+#define IsDebugVerbose(cat)  ((AnyDebugVerboseListener & (1<<(cat&D_CATEGORY_MASK))) != 0)
+#define IsFulldebug(cat)     ((AnyDebugBasicListener & D_FULLDEBUG) != 0 || IsDebugVerbose(cat))
 #define IsDebugCatAndVerbosity(flags) ((flags & (D_VERBOSE_MASK | D_FULLDEBUG)) ? IsDebugVerbose(flags) : IsDebugLevel(flags))
 
 // in the future, we will change the debug system to use a table rather than 
@@ -145,8 +145,8 @@ extern "C" {
 typedef unsigned int DebugOutputChoice;
 
 extern unsigned int DebugHeaderOptions;	// for D_FID, D_PID, D_NOHEADER & D_
-extern DebugOutputChoice DebugBasic;   /* Bits to look for in dprintf */
-extern DebugOutputChoice DebugVerbose; /* verbose bits for dprintf */
+extern DebugOutputChoice AnyDebugBasicListener;   /* Bits to look for in dprintf */
+extern DebugOutputChoice AnyDebugVerboseListener; /* verbose bits for dprintf */
 extern int DebugShouldLockToAppend; /* Should we lock the file before each write? */
 
 /* DebugId is a function that may be registered to be called to insert text

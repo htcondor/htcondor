@@ -837,12 +837,12 @@ int daemon::RealStart( )
 		else {
 			args_string = tmp;
 		}
-		dprintf( D_FAILURE|D_ALWAYS,
+		dprintf( D_ALWAYS,
 				 "Started %sprocess \"%s%s\", pid and pgroup = %d\n",
 				 proc_type, process_name, args_string.Value(), pid );
 	}
 	else {
-		dprintf( D_FAILURE|D_ALWAYS,
+		dprintf( D_ALWAYS,
 				 "Started %sprocess \"%s\", pid and pgroup = %d\n",
 				 proc_type, process_name, pid );
 	}

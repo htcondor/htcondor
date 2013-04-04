@@ -37,8 +37,8 @@
    equivalent inside the user job.
 */
 unsigned int      DebugHeaderOptions = 0;
-DebugOutputChoice DebugBasic = 0;
-DebugOutputChoice DebugVerbose = 0;
+DebugOutputChoice AnyDebugBasicListener = 0;
+DebugOutputChoice AnyDebugVerboseListener = 0;
 
 
 /*
@@ -58,7 +58,7 @@ const char * const _condor_DebugCategoryNames[D_CATEGORY_COUNT] = {
 	"D_PROCFAMILY", "D_IDLE", "D_THREADS", "D_ACCOUNTANT",
 	"D_SYSCALLS", "D_CKPT", "D_HOSTNAME", "D_PERF_TRACE",
 	"D_LOAD", "D_PROC", "D_NFS", "D_AUDIT", "D_TEST",
-	"D_29", "D_30", "D_BUG",
+	"D_29", "D_30", "D_31",
 };
 // these are flags rather than categories
 // "D_EXPR", "D_FULLDEBUG", "D_PID", "D_FDS", "D_CAT", "D_NOHEADER",
@@ -229,7 +229,7 @@ _condor_set_debug_flags( const char *strflags, int cat_and_flags )
 {
 	// set default values for flags and header options before we parse the passed in args
 	unsigned int      header = 0;
-	DebugOutputChoice choice = (1<<D_ALWAYS) | (1<<D_ERROR);
+	DebugOutputChoice choice = (1<<D_ALWAYS) | (1<<D_ERROR) | (1<<D_STATUS);
 	DebugOutputChoice verbose = 0;
 
 	// special case. if a single category to be passed in cat_and_flags
@@ -242,8 +242,8 @@ _condor_set_debug_flags( const char *strflags, int cat_and_flags )
 	_condor_parse_merge_debug_flags(strflags, (cat_and_flags & ~D_CATEGORY_RESERVED_MASK), header, choice, verbose);
 
 	DebugHeaderOptions = header;
-	DebugBasic = choice;
-	DebugVerbose = verbose;
+	AnyDebugBasicListener = choice;
+	AnyDebugVerboseListener = verbose;
 }
 
 #if defined(HAVE__FTIME)
