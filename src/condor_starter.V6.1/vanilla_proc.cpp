@@ -899,6 +899,7 @@ VanillaProc::setupOOMEvent(const std::string &cgroup_string)
 		close(m_oom_fd); m_oom_fd = -1;
 		daemonCore->Close_Pipe(pipes[0]);
 		daemonCore->Close_Pipe(pipes[1]);
+		return 1;
 	}
 	dup3(m_oom_efd, fd_to_replace, O_CLOEXEC);
 	close(m_oom_efd);
