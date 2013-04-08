@@ -1032,7 +1032,7 @@ Scheduler::count_jobs()
 	// set FlockLevel for owners
 	if (MaxFlockLevel) {
 		Owners.set_FlockLevel(OldOwners);
-		Owners.updateFlockLevel(time(0),SchedDInterval.getDefaultInterval(),MaxFlockLevel, &FlockLevel);
+		Owners.updateFlockLevel(time(0),(int)SchedDInterval.getDefaultInterval(),MaxFlockLevel, &FlockLevel);
 	}
 
 	dprintf( D_FULLDEBUG, "JobsRunning = %d\n", JobsRunning );
