@@ -10939,7 +10939,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter
 id=613
 
-[MEMORY_LIMIT]
+[CGROUP_MEMORY_LIMIT_POLICY]
 aliases=
 default=none
 version=7.9.0
