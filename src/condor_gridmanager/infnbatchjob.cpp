@@ -470,8 +470,9 @@ void INFNBatchJob::doEvaluateState()
 			// Transfer input sandbox
 			if ( numSubmitAttempts >= MAX_SUBMIT_ATTEMPTS ) {
 				if ( errorString == "" ) {
-					jobAd->Assign( ATTR_HOLD_REASON,
-								   "Attempts to submit failed" );
+					std::string error_string = "Attempts to submit failed: ";
+					error_string += gahp->getGahpStderr();
+					jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
 				}
 				gmState = GM_HOLD;
 				break;
