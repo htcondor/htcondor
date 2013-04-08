@@ -27,13 +27,16 @@
 #include "basename.h"
 
 
-WindowsFirewallHelper::WindowsFirewallHelper() {
-	fwProf = NULL;
-	fwApps = NULL;
-    fwMgr  = NULL;
-	fwPolicy = NULL;
-	wfh_initialized = false;
-	wfh_operational = false;
+WindowsFirewallHelper::WindowsFirewallHelper()
+	: fwProf(NULL)
+	, fwMgr(NULL)
+	, fwApps(NULL)
+	, fwPolicy(NULL)
+	, wfh_initialized(false)
+	, wfh_operational(false)
+	, i_can_add(true)
+	, i_can_remove(true)
+{
 }
 
 WindowsFirewallHelper::~WindowsFirewallHelper() {
@@ -113,7 +116,7 @@ WindowsFirewallHelper::firewallIsOn() {
     return (fwEnabled == VARIANT_TRUE);    
 }
 
-bool 
+HRESULT
 WindowsFirewallHelper::addTrusted( const char *app_path ) {
 
 	const char *app_basename;
@@ -123,18 +126,18 @@ WindowsFirewallHelper::addTrusted( const char *app_path ) {
 	HRESULT hr = S_OK;
 	INetFwAuthorizedApplication* fwApp = NULL;
 	
-	if ( ! ready() ) { 
-		return false;
+	if ( ! ready() || ! i_can_add) { 
+		return S_FALSE;
 	}
 
 	if ( !firewallIsOn() ) {
 		// firewall is turned off, so there's nothing to do.
-		return true;
+		return S_FALSE;
 	}
 
 	if ( applicationIsTrusted(app_path) ) {
 		// this app is already set to be trusted, so do nothing.
-		return true;
+		return S_OK;
 	}
 
 	// now, if the basename of the app is condor_<something>, we 
@@ -146,7 +149,7 @@ WindowsFirewallHelper::addTrusted( const char *app_path ) {
 
 	if ( _strnicmp(app_basename, "condor_", strlen("condor_")) == 0 ) {
 		
-		removeByBasename(app_basename);
+		hr = removeByBasename(app_basename);
 
 	}
 
@@ -163,8 +166,9 @@ WindowsFirewallHelper::addTrusted( const char *app_path ) {
 		);
 	if (FAILED(hr))
 	{
-		dprintf(D_FULLDEBUG, "WinFirewall: CoCreateInstance failed: 0x%08lx\n", hr);
-		return false;
+		i_can_add = false;
+		dprintf(D_ERROR | D_FULLDEBUG, "WinFirewall: CoCreateInstance failed: 0x%08lx\n", hr);
+		return hr;
 	}
 	
 	app_path_bstr = charToBstr(app_path);
@@ -173,10 +177,10 @@ WindowsFirewallHelper::addTrusted( const char *app_path ) {
 	if (FAILED(hr))
 	{
 		if ( hr == 0x80070002 ) {
-			dprintf(D_ALWAYS, "WinFirewall Error: Could not find trusted app image %s\n",
+			dprintf(D_ERROR, "WinFirewall Error: Could not find trusted app image %s\n",
 				app_path);
 		} else {
-			dprintf(D_ALWAYS, "put_ProcessImageFileName failed: 0x%08lx\n", hr);
+			dprintf(D_ERROR, "put_ProcessImageFileName failed: 0x%08lx\n", hr);
 		}
 		goto error;
 	}
@@ -188,7 +192,7 @@ WindowsFirewallHelper::addTrusted( const char *app_path ) {
         hr = fwApp->put_Name(app_basename_bstr);
         if (FAILED(hr))
         {
-            dprintf(D_ALWAYS, "WinFirewall: put_Name failed: 0x%08lx\n", hr);
+            dprintf(D_ERROR | D_FULLDEBUG, "WinFirewall: put_Name failed: 0x%08lx\n", hr);
             goto error;
         }
 
@@ -196,13 +200,13 @@ WindowsFirewallHelper::addTrusted( const char *app_path ) {
         hr = fwApps->Add(fwApp);
         if (FAILED(hr))
         {
-           dprintf(D_ALWAYS, "WinFirewall: Add failed: 0x%08lx\n", hr);
+           dprintf(D_ERROR, "WinFirewall: Add failed: 0x%08lx\n", hr);
             goto error;
         }
 
 		// it seems like we should always inform users somehow that we're 
 		// doing this.
-        dprintf(D_ALWAYS, "Authorized application %s is now enabled in the"
+        dprintf(D_STATUS, "Authorized application %s is now enabled in the"
 			   " firewall.\n",
             app_path );
 
@@ -218,7 +222,8 @@ error:
         fwApp->Release();
     }
 
-    return (SUCCEEDED(hr));
+	if (hr == E_ACCESSDENIED) i_can_add = false;
+    return hr;
 
 }
 
@@ -266,7 +271,7 @@ WindowsFirewallHelper::applicationIsTrusted(const char* app_path) {
 	return result;
 }
 
-bool 
+HRESULT
 WindowsFirewallHelper::removeByBasename( const char *name ) {
 	
 	HRESULT hr = S_OK;
@@ -282,33 +287,33 @@ WindowsFirewallHelper::removeByBasename( const char *name ) {
 	VARIANT v;
 
 	if ( ! ready() ) {
-		return false;
+		return S_FALSE;
 	}
 
 	hr = fwApps->get__NewEnum(&pUnknown);
 	if ( hr != S_OK ) {
-		dprintf(D_ALWAYS, "Failed to get enumerator for Authorized "
+		dprintf(D_ERROR, "Failed to get enumerator for Authorized "
 				"Applications (err=%x)\n", hr);
-		return false;
+		return hr;
 	}
 
 	hr = fwApps->get_Count(&count);
 	if ( hr != S_OK ) {
-		dprintf(D_ALWAYS, "Failed to get count of Authorized "
+		dprintf(D_ERROR, "Failed to get count of Authorized "
 				"Applications (err=%x)\n", hr);
-		return false;
+		return hr;
 	}
 
 	hr = pUnknown->QueryInterface(IID_IEnumVARIANT, (void**)&pEnum);
 	if ( hr != S_OK ) {
 		if ( hr == E_NOINTERFACE ) {
-			dprintf(D_ALWAYS, "Failed to QueryInterface for trusted "
+			dprintf(D_ERROR, "Failed to QueryInterface for trusted "
 					"applications. Interface not supported.\n");
 		} else {
-			dprintf(D_ALWAYS, "Failed to QueryInterface for trusted "
+			dprintf(D_ERROR, "Failed to QueryInterface for trusted "
 				   "applications. (err=%x)\n", hr);
 		}
-		return false;
+		return hr;
 	}
 
 	for (i=0; i<count; i++) {
@@ -323,6 +328,7 @@ WindowsFirewallHelper::removeByBasename( const char *name ) {
 		// it returns 0x80020008, or Bad Variable Type. Sigh.
 		if ( hr != S_OK ) {
 			// no more elements. stop.
+			hr = S_FALSE;
 			break;
 		}
 
@@ -346,50 +352,48 @@ WindowsFirewallHelper::removeByBasename( const char *name ) {
 			
 			// basenames match, so remove it from the list.
 			
-			result = removeTrusted(tmp);
+			hr = removeTrusted(tmp);
 		}
 		free(tmp);
 
 		SysFreeString(str);
+
+		if (hr == E_ACCESSDENIED) {
+			// don't have enough privilege to remove, so don't bother to keep trying.
+			break;
+		}
 	}
 
-	return result;
+	return hr;
 }
 
-bool 
-WindowsFirewallHelper::removeTrusted( const char *app_path ) {
+HRESULT
+WindowsFirewallHelper::removeTrusted( const char *app_path) {
 	
 	BSTR app_path_bstr = NULL;
-	HRESULT hr = S_OK;
-	bool result = false;
 
-	if ( ! ready() ) {
-		return false;
+	if ( ! ready() || ! i_can_remove) {
+		return S_FALSE;
 	}
 
 	app_path_bstr = charToBstr(app_path);
-
 	if ( app_path_bstr == NULL ) {
-		return false;
+		return S_FALSE;
 	}
 
-    // Attempt to retrieve the authorized application.
-    hr = fwApps->Remove(app_path_bstr);
-    if (SUCCEEDED(hr)) {
-
-        result = true;	
-
-	} else if (FAILED(hr)) {
-
-        dprintf(D_ALWAYS, "WinFirewall: remove trusted app failed: 0x%08lx\n",
-			hr);
-		result = false;
+	// Attempt to retrieve the authorized application.
+	HRESULT hr = fwApps->Remove(app_path_bstr);
+	if (FAILED(hr)) {
+		dprintf(D_ERROR, "WinFirewall: remove trusted app %s failed: 0x%08lx\n", app_path, hr);
+		if (hr == E_ACCESSDENIED) {
+			i_can_remove = false;
+		}
 	}
-        
+
     // Free the BSTR.
     SysFreeString(app_path_bstr);
 
-  	return result;
+	return hr;
 }
 
 BSTR
@@ -533,23 +537,26 @@ int main(int argc, char **argv) {
 	wfh.removeTrusted(app);
 	// wfh.addTrusted(app);
 
-	if ( ! wfh.addTrusted("C:\\Condor\\bin\\condor_master.exe") ) {
+	if ( ! SUCCEEDED(wfh.addTrusted("C:\\Condor\\bin\\condor_master.exe")) ) {
 		printf("first addTrusted() failed\n");
 		result = 1;
 	}
 
-	if ( ! wfh.addTrusted("C:\\Condor\\condor_master.exe") ) {
+	if ( ! SUCCEEDED(wfh.addTrusted("C:\\Condor\\condor_master.exe")) ) {
 		printf("second addTrusted() failed\n");
 		result = 1;
 	}
 
-	if ( ! wfh.removeTrusted("C:\\Condor\\bin\\condor_master.exe") ) {
-		printf("first removeTrusted() failed\n");
+	HRESULT hr = wfh.removeTrusted("C:\\Condor\\bin\\condor_master.exe");
+	if (FAILED(hr)) {
+		printf("first removeTrusted() failed 0x%08x\n", hr);
 		result = 1;
 	}
 
-	if ( ! wfh.removeTrusted("C:\\Condor\\bin\\condor_master.exe") ) {
-		printf("second removeTrusted() failed\n");
+
+	hr = wfh.removeTrusted("C:\\Condor\\bin\\condor_master.exe");
+	if (FAILED(hr)) {
+		printf("second removeTrusted() failed 0x%08x\n", hr);
 		result = 1;
 	}
 
