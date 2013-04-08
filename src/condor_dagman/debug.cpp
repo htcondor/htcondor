@@ -57,6 +57,7 @@ static void debug_cache_insert(int flags, const char *fmt, va_list args);
 /*--------------------------------------------------------------------------*/
 void
 debug_printf( debug_level_t level, const char *fmt, ... ) {
+	const void * ident = 0; // REMIND: maybe have something useful here?
 	if( DEBUG_LEVEL( level ) ) {
 		if (cache_enabled == false ||
 			(cache_enabled == true && cache_is_caching == false))
@@ -64,7 +65,7 @@ debug_printf( debug_level_t level, const char *fmt, ... ) {
 			// let it go through right away
 			va_list args;
 			va_start( args, fmt );
-			_condor_dprintf_va( D_ALWAYS, fmt, args );
+			_condor_dprintf_va( D_ALWAYS, ident, fmt, args );
 			va_end( args );
 		} else {
 			// store it for later flushing
@@ -79,6 +80,7 @@ debug_printf( debug_level_t level, const char *fmt, ... ) {
 /*--------------------------------------------------------------------------*/
 void
 debug_dprintf( int flags, debug_level_t level, const char *fmt, ... ) {
+	const void * ident = 0; // REMIND: maybe have something useful here?
 
 	if( DEBUG_LEVEL( level ) ) {
 
@@ -101,7 +103,7 @@ debug_dprintf( int flags, debug_level_t level, const char *fmt, ... ) {
 
 		va_list args;
 		va_start( args, fmt );
-		_condor_dprintf_va( flags, fmt, args );
+		_condor_dprintf_va( flags, ident, fmt, args );
 		va_end( args );
 			
 	}
@@ -110,7 +112,7 @@ debug_dprintf( int flags, debug_level_t level, const char *fmt, ... ) {
 /*--------------------------------------------------------------------------*/
 void
 debug_error( int error, debug_level_t level, const char *fmt, ... ) {
-
+	const void * ident = 0;
 	// make sure these come out before emitting the error
 	debug_cache_flush();
 	debug_cache_stop_caching();
@@ -119,7 +121,7 @@ debug_error( int error, debug_level_t level, const char *fmt, ... ) {
     if( DEBUG_LEVEL( level ) ) {
         va_list args;
         va_start( args, fmt );
-        _condor_dprintf_va( D_ALWAYS, fmt, args );
+        _condor_dprintf_va( D_ALWAYS | D_FAILURE, ident, fmt, args );
         va_end( args );
     }
 	DC_Exit( error );
@@ -171,7 +173,7 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 	time_t clock_now;
 	struct tm *tm = NULL;
 
-	MyString tstamp, fds, line, pid;
+	MyString tstamp, fds, line, pid, cid;
 	pid_t my_pid;
 
 #ifdef D_CATEGORY_MASK
@@ -222,6 +224,12 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 
 		}
 
+#if 0  // not currently used by dagman.
+		if (HdrFlags & D_IDENT) {
+			const void * ident = 0;
+			cid.formatstr("(ident:%p) ", ident);
+		}
+#endif
 		// We skip running of the DebugId function, since it needs to
 		// emit to a FILE* and we can't store it in the cache. It, as of this
 		// time, isn't used in condor_dagman.
@@ -231,7 +239,7 @@ debug_cache_insert(int flags, const char *fmt, va_list args)
 	line.vformatstr(fmt, args);
 
 	// build the cached line and add it to the cache
-	cache += (tstamp + fds + line);
+	cache += (tstamp + fds + line + cid);
 
 	// if the cache has surpassed the highwater mark, then flush it.
 	if (cache.Length() > cache_size) {

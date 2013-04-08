@@ -179,6 +179,7 @@ int InDBX = 0;
 #define FCLOSE_RETRY_MAX 10
 
 
+
 DebugFileInfo::~DebugFileInfo()
 {
 	if(outputTarget == FILE_OUT && debugFP)
@@ -217,8 +218,11 @@ static char *formatTimeHeader(struct tm *tm) {
 	return timebuf;
 }
 
-const char* _format_global_header(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm)
+const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info)
 {
+	time_t clock_now = info.clock_now;
+	//struct tm *tm    = info.ptm;
+
 	static char *buf = NULL;
 	static int buflen = 0;
 	int bufpos = 0;
@@ -245,7 +249,7 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, time_t clock
 				sprintf_errno = errno;
 			}
 		} else {
-			rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s", formatTimeHeader(tm));
+			rc = sprintf_realloc( &buf, &bufpos, &buflen, "%s", formatTimeHeader(info.tm));
 			if( rc < 0 ) {
 				sprintf_errno = errno;
 			}
@@ -293,6 +297,13 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, time_t clock
 			}
 		}
 
+		if (hdr_flags & D_IDENT) {
+			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(cid:%p) ", info.ident );
+			if( rc < 0 ) {
+				sprintf_errno = errno;
+			}
+		}
+
 		if ((hdr_flags & D_CAT) && /*cat > 0 &&*/ cat < D_CATEGORY_COUNT) {
 			char verbosity[10] = "";
 			int sprintf_error = 0;
@@ -330,14 +341,14 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, time_t clock
 }
 
 void
-_dprintf_global_func(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, const char* message, DebugFileInfo* dbgInfo)
+_dprintf_global_func(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, const char* message, DebugFileInfo* dbgInfo)
 {
 	int start_pos = 0;
 	int bufpos = 0;
 	int rc = 0;
 	static char* buffer = NULL;
 	static int buflen = 0;
-	const char* header = _format_global_header(cat_and_flags, hdr_flags, clock_now, tm);
+	const char* header = _format_global_header(cat_and_flags, hdr_flags, info);
 	if(header)
 	{
 		rc = sprintf_realloc(&buffer, &bufpos, &buflen, "%s", header);
@@ -387,7 +398,7 @@ _dprintf_global_func(int cat_and_flags, int hdr_flags, time_t clock_now, struct 
  */
 
 static void
-_condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, DebugFileInfo *dbgInfo, const char* fmt, va_list args )
+_condor_dfprintf_va( int cat_and_flags, int hdr_flags, DebugHeaderInfo &info, DebugFileInfo *dbgInfo, const char* fmt, va_list args )
 {
 		// static buffer to avoid frequent memory allocation
 	static char *buf = NULL;
@@ -400,7 +411,7 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct 
 		_condor_dprintf_exit(errno, "Error writing to debug buffer\n");	
 	}
 
-	dbgInfo->dprintfFunc(cat_and_flags, hdr_flags, clock_now, tm, buf, dbgInfo);
+	dbgInfo->dprintfFunc(cat_and_flags, hdr_flags, info, buf, dbgInfo);
 }
 
 /* _condor_dfprintf
@@ -410,18 +421,17 @@ _condor_dfprintf_va( int cat_and_flags, int hdr_flags, time_t clock_now, struct 
 static void
 _condor_dfprintf( struct DebugFileInfo* it, const char* fmt, ... )
 {
-	struct tm *tm=0;
-	time_t clock_now;
+	DebugHeaderInfo info;
     va_list args;
 
-	memset((void*)&clock_now,0,sizeof(time_t)); // just to stop Purify UMR errors
-	(void)time(  &clock_now );
+	memset((void*)&info,0,sizeof(info)); // just to stop Purify UMR errors
+	(void)time(  &info.clock_now );
 	if ( ! DebugUseTimestamps ) {
-		tm = localtime( &clock_now );
+		info.tm = localtime( &info.clock_now );
 	}
 
     va_start( args, fmt );
-	_condor_dfprintf_va(D_ALWAYS, DebugHeaderOptions, clock_now,tm,it,fmt,args);
+	_condor_dfprintf_va(D_ALWAYS, DebugHeaderOptions, info,it,fmt,args);
     va_end( args );
 }
 
@@ -440,13 +450,14 @@ int dprintf_getCount(void)
 struct tm *localtime();
 
 void
-_condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
+_condor_dprintf_va( int cat_and_flags, const void * ident, const char* fmt, va_list args )
 {
 	static char* message_buffer = NULL;
 	static int buflen = 0;
 	int bufpos = 0;
-	struct tm *tm=0;
-	time_t clock_now;
+	DebugHeaderInfo info;
+	//struct tm *tm=0;
+	//time_t clock_now;
 #if !defined(WIN32)
 	sigset_t	mask, omask;
 	mode_t		old_umask;
@@ -557,10 +568,11 @@ _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 
 			/* Grab the time info only once, instead of inside the for
 			   loop.  -Derek 9/14 */
-		memset((void*)&clock_now,0,sizeof(time_t)); // just to stop Purify UMR errors
-		(void)time(  &clock_now );
+		memset((void*)&info,0,sizeof(info)); // just to stop Purify UMR errors
+		info.ident = ident;
+		(void)time(&info.clock_now);
 		if ( ! DebugUseTimestamps ) {
-			tm = localtime( &clock_now );
+			info.tm = localtime(&info.clock_now);
 		}
 	
 		#ifdef va_copy
@@ -583,7 +595,7 @@ _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 			backup.outputTarget = STD_ERR;
 			backup.debugFP = stderr;
 			backup.dprintfFunc = _dprintf_global_func;
-			backup.dprintfFunc(cat_and_flags, DebugHeaderOptions, clock_now, tm, message_buffer, &backup);
+			backup.dprintfFunc(cat_and_flags, DebugHeaderOptions, info, message_buffer, &backup);
 			backup.debugFP = NULL; // don't allow destructor to free stderr
 		}
 
@@ -623,7 +635,7 @@ _condor_dprintf_va( int cat_and_flags, const char* fmt, va_list args )
 			   #endif
 			}
 			
-			it->dprintfFunc(cat_and_flags, DebugHeaderOptions, clock_now, tm, message_buffer, &(*it));
+			it->dprintfFunc(cat_and_flags, DebugHeaderOptions, info, message_buffer, &(*it));
 			if (funlock_it) {
 				debug_unlock_it(&(*it));
 			}
@@ -1888,9 +1900,9 @@ dprintf_dump_stack(void) {
 #endif
 
 #ifdef WIN32
-void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, const char* message, DebugFileInfo* dbgInfo)
+void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, const char* message, DebugFileInfo* dbgInfo)
 {
-	_format_global_header(cat_and_flags,hdr_flags,clock_now,tm);
+	_format_global_header(cat_and_flags,hdr_flags,info);
 	OutputDebugStringA(message);
 }
 #endif

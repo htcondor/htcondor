@@ -1457,7 +1457,8 @@ void BaseShadow::dprintf_va( int flags, const char* fmt, va_list args )
 {
 		// Print nothing in this version.  A subclass like MPIShadow
 		// might like to say ::dprintf( flags, "(res %d)"
-	::_condor_dprintf_va( flags, fmt, args );
+	const void * ident = 0; // REMIND: maybe something useful here??
+	::_condor_dprintf_va( flags, ident, fmt, args );
 }
 
 void BaseShadow::dprintf( int flags, const char* fmt, ... )

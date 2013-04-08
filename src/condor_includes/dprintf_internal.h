@@ -33,8 +33,13 @@ typedef _Longlong int64_t;
 #include <ctime>
 
 struct DebugFileInfo;
+typedef struct DebugHeaderInfo {
+   time_t clock_now;
+   struct tm * tm;
+   const void*  ident; // caller supplied identity, used by D_AUDIT
+}  DebugHeaderInfo;
 
-typedef void (*DprintfFuncPtr)(int, int, time_t, struct tm*, const char*, DebugFileInfo*);
+typedef void (*DprintfFuncPtr)(int, int, DebugHeaderInfo &, const char*, DebugFileInfo*);
 
 enum DebugOutput
 {
@@ -122,13 +127,13 @@ struct dprintf_output_settings
 
 void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_info);
 
-const char* _format_global_header(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm);
+const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info);
 //Global dprint functions meant as fallbacks.
-void _dprintf_global_func(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, const char* message, DebugFileInfo* dbgInfo);
+void _dprintf_global_func(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, const char* message, DebugFileInfo* dbgInfo);
 
 #ifdef WIN32
 //Output to dbg string
-void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, const char* message, DebugFileInfo* dbgInfo);
+void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, const char* message, DebugFileInfo* dbgInfo);
 #endif
 
 #endif

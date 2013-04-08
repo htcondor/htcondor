@@ -76,11 +76,20 @@ const char * const _condor_DebugCategoryNames[D_CATEGORY_COUNT] = {
    the messages going to stderr, instead of being dropped.
 */
 void
+dprintf(int flags, const void * ident, const char* fmt, ...)
+{
+    va_list args;
+    va_start( args, fmt );
+    _condor_dprintf_va( flags, ident, fmt, args );
+    va_end( args );
+}
+
+void
 dprintf(int flags, const char* fmt, ...)
 {
     va_list args;
     va_start( args, fmt );
-    _condor_dprintf_va( flags, fmt, args );
+    _condor_dprintf_va( flags, 0, fmt, args );
     va_end( args );
 }
 
@@ -94,7 +103,7 @@ void __wrap_dprintf(int flags, const char * fmt, ...)
 {
     va_list args;
     va_start( args, fmt );
-    _condor_dprintf_va( flags, fmt, args );
+    _condor_dprintf_va( flags, 0, fmt, args );
     va_end( args );
 }
 }
@@ -170,6 +179,8 @@ _condor_parse_merge_debug_flags(
 				hdr = D_PID;
 			} else if( strcasecmp(flag, "D_FDS") == 0 ) {
 				hdr = D_FDS;
+			} else if( strcasecmp(flag, "D_IDENT") == 0 ) {
+				hdr = D_IDENT;
 			} else if( strcasecmp(flag, "D_EXPR") == 0 ) {
 				hdr = D_EXPR;
 			} else if( (strcasecmp(flag, "D_LEVEL") == 0) || (strcasecmp(flag, "D_CATEGORY") == 0) || (strcasecmp(flag, "D_CAT") == 0) ) {

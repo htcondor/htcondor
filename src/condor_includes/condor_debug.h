@@ -98,6 +98,7 @@ enum {
 
 
 // format-modifying flags to change the appearance of the dprintf line
+#define D_IDENT         (1<<25) // 
 #define D_SUB_SECOND    (1<<26) // future: print sub-second timestamp
 #define D_TIMESTAMP     (1<<27) // future: print unix timestamp rather than human-readable time.
 #define D_PID           (1<<28)
@@ -186,7 +187,7 @@ void _condor_parse_merge_debug_flags(
 bool dprintf_to_term_check();
 
 #endif
-void _condor_dprintf_va ( int flags, const char* fmt, va_list args );
+void _condor_dprintf_va ( int flags, const void* ident, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void PREFAST_NORETURN _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 void Suicide(void);

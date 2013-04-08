@@ -370,6 +370,8 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 				info.want_truncate = false;
 				info.rotate_by_time = false;
 				info.choice = 1<<debug_level;
+				PRAGMA_REMIND("tj: remove this hack when you can config header of secondary log files.")
+				if (debug_level == D_AUDIT) info.HeaderOpts |= D_IDENT;
 				info.logPath = logPath;
 				info.logMax = 1024*1024;
 				info.maxLogNum = 1;
