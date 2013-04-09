@@ -57,7 +57,6 @@ extern void		_condor_set_debug_flags( const char *strflags, int flags );
 
 // Define this to check for memory leaks
 
-int			MaxCkptInterval;	// max time between ckpts on this machine
 char		*Spool;				// dir for condor job queue
 StringList   ExecuteDirs;		// dirs for execution of condor jobs
 char		*Log;				// dir for condor program logs
@@ -66,7 +65,6 @@ char		*PreenAdmin;		// who to send mail to in case of trouble
 char		*MyName;			// name this program was invoked by
 char        *ValidSpoolFiles;   // well known files in the spool dir
 char        *InvalidLogFiles;   // files we know we want to delete from log
-char		*MailPrg;			// what program to use to send email
 BOOLEAN		MailFlag;			// true if we should send mail about problems
 BOOLEAN		VerboseFlag;		// true if we should produce verbose output
 BOOLEAN		RmFlag;				// true if we should remove extraneous files
@@ -836,10 +834,6 @@ init_params()
 			if( (PreenAdmin = param("CONDOR_ADMIN")) == NULL ) {
 				EXCEPT( "CONDOR_ADMIN not specified in config file" );
 			}
-		}
-
-		if( (MailPrg = param("MAIL")) == NULL ) {
-			EXCEPT ( "MAIL not specified in config file" );
 		}
 	}
 
