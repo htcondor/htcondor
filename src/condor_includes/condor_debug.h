@@ -157,10 +157,10 @@ extern int DebugShouldLockToAppend; /* Should we lock the file before each write
  */
 extern int (*DebugId)(char **buf,int *bufpos,int *buflen);
 
+typedef unsigned long long DPF_IDENT;
 void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 #ifdef __cplusplus
 }
-typedef unsigned long long DPF_IDENT;
 void dprintf ( int flags, DPF_IDENT ident, const char *fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
 extern "C" {
 // parse config files (via param_functions) and use them to fill out the array of dprintf_output_settings

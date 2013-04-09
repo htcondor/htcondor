@@ -593,4 +593,6 @@ private:
 	int _bind_helper(int fd, const condor_sockaddr& addr, bool outbound, bool loopback);
 };
 
+void dprintf ( int flags, Sock & sock, const char *fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
+
 #endif /* SOCK_H */
