@@ -364,6 +364,7 @@ public:
 
 	void invalidateSock();
 
+	unsigned int getUniqueId() { return m_uniqueId; }
 
 //	PRIVATE INTERFACE TO ALL SOCKS
 //
@@ -495,6 +496,9 @@ protected:
 	KeyInfo           * mdKey_;
 
 	static bool guess_address_string(char const* host, int port, condor_sockaddr& addr);
+
+	unsigned int m_uniqueId;
+	static unsigned int m_nextUniqueId;
 
 private:
 	bool initialize_crypto(KeyInfo * key);

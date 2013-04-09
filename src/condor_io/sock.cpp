@@ -51,11 +51,13 @@ void dprintf ( int flags, Sock & sock, const char *fmt, ... )
 {
     va_list args;
     va_start( args, fmt );
-    _condor_dprintf_va( flags, (DPF_IDENT)sock.get_timeout_raw(), fmt, args );
+    _condor_dprintf_va( flags, (DPF_IDENT)sock.getUniqueId(), fmt, args );
     va_end( args );
 }
 
 DaemonCoreSockAdapterClass daemonCoreSockAdapter;
+
+unsigned int Sock::m_nextUniqueId = 1;
 
 Sock::Sock() : Stream() {
 	_sock = INVALID_SOCKET;
@@ -80,6 +82,7 @@ Sock::Sock() : Stream() {
 	connect_state.port = 0;
 	connect_state.connect_failure_reason = NULL;
 	_who.clear();
+	m_uniqueId = m_nextUniqueId++;
 
     crypto_ = NULL;
     mdMode_ = MD_OFF;
@@ -114,6 +117,8 @@ Sock::Sock(const Sock & orig) : Stream() {
 	connect_state.port = 0;
 	connect_state.connect_failure_reason = NULL;
 	_who.clear();
+	// TODO Do we want a new unique ID here?
+	m_uniqueId = m_nextUniqueId++;
 
     crypto_ = NULL;
     mdMode_ = MD_OFF;
