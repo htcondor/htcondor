@@ -2132,7 +2132,7 @@ Resource::compute( amask_t mask )
 void
 Resource::dprintf_va( int flags, const char* fmt, va_list args )
 {
-	const void * ident = 0; // REMIND: maybe something useful here??
+	const DPF_IDENT ident = 0; // REMIND: maybe something useful here??
 	if( resmgr->is_smp() ) {
 		MyString fmt_str( r_id_str );
 		fmt_str += ": ";

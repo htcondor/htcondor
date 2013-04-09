@@ -142,7 +142,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		}
 		assert( syscall_sock->end_of_message() );;
 
-		dprintf(D_FAILURE,"schedd: NewCluster rval %d errno %d\n",rval,terrno);
+		dprintf(D_FULLDEBUG,"schedd: NewCluster rval %d errno %d\n",rval,terrno);
 
 		return 0;
 	}
@@ -168,7 +168,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		}
 		assert( syscall_sock->end_of_message() );;
 
-		dprintf(D_FAILURE,"schedd: NewProc rval %d errno %d\n",rval,terrno);
+		dprintf(D_FULLDEBUG,"schedd: NewProc rval %d errno %d\n",rval,terrno);
 
 		return 0;
 	}
@@ -197,7 +197,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		}
 		assert( syscall_sock->end_of_message() );;
 
-		dprintf(D_FAILURE,"schedd: DestroyProc cluster %d proc %d rval %d errno %d\n",cluster_id,proc_id,rval,terrno);
+		dprintf(D_FULLDEBUG,"schedd: DestroyProc cluster %d proc %d rval %d errno %d\n",cluster_id,proc_id,rval,terrno);
 
 		return 0;
 	}

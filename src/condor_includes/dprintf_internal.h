@@ -36,7 +36,7 @@ struct DebugFileInfo;
 typedef struct DebugHeaderInfo {
    time_t clock_now;
    struct tm * tm;
-   const void*  ident; // caller supplied identity, used by D_AUDIT
+   DPF_IDENT  ident; // caller supplied identity, used by D_AUDIT
 }  DebugHeaderInfo;
 
 typedef void (*DprintfFuncPtr)(int, int, DebugHeaderInfo &, const char*, DebugFileInfo*);
@@ -74,6 +74,7 @@ struct DebugFileInfo
 	DebugOutput outputTarget;
 	FILE *debugFP;
 	DebugOutputChoice choice;
+	unsigned int headerOpts;
 	std::string logPath;
 	long long maxLog;
 	long long logZero;
@@ -87,6 +88,7 @@ struct DebugFileInfo
 			outputTarget(FILE_OUT),
 			debugFP(0),
 			choice(0),
+			headerOpts(0),
 			maxLog(0),
 			logZero(0),
 			maxLogNum(0),
@@ -97,7 +99,8 @@ struct DebugFileInfo
 			userData(NULL),
 			dprintfFunc(NULL)
 			{}
-	DebugFileInfo(const DebugFileInfo &dfi) : outputTarget(dfi.outputTarget), debugFP(NULL), choice(dfi.choice),
+	DebugFileInfo(const DebugFileInfo &dfi) : outputTarget(dfi.outputTarget), debugFP(NULL),
+		choice(dfi.choice), headerOpts(dfi.headerOpts),
 		logPath(dfi.logPath), maxLog(dfi.maxLog), logZero(dfi.logZero), maxLogNum(dfi.maxLogNum), want_truncate(dfi.want_truncate),
 		accepts_all(dfi.accepts_all), rotate_by_time(dfi.rotate_by_time), dont_panic(dfi.dont_panic), dprintfFunc(dfi.dprintfFunc) {}
 	DebugFileInfo(const dprintf_output_settings&);

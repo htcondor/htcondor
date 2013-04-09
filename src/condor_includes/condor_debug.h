@@ -27,9 +27,9 @@
 // TODO Do we like this name?
 // TODO Once we have a connection id in Sock, use that
 #if defined(WIN32)
-#  define audit_log(sock, fmt, ...) dprintf(D_AUDIT, "%d " fmt, (sock)->get_timeout_raw(), __VA_ARGS__)
+#  define audit_log(df, sock, fmt, ...) dprintf(D_AUDIT | D_IDENT | df, (DPF_IDENT)((sock)->get_timeout_raw()), fmt, __VA_ARGS__)
 #else
-#  define audit_log(sock, fmt, ...) dprintf(D_AUDIT, "%d " fmt, (sock)->get_timeout_raw(), ##__VA_ARGS__)
+#  define audit_log(df, sock, fmt, ...) dprintf(D_AUDIT | D_IDENT | df, (DPF_IDENT)((sock)->get_timeout_raw()), fmt, ##__VA_ARGS__)
 #endif
 
 /*
@@ -159,6 +159,10 @@ extern int (*DebugId)(char **buf,int *bufpos,int *buflen);
 
 void dprintf ( int flags, const char *fmt, ... ) CHECK_PRINTF_FORMAT(2,3);
 #ifdef __cplusplus
+}
+typedef unsigned long long DPF_IDENT;
+void dprintf ( int flags, DPF_IDENT ident, const char *fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
+extern "C" {
 // parse config files (via param_functions) and use them to fill out the array of dprintf_output_settings
 // one for each output log file. returns the number of entries needed in p_info, (may be larger than c_info!)
 // if p_info is NULL, then dprintf_set_outputs is called with the dprintf_output_settings array.  if != NULL, then
@@ -187,7 +191,7 @@ void _condor_parse_merge_debug_flags(
 bool dprintf_to_term_check();
 
 #endif
-void _condor_dprintf_va ( int flags, const void* ident, const char* fmt, va_list args );
+void _condor_dprintf_va ( int flags, DPF_IDENT ident, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
 void PREFAST_NORETURN _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
 void Suicide(void);

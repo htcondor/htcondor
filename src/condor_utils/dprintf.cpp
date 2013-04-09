@@ -190,8 +190,8 @@ DebugFileInfo::~DebugFileInfo()
 }
 
 DebugFileInfo::DebugFileInfo(const dprintf_output_settings& p) :
-	outputTarget(STD_OUT), debugFP(NULL), choice(p.choice),
-	maxLog(p.logMax), maxLogNum(p.maxLogNum),
+	outputTarget(STD_OUT), debugFP(NULL), choice(p.choice), headerOpts(p.HeaderOpts),
+	maxLog(p.logMax), logZero(p.logZero), maxLogNum(p.maxLogNum),
 	want_truncate(p.want_truncate), accepts_all(p.accepts_all),
 	rotate_by_time(p.rotate_by_time) {}
 
@@ -298,7 +298,7 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 		}
 
 		if (hdr_flags & D_IDENT) {
-			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(cid:%p) ", info.ident );
+			rc = sprintf_realloc( &buf, &bufpos, &buflen, "(cid:%llu) ", info.ident );
 			if( rc < 0 ) {
 				sprintf_errno = errno;
 			}
@@ -348,6 +348,7 @@ _dprintf_global_func(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, c
 	int rc = 0;
 	static char* buffer = NULL;
 	static int buflen = 0;
+	if (dbgInfo) hdr_flags |= dbgInfo->headerOpts;
 	const char* header = _format_global_header(cat_and_flags, hdr_flags, info);
 	if(header)
 	{
@@ -450,7 +451,7 @@ int dprintf_getCount(void)
 struct tm *localtime();
 
 void
-_condor_dprintf_va( int cat_and_flags, const void * ident, const char* fmt, va_list args )
+_condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list args )
 {
 	static char* message_buffer = NULL;
 	static int buflen = 0;

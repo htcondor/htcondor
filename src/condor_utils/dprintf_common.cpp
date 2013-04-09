@@ -76,7 +76,7 @@ const char * const _condor_DebugCategoryNames[D_CATEGORY_COUNT] = {
    the messages going to stderr, instead of being dropped.
 */
 void
-dprintf(int flags, const void * ident, const char* fmt, ...)
+dprintf(int flags, DPF_IDENT ident, const char* fmt, ...)
 {
     va_list args;
     va_start( args, fmt );
@@ -89,7 +89,7 @@ dprintf(int flags, const char* fmt, ...)
 {
     va_list args;
     va_start( args, fmt );
-    _condor_dprintf_va( flags, 0, fmt, args );
+    _condor_dprintf_va( flags, (DPF_IDENT)0, fmt, args );
     va_end( args );
 }
 
@@ -103,7 +103,7 @@ void __wrap_dprintf(int flags, const char * fmt, ...)
 {
     va_list args;
     va_start( args, fmt );
-    _condor_dprintf_va( flags, 0, fmt, args );
+    _condor_dprintf_va( flags, (DPF_IDENT)0, fmt, args );
     va_end( args );
 }
 }
