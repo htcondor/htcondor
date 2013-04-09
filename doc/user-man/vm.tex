@@ -175,6 +175,16 @@ Note that \Condor{submit} issues an error message and does not
 submit the job if both \SubmitCmd{vmware\_should\_transfer\_files}
 and \SubmitCmd{vmware\_snapshot\_disk} are \Expr{False}.
 
+Because \Prog{VMware Player} does not support snapshots, 
+machines using \Prog{VMware Player} may only run \SubmitCmd{vm} jobs
+that set \SubmitCmd{vmware\_snapshot\_disk} to \Expr{False}.
+These jobs will also set
+\SubmitCmd{vmware\_should\_transfer\_files} to \Expr{True}.
+A job using \Prog{VMware Player} will go on hold if it attempts
+to use a snapshot.
+The pool administrator should have configured the pool
+such that machines will not start jobs they can not run.
+
 Note that if snapshot disks are requested and file transfer is not
 being used, the \SubmitCmd{vmware\_dir} setting given in 
 the submit description file
