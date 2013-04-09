@@ -9126,7 +9126,8 @@ Scheduler::mail_problem_message()
 {
 	FILE	*mailer;
 
-	dprintf( D_ALWAYS, "Mailing administrator (%s)\n", CondorAdministrator );
+	dprintf( D_ALWAYS, "Mailing administrator (%s)\n",
+			 CondorAdministrator ? CondorAdministrator : "<undefined>" );
 
 	mailer = email_admin_open("CONDOR Problem");
 	if (mailer == NULL)
@@ -12058,7 +12059,9 @@ Scheduler::publish( ClassAd *cad ) {
 	cad->Assign( "NegotiationRequestTime", (int)NegotiationRequestTime  );
 	cad->Assign( "ExitWhenDone", ExitWhenDone );
 	cad->Assign( "StartJobTimer", StartJobTimer );
-	cad->Assign( "CondorAdministrator", CondorAdministrator );
+	if ( CondorAdministrator ) {
+		cad->Assign( "CondorAdministrator", CondorAdministrator );
+	}
 	cad->Assign( "AccountantName", AccountantName );
 	cad->Assign( "UidDomain", UidDomain );
 	cad->Assign( "MaxFlockLevel", MaxFlockLevel );

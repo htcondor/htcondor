@@ -122,8 +122,10 @@ main( int argc, char *argv[] )
 	MyName = argv[0];
 	myDistro->Init( argc, argv );
 	config();
-	init_params();
-	BadFiles = new StringList;
+
+	VerboseFlag = FALSE;
+	MailFlag = FALSE;
+	RmFlag = FALSE;
 
 		// Parse command line arguments
 	for( argv++; *argv; argv++ ) {
@@ -153,6 +155,9 @@ main( int argc, char *argv[] )
 		}
 	}
 	
+	init_params();
+	BadFiles = new StringList;
+
 	if (VerboseFlag)
 	{
 		// always append D_FULLDEBUG locally when verbose.
@@ -826,19 +831,21 @@ init_params()
 	}
 	delete params;
 
-    if( (PreenAdmin = param("PREEN_ADMIN")) == NULL ) {
-		if( (PreenAdmin = param("CONDOR_ADMIN")) == NULL ) {
-			EXCEPT( "CONDOR_ADMIN not specified in config file" );
+	if ( MailFlag ) {
+		if( (PreenAdmin = param("PREEN_ADMIN")) == NULL ) {
+			if( (PreenAdmin = param("CONDOR_ADMIN")) == NULL ) {
+				EXCEPT( "CONDOR_ADMIN not specified in config file" );
+			}
 		}
-    }
+
+		if( (MailPrg = param("MAIL")) == NULL ) {
+			EXCEPT ( "MAIL not specified in config file" );
+		}
+	}
 
 	ValidSpoolFiles = param("VALID_SPOOL_FILES");
 
 	InvalidLogFiles = param("INVALID_LOG_FILES");
-
-	if( (MailPrg = param("MAIL")) == NULL ) {
-		EXCEPT ( "MAIL not specified in config file" );
-	}
 }
 
 
