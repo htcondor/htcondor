@@ -824,17 +824,39 @@ JobInfoCommunicator::setupJobEnvironment( void )
 		int rval = m_hook_mgr->tryHookPrepareJob();
 		switch (rval) {
 		case -1:   // Error
+			// Debug purpose, need to be deleted
+			dprintf(D_ALWAYS, "tryHookPrepareJob failed(zhe)\n");
 			Starter->RemoteShutdownFast(0);
 			return;
 			break;
 
 		case 0:    // Hook not configured
-				// Nothing to do, break out and finish.
+				// Call tryHookPrepareMachine here
+		{
+			int rval1 = m_hook_mgr->tryHookPrepareMachine();
+			if(rval1 == -1) { // Error
+				Starter->RemoteShutdownFast(0);
+				return;
+			}
+			if(rval1 == 0) { // Hook not configured
+				// Debug purpose, need to be deleted
+				dprintf(D_ALWAYS, "tryHookPrepareMachine is not configured(zhe)\n");
+				// Do nothing here, just break and call
+				// jobEnvironmentReady
+			}
+			if(rval1 == 1) {
+				// Debug purpose, need to be deleted afte working
+				dprintf(D_ALWAYS, "tryHookPrepareMachine has been spawned.(zhe)\n");
+				return;
+			}
+		}	
 			break;
 
 		case 1:    // Spawned the hook.
 				// We need to bail now, and let the handler call
 				// jobEnvironmentReady() when the hook returns.
+			//Debug purpose, need to be deleted
+			dprintf(D_ALWAYS, "tryHookPrepareJob has been spawned(zhe)\n");
 			return;
 			break;
 		}

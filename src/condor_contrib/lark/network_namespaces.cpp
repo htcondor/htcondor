@@ -645,7 +645,8 @@ int NetworkNamespaceManager::ConfigureNetworkAccounting(const classad::ClassAd &
 
 	// See if network accounting is requested; if not, return early.
 	bool request_accounting = false;
-	if (!machine_ad.EvaluateAttrBool(ATTR_NETWORK_ACCOUNTING, request_accounting)) {
+	//if (!machine_ad.EvaluateAttrBool(ATTR_NETWORK_ACCOUNTING, request_accounting)) {
+    if( !machine_ad.EvaluateAttrBoolEquiv(ATTR_NETWORK_ACCOUNTING, request_accounting)) {
 		request_accounting = param_boolean(CONFIG_NETWORK_ACCOUNTING, false);
 	}
 	if (!request_accounting) {

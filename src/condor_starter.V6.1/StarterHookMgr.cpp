@@ -38,6 +38,7 @@ StarterHookMgr::StarterHookMgr()
 {
 	m_hook_keyword = NULL;
 	m_hook_prepare_job = NULL;
+	m_hook_prepare_machine = NULL;
 	m_hook_update_job_info = NULL;
 	m_hook_job_exit = NULL;
 
@@ -67,6 +68,10 @@ StarterHookMgr::clearHookPaths()
 		free(m_hook_prepare_job);
         m_hook_prepare_job = NULL;
 	}
+	if(m_hook_prepare_machine) {
+		free(m_hook_prepare_machine);
+	m_hook_prepare_machine = NULL;
+	}
 	if (m_hook_update_job_info) {
 		free(m_hook_update_job_info);
         m_hook_update_job_info = NULL;
@@ -81,6 +86,10 @@ StarterHookMgr::clearHookPaths()
 bool
 StarterHookMgr::initialize(ClassAd* job_ad)
 {
+	m_hook_prepare_machine = param("STARTER_NETWORK_POLICY_SCRIPT_PATH");
+	if(!m_hook_prepare_machine) {
+		dprintf(D_FULLDEBUG, "STARTER_NETWORK_POLICY_SCRIPT_PATH is not found in configuration file, network policy script will not be invoked.\n");
+	}
 	char* tmp = param("STARTER_JOB_HOOK_KEYWORD");
 	if (tmp) {
 		m_hook_keyword = tmp;
@@ -90,7 +99,7 @@ StarterHookMgr::initialize(ClassAd* job_ad)
 		dprintf(D_FULLDEBUG,
 				"Job does not define %s, not invoking any job hooks.\n",
 				ATTR_HOOK_KEYWORD);
-		return true;
+		//return true;
 	}
 	else {
 		dprintf(D_FULLDEBUG,
@@ -98,6 +107,7 @@ StarterHookMgr::initialize(ClassAd* job_ad)
 				ATTR_HOOK_KEYWORD, m_hook_keyword);
 	}
 	if (!reconfig()) return false;
+	if (!m_hook_prepare_machine && !tmp) return true;
 	return HookClientMgr::initialize();
 }
 
@@ -111,6 +121,8 @@ StarterHookMgr::reconfig()
     if (!getHookPath(HOOK_PREPARE_JOB, m_hook_prepare_job)) return false;
     if (!getHookPath(HOOK_UPDATE_JOB_INFO, m_hook_update_job_info)) return false;
     if (!getHookPath(HOOK_JOB_EXIT, m_hook_job_exit)) return false;
+	
+	m_hook_prepare_machine = param("STARTER_NETWORK_POLICY_SCRIPT_PATH");
 
 	m_hook_job_exit_timeout = getHookTimeout(HOOK_JOB_EXIT, 30);
 
@@ -172,6 +184,50 @@ StarterHookMgr::tryHookPrepareJob()
 	return 1;
 }
 
+int 
+StarterHookMgr::tryHookPrepareMachine()
+{
+	if(!m_hook_prepare_machine) {
+		dprintf(D_FULLDEBUG, "HOOK_PREPARE_MACHINE not configured.\n");
+		return 0;
+	}
+	
+	MyString hook_stdin;
+	MyString job_classad_str;
+	MyString machine_classad_str;
+	MyString separator_line = MyString("----------\n");
+	ClassAd* job_ad = Starter->jic->jobClassAd();
+	job_ad->sPrint(job_classad_str);
+	ClassAd* machine_ad = Starter->jic->machClassAd();
+	machine_ad->sPrint(machine_classad_str);
+	
+	hook_stdin = job_classad_str + separator_line + machine_classad_str;
+	dprintf(D_FULLDEBUG, "The job classad is %s\n", job_classad_str.Value());
+	dprintf(D_FULLDEBUG, "The machine classad is %s\n", machine_classad_str.Value());
+	dprintf(D_FULLDEBUG, "The combined job and machine classad is %s\n", hook_stdin.Value());
+
+	HookClient* hook_client = new HookPrepareMachineClient(m_hook_prepare_machine);
+	
+	Env env;
+	Starter->PublishToEnv(&env);
+	
+	if(!spawn(hook_client, NULL, &hook_stdin, PRIV_USER_FINAL, &env)) {
+		MyString err_msg;
+		err_msg.formatstr("failed to execute HOOK_PREPARE_MACHINE (%s)",
+						m_hook_prepare_machine);
+		dprintf(D_ALWAYS|D_FAILURE,
+				"ERROR in StarterHookMgr::tryHookPrepareMachine: %s\n",
+				err_msg.Value());
+		/** ToDo -- handle the notifyStarterError*/
+		Starter->jic->notifyStarterError(err_msg.Value(), true,
+						CONDOR_HOLD_CODE_HookPrepareMachineFailure, 0);
+		delete hook_client;
+		return -1;
+	}
+	
+	dprintf(D_FULLDEBUG, "HOOK_PREPARE_MACHINE (%s) invoked.\n", m_hook_prepare_machine);
+	return 1;
+}
 
 bool
 StarterHookMgr::hookUpdateJobInfo(ClassAd* job_info)
@@ -320,11 +376,84 @@ HookPrepareJobClient::hookExited(int exit_status) {
 		}
 		dprintf(D_FULLDEBUG, "After Prepare hook: merged job classad:\n");
 		job_ad->dPrint(D_FULLDEBUG);
+		int rval = Starter->jic->m_hook_mgr->tryHookPrepareMachine();
+		switch(rval){
+			case -1:  // Error
+				Starter->RemoteShutdownFast(0);
+				return;
+				break;
+		
+			case 0:   // Hook not configured
+				break;
+		
+			case 1:   // Spawned the hook
+				return;
+				break;
+		}  
 		Starter->jobEnvironmentReady();
 	}
 }
 
+// // // // // // // // // // // //
+// HookPrepareMachineClient class
+// // // // // // // // // // // //
 
+HookPrepareMachineClient::HookPrepareMachineClient(const char* hook_path)
+	: HookClient(HOOK_PREPARE_MACHINE, hook_path, true)
+{
+		// Nothing special needed in the child class.
+}
+
+void
+HookPrepareMachineClient::hookExited(int exit_status) {
+	HookClient::hookExited(exit_status);
+	        if (WIFSIGNALED(exit_status) || WEXITSTATUS(exit_status) != 0) {
+                MyString status_msg = "";
+                statusString(exit_status, status_msg);
+                int subcode;
+                if (WIFSIGNALED(exit_status)) {
+                        subcode = -1 * WTERMSIG(exit_status);
+                }
+                else {
+                        subcode = WEXITSTATUS(exit_status);
+                }
+                MyString err_msg;
+                err_msg.formatstr("HOOK_PREPARE_MACHINE (%s) failed (%s)", m_hook_path,
+                                                status_msg.Value());
+                dprintf(D_ALWAYS|D_FAILURE,
+                                "ERROR in StarterHookMgr::tryHookPrepareMachine: %s\n",
+                                err_msg.Value());
+			// ToDo
+                Starter->jic->notifyStarterError(err_msg.Value(), true,
+                                                         CONDOR_HOLD_CODE_HookPrepareMachineFailure, subcode);
+                Starter->RemoteShutdownFast(0);
+        }
+        else {
+                        // Make an update ad from the stdout of the hook
+                MyString out(*getStdOut());
+                ClassAd updateAd;
+                updateAd.initFromString(out.Value(), NULL);
+                dprintf(D_FULLDEBUG, "Prepare hook output classad\n");
+                updateAd.dPrint(D_FULLDEBUG);
+                        // Insert each expr from the update ad into the machine ad
+                updateAd.ResetExpr();
+				ClassAd* job_ad = Starter->jic->jobClassAd();
+				ClassAd* machine_ad = Starter->jic->machClassAd();
+                const char *name;
+                ExprTree *et;
+                while (updateAd.NextExpr(name, et)) {
+                        ExprTree *pCopy = et->Copy();
+						machine_ad->Insert(name, pCopy, false);
+						job_ad->Insert(name, pCopy, false);
+                }
+				dprintf(D_FULLDEBUG, "After prepare machine hook: merged job classad:\n");
+				job_ad->dPrint(D_FULLDEBUG);
+                dprintf(D_FULLDEBUG, "After Prepare machine hook: merged machine classad:\n");
+                machine_ad->dPrint(D_FULLDEBUG);
+                Starter->jobEnvironmentReady();
+        }
+}
+	
 // // // // // // // // // // // //
 // HookJobExitClient class
 // // // // // // // // // // // //

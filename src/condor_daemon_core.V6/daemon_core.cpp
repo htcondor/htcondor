@@ -6379,6 +6379,9 @@ int DaemonCore::Create_Process(
 	if ( (reaper_id < 0) || (reaper_id > maxReap) ||
 		 ((reaper_id > 0) && (reapTable[reaper_id - 1].num == 0)) ) {
 		dprintf(D_ALWAYS,"Create_Process: invalid reaper_id\n");
+		// Debug for lark_network_policy, need to be deleted after working
+		dprintf(D_ALWAYS, "maxReap is %d\n", maxReap);
+		dprintf(D_ALWAYS, "readper_id is %d, and the corresponding id in the reapTable is %d\n", reaper_id, reapTable[reaper_id - 1].num);
 		goto wrapup;
 	}
 

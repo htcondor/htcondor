@@ -14,7 +14,7 @@ if ( LINUX AND WITH_PYTHON_BINDINGS )
   set ( CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /usr/lib64 )
   set ( CMAKE_LIBRARY_PATH CMAKE_LIBRARY_PATH_ORIG)
 
-  include_directories(${PYTHON_INCLUDE_DIRS})
+  include_directories(${PYTHON_INCLUDE_PATH})
 
   if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
     set( PYCLASSAD_LIB_NAME "pyclassad_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
