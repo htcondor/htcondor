@@ -33,11 +33,11 @@ The details of each version are described below.
 and \Prog{VMware Player}.
 \Ticket{740}
 
-\item On Linux systems where cgroups are supported and enabled, the 
-condor\_starter will now detect and trap when a vanilla universe job 
+\item On Linux platforms where cgroups are supported and enabled, the 
+\Condor{starter} will now detect and trap if a vanilla universe job 
 would otherwise be killed by the system Out Of Memory (OOM) killer.  
-This is especially likely when a job sets the RequestedMemory attribute 
-lower than needed.  The job will be put on hold.
+This situation is especially likely when a job sets \SubmitCmd{RequestMemory}
+lower than needed.  The job will now be put on hold.
 \Ticket{2944}
 
 \item Add a \Opt{-force-graceful} command-line option to \Condor{off}.  This
