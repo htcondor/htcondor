@@ -65,7 +65,8 @@ _fixed_windows_stat(const char *file, struct _fixed_windows_stat *sbuf) {
 		return ret;
 	}
 	
-	resolve_daylight_saving_problem ( sbuf );
+	// TJ: 2012 this is the wrong thing to to on Win7 for sure. still need to check for XP.
+	//resolve_daylight_saving_problem ( sbuf );
 
 	return ret;
 
@@ -82,7 +83,9 @@ _fixed_windows_fstat(int file, struct _fixed_windows_stat *sbuf) {
 		return ret;
 	}
 	
-	resolve_daylight_saving_problem ( sbuf );
+	// TJ: 2012 this is the wrong thing to to on Win7 for sure. still need to check for XP.
+	//resolve_daylight_saving_problem ( sbuf );
+	// resolve_daylight_saving_problem ( sbuf );
 
 	return ret;
 

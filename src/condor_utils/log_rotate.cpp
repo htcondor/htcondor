@@ -38,6 +38,9 @@ int isInitialized = 0;
 
 int numLogs = 0;
 
+// max size of an iso timestamp extenstion 4+2+2+1+2+2+2
+#define MAX_ISO_TIMESTAMP 16
+
 /** create an ISO timestamp string */
 static void createTimestampString(std::string & timestamp, time_t tt)
 {
@@ -49,6 +52,24 @@ static void createTimestampString(std::string & timestamp, time_t tt)
 
 	timestamp = buf;
 }
+
+long long quantizeTimestamp(time_t tt, long long secs)
+{
+	if ( ! secs) return tt;
+
+	static int leap_sec = -1;
+	if (leap_sec < 0) {
+		struct tm * ptm = localtime(&tt);
+		ptm->tm_hour  = 0;
+		ptm->tm_min = 0;
+		ptm->tm_sec = 0;
+		time_t today = mktime(ptm);
+		leap_sec = today % 3600;
+	}
+
+	return tt - (tt % secs);
+}
+
 
 #ifndef WIN32
 int scandirectory(const char *dir, struct dirent ***namelist,
@@ -164,7 +185,13 @@ rotateTimestamp(const char *timeStamp, int maxNum, time_t tt)
 	return save_errno; // will be 0 in case of success.
 }
 
-int cleanUp(int maxNum) {
+/*
+tj : change to delete files rather than 'rotating' them when the number exceeds 1
+this code currently will take the oldest .timestamp file and rename it to .old
+which seems wrong.
+*/
+
+int cleanUpOldLogFiles(int maxNum) {
 	int count;
 	char *oldFile = NULL;
 	char empty[BUFSIZ];
@@ -268,6 +295,7 @@ char *findOldest(char *dirName, int *count) {
 	WIN32_FIND_DATA ffd;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
 	int result;
+	int cchBase = strlen(logBaseName);
 	
 	*count = 0;
 	
@@ -276,19 +304,29 @@ char *findOldest(char *dirName, int *count) {
 		return NULL;
 	}
 	
+	// the filenames returned from FindNextFile aren't necessarily sorted
+	// so scan the list, and return the one that sorts the lowest
+	// this should work correctly for .old (because there is only one)
+	// and for .{TIMESTAMP} because the timestamps will sort by date.
+
 	result = FindNextFile(hFind, &ffd);
 	if (result == 0) {
 		return NULL;
 	} else {
-		oldFile = (char*)malloc(strlen(logBaseName) + 16);
+		oldFile = (char*)malloc(strlen(logBaseName) + 2 + MAX_ISO_TIMESTAMP);
 		ASSERT( oldFile );
 		strcpy(oldFile, ffd.cFileName);
 	}
 	while (result != 0) {
 		++(*count);
 		result = FindNextFile(hFind, &ffd);
+		int cch = strlen(ffd.cFileName);
+		if (cch > cchBase && strcmp(ffd.cFileName+cchBase, oldFile+cchBase) < 0) {
+			strcpy(oldFile, ffd.cFileName);
+		}
 	}
-	
+
+	FindClose(hFind);
 	return oldFile;
 }
 

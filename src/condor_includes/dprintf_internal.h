@@ -114,7 +114,6 @@ struct dprintf_output_settings
 	DebugOutputChoice choice;
 	std::string logPath;
 	long long logMax;  // max size/duration of a single log file
-	long long logZero; // when rotation is time based. this is time 0
 	int maxLogNum;
 	bool want_truncate;
 	bool accepts_all;
@@ -123,7 +122,7 @@ struct dprintf_output_settings
 	unsigned int VerboseCats; // temporary, should get folded into choice
 
 	dprintf_output_settings()
-		: choice(0), logMax(0), logZero(0), maxLogNum(0)
+		: choice(0), logMax(0), maxLogNum(0)
 		, want_truncate(false), accepts_all(false), rotate_by_time(false)
 		, HeaderOpts(0), VerboseCats(0) {}
 };

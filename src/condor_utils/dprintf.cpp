@@ -191,7 +191,7 @@ DebugFileInfo::~DebugFileInfo()
 
 DebugFileInfo::DebugFileInfo(const dprintf_output_settings& p) :
 	outputTarget(STD_OUT), debugFP(NULL), choice(p.choice), headerOpts(p.HeaderOpts),
-	maxLog(p.logMax), logZero(p.logZero), maxLogNum(p.maxLogNum),
+	maxLog(p.logMax), logZero(0), maxLogNum(p.maxLogNum),
 	want_truncate(p.want_truncate), accepts_all(p.accepts_all),
 	rotate_by_time(p.rotate_by_time) {}
 
@@ -851,6 +851,7 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 {
 	long long length = 0; // this gets assigned return value from lseek()
 	time_t now = 0;         // this gets assigned only when rotate_by_time is true
+	time_t rotation_timestamp = 0;
 	priv_state	priv;
 	int save_errno;
 	char msg_buf[DPRINTF_ERR_MAX];
@@ -909,11 +910,24 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 	}
 
 	if (it->rotate_by_time) {
-		struct stat stat_buf;
 		now = time(NULL);
-		if (fstat(fileno(debug_file_ptr), &stat_buf) >= 0) {
-			// this is "change time" may not actually be creation time, chmod will reset this time
-			length = now - stat_buf.st_ctime;
+		if (it->maxLog) {
+			long long now_quantized = quantizeTimestamp(now, it->maxLog);
+			if ( ! it->logZero) {
+				struct stat stat_buf;
+				if (fstat(fileno(debug_file_ptr), &stat_buf) >= 0) {
+					it->logZero = stat_buf.st_mtime;
+				} else {
+					it->logZero = now;
+				}
+			}
+			long long zero_quantized = quantizeTimestamp((time_t)it->logZero, it->maxLog);
+			if (now_quantized >= zero_quantized) {
+				length = now_quantized - zero_quantized;
+				rotation_timestamp = zero_quantized;
+			} else {
+				// clock went backwards what do we do now?
+			}
 		}
 	} else {
 
@@ -940,7 +954,7 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 	}
 
 	//This is checking for a non-zero max length.  Zero is infinity.
-	if( it->maxLog && length > it->maxLog ) {
+	if( it->maxLog && length >= it->maxLog ) {
 		if( !locked ) {
 			/*
 			 * We only need to redo everything if there is a lock defined
@@ -973,7 +987,10 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 		_condor_dfprintf(it, "MaxLog = %lld %s, length = %lld\n",
 			it->maxLog, it->rotate_by_time ? "sec" : "bytes", length);
 		
-		debug_file_ptr = preserve_log_file(it, dont_panic, now);
+		debug_file_ptr = preserve_log_file(it, dont_panic, rotation_timestamp);
+		if (it->rotate_by_time) {
+			it->logZero = now;
+		}
 	}
 
 	_set_priv(priv, __FILE__, __LINE__, 0);
@@ -1202,7 +1219,7 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t now)
 	}
 	
 	_set_priv(priv, __FILE__, __LINE__, 0);
-	cleanUp(it->maxLogNum);
+	cleanUpOldLogFiles(it->maxLogNum);
 
 	return debug_file_ptr;
 }
