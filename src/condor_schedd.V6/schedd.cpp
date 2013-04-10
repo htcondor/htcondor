@@ -95,6 +95,7 @@
 #endif
 #endif
 #include <algorithm>
+#include <sstream>
 
 #if defined(WINDOWS) && !defined(MAXINT)
 	#define MAXINT INT_MAX
@@ -3431,6 +3432,8 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	PROC_ID a_job;
 	int tid;
 	char *peer_version = NULL;
+	std::ostringstream job_ids;
+	std::string job_ids_string;
 
 		// make sure this connection is authenticated, and we know who
 		// the user is.  also, set a timeout, since we don't want to
@@ -3543,6 +3546,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 					// is allowed to transfer data to/from a job.
 				if (OwnerCheck(a_job.cluster,a_job.proc)) {
 					(*jobs)[i] = a_job;
+					job_ids << a_job.cluster << "." << a_job.proc << ", ";
 
 						// Must not allow stagein to happen more than
 						// once, because this could screw up
@@ -3594,6 +3598,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 				 	OwnerCheck(a_job.cluster, a_job.proc) )
 				{
 					(*jobs)[JobAdsArrayLen++] = a_job;
+					job_ids << a_job.cluster << "." << a_job.proc << ", ";
 				}
 				tmp_ad = GetNextJobByConstraint(constraint_string,0);
 			}
@@ -3618,6 +3623,11 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	unsetQSock();
 
 	rsock->end_of_message();
+
+	job_ids_string = job_ids.str();
+	job_ids_string.erase(job_ids_string.length()-2,2); //Get rid of the extraneous ", "
+	dprintf( D_AUDIT, *rsock, "spool_job_files mode = %d, job ids = %s\n", 
+			 mode, job_ids_string.c_str());
 
 		// DaemonCore will free the thread_arg for us when the thread
 		// exits, but we need to free anything pointed to by
@@ -3693,6 +3703,10 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		// Place this tid into a hashtable so our reaper can finish up.
 	spoolJobFileWorkers->insert(tid, jobs);
 	
+		// TO DO: Add Job Proxy Info (if transferred)
+	dprintf( D_AUDIT, *rsock, "Finished spoolJobFiles mode = %d, job ids = %s\n",
+			 mode, job_ids_string.c_str());
+
 	return TRUE;
 }
 
@@ -4148,6 +4162,21 @@ Scheduler::actOnJobs(int, Stream* s)
 		free( tmp );
 		tmp = NULL;
 	}
+	
+		// Audit Log reporting
+	std::string job_ids_string, initial_constraint;
+	if( constraint ) {
+		initial_constraint = constraint;
+//		dprintf( D_AUDIT, *rsock, "actOnJobs. Command: %s (%d); Constraint: %s (%s)",
+//				 ATTR_JOB_ACTION, action_num, ATTR_ACTION_CONSTRAINT, initial_constraint.c_str());
+		dprintf( D_AUDIT, *rsock, "actOnJobs. Command: %s; Constraint: %s\n",
+				 getJobActionString(action), initial_constraint.c_str());
+
+	} else {
+		job_ids_string = job_ids.print_to_string();
+		dprintf( D_AUDIT, *rsock, "actOnJobs. Command: %s; Job ID List: %s\n",
+				 getJobActionString(action), job_ids_string.c_str());
+	}		
 
 		// // // // //
 		// REAL WORK
@@ -4463,6 +4492,15 @@ Scheduler::actOnJobs(int, Stream* s)
 		// our matches and either remove them or pick a different job
 		// to run on them.
 	ExpediteStartJobs();
+
+		// Audit Log reporting
+	if( !initial_constraint.empty() ) {
+		dprintf( D_AUDIT, *rsock, "Finished actOnJobs. Command: %d; Constraint: %s\n",
+				 action_num, initial_constraint.c_str());
+	} else {
+		dprintf( D_AUDIT, *rsock, "Finished actOnJobs. Command: %d; Job ID List: %s\n",
+				 action_num, job_ids_string.c_str());
+	}
 
 	return TRUE;
 }
@@ -12214,7 +12252,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		goto error_wrapup;
 	}
 
-	audit_log(D_AUDIT, sock, "GET_JOB_CONNECT_INFO job %d.%d\n", jobid.cluster, jobid.proc );
+	dprintf(D_AUDIT, *sock, "GET_JOB_CONNECT_INFO job %d.%d\n", jobid.cluster, jobid.proc );
 
 	input.LookupString(ATTR_SESSION_INFO,job_owner_session_info);
 
@@ -12389,8 +12427,8 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	return TRUE;
 
  error_wrapup:
-	audit_log(D_AUDIT|D_FAILURE, sock, "GET_JOB_CONNECT_INFO failed: %s\n",error_msg.Value() );
-	dprintf(D_ALWAYS,"GET_JOB_CONNECT_INFO failed: %s\n",error_msg.Value());
+	dprintf(D_AUDIT|D_FAILURE, *sock, "GET_JOB_CONNECT_INFO failed: %s\n",error_msg.Value() );
+		//dprintf(D_ALWAYS,"GET_JOB_CONNECT_INFO failed: %s\n",error_msg.Value());
 	reply.Assign(ATTR_RESULT,false);
 	reply.Assign(ATTR_ERROR_STRING,error_msg);
 	if( retry_is_sensible ) {

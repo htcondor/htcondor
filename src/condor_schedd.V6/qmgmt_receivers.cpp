@@ -133,7 +133,10 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		errno = 0;
 		rval = NewCluster( );
 		terrno = errno;
-		dprintf(D_SYSCALLS,"\tNewCluster: trval = %d, errno = %d\n",rval,terrno );
+		dprintf(D_AUDIT, *syscall_sock, 
+				"\tNewCluster: rval = %d, errno = %d\n",rval,terrno );
+		dprintf(D_SYSCALLS, 
+				"\tNewCluster: rval = %d, errno = %d\n",rval,terrno );
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
@@ -279,6 +282,11 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			rval = SetAttributeByConstraint( constraint, attr_name, attr_value, flags );
 			terrno = errno;
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+			dprintf( D_AUDIT, *syscall_sock,
+					 "Set Attribute By Constraint constraint = %s, "
+					 "%s = %s\n",
+					 constraint, attr_name, attr_value);
+
 		}
 
 		syscall_sock->encode();
@@ -333,6 +341,12 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			rval = SetAttribute( cluster_id, proc_id, attr_name, attr_value, flags );
 			terrno = errno;
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+			if( proc_id >= 0 ) { //If we have a valid proc_id
+				dprintf( D_AUDIT, *syscall_sock, 
+						 "Set Attribute cluster_id = %d, proc_id = %d, "
+						 "%s = %s\n",
+						 cluster_id, proc_id, attr_name, attr_value);
+			}
 		}
 
 		free( (char *)attr_value );
@@ -377,6 +391,10 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		rval = SetTimerAttribute( cluster_id, proc_id, attr_name, duration );
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		dprintf( D_AUDIT, *syscall_sock, 
+				 "Set Timer Attribute cluster_id = %d, proc_id = %d, "
+				 "attr_name = %s, attr_value %d\n",
+				 cluster_id, proc_id, attr_name, duration);
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
