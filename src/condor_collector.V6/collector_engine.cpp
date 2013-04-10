@@ -927,6 +927,44 @@ int CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query, bool *q
 	return ( iRet );
 }
 
+int CollectorEngine::expire( AdTypes adType, const ClassAd & query, bool * queryContainsHashKey ) {
+    int rVal = 0;
+    if( queryContainsHashKey ) { * queryContainsHashKey = false; }
+
+    HashFunc hFunc;
+    CollectorHashTable * hTable;
+    if( LookupByAdType( adType, hTable, hFunc ) ) {
+        AdNameHashKey hKey;
+        if( (* hFunc)( hKey, const_cast< ClassAd * >( & query ) ) ) {
+            if( queryContainsHashKey ) { * queryContainsHashKey = true; }
+
+            ClassAd * cAd = NULL;
+            if( hTable->lookup( hKey, cAd ) != -1 ) {
+                cAd->Assign( ATTR_LAST_HEARD_FROM, 1 );
+                
+                if( CollectorDaemon::offline_plugin_.expire( * cAd ) == true ) {
+                    return rVal;
+                }
+                
+                rVal = hTable->remove( hKey );
+                if( rVal == -1 ) {
+                    dprintf( D_ALWAYS, "\t\t Error removing ad\n" );
+                    return 0;
+                }
+                rVal = (! rVal);
+                
+                MyString hkString;
+                hKey.sprint( hkString );                
+                dprintf( D_ALWAYS, "\t\t**** Removed(%d) stale ad(s): \"%s\"\n", rVal, hkString.Value() );
+
+                delete cAd;
+            }
+        }
+    }
+
+	return rVal;
+}
+
 int CollectorEngine::
 remove (AdTypes adType, AdNameHashKey &hk)
 {

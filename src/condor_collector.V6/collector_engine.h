@@ -60,6 +60,12 @@ class CollectorEngine : public Service
 	*/
 	int remove (AdTypes t_AddType, const ClassAd & c_query, bool *hash_key_specified);
 
+    /**
+     * expire() - as remove(), above, except that it expires the ad.
+     *
+     */
+	int expire (AdTypes t_AddType, const ClassAd & c_query, bool *hash_key_specified);
+
 	// remove classad in the specified table with the given hashkey
 	int remove (AdTypes, AdNameHashKey &);
 

@@ -1000,7 +1000,24 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 	dprintf (D_ALWAYS, "(Sending %d ads in response to query)\n", __numAds__);
 }	
 
+//
+// Setting ATTR_LAST_HEARD_FROM to 0 causes the housekeeper to invalidate
+// the ad.  Since we don't want that -- we just want the ad to expire --
+// set the time to the next-smallest legal value, instead.  Expiring
+// invalidated ads allows the offline plugin to decide if they should go
+// absent, instead.
+//
+int CollectorDaemon::expiration_scanFunc (ClassAd *cad)
+{
+    return setAttrLastHeardFrom( cad, 1 );
+}
+
 int CollectorDaemon::invalidation_scanFunc (ClassAd *cad)
+{
+    return setAttrLastHeardFrom( cad, 0 );
+}
+
+int CollectorDaemon::setAttrLastHeardFrom (ClassAd* cad, unsigned long time)
 {
 	if ( !__adType__.empty() ) {
 		std::string type = "";
@@ -1015,7 +1032,7 @@ int CollectorDaemon::invalidation_scanFunc (ClassAd *cad)
 	if ( EvalExprTree( __filter__, cad, NULL, result ) &&
 		 result.IsBooleanValueEquiv(val) && val ) {
 
-		cad->Assign( ATTR_LAST_HEARD_FROM, 0 );
+		cad->Assign( ATTR_LAST_HEARD_FROM, time );
         __numAds__++;
     }
 
@@ -1033,7 +1050,14 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 	sock->timeout(QueryTimeout);
 
 	bool query_contains_hash_key = false;
+
+    bool expireInvalidatedAds = param_boolean( "EXPIRE_INVALIDATED_ADS", false );
+    if( expireInvalidatedAds ) {
+        __numAds__ = collector.expire( whichAds, query, &query_contains_hash_key );
+    } else {        
 	__numAds__ = collector.remove( whichAds, query, &query_contains_hash_key );
+    }
+
     if ( !query_contains_hash_key )
 	{
 		dprintf ( D_ALWAYS, "Walking tables to invalidate... O(n)\n" );
@@ -1058,7 +1082,11 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 			return;
 		}
 
-		if (param_boolean("HOUSEKEEPING_ON_INVALIDATE", true)) 
+        if (expireInvalidatedAds)
+        {
+            collector.walkHashTable (whichAds, expiration_scanFunc);
+            collector.invokeHousekeeper (whichAds);
+        } else if (param_boolean("HOUSEKEEPING_ON_INVALIDATE", true)) 
 		{
 			// first set all the "LastHeardFrom" attributes to low values ...
 			collector.walkHashTable (whichAds, invalidation_scanFunc);
