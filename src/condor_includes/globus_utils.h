@@ -23,19 +23,12 @@
 #include "condor_common.h"
 
 #if defined(HAVE_EXT_GLOBUS)
-/* Sigh.  globus forcibly defines IOV_MAX, instead of just gettint
-   it from limits.h.  Do this rigamarole to avoid annoying warnings */
-#define IOV_MAX_SAVE IOV_MAX
-#undef IOV_MAX
 #     include "globus_gsi_credential.h"
 #     include "globus_gsi_system_config.h"
 #     include "globus_gsi_system_config_constants.h"
 #     include "gssapi.h"
 #     include "globus_gss_assist.h"
 #     include "globus_gsi_proxy.h"
-#undef IOV_MAX
-#define IOV_MAX IOV_MAX_SAVE
-#undef IOV_MAX_SAVE
 #endif
 
 #if defined(HAVE_EXT_VOMS)
@@ -44,8 +37,6 @@ extern "C"
 	#include "voms/voms_apic.h"
 }
 #endif
-
-BEGIN_C_DECLS
 
 #define NULL_JOB_CONTACT	"X"
 
@@ -301,12 +292,25 @@ void parse_resource_manager_string( const char *string, char **host,
 int is_globus_friendly_url(const char * path);
 
 #if defined(HAVE_EXT_GLOBUS)
+
+globus_gsi_cred_handle_t x509_proxy_read( const char *proxy_file );
+
+void x509_proxy_free( globus_gsi_cred_handle_t handle );
+
+time_t x509_proxy_expiration_time( globus_gsi_cred_handle_t handle );
+
+char* x509_proxy_email( globus_gsi_cred_handle_t handle );
+
+char* x509_proxy_subject_name( globus_gsi_cred_handle_t handle );
+
+char* x509_proxy_identity_name( globus_gsi_cred_handle_t handle );
+
+int x509_proxy_seconds_until_expire( globus_gsi_cred_handle_t handle );
+
 /* functions for extracting voms attributes */
 int extract_VOMS_info( globus_gsi_cred_handle_t cred_handle, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN);
 int extract_VOMS_info_from_file( const char* proxy_file, int verify_type, char **voname, char **firstfqan, char **quoted_DN_and_FQAN);
 #endif
-
-END_C_DECLS
 
 #endif
 
