@@ -2959,6 +2959,32 @@ attributes and their values will be included in the e-mail notification
 of job completion.
 
 %%%%%%%%%%%%%%%%%%%
+%% accounting_group
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!accounting\_group}
+\label{condor-submit-accounting-group}
+\item[accounting\_group = $<$accounting-group-name$>$] 
+Causes jobs to negotiate under the given accounting group.  This value
+is recorded on the job ad as \AdAttr{AcctGroup}.
+See section~\ref{sec:group-accounting} for more information about 
+accounting groups.
+
+%%%%%%%%%%%%%%%%%%%
+%% accounting_group_user
+%%%%%%%%%%%%%%%%%%%
+
+\index{submit commands!accounting\_group\_user}
+\label{condor-submit-accounting-group-user}
+\item[accounting\_group\_user = $<$accounting-group-user-name$>$] 
+Sets the user name associated with the accounting group name for 
+resource usage accounting purposes.  If not set, 
+defaults to the value of \AdAttr{Owner}.  The group user value is
+recorded on the job ad as \AdAttr{AcctGroupUser}.
+If an accounting group has not been set via the group command, 
+this command is ignored.
+
+%%%%%%%%%%%%%%%%%%%
 %% image_size
 %%%%%%%%%%%%%%%%%%%
 
