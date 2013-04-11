@@ -68,8 +68,12 @@ This variable is now called \Macro{CGROUP\_MEMORY\_LIMIT\_POLICY}.
 \Ticket{3561}
 
 \item Fixed a bug that could cause HTCondor-C jobs to fail when they are
-part of a DAG. The jobs would be held with a hold reason of
-``Failed to initialize user log to /dev/null or <DAG log path>''.
+part of a DAG. The jobs would be held with a hold reason of the form
+\footnotesize
+\begin{verbatim}
+Failed to initialize user log to /dev/null or <DAG log path>.
+\end{verbatim}
+\normalsize
 \Ticket{3474}
 
 \item Fixed a bad file descriptor leak in \Condor{ft-gahp}.
