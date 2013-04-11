@@ -88,6 +88,7 @@
 #include "schedd_negotiate.h"
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
+#include "globus_utils.h"
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
 #include "ScheddPlugin.h"
@@ -179,6 +180,82 @@ int STARTD_CONTACT_TIMEOUT = 45;  // how long to potentially block
 #ifdef CARMI_OPS
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
 #endif
+
+void AuditLogJobProxy( Sock &sock, PROC_ID job_id, const char *proxy_file )
+{
+#if defined(HAVE_EXT_GLOBUS)
+	dprintf( D_AUDIT, sock, "Received proxy for job %d.%d\n",
+			 job_id.cluster, job_id.proc );
+
+	globus_gsi_cred_handle_t proxy_handle = x509_proxy_read( proxy_file );
+
+	if ( proxy_handle == NULL ) {
+		dprintf( D_AUDIT|D_FAILURE, sock, "Failed to read job proxy: %s\n",
+				 x509_error_string() );
+		return;
+	}
+
+	time_t expire_time = x509_proxy_expiration_time( proxy_handle );
+	char *proxy_subject = x509_proxy_subject_name( proxy_handle );
+	char *proxy_identity = x509_proxy_identity_name( proxy_handle );
+	char *proxy_email = x509_proxy_email( proxy_handle );
+	char *voname = NULL;
+	char *firstfqan = NULL;
+	char *fullfqan = NULL;
+	extract_VOMS_info( proxy_handle, 0, &voname, &firstfqan, &fullfqan );
+
+	x509_proxy_free( proxy_handle );
+
+	dprintf( D_AUDIT, sock, "proxy path: %s\n", proxy_file );
+	dprintf( D_AUDIT, sock, "proxy expiration: %d\n", (int)expire_time );
+	dprintf( D_AUDIT, sock, "proxy identity: %s\n", proxy_identity );
+	dprintf( D_AUDIT, sock, "proxy subject: %s\n", proxy_subject );
+	if ( proxy_email ) {
+		dprintf( D_AUDIT, sock, "proxy email: %s\n", proxy_email );
+	}
+	if ( voname ) {
+		dprintf( D_AUDIT, sock, "proxy vo name: %s\n", voname );
+	}
+	if ( firstfqan ) {
+		dprintf( D_AUDIT, sock, "proxy first fqan: %s\n", firstfqan );
+	}
+	if ( fullfqan ) {
+		dprintf( D_AUDIT, sock, "proxy full fqan: %s\n", fullfqan );
+	}
+
+	free( proxy_subject );
+	free( proxy_identity );
+	free( proxy_email );
+	free( voname );
+	free( firstfqan );
+	free( fullfqan );
+#endif
+}
+
+void AuditLogJobProxy( Sock &sock, ClassAd *job_ad )
+{
+	PROC_ID job_id;
+	std::string iwd;
+	std::string proxy_file;
+	std::string buff;
+
+	ASSERT( job_ad );
+
+	if ( !job_ad->LookupString( ATTR_X509_USER_PROXY, buff ) || buff.empty() ) {
+		return;
+	}
+	if ( buff[0] == DIR_DELIM_CHAR ) {
+		proxy_file = buff;
+	} else {
+		job_ad->LookupString( ATTR_JOB_IWD, iwd );
+		formatstr( proxy_file, "%s%c%s", iwd.c_str(), DIR_DELIM_CHAR, buff.c_str() );
+	}
+
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, job_id.cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, job_id.proc );
+
+	AuditLogJobProxy( sock, job_id, proxy_file.c_str() );
+}
 
 unsigned int UserIdentity::HashFcn(const UserIdentity & index)
 {
@@ -3340,6 +3417,10 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS ) {
 			// receive sandbox into the schedd
 			result = ftrans.DownloadFiles();
+
+			if ( result ) {
+				AuditLogJobProxy( *rsock, ad );
+			}
 		} else {
 			// send sandbox out of the schedd
 			rsock->encode();
@@ -3887,6 +3968,8 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 			reply = 0;
 		} else {
 			reply = 1;	// reply of 1 means success
+
+			AuditLogJobProxy( *rsock, jobid, final_proxy_path.Value() );
 		}
 	}
 
