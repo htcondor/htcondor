@@ -293,6 +293,7 @@ globus_gsi_cred_handle_t x509_proxy_read( const char *proxy_file )
 	globus_gsi_cred_handle_t         handle       = NULL;
 	globus_gsi_cred_handle_attrs_t   handle_attrs = NULL;
 	char *my_proxy_file = NULL;
+	bool error = false;
 
 	if ( activate_globus_gsi() != 0 ) {
 		return NULL;
@@ -300,11 +301,13 @@ globus_gsi_cred_handle_t x509_proxy_read( const char *proxy_file )
 
 	if (globus_gsi_cred_handle_attrs_init(&handle_attrs)) {
 		set_error_string( "problem during internal initialization1" );
+		error = true;
 		goto cleanup;
 	}
 
 	if (globus_gsi_cred_handle_init(&handle, handle_attrs)) {
 		set_error_string( "problem during internal initialization2" );
+		error = true;
 		goto cleanup;
 	}
 
@@ -320,7 +323,8 @@ globus_gsi_cred_handle_t x509_proxy_read( const char *proxy_file )
 	// We should have a proxy file, now, try to read it
 	if (globus_gsi_cred_read_proxy(handle, proxy_file)) {
 		set_error_string( "unable to read proxy file" );
-	   goto cleanup;
+		error = true;
+		goto cleanup;
 	}
 
  cleanup:
@@ -330,6 +334,11 @@ globus_gsi_cred_handle_t x509_proxy_read( const char *proxy_file )
 
 	if (handle_attrs) {
 		globus_gsi_cred_handle_attrs_destroy(handle_attrs);
+	}
+
+	if (error && handle) {
+		globus_gsi_cred_handle_destroy(handle);
+		handle = NULL;
 	}
 
 	return handle;
