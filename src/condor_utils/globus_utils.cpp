@@ -380,7 +380,7 @@ char* x509_proxy_email( globus_gsi_cred_handle_t handle )
 	}
 
 	for(i = 0; i < sk_X509_num(cert_chain) && email == NULL; ++i) {
-		if((cert = X509_dup(sk_X509_value(cert_chain, i))) == NULL) {
+		if((cert = sk_X509_value(cert_chain, i)) == NULL) {
 			continue;
 		}
 		if ((email_orig = (X509_NAME *)X509_get_ext_d2i(cert, NID_pkcs9_emailAddress, 0, 0)) != NULL) {
@@ -414,6 +414,7 @@ char* x509_proxy_email( globus_gsi_cred_handle_t handle )
 				}
 				break;
 			}
+			sk_GENERAL_NAME_pop_free(gens, GENERAL_NAME_free);
 		}
 	}
 
@@ -424,7 +425,7 @@ char* x509_proxy_email( globus_gsi_cred_handle_t handle )
 
  cleanup:
 	if (cert_chain) {
-		sk_X509_free(cert_chain);
+		sk_X509_pop_free(cert_chain, X509_free);
 	}
 
 	if (email_orig) {
