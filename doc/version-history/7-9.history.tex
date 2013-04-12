@@ -84,6 +84,11 @@ Failed to initialize user log to /dev/null or <DAG log path>.
 \item Fixed a severe leak of file descriptors in the \Condor{ft-gahp}.
 \Ticket{3559}
 
+\item Fixed a bug wherein it was impossible for the \Condor{startd} to clean
+up execute directories after a \Condor{starter} was prematurely killed, while using 
+Privilege Separation.
+\Ticket{3573}
+
 \end{itemize}
 
 \noindent Known Bugs:

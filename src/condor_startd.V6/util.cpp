@@ -273,6 +273,9 @@ cleanup_execute_dirs( StringList &list )
 		pair_strings_vector root_dirs = root_dir_list();
 		for (pair_strings_vector::const_iterator it=root_dirs.begin(); it != root_dirs.end(); ++it) {
 			const char * exec_path_full = dirscat(it->second.c_str(), exec_path);
+			if(exec_path_full) {
+				dprintf(D_FULLDEBUG, "Looking at %s\n",exec_path_full);
+			}
 			Directory execute_dir( exec_path_full, PRIV_ROOT );
 
 			execute_dir.Rewind();
@@ -283,6 +286,7 @@ cleanup_execute_dirs( StringList &list )
 			if (privsep_enabled()) {
 				execute_dir.Rewind();
 				while (execute_dir.Next()) {
+					dprintf(D_FULLDEBUG, "Attempting to remove %s\n",execute_dir.GetFullPath());
 					privsep_remove_dir(execute_dir.GetFullPath());
 				}
 			}
