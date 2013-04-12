@@ -600,7 +600,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 		m_auth_cmd = 0;
 		m_auth_info.LookupInteger(ATTR_SEC_COMMAND, m_real_cmd);
 
-		if (m_real_cmd == DC_AUTHENTICATE) {
+		if ((m_real_cmd == DC_AUTHENTICATE) || (m_real_cmd == DC_SEC_QUERY)) {
 			// we'll set m_auth_cmd temporarily to
 			m_auth_info.LookupInteger(ATTR_SEC_AUTH_COMMAND, m_auth_cmd);
 		} else {
@@ -1232,13 +1232,20 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 	int cmd_index = 0;
 
 	if (m_req == DC_AUTHENTICATE) {
+
+		m_result = TRUE;
+
 		if (m_real_cmd == DC_AUTHENTICATE) {
-			m_result = TRUE;
 			return CommandProtocolFinished;
 		}
 
-		m_req = m_real_cmd;
-		m_result = TRUE;
+		if (m_real_cmd == DC_SEC_QUERY) {
+			// continue spoofing another command.  just before calling the command
+			// handler we will check m_real_cmd again for DC_SEC_QUERY and abort.
+			m_req = m_auth_cmd;
+		} else {
+			m_req = m_real_cmd;
+		}
 
 		if( !daemonCore->CommandNumToTableIndex(m_auth_cmd,&cmd_index) ) {
 			dprintf(D_ALWAYS, "DC_AUTHENTICATE: UNREGISTERED COMMAND %d in ExecCommand()\n",m_auth_cmd);
@@ -1381,6 +1388,32 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 						  m_user.Value() );
 		}
 
+		// special case for DC_SEC_QUERY.  we are not going to call a command
+		// handler, but we need to respond whether or not the authorization
+		// succeeded.
+		if ( m_real_cmd == DC_SEC_QUERY ) {
+
+			// send another classad saying what happened
+			ClassAd q_response;
+			q_response.Assign( ATTR_SEC_AUTHORIZATION_SUCCEEDED, (m_perm == USER_AUTH_SUCCESS) );
+
+			if (!q_response.put(*m_sock) ||
+				!m_sock->end_of_message()) {
+				dprintf (D_ALWAYS, "SECMAN: Error sending DC_SEC_QUERY classad to %s!\n", m_sock->peer_description());
+				q_response.dPrint (D_ALWAYS);
+				m_result = FALSE;
+				return CommandProtocolFinished;
+			}
+
+			dprintf (D_ALWAYS, "SECMAN: Succesfully sent DC_SEC_QUERY classad to %s!\n", m_sock->peer_description());
+			q_response.dPrint (D_ALWAYS);
+
+			// now, having informed the client about the authorization status,
+			// successfully abort before actually calling any command handler.
+			m_result = TRUE;
+			return CommandProtocolFinished;
+		}
+
 		if( m_perm != USER_AUTH_SUCCESS )
 		{
 			// Permission check FAILED
@@ -1426,6 +1459,14 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		}
 	}
 */
+
+	if ( m_real_cmd == DC_SEC_QUERY ) {
+		// send another classad saying what happened
+		// abort before actually calling any command handler.
+		m_result = TRUE;
+		return CommandProtocolFinished;
+	}
+
 	if ( m_reqFound == TRUE ) {
 		// Handlers should start out w/ parallel mode disabled by default
 		ScopedEnableParallel(false);
