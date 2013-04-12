@@ -6104,7 +6104,7 @@ find_idle_local_jobs( ClassAd *job )
 		}
 
 		if ( ! requirementsMet ) {
-			char *exp = scheddAd.sPrintExpr( NULL, false, universeExp );
+			char *exp = sPrintExpr( scheddAd, universeExp );
 			if ( exp ) {
 				dprintf( D_FULLDEBUG, "Failed expression '%s'\n", exp );
 				free( exp );
@@ -6136,7 +6136,7 @@ find_idle_local_jobs( ClassAd *job )
 			// print the expression to the user and return
 			//
 		if ( ! requirementsMet ) {
-			char *exp = job->sPrintExpr( NULL, false, ATTR_REQUIREMENTS );
+			char *exp = sPrintExpr( *job, ATTR_REQUIREMENTS );
 			if ( exp ) {
 				dprintf( D_FULLDEBUG, "Failed expression '%s'\n", exp );
 				free( exp );

@@ -3553,14 +3553,14 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					}
 					else if ( startd_ad ) {
 							// We have a startd ad in memory, use it
-						value = startd_ad->sPrintExpr(NULL,0,name);
+						value = sPrintExpr(*startd_ad, name);
 						value_came_from_jobad = false;
 					} else {
 							// No startd ad -- use value from last match.
 						MyString expr;
 						expr = "MATCH_";
 						expr += name;
-						value = ad->sPrintExpr(NULL,0,expr.Value());
+						value = sPrintExpr(*ad, expr.Value());
 						value_came_from_jobad = true;
 					}
 

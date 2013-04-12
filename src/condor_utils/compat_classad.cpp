@@ -1706,21 +1706,21 @@ sPrint( std::string &output, StringList *attr_white_list )
 }
 // Taken from the old classad's function. Got rid of incorrect documentation. 
 ////////////////////////////////////////////////////////////////////////////////// Print an expression with a certain name into a buffer. 
-// The caller should pass the size of the buffer in buffersize.
-// If buffer is NULL, then space will be allocated with malloc(), and it needs
+// The returned buffer will be allocated with malloc(), and it needs
 // to be free-ed with free() by the user.
 ////////////////////////////////////////////////////////////////////////////////
-char* ClassAd::
-sPrintExpr(char* buffer, unsigned int buffersize, const char* name)
+char*
+sPrintExpr(const classad::ClassAd &ad, const char* name)
 {
-
+	char *buffer = NULL;
+	int buffersize = 0;
 	classad::ClassAdUnParser unp;
     string parsedString;
 	classad::ExprTree* expr;
 
 	unp.SetOldClassAd( true );
 
-    expr = Lookup(name); 
+    expr = ad.Lookup(name);
 
     if(!expr)
     {
@@ -1729,15 +1729,11 @@ sPrintExpr(char* buffer, unsigned int buffersize, const char* name)
 
     unp.Unparse(parsedString, expr);
 
-    if(!buffer)
-    {
-
-        buffersize = strlen(name) + parsedString.length() +
-                        3 +     // " = "
-                        1;      // null termination
-        buffer = (char*) malloc(buffersize);
-        ASSERT( buffer != NULL );
-    } 
+    buffersize = strlen(name) + parsedString.length() +
+                    3 +     // " = "
+                    1;      // null termination
+    buffer = (char*) malloc(buffersize);
+    ASSERT( buffer != NULL );
 
     snprintf(buffer, buffersize, "%s = %s", name, parsedString.c_str() );
     buffer[buffersize - 1] = '\0';
@@ -2229,8 +2225,8 @@ CopyAttribute( char const *target_attr, char const *source_attr,
 
 //////////////XML functions///////////
 
-int ClassAd::
-fPrintAsXML(FILE *fp, StringList *attr_white_list)
+int
+fPrintAdAsXML(FILE *fp, classad::ClassAd &ad, StringList *attr_white_list)
 {
     if(!fp)
     {
@@ -2238,34 +2234,34 @@ fPrintAsXML(FILE *fp, StringList *attr_white_list)
     }
 
     std::string out;
-    sPrintAsXML(out,attr_white_list);
+    sPrintAdAsXML(out,ad,attr_white_list);
     fprintf(fp, "%s", out.c_str());
     return TRUE;
 }
 
-int ClassAd::
-sPrintAsXML(MyString &output, StringList *attr_white_list)
+int
+sPrintAdAsXML(MyString &output, classad::ClassAd &ad, StringList *attr_white_list)
 {
 	std::string std_output;
-	int rc = sPrintAsXML(std_output, attr_white_list);
+	int rc = sPrintAdAsXML(std_output, ad, attr_white_list);
 	output += std_output;
 	return rc;
 }
 
-int ClassAd::
-sPrintAsXML(std::string &output, StringList *attr_white_list)
+int
+sPrintAdAsXML(std::string &output, classad::ClassAd &ad, StringList *attr_white_list)
 {
 	classad::ClassAdXMLUnParser unparser;
 	std::string xml;
 
 	unparser.SetCompactSpacing(false);
 	if ( attr_white_list ) {
-		ClassAd tmp_ad;
+		classad::ClassAd tmp_ad;
 		classad::ExprTree *expr;
 		const char *attr;
 		attr_white_list->rewind();
 		while( (attr = attr_white_list->next()) ) {
-			if ( (expr = this->Lookup( attr )) ) {
+			if ( (expr = ad.Lookup( attr )) ) {
 				tmp_ad.Insert( attr, expr, false );
 			}
 		}
@@ -2275,7 +2271,7 @@ sPrintAsXML(std::string &output, StringList *attr_white_list)
 			tmp_ad.Remove( attr );
 		}
 	} else {
-		unparser.Unparse( xml, this );
+		unparser.Unparse( xml, &ad );
 	}
 	output += xml;
 	return TRUE;

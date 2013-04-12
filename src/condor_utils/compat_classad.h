@@ -363,28 +363,6 @@ class ClassAd : public classad::ClassAd
 			@return TRUE
 		*/
 	int sPrint( std::string &output, StringList *attr_white_list = NULL );
-        /** Prints an expression with a certain name into a buffer. 
-         *
-         *  @param buffer The buffer to place the named expression into. NOTE: if this is NULL, then the function returns some malloc'd memory. Free it.
-         *  @param buffersize The size of the buffer.
-         *  @param name The attr whose expr is to be printed into the buffer.
-         *  @return Returns the now-filled buffer.
-         */
-    char* sPrintExpr(char* buffer, unsigned int buffersize, const char* name);
-
-    /* Prints out the classad as xml to a file.
-     * @param fp The file to be printed to.
-     * @return TRUE as long as the file existed.
-     */
-    int fPrintAsXML(FILE *fp, StringList *attr_white_list = NULL);
-
-    /* Prints the current classad as XML to a string. fPrintAsXML calls this.
-     * @param output The MyString to have filled with the XML-ified classad.
-	 *   The string is appended to, not overwritten.
-     * @return TRUE
-     */
-    int sPrintAsXML(MyString &output, StringList *attr_white_list = NULL);
-    int sPrintAsXML(std::string &output, StringList *attr_white_list = NULL);
 
     void ResetExpr();
 
@@ -536,6 +514,38 @@ class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
  private:
 	std::string ad_delimitor;
 };
+
+/* Prints out the classad as xml to a file.
+ * @param fp The file to be printed to.
+ * @param ad The classad containing the attribute
+ * @param An optional white-list of attributes to be printed.
+ * @return TRUE as long as the file existed.
+ */
+int fPrintAdAsXML(FILE *fp, classad::ClassAd &ad,
+				  StringList *attr_white_list = NULL);
+
+/* Prints the classad as XML to a string. fPrintAdAsXML calls this.
+ * @param output The string to have filled with the XML-ified classad.
+ *   The string is appended to, not overwritten.
+ * @param ad The ad to be printed.
+ * @param An optional white-list of attributes to be printed.
+ * @return TRUE
+ */
+int sPrintAdAsXML(MyString &output, classad::ClassAd &ad,
+				  StringList *attr_white_list = NULL);
+int sPrintAdAsXML(std::string &output, classad::ClassAd &ad,
+				  StringList *attr_white_list = NULL);
+
+/** Given an attribute name, return a buffer containing the name
+ *  and it's unevaluated value, like so:
+ *    <name> = <expression>
+ *  The returned buffer is malloc'd and must be free'd by the
+ *  caller.
+ *  @param ad The classad containing the attribute
+ *  @param name The attr whose expr is to be printed into the buffer.
+ *  @return Returns a malloc'd buffer.
+ */
+char* sPrintExpr(const classad::ClassAd &ad, const char* name);
 
 void getTheMyRef( classad::ClassAd *ad );
 void releaseTheMyRef( classad::ClassAd *ad );
