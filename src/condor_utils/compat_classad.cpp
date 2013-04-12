@@ -1706,21 +1706,21 @@ sPrint( std::string &output, StringList *attr_white_list )
 }
 // Taken from the old classad's function. Got rid of incorrect documentation. 
 ////////////////////////////////////////////////////////////////////////////////// Print an expression with a certain name into a buffer. 
-// The caller should pass the size of the buffer in buffersize.
-// If buffer is NULL, then space will be allocated with malloc(), and it needs
+// The returned buffer will be allocated with malloc(), and it needs
 // to be free-ed with free() by the user.
 ////////////////////////////////////////////////////////////////////////////////
-char* ClassAd::
-sPrintExpr(char* buffer, unsigned int buffersize, const char* name)
+char*
+sPrintExpr(const classad::ClassAd &ad, const char* name)
 {
-
+	char *buffer = NULL;
+	int buffersize = 0;
 	classad::ClassAdUnParser unp;
     string parsedString;
 	classad::ExprTree* expr;
 
 	unp.SetOldClassAd( true );
 
-    expr = Lookup(name); 
+    expr = ad.Lookup(name);
 
     if(!expr)
     {
@@ -1729,15 +1729,11 @@ sPrintExpr(char* buffer, unsigned int buffersize, const char* name)
 
     unp.Unparse(parsedString, expr);
 
-    if(!buffer)
-    {
-
-        buffersize = strlen(name) + parsedString.length() +
-                        3 +     // " = "
-                        1;      // null termination
-        buffer = (char*) malloc(buffersize);
-        ASSERT( buffer != NULL );
-    } 
+    buffersize = strlen(name) + parsedString.length() +
+                    3 +     // " = "
+                    1;      // null termination
+    buffer = (char*) malloc(buffersize);
+    ASSERT( buffer != NULL );
 
     snprintf(buffer, buffersize, "%s = %s", name, parsedString.c_str() );
     buffer[buffersize - 1] = '\0';

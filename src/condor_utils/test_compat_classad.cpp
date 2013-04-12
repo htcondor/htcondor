@@ -249,52 +249,36 @@ bool test_sPrintExpr(compat_classad::ClassAd *c1, int verbose)
      *  B = 2
      * So we're testing against those.
      */
-    bool passedNonNull = false, passedNull = false, passed = false;
+    bool passedValid = false, passed = false;
     bool passedNonsense = false;
     classad::AttrList::iterator itr;
     itr = c1->begin();
 
-    char *buffer1, *buffer2;
-    int bufferSize = 16;
-    buffer1 = (char*) calloc(bufferSize, sizeof(char));
+    char *buffer;
 
+    buffer = sPrintExpr(*c1, (*itr).first.c_str());
 
-    buffer1 = c1->sPrintExpr(buffer1, bufferSize, (*itr).first.c_str());
-
-    if(!strcmp(buffer1, "A = 1") )
+    if(!strcmp(buffer, "A = 1") )
     {
-        passedNonNull = true;
+        passedValid = true;
     }
 
     if(verbose)
-        printf("buf != NULL test %s.\n", passedNonNull ? "passed" : "failed");
+        printf("Valid attr test %s.\n", passedValid ? "passed" : "failed");
 
-    buffer2 = c1->sPrintExpr(NULL, 0, (*itr).first.c_str()); 
+    free(buffer);
 
-    if(!strcmp(buffer2, "A = 1") )
+    buffer = sPrintExpr(*c1, "fred");
+    if(buffer == NULL)
     {
-        passedNull = true;
-    }
-
-    if(verbose)
-        printf("buf == NULL test %s.\n", passedNull ? "passed" : "failed");
-
-
-    free(buffer1);
-    //buffer1 = (char*) calloc(bufferSize, sizeof(char));
-
-    buffer1 = c1->sPrintExpr(NULL, 0, "fred");
-    if(buffer1 == NULL)
-    {
-        passedNonsense = TRUE; 
+        passedNonsense = true;
     }
 
     if(verbose)
         printf("Nonsense Attr test %s.\n", passedNonsense ? "passed" : "failed");
-    passed = passedNull && passedNonNull && passedNonsense;
+    passed = passedValid && passedNonsense;
 
-    free(buffer1);
-    free(buffer2);
+    free(buffer);
 
     return passed;
 
