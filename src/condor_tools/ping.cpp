@@ -35,13 +35,22 @@
 void
 usage( char *cmd )
 {
-	fprintf(stderr,"Usage: %s [options] <authz-level | command-name | command-int>\n",cmd);
-	fprintf(stderr,"Where options are:\n");
-	fprintf(stderr,"    -help             Display options\n");
-	fprintf(stderr,"    -version          Display Condor version\n");
-	fprintf(stderr,"    -addr <hostname>  Use this sinful string\n");
-	fprintf(stderr,"    -debug            Show extra debugging info\n");
-	fprintf(stderr,"\nExample: %s -debug WRITE -addr \"<127.0.0.1:9618>\"\n\n",cmd);
+	fprintf(stderr,"Usage: %s [options] TOKEN [TOKEN [TOKEN [...]]]\n",cmd);
+	fprintf(stderr,"\nwhere TOKEN is an (authorization-level | command-name | command-int)\n\n");
+	fprintf(stderr,"general options:\n");
+	fprintf(stderr,"    -help                           Display options\n");
+	fprintf(stderr,"    -version                        Display Condor version\n");
+	fprintf(stderr,"    -debug                          Show extra debugging info\n");
+	fprintf(stderr,"\nspecifying target options:\n");
+	fprintf(stderr,"    -address <sinful>               Use this sinful string\n");
+	fprintf(stderr,"    -pool    <host>                 NOT IMPLEMENTED\n");
+	fprintf(stderr,"    -name    <name>                 NOT IMPLEMENTED\n");
+	fprintf(stderr,"    -type    <subsystem>            NOT IMPLEMENTED (default: SCHEDD)\n");
+	fprintf(stderr,"\noutput options (specify only one):\n");
+	fprintf(stderr,"    -quiet                          No output, only sets status\n");
+	fprintf(stderr,"    -table                          Print one result per line\n");
+	fprintf(stderr,"    -verbose                        Print all available information\n");
+	fprintf(stderr,"\nExample:\n    %s -addr \"<127.0.0.1:9618>\" -table READ WRITE DAEMON\n\n",cmd);
 }
 
 void
@@ -59,7 +68,7 @@ void process_err_stack(CondorError *errstack) {
 }
 
 
-void print_useful_info(ClassAd *ad) {
+void print_useful_info(ClassAd *ad, ClassAd *authz_ad) {
 	MyString  val;
 
 	ad->LookupString("remoteversion", val);
@@ -100,13 +109,17 @@ void print_useful_info(ClassAd *ad) {
 	ad->LookupString("myremoteusername", val);
 	printf("Remote Mapping:              %s\n", val.Value());
 
+	bool bval;
+	authz_ad->LookupBool(ATTR_SEC_AUTHORIZATION_SUCCEEDED, bval);
+	printf("Authorized:                  %s\n", (bval ? "TRUE" : "FALSE"));
+
 	printf ("\n");
 
 }
 
 
 
-void print_info(char * addr,  int cmd, CondorError *errstack) {
+void print_info(char * addr,  int cmd, ClassAd *authz_ad, CondorError *errstack) {
 
 	MyString cmd_map_ent;
 	cmd_map_ent.formatstr ("{%s,<%i>}", addr, cmd); 
@@ -129,7 +142,7 @@ void print_info(char * addr,  int cmd, CondorError *errstack) {
 	}
 
 	ClassAd *policy = k->policy();
-	print_useful_info(policy);
+	print_useful_info(policy, authz_ad);
 
 	if (errstack->getFullText() != "") {
 		printf ("Information about authentication methods that were attempted but failed:\n");
@@ -271,41 +284,81 @@ int main( int argc, char *argv[] )
 	}
 
 
-	CondorError errstack;
 
-	Daemon* daemon;
+	//
+	// LETS GET TO WORK!
+	//
+
+	CondorError errstack;
+	ClassAd authz_ad;
+
+	Daemon *daemon = NULL;
+	ReliSock *sock = NULL;
+	int return_code = 1;
+
 	if(address) {
 		daemon = new Daemon( DT_ANY, address, 0 );
 		if (!(daemon->locate())) {
 			fprintf(stderr, "couldn't locate %s!  check the -address argument.\n", address);
-			exit(1);
+			goto cleanup;
 		}
 	} else {
-		fprintf( stderr, "Missing -address argument, attempting to talk to local condor_master\n");
-		daemon = new Daemon( DT_MASTER, NULL, 0 );
+		fprintf( stderr, "Missing -address argument, attempting to talk to local condor_schedd\n");
+		daemon = new Daemon( DT_SCHEDD, NULL, 0 );
 		if (!(daemon->locate())) {
-			fprintf(stderr, "couldn't locate local master!  use the -address argument.\n");
-			exit(1);
+			fprintf(stderr, "couldn't locate local schedd!  use the -address argument.\n");
+			goto cleanup;
 		}
 	}
 
-	ReliSock *sock = NULL;
-	int return_code = 1;
 
-	if( (sock = (ReliSock*)(daemon->startSubCommand(DC_AUTHENTICATE, subcmd, Stream::reli_sock, 0, &errstack))) ) {
-		sock->end_of_message();
-		delete sock;
-
-		print_info(daemon->addr(), subcmd, &errstack);
-
-		return_code = 0;
-	} else {
-		process_err_stack(&errstack);
-		return_code = 1;
+	sock = (ReliSock*) daemon->makeConnectedSocket( Stream::reli_sock, 0, 0, &errstack );
+	if (!sock) {
+		goto print_results;
 	}
 
-	delete daemon;
-	return return_code;
+	bool sc_success;
+	sc_success = daemon->startSubCommand(DC_SEC_QUERY, subcmd, sock, 0, &errstack);
+	if (!sc_success) {
+		goto print_results;
+	}
 
+	sock->decode();
+	if (!authz_ad.initFromStream(*sock) ||
+		!sock->end_of_message()) {
+		return_code = 1;
+		goto print_results;
+	}
+
+	return_code = 0;
+
+
+print_results:
+
+	if (return_code == 0) {
+		print_info(daemon->addr(), subcmd, &authz_ad, &errstack);
+	} else {
+		if(sock) {
+			printf("sock exists.\n");
+			MyString a = sock->getAuthenticationMethodUsed();
+			if (!a.IsEmpty()) {
+				printf("auth: %s\n", a.Value());
+			}
+		}
+		process_err_stack(&errstack);
+	}
+
+cleanup:
+	if(sock) {
+		delete sock;
+		sock = NULL;
+	}
+
+	if(daemon) {
+		delete daemon;
+		daemon = NULL;
+	}
+
+	return return_code;
 }
 
