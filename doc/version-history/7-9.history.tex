@@ -62,6 +62,13 @@ introduced in HTCondor version 7.9.2 has changed.
 This variable is now called \Macro{CGROUP\_MEMORY\_LIMIT\_POLICY}.
 \Ticket{3564}
 
+\item The new configuration variable \Macro{EXPIRE\_INVALIDATED\_ADS},
+when set to \Expr{True}, causes invalidated ClassAds that would have
+been removed from the \Condor{collector} right away to instead
+be treated as expired ClassAds, such that they may become absent ClassAds.
+See section~\ref{sec:Absent-Ads} for details on absent ClassAds.
+\Ticket{3085}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

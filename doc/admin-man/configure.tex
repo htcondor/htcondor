@@ -7041,6 +7041,13 @@ page~\pageref{sec:Absent-Ads} for more details.
   This configuration variable replaces \MacroNI{OFFLINE\_LOG},
   which is no longer used.
 
+\label{param:ExpireInvalidatedAds}
+\item[\Macro{EXPIRE\_INVALIDATED\_ADS}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, causes all invalidated ClassAds to be treated 
+  as if they expired.
+  This permits invalidated ClassAds to be marked absent,
+  as defined in section~\ref{sec:Absent-Ads}.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
