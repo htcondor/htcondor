@@ -3373,7 +3373,7 @@ process_buffer_line_old(void *, ClassAd *job)
 	if (use_xml) {
 		std::string s;
 		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
-		job->sPrintAsXML(s,attr_white_list);
+		sPrintAdAsXML(s,*job,attr_white_list);
 		tempCPS->string = strnewp( s.c_str() );
 	} else if( dash_long ) {
 		MyString s;
@@ -3427,7 +3427,7 @@ static void count_job(ClassAd *job)
 static const char * render_job_text(ClassAd *job, std::string & result_text)
 {
 	if (use_xml) {
-		job->sPrintAsXML(result_text, attrs.isEmpty() ? NULL : &attrs);
+		sPrintAdAsXML(result_text, *job, attrs.isEmpty() ? NULL : &attrs);
 	} else if (dash_long) {
 		job->sPrint(result_text, attrs.isEmpty() ? NULL : &attrs);
 		result_text += "\n";

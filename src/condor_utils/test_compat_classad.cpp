@@ -36,8 +36,8 @@ using namespace std;
 
 bool test_sPrintExpr(compat_classad::ClassAd *c1, int verbose);
 bool test_IsValidAttrValue(compat_classad::ClassAd *c1, int verbose);
-bool test_fPrintAsXML(compat_classad::ClassAd *c1, int verbose);
-bool test_sPrintAsXML(int verbose); //I guess if fPrintAsXML works, 
+bool test_fPrintAdAsXML(compat_classad::ClassAd *c1, int verbose);
+bool test_sPrintAdAsXML(int verbose); //I guess if fPrintAdAsXML works, 
                                      //this does too
 
 bool test_ChainCollapse(compat_classad::ClassAd *c2, compat_classad::ClassAd *c3, int verbose);
@@ -329,15 +329,15 @@ bool test_IsValidAttrValue(compat_classad::ClassAd *c1, int verbose)
 }
 //}}}
 
-//{{{test_fPrintAsXML
-bool test_fPrintAsXML(compat_classad::ClassAd *c1, int verbose)
+//{{{test_fPrintAdAsXML
+bool test_fPrintAdAsXML(compat_classad::ClassAd *c1, int verbose)
 {
     bool passed = false;
     FILE* compC1XML;
 
     compC1XML = safe_fopen_wrapper("compC1XML.xml", "w+");
     //compC1XML = fopen("compC1XML.xml", "w+");
-    c1->fPrintAsXML(compC1XML);
+    fPrintAdAsXML(compC1XML, *c1);
 
     fclose(compC1XML);
     if(verbose){}
@@ -349,10 +349,10 @@ bool test_fPrintAsXML(compat_classad::ClassAd *c1, int verbose)
 }
 //}}}
 
-//{{{test_sPrintAsXML
-bool test_sPrintAsXML(int verbose)
+//{{{test_sPrintAdAsXML
+bool test_sPrintAdAsXML(int verbose)
 {
-    /* it's tested in fPrintAsXML */
+    /* it's tested in fPrintAdAsXML */
     bool passed = false;
 
     if(verbose)
@@ -1438,9 +1438,9 @@ void setUpAndRun(int verbose)
     printf("-------------\n");
 
 
-    printf("Testing fPrintAsXML and sPrintAsXML...\n");
-    passedTest[2] = test_fPrintAsXML(compC1, verbose);
-    printf("fPrintAsXML and sPrintAsXML %s.\n", passedTest[2] ? "passed" : "failed");
+    printf("Testing fPrintAdAsXML and sPrintAdAsXML...\n");
+    passedTest[2] = test_fPrintAdAsXML(compC1, verbose);
+    printf("fPrintAdAsXML and sPrintAdAsXML %s.\n", passedTest[2] ? "passed" : "failed");
     printf("-------------\n");
 
 
