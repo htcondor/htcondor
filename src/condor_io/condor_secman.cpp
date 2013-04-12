@@ -1466,7 +1466,7 @@ SecManStartCommand::sendAuthInfo_inner()
 	// fill in command
 	m_auth_info.Assign(ATTR_SEC_COMMAND, m_cmd);
 
-	if (m_cmd == DC_AUTHENTICATE) {
+	if ((m_cmd == DC_AUTHENTICATE) || (m_cmd == DC_SEC_QUERY)) {
 		// fill in sub-command
 		m_auth_info.Assign(ATTR_SEC_AUTH_COMMAND, m_subcmd);
 	}

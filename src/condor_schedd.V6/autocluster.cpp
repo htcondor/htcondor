@@ -206,7 +206,7 @@ int AutoCluster::getAutoClusterid( ClassAd *job )
 	const char* next_attr = NULL;
 	while ( (next_attr=significant_attrs->next()) != NULL ) {
 		buf = NULL;
-		buf = job->sPrintExpr(NULL,0,next_attr);
+		buf = sPrintExpr(*job, next_attr);
 		if (buf) {
 			signature += buf;
 			free(buf);
@@ -235,7 +235,7 @@ int AutoCluster::getAutoClusterid( ClassAd *job )
 				continue;
 			}
 			buf = NULL;
-			buf = job->sPrintExpr(NULL, 0,next_attr);
+			buf = sPrintExpr(*job, next_attr);
 			if (buf) {
 				signature += buf;
 				free(buf);

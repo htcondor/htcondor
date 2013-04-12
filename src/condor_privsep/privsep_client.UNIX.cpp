@@ -430,6 +430,7 @@ privsep_remove_dir(const char* pathname)
 
 	// feed it the pathname via its input pipe
 	//
+	dprintf(D_FULLDEBUG, "Sending \"user-dir = %s\"\n",pathname);
 	fprintf(in_fp, "user-dir = %s\n", pathname);
 	fclose(in_fp);
 

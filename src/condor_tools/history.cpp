@@ -1152,7 +1152,7 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
         if (!constraint || constraint[0]=='\0' || EvalBool(ad, constraintExpr)) {
             if (longformat) { 
 				if( use_xml ) {
-					ad->fPrintAsXML(stdout);
+					fPrintAdAsXML(stdout, *ad);
 				}
 				else {
 					ad->fPrint(stdout);
@@ -1220,7 +1220,7 @@ static void printJob(ClassAd & ad)
 {
 	if (longformat) {
 		if (use_xml) {
-			ad.fPrintAsXML(stdout);
+			fPrintAdAsXML(stdout, ad);
 		} else {
 			ad.fPrint(stdout);
 		}

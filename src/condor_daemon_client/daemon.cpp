@@ -626,6 +626,28 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 						 sec_session_id);
 }
 
+
+bool
+Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, int timeout, CondorError *errstack, char const *cmd_description,bool raw_protocol, char const *sec_session_id )
+{
+	// This is a blocking version of startCommand().
+	const bool nonblocking = false;
+	StartCommandResult rc = startCommand(cmd,sock,timeout,errstack,subcmd,NULL,NULL,nonblocking,cmd_description,_version,&_sec_man,raw_protocol,sec_session_id);
+	switch(rc) {
+	case StartCommandSucceeded:
+		return true;
+	case StartCommandFailed:
+		return false;
+	case StartCommandInProgress:
+	case StartCommandWouldBlock: //impossible!
+	case StartCommandContinue: //impossible!
+		break;
+	}
+	EXCEPT("startCommand(nonblocking=false) returned an unexpected result: %d\n",rc);
+	return false;
+}
+
+
 Sock*
 Daemon::startSubCommand( int cmd, int subcmd, Stream::stream_type st, int timeout, CondorError* errstack, char const *cmd_description, bool raw_protocol, char const *sec_session_id )
 {

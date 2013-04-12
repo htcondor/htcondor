@@ -76,6 +76,9 @@ dircat( const char *dirpath, const char *filename )
 		needs_delim = false;
 		extra = 1;
 	}
+	while(filename && *filename == DIR_DELIM_CHAR) {
+		++filename;
+	}
 	rval = new char[ extra + dirlen + strlen(filename)];
 	if( needs_delim ) {
 		sprintf( rval, "%s%c%s", dirpath, DIR_DELIM_CHAR, filename );
@@ -98,7 +101,12 @@ dirscat( const char *dirpath, const char *subdir )
 {
 	ASSERT(dirpath);
 	ASSERT(subdir);
+	dprintf(D_FULLDEBUG,"dirscat: dirpath = %s\n",dirpath);
+	dprintf(D_FULLDEBUG,"dirscat: subdir = %s\n",subdir);
 	bool needs_delim1 = true, needs_delim2 = true;
+	while(subdir && *subdir == DIR_DELIM_CHAR) {
+		++subdir;
+	}
 	int extra = 3, dirlen = strlen(dirpath), subdirlen = strlen(subdir);
 	char* rval;
 	if( dirpath[dirlen - 1] == DIR_DELIM_CHAR ) {
@@ -109,7 +117,7 @@ dirscat( const char *dirpath, const char *subdir )
 		--extra;
 		needs_delim2 = false;
 	}
-	rval = new char[ extra + dirlen + strlen(subdir)];
+	rval = new char[ extra + dirlen + subdirlen];
 	if( needs_delim1 ) {
 		if ( needs_delim2 ) {
 			sprintf( rval, "%s%c%s%c", dirpath, DIR_DELIM_CHAR, subdir, DIR_DELIM_CHAR );

@@ -286,6 +286,7 @@ public:
 	SafeSock* safeSock( int timeout = 0, time_t deadline = 0,
 						CondorError* errstack = 0, bool non_blocking = false );
 
+public:
 		/**	Create a new Sock object connected to the daemon.
 		  Callers can optionally specify a timeout to use for the
 		  connect().  If there was a failure in connect(), we delete 
@@ -309,7 +310,6 @@ public:
 		  */
 	bool connectSock(Sock *sock, int sec=0, CondorError* errstack=NULL, bool non_blocking=false, bool ignore_timeout_multiplier=false );
 
-public:
 		/** Send the given command to the daemon.  The caller gives
 		  the command they want to send, the type of Sock they
 		  want to use to send it over, and an optional timeout.  
@@ -401,6 +401,26 @@ public:
 		  @return false on error, true on success.
 		*/
 	bool startCommand( int cmd, Sock* sock,
+			int sec = 0, CondorError* errstack = NULL,
+			char const *cmd_description=NULL,
+			bool raw_protocol=false, char const *sec_session_id=NULL );
+
+		/** Start sending the given command and subcommand to the daemon.  The caller
+		  gives the command they want to send, and a pointer to the
+		  Sock they want us to use to send it over.  This method will
+		  then place that Sock in encode() mode, send the command, and
+		  return true on success, false on failure.  See
+		  startCommand_nonblocking for a non-blocking interface.
+		  @param cmd The command you want to send.
+		  @param subcmd The sub command you want to send with DC_AUTHENTICATE
+		  @param sock The Sock you want to use.
+		  @param sec The timeout you want to use on your Sock.
+		  @param errstack NULL or error stack to dump errors into.
+		  @param raw_protocol to bypass all security negotiation, set to true
+		  @param sec_session_id use specified session if available
+		  @return false on error, true on success.
+		*/
+	bool startSubCommand( int cmd, int subcmd, Sock* sock,
 			int sec = 0, CondorError* errstack = NULL,
 			char const *cmd_description=NULL,
 			bool raw_protocol=false, char const *sec_session_id=NULL );
