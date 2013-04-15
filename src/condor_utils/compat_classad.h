@@ -367,33 +367,6 @@ class ClassAd : public classad::ClassAd
 		 */
 	int initAttrListFromStream(Stream& s);
 
-		/** Print the ClassAd as an old ClassAd to the FILE
-			@param file The file handle to print to.
-			@return TRUE
-		*/
-	int	fPrint(FILE *file, StringList *attr_white_list = NULL)
-	{ return fPrintAd(file, *this, m_privateAttrsAreInvisible, attr_white_list); }
-
-		/** Print the ClassAd as an old ClasAd with dprintf
-			@param level The dprintf level.
-		*/
-	void dPrint( int level )
-	{ dPrintAd(level, *this); }
-
-		/** Format the ClassAd as an old ClassAd into the MyString.
-			@param output The MyString to write into
-			@return TRUE
-		*/
-	int sPrint( MyString &output, StringList *attr_white_list = NULL )
-	{ return sPrintAd(output, *this, m_privateAttrsAreInvisible, attr_white_list); }
-
-		/** Format the ClassAd as an old ClassAd into the std::string.
-			@param output The std::string to write into
-			@return TRUE
-		*/
-	int sPrint( std::string &output, StringList *attr_white_list = NULL )
-	{ return sPrintAd(output, *this, m_privateAttrsAreInvisible, attr_white_list); }
-
     void ResetExpr();
 
 	void ResetName();
