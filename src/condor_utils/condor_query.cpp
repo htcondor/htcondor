@@ -410,7 +410,7 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 	if( IsDebugLevel( D_HOSTNAME ) ) {
 		dprintf( D_HOSTNAME, "Querying collector %s (%s) with classad:\n", 
 				 my_collector.addr(), my_collector.fullHostname() );
-		queryAd.dPrint( D_HOSTNAME );
+		dPrintAd( D_HOSTNAME, queryAd );
 		dprintf( D_HOSTNAME, " --- End of Query ClassAd ---\n" );
 	}
 

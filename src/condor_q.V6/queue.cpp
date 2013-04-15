@@ -3378,7 +3378,7 @@ process_buffer_line_old(void *, ClassAd *job)
 	} else if( dash_long ) {
 		MyString s;
 		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
-		job->sPrint(s,attr_white_list);
+		sPrintAd(s, *job, attr_white_list);
 		s += "\n";
 		tempCPS->string = strnewp( s.Value() );
 	} else if( better_analyze ) {
@@ -3429,7 +3429,7 @@ static const char * render_job_text(ClassAd *job, std::string & result_text)
 	if (use_xml) {
 		sPrintAdAsXML(result_text, *job, attrs.isEmpty() ? NULL : &attrs);
 	} else if (dash_long) {
-		job->sPrint(result_text, attrs.isEmpty() ? NULL : &attrs);
+		sPrintAd(result_text, *job, false, attrs.isEmpty() ? NULL : &attrs);
 		result_text += "\n";
 	} else if (better_analyze) {
 		ASSERT(0); // should never get here.

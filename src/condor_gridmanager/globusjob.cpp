@@ -415,9 +415,9 @@ static bool write_classad_input_file( ClassAd *classad,
 		return false;
 	}
 
-	if( tmpclassad.fPrint(fp) ) {
+	if( fPrintAd(fp, tmpclassad) ) {
 		dprintf(D_ALWAYS,"(%d.%d) Failed to write ClassAd to file %s. "
-			"Unknown error in ClassAd::fPrint.\n",
+			"Unknown error in fPrintAd.\n",
 			procID.cluster, procID.proc, out_filename.c_str());
 		fclose(fp);
 		return false;

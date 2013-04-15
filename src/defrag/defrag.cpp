@@ -383,7 +383,7 @@ void Defrag::saveState()
 		EXCEPT("failed to save state to %s\n",new_state_file.c_str());
 	}
 	else {
-		ad.fPrint(fp);
+		fPrintAd(fp, ad);
 		fclose( fp );
 		if( rotate_file(new_state_file.c_str(),m_state_file.c_str())!=0 ) {
 			EXCEPT("failed to save state to %s\n",m_state_file.c_str());

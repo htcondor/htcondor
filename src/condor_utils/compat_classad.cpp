@@ -2416,7 +2416,7 @@ _GetReferences(classad::ExprTree *tree,
 	}
 	if( !ok ) {
 		dprintf(D_FULLDEBUG,"warning: failed to get all attribute references in ClassAd (perhaps caused by circular reference).\n");
-		dPrint(D_FULLDEBUG);
+		dPrintAd(D_FULLDEBUG, *this);
 		dprintf(D_FULLDEBUG,"End of offending ad.\n");
 	}
 

@@ -113,7 +113,7 @@ main(int argc, const char **argv)
 
 	ClassAd	ad;
 	net->publish( ad );
-	ad.fPrint( stdout );
+	fPrintAd( stdout, ad );
 
 	delete net;
 

@@ -1254,7 +1254,7 @@ Scheduler::uploadGeneralJobFilesWorkerThread(void *arg, Stream* s)
 		}
 
 		dprintf(D_ALWAYS, "The submitting job ad as the FileTransferObject sees it\n");
-		ad->dPrint(D_ALWAYS);
+		dPrintAd(D_ALWAYS, *ad);
 
 			// Create a file transfer object, with schedd as the server
 		result = ftrans.SimpleInit(ad, true, true, rsock);
@@ -1700,7 +1700,7 @@ Scheduler::downloadGeneralJobFilesWorkerThread(void *arg, Stream* s)
 		}
 
 		dprintf(D_ALWAYS, "The submitting job ad as the FileTransferObject sees it\n");
-		ad->dPrint(D_ALWAYS);
+		dPrintAd(D_ALWAYS, *ad);
 
 			// Create a file transfer object, with schedd as the server
 		result = ftrans.SimpleInit(ad, true, true, rsock);

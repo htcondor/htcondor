@@ -345,9 +345,9 @@ void setUpClassAds(ClassAd* c1, ClassAd* c2, ClassAd* c3, FILE* c1FP,
 
     if(verbose)
     {
-        printf("C1:\n"); c1->fPrint(stdout); printf("\n");
-        printf("C2:\n"); c2->fPrint(stdout); printf("\n");
-        printf("C3:\n"); c3->fPrint(stdout); printf("\n");
+        printf("C1:\n"); fPrintAd(stdout, *c1); printf("\n");
+        printf("C2:\n"); fPrintAd(stdout, *c2); printf("\n");
+        printf("C3:\n"); fPrintAd(stdout, *c3); printf("\n");
     }
 
     //ugh, converting old classads into compat_classad::ClassAds, in probably the 
@@ -356,9 +356,9 @@ void setUpClassAds(ClassAd* c1, ClassAd* c2, ClassAd* c3, FILE* c1FP,
     c2FP = fopen("c2FP.txt", "w+");
     c3FP = fopen("c3FP.txt", "w+");
 
-    c1->fPrint(c1FP);
-    c2->fPrint(c2FP);
-    c3->fPrint(c3FP);
+    fPrintAd(c1FP, *c1);
+    fPrintAd(c2FP, *c2);
+    fPrintAd(c3FP, *c3);
 
     fclose(c1FP); fclose(c2FP); fclose(c3FP);
 }
@@ -411,9 +411,9 @@ bool test_put_server_time(bool verbose)
 
     if(verbose)
     {
-        printf("Comp1:\n"); compC1->fPrint(stdout); printf("\n");
-        printf("Comp2:\n"); compC2->fPrint(stdout); printf("\n");
-        printf("Comp3:\n"); compC3->fPrint(stdout); printf("\n");
+        printf("Comp1:\n"); fPrintAd(stdout, *compC1); printf("\n");
+        printf("Comp2:\n"); fPrintAd(stdout, *compC2); printf("\n");
+        printf("Comp3:\n"); fPrintAd(stdout, *compC3); printf("\n");
     
         printf("----------------\n\n");
     }
@@ -478,9 +478,9 @@ bool test_put_chained_ads(bool verbose)
 
     if(verbose)
     {
-        printf("Comp1:\n"); compC1->fPrint(stdout); printf("\n");
-        printf("Comp2:\n"); compC2->fPrint(stdout); printf("\n");
-        printf("Comp3:\n"); compC3->fPrint(stdout); printf("\n");
+        printf("Comp1:\n"); fPrintAd(stdout, *compC1); printf("\n");
+        printf("Comp2:\n"); fPrintAd(stdout, *compC2); printf("\n");
+        printf("Comp3:\n"); fPrintAd(stdout, *compC3); printf("\n");
 
         printf("Putting CompClassAd1\n");
     }

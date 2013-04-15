@@ -194,7 +194,7 @@ XferSummary::time_out(time_t now, char *hostaddr)
 	// Send to collector
 	if ( Collectors ) {
         dprintf(D_NETWORK, "Sending CkptServer ClassAd:\n");
-        info.dPrint(D_NETWORK);
+        dPrintAd(D_NETWORK, info);
 		Collectors->sendUpdates (UPDATE_CKPT_SRVR_AD, &info, NULL, true);
 	}
 

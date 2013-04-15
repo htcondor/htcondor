@@ -5470,7 +5470,7 @@ JobAdInformationEvent::writeEvent(FILE *file, ClassAd *jobad_arg)
 	fprintf(file,"Job ad information event triggered.\n");
 
 	if ( jobad_arg ) {
-		retval = jobad_arg->fPrint(file);
+		retval = fPrintAd(file, *jobad_arg);
 	}
 
     return retval;

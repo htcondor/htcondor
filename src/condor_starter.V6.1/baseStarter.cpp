@@ -1162,7 +1162,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 	{
 		return PeekFailed(s, "Failed to add transfer offsets list.\n");
 	}
-	reply.dPrint(D_FULLDEBUG);
+	dPrintAd(D_FULLDEBUG, reply);
 
 	s->encode();
 	// From here on out, *always* send the same number of files as specified by
@@ -2468,7 +2468,7 @@ CStarter::WriteRecoveryFile( ClassAd *recovery_ad )
 		return;
 	}
 
-	if ( recovery_ad->fPrint( tmp_fp ) == FALSE ) {
+	if ( fPrintAd( tmp_fp, *recovery_ad ) == FALSE ) {
 		dprintf( D_ALWAYS, "Failed to write recovery file\n" );
 		fclose( tmp_fp );
 		return;
@@ -3369,9 +3369,7 @@ CStarter::WriteAdFiles()
 		}
 		else
 		{
-			ad->SetPrivateAttributesInvisible(true);
-			ad->fPrint(fp);
-			ad->SetPrivateAttributesInvisible(false);
+			fPrintAd(fp, *ad, true);
 			fclose(fp);
 		}
 	}
@@ -3396,9 +3394,7 @@ CStarter::WriteAdFiles()
 		}
 		else
 		{
-			ad->SetPrivateAttributesInvisible(true);
-			ad->fPrint(fp);
-			ad->SetPrivateAttributesInvisible(false);
+			fPrintAd(fp, *ad, true);
 			fclose(fp);
 		}
 	}

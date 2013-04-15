@@ -1537,12 +1537,12 @@ activate_claim( Resource* rip, Stream* stream )
 		// Possibly print out the ads we just got to the logs.
 	rip->dprintf( D_JOB, "REQ_CLASSAD:\n" );
 	if( IsDebugLevel( D_JOB ) ) {
-		req_classad->dPrint( D_JOB );
+		dPrintAd( D_JOB, *req_classad );
 	}
 	  
 	rip->dprintf( D_MACHINE, "MACHINE_CLASSAD:\n" );
 	if( IsDebugLevel( D_MACHINE ) ) {
-		mach_classad->dPrint( D_MACHINE );
+		dPrintAd( D_MACHINE, *mach_classad );
 	}
 
 		// See if machine and job meet each other's requirements, if
@@ -2238,7 +2238,7 @@ command_drain_jobs( Service*, int /*dc_cmd*/, Stream* s )
 	}
 
 	dprintf(D_ALWAYS,"Processing drain request from %s\n",s->peer_description());
-	ad.dPrint(D_ALWAYS);
+	dPrintAd(D_ALWAYS, ad);
 
 	int how_fast = DRAIN_GRACEFUL;
 	ad.LookupInteger(ATTR_HOW_FAST,how_fast);
@@ -2287,7 +2287,7 @@ command_cancel_drain_jobs( Service*, int /*dc_cmd*/, Stream* s )
 	}
 
 	dprintf(D_ALWAYS,"Processing cancel drain request from %s\n",s->peer_description());
-	ad.dPrint(D_ALWAYS);
+	dPrintAd(D_ALWAYS, ad);
 
 	std::string request_id;
 	ad.LookupString(ATTR_REQUEST_ID,request_id);

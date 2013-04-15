@@ -813,7 +813,7 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 	}
 	else {
 		dprintf(D_FULLDEBUG, "Received job ClassAd update from starter.\n");
-		update_ad.dPrint( D_JOB );
+		dPrintAd( D_JOB, update_ad );
 
 		// In addition to new info about the job, the starter also
 		// inserts contact info for itself (important for CCB and
@@ -1230,7 +1230,7 @@ Starter::printInfo( int debug_level )
 		dprintf( debug_level | D_NOHEADER, 
 				 "No ClassAd available!\n" ); 
 	} else {
-		s_ad->dPrint( debug_level );
+		dPrintAd( debug_level, *s_ad );
 	}
 	dprintf( debug_level | D_NOHEADER, "*** End of starter info ***\n" ); 
 }

@@ -314,7 +314,7 @@ DCTransferQueue::PollForTransferQueueSlot(int timeout,bool &pending,MyString &er
 	int result; // this should be one of the values in XFER_QUEUE_ENUM
 	if( !msg.LookupInteger(ATTR_RESULT,result) ) {
 		std::string msg_str;
-		msg.sPrint(msg_str);
+		sPrintAd(msg_str, msg);
 		formatstr(m_xfer_rejected_reason,
 			"Invalid transfer queue response from %s for job %s (%s): %s",
 			m_xfer_queue_sock->peer_description(),

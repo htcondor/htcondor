@@ -243,7 +243,7 @@ TransferD::accept_transfer_request_encapsulation_old_classads(FILE *fin)
 			EXCEPT("Expected %d transfer job ads, got %d instead.", 
 				treq->get_num_transfers(), i);
 		}
-		ad->dPrint(D_ALWAYS);
+		dPrintAd(D_ALWAYS, *ad);
 		treq->append_task(ad);
 	}
 

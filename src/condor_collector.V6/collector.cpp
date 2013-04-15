@@ -1105,7 +1105,7 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 		// why.  That is what the following block of code tries to solve.
 	if( __numAds__ > 1 ) {
 		dprintf(D_ALWAYS, "The invalidation query was this:\n");
-		query.dPrint(D_ALWAYS);
+		dPrintAd(D_ALWAYS, query);
 	}
 }	
 

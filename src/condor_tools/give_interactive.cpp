@@ -123,9 +123,9 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 		if( !IsAMatch( &request, candidate ) ) {
 				// they don't match; continue
 			//printf("DEBUG: MATCH FAILED\n\nCANDIDATE:\n");
-			//candidate->fPrint(stdout);
+			//fPrintAd(stdout, *candidate);
 			//printf("\nDEBUG: REQUEST:\n");
-			//request.fPrint(stdout);
+			//fPrintAd(stdout, request);
 			continue;
 		}
 

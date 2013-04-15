@@ -364,7 +364,7 @@ CCBServer::HandleRequest(int cmd,Stream *stream)
 		!msg.LookupString(ATTR_CLAIM_ID,connect_id) )
 	{
 		MyString ad_str;
-		msg.sPrint(ad_str);
+		sPrintAd(ad_str, msg);
 		dprintf(D_ALWAYS,
 				"CCB: invalid request from %s: %s\n",
 				sock->peer_description(), ad_str.Value() );
@@ -465,7 +465,7 @@ CCBServer::HandleRequestResultsMsg( CCBTarget *target )
 
 	if( !CCBIDFromString( reqid, reqid_str.Value() ) ) {
 		MyString msg_str;
-		msg.sPrint(msg_str);
+		sPrintAd(msg_str, msg);
 		dprintf(D_ALWAYS,
 				"CCB: received reply from target daemon %s with ccbid %lu "
 				"without a valid request id: %s\n",
@@ -524,7 +524,7 @@ CCBServer::HandleRequestResultsMsg( CCBTarget *target )
 	}
 	if( connect_id != request->getConnectID() ) {
 		MyString msg_str;
-		msg.sPrint(msg_str);
+		sPrintAd(msg_str, msg);
 		dprintf( D_FULLDEBUG,
 				 "CCB: received wrong connect id (%s) from target daemon %s "
 				 "with ccbid %lu for "

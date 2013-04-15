@@ -223,7 +223,7 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 		my_match_ad = new ClassAd( *match );
 		if( IsDebugLevel(D_MACHINE) ) {
 			dprintf( D_MACHINE, "*** ClassAd of Matched Resource ***\n" );
-			my_match_ad->dPrint( D_MACHINE );
+			dPrintAd( D_MACHINE, *my_match_ad );
 			dprintf( D_MACHINE | D_NOHEADER, "*** End of ClassAd ***\n" );
 		}		
 	} else {
@@ -3313,7 +3313,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		}
 
 		dprintf(D_ALWAYS, "The submitting job ad as the FileTransferObject sees it\n");
-		ad->dPrint(D_ALWAYS);
+		dPrintAd(D_ALWAYS, *ad);
 
 			// Create a file transfer object, with schedd as the server.
 			// If we're receiving files, don't create a file catalog in
@@ -4901,7 +4901,7 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id,C
 	Daemon startd(&match_ad,DT_STARTD,NULL);
 	if( !startd.addr() ) {
 		dprintf( D_ALWAYS, "Can't find address of startd in match ad:\n" );
-		match_ad.dPrint(D_ALWAYS);
+		dPrintAd(D_ALWAYS, match_ad);
 		return false;
 	}
 
@@ -6143,9 +6143,9 @@ find_idle_local_jobs( ClassAd *job )
 			}
 			// This is too verbose.
 			//dprintf(D_FULLDEBUG,"Schedd ad that failed to match:\n");
-			//scheddAd.dPrint(D_FULLDEBUG);
+			//dPrintAd(D_FULLDEBUG, scheddAd);
 			//dprintf(D_FULLDEBUG,"Job ad that failed to match:\n");
-			//job->dPrint(D_FULLDEBUG);
+			//dPrintAd(D_FULLDEBUG, *job);
 			return ( 0 );
 		}
 
@@ -7186,7 +7186,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 			// handler is now alive and can read from the pipe.
 		ASSERT( job_ad );
 		MyString ad_str;
-		job_ad->sPrint(ad_str);
+		sPrintAd(ad_str, *job_ad);
 		const char* ptr = ad_str.Value();
 		int len = ad_str.Length();
 		while (len) {

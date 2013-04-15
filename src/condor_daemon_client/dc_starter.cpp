@@ -507,7 +507,7 @@ DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stde
 		error_msg = "Failed to read response for peeking at logs.";
 		return false;
 	}
-	response.dPrint(D_FULLDEBUG);
+	dPrintAd(D_FULLDEBUG, response);
 
 	bool success = false;
 	if (!response.EvaluateAttrBool(ATTR_RESULT, success) || !success)

@@ -1733,9 +1733,7 @@ bool DCSchedd::getJobConnectInfo(
 
 	if( IsFulldebug(D_FULLDEBUG) ) {
 		std::string adstr;
-		output.SetPrivateAttributesInvisible(true);
-		output.sPrint(adstr);
-		output.SetPrivateAttributesInvisible(false);
+		sPrintAd(adstr, output, true);
 		dprintf(D_FULLDEBUG,"Response for GET_JOB_CONNECT_INFO:\n%s\n",
 				adstr.c_str());
 	}

@@ -133,7 +133,7 @@ Shadow::printInfo( int debug_level )
 		dprintf( debug_level | D_NOHEADER, 
 				 "No ClassAd available!\n" ); 
 	} else {
-		s_ad->dPrint( debug_level );
+		dPrintAd( debug_level, *s_ad );
 	}
 	dprintf( debug_level | D_NOHEADER, "*** End of shadow info ***\n" ); 
 }

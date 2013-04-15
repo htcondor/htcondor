@@ -696,7 +696,7 @@ RemoteResource::setStartdInfo( ClassAd* ad )
 	if( ! name ) {
 		ad->LookupString( ATTR_NAME, &name );
 		if( ! name ) {
-			ad->dPrint(D_ALWAYS);
+			dPrintAd(D_ALWAYS, *ad);
 			EXCEPT( "ad includes neither %s nor %s!", ATTR_NAME,
 					ATTR_REMOTE_HOST );
 		}
@@ -1125,7 +1125,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 	if( IsDebugLevel(D_MACHINE) ) {
 		dprintf( D_MACHINE, "Update ad:\n" );
-		update_ad->dPrint( D_MACHINE );
+		dPrintAd( D_MACHINE, *update_ad );
 		dprintf( D_MACHINE, "--- End of ClassAd ---\n" );
 	}
 

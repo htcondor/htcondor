@@ -262,7 +262,7 @@ doContactSchedd()
 					 ScheddAddr, dc_schedd.addr(), errstack.getFullText().c_str() );
 		}
 		else {
-			result_ad->dPrint (D_FULLDEBUG);
+			dPrintAd (D_FULLDEBUG, *result_ad);
 			if ( this_command == SchedDRequest::SDC_RELEASE_JOB ) {
 				do_reschedule = true;
 			}

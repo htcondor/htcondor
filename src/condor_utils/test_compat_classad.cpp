@@ -393,7 +393,7 @@ bool test_ChainCollapse(compat_classad::ClassAd *c2, compat_classad::ClassAd *c3
         {
             printf("c2 not chained to c3.\n");
         }
-        c2->fPrint(stdout);
+        fPrintAd(stdout, *c2);
         printf("Calling ChainCollapse on c2.\n");
         printf("------\n");
     }
@@ -413,7 +413,7 @@ bool test_ChainCollapse(compat_classad::ClassAd *c2, compat_classad::ClassAd *c3
         {
             printf("c2 not chained to c3.\n");
         }
-        c2->fPrint(stdout);
+        fPrintAd(stdout, *c2);
         printf("------\n");
     }
     */

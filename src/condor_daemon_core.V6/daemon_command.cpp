@@ -586,7 +586,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 		if (IsDebugVerbose(D_SECURITY)) {
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: received following ClassAd:\n");
-			m_auth_info.dPrint (D_SECURITY);
+			dPrintAd (D_SECURITY, m_auth_info);
 		}
 
 		MyString peer_version;
@@ -720,7 +720,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					m_policy = new ClassAd(*session->policy());
 					if (IsDebugVerbose(D_SECURITY)) {
 						dprintf (D_SECURITY, "DC_AUTHENTICATE: Cached Session:\n");
-						m_policy->dPrint (D_SECURITY);
+						dPrintAd (D_SECURITY, *m_policy);
 					}
 				}
 
@@ -763,7 +763,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 				if (IsDebugVerbose(D_SECURITY)) {
 					dprintf ( D_SECURITY, "DC_AUTHENTICATE: our_policy:\n" );
-					our_policy.dPrint(D_SECURITY);
+					dPrintAd(D_SECURITY, our_policy);
 				}
 
 				// reconcile.  if unable, close socket.
@@ -777,7 +777,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 				} else {
 					if (IsDebugVerbose(D_SECURITY)) {
 						dprintf ( D_SECURITY, "DC_AUTHENTICATE: the_policy:\n" );
-						m_policy->dPrint(D_SECURITY);
+						dPrintAd(D_SECURITY, *m_policy);
 					}
 				}
 
@@ -857,13 +857,13 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 				if (m_is_tcp && (m_sec_man->sec_lookup_feat_act(m_auth_info, ATTR_SEC_ENACT) == SecMan::SEC_FEAT_ACT_NO)) {
 					if (IsDebugVerbose(D_SECURITY)) {
 						dprintf (D_SECURITY, "SECMAN: Sending following response ClassAd:\n");
-						m_policy->dPrint( D_SECURITY );
+						dPrintAd( D_SECURITY, *m_policy );
 					}
 					m_sock->encode();
 					if (!m_policy->put(*m_sock) ||
 						!m_sock->end_of_message()) {
 						dprintf (D_ALWAYS, "SECMAN: Error sending response classad to %s!\n", m_sock->peer_description());
-						m_auth_info.dPrint (D_ALWAYS);
+						dPrintAd (D_ALWAYS, m_auth_info);
 						m_result = FALSE;
 						return CommandProtocolFinished;
 					}
@@ -1158,7 +1158,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::PostAuthenti
 
 		if (IsDebugVerbose(D_SECURITY)) {
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: sending session ad:\n");
-			pa_ad.dPrint( D_SECURITY );
+			dPrintAd( D_SECURITY, pa_ad );
 		}
 
 		m_sock->encode();
@@ -1211,7 +1211,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::PostAuthenti
 		m_sec_man->session_cache->insert(tmp_key);
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: added incoming session id %s to cache for %i seconds (lease is %ds, return address is %s).\n", m_sid, durint, session_lease, return_addr ? return_addr : "unknown");
 		if (IsDebugVerbose(D_SECURITY)) {
-			m_policy->dPrint(D_SECURITY);
+			dPrintAd(D_SECURITY, *m_policy);
 		}
 
 		free( dur );

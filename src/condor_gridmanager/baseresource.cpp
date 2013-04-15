@@ -247,7 +247,7 @@ bool BaseResource::SendUpdate () {
 	daemonCore->publish( &ad );
 
 	std::string tmp;
-    ad.sPrint ( tmp );
+    sPrintAd ( tmp, ad );
     dprintf (
         D_FULLDEBUG,
         "BaseResource::UpdateResource: \n%s\n",

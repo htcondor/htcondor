@@ -3503,7 +3503,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 
 		if( IsDebugLevel( D_JOB ) ) {
 			dprintf(D_JOB,"Searching for a matching machine for the following job ad:\n");
-			request.dPrint(D_JOB);
+			dPrintAd(D_JOB, request);
 		}
 
 		// 2e.  find a compatible offer for the request --- keep attempting
@@ -3910,7 +3910,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 
 		if( IsDebugVerbose(D_MACHINE) ) {
 			dprintf(D_MACHINE,"Testing whether the job matches with the following machine ad:\n");
-			candidate->dPrint(D_MACHINE);
+			dPrintAd(D_MACHINE, *candidate);
 		}
 
 			// the candidate offer and request must match

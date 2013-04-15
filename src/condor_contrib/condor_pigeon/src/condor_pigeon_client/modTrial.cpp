@@ -391,7 +391,7 @@ string JobLog::netFormatLog(ULogEvent *event){
 
   ClassAd *eventAd=NULL;
   eventAd = event->toClassAd();
-  eventAd->sPrint(inBuf);
+  sPrintAd(inBuf, *eventAd);
   string logval ="";
   string chkmystr = inBuf.Value();
   char* input ="";
@@ -473,7 +473,7 @@ string JobLog::classAdFormatLog(ULogEvent *event){
 
   ClassAd *eventAd=NULL;
   eventAd = event->toClassAd();
-  eventAd->sPrint(inBuf);
+  sPrintAd(inBuf, *eventAd);
   string logval ="";
   string chkmystr = inBuf.Value();
   char* input ="";

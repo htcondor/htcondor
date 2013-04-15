@@ -1914,7 +1914,7 @@ printAdToFile(ClassAd *ad, char* filename) {
 		fp = stdout;
 	}
 
-    if (!ad->fPrint(fp)) {
+    if (!fPrintAd(fp, *ad)) {
         printf( "ERROR - failed to write ad to file.\n" );
         if ( filename ) fclose(fp);
         return FALSE;

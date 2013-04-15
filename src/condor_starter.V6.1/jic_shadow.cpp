@@ -795,7 +795,7 @@ JICShadow::updateStartd( ClassAd *ad, bool final_update )
 		dprintf(D_FULLDEBUG,"Sent job ClassAd update to startd.\n");
 	}
 	if( IsDebugVerbose(D_JOB) ) {
-		ad->dPrint(D_JOB);
+		dPrintAd(D_JOB, *ad);
 	}
 
 	if( final_update ) {
@@ -2283,7 +2283,7 @@ JICShadow::receiveMachineAd( Stream *stream )
 	}
 	else
 	{
-		mach_ad->dPrint(D_JOB);
+		dPrintAd(D_JOB, *mach_ad);
 	}
 
 	return ret_val;

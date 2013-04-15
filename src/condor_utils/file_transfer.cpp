@@ -2054,7 +2054,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			} else {
 				// unrecongized subcommand
 				dprintf(D_ALWAYS, "FILETRANSFER: unrecognized subcommand %i! skipping!\n", subcommand);
-				file_info.dPrint(D_FULLDEBUG);
+				dPrintAd(D_FULLDEBUG, file_info);
 				
 				rc = 0;
 			}
@@ -2393,7 +2393,7 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 	int result = -1;
 	if(!ad.LookupInteger(ATTR_RESULT,result)) {
 		MyString ad_str;
-		ad.sPrint(ad_str);
+		sPrintAd(ad_str, ad);
 		dprintf(D_ALWAYS,"Download acknowledgment missing attribute: %s.  Full classad: [\n%s]\n",ATTR_RESULT,ad_str.Value());
 		success = false;
 		try_again = false;
@@ -3103,7 +3103,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 				// compute the size of what we sent
 				MyString junkbuf;
-				file_info.sPrint(junkbuf);
+				sPrintAd(junkbuf, file_info);
 				bytes = junkbuf.Length();
 
 			} else {
@@ -3546,7 +3546,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 		go_ahead = GO_AHEAD_UNDEFINED;
 		if(!msg.LookupInteger(ATTR_RESULT,go_ahead)) {
 			MyString msg_str;
-			msg.sPrint(msg_str);
+			sPrintAd(msg_str, msg);
 			error_desc.formatstr("GoAhead message missing attribute: %s.  "
 							   "Full classad: [\n%s]",
 							   ATTR_RESULT,msg_str.Value());

@@ -473,7 +473,7 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 				show_details ? " Contents of the ClassAd:" : " (turn on D_FULLDEBUG to see details)");
 		if( show_details ) {
 			details_shown += 1;
-			clientAd->dPrint(D_ALWAYS);
+			dPrintAd(D_ALWAYS, *clientAd);
 		}
 
 		return false;

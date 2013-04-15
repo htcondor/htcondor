@@ -2003,7 +2003,7 @@ Claim::writeJobAd( int pipe_end )
 	// DC::Write_Pipe for writing to it
 	
 	MyString ad_str;
-	c_ad->sPrint(ad_str);
+	sPrintAd(ad_str, *c_ad);
 
 	const char* ptr = ad_str.Value();
 	int len = ad_str.Length();
@@ -2024,7 +2024,7 @@ bool
 Claim::writeMachAd( Stream* stream )
 {
 	dprintf(D_FULLDEBUG | D_JOB, "Sending Machine Ad to Starter\n");
-	c_rip->r_classad->dPrint(D_JOB);
+	dPrintAd(D_JOB, *c_rip->r_classad);
 	if (!c_rip->r_classad->put(*stream) || !stream->end_of_message()) {
 		dprintf(D_ALWAYS, "writeMachAd: Failed to write machine ClassAd to stream\n");
 		return false;
@@ -2425,6 +2425,6 @@ Claim::receiveJobClassAdUpdate( ClassAd &update_ad )
 	loadStatistics();
 	if( IsDebugLevel(D_JOB) ) {
 		dprintf(D_JOB,"Updated job ClassAd:\n");
-		c_ad->dPrint(D_JOB);
+		dPrintAd(D_JOB, *c_ad);
 	}
 }

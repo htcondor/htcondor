@@ -123,7 +123,7 @@ int vanilla2grid(int argc, char **argv)
 	{
 		// Convert to old classad string
 		MyString out;
-		jobad.sPrint(out);
+		sPrintAd(out, jobad);
 		printf("%s\n", out.Value());
 	}
 

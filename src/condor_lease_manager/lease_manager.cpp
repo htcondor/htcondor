@@ -480,7 +480,7 @@ LeaseManager::timerHandler_GetAds ( void )
 		ClassAd	qad;
 		query.getQueryAd( qad );
 		dprintf( D_FULLDEBUG, "Query Ad:\n" );
-		qad.dPrint( D_FULLDEBUG );
+		dPrintAd( D_FULLDEBUG, qad );
 	}
 
 	QueryResult result;

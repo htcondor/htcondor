@@ -705,7 +705,7 @@ DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim
 	Daemon startd(&match_ad,DT_STARTD,NULL);
 	if( !startd.addr() ) {
 		dprintf( D_ALWAYS, "Can't find address of startd in match ad:\n" );
-		match_ad.dPrint(D_ALWAYS);
+		dPrintAd(D_ALWAYS, match_ad);
 		return false;
 	}
 
@@ -3807,7 +3807,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 						host ? host : "(null host)",
 						remote_hosts ? remote_hosts : "(null)",
 						claims ? claims : "(null)");
-				job->dPrint(D_ALWAYS);
+				dPrintAd(D_ALWAYS, *job);
 					// we will break out of the loop below
 			}
 
@@ -3834,7 +3834,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 				Daemon startd(machineAd,DT_STARTD,NULL);
 				if( !startd.addr() ) {
 					dprintf( D_ALWAYS, "Can't find address of startd in ad:\n" );
-					machineAd->dPrint(D_ALWAYS);
+					dPrintAd(D_ALWAYS, *machineAd);
 						// we will break out of the loop below
 				}
 				else {

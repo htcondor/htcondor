@@ -718,12 +718,12 @@ static bool test_xml() {
 	MyString before, after;
 	std::string xml;
 	classad.initFromString(classad_string, NULL);
-	classad.sPrint(before);
+	sPrintAd(before, classad);
 	unparser.SetCompactSpacing(false);
 	unparser.Unparse(xml, &classad);
 	classadAfter = new compat_classad::ClassAd();
 	parser.ParseClassAd(xml, *classadAfter);
-	classadAfter->sPrint(after);
+	sPrintAd(after, *classadAfter);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_output_expected_header();

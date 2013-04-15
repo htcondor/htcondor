@@ -221,7 +221,7 @@ int TransferQueueManager::HandleRequest(int cmd,Stream *stream)
 		!msg.LookupString(ATTR_USER,queue_user) )
 	{
 		MyString msg_str;
-		msg.sPrint(msg_str);
+		sPrintAd(msg_str, msg);
 		dprintf(D_ALWAYS,"TransferQueueManager: invalid request from %s: %s\n",
 				sock->peer_description(), msg_str.Value());
 		return FALSE;

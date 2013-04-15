@@ -4406,7 +4406,7 @@ PrintQ()
 	dprintf(D_ALWAYS, "*******Job Queue*********\n");
 	JobQueue->StartIterateAllClassAds();
 	while(JobQueue->IterateAllClassAds(ad)) {
-		ad->fPrint(stdout);
+		fPrintAd(stdout, *ad);
 	}
 	dprintf(D_ALWAYS, "****End of Queue*********\n");
 }

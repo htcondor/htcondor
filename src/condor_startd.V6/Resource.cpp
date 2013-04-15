@@ -1287,10 +1287,10 @@ Resource::wants_vacate( void )
 			dprintf( D_ALWAYS,
 					 "In Resource::wants_vacate() with undefined WANT_VACATE\n" );
 			dprintf( D_ALWAYS, "INTERNAL AD:\n" );
-			r_classad->dPrint( D_ALWAYS );
+			dPrintAd( D_ALWAYS, *r_classad );
 			if( r_cur->ad() ) {
 				dprintf( D_ALWAYS, "JOB AD:\n" );
-				(r_cur->ad())->dPrint( D_ALWAYS );
+				dPrintAd( D_ALWAYS, *r_cur->ad() );
 			} else {
 				dprintf( D_ALWAYS, "ERROR! No job ad!!!!\n" );
 			}
@@ -1611,10 +1611,10 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 	if( (r_classad->EvalBool(expr_name, r_cur ? r_cur->ad() : NULL , tmp) ) == 0 ) {
 		if( fatal ) {
 			dprintf(D_ALWAYS, "Can't evaluate %s in the context of following ads\n", expr_name );
-			r_classad->dPrint(D_ALWAYS);
+			dPrintAd(D_ALWAYS, *r_classad);
 			dprintf(D_ALWAYS, "=============================\n");
 			if ( r_cur && r_cur->ad() ) {
-				r_cur->ad()->dPrint(D_ALWAYS);
+				dPrintAd(D_ALWAYS, *r_cur->ad());
 			} else {
 				dprintf( D_ALWAYS, "<no job ad>\n" );
 			}
@@ -2428,11 +2428,11 @@ Resource::willingToRun(ClassAd* request_ad)
 			// Possibly print out the ads we just got to the logs.
 		if (IsDebugLevel(D_JOB)) {
 			dprintf(D_JOB, "REQ_CLASSAD:\n");
-			request_ad->dPrint(D_JOB);
+			dPrintAd(D_JOB, *request_ad);
 		}
 		if (IsDebugLevel(D_MACHINE)) {
 			dprintf(D_MACHINE, "MACHINE_CLASSAD:\n");
-			r_classad->dPrint(D_MACHINE);
+			dPrintAd(D_MACHINE, *r_classad);
 		}
 	}
 	else {

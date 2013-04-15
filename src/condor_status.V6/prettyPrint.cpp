@@ -1259,7 +1259,7 @@ printAnyNormal(ClassAd *ad, bool first)
 void
 printVerbose (ClassAd *ad)
 {
-	ad->fPrint (stdout);
+	fPrintAd (stdout, *ad);
 	fputc ('\n', stdout);	
 }
 
