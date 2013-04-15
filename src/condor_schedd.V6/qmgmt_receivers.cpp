@@ -42,7 +42,7 @@
 extern char *CondorCertDir;
 
 static bool QmgmtMayAccessAttribute( char const *attr_name ) {
-	return !ClassAd::ClassAdAttributeIsPrivate( attr_name );
+	return !ClassAdAttributeIsPrivate( attr_name );
 }
 
 int

@@ -47,6 +47,31 @@ typedef enum {
 
 class ClassAdFileParseHelper;
 
+bool ClassAdAttributeIsPrivate( char const *name );
+
+	/** Print the ClassAd as an old ClassAd to the FILE
+		@param file The file handle to print to.
+		@return TRUE
+	*/
+int	fPrintAd(FILE *file, classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL);
+
+	/** Print the ClassAd as an old ClasAd with dprintf
+		@param level The dprintf level.
+	*/
+void dPrintAd( int level, classad::ClassAd &ad );
+
+	/** Format the ClassAd as an old ClassAd into the MyString.
+		@param output The MyString to write into
+		@return TRUE
+	*/
+int sPrintAd( MyString &output, classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL );
+
+	/** Format the ClassAd as an old ClassAd into the std::string.
+		@param output The std::string to write into
+		@return TRUE
+	*/
+int sPrintAd( std::string &output, classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL );
+
 class ClassAd : public classad::ClassAd
 {
  public:
@@ -346,23 +371,28 @@ class ClassAd : public classad::ClassAd
 			@param file The file handle to print to.
 			@return TRUE
 		*/
-	int	fPrint(FILE *file, StringList *attr_white_list = NULL);
+	int	fPrint(FILE *file, StringList *attr_white_list = NULL)
+	{ return fPrintAd(file, *this, m_privateAttrsAreInvisible, attr_white_list); }
 
 		/** Print the ClassAd as an old ClasAd with dprintf
 			@param level The dprintf level.
 		*/
-	void dPrint( int level);
+	void dPrint( int level )
+	{ dPrintAd(level, *this); }
 
 		/** Format the ClassAd as an old ClassAd into the MyString.
 			@param output The MyString to write into
 			@return TRUE
 		*/
-	int sPrint( MyString &output, StringList *attr_white_list = NULL );
+	int sPrint( MyString &output, StringList *attr_white_list = NULL )
+	{ return sPrintAd(output, *this, m_privateAttrsAreInvisible, attr_white_list); }
+
 		/** Format the ClassAd as an old ClassAd into the std::string.
 			@param output The std::string to write into
 			@return TRUE
 		*/
-	int sPrint( std::string &output, StringList *attr_white_list = NULL );
+	int sPrint( std::string &output, StringList *attr_white_list = NULL )
+	{ return sPrintAd(output, *this, m_privateAttrsAreInvisible, attr_white_list); }
 
     void ResetExpr();
 
@@ -384,8 +414,6 @@ class ClassAd : public classad::ClassAd
 	void RemoveExplicitTargetRefs(  );
 	
 	void AddTargetRefs( TargetAdType target_type, bool do_version_check = true );
-
-	static bool ClassAdAttributeIsPrivate( char const *name );
 
 	void SetPrivateAttributesInvisible( bool invisible )
 	{ m_privateAttrsAreInvisible = invisible; }

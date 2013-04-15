@@ -3215,7 +3215,7 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 	ad->ResetExpr();
 	while( ad->NextDirtyExpr(name, expr) != false )
 	{
-		if(!ad->ClassAdAttributeIsPrivate(name))
+		if(!ClassAdAttributeIsPrivate(name))
 		{
 			if(!JobQueue->LookupInTransaction(key, name, val) )
 			{

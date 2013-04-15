@@ -130,7 +130,7 @@ convert_ad_to_adStruct(struct soap *s,
 
 	// Ignore any attributes that are considered private - we don't wanna 
 	// be handing out private attributes to soap clients.
-	if ( ClassAd::ClassAdAttributeIsPrivate(name) )
+	if ( ClassAdAttributeIsPrivate(name) )
 	{
 		continue;
 	}

@@ -895,7 +895,7 @@ InsertFromFile(FILE* file, /*out*/ bool& is_eof, /*out*/ int& error, ClassAdFile
 }
 
 
-bool ClassAd::
+bool
 ClassAdAttributeIsPrivate( char const *name )
 {
 	if( strcasecmp(name,ATTR_CLAIM_ID) == 0 ) {
@@ -1631,31 +1631,29 @@ initAttrListFromStream(Stream& s)
 }
 
 		// output functions
-int	ClassAd::
-fPrint( FILE *file, StringList *attr_white_list )
+int
+fPrintAd( FILE *file, classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
 {
 	MyString buffer;
 
-	sPrint( buffer, attr_white_list );
+	sPrintAd( buffer, ad, exclude_private, attr_white_list );
 	fprintf( file, "%s", buffer.Value() );
 
 	return TRUE;
 }
 
-void ClassAd::
-dPrint( int level )
+void
+dPrintAd( int level, classad::ClassAd &ad )
 {
 	MyString buffer;
 
-	SetPrivateAttributesInvisible( true );
-	sPrint( buffer );
-	SetPrivateAttributesInvisible( false );
+	sPrintAd( buffer, ad, true );
 
 	dprintf( level|D_NOHEADER, "%s", buffer.Value() );
 }
 
-int ClassAd::
-sPrint( MyString &output, StringList *attr_white_list )
+int
+sPrintAd( MyString &output, classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
 {
 	classad::ClassAd::iterator itr;
 
@@ -1663,14 +1661,14 @@ sPrint( MyString &output, StringList *attr_white_list )
 	unp.SetOldClassAd( true );
 	string value;
 
-	classad::ClassAd *parent = GetChainedParentAd();
+	classad::ClassAd *parent = ad.GetChainedParentAd();
 
 	if ( parent ) {
 		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
 			if ( attr_white_list && !attr_white_list->contains_anycase(itr->first.c_str()) ) {
 				continue; // not in white-list
 			}
-			if ( !m_privateAttrsAreInvisible ||
+			if ( !exclude_private ||
 				 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
 				value = "";
 				unp.Unparse( value, itr->second );
@@ -1680,11 +1678,11 @@ sPrint( MyString &output, StringList *attr_white_list )
 		}
 	}
 
-	for ( itr = this->begin(); itr != this->end(); itr++ ) {
+	for ( itr = ad.begin(); itr != ad.end(); itr++ ) {
 		if ( attr_white_list && !attr_white_list->contains_anycase(itr->first.c_str()) ) {
 			continue; // not in white-list
 		}
-		if ( !m_privateAttrsAreInvisible ||
+		if ( !exclude_private ||
 			 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
 			value = "";
 			unp.Unparse( value, itr->second );
@@ -1696,14 +1694,15 @@ sPrint( MyString &output, StringList *attr_white_list )
 	return TRUE;
 }
 
-int ClassAd::
-sPrint( std::string &output, StringList *attr_white_list )
+int
+sPrintAd( std::string &output, classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
 {
 	MyString myout = output;
-	int rc = sPrint( myout, attr_white_list );
+	int rc = sPrintAd( myout, ad, exclude_private, attr_white_list );
 	output += myout;
 	return rc;
 }
+
 // Taken from the old classad's function. Got rid of incorrect documentation. 
 ////////////////////////////////////////////////////////////////////////////////// Print an expression with a certain name into a buffer. 
 // The returned buffer will be allocated with malloc(), and it needs
