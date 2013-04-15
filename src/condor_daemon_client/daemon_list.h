@@ -43,7 +43,7 @@ class CondorQuery;
 class DaemonList {
 public:
 
-	DaemonList() {}
+	DaemonList();
 	virtual ~DaemonList();
 
 		/** Initialize the list with Daemons of the given type,

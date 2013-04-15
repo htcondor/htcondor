@@ -455,5 +455,8 @@ bool ScheddNegotiate::getSatisfaction() {
 		nextJob();
 	}
 
-	return ( m_current_job_id.cluster == -1 );
+	if( m_current_job_id.cluster == -1 ) {
+		return true; // no more jobs
+	}
+	return false;
 }
