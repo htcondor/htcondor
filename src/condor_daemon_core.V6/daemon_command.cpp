@@ -45,6 +45,8 @@ static int ZZZ_always_increase() {
 	return ZZZZZ++;
 }
 
+const std::string DaemonCommandProtocol::WaitForSocketDataString = "DaemonCommandProtocol::WaitForSocketData";
+
 DaemonCommandProtocol::DaemonCommandProtocol(Stream *sock,bool is_command_sock):
 #ifdef HAVE_EXT_GSOAP
 	m_is_http_post(false),
@@ -175,7 +177,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::WaitForSocke
 		m_sock,
 		m_sock->peer_description(),
 		(SocketHandlercpp)&DaemonCommandProtocol::SocketCallback,
-		"DaemonCommandProtocol::WaitForSocketData",
+		WaitForSocketDataString.c_str(),
 		this,
 		ALLOW);
 

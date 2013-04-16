@@ -1562,8 +1562,12 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	else
 		(*sockTable)[i].iosock_descrip = strdup(EMPTY_DESCRIP);
 	free((*sockTable)[i].handler_descrip);
-	if ( handler_descrip )
+	if ( handler_descrip ) {
 		(*sockTable)[i].handler_descrip = strdup(handler_descrip);
+		if ( strcmp(handler_descrip,DaemonCommandProtocol::WaitForSocketDataString.c_str()) == 0 ) {
+			(*sockTable)[i].waiting_for_data = true;
+		}
+	}
 	else
 		(*sockTable)[i].handler_descrip = strdup(EMPTY_DESCRIP);
 
@@ -4075,6 +4079,18 @@ DaemonCore::CheckPrivState( void )
 
 int DaemonCore::ServiceCommandSocket()
 {
+	int ServiceCommandSocketMaxSocketIndex = 
+		param_integer("SERVICE_COMMAND_SOCKET_MAX_SOCKET_INDEX", 0);
+		// A value of <-1 will make ServiceCommandSocket never service
+		// A value of -1 will make ServiceCommandSocket only service
+		// the initial command socket. 
+		// A value of 0 will cause the correct behavior
+		// Any other positive integer will restrict how many sockets get serviced
+		// The larger the number, the more sockets get serviced.
+	if( ServiceCommandSocketMaxSocketIndex < -1 ) {
+		return 0;
+	}
+
 	Selector selector;
 	int commands_served = 0;
 
@@ -4090,37 +4106,86 @@ int DaemonCore::ServiceCommandSocket()
 	if ( !( (*sockTable)[initial_command_sock].iosock) )
 		return 0;
 
-	// Setting timeout to 0 means do not block, i.e. just poll the socket
-	selector.set_timeout( 0 );
-	selector.add_fd( (*sockTable)[initial_command_sock].iosock->get_file_desc(),
-					 Selector::IO_READ );
-
+		// CallSocketHandler called inside the loop can change nSock 
+		// and nRegisteredSock. We want a variable that won't change during the loop.
+	int local_nSock;
+	if ( ServiceCommandSocketMaxSocketIndex == -1) {
+		local_nSock = 0;
+	}
+	else if ( ServiceCommandSocketMaxSocketIndex != 0) {
+		local_nSock = ServiceCommandSocketMaxSocketIndex;
+	}
+	else {
+		local_nSock = nSock;
+	}
+	
 	inServiceCommandSocket_flag = TRUE;
-	do {
+	for( int i = -1; i < local_nSock; i++) {
+		bool use_loop = true;
+			// We iterate through each socket in sockTable. We do this instead of selecting
+			// over a bunch of different file descriptors because we can have them be removed
+			// while we're still in the process of examining all the sockets.
+			// We could do it the other way using selector.has_ready, selector.fd_ready,
+			// and selector.delete_fd. We also then need to keep track in a separate table
+			// the list of indices we plan on using.
 
-		errno = 0;
-		selector.execute();
+			// We start with i = -1 so that we always start with the initial command socket.
+		if( i == -1 ) {
+			selector.add_fd( (*sockTable)[initial_command_sock].iosock->get_file_desc(), Selector::IO_READ );
+		}
+			// If (*sockTable)[i].iosock is a valid socket
+			// and that we don't use the initial command socket (could substitute i != initial_command_socket)
+			// and that the handler description is DaemonCommandProtocol::WaitForSocketData
+			// and that the socket is not waiting for an outgoing connection.
+		else if( ((*sockTable)[i].iosock) && 
+				 (i != initial_command_sock) && 
+				 ((*sockTable)[i].waiting_for_data) &&
+				 ((*sockTable)[i].is_connect_pending == false)) {
+			selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
+		}
+		else {
+			use_loop = false;
+		}
+			
+		if(use_loop) {
+				// Setting timeout to 0 means do not block, i.e. just poll the socket
+			selector.set_timeout( 0 );
+			
+			do {
+				
+				errno = 0;
+				selector.execute();
 #ifndef WIN32
-		// Unix
-		if ( selector.failed() ) {
-				// not just interrupted by a signal...
-				EXCEPT("select, error # = %d", errno);
-		}
+				// Unix
+				if ( selector.failed() ) {
+						// not just interrupted by a signal...
+					EXCEPT("select, error # = %d", errno);
+				}
 #else
-		// Win32
-		if ( selector.select_retval() == SOCKET_ERROR ) {
-			EXCEPT("select, error # = %d",WSAGetLastError());
-		}
+				// Win32
+				if ( selector.select_retval() == SOCKET_ERROR ) {
+					EXCEPT("select, error # = %d",WSAGetLastError());
+				}
 #endif
+				if ( selector.has_ready() ) {
+						// CallSocketHandler_worker called by CallSocketHandler
+						// also calls CheckPrivState in order to
+						// Make sure we didn't leak our priv state.
+					CallSocketHandler(i, true);
+					commands_served++;
+						// If the slot in sockTable just got removed, make sure we exit the loop
+					if ( ((*sockTable)[i].iosock == NULL) ||  // slot is empty
+						 ((*sockTable)[i].remove_asap &&           // slot available
+						  (*sockTable)[i].servicing_tid==0 ) ) {
+						break;
+					}
+				} 
+			} while ( selector.has_ready() );
+			
+			selector.reset();  // Reset selector for next socket
+		} // if(use_loop)
+	} // for( int i = -1; i < local_nSock; i++)
 
-		if ( selector.has_ready() ) {
-			HandleReq( initial_command_sock );
-			commands_served++;
-				// Make sure we didn't leak our priv state
-			CheckPrivState();
-		}
-
-	} while ( selector.has_ready() );	// loop until no more commands waiting on socket
 
 	inServiceCommandSocket_flag = FALSE;
 	return commands_served;
