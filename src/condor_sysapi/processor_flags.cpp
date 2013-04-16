@@ -63,10 +63,11 @@ const char * sysapi_processor_flags( void ) {
     
     if( _sysapi_processor_flags_raw == NULL ) {
         sysapi_processor_flags_raw();
+        ASSERT(_sysapi_processor_flags_raw != NULL);
     }
 
     /* Which flags do we care about?  You MUST terminate this list with NULL. */
-    const char * flagNames[] = { "ssse3", "sse4_1", "sse4_2", NULL };
+    static const char * const flagNames[] = { "ssse3", "sse4_1", "sse4_2", NULL };
 
     /* Do some memory-allocation math. */
     int numFlags = 0;
