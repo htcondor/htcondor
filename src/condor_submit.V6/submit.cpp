@@ -748,8 +748,8 @@ init_job_ad()
 	// set up types of the ad
 	if ( !job ) {
 		job = new ClassAd();
-		job->SetMyTypeName (JOB_ADTYPE);
-		job->SetTargetTypeName (STARTD_ADTYPE);
+		SetMyTypeName (*job, JOB_ADTYPE);
+		SetTargetTypeName (*job, STARTD_ADTYPE);
 	}
 
 	buffer.formatstr( "%s = %d", ATTR_Q_DATE, (int)time ((time_t *) 0));
@@ -6569,7 +6569,7 @@ queue(int num)
 		if( !Quiet ) 
 			{
 				fprintf(stdout, "\n** Proc %d.%d:\n", ClusterId, ProcId);
-				job->fPrint (stdout);
+				fPrintAd (stdout, *job);
 			}
 
 		logfile = condor_param( UserLogFile, ATTR_ULOG_FILE );
@@ -6621,7 +6621,7 @@ queue(int num)
 		// ugly, here we should be using a derivation of Stream called File 
 		// which we would in turn serialize the job object to...)
 		if ( DumpClassAdToFile ) {
-			job->fPrint ( DumpFileIsStdout ? stdout : DumpFile );
+			fPrintAd ( DumpFileIsStdout ? stdout : DumpFile, *job );
 			fprintf ( DumpFileIsStdout ? stdout : DumpFile, "\n" );
 		}
 

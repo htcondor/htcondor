@@ -27,7 +27,6 @@
 
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"
-#include "../classad_analysis/conversion.h"
 using namespace std;
 
 #include "subsystem_info.h"
@@ -480,7 +479,7 @@ LeaseManager::timerHandler_GetAds ( void )
 		ClassAd	qad;
 		query.getQueryAd( qad );
 		dprintf( D_FULLDEBUG, "Query Ad:\n" );
-		qad.dPrint( D_FULLDEBUG );
+		dPrintAd( D_FULLDEBUG, qad );
 	}
 
 	QueryResult result;
@@ -497,22 +496,17 @@ LeaseManager::timerHandler_GetAds ( void )
 	m_resources.StartExpire( );
 	dprintf(D_ALWAYS, "  Processing %d ads ...\n", ads.MyLength() );
 	DebugTimerDprintf	timer;
+	int list_length = ads.MyLength();
 	ads.Open( );
 	ClassAd *ad;
 	while( ( ad = ads.Next()) ) {
-		classad::ClassAd	*newAd = toNewClassAd( ad );
-		if ( !newAd ) {
-			dprintf( D_ALWAYS,
-					 "Failed to import old ClassAd from collector!\n" );
-			continue;
-		}
-
 		// Give the ad to the collection
-		m_resources.AddResource( newAd );
+		ads.Remove( ad );
+		m_resources.AddResource( ad );
 	}
 	ads.Close( );
-	timer.Log( "ProcessAds", ads.MyLength() );
-	dprintf( D_ALWAYS, "  Done processing %d ads; pruning\n", ads.MyLength());
+	timer.Log( "ProcessAds", list_length );
+	dprintf( D_ALWAYS, "  Done processing %d ads; pruning\n", list_length);
 	timer.Start( );
 	m_resources.PruneExpired( );
 	timer.Log( "PruneExpired" );
@@ -526,8 +520,8 @@ LeaseManager::initPublicAd( void )
 {
 	m_publicAd.Clear();
 
-	m_publicAd.SetMyTypeName( LEASE_MANAGER_ADTYPE );
-	m_publicAd.SetTargetTypeName( "" );
+	SetMyTypeName( m_publicAd, LEASE_MANAGER_ADTYPE );
+	SetTargetTypeName( m_publicAd, "" );
 
 	m_publicAd.Assign( ATTR_MACHINE, my_full_hostname() );
 

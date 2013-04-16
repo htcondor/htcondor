@@ -80,7 +80,7 @@ bool ClassAdCollection::NewClassAd(const char* key, const char* mytype, const ch
 
 bool ClassAdCollection::NewClassAd(const char* key, ClassAd* ad)
 {
-  LogRecord* log=new LogNewClassAd(key,ad->GetMyTypeName(),ad->GetTargetTypeName());
+  LogRecord* log=new LogNewClassAd(key,GetMyTypeName(*ad),GetTargetTypeName(*ad));
   ClassAdLog::AppendLog(log);
   const char *name;
   ExprTree* expr;

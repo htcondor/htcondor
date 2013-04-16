@@ -70,18 +70,18 @@ bool test_merge(
 	c3 = new ClassAd(classad_strings[2], ',');
 
 	if (verbose) {
-		printf("C1:\n"); c1->fPrint(stdout); printf("\n");
-		printf("C2:\n"); c2->fPrint(stdout); printf("\n");
-		printf("C3:\n"); c3->fPrint(stdout); printf("\n");
+		printf("C1:\n"); fPrintAd(stdout, *c1); printf("\n");
+		printf("C2:\n"); fPrintAd(stdout, *c2); printf("\n");
+		printf("C3:\n"); fPrintAd(stdout, *c3); printf("\n");
 	}
 
 	MergeClassAds(c1, c3, true);
 	MergeClassAds(c2, c3, false);
 
 	if (verbose) {
-		printf("C1:\n"); c1->fPrint(stdout); printf("\n");
-		printf("C2:\n"); c2->fPrint(stdout); printf("\n");
-		printf("C3:\n"); c3->fPrint(stdout); printf("\n");
+		printf("C1:\n"); fPrintAd(stdout, *c1); printf("\n");
+		printf("C2:\n"); fPrintAd(stdout, *c2); printf("\n");
+		printf("C3:\n"); fPrintAd(stdout, *c3); printf("\n");
 	}
 
 	failed = false;

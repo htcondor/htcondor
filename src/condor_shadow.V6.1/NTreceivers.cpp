@@ -296,7 +296,7 @@ do_REMOTE_syscall()
 			result = ( syscall_sock->code( terrno ) );
 			ASSERT( result );
 		} else {
-			result = ( ad->put(*syscall_sock) );
+			result = ( putClassAd(syscall_sock, *ad) );
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
@@ -327,7 +327,7 @@ do_REMOTE_syscall()
 			result = ( syscall_sock->code( terrno ) );
 			ASSERT( result );
 		} else {
-			result = ( ad->put(*syscall_sock) );
+			result = ( putClassAd(syscall_sock, *ad) );
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );

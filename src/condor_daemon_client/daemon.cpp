@@ -807,8 +807,8 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 		return false;
 	}
 	
-	req->SetMyTypeName( COMMAND_ADTYPE );
-	req->SetTargetTypeName( REPLY_ADTYPE );
+	SetMyTypeName( *req, COMMAND_ADTYPE );
+	SetTargetTypeName( *req, REPLY_ADTYPE );
 
 	if( timeout >= 0 ) {
 		cmd_sock->timeout( timeout );
@@ -857,7 +857,7 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 		cmd_sock->timeout( timeout );
 	}
 
-	if( ! req->put(*cmd_sock) ) { 
+	if( ! putClassAd(cmd_sock, *req) ) {
 		newError( CA_COMMUNICATION_ERROR,
 				  "Failed to send request ClassAd" );
 		return false;

@@ -45,7 +45,7 @@ int condor__runCommandWithString(struct soap *soap,
 	ClassAd * resultAd = process_request(&inputAd);
 
 	MyString temp;
-	resultAd->sPrint(temp);
+	sPrintAd(temp, *resultAd);
 	result.response.message = (char * ) soap_malloc(soap, temp.Length()+1);
 	strcpy(result.response.message,temp.Value());
 	result.response.status.code = SUCCESS;

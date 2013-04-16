@@ -369,7 +369,7 @@ pseudo_ulog( ClassAd *ad )
 
 	if(!event) {
 		MyString add_str;
-		ad->sPrint(add_str);
+		sPrintAd(add_str, *ad);
 		dprintf(
 		  D_ALWAYS,
 		  "invalid event ClassAd in pseudo_ulog: %s\n",
@@ -419,7 +419,7 @@ pseudo_ulog( ClassAd *ad )
 
 	if( !event_already_logged && !Shadow->uLog.writeEvent( event, ad ) ) {
 		MyString add_str;
-		ad->sPrint(add_str);
+		sPrintAd(add_str, *ad);
 		dprintf(
 		  D_ALWAYS,
 		  "unable to log event in pseudo_ulog: %s\n",

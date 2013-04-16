@@ -631,7 +631,7 @@ SendSpoolFileIfNeeded( ClassAd& ad )
 
 	qmgmt_sock->encode();
 	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
-	neg_on_error( ad.put(*qmgmt_sock) );
+	neg_on_error( putClassAd(qmgmt_sock, ad) );
 	neg_on_error( qmgmt_sock->end_of_message() );
 
 	qmgmt_sock->decode();

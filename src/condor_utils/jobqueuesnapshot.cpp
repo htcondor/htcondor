@@ -272,8 +272,8 @@ JobQueueSnapshot::getNextProcAd(ClassAd*& ad)
 	}
 	else {
 		ad = new ClassAd();
-		ad->SetMyTypeName("Job");
-		ad->SetTargetTypeName("Machine");
+		SetMyTypeName(*ad, "Job");
+		SetTargetTypeName(*ad, "Machine");
 	}
 
 		//the below two while loops is to iterate over 
@@ -409,8 +409,8 @@ JobQueueSnapshot::getNextProcAd(ClassAd*& ad)
 		}
 	}
 
-	ad->SetMyTypeName("Job");
-	ad->SetTargetTypeName("Machine");
+	SetMyTypeName(*ad, "Job");
+	SetTargetTypeName(*ad, "Machine");
 	cur_procads_hor_index++;
 
 	char* expr = 

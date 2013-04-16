@@ -228,15 +228,15 @@ void setUpCompatClassAds(compat_classad::ClassAd** compC1, compat_classad::Class
     (*compC4) = new compat_classad::ClassAd(*c);
     delete c;
 
-    (*compC1)->SetMyTypeName("compC1");
-    (*compC2)->SetMyTypeName("compC2");
-    (*compC3)->SetMyTypeName("compC3");
-    (*compC4)->SetMyTypeName("compC4");
+    SetMyTypeName(*(*compC1), "compC1");
+    SetMyTypeName(*(*compC2), "compC2");
+    SetMyTypeName(*(*compC3), "compC3");
+    SetMyTypeName(*(*compC4), "compC4");
 
-    (*compC1)->SetTargetTypeName("not compC1!");
-    (*compC2)->SetTargetTypeName("not compC2!");
-    (*compC3)->SetTargetTypeName("not compC3!");
-    (*compC4)->SetTargetTypeName("not compC4!");
+    SetTargetTypeName(*(*compC1), "not compC1!");
+    SetTargetTypeName(*(*compC2), "not compC2!");
+    SetTargetTypeName(*(*compC3), "not compC3!");
+    SetTargetTypeName(*(*compC4), "not compC4!");
 
 }
 //}}}
@@ -393,7 +393,7 @@ bool test_ChainCollapse(compat_classad::ClassAd *c2, compat_classad::ClassAd *c3
         {
             printf("c2 not chained to c3.\n");
         }
-        c2->fPrint(stdout);
+        fPrintAd(stdout, *c2);
         printf("Calling ChainCollapse on c2.\n");
         printf("------\n");
     }
@@ -413,7 +413,7 @@ bool test_ChainCollapse(compat_classad::ClassAd *c2, compat_classad::ClassAd *c3
         {
             printf("c2 not chained to c3.\n");
         }
-        c2->fPrint(stdout);
+        fPrintAd(stdout, *c2);
         printf("------\n");
     }
     */

@@ -50,7 +50,7 @@ main(int argc, char *argv[])
 
 	ClassAd *ad = NULL; 
 	while (c.IterateAllClassAds(ad)) {
-		ad->fPrint(stdout);
+		fPrintAd(stdout, *ad);
 		printf("\n");
 	}
 

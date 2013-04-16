@@ -209,7 +209,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 	MyString hook_stdin;
 	hook_stdin = route_info.c_str();
 	hook_stdin += "\n------\n";
-	temp_ad.sPrint(hook_stdin);
+	sPrintAd(hook_stdin, temp_ad);
 
 	TranslateClient* translate_client = new TranslateClient(hook_translate, r_job);
 	if (NULL == translate_client)
@@ -273,7 +273,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 	temp_ad = r_job->dest_ad;
 
 	MyString hook_stdin;
-	temp_ad.sPrint(hook_stdin);
+	sPrintAd(hook_stdin, temp_ad);
 
 	StatusClient* status_client = new StatusClient(hook_update_job_info, r_job);
 	if (NULL == status_client)
@@ -337,11 +337,11 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 	temp_ad = r_job->src_ad;
 
 	MyString hook_stdin;
-	temp_ad.sPrint(hook_stdin);
+	sPrintAd(hook_stdin, temp_ad);
 	hook_stdin += "\n------\n";
 
 	temp_ad = r_job->dest_ad;
-	temp_ad.sPrint(hook_stdin);
+	sPrintAd(hook_stdin, temp_ad);
 
 	ExitClient *exit_client = new ExitClient(hook_job_exit, r_job);
 	if (NULL == exit_client)
@@ -410,7 +410,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 	temp_ad = r_job->dest_ad;
 
 	MyString hook_stdin;
-	temp_ad.sPrint(hook_stdin);
+	sPrintAd(hook_stdin, temp_ad);
 
 	CleanupClient* cleanup_client = new CleanupClient(hook_cleanup, r_job);
 	if (NULL == cleanup_client)

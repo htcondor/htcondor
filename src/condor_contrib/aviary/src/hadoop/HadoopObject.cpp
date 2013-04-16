@@ -97,7 +97,7 @@ HadoopObject::update(const ClassAd &ad)
 
     // debug
     //if (DebugFlags & D_FULLDEBUG) {
-        const_cast<ClassAd*>(&ad)->dPrint(D_FULLDEBUG|D_NOHEADER);
+	dPrintAd(D_FULLDEBUG|D_NOHEADER, const_cast<ClassAd>(ad));
     //}
 }
 

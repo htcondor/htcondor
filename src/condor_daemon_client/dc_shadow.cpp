@@ -151,7 +151,7 @@ DCShadow::updateJobInfo( ClassAd* ad, bool insure_update )
 		}
 		return false;
 	}
-	if( ! ad->put(*tmp) ) {
+	if( ! putClassAd(tmp, *ad) ) {
 		dprintf( D_FULLDEBUG, 
 				 "Failed to send SHADOW_UPDATEINFO ClassAd to shadow\n" );
 		if( shadow_safesock ) {

@@ -147,8 +147,8 @@ void Hadoop::initialize() {
         startServices();
 
         //ClassAd Initialization
-        m_hdfsAd.SetMyTypeName("hdfs");
-        m_hdfsAd.SetTargetTypeName("");
+        SetMyTypeName(m_hdfsAd, "hdfs");
+        SetTargetTypeName(m_hdfsAd, "");
         m_hdfsAd.Assign(ATTR_NAME, "hdfs");
         m_hdfsAd.Assign("ServiceType", getServiceNameByType( m_nodeType) );
         daemonCore->publish(&m_hdfsAd); 

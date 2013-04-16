@@ -884,7 +884,7 @@ GET_PRIORITY_commandHandler (int, Stream *strm)
 	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
 	AttrList* ad=accountant.ReportState();
 	
-	if (!ad->putAttrList(*strm) ||
+	if (!putClassAdNoTypes(strm, *ad) ||
 	    !strm->end_of_message())
 	{
 		dprintf (D_ALWAYS, "Could not send priority information\n");
@@ -910,7 +910,7 @@ GET_PRIORITY_ROLLUP_commandHandler(int, Stream *strm) {
     dprintf(D_ALWAYS, "Getting state information from the accountant\n");
     AttrList* ad = accountant.ReportState(true);
 
-    if (!ad->putAttrList(*strm) ||
+    if (!putClassAdNoTypes(strm, *ad) ||
         !strm->end_of_message()) {
         dprintf (D_ALWAYS, "Could not send priority information\n");
         delete ad;
@@ -942,7 +942,7 @@ GET_RESLIST_commandHandler (int, Stream *strm)
 	AttrList* ad=accountant.ReportState(submitter);
 	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
 	
-	if (!ad->putAttrList(*strm) ||
+	if (!putClassAdNoTypes(strm, *ad) ||
 	    !strm->end_of_message())
 	{
 		dprintf (D_ALWAYS, "Could not send resource list\n");
@@ -2881,7 +2881,7 @@ obtainAdsFromCollector (
 		// let's see if we've already got it - first lookup the sequence 
 		// number from the new ad, then let's look and see if we've already
 		// got something for this one.		
-		if(!strcmp(ad->GetMyTypeName(),STARTD_ADTYPE)) {
+		if(!strcmp(GetMyTypeName(*ad),STARTD_ADTYPE)) {
 
 			// first, let's make sure that will want to actually use this
 			// ad, and if we can use it (old startds had no seq. number)
@@ -3032,8 +3032,8 @@ obtainAdsFromCollector (
 			OptimizeMachineAdForMatchmaking( ad );
 
 			startdAds.Insert(ad);
-		} else if( !strcmp(ad->GetMyTypeName(),SUBMITTER_ADTYPE) ||
-				   ( !strcmp(ad->GetMyTypeName(),SCHEDD_ADTYPE) &&
+		} else if( !strcmp(GetMyTypeName(*ad),SUBMITTER_ADTYPE) ||
+				   ( !strcmp(GetMyTypeName(*ad),SCHEDD_ADTYPE) &&
 					 !ad->LookupExpr(ATTR_NUM_USERS) ) ) {
 				// CRUFT: Before 7.3.2, submitter ads had a MyType of
 				//   "Scheduler". The only way to tell the difference
@@ -3312,7 +3312,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 		negotiate_ad.Assign(ATTR_AUTO_CLUSTER_ATTRS,job_attr_references ? job_attr_references : "");
 		// Tell the schedd a submitter tag value (used for flocking levels)
 		negotiate_ad.Assign(ATTR_SUBMITTER_TAG,submitter_tag.Value());
-		if( !negotiate_ad.put( *sock ) ) {
+		if( !putClassAd( sock, negotiate_ad ) ) {
 			dprintf (D_ALWAYS, "    Failed to send negotiation header to %s\n",
 					 schedd_id.Value() );
 			sockCache->invalidateSock(scheddAddr.Value());
@@ -3503,7 +3503,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 
 		if( IsDebugLevel( D_JOB ) ) {
 			dprintf(D_JOB,"Searching for a matching machine for the following job ad:\n");
-			request.dPrint(D_JOB);
+			dPrintAd(D_JOB, request);
 		}
 
 		// 2e.  find a compatible offer for the request --- keep attempting
@@ -3910,7 +3910,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 
 		if( IsDebugVerbose(D_MACHINE) ) {
 			dprintf(D_MACHINE,"Testing whether the job matches with the following machine ad:\n");
-			candidate->dPrint(D_MACHINE);
+			dPrintAd(D_MACHINE, *candidate);
 		}
 
 			// the candidate offer and request must match
@@ -4426,7 +4426,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		"      Sending PERMISSION, claim id, startdAd to schedd\n");
 	if (!sock->put(PERMISSION_AND_AD) ||
 		!sock->put_secret(claim_id) ||
-		!offer->put(*sock)		||	// send startd ad to schedd
+		!putClassAd(sock, *offer)	||	// send startd ad to schedd
 		!sock->end_of_message())
 	{
 			send_failed = true;
@@ -5080,8 +5080,8 @@ init_public_ad()
 	if( publicAd ) delete( publicAd );
 	publicAd = new ClassAd();
 
-	publicAd->SetMyTypeName(NEGOTIATOR_ADTYPE);
-	publicAd->SetTargetTypeName("");
+	SetMyTypeName(*publicAd, NEGOTIATOR_ADTYPE);
+	SetTargetTypeName(*publicAd, "");
 
 	if( !NegotiatorName ) {
 		char* defaultName = NULL;
@@ -5150,8 +5150,8 @@ Matchmaker::invalidateNegotiatorAd( void )
 	}
 
 		// Set the correct types
-	cmd_ad.SetMyTypeName( QUERY_ADTYPE );
-	cmd_ad.SetTargetTypeName( NEGOTIATOR_ADTYPE );
+	SetMyTypeName( cmd_ad, QUERY_ADTYPE );
+	SetTargetTypeName( cmd_ad, NEGOTIATOR_ADTYPE );
 
 	line.formatstr( "%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS,
 				  ATTR_NAME,

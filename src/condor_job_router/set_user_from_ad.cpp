@@ -34,7 +34,7 @@ void set_user_from_ad(classad::ClassAd const &ad)
         if( 0 == ad.EvaluateAttrString(ATTR_OWNER,owner) ) {
                 ClassAd ad_copy;
                 ad_copy = ad;
-                ad_copy.dPrint(D_ALWAYS);
+                dPrintAd(D_ALWAYS, ad_copy);
                 EXCEPT("Failed to find %s in job ad.",ATTR_OWNER);
         }
         ad.EvaluateAttrString(ATTR_NT_DOMAIN,domain);

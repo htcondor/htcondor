@@ -73,8 +73,8 @@ EndpointPublisher::init(const std::string& uri_suffix, bool for_ssl)
 
 	// populate the publish ad
 	m_ad = ClassAd();
-	m_ad.SetMyTypeName(GENERIC_ADTYPE);
-	m_ad.SetTargetTypeName(ENDPOINT);
+	SetMyTypeName(m_ad, GENERIC_ADTYPE);
+	SetTargetTypeName(m_ad, ENDPOINT);
 	m_ad.Assign(ATTR_NAME,m_name);
 	m_ad.Assign(ENDPOINT_URI,m_location);
 	m_ad.Assign(MAJOR_TYPE,m_major_type);
@@ -134,8 +134,8 @@ EndpointPublisher::invalidate()
    ClassAd invalidate_ad;
    string line;
 
-   invalidate_ad.SetMyTypeName(QUERY_ADTYPE);
-   invalidate_ad.SetTargetTypeName(ENDPOINT);
+   SetMyTypeName(invalidate_ad, QUERY_ADTYPE);
+   SetTargetTypeName(invalidate_ad, ENDPOINT);
    invalidate_ad.Assign(ENDPOINT_URI,m_location.c_str());
    invalidate_ad.Assign(ATTR_NAME,m_name.c_str());
    aviUtilFmt(line,"%s == \"%s\"", ATTR_NAME, m_name.c_str()); 

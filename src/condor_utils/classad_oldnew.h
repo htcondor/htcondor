@@ -24,6 +24,7 @@
   This file holds utility functions that rely on *new* ClassAds.
 */
 #include "stream.h"
+#include "string_list.h"
 
 #include "classad/classad_distribution.h"
 
@@ -36,14 +37,30 @@ void AttrList_setPublishServerTimeMangled( bool publish);
 classad::ClassAd* getOldClassAd( Stream *sock );
 bool getOldClassAd( Stream *sock, classad::ClassAd& ad );
 bool getOldClassAdNoTypes( Stream *sock, classad::ClassAd& ad );
-bool putOldClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private, StringList *attr_whitelist=NULL );
-bool putOldClassAdNoTypes ( Stream *sock, classad::ClassAd& ad, bool exclude_private );
-//DO NOT CALL THIS, EXCEPT IN THE ABOVE TWO putOldClassAds*!
+
+/** Send the ClassAd on the CEDAR stream
+ * @param sock the stream
+ * @param ad the ClassAd to be sent
+ * @param exclude_private whether to exclude private attributes
+ * @param attr_whitelist list of attributes to send (default is to send all)
+ */
+bool putClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private = false, StringList *attr_whitelist=NULL );
+
+/** Send the ClassAd on the CEDAR stream, excluding the special handling
+ *  for MyType and TargetType. You will rarely want this function.
+ * @param sock the stream
+ * @param ad the ClassAd to be sent
+ * @param exclude_private whether to exclude private attributes
+ * @param attr_whitelist list of attributes to send (default is to send all)
+ */
+bool putClassAdNoTypes ( Stream *sock, classad::ClassAd& ad, bool exclude_private = false );
+
+//DO NOT CALL THIS, EXCEPT IN THE ABOVE TWO putClassAds*!
 //the bool exclude types tells the function whether to exclude 
 //  stuff about MyType and TargetType from being included.
-//  true is the same as the old putOldClassAd()
-//  false is the same as the putOldClassAdNoTypes()
-bool _putOldClassAd(Stream *sock, classad::ClassAd& ad, bool excludeTypes,
+//  true is the same as the old putClassAd()
+//  false is the same as the putClassAdNoTypes()
+bool _putClassAd(Stream *sock, classad::ClassAd& ad, bool excludeTypes,
 					bool exclude_private, StringList *attr_whitelist);
 
 //this is a shorthand version of EvalTree w/o a target ad.

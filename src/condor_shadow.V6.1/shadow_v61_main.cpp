@@ -202,7 +202,7 @@ readJobAd( void )
 				is_stdin ? "STDIN" : job_ad_file );
 	}
 	if( IsDebugVerbose(D_JOB) ) {
-		ad->dPrint( D_JOB );
+		dPrintAd( D_JOB, *ad );
 	} 
 
 	// For debugging, see if there's a special attribute in the
@@ -429,7 +429,7 @@ dumpClassad( const char* header, ClassAd* ad, int debug_flag )
 	}
 	if( IsDebugCatAndVerbosity(debug_flag) ) {
 		dprintf( debug_flag, "*** ClassAd Dump: %s ***\n", header );  
-		ad->dPrint( debug_flag );
+		dPrintAd( debug_flag, *ad );
 		dprintf( debug_flag, "--- End of ClassAd ---\n" );
 	}
 }
