@@ -4180,7 +4180,7 @@ int DaemonCore::ServiceCommandSocket()
 						break;
 					}
 				} 
-			} while ( selector.has_ready() );
+			} while ( selector.has_ready() ); // loop ​until ​no ​more ​commands ​waiting ​on socket
 			
 			selector.reset();  // Reset selector for next socket
 		} // if(use_loop)
