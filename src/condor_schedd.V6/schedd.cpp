@@ -11424,6 +11424,8 @@ Scheduler::invalidate_ads()
 			}
 		}
 	}
+
+	delete cad;
 }
 
 
