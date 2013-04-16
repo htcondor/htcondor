@@ -4634,7 +4634,7 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 
 	bool request_is_machine = false;
 	const char * attrConstraint = ATTR_REQUIREMENTS;
-	if (0 == strcmp(request->GetMyTypeName(),STARTD_ADTYPE)) {
+	if (0 == strcmp(GetMyTypeName(*request),STARTD_ADTYPE)) {
 		//attrConstraint = ATTR_START;
 		attrConstraint = ATTR_REQUIREMENTS;
 		request_is_machine = true;

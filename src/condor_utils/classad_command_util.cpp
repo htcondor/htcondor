@@ -30,8 +30,8 @@
 int
 sendCAReply( Stream* s, const char* cmd_str, ClassAd* reply )
 {
-	reply->SetMyTypeName( REPLY_ADTYPE );
-	reply->SetTargetTypeName( COMMAND_ADTYPE );
+	SetMyTypeName( *reply, REPLY_ADTYPE );
+	SetTargetTypeName( *reply, COMMAND_ADTYPE );
 
 	reply->Assign( ATTR_VERSION, CondorVersion() );
 

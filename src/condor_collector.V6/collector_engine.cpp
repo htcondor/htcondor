@@ -548,7 +548,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 				// the startd could stop bothering to send these attributes.
 
 				// Queries of private ads depend on the following:
-			pvtAd->SetMyTypeName( STARTD_ADTYPE );
+			SetMyTypeName( *pvtAd, STARTD_ADTYPE );
 
 				// Negotiator matches up private ad with public ad by
 				// using the following.
@@ -653,7 +653,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 		//   these older schedds.
 		//   Before 7.7.3, submitter ads for parallel universe
 		//   jobs had a MyType of "Scheduler".
-		clientAd->SetMyTypeName( SUBMITTER_ADTYPE );
+		SetMyTypeName( *clientAd, SUBMITTER_ADTYPE );
 		// since submittor ads always follow a schedd ad, and a master check is
 		// performed for schedd ads, we don't need a master check in here
 		hashString.Build( hk );
@@ -774,7 +774,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 
 	  case UPDATE_AD_GENERIC:
 	  {
-		  const char *type_str = clientAd->GetMyTypeName();
+		  const char *type_str = GetMyTypeName(*clientAd);
 		  if (type_str == NULL) {
 			  dprintf(D_ALWAYS, "collect: UPDATE_AD_GENERIC: ad has no type\n");
 			  insert = -3;

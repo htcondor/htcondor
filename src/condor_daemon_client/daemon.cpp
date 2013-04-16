@@ -807,8 +807,8 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 		return false;
 	}
 	
-	req->SetMyTypeName( COMMAND_ADTYPE );
-	req->SetTargetTypeName( REPLY_ADTYPE );
+	SetMyTypeName( *req, COMMAND_ADTYPE );
+	SetTargetTypeName( *req, REPLY_ADTYPE );
 
 	if( timeout >= 0 ) {
 		cmd_sock->timeout( timeout );

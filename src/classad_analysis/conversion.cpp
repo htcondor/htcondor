@@ -61,8 +61,8 @@ toNewClassAd( ClassAd *ad )
 		}
 	}
 
-	newAd->InsertAttr( "MyType", std::string( ad->GetMyTypeName( ) ) );
-	newAd->InsertAttr( "TargetType", std::string( ad->GetTargetTypeName( ) ) );
+	newAd->InsertAttr( "MyType", std::string( GetMyTypeName( *ad ) ) );
+	newAd->InsertAttr( "TargetType", std::string( GetTargetTypeName( *ad ) ) );
 	return newAd;
 }
 
@@ -87,13 +87,13 @@ toOldClassAd( classad::ClassAd * ad )
 	if (!ad->EvaluateAttrString("MyType",buffer)) {
 		buffer="(unknown type)";
 	}
-	oldAd->SetMyTypeName( buffer.c_str( ) );
+	SetMyTypeName( *oldAd, buffer.c_str( ) );
 
 	buffer = "";
 	if (!ad->EvaluateAttrString("TargetType",buffer)) {
 		buffer="(unknown type)";
 	}
-	oldAd->SetTargetTypeName( buffer.c_str( ) );
+	SetTargetTypeName( *oldAd, buffer.c_str( ) );
 	
 	return oldAd;
 }

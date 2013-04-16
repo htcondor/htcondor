@@ -1067,8 +1067,8 @@ Resource::final_update( void )
 	MyString escaped_name;
 
 		// Set the correct types
-	invalidate_ad.SetMyTypeName( QUERY_ADTYPE );
-	invalidate_ad.SetTargetTypeName( STARTD_ADTYPE );
+	SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
+	SetTargetTypeName( invalidate_ad, STARTD_ADTYPE );
 
 	/*
 	 * NOTE: the collector depends on the data below for performance reasons
@@ -1778,8 +1778,8 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	char* ptr;
 
 		// Set the correct types on the ClassAd
-	cap->SetMyTypeName( STARTD_ADTYPE );
-	cap->SetTargetTypeName( JOB_ADTYPE );
+	SetMyTypeName( *cap,STARTD_ADTYPE );
+	SetTargetTypeName( *cap, JOB_ADTYPE );
 
 		// Insert attributes directly in the Resource object, or not
 		// handled by other objects.
@@ -1977,7 +1977,7 @@ Resource::publish_private( ClassAd *ad )
 {
 		// Needed by the collector to correctly respond to queries
 		// for private ads.  As of 7.2.0, the 
-	ad->SetMyTypeName( STARTD_ADTYPE );
+	SetMyTypeName( *ad, STARTD_ADTYPE );
 
 		// For backward compatibility with pre 7.2.0 collectors, send
 		// name and IP address in private ad (needed to match up the

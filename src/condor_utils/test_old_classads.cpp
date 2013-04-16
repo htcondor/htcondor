@@ -1125,7 +1125,7 @@ test_mytype(
 {
 	static const char *actual_value;
 
-	actual_value = classad->GetMyTypeName();
+	actual_value = GetMyTypeName(*classad);
 	if (!strcmp(expected_value, actual_value)) {
 		printf("Passed: MyType is \"");
 		print_truncated_string(expected_value, 40);
@@ -1158,7 +1158,7 @@ test_targettype(
 {
 	static const char *actual_value;
 
-	actual_value = classad->GetTargetTypeName();
+	actual_value = GetTargetTypeName(*classad);
 	if (!strcmp(expected_value, actual_value)) {
 		printf("Passed: TargetType is \"");
 		print_truncated_string(expected_value, 40);

@@ -358,8 +358,8 @@ void TTManager::createQuillAd(void) {
 	char *tmp;
 
 	quillad = new ClassAd();
-	quillad->SetMyTypeName(QUILL_ADTYPE);
-	quillad->SetTargetTypeName("");
+	SetMyTypeName(*quillad, QUILL_ADTYPE);
+	SetTargetTypeName(*quillad, "");
   
 	config_fill_ad(quillad);
 

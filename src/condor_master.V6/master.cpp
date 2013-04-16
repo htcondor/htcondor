@@ -880,8 +880,8 @@ init_classad()
 	if( ad ) delete( ad );
 	ad = new ClassAd();
 
-	ad->SetMyTypeName(MASTER_ADTYPE);
-	ad->SetTargetTypeName("");
+	SetMyTypeName(*ad, MASTER_ADTYPE);
+	SetTargetTypeName(*ad, "");
 
 	if (MasterName) {
 		ad->Assign(ATTR_NAME, MasterName);
@@ -1077,8 +1077,8 @@ main_shutdown_graceful()
 void
 invalidate_ads() {
 	ClassAd cmd_ad;
-	cmd_ad.SetMyTypeName( QUERY_ADTYPE );
-	cmd_ad.SetTargetTypeName( MASTER_ADTYPE );
+	SetMyTypeName( cmd_ad, QUERY_ADTYPE );
+	SetTargetTypeName( cmd_ad, MASTER_ADTYPE );
 	
 	MyString line;
 	MyString escaped_name;

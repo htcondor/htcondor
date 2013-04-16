@@ -1708,41 +1708,41 @@ sPrintExpr(const classad::ClassAd &ad, const char* name)
 // ClassAd methods
 
 		// Type operations
-void ClassAd::
-SetMyTypeName( const char *myType )
+void
+SetMyTypeName( classad::ClassAd &ad, const char *myType )
 {
 	if( myType ) {
-		InsertAttr( ATTR_MY_TYPE, string( myType ) );
+		ad.InsertAttr( ATTR_MY_TYPE, string( myType ) );
 	}
 
 	return;
 }
 
-const char*	ClassAd::
-GetMyTypeName( ) const
+const char*
+GetMyTypeName( const classad::ClassAd &ad )
 {
 	static string myTypeStr;
-	if( !EvaluateAttrString( ATTR_MY_TYPE, myTypeStr ) ) {
+	if( !ad.EvaluateAttrString( ATTR_MY_TYPE, myTypeStr ) ) {
 		return "";
 	}
 	return myTypeStr.c_str( );
 }
 
-void ClassAd::
-SetTargetTypeName( const char *targetType )
+void
+SetTargetTypeName( classad::ClassAd &ad, const char *targetType )
 {
 	if( targetType ) {
-		InsertAttr( ATTR_TARGET_TYPE, string( targetType ) );
+		ad.InsertAttr( ATTR_TARGET_TYPE, string( targetType ) );
 	}
 
 	return;
 }
 
-const char*	ClassAd::
-GetTargetTypeName( ) const
+const char*
+GetTargetTypeName( const classad::ClassAd &ad )
 {
 	static string targetTypeStr;
-	if( !EvaluateAttrString( ATTR_TARGET_TYPE, targetTypeStr ) ) {
+	if( !ad.EvaluateAttrString( ATTR_TARGET_TYPE, targetTypeStr ) ) {
 		return "";
 	}
 	return targetTypeStr.c_str( );

@@ -248,8 +248,8 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 void
 make_request_ad(ClassAd & requestAd, const char *rank)
 {
-	requestAd.SetMyTypeName (JOB_ADTYPE);
-	requestAd.SetTargetTypeName (STARTD_ADTYPE);
+	SetMyTypeName (requestAd, JOB_ADTYPE);
+	SetTargetTypeName (requestAd, STARTD_ADTYPE);
 
 	get_mySubSystem()->setTempName( "SUBMIT" );
 	config_fill_ad( &requestAd );

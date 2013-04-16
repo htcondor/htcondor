@@ -397,7 +397,7 @@ string JobLog::netFormatLog(ULogEvent *event){
   char* input ="";
   input = (char*)chkmystr.c_str();
 
-  char* name =(char*)eventAd->GetMyTypeName();
+  char* name =(char*)GetMyTypeName(*eventAd);
   string sename = name;
   string estr = "Event";
   int epos = sename.find(estr,0);

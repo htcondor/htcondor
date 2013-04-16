@@ -748,8 +748,8 @@ init_job_ad()
 	// set up types of the ad
 	if ( !job ) {
 		job = new ClassAd();
-		job->SetMyTypeName (JOB_ADTYPE);
-		job->SetTargetTypeName (STARTD_ADTYPE);
+		SetMyTypeName (*job, JOB_ADTYPE);
+		SetTargetTypeName (*job, STARTD_ADTYPE);
 	}
 
 	buffer.formatstr( "%s = %d", ATTR_Q_DATE, (int)time ((time_t *) 0));

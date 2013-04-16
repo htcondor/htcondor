@@ -767,8 +767,8 @@ Defrag::publish(ClassAd *ad)
 	m_daemon_name = valid_name;
 	delete [] valid_name;
 
-	ad->SetMyTypeName("Defrag");
-	ad->SetTargetTypeName("");
+	SetMyTypeName(*ad, "Defrag");
+	SetTargetTypeName(*ad, "");
 
 	ad->Assign(ATTR_NAME,m_daemon_name.c_str());
 
@@ -788,8 +788,8 @@ Defrag::invalidatePublicAd() {
 	ClassAd invalidate_ad;
 	std::string line;
 
-	invalidate_ad.SetMyTypeName(QUERY_ADTYPE);
-	invalidate_ad.SetTargetTypeName("Defrag");
+	SetMyTypeName(invalidate_ad, QUERY_ADTYPE);
+	SetTargetTypeName(invalidate_ad, "Defrag");
 
 	formatstr(line,"%s == \"%s\"", ATTR_NAME, m_daemon_name.c_str());
 	invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.c_str());

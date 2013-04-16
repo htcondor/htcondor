@@ -134,8 +134,8 @@ XferSummary::time_out(time_t now, char *hostaddr)
 	char		line[128], *tmp;
 	char		*str = NULL;
 
-	info.SetMyTypeName("CkptServer");
-	info.SetTargetTypeName("CkptFile");
+	SetMyTypeName(info, "CkptServer");
+	SetTargetTypeName(info, "CkptFile");
 
 	sprintf(line, "%s = \"%s\"", ATTR_NAME, my_full_hostname() );
 	info.Insert(line);

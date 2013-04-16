@@ -129,8 +129,8 @@ void Pigeon::initialize() {
     m_qpidAd.Assign("PORT", portStr.c_str());
     dprintf(D_ALWAYS,"qpid process started on port number %s \n", portStr.c_str());
   }  
-  m_qpidAd.SetMyTypeName("pigeon");
-  m_qpidAd.SetTargetTypeName("");
+  SetMyTypeName(m_qpidAd, "pigeon");
+  SetTargetTypeName(m_qpidAd, "");
   std::string hostAddr = "pigeon@";
   hostAddr += hostname;
   m_qpidAd.Assign(ATTR_NAME, "pigeon"); //hostAddr.c_str());

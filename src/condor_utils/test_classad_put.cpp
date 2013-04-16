@@ -335,13 +335,13 @@ void setUpClassAds(ClassAd* c1, ClassAd* c2, ClassAd* c3, FILE* c1FP,
     c1->initFromString(classad_strings[0], NULL);
     c2->initFromString(classad_strings[1], NULL);
     c3->initFromString(classad_strings[2], NULL);
-    c1->SetMyTypeName("c1");
-    c2->SetMyTypeName("c2");
-    c3->SetMyTypeName("c3");
+    SetMyTypeName(*c1, "c1");
+    SetMyTypeName(*c2, "c2");
+    SetMyTypeName(*c3, "c3");
 
-    c1->SetTargetTypeName("not c1!");
-    c2->SetTargetTypeName("not c2!");
-    c3->SetTargetTypeName("not c3!");
+    SetTargetTypeName(*c1, "not c1!");
+    SetTargetTypeName(*c2, "not c2!");
+    SetTargetTypeName(*c3, "not c3!");
 
     if(verbose)
     {
@@ -382,13 +382,13 @@ void setUpCompatClassAds(compat_classad::ClassAd** compC1, compat_classad::Class
     (*compC3) = new compat_classad::ClassAd(c3FP, ",", eofCheck, errorCheck, emptyCheck); 
     fclose(c1FP); fclose(c2FP); fclose(c3FP);
 
-    (*compC1)->SetMyTypeName("compC1");
-    (*compC2)->SetMyTypeName("compC2");
-    (*compC3)->SetMyTypeName("compC3");
+    SetMyTypeName(*(*compC1), "compC1");
+    SetMyTypeName(*(*compC2), "compC2");
+    SetMyTypeName(*(*compC3), "compC3");
 
-    (*compC1)->SetTargetTypeName("not compC1!");
-    (*compC2)->SetTargetTypeName("not compC2!");
-    (*compC3)->SetTargetTypeName("not compC3!");
+    SetTargetTypeName(*(*compC1), "not compC1!");
+    SetTargetTypeName(*(*compC2), "not compC2!");
+    SetTargetTypeName(*(*compC3), "not compC3!");
 
 
 }

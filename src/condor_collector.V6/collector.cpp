@@ -345,7 +345,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	//   Before 7.7.3, submitter ads for parallel universe
 	//   jobs had a MyType of "Scheduler".
 	if ( whichAds == SUBMITTOR_AD ) {
-		cad.SetTargetTypeName( SUBMITTER_ADTYPE );
+		SetTargetTypeName( cad, SUBMITTER_ADTYPE );
 	}
 
 	UtcTime begin(true);
@@ -1527,8 +1527,8 @@ void CollectorDaemon::init_classad(int interval)
     if( ad ) delete( ad );
     ad = new ClassAd();
 
-    ad->SetMyTypeName(COLLECTOR_ADTYPE);
-    ad->SetTargetTypeName("");
+    SetMyTypeName(*ad, COLLECTOR_ADTYPE);
+    SetTargetTypeName(*ad, "");
 
     char *tmp;
     tmp = param( "CONDOR_ADMIN" );
@@ -1787,7 +1787,7 @@ computeProjection(ClassAd *full_ad, SimpleList<MyString> *projectionList,StringL
 	//   submitter ads, regardless of MyType.
 	//   Before 7.7.3, submitter ads for parallel universe
 	//   jobs had a MyType of "Scheduler".
-	if (strcmp("Scheduler", full_ad->GetMyTypeName()) == 0) {
+	if (strcmp("Scheduler", GetMyTypeName(*full_ad)) == 0) {
 		expanded_projection.append(ATTR_NUM_USERS);
 	}
 

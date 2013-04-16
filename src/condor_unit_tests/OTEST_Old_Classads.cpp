@@ -1041,7 +1041,7 @@ static bool test_get_my_type_name_no() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	const char* expect = "";
-	const char* result = classad.GetMyTypeName();
+	const char* result = GetMyTypeName(classad);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_output_expected_header();
@@ -1061,7 +1061,7 @@ static bool test_get_my_type_name_yes() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	const char* expect = "foo";
-	const char* result = classad.GetMyTypeName();
+	const char* result = GetMyTypeName(classad);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_output_expected_header();
@@ -1082,7 +1082,7 @@ static bool test_get_target_type_name_no() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	const char* expect = "";
-	const char* result = classad.GetTargetTypeName();
+	const char* result = GetTargetTypeName(classad);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_output_expected_header();
@@ -1103,7 +1103,7 @@ static bool test_get_target_type_name_yes() {
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	const char* expect = "blah";
-	const char* result = classad.GetTargetTypeName();
+	const char* result = GetTargetTypeName(classad);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
 	emit_output_expected_header();

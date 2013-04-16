@@ -626,8 +626,8 @@ Starter::exited(int status)
 		// Dummy up an ad
 		int now = (int) time(0);
 		jobAd = new ClassAd();
-		jobAd->SetMyTypeName("Job");
-		jobAd->SetTargetTypeName("Machine");
+		SetMyTypeName(*jobAd, "Job");
+		SetTargetTypeName(*jobAd, "Machine");
 		jobAd->Assign(ATTR_CLUSTER_ID, now);
 		jobAd->Assign(ATTR_PROC_ID, 1);
 		jobAd->Assign(ATTR_OWNER, "boinc");

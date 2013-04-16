@@ -179,8 +179,8 @@ VMRegister::requestHostClassAds(void)
 	}
 
 	ClassAd query_ad;
-	query_ad.SetMyTypeName(QUERY_ADTYPE);
-	query_ad.SetTargetTypeName(STARTD_ADTYPE);
+	SetMyTypeName(query_ad, QUERY_ADTYPE);
+	SetTargetTypeName(query_ad, STARTD_ADTYPE);
 	query_ad.Assign(ATTR_REQUIREMENTS, true);
 
 	char *addr = m_vm_host_daemon->addr();

@@ -330,15 +330,6 @@ class ClassAd : public classad::ClassAd
 		 */
 	int EvalBool  (const char *name, classad::ClassAd *target, int &value);
 
-		/** Set the MyType attribute */
-	void		SetMyTypeName(const char *);
-		/** Get the value of the MyType attribute */
-	const char*	GetMyTypeName() const ;
-		/** Set the value of the TargetType attribute */
-	void 		SetTargetTypeName(const char *);
-		/** Get the value of the TargetType attribtute */
-	const char*	GetTargetTypeName() const;
-
 	bool initFromString(char const *str,MyString *err_msg=NULL);
 
 		/** Read the old ClassAd from the stream, and fill in this ClassAd.
@@ -527,6 +518,16 @@ int sPrintAdAsXML(std::string &output, classad::ClassAd &ad,
  *  @return Returns a malloc'd buffer.
  */
 char* sPrintExpr(const classad::ClassAd &ad, const char* name);
+
+	/** Set the MyType attribute */
+void SetMyTypeName(classad::ClassAd &ad, const char *);
+	/** Get the value of the MyType attribute */
+const char*	GetMyTypeName(const classad::ClassAd &ad);
+	/** Set the value of the TargetType attribute */
+void SetTargetTypeName(classad::ClassAd &ad, const char *);
+	/** Get the value of the TargetType attribtute */
+const char*	GetTargetTypeName(const classad::ClassAd& ad);
+
 
 void getTheMyRef( classad::ClassAd *ad );
 void releaseTheMyRef( classad::ClassAd *ad );

@@ -1165,7 +1165,7 @@ Scheduler::count_jobs()
 
 	// Set attributes common to all submitter Ads
 	// 
-	m_adBase->SetMyTypeName(SUBMITTER_ADTYPE);
+	SetMyTypeName(*m_adBase, SUBMITTER_ADTYPE);
 	m_adBase->Assign(ATTR_SCHEDD_NAME, Name);
 	daemonCore->publish(m_adBase);
 	extra_ads.Publish(m_adBase);
@@ -1337,7 +1337,7 @@ Scheduler::count_jobs()
 	  }
 	}
 
-	// pAd.SetMyTypeName( SCHEDD_ADTYPE );
+	// SetMyTypeName( pAd, SCHEDD_ADTYPE );
 
 	// If JobsIdle > 0, then we are asking the negotiator to contact us. 
 	// Record the earliest time we asked the negotiator to talk to us.
@@ -10717,7 +10717,7 @@ Scheduler::Init()
     // first put attributes into the Base ad that we want to
     // share between the Scheduler AD and the Submitter Ad
     //
-	m_adBase->SetTargetTypeName("");
+	SetTargetTypeName(*m_adBase, "");
     m_adBase->Assign(ATTR_SCHEDD_IP_ADDR, daemonCore->publicNetworkIpAddr());
         // Tell negotiator to send us the startd ad
 		// As of 7.1.3, the negotiator no longer pays attention to this
@@ -10732,7 +10732,7 @@ Scheduler::Init()
     // and fill in some standard attribs that will change only on reconfig. 
     // the rest are added in count_jobs()
     m_adSchedd = new ClassAd(*m_adBase);
-	m_adSchedd->SetMyTypeName(SCHEDD_ADTYPE);
+	SetMyTypeName(*m_adSchedd, SCHEDD_ADTYPE);
 	m_adSchedd->Assign(ATTR_NAME, Name);
 
 	// This is foul, but a SCHEDD_ADTYPE _MUST_ have a NUM_USERS attribute
@@ -11383,8 +11383,8 @@ Scheduler::invalidate_ads()
 		// The ClassAd we need to use is totally different from the
 		// regular one, so just create a temporary one
 	ClassAd * cad = new ClassAd;
-    cad->SetMyTypeName( QUERY_ADTYPE );
-    cad->SetTargetTypeName( SCHEDD_ADTYPE );
+    SetMyTypeName( *cad, QUERY_ADTYPE );
+    SetTargetTypeName( *cad, SCHEDD_ADTYPE );
 
         // Invalidate the schedd ad
     line.formatstr( "%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, Name );

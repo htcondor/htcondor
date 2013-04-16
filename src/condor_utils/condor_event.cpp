@@ -354,94 +354,94 @@ ULogEvent::toClassAd(void)
 	switch( (ULogEventNumber) eventNumber )
 	{
 	  case ULOG_SUBMIT:
-		myad->SetMyTypeName("SubmitEvent");
+		SetMyTypeName(*myad, "SubmitEvent");
 		break;
 	  case ULOG_EXECUTE:
-		myad->SetMyTypeName("ExecuteEvent");
+		SetMyTypeName(*myad, "ExecuteEvent");
 		break;
 	  case ULOG_EXECUTABLE_ERROR:
-		myad->SetMyTypeName("ExecutableErrorEvent");
+		SetMyTypeName(*myad, "ExecutableErrorEvent");
 		break;
 	  case ULOG_CHECKPOINTED:
-		myad->SetMyTypeName("CheckpointedEvent");
+		SetMyTypeName(*myad, "CheckpointedEvent");
 		break;
 	  case ULOG_JOB_EVICTED:
-		myad->SetMyTypeName("JobEvictedEvent");
+		SetMyTypeName(*myad, "JobEvictedEvent");
 		break;
 	  case ULOG_JOB_TERMINATED:
-		myad->SetMyTypeName("JobTerminatedEvent");
+		SetMyTypeName(*myad, "JobTerminatedEvent");
 		break;
 	  case ULOG_IMAGE_SIZE:
-		myad->SetMyTypeName("JobImageSizeEvent");
+		SetMyTypeName(*myad, "JobImageSizeEvent");
 		break;
 	  case ULOG_SHADOW_EXCEPTION:
-		myad->SetMyTypeName("ShadowExceptionEvent");
+		SetMyTypeName(*myad, "ShadowExceptionEvent");
 		break;
 	  case ULOG_GENERIC:
-		myad->SetMyTypeName("GenericEvent");
+		SetMyTypeName(*myad, "GenericEvent");
 		break;
 	  case ULOG_JOB_ABORTED:
-		myad->SetMyTypeName("JobAbortedEvent");
+		SetMyTypeName(*myad, "JobAbortedEvent");
 		break;
 	  case ULOG_JOB_SUSPENDED:
-		myad->SetMyTypeName("JobSuspendedEvent");
+		SetMyTypeName(*myad, "JobSuspendedEvent");
 		break;
 	  case ULOG_JOB_UNSUSPENDED:
-		myad->SetMyTypeName("JobUnsuspendedEvent");
+		SetMyTypeName(*myad, "JobUnsuspendedEvent");
 		break;
 	  case ULOG_JOB_HELD:
-		myad->SetMyTypeName("JobHeldEvent");
+		SetMyTypeName(*myad, "JobHeldEvent");
 		break;
 	  case ULOG_JOB_RELEASED:
-		myad->SetMyTypeName("JobReleaseEvent");
+		SetMyTypeName(*myad, "JobReleaseEvent");
 		break;
 	  case ULOG_NODE_EXECUTE:
-		myad->SetMyTypeName("NodeExecuteEvent");
+		SetMyTypeName(*myad, "NodeExecuteEvent");
 		break;
 	  case ULOG_NODE_TERMINATED:
-		myad->SetMyTypeName("NodeTerminatedEvent");
+		SetMyTypeName(*myad, "NodeTerminatedEvent");
 		break;
 	  case ULOG_POST_SCRIPT_TERMINATED:
-		myad->SetMyTypeName("PostScriptTerminatedEvent");
+		SetMyTypeName(*myad, "PostScriptTerminatedEvent");
 		break;
 	  case ULOG_GLOBUS_SUBMIT:
-		myad->SetMyTypeName("GlobusSubmitEvent");
+		SetMyTypeName(*myad, "GlobusSubmitEvent");
 		break;
 	  case ULOG_GLOBUS_SUBMIT_FAILED:
-		myad->SetMyTypeName("GlobusSubmitFailedEvent");
+		SetMyTypeName(*myad, "GlobusSubmitFailedEvent");
 		break;
 	  case ULOG_GLOBUS_RESOURCE_UP:
-		myad->SetMyTypeName("GlobusResourceUpEvent");
+		SetMyTypeName(*myad, "GlobusResourceUpEvent");
 		break;
 	  case ULOG_GLOBUS_RESOURCE_DOWN:
-		myad->SetMyTypeName("GlobusResourceDownEvent");
+		SetMyTypeName(*myad, "GlobusResourceDownEvent");
 		break;
 	case ULOG_REMOTE_ERROR:
-		myad->SetMyTypeName("RemoteErrorEvent");
+		SetMyTypeName(*myad, "RemoteErrorEvent");
 		break;
 	case ULOG_JOB_DISCONNECTED:
-		myad->SetMyTypeName("JobDisconnectedEvent");
+		SetMyTypeName(*myad, "JobDisconnectedEvent");
 		break;
 	case ULOG_JOB_RECONNECTED:
-		myad->SetMyTypeName("JobReconnectedEvent");
+		SetMyTypeName(*myad, "JobReconnectedEvent");
 		break;
 	case ULOG_JOB_RECONNECT_FAILED:
-		myad->SetMyTypeName("JobReconnectFailedEvent");
+		SetMyTypeName(*myad, "JobReconnectFailedEvent");
 		break;
 	case ULOG_GRID_RESOURCE_UP:
-		myad->SetMyTypeName("GridResourceUpEvent");
+		SetMyTypeName(*myad, "GridResourceUpEvent");
 		break;
 	case ULOG_GRID_RESOURCE_DOWN:
-		myad->SetMyTypeName("GridResourceDownEvent");
+		SetMyTypeName(*myad, "GridResourceDownEvent");
 		break;
 	case ULOG_GRID_SUBMIT:
-		myad->SetMyTypeName("GridSubmitEvent");
+		SetMyTypeName(*myad, "GridSubmitEvent");
 		break;
 	case ULOG_JOB_AD_INFORMATION:
-		myad->SetMyTypeName("JobAdInformationEvent");
+		SetMyTypeName(*myad, "JobAdInformationEvent");
 		break;
 	case ULOG_ATTRIBUTE_UPDATE:
-		myad->SetMyTypeName("AttributeUpdateEvent");
+		SetMyTypeName(*myad, "AttributeUpdateEvent");
 		break;
 	  default:
 		delete myad;
@@ -5513,7 +5513,7 @@ JobAdInformationEvent::toClassAd(void)
 	MergeClassAds(myad,jobad,false);
 
 		// Reset MyType in case MergeClassAds() clobbered it.
-	myad->SetMyTypeName("JobAdInformationEvent");
+	SetMyTypeName(*myad, "JobAdInformationEvent");
 
 	return myad;
 }

@@ -153,8 +153,8 @@ static int receive_query_soap(int command,struct soap *s,char *constraint,
 
 	// construct a query classad from the constraint
 	ClassAd query_ad;
-	query_ad.SetMyTypeName(QUERY_ADTYPE);
-	query_ad.SetTargetTypeName(ANY_ADTYPE);
+	SetMyTypeName(query_ad, QUERY_ADTYPE);
+	SetTargetTypeName(query_ad, ANY_ADTYPE);
 	MyString req = ATTR_REQUIREMENTS;
 	req += " = ";
 	if ( constraint && constraint[0] ) {

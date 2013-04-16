@@ -526,8 +526,8 @@ LeaseManager::initPublicAd( void )
 {
 	m_publicAd.Clear();
 
-	m_publicAd.SetMyTypeName( LEASE_MANAGER_ADTYPE );
-	m_publicAd.SetTargetTypeName( "" );
+	SetMyTypeName( m_publicAd, LEASE_MANAGER_ADTYPE );
+	SetTargetTypeName( m_publicAd, "" );
 
 	m_publicAd.Assign( ATTR_MACHINE, my_full_hostname() );
 
