@@ -116,15 +116,14 @@ up execute directories after a \Condor{starter} was prematurely killed.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-7-6-0}Version 7.9.5}
+\subsection*{\label{sec:New-7-9-5}Version 7.9.5}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item HTCondor version 7.9.5 not yet released.
-%\item HTCondor version 7.9.5 released on Month Date, 2013.
+\item HTCondor version 7.9.5 released on April 17, 2013.
 
 \end{itemize}
 
@@ -288,9 +287,9 @@ longer creates a visible console window.
 job can cause the \Condor{schedd} to crash.
 \Ticket{3561}
 
-\item Using privilege separation may cause execute directories to be leaked, if
-the starter is shutdown prematurely, say, by a hard kill signal or power
-interruption.
+\item Using privilege separation may cause execute directories to be leaked,
+if the \Condor{starter} is shut down prematurely; 
+for example, shut down may occur by a hard kill signal or power interruption.
 \Ticket{3573}
 
 \end{itemize}
