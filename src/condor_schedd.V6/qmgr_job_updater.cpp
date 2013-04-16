@@ -406,7 +406,7 @@ QmgrJobUpdater::retrieveJobUpdates( void )
 	DisconnectQ( NULL, false );
 
 	dprintf( D_FULLDEBUG, "Retrieved updated attributes from schedd\n" );
-	updates.dPrint( D_JOB );
+	dPrintAd( D_JOB, updates );
 	MergeClassAds( job_ad, &updates, true );
 
 	DCSchedd schedd( schedd_addr );

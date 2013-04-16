@@ -391,13 +391,13 @@ string JobLog::netFormatLog(ULogEvent *event){
 
   ClassAd *eventAd=NULL;
   eventAd = event->toClassAd();
-  eventAd->sPrint(inBuf);
+  sPrintAd(inBuf, *eventAd);
   string logval ="";
   string chkmystr = inBuf.Value();
   char* input ="";
   input = (char*)chkmystr.c_str();
 
-  char* name =(char*)eventAd->GetMyTypeName();
+  char* name =(char*)GetMyTypeName(*eventAd);
   string sename = name;
   string estr = "Event";
   int epos = sename.find(estr,0);
@@ -473,7 +473,7 @@ string JobLog::classAdFormatLog(ULogEvent *event){
 
   ClassAd *eventAd=NULL;
   eventAd = event->toClassAd();
-  eventAd->sPrint(inBuf);
+  sPrintAd(inBuf, *eventAd);
   string logval ="";
   string chkmystr = inBuf.Value();
   char* input ="";

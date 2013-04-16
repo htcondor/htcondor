@@ -345,7 +345,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	//   Before 7.7.3, submitter ads for parallel universe
 	//   jobs had a MyType of "Scheduler".
 	if ( whichAds == SUBMITTOR_AD ) {
-		cad.SetTargetTypeName( SUBMITTER_ADTYPE );
+		SetTargetTypeName( cad, SUBMITTER_ADTYPE );
 	}
 
 	UtcTime begin(true);
@@ -392,7 +392,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			attr_whitelist = &expanded_projection;
 		}
 		
-        if (!sock->code(more) || !curr_ad->put(*sock,attr_whitelist))
+        if (!sock->code(more) || !putClassAd(sock, *curr_ad, false, attr_whitelist))
         {
             dprintf (D_ALWAYS,
                     "Error sending query result to client -- aborting\n");
@@ -1105,7 +1105,7 @@ void CollectorDaemon::process_invalidation (AdTypes whichAds, ClassAd &query, St
 		// why.  That is what the following block of code tries to solve.
 	if( __numAds__ > 1 ) {
 		dprintf(D_ALWAYS, "The invalidation query was this:\n");
-		query.dPrint(D_ALWAYS);
+		dPrintAd(D_ALWAYS, query);
 	}
 }	
 
@@ -1527,8 +1527,8 @@ void CollectorDaemon::init_classad(int interval)
     if( ad ) delete( ad );
     ad = new ClassAd();
 
-    ad->SetMyTypeName(COLLECTOR_ADTYPE);
-    ad->SetTargetTypeName("");
+    SetMyTypeName(*ad, COLLECTOR_ADTYPE);
+    SetTargetTypeName(*ad, "");
 
     char *tmp;
     tmp = param( "CONDOR_ADMIN" );
@@ -1635,7 +1635,7 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
         }
 
         if (theAd) {
-            if (!theAd->put(*view_sock)) {
+            if (!putClassAd(view_sock, *theAd)) {
                 dprintf( D_ALWAYS, "Can't forward classad to View Collector %s\n", view_name);
                 view_sock->end_of_message();
                 view_sock->close();
@@ -1653,7 +1653,7 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
             ASSERT( makeStartdAdHashKey (hk, theAd) );
             pvt_ad = collector.lookup(STARTD_PVT_AD,hk);
             if (pvt_ad) {
-                if (!pvt_ad->put(*view_sock)) {
+                if (!putClassAd(view_sock, *pvt_ad)) {
                     dprintf( D_ALWAYS, "Can't forward startd private classad to View Collector %s\n", view_name);
                     view_sock->end_of_message();
                     view_sock->close();
@@ -1787,7 +1787,7 @@ computeProjection(ClassAd *full_ad, SimpleList<MyString> *projectionList,StringL
 	//   submitter ads, regardless of MyType.
 	//   Before 7.7.3, submitter ads for parallel universe
 	//   jobs had a MyType of "Scheduler".
-	if (strcmp("Scheduler", full_ad->GetMyTypeName()) == 0) {
+	if (strcmp("Scheduler", GetMyTypeName(*full_ad)) == 0) {
 		expanded_projection.append(ATTR_NUM_USERS);
 	}
 

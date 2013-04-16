@@ -87,8 +87,8 @@ main( int argc, char** argv )
 	}
 
 		// Set the correct types
-    invalidate_ad.SetMyTypeName( QUERY_ADTYPE );
-    invalidate_ad.SetTargetTypeName( STARTD_ADTYPE );
+    SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
+    SetTargetTypeName( invalidate_ad, STARTD_ADTYPE );
 
         // We only want to invalidate this slot.
     sprintf( line, "%s = %s == \"%s\"", ATTR_REQUIREMENTS, ATTR_MACHINE,  

@@ -85,8 +85,8 @@ CollectorObject::advertise()
 
 	char *CollectorName = param("COLLECTOR_NAME");
 
-	ad.SetMyTypeName(COLLECTOR_ADTYPE);
-	ad.SetTargetTypeName("");
+	SetMyTypeName(ad, COLLECTOR_ADTYPE);
+	SetTargetTypeName(ad, "");
 
 	char *tmp;
 	tmp = param( "CONDOR_ADMIN" );

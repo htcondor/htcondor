@@ -441,7 +441,7 @@ process_request(const ClassAd *inputAd)
 
 	dprintf(D_FULLDEBUG,"Contents of request classad:\n");
 	if ( inputAd ) {
-		((ClassAd*)inputAd)->dPrint(D_FULLDEBUG);
+		dPrintAd(D_FULLDEBUG, *(ClassAd*)inputAd);
 	}
 
 		// Create two temp dirs, one to serve as the iwd for the command, another
@@ -483,7 +483,7 @@ process_request(const ClassAd *inputAd)
 	}
 
 	dprintf(D_FULLDEBUG,"Contents of result classad:\n");
-	resultAd->dPrint(D_FULLDEBUG);
+	dPrintAd(D_FULLDEBUG, *resultAd);
 
 	dprintf(D_ALWAYS,"Finished processing request %d\n",req_number);
 	return resultAd;
@@ -533,7 +533,7 @@ void main_init(int  argc , char *  argv  [])
 		}
 		// since this option is for testing, process then exit
 		ClassAd * resultAd =  process_request(inputAd);
-		resultAd->dPrint(D_ALWAYS);
+		dPrintAd(D_ALWAYS, *resultAd);
 		DC_Exit( 0 );
 	}
 }

@@ -29,7 +29,6 @@
 
 #include "classad/classad_distribution.h"
 #include "classad_oldnew.h"
-#include "conversion.h"
 using namespace std;
 
 #include <list>

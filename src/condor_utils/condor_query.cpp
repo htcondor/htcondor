@@ -410,14 +410,14 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 	if( IsDebugLevel( D_HOSTNAME ) ) {
 		dprintf( D_HOSTNAME, "Querying collector %s (%s) with classad:\n", 
 				 my_collector.addr(), my_collector.fullHostname() );
-		queryAd.dPrint( D_HOSTNAME );
+		dPrintAd( D_HOSTNAME, queryAd );
 		dprintf( D_HOSTNAME, " --- End of Query ClassAd ---\n" );
 	}
 
 
 	int mytimeout = param_integer ("QUERY_TIMEOUT",60); 
 	if (!(sock = my_collector.startCommand(command, Stream::reli_sock, mytimeout, errstack)) ||
-	    !queryAd.put (*sock) || !sock->end_of_message()) {
+	    !putClassAd (sock, queryAd) || !sock->end_of_message()) {
 
 		if (sock) {
 			delete sock;
@@ -476,93 +476,93 @@ getQueryAd (ClassAd &queryAd)
 	queryAd.Insert(ATTR_REQUIREMENTS, tree);
 
 	// fix types
-	queryAd.SetMyTypeName (QUERY_ADTYPE);
+	SetMyTypeName (queryAd, QUERY_ADTYPE);
 	switch (queryType) {
 #ifdef HAVE_EXT_POSTGRESQL
 	  case QUILL_AD:
-		queryAd.SetTargetTypeName (QUILL_ADTYPE);
+		SetTargetTypeName (queryAd, QUILL_ADTYPE);
 		break;
 #endif /* HAVE_EXT_POSTGRESQL */
 
 	  case STARTD_AD:
 	  case STARTD_PVT_AD:
-		queryAd.SetTargetTypeName (STARTD_ADTYPE);
+		SetTargetTypeName (queryAd, STARTD_ADTYPE);
 		break;
 
 	  case SCHEDD_AD:
-		queryAd.SetTargetTypeName (SCHEDD_ADTYPE);
+		SetTargetTypeName (queryAd, SCHEDD_ADTYPE);
 		break;
 
 	  case SUBMITTOR_AD:
-		queryAd.SetTargetTypeName (SUBMITTER_ADTYPE);
+		SetTargetTypeName (queryAd, SUBMITTER_ADTYPE);
 		break;
 
 	  case LICENSE_AD:
-		queryAd.SetTargetTypeName (LICENSE_ADTYPE);
+		SetTargetTypeName (queryAd, LICENSE_ADTYPE);
 		break;
 
 	  case MASTER_AD:
-		queryAd.SetTargetTypeName (MASTER_ADTYPE);
+		SetTargetTypeName (queryAd, MASTER_ADTYPE);
 		break;
 
 	  case CKPT_SRVR_AD:
-		queryAd.SetTargetTypeName (CKPT_SRVR_ADTYPE);
+		SetTargetTypeName (queryAd, CKPT_SRVR_ADTYPE);
 		break;
 
 	  case COLLECTOR_AD:
-		queryAd.SetTargetTypeName (COLLECTOR_ADTYPE);
+		SetTargetTypeName (queryAd, COLLECTOR_ADTYPE);
 		break;
 
 	  case NEGOTIATOR_AD:
-		queryAd.SetTargetTypeName (NEGOTIATOR_ADTYPE);
+		SetTargetTypeName (queryAd, NEGOTIATOR_ADTYPE);
 		break;
 
       case STORAGE_AD:
-        queryAd.SetTargetTypeName (STORAGE_ADTYPE);
+        SetTargetTypeName (queryAd, STORAGE_ADTYPE);
         break;
 
       case CREDD_AD:
-        queryAd.SetTargetTypeName (CREDD_ADTYPE);
+        SetTargetTypeName (queryAd, CREDD_ADTYPE);
         break;
 
 	  case GENERIC_AD:
 		if ( genericQueryType ) {
-			queryAd.SetTargetTypeName (genericQueryType);
+			SetTargetTypeName (queryAd, genericQueryType);
 		} else {
-			queryAd.SetTargetTypeName (GENERIC_ADTYPE);
+			SetTargetTypeName (queryAd, GENERIC_ADTYPE);
 		}
 		break;
 
       case XFER_SERVICE_AD:
-        queryAd.SetTargetTypeName (XFER_SERVICE_ADTYPE);
+        SetTargetTypeName (queryAd, XFER_SERVICE_ADTYPE);
         break;
 
       case LEASE_MANAGER_AD:
-        queryAd.SetTargetTypeName (LEASE_MANAGER_ADTYPE);
+        SetTargetTypeName (queryAd, LEASE_MANAGER_ADTYPE);
         break;
 
 	  case ANY_AD:
-		queryAd.SetTargetTypeName (ANY_ADTYPE);
+		SetTargetTypeName (queryAd, ANY_ADTYPE);
 		break;
 
 	  case DATABASE_AD:
-		queryAd.SetTargetTypeName (DATABASE_ADTYPE);
+		SetTargetTypeName (queryAd, DATABASE_ADTYPE);
 		break;
 
 	  case DBMSD_AD:
-		queryAd.SetTargetTypeName (DBMSD_ADTYPE);
+		SetTargetTypeName (queryAd, DBMSD_ADTYPE);
 		break;
 
 	  case TT_AD:
-		queryAd.SetTargetTypeName (TT_ADTYPE);
+		SetTargetTypeName (queryAd, TT_ADTYPE);
 		break;
 
       case GRID_AD:
-        queryAd.SetTargetTypeName (GRID_ADTYPE);
+        SetTargetTypeName (queryAd, GRID_ADTYPE);
         break;
 
 	  case HAD_AD:
-		queryAd.SetTargetTypeName (HAD_ADTYPE);
+		SetTargetTypeName (queryAd, HAD_ADTYPE);
 		break;
 
 	  default:

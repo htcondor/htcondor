@@ -1730,16 +1730,18 @@ Daemons::CheckForNewExecutable()
 			// do here.
 		return;
 	}
+	time_t tspOld = master->timeStamp;
 	if( NewExecutable( master->watch_name, &master->timeStamp ) ) {
 		master->newExec = TRUE;
 		if (NONE == new_bin_restart_mode) {
-			dprintf( D_ALWAYS,"%s was modified, but master restart mode is NEVER\n", 
-					 master->watch_name);
+			dprintf( D_ALWAYS,"%s was modified (%lld != %lld), but master restart mode is NEVER\n",
+					 master->watch_name, (long long)master->timeStamp, (long long)tspOld);
 			//don't want to do this in case the user later reconfigs the restart mode.
 			//CancelNewExecTimer();
 		} else {
-			dprintf( D_ALWAYS,"%s was modified, restarting %s %s.\n", 
-					 master->watch_name, 
+			dprintf( D_ALWAYS,"%s was modified (%lld != %lld), restarting %s %s.\n", 
+					 master->watch_name,
+					 (long long)master->timeStamp, (long long)tspOld,
 					 master->process_name,
 					 (new_bin_restart_mode == PEACEFUL) ? "Peacefully" : "Gracefully");
 			// Begin the master restart procedure.
@@ -2168,6 +2170,13 @@ Daemons::InitMaster()
 	master->timeStamp = GetTimeStamp(master->watch_name);
 	master->startTime = time(0);
 	master->pid = daemonCore->getpid();
+
+	// to aid in debugging unwanted daylight savings time restarts, log the restart mode and timestamp.
+	if (new_bin_restart_mode != NONE) {
+		dprintf(D_ALWAYS, "Master restart (%s) is watching %s (mtime:%lld)\n", 
+				StopStateToString(new_bin_restart_mode),
+				master->watch_name, (long long)master->timeStamp);
+	}
 }
 
 

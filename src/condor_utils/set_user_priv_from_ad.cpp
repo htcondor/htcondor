@@ -32,7 +32,7 @@ priv_state set_user_priv_from_ad(ClassAd const &ad)
 	if (!ad.LookupString(ATTR_OWNER, &owner)) {
 		ClassAd ad_copy;
 		ad_copy = ad;
-		ad_copy.dPrint(D_ALWAYS);
+		dPrintAd(D_ALWAYS, ad_copy);
 		EXCEPT("Failed to find %s in job ad.", ATTR_OWNER);
 	}
 

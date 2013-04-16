@@ -1155,7 +1155,7 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
 					fPrintAdAsXML(stdout, *ad);
 				}
 				else {
-					ad->fPrint(stdout);
+					fPrintAd(stdout, *ad);
 				}
 				printf("\n"); 
             } else {
@@ -1222,7 +1222,7 @@ static void printJob(ClassAd & ad)
 		if (use_xml) {
 			fPrintAdAsXML(stdout, ad);
 		} else {
-			ad.fPrint(stdout);
+			fPrintAd(stdout, ad);
 		}
 		printf("\n");
 	} else {

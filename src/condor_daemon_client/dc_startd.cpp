@@ -116,7 +116,7 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true));
 
 	if( !sock->put_secret( m_claim_id.c_str() ) ||
-	    !m_job_ad.put( *sock ) ||
+	    !putClassAd( sock, m_job_ad ) ||
 	    !sock->put( scheduler_addr_to_send.c_str() ) ||
 	    !sock->put( m_alive_interval ) )
 	{
@@ -348,7 +348,7 @@ DCStartd::activateClaim( ClassAd* job_ad, int starter_version,
 		delete tmp;
 		return CONDOR_ERROR;
 	}
-	if( ! job_ad->put(*tmp) ) {
+	if( ! putClassAd(tmp, *job_ad) ) {
 		newError( CA_COMMUNICATION_ERROR,
 				  "DCStartd::activateClaim: Failed to send job ClassAd to the startd" );
 		delete tmp;
@@ -1027,7 +1027,7 @@ DCStartd::drainJobs(int how_fast,bool resume_on_completion,char const *check_exp
 		request_ad.AssignExpr(ATTR_CHECK_EXPR,check_expr);
 	}
 
-	if( !request_ad.put(*sock) || !sock->end_of_message() ) {
+	if( !putClassAd(sock, request_ad) || !sock->end_of_message() ) {
 		formatstr(error_msg,"Failed to compose DRAIN_JOBS request to %s",name());
 		newError(CA_FAILURE,error_msg.c_str());
 		delete sock;
@@ -1080,7 +1080,7 @@ DCStartd::cancelDrainJobs(char const *request_id)
 		request_ad.Assign(ATTR_REQUEST_ID,request_id);
 	}
 
-	if( !request_ad.put(*sock) || !sock->end_of_message() ) {
+	if( !putClassAd(sock, request_ad) || !sock->end_of_message() ) {
 		formatstr(error_msg,"Failed to compose CANCEL_DRAIN_JOBS request to %s",name());
 		newError(CA_FAILURE,error_msg.c_str());
 		return false;

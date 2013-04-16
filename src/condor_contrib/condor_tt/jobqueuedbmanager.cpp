@@ -601,8 +601,8 @@ JobQueueDBManager::processLogEntry(int op_type, JobQueueCollection* jobQueue)
 			}
 		job_id_type = getProcClusterIds(key, cid, pid);
 		ClassAd* ad = new ClassAd();
-		ad->SetMyTypeName("Job");
-		ad->SetTargetTypeName("Machine");
+		SetMyTypeName(*ad, "Job");
+		SetTargetTypeName(*ad, "Machine");
 
 		switch(job_id_type) {
 		case IS_CLUSTER_ID:

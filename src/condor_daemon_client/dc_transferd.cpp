@@ -171,7 +171,7 @@ DCTransferD::upload_job_files(int JobAdsArrayLen, ClassAd* JobAdsArray[],
 	// This request ad to the transferd should contain:
 	//	ATTR_TREQ_CAPABILITY
 	//	ATTR_TREQ_FTP
-	reqad.put(*rsock);
+	putClassAd(rsock, reqad);
 	rsock->end_of_message();
 
 	rsock->decode();
@@ -342,7 +342,7 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 	// This request ad to the transferd should contain:
 	//	ATTR_TREQ_CAPABILITY
 	//	ATTR_TREQ_FTP
-	reqad.put(*rsock);
+	putClassAd(rsock, reqad);
 	rsock->end_of_message();
 
 	rsock->decode();

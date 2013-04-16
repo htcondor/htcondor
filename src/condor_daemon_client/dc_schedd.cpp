@@ -588,7 +588,7 @@ DCSchedd::register_transferd(MyString sinful, MyString id, int timeout,
 	// It contains:
 	//	ATTR_TREQ_TD_SINFUL
 	//	ATTR_TREQ_TD_ID
-	regad.put(*rsock);
+	putClassAd(rsock, regad);
 	rsock->end_of_message();
 
 	// Get the response from the schedd.
@@ -796,7 +796,7 @@ DCSchedd::requestSandboxLocation(ClassAd *reqad, ClassAd *respad,
 	//	ATTR_TREQ_CONSTRAINT
 	//	ATTR_TREQ_FTP
 	dprintf(D_ALWAYS, "Sending request ad.\n");
-	if (reqad->put(rsock) != 1) {
+	if (putClassAd(&rsock, *reqad) != 1) {
 		dprintf(D_ALWAYS,"DCSchedd:requestSandboxLocation(): "
 				"Can't send reqad to the schedd\n");
 		return false;
@@ -1310,7 +1310,7 @@ DCSchedd::actOnJobs( JobAction action,
 	}
 
 		// Now, put the command classad on the wire
-	if( ! (cmd_ad.put(rsock) && rsock.end_of_message()) ) {
+	if( ! (putClassAd(&rsock, cmd_ad) && rsock.end_of_message()) ) {
 		dprintf( D_ALWAYS, "DCSchedd:actOnJobs: Can't send classad\n" );
 		return NULL;
 	}
@@ -1718,7 +1718,7 @@ bool DCSchedd::getJobConnectInfo(
 	}
 
 	sock.encode();
-	if( !input.put(sock) || !sock.end_of_message() ) {
+	if( !putClassAd(&sock, input) || !sock.end_of_message() ) {
 		error_msg = "Failed to send GET_JOB_CONNECT_INFO to schedd";
 		dprintf( D_ALWAYS, "%s\n",error_msg.Value());
 		return false;
@@ -1733,9 +1733,7 @@ bool DCSchedd::getJobConnectInfo(
 
 	if( IsFulldebug(D_FULLDEBUG) ) {
 		std::string adstr;
-		output.SetPrivateAttributesInvisible(true);
-		output.sPrint(adstr);
-		output.SetPrivateAttributesInvisible(false);
+		sPrintAd(adstr, output, true);
 		dprintf(D_FULLDEBUG,"Response for GET_JOB_CONNECT_INFO:\n%s\n",
 				adstr.c_str());
 	}

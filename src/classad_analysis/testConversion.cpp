@@ -50,7 +50,7 @@ int main( int argc, char *argv[] )
 		cout << "toOldClassAd returned NULL" << endl;
 	}
 	else {
-		oldAd->sPrint( oldBuffer );
+		sPrintAd( oldBuffer, *oldAd );
 		cout << "Old ClassAd:" << endl;
 		cout << "------------" << endl;
 		cout << oldBuffer << endl << endl;

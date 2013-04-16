@@ -625,7 +625,7 @@ ClassAdLog::LogState(FILE *fp)
 	while(table.iterate(ad) == 1) {
 		table.getCurrentKey(hashval);
 		hashval.sprint(key);
-		log = new LogNewClassAd(key.Value(), ad->GetMyTypeName(), ad->GetTargetTypeName());
+		log = new LogNewClassAd(key.Value(), GetMyTypeName(*ad), GetTargetTypeName(*ad));
 		if (log->Write(fp) < 0) {
 			EXCEPT("write to %s failed, errno = %d", logFilename(), errno);
 		}
@@ -735,8 +735,8 @@ LogNewClassAd::Play(void *data_structure)
 	int result;
 	ClassAdHashTable *table = (ClassAdHashTable *)data_structure;
 	ClassAd	*ad = new ClassAd();
-	ad->SetMyTypeName(mytype);
-	ad->SetTargetTypeName(targettype);
+	SetMyTypeName(*ad, mytype);
+	SetTargetTypeName(*ad, targettype);
 	ad->EnableDirtyTracking();
 	result = table->insert(HashKey(key), ad);
 

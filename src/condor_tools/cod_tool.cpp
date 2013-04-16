@@ -178,7 +178,7 @@ printOutput( ClassAd* reply, DCStartd* startd )
 	}
 
 	if( CA_PATH ) {
-		reply->fPrint( CA_PATH );
+		fPrintAd( CA_PATH, *reply );
 		fclose( CA_PATH );
 		printf( "Successfully sent %s to startd at %s\n",
 				getCommandString(cmd), startd->addr() ); 
@@ -195,7 +195,7 @@ printOutput( ClassAd* reply, DCStartd* startd )
 				 getCommandString(cmd), startd->addr() ); 
 		fprintf( stderr, "WARNING: You did not specify "
 				 "-classad, printing to STDOUT\n" );
-		reply->fPrint( stdout );
+		fPrintAd( stdout, *reply );
 		fprintf( stderr, "ID of new claim is: \"%s\"\n", claimid );
 		free( claimid );
 		return;

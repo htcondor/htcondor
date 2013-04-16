@@ -260,8 +260,8 @@ bool IsAHalfMatch( compat_classad::ClassAd *my, compat_classad::ClassAd *target 
 		// The collector relies on this function to check the target type.
 		// Eventually, we should move that check either into the collector
 		// or into the requirements expression.
-	char const *my_target_type = my->GetTargetTypeName();
-	char const *target_type = target->GetMyTypeName();
+	char const *my_target_type = GetTargetTypeName(*my);
+	char const *target_type = GetMyTypeName(*target);
 	if( !my_target_type ) {
 		my_target_type = "";
 	}

@@ -10071,7 +10071,7 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd,char const *fname)
 		MyString newLocalAdFile;
 		newLocalAdFile.formatstr("%s.new",fname);
         if( (AD_FILE = safe_fopen_wrapper_follow(newLocalAdFile.Value(), "w")) ) {
-            daemonAd->fPrint(AD_FILE);
+            fPrintAd(AD_FILE, *daemonAd);
             fclose( AD_FILE );
 			if( rotate_file(newLocalAdFile.Value(),fname)!=0 ) {
 					// Under windows, rotate_file() sometimes failes with

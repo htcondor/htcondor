@@ -258,7 +258,7 @@ AdminEvent::check_Shutdown( bool initial )
 		if(spoolClassAd(m_lastShutdown,"in") == 1) {
 			dprintf(D_ALWAYS,"Failed to get/create initial spool classad\n");
 		}
-		m_lastShutdown->dPrint(D_FULLDEBUG);
+		dPrintAd(D_FULLDEBUG, *m_lastShutdown);
 		free(tmp);
 	} else {
 		EXCEPT( "SPOOL not defined!" );
@@ -356,7 +356,7 @@ AdminEvent::spoolClassAd( ClassAd * ca_shutdownRate, char *direction )
 				dprintf(D_ALWAYS,"Got initial classad from spool(%s)\n",
 					spoolHistory.Value());
 				fclose(m_spoolStorage);
-				m_lastShutdown->dPrint(D_FULLDEBUG);
+				dPrintAd(D_FULLDEBUG, *m_lastShutdown);
 			} else {
 				dprintf(D_ALWAYS,"Failed to get initial spool classad(%s)\n",
 					spoolHistory.Value());
@@ -371,10 +371,10 @@ AdminEvent::spoolClassAd( ClassAd * ca_shutdownRate, char *direction )
 			m_lastShutdown = new ClassAd();
 			sprintf(line, "%s = %f", "LastShutdownRate", lastrate);
 			m_lastShutdown->Insert(line);
-			m_lastShutdown->dPrint(D_FULLDEBUG);
+			dPrintAd(D_FULLDEBUG, *m_lastShutdown);
 			m_spoolStorage = safe_fopen_wrapper((const char *)spoolHistory.Value(),"w+");
 			if(m_spoolStorage != NULL) {
-				m_lastShutdown->fPrint(m_spoolStorage);
+				fPrintAd(m_spoolStorage, *m_lastShutdown);
 				fclose(m_spoolStorage);
 			} else {
 				dprintf(D_ALWAYS,"Failed to open(w) from spool(%s/%d)\n",
@@ -389,7 +389,7 @@ AdminEvent::spoolClassAd( ClassAd * ca_shutdownRate, char *direction )
 
 		m_spoolStorage = safe_fopen_wrapper((const char *)spoolHistory.Value(),"w");
 		if(m_spoolStorage != NULL) {
-			m_lastShutdown->fPrint(m_spoolStorage);
+			fPrintAd(m_spoolStorage, *m_lastShutdown);
 			fclose(m_spoolStorage);
 		} else {
 			dprintf(D_ALWAYS,"Failed to open(w) from spool(%s/%d)\n",
@@ -589,7 +589,7 @@ AdminEvent::th_DoShutdown_States( void )
 				m_lastShutdown = new ClassAd();
 				sprintf(line, "%s = %f", "LastShutdownRate", megs_per_second);
 				m_lastShutdown->Insert(line);
-				m_lastShutdown->dPrint(D_FULLDEBUG);
+				dPrintAd(D_FULLDEBUG, *m_lastShutdown);
 
 				tmp = param("SPOOL");
 				if(tmp) {
@@ -1347,7 +1347,7 @@ AdminEvent::standardUDisplay()
 			dprintf(D_ALWAYS, 
 				"Found <<%s>> machine matching <<%s>> Standard SORTED!!!!\n",
 				machine.Value(),m_shutdownConstraint.Value());
-			//ad->dPrint( D_ALWAYS );
+			//dPrintAd( D_ALWAYS, *ad );
 		}
 	}
 	return(0);
