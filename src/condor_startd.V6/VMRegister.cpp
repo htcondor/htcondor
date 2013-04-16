@@ -200,7 +200,7 @@ VMRegister::requestHostClassAds(void)
 		return;
 	}
 
-	if( !query_ad.put(ssock) ) {
+	if( !putClassAd(&ssock, query_ad) ) {
 		dprintf(D_FULLDEBUG, "Failed to send query Ad to host startd(%s)\n", addr);
 	}
 

@@ -786,7 +786,7 @@ JICShadow::updateStartd( ClassAd *ad, bool final_update )
 
 	m_job_startd_update_sock->encode();
 	if( !m_job_startd_update_sock->put((int)final_update) ||
-		!ad->put(*m_job_startd_update_sock) ||
+		!putClassAd(m_job_startd_update_sock, *ad) ||
 		!m_job_startd_update_sock->end_of_message() )
 	{
 		dprintf(D_FULLDEBUG,"Failed to send job ClassAd update to startd.\n");

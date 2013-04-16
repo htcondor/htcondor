@@ -84,7 +84,7 @@ TransferQueueRequest::SendGoAhead(XFER_QUEUE_ENUM go_ahead,char const *reason) {
 	int report_interval = param_integer("TRANSFER_IO_REPORT_INTERVAL",10,0);
 	msg.Assign(ATTR_REPORT_INTERVAL,report_interval);
 
-	if(!msg.put( *m_sock ) || !m_sock->end_of_message()) {
+	if(!putClassAd( m_sock, msg ) || !m_sock->end_of_message()) {
 		dprintf(D_ALWAYS,
 				"TransferQueueRequest: failed to send GoAhead to %s\n",
 				Description() );

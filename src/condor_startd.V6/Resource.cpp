@@ -1133,7 +1133,7 @@ Resource::update_with_ack( void )
     /* get the public and private ads */
     publish_for_update( &public_ad, &private_ad );
 
-    if ( !public_ad.put ( *socket ) ) {
+    if ( !putClassAd ( socket, public_ad ) ) {
 
         dprintf (
             D_FULLDEBUG,
@@ -1145,7 +1145,7 @@ Resource::update_with_ack( void )
 
     }
 
-    if ( !private_ad.put ( *socket ) ) {
+    if ( !putClassAd ( socket, private_ad ) ) {
 
 		dprintf (
             D_FULLDEBUG,

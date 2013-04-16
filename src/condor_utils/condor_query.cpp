@@ -417,7 +417,7 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 
 	int mytimeout = param_integer ("QUERY_TIMEOUT",60); 
 	if (!(sock = my_collector.startCommand(command, Stream::reli_sock, mytimeout, errstack)) ||
-	    !queryAd.put (*sock) || !sock->end_of_message()) {
+	    !putClassAd (sock, queryAd) || !sock->end_of_message()) {
 
 		if (sock) {
 			delete sock;

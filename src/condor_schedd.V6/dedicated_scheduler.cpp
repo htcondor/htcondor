@@ -1211,7 +1211,7 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 			}				
 			//job_ad = new ClassAd( *((*alloc->jobs)[p]) );
 			job_ad = dollarDollarExpand(0,0, (*alloc->jobs)[p], (*matches)[i]->my_match_ad, true);
-			if( ! job_ad->put(*stream) ) {
+			if( ! putClassAd(stream, *job_ad) ) {
 				dprintf( D_ALWAYS, "ERROR in giveMatches: "
 						 "can't send job classad for proc %d\n", p );
 				delete job_ad;

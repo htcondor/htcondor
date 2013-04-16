@@ -884,7 +884,7 @@ GET_PRIORITY_commandHandler (int, Stream *strm)
 	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
 	AttrList* ad=accountant.ReportState();
 	
-	if (!ad->putAttrList(*strm) ||
+	if (!putClassAdNoTypes(strm, *ad) ||
 	    !strm->end_of_message())
 	{
 		dprintf (D_ALWAYS, "Could not send priority information\n");
@@ -910,7 +910,7 @@ GET_PRIORITY_ROLLUP_commandHandler(int, Stream *strm) {
     dprintf(D_ALWAYS, "Getting state information from the accountant\n");
     AttrList* ad = accountant.ReportState(true);
 
-    if (!ad->putAttrList(*strm) ||
+    if (!putClassAdNoTypes(strm, *ad) ||
         !strm->end_of_message()) {
         dprintf (D_ALWAYS, "Could not send priority information\n");
         delete ad;
@@ -942,7 +942,7 @@ GET_RESLIST_commandHandler (int, Stream *strm)
 	AttrList* ad=accountant.ReportState(submitter);
 	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
 	
-	if (!ad->putAttrList(*strm) ||
+	if (!putClassAdNoTypes(strm, *ad) ||
 	    !strm->end_of_message())
 	{
 		dprintf (D_ALWAYS, "Could not send resource list\n");
@@ -3312,7 +3312,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 		negotiate_ad.Assign(ATTR_AUTO_CLUSTER_ATTRS,job_attr_references ? job_attr_references : "");
 		// Tell the schedd a submitter tag value (used for flocking levels)
 		negotiate_ad.Assign(ATTR_SUBMITTER_TAG,submitter_tag.Value());
-		if( !negotiate_ad.put( *sock ) ) {
+		if( !putClassAd( sock, negotiate_ad ) ) {
 			dprintf (D_ALWAYS, "    Failed to send negotiation header to %s\n",
 					 schedd_id.Value() );
 			sockCache->invalidateSock(scheddAddr.Value());
@@ -4426,7 +4426,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		"      Sending PERMISSION, claim id, startdAd to schedd\n");
 	if (!sock->put(PERMISSION_AND_AD) ||
 		!sock->put_secret(claim_id) ||
-		!offer->put(*sock)		||	// send startd ad to schedd
+		!putClassAd(sock, *offer)	||	// send startd ad to schedd
 		!sock->end_of_message())
 	{
 			send_failed = true;

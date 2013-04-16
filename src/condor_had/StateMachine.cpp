@@ -582,7 +582,7 @@ HADStateMachine::sendCommandToOthers( int comm )
             continue;
         }
 
-        if(! m_classAd.put(sock) || !sock.end_of_message()) {
+        if(! putClassAd(&sock, m_classAd) || !sock.end_of_message()) {
             dprintf( D_ALWAYS, "Failed to send classad to peer\n");
         } else {
             dprintf( D_FULLDEBUG, "Sent classad to peer\n");

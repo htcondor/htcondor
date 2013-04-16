@@ -672,7 +672,7 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 				fqu.Value());
 	}
 
-	if( !response.put(*s) || !s->end_of_message() ) {
+	if( !putClassAd(s, response) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"createJobOwnerSecSession failed to send response\n");
 	}
@@ -703,7 +703,7 @@ CStarter::vMessageFailed(Stream *s,bool retry, const std::string &prefix,char co
 	}
 
 	s->encode();
-	if( !response.put(*s) || !s->end_of_message() ) {
+	if( !putClassAd(s, response) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"Failed to send response to %s.\n", prefix.c_str());
 	}
 
@@ -1167,7 +1167,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 	s->encode();
 	// From here on out, *always* send the same number of files as specified by
 	// the response ad, even if it means putting an empty file.
-	if (!reply.put(*s) || !s->end_of_message()) {
+	if (!putClassAd(s, reply) || !s->end_of_message()) {
 		dprintf(D_ALWAYS, "Failed to send read request response for peeking at logs.\n");
 		return false;
 	}
@@ -1601,7 +1601,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	response.Assign(ATTR_SSH_PRIVATE_CLIENT_KEY,private_client_key.Value());
 
 	s->encode();
-	if( !response.put(*s) || !s->end_of_message() ) {
+	if( !putClassAd(s, response) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"Failed to send response to START_SSHD.\n");
 		return FALSE;
 	}

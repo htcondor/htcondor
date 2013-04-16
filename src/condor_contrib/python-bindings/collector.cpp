@@ -276,7 +276,7 @@ struct Collector {
                 }
                 int result = 0;
                 if (sock.get()) {
-                    result += ad.put(*sock);
+                    result += putClassAd(sock.get(), ad);
                     result += sock->end_of_message();
                 }
                 if (result != 2) {

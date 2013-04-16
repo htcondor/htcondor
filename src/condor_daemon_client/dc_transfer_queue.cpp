@@ -243,7 +243,7 @@ DCTransferQueue::RequestTransferQueueSlot(bool downloading,char const *fname,cha
 
 	m_xfer_queue_sock->encode();
 
-	if( !msg.put(*m_xfer_queue_sock) || !m_xfer_queue_sock->end_of_message() )
+	if( !putClassAd(m_xfer_queue_sock, msg) || !m_xfer_queue_sock->end_of_message() )
 	{
 		formatstr(m_xfer_rejected_reason,
 			"Failed to write transfer request to %s for job %s "

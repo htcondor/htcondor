@@ -186,10 +186,10 @@ getOldClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
  * It should also do encryption now.
  */
 
-bool putOldClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private, StringList *attr_whitelist )
+bool putClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private, StringList *attr_whitelist )
 {
     bool completion;
-    completion = _putOldClassAd(sock, ad, false, exclude_private, attr_whitelist);
+    completion = _putClassAd(sock, ad, false, exclude_private, attr_whitelist);
 
 
     //should be true by this point
@@ -197,12 +197,12 @@ bool putOldClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private, S
 }
 
 bool
-putOldClassAdNoTypes ( Stream *sock, classad::ClassAd& ad, bool exclude_private )
+putClassAdNoTypes ( Stream *sock, classad::ClassAd& ad, bool exclude_private )
 {
-    return _putOldClassAd(sock, ad, true, exclude_private, NULL);
+    return _putClassAd(sock, ad, true, exclude_private, NULL);
 }
 
-bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
+bool _putClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
 					 bool exclude_private, StringList *attr_whitelist )
 {
 	classad::ClassAdUnParser	unp;

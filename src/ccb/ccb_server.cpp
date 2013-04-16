@@ -300,7 +300,7 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 	reply_msg.Assign(ATTR_COMMAND,CCB_REGISTER);
 	reply_msg.Assign(ATTR_CLAIM_ID,reconnect_cookie_str.Value());
 
-	if( !reply_msg.put( *sock ) || !sock->end_of_message() ) {
+	if( !putClassAd( sock, reply_msg ) || !sock->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"CCB: failed to send registration response "
 				"to %s.\n", sock->peer_description() );
@@ -548,7 +548,7 @@ CCBServer::SendHeartbeatResponse( CCBTarget *target )
 	ClassAd msg;
 	msg.Assign( ATTR_COMMAND, ALIVE );
 	sock->encode();
-	if( !msg.put( *sock ) || !sock->end_of_message() ) {
+	if( !putClassAd( sock, msg ) || !sock->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"CCB: failed to send heartbeat to target "
 				"daemon %s with ccbid %lu\n",
@@ -579,7 +579,7 @@ CCBServer::ForwardRequestToTarget( CCBServerRequest *request, CCBTarget *target 
 	msg.Assign( ATTR_REQUEST_ID, reqid_str );
 
 	sock->encode();
-	if( !msg.put( *sock ) || !sock->end_of_message() ) {
+	if( !putClassAd( sock, msg ) || !sock->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"CCB: failed to forward request id %lu from %s to target "
 				"daemon %s with ccbid %lu\n",
@@ -612,7 +612,7 @@ CCBServer::RequestReply( Sock *sock, bool success, char const *error_msg, CCBID 
 	msg.Assign( ATTR_ERROR_STRING, error_msg );
 
 	sock->encode();
-	if( !msg.put( *sock ) || !sock->end_of_message() ) {
+	if( !putClassAd( sock, msg ) || !sock->end_of_message() ) {
 			// Would like to be completely quiet if success and the
 			// client has disconnected, since this is normal; however,
 			// the above write operations will generate noise when

@@ -1570,24 +1570,6 @@ initFromString( char const *str,MyString *err_msg )
 	return succeeded;
 }
 
-        // shipping functions
-int ClassAd::
-put( Stream &s )
-{
-	if( !putOldClassAd( &s, *this, m_privateAttrsAreInvisible ) ) {
-		return FALSE;
-	}
-	return TRUE;
-}
-
-int ClassAd::
-put( Stream &s, StringList *attr_whitelist )
-{
-	if( !putOldClassAd( &s, *this, m_privateAttrsAreInvisible, attr_whitelist ) ) {
-		return FALSE;
-	}
-	return TRUE;
-}
 
 int ClassAd::
 initFromStream(Stream& s)
@@ -1602,15 +1584,6 @@ initFromStream(Stream& s)
 		AssignExpr( ATTR_CURRENT_TIME, "time()" );
 	}
 
-	return TRUE;
-}
-
-int ClassAd::
-putAttrList( Stream &s )
-{
-	if( !putOldClassAdNoTypes( &s, *this, m_privateAttrsAreInvisible ) ) {
-		return FALSE;
-	}
 	return TRUE;
 }
 

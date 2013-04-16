@@ -1510,7 +1510,7 @@ int Scheduler::command_query_ads(int, Stream* stream)
 	ads.Open();
 	while( (ad = ads.Next()) ) {
 		if( IsAHalfMatch( &queryAd, ad ) ) {
-			if( !stream->code(more) || !ad->put(*stream) ) {
+			if( !stream->code(more) || !putClassAd(stream, *ad) ) {
 				dprintf (D_ALWAYS, 
 						 "Error sending query result to client -- aborting\n");
 				return FALSE;
@@ -3343,7 +3343,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			// send sandbox out of the schedd
 			rsock->encode();
 			// first send the classad for the job
-			result = ad->put(*rsock);
+			result = putClassAd(rsock, *ad);
 			if (!result) {
 				dprintf(D_ALWAYS, "generalJobFilesWorkerThread(): "
 					"failed to send job ad for job %d.%d \n",
@@ -4392,7 +4392,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			 isQueueSuperUser(rsock->getOwner()) ? true : false );
 	
 	rsock->encode();
-	if( ! (response_ad->put(*rsock) && rsock->end_of_message()) ) {
+	if( ! (putClassAd(rsock, *response_ad) && rsock->end_of_message()) ) {
 			// Failed to send reply, the client might be dead, so
 			// abort our transaction.
 		dprintf( D_ALWAYS, 
@@ -12375,7 +12375,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	reply.Assign(ATTR_CLAIM_ID,starter_claim_id.Value());
 	reply.Assign(ATTR_VERSION,starter_version.Value());
 	reply.Assign(ATTR_REMOTE_HOST,startd_name.Value());
-	if( !reply.put(*s) || !s->end_of_message() ) {
+	if( !putClassAd(s, reply) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"Failed to send response to GET_JOB_CONNECT_INFO\n");
 	}
@@ -12393,7 +12393,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	if( retry_is_sensible ) {
 		reply.Assign(ATTR_RETRY,retry_is_sensible);
 	}
-	if( !reply.put(*s) || !s->end_of_message() ) {
+	if( !putClassAd(s, reply) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"Failed to send error response to GET_JOB_CONNECT_INFO\n");
 	}
@@ -12428,7 +12428,7 @@ Scheduler::dumpState(int, Stream* s) {
 
 	s->encode();
 	
-	job_ad.put( *s );
+	putClassAd( s, job_ad );
 
 	return TRUE;
 }
@@ -13891,7 +13891,7 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 	if( new_ad ) {
 			// give the shadow the new job
 		stream->put((int)1);
-		new_ad->put(*stream);
+		putClassAd(stream, *new_ad);
 	}
 	else {
 			// tell the shadow, "no job found"

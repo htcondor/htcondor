@@ -85,7 +85,7 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 
 	ClassAd response_ad;
 	response_ad.Assign(ATTR_START,!claim_is_closing);
-	if( !response_ad.put(*stream) || !stream->end_of_message() ) {
+	if( !putClassAd(stream, response_ad) || !stream->end_of_message() ) {
 		dprintf(D_FULLDEBUG,"Failed to send response ClassAd in deactivate_claim.\n");
 			// Prior to 7.0.5, no response ClassAd was expected.
 			// Anyway, failure to send it is not (currently) critical
@@ -263,7 +263,7 @@ command_give_totals_classad( Service*, int, Stream* stream )
 	dprintf( D_FULLDEBUG, "command_give_totals_classad() called.\n" );
 	stream->encode();
 	if( resmgr->totals_classad ) {
-		resmgr->totals_classad->put( *stream );
+		putClassAd( stream, *resmgr->totals_classad );
 		rval = TRUE;
 	}
 	stream->end_of_message();
@@ -662,7 +662,7 @@ command_query_ads( Service*, int, Stream* stream)
 	ads.Open();
 	while( (ad = ads.Next()) ) {
 		if( IsAHalfMatch( &queryAd, ad ) ) {
-			if( !stream->code(more) || !ad->put(*stream) ) {
+			if( !stream->code(more) || !putClassAd(stream, *ad) ) {
 				dprintf (D_ALWAYS, 
 						 "Error sending query result to client -- aborting\n");
 				return FALSE;
@@ -1366,7 +1366,7 @@ accept_request_claim( Resource* rip, Claim* leftover_claim )
 		dprintf(D_FULLDEBUG,"Will send partitionable slot leftovers to schedd\n");
 		MyString claimId(leftover_claim->id());
 		if ( !stream->put(claimId) ||
-			 !leftover_claim->rip()->r_classad->put(*stream) )
+			 !putClassAd(stream, *leftover_claim->rip()->r_classad) )
 		{
 			rip->dprintf( D_ALWAYS, 
 				"Can't send partitionable slot leftovers to schedd.\n" );
@@ -2263,7 +2263,7 @@ command_drain_jobs( Service*, int /*dc_cmd*/, Stream* s )
 		response_ad.Assign(ATTR_ERROR_CODE,error_code);
 	}
 	s->encode();
-	if( !response_ad.put(*s) || !s->end_of_message() ) {
+	if( !putClassAd(s, response_ad) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"command_drain_jobs: failed to send response to %s\n",s->peer_description());
 		return FALSE;
 	}
@@ -2306,7 +2306,7 @@ command_cancel_drain_jobs( Service*, int /*dc_cmd*/, Stream* s )
 		response_ad.Assign(ATTR_ERROR_CODE,error_code);
 	}
 	s->encode();
-	if( !response_ad.put(*s) || !s->end_of_message() ) {
+	if( !putClassAd(s, response_ad) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"command_cancel_drain_jobs: failed to send response to %s\n",s->peer_description());
 		return FALSE;
 	}

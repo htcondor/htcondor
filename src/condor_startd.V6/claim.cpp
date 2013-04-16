@@ -2025,7 +2025,7 @@ Claim::writeMachAd( Stream* stream )
 {
 	dprintf(D_FULLDEBUG | D_JOB, "Sending Machine Ad to Starter\n");
 	dPrintAd(D_JOB, *c_rip->r_classad);
-	if (!c_rip->r_classad->put(*stream) || !stream->end_of_message()) {
+	if (!putClassAd(stream, *c_rip->r_classad) || !stream->end_of_message()) {
 		dprintf(D_ALWAYS, "writeMachAd: Failed to write machine ClassAd to stream\n");
 		return false;
 	}

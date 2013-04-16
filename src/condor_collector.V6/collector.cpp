@@ -392,7 +392,7 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 			attr_whitelist = &expanded_projection;
 		}
 		
-        if (!sock->code(more) || !curr_ad->put(*sock,attr_whitelist))
+        if (!sock->code(more) || !putClassAd(sock, *curr_ad, false, attr_whitelist))
         {
             dprintf (D_ALWAYS,
                     "Error sending query result to client -- aborting\n");
@@ -1635,7 +1635,7 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
         }
 
         if (theAd) {
-            if (!theAd->put(*view_sock)) {
+            if (!putClassAd(view_sock, *theAd)) {
                 dprintf( D_ALWAYS, "Can't forward classad to View Collector %s\n", view_name);
                 view_sock->end_of_message();
                 view_sock->close();
@@ -1653,7 +1653,7 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
             ASSERT( makeStartdAdHashKey (hk, theAd) );
             pvt_ad = collector.lookup(STARTD_PVT_AD,hk);
             if (pvt_ad) {
-                if (!pvt_ad->put(*view_sock)) {
+                if (!putClassAd(view_sock, *pvt_ad)) {
                     dprintf( D_ALWAYS, "Can't forward startd private classad to View Collector %s\n", view_name);
                     view_sock->end_of_message();
                     view_sock->close();

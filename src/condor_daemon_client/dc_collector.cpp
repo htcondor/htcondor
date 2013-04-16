@@ -375,14 +375,14 @@ DCCollector::finishUpdate( DCCollector *self, Sock* sock, ClassAd* ad1, ClassAd*
 	// longevity of the DCCollector instance.
 
 	sock->encode();
-	if( ad1 && ! ad1->put(*sock) ) {
+	if( ad1 && ! putClassAd(sock, *ad1) ) {
 		if(self) {
 			self->newError( CA_COMMUNICATION_ERROR,
 			                "Failed to send ClassAd #1 to collector" );
 		}
 		return false;
 	}
-	if( ad2 && ! ad2->put(*sock) ) {
+	if( ad2 && ! putClassAd(sock, *ad2) ) {
 		if(self) {
 			self->newError( CA_COMMUNICATION_ERROR,
 			          "Failed to send ClassAd #2 to collector" );

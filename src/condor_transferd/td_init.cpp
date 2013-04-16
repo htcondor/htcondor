@@ -458,7 +458,7 @@ TransferD::accept_transfer_request_encapsulation_old_classads(Stream *sock)
 				"protocol.");
 
 			// tell the schedd we don't want to do this request
-			respad.put(*sock);
+			putClassAd(sock, respad);
 			sock->end_of_message();
 			delete treq;
 
@@ -489,7 +489,7 @@ TransferD::accept_transfer_request_encapsulation_old_classads(Stream *sock)
 	//	ATTR_TREQ_INVALID_REQUEST (set to false)
 	//	ATTR_TREQ_CAPABILITY
 	//
-	respad.put(*sock);
+	putClassAd(sock, respad);
 	sock->end_of_message();
 
 	dprintf(D_ALWAYS, "Reported capability back to schedd.\n");

@@ -2472,7 +2472,7 @@ FileTransfer::SendTransferAck(Stream *s,bool success,bool try_again,int hold_cod
 		}
 	}
 	s->encode();
-	if(!ad.put(*s) || !s->end_of_message()) {
+	if(!putClassAd(s, ad) || !s->end_of_message()) {
 		char const *ip = NULL;
 		if(s->type() == Sock::reli_sock) {
 			ip = ((ReliSock *)s)->get_sinful_peer();
@@ -3096,7 +3096,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 				// it's all assembled, so send the ad using stream s.
 				// don't end the message, it's done below.
-				if(!file_info.put(*s)) {
+				if(!putClassAd(s, file_info)) {
 					dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
@@ -3375,7 +3375,7 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 		msg.Assign(ATTR_RESULT,go_ahead);
 
 		s->encode();
-		if( !msg.put(*s) || !s->end_of_message() ) {
+		if( !putClassAd(s, msg) || !s->end_of_message() ) {
 			error_desc.formatstr("Failed to send GoAhead new timeout message.");
 		}
 	}
@@ -3443,7 +3443,7 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 				msg.Assign(ATTR_HOLD_REASON,error_desc.Value());
 			}
 		}
-		if( !msg.put(*s) || !s->end_of_message() ) {
+		if( !putClassAd(s, msg) || !s->end_of_message() ) {
 			error_desc.formatstr("Failed to send GoAhead message.");
 			try_again = true;
 			return false;

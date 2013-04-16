@@ -22,6 +22,7 @@
 
 #include "classad/classad_distribution.h"
 #include "MyString.h"
+#include "classad_oldnew.h"
 
 class StringList;
 class Stream;
@@ -340,26 +341,10 @@ class ClassAd : public classad::ClassAd
 
 	bool initFromString(char const *str,MyString *err_msg=NULL);
 
-		/** Print the ClassAd as an old ClassAd to the stream
-		 * @param s the stream
-		 */
-	int put(Stream& s);
-
-		/** Send the ClassAd as an old ClassAd on the stream
-		 * @param s the stream
-		 * @param attr_whitelist list of attributes to send
-		 */
-	int put(Stream& s,StringList *attr_whitelist);
-
 		/** Read the old ClassAd from the stream, and fill in this ClassAd.
 		 * @param s the stream
 		 */
 	int initFromStream(Stream& s);
-
-		/** Print the ClassAd as an old AttrList to the stream
-		 * @param s the stream
-		 */
-	int putAttrList(Stream& s);
 
 		/** Read the old ClassAd as an old AttrList from the stream,
 		 * and fill in this ClassAd.

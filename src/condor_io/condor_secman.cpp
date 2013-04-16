@@ -1625,7 +1625,7 @@ SecManStartCommand::sendAuthInfo_inner()
 	}
 
 	// send the classad
-	if (! m_auth_info.put(*m_sock)) {
+	if (! putClassAd(m_sock, m_auth_info)) {
 		dprintf ( D_ALWAYS, "SECMAN: failed to send auth_info\n");
 		m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
 						"Failed to send auth_info." );

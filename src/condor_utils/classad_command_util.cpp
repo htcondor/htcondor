@@ -38,7 +38,7 @@ sendCAReply( Stream* s, const char* cmd_str, ClassAd* reply )
 	reply->Assign( ATTR_PLATFORM, CondorPlatform() );
 
 	s->encode();
-	if( ! reply->put(*s) ) {
+	if( ! putClassAd(s, *reply) ) {
 		dprintf( D_ALWAYS,
 				 "ERROR: Can't send reply classad for %s, aborting\n",
 				 cmd_str );

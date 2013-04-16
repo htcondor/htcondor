@@ -167,7 +167,7 @@ CCBListener::WriteMsgToCCB(ClassAd &msg)
 	}
 
 	m_sock->encode();
-	if( !msg.put( *m_sock ) || !m_sock->end_of_message() ) {
+	if( !putClassAd( m_sock, msg ) || !m_sock->end_of_message() ) {
 		Disconnected();
 		return false;
 	}
@@ -521,7 +521,7 @@ CCBListener::ReverseConnected(Stream *stream)
 		sock->encode();
 		int cmd = CCB_REVERSE_CONNECT;
 		if( !sock->put(cmd) ||
-			!msg_ad->put( *sock ) ||
+			!putClassAd( sock, *msg_ad ) ||
 			!sock->end_of_message() )
 		{
 			ReportReverseConnectResult(msg_ad,false,"failure writing reverse connect command");

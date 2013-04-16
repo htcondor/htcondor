@@ -860,7 +860,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 						dPrintAd( D_SECURITY, *m_policy );
 					}
 					m_sock->encode();
-					if (!m_policy->put(*m_sock) ||
+					if (!putClassAd(m_sock, *m_policy) ||
 						!m_sock->end_of_message()) {
 						dprintf (D_ALWAYS, "SECMAN: Error sending response classad to %s!\n", m_sock->peer_description());
 						dPrintAd (D_ALWAYS, m_auth_info);
@@ -1162,7 +1162,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::PostAuthenti
 		}
 
 		m_sock->encode();
-		if (! pa_ad.put(*m_sock) ||
+		if (! putClassAd(m_sock, pa_ad) ||
 			! m_sock->end_of_message() ) {
 			dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to send session %s info to %s!\n", m_sid, m_sock->peer_description());
 			m_result = FALSE;

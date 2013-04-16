@@ -932,7 +932,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 		respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 		respad.Assign(ATTR_TREQ_INVALID_REASON, 
 			"Did not request a transferd with that id for any user.");
-		respad.put(*rsock);
+		putClassAd(rsock, respad);
 		rsock->end_of_message();
 
 		dprintf(D_ALWAYS, "Leaving TDMan::transferd_registration()\n");
@@ -949,7 +949,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 		respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 		respad.Assign(ATTR_TREQ_INVALID_REASON, 
 			"Did not request a transferd with that id for this specific user.");
-		respad.put(*rsock);
+		putClassAd(rsock, respad);
 		rsock->end_of_message();
 
 		dprintf(D_ALWAYS, "Leaving TDMan::transferd_registration()\n");
@@ -966,7 +966,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 		respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 		respad.Assign(ATTR_TREQ_INVALID_REASON, 
 			"Transferd for user not in TD_PRE_INVOKED state.\n");
-		respad.put(*rsock);
+		putClassAd(rsock, respad);
 		rsock->end_of_message();
 
 		dprintf(D_ALWAYS, "Leaving TDMan::transferd_registration()\n");
@@ -975,7 +975,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 
 	// send back a good reply if all the above passed
 	respad.Assign(ATTR_TREQ_INVALID_REQUEST, FALSE);
-	respad.put(*rsock);
+	putClassAd(rsock, respad);
 	rsock->end_of_message();
 
 	///////////////////////////////////////////////////////////////

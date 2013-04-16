@@ -857,7 +857,7 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 		cmd_sock->timeout( timeout );
 	}
 
-	if( ! req->put(*cmd_sock) ) { 
+	if( ! putClassAd(cmd_sock, *req) ) {
 		newError( CA_COMMUNICATION_ERROR,
 				  "Failed to send request ClassAd" );
 		return false;

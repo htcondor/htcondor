@@ -667,7 +667,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			}
 		}
 		if( rval >= 0 ) {
-			assert( updates.put(*syscall_sock) );
+			assert( putClassAd(syscall_sock, updates) );
 		}
 		assert( syscall_sock->end_of_message() );;
 		return 0;
@@ -749,10 +749,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			ad->SetPrivateAttributesInvisible( true );
-			assert( ad->put(*syscall_sock) );
-				// no need to unhide the private attributes, since this
-				// ad is being thrown away
+			assert( putClassAd(syscall_sock, *ad, true) );
 		}
 		// Here we must really, truely delete the ad.  Why? Because
 		// when GetJobAd is called with the third bool argument set
@@ -785,9 +782,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			ad->SetPrivateAttributesInvisible( true );
-			assert( ad->put(*syscall_sock) );
-			ad->SetPrivateAttributesInvisible( false );
+			assert( putClassAd(syscall_sock, *ad, true) );
 		}
 		FreeJobAd(ad);
 		free( (char *)constraint );
@@ -817,9 +812,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			ad->SetPrivateAttributesInvisible( true );
-			assert( ad->put(*syscall_sock) );
-			ad->SetPrivateAttributesInvisible( false );
+			assert( putClassAd(syscall_sock, *ad, true) );
 		}
 		FreeJobAd(ad);
 		assert( syscall_sock->end_of_message() );;
@@ -856,9 +849,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			ad->SetPrivateAttributesInvisible( true );
-			assert( ad->put(*syscall_sock) );
-			ad->SetPrivateAttributesInvisible( false );
+			assert( putClassAd(syscall_sock, *ad, true) );
 		}
 		FreeJobAd(ad);
 		free( (char *)constraint );
@@ -895,9 +886,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			assert( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			ad->SetPrivateAttributesInvisible( true );
-			assert( ad->put(*syscall_sock) );
-			ad->SetPrivateAttributesInvisible( false );
+			assert( putClassAd(syscall_sock, *ad, true) );
 		}
 		FreeJobAd(ad);
 		free( (char *)constraint );
@@ -1007,13 +996,9 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 						}
 					}
 
-					ad->SetPrivateAttributesInvisible( true );
-					assert( ad->put(*syscall_sock,&internals) );
-					ad->SetPrivateAttributesInvisible( false );
+					assert( putClassAd(syscall_sock, *ad, true, &internals) );
 				} else {
-					ad->SetPrivateAttributesInvisible( true );
-					assert( ad->put(*syscall_sock) );
-					ad->SetPrivateAttributesInvisible( false );
+					assert( putClassAd(syscall_sock, *ad, true) );
 				}
 				FreeJobAd(ad);
 			}
