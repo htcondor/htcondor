@@ -373,9 +373,6 @@ class ClassAd : public classad::ClassAd
 	
 	void AddTargetRefs( TargetAdType target_type, bool do_version_check = true );
 
-	void SetPrivateAttributesInvisible( bool invisible )
-	{ m_privateAttrsAreInvisible = invisible; }
-
     /** Is this value valid for being written to the log? The value is a RHS of an expression. Only '\n' or '\r' are invalid.
      *
      * @param value The thing we check to see if valid.
@@ -456,8 +453,6 @@ class ClassAd : public classad::ClassAd
 
     classad::DirtyAttrList::iterator m_dirtyItr;
     bool m_dirtyItrInit;
-
-	bool m_privateAttrsAreInvisible;
 
 	void _GetReferences(classad::ExprTree *tree,
 						StringList &internal_refs,

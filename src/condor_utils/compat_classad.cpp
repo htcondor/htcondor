@@ -627,8 +627,6 @@ ClassAd::ClassAd()
 		m_initConfig = true;
 	}
 
-	m_privateAttrsAreInvisible = false;
-
 		// Compatibility ads are born with this to emulate the special
 		// CurrentTime in old ClassAds. We don't protect it afterwards,
 		// but that shouldn't be problem unless someone is deliberately
@@ -661,8 +659,6 @@ ClassAd::ClassAd( const ClassAd &ad ) : classad::ClassAd(ad)
 		AssignExpr( ATTR_CURRENT_TIME, "time()" );
 	}
 
-	m_privateAttrsAreInvisible = false;
-
 	ResetName();
     ResetExpr();
 
@@ -686,8 +682,6 @@ ClassAd::ClassAd( const classad::ClassAd &ad )
 		AssignExpr( ATTR_CURRENT_TIME, "time()" );
 	}
 
-	m_privateAttrsAreInvisible = false;
-
 	ResetName();
     ResetExpr();
 
@@ -705,8 +699,6 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 		registerStrlistFunctions();
 		m_initConfig = true;
 	}
-
-	m_privateAttrsAreInvisible = false;
 
 		// Compatibility ads are born with this to emulate the special
 		// CurrentTime in old ClassAds. We don't protect it afterwards,
