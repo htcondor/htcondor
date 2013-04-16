@@ -44,7 +44,7 @@ if "OutboundConnectivity" in job_ad.keys():
 if "NetworkAccounting" in job_ad.keys():
 	expr3 = job_ad.lookup("NetworkAccounting")
 
-if expr1.eval() == True and expr2.eval() == False:
+if expr1.eval() == False and expr2.eval() == True:
 	machine_ad_update["LarkNetworkType"] = 'nat'
 if expr1.eval() == True and expr2.eval() == True:
     machine_ad_update["LarkNetworkType"] = 'bridge'
