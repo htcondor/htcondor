@@ -1397,16 +1397,16 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 			ClassAd q_response;
 			q_response.Assign( ATTR_SEC_AUTHORIZATION_SUCCEEDED, (m_perm == USER_AUTH_SUCCESS) );
 
-			if (!q_response.put(*m_sock) ||
+			if (!putClassAd(m_sock, q_response) ||
 				!m_sock->end_of_message()) {
 				dprintf (D_ALWAYS, "SECMAN: Error sending DC_SEC_QUERY classad to %s!\n", m_sock->peer_description());
-				q_response.dPrint (D_ALWAYS);
+				dPrintAd (D_ALWAYS, q_response);
 				m_result = FALSE;
 				return CommandProtocolFinished;
 			}
 
 			dprintf (D_ALWAYS, "SECMAN: Succesfully sent DC_SEC_QUERY classad to %s!\n", m_sock->peer_description());
-			q_response.dPrint (D_ALWAYS);
+			dPrintAd (D_ALWAYS, q_response);
 
 			// now, having informed the client about the authorization status,
 			// successfully abort before actually calling any command handler.
