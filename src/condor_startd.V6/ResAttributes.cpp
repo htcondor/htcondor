@@ -880,6 +880,18 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 	if ( m_named_chroot.size() > 0 ) {
 		cp->Assign( "NamedChroot", m_named_chroot.c_str() );
 	}
+	
+	// Advertise processor flags.
+	char * savePointer;
+	char * processor_flags = strdup( sysapi_processor_flags() );
+	char * flag = strtok_r( processor_flags, " ", & savePointer );
+	std::string attributeName;
+	while( flag != NULL ) {
+	    formatstr( attributeName, "has_%s", flag );
+	    cp->Assign( attributeName.c_str(), true );
+	    flag = strtok_r( NULL, " ", & savePointer );
+	}
+	free( processor_flags );
 }
 
 void

@@ -37,6 +37,7 @@ sysapi_ckptpltfrm_raw(void)
 	const char *vsyscall_page;
 #endif
 	int size;
+	const char *processor_flags;
 
 	/* compute the checkpointing signature of this machine, each thing
 		you want to detect should be defined in some form for every platform. */
@@ -47,6 +48,7 @@ sysapi_ckptpltfrm_raw(void)
 #ifndef WIN32
 	vsyscall_page = sysapi_vsyscall_gate_addr();
 #endif
+	processor_flags = sysapi_processor_flags();
 
 /* Currently, windows doesn't support condor_ckpt_probe, so don't put in
 	the vsyscall page information. */
@@ -55,12 +57,14 @@ sysapi_ckptpltfrm_raw(void)
 			strlen(arch) + 1 /*space*/ +
 			strlen(kernel_version) + 1 /*space*/ +
 			strlen(memory_model) + 1 /*space*/ +
-			strlen(vsyscall_page) + 1 /*nul*/;
+			strlen(vsyscall_page) + 1 /*space*/ +
+			strlen(processor_flags) + 1; /*nul*/;
 #else
 	size = strlen(opsys) + 1 /*space*/ +
 			strlen(arch) + 1 /*space*/ +
 			strlen(kernel_version) + 1 /*space*/ +
-			strlen(memory_model) + 1; /*space*/
+			strlen(memory_model) + 1 /*space*/ +
+			strlen(processor_flags) + 1 /*nul*/;
 #endif
 	
 	/* this will always be NULL when this function is entered */
@@ -80,6 +84,8 @@ sysapi_ckptpltfrm_raw(void)
 	strcat(_sysapi_ckptpltfrm, " ");
 	strcat(_sysapi_ckptpltfrm, vsyscall_page);
 #endif
+	strcat(_sysapi_ckptpltfrm, " " );
+	strcat(_sysapi_ckptpltfrm, processor_flags);
 
 	return _sysapi_ckptpltfrm;
 }
