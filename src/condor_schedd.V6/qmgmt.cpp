@@ -94,7 +94,7 @@ static ClassAdCollection *JobQueue = 0;
 static StringList DirtyJobIDs;
 static int next_cluster_num = -1;
 static int next_proc_num = 0;
-static int active_cluster_num = -1;	// client is restricted to only insert jobs to the active cluster
+int active_cluster_num = -1;	// client is restricted to only insert jobs to the active cluster
 static bool JobQueueDirty = false;
 static int in_walk_job_queue = 0;
 static time_t xact_start_time = 0;	// time at which the current transaction was started

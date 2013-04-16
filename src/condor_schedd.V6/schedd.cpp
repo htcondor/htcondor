@@ -3365,7 +3365,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			"TRANSFER_DATA/WITH_PERMS: %d jobs to be sent\n", JobAdsArrayLen);
 		rsock->encode();
 		if ( !rsock->code(JobAdsArrayLen) || !rsock->end_of_message() ) {
-			dprintf( D_ALWAYS, "generalJobFilesWorkerThread(): "
+			dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
 					 "failed to send JobAdsArrayLen (%d) \n",
 					 JobAdsArrayLen );
 			s->timeout( 10 ); // avoid hanging due to huge timeout
@@ -3379,7 +3379,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		proc = (*jobs)[i].proc;
 		ClassAd * ad = GetJobAd( cluster, proc );
 		if ( !ad ) {
-			dprintf( D_ALWAYS, "generalJobFilesWorkerThread(): "
+			dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
 					 "job ad %d.%d not found\n",cluster,proc );
 			s->timeout( 10 ); // avoid hanging due to huge timeout
 			refuse(s);
@@ -3401,7 +3401,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 								   (mode == TRANSFER_DATA ||
 									mode == TRANSFER_DATA_WITH_PERMS));
 		if ( !result ) {
-			dprintf( D_ALWAYS, "generalJobFilesWorkerThread(): "
+			dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
 					 "failed to init filetransfer for job %d.%d \n",
 					 cluster,proc );
 			s->timeout( 10 ); // avoid hanging due to huge timeout
@@ -3427,7 +3427,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			// first send the classad for the job
 			result = ad->put(*rsock);
 			if (!result) {
-				dprintf(D_ALWAYS, "generalJobFilesWorkerThread(): "
+				dprintf(D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
 					"failed to send job ad for job %d.%d \n",
 					cluster,proc );
 			} else {
@@ -3438,7 +3438,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		}
 
 		if ( !result ) {
-			dprintf( D_ALWAYS, "generalJobFilesWorkerThread(): "
+			dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
 					 "failed to transfer files for job %d.%d \n",
 					 cluster,proc );
 			s->timeout( 10 ); // avoid hanging due to huge timeout
@@ -3493,6 +3493,8 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		free( peer_version );
 	}
 
+	dprintf( D_AUDIT, *rsock, (answer==OK) ? "Transfer completed\n" :
+			 "Error received from client\n" );
    return ((answer == OK)?TRUE:FALSE);
 }
 
@@ -3707,8 +3709,8 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 
 	job_ids_string = job_ids.str();
 	job_ids_string.erase(job_ids_string.length()-2,2); //Get rid of the extraneous ", "
-	dprintf( D_AUDIT, *rsock, "spool_job_files mode = %d, job ids = %s\n", 
-			 mode, job_ids_string.c_str());
+	dprintf( D_AUDIT, *rsock, "job ids: %s\n", 
+			 job_ids_string.c_str());
 
 		// DaemonCore will free the thread_arg for us when the thread
 		// exits, but we need to free anything pointed to by
@@ -3784,9 +3786,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		// Place this tid into a hashtable so our reaper can finish up.
 	spoolJobFileWorkers->insert(tid, jobs);
 	
-		// TO DO: Add Job Proxy Info (if transferred)
-	dprintf( D_AUDIT, *rsock, "Finished spoolJobFiles mode = %d, job ids = %s\n",
-			 mode, job_ids_string.c_str());
+	dprintf( D_AUDIT, *rsock, "spoolJobFiles(): started worker process\n");
 
 	return TRUE;
 }
