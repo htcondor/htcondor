@@ -856,6 +856,9 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_VM_CKPT_MAC  "VM_CkptMac"
 #define ATTR_VM_CKPT_IP  "VM_CkptIP"
 
+#define ATTR_WEIGHTED_IDLE_JOBS "WeightedIdleJobs"
+#define ATTR_WEIGHTED_RUNNING_JOBS "WeightedRunningJobs"
+
 //************* Added for EC2 Jobs ***************************//
 #define ATTR_EC2_ACCESS_KEY_ID  "EC2AccessKeyId"
 #define ATTR_EC2_SECRET_ACCESS_KEY  "EC2SecretAccessKey"

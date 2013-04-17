@@ -122,16 +122,20 @@ struct OwnerData {
 		// successful negotiation at highest current flocking
 		// level.
   time_t NegotiationTimestamp;
+
+  int WeightedJobsRunning;
+  int WeightedJobsIdle;
+
   std::set<int> PrioSet; // Set of job priorities, used for JobPrioArray attr
   static int flock_increment;
   OwnerData() : JobsRunning(0), JobsIdle(0), JobsHeld(0), JobsFlocked(0),
 	FlockLevel(0),
-	OldFlockLevel(0) {} 
+	OldFlockLevel(0), WeightedJobsRunning(0), WeightedJobsIdle(0) {} 
   OwnerData(const char* p) : Name(p), JobsRunning(0), JobsIdle(0), JobsHeld(0),
     JobsFlocked(0), FlockLevel(0),
-	OldFlockLevel(0) {} 
+	OldFlockLevel(0), WeightedJobsRunning(0), WeightedJobsIdle(0) {} 
   OwnerData(const std::string& name) : Name(name), JobsRunning(0), JobsIdle(0), JobsHeld(0),
-    JobsFlocked(0), FlockLevel(0), OldFlockLevel(0) {} 
+    JobsFlocked(0), FlockLevel(0), OldFlockLevel(0), WeightedJobsRunning(0), WeightedJobsIdle(0) {} 
 
     // Returns old flocklevel
   int inc_flocking(int max);

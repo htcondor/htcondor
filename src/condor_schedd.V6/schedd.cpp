@@ -835,6 +835,14 @@ Scheduler::fill_submitter_ad(ClassAd & pAd, int owner_num, int flock_level)
 	if (want_dprintf)
 		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_IDLE_JOBS, owner.JobsIdle);
 
+	pAd.Assign(ATTR_WEIGHTED_RUNNING_JOBS, owner.WeightedJobsRunning);
+	if (want_dprintf)
+		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_WEIGHTED_RUNNING_JOBS, owner.WeightedJobsRunning);
+
+	pAd.Assign(ATTR_WEIGHTED_IDLE_JOBS, owner.WeightedJobsIdle);
+	if (want_dprintf)
+		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_WEIGHTED_IDLE_JOBS, owner.WeightedJobsIdle);
+
 	pAd.Assign(ATTR_HELD_JOBS, owner.JobsHeld);
 	if (want_dprintf)
 		dprintf (dprint_level, "Changed attribute: %s = %d\n", ATTR_HELD_JOBS, owner.JobsHeld);
@@ -1022,7 +1030,21 @@ Scheduler::count_jobs()
 		int OwnerNum = insert_owner( rec->user );
 		if (at_sign) *at_sign = '@';
 		if (rec->shadowRec && !rec->pool) {
+				// Sum up the # of cpus claimed by this user and advertise it as
+				// WeightedJobsRunning.  Technically, should look at SlotWeight
+				// but the IdleJobRunning only know about request_cpus, etc.
+				// and hard-codes cpus as the weight, so we do the same here.
+				// This is needed as the HGQ code in the negotitator needs to
+				// know weighted demand to dole out surplus properly.
+			int request_cpus = 1;
 			++Owners[OwnerNum].JobsRunning;
+			if (rec->my_match_ad) {
+				if(0 == rec->my_match_ad->LookupInteger(ATTR_CPUS, request_cpus)) {
+					request_cpus = 1;
+				}
+			}
+			Owners[OwnerNum].WeightedJobsRunning += request_cpus;
+
 		} else {				// in remote pool, so add to Flocked count
 			++Owners[OwnerNum].JobsFlocked;
 			JobsFlocked++;
@@ -1288,6 +1310,8 @@ Scheduler::count_jobs()
 	pAd.Assign(ATTR_RUNNING_JOBS, 0);
 	pAd.Assign(ATTR_IDLE_JOBS, 0);
 	pAd.Assign(ATTR_HELD_JOBS, 0);
+	pAd.Assign(ATTR_WEIGHTED_RUNNING_JOBS, 0);
+	pAd.Assign(ATTR_WEIGHTED_IDLE_JOBS, 0);
 
  	// send ads for owner that don't have jobs idle
 	// This is done by looking at the old owners list and searching for owners
@@ -1435,6 +1459,8 @@ int Scheduler::make_ad_list(
 
       cad->Assign(ATTR_RUNNING_JOBS, Owners[ii].JobsRunning);
       cad->Assign(ATTR_IDLE_JOBS, Owners[ii].JobsIdle);
+      cad->Assign(ATTR_WEIGHTED_RUNNING_JOBS, Owners[ii].WeightedJobsRunning);
+      cad->Assign(ATTR_WEIGHTED_IDLE_JOBS, Owners[ii].WeightedJobsIdle);
       cad->Assign(ATTR_HELD_JOBS, Owners[ii].JobsHeld);
       cad->Assign(ATTR_FLOCKED_JOBS, Owners[ii].JobsFlocked);
       ads.Insert(cad);
@@ -1597,6 +1623,17 @@ count( ClassAd *job )
 	if (job->LookupInteger(ATTR_JOB_UNIVERSE, universe) == 0) {
 		universe = CONDOR_UNIVERSE_STANDARD;
 	}
+
+	int request_cpus = 0;
+    if (job->LookupInteger(ATTR_REQUEST_CPUS, request_cpus) == 0) {
+		request_cpus = 1;
+	}
+	
+		// Just in case it is set funny
+	if (request_cpus < 1) {
+		request_cpus = 1;
+	}
+	
 
 	// Sometimes we need the read username owner, not the accounting group
 	MyString real_owner;
@@ -1762,6 +1799,8 @@ count( ClassAd *job )
 		}
 			// Update Owners array JobsIdle
 		scheduler.Owners[OwnerNum].JobsIdle += (max_hosts - cur_hosts);
+		scheduler.Owners[OwnerNum].WeightedJobsIdle += request_cpus * (max_hosts - cur_hosts);
+
 			// Don't update scheduler.Owners[OwnerNum].JobsRunning here.
 			// We do it in Scheduler::count_jobs().
 

@@ -1350,7 +1350,23 @@ negotiationTime ()
             ad->LookupInteger(ATTR_IDLE_JOBS, numidle);
             int numrunning=0;
             ad->LookupInteger(ATTR_RUNNING_JOBS, numrunning);
-            group->requested += numrunning + numidle;
+
+			// The HGQ codes uses number of idle jobs to determine how to allocate
+			// surplus.  This should really be weighted demand when slot weights
+			// and paritionable slot are in use.  The schedd can tell us the cpu-weighed
+			// demand in ATTR_WEIGHTED_IDLE_JOBS.  If this knob is set, use it.
+
+			if (param_boolean("NEGOTIATOR_USE_WEIGHTED_DEMAND", false)) {
+				int weightedIdle = numidle;
+				int weightedRunning = numrunning;
+
+				ad->LookupInteger(ATTR_WEIGHTED_IDLE_JOBS, weightedIdle);
+				ad->LookupInteger(ATTR_WEIGHTED_RUNNING_JOBS, weightedRunning);
+
+            	group->requested += weightedRunning + weightedIdle;
+			} else {
+            	group->requested += numrunning + numidle;
+			}
 			group->currently_requested = group->requested;
         }
 
