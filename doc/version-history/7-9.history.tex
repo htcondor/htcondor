@@ -51,6 +51,13 @@ issuing a \Opt{-peaceful} command. Previously, a \Opt{-peaceful} \Condor{off}
 command would preclude a \Opt{-graceful} off command.
 \Ticket{2949}
 
+\item The \Condor{gather\_info} tool now includes the output of the Unix
+\Prog{uptime} and \Prog{free} programs, 
+as well as logs of the \Condor{master}, \Condor{startd}, and \Condor{starter}
+of the machine where the job most recently ran, 
+if \Condor{gather\_info} has the necessary permissions to fetch those logs.
+\Ticket{3246}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
