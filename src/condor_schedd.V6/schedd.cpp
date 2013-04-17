@@ -181,6 +181,46 @@ int STARTD_CONTACT_TIMEOUT = 45;  // how long to potentially block
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
 #endif
 
+void AuditLogNewConnection( int cmd, Sock &sock, bool failure )
+{
+	// Quickly determine if this is a command we care about for
+	// the audit log.
+	switch( cmd ) {
+	case ACT_ON_JOBS:
+	case SPOOL_JOB_FILES:
+	case SPOOL_JOB_FILES_WITH_PERMS:
+	case TRANSFER_DATA:
+	case TRANSFER_DATA_WITH_PERMS:
+	case UPDATE_GSI_CRED:
+	case DELEGATE_GSI_CRED_SCHEDD:
+	case QMGMT_WRITE_CMD:
+	case GET_JOB_CONNECT_INFO:
+		break;
+	default:
+		return;
+	}
+
+	if ( !strcmp( get_condor_username(), sock.getOwner() ) ) {
+		return;
+	}
+
+	dprintf( D_AUDIT, sock, "Command=%s, peer=%s\n", getCommandString( cmd ),
+			 sock.get_sinful_peer() );
+	dprintf( D_AUDIT, sock, "AuthMethod=%s, AuthId=%s, CondorId=%s\n",
+			 sock.getAuthenticationMethodUsed(),
+			 "???",
+			 sock.getFullyQualifiedUser() );
+	dprintf( D_AUDIT, sock,
+			 "triedAuthentication=%s, isAuthenticated=%s, isMappedFQU=%s\n",
+			 sock.triedAuthentication() ? "true" : "false",
+			 sock.isAuthenticated() ? "true" : "false",
+			 sock.isMappedFQU() ? "true" : "false" );
+
+	if ( failure ) {
+		dprintf( D_AUDIT, sock, "Authentication or authorization failed\n" );
+	}
+}
+
 void AuditLogJobProxy( Sock &sock, PROC_ID job_id, const char *proxy_file )
 {
 #if defined(HAVE_EXT_GLOBUS)
