@@ -660,7 +660,7 @@ fi
 # If the key doesn't exist, create it
 if [ ! -e $bosco_key ]; then
     # Generate a md5sum password
-    PASSPHRASE=`echo $RANDOM$RANDOM$RANDOM$RANDOM | $MD5SUM`
+    PASSPHRASE=`echo $RANDOM$RANDOM$RANDOM$RANDOM | $MD5SUM | awk '{print $1}'`
 
     # Output the password to a specially crafted file
     mkdir -p `dirname $PASSPHRASE_LOCATION`
