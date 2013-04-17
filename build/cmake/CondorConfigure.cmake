@@ -388,7 +388,7 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	  find_library(HAVE_X11 X11)
 	endif()
 
-	dprint("Threaded functionality only enabled in Linux, Windows, and Mac")
+	dprint("Threaded functionality only enabled in Linux, Windows, and Mac OS X > 10.6")
 	set(HAS_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 	set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 
@@ -414,9 +414,17 @@ elseif(${OS_NAME} STREQUAL "DARWIN")
 	find_library( COREFOUNDATION_FOUND CoreFoundation )
 	set(CMAKE_STRIP ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_strip CACHE FILEPATH "Command to remove sybols from binaries" FORCE)
 
-	dprint("Threaded functionality only enabled in Linux, Windows and Mac")
-	set(HAS_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
-	set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
+	dprint("Threaded functionality only enabled in Linux, Windows and Mac OS X > 10.6")
+
+	check_symbol_exists(PTHREAD_RECURSIVE_MUTEX_INITIALIZER "pthread.h" HAVE_DECL_PTHREAD_RECURSIVE_MUTEX_INITIALIZER)
+	check_symbol_exists(PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP "pthread.h" HAVE_DECL_PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP)
+	if (HAVE_DECL_PTHREAD_RECURSIVE_MUTEX_INITIALIZER OR HAVE_DECL_PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP)
+		set(HAS_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
+		set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
+	else()
+		set(HAS_PTHREADS FALSE)
+		set(HAVE_PTHREADS FALSE)
+	endif()
 endif()
 
 ##################################################
