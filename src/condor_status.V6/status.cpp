@@ -360,7 +360,7 @@ main (int argc, char *argv[])
 		printf ("----------\n");
 
 		q = query->getQueryAd (queryAd);
-		queryAd.fPrint (stdout);
+		fPrintAd (stdout, queryAd);
 
 		printf ("----------\n");
 		fprintf (stderr, "Result of making query ad was:  %d\n", q);

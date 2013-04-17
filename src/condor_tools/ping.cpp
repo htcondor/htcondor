@@ -32,16 +32,28 @@
 #include "dc_collector.h"
 #include "my_hostname.h"
 
+using namespace std;
+
 void
 usage( char *cmd )
 {
-	fprintf(stderr,"Usage: %s [options] <authz-level | command-name | command-int>\n",cmd);
-	fprintf(stderr,"Where options are:\n");
-	fprintf(stderr,"    -help             Display options\n");
-	fprintf(stderr,"    -version          Display Condor version\n");
-	fprintf(stderr,"    -addr <hostname>  Use this sinful string\n");
-	fprintf(stderr,"    -debug            Show extra debugging info\n");
-	fprintf(stderr,"\nExample: %s -debug WRITE -addr \"<127.0.0.1:9618>\"\n\n",cmd);
+	fprintf(stderr,"Usage: %s [options] TOKEN [TOKEN [TOKEN [...]]]\n",cmd);
+	fprintf(stderr,"\nwhere TOKEN is ( ALL | <authorization-level> | <command-name> | <command-int> )\n\n");
+	fprintf(stderr,"general options:\n");
+	fprintf(stderr,"    -config <filename>              Add configuration from specified file\n");
+	fprintf(stderr,"    -debug                          Show extra debugging info\n");
+	fprintf(stderr,"    -version                        Display Condor version\n");
+	fprintf(stderr,"    -help                           Display options\n");
+	fprintf(stderr,"\nspecifying target options:\n");
+	fprintf(stderr,"    -address <sinful>               Use this sinful string\n");
+	fprintf(stderr,"    -pool    <host>                 Query this collector\n");
+	fprintf(stderr,"    -name    <name>                 Find a daemon with this name\n");
+	fprintf(stderr,"    -type    <subsystem>            Type of daemon to contact (default: SCHEDD)\n");
+	fprintf(stderr,"\noutput options (specify only one):\n");
+	fprintf(stderr,"    -quiet                          No output, only sets status\n");
+	fprintf(stderr,"    -table                          Print one result per line\n");
+	fprintf(stderr,"    -verbose                        Print all available information\n");
+	fprintf(stderr,"\nExample:\n    %s -addr \"<127.0.0.1:9618>\" -table READ WRITE DAEMON\n\n",cmd);
 }
 
 void
@@ -59,18 +71,78 @@ void process_err_stack(CondorError *errstack) {
 }
 
 
-void print_useful_info(ClassAd *ad) {
+void print_useful_info_1(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
 	MyString  val;
+
+	if(!rv) {
+		printf("%s failed!  Use -verbose for more information.\n", name.Value());
+		return;
+	}
+
+	printf("%s using (", name.Value());
+
+	ad->LookupString("encryption", val);
+	if (strcasecmp(val.Value(), "no") == 0) {
+		printf("no encryption");
+	} else {
+		ad->LookupString("cryptomethods", val);
+		printf(val.Value());
+	}
+
+	printf(", ");
+
+	ad->LookupString("integrity", val);
+	if (strcasecmp(val.Value(), "no") == 0) {
+		printf("no integrity");
+	} else {
+		printf("MD5");
+	}
+
+	printf(", and ");
+
+	ad->LookupString("authentication", val);
+	if (strcasecmp(val.Value(), "no") == 0) {
+		printf("no authentication");
+	} else {
+		ad->LookupString("authmethods", val);
+		printf(val.Value());
+	}
+
+	printf(") ");
+
+	bool bval;
+	authz_ad->LookupBool(ATTR_SEC_AUTHORIZATION_SUCCEEDED, bval);
+	printf(bval ? "succeeded" : "failed");
+
+	printf(" as ");
+
+	ad->LookupString("myremoteusername", val);
+	printf(val.Value());
+
+	printf ("\n");
+}
+
+
+void print_useful_info_2(bool rv, int cmd, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *errstack) {
+	MyString  val;
+
+	if(!rv) {
+		printf("%s failed!\n", name.Value());
+		process_err_stack(errstack);
+		printf("\n");
+		return;
+	}
 
 	ad->LookupString("remoteversion", val);
 	printf("Remote Version:              %s\n", val.Value());
 	val = CondorVersion();
 	printf("Local  Version:              %s\n", val.Value());
 
-	printf ("\n");
-
 	ad->LookupString("sid", val);
 	printf("Session ID:                  %s\n", val.Value());
+	printf("Instruction:                 %s\n", name.Value());
+	printf("Command:                     %i\n", cmd);
+
 
 	ad->LookupString("encryption", val);
 	if (strcasecmp(val.Value(), "no") == 0) {
@@ -100,42 +172,103 @@ void print_useful_info(ClassAd *ad) {
 	ad->LookupString("myremoteusername", val);
 	printf("Remote Mapping:              %s\n", val.Value());
 
+	bool bval;
+	authz_ad->LookupBool(ATTR_SEC_AUTHORIZATION_SUCCEEDED, bval);
+	printf("Authorized:                  %s\n", (bval ? "TRUE" : "FALSE"));
+
 	printf ("\n");
-
-}
-
-
-
-void print_info(char * addr,  int cmd, CondorError *errstack) {
-
-	MyString cmd_map_ent;
-	cmd_map_ent.formatstr ("{%s,<%i>}", addr, cmd); 
-
-	MyString session_id;
-	int ret = (SecMan::command_map)->lookup(cmd_map_ent, session_id);
-
-	// IMPORTANT: this hashtable returns 0 on success!
-	if (ret) {
-		printf("no cmd map!\n");
-		return;
-	}
-
-	// IMPORTANT: this hashtable returns 1 on success!
-	KeyCacheEntry *k;
-	ret = (SecMan::session_cache)->lookup(session_id.Value(), k);
-	if (!ret) {
-		printf("no session!\n");
-		return;
-	}
-
-	ClassAd *policy = k->policy();
-	print_useful_info(policy);
 
 	if (errstack->getFullText() != "") {
 		printf ("Information about authentication methods that were attempted but failed:\n");
 		process_err_stack(errstack);
+		printf ("\n");
 	}
 
+}
+
+
+void print_useful_info_10(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *authz_ad, CondorError *) {
+	MyString  val;
+
+	printf("%20s", name.Value());
+
+	if(!rv) {
+		printf ("           FAIL       FAIL      FAIL  FAIL FAIL\n");
+		return;
+	}
+
+	ad->LookupString("authentication", val);
+	if (strcasecmp(val.Value(), "no") == 0) {
+		val = "none";
+	} else {
+		ad->LookupString("authmethods", val);
+	}
+	printf("%15s", val.Value());
+
+	ad->LookupString("encryption", val);
+	if (strcasecmp(val.Value(), "no") == 0) {
+		val = "none";
+	} else {
+		ad->LookupString("cryptomethods", val);
+	}
+	printf("%11s", val.Value());
+
+	ad->LookupString("integrity", val);
+	if (strcasecmp(val.Value(), "no") == 0) {
+		val = "none";
+	} else {
+		val = "MD5";
+	}
+	printf("%10s", val.Value());
+
+	bool bval;
+	authz_ad->LookupBool(ATTR_SEC_AUTHORIZATION_SUCCEEDED, bval);
+	printf(bval ? " ALLOW " : "  DENY ");
+
+	ad->LookupString("myremoteusername", val);
+	printf(val.Value());
+
+	printf("\n");
+}
+
+
+void print_info(bool rv, char * addr, Sock* s, MyString name, int cmd, ClassAd *authz_ad, CondorError *errstack, int output_mode) {
+	MyString cmd_map_ent;
+	cmd_map_ent.formatstr ("{%s,<%i>}", addr, cmd); 
+
+	MyString session_id;
+	KeyCacheEntry *k = NULL;
+	ClassAd *policy = NULL;
+	int ret = 0;
+	
+	if(rv) {
+		// IMPORTANT: this hashtable returns 0 on success!
+		ret = (SecMan::command_map)->lookup(cmd_map_ent, session_id);
+		if (ret) {
+			printf("no cmd map!\n");
+			return;
+		}
+
+		// IMPORTANT: this hashtable returns 1 on success!
+		ret = (SecMan::session_cache)->lookup(session_id.Value(), k);
+		if (!ret) {
+			printf("no session!\n");
+			return;
+		}
+
+		policy = k->policy();
+	}
+
+
+	if (output_mode == 0) {
+		// print nothing!!
+	} else if (output_mode == 1) {
+		print_useful_info_1(rv, name, s, policy, authz_ad, errstack);
+	} else if (output_mode == 2) {
+		print_useful_info_2(rv, cmd, name, s, policy, authz_ad, errstack);
+	} else if (output_mode == 10) {
+		print_useful_info_10(rv, name, s, policy, authz_ad, errstack);
+	}
 }
 
 
@@ -144,32 +277,32 @@ int getSampleCommand( int authz_level ) {
 		case ALLOW:
 			return DC_NOP;
 		case READ:
-			return CONFIG_VAL;
+			return DC_NOP_READ;
 		case WRITE:
-			return DC_RECONFIG;
+			return DC_NOP_WRITE;
 		case NEGOTIATOR:
-			return NEGOTIATE;
+			return DC_NOP_NEGOTIATOR;
 		case ADMINISTRATOR:
-			return DC_OFF_FAST;
+			return DC_NOP_ADMINISTRATOR;
 		case OWNER:
-			return VACATE_CLAIM;
+			return DC_NOP_OWNER;
 		case CONFIG_PERM:
-			return STORE_POOL_CRED;
+			return DC_NOP_CONFIG;
 		case DAEMON:
-			return DC_TIME_OFFSET;
+			return DC_NOP_DAEMON;
 		case ADVERTISE_STARTD_PERM:
-			return UPDATE_STARTD_AD;
+			return DC_NOP_ADVERTISE_STARTD;
 		case ADVERTISE_SCHEDD_PERM:
-			return UPDATE_SCHEDD_AD;
+			return DC_NOP_ADVERTISE_SCHEDD;
 		case ADVERTISE_MASTER_PERM:
-			return UPDATE_MASTER_AD;
+			return DC_NOP_ADVERTISE_MASTER;
 	}
 
 	return -1;
 
 }
 
-int getSomeCommandFromString ( char * cmdstring ) {
+int getSomeCommandFromString ( const char * cmdstring ) {
 
 	int res = -1;
 
@@ -187,7 +320,7 @@ int getSomeCommandFromString ( char * cmdstring ) {
 	}
 
 	res = atoi ( cmdstring );
-	if (res > 0) {
+	if (res > 0 || (strcmp("0", cmdstring) == 0)) {
 		char compare_conversion[20];
 		sprintf(compare_conversion, "%i", res);
 		if (strcmp(cmdstring, compare_conversion) == 0) {
@@ -201,13 +334,51 @@ int getSomeCommandFromString ( char * cmdstring ) {
 }
 
 
+bool do_item(Daemon* d, MyString name, int num, int output_mode) {
+
+	CondorError errstack;
+	ClassAd authz_ad;
+	bool sc_success;
+	ReliSock *sock = NULL;
+	bool fn_success = false;
+
+	sock = (ReliSock*) d->makeConnectedSocket( Stream::reli_sock, 0, 0, &errstack );
+	if (sock) {
+
+		sc_success = d->startSubCommand(DC_SEC_QUERY, num, sock, 0, &errstack);
+		if (sc_success) {
+
+			sock->decode();
+			if (authz_ad.initFromStream(*sock) &&
+				sock->end_of_message()) {
+				fn_success = true;
+			}
+		}
+	}
+
+	print_info(fn_success, d->addr(), sock, name, num, &authz_ad, &errstack, output_mode);
+
+	return true;
+
+}
+
+
+
 
 int main( int argc, char *argv[] )
 {
+	char *pool=0;
+	char *name=0;
 	char *address=0;
 	char *optional_config=0;
-	int subcmd=-1;
+	int  output_mode = -1;
+	daemon_t dtype = DT_NONE;
 	int i;
+
+	ExtArray<MyString> worklist_name;
+	ExtArray<int> worklist_number;
+	int worklist_count = 0;
+	Daemon * daemon = NULL;
 
 	myDistro->Init( argc, argv );
 	config();
@@ -216,18 +387,86 @@ int main( int argc, char *argv[] )
 		if(!strcmp(argv[i],"-help")) {
 			usage(argv[0]);
 			exit(0);
+		} else if(!strncmp(argv[i],"-quiet",strlen(argv[i]))) {	
+			if(output_mode == -1) {
+				output_mode = 0;
+			} else {
+				fprintf(stderr,"ERROR: only one output mode may be specified.\n\n");
+				usage(argv[0]);
+				exit(1);
+			}
+		} else if(!strncmp(argv[i],"-table",strlen(argv[i]))) {	
+			if(output_mode == -1) {
+				output_mode = 10;
+			} else {
+				fprintf(stderr,"ERROR: only one output mode may be specified.\n\n");
+				usage(argv[0]);
+				exit(1);
+			}
+		} else if(!strncmp(argv[i],"-verbose",strlen(argv[i]))) {	
+			if(output_mode == -1) {
+				output_mode = 2;
+			} else {
+				fprintf(stderr,"ERROR: only one output mode may be specified.\n\n");
+				usage(argv[0]);
+				exit(1);
+			}
 		} else if(!strncmp(argv[i],"-config",strlen(argv[i]))) {	
 			i++;
 			if(!argv[i]) {
-				fprintf(stderr,"-config requires an argument.\n\n");
+				fprintf(stderr,"ERROR: -config requires an argument.\n\n");
 				usage(argv[0]);
 				exit(1);
 			}
 			optional_config = argv[i];
+		} else if(!strncmp(argv[i],"-pool",strlen(argv[i]))) {	
+			i++;
+			if(!argv[i]) {
+				fprintf(stderr,"ERROR: -pool requires an argument.\n\n");
+				usage(argv[0]);
+				exit(1);
+			}
+			if(address) {
+				fprintf(stderr,"ERROR: -address cannot be used with -pool or -name.\n\n");
+				usage(argv[0]);
+				exit(1);
+			}
+			pool = argv[i];
+		} else if(!strncmp(argv[i],"-name",strlen(argv[i]))) {	
+			i++;
+			if(!argv[i]) {
+				fprintf(stderr,"ERROR: -name requires an argument.\n\n");
+				usage(argv[0]);
+				exit(1);
+			}
+			if(address) {
+				fprintf(stderr,"ERROR: -address cannot be used with -pool or -name.\n\n");
+				usage(argv[0]);
+				exit(1);
+			}
+			name = argv[i];
+		} else if(!strncmp(argv[i],"-type",strlen(argv[i]))) {	
+			i++;
+			if(!argv[i]) {
+				fprintf(stderr,"ERROR: -type requires an argument.\n\n");
+				usage(argv[0]);
+				exit(1);
+			}
+			dtype = stringToDaemonType(argv[i]);
+			if( dtype == DT_NONE) {
+				fprintf(stderr,"ERROR: unrecognized daemon type: %s\n\n", argv[i]);
+				usage(argv[0]);
+				exit(1);
+			}
 		} else if(!strncmp(argv[i],"-address",strlen(argv[i]))) {	
 			i++;
 			if(!argv[i]) {
-				fprintf(stderr,"-address requires an argument.\n\n");
+				fprintf(stderr,"ERROR: -address requires an argument.\n\n");
+				usage(argv[0]);
+				exit(1);
+			}
+			if(pool || name) {
+				fprintf(stderr,"ERROR: -address cannot be used with -pool or -name.\n\n");
 				usage(argv[0]);
 				exit(1);
 			}
@@ -239,73 +478,122 @@ int main( int argc, char *argv[] )
 				// dprintf to console
 			dprintf_set_tool_debug("TOOL", 0);
 		} else if(argv[i][0]!='-' || !strcmp(argv[i],"-")) {
-			if(subcmd==-1) {
-				subcmd = getSomeCommandFromString(argv[i]);
-				if(subcmd==-1) {
-					fprintf(stderr,"Not recognized as an authorization level, command name, or command int: %s\n\n",argv[i]);
-					usage(argv[0]);
-					exit(1);
-				}
+			// a special case
+			if(strcasecmp("ALL", argv[i]) == 0) {
+				worklist_name[worklist_count++] = "ALLOW";
+				worklist_name[worklist_count++] = "READ";
+				worklist_name[worklist_count++] = "WRITE";
+				worklist_name[worklist_count++] = "NEGOTIATOR";
+				worklist_name[worklist_count++] = "ADMINISTRATOR";
+				worklist_name[worklist_count++] = "OWNER";
+				worklist_name[worklist_count++] = "CONFIG";
+				worklist_name[worklist_count++] = "DAEMON";
+				worklist_name[worklist_count++] = "ADVERTISE_STARTD";
+				worklist_name[worklist_count++] = "ADVERTISE_SCHEDD";
+				worklist_name[worklist_count++] = "ADVERTISE_MASTER";
 			} else {
-				fprintf(stderr,"Extra argument: %s\n\n",argv[i]);
-				usage(argv[0]);
-				exit(1);
+				// an individual item to act on
+				worklist_name[worklist_count++] = argv[i];
 			}
 		} else {
-			fprintf(stderr,"Unknown argument: %s\n\n",argv[i]);
+			fprintf(stderr,"ERROR: Unknown argument: %s\n\n",argv[i]);
 			usage(argv[0]);
 			exit(1);
 		}
 	}
 
-	// sanity check invocation
-	if(subcmd==-1) {
-		fprintf( stderr, "Missing <authz-level | command-name | command-int> argument, defaulting to DC_NOP\n\n");
-		subcmd = DC_NOP;
+
+	// 1 (normal) is the default
+	if(output_mode == -1) {
+		output_mode = 1;
+	}
+
+	// use some default
+	if(worklist_count == 0) {
+		if(output_mode) {
+			fprintf( stderr, "WARNING: Missing <authz-level | command-name | command-int> argument, defaulting to DC_NOP\n");
+		}
+		worklist_name[0] = "DC_NOP";
+		worklist_count++;
+	}
+
+
+	// convert each item
+	bool all_okay = true;
+	for (i=0; i<worklist_count; i++) {
+		int c = getSomeCommandFromString(worklist_name[i].Value());
+		if (c == -1) {
+			if(output_mode) {
+				fprintf(stderr, "ERROR: Could not understand TOKEN \"%s\".\n", worklist_name[i].Value());
+			}
+			all_okay = false;
+		} else {
+			worklist_number[i] = c;
+		}
+	}
+	if (!all_okay) {
+		exit(1);
+	}
+
+
+	//
+	// LETS GET TO WORK!
+	//
+
+	if(dtype == DT_NONE) {
+		dtype = DT_SCHEDD;
+	}
+
+	if(address) {
+		daemon = new Daemon( DT_ANY, address, 0 );
+	} else {
+		if (pool) {
+			DCCollector col( pool );
+			if( ! col.addr() ) {
+				fprintf( stderr, "ERROR: %s\n", col.error() );
+				exit(1);
+			}
+			daemon = new Daemon( dtype, name, col.addr() );
+		} else {
+			daemon = new Daemon( dtype, name );
+		}
+	}
+
+	if (!(daemon->locate())) {
+		if(output_mode) {
+			fprintf(stderr, "ERROR: couldn't locate %s!\n", address?address:name);
+		}
+		delete daemon;
+		exit(1);
+	}
+
+	// do we need to print headers?
+	if(output_mode == 10) {
+		printf ("         Instruction Authentication Encryption Integrity Authz Identity\n");
 	}
 
 	// load the supplied config if specified
 	if (optional_config) {
 		process_config_source( optional_config, "special config", NULL, true);
 		//process_config_source( optional_config, "special config", get_local_hostname().Value(), true);
+
+		// ZKM TODO FIXME check the success of loading the config
 	}
 
-
-	CondorError errstack;
-
-	Daemon* daemon;
-	if(address) {
-		daemon = new Daemon( DT_ANY, address, 0 );
-		if (!(daemon->locate())) {
-			fprintf(stderr, "couldn't locate %s!  check the -address argument.\n", address);
-			exit(1);
-		}
-	} else {
-		fprintf( stderr, "Missing -address argument, attempting to talk to local condor_master\n");
-		daemon = new Daemon( DT_MASTER, NULL, 0 );
-		if (!(daemon->locate())) {
-			fprintf(stderr, "couldn't locate local master!  use the -address argument.\n");
-			exit(1);
+	all_okay = true;
+	for(i=0; i<worklist_count; i++) {
+		// any item failing induces failure of whole program
+		if (!do_item(daemon, worklist_name[i], worklist_number[i], output_mode)) {
+			all_okay = false;
 		}
 	}
 
-	ReliSock *sock = NULL;
-	int return_code = 1;
-
-	if( (sock = (ReliSock*)(daemon->startSubCommand(DC_AUTHENTICATE, subcmd, Stream::reli_sock, 0, &errstack))) ) {
-		sock->end_of_message();
-		delete sock;
-
-		print_info(daemon->addr(), subcmd, &errstack);
-
-		return_code = 0;
-	} else {
-		process_err_stack(&errstack);
-		return_code = 1;
+	if(daemon) {
+		delete daemon;
+		daemon = NULL;
 	}
 
-	delete daemon;
-	return return_code;
+	return (all_okay ? 0 : 1);
 
 }
 

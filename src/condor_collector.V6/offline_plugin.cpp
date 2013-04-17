@@ -437,7 +437,7 @@ OfflineCollectorPlugin::expire (
 	/* for now, if the ad is of any type other than a startd ad, bail out. currently
 	   absent ads only supported for ads of type Machine, because our offline storage
 	   assumes that. */
-	if ( strcmp(ad.GetMyTypeName(),STARTD_ADTYPE) ) {
+	if ( strcmp(GetMyTypeName(ad),STARTD_ADTYPE) ) {
 		return false;	// return false tells collector to delete this ad
 	}
 	/*	The ad may be a STARTD_PVT_ADTYPE, even though GetMyTypeName() claims 

@@ -123,7 +123,7 @@ classad_visa_write(ClassAd* ad,
 		goto EXIT;
 	}
 										   
-	if (!visa_ad.fPrint(file)) {
+	if (!fPrintAd(file, visa_ad)) {
 		dprintf(D_ALWAYS | D_FAILURE,
 		        "classad_visa_write ERROR: Error writing to file '%s'\n",
 		        file_path);

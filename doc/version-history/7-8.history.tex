@@ -49,7 +49,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug that caused the \Condor{master} daemon on Windows platforms
+to think there were new binaries
+when changing to and from daylight savings time.
+The \Condor{master} daemon would then kill and restart itself,
+as well as all of the daemons,
+if configuration variable \Macro{MASTER\_NEW\_BINARY\_RESTART} was set
+to its default value of \Expr{GRACEFUL}.
+\Ticket{3572}
 
 \end{itemize}
 

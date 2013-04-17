@@ -81,6 +81,10 @@ int _sysapi_getload = 0;
 bool _sysapi_net_devices_cached = false;
 bool _sysapi_opsys_is_versioned = false;
 
+/* needed by processor_flags.c */
+const char * _sysapi_processor_flags_raw = NULL;
+const char * _sysapi_processor_flags = NULL;
+
 extern "C"
 {
 

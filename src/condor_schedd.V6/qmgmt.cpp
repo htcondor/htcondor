@@ -3215,7 +3215,7 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 	ad->ResetExpr();
 	while( ad->NextDirtyExpr(name, expr) != false )
 	{
-		if(!ad->ClassAdAttributeIsPrivate(name))
+		if(!ClassAdAttributeIsPrivate(name))
 		{
 			if(!JobQueue->LookupInTransaction(key, name, val) )
 			{
@@ -3553,14 +3553,14 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					}
 					else if ( startd_ad ) {
 							// We have a startd ad in memory, use it
-						value = startd_ad->sPrintExpr(NULL,0,name);
+						value = sPrintExpr(*startd_ad, name);
 						value_came_from_jobad = false;
 					} else {
 							// No startd ad -- use value from last match.
 						MyString expr;
 						expr = "MATCH_";
 						expr += name;
-						value = ad->sPrintExpr(NULL,0,expr.Value());
+						value = sPrintExpr(*ad, expr.Value());
 						value_came_from_jobad = true;
 					}
 
@@ -4406,7 +4406,7 @@ PrintQ()
 	dprintf(D_ALWAYS, "*******Job Queue*********\n");
 	JobQueue->StartIterateAllClassAds();
 	while(JobQueue->IterateAllClassAds(ad)) {
-		ad->fPrint(stdout);
+		fPrintAd(stdout, *ad);
 	}
 	dprintf(D_ALWAYS, "****End of Queue*********\n");
 }

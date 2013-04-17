@@ -308,8 +308,12 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 	Processor	*array = NULL;			/* Array of processors */
 	int			 array_size;			/* Currewnt size of the array */
 	FILE        *fp;					/* File pointer */
-	char 		 buf[256];				/* Input line buffer */
-	char		 buf_copy[256];			/* Copy of the above */
+	/* Between the Xeon E5620 (Mar 16, 2010) and the E5-2470 (May 14, 2012),
+	   the 'flags' line grew from 405 to 435 characters long.  At that rate,
+	   we have 23 years before we need to increase the size of these buffers
+	   again. */
+	char 		 buf[1024];				/* Input line buffer */
+	char		 buf_copy[1024];		/* Copy of the above */
 	int			 errors = 0;			/* # of errors encountered */
 
 	/* Initialize processor array chunks */

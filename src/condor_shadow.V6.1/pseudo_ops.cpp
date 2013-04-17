@@ -38,12 +38,10 @@ extern RemoteResource *thisRemoteResource;
 extern RemoteResource *parallelMasterResource;
 
 int
-pseudo_register_machine_info(char *uiddomain, char *fsdomain, 
+pseudo_register_machine_info(char * /* uiddomain */, char * /* fsdomain */, 
 							 char * starterAddr, char *full_hostname )
 {
 
-	thisRemoteResource->setUidDomain( uiddomain );
-	thisRemoteResource->setFilesystemDomain( fsdomain );
 	thisRemoteResource->setStarterAddress( starterAddr );
 	thisRemoteResource->setMachineName( full_hostname );
 
@@ -369,7 +367,7 @@ pseudo_ulog( ClassAd *ad )
 
 	if(!event) {
 		MyString add_str;
-		ad->sPrint(add_str);
+		sPrintAd(add_str, *ad);
 		dprintf(
 		  D_ALWAYS,
 		  "invalid event ClassAd in pseudo_ulog: %s\n",
@@ -419,7 +417,7 @@ pseudo_ulog( ClassAd *ad )
 
 	if( !event_already_logged && !Shadow->uLog.writeEvent( event, ad ) ) {
 		MyString add_str;
-		ad->sPrint(add_str);
+		sPrintAd(add_str, *ad);
 		dprintf(
 		  D_ALWAYS,
 		  "unable to log event in pseudo_ulog: %s\n",

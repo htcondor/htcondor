@@ -223,7 +223,7 @@ int main( int argc, char *argv[] )
 
 			int result = 0;
 			if ( sock ) {
-				result += ad->put( *sock );
+				result += putClassAd( sock, *ad );
 				result += sock->end_of_message();
 			}
 			if ( result != 2 ) {

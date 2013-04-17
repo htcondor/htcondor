@@ -111,9 +111,12 @@ struct shadow_rec
 }; 
 
 struct OwnerData {
-  std::string Name;
+  char* Name;
+  char* Domain;
   int JobsRunning;
   int JobsIdle;
+  int WeightedJobsRunning;
+  int WeightedJobsIdle;
   int JobsHeld;
   int JobsFlocked;
   int FlockLevel;
@@ -122,38 +125,9 @@ struct OwnerData {
 		// successful negotiation at highest current flocking
 		// level.
   time_t NegotiationTimestamp;
-
-  int WeightedJobsRunning;
-  int WeightedJobsIdle;
-
   std::set<int> PrioSet; // Set of job priorities, used for JobPrioArray attr
-  static int flock_increment;
-  OwnerData() : JobsRunning(0), JobsIdle(0), JobsHeld(0), JobsFlocked(0),
-	FlockLevel(0),
-	OldFlockLevel(0), WeightedJobsRunning(0), WeightedJobsIdle(0) {} 
-  OwnerData(const char* p) : Name(p), JobsRunning(0), JobsIdle(0), JobsHeld(0),
-    JobsFlocked(0), FlockLevel(0),
-	OldFlockLevel(0), WeightedJobsRunning(0), WeightedJobsIdle(0) {} 
-  OwnerData(const std::string& name) : Name(name), JobsRunning(0), JobsIdle(0), JobsHeld(0),
-    JobsFlocked(0), FlockLevel(0), OldFlockLevel(0), WeightedJobsRunning(0), WeightedJobsIdle(0) {} 
-
-    // Returns old flocklevel
-  int inc_flocking(int max);
-  void flock_reset(int flock_begin);
-};
-
-class OwnerArray {
-public:
-	OwnerData& operator[](int i) { return owners[i]; }
-	int insert(const char* s);	
-	int find(const std::string& s) const;
-	void set_FlockLevel(const OwnerArray& oldOwners);
-	void updateFlockLevel(time_t curr,int interval,int max,int*fl);
-	void clear() { owners.clear(); }
-	int size() const { return owners.size(); }
-	bool empty() const { return owners.empty(); }
-private:
-	std::vector<OwnerData> owners;
+  OwnerData() { Name=NULL; Domain=NULL;
+  NegotiationTimestamp=WeightedJobsRunning=WeightedJobsIdle=JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=0; }
 };
 
 class match_rec: public ClaimIdParser
@@ -587,8 +561,9 @@ private:
 	char*			LocalUnivExecuteDir;
 	int				BadCluster;
 	int				BadProc;
-	OwnerArray Owners; // May be tracking AccountingGroup instead of owner username/domain
+	ExtArray<OwnerData> Owners; // May be tracking AccountingGroup instead of owner username/domain
 	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
+	int				N_Owners;
 	time_t			NegotiationRequestTime;
 	int				ExitWhenDone;  // Flag set for graceful shutdown
 	Queue<shadow_rec*> RunnableJobQueue;
@@ -660,7 +635,7 @@ private:
     int             make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
     int             command_query_ads(int, Stream* stream);
 	void   			check_claim_request_timeouts( void );
-	int				insert_owner( const char*p  ) { return Owners.insert(p); }
+	int				insert_owner(char const*);
 	void			child_exit(int, int);
 	void			scheduler_univ_job_exit(int pid, int status, shadow_rec * srec);
 	void			scheduler_univ_job_leave_queue(PROC_ID job_id, int status, ClassAd *ad);

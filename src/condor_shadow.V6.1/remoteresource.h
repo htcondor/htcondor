@@ -136,16 +136,6 @@ class RemoteResource : public Service {
 		*/ 
 	void getMachineName( char *& machineName );
 
-		/** Return the filesystem domain of the remote host.
-			@param filesystemDomain Will contain the host's fs_domain
-		*/
-	void getFilesystemDomain( char *& filesystemDomain );
-
-		/** Return the uid domain of the remote host.
-			@param uidDomain Will contain the host's uid_domain
-		*/
-	void getUidDomain( char *& uidDomain );
-
 		/** Return the sinful string of the starter.
 			@param starterAddr Will contain the starter's sinful string.
 		*/
@@ -173,16 +163,6 @@ class RemoteResource : public Service {
 			already exists, we assume it's a buffer and print into it.
        */
    void getClaimId( char *& id );
-
-		/** Return the arch string of the starter.
-			@param arch Will contain the starter's arch string.
-		*/
-	void getStarterArch( char *& arch );
-
-		/** Return the opsys string of the starter.
-			@param opsys Will contain the starter's opsys string.
-		*/
-	void getStarterOpsys( char *& opsys );
 
 		/** Return the claim socket associated with this remote host.  
 			@return The claim socket for this host.
@@ -272,16 +252,6 @@ class RemoteResource : public Service {
 			@param machineName The machine name of this host.
 		*/
 	void setMachineName( const char *machineName );
-
-		/** Set the filesystem domain for this host.  CRUFT
-			@param filesystemDomain The filesystem domain of this host.
-		*/
-	void setFilesystemDomain( const char *filesystemDomain );
-
-		/** Set the uid domain for this host.  CRUFT
-			@param uidDomain The uid domain of this host.
-		*/
-	void setUidDomain( const char *uidDomain );
 
 		/// The number of bytes sent to this resource.
 	float bytesSent();
@@ -430,9 +400,6 @@ class RemoteResource : public Service {
 	char *starterAddress;
 	char *starterArch;
 	char *starterOpsys;
-	char *starter_version;
-	char *fs_domain;
-	char *uid_domain;
 	ReliSock *claim_sock;
 	int exit_reason;
 	bool claim_is_closing;

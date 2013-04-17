@@ -22,6 +22,7 @@
 
 #include "classad/classad_distribution.h"
 #include "MyString.h"
+#include "classad_oldnew.h"
 
 class StringList;
 class Stream;
@@ -46,6 +47,31 @@ typedef enum {
 } TargetAdType;
 
 class ClassAdFileParseHelper;
+
+bool ClassAdAttributeIsPrivate( char const *name );
+
+	/** Print the ClassAd as an old ClassAd to the FILE
+		@param file The file handle to print to.
+		@return TRUE
+	*/
+int	fPrintAd(FILE *file, classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL);
+
+	/** Print the ClassAd as an old ClasAd with dprintf
+		@param level The dprintf level.
+	*/
+void dPrintAd( int level, classad::ClassAd &ad );
+
+	/** Format the ClassAd as an old ClassAd into the MyString.
+		@param output The MyString to write into
+		@return TRUE
+	*/
+int sPrintAd( MyString &output, classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL );
+
+	/** Format the ClassAd as an old ClassAd into the std::string.
+		@param output The std::string to write into
+		@return TRUE
+	*/
+int sPrintAd( std::string &output, classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL );
 
 class ClassAd : public classad::ClassAd
 {
@@ -304,87 +330,18 @@ class ClassAd : public classad::ClassAd
 		 */
 	int EvalBool  (const char *name, classad::ClassAd *target, int &value);
 
-		/** Set the MyType attribute */
-	void		SetMyTypeName(const char *);
-		/** Get the value of the MyType attribute */
-	const char*	GetMyTypeName() const ;
-		/** Set the value of the TargetType attribute */
-	void 		SetTargetTypeName(const char *);
-		/** Get the value of the TargetType attribtute */
-	const char*	GetTargetTypeName() const;
-
 	bool initFromString(char const *str,MyString *err_msg=NULL);
-
-		/** Print the ClassAd as an old ClassAd to the stream
-		 * @param s the stream
-		 */
-	int put(Stream& s);
-
-		/** Send the ClassAd as an old ClassAd on the stream
-		 * @param s the stream
-		 * @param attr_whitelist list of attributes to send
-		 */
-	int put(Stream& s,StringList *attr_whitelist);
 
 		/** Read the old ClassAd from the stream, and fill in this ClassAd.
 		 * @param s the stream
 		 */
 	int initFromStream(Stream& s);
 
-		/** Print the ClassAd as an old AttrList to the stream
-		 * @param s the stream
-		 */
-	int putAttrList(Stream& s);
-
 		/** Read the old ClassAd as an old AttrList from the stream,
 		 * and fill in this ClassAd.
 		 * @param s the stream
 		 */
 	int initAttrListFromStream(Stream& s);
-
-		/** Print the ClassAd as an old ClassAd to the FILE
-			@param file The file handle to print to.
-			@return TRUE
-		*/
-	int	fPrint(FILE *file, StringList *attr_white_list = NULL);
-
-		/** Print the ClassAd as an old ClasAd with dprintf
-			@param level The dprintf level.
-		*/
-	void dPrint( int level);
-
-		/** Format the ClassAd as an old ClassAd into the MyString.
-			@param output The MyString to write into
-			@return TRUE
-		*/
-	int sPrint( MyString &output, StringList *attr_white_list = NULL );
-		/** Format the ClassAd as an old ClassAd into the std::string.
-			@param output The std::string to write into
-			@return TRUE
-		*/
-	int sPrint( std::string &output, StringList *attr_white_list = NULL );
-        /** Prints an expression with a certain name into a buffer. 
-         *
-         *  @param buffer The buffer to place the named expression into. NOTE: if this is NULL, then the function returns some malloc'd memory. Free it.
-         *  @param buffersize The size of the buffer.
-         *  @param name The attr whose expr is to be printed into the buffer.
-         *  @return Returns the now-filled buffer.
-         */
-    char* sPrintExpr(char* buffer, unsigned int buffersize, const char* name);
-
-    /* Prints out the classad as xml to a file.
-     * @param fp The file to be printed to.
-     * @return TRUE as long as the file existed.
-     */
-    int fPrintAsXML(FILE *fp, StringList *attr_white_list = NULL);
-
-    /* Prints the current classad as XML to a string. fPrintAsXML calls this.
-     * @param output The MyString to have filled with the XML-ified classad.
-	 *   The string is appended to, not overwritten.
-     * @return TRUE
-     */
-    int sPrintAsXML(MyString &output, StringList *attr_white_list = NULL);
-    int sPrintAsXML(std::string &output, StringList *attr_white_list = NULL);
 
     void ResetExpr();
 
@@ -406,11 +363,6 @@ class ClassAd : public classad::ClassAd
 	void RemoveExplicitTargetRefs(  );
 	
 	void AddTargetRefs( TargetAdType target_type, bool do_version_check = true );
-
-	static bool ClassAdAttributeIsPrivate( char const *name );
-
-	void SetPrivateAttributesInvisible( bool invisible )
-	{ m_privateAttrsAreInvisible = invisible; }
 
     /** Is this value valid for being written to the log? The value is a RHS of an expression. Only '\n' or '\r' are invalid.
      *
@@ -493,8 +445,6 @@ class ClassAd : public classad::ClassAd
     classad::DirtyAttrList::iterator m_dirtyItr;
     bool m_dirtyItrInit;
 
-	bool m_privateAttrsAreInvisible;
-
 	void _GetReferences(classad::ExprTree *tree,
 						StringList &internal_refs,
 						StringList &external_refs);
@@ -536,6 +486,48 @@ class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
  private:
 	std::string ad_delimitor;
 };
+
+/* Prints out the classad as xml to a file.
+ * @param fp The file to be printed to.
+ * @param ad The classad containing the attribute
+ * @param An optional white-list of attributes to be printed.
+ * @return TRUE as long as the file existed.
+ */
+int fPrintAdAsXML(FILE *fp, classad::ClassAd &ad,
+				  StringList *attr_white_list = NULL);
+
+/* Prints the classad as XML to a string. fPrintAdAsXML calls this.
+ * @param output The string to have filled with the XML-ified classad.
+ *   The string is appended to, not overwritten.
+ * @param ad The ad to be printed.
+ * @param An optional white-list of attributes to be printed.
+ * @return TRUE
+ */
+int sPrintAdAsXML(MyString &output, classad::ClassAd &ad,
+				  StringList *attr_white_list = NULL);
+int sPrintAdAsXML(std::string &output, classad::ClassAd &ad,
+				  StringList *attr_white_list = NULL);
+
+/** Given an attribute name, return a buffer containing the name
+ *  and it's unevaluated value, like so:
+ *    <name> = <expression>
+ *  The returned buffer is malloc'd and must be free'd by the
+ *  caller.
+ *  @param ad The classad containing the attribute
+ *  @param name The attr whose expr is to be printed into the buffer.
+ *  @return Returns a malloc'd buffer.
+ */
+char* sPrintExpr(const classad::ClassAd &ad, const char* name);
+
+	/** Set the MyType attribute */
+void SetMyTypeName(classad::ClassAd &ad, const char *);
+	/** Get the value of the MyType attribute */
+const char*	GetMyTypeName(const classad::ClassAd &ad);
+	/** Set the value of the TargetType attribute */
+void SetTargetTypeName(classad::ClassAd &ad, const char *);
+	/** Get the value of the TargetType attribtute */
+const char*	GetTargetTypeName(const classad::ClassAd& ad);
+
 
 void getTheMyRef( classad::ClassAd *ad );
 void releaseTheMyRef( classad::ClassAd *ad );

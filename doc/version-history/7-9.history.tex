@@ -62,6 +62,13 @@ introduced in HTCondor version 7.9.2 has changed.
 This variable is now called \Macro{CGROUP\_MEMORY\_LIMIT\_POLICY}.
 \Ticket{3564}
 
+\item The new configuration variable \Macro{EXPIRE\_INVALIDATED\_ADS},
+when set to \Expr{True}, causes invalidated ClassAds that would have
+been removed from the \Condor{collector} right away to instead
+be treated as expired ClassAds, such that they may become absent ClassAds.
+See section~\ref{sec:Absent-Ads} for details on absent ClassAds.
+\Ticket{3085}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -84,6 +91,11 @@ Failed to initialize user log to /dev/null or <DAG log path>.
 \item Fixed a severe leak of file descriptors in the \Condor{ft-gahp}.
 \Ticket{3559}
 
+\item Fixed a bug that occurred when using privilege separation;
+the bug made it impossible for the \Condor{startd} to clean
+up execute directories after a \Condor{starter} was prematurely killed.
+\Ticket{3573}
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -104,15 +116,14 @@ Failed to initialize user log to /dev/null or <DAG log path>.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-7-6-0}Version 7.9.5}
+\subsection*{\label{sec:New-7-9-5}Version 7.9.5}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item HTCondor version 7.9.5 not yet released.
-%\item HTCondor version 7.9.5 released on Month Date, 2013.
+\item HTCondor version 7.9.5 released on April 17, 2013.
 
 \end{itemize}
 
@@ -275,6 +286,11 @@ longer creates a visible console window.
 \item Running \Condor{rm} with the \Opt{-f} option on a parallel universe
 job can cause the \Condor{schedd} to crash.
 \Ticket{3561}
+
+\item Using privilege separation may cause execute directories to be leaked,
+if the \Condor{starter} is shut down prematurely; 
+for example, shut down may occur by a hard kill signal or power interruption.
+\Ticket{3573}
 
 \end{itemize}
 

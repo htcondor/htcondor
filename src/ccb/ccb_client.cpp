@@ -199,7 +199,7 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 		}
 
 		m_ccb_sock->encode();
-		if( !msg.put( *m_ccb_sock ) || !m_ccb_sock->end_of_message() ) {
+		if( !putClassAd( m_ccb_sock, msg ) || !m_ccb_sock->end_of_message() ) {
 			if( error ) {
 				error->pushf(
 					"CCBClient",

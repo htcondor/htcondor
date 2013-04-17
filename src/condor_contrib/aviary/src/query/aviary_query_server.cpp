@@ -145,8 +145,8 @@ init_classad()
 	}
 	ad = new ClassAd();
 
-	ad->SetMyTypeName("QueryServer");
-	ad->SetTargetTypeName("Daemon");
+	SetMyTypeName(*ad, "QueryServer");
+	SetTargetTypeName(*ad, "Daemon");
 
 	char* default_name = default_daemon_name();
 		if( ! default_name ) {

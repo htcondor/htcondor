@@ -89,7 +89,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 
 			respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 			respad.Assign(ATTR_TREQ_INVALID_REASON, "Authentication failed.");
-			respad.put(*rsock);
+			putClassAd(rsock, respad);
 			rsock->end_of_message();
 
 			return FALSE;
@@ -129,7 +129,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 
 		respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 		respad.Assign(ATTR_TREQ_INVALID_REASON, "Missing constraint bool.");
-		respad.put(*rsock);
+		putClassAd(rsock, respad);
 		rsock->end_of_message();
 
 		return FALSE;
@@ -165,7 +165,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 
 			respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 			respad.Assign(ATTR_TREQ_INVALID_REASON, "Missing jobid list.");
-			respad.put(*rsock);
+			putClassAd(rsock, respad);
 			rsock->end_of_message();
 
 			delete modify_allow_jobs;
@@ -188,7 +188,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 			respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 			respad.Assign(ATTR_TREQ_INVALID_REASON, 
 				"No constraint and no jobid list.");
-			respad.put(*rsock);
+			putClassAd(rsock, respad);
 			rsock->end_of_message();
 
 			delete modify_allow_jobs;
@@ -318,7 +318,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 		respad.Assign(ATTR_TREQ_INVALID_REASON, 
 			"No file transfer protocol specified.");
-		respad.put(*rsock);
+		putClassAd(rsock, respad);
 		rsock->end_of_message();
 
 		delete modify_allow_jobs;
@@ -339,7 +339,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 		respad.Assign(ATTR_TREQ_INVALID_REASON, 
 			"No peer version specified.");
-		respad.put(*rsock);
+		putClassAd(rsock, respad);
 		rsock->end_of_message();
 
 		delete modify_allow_jobs;
@@ -358,7 +358,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 		respad.Assign(ATTR_TREQ_INVALID_REASON, 
 			"No file transfer direction specified.");
-		respad.put(*rsock);
+		putClassAd(rsock, respad);
 		rsock->end_of_message();
 
 		delete modify_allow_jobs;
@@ -503,7 +503,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 		// to wake up and register to this schedd, let the client know we
 		// might block for a while.
 		respad.Assign(ATTR_TREQ_WILL_BLOCK, 1);
-		if (respad.put(*rsock) == 0) {
+		if (putClassAd(rsock, respad) == 0) {
 			dprintf(D_ALWAYS, "Submittor %s closed connection. Aborting "
 				"getting sandbox info for user.\n", fquser.Value());
 			delete treq;
@@ -562,7 +562,7 @@ Scheduler::requestSandboxLocation(int mode, Stream* s)
 	////////////////////////////////////////////////////////////////////////
 
 	respad.Assign(ATTR_TREQ_WILL_BLOCK, 0);
-	if (respad.put(*rsock) == 0) {
+	if (putClassAd(rsock, respad) == 0) {
 		dprintf(D_ALWAYS, "Submittor %s closed connection. Aborting "
 			"getting sandbox info for user.\n", fquser.Value());
 		delete treq;
@@ -719,7 +719,7 @@ Scheduler::treq_upload_post_push_callback(TransferRequest *treq,
 	//
 	dprintf(D_ALWAYS, "Scheduler::treq_post_push_callback() "
 		"Responding to client about sandbox request and closing connection.\n");
-	respad.put(*rsock);
+	putClassAd(rsock, respad);
 	rsock->end_of_message();
 
 	// close the connection to the client now that I've told it where it can
@@ -1055,7 +1055,7 @@ Scheduler::treq_download_post_push_callback(TransferRequest *treq,
 	//
 	dprintf(D_ALWAYS, "Scheduler::treq_download_post_push_callback() "
 		"Responding to client about sandbox request and closing connection.\n");
-	respad.put(*rsock);
+	putClassAd(rsock, respad);
 	rsock->end_of_message();
 
 	// close the connection to the client now that I've told it where it can
@@ -1254,7 +1254,7 @@ Scheduler::uploadGeneralJobFilesWorkerThread(void *arg, Stream* s)
 		}
 
 		dprintf(D_ALWAYS, "The submitting job ad as the FileTransferObject sees it\n");
-		ad->dPrint(D_ALWAYS);
+		dPrintAd(D_ALWAYS, *ad);
 
 			// Create a file transfer object, with schedd as the server
 		result = ftrans.SimpleInit(ad, true, true, rsock);
@@ -1700,7 +1700,7 @@ Scheduler::downloadGeneralJobFilesWorkerThread(void *arg, Stream* s)
 		}
 
 		dprintf(D_ALWAYS, "The submitting job ad as the FileTransferObject sees it\n");
-		ad->dPrint(D_ALWAYS);
+		dPrintAd(D_ALWAYS, *ad);
 
 			// Create a file transfer object, with schedd as the server
 		result = ftrans.SimpleInit(ad, true, true, rsock);

@@ -338,7 +338,7 @@ bool VirshType::CreateVirshConfigFile(const char*  /*filename*/)
     }
   StringList input_strings, output_strings, error_strings;
   MyString classad_string;
-  m_classAd.sPrint(classad_string);
+  sPrintAd(classad_string, m_classAd);
   classad_string += VMPARAM_XEN_BOOTLOADER;
   classad_string += " = \"";
   classad_string += m_xen_bootloader;

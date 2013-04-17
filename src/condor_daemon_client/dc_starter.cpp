@@ -269,7 +269,7 @@ DCStarter::createJobOwnerSecSession(int timeout,char const *job_claim_id,char co
 	input.Assign(ATTR_SESSION_INFO,session_info);
 
 	sock.encode();
-	if( !input.put(sock) || !sock.end_of_message() ) {
+	if( !putClassAd(&sock, input) || !sock.end_of_message() ) {
 		error_msg = "Failed to compose CREATE_JOB_OWNER_SEC_SESSION to starter";
 		return false;
 	}
@@ -334,7 +334,7 @@ bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_clien
 	}
 
 	sock.encode();
-	if( !input.put(sock) || !sock.end_of_message() ) {
+	if( !putClassAd(&sock, input) || !sock.end_of_message() ) {
 		error_msg = "Failed to send START_SSHD request to starter";
 		return false;
 	}
@@ -495,7 +495,7 @@ DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stde
 		return false;
 	}
 	sock.encode();
-	if (!ad.put(sock) || !sock.end_of_message()) {
+	if (!putClassAd(&sock, ad) || !sock.end_of_message()) {
 		error_msg = "Failed to send request to starter";
 		return false;
 	}
@@ -507,7 +507,7 @@ DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stde
 		error_msg = "Failed to read response for peeking at logs.";
 		return false;
 	}
-	response.dPrint(D_FULLDEBUG);
+	dPrintAd(D_FULLDEBUG, response);
 
 	bool success = false;
 	if (!response.EvaluateAttrBool(ATTR_RESULT, success) || !success)

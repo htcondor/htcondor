@@ -627,8 +627,6 @@ ClassAd::ClassAd()
 		m_initConfig = true;
 	}
 
-	m_privateAttrsAreInvisible = false;
-
 		// Compatibility ads are born with this to emulate the special
 		// CurrentTime in old ClassAds. We don't protect it afterwards,
 		// but that shouldn't be problem unless someone is deliberately
@@ -661,8 +659,6 @@ ClassAd::ClassAd( const ClassAd &ad ) : classad::ClassAd(ad)
 		AssignExpr( ATTR_CURRENT_TIME, "time()" );
 	}
 
-	m_privateAttrsAreInvisible = false;
-
 	ResetName();
     ResetExpr();
 
@@ -686,8 +682,6 @@ ClassAd::ClassAd( const classad::ClassAd &ad )
 		AssignExpr( ATTR_CURRENT_TIME, "time()" );
 	}
 
-	m_privateAttrsAreInvisible = false;
-
 	ResetName();
     ResetExpr();
 
@@ -705,8 +699,6 @@ ClassAd( FILE *file, const char *delimitor, int &isEOF, int&error, int &empty )
 		registerStrlistFunctions();
 		m_initConfig = true;
 	}
-
-	m_privateAttrsAreInvisible = false;
 
 		// Compatibility ads are born with this to emulate the special
 		// CurrentTime in old ClassAds. We don't protect it afterwards,
@@ -895,7 +887,7 @@ InsertFromFile(FILE* file, /*out*/ bool& is_eof, /*out*/ int& error, ClassAdFile
 }
 
 
-bool ClassAd::
+bool
 ClassAdAttributeIsPrivate( char const *name )
 {
 	if( strcasecmp(name,ATTR_CLAIM_ID) == 0 ) {
@@ -1570,24 +1562,6 @@ initFromString( char const *str,MyString *err_msg )
 	return succeeded;
 }
 
-        // shipping functions
-int ClassAd::
-put( Stream &s )
-{
-	if( !putOldClassAd( &s, *this, m_privateAttrsAreInvisible ) ) {
-		return FALSE;
-	}
-	return TRUE;
-}
-
-int ClassAd::
-put( Stream &s, StringList *attr_whitelist )
-{
-	if( !putOldClassAd( &s, *this, m_privateAttrsAreInvisible, attr_whitelist ) ) {
-		return FALSE;
-	}
-	return TRUE;
-}
 
 int ClassAd::
 initFromStream(Stream& s)
@@ -1602,15 +1576,6 @@ initFromStream(Stream& s)
 		AssignExpr( ATTR_CURRENT_TIME, "time()" );
 	}
 
-	return TRUE;
-}
-
-int ClassAd::
-putAttrList( Stream &s )
-{
-	if( !putOldClassAdNoTypes( &s, *this, m_privateAttrsAreInvisible ) ) {
-		return FALSE;
-	}
 	return TRUE;
 }
 
@@ -1631,31 +1596,29 @@ initAttrListFromStream(Stream& s)
 }
 
 		// output functions
-int	ClassAd::
-fPrint( FILE *file, StringList *attr_white_list )
+int
+fPrintAd( FILE *file, classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
 {
 	MyString buffer;
 
-	sPrint( buffer, attr_white_list );
+	sPrintAd( buffer, ad, exclude_private, attr_white_list );
 	fprintf( file, "%s", buffer.Value() );
 
 	return TRUE;
 }
 
-void ClassAd::
-dPrint( int level )
+void
+dPrintAd( int level, classad::ClassAd &ad )
 {
 	MyString buffer;
 
-	SetPrivateAttributesInvisible( true );
-	sPrint( buffer );
-	SetPrivateAttributesInvisible( false );
+	sPrintAd( buffer, ad, true );
 
 	dprintf( level|D_NOHEADER, "%s", buffer.Value() );
 }
 
-int ClassAd::
-sPrint( MyString &output, StringList *attr_white_list )
+int
+sPrintAd( MyString &output, classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
 {
 	classad::ClassAd::iterator itr;
 
@@ -1663,14 +1626,14 @@ sPrint( MyString &output, StringList *attr_white_list )
 	unp.SetOldClassAd( true );
 	string value;
 
-	classad::ClassAd *parent = GetChainedParentAd();
+	classad::ClassAd *parent = ad.GetChainedParentAd();
 
 	if ( parent ) {
 		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
 			if ( attr_white_list && !attr_white_list->contains_anycase(itr->first.c_str()) ) {
 				continue; // not in white-list
 			}
-			if ( !m_privateAttrsAreInvisible ||
+			if ( !exclude_private ||
 				 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
 				value = "";
 				unp.Unparse( value, itr->second );
@@ -1680,11 +1643,11 @@ sPrint( MyString &output, StringList *attr_white_list )
 		}
 	}
 
-	for ( itr = this->begin(); itr != this->end(); itr++ ) {
+	for ( itr = ad.begin(); itr != ad.end(); itr++ ) {
 		if ( attr_white_list && !attr_white_list->contains_anycase(itr->first.c_str()) ) {
 			continue; // not in white-list
 		}
-		if ( !m_privateAttrsAreInvisible ||
+		if ( !exclude_private ||
 			 !ClassAdAttributeIsPrivate( itr->first.c_str() ) ) {
 			value = "";
 			unp.Unparse( value, itr->second );
@@ -1696,31 +1659,32 @@ sPrint( MyString &output, StringList *attr_white_list )
 	return TRUE;
 }
 
-int ClassAd::
-sPrint( std::string &output, StringList *attr_white_list )
+int
+sPrintAd( std::string &output, classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
 {
 	MyString myout = output;
-	int rc = sPrint( myout, attr_white_list );
+	int rc = sPrintAd( myout, ad, exclude_private, attr_white_list );
 	output += myout;
 	return rc;
 }
+
 // Taken from the old classad's function. Got rid of incorrect documentation. 
 ////////////////////////////////////////////////////////////////////////////////// Print an expression with a certain name into a buffer. 
-// The caller should pass the size of the buffer in buffersize.
-// If buffer is NULL, then space will be allocated with malloc(), and it needs
+// The returned buffer will be allocated with malloc(), and it needs
 // to be free-ed with free() by the user.
 ////////////////////////////////////////////////////////////////////////////////
-char* ClassAd::
-sPrintExpr(char* buffer, unsigned int buffersize, const char* name)
+char*
+sPrintExpr(const classad::ClassAd &ad, const char* name)
 {
-
+	char *buffer = NULL;
+	int buffersize = 0;
 	classad::ClassAdUnParser unp;
     string parsedString;
 	classad::ExprTree* expr;
 
 	unp.SetOldClassAd( true );
 
-    expr = Lookup(name); 
+    expr = ad.Lookup(name);
 
     if(!expr)
     {
@@ -1729,15 +1693,11 @@ sPrintExpr(char* buffer, unsigned int buffersize, const char* name)
 
     unp.Unparse(parsedString, expr);
 
-    if(!buffer)
-    {
-
-        buffersize = strlen(name) + parsedString.length() +
-                        3 +     // " = "
-                        1;      // null termination
-        buffer = (char*) malloc(buffersize);
-        ASSERT( buffer != NULL );
-    } 
+    buffersize = strlen(name) + parsedString.length() +
+                    3 +     // " = "
+                    1;      // null termination
+    buffer = (char*) malloc(buffersize);
+    ASSERT( buffer != NULL );
 
     snprintf(buffer, buffersize, "%s = %s", name, parsedString.c_str() );
     buffer[buffersize - 1] = '\0';
@@ -1748,41 +1708,41 @@ sPrintExpr(char* buffer, unsigned int buffersize, const char* name)
 // ClassAd methods
 
 		// Type operations
-void ClassAd::
-SetMyTypeName( const char *myType )
+void
+SetMyTypeName( classad::ClassAd &ad, const char *myType )
 {
 	if( myType ) {
-		InsertAttr( ATTR_MY_TYPE, string( myType ) );
+		ad.InsertAttr( ATTR_MY_TYPE, string( myType ) );
 	}
 
 	return;
 }
 
-const char*	ClassAd::
-GetMyTypeName( ) const
+const char*
+GetMyTypeName( const classad::ClassAd &ad )
 {
 	static string myTypeStr;
-	if( !EvaluateAttrString( ATTR_MY_TYPE, myTypeStr ) ) {
+	if( !ad.EvaluateAttrString( ATTR_MY_TYPE, myTypeStr ) ) {
 		return "";
 	}
 	return myTypeStr.c_str( );
 }
 
-void ClassAd::
-SetTargetTypeName( const char *targetType )
+void
+SetTargetTypeName( classad::ClassAd &ad, const char *targetType )
 {
 	if( targetType ) {
-		InsertAttr( ATTR_TARGET_TYPE, string( targetType ) );
+		ad.InsertAttr( ATTR_TARGET_TYPE, string( targetType ) );
 	}
 
 	return;
 }
 
-const char*	ClassAd::
-GetTargetTypeName( ) const
+const char*
+GetTargetTypeName( const classad::ClassAd &ad )
 {
 	static string targetTypeStr;
-	if( !EvaluateAttrString( ATTR_TARGET_TYPE, targetTypeStr ) ) {
+	if( !ad.EvaluateAttrString( ATTR_TARGET_TYPE, targetTypeStr ) ) {
 		return "";
 	}
 	return targetTypeStr.c_str( );
@@ -2229,8 +2189,8 @@ CopyAttribute( char const *target_attr, char const *source_attr,
 
 //////////////XML functions///////////
 
-int ClassAd::
-fPrintAsXML(FILE *fp, StringList *attr_white_list)
+int
+fPrintAdAsXML(FILE *fp, classad::ClassAd &ad, StringList *attr_white_list)
 {
     if(!fp)
     {
@@ -2238,34 +2198,34 @@ fPrintAsXML(FILE *fp, StringList *attr_white_list)
     }
 
     std::string out;
-    sPrintAsXML(out,attr_white_list);
+    sPrintAdAsXML(out,ad,attr_white_list);
     fprintf(fp, "%s", out.c_str());
     return TRUE;
 }
 
-int ClassAd::
-sPrintAsXML(MyString &output, StringList *attr_white_list)
+int
+sPrintAdAsXML(MyString &output, classad::ClassAd &ad, StringList *attr_white_list)
 {
 	std::string std_output;
-	int rc = sPrintAsXML(std_output, attr_white_list);
+	int rc = sPrintAdAsXML(std_output, ad, attr_white_list);
 	output += std_output;
 	return rc;
 }
 
-int ClassAd::
-sPrintAsXML(std::string &output, StringList *attr_white_list)
+int
+sPrintAdAsXML(std::string &output, classad::ClassAd &ad, StringList *attr_white_list)
 {
 	classad::ClassAdXMLUnParser unparser;
 	std::string xml;
 
 	unparser.SetCompactSpacing(false);
 	if ( attr_white_list ) {
-		ClassAd tmp_ad;
+		classad::ClassAd tmp_ad;
 		classad::ExprTree *expr;
 		const char *attr;
 		attr_white_list->rewind();
 		while( (attr = attr_white_list->next()) ) {
-			if ( (expr = this->Lookup( attr )) ) {
+			if ( (expr = ad.Lookup( attr )) ) {
 				tmp_ad.Insert( attr, expr, false );
 			}
 		}
@@ -2275,7 +2235,7 @@ sPrintAsXML(std::string &output, StringList *attr_white_list)
 			tmp_ad.Remove( attr );
 		}
 	} else {
-		unparser.Unparse( xml, this );
+		unparser.Unparse( xml, &ad );
 	}
 	output += xml;
 	return TRUE;
@@ -2421,7 +2381,7 @@ _GetReferences(classad::ExprTree *tree,
 	}
 	if( !ok ) {
 		dprintf(D_FULLDEBUG,"warning: failed to get all attribute references in ClassAd (perhaps caused by circular reference).\n");
-		dPrint(D_FULLDEBUG);
+		dPrintAd(D_FULLDEBUG, *this);
 		dprintf(D_FULLDEBUG,"End of offending ad.\n");
 	}
 

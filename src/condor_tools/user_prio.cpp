@@ -695,7 +695,7 @@ main(int argc, char* argv[])
     sock->close();
     delete sock;
 
-    if (LongFlag) ad->fPrint(stdout);
+    if (LongFlag) fPrintAd(stdout, *ad);
     else PrintResList(ad);
   }
 
@@ -731,7 +731,7 @@ main(int argc, char* argv[])
        HideGroups = !HierFlag;
     }
 
-    if (LongFlag) ad->fPrint(stdout);
+    if (LongFlag) fPrintAd(stdout, *ad);
     else ProcessInfo(ad,GroupRollup,HierFlag);
 
   }
@@ -769,7 +769,7 @@ main(int argc, char* argv[])
        HideGroups = !HierFlag;
     }
 
-    if (LongFlag) ad->fPrint(stdout);
+    if (LongFlag) fPrintAd(stdout, *ad);
     else ProcessInfo(ad,GroupRollup,HierFlag);
   }
 
@@ -1015,7 +1015,7 @@ static void CollectInfo(int numElem, AttrList* ad, LineRec* LR, bool GroupRollup
   if ( ! DashQuota && !(DetailAvailFlag & DetailQuotas))
     DetailFlag &= ~DetailQuotas;
 
-// ad->fPrint(stdout);
+// fPrintAd(stdout, *ad);
 
   if (fNeedGroupIdFixup) {
 
@@ -1507,7 +1507,7 @@ static void usage(char* name) {
 
 static void PrintResList(AttrList* ad)
 {
-  // ad->fPrint(stdout);
+  // fPrintAd(stdout, *ad);
 
   char  attrName[32], attrStartTime[32];
   char  name[128];

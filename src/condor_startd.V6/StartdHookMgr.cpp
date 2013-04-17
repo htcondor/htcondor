@@ -287,9 +287,9 @@ StartdHookMgr::hookReplyFetch(bool accepted, ClassAd* job_ad, Resource* rip)
 
 		// Construct the output to write to STDIN.
 	MyString hook_stdin;
-	job_ad->sPrint(hook_stdin);
+	sPrintAd(hook_stdin, *job_ad);
 	hook_stdin += "-----\n";  // TODO-fetch: better delimiter?
-	rip->r_classad->sPrint(hook_stdin);
+	sPrintAd(hook_stdin, *rip->r_classad);
 	if (accepted) {
 			// Also include the claim id in the slot classad.
 		hook_stdin += ATTR_CLAIM_ID;
@@ -319,9 +319,9 @@ StartdHookMgr::hookEvictClaim(Resource* rip)
 
 		// Construct the output to write to STDIN.
 	MyString hook_stdin;
-	rip->r_cur->ad()->sPrint(hook_stdin);
+	sPrintAd(hook_stdin, *rip->r_cur->ad());
 	hook_stdin += "-----\n";  // TODO-fetch: better delimiter?
-	rip->r_classad->sPrint(hook_stdin);
+	sPrintAd(hook_stdin, *rip->r_classad);
 		// Also include the claim id in the slot classad.
 	hook_stdin += ATTR_CLAIM_ID;
 	hook_stdin += " = \"";
@@ -360,7 +360,7 @@ FetchClient::startFetch()
 	ClassAd slot_ad;
 	m_rip->publish(&slot_ad, A_ALL_PUB);
 	MyString slot_ad_txt;
-	slot_ad.sPrint(slot_ad_txt);
+	sPrintAd(slot_ad_txt, slot_ad);
 	resmgr->m_hook_mgr->spawn(this, NULL, &slot_ad_txt);
 	m_rip->startedFetch();
 	return true;

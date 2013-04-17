@@ -79,6 +79,7 @@ Directory::Directory( const char *name, priv_state priv )
 	initialize( priv );
 
 	curr_dir = strnewp(name);
+	dprintf(D_FULLDEBUG, "Initializing Directory: curr_dir = %s\n",curr_dir?curr_dir:"NULL");
 	ASSERT(curr_dir);
 
 #ifndef WIN32
@@ -817,7 +818,9 @@ Directory::Next()
 		}
 		{
 			path = curr_dir;
-			path += DIR_DELIM_CHAR;
+			if(path.Length() == 0 || path[path.Length()-1] != DIR_DELIM_CHAR) {
+				path += DIR_DELIM_CHAR;
+			}
 			path += dirent->d_name;
 			curr = new StatInfo( path.Value() );
 			switch( curr->Error() ) {

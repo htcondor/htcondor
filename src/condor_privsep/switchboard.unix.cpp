@@ -767,14 +767,14 @@ static char *do_common_dir_cmd_tasks(configuration *c,
     dir_name = strrchr(dir_parent, '/');
     if (dir_name == NULL) {
         fatal_error_exit(1,
-                         "directory without parent directory specified");
+                         "directory (%s) without parent directory specified", dir_parent);
     }
 
     *dir_name++ = '\0';
 
     if (!is_string_in_list(&c->valid_dirs, dir_parent)) {
         fatal_error_exit(1,
-                         "directory is not in list of valid dirs");
+                         "directory (%s) is not in list of valid dirs", dir_parent);
     }
 
     r = safe_is_path_trusted(dir_parent, &conf_safe_uids, &conf_safe_gids);

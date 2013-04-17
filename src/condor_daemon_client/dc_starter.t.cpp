@@ -59,7 +59,7 @@ sendCmd( const char* starter_addr )
 	}
 
 	printf( "reply ad:\n" );
-	reply.fPrint( stdout );
+	fPrintAd( stdout, reply );
 
 	return 0;
 }

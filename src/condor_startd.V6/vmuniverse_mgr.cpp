@@ -289,7 +289,7 @@ void
 VMUniverseMgr::printVMGahpInfo( int debug_level )
 {
 	dprintf( debug_level, "........VMGAHP info........\n");
-	m_vmgahp_info.AttrList::dPrint(debug_level);
+	dPrintAd(debug_level, m_vmgahp_info);
 	dprintf( debug_level, "\n");
 }
 

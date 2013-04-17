@@ -64,12 +64,12 @@ sendCmd( const char* job_id, const char* name, const char* pool )
 	if( ! d.locateStarter(job_id, &reply) ) {
 		fprintf( stderr, "locateStarter() failed: %s\n", d.error() );
 		fprintf( stderr, "reply ad:\n" );
-		reply.fPrint( stderr );
+		fPrintAd( stderr, reply );
 		return 1;
 	}
 
 	printf( "locateStarter() worked!\n" );
 	printf( "reply ad:\n" );
-	reply.fPrint( stdout );
+	fPrintAd( stdout, reply );
 	return 0;
 }

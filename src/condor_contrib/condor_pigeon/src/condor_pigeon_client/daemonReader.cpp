@@ -56,7 +56,7 @@ char* getQpidPort(char *hName){
 
   if(qpidAd){
     MyString inBuf="";
-    qpidAd->sPrint(inBuf);
+    sPrintAd(inBuf, *qpidAd);
     char* start =strstr(inBuf.Value(),"PORT =");
     char* end =strstr(start,"\n");
     int len = end - start -9;

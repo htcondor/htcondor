@@ -300,7 +300,7 @@ main(
 
 		if (parameters.verbose) {
 			printf("ClassAd %d:\n", classad_index);
-			classads[classad_index]->fPrint(stdout);
+			fPrintAd(stdout, *classads[classad_index]);
 			printf("\n");
 		}
 	}
@@ -319,7 +319,7 @@ main(
 			// 1) Print each ClassAd to a string.
 			// 2) Convert it to XML and back and 
 			// 3) see if the string is the same. 
-			classads[classad_index]->sPrint(before_classad_string);
+			sPrintAd(before_classad_string, *classads[classad_index]);
 
 			unparser.SetCompactSpacing(false);
 			unparser.Unparse(xml, classads[classad_index]);
@@ -329,7 +329,7 @@ main(
 			after_classad = new ClassAd();
 			parser.ParseClassAd(xml, *after_classad);
 
-			after_classad->sPrint(after_classad_string);
+			sPrintAd(after_classad_string, *after_classad);
 			if (strcmp(before_classad_string.Value(), after_classad_string.Value()) != 0) {
 				printf("Failed: XML Parse and UnParse for classad %d\n", classad_index);
 				printf("---- Original ClassAd:\n%s\n", before_classad_string.Value());
@@ -418,7 +418,7 @@ main(
         FILE *classad_file;
         ClassAd *classad_from_file;
         classad_file = safe_fopen_wrapper("classad_file", "w");
-        classads[1]->fPrint(classad_file);
+        fPrintAd(classad_file, *classads[1]);
         fprintf(classad_file, "***\n");
         fclose(classad_file);
 
@@ -1125,7 +1125,7 @@ test_mytype(
 {
 	static const char *actual_value;
 
-	actual_value = classad->GetMyTypeName();
+	actual_value = GetMyTypeName(*classad);
 	if (!strcmp(expected_value, actual_value)) {
 		printf("Passed: MyType is \"");
 		print_truncated_string(expected_value, 40);
@@ -1158,7 +1158,7 @@ test_targettype(
 {
 	static const char *actual_value;
 
-	actual_value = classad->GetTargetTypeName();
+	actual_value = GetTargetTypeName(*classad);
 	if (!strcmp(expected_value, actual_value)) {
 		printf("Passed: TargetType is \"");
 		print_truncated_string(expected_value, 40);

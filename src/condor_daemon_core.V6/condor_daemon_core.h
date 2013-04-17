@@ -1726,6 +1726,7 @@ class DaemonCore : public Service
 		bool			is_connect_pending;
 		bool			is_reverse_connect_pending;
 		bool			call_handler;
+		bool			waiting_for_data;
 		int				servicing_tid;	// tid servicing this socket
 		bool			remove_asap;	// remove when being_serviced==false
     };

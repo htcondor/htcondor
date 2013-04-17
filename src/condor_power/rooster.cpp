@@ -270,7 +270,7 @@ Rooster::wakeUp(ClassAd *startd_ad)
 	}
 
 	MyString stdin_str;
-	startd_ad->sPrint(stdin_str);
+	sPrintAd(stdin_str, *startd_ad);
 
 		// Beware: the following code assumes that we will not
 		// deadlock by filling up the stdin pipe while the tool blocks

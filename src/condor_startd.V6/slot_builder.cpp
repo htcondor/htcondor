@@ -65,6 +65,7 @@ void GetConfigExecuteDir( int slot_id, MyString *execute_dir, MyString *partitio
 #endif
 
 	*execute_dir = execute_value;
+	dprintf(D_FULLDEBUG, "Got execute_dir = %s\n",execute_dir->Value());
 	free( execute_value );
 
 		// Get a unique identifier for the partition containing the execute dir
