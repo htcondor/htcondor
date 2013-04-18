@@ -208,7 +208,7 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure )
 			 sock.get_sinful_peer() );
 	dprintf( D_AUDIT, sock, "AuthMethod=%s, AuthId=%s, CondorId=%s\n",
 			 sock.getAuthenticationMethodUsed(),
-			 "???",
+			 sock.getAuthenticatedName(),
 			 sock.getFullyQualifiedUser() );
 	dprintf( D_AUDIT, sock,
 			 "triedAuthentication=%s, isAuthenticated=%s, isMappedFQU=%s\n",
