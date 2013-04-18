@@ -1003,6 +1003,9 @@ int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key,
 				*method_used = strdup(authob.getMethodUsed());
 			}
 		}
+		if ( authob.getAuthenticatedName() ) {
+			setAuthenticatedName( authob.getAuthenticatedName() );
+		}
 		return result;
     }
     else {

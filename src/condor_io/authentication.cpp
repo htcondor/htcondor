@@ -619,6 +619,19 @@ void Authentication::setAuthAny()
 }
 */
 
+const char* Authentication::getAuthenticatedName()
+{
+#if defined(SKIP_AUTHENTICATION)
+	return NULL;
+#else
+	if ( authenticator_ ) {
+		return authenticator_->getAuthenticatedName();
+	} else {
+		return NULL;
+	}
+#endif
+}
+
 int Authentication::setOwner( const char *owner ) 
 {
 #if defined(SKIP_AUTHENTICATION)

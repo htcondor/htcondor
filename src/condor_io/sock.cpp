@@ -67,6 +67,7 @@ Sock::Sock() : Stream() {
 	_fqu_user_part = NULL;
 	_fqu_domain_part = NULL;
 	_auth_method = NULL;
+	_auth_name = NULL;
 	_crypto_method = NULL;
 	_tried_authentication = false;
 	ignore_connect_timeout = FALSE;		// Used by the HA Daemon
@@ -102,6 +103,7 @@ Sock::Sock(const Sock & orig) : Stream() {
 	_fqu_user_part = NULL;
 	_fqu_domain_part = NULL;
 	_auth_method = NULL;
+	_auth_name = NULL;
 	_crypto_method = NULL;
 	_tried_authentication = false;
 	ignore_timeout_multiplier = orig.ignore_timeout_multiplier;
@@ -176,6 +178,7 @@ Sock::~Sock()
 		free(_auth_method);
 		_auth_method = NULL;
 	}
+	free(_auth_name);
 	if (_crypto_method) {
 		free(_crypto_method);
 		_crypto_method = NULL;
@@ -2237,6 +2240,16 @@ void Sock :: setAuthenticationMethodUsed(char const *auth_method)
 
 const char* Sock :: getAuthenticationMethodUsed() {
 	return _auth_method;
+}
+
+void Sock :: setAuthenticatedName(char const *auth_name)
+{
+	free(_auth_name);
+	_auth_name = strdup(auth_name);
+}
+
+const char* Sock :: getAuthenticatedName() {
+	return _auth_name;
 }
 
 void Sock :: setCryptoMethodUsed(char const *crypto_method)
