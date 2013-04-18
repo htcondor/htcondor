@@ -109,8 +109,9 @@ will not necessarily have to wait until the end of the cycle to be returned.
 \Ticket{3535}
 
 \item Fixed a bug that would cause parallel universe jobs to fail when 
-\Expr{USE\_NFS=True}. This may cause a potential issue with 
-\Condor{chirp} \Opt{lookup}, though testing seems to show that this is not an issue.
+\Expr{USE\_NFS=True}. This might have caused a potential issue with 
+doing a look up using \Condor{chirp}, 
+although testing seems to show that this is not an issue.
 \Ticket{3390}
 
 \end{itemize}
