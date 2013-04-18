@@ -28,7 +28,8 @@ using namespace std;
 #include <dlfcn.h> //To facilitate compiling on machines that don't have NVIDIA installed
 //#include <cuda_runtime_api.h>
 #include "cuda_header_doc.h"
-#include "nvml.h"
+//#include "nvml.h"
+#include "nvml_stub.h"
 #endif
 
 /*
