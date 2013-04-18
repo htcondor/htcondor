@@ -260,7 +260,7 @@ ParallelShadow::getResources( void )
             
 			job_ad = new ClassAd();
 
-			if( !job_ad->initFromStream(*sock)  ) {
+			if( !getClassAd(sock, *job_ad)  ) {
 				EXCEPT( "Failed to get job classad for proc %d", i );
 			}
 
@@ -749,7 +749,7 @@ ParallelShadow::updateFromStarter(int  /*command*/, Stream *s)
 {
 	ClassAd update_ad;
 	s->decode();
-	update_ad.initFromStream(*s);
+	getClassAd(s, update_ad);
 	s->end_of_message();
 	return updateFromStarterClassAd(&update_ad);
 }

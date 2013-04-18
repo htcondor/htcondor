@@ -1497,7 +1497,7 @@ int Scheduler::command_query_ads(int, Stream* stream)
 
 	stream->decode();
     stream->timeout(15);
-	if( !queryAd.initFromStream(*stream) || !stream->end_of_message()) {
+	if( !getClassAd(stream, queryAd) || !stream->end_of_message()) {
         dprintf( D_ALWAYS, "Failed to receive query on TCP: aborting\n" );
 		return FALSE;
 	}
@@ -3975,7 +3975,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	}
 
 		// read the command ClassAd + EOM
-	if( ! (command_ad.initFromStream(*rsock) && rsock->end_of_message()) ) {
+	if( ! (getClassAd(rsock, command_ad) && rsock->end_of_message()) ) {
 		dprintf( D_ALWAYS, "Can't read command ad from tool\n" );
 		refuse( s );
 		return FALSE;
@@ -5195,7 +5195,7 @@ Scheduler::negotiate(int command, Stream* s)
 	MyString submitter_tag;
 	s->decode();
 	if( command == NEGOTIATE ) {
-		if( !negotiate_ad.initFromStream( *s ) ) {
+		if( !getClassAd( s, negotiate_ad ) ) {
 			dprintf( D_ALWAYS, "Can't receive negotiation header\n" );
 			return (!(KEEP_STREAM));
 		}
@@ -12243,7 +12243,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		}
 	}
 
-	if( !input.initFromStream(*s) || !s->end_of_message() ) {
+	if( !getClassAd(s, input) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"Failed to receive input ClassAd for GET_JOB_CONNECT_INFO\n");
 		return FALSE;
@@ -14022,13 +14022,13 @@ Scheduler::receive_startd_update(int /*cmd*/, Stream *stream) {
 	dprintf(D_COMMAND, "Schedd got update ad from local startd\n");
 
 	ClassAd *machineAd = new ClassAd;
-	if (!machineAd->initFromStream(*stream)) {
+	if (!getClassAd(stream, *machineAd)) {
 		dprintf(D_ALWAYS, "Error receiving update ad from local startd\n");
 		return TRUE;
 	}
 
 	ClassAd *privateAd = new ClassAd;
-	if (!privateAd->initFromStream(*stream)) {
+	if (!getClassAd(stream, *privateAd)) {
 		dprintf(D_ALWAYS, "Error receiving update private ad from local startd\n");
 		return TRUE;
 	}

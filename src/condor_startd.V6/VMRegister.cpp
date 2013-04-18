@@ -223,7 +223,7 @@ VMRegister::requestHostClassAds(void)
 
 		if(more) {
 			ad = new ClassAd;
-			if( !ad->initFromStream(ssock) ) {
+			if( !getClassAd(&ssock, *ad) ) {
 				ssock.end_of_message();
 				delete ad;
 				return;

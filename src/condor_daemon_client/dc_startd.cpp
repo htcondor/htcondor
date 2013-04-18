@@ -166,7 +166,7 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		dprintf( failureDebugLevel(), "Request was NOT accepted for claim %s\n", description() );
 	} else if( m_reply == 3 ) {
 	 	if( !sock->get(m_leftover_claim_id) ||
-			!m_leftover_startd_ad.initFromStream( *sock )  ) 
+			!getClassAd( sock, m_leftover_startd_ad )  ) 
 		{
 			// failed to read leftover partitionable slot info
 			dprintf( failureDebugLevel(),
@@ -282,7 +282,7 @@ DCStartd::deactivateClaim( bool graceful, bool *claim_is_closing )
 
 	reli_sock.decode();
 	ClassAd response_ad;
-	if( !response_ad.initFromStream(reli_sock) || !reli_sock.end_of_message() ) {
+	if( !getClassAd(&reli_sock, response_ad) || !reli_sock.end_of_message() ) {
 		dprintf( D_FULLDEBUG, "DCStartd::deactivateClaim: failed to read response ad.\n");
 			// The response ad is not critical and is expected to be missing
 			// if the startd is from before 7.0.5.
@@ -1036,7 +1036,7 @@ DCStartd::drainJobs(int how_fast,bool resume_on_completion,char const *check_exp
 
 	sock->decode();
 	ClassAd response_ad;
-	if( !response_ad.initFromStream(*sock) || !sock->end_of_message() ) {
+	if( !getClassAd(sock, response_ad) || !sock->end_of_message() ) {
 		formatstr(error_msg,"Failed to get response to DRAIN_JOBS request to %s",name());
 		newError(CA_FAILURE,error_msg.c_str());
 		delete sock;
@@ -1088,7 +1088,7 @@ DCStartd::cancelDrainJobs(char const *request_id)
 
 	sock->decode();
 	ClassAd response_ad;
-	if( !response_ad.initFromStream(*sock) || !sock->end_of_message() ) {
+	if( !getClassAd(sock, response_ad) || !sock->end_of_message() ) {
 		formatstr(error_msg,"Failed to get response to CANCEL_DRAIN_JOBS request to %s",name());
 		newError(CA_FAILURE,error_msg.c_str());
 		delete sock;

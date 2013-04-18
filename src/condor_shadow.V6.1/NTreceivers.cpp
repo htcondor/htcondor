@@ -229,7 +229,7 @@ do_REMOTE_syscall()
 	case CONDOR_register_starter_info:
 	{
 		ClassAd ad;
-		result = ( ad.initFromStream(*syscall_sock) );
+		result = ( getClassAd(syscall_sock, ad) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
@@ -254,7 +254,7 @@ do_REMOTE_syscall()
 	case CONDOR_register_job_info:
 	{
 		ClassAd ad;
-		result = ( ad.initFromStream(*syscall_sock) );
+		result = ( getClassAd(syscall_sock, ad) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
@@ -346,7 +346,7 @@ do_REMOTE_syscall()
 		ASSERT( result );
 		result = ( syscall_sock->code(reason) );
 		ASSERT( result );
-		result = ( ad.initFromStream(*syscall_sock) );
+		result = ( getClassAd(syscall_sock, ad) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
@@ -371,7 +371,7 @@ do_REMOTE_syscall()
 	case CONDOR_job_termination:
 	{
 		ClassAd ad;
-		result = ( ad.initFromStream(*syscall_sock) );
+		result = ( getClassAd(syscall_sock, ad) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
@@ -677,7 +677,7 @@ do_REMOTE_syscall()
 	case CONDOR_register_mpi_master_info:
 	{
 		ClassAd ad;
-		result = ( ad.initFromStream(*syscall_sock) );
+		result = ( getClassAd(syscall_sock, ad) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
@@ -823,7 +823,7 @@ do_REMOTE_syscall()
 	{
 		ClassAd ad;
 
-		result = ( ad.initFromStream(*syscall_sock) );
+		result = ( getClassAd(syscall_sock, ad) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );

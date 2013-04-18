@@ -941,7 +941,7 @@ HADStateMachine::commandHandlerHad(int cmd, Stream *strm)
 
     ClassAd	ad;
     strm->decode();
-    if( ! ad.initFromStream(*strm) ) {
+    if( ! getClassAd(strm, ad) ) {
         dprintf( D_ALWAYS, "commandHandler ERROR -  can't read classad\n" );
         return FALSE;
     }

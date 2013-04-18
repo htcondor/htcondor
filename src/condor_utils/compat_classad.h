@@ -364,20 +364,6 @@ class ClassAd : public classad::ClassAd
 	
 	void AddTargetRefs( TargetAdType target_type, bool do_version_check = true );
 
-    /** Is this value valid for being written to the log? The value is a RHS of an expression. Only '\n' or '\r' are invalid.
-     *
-     * @param value The thing we check to see if valid.
-     * @return True, unless value had '\n' or '\r'.
-     */
-    static bool IsValidAttrValue(const char *value);
-
-	//	Decides if a string is a valid attribute name, the LHS
-	//  of an expression.  As per the manual, valid names:
-	//
-	//  Attribute names are sequences of alphabetic characters, digits and 
-	//  underscores, and may not begin with a digit
-	static bool IsValidAttrName(const char *name);
-
 	bool NextExpr( const char *&name, ExprTree *&value );
 
     /** Gets the next dirty expression tree
@@ -486,6 +472,25 @@ class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
  private:
 	std::string ad_delimitor;
 };
+
+/** Is this value valid for being written to the log?
+ *  The value is a RHS of an expression. Only '\n' or '\r' are invalid.
+ *
+ *  @param value The thing we check to see if valid.
+ *  @return True, unless value had '\n' or '\r'.
+ */
+bool IsValidAttrValue(const char *value);
+
+/** Decides if a string is a valid attribute name, the LHS
+ *  of an expression.  As per the manual, valid names:
+ *
+ *  Attribute names are sequences of alphabetic characters, digits and 
+ *  underscores, and may not begin with a digit.
+ *
+ *  @param name The thing we check to see if valid.
+ *  @return true if valid, else false
+ */
+bool IsValidAttrName(const char *name);
 
 /* Prints out the classad as xml to a file.
  * @param fp The file to be printed to.

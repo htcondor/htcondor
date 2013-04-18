@@ -1566,7 +1566,7 @@ initFromString( char const *str,MyString *err_msg )
 int ClassAd::
 initFromStream(Stream& s)
 {
-	if( !getOldClassAd( &s, *this ) ) {
+	if( !getClassAd( &s, *this ) ) {
 		return FALSE;
 	}
 
@@ -1582,7 +1582,7 @@ initFromStream(Stream& s)
 int ClassAd::
 initAttrListFromStream(Stream& s)
 {
-	if( !getOldClassAdNoTypes( &s, *this ) ) {
+	if( !getClassAdNoTypes( &s, *this ) ) {
 		return FALSE;
 	}
 
@@ -2022,7 +2022,7 @@ AddExplicitConditionals( classad::ExprTree *expr )
 // Determine if a value is valid to be written to the log. The value
 // is a RHS of an expression. According to LogSetAttribute::WriteBody,
 // the only invalid character is a '\n'.
-bool ClassAd::
+bool
 IsValidAttrValue(const char *value)
 {
     //NULL value is not invalid, may translate to UNDEFINED
@@ -2051,8 +2051,8 @@ IsValidAttrValue(const char *value)
 //  Attribute names are sequences of alphabetic characters, digits and 
 //  underscores, and may not begin with a digit
 
-/* static */ bool
-ClassAd::IsValidAttrName(const char *name) {
+bool
+IsValidAttrName(const char *name) {
 		// NULL pointer certainly false
 	if (!name) {
 		return false;

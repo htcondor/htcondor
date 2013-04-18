@@ -41,13 +41,13 @@ void AttrList_setPublishServerTimeMangled( bool publish)
 static const char *SECRET_MARKER = "ZKM"; // "it's a Zecret Klassad, Mon!"
 
 classad::ClassAd *
-getOldClassAd( Stream *sock )
+getClassAd( Stream *sock )
 {
 	classad::ClassAd *ad = new classad::ClassAd( );
 	if( !ad ) { 
 		return NULL;
 	}
-	if( !getOldClassAd( sock, *ad ) ) {
+	if( !getClassAd( sock, *ad ) ) {
 		delete ad;
 		return NULL;
 	}
@@ -55,13 +55,19 @@ getOldClassAd( Stream *sock )
 }
 
 bool
-getOldClassAd( Stream *sock, classad::ClassAd& ad )
+getClassAd( Stream *sock, classad::ClassAd& ad )
 {
 	int 					numExprs;
 	MyString				inputLine;
 
-
 	ad.Clear( );
+
+		// Reinsert CurrentTime, emulating the special version in old
+		// ClassAds
+	if ( !compat_classad::ClassAd::m_strictEvaluation ) {
+		ad.Insert( ATTR_CURRENT_TIME " = time()" );
+	}
+
 	sock->decode( );
 	if( !sock->code( numExprs ) ) {
  		return false;
@@ -124,7 +130,7 @@ getOldClassAd( Stream *sock, classad::ClassAd& ad )
 }
 
 bool
-getOldClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
+getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 {
 	classad::ClassAdParser	parser;
 	int 					numExprs = 0; // Initialization clears Coverity warning
@@ -134,6 +140,13 @@ getOldClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 
 
 	ad.Clear( );
+
+		// Reinsert CurrentTime, emulating the special version in old
+		// ClassAds
+	if ( !compat_classad::ClassAd::m_strictEvaluation ) {
+		ad.Insert( ATTR_CURRENT_TIME " = time()" );
+	}
+
 	sock->decode( );
 	if( !sock->code( numExprs ) ) {
  		return false;

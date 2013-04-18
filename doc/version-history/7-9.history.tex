@@ -114,6 +114,13 @@ doing a look up using \Condor{chirp},
 although testing seems to show that this is not an issue.
 \Ticket{3390}
 
+\item Fixed a bug introduced in 7.9.4 that sometimes causeed
+\AdAttr{ExitCode} and \AdAttr{ExitBySignal} not to be set in the job
+ad when the job terminated.  These attributes were correctly
+reported in the user log but were not propagated to the job ad and
+were therefore not available for querying with \Condor{history}.
+\Ticket{3577}
+
 \end{itemize}
 
 \noindent Known Bugs:

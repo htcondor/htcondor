@@ -349,7 +349,7 @@ bool do_item(Daemon* d, MyString name, int num, int output_mode) {
 		if (sc_success) {
 
 			sock->decode();
-			if (authz_ad.initFromStream(*sock) &&
+			if (getClassAd(sock, authz_ad) &&
 				sock->end_of_message()) {
 				fn_success = true;
 			}

@@ -686,7 +686,7 @@ main(int argc, char* argv[])
     // get reply
     sock->decode();
     AttrList* ad=new AttrList();
-    if (!ad->initAttrListFromStream(*sock) ||
+    if (!getClassAdNoTypes(sock, *ad) ||
         !sock->end_of_message()) {
       fprintf( stderr, "failed to get classad from negotiator\n" );
       exit(1);
@@ -747,7 +747,7 @@ main(int argc, char* argv[])
     // get reply
     sock->decode();
     AttrList* ad=new AttrList();
-    if (!ad->initAttrListFromStream(*sock) ||
+    if (!getClassAdNoTypes(sock, *ad) ||
         !sock->end_of_message()) {
       fprintf( stderr, "failed to get classad from negotiator\n" );
       exit(1);

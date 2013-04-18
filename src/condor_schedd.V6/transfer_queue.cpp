@@ -204,7 +204,7 @@ int TransferQueueManager::HandleRequest(int cmd,Stream *stream)
 
 	ClassAd msg;
 	sock->decode();
-	if( !msg.initFromStream( *sock ) || !sock->end_of_message() ) {
+	if( !getClassAd( sock, msg ) || !sock->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"TransferQueueManager: failed to receive transfer request "
 				"from %s.\n", sock->peer_description() );

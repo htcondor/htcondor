@@ -348,7 +348,7 @@ collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 	if (!clientAd) return 0;
 
 	// get the ad
-	if( !clientAd->initFromStream(*sock) )
+	if( !getClassAd(sock, *clientAd) )
 	{
 		dprintf (D_ALWAYS,"Command %d on Sock not follwed by ClassAd (or timeout occured)\n",
 				command);
@@ -535,7 +535,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			{
 				EXCEPT ("Memory error!");
 			}
-			if( !pvtAd->initFromStream(*sock) )
+			if( !getClassAd(sock, *pvtAd) )
 			{
 				dprintf(D_FULLDEBUG,"\t(Could not get startd's private ad)\n");
 				delete pvtAd;
