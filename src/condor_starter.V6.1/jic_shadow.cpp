@@ -2274,7 +2274,7 @@ JICShadow::receiveMachineAd( Stream *stream )
 	mach_ad = new ClassAd();
 
 	stream->decode();
-	if (!mach_ad->initFromStream(*stream))
+	if (!getClassAd(stream, *mach_ad))
 	{
 		dprintf(D_ALWAYS, "Received invalid machine ad.  Discarding\n");
 		delete mach_ad;

@@ -585,7 +585,7 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 	MyString error_msg;
 	ClassAd input;
 	s->decode();
-	if( !input.initFromStream(*s) || !s->end_of_message() ) {
+	if( !getClassAd(s, input) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"Failed to read request in createJobOwnerSecSession()\n");
 		return FALSE;
 	}
@@ -852,7 +852,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 
 	compat_classad::ClassAd input;
 	s->decode();
-	if( !input.initFromStream(*s) || !s->end_of_message() ) {
+	if( !getClassAd(s, input) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS, "Failed to read request for peeking at logs.\n");
 		return false;
 	}
@@ -1225,7 +1225,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 
 	ClassAd input;
 	s->decode();
-	if( !input.initFromStream(*s) || !s->end_of_message() ) {
+	if( !getClassAd(s, input) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"Failed to read request in START_SSHD.\n");
 		return FALSE;
 	}

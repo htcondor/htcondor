@@ -437,7 +437,7 @@ fetchAds (ClassAdList &adList, const char *poolName, CondorError* errstack)
 		}
 		if (more) {
 			ad = new ClassAd;
-			if( !ad->initFromStream(*sock) ) {
+			if( !getClassAd(sock, *ad) ) {
 				sock->end_of_message();
 				delete ad;
 				delete sock;

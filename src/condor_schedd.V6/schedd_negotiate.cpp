@@ -423,7 +423,7 @@ ScheddNegotiate::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 		m_match_ad.Clear();
 
 			// get startd ad from negotiator
-		if( !m_match_ad.initFromStream(*sock) ) {
+		if( !getClassAd(sock, m_match_ad) ) {
 			dprintf( D_ALWAYS,
 					 "Can't get my match ad from negotiator\n" );
 			return false;

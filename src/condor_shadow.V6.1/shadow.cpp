@@ -48,7 +48,7 @@ UniShadow::updateFromStarter(int /* command */, Stream *s)
 
 	// get info from the starter encapsulated in a ClassAd
 	s->decode();
-	if( ! update_ad.initFromStream(*s) ) {
+	if( ! getClassAd(s, update_ad) ) {
 		dprintf( D_ALWAYS, "ERROR in UniShadow::updateFromStarter:"
 				 "Can't read ClassAd, aborting.\n" );
 		return FALSE;

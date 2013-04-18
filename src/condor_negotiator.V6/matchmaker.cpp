@@ -3471,7 +3471,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 
 		// 2d.  get the request 
 		dprintf (D_FULLDEBUG,"    Got JOB_INFO command; getting classad/eom\n");
-		if (!request.initFromStream(*sock) || !sock->end_of_message())
+		if (!getClassAd(sock, request) || !sock->end_of_message())
 		{
 			dprintf(D_ALWAYS, "    JOB_INFO command not followed by ad/eom\n");
 			sock->end_of_message();

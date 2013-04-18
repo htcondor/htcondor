@@ -1662,7 +1662,7 @@ SecManStartCommand::receiveAuthInfo_inner()
 			ClassAd auth_response;
 			m_sock->decode();
 
-			if (!auth_response.initFromStream(*m_sock) ||
+			if (!getClassAd(m_sock, auth_response) ||
 				!m_sock->end_of_message() ) {
 
 				// if we get here, it means the serve accepted our connection
@@ -1935,7 +1935,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			// receive a classAd containing info about new session
 			ClassAd post_auth_info;
 			m_sock->decode();
-			if (!post_auth_info.initFromStream(*m_sock) || !m_sock->end_of_message()) {
+			if (!getClassAd(m_sock, post_auth_info) || !m_sock->end_of_message()) {
 				dprintf (D_ALWAYS, "SECMAN: could not receive session info, failing!\n");
 				m_errstack->push ("SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
 							"could not receive post_auth_info." );

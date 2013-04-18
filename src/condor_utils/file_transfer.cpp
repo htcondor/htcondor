@@ -1985,7 +1985,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			//
 			// receive the classad
 			ClassAd file_info;
-			if (!file_info.initFromStream(*s)) {
+			if (!getClassAd(s, file_info)) {
 				dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
@@ -2379,7 +2379,7 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 	s->decode();
 
 	ClassAd ad;
-	if(!ad.initFromStream(*s) || !s->end_of_message()) {
+	if(!getClassAd(s, ad) || !s->end_of_message()) {
 		char const *ip = NULL;
 		if(s->type() == Sock::reli_sock) {
 			ip = ((ReliSock *)s)->get_sinful_peer();
@@ -3535,7 +3535,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 
 	while(1) {
 		ClassAd msg;
-		if( !msg.initFromStream(*s) || !s->end_of_message() ) {
+		if( !getClassAd(s, msg) || !s->end_of_message() ) {
 			char const *ip = s->peer_ip_str();
 			error_desc.formatstr("Failed to receive GoAhead message from %s.",
 							   ip ? ip : "(null)");

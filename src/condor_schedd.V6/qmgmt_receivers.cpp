@@ -923,7 +923,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		int terrno;
 
 		ClassAd ad;
-		assert( ad.initFromStream(*syscall_sock) );
+		assert( getClassAd(syscall_sock, ad) );
 		assert( syscall_sock->end_of_message() );;
 
 		errno = 0;

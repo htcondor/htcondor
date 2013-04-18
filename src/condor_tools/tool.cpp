@@ -1695,7 +1695,7 @@ handleSquawk( char *line, char *addr ) {
 		sock.decode();
 
 		ClassAd ad;
-		ad.initFromStream( sock );
+		getClassAd( &sock, ad );
 		printAdToFile( &ad, NULL );
 		
 		return TRUE;

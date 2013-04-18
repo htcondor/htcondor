@@ -400,7 +400,7 @@ TransferD::accept_transfer_request_encapsulation_old_classads(Stream *sock)
 
 	/* read the transfer request header packet upon construction */
 	ad = new ClassAd();
-	if (ad->initFromStream(*sock) == 0) {
+	if (getClassAd(sock, *ad) == false) {
 		// XXX don't fail here, just go back to daemoncore
 		EXCEPT("XXX Couldn't init initial ad from stream!");
 	}
@@ -425,7 +425,7 @@ TransferD::accept_transfer_request_encapsulation_old_classads(Stream *sock)
 		if (ad == NULL) {
 			EXCEPT("Out of memory!");
 		}
-		if (ad->initFromStream(*sock) == 0) {
+		if (getClassAd(sock, *ad) == false) {
 			EXCEPT("Expected %d transfer job ads, got %d instead.", 
 				treq->get_num_transfers(), i);
 		}

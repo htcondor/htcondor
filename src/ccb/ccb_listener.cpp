@@ -354,7 +354,7 @@ CCBListener::ReadMsgFromCCB()
 	}
 	m_sock->timeout(CCB_TIMEOUT);
 	ClassAd msg;
-	if( !msg.initFromStream( *m_sock ) || !m_sock->end_of_message() ) {
+	if( !getClassAd( m_sock, msg ) || !m_sock->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"CCBListener: failed to receive message from CCB server %s\n",
 				m_ccb_address.Value());

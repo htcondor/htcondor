@@ -68,7 +68,7 @@ ODSAccountant::fetchAd ()
     // get reply
     sock->decode();
     ad=new AttrList();
-    if (!ad->initAttrListFromStream(*sock) || !sock->end_of_message()) {
+    if (!getClassAdNoTypes(sock, *ad) || !sock->end_of_message()) {
         dprintf( D_ALWAYS, "ODSAccountant: failed to get classad from negotiator!\n" );
     }
     

@@ -1566,7 +1566,7 @@ initFromString( char const *str,MyString *err_msg )
 int ClassAd::
 initFromStream(Stream& s)
 {
-	if( !getOldClassAd( &s, *this ) ) {
+	if( !getClassAd( &s, *this ) ) {
 		return FALSE;
 	}
 
@@ -1582,7 +1582,7 @@ initFromStream(Stream& s)
 int ClassAd::
 initAttrListFromStream(Stream& s)
 {
-	if( !getOldClassAdNoTypes( &s, *this ) ) {
+	if( !getClassAdNoTypes( &s, *this ) ) {
 		return FALSE;
 	}
 

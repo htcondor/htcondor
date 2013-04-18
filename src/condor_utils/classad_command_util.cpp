@@ -104,7 +104,7 @@ getCmdFromReliSock( ReliSock* s, ClassAd* ad, bool force_auth )
         }
     }
 	
-	if( ! ad->initFromStream(*s) ) { 
+	if( ! getClassAd(s, *ad) ) { 
 		dprintf( D_ALWAYS, 
 				 "Failed to read ClassAd from network, aborting\n" ); 
 		return FALSE;
