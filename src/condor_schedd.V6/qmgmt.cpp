@@ -2132,7 +2132,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	// If someone is trying to do something funny with an invalid
 	// attribute name, bail out early
-	if (!AttrList::IsValidAttrName(attr_name)) {
+	if (!IsValidAttrName(attr_name)) {
 		dprintf(D_ALWAYS, "SetAttribute got invalid attribute named %s for job %d.%d\n", 
 			attr_name ? attr_name : "(null)", cluster_id, proc_id);
 		return -1;
@@ -2140,7 +2140,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		// If someone is trying to do something funny with an invalid
 		// attribute value, bail earlyxs
-	if (!AttrList::IsValidAttrValue(attr_value)) {
+	if (!IsValidAttrValue(attr_value)) {
 		dprintf(D_ALWAYS,
 				"SetAttribute received invalid attribute value '%s' for "
 				"job %d.%d, ignoring\n",
