@@ -103,9 +103,10 @@ the bug made it impossible for the \Condor{startd} to clean
 up execute directories after a \Condor{starter} was prematurely killed.
 \Ticket{3573}
 
-\item Fixed a bug that caused fetching user priorities from the negotiator
-to take a long time. User priorities requested during the negotiation cycle
-will not necessarily have to wait until the end of the cycle to be returned.
+\item Fixed a bug that sometimes caused fetching user priorities 
+from the \Condor{negotiator} daemon to take a long time,
+as the fetch potentially had to wait until the end of the negotiation cycle. 
+The fetch no longer needs to wait.
 \Ticket{3535}
 
 \item Fixed a bug that would cause parallel universe jobs to fail when 
