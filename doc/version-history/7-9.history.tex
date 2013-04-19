@@ -188,6 +188,11 @@ if the \Condor{starter} is shut down prematurely;
 for example, shut down may occur by a hard kill signal or power interruption.
 \Ticket{3573}
 
+\item  If a job has any output files and uses the file transfer mechanism,
+the job ClassAd attribute \Attr{ExitCode} may be lost,
+causing its value to be reported as 0.
+\Ticket{3577}
+
 \end{itemize}
 
 \noindent Additions and Changes to the Manual:
