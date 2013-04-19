@@ -1500,7 +1500,7 @@ class DaemonCore : public Service
 		 */
 	void ClearSharedPortServerAddr();
 
-	void InstallAuditingCallback( void (*fn)(int, Sock&, bool) );
+	void InstallAuditingCallback( void (*fn)(int, Sock&, bool) ) { audit_log_callback_fn = fn; }
 
 	//-----------------------------------------------------------------------------
 	/*
