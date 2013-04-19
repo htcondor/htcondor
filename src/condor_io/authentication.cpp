@@ -632,6 +632,25 @@ const char* Authentication::getAuthenticatedName()
 #endif
 }
 
+const char* Authentication::getFQAuthenticatedName()
+{
+#if defined(SKIP_AUTHENTICATION)
+	return NULL;
+#else
+	if ( authenticator_ ) {
+		if(strcasecmp("GSI", method_used) == 0) {
+	        const char *fqan = ((Condor_Auth_X509*)authenticator_)->getFQAN();	
+			if(fqan) {
+				return fqan;
+			}
+		}
+		return authenticator_->getAuthenticatedName();
+	} else {
+		return NULL;
+	}
+#endif
+}
+
 int Authentication::setOwner( const char *owner ) 
 {
 #if defined(SKIP_AUTHENTICATION)
