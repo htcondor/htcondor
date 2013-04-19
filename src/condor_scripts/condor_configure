@@ -451,6 +451,8 @@ if ($opt_bosco) {
 
 	$local_config{IS_BOSCO}="True";
     $local_config{CREATE_CORE_FILES }="False";
+    $local_config{CONDOR_ADMIN}=" ";
+    $local_config{PREEN_ARGS}="-r";
 
 	$daemon_list{SCHEDD} = 1;
     $daemon_list{COLLECTOR} = 1;
