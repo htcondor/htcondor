@@ -30,6 +30,8 @@
 #include "condor_holdcodes.h"
 #include "basename.h"
 
+#define INVALID_PROXY_RC -10000
+
 GLExecPrivSepHelper::GLExecPrivSepHelper() :
 	m_initialized(false),m_glexec(0),  m_sandbox(0), m_proxy(0),m_sandbox_owned_by_user(false),
 	m_glexec_retries(0),m_glexec_retry_delay(0)
@@ -90,7 +92,7 @@ GLExecPrivSepHelper::run_script(ArgList& args,MyString &error_desc)
 	if (!proxy_valid_right_now()) {
 		dprintf(D_ALWAYS, "GLExecPrivSepHelper::run_script: not invoking glexec since the proxy is not valid!\n");
 		error_desc += "The job proxy is not valid.";
-		return -1;
+		return INVALID_PROXY_RC;
 	}
 
 		/* Note that set_user_priv is a no-op if condor is running as
@@ -199,8 +201,8 @@ GLExecPrivSepHelper::chown_sandbox_to_user(PrivSepError &err)
 	int rc = run_script(args,error_desc);
 	if( rc != 0) {
 		int hold_code = CONDOR_HOLD_CODE_GlexecChownSandboxToUser;
-		if( !param_boolean("GLEXEC_HOLD_ON_INITIAL_FAILURE",true) ) {
-			// Do not put the job on hold.
+		if( rc != INVALID_PROXY_RC && !param_boolean("GLEXEC_HOLD_ON_INITIAL_FAILURE",true) ) {
+			// Do not put the job on hold due to glexec failure.
 			// It will simply return to idle status and try again.
 			hold_code = 0;
 		}
