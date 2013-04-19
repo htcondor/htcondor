@@ -204,17 +204,25 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure )
 		return;
 	}
 
-	dprintf( D_AUDIT, sock, "Command=%s, peer=%s\n", getCommandString( cmd ),
-			 sock.get_sinful_peer() );
+	const char *cmd_name = getCommandString( cmd );
+	const char *sinful = sock.get_sinful_peer();
+	const char *method = sock.getAuthenticationMethodUsed();
+	const char *unmapped = sock.getAuthenticatedName();
+	const char *mapped = sock.getFullyQualifiedUser();
+	dprintf( D_AUDIT, sock, "Command=%s, peer=%s\n",
+			 cmd_name ? cmd_name : "(null)",
+			 sinful ? sinful : "(null)" );
 	dprintf( D_AUDIT, sock, "AuthMethod=%s, AuthId=%s, CondorId=%s\n",
-			 sock.getAuthenticationMethodUsed(),
-			 sock.getAuthenticatedName(),
-			 sock.getFullyQualifiedUser() );
+			 method ? method : "(null)",
+			 unmapped ? unmapped : "(null)",
+			 mapped ? mapped : "(null)" );
+	/* Currently, all audited commands require authentication.
 	dprintf( D_AUDIT, sock,
 			 "triedAuthentication=%s, isAuthenticated=%s, isMappedFQU=%s\n",
 			 sock.triedAuthentication() ? "true" : "false",
 			 sock.isAuthenticated() ? "true" : "false",
 			 sock.isMappedFQU() ? "true" : "false" );
+	*/
 
 	if ( failure ) {
 		dprintf( D_AUDIT, sock, "Authentication or authorization failed\n" );
