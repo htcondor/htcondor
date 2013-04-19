@@ -328,6 +328,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 		maxSocket = DEFAULT_MAXSOCKETS;
 
 	sec_man = new SecMan();
+	audit_log_callback_fn = 0;
 
 	sockTable = new ExtArray<SockEnt>(maxSocket);
 	if(sockTable == NULL)

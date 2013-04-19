@@ -1426,6 +1426,12 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		}
 	}
 */
+
+	// call the auditing callback to record the status of this connection
+	if (daemonCore->audit_log_callback_fn) {
+		(*(daemonCore->audit_log_callback_fn))( m_req, (*m_sock), (m_perm != USER_AUTH_SUCCESS) );
+	}
+
 	if ( m_reqFound == TRUE ) {
 		// Handlers should start out w/ parallel mode disabled by default
 		ScopedEnableParallel(false);
