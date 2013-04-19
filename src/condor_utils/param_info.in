@@ -3461,6 +3461,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=182
 
+[GLEXEC_HOLD_ON_INITIAL_FAILURE]
+aliases=
+default=true
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Glexec Hold on Initial Failure
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=daemon_core,daemon_core
+id=182
+
 [WINDOWS_SOFTKILL]
 aliases=
 default=$(SBIN)/condor_softkill

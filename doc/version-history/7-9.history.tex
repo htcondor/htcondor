@@ -76,6 +76,13 @@ be treated as expired ClassAds, such that they may become absent ClassAds.
 See section~\ref{sec:Absent-Ads} for details on absent ClassAds.
 \Ticket{3085}
 
+\item The new configuration variable
+\Macro{GLEXEC\_HOLD\_ON\_INITIAL\_FAILURE} controls whether jobs are put
+on hold when a failure is encountered in the glexec setup phase of
+managing the job.  The default is \Expr{True}, which is the previous
+behavior.
+\Ticket{3569}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

@@ -89,6 +89,7 @@ GLExecPrivSepHelper::run_script(ArgList& args,MyString &error_desc)
 {
 	if (!proxy_valid_right_now()) {
 		dprintf(D_ALWAYS, "GLExecPrivSepHelper::run_script: not invoking glexec since the proxy is not valid!\n");
+		error_desc += "The job proxy is not valid.";
 		return -1;
 	}
 
@@ -197,9 +198,14 @@ GLExecPrivSepHelper::chown_sandbox_to_user(PrivSepError &err)
 	MyString error_desc = "error changing sandbox ownership to the user: ";
 	int rc = run_script(args,error_desc);
 	if( rc != 0) {
-		err.setHoldInfo(
-						CONDOR_HOLD_CODE_GlexecChownSandboxToUser, rc,
-						error_desc.Value());
+		int hold_code = CONDOR_HOLD_CODE_GlexecChownSandboxToUser;
+		if( !param_boolean("GLEXEC_HOLD_ON_INITIAL_FAILURE",true) ) {
+			// Do not put the job on hold.
+			// It will simply return to idle status and try again.
+			hold_code = 0;
+		}
+
+		err.setHoldInfo( hold_code, rc, error_desc.Value());
 		return false;
 	}
 
@@ -281,6 +287,9 @@ GLExecPrivSepHelper::create_process(const char* path,
 
 	if (!proxy_valid_right_now()) {
 		dprintf(D_ALWAYS, "GLExecPrivSepHelper::create_process: not invoking glexec since the proxy is not valid!\n");
+		if( error_msg ) {
+			error_msg->formatstr_cat("The job proxy is invalid.");
+		}
 		return -1;
 	}
 
