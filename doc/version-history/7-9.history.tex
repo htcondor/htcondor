@@ -130,6 +130,9 @@ reported in the user log, but they were not propagated to the job ClassAd and
 were therefore not available for querying with \Condor{history}.
 \Ticket{3577}
 
+\item Do not leak \Condor{starter} file descriptors to file transfer plugins. 
+\Ticket{3570}
+
 \end{itemize}
 
 \noindent Known Bugs:
