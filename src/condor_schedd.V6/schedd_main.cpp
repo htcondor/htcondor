@@ -187,6 +187,8 @@ main_init(int argc, char* argv[])
 	ClassAdLogPluginManager::Initialize();
 #endif
 #endif
+
+	daemonCore->InstallAuditingCallback( AuditLogNewConnection );
 } 
 
 void

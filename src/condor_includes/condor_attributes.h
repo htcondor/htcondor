@@ -755,6 +755,7 @@
 #define ATTR_GLOBUS_RESUBMIT_CHECK  "GlobusResubmit"
 #define ATTR_REMATCH_CHECK  "Rematch"
 
+#define ATTR_SEC_AUTHENTICATED_NAME  "AuthenticatedName"
 #define ATTR_SEC_AUTHENTICATION_METHODS_LIST  "AuthMethodsList"
 #define ATTR_SEC_AUTHENTICATION_METHODS  "AuthMethods"
 #define ATTR_SEC_CRYPTO_METHODS  "CryptoMethods"

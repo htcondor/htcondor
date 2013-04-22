@@ -73,6 +73,8 @@ extern	DLL_IMPORT_MAGIC char**		environ;
 
 extern char const * const HOME_POOL_SUBMITTER_TAG;
 
+void AuditLogNewConnection( int cmd, Sock &sock, bool failure );
+
 //
 // Given a ClassAd from the job queue, we check to see if it
 // has the ATTR_SCHEDD_INTERVAL attribute defined. If it does, then

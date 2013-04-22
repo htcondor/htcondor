@@ -1500,6 +1500,7 @@ class DaemonCore : public Service
 		 */
 	void ClearSharedPortServerAddr();
 
+	void InstallAuditingCallback( void (*fn)(int, Sock&, bool) ) { audit_log_callback_fn = fn; }
 
 	//-----------------------------------------------------------------------------
 	/*
@@ -1869,6 +1870,8 @@ class DaemonCore : public Service
 
 	int					_cookie_len, _cookie_len_old;
 	unsigned char		*_cookie_data, *_cookie_data_old;
+
+	void (*audit_log_callback_fn)( int, Sock &, bool);
 
 #ifdef WIN32
     // the thread id of the thread running the main daemon core
