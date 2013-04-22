@@ -8099,11 +8099,12 @@ SetConcurrencyLimits()
 void SetAccountingGroup() {
     // is a group setting in effect?
     char* group = condor_param(AcctGroup);
-    if (NULL == group) return;
 
     // look for the group user setting, or default to owner
     std::string group_user;
     char* gu = condor_param(AcctGroupUser);
+    if ((group == NULL) && (gu == NULL)) return; // nothing set, give up
+
     if (NULL == gu) {
         ASSERT(owner);
         group_user = owner;
@@ -8114,13 +8115,25 @@ void SetAccountingGroup() {
 
     // set attributes AcctGroup, AcctGroupUser and AccountingGroup on the job ad:
     std::string assign;
-    formatstr(assign, "%s = \"%s.%s\"", ATTR_ACCOUNTING_GROUP, group, group_user.c_str()); 
+
+    if (group) {
+        // If we have a group, must also specify user
+        formatstr(assign, "%s = \"%s.%s\"", ATTR_ACCOUNTING_GROUP, group, group_user.c_str()); 
+    } else {
+        // If not, this is accounting group as user alias, just set name
+        formatstr(assign, "%s = \"%s\"", ATTR_ACCOUNTING_GROUP, group_user.c_str()); 
+    }
     InsertJobExpr(assign.c_str());
-    formatstr(assign, "%s = \"%s\"", ATTR_ACCT_GROUP, group);
-    InsertJobExpr(assign.c_str());
+
+	if (group) {
+        formatstr(assign, "%s = \"%s\"", ATTR_ACCT_GROUP, group);
+        InsertJobExpr(assign.c_str());
+    }
+
     formatstr(assign, "%s = \"%s\"", ATTR_ACCT_GROUP_USER, group_user.c_str());
     InsertJobExpr(assign.c_str());
-    free(group);
+
+    if (group) free(group);
 }
 
 
