@@ -1,10 +1,8 @@
 
 
-if (PYTHONLIBS_FOUND)
-    option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
-endif()
+option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
 
-if ( LINUX AND WITH_PYTHON_BINDINGS )
+if ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND )
   configure_file (
 	"${PROJECT_SOURCE_DIR}/src/condor_contrib/python-bindings/test_driver.in"
 	"${CMAKE_CURRENT_BINARY_DIR}/test_driver"
@@ -14,7 +12,8 @@ if ( LINUX AND WITH_PYTHON_BINDINGS )
   set ( CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /usr/lib64 )
   set ( CMAKE_LIBRARY_PATH CMAKE_LIBRARY_PATH_ORIG)
 
-  include_directories(${PYTHON_INCLUDE_DIRS})
+  include_directories(${PYTHON_INCLUDE_DIRS} ${BOOST_INCLUDE})
+  link_directories(${BOOST_LD})
 
   if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
     set( PYCLASSAD_LIB_NAME "pyclassad_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
@@ -29,11 +28,13 @@ if ( LINUX AND WITH_PYTHON_BINDINGS )
   condor_shared_lib( classad_module classad_module.cpp )
   target_link_libraries( classad_module pyclassad -lboost_python ${PYTHON_LIBRARIES} )
   set_target_properties(classad_module PROPERTIES PREFIX "" OUTPUT_NAME classad )
+  set_target_properties(classad_module PROPERTIES SUFFIX ".so" )
 
   set_source_files_properties(config.cpp collector.cpp secman.cpp dc_tool.cpp schedd.cpp classad.cpp classad_module.cpp PROPERTIES COMPILE_FLAGS "-Wno-strict-aliasing -Wno-cast-qual -Wno-deprecated")
   condor_shared_lib( htcondor htcondor.cpp collector.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp )
   target_link_libraries( htcondor pyclassad condor_utils -lboost_python ${PYTHON_LIBRARIES} )
   set_target_properties( htcondor PROPERTIES PREFIX "" )
+  set_target_properties( htcondor PROPERTIES SUFFIX ".so" )
 
   install ( TARGETS pyclassad DESTINATION ${C_LIB} )
   install ( TARGETS htcondor classad_module DESTINATION ${C_PYTHONARCHLIB} )
@@ -54,5 +55,5 @@ if ( LINUX AND WITH_PYTHON_BINDINGS )
     add_test(python_htcondor_test test_driver tests/htcondor_tests.py TestConfig TestVersion)
   endif (BUILD_TESTING)
 
-endif ( LINUX AND WITH_PYTHON_BINDINGS )
+endif ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND )
 
