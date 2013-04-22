@@ -8977,7 +8977,7 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 						// Send a vacate
 						//
 					if ( ! skip_vacate ) {
-						send_vacate( rec->match, CKPT_FRGN_JOB );
+						send_vacate( rec->match, DEACTIVATE_CLAIM );
 						dprintf( D_ALWAYS, 
 								"Sent vacate command to %s for job %d.%d\n",
 								rec->match->peer, cluster, proc );

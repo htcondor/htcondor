@@ -43,13 +43,9 @@
 **	In the following definitions 'FRGN' does not
 **	stand for "friggin'"...
 */
-#define CONTINUE_FRGN_JOB	(SCHED_VERS+1)
 #define CONTINUE_CLAIM		(SCHED_VERS+1)		// New name for CONTINUE_FRGN_JOB
-#define SUSPEND_FRGN_JOB	(SCHED_VERS+2)
 #define SUSPEND_CLAIM		(SCHED_VERS+2)		// New name for SUSPEND_FRGN_JOB
-#define CKPT_FRGN_JOB		(SCHED_VERS+3)		
 #define DEACTIVATE_CLAIM	(SCHED_VERS+3)		// New name for CKPT_FRGN_JOB
-#define KILL_FRGN_JOB		(SCHED_VERS+4)
 #define DEACTIVATE_CLAIM_FORCIBLY	(SCHED_VERS+4)		// New name for KILL_FRGN_JOB
 
 #define LOCAL_STATUS		(SCHED_VERS+5)
