@@ -7320,6 +7320,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=450
 
+[NEGOTIATOR_CONSIDER_EARLY_PREEMPTION]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Negotiator Consider Early Preemption
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,matchmaker
+id=450
+
 [NEGOTIATOR_INFORM_STARTD]
 aliases=
 default=true
