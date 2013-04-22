@@ -37,20 +37,31 @@ job_ad = classad.parseOld(job_ad_str)
 machine_ad = classad.parseOld(machine_ad_str)
 machine_ad_update = classad.ClassAd()
 
-if "InboundConnectivity" in job_ad.keys():
-	expr1 = job_ad.lookup("InboundConnectivity")
-if "OutboundConnectivity" in job_ad.keys():
-	expr2 = job_ad.lookup("OutboundConnectivity")
-if "NetworkAccounting" in job_ad.keys():
-	expr3 = job_ad.lookup("NetworkAccounting")
+# flags used to indicate whether the network attributes are in the job classad
+# by default it is false (not existed)
+flag1 = False
+flag2 = False
+flag3 = False
 
-if expr1.eval() == True and expr2.eval() == False:
-	machine_ad_update["LarkNetworkType"] = 'nat'
-if expr1.eval() == True and expr2.eval() == True:
-    machine_ad_update["LarkNetworkType"] = 'bridge'
-    machine_ad_update["LarkBridgeDevice"] = 'eth0'
-    machine_ad_update["LarkAddressType"] = 'dhcp'
-if expr3.eval() == True:
-	machine_ad_update["LarkNetworkAccounting"] = True
+if "InboundConnectivity" in job_ad.keys():
+    flag1 = True
+    expr1 = job_ad.lookup("InboundConnectivity")
+if "OutboundConnectivity" in job_ad.keys():
+    flag2 = True
+    expr2 = job_ad.lookup("OutboundConnectivity")
+if "NetworkAccounting" in job_ad.keys():
+    flag3 = True
+    expr3 = job_ad.lookup("NetworkAccounting")
+
+if  flag1 == True and flag2 == True:
+    if expr1.eval() == False and expr2.eval() == True:
+        machine_ad_update["LarkNetworkType"] = 'nat'
+    if expr1.eval() == True and expr2.eval() == True:
+        machine_ad_update["LarkNetworkType"] = 'bridge'
+        machine_ad_update["LarkBridgeDevice"] = 'eth0'
+        machine_ad_update["LarkAddressType"] = 'dhcp'
+if flag3 == True:
+    if expr3.eval() == True:
+        machine_ad_update["LarkNetworkAccounting"] = True
 
 print machine_ad_update.printOld()

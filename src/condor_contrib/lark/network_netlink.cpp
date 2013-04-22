@@ -146,10 +146,10 @@ int create_veth(int sock, const char * veth0, const char * veth1, const char *ve
 
 	// Create the header of the netlink message
 	struct nlmsghdr nlmsghdr; memset(&nlmsghdr, 0, sizeof(struct nlmsghdr));
-	nlmsghdr.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg)) + RTA_LENGTH(0) + RTA_LENGTH(VETH_LEN) + 
-			RTA_LENGTH(0) + RTA_LENGTH(0) + NLMSG_ALIGN(sizeof(struct ifinfomsg)) + 
-			RTA_LENGTH(veth1_len) + (veth1_mac ? RTA_LENGTH(8) : 0) + 
-			RTA_LENGTH(veth0_len) + (veth0_mac ? RTA_LENGTH(8) : 0);
+	nlmsghdr.nlmsg_len = NLMSG_SPACE(sizeof(struct ifinfomsg)) + RTA_LENGTH(0) + RTA_LENGTH(0) +
+            RTA_ALIGN(VETH_LEN) + RTA_LENGTH(0) + RTA_LENGTH(0) + NLMSG_ALIGN(sizeof(struct ifinfomsg)) + 
+			RTA_LENGTH(0) + RTA_ALIGN(veth1_len) + (veth1_mac ? (RTA_LENGTH(0)+RTA_ALIGN(8)) : 0) + 
+			RTA_LENGTH(0) + RTA_ALIGN(veth0_len) + (veth0_mac ? (RTA_LENGTH(0)+RTA_ALIGN(8)) : 0);
 	nlmsghdr.nlmsg_type = RTM_NEWLINK;
 	nlmsghdr.nlmsg_flags = NLM_F_REQUEST|NLM_F_CREATE|NLM_F_EXCL|NLM_F_ACK;
 	nlmsghdr.nlmsg_seq = ++seq;

@@ -106,7 +106,7 @@ BridgeConfiguration::Setup() {
 	}
 
 	if ((result = add_interface_to_bridge(bridge_name.c_str(), external_device.c_str())) && (result != EEXIST)) {
-		dprintf(D_ALWAYS, "Unable to add device %s to bridge %s\n", bridge_name.c_str(), external_device.c_str());
+		dprintf(D_ALWAYS, "Unable to add device %s to bridge %s\n", external_device.c_str(), bridge_name.c_str());
 		return result;
 	}
 

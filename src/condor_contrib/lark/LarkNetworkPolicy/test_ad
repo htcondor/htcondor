@@ -1,5 +1,5 @@
-InboundConnectivity = true
-OutboundConnectivity = false
+InboundConnectivity = false
+OutboundConnectivity = true
 NetworkAccounting = true
 ----------
 cpu = 1
