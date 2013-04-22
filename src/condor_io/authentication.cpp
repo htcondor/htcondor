@@ -638,17 +638,19 @@ const char* Authentication::getFQAuthenticatedName()
 	return NULL;
 #else
 	if ( authenticator_ ) {
+#if defined(HAVE_EXT_GLOBUS)
 		if(strcasecmp("GSI", method_used) == 0) {
 	        const char *fqan = ((Condor_Auth_X509*)authenticator_)->getFQAN();	
 			if(fqan) {
 				return fqan;
 			}
 		}
+#endif // defined(HAVE_EXT_GLOBUS)
 		return authenticator_->getAuthenticatedName();
 	} else {
 		return NULL;
 	}
-#endif
+#endif // defined(SKIP_AUTHENTICATION)
 }
 
 int Authentication::setOwner( const char *owner ) 
