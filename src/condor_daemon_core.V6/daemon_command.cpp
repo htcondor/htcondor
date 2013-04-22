@@ -741,6 +741,13 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 						free( tmp );
 						tmp = NULL;
 					}
+					m_policy->LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &tmp);
+					if (tmp) {
+						// copy this to the HandleReq() scope
+						m_sock->setAuthenticationMethodUsed(tmp);
+						free( tmp );
+						tmp = NULL;
+					}
 
 
 					bool tried_authentication=false;
