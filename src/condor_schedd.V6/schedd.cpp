@@ -3757,7 +3757,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 
 	job_ids_string = job_ids.str();
 	job_ids_string.erase(job_ids_string.length()-2,2); //Get rid of the extraneous ", "
-	dprintf( D_AUDIT, *rsock, "job ids: %s\n", 
+	dprintf( D_AUDIT, *rsock, "Transferring files for jobs %s\n", 
 			 job_ids_string.c_str());
 
 		// DaemonCore will free the thread_arg for us when the thread
@@ -4031,7 +4031,6 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	rsock->code(reply);
 	rsock->end_of_message();
 
-		// TO DO:  Add job proxy info. proxy_path? proxy_uid? temp_proxy_path? final_proxy_path?
 	dprintf( D_AUDIT | D_ALWAYS, *rsock,"Refresh GSI cred for job %d.%d %s\n",
 		jobid.cluster,jobid.proc,reply ? "suceeded" : "failed");
 	
@@ -4304,14 +4303,12 @@ Scheduler::actOnJobs(int, Stream* s)
 	std::string job_ids_string, initial_constraint;
 	if( constraint ) {
 		initial_constraint = constraint;
-//		dprintf( D_AUDIT, *rsock, "actOnJobs. Command: %s (%d); Constraint: %s (%s)",
-//				 ATTR_JOB_ACTION, action_num, ATTR_ACTION_CONSTRAINT, initial_constraint.c_str());
-		dprintf( D_AUDIT, *rsock, "actOnJobs. Command: %s; Constraint: %s\n",
+		dprintf( D_AUDIT, *rsock, "%s by constraint %s\n",
 				 getJobActionString(action), initial_constraint.c_str());
 
 	} else {
 		job_ids_string = job_ids.print_to_string();
-		dprintf( D_AUDIT, *rsock, "actOnJobs. Command: %s; Job ID List: %s\n",
+		dprintf( D_AUDIT, *rsock, "%s jobs %s\n",
 				 getJobActionString(action), job_ids_string.c_str());
 	}		
 
@@ -4634,10 +4631,10 @@ Scheduler::actOnJobs(int, Stream* s)
 
 		// Audit Log reporting
 	if( !initial_constraint.empty() ) {
-		dprintf( D_AUDIT, *rsock, "Finished actOnJobs. Command: %s; Constraint: %s\n",
+		dprintf( D_AUDIT, *rsock, "Finished %s by constraint %s\n",
 				 getJobActionString(action), initial_constraint.c_str());
 	} else {
-		dprintf( D_AUDIT, *rsock, "Finished actOnJobs. Command: %s; Job ID List: %s\n",
+		dprintf( D_AUDIT, *rsock, "Finished %s jobs %s\n",
 				 getJobActionString(action), job_ids_string.c_str());
 	}
 
@@ -12391,7 +12388,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		goto error_wrapup;
 	}
 
-	dprintf(D_AUDIT, *sock, "GET_JOB_CONNECT_INFO job %d.%d\n", jobid.cluster, jobid.proc );
+	dprintf(D_AUDIT, *sock, "GET_JOB_CONNECT_INFO for job %d.%d\n", jobid.cluster, jobid.proc );
 
 	input.LookupString(ATTR_SESSION_INFO,job_owner_session_info);
 

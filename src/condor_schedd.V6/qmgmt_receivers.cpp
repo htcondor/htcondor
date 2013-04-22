@@ -140,7 +140,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 				"\tNewCluster: rval = %d, errno = %d\n",rval,terrno );
 		if ( rval > 0 ) {
 			dprintf( D_AUDIT, *syscall_sock, 
-					 "Submitting new job cluster %d\n", rval );
+					 "Submitting new job %d.0\n", rval );
 		}
 
 		syscall_sock->encode();
@@ -293,7 +293,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 			if ( rval == 0 ) {
 				dprintf( D_AUDIT, *syscall_sock,
-						 "Set Attribute By Constraint constraint = %s, "
+						 "Set Attribute By Constraint %s, "
 						 "%s = %s\n",
 						 constraint, attr_name, attr_value);
 			}
@@ -363,7 +363,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 				( strcmp(users_username, condor_username) || (flags & SHOULDLOG) ) ) { 
 
 				dprintf( D_AUDIT, *syscall_sock, 
-						 "Set Attribute cluster_id = %d, proc_id = %d, "
+						 "Set Attribute for job %d.%d, "
 						 "%s = %s\n",
 						 cluster_id, proc_id, attr_name, attr_value);
 			}
@@ -412,8 +412,8 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 		dprintf( D_AUDIT, *syscall_sock, 
-				 "Set Timer Attribute cluster_id = %d, proc_id = %d, "
-				 "attr_name = %s, attr_value %d\n",
+				 "Set Timer Attribute for job %d.%d, "
+				 "attr_name = %s, duration = %d\n",
 				 cluster_id, proc_id, attr_name, duration);
 
 		syscall_sock->encode();
