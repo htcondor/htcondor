@@ -18,7 +18,7 @@
 ##
 ##**************************************************************
 
-# Original Author Michael Hanke <michael.hanke@gmail.com> Todd Tannenbaum (v0.1)
+# Original Author Michael Hanke <michael.hanke@gmail.com> (v0.1)
 # Updated by Samuel Friedman (03/13)
 
 #
@@ -781,7 +781,7 @@ if [ -n "$rerun_flag" ]; then
 fi
 if [ -n "$checkpoint_interval" ]; then
 	if [ "$(echo $checkpoint_interval | cut -c 1 | tr A-Z a-z)" = "n" ]; then
-		printf "+WantCheckpoint = Flase\n" >> $submit_file
+		printf "+WantCheckpoint = False\n" >> $submit_file
 	fi
 	if [ "$(echo $checkpoint_interval | cut -c 1 | tr A-Z a-z)" = "s" ]; then
 		printf "PERIODIC_CHECKPOINT = False\n" >> $submit_file
