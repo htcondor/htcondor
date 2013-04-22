@@ -33,8 +33,13 @@ typedef _Longlong int64_t;
 #include <ctime>
 
 struct DebugFileInfo;
+typedef struct DebugHeaderInfo {
+   time_t clock_now;
+   struct tm * tm;
+   DPF_IDENT  ident; // caller supplied identity, used by D_AUDIT
+}  DebugHeaderInfo;
 
-typedef void (*DprintfFuncPtr)(int, int, time_t, struct tm*, const char*, DebugFileInfo*);
+typedef void (*DprintfFuncPtr)(int, int, DebugHeaderInfo &, const char*, DebugFileInfo*);
 
 enum DebugOutput
 {
@@ -69,28 +74,35 @@ struct DebugFileInfo
 	DebugOutput outputTarget;
 	FILE *debugFP;
 	DebugOutputChoice choice;
+	unsigned int headerOpts;
 	std::string logPath;
-	int64_t maxLog;
+	long long maxLog;
+	long long logZero;
 	int maxLogNum;
 	bool want_truncate;
 	bool accepts_all;
+	bool rotate_by_time; // when true, logMax is a time interval for rotation
 	bool dont_panic;
 	void *userData;
 	DebugFileInfo() :
 			outputTarget(FILE_OUT),
 			debugFP(0),
 			choice(0),
+			headerOpts(0),
 			maxLog(0),
+			logZero(0),
 			maxLogNum(0),
 			want_truncate(false),
 			accepts_all(false),
+			rotate_by_time(false),
 			dont_panic(false),
 			userData(NULL),
 			dprintfFunc(NULL)
 			{}
-	DebugFileInfo(const DebugFileInfo &dfi) : outputTarget(dfi.outputTarget), debugFP(NULL), choice(dfi.choice),
-		logPath(dfi.logPath), maxLog(dfi.maxLog), maxLogNum(dfi.maxLogNum), want_truncate(dfi.want_truncate),
-		accepts_all(dfi.accepts_all), dont_panic(dfi.dont_panic), dprintfFunc(dfi.dprintfFunc) {}
+	DebugFileInfo(const DebugFileInfo &dfi) : outputTarget(dfi.outputTarget), debugFP(NULL),
+		choice(dfi.choice), headerOpts(dfi.headerOpts),
+		logPath(dfi.logPath), maxLog(dfi.maxLog), logZero(dfi.logZero), maxLogNum(dfi.maxLogNum), want_truncate(dfi.want_truncate),
+		accepts_all(dfi.accepts_all), rotate_by_time(dfi.rotate_by_time), dont_panic(dfi.dont_panic), dprintfFunc(dfi.dprintfFunc) {}
 	DebugFileInfo(const dprintf_output_settings&);
 	~DebugFileInfo();
 	bool MatchesCatAndFlags(int cat_and_flags) const;
@@ -101,25 +113,29 @@ struct dprintf_output_settings
 {
 	DebugOutputChoice choice;
 	std::string logPath;
-	off_t maxLog;
+	long long logMax;  // max size/duration of a single log file
 	int maxLogNum;
 	bool want_truncate;
 	bool accepts_all;
-	unsigned int HeaderOpts;  // temporary, should get folded into choice
+	bool rotate_by_time; // when true, logMax is a time interval for rotation
+	unsigned int HeaderOpts;
 	unsigned int VerboseCats; // temporary, should get folded into choice
 
-	dprintf_output_settings() : choice(0), maxLog(0), maxLogNum(0), want_truncate(false), accepts_all(false), HeaderOpts(0), VerboseCats(0) {}
+	dprintf_output_settings()
+		: choice(0), logMax(0), maxLogNum(0)
+		, want_truncate(false), accepts_all(false), rotate_by_time(false)
+		, HeaderOpts(0), VerboseCats(0) {}
 };
 
 void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_info);
 
-const char* _format_global_header(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm);
+const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info);
 //Global dprint functions meant as fallbacks.
-void _dprintf_global_func(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, const char* message, DebugFileInfo* dbgInfo);
+void _dprintf_global_func(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, const char* message, DebugFileInfo* dbgInfo);
 
 #ifdef WIN32
 //Output to dbg string
-void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, time_t clock_now, struct tm *tm, const char* message, DebugFileInfo* dbgInfo);
+void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, const char* message, DebugFileInfo* dbgInfo);
 #endif
 
 #endif

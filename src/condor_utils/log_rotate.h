@@ -35,13 +35,16 @@ void setBaseName(const char *baseName);
 int rotateSingle(void);
 
 /** create a rotation filename depending on maxNum and existing ending */
-const char *createRotateFilename(const char *ending, int maxNum);
+const char *createRotateFilename(const char *ending, int maxNum, time_t tt);
 
-/** perform rotation */
-int rotateTimestamp(const char *timeStamp, int maxNum);
+/** perform rotation, time value may be 0 if maxNum < 2 */
+int rotateTimestamp(const char *timeStamp, int maxNum, time_t tt);
+
+/** quantize time tt to the time secs. ie if secs = 3600, quantize to the hour **/
+long long quantizeTimestamp(time_t tt, long long secs);
 
 /** Rotate away all old history files exceeding maxNum count */
-int cleanUp(int maxNum);
+int cleanUpOldLogFiles(int maxNum);
 
 /** is it a *.old file? */
 int isOldString(char *str);

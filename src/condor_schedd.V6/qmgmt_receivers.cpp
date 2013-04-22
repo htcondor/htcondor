@@ -25,6 +25,7 @@
 #include "condor_fix_assert.h"
 #include "condor_secman.h"
 #include "condor_attributes.h"
+#include "condor_uid.h"
 
 #include "../condor_syscall_lib/syscall_param_sizes.h"
 
@@ -40,6 +41,8 @@
 #define assert(x) if (!(x)) return -1;
 
 extern char *CondorCertDir;
+
+extern int active_cluster_num;
 
 static bool QmgmtMayAccessAttribute( char const *attr_name ) {
 	return !ClassAdAttributeIsPrivate( attr_name );
@@ -133,7 +136,12 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		errno = 0;
 		rval = NewCluster( );
 		terrno = errno;
-		dprintf(D_SYSCALLS,"\tNewCluster: trval = %d, errno = %d\n",rval,terrno );
+		dprintf(D_SYSCALLS, 
+				"\tNewCluster: rval = %d, errno = %d\n",rval,terrno );
+		if ( rval > 0 ) {
+			dprintf( D_AUDIT, *syscall_sock, 
+					 "Submitting new job %d.0\n", rval );
+		}
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
@@ -142,7 +150,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		}
 		assert( syscall_sock->end_of_message() );;
 
-		dprintf(D_FAILURE,"schedd: NewCluster rval %d errno %d\n",rval,terrno);
+		dprintf(D_FULLDEBUG,"schedd: NewCluster rval %d errno %d\n",rval,terrno);
 
 		return 0;
 	}
@@ -160,6 +168,10 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		rval = NewProc( cluster_id );
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		if ( rval > 0 ) {
+			dprintf( D_AUDIT, *syscall_sock, 
+					 "Submitting new job %d.%d\n", cluster_id, rval );
+		}
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
@@ -168,7 +180,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		}
 		assert( syscall_sock->end_of_message() );;
 
-		dprintf(D_FAILURE,"schedd: NewProc rval %d errno %d\n",rval,terrno);
+		dprintf(D_FULLDEBUG,"schedd: NewProc rval %d errno %d\n",rval,terrno);
 
 		return 0;
 	}
@@ -197,7 +209,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		}
 		assert( syscall_sock->end_of_message() );;
 
-		dprintf(D_FAILURE,"schedd: DestroyProc cluster %d proc %d rval %d errno %d\n",cluster_id,proc_id,rval,terrno);
+		dprintf(D_FULLDEBUG,"schedd: DestroyProc cluster %d proc %d rval %d errno %d\n",cluster_id,proc_id,rval,terrno);
 
 		return 0;
 	}
@@ -279,6 +291,13 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			rval = SetAttributeByConstraint( constraint, attr_name, attr_value, flags );
 			terrno = errno;
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+			if ( rval == 0 ) {
+				dprintf( D_AUDIT, *syscall_sock,
+						 "Set Attribute By Constraint %s, "
+						 "%s = %s\n",
+						 constraint, attr_name, attr_value);
+			}
+
 		}
 
 		syscall_sock->encode();
@@ -302,6 +321,8 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		char *attr_value=NULL;
 		int terrno;
 		SetAttributeFlags_t flags = 0;
+		const char *users_username;
+		const char *condor_username;
 
 		assert( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
@@ -312,8 +333,10 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		if( request_num == CONDOR_SetAttribute2 ) {
 			assert( syscall_sock->code( flags ) );
 		}
+		users_username = syscall_sock->getOwner();
+		condor_username = get_condor_username();
 		if (attr_name) dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name);
-		if (attr_value) dprintf(D_SYSCALLS,"\tattr_value = %s\n",attr_value);
+		if (attr_value) dprintf(D_SYSCALLS,"\tattr_value = %s\n",attr_value);		
 		assert( syscall_sock->end_of_message() );;
 
 		// ckireyev:
@@ -333,6 +356,17 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			rval = SetAttribute( cluster_id, proc_id, attr_name, attr_value, flags );
 			terrno = errno;
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+				// If we're modifying a previously-submitted job AND either
+				// the client's username is not HTCondor's (i.e. not a
+				// daemon) OR the client says we should log...
+			if( (cluster_id != active_cluster_num) && (rval == 0) &&
+				( strcmp(users_username, condor_username) || (flags & SHOULDLOG) ) ) { 
+
+				dprintf( D_AUDIT, *syscall_sock, 
+						 "Set Attribute for job %d.%d, "
+						 "%s = %s\n",
+						 cluster_id, proc_id, attr_name, attr_value);
+			}
 		}
 
 		free( (char *)attr_value );
@@ -377,6 +411,10 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		rval = SetTimerAttribute( cluster_id, proc_id, attr_name, duration );
 		terrno = errno;
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
+		dprintf( D_AUDIT, *syscall_sock, 
+				 "Set Timer Attribute for job %d.%d, "
+				 "attr_name = %s, duration = %d\n",
+				 cluster_id, proc_id, attr_name, duration);
 
 		syscall_sock->encode();
 		assert( syscall_sock->code(rval) );
