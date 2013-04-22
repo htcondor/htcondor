@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:job-log-reader}The HTCondor User and Job Log Reader API}
+\section{\label{sec:job-log-reader}The HTCondor User and Job Log Reader API}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{API!ReadUserLog class}
 \index{User Log Reader API}
@@ -18,7 +18,7 @@ to read and parse events,
 polling for events, and saving and restoring reader state.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Constants and Enumerated Types}
+\subsection{Constants and Enumerated Types}
 
 The following define enumerated types useful to the API.
 
@@ -44,7 +44,7 @@ The following define enumerated types useful to the API.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Constructors and Destructors}
+\subsection{Constructors and Destructors}
 
 All \Code{ReadUserLog} constructors invoke one of the \Code{initialize()}
 methods.
@@ -128,7 +128,7 @@ The application will need to call the appropriate \Code{initialize()} method.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Initializers}
+\subsection{Initializers}
 
 These methods are used to perform the initialization of the
 \Code{ReadUserLog} objects.  These initializers are used by all constructors
@@ -232,7 +232,7 @@ or \Const{true} if successful.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Primary Methods}
+\subsection{Primary Methods}
 \begin{itemize}
 
 \item \MethodDef{ReadUserLog}{readEvent}
@@ -264,7 +264,7 @@ or \Const{true} if successful.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Accessors}
+\subsection{Accessors}
 \begin{itemize}
 
 \item \MethodDef{ReadUserLog}{CheckFileStatus}
@@ -288,7 +288,7 @@ or \Const{true} if successful.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Methods for saving and restoring persistent reader state}
+\subsection{Methods for saving and restoring persistent reader state}
 
 The \Type{ReadUserLog::FileState} structure is used to save and
 restore the state of the \Type{ReadUserLog} state for persistence.  The
@@ -301,7 +301,7 @@ as their only parameter.
 All of these methods return \Const{true} upon success.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Save state to persistent storage}
+\subsection{Save state to persistent storage}
 To save the state, do something like this:
 \footnotesize
 \begin{verbatim}
@@ -322,7 +322,7 @@ To save the state, do something like this:
 \normalsize
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Restore state from persistent storage}
+\subsection{Restore state from persistent storage}
 To restore the state, do something like this:
 \footnotesize
 \begin{verbatim}
@@ -340,7 +340,7 @@ To restore the state, do something like this:
 \normalsize
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{API Reference}
+\subsection{API Reference}
 \begin{itemize}
 
 \item \StaticMethodDef{ReadUserLog}{InitFileState}
@@ -386,7 +386,7 @@ To restore the state, do something like this:
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Access to the persistent state data}
+\subsection{Access to the persistent state data}
 
 If the application needs access to the data elements in a persistent
 state, it should instantiate a \Type{ReadUserLogStateAccess} object.
@@ -559,7 +559,7 @@ state, it should instantiate a \Type{ReadUserLogStateAccess} object.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Future persistence API}
+\subsection{Future persistence API}
 The \Type{ReadUserLog::FileState} will likely be replaced with a new
 C++ \Type{ReadUserLog::NewFileState}, or a similarly named class that
 will self initialize.
