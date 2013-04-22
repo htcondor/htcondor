@@ -244,11 +244,11 @@ void ClassAdListDoesNotDeleteAds::fPrintAttrListList(FILE* f, bool use_xml, Stri
     Open();
     for(tmpAttrList = Next(); tmpAttrList; tmpAttrList = Next()) {
 		if (use_xml) {
-			tmpAttrList->sPrintAsXML(xml, attr_white_list);
+			sPrintAdAsXML(xml, *tmpAttrList, attr_white_list);
 			printf("%s\n", xml.c_str());
 			xml = "";
 		} else {
-			tmpAttrList->fPrint(f,attr_white_list);
+			fPrintAd(f, *tmpAttrList, false, attr_white_list);
 		}
         fprintf(f, "\n");
     }

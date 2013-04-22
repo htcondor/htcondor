@@ -560,7 +560,7 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 		return rval;
 	}
 
-	if ( !(updated_attrs->initFromStream(*qmgmt_sock)) ) {
+	if ( !(getClassAd(qmgmt_sock, *updated_attrs)) ) {
 		errno = ETIMEDOUT;
 		return 0;
 	}
@@ -631,7 +631,7 @@ SendSpoolFileIfNeeded( ClassAd& ad )
 
 	qmgmt_sock->encode();
 	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
-	neg_on_error( ad.put(*qmgmt_sock) );
+	neg_on_error( putClassAd(qmgmt_sock, ad) );
 	neg_on_error( qmgmt_sock->end_of_message() );
 
 	qmgmt_sock->decode();
@@ -682,7 +682,7 @@ GetJobAd( int cluster_id, int proc_id, bool /*expStartdAttrs*/, bool /*persist_e
 		}
 		ClassAd *ad = new ClassAd;
 
-		if ( !(ad->initFromStream(*qmgmt_sock)) ) {
+		if ( !(getClassAd(qmgmt_sock, *ad)) ) {
 			delete ad;
 			errno = ETIMEDOUT;
 			return NULL;
@@ -716,7 +716,7 @@ GetJobByConstraint( char const *constraint )
 		}
 		ClassAd *ad = new ClassAd;
 
-		if ( !(ad->initFromStream(*qmgmt_sock)) ) {
+		if ( !(getClassAd(qmgmt_sock, *ad)) ) {
 			delete ad;
 			errno = ETIMEDOUT;
 			return NULL;
@@ -751,7 +751,7 @@ GetNextJob( int initScan )
 		
 		ClassAd *ad = new ClassAd;
 
-		if ( !(ad->initFromStream(*qmgmt_sock)) ) {
+		if ( !(getClassAd(qmgmt_sock, *ad)) ) {
 			delete ad;
 			errno = ETIMEDOUT;
 			return NULL;
@@ -787,7 +787,7 @@ GetNextJobByConstraint( char const *constraint, int initScan )
 
 	ClassAd *ad = new ClassAd;
 
-	if ( ! (ad->initFromStream(*qmgmt_sock)) ) {
+	if ( ! (getClassAd(qmgmt_sock, *ad)) ) {
 		delete ad;
 		errno = ETIMEDOUT;
 		return NULL;
@@ -824,7 +824,7 @@ GetAllJobsByConstraint_imp( char const *constraint, char const *projection, Clas
 
 			ClassAd *ad = new ClassAd;
 
-			if ( ! (ad->initFromStream(*qmgmt_sock)) ) {
+			if ( ! (getClassAd(qmgmt_sock, *ad)) ) {
 				delete ad;
 				errno = ETIMEDOUT;
 				return NULL;
@@ -873,7 +873,7 @@ GetAllJobsByConstraint_Next( ClassAd &ad )
 		return -1;
 	}
 
-	if ( ! (ad.initFromStream(*qmgmt_sock)) ) {
+	if ( ! (getClassAd(qmgmt_sock, ad)) ) {
 		errno = ETIMEDOUT;
 		return -1;
 	}
@@ -905,7 +905,7 @@ GetNextDirtyJobByConstraint( char const *constraint, int initScan )
 
 	ClassAd *ad = new ClassAd;
 
-	if ( ! (ad->initFromStream(*qmgmt_sock)) ) {
+	if ( ! (getClassAd(qmgmt_sock, *ad)) ) {
 		delete ad;
 		errno = ETIMEDOUT;
 		return NULL;

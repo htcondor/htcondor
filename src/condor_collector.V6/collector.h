@@ -109,6 +109,7 @@ public:
 
 	static int query_scanFunc(ClassAd*);
 	static int invalidation_scanFunc(ClassAd*);
+	static int expiration_scanFunc(ClassAd*);
 
 	static int reportStartdScanFunc(ClassAd*);
 	static int reportSubmittorScanFunc(ClassAd*);
@@ -181,6 +182,7 @@ protected:
 
 private:
 
+	static int setAttrLastHeardFrom( ClassAd* cad, unsigned long time );
 
 };
 

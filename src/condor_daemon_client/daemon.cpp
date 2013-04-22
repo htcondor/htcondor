@@ -626,6 +626,28 @@ Daemon::startCommand( int cmd, Stream::stream_type st,Sock **sock,int timeout, C
 						 sec_session_id);
 }
 
+
+bool
+Daemon::startSubCommand( int cmd, int subcmd, Sock* sock, int timeout, CondorError *errstack, char const *cmd_description,bool raw_protocol, char const *sec_session_id )
+{
+	// This is a blocking version of startCommand().
+	const bool nonblocking = false;
+	StartCommandResult rc = startCommand(cmd,sock,timeout,errstack,subcmd,NULL,NULL,nonblocking,cmd_description,_version,&_sec_man,raw_protocol,sec_session_id);
+	switch(rc) {
+	case StartCommandSucceeded:
+		return true;
+	case StartCommandFailed:
+		return false;
+	case StartCommandInProgress:
+	case StartCommandWouldBlock: //impossible!
+	case StartCommandContinue: //impossible!
+		break;
+	}
+	EXCEPT("startCommand(nonblocking=false) returned an unexpected result: %d\n",rc);
+	return false;
+}
+
+
 Sock*
 Daemon::startSubCommand( int cmd, int subcmd, Stream::stream_type st, int timeout, CondorError* errstack, char const *cmd_description, bool raw_protocol, char const *sec_session_id )
 {
@@ -785,8 +807,8 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 		return false;
 	}
 	
-	req->SetMyTypeName( COMMAND_ADTYPE );
-	req->SetTargetTypeName( REPLY_ADTYPE );
+	SetMyTypeName( *req, COMMAND_ADTYPE );
+	SetTargetTypeName( *req, REPLY_ADTYPE );
 
 	if( timeout >= 0 ) {
 		cmd_sock->timeout( timeout );
@@ -835,7 +857,7 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 		cmd_sock->timeout( timeout );
 	}
 
-	if( ! req->put(*cmd_sock) ) { 
+	if( ! putClassAd(cmd_sock, *req) ) {
 		newError( CA_COMMUNICATION_ERROR,
 				  "Failed to send request ClassAd" );
 		return false;
@@ -848,7 +870,7 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 
 		// Now, try to get the reply
 	cmd_sock->decode();
-	if( ! reply->initFromStream(*cmd_sock) ) {
+	if( ! getClassAd(cmd_sock, *reply) ) {
 		newError( CA_COMMUNICATION_ERROR, "Failed to read reply ClassAd" );
 		return false;
 	}

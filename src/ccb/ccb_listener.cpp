@@ -167,7 +167,7 @@ CCBListener::WriteMsgToCCB(ClassAd &msg)
 	}
 
 	m_sock->encode();
-	if( !msg.put( *m_sock ) || !m_sock->end_of_message() ) {
+	if( !putClassAd( m_sock, msg ) || !m_sock->end_of_message() ) {
 		Disconnected();
 		return false;
 	}
@@ -354,7 +354,7 @@ CCBListener::ReadMsgFromCCB()
 	}
 	m_sock->timeout(CCB_TIMEOUT);
 	ClassAd msg;
-	if( !msg.initFromStream( *m_sock ) || !m_sock->end_of_message() ) {
+	if( !getClassAd( m_sock, msg ) || !m_sock->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"CCBListener: failed to receive message from CCB server %s\n",
 				m_ccb_address.Value());
@@ -378,7 +378,7 @@ CCBListener::ReadMsgFromCCB()
 	}
 
 	MyString msg_str;
-	msg.sPrint(msg_str);
+	sPrintAd(msg_str, msg);
 	dprintf( D_ALWAYS,
 			 "CCBListener: Unexpected message received from CCB "
 			 "server: %s\n",
@@ -391,7 +391,7 @@ CCBListener::HandleCCBRegistrationReply( ClassAd &msg )
 {
 	if( !msg.LookupString(ATTR_CCBID,m_ccbid) ) {
 		MyString msg_str;
-		msg.sPrint(msg_str);
+		sPrintAd(msg_str, msg);
 		EXCEPT("CCBListener: no ccbid in registration reply: %s\n",
 			   msg_str.Value() );
 	}
@@ -421,7 +421,7 @@ CCBListener::HandleCCBRequest( ClassAd &msg )
 		!msg.LookupString( ATTR_REQUEST_ID, request_id) )
 	{
 		MyString msg_str;
-		msg.sPrint(msg_str);
+		sPrintAd(msg_str, msg);
 		EXCEPT("CCBListener: invalid CCB request from %s: %s\n",
 			   m_ccb_address.Value(),
 			   msg_str.Value() );
@@ -521,7 +521,7 @@ CCBListener::ReverseConnected(Stream *stream)
 		sock->encode();
 		int cmd = CCB_REVERSE_CONNECT;
 		if( !sock->put(cmd) ||
-			!msg_ad->put( *sock ) ||
+			!putClassAd( sock, *msg_ad ) ||
 			!sock->end_of_message() )
 		{
 			ReportReverseConnectResult(msg_ad,false,"failure writing reverse connect command");

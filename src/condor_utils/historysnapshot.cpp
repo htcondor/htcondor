@@ -191,7 +191,7 @@ HistorySnapshot::printResults(SQLQuery *queryhor,
 			  MyString owner, ad_str, temp;
 			  int compl_date;
 
-			  ad->sPrint(ad_str);
+                       sPrintAd(ad_str, *ad);
                        if (!ad->LookupString(ATTR_OWNER, owner))
                                  owner = "NULL";
                          if (!ad->LookupInteger(ATTR_COMPLETION_DATE, compl_date))
@@ -204,7 +204,7 @@ HistorySnapshot::printResults(SQLQuery *queryhor,
                          fprintf(stdout, "%s", ad_str.Value());
                          fprintf(stdout, "%s", temp.Value());
                  }     else if (longformat) {
-                         ad->fPrint(stdout);
+                         fPrintAd(stdout, *ad);
                          printf("\n");
                  }
 

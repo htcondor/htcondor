@@ -29,7 +29,34 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item \Condor{submit} now supports first-class accounting\_group and
+accounting\_group\_user commands, which deprecate the legacy
++\Attr{AccountingGroup} convention.
+\Ticket{2728}
+
+\item The \SubmitCmd{vm} universe now supports \Prog{VMware Workstation}
+and \Prog{VMware Player}.
+\Ticket{740}
+
+\item On Linux platforms where cgroups are supported and enabled, the 
+\Condor{starter} will now detect and trap if a vanilla universe job 
+would otherwise be killed by the system Out Of Memory (OOM) killer.  
+This situation is especially likely when a job sets \SubmitCmd{RequestMemory}
+lower than needed.  The job will now be put on hold.
+\Ticket{2992}
+
+\item Add a \Opt{-force-graceful} command-line option to \Condor{off}.  This
+will allow administrators to issue a graceful shutdown command, even after
+issuing a \Opt{-peaceful} command. Previously, a \Opt{-peaceful} \Condor{off}
+command would preclude a \Opt{-graceful} off command.
+\Ticket{2949}
+
+\item The \Condor{gather\_info} tool now includes the output of the Unix
+\Prog{uptime} and \Prog{free} programs, 
+as well as logs of the \Condor{master}, \Condor{startd}, and \Condor{starter}
+of the machine where the job most recently ran, 
+if \Condor{gather\_info} has the necessary permissions to fetch those logs.
+\Ticket{3246}
 
 \end{itemize}
 
@@ -37,7 +64,24 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The name of the configuration variable \MacroNI{MEMORY\_LIMIT}
+introduced in HTCondor version 7.9.2 has changed.
+This variable is now called \Macro{CGROUP\_MEMORY\_LIMIT\_POLICY}.
+\Ticket{3564}
+
+\item The new configuration variable \Macro{EXPIRE\_INVALIDATED\_ADS},
+when set to \Expr{True}, causes invalidated ClassAds that would have
+been removed from the \Condor{collector} right away to instead
+be treated as expired ClassAds, such that they may become absent ClassAds.
+See section~\ref{sec:Absent-Ads} for details on absent ClassAds.
+\Ticket{3085}
+
+\item The new configuration variable
+\Macro{GLEXEC\_HOLD\_ON\_INITIAL\_FAILURE} controls whether jobs are put
+on hold when a failure is encountered in the glexec setup phase of
+managing the job.  The default is \Expr{True}, which is the previous
+behavior.
+\Ticket{3569}
 
 \end{itemize}
 
@@ -45,7 +89,49 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug that caused the \Condor{schedd} to crash when 
+\Condor{rm} was used with the \Opt{-f} option on parallel universe jobs.
+\Ticket{3561}
+
+\item Fixed a bug that could cause HTCondor-C jobs to fail when they are
+part of a DAG. The jobs would be held with a hold reason of the form
+\footnotesize
+\begin{verbatim}
+Failed to initialize user log to /dev/null or <DAG log path>.
+\end{verbatim}
+\normalsize
+\Ticket{3474}
+
+\item Fixed a severe leak of file descriptors in the \Condor{ft-gahp}.
+\Ticket{3559}
+
+\item Fixed a bug that occurred when using privilege separation;
+the bug made it impossible for the \Condor{startd} to clean
+up execute directories after a \Condor{starter} was prematurely killed.
+\Ticket{3573}
+
+\item Fixed a bug that sometimes caused fetching user priorities 
+from the \Condor{negotiator} daemon to take a long time,
+as the fetch potentially had to wait until the end of the negotiation cycle. 
+The fetch no longer needs to wait.
+\Ticket{3535}
+
+\item Fixed a bug that would cause parallel universe jobs to fail when 
+\Expr{USE\_NFS=True}. This might have caused a potential issue with 
+doing a look up using \Condor{chirp}, 
+although testing seems to show that this is not an issue.
+\Ticket{3390}
+
+\item Fixed a bug introduced in HTCondor version 7.9.4 that sometimes caused
+attributes
+\AdAttr{ExitCode} and \AdAttr{ExitBySignal} not to be set in the job
+ClassAd when the job terminated.  These attributes were correctly
+reported in the user log, but they were not propagated to the job ClassAd and
+were therefore not available for querying with \Condor{history}.
+\Ticket{3577}
+
+\item Do not leak \Condor{starter} file descriptors to file transfer plugins. 
+\Ticket{3570}
 
 \end{itemize}
 
@@ -67,15 +153,14 @@ The details of each version are described below.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-7-6-0}Version 7.9.5}
+\subsection*{\label{sec:New-7-9-5}Version 7.9.5}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item HTCondor version 7.9.5 not yet released.
-%\item HTCondor version 7.9.5 released on Month Date, 2013.
+\item HTCondor version 7.9.5 released on April 17, 2013.
 
 \end{itemize}
 
@@ -118,9 +203,10 @@ the claim is kept not only when the job exits,
 but also when the job is removed.
 \Ticket{3491}
 
-\item \Condor{dagman} now reports the DAG status (total number of nodes,
-nodes queued, nodes finished, etc.) to its classad.  See
-section~\ref{sec:DAGStatusClassad} for more information.
+\item \Condor{dagman} now publishes in its own job ClassAd,
+attributes with the DAG status,
+such as total number of nodes, nodes queued, and nodes finished.
+See section~\ref{sec:DAGStatusClassad} for more information.
 \Ticket{1782}
 
 \end{itemize}
@@ -224,13 +310,29 @@ to abort and drop a dprintf error file during file transfer once the log had
 grown large enough to rotate.
 \Ticket{3528}
 
+\item On Windows platforms, running the \Condor{kbdd} no
+longer creates a visible console window.
+\Ticket{2805}
+
 \end{itemize}
 
 \noindent Known Bugs:
 
 \begin{itemize}
 
-\item None.
+\item Running \Condor{rm} with the \Opt{-f} option on a parallel universe
+job can cause the \Condor{schedd} to crash.
+\Ticket{3561}
+
+\item Using privilege separation may cause execute directories to be leaked,
+if the \Condor{starter} is shut down prematurely; 
+for example, shut down may occur by a hard kill signal or power interruption.
+\Ticket{3573}
+
+\item  If a job has any output files and uses the file transfer mechanism,
+the job ClassAd attribute \Attr{ExitCode} may be lost,
+causing its value to be reported as 0.
+\Ticket{3577}
 
 \end{itemize}
 

@@ -276,7 +276,7 @@ TransferDaemon::push_transfer_requests(void)
 		//	ATTR_TREQ_INVALID_REQUEST (set to false)
 		//	ATTR_TREQ_CAPABILITY
 		//
-		respad.initFromStream(*m_treq_sock);
+		getClassAd(m_treq_sock, respad);
 		m_treq_sock->end_of_message();
 
 		/////////////////////////////////////////////////
@@ -906,7 +906,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 	// This is the initial registration ad from the transferd:
 	//	ATTR_TD_SINFUL
 	//	ATTR_TD_ID
-	regad.initFromStream(*rsock);
+	getClassAd(rsock, regad);
 	rsock->end_of_message();
 	regad.LookupString(ATTR_TREQ_TD_SINFUL, td_sinful);
 	regad.LookupString(ATTR_TREQ_TD_ID, td_id);
@@ -932,7 +932,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 		respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 		respad.Assign(ATTR_TREQ_INVALID_REASON, 
 			"Did not request a transferd with that id for any user.");
-		respad.put(*rsock);
+		putClassAd(rsock, respad);
 		rsock->end_of_message();
 
 		dprintf(D_ALWAYS, "Leaving TDMan::transferd_registration()\n");
@@ -949,7 +949,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 		respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 		respad.Assign(ATTR_TREQ_INVALID_REASON, 
 			"Did not request a transferd with that id for this specific user.");
-		respad.put(*rsock);
+		putClassAd(rsock, respad);
 		rsock->end_of_message();
 
 		dprintf(D_ALWAYS, "Leaving TDMan::transferd_registration()\n");
@@ -966,7 +966,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 		respad.Assign(ATTR_TREQ_INVALID_REQUEST, TRUE);
 		respad.Assign(ATTR_TREQ_INVALID_REASON, 
 			"Transferd for user not in TD_PRE_INVOKED state.\n");
-		respad.put(*rsock);
+		putClassAd(rsock, respad);
 		rsock->end_of_message();
 
 		dprintf(D_ALWAYS, "Leaving TDMan::transferd_registration()\n");
@@ -975,7 +975,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 
 	// send back a good reply if all the above passed
 	respad.Assign(ATTR_TREQ_INVALID_REQUEST, FALSE);
-	respad.put(*rsock);
+	putClassAd(rsock, respad);
 	rsock->end_of_message();
 
 	///////////////////////////////////////////////////////////////
@@ -1133,7 +1133,7 @@ TDMan::transferd_update(Stream *sock)
 	/////////////////////////////////////////////////////////////////////////
 
 	// grab the classad from the transferd
-	if (update.initFromStream(*rsock) == 0) {
+	if (getClassAd(rsock, update) == false) {
 		// Hmm, couldn't get the update, clean up shop.
 		dprintf(D_ALWAYS, "Update socket was closed. "
 			"Transferd for user: %s with id: %s at location: %s will soon be "

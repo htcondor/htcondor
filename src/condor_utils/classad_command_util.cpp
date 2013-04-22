@@ -30,15 +30,15 @@
 int
 sendCAReply( Stream* s, const char* cmd_str, ClassAd* reply )
 {
-	reply->SetMyTypeName( REPLY_ADTYPE );
-	reply->SetTargetTypeName( COMMAND_ADTYPE );
+	SetMyTypeName( *reply, REPLY_ADTYPE );
+	SetTargetTypeName( *reply, COMMAND_ADTYPE );
 
 	reply->Assign( ATTR_VERSION, CondorVersion() );
 
 	reply->Assign( ATTR_PLATFORM, CondorPlatform() );
 
 	s->encode();
-	if( ! reply->put(*s) ) {
+	if( ! putClassAd(s, *reply) ) {
 		dprintf( D_ALWAYS,
 				 "ERROR: Can't send reply classad for %s, aborting\n",
 				 cmd_str );
@@ -104,7 +104,7 @@ getCmdFromReliSock( ReliSock* s, ClassAd* ad, bool force_auth )
         }
     }
 	
-	if( ! ad->initFromStream(*s) ) { 
+	if( ! getClassAd(s, *ad) ) { 
 		dprintf( D_ALWAYS, 
 				 "Failed to read ClassAd from network, aborting\n" ); 
 		return FALSE;
@@ -117,7 +117,7 @@ getCmdFromReliSock( ReliSock* s, ClassAd* ad, bool force_auth )
 
 	if( IsDebugVerbose( D_COMMAND ) ) {
 		dprintf( D_COMMAND, "Command ClassAd:\n" );
-		ad->dPrint( D_COMMAND );
+		dPrintAd( D_COMMAND, *ad );
 		dprintf( D_COMMAND, "*** End of Command ClassAd***\n" );
 	}
 

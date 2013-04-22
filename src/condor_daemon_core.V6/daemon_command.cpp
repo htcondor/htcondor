@@ -45,6 +45,8 @@ static int ZZZ_always_increase() {
 	return ZZZZZ++;
 }
 
+const std::string DaemonCommandProtocol::WaitForSocketDataString = "DaemonCommandProtocol::WaitForSocketData";
+
 DaemonCommandProtocol::DaemonCommandProtocol(Stream *sock,bool is_command_sock):
 #ifdef HAVE_EXT_GSOAP
 	m_is_http_post(false),
@@ -175,7 +177,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::WaitForSocke
 		m_sock,
 		m_sock->peer_description(),
 		(SocketHandlercpp)&DaemonCommandProtocol::SocketCallback,
-		"DaemonCommandProtocol::WaitForSocketData",
+		WaitForSocketDataString.c_str(),
 		this,
 		ALLOW);
 
@@ -570,7 +572,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: received DC_AUTHENTICATE from %s\n", m_sock->peer_description());
 
-		if( !m_auth_info.initFromStream(*m_sock)) {
+		if( !getClassAd(m_sock, m_auth_info)) {
 			dprintf (D_ALWAYS, "ERROR: DC_AUTHENTICATE unable to "
 					 "receive auth_info from %s!\n", m_sock->peer_description());
 			m_result = FALSE;
@@ -586,7 +588,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 		if (IsDebugVerbose(D_SECURITY)) {
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: received following ClassAd:\n");
-			m_auth_info.dPrint (D_SECURITY);
+			dPrintAd (D_SECURITY, m_auth_info);
 		}
 
 		MyString peer_version;
@@ -600,7 +602,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 		m_auth_cmd = 0;
 		m_auth_info.LookupInteger(ATTR_SEC_COMMAND, m_real_cmd);
 
-		if (m_real_cmd == DC_AUTHENTICATE) {
+		if ((m_real_cmd == DC_AUTHENTICATE) || (m_real_cmd == DC_SEC_QUERY)) {
 			// we'll set m_auth_cmd temporarily to
 			m_auth_info.LookupInteger(ATTR_SEC_AUTH_COMMAND, m_auth_cmd);
 		} else {
@@ -720,7 +722,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					m_policy = new ClassAd(*session->policy());
 					if (IsDebugVerbose(D_SECURITY)) {
 						dprintf (D_SECURITY, "DC_AUTHENTICATE: Cached Session:\n");
-						m_policy->dPrint (D_SECURITY);
+						dPrintAd (D_SECURITY, *m_policy);
 					}
 				}
 
@@ -763,7 +765,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 				if (IsDebugVerbose(D_SECURITY)) {
 					dprintf ( D_SECURITY, "DC_AUTHENTICATE: our_policy:\n" );
-					our_policy.dPrint(D_SECURITY);
+					dPrintAd(D_SECURITY, our_policy);
 				}
 
 				// reconcile.  if unable, close socket.
@@ -777,7 +779,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 				} else {
 					if (IsDebugVerbose(D_SECURITY)) {
 						dprintf ( D_SECURITY, "DC_AUTHENTICATE: the_policy:\n" );
-						m_policy->dPrint(D_SECURITY);
+						dPrintAd(D_SECURITY, *m_policy);
 					}
 				}
 
@@ -857,13 +859,13 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 				if (m_is_tcp && (m_sec_man->sec_lookup_feat_act(m_auth_info, ATTR_SEC_ENACT) == SecMan::SEC_FEAT_ACT_NO)) {
 					if (IsDebugVerbose(D_SECURITY)) {
 						dprintf (D_SECURITY, "SECMAN: Sending following response ClassAd:\n");
-						m_policy->dPrint( D_SECURITY );
+						dPrintAd( D_SECURITY, *m_policy );
 					}
 					m_sock->encode();
-					if (!m_policy->put(*m_sock) ||
+					if (!putClassAd(m_sock, *m_policy) ||
 						!m_sock->end_of_message()) {
 						dprintf (D_ALWAYS, "SECMAN: Error sending response classad to %s!\n", m_sock->peer_description());
-						m_auth_info.dPrint (D_ALWAYS);
+						dPrintAd (D_ALWAYS, m_auth_info);
 						m_result = FALSE;
 						return CommandProtocolFinished;
 					}
@@ -1158,11 +1160,11 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::PostAuthenti
 
 		if (IsDebugVerbose(D_SECURITY)) {
 			dprintf (D_SECURITY, "DC_AUTHENTICATE: sending session ad:\n");
-			pa_ad.dPrint( D_SECURITY );
+			dPrintAd( D_SECURITY, pa_ad );
 		}
 
 		m_sock->encode();
-		if (! pa_ad.put(*m_sock) ||
+		if (! putClassAd(m_sock, pa_ad) ||
 			! m_sock->end_of_message() ) {
 			dprintf (D_ALWAYS, "DC_AUTHENTICATE: unable to send session %s info to %s!\n", m_sid, m_sock->peer_description());
 			m_result = FALSE;
@@ -1211,7 +1213,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::PostAuthenti
 		m_sec_man->session_cache->insert(tmp_key);
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: added incoming session id %s to cache for %i seconds (lease is %ds, return address is %s).\n", m_sid, durint, session_lease, return_addr ? return_addr : "unknown");
 		if (IsDebugVerbose(D_SECURITY)) {
-			m_policy->dPrint(D_SECURITY);
+			dPrintAd(D_SECURITY, *m_policy);
 		}
 
 		free( dur );
@@ -1232,13 +1234,20 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 	int cmd_index = 0;
 
 	if (m_req == DC_AUTHENTICATE) {
+
+		m_result = TRUE;
+
 		if (m_real_cmd == DC_AUTHENTICATE) {
-			m_result = TRUE;
 			return CommandProtocolFinished;
 		}
 
-		m_req = m_real_cmd;
-		m_result = TRUE;
+		if (m_real_cmd == DC_SEC_QUERY) {
+			// continue spoofing another command.  just before calling the command
+			// handler we will check m_real_cmd again for DC_SEC_QUERY and abort.
+			m_req = m_auth_cmd;
+		} else {
+			m_req = m_real_cmd;
+		}
 
 		if( !daemonCore->CommandNumToTableIndex(m_auth_cmd,&cmd_index) ) {
 			dprintf(D_ALWAYS, "DC_AUTHENTICATE: UNREGISTERED COMMAND %d in ExecCommand()\n",m_auth_cmd);
@@ -1381,6 +1390,32 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 						  m_user.Value() );
 		}
 
+		// special case for DC_SEC_QUERY.  we are not going to call a command
+		// handler, but we need to respond whether or not the authorization
+		// succeeded.
+		if ( m_real_cmd == DC_SEC_QUERY ) {
+
+			// send another classad saying what happened
+			ClassAd q_response;
+			q_response.Assign( ATTR_SEC_AUTHORIZATION_SUCCEEDED, (m_perm == USER_AUTH_SUCCESS) );
+
+			if (!putClassAd(m_sock, q_response) ||
+				!m_sock->end_of_message()) {
+				dprintf (D_ALWAYS, "SECMAN: Error sending DC_SEC_QUERY classad to %s!\n", m_sock->peer_description());
+				dPrintAd (D_ALWAYS, q_response);
+				m_result = FALSE;
+				return CommandProtocolFinished;
+			}
+
+			dprintf (D_ALWAYS, "SECMAN: Succesfully sent DC_SEC_QUERY classad to %s!\n", m_sock->peer_description());
+			dPrintAd (D_ALWAYS, q_response);
+
+			// now, having informed the client about the authorization status,
+			// successfully abort before actually calling any command handler.
+			m_result = TRUE;
+			return CommandProtocolFinished;
+		}
+
 		if( m_perm != USER_AUTH_SUCCESS )
 		{
 			// Permission check FAILED
@@ -1426,6 +1461,14 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		}
 	}
 */
+
+	if ( m_real_cmd == DC_SEC_QUERY ) {
+		// send another classad saying what happened
+		// abort before actually calling any command handler.
+		m_result = TRUE;
+		return CommandProtocolFinished;
+	}
+
 	if ( m_reqFound == TRUE ) {
 		// Handlers should start out w/ parallel mode disabled by default
 		ScopedEnableParallel(false);

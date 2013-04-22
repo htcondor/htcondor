@@ -199,7 +199,7 @@ CCBClient::ReverseConnect_blocking( CondorError *error )
 		}
 
 		m_ccb_sock->encode();
-		if( !msg.put( *m_ccb_sock ) || !m_ccb_sock->end_of_message() ) {
+		if( !putClassAd( m_ccb_sock, msg ) || !m_ccb_sock->end_of_message() ) {
 			if( error ) {
 				error->pushf(
 					"CCBClient",
@@ -368,7 +368,7 @@ CCBClient::AcceptReversedConnection(counted_ptr<ReliSock> listen_sock,counted_pt
 
 	m_target_sock->decode();
 	if( !m_target_sock->get(cmd) ||
-		!msg.initFromStream( *m_target_sock ) ||
+		!getClassAd( m_target_sock, msg ) ||
 		!m_target_sock->end_of_message() )
 	{
 		dprintf(D_ALWAYS,
@@ -417,7 +417,7 @@ CCBClient::HandleReversedConnectionRequestReply(CondorError *error)
 	MyString errmsg;
 
 	m_ccb_sock->decode();
-	if( !msg.initFromStream(*m_ccb_sock) || !m_ccb_sock->end_of_message() ) {
+	if( !getClassAd(m_ccb_sock, msg) || !m_ccb_sock->end_of_message() ) {
 		errmsg.formatstr("Failed to read response from CCB server "
 					   "%s when requesting reversed connection to %s",
 					   m_ccb_sock->peer_description(),
@@ -753,7 +753,7 @@ CCBClient::ReverseConnectCommandHandler(Service *,int cmd,Stream *stream)
 	ASSERT( cmd == CCB_REVERSE_CONNECT );
 
 	ClassAd msg;
-	if( !msg.initFromStream(*stream) || !stream->end_of_message() ) {
+	if( !getClassAd(stream, msg) || !stream->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"CCBClient: failed to read reverse connection message from "
 				"%s.\n", stream->peer_description());

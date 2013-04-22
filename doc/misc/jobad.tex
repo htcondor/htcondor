@@ -16,7 +16,16 @@ of all the remote machines running a parallel or mpi universe job.
 %%% ClassAd attribute: Args
 \index{ClassAd job attribute!Args}
 \index{Args!job ClassAd attribute}
-\item[\AdAttr{Args}:]  String representing the arguments passed to the job.
+\item[\AdAttr{Args}:]  A string representing the command line arguments 
+passed to the job, when those arguments are specified using the
+\emph{old} syntax, as specified in section~\ref{man-condor-submit-arguments}.
+
+%%% ClassAd attribute: Arguments
+\index{ClassAd job attribute!Arguments}
+\index{Arguments!job ClassAd attribute}
+\item[\AdAttr{Arguments}:]  A string representing the command line arguments 
+passed to the job, when those arguments are specified using the
+\emph{new} syntax, as specified in section~\ref{man-condor-submit-arguments}.
 
 %%% ClassAd attribute: BatchQueue
 \index{ClassAd job attribute!BatchQueue}
@@ -569,6 +578,22 @@ reported by the remote job management system.
 of the the submit description file command \SubmitCmd{grid\_resource}.
 It specifies the target grid type, plus additional parameters
 specific to the grid type.
+
+%%% ClassAd attribute: AcctGroup
+\index{ClassAd job attribute!AcctGroup}
+\index{AcctGroup!job ClassAd attribute}
+\item[\AdAttr{AcctGroup}:] The accounting group name, as set in the
+\Condor{submit} file via the accounting\_group command.  This attribute
+is only present if an accounting group was requested by the
+submission. See section~\ref{sec:group-accounting} for more 
+information about accounting groups.
+
+%%% ClassAd attribute: AcctGroupUser
+\index{ClassAd job attribute!AcctGroupUser}
+\index{AcctGroupUser!job ClassAd attribute}
+\item[\AdAttr{AcctGroupUser}:] The user name associated with the
+accounting group.  This attribute is only present if an
+accounting group was requested by the submission.
 
 %%% ClassAd attribute: HoldKillSig
 \index{ClassAd job attribute!HoldKillSig}
@@ -1648,4 +1673,109 @@ This attribute is currently limited to apply only to Xen virtual machines.
 %\index{ClassAd job attribute!VM\_VCPUS}
 %\item[\AdAttr{VM\_VCPUS}:] Definition here.
 
+\end{description}
+
+\label{Job-ClassAd-DAGAttributes}
+The following job ClassAd attributes appear in the job ClassAd
+only for the \Condor{dagman}
+job submitted under DAGMan.
+They represent status information for the DAG.
+
+\begin {description}
+
+%%% ClassAd attribute: DAG_InRecovery
+\index{ClassAd job attribute!DAG\_InRecovery}
+\index{DAG\_InRecovery!job ClassAd attribute}
+\label{AttrDAGInRecovery}
+\item[\AdAttr{DAG\_InRecovery}:]   
+The value 1 if the DAG is in recovery mode, and
+The value 0 otherwise. 
+
+%%% ClassAd attribute: DAG_NodesDone
+\index{ClassAd job attribute!DAG\_NodesDone}
+\index{DAG\_NodesDone!job ClassAd attribute}
+\label{AttrDAGNodesDone}
+\item[\AdAttr{DAG\_NodesDone}:]   
+The number of DAG nodes that have finished successfully.
+This means that the entire node has finished, 
+not only an actual HTCondor job or jobs.
+
+%%% ClassAd attribute: DAG_NodesFailed
+\index{ClassAd job attribute!DAG\_NodesFailed}
+\index{DAG\_NodesFailed!job ClassAd attribute}
+\label{AttrDAGNodesFailed}
+\item[\AdAttr{DAG\_NodesFailed}:]
+The number of DAG nodes that have failed.
+This value includes all retries, if there are any.
+
+%%% ClassAd attribute: DAG_NodesPostrun
+\index{ClassAd job attribute!DAG\_NodesPostrun}
+\index{DAG\_NodesPostrun!job ClassAd attribute}
+\label{AttrDAGNodesPostrun}
+\item[\AdAttr{DAG\_NodesPostrun}:]
+The number of DAG nodes for which a POST script is running 
+or has been deferred because of a POST script throttle setting. 
+
+%%% ClassAd attribute: DAG_NodesPrerun
+\index{ClassAd job attribute!DAG\_NodesPrerun}
+\index{DAG\_NodesPrerun!job ClassAd attribute}
+\label{AttrDAGNodesPrerun}
+\item[\AdAttr{DAG\_NodesPrerun}:]
+The number of DAG nodes for which a PRE script is running 
+or has been deferred because of a PRE script throttle setting. 
+
+%%% ClassAd attribute: DAG_NodesQueued
+\index{ClassAd job attribute!DAG\_NodesQueued}
+\index{DAG\_NodesQueued!job ClassAd attribute}
+\label{AttrDAGNodesQueued}
+\item[\AdAttr{DAG\_NodesQueued}:]
+The number of DAG nodes for which the actual HTCondor job or jobs 
+are queued.
+The queued jobs may be in any state.
+
+%%% ClassAd attribute: DAG_NodesReady
+\index{ClassAd job attribute!DAG\_NodesReady}
+\index{DAG\_NodesReady!job ClassAd attribute}
+\label{AttrDAGNodesReady}
+\item[\AdAttr{DAG\_NodesReady}:]
+The number of DAG nodes that are ready to run,
+but which have not yet started running.
+
+%%% ClassAd attribute: DAG_NodesTotal
+\index{ClassAd job attribute!DAG\_NodesTotal}
+\index{DAG\_NodesTotal!job ClassAd attribute}
+\label{AttrDAGNodesTotal}
+\item[\AdAttr{DAG\_NodesTotal}:]   
+The total number of nodes in the DAG, including the FINAL node, if there
+is a FINAL node.
+
+%%% ClassAd attribute: DAG_NodesUnready
+\index{ClassAd job attribute!DAG\_NodesUnready}
+\index{DAG\_NodesUnready!job ClassAd attribute}
+\label{AttrDAGNodesUnready}
+\item[\AdAttr{DAG\_NodesUnready}:]   
+The number of DAG nodes that are not ready to run.
+This is a node in which one or more of the parent nodes has not yet finished. 
+
+%%% ClassAd attribute: DAG_Status
+\index{ClassAd job attribute!DAG\_Status}
+\index{DAG\_Status!job ClassAd attribute}
+\label{AttrDAGStatus}
+\item[\AdAttr{DAG\_Status}:]   
+The overall status of the DAG, with the same values as the \Env{\_DAG\_STATUS}
+macro.
+\begin{center}
+\begin{table}[hbt]
+\begin{tabular}{|p{2cm}p{10cm}|} \hline
+\emph{Value} & \emph{Status} \\ \hline \hline
+0 & OK \\ \hline
+1 & error; an error condition different than those listed here \\ \hline
+2 & one or more nodes in the DAG have failed \\ \hline
+3 & the DAG has been aborted by an ABORT-DAG-ON specification  \\ \hline
+4 & removed; the DAG has been removed by \Condor{rm} \\ \hline
+5 & a cycle was found in the DAG \\ \hline
+6 & the DAG has been suspended (see section~\ref{sec:DagSuspend}) \\ \hline
+\end{tabular}
+\end{table}
+\end{center}
 \end{description}

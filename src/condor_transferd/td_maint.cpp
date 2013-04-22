@@ -63,7 +63,7 @@ TransferD::dump_state_handler(int  /*cmd*/, Stream *sock)
 
 	sock->encode();
 
-	state.put(*sock);
+	putClassAd(sock, state);
 
 	sock->end_of_message();
 

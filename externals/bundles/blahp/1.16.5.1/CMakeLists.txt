@@ -49,7 +49,7 @@ if ( WITH_BLAHP )
 		endif()
 
 
-		condor_pre_external( BLAHP blahp-1.16.5.1-p12 "lib;include" "done")
+		condor_pre_external( BLAHP blahp-1.16.5.1-p13 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${BLAHP_DEPENDS}
@@ -62,6 +62,7 @@ if ( WITH_BLAHP )
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/mtrace.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/registry.patch -p0 && 
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/dl.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/lsf-jobid.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/add-sge.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/sge-status.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/sge-status-fallback.patch -p0 &&
@@ -81,6 +82,7 @@ if ( WITH_BLAHP )
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/proxy-tools.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/ld-library-path.patch -p0 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/run-dir.patch -p0 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/request-memory.patch -p0 &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/classads.m4 org.glite.ce.blahp/project &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/${GLOBUS_M4_FILE} org.glite.ce.blahp/project/globus.m4 &&
 							cp ${CMAKE_CURRENT_SOURCE_DIR}/glite.m4 org.glite.ce.blahp/project.&&

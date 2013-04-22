@@ -64,15 +64,15 @@ public:
 	bool firewallIsOn();
 	bool applicationIsTrusted(const char* app_path);
 	
-	bool addTrusted(const char* app_path);
-	bool removeTrusted(const char* app_path);
+	HRESULT addTrusted(const char* app_path);
+	HRESULT removeTrusted(const char* app_path);
 	
 private:
 
 	bool WindowsFirewallInitialize();
 	void WindowsFirewallCleanup();
 
-	bool removeByBasename(const char* basename);
+	HRESULT removeByBasename(const char* basename);
 	
 	/* data members */
 
@@ -85,6 +85,8 @@ private:
 	
 	bool wfh_initialized; // flag indicating init() has been called.
 	bool wfh_operational; // flag indicating whether this OS supports ICF
+	bool i_can_add;       // flag indicates this process has rights to add to firewall
+	bool i_can_remove;    // flag indicates this process has rights to remove from firewall
 };
 
 #endif /* _CONDOR_WINDOWS_FIREWALL_H */

@@ -694,7 +694,7 @@ ClassAdMsg::ClassAdMsg(int cmd,ClassAd &msg):
 bool
 ClassAdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock )
 {
-	if( !m_msg.put( *sock ) ) {
+	if( !putClassAd( sock, m_msg ) ) {
 		sockFailed( sock );
 		return false;
 	}
@@ -704,7 +704,7 @@ ClassAdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock )
 bool
 ClassAdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 {
-	if( !m_msg.initFromStream( *sock ) ) {
+	if( !getClassAd( sock, m_msg ) ) {
 		sockFailed( sock );
 		return false;
 	}

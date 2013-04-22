@@ -585,7 +585,7 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 	MyString error_msg;
 	ClassAd input;
 	s->decode();
-	if( !input.initFromStream(*s) || !s->end_of_message() ) {
+	if( !getClassAd(s, input) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"Failed to read request in createJobOwnerSecSession()\n");
 		return FALSE;
 	}
@@ -672,7 +672,7 @@ CStarter::createJobOwnerSecSession( int /*cmd*/, Stream* s )
 				fqu.Value());
 	}
 
-	if( !response.put(*s) || !s->end_of_message() ) {
+	if( !putClassAd(s, response) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"createJobOwnerSecSession failed to send response\n");
 	}
@@ -703,7 +703,7 @@ CStarter::vMessageFailed(Stream *s,bool retry, const std::string &prefix,char co
 	}
 
 	s->encode();
-	if( !response.put(*s) || !s->end_of_message() ) {
+	if( !putClassAd(s, response) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"Failed to send response to %s.\n", prefix.c_str());
 	}
 
@@ -852,7 +852,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 
 	compat_classad::ClassAd input;
 	s->decode();
-	if( !input.initFromStream(*s) || !s->end_of_message() ) {
+	if( !getClassAd(s, input) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS, "Failed to read request for peeking at logs.\n");
 		return false;
 	}
@@ -1162,12 +1162,12 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 	{
 		return PeekFailed(s, "Failed to add transfer offsets list.\n");
 	}
-	reply.dPrint(D_FULLDEBUG);
+	dPrintAd(D_FULLDEBUG, reply);
 
 	s->encode();
 	// From here on out, *always* send the same number of files as specified by
 	// the response ad, even if it means putting an empty file.
-	if (!reply.put(*s) || !s->end_of_message()) {
+	if (!putClassAd(s, reply) || !s->end_of_message()) {
 		dprintf(D_ALWAYS, "Failed to send read request response for peeking at logs.\n");
 		return false;
 	}
@@ -1225,7 +1225,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 
 	ClassAd input;
 	s->decode();
-	if( !input.initFromStream(*s) || !s->end_of_message() ) {
+	if( !getClassAd(s, input) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"Failed to read request in START_SSHD.\n");
 		return FALSE;
 	}
@@ -1601,7 +1601,7 @@ CStarter::startSSHD( int /*cmd*/, Stream* s )
 	response.Assign(ATTR_SSH_PRIVATE_CLIENT_KEY,private_client_key.Value());
 
 	s->encode();
-	if( !response.put(*s) || !s->end_of_message() ) {
+	if( !putClassAd(s, response) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,"Failed to send response to START_SSHD.\n");
 		return FALSE;
 	}
@@ -2468,7 +2468,7 @@ CStarter::WriteRecoveryFile( ClassAd *recovery_ad )
 		return;
 	}
 
-	if ( recovery_ad->fPrint( tmp_fp ) == FALSE ) {
+	if ( fPrintAd( tmp_fp, *recovery_ad ) == FALSE ) {
 		dprintf( D_ALWAYS, "Failed to write recovery file\n" );
 		fclose( tmp_fp );
 		return;
@@ -3369,9 +3369,7 @@ CStarter::WriteAdFiles()
 		}
 		else
 		{
-			ad->SetPrivateAttributesInvisible(true);
-			ad->fPrint(fp);
-			ad->SetPrivateAttributesInvisible(false);
+			fPrintAd(fp, *ad, true);
 			fclose(fp);
 		}
 	}
@@ -3396,9 +3394,7 @@ CStarter::WriteAdFiles()
 		}
 		else
 		{
-			ad->SetPrivateAttributesInvisible(true);
-			ad->fPrint(fp);
-			ad->SetPrivateAttributesInvisible(false);
+			fPrintAd(fp, *ad, true);
 			fclose(fp);
 		}
 	}

@@ -542,7 +542,7 @@ doWorkByConstraint( const char* constraint, CondorError * errstack )
 			} else {
 				// There were no jobs in the queue, so add a
 				// more meaningful error message
-				errstack->push("condor_rm", 0, "There are no jobs in the queue");
+				errstack->push(MyName, 0, "There are no jobs in the queue");
 			}
 			rval = false;
 		}

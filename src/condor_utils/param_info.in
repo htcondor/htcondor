@@ -3461,6 +3461,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=182
 
+[GLEXEC_HOLD_ON_INITIAL_FAILURE]
+aliases=
+default=true
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Glexec Hold on Initial Failure
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=daemon_core,daemon_core
+id=182
+
 [WINDOWS_SOFTKILL]
 aliases=
 default=$(SBIN)/condor_softkill
@@ -10921,4 +10937,52 @@ friendly_name=Determines if jobs should be removed gracefully by default.
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,baseshadow
+id=612
+
+[BASE_CGROUP]
+aliases=
+default=
+version=7.9.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Enables and names the base kernel cgroup for job management
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=starter
+id=613
+
+[CGROUP_MEMORY_LIMIT_POLICY]
+aliases=
+default=none
+version=7.9.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Determines whether cgroup base memory enforcement should happen
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=starter
+id=614
+
+[BATCH_GAHP_CHECK_STATUS_ATTEMPTS]
+aliases=
+default=5
+version=7.9.5
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Determines how many failed check status attempts before failing an infn gahp job.
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=gridmanager,infnbatchjob
 id=612

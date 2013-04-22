@@ -243,7 +243,7 @@ DCTransferQueue::RequestTransferQueueSlot(bool downloading,char const *fname,cha
 
 	m_xfer_queue_sock->encode();
 
-	if( !msg.put(*m_xfer_queue_sock) || !m_xfer_queue_sock->end_of_message() )
+	if( !putClassAd(m_xfer_queue_sock, msg) || !m_xfer_queue_sock->end_of_message() )
 	{
 		formatstr(m_xfer_rejected_reason,
 			"Failed to write transfer request to %s for job %s "
@@ -299,7 +299,7 @@ DCTransferQueue::PollForTransferQueueSlot(int timeout,bool &pending,MyString &er
 
 	m_xfer_queue_sock->decode();
 	ClassAd msg;
-	if( !msg.initFromStream(*m_xfer_queue_sock) ||
+	if( !getClassAd(m_xfer_queue_sock, msg) ||
 		!m_xfer_queue_sock->end_of_message() )
 	{
 		formatstr(m_xfer_rejected_reason,
@@ -314,7 +314,7 @@ DCTransferQueue::PollForTransferQueueSlot(int timeout,bool &pending,MyString &er
 	int result; // this should be one of the values in XFER_QUEUE_ENUM
 	if( !msg.LookupInteger(ATTR_RESULT,result) ) {
 		std::string msg_str;
-		msg.sPrint(msg_str);
+		sPrintAd(msg_str, msg);
 		formatstr(m_xfer_rejected_reason,
 			"Invalid transfer queue response from %s for job %s (%s): %s",
 			m_xfer_queue_sock->peer_description(),

@@ -89,8 +89,8 @@ ClassAd * ProcAd::dumpToAd( piPTR pi ) {
   char line[128];
   ClassAd *ad = new ClassAd;
 
-  ad->SetMyTypeName( "PROCESS_INFORMATION" );
-  ad->SetTargetTypeName( "ENQUIRING_MINDS_WANT_TO_KNOW" );
+  SetMyTypeName( *ad, "PROCESS_INFORMATION" );
+  SetTargetTypeName( *ad, "ENQUIRING_MINDS_WANT_TO_KNOW" );
 
   sprintf ( line, "THIS_PID = %d", pi->pid );
   ad->Insert(line);

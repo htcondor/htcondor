@@ -1420,7 +1420,7 @@ main( int argc, char *argv[] )
 
 		ClassAd queryAd;
 		QueryResult qr = query->getQueryAd (queryAd);
-		queryAd.fPrint (stdout);
+		fPrintAd (stdout, queryAd);
 
 		printf ("----------\n");
 		fprintf (stderr, "Result of making query ad was:  %d\n", qr);
@@ -1481,7 +1481,7 @@ main( int argc, char *argv[] )
 
 			result.Open();
 			while (ClassAd	*ad = result.Next()) {
-				ad->fPrint(stdout);
+				fPrintAd(stdout, *ad);
 				printf("\n");
 			}
 			result.Close();

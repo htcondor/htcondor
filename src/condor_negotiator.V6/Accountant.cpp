@@ -764,7 +764,7 @@ void Accountant::DisplayLog()
   AcctLog->table.startIterations();
   while (AcctLog->table.iterate(HK,ad)) {
     printf("------------------------------------------------\nkey = %s\n",HK.value());
-    ad->fPrint(stdout);
+    fPrintAd(stdout, *ad);
   }
 }
 
@@ -930,7 +930,7 @@ void Accountant::CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList)
     bool success = ( resource_hash.insert( ResourceName, ResourceAd ) == 0 );
     if (!success) {
       dprintf(D_ALWAYS, "WARNING: found duplicate key: %s\n", ResourceName.Value());
-      ResourceAd->dPrint(D_FULLDEBUG);
+      dPrintAd(D_FULLDEBUG, *ResourceAd);
     }
   }
   ResourceList.Close();

@@ -807,7 +807,7 @@ part_send_job(
 	  }
 
 		  // Send the job info 
-	  if( !JobAd->put(*sock) ) {
+	  if( !putClassAd(sock, *JobAd) ) {
 		  dprintf( D_ALWAYS, "failed to send job ad\n" );
 		  goto returnfailure;
 	  }	

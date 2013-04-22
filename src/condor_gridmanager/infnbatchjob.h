@@ -70,6 +70,7 @@ class INFNBatchJob : public BaseJob
 	time_t enteredCurrentRemoteState;
 	time_t lastSubmitAttempt;
 	int numSubmitAttempts;
+	int numStatusCheckAttempts;
 	char *batchType;
 	char *remoteSandboxId;
 	char *remoteJobId;

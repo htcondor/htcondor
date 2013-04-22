@@ -81,8 +81,8 @@ DBMSManager::InitPublicAd() {
 	//Until then, actual writes to the collector are disabled,
 	//because it conflicts with the schedd on the same host..
 
-	m_public_ad.SetMyTypeName( DBMSD_ADTYPE );
-	m_public_ad.SetTargetTypeName( "" );
+	SetMyTypeName( m_public_ad, DBMSD_ADTYPE );
+	SetTargetTypeName( m_public_ad, "" );
 
 	m_public_ad.Assign(ATTR_MACHINE,my_full_hostname());
 	m_public_ad.Assign(ATTR_NAME,m_name.Value());
@@ -179,8 +179,8 @@ DBMSManager::TimerHandler_UpdateCollector() {
 void
 DBMSManager::InvalidatePublicAd() {
 	ClassAd query_ad;
-    query_ad.SetMyTypeName(QUERY_ADTYPE);
-    query_ad.SetTargetTypeName(DBMSD_ADTYPE);
+    SetMyTypeName(query_ad, QUERY_ADTYPE);
+    SetTargetTypeName(query_ad, DBMSD_ADTYPE);
 
     MyString line;
     line.sprintf("%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, m_name.Value());

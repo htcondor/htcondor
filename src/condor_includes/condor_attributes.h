@@ -38,6 +38,8 @@
 // all compilers!), but the bloat is in the text segment - shared on all processes!
 
 #define ATTR_ABSENT                    "Absent"
+#define ATTR_ACCT_GROUP  "AcctGroup"
+#define ATTR_ACCT_GROUP_USER  "AcctGroupUser"
 #define ATTR_ACCOUNTING_GROUP          "AccountingGroup"
 #define ATTR_ACTION_CONSTRAINT  "ActionConstraint"
 #define ATTR_ACTION_IDS  "ActionIds"
@@ -784,6 +786,7 @@
 #define ATTR_SEC_COOKIE  "Cookie"
 extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SEC_TRIED_AUTHENTICATION  "TriedAuthentication"
+#define ATTR_SEC_AUTHORIZATION_SUCCEEDED  "AuthorizationSucceeded"
 
 #define ATTR_MULTIPLE_TASKS_PER_PVMD  "MultipleTasksPerPvmd"
 
@@ -853,6 +856,9 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_VM_GUEST_MEM  "VM_Guest_Mem"
 #define ATTR_VM_CKPT_MAC  "VM_CkptMac"
 #define ATTR_VM_CKPT_IP  "VM_CkptIP"
+
+#define ATTR_WEIGHTED_IDLE_JOBS "WeightedIdleJobs"
+#define ATTR_WEIGHTED_RUNNING_JOBS "WeightedRunningJobs"
 
 //************* Added for EC2 Jobs ***************************//
 #define ATTR_EC2_ACCESS_KEY_ID  "EC2AccessKeyId"

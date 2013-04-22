@@ -82,7 +82,7 @@ int verify_number_args (const int, const int);
 
 int ftgahp_reaper(FileTransfer *);
 
-void enqueue_result (std::string req_id, const char ** results, const int argc);
+void enqueue_result (const std::string &req_id, const char ** results, const int argc);
 void enqueue_result (int req_id, const char ** results, const int argc);
 
 void define_sandbox_path(std::string sid, std::string &path);

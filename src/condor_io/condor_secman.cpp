@@ -1294,7 +1294,7 @@ SecManStartCommand::sendAuthInfo_inner()
 			dprintf (D_SECURITY, "SECMAN: found cached session id %s for %s.\n",
 					m_enc_key->id(), m_session_key.Value());
 			m_sec_man.key_printf(D_SECURITY, m_enc_key->key());
-			m_auth_info.dPrint( D_SECURITY );
+			dPrintAd( D_SECURITY, m_auth_info );
 		}
 
 			// Ideally, we would only increment our lease expiration time after
@@ -1338,7 +1338,7 @@ SecManStartCommand::sendAuthInfo_inner()
 	
 	if (IsDebugVerbose(D_SECURITY)) {
 		dprintf (D_SECURITY, "SECMAN: Security Policy:\n");
-		m_auth_info.dPrint( D_SECURITY );
+		dPrintAd( D_SECURITY, m_auth_info );
 	}
 
 
@@ -1466,7 +1466,7 @@ SecManStartCommand::sendAuthInfo_inner()
 	// fill in command
 	m_auth_info.Assign(ATTR_SEC_COMMAND, m_cmd);
 
-	if (m_cmd == DC_AUTHENTICATE) {
+	if ((m_cmd == DC_AUTHENTICATE) || (m_cmd == DC_SEC_QUERY)) {
 		// fill in sub-command
 		m_auth_info.Assign(ATTR_SEC_AUTH_COMMAND, m_subcmd);
 	}
@@ -1515,7 +1515,7 @@ SecManStartCommand::sendAuthInfo_inner()
 				// suck.
 
 				dprintf ( D_ALWAYS, "SECMAN: action attribute missing from classad\n");
-				m_auth_info.dPrint( D_SECURITY );
+				dPrintAd( D_SECURITY, m_auth_info );
 				m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
 						"Protocol Error: Action attribute missing.");
 				return StartCommandFailed;
@@ -1621,11 +1621,11 @@ SecManStartCommand::sendAuthInfo_inner()
 
 	if (IsDebugVerbose(D_SECURITY)) {
 		dprintf ( D_SECURITY, "SECMAN: sending following classad:\n");
-		m_auth_info.dPrint ( D_SECURITY );
+		dPrintAd ( D_SECURITY, m_auth_info );
 	}
 
 	// send the classad
-	if (! m_auth_info.put(*m_sock)) {
+	if (! putClassAd(m_sock, m_auth_info)) {
 		dprintf ( D_ALWAYS, "SECMAN: failed to send auth_info\n");
 		m_errstack->push( "SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
 						"Failed to send auth_info." );
@@ -1662,7 +1662,7 @@ SecManStartCommand::receiveAuthInfo_inner()
 			ClassAd auth_response;
 			m_sock->decode();
 
-			if (!auth_response.initFromStream(*m_sock) ||
+			if (!getClassAd(m_sock, auth_response) ||
 				!m_sock->end_of_message() ) {
 
 				// if we get here, it means the serve accepted our connection
@@ -1687,7 +1687,7 @@ SecManStartCommand::receiveAuthInfo_inner()
 
 			if (IsDebugVerbose(D_SECURITY)) {
 				dprintf ( D_SECURITY, "SECMAN: server responded with:\n");
-				auth_response.dPrint( D_SECURITY );
+				dPrintAd( D_SECURITY, auth_response );
 			}
 
 				// Get rid of our sinful address in what will become
@@ -1754,7 +1754,7 @@ SecManStartCommand::authenticate_inner()
 			// missing some essential info.
 
 			dprintf ( D_SECURITY, "SECMAN: action attribute missing from classad, failing!\n");
-			m_auth_info.dPrint( D_SECURITY );
+			dPrintAd( D_SECURITY, m_auth_info );
 			m_errstack->push( "SECMAN", SECMAN_ERR_ATTRIBUTE_MISSING,
 						"Protocol Error: Action attribute missing.");
 			return StartCommandFailed;
@@ -1935,7 +1935,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			// receive a classAd containing info about new session
 			ClassAd post_auth_info;
 			m_sock->decode();
-			if (!post_auth_info.initFromStream(*m_sock) || !m_sock->end_of_message()) {
+			if (!getClassAd(m_sock, post_auth_info) || !m_sock->end_of_message()) {
 				dprintf (D_ALWAYS, "SECMAN: could not receive session info, failing!\n");
 				m_errstack->push ("SECMAN", SECMAN_ERR_COMMUNICATIONS_ERROR,
 							"could not receive post_auth_info." );
@@ -1943,7 +1943,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			} else {
 				if (IsDebugVerbose(D_SECURITY)) {
 					dprintf (D_SECURITY, "SECMAN: received post-auth classad:\n");
-					post_auth_info.dPrint (D_SECURITY);
+					dPrintAd (D_SECURITY, post_auth_info);
 				}
 			}
 
@@ -1982,7 +1982,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			
 			if (IsDebugVerbose(D_SECURITY)) {
 				dprintf (D_SECURITY, "SECMAN: policy to be cached:\n");
-				m_auth_info.dPrint(D_SECURITY);
+				dPrintAd(D_SECURITY, m_auth_info);
 			}
 
 			char *sesid = NULL;
@@ -2971,7 +2971,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 			ClassAd *existing_policy = existing ? existing->policy() : NULL;
 			if( existing_policy ) {
 				dprintf(D_ALWAYS,"SECMAN: existing session %s:\n", sesid);
-				existing_policy->dPrint(D_SECURITY);
+				dPrintAd(D_SECURITY, *existing_policy);
 			}
 			delete keyinfo;
 			return false;
@@ -2987,7 +2987,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 					exported_session_info);
 		}
 		dprintf(D_SECURITY,"Caching non-negotiated security session ad:\n");
-		policy.dPrint(D_SECURITY);
+		dPrintAd(D_SECURITY, policy);
 	}
 
 	delete keyinfo;

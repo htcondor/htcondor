@@ -557,8 +557,8 @@ DedicatedScheduler::initialize( void )
 
 		// Next, fill in the dummy job ad we're going to send to 
 		// startds for claiming them.
-	dummy_job.SetMyTypeName( JOB_ADTYPE );
-	dummy_job.SetTargetTypeName( STARTD_ADTYPE );
+	SetMyTypeName( dummy_job, JOB_ADTYPE );
+	SetTargetTypeName( dummy_job, STARTD_ADTYPE );
 	dummy_job.Assign( ATTR_REQUIREMENTS, true );
 	dummy_job.Assign( ATTR_OWNER, ds_owner );
 	dummy_job.Assign( ATTR_USER, ds_name );
@@ -705,7 +705,7 @@ DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim
 	Daemon startd(&match_ad,DT_STARTD,NULL);
 	if( !startd.addr() ) {
 		dprintf( D_ALWAYS, "Can't find address of startd in match ad:\n" );
-		match_ad.dPrint(D_ALWAYS);
+		dPrintAd(D_ALWAYS, match_ad);
 		return false;
 	}
 
@@ -975,8 +975,7 @@ DedicatedScheduler::reaper( int pid, int status )
 
 	if( GetAttributeInt(srec->job_id.cluster, srec->job_id.proc, 
 						ATTR_JOB_STATUS, &q_status) < 0 ) {
-		EXCEPT( "ERROR no job status for %d.%d in "
-				"DedicatedScheduler::reaper()!",
+		dprintf(D_ALWAYS, "Job (%d.%d) for reaped shadow has already been removed.\n",
 				srec->job_id.cluster, srec->job_id.proc );
 	}
 
@@ -1212,7 +1211,7 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 			}				
 			//job_ad = new ClassAd( *((*alloc->jobs)[p]) );
 			job_ad = dollarDollarExpand(0,0, (*alloc->jobs)[p], (*matches)[i]->my_match_ad, true);
-			if( ! job_ad->put(*stream) ) {
+			if( ! putClassAd(stream, *job_ad) ) {
 				dprintf( D_ALWAYS, "ERROR in giveMatches: "
 						 "can't send job classad for proc %d\n", p );
 				delete job_ad;
@@ -2691,19 +2690,6 @@ DedicatedScheduler::removeAllocation( shadow_rec* srec )
 		}
 	}
 
-		/* it may be that the mpi shadow crashed and left around a 
-		   file named 'procgroup' in the IWD of the job.  We should 
-		   check and delete it here. */
-	std::string pg_file;
-	((*alloc->jobs)[0])->LookupString( ATTR_JOB_IWD, pg_file );  
-	pg_file += "/procgroup";
-	if ( unlink ( pg_file.c_str() ) == -1 ) {
-		if ( errno != ENOENT ) {
-			dprintf ( D_FULLDEBUG, "Couldn't remove %s. errno %d.\n", 
-					  pg_file.c_str(), errno );
-		}
-	}
-
 		// This "allocation" is no longer valid.  So, delete the
 		// allocation node from our table.
 	allocations->remove( srec->job_id.cluster );
@@ -3138,8 +3124,8 @@ DedicatedScheduler::publishRequestAd( void )
 
 	dprintf( D_FULLDEBUG, "In DedicatedScheduler::publishRequestAd()\n" );
 
-	ad.SetMyTypeName(SUBMITTER_ADTYPE);
-	ad.SetTargetTypeName(STARTD_ADTYPE);
+	SetMyTypeName(ad, SUBMITTER_ADTYPE);
+	SetTargetTypeName(ad, STARTD_ADTYPE);
 
         // Publish all DaemonCore-specific attributes, which also handles
         // SCHEDD_ATTRS for us.
@@ -3821,7 +3807,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 						host ? host : "(null host)",
 						remote_hosts ? remote_hosts : "(null)",
 						claims ? claims : "(null)");
-				job->dPrint(D_ALWAYS);
+				dPrintAd(D_ALWAYS, *job);
 					// we will break out of the loop below
 			}
 
@@ -3848,7 +3834,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 				Daemon startd(machineAd,DT_STARTD,NULL);
 				if( !startd.addr() ) {
 					dprintf( D_ALWAYS, "Can't find address of startd in ad:\n" );
-					machineAd->dPrint(D_ALWAYS);
+					dPrintAd(D_ALWAYS, *machineAd);
 						// we will break out of the loop below
 				}
 				else {

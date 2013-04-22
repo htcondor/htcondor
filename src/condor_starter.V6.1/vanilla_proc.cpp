@@ -45,10 +45,17 @@
 extern dynuser* myDynuser;
 #endif
 
+#if defined(HAVE_EVENTFD)
+#include <sys/eventfd.h>
+#endif
+
 extern CStarter *Starter;
 
 VanillaProc::VanillaProc(ClassAd* jobAd) : OsProc(jobAd),
-	m_network_name()
+	m_network_name(),
+	m_memory_limit(-1),
+	m_oom_fd(-1),
+	m_oom_efd(-1)
 {
 #if !defined(WIN32)
 	m_escalation_tid = -1;
@@ -219,6 +226,12 @@ VanillaProc::StartJob()
 		}
 		fi.group_ptr = &tracking_gid;
 	}
+
+	// Increase the OOM score of this process; the child will inherit it.
+	// This way, the job will be heavily preferred to be killed over a normal process.
+	// OOM score is currently exponential - a score of 4 is a factor-16 increase in
+	// the OOM score.
+	setupOOMScore(4);
 #endif
 
 #if defined(HAVE_EXT_LIBCGROUP)
@@ -458,7 +471,7 @@ VanillaProc::StartJob()
 	// See Note near setup of param(BASE_CGROUP)
 	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup && retval) {
 		std::string mem_limit;
-		param(mem_limit, "MEMORY_LIMIT", "soft");
+		param(mem_limit, "CGROUP_MEMORY_LIMIT_POLICY", "soft");
 		bool mem_is_soft = mem_limit == "soft";
 		std::string cgroup_string = cgroup;
 		CgroupLimits climits(cgroup_string);
@@ -467,6 +480,7 @@ VanillaProc::StartJob()
 			int MemMb;
 			if (MachineAd->LookupInteger(ATTR_MEMORY, MemMb)) {
 				uint64_t MemMb_big = MemMb;
+				m_memory_limit = MemMb_big;
 				climits.set_memory_limit_bytes(1024*1024*MemMb_big, mem_is_soft);
 			} else {
 				dprintf(D_ALWAYS, "Not setting memory soft limit in cgroup because "
@@ -475,7 +489,7 @@ VanillaProc::StartJob()
 		} else if (mem_limit == "none") {
 			dprintf(D_FULLDEBUG, "Not enforcing memory soft limit.\n");
 		} else {
-			dprintf(D_ALWAYS, "Invalid value of MEMORY_LIMIT: %s.  Ignoring.\n", mem_limit.c_str());
+			dprintf(D_ALWAYS, "Invalid value of CGROUP_MEMORY_LIMIT_POLICY: %s.  Ignoring.\n", mem_limit.c_str());
 		}
 
 		// Now, set the CPU shares
@@ -486,6 +500,14 @@ VanillaProc::StartJob()
 		} else {
 			dprintf(D_FULLDEBUG, "Invalid value of Cpus in machine ClassAd; ignoring.\n");
 		}
+		setupOOMEvent(cgroup);
+	}
+
+	// Now that the job is started, decrease the likelihood that the starter
+	// is killed instead of the job itself.
+	if (retval)
+	{
+		setupOOMScore(-4);
 	}
 
 #endif
@@ -710,5 +732,229 @@ VanillaProc::finishShutdownFast()
 	//   -gquinn, 2007-11-14
 	daemonCore->Kill_Family(JobPid);
 
+	if (m_oom_efd >= 0) {
+		dprintf(D_FULLDEBUG, "Closing event FD pipe in shutdown %d.\n", m_oom_efd);
+		daemonCore->Close_Pipe(m_oom_efd);
+		m_oom_efd = -1;
+	}
+	if (m_oom_fd >= 0) {
+		close(m_oom_fd);
+		m_oom_fd = -1;
+	}
+
 	return false;	// shutdown is pending, so return false
 }
+
+/*
+ * This will be called when the event fd fires, indicating an OOM event.
+ */
+int
+VanillaProc::outOfMemoryEvent(int /* fd */)
+{
+	std::stringstream ss;
+	if (m_memory_limit >= 0) {
+		ss << "Job has gone over memory limit of " << m_memory_limit << " megabytes.";
+	} else {
+		ss << "Job has encountered an out-of-memory event.";
+	}
+	Starter->jic->holdJob(ss.str().c_str(), CONDOR_HOLD_CODE_JobOutOfResources, 0);
+
+	// this will actually clean up the job
+	if ( Starter->Hold( ) ) {
+		dprintf( D_FULLDEBUG, "All jobs were removed due to OOM event.\n" );
+		Starter->allJobsDone();
+	}
+
+	dprintf(D_FULLDEBUG, "Closing event FD pipe %d.\n", m_oom_efd);
+	daemonCore->Close_Pipe(m_oom_efd);
+	close(m_oom_fd);
+	m_oom_efd = -1;
+	m_oom_fd = -1;
+
+	Starter->ShutdownFast();
+
+	return 0;
+}
+
+int
+VanillaProc::setupOOMScore(int new_score)
+{
+
+#if !(defined(HAVE_EVENTFD))
+	if (new_score) // Done to suppress compiler warnings.
+		return 0;
+	return 0;
+#else 
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	// oom_adj is deprecated on modern kernels and causes a deprecation warning when used.
+	int oom_score_fd = open("/proc/self/oom_score_adj", O_WRONLY | O_CLOEXEC);
+	if (oom_score_fd == -1) {
+		if (errno != ENOENT) {
+			dprintf(D_ALWAYS,
+				"Unable to open oom_score_adj for the starter: (errno=%u, %s)\n",
+				errno, strerror(errno));
+			return 1;
+		} else {
+			oom_score_fd = open("/proc/self/oom_adj", O_WRONLY | O_CLOEXEC);
+			if (oom_score_fd == -1) {
+				dprintf(D_ALWAYS,
+					"Unable to open oom_adj for the starter: (errno=%u, %s)\n",
+					errno, strerror(errno));
+				return 1;
+			}
+		}
+	} else {
+		// oom_score_adj is linear; oom_adj was exponential.
+		if (new_score > 0)
+			new_score = 1 << new_score;
+		else
+			new_score = -(1 << -new_score);
+	}
+
+	std::stringstream ss;
+	ss << new_score;
+	std::string new_score_str = ss.str();
+        ssize_t nwritten = full_write(oom_score_fd, new_score_str.c_str(), new_score_str.length());
+	if (nwritten < 0) {
+		dprintf(D_ALWAYS,
+			"Unable to write into oom_adj file for the starter: (errno=%u, %s)\n",
+			errno, strerror(errno));
+		close(oom_score_fd);
+		return 1;
+	}
+	close(oom_score_fd);
+	return 0;
+#endif
+}
+
+int
+VanillaProc::setupOOMEvent(const std::string &cgroup_string)
+{
+#if !(defined(HAVE_EVENTFD) && defined(HAVE_EXT_LIBCGROUP))
+	return 0;
+#else
+	// Initialize the event descriptor
+	m_oom_efd = eventfd(0, EFD_CLOEXEC);
+	if (m_oom_efd == -1) {
+		dprintf(D_ALWAYS,
+			"Unable to create new event FD for starter: %u %s\n",
+			errno, strerror(errno));
+		return 1;
+	}
+
+	// Find the memcg location on disk
+	void * handle = NULL;
+	struct cgroup_mount_point mount_info;
+	int ret = cgroup_get_controller_begin(&handle, &mount_info);
+	std::stringstream oom_control;
+	std::stringstream event_control;
+	bool found_memcg = false;
+	while (ret == 0) {
+		if (strcmp(mount_info.name, MEMORY_CONTROLLER_STR) == 0) {
+			found_memcg = true;
+			oom_control << mount_info.path << "/";
+			event_control << mount_info.path << "/";
+			break;
+		}
+		cgroup_get_controller_next(&handle, &mount_info);
+	}
+	if (!found_memcg && (ret != ECGEOF)) {
+		dprintf(D_ALWAYS,
+			"Error while locating memcg controller for starter: %u %s\n",
+			ret, cgroup_strerror(ret));
+		return 1;
+	}
+	cgroup_get_controller_end(&handle);
+	if (found_memcg == false) {
+		dprintf(D_ALWAYS,
+			"Memcg is not available; OOM notification disabled for starter.\n");
+		return 1;
+	}
+
+	// Finish constructing the location of the control files
+	oom_control << cgroup_string << "/memory.oom_control";
+	std::string oom_control_str = oom_control.str();
+	event_control << cgroup_string << "/cgroup.event_control";
+	std::string event_control_str = event_control.str();
+
+	// Open the oom_control and event control files
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	m_oom_fd = open(oom_control_str.c_str(), O_RDONLY | O_CLOEXEC);
+	if (m_oom_fd == -1) {
+		dprintf(D_ALWAYS,
+			"Unable to open the OOM control file for starter: %u %s\n",
+			errno, strerror(errno));
+		return 1;
+	}
+	int event_ctrl_fd = open(event_control_str.c_str(), O_WRONLY | O_CLOEXEC);
+	if (event_ctrl_fd == -1) {
+		dprintf(D_ALWAYS,
+			"Unable to open event control for starter: %u %s\n",
+			errno, strerror(errno));
+		return 1;
+	}
+
+	// Inform Linux we will be handling the OOM events for this container.
+	int oom_fd2 = open(oom_control_str.c_str(), O_WRONLY | O_CLOEXEC);
+	if (oom_fd2 == -1) {
+		dprintf(D_ALWAYS,
+			"Unable to open the OOM control file for writing for starter: %u %s\n",
+			errno, strerror(errno));
+		close(event_ctrl_fd);
+		return 1;
+	}
+	const char limits [] = "1";
+        ssize_t nwritten = full_write(oom_fd2, &limits, 1);
+	if (nwritten < 0) {
+		dprintf(D_ALWAYS,
+			"Unable to set OOM control to %s for starter: %u %s\n",
+				limits, errno, strerror(errno));
+		close(event_ctrl_fd);
+		close(oom_fd2);
+		return 1;
+	}
+	close(oom_fd2);
+
+	// Create the subscription string:
+	std::stringstream sub_ss;
+	sub_ss << m_oom_efd << " " << m_oom_fd;
+	std::string sub_str = sub_ss.str();
+
+	if ((nwritten = full_write(event_ctrl_fd, sub_str.c_str(), sub_str.size())) < 0) {
+		dprintf(D_ALWAYS,
+			"Unable to write into event control file for starter: %u %s\n",
+			errno, strerror(errno));
+		close(event_ctrl_fd);
+		return 1;
+	}
+	close(event_ctrl_fd);
+
+	// Fool DC into talking to the eventfd
+	int pipes[2]; pipes[0] = -1; pipes[1] = -1;
+	int fd_to_replace = -1;
+	if (daemonCore->Create_Pipe(pipes, true) == -1 || pipes[0] == -1) {
+		dprintf(D_ALWAYS, "Unable to create a DC pipe\n");
+		close(m_oom_efd);
+		m_oom_efd = -1;
+		close(m_oom_fd);
+		m_oom_fd = -1;
+		return 1;
+	}
+	if ( daemonCore->Get_Pipe_FD(pipes[0], &fd_to_replace) == -1 || fd_to_replace == -1) {
+		dprintf(D_ALWAYS, "Unable to lookup pipe's FD\n");
+		close(m_oom_efd); m_oom_efd = -1;
+		close(m_oom_fd); m_oom_fd = -1;
+		daemonCore->Close_Pipe(pipes[0]);
+		daemonCore->Close_Pipe(pipes[1]);
+		return 1;
+	}
+	dup3(m_oom_efd, fd_to_replace, O_CLOEXEC);
+	close(m_oom_efd);
+	m_oom_efd = pipes[0];
+
+	// Inform DC we want to recieve notifications from this FD.
+	daemonCore->Register_Pipe(pipes[0],"OOM event fd", static_cast<PipeHandlercpp>(&VanillaProc::outOfMemoryEvent),"OOM Event Handler",this,HANDLE_READ);
+	return 0;
+#endif
+}
+

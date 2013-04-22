@@ -422,7 +422,7 @@ JobInfoCommunicator::writeOutputAdFile( ClassAd* ad )
 		}
 	}
 		// append a delimiter?
-	ad->fPrint( fp );
+	fPrintAd( fp, *ad );
 
 	if( job_output_ad_is_stdout ) {
 		fflush( fp );
@@ -781,7 +781,7 @@ JobInfoCommunicator::checkForStarterDebugging( void )
 		// out the job ad to the log file...
 	if( IsDebugLevel( D_JOB ) ) {
 		dprintf( D_JOB, "*** Job ClassAd ***\n" );  
-		job_ad->dPrint( D_JOB );
+		dPrintAd( D_JOB, *job_ad );
         dprintf( D_JOB, "--- End of ClassAd ---\n" );
 	}
 }

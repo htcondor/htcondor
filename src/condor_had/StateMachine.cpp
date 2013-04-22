@@ -130,8 +130,8 @@ HADStateMachine::~HADStateMachine(void)
 
     freeResources();
 
-    invalidate_ad.SetMyTypeName( QUERY_ADTYPE );
-    invalidate_ad.SetTargetTypeName( HAD_ADTYPE );
+    SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
+    SetTargetTypeName( invalidate_ad, HAD_ADTYPE );
     line.formatstr( "TARGET.%s == \"%s\"", ATTR_NAME, m_name.Value( ) );
     invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value( ) );
 	invalidate_ad.Assign( ATTR_NAME, m_name.Value() );
@@ -280,8 +280,8 @@ HADStateMachine::initializeClassAd(void)
 
 	m_classAd.Clear();
 
-    m_classAd.SetMyTypeName(HAD_ADTYPE);
-    m_classAd.SetTargetTypeName("");
+    SetMyTypeName(m_classAd, HAD_ADTYPE);
+    SetTargetTypeName(m_classAd, "");
 
     MyString line;
 
@@ -582,7 +582,7 @@ HADStateMachine::sendCommandToOthers( int comm )
             continue;
         }
 
-        if(! m_classAd.put(sock) || !sock.end_of_message()) {
+        if(! putClassAd(&sock, m_classAd) || !sock.end_of_message()) {
             dprintf( D_ALWAYS, "Failed to send classad to peer\n");
         } else {
             dprintf( D_FULLDEBUG, "Sent classad to peer\n");
@@ -941,7 +941,7 @@ HADStateMachine::commandHandlerHad(int cmd, Stream *strm)
 
     ClassAd	ad;
     strm->decode();
-    if( ! ad.initFromStream(*strm) ) {
+    if( ! getClassAd(strm, ad) ) {
         dprintf( D_ALWAYS, "commandHandler ERROR -  can't read classad\n" );
         return FALSE;
     }

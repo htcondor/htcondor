@@ -139,7 +139,7 @@ main(int argc, const char **argv)
 
 	ClassAd	ad;
 	hman.publish( ad );
-	ad.fPrint( stdout );
+	fPrintAd( stdout, ad );
 
 	const char	*method = hman.getHibernationMethod();
 	printf( "Hibernation method used: %s\n", method );

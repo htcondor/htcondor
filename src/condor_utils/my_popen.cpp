@@ -354,6 +354,23 @@ my_popenv_impl( const char *const args[],
 
 		/* The child */
 	if( pid == 0 ) {
+
+		/* Don't leak out fds from the parent to our child.
+		 * Wish there was a more efficient way to do this, but
+		 * this is how we do it in daemoncore CreateProcess...
+		 * Of course, do not close stdin/out/err or the fds to
+		 * the pipes we just created above.
+		 */
+		for (int jj=3; jj < getdtablesize(); jj++) {
+			if (jj != pipe_d[0] &&
+				jj != pipe_d[1] &&
+				jj != pipe_d2[0] &&
+				jj != pipe_d2[1])
+			{
+				close(jj);
+			}
+		}
+
 		close(pipe_d2[0]);
 
 		if( parent_reads ) {

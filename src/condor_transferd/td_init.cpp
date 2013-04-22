@@ -243,7 +243,7 @@ TransferD::accept_transfer_request_encapsulation_old_classads(FILE *fin)
 			EXCEPT("Expected %d transfer job ads, got %d instead.", 
 				treq->get_num_transfers(), i);
 		}
-		ad->dPrint(D_ALWAYS);
+		dPrintAd(D_ALWAYS, *ad);
 		treq->append_task(ad);
 	}
 
@@ -400,7 +400,7 @@ TransferD::accept_transfer_request_encapsulation_old_classads(Stream *sock)
 
 	/* read the transfer request header packet upon construction */
 	ad = new ClassAd();
-	if (ad->initFromStream(*sock) == 0) {
+	if (getClassAd(sock, *ad) == false) {
 		// XXX don't fail here, just go back to daemoncore
 		EXCEPT("XXX Couldn't init initial ad from stream!");
 	}
@@ -425,7 +425,7 @@ TransferD::accept_transfer_request_encapsulation_old_classads(Stream *sock)
 		if (ad == NULL) {
 			EXCEPT("Out of memory!");
 		}
-		if (ad->initFromStream(*sock) == 0) {
+		if (getClassAd(sock, *ad) == false) {
 			EXCEPT("Expected %d transfer job ads, got %d instead.", 
 				treq->get_num_transfers(), i);
 		}
@@ -458,7 +458,7 @@ TransferD::accept_transfer_request_encapsulation_old_classads(Stream *sock)
 				"protocol.");
 
 			// tell the schedd we don't want to do this request
-			respad.put(*sock);
+			putClassAd(sock, respad);
 			sock->end_of_message();
 			delete treq;
 
@@ -489,7 +489,7 @@ TransferD::accept_transfer_request_encapsulation_old_classads(Stream *sock)
 	//	ATTR_TREQ_INVALID_REQUEST (set to false)
 	//	ATTR_TREQ_CAPABILITY
 	//
-	respad.put(*sock);
+	putClassAd(sock, respad);
 	sock->end_of_message();
 
 	dprintf(D_ALWAYS, "Reported capability back to schedd.\n");

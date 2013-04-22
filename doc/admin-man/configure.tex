@@ -6251,8 +6251,8 @@ These settings affect the \Condor{starter}.
         cmd = /bin/sleep
 \end{verbatim}
 
-\label{param:MemoryLimit} 
-\item[\Macro{MEMORY\_LIMIT}]
+\label{param:CgroupMemoryLimitPolicy} 
+\item[\Macro{CGROUP\_MEMORY\_LIMIT\_POLICY}]
   A string with values of \Expr{hard}, \Expr{soft} and the default value
   of \Expr{none}.
   If set to \Expr{hard}, the cgroup-based limit on the total amount 
@@ -7041,6 +7041,13 @@ page~\pageref{sec:Absent-Ads} for more details.
   This configuration variable replaces \MacroNI{OFFLINE\_LOG},
   which is no longer used.
 
+\label{param:ExpireInvalidatedAds}
+\item[\Macro{EXPIRE\_INVALIDATED\_ADS}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, causes all invalidated ClassAds to be treated 
+  as if they expired.
+  This permits invalidated ClassAds to be marked absent,
+  as defined in section~\ref{sec:Absent-Ads}.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -7425,6 +7432,25 @@ These macros affect the \Condor{negotiator}.
   A full reconfiguration, for example as accomplished with \Condor{reconfig},
   remains the best way to 
   guarantee that all \Condor{negotiator} configuration is completely updated.
+
+\label{param:ConcurrencyLimitDefault}
+\item[\Macro{CONCURRENCY\_LIMIT\_DEFAULT}]
+  An integer value that describes the number of resources available for
+  all resources that are not explicitly named by defining the
+  configuration variable \MacroNI{<NAME>\_LIMIT}.
+  If not defined, no limits are set for resources not explicitly identified
+  using \MacroNI{<NAME>\_LIMIT}.
+
+\label{param:ConcurrencyLimitDefaultName}
+\item[\Macro{CONCURRENCY\_LIMIT\_DEFAULT\_<NAME>}]
+  Definition not yet written.
+
+\label{param:NameLimit}
+\item[\Macro{<NAME>\_LIMIT}]
+  An integer value that describes the number of a resource available for
+  concurrent job execution when requested for a job under concurrency limits
+  as described in section~\ref{sec:Concurrency-Limits}. 
+  \MacroNI{<Name>} is a string invented to uniquely describe the resource.
 
 \end{description}
 
@@ -8568,6 +8594,16 @@ The actual delay to be used is determined by a random exponential backoff
 algorithm that chooses a delay with a minimum of
 the value of \MacroNI{GLEXEC\_RETRY\_DELAY} 
 and a maximum of 100 times that value.
+
+\label{param:GlexecHoldOnInitialFailure}
+\item[\Macro{GLEXEC\_HOLD\_ON\_INITIAL\_FAILURE}]
+A boolean value that when \Expr{False} prevents a job from being put
+on hold when a failure is encountered during the glexec setup phase
+of managing a job.  The default is \Expr{True}.
+glexec is invoked multiple times during each attempt to run a job.  This
+configuration setting only disables putting the job on hold for the
+initial invocation.  Subsequent failures during that run attempt always
+put the job on hold.
 
 \end{description}
 

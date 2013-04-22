@@ -626,8 +626,8 @@ Starter::exited(int status)
 		// Dummy up an ad
 		int now = (int) time(0);
 		jobAd = new ClassAd();
-		jobAd->SetMyTypeName("Job");
-		jobAd->SetTargetTypeName("Machine");
+		SetMyTypeName(*jobAd, "Job");
+		SetTargetTypeName(*jobAd, "Machine");
 		jobAd->Assign(ATTR_CLUSTER_ID, now);
 		jobAd->Assign(ATTR_PROC_ID, 1);
 		jobAd->Assign(ATTR_OWNER, "boinc");
@@ -806,14 +806,14 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 
 	stream->decode();
 	if( !stream->get( final_update) ||
-		!update_ad.initFromStream( *stream ) ||
+		!getClassAd( stream, update_ad ) ||
 		!stream->end_of_message() )
 	{
 		final_update = 1;
 	}
 	else {
 		dprintf(D_FULLDEBUG, "Received job ClassAd update from starter.\n");
-		update_ad.dPrint( D_JOB );
+		dPrintAd( D_JOB, update_ad );
 
 		// In addition to new info about the job, the starter also
 		// inserts contact info for itself (important for CCB and
@@ -1230,7 +1230,7 @@ Starter::printInfo( int debug_level )
 		dprintf( debug_level | D_NOHEADER, 
 				 "No ClassAd available!\n" ); 
 	} else {
-		s_ad->dPrint( debug_level );
+		dPrintAd( debug_level, *s_ad );
 	}
 	dprintf( debug_level | D_NOHEADER, "*** End of starter info ***\n" ); 
 }

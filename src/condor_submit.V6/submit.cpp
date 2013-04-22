@@ -375,6 +375,10 @@ const char	*LoadProfile = "load_profile";
 // Concurrency Limit parameters
 const char    *ConcurrencyLimits = "concurrency_limits";
 
+// Accounting Group parameters
+const char* AcctGroup = "accounting_group";
+const char* AcctGroupUser = "accounting_group_user";
+
 //
 // VM universe Parameters
 //
@@ -527,6 +531,7 @@ void SetMaxJobRetirementTime();
 bool mightTransfer( int universe );
 bool isTrue( const char* attr );
 void SetConcurrencyLimits();
+void SetAccountingGroup();
 void SetVMParams();
 void SetVMRequirements();
 bool parse_vm_option(char *value, bool& onoff);
@@ -743,8 +748,8 @@ init_job_ad()
 	// set up types of the ad
 	if ( !job ) {
 		job = new ClassAd();
-		job->SetMyTypeName (JOB_ADTYPE);
-		job->SetTargetTypeName (STARTD_ADTYPE);
+		SetMyTypeName (*job, JOB_ADTYPE);
+		SetTargetTypeName (*job, STARTD_ADTYPE);
 	}
 
 	buffer.formatstr( "%s = %d", ATTR_Q_DATE, (int)time ((time_t *) 0));
@@ -6533,6 +6538,7 @@ queue(int num)
 		SetJavaVMArgs();
 		SetParallelStartupScripts(); //JDB
 		SetConcurrencyLimits();
+        SetAccountingGroup();
 		SetVMParams();
 		SetLogNotes();
 		SetUserNotes();
@@ -6563,7 +6569,7 @@ queue(int num)
 		if( !Quiet ) 
 			{
 				fprintf(stdout, "\n** Proc %d.%d:\n", ClusterId, ProcId);
-				job->fPrint (stdout);
+				fPrintAd (stdout, *job);
 			}
 
 		logfile = condor_param( UserLogFile, ATTR_ULOG_FILE );
@@ -6615,7 +6621,7 @@ queue(int num)
 		// ugly, here we should be using a derivation of Stream called File 
 		// which we would in turn serialize the job object to...)
 		if ( DumpClassAdToFile ) {
-			job->fPrint ( DumpFileIsStdout ? stdout : DumpFile );
+			fPrintAd ( DumpFileIsStdout ? stdout : DumpFile, *job );
 			fprintf ( DumpFileIsStdout ? stdout : DumpFile, "\n" );
 		}
 
@@ -8088,6 +8094,35 @@ SetConcurrencyLimits()
 		}
 	}
 }
+
+
+void SetAccountingGroup() {
+    // is a group setting in effect?
+    char* group = condor_param(AcctGroup);
+    if (NULL == group) return;
+
+    // look for the group user setting, or default to owner
+    std::string group_user;
+    char* gu = condor_param(AcctGroupUser);
+    if (NULL == gu) {
+        ASSERT(owner);
+        group_user = owner;
+    } else {
+        group_user = gu;
+        free(gu);
+    }
+
+    // set attributes AcctGroup, AcctGroupUser and AccountingGroup on the job ad:
+    std::string assign;
+    formatstr(assign, "%s = \"%s.%s\"", ATTR_ACCOUNTING_GROUP, group, group_user.c_str()); 
+    InsertJobExpr(assign.c_str());
+    formatstr(assign, "%s = \"%s\"", ATTR_ACCT_GROUP, group);
+    InsertJobExpr(assign.c_str());
+    formatstr(assign, "%s = \"%s\"", ATTR_ACCT_GROUP_USER, group_user.c_str());
+    InsertJobExpr(assign.c_str());
+    free(group);
+}
+
 
 // this function must be called after SetUniverse
 void

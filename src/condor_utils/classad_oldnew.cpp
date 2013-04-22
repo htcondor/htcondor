@@ -41,13 +41,13 @@ void AttrList_setPublishServerTimeMangled( bool publish)
 static const char *SECRET_MARKER = "ZKM"; // "it's a Zecret Klassad, Mon!"
 
 classad::ClassAd *
-getOldClassAd( Stream *sock )
+getClassAd( Stream *sock )
 {
 	classad::ClassAd *ad = new classad::ClassAd( );
 	if( !ad ) { 
 		return NULL;
 	}
-	if( !getOldClassAd( sock, *ad ) ) {
+	if( !getClassAd( sock, *ad ) ) {
 		delete ad;
 		return NULL;
 	}
@@ -55,13 +55,19 @@ getOldClassAd( Stream *sock )
 }
 
 bool
-getOldClassAd( Stream *sock, classad::ClassAd& ad )
+getClassAd( Stream *sock, classad::ClassAd& ad )
 {
 	int 					numExprs;
 	MyString				inputLine;
 
-
 	ad.Clear( );
+
+		// Reinsert CurrentTime, emulating the special version in old
+		// ClassAds
+	if ( !compat_classad::ClassAd::m_strictEvaluation ) {
+		ad.Insert( ATTR_CURRENT_TIME " = time()" );
+	}
+
 	sock->decode( );
 	if( !sock->code( numExprs ) ) {
  		return false;
@@ -124,7 +130,7 @@ getOldClassAd( Stream *sock, classad::ClassAd& ad )
 }
 
 bool
-getOldClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
+getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 {
 	classad::ClassAdParser	parser;
 	int 					numExprs = 0; // Initialization clears Coverity warning
@@ -134,6 +140,13 @@ getOldClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 
 
 	ad.Clear( );
+
+		// Reinsert CurrentTime, emulating the special version in old
+		// ClassAds
+	if ( !compat_classad::ClassAd::m_strictEvaluation ) {
+		ad.Insert( ATTR_CURRENT_TIME " = time()" );
+	}
+
 	sock->decode( );
 	if( !sock->code( numExprs ) ) {
  		return false;
@@ -186,10 +199,10 @@ getOldClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
  * It should also do encryption now.
  */
 
-bool putOldClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private, StringList *attr_whitelist )
+bool putClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private, StringList *attr_whitelist )
 {
     bool completion;
-    completion = _putOldClassAd(sock, ad, false, exclude_private, attr_whitelist);
+    completion = _putClassAd(sock, ad, false, exclude_private, attr_whitelist);
 
 
     //should be true by this point
@@ -197,12 +210,12 @@ bool putOldClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private, S
 }
 
 bool
-putOldClassAdNoTypes ( Stream *sock, classad::ClassAd& ad, bool exclude_private )
+putClassAdNoTypes ( Stream *sock, classad::ClassAd& ad, bool exclude_private )
 {
-    return _putOldClassAd(sock, ad, true, exclude_private, NULL);
+    return _putClassAd(sock, ad, true, exclude_private, NULL);
 }
 
-bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
+bool _putClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
 					 bool exclude_private, StringList *attr_whitelist )
 {
 	classad::ClassAdUnParser	unp;
@@ -250,7 +263,7 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
 			std::string const &attr = itor->first;
 
             if(!exclude_private ||
-			   !compat_classad::ClassAd::ClassAdAttributeIsPrivate(attr.c_str()))
+			   !compat_classad::ClassAdAttributeIsPrivate(attr.c_str()))
             {
                 if(excludeTypes)
                 {
@@ -286,7 +299,7 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
 			classad::ExprTree const *expr = ad.Lookup(attr);
 			buf = attr;
 			buf += " = ";
-            if( !expr || (exclude_private && compat_classad::ClassAd::ClassAdAttributeIsPrivate(attr)) )
+            if( !expr || (exclude_private && compat_classad::ClassAdAttributeIsPrivate(attr)) )
 			{
 				buf += "undefined";
             }
@@ -296,7 +309,7 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
             ConvertDefaultIPToSocketIP(attr,buf,*sock);
 
             if( ! sock->prepare_crypto_for_secret_is_noop() &&
-				compat_classad::ClassAd::ClassAdAttributeIsPrivate(attr) )
+				compat_classad::ClassAdAttributeIsPrivate(attr) )
 			{
                 sock->put(SECRET_MARKER);
 
@@ -331,7 +344,7 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
 			if(strcasecmp(ATTR_CURRENT_TIME,attr.c_str())==0) {
 				continue;
 			}
-            if(exclude_private && compat_classad::ClassAd::ClassAdAttributeIsPrivate(attr.c_str())){
+            if(exclude_private && compat_classad::ClassAdAttributeIsPrivate(attr.c_str())){
                 continue;
             }
 
@@ -350,7 +363,7 @@ bool _putOldClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
             ConvertDefaultIPToSocketIP(attr.c_str(),buf,*sock);
 
             if( ! sock->prepare_crypto_for_secret_is_noop() &&
-				compat_classad::ClassAd::ClassAdAttributeIsPrivate(attr.c_str()))
+				compat_classad::ClassAdAttributeIsPrivate(attr.c_str()))
 			{
                 sock->put(SECRET_MARKER);
 

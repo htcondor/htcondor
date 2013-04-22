@@ -180,7 +180,7 @@ foreach my $ii (1..5) {
 	close COLL_ADDRESS_FILE;
 }
 
-my $flock_increment = 2;
+my $flock_increment = 2+int(rand(3));
 print LOCAL_CONFIG "$flock_string\n";
 print LOCAL_CONFIG "$daemon_string\n";
 print LOCAL_CONFIG "FLOCK_INCREMENT = $flock_increment\n";
