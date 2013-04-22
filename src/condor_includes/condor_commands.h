@@ -466,15 +466,6 @@ const int SHARED_PORT_PASS_SOCK = 76;
 
 
 /*
-*** Commands used by the stork daemon
-*/
-#define STORK_BASE 80000
-#define STORK_SUBMIT (STORK_BASE+0)
-#define STORK_REMOVE (STORK_BASE+1)
-#define STORK_STATUS (STORK_BASE+2)
-#define STORK_LIST 	 (STORK_BASE+3)
-
-/*
 *** Commands used by the credd daemon
 */
 #define CREDD_BASE 81000	

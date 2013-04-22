@@ -1923,38 +1923,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ckpt_server,server2
 id=87
 
-[STORK_TMP_CRED_DIR]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Stork Tmp Cred Dir
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=stork,dap_server
-id=88
-
-[STORK_MODULE_DIR]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Stork Module Dir
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=stork,dap_server
-id=89
-
 [LIBEXEC]
 aliases=
 default=$(RELEASE_DIR)/libexec
@@ -1969,7 +1937,7 @@ customization=seldom
 friendly_name=Libexec
 usage=Pathnames
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=stork,dap_server
+tags=dap_server
 id=90
 
 [LOG]
@@ -1985,24 +1953,8 @@ customization=seldom
 friendly_name=Log
 usage=Pathnames
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=stork,dap_server
+tags=dap_server
 id=91
-
-[STORK_ENABLE_DEPRECATED_USERLOG]
-aliases=
-default=false
-version=0.0.0
-range=.*
-state=default
-type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Stork Enable Deprecated Userlog
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=stork,dap_logger
-id=92
 
 [XAUTHORITY_USERS]
 aliases=
