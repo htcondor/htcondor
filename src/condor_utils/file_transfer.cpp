@@ -4116,7 +4116,7 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	// return -1 on error, or zero otherwise, so map plugin_status to the
 	// proper value.
 	if (plugin_status != 0) {
-		e.pushf("FILETRANSFER", 1, "non-zero exit(%i) from %s\n", plugin_status, plugin.Value());
+		e.pushf("FILETRANSFER", 1, "non-zero exit(%i) from %s", plugin_status, plugin.Value());
 		return GET_FILE_PLUGIN_FAILED;
 	}
 

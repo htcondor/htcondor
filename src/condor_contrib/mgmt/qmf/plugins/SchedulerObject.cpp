@@ -279,7 +279,7 @@ SchedulerObject::update(const ClassAd &ad)
 
 	// debug
 	if (IsFulldebug(D_FULLDEBUG)) {
-		dPrintAd(D_FULLDEBUG|D_NOHEADER, const_cast<ClassAd>(ad));
+		dPrintAd(D_FULLDEBUG|D_NOHEADER, const_cast<ClassAd&>(ad));
 	}
 }
 
