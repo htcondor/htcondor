@@ -1858,7 +1858,21 @@ service_this_universe(int universe, ClassAd* job)
 		case CONDOR_UNIVERSE_SCHEDULER:
 			return false;
 		case CONDOR_UNIVERSE_LOCAL:
-			return scheduler.usesLocalStartd();
+			if (scheduler.usesLocalStartd()) {
+				bool reqsFixedup = false;
+				job->LookupBool("LocalStartupFixup", reqsFixedup);
+				if (!reqsFixedup) {
+					job->Assign("LocalStartupFixup", true);
+					ExprTree *requirements = job->LookupExpr(ATTR_REQUIREMENTS);
+					const char *rhs = ExprTreeToString(requirements);
+					std::string newRequirements = std::string("IsLocalStartd && ")  + rhs;
+					job->AssignExpr(ATTR_REQUIREMENTS, newRequirements.c_str());
+				}
+				return true;
+			} else {
+				return false;
+			}
+			break;
 		default:
 
 			int sendToDS = 0;
@@ -14054,6 +14068,7 @@ Scheduler::receive_startd_update(int /*cmd*/, Stream *stream) {
 		} 
 		free(name);
 		free(claim_id);
+		free(state);
 		return TRUE;
 	} else {
 		if (m_unclaimedLocalStartds.count(name) > 0) {
@@ -14073,9 +14088,9 @@ Scheduler::receive_startd_update(int /*cmd*/, Stream *stream) {
 		m_unclaimedLocalStartds[name] = machineAd;
 		free(name);
 		free(claim_id);
+		free(state);
 		return TRUE;
 	}
-	free(claim_id);
 	return TRUE;
 }
 
