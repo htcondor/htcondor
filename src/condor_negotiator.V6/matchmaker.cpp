@@ -268,6 +268,7 @@ Matchmaker ()
 	want_globaljobprio = false;
 	want_matchlist_caching = false;
 	ConsiderPreemption = true;
+	ConsiderEarlyPreemption = false;
 	want_nonblocking_startd_contact = true;
 
 	completedLastCycleTime = (time_t) 0;
@@ -619,6 +620,10 @@ reinitialize ()
 	want_globaljobprio = param_boolean("USE_GLOBAL_JOB_PRIOS",false);
 	want_matchlist_caching = param_boolean("NEGOTIATOR_MATCHLIST_CACHING",true);
 	ConsiderPreemption = param_boolean("NEGOTIATOR_CONSIDER_PREEMPTION",true);
+	ConsiderEarlyPreemption = param_boolean("NEGOTIATOR_CONSIDER_EARLY_PREEMPTION",false);
+	if( ConsiderEarlyPreemption && !ConsiderPreemption ) {
+		dprintf(D_ALWAYS,"WARNING: NEGOTIATOR_CONSIDER_EARLY_PREEMPTION=true will be ignored, because NEGOTIATOR_CONSIDER_PREEMPTION=false\n");
+	}
 	want_inform_startd = param_boolean("NEGOTIATOR_INFORM_STARTD", true);
 	want_nonblocking_startd_contact = param_boolean("NEGOTIATOR_USE_NONBLOCKING_STARTD_CONTACT",true);
 
@@ -1262,15 +1267,13 @@ negotiationTime ()
         effectivePoolsize = count_effective_slots(startdAds, NULL);
     }
 
-	// if don't care about preemption, we can trim out all non Unclaimed ads now.
+	// Trim out ads that we should not bother considering
+	// during matchmaking now.  (e.g. when NEGOTIATOR_CONSIDER_PREEMPTION=False)
 	// note: we cannot trim out the Unclaimed ads before we call CheckMatches,
 	// otherwise CheckMatches will do the wrong thing (because it will not see
 	// any of the claimed machines!).
-	int num_trimmed = trimStartdAds(startdAds);
-	if ( num_trimmed > 0 ) {
-		dprintf(D_FULLDEBUG,
-			"Trimmed out %d startd ads not Unclaimed\n",num_trimmed);
-	}
+
+	trimStartdAds(startdAds);
     negotiation_cycle_stats[0]->trimmed_slots = startdAds.MyLength();
     negotiation_cycle_stats[0]->candidate_slots = startdAds.MyLength();
 
@@ -2789,8 +2792,38 @@ trimStartdAds(ClassAdListDoesNotDeleteAds &startdAds)
 		// getting rid of ads that are not in the Unclaimed state.
 	
 	if ( ConsiderPreemption ) {
-			// we need to keep all the ads.
-		return 0;
+		if( ConsiderEarlyPreemption ) {
+				// we need to keep all the ads.
+			return 0;
+		}
+
+			// Remove ads with retirement time, because we are not
+			// considering early preemption
+		startdAds.Open();
+		while( (ad=startdAds.Next()) ) {
+			int retirement_remaining;
+			if(ad->LookupInteger(ATTR_RETIREMENT_TIME_REMAINING, retirement_remaining) &&
+			   retirement_remaining > 0 )
+			{
+				if( IsDebugLevel(D_FULLDEBUG) ) {
+					std::string name,user;
+					ad->LookupString(ATTR_NAME,name);
+					ad->LookupString(ATTR_REMOTE_USER,user);
+					dprintf(D_FULLDEBUG,"Trimming %s, because %s still has %ds of retirement time.\n",
+							name.c_str(), user.c_str(), retirement_remaining);
+				}
+				startdAds.Remove(ad);
+				removed++;
+			}
+		}
+		startdAds.Close();
+
+		if ( removed > 0 ) {
+			dprintf(D_FULLDEBUG,
+					"Trimmed out %d startd ads due to NEGOTIATOR_CONSIDER_EARLY_PREEMPTION=False\n",
+					removed);
+		}
+		return removed;
 	}
 
 	startdAds.Open();
@@ -2806,6 +2839,11 @@ trimStartdAds(ClassAdListDoesNotDeleteAds &startdAds)
 	}
 	startdAds.Close();
 
+	if ( removed > 0 ) {
+		dprintf(D_FULLDEBUG,
+				"Trimmed out %d startd ads due to NEGOTIATOR_CONSIDER_PREEMPTION=False\n",
+				removed);
+	}
 	return removed;
 }
 

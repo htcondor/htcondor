@@ -1918,6 +1918,8 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 	free(ptr);
 
+	cap->Assign( ATTR_RETIREMENT_TIME_REMAINING, evalRetirementRemaining() );
+
 	    // Is this the local universe startd?
     cap->Assign(ATTR_IS_LOCAL_STARTD, param_boolean("IS_LOCAL_STARTD", false));
 
