@@ -106,8 +106,6 @@ char *strcpy();
 
 extern int MainSymbolExists;
 extern int JobStatus;
-extern char    *MailerPgm;
-extern char My_UID_Domain[];
 
 ClassAd *JobAd = NULL;			// ClassAd which describes this job
 extern char *schedd, *scheddName;
