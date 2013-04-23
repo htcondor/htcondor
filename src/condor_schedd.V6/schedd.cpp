@@ -4363,7 +4363,11 @@ Scheduler::actOnJobs(int, Stream* s)
 				 getJobActionString(action), initial_constraint.c_str());
 
 	} else {
-		job_ids_string = job_ids.print_to_string();
+		char *tmp = job_ids.print_to_string();
+		if ( tmp ) {
+			job_ids_string = job_ids.print_to_string();
+			free( tmp );
+		}
 		dprintf( D_AUDIT, *rsock, "%s jobs %s\n",
 				 getJobActionString(action), job_ids_string.c_str());
 	}		
