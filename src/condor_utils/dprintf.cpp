@@ -1105,15 +1105,11 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t now)
 	int			still_in_old_file = FALSE;
 	int			failed_to_rotate = FALSE;
 	int			save_errno;
-	int         rename_failed = 0;
 	const char *timestamp;
 	int			result;
 	int			file_there = 0;
 	FILE		*debug_file_ptr = (*it).debugFP;
 	std::string		filePath = (*it).logPath;
-#ifndef WIN32
-	struct stat buf;
-#endif
 	char msg_buf[DPRINTF_ERR_MAX];
 
 
@@ -1131,7 +1127,7 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t now)
 	result = rotateTimestamp(timestamp, it->maxLogNum, now);
 
 #if defined(WIN32)
-	if (result < 0) { // MoveFileEx and Copy failed
+	if (result != 0) { // MoveFileEx and Copy failed
 		failed_to_rotate = TRUE;
 		debug_file_ptr = open_debug_file(it, "wN", dont_panic);
 		if ( debug_file_ptr ==  NULL ) {
@@ -1140,11 +1136,9 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t now)
 	}
 #else
 
-	if (result != 0) 
-		rename_failed = 1;
-
 	errno = 0;
 	if (result != 0) {
+		failed_to_rotate = TRUE;
 		save_errno = result;
 		if( save_errno == ENOENT && !DebugLock ) {
 				/* This can happen if we are not using debug file locking,
@@ -1152,7 +1146,6 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t now)
 				   same time.  The other process must have already done
 				   the rename but not created the new log file yet.
 				*/
-			rename_failed = 1;
 		}
 		else {
 			snprintf( msg_buf, sizeof(msg_buf), "Can't rename(%s,%s)\n",
@@ -1169,7 +1162,8 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t now)
 
 	if( DebugLock && DebugShouldLockToAppend ) {
 		errno = 0;
-		if (stat (filePath.c_str(), &buf) >= 0)
+		struct stat statbuf;
+		if (stat (filePath.c_str(), &statbuf) >= 0)
 		{
 			file_there = 1;
 			save_errno = errno;
@@ -1208,14 +1202,13 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t now)
 		_condor_dfprintf(it, "WARNING: %s", msg_buf);
 	}
 
-	if ( failed_to_rotate || rename_failed ) {
-		_condor_dfprintf(it,"WARNING: Failed to rotate log into file %s!\n",old);
-		if( rename_failed ) {
-			_condor_dfprintf(it,"Likely cause is that another Condor process rotated the file at the same time.\n");
-		}
-		else {
-			_condor_dfprintf(it,"       Perhaps someone is keeping log files open???");
-		}
+	if ( failed_to_rotate ) {
+	#ifdef WIN32
+		const char * reason_hint = "Perhaps another process is keeping log files open?";
+	#else
+		const char * reason_hint = "Likely cause is that another Condor process rotated the file at the same time.";
+	#endif
+		_condor_dfprintf(it,"WARNING: Failed to rotate old log into file %s!\n       %s\n",old,reason_hint);
 	}
 	
 	_set_priv(priv, __FILE__, __LINE__, 0);
