@@ -3960,32 +3960,19 @@ WANT_HOLD_REASON = \
 
 \label{param:ClaimWorklife}
 \item[\Macro{CLAIM\_WORKLIFE}]
-  If provided, this expression specifies the number of seconds after
-  which a claim will stop accepting additional jobs.  By default, once
-  the negotiator gives a schedd a claim to a slot, the schedd will
-  keep running jobs on that slot as long as it has more jobs with
-  matching requirements, without returning the slot to the unclaimed
-  state and renegotiating for machines.  Once \MacroNI{CLAIM\_WORKLIFE}
-  expires, any existing job may continue to run as usual, but once it
-  finishes or is preempted, the claim is closed.
-  This may be useful if you want to force periodic renegotiation of
-  resources without preemption having to occur.  For example, if you
-  have some low-priority jobs which should never be interrupted with
-  kill signals, you could prevent them from being killed with
-  \Expr{MaxJobRetirementTime}, but now high-priority jobs may have to
-  wait in line when they match to a machine that is busy running one of
-  these uninterruptible jobs.  You can prevent the high-priority jobs
-  from ever matching to such a machine by using a rank expression in the
-  job or in the negotiator's rank expressions, but then the low-priority
-  claim will never be interrupted; it can keep running more jobs.  The
-  solution is to use \Expr{CLAIM\_WORKLIFE} to force the claim to stop
-  running additional jobs after a certain amount of time.
-  The default value for \Expr{CLAIM\_WORKLIFE} is -1, which is treated
-  as an infinite claim worklife, so claims may be held indefinitely
-  (as long as they are not preempted and the schedd does not
-  relinquish them, of course).  A value of 0 has the effect of not allowing
-  more than one job to run per claim, since it immediately expires after the
-  first job starts running.
+  This expression specifies the number of seconds after which a claim
+  will stop accepting additional jobs.  The default is 3600.  Once the
+  negotiator gives a schedd a claim to a slot, the schedd will keep
+  running jobs on that slot as long as it has more jobs with matching
+  requirements, and \Macro{CLAIM\_WORKLIFE} has not expired, and it is
+  not preempted.  Once \MacroNI{CLAIM\_WORKLIFE} expires, any existing
+  job may continue to run as usual, but once it finishes or is
+  preempted, the claim is closed.  When \Expr{CLAIM\_WORKLIFE} is -1,
+  this is treated as an infinite claim worklife, so claims may be held
+  indefinitely (as long as they are not preempted and the user does
+  not run out of jobs, of course).  A value of 0 has the effect of not
+  allowing more than one job to run per claim, since it immediately
+  expires after the first job starts running.
 
 \label{param:MaxClaimAlivesMissed}
 \item[\Macro{MAX\_CLAIM\_ALIVES\_MISSED}]
@@ -5347,7 +5334,8 @@ MAX_JOBS_RUNNING	= \
   This macro sets the time (in
   seconds) that the \Condor{schedd} will wait for a claim to be granted by the
   \Condor{startd}.  The default is 30 minutes.  This is only likely to matter
-  if the \Condor{startd} has an existing claim and it takes a long time for the
+  if \Macro{NEGOTIATOR\_CONSIDER\_EARLY\_PREEMPTION} is \Expr{True}, and the
+  \Condor{startd} has an existing claim, and it takes a long time for the
   existing claim to be preempted due to \Expr{MaxJobRetirementTime}.
   Once a request times out, the \Condor{schedd} will simply begin the process
   of finding a machine for the job all over again.
@@ -7401,6 +7389,13 @@ These macros affect the \Condor{negotiator}.
   is \Expr{False},
   and if all \Condor{startd} rank expressions are \Expr{False}.}
 
+\label{param:NegotiatorConsiderEarlyPreemption}
+\item[\Macro{NEGOTIATOR\_CONSIDER\_EARLY\_PREEMPTION}]
+  A boolean value that when \Expr{False} (the default),
+  prevents the \Condor{negotiator} from matching jobs
+  to claimed slots that cannot immediately be preempted
+  due to \Macro{MAXJOBRETIREMENTTIME}.
+
 \label{param:StartdAdReevalExpr}
 \item[\Macro{STARTD\_AD\_REEVAL\_EXPR}]
   A boolean value evaluated in the context of each machine ClassAd within
@@ -8594,6 +8589,16 @@ The actual delay to be used is determined by a random exponential backoff
 algorithm that chooses a delay with a minimum of
 the value of \MacroNI{GLEXEC\_RETRY\_DELAY} 
 and a maximum of 100 times that value.
+
+\label{param:GlexecHoldOnInitialFailure}
+\item[\Macro{GLEXEC\_HOLD\_ON\_INITIAL\_FAILURE}]
+A boolean value that when \Expr{False} prevents a job from being put
+on hold when a failure is encountered during the glexec setup phase
+of managing a job.  The default is \Expr{True}.
+glexec is invoked multiple times during each attempt to run a job.  This
+configuration setting only disables putting the job on hold for the
+initial invocation.  Subsequent failures during that run attempt always
+put the job on hold.
 
 \end{description}
 

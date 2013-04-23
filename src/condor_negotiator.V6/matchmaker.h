@@ -308,6 +308,7 @@ class Matchmaker : public Service
 		bool want_globaljobprio;	// cached value of config knob USE_GLOBAL_JOB_PRIOS
 		bool want_matchlist_caching;	// should we cache matches per autocluster?
 		bool ConsiderPreemption; // if false, negotiation is faster (default=true)
+		bool ConsiderEarlyPreemption; // if false, do not preempt slots that still have retirement time
 		/// Should the negotiator inform startds of matches?
 		bool want_inform_startd;	
 		/// Should the negotiator use non-blocking connect to contact startds?

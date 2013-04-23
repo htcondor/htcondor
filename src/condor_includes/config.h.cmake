@@ -160,9 +160,6 @@
 /* Define if enabling Quill (USED)*/
 #cmakedefine WANT_QUILL 1
 
-/* Define if enabling Stork (USED)*/
-#cmakedefine WANT_STORK 1
-
 /* Define to 1 to support invoking hooks throughout the workflow of a job (USED)*/
 #cmakedefine HAVE_JOB_HOOKS 1
 

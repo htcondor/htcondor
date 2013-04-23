@@ -299,7 +299,7 @@ DCTransferQueue::PollForTransferQueueSlot(int timeout,bool &pending,MyString &er
 
 	m_xfer_queue_sock->decode();
 	ClassAd msg;
-	if( !msg.initFromStream(*m_xfer_queue_sock) ||
+	if( !getClassAd(m_xfer_queue_sock, msg) ||
 		!m_xfer_queue_sock->end_of_message() )
 	{
 		formatstr(m_xfer_rejected_reason,

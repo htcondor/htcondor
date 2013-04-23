@@ -870,7 +870,7 @@ Daemon::sendCACmd( ClassAd* req, ClassAd* reply, ReliSock* cmd_sock,
 
 		// Now, try to get the reply
 	cmd_sock->decode();
-	if( ! reply->initFromStream(*cmd_sock) ) {
+	if( ! getClassAd(cmd_sock, *reply) ) {
 		newError( CA_COMMUNICATION_ERROR, "Failed to read reply ClassAd" );
 		return false;
 	}

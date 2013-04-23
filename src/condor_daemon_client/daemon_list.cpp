@@ -28,6 +28,11 @@
 #include "ipv6_hostname.h"
 #include <vector>
 
+DaemonList::DaemonList()
+{
+}
+
+
 DaemonList::~DaemonList( void )
 {
 	Daemon* tmp;

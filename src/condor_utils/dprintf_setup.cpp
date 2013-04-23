@@ -86,8 +86,8 @@ void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_inf
 	**	debug flags have changed, we actually use the new
 	**  flags.  -Derek Wright 12/8/97
 	*/
-	DebugBasic = 1<<D_ALWAYS | 1<<D_ERROR;
-	DebugVerbose = 0;
+	AnyDebugBasicListener = 1<<D_ALWAYS | 1<<D_ERROR | 1<<D_STATUS;
+	AnyDebugVerboseListener = 0;
 	DebugHeaderOptions = 0;
 
 	/*
@@ -171,9 +171,12 @@ void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_inf
 					}
 				}
 				PRAGMA_REMIND("TJ: fix this when choice includes verbose.")
-				DebugBasic = p_info[0].choice;
-				DebugVerbose = p_info[0].VerboseCats;
-				DebugHeaderOptions = p_info[0].HeaderOpts;
+				AnyDebugBasicListener = p_info[ii].choice;
+				AnyDebugVerboseListener = p_info[ii].VerboseCats;
+				DebugHeaderOptions = p_info[ii].HeaderOpts;
+			} else {
+				AnyDebugBasicListener |= p_info[ii].choice;
+				AnyDebugVerboseListener |= p_info[ii].VerboseCats;
 			}
 
 			// check to see if we can open the log file.

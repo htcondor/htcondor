@@ -345,7 +345,7 @@ fetchSubmittorPrios()
 
 	sock->end_of_message();
 	sock->decode();
-	if( !al.initAttrListFromStream(*sock) || !sock->end_of_message() ) {
+	if( !getClassAdNoTypes(sock, al) || !sock->end_of_message() ) {
 		fprintf( stderr, 
 				 "Error:  Could not get priorities from negotiator (%s)\n",
 				 negotiator.fullHostname() );

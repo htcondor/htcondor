@@ -1,6 +1,7 @@
---- org.glite.ce.blahp.patched/src/scripts/pbs_status.sh	2011-12-21 16:40:48.555891279 -0600
-+++ org.glite.ce.blahp/src/scripts/pbs_status.sh	2011-12-21 16:40:19.328891128 -0600
-@@ -165,7 +165,9 @@
+diff -u -r org.glite.ce.blahp/src/scripts/pbs_status.sh org.glite.ce.blahp.patched/src/scripts/pbs_status.sh
+--- org.glite.ce.blahp/src/scripts/pbs_status.sh	2011-03-04 06:56:04.000000000 -0600
++++ org.glite.ce.blahp.patched/src/scripts/pbs_status.sh	2013-04-19 11:32:31.720395082 -0500
+@@ -169,7 +169,9 @@
  
          staterr=/tmp/${reqjob}_staterr
  	
@@ -11,15 +12,17 @@
  BEGIN {
      current_job = ""
      current_wn = ""
-@@ -219,6 +221,11 @@
-         if [ -z "$errout" ] ; then
-                 echo "0"$result
-                 retcode=0
-+        elif [ "$qstat_exit_code" -eq "153" ] ; then
-+                # If the job has disappeared, assume it's completed 
+@@ -220,7 +222,12 @@
+         errout=`cat $staterr`
+ 	rm -f $staterr 2>/dev/null
+ 	
+-        if [ -z "$errout" ] ; then
++        if [ "$qstat_exit_code" -eq "153" ] ; then
++                # If the job has disappeared, assume it's completed
 +                # (same as globus)
 +                echo "0[BatchJobId=\"$reqjob\";JobStatus=4;ExitCode=0]"
 +                retcode=0
++        elif [ -z "$errout" ] ; then
+                 echo "0"$result
+                 retcode=0
          else
-                 echo "1ERROR: Job not found"
-                 retcode=1

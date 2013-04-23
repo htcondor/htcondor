@@ -12,6 +12,61 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-9-7}Version 7.9.7}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 7.9.7 not yet released.
+%\item HTCondor version 7.9.7 released on Month Date, 2013.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-9-6}Version 7.9.6}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -51,6 +106,13 @@ issuing a \Opt{-peaceful} command. Previously, a \Opt{-peaceful} \Condor{off}
 command would preclude a \Opt{-graceful} off command.
 \Ticket{2949}
 
+\item The \Condor{gather\_info} tool now includes the output of the Unix
+\Prog{uptime} and \Prog{free} programs, 
+as well as logs of the \Condor{master}, \Condor{startd}, and \Condor{starter}
+of the machine where the job most recently ran, 
+if \Condor{gather\_info} has the necessary permissions to fetch those logs.
+\Ticket{3246}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -69,11 +131,30 @@ be treated as expired ClassAds, such that they may become absent ClassAds.
 See section~\ref{sec:Absent-Ads} for details on absent ClassAds.
 \Ticket{3085}
 
+\item The new configuration variable
+\Macro{GLEXEC\_HOLD\_ON\_INITIAL\_FAILURE} controls whether jobs are put
+on hold when a failure is encountered in the glexec setup phase of
+managing the job.  The default is \Expr{True}, which is the previous
+behavior.
+\Ticket{3569}
+
+\item The new configuration variable
+\Macro{NEGOTIATOR\_CONSIDER\_EARLY\_PREEMPTION} controls whether jobs
+can be matched to slots that still have retirement time remaining
+before the existing job can be evicted.  The default is \Expr{False}.
+The old behavior can be enabled by setting it to \Expr{True}.  The
+new default behavior is intended to improve scheduling behavior
+when \Expr{MaxJobRetirementTime} is used.
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed the condor\_updates\_stats script so that it works with
+modern perl interepreters.
+\Ticket{3579}
 
 \item Fixed a bug that caused the \Condor{schedd} to crash when 
 \Condor{rm} was used with the \Opt{-f} option on parallel universe jobs.
@@ -95,6 +176,29 @@ Failed to initialize user log to /dev/null or <DAG log path>.
 the bug made it impossible for the \Condor{startd} to clean
 up execute directories after a \Condor{starter} was prematurely killed.
 \Ticket{3573}
+
+\item Fixed a bug that sometimes caused fetching user priorities 
+from the \Condor{negotiator} daemon to take a long time,
+as the fetch potentially had to wait until the end of the negotiation cycle. 
+The fetch no longer needs to wait.
+\Ticket{3535}
+
+\item Fixed a bug that would cause parallel universe jobs to fail when 
+\Expr{USE\_NFS=True}. This might have caused a potential issue with 
+doing a look up using \Condor{chirp}, 
+although testing seems to show that this is not an issue.
+\Ticket{3390}
+
+\item Fixed a bug introduced in HTCondor version 7.9.4 that sometimes caused
+attributes
+\AdAttr{ExitCode} and \AdAttr{ExitBySignal} not to be set in the job
+ClassAd when the job terminated.  These attributes were correctly
+reported in the user log, but they were not propagated to the job ClassAd and
+were therefore not available for querying with \Condor{history}.
+\Ticket{3577}
+
+\item Do not leak \Condor{starter} file descriptors to file transfer plugins. 
+\Ticket{3570}
 
 \end{itemize}
 
@@ -291,6 +395,11 @@ job can cause the \Condor{schedd} to crash.
 if the \Condor{starter} is shut down prematurely; 
 for example, shut down may occur by a hard kill signal or power interruption.
 \Ticket{3573}
+
+\item  If a job has any output files and uses the file transfer mechanism,
+the job ClassAd attribute \Attr{ExitCode} may be lost,
+causing its value to be reported as 0.
+\Ticket{3577}
 
 \end{itemize}
 

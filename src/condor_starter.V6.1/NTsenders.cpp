@@ -171,7 +171,7 @@ REMOTE_CONDOR_get_job_info(ClassAd *ad)
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 		return rval;
 	}
-	result = ad->initFromStream(*syscall_sock);
+	result = getClassAd(syscall_sock, *ad);
 	ASSERT( result );
 	result = syscall_sock->end_of_message();
 	ASSERT( result );
@@ -208,7 +208,7 @@ REMOTE_CONDOR_get_user_info(ClassAd *ad)
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 		return rval;
 	}
-	result = ad->initFromStream(*syscall_sock);
+	result = getClassAd(syscall_sock, *ad);
 	ASSERT( result );
 	result = syscall_sock->end_of_message();
 	ASSERT( result );

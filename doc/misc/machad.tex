@@ -474,6 +474,16 @@ finish before kicking it off if it needs to do so.  This is evaluated
 in the context of the job ClassAd, so it may refer to job attributes
 as well as machine attributes.
 %
+\index{ClassAd machine attribute!RetirementTimeRemaining}
+\item[\AdAttr{RetirementTimeRemaining}:] An integer number of seconds
+after \AdAttr{MyCurrentTime} when the running job can be evicted.
+\AdAttr{MaxJobRetirementTime} is the expression of how much retirement
+time the machine offers to new jobs, whereas \AdAttr{RetirementTimeRemaining}
+is the negotiated amount of time remaining for the current running
+job.  This may be less than the amount offered by the machine's
+\AdAttr{MaxJobRetirementTime} expression, because the job may
+ask for less.
+%
 \index{ClassAd machine attribute!PartitionableSlot}
 \label{PartitionableSlot-machine-attribute} 
 \item[\AdAttr{PartitionableSlot}:] For SMP machines,

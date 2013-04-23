@@ -94,7 +94,7 @@ static ClassAdCollection *JobQueue = 0;
 static StringList DirtyJobIDs;
 static int next_cluster_num = -1;
 static int next_proc_num = 0;
-static int active_cluster_num = -1;	// client is restricted to only insert jobs to the active cluster
+int active_cluster_num = -1;	// client is restricted to only insert jobs to the active cluster
 static bool JobQueueDirty = false;
 static int in_walk_job_queue = 0;
 static time_t xact_start_time = 0;	// time at which the current transaction was started
@@ -2132,7 +2132,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	// If someone is trying to do something funny with an invalid
 	// attribute name, bail out early
-	if (!AttrList::IsValidAttrName(attr_name)) {
+	if (!IsValidAttrName(attr_name)) {
 		dprintf(D_ALWAYS, "SetAttribute got invalid attribute named %s for job %d.%d\n", 
 			attr_name ? attr_name : "(null)", cluster_id, proc_id);
 		return -1;
@@ -2140,7 +2140,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		// If someone is trying to do something funny with an invalid
 		// attribute value, bail earlyxs
-	if (!AttrList::IsValidAttrValue(attr_value)) {
+	if (!IsValidAttrValue(attr_value)) {
 		dprintf(D_ALWAYS,
 				"SetAttribute received invalid attribute value '%s' for "
 				"job %d.%d, ignoring\n",

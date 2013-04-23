@@ -294,7 +294,7 @@ bool test_IsValidAttrValue(compat_classad::ClassAd *c1, int verbose)
     itr = c1->begin();
 
     //should be true
-    if( c1->IsValidAttrValue((*itr).first.c_str()) )
+    if( IsValidAttrValue((*itr).first.c_str()) )
     {
         passedReal = true;
     }
@@ -306,7 +306,7 @@ bool test_IsValidAttrValue(compat_classad::ClassAd *c1, int verbose)
     //passedSlashN because it only fails on '\n' or '\r'.
     
     //should be false...I *hope* it'd be false
-    if( !(c1->IsValidAttrValue("Arthur Dent\n") ) )
+    if( !(IsValidAttrValue("Arthur Dent\n") ) )
     {
         passedSlashN = true;
     }
@@ -315,7 +315,7 @@ bool test_IsValidAttrValue(compat_classad::ClassAd *c1, int verbose)
         printf("IsValidAttrValue w/ slash n attr %s.\n", passedSlashN ? "passed" : "failed");
 
     //should be true
-    if( c1->IsValidAttrValue("fred") )
+    if( IsValidAttrValue("fred") )
     {
         passedNonReal = true;
     }

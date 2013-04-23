@@ -18,14 +18,12 @@
 [\verb@--@\textbf{type = $<$ submit, execute, manager $>$}]
 [\verb@--@\textbf{central-manager = $<$ hostname$>$}]
 [\verb@--@\textbf{owner = $<$ ownername $>$}]
-[\verb@--@\textbf{make-personal-stork}]
 [\verb@--@\textbf{overwrite}]
 [\verb@--@\textbf{ignore-missing-libs}]
 [\verb@--@\textbf{force}]
 [\verb@--@\textbf{no-env-scripts}]
 [\verb@--@\textbf{env-scripts-dir = $<$ directory $>$}]
 [\verb@--@\textbf{backup}]
-[\verb@--@\textbf{stork}]
 [\verb@--@\textbf{credd}]
 [\verb@--@\textbf{verbose}]
 
@@ -242,13 +240,6 @@ released with HTCondor.  This list includes:
     the root directory of the HTCondor installation.  This option
     causes \Condor{configure} to generate these scripts in the
     specified directory.  }
-
-  \OptItem{\Opt{---make-personal-stork}} {Creates a 
-    Personal Stork, using the \Condor{credd} daemon.}
-
-  \OptItem{\Opt{---stork}} {Configures the 
-    Stork data placement server.
-    Use this option with the \Opt{---credd} option.}
 
   \OptItem{\Opt{---credd}} {Configure the
     the \Condor{credd} daemon (credential manager daemon).}

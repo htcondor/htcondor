@@ -247,7 +247,7 @@ CCBServer::HandleRegistration(int cmd,Stream *stream)
 
 	ClassAd msg;
 	sock->decode();
-	if( !msg.initFromStream( *sock ) || !sock->end_of_message() ) {
+	if( !getClassAd( sock, msg ) || !sock->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"CCB: failed to receive registration "
 				"from %s.\n", sock->peer_description() );
@@ -335,7 +335,7 @@ CCBServer::HandleRequest(int cmd,Stream *stream)
 
 	ClassAd msg;
 	sock->decode();
-	if( !msg.initFromStream( *sock ) || !sock->end_of_message() ) {
+	if( !getClassAd( sock, msg ) || !sock->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"CCB: failed to receive request "
 				"from %s.\n", sock->peer_description() );
@@ -435,7 +435,7 @@ CCBServer::HandleRequestResultsMsg( CCBTarget *target )
 
 	ClassAd msg;
 	sock->decode();
-	if( !msg.initFromStream( *sock ) || !sock->end_of_message() ) {
+	if( !getClassAd( sock, msg ) || !sock->end_of_message() ) {
 			// disconnect
 		dprintf(D_FULLDEBUG,
 				"CCB: received disconnect from target daemon %s "

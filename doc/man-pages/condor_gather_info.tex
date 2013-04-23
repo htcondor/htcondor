@@ -11,12 +11,8 @@
 
 \Description
 
-\Note  The usage information that the 
-HTCondor versions 7.7.3 and 7.7.4 \Condor{gather\_info} tool outputs
-is not quite correct.
-This manual page is more accurate for those releases.
-
-\Condor{gather\_info} will collect and output information 
+\Condor{gather\_info} is a Linux-only tool that
+will collect and output information 
 about the machine it is run upon,
 about the HTCondor installation local to the machine, 
 and optionally about a specified HTCondor job. 
@@ -64,6 +60,9 @@ The information gathered by this tool:
           \item Contents of \File{/etc/issue}
           \item Contents of \File{/etc/redhat-release}
           \item Contents of \File{/etc/debian\_version}
+          \item Contents of \File{\$(LOG)/MasterLog}
+          \item Contents of \File{\$(LOG)/ShadowLog}
+          \item Contents of \File{\$(LOG)/SchedLog}
           \item Output of \Shell{ps -auxww --forest}
           \item Output of \Shell{df -h}
           \item Output of \Shell{iptables -L}
@@ -72,6 +71,8 @@ The information gathered by this tool:
           \item Contents of \File{/etc/hosts}
           \item Contents of \File{/etc/nsswitch.conf}
           \item Output of \Shell{ulimit -a}
+          \item Output of \Shell{uptime}
+          \item Output of \Shell{free}
           \item Network interface configuration (\Shell{ifconfig})
           \item HTCondor version
           \item Location of HTCondor configuration files
@@ -90,6 +91,10 @@ The information gathered by this tool:
 		\begin{itemize}
           	\item Only events pertaining to the job ID 
 		\end{itemize}
+    	\item If \Condor{gather\_info} has the proper permissions,
+it runs \Condor{fetchlog} on the machine where the job most recently ran,
+and includes the contents of the logs from the \Condor{master},
+\Condor{startd}, and \Condor{starter}.
 	\end{itemize}
 \end{enumerate}
 

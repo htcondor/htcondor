@@ -36,6 +36,7 @@ if (NOT WINDOWS)
 
     # The following is helpful if you are trying to debug cmake find module
     #  set (Boost_DEBUG TRUE)
+    message ("Boost components: ${BOOST_COMPONENTS}" )
     find_package( Boost 1.33.1 COMPONENTS ${BOOST_COMPONENTS} )
 
     # always prefer system libraries where possible
@@ -63,6 +64,7 @@ if (NOT WINDOWS)
             append_var (CONDOR_EXTERNAL_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
             set (BOOST_VER ${Boost_VERSION})
             set (BOOST_INCLUDE ${Boost_INCLUDE_DIRS})
+            set (BOOST_LD ${Boost_LIBRARY_DIRS})
         endif()
 
     endif(Boost_FOUND)
@@ -143,7 +145,7 @@ endif()
 
 # update configure information
 if (BOOST_VER)
-	message (STATUS "external configured (BOOST_INCLUDE=${BOOST_INCLUDE}) version:(${BOOST_VER})")
+	message (STATUS "external configured (BOOST_INCLUDE=${BOOST_INCLUDE}) version:(${BOOST_VER}) link directories (${BOOST_LD})")
 	set( HAVE_EXT_BOOST ON PARENT_SCOPE )
 	set( BOOST_VER ${BOOST_VER} PARENT_SCOPE )
 	set( BOOST_INCLUDE ${BOOST_INCLUDE} PARENT_SCOPE )

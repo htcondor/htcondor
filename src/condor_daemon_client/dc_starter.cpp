@@ -277,7 +277,7 @@ DCStarter::createJobOwnerSecSession(int timeout,char const *job_claim_id,char co
 	sock.decode();
 
 	ClassAd reply;
-	if( !reply.initFromStream(sock) || !sock.end_of_message() ) {
+	if( !getClassAd(&sock, reply) || !sock.end_of_message() ) {
 		error_msg = "Failed to get response to CREATE_JOB_OWNER_SEC_SESSION from starter";
 		return false;
 	}
@@ -341,7 +341,7 @@ bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_clien
 
 	ClassAd result;
 	sock.decode();
-	if( !result.initFromStream(sock) || !sock.end_of_message() ) {
+	if( !getClassAd(&sock, result) || !sock.end_of_message() ) {
 		error_msg = "Failed to read response to START_SSHD from starter";
 		return false;
 	}
@@ -502,7 +502,7 @@ DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stde
 
 	compat_classad::ClassAd response;
 	sock.decode();
-	if (!response.initFromStream(sock) || !sock.end_of_message())
+	if (!getClassAd(&sock, response) || !sock.end_of_message())
 	{
 		error_msg = "Failed to read response for peeking at logs.";
 		return false;

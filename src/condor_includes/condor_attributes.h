@@ -411,6 +411,7 @@
 #define ATTR_MASTER_IP_ADDR  "MasterIpAddr"
 #define ATTR_MAX_HOSTS  "MaxHosts"
 #define ATTR_MAX_JOB_RETIREMENT_TIME  "MaxJobRetirementTime"
+#define ATTR_RETIREMENT_TIME_REMAINING "RetirementTimeRemaining"
 #define ATTR_MAX_JOBS_RUNNING  "MaxJobsRunning"
 #define ATTR_MEMORY  "Memory"
 #define ATTR_MEMORY_USAGE  "MemoryUsage"
@@ -755,6 +756,7 @@
 #define ATTR_GLOBUS_RESUBMIT_CHECK  "GlobusResubmit"
 #define ATTR_REMATCH_CHECK  "Rematch"
 
+#define ATTR_SEC_AUTHENTICATED_NAME  "AuthenticatedName"
 #define ATTR_SEC_AUTHENTICATION_METHODS_LIST  "AuthMethodsList"
 #define ATTR_SEC_AUTHENTICATION_METHODS  "AuthMethods"
 #define ATTR_SEC_CRYPTO_METHODS  "CryptoMethods"
@@ -856,6 +858,9 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_VM_GUEST_MEM  "VM_Guest_Mem"
 #define ATTR_VM_CKPT_MAC  "VM_CkptMac"
 #define ATTR_VM_CKPT_IP  "VM_CkptIP"
+
+#define ATTR_WEIGHTED_IDLE_JOBS "WeightedIdleJobs"
+#define ATTR_WEIGHTED_RUNNING_JOBS "WeightedRunningJobs"
 
 //************* Added for EC2 Jobs ***************************//
 #define ATTR_EC2_ACCESS_KEY_ID  "EC2AccessKeyId"

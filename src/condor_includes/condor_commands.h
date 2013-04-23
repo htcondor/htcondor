@@ -43,13 +43,9 @@
 **	In the following definitions 'FRGN' does not
 **	stand for "friggin'"...
 */
-#define CONTINUE_FRGN_JOB	(SCHED_VERS+1)
 #define CONTINUE_CLAIM		(SCHED_VERS+1)		// New name for CONTINUE_FRGN_JOB
-#define SUSPEND_FRGN_JOB	(SCHED_VERS+2)
 #define SUSPEND_CLAIM		(SCHED_VERS+2)		// New name for SUSPEND_FRGN_JOB
-#define CKPT_FRGN_JOB		(SCHED_VERS+3)		
 #define DEACTIVATE_CLAIM	(SCHED_VERS+3)		// New name for CKPT_FRGN_JOB
-#define KILL_FRGN_JOB		(SCHED_VERS+4)
 #define DEACTIVATE_CLAIM_FORCIBLY	(SCHED_VERS+4)		// New name for KILL_FRGN_JOB
 
 #define LOCAL_STATUS		(SCHED_VERS+5)
@@ -464,15 +460,6 @@ const int SHARED_PORT_PASS_SOCK = 76;
 #define LEASE_MANAGER_RENEW_LEASE	(LEASE_MANAGER_BASE+1)
 #define LEASE_MANAGER_RELEASE_LEASE	(LEASE_MANAGER_BASE+2)
 
-
-/*
-*** Commands used by the stork daemon
-*/
-#define STORK_BASE 80000
-#define STORK_SUBMIT (STORK_BASE+0)
-#define STORK_REMOVE (STORK_BASE+1)
-#define STORK_STATUS (STORK_BASE+2)
-#define STORK_LIST 	 (STORK_BASE+3)
 
 /*
 *** Commands used by the credd daemon

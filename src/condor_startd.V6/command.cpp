@@ -631,7 +631,7 @@ command_query_ads( Service*, int, Stream* stream)
 
 	stream->decode();
     stream->timeout(15);
-	if( !queryAd.initFromStream(*stream) || !stream->end_of_message()) {
+	if( !getClassAd(stream, queryAd) || !stream->end_of_message()) {
         dprintf( D_ALWAYS, "Failed to receive query on TCP: aborting\n" );
 		return FALSE;
 	}
@@ -1075,7 +1075,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	claim->cancel_match_timer();
 
 		// Get the classad of the request.
-	if( !req_classad->initFromStream(*stream) ) {
+	if( !getClassAd(stream, *req_classad) ) {
 		rip->dprintf( D_ALWAYS, "Can't receive classad from schedd\n" );
 		ABORT;
 	}
@@ -1513,7 +1513,7 @@ activate_claim( Resource* rip, Stream* stream )
 
 		// Grab request class ad 
 	req_classad = new ClassAd;
-	if( !req_classad->initFromStream(*stream) ) {
+	if( !getClassAd(stream, *req_classad) ) {
 		rip->dprintf( D_ALWAYS, "Can't receive request classad from shadow.\n" );
 		ABORT;
 	}
@@ -2228,7 +2228,7 @@ command_drain_jobs( Service*, int /*dc_cmd*/, Stream* s )
 	ClassAd ad;
 
 	s->decode();
-	if( !ad.initFromStream(*s) ) {
+	if( !getClassAd(s, ad) ) {
 		dprintf(D_ALWAYS,"command_drain_jobs: failed to read classad from %s\n",s->peer_description());
 		return FALSE;
 	}
@@ -2277,7 +2277,7 @@ command_cancel_drain_jobs( Service*, int /*dc_cmd*/, Stream* s )
 	ClassAd ad;
 
 	s->decode();
-	if( !ad.initFromStream(*s) ) {
+	if( !getClassAd(s, ad) ) {
 		dprintf(D_ALWAYS,"command_cancel_drain_jobs: failed to read classad from %s\n",s->peer_description());
 		return FALSE;
 	}

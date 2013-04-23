@@ -34,9 +34,9 @@
 
 void AttrList_setPublishServerTimeMangled( bool publish);
 
-classad::ClassAd* getOldClassAd( Stream *sock );
-bool getOldClassAd( Stream *sock, classad::ClassAd& ad );
-bool getOldClassAdNoTypes( Stream *sock, classad::ClassAd& ad );
+classad::ClassAd* getClassAd( Stream *sock );
+bool getClassAd( Stream *sock, classad::ClassAd& ad );
+bool getClassAdNoTypes( Stream *sock, classad::ClassAd& ad );
 
 /** Send the ClassAd on the CEDAR stream
  * @param sock the stream

@@ -23,7 +23,7 @@ class ExprTreeHolder;
 
 struct AttrPairToSecond :
   public std::unary_function<std::pair<std::string, classad::ExprTree*> const&, boost::python::object>
-{   
+{
   AttrPairToSecond::result_type operator()(AttrPairToSecond::argument_type p) const;
 };
 
@@ -77,6 +77,4 @@ struct ClassAdWrapper : classad::ClassAd, boost::python::wrapper<classad::ClassA
 
     virtual ~ClassAdWrapper();
 };
-
 #endif
-

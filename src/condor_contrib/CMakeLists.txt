@@ -20,6 +20,7 @@
 # add the contrib subtree for build & test only
 
 if (WANT_CONTRIB)
+  dprint("building contrib modules")
   string(REGEX REPLACE "-Werror" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
   #dprint( "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
 
@@ -32,5 +33,4 @@ else(WANT_CONTRIB)
   dprint("skipping contrib modules")
   add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/campus_factory")
   add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/bosco")
-  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/python-bindings")
 endif(WANT_CONTRIB)

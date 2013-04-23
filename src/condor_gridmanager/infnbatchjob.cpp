@@ -155,6 +155,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	enteredCurrentRemoteState = time(NULL);
 	lastSubmitAttempt = 0;
 	numSubmitAttempts = 0;
+	numStatusCheckAttempts = 0;
 	remoteSandboxId = NULL;
 	remoteJobId = NULL;
 	lastPollTime = 0;
@@ -674,13 +675,22 @@ void INFNBatchJob::doEvaluateState()
 			}
 			if ( rc != GLOBUS_SUCCESS ) {
 				// unhandled error
-				dprintf( D_ALWAYS,
-						 "(%d.%d) blah_job_status() failed: %s\n",
-						 procID.cluster, procID.proc, gahp->getErrorString() );
-				errorString = gahp->getErrorString();
-				gmState = GM_HOLD;
-				break;
+				numStatusCheckAttempts++;
+				if (numStatusCheckAttempts < param_integer("BATCH_GAHP_CHECK_STATUS_ATTEMPTS", 5)) {
+					// We'll check again soon
+					lastPollTime = time(NULL);
+					gmState = GM_SUBMITTED;
+					break;
+				} else {
+					dprintf( D_ALWAYS,
+							"(%d.%d) blah_job_status() failed: %s\n",
+							procID.cluster, procID.proc, gahp->getErrorString() );
+					errorString = gahp->getErrorString();
+					gmState = GM_HOLD;
+					break;
+				}
 			}
+			numStatusCheckAttempts = 0;
 			ProcessRemoteAd( status_ad );
 			delete status_ad;
 			lastPollTime = time(NULL);
