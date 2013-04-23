@@ -56,5 +56,4 @@ if ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND )
       add_test(python_htcondor_test test_driver tests/htcondor_tests.py TestConfig TestVersion)
     endif ( LINUX )
   endif (BUILD_TESTING)
-
 endif ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND )
