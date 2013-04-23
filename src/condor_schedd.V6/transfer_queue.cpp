@@ -114,6 +114,8 @@ TransferQueueManager::TransferQueueManager() {
 	m_update_iostats_timer = -1;
 	m_publish_flags = 0;
 
+	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_MAX_UPLOADING,&m_max_uploading_stat,NULL,IF_BASICPUB|m_max_uploading_stat.PubValue);
+	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING,&m_max_downloading_stat,NULL,IF_BASICPUB|m_max_uploading_stat.PubValue);
 	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_UPLOADING,&m_uploading_stat,NULL,IF_BASICPUB|m_uploading_stat.PubDefault);
 	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_DOWNLOADING,&m_downloading_stat,NULL,IF_BASICPUB|m_downloading_stat.PubDefault);
 	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD,&m_waiting_to_upload_stat,NULL,IF_BASICPUB|m_waiting_to_upload_stat.PubDefault);
@@ -843,6 +845,8 @@ TransferQueueManager::AddRecentIOStats(IOStats &s,const std::string up_down_queu
 void
 TransferQueueManager::UpdateIOStats()
 {
+	m_max_uploading_stat = m_max_uploads;
+	m_max_downloading_stat = m_max_downloads;
 	m_uploading_stat = m_uploading;
 	m_downloading_stat = m_downloading;
 	m_waiting_to_upload_stat = m_waiting_to_upload;
@@ -896,9 +900,6 @@ TransferQueueManager::publish(ClassAd *ad,int pubflags)
 				m_iostats.file_write.EMARate(ema_horizon),
 				m_iostats.net_read.EMARate(ema_horizon));
 	}
-
-	ad->Assign(ATTR_TRANSFER_QUEUE_MAX_UPLOADING,m_max_uploads);
-	ad->Assign(ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING,m_max_downloads);
 
 	m_stat_pool.Publish(*ad,pubflags);
 
