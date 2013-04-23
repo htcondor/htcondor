@@ -11,7 +11,11 @@ const char * sysapi_processor_flags_raw( void ) {
     if( _sysapi_processor_flags_raw != NULL ) {
         return _sysapi_processor_flags_raw;
     }
-    
+
+    /* Set the default to the empty string so that if something goes wrong
+       during parsing (or if /proc/cpuinfo doesn't exist), we stop trying. */
+    _sysapi_processor_flags_raw = "";
+
     /* You can adapt this to ncpus.cpp's _SysapiProceCpuinfo for debugging. */
     FILE * fp = safe_fopen_wrapper_follow( "/proc/cpuinfo", "r", 0644 );
     dprintf( D_LOAD, "Reading from /proc/cpuinfo\n" );
@@ -21,8 +25,8 @@ const char * sysapi_processor_flags_raw( void ) {
         while( fgets( buffer, sizeof( buffer ) - sizeof(char), fp ) ) {
             char * colon = strchr( buffer, ':' );
             
-            char * value = NULL;
-            char * attribute = NULL;
+            const char * value = "";
+            const char * attribute = NULL;
             if( colon != NULL ) {
                 if( *(colon + 1) != '\0' ) {
                     value = colon + 2;
@@ -47,8 +51,6 @@ const char * sysapi_processor_flags_raw( void ) {
         }
         
         fclose( fp );
-    } else {
-        _sysapi_processor_flags_raw = "";
     }
     
     return _sysapi_processor_flags_raw;
