@@ -40,6 +40,7 @@ if ( WITH_VOMS )
 				touch -r src/utils/vomsfake.y src/utils/vomsparser.c &&
 				touch -r src/utils/vomsfake.y src/utils/lex.yy.c &&
 				patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/globus_thread_h.patch &&
+				patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/new_cpp_linkage.patch &&
 				cp ${CMAKE_CURRENT_SOURCE_DIR}/dummy.c src/replib &&
 				patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/replib.patch )
 			set ( VOMS_GLOBUS_FLAG "" )
@@ -57,6 +58,18 @@ if ( WITH_VOMS )
 
 		condor_pre_external( VOMS voms-2.0.6 "include;lib" "done")
 
+		if ( ${OS_NAME} STREQUAL "DARWIN" AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
+			string(REPLACE "-std=c++11" "" VOMS_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+			string(REPLACE "-std=c++11" "" VOMS_C_FLAGS "${CMAKE_C_FLAGS}")
+			string(REPLACE "-std=c++11" "" VOMS_LDFLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
+			set ( VOMS_CXX_COMPILER  "clang++" )
+                else()
+			set ( VOMS_CXX_FLAGS ${CMAKE_CXX_FLAGS} )
+			set ( VOMS_C_FLAGS ${CMAKE_C_FLAGS} )
+			set ( VOMS_LDFLAGS ${CMAKE_SHARED_LINKER_FLAGS} )
+			set ( VOMS_CXX_COMPILER ${CMAKE_CXX_COMPILER} )
+		endif()
+
 		ExternalProject_Add(voms
 			DEPENDS ${GLOBUS_REF}
 			#-- Download Step ----------
@@ -66,6 +79,11 @@ if ( WITH_VOMS )
 			PATCH_COMMAND ${VOMS_PATCH}
 			#--Configure step ----------
 			CONFIGURE_COMMAND cd voms-2.0.6 &&
+				CXX=${CMAKE_CXX_COMPILER}
+				CC=${CMAKE_C_COMPILER}
+				CXXFLAGS=${VOMS_CXX_FLAGS}
+				CFLAGS=${VOMS_C_FLAGS}
+				LDFLAGS=${VOMS_LDFLAGS}
 				./configure
 					--prefix=${VOMS_INSTALL_LOC}
 					--with-api-only

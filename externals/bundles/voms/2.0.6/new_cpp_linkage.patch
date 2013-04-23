@@ -1,0 +1,48 @@
+--- voms-2.0.6/src/api/ccapi/voms_api.cc.orig	2013-04-23 17:57:54.000000000 -0500
++++ voms-2.0.6/src/api/ccapi/voms_api.cc	2013-04-23 17:58:08.000000000 -0500
+@@ -27,6 +27,10 @@
+ #define NOGLOBUS
+ #endif
+ 
++#ifdef __cplusplus
++#include <new>
++#endif
++
+ extern "C" {
+ #ifdef NOGLOBUS
+ #include <pthread.h>
+--- voms-2.0.6/src/socklib/ipv6sock.cc.orig	2011-07-22 05:17:52.000000000 -0500
++++ voms-2.0.6/src/socklib/ipv6sock.cc	2013-04-23 18:09:34.000000000 -0500
+@@ -30,6 +30,10 @@
+ #include <stdlib.h>
+ #include <string.h>
+ 
++#ifdef __cplusplus
++#include <new>
++#endif
++
+ extern "C" {
+ #include "log.h"
+ }
+--- voms-2.0.6/src/ac/ccinit.cc.orig	2013-04-23 18:10:45.000000000 -0500
++++ voms-2.0.6/src/ac/ccinit.cc	2013-04-23 18:10:57.000000000 -0500
+@@ -22,6 +22,9 @@
+  * follows.
+  *
+  *********************************************************************/
++
++#include <new>
++
+ extern "C" {
+ #include "init.h"
+ #include "extensions.h"
+--- voms-2.0.6/src/api/ccapi/ccval.cc.orig	2013-04-23 18:12:13.000000000 -0500
++++ voms-2.0.6/src/api/ccapi/ccval.cc	2013-04-23 18:12:20.000000000 -0500
+@@ -22,6 +22,7 @@
+  * follows.
+  *
+  *********************************************************************/
++#include <new>
+ extern "C" {
+ #include "config.h"
+ #include "replace.h"
