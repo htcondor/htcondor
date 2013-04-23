@@ -115,7 +115,7 @@ make_spool(compat_classad::ClassAd& ad)
     if (!new_expr || !ad.Insert(ATTR_JOB_LEAVE_IN_QUEUE, new_expr))
         THROW_EX(RuntimeError, "Unable to set " ATTR_JOB_LEAVE_IN_QUEUE);
     make_spool_remap(ad, ATTR_JOB_OUTPUT, ATTR_STREAM_OUTPUT, "_condor_stdout");
-    make_spool_remap(ad, ATTR_JOB_ERROR, ATTR_STREAM_ERROR, "_condor_stderr");    
+    make_spool_remap(ad, ATTR_JOB_ERROR, ATTR_STREAM_ERROR, "_condor_stderr");
 }
 
 std::auto_ptr<ExprTree>
@@ -373,7 +373,7 @@ struct Schedd {
             PyErr_SetString(PyExc_RuntimeError, "Failed to create new cluster.");
             throw_error_already_set();
         }
-        
+
         ClassAd ad;
         // Create a blank ad for job submission.
         ClassAd *tmpad = CreateJobAd(NULL, CONDOR_UNIVERSE_VANILLA, "/bin/echo");
@@ -637,4 +637,3 @@ void export_schedd()
         .def("reschedule", &Schedd::reschedule, "Send reschedule command to the schedd.\n");
         ;
 }
-

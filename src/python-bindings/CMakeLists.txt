@@ -6,7 +6,7 @@ endif()
 
 if ( LINUX AND WITH_PYTHON_BINDINGS )
   configure_file (
-	"${PROJECT_SOURCE_DIR}/src/condor_contrib/python-bindings/test_driver.in"
+	"${PROJECT_SOURCE_DIR}/src/python-bindings/test_driver.in"
 	"${CMAKE_CURRENT_BINARY_DIR}/test_driver"
   )
 
@@ -53,6 +53,4 @@ if ( LINUX AND WITH_PYTHON_BINDINGS )
     add_test(python_classad_test test_driver tests/classad_tests.py)
     add_test(python_htcondor_test test_driver tests/htcondor_tests.py TestConfig TestVersion)
   endif (BUILD_TESTING)
-
-endif ( LINUX AND WITH_PYTHON_BINDINGS )
-
+endif ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND )

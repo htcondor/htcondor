@@ -30,6 +30,4 @@ private:
     boost::shared_ptr<classad::ExprTree> m_refcount;
     bool m_owns;
 };
-
 #endif
-
