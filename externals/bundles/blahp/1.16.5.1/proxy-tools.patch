@@ -1,6 +1,6 @@
 diff -u -r org.glite.ce.blahp/src/Makefile.am org.glite.ce.blahp.patched/src/Makefile.am
 --- org.glite.ce.blahp/src/Makefile.am	2010-11-05 08:28:44.000000000 -0500
-+++ org.glite.ce.blahp.patched/src/Makefile.am	2013-01-09 15:58:35.000000000 -0600
++++ org.glite.ce.blahp.patched/src/Makefile.am	2013-04-23 13:56:42.999661823 -0500
 @@ -50,7 +50,7 @@
  
  blahpd_daemon_SOURCES = main_daemon.c $(common_sources)
@@ -11,8 +11,8 @@ diff -u -r org.glite.ce.blahp/src/Makefile.am org.glite.ce.blahp.patched/src/Mak
  blahpd_daemon_LDADD = $(blahpd_LDADD)
  
 diff -u -r org.glite.ce.blahp/src/server.c org.glite.ce.blahp.patched/src/server.c
---- org.glite.ce.blahp/src/server.c	2013-01-09 15:56:16.000000000 -0600
-+++ org.glite.ce.blahp.patched/src/server.c	2013-01-09 16:00:37.000000000 -0600
+--- org.glite.ce.blahp/src/server.c	2013-04-23 13:55:53.497783210 -0500
++++ org.glite.ce.blahp.patched/src/server.c	2013-04-23 14:03:12.074697268 -0500
 @@ -80,6 +80,9 @@
  #include <fcntl.h>
  #include <signal.h>
@@ -23,7 +23,7 @@ diff -u -r org.glite.ce.blahp/src/server.c org.glite.ce.blahp.patched/src/server
  #include "blahpd.h"
  #include "config.h"
  #include "job_registry.h"
-@@ -2590,13 +2593,161 @@
+@@ -2583,13 +2586,166 @@
  	return(result);
  }
  
@@ -35,6 +35,11 @@ diff -u -r org.glite.ce.blahp/src/server.c org.glite.ce.blahp.patched/src/server
 +
 +	if (active) {
 +		return 0;
++	}
++
++	if ( globus_thread_set_model( "pthread" ) ) {
++		grid_proxy_errmsg = "failed to activate Globus";
++		return -1;
 +	}
 +
 +	if ( globus_module_activate(GLOBUS_GSI_CREDENTIAL_MODULE) ) {
@@ -186,7 +191,7 @@ diff -u -r org.glite.ce.blahp/src/server.c org.glite.ce.blahp.patched/src/server
  	char *limit_command_output;
  	int tmpfd;
  	exec_cmd_t exe_command = EXEC_CMD_DEFAULT;
-@@ -2613,27 +2764,10 @@
+@@ -2606,27 +2762,10 @@
  		limited_proxy_name = limited_proxy_made_up_name;
  	}
  
@@ -218,7 +223,7 @@ diff -u -r org.glite.ce.blahp/src/server.c org.glite.ce.blahp.patched/src/server
  	}
  
  	limit_command_output = make_message("%s_XXXXXX", limited_proxy_name);
-@@ -2656,18 +2790,9 @@
+@@ -2649,18 +2788,9 @@
          
  	get_lock_on_limited_proxy = config_test_boolean(config_get("blah_get_lock_on_limited_proxies",blah_config_handle));
  
@@ -239,7 +244,7 @@ diff -u -r org.glite.ce.blahp/src/server.c org.glite.ce.blahp.patched/src/server
  	}
  
   	if ((limit_command_output == limited_proxy_name) &&
-@@ -2694,8 +2819,7 @@
+@@ -2687,8 +2817,7 @@
  		}
  	} 
  
@@ -249,7 +254,7 @@ diff -u -r org.glite.ce.blahp/src/server.c org.glite.ce.blahp.patched/src/server
  
   	if ((limit_command_output == limited_proxy_name) &&
  	    get_lock_on_limited_proxy)
-@@ -2712,25 +2836,6 @@
+@@ -2705,25 +2834,6 @@
  		return(NULL);
  	}
  
