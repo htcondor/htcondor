@@ -4,7 +4,7 @@ option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
 
 if ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND )
   configure_file (
-	"${PROJECT_SOURCE_DIR}/src/condor_contrib/python-bindings/test_driver.in"
+	"${PROJECT_SOURCE_DIR}/src/python-bindings/test_driver.in"
 	"${CMAKE_CURRENT_BINARY_DIR}/test_driver"
   )
 
@@ -58,4 +58,3 @@ if ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND )
   endif (BUILD_TESTING)
 
 endif ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND )
-

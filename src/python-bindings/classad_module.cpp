@@ -1,4 +1,3 @@
-
 #include <boost/python.hpp>
 #include <classad/source.h>
 
@@ -145,4 +144,3 @@ BOOST_PYTHON_MODULE(classad)
     boost::python::converter::registry::insert(convert_to_FILEptr,
         boost::python::type_id<FILE>());
 }
-
