@@ -229,7 +229,12 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure )
 	}
 }
 
+#if defined(HAVE_EXT_GLOBUS)
 void AuditLogJobProxy( Sock &sock, PROC_ID job_id, const char *proxy_file )
+#else
+// because g++ warnings are sometimes idiotically pedantic.
+void AuditLogJobProxy( Sock &, PROC_ID , const char * )
+#endif
 {
 #if defined(HAVE_EXT_GLOBUS)
 	dprintf( D_AUDIT, sock, "Received proxy for job %d.%d\n",
