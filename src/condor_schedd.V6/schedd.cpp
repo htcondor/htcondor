@@ -183,8 +183,11 @@ struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
 
 void AuditLogNewConnection( int cmd, Sock &sock, bool failure )
 {
-	// Quickly determine if this is a command we care about for
-	// the audit log.
+	// Quickly determine if we're writing to the audit log and if this
+	// is a command we care about for the audit log.
+	if ( !IsDebugCategory( D_AUDIT ) ) {
+		return;
+	}
 	switch( cmd ) {
 	case ACT_ON_JOBS:
 	case SPOOL_JOB_FILES:
@@ -237,6 +240,11 @@ void AuditLogJobProxy( Sock &, PROC_ID , const char * )
 #endif
 {
 #if defined(HAVE_EXT_GLOBUS)
+	// Quickly determine if we're writing to the audit log.
+	if ( !IsDebugCategory( D_AUDIT ) ) {
+		return;
+	}
+
 	dprintf( D_AUDIT, sock, "Received proxy for job %d.%d\n",
 			 job_id.cluster, job_id.proc );
 
