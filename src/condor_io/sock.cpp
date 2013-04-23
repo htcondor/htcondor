@@ -67,6 +67,7 @@ Sock::Sock() : Stream() {
 	_fqu_user_part = NULL;
 	_fqu_domain_part = NULL;
 	_auth_method = NULL;
+	_auth_methods = NULL;
 	_auth_name = NULL;
 	_crypto_method = NULL;
 	_tried_authentication = false;
@@ -103,6 +104,7 @@ Sock::Sock(const Sock & orig) : Stream() {
 	_fqu_user_part = NULL;
 	_fqu_domain_part = NULL;
 	_auth_method = NULL;
+	_auth_methods = NULL;
 	_auth_name = NULL;
 	_crypto_method = NULL;
 	_tried_authentication = false;
@@ -177,6 +179,10 @@ Sock::~Sock()
 	if (_auth_method) {
 		free(_auth_method);
 		_auth_method = NULL;
+	}
+	if (_auth_methods) {
+		free(_auth_methods);
+		_auth_methods = NULL;
 	}
 	free(_auth_name);
 	if (_crypto_method) {
@@ -2240,6 +2246,16 @@ void Sock :: setAuthenticationMethodUsed(char const *auth_method)
 
 const char* Sock :: getAuthenticationMethodUsed() {
 	return _auth_method;
+}
+
+void Sock :: setAuthenticationMethodsTried(char const *auth_methods)
+{
+	free(_auth_methods);
+	_auth_methods = strdup(auth_methods);
+}
+
+const char* Sock :: getAuthenticationMethodsTried() {
+	return _auth_methods;
 }
 
 void Sock :: setAuthenticatedName(char const *auth_name)

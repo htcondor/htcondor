@@ -329,6 +329,9 @@ public:
 	void setAuthenticationMethodUsed(char const *auth_method);
 	const char *getAuthenticationMethodUsed();
 
+	void setAuthenticationMethodsTried(char const *auth_methods);
+	const char *getAuthenticationMethodsTried();
+
 	void setAuthenticatedName(char const *auth_name);
 	const char *getAuthenticatedName();
 
@@ -486,6 +489,7 @@ protected:
 	char *          _fqu_user_part;
 	char *          _fqu_domain_part;
 	char *          _auth_method;
+	char *          _auth_methods;
 	char *          _auth_name;
 	char *          _crypto_method;
 	bool            _tried_authentication;
