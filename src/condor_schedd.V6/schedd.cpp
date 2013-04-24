@@ -4373,7 +4373,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	} else {
 		char *tmp = job_ids.print_to_string();
 		if ( tmp ) {
-			job_ids_string = job_ids.print_to_string();
+			job_ids_string = tmp;
 			free( tmp );
 		}
 		dprintf( D_AUDIT, *rsock, "%s jobs %s\n",
