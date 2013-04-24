@@ -1023,7 +1023,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 	if (!auth_success) {
 		// call the auditing callback to record the authentication failure
 		if (daemonCore->audit_log_callback_fn) {
-			(*(daemonCore->audit_log_callback_fn))( m_req, (*m_sock), true );
+			(*(daemonCore->audit_log_callback_fn))( m_auth_cmd, (*m_sock), true );
 		}
 	}
 
