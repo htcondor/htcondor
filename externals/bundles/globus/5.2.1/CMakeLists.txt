@@ -116,7 +116,7 @@ if (WITH_GLOBUS)
 							#--Build Step ----------
 							BUILD_COMMAND cd gt5.2.1-all-source-installer &&
 								${GLOBUS_FLAGS} make gpt globus_gssapi_error globus-resource-management-sdk globus-data-management-sdk &&
-								cd ${GLOBUS_INSTALL_LOC}/include/globus/ && ln -s ${GLOBUS_FLAVOR}pthr/globus_config.h .
+								cd ${GLOBUS_INSTALL_LOC}/include/globus/ && ln -sf ${GLOBUS_FLAVOR}pthr/globus_config.h .
 							BUILD_IN_SOURCE 1
 							#--install Step ----------
 							INSTALL_DIR ${GLOBUS_INSTALL_LOC}
