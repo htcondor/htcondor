@@ -330,6 +330,13 @@ buffer overflow and incorrect determination that daemons are hung.
 
 \begin{itemize}
 
+\item Fixed a bug with the dedicated scheduler reconnect mode, where
+if the schedd crashed with a parallel universe job running after the 
+job's first job lease duration interval, parallel universe jobs would 
+not successfully reconnect, and they
+would restart from scratch.
+\Ticket{2291}
+
 \item The EC2 GAHP now treats OpenStack's \Code{stopped} state as if it
 were \Code{shutoff}, terminating instances which enter this state and
 preventing the instances from remaining in the queue forever.
