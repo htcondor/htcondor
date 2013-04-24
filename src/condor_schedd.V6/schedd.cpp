@@ -215,6 +215,14 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure )
 	dprintf( D_AUDIT, sock, "Command=%s, peer=%s\n",
 			 cmd_name ? cmd_name : "(null)",
 			 sinful ? sinful : "(null)" );
+
+	if ( failure && unmapped == NULL ) {
+		const char *methods_tried = sock.getAuthenticationMethodsTried();
+		dprintf( D_AUDIT, sock, "Authentication Failed, MethodsTried=%s\n",
+				 methods_tried ? methods_tried : "(null)" );
+		return;
+	}
+
 	dprintf( D_AUDIT, sock, "AuthMethod=%s, AuthId=%s, CondorId=%s\n",
 			 method ? method : "(null)",
 			 unmapped ? unmapped : "(null)",
@@ -228,7 +236,7 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure )
 	*/
 
 	if ( failure ) {
-		dprintf( D_AUDIT, sock, "Authentication or authorization failed\n" );
+		dprintf( D_AUDIT, sock, "Authorization Denied\n" );
 	}
 }
 
