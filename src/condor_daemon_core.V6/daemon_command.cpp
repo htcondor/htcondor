@@ -1008,6 +1008,8 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 
 	int auth_timeout = daemonCore->getSecMan()->getSecTimeout( m_comTable[cmd_index].perm );
 
+	m_sock->setAuthenticationMethodsTried(auth_methods);
+
 	char *method_used = NULL;
 	bool auth_success = m_sock->authenticate(m_key, auth_methods, &errstack, auth_timeout, &method_used);
 
@@ -1016,6 +1018,13 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 	}
 	if ( m_sock->getAuthenticatedName() ) {
 		m_policy->Assign(ATTR_SEC_AUTHENTICATED_NAME, m_sock->getAuthenticatedName() );
+	}
+
+	if (!auth_success) {
+		// call the auditing callback to record the authentication failure
+		if (daemonCore->audit_log_callback_fn) {
+			(*(daemonCore->audit_log_callback_fn))( m_auth_cmd, (*m_sock), true );
+		}
 	}
 
 	free( auth_methods );
