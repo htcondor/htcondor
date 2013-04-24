@@ -926,6 +926,8 @@ DedicatedScheduler::sendAlives( void )
 	match_rec	*mrec;
 	int		  	numsent=0;
 
+	BeginTransaction();
+
 	all_matches->startIterations();
 	while( all_matches->iterate(mrec) == 1 ) {
 		if( mrec->m_startd_sends_alives == false &&
@@ -934,7 +936,19 @@ DedicatedScheduler::sendAlives( void )
 				numsent++;
 			}
 		}
+
+		if (mrec->m_startd_sends_alives && (mrec->status == M_ACTIVE)) {
+
+				// in receive_startd_update, we've updated the lease time only in the job ad
+				// actually write it to the job log here in one big transaction.
+			int renew_time = 0;
+			GetAttributeInt(mrec->cluster,mrec->proc, ATTR_LAST_JOB_LEASE_RENEWAL,&renew_time);
+			SetAttributeInt( mrec->cluster, mrec->proc, ATTR_LAST_JOB_LEASE_RENEWAL, renew_time ); 
+		}
 	}
+
+	CommitTransaction();
+
 	if( numsent ) {
 		dprintf( D_PROTOCOL, "## 6. (Done sending alive messages to "
 				 "%d dedicated startds)\n", numsent );

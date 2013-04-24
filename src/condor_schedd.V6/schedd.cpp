@@ -240,14 +240,8 @@ void AuditLogNewConnection( int cmd, Sock &sock, bool failure )
 	}
 }
 
-#if defined(HAVE_EXT_GLOBUS)
 void AuditLogJobProxy( Sock &sock, PROC_ID job_id, const char *proxy_file )
-#else
-// because g++ warnings are sometimes idiotically pedantic.
-void AuditLogJobProxy( Sock &, PROC_ID , const char * )
-#endif
 {
-#if defined(HAVE_EXT_GLOBUS)
 	// Quickly determine if we're writing to the audit log.
 	if ( !IsDebugCategory( D_AUDIT ) ) {
 		return;
@@ -255,7 +249,9 @@ void AuditLogJobProxy( Sock &, PROC_ID , const char * )
 
 	dprintf( D_AUDIT, sock, "Received proxy for job %d.%d\n",
 			 job_id.cluster, job_id.proc );
+	dprintf( D_AUDIT, sock, "proxy path: %s\n", proxy_file );
 
+#if defined(HAVE_EXT_GLOBUS)
 	globus_gsi_cred_handle_t proxy_handle = x509_proxy_read( proxy_file );
 
 	if ( proxy_handle == NULL ) {
@@ -275,7 +271,6 @@ void AuditLogJobProxy( Sock &, PROC_ID , const char * )
 
 	x509_proxy_free( proxy_handle );
 
-	dprintf( D_AUDIT, sock, "proxy path: %s\n", proxy_file );
 	dprintf( D_AUDIT, sock, "proxy expiration: %d\n", (int)expire_time );
 	dprintf( D_AUDIT, sock, "proxy identity: %s\n", proxy_identity );
 	dprintf( D_AUDIT, sock, "proxy subject: %s\n", proxy_subject );
