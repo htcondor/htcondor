@@ -161,15 +161,17 @@
 
 #define RECYCLE_SHADOW (SCHED_VERS+110) // schedd: get a new job for a shadow
 #define CLEAR_DIRTY_JOB_ATTRS (SCHED_VERS+111) // schedd: clear dirty attributes for a job
+// These two commands originally used the same command int by mistake.
+// In 7.9.6, GET_PRIORITY_ROLLUP was assigned a new command int.
+#define GET_PRIORITY_ROLLUP_OLD (SCHED_VERS+112) // negotiator
 #define DRAIN_JOBS (SCHED_VERS+112)
 #define CANCEL_DRAIN_JOBS (SCHED_VERS+113)
+#define GET_PRIORITY_ROLLUP (SCHED_VERS+114) // negotiator
 
 // values used for "HowFast" in the draining request
 #define DRAIN_GRACEFUL 0
 #define DRAIN_QUICK 10
 #define DRAIN_FAST 20
-
-#define GET_PRIORITY_ROLLUP (SCHED_VERS+112) // negotiator
 
 
 // HAD-related commands
