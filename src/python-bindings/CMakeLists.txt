@@ -20,9 +20,10 @@ if ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND AND NOT SOLARIS )
   else()
     message(FATAL_ERROR "Can't determine HTCondor version!")
   endif()
-  condor_shared_lib( pyclassad classad.cpp classad_wrapper.h exprtree_wrapper.h )
+  condor_static_lib( pyclassad classad.cpp classad_wrapper.h exprtree_wrapper.h )
   target_link_libraries( pyclassad ${CLASSADS_FOUND} ${PYTHON_LIBRARIES} -lboost_python )
   set_target_properties( pyclassad PROPERTIES OUTPUT_NAME "${PYCLASSAD_LIB_NAME}" )
+  set_target_properties( pyclassad PROPERTIES COMPILE_FLAGS "-fPIC")
 
   # Note we do not use condor_shared_lib below because we want a separate install target.
   add_library( classad_module SHARED classad_module.cpp )
