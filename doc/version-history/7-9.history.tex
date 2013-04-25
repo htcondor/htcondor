@@ -96,6 +96,11 @@ The old behavior can be enabled by setting it to \Expr{True}.  The
 new default behavior is intended to improve scheduling behavior
 when \Expr{MaxJobRetirementTime} is used.
 
+\item The per-user file transfer I/O statistics now have a prefix of
+\AdAttr{Owner\_<username>\_}.  In 7.9.5, they had a prefix of
+\AdAttr{<username>\_}.  This can be configured via
+\Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+
 \end{itemize}
 
 \noindent Bugs Fixed:

@@ -10781,7 +10781,7 @@ id=614
 
 [TRANSFER_QUEUE_USER_EXPR]
 aliases=
-default=User
+default=strcat("Owner_",Owner)
 version=7.9.1
 range=.*
 state=default
