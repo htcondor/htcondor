@@ -3958,6 +3958,10 @@ WANT_HOLD_REASON = \
   \MacroNI{MAXJOBRETIREMENTTIME} in
   section~\ref{sec:State-Expression-Summary} for further explanation.
 
+  By default the \Condor{negotiator} will not match jobs to a slot with
+  retirement time remaining.  This behavior is controlled by
+  \Macro{NEGOTIATOR\_CONSIDER\_EARLY\_PREEMPTION}.
+
 \label{param:ClaimWorklife}
 \item[\Macro{CLAIM\_WORKLIFE}]
   This expression specifies the number of seconds after which a claim
@@ -5109,7 +5113,10 @@ MAX_JOBS_RUNNING	= \
   evaluated in the context of the job ad.  For example, if this
   expression were set to a name that is the same for all jobs, file
   transfers would be scheduled in first-in-first-out order rather than
-  equal share order.
+  equal share order.  Note that the string produced by this expression
+  is used as a prefix in the ClassAd attributes for per-user file
+  transfer I/O statistics that are published in the \Condor{schedd}
+  ad.
 
 \label{param:MaxTransferInputMB}
 \item[\Macro{MAX\_TRANSFER\_INPUT\_MB}]
