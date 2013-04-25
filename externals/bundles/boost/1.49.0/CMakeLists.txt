@@ -125,7 +125,7 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 		#--Patch step ----------
 		 PATCH_COMMAND ${BOOST_PATCH}
 		#--Configure step ----------
-		 CONFIGURE_COMMAND cd ${BOOST_FILENAME} ${CMD_TERM} ${BOOTSTRAP} --prefix=${BOOST_INSTALL_LOC} ${CMD_TERM} echo "Configure complete"
+		 CONFIGURE_COMMAND cd ${BOOST_FILENAME} ${CMD_TERM} ${BOOTSTRAP} --prefix=${BOOST_INSTALL_LOC} --with-python=${PYTHON_EXECUTABLE} ${CMD_TERM} echo "Configure complete"
 		#--Build Step ----------
 		BUILD_COMMAND cd ${BOOST_FILENAME} ${CMD_TERM} ${EXEC}bjam ${BOOST_MIN_BUILD_DEP} --prefix=${BOOST_INSTALL_LOC} --libdir=${BOOST_INSTALL_LOC}/lib define=BOOST_HAS_THREADS ${BUILD_OPTIONS} toolset=${TOOLSET} link=static install
 		BUILD_IN_SOURCE 1

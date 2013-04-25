@@ -72,6 +72,7 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 ##################################################
 ##################################################
 include (FindPythonLibs)
+include (FindPythonInterp)
 include (FindThreads)
 include (GlibcDetect)
 
