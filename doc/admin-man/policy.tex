@@ -1424,26 +1424,20 @@ It serves as a quick reference.
   \MacroNI{WANT\_SUSPEND} is FALSE, the machine enters the Claimed/Retiring
   state whenever \MacroNI{PREEMPT} is TRUE. 
 
-\item[\Macro{CLAIM\_WORKLIFE}] If provided, this expression specifies
-the number of seconds during which a claim will continue accepting new
-jobs.  Once this time expires, any existing job may continue to run as
-usual, but once it finishes or is preempted, the claim is closed.
-This may be useful if you want to force periodic renegotiation of
-resources without preemption having to occur.  For example, if you
-have some low-priority jobs which should never be interrupted with
-kill signals, you could prevent them from being killed with
-\Attr{MaxJobRetirementTime}, but now high-priority jobs may have to
-wait in line when they match to a machine that is busy running one of
-these uninterruptible jobs.  You can prevent the high-priority jobs
-from ever matching to such a machine by using a rank expression in the
-job or in the negotiator's rank expressions, but then the low-priority
-claim will never be interrupted; it can keep running more jobs.  The
-solution is to use \MacroNI{CLAIM\_WORKLIFE} to force the claim to stop
-running additional jobs after a certain amount of time.
-The default value for \MacroNI{CLAIM\_WORKLIFE} is -1, which is treated
-as an infinite claim worklife, so claims may be held indefinitely (as
-long as they are not preempted and the schedd does not relinquish
-them, of course).
+\item[\Macro{CLAIM\_WORKLIFE}]
+  This expression specifies the number of seconds after which a claim
+  will stop accepting additional jobs.  The default is 3600.  Once the
+  negotiator gives a schedd a claim to a slot, the schedd will keep
+  running jobs on that slot as long as it has more jobs with matching
+  requirements, and \Macro{CLAIM\_WORKLIFE} has not expired, and it is
+  not preempted.  Once \MacroNI{CLAIM\_WORKLIFE} expires, any existing
+  job may continue to run as usual, but once it finishes or is
+  preempted, the claim is closed.  When \Expr{CLAIM\_WORKLIFE} is -1,
+  this is treated as an infinite claim worklife, so claims may be held
+  indefinitely (as long as they are not preempted and the user does
+  not run out of jobs, of course).  A value of 0 has the effect of not
+  allowing more than one job to run per claim, since it immediately
+  expires after the first job starts running.
 
 \item[\Macro{MachineMaxVacateTime}] When the machine enters the
 Preempting/Vacating state, this expression specifies the maximum
@@ -1481,22 +1475,11 @@ shutting down before then.
 
 This expression is evaluated in the context of the job ClassAd, so it
 may refer to attributes of the current job as well as machine
-attributes.  The expression is continually re-evaluated while the job
-is running, so it is possible, though unusual, to have an expression
-that changes over time.  For example, if you want the retirement time
-to drop to 0 if an especially high priority job is waiting for the
-current job to retire, you could use \AdAttr{PreemptingRank} in the
-expression.  Example:
+attributes.
 
-\begin{verbatim}
-MAXJOBRETIREMENTTIME = 3600 * ( \
-  MY.PreemptingRank =?= UNDEFINED || \
-  PreemptingRank < 600)
-\end{verbatim}
-
-In this example, the retirement time is 3600 seconds, but if a job gets
-matched to this machine and it has a \AdAttr{PreemptingRank} of 600 or more,
-the retirement time drops to 0 and the current job is immediately preempted.
+By default the \Condor{negotiator} will not match jobs to a slot with
+retirement time remaining.  This behavior is controlled by
+\Macro{NEGOTIATOR\_CONSIDER\_EARLY\_PREEMPTION}.
 
 \item[\Macro{WANT\_VACATE}] This is checked only when the
   \MacroNI{PREEMPT} expression is TRUE and the machine enters the
@@ -1978,7 +1961,7 @@ Disabling Preemption}
 \index{preemption!disabling}
 Preemption can result in jobs being killed by HTCondor.  When this
 happens, the jobs remain in the queue and will be automatically
-rescheduled.  We highly recommend designing jobs that work well in
+rescheduled.  We recommend designing jobs that work well in
 this environment, rather than simply disabling preemption.
 
 Planning for preemption makes jobs more robust in the face of other
@@ -2019,19 +2002,10 @@ you may decrease the number of
 cycles that are wasted on non-checkpointable jobs that are killed.
 That is the basic trade off.
 
-Note that the use of \MacroNI{MAXJOBRETIREMENTTIME} limits the killing
-of jobs, but it does not prevent the preemption of resource claims.
-Therefore, it is technically not a way of disabling preemption, but
-simply a way of forcing preempting claims to wait until an existing
-job finishes or runs out of time.  In other words, it limits the preemption
-of jobs but not the preemption of claims.
-
-Limiting the preemption of jobs is often more desirable than limiting
-the preemption of resource claims.  
-However, if you really do want to limit the preemption of resource claims,
-the following policy may be used.  Some of these settings apply to the
-execute node and some apply to the central manager, so this policy should
-be configured so that it is read by both.
+It is instructive to see how one could disable preemption without
+using \MacroNI{MAXJOBRETIREMENTTIME}.  This can be done with
+the following policy, which applies to both the execute machines
+and the central manager:
 
 \footnotesize
 \begin{verbatim}
@@ -2044,35 +2018,16 @@ RANK = 0
 #Since we are disabling claim preemption, we
 # may as well optimize negotiation for this case:
 NEGOTIATOR_CONSIDER_PREEMPTION = False
+# Without preemption, it is advisable to limit the time during
+# which the submit node may keep reusing the same slot for
+# more jobs.
+CLAIM_WORKLIFE = 3600
 \end{verbatim}
 \normalsize
 
-Be aware of the consequences of this policy. 
-Without any preemption of resource claims, once the 
-\Condor{negotiator} gives
-the \Condor{schedd} a match to a machine,
-the \Condor{schedd} may hold onto this claim indefinitely,
-as long as the user keeps supplying more jobs to run.
-If this is not desired, force claims to be retired after
-some amount of time using \Macro{CLAIM\_WORKLIFE}. 
-This enforces a time limit, beyond which no new jobs may be started on
-an existing claim; therefore the \Condor{schedd} daemon is forced to go back to
-the \Condor{negotiator} to request a new match, if there is still
-more work to do.  Example execute machine configuration to include in
-addition to the example above:
-
-\footnotesize
-\begin{verbatim}
-# after 20 minutes, schedd must renegotiate to run
-# additional jobs on the machine
-CLAIM_WORKLIFE = 1200
-\end{verbatim}
-\normalsize
-
-Also be aware that in all versions of HTCondor prior to 6.8.1, it is
-not advisable to set \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} to False,
-because of a bug that can lead to some machines never being
-matched to jobs.
+Unlike \MacroNI{MAXJOBRETIREMENTTIME}, the above policy does not prevent
+jobs from being immediately killed during a graceful shutdown or draining
+operation.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Job-Suspension}Job Suspension}

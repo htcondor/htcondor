@@ -3958,6 +3958,10 @@ WANT_HOLD_REASON = \
   \MacroNI{MAXJOBRETIREMENTTIME} in
   section~\ref{sec:State-Expression-Summary} for further explanation.
 
+  By default the \Condor{negotiator} will not match jobs to a slot with
+  retirement time remaining.  This behavior is controlled by
+  \Macro{NEGOTIATOR\_CONSIDER\_EARLY\_PREEMPTION}.
+
 \label{param:ClaimWorklife}
 \item[\Macro{CLAIM\_WORKLIFE}]
   This expression specifies the number of seconds after which a claim
