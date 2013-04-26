@@ -1195,7 +1195,7 @@ CStarter::peek(int /*cmd*/, Stream *sock)
 		close(fd);
 		if (size < 0 && size != PUT_FILE_MAX_BYTES_EXCEEDED)
 		{
-			dprintf(D_ALWAYS, "Failed to send file %s for peeking at logs (%ld).\n", it->c_str(), size);
+			dprintf(D_ALWAYS, "Failed to send file %s for peeking at logs (%ld).\n", it->c_str(), (long)size);
 			continue;
 		}
 		file_count++;

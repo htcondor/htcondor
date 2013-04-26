@@ -86,7 +86,7 @@ void print_useful_info_1(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *au
 		printf("no encryption");
 	} else {
 		ad->LookupString("cryptomethods", val);
-		printf(val.Value());
+		printf("%s", val.Value());
 	}
 
 	printf(", ");
@@ -105,7 +105,7 @@ void print_useful_info_1(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *au
 		printf("no authentication");
 	} else {
 		ad->LookupString("authmethods", val);
-		printf(val.Value());
+		printf("%s", val.Value());
 	}
 
 	printf(") ");
@@ -117,7 +117,7 @@ void print_useful_info_1(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *au
 	printf(" as ");
 
 	ad->LookupString("myremoteusername", val);
-	printf(val.Value());
+	printf("%s", val.Value());
 
 	printf ("\n");
 }
@@ -226,7 +226,7 @@ void print_useful_info_10(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *a
 	printf(bval ? " ALLOW " : "  DENY ");
 
 	ad->LookupString("myremoteusername", val);
-	printf(val.Value());
+	printf("%s", val.Value());
 
 	printf("\n");
 }

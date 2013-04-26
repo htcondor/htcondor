@@ -784,6 +784,8 @@ int
 VanillaProc::setupOOMEvent(const std::string &cgroup_string)
 {
 #if !(defined(HAVE_EVENTFD) && defined(HAVE_EXT_LIBCGROUP))
+	// Shut the compiler up.
+	cgroup_string.size();
 	return 0;
 #else
 	// Initialize the event descriptor

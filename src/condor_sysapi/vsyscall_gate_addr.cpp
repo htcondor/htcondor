@@ -29,13 +29,13 @@ static char *_sysapi_vsyscall_gate_addr = NULL;
 
 #define BUFFER_SIZE 2048
 
+#if defined(LINUX)
 /* The memory returned from here must be freed */
-static char* find_ckpt_probe(void);
-
 static char* find_ckpt_probe(void)
 {
 	return param("CKPT_PROBE");
 }
+#endif
 
 /* the raw version */
 /* Do not free the returned pointer */

@@ -744,7 +744,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
         if( vmStartRequest.instanceID.empty() ) {
             dprintf( D_ALWAYS, "Got result from endpoint that did not include an instance ID, failing.  Response follows.\n" );
             dprintf( D_ALWAYS, "-- RESPONSE BEGINS --\n" );
-            dprintf( D_ALWAYS, vmStartRequest.resultString.c_str() );
+            dprintf( D_ALWAYS, "%s", vmStartRequest.resultString.c_str() );
             dprintf( D_ALWAYS, "-- RESPONSE ENDS --\n" );
             result_string = create_failure_result( requestID, "Could not find instance ID in response from server.  Check the EC2 GAHP log for details.", "E_NO_INSTANCE_ID" );
         } else {
@@ -915,7 +915,7 @@ bool AmazonVMStartSpot::workerFunction( char ** argv, int argc, std::string & re
         if( vmSpotRequest.spotRequestID.empty() ) {
             dprintf( D_ALWAYS, "Got a result from endpoint that did not include a spot request ID, failing.  Response follows.\n" );
             dprintf( D_ALWAYS, "-- RESPONSE BEGINS --\n" );
-            dprintf( D_ALWAYS, vmSpotRequest.resultString.c_str() );
+            dprintf( D_ALWAYS, "%s", vmSpotRequest.resultString.c_str() );
             dprintf( D_ALWAYS, "-- RESPONSE ENDS --\n" );
             result_string = create_failure_result( requestID, "Could not find spot request ID in repsonse from server.  Check the EC2 GAHP log for details.", "E_NO_SPOT_REQUEST_ID" );
             // We don't return false here, because this isn't an error;
