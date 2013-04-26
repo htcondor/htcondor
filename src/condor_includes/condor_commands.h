@@ -51,7 +51,7 @@
 #define LOCAL_STATUS		(SCHED_VERS+5)		/* Not used */
 //#define LOCAL_STATISTICS	(SCHED_VERS+6)		/* Not used */
 
-#define PERMISSION			(SCHED_VERS+7)
+#define PERMISSION			(SCHED_VERS+7)		// used in negotiation protocol
 //#define SET_DEBUG_FLAGS		(SCHED_VERS+8)		/* Not used */
 //#define PREEMPT_LOCAL_JOBS	(SCHED_VERS+9)		/* Not used */
 
@@ -64,14 +64,14 @@
 //#define SCHEDD_INFO			(SCHED_VERS+15)		/* Not used */
 #define NEGOTIATE			(SCHED_VERS+16) // 7.5.4+ negotiation command
 #define SEND_JOB_INFO		(SCHED_VERS+17)
-#define NO_MORE_JOBS		(SCHED_VERS+18)
-#define JOB_INFO			(SCHED_VERS+19)
+#define NO_MORE_JOBS		(SCHED_VERS+18)		// used in negotiation protocol
+#define JOB_INFO			(SCHED_VERS+19)		// used in negotiation protocol
 //#define GIVE_STATUS			(SCHED_VERS+20)		/* Not used */
 #define RESCHEDULE			(SCHED_VERS+21)
 //#define PING				(SCHED_VERS+22)			/* Not used */
 //#define NEGOTIATOR_INFO		(SCHED_VERS+23)		/* Not used */
 //#define GIVE_STATUS_LINES	(SCHED_VERS+24)			/* Not used */
-#define END_NEGOTIATE		(SCHED_VERS+25)
+#define END_NEGOTIATE		(SCHED_VERS+25)		// used in negotiation protocol
 #define REJECTED			(SCHED_VERS+26)
 #define X_EVENT_NOTIFICATION		(SCHED_VERS+27)
 //#define RECONFIG			(SCHED_VERS+28)			/* Not used */
