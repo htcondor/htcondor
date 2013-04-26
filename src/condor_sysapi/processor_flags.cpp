@@ -5,6 +5,24 @@
 #include "sysapi.h"
 #include "sysapi_externs.h"
 
+/*
+ * See GitTrac #3544 for an explanation of why we care about processor flags
+ * (short answer: because glibc does, and breaks standard universe as a 
+ * result).  To determine which flags glibc cares about, examine the glibc
+ * sources; in 2.12-2, the file sysdeps/x86_64/multiarch/init-arch.h #defines
+ * [bit|index]_[SSE2|SSSE3|SSE4_1|SSE4_2].  I confirmed (by checking with
+ * Wikipedia's CPUID article) that glibc was using the same names for those
+ * processor flags as everyone else (using the value of the shift in the bit_*
+ * macros, combined with CPUID_E[C|D]X_OFFSET).  Thus, SSSE3 really does have
+ * three 'S's.
+ *
+ * We ignore what glibc is doing in init-arch.c because it's strictly for
+ * performance -- see the ticket for details.
+ *
+ * We're ignoring SSE2 because every processor built in the last 10 years
+ * supports it.
+ */
+
 const char * sysapi_processor_flags_raw( void ) {
     sysapi_internal_reconfig();
     
@@ -78,7 +96,7 @@ const char * sysapi_processor_flags( void ) {
         if( curFlagLength > maxFlagLength ) { maxFlagLength = curFlagLength; }
     }
 
-    char * currentFlag = (char *)malloc( maxFlagLength * sizeof( char ) );
+    char * currentFlag = (char *)malloc( (1 + maxFlagLength) * sizeof( char ) );
     if( currentFlag == NULL ) {
         EXCEPT( "Failed to allocate memory for current processor flag." );
     }        
