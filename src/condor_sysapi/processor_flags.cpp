@@ -34,7 +34,7 @@ const char * sysapi_processor_flags_raw( void ) {
        during parsing (or if /proc/cpuinfo doesn't exist), we stop trying. */
     _sysapi_processor_flags_raw = "";
 
-    /* You can adapt this to ncpus.cpp's _SysapiProceCpuinfo for debugging. */
+    /* You can adapt this to ncpus.cpp's _SysapiProcCpuinfo for debugging. */
     FILE * fp = safe_fopen_wrapper_follow( "/proc/cpuinfo", "r", 0644 );
     dprintf( D_LOAD, "Reading from /proc/cpuinfo\n" );
     if( fp ) {
