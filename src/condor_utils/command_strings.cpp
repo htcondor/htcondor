@@ -294,6 +294,42 @@ getCommandString( int num )
 	return result;
 }
 
+// return the command name for known commmand or "command NNN" for unknown commands
+// returned pointer is valid forever and the caller does not free it
+const char*
+getCommandStringSafe( int num )
+{
+	char const *result = getCommandString(num);
+	if (result)
+		return result;
+
+	return getUnknownCommandString(num);
+}
+
+// return a string pointer representation of an unknown command id
+// that can be cached by the caller for the lifetime of the process.
+const char*
+getUnknownCommandString(int num)
+{
+	static std::map<int, const char*> * pcmds = NULL;
+	if ( ! pcmds) {
+		pcmds = new std::map<int, const char*>();
+		ASSERT(pcmds);
+	}
+
+	std::map<int, const char*>::iterator it = pcmds->find(num);
+	if (it != pcmds->end()) {
+		return it->second;
+	}
+
+	static const char fmt[] = "command %d";
+	char * pstr = (char*)malloc(sizeof(fmt)+8); // max int string is 10 bytes (-2 for %d)
+	ASSERT(pstr);
+	sprintf(pstr, fmt, num);
+	(*pcmds)[num] = pstr;
+	return pstr;
+}
+
 
 int
 getCommandNum( const char* command )

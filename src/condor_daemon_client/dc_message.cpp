@@ -91,12 +91,7 @@ DCMsg::name()
 	if( m_cmd_str ) {
 		return m_cmd_str;
 	}
-	m_cmd_str = getCommandString( m_cmd );
-	if( !m_cmd_str ) {
-		std::string buf;
-		formatstr(buf,"command %d",m_cmd);
-		m_cmd_str = buf.c_str();
-	}
+	m_cmd_str = getCommandStringSafe( m_cmd );
 	return m_cmd_str;
 }
 

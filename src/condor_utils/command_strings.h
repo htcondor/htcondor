@@ -40,6 +40,16 @@
 /** Given a command number, return the (static buffer) string */
 const char* getCommandString( int );
 
+/** Given a command number, always return a string suitable for printf */
+const char* getCommandStringSafe(int num);
+
+/** Given a command number return the string "command %d"
+    the returned string is valid forever, and should not be freed by the caller
+    it is not recommended to use this functuion unless getCommandString returns null
+*/
+const char* getUnknownCommandString(int num);
+
+
 /** Given a command/signal name, return the number. */
 int getCommandNum( const char* );
 
