@@ -315,7 +315,7 @@ getUnknownCommandString(int num)
 	static std::map<int, const char*> * pcmds = NULL;
 	if ( ! pcmds) {
 		pcmds = new std::map<int, const char*>();
-		ASSERT(pcmds);
+		if ( ! pcmds) return "malloc-fail!";
 	}
 
 	std::map<int, const char*>::iterator it = pcmds->find(num);
@@ -323,9 +323,9 @@ getUnknownCommandString(int num)
 		return it->second;
 	}
 
-	static const char fmt[] = "command %d";
+	static const char fmt[] = "command %u";
 	char * pstr = (char*)malloc(sizeof(fmt)+8); // max int string is 10 bytes (-2 for %d)
-	ASSERT(pstr);
+	if ( ! pstr) return "malloc-fail!";
 	sprintf(pstr, fmt, num);
 	(*pcmds)[num] = pstr;
 	return pstr;
