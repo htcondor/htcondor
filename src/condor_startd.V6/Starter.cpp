@@ -880,18 +880,10 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 		}
 	}
 
-	int slotId = s_claim->rip()->r_sub_id;
-	if (slotId == 0) {
-		// Isn't a paritionable slot, use the main id
-		slotId = s_claim->rip()->r_id;
-	}
-	std::string affinityKnob;
-	formatstr(affinityKnob, "_CONDOR_SLOT%d_CPU_AFFINITY",  slotId);
-
 	if (param_boolean("ASSIGN_CPU_AFFINITY", false)) {
-		new_env.SetEnv(affinityKnob.c_str(), affinityString.c_str());
+		new_env.SetEnv("_CONDOR_STARTD_ASSIGNED_AFFINITY", affinityString.c_str());
 		new_env.SetEnv("_CONDOR_ENFORCE_CPU_AFFINITY", "true");
-		dprintf(D_FULLDEBUG, "Setting affinity env to %s = %s\n", affinityKnob.c_str(), affinityString.c_str());
+		dprintf(D_ALWAYS, "Setting affinity env to %s\n", affinityString.c_str());
 	}
 
 

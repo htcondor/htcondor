@@ -940,10 +940,12 @@ OsProc::makeCpuAffinityMask(int slotId) {
 		return NULL;
 	}
 
-	MyString affinityParam;
-
-	affinityParam.formatstr("SLOT%d_CPU_AFFINITY", slotId);
-	char *affinityParamResult = param(affinityParam.Value());
+	char *affinityParamResult = param("STARTD_ASSIGNED_AFFINITY");
+	if (!affinityParamResult) {
+		MyString affinityParam;
+		affinityParam.formatstr("SLOT%d_CPU_AFFINITY", slotId);
+		affinityParamResult = param(affinityParam.Value());
+	}
 
 	if (affinityParamResult == NULL) {
 		// No specific cpu, assume one-to-one mapping from slotid
