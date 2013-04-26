@@ -2850,7 +2850,7 @@ ProcAPI::printProcInfo(FILE* fp, piPTR pi){
 uid_t 
 ProcAPI::getFileOwner(int fd) {
 	
-#if HAVE_FSTAT64
+#if defined(HAVE_FSTAT64) && !defined(DARWIN)
 	// If we do not use fstat64(), fstat() fails if the inode number
 	// is too big and possibly for a few other reasons as well.
 	struct stat64 si;
