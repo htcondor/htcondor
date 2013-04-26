@@ -302,7 +302,7 @@ _condor_itoa(long quantity, char *out, int base)
 		mask = 0xffUL << ((sizeof(unsigned long) - 1) * 8);
 		
 			/* put the number into the out array, including leading zeros */
-		for( i=0; i<sizeof(unsigned long); i++ ) {
+		for( i=0; i<(int)sizeof(unsigned long); i++ ) {
 			byte = (unsigned char)
 					((mask & hexquant) >> (sizeof(unsigned long)-i-1)*8);
 			out[i*2] = basemap[(byte&0xf0)>>4];
