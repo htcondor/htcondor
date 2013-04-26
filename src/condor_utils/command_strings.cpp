@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "command_strings.h"
+#include <map>
 
 const struct Translation DCTranslation[] = {
 	{ "QMGMT_READ_CMD", QMGMT_READ_CMD }, 
