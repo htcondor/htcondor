@@ -838,7 +838,6 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 	  case QUERY_STARTD_ADS:
 	  case QUERY_SCHEDD_ADS:
 	  case QUERY_MASTER_ADS:
-	  case QUERY_GATEWAY_ADS:
 	  case QUERY_SUBMITTOR_ADS:
 	  case QUERY_CKPT_SRVR_ADS:
 	  case QUERY_STARTD_PVT_ADS:
@@ -851,7 +850,6 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 	  case INVALIDATE_STARTD_ADS:
 	  case INVALIDATE_SCHEDD_ADS:
 	  case INVALIDATE_MASTER_ADS:
-	  case INVALIDATE_GATEWAY_ADS:
 	  case INVALIDATE_CKPT_SRVR_ADS:
 	  case INVALIDATE_SUBMITTOR_ADS:
 	  case INVALIDATE_COLLECTOR_ADS:

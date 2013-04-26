@@ -48,57 +48,57 @@
 #define DEACTIVATE_CLAIM	(SCHED_VERS+3)		// New name for CKPT_FRGN_JOB
 #define DEACTIVATE_CLAIM_FORCIBLY	(SCHED_VERS+4)		// New name for KILL_FRGN_JOB
 
-#define LOCAL_STATUS		(SCHED_VERS+5)
-#define LOCAL_STATISTICS	(SCHED_VERS+6)
+#define LOCAL_STATUS		(SCHED_VERS+5)		/* Not used */
+//#define LOCAL_STATISTICS	(SCHED_VERS+6)		/* Not used */
 
-#define PERMISSION			(SCHED_VERS+7)
-#define SET_DEBUG_FLAGS		(SCHED_VERS+8)
-#define PREEMPT_LOCAL_JOBS	(SCHED_VERS+9)
+#define PERMISSION			(SCHED_VERS+7)		// used in negotiation protocol
+//#define SET_DEBUG_FLAGS		(SCHED_VERS+8)		/* Not used */
+//#define PREEMPT_LOCAL_JOBS	(SCHED_VERS+9)		/* Not used */
 
-#define RM_LOCAL_JOB		(SCHED_VERS+10)
-#define START_FRGN_JOB		(SCHED_VERS+11)
+//#define RM_LOCAL_JOB		(SCHED_VERS+10)		/* Not used */
+//#define START_FRGN_JOB		(SCHED_VERS+11)		/* Not used */
 
-#define AVAILABILITY		(SCHED_VERS+12)		/* Not used */
-#define NUM_FRGN_JOBS		(SCHED_VERS+13)
-#define STARTD_INFO			(SCHED_VERS+14)
-#define SCHEDD_INFO			(SCHED_VERS+15)
+//#define AVAILABILITY		(SCHED_VERS+12)		/* Not used */
+//#define NUM_FRGN_JOBS		(SCHED_VERS+13)		/* Not used */
+//#define STARTD_INFO			(SCHED_VERS+14)		/* Not used */
+//#define SCHEDD_INFO			(SCHED_VERS+15)		/* Not used */
 #define NEGOTIATE			(SCHED_VERS+16) // 7.5.4+ negotiation command
 #define SEND_JOB_INFO		(SCHED_VERS+17)
-#define NO_MORE_JOBS		(SCHED_VERS+18)
-#define JOB_INFO			(SCHED_VERS+19)
-#define GIVE_STATUS			(SCHED_VERS+20)
+#define NO_MORE_JOBS		(SCHED_VERS+18)		// used in negotiation protocol
+#define JOB_INFO			(SCHED_VERS+19)		// used in negotiation protocol
+//#define GIVE_STATUS			(SCHED_VERS+20)		/* Not used */
 #define RESCHEDULE			(SCHED_VERS+21)
-#define PING				(SCHED_VERS+22)
-#define NEGOTIATOR_INFO		(SCHED_VERS+23)
-#define GIVE_STATUS_LINES	(SCHED_VERS+24)
-#define END_NEGOTIATE		(SCHED_VERS+25)
+//#define PING				(SCHED_VERS+22)			/* Not used */
+//#define NEGOTIATOR_INFO		(SCHED_VERS+23)		/* Not used */
+//#define GIVE_STATUS_LINES	(SCHED_VERS+24)			/* Not used */
+#define END_NEGOTIATE		(SCHED_VERS+25)		// used in negotiation protocol
 #define REJECTED			(SCHED_VERS+26)
 #define X_EVENT_NOTIFICATION		(SCHED_VERS+27)
-#define RECONFIG			(SCHED_VERS+28)
-#define GET_HISTORY			(SCHED_VERS+29)
-#define UNLINK_HISTORY_FILE			(SCHED_VERS+30)
-#define UNLINK_HISTORY_FILE_DONE	(SCHED_VERS+31)
-#define DO_NOT_UNLINK_HISTORY_FILE	(SCHED_VERS+32)
-#define SEND_ALL_JOBS		(SCHED_VERS+33)
-#define SEND_ALL_JOBS_PRIO	(SCHED_VERS+34)
+//#define RECONFIG			(SCHED_VERS+28)			/* Not used */
+//#define GET_HISTORY			(SCHED_VERS+29)		/* Not used */
+//#define UNLINK_HISTORY_FILE			(SCHED_VERS+30)	/* Not used */
+//#define UNLINK_HISTORY_FILE_DONE	(SCHED_VERS+31)		/* Not used */
+//#define DO_NOT_UNLINK_HISTORY_FILE	(SCHED_VERS+32)	/* Not used */
+//#define SEND_ALL_JOBS		(SCHED_VERS+33)			/* Not used */
+//#define SEND_ALL_JOBS_PRIO	(SCHED_VERS+34)			/* Not used */
 #define REQ_NEW_PROC		(SCHED_VERS+35)
 #define PCKPT_FRGN_JOB		(SCHED_VERS+36)
-#define SEND_RUNNING_JOBS	(SCHED_VERS+37)
-#define CHECK_CAPABILITY    (SCHED_VERS+38)
-#define GIVE_PRIORITY		(SCHED_VERS+39)
+//#define SEND_RUNNING_JOBS	(SCHED_VERS+37)			/* Not used */
+//#define CHECK_CAPABILITY    (SCHED_VERS+38)		/* Not used */
+//#define GIVE_PRIORITY		(SCHED_VERS+39)			/* Not used */
 #define	MATCH_INFO			(SCHED_VERS+40)
 #define	ALIVE				(SCHED_VERS+41)
 #define REQUEST_CLAIM 		(SCHED_VERS+42)
 #define RELEASE_CLAIM 		(SCHED_VERS+43)
 #define ACTIVATE_CLAIM	 	(SCHED_VERS+44)
-#define PRIORITY_INFO       (SCHED_VERS+45)     /* negotiator to accountant */
+//#define PRIORITY_INFO       (SCHED_VERS+45)     /* negotiator to accountant, Not used */
 #define PCKPT_ALL_JOBS		(SCHED_VERS+46)
 #define VACATE_ALL_CLAIMS	(SCHED_VERS+47)
 #define GIVE_STATE			(SCHED_VERS+48)
 #define SET_PRIORITY		(SCHED_VERS+49)		// negotiator(priviliged) cmd 
-#define GIVE_CLASSAD		(SCHED_VERS+50)
+//#define GIVE_CLASSAD		(SCHED_VERS+50)		/* Not used */
 #define GET_PRIORITY		(SCHED_VERS+51)		// negotiator
-#define GIVE_REQUEST_AD		(SCHED_VERS+52)		// Starter -> Startd
+//#define GIVE_REQUEST_AD		(SCHED_VERS+52)		// Starter -> Startd, Not used
 #define RESTART				(SCHED_VERS+53)
 #define DAEMONS_OFF			(SCHED_VERS+54)
 #define DAEMONS_ON			(SCHED_VERS+55)
@@ -119,7 +119,7 @@
 #define GIVE_TOTALS_CLASSAD	(SCHED_VERS+70)
 #define DUMP_STATE          (SCHED_VERS+71)	// drop internal vars into classad
 #define PERMISSION_AND_AD	(SCHED_VERS+72) // negotiator is sending startad to schedd
-#define REQUEST_NETWORK		(SCHED_VERS+73)	// negotiator network mgmt
+//#define REQUEST_NETWORK		(SCHED_VERS+73)	// negotiator network mgmt, Not used
 #define VACATE_ALL_FAST		(SCHED_VERS+74)		// fast vacate for whole machine
 #define VACATE_CLAIM_FAST	(SCHED_VERS+75)  	// fast vacate for a given slot
 #define REJECTED_WITH_REASON (SCHED_VERS+76) // diagnostic version of REJECTED
@@ -161,21 +161,23 @@
 
 #define RECYCLE_SHADOW (SCHED_VERS+110) // schedd: get a new job for a shadow
 #define CLEAR_DIRTY_JOB_ATTRS (SCHED_VERS+111) // schedd: clear dirty attributes for a job
+// These two commands originally used the same command int by mistake.
+// In 7.9.6, GET_PRIORITY_ROLLUP was assigned a new command int.
+#define GET_PRIORITY_ROLLUP_OLD (SCHED_VERS+112) // negotiator
 #define DRAIN_JOBS (SCHED_VERS+112)
 #define CANCEL_DRAIN_JOBS (SCHED_VERS+113)
+#define GET_PRIORITY_ROLLUP (SCHED_VERS+114) // negotiator
 
 // values used for "HowFast" in the draining request
 #define DRAIN_GRACEFUL 0
 #define DRAIN_QUICK 10
 #define DRAIN_FAST 20
 
-#define GET_PRIORITY_ROLLUP (SCHED_VERS+112) // negotiator
-
 
 // HAD-related commands
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)
 #define HAD_SEND_ID_CMD                 (HAD_COMMANDS_BASE + 1)
-#define HAD_REPL_UPDATE_VERSION         (HAD_COMMANDS_BASE + 2)
+//#define HAD_REPL_UPDATE_VERSION         (HAD_COMMANDS_BASE + 2)	/* Not used */
 #define HAD_BEFORE_PASSIVE_STATE        (HAD_COMMANDS_BASE + 3)
 #define HAD_AFTER_ELECTION_STATE        (HAD_COMMANDS_BASE + 4)
 #define HAD_AFTER_LEADER_STATE          (HAD_COMMANDS_BASE + 5)
@@ -223,13 +225,13 @@
 const int UPDATE_STARTD_AD		= 0;
 const int UPDATE_SCHEDD_AD		= 1;
 const int UPDATE_MASTER_AD		= 2;
-const int UPDATE_GATEWAY_AD		= 3;
+//const int UPDATE_GATEWAY_AD		= 3;			/* Not used */
 const int UPDATE_CKPT_SRVR_AD	= 4;
 
 const int QUERY_STARTD_ADS		= 5;
 const int QUERY_SCHEDD_ADS		= 6;
 const int QUERY_MASTER_ADS		= 7;
-const int QUERY_GATEWAY_ADS		= 8;
+//const int QUERY_GATEWAY_ADS		= 8;			/* Not used */
 const int QUERY_CKPT_SRVR_ADS	= 9;
 const int QUERY_STARTD_PVT_ADS	= 10;
 
@@ -239,7 +241,7 @@ const int QUERY_SUBMITTOR_ADS	= 12;
 const int INVALIDATE_STARTD_ADS	= 13;
 const int INVALIDATE_SCHEDD_ADS	= 14;
 const int INVALIDATE_MASTER_ADS	= 15;
-const int INVALIDATE_GATEWAY_ADS	= 16;
+//const int INVALIDATE_GATEWAY_ADS	= 16;			/* Not used */
 const int INVALIDATE_CKPT_SRVR_ADS	= 17;
 const int INVALIDATE_SUBMITTOR_ADS	= 18;
 
@@ -354,7 +356,7 @@ const int SHARED_PORT_PASS_SOCK = 76;
 #define DC_SET_PEACEFUL_SHUTDOWN (DC_BASE+16)
 #define DC_TIME_OFFSET      (DC_BASE+17)
 #define DC_PURGE_LOG        (DC_BASE+18)
-#define DC_SHARE_SOCK       (DC_BASE+19)
+//#define DC_SHARE_SOCK       (DC_BASE+19)		/* Not used */
 
 // these are all NOP but registered at different authz levels
 #define DC_NOP_READ         (DC_BASE+20)
@@ -407,20 +409,20 @@ const int SHARED_PORT_PASS_SOCK = 76;
 /*
 *** Condor Password Daemon Commands
 */
-#define PW_BASE 70000
-#define PW_SETPASS			(PW_BASE+1)
-#define PW_GETPASS			(PW_BASE+2)
-#define PW_CLEARPASS		(PW_BASE+3)
+//#define PW_BASE 70000							/* Not used */
+//#define PW_SETPASS			(PW_BASE+1)		/* Not used */
+//#define PW_GETPASS			(PW_BASE+2)		/* Not used */
+//#define PW_CLEARPASS		(PW_BASE+3)			/* Not used */
 
 /*
 *** Commands used by the daemon core Shadow
 */
 #define DCSHADOW_BASE 71000
 #define SHADOW_UPDATEINFO	   (DCSHADOW_BASE+0)
-#define TAKE_MATCH             (DCSHADOW_BASE+1)  // for MPI & parallel shadow
+//#define TAKE_MATCH             (DCSHADOW_BASE+1)  // for MPI & parallel shadow, Not used
 #define MPI_START_COMRADE      (DCSHADOW_BASE+2)  // for MPI & parallel shadow
 #define GIVE_MATCHES 	       (DCSHADOW_BASE+3)  // for MPI & parallel shadow
-#define RECEIVE_JOBAD		   (DCSHADOW_BASE+4)
+//#define RECEIVE_JOBAD		   (DCSHADOW_BASE+4)	/* Not used */
 #define UPDATE_JOBAD		   (DCSHADOW_BASE+5)
 
 

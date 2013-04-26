@@ -534,6 +534,9 @@ bool AmazonRequest::SendRequest() {
         // this->errorCode = "E_HTTP_RESPONSE_NOT_200";
         formatstr( this->errorCode, "E_HTTP_RESPONSE_NOT_200 (%lu)", responseCode );
         this->errorMessage = resultString;
+        if( this->errorMessage.empty() ) {
+            formatstr( this->errorMessage, "HTTP response was %lu, not 200, and no body was returned.", responseCode );
+        }
         dprintf( D_ALWAYS, "Query did not return 200 (%lu), failing.\n",
             responseCode );
         dprintf( D_ALWAYS, "Failure response text was '%s'.\n", resultString.c_str() );
