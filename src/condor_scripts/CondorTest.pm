@@ -406,6 +406,27 @@ sub RegisterRelease
 
     $test{$handle}{"RegisterRelease"} = $function_ref;
 }
+sub RegisterDisconnected
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterDisconnected"} = $function_ref;
+}
+sub RegisterReconnected
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterReconnected"} = $function_ref;
+}
+sub RegisterReconnectFailed
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterReconnectFailed"} = $function_ref;
+}
 sub RegisterJobErr
 {
     my $handle = shift || croak "missing handle argument";
@@ -1625,6 +1646,48 @@ sub SearchCondorLog
             CondorTest::debug("FOUND IT! $_",2);
             return(1);
         }
+    }
+    return(0);
+}
+
+##############################################################################
+##
+## SearchCondorSpecialLog
+##
+## Serach a log for a regexp pattern
+## Log not a daemon log but in log location(NEGOTIATOR_MATCH_LOG)
+##
+###############################################################################
+
+
+sub SearchCondorSpecialLog
+{
+    my $logname = shift;
+    my $regexp = shift;
+    my $allmatch = shift;
+
+    my $matches = 0;
+    my $logloc = `condor_config_val log`;
+    CondorUtils::fullchomp($logloc);
+    $logloc = "$logloc/$logname";
+
+    #print "SearchCondorSpecialLog: $logname/$regexp/$allmatch\n";
+    CondorTest::debug("Search this log <$logloc> for <$regexp>\n",2);
+    open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
+    while(<LOG>) {
+        if( $_ =~ /$regexp/) {
+            CondorTest::debug("FOUND IT! $_",2);
+            $matches += 1;
+        } else {
+            if($allmatch != 0) {
+                CondorTest::debug("Search this log <$logname> for <$regexp> no none matching lines allowed\n",2);
+                CondorTest::debug("Failing found $_\n",2);
+                return(0);
+            }
+        }
+    }
+    if($matches > 0) {
+        return(1);
     }
     return(0);
 }

@@ -74,6 +74,9 @@ my $AbortCallback;
 my $ShadowCallback;
 my $HoldCallback;
 my $ReleaseCallback;
+my $DisconnectedCallback;
+my $ReconnectedCallback;
+my $ReconnectFailedCallback;
 my $JobErrCallback;
 my $TimedCallback;
 my $WantErrorCallback;
@@ -105,6 +108,9 @@ sub Reset
     undef $ShadowCallback;
     undef $HoldCallback;
     undef $ReleaseCallback;
+    undef $DisconnectedCallback;
+    undef $ReconnectedCallback;
+    undef $ReconnectFailedCallback;
     undef $JobErrCallback;
     undef $TimedCallback;
     undef $WantErrorCallback;
@@ -513,6 +519,21 @@ sub RegisterRelease
     my $sub = shift || croak "missing argument";
     $ReleaseCallback = $sub;
 }
+sub RegisterDisconnected
+{
+    my $sub = shift || croak "missing argument";
+    $DisconnectedCallback = $sub;
+}
+sub RegisterReconnected
+{
+    my $sub = shift || croak "missing argument";
+    $ReconnectedCallback = $sub;
+}
+sub RegisterReconnectFailed
+{
+    my $sub = shift || croak "missing argument";
+    $ReconnectFailedCallback = $sub;
+}
 sub RegisterJobErr
 {
     my $sub = shift || croak "missing argument";
@@ -866,6 +887,147 @@ sub Monitor
 		# execute callback if one is registered
 		&$ShadowCallback( %info )
 		    if defined $ShadowCallback;
+
+	    next LINE;
+	}
+
+	# 022: Job Disconnected
+	if( $line =~ /^022\s+\(0*(\d+)\.0*(\d+)/ )
+	{
+	    $info{'cluster'} = $1;
+	    $info{'job'} = $2;
+
+	    debug( "Saw Job Disconnected\n" ,1);
+
+	    # read next line to see cause
+	    $line = <SUBMIT_LOG>;
+		while( ! defined $line )
+		{
+			sleep 2;
+			if(defined $TimedCallback)
+			{
+				CheckTimedCallback();
+			}
+			$line = <SUBMIT_LOG>;
+		}
+	    CondorUtils::fullchomp($line);
+	    $linenum++;
+
+		$info{'cause'} = $line;
+
+	    # read next line to see recovery
+	    $line = <SUBMIT_LOG>;
+		while( ! defined $line )
+		{
+			sleep 2;
+			if(defined $TimedCallback)
+			{
+				CheckTimedCallback();
+			}
+			$line = <SUBMIT_LOG>;
+		}
+	    CondorUtils::fullchomp($line);
+	    $linenum++;
+
+		$info{'recovery'} = $line;
+
+		# execute callback if one is registered
+		&$DisconnectedCallback( %info )
+		    if defined $DisconnectedCallback;
+
+	    next LINE;
+	}
+
+	# 023: Job Reconnected
+	if( $line =~ /^023\s+\(0*(\d+)\.0*(\d+)/ )
+	{
+	    $info{'cluster'} = $1;
+	    $info{'job'} = $2;
+
+	    debug( "Saw Job Reconnected\n" ,1);
+
+	    # read next line to see cause
+	    $line = <SUBMIT_LOG>;
+		while( ! defined $line )
+		{
+			sleep 2;
+			if(defined $TimedCallback)
+			{
+				CheckTimedCallback();
+			}
+			$line = <SUBMIT_LOG>;
+		}
+	    CondorUtils::fullchomp($line);
+	    $linenum++;
+
+		$info{'startd'} = $line;
+
+	    # read next line to see recovery
+	    $line = <SUBMIT_LOG>;
+		while( ! defined $line )
+		{
+			sleep 2;
+			if(defined $TimedCallback)
+			{
+				CheckTimedCallback();
+			}
+			$line = <SUBMIT_LOG>;
+		}
+	    CondorUtils::fullchomp($line);
+	    $linenum++;
+
+		$info{'starter'} = $line;
+
+		# execute callback if one is registered
+		&$ReconnectedCallback( %info )
+		    if defined $ReconnectedCallback;
+
+	    next LINE;
+	}
+
+	# 024: Job Reconnect Failed
+	if( $line =~ /^024\s+\(0*(\d+)\.0*(\d+)/ )
+	{
+	    $info{'cluster'} = $1;
+	    $info{'job'} = $2;
+
+	    debug( "Saw Job Reconnect Fail\n" ,1);
+
+	    # read next line to see cause
+	    $line = <SUBMIT_LOG>;
+		while( ! defined $line )
+		{
+			sleep 2;
+			if(defined $TimedCallback)
+			{
+				CheckTimedCallback();
+			}
+			$line = <SUBMIT_LOG>;
+		}
+	    CondorUtils::fullchomp($line);
+	    $linenum++;
+
+		$info{'cause'} = $line;
+
+	    # read next line to see recovery
+	    $line = <SUBMIT_LOG>;
+		while( ! defined $line )
+		{
+			sleep 2;
+			if(defined $TimedCallback)
+			{
+				CheckTimedCallback();
+			}
+			$line = <SUBMIT_LOG>;
+		}
+	    CondorUtils::fullchomp($line);
+	    $linenum++;
+
+		$info{'recovery'} = $line;
+
+		# execute callback if one is registered
+		&$ReconnectedCallback( %info )
+		    if defined $ReconnectedCallback;
 
 	    next LINE;
 	}
