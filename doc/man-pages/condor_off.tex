@@ -40,9 +40,13 @@ for further explanation.
 \begin{Options}
 	\ToolArgsBaseDesc
 	\OptItem{\Opt{-graceful}}{Gracefully shutdown daemons (the default)}
-	\OptItem{\Opt{-fast}}{Quickly shutdown daemons}
+	\OptItem{\Opt{-fast}}{Quickly shutdown daemons. 
+A minimum of the first two characters of this option must be specified,
+to distinguish it from the \Opt{-force-graceful} command.}
 	\OptItem{\Opt{-peaceful}}{Wait indefinitely for jobs to finish}
-	\OptItem{\Opt{-force-graceful}}{Force a graceful shutdown, even after issuing a \Opt{-peaceful} command}
+	\OptItem{\Opt{-force-graceful}}{Force a graceful shutdown, even after issuing a \Opt{-peaceful} command.
+A minimum of the first two characters of this option must be specified,
+to distinguish it from the \Opt{-fast} command.}
 	\ToolDebugDesc
 	\ToolArgsLocateDesc
 	\ToolArgsAffectDesc
