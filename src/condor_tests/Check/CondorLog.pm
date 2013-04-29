@@ -48,4 +48,33 @@ sub RunCheck
     return $result;
 }
 
+sub RunSpecialCheck
+{
+    my %args = @_;
+
+    my $logname = $args{logname} || die("'logname' not specified");
+    my $match_regexp = $args{match_regexp} || die("'match_regexp' not specified");
+    my $allmatch = $args{allmatch} || 0;
+    my $num_retries = $args{num_retries} || 0;
+
+    my $result;
+    my $count = 0;
+    while(1) {
+	print "Looking for $match_regexp in $logname\n";
+	$result = CondorTest::SearchCondorSpecialLog($logname,$match_regexp,$allmatch);
+	print "CondorTest::SearchCondorSpecialLog says <$result>\n";
+	
+	last if $result;
+	last if ($count >= $num_retries);
+	sleep(1);
+    }
+
+    if( $fail_if_found ) {
+	$result = !$result;
+    }
+
+    CondorTest::RegisterResult( $result, %args );
+    return $result;
+}
+
 1;
