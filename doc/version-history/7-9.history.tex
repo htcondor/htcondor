@@ -161,8 +161,12 @@ were therefore not available for querying with \Condor{history}.
 
 \begin{itemize}
 
-\item A 7.9.6 or newer \Condor{userprio} will fail to produce any output
-when it queries an older \Condor{negotiator} with the grouprollup option.
+\item Using \Condor{userprio} with the \Opt{-grouprollup} option
+will fail to produce any output
+if the \Condor{negotiator} it queries is of a version older 
+than HTCondor version 7.9.6 and the \Condor{userprio} executable is 
+HTCondor version 7.9.6.
+\Ticket{3600}
 
 \end{itemize}
 
