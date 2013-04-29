@@ -139,8 +139,9 @@ See section~\ref{sec:Absent-Ads} for details on absent ClassAds.
 \item The new configuration variable
 \Macro{GLEXEC\_HOLD\_ON\_INITIAL\_FAILURE} controls whether jobs are put
 on hold when a failure is encountered in the glexec setup phase of
-managing the job.  The default is \Expr{True}, which is the previous
-behavior.
+managing the job.  The default value is \Expr{True}, 
+which implements the previous behavior of putting a job on hold when
+there is a failure.
 \Ticket{3569}
 
 \item The new configuration variable
@@ -216,8 +217,12 @@ were therefore not available for querying with \Condor{history}.
 
 \begin{itemize}
 
-\item A 7.9.6 or newer \Condor{userprio} will fail to produce any output
-when it queries an older \Condor{negotiator} with the grouprollup option.
+\item Using \Condor{userprio} with the \Opt{-grouprollup} option
+will fail to produce any output
+if the \Condor{negotiator} it queries is of a version older 
+than HTCondor version 7.9.6 and the \Condor{userprio} executable is 
+HTCondor version 7.9.6.
+\Ticket{3600}
 
 \end{itemize}
 
