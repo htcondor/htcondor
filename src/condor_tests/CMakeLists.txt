@@ -370,6 +370,8 @@ if (BUILD_TESTING)
 	condor_pl_test(lib_eventlog_rotation-reader_20_rotations_20_loops "Event Log Rotation: reader, 20 rotations / 20 loops" "core;quick;full")
 	condor_pl_test(lib_eventlog_rotation-reader_missed_1 "Event Log Rotation: reader, missed events 1" "core;quick;full")
 	condor_pl_test(lib_eventlog_rotation-reader_missed_2 "Event Log Rotation: reader, missed events 2" "core;quick;full")
+	condor_pl_test(negotiator_match_log_exists "ensure Matlog has only matches" "core;quick;full")
+	condor_pl_test(job_schedd_restart-check_reconnect "test reconnects" "core;quick;full")
 	condor_pl_test(job_aggressive_flocking "Test aggressive flocking" "core;quick;full")
 	##### job tests
 	#condor_pl_test(job_had_basic "Basic High Availability Daemon Test" "core;quick;full;quicknolink")
