@@ -6063,7 +6063,13 @@ void CreateProcessForkit::exec() {
 
 	bool bOkToReMap=false;
 #ifdef HAVE_UNSHARE
-    if (can_switch_ids()) {
+      /////////////////////////////////////////////////
+      // Ticket #3601 - Current theory is that nfs-automounter fails 
+      // when a process has been unshared, so allow for a knob.
+      /////////////////////////////////////////////////
+      bool want_namespace = param_boolean( "PER_JOB_NAMESPACES", true );
+
+      if ( m_fs_remap && can_switch_ids() && want_namespace ) {
         m_priv_state = set_priv_no_memory_changes(PRIV_ROOT);
             
         int rc =0;
