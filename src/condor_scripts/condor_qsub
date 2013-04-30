@@ -333,7 +333,7 @@ parse_args() {
 				line_has_command=1
 			fi
 			if [[ $qsub_file_line =~ $sge_regex ]]; then
-				line_qsub_option=${qsub_file_line#*#SGE}
+				line_qsub_option=${qsub_file_line#*#\$}
 				line_has_command=1
 			fi
 			if [ "$line_has_command" = 1 ]; then
