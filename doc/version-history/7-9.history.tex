@@ -163,8 +163,12 @@ when \Expr{MaxJobRetirementTime} is used.
 
 \begin{itemize}
 
+\item For errors which have no response body, EC2 jobs now report the 
+HTTP code instead.
+\Ticket{3541}
+
 \item Fixed the condor\_updates\_stats script so that it works with
-modern perl interepreters.
+modern perl interpreters.
 \Ticket{3579}
 
 \item Fixed a bug that caused the \Condor{schedd} to crash when 
