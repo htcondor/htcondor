@@ -49,11 +49,20 @@ sub RunCheck
     my $grid_resource = $args{grid_resource} || "";
     my $should_transfer_files = $args{should_transfer_files} || "";
     my $when_to_transfer_output = $args{when_to_transfer_output} || "";
-    my $duration = $args{duration} || "1";
+    my $duration = "1";
+	if(exists $args{duration}) {
+		$duration = $args{duration};
+	}
+	 
+	#print "Checking duration being passsed to RunCheck <$args{duration}>\n";
     my $execute_fn = $args{on_execute} || $dummy;
     my $ulog_fn = $args{on_ulog} || $dummy;
+	# if we want to remove these jobs, better override aborted function
+	# this change is for running forever sleep jobs to test concurrency limits
+	# we'll want to see some running and some waiting to run
+    my $abort = $args{on_abort} || $aborted;
 
-    CondorTest::RegisterAbort( $testname, $aborted );
+    CondorTest::RegisterAbort( $testname, $abort );
     CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
     CondorTest::RegisterExecute($testname, $execute_fn);
     CondorTest::RegisterULog($testname, $ulog_fn);
@@ -78,7 +87,7 @@ sub RunCheck
     if( $append_submit_commands ne "" ) {
         print SUBMIT "\n" . $append_submit_commands . "\n";
     }
-    print SUBMIT "queue\n";
+    print SUBMIT "queue $args{queue_sz}\n";
     close( SUBMIT );
 
     my $result = CondorTest::RunTest($testname, $submit_fname, 0);

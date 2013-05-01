@@ -48,6 +48,24 @@ sub RunCheck
     return $result;
 }
 
+sub RunCheckMultiple
+{
+    my %args = @_;
+
+    my $daemon = $args{daemon} || die("'daemon' not specified");
+    my $match_regexp = $args{match_regexp} || die("'match_regexp' not specified");
+	my $match_instances = $args{match_instances} || 1;
+    my $match_timeout = $args{match_timeout} || 10;
+	my $match_new = $args{match_new} || "false";
+
+    my $result;
+    my $count = 0;
+	$result = CondorTest::SearchCondorLogMultiple($daemon,$match_regexp,$match_instances,$match_timeout,$match_new);
+
+    CondorTest::RegisterResult( $result, %args );
+    return $result;
+}
+
 sub RunSpecialCheck
 {
     my %args = @_;
@@ -60,9 +78,7 @@ sub RunSpecialCheck
     my $result;
     my $count = 0;
     while(1) {
-	print "Looking for $match_regexp in $logname\n";
 	$result = CondorTest::SearchCondorSpecialLog($logname,$match_regexp,$allmatch);
-	print "CondorTest::SearchCondorSpecialLog says <$result>\n";
 	
 	last if $result;
 	last if ($count >= $num_retries);
