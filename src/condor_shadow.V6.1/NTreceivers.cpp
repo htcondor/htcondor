@@ -1298,6 +1298,9 @@ case CONDOR_putfile:
 		}
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
+		free((char*)path);
+
+        if (length <= 0) return 0;
 		
 		int num = -1;
 		if(fd >= 0) {
@@ -1323,7 +1326,6 @@ case CONDOR_putfile:
 			result = ( syscall_sock->code( terrno ) );
 			ASSERT( result );
 		}
-		free((char*)path);
 		free((char*)buffer);
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
