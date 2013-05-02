@@ -45,7 +45,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The 32-bit \Condor{starter} could fail to execute jobs when the initial
+working directory of the job was on a filesystem containing 64-bit metadata,
+such as inode numbers.
+\Ticket{3605}
 
 \end{itemize}
 
