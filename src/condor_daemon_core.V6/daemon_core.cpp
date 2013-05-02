@@ -7430,7 +7430,10 @@ int DaemonCore::Create_Process(
 				// error happened before the exec.  We need to reap
 				// the child and return FALSE.
 			int child_failed_op = 0;
-			full_read(errorpipe[0], &child_failed_op, sizeof(int));
+			if (full_read(errorpipe[0], &child_failed_op, sizeof(int)) != sizeof(int)) {
+				child_failed_op = -1;
+				dprintf(D_ALWAYS, "Warning: Create_Process: failed to read child process failure code\n");
+			}
 			int child_status;
 			waitpid(newpid, &child_status, 0);
 			errno = child_errno;
