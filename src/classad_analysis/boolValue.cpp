@@ -687,7 +687,7 @@ GenerateMinimalFalseBVList( List< BoolVector > &result )
 	List< BoolVector > *oldBVList = new List< BoolVector >( );
 	List< BoolVector > *newBVList = new List< BoolVector >( );
 	BoolVector *bv = NULL;
-	BoolValue bval;
+	BoolValue bval = FALSE_VALUE;
 	GenerateMaximalTrueBVList( *baseBVList );
 	if( baseBVList->IsEmpty( ) ) {
 		delete baseBVList;

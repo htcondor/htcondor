@@ -10954,3 +10954,19 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,infnbatchjob
 id=612
+
+[PER_JOB_NAMESPACES]
+aliases=
+default=true
+version=7.9.6
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Determines if job creates their own namespace
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=starter
+id=615

@@ -114,7 +114,6 @@ struct shadow_rec
 
 struct OwnerData {
   char* Name;
-  char* Domain;
   int JobsRunning;
   int JobsIdle;
   int WeightedJobsRunning;
@@ -128,7 +127,7 @@ struct OwnerData {
 		// level.
   time_t NegotiationTimestamp;
   std::set<int> PrioSet; // Set of job priorities, used for JobPrioArray attr
-  OwnerData() { Name=NULL; Domain=NULL;
+  OwnerData() { Name=NULL;
   NegotiationTimestamp=WeightedJobsRunning=WeightedJobsIdle=JobsRunning=JobsIdle=JobsHeld=JobsFlocked=FlockLevel=OldFlockLevel=0; }
 };
 
