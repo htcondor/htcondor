@@ -49,6 +49,11 @@ The details of each version are described below.
 HTTP code instead.
 \Ticket{3541}
 
+\item \Condor{chirp} putfile would experience an assertion failure when
+used on an empty file.  This bug has been fixed, and putfile can now be
+used on empty files.
+\Ticket{3542}
+
 \item The 32-bit \Condor{starter} could fail to execute jobs when the initial
 working directory of the job was on a filesystem containing 64-bit metadata,
 such as inode numbers.
