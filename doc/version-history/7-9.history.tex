@@ -108,6 +108,10 @@ when \Expr{MaxJobRetirementTime} is used.
 
 \begin{itemize}
 
+\item Fixed a bug in the condor\_starter where filesystems mounted by
+the automounter would not be seen by the job.
+\Ticket{3601}
+
 \item Fixed the condor\_updates\_stats script so that it works with
 modern perl interepreters.
 \Ticket{3579}
