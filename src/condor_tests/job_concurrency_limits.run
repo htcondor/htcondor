@@ -213,10 +213,10 @@ sub CountIdle
 	foreach my $job (@jobs) {
 		chomp($job);
 		$line = $job;
-		#print "JOB: $line\n";
+		print "JOB: $line\n";
 		if($line =~ /^.*?\sI\s.*$/) {
 			$idlecount += 1;
-			#print "Idle count now <$idlecount>, expecting <$expectidle>\n";
+			print "Idle count now <$idlecount>, expecting <$expectidle>\n";
 		}
 	}
 	if($idlecount != $expectidle) {
