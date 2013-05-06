@@ -83,15 +83,15 @@ if (WITH_KRB5)
 				    URL http://parrot.cs.wisc.edu/externals/${KRB5_VER}.tar.gz
 				    #URL C:/Scratch/Build/test-externals/${KRB5_VER}.tar.gz
 					#--Patch step ----------
-					PATCH_COMMAND cd ${KRB5_VER} ${CMD_TERM} ${KRB5_PATCH}
+					PATCH_COMMAND ${KRB5_PATCH}
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cd ${KRB5_VER} ${CMD_TERM} ${KRB5_CONFIGURE}
+				    CONFIGURE_COMMAND ${KRB5_CONFIGURE}
 				    #--Build Step ----------
-				    BUILD_COMMAND cd ${KRB5_VER} ${CMD_TERM} ${KRB5_MAKE}
+				    BUILD_COMMAND ${KRB5_MAKE}
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${KRB5_INSTALL_LOC}
-				    INSTALL_COMMAND cd ${KRB5_VER} ${CMD_TERM} ${KRB5_INSTALL} )
+				    INSTALL_COMMAND ${KRB5_INSTALL} )
 
 		# Set the target dependencies which the rest of condor depends on.
 		if (WINDOWS)

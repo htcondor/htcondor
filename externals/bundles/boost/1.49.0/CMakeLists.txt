@@ -110,7 +110,7 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 
 	set(BOOST_MIN_BUILD_DEP --with-thread --with-test --with-python)
 	if( "${CONDOR_PLATFORM}" STREQUAL "x86_64_Fedora18" )
-		set(BOOST_PATCH patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/boost.patch)
+		set(BOOST_PATCH patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/boost.patch)
 	else ()
 		set(BOOST_PATCH echo "nothing")
 	endif()
@@ -132,9 +132,9 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 		#--Patch step ----------
 		 PATCH_COMMAND ${BOOST_PATCH}
 		#--Configure step ----------
-		 CONFIGURE_COMMAND cd ${BOOST_FILENAME} ${CMD_TERM} ${BOOTSTRAP} --prefix=${BOOST_INSTALL_LOC} ${BOOTSTRAP_PYTHON_OPTION} ${CMD_TERM} echo "Configure complete"
+		 CONFIGURE_COMMAND ${BOOTSTRAP} --prefix=${BOOST_INSTALL_LOC} ${BOOTSTRAP_PYTHON_OPTION} ${CMD_TERM} echo "Configure complete"
 		#--Build Step ----------
-		BUILD_COMMAND cd ${BOOST_FILENAME} ${CMD_TERM} ${EXEC}bjam ${BOOST_MIN_BUILD_DEP} --prefix=${BOOST_INSTALL_LOC} --libdir=${BOOST_INSTALL_LOC}/lib define=BOOST_HAS_THREADS ${BUILD_OPTIONS} toolset=${TOOLSET} link=static install
+		BUILD_COMMAND ${EXEC}bjam ${BOOST_MIN_BUILD_DEP} --prefix=${BOOST_INSTALL_LOC} --libdir=${BOOST_INSTALL_LOC}/lib define=BOOST_HAS_THREADS ${BUILD_OPTIONS} toolset=${TOOLSET} link=static install
 		BUILD_IN_SOURCE 1
 		#--install Step ----------
 		INSTALL_DIR ${BOOST_INSTALL_LOC}

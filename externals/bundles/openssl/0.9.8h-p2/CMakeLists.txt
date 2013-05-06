@@ -65,15 +65,15 @@ if (WITH_OPENSSL)
 				    DOWNLOAD_DIR ${OPENSSL_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${OPENSSL_VER}.tar.gz
 					#--Patch step ----------
-					PATCH_COMMAND cd ${OPENSSL_VER} ${CMD_TERM} ${OPENSSL_PATCH}
+					PATCH_COMMAND ${OPENSSL_PATCH}
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cd ${OPENSSL_VER} ${CMD_TERM} ${OPENSSL_CONFIGURE}
+				    CONFIGURE_COMMAND ${OPENSSL_CONFIGURE}
 				    #--Build Step ----------
-				    BUILD_COMMAND cd ${OPENSSL_VER} ${CMD_TERM} ${OPENSSL_MAKE}
+				    BUILD_COMMAND ${OPENSSL_MAKE}
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${OPENSSL_INSTALL_LOC}
-				    INSTALL_COMMAND cd ${OPENSSL_VER} ${CMD_TERM} ${OPENSSL_INSTALL} )
+				    INSTALL_COMMAND ${OPENSSL_INSTALL} )
 
 		# Set the target dependencies which the rest of condor depends on.
 		if (WINDOWS)
