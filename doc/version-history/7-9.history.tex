@@ -108,6 +108,10 @@ when \Expr{MaxJobRetirementTime} is used.
 
 \begin{itemize}
 
+\item Fixed a bug in ASSIGN\_CPU\_AFFINITY when running on systems
+with partitionable slots.
+\Ticket{3597}
+
 \item Fixed a bug in the condor\_starter where filesystems mounted by
 the automounter would not be seen by the job.
 \Ticket{3601}
