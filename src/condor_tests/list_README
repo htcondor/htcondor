@@ -1,0 +1,14 @@
+The default list of tests is list_quick.
+
+However, its has gotten stale and does not match
+the nightly test list as kept in CMakeList.txt.
+
+So I wrote CMakeTestList.pl which takes no arguments
+and compiles a new list  Cmake_batch_tests_list.txt.
+
+This was done today, 4/23/13, and copied to list_quick
+so we are not testing any tests which are not currently
+nightly tests.
+
+We may be doing a few less and I am unsure what
+happens on Windows, which pulls another list.

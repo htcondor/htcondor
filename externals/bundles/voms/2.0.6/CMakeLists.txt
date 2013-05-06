@@ -33,9 +33,8 @@ if ( WITH_VOMS )
 		endif()
 
 		if ( DARWIN )
-			set ( VOMS_PATCH cd voms-2.0.6 &&
-				patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/voms-gsoap.patch &&
-				rm src/server/stdsoap2.c src/server/stdsoap2.h src/server/soap* &&
+			set ( VOMS_PATCH patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/voms-gsoap.patch &&
+				rm src/server/stdsoap2.c src/server/stdsoap2.h src/server/soapC.c src/server/soapH.h src/server/soapStub.h src/server/soapdefs.h &&
 				touch -r src/utils/vomsfake.y src/utils/vomsparser.h &&
 				touch -r src/utils/vomsfake.y src/utils/vomsparser.c &&
 				touch -r src/utils/vomsfake.y src/utils/lex.yy.c &&
@@ -45,9 +44,8 @@ if ( WITH_VOMS )
 				patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/replib.patch )
 			set ( VOMS_GLOBUS_FLAG "" )
 		ELSE()
-			set ( VOMS_PATCH cd voms-2.0.6 &&
-				patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/voms-gsoap.patch &&
-				rm src/server/stdsoap2.c src/server/stdsoap2.h src/server/soap* &&
+			set ( VOMS_PATCH patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/voms-gsoap.patch &&
+				rm src/server/stdsoap2.c src/server/stdsoap2.h src/server/soapC.c src/server/soapH.h src/server/soapStub.h src/server/soapdefs.h &&
 				touch -r src/utils/vomsfake.y src/utils/vomsparser.h &&
 				touch -r src/utils/vomsfake.y src/utils/vomsparser.c &&
 				touch -r src/utils/vomsfake.y src/utils/lex.yy.c &&
@@ -78,12 +76,12 @@ if ( WITH_VOMS )
 			#--Patch step ----------
 			PATCH_COMMAND ${VOMS_PATCH}
 			#--Configure step ----------
-			CONFIGURE_COMMAND cd voms-2.0.6 &&
-				CXX=${CMAKE_CXX_COMPILER}
-				CC=${CMAKE_C_COMPILER}
-				CXXFLAGS=${VOMS_CXX_FLAGS}
-				CFLAGS=${VOMS_C_FLAGS}
-				LDFLAGS=${VOMS_LDFLAGS}
+			CONFIGURE_COMMAND 
+				export CXX=${CMAKE_CXX_COMPILER} &&
+				export CC=${CMAKE_C_COMPILER} &&
+				export CXXFLAGS=${VOMS_CXX_FLAGS} &&
+				export CFLAGS=${VOMS_C_FLAGS} &&
+				export LDFLAGS=${VOMS_LDFLAGS} &&
 				./configure
 					--prefix=${VOMS_INSTALL_LOC}
 					--with-api-only
@@ -91,11 +89,11 @@ if ( WITH_VOMS )
 					--disable-java --disable-docs
 					--disable-glite
 			#--Build Step ----------
-			BUILD_COMMAND cd voms-2.0.6 && make
+			BUILD_COMMAND make
 			BUILD_IN_SOURCE 1
 			#--install Step ----------
 			INSTALL_DIR ${VOMS_INSTALL_LOC}
-			INSTALL_COMMAND cd voms-2.0.6 && make install && touch ${VOMS_INSTALL_LOC}/done
+			INSTALL_COMMAND make install && touch ${VOMS_INSTALL_LOC}/done
 		)
 
 		set( VOMS_FOUND_STATIC "${VOMS_INSTALL_LOC}/lib/libvomsapi.a" )

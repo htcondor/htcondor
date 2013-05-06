@@ -52,7 +52,7 @@ if ( NOT PROPER )
 					BUILD_IN_SOURCE 1
 					#--install Step ----------
 					INSTALL_DIR ${HADOOP_INSTALL_LOC}
-					INSTALL_COMMAND cd ${HADOOP_VER} ${CMD_TERM} ${HADOOP_INSTALL} )
+					INSTALL_COMMAND ${HADOOP_INSTALL} )
 
 		## Set all the config information
 		set( HADOOP_TARGET ${HADOOP_TARGET} PARENT_SCOPE )
