@@ -45,6 +45,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item For errors which have no response body, EC2 jobs now report the 
+HTTP code instead.
+\Ticket{3541}
+
 \item The 32-bit \Condor{starter} could fail to execute jobs when the initial
 working directory of the job was on a filesystem containing 64-bit metadata,
 such as inode numbers.
@@ -165,10 +169,6 @@ when \Expr{MaxJobRetirementTime} is used.
 \noindent Bugs Fixed:
 
 \begin{itemize}
-
-\item For errors which have no response body, EC2 jobs now report the 
-HTTP code instead.
-\Ticket{3541}
 
 \item Fixed the condor\_updates\_stats script so that it works with
 modern perl interpreters.
