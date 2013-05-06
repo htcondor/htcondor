@@ -1627,7 +1627,7 @@ sub getFqdnHost {
 #
 # SearchCondorLog
 #
-# Serach a log for a regexp pattern
+# Search a log for a regexp pattern
 #
 ##############################################################################
 
@@ -1648,6 +1648,80 @@ sub SearchCondorLog
         }
     }
     return(0);
+}
+
+##############################################################################
+#
+# SearchCondorLogMultiple`
+#
+# Search a log for a regexp pattern N times on some interval
+#
+##############################################################################
+
+sub SearchCondorLogMultiple
+{
+    my $daemon = shift;
+    my $regexp = shift;
+	my $instances = shift;
+	my $timeout = shift;
+	my $findnew = shift;
+	my $currentcount = 0;
+	my $found = 0;
+	my $tried = 0;
+
+    my $logloc = `condor_config_val ${daemon}_log`;
+    CondorUtils::fullchomp($logloc);
+    CondorTest::debug("Search this log <$logloc> for <$regexp>\n",2);
+
+	# do we want to see X new events
+	if($findnew eq "true") {
+		# find current event count
+   		open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
+   		while(<LOG>) {
+       		if( $_ =~ /$regexp/) {
+           		CondorTest::debug("FOUND IT! $_\n",2);
+				$currentcount += 1;
+       		} else {
+           		CondorTest::debug(".",2);
+			}
+   		}
+		close(LOG);
+		$instances = $currentcount + $instances;
+	}
+
+	while($found < $instances) {
+       	CondorTest::debug("Searching Try $tried\n",2);
+		$found = 0;
+   		open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
+   		while(<LOG>) {
+       		if( $_ =~ /$regexp/) {
+           		CondorTest::debug("FOUND IT! $_\n",2);
+				$found += 1;
+       		} else {
+           		CondorTest::debug(".",2);
+			}
+   		}
+		close(LOG);
+		CondorTest::debug("Found <$found> want <$instances>\n",2);
+		if($found < $instances) {
+			sleep 1;
+		} else {
+			#Done
+			last;
+		}
+		$tried += 1;
+		if($tried >= $timeout) {
+			last;
+		}
+		if($found >= $instances) {
+			CondorTest::debug("Found <$found> want <$instances> LEAVING\n",2);
+			#done
+			return(1);;
+		}
+	}
+	if($found < $instances) {
+		return(0);
+	}
 }
 
 ##############################################################################
@@ -2391,7 +2465,6 @@ sub WriteFileOrDie
 	print OUT $body;
 	close OUT;
 }
-
 
 
 1;
