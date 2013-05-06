@@ -1074,7 +1074,6 @@ Scheduler::count_jobs()
 	time_t current_time = time(0);
 	for ( i = 0; i < Owners.getsize(); i++) {
 		Owners[i].Name = NULL;
-		Owners[i].Domain = NULL;
 		Owners[i].JobsRunning = 0;
 		Owners[i].JobsIdle = 0;
 		Owners[i].JobsHeld = 0;
