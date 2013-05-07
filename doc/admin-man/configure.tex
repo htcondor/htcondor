@@ -7435,24 +7435,25 @@ These macros affect the \Condor{negotiator}.
   remains the best way to 
   guarantee that all \Condor{negotiator} configuration is completely updated.
 
+\label{param:NameLimit}
+\item[\Macro{<NAME>\_LIMIT}]
+  An integer value that defines the amount of resources available for
+  jobs which declare that they use some consumable resource 
+  as described in section~\ref{sec:Concurrency-Limits}. 
+  \MacroNI{<Name>} is a string invented to uniquely describe the resource.
+
 \label{param:ConcurrencyLimitDefault}
 \item[\Macro{CONCURRENCY\_LIMIT\_DEFAULT}]
   An integer value that describes the number of resources available for
-  all resources that are not explicitly named by defining the
+  any resources that are not explicitly named defined with the
   configuration variable \MacroNI{<NAME>\_LIMIT}.
   If not defined, no limits are set for resources not explicitly identified
   using \MacroNI{<NAME>\_LIMIT}.
 
 \label{param:ConcurrencyLimitDefaultName}
 \item[\Macro{CONCURRENCY\_LIMIT\_DEFAULT\_<NAME>}]
-  Definition not yet written.
-
-\label{param:NameLimit}
-\item[\Macro{<NAME>\_LIMIT}]
-  An integer value that describes the number of a resource available for
-  concurrent job execution when requested for a job under concurrency limits
-  as described in section~\ref{sec:Concurrency-Limits}. 
-  \MacroNI{<Name>} is a string invented to uniquely describe the resource.
+	If set, this defines a default concurrency limit for all resources
+that start with \MacroNI{<NAME>.}
 
 \end{description}
 

@@ -316,6 +316,14 @@ HTCondor version 7.9.6.
 
 \begin{itemize}
 
+\item Several improvements have been made to the
+\Condor{gather\_info} tool.  It now prints the name of the
+tarball it emits, and now also checks the history file for the
+job in question, and if found, uses and displays the information 
+there.
+\Ticket{3239}
+\Ticket{3240}
+
 \item The new command line tool \Condor{tail}
 displays files that are in the sandbox of a running job.
 See details in the manual page at
