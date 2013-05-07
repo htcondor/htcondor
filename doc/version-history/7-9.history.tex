@@ -112,9 +112,10 @@ weighted by the count of requested CPUs, if the configuration variable
 The default value is \Expr{False}.
 \Ticket{3574}
 
-\item \Condor{submit} now supports first-class accounting\_group and
-accounting\_group\_user commands, which deprecate the legacy
-+\Attr{AccountingGroup} convention.
+\item Negotiation under groups now prefers the specification of
+groups with the new submit commands \SubmitCmd{accounting\_group} and
+\SubmitCmd{accounting\_group\_user}.
+See section~\ref{sec:group-accounting} for details.
 \Ticket{2728}
 
 \item The \SubmitCmd{vm} universe now supports \Prog{VMware Workstation}
@@ -130,7 +131,7 @@ lower than needed.  The job will now be put on hold.
 
 \item The new \Opt{-force-graceful} command-line option to \Condor{off}
 allows administrators to issue a graceful shutdown command, even after
-issuing a \Opt{-peaceful} command. Previously, a \Opt{-peaceful} \Condor{off}
+issuing a \Opt{-peaceful} command. Previously, a peaceful \Condor{off}
 command would preclude a \Opt{-graceful} off command.
 \Ticket{2949}
 
@@ -141,21 +142,22 @@ of the machine where the job most recently ran,
 if \Condor{gather\_info} has the necessary permissions to fetch those logs.
 \Ticket{3246}
 
-\item The maximum size of a daemon log file can now be specified in seconds or bytes.
-Only bytes was allowed previously.
+\item The rotation of a daemon log file can now be specified 
+in terms of time (seconds) or in terms of maximum size (bytes).
+Only size was allowed previously.
 \Ticket{3560}
 
 \item The new \Condor{qsub} command line tool emulates submission to PBS, SGE, 
-and Torque like systems. It handles both scripts and command line options.
+and Torque-like systems. It handles both scripts and command line options.
 \Ticket{2699}
 
-\item When submitting a grid-type batch job, the value of
-\SubmitCmd{request\_memory} is now propagated to the batch system
+\item When submitting a grid universe job with a grid type of batch,
+the value of \SubmitCmd{request\_memory} is now propagated to the batch system
 submission request.
 \Ticket{3398}
 
-\item The set of Python bindings introduced in HTCondor v7.9.4 is now
-distributed as part of HTCondor, not as a ``contrib'' module.
+\item The set of Python bindings introduced in HTCondor version 7.9.4 is now
+distributed as part of HTCondor, not as a contrib module.
 \Ticket{3586}
 
 \end{itemize}
@@ -191,11 +193,20 @@ before the existing job can be evicted.  The default is \Expr{False}.
 The old behavior can be enabled by setting it to \Expr{True}.  The
 new default behavior is intended to improve scheduling behavior
 when \Expr{MaxJobRetirementTime} is used.
+\Ticket{3539}
+
+\item The new configuration variable \Macro{SCHEDD\_AUDIT\_LOG}
+defines a file name, such that the
+\Condor{schedd} can now write an audit log that records all
+commands issued by users that modify the job queue.
+\Ticket{3493}
 
 \item The per-user file transfer I/O statistics now have a prefix of
-\AdAttr{Owner\_<username>\_}.  In 7.9.5, they had a prefix of
+\AdAttr{Owner\_<username>\_}.  In HTCondor version 7.9.5, 
+they had a prefix of
 \AdAttr{<username>\_}.  This can be configured via
 \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+\Ticket{3496}
 
 \end{itemize}
 
@@ -203,16 +214,16 @@ when \Expr{MaxJobRetirementTime} is used.
 
 \begin{itemize}
 
-\item Fixed a bug in ASSIGN\_CPU\_AFFINITY when running on systems
-with partitionable slots.
+\item Fixed a bug in the setting of \Macro{ASSIGN\_CPU\_AFFINITY},
+when running on systems with partitionable slots.
 \Ticket{3597}
 
-\item Fixed a bug in the condor\_starter where filesystems mounted by
+\item Fixed a bug in the \Condor{starter} in which file systems mounted by
 the automounter would not be seen by the job.
 \Ticket{3601}
 
-\item Fixed the condor\_updates\_stats script so that it works with
-modern perl interpreters.
+\item Fixed the \Condor{updates\_stats} tool such that it works with
+modern Perl interpreters.
 \Ticket{3579}
 
 \item Fixed a bug that caused the \Condor{schedd} to crash when 
@@ -256,11 +267,12 @@ reported in the user log, but they were not propagated to the job ClassAd and
 were therefore not available for querying with \Condor{history}.
 \Ticket{3577}
 
-\item Do not leak \Condor{starter} file descriptors to file transfer plugins. 
+\item Fixed a bug that caused the \Condor{starter} to leak file descriptors 
+to file transfer plug-ins. 
 \Ticket{3570}
 
-\item Do not leak file descriptors in the \Prog{batch\_gahp} when reading
-a job's X.509 proxy.
+\item Fixed a bug that caused the \Prog{batch\_gahp} to leak file descriptors 
+when reading a job's X.509 proxy.
 \Ticket{3558}
 
 \end{itemize}
