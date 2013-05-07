@@ -74,6 +74,19 @@ if \Condor{gather\_info} has the necessary permissions to fetch those logs.
 Only bytes was allowed previously.
 \Ticket{3560}
 
+\item The new \Condor{qsub} command line tool emulates submission to PBS, SGE, 
+and Torque like systems. It handles both scripts and command line options.
+\Ticket{2699}
+
+\item When submitting a grid-type batch job, the value of
+\SubmitCmd{request\_memory} is now propagated to the batch system
+submission request.
+\Ticket{3398}
+
+\item The set of Python bindings introduced in HTCondor v7.9.4 is now
+distributed as part of HTCondor, not as a ``contrib'' module.
+\Ticket{3586}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -107,6 +120,13 @@ before the existing job can be evicted.  The default is \Expr{False}.
 The old behavior can be enabled by setting it to \Expr{True}.  The
 new default behavior is intended to improve scheduling behavior
 when \Expr{MaxJobRetirementTime} is used.
+
+\item The \Condor{schedd} can now write an audit log that records all
+commands issued by users that modify the job queue.
+To enable this feature, set the new configuration variable
+\Macro{SCHEDD\_AUDIT\_LOG} to the filename that the \Condor{schedd}
+should use to write the audit log.
+\Ticket{3493}
 
 \item The per-user file transfer I/O statistics now have a prefix of
 \AdAttr{Owner\_<username>\_}.  In 7.9.5, they had a prefix of
@@ -174,6 +194,10 @@ were therefore not available for querying with \Condor{history}.
 
 \item Do not leak \Condor{starter} file descriptors to file transfer plugins. 
 \Ticket{3570}
+
+\item Do not leak file descriptors in the \Prog{batch\_gahp} when reading
+a job's X.509 proxy.
+\Ticket{3558}
 
 \end{itemize}
 
