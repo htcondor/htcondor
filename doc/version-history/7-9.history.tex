@@ -40,9 +40,10 @@ weighted by the count of requested CPUs, if the configuration variable
 The default value is \Expr{False}.
 \Ticket{3574}
 
-\item \Condor{submit} now supports first-class accounting\_group and
-accounting\_group\_user commands, which deprecate the legacy
-+\Attr{AccountingGroup} convention.
+\item Negotiation under groups now prefers the specification of
+groups with the new submit commands \SubmitCmd{accounting\_group} and
+\SubmitCmd{accounting\_group\_user}.
+See section~\ref{sec:group-accounting} for details.
 \Ticket{2728}
 
 \item The \SubmitCmd{vm} universe now supports \Prog{VMware Workstation}

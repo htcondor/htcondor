@@ -444,26 +444,48 @@ all accounting and priority based on the user,
 which may be identified by the job ClassAd attribute \Attr{Owner}.
 Jobs that do specify an accounting group have 
 all accounting and priority based on the specified accounting group.
+Therefore, accounting based on groups only works when
+the jobs correctly identify their group membership.
 
-To use an accounting group, a job submit file may include a
-command that specifies the group:
+\index{ClassAd job attribute!AcctGroup}
+\index{ClassAd job attribute!AcctGroupUser}
+The preferred method for having a job associate itself with
+an accounting group adds a command to the submit description file
+that specifies the group name:
 \begin{verbatim}
-# instruct job to negotiate under accounting group "group_physics"
-accounting_group = group_physics
-# accounting_group_user is optional, and defaults to job owner:
-accounting_group_user = albert
+  accounting_group = group_physics
 \end{verbatim}
+This command causes the job ClassAd attribute \Attr{AcctGroup} to
+be set with this group name.
+
+If the user name of the job submitter should be other than the \Attr{Owner}
+job ClassAd attribute, an additional command specifies the user name:
+\begin{verbatim}
+  accounting_group_user = albert
+\end{verbatim}
+This command causes the job ClassAd attribute \Attr{AcctGroupUser} to
+be set with this user name.
 
 \index{ClassAd job attribute!AccountingGroup}
-The legacy method for invoking accounting groups (now deprecated)
-is to insert a value for \AdAttr{AccountingGroup} directly
-into the job ad at submission time, as in this example:
+The previous method for defining accounting groups
+is no longer recommended. 
+It inserted the job ClassAd attribute \AdAttr{AccountingGroup}
+by setting it in the submit description file using the syntax 
+in this example:
 \begin{verbatim}
 +AccountingGroup = "group_physics.albert"
 \end{verbatim}
 
-The \AdAttr{AccountingGroup} attribute is a string,
+In this previous method for defining accounting groups,
+the \AdAttr{AccountingGroup} attribute is a string,
 and it therefore must be enclosed in double quote marks.
+
+Much of the reason that the previous method for defining accounting groups
+is no longer recommended  is that the name of an accounting is that it
+used the period (.) character to separate the group name from the
+user name.  Therefore, the syntax did not work if a user name contained
+a period.
+
 The name should \emph{not} be qualified with a domain.
 Certain parts of the HTCondor system 
 do append the value \MacroUNI{UID\_DOMAIN}
@@ -509,21 +531,16 @@ be beneficial when the use of thousands
 of short term accounting groups leads to scalability
 issues.
 
-Note that the name of an accounting group may include a period (.).
-Inclusion of a period character in the accounting group name
-only has relevance if the portion of the name before the
-period matches a group name,
-as described in the next section on group quotas.
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:group-quotas}Accounting Groups with Hierarchical Group Quotas}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{hierarchical group quotas}
 \index{negotiation!by group}
 \index{groups!quotas}
 \index{quotas!hierarchical quotas for a group}
-Quotas can be applied to the allocation of slots/machines
-for groups of users.
+An upper limit on the number of slots/machines allocated for a group
+of users can be specified with group quotas.
 The use of these group quotas modifies the negotiation for 
 available resources (machines) within an HTCondor pool.
 When accounting groups together with group quotas are specified,
@@ -550,7 +567,7 @@ perhaps causing more preemption than necessary.
 The (fair allocation) policy desired is likely somewhat different,
 if these thirty machines have been pooled.
 The desired policy does not tie users to specific sets of machines,
-but to numbers of slots/machines (a quota).
+but caps the maximum number of slots/machines (a quota).
 Given thirty similar machines,
 the desired policy allows users within the physics group to have
 preference on up to twenty of the machines within the pool,
@@ -561,43 +578,41 @@ such that quotas may be described for groups, subgroups,
 sub subgroups, etc.  
 The hierarchy is described by adherence to a naming scheme
 set up in advance.
+Configuration defines the quotas in terms of limiting the number of
+cores allocated for a group or subgroup.  
+And, the jobs state which group or subgroup they are part of.
 
 A quota for a set of users requires an identification of
 the set; members are called group users.
+Group users' jobs identify themselves as desiring negotiation
+under the group by setting the \SubmitCmd{accounting\_group}
+command in the submit description file,
+as specified in section~\ref{sec:group-accounting}.
 
-The submit description file syntax for specifying a job is to be
-part of a group includes 
-a series of names separated by the period character ('\Expr{.}').
-Example syntax that shows only 2 levels of a (limited) hierarchy is:
-\begin{verbatim}
-accounting_group = physics.gravity
-\end{verbatim}
-
-The deprecated legacy method uses the following syntax:
-\begin{verbatim}
-+AccountingGroup = "<group>.<subgroup>.<user>"
-\end{verbatim}
-Both \verb@<group>@ and \verb@<subgroup>@ are names chosen for the group.
+The hierarchy is identified by using the period ('.') character
+to separate a group name from a subgroup name from a sub subgroup
+name, etc.
 Group names are case-insensitive for negotiation.
 The topmost level group name is not required to begin with the
 string \AdStr{group\_},
 as in the examples
-\AdStr{group\_physics.newton} and \AdStr{group\_chemistry.curie},
+\AdStr{group\_physics.experiment1} and \AdStr{group\_chemistry.organic},
 but it is a useful convention,
-because group names must not conflict with subgroup or user names.
-Note that a job specifying a value for the \Attr{AccountingGroup}
-ClassAd attribute that lacks at least one period in the specification
-will cause the job to not be considered part of a group when negotiating,
-even if the group name (highest within the hierarchy) has a quota.
-Furthermore, there will be no warnings that the group quota is not
-in effect for the job,
-as this syntax defines group accounting.
+because group names must not conflict with subgroup names.
 
 Configuration controls the order of negotiation for
 groups, subgroups within the hierarchy defined, and individual users,
-as well as sets quotas
-(preferentially allocated numbers of machines)
-for the groups.
+as well as sets quotas.
+
+\index{<none> group}
+\index{group accounting!<none> group}
+When at least one group quota is defined,
+HTCondor must still do negotiation for jobs that are not party
+to the groups.
+Any job that is \emph{not} part of any group is considered part of the
+invented \AdStr{<none>} group that is the top or root of the
+hierarchical tree of groups.
+This string will appear in the output of \Condor{status}.
 
 Quotas are categorized as either static or dynamic.
 A static quota specifies an integral numbers of machines (slots),
