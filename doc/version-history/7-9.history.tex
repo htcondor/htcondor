@@ -120,6 +120,13 @@ The old behavior can be enabled by setting it to \Expr{True}.  The
 new default behavior is intended to improve scheduling behavior
 when \Expr{MaxJobRetirementTime} is used.
 
+\item The \Condor{schedd} can now write an audit log that records all
+commands issued by users that modify the job queue.
+To enable this feature, set the new configuration variable
+\Macro{SCHEDD\_AUDIT\_LOG} to the filename that the \Condor{schedd}
+should use to write the audit log.
+\Ticket{3493}
+
 \item The per-user file transfer I/O statistics now have a prefix of
 \AdAttr{Owner\_<username>\_}.  In 7.9.5, they had a prefix of
 \AdAttr{<username>\_}.  This can be configured via
