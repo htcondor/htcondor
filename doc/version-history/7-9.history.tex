@@ -34,10 +34,10 @@ targeted security negotiations to see if it succeeds or fails,
 potentially helping to debug security configuration.
 \Ticket{3371}
 
-\item The schedd will now also advertise demand by jobs for slots,
-weighted by the count of requested CPUs, if the parameter
-NEGOTIATOR\_USE\_WEIGHTED\_DEMAND is set to true (defaults to
-false).
+\item The \Condor{schedd} will now also advertise demand by jobs for slots,
+weighted by the count of requested CPUs, if the configuration variable
+\Macro{NEGOTIATOR\_USE\_WEIGHTED\_DEMAND} is set to \Expr{True}.
+The default value is \Expr{False}.
 \Ticket{3574}
 
 \item \Condor{submit} now supports first-class accounting\_group and

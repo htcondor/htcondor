@@ -7595,6 +7595,26 @@ The following configuration macros affect negotiation for group users.
   machine ClassAd attribute \Attr{SlotWeight}. 
   When \Expr{False}, each slot effectively has a weight of 1.
 
+\label{param:NegotiatorUseWeightedDemand}
+\item[\Macro{NEGOTIATOR\_USE\_WEIGHTED\_DEMAND}]
+  A boolean value with a default of \Expr{False}. 
+  When \Expr{False}, the behavior is the same as for HTCondor versions
+  prior to 7.9.6.
+  If \Expr{True}, when the \Condor{schedd} advertises \Attr{IdleJobs}
+  in the submitter ClassAd,
+  the number of idle jobs in the queue for that submitter,
+  it will also advertise the total number of requested cores across
+  all idle jobs from that submitter, \Attr{WeightedIdleJobs}.
+  If partitionable slots are being used,
+  and if hierarchical group quotas are used,
+  and if any hierarchical group quotas set \Macro{GROUP\_ACCEPT\_SURPLUS}
+  to \Expr{True},
+  and if configuration variable \Macro{SlotWeight} is set to 
+  the number of cores,
+  then setting this configuration variable to \Expr{True} allows
+  the amount of surplus allocated to each group to be calculated correctly. 
+   
+
 \label{param:GroupSortExpr}
 \item[\Macro{GROUP\_SORT\_EXPR}]
   \fbox{This definition is not complete.}
