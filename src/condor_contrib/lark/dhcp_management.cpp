@@ -559,9 +559,10 @@ int
 dhcp_query(classad::ClassAd &machine_ad)
 {
 	std::string device_name;
-	if (!machine_ad.EvaluateAttrString(ATTR_BRIDGE_DEVICE, device_name)) {
+	if (!machine_ad.EvaluateAttrString(ATTR_BRIDGE_NAME, device_name)) {
 		device_name = "";
 	}
+    dprintf(D_FULLDEBUG, "The device that the dhcp socket binds on to is: %s\n", device_name.c_str());
 	int fd = get_dhcp_socket(device_name);
 	if (fd == -1) return -1; // get_dhcp_socket already logged error.
 
@@ -717,7 +718,7 @@ dhcp_release (classad::ClassAd &machine_ad)
 	req_iter = packet.setOption(req_iter, '\x3c', 4, "lark");
 
 	std::string device_name;
-	if (!machine_ad.EvaluateAttrString(ATTR_BRIDGE_DEVICE, device_name)) {
+	if (!machine_ad.EvaluateAttrString(ATTR_BRIDGE_NAME, device_name)) {
 		device_name = "";
 	}
 
