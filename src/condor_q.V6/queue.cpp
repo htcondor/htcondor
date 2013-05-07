@@ -2248,8 +2248,8 @@ format_owner_common (char *owner, AttrList *ad)
 	}
 
 	int niceUser;
+	char tmp[100];
 	if (ad->LookupInteger( ATTR_NICE_USER, niceUser) && niceUser ) {
-		char tmp[100];
 		strncpy(tmp,NiceUserName,80);
 		strcat(tmp, ".");
 		strcat(tmp, owner);
