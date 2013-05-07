@@ -94,6 +94,17 @@ distributed as part of HTCondor, not as a contrib module.
 
 \begin{itemize}
 
+\item The administrator can now set \Macro{CheckpointPlatform} to change the
+string used by the standard universe to determine if a job checkpointed on
+one machine can be started on another.
+\Ticket{3544}
+
+%% Yes, SSSE 3 has three Ss.
+\item Machine ClassAds now include \AdAttr{has\_sse4\_1},
+\AdAttr{has\_sse4\_2}, and \AdAttr{has\_ssse3}, set if the corresponding
+instructions are available on that machine.
+\Ticket{3544}
+
 \item The name of the configuration variable \MacroNI{MEMORY\_LIMIT}
 introduced in HTCondor version 7.9.2 has changed.
 This variable is now called \Macro{CGROUP\_MEMORY\_LIMIT\_POLICY}.
