@@ -34,7 +34,7 @@ extern "C" {
 #endif
 
 // These are the actual stat functions that we'll use below
-#if defined(HAVE_STAT64)
+#if defined(HAVE_STAT64) && !defined(DARWIN)
 #  define STAT_FUNC stat64
    const char *STAT_NAME = "stat64";
 #elif defined(HAVE__STATI64)
@@ -46,7 +46,7 @@ extern "C" {
 #endif
 
 // Ditto for lstat.  NOTE: We fall back to stat if there is no lstat
-#if defined(HAVE_LSTAT64)
+#if defined(HAVE_LSTAT64) && !defined(DARWIN)
 #  define LSTAT_FUNC lstat64
    const char *LSTAT_NAME = "lstat64";
 #  define HAVE_AN_LSTAT
@@ -65,7 +65,7 @@ extern "C" {
 #endif
 
 // These are the actual fstat functions that we'll use below
-#if defined(HAVE_FSTAT64)
+#if defined(HAVE_FSTAT64) && !defined(DARWIN)
 #  define FSTAT_FUNC fstat64
    const char *FSTAT_NAME = "fstat64";
 #elif defined(HAVE__FSTATI64)

@@ -88,12 +88,15 @@
 #include "schedd_negotiate.h"
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
+#include "globus_utils.h"
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN)
 #include "ScheddPlugin.h"
 #include "ClassAdLogPlugin.h"
 #endif
 #endif
+#include <algorithm>
+#include <sstream>
 
 #if defined(WINDOWS) && !defined(MAXINT)
 	#define MAXINT INT_MAX
@@ -177,6 +180,146 @@ int STARTD_CONTACT_TIMEOUT = 45;  // how long to potentially block
 #ifdef CARMI_OPS
 struct shadow_rec *find_shadow_by_cluster( PROC_ID * );
 #endif
+
+void AuditLogNewConnection( int cmd, Sock &sock, bool failure )
+{
+	// Quickly determine if we're writing to the audit log and if this
+	// is a command we care about for the audit log.
+	if ( !IsDebugCategory( D_AUDIT ) ) {
+		return;
+	}
+	switch( cmd ) {
+	case ACT_ON_JOBS:
+	case SPOOL_JOB_FILES:
+	case SPOOL_JOB_FILES_WITH_PERMS:
+	case TRANSFER_DATA:
+	case TRANSFER_DATA_WITH_PERMS:
+	case UPDATE_GSI_CRED:
+	case DELEGATE_GSI_CRED_SCHEDD:
+	case QMGMT_WRITE_CMD:
+	case GET_JOB_CONNECT_INFO:
+		break;
+	default:
+		return;
+	}
+
+	if ( !strcmp( get_condor_username(), sock.getOwner() ) ) {
+		return;
+	}
+
+	const char *cmd_name = getCommandString( cmd );
+	const char *sinful = sock.get_sinful_peer();
+	const char *method = sock.getAuthenticationMethodUsed();
+	const char *unmapped = sock.getAuthenticatedName();
+	const char *mapped = sock.getFullyQualifiedUser();
+	dprintf( D_AUDIT, sock, "Command=%s, peer=%s\n",
+			 cmd_name ? cmd_name : "(null)",
+			 sinful ? sinful : "(null)" );
+
+	if ( failure && unmapped == NULL ) {
+		const char *methods_tried = sock.getAuthenticationMethodsTried();
+		dprintf( D_AUDIT, sock, "Authentication Failed, MethodsTried=%s\n",
+				 methods_tried ? methods_tried : "(null)" );
+		return;
+	}
+
+	dprintf( D_AUDIT, sock, "AuthMethod=%s, AuthId=%s, CondorId=%s\n",
+			 method ? method : "(null)",
+			 unmapped ? unmapped : "(null)",
+			 mapped ? mapped : "(null)" );
+	/* Currently, all audited commands require authentication.
+	dprintf( D_AUDIT, sock,
+			 "triedAuthentication=%s, isAuthenticated=%s, isMappedFQU=%s\n",
+			 sock.triedAuthentication() ? "true" : "false",
+			 sock.isAuthenticated() ? "true" : "false",
+			 sock.isMappedFQU() ? "true" : "false" );
+	*/
+
+	if ( failure ) {
+		dprintf( D_AUDIT, sock, "Authorization Denied\n" );
+	}
+}
+
+void AuditLogJobProxy( Sock &sock, PROC_ID job_id, const char *proxy_file )
+{
+	// Quickly determine if we're writing to the audit log.
+	if ( !IsDebugCategory( D_AUDIT ) ) {
+		return;
+	}
+
+	dprintf( D_AUDIT, sock, "Received proxy for job %d.%d\n",
+			 job_id.cluster, job_id.proc );
+	dprintf( D_AUDIT, sock, "proxy path: %s\n", proxy_file );
+
+#if defined(HAVE_EXT_GLOBUS)
+	globus_gsi_cred_handle_t proxy_handle = x509_proxy_read( proxy_file );
+
+	if ( proxy_handle == NULL ) {
+		dprintf( D_AUDIT|D_FAILURE, sock, "Failed to read job proxy: %s\n",
+				 x509_error_string() );
+		return;
+	}
+
+	time_t expire_time = x509_proxy_expiration_time( proxy_handle );
+	char *proxy_subject = x509_proxy_subject_name( proxy_handle );
+	char *proxy_identity = x509_proxy_identity_name( proxy_handle );
+	char *proxy_email = x509_proxy_email( proxy_handle );
+	char *voname = NULL;
+	char *firstfqan = NULL;
+	char *fullfqan = NULL;
+	extract_VOMS_info( proxy_handle, 0, &voname, &firstfqan, &fullfqan );
+
+	x509_proxy_free( proxy_handle );
+
+	dprintf( D_AUDIT, sock, "proxy expiration: %d\n", (int)expire_time );
+	dprintf( D_AUDIT, sock, "proxy identity: %s\n", proxy_identity );
+	dprintf( D_AUDIT, sock, "proxy subject: %s\n", proxy_subject );
+	if ( proxy_email ) {
+		dprintf( D_AUDIT, sock, "proxy email: %s\n", proxy_email );
+	}
+	if ( voname ) {
+		dprintf( D_AUDIT, sock, "proxy vo name: %s\n", voname );
+	}
+	if ( firstfqan ) {
+		dprintf( D_AUDIT, sock, "proxy first fqan: %s\n", firstfqan );
+	}
+	if ( fullfqan ) {
+		dprintf( D_AUDIT, sock, "proxy full fqan: %s\n", fullfqan );
+	}
+
+	free( proxy_subject );
+	free( proxy_identity );
+	free( proxy_email );
+	free( voname );
+	free( firstfqan );
+	free( fullfqan );
+#endif
+}
+
+void AuditLogJobProxy( Sock &sock, ClassAd *job_ad )
+{
+	PROC_ID job_id;
+	std::string iwd;
+	std::string proxy_file;
+	std::string buff;
+
+	ASSERT( job_ad );
+
+	if ( !job_ad->LookupString( ATTR_X509_USER_PROXY, buff ) || buff.empty() ) {
+		return;
+	}
+	if ( buff[0] == DIR_DELIM_CHAR ) {
+		proxy_file = buff;
+	} else {
+		job_ad->LookupString( ATTR_JOB_IWD, iwd );
+		formatstr( proxy_file, "%s%c%s", iwd.c_str(), DIR_DELIM_CHAR, buff.c_str() );
+	}
+
+	job_ad->LookupInteger( ATTR_CLUSTER_ID, job_id.cluster );
+	job_ad->LookupInteger( ATTR_PROC_ID, job_id.proc );
+
+	AuditLogJobProxy( sock, job_id, proxy_file.c_str() );
+}
 
 unsigned int UserIdentity::HashFcn(const UserIdentity & index)
 {
@@ -931,7 +1074,6 @@ Scheduler::count_jobs()
 	time_t current_time = time(0);
 	for ( i = 0; i < Owners.getsize(); i++) {
 		Owners[i].Name = NULL;
-		Owners[i].Domain = NULL;
 		Owners[i].JobsRunning = 0;
 		Owners[i].JobsIdle = 0;
 		Owners[i].JobsHeld = 0;
@@ -1858,7 +2000,21 @@ service_this_universe(int universe, ClassAd* job)
 		case CONDOR_UNIVERSE_SCHEDULER:
 			return false;
 		case CONDOR_UNIVERSE_LOCAL:
-			return scheduler.usesLocalStartd();
+			if (scheduler.usesLocalStartd()) {
+				bool reqsFixedup = false;
+				job->LookupBool("LocalStartupFixup", reqsFixedup);
+				if (!reqsFixedup) {
+					job->Assign("LocalStartupFixup", true);
+					ExprTree *requirements = job->LookupExpr(ATTR_REQUIREMENTS);
+					const char *rhs = ExprTreeToString(requirements);
+					std::string newRequirements = std::string("IsLocalStartd && ")  + rhs;
+					job->AssignExpr(ATTR_REQUIREMENTS, newRequirements.c_str());
+				}
+				return true;
+			} else {
+				return false;
+			}
+			break;
 		default:
 
 			int sendToDS = 0;
@@ -3323,7 +3479,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			"TRANSFER_DATA/WITH_PERMS: %d jobs to be sent\n", JobAdsArrayLen);
 		rsock->encode();
 		if ( !rsock->code(JobAdsArrayLen) || !rsock->end_of_message() ) {
-			dprintf( D_ALWAYS, "generalJobFilesWorkerThread(): "
+			dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
 					 "failed to send JobAdsArrayLen (%d) \n",
 					 JobAdsArrayLen );
 			s->timeout( 10 ); // avoid hanging due to huge timeout
@@ -3337,7 +3493,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		proc = (*jobs)[i].proc;
 		ClassAd * ad = GetJobAd( cluster, proc );
 		if ( !ad ) {
-			dprintf( D_ALWAYS, "generalJobFilesWorkerThread(): "
+			dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
 					 "job ad %d.%d not found\n",cluster,proc );
 			s->timeout( 10 ); // avoid hanging due to huge timeout
 			refuse(s);
@@ -3359,7 +3515,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 								   (mode == TRANSFER_DATA ||
 									mode == TRANSFER_DATA_WITH_PERMS));
 		if ( !result ) {
-			dprintf( D_ALWAYS, "generalJobFilesWorkerThread(): "
+			dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
 					 "failed to init filetransfer for job %d.%d \n",
 					 cluster,proc );
 			s->timeout( 10 ); // avoid hanging due to huge timeout
@@ -3375,13 +3531,17 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		if ( mode == SPOOL_JOB_FILES || mode == SPOOL_JOB_FILES_WITH_PERMS ) {
 			// receive sandbox into the schedd
 			result = ftrans.DownloadFiles();
+
+			if ( result ) {
+				AuditLogJobProxy( *rsock, ad );
+			}
 		} else {
 			// send sandbox out of the schedd
 			rsock->encode();
 			// first send the classad for the job
 			result = putClassAd(rsock, *ad);
 			if (!result) {
-				dprintf(D_ALWAYS, "generalJobFilesWorkerThread(): "
+				dprintf(D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
 					"failed to send job ad for job %d.%d \n",
 					cluster,proc );
 			} else {
@@ -3392,7 +3552,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		}
 
 		if ( !result ) {
-			dprintf( D_ALWAYS, "generalJobFilesWorkerThread(): "
+			dprintf( D_AUDIT | D_FAILURE, *rsock, "generalJobFilesWorkerThread(): "
 					 "failed to transfer files for job %d.%d \n",
 					 cluster,proc );
 			s->timeout( 10 ); // avoid hanging due to huge timeout
@@ -3447,6 +3607,8 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		free( peer_version );
 	}
 
+	dprintf( D_AUDIT, *rsock, (answer==OK) ? "Transfer completed\n" :
+			 "Error received from client\n" );
    return ((answer == OK)?TRUE:FALSE);
 }
 
@@ -3467,6 +3629,8 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	PROC_ID a_job;
 	int tid;
 	char *peer_version = NULL;
+	std::ostringstream job_ids;
+	std::string job_ids_string;
 
 		// make sure this connection is authenticated, and we know who
 		// the user is.  also, set a timeout, since we don't want to
@@ -3484,7 +3648,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 				// need better error propagation for that...
 			errstack.push( "SCHEDD", SCHEDD_ERR_SPOOL_FILES_FAILED,
 					"Failure to spool job files - Authentication failed" );
-			dprintf( D_ALWAYS, "spoolJobFiles() aborting: %s\n",
+			dprintf( D_AUDIT | D_FAILURE, *rsock, "spoolJobFiles() aborting: %s\n",
 					 errstack.getFullText().c_str() );
 			refuse( s );
 			return FALSE;
@@ -3499,7 +3663,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		case TRANSFER_DATA_WITH_PERMS:	// downloading perm files from schedd
 			peer_version = NULL;
 			if ( !rsock->code(peer_version) ) {
-				dprintf( D_ALWAYS,
+				dprintf(D_AUDIT | D_FAILURE, *rsock, 
 					 	"spoolJobFiles(): failed to read peer_version\n" );
 				refuse(s);
 				return FALSE;
@@ -3524,14 +3688,14 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		case SPOOL_JOB_FILES_WITH_PERMS:
 			// read the number of jobs involved
 			if ( !rsock->code(JobAdsArrayLen) ) {
-					dprintf( D_ALWAYS, "spoolJobFiles(): "
-						 	"failed to read JobAdsArrayLen (%d)\n",
-							JobAdsArrayLen );
+				    dprintf( D_AUDIT | D_FAILURE, *rsock, "spoolJobFiles(): "
+							 "failed to read JobAdsArrayLen (%d)\n",
+							 JobAdsArrayLen );
 					refuse(s);
 					return FALSE;
 			}
 			if ( JobAdsArrayLen <= 0 ) {
-				dprintf( D_ALWAYS, "spoolJobFiles(): "
+				dprintf( D_AUDIT | D_FAILURE, *rsock, "spoolJobFiles(): "
 					 	"read bad JobAdsArrayLen value %d\n", JobAdsArrayLen );
 				refuse(s);
 				return FALSE;
@@ -3549,7 +3713,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 			// read constraint string
 			if ( !rsock->code(constraint_string) || constraint_string == NULL )
 			{
-					dprintf( D_ALWAYS, "spoolJobFiles(): "
+					dprintf( D_AUDIT | D_FAILURE, *rsock, "spoolJobFiles(): "
 						 	"failed to read constraint string\n" );
 					refuse(s);
 					return FALSE;
@@ -3579,6 +3743,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 					// is allowed to transfer data to/from a job.
 				if (OwnerCheck(a_job.cluster,a_job.proc)) {
 					(*jobs)[i] = a_job;
+					job_ids << a_job.cluster << "." << a_job.proc << ", ";
 
 						// Must not allow stagein to happen more than
 						// once, because this could screw up
@@ -3588,7 +3753,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 					int finish_time;
 					if( GetAttributeInt(a_job.cluster,a_job.proc,
 					    ATTR_STAGE_IN_FINISH,&finish_time) >= 0 ) {
-						dprintf( D_ALWAYS, "spoolJobFiles(): cannot allow"
+						dprintf( D_AUDIT | D_FAILURE, *rsock, "spoolJobFiles(): cannot allow"
 						         " stagein for job %d.%d, because stagein"
 						         " already finished for this job.\n",
 						         a_job.cluster, a_job.proc);
@@ -3605,7 +3770,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 						dprintf( D_FULLDEBUG, "job_status is %d\n", job_status);
 						if(job_status == HELD &&
 								holdcode != CONDOR_HOLD_CODE_SpoolingInput) {
-							dprintf( D_ALWAYS, "Job %d.%d is not in hold state for "
+							dprintf( D_AUDIT | D_FAILURE, *rsock, "Job %d.%d is not in hold state for "
 								"spooling. Do not allow stagein\n",
 								a_job.cluster, a_job.proc);
 							unsetQSock();
@@ -3630,6 +3795,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 				 	OwnerCheck(a_job.cluster, a_job.proc) )
 				{
 					(*jobs)[JobAdsArrayLen++] = a_job;
+					job_ids << a_job.cluster << "." << a_job.proc << ", ";
 				}
 				tmp_ad = GetNextJobByConstraint(constraint_string,0);
 			}
@@ -3654,6 +3820,11 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	unsetQSock();
 
 	rsock->end_of_message();
+
+	job_ids_string = job_ids.str();
+	job_ids_string.erase(job_ids_string.length()-2,2); //Get rid of the extraneous ", "
+	dprintf( D_AUDIT, *rsock, "Transferring files for jobs %s\n", 
+			 job_ids_string.c_str());
 
 		// DaemonCore will free the thread_arg for us when the thread
 		// exits, but we need to free anything pointed to by
@@ -3729,6 +3900,8 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		// Place this tid into a hashtable so our reaper can finish up.
 	spoolJobFileWorkers->insert(tid, jobs);
 	
+	dprintf( D_AUDIT, *rsock, "spoolJobFiles(): started worker process\n");
+
 	return TRUE;
 }
 
@@ -3756,7 +3929,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 				// need better error propagation for that...
 			errstack.push( "SCHEDD", SCHEDD_ERR_UPDATE_GSI_CRED_FAILED,
 					"Failure to update GSI cred - Authentication failed" );
-			dprintf( D_ALWAYS, "updateGSICred(%d) aborting: %s\n", cmd,
+			dprintf( D_AUDIT | D_FAILURE, *rsock, "updateGSICred(%d) aborting: %s\n", cmd,
 					 errstack.getFullText().c_str() );
 			refuse( s );
 			return FALSE;
@@ -3767,16 +3940,17 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		// read the job id from the client
 	rsock->decode();
 	if ( !rsock->code(jobid) || !rsock->end_of_message() ) {
-			dprintf( D_ALWAYS, "updateGSICred(%d): "
+		dprintf( D_AUDIT | D_FAILURE, *rsock, "updateGSICred(%d): "
 					 "failed to read job id\n", cmd );
 			refuse(s);
 			return FALSE;
 	}
-	dprintf(D_FULLDEBUG,"updateGSICred(%d): read job id %d.%d\n",
+		// TO DO: Add job proxy info
+	dprintf( D_AUDIT | D_FULLDEBUG, *rsock,"updateGSICred(%d): read job id %d.%d\n",
 		cmd,jobid.cluster,jobid.proc);
 	jobad = GetJobAd(jobid.cluster,jobid.proc);
 	if ( !jobad ) {
-		dprintf( D_ALWAYS, "updateGSICred(%d): failed, "
+		dprintf( D_AUDIT | D_FAILURE, *rsock, "updateGSICred(%d): failed, "
 				 "job %d.%d not found\n", cmd, jobid.cluster, jobid.proc );
 		refuse(s);
 		return FALSE;
@@ -3792,7 +3966,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	}
 	unsetQSock();
 	if ( !authorized ) {
-		dprintf( D_ALWAYS, "updateGSICred(%d): failed, "
+		dprintf( D_AUDIT | D_FAILURE, *rsock, "updateGSICred(%d): failed, "
 				 "user %s not authorized to edit job %d.%d\n", cmd,
 				 rsock->getFullyQualifiedUser(),jobid.cluster, jobid.proc );
 		refuse(s);
@@ -3814,7 +3988,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		}
 	}
 	if ( !proxy_path || strncmp(SpoolSpace,proxy_path,strlen(SpoolSpace)) ) {
-		dprintf( D_ALWAYS, "updateGSICred(%d): failed, "
+		dprintf( D_AUDIT | D_FAILURE, *rsock, "updateGSICred(%d): failed, "
 			 "job %d.%d does not contain a gsi credential in SPOOL\n", 
 			 cmd, jobid.cluster, jobid.proc );
 		refuse(s);
@@ -3833,7 +4007,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		// if needed
 	StatInfo si( final_proxy_path.Value() );
 	if ( si.Error() == SINoFile ) {
-		dprintf( D_ALWAYS, "updateGSICred(%d): failed, "
+		dprintf( D_AUDIT | D_FAILURE, *rsock, "updateGSICred(%d): failed, "
 			 "job %d.%d's proxy doesn't exist\n", 
 			 cmd, jobid.cluster, jobid.proc );
 		refuse(s);
@@ -3845,12 +4019,13 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	char *job_owner = NULL;
 	jobad->LookupString( ATTR_OWNER, &job_owner );
 	if ( !job_owner ) {
+			// Maybe change EXCEPT to print to the audit log with D_AUDIT
 		EXCEPT( "No %s for job %d.%d!", ATTR_OWNER, jobid.cluster,
 				jobid.proc );
 	}
 	if ( !p_cache->get_user_uid( job_owner, job_uid ) ) {
 			// Failed to find uid for this owner, badness.
-		dprintf( D_ALWAYS, "Failed to find uid for user %s (job %d.%d)\n",
+		dprintf( D_AUDIT | D_FAILURE, *rsock, "Failed to find uid for user %s (job %d.%d)\n",
 				 job_owner, jobid.cluster, jobid.proc );
 		free( job_owner );
 		refuse(s);
@@ -3862,7 +4037,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	if ( proxy_uid == job_uid ) {
 			// We're not Windows here, so we don't need the NT Domain
 		if ( !init_user_ids( job_owner, NULL ) ) {
-			dprintf( D_ALWAYS, "init_user_ids() failed for user %s!\n",
+			dprintf( D_AUDIT | D_FAILURE, *rsock, "init_user_ids() failed for user %s!\n",
 					 job_owner );
 			free( job_owner );
 			refuse(s);
@@ -3907,6 +4082,8 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 			reply = 0;
 		} else {
 			reply = 1;	// reply of 1 means success
+
+			AuditLogJobProxy( *rsock, jobid, final_proxy_path.Value() );
 		}
 	}
 
@@ -3920,7 +4097,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	rsock->code(reply);
 	rsock->end_of_message();
 
-	dprintf(D_ALWAYS,"Refresh GSI cred for job %d.%d %s\n",
+	dprintf( D_AUDIT | D_ALWAYS, *rsock,"Refresh GSI cred for job %d.%d %s\n",
 		jobid.cluster,jobid.proc,reply ? "suceeded" : "failed");
 	
 	return TRUE;
@@ -3967,7 +4144,7 @@ Scheduler::actOnJobs(int, Stream* s)
 				// need better error propagation for that...
 			errstack.push( "SCHEDD", SCHEDD_ERR_JOB_ACTION_FAILED,
 					"Failed to act on jobs - Authentication failed");
-			dprintf( D_ALWAYS, "actOnJobs() aborting: %s\n",
+			dprintf( D_AUDIT | D_FAILURE, *rsock, "actOnJobs() aborting: %s\n",
 					 errstack.getFullText().c_str() );
 			refuse( s );
 			return FALSE;
@@ -3976,7 +4153,7 @@ Scheduler::actOnJobs(int, Stream* s)
 
 		// read the command ClassAd + EOM
 	if( ! (getClassAd(rsock, command_ad) && rsock->end_of_message()) ) {
-		dprintf( D_ALWAYS, "Can't read command ad from tool\n" );
+		dprintf( D_AUDIT | D_FAILURE, *rsock, "Can't read command ad from tool\n" );
 		refuse( s );
 		return FALSE;
 	}
@@ -4006,7 +4183,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		   It may optionally contain ATTR_HOLD_REASON_SUBCODE.
 		*/
 	if( ! command_ad.LookupInteger(ATTR_JOB_ACTION, action_num) ) {
-		dprintf( D_ALWAYS, 
+		dprintf( D_AUDIT | D_FAILURE, *rsock,
 				 "actOnJobs(): ClassAd does not contain %s, aborting\n", 
 				 ATTR_JOB_ACTION );
 		refuse( s );
@@ -4043,7 +4220,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		needs_transaction = false;
 		break;
 	default:
-		dprintf( D_ALWAYS, "actOnJobs(): ClassAd contains invalid "
+		dprintf( D_AUDIT | D_FAILURE, *rsock, "actOnJobs(): ClassAd contains invalid "
 				 "%s (%d), aborting\n", ATTR_JOB_ACTION, action_num );
 		refuse( s );
 		return FALSE;
@@ -4061,6 +4238,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		int size = strlen(tmp) + strlen(owner) + 14;
 		reason = (char*)malloc( size * sizeof(char) );
 		if( ! reason ) {
+				// Maybe change EXCEPT to print to the audit log with D_AUDIT
 			EXCEPT( "Out of memory!" );
 		}
 		sprintf( reason, "\"%s (by user %s)\"", tmp, owner );
@@ -4155,12 +4333,14 @@ Scheduler::actOnJobs(int, Stream* s)
 			snprintf( buf, 256, "(%s==%d) && (", ATTR_JOB_STATUS, SUSPENDED );
 			break;
 		default:
+				// Maybe change EXCEPT to print to the audit log with D_AUDIT
 			EXCEPT( "impossible: unknown action (%d) in actOnJobs() after "
 					"it was already recognized", action_num );
 		}
 		int size = strlen(buf) + strlen(value) + 3;
 		constraint = (char*) malloc( size * sizeof(char) );
 		if( ! constraint ) {
+				// Maybe change EXCEPT to print to the audit log with D_AUDIT
 			EXCEPT( "Out of memory!" );
 		}
 			// we need to terminate the ()'s after their constraint
@@ -4171,7 +4351,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	tmp = NULL;
 	if( command_ad.LookupString(ATTR_ACTION_IDS, &tmp) ) {
 		if( constraint ) {
-			dprintf( D_ALWAYS, "actOnJobs(): "
+			dprintf( D_AUDIT | D_FAILURE, *rsock, "actOnJobs(): "
 					 "ClassAd has both %s and %s, aborting\n",
 					 ATTR_ACTION_CONSTRAINT, ATTR_ACTION_IDS );
 			refuse( s );
@@ -4184,6 +4364,23 @@ Scheduler::actOnJobs(int, Stream* s)
 		free( tmp );
 		tmp = NULL;
 	}
+	
+		// Audit Log reporting
+	std::string job_ids_string, initial_constraint;
+	if( constraint ) {
+		initial_constraint = constraint;
+		dprintf( D_AUDIT, *rsock, "%s by constraint %s\n",
+				 getJobActionString(action), initial_constraint.c_str());
+
+	} else {
+		char *tmp = job_ids.print_to_string();
+		if ( tmp ) {
+			job_ids_string = tmp;
+			free( tmp );
+		}
+		dprintf( D_AUDIT, *rsock, "%s jobs %s\n",
+				 getJobActionString(action), job_ids_string.c_str());
+	}		
 
 		// // // // //
 		// REAL WORK
@@ -4357,6 +4554,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			num_success++;
 			continue;
 		default:
+				// Maybe change EXCEPT to print to the audit log with D_AUDIT
 			EXCEPT( "impossible: unknown action (%d) in actOnJobs() "
 					"after it was already recognized", action_num );
 		}
@@ -4374,6 +4572,7 @@ Scheduler::actOnJobs(int, Stream* s)
 				// done.
 			ClassAd *cad = GetJobAd( tmp_id.cluster, tmp_id.proc, false );
 			if( ! cad ) {
+					// Maybe change EXCEPT to print to the audit log with D_AUDIT
 				EXCEPT( "impossible: GetJobAd(%d.%d) returned false "
 						"yet GetAttributeInt(%s) returned success",
 						tmp_id.cluster, tmp_id.proc, ATTR_JOB_STATUS );
@@ -4431,7 +4630,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	if( ! (putClassAd(rsock, *response_ad) && rsock->end_of_message()) ) {
 			// Failed to send reply, the client might be dead, so
 			// abort our transaction.
-		dprintf( D_ALWAYS, 
+		dprintf( D_AUDIT | D_FAILURE, *rsock,
 				 "actOnJobs: couldn't send results to client: aborting\n" );
 		if( needs_transaction ) {
 			AbortTransaction();
@@ -4442,7 +4641,7 @@ Scheduler::actOnJobs(int, Stream* s)
 
 	if( num_success == 0 ) {
 			// We didn't do anything, so we want to bail out now...
-		dprintf( D_FULLDEBUG, 
+		dprintf( D_AUDIT | D_FAILURE | D_FULLDEBUG, *rsock, 
 				 "actOnJobs: didn't do any work, aborting\n" );
 		if( needs_transaction ) {
 			AbortTransaction();
@@ -4456,7 +4655,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	rsock->decode();
 	if( ! (rsock->code(reply) && rsock->end_of_message() && reply == OK) ) {
 			// we couldn't get the reply, or they told us to bail
-		dprintf( D_ALWAYS, "actOnJobs: client not responding: aborting\n" );
+		dprintf( D_AUDIT | D_FAILURE, *rsock, "actOnJobs: client not responding: aborting\n" );
 		if( needs_transaction ) {
 			AbortTransaction();
 		}
@@ -4499,6 +4698,15 @@ Scheduler::actOnJobs(int, Stream* s)
 		// our matches and either remove them or pick a different job
 		// to run on them.
 	ExpediteStartJobs();
+
+		// Audit Log reporting
+	if( !initial_constraint.empty() ) {
+		dprintf( D_AUDIT, *rsock, "Finished %s by constraint %s\n",
+				 getJobActionString(action), initial_constraint.c_str());
+	} else {
+		dprintf( D_AUDIT, *rsock, "Finished %s jobs %s\n",
+				 getJobActionString(action), job_ids_string.c_str());
+	}
 
 	return TRUE;
 }
@@ -8963,7 +9171,7 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 						// Send a vacate
 						//
 					if ( ! skip_vacate ) {
-						send_vacate( rec->match, CKPT_FRGN_JOB );
+						send_vacate( rec->match, DEACTIVATE_CLAIM );
 						dprintf( D_ALWAYS, 
 								"Sent vacate command to %s for job %d.%d\n",
 								rec->match->peer, cluster, proc );
@@ -12258,6 +12466,8 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		goto error_wrapup;
 	}
 
+	dprintf(D_AUDIT, *sock, "GET_JOB_CONNECT_INFO for job %d.%d\n", jobid.cluster, jobid.proc );
+
 	input.LookupString(ATTR_SESSION_INFO,job_owner_session_info);
 
 	jobad = GetJobAd(jobid.cluster,jobid.proc);
@@ -12431,7 +12641,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	return TRUE;
 
  error_wrapup:
-	dprintf(D_ALWAYS,"GET_JOB_CONNECT_INFO failed: %s\n",error_msg.Value());
+	dprintf(D_AUDIT|D_FAILURE, *sock, "GET_JOB_CONNECT_INFO failed: %s\n",error_msg.Value() );
 	reply.Assign(ATTR_RESULT,false);
 	reply.Assign(ATTR_ERROR_STRING,error_msg);
 	if( retry_is_sensible ) {
@@ -14054,6 +14264,7 @@ Scheduler::receive_startd_update(int /*cmd*/, Stream *stream) {
 		} 
 		free(name);
 		free(claim_id);
+		free(state);
 		return TRUE;
 	} else {
 		if (m_unclaimedLocalStartds.count(name) > 0) {
@@ -14073,9 +14284,9 @@ Scheduler::receive_startd_update(int /*cmd*/, Stream *stream) {
 		m_unclaimedLocalStartds[name] = machineAd;
 		free(name);
 		free(claim_id);
+		free(state);
 		return TRUE;
 	}
-	free(claim_id);
 	return TRUE;
 }
 

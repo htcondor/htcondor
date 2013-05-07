@@ -31,6 +31,7 @@ if (HAVE_SSH_TO_JOB)
 	condor_exe(condor_ssh_to_job "ssh_to_job.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 endif(HAVE_SSH_TO_JOB)
 
+include_directories(${BOOST_INCLUDE})
 condor_exe(condor_tail "peek.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 
 condor_exe(condor_transfer_data "transfer_data.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)

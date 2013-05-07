@@ -33,20 +33,19 @@ if ( WITH_VOMS )
 		endif()
 
 		if ( DARWIN )
-			set ( VOMS_PATCH cd voms-2.0.6 &&
-				patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/voms-gsoap.patch &&
-				rm src/server/stdsoap2.c src/server/stdsoap2.h src/server/soap* &&
+			set ( VOMS_PATCH patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/voms-gsoap.patch &&
+				rm src/server/stdsoap2.c src/server/stdsoap2.h src/server/soapC.c src/server/soapH.h src/server/soapStub.h src/server/soapdefs.h &&
 				touch -r src/utils/vomsfake.y src/utils/vomsparser.h &&
 				touch -r src/utils/vomsfake.y src/utils/vomsparser.c &&
 				touch -r src/utils/vomsfake.y src/utils/lex.yy.c &&
 				patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/globus_thread_h.patch &&
+				patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/new_cpp_linkage.patch &&
 				cp ${CMAKE_CURRENT_SOURCE_DIR}/dummy.c src/replib &&
 				patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/replib.patch )
 			set ( VOMS_GLOBUS_FLAG "" )
 		ELSE()
-			set ( VOMS_PATCH cd voms-2.0.6 &&
-				patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/voms-gsoap.patch &&
-				rm src/server/stdsoap2.c src/server/stdsoap2.h src/server/soap* &&
+			set ( VOMS_PATCH patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/voms-gsoap.patch &&
+				rm src/server/stdsoap2.c src/server/stdsoap2.h src/server/soapC.c src/server/soapH.h src/server/soapStub.h src/server/soapdefs.h &&
 				touch -r src/utils/vomsfake.y src/utils/vomsparser.h &&
 				touch -r src/utils/vomsfake.y src/utils/vomsparser.c &&
 				touch -r src/utils/vomsfake.y src/utils/lex.yy.c &&
@@ -57,6 +56,18 @@ if ( WITH_VOMS )
 
 		condor_pre_external( VOMS voms-2.0.6 "include;lib" "done")
 
+		if ( ${OS_NAME} STREQUAL "DARWIN" AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
+			string(REPLACE "-std=c++11" "" VOMS_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+			string(REPLACE "-std=c++11" "" VOMS_C_FLAGS "${CMAKE_C_FLAGS}")
+			string(REPLACE "-std=c++11" "" VOMS_LDFLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
+			set ( VOMS_CXX_COMPILER  "clang++" )
+                else()
+			set ( VOMS_CXX_FLAGS ${CMAKE_CXX_FLAGS} )
+			set ( VOMS_C_FLAGS ${CMAKE_C_FLAGS} )
+			set ( VOMS_LDFLAGS ${CMAKE_SHARED_LINKER_FLAGS} )
+			set ( VOMS_CXX_COMPILER ${CMAKE_CXX_COMPILER} )
+		endif()
+
 		ExternalProject_Add(voms
 			DEPENDS ${GLOBUS_REF}
 			#-- Download Step ----------
@@ -65,7 +76,12 @@ if ( WITH_VOMS )
 			#--Patch step ----------
 			PATCH_COMMAND ${VOMS_PATCH}
 			#--Configure step ----------
-			CONFIGURE_COMMAND cd voms-2.0.6 &&
+			CONFIGURE_COMMAND 
+				export CXX=${CMAKE_CXX_COMPILER} &&
+				export CC=${CMAKE_C_COMPILER} &&
+				export CXXFLAGS=${VOMS_CXX_FLAGS} &&
+				export CFLAGS=${VOMS_C_FLAGS} &&
+				export LDFLAGS=${VOMS_LDFLAGS} &&
 				./configure
 					--prefix=${VOMS_INSTALL_LOC}
 					--with-api-only
@@ -73,11 +89,11 @@ if ( WITH_VOMS )
 					--disable-java --disable-docs
 					--disable-glite
 			#--Build Step ----------
-			BUILD_COMMAND cd voms-2.0.6 && make
+			BUILD_COMMAND make
 			BUILD_IN_SOURCE 1
 			#--install Step ----------
 			INSTALL_DIR ${VOMS_INSTALL_LOC}
-			INSTALL_COMMAND cd voms-2.0.6 && make install && touch ${VOMS_INSTALL_LOC}/done
+			INSTALL_COMMAND make install && touch ${VOMS_INSTALL_LOC}/done
 		)
 
 		set( VOMS_FOUND_STATIC "${VOMS_INSTALL_LOC}/lib/libvomsapi.a" )

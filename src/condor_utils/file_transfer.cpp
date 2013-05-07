@@ -3326,7 +3326,7 @@ FileTransfer::GetTransferQueueUser()
 	ClassAd *job = GetJobAd();
 	if( job ) {
 		std::string user_expr;
-		if( param(user_expr,"TRANSFER_QUEUE_USER_EXPR",ATTR_USER) ) {
+		if( param(user_expr,"TRANSFER_QUEUE_USER_EXPR","strcat(\"Owner_\",Owner)") ) {
 			ExprTree *user_tree = NULL;
 			if( ParseClassAdRvalExpr( user_expr.c_str(), user_tree ) == 0 && user_tree ) {
 				classad::Value val;

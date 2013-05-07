@@ -25,13 +25,13 @@ if ( NOT CLIPPED )
 			    DOWNLOAD_DIR ${ZLIB_STAGE}/dl
 			    URL http://parrot.cs.wisc.edu/externals/${ZLIB_VER}.tar.gz
 			    #--Configure step ----------
-			    CONFIGURE_COMMAND cd ${ZLIB_VER} && ./configure --prefix=${ZLIB_INSTALL_LOC}
+			    CONFIGURE_COMMAND ./configure --prefix=${ZLIB_INSTALL_LOC}
 			    #--Build Step ----------
-			    BUILD_COMMAND cd ${ZLIB_VER} && make
+			    BUILD_COMMAND make
 			    BUILD_IN_SOURCE 1
 			    #--install Step ----------
 			    INSTALL_DIR ${ZLIB_INSTALL_LOC}
-			    INSTALL_COMMAND cd ${ZLIB_VER} && make install )
+			    INSTALL_COMMAND make install )
 
 	condor_post_external( zlib include OFF )
 

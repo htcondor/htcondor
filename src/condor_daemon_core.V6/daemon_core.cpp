@@ -127,6 +127,8 @@ const int DaemonCore::ERRNO_PID_COLLISION = 666667;
 const int DaemonCore::ERRNO_REGISTRATION_FAILED = 666668;
 const int DaemonCore::ERRNO_EXIT = 666669;
 
+#define CREATE_PROCESS_FAILED_CHDIR 1
+
 // Make this the last include to fix assert problems on Win32 -- see
 // the comments about assert at the end of condor_debug.h to understand
 // why.
@@ -329,6 +331,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 		maxSocket = DEFAULT_MAXSOCKETS;
 
 	sec_man = new SecMan();
+	audit_log_callback_fn = 0;
 
 	sockTable = new ExtArray<SockEnt>(maxSocket);
 	if(sockTable == NULL)
@@ -5048,7 +5051,7 @@ exitCreateProcessChild() {
 }
 
 void
-writeExecError(CreateProcessForkit *forkit,int exec_errno);
+writeExecError(CreateProcessForkit *forkit,int exec_errno,int failed_op=0);
 
 #endif
 
@@ -5343,7 +5346,7 @@ public:
 	pid_t clone_safe_getppid();
 
 	void writeTrackingGid(gid_t tracking_gid);
-	void writeExecError(int exec_errno);
+	void writeExecError(int exec_errno,int failed_op=0);
 
 private:
 		// Data passed to us from the parent:
@@ -5670,7 +5673,7 @@ void CreateProcessForkit::writeTrackingGid(gid_t tracking_gid)
 	}
 }
 
-void CreateProcessForkit::writeExecError(int child_errno)
+void CreateProcessForkit::writeExecError(int child_errno,int failed_op)
 {
 	if( !m_wrote_tracking_gid ) {
 			// Tracking gid must come before errno on the pipe,
@@ -5685,11 +5688,17 @@ void CreateProcessForkit::writeExecError(int child_errno)
 			dprintf(D_ALWAYS,"Create_Process: Failed to write error to error pipe: rc=%d, errno=%d\n",rc,errno);
 		}
 	}
+	rc = full_write(m_errorpipe[1], &failed_op, sizeof(failed_op));
+	if( rc != sizeof(failed_op) ) {
+		if( !m_no_dprintf_allowed ) {
+			dprintf(D_ALWAYS,"Create_Process: Failed to write failed_op to error pipe: rc=%d, errno=%d\n",rc,errno);
+		}
+	}
 }
 
-void writeExecError(CreateProcessForkit *forkit,int exec_errno)
+void writeExecError(CreateProcessForkit *forkit,int exec_errno,int failed_op)
 {
-	forkit->writeExecError(exec_errno);
+	forkit->writeExecError(exec_errno,failed_op);
 }
 
 void CreateProcessForkit::exec() {
@@ -6094,7 +6103,13 @@ void CreateProcessForkit::exec() {
 
 	bool bOkToReMap=false;
 #ifdef HAVE_UNSHARE
-    if (can_switch_ids()) {
+      /////////////////////////////////////////////////
+      // Ticket #3601 - Current theory is that nfs-automounter fails 
+      // when a process has been unshared, so allow for a knob.
+      /////////////////////////////////////////////////
+      bool want_namespace = param_boolean( "PER_JOB_NAMESPACES", true );
+
+      if ( m_fs_remap && can_switch_ids() && want_namespace ) {
         m_priv_state = set_priv_no_memory_changes(PRIV_ROOT);
             
         int rc =0;
@@ -6294,7 +6309,7 @@ void CreateProcessForkit::exec() {
 		if( chdir(m_cwd) == -1 ) {
 				// before we exit, make sure our parent knows something
 				// went wrong before the exec...
-			writeExecError(errno);
+			writeExecError(errno,CREATE_PROCESS_FAILED_CHDIR);
 			_exit(errno);
 		}
 	}
@@ -7288,24 +7303,6 @@ int DaemonCore::Create_Process(
 		goto wrapup;
 	}
 
-	// Next, check to see that the cwd exists.
-	struct stat stat_struct;
-	if( cwd && (cwd[0] != '\0') ) {
-		if( stat(cwd, &stat_struct) == -1 ) {
-			return_errno = errno;
-            if (NULL != err_return_msg) {
-                err_return_msg->formatstr("Cannot access specified iwd \"%s\"", cwd);
-            }
-			dprintf( D_ALWAYS, "Create_Process: "
-					 "Cannot access specified iwd \"%s\": "
-					 "errno = %d (%s)\n", cwd, errno, strerror(errno) );
-			if ( priv != PRIV_UNKNOWN ) {
-				set_priv( current_priv );
-			}
-			goto wrapup;
-		}
-	}
-
 		// Change back to the priv we came from:
 	if ( priv != PRIV_UNKNOWN ) {
 		set_priv( current_priv );
@@ -7464,6 +7461,11 @@ int DaemonCore::Create_Process(
 				// errorpipe before it was closed, then we know the
 				// error happened before the exec.  We need to reap
 				// the child and return FALSE.
+			int child_failed_op = 0;
+			if (full_read(errorpipe[0], &child_failed_op, sizeof(int)) != sizeof(int)) {
+				child_failed_op = -1;
+				dprintf(D_ALWAYS, "Warning: Create_Process: failed to read child process failure code\n");
+			}
 			int child_status;
 			waitpid(newpid, &child_status, 0);
 			errno = child_errno;
@@ -7543,11 +7545,28 @@ int DaemonCore::Create_Process(
 				break;
 
 			default:
-				dprintf( D_ALWAYS, "Create_Process(%s): child "
-						 "failed with errno %d (%s) before exec()\n",
-						 executable,
-						 errno,
-						 strerror(errno) );
+				if( child_failed_op == CREATE_PROCESS_FAILED_CHDIR && cwd) {
+					std::string remap_description;
+					if( alt_cwd.length() && alt_cwd.compare(cwd) ) {
+						formatstr(remap_description," remapped to \"%s\"",alt_cwd.c_str());
+					}
+					if (NULL != err_return_msg) {
+						err_return_msg->formatstr("Cannot access initial working directory \"%s\"%s",
+												  cwd, remap_description.c_str());
+					}
+					dprintf( D_ALWAYS, "Create_Process: "
+							 "Cannot access initial working directory \"%s\"%s: "
+							 "errno = %d (%s)\n",
+							 cwd, remap_description.c_str(),
+							 return_errno, strerror(return_errno) );
+				}
+				else {
+					dprintf( D_ALWAYS, "Create_Process(%s): child "
+							 "failed with errno %d (%s) before exec()\n",
+							 executable,
+							 errno,
+							 strerror(errno));
+				}
 				break;
 
 			}

@@ -188,7 +188,7 @@ class TestWithDaemons(unittest.TestCase):
         self.launch_daemons(["COLLECTOR"])
         coll = htcondor.Collector()
         now = time.time()
-        ad = classad.ClassAd('[MyType="GenericAd"; Name="Foo"; Foo=1; Bar=%f; Baz="foo"]' % now) 
+        ad = classad.ClassAd('[MyType="GenericAd"; Name="Foo"; Foo=1; Bar=%f; Baz="foo"]' % now)
         coll.advertise([ad])
         for i in range(5):
             ads = coll.query(htcondor.AdTypes.Any, 'Name =?= "Foo"', ["Bar"])
@@ -240,11 +240,10 @@ class TestWithDaemons(unittest.TestCase):
             time.sleep(1)
         schedd.retrieve("ClusterId == %d" % cluster)
         #print "Final status:", schedd.query("ClusterId == %d" % cluster)[0];
-        schedd.act(htcondor.JobAction.Remove, ["%d.0" % cluster])       
+        schedd.act(htcondor.JobAction.Remove, ["%d.0" % cluster])
         ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
         self.assertEquals(len(ads), 0)
         self.assertEquals(open(output_file).read(), "hello world\n");
 
 if __name__ == '__main__':
     unittest.main()
-

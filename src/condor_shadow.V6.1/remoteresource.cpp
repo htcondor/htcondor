@@ -47,6 +47,7 @@ static const char *Resource_State_String [] = {
 	"PRE", 
 	"EXECUTING", 
 	"PENDING_DEATH", 
+	"PENDING_TRANSFER",
 	"FINISHED",
 	"SUSPENDED",
 	"STARTUP",

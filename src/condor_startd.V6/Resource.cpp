@@ -1918,6 +1918,8 @@ Resource::publish( ClassAd* cap, amask_t mask )
 
 	free(ptr);
 
+	cap->Assign( ATTR_RETIREMENT_TIME_REMAINING, evalRetirementRemaining() );
+
 	    // Is this the local universe startd?
     cap->Assign(ATTR_IS_LOCAL_STARTD, param_boolean("IS_LOCAL_STARTD", false));
 
@@ -1930,6 +1932,45 @@ Resource::publish( ClassAd* cap, amask_t mask )
 	cap->AssignExpr( ATTR_MACHINE_MAX_VACATE_TIME, ptr ? ptr : "0" );
 
 	free(ptr);
+    
+    
+    /////////////////////////////////////////////////////////////
+    // TSTCLAIR: Add named mounts to allow job matching based 
+    //           on starter mount capabilities. 
+    /////////////////////////////////////////////////////////////
+    ptr = param("NAMED_MOUNTS");
+    if (ptr)
+    {
+        StringList mount_list(ptr);
+        mount_list.rewind();
+        std::string mntlist; 
+        const char * next_mnt;
+        
+        // advertise the named mount points, but hide their details
+        while ( (next_mnt=mount_list.next()) ) 
+        {
+            MyString mnt_spec(next_mnt);
+            mnt_spec.Tokenize();
+            
+            const char * mnt_name = mnt_spec.GetNextToken("=", false);
+            if ( mnt_name ) 
+            {
+                if (mntlist.size())
+                {
+                    mntlist+=",";   
+                }
+                mntlist+=mnt_name;
+            }
+        }
+        
+        if (! cap->Assign( ATTR_NAMED_MOUNT_PTS, mntlist.c_str() ))
+        {
+            dprintf( D_ALWAYS, "FAILED to assign %s=%s\n",ATTR_NAMED_MOUNT_PTS,mntlist.c_str() );
+        }
+            
+        free(ptr);
+        ptr = NULL;
+    }
 
 #if HAVE_JOB_HOOKS
 	if (IS_PUBLIC(mask)) {
@@ -2132,13 +2173,14 @@ Resource::compute( amask_t mask )
 void
 Resource::dprintf_va( int flags, const char* fmt, va_list args )
 {
+	const DPF_IDENT ident = 0; // REMIND: maybe something useful here??
 	if( resmgr->is_smp() ) {
 		MyString fmt_str( r_id_str );
 		fmt_str += ": ";
 		fmt_str += fmt;
-		::_condor_dprintf_va( flags, fmt_str.Value(), args );
+		::_condor_dprintf_va( flags, ident, fmt_str.Value(), args );
 	} else {
-		::_condor_dprintf_va( flags, fmt, args );
+		::_condor_dprintf_va( flags, ident, fmt, args );
 	}
 }
 

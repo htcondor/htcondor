@@ -406,6 +406,27 @@ sub RegisterRelease
 
     $test{$handle}{"RegisterRelease"} = $function_ref;
 }
+sub RegisterDisconnected
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterDisconnected"} = $function_ref;
+}
+sub RegisterReconnected
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterReconnected"} = $function_ref;
+}
+sub RegisterReconnectFailed
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterReconnectFailed"} = $function_ref;
+}
 sub RegisterJobErr
 {
     my $handle = shift || croak "missing handle argument";
@@ -1606,7 +1627,7 @@ sub getFqdnHost {
 #
 # SearchCondorLog
 #
-# Serach a log for a regexp pattern
+# Search a log for a regexp pattern
 #
 ##############################################################################
 
@@ -1625,6 +1646,122 @@ sub SearchCondorLog
             CondorTest::debug("FOUND IT! $_",2);
             return(1);
         }
+    }
+    return(0);
+}
+
+##############################################################################
+#
+# SearchCondorLogMultiple`
+#
+# Search a log for a regexp pattern N times on some interval
+#
+##############################################################################
+
+sub SearchCondorLogMultiple
+{
+    my $daemon = shift;
+    my $regexp = shift;
+	my $instances = shift;
+	my $timeout = shift;
+	my $findnew = shift;
+	my $currentcount = 0;
+	my $found = 0;
+	my $tried = 0;
+
+    my $logloc = `condor_config_val ${daemon}_log`;
+    CondorUtils::fullchomp($logloc);
+    CondorTest::debug("Search this log <$logloc> for <$regexp>\n",2);
+
+	# do we want to see X new events
+	if($findnew eq "true") {
+		# find current event count
+   		open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
+   		while(<LOG>) {
+       		if( $_ =~ /$regexp/) {
+           		CondorTest::debug("FOUND IT! $_\n",2);
+				$currentcount += 1;
+       		} else {
+           		CondorTest::debug(".",2);
+			}
+   		}
+		close(LOG);
+		$instances = $currentcount + $instances;
+	}
+
+	while($found < $instances) {
+       	CondorTest::debug("Searching Try $tried\n",2);
+		$found = 0;
+   		open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
+   		while(<LOG>) {
+       		if( $_ =~ /$regexp/) {
+           		CondorTest::debug("FOUND IT! $_\n",2);
+				$found += 1;
+       		} else {
+           		CondorTest::debug(".",2);
+			}
+   		}
+		close(LOG);
+		CondorTest::debug("Found <$found> want <$instances>\n",2);
+		if($found < $instances) {
+			sleep 1;
+		} else {
+			#Done
+			last;
+		}
+		$tried += 1;
+		if($tried >= $timeout) {
+			last;
+		}
+		if($found >= $instances) {
+			CondorTest::debug("Found <$found> want <$instances> LEAVING\n",2);
+			#done
+			return(1);;
+		}
+	}
+	if($found < $instances) {
+		return(0);
+	}
+}
+
+##############################################################################
+##
+## SearchCondorSpecialLog
+##
+## Serach a log for a regexp pattern
+## Log not a daemon log but in log location(NEGOTIATOR_MATCH_LOG)
+##
+###############################################################################
+
+
+sub SearchCondorSpecialLog
+{
+    my $logname = shift;
+    my $regexp = shift;
+    my $allmatch = shift;
+
+    my $matches = 0;
+    my $logloc = `condor_config_val log`;
+    CondorUtils::fullchomp($logloc);
+    $logloc = "$logloc/$logname";
+
+    #print "SearchCondorSpecialLog: $logname/$regexp/$allmatch\n";
+    CondorTest::debug("Search this log <$logloc> for <$regexp>\n",2);
+    open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
+    while(<LOG>) {
+        if( $_ =~ /$regexp/) {
+            CondorTest::debug("FOUND IT! $_",2);
+            $matches += 1;
+        } else {
+            if($allmatch != 0) {
+                CondorTest::debug("Search this log <$logname> for <$regexp> no none matching lines allowed\n",2);
+                CondorTest::debug("Failing found $_\n",2);
+                return(0);
+            }
+        }
+    }
+    if($matches > 0) {
+        return(1);
     }
     return(0);
 }
@@ -2328,7 +2465,6 @@ sub WriteFileOrDie
 	print OUT $body;
 	close OUT;
 }
-
 
 
 1;

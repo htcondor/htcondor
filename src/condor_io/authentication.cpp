@@ -619,6 +619,40 @@ void Authentication::setAuthAny()
 }
 */
 
+const char* Authentication::getAuthenticatedName()
+{
+#if defined(SKIP_AUTHENTICATION)
+	return NULL;
+#else
+	if ( authenticator_ ) {
+		return authenticator_->getAuthenticatedName();
+	} else {
+		return NULL;
+	}
+#endif
+}
+
+const char* Authentication::getFQAuthenticatedName()
+{
+#if defined(SKIP_AUTHENTICATION)
+	return NULL;
+#else
+	if ( authenticator_ ) {
+#if defined(HAVE_EXT_GLOBUS)
+		if(strcasecmp("GSI", method_used) == 0) {
+	        const char *fqan = ((Condor_Auth_X509*)authenticator_)->getFQAN();	
+			if(fqan) {
+				return fqan;
+			}
+		}
+#endif // defined(HAVE_EXT_GLOBUS)
+		return authenticator_->getAuthenticatedName();
+	} else {
+		return NULL;
+	}
+#endif // defined(SKIP_AUTHENTICATION)
+}
+
 int Authentication::setOwner( const char *owner ) 
 {
 #if defined(SKIP_AUTHENTICATION)

@@ -1,0 +1,227 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	ALL_DEBUG = 
+';
+
+my $negotiatorcycle = 5;
+my $nextappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	ALL_DEBUG = 
+	XSW_LIMIT = 2
+	CONCURRENCY_LIMIT_DEFAULT = 2
+	CONCURRENCY_LIMIT_DEFAULT_SMALL = 5
+	CONCURRENCY_LIMIT_DEFAULT_LARGE = 2
+	NEGOTIATOR_INTERVAL = 5
+';
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $firstappend_condor_config
+);
+
+my $append_submit_commands = '
+concurrency_limits = XSW;
+';
+
+my $on_abort = sub {
+	CondorTest::debug("Abort from removing sleep 0 jobs.\n",1);
+};
+
+my $testname = "job_concurrency_limits.run";
+my $result = 1;
+my $running_now = 0;
+my $expect_idle = 0;
+my $expect_run = 0;
+
+my $on_execute = sub {
+my $idles = 0;
+	$running_now += 1;
+	CondorTest::debug("Job started running.\n",1);
+	# compare current running to expected total
+	if($running_now == $expect_run) {
+		# if we expect no idle jobs, don't check.
+		# remove jobs and return
+		if($expect_idle == 0) {
+			runcmd("condor_rm -all");
+		} else {
+			$idles = CountIdle($expect_idle);
+			if($idles == $expect_idle) {
+				print "Will another job start up? Better not.\n";
+				# Started Negotiation Cycle
+				CondorLog::RunCheckMultiple(
+					daemon => "Negotiator",
+					match_regexp => "Started Negotiation Cycle",
+					match_instances => 2,
+					match_timeout => 30,
+					match_new => "true"
+				);
+				runcmd("condor_rm -all");
+			}
+		}
+	} else {
+		print "running $running_now expecting $expect_run: not removing jobs\n";
+	}
+
+	if($running_now > $expect_run) {
+		die "Running jobs <$running_now> exceeded concurrency lints <$expect_run>\n";
+	}
+};
+
+#Do a couple things before setting currency limits
+print "First test basic job\n";
+$result = SimpleJob::RunCheck();
+
+# then test behaviour of non cuncurrency jobs first
+# all from each batch should run. Remove and do next set.
+my $count = 0;
+my $running_now = 0;
+$expect_run = 3;
+$expect_idle = 0;
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	on_execute => $on_execute,
+	queue_sz => 3,
+	duration => 0,
+	append_submit_commands => $append_submit_commands
+);
+print "First test basic job. 3 jobs no concurrency settings\n";
+if($result == 1) {
+	print "ok\n";
+} else {
+	print "bad\n";
+}
+
+
+# OK turn it on with concurrency limits
+CondorTest::StartCondorWithParams(
+    append_condor_config => $nextappend_condor_config
+);
+
+$expect_run = 2;
+$expect_idle = 1;
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	on_execute => $on_execute,
+	queue_sz => 3,
+	duration => 0,
+	append_submit_commands => $append_submit_commands
+);
+print "Test specified concurrency\n";
+if($result == 1) {
+	print "ok\n";
+} else {
+	print "bad\n";
+}
+
+my $append_submit_commands = '
+concurrency_limits = UNDEFINED:2;
+';
+
+$expect_run = 1;
+$expect_idle = 1;
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	on_execute => $on_execute,
+	queue_sz => 2,
+	duration => 0,
+	append_submit_commands => $append_submit_commands
+);
+print "Test default concurrency and colon usage spec\n";
+if($result == 1) {
+	print "ok\n";
+} else {
+	print "bad\n";
+}
+
+my $append_submit_commands = '
+concurrency_limits = large.license;
+';
+
+$expect_run = 2;
+$expect_idle = 1;
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	on_execute => $on_execute,
+	queue_sz => 3,
+	duration => 0,
+	append_submit_commands => $append_submit_commands
+);
+print "Test class default\n";
+if($result == 1) {
+	print "ok\n";
+} else {
+	print "bad\n";
+}
+
+my $append_submit_commands = '
+concurrency_limits = small.license;
+';
+
+$expect_run = 5;
+$expect_idle = 2;
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	on_execute => $on_execute,
+	queue_sz => 7,
+	duration => 0,
+	append_submit_commands => $append_submit_commands
+);
+print "Test class default\n";
+if($result == 1) {
+	print "ok\n";
+} else {
+	print "bad\n";
+}
+
+
+
+CondorTest::EndTest();
+
+
+sub CountIdle
+{
+	my $expectidle = shift;
+	my $idlecount = 0;
+	my $line = "";
+
+	#runcmd("condor_q");
+	my @jobs = `condor_q`;
+	foreach my $job (@jobs) {
+		chomp($job);
+		$line = $job;
+		print "JOB: $line\n";
+		if($line =~ /^.*?\sI\s.*$/) {
+			$idlecount += 1;
+			print "Idle count now <$idlecount>, expecting <$expectidle>\n";
+		}
+	}
+	if($idlecount != $expectidle) {
+		die "Expected $expectidle idle but found $idlecount\n";
+	}
+
+	return($idlecount);
+}

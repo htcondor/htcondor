@@ -36,6 +36,7 @@ if (NOT WINDOWS)
 
     # The following is helpful if you are trying to debug cmake find module
     #  set (Boost_DEBUG TRUE)
+    message ("Boost components: ${BOOST_COMPONENTS}" )
     find_package( Boost 1.33.1 COMPONENTS ${BOOST_COMPONENTS} )
 
     # always prefer system libraries where possible
@@ -63,6 +64,7 @@ if (NOT WINDOWS)
             append_var (CONDOR_EXTERNAL_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
             set (BOOST_VER ${Boost_VERSION})
             set (BOOST_INCLUDE ${Boost_INCLUDE_DIRS})
+            set (BOOST_LD ${Boost_LIBRARY_DIRS})
         endif()
 
     endif(Boost_FOUND)
@@ -108,12 +110,19 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 
 	set(BOOST_MIN_BUILD_DEP --with-thread --with-test --with-python)
 	if( "${CONDOR_PLATFORM}" STREQUAL "x86_64_Fedora18" )
-		set(BOOST_PATCH patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/boost.patch)
+		set(BOOST_PATCH patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/boost.patch)
 	else ()
 		set(BOOST_PATCH echo "nothing")
 	endif()
 	set(BOOST_INSTALL echo "nothing")
 	unset(BOOST_INCLUDE)
+
+	if (PYTHONINTERP_FOUND AND PYTHONLIBS_FOUND)
+		message("Bootstrapping python for boost")
+		set(BOOTSTRAP_PYTHON_OPTION "--with-python=${PYTHON_EXECUTABLE}")
+	else ()
+		set(BOOTSTRAP_PYTHON_OPTION )
+	endif()
 
 	# so the idea of privately staging boost is silly.
 	ExternalProject_Add(boost
@@ -123,9 +132,9 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 		#--Patch step ----------
 		 PATCH_COMMAND ${BOOST_PATCH}
 		#--Configure step ----------
-		 CONFIGURE_COMMAND cd ${BOOST_FILENAME} ${CMD_TERM} ${BOOTSTRAP} --prefix=${BOOST_INSTALL_LOC} ${CMD_TERM} echo "Configure complete"
+		 CONFIGURE_COMMAND ${BOOTSTRAP} --prefix=${BOOST_INSTALL_LOC} ${BOOTSTRAP_PYTHON_OPTION} ${CMD_TERM} echo "Configure complete"
 		#--Build Step ----------
-		BUILD_COMMAND cd ${BOOST_FILENAME} ${CMD_TERM} ${EXEC}bjam ${BOOST_MIN_BUILD_DEP} --prefix=${BOOST_INSTALL_LOC} --libdir=${BOOST_INSTALL_LOC}/lib define=BOOST_HAS_THREADS ${BUILD_OPTIONS} toolset=${TOOLSET} link=static install
+		BUILD_COMMAND ${EXEC}bjam ${BOOST_MIN_BUILD_DEP} --prefix=${BOOST_INSTALL_LOC} --libdir=${BOOST_INSTALL_LOC}/lib define=BOOST_HAS_THREADS ${BUILD_OPTIONS} toolset=${TOOLSET} link=static install
 		BUILD_IN_SOURCE 1
 		#--install Step ----------
 		INSTALL_DIR ${BOOST_INSTALL_LOC}
@@ -143,7 +152,7 @@ endif()
 
 # update configure information
 if (BOOST_VER)
-	message (STATUS "external configured (BOOST_INCLUDE=${BOOST_INCLUDE}) version:(${BOOST_VER})")
+	message (STATUS "external configured (BOOST_INCLUDE=${BOOST_INCLUDE}) version:(${BOOST_VER}) link directories (${BOOST_LD})")
 	set( HAVE_EXT_BOOST ON PARENT_SCOPE )
 	set( BOOST_VER ${BOOST_VER} PARENT_SCOPE )
 	set( BOOST_INCLUDE ${BOOST_INCLUDE} PARENT_SCOPE )

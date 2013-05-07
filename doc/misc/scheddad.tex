@@ -676,11 +676,12 @@ to the network.  These statistics are reported for the sum of all
 users and may also be reported individually for recently active users
 by increasing the verbosity level \Expr{STATISTICS\_TO\_PUBLISH = TRANSFER:2}.
 Each of the per-user statistics is prefixed by a
-user name in the form \AdAttr{<username>\_FileTransferUploadBytes}.
+user name in the form \AdAttr{Owner\_<username>\_FileTransferUploadBytes}.
 In this case, the attribute represents activity by the specified user.
 The published user name is actually the file transfer queue name, 
 as defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
-This expression defaults to the name of the job owner.  
+This expression defaults to \AdAttr{Owner\_} followed by the name of the job
+owner.
 The attributes that are rates have a
 suffix that specifies the time span of the exponential moving average.
 By default the time spans that are published are 1m, 5m, 1h, and 1d.
@@ -696,7 +697,7 @@ reported once a full time span has accumulated.
   started.
   If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
   for each active user, this attribute is also published prefixed by
-  the user name, with the name \AdAttr{<username>\_FileTransferDownloadBytes}.
+  the user name, with the name \AdAttr{Owner\_<username>\_FileTransferDownloadBytes}.
   The published user name is actually the file transfer queue name, as
   defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 
@@ -711,7 +712,7 @@ reported once a full time span has accumulated.
   If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
   for each active user, this attribute is also published prefixed by
   the user name, with the name 
-  \AdAttr{<username>\_FileTransferDownloadBytesPerSecond\_<timespan>}.
+  \AdAttr{Owner\_<username>\_FileTransferDownloadBytesPerSecond\_<timespan>}.
   The published user name is actually the file transfer queue name, as
   defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 
@@ -729,7 +730,7 @@ reported once a full time span has accumulated.
   If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
   for each active user, this attribute is also published prefixed by
   the user name, with the name
-  \AdAttr{<username>\_FileTransferFileReadLoad\_<timespan>}.
+  \AdAttr{Owner\_<username>\_FileTransferFileReadLoad\_<timespan>}.
   The published user name is actually the file transfer queue name, as
   defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 
@@ -740,7 +741,7 @@ reported once a full time span has accumulated.
   If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
   for each active user, this attribute is also published prefixed by
   the user name, with the name
-  \AdAttr{<username>\_FileTransferFileReadSeconds}.
+  \AdAttr{Owner\_<username>\_FileTransferFileReadSeconds}.
   The published user name is actually the file transfer queue name, as
   defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 
@@ -758,7 +759,7 @@ reported once a full time span has accumulated.
   If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
   for each active user, this attribute is also published prefixed by
   the user name, with the name
-  \AdAttr{<username>\_FileTransferFileWriteLoad\_<timespan>}.
+  \AdAttr{Owner\_<username>\_FileTransferFileWriteLoad\_<timespan>}.
   The published user name is actually the file transfer queue name, as
   defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 
@@ -770,7 +771,7 @@ reported once a full time span has accumulated.
   If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
   for each active user, this attribute is also published prefixed by
   the user name, with the name
-  \AdAttr{<username>\_FileTransferFileWriteSeconds}.
+  \AdAttr{Owner\_<username>\_FileTransferFileWriteSeconds}.
   The published user name is actually the file transfer queue name, as
   defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 
@@ -791,7 +792,7 @@ reported once a full time span has accumulated.
   If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
   for each active user, this attribute is also published prefixed by
   the user name, with the name
-  \AdAttr{<username>\_FileTransferNetReadLoad\_<timespan>}.
+  \AdAttr{Owner\_<username>\_FileTransferNetReadLoad\_<timespan>}.
   The published user name is actually the file transfer queue name, as
   defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 
@@ -806,7 +807,7 @@ reported once a full time span has accumulated.
   If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
   for each active user, this attribute is also published prefixed by
   the user name, with the name
-  \AdAttr{<username>\_FileTransferNetReadSeconds}.
+  \AdAttr{Owner\_<username>\_FileTransferNetReadSeconds}.
   The published user name is actually the file transfer queue name, as
   defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 
@@ -827,7 +828,7 @@ reported once a full time span has accumulated.
   If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
   for each active user, this attribute is also published prefixed by
   the user name, with the name
-  \AdAttr{<username>\_FileTransferNetWriteLoad\_<timespan>}.
+  \AdAttr{Owner\_<username>\_FileTransferNetWriteLoad\_<timespan>}.
   The published user name is actually the file transfer queue name, as
   defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 
@@ -846,7 +847,7 @@ reported once a full time span has accumulated.
   If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
   for each active user, this attribute is also published prefixed by
   the user name, with the name
-  \AdAttr{<username>\_FileTransferNetWriteSeconds}.
+  \AdAttr{Owner\_<username>\_FileTransferNetWriteSeconds}.
   The published user name is actually the file transfer queue name, as
   defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 
@@ -856,7 +857,7 @@ reported once a full time span has accumulated.
   If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
   for each active user, this attribute is also published prefixed by
   the user name, with the name
-  \AdAttr{<username>\_FileTransferUploadBytes}.
+  \AdAttr{Owner\_<username>\_FileTransferUploadBytes}.
   The published user name is actually the file transfer queue name, as
   defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 
@@ -871,7 +872,7 @@ reported once a full time span has accumulated.
   If \Macro{STATISTICS\_TO\_PUBLISH} contains \Expr{TRANSFER:2},
   for each active user, this attribute is also published prefixed by
   the user name, with the name
-  \AdAttr{<username>\_FileTransferUploadBytesPerSecond\_<timespan>}.
+  \AdAttr{Owner\_<username>\_FileTransferUploadBytesPerSecond\_<timespan>}.
   The published user name is actually the file transfer queue name, as
   defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 

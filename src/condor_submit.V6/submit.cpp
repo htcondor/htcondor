@@ -246,6 +246,7 @@ const char	*RequestMemory	= "request_memory";
 const char	*RequestDisk	= "request_disk";
 const std::string  RequestPrefix  = "request_";
 std::set<std::string> fixedReqRes;
+std::set<std::string> stringReqRes;
 
 const char	*Universe		= "universe";
 const char	*MachineCount	= "machine_count";
@@ -2561,6 +2562,12 @@ void SetRequestResources() {
         std::string val = condor_param(key.c_str());
         std::string assign;
         formatstr(assign, "%s%s = %s", ATTR_REQUEST_PREFIX, rname.c_str(), val.c_str());
+        
+        if (val[0]=='\"')
+        {
+            stringReqRes.insert(rname);
+        }
+        
         InsertJobExpr(assign.c_str()); 
     }
     hash_iter_delete(&it);
@@ -6916,7 +6923,10 @@ check_requirements( char const *orig, MyString &answer )
         // CamelCase it!
         *(rname.begin()) = toupper(*(rname.begin()));
         std::string clause;
-        formatstr(clause, " && (TARGET.%s%s >= %s%s)", "", rname.c_str(), ATTR_REQUEST_PREFIX, rname.c_str());
+        if (stringReqRes.count(rname) > 0)
+            formatstr(clause, " && regexp(%s%s, TARGET.%s)", ATTR_REQUEST_PREFIX, rname.c_str(), rname.c_str());
+        else
+            formatstr(clause, " && (TARGET.%s%s >= %s%s)", "", rname.c_str(), ATTR_REQUEST_PREFIX, rname.c_str());
         answer += clause;
     }
     hash_iter_delete(&it);
@@ -7371,6 +7381,7 @@ init_params()
     fixedReqRes.insert(RequestCpus);
     fixedReqRes.insert(RequestMemory);
     fixedReqRes.insert(RequestDisk);
+    stringReqRes.clear();
 }
 
 int
@@ -8099,11 +8110,12 @@ SetConcurrencyLimits()
 void SetAccountingGroup() {
     // is a group setting in effect?
     char* group = condor_param(AcctGroup);
-    if (NULL == group) return;
 
     // look for the group user setting, or default to owner
     std::string group_user;
     char* gu = condor_param(AcctGroupUser);
+    if ((group == NULL) && (gu == NULL)) return; // nothing set, give up
+
     if (NULL == gu) {
         ASSERT(owner);
         group_user = owner;
@@ -8114,13 +8126,25 @@ void SetAccountingGroup() {
 
     // set attributes AcctGroup, AcctGroupUser and AccountingGroup on the job ad:
     std::string assign;
-    formatstr(assign, "%s = \"%s.%s\"", ATTR_ACCOUNTING_GROUP, group, group_user.c_str()); 
+
+    if (group) {
+        // If we have a group, must also specify user
+        formatstr(assign, "%s = \"%s.%s\"", ATTR_ACCOUNTING_GROUP, group, group_user.c_str()); 
+    } else {
+        // If not, this is accounting group as user alias, just set name
+        formatstr(assign, "%s = \"%s\"", ATTR_ACCOUNTING_GROUP, group_user.c_str()); 
+    }
     InsertJobExpr(assign.c_str());
-    formatstr(assign, "%s = \"%s\"", ATTR_ACCT_GROUP, group);
-    InsertJobExpr(assign.c_str());
+
+	if (group) {
+        formatstr(assign, "%s = \"%s\"", ATTR_ACCT_GROUP, group);
+        InsertJobExpr(assign.c_str());
+    }
+
     formatstr(assign, "%s = \"%s\"", ATTR_ACCT_GROUP_USER, group_user.c_str());
     InsertJobExpr(assign.c_str());
-    free(group);
+
+    if (group) free(group);
 }
 
 

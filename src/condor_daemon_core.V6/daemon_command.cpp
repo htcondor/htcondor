@@ -726,16 +726,31 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 					}
 				}
 
-				// grab the user out of the policy.
+				// grab some attributes out of the policy.
 				if (m_policy) {
-					char *the_user  = NULL;
-					m_policy->LookupString( ATTR_SEC_USER, &the_user);
-					if (the_user) {
+					char *tmp  = NULL;
+					m_policy->LookupString( ATTR_SEC_USER, &tmp);
+					if (tmp) {
 						// copy this to the HandleReq() scope
-						m_user = the_user;
-						free( the_user );
-						the_user = NULL;
+						m_user = tmp;
+						free( tmp );
+						tmp = NULL;
 					}
+					m_policy->LookupString( ATTR_SEC_AUTHENTICATED_NAME, &tmp);
+					if (tmp) {
+						// copy this to the HandleReq() scope
+						m_sock->setAuthenticatedName(tmp);
+						free( tmp );
+						tmp = NULL;
+					}
+					m_policy->LookupString( ATTR_SEC_AUTHENTICATION_METHODS, &tmp);
+					if (tmp) {
+						// copy this to the HandleReq() scope
+						m_sock->setAuthenticationMethodUsed(tmp);
+						free( tmp );
+						tmp = NULL;
+					}
+
 
 					bool tried_authentication=false;
 					m_policy->LookupBool(ATTR_SEC_TRIED_AUTHENTICATION,tried_authentication);
@@ -993,11 +1008,23 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 
 	int auth_timeout = daemonCore->getSecMan()->getSecTimeout( m_comTable[cmd_index].perm );
 
+	m_sock->setAuthenticationMethodsTried(auth_methods);
+
 	char *method_used = NULL;
 	bool auth_success = m_sock->authenticate(m_key, auth_methods, &errstack, auth_timeout, &method_used);
 
 	if ( method_used ) {
 		m_policy->Assign(ATTR_SEC_AUTHENTICATION_METHODS, method_used);
+	}
+	if ( m_sock->getAuthenticatedName() ) {
+		m_policy->Assign(ATTR_SEC_AUTHENTICATED_NAME, m_sock->getAuthenticatedName() );
+	}
+
+	if (!auth_success) {
+		// call the auditing callback to record the authentication failure
+		if (daemonCore->audit_log_callback_fn) {
+			(*(daemonCore->audit_log_callback_fn))( m_auth_cmd, (*m_sock), true );
+		}
 	}
 
 	free( auth_methods );
@@ -1467,6 +1494,11 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ExecCommand(
 		// abort before actually calling any command handler.
 		m_result = TRUE;
 		return CommandProtocolFinished;
+	}
+
+	// call the auditing callback to record the status of this connection
+	if (daemonCore->audit_log_callback_fn) {
+		(*(daemonCore->audit_log_callback_fn))( m_req, (*m_sock), (m_perm != USER_AUTH_SUCCESS) );
 	}
 
 	if ( m_reqFound == TRUE ) {

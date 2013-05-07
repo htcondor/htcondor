@@ -564,7 +564,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		sprintf(line, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
-		if(result >= 0) {
+		if ((length > 0) && (result >= 0)) {
 			char *buffer = (char*) malloc(length);
 			if(buffer) {
 				result = r->get_bytes_raw(buffer,length);

@@ -329,6 +329,12 @@ public:
 	void setAuthenticationMethodUsed(char const *auth_method);
 	const char *getAuthenticationMethodUsed();
 
+	void setAuthenticationMethodsTried(char const *auth_methods);
+	const char *getAuthenticationMethodsTried();
+
+	void setAuthenticatedName(char const *auth_name);
+	const char *getAuthenticatedName();
+
 	void setCryptoMethodUsed(char const *crypto_method);
 	const char* getCryptoMethodUsed();
 
@@ -364,6 +370,7 @@ public:
 
 	void invalidateSock();
 
+	unsigned int getUniqueId() { return m_uniqueId; }
 
 //	PRIVATE INTERFACE TO ALL SOCKS
 //
@@ -482,6 +489,8 @@ protected:
 	char *          _fqu_user_part;
 	char *          _fqu_domain_part;
 	char *          _auth_method;
+	char *          _auth_methods;
+	char *          _auth_name;
 	char *          _crypto_method;
 	bool            _tried_authentication;
 
@@ -495,6 +504,9 @@ protected:
 	KeyInfo           * mdKey_;
 
 	static bool guess_address_string(char const* host, int port, condor_sockaddr& addr);
+
+	unsigned int m_uniqueId;
+	static unsigned int m_nextUniqueId;
 
 private:
 	bool initialize_crypto(KeyInfo * key);
@@ -592,5 +604,7 @@ private:
 	//	SOCKET_LENGTH_TYPE len, bool outbound, bool loopback);
 	int _bind_helper(int fd, const condor_sockaddr& addr, bool outbound, bool loopback);
 };
+
+void dprintf ( int flags, Sock & sock, const char *fmt, ... ) CHECK_PRINTF_FORMAT(3,4);
 
 #endif /* SOCK_H */

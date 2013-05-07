@@ -993,7 +993,7 @@ update_cpu()
 UserProc *
 get_job_info()
 {
-	UserProc		*u_proc;
+	UserProc		*u_proc = NULL;
 	STARTUP_INFO	s;
 /*
 	int wait_for_debugger = 1;

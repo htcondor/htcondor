@@ -12,6 +12,73 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-7-9-7}Version 7.9.7}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 7.9.7 not yet released.
+%\item HTCondor version 7.9.7 released on Month Date, 2013.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item The HTCondor Python bindings now build on Mac OS X.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item For errors which have no response body, EC2 jobs now report the 
+HTTP code instead.
+\Ticket{3541}
+
+\item \Condor{chirp} putfile would experience an assertion failure when
+used on an empty file.  This bug has been fixed, and putfile can now be
+used on empty files.
+\Ticket{3542}
+
+\item The 32-bit \Condor{starter} could fail to execute jobs when the initial
+working directory of the job was on a filesystem containing 64-bit metadata,
+such as inode numbers.
+\Ticket{3605}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-9-6}Version 7.9.6}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -29,6 +96,17 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The new \Condor{ping} command line tool attempts one or more
+targeted security negotiations to see if it succeeds or fails,
+potentially helping to debug security configuration.
+\Ticket{3371}
+
+\item The schedd will now also advertise demand by jobs for slots,
+weighted by the count of requested CPUs, if the parameter
+NEGOTIATOR\_USE\_WEIGHTED\_DEMAND is set to true (defaults to
+false).
+\Ticket{3574}
+
 \item \Condor{submit} now supports first-class accounting\_group and
 accounting\_group\_user commands, which deprecate the legacy
 +\Attr{AccountingGroup} convention.
@@ -45,8 +123,8 @@ This situation is especially likely when a job sets \SubmitCmd{RequestMemory}
 lower than needed.  The job will now be put on hold.
 \Ticket{2992}
 
-\item Add a \Opt{-force-graceful} command-line option to \Condor{off}.  This
-will allow administrators to issue a graceful shutdown command, even after
+\item The new \Opt{-force-graceful} command-line option to \Condor{off}
+allows administrators to issue a graceful shutdown command, even after
 issuing a \Opt{-peaceful} command. Previously, a \Opt{-peaceful} \Condor{off}
 command would preclude a \Opt{-graceful} off command.
 \Ticket{2949}
@@ -57,6 +135,10 @@ as well as logs of the \Condor{master}, \Condor{startd}, and \Condor{starter}
 of the machine where the job most recently ran, 
 if \Condor{gather\_info} has the necessary permissions to fetch those logs.
 \Ticket{3246}
+
+\item The maximum size of a daemon log file can now be specified in seconds or bytes.
+Only bytes was allowed previously.
+\Ticket{3560}
 
 \end{itemize}
 
@@ -79,15 +161,41 @@ See section~\ref{sec:Absent-Ads} for details on absent ClassAds.
 \item The new configuration variable
 \Macro{GLEXEC\_HOLD\_ON\_INITIAL\_FAILURE} controls whether jobs are put
 on hold when a failure is encountered in the glexec setup phase of
-managing the job.  The default is \Expr{True}, which is the previous
-behavior.
+managing the job.  The default value is \Expr{True}, 
+which implements the previous behavior of putting a job on hold when
+there is a failure.
 \Ticket{3569}
+
+\item The new configuration variable
+\Macro{NEGOTIATOR\_CONSIDER\_EARLY\_PREEMPTION} controls whether jobs
+can be matched to slots that still have retirement time remaining
+before the existing job can be evicted.  The default is \Expr{False}.
+The old behavior can be enabled by setting it to \Expr{True}.  The
+new default behavior is intended to improve scheduling behavior
+when \Expr{MaxJobRetirementTime} is used.
+
+\item The per-user file transfer I/O statistics now have a prefix of
+\AdAttr{Owner\_<username>\_}.  In 7.9.5, they had a prefix of
+\AdAttr{<username>\_}.  This can be configured via
+\Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug in ASSIGN\_CPU\_AFFINITY when running on systems
+with partitionable slots.
+\Ticket{3597}
+
+\item Fixed a bug in the condor\_starter where filesystems mounted by
+the automounter would not be seen by the job.
+\Ticket{3601}
+
+\item Fixed the condor\_updates\_stats script so that it works with
+modern perl interpreters.
+\Ticket{3579}
 
 \item Fixed a bug that caused the \Condor{schedd} to crash when 
 \Condor{rm} was used with the \Opt{-f} option on parallel universe jobs.
@@ -139,7 +247,12 @@ were therefore not available for querying with \Condor{history}.
 
 \begin{itemize}
 
-\item None.
+\item Using \Condor{userprio} with the \Opt{-grouprollup} option
+will fail to produce any output
+if the \Condor{negotiator} it queries is of a version older 
+than HTCondor version 7.9.6 and the \Condor{userprio} executable is 
+HTCondor version 7.9.6.
+\Ticket{3600}
 
 \end{itemize}
 
@@ -257,6 +370,13 @@ buffer overflow and incorrect determination that daemons are hung.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug with the dedicated scheduler reconnect mode, where
+if the schedd crashed with a parallel universe job running after the 
+job's first job lease duration interval, parallel universe jobs would 
+not successfully reconnect, and they
+would restart from scratch.
+\Ticket{2291}
 
 \item The EC2 GAHP now treats OpenStack's \Code{stopped} state as if it
 were \Code{shutoff}, terminating instances which enter this state and

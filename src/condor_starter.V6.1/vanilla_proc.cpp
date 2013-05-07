@@ -50,6 +50,7 @@ extern dynuser* myDynuser;
 #endif
 
 extern CStarter *Starter;
+FilesystemRemap * fs_remap = NULL;
 
 VanillaProc::VanillaProc(ClassAd* jobAd) : OsProc(jobAd),
 	m_network_name(),
@@ -210,7 +211,11 @@ VanillaProc::StartJob()
 		        fi.login);
 	}
 
-	FilesystemRemap * fs_remap = NULL;
+	if (fs_remap != NULL) {
+        delete fs_remap;
+        fs_remap = NULL;
+    }
+    
 #if defined(LINUX)
 	// on Linux, we also have the ability to track processes via
 	// a phony supplementary group ID
@@ -361,7 +366,92 @@ VanillaProc::StartJob()
                dprintf(D_FULLDEBUG, "Value of RequestedChroot is unset.\n");
        }
 	}
-// End of chroot 
+    // End of chroot 
+
+
+    // NAMED_MOUNTS
+    {
+        std::string requested_fuse, fexec, fmnt;
+        // RequestedFuse='Name1' Debatable on if it should be a list.
+        JobAd->EvalString(ATTR_REQUEST_MNTS, NULL, requested_fuse);
+        // NAMED_FUSE= 'Name1=Executable:/sand_box_mountpoint, Name2=Executable:/sand_box_mountpoint'
+        const char * allowed_fuse_mounts = param("NAMED_MOUNTS");
+        
+        if (requested_fuse.size()) 
+        {
+            dprintf(D_FULLDEBUG, "Checking for fuse: %s\n", requested_fuse.c_str());
+            
+            StringList fuse_list(allowed_fuse_mounts);
+            fuse_list.rewind();
+            
+            const char * next_fuse;
+            bool acceptable_fuse = false;
+           
+            while ( (next_fuse=fuse_list.next()) ) {
+                
+                MyString fuse_spec(next_fuse);
+                fuse_spec.Tokenize();
+                
+                const char * fuse_name = fuse_spec.GetNextToken("=", false);
+                // e.g 'Name1=Executable:/sand_box_mountpoint'
+                if ( fuse_name == NULL ) {
+                    dprintf(D_ALWAYS, "Invalid named mount: %s\n", fuse_spec.Value());
+                }
+                else {
+                    
+                    dprintf(D_FULLDEBUG, "Considering mount %s.\n", fuse_name);
+                    // Check to see if the names are = ?
+                    if ( (strcmp(requested_fuse.c_str(), fuse_name) == 0)) 
+                    {
+                        const char * fuse_exec = fuse_spec.GetNextToken(":", false);
+                        //'Executable:/sand_box_mountpoint'
+                        if ( fuse_exec == NULL ) {
+                            dprintf(D_ALWAYS, "Invalid named mount: %s\n", fuse_spec.Value());
+                        }
+                        else {
+                            
+                            const char * fuse_mnt_point = fuse_spec.GetNextToken(":", false);
+                            if (fuse_mnt_point) 
+                            {
+                                fexec=fuse_exec;
+                                
+                                // 'SCRATCH'/fusemntpt
+                                fmnt = Starter->GetWorkingDir();
+                                fmnt+=fuse_mnt_point;
+                                
+                                acceptable_fuse = true;
+                            }
+                            
+                        }
+                    }
+                    
+                }
+                
+            }
+            
+            if (!acceptable_fuse) {
+                return FALSE;
+            }
+            
+            dprintf(D_FULLDEBUG, "Will attempt to set the Mount to %s.\n", requested_fuse.c_str());
+            
+            if (!fs_remap) {
+                fs_remap = new FilesystemRemap();
+            }
+            
+            // 
+            if ( fs_remap->AddNamedMapping( fexec, fmnt ) )
+            {
+                dprintf(D_FULLDEBUG, "Failed to mount NAMED_MOUNT: %s.\n", requested_fuse.c_str());
+                return FALSE;
+            }
+            
+            dprintf(D_FULLDEBUG, "Adding Named Mount Mapping [%s]: %s -> %s.\n", requested_fuse.c_str(),fexec.c_str(),fmnt.c_str());
+            
+        }
+        
+    }
+    // end autofuse mounting
 #endif
 
 
@@ -632,6 +722,13 @@ VanillaProc::JobReaper(int pid, int status)
 		}
 	}
 
+	if (fs_remap != NULL) {
+        fs_remap->cleanup();
+        delete fs_remap;
+        fs_remap = NULL;
+    }
+	
+	
 		// This will reset num_pids for us, too.
 	return OsProc::JobReaper( pid, status );
 }
@@ -831,6 +928,8 @@ int
 VanillaProc::setupOOMEvent(const std::string &cgroup_string)
 {
 #if !(defined(HAVE_EVENTFD) && defined(HAVE_EXT_LIBCGROUP))
+	// Shut the compiler up.
+	cgroup_string.size();
 	return 0;
 #else
 	// Initialize the event descriptor

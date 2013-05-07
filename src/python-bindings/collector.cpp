@@ -330,4 +330,3 @@ void export_collector()
             ":param use_tcp: When set to true, updates are sent via TCP."))
         ;
 }
-

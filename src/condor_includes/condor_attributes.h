@@ -411,6 +411,7 @@
 #define ATTR_MASTER_IP_ADDR  "MasterIpAddr"
 #define ATTR_MAX_HOSTS  "MaxHosts"
 #define ATTR_MAX_JOB_RETIREMENT_TIME  "MaxJobRetirementTime"
+#define ATTR_RETIREMENT_TIME_REMAINING "RetirementTimeRemaining"
 #define ATTR_MAX_JOBS_RUNNING  "MaxJobsRunning"
 #define ATTR_MEMORY  "Memory"
 #define ATTR_MEMORY_USAGE  "MemoryUsage"
@@ -755,6 +756,7 @@
 #define ATTR_GLOBUS_RESUBMIT_CHECK  "GlobusResubmit"
 #define ATTR_REMATCH_CHECK  "Rematch"
 
+#define ATTR_SEC_AUTHENTICATED_NAME  "AuthenticatedName"
 #define ATTR_SEC_AUTHENTICATION_METHODS_LIST  "AuthMethodsList"
 #define ATTR_SEC_AUTHENTICATION_METHODS  "AuthMethods"
 #define ATTR_SEC_CRYPTO_METHODS  "CryptoMethods"
@@ -888,6 +890,11 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_REQUEST_CPUS  "RequestCpus"
 #define ATTR_REQUEST_MEMORY  "RequestMemory"
 #define ATTR_REQUEST_DISK  "RequestDisk"
+
+//------------------------------------------------------------
+#define ATTR_REQUEST_MNTS  "RequestMounts"
+#define ATTR_NAMED_MOUNT_PTS "Mounts"
+//------------------------------------------------------------
 
 // machine resource prefixes
 #define ATTR_REQUEST_PREFIX  "Request"

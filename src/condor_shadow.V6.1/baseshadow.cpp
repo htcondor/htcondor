@@ -51,8 +51,6 @@ int getJobAdExitedBySignal(ClassAd *jad, int &exited_by_signal);
 int getJobAdExitSignal(ClassAd *jad, int &exit_signal);
 
 BaseShadow::BaseShadow() {
-	spool = NULL;
-	fsDomain = uidDomain = NULL;
 	jobAd = NULL;
 	remove_requested = false;
 	cluster = proc = -1;
@@ -77,8 +75,6 @@ BaseShadow::BaseShadow() {
 }
 
 BaseShadow::~BaseShadow() {
-	if (spool) free(spool);
-	if (fsDomain) free(fsDomain);
 	if (jobAd) FreeJobAd(jobAd);
 	if (gjid) free(gjid); 
 	if (scheddAddr) free(scheddAddr);
@@ -274,24 +270,6 @@ void BaseShadow::startdClaimedCB(DCMsgCallback *) {
 
 void BaseShadow::config()
 {
-	if (spool) free(spool);
-	spool = param("SPOOL");
-	if (!spool) {
-		EXCEPT("SPOOL not specified in config file.");
-	}
-
-	if (fsDomain) free(fsDomain);
-	fsDomain = param( "FILESYSTEM_DOMAIN" );
-	if (!fsDomain) {
-		EXCEPT("FILESYSTEM_DOMAIN not specified in config file.");
-	}
-
-	if (uidDomain) free(uidDomain);
-	uidDomain = param( "UID_DOMAIN" );
-	if (!uidDomain) {
-		EXCEPT("UID_DOMAIN not specified in config file.");
-	}
-
 	reconnect_ceiling = param_integer( "RECONNECT_BACKOFF_CEILING", 300 );
 
 	reconnect_e_factor = 0.0;
@@ -1457,7 +1435,8 @@ void BaseShadow::dprintf_va( int flags, const char* fmt, va_list args )
 {
 		// Print nothing in this version.  A subclass like MPIShadow
 		// might like to say ::dprintf( flags, "(res %d)"
-	::_condor_dprintf_va( flags, fmt, args );
+	const DPF_IDENT ident = 0; // REMIND: maybe something useful here??
+	::_condor_dprintf_va( flags, ident, fmt, args );
 }
 
 void BaseShadow::dprintf( int flags, const char* fmt, ... )

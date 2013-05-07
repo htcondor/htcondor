@@ -9,21 +9,21 @@
 #include "exprtree_wrapper.h"
 #include "classad_wrapper.h"
 
-namespace condor { 
+namespace condor {
 
 template <class BasePolicy_ = boost::python::default_call_policies>
 struct classad_expr_return_policy : BasePolicy_
 {
-    
+
     template <class ArgumentPackage>
     static PyObject* postcall(ArgumentPackage const& args_, PyObject* result)
     {
-        
+
         PyObject* patient = PyTuple_GET_ITEM(args_, 0);
         PyObject* nurse = result;
 
         if (nurse == 0) return 0;
-    
+
         result = BasePolicy_::postcall(args_, result);
         if (result == 0)
             return 0;
@@ -49,7 +49,7 @@ struct classad_expr_return_policy : BasePolicy_
         if (!type_obj) {Py_XDECREF(result); return 0;}
 
         if (PyObject_TypeCheck(result, type_obj) && (boost::python::objects::make_nurse_and_patient(nurse, patient) == 0))
-        {   
+        {
             Py_XDECREF(result);
             return 0;
         }

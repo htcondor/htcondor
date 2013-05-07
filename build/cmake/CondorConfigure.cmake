@@ -72,6 +72,7 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 ##################################################
 ##################################################
 include (FindPythonLibs)
+include (FindPythonInterp)
 include (FindThreads)
 include (GlibcDetect)
 
@@ -704,6 +705,9 @@ set (CONDOR_TOOL_LIBS "condor_utils;${CLASSADS_FOUND};${VOMS_FOUND};${GLOBUS_FOU
 set (CONDOR_SCRIPT_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 if (LINUX OR DARWIN)
   set (CONDOR_LIBS_FOR_SHADOW "condor_utils_s;classads;${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${POSTGRESQL_FOUND};${COREDUMPER_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND}")
+  if (DARWIN)
+    set (CONDOR_LIBS_FOR_SHADOW "${CONDOR_LIBS_FOR_SHADOW};resolv" )
+  endif (DARWIN)
 else ()
   set (CONDOR_LIBS_FOR_SHADOW "${CONDOR_LIBS}")
 endif ()

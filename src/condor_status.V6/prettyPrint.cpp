@@ -206,7 +206,7 @@ static void ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszExtra)
 	}
 	pm.display_Headings(file, pm_head);
 	if (pszExtra)
-		printf(pszExtra);
+		printf("%s", pszExtra);
 }
 
 void

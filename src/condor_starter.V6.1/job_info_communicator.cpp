@@ -667,13 +667,10 @@ JobInfoCommunicator::initUserPrivWindows( void )
 	}
 
 	if ( !name ) {
-		char slot_user[255];
-		MyString slotName = "";
-		slotName = Starter->getMySlotName();
-
+		MyString slotName = Starter->getMySlotName();
 		slotName.upper_case();
-		sprintf(slot_user, "%s_USER", slotName);
-		char *run_jobs_as = param(slot_user);
+		slotName += "_USER";
+		char *run_jobs_as = param(slotName.Value());
 		if (run_jobs_as) {		
 			getDomainAndName(run_jobs_as, domain, name);
 				/* 

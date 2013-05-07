@@ -47,7 +47,17 @@
 #define closesocket close
 #endif
 
+void dprintf ( int flags, Sock & sock, const char *fmt, ... )
+{
+    va_list args;
+    va_start( args, fmt );
+    _condor_dprintf_va( flags, (DPF_IDENT)sock.getUniqueId(), fmt, args );
+    va_end( args );
+}
+
 DaemonCoreSockAdapterClass daemonCoreSockAdapter;
+
+unsigned int Sock::m_nextUniqueId = 1;
 
 Sock::Sock() : Stream() {
 	_sock = INVALID_SOCKET;
@@ -57,6 +67,8 @@ Sock::Sock() : Stream() {
 	_fqu_user_part = NULL;
 	_fqu_domain_part = NULL;
 	_auth_method = NULL;
+	_auth_methods = NULL;
+	_auth_name = NULL;
 	_crypto_method = NULL;
 	_tried_authentication = false;
 	ignore_connect_timeout = FALSE;		// Used by the HA Daemon
@@ -72,6 +84,7 @@ Sock::Sock() : Stream() {
 	connect_state.port = 0;
 	connect_state.connect_failure_reason = NULL;
 	_who.clear();
+	m_uniqueId = m_nextUniqueId++;
 
     crypto_ = NULL;
     mdMode_ = MD_OFF;
@@ -91,6 +104,8 @@ Sock::Sock(const Sock & orig) : Stream() {
 	_fqu_user_part = NULL;
 	_fqu_domain_part = NULL;
 	_auth_method = NULL;
+	_auth_methods = NULL;
+	_auth_name = NULL;
 	_crypto_method = NULL;
 	_tried_authentication = false;
 	ignore_timeout_multiplier = orig.ignore_timeout_multiplier;
@@ -106,6 +121,8 @@ Sock::Sock(const Sock & orig) : Stream() {
 	connect_state.port = 0;
 	connect_state.connect_failure_reason = NULL;
 	_who.clear();
+	// TODO Do we want a new unique ID here?
+	m_uniqueId = m_nextUniqueId++;
 
     crypto_ = NULL;
     mdMode_ = MD_OFF;
@@ -163,6 +180,11 @@ Sock::~Sock()
 		free(_auth_method);
 		_auth_method = NULL;
 	}
+	if (_auth_methods) {
+		free(_auth_methods);
+		_auth_methods = NULL;
+	}
+	free(_auth_name);
 	if (_crypto_method) {
 		free(_crypto_method);
 		_crypto_method = NULL;
@@ -2224,6 +2246,26 @@ void Sock :: setAuthenticationMethodUsed(char const *auth_method)
 
 const char* Sock :: getAuthenticationMethodUsed() {
 	return _auth_method;
+}
+
+void Sock :: setAuthenticationMethodsTried(char const *auth_methods)
+{
+	free(_auth_methods);
+	_auth_methods = strdup(auth_methods);
+}
+
+const char* Sock :: getAuthenticationMethodsTried() {
+	return _auth_methods;
+}
+
+void Sock :: setAuthenticatedName(char const *auth_name)
+{
+	free(_auth_name);
+	_auth_name = strdup(auth_name);
+}
+
+const char* Sock :: getAuthenticatedName() {
+	return _auth_name;
 }
 
 void Sock :: setCryptoMethodUsed(char const *crypto_method)
