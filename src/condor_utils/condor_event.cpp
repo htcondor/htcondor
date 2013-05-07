@@ -3958,7 +3958,7 @@ ULogEvent::readRusage (FILE *file, rusage &usage)
 }
 
 char*
-ULogEvent::rusageToStr (const rusage &usage)
+ULogEvent::rusageToStr (rusage usage)
 {
 	char* result = (char*) malloc(128);
 	ASSERT( result != NULL );

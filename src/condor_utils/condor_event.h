@@ -246,7 +246,7 @@ log readers.
         @param usage the usage to consider
         @return NULL for failure, the string for success
     */
-    char* rusageToStr (const rusage &usage);
+    char* rusageToStr (rusage usage);
 
     /** Parse a formatted string with the resource usage information.
         @param rusageStr a string like the ones made by rusageToStr.
