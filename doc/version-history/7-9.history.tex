@@ -245,6 +245,10 @@ were therefore not available for querying with \Condor{history}.
 \item Do not leak \Condor{starter} file descriptors to file transfer plugins. 
 \Ticket{3570}
 
+\item Do not leak file descriptors in the \Prog{batch\_gahp} when reading
+a job's X.509 proxy.
+\Ticket{3558}
+
 \end{itemize}
 
 \noindent Known Bugs:
