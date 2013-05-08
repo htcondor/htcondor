@@ -2072,7 +2072,7 @@ sub KillPersonal
 		$logdir = $1 . "/log";
 	} else {
 		debug("KillPersonal passed this config<<$personal_config>>\n",2);
-		die "Can not extract log directory\n";
+		e ie "Can not extract log directory\n";
 	}
 	debug("Doing core ERROR check in  KillPersonal\n",2);
 	$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
@@ -2466,5 +2466,19 @@ sub WriteFileOrDie
 	close OUT;
 }
 
+# we want to produce a temporary file to use as a fresh start
+# through StartCondorWithParams. 
+sub CreateLocalConfig
+{
+    my $text = shift;
+    my $name = shift;
+    $name = "$name$$";
+    open(FI,">$name") or die "Failed to create local config starter file<$name>:$!\n";
+    print "Created <$name>\n";
+    print FI "$text";
+    runcmd("cat $name");
+    close(FI);
+    return($name);
+}
 
 1;
