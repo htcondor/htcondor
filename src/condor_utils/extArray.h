@@ -66,7 +66,7 @@ class ExtArray
 
 template <class Element>
 ExtArray<Element>::
-ExtArray (int sz)
+ExtArray (int sz) : filler()
 {
 	// create array of required size
 	size = sz;
