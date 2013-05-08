@@ -3805,6 +3805,20 @@ WANT_HOLD_REASON = \
    \end{verbatim}
    \normalsize
 
+\label{param:CheckpointPlatform}
+\item[\Macro{CheckpointPlatform}]
+  A string used to
+  override the automatically-generated machine ClassAd attribute 
+  \AdAttr{CheckpointPlatform} (see section
+  \ref{CheckpointPlatform-machine-attribute}),
+  which is used to identify the platform upon which a job previously generated
+  a checkpoint under the standard universe.
+  This restricts the machine matches that may be considered for a job
+  and where the job may resume.
+  Overriding the value may be necessary for architectures that are
+  the same in name, but actually have differences in instruction sets,
+  such as the AVX extensions to the Intel processor.
+
 \label{param:WantSuspend}
 \item[\Macro{WANT\_SUSPEND}]
   A boolean expression that, when \Expr{True},
@@ -8062,6 +8076,13 @@ These macros affect the \Condor{gridmanager}.
   accordingly.
   Beware that identifying a \Expr{gt2} server as \Expr{gt5} can result in
   overloading the server, if a large number of jobs are submitted.
+
+\label{param:BatchGahpCheckStatusAttempts}
+\item[\Macro{BATCH\_GAHP\_CHECK\_STATUS\_ATTEMPTS}]
+  The number of times a failed status command issued to the
+  \Prog{batch\_gahp} should be retried. These retries allow the
+  \Condor{gridmanager} to tolerate short-lived failures of the underlying
+  batch system. The default value is 5.
 
 \label{param:CGAHPLog}
 \item[\Macro{C\_GAHP\_LOG}]

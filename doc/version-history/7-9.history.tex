@@ -166,6 +166,27 @@ distributed as part of HTCondor, not as a contrib module.
 
 \begin{itemize}
 
+\item The new configuration variable 
+\Macro{GSI\_DELEGATION\_CLOCK\_SKEW\_ALLOWABLE}, expressed in seconds,
+allows HTCondor to adjust the amount of
+allowable clock skew between two parties.
+This is relevant when delegating X.509 proxies.
+\Ticket{3557}
+
+\item The new configuration variable \Macro{CheckpointPlatform}
+is a string that may be set by
+an administrator to override the auto-detected
+platform used to determine if a standard universe job that produced 
+a checkpoint on one machine can be started on another.
+\Ticket{3544}
+
+%% Yes, SSSE 3 has three Ss.
+\item The new Machine ClassAd attributes \AdAttr{Has\_sse4\_1},
+\AdAttr{Has\_sse4\_2}, and \AdAttr{Has\_ssse3} are set to \Expr{True}
+if the corresponding instruction set additions exist on that machine.
+These attributes will be undefined otherwise.
+\Ticket{3544}
+
 \item The name of the configuration variable \MacroNI{MEMORY\_LIMIT}
 introduced in HTCondor version 7.9.2 has changed.
 This variable is now called \Macro{CGROUP\_MEMORY\_LIMIT\_POLICY}.
@@ -207,6 +228,12 @@ they had a prefix of
 \AdAttr{<username>\_}.  This can be configured via
 \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 \Ticket{3496}
+
+\item The new configuration variable
+\Macro{BATCH\_GAHP\_CHECK\_STATUS\_ATTEMPTS} controls how often the
+\Condor{gridmanager} should retry a failed job status check when using
+the \Prog{batch\_gahp}. The default is 5.
+\Ticket{3533}
 
 \end{itemize}
 

@@ -45,6 +45,7 @@ then this boolean ClassAd attribute will be \Expr{True}.
 By default, it is \Expr{False}.
 %
 \index{ClassAd machine attribute!CheckpointPlatform}
+\label{CheckpointPlatform-machine-attribute}
 \item[\AdAttr{CheckpointPlatform}:] A string which opaquely encodes various
 aspects about a machine's operating system, hardware, and kernel
 attributes.
@@ -160,6 +161,21 @@ HTCondor administrator which describes a cluster of machines which all
 access the same, uniformly-mounted, networked file systems usually via
 NFS or AFS.  This is useful for Vanilla universe jobs which require
 remote file access.
+%
+\index{ClassAd machine attribute!Has\_sse4\_1}
+\item[\AdAttr{Has\_sse4\_1}:] A boolean value set to \Expr{True}
+ if the machine being advertised supports
+the SSE 4.1 instructions, and \Expr{Undefined} otherwise.
+%
+\index{ClassAd machine attribute!Has\_sse4\_2}
+\item[\AdAttr{Has\_sse4\_2}:] A boolean value set to \Expr{True}
+if the machine being advertised supports
+the SSE 4.2 instructions, and \Expr{Undefined} otherwise.
+%
+\index{ClassAd machine attribute!has\_ssse3}
+\item[\AdAttr{has\_ssse3}:] A boolean value set to \Expr{True}
+if the machine being advertised supports
+the SSSE 3 instructions, and \Expr{Undefined} otherwise.
 %
 \index{ClassAd machine attribute!HasVM}
 \item[\AdAttr{HasVM}:] A boolean value added to the machine ClassAd
