@@ -57,15 +57,15 @@ if (WITH_CURL)
 							DOWNLOAD_DIR ${CURL_STAGE}/dl
 							URL http://parrot.cs.wisc.edu/externals/curl-7.19.6.tar.gz
 							#--Patch Step ----------
-							PATCH_COMMAND cd curl-7.19.6 ${CMD_TERM} ${CURL_PATCH}
+							PATCH_COMMAND ${CURL_PATCH}
 							#--Configure step ----------
-							CONFIGURE_COMMAND cd curl-7.19.6 && ${CURL_CONFIGURE}
+							CONFIGURE_COMMAND ${CURL_CONFIGURE}
 							#--Build Step ----------
-							BUILD_COMMAND cd curl-7.19.6 && ${CURL_MAKE}
+							BUILD_COMMAND ${CURL_MAKE}
 							BUILD_IN_SOURCE 1
 							#--install Step ----------
 							INSTALL_DIR ${CURL_INSTALL_LOC}
-							INSTALL_COMMAND cd curl-7.19.6 && ${CURL_INSTALL} )
+							INSTALL_COMMAND ${CURL_INSTALL} )
 
 		# Set the target dependencies which the rest of condor depends on.
 		if (WINDOWS)

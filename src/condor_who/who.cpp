@@ -330,7 +330,7 @@ int get_fields_from_tabular_stream(FILE * stream, TABULAR_MAP & out, bool fMulti
 		if (subhead.empty()) {
 			// use whitespace as a field separator
 			// assume all but last field headings/data have no spaces in them.
-			size_t ixh=0, ixd=0, ixh2, ixd2, ixhN;
+			size_t ixh=0, ixd=0, ixh2, ixd2=0, ixhN;
 			for (;;) {
 				if (ixh == string::npos)
 					break;

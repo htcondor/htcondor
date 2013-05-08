@@ -40,8 +40,8 @@ if ( WITH_DRMAA )
 
 	else()
 		set (DRMAA_CONFIGURE echo "Nothing to configure for Windows")
-		set (DRMAA_MAKE nmake /f libdrmaa.mak CFG="libdrmaa - Win32 Release")
-		set (DRMAA_INSTALL  cp Release/* ${DRMAA_INSTALL_LOC}/lib \r\n
+		set (DRMAA_MAKE nmake /f libdrmaa.mak "CFG=libdrmaa - Win32 Release")
+		set (DRMAA_INSTALL  cp Release/libdrmaa.lib Release/libdrmaa.dll ${DRMAA_INSTALL_LOC}/lib \r\n
 		                    cp drmaa.h README ${DRMAA_INSTALL_LOC}/include)
 			
 		set( DRMAA_FOUND "${DRMAA_INSTALL_LOC}/lib/libdrmaa.lib" )

@@ -44,15 +44,15 @@ if ( NOT PROPER )
 				    DOWNLOAD_DIR ${CREAMSOAP_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/gsoap_2.7.6b.tar.gz
 				    #--Patch step ----------
-				    PATCH_COMMAND patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/gsoap_cast.patch
+				    PATCH_COMMAND patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/gsoap_cast.patch
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cd gsoap-2.7 && ./configure --prefix=${CREAM_INSTALL_LOC}
+				    CONFIGURE_COMMAND ./configure --prefix=${CREAM_INSTALL_LOC}
 				    #--Build Step ----------
-				    BUILD_COMMAND cd gsoap-2.7 && make
+				    BUILD_COMMAND make
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${CREAM_INSTALL_LOC}
-				    INSTALL_COMMAND cd gsoap-2.7 && make
+				    INSTALL_COMMAND make
 				    install && cp -f soapcpp2/wsdl/stlvector.h
 				    ${CREAM_INSTALL_LOC}/include && touch
 				    ${CREAMSOAP_INSTALL_LOC}/done )
@@ -67,13 +67,13 @@ if ( NOT PROPER )
 				    DOWNLOAD_DIR ${CARES_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/c-ares-1.3.0.tar.gz
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cd c-ares-1.3.0 && ./configure --prefix=${CREAM_INSTALL_LOC}
+				    CONFIGURE_COMMAND ./configure --prefix=${CREAM_INSTALL_LOC}
 				    #--Build Step ----------
-				    BUILD_COMMAND cd c-ares-1.3.0 && make
+				    BUILD_COMMAND make
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${CREAM_INSTALL_LOC}
-				    INSTALL_COMMAND cd c-ares-1.3.0 && make
+				    INSTALL_COMMAND make
 				    install && touch ${CARES_INSTALL_LOC}/done )
 		condor_post_external( cares OFF OFF )
 
@@ -85,16 +85,16 @@ if ( NOT PROPER )
 				    DOWNLOAD_DIR ${LOG4CPP_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${LOG4CPP_VER}.tar.gz
 					#--Patch step ----------
-				    PATCH_COMMAND patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/log4errors.patch &&
-					  patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/log4configure.patch
+				    PATCH_COMMAND patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/log4errors.patch &&
+					  patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/log4configure.patch
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cd log4cpp-1.0 && ./configure --prefix=${LOG4CPP_INSTALL_LOC}
+				    CONFIGURE_COMMAND ./configure --prefix=${LOG4CPP_INSTALL_LOC}
 				    #--Build Step ----------
-				    BUILD_COMMAND cd log4cpp-1.0 && make && make check
+				    BUILD_COMMAND make && make check
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${LOG4CPP_INSTALL_LOC}
-				    INSTALL_COMMAND cd log4cpp-1.0 && make install )
+				    INSTALL_COMMAND make install )
 		condor_post_external( log4cpp include OFF )
 
 ######################################### cream/gss packages.
@@ -102,10 +102,10 @@ if ( NOT PROPER )
 		condor_pre_external( GRIDSITE gridsite-1.6.0-p8 "lib;include" "done")
 		if ( BUILDING_LIBXML2 )
 			set (GRIDSITE_DEPENDS ${LIBXML2_REF})
-			set (GRIDSITE_INCLUDE -I${LIBXML2_INSTALL_LOC}/include/libxml2)
+			set (GRIDSITE_INCLUDE "-I. -I../interface -I${LIBXML2_INSTALL_LOC}/include/libxml2")
 		else ()
 			set (GRIDSITE_DEPENDS "")
-			set (GRIDSITE_INCLUDE "")
+			set (GRIDSITE_INCLUDE "-I. -I../interface")
 		endif ()
 		ExternalProject_Add(gridsite
 				    DEPENDS ${GRIDSITE_DEPENDS}
@@ -115,16 +115,15 @@ if ( NOT PROPER )
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND echo "no config"
 				    #--Build Step ----------
-				    BUILD_COMMAND export MYCFLAGS='-I. -I../interface ${GRIDSITE_INCLUDE}' &&
-					  export MYCFLAGS &&
-					  cd org.gridsite.core/src &&
+				    BUILD_COMMAND export MYCFLAGS=${GRIDSITE_INCLUDE} &&
+					  cd src &&
 					  make libgridsite.a
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${CREAM_INSTALL_LOC}
-				    INSTALL_COMMAND cd org.gridsite.core/src && 
-				    cp -f libgridsite.a ${CREAM_INSTALL_LOC}/lib && 
-				    cp -f ../interface/*.h ${CREAM_INSTALL_LOC}/include && 
+				    INSTALL_COMMAND cd src &&
+				    cp -f libgridsite.a ${CREAM_INSTALL_LOC}/lib &&
+				    cp -f ../interface/gridsite-gacl.h ../interface/gridsite.h ${CREAM_INSTALL_LOC}/include &&
 				    touch ${GRIDSITE_INSTALL_LOC}/done )
 		condor_post_external( gridsite OFF OFF )
 
@@ -137,11 +136,11 @@ if ( NOT PROPER )
 				    DOWNLOAD_DIR ${GLITE_SECURITY_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/org.glite.security.gss-2.0.1-1.tar.gz
 				    #--Patch step ----------
-				    PATCH_COMMAND patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/gss_import.patch
+				    PATCH_COMMAND patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/gss_import.patch
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND echo "no config"
 				    #--Build Step ----------
-				    BUILD_COMMAND cd org.glite.security.gss/src && 
+				    BUILD_COMMAND cd src &&
 					  gcc -g -O0 -W -Wall
 					  -Wno-unused-parameter -I../interface
 					  -I${CREAM_INSTALL_LOC}/include -I${GLOBUS_INSTALL_LOC}/include/globus -o glite_gss.thr.o -c glite_gss.c && 
@@ -150,8 +149,8 @@ if ( NOT PROPER )
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${CREAM_INSTALL_LOC}
-				    INSTALL_COMMAND cd org.glite.security.gss/src &&
-					  cp ../interface/* ${CREAM_INSTALL_LOC}/include/glite/security &&
+				    INSTALL_COMMAND cd src &&
+					  cp ../interface/glite_gss.h ${CREAM_INSTALL_LOC}/include/glite/security &&
 					  cp libglite_security_gss_${GLOBUS_FLAVOR}pthr.a ${CREAM_INSTALL_LOC}/lib && 
 					  touch ${GLITE_SECURITY_INSTALL_LOC}/done )
 		condor_post_external( glite_security OFF OFF )
@@ -167,10 +166,10 @@ if ( NOT PROPER )
 				    DOWNLOAD_DIR ${CREAM_SOAP_PLUGIN_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/org.glite.security.gsoap-plugin-2.0.1-3.tar.gz
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cd org.glite.security.gsoap-plugin/src &&
+				    CONFIGURE_COMMAND cd src &&
 				    	${CMAKE_CURRENT_SOURCE_DIR}/cream_soap_plugin_patch.sh
 				    #--Build Step ----------
-				    BUILD_COMMAND cd org.glite.security.gsoap-plugin/src &&
+				    BUILD_COMMAND cd src &&
 						gcc ${CSP_CC_FLAGS} -o glite_gsplugin.thr.o -c glite_gsplugin.c &&
 						gcc ${CSP_CC_FLAGS} -o stdsoap2.thr.o -c stdsoap2.c &&
 						ar crv libglite_security_gsoap_plugin_${GLOBUS_FLAVOR}pthr.a glite_gsplugin.thr.o stdsoap2.thr.o &&
@@ -178,9 +177,9 @@ if ( NOT PROPER )
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${CREAM_INSTALL_LOC}/lib
-				    INSTALL_COMMAND  cd org.glite.security.gsoap-plugin/src &&
+				    INSTALL_COMMAND  cd src &&
 						cp libglite_security_gsoap_plugin_${GLOBUS_FLAVOR}pthr.a ${CREAM_INSTALL_LOC}/lib && 
-						cp ../interface/*.h ${CREAM_INSTALL_LOC}/include/glite/security && 
+						cp ../interface/glite_gscompat.h ../interface/glite_gsplugin.h ../interface/glite_gsplugin-int.h ${CREAM_INSTALL_LOC}/include/glite/security && 
 						touch ${CREAM_SOAP_PLUGIN_INSTALL_LOC}/done )
 		condor_post_external( cream_soap_plugin OFF OFF )
 
@@ -192,18 +191,17 @@ if ( NOT PROPER )
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND echo "nothing to do"
 				    #--Build Step ----------
-				    BUILD_COMMAND cd org.glite.ce.wsdl && 
-					  project/install.sh ${CREAM_INSTALL_LOC} ${CREAM_INSTALL_LOC} 1.12.1 2.0.0
+				    BUILD_COMMAND project/install.sh ${CREAM_INSTALL_LOC} ${CREAM_INSTALL_LOC} 1.12.1 2.0.0
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${CREAM_INSTALL_LOC}
-				    INSTALL_COMMAND cd org.glite.ce.wsdl && ln -fs share/wsdl ${CREAM_INSTALL_LOC}/interface && touch ${CREAM_WSDL_INSTALL_LOC}/done )
+				    INSTALL_COMMAND ln -fs share/wsdl ${CREAM_INSTALL_LOC}/interface && touch ${CREAM_WSDL_INSTALL_LOC}/done )
 		condor_post_external( cream_wsdl OFF OFF )
 
-		set (CREAM_PATCH patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/cream.patch &&
-				 patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/voms2.patch)
+		set (CREAM_PATCH patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/cream.patch &&
+				 patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/voms2.patch)
 		if (DARWIN)
-		  set (CREAM_PATCH ${CREAM_PATCH} && patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/bsd.patch && patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/macos.patch )
+		  set (CREAM_PATCH ${CREAM_PATCH} && patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/bsd.patch && patch -N -p0 -i ${CMAKE_CURRENT_SOURCE_DIR}/macos.patch )
 		endif(DARWIN)
 
 		if ( BUILDING_OPENSSL )
@@ -228,17 +226,22 @@ if ( NOT PROPER )
 					#--Patch step ----------
 					PATCH_COMMAND ${CREAM_PATCH}
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/*.m4 org.glite.ce.cream-client-api-c/project &&    
-						cd org.glite.ce.cream-client-api-c &&
+				    CONFIGURE_COMMAND cp ${CMAKE_CURRENT_SOURCE_DIR}/boost.m4 project/ &&
+						cp ${CMAKE_CURRENT_SOURCE_DIR}/classads.m4 project/ &&
+						cp ${CMAKE_CURRENT_SOURCE_DIR}/glite.m4 project/ &&
+						cp ${CMAKE_CURRENT_SOURCE_DIR}/glite_ce_wsdl.m4 project/ &&
+						cp ${CMAKE_CURRENT_SOURCE_DIR}/globus.m4 project/ &&
+						cp ${CMAKE_CURRENT_SOURCE_DIR}/gsoap.m4 project/ &&
+						cp ${CMAKE_CURRENT_SOURCE_DIR}/log4cpp.m4 project/ &&
+						cp ${CMAKE_CURRENT_SOURCE_DIR}/optimize.m4 project/ &&
 						./bootstrap &&
 						CPPFLAGS=${CPP11_FLAG} ./configure --prefix=${CREAM_INSTALL_LOC} --with-globus-prefix=${GLOBUS_INSTALL_LOC} --with-globus-thr-flavor=${GLOBUS_FLAVOR}pthr --with-globus-nothr-flavor=${GLOBUS_FLAVOR} ${OPENSSL_FLAG} --with-voms-prefix=${VOMS_INSTALL_LOC} --with-classads-prefix=${CLASSADS_INSTALL_LOC} --with-log4cpp-prefix=${LOG4CPP_INSTALL_LOC} --with-gsoap-location=${CREAM_INSTALL_LOC} --with-glite-location=${CREAM_INSTALL_LOC} --with-ce-wsdl-version=1.12.1 --with-delegation-wsdl-version=2.0.0 ${BOOST_PREFIX}
 				    #--Build Step ----------
-				    BUILD_COMMAND cd org.glite.ce.cream-client-api-c && make
+				    BUILD_COMMAND make
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${CREAM_INSTALL_LOC}
-				    INSTALL_COMMAND cd org.glite.ce.cream-client-api-c &&
-						make install && touch ${CREAM_INSTALL_LOC}/done
+				    INSTALL_COMMAND make install && touch ${CREAM_INSTALL_LOC}/done
 				)
 
 		

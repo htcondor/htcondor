@@ -856,7 +856,7 @@ int _xstat(int version, const char *path, struct stat *buf)
 }
 
 
-int __xstat(int version, const char *path, struct stat *buf)
+int __xstat(int version, const char *path, struct stat *buf) __THROW
 {
 	return _condor_xstat( version, path, buf );
 }
@@ -866,7 +866,7 @@ int _fxstat(int version, int fd, struct stat *buf)
 	return _condor_fxstat( version, fd, buf );
 }
 
-int __fxstat(int version, int fd, struct stat *buf)
+int __fxstat(int version, int fd, struct stat *buf) __THROW
 {
 	return _condor_fxstat( version, fd, buf );
 }
@@ -878,7 +878,7 @@ int _lxstat(int version, const char *path, struct stat *buf)
 }
 
 
-int __lxstat(int version, const char *path, struct stat *buf)
+int __lxstat(int version, const char *path, struct stat *buf) __THROW
 {
 	return _condor_lxstat( version, path, buf );
 }
@@ -889,7 +889,7 @@ int _xstat64(int version, const char *path, struct stat64 *buf)
 	return _condor_xstat64( version, path, buf );
 }
 
-int __xstat64(int version, const char *path, struct stat64 *buf)
+int __xstat64(int version, const char *path, struct stat64 *buf) __THROW
 {
 	return _condor_xstat64( version, path, buf );
 }
@@ -899,7 +899,7 @@ int _fxstat64(int version, int fd, struct stat64 *buf)
 	return _condor_fxstat64( version, fd, buf );
 }
 
-int __fxstat64(int version, int fd, struct stat64 *buf)
+int __fxstat64(int version, int fd, struct stat64 *buf) __THROW
 {
 	return _condor_fxstat64( version, fd, buf );
 }
@@ -909,7 +909,7 @@ int _lxstat64(int version, const char *path, struct stat64 *buf)
 	return _condor_lxstat64( version, path, buf );
 }
 
-int __lxstat64(int version, const char *path, struct stat64 *buf)
+int __lxstat64(int version, const char *path, struct stat64 *buf) __THROW
 {
 	return _condor_lxstat64( version, path, buf );
 }
@@ -1648,7 +1648,7 @@ getrusage( int who, struct rusage *rusage )
 	int rval1 = 0;
 	int scm;
 	static struct rusage accum_rusage;
-	static int num_restarts = 50;  /* must not initialize to 0 */
+	static unsigned int num_restarts = 50;  /* must not initialize to 0 */
 
 	sigset_t omask = _condor_signals_disable();
 

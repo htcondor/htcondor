@@ -1026,12 +1026,13 @@ get_job_info()
 			break;
 #endif
 		default:
-			if(s.cmd)
+			if(s.cmd) {
 				u_proc = new UserProc( s );
+				u_proc->display();
+			}
 			break;
 	}
 
-	u_proc->display();
 
 	// We need to clean up the memory allocated in the STARTUP_INFO I
 	// think that STARTUP_INFO should probably be a class with a

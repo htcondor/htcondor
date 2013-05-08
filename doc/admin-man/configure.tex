@@ -7435,24 +7435,25 @@ These macros affect the \Condor{negotiator}.
   remains the best way to 
   guarantee that all \Condor{negotiator} configuration is completely updated.
 
+\label{param:NameLimit}
+\item[\Macro{<NAME>\_LIMIT}]
+  An integer value that defines the amount of resources available for
+  jobs which declare that they use some consumable resource 
+  as described in section~\ref{sec:Concurrency-Limits}. 
+  \MacroNI{<Name>} is a string invented to uniquely describe the resource.
+
 \label{param:ConcurrencyLimitDefault}
 \item[\Macro{CONCURRENCY\_LIMIT\_DEFAULT}]
   An integer value that describes the number of resources available for
-  all resources that are not explicitly named by defining the
+  any resources that are not explicitly named defined with the
   configuration variable \MacroNI{<NAME>\_LIMIT}.
   If not defined, no limits are set for resources not explicitly identified
   using \MacroNI{<NAME>\_LIMIT}.
 
 \label{param:ConcurrencyLimitDefaultName}
 \item[\Macro{CONCURRENCY\_LIMIT\_DEFAULT\_<NAME>}]
-  Definition not yet written.
-
-\label{param:NameLimit}
-\item[\Macro{<NAME>\_LIMIT}]
-  An integer value that describes the number of a resource available for
-  concurrent job execution when requested for a job under concurrency limits
-  as described in section~\ref{sec:Concurrency-Limits}. 
-  \MacroNI{<Name>} is a string invented to uniquely describe the resource.
+	If set, this defines a default concurrency limit for all resources
+that start with \MacroNI{<NAME>.}
 
 \end{description}
 
@@ -7594,6 +7595,26 @@ The following configuration macros affect negotiation for group users.
   When \Expr{True}, the \Condor{negotiator} pays attention to the
   machine ClassAd attribute \Attr{SlotWeight}. 
   When \Expr{False}, each slot effectively has a weight of 1.
+
+\label{param:NegotiatorUseWeightedDemand}
+\item[\Macro{NEGOTIATOR\_USE\_WEIGHTED\_DEMAND}]
+  A boolean value with a default of \Expr{False}. 
+  When \Expr{False}, the behavior is the same as for HTCondor versions
+  prior to 7.9.6.
+  If \Expr{True}, when the \Condor{schedd} advertises \Attr{IdleJobs}
+  in the submitter ClassAd,
+  the number of idle jobs in the queue for that submitter,
+  it will also advertise the total number of requested cores across
+  all idle jobs from that submitter, \Attr{WeightedIdleJobs}.
+  If partitionable slots are being used,
+  and if hierarchical group quotas are used,
+  and if any hierarchical group quotas set \Macro{GROUP\_ACCEPT\_SURPLUS}
+  to \Expr{True},
+  and if configuration variable \Macro{SlotWeight} is set to 
+  the number of cores,
+  then setting this configuration variable to \Expr{True} allows
+  the amount of surplus allocated to each group to be calculated correctly. 
+   
 
 \label{param:GroupSortExpr}
 \item[\Macro{GROUP\_SORT\_EXPR}]

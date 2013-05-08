@@ -63,13 +63,13 @@ if (WITH_GLOBUS)
 					DOWNLOAD_DIR ${LIBTOOL_STAGE}/dl
 					URL http://parrot.cs.wisc.edu/externals/libtool-2.4.2.tar.gz
 					#--Configure step ----------
-					CONFIGURE_COMMAND cd libtool-2.4.2 && ./configure --prefix=${GLOBUS_INSTALL_LOC}
+					CONFIGURE_COMMAND ./configure --prefix=${GLOBUS_INSTALL_LOC}
 					#--Build Step ----------
-					BUILD_COMMAND cd libtool-2.4.2 && make
+					BUILD_COMMAND make
 					BUILD_IN_SOURCE 1
 					#--install Step ----------
 					INSTALL_DIR ${GLOBUS_INSTALL_LOC}
-					INSTALL_COMMAND cd libtool-2.4.2 && make install )
+					INSTALL_COMMAND make install )
 
 			condor_post_external( libtool OFF OFF )
 			set( GLOBUS_DEPENDS ${LIBTOOL_REF} )
@@ -80,25 +80,30 @@ if (WITH_GLOBUS)
 		endif()
 
 
-		set (GLOBUS_PATCH patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins.patch -p0 &&
-						patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/mac_openssl.patch -p0 &&
-						cd gt5.2.1-all-source-installer/source-trees/xio/src/builtins &&
+		set (GLOBUS_PATCH patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins.patch -p1 &&
+						patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/mac_openssl.patch -p1 &&
+						cd source-trees/xio/src/builtins &&
 						mkdir -p gsi popen &&
-						sed -e 's/globus_xio_gsi.h/globus_xio_gsi_driver.h/' ../../drivers/gsi/globus_i_xio_gsi.h >gsi/globus_i_xio_gsi.h &&
+						cp ../../drivers/gsi/globus_i_xio_gsi.h gsi/globus_i_xio_gsi.h &&
+						sed -i.old -e s/globus_xio_gsi.h/globus_xio_gsi_driver.h/ gsi/globus_i_xio_gsi.h &&
 						cp ../../drivers/gsi/globus_xio_gsi.c gsi/globus_xio_gsi_driver.c &&
 						cp ../../drivers/gsi/globus_xio_gsi.h gsi/globus_xio_gsi_driver.h &&
-						cp ../../drivers/popen/source/*.h popen &&
-						cp ../../drivers/popen/source/*.c popen &&
-						sed -e 's/tcp/gsi/g' tcp/Makefile.am >gsi/Makefile.am &&
-						sed -e 's/tcp/gsi/g' tcp/Makefile.in >gsi/Makefile.in &&
-						sed -e 's/tcp/popen/g' tcp/Makefile.am >popen/Makefile.am &&
-						sed -e 's/tcp/popen/g' tcp/Makefile.in >popen/Makefile.in )
+						cp ../../drivers/popen/source/globus_xio_popen_driver.h popen &&
+						cp ../../drivers/popen/source/globus_xio_popen_driver.c popen &&
+						cp tcp/Makefile.am gsi/Makefile.am &&
+						sed -i.old -e s/tcp/gsi/g gsi/Makefile.am &&
+						cp tcp/Makefile.in gsi/Makefile.in &&
+						sed -i.old -e s/tcp/gsi/g gsi/Makefile.in &&
+						cp tcp/Makefile.am popen/Makefile.am &&
+						sed -i.old -e s/tcp/popen/g popen/Makefile.am &&
+						cp tcp/Makefile.in popen/Makefile.in &&
+						sed -i.old -e s/tcp/popen/g popen/Makefile.in )
 
 		if(DARWIN)
 			set ( GLOBUS_PATCH ${GLOBUS_PATCH} &&
-				cd ../../../../../ &&
-				patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins-2.patch -p0 &&
-				patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/mac_environ.patch -p0 )
+				cd ../../../../ &&
+				patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins-2.patch -p1 &&
+				patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/mac_environ.patch -p1 )
 		endif()
 
 		# honestly the build of globus is one of the strangest things I have ever seen and it makes no sense to me.
@@ -110,12 +115,10 @@ if (WITH_GLOBUS)
 							#--Patch step ----------
 							PATCH_COMMAND ${GLOBUS_PATCH}
 							#--Configure step ----------
-							CONFIGURE_COMMAND cd gt5.2.1-all-source-installer &&
-								ln -s lib ${GLOBUS_INSTALL_LOC}/lib64 &&
+							CONFIGURE_COMMAND ln -s lib ${GLOBUS_INSTALL_LOC}/lib64 &&
 							./configure --prefix=${GLOBUS_INSTALL_LOC} --with-flavor=${GLOBUS_FLAVOR}pthr
 							#--Build Step ----------
-							BUILD_COMMAND cd gt5.2.1-all-source-installer &&
-								${GLOBUS_FLAGS} make gpt globus_gssapi_error globus-resource-management-sdk globus-data-management-sdk &&
+							BUILD_COMMAND ${GLOBUS_FLAGS} make gpt globus_gssapi_error globus-resource-management-sdk globus-data-management-sdk &&
 								cd ${GLOBUS_INSTALL_LOC}/include/globus/ && ln -sf ${GLOBUS_FLAVOR}pthr/globus_config.h .
 							BUILD_IN_SOURCE 1
 							#--install Step ----------
