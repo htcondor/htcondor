@@ -29,6 +29,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item When delegating X509 proxies, HTCondor can now adjust the amount of
+allowable clock skew between the two parties using the configuration variable
+\Macro{GSI\_DELEGATION\_CLOCK\_SKEW\_ALLOWABLE} which is specified in seconds.
+
 \item The new \Condor{ping} command line tool attempts one or more
 targeted security negotiations to see if it succeeds or fails,
 potentially helping to debug security configuration.
