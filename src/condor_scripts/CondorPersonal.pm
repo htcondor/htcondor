@@ -569,7 +569,10 @@ sub InstallPersonalCondor
 		}
 		close(CONFIG);
 		$personal_condor_params{"condortemplate"} = shift @configfiles;
-		$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
+		if(exists $personal_condor_params{fresh_local}) {
+		} else {
+			$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
+		}
 
 		debug("condor_q: $condorq\n",$debuglevel);
                 debug("topleveldir: $topleveldir",$debuglevel);
@@ -848,6 +851,9 @@ sub TunePersonalCondor
 		$mytoppath =  $topleveldir;
 	}
 
+
+debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath",$debuglevel);
+
 	my $line;
 	#system("ls;pwd");
 	#print "***************** opening $personal_template as config file template *****************\n";
@@ -898,11 +904,16 @@ sub TunePersonalCondor
 		debug( "portchanges set to $portchanges\n",$debuglevel);
 	}
 
+debug( "HMMMMMMMMMMM opening to write <$topleveldir/$personal_local>\n",$debuglevel);
+
 	open(NEW,">$topleveldir/$personal_local")  || die "Can not open template: $!\n";
 	if($personal_local_src ne "")
 	{
 		print NEW "# Requested local config<$personal_local_src>\n";
 		#print "******************** Must seed condor_config.local <<$personal_local_src>> ************************\n";
+
+debug( "HMMMMMMMMMMM opening to read <$personal_local_src>\n",$debuglevel);
+
 		open(LOCSRC,"<$personal_local_src") || die "Can not open local config template: $!\n";
 		while(<LOCSRC>)
 		{
@@ -977,6 +988,7 @@ sub TunePersonalCondor
 		print NEW "CONDOR_HOST = $condorhost\n";
 		
 		print NEW "START = TRUE\n";
+		print NEW "SUSPEND = FALSE\n";
 		print NEW "RUNBENCHMARKS = FALSE\n";
 		print NEW "JAVA_BENCHMARK_TIME = 0\n";
 		print NEW "SCHEDD_INTERVAL = 5\n";
@@ -1005,6 +1017,7 @@ sub TunePersonalCondor
 
 		print NEW "CONDOR_HOST = $condorhost\n";
 		print NEW "START = TRUE\n";
+		print NEW "SUSPEND = FALSE\n";
 		print NEW "SCHEDD_INTERVAL = 5\n";
 		print NEW "UPDATE_INTERVAL = 5\n";
 		print NEW "NEGOTIATOR_INTERVAL = 5\n";
