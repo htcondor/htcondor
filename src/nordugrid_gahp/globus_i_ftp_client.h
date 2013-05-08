@@ -83,7 +83,9 @@ EXTERN_C_BEGIN
  */
 #define GLOBUS_FTP_CLIENT_MAGIC_STRING "FTPClient-1.0"
 
-#ifdef BUILD_DEBUG
+/* Disable this check, as it causes compiler warnings. -jfrey */
+/* #ifdef BUILD_DEBUG */
+#if 0
 #define GLOBUS_I_FTP_CLIENT_BAD_MAGIC(h) \
     (!(h && (*h) && \
        !strcmp(((*h))->magic, \
