@@ -101,15 +101,18 @@ allowable clock skew between two parties.
 This is relevant when delegating X.509 proxies.
 \Ticket{3557}
 
-\item The administrator can now set \Macro{CheckpointPlatform} to change the
-string used by the standard universe to determine if a job checkpointed on
-one machine can be started on another.
+\item The new configuration variable \Macro{CheckpointPlatform}
+is a string that may be set by
+an administrator to override the auto-detected
+platform used to determine if a standard universe job that produced 
+a checkpoint on one machine can be started on another.
 \Ticket{3544}
 
 %% Yes, SSSE 3 has three Ss.
-\item Machine ClassAds now include \AdAttr{has\_sse4\_1},
-\AdAttr{has\_sse4\_2}, and \AdAttr{has\_ssse3}, set if the corresponding
-instructions are available on that machine.
+\item The new Machine ClassAd attributes \AdAttr{Has\_sse4\_1},
+\AdAttr{Has\_sse4\_2}, and \AdAttr{Has\_ssse3} are set to \Expr{True}
+if the corresponding instruction set additions exist on that machine.
+These attributes will be undefined otherwise.
 \Ticket{3544}
 
 \item The name of the configuration variable \MacroNI{MEMORY\_LIMIT}

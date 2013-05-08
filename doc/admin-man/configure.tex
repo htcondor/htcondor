@@ -3807,11 +3807,17 @@ WANT_HOLD_REASON = \
 
 \label{param:CheckpointPlatform}
 \item[\Macro{CheckpointPlatform}]
-  Overrides the automatically-generated machine ad attribute 
+  A string used to
+  override the automatically-generated machine ClassAd attribute 
   \AdAttr{CheckpointPlatform} (see section
   \ref{CheckpointPlatform-machine-attribute}),
-  which is used to identify systems where previously taken checkpoints
-  for the standard universe may resume.
+  which is used to identify the platform upon which a job previously generated
+  a checkpoint under the standard universe.
+  This restricts the machine matches that may be considered for a job
+  and where the job may resume.
+  Overriding the value may be necessary for architectures that are
+  the same in name, but actually have differences in instruction sets,
+  such as the AVX extensions to the Intel processor.
 
 \label{param:WantSuspend}
 \item[\Macro{WANT\_SUSPEND}]
