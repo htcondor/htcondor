@@ -1,0 +1,119 @@
+#!/bin/bash
+# first version 5/2/2013 - Marco Mambelli
+
+# Download URL
+INSTALLER_URL=ftp://ftp.cs.wisc.edu/condor/bosco/latest/boscoinstaller
+
+# Binaries used
+# which
+# python
+# wget or curl if download needed
+
+# Check if setup needs to be invoked
+env_missing=0
+which bosco_cluster &> /dev/null
+if [ $? -ne 0 ]; then
+  if [ ! -e $HOME/bosco/bosco_setenv ]; then
+    # No Bosco available -> install Bosco
+    echo "Bosco is not installed. You need Bosco to run this quickstart."
+    while [ 1 ]; do
+      read -p "Do you want to install Bosco? Select y/n and press [ENTER]): " q_tmp
+      [ "x$q_tmp" = "xn" ] && exit 0
+      [ "x$q_tmp" = "xy" ] && break
+    done
+    echo "********************** Installing Bosco: ***********"
+    which wget &> /dev/null
+    if [ $? -eq 0 ]; then
+      wget -O $HOME/boscoinstaller $INSTALLER_URL
+    else
+      which curl &> /dev/null
+      if [ $? -eq 0 ]; then
+        curl -o $HOME/boscoinstaller $INSTALLER_URL
+      fi
+    fi
+    if [ ! -e $HOME/boscoinstaller ]; then
+      echo "Unable to download Bosco. Please see "
+      echo "https://twiki.grid.iu.edu/bin/view/CampusGrids/BoscoQuickStart"
+      echo "to download manually Bosco and install it."
+      exit 0
+    fi
+    python $HOME/boscoinstaller
+    rm $HOME/boscoinstaller
+  fi
+  env_missing=1
+  source $HOME/bosco/bosco_setenv
+fi
+ 
+# Add Bosco installation?
+
+# Start Bosco
+echo "********************** Starting Bosco: ***********"
+bosco_start
+
+# Add one cluster
+REMOTE_HOST=""
+REMOTE_USER=""
+REMOTE_TYPE=""
+echo "********************** Adding one cluster: ***********"
+echo "Hit [CTRL+C] to interrupt."
+echo 
+q_tmp=""
+read -p "Type the cluster name and press [ENTER]: " q_tmp
+while [ "x$q_tmp" = "x" ]; do
+  read -p "No default, please type the cluster name and press [ENTER]: " q_tmp
+done
+REMOTE_HOST=$q_tmp
+
+q_tmp=""
+read -p "Type your name at $REMOTE_HOST (default $USER) and press [ENTER]: " q_tmp
+if [ "x$q_name" = "x" ]; then 
+  REMOTE_USER=$USER
+else
+  REMOTE_USER=$q_tmp
+fi
+
+q_tmp=""
+read -p "Type the queue manager for $REMOTE_HOST (pbs, condor, lsf, sge, slurm) and press [ENTER]: " q_tmp
+while [ "x$q_tmp" = "x" ]; do
+  read -p "No default, please type the queue manager and press [ENTER]: " q_tmp
+done
+if [ "x$q_tmp" = "xslurm" ]; then
+  # SLURM is using PBS emulation
+  q_tmp="pbs"
+fi
+REMOTE_TYPE=$q_tmp
+
+echo "Adding $REMOTE_HOST, user: $REMOTE_USER, queue manager: $REMOTE_TYPE"
+bosco_cluster --add $REMOTE_USER@$REMOTE_HOST $REMOTE_TYPE
+if [ $? -ne 0 ]; then
+  echo "Failed to add the cluster $REMOTE_HOST. Please check your data and retry."
+  exit 1
+fi
+
+echo "********************** Testing the cluster: ***********"
+bosco_cluster --test $REMOTE_USER@$REMOTE_HOST
+
+echo "********************** Congratulations, Bosco is now setup to work with $REMOTE_HOST! ***********"
+cat << EOF
+You are ready to submit jobs with the \"condor_submit\" command.
+Remember to setup the environment all the time you want to use Bosco:
+source ~/bosco/bosco_setenv
+
+Here is a quickstart guide (we took care of most of the section 3):
+https://twiki.grid.iu.edu/bin/view/CampusGrids/BoscoQuickStart
+
+To remove Bosco you can run:
+source ~/bosco/bosco_setenv; bosco_uninstall --all
+
+Here is a submit file example (supposing you want to run "myjob.sh"):
+universe = grid
+Executable = myjob.sh
+arguments = 
+output = myjob.output.txt
+error = myjob.error.txt
+log = myjob.log
+transfer_output_files = 
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+queue 1
+EOF
