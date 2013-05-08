@@ -147,6 +147,11 @@ they had a prefix of
 \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
 \Ticket{3496}
 
+\item The new configuration variable
+\Macro{BATCH\_GAHP\_CHECK\_STATUS\_ATTEMPTS} controls how often the
+\Condor{gridmanager} should retry a failed job status check when using
+the \Prog{batch\_gahp}. The default is 5.
+
 \end{itemize}
 
 \noindent Bugs Fixed:

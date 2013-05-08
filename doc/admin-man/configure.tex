@@ -8071,6 +8071,13 @@ These macros affect the \Condor{gridmanager}.
   Beware that identifying a \Expr{gt2} server as \Expr{gt5} can result in
   overloading the server, if a large number of jobs are submitted.
 
+\label{param:BatchGahpCheckStatusAttempts}
+\item[\Macro{BATCH\_GAHP\_CHECK\_STATUS\_ATTEMPTS}]
+  The number of times a failed status command issued to the
+  \Prog{batch\_gahp} should be retried. These retries allow the
+  \Condor{gridmanager} to tolerate short-lived failures of the underlying
+  batch system. The default value is 5.
+
 \label{param:CGAHPLog}
 \item[\Macro{C\_GAHP\_LOG}]
   The complete path and file name of the HTCondor GAHP server's log.
