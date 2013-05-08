@@ -112,6 +112,8 @@ if ( NOT PROPER )
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${GRIDSITE_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/gridsite-1.6.0.src.tar.gz
+				    #--Patch step ----------
+				    PATCH_COMMAND patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/gridsite_extern.patch
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND echo "no config"
 				    #--Build Step ----------
