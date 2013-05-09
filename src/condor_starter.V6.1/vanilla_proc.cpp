@@ -605,10 +605,6 @@ VanillaProc::StartJob()
 		int rc = NetworkPluginManager::Cleanup(network_name);
 		if (rc) dprintf(D_ALWAYS, "Failed to cleanup network namespace (rc=%d)\n", rc);
 	}
-	// TODO: This leaks on several of the above failure cases.
-	if (fs_remap) {
-		delete fs_remap;
-	}
 
 	return retval;
 }

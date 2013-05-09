@@ -197,9 +197,9 @@ StarterHookMgr::tryHookPrepareMachine()
 	MyString machine_classad_str;
 	MyString separator_line = MyString("----------\n");
 	ClassAd* job_ad = Starter->jic->jobClassAd();
-	job_ad->sPrint(job_classad_str);
+	sPrintAd(job_classad_str, *job_ad);
 	ClassAd* machine_ad = Starter->jic->machClassAd();
-	machine_ad->sPrint(machine_classad_str);
+	sPrintAd(machine_classad_str, *machine_ad);
 	
 	hook_stdin = job_classad_str + separator_line + machine_classad_str;
 	dprintf(D_FULLDEBUG, "The job classad is %s\n", job_classad_str.Value());
@@ -434,7 +434,7 @@ HookPrepareMachineClient::hookExited(int exit_status) {
                 ClassAd updateAd;
                 updateAd.initFromString(out.Value(), NULL);
                 dprintf(D_FULLDEBUG, "Prepare hook output classad\n");
-                updateAd.dPrint(D_FULLDEBUG);
+                dPrintAd(D_FULLDEBUG, updateAd);
                         // Insert each expr from the update ad into the machine ad
                 updateAd.ResetExpr();
 				ClassAd* job_ad = Starter->jic->jobClassAd();
@@ -447,9 +447,9 @@ HookPrepareMachineClient::hookExited(int exit_status) {
 						job_ad->Insert(name, pCopy, false);
                 }
 				dprintf(D_FULLDEBUG, "After prepare machine hook: merged job classad:\n");
-				job_ad->dPrint(D_FULLDEBUG);
+				dPrintAd(D_FULLDEBUG, *job_ad);
                 dprintf(D_FULLDEBUG, "After Prepare machine hook: merged machine classad:\n");
-                machine_ad->dPrint(D_FULLDEBUG);
+                dPrintAd(D_FULLDEBUG, *machine_ad);
                 Starter->jobEnvironmentReady();
         }
 }
