@@ -1,0 +1,6 @@
+InboundConnectivity = false
+OutboundConnectivity = true
+NetworkAccounting = true
+----------
+cpu = 1
+memory = 1024

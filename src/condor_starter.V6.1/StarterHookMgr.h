@@ -41,6 +41,7 @@ public:
 	bool initialize(ClassAd* job_ad);
 	bool reconfig();
 
+
 		/**
 		   See if we're configured to use HOOK_PREPARE_JOB and spawn it.
 
@@ -48,7 +49,11 @@ public:
 		   to use this hook for the job's hook keyword, or -1 on error.
 		*/
 	int tryHookPrepareJob();
-
+		/**
+ 		   Invode HOOK_PREPARE_MACHINE to update the machine classad with
+		   network configuration info inserted.
+		*/
+	int tryHookPrepareMachine();
 		/**
 		   Invoke HOOK_UPDATE_JOB_INFO to provide a periodic update
 		   for job information such as image size, CPU time, etc.
@@ -86,6 +91,8 @@ private:
 
 		/// The path to HOOK_PREPARE_JOB, if defined.
 	char* m_hook_prepare_job;
+		/// The path to HOOK_PREPARE_MACHINE, if defined.
+	char* m_hook_prepare_machine;
 		/// The path to HOOK_UPDATE_JOB_INFO, if defined.
 	char* m_hook_update_job_info;
 		/// The path to HOOK_JOB_EXIT, if defined.
@@ -126,8 +133,33 @@ public:
 		   Otherwise, we let the Starter know the job is ready to run.
 		*/
 	virtual void hookExited(int exit_status);
+		
+		/**
+ 		   Provide another hookExited member function in which a StarterHookMgr
+		   pointer can be passed as input parameter
+		*/	
 };
 
+/**
+   Manages an invocation of HOOK_PREPARE_MACHINE
+*/
+class HookPrepareMachineClient : public HookClient
+{
+public:
+	friend class StarterHookMgr;
+
+	HookPrepareMachineClient(const char* hook_path);
+
+		/**
+  		   HOOK_PREPARE_MACHINE has exited. IF the hook exited with a
+		   non-zero status, the updated machine classad with network 
+		   configuratin info is not ready, so the network manager plugin
+		   is not called. Otherwise, the network manger plugin is called
+		   and let the Starter know the job environment is ready.
+		*/
+		
+	virtual void hookExited(int exit_status);
+};
 
 /**
    Manages an invocation of HOOK_JOB_EXIT.

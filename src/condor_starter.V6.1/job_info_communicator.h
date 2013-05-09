@@ -42,6 +42,8 @@
 
 class JobInfoCommunicator : public Service {
 public:
+
+	friend void HookPrepareJobClient::hookExited(int exit_status);
 		/// Constructor
 	JobInfoCommunicator();
 

@@ -290,7 +290,7 @@ MacAddressHexToBin(const char hwaddr_str[32], unsigned char hwaddr[8])
 			return false;
 		}
 		str = result_str;
-		if (*str != '\0' && *str != ':') return false;
+        if ((i < 5 && *str != ':') || (i == 5 && *str != '\0')) return false;
 		str++;
 		if (retval > 255 || retval < 0) return false;
 		hwaddr[i] = retval;

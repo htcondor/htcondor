@@ -1,0 +1,8 @@
+[
+Err = "tests_tmp/lark_test_1.err";
+Out = "tests_tmp/lark_test_1.out";
+Cmd = "/bin/sh";
+Arguments = "-c 'sleep 30 | ls -l'";
+InboundConnectivity = false;
+OutboundConnectivity = true;
+]

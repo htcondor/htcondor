@@ -62,6 +62,7 @@ typedef enum {
     HOOK_EVICT_JOB,
     HOOK_TRANSLATE_JOB,
     HOOK_JOB_CLEANUP,
+    HOOK_PREPARE_MACHINE,
 } HookType;
 
 const char* getHookTypeString( HookType type );

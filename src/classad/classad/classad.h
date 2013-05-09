@@ -445,6 +445,15 @@ e		*/
 		*/
 		bool EvaluateAttrBool( const std::string &attr, bool& boolValue ) const;
 
+        /** Evaluates an attribute to a boolean equivalent. A pointer to the string is
+                returned.
+            @param attr The name of the attributes.
+            @param boolValue The value of the attribute.
+            @return true if attrName evaluated to a boolean equivalent value, false
+                otherwise.
+        */
+        bool EvaluateAttrBoolEquiv( const std::string &attr, bool& boolValue ) const;
+
 		/** Evaluates an attribute to a ClassAd.  A pointer to the ClassAd is 
 				returned. You do not own the ClassAd--do not free it.
 			@param attr The name of the attribute.
