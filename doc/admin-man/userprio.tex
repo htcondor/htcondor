@@ -445,20 +445,25 @@ which may be identified by the job ClassAd attribute \Attr{Owner}.
 Jobs that do specify an accounting group have 
 all accounting and priority based on the specified accounting group.
 
-\index{ClassAd job attribute!AccountingGroup}
-To use an accounting group,
-each job inserts an attribute into the job ClassAd which defines
-the accounting group name for the job.
-A common name is decided upon and used for the group.
-The following line is an example that defines the attribute
-within the job's submit description file:
+To use an accounting group, a job submit file may include a
+command that specifies the group:
 \begin{verbatim}
-+AccountingGroup = "group_physics"
+# instruct job to negotiate under accounting group "group_physics"
+accounting_group = group_physics
+# accounting_group_user is optional, and defaults to job owner:
+accounting_group_user = albert
+\end{verbatim}
+
+\index{ClassAd job attribute!AccountingGroup}
+The legacy method for invoking accounting groups (now deprecated)
+is to insert a value for \AdAttr{AccountingGroup} directly
+into the job ad at submission time, as in this example:
+\begin{verbatim}
++AccountingGroup = "group_physics.albert"
 \end{verbatim}
 
 The \AdAttr{AccountingGroup} attribute is a string,
 and it therefore must be enclosed in double quote marks.
-The string may have a maximum length of 40 characters.
 The name should \emph{not} be qualified with a domain.
 Certain parts of the HTCondor system 
 do append the value \MacroUNI{UID\_DOMAIN}
@@ -559,14 +564,16 @@ set up in advance.
 
 A quota for a set of users requires an identification of
 the set; members are called group users.
-Jobs under the group quota specify the group user with the
-\Attr{AccountingGroup} job ClassAd attribute.
-This is the same attribute as is used with group accounting.
 
 The submit description file syntax for specifying a job is to be
 part of a group includes 
 a series of names separated by the period character ('\Expr{.}').
-Example syntax that shows only 2 levels of a (limited) hierarchy is
+Example syntax that shows only 2 levels of a (limited) hierarchy is:
+\begin{verbatim}
+accounting_group = physics.gravity
+\end{verbatim}
+
+The deprecated legacy method uses the following syntax:
 \begin{verbatim}
 +AccountingGroup = "<group>.<subgroup>.<user>"
 \end{verbatim}

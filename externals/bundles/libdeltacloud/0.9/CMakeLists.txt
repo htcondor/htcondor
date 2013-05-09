@@ -35,13 +35,13 @@ if (WITH_LIBDELTACLOUD)
 				DOWNLOAD_DIR ${LIBDELTACLOUD_STAGE}/dl
 				URL http://parrot.cs.wisc.edu/externals/${LIBDELTACLOUD_VER}.tar.gz
 				#--Configure step ----------
-				CONFIGURE_COMMAND cd ${LIBDELTACLOUD_VER} && ./configure --prefix=${LIBDELTACLOUD_INSTALL_LOC}
+				CONFIGURE_COMMAND ./configure --prefix=${LIBDELTACLOUD_INSTALL_LOC}
 				#--Build Step ----------
-				BUILD_COMMAND cd ${LIBDELTACLOUD_VER} && make
+				BUILD_COMMAND make
 				BUILD_IN_SOURCE 1
 				#--install Step ----------
 				INSTALL_DIR ${LIBDELTACLOUD_INSTALL_LOC}
-				INSTALL_COMMAND cd ${LIBDELTACLOUD_VER} && make install )
+				INSTALL_COMMAND make install )
 
 		# Set the target dependencies which the rest of condor depends on.
 		set(LIBDELTACLOUD_FOUND "${LIBDELTACLOUD_INSTALL_LOC}/lib/libdeltacloud.a")

@@ -187,7 +187,7 @@ bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad, bool excludeTypes 
             itor.CurrentAttribute( buf, expr );
 
 
-            if(!compat_classad::ClassAd::ClassAdAttributeIsPrivate(buf.c_str()))
+            if(!compat_classad::ClassAdAttributeIsPrivate(buf.c_str()))
             {
                 if(excludeTypes)
                 {
@@ -237,7 +237,7 @@ bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad, bool excludeTypes 
 
             attrItor.CurrentAttribute( buf, expr );
 
-            if(compat_classad::ClassAd::ClassAdAttributeIsPrivate(buf.c_str())){
+            if(compat_classad::ClassAdAttributeIsPrivate(buf.c_str())){
                 continue;
             }
 
@@ -259,7 +259,7 @@ bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad, bool excludeTypes 
             //ConvertDefaultIPToSocketIP(tmpAttrName.c_str(),&exprString,*sock);
             /*
             if( ! sock->prepare_crypto_for_secret_is_noop() &&
-                    compat_classad::ClassAd::ClassAdAttributeIsPrivate(tmpAttrName.c_str())) {
+                    compat_classad::ClassAdAttributeIsPrivate(tmpAttrName.c_str())) {
                 sock->put(SECRET_MARKER);
 
                 sock->put_secret(exprString);
@@ -335,19 +335,19 @@ void setUpClassAds(ClassAd* c1, ClassAd* c2, ClassAd* c3, FILE* c1FP,
     c1->initFromString(classad_strings[0], NULL);
     c2->initFromString(classad_strings[1], NULL);
     c3->initFromString(classad_strings[2], NULL);
-    c1->SetMyTypeName("c1");
-    c2->SetMyTypeName("c2");
-    c3->SetMyTypeName("c3");
+    SetMyTypeName(*c1, "c1");
+    SetMyTypeName(*c2, "c2");
+    SetMyTypeName(*c3, "c3");
 
-    c1->SetTargetTypeName("not c1!");
-    c2->SetTargetTypeName("not c2!");
-    c3->SetTargetTypeName("not c3!");
+    SetTargetTypeName(*c1, "not c1!");
+    SetTargetTypeName(*c2, "not c2!");
+    SetTargetTypeName(*c3, "not c3!");
 
     if(verbose)
     {
-        printf("C1:\n"); c1->fPrint(stdout); printf("\n");
-        printf("C2:\n"); c2->fPrint(stdout); printf("\n");
-        printf("C3:\n"); c3->fPrint(stdout); printf("\n");
+        printf("C1:\n"); fPrintAd(stdout, *c1); printf("\n");
+        printf("C2:\n"); fPrintAd(stdout, *c2); printf("\n");
+        printf("C3:\n"); fPrintAd(stdout, *c3); printf("\n");
     }
 
     //ugh, converting old classads into compat_classad::ClassAds, in probably the 
@@ -356,9 +356,9 @@ void setUpClassAds(ClassAd* c1, ClassAd* c2, ClassAd* c3, FILE* c1FP,
     c2FP = fopen("c2FP.txt", "w+");
     c3FP = fopen("c3FP.txt", "w+");
 
-    c1->fPrint(c1FP);
-    c2->fPrint(c2FP);
-    c3->fPrint(c3FP);
+    fPrintAd(c1FP, *c1);
+    fPrintAd(c2FP, *c2);
+    fPrintAd(c3FP, *c3);
 
     fclose(c1FP); fclose(c2FP); fclose(c3FP);
 }
@@ -382,13 +382,13 @@ void setUpCompatClassAds(compat_classad::ClassAd** compC1, compat_classad::Class
     (*compC3) = new compat_classad::ClassAd(c3FP, ",", eofCheck, errorCheck, emptyCheck); 
     fclose(c1FP); fclose(c2FP); fclose(c3FP);
 
-    (*compC1)->SetMyTypeName("compC1");
-    (*compC2)->SetMyTypeName("compC2");
-    (*compC3)->SetMyTypeName("compC3");
+    SetMyTypeName(*(*compC1), "compC1");
+    SetMyTypeName(*(*compC2), "compC2");
+    SetMyTypeName(*(*compC3), "compC3");
 
-    (*compC1)->SetTargetTypeName("not compC1!");
-    (*compC2)->SetTargetTypeName("not compC2!");
-    (*compC3)->SetTargetTypeName("not compC3!");
+    SetTargetTypeName(*(*compC1), "not compC1!");
+    SetTargetTypeName(*(*compC2), "not compC2!");
+    SetTargetTypeName(*(*compC3), "not compC3!");
 
 
 }
@@ -411,9 +411,9 @@ bool test_put_server_time(bool verbose)
 
     if(verbose)
     {
-        printf("Comp1:\n"); compC1->fPrint(stdout); printf("\n");
-        printf("Comp2:\n"); compC2->fPrint(stdout); printf("\n");
-        printf("Comp3:\n"); compC3->fPrint(stdout); printf("\n");
+        printf("Comp1:\n"); fPrintAd(stdout, *compC1); printf("\n");
+        printf("Comp2:\n"); fPrintAd(stdout, *compC2); printf("\n");
+        printf("Comp3:\n"); fPrintAd(stdout, *compC3); printf("\n");
     
         printf("----------------\n\n");
     }
@@ -478,9 +478,9 @@ bool test_put_chained_ads(bool verbose)
 
     if(verbose)
     {
-        printf("Comp1:\n"); compC1->fPrint(stdout); printf("\n");
-        printf("Comp2:\n"); compC2->fPrint(stdout); printf("\n");
-        printf("Comp3:\n"); compC3->fPrint(stdout); printf("\n");
+        printf("Comp1:\n"); fPrintAd(stdout, *compC1); printf("\n");
+        printf("Comp2:\n"); fPrintAd(stdout, *compC2); printf("\n");
+        printf("Comp3:\n"); fPrintAd(stdout, *compC3); printf("\n");
 
         printf("Putting CompClassAd1\n");
     }

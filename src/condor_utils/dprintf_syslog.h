@@ -9,7 +9,7 @@ class DprintfSyslog
 	friend class DprintfSyslogFactory;
 
 public:
-	static void Log(int, int, time_t, struct tm*, const char * message, DebugFileInfo* info)
+	static void Log(int, int, DebugHeaderInfo &, const char * message, DebugFileInfo* info)
 	{
 		if (!info || !info->userData)
 		{

@@ -293,6 +293,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 	bool had_error = false;
 	const char* name;
 	char *value = NULL;
+	std::list< std::string > undirty_attrs;
 	
 	StringList* job_queue_attrs = NULL;
 	switch( type ) {
@@ -352,6 +353,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 			if( ! updateExprTree(name, tree) ) {
 				had_error = true;
 			}
+			undirty_attrs.push_back( name );
 		}
 	}
 	m_pull_attrs->rewind();
@@ -366,6 +368,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 			had_error = true;
 		} else {
 			job_ad->AssignExpr( name, value );
+			undirty_attrs.push_back( name );
 		}
 		free( value );
 	}
@@ -381,7 +384,12 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 	if( had_error ) {
 		return false;
 	}
-	job_ad->ClearAllDirtyFlags();
+	for(std::list< std::string >::iterator itr = undirty_attrs.begin();
+		itr != undirty_attrs.end();
+		++itr)
+	{
+		job_ad->SetDirtyFlag(itr->c_str(),false);
+	}
 	return true;
 }
 
@@ -408,7 +416,7 @@ QmgrJobUpdater::retrieveJobUpdates( void )
 	DisconnectQ( NULL, false );
 
 	dprintf( D_FULLDEBUG, "Retrieved updated attributes from schedd\n" );
-	updates.dPrint( D_JOB );
+	dPrintAd( D_JOB, updates );
 	MergeClassAds( job_ad, &updates, true );
 
 	DCSchedd schedd( schedd_addr );

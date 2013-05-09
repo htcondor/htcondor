@@ -20,13 +20,20 @@ Details of configuration variables are in section~\ref{sec:Config-VMs}.
 
 Begin by installing the virtualization package on all execute machines,
 according to the vendor's instructions.
-We have successfully used VMware Server, Xen, and KVM.
+We have successfully used VMware, Xen, and KVM.
 If considering running on a Windows system, 
 a \Prog{Perl} distribution will also need to be installed;
 we have successfully used \Prog{ActivePerl}. 
 
 For VMware, \Prog{VMware Server 1} must be installed
 and running on the execute machine.
+HTCondor also
+supports using \Prog{VMware Workstation} and \Prog{VMware Player}, version 5.
+Earlier versions of these products may also work.  
+HTCondor will attempt to automatically discern which 
+VMware product is installed.
+If using \Prog{Player}, also install the \Prog{VIX API},
+which is freely available from VMware.
 
 For Xen, there are three things that must exist on 
 an execute machine to fully support \SubmitCmd{vm} universe jobs. 
@@ -112,6 +119,17 @@ This, of course, assumes the \Prog{Perl} executable is in the path
 of the \Condor{master} daemon.
 If this is not the case,
 then a full path to the \Prog{Perl} executable will be required.
+
+If using \Prog{VMware Player}, 
+which does not support snapshots,
+configure the \MacroNI{START} expression to reject
+jobs which require snapshots.
+These are jobs that do not have 
+\SubmitCmd{vmware\_snapshot\_disk} set to \Expr{False}.
+Here is an example modification to the \MacroNI{START} expression. 
+\begin{verbatim}
+START = ($(START)) && (!(TARGET.VMPARAM_VMware_SnapshotDisk =?= TRUE))
+\end{verbatim}
 
 The final required configuration is the location of the VMware control script
 used by the \Condor{vm-gahp} on the execute machine

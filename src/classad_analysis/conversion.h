@@ -25,10 +25,6 @@
 #include "classad/classad_distribution.h"
 #include "condor_classad.h"
 
-classad::ClassAd * toNewClassAd( ClassAd * );
-
-ClassAd * toOldClassAd( classad::ClassAd * );
-
 //classad::ExprTree *AddExplicitConditionals( classad::ExprTree *expr );
 
 // AddExplicitTargets creates a new ClassAd (the caller owns it)

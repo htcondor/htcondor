@@ -48,4 +48,49 @@ sub RunCheck
     return $result;
 }
 
+sub RunCheckMultiple
+{
+    my %args = @_;
+
+    my $daemon = $args{daemon} || die("'daemon' not specified");
+    my $match_regexp = $args{match_regexp} || die("'match_regexp' not specified");
+	my $match_instances = $args{match_instances} || 1;
+    my $match_timeout = $args{match_timeout} || 10;
+	my $match_new = $args{match_new} || "false";
+
+    my $result;
+    my $count = 0;
+	$result = CondorTest::SearchCondorLogMultiple($daemon,$match_regexp,$match_instances,$match_timeout,$match_new);
+
+    CondorTest::RegisterResult( $result, %args );
+    return $result;
+}
+
+sub RunSpecialCheck
+{
+    my %args = @_;
+
+    my $logname = $args{logname} || die("'logname' not specified");
+    my $match_regexp = $args{match_regexp} || die("'match_regexp' not specified");
+    my $allmatch = $args{allmatch} || 0;
+    my $num_retries = $args{num_retries} || 0;
+
+    my $result;
+    my $count = 0;
+    while(1) {
+	$result = CondorTest::SearchCondorSpecialLog($logname,$match_regexp,$allmatch);
+	
+	last if $result;
+	last if ($count >= $num_retries);
+	sleep(1);
+    }
+
+    if( $fail_if_found ) {
+	$result = !$result;
+    }
+
+    CondorTest::RegisterResult( $result, %args );
+    return $result;
+}
+
 1;

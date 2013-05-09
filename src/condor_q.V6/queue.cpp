@@ -3373,12 +3373,12 @@ process_buffer_line_old(void *, ClassAd *job)
 	if (use_xml) {
 		std::string s;
 		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
-		job->sPrintAsXML(s,attr_white_list);
+		sPrintAdAsXML(s,*job,attr_white_list);
 		tempCPS->string = strnewp( s.c_str() );
 	} else if( dash_long ) {
 		MyString s;
 		StringList *attr_white_list = attrs.isEmpty() ? NULL : &attrs;
-		job->sPrint(s,attr_white_list);
+		sPrintAd(s, *job, attr_white_list);
 		s += "\n";
 		tempCPS->string = strnewp( s.Value() );
 	} else if( better_analyze ) {
@@ -3427,9 +3427,9 @@ static void count_job(ClassAd *job)
 static const char * render_job_text(ClassAd *job, std::string & result_text)
 {
 	if (use_xml) {
-		job->sPrintAsXML(result_text, attrs.isEmpty() ? NULL : &attrs);
+		sPrintAdAsXML(result_text, *job, attrs.isEmpty() ? NULL : &attrs);
 	} else if (dash_long) {
-		job->sPrint(result_text, attrs.isEmpty() ? NULL : &attrs);
+		sPrintAd(result_text, *job, false, attrs.isEmpty() ? NULL : &attrs);
 		result_text += "\n";
 	} else if (better_analyze) {
 		ASSERT(0); // should never get here.
@@ -3985,7 +3985,7 @@ fetchSubmittorPriosFromNegotiator(ExtArray<PrioEntry> & prios)
 
 	sock->end_of_message();
 	sock->decode();
-	if( !al.initAttrListFromStream(*sock) || !sock->end_of_message() ) {
+	if( !getClassAdNoTypes(sock, al) || !sock->end_of_message() ) {
 		fprintf( stderr, 
 				 "Error:  Could not get priorities from negotiator (%s)\n",
 				 negotiator.fullHostname() );
@@ -4634,7 +4634,7 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 
 	bool request_is_machine = false;
 	const char * attrConstraint = ATTR_REQUIREMENTS;
-	if (0 == strcmp(request->GetMyTypeName(),STARTD_ADTYPE)) {
+	if (0 == strcmp(GetMyTypeName(*request),STARTD_ADTYPE)) {
 		//attrConstraint = ATTR_START;
 		attrConstraint = ATTR_REQUIREMENTS;
 		request_is_machine = true;

@@ -159,7 +159,7 @@ StarterHookMgr::tryHookPrepareJob()
 
 	MyString hook_stdin;
 	ClassAd* job_ad = Starter->jic->jobClassAd();
-	job_ad->sPrint(hook_stdin);
+	sPrintAd(hook_stdin, *job_ad);
 
 	HookClient* hook_client = new HookPrepareJobClient(m_hook_prepare_job);
 
@@ -242,7 +242,7 @@ StarterHookMgr::hookUpdateJobInfo(ClassAd* job_info)
 	MergeClassAds(&update_ad, job_info, true);
 
 	MyString hook_stdin;
-	update_ad.sPrint(hook_stdin);
+	sPrintAd(hook_stdin, update_ad);
 
 		// Since we're not saving the output, this can just live on
         // the stack and be destroyed as soon as we return.
@@ -298,7 +298,7 @@ StarterHookMgr::tryHookJobExit(ClassAd* job_info, const char* exit_reason)
 	ASSERT(exit_reason);
 
 	MyString hook_stdin;
-	job_info->sPrint(hook_stdin);
+	sPrintAd(hook_stdin, *job_info);
 
 	ArgList args;
 	args.AppendArg(exit_reason);
@@ -363,7 +363,7 @@ HookPrepareJobClient::hookExited(int exit_status) {
 		ClassAd updateAd;
 		updateAd.initFromString(out.Value(), NULL);
 		dprintf(D_FULLDEBUG, "Prepare hook output classad\n");
-		updateAd.dPrint(D_FULLDEBUG);
+		dPrintAd(D_FULLDEBUG, updateAd);
 
 			// Insert each expr from the update ad into the job ad
 		updateAd.ResetExpr();
@@ -375,7 +375,7 @@ HookPrepareJobClient::hookExited(int exit_status) {
 			job_ad->Insert(name, pCopy, false);
 		}
 		dprintf(D_FULLDEBUG, "After Prepare hook: merged job classad:\n");
-		job_ad->dPrint(D_FULLDEBUG);
+		dPrintAd(D_FULLDEBUG, *job_ad);
 		int rval = Starter->jic->m_hook_mgr->tryHookPrepareMachine();
 		switch(rval){
 			case -1:  // Error

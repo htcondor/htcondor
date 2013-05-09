@@ -67,16 +67,15 @@ if (WITH_GSOAP)
 				    DOWNLOAD_DIR ${GSOAP_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/gsoap-2.7.10.tar.gz
 					#--Patch step ----------
-					PATCH_COMMAND cd gsoap-2.7.10 ${CMD_TERM} ${GSOAP_PATCH}
+					PATCH_COMMAND ${GSOAP_PATCH}
 					#--Configure step ----------
-				    CONFIGURE_COMMAND cd gsoap-2.7.10 ${CMD_TERM} ${GSOAP_CONFIGURE}
+				    CONFIGURE_COMMAND ${GSOAP_CONFIGURE}
 				    #--Build Step ----------
-				    BUILD_COMMAND cd gsoap-2.7.10 ${CMD_TERM} ${GSOAP_MAKE}
+				    BUILD_COMMAND ${GSOAP_MAKE}
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${GSOAP_INSTALL_LOC}
-				    INSTALL_COMMAND cd gsoap-2.7.10
-				    ${CMD_TERM} ${GSOAP_INSTALL} ${CMD_TERM}
+				    INSTALL_COMMAND ${GSOAP_INSTALL} ${CMD_TERM}
 				    touch ${GSOAP_INSTALL_LOC}/done )
 
 		# Set the target dependencies which the rest of condor depends on.

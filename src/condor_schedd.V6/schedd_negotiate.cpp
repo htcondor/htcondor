@@ -263,7 +263,7 @@ ScheddNegotiate::sendJobInfo(Sock *sock)
 	m_current_job_ad.Assign(ATTR_WANT_MATCH_DIAGNOSTICS, true);
 
 		// Send the ad to the negotiator
-	if( !m_current_job_ad.put(*sock) ) {
+	if( !putClassAd(sock, m_current_job_ad) ) {
 		dprintf( D_ALWAYS,
 				 "Can't send job ad to mgr\n" );
 		sock->end_of_message();
@@ -423,7 +423,7 @@ ScheddNegotiate::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 		m_match_ad.Clear();
 
 			// get startd ad from negotiator
-		if( !m_match_ad.initFromStream(*sock) ) {
+		if( !getClassAd(sock, m_match_ad) ) {
 			dprintf( D_ALWAYS,
 					 "Can't get my match ad from negotiator\n" );
 			return false;
@@ -455,5 +455,8 @@ bool ScheddNegotiate::getSatisfaction() {
 		nextJob();
 	}
 
-	return ( m_current_job_id.cluster == -1 );
+	if( m_current_job_id.cluster == -1 ) {
+		return true; // no more jobs
+	}
+	return false;
 }

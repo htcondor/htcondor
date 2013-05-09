@@ -626,8 +626,8 @@ Starter::exited(int status)
 		// Dummy up an ad
 		int now = (int) time(0);
 		jobAd = new ClassAd();
-		jobAd->SetMyTypeName("Job");
-		jobAd->SetTargetTypeName("Machine");
+		SetMyTypeName(*jobAd, "Job");
+		SetTargetTypeName(*jobAd, "Machine");
 		jobAd->Assign(ATTR_CLUSTER_ID, now);
 		jobAd->Assign(ATTR_PROC_ID, 1);
 		jobAd->Assign(ATTR_OWNER, "boinc");
@@ -806,14 +806,14 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 
 	stream->decode();
 	if( !stream->get( final_update) ||
-		!update_ad.initFromStream( *stream ) ||
+		!getClassAd( stream, update_ad ) ||
 		!stream->end_of_message() )
 	{
 		final_update = 1;
 	}
 	else {
 		dprintf(D_FULLDEBUG, "Received job ClassAd update from starter.\n");
-		update_ad.dPrint( D_JOB );
+		dPrintAd( D_JOB, update_ad );
 
 		// In addition to new info about the job, the starter also
 		// inserts contact info for itself (important for CCB and
@@ -880,18 +880,10 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 		}
 	}
 
-	int slotId = s_claim->rip()->r_sub_id;
-	if (slotId == 0) {
-		// Isn't a paritionable slot, use the main id
-		slotId = s_claim->rip()->r_id;
-	}
-	std::string affinityKnob;
-	formatstr(affinityKnob, "_CONDOR_SLOT%d_CPU_AFFINITY",  slotId);
-
 	if (param_boolean("ASSIGN_CPU_AFFINITY", false)) {
-		new_env.SetEnv(affinityKnob.c_str(), affinityString.c_str());
+		new_env.SetEnv("_CONDOR_STARTD_ASSIGNED_AFFINITY", affinityString.c_str());
 		new_env.SetEnv("_CONDOR_ENFORCE_CPU_AFFINITY", "true");
-		dprintf(D_FULLDEBUG, "Setting affinity env to %s = %s\n", affinityKnob.c_str(), affinityString.c_str());
+		dprintf(D_ALWAYS, "Setting affinity env to %s\n", affinityString.c_str());
 	}
 
 
@@ -1151,12 +1143,13 @@ Starter::active()
 void
 Starter::dprintf( int flags, const char* fmt, ... )
 {
+	const DPF_IDENT ident = 0; // REMIND: maybe something useful here??
 	va_list args;
 	va_start( args, fmt );
 	if( s_claim && s_claim->rip() ) {
 		s_claim->rip()->dprintf_va( flags, fmt, args );
 	} else {
-		::_condor_dprintf_va( flags, fmt, args );
+		::_condor_dprintf_va( flags, ident, fmt, args );
 	}
 	va_end( args );
 }
@@ -1230,7 +1223,7 @@ Starter::printInfo( int debug_level )
 		dprintf( debug_level | D_NOHEADER, 
 				 "No ClassAd available!\n" ); 
 	} else {
-		s_ad->dPrint( debug_level );
+		dPrintAd( debug_level, *s_ad );
 	}
 	dprintf( debug_level | D_NOHEADER, "*** End of starter info ***\n" ); 
 }

@@ -285,7 +285,7 @@ sub DumpHistory( $$$ )
     # Dump the "History" info
     if ( exists $Updates{Hist} )
     {
-	my $History = ParseHex( $Updates{Hist} );
+	my @History = ParseHex( $Updates{Hist} );
 	my $UpdateNum = 0;
 	my $LastStatus = -1;
 	my $Repeats = 0;
@@ -293,14 +293,14 @@ sub DumpHistory( $$$ )
 	my $Time = time( );
 	$Time = $Ad->{LastHeardFrom} if ( exists $Ad->{LastHeardFrom} );
 
-	foreach my $Sample ( 0 .. $#{@{$History}} )
+	foreach my $Sample ( 0 .. $#History )
 	{
 	    if ( ( $Sample >= $Config{HistMin} ) &&
 		 ( $Sample <= $Config{HistMax} ) )
 	    {
-		my $Status = @{$History}[$Sample];
+		my $Status = $History[$Sample];
 		if ( ( ! $Config{Long} ) && ( $Status == $LastStatus ) &&
-		     ( $Sample < $#{@{$History}} )  )
+		     ( $Sample < $#History )  )
 		{
 		    print "  ...\n" if ( ! $Repeats );
 		    $Repeats++;
@@ -345,7 +345,7 @@ sub ParseHex( $ )
 	    push( @History, $Bit );
 	}
     }
-    \@History;
+    @History;
 }
 
 # ******************************************************

@@ -131,8 +131,8 @@ Triggerd::InitPublicAd()
 {
    publicAd = ClassAd();
 
-   publicAd.SetMyTypeName(GENERIC_ADTYPE);
-   publicAd.SetTargetTypeName("Triggerd");
+   SetMyTypeName(publicAd, GENERIC_ADTYPE);
+   SetTargetTypeName(publicAd, "Triggerd");
 
    publicAd.Assign(ATTR_NAME, daemonName.c_str());
 
@@ -452,8 +452,8 @@ Triggerd::AddTrigger(std::string name, std::string query, std::string triggerTex
    Manageable::status_t ret_val;
    char* tmp;
 
-   ad->SetMyTypeName("EventTrigger");
-   ad->SetTargetTypeName("Trigger");
+   SetMyTypeName(*ad, "EventTrigger");
+   SetTargetTypeName(*ad, "Trigger");
    tmp = strdup(name.c_str());
    ReplaceAllChars(tmp, '"', '\'');
    ad->Assign(ATTR_TRIGGER_NAME, tmp);
@@ -1035,8 +1035,8 @@ Triggerd::InvalidatePublicAd()
    ClassAd invalidate_ad;
    MyString line;
 
-   invalidate_ad.SetMyTypeName(QUERY_ADTYPE);
-   invalidate_ad.SetTargetTypeName(GENERIC_ADTYPE);
+   SetMyTypeName(invalidate_ad, QUERY_ADTYPE);
+   SetTargetTypeName(invalidate_ad, GENERIC_ADTYPE);
 
    line.formatstr("%s == \"%s\"", ATTR_NAME, daemonName.c_str()); 
    invalidate_ad.AssignExpr(ATTR_REQUIREMENTS, line.Value());

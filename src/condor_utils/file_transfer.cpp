@@ -1985,7 +1985,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			//
 			// receive the classad
 			ClassAd file_info;
-			if (!file_info.initFromStream(*s)) {
+			if (!getClassAd(s, file_info)) {
 				dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
 			}
@@ -2054,7 +2054,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 			} else {
 				// unrecongized subcommand
 				dprintf(D_ALWAYS, "FILETRANSFER: unrecognized subcommand %i! skipping!\n", subcommand);
-				file_info.dPrint(D_FULLDEBUG);
+				dPrintAd(D_FULLDEBUG, file_info);
 				
 				rc = 0;
 			}
@@ -2379,7 +2379,7 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 	s->decode();
 
 	ClassAd ad;
-	if(!ad.initFromStream(*s) || !s->end_of_message()) {
+	if(!getClassAd(s, ad) || !s->end_of_message()) {
 		char const *ip = NULL;
 		if(s->type() == Sock::reli_sock) {
 			ip = ((ReliSock *)s)->get_sinful_peer();
@@ -2393,7 +2393,7 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 	int result = -1;
 	if(!ad.LookupInteger(ATTR_RESULT,result)) {
 		MyString ad_str;
-		ad.sPrint(ad_str);
+		sPrintAd(ad_str, ad);
 		dprintf(D_ALWAYS,"Download acknowledgment missing attribute: %s.  Full classad: [\n%s]\n",ATTR_RESULT,ad_str.Value());
 		success = false;
 		try_again = false;
@@ -2472,7 +2472,7 @@ FileTransfer::SendTransferAck(Stream *s,bool success,bool try_again,int hold_cod
 		}
 	}
 	s->encode();
-	if(!ad.put(*s) || !s->end_of_message()) {
+	if(!putClassAd(s, ad) || !s->end_of_message()) {
 		char const *ip = NULL;
 		if(s->type() == Sock::reli_sock) {
 			ip = ((ReliSock *)s)->get_sinful_peer();
@@ -3096,14 +3096,14 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 
 				// it's all assembled, so send the ad using stream s.
 				// don't end the message, it's done below.
-				if(!file_info.put(*s)) {
+				if(!putClassAd(s, file_info)) {
 					dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
 
 				// compute the size of what we sent
 				MyString junkbuf;
-				file_info.sPrint(junkbuf);
+				sPrintAd(junkbuf, file_info);
 				bytes = junkbuf.Length();
 
 			} else {
@@ -3326,7 +3326,7 @@ FileTransfer::GetTransferQueueUser()
 	ClassAd *job = GetJobAd();
 	if( job ) {
 		std::string user_expr;
-		if( param(user_expr,"TRANSFER_QUEUE_USER_EXPR",ATTR_USER) ) {
+		if( param(user_expr,"TRANSFER_QUEUE_USER_EXPR","strcat(\"Owner_\",Owner)") ) {
 			ExprTree *user_tree = NULL;
 			if( ParseClassAdRvalExpr( user_expr.c_str(), user_tree ) == 0 && user_tree ) {
 				classad::Value val;
@@ -3375,7 +3375,7 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 		msg.Assign(ATTR_RESULT,go_ahead);
 
 		s->encode();
-		if( !msg.put(*s) || !s->end_of_message() ) {
+		if( !putClassAd(s, msg) || !s->end_of_message() ) {
 			error_desc.formatstr("Failed to send GoAhead new timeout message.");
 		}
 	}
@@ -3443,7 +3443,7 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 				msg.Assign(ATTR_HOLD_REASON,error_desc.Value());
 			}
 		}
-		if( !msg.put(*s) || !s->end_of_message() ) {
+		if( !putClassAd(s, msg) || !s->end_of_message() ) {
 			error_desc.formatstr("Failed to send GoAhead message.");
 			try_again = true;
 			return false;
@@ -3535,7 +3535,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 
 	while(1) {
 		ClassAd msg;
-		if( !msg.initFromStream(*s) || !s->end_of_message() ) {
+		if( !getClassAd(s, msg) || !s->end_of_message() ) {
 			char const *ip = s->peer_ip_str();
 			error_desc.formatstr("Failed to receive GoAhead message from %s.",
 							   ip ? ip : "(null)");
@@ -3546,7 +3546,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 		go_ahead = GO_AHEAD_UNDEFINED;
 		if(!msg.LookupInteger(ATTR_RESULT,go_ahead)) {
 			MyString msg_str;
-			msg.sPrint(msg_str);
+			sPrintAd(msg_str, msg);
 			error_desc.formatstr("GoAhead message missing attribute: %s.  "
 							   "Full classad: [\n%s]",
 							   ATTR_RESULT,msg_str.Value());
@@ -4116,7 +4116,7 @@ int FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, c
 	// return -1 on error, or zero otherwise, so map plugin_status to the
 	// proper value.
 	if (plugin_status != 0) {
-		e.pushf("FILETRANSFER", 1, "non-zero exit(%i) from %s\n", plugin_status, plugin.Value());
+		e.pushf("FILETRANSFER", 1, "non-zero exit(%i) from %s", plugin_status, plugin.Value());
 		return GET_FILE_PLUGIN_FAILED;
 	}
 

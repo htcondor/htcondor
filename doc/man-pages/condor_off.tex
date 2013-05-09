@@ -4,7 +4,7 @@
 \ToolArgsBase
 
 \SynProg{\Condor{off}}
-\oOptnm{-graceful $|$ -fast  $|$ -peaceful}
+\oOptnm{-graceful $|$ -fast  $|$ -peaceful $|$ -force-graceful}
 \ToolDebugOption
 \ToolWhere
 \ToolArgsAffect
@@ -31,7 +31,7 @@ Specification using the \Opt{-daemon} option
 will shut down
 only the specified daemon.
 
-For security purposes (authentication and authorization),
+For security reasons (authentication and authorization),
 this command requires an administrator's level of access.
 See
 section~\ref{sec:Config-Security} on page~\pageref{sec:Config-Security}
@@ -40,8 +40,13 @@ for further explanation.
 \begin{Options}
 	\ToolArgsBaseDesc
 	\OptItem{\Opt{-graceful}}{Gracefully shutdown daemons (the default)}
-	\OptItem{\Opt{-fast}}{Quickly shutdown daemons}
+	\OptItem{\Opt{-fast}}{Quickly shutdown daemons. 
+A minimum of the first two characters of this option must be specified,
+to distinguish it from the \Opt{-force-graceful} command.}
 	\OptItem{\Opt{-peaceful}}{Wait indefinitely for jobs to finish}
+	\OptItem{\Opt{-force-graceful}}{Force a graceful shutdown, even after issuing a \Opt{-peaceful} command.
+A minimum of the first two characters of this option must be specified,
+to distinguish it from the \Opt{-fast} command.}
 	\ToolDebugDesc
 	\ToolArgsLocateDesc
 	\ToolArgsAffectDesc

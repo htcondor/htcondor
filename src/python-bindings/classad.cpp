@@ -202,7 +202,7 @@ AttrPairToSecond::result_type AttrPairToSecond::operator()(AttrPairToSecond::arg
     }
     boost::python::object result(holder);
     return result;
-} 
+}
 
 
 AttrPair::result_type AttrPair::operator()(AttrPair::argument_type p) const

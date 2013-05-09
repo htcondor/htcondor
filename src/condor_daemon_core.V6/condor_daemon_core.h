@@ -1500,6 +1500,7 @@ class DaemonCore : public Service
 		 */
 	void ClearSharedPortServerAddr();
 
+	void InstallAuditingCallback( void (*fn)(int, Sock&, bool) ) { audit_log_callback_fn = fn; }
 
 	//-----------------------------------------------------------------------------
 	/*
@@ -1726,6 +1727,7 @@ class DaemonCore : public Service
 		bool			is_connect_pending;
 		bool			is_reverse_connect_pending;
 		bool			call_handler;
+		bool			waiting_for_data;
 		int				servicing_tid;	// tid servicing this socket
 		bool			remove_asap;	// remove when being_serviced==false
     };
@@ -1868,6 +1870,8 @@ class DaemonCore : public Service
 
 	int					_cookie_len, _cookie_len_old;
 	unsigned char		*_cookie_data, *_cookie_data_old;
+
+	void (*audit_log_callback_fn)( int, Sock &, bool);
 
 #ifdef WIN32
     // the thread id of the thread running the main daemon core

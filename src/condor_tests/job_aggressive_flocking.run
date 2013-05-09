@@ -30,6 +30,15 @@ Condor::DebugLevel(1);
 select STDERR; $|=1;
 select STDOUT; $|=1;
 
+my $spooldir = `condor_config_val SPOOL`;
+chomp $spooldir;
+
+mkdir "${spooldir}/N1",0755 || die "Could not create spool directory for our negotiator\n";
+mkdir "${spooldir}/N2",0755 || die "Could not create spool directory for our negotiator\n";
+mkdir "${spooldir}/N3",0755 || die "Could not create spool directory for our negotiator\n";
+mkdir "${spooldir}/N4",0755 || die "Could not create spool directory for our negotiator\n";
+mkdir "${spooldir}/N5",0755 || die "Could not create spool directory for our negotiator\n";
+
 my $append_condor_config = '
 C1=$(COLLECTOR)
 C2=$(COLLECTOR)
@@ -180,7 +189,7 @@ foreach my $ii (1..5) {
 	close COLL_ADDRESS_FILE;
 }
 
-my $flock_increment = 2;
+my $flock_increment = 2+int(rand(3));
 print LOCAL_CONFIG "$flock_string\n";
 print LOCAL_CONFIG "$daemon_string\n";
 print LOCAL_CONFIG "FLOCK_INCREMENT = $flock_increment\n";

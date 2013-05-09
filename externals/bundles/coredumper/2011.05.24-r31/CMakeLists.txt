@@ -38,13 +38,13 @@ if (WITH_COREDUMPER)
 				    DOWNLOAD_DIR ${COREDUMPER_STAGE}/dl
 				    URL http://parrot.cs.wisc.edu/externals/${COREDUMPER_VER}.tar.gz
 				    #--Configure step ----------
-				    CONFIGURE_COMMAND cd ${COREDUMPER_VER} && LDFLAGS=-fPIC "CFLAGS=-D_GNU_SOURCE -fPIC" ./configure --prefix=${COREDUMPER_INSTALL_LOC}
+				    CONFIGURE_COMMAND export LDFLAGS=-fPIC && export "CFLAGS=-D_GNU_SOURCE -fPIC" && ./configure --prefix=${COREDUMPER_INSTALL_LOC}
 				    #--Build Step ----------
-				    BUILD_COMMAND cd ${COREDUMPER_VER} && make
+				    BUILD_COMMAND make
 				    BUILD_IN_SOURCE 1
 				    #--install Step ----------
 				    INSTALL_DIR ${COREDUMPER_INSTALL_LOC}
-				    INSTALL_COMMAND cd ${COREDUMPER_VER} && make install && touch ${COREDUMPER_INSTALL_LOC}/done)
+				    INSTALL_COMMAND make install && touch ${COREDUMPER_INSTALL_LOC}/done)
 
 		# Set the target dependencies which the rest of condor depends on.
 		set(COREDUMPER_FOUND "${COREDUMPER_INSTALL_LOC}/lib/libcoredumper.a")

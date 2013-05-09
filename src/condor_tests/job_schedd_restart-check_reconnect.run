@@ -1,0 +1,100 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+
+$cmd_template = "job_schedd_restart-check_reconnect.template";
+$testdesc =  'job_schedd_restart-check_reconnect - Simple parallel job with security on';
+$testname = "job_schedd_restart-check_reconnect";
+$cmd = "job_schedd_restart-check_reconnect.cmd";
+$corename = "job_schedd_restart-check_reconnect";
+
+# where am I running
+$currenthost = CondorTest::getFqdnHost();
+
+print scalar localtime() . "\n";
+
+$mypid = $$;
+$mysaveme = $corename . ".saveme";
+
+if($mypid == 0) {
+	die "Saveme setup for test failed\n";
+}
+
+$mysubmitnm = $corename . $mypid . ".cmd";
+$mysubmitnmcmdout = $corename . $mypid . ".cmd.out";
+$mysubmitnmlog = $corename . $mypid . ".log";
+$mysubmitnmerr = $corename . $mypid . ".err";
+$mysubmitnmout = $corename . $mypid . ".out";
+$mycorenm = $corename . ".cmd";
+$mycorenmcmdout = $corename . ".cmd.out";
+$mycorenmlog = $corename . ".log";
+$mycorenmerr = $corename . ".err";
+$mycorenmout = $corename . ".out";
+
+CondorTest::debug("Master PID is $mypid\n",1);
+CondorTest::debug("Master PID submit file is $mysubmitnm\n",1);
+
+# get a remote scheduler running (side b)
+my $configrem = CondorTest::StartPersonal( "job_schedd_restart-check_reconnect", "x_param.scheddrestart" ,"scheddrestart");
+my @parallel = split /\+/, $configrem;
+my $parallelconfig = shift @parallel;
+my $parallelport = shift @parallel;
+
+CondorTest::debug("---Parallel config is $parallelconfig and remote port is $parallelport---\n",1);
+
+$ENV{CONDOR_CONFIG} = $parallelconfig;
+
+CondorTest::debug("Set config to $parallelconfig\n",1);
+
+CondorTest::debug("---about to run job_schedd_restart-check_reconnect.pl---\n",1);
+my $result = system("./job_schedd_restart-check_reconnect.pl $mysubmitnm");
+CondorTest::debug("Result of job_schedd_restart-check_reconnect job is  $result\n",1);
+
+#fails due to directory matching pattern
+runcmd("cp *schedd_restart-check_reconnect* $mysaveme", {expect_result=>\&ANY});
+
+if( -e "$mysubmitnm" )
+{
+	runcmd("cp $mysubmitnm $mycorenm");
+}
+
+if( -e "$mysubmitnmout" )
+{
+	runcmd("cp $mysubmitnmcmdout $mycorenmcmdout");
+}
+
+if( -e "$mysubmitnmlog" )
+{
+	runcmd("cp $mysubmitnmlog $mycorenmlog");
+}
+
+CondorTest::KillPersonal($parallelconfig);
+print scalar localtime() . "\n";
+
+if($result != 0)
+{
+    # actuaal job failed but we allowed cleanup
+    exit(1);
+}
+
+CondorTest::debug("job_schedd_restart-check_restarcheck_reconnect",1);
+exit(0);

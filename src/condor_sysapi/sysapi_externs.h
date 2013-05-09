@@ -75,6 +75,10 @@ extern int _sysapi_config;
 extern int _sysapi_ncpus;
 extern int _sysapi_max_ncpus;
 
+/* needed by processor_flags.c */
+extern const char * _sysapi_processor_flags_raw;
+extern const char * _sysapi_processor_flags;
+
 /* needed by phys_mem.c */
 extern int _sysapi_memory;
 extern int _sysapi_reserve_memory;

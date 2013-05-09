@@ -72,6 +72,7 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 ##################################################
 ##################################################
 include (FindPythonLibs)
+include (FindPythonInterp)
 include (FindThreads)
 include (GlibcDetect)
 
@@ -177,6 +178,7 @@ if( NOT WINDOWS)
 	check_function_exists("setlinebuf" HAVE_SETLINEBUF)
 	check_function_exists("snprintf" HAVE_SNPRINTF)
 	check_function_exists("snprintf" HAVE_WORKING_SNPRINTF)
+	check_include_files("sys/eventfd.h" HAVE_EVENTFD)
 
 	check_function_exists("stat64" HAVE_STAT64)
 	check_function_exists("_stati64" HAVE__STATI64)
@@ -387,7 +389,7 @@ elseif(${OS_NAME} STREQUAL "LINUX")
 	  find_library(HAVE_X11 X11)
 	endif()
 
-	dprint("Threaded functionality only enabled in Linux, Windows, and Mac")
+	dprint("Threaded functionality only enabled in Linux, Windows, and Mac OS X > 10.6")
 	set(HAS_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 	set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
 
@@ -413,9 +415,17 @@ elseif(${OS_NAME} STREQUAL "DARWIN")
 	find_library( COREFOUNDATION_FOUND CoreFoundation )
 	set(CMAKE_STRIP ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_strip CACHE FILEPATH "Command to remove sybols from binaries" FORCE)
 
-	dprint("Threaded functionality only enabled in Linux, Windows and Mac")
-	set(HAS_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
-	set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
+	dprint("Threaded functionality only enabled in Linux, Windows and Mac OS X > 10.6")
+
+	check_symbol_exists(PTHREAD_RECURSIVE_MUTEX_INITIALIZER "pthread.h" HAVE_DECL_PTHREAD_RECURSIVE_MUTEX_INITIALIZER)
+	check_symbol_exists(PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP "pthread.h" HAVE_DECL_PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP)
+	if (HAVE_DECL_PTHREAD_RECURSIVE_MUTEX_INITIALIZER OR HAVE_DECL_PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP)
+		set(HAS_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
+		set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
+	else()
+		set(HAS_PTHREADS FALSE)
+		set(HAVE_PTHREADS FALSE)
+	endif()
 endif()
 
 ##################################################
@@ -695,6 +705,9 @@ set (CONDOR_TOOL_LIBS "condor_utils;${CLASSADS_FOUND};${VOMS_FOUND};${GLOBUS_FOU
 set (CONDOR_SCRIPT_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 if (LINUX OR DARWIN)
   set (CONDOR_LIBS_FOR_SHADOW "condor_utils_s;classads;${VOMS_FOUND};${GLOBUS_FOUND};${EXPAT_FOUND};${PCRE_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${POSTGRESQL_FOUND};${COREDUMPER_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND}")
+  if (DARWIN)
+    set (CONDOR_LIBS_FOR_SHADOW "${CONDOR_LIBS_FOR_SHADOW};resolv" )
+  endif (DARWIN)
 else ()
   set (CONDOR_LIBS_FOR_SHADOW "${CONDOR_LIBS}")
 endif ()
@@ -832,6 +845,9 @@ else(MSVC)
 
 	if (LINUX)
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--warn-once -Wl,--warn-common")
+		if ( "${CONDOR_PLATFORM}" STREQUAL "x86_64_Ubuntu12")
+			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-as-needed")
+		endif()
 	endif(LINUX)
 
 	if( HAVE_LIBDL AND NOT BSD_UNIX )

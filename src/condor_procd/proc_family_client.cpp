@@ -50,7 +50,7 @@ ProcFamilyClient::initialize(const char* addr)
 	// create the LocalClient object for communicating with the ProcD
 	//
 	m_client = new LocalClient;
-	ASSERT(m_client != NULL);
+	assert(m_client != NULL);
 	if (!m_client->initialize(addr)) {
 		dprintf(D_ALWAYS,
 		        "ProcFamilyClient: error initializing LocalClient\n");
@@ -82,7 +82,7 @@ ProcFamilyClient::register_subfamily(pid_t root_pid,
                                      int max_snapshot_interval,
                                      bool& response)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	dprintf(D_PROCFAMILY,
 	        "About to register family for PID %u with the ProcD\n",
@@ -93,7 +93,7 @@ ProcFamilyClient::register_subfamily(pid_t root_pid,
 	                  sizeof(pid_t) +
 	                  sizeof(int);
 	void* buffer = malloc(message_len);
-	ASSERT(buffer != NULL);
+	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 	
 	// fill in the commmand id
@@ -118,7 +118,7 @@ ProcFamilyClient::register_subfamily(pid_t root_pid,
 
 	// quick sanity check
 	//
-	ASSERT(ptr - (char*)buffer == message_len);
+	assert(ptr - (char*)buffer == message_len);
 
 	// make the RPC to the ProcD
 	//
@@ -147,7 +147,7 @@ ProcFamilyClient::track_family_via_environment(pid_t pid,
                                                PidEnvID& penvid,
                                                bool& response)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	dprintf(D_PROCFAMILY,
 	        "About to tell ProcD to track family with root %u "
@@ -159,7 +159,7 @@ ProcFamilyClient::track_family_via_environment(pid_t pid,
 	                  sizeof(int) +
 	                  sizeof(PidEnvID);
 	void* buffer = malloc(message_len);
-	ASSERT(buffer != NULL);
+	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
 	*(proc_family_command_t*)ptr = PROC_FAMILY_TRACK_FAMILY_VIA_ENVIRONMENT;
@@ -174,7 +174,7 @@ ProcFamilyClient::track_family_via_environment(pid_t pid,
 	pidenvid_copy((PidEnvID*)ptr, &penvid);
 	ptr += sizeof(PidEnvID);
 
-	ASSERT(ptr - (char*)buffer == message_len);
+	assert(ptr - (char*)buffer == message_len);
 
 	if (!m_client->start_connection(buffer, message_len)) {
 		dprintf(D_ALWAYS,
@@ -201,7 +201,7 @@ ProcFamilyClient::track_family_via_login(pid_t pid,
                                          const char* login,
                                          bool& response)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	dprintf(D_PROCFAMILY,
 	        "About to tell ProcD to track family with root %u "
@@ -215,7 +215,7 @@ ProcFamilyClient::track_family_via_login(pid_t pid,
 	                  sizeof(int) +
 	                  login_len;
 	void* buffer = malloc(message_len);
-	ASSERT(buffer != NULL);
+	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
 	*(proc_family_command_t*)ptr = PROC_FAMILY_TRACK_FAMILY_VIA_LOGIN;
@@ -230,7 +230,7 @@ ProcFamilyClient::track_family_via_login(pid_t pid,
 	memcpy(ptr, login, login_len);
 	ptr += login_len;
 
-	ASSERT(ptr - (char*)buffer == message_len);
+	assert(ptr - (char*)buffer == message_len);
 
 	if (!m_client->start_connection(buffer, message_len)) {
 		dprintf(D_ALWAYS,
@@ -258,7 +258,7 @@ ProcFamilyClient::track_family_via_allocated_supplementary_group(pid_t pid,
                                                        bool& response,
                                                        gid_t& gid)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	dprintf(D_PROCFAMILY,
 	        "About to tell ProcD to track family with root %u "
@@ -268,7 +268,7 @@ ProcFamilyClient::track_family_via_allocated_supplementary_group(pid_t pid,
 	int message_len = sizeof(proc_family_command_t) +
 	                  sizeof(pid_t);
 	void* buffer = malloc(message_len);
-	ASSERT(buffer != NULL);
+	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
 	*(proc_family_command_t*)ptr =
@@ -278,7 +278,7 @@ ProcFamilyClient::track_family_via_allocated_supplementary_group(pid_t pid,
 	*(pid_t*)ptr = pid;
 	ptr += sizeof(pid_t);
 
-	ASSERT(ptr - (char*)buffer == message_len);
+	assert(ptr - (char*)buffer == message_len);
 	
 	if (!m_client->start_connection(buffer, message_len)) {
 		dprintf(D_ALWAYS,
@@ -316,7 +316,7 @@ ProcFamilyClient::track_family_via_associated_supplementary_group(pid_t pid,
                                                        gid_t gid,
                                                        bool& response)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	dprintf(D_PROCFAMILY,
 	        "About to tell ProcD to track family with root %u "
@@ -328,7 +328,7 @@ ProcFamilyClient::track_family_via_associated_supplementary_group(pid_t pid,
 	                  sizeof(pid_t) +
 					  sizeof(gid_t);
 	void* buffer = malloc(message_len);
-	ASSERT(buffer != NULL);
+	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
 	*(proc_family_command_t*)ptr =
@@ -341,7 +341,7 @@ ProcFamilyClient::track_family_via_associated_supplementary_group(pid_t pid,
 	*(gid_t*)ptr = gid;
 	ptr += sizeof(gid_t);
 
-	ASSERT(ptr - (char*)buffer == message_len);
+	assert(ptr - (char*)buffer == message_len);
 	
 	if (!m_client->start_connection(buffer, message_len)) {
 		dprintf(D_ALWAYS,
@@ -370,7 +370,7 @@ ProcFamilyClient::track_family_via_cgroup(pid_t pid,
                                           const char * cgroup,
                                           bool& response)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	dprintf(D_FULLDEBUG,
 		"About to tell ProcD to track family with root %u "
@@ -385,7 +385,7 @@ ProcFamilyClient::track_family_via_cgroup(pid_t pid,
 			  sizeof(size_t) +
 			  sizeof(char)*cgroup_len;
 	void* buffer = malloc(message_len);
-	ASSERT(buffer != NULL);
+	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
 	*(proc_family_command_t*)ptr =
@@ -401,7 +401,7 @@ ProcFamilyClient::track_family_via_cgroup(pid_t pid,
 	memcpy((void *)ptr, (const void *)cgroup, sizeof(char)*cgroup_len);
 	ptr += cgroup_len*sizeof(char);
 
-	ASSERT(ptr - (char*)buffer == message_len);
+	assert(ptr - (char*)buffer == message_len);
 
 	if (!m_client->start_connection(buffer, message_len)) {
 		dprintf(D_ALWAYS,
@@ -429,7 +429,7 @@ ProcFamilyClient::use_glexec_for_family(pid_t pid,
                                         const char* proxy,
                                         bool& response)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	dprintf(D_PROCFAMILY,
 	        "About to tell ProcD to use glexec for family with root %u "
@@ -443,7 +443,7 @@ ProcFamilyClient::use_glexec_for_family(pid_t pid,
 	                  sizeof(int) +
 	                  proxy_len;
 	void* buffer = malloc(message_len);
-	ASSERT(buffer != NULL);
+	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
 	*(proc_family_command_t*)ptr = PROC_FAMILY_USE_GLEXEC_FOR_FAMILY;
@@ -458,7 +458,7 @@ ProcFamilyClient::use_glexec_for_family(pid_t pid,
 	memcpy(ptr, proxy, proxy_len);
 	ptr += proxy_len;
 
-	ASSERT(ptr - (char*)buffer == message_len);
+	assert(ptr - (char*)buffer == message_len);
 
 	if (!m_client->start_connection(buffer, message_len)) {
 		dprintf(D_ALWAYS,
@@ -485,7 +485,7 @@ ProcFamilyClient::use_glexec_for_family(pid_t pid,
 bool
 ProcFamilyClient::get_usage(pid_t pid, ProcFamilyUsage& usage, bool& response)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	dprintf(D_PROCFAMILY,
 	        "About to get usage data from ProcD for family with root %u\n",
@@ -494,7 +494,7 @@ ProcFamilyClient::get_usage(pid_t pid, ProcFamilyUsage& usage, bool& response)
 	int message_len = sizeof(proc_family_command_t) +
 	                  sizeof(pid_t);
 	void* buffer = malloc(message_len);
-	ASSERT(buffer != NULL);
+	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
 	*(proc_family_command_t*)ptr = PROC_FAMILY_GET_USAGE;
@@ -503,7 +503,7 @@ ProcFamilyClient::get_usage(pid_t pid, ProcFamilyUsage& usage, bool& response)
 	*(pid_t*)ptr = pid;
 	ptr += sizeof(pid_t);
 
-	ASSERT(ptr - (char*)buffer == message_len);
+	assert(ptr - (char*)buffer == message_len);
 
 	if (!m_client->start_connection(buffer, message_len)) {
 		dprintf(D_ALWAYS,
@@ -535,7 +535,7 @@ ProcFamilyClient::get_usage(pid_t pid, ProcFamilyUsage& usage, bool& response)
 bool
 ProcFamilyClient::signal_process(pid_t pid, int sig, bool& response)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	dprintf(D_PROCFAMILY,
 	        "About to send process %u signal %d via the ProcD\n",
@@ -546,7 +546,7 @@ ProcFamilyClient::signal_process(pid_t pid, int sig, bool& response)
 	                  sizeof(pid_t) +
 	                  sizeof(int);
 	void* buffer = malloc(message_len);
-	ASSERT(buffer != NULL);
+	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
 	*(proc_family_command_t*)ptr = PROC_FAMILY_SIGNAL_PROCESS;
@@ -558,7 +558,7 @@ ProcFamilyClient::signal_process(pid_t pid, int sig, bool& response)
 	*(int*)ptr = sig;
 	ptr += sizeof(int);
 
-	ASSERT(ptr - (char*)buffer == message_len);
+	assert(ptr - (char*)buffer == message_len);
 	
 	if (!m_client->start_connection(buffer, message_len)) {
 		dprintf(D_ALWAYS,
@@ -583,7 +583,7 @@ ProcFamilyClient::signal_process(pid_t pid, int sig, bool& response)
 bool
 ProcFamilyClient::kill_family(pid_t pid, bool& response)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	dprintf(D_PROCFAMILY,
 	        "About to kill family with root process %u using the ProcD\n",
@@ -595,7 +595,7 @@ ProcFamilyClient::kill_family(pid_t pid, bool& response)
 bool
 ProcFamilyClient::suspend_family(pid_t pid, bool& response)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	dprintf(D_PROCFAMILY,
 	        "About to suspend family with root process %u using the ProcD\n",
@@ -607,7 +607,7 @@ ProcFamilyClient::suspend_family(pid_t pid, bool& response)
 bool
 ProcFamilyClient::continue_family(pid_t pid, bool& response)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	dprintf(D_PROCFAMILY,
 	        "About to continue family with root process %u using the ProcD\n",
@@ -621,12 +621,12 @@ ProcFamilyClient::signal_family(pid_t pid,
                                 proc_family_command_t command,
                                 bool& response)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	int message_len = sizeof(proc_family_command_t) +
 	                  sizeof(pid_t);
 	void* buffer = malloc(message_len);
-	ASSERT(buffer != NULL);
+	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
 	*(proc_family_command_t*)ptr = command;
@@ -635,7 +635,7 @@ ProcFamilyClient::signal_family(pid_t pid,
 	*(pid_t*)ptr = pid;
 	ptr += sizeof(pid_t);
 
-	ASSERT(ptr - (char*)buffer == message_len);
+	assert(ptr - (char*)buffer == message_len);
 	
 	if (!m_client->start_connection(buffer, message_len)) {
 		dprintf(D_ALWAYS,
@@ -660,7 +660,7 @@ ProcFamilyClient::signal_family(pid_t pid,
 bool
 ProcFamilyClient::unregister_family(pid_t pid, bool& response)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	dprintf(D_PROCFAMILY,
 	        "About to unregister family with root %u from the ProcD\n",
@@ -669,7 +669,7 @@ ProcFamilyClient::unregister_family(pid_t pid, bool& response)
 	int message_len = sizeof(proc_family_command_t) +
 	                  sizeof(pid_t);
 	void* buffer = malloc(message_len);
-	ASSERT(buffer != NULL);
+	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
 	*(proc_family_command_t*)ptr = PROC_FAMILY_UNREGISTER_FAMILY;
@@ -701,7 +701,7 @@ ProcFamilyClient::unregister_family(pid_t pid, bool& response)
 bool
 ProcFamilyClient::snapshot(bool& response)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	dprintf(D_PROCFAMILY, "About to tell the ProcD to take a snapshot\n");
 
@@ -728,7 +728,7 @@ ProcFamilyClient::snapshot(bool& response)
 bool
 ProcFamilyClient::quit(bool& response)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	dprintf(D_PROCFAMILY, "About to tell the ProcD to exit\n");
 
@@ -757,14 +757,14 @@ ProcFamilyClient::dump(pid_t pid,
                        bool& response,
                        std::vector<ProcFamilyDump>& vec)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	dprintf(D_PROCFAMILY, "About to retrive snapshot state from ProcD\n");
 
 	int message_len = sizeof(proc_family_command_t) +
 	                  sizeof(pid_t);
 	void* buffer = malloc(message_len);
-	ASSERT(buffer != NULL);
+	assert(buffer != NULL);
 	char* ptr = (char*)buffer;
 
 	*(proc_family_command_t*)ptr = PROC_FAMILY_DUMP;
@@ -773,7 +773,7 @@ ProcFamilyClient::dump(pid_t pid,
 	*(pid_t*)ptr = pid;
 	ptr += sizeof(pid_t);
 
-	ASSERT(ptr - (char*)buffer == message_len);
+	assert(ptr - (char*)buffer == message_len);
 
 	if (!m_client->start_connection(buffer, message_len)) {
 		dprintf(D_ALWAYS,

@@ -200,7 +200,7 @@ SubmissionObject::GetJobSummaries ( Variant::List &jobs,
 
 		// debug
 //		if (IsFulldebug(D_FULLDEBUG)) {
-//			ad->dPrint(D_FULLDEBUG|D_NOHEADER);
+//			dPrintAd(D_FULLDEBUG|D_NOHEADER, *ad);
 //		}
 
 		for (int i = 0; NULL != ATTRS[i]; i++) {

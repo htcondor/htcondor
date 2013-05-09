@@ -80,6 +80,35 @@ open STDOUT, ">&STDERR";
 my $tmpdir = undef;
 my $progname = $0;
 
+#
+# Assume we're using Workstation, but attempt to autodetect Server.
+# (It looks like only Server has vmware-cmd.)
+#
+my $VMWARE_VERSION = "workstation";
+my $childPID = open( VMV, '-|', $vmwarecmd_prog, '-l' );
+if( defined( $childPID ) ) {
+	$VMWARE_VERSION = "server";
+}
+close( VMV );
+if( defined($verbose) ) { print( "Using \$VMWARE_VERSION '$VMWARE_VERSION'.\n" ); }
+
+my $VM_CONTROL_TYPE='ws';
+if( $VMWARE_VERSION eq 'workstation' ) {
+    my $realVersion = `vmware-installer -l`;
+    if( ! defined( $realVersion ) ) {
+        printwarn( "Unable to run vmware-installer to determine type of VMware installation, assuming Workstation.\n" );
+    } else {
+        if( $realVersion =~ m/workstation/ ) {
+            $VM_CONTROL_TYPE = 'ws';
+        } elsif( $realVersion =~ m/player/ ) {
+            $VM_CONTROL_TYPE = 'player';
+        } else {
+            printwarn( "Unrecognized output from vmware-installer, assuming Workstation.\n" );
+        }
+    }
+}
+if( defined($verbose) ) { print( "Using \$VM_CONTROL_TYPE '$VM_CONTROL_TYPE'.\n" ); }
+
 sub usage()
 {
 print STDERR <<EOF;
@@ -149,7 +178,7 @@ sub checkvmconfig
 	}
 
 	unless( -e $vmconfig ) {
-		printerror "vmconfig $vmconfig doesnot exist";
+		printerror "vmconfig $vmconfig does not exist";
 	}
 
 	unless ( -r $vmconfig ) {
@@ -161,45 +190,54 @@ sub checkvmconfig
 
 sub checkregister
 {
-	my $vmconfig = $_[0];
-	
-	chomp(my @vmstatus = `"$vmwarecmd_prog" -l`);
-	# result must be like this
-	# /home/condor/vmware/Centos.vmx
-	# /home/condor/vmware/Centos2.vmx
-
-	foreach( @vmstatus ) {
-		# delete leading/trailing whitespace
-		s/^\s+|\s+$//g;
-		if( $_ eq $vmconfig ) {
-			# this vm is already registered
-			# return true
-			return 1;
-		}
+	if ($VMWARE_VERSION eq "workstation") {
+		# return true
+		return 1;
 	}
+	else {
+		my $vmconfig = $_[0];
+	
+		chomp(my @vmstatus = `"$vmwarecmd_prog" -l`);
+		# result must be like this
+		# /home/condor/vmware/Centos.vmx
+		# /home/condor/vmware/Centos2.vmx
+
+		foreach( @vmstatus ) {
+			# delete leading/trailing whitespace
+			s/^\s+|\s+$//g;
+			if( $_ eq $vmconfig ) {
+				# this vm is already registered
+				# return true
+				return 1;
+			}
+		}
 	
 	# return false
 	return 0;
+	}
 }
 
 sub list
 {
 #list                           List all running VMs
-	!system $vmrun_prog, "list"
+	!system $vmrun_prog, "-T", $VM_CONTROL_TYPE, "list"
 		or printerror "Can't execute the command: '$vmrun_prog' list";
 }
 
 sub check
 {
 #check       [vmconfig]         Check if vmware command line tools are installed
-	!system $vmrun_prog, "list"
+	!system $vmrun_prog, "-T", $VM_CONTROL_TYPE, "list"
 		or printerror "Can't execute $vmrun_prog";
 
-	!system $vmwarecmd_prog, "-l"
-		or printerror  "Can't execute $vmwarecmd_prog";
+	if ($VMWARE_VERSION ne "workstation") {
+		!system $vmwarecmd_prog, "-l"
+			or printerror  "Can't execute $vmwarecmd_prog";
+	}
 
 	if (lc($^O) ne "mswin32") {
 		!system $mkisofs, "-version"
+	
 			or printerror "Can't execute $mkisofs";
 	}
 }
@@ -207,47 +245,57 @@ sub check
 sub register
 {
 #register    [vmconfig]         Register a VM
-	printverbose "register is called";
-	my $vmconfig = checkvmconfig($_[0]);
-	if( ! checkregister($vmconfig) ) {
-		#!system $vmwarecmd_prog, "-s", "register", $vmconfig
-		#	or printerror "Can't register a vm($vmconfig)";
-		system $vmwarecmd_prog, "-s", "register", $vmconfig;
+	if ($VMWARE_VERSION ne "workstation") {
+		printverbose "register is called";
+		my $vmconfig = checkvmconfig($_[0]);
+		if( ! checkregister($vmconfig) ) {
+			#!system $vmwarecmd_prog, "-s", "register", $vmconfig
+			#	or printerror "Can't register a vm($vmconfig)";
+			system $vmwarecmd_prog, "-s", "register", $vmconfig;
+		}
 	}
 }
 
 sub unregister
 {
 #unregister    [vmconfig]         Unregister a VM
-	printverbose "unregister is called";
-	my $vmconfig = checkvmconfig($_[0]);
-	#if( checkregister($vmconfig) ) {
-		#!system $vmwarecmd_prog, "-s", "unregister", $vmconfig
-		#	or printerror "Can't unregister a vm($vmconfig)";
-	#}
-	system $vmwarecmd_prog, "-s", "unregister", $vmconfig;
+	if ($VMWARE_VERSION ne "workstation") {
+		printverbose "unregister is called";
+		my $vmconfig = checkvmconfig($_[0]);
+		#if( checkregister($vmconfig) ) {
+			#!system $vmwarecmd_prog, "-s", "unregister", $vmconfig
+			#	or printerror "Can't unregister a vm($vmconfig)";
+		#}
+		system $vmwarecmd_prog, "-s", "unregister", $vmconfig;
+	}
 }
 
 sub getvmpid
 {
-	my $vmconfig = $_[0];
+	if ($VMWARE_VERSION eq "workstation") {
+		return 0;
+	} 
+    
+	else {	
+		my $vmconfig = $_[0];
 
-	my $resultline = `"$vmwarecmd_prog" "$vmconfig" getpid`;
-	chomp($resultline);
-	if( ! $resultline ) {
-		printerror "Can't execute getpid of a vm($vmconfig)";
-	}
+		my $resultline = `"$vmwarecmd_prog" "$vmconfig" getpid`;
+		chomp($resultline);
+		if( ! $resultline ) {
+			printerror "Can't execute getpid of a vm($vmconfig)";
+		}
 
-	# result must be like "getpid() = 18690"
-	my @fields = split /=/, $resultline;
-	shift @fields;
-	my $pid_field = shift @fields;
-	if( ! defined($pid_field) ) {
-		printerror "Invalid format of getpid($resultline)";
+		# result must be like "getpid() = 18690"
+		my @fields = split /=/, $resultline;
+		shift @fields;
+		my $pid_field = shift @fields;
+		if( ! defined($pid_field) ) {
+			printerror "Invalid format of getpid($resultline)";
+		}
+		# delete leading/trailing whitespace
+		$pid_field =~ s/^\s+|\s+$//g;
+		return $pid_field;
 	}
-	# delete leading/trailing whitespace
-	$pid_field =~ s/^\s+|\s+$//g;
-	return $pid_field;
 }
 
 sub status
@@ -263,6 +311,19 @@ sub status
 	}
 
 	my $output_status = "Stopped";	# default status
+	if ($VMWARE_VERSION eq "workstation") {
+		# Just check to see if $vmconfig is listed in the output
+		my @vmstatus =  `"$vmrun_prog" -T $VM_CONTROL_TYPE list`;
+		foreach my $i (@vmstatus) {	
+			# delete newline
+			chomp($i);
+			if( $i eq $vmconfig ) {
+				$output_status = "Running";
+			}
+		}
+	}
+
+	else {
 	#if( checkregister($vmconfig) ) {
 		my $vmstatus = `"$vmwarecmd_prog" "$vmconfig" getstate`;
 		chomp($vmstatus);
@@ -286,6 +347,7 @@ sub status
 		( $status_field eq "off") ? "Stopped":
 		"Error";	# default value
 	#}
+	}
 	if( defined($print_result) ) {
 		print OUTPUT "STATUS=$output_status\n";
 		if( $output_status eq "Running") {
@@ -303,9 +365,11 @@ sub pidofvm
 	my $vmconfig = checkvmconfig($_[0]);
 
 	# Get status
-	my $vmstatus = status($vmconfig);
-	if( $vmstatus ne "Running" ) {
-		printerror "vm($vmconfig) is not running";
+	if ($VMWARE_VERSION ne "workstation") {
+		my $vmstatus = status($vmconfig);
+		if( $vmstatus ne "Running" ) {
+			printerror "vm($vmconfig) is not running";
+		}
 	}
 
 	# Get pid of main process of this VM
@@ -326,76 +390,82 @@ sub getvminfo
 		return;
 	}
 
-	# Get mac address of VM
-	my $mac_address = undef;
-	my $resultline = `"$vmwarecmd_prog" "$vmconfig" getconfig ethernet0.generatedAddress`;
-	chomp($resultline);
-	if( $resultline ) {
-		# result must be like 
-		# "getconfig(ethernet0.generatedAddress) = 00:0c:29:cb:40:bb"
-		my @fields = split /=/, $resultline;
-		shift @fields;
-		$mac_address = shift @fields; 
-		# delete leading/trailing whitespace
-		$mac_address =~ s/^\s+|\s+$//g;
-		if( ! defined($mac_address) ) {
-			printwarn "Invalid format of getconfig for mac($resultline)";
-			$mac_address = undef;
-		}else {
-			print OUTPUT "MAC=$mac_address\n";
-		}
+	if ($VMWARE_VERSION eq "workstation") {
+		return;
 	}
 
-	my $ip_address = undef;
-	if( defined($mac_address) ) {
-		# Get IP address of VM
-
-		# If dhcpd_lease file is defined, use it.
-		# Otherwise, use vmware tool.
-		if( defined($dhcpd_lease) && -r $dhcpd_lease ) {
-			my $tmp_lease_file = "dhcpd_lease";
-			copy( "$dhcpd_lease", "$tmp_lease_file") 
-				or printwarn "Cannot copy file($dhcpd_lease) into working directory: $!";
-
-			if( -r $tmp_lease_file && open(LEASEFILE, $tmp_lease_file) ) {
-				my $tmp_ip;
-				while (<LEASEFILE>) {
-					next if /^#|^$/;
-					if( /^lease (\d+\.\d+\.\d+\.\d+)/) {
-						$tmp_ip = $1;
-					}
-					if( /$mac_address/ ) {
-						$ip_address = $tmp_ip;
-					}
-				}
-				close LEASEFILE;
-			}
-			unlink $tmp_lease_file;
-		}
-		if( defined($ip_address) ) {
-			printverbose "getting IP address using lease file($dhcpd_lease)";
-		}else {
-			# We failed to get IP address of guest VM
-			# We will retry to get it by using vmware tool
-
-			$resultline = `"$vmwarecmd_prog" "$vmconfig" getguestinfo ip`;
-			chomp($resultline);
-			if( $resultline ) {
-				# result must be like "getguestinfo(ip) = 172.16.123.143"
-				my @fields = split /=/, $resultline;
-				shift @fields;
-				$ip_address = shift @fields;
-				# delete leading/trailing whitespace
-				$ip_address =~ s/^\s+|\s+$//g;
-				if( ! defined($ip_address) ) {
-					$ip_address = undef;
-					printwarn "Invalid format of getguestinfo ip($resultline)";
-				}
+	else {
+		# Get mac address of VM
+		my $mac_address = undef;
+		my $resultline = `"$vmwarecmd_prog" "$vmconfig" getconfig ethernet0.generatedAddress`;
+		chomp($resultline);
+		if( $resultline ) {
+			# result must be like 
+			# "getconfig(ethernet0.generatedAddress) = 00:0c:29:cb:40:bb"
+			my @fields = split /=/, $resultline;
+			shift @fields;
+			$mac_address = shift @fields; 
+			# delete leading/trailing whitespace
+			$mac_address =~ s/^\s+|\s+$//g;
+			if( ! defined($mac_address) ) {
+				printwarn "Invalid format of getconfig for mac($resultline)";
+				$mac_address = undef;
+			}else {
+				print OUTPUT "MAC=$mac_address\n";
 			}
 		}
 
-		if( defined($ip_address) ) {
-			print OUTPUT "IP=$ip_address\n";
+		my $ip_address = undef;
+		if( defined($mac_address) ) {
+			# Get IP address of VM
+	
+			# If dhcpd_lease file is defined, use it.
+			# Otherwise, use vmware tool.
+			if( defined($dhcpd_lease) && -r $dhcpd_lease ) {
+				my $tmp_lease_file = "dhcpd_lease";
+				copy( "$dhcpd_lease", "$tmp_lease_file") 
+					or printwarn "Cannot copy file($dhcpd_lease) into working directory: $!";
+	
+				if( -r $tmp_lease_file && open(LEASEFILE, $tmp_lease_file) ) {
+					my $tmp_ip;
+					while (<LEASEFILE>) {
+						next if /^#|^$/;
+						if( /^lease (\d+\.\d+\.\d+\.\d+)/) {
+							$tmp_ip = $1;
+						}
+						if( /$mac_address/ ) {
+							$ip_address = $tmp_ip;
+						}
+					}
+					close LEASEFILE;
+				}
+				unlink $tmp_lease_file;
+			}
+			if( defined($ip_address) ) {
+				printverbose "getting IP address using lease file($dhcpd_lease)";
+			}else {
+				# We failed to get IP address of guest VM
+				# We will retry to get it by using vmware tool
+	
+				$resultline = `"$vmwarecmd_prog" "$vmconfig" getguestinfo ip`;
+				chomp($resultline);
+				if( $resultline ) {
+					# result must be like "getguestinfo(ip) = 172.16.123.143"
+					my @fields = split /=/, $resultline;
+					shift @fields;
+					$ip_address = shift @fields;
+					# delete leading/trailing whitespace
+					$ip_address =~ s/^\s+|\s+$//g;
+					if( ! defined($ip_address) ) {
+						$ip_address = undef;
+						printwarn "Invalid format of getguestinfo ip($resultline)";
+					}
+				}
+			}
+	
+			if( defined($ip_address) ) {
+				print OUTPUT "IP=$ip_address\n";
+			}
 		}
 	}
 }
@@ -407,19 +477,25 @@ sub start
 
 	my $vmconfig = checkvmconfig($_[0]);
 
-	if( ! checkregister($vmconfig) ) {
-		#!system $vmwarecmd_prog, "-s", "register", $vmconfig
-		#	or printerror "Can't register a new vm with $vmconfig";
-		system $vmwarecmd_prog, "-s", "register", $vmconfig;
+	if ($VMWARE_VERSION eq "workstation") {
+		!system $vmrun_prog, "-T", $VM_CONTROL_TYPE, "start", $vmconfig, "nogui"
+			or printerror "Can't create vm with $vmconfig";
 	}
 
-	# Now, a new vm is registered
-	# Try to create a new vm
-	!system $vmwarecmd_prog, $vmconfig, "start", "trysoft"
-		or printerror "Can't create vm with $vmconfig";
+        else {
+		if( ! checkregister($vmconfig) ) {
+			#!system $vmwarecmd_prog, "-s", "register", $vmconfig
+			#	or printerror "Can't register a new vm with $vmconfig";
+			system $vmwarecmd_prog, "-s", "register", $vmconfig;
+		}
 
-	sleep(5);
+		# Now, a new vm is registered
+		# Try to create a new vm
+		!system $vmwarecmd_prog, $vmconfig, "start", "trysoft"
+			or printerror "Can't create vm with $vmconfig";
+        }
 
+        sleep(5);
 	# Get pid of main process of this VM
 	my $vmpid = getvmpid($vmconfig);
 	print OUTPUT "PID=$vmpid\n";
@@ -431,16 +507,25 @@ sub stop
 	printverbose "stop is called";
 	my $vmconfig = checkvmconfig($_[0]);
 
-	# Get status
-	my $vmstatus = status($vmconfig);
-	if( $vmstatus eq "Running" ) {
+	if ($VMWARE_VERSION eq "workstation") {
 		# Try to stop vm
-		!system $vmwarecmd_prog, $vmconfig, "stop", "hard"
-			or printerror "Can't stop vm with $vmconfig";
-
+		!system $vmrun_prog, "-T", $VM_CONTROL_TYPE, "stop", $vmconfig, "hard"
+		    or printerror "Can't stop vm with $vmconfig";
 		sleep(2);
+	}	  
+
+	else {
+		# Get status
+		my $vmstatus = status($vmconfig);
+		if( $vmstatus eq "Running" ) {
+			# Try to stop vm
+			!system $vmwarecmd_prog, $vmconfig, "stop", "hard"
+				or printerror "Can't stop vm with $vmconfig";
+
+			sleep(2);
+		}
+	        unregister($vmconfig);
 	}
-	unregister($vmconfig);
 }
 
 sub killvm
@@ -448,6 +533,37 @@ sub killvm
 #killvm        [vmconfig]         kill a VM
 	printverbose "killvm is called";
 	my $matchstring = $_[0];
+
+	if ($VMWARE_VERSION eq "workstation") {
+		#
+		# Rather than error out and cause ugly warnings in the log,
+		# we'd like to try stopping the VM again.  Unfortunately,
+		# the starter has already removed the execute directory by
+		# the time it calls VMwareType::killVMFast(), so we don't
+		# have a .vmx to pass to vmrun any longer.  (The .vmx must
+		# exist; we can't just pass the path.)
+		#
+
+        my $processList = `ps uxw`;
+        my @processes = split( /\n/, $processList );
+        foreach my $process (@processes) {
+            if( $process =~ m/vmware-vmx.*$matchstring/ ) {
+                my( $user, $pid ) = split( /\s+/, $process );
+                printwarn( "Found '$process', trying to kill...\n" );
+                my $numSignalled = kill( 9, $pid );
+                if( $numSignalled < 1 ) {
+                    printerror( "Failed to signal process '$process'.\n" );
+                } else {
+                    printwarn( "Sent signal to process '$process'.\n" );
+                    # Otherwise, the VM GAHP won't log the warnings.  Change
+                    # back to zero once this problem is corrected.
+                    exit 1;
+                }
+            }
+        }
+        printwarn( "Found no process matching '$matchstring', assuming succesful prior termination." );
+        exit( 0 );
+	}
 
 	if( ! defined($matchstring) ) {
 		usage();
@@ -520,14 +636,20 @@ sub suspend
 	printverbose "suspend is called";
 	my $vmconfig = checkvmconfig($_[0]);
 
-	# Get status
-	my $vmstatus = status($vmconfig);
-	if( $vmstatus ne "Running" ) {
-		printerror "vm($vmconfig) is not running";
+	if ($VMWARE_VERSION eq "workstation") {
+		!system $vmrun_prog, "-T", $VM_CONTROL_TYPE, "suspend", $vmconfig, "soft"
+			or printerror "Can't suspend vm with $vmconfig";
 	}
+	else {
+		# Get status
+		my $vmstatus = status($vmconfig);
+		if( $vmstatus ne "Running" ) {
+			printerror "vm($vmconfig) is not running";
+		}
 
-	!system $vmwarecmd_prog, $vmconfig, "suspend", "trysoft"
-		or printerror "Can't suspend vm with $vmconfig";
+		!system $vmwarecmd_prog, $vmconfig, "suspend", "trysoft"
+			or printerror "Can't suspend vm with $vmconfig";
+	}
 
 	# We need to guarantee all memory data into a file
 	# VMware does some part of suspending in background mode
@@ -553,14 +675,21 @@ sub snapshot
 #snapshot    [vmconfig]         Create a snapshot of a VM
 	printverbose "snapshot is called";
 	my $vmconfig = checkvmconfig($_[0]);
-	if( ! checkregister($vmconfig) ) {
-		#!system $vmwarecmd_prog, "-s", "register", $vmconfig
-		#	or printerror "Can't register a vm with $vmconfig";
-		system $vmwarecmd_prog, "-s", "register", $vmconfig;
-	}
 
-	!system $vmrun_prog, "snapshot", $vmconfig
-		or printerror "Can't create snapshot for vm($vmconfig)";
+	if ($VMWARE_VERSION eq "workstation") {
+		!system $vmrun_prog, "-T", $VM_CONTROL_TYPE, "snapshot", $vmconfig, "condor-snapshot"
+			or printerror "Can't create snapshot for vm($vmconfig)";	
+	}
+	else {
+		if( ! checkregister($vmconfig) ) {
+			#!system $vmwarecmd_prog, "-s", "register", $vmconfig
+			#	or printerror "Can't register a vm with $vmconfig";
+			system $vmwarecmd_prog, "-s", "register", $vmconfig;
+		}
+
+		!system $vmrun_prog, "snapshot", $vmconfig
+			or printerror "Can't create snapshot for vm($vmconfig)";
+	}
 
 	sleep(1);
 }
@@ -570,14 +699,21 @@ sub commit
 #commit      [vmconfig]         Commit COW disks and delete the COW
 	printverbose "commit is called";
 	my $vmconfig = checkvmconfig($_[0]);
-	if( ! checkregister($vmconfig) ) {
-		#!system $vmwarecmd_prog, "-s", "register", $vmconfig
-		#	or printerror "Can't register a vm with $vmconfig";
-		system $vmwarecmd_prog, "-s", "register", $vmconfig;
-	}
 
-	!system $vmrun_prog, "deleteSnapshot", $vmconfig
-		or printerror "Can't combine snapshot disk with base disk for vm($vmconfig)";
+	if ($VMWARE_VERSION eq "workstation") {
+		!system $vmrun_prog, "-T", $VM_CONTROL_TYPE, "deleteSnapshot", $vmconfig, "condor-snapshot"
+			or printerror "Can't combine snapshot disk with base disk for vm($vmconfig)";
+	}
+	else {
+		if( ! checkregister($vmconfig) ) {
+			#!system $vmwarecmd_prog, "-s", "register", $vmconfig
+			#	or printerror "Can't register a vm with $vmconfig";
+			system $vmwarecmd_prog, "-s", "register", $vmconfig;
+		}
+
+		!system $vmrun_prog, "deleteSnapshot", $vmconfig
+			or printerror "Can't combine snapshot disk with base disk for vm($vmconfig)";
+	}
 
 	sleep(5);
 }
@@ -588,14 +724,20 @@ sub revert
 	printverbose "revert is called";
 	my $vmconfig = checkvmconfig($_[0]);
 
-	if( ! checkregister($vmconfig) ) {
-		#!system $vmwarecmd_prog, "-s", "register", $vmconfig
-		#	or printerror "Can't register a vm with $vmconfig";
-		system $vmwarecmd_prog, "-s", "register", $vmconfig;
+	if ($VMWARE_VERSION eq "workstation") {
+		!system $vmrun_prog, "-T", $VM_CONTROL_TYPE, "revertToSnapshot", $vmconfig, "condor-snapshot"
+			or printerror "Can't revert VM state to a snapshot for vm($vmconfig)";
 	}
+	else {
+		if( ! checkregister($vmconfig) ) {
+			#!system $vmwarecmd_prog, "-s", "register", $vmconfig
+			#	or printerror "Can't register a vm with $vmconfig";
+			system $vmwarecmd_prog, "-s", "register", $vmconfig;
+		}
 
-	!system $vmrun_prog, "revertToSnapshot", $vmconfig
-		or printerror "Can't revert VM state to a snapshot for vm($vmconfig)";
+		!system $vmrun_prog, "revertToSnapshot", $vmconfig
+			or printerror "Can't revert VM state to a snapshot for vm($vmconfig)";
+	}
 
 	sleep(5);
 }

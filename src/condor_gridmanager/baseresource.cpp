@@ -207,7 +207,7 @@ bool BaseResource::Invalidate () {
     ClassAd ad;
     
     /* Set the correct types */
-    ad.SetMyTypeName ( GRID_ADTYPE );
+    SetMyTypeName ( ad, GRID_ADTYPE );
 
     /* We only want to invalidate this resource. Using the tuple
        (HashName,SchedName,Owner) as unique id. */
@@ -239,7 +239,7 @@ bool BaseResource::SendUpdate () {
     ClassAd ad;
 
 	/* Set the correct types */
-    ad.SetMyTypeName ( GRID_ADTYPE );
+    SetMyTypeName ( ad, GRID_ADTYPE );
 
     /* populate class ad with the relevant resource information */
     PublishResourceAd ( &ad );
@@ -247,7 +247,7 @@ bool BaseResource::SendUpdate () {
 	daemonCore->publish( &ad );
 
 	std::string tmp;
-    ad.sPrint ( tmp );
+    sPrintAd ( tmp, ad );
     dprintf (
         D_FULLDEBUG,
         "BaseResource::UpdateResource: \n%s\n",

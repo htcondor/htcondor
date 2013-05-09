@@ -358,8 +358,8 @@ void TTManager::createQuillAd(void) {
 	char *tmp;
 
 	quillad = new ClassAd();
-	quillad->SetMyTypeName(QUILL_ADTYPE);
-	quillad->SetTargetTypeName("");
+	SetMyTypeName(*quillad, QUILL_ADTYPE);
+	SetTargetTypeName(*quillad, "");
   
 	config_fill_ad(quillad);
 
@@ -870,7 +870,7 @@ QuillErrCode TTManager::insertMachines(AttrList *ad) {
 	const char *data_arr[7];
 	QuillAttrDataType   data_typ[7];
 
-	ad->sPrint(classAd);
+	sPrintAd(classAd, *ad);
 
 	// Insert stuff into Machines_Horizontal
 
@@ -1335,7 +1335,7 @@ QuillErrCode TTManager::insertScheddAd(AttrList *ad) {
 	attNameList.sprintf("(MyType");
 	attValList.sprintf("('Scheduler'");
 
-	ad->sPrint(classAd);
+	sPrintAd(classAd, *ad);
 
 	classAd.Tokenize();
 	iter = classAd.GetNextToken("\n", true);
@@ -1622,7 +1622,7 @@ QuillErrCode TTManager::insertMasterAd(AttrList *ad) {
 	attNameList.sprintf("(MyType");
 	attValList.sprintf("('Master'");
 
-	ad->sPrint(classAd);
+	sPrintAd(classAd, *ad);
 
 	classAd.Tokenize();
 	iter = classAd.GetNextToken("\n", true);
@@ -1913,7 +1913,7 @@ QuillErrCode TTManager::insertNegotiatorAd(AttrList *ad) {
 	attNameList.sprintf("(MyType");
 	attValList.sprintf("('Negotiator'");
 
-	ad->sPrint(classAd);
+	sPrintAd(classAd, *ad);
 
 	classAd.Tokenize();
 	iter = classAd.GetNextToken("\n", true);
@@ -2192,7 +2192,7 @@ QuillErrCode TTManager::insertBasic(AttrList *ad, char *tableName) {
 	else if (strcasecmp(tableName, "generic_messages") == 0) 
 		isGeneric = TRUE;
 
-	ad->sPrint(classAd);
+	sPrintAd(classAd, *ad);
 
 	classAd.Tokenize();
 	iter = classAd.GetNextToken("\n", true);
@@ -2317,7 +2317,7 @@ QuillErrCode TTManager::insertRuns(AttrList *ad) {
 	attNameList.sprintf("(run_id");
 	attValList.sprintf("(%s", runid_expr.Value());
 
-	ad->sPrint(classAd);
+	sPrintAd(classAd, *ad);
 
 	classAd.Tokenize();
 	iter = classAd.GetNextToken("\n", true);
@@ -2403,7 +2403,7 @@ QuillErrCode TTManager::insertEvents(AttrList *ad) {
 	int eventtype;
 	MyString newvalue;
 
-	ad->sPrint(classAd);
+	sPrintAd(classAd, *ad);
 
 	classAd.Tokenize();
 	iter = classAd.GetNextToken("\n", true);
@@ -2492,7 +2492,7 @@ QuillErrCode TTManager::insertFiles(AttrList *ad) {
 	time_t old_ts;
 	MyString ts_expr;
 
-	ad->sPrint(classAd);
+	sPrintAd(classAd, *ad);
 
 	classAd.Tokenize();
 	iter = classAd.GetNextToken("\n", true);
@@ -2591,7 +2591,7 @@ QuillErrCode TTManager::insertFileusages(AttrList *ad) {
 	MyString ts_expr;
 	MyString onerow_expr;
 
-	ad->sPrint(classAd);
+	sPrintAd(classAd, *ad);
 
 	classAd.Tokenize();
 	iter = classAd.GetNextToken("\n", true);
@@ -2690,7 +2690,7 @@ QuillErrCode TTManager::insertTransfers(AttrList *ad) {
   time_t transfer_time;
   MyString transfer_time_expr;
 
-  ad->sPrint(classAd);
+  sPrintAd(classAd, *ad);
 
   classAd.Tokenize();
   iter = classAd.GetNextToken("\n", true);
@@ -2827,7 +2827,7 @@ QuillErrCode TTManager::updateBasic(AttrList *info, AttrList *condition,
 
 	if (!info) return QUILL_SUCCESS;
 
-	info->sPrint(classAd);
+	sPrintAd(classAd, *info);
 
 	classAd.Tokenize();
 	iter = classAd.GetNextToken("\n", true);	
@@ -2882,7 +2882,7 @@ QuillErrCode TTManager::updateBasic(AttrList *info, AttrList *condition,
 	setList.setChar(setList.Length()-2, '\0');
 
 	if (condition) {
-		condition->sPrint(classAd1);
+		sPrintAd(classAd1, *condition);
 
 		classAd1.Tokenize();
 		iter = classAd1.GetNextToken("\n", true);	

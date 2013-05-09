@@ -45,8 +45,8 @@ void MergeClassAds(ClassAd *merge_into, ClassAd *merge_from,
 				char *to_expr = NULL;
 				bool equiv=false;
 
-				if( (from_expr=merge_from->sPrintExpr(NULL,0,name)) &&
-					(to_expr=merge_into->sPrintExpr(NULL,0,name)) )
+				if( (from_expr=sPrintExpr(*merge_from,name)) &&
+					(to_expr=sPrintExpr(*merge_into,name)) )
 				{
 					if( from_expr && to_expr && strcmp(from_expr,to_expr)==0 ) {
 						equiv=true;

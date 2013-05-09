@@ -47,6 +47,7 @@ static const char *Resource_State_String [] = {
 	"PRE", 
 	"EXECUTING", 
 	"PENDING_DEATH", 
+	"PENDING_TRANSFER",
 	"FINISHED",
 	"SUSPENDED",
 	"STARTUP",
@@ -63,10 +64,7 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	starterAddress = NULL;
 	starterArch = NULL;
 	starterOpsys = NULL;
-	starter_version = NULL;
 	jobAd = NULL;
-	fs_domain = NULL;
-	uid_domain = NULL;
 	claim_sock = NULL;
 	last_job_lease_renewal = 0;
 	exit_reason = -1;
@@ -113,9 +111,6 @@ RemoteResource::~RemoteResource()
 	if ( starterAddress) delete [] starterAddress;
 	if ( starterArch   ) delete [] starterArch;
 	if ( starterOpsys  ) delete [] starterOpsys;
-	if ( starter_version ) delete [] starter_version;
-	if ( uid_domain	   ) delete [] uid_domain;
-	if ( fs_domain     ) delete [] fs_domain;
 	closeClaimSock();
 	if ( jobAd && jobAd != shadow->getJobAd() ) {
 		delete jobAd;
@@ -488,7 +483,8 @@ RemoteResource::getMachineName( char *& mName )
 		mName = strnewp( machineName );
 	} else {
 		if ( machineName ) {
-			strcpy( mName, machineName );
+			delete [] mName;
+			mName = strnewp( machineName );
 		} else {
 			mName[0] = '\0';
 		}
@@ -509,11 +505,10 @@ RemoteResource::getStartdAddress( char *& sinful )
 	if( ! addr ) {
 		return;
 	}
-	if( ! sinful ) {
-		sinful = strnewp( addr );
-	} else {
-		strcpy( sinful, addr );
+	if( sinful ) {
+		delete [] sinful;
 	}
+	sinful = strnewp( addr );
 }
 
 void
@@ -529,11 +524,10 @@ RemoteResource::getStartdName( char *& remoteName )
 	if( ! localName ) {
 		return;
 	}
-	if( ! remoteName ) {
-		remoteName = strnewp( localName );
-	} else {
-		strcpy( remoteName, localName );
+	if( remoteName ) {
+		delete [] remoteName;
 	}
+	remoteName = strnewp( localName );
 }
 
 
@@ -551,45 +545,11 @@ RemoteResource::getClaimId( char *& id )
 	if( ! my_id ) {
 		return;
 	}
-	if( ! id ) {
-		id = strnewp( my_id );
-	} else {
-		strcpy( id, my_id );
+	if( id ) {
+		delete[] id;
 	}
+	id = strnewp( my_id );
 }
-
-
-void
-RemoteResource::getUidDomain( char *& uidDomain )
-{
-
-	if ( !uidDomain ) {
-		uidDomain = strnewp( uid_domain );
-	} else {
-		if ( uid_domain ) {
-			strcpy( uidDomain, uid_domain );
-		} else {
-			uidDomain[0] = '\0';
-		}
-	}
-}
-
-
-void
-RemoteResource::getFilesystemDomain( char *& filesystemDomain )
-{
-
-	if ( !filesystemDomain ) {
-		filesystemDomain = strnewp( fs_domain );
-	} else {
-		if ( fs_domain ) {
-			strcpy( filesystemDomain, fs_domain );
-		} else {
-			filesystemDomain[0] = '\0';
-		}
-	}
-}
-
 
 void
 RemoteResource::getStarterAddress( char *& starterAddr )
@@ -599,43 +559,13 @@ RemoteResource::getStarterAddress( char *& starterAddr )
 		starterAddr = strnewp( starterAddress );
 	} else {
 		if ( starterAddress ) {
-			strcpy( starterAddr, starterAddress );
+			delete[] starterAddr;
+			starterAddr = strnewp( starterAddress );
 		} else {
 			starterAddr[0] = '\0';
 		}
 	}
 }
-
-
-void
-RemoteResource::getStarterArch( char *& arch )
-{
-	if(! arch ) {
-		arch = strnewp( starterArch );
-	} else {
-		if ( starterArch ) {
-			strcpy( arch, starterArch );
-		} else {
-			arch[0] = '\0';
-		}
-	}
-}
-
-
-void
-RemoteResource::getStarterOpsys( char *& opsys )
-{
-	if(! opsys ) {
-		opsys = strnewp( starterOpsys );
-	} else {
-		if ( starterOpsys ) {
-			strcpy( opsys, starterOpsys );
-		} else {
-			opsys[0] = '\0';
-		}
-	}
-}
-
 
 ReliSock*
 RemoteResource::getClaimSock()
@@ -696,7 +626,7 @@ RemoteResource::setStartdInfo( ClassAd* ad )
 	if( ! name ) {
 		ad->LookupString( ATTR_NAME, &name );
 		if( ! name ) {
-			ad->dPrint(D_ALWAYS);
+			dPrintAd(D_ALWAYS, *ad);
 			EXCEPT( "ad includes neither %s nor %s!", ATTR_NAME,
 					ATTR_REMOTE_HOST );
 		}
@@ -845,20 +775,12 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	}
 
 	if( ad->LookupString(ATTR_UID_DOMAIN, &tmp) ) {
-		if( uid_domain ) {
-			delete [] uid_domain;
-		}	
-		uid_domain = strnewp( tmp );
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_UID_DOMAIN, tmp );
 		free( tmp );
 		tmp = NULL;
 	}
 
 	if( ad->LookupString(ATTR_FILE_SYSTEM_DOMAIN, &tmp) ) {
-		if( fs_domain ) {
-			delete [] fs_domain;
-		}	
-		fs_domain = strnewp( tmp );
 		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_FILE_SYSTEM_DOMAIN,
 				 tmp );  
 		free( tmp );
@@ -907,20 +829,16 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 		tmp = NULL;
 	}
 
-	if( ad->LookupString(ATTR_VERSION, &tmp) ) {
-		if( starter_version ) {
-			delete [] starter_version;
-		}	
-		starter_version = strnewp( tmp );
-		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_VERSION, tmp ); 
-		free( tmp );
-		tmp = NULL;
+	char* starter_version;
+	if( ad->LookupString(ATTR_VERSION, &starter_version) ) {
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_VERSION, starter_version ); 
 	}
 
 	if ( starter_version == NULL ) {
 		dprintf( D_ALWAYS, "Can't determine starter version for FileTransfer!\n" );
 	} else {
 		filetrans.setPeerVersion( starter_version );
+		free(starter_version);
 	}
 
 	filetrans.setTransferQueueContactInfo( shadow->getTransferQueueContactInfo() );
@@ -948,28 +866,6 @@ RemoteResource::setMachineName( const char * mName )
 	
 	machineName = strnewp ( mName );
 }
-
-void
-RemoteResource::setUidDomain( const char * uidDomain )
-{
-
-	if ( uid_domain )
-		delete [] uid_domain;
-	
-	uid_domain = strnewp ( uidDomain );
-}
-
-
-void
-RemoteResource::setFilesystemDomain( const char * filesystemDomain )
-{
-
-	if ( fs_domain )
-		delete [] fs_domain;
-	
-	fs_domain = strnewp ( filesystemDomain );
-}
-
 
 void
 RemoteResource::setStarterAddress( const char * starterAddr )
@@ -1125,7 +1021,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 
 	if( IsDebugLevel(D_MACHINE) ) {
 		dprintf( D_MACHINE, "Update ad:\n" );
-		update_ad->dPrint( D_MACHINE );
+		dPrintAd( D_MACHINE, *update_ad );
 		dprintf( D_MACHINE, "--- End of ClassAd ---\n" );
 	}
 

@@ -30,6 +30,9 @@ enum AllGoneT { MASTER_RESTART, MASTER_EXIT, MASTER_RESET };
 enum ReaperT { DEFAULT_R, ALL_R, NO_R };
 enum StopStateT { PEACEFUL, GRACEFUL, FAST, KILL, NONE };
 
+const char * StopStateToString(StopStateT state);
+StopStateT StringToStopState(const char * psz);
+
 // Max # of controllee's a controller can support
 const int MAX_CONTROLLEES = 5;
 

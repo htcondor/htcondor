@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2013, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -21,69 +21,26 @@
 #include "condor_common.h"
 #include "stat.WINDOWS.h"
 
-void 
-resolve_daylight_saving_problem (struct stat *sbuf) {
+int _fixed_windows_stat(const char *file, struct _fixed_windows_stat *sbuf)
+{
 
-	struct tm	*newtime;
-    time_t		mytime;
+	// TJ: April 2013 - in vs2008
+	// if we don't call this before we call stat, and daylight savings time
+	// changes while our process is running, we start getting file times that
+	// are off by 1 hour.
+	_tzset();
 
-	time( &mytime );					/* get time as long integer. */
-    newtime = localtime( &mytime );		/* convert to local time. */
-
-
-	/*
-		It appearers that the _stat function under Windows NT 4.0 and, by all 
-		reports, many other Windows systems, will return file times 3600 seconds 
-		(1 hour) too big when daylight savings time is in effect (this also 
-		includes st_atime and st_ctime).  This seems surprising to me: since, in 
-		general, the MSDN is an accurate source of information, but that the stat 
-		section leaves out is a glaring omission. This is a to be considered a bug since 
-		it is defined as returning the time in UTC. The following fix is kinda gross, 
-		but it seems to resolve the problem (the MS code does += so we are just
-		reversing it). Also, since the problem has been around since NT 4.0, it's 
-		sure to survive at least another 10 years... if not forever.
-
-		-B [11/6/2007]
-	*/
-
-	
-    if ( 1 == newtime->tm_isdst ) {
-		sbuf->st_atime -= 3600; 
-		sbuf->st_ctime -= 3600; 
-		sbuf->st_mtime -= 3600;
-    }
-
+	return _stat(file, (struct _stat*) sbuf);
 }
 
-/* on success returns the file's *real* UTC time; otherwise, -1 */
-int
-_fixed_windows_stat(const char *file, struct _fixed_windows_stat *sbuf) { 
-	
-	int ret = _stat(file, (struct _stat*) sbuf);
+int _fixed_windows_fstat(int file, struct _fixed_windows_stat *sbuf)
+{
 
-	if ( ret != 0 ) {
-		return ret;
-	}
-	
-	resolve_daylight_saving_problem ( sbuf );
+	// TJ: April 2013 - in vs2008
+	// if we don't call this before we call fstat and daylight savings time
+	// changes while our process is running, we start getting file times that
+	// are off by 1 hour.
+	_tzset();
 
-	return ret;
-
-}
-
-
-/* on success returns the file's *real* UTC time; otherwise, -1 */
-int
-_fixed_windows_fstat(int file, struct _fixed_windows_stat *sbuf) { 
-	
-	int ret = _fstat(file, (struct _stat*) sbuf);
-
-	if ( ret != 0 ) {
-		return ret;
-	}
-	
-	resolve_daylight_saving_problem ( sbuf );
-
-	return ret;
-
+	return _fstat(file, (struct _stat*) sbuf);
 }

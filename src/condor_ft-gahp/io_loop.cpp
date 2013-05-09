@@ -331,6 +331,11 @@ stdin_pipe_handler(Service*, int) {
 				} else {
 					dprintf (D_ALWAYS, "BOSCO: Create_Thread FAILED!\n");
 					gahp_output_return_success();
+					const char * res[2] = {
+						"Worker thread failed",
+						"NULL"
+					};
+					enqueue_result(args.argv[1], res, 2);
 					close( fds[0] );
 				}
 
@@ -363,6 +368,10 @@ stdin_pipe_handler(Service*, int) {
 				} else {
 					dprintf (D_ALWAYS, "BOSCO: Create_Thread FAILED!\n");
 					gahp_output_return_success();
+					const char * res[1] = {
+						"Worker thread failed"
+					};
+					enqueue_result(args.argv[1], res, 1);
 					close( fds[0] );
 				}
 
@@ -395,6 +404,10 @@ stdin_pipe_handler(Service*, int) {
 				} else {
 					dprintf (D_ALWAYS, "BOSCO: Create_Thread FAILED!\n");
 					gahp_output_return_success();
+					const char * res[1] = {
+						"Worker thread failed"
+					};
+					enqueue_result(args.argv[1], res, 1);
 					close( fds[0] );
 				}
 
@@ -582,7 +595,7 @@ display_dprintf_header(char **buf,int *bufpos,int *buflen)
 }
 
 void
-enqueue_result (std::string req_id, const char ** results, const int argc)
+enqueue_result (const std::string &req_id, const char ** results, const int argc)
 {
 	std::string buffer;
 
@@ -995,6 +1008,8 @@ int upload_sandbox_reaper(Service*, int pid, int status) {
 		free( err_msg );
 	}
 
+	close( e.error_pipe );
+
 	// remove from the map
 	sandbox_map.erase(pid);
 
@@ -1028,6 +1043,8 @@ int destroy_sandbox_reaper(Service*, int pid, int status) {
 
 		free( err_msg );
 	}
+
+	close( e.error_pipe );
 
 	// remove from the map
 	sandbox_map.erase(pid);

@@ -61,7 +61,7 @@ REMOTE_CONDOR_work_request(ClassAd *ad, char *&a_out, char *&targ, char *&orig,
 	assert( syscall_sock->code(orig) );
 	assert( syscall_sock->code(targ) );
 	assert( syscall_sock->code(a_out) );
-	assert( ad->initFromStream(*syscall_sock) );
+	assert( getClassAd(syscall_sock, *ad) );
 	assert( syscall_sock->end_of_message() );
 
 	_condor_signals_enable( omask );

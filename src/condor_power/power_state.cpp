@@ -238,7 +238,7 @@ dump_ad( void )
 	ad.Assign( ATTR_HIBERNATION_METHOD, hibernator->getMethod() );
 	ad.Assign( ATTR_HIBERNATION_SUPPORTED_STATES, states );
 	ad.Assign( ATTR_HIBERNATION_RAW_MASK, mask );
-	ad.fPrint( stdout );
+	fPrintAd( stdout, ad );
 }
 
 int

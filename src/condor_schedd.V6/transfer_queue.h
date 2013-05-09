@@ -123,6 +123,8 @@ class TransferQueueManager: public Service {
 	int m_upload_wait_time;
 	int m_download_wait_time;
 
+	stats_entry_abs<int> m_max_uploading_stat;
+	stats_entry_abs<int> m_max_downloading_stat;
 	stats_entry_abs<int> m_uploading_stat;
 	stats_entry_abs<int> m_downloading_stat;
 	stats_entry_abs<int> m_waiting_to_upload_stat;

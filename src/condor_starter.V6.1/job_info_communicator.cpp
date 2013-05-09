@@ -422,7 +422,7 @@ JobInfoCommunicator::writeOutputAdFile( ClassAd* ad )
 		}
 	}
 		// append a delimiter?
-	ad->fPrint( fp );
+	fPrintAd( fp, *ad );
 
 	if( job_output_ad_is_stdout ) {
 		fflush( fp );
@@ -667,13 +667,10 @@ JobInfoCommunicator::initUserPrivWindows( void )
 	}
 
 	if ( !name ) {
-		char slot_user[255];
-		MyString slotName = "";
-		slotName = Starter->getMySlotName();
-
+		MyString slotName = Starter->getMySlotName();
 		slotName.upper_case();
-		sprintf(slot_user, "%s_USER", slotName);
-		char *run_jobs_as = param(slot_user);
+		slotName += "_USER";
+		char *run_jobs_as = param(slotName.Value());
 		if (run_jobs_as) {		
 			getDomainAndName(run_jobs_as, domain, name);
 				/* 
@@ -781,7 +778,7 @@ JobInfoCommunicator::checkForStarterDebugging( void )
 		// out the job ad to the log file...
 	if( IsDebugLevel( D_JOB ) ) {
 		dprintf( D_JOB, "*** Job ClassAd ***\n" );  
-		job_ad->dPrint( D_JOB );
+		dPrintAd( D_JOB, *job_ad );
         dprintf( D_JOB, "--- End of ClassAd ---\n" );
 	}
 }

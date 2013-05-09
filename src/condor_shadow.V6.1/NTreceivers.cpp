@@ -229,7 +229,7 @@ do_REMOTE_syscall()
 	case CONDOR_register_starter_info:
 	{
 		ClassAd ad;
-		result = ( ad.initFromStream(*syscall_sock) );
+		result = ( getClassAd(syscall_sock, ad) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
@@ -254,7 +254,7 @@ do_REMOTE_syscall()
 	case CONDOR_register_job_info:
 	{
 		ClassAd ad;
-		result = ( ad.initFromStream(*syscall_sock) );
+		result = ( getClassAd(syscall_sock, ad) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
@@ -296,7 +296,7 @@ do_REMOTE_syscall()
 			result = ( syscall_sock->code( terrno ) );
 			ASSERT( result );
 		} else {
-			result = ( ad->put(*syscall_sock) );
+			result = ( putClassAd(syscall_sock, *ad) );
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
@@ -327,7 +327,7 @@ do_REMOTE_syscall()
 			result = ( syscall_sock->code( terrno ) );
 			ASSERT( result );
 		} else {
-			result = ( ad->put(*syscall_sock) );
+			result = ( putClassAd(syscall_sock, *ad) );
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
@@ -346,7 +346,7 @@ do_REMOTE_syscall()
 		ASSERT( result );
 		result = ( syscall_sock->code(reason) );
 		ASSERT( result );
-		result = ( ad.initFromStream(*syscall_sock) );
+		result = ( getClassAd(syscall_sock, ad) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
@@ -371,7 +371,7 @@ do_REMOTE_syscall()
 	case CONDOR_job_termination:
 	{
 		ClassAd ad;
-		result = ( ad.initFromStream(*syscall_sock) );
+		result = ( getClassAd(syscall_sock, ad) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
@@ -677,7 +677,7 @@ do_REMOTE_syscall()
 	case CONDOR_register_mpi_master_info:
 	{
 		ClassAd ad;
-		result = ( ad.initFromStream(*syscall_sock) );
+		result = ( getClassAd(syscall_sock, ad) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
@@ -823,7 +823,7 @@ do_REMOTE_syscall()
 	{
 		ClassAd ad;
 
-		result = ( ad.initFromStream(*syscall_sock) );
+		result = ( getClassAd(syscall_sock, ad) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
@@ -1298,6 +1298,9 @@ case CONDOR_putfile:
 		}
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
+		free((char*)path);
+
+        if (length <= 0) return 0;
 		
 		int num = -1;
 		if(fd >= 0) {
@@ -1323,7 +1326,6 @@ case CONDOR_putfile:
 			result = ( syscall_sock->code( terrno ) );
 			ASSERT( result );
 		}
-		free((char*)path);
 		free((char*)buffer);
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );

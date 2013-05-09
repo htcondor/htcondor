@@ -27,11 +27,11 @@
 bool
 NamedPipeReader::initialize(const char* addr)
 {
-	ASSERT(!m_initialized);
+	assert(!m_initialized);
 
-	ASSERT(addr != NULL);
+	assert(addr != NULL);
 	m_addr = strdup(addr);
-	ASSERT(m_addr != NULL);
+	assert(m_addr != NULL);
 
 	if (!named_pipe_create(addr, m_pipe, m_dummy_pipe)) {
 		dprintf(D_ALWAYS,
@@ -69,27 +69,27 @@ NamedPipeReader::~NamedPipeReader()
 char*
 NamedPipeReader::get_path()
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 	return m_addr;
 }
 
 void
 NamedPipeReader::set_watchdog(NamedPipeWatchdog* watchdog)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 	m_watchdog = watchdog;
 }
 
 bool
 NamedPipeReader::read_data(void* buffer, int len)
 {
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	// if this pipe has multiple writers, we need to ensure
 	// that our message size is no more than PIPE_BUF, otherwise
 	// messages could be interleaved
 	//
-	ASSERT(len <= PIPE_BUF);
+	assert(len <= PIPE_BUF);
 
 	// if we have a watchdog, we don't go right into a blocking
 	// read. instead, we select with both the real pipe and the
@@ -151,9 +151,9 @@ NamedPipeReader::poll(int timeout, bool& ready)
 	// currently isn't a big deal since we only use poll() on
 	// the server-side - which doesn't set a watchdog pipe
 
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
-	ASSERT(timeout >= -1);
+	assert(timeout >= -1);
 
 	fd_set read_fd_set;
 	FD_ZERO(&read_fd_set);
@@ -201,7 +201,7 @@ NamedPipeReader::consistent(void)
 	struct stat fbuf;
 	struct stat lbuf;
 
-	ASSERT(m_initialized);
+	assert(m_initialized);
 
 	/* We already have the named pipe open, so get its information */
 	if (fstat(m_pipe, &fbuf) < 0) {

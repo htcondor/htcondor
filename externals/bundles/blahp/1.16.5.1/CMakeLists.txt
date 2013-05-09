@@ -49,7 +49,7 @@ if ( WITH_BLAHP )
 		endif()
 
 
-		condor_pre_external( BLAHP blahp-1.16.5.1-p12 "lib;include" "done")
+		condor_pre_external( BLAHP blahp-1.16.5.1-p13 "lib;include" "done")
 		
 		ExternalProject_Add(blahp
 						DEPENDS ${BLAHP_DEPENDS}
@@ -57,50 +57,51 @@ if ( WITH_BLAHP )
 					    DOWNLOAD_DIR ${BLAHP_STAGE}/dl
 						URL http://parrot.cs.wisc.edu/externals/blahp-1.16.5.1.tar.gz
 						#--Patch step ----------
-						PATCH_COMMAND patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/iclassad.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/classad.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/mtrace.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/registry.patch -p0 && 
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/dl.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/add-sge.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/sge-status.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/sge-status-fallback.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/sge_helper.error-exit.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/add-condor.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-completion.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-qdel.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-status.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/shared-fs.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/shared-dir.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/config-paths.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/escape-args.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/condor-history.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/condor-status.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/submit-l.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/slurm.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/proxy-tools.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/ld-library-path.patch -p0 &&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/run-dir.patch -p0 &&
-							cp ${CMAKE_CURRENT_SOURCE_DIR}/classads.m4 org.glite.ce.blahp/project &&
-							cp ${CMAKE_CURRENT_SOURCE_DIR}/${GLOBUS_M4_FILE} org.glite.ce.blahp/project/globus.m4 &&
-							cp ${CMAKE_CURRENT_SOURCE_DIR}/glite.m4 org.glite.ce.blahp/project.&&
-							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/name-change.patch -p0 &&
-							mv org.glite.ce.blahp/config/blah.config.template org.glite.ce.blahp/config/batch_gahp.config.template
+						PATCH_COMMAND patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/iclassad.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/classad.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/mtrace.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/registry.patch -p1 && 
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/dl.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/lsf-jobid.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/add-sge.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/sge-status.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/sge-status-fallback.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/sge_helper.error-exit.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/add-condor.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-completion.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-qdel.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/pbs-status.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/shared-fs.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/shared-dir.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/config-paths.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/escape-args.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/condor-history.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/condor-status.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/submit-l.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/slurm.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/proxy-tools.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/ld-library-path.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/run-dir.patch -p1 &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/request-memory.patch -p1 &&
+							cp ${CMAKE_CURRENT_SOURCE_DIR}/classads.m4 project/ &&
+							cp ${CMAKE_CURRENT_SOURCE_DIR}/${GLOBUS_M4_FILE} project/globus.m4 &&
+							cp ${CMAKE_CURRENT_SOURCE_DIR}/glite.m4 project/ &&
+							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/name-change.patch -p1 &&
+							mv config/blah.config.template config/batch_gahp.config.template
 						#--Configure step ----------
-						CONFIGURE_COMMAND cd org.glite.ce.blahp &&
-                                                        export CPPFLAGS=${CPP11_FLAG} &&
+						CONFIGURE_COMMAND export CPPFLAGS=${CPP11_FLAG} &&
 							./bootstrap && ./configure --with-classads-prefix=${CLASSADS_INSTALL_LOC}
 							${OPENSSL_FLAG}
 							--with-globus-prefix=${GLOBUS_INSTALL_LOC}
 							--with-globus-nothr-flavor=gcc${BIT_MODE}dbg
 							--prefix=${BLAHP_INSTALL_LOC}/opt/glite &&
-							sed -i 's/^hardcode_libdir_flag_spec=.*/hardcode_libdir_flag_spec=/' libtool
+							sed -i s/^hardcode_libdir_flag_spec=.*/hardcode_libdir_flag_spec=/ libtool
 						#--Build Step ----------
-						BUILD_COMMAND cd org.glite.ce.blahp && LD_RUN_PATH='${EXTERNALS_RPATH}' make
+						BUILD_COMMAND export LD_RUN_PATH=${EXTERNALS_RPATH} && echo EXTERNALS_RPATH is ${EXTERNALS_RPATH} && env && make
 						BUILD_IN_SOURCE 1
 						#--install Step ----------
 						INSTALL_DIR ${BLAHP_INSTALL_LOC}
-						INSTALL_COMMAND cd org.glite.ce.blahp && make install && touch ${BLAHP_INSTALL_LOC}/done )
+						INSTALL_COMMAND make install && touch ${BLAHP_INSTALL_LOC}/done )
 
 		add_dependencies(blahp ${CLASSADS_FOUND})
 

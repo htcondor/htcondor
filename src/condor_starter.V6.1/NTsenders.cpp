@@ -56,7 +56,7 @@ REMOTE_CONDOR_register_starter_info( ClassAd* ad )
 	syscall_sock->encode();
 	result = syscall_sock->code(CurrentSysCall);
 	ASSERT( result );
-	result = ad->put(*syscall_sock);
+	result = putClassAd(syscall_sock, *ad);
 	ASSERT( result );
 	result = syscall_sock->end_of_message();
 	ASSERT( result );
@@ -112,7 +112,7 @@ REMOTE_CONDOR_register_job_info( ClassAd* ad )
 	if (!syscall_sock->code(CurrentSysCall)) {
 		return -1;
 	}
-	if (!ad->put(*syscall_sock)) {
+	if (!putClassAd(syscall_sock, *ad)) {
 		return -1;
 	}
 	if (!syscall_sock->end_of_message()) {
@@ -171,7 +171,7 @@ REMOTE_CONDOR_get_job_info(ClassAd *ad)
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 		return rval;
 	}
-	result = ad->initFromStream(*syscall_sock);
+	result = getClassAd(syscall_sock, *ad);
 	ASSERT( result );
 	result = syscall_sock->end_of_message();
 	ASSERT( result );
@@ -208,7 +208,7 @@ REMOTE_CONDOR_get_user_info(ClassAd *ad)
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
 		return rval;
 	}
-	result = ad->initFromStream(*syscall_sock);
+	result = getClassAd(syscall_sock, *ad);
 	ASSERT( result );
 	result = syscall_sock->end_of_message();
 	ASSERT( result );
@@ -289,7 +289,7 @@ REMOTE_CONDOR_job_exit(int status, int reason, ClassAd *ad)
 		return -1;
 	}
 	if ( ad ) {
-		if( ! ad->put(*syscall_sock) ) {
+		if( ! putClassAd(syscall_sock, *ad) ) {
 			return -1;
 		}
 	}
@@ -336,7 +336,7 @@ REMOTE_CONDOR_job_termination( ClassAd* ad )
 	syscall_sock->encode();
 	result = syscall_sock->code(CurrentSysCall);
 	ASSERT( result );
-	result = ad->put(*syscall_sock);
+	result = putClassAd(syscall_sock, *ad);
 	ASSERT( result );
 	result = syscall_sock->end_of_message();
 	ASSERT( result );
@@ -683,7 +683,7 @@ REMOTE_CONDOR_register_mpi_master_info( ClassAd* ad )
 	syscall_sock->encode();
 	result = ( syscall_sock->code(CurrentSysCall) );
 	ASSERT( result );
-	result = ( ad->put(*syscall_sock) );
+	result = ( putClassAd(syscall_sock, *ad) );
 	ASSERT( result );
 	result = ( syscall_sock->end_of_message() );
 	ASSERT( result );
@@ -896,7 +896,7 @@ REMOTE_CONDOR_ulog( ClassAd *ad )
 	syscall_sock->encode();
 	result = syscall_sock->code(CurrentSysCall);
 	ASSERT( result );
-	result = ad->put(*syscall_sock);
+	result = putClassAd(syscall_sock, *ad);
 	ASSERT( result );
 	result = syscall_sock->end_of_message();
 	ASSERT( result );

@@ -880,6 +880,26 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 	if ( m_named_chroot.size() > 0 ) {
 		cp->Assign( "NamedChroot", m_named_chroot.c_str() );
 	}
+
+#ifdef WIN32
+// window's strtok_s is the 'safe' version of strtok, it's not identical to linx's strtok_r, but it's close enough.
+#define strtok_r strtok_s
+#endif
+
+	// Advertise processor flags.
+	const char * pflags = sysapi_processor_flags();
+	if (pflags) {
+		char * savePointer = NULL;
+		char * processor_flags = strdup( pflags );
+		char * flag = strtok_r( processor_flags, " ", & savePointer );
+		std::string attributeName;
+		while( flag != NULL ) {
+			formatstr( attributeName, "has_%s", flag );
+			cp->Assign( attributeName.c_str(), true );
+			flag = strtok_r( NULL, " ", & savePointer );
+		}
+		free( processor_flags );
+	}
 }
 
 void

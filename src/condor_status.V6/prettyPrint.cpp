@@ -206,7 +206,7 @@ static void ppDisplayHeadings(FILE* file, ClassAd *ad, const char * pszExtra)
 	}
 	pm.display_Headings(file, pm_head);
 	if (pszExtra)
-		printf(pszExtra);
+		printf("%s", pszExtra);
 }
 
 void
@@ -230,9 +230,9 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 				//   the ClassAd library.
 				//   Before 7.7.3, submitter ads for parallel universe
 				//   jobs had a MyType of "Scheduler".
-			if ( !strcmp( ad->GetMyTypeName(), SCHEDD_ADTYPE ) &&
+			if ( !strcmp( GetMyTypeName(*ad), SCHEDD_ADTYPE ) &&
 				 !ad->LookupExpr( ATTR_NUM_USERS ) ) {
-				ad->SetMyTypeName( SUBMITTER_ADTYPE );
+				SetMyTypeName( *ad, SUBMITTER_ADTYPE );
 			}
 			switch (ppStyle) {
 			  case PP_STARTD_NORMAL:
@@ -1241,10 +1241,10 @@ printAnyNormal(ClassAd *ad, bool first)
 			strcpy(name,"[???]");
 		}
 
-		my_type = ad->GetMyTypeName();
+		my_type = GetMyTypeName(*ad);
 		if(!my_type[0]) my_type = "None";
 
-		target_type = ad->GetTargetTypeName();
+		target_type = GetTargetTypeName(*ad);
 		if(!target_type[0]) target_type = "None";
 
 		printf("%-20.20s %-20.20s %-30.30s\n",my_type,target_type,name);
@@ -1259,7 +1259,7 @@ printAnyNormal(ClassAd *ad, bool first)
 void
 printVerbose (ClassAd *ad)
 {
-	ad->fPrint (stdout);
+	fPrintAd (stdout, *ad);
 	fputc ('\n', stdout);	
 }
 

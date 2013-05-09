@@ -37,22 +37,11 @@ extern BaseShadow *Shadow;
 extern RemoteResource *thisRemoteResource;
 extern RemoteResource *parallelMasterResource;
 
-static void append_buffer_info( MyString &url, const char *method, char const *path );
-static int use_append( const char *method, const char *path );
-static int use_compress( const char *method, const char *path );
-static int use_fetch( const char *method, const char *path );
-static int use_local_access( const char *file );
-static int use_special_access( const char *file );
-static int access_via_afs( const char *file );
-static int access_via_nfs( const char *file );
-
 int
-pseudo_register_machine_info(char *uiddomain, char *fsdomain, 
+pseudo_register_machine_info(char * /* uiddomain */, char * /* fsdomain */, 
 							 char * starterAddr, char *full_hostname )
 {
 
-	thisRemoteResource->setUidDomain( uiddomain );
-	thisRemoteResource->setFilesystemDomain( fsdomain );
 	thisRemoteResource->setStarterAddress( starterAddr );
 	thisRemoteResource->setMachineName( full_hostname );
 
@@ -282,7 +271,6 @@ int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 	MyString	full_path;
 	MyString	remap;
 	MyString urlbuf;
-	const char	*method;
 
 	dprintf( D_SYSCALLS, "\tlogical_name = \"%s\"\n", logical_name );
 
@@ -330,117 +318,12 @@ int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 		full_path = "/usr/lib/nls/C/strerror.cat\0";
 #endif
 
-	if( use_special_access(full_path.Value()) ) {
-		method = "special";
-	} else if( use_local_access(full_path.Value()) ) {
-		method = "local";
-	} else if( access_via_afs(full_path.Value()) ) {
-		method = "local";
-	} else if( access_via_nfs(full_path.Value()) ) {
-		method = "local";
-	} else {
-		method = "remote";
-	}
-
-	if( use_fetch(method,full_path.Value()) ) {
-		urlbuf += "fetch:";
-	}
-
-	if( use_compress(method,full_path.Value()) ) {
-		urlbuf += "compress:";
-	}
-
-	append_buffer_info(urlbuf,method,full_path.Value());
-
-	if( use_append(method,full_path.Value()) ) {
-		urlbuf += "append:";
-	}
-
-	urlbuf += method;
-	urlbuf += ":";
 	urlbuf += full_path;
 	actual_url = strdup(urlbuf.Value());
 
 	dprintf(D_SYSCALLS,"\tactual_url: %s\n",actual_url);
 
 	return 0;
-}
-
-static void append_buffer_info( MyString &url, const char *method, char const *path )
-{
-	MyString buffer_list;
-	MyString buffer_string;
-	MyString dir;
-	MyString file;
-	int s,bs,ps;
-	int result;
-
-	filename_split(path,dir,file);
-
-	/* Do not buffer special device files, whether local or remote */
-	if(!strncmp(path,"/dev/",5)) return;
-
-	/* Get the default buffer setting */
-	pseudo_get_buffer_info( &s, &bs, &ps );
-
-	/* Now check for individual file overrides */
-	/* These lines have the same syntax as a remap list */
-
-	if(Shadow->getJobAd()->LookupString(ATTR_BUFFER_FILES,buffer_list)) {
-		if( filename_remap_find(buffer_list.Value(),path,buffer_string) ||
-		    filename_remap_find(buffer_list.Value(),file.Value(),buffer_string) ) {
-
-			/* If the file is merely mentioned, turn on the default buffer */
-			url += "buffer:";
-
-			/* If there is also a size setting, use that */
-			result = sscanf(buffer_string.Value(),"(%d,%d)",&s,&bs);
-			if( result==2 ) url += buffer_string;
-
-			return;
-		}
-	}
-
-	/* Turn on buffering if the value is set and is not special or local */
-	/* In this case, use the simple syntax 'buffer:' so as not to confuse old libs */
-
-	if( s>0 && bs>0 && strcmp(method,"local") && strcmp(method,"special")  ) {
-		url += "buffer:";
-	}
-}
-
-/* Return true if this JobAd attribute contains this path */
-
-static int attr_list_has_file( const char *attr, const char *path )
-{
-	char const *file;
-	MyString str;
-
-	file = condor_basename(path);
-
-	Shadow->getJobAd()->LookupString(attr,str);
-	StringList list(str.Value());
-
-	if( list.contains_withwildcard(path) || list.contains_withwildcard(file) ) {
-		return 1;
-	} else {
-		return 0;
-	}
-}
-
-static int use_append( const char * /* method */, const char *path )
-{
-	return attr_list_has_file( ATTR_APPEND_FILES, path );
-}
-
-static int use_compress( const char * /* method */, const char *path )
-{
-	return attr_list_has_file( ATTR_COMPRESS_FILES, path );
-}
-
-static int use_fetch( const char * /* method */, const char *path )
-{
-	return attr_list_has_file( ATTR_FETCH_FILES, path );
 }
 
 /*
@@ -468,145 +351,6 @@ int pseudo_get_buffer_info( int *bytes_out, int *block_size_out, int *prefetch_b
 	return 0;
 }
 
-static int use_local_access( const char *file )
-{
-	return
-		!strcmp(file,"/dev/null") ||
-		!strcmp(file,"/dev/zero") ||
-		attr_list_has_file( ATTR_LOCAL_FILES, file );
-}
-
-/*
-"special" access means open the file locally, and also protect it by preventing checkpointing while it is open.   This needs to be applied to sockets (not trapped here) and special files that take the place of sockets.
-*/
-
-static int use_special_access( const char *file )
-{
-	return
-		!strcmp(file,"/dev/tcp") ||
-		!strcmp(file,"/dev/udp") ||
-		!strcmp(file,"/dev/icmp") ||
-		!strcmp(file,"/dev/ip");	
-}
-
-static int access_via_afs( const char * /* file */ )
-{
-	char *my_fs_domain=0;
-	char *remote_fs_domain=0;
-	int result=0;
-
-	dprintf( D_SYSCALLS, "\tentering access_via_afs()\n" );
-
-	my_fs_domain = param("FILESYSTEM_DOMAIN");
-	thisRemoteResource->getFilesystemDomain(remote_fs_domain);
-
-	if(!param_boolean_crufty("NONSTD_USE_AFS", false)) {
-		dprintf( D_SYSCALLS, "\tnot configured to use AFS for file access\n" );
-		goto done;
-	}
-
-	if(!my_fs_domain) {
-		dprintf( D_SYSCALLS, "\tmy FILESYSTEM_DOMAIN is not defined\n" );
-		goto done;
-	}
-
-	if(!remote_fs_domain) {
-		dprintf( D_SYSCALLS, "\tdon't know FILESYSTEM_DOMAIN of executing machine\n" );
-		goto done;
-	}
-
-	dprintf( D_SYSCALLS,
-		"\tMy_FS_Domain = \"%s\", Executing_FS_Domain = \"%s\"\n",
-		my_fs_domain,
-		remote_fs_domain
-	);
-
-	if( strcmp(my_fs_domain,remote_fs_domain) != MATCH ) {
-		dprintf( D_SYSCALLS, "\tFilesystem domains don't match\n" );
-		goto done;
-	}
-
-	result = 1;
-
-	done:
-	dprintf(D_SYSCALLS,"\taccess_via_afs() returning %s\n", result ? "TRUE" : "FALSE" );
-	if(my_fs_domain) free(my_fs_domain);
-	if(remote_fs_domain) free(remote_fs_domain);
-	return result;
-}
-
-static int access_via_nfs( const char * /* file */ )
-{
-	char *my_uid_domain=0;
-	char *my_fs_domain=0;
-	char *remote_uid_domain=0;
-	char *remote_fs_domain=0;
-	int result = 0;
-
-	dprintf( D_SYSCALLS, "\tentering access_via_nfs()\n" );
-
-	my_uid_domain = param("UID_DOMAIN");
-	my_fs_domain = param("FILESYSTEM_DOMAIN");
-
-	thisRemoteResource->getUidDomain(remote_uid_domain);
-	thisRemoteResource->getFilesystemDomain(remote_fs_domain);
-
-	if( !param_boolean_crufty("NONSTD_USE_NFS", false) ) {
-		dprintf( D_SYSCALLS, "\tnot configured to use NFS for file access\n" );
-		goto done;
-	}
-
-	if( !my_uid_domain ) {
-		dprintf( D_SYSCALLS, "\tdon't know my UID domain\n" );
-		goto done;
-	}
-
-	if( !my_fs_domain ) {
-		dprintf( D_SYSCALLS, "\tdon't know my FS domain\n" );
-		goto done;
-	}
-
-	if( !remote_uid_domain ) {
-		dprintf( D_SYSCALLS, "\tdon't know UID domain of executing machine\n" );
-		goto done;
-	}
-
-	if( !remote_fs_domain ) {
-		dprintf( D_SYSCALLS, "\tdon't know FS domain of executing machine\n" );
-		goto done;
-	}
-
-	dprintf( D_SYSCALLS,
-		"\tMy_FS_Domain = \"%s\", Executing_FS_Domain = \"%s\"\n",
-		my_fs_domain,
-		remote_fs_domain
-	);
-
-	dprintf( D_SYSCALLS,
-		"\tMy_UID_Domain = \"%s\", Executing_UID_Domain = \"%s\"\n",
-		my_uid_domain,
-		remote_uid_domain
-	);
-
-	if( strcmp(my_fs_domain,remote_fs_domain) != MATCH ) {
-		dprintf( D_SYSCALLS, "\tFilesystem domains don't match\n" );
-		goto done;
-	}
-
-	if( strcmp(my_uid_domain,remote_uid_domain) != MATCH ) {
-		dprintf( D_SYSCALLS, "\tUID domains don't match\n" );
-		goto done;
-	}
-
-	result = 1;
-
-	done:
-	dprintf( D_SYSCALLS, "\taccess_via_NFS() returning %s\n", result ? "TRUE" : "FALSE" );
-	if (remote_fs_domain) free(remote_fs_domain);
-	if (remote_uid_domain) free(remote_uid_domain);
-	return result;
-}
-
 int
 pseudo_ulog( ClassAd *ad )
 {
@@ -623,7 +367,7 @@ pseudo_ulog( ClassAd *ad )
 
 	if(!event) {
 		MyString add_str;
-		ad->sPrint(add_str);
+		sPrintAd(add_str, *ad);
 		dprintf(
 		  D_ALWAYS,
 		  "invalid event ClassAd in pseudo_ulog: %s\n",
@@ -673,7 +417,7 @@ pseudo_ulog( ClassAd *ad )
 
 	if( !event_already_logged && !Shadow->uLog.writeEvent( event, ad ) ) {
 		MyString add_str;
-		ad->sPrint(add_str);
+		sPrintAd(add_str, *ad);
 		dprintf(
 		  D_ALWAYS,
 		  "unable to log event in pseudo_ulog: %s\n",

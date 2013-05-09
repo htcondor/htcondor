@@ -113,8 +113,8 @@ CredDaemon::initialize_classad()
 {
 	m_classad.Clear();
 
-	m_classad.SetMyTypeName(CREDD_ADTYPE);
-	m_classad.SetTargetTypeName("");
+	SetMyTypeName(m_classad, CREDD_ADTYPE);
+	SetTargetTypeName(m_classad, "");
 
 	MyString line;
 
@@ -140,8 +140,8 @@ void
 CredDaemon::invalidate_ad()
 {
 	ClassAd query_ad;
-	query_ad.SetMyTypeName(QUERY_ADTYPE);
-	query_ad.SetTargetTypeName(CREDD_ADTYPE);
+	SetMyTypeName(query_ad, QUERY_ADTYPE);
+	SetTargetTypeName(query_ad, CREDD_ADTYPE);
 
 	MyString line;
 	line.formatstr("%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS, ATTR_NAME, m_name);

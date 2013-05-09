@@ -1698,7 +1698,11 @@ pseudo_chdir( const char *path )
 int
 pseudo_register_fs_domain( const char *fs_domain )
 {
-	strcpy( Executing_Filesystem_Domain, fs_domain );
+	if( strlen ( fs_domain ) < MAX_STRING ) {
+		strcpy( Executing_Filesystem_Domain, fs_domain );
+	} else {
+		EXCEPT( "Attempt to overflow Executing_Filesystem_Domain with %s", fs_domain );
+	}
 	dprintf( D_SYSCALLS, "\tFS_Domain = \"%s\"\n", fs_domain );
 	return 0;
 }
@@ -1709,7 +1713,11 @@ pseudo_register_fs_domain( const char *fs_domain )
 int
 pseudo_register_uid_domain( const char *uid_domain )
 {
-	strcpy( Executing_UID_Domain, uid_domain );
+	if( strlen( uid_domain ) < MAX_STRING ) {
+		strcpy( Executing_UID_Domain, uid_domain );
+	} else {
+		EXCEPT( "Attempt to overflow Executing_UID_Domain with %s", uid_domain );
+	}
 	dprintf( D_SYSCALLS, "\tUID_Domain = \"%s\"\n", uid_domain );
 	return 0;
 }

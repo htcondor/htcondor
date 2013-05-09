@@ -43,8 +43,22 @@ configuration variable \Macro{ABSENT\_EXPIRE\_ADS\_AFTER}.
 A value of 0 for this variable means that the ClassAds are never discarded,
 and the default value is thirty days.
 
-Absent ClassAds are only returned by the \Condor{collector} when 
-using the \Opt{-collector} option to \Condor{status},
+Absent ClassAds are only returned by the \Condor{collector} and displayed
+when the \Opt{-absent} option to \Condor{status} is specified,
 or when the absent machine ClassAd attribute is mentioned on 
 the \Condor{status} command line.  
-This renders absent ClassAds invisible to the rest of the HTCondor infrastructure.
+This renders absent ClassAds invisible to the rest of 
+the HTCondor infrastructure.
+
+A daemon may inform the \Condor{collector} that the daemon's
+ClassAd should not expire, but should be removed right away;
+the daemon asks for its ClassAd to be invalidated.
+It may be useful to place an invalidated ClassAd in the absent state,
+instead of having it removed as an invalidated ClassAd.
+An example of a ClassAd that could benefit from being absent
+is a system with an uninterruptible power supply that shuts
+down cleanly but unexpectedly as a result of a power outage.
+To cause all invalidated ClassAds to become absent instead of invalidated, 
+set \Macro{EXPIRE\_INVALIDATED\_ADS} to \Expr{True}.
+Invalidated ClassAds will instead be treated as if they expired, 
+including when evaluating \MacroNI{ABSENT\_REQUIREMENTS}.

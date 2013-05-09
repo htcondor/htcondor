@@ -268,6 +268,7 @@ Matchmaker ()
 	want_globaljobprio = false;
 	want_matchlist_caching = false;
 	ConsiderPreemption = true;
+	ConsiderEarlyPreemption = false;
 	want_nonblocking_startd_contact = true;
 
 	completedLastCycleTime = (time_t) 0;
@@ -398,6 +399,12 @@ initialize ()
 		(CommandHandlercpp) &Matchmaker::GET_PRIORITY_commandHandler, 
 			"GET_PRIORITY_commandHandler", this, READ);
     daemonCore->Register_Command (GET_PRIORITY_ROLLUP, "GetPriorityRollup",
+		(CommandHandlercpp) &Matchmaker::GET_PRIORITY_ROLLUP_commandHandler, 
+			"GET_PRIORITY_ROLLUP_commandHandler", this, READ);
+	// CRUFT: The original command int for GET_PRIORITY_ROLLUP conflicted
+	//   with DRAIN_JOBS. In 7.9.6, we assigned a new command int to
+	//   GET_PRIORITY_ROLLUP. Recognize the old int here for now...
+    daemonCore->Register_Command (GET_PRIORITY_ROLLUP_OLD, "GetPriorityRollup",
 		(CommandHandlercpp) &Matchmaker::GET_PRIORITY_ROLLUP_commandHandler, 
 			"GET_PRIORITY_ROLLUP_commandHandler", this, READ);
     daemonCore->Register_Command (GET_RESLIST, "GetResList",
@@ -619,6 +626,10 @@ reinitialize ()
 	want_globaljobprio = param_boolean("USE_GLOBAL_JOB_PRIOS",false);
 	want_matchlist_caching = param_boolean("NEGOTIATOR_MATCHLIST_CACHING",true);
 	ConsiderPreemption = param_boolean("NEGOTIATOR_CONSIDER_PREEMPTION",true);
+	ConsiderEarlyPreemption = param_boolean("NEGOTIATOR_CONSIDER_EARLY_PREEMPTION",false);
+	if( ConsiderEarlyPreemption && !ConsiderPreemption ) {
+		dprintf(D_ALWAYS,"WARNING: NEGOTIATOR_CONSIDER_EARLY_PREEMPTION=true will be ignored, because NEGOTIATOR_CONSIDER_PREEMPTION=false\n");
+	}
 	want_inform_startd = param_boolean("NEGOTIATOR_INFORM_STARTD", true);
 	want_nonblocking_startd_contact = param_boolean("NEGOTIATOR_USE_NONBLOCKING_STARTD_CONTACT",true);
 
@@ -884,7 +895,7 @@ GET_PRIORITY_commandHandler (int, Stream *strm)
 	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
 	AttrList* ad=accountant.ReportState();
 	
-	if (!ad->putAttrList(*strm) ||
+	if (!putClassAdNoTypes(strm, *ad) ||
 	    !strm->end_of_message())
 	{
 		dprintf (D_ALWAYS, "Could not send priority information\n");
@@ -910,7 +921,7 @@ GET_PRIORITY_ROLLUP_commandHandler(int, Stream *strm) {
     dprintf(D_ALWAYS, "Getting state information from the accountant\n");
     AttrList* ad = accountant.ReportState(true);
 
-    if (!ad->putAttrList(*strm) ||
+    if (!putClassAdNoTypes(strm, *ad) ||
         !strm->end_of_message()) {
         dprintf (D_ALWAYS, "Could not send priority information\n");
         delete ad;
@@ -942,7 +953,7 @@ GET_RESLIST_commandHandler (int, Stream *strm)
 	AttrList* ad=accountant.ReportState(submitter);
 	dprintf (D_ALWAYS,"Getting state information from the accountant\n");
 	
-	if (!ad->putAttrList(*strm) ||
+	if (!putClassAdNoTypes(strm, *ad) ||
 	    !strm->end_of_message())
 	{
 		dprintf (D_ALWAYS, "Could not send resource list\n");
@@ -1262,15 +1273,13 @@ negotiationTime ()
         effectivePoolsize = count_effective_slots(startdAds, NULL);
     }
 
-	// if don't care about preemption, we can trim out all non Unclaimed ads now.
+	// Trim out ads that we should not bother considering
+	// during matchmaking now.  (e.g. when NEGOTIATOR_CONSIDER_PREEMPTION=False)
 	// note: we cannot trim out the Unclaimed ads before we call CheckMatches,
 	// otherwise CheckMatches will do the wrong thing (because it will not see
 	// any of the claimed machines!).
-	int num_trimmed = trimStartdAds(startdAds);
-	if ( num_trimmed > 0 ) {
-		dprintf(D_FULLDEBUG,
-			"Trimmed out %d startd ads not Unclaimed\n",num_trimmed);
-	}
+
+	trimStartdAds(startdAds);
     negotiation_cycle_stats[0]->trimmed_slots = startdAds.MyLength();
     negotiation_cycle_stats[0]->candidate_slots = startdAds.MyLength();
 
@@ -1350,7 +1359,23 @@ negotiationTime ()
             ad->LookupInteger(ATTR_IDLE_JOBS, numidle);
             int numrunning=0;
             ad->LookupInteger(ATTR_RUNNING_JOBS, numrunning);
-            group->requested += numrunning + numidle;
+
+			// The HGQ codes uses number of idle jobs to determine how to allocate
+			// surplus.  This should really be weighted demand when slot weights
+			// and paritionable slot are in use.  The schedd can tell us the cpu-weighed
+			// demand in ATTR_WEIGHTED_IDLE_JOBS.  If this knob is set, use it.
+
+			if (param_boolean("NEGOTIATOR_USE_WEIGHTED_DEMAND", false)) {
+				int weightedIdle = numidle;
+				int weightedRunning = numrunning;
+
+				ad->LookupInteger(ATTR_WEIGHTED_IDLE_JOBS, weightedIdle);
+				ad->LookupInteger(ATTR_WEIGHTED_RUNNING_JOBS, weightedRunning);
+
+            	group->requested += weightedRunning + weightedIdle;
+			} else {
+            	group->requested += numrunning + numidle;
+			}
 			group->currently_requested = group->requested;
         }
 
@@ -2773,8 +2798,38 @@ trimStartdAds(ClassAdListDoesNotDeleteAds &startdAds)
 		// getting rid of ads that are not in the Unclaimed state.
 	
 	if ( ConsiderPreemption ) {
-			// we need to keep all the ads.
-		return 0;
+		if( ConsiderEarlyPreemption ) {
+				// we need to keep all the ads.
+			return 0;
+		}
+
+			// Remove ads with retirement time, because we are not
+			// considering early preemption
+		startdAds.Open();
+		while( (ad=startdAds.Next()) ) {
+			int retirement_remaining;
+			if(ad->LookupInteger(ATTR_RETIREMENT_TIME_REMAINING, retirement_remaining) &&
+			   retirement_remaining > 0 )
+			{
+				if( IsDebugLevel(D_FULLDEBUG) ) {
+					std::string name,user;
+					ad->LookupString(ATTR_NAME,name);
+					ad->LookupString(ATTR_REMOTE_USER,user);
+					dprintf(D_FULLDEBUG,"Trimming %s, because %s still has %ds of retirement time.\n",
+							name.c_str(), user.c_str(), retirement_remaining);
+				}
+				startdAds.Remove(ad);
+				removed++;
+			}
+		}
+		startdAds.Close();
+
+		if ( removed > 0 ) {
+			dprintf(D_FULLDEBUG,
+					"Trimmed out %d startd ads due to NEGOTIATOR_CONSIDER_EARLY_PREEMPTION=False\n",
+					removed);
+		}
+		return removed;
 	}
 
 	startdAds.Open();
@@ -2790,6 +2845,11 @@ trimStartdAds(ClassAdListDoesNotDeleteAds &startdAds)
 	}
 	startdAds.Close();
 
+	if ( removed > 0 ) {
+		dprintf(D_FULLDEBUG,
+				"Trimmed out %d startd ads due to NEGOTIATOR_CONSIDER_PREEMPTION=False\n",
+				removed);
+	}
 	return removed;
 }
 
@@ -2881,7 +2941,7 @@ obtainAdsFromCollector (
 		// let's see if we've already got it - first lookup the sequence 
 		// number from the new ad, then let's look and see if we've already
 		// got something for this one.		
-		if(!strcmp(ad->GetMyTypeName(),STARTD_ADTYPE)) {
+		if(!strcmp(GetMyTypeName(*ad),STARTD_ADTYPE)) {
 
 			// first, let's make sure that will want to actually use this
 			// ad, and if we can use it (old startds had no seq. number)
@@ -3032,8 +3092,8 @@ obtainAdsFromCollector (
 			OptimizeMachineAdForMatchmaking( ad );
 
 			startdAds.Insert(ad);
-		} else if( !strcmp(ad->GetMyTypeName(),SUBMITTER_ADTYPE) ||
-				   ( !strcmp(ad->GetMyTypeName(),SCHEDD_ADTYPE) &&
+		} else if( !strcmp(GetMyTypeName(*ad),SUBMITTER_ADTYPE) ||
+				   ( !strcmp(GetMyTypeName(*ad),SCHEDD_ADTYPE) &&
 					 !ad->LookupExpr(ATTR_NUM_USERS) ) ) {
 				// CRUFT: Before 7.3.2, submitter ads had a MyType of
 				//   "Scheduler". The only way to tell the difference
@@ -3312,7 +3372,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 		negotiate_ad.Assign(ATTR_AUTO_CLUSTER_ATTRS,job_attr_references ? job_attr_references : "");
 		// Tell the schedd a submitter tag value (used for flocking levels)
 		negotiate_ad.Assign(ATTR_SUBMITTER_TAG,submitter_tag.Value());
-		if( !negotiate_ad.put( *sock ) ) {
+		if( !putClassAd( sock, negotiate_ad ) ) {
 			dprintf (D_ALWAYS, "    Failed to send negotiation header to %s\n",
 					 schedd_id.Value() );
 			sockCache->invalidateSock(scheddAddr.Value());
@@ -3455,7 +3515,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 
 		// 2d.  get the request 
 		dprintf (D_FULLDEBUG,"    Got JOB_INFO command; getting classad/eom\n");
-		if (!request.initFromStream(*sock) || !sock->end_of_message())
+		if (!getClassAd(sock, request) || !sock->end_of_message())
 		{
 			dprintf(D_ALWAYS, "    JOB_INFO command not followed by ad/eom\n");
 			sock->end_of_message();
@@ -3503,7 +3563,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 
 		if( IsDebugLevel( D_JOB ) ) {
 			dprintf(D_JOB,"Searching for a matching machine for the following job ad:\n");
-			request.dPrint(D_JOB);
+			dPrintAd(D_JOB, request);
 		}
 
 		// 2e.  find a compatible offer for the request --- keep attempting
@@ -3910,7 +3970,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 
 		if( IsDebugVerbose(D_MACHINE) ) {
 			dprintf(D_MACHINE,"Testing whether the job matches with the following machine ad:\n");
-			candidate->dPrint(D_MACHINE);
+			dPrintAd(D_MACHINE, *candidate);
 		}
 
 			// the candidate offer and request must match
@@ -4426,7 +4486,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		"      Sending PERMISSION, claim id, startdAd to schedd\n");
 	if (!sock->put(PERMISSION_AND_AD) ||
 		!sock->put_secret(claim_id) ||
-		!offer->put(*sock)		||	// send startd ad to schedd
+		!putClassAd(sock, *offer)	||	// send startd ad to schedd
 		!sock->end_of_message())
 	{
 			send_failed = true;
@@ -5080,8 +5140,8 @@ init_public_ad()
 	if( publicAd ) delete( publicAd );
 	publicAd = new ClassAd();
 
-	publicAd->SetMyTypeName(NEGOTIATOR_ADTYPE);
-	publicAd->SetTargetTypeName("");
+	SetMyTypeName(*publicAd, NEGOTIATOR_ADTYPE);
+	SetTargetTypeName(*publicAd, "");
 
 	if( !NegotiatorName ) {
 		char* defaultName = NULL;
@@ -5150,8 +5210,8 @@ Matchmaker::invalidateNegotiatorAd( void )
 	}
 
 		// Set the correct types
-	cmd_ad.SetMyTypeName( QUERY_ADTYPE );
-	cmd_ad.SetTargetTypeName( NEGOTIATOR_ADTYPE );
+	SetMyTypeName( cmd_ad, QUERY_ADTYPE );
+	SetTargetTypeName( cmd_ad, NEGOTIATOR_ADTYPE );
 
 	line.formatstr( "%s = TARGET.%s == \"%s\"", ATTR_REQUIREMENTS,
 				  ATTR_NAME,

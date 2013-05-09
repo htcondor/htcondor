@@ -240,8 +240,8 @@ init_classad()
 	}
 	ad = new ClassAd();
 
-	ad->SetMyTypeName("JobServer");
-	ad->SetTargetTypeName("Daemon");
+	SetMyTypeName(*ad, "JobServer");
+	SetTargetTypeName(*ad, "Daemon");
 
 	char* default_name = default_daemon_name();
 		if( ! default_name ) {

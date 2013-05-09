@@ -84,21 +84,21 @@ convert_ad_to_adStruct(struct soap *s,
   ad_struct->__ptr[attr_index].type = STRING_ATTR;
   if (isDeepCopy) {
 	  ad_struct->__ptr[attr_index].value =
-		  (char *) soap_malloc(s, strlen(curr_ad->GetMyTypeName()) + 1);
-	  strcpy(ad_struct->__ptr[attr_index].value, curr_ad->GetMyTypeName());
+		  (char *) soap_malloc(s, strlen(GetMyTypeName(*curr_ad)) + 1);
+	  strcpy(ad_struct->__ptr[attr_index].value, GetMyTypeName(*curr_ad));
   } else {
-	  ad_struct->__ptr[attr_index].value = (char *) curr_ad->GetMyTypeName();
+	  ad_struct->__ptr[attr_index].value = (char *) GetMyTypeName(*curr_ad);
   }
   attr_index++;
   ad_struct->__ptr[attr_index].name = (char *) ATTR_TARGET_TYPE;
   ad_struct->__ptr[attr_index].type = STRING_ATTR;
   if (isDeepCopy) {
 	  ad_struct->__ptr[attr_index].value =
-		  (char *) soap_malloc(s, strlen(curr_ad->GetTargetTypeName()) + 1);
-	  strcpy(ad_struct->__ptr[attr_index].value, curr_ad->GetTargetTypeName());
+		  (char *) soap_malloc(s, strlen(GetTargetTypeName(*curr_ad)) + 1);
+	  strcpy(ad_struct->__ptr[attr_index].value, GetTargetTypeName(*curr_ad));
   } else {
 	  ad_struct->__ptr[attr_index].value =
-		  (char *) curr_ad->GetTargetTypeName();
+		  (char *) GetTargetTypeName(*curr_ad);
   }
   attr_index++;
   // And, ServerTime...
@@ -130,7 +130,7 @@ convert_ad_to_adStruct(struct soap *s,
 
 	// Ignore any attributes that are considered private - we don't wanna 
 	// be handing out private attributes to soap clients.
-	if ( ClassAd::ClassAdAttributeIsPrivate(name) )
+	if ( ClassAdAttributeIsPrivate(name) )
 	{
 		continue;
 	}
@@ -268,10 +268,10 @@ convert_adStruct_to_ad(struct soap *s,
 		// XXX: This is ugly, but needed because of how MyType and TargetType
 		// are treated specially in old classads.
 	if (name == ATTR_MY_TYPE) {
-		curr_ad->SetMyTypeName(value.Value());
+		SetMyTypeName(*curr_ad, value.Value());
 		continue;
 	} else if (name == ATTR_TARGET_TYPE) {
-		curr_ad->SetTargetTypeName(value.Value());
+		SetTargetTypeName(*curr_ad, value.Value());
 		continue;
 	}
 

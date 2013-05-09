@@ -460,7 +460,7 @@ UserProc::execute()
 	sigset_t	sigmask;
 	MyString	a_out_name;
 	MyString	shortname;
-	int		user_syscall_fd;
+	int		user_syscall_fd = -1;
 	const	int READ_END = 0;
 	const	int WRITE_END = 1;
 	int		pipe_fds[2];

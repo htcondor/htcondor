@@ -300,7 +300,7 @@ QuillErrCode FILESQL::file_newEvent(const char *eventType, AttrList *info) {
 		MyString temp;
 		const char *tempv;
 	
-		retval = info->sPrint(temp);
+		retval = sPrintAd(temp, *info);
 		tempv = temp.Value();
 		retval = write(outfiledes,tempv, strlen(tempv));
 
@@ -347,14 +347,14 @@ QuillErrCode FILESQL::file_updateEvent(const char *eventType,
 		MyString temp, temp1;
 		const char *tempv;
 
-		retval = info->sPrint(temp);
+		retval = sPrintAd(temp, *info);
 		tempv = temp.Value();
 		retval = write(outfiledes,tempv, strlen(tempv));
 
 		retval = write(outfiledes,"***",3); /* Now the delimitor*/
 		retval = write(outfiledes,"\n",1); /* Now the newline*/
 
-		retval = condition->sPrint(temp1);
+		retval = sPrintAd(temp1, *condition);
 		tempv = temp1.Value();
 		retval = write(outfiledes,tempv, strlen(tempv));
 		
@@ -400,7 +400,7 @@ QuillErrCode FILESQL::file_deleteEvent(const char *eventType,
 		MyString temp;
 		const char *tempv;
 	
-		retval = condition->sPrint(temp);
+		retval = sPrintAd(temp, *condition);
 		tempv = temp.Value();
 		retval = write(outfiledes,tempv, strlen(tempv));
 

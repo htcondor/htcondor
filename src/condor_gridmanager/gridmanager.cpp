@@ -958,7 +958,7 @@ contact_schedd_next_add_job:
 		        }
 			else {
 				dprintf (D_FULLDEBUG, "Retrieved updated attributes for job %d.%d\n", job_id.cluster, job_id.proc);
-				updates.dPrint(D_JOB);
+				dPrintAd(D_JOB, updates);
 			}
 			if ( BaseJob::JobsByProcId.lookup( job_id, curr_job ) == 0 ) {
 				curr_job->JobAdUpdateFromSchedd( &updates, false );

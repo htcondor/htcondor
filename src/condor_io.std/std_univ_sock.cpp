@@ -148,7 +148,7 @@ StdUnivSock::get_sinful_peer()
         return _sinful_peer_buf;
     }
 	MyString sinful_string = _who.to_sinful();
-	ASSERT(sinful_string.Length() < sizeof(_sinful_peer_buf));
+	ASSERT(sinful_string.Length() < (int)sizeof(_sinful_peer_buf));
 	strcpy(_sinful_peer_buf, sinful_string.Value());
 	return _sinful_peer_buf;
 }

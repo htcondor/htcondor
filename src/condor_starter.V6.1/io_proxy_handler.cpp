@@ -77,7 +77,7 @@ int IOProxyHandler::handle_request( Stream *s )
 		}
 		return KEEP_STREAM;
 	} else {
-		dprintf(D_ALWAYS,"IOProxyHandler: closing connection to %s\n",r->peer_ip_str());
+		dprintf(D_FULLDEBUG,"IOProxyHandler: closing connection to %s\n",r->peer_ip_str());
 		delete this;
 		return ~KEEP_STREAM;
 	}
@@ -227,18 +227,12 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		if(result==0) {
 			dprintf(D_SYSCALLS,"Directed to use url %s\n",url);
 			ASSERT( strlen(url) < CHIRP_LINE_MAX );
-			if(!strncmp(url,"remote:",7)) {
-				strncpy(path,url+7,CHIRP_LINE_MAX);
-			} else if(!strncmp(url,"buffer:remote:",14)) {
-				strncpy(path,url+14,CHIRP_LINE_MAX);
-			} else {
-				EXCEPT("File %s maps to url %s, which I don't know how to open.\n",path,url);
-			}
 		} else {
 			EXCEPT("Unable to map file %s to a url: %s\n",path,strerror(errno));
 		}
 
 		dprintf(D_SYSCALLS,"Which simplifies to file %s\n",path);
+
 
 		flags = 0;
 
@@ -570,7 +564,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		sprintf(line, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
-		if(result >= 0) {
+		if ((length > 0) && (result >= 0)) {
 			char *buffer = (char*) malloc(length);
 			if(buffer) {
 				result = r->get_bytes_raw(buffer,length);

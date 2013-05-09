@@ -83,7 +83,7 @@ std::string amazonURLEncode( const std::string & input )
         } else {
             char percentEncode[4];
             int written = snprintf( percentEncode, 4, "%%%.2hhX", input[i] );
-            assert( written == 3 );
+            ASSERT( written == 3 );
             output.append( percentEncode );
         }
     }
@@ -203,7 +203,7 @@ bool AmazonRequest::SendRequest() {
     // be of the form '[http[s]|x509|euca3[s]]://hostname[:port][/path]*'.
     Regex r; int errCode = 0; const char * errString = 0;
     bool patternOK = r.compile( "([^:]+)://(([^/]+)(/.*)?)", & errString, & errCode );
-    assert( patternOK );
+    ASSERT( patternOK );
     ExtArray<MyString> groups(5);
     bool matchFound = r.match( this->serviceURL.c_str(), & groups );
     if( (! matchFound) || (groups[1] != "http" && groups[1] != "https" && groups[1] != "x509" && groups[1] != "euca3" && groups[1] != "euca3s" ) ) {
@@ -534,6 +534,9 @@ bool AmazonRequest::SendRequest() {
         // this->errorCode = "E_HTTP_RESPONSE_NOT_200";
         formatstr( this->errorCode, "E_HTTP_RESPONSE_NOT_200 (%lu)", responseCode );
         this->errorMessage = resultString;
+        if( this->errorMessage.empty() ) {
+            formatstr( this->errorMessage, "HTTP response was %lu, not 200, and no body was returned.", responseCode );
+        }
         dprintf( D_ALWAYS, "Query did not return 200 (%lu), failing.\n",
             responseCode );
         dprintf( D_ALWAYS, "Failure response text was '%s'.\n", resultString.c_str() );
@@ -741,7 +744,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
         if( vmStartRequest.instanceID.empty() ) {
             dprintf( D_ALWAYS, "Got result from endpoint that did not include an instance ID, failing.  Response follows.\n" );
             dprintf( D_ALWAYS, "-- RESPONSE BEGINS --\n" );
-            dprintf( D_ALWAYS, vmStartRequest.resultString.c_str() );
+            dprintf( D_ALWAYS, "%s", vmStartRequest.resultString.c_str() );
             dprintf( D_ALWAYS, "-- RESPONSE ENDS --\n" );
             result_string = create_failure_result( requestID, "Could not find instance ID in response from server.  Check the EC2 GAHP log for details.", "E_NO_INSTANCE_ID" );
         } else {
@@ -912,7 +915,7 @@ bool AmazonVMStartSpot::workerFunction( char ** argv, int argc, std::string & re
         if( vmSpotRequest.spotRequestID.empty() ) {
             dprintf( D_ALWAYS, "Got a result from endpoint that did not include a spot request ID, failing.  Response follows.\n" );
             dprintf( D_ALWAYS, "-- RESPONSE BEGINS --\n" );
-            dprintf( D_ALWAYS, vmSpotRequest.resultString.c_str() );
+            dprintf( D_ALWAYS, "%s", vmSpotRequest.resultString.c_str() );
             dprintf( D_ALWAYS, "-- RESPONSE ENDS --\n" );
             result_string = create_failure_result( requestID, "Could not find spot request ID in repsonse from server.  Check the EC2 GAHP log for details.", "E_NO_SPOT_REQUEST_ID" );
             // We don't return false here, because this isn't an error;

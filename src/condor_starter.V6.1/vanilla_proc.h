@@ -75,6 +75,15 @@ private:
 	int m_escalation_tid;
 #endif
 	std::string m_network_name;
+
+	// Configure OOM killer for this job
+	int m_memory_limit; // Memory limit, in MB.
+	int m_oom_fd; // The file descriptor which recieves events
+	int m_oom_efd; // The event FD to watch
+	int setupOOMScore(int new_score);
+	int outOfMemoryEvent(int fd);
+	int setupOOMEvent(const std::string & cgroup_string);
+
 };
 
 #endif

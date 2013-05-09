@@ -38,6 +38,8 @@
 // all compilers!), but the bloat is in the text segment - shared on all processes!
 
 #define ATTR_ABSENT                    "Absent"
+#define ATTR_ACCT_GROUP  "AcctGroup"
+#define ATTR_ACCT_GROUP_USER  "AcctGroupUser"
 #define ATTR_ACCOUNTING_GROUP          "AccountingGroup"
 #define ATTR_ACTION_CONSTRAINT  "ActionConstraint"
 #define ATTR_ACTION_IDS  "ActionIds"
@@ -409,6 +411,7 @@
 #define ATTR_MASTER_IP_ADDR  "MasterIpAddr"
 #define ATTR_MAX_HOSTS  "MaxHosts"
 #define ATTR_MAX_JOB_RETIREMENT_TIME  "MaxJobRetirementTime"
+#define ATTR_RETIREMENT_TIME_REMAINING "RetirementTimeRemaining"
 #define ATTR_MAX_JOBS_RUNNING  "MaxJobsRunning"
 #define ATTR_MEMORY  "Memory"
 #define ATTR_MEMORY_USAGE  "MemoryUsage"
@@ -753,6 +756,7 @@
 #define ATTR_GLOBUS_RESUBMIT_CHECK  "GlobusResubmit"
 #define ATTR_REMATCH_CHECK  "Rematch"
 
+#define ATTR_SEC_AUTHENTICATED_NAME  "AuthenticatedName"
 #define ATTR_SEC_AUTHENTICATION_METHODS_LIST  "AuthMethodsList"
 #define ATTR_SEC_AUTHENTICATION_METHODS  "AuthMethods"
 #define ATTR_SEC_CRYPTO_METHODS  "CryptoMethods"
@@ -784,6 +788,7 @@
 #define ATTR_SEC_COOKIE  "Cookie"
 extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SEC_TRIED_AUTHENTICATION  "TriedAuthentication"
+#define ATTR_SEC_AUTHORIZATION_SUCCEEDED  "AuthorizationSucceeded"
 
 #define ATTR_MULTIPLE_TASKS_PER_PVMD  "MultipleTasksPerPvmd"
 
@@ -854,6 +859,9 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_VM_CKPT_MAC  "VM_CkptMac"
 #define ATTR_VM_CKPT_IP  "VM_CkptIP"
 
+#define ATTR_WEIGHTED_IDLE_JOBS "WeightedIdleJobs"
+#define ATTR_WEIGHTED_RUNNING_JOBS "WeightedRunningJobs"
+
 //************* Added for EC2 Jobs ***************************//
 #define ATTR_EC2_ACCESS_KEY_ID  "EC2AccessKeyId"
 #define ATTR_EC2_SECRET_ACCESS_KEY  "EC2SecretAccessKey"
@@ -882,6 +890,11 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_REQUEST_CPUS  "RequestCpus"
 #define ATTR_REQUEST_MEMORY  "RequestMemory"
 #define ATTR_REQUEST_DISK  "RequestDisk"
+
+//------------------------------------------------------------
+#define ATTR_REQUEST_MNTS  "RequestMounts"
+#define ATTR_NAMED_MOUNT_PTS "Mounts"
+//------------------------------------------------------------
 
 // machine resource prefixes
 #define ATTR_REQUEST_PREFIX  "Request"

@@ -1923,38 +1923,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ckpt_server,server2
 id=87
 
-[STORK_TMP_CRED_DIR]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Stork Tmp Cred Dir
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=stork,dap_server
-id=88
-
-[STORK_MODULE_DIR]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Stork Module Dir
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=stork,dap_server
-id=89
-
 [LIBEXEC]
 aliases=
 default=$(RELEASE_DIR)/libexec
@@ -1969,7 +1937,7 @@ customization=seldom
 friendly_name=Libexec
 usage=Pathnames
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=stork,dap_server
+tags=dap_server
 id=90
 
 [LOG]
@@ -1985,24 +1953,8 @@ customization=seldom
 friendly_name=Log
 usage=Pathnames
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=stork,dap_server
+tags=dap_server
 id=91
-
-[STORK_ENABLE_DEPRECATED_USERLOG]
-aliases=
-default=false
-version=0.0.0
-range=.*
-state=default
-type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Stork Enable Deprecated Userlog
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=stork,dap_logger
-id=92
 
 [XAUTHORITY_USERS]
 aliases=
@@ -3456,6 +3408,22 @@ is_macro=false
 reconfig=true
 customization=seldom
 friendly_name=Glexec Job
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=daemon_core,daemon_core
+id=182
+
+[GLEXEC_HOLD_ON_INITIAL_FAILURE]
+aliases=
+default=true
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Glexec Hold on Initial Failure
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
@@ -7352,6 +7320,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=450
 
+[NEGOTIATOR_CONSIDER_EARLY_PREEMPTION]
+aliases=
+default=false
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Negotiator Consider Early Preemption
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,matchmaker
+id=450
+
 [NEGOTIATOR_INFORM_STARTD]
 aliases=
 default=true
@@ -10797,7 +10781,7 @@ id=614
 
 [TRANSFER_QUEUE_USER_EXPR]
 aliases=
-default=User
+default=strcat("Owner_",Owner)
 version=7.9.1
 range=.*
 state=default
@@ -10922,3 +10906,67 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=shadow,baseshadow
 id=612
+
+[BASE_CGROUP]
+aliases=
+default=
+version=7.9.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Enables and names the base kernel cgroup for job management
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=starter
+id=613
+
+[CGROUP_MEMORY_LIMIT_POLICY]
+aliases=
+default=none
+version=7.9.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Determines whether cgroup base memory enforcement should happen
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=starter
+id=614
+
+[BATCH_GAHP_CHECK_STATUS_ATTEMPTS]
+aliases=
+default=5
+version=7.9.5
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Determines how many failed check status attempts before failing an infn gahp job.
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=gridmanager,infnbatchjob
+id=612
+
+[PER_JOB_NAMESPACES]
+aliases=
+default=true
+version=7.9.6
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Determines if job creates their own namespace
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=starter
+id=615

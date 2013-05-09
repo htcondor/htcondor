@@ -688,6 +688,9 @@ init_params()
 	new_bin_restart_mode = GRACEFUL;
 	char * restart_mode = param("MASTER_NEW_BINARY_RESTART");
 	if (restart_mode) {
+#if 1
+		StopStateT mode = StringToStopState(restart_mode);
+#else
 		static const struct {
 			const char * text;
 			StopStateT   mode;
@@ -705,6 +708,7 @@ init_params()
 				break;
 			}
 		}
+#endif
 		if (mode == (StopStateT)-1)	{
 			dprintf(D_ALWAYS, "%s is not a valid value for MASTER_NEW_BINARY_RESTART. using GRACEFUL\n", restart_mode);
 		}
@@ -876,8 +880,8 @@ init_classad()
 	if( ad ) delete( ad );
 	ad = new ClassAd();
 
-	ad->SetMyTypeName(MASTER_ADTYPE);
-	ad->SetTargetTypeName("");
+	SetMyTypeName(*ad, MASTER_ADTYPE);
+	SetTargetTypeName(*ad, "");
 
 	if (MasterName) {
 		ad->Assign(ATTR_NAME, MasterName);
@@ -1073,8 +1077,8 @@ main_shutdown_graceful()
 void
 invalidate_ads() {
 	ClassAd cmd_ad;
-	cmd_ad.SetMyTypeName( QUERY_ADTYPE );
-	cmd_ad.SetTargetTypeName( MASTER_ADTYPE );
+	SetMyTypeName( cmd_ad, QUERY_ADTYPE );
+	SetTargetTypeName( cmd_ad, MASTER_ADTYPE );
 	
 	MyString line;
 	MyString escaped_name;
@@ -1091,6 +1095,45 @@ invalidate_ads() {
 	daemonCore->sendUpdates( INVALIDATE_MASTER_ADS, &cmd_ad, NULL, false );
 	delete [] default_name;
 }
+
+static const struct {
+	StopStateT state;
+	const char * name;
+} aStopStateNames[] = {
+	{ PEACEFUL, "PEACEFUL" },
+	{ GRACEFUL, "GRACEFUL" },
+	{ FAST,     "FAST" },
+	{ KILL,     "KILL" },
+	{ NONE,     "NEVER" }, { NONE, "NONE" }, { NONE, "NO" },
+};
+
+const char * StopStateToString(StopStateT state)
+{
+	// start by assuming that the index into the names table matches the state
+	if ((int)state < (int)COUNTOF(aStopStateNames) && state == aStopStateNames[state].state) {
+		return aStopStateNames[state].name;
+	}
+	// if the names table isn't packed and sorted, the brute force search it.
+	for (int ii = 0; ii < (int)COUNTOF(aStopStateNames); ++ii) {
+		if (aStopStateNames[ii].state == state) {
+			return aStopStateNames[ii].name;
+		}
+	}
+	return "??";
+}
+
+StopStateT StringToStopState(const char * psz)
+{
+	StopStateT state = (StopStateT)-1; // prime with -1 so we can detect bad input.
+	for (int ii = 0; ii < (int)COUNTOF(aStopStateNames); ++ii) {
+		if (MATCH == strcasecmp(psz, aStopStateNames[ii].name)) {
+			state = aStopStateNames[ii].state;
+			break;
+		}
+	}
+	return state;
+}
+
 
 time_t
 GetTimeStamp(char* file)
@@ -1354,7 +1397,7 @@ void init_firewall_exceptions() {
 	}
 
 	// Insert the master
-	if ( !wfh.addTrusted(master_image_path) ) {
+	if ( !SUCCEEDED(wfh.addTrusted(master_image_path)) ) {
 		dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
 				master_image_path);
@@ -1362,14 +1405,14 @@ void init_firewall_exceptions() {
 
 	// Insert daemons needed on a central manager
 	if ( (daemons.FindDaemon("NEGOTIATOR") != NULL) && negotiator_image_path ) {
-		if ( !wfh.addTrusted(negotiator_image_path) ) {
+		if ( !SUCCEEDED(wfh.addTrusted(negotiator_image_path)) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
 				negotiator_image_path);
 		}
 	}
 	if ( (daemons.FindDaemon("COLLECTOR") != NULL) && collector_image_path ) {
-		if ( !wfh.addTrusted(collector_image_path) ) {
+		if ( !SUCCEEDED(wfh.addTrusted(collector_image_path)) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
 				collector_image_path);
@@ -1379,31 +1422,31 @@ void init_firewall_exceptions() {
 	// Insert daemons needed on a submit node
 	if ( (daemons.FindDaemon("SCHEDD") != NULL) && schedd_image_path ) {
 		// put in schedd
-		if ( !wfh.addTrusted(schedd_image_path) ) {
+		if ( !SUCCEEDED(wfh.addTrusted(schedd_image_path)) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
 				schedd_image_path);
 		}
 		// put in shadow
-		if ( shadow_image_path && !wfh.addTrusted(shadow_image_path) ) {
+		if ( shadow_image_path && !SUCCEEDED(wfh.addTrusted(shadow_image_path)) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
 				shadow_image_path);
 		}
 		// put in gridmanager
-		if ( gridmanager_image_path && !wfh.addTrusted(gridmanager_image_path) ) {
+		if ( gridmanager_image_path && !SUCCEEDED(wfh.addTrusted(gridmanager_image_path)) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
 				gridmanager_image_path);
 		}
 		// put in condor gahp
-		if ( gahp_image_path && !wfh.addTrusted(gahp_image_path) ) {
+		if ( gahp_image_path && !SUCCEEDED(wfh.addTrusted(gahp_image_path)) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
 				gahp_image_path);
 		}
 		// put in condor worker gahp
-		if ( gahp_worker_image_path && !wfh.addTrusted(gahp_worker_image_path) ) {
+		if ( gahp_worker_image_path && !SUCCEEDED(wfh.addTrusted(gahp_worker_image_path)) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
 				gahp_worker_image_path);
@@ -1415,12 +1458,12 @@ void init_firewall_exceptions() {
 	// starter could run on either execute or submit nodes (think 
 	// local universe jobs).
 	if ( (daemons.FindDaemon("STARTD") != NULL) && startd_image_path ) {
-		if ( !wfh.addTrusted(startd_image_path) ) {
+		if ( !SUCCEEDED(wfh.addTrusted(startd_image_path)) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
 				startd_image_path);
 		}
-		if ( !wfh.addTrusted(kbdd_image_path) ) {
+		if ( !SUCCEEDED(wfh.addTrusted(kbdd_image_path)) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
 				kbdd_image_path);
@@ -1428,7 +1471,7 @@ void init_firewall_exceptions() {
 	}
 
 	if ( (daemons.FindDaemon("QUILL") != NULL) && quill_image_path ) {
-		if ( !wfh.addTrusted(quill_image_path) ) {
+		if ( !SUCCEEDED(wfh.addTrusted(quill_image_path)) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
 				quill_image_path);
@@ -1436,7 +1479,7 @@ void init_firewall_exceptions() {
 	}
 
 	if ( (daemons.FindDaemon("DBMSD") != NULL) && dbmsd_image_path ) {
-		if ( !wfh.addTrusted(dbmsd_image_path) ) {
+		if ( !SUCCEEDED(wfh.addTrusted(dbmsd_image_path)) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
 				dbmsd_image_path);
@@ -1444,7 +1487,7 @@ void init_firewall_exceptions() {
 	}
 
 	if ( starter_image_path ) {
-		if ( !wfh.addTrusted(starter_image_path) ) {
+		if ( !SUCCEEDED(wfh.addTrusted(starter_image_path)) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
 				starter_image_path);
@@ -1452,7 +1495,7 @@ void init_firewall_exceptions() {
 	}
 
 	if ( (daemons.FindDaemon("CREDD") != NULL) && credd_image_path ) {
-		if ( !wfh.addTrusted(credd_image_path) ) {
+		if ( !SUCCEEDED(wfh.addTrusted(credd_image_path)) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
 				credd_image_path);
@@ -1460,14 +1503,14 @@ void init_firewall_exceptions() {
 	}
 
 	if ( (daemons.FindDaemon("HDFS") != NULL) && hdfs_image_path ) {
-		if ( !wfh.addTrusted(hdfs_image_path) ) {
+		if ( !SUCCEEDED(wfh.addTrusted(hdfs_image_path)) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n", hdfs_image_path);
 		}
 	}
 
 	if ( vmgahp_image_path ) {
-		if ( !wfh.addTrusted(vmgahp_image_path) ) {
+		if ( !SUCCEEDED(wfh.addTrusted(vmgahp_image_path)) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to the "
 				"windows firewall exception list.\n",
 				vmgahp_image_path);
@@ -1475,7 +1518,7 @@ void init_firewall_exceptions() {
 	}
 
 	if ( dagman_image_path ) {
-		if ( !wfh.addTrusted (dagman_image_path) ) {
+		if ( !SUCCEEDED(wfh.addTrusted (dagman_image_path)) ) {
 			dprintf(D_FULLDEBUG, "WinFirewall: unable to add %s to "
 				"the windows firewall exception list.\n",
 				dagman_image_path);

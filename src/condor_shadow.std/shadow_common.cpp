@@ -106,8 +106,6 @@ char *strcpy();
 
 extern int MainSymbolExists;
 extern int JobStatus;
-extern char    *MailerPgm;
-extern char My_UID_Domain[];
 
 ClassAd *JobAd = NULL;			// ClassAd which describes this job
 extern char *schedd, *scheddName;
@@ -807,7 +805,7 @@ part_send_job(
 	  }
 
 		  // Send the job info 
-	  if( !JobAd->put(*sock) ) {
+	  if( !putClassAd(sock, *JobAd) ) {
 		  dprintf( D_ALWAYS, "failed to send job ad\n" );
 		  goto returnfailure;
 	  }	

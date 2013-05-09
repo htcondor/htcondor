@@ -473,6 +473,44 @@ sub acquire_all_info_for_jobid
 	# associated with the job if defined.
 	# ##########
 	acquire_job_userlog_lines($jobid, "$jdir/job_userlog_lines");
+
+	#######
+	# Copy the system log files, assuming we're on the submit side
+	######
+	system("cp `condor_config_val LOG`/MasterLog $args{'scratch'}/MasterLog");
+	system("cp `condor_config_val LOG`/MasterLog.old $args{'scratch'}/MasterLog.old");
+	system("cp `condor_config_val LOG`/ShadowLog $args{'scratch'}/ShadowLog");
+	system("cp `condor_config_val LOG`/ShadowLog.old $args{'scratch'}/ShadowLog.old");
+	system("cp `condor_config_val LOG`/SchedLog.old $args{'scratch'}/SchedLog.old");
+
+	open(ADF, "$jdir/job_ad") || die("Can't open $jdir/job_ad which was just created\n");
+	my $RemoteHost;
+	while(<ADF>) {
+		if (/^RemoteHost /) {
+			$RemoteHost = $_;
+		}
+
+		if (/^LastRemoteHost /) {
+			$RemoteHost = $_;
+		}
+	}
+	chomp($RemoteHost);
+	close(ADF);
+
+	if (length($RemoteHost) > 0) {
+		$RemoteHost = (split(/ /, $RemoteHost))[2];
+		$RemoteHost =~ s/\"//g;
+		print "The execute machine for this job is $RemoteHost";
+		my $slot = (split(/@/, $RemoteHost))[0];
+		if (length($slot) > 2) {
+			$RemoteHost = (split(/@/, $RemoteHost))[1];
+		}
+		system("condor_fetchlog $RemoteHost MASTER > $args{'scratch'}/MasterLog.$RemoteHost");
+		system("condor_fetchlog $RemoteHost STARTD > $args{'scratch'}/StartLog");
+		system("condor_fetchlog $RemoteHost STARTER.$slot > $args{'scratch'}/StarterLog.$slot");
+	} else {
+		print "No Remote host found in job ad -- perhaps job this never ran?\n";
+	}
 }
 
 sub acquire_all_info

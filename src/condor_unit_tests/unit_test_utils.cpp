@@ -162,7 +162,7 @@ compat_classad::ClassAd* get_classad_from_file(){
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	classad_file = safe_fopen_wrapper_follow("classad_file", "w");
-	classad.fPrint(classad_file);
+	fPrintAd(classad_file, classad);
 	fprintf(classad_file, "***\n");
 	fclose(classad_file);
 

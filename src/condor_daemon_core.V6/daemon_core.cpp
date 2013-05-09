@@ -127,6 +127,8 @@ const int DaemonCore::ERRNO_PID_COLLISION = 666667;
 const int DaemonCore::ERRNO_REGISTRATION_FAILED = 666668;
 const int DaemonCore::ERRNO_EXIT = 666669;
 
+#define CREATE_PROCESS_FAILED_CHDIR 1
+
 // Make this the last include to fix assert problems on Win32 -- see
 // the comments about assert at the end of condor_debug.h to understand
 // why.
@@ -329,6 +331,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 		maxSocket = DEFAULT_MAXSOCKETS;
 
 	sec_man = new SecMan();
+	audit_log_callback_fn = 0;
 
 	sockTable = new ExtArray<SockEnt>(maxSocket);
 	if(sockTable == NULL)
@@ -1563,8 +1566,12 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	else
 		(*sockTable)[i].iosock_descrip = strdup(EMPTY_DESCRIP);
 	free((*sockTable)[i].handler_descrip);
-	if ( handler_descrip )
+	if ( handler_descrip ) {
 		(*sockTable)[i].handler_descrip = strdup(handler_descrip);
+		if ( strcmp(handler_descrip,DaemonCommandProtocol::WaitForSocketDataString.c_str()) == 0 ) {
+			(*sockTable)[i].waiting_for_data = true;
+		}
+	}
 	else
 		(*sockTable)[i].handler_descrip = strdup(EMPTY_DESCRIP);
 
@@ -4076,6 +4083,18 @@ DaemonCore::CheckPrivState( void )
 
 int DaemonCore::ServiceCommandSocket()
 {
+	int ServiceCommandSocketMaxSocketIndex = 
+		param_integer("SERVICE_COMMAND_SOCKET_MAX_SOCKET_INDEX", 0);
+		// A value of <-1 will make ServiceCommandSocket never service
+		// A value of -1 will make ServiceCommandSocket only service
+		// the initial command socket. 
+		// A value of 0 will cause the correct behavior
+		// Any other positive integer will restrict how many sockets get serviced
+		// The larger the number, the more sockets get serviced.
+	if( ServiceCommandSocketMaxSocketIndex < -1 ) {
+		return 0;
+	}
+
 	Selector selector;
 	int commands_served = 0;
 
@@ -4091,37 +4110,86 @@ int DaemonCore::ServiceCommandSocket()
 	if ( !( (*sockTable)[initial_command_sock].iosock) )
 		return 0;
 
-	// Setting timeout to 0 means do not block, i.e. just poll the socket
-	selector.set_timeout( 0 );
-	selector.add_fd( (*sockTable)[initial_command_sock].iosock->get_file_desc(),
-					 Selector::IO_READ );
-
+		// CallSocketHandler called inside the loop can change nSock 
+		// and nRegisteredSock. We want a variable that won't change during the loop.
+	int local_nSock;
+	if ( ServiceCommandSocketMaxSocketIndex == -1) {
+		local_nSock = 0;
+	}
+	else if ( ServiceCommandSocketMaxSocketIndex != 0) {
+		local_nSock = ServiceCommandSocketMaxSocketIndex;
+	}
+	else {
+		local_nSock = nSock;
+	}
+	
 	inServiceCommandSocket_flag = TRUE;
-	do {
+	for( int i = -1; i < local_nSock; i++) {
+		bool use_loop = true;
+			// We iterate through each socket in sockTable. We do this instead of selecting
+			// over a bunch of different file descriptors because we can have them be removed
+			// while we're still in the process of examining all the sockets.
+			// We could do it the other way using selector.has_ready, selector.fd_ready,
+			// and selector.delete_fd. We also then need to keep track in a separate table
+			// the list of indices we plan on using.
 
-		errno = 0;
-		selector.execute();
+			// We start with i = -1 so that we always start with the initial command socket.
+		if( i == -1 ) {
+			selector.add_fd( (*sockTable)[initial_command_sock].iosock->get_file_desc(), Selector::IO_READ );
+		}
+			// If (*sockTable)[i].iosock is a valid socket
+			// and that we don't use the initial command socket (could substitute i != initial_command_socket)
+			// and that the handler description is DaemonCommandProtocol::WaitForSocketData
+			// and that the socket is not waiting for an outgoing connection.
+		else if( ((*sockTable)[i].iosock) && 
+				 (i != initial_command_sock) && 
+				 ((*sockTable)[i].waiting_for_data) &&
+				 ((*sockTable)[i].is_connect_pending == false)) {
+			selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
+		}
+		else {
+			use_loop = false;
+		}
+			
+		if(use_loop) {
+				// Setting timeout to 0 means do not block, i.e. just poll the socket
+			selector.set_timeout( 0 );
+			
+			do {
+				
+				errno = 0;
+				selector.execute();
 #ifndef WIN32
-		// Unix
-		if ( selector.failed() ) {
-				// not just interrupted by a signal...
-				EXCEPT("select, error # = %d", errno);
-		}
+				// Unix
+				if ( selector.failed() ) {
+						// not just interrupted by a signal...
+					EXCEPT("select, error # = %d", errno);
+				}
 #else
-		// Win32
-		if ( selector.select_retval() == SOCKET_ERROR ) {
-			EXCEPT("select, error # = %d",WSAGetLastError());
-		}
+				// Win32
+				if ( selector.select_retval() == SOCKET_ERROR ) {
+					EXCEPT("select, error # = %d",WSAGetLastError());
+				}
 #endif
+				if ( selector.has_ready() ) {
+						// CallSocketHandler_worker called by CallSocketHandler
+						// also calls CheckPrivState in order to
+						// Make sure we didn't leak our priv state.
+					CallSocketHandler(i, true);
+					commands_served++;
+						// If the slot in sockTable just got removed, make sure we exit the loop
+					if ( ((*sockTable)[i].iosock == NULL) ||  // slot is empty
+						 ((*sockTable)[i].remove_asap &&           // slot available
+						  (*sockTable)[i].servicing_tid==0 ) ) {
+						break;
+					}
+				} 
+			} while ( selector.has_ready() ); // loop ​until ​no ​more ​commands ​waiting ​on socket
+			
+			selector.reset();  // Reset selector for next socket
+		} // if(use_loop)
+	} // for( int i = -1; i < local_nSock; i++)
 
-		if ( selector.has_ready() ) {
-			HandleReq( initial_command_sock );
-			commands_served++;
-				// Make sure we didn't leak our priv state
-			CheckPrivState();
-		}
-
-	} while ( selector.has_ready() );	// loop until no more commands waiting on socket
 
 	inServiceCommandSocket_flag = FALSE;
 	return commands_served;
@@ -4201,7 +4269,7 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 int DaemonCore::HandleSigCommand(int command, Stream* stream) {
 	int sig = 0;
 
-	assert( command == DC_RAISESIGNAL );
+	ASSERT( command == DC_RAISESIGNAL );
 
 	// We have been sent a DC_RAISESIGNAL command
 
@@ -4983,7 +5051,7 @@ exitCreateProcessChild() {
 }
 
 void
-writeExecError(CreateProcessForkit *forkit,int exec_errno);
+writeExecError(CreateProcessForkit *forkit,int exec_errno,int failed_op=0);
 
 #endif
 
@@ -5278,7 +5346,7 @@ public:
 	pid_t clone_safe_getppid();
 
 	void writeTrackingGid(gid_t tracking_gid);
-	void writeExecError(int exec_errno);
+	void writeExecError(int exec_errno,int failed_op=0);
 
 private:
 		// Data passed to us from the parent:
@@ -5605,7 +5673,7 @@ void CreateProcessForkit::writeTrackingGid(gid_t tracking_gid)
 	}
 }
 
-void CreateProcessForkit::writeExecError(int child_errno)
+void CreateProcessForkit::writeExecError(int child_errno,int failed_op)
 {
 	if( !m_wrote_tracking_gid ) {
 			// Tracking gid must come before errno on the pipe,
@@ -5620,11 +5688,17 @@ void CreateProcessForkit::writeExecError(int child_errno)
 			dprintf(D_ALWAYS,"Create_Process: Failed to write error to error pipe: rc=%d, errno=%d\n",rc,errno);
 		}
 	}
+	rc = full_write(m_errorpipe[1], &failed_op, sizeof(failed_op));
+	if( rc != sizeof(failed_op) ) {
+		if( !m_no_dprintf_allowed ) {
+			dprintf(D_ALWAYS,"Create_Process: Failed to write failed_op to error pipe: rc=%d, errno=%d\n",rc,errno);
+		}
+	}
 }
 
-void writeExecError(CreateProcessForkit *forkit,int exec_errno)
+void writeExecError(CreateProcessForkit *forkit,int exec_errno,int failed_op)
 {
-	forkit->writeExecError(exec_errno);
+	forkit->writeExecError(exec_errno,failed_op);
 }
 
 void CreateProcessForkit::exec() {
@@ -6029,7 +6103,13 @@ void CreateProcessForkit::exec() {
 
 	bool bOkToReMap=false;
 #ifdef HAVE_UNSHARE
-    if (can_switch_ids()) {
+      /////////////////////////////////////////////////
+      // Ticket #3601 - Current theory is that nfs-automounter fails 
+      // when a process has been unshared, so allow for a knob.
+      /////////////////////////////////////////////////
+      bool want_namespace = param_boolean( "PER_JOB_NAMESPACES", true );
+
+      if ( m_fs_remap && can_switch_ids() && want_namespace ) {
         m_priv_state = set_priv_no_memory_changes(PRIV_ROOT);
             
         int rc =0;
@@ -6229,7 +6309,7 @@ void CreateProcessForkit::exec() {
 		if( chdir(m_cwd) == -1 ) {
 				// before we exit, make sure our parent knows something
 				// went wrong before the exec...
-			writeExecError(errno);
+			writeExecError(errno,CREATE_PROCESS_FAILED_CHDIR);
 			_exit(errno);
 		}
 	}
@@ -7226,24 +7306,6 @@ int DaemonCore::Create_Process(
 		goto wrapup;
 	}
 
-	// Next, check to see that the cwd exists.
-	struct stat stat_struct;
-	if( cwd && (cwd[0] != '\0') ) {
-		if( stat(cwd, &stat_struct) == -1 ) {
-			return_errno = errno;
-            if (NULL != err_return_msg) {
-                err_return_msg->formatstr("Cannot access specified iwd \"%s\"", cwd);
-            }
-			dprintf( D_ALWAYS, "Create_Process: "
-					 "Cannot access specified iwd \"%s\": "
-					 "errno = %d (%s)\n", cwd, errno, strerror(errno) );
-			if ( priv != PRIV_UNKNOWN ) {
-				set_priv( current_priv );
-			}
-			goto wrapup;
-		}
-	}
-
 		// Change back to the priv we came from:
 	if ( priv != PRIV_UNKNOWN ) {
 		set_priv( current_priv );
@@ -7402,6 +7464,11 @@ int DaemonCore::Create_Process(
 				// errorpipe before it was closed, then we know the
 				// error happened before the exec.  We need to reap
 				// the child and return FALSE.
+			int child_failed_op = 0;
+			if (full_read(errorpipe[0], &child_failed_op, sizeof(int)) != sizeof(int)) {
+				child_failed_op = -1;
+				dprintf(D_ALWAYS, "Warning: Create_Process: failed to read child process failure code\n");
+			}
 			int child_status;
 			waitpid(newpid, &child_status, 0);
 			errno = child_errno;
@@ -7481,11 +7548,28 @@ int DaemonCore::Create_Process(
 				break;
 
 			default:
-				dprintf( D_ALWAYS, "Create_Process(%s): child "
-						 "failed with errno %d (%s) before exec()\n",
-						 executable,
-						 errno,
-						 strerror(errno) );
+				if( child_failed_op == CREATE_PROCESS_FAILED_CHDIR && cwd) {
+					std::string remap_description;
+					if( alt_cwd.length() && alt_cwd.compare(cwd) ) {
+						formatstr(remap_description," remapped to \"%s\"",alt_cwd.c_str());
+					}
+					if (NULL != err_return_msg) {
+						err_return_msg->formatstr("Cannot access initial working directory \"%s\"%s",
+												  cwd, remap_description.c_str());
+					}
+					dprintf( D_ALWAYS, "Create_Process: "
+							 "Cannot access initial working directory \"%s\"%s: "
+							 "errno = %d (%s)\n",
+							 cwd, remap_description.c_str(),
+							 return_errno, strerror(return_errno) );
+				}
+				else {
+					dprintf( D_ALWAYS, "Create_Process(%s): child "
+							 "failed with errno %d (%s) before exec()\n",
+							 executable,
+							 errno,
+							 strerror(errno));
+				}
 				break;
 
 			}
@@ -7648,7 +7732,7 @@ int DaemonCore::Create_Process(
 	/* add it to the pid table */
 	{
 	   int insert_result = pidTable->insert(newpid,pidtmp);
-	   assert( insert_result == 0);
+	   ASSERT( insert_result == 0);
 	}
 
 #if !defined(WIN32)
@@ -7980,7 +8064,7 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 	pidtmp->pid = tid;
 #endif
 	int insert_result = pidTable->insert(tid,pidtmp);
-	assert( insert_result == 0 );
+	ASSERT( insert_result == 0 );
 #ifdef WIN32
 	WatchPid(pidtmp);
 #endif
@@ -8153,7 +8237,7 @@ DaemonCore::Inherit( void )
 		pidtmp->deallocate = 0L;
 #endif
 		int insert_result = pidTable->insert(ppid,pidtmp);
-		assert( insert_result == 0 );
+		ASSERT( insert_result == 0 );
 #ifdef WIN32
 		if ( watch_ppid ) {
 			assert(pidtmp->hProcess);
@@ -8441,7 +8525,7 @@ DaemonCore::HandleDC_SIGCHLD(int sig)
 	bool first_time = true;
 
 
-	assert( sig == SIGCHLD );
+	ASSERT( sig == SIGCHLD );
 
 	for(;;) {
 		errno = 0;
@@ -10041,7 +10125,7 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd,char const *fname)
 		MyString newLocalAdFile;
 		newLocalAdFile.formatstr("%s.new",fname);
         if( (AD_FILE = safe_fopen_wrapper_follow(newLocalAdFile.Value(), "w")) ) {
-            daemonAd->fPrint(AD_FILE);
+            fPrintAd(AD_FILE, *daemonAd);
             fclose( AD_FILE );
 			if( rotate_file(newLocalAdFile.Value(),fname)!=0 ) {
 					// Under windows, rotate_file() sometimes failes with

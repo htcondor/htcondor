@@ -171,7 +171,7 @@ DCTransferD::upload_job_files(int JobAdsArrayLen, ClassAd* JobAdsArray[],
 	// This request ad to the transferd should contain:
 	//	ATTR_TREQ_CAPABILITY
 	//	ATTR_TREQ_FTP
-	reqad.put(*rsock);
+	putClassAd(rsock, reqad);
 	rsock->end_of_message();
 
 	rsock->decode();
@@ -183,7 +183,7 @@ DCTransferD::upload_job_files(int JobAdsArrayLen, ClassAd* JobAdsArray[],
 	// OR
 	//
 	//	ATTR_TREQ_INVALID_REQUEST (set to false)
-	respad.initFromStream(*rsock);
+	getClassAd(rsock, respad);
 	rsock->end_of_message();
 
 	respad.LookupInteger(ATTR_TREQ_INVALID_REQUEST, invalid);
@@ -260,7 +260,7 @@ DCTransferD::upload_job_files(int JobAdsArrayLen, ClassAd* JobAdsArray[],
 	//////////////////////////////////////////////////////////////////////////
 
 	rsock->decode();
-	respad.initFromStream(*rsock);
+	getClassAd(rsock, respad);
 	rsock->end_of_message();
 
 	// close up shop
@@ -342,7 +342,7 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 	// This request ad to the transferd should contain:
 	//	ATTR_TREQ_CAPABILITY
 	//	ATTR_TREQ_FTP
-	reqad.put(*rsock);
+	putClassAd(rsock, reqad);
 	rsock->end_of_message();
 
 	rsock->decode();
@@ -356,7 +356,7 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 	//	ATTR_TREQ_INVALID_REQUEST (set to false)
 	//	ATTR_TREQ_NUM_TRANSFERS
 	//
-	respad.initFromStream(*rsock);
+	getClassAd(rsock, respad);
 	rsock->end_of_message();
 
 	respad.LookupInteger(ATTR_TREQ_INVALID_REQUEST, invalid);
@@ -386,7 +386,7 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 
 				// Grab a job ad the server is sending us so we know what
 				// to receive.
-				jad.initFromStream(*rsock);
+				getClassAd(rsock, jad);
 				rsock->end_of_message();
 
 				// translate the job ad by replacing the 
@@ -458,7 +458,7 @@ DCTransferD::download_job_files(ClassAd *work_ad, CondorError * errstack)
 	//////////////////////////////////////////////////////////////////////////
 
 	rsock->decode();
-	respad.initFromStream(*rsock);
+	getClassAd(rsock, respad);
 	rsock->end_of_message();
 
 	// close up shop

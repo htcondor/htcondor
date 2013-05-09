@@ -28,6 +28,7 @@
 class PeekGetFD
 {
 public:
+	virtual ~PeekGetFD() { }
 	virtual int getNextFD(const std::string &) = 0;
 };
 

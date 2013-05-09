@@ -1419,6 +1419,7 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_FILE_SYSTEM_DOMAIN );
 	submit_ad->Delete( ATTR_ULOG_FILE );
 	submit_ad->Delete( ATTR_ULOG_USE_XML );
+	submit_ad->Delete( ATTR_DAGMAN_WORKFLOW_LOG );
 	submit_ad->Delete( ATTR_NOTIFY_USER );
 	submit_ad->Delete( ATTR_ON_EXIT_HOLD_CHECK );
 	submit_ad->Delete( ATTR_ON_EXIT_REMOVE_CHECK );

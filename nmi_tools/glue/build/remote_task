@@ -281,7 +281,7 @@ sub check_rpm {
 sub create_deb {    
     #Reconfigure cmake variables for native package build   
     my $command = get_cmake_args();
-    return "$command -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && fakeroot make package";
+    return "$command -DCONDOR_PACKAGE_BUILD:BOOL=ON -DCONDOR_STRIP_PACKAGES:BOOL=ON && make VERBOSE=1 package";
 }
 
 sub check_deb {

@@ -84,7 +84,7 @@ TransferQueueRequest::SendGoAhead(XFER_QUEUE_ENUM go_ahead,char const *reason) {
 	int report_interval = param_integer("TRANSFER_IO_REPORT_INTERVAL",10,0);
 	msg.Assign(ATTR_REPORT_INTERVAL,report_interval);
 
-	if(!msg.put( *m_sock ) || !m_sock->end_of_message()) {
+	if(!putClassAd( m_sock, msg ) || !m_sock->end_of_message()) {
 		dprintf(D_ALWAYS,
 				"TransferQueueRequest: failed to send GoAhead to %s\n",
 				Description() );
@@ -114,6 +114,8 @@ TransferQueueManager::TransferQueueManager() {
 	m_update_iostats_timer = -1;
 	m_publish_flags = 0;
 
+	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_MAX_UPLOADING,&m_max_uploading_stat,NULL,IF_BASICPUB|m_max_uploading_stat.PubValue);
+	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING,&m_max_downloading_stat,NULL,IF_BASICPUB|m_max_uploading_stat.PubValue);
 	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_UPLOADING,&m_uploading_stat,NULL,IF_BASICPUB|m_uploading_stat.PubDefault);
 	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_DOWNLOADING,&m_downloading_stat,NULL,IF_BASICPUB|m_downloading_stat.PubDefault);
 	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD,&m_waiting_to_upload_stat,NULL,IF_BASICPUB|m_waiting_to_upload_stat.PubDefault);
@@ -164,7 +166,7 @@ TransferQueueManager::InitAndReconfig() {
 	m_publish_flags = IF_BASICPUB;
 	std::string publish_config;
 	if( param(publish_config,"STATISTICS_TO_PUBLISH") ) {
-		m_publish_flags = generic_stats_ParseConfigString(publish_config.c_str(), "TRANSFER", NULL, m_publish_flags);
+		m_publish_flags = generic_stats_ParseConfigString(publish_config.c_str(), "TRANSFER", "TRANSFER", m_publish_flags);
 	}
 
 	std::string iostat_timespans;
@@ -204,7 +206,7 @@ int TransferQueueManager::HandleRequest(int cmd,Stream *stream)
 
 	ClassAd msg;
 	sock->decode();
-	if( !msg.initFromStream( *sock ) || !sock->end_of_message() ) {
+	if( !getClassAd( sock, msg ) || !sock->end_of_message() ) {
 		dprintf(D_ALWAYS,
 				"TransferQueueManager: failed to receive transfer request "
 				"from %s.\n", sock->peer_description() );
@@ -221,7 +223,7 @@ int TransferQueueManager::HandleRequest(int cmd,Stream *stream)
 		!msg.LookupString(ATTR_USER,queue_user) )
 	{
 		MyString msg_str;
-		msg.sPrint(msg_str);
+		sPrintAd(msg_str, msg);
 		dprintf(D_ALWAYS,"TransferQueueManager: invalid request from %s: %s\n",
 				sock->peer_description(), msg_str.Value());
 		return FALSE;
@@ -843,6 +845,8 @@ TransferQueueManager::AddRecentIOStats(IOStats &s,const std::string up_down_queu
 void
 TransferQueueManager::UpdateIOStats()
 {
+	m_max_uploading_stat = m_max_uploads;
+	m_max_downloading_stat = m_max_downloads;
 	m_uploading_stat = m_uploading;
 	m_downloading_stat = m_downloading;
 	m_waiting_to_upload_stat = m_waiting_to_upload;
@@ -856,7 +860,10 @@ TransferQueueManager::UpdateIOStats()
 void
 TransferQueueManager::publish(ClassAd *ad, char const *publish_config)
 {
-	int publish_flags = generic_stats_ParseConfigString(publish_config, "TRANSFER", NULL, m_publish_flags);
+	int publish_flags = m_publish_flags;
+	if (publish_config && publish_config[0]) {
+		publish_flags = generic_stats_ParseConfigString(publish_config, "TRANSFER", "TRANSFER", publish_flags);
+	}
 	publish(ad,publish_flags);
 }
 
@@ -893,9 +900,6 @@ TransferQueueManager::publish(ClassAd *ad,int pubflags)
 				m_iostats.file_write.EMARate(ema_horizon),
 				m_iostats.net_read.EMARate(ema_horizon));
 	}
-
-	ad->Assign(ATTR_TRANSFER_QUEUE_MAX_UPLOADING,m_max_uploads);
-	ad->Assign(ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING,m_max_downloads);
 
 	m_stat_pool.Publish(*ad,pubflags);
 

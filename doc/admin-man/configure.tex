@@ -3958,34 +3958,25 @@ WANT_HOLD_REASON = \
   \MacroNI{MAXJOBRETIREMENTTIME} in
   section~\ref{sec:State-Expression-Summary} for further explanation.
 
+  By default the \Condor{negotiator} will not match jobs to a slot with
+  retirement time remaining.  This behavior is controlled by
+  \Macro{NEGOTIATOR\_CONSIDER\_EARLY\_PREEMPTION}.
+
 \label{param:ClaimWorklife}
 \item[\Macro{CLAIM\_WORKLIFE}]
-  If provided, this expression specifies the number of seconds after
-  which a claim will stop accepting additional jobs.  By default, once
-  the negotiator gives a schedd a claim to a slot, the schedd will
-  keep running jobs on that slot as long as it has more jobs with
-  matching requirements, without returning the slot to the unclaimed
-  state and renegotiating for machines.  Once \MacroNI{CLAIM\_WORKLIFE}
-  expires, any existing job may continue to run as usual, but once it
-  finishes or is preempted, the claim is closed.
-  This may be useful if you want to force periodic renegotiation of
-  resources without preemption having to occur.  For example, if you
-  have some low-priority jobs which should never be interrupted with
-  kill signals, you could prevent them from being killed with
-  \Expr{MaxJobRetirementTime}, but now high-priority jobs may have to
-  wait in line when they match to a machine that is busy running one of
-  these uninterruptible jobs.  You can prevent the high-priority jobs
-  from ever matching to such a machine by using a rank expression in the
-  job or in the negotiator's rank expressions, but then the low-priority
-  claim will never be interrupted; it can keep running more jobs.  The
-  solution is to use \Expr{CLAIM\_WORKLIFE} to force the claim to stop
-  running additional jobs after a certain amount of time.
-  The default value for \Expr{CLAIM\_WORKLIFE} is -1, which is treated
-  as an infinite claim worklife, so claims may be held indefinitely
-  (as long as they are not preempted and the schedd does not
-  relinquish them, of course).  A value of 0 has the effect of not allowing
-  more than one job to run per claim, since it immediately expires after the
-  first job starts running.
+  This expression specifies the number of seconds after which a claim
+  will stop accepting additional jobs.  The default is 3600.  Once the
+  negotiator gives a schedd a claim to a slot, the schedd will keep
+  running jobs on that slot as long as it has more jobs with matching
+  requirements, and \Macro{CLAIM\_WORKLIFE} has not expired, and it is
+  not preempted.  Once \MacroNI{CLAIM\_WORKLIFE} expires, any existing
+  job may continue to run as usual, but once it finishes or is
+  preempted, the claim is closed.  When \Expr{CLAIM\_WORKLIFE} is -1,
+  this is treated as an infinite claim worklife, so claims may be held
+  indefinitely (as long as they are not preempted and the user does
+  not run out of jobs, of course).  A value of 0 has the effect of not
+  allowing more than one job to run per claim, since it immediately
+  expires after the first job starts running.
 
 \label{param:MaxClaimAlivesMissed}
 \item[\Macro{MAX\_CLAIM\_ALIVES\_MISSED}]
@@ -5122,7 +5113,10 @@ MAX_JOBS_RUNNING	= \
   evaluated in the context of the job ad.  For example, if this
   expression were set to a name that is the same for all jobs, file
   transfers would be scheduled in first-in-first-out order rather than
-  equal share order.
+  equal share order.  Note that the string produced by this expression
+  is used as a prefix in the ClassAd attributes for per-user file
+  transfer I/O statistics that are published in the \Condor{schedd}
+  ad.
 
 \label{param:MaxTransferInputMB}
 \item[\Macro{MAX\_TRANSFER\_INPUT\_MB}]
@@ -5347,7 +5341,8 @@ MAX_JOBS_RUNNING	= \
   This macro sets the time (in
   seconds) that the \Condor{schedd} will wait for a claim to be granted by the
   \Condor{startd}.  The default is 30 minutes.  This is only likely to matter
-  if the \Condor{startd} has an existing claim and it takes a long time for the
+  if \Macro{NEGOTIATOR\_CONSIDER\_EARLY\_PREEMPTION} is \Expr{True}, and the
+  \Condor{startd} has an existing claim, and it takes a long time for the
   existing claim to be preempted due to \Expr{MaxJobRetirementTime}.
   Once a request times out, the \Condor{schedd} will simply begin the process
   of finding a machine for the job all over again.
@@ -6251,8 +6246,8 @@ These settings affect the \Condor{starter}.
         cmd = /bin/sleep
 \end{verbatim}
 
-\label{param:MemoryLimit} 
-\item[\Macro{MEMORY\_LIMIT}]
+\label{param:CgroupMemoryLimitPolicy} 
+\item[\Macro{CGROUP\_MEMORY\_LIMIT\_POLICY}]
   A string with values of \Expr{hard}, \Expr{soft} and the default value
   of \Expr{none}.
   If set to \Expr{hard}, the cgroup-based limit on the total amount 
@@ -7041,6 +7036,13 @@ page~\pageref{sec:Absent-Ads} for more details.
   This configuration variable replaces \MacroNI{OFFLINE\_LOG},
   which is no longer used.
 
+\label{param:ExpireInvalidatedAds}
+\item[\Macro{EXPIRE\_INVALIDATED\_ADS}]
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, causes all invalidated ClassAds to be treated 
+  as if they expired.
+  This permits invalidated ClassAds to be marked absent,
+  as defined in section~\ref{sec:Absent-Ads}.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -7394,6 +7396,13 @@ These macros affect the \Condor{negotiator}.
   is \Expr{False},
   and if all \Condor{startd} rank expressions are \Expr{False}.}
 
+\label{param:NegotiatorConsiderEarlyPreemption}
+\item[\Macro{NEGOTIATOR\_CONSIDER\_EARLY\_PREEMPTION}]
+  A boolean value that when \Expr{False} (the default),
+  prevents the \Condor{negotiator} from matching jobs
+  to claimed slots that cannot immediately be preempted
+  due to \Macro{MAXJOBRETIREMENTTIME}.
+
 \label{param:StartdAdReevalExpr}
 \item[\Macro{STARTD\_AD\_REEVAL\_EXPR}]
   A boolean value evaluated in the context of each machine ClassAd within
@@ -7425,6 +7434,25 @@ These macros affect the \Condor{negotiator}.
   A full reconfiguration, for example as accomplished with \Condor{reconfig},
   remains the best way to 
   guarantee that all \Condor{negotiator} configuration is completely updated.
+
+\label{param:ConcurrencyLimitDefault}
+\item[\Macro{CONCURRENCY\_LIMIT\_DEFAULT}]
+  An integer value that describes the number of resources available for
+  all resources that are not explicitly named by defining the
+  configuration variable \MacroNI{<NAME>\_LIMIT}.
+  If not defined, no limits are set for resources not explicitly identified
+  using \MacroNI{<NAME>\_LIMIT}.
+
+\label{param:ConcurrencyLimitDefaultName}
+\item[\Macro{CONCURRENCY\_LIMIT\_DEFAULT\_<NAME>}]
+  Definition not yet written.
+
+\label{param:NameLimit}
+\item[\Macro{<NAME>\_LIMIT}]
+  An integer value that describes the number of a resource available for
+  concurrent job execution when requested for a job under concurrency limits
+  as described in section~\ref{sec:Concurrency-Limits}. 
+  \MacroNI{<Name>} is a string invented to uniquely describe the resource.
 
 \end{description}
 
@@ -8568,6 +8596,16 @@ The actual delay to be used is determined by a random exponential backoff
 algorithm that chooses a delay with a minimum of
 the value of \MacroNI{GLEXEC\_RETRY\_DELAY} 
 and a maximum of 100 times that value.
+
+\label{param:GlexecHoldOnInitialFailure}
+\item[\Macro{GLEXEC\_HOLD\_ON\_INITIAL\_FAILURE}]
+A boolean value that when \Expr{False} prevents a job from being put
+on hold when a failure is encountered during the glexec setup phase
+of managing a job.  The default is \Expr{True}.
+\Prog{glexec} is invoked multiple times during each attempt to run a job.
+This configuration setting only disables putting the job on hold for the
+initial invocation.  Subsequent failures during that run attempt always
+put the job on hold.
 
 \end{description}
 

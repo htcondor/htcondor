@@ -3022,54 +3022,29 @@ assuming the example \Arg{jobTag} field of \Expr{local}:
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:DAGStatusClassad}DAG Status Information in DAGMan's Classad}
+\subsection{\label{sec:DAGStatusClassad}Status Information for the DAG in a ClassAd}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{DAGMan!DAG status in DAGMan's classad}
+\index{DAGMan!DAG status in a job ClassAd}
+\label{Job-ClassAd-DAGAttributes}
 
-As of version 7.9.5 DAGMan puts information about the status of the DAG
-into its own classad.  This information is stored in the following classad
-attributes:
+The \Condor{dagman} job places information about the status of the DAG
+into its own job ClassAd.  
+The attributes are fully described at
+section ~\ref{Job-ClassAd-DAGAttributes}.
+The attributes are
 
-\Opt{DAG\_NodesTotal}:  The total number of nodes in the DAG, including
-the FINAL node, if any.
-
-\Opt{DAG\_NodesDone}:  The number of nodes that have finished successfully
-(this means that the entire node has finished, not just the actual HTCondor
-job or jobs).
-
-\Opt{DAG\_NodesPrerun}:  The number of nodes for which a PRE script is
-running or has been deferred because of a PRE script throttle setting.
-
-\Opt{DAG\_NodesQueued}:  The number of nodes for which the actual HTCondor
-job or jobs are queued (whether they are actually running, or are idle,
-held, etc.).
-
-\Opt{DAG\_NodesPostrun}:  The number of nodes for which a POST script is
-running or has been deferred because of a POST script throttle setting.
-
-\Opt{DAG\_NodesReady}:  The number of nodes that are ready to run but
-which have not yet actually started running.
-
-\Opt{DAG\_NodesFailed}:  The number of nodes that have failed (including
-all retries, if any).
-
-\Opt{DAG\_NodesUnready}:  The number of nodes that are not ready to run
-(one or more of their parent nodes has not yet finished).
-
-\Opt{DAG\_Status}:  The overall status of the DAG, with the same values
-as the \Env{\$DAG\_STATUS} macro:
 \begin{itemize}
-\item 0: OK
-\item 1: error; an error condition different than those listed here
-\item 2: one or more nodes in the DAG have failed
-\item 3: the DAG has been aborted by an ABORT-DAG-ON specification
-\item 4: removed; the DAG has been removed by \Condor{rm}
-\item 5: cycle; a cycle was found in the DAG
-\item 6: halted; the DAG has been halted (see section ~\ref{sec:DagSuspend})
+\item \Attr{DAG\_NodesTotal}
+\item \Attr{DAG\_NodesDone}
+\item \Attr{DAG\_NodesPrerun}
+\item \Attr{DAG\_NodesQueued}
+\item \Attr{DAG\_NodesPostrun}
+\item \Attr{DAG\_NodesReady}
+\item \Attr{DAG\_NodesFailed}
+\item \Attr{DAG\_NodesUnready}
+\item \Attr{DAG\_Status}
+\item \Attr{DAG\_InRecovery}
 \end{itemize}
-
-\Opt{DAG\_InRecovery}:  1 if the DAG is in recovery mode; 0 otherwise.
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:DAGLotsaJobs}Utilizing the Power of DAGMan for Large Numbers of Jobs}

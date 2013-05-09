@@ -94,7 +94,7 @@ static ClassAdCollection *JobQueue = 0;
 static StringList DirtyJobIDs;
 static int next_cluster_num = -1;
 static int next_proc_num = 0;
-static int active_cluster_num = -1;	// client is restricted to only insert jobs to the active cluster
+int active_cluster_num = -1;	// client is restricted to only insert jobs to the active cluster
 static bool JobQueueDirty = false;
 static int in_walk_job_queue = 0;
 static time_t xact_start_time = 0;	// time at which the current transaction was started
@@ -2132,7 +2132,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 	// If someone is trying to do something funny with an invalid
 	// attribute name, bail out early
-	if (!AttrList::IsValidAttrName(attr_name)) {
+	if (!IsValidAttrName(attr_name)) {
 		dprintf(D_ALWAYS, "SetAttribute got invalid attribute named %s for job %d.%d\n", 
 			attr_name ? attr_name : "(null)", cluster_id, proc_id);
 		return -1;
@@ -2140,7 +2140,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 
 		// If someone is trying to do something funny with an invalid
 		// attribute value, bail earlyxs
-	if (!AttrList::IsValidAttrValue(attr_value)) {
+	if (!IsValidAttrValue(attr_value)) {
 		dprintf(D_ALWAYS,
 				"SetAttribute received invalid attribute value '%s' for "
 				"job %d.%d, ignoring\n",
@@ -3215,7 +3215,7 @@ GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 	ad->ResetExpr();
 	while( ad->NextDirtyExpr(name, expr) != false )
 	{
-		if(!ad->ClassAdAttributeIsPrivate(name))
+		if(!ClassAdAttributeIsPrivate(name))
 		{
 			if(!JobQueue->LookupInTransaction(key, name, val) )
 			{
@@ -3553,14 +3553,14 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					}
 					else if ( startd_ad ) {
 							// We have a startd ad in memory, use it
-						value = startd_ad->sPrintExpr(NULL,0,name);
+						value = sPrintExpr(*startd_ad, name);
 						value_came_from_jobad = false;
 					} else {
 							// No startd ad -- use value from last match.
 						MyString expr;
 						expr = "MATCH_";
 						expr += name;
-						value = ad->sPrintExpr(NULL,0,expr.Value());
+						value = sPrintExpr(*ad, expr.Value());
 						value_came_from_jobad = true;
 					}
 
@@ -4406,7 +4406,7 @@ PrintQ()
 	dprintf(D_ALWAYS, "*******Job Queue*********\n");
 	JobQueue->StartIterateAllClassAds();
 	while(JobQueue->IterateAllClassAds(ad)) {
-		ad->fPrint(stdout);
+		fPrintAd(stdout, *ad);
 	}
 	dprintf(D_ALWAYS, "****End of Queue*********\n");
 }

@@ -90,12 +90,6 @@ Creates a personal Condor (i.e. a 1-node pool running on local machine).
 END_OPT_MAKE_PERSONAL_CONDOR
  },
  {
-	 short => "--make-personal-stork",
-	 long => <<END_OPT_MAKE_PERSONAL_STORK,
-Creates a personal Stork, using the credential manager daemon.
-END_OPT_MAKE_PERSONAL_STORK
- },
- {
 	 short => "--bosco",
 	 long => <<END_OPT_BOSCO,
 Install BOSCO, a personal Condor that submits jobs to remote batch systems.
@@ -115,13 +109,6 @@ END_OPT_TYPE
 	 long => <<END_OPT_CENTRAL_MANAGER,
 Connect to existing pool with Central manager on <host>. 
 END_OPT_CENTRAL_MANAGER
- },
- {
-	 short => "--stork",
-	 long => <<END_OPT_STORK,
-Configures Stork data placement server.  It is recommended to also use
-the --credd option with the --stork option.
-END_OPT_STORK
  },
  {
 	 short => "--credd",
@@ -237,11 +224,9 @@ my (
 	$opt_sbin_rename,
 	$opt_local_dir,
 	$opt_make_personal_condor,
-	$opt_make_personal_stork,
 	$opt_bosco,
 	$opt_type,
 	$opt_central_manager,
-	$opt_stork,
 	$opt_credd,
 	$opt_owner,
 	$opt_maybe_daemon_owner,
@@ -284,7 +269,6 @@ sub set_central_manager ( $ );
 sub set_config_values ( $$$ );
 sub set_java_jvm_path();
 sub make_personal_condor();
-sub make_personal_stork();
 sub get_config_value( $;$ );
 sub debug( $ );
 sub read_config_file_comments();
@@ -292,7 +276,6 @@ sub read_config_file_comments();
 sub which( $ );
 sub myproxy();
 sub credd();
-sub stork();
 sub log_message( $ );
 sub usage( $ );
 sub help( );
@@ -451,6 +434,8 @@ if ($opt_bosco) {
 
 	$local_config{IS_BOSCO}="True";
     $local_config{CREATE_CORE_FILES }="False";
+    $local_config{CONDOR_ADMIN}=" ";
+    $local_config{PREEN_ARGS}="-r";
 
 	$daemon_list{SCHEDD} = 1;
     $daemon_list{COLLECTOR} = 1;
@@ -509,19 +494,11 @@ elsif ($opt_type) {
     }
 }
 
-if ($opt_make_personal_stork) {
-	make_personal_stork();
-}
-
 # Condor-G and CredD can use MyProxy.
 myproxy();
 
 if ($opt_credd)  {
 	credd();
-}
-
-if ($opt_stork)  {
-	stork();
 }
 
 # Change ownership if necessary
@@ -728,11 +705,9 @@ sub parse_command_line() {
 				 "install-dir=s"			=>	\$opt_prefix_dir,
 				 "local-dir=s"				=>	\$opt_local_dir,
 				 "make-personal-condor!"	=>	\$opt_make_personal_condor,
-				 "make-personal-stork!"		=>	\$opt_make_personal_stork,
 				 "bosco!"					=>	\$opt_bosco,
 				 "type=s"					=>	\$opt_type,
 				 "central-manager=s"		=>	\$opt_central_manager,
-				 "stork!"					=>	\$opt_stork,
 				 "credd!"					=>	\$opt_credd,
 				 "owner=s"					=>	\$opt_owner,
 				 "maybe-daemon-owner!"		=>	\$opt_maybe_daemon_owner,
@@ -1726,14 +1701,6 @@ sub myproxy() {
 	}
 }
 
-# Create a personal Stork/CredD
-sub make_personal_stork()
-{
-	$daemon_list{COLLECTOR} = 1;
-	$opt_credd = 1;
-	$opt_stork = 1;
-}
-
 # Configure CredD credential management daemon.
 sub credd() {
 	$daemon_list{CREDD} = 1;
@@ -1753,12 +1720,6 @@ myproxy-get-delegation not found in PATH.  To enable GSI proxy auto-refresh,
 edit MYPROXY_GET_DELEGATION configuration macro.
 EOF
 	}
-}
-
-# Configure Stork server.
-sub stork() {
-	$daemon_list{STORK} = 1;
-
 }
 
 sub log_message( $ )

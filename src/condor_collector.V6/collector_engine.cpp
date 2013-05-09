@@ -348,7 +348,7 @@ collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 	if (!clientAd) return 0;
 
 	// get the ad
-	if( !clientAd->initFromStream(*sock) )
+	if( !getClassAd(sock, *clientAd) )
 	{
 		dprintf (D_ALWAYS,"Command %d on Sock not follwed by ClassAd (or timeout occured)\n",
 				command);
@@ -473,7 +473,7 @@ bool CollectorEngine::ValidateClassAd(int command,ClassAd *clientAd,Sock *sock)
 				show_details ? " Contents of the ClassAd:" : " (turn on D_FULLDEBUG to see details)");
 		if( show_details ) {
 			details_shown += 1;
-			clientAd->dPrint(D_ALWAYS);
+			dPrintAd(D_ALWAYS, *clientAd);
 		}
 
 		return false;
@@ -535,7 +535,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			{
 				EXCEPT ("Memory error!");
 			}
-			if( !pvtAd->initFromStream(*sock) )
+			if( !getClassAd(sock, *pvtAd) )
 			{
 				dprintf(D_FULLDEBUG,"\t(Could not get startd's private ad)\n");
 				delete pvtAd;
@@ -548,7 +548,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 				// the startd could stop bothering to send these attributes.
 
 				// Queries of private ads depend on the following:
-			pvtAd->SetMyTypeName( STARTD_ADTYPE );
+			SetMyTypeName( *pvtAd, STARTD_ADTYPE );
 
 				// Negotiator matches up private ad with public ad by
 				// using the following.
@@ -653,7 +653,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 		//   these older schedds.
 		//   Before 7.7.3, submitter ads for parallel universe
 		//   jobs had a MyType of "Scheduler".
-		clientAd->SetMyTypeName( SUBMITTER_ADTYPE );
+		SetMyTypeName( *clientAd, SUBMITTER_ADTYPE );
 		// since submittor ads always follow a schedd ad, and a master check is
 		// performed for schedd ads, we don't need a master check in here
 		hashString.Build( hk );
@@ -774,7 +774,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 
 	  case UPDATE_AD_GENERIC:
 	  {
-		  const char *type_str = clientAd->GetMyTypeName();
+		  const char *type_str = GetMyTypeName(*clientAd);
 		  if (type_str == NULL) {
 			  dprintf(D_ALWAYS, "collect: UPDATE_AD_GENERIC: ad has no type\n");
 			  insert = -3;
@@ -838,7 +838,6 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 	  case QUERY_STARTD_ADS:
 	  case QUERY_SCHEDD_ADS:
 	  case QUERY_MASTER_ADS:
-	  case QUERY_GATEWAY_ADS:
 	  case QUERY_SUBMITTOR_ADS:
 	  case QUERY_CKPT_SRVR_ADS:
 	  case QUERY_STARTD_PVT_ADS:
@@ -851,7 +850,6 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 	  case INVALIDATE_STARTD_ADS:
 	  case INVALIDATE_SCHEDD_ADS:
 	  case INVALIDATE_MASTER_ADS:
-	  case INVALIDATE_GATEWAY_ADS:
 	  case INVALIDATE_CKPT_SRVR_ADS:
 	  case INVALIDATE_SUBMITTOR_ADS:
 	  case INVALIDATE_COLLECTOR_ADS:
@@ -925,6 +923,44 @@ int CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query, bool *q
 	}
 
 	return ( iRet );
+}
+
+int CollectorEngine::expire( AdTypes adType, const ClassAd & query, bool * queryContainsHashKey ) {
+    int rVal = 0;
+    if( queryContainsHashKey ) { * queryContainsHashKey = false; }
+
+    HashFunc hFunc;
+    CollectorHashTable * hTable;
+    if( LookupByAdType( adType, hTable, hFunc ) ) {
+        AdNameHashKey hKey;
+        if( (* hFunc)( hKey, const_cast< ClassAd * >( & query ) ) ) {
+            if( queryContainsHashKey ) { * queryContainsHashKey = true; }
+
+            ClassAd * cAd = NULL;
+            if( hTable->lookup( hKey, cAd ) != -1 ) {
+                cAd->Assign( ATTR_LAST_HEARD_FROM, 1 );
+                
+                if( CollectorDaemon::offline_plugin_.expire( * cAd ) == true ) {
+                    return rVal;
+                }
+                
+                rVal = hTable->remove( hKey );
+                if( rVal == -1 ) {
+                    dprintf( D_ALWAYS, "\t\t Error removing ad\n" );
+                    return 0;
+                }
+                rVal = (! rVal);
+                
+                MyString hkString;
+                hKey.sprint( hkString );                
+                dprintf( D_ALWAYS, "\t\t**** Removed(%d) stale ad(s): \"%s\"\n", rVal, hkString.Value() );
+
+                delete cAd;
+            }
+        }
+    }
+
+	return rVal;
 }
 
 int CollectorEngine::

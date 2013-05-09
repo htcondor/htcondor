@@ -263,14 +263,16 @@ Condor_Auth_Base& Condor_Auth_Base :: setRemoteUser( const char *owner )
 // name.
 Condor_Auth_Base& Condor_Auth_Base :: setAuthenticatedName(const char * auth_name)
 {
-    if (authenticatedName_) {
-        free(authenticatedName_);
-        authenticatedName_ = NULL;
-    }
-    
-    if (auth_name) {
-        authenticatedName_ = strdup(auth_name);
-    }
+		// Some callers will pass authenticatedName_ as the new value.
+	if (auth_name != authenticatedName_) {
+		free(authenticatedName_);
+
+		if (auth_name) {
+			authenticatedName_ = strdup(auth_name);
+		} else {
+			authenticatedName_ = NULL;
+		}
+	}
 
     return *this;
 }

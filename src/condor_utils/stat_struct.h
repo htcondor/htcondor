@@ -23,7 +23,7 @@
 #include "config.h"
 
 	// Define a common "struct stat" type
-#if HAVE_STAT64
+#if defined(HAVE_STAT64) && !defined(DARWIN)
 typedef struct stat64 StatStructType;
 #elif HAVE__STATI64	/* Win32 */
 typedef struct _stati64 StatStructType;
