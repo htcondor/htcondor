@@ -50,8 +50,8 @@ number of bytes.
 
 \begin{itemize}
 
-\item For errors which have no response body, EC2 jobs now report the 
-HTTP code instead.
+\item For grid universe jobs intended for an EC2 grid resource,
+errors which have no response body now report the HTTP code.
 \Ticket{3541}
 
 \item \Condor{chirp} putfile would experience an assertion failure when
