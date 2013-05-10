@@ -61,17 +61,23 @@ sub RunCheck
 	# this change is for running forever sleep jobs to test concurrency limits
 	# we'll want to see some running and some waiting to run
     my $abort = $args{on_abort} || $aborted;
+	my $donewithsuccess = $args{on_success} || $ExitSuccess;
+
+	my $program = $args{runthis} || "x_sleep.pl";
 
     CondorTest::RegisterAbort( $testname, $abort );
-    CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+    CondorTest::RegisterExitedSuccess( $testname, $donewithsuccess );
     CondorTest::RegisterExecute($testname, $execute_fn);
     CondorTest::RegisterULog($testname, $ulog_fn);
     CondorTest::RegisterSubmit( $testname, $submitted );
+	if(defined $args{on_failure}) {
+		CondorTest::RegisterExitedFailure( $testname, $args{on_failure} );
+	}
 
     my $submit_fname = CondorTest::TempFileName("$testname.submit");
     open( SUBMIT, ">$submit_fname" ) || die "error writing to $submit_fname: $!\n";
     print SUBMIT "universe = $universe\n";
-    print SUBMIT "executable = x_sleep.pl\n";
+    print SUBMIT "executable = $program\n";
     print SUBMIT "log = $user_log\n";
     print SUBMIT "arguments = $duration\n";
     print SUBMIT "notification = never\n";
@@ -90,7 +96,12 @@ sub RunCheck
     print SUBMIT "queue $args{queue_sz}\n";
     close( SUBMIT );
 
-    my $result = CondorTest::RunTest($testname, $submit_fname, 0);
+    my $result = 0;
+	if (defined $args{GetClusterId}) {
+    	$result = CondorTest::RunTest($testname, $submit_fname, 0, $args{GetClusterId});
+	} else {
+    	$result = CondorTest::RunTest($testname, $submit_fname, 0);
+	}
     CondorTest::RegisterResult( $result, %args );
     return $result;
 }
