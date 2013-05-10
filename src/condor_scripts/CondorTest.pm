@@ -619,12 +619,30 @@ END
 		$want_checkpoint = 0;
 	}
 
-	return DoTest($name, $submit_file, $want_checkpoint, $args{dagman_args});
+	my $undead = undef;
+	return DoTest($name, $submit_file, $want_checkpoint, $undead, $args{dagman_args});
 }
  
+###################################################################################
+##
+## We want to pass a call back function to secure the cluster id after DoTest
+## submits the job. We were expecting 3 defined values and one possible. We are adding
+## another possible which will have stack location alllowing an undefined then
+## followed by a defined on for dag args. We want this to work for dag tests too
+## so we will expand the 4 dag args to 5 with an undef at poision 3 , the fourth element
+##
+###################################################################################
+
 sub RunDagTest
 {
-	DoTest(@_);
+	my $undead = undef;
+	my $count = 0;
+	$count = @_;
+	if($count == 5) {
+		DoTest(@_);
+	} else {
+		my @newrgs = ($_[0],$_[1],$_[2],$undead,$_[3])
+	}
 }
 
 sub DoTest
@@ -632,6 +650,7 @@ sub DoTest
     $handle              = shift || croak "missing handle argument";
     $submit_file      = shift || croak "missing submit file argument";
     my $wants_checkpoint = shift;
+	my $clusterIDcallback = shift;
 	my $dagman_args = 	shift;
 
     my $status           = -1;
@@ -709,6 +728,10 @@ sub DoTest
     	$cluster = Condor::TestSubmitDagman( $submit_file, $dagman_args );
 	}
     
+	if(defined $clusterIDcallback) {
+		&$clusterIDcallback($cluster);
+	}
+
     # if condor_submit failed for some reason return an error
     if($cluster == 0){
 		print "Why is cluster 0 in RunTest??????\n";
