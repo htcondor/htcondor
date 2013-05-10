@@ -18,10 +18,8 @@
 ##
 ##**************************************************************
 ##
-## This test check availability and usage contol of the new
-## local, resources in both a static configuration and in psolts.
-## It is model after what we did to test concurrency limits
-## as we are checking the same sorts of things. bt
+## This test checks that the program exit code is both returned in the
+## terminate event, but also makes it to the ExitCode ClassAd.
 ##
 ##**************************************************************
 
