@@ -274,7 +274,6 @@ BridgeConfiguration::Cleanup() {
 		return 1;
 	}
 
-	GratuitousArp(bridge_device);
 	DIR *dirp = opendir(("/sys/class/net/" + bridge_device + "/brif").c_str());
 	struct dirent *dp;
 	while (dirp)
@@ -292,6 +291,7 @@ BridgeConfiguration::Cleanup() {
 			dirp = NULL;
 		}
 	}
+	GratuitousArp(bridge_device);
 
 	return 0;
 }
@@ -328,6 +328,13 @@ int BridgeConfiguration::GratuitousArp(const std::string &device)
 		return 1;
 	}
 
+	int dev_idx = if_nametoindex(device.c_str());
+	if (dev_idx == 0) {
+		dprintf(D_ALWAYS, "Unknown device %s for sending ARP packets.\n", device.c_str());
+		close(fd);
+		return 1;
+	}
+
 	struct ifreq iface_req; memset(&iface_req, '\0', sizeof(iface_req));
 	strncpy(iface_req.ifr_name, device.c_str(), IFNAMSIZ);
 	if (-1 == ioctl(fd, SIOCGIFHWADDR, &iface_req))
@@ -338,13 +345,6 @@ int BridgeConfiguration::GratuitousArp(const std::string &device)
 	}
 	unsigned char mac_address[IFHWADDRLEN+1]; mac_address[IFHWADDRLEN] = '\0';
 	memcpy(mac_address, iface_req.ifr_hwaddr.sa_data, IFHWADDRLEN);
-
-	int dev_idx = if_nametoindex(device.c_str());	
-	if (dev_idx == 0) {
-		dprintf(D_ALWAYS, "Unknown device %s for sending ARP packets.\n", device.c_str());
-		close(fd);
-		return 1;
-	}
 
         NetworkNamespaceManager & manager = NetworkNamespaceManager::GetManager();
         int sock= manager.GetNetlinkSocket();
