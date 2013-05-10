@@ -36,6 +36,7 @@ BridgeConfiguration::Setup() {
 			!param(bridge_name, CONFIG_BRIDGE_NAME)) {
 		dprintf(D_FULLDEBUG, "Could not determine the bridge name from the configuration; using the default " LARK_BRIDGE_NAME ".\n");
 		bridge_name = LARK_BRIDGE_NAME;
+        m_ad->InsertAttr(ATTR_BRIDGE_NAME, bridge_name);
 	}
 
 	std::string bridge_device;
@@ -268,8 +269,8 @@ BridgeConfiguration::Cleanup() {
 	address.Cleanup();
 
 	std::string bridge_device;
-	if (!m_ad->EvaluateAttrString(ATTR_BRIDGE_DEVICE, bridge_device)) {
-		dprintf(D_ALWAYS, "Required ClassAd attribute " ATTR_BRIDGE_DEVICE " is missing.\n");
+	if (!m_ad->EvaluateAttrString(ATTR_BRIDGE_NAME, bridge_device)) {
+		dprintf(D_ALWAYS, "Required ClassAd attribute " ATTR_BRIDGE_NAME " is missing.\n");
 		return 1;
 	}
 
