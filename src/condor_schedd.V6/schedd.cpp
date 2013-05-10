@@ -10219,7 +10219,9 @@ Scheduler::check_zombie(int pid, PROC_ID* job_id)
 	
 	if( GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS,
 						&status) < 0 ) {
-		dprintf(D_ALWAYS,"ERROR fetching job status in check_zombie !\n");
+		dprintf(D_ALWAYS,"ERROR fetching job (%d.%d) status in check_zombie !\n",
+				job_id->cluster,
+				job_id->proc);
 		return;
 	}
 
