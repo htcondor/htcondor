@@ -1624,6 +1624,8 @@ void _exit( int status )
 {
 	/* XXX this breaks atexit() and global C++ destructors */
 	(void) syscall( SYS_exit, status );
+
+	exit(status); // shouldn't get here, but supresses "_exit didn't exit" warning
 }
 
 /*
