@@ -65,18 +65,12 @@ my $nextappend_condor_config = '
 	SLOT_TYPE_1 = cpus=100%,disk=100%,swap=100%
 ';
 
-$configfile = CondorTest::CreateLocalConfig($nextappend_condor_config,"affinity");
+$configfile = CondorTest::CreateLocalConfig($nextappend_condor_config,"affinity1");
 
 CondorTest::StartCondorWithParams(
-	condor_name => "affinityon",
+	condor_name => "affinityon1",
 	fresh_local => "TRUE",
 	condorlocalsrc => "$configfile",
-);
-
-
-# OK turn it on and do affinity testing
-CondorTest::StartCondorWithParams(
-    append_condor_config => $nextappend_condor_config
 );
 
 
@@ -84,6 +78,14 @@ $count = ProcInfo::RunAffinityCheck(
 	proc_file => "status",
 	proc_file_pattern => "Cpus_allowed:",
 	cores_desired => 1);
+
+$configfile = CondorTest::CreateLocalConfig($nextappend_condor_config,"affinity2");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "affinityon2",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
 
 $count = ProcInfo::RunAffinityCheck(
 	proc_file => "status",
