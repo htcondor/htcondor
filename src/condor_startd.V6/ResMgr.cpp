@@ -1561,7 +1561,6 @@ ResMgr::calculateAffinityMask( Resource *rip) {
 
 		rip->get_affinity_set()->push_back(leastUsedCore);
 		coreOccupancy[leastUsedCore]++;
-		dprintf(D_ALWAYS, "Setting cpu affinity for %s to cpu id %d\n", rip->r_name, leastUsedCore);
 	}
 
 	delete [] coreOccupancy;
