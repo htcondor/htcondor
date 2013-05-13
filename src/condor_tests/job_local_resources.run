@@ -115,18 +115,13 @@ my $idles = 0;
 		if($longad =~ /^TotalGpu\s*=\s*(\d+)\s*$/) {
 			CondorTest::debug("Total$AdType = $1\n",1);;
 			CheckExpectations("Total$AdType", $1, 2);
-		} elsif($longad =~ /^TotalSlotGpu\s*=\s*(\d+)\s*$/) {
-			CondorTest::debug("TotalSlot$AdType = $1\n",1);;
-			CheckExpectations("TotalSlot$AdType", $1, 1);
 		} elsif($longad =~ /^Gpu\s*=\s*(\d+)\s*$/) {
 			CondorTest::debug("$AdType = $1\n",1);;
 			CheckExpectations("$AdType", $1, 1);
 		} elsif($longad =~ /^DetectedGpu\s*=\s*(\d+)\s*$/) {
 			CondorTest::debug("Detected$AdType = $1\n",1);;
 			CheckExpectations("Detected$AdType", $1, 2);
-		} else {
-			die "Failed to match this line<$longad>\n";
-		}
+		} 
 	}
 	print "After looking at <$statusline>\n";
 
@@ -157,18 +152,13 @@ foreach my $longad (@StaticClassadsLong) {
 	if($longad =~ /^TotalGpu\s*=\s*(\d+)\s*$/) {
 		CondorTest::debug("Total$AdType = $1\n",2);;
 		CheckExpectations("Total$AdType", $1, 2);
-	} elsif($longad =~ /^TotalSlotGpu\s*=\s*(\d+)\s*$/) {
-		CondorTest::debug("TotalSlot$AdType = $1\n",2);;
-		CheckExpectations("TotalSlot$AdType", $1, 1);
 	} elsif($longad =~ /^Gpu\s*=\s*(\d+)\s*$/) {
 		CondorTest::debug("$AdType = $1\n",2);;
 		CheckExpectations("$AdType", $1, 1);
 	} elsif($longad =~ /^DetectedGpu\s*=\s*(\d+)\s*$/) {
 		CondorTest::debug("Detected$AdType = $1\n",2);;
 		CheckExpectations("Detected$AdType", $1, 2);
-	} else {
-		die "Failed to match this line<$longad>\n";
-	}
+	} 
 }
 
 @StaticClassadsLong = `condor_status -l | grep Sails`;
@@ -263,7 +253,7 @@ runcmd("condor_config_val -config",{emit_output=>1});
 
 
 $append_submit_commands = '
-request_gpu = 1;
+request_gpu = 1
 ';
 
 # on this on-execute, check the ads like above
