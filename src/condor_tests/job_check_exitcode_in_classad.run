@@ -139,7 +139,8 @@ sub  ValidateExit
 
 	foreach my $ad (@history) {
 		chomp($ad);
-		#print "USERLOG = $ad\n";
+		print "USERLOG = $ad\n";
+		print "$ad\n";
 		if( $ad =~ /^UserLog\s*=\s*?"(.*)"$/) {
 			$userlog = $1;
 			#print "Userlog is $userlog\n";
