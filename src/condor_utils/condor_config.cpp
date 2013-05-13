@@ -873,63 +873,64 @@ get_exclude_regex(Regex &excludeFilesRegex)
 	free(excludeRegex);
 }
 
+bool
+get_config_dir_file_list( char const *dirpath, StringList &files )
+{
+	Regex excludeFilesRegex;
+	get_exclude_regex(excludeFilesRegex);
+
+	Directory dir(dirpath);
+	if(!dir.Rewind()) {
+		dprintf(D_ALWAYS, "Cannot open %s: %s\n", dirpath, strerror(errno));
+		return false;
+	}
+
+	const char *file;
+	while( (file = dir.Next()) ) {
+		// don't consider directories
+		// maybe we should squash symlinks here...
+		if(! dir.IsDirectory() ) {
+			if(!excludeFilesRegex.isInitialized() ||
+			   !excludeFilesRegex.match(file)) {
+				files.append(dir.GetFullPath());
+			} else {
+				dprintf(D_FULLDEBUG|D_CONFIG,
+						"Ignoring config file "
+						"based on "
+						"LOCAL_CONFIG_DIR_EXCLUDE_REGEXP, "
+						"'%s'\n", dir.GetFullPath());
+			}
+		}
+	}
+
+	files.qsort();
+	return true;
+}
+
 // examine each file in a directory and treat it as a config file
 void
 process_directory( char* dirlist, char* host )
 {
 	StringList locals;
-	Directory *files;
-	const char *file, *dirpath;
-	char **paths;
+	const char *dirpath;
 	int local_required;
-	Regex excludeFilesRegex;
 	
 	local_required = param_boolean_crufty("REQUIRE_LOCAL_CONFIG_FILE", true);
 
 	if(!dirlist) { return; }
 	locals.initializeFromString( dirlist );
 	locals.rewind();
-	get_exclude_regex(excludeFilesRegex);
 	while( (dirpath = locals.next()) ) {
+		StringList file_list;
+		get_config_dir_file_list(dirpath,file_list);
+		file_list.rewind();
 
-		paths = (char **)calloc(65536, sizeof(char *));
-		ASSERT(paths);
-		files = new Directory(dirpath);
-		int i = 0;
-		if(files == NULL) {
-			fprintf(stderr, "Cannot open %s\n", dirpath);
-		} else {
-			while( (file = files->Next()) && i < 65536) {
-				// don't consider directories
-				// maybe we should squash symlinks here...
-				if(! files->IsDirectory() ) {
-					if(!excludeFilesRegex.isInitialized() ||
-					   !excludeFilesRegex.match(file)) {
-						paths[i] = strdup(files->GetFullPath());
-						i++;
-					} else {
-						dprintf(D_FULLDEBUG|D_CONFIG,
-							"Ignoring config file "
-							"based on "
-							"LOCAL_CONFIG_DIR_EXCLUDE_REGEXP, "
-							"'%s'\n", files->GetFullPath());
-					}
-				}
-			}
-			delete files;
+		char const *file;
+		while( (file=file_list.next()) ) {
+			process_config_source( file, "config source", host, local_required );
+
+			local_config_sources.append(file);
 		}
-		qsort(paths, i, sizeof(char *), compareFiles);
-		char **pathCopy = paths;
-		while(*pathCopy) {
-			process_config_source( *pathCopy, "config source", host,
-								   local_required );
-
-			local_config_sources.append(*pathCopy);
-
-			free(*pathCopy);
-			pathCopy++;
-		}
-		free(paths);
 	}
 }
 
