@@ -230,12 +230,17 @@ chirp_client_connect_default()
 	int fields;
 	int save_errno;
 	struct chirp_client *client;
+	char *default_filename;
 	char host[CHIRP_LINE_MAX];
 	char cookie[CHIRP_LINE_MAX];
 	int port;
 	int result;
 
-	file = fopen("chirp.config","r");
+	if (!(default_filename = getenv("_CONDOR_CHIRP_CONFIG"))) {
+		default_filename = ".chirp.config";
+	}
+
+	file = fopen(default_filename,"r");
 	if(!file) return 0;
 
 	fields = fscanf(file,"%s %d %s",host,&port,cookie);

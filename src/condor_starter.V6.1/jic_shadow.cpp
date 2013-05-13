@@ -48,6 +48,7 @@ extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
 extern const char* JOB_AD_FILENAME;
 extern const char* MACHINE_AD_FILENAME;
+const char* CHIRP_CONFIG_FILENAME = ".chirp_config";
 
 // Filenames are case insensitive on Win32, but case sensitive on Unix
 #ifdef WIN32
@@ -58,7 +59,8 @@ extern const char* MACHINE_AD_FILENAME;
 #	define file_remove remove
 #endif
 
-JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator()
+JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
+	m_wrote_chirp_config(false)
 {
 	if( ! shadow_name ) {
 		EXCEPT( "Trying to instantiate JICShadow with no shadow name!" );
@@ -424,6 +426,9 @@ JICShadow::transferOutput( bool &transient_failure )
 		// ft list
 		filetrans->addFileToExeptionList(JOB_AD_FILENAME);
 		filetrans->addFileToExeptionList(MACHINE_AD_FILENAME);
+		if (m_wrote_chirp_config) {
+			filetrans->addFileToExeptionList(CHIRP_CONFIG_FILENAME);
+		}
 	
 			// true if job exited on its own
 		bool final_transfer = (requested_exit == false);	
@@ -2180,8 +2185,10 @@ JICShadow::initIOProxy( void )
 	}
 
 	if( want_io_proxy || want_updates || job_universe==CONDOR_UNIVERSE_JAVA ) {
-		io_proxy_config_file.formatstr( "%s%cchirp.config",
-				 Starter->GetWorkingDir(), DIR_DELIM_CHAR );
+		m_wrote_chirp_config = true;
+		io_proxy_config_file.formatstr( "%s%c%s" ,
+				 Starter->GetWorkingDir(), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
+		m_chirp_config_filename = io_proxy_config_file;
 		if( !io_proxy.init(this, io_proxy_config_file.Value(), want_io_proxy, want_updates) ) {
 			dprintf( D_FAILURE|D_ALWAYS, 
 					 "Couldn't initialize IO Proxy.\n" );

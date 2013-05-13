@@ -241,6 +241,9 @@ public:
 		/* Record an attribute to update */
 	void recordVolatileUpdate( const std::string &name, const classad::ExprTree &expr );
 
+	virtual bool wroteChirpConfig() { return m_wrote_chirp_config; }
+	virtual const std::string chirpConfigFilename() { return m_chirp_config_filename; }
+
 private:
 
 		// // // // // // // // // // // //
@@ -463,6 +466,9 @@ private:
 	char* uid_domain;
 	char* fs_domain;
 	bool trust_uid_domain;
+
+	std::string m_chirp_config_filename;
+	bool m_wrote_chirp_config;
 
 		/** A flag to keep track of the case where we were trying to
 			cleanup our job but we discovered that we were

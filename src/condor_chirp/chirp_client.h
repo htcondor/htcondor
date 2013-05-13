@@ -93,7 +93,7 @@ int get_statfs( const char *line, struct chirp_statfs *info );
 DLLEXPORT struct chirp_client * chirp_client_connect_default(void);
 /*chirp_client_connect_default()
   Opens connection to the default chirp server.  The default connection
-  information is determined by reading ./chirp.config.  Under Condor,
+  information is determined by reading ./.chirp.config.  Under Condor,
   the starter can automatically create this file if you specify
   +WantIOProxy=True in the submit file.
 */
