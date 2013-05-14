@@ -1403,6 +1403,8 @@ int Scheduler::make_ad_list(
    // publish scheduler generic statistics
    stats.Publish(*cad, stats_config.Value());
 
+   m_xfer_queue_mgr.publish(cad, stats_config.Value());
+
    // publish daemon core stats
    daemonCore->publish(cad);
    daemonCore->dc_stats.Publish(*cad, stats_config.Value());
@@ -9229,7 +9231,8 @@ Scheduler::child_exit(int pid, int status)
 			if (srec->exit_already_handled && (srec->match->keep_while_idle == 0)) {
 				DelMrec( srec->match );
 			} else {
-				if (srec->match->keep_while_idle > 0) {
+				int exitstatus = WEXITSTATUS(status);
+				if ((srec->match->keep_while_idle > 0) && ((exitstatus == JOB_EXITED) || (exitstatus == JOB_SHOULD_REMOVE) || (exitstatus == JOB_KILLED))) {
 					srec->match->status = M_CLAIMED;
 					srec->match->shadowRec = NULL;
 					srec->match->idle_timer_deadline = time(NULL) + srec->match->keep_while_idle;

@@ -23,8 +23,9 @@
 #include <deque>
 #include <cstdlib>
 
-// disable the EXCEPT macro in generic stats so we can test it.
+// override the EXCEPT macro in generic stats so we can test it.
 #undef EXCEPT
+#define EXCEPT(msg,...) {}
 #include "generic_stats.h"
 
 #define BOOST_TEST_MAIN

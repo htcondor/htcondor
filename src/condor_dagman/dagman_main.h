@@ -22,6 +22,7 @@
 
 #include "dag.h"
 #include "string_list.h"
+#include "dagman_classad.h"
 
 	// Don't change these values!  Doing so would break some DAGs.
 enum exit_value {
@@ -44,6 +45,8 @@ class Dagman {
 			delete dag; 
 			dag = NULL;
 		}
+		delete _dagmanClassad;
+		_dagmanClassad = NULL;
 	}
     Dag * dag;
     int maxIdle;  // Maximum number of idle DAG nodes
@@ -204,6 +207,8 @@ class Dagman {
 		// Default priority that DAGman uses for nodes.
 	int _defaultPriority;
 	int _claim_hold_time;
+
+	DagmanClassad *_dagmanClassad;
 };
 
 #endif	// ifndef DAGMAN_MAIN_H

@@ -190,6 +190,10 @@ if ( defined( $opt_use_externals_cache ) ) {
 	$defines{externals} = "-DCACHED_EXTERNALS:BOOL=FALSE";
 }
 
+if($platform =~ /Fedora17$/) {
+        $defines{python_version} = "-DPythonLibs_FIND_VERSION:STRING=2.7";
+}
+
 ######################################################################
 # run cmake on the source tree
 # Note: This stores the absolute path to cmake, which could be either

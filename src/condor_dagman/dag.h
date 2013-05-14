@@ -727,6 +727,11 @@ class Dag {
 	*/
 	inline bool RunningFinalNode() { return _runningFinalNode; }
 
+	/** Determine whether the DAG is in recovery mode.
+		@return true iff the DAG is in recovery mode
+	*/
+	inline bool Recovery() const { return _recovery; }
+
   private:
 
 	// If this DAG is a splice, then this is what the DIR was set to, it 

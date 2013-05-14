@@ -859,37 +859,6 @@ page~\pageref{sec:file-transfer-if-when} for details on the naming
 of the intermediate files.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:vmware-symlink-bug}Why are my vm universe VMware jobs failing and being put on hold?}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Strange behavior has been noted when HTCondor tries to run a 
-\SubmitCmd{vm} universe VMware
-job using a path to a VMX file that contains a symbolic link.
-An example of an error message that may appear in such a job's user log:
-\begin{verbatim}
-Error from starter on master_vmuniverse_strtd@nostos.cs.wisc
-.edu: register(/scratch/gquinn/condor/git/CONDOR_SRC/src/con
-dor_tests/31426/31426vmuniverse/execute/dir_31534/vmN3hylp_c
-ondor.vmx) = 1/Error: Command failed: A file was not found/(
-ERROR) Can't create snapshot for vm(/scratch/gquinn/condor/g
-it/CONDOR_SRC/src/condor_tests/31426/31426vmuniverse/execute
-/dir_31534/vmN3hylp_condor.vmx)
-\end{verbatim}
-To work around this problem:
-\begin{itemize}
-\item If using file transfer
-(the submit description file contains
-\SubmitCmd{vmware\_should\_transfer\_files = true}),
-then modify any
-configuration variable \Macro{EXECUTE} values on all execute machines,
-such that they do not contain symbolic link path components.
-\item If using a shared file system, ensure that the
-submit description file command
-\SubmitCmd{vmware\_dir} does not use
-symbolic link path name components.
-\end{itemize}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{HTCondor on Windows}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1702,21 +1671,6 @@ correctly.
 
 Note that this problem does not manifest itself
 on non-BSD Unix platforms, such as Linux.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:xen-jiffies-bug}Why are there spurious HTCondor errors on some machines running Xen kernels?}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-Some older Xen kernels had a problem where the kernel's jiffy counter
-could jump backwards in time. This breaks an assumption made by the
-\Condor{procd}. This problem can only be worked around by upgrading
-the Xen kernel to a version that fixes the issue with the jiffy counter.
-Running HTCondor on an affected Xen kernel often results in failures
-of the following forms in HTCondor daemon log files:
-\begin{itemize}
-\item \verb@error: parent process's birthday is later than our own@
-\item \verb@ERROR: No family with the given PID is registered@
-\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Other questions}

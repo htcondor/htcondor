@@ -20,6 +20,7 @@
 #ifndef _GENERIC_STATS_H
 #define _GENERIC_STATS_H
 
+#include "classy_counted_ptr.h"
 
 // To use generic statistics:
 //   * declare your probes as class (or struct) members
@@ -319,9 +320,7 @@ public:
    }
 
    int Unexpected() {
-     #ifdef EXCEPT
       EXCEPT("Unexpected call to empty ring_buffer\n");
-     #endif
       return 0;
    }
 
@@ -566,46 +565,61 @@ public:
    static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return (FN_STATS_ENTRY_UNPUBLISH)&stats_entry_abs<T>::Unpublish; };
 };
 
+class stats_ema_config: public ClassyCountedPtr {
+ public:
+	void add(time_t horizon,char const *horizon_name);
+	bool sameAs( stats_ema_config const *other);
+
+	class horizon_config {
+	public:
+		horizon_config(time_t h,char const *h_name): horizon(h), horizon_name(h_name), cached_alpha(0.0), cached_interval(0) {}
+
+		time_t horizon;
+		std::string horizon_name;
+		double cached_alpha;
+		time_t cached_interval;
+	};
+	typedef std::vector< horizon_config > horizon_config_list;
+	horizon_config_list horizons;
+};
+
 // exponential moving average class
 class stats_ema {
  public:
 	double ema;
 	time_t total_elapsed_time;
-	time_t horizon;
-	std::string horizon_name;
 
-	stats_ema(time_t the_horizon,char const *the_horizon_name):
-		ema(0.0), total_elapsed_time(0), horizon(the_horizon), horizon_name(the_horizon_name) {}
+	stats_ema():
+		ema(0.0), total_elapsed_time(0) {}
 
 	void Clear() {
 		ema = 0.0;
 		total_elapsed_time = 0;
 	}
 
-	void Update(double value,time_t interval) {
-		double alpha = 1.0 - exp(-(double)interval/this->horizon);
-		this->ema = alpha*value + (1.0-alpha)*ema;
+	void Update(double value,time_t interval,stats_ema_config::horizon_config &config) {
+		if( config.cached_interval != interval ) {
+			config.cached_interval = interval;
+			config.cached_alpha = 1.0 - exp(-(double)interval/config.horizon);
+		}
+		this->ema = config.cached_alpha*value + (1.0-config.cached_alpha)*ema;
 		this->total_elapsed_time += interval;
 	}
 
-	bool sameHorizon(stats_ema const &other) const {
-		return this->horizon == other.horizon && this->horizon_name == other.horizon_name;
-	}
-
-	bool insufficientData() const {
-		return total_elapsed_time < horizon;
+	bool insufficientData(stats_ema_config::horizon_config &config) const {
+		return total_elapsed_time < config.horizon;
 	}
 };
 
-// list of exponential moving averages
-typedef std::list<stats_ema> stats_ema_list;
+// collection of exponential moving averages
+typedef std::vector<stats_ema> stats_ema_list;
 
 	// Parse exponential moving average list configuration string of the form
 	// "NAME1:HORIZON1 NAME2:HORIZON2 ..."
 	// Where each horizon is specified as an integer number of seconds
 	// Fills in ema_horizons, which can be fed to ConfigureEMAHorizons() of one or more
 	// instances of this class to allocate EMA variables.
-bool ParseEMAHorizonConfiguration(char const *ema_conf,stats_ema_list &ema_horizons,std::string &error_str);
+bool ParseEMAHorizonConfiguration(char const *ema_conf,classy_counted_ptr<stats_ema_config> &ema_horizons,std::string &error_str);
 
 // use stats_entry_sum_ema_rate to compute a running sum and rate of growth.
 // The rate of growth is computed as an exponential moving average over
@@ -623,10 +637,11 @@ public:
 	stats_ema_list ema;
 	time_t recent_start_time;
 	T recent_sum;
+	classy_counted_ptr<stats_ema_config> ema_config;
 
 	void Clear() {
 		this->value = 0;
-		this->recent_start_time = 0;
+		this->recent_sum = 0;
 		this->recent_start_time = time(NULL);
 		for(stats_ema_list::iterator ema_itr = ema.begin();
 			ema_itr != ema.end();
@@ -650,24 +665,27 @@ public:
 
 		// update the exponential moving averages of the rate of growth
 	void Update(time_t now) {
-		time_t interval = now - this->recent_start_time;
-		double recent_rate = (double)this->recent_sum/interval;
+			// Throw out data points during which time jumps into the past.
+			// We could be more correct and use clock_gettime(CLOCK_MONOTONIC),
+			// but that is overkill for our current uses of this code.
+		if( now > this->recent_start_time ) {
+			time_t interval = now - this->recent_start_time;
+			double recent_rate = (double)this->recent_sum/interval;
+
+			for(size_t i = ema.size(); i--; ) {
+				ema[i].Update(recent_rate,interval,ema_config->horizons[i]);
+			}
+		}
+
 		this->recent_sum = 0;
 		this->recent_start_time = now;
-
-		for(stats_ema_list::iterator ema_itr = ema.begin();
-			ema_itr != ema.end();
-			++ema_itr )
-		{
-			ema_itr->Update(recent_rate,interval);
-		}
 	}
 
 		// Allocate variables to track exponential moving averages.
 		// Can be called to reconfigure or initialize this object.
 		// Args:
-		//   ema_horizons serves as a template; it can be created with ParseEMAHorizonConfiguration()
-	void ConfigureEMAHorizons(stats_ema_list const &ema_horizons);
+		//   ema_config serves as a template; it can be created with ParseEMAHorizonConfiguration()
+	void ConfigureEMAHorizons(classy_counted_ptr<stats_ema_config> config);
 
 		// Return the biggest EMA rate value
 	double BiggestEMARate() const;
@@ -1118,11 +1136,9 @@ public:
    T operator-=(T val) { return Remove(val); }
    stats_histogram& operator=(const stats_histogram<T>& sh);
    stats_histogram& operator=(int val) {
-     #ifdef EXCEPT
       if (val != 0) {
           EXCEPT("Clearing operation on histogram with non-zero value\n");
       }
-     #endif
       Clear();
       return *this;
    }
@@ -1173,20 +1189,14 @@ stats_histogram<T>& stats_histogram<T>::Accumulate(const stats_histogram<T>& sh)
    // to add histograms, they must both be the same size (and have the same
    // limits array as well, should we check that?)
    if (this->cLevels != sh.cLevels) {
-      #ifdef EXCEPT
        EXCEPT("attempt to add histogram of %d items to histogram of %d items\n",
               sh.cLevels, this->cLevels);
-      #else
        return *this;
-      #endif
    }
 
    if (this->levels != sh.levels) {
-      #ifdef EXCEPT
        EXCEPT("Histogram level pointers are not the same.\n");
-      #else
        return *this;
-      #endif
    }
 
    for (int i = 0; i <= cLevels; ++i) {
@@ -1204,9 +1214,7 @@ stats_histogram<T>& stats_histogram<T>::operator=(const stats_histogram<T>& sh)
       Clear();
    } else if(this != &sh) {
       if(this->cLevels > 0 && this->cLevels != sh.cLevels){
-#ifdef EXCEPT
          EXCEPT("Tried to assign different sized histograms\n");
-#endif
       return *this;
       } else if(this->cLevels == 0) {
          this->cLevels = sh.cLevels;
@@ -1219,9 +1227,7 @@ stats_histogram<T>& stats_histogram<T>::operator=(const stats_histogram<T>& sh)
          for(int i=0;i<=cLevels;++i){
             this->data[i] = sh.data[i];
             if(this->levels[i] < sh.levels[i] || this->levels[i] > sh.levels[i]){
-#ifdef EXCEPT
                EXCEPT("Tried to assign different levels of histograms\n");
-#endif
                return *this;
             }
          }

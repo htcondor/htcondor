@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #define KBDD
 #ifdef WIN32
+#pragma comment( linker, "/subsystem:windows" )
 #include "condor_daemon_core.h"
 #include "condor_debug.h"
 #include "condor_uid.h"
@@ -171,25 +172,16 @@ main_init(int, char *[])
 #endif
 }
 
-
+// on ! Windows, this is just called by main,
+// on Windows, WinMain builds an argc,argv, 
+// does some Windows specific initialization, then calls this
+//
+// TODO: make kbdd a simple program and not daemon core, then
+// we can ditch this.
+//
 int
-main( int argc, char **argv )
+daemon_main( int argc, char **argv )
 {
-   #ifdef WIN32
-	// t1031 - tell dprintf not to exit if it can't write to the log
-	// we have to do this before dprintf_config is called 
-	// (which happens inside dc_main), otherwise KBDD on Win32 will 
-	// except in dprintf_config if the log directory isn't writable
-	// by the current user.
-	dprintf_config_ContinueOnFailure( TRUE );
-
-	// check to see if we are running as a service, and if we are
-	// add a Run key value to the registry for HKLM so that the kbdd
-	// will run as the user whenever a user logs on.
-	//
-	hack_kbdd_registry();
-   #endif
-
 	set_mySubSystem( "KBDD", SUBSYSTEM_TYPE_DAEMON );
 
 	dc_main_init = main_init;
@@ -202,45 +194,41 @@ main( int argc, char **argv )
 #ifdef WIN32
 int WINAPI WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, __in_opt LPSTR lpCmdLine, __in int nShowCmd )
 {
-   #ifdef WIN32
 	// t1031 - tell dprintf not to exit if it can't write to the log
-	// we have to do this before dprintf_config is called 
-	// (which happens inside dc_main), otherwise KBDD on Win32 will 
+	// we have to do this before dprintf_config is called
+	// (which happens inside dc_main), otherwise KBDD on Win32 will
 	// except in dprintf_config if the log directory isn't writable
 	// by the current user.
 	dprintf_config_ContinueOnFailure( TRUE );
-   #endif
 
-	// cons up a "standard" argv for dc_main.
-	char **parameters;
-	LPWSTR cmdLine = NULL;
-	LPWSTR* cmdArgs = NULL;
-	int nArgs;
+	// cons up a "standard" argc,argv for daemon_main.
 
 	/*
 	Due to the risk of spaces in paths on Windows, we use the function
 	CommandLineToArgvW to extract a list of arguments instead of parsing
 	the string using a delimiter.
 	*/
-	cmdLine = GetCommandLineW();
+	LPWSTR cmdLine = GetCommandLineW();
 	if(!cmdLine)
 	{
 		return GetLastError();
 	}
-	cmdArgs = CommandLineToArgvW(cmdLine, &nArgs);
+
+	int cArgs = 0;
+	LPWSTR* cmdArgs = CommandLineToArgvW(cmdLine, &cArgs);
 	if(!cmdArgs)
 	{
 		return GetLastError();
 	}
-	parameters = (char**)malloc(sizeof(char*)*nArgs + 1);
+	char **parameters = (char**)malloc(sizeof(char*)*cArgs + 1);
 	ASSERT( parameters != NULL );
 	parameters[0] = "condor_kbdd";
-	parameters[nArgs] = NULL;
+	parameters[cArgs] = NULL;
 
 	/*
 	List of strings is in unicode so we need to downconvert it into ascii strings.
 	*/
-	for(int counter = 1; counter < nArgs; ++counter)
+	for(int counter = 1; counter < cArgs; ++counter)
 	{
 		//There's a *2 on the size to provide some leeway for non-ascii characters being split.  Suggested by TJ.
 		int argSize = ((wcslen(cmdArgs[counter]) + 1) * sizeof(char)) * 2;
@@ -255,12 +243,13 @@ int WINAPI WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, 
 	LocalFree((HLOCAL)cmdLine);
 	LocalFree((HLOCAL)cmdArgs);
 
+	// check to see if we are running as a service, and if we are
+	// add a Run key value to the registry for HKLM so that the kbdd
+	// will run as the user whenever a user logs on.
 	hack_kbdd_registry();
-	//nArgs includes the first argument, the program name, in the count.
-	dc_main(nArgs, parameters);
 
-	// dc_main should exit() so we probably never get here.
-	return 0;
+	// call the daemon main function which is common between Windows and ! Windows.
+	return daemon_main(cArgs, parameters);
 }
 
 static void hack_kbdd_registry()
@@ -352,5 +341,14 @@ static void hack_kbdd_registry()
 		} //if(regResult != ERROR_SUCCESS)
 	} //if(isService)
 }
-#endif
+
+#else // ! WIN32
+
+int
+main( int argc, char **argv )
+{
+	return daemon_main(argc, argv);
+}
+
+#endif // WIN32
 

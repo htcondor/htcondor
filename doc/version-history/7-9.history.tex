@@ -12,15 +12,14 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-7-6-0}Version 7.9.5}
+\subsection*{\label{sec:New-7-9-5}Version 7.9.5}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item HTCondor version 7.9.5 not yet released.
-%\item HTCondor version 7.9.5 released on Month Date, 2013.
+\item HTCondor version 7.9.5 released on April 17, 2013.
 
 \end{itemize}
 
@@ -55,13 +54,19 @@ account name.
 
 \item New functions are available in the Python Bindings contrib module.
 ClassAds now more closely mimic Python dictionaries and provide
-support for lists and sub-ClassAds. 
+support for lists and values that are ClassAds. 
 \Ticket{3494}
 
 \item If a job is submitted specifying \SubmitCmd{keep\_claim\_idle},
 the claim is kept not only when the job exits,
 but also when the job is removed.
 \Ticket{3491}
+
+\item \Condor{dagman} now publishes in its own job ClassAd,
+attributes with the DAG status,
+such as total number of nodes, nodes queued, and nodes finished.
+See section~\ref{sec:DAGStatusClassad} for more information.
+\Ticket{1782}
 
 \end{itemize}
 
@@ -79,7 +84,8 @@ usage statistics are now published as attributes in the ClassAd of the
 \Condor{schedd}.  This includes the sum and rate of bytes
 transferred as well as time spent reading and writing to files and
 to the network.  These statistics are reported for the sum of all
-users and individually for recently active users.  
+users and, when increased verbosity is configured, individually for
+recently active users.  
 These ClassAd attributes are fully described 
 within the section on scheduler attributes at 
 section~\pageref{sec:FT-Scheduler-ClassAd-Attributes}.
@@ -124,6 +130,12 @@ as it incorrectly believed that the cloud
 service had purged it.
 \Ticket{3492}
 
+\item The EC2 GAHP now reports the
+bidding status, defined at
+\URL{http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-spot-instances-bid-status.html},
+for spot instances. 
+\Ticket{3388}
+
 \item The \Condor{negotiator} now checks to see if 
 the time set by configuration variable 
 \Macro{NEGOTIATOR\_MAX\_TIME\_PER\_SUBMITTER}
@@ -141,9 +153,25 @@ could cause a crash when transferring files for grid universe jobs of
 grid type batch going to a remote cluster.
 \Ticket{3529}
 
-\item Fixed a bug where \Condor{status} queries would not work unless the \Condor{collector}
+\item Fixed a bug in which \Condor{status} queries would not work,
+with output of \AdStr{Access denied}, unless the \Condor{collector}
 and the machine doing the query had synchronized clocks.
 \Ticket{3360}
+
+\item Fixed a Linux platform bug in which mount points were leaked
+to the greater namespace when the configuration set
+\MacroNI{MOUNT\_UNDER\_SCRATCH} for file systems
+that have been mounted with shared propagation enabled.
+\Ticket{3505}
+
+\item Fixed a bug in the logging code that was causing grid universe batch jobs
+to abort and drop a dprintf error file during file transfer once the log had
+grown large enough to rotate.
+\Ticket{3528}
+
+\item On Windows platforms, running the \Condor{kbdd} no
+longer creates a visible console window.
+\Ticket{2805}
 
 \end{itemize}
 
@@ -151,7 +179,19 @@ and the machine doing the query had synchronized clocks.
 
 \begin{itemize}
 
-\item None.
+\item Running \Condor{rm} with the \Opt{-f} option on a parallel universe
+job can cause the \Condor{schedd} to crash.
+\Ticket{3561}
+
+\item Using privilege separation may cause execute directories to be leaked,
+if the \Condor{starter} is shut down prematurely; 
+for example, shut down may occur by a hard kill signal or power interruption.
+\Ticket{3573}
+
+\item  If a job has any output files and uses the file transfer mechanism,
+the job ClassAd attribute \Attr{ExitCode} may be lost,
+causing its value to be reported as 0.
+\Ticket{3577}
 
 \end{itemize}
 
