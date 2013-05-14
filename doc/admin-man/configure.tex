@@ -6220,6 +6220,17 @@ These settings affect the \Condor{starter}.
         exec $*:q
 \end{verbatim}
 
+  On Windows, the end should look like:
+\begin{verbatim}
+REM set some environment variables
+set LICENSE_SERVER=192.168.1.202:5012
+set MY_PARAMS=2
+
+REM Run the actual job now
+%*
+
+\end{verbatim}
+
   This syntax is precise, to correctly handle program arguments
   which contain white space characters.
 
