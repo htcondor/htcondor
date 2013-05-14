@@ -248,7 +248,7 @@ extern "C" int __getdents( int fd, struct dirent *dirp, size_t count ) {
 #ifdef X86_64
 extern "C" int __getdents64( int fd, struct dirent64 *dirp, size_t count ) __attribute__ ((regparm (3), stdcall));
 #else
-extern "C" int __getdents64( int fd, struct dirent64 *dirp, size_t count )
+extern "C" int __getdents64( int fd, struct dirent64 *dirp, size_t count );
 #endif
 
 extern "C" int getdents64(int, struct dirent64*, size_t);
