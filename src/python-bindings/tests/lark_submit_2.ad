@@ -1,0 +1,10 @@
+[
+Err = "tests_tmp/lark_test_2.err";
+Out = "tests_tmp/lark_test_2.out";
+Cmd = "/usr/bin/curl";
+Arguments = "www.google.com";
+InboundConnectivity = false;
+OutboundConnectivity = true;
+LeaveJobInQueue = true;
+NetworkAccounting = true;
+]

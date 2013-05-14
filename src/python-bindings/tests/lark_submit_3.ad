@@ -1,0 +1,9 @@
+[
+Err = "tests_tmp/lark_test_3.err";
+Out = "tests_tmp/lark_test_3.out";
+Cmd = "/sbin/ifconfig";
+Arguments = "-a";
+InboundConnectivity = true;
+OutboundConnectivity = true;
+NetworkAccounting = true;
+]
