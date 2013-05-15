@@ -1236,7 +1236,7 @@ sub install( $ )
 
     $local_config{UID_DOMAIN}="\$(FULL_HOSTNAME)";
     $local_config{FILESYSTEM_DOMAIN}="\$(FULL_HOSTNAME)";
-    $local_config{LOCK}="/tmp/condor-lock.\$(HOSTNAME)".rand();
+    $local_config{LOCK}="/tmp/condor-lock.".rand();
 
     # This is necessary so that if no collector host is specified, 
     # Condor doesn't start using "central-manager-hostname.your.domain"

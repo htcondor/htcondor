@@ -224,8 +224,12 @@ extern "C" int getdents ( int fd, struct dirent *buf, size_t nbytes )
 }
 
 /* getdents, for some unknown reason, requires a special register passing
-	convention. */
+	convention. But only on 32 bit machines */
+#ifdef X86_64
+extern "C" int __getdents( int fd, struct dirent *dirp, size_t count ); 
+#else
 extern "C" int __getdents( int fd, struct dirent *dirp, size_t count ) __attribute__ ((regparm (3), stdcall));
+#endif
 
 extern "C" int __getdents( int fd, struct dirent *dirp, size_t count ) {
 	return getdents(fd,dirp,count);
@@ -241,7 +245,11 @@ extern "C" int __getdents( int fd, struct dirent *dirp, size_t count ) {
 	getdents/getdents64 and the implementation of it was, and is,
 	a crime against all that is rational and good. */
 
+#ifdef X86_64
+extern "C" int __getdents64( int fd, struct dirent64 *dirp, size_t count );
+#else
 extern "C" int __getdents64( int fd, struct dirent64 *dirp, size_t count ) __attribute__ ((regparm (3), stdcall));
+#endif
 
 extern "C" int getdents64(int, struct dirent64*, size_t);
 
@@ -1912,7 +1920,7 @@ static int remote_system_posix(const char *command, int len)
 	}
 
 	/* else just do what the user wanted of me */
-	rval = REMOTE_CONDOR_shell( (char*)command, len );
+	rval = REMOTE_CONDOR_shell( const_cast<char*>(command), len );
 	return rval;
 }
 
