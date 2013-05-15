@@ -18,8 +18,10 @@
 ##
 ##**************************************************************
 ##
-## This test checks that the program exit code is both returned in the
-## terminate event, but also makes it to the ExitCode ClassAd.
+## This test check availability and usage contol of the new
+## local, resources in both a static configuration and in psolts.
+## It is model after what we did to test concurrency limits
+## as we are checking the same sorts of things. bt
 ##
 ##**************************************************************
 
@@ -125,6 +127,43 @@ if($result == 1) {
 
 CondorTest::EndTest();
 
+# I think there is a race condition. The test failed a couple times
+# and was not able to get the userlog so I was not able to verify
+# expected terminate code. Going to make sure all the jobs have gone.
+sub VerifyNoJobs
+{
+	my $done = 0;
+	my $count  = 0;
+	my $maxtries = 10;
+	my @queue = ();
+	my $jobsrunning = 0;
+
+	if($ClusterId == 0) {
+		die "Cluster ID should not be zero\n";
+	}
+
+	while( $done != 1)
+	{
+		if($count > $maxtries) {
+			die "TOOO MANY tries to find empty queue with condor_q\n";
+		}
+		$count += 1;
+		@queue = `condor_q`;
+		foreach my $line (@queue) {
+			chomp($line);
+			if($line =~ /^(\d+)\s\jobs;.*$/) {
+				$jobsrunning = $1;
+				if($1 eq "0") {
+					$done = 1;
+				}
+			}
+		}
+		if($done == 0) {
+			print "Waiting for $jobsrunning job/s to leave queue\n";
+			sleep 1;
+		}
+	}
+}
 
 sub  ValidateExit
 {
@@ -135,6 +174,7 @@ sub  ValidateExit
 	if($ClusterId == 0) {
 		die "Cluster ID should not be zero\n";
 	}
+	VerifyNoJobs();
 	@history = `condor_history -l $ClusterId | grep UserLog`;
 
 	foreach my $ad (@history) {
@@ -158,6 +198,7 @@ sub GetExitClassAd
 	my @history = 0;
 	my $returncode = "";
 
+	VerifyNoJobs();
 	CondorTest::debug("GetExitClassAd: Expected,$expected\n",2);
 	@history = `condor_history -l $ClusterId | grep ExitCode`;
 
