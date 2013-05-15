@@ -57,12 +57,23 @@ sub RunCheckMultiple
 	my $match_instances = $args{match_instances} || 1;
     my $match_timeout = $args{match_timeout} || 10;
 	my $match_new = $args{match_new} || "false";
+    my $match_after_regexp = $args{match_after_regexp} || undef;
+    my $match_between = $args{match_between_regexp} || undef;
 
     my $result;
     my $count = 0;
-	$result = CondorTest::SearchCondorLogMultiple($daemon,$match_regexp,$match_instances,$match_timeout,$match_new);
+	my $undead = undef;
+
+	if(defined $args{match_callback}) {
+		# we don't just want to look for it, we want to get it back
+		#print "Match Callback set\n";
+		$result = CondorTest::SearchCondorLogMultiple($daemon,$match_regexp,$match_instances,$match_timeout,$match_new,$args{match_callback},$match_after_regexp,$match_between);
+	} else {
+		$result = CondorTest::SearchCondorLogMultiple($daemon,$match_regexp,$match_instances,$match_timeout,$match_new,$undead,$match_after_regexp,$match_between);
+	}
 
     CondorTest::RegisterResult( $result, %args );
+	#print "Result returned from RunCheckMultiple is <$result>\n";
     return $result;
 }
 
