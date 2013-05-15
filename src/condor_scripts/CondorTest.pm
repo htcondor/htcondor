@@ -1678,6 +1678,19 @@ sub SearchCondorLog
 # SearchCondorLogMultiple`
 #
 # Search a log for a regexp pattern N times on some interval
+# 
+# May 2103 extension by bt
+#
+# Find N new patterns in the file lets you wait for a new say negotiator
+# 	cycle to start. ($findnew [true/false]
+#
+# Find the next pattern after this pattern (next $findafter after regexp) 
+#
+# Find number of matches between two patterns and use call back for count.
+#	Count $findbetween which come after $regexp but before $findafter
+#
+#	see test job_services_during_neg_cycle.run
+#
 #
 ##############################################################################
 
@@ -1688,13 +1701,17 @@ sub SearchCondorLogMultiple
 	my $instances = shift;
 	my $timeout = shift;
 	my $findnew = shift;
+	my $findcallback = shift;
+	my $findafter = shift;
+	my $findbetween = shift;
 	my $currentcount = 0;
 	my $found = 0;
 	my $tried = 0;
+	my $goal = 0;
 
     my $logloc = `condor_config_val ${daemon}_log`;
     CondorUtils::fullchomp($logloc);
-    CondorTest::debug("Search this log <$logloc> for <$regexp>\n",2);
+    CondorTest::debug("Search this log <$logloc> for <$regexp> instances = <$instances>\n",1);
 
 	# do we want to see X new events
 	if($findnew eq "true") {
@@ -1709,24 +1726,75 @@ sub SearchCondorLogMultiple
 			}
    		}
 		close(LOG);
-		$instances = $currentcount + $instances;
+		$goal = $currentcount + $instances;
+		CondorTest::debug("Raised request to $goal since current count is $currentcount\n",2);
+	} else {
+		$goal = $instances;
 	}
 
-	while($found < $instances) {
+
+	my $count = 0;
+	my $begin = 0;
+	my $done = 0;
+	while($found < $goal) {
        	CondorTest::debug("Searching Try $tried\n",2);
 		$found = 0;
    		open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
    		while(<LOG>) {
-       		if( $_ =~ /$regexp/) {
+			chomp($_);
+			if(defined $findbetween) {
+				# start looking for between string after first pattern
+				# and stop when you find after string. call match callback
+				# with actual count.
+				if( $_ =~ /$regexp/) {
+					CondorTest::debug("Found start <$_>\n",2);
+					$begin = 1;
+					$goal = 100000;
+				} elsif( $_ =~ /$findafter/) {
+					CondorTest::debug("Found done <$_>\n",2);
+					$done = 1;
+					if(defined $findcallback) {
+						 &$findcallback($count);
+					}
+					$found = $goal;
+					last;
+				} elsif($_ =~ /$findbetween/) {
+					if($begin == 1) {
+						$count += 1;
+
+						CondorTest::debug("Found Match <$_>\n",2);
+					}
+				} else {
+					#print ".";
+				}
+       		} elsif( $_ =~ /$regexp/) {
            		CondorTest::debug("FOUND IT! $_\n",2);
 				$found += 1;
+				#print "instances $instances found $found goal $goal\n";
+				if((defined $findcallback) and (!(defined $findafter)) and 
+					 ($found == $goal)) {
+					&$findcallback($_);
+				}
+				if((defined $findcallback) and (defined $findafter) and 
+					 ($found == $goal)) {
+					#&$findcallback($_);
+				}
+				if((defined $findafter) and ($found == $goal)) {
+					# change the pattern we are looking for. really only
+					# works well when looking for one particular item.
+					# undef the second pattern so we get a crack at the callback
+					$found = 0;
+					$goal = 1;
+					$regexp = $findafter;
+					$findafter = undef;
+				}
        		} else {
            		CondorTest::debug(".",2);
 			}
    		}
 		close(LOG);
-		CondorTest::debug("Found <$found> want <$instances>\n",2);
-		if($found < $instances) {
+		CondorTest::debug("Found <$found> want <$goal>\n",2);
+		if($found < $goal) {
 			sleep 1;
 		} else {
 			#Done
@@ -1736,14 +1804,11 @@ sub SearchCondorLogMultiple
 		if($tried >= $timeout) {
 			last;
 		}
-		if($found >= $instances) {
-			CondorTest::debug("Found <$found> want <$instances> LEAVING\n",2);
-			#done
-			return(1);;
-		}
 	}
-	if($found < $instances) {
+	if($found < $goal) {
 		return(0);
+	} else {
+		return(1);
 	}
 }
 
