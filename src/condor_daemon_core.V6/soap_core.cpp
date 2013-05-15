@@ -35,7 +35,11 @@
 #define realpath(P,B) _fullpath((B),(P),_MAX_PATH)
 #endif
 
+namespace condor_soap {
+
 extern int soap_serve(struct soap *);
+
+}
 
 extern DaemonCore *daemonCore;
 
@@ -78,7 +82,7 @@ dc_soap_accept(Sock *socket, const struct soap *soap)
 int
 dc_soap_serve(struct soap *soap)
 {
-	return soap_serve(soap);
+	return condor_soap::soap_serve(soap);
 }
 
 void
@@ -454,7 +458,7 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 	}
 
 	current_soap->user = soap_strdup(current_soap, canonical_user.Value());
-	soap_serve(current_soap);	// process RPC request
+	condor_soap::soap_serve(current_soap);	// process RPC request
 	soap_destroy(current_soap);	// clean up class instances
 	soap_end(current_soap);	// clean up everything and close socket
 	soap_done(current_soap);

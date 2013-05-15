@@ -1,0 +1,6 @@
+# This is a linker script for Linux
+# This prevents the condor daemons from exporting soap symbols.
+condor_daemon {
+  local: *;
+  #global: *;
+};
