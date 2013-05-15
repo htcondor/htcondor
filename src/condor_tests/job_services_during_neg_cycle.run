@@ -36,12 +36,15 @@ use Check::CondorLog;
 my $ClusterId = 0;
 my $expect_return = 0;
 
+	#NEGOTIATE_ALL_JOBS_IN_CLUSTER = True
+
 my $firstappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	NEGOTIATOR_DEBUG = D_COMMAND, D_MATCH
-	NEGOTIATE_ALL_JOBS_IN_CLUSTER = True
-	MAX_NEGOTIATOR_LOG = 1000000000
+	MAX_NEGOTIATOR_LOG = 5000000000
+	MAX_SCHEDD_LOG = 5000000000
+	SIGNIFICANT_ATTRIBUTES = Procid
 	START = False
+	NEGOTIATOR_DEBUG = D_COMMAND, D_MATCH, D_FULLDEBUG
 ';
 
 $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"affinityoff");
@@ -71,11 +74,13 @@ my $matchedbegin = "";
 my $matchednextend = "";
 my $matchedendafterbegin = "";
 my $matchbeginafterend = "";
+my $matchedfinalfinish = "";
 
 my $matchonbegin = 0;
 my $matchonnextend = 0;
 my $matchedendafterbegin = 0;
 my $matchedbeginafterend = 0;
+my $matchonfinalfinish = 0;
 my $match = "";
 
 my $on_match = sub {
@@ -89,6 +94,8 @@ my $on_match = sub {
 		$matchedendafterbegin = $match;
 	} elsif($matchedbeginafterend == 1) {
 		$matchbeginafterend = $match;
+	} elsif ($matchonfinalfinish == 1) {
+		$matchedfinalfinish = $match;
 	}
 };
 
@@ -230,24 +237,36 @@ my $on_submit = sub {
 		$matchedbeginafterend = 0;
 
 		@prioutput = `condor_userprio`;
-		my @condorofffast = `condor_off -fast`;
+		my @condorofffast = `condor_off -fast -daemon negotiator`;
 		@prioutput = `condor_userprio`;
 		@prioutput = `condor_userprio`;
 		@prioutput = `condor_userprio`;
 		@prioutput = `condor_userprio`;
 		@prioutput = `condor_userprio`;
-		#Look for a particular number of calls to condor_userprio 
-#		CondorLog::RunCheckMultiple(
-#			daemon => "Negotiator",
-#			match_new => "false",
-#			match_timeout => 45,
-#			match_instances => 1,
-#			match_regexp => "$matchedendafterbegin",
-#			match_between_regexp => "",
-#			match_after_regexp => "$matchbeginafterend",
-#			match_callback => $on_match,
-#			matchbeginafterend
-#		);
+
+		# find the last negotiator end and store the match
+		$matchonfinalfinish = 1;
+		CondorLog::RunCheckMultiple(
+			daemon => "Negotiator",
+			match_new => "true",
+			match_timeout => 45,
+			match_regexp => "Finished Negotiation Cycle",
+			match_callback => $on_match,
+		);
+		$matchonfinalfinish = 0;
+
+		CondorLog::RunCheckMultiple(
+			daemon => "Negotiator",
+			match_new => "false",
+			match_timeout => 45,
+			match_regexp => "$matchedfinalfinish",
+			match_after_regexp => "Got SIGQUIT.  Performing fast shutdown.",
+			match_callback => $on_match,
+		);
+		if($match =~ /Got SIGQUIT.  Performing fast shutdown./) {
+			print "Saw the condor_off -fast hit the negotiator\n";
+			die "condor_off -fast -daemon negotiator happened After Negotiation Cycle Finished\n";
+		}
 
 		system("condor_rm -all");
 		system("condor_rm -forcex -all");
