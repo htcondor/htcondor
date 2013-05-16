@@ -1438,9 +1438,7 @@ not_supported {
 		int mprotect( const void * addr, size_t len, int prot );
 		int madvise( void * addr, size_t len, int behav );
 #	elif defined(LINUX)
-#		if !defined(SWITCH)
-			void * mmap( void * a, size_t l, int p, int f, map(int fd), off_t o );
-#		endif
+        // Don't define mmap(), since it doesn't return NULL on error.
 		int mprotect( MMAP_T addr, size_t len, int prot );
 #	else
 		char * mmap( char * a, size_t l, int p, int f, map(int fd), off_t o ) : EXTRACT;
