@@ -630,6 +630,7 @@ static void writeUsageAd(FILE * file, ClassAd * pusageAd)
 		if (lbl.compare("Memory") == 0) lbl += " (MB)";
 		else if (lbl.compare("Disk") == 0) lbl += " (KB)";
 		fprintf(file, fmt.Value(), lbl.c_str(), psumy->use.c_str(), psumy->req.c_str(), psumy->alloc.c_str());
+		delete psumy;
 	}
 	//fprintf(file, "\t  *See Section %d.%d in the manual for information about requesting resources\n", 2, 5);
 }
