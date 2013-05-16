@@ -64,6 +64,10 @@ working directory of the job was on a filesystem containing 64-bit metadata,
 such as inode numbers.
 \Ticket{3605}
 
+\item \Condor{dagman} would fail to react correctly if a nested DAG file 
+did not exist. The error message was not helpful.
+\Ticket{3623}
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -158,6 +162,14 @@ submission request.
 \item The set of Python bindings introduced in HTCondor version 7.9.4 is now
 distributed as part of HTCondor, not as a contrib module.
 \Ticket{3586}
+
+\item Several improvements have been made to the
+\Condor{gather\_info} tool.  It now prints the name of the
+tarball it emits, and now also checks the history file for the
+job in question, and if found, uses and displays the information 
+there.
+\Ticket{3239}
+\Ticket{3240}
 
 \end{itemize}
 
@@ -301,6 +313,13 @@ to file transfer plug-ins.
 when reading a job's X.509 proxy.
 \Ticket{3558}
 
+\item Fixed a bug with the dedicated scheduler reconnect mode.
+If the \Condor{schedd} crashed with a parallel universe job running after the 
+job's first job lease duration interval, parallel universe jobs would 
+not successfully reconnect, and they
+would restart from the beginning.
+\Ticket{2291}
+
 \end{itemize}
 
 \noindent Known Bugs:
@@ -341,14 +360,6 @@ HTCondor version 7.9.6.
 \noindent New Features:
 
 \begin{itemize}
-
-\item Several improvements have been made to the
-\Condor{gather\_info} tool.  It now prints the name of the
-tarball it emits, and now also checks the history file for the
-job in question, and if found, uses and displays the information 
-there.
-\Ticket{3239}
-\Ticket{3240}
 
 \item The new command line tool \Condor{tail}
 displays files that are in the sandbox of a running job.
@@ -438,13 +449,6 @@ buffer overflow and incorrect determination that daemons are hung.
 \noindent Bugs Fixed:
 
 \begin{itemize}
-
-\item Fixed a bug with the dedicated scheduler reconnect mode, where
-if the schedd crashed with a parallel universe job running after the 
-job's first job lease duration interval, parallel universe jobs would 
-not successfully reconnect, and they
-would restart from scratch.
-\Ticket{2291}
 
 \item The EC2 GAHP now treats OpenStack's \Code{stopped} state as if it
 were \Code{shutoff}, terminating instances which enter this state and

@@ -533,7 +533,7 @@ fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
 
 		// Make sure that this job gets marked as a NOOP 
 	if( job ) {
-		job->_CondorID = condorID;
+		job->SetCondorID( condorID );
 	}
 
 	WriteUserLog ulog;
@@ -600,7 +600,7 @@ bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName,
 	set_fake_condorID(condorID._subproc);
 
 	if( job ) {
-		job->_CondorID = condorID;
+		job->SetCondorID( condorID );
 	}
 
 	WriteUserLog ulog;

@@ -795,6 +795,11 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 						// let the script know the job's exit status
 					job->_scriptPost->_retValJob = job->retval;
 				}
+			} else {
+				debug_printf( DEBUG_NORMAL, "Node %s job proc (%d.%d.%d) "
+					"completed successfully, but status is STATUS_ERROR\n",
+					job->GetJobName(), termEvent->cluster, termEvent->proc,
+					termEvent->subproc );
 			}
 			debug_printf( DEBUG_NORMAL,
 							"Node %s job proc (%d.%d.%d) completed "
@@ -836,13 +841,13 @@ Dag::RemoveBatchJob(Job *node) {
 			// job.
 		constraint.formatstr( "%s == %d && %s == %d",
 					ATTR_DAGMAN_JOB_ID, _DAGManJobId->_cluster,
-					ATTR_CLUSTER_ID, node->_CondorID._cluster);
+					ATTR_CLUSTER_ID, node->GetCluster() );
 		args.AppendArg( constraint.Value() );
 		break;
 
 	case Job::TYPE_STORK:
 		args.AppendArg( _storkRmExe );
-		args.AppendArg( node->_CondorID._cluster );
+		args.AppendArg( node->GetCluster() );
 		break;
 
 	default:
@@ -1078,9 +1083,9 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 		// maximum subprocID for NOOP jobs, so we can start out at
 		// the next value instead of zero.
 	if ( recovery ) {
-		if ( JobIsNoop( job->_CondorID ) ) {
+		if ( JobIsNoop( job->GetID() ) ) {
 			_recoveryMaxfakeID = MAX( _recoveryMaxfakeID,
-						GetIndexID( job->_CondorID ) );
+						GetIndexID( job->GetID() ) );
 		}
 	}
 
@@ -1312,11 +1317,11 @@ Job * Dag::FindNodeByEventID ( int logsource, const CondorID condorID ) const {
 	}
 
 	if ( node ) {
-		if ( condorID._cluster != node->_CondorID._cluster ) {
-			if ( node->_CondorID._cluster != _defaultCondorId._cluster ) {
+		if ( condorID._cluster != node->GetCluster() ) {
+			if ( node->GetCluster() != _defaultCondorId._cluster ) {
 			 	EXCEPT( "Searched for node for cluster %d; got %d!!",
 						 	condorID._cluster,
-						 	node->_CondorID._cluster );
+						 	node->GetCluster() );
 			} else {
 					// Note: we can get here if we get an aborted event
 					// after a terminated event for the same job (see
@@ -1324,7 +1329,7 @@ Job * Dag::FindNodeByEventID ( int logsource, const CondorID condorID ) const {
 					// job_dagman_abnormal_term_recovery_retries test).
 				debug_printf( DEBUG_QUIET, "Warning: searched for node for "
 							"cluster %d; got %d!!\n", condorID._cluster,
-							node->_CondorID._cluster );
+							node->GetCluster() );
 				check_warning_strictness( DAG_STRICT_3 );
 			}
 		}
@@ -1574,13 +1579,9 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 				ProcessSuccessfulSubmit( job, condorID );
     			numSubmitsThisCycle++;
 
-			} else if ( submit_result == SUBMIT_RESULT_FAILED ) {
+			} else if ( submit_result == SUBMIT_RESULT_FAILED || submit_result == SUBMIT_RESULT_NO_SUBMIT ) {
 				ProcessFailedSubmit( job, dm.max_submit_attempts );
 				break; // break out of while loop
-
-			} else if ( submit_result == SUBMIT_RESULT_NO_SUBMIT ) {
-				// No op.
-
 			} else {
 				EXCEPT( "Illegal submit_result_t value: %d\n", submit_result );
 			}
@@ -1804,15 +1805,15 @@ Dag::PostScriptSubReaper( Job* job, int status )
 			// This means that in recovery mode we'll end up running this
 			// POST script again even if we successfully ran it already.
 			// wenger 2005-10-04.
-		e.cluster = job->_CondorID._cluster;
-		e.proc = job->_CondorID._proc;
-		e.subproc = job->_CondorID._subproc;
+		e.cluster = job->GetCluster();
+		e.proc = job->GetProc();
+		e.subproc = job->GetSubProc();
 		ProcessPostTermEvent(&e, job, _recovery);
 	} else {
 
-		e.cluster = job->_CondorID._cluster;
-		e.proc = job->_CondorID._proc;
-		e.subproc = job->_CondorID._subproc;
+		e.cluster = job->GetCluster();
+		e.proc = job->GetProc();
+		e.subproc = job->GetSubProc();
 		WriteUserLog ulog;
 			// Disabling the global log (EventLog) fixes the main problem
 			// in gittrac #934 (if you can't write to the global log the
@@ -1822,8 +1823,8 @@ Dag::PostScriptSubReaper( Job* job, int status )
 		ulog.setUseXML( !_use_default_node_log && job->GetLogFileIsXml() );
 			// For NOOP jobs, we need the proc and subproc values;
 			// for "real" jobs, they are not significant.
-		int procID = job->GetNoop() ? job->_CondorID._proc : 0;
-		int subprocID = job->GetNoop() ? job->_CondorID._subproc : 0;
+		int procID = job->GetNoop() ? job->GetProc() : 0;
+		int subprocID = job->GetNoop() ? job->GetSubProc() : 0;
 		const char* s = _use_default_node_log ? DefaultNodeLog() :
 			job->GetLogFile();
 		if( !s ) { 
@@ -1833,9 +1834,9 @@ Dag::PostScriptSubReaper( Job* job, int status )
 			s = DefaultNodeLog();
 			ulog.setUseXML( false );
 		}
-		debug_printf(DEBUG_QUIET,"Initializing logfile %s, %d, %d, %d\n",
-			s,job->_CondorID._cluster,procID,subprocID);
-		ulog.initialize( std::vector<const char*>(1,s), job->_CondorID._cluster,
+		debug_printf( DEBUG_QUIET, "Initializing logfile %s, %d, %d, %d\n",
+			s, job->GetCluster(), procID, subprocID );
+		ulog.initialize( std::vector<const char*>(1,s), job->GetCluster(),
 			procID, subprocID, NULL );
 
 		for(int write_attempts = 0;;++write_attempts) {
@@ -2027,7 +2028,7 @@ void Dag::RemoveRunningJobs ( const Dagman &dm, bool bForce) const {
 			job->GetStatus() == Job::STATUS_SUBMITTED ) {
 			args.Clear();
 			args.AppendArg( dm.storkRmExe );
-			args.AppendArg( job->_CondorID._cluster );
+			args.AppendArg( job->GetCluster() );
 			if ( util_popen( args ) != 0 ) {
 				debug_printf( DEBUG_NORMAL, "Error removing Stork job\n");
 			}
@@ -2497,10 +2498,10 @@ Dag::RestartNode( Job *node, bool recovery )
 			// here to fix gittrac #1957.
 			// Note: the if checking against the default condor ID
 			// should *always* be true here, but checking just to be safe.
-		if ( !(node->_CondorID == _defaultCondorId) ) {
+		if ( !(node->GetID() == _defaultCondorId) ) {
 			int logsource = node->JobType() == Job::TYPE_CONDOR ? CONDORLOG :
 						DAPLOG;
-			int id = GetIndexID( node->_CondorID );
+			int id = GetIndexID( node->GetID() );
 			if ( GetEventIDHash( node->GetNoop(), logsource )->remove( id )
 						!= 0 ) {
 				EXCEPT( "Event ID hash table error!" );
@@ -2510,7 +2511,7 @@ Dag::RestartNode( Job *node, bool recovery )
 		// Doing this fixes gittrac #481 (recovery fails on a DAG that
 		// has retried nodes).  (See SubmitNodeJob() for where this
 		// gets done during "normal" running.)
-		node->_CondorID = _defaultCondorId;
+		node->SetCondorID( _defaultCondorId );
 		(void)node->MonitorLogFile( _condorLogRdr, _storkLogRdr,
 					_nfsLogIsError, recovery, _defaultNodeLog, _use_default_node_log );
 	}
@@ -3077,7 +3078,7 @@ Dag::PrintPendingNodes() const
 		case Job::STATUS_SUBMITTED:
 		case Job::STATUS_POSTRUN:
 			dprintf( D_ALWAYS, "  Node %s, Condor ID %d, status %s\n",
-						node->GetJobName(), node->_CondorID._cluster,
+						node->GetJobName(), node->GetCluster(),
 						node->GetStatusName() );
 			break;
 
@@ -3527,7 +3528,7 @@ Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
 				if( node ) {
 					submitEventIsSane = SanityCheckSubmitEvent( condorID,
 								node );
-					node->_CondorID = condorID;
+					node->SetCondorID( condorID );
 
 						// Insert this node into the CondorID->node hash
 						// table if we don't already have it (e.g., recovery
@@ -3575,7 +3576,7 @@ Dag::LogEventNodeLookup( int logsource, const ULogEvent* event,
 				nodeName ) == 1) {
 			node = FindNodeByName( nodeName );
 			if( node ) {
-				node->_CondorID = condorID;
+				node->SetCondorID( condorID );
 					// Insert this node into the CondorID->node hash
 					// table.
 				Job *tmpNode = NULL;
@@ -3690,12 +3691,12 @@ Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node )
 		// this is better because if you get two submit events for the
 		// same node you'll still get a warning in recovery mode.
 		// wenger 2007-01-31.
-	if( node->_CondorID == _defaultCondorId ) {
+	if( node->GetID() == _defaultCondorId ) {
 			// we no longer have the submit command stdout to check against
 		return true;
 	}
 
-	if( condorID._cluster == node->_CondorID._cluster ) {
+	if( condorID._cluster == node->GetCluster() ) {
 		return true;
 	}
 
@@ -3704,9 +3705,8 @@ Dag::SanityCheckSubmitEvent( const CondorID condorID, const Job* node )
 				"doesn't match ID reported earlier by submit command "
 				"(%d.%d.%d)!", 
 				node->GetJobName(), condorID._cluster, condorID._proc,
-				condorID._subproc,
-				node->_CondorID._cluster, node->_CondorID._proc,
-				node->_CondorID._subproc );
+				condorID._subproc, node->GetCluster(), node->GetProc(),
+				node->GetSubProc() );
 
 	if ( _abortOnScarySubmit ) {
 		debug_printf( DEBUG_QUIET, "%s  Aborting DAG; set "
@@ -3779,13 +3779,33 @@ Dag::GetEventIDHash(bool isNoop, int jobType) const
 // the higher level calling them to get right...
 //---------------------------------------------------------------------------
 
-namespace {
-void swap_priorities(Job* job, SubmitDagDeepOptions* sdo)
+// A RAII class to swap out the priorities below, then restore them
+// when we are done.
+class priority_swapper {
+public:
+	priority_swapper(bool nodepriority, int newprio, int& oldprio);
+	~priority_swapper();
+private:
+	priority_swapper(); // Not implemented
+	bool swapped;
+	int& oldp;
+	int oldp_value;
+};
+
+priority_swapper::priority_swapper(bool nodepriority, int newprio, int& oldprio) :
+	swapped(false), oldp(oldprio), oldp_value(oldprio)
 {
-	int priority = job->_nodePriority;
-	job->_nodePriority = sdo->priority;
-	sdo->priority = priority;
+	if( nodepriority && newprio > oldprio ) {
+		swapped = true;
+		oldp = newprio;
+	}
 }
+
+priority_swapper::~priority_swapper()
+{
+	if( swapped ) {
+		oldp = oldp_value;
+	}
 }
 
 Dag::submit_result_t
@@ -3794,14 +3814,14 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 	submit_result_t result = SUBMIT_RESULT_NO_SUBMIT;
 
 		// Resetting the Condor ID here fixes PR 799.  wenger 2007-01-24.
-	if ( node->_CondorID._cluster != _defaultCondorId._cluster ) {
+	if ( node->GetCluster() != _defaultCondorId._cluster ) {
 		ASSERT( JobIsNoop( condorID ) == node->GetNoop() );
-		int id = GetIndexID( node->_CondorID );
+		int id = GetIndexID( node->GetID() );
 		int removeResult = GetEventIDHash( node->GetNoop(),
 					node->JobType() )->remove( id );
 		ASSERT( removeResult == 0 );
 	}
-	node->_CondorID = _defaultCondorId;
+	node->SetCondorID( _defaultCondorId );
 
 		// sleep for a specified time before submitting
 	if( dm.submit_delay != 0 ) {
@@ -3817,28 +3837,23 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
    	if ( node->JobType() == Job::TYPE_CONDOR && !node->GetNoop() &&
 				node->GetDagFile() != NULL && _generateSubdagSubmits ) {
 		bool isRetry = node->GetRetries() > 0;
-		if( node->_hasNodePriority && node->_nodePriority > _submitDagDeepOpts->priority ){
-			swap_priorities(node,_submitDagDeepOpts);
-		}
+		priority_swapper ps( node->_hasNodePriority, node->_nodePriority, _submitDagDeepOpts->priority);
 		if ( runSubmitDag( *_submitDagDeepOpts, node->GetDagFile(),
 					node->GetDirectory(), isRetry ) != 0 ) {
+			++node->_submitTries;
 			debug_printf( DEBUG_QUIET,
 						"ERROR: condor_submit_dag -no_submit failed "
 						"for node %s.\n", node->GetJobName() );
 				// Hmm -- should this be a node failure, since it probably
 				// won't work on retry?  wenger 2010-03-26
-			if( node->_hasNodePriority && node->_nodePriority < _submitDagDeepOpts->priority ){
-				swap_priorities(node,_submitDagDeepOpts);
-			}
 			return SUBMIT_RESULT_NO_SUBMIT;
-		}
-		if( node->_hasNodePriority && node->_nodePriority < _submitDagDeepOpts->priority ){
-			swap_priorities(node,_submitDagDeepOpts);
 		}
 	}
 
 	if ( !node->MonitorLogFile( _condorLogRdr, _storkLogRdr, _nfsLogIsError,
-				_recovery, _defaultNodeLog, _use_default_node_log ) ) {
+			_recovery, _defaultNodeLog, _use_default_node_log ) ) {
+		debug_printf( DEBUG_QUIET, "ERROR: Failed to monitor log for node %s.\n",
+			node->GetJobName() );
 		return SUBMIT_RESULT_NO_SUBMIT;
 	}
 
@@ -3949,9 +3964,9 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
         // (note: this sanity-check is not possible during recovery,
         // since we won't have seen the submit command stdout...)
 
-	node->_CondorID = condorID;
-	ASSERT( JobIsNoop( node->_CondorID ) == node->GetNoop() );
-	int id = GetIndexID( node->_CondorID );
+	node->SetCondorID( condorID );
+	ASSERT( JobIsNoop( node->GetID() ) == node->GetNoop() );
+	int id = GetIndexID( node->GetID() );
 	int insertResult = GetEventIDHash( node->GetNoop(), node->JobType() )->
 				insert( id, node );
 	ASSERT( insertResult == 0 );

@@ -289,6 +289,7 @@ if (BUILD_TESTING)
 	condor_pl_test(job_dagman_final-G "Simple Dagman Final Node G" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_final-H "Simple Dagman Final Node H" "core;dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_final-I "Simple Dagman Final Node I" "core;dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_nonexistent_subdag "Test for nonexistent subdag" "core;dagman;quick;full;quicknolink")
 	##### generic lib tests
 	# TSTCLAIR: I can not move the "condor_unit_tests" into the actual unit_test b/c it depends 
 	# on condor_config ++ deps. 
