@@ -1485,17 +1485,30 @@ of the subsystem corresponding to the daemon.
 
 \label{param:MaxSubsysLog}
 \item[\Macro{MAX\_<SUBSYS>\_LOG}]
-  Controls the maximum length in bytes to which a
-  log will be allowed to grow.  Each log file will grow to the
-  specified length, then be saved to a file with an ISO timestamp 
+  Controls the maximum size in bytes or amount of time that a
+  log will be allowed to grow.  When it is time to rotate a log file,
+  it will be saved to a file with an ISO timestamp 
   suffix. The oldest rotated file receives the ending \File{.old}. 
   The \File{.old} files are overwritten each time the maximum 
   number of rotated files (determined by the value of
   \MacroNI{MAX\_NUM\_<SUBSYS>\_LOG}) is exceeded.
-  Thus, the maximum space devoted to logging for 
-  any one program will be \Expr{MAX\_NUM\_<SUBSYS>\_LOG + 1} times 
-  the maximum length of its log file.  A value of 0 specifies that 
-  the file may grow without bounds. The default is 1 Mbyte.
+  A value of 0 specifies that the file may grow without bounds. 
+  If not specified, the default is 1 Mbyte in size.
+  A single integer value is specified; without a suffix, defaults to
+  specifying a size in bytes.  The following suffixes may be used to
+  qualify the integer:
+\begin{description} 
+  \item{\Expr{Bytes} for bytes}
+  \item{\Expr{Kb} for kilobytes}
+  \item{\Expr{Mb} for megabytes}
+  \item{\Expr{Gb} for gigabytes}
+  \item{\Expr{Tb} for terabytes}
+  \item{\Expr{Sec} for seconds}
+  \item{\Expr{Min} for minutes}
+  \item{\Expr{Hr} for hours}
+  \item{\Expr{Day} for days}
+  \item{\Expr{Wk} for weeks}
+\end{description} 
  
 \label{param:MaxNumSubsysLog}
 \item[\Macro{MAX\_NUM\_<SUBSYS>\_LOG}]

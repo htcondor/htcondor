@@ -386,6 +386,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	send_child_alive_timer = -1;
 	m_want_send_child_alive = true;
 
+	max_hang_time_raw = 3600;
 #ifdef WIN32
 	dcmainThreadId = ::GetCurrentThreadId();
 #endif

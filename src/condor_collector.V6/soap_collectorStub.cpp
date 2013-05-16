@@ -28,11 +28,14 @@
 
 #include "condorCollector.nsmap"
 
+using namespace soap_collector;
 #include "../condor_utils/soap_helpers.cpp"
 
 extern CollectorDaemon* Daemon;
 
 //struct timeval convert_start_time, convert_end_time, convert_time_diff;
+
+namespace soap_collector {
 
 int
 condor__insertAd(struct soap *soap,
@@ -144,6 +147,7 @@ condor__insertAd(struct soap *soap,
 	return SOAP_OK;
 }
 
+}
 
 static int receive_query_soap(int command,struct soap *s,char *constraint,
 	struct condor__ClassAdStructArray &ads)
@@ -186,6 +190,18 @@ static int receive_query_soap(int command,struct soap *s,char *constraint,
 
 	return SOAP_OK;
 }
+
+namespace condor_soap {
+
+int
+soap_serve(struct soap *soap)
+{
+        return soap_collector::soap_serve(soap);
+}
+
+}
+
+namespace soap_collector {
 
 int condor__queryStartdAds(struct soap *s,char *constraint,
 	struct condor__ClassAdStructArray & ads)
@@ -236,54 +252,9 @@ int condor__queryAnyAds(struct soap *s,char *constraint,
 	return receive_query_soap(command,s,constraint,ads);
 }
 
-
-// TODO : This should move into daemonCore once we figure out how we wanna link
-
-int condor__getPlatformString(struct soap *soap,void *,char* &result)
-{
-	const char *platform = CondorPlatform();
-	result = (char *) soap_malloc(soap, strlen(platform) + 1);
-	ASSERT(result);
-	strcpy(result, platform);
-	return SOAP_OK;
-}
-
-int condor__getVersionString(struct soap *soap,void *,char* &result)
-{
-	const char *version = CondorVersion();
-	result = (char *) soap_malloc(soap, strlen(version) + 1);
-	ASSERT(result);
-	strcpy(result, version);
-	return SOAP_OK;
-}
-
-int condor__getInfoAd(struct soap *soap,void *,struct condor__ClassAdStruct & ad)
-{
-	char* todd = "Todd A Tannenbaum";
-
-	ad.__size = 3;
-	ad.__ptr = (struct condor__ClassAdStructAttr *)soap_malloc(soap,3 * sizeof(struct condor__ClassAdStructAttr));
-
-	ad.__ptr[0].name = "Name";
-	ad.__ptr[0].type = STRING_ATTR;
-	ad.__ptr[0].value = todd;
-
-	ad.__ptr[1].name = "Age";
-	ad.__ptr[1].type = INTEGER_ATTR;
-	ad.__ptr[1].value = "35";
-	int* age = (int*)soap_malloc(soap,sizeof(int));
-	*age = 35;
-
-	ad.__ptr[2].name = "Friend";
-	ad.__ptr[2].type = STRING_ATTR;
-	ad.__ptr[2].value = todd;
-
-	return SOAP_OK;
-
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 // TODO : This should move into daemonCore once we figure out how we wanna link
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "soap_daemon_core.cpp"
+}
