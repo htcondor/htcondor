@@ -2554,6 +2554,10 @@ ProcAPI::buildPidList() {
 	nentries = bufSize / sizeof(struct kinfo_proc);
 
 	for(int i = 0; i < nentries; i++) {
+			// Pid 0 is not a real process. It represents the kernel.
+		if ( kp[i].kp_proc.p_pid == 0 ) {
+			continue;
+		}
 		temp = new pidlist;
 		temp->pid = (pid_t) kp[i].kp_proc.p_pid;
 		temp->next = NULL;
