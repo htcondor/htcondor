@@ -47,7 +47,7 @@ my $firstappend_condor_config = '
 	NEGOTIATOR_DEBUG = D_COMMAND, D_MATCH, D_FULLDEBUG
 ';
 
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"affinityoff");
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"negotiator");
 
 CondorTest::StartCondorWithParams(
 	condor_name => "watchingnegotiator",
@@ -58,7 +58,6 @@ CondorTest::StartCondorWithParams(
 my $count = 0;
 my $targetjobcount = 10000;
 my $on_execute = sub {
-	CondorTest::debug("ON execute\n",1);
 };
 
 my $on_abort = sub {
@@ -66,9 +65,6 @@ my $on_abort = sub {
 
 my $result = 1;
 my $test_name = "job_services_during_neg_cycle";
-my $on_submit = sub {
-
-};
 
 my $matchedbegin = "";
 my $matchednextend = "";
@@ -195,7 +191,7 @@ my $on_submit = sub {
 		# are they the same?
 
 		if($matchednextend eq $matchedendafterbegin) {
-			print "*************************** sweet ******************************\n";
+			print "Good. Got End of Negotiation Cyle we expected\n";
 		}
 
 		# Were all the condor_userprios done within the cycle?
