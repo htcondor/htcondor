@@ -56,7 +56,7 @@ CondorTest::StartCondorWithParams(
 );
 
 my $count = 0;
-my $targetjobcount = 10000;
+my $targetjobcount = 30000;
 my $on_execute = sub {
 };
 
@@ -114,56 +114,8 @@ my $on_submit = sub {
 		# do my condor_userprios
 		my @prioutput = `condor_userprio`;
 		my @condorreconfig = `condor_reconfig`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
+		RunNTimes("condor_reconfig",1);
+		RunNTimes("condor_userprio",50);
 
 		# find the next end of a negotiation cycle
 		$matchonnextend = 1;
@@ -232,13 +184,9 @@ my $on_submit = sub {
 		);
 		$matchedbeginafterend = 0;
 
-		@prioutput = `condor_userprio`;
-		my @condorofffast = `condor_off -fast -daemon negotiator`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
-		@prioutput = `condor_userprio`;
+		RunNTimes("condor_userprio",1);
+		RunNTimes("condor_off -fast -daemon negotiator",1);
+		RunNTimes("condor_userprio",5);
 
 		# find the last negotiator end and store the match
 		$matchonfinalfinish = 1;
@@ -309,4 +257,33 @@ sub CheckExpectations
 	if($got != $expected) {
 		die "$ad: Expected <$expected> but only got <$got>\n";
 	} 
+}
+
+sub RunNTimes
+{
+	my $cmd = shift;
+	my $goal = shift;
+	my $wantoutput = shift;
+
+	my $count = 0;
+	my $stop = 0;
+	my @cmdout = ();
+	my @date = ();
+	$stop = $goal;
+
+	while($count < $stop) {
+		@cmdout = ();
+		@date = ();
+		@date = `date`;
+		chomp $date[0];
+		print "$date[0] $cmd $count\n";
+		@cmdout = `$cmd`;
+
+		if(defined $wantoutput) {
+			foreach my $line (@cmdout) {
+				print "$line\n";
+			}
+		}
+		$count += 1;
+	}
 }
