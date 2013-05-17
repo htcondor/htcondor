@@ -33,7 +33,14 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+% would have been in 7.9.7, but there was no 7.9.7 release
+\item The \Condor{chirp} write command now accepts an option length parameter
+after the local file name, which allows the write to be limited to the given
+number of bytes.
+\Ticket{3548}
+
+% would have been in 7.9.7, but there was no 7.9.7 release
+\item The HTCondor Python bindings now build on Mac OS X.
 
 \end{itemize}
 
@@ -48,6 +55,28 @@ The details of each version are described below.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+% would have been in 7.9.7, but there was no 7.9.7 release
+\item For grid universe jobs intended for an EC2 grid resource,
+errors which have no response body now report the HTTP code.
+\Ticket{3541}
+
+% would have been in 7.9.7, but there was no 7.9.7 release
+\item \Condor{chirp} putfile would experience an assertion failure when
+used on an empty file.  This bug has been fixed, and putfile can now be
+used on empty files.
+\Ticket{3542}
+
+% would have been in 7.9.7, but there was no 7.9.7 release
+\item The 32-bit \Condor{starter} could fail to execute jobs when the initial
+working directory of the job was on a filesystem containing 64-bit metadata,
+such as inode numbers.
+\Ticket{3605}
+
+% would have been in 7.9.7, but there was no 7.9.7 release
+\item \Condor{dagman} would fail to react correctly if a nested DAG file
+did not exist. The error message was not helpful.
+\Ticket{3623}
 
 % would have been in 7.8.9, but there was no 7.8.9 release
 \item Fixed a bug that caused the \Condor{master} daemon on Windows platforms

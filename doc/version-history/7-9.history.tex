@@ -11,81 +11,8 @@
 This is the development release series of HTCondor.
 The details of each version are described below.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-7-9-7}Version 7.9.7}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\noindent Release Notes:
-
-\begin{itemize}
-
-\item HTCondor version 7.9.7 not yet released.
-%\item HTCondor version 7.9.7 released on Month Date, 2013.
-
-\end{itemize}
-
-
-\noindent New Features:
-
-\begin{itemize}
-
-\item The \Condor{chirp} write command now accepts an option length parameter
-after the local file name, which allows the write to be limited to the given
-number of bytes.
-\Ticket{3548}
-
-\item The HTCondor Python bindings now build on Mac OS X.
-
-\end{itemize}
-
-\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-\noindent Bugs Fixed:
-
-\begin{itemize}
-
-\item For grid universe jobs intended for an EC2 grid resource,
-errors which have no response body now report the HTTP code.
-\Ticket{3541}
-
-\item \Condor{chirp} putfile would experience an assertion failure when
-used on an empty file.  This bug has been fixed, and putfile can now be
-used on empty files.
-\Ticket{3542}
-
-\item The 32-bit \Condor{starter} could fail to execute jobs when the initial
-working directory of the job was on a filesystem containing 64-bit metadata,
-such as inode numbers.
-\Ticket{3605}
-
-\item \Condor{dagman} would fail to react correctly if a nested DAG file 
-did not exist. The error message was not helpful.
-\Ticket{3623}
-
-\end{itemize}
-
-\noindent Known Bugs:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
-\noindent Additions and Changes to the Manual:
-
-\begin{itemize}
-
-\item None.
-
-\end{itemize}
-
+%% NO 7.9.7 RELEASE IS PLANNED.  PLEASE PUT YOUR ITEMS INTO THE 
+%%  8.0.0 VERSION HISTORY   !!!
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-7-9-6}Version 7.9.6}
