@@ -56,6 +56,7 @@ sub RunCheck
 	 
 	#print "Checking duration being passsed to RunCheck <$args{duration}>\n";
     my $execute_fn = $args{on_execute} || $dummy;
+    my $submit_fn = $args{on_submit} || $submitted;
     my $ulog_fn = $args{on_ulog} || $dummy;
 	# if we want to remove these jobs, better override aborted function
 	# this change is for running forever sleep jobs to test concurrency limits
@@ -69,7 +70,7 @@ sub RunCheck
     CondorTest::RegisterExitedSuccess( $testname, $donewithsuccess );
     CondorTest::RegisterExecute($testname, $execute_fn);
     CondorTest::RegisterULog($testname, $ulog_fn);
-    CondorTest::RegisterSubmit( $testname, $submitted );
+    CondorTest::RegisterSubmit( $testname, $submit_fn );
 	if(defined $args{on_failure}) {
 		CondorTest::RegisterExitedFailure( $testname, $args{on_failure} );
 	}
