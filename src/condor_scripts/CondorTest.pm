@@ -208,7 +208,7 @@ sub RegisterResult
     my $testname = $args{test_name} || GetDefaultTestName();
 
     my $result_str = $result == 1 ? "PASSED" : "FAILED";
-    debug( "\n\n$result_str check $checkname in test $testname\n\n", 2 );
+    debug( "\n\n$result_str check $checkname in test $testname\n\n", 1 );
     if( $result != 1 ) {
 	$test_failure_count += 1;
     }
@@ -1711,7 +1711,7 @@ sub SearchCondorLogMultiple
 
     my $logloc = `condor_config_val ${daemon}_log`;
     CondorUtils::fullchomp($logloc);
-    CondorTest::debug("Search this log <$logloc> for <$regexp> instances = <$instances>\n",3);
+    CondorTest::debug("Search this log <$logloc> for <$regexp> instances = <$instances>\n",1);
 
 	# do we want to see X new events
 	if($findnew eq "true") {
