@@ -1,0 +1,109 @@
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+%%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:History-8-0}Stable Release Series 8.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+This is a stable release series of HTCondor.
+As usual, only bug fixes (and potentially, ports to new platforms)
+will be provided in future 8.0.x releases.
+New features will be added in the 8.1.x development series.
+
+The details of each version are described below.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-0-0}Version 8.0.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.0.0 not yet released.
+%\item HTCondor version 8.0.0 released on Month Date, 2013.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+% would have been in 7.9.7, but there was no 7.9.7 release
+\item The \Condor{chirp} write command now accepts an option length parameter
+after the local file name, which allows the write to be limited to the given
+number of bytes.
+\Ticket{3548}
+
+% would have been in 7.9.7, but there was no 7.9.7 release
+\item The HTCondor Python bindings now build on Mac OS X.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+% would have been in 7.9.7, but there was no 7.9.7 release
+\item For grid universe jobs intended for an EC2 grid resource,
+errors which have no response body now report the HTTP code.
+\Ticket{3541}
+
+% would have been in 7.9.7, but there was no 7.9.7 release
+\item \Condor{chirp} putfile would experience an assertion failure when
+used on an empty file.  This bug has been fixed, and putfile can now be
+used on empty files.
+\Ticket{3542}
+
+% would have been in 7.9.7, but there was no 7.9.7 release
+\item The 32-bit \Condor{starter} could fail to execute jobs when the initial
+working directory of the job was on a filesystem containing 64-bit metadata,
+such as inode numbers.
+\Ticket{3605}
+
+% would have been in 7.9.7, but there was no 7.9.7 release
+\item \Condor{dagman} would fail to react correctly if a nested DAG file
+did not exist. The error message was not helpful.
+\Ticket{3623}
+
+% would have been in 7.8.9, but there was no 7.8.9 release
+\item Fixed a bug that caused the \Condor{master} daemon on Windows platforms
+to think there were new binaries
+when changing to and from daylight savings time.
+The \Condor{master} daemon would then kill and restart itself,
+as well as all of the daemons,
+if configuration variable \Macro{MASTER\_NEW\_BINARY\_RESTART} was set
+to its default value of \Expr{GRACEFUL}.
+\Ticket{3572}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+

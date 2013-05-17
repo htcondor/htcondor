@@ -1037,3 +1037,16 @@ Job::FixPriority(Dag& dag)
 		}
 	}
 }
+
+bool Job::SetCondorID(const CondorID& cid)
+{
+	bool ret = true;
+	if(GetCluster() != -1) {
+		debug_printf( DEBUG_NORMAL, "Reassigning the id of job %s from (%d.%d.%d) to "
+			"(%d.%d.%d)\n", GetJobName(), GetCluster(), GetProc(), GetSubProc(),
+			cid._cluster, cid._proc,cid._subproc );
+			ret = false;
+	}
+	_CondorID = cid;
+	return ret;	
+}

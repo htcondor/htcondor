@@ -81,33 +81,54 @@ my $tmpdir = undef;
 my $progname = $0;
 
 #
-# Assume we're using Workstation, but attempt to autodetect Server.
-# (It looks like only Server has vmware-cmd.)
+# Assume we're using Workstation or Player, but autodetect Server;
+# only Server has vmware-cmd.
 #
 my $VMWARE_VERSION = "workstation";
-my $childPID = open( VMV, '-|', $vmwarecmd_prog, '-l' );
-if( defined( $childPID ) ) {
-	$VMWARE_VERSION = "server";
+
+# open()ing a pipe on Windows always succeeds, even if the binary in
+# question doesn't exist, so just check if the binary exists.  (We can't
+# do this on Linux because we don't have the full path to the binary.)
+if( lc($^O) eq "mswin32" ) {
+    if( -x $vmwarecmd_prog ) {
+        $VMWARE_VERSION = "server";
+    }
+} else {
+    my $childPID = open( VMV, '-|', $vmwarecmd_prog, '-l' );
+    if( defined( $childPID ) ) {
+	    $VMWARE_VERSION = "server";
+    }
+    close( VMV );
 }
-close( VMV );
+
 if( defined($verbose) ) { print( "Using \$VMWARE_VERSION '$VMWARE_VERSION'.\n" ); }
 
-my $VM_CONTROL_TYPE='ws';
-if( $VMWARE_VERSION eq 'workstation' ) {
-    my $realVersion = `vmware-installer -l`;
-    if( ! defined( $realVersion ) ) {
-        printwarn( "Unable to run vmware-installer to determine type of VMware installation, assuming Workstation.\n" );
-    } else {
-        if( $realVersion =~ m/workstation/ ) {
-            $VM_CONTROL_TYPE = 'ws';
-        } elsif( $realVersion =~ m/player/ ) {
-            $VM_CONTROL_TYPE = 'player';
-        } else {
-            printwarn( "Unrecognized output from vmware-installer, assuming Workstation.\n" );
-        }
+#
+# The behavior of vmrun isn't consistent from platform to platform, so we
+# have to examine the output to determine if it actually worked.  Note 
+# that VMWare Server's implementation of vmrun dies if passed -T, so be
+# sure never to do that.
+#
+
+my @VMRUN_CMD = ($vmrun_prog);
+while( $VMWARE_VERSION eq 'workstation' ) {
+    my $wsList = `"$vmrun_prog" -T ws list`;
+    if( $wsList =~ m/^Total running VMs:/ ) {
+	push( @VMRUN_CMD, '-T', 'ws' );
+        last;
     }
+    
+    my $playerList = `"$vmrun_prog" -T player list`;
+    if( $playerList =~ m/^Total running VMs:/ ) {
+	push( @VMRUN_CMD, '-T', 'player' );
+        last;
+    }
+    
+    last;
 }
-if( defined($verbose) ) { print( "Using \$VM_CONTROL_TYPE '$VM_CONTROL_TYPE'.\n" ); }
+
+my $VMRUNCMD = '"' . join( '"  "', @VMRUN_CMD ) . '"';
+if( defined($verbose) ) { print( "Using \$VMRUNCMD '$VMRUNCMD'.\n" ); }
 
 sub usage()
 {
@@ -220,14 +241,14 @@ sub checkregister
 sub list
 {
 #list                           List all running VMs
-	!system $vmrun_prog, "-T", $VM_CONTROL_TYPE, "list"
+	!system @VMRUN_CMD, "list"
 		or printerror "Can't execute the command: '$vmrun_prog' list";
 }
 
 sub check
 {
 #check       [vmconfig]         Check if vmware command line tools are installed
-	!system $vmrun_prog, "-T", $VM_CONTROL_TYPE, "list"
+	!system @VMRUN_CMD, "list"
 		or printerror "Can't execute $vmrun_prog";
 
 	if ($VMWARE_VERSION ne "workstation") {
@@ -313,7 +334,7 @@ sub status
 	my $output_status = "Stopped";	# default status
 	if ($VMWARE_VERSION eq "workstation") {
 		# Just check to see if $vmconfig is listed in the output
-		my @vmstatus =  `"$vmrun_prog" -T $VM_CONTROL_TYPE list`;
+		my @vmstatus =  `${VMRUNCMD} list`;
 		foreach my $i (@vmstatus) {	
 			# delete newline
 			chomp($i);
@@ -478,7 +499,7 @@ sub start
 	my $vmconfig = checkvmconfig($_[0]);
 
 	if ($VMWARE_VERSION eq "workstation") {
-		!system $vmrun_prog, "-T", $VM_CONTROL_TYPE, "start", $vmconfig, "nogui"
+		!system @VMRUN_CMD, "start", $vmconfig, "nogui"
 			or printerror "Can't create vm with $vmconfig";
 	}
 
@@ -509,7 +530,7 @@ sub stop
 
 	if ($VMWARE_VERSION eq "workstation") {
 		# Try to stop vm
-		!system $vmrun_prog, "-T", $VM_CONTROL_TYPE, "stop", $vmconfig, "hard"
+		!system @VMRUN_CMD, "stop", $vmconfig, "hard"
 		    or printerror "Can't stop vm with $vmconfig";
 		sleep(2);
 	}	  
@@ -637,7 +658,7 @@ sub suspend
 	my $vmconfig = checkvmconfig($_[0]);
 
 	if ($VMWARE_VERSION eq "workstation") {
-		!system $vmrun_prog, "-T", $VM_CONTROL_TYPE, "suspend", $vmconfig, "soft"
+		!system @VMRUN_CMD, "suspend", $vmconfig, "soft"
 			or printerror "Can't suspend vm with $vmconfig";
 	}
 	else {
@@ -677,7 +698,7 @@ sub snapshot
 	my $vmconfig = checkvmconfig($_[0]);
 
 	if ($VMWARE_VERSION eq "workstation") {
-		!system $vmrun_prog, "-T", $VM_CONTROL_TYPE, "snapshot", $vmconfig, "condor-snapshot"
+		!system @VMRUN_CMD, "snapshot", $vmconfig, "condor-snapshot"
 			or printerror "Can't create snapshot for vm($vmconfig)";	
 	}
 	else {
@@ -701,7 +722,7 @@ sub commit
 	my $vmconfig = checkvmconfig($_[0]);
 
 	if ($VMWARE_VERSION eq "workstation") {
-		!system $vmrun_prog, "-T", $VM_CONTROL_TYPE, "deleteSnapshot", $vmconfig, "condor-snapshot"
+		!system @VMRUN_CMD, "deleteSnapshot", $vmconfig, "condor-snapshot"
 			or printerror "Can't combine snapshot disk with base disk for vm($vmconfig)";
 	}
 	else {
@@ -725,7 +746,7 @@ sub revert
 	my $vmconfig = checkvmconfig($_[0]);
 
 	if ($VMWARE_VERSION eq "workstation") {
-		!system $vmrun_prog, "-T", $VM_CONTROL_TYPE, "revertToSnapshot", $vmconfig, "condor-snapshot"
+		!system @VMRUN_CMD, "revertToSnapshot", $vmconfig, "condor-snapshot"
 			or printerror "Can't revert VM state to a snapshot for vm($vmconfig)";
 	}
 	else {

@@ -2061,6 +2061,7 @@ Client::~Client()
 	if( c_host) free( c_host );
     if (c_rmtgrp) free(c_rmtgrp);
     if (c_neggrp) free(c_neggrp);
+    if (c_concurrencyLimits) free(c_concurrencyLimits);
 }
 
 

@@ -1,0 +1,31 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\label{sec:to-8.0}Upgrading from the 7.8 series to the 8.0 series of HTCondor}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\index{upgrading!items to be aware of}
+While upgrading from the 7.8 series of HTCondor to the 8.0 series 
+will bring many
+new features and improvements introduced in the 7.9 series of HTCondor,
+it will
+also introduce changes that administrators of sites running from an older
+HTCondor version should be aware of when planning an upgrade.  
+Here is a list of items that administrators should be aware of.
+
+\begin{itemize}
+
+\item \Condor{dagman} jobs that are on hold when an upgrade occurs will have
+problems running when they are released after the upgrade. This is because of
+the new feature introduced in HTCondor version 7.9.0, where \Condor{dagman}
+uses a single log file to monitor events.  The suggested workaround is for the
+DAG file to set the config option \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} to
+\Macro{False} in a DAG config file, before running \Condor{release} on the held
+DAG job.  \Condor{dagman} jobs that have a chance to write out a rescue
+DAG---those that are \Condor{rm}'d or that have failed---are expected to
+successfully restart after the upgrade. Administrators can be proactive by
+checking that no \Condor{dagman} jobs are on hold when the upgrade occurs, and
+encourage users to use the halt file feature and release their \Condor{dagman}
+jobs before the upgrade.  Running \Condor{rm} on a held \Condor{dagman} job is
+not advised in this case, unless the user is abandoning the DAG job.
+
+\end{itemize}
+
