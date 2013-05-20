@@ -466,7 +466,7 @@ BoincResource::BatchStatusResult BoincResource::StartBatchStatus()
 BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 {
 	GahpClient::BoincQueryResults results;
-	int rc = m_statusGahp->boinc_query_batch( m_statusBatches, results );
+	int rc = m_statusGahp->boinc_query_batches( m_statusBatches, results );
 	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 		return BSR_PENDING;
 	}

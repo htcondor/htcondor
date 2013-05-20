@@ -1279,7 +1279,7 @@ GahpServer::useBoincResource( BoincResource *resource )
 bool
 GahpServer::command_boinc_select_project( const char *url, const char *auth )
 {
-	static const char *command = "USE_CACHED_PROXY";
+	static const char *command = "BOINC_SELECT_PROJECT";
 
 		// Check if this command is supported
 	if  ( m_commands_supported->contains_anycase( command ) == FALSE ) {
@@ -8219,10 +8219,10 @@ int GahpClient::boinc_submit( const char *batch_name,
 	return GAHPCLIENT_COMMAND_PENDING;
 }
 
-int GahpClient::boinc_query_batch( StringList &batch_names,
-								   BoincQueryResults &results )
+int GahpClient::boinc_query_batches( StringList &batch_names,
+									 BoincQueryResults &results )
 {
-	static const char* command = "BOINC_QUERY_BATCH";
+	static const char* command = "BOINC_QUERY_BATCHES";
 
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {

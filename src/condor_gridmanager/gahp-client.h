@@ -772,8 +772,8 @@ class GahpClient : public Service {
 		typedef std::vector< std::pair< std::string, std::string > > BoincBatchResults;
 		typedef std::vector< BoincBatchResults > BoincQueryResults;
 //		typedef std::vector< std::vector< std::pair< std::string, std::string > > > BoincQueryResults;
-		int boinc_query_batch( StringList &batch_names,
-							   BoincQueryResults &results );
+		int boinc_query_batches( StringList &batch_names,
+								 BoincQueryResults &results );
 
 		typedef std::vector< std::pair< std::string, std::string> > BoincOutputFiles;
 		int boinc_fetch_output( const char *job_name,
