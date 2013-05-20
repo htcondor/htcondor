@@ -6443,6 +6443,16 @@ REM Run the actual job now
   namespaces for HTCondor jobs run on Linux kernels.
   Defaults to \Expr{False}.
 
+\label{param:PerJobNamespaces} 
+\item[ \Macro{PER\_JOB\_NAMESPACES}]
+  A boolean value that defaults to \Expr{False}.
+  Relevant only for Linux platforms using file system namespaces.
+  The default value of \Expr{False} ensures that there will be no
+  private mount points, because auto mounts done by \Prog{autofs} 
+  would use the wrong name for private file system mounts. 
+  A \Expr{True} value is useful when private file system mounts are
+  permitted and \Prog{autofs} (for NFS) is not used.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
