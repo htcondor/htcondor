@@ -1330,9 +1330,15 @@ DedicatedScheduler::sortJobs( void )
 		formatstr(fifoConstraint, "%s == %d && %s == %d && %s == %d", ATTR_JOB_UNIVERSE, CONDOR_UNIVERSE_PARALLEL, 
 																ATTR_JOB_STATUS, HELD, 
 																ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE_SpoolingInput);
-		ClassAd *spoolingInJob = GetJobByConstraint(fifoConstraint.c_str());
-		if (spoolingInJob) {
-			spoolingInJob->LookupInteger(ATTR_CLUSTER_ID, cluster_causing_skippage);
+		ClassAd *spoolingInJob = NULL;
+		bool firstTime = true;
+		while ((spoolingInJob = GetNextJobByConstraint(fifoConstraint.c_str(), firstTime))) {
+			firstTime = false;
+			int spooling_cluster_id = INT_MAX;
+			spoolingInJob->LookupInteger(ATTR_CLUSTER_ID, spooling_cluster_id);
+			if (spooling_cluster_id < cluster_causing_skippage) {
+				cluster_causing_skippage = spooling_cluster_id;
+			}
 		}
 	}
 
