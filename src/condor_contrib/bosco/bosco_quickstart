@@ -121,11 +121,11 @@ fi
 echo "************** Starting Bosco: ***********"
 bosco_start
 
-# Add one cluster
+# Connect one cluster
 REMOTE_HOST=""
 REMOTE_USER=""
 REMOTE_TYPE=""
-echo "************** Adding one cluster (resource) to BOSCO: ***********"
+echo "************** Connect one cluster (resource) to BOSCO: ***********"
 echo "At any time hit [CTRL+C] to interrupt."
 echo 
 q_tmp=""
@@ -154,14 +154,14 @@ if [ "x$q_tmp" = "xslurm" ]; then
 fi
 REMOTE_TYPE=$q_tmp
 
-echo "Adding $REMOTE_HOST, user: $REMOTE_USER, queue manager: $REMOTE_TYPE"
+echo "Connecting $REMOTE_HOST, user: $REMOTE_USER, queue manager: $REMOTE_TYPE"
 show_progress "-20-" bosco_cluster --add $REMOTE_USER@$REMOTE_HOST $REMOTE_TYPE 
 if [ $? -ne 0 ]; then
-  echo "Failed to add the cluster $REMOTE_HOST. Please check your data and retry."
+  echo "Failed to connect the cluster $REMOTE_HOST. Please check your data and retry."
   exit 1
 fi
 
-echo "$REMOTE_HOST added"
+echo "$REMOTE_HOST connected"
 
 echo "************** Testing the cluster (resource): ***********"
 #echo "This may take up to 2 minutes... please wait."
