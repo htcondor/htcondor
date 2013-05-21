@@ -641,7 +641,7 @@ sub RunDagTest
 	if($count == 5) {
 		DoTest(@_);
 	} else {
-		my @newrgs = ($_[0],$_[1],$_[2],$undead,$_[3])
+		my @newrgs = ($_[0],$_[1],$_[2],$undead,$_[3]);
 		DoTest(@newrgs);
 	}
 }
