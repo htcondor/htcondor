@@ -1802,6 +1802,9 @@ sub SearchCondorLogMultiple
 		}
 		$tried += 1;
 		if($tried >= $timeout) {
+			if(defined $findcallback) {
+				&$findcallback("HitRetryLimit");
+			}
 			last;
 		}
 	}
