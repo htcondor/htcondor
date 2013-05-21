@@ -3819,7 +3819,7 @@ WANT_HOLD_REASON = \
    \normalsize
 
 \label{param:CheckpointPlatform}
-\item[\Macro{CheckpointPlatform}]
+\item[\Macro{CHECKPOINT\_PLATFORM}]
   A string used to
   override the automatically-generated machine ClassAd attribute 
   \AdAttr{CheckpointPlatform} (see section
@@ -4581,7 +4581,7 @@ search for the corresponding attribute names using \Expr{slot}, instead.
   The default value is given by
   \footnotesize
   \begin{verbatim}
-  quantize(RequestMemory,{TotalSlotMemory / TotalSlotCpus / 4})
+  quantize(RequestMemory,{128})
   \end{verbatim}
   \normalsize
 
