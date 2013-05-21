@@ -1,9 +1,22 @@
 
-
+\index{exit codes!of condor\_shadow}
+When a \Condor{shadow} daemon exits, 
+the \Condor{shadow} exit code is recorded in the \Condor{schedd} log,
+and it identifies why the job exited. 
+Prose in the log appears of the form
+\begin{verbatim}
+Shadow pid XXXXX for job XX.X exited with status YYY 
+\end{verbatim}
+where \Expr{YYY} is the exit code,  or
+\begin{verbatim}
+Shadow pid XXXXX for job XX.X reports job exit reason 100. 
+\end{verbatim}
+where the exit code is the value 100.
+Table~\ref{table:shadow-exit-codes} lists these codes.
 % shadow error codes
 \begin{center}
 \begin{table}[H]
-\caption{\label{shadow-exit-codes}\Condor{shadow} Exit Codes}
+\caption{\label{table:shadow-exit-codes}\Condor{shadow} Exit Codes}
 \begin{tabular}{|c|l|l|} \hline
 \emph{Value} & \emph{Error Name} & \emph{Description} \\ \hline \hline
 4   &   JOB\_EXCEPTION    & the job exited with an exception \\ \hline
@@ -77,9 +90,10 @@ section~\ref{sec:job-log-events}.
 028  &   Job ClassAd attribute values added to event log  \\ \hline
 029  &   Job status unknown \\ \hline
 030  &   Job status known \\ \hline
-031  &   Unused \\ \hline
-032  &   Unused \\ \hline
+031  &   Job Stage In \\ \hline
+032  &   Job Stage Out \\ \hline
 033  &   Attribute update \\ \hline
+034  &   Pre Skip \\ \hline
 \end{tabular}
 \end{table}
 \end{center}
