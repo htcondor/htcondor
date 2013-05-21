@@ -2,15 +2,69 @@
 # first version 5/2/2013 - Marco Mambelli
 
 # Download URL
-INSTALLER_URL=ftp://ftp.cs.wisc.edu/condor/bosco/latest/boscoinstaller
+#INSTALLER_URL=ftp://ftp.cs.wisc.edu/condor/bosco/latest/boscoinstaller
+INSTALLER_URL=ftp://ftp.cs.wisc.edu/condor/bosco/1.2/boscoinstaller
+
+# Change this to download a patch for bosco_cluster
+#PATCH_B_CLUSTER_URL=https://twiki.grid.iu.edu/twiki/bin/viewfile/CampusGrids/BoscoQuickStart_draft/bosco_cluster
+
+# Change to have a different log file
+LOG_FILE=./bosco_quickstart.log
 
 # Binaries used
 # which
 # python
 # wget or curl if download needed
 
+display_dots () {
+    if [ "x$1" != "x" ]; then
+        sleep $1
+    fi
+    while [ 1 ]; do
+        # Get parent ID
+        ppid=`ps -p $$ -o ppid=`
+        if [ "$ppid" -eq 1 ]; then
+            exit
+        fi
+        echo -n "."
+        sleep 1
+    done
+
+}
+
+
+show_progress () {
+    message=$1
+    shift
+    command=$@
+
+    # Display the message & dots
+    #echo -n $message
+    if [ "x$message" == "x-20-" ]; then
+        display_dots 20 2>/dev/null &
+    else
+        echo -n $message    
+        display_dots 2>/dev/null &
+    fi
+    dots_pid=$!
+
+    # Run the command
+    "$@"  &>> $LOG_FILE
+    exit_code=$?
+    disown $dots_pid
+    kill -9 $dots_pid
+    echo ""
+    
+    return $exit_code
+
+}
+
+
 # Check if setup needs to be invoked
 env_missing=0
+echo "Bosco Quickstart"
+echo "Detailed logging of this run is in $LOG_FILE"
+echo
 which bosco_cluster &> /dev/null
 if [ $? -ne 0 ]; then
   if [ ! -e $HOME/bosco/bosco_setenv ]; then
@@ -19,16 +73,18 @@ if [ $? -ne 0 ]; then
     while [ 1 ]; do
       read -p "Do you want to install Bosco? Select y/n and press [ENTER]): " q_tmp
       [ "x$q_tmp" = "xn" ] && exit 0
+      [ "x$q_tmp" = "xno" ] && exit 0
       [ "x$q_tmp" = "xy" ] && break
+      [ "x$q_tmp" = "xyes" ] && break
     done
-    echo "********************** Installing Bosco: ***********"
+    echo "************** Downloading and Installing Bosco ***********"
     which wget &> /dev/null
     if [ $? -eq 0 ]; then
-      wget -O $HOME/boscoinstaller $INSTALLER_URL
+      wget -O $HOME/boscoinstaller $INSTALLER_URL &>> $LOG_FILE
     else
       which curl &> /dev/null
       if [ $? -eq 0 ]; then
-        curl -o $HOME/boscoinstaller $INSTALLER_URL
+        curl -o $HOME/boscoinstaller $INSTALLER_URL &>> $LOG_FILE
       fi
     fi
     if [ ! -e $HOME/boscoinstaller ]; then
@@ -37,36 +93,51 @@ if [ $? -ne 0 ]; then
       echo "to download manually Bosco and install it."
       exit 0
     fi
-    python $HOME/boscoinstaller
+    show_progress "Installing BOSCO" python $HOME/boscoinstaller
     rm $HOME/boscoinstaller
+    # TMP Patching bosco_cluster
+    if [ "x$PATCH_B_CLUSTER_URL" != "x" ]; then
+      which wget &> /dev/null
+      if [ $? -eq 0 ]; then
+        rm $HOME/bosco/bin/bosco_cluster
+        wget -O $HOME/bosco/bin/bosco_cluster --no-check-certificate $PATCH_B_CLUSTER_URL &>> $LOG_FILE
+      else
+        which curl &> /dev/null
+        if [ $? -eq 0 ]; then
+          rm $HOME/bosco/bin/bosco_cluster
+          curl -o $HOME/bosco/bin/bosco_cluster $PATCH_B_CLUSTER_URL &>> $LOG_FILE
+        fi
+      fi
+      chmod +x $HOME/bosco/bin/bosco_cluster &>> $LOG_FILE
+    fi
+    echo "BOSCO Installed"
   fi
   env_missing=1
   source $HOME/bosco/bosco_setenv
 fi
- 
-# Add Bosco installation?
+
 
 # Start Bosco
-echo "********************** Starting Bosco: ***********"
+echo "************** Starting Bosco: ***********"
 bosco_start
 
 # Add one cluster
 REMOTE_HOST=""
 REMOTE_USER=""
 REMOTE_TYPE=""
-echo "********************** Adding one cluster: ***********"
-echo "Hit [CTRL+C] to interrupt."
+echo "************** Adding one cluster (resource) to BOSCO: ***********"
+echo "At any time hit [CTRL+C] to interrupt."
 echo 
 q_tmp=""
-read -p "Type the cluster name and press [ENTER]: " q_tmp
+read -p "Type the submit host name for the BOSCO resource and press [ENTER]: " q_tmp
 while [ "x$q_tmp" = "x" ]; do
-  read -p "No default, please type the cluster name and press [ENTER]: " q_tmp
+  read -p "No default, please type the name and press [ENTER]: " q_tmp
 done
 REMOTE_HOST=$q_tmp
 
 q_tmp=""
-read -p "Type your name at $REMOTE_HOST (default $USER) and press [ENTER]: " q_tmp
-if [ "x$q_name" = "x" ]; then 
+read -p "Type your username on $REMOTE_HOST (default $USER) and press [ENTER]: " q_tmp
+if [ "x$q_tmp" = "x" ]; then 
   REMOTE_USER=$USER
 else
   REMOTE_USER=$q_tmp
@@ -84,22 +155,34 @@ fi
 REMOTE_TYPE=$q_tmp
 
 echo "Adding $REMOTE_HOST, user: $REMOTE_USER, queue manager: $REMOTE_TYPE"
-bosco_cluster --add $REMOTE_USER@$REMOTE_HOST $REMOTE_TYPE
+show_progress "-20-" bosco_cluster --add $REMOTE_USER@$REMOTE_HOST $REMOTE_TYPE 
 if [ $? -ne 0 ]; then
   echo "Failed to add the cluster $REMOTE_HOST. Please check your data and retry."
   exit 1
 fi
 
-echo "********************** Testing the cluster: ***********"
-bosco_cluster --test $REMOTE_USER@$REMOTE_HOST
+echo "$REMOTE_HOST added"
 
-echo "********************** Congratulations, Bosco is now setup to work with $REMOTE_HOST! ***********"
+echo "************** Testing the cluster (resource): ***********"
+#echo "This may take up to 2 minutes... please wait."
+show_progress "This may take up to 2 minutes... please wait." bosco_cluster --test $REMOTE_USER@$REMOTE_HOST 
+# MMDB move this underneath 
+echo "BOSCO on $REMOTE_HOST Tested"
+if [ $? -ne 0 ]; then
+  echo "Failed to test the cluster $REMOTE_HOST. Please check your data and retry."
+  echo "The BOSCO install document contains some troubleshooting information:"
+  echo "https://twiki.grid.iu.edu/bin/view/CampusGrids/BoscoInstall"
+  exit 1
+fi
+
+
+echo "************** Congratulations, Bosco is now setup to work with $REMOTE_HOST! ***********"
 cat << EOF
-You are ready to submit jobs with the \"condor_submit\" command.
+You are ready to submit jobs with the "condor_submit" command.
 Remember to setup the environment all the time you want to use Bosco:
 source ~/bosco/bosco_setenv
 
-Here is a quickstart guide (we took care of most of the section 3):
+Here is a quickstart guide about BOSCO:
 https://twiki.grid.iu.edu/bin/view/CampusGrids/BoscoQuickStart
 
 To remove Bosco you can run:
