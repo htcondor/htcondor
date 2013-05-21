@@ -19,11 +19,14 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 
 $cmd = 'job_dagman_basic.dag';
 $testdesc =  'Condor submit dag - basic test - scheduler U';
 $testname = "job_dagman_basic";
 $dagman_args = "-verbose";
+
+$outfile = "job_dagman_basic.dag.dagman.out";
 
 my $killedchosen = 0;
 
@@ -32,9 +35,13 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
+# Get rid of dagman.out file if it exists.
+if (-e $outfile) {
+	runcmd("rm -f $outfile");
+}
+
 $abnormal = sub 
 {
-
 	die "Want to see only submit, execute and successful completion\n";
 };
 
@@ -73,6 +80,9 @@ CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
 if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	if (! -e $outfile) {
+		die "$testname: failed -- no $outfile file!\n";
+	}
 	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {
