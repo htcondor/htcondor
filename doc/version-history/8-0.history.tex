@@ -56,6 +56,11 @@ number of bytes.
 
 \begin{itemize}
 
+\item The redundant configuration variable \Macro{CheckpointPlatform} has
+been removed and the configuration variable \Macro{CHECKPOINT\_PLATFORM}
+documented.
+\Ticket{3544}
+
 \item A standard universe job will no longer crash, and no longer crash
 the shadow, if it calls mmap() with an unsupported combination of flags.
 \Ticket{3565}
@@ -95,6 +100,10 @@ as well as all of the daemons,
 if configuration variable \Macro{MASTER\_NEW\_BINARY\_RESTART} was set
 to its default value of \Expr{GRACEFUL}.
 \Ticket{3572}
+
+\item Fixed a bug that caused redundant usage lines to show up at the end of
+the partitionable resource usage summary in the user log.
+\Ticket{3621}
 
 \end{itemize}
 

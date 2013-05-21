@@ -211,7 +211,9 @@ my $on_submit = sub {
 		);
 		if($match =~ /Got SIGQUIT.  Performing fast shutdown./) {
 			print "Saw the condor_off -fast hit the negotiator\n";
-			die "condor_off -fast -daemon negotiator happened After Negotiation Cycle Finished\n";
+			print "condor_off -fast -daemon negotiator happened After Negotiation Cycle Finished\n";
+			# as of 8.0.0 we don't expect the condor_off to happen before the negotiation cycle finishes
+			# die "condor_off -fast -daemon negotiator happened After Negotiation Cycle Finished\n";
 		}
 
 		system("condor_rm -all");

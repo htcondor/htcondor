@@ -565,6 +565,7 @@ static void writeUsageAd(FILE * file, ClassAd * pusageAd)
 			key = iter->first;
 		}
 		if (key.size() != 0) {
+			title_case(key); // capitalize it to make it consistent for map lookup.
 			SlotResTermSumy * psumy = useMap[key];
 			if ( ! psumy) {
 				psumy = new SlotResTermSumy();
