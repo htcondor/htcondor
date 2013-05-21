@@ -56,6 +56,11 @@ number of bytes.
 
 \begin{itemize}
 
+\item The redundant configuration variable \Macro{CheckpointPlatform} has
+been removed and the configuration variable \Macro{CHECKPOINT\_PLATFORM}
+documented.
+\Ticket{3544}
+
 \item A standard universe job will no longer crash, and no longer crash
 the shadow, if it calls mmap() with an unsupported combination of flags.
 \Ticket{3565}
