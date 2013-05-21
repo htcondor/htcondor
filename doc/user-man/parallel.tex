@@ -4,14 +4,14 @@
 \index{parallel universe|(}
 \index{MPI application}
 
-HTCondor's parallel universe supports a wide variety of parallel
-programming environments, and it encompasses the execution 
-of MPI jobs.
-It supports jobs which need to be co-scheduled.
-A co-scheduled job has
-more than one process that must be running at the same time on different
-machines to work correctly.
-The parallel universe supersedes the mpi universe.
+HTCondor's parallel universe supports jobs that span multiple machines.
+All other job universe in HTCondor are serial, that is, each job runs
+on exactly one machine, only in the parallel universe are jobs consisting
+of multiple processes allowed to be concurrently scheduled across multiple
+machines.  The parallel universe provides machine scheduling and allocation,
+but does not enforce any particular programming paradigm.  Thus, with
+the parallel universe, users can launch jobs using various MPI implementations, 
+or other programming environments. The parallel universe supersedes the mpi universe.
 The mpi universe eventually will be removed from HTCondor.
 
 
@@ -19,24 +19,18 @@ The mpi universe eventually will be removed from HTCondor.
 \subsection{\label{sec:parallel-setup}Prerequisites to Running Parallel Jobs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-HTCondor must be configured such that resources (machines) running
+To run parallel universe jobs, HTCondor must be configured such that machines running
 parallel jobs are dedicated.  
 \index{scheduling!dedicated}
 Note that \Term{dedicated} has a very specific meaning in HTCondor:
-dedicated
-machines never vacate their executing HTCondor jobs,
-should the machine's interactive owner return.
-This is implemented by running a single dedicated scheduler
-process on a machine in the pool,
-which becomes the single machine from which parallel universe
-jobs are submitted.
-Once the dedicated scheduler claims a
-dedicated machine for use, 
-the dedicated scheduler will try to use that machine to satisfy
-the requirements of the queue of parallel universe or MPI universe jobs.
-If the dedicated scheduler cannot use a machine for a
-configurable amount of time, it will release its claim on the machine,
-making it available again for the opportunistic scheduler.
+while dedicated machine can run serial jobs, they prefer to run
+parallel jobs, and never preempt a parallel job once it starts running.
+A machine becomes a dedicated machine when an administrator configures
+it to accept parallel jobs from one specific dedicated scheduler.  Note
+the difference from serial jobs.  Generally speaking, any scheduler in
+a pool can send serial jobs to a any machine, but for parallel jobs,
+only the designated dedicated scheduler can send parallel universe
+jobs to a given machine.
 
 Since HTCondor does not ordinarily run this way, (HTCondor usually uses
 opportunistic scheduling), dedicated machines must be specially
@@ -44,10 +38,36 @@ configured.  Section~\ref{sec:Config-Dedicated-Jobs} of the
 Administrator's Manual describes the necessary configuration and
 provides detailed examples.
 
-To simplify the scheduling of dedicated resources, a single machine
-becomes the scheduler of dedicated resources.  This leads to a further
-restriction that jobs submitted to execute under the parallel universe
-must be submitted from the machine acting as the dedicated scheduler.
+Usually, a single dedicated scheduler is configured for a pool
+which can run parallel universe jobs, and this \Condor{schedd}
+becomes the single machine from which parallel universe
+jobs are submitted.
+
+The following command line will list the execute machines 
+in the local pool which have been configured to use a dedicated
+scheduler, and print out the name of that dedicated scheduler.
+In order to run parallel jobs, this name must be defined to be
+the string "DedicatedScheduler@" prepended to the name of the
+scheduler.
+
+\begin{verbatim}
+$ condor_status -const '!isundefined(DedicatedScheduler)' \
+	-format "%s\t" Machine -format "%s\n" DedicatedScheduler
+
+execute1.example.com	DedicatedScheduler@submit.example.com
+execute2.example.com	DedicatedScheduler@submit.example.com
+
+\end{verbatim}
+
+If this command emits no lines of output, then then pool is
+not correctly configured to run parallel jobs.  Make sure that
+the name of the scheduler is correct, the string after the
+at sign should match the name of the schedd, as returned by the
+command
+
+\begin{verbatim}
+$ condor_status -sched
+\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:parallel-submit}Parallel Job Submission}
@@ -56,14 +76,12 @@ must be submitted from the machine acting as the dedicated scheduler.
 Given correct configuration, parallel universe jobs may be submitted
 from the machine running the dedicated scheduler.
 The dedicated scheduler claims machines for the parallel universe job,
-and invokes the job when the correct number of machines of the
-correct platform (architecture and operating system) are claimed.
+and starts the job when the correct number of machines which match
+the job's requirements are claimed.
 Note that the job likely consists of more than one process,
-each to be executed on a separate machine.
-The first process (machine) invoked is treated
-different than the others.
-When this first process exits, HTCondor shuts down all the others,
-even if they have not yet completed their execution.
+each to be executed on a separate machine.  If the pool is
+not correctly configured, the job will stay in the Idle state
+indefinitely.
 
 An overly simplified submit description file for a parallel universe
 job appears as
@@ -76,6 +94,12 @@ universe = parallel
 executable = /bin/sleep
 arguments = 30
 machine_count = 8
+log = log
+output = output
+error  = error
+notification = never
+should_transfer_files = always
+when_to_transfer_output = on_exit
 queue 
 \end{verbatim}
 
@@ -89,11 +113,16 @@ machines with the same architecture and operating system as the submit
 machine.  It waits until all eight machines are available before
 starting the job.  When all the machines are ready, it invokes the
 \Prog{/bin/sleep} command, with a command line argument of 30
-on all eight machines more or less simultaneously.
+on all eight machines more or less simultaneously.  As with serial
+jobs, important event in the lifecycle of the job are written
+to the user log noted in the log command.
 
-The addition of several related OpSys attributes means that you may specify versions of Linux operating systems to run on in a heterogeneous pool.
+Parallel universe jobs have the familiar Requirements expression
+that serial jobs do, and setting the requirements expression will
+restrict the machines that match your job.
 
-If your pool consists of Linux machines installed with the RedHat and Ubuntu operating systems, and you'd like to run on only the RedHat machines, use the following example.
+For example, if your pool consists of Linux machines installed with the RedHat and Ubuntu operating systems, and you'd like to run on only the RedHat machines, you can use
+the following requirements expression:
 
 \begin{verbatim}
 #############################################
@@ -103,10 +132,16 @@ universe = parallel
 executable = /bin/sleep
 arguments = 30
 machine_count = 8
+log = log
+output = output
+error  = error
+notification = never
+should_transfer_files = always
+when_to_transfer_output = on_exit
 requirements = (OpSysName == "RedHat")
-queue
-\end{verbatim}
+queue 
 
+\end{verbatim}
 
 In addition, you may narrow down your machine selection to the version you'd like to run on using the OpSysAndVer attribute.
 
@@ -118,6 +153,12 @@ universe = parallel
 executable = /bin/sleep
 arguments = 30
 machine_count = 8
+log = log
+output = output
+error  = error
+notification = never
+should_transfer_files = always
+when_to_transfer_output = on_exit
 requirements = (OpSysAndVer == "RedHat6")
 queue
 \end{verbatim}
@@ -135,6 +176,9 @@ input = infile.$(NODE)
 output = outfile.$(NODE)
 error = errfile.$(NODE)
 machine_count = 4
+notification = never
+should_transfer_files = always
+when_to_transfer_output = on_exit
 queue
 \end{verbatim}
 
@@ -146,51 +190,23 @@ See the \Condor{submit}
 manual page on page~\pageref{man-condor-submit} for further
 description of predefined macros.
 The \MacroU{NODE} macro is given a
-unique value as processes are assigned to machines.
+unique integer value, starting at zero as processes are assigned to machines.
+This is similar to the MPI notion of "rank".
 The \MacroUNI{NODE} value is fixed for the entire length of the job.
 It can therefore be used to identify individual aspects of the computation.
 In this example, it is used to utilize and assign unique names to
 input and output files.
 
-This example presumes a shared file system across all the machines
-claimed for the parallel universe job. 
-Where no shared file system is either available or guaranteed,
-use HTCondor's file transfer mechanism,
-as described in section~\ref{sec:file-transfer}
-on page~\pageref{sec:file-transfer}.
-This example uses the file transfer mechanism.
-
-\begin{verbatim}
-######################################
-## Parallel example submit description file
-## without using a shared file system
-######################################
-universe = parallel
-executable = /bin/cat
-log = logfile
-input = infile.$(NODE)
-output = outfile.$(NODE)
-error = errfile.$(NODE)
-machine_count = 4
-should_transfer_files = yes
-when_to_transfer_output = on_exit
-queue
-\end{verbatim}
-
-The job requires exactly four machines,
-and queues four processes.
-Each of these processes requires a correctly named input file,
-and produces an output file.
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:parallel-multi-proc}Parallel Jobs with Separate Requirements}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The different machines executing for a parallel universe job
-may specify different machine requirements.
-A common example requires that the
-head node execute on a specific machine.
-It may be also useful for debugging purposes.
+Usually, all the machines running a parallel job will have the
+same requirements.  Sometimes, though, one machine will need
+to be different than the rest.  
+The different subsets of machines executing a parallel universe job
+may specify different machine requirements.  A common example requires that the
+head node execute on a specific machine.  It may be also useful for debugging purposes.
 
 Consider the following example.
 
@@ -239,8 +255,8 @@ could satisfy the requirements.
 \index{parallel universe!running MPI applications}
 \index{MPI application}
 
-MPI applications utilize a single executable that is invoked in order to
-execute in parallel on one or more machines. 
+MPI applications consist of a single executable that is invoked 
+in parallel on one or more machines. 
 HTCondor's parallel universe provides the environment within
 which this executable is executed in parallel.
 However, the various implementations of MPI
