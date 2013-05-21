@@ -56,6 +56,14 @@ number of bytes.
 
 \begin{itemize}
 
+\item A standard universe job will no longer crash, and no longer crash
+the shadow, if it calls mmap() with an unsupported combination of flags.
+\Ticket{3565}
+
+\item The \SubmitCmd{vm} universe now supports \Prog{VMware Workstation}
+and \Prog{VMware Player} on Windows.
+\Ticket{3627}
+
 % would have been in 7.9.7, but there was no 7.9.7 release
 \item For grid universe jobs intended for an EC2 grid resource,
 errors which have no response body now report the HTTP code.

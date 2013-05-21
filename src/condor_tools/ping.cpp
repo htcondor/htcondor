@@ -358,7 +358,7 @@ bool do_item(Daemon* d, MyString name, int num, int output_mode) {
 
 	print_info(fn_success, d->addr(), sock, name, num, &authz_ad, &errstack, output_mode);
 
-	return true;
+	return fn_success;
 
 }
 
@@ -384,7 +384,7 @@ int main( int argc, char *argv[] )
 	config();
 
 	for( i=1; i<argc; i++ ) {
-		if(!strcmp(argv[i],"-help")) {
+		if(!strncmp(argv[i],"-help",strlen(argv[i]))) {
 			usage(argv[0]);
 			exit(0);
 		} else if(!strncmp(argv[i],"-quiet",strlen(argv[i]))) {	

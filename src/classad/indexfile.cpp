@@ -88,6 +88,7 @@ TruncateStorageFile()
 	}
 	
 	fsync(new_filed);
+	close(new_filed);
 	if( rename(filename, logfilename) < 0 ) {
 		CondorErrno = ERR_CACHE_FILE_ERROR;
 		char buf[10];

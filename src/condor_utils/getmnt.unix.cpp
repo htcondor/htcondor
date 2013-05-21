@@ -223,6 +223,8 @@ getmnt( int* /*start*/, struct fs_data buf[],
 		buf[i].fd_req.devname = strdup(ent->mnt_fsname);
 		buf[i].fd_req.path = strdup(ent->mnt_dir);
 	}
+
+	endmntent(tab);
 	return i;
 }
 
