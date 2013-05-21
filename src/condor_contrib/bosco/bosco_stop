@@ -6,13 +6,17 @@ if [ $? != 0 ] ; then
     echo "Please source the bosco_setenv script first."
 fi
 
+off_ok=0
 address_file=`condor_config_val MASTER_ADDRESS_FILE`
 if [ x$address_file != x -a -r $address_file ] ; then
     echo "Sending off command to condor_master."
     condor_off -master
     if [ $? != 0 ] ; then
-        echo "Failed to stop Condor."
-        exit 1
+        echo "Failed to stop HTCondor."
+        off_ok=1
+        #exit 1
+    else
+        echo "Stopped HTCondor" 
     fi
 fi
 
@@ -21,7 +25,11 @@ fi
 
 # Adding a part to force down Condor processes left behind (usually due to some misconfiguration)
 if [ "x$1" != "x--force" ]; then
-  echo "BOSCO is now off."
+  if [ $off_ok != 0 ]; then
+    echo "Unable to stop BOSCO, try '$0 --force'"
+    exit 1
+  fi
+  echo "BOSCO is now off."  
   exit 0
 fi
 
