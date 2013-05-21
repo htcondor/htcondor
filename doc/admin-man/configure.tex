@@ -5849,6 +5849,18 @@ SYSTEM_PERIODIC_REMOVE = \
   best-fit algorithm. Using the best-fit algorithm is not recommended,
   as it can cause starvation.
 
+\label{param:DedicatedSchedulerWaitForSpooler}
+\item[\Macro{DEDICATED\_SCHEDULER\_WAIT\_FOR\_SPOOLER}]
+  When this parameter is set to true, the dedicated scheduler will
+schedule parallel jobs in very strict first-in, first-out manner.
+When set to false, which is the default, parallel jobs that are being remotely
+submitted to a scheduler, and are on hold, waiting for spooled input
+files to arrive at the scheduler, will not block jobs that arrived later,
+but whose inputs files have finished spooling.  When set to true,
+jobs with larger cluster ids, but that are in the Idle state will not
+be scheduled to run until all earlier jobs have finished spooling in
+their input files and have been scheduled.
+
 \label{param:ScheddSendVacateViaTcp}
 \item[\Macro{SCHEDD\_SEND\_VACATE\_VIA\_TCP}]
   A boolean value that defaults to \Expr{False}.
