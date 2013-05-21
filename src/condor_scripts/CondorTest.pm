@@ -642,6 +642,7 @@ sub RunDagTest
 		DoTest(@_);
 	} else {
 		my @newrgs = ($_[0],$_[1],$_[2],$undead,$_[3])
+		DoTest(@newrgs);
 	}
 }
 
