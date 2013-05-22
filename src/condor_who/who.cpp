@@ -1794,9 +1794,9 @@ static void scan_a_log_for_info(
 									daemon.c_str(), exited_pid.c_str(), exit_code.c_str());
 						}
 						if (info.find(daemon) != info.end()) {
-							LOG_INFO * pliDaemon = info[daemon];
-							pliDaemon->pid = exited_pid;
-							pliDaemon->exit_code = exit_code;
+							LOG_INFO * pliD = info[daemon];
+							pliD->pid = exited_pid;
+							pliD->exit_code = exit_code;
 						}
 					}
 				}

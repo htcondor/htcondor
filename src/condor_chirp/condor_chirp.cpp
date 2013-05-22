@@ -547,6 +547,7 @@ int chirp_write(int argc, char **argv) {
 	}
 	
 	buf = (char*)malloc(length+1);
+	ASSERT(buf);
 
 	int ret_val = -1;
 	// Use pwrite

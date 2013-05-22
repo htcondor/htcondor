@@ -893,6 +893,7 @@ process_directory( char* dirlist, char* host )
 	while( (dirpath = locals.next()) ) {
 
 		paths = (char **)calloc(65536, sizeof(char *));
+		ASSERT(paths);
 		files = new Directory(dirpath);
 		int i = 0;
 		if(files == NULL) {
