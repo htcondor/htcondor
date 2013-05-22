@@ -412,6 +412,8 @@ const char* EC2VpcIP = "ec2_vpc_ip";
 const char* EC2TagNames = "ec2_tag_names";
 const char* EC2SpotPrice = "ec2_spot_price";
 
+const char* BoincAuthenticator = "boinc_authenticator";
+
 //
 // Deltacloud Parameters
 //
@@ -1683,13 +1685,14 @@ SetExecutable()
 	MyString	full_ename;
 	MyString buffer;
 
-	// In vm universe and ec2 grid jobs, 'Executable' parameter is not
-	// a real file but just the name of job.
+	// In vm universe and ec2/deltacloud/boinc grid jobs, 'Executable'
+	// parameter is not a real file but just the name of job.
 	if ( JobUniverse == CONDOR_UNIVERSE_VM ||
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   JobGridType != NULL &&
 		   ( strcasecmp( JobGridType, "ec2" ) == MATCH ||
-		     strcasecmp( JobGridType, "deltacloud" ) == MATCH ) ) ) {
+		     strcasecmp( JobGridType, "deltacloud" ) == MATCH ||
+			 strcasecmp( JobGridType, "boinc" ) == MATCH ) ) ) {
 		ignore_it = true;
 	}
 
@@ -2005,6 +2008,7 @@ SetUniverse()
 				(strcasecmp (JobGridType, "ec2") == MATCH) ||
 				(strcasecmp (JobGridType, "deltacloud") == MATCH) ||
 				(strcasecmp (JobGridType, "unicore") == MATCH) ||
+				(strcasecmp (JobGridType, "boinc") == MATCH) ||
 				(strcasecmp (JobGridType, "cream") == MATCH)){
 				// We're ok	
 				// Values are case-insensitive for gridmanager, so we don't need to change case			
@@ -2016,7 +2020,7 @@ SetUniverse()
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
 				fprintf( stderr, "Must be one of: gt2, gt5, pbs, lsf, "
-						 "sge, nqs, condor, nordugrid, unicore, ec2, deltacloud, or cream\n" );
+						 "sge, nqs, condor, nordugrid, unicore, ec2, deltacloud, cream, or boinc\n" );
 				exit( 1 );
 			}
 		}			
@@ -5642,6 +5646,15 @@ SetGridParams()
 		InsertJobExpr(buffer.Value());
 	}
 
+	if ( (tmp = condor_param( BoincAuthenticator, ATTR_BOINC_AUTHENTICATOR )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_BOINC_AUTHENTICATOR, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "boinc" ) == 0 ) {
+		fprintf(stderr, "\nERROR: BOINC jobs require a \"%s\" parameter\n", BoincAuthenticator );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
 
 	//
 	// Deltacloud grid-type submit attributes
