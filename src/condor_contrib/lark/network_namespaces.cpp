@@ -331,7 +331,7 @@ int NetworkNamespaceManager::PostForkChild() {
 	pp.Unparse(ad_str, m_ad.get());
 	dprintf(D_FULLDEBUG, "Child network classad: \n%s\n", ad_str.c_str());
 
-	if (m_state == UNCREATED)
+	if (m_state == UNCREATED || m_state == EXECUTING)
 		return 0;
 
 	// Close the end of the pipes that aren't ours
