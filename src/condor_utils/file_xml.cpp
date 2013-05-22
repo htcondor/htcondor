@@ -147,6 +147,7 @@ FILEXML::createInstanceXML() {
 	daemon_name = get_mySubSystem()->getName();
 
 	tmpParamName = (char *)malloc(10+strlen(daemon_name));
+	ASSERT(tmpParamName);
 
 		/* build parameter name based on the daemon name */
 	sprintf(tmpParamName, "%s_XMLLOG", daemon_name);
