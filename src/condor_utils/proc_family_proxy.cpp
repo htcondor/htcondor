@@ -672,8 +672,10 @@ ProcFamilyProxy::recover_from_procd_error()
 		}
 	}
 
-	// Ran out of attempts to restart procd
-	EXCEPT("unable to restart the ProcD after several tries");
+	if ( m_client == NULL ) {
+		// Ran out of attempts to restart procd
+		EXCEPT("unable to restart the ProcD after several tries");
+	}
 }
 
 int

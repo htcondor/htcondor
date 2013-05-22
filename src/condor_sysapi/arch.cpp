@@ -121,7 +121,7 @@ static const char* opsys_super_short_name = NULL;
 void
 sysapi_get_windows_info(void)
 {
-    	char tmp_info[255];
+	char tmp_info[7+10+10] = "UNKNOWN";
 
 	OSVERSIONINFOEX info;
 	info.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
@@ -135,9 +135,6 @@ sysapi_get_windows_info(void)
 			break;
 		case VER_PLATFORM_WIN32_NT:
 			sprintf(tmp_info, "WINNT%d%d", info.dwMajorVersion, info.dwMinorVersion);
-			break;
-		default:
-			sprintf(tmp_info, "UNKNOWN");
 			break;
 		}
 	}

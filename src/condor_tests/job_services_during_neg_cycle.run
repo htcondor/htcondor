@@ -79,6 +79,8 @@ my $matchedbeginafterend = 0;
 my $matchonfinalfinish = 0;
 my $match = "";
 
+my $failure = "HitRetryLimit";
+
 my $on_match = sub {
 	$match = shift;
 	print "Matched: $match\n";
@@ -110,6 +112,12 @@ my $on_submit = sub {
 			match_callback => $on_match,
 		);
 		$matchonbegin = 0;
+		print "Looking for new - Started Negotiation Cycle - ";
+		if($matchedbegin eq $failure) {
+			print "$failure\n";
+		} else {
+			print "OK\n";
+		}
 
 		# do my condor_userprios
 		my @prioutput = `condor_userprio`;
@@ -127,6 +135,13 @@ my $on_submit = sub {
 			match_callback => $on_match,
 		);
 		$matchonnextend = 0;
+		print "Looking for new - Finished Negotiation Cycle - ";
+		if($matchednextend eq $failure) {
+			print "$failure\n";
+		} else {
+			print "OK\n";
+		}
+
 
 		# find the one  finish after our begin
 		$matchonendafterbegin = 1;
@@ -139,14 +154,26 @@ my $on_submit = sub {
 			match_callback => $on_match,
 		);
 		$matchonendafterbegin = 0;
+		print "Looking for the Finish which follows my Bigin - Finished Negotiation Cycle - ";
+		if($matchedendafterbegin eq $failure) {
+			print "$failure\n";
+		} else {
+			print "OK\n";
+		}
+
 
 		# are they the same?
 
 		if($matchednextend eq $matchedendafterbegin) {
 			print "Good. Got End of Negotiation Cyle we expected\n";
 		} else {
+			print "Expected the next Finish Negotiator Cycle to be this one:\n";
+			print "$matchedendafterbegin\n";
+			print "But got this one:\n";
+			print "$matchednextend\n";
 			die "All bets are off as we did not find the cycle end we expected\n";
 		}
+
 
 		# Were all the condor_userprios done within the cycle?
 		CondorLog::RunCheckMultiple(
@@ -159,6 +186,13 @@ my $on_submit = sub {
 			match_after_regexp => "$matchedendafterbegin",
 			match_callback => $on_match,
 		);
+		print "Looking for how many Return from HandleReq <GET_PRIORITY... come betweem <$matchedbegin> and <$matchedendafterbegin> - ";
+		if($match eq $failure) {
+			print "$failure\n";
+		} else {
+			print "OK got $match\n";
+		}
+
 		CheckExpectations("Condor_userprio handlings during cycle",$match,51);
 
 		# Did the reconfig wait for the end of the cycle
@@ -172,6 +206,14 @@ my $on_submit = sub {
 			match_after_regexp => "$matchedendafterbegin",
 			match_callback => $on_match,
 		);
+
+		print "Looking for how many ...Got SIGHUP.  Re-reading config files.... come betweem <$matchedbegin> and <$matchedendafterbegin> - ";
+		if($match eq $failure) {
+			print "$failure\n";
+		} else {
+			print "OK got $match\n";
+		}
+
 		CheckExpectations("Condor_reconfig handlings during cycle",$match,0);
 
 		# find the start cycle after the matching end to the start
@@ -185,6 +227,14 @@ my $on_submit = sub {
 			match_callback => $on_match,
 		);
 		$matchedbeginafterend = 0;
+
+		print "Looking for new - Started Negotiation Cycle - ";
+		if($matchbeginafterend eq $failure) {
+			print "$failure\n";
+		} else {
+			print "OK\n";
+		}
+
 
 		RunNTimes("condor_userprio",1);
 		RunNTimes("condor_off -fast -daemon negotiator",1);
@@ -200,6 +250,14 @@ my $on_submit = sub {
 			match_callback => $on_match,
 		);
 		$matchonfinalfinish = 0;
+		# could I not be getting the Finsh I expect?
+		print "Looking for new Finsh after this Begin - $matchbeginafterend - ";
+		if($matchedfinalfinish eq $failure) {
+			print "$failure\n";
+		} else {
+			print "OK\n";
+		}
+
 
 		CondorLog::RunCheckMultiple(
 			daemon => "Negotiator",
@@ -209,6 +267,14 @@ my $on_submit = sub {
 			match_after_regexp => "Got SIGQUIT.  Performing fast shutdown.",
 			match_callback => $on_match,
 		);
+
+		print "Looking for Got SIGQUIT.  Performing fast shutdown. After this - $matchedfinalfinish - ";
+		if($match eq $failure) {
+			print "$failure\n";
+		} else {
+			print "OK\n";
+		}
+
 		if($match =~ /Got SIGQUIT.  Performing fast shutdown./) {
 			print "Saw the condor_off -fast hit the negotiator\n";
 			print "condor_off -fast -daemon negotiator happened After Negotiation Cycle Finished\n";

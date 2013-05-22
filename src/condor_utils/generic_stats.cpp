@@ -1180,7 +1180,7 @@ bool ParseEMAHorizonConfiguration(char const *ema_conf,classy_counted_ptr<stats_
 	ema_horizons = new stats_ema_config;
 
 	while( *ema_conf ) {
-		while( isspace(*ema_conf) || *ema_conf == ',' ) ema_conf++;
+		while( is_space(*ema_conf) || *ema_conf == ',' ) ema_conf++;
 		if( *ema_conf == '\0' ) break;
 
 		char const *colon = strchr(ema_conf,':');
@@ -1192,7 +1192,7 @@ bool ParseEMAHorizonConfiguration(char const *ema_conf,classy_counted_ptr<stats_
 		horizon_name.append(ema_conf,colon-ema_conf);
 		char *horizon_end=NULL;
 		time_t horizon = (time_t)strtol(colon+1,&horizon_end,10);
-		if( horizon_end == colon+1 || (!isspace(*horizon_end) && *horizon_end != ',' && *horizon_end) ) {
+		if( horizon_end == colon+1 || (!is_space(*horizon_end) && *horizon_end != ',' && *horizon_end) ) {
 			error_str = "expecting NAME1:SECONDS1 NAME2:SECONDS2 ...";
 			return false;
 		}
