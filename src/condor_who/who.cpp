@@ -1764,8 +1764,8 @@ static void scan_a_log_for_info(
 							if (App.diagnostic)
 								printf("From Started DaemonCore process: %s = %s\n", daemon.c_str(), pid.c_str());
 							if (info.find(daemon) != info.end()) {
-								LOG_INFO * pliDaemon = info[daemon];
-								if (pliDaemon->pid.empty())
+								LOG_INFO * pliD = info[daemon];
+								if (pliD->pid.empty())
 									info[daemon]->pid = pid;
 							}
 						}
@@ -1839,7 +1839,7 @@ static void scan_a_log_for_info(
 
 			// top line of JobStartup is " Communicating with shadow <"
 			//
-			size_t ix = line.find(" Communicating with shadow <");
+			ix = line.find(" Communicating with shadow <");
 			if (ix != string::npos) {
 				bInsideJobStartup = false;
 				//possible_job_shadow_addr = line.substr(line.find("<",ix));
