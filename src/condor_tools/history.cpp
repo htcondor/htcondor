@@ -338,8 +338,7 @@ main(int argc, char* argv[])
 			fprintf(stderr, "Error: Cannot provide both -constraint and <owner>\n");
 			break;
 		}
-		owner = (char *) malloc(512 * sizeof(char));
-		sscanf(argv[i], "%s", owner);	
+		owner = strdup(argv[i]);
 		formatstr(constraint, "(%s == \"%s\")", ATTR_OWNER, owner);
 		parameters[0] = owner;
 #ifdef HAVE_EXT_POSTGRESQL
@@ -670,13 +669,13 @@ format_int_job_status(int status, AttrList * /*ad*/, Formatter & /*fmt*/)
 }
 
 static const char *
-format_job_id(int cluster, AttrList * ad, Formatter & /*fmt*/)
+format_job_id(int clusterId, AttrList * ad, Formatter & /*fmt*/)
 {
 	static MyString ret;
 	ret = "";
-	int proc;
-	if( ! ad->EvalInteger(ATTR_PROC_ID,NULL,proc)) proc = 0;
-	ret.formatstr("%4d.%-3d", cluster, proc);
+	int procId;
+	if( ! ad->EvalInteger(ATTR_PROC_ID,NULL,procId)) procId = 0;
+	ret.formatstr("%4d.%-3d", clusterId, procId);
 	return ret.Value();
 }
 
@@ -1001,10 +1000,11 @@ static long findPrevDelimiter(FILE *fd, const char* filename, long currOffset)
     // *** ProcId = a ClusterId = b Owner = "cde" CompletionDate = f
     // For the moment, owner and completionDate are just parsed in, reserved for future functionalities. 
 
+    int scan_result =
     sscanf(buf.Value(), "%*s %*s %*s %ld %*s %*s %d %*s %*s %d %*s %*s %s %*s %*s %ld", 
            &prevOffset, &clusterId, &procId, owner, &completionDate);
 
-    if (prevOffset == -1 && clusterId == -1 && procId == -1) {
+    if (scan_result < 1 || (prevOffset == -1 && clusterId == -1 && procId == -1)) {
         fprintf(stderr, 
                 "Error: (%s) is an incompatible history file, please run condor_convert_history.\n",
                 filename);
@@ -1035,10 +1035,11 @@ static long findPrevDelimiter(FILE *fd, const char* filename, long currOffset)
 			clusterId = -1;
 			procId = -1;
 
+			scan_result =
             sscanf(buf.Value(), "%*s %*s %*s %ld %*s %*s %d %*s %*s %d %*s %*s %s %*s %*s %ld", 
                    &prevOffset, &clusterId, &procId, owner, &completionDate);
 
-			if (prevOffset == -1 && clusterId == -1 && procId == -1) {
+			if (scan_result < 1 || (prevOffset == -1 && clusterId == -1 && procId == -1)) {
 				fprintf(stderr, 
 						"Error: (%s) is an incompatible history file, please run condor_convert_history.\n",
 						filename);

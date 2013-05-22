@@ -2402,7 +2402,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		}
 		delete tree;
 
-		if ( attr_type == classad::Value::INTEGER_VALUE || classad::Value::REAL_VALUE ) {
+		if ( attr_type == classad::Value::INTEGER_VALUE || attr_type == classad::Value::REAL_VALUE ) {
 			// first, store the actual value
 			MyString raw_attribute = attr_name;
 			raw_attribute += "_RAW";
