@@ -309,7 +309,7 @@ int NetworkNamespaceManager::CreateNetworkPipe() {
 
 int NetworkNamespaceManager::PreFork() {
 	NetworkLock sentry;
-	if (m_state == UNCREATED)
+	if (m_state == UNCREATED || m_state == EXECUTING)
 		return 0;
 
 	if ((pipe(m_p2c) < 0) || (pipe(m_c2p) < 0)) {
@@ -420,7 +420,7 @@ int NetworkNamespaceManager::PostForkChild() {
 		goto finalize_child;
 	}
 
-	m_state = INTERNAL_CONFIGURED;
+	m_state = EXECUTING;
 
 	// Note we don't write anything to the parent, on success or failure.
 	// This is because the parent must wait until the child exits, and the fact
@@ -437,7 +437,7 @@ failed_socket:
 
 int NetworkNamespaceManager::PostForkParent(pid_t pid) {
 	NetworkLock sentry;
-	if (m_state == UNCREATED)
+	if (m_state == UNCREATED || m_state == EXECUTING)
 		return 0;
 
         // Close the end of the pipes that aren't ours
@@ -476,7 +476,7 @@ int NetworkNamespaceManager::PostForkParent(pid_t pid) {
 	m_state = PASSED;
 
 	// Advance automatically, in case we didn't use clone.
-	m_state = INTERNAL_CONFIGURED;
+	m_state = EXECUTING;
 
 	// Inform the child it can advance.
 	if (rc == 0) {
@@ -514,7 +514,7 @@ int NetworkNamespaceManager::PerformJobAccounting(classad::ClassAd *classad) {
 		return 0;
 
 	int rc = 0;
-	if (m_state == INTERNAL_CONFIGURED) {
+	if (m_state == EXECUTING) {
 		dprintf(D_FULLDEBUG, "Polling netfilter for network statistics on chain %s.\n", m_network_namespace.c_str());
 		rc = perform_accounting(m_network_namespace.c_str(), JobAccountingCallback, (void *)&m_statistics);
 	}
