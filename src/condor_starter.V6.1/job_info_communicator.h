@@ -359,6 +359,10 @@ public:
 		/* Update Job ClassAd with checkpoint info and log it */
 	virtual void updateCkptInfo(void) {};
 
+		/* Methods to get chirp config information */
+	virtual bool wroteChirpConfig() { return false; }
+	virtual const std::string chirpConfigFilename() { return ""; }
+
 protected:
 
 		// // // // // // // // // // // //

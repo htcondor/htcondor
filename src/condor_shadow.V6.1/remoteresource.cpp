@@ -57,6 +57,7 @@ static const char *Resource_State_String [] = {
 
 
 RemoteResource::RemoteResource( BaseShadow *shad ) 
+	: m_want_remote_updates(false)
 {
 	shadow = shad;
 	dc_startd = NULL;
@@ -990,6 +991,7 @@ RemoteResource::setJobAd( ClassAd *jA )
 	}
 
 	jA->LookupBool( ATTR_WANT_IO_PROXY, m_want_chirp );
+	jA->LookupBool( ATTR_WANT_REMOTE_UPDATES, m_want_remote_updates );
 
 	bool stream_input=false, stream_output=false, stream_error=false;
 	jA->LookupBool(ATTR_STREAM_INPUT,stream_input);
@@ -1002,6 +1004,10 @@ RemoteResource::setJobAd( ClassAd *jA )
 			"Enabling remote IO syscalls (want chirp=%s,want streaming=%s).\n",
 			m_want_chirp ? "true" : "false",
 			m_want_streaming_io ? "true" : "false");
+	}
+	if( m_want_chirp || m_want_remote_updates )
+	{
+		dprintf(D_FULLDEBUG, "Enabling remote updates.\n");
 	}
 
 	jA->LookupString(ATTR_X509_USER_PROXY, proxy_path);
@@ -1128,6 +1134,18 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	}
 	else if( jobAd->LookupString(ATTR_SPOOLED_OUTPUT_FILES,string_value) ) {
 		jobAd->AssignExpr(ATTR_SPOOLED_OUTPUT_FILES,"UNDEFINED");
+	}
+
+		// Process all chrip-based updates from the starter.
+	const std::string prefix = "CHIRP";
+	for (classad::ClassAd::const_iterator it = update_ad->begin(); it != update_ad->end(); it++) {
+		if (strcasecmp(it->first.substr(0, prefix.length()).c_str(), prefix.c_str()) == 0)
+		{
+			std::string new_attr = it->first.substr(prefix.length());
+			classad::ExprTree *expr_copy = it->second->Copy();
+			jobAd->Insert(new_attr, expr_copy);
+			shadow->watchJobAttr(new_attr);
+		}
 	}
 
 	char* job_state = NULL;
@@ -2292,7 +2310,7 @@ RemoteResource::allowRemoteWriteFileAccess( char const * filename )
 bool
 RemoteResource::allowRemoteReadAttributeAccess( char const * name )
 {
-	bool response = m_want_chirp;
+	bool response = m_want_chirp || m_want_remote_updates;
 	logRemoteAccessCheck(response,"read access to attribute",name);
 	return response;
 }
@@ -2300,7 +2318,7 @@ RemoteResource::allowRemoteReadAttributeAccess( char const * name )
 bool
 RemoteResource::allowRemoteWriteAttributeAccess( char const * name )
 {
-	bool response = m_want_chirp;
+	bool response = m_want_chirp || m_want_remote_updates;
 	logRemoteAccessCheck(response,"write access to attribute",name);
 	return response;
 }

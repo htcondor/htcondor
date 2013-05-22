@@ -93,7 +93,7 @@ int get_statfs( const char *line, struct chirp_statfs *info );
 DLLEXPORT struct chirp_client * chirp_client_connect_default(void);
 /*chirp_client_connect_default()
   Opens connection to the default chirp server.  The default connection
-  information is determined by reading ./chirp.config.  Under Condor,
+  information is determined by reading ./.chirp.config.  Under Condor,
   the starter can automatically create this file if you specify
   +WantIOProxy=True in the submit file.
 */
@@ -169,6 +169,13 @@ DLLEXPORT int chirp_client_get_job_attr( struct chirp_client *c, const char *nam
 DLLEXPORT int chirp_client_set_job_attr( struct chirp_client *c, const char *name, const char *expr );
 /*chirp_client_set_job_attr()
   When running under Condor, set the value of a job ClassAd attribute.
+*/
+
+DLLEXPORT int chirp_client_set_job_attr_volatile( struct chirp_client *c, const char *name, const char *expr );
+/*chirp_client_set_job_attr_volatile()
+  When running under HTCondor, set the value of a job ClassAd attribute to a given expression.
+  This variant of set_job_attr will not push the update immediately, but rather as a non-durable
+  update during the next communication between starter and shadow.
 */
 
 DLLEXPORT int chirp_client_open( struct chirp_client *c, const char *path, const char *flags, int mode );

@@ -407,6 +407,7 @@ class RemoteResource : public Service {
 	bool exited_by_signal;
 
 	bool m_want_chirp;
+	bool m_want_remote_updates;
 	bool m_want_streaming_io;
 
 		// If we specially create a security session for file transfer,

@@ -62,7 +62,7 @@ public class ChirpClient {
 	public ChirpClient() throws IOException {
 		ChirpConfig config;
 		try {
-			String filename = System.getProperty("chirp.config");
+			String filename = System.getProperty(".chirp.config");
 			if(filename==null) throw new ChirpError("system property chirp.config is not defined!");
 			config = new ChirpConfig(filename);
 		} catch( Exception e ) {
