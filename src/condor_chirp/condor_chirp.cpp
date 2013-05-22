@@ -374,6 +374,25 @@ int chirp_get_job_attr(int argc, char **argv) {
 	DISCONNECT_AND_RETURN(client, 0);
 }
 
+int chirp_get_job_attr_volatile(int argc, char **argv) {
+	if (argc != 3) {
+		printf("condor_chirp get_job_attr_volatile AttributeName\n");
+		printf("This retrieves the attribute value from the local starter.\n");
+		printf("While this has no impact on the schedd, the attribute value may\n");
+		printf("differ from the current one in the schedd, depending when the last\n");
+		printf("schedd->starter update occurred.\n");
+		return -1;
+	}
+
+	struct chirp_client *client = NULL;
+	CONNECT_STARTER(client);
+
+	char *p = 0;
+	int len = chirp_client_get_job_attr_volatile(client, argv[2], &p);
+	printf("%.*s\n", len, p);
+	DISCONNECT_AND_RETURN(client, 0);
+}
+
 /*
  * chirp_getattr
  *   call chirp_setattr to do the real work
@@ -911,6 +930,7 @@ void usage() {
 	   "remote_file\n");
 	printf("condor_chirp remove remote_file\n");
 	printf("condor_chirp get_job_attr job_attribute\n");
+	printf("condor_chirp get_job_attr_volatile job_attribute\n");
 	printf("condor_chirp set_job_attr job_attribute attribute_value\n");
 	printf("condor_chirp set_job_attr_volatile job_attribute attribute_value\n");
 	printf("condor_chirp ulog text\n");
@@ -951,6 +971,8 @@ main(int argc, char **argv) {
 		ret_val = chirp_put(argc, argv);
 	} else if (strcmp("remove", argv[1]) == 0) {
 		ret_val = chirp_remove(argc, argv);
+	} else if (strcmp("get_job_attr_volatile", argv[1]) == 0) {
+		ret_val = chirp_get_job_attr_volatile(argc, argv);
 	} else if (strcmp("get_job_attr", argv[1]) == 0) {
 		ret_val = chirp_get_job_attr(argc, argv);
 	} else if (strcmp("set_job_attr_volatile", argv[1]) == 0) {

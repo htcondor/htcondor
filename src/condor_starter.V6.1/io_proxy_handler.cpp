@@ -31,12 +31,13 @@
 
 static int sscanf_chirp( char const *input,char const *fmt,... );
 
-IOProxyHandler::IOProxyHandler(JICShadow *shadow, bool enable_file, bool enable_updates)
+IOProxyHandler::IOProxyHandler(JICShadow *shadow, bool enable_file, bool enable_updates, bool enable_volatile)
 	: m_shadow(shadow),
 	  cookie(NULL),
 	  got_cookie(false),
 	  m_enable_files(enable_file),
-	  m_enable_updates(enable_file || enable_updates)
+	  m_enable_updates(enable_updates),
+	  m_enable_volatile(enable_volatile)
 {
 }
 
@@ -351,14 +352,14 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 		free( url );
 		url = NULL;
-	} else if(m_enable_updates && sscanf_chirp(line,"set_job_attr_volatile %s %s",name,expr)==2) {
+	} else if(m_enable_volatile && sscanf_chirp(line,"set_job_attr_volatile %s %s",name,expr)==2) {
 
 		classad::ClassAdParser parser;
 		classad::ExprTree *expr_tree;
 		result = parser.ParseExpression(expr, expr_tree);
 		if (result)
 		{
-			m_shadow->recordVolatileUpdate(name, *expr_tree);
+			result = !m_shadow->recordVolatileUpdate(name, *expr_tree);
 		}
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
@@ -367,7 +368,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		result = REMOTE_CONDOR_set_job_attr(name,expr);
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
-	} else if(m_enable_updates && sscanf_chirp(line,"get_job_attr %s",name)==1) {
+	} else if((m_enable_updates) && sscanf_chirp(line,"get_job_attr %s",name)==1) {
 
 		char *recv_expr = NULL;
 		result = REMOTE_CONDOR_get_job_attr(name,recv_expr);
@@ -380,7 +381,19 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 			r->put_line_raw(line);
 		}	
 		free( recv_expr );
-
+	} else if(m_enable_volatile && sscanf_chirp(line,"get_job_attr_volatile %s",name)==1) {
+		std::string value;
+		classad::ClassAdUnParser unparser;
+		std::auto_ptr<classad::ExprTree> expr = m_shadow->getVolatileUpdate(name);
+		if (expr.get()) {
+			unparser.Unparse(value, expr.get());
+			sprintf(line,"%u",(unsigned int)value.size());
+			r->put_line_raw(line);
+			r->put_bytes_raw(value.c_str(),value.size());
+		} else {
+			sprintf(line,"%d",convert(-1,ENOENT));
+			r->put_line_raw(line);
+		}
 	} else if(m_enable_updates && sscanf_chirp(line,"constrain %s",expr)==1) {
 
 		result = REMOTE_CONDOR_constrain(expr);

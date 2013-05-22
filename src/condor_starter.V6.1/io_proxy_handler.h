@@ -33,7 +33,7 @@ class JICShadow;
 
 class IOProxyHandler : public Service {
 public:
-	IOProxyHandler(JICShadow *shadow, bool enable_file, bool enable_updates);
+	IOProxyHandler(JICShadow *shadow, bool enable_file, bool enable_updates, bool enable_volatile);
 	~IOProxyHandler();
 
 	bool init( Stream *stream, const char *cookie );
@@ -50,6 +50,7 @@ private:
 	int got_cookie;
 	bool m_enable_files;
 	bool m_enable_updates;
+	bool m_enable_volatile;
 };
 
 #endif

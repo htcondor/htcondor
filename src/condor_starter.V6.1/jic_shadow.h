@@ -239,7 +239,10 @@ public:
 	void updateCkptInfo(void);
 
 		/* Record an attribute to update */
-	void recordVolatileUpdate( const std::string &name, const classad::ExprTree &expr );
+	bool recordVolatileUpdate( const std::string &name, const classad::ExprTree &expr );
+
+		/* Return an attribute from the combination of the volatile ad and the starter */
+	std::auto_ptr<classad::ExprTree> getVolatileUpdate( const std::string &name );
 
 	virtual bool wroteChirpConfig() { return m_wrote_chirp_config; }
 	virtual const std::string chirpConfigFilename() { return m_chirp_config_filename; }

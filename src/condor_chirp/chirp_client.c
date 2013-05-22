@@ -402,6 +402,26 @@ chirp_client_get_job_attr( struct chirp_client *c, const char *name, char **expr
 }
 
 DLLEXPORT int
+chirp_client_get_job_attr_volatile( struct chirp_client *c, const char *name, char **expr )
+{
+	int result;
+	int actual;
+
+	result = simple_command(c,"get_job_attr_volatile %s\n",name);
+	if(result>0) {
+		*expr = (char*)malloc(result);
+		if(*expr) {
+			actual = fread(*expr,1,result,c->rstream);
+			if(actual!=result) chirp_fatal_request("get_job_attr");
+		} else {
+			chirp_fatal_request("get_job_attr");
+		}
+	}
+	
+	return result;
+}
+
+DLLEXPORT int
 chirp_client_set_job_attr( struct chirp_client *c, const char *name, const char *expr )
 {
 	return simple_command(c,"set_job_attr %s %s\n",name,expr);

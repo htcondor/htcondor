@@ -166,6 +166,12 @@ DLLEXPORT int chirp_client_get_job_attr( struct chirp_client *c, const char *nam
   When running under Condor, obtain the value of a job ClassAd attribute.
 */
 
+DLLEXPORT int chirp_client_get_job_attr_volatile( struct chirp_client *c, const char *name, char **expr );
+/*chirp_client_get_job_attr_volatile()
+ When running under Condor, obtain the value of a job ClassAd attribute from the local starter.
+ This may differ from the value in the schedd!
+*/
+
 DLLEXPORT int chirp_client_set_job_attr( struct chirp_client *c, const char *name, const char *expr );
 /*chirp_client_set_job_attr()
   When running under Condor, set the value of a job ClassAd attribute.

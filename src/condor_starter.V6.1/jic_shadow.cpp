@@ -1830,15 +1830,41 @@ JICShadow::setX509ProxyExpirationTimer()
 }
 
 
-void
+bool
 JICShadow::recordVolatileUpdate( const std::string &name, const classad::ExprTree &expr )
 {
-	// Note that the ClassAd takes ownership of the copy.
-	dprintf(D_FULLDEBUG, "Got a volatile update for attribute %s.\n", name.c_str());
-	classad::ExprTree *expr_copy = expr.Copy();
-	m_volatile_updates.Insert("Chirp" + name, expr_copy);
+	std::string prefix;
+	param(prefix, "REMOTE_UPDATE_PREFIX", "CHIRP");
+	if (strcasecmp(name.substr(0, prefix.length()).c_str(), prefix.c_str()) == 0) {
+		// Note that the ClassAd takes ownership of the copy.
+		dprintf(D_FULLDEBUG, "Got a volatile update for attribute %s.\n", name.c_str());
+		classad::ExprTree *expr_copy = expr.Copy();
+		m_volatile_updates.Insert(name, expr_copy);
+		return true;
+	}
+	else
+	{
+		dprintf(D_ALWAYS, "Got an invalid prefix for updates: %s\n", name.c_str());
+		return false;
+	}
 }
 
+
+
+std::auto_ptr<classad::ExprTree>
+JICShadow::getVolatileUpdate( const std::string &name )
+{
+	std::auto_ptr<classad::ExprTree> expr;
+	classad::ExprTree *borrowed_expr = NULL;
+	ClassAd *ad = jobClassAd();
+	dprintf(D_FULLDEBUG, "Looking up volatile attribute named %s.\n", name.c_str());
+	if (!(borrowed_expr = m_volatile_updates.Lookup(name)) && (!ad || !(borrowed_expr = ad->Lookup(name))))
+	{
+		return expr;
+	}
+	expr.reset(borrowed_expr->Copy());
+	return expr;
+}
 
 bool
 JICShadow::publishUpdateAd( ClassAd* ad )
@@ -2148,7 +2174,7 @@ JICShadow::initShadowInfo( ClassAd* ad )
 bool
 JICShadow::initIOProxy( void )
 {
-	int want_io_proxy = 0;
+	bool want_io_proxy = false;
 	MyString io_proxy_config_file;
 
 		// the admin should have the final say over whether
@@ -2162,34 +2188,67 @@ JICShadow::initIOProxy( void )
 	bool enableFiles = false;
 	enableFiles = param_boolean("ENABLE_CHIRP_IO", true);
 
-	if (!enableIOProxy || (!enableUpdates && !enableFiles)) {
+	bool enableVolatile = false;
+	enableVolatile = param_boolean("ENABLE_CHIRP_VOLATILE", true);
+
+	if (!enableIOProxy || (!enableUpdates && !enableFiles && !enableVolatile)) {
 		dprintf(D_ALWAYS, "ENABLE_CHIRP is false in config file, not enabling chirp\n");
 		return false;
 	}
 
-	if( job_ad->LookupBool( ATTR_WANT_IO_PROXY, want_io_proxy ) < 1 ) {
+	if( ! job_ad->EvaluateAttrBool( ATTR_WANT_IO_PROXY, want_io_proxy ) ) {
+		want_io_proxy = false;
 		dprintf( D_FULLDEBUG, "JICShadow::initIOProxy(): "
-				 "Job does not define %s\n", ATTR_WANT_IO_PROXY );
-		want_io_proxy = 0;
+				 "Job does not define %s; setting to %s\n",
+				 ATTR_WANT_IO_PROXY, want_io_proxy ? "true" : "false" );
 	} else {
 		dprintf( D_ALWAYS, "Job has %s=%s\n", ATTR_WANT_IO_PROXY,
 				 want_io_proxy ? "true" : "false" );
 	}
-	bool want_updates = false;
-	if (job_ad->EvaluateAttrBool(ATTR_WANT_REMOTE_UPDATES, want_updates) < 1 ) {
+	if (!enableIOProxy && !enableFiles && want_io_proxy)
+	{
+		dprintf(D_ALWAYS, "Starter config prevents us from enabling IO proxy.\n");
+		want_io_proxy = false;
+	}
+	bool want_updates = want_io_proxy;
+	if ( ! job_ad->EvaluateAttrBool(ATTR_WANT_REMOTE_UPDATES, want_updates) ) {
+		want_updates = want_io_proxy;
 		dprintf(D_FULLDEBUG, "JICShadow::initIOProxy(): "
-				"Job does not want remote updates.\n");
+				"Job does not define %s; setting to %s.\n",
+				ATTR_WANT_REMOTE_UPDATES, want_updates ? "true" : "false" );
 	} else {
 		dprintf(D_ALWAYS, "Job has %s=%s\n", ATTR_WANT_REMOTE_UPDATES,
 				want_updates ? "true" : "false");
 	}
-
-	if( want_io_proxy || want_updates || job_universe==CONDOR_UNIVERSE_JAVA ) {
+	if (!enableIOProxy && !enableUpdates && want_updates)
+	{
+		dprintf(D_ALWAYS, "Starter config prevents us from enabling remote updates.\n");
+		want_updates = false;
+	}
+	bool want_volatile = true;
+	if ( ! job_ad->EvaluateAttrBool(ATTR_WANT_VOLATILE_UPDATES, want_volatile) ) {
+		want_volatile = true;
+		dprintf(D_FULLDEBUG, "JICShadow::initIOProxy(): "
+				"Job does not define %s; enabling volatile updates.\n", ATTR_WANT_VOLATILE_UPDATES);
+	} else {
+		dprintf(D_ALWAYS, "Job has %s=%s\n", ATTR_WANT_VOLATILE_UPDATES,
+				want_volatile ? "true" : "false");
+	}
+	if (!enableIOProxy && !enableVolatile && want_volatile)
+	{
+		dprintf(D_ALWAYS, "Starter config prevents us from enabling volatile updates.\n");
+		want_volatile = false;
+	}
+	dprintf(D_ALWAYS, "Chirp config summary: IO %s, Updates %s, Volatile updates %s.\n",
+		want_io_proxy ? "true" : "false", want_updates ? "true" : "false",
+		want_volatile ? "true" : "false");
+	if( want_io_proxy || want_updates || want_volatile || job_universe==CONDOR_UNIVERSE_JAVA ) {
 		m_wrote_chirp_config = true;
 		io_proxy_config_file.formatstr( "%s%c%s" ,
 				 Starter->GetWorkingDir(), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
 		m_chirp_config_filename = io_proxy_config_file;
-		if( !io_proxy.init(this, io_proxy_config_file.Value(), want_io_proxy, want_updates) ) {
+		dprintf(D_FULLDEBUG, "Initializing IO proxy with config file at %s.\n", io_proxy_config_file.Value());
+		if( !io_proxy.init(this, io_proxy_config_file.Value(), want_io_proxy, want_updates, want_volatile) ) {
 			dprintf( D_FAILURE|D_ALWAYS, 
 					 "Couldn't initialize IO Proxy.\n" );
 			return false;

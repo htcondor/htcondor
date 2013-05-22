@@ -1137,14 +1137,14 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	}
 
 		// Process all chrip-based updates from the starter.
-	const std::string prefix = "CHIRP";
+	std::string prefix;
+	param(prefix, "REMOTE_UPDATE_PREFIX", "CHIRP");
 	for (classad::ClassAd::const_iterator it = update_ad->begin(); it != update_ad->end(); it++) {
 		if (strcasecmp(it->first.substr(0, prefix.length()).c_str(), prefix.c_str()) == 0)
 		{
-			std::string new_attr = it->first.substr(prefix.length());
 			classad::ExprTree *expr_copy = it->second->Copy();
-			jobAd->Insert(new_attr, expr_copy);
-			shadow->watchJobAttr(new_attr);
+			jobAd->Insert(it->first, expr_copy);
+			shadow->watchJobAttr(it->first);
 		}
 	}
 
