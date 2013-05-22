@@ -112,7 +112,7 @@ my $on_submit = sub {
 			match_callback => $on_match,
 		);
 		$matchonbegin = 0;
-		print "Looking for new - Started Negotiation Cycle - "
+		print "Looking for new - Started Negotiation Cycle - ";
 		if($matchedbegin eq $failure) {
 			print "$failure\n";
 		} else {
@@ -135,7 +135,7 @@ my $on_submit = sub {
 			match_callback => $on_match,
 		);
 		$matchonnextend = 0;
-		print "Looking for new - Finished Negotiation Cycle - "
+		print "Looking for new - Finished Negotiation Cycle - ";
 		if($matchednextend eq $failure) {
 			print "$failure\n";
 		} else {
@@ -154,7 +154,7 @@ my $on_submit = sub {
 			match_callback => $on_match,
 		);
 		$matchonendafterbegin = 0;
-		print "Looking for the Finish which follows my Bigin - Finished Negotiation Cycle - "
+		print "Looking for the Finish which follows my Bigin - Finished Negotiation Cycle - ";
 		if($matchedendafterbegin eq $failure) {
 			print "$failure\n";
 		} else {
@@ -186,7 +186,7 @@ my $on_submit = sub {
 			match_after_regexp => "$matchedendafterbegin",
 			match_callback => $on_match,
 		);
-		print "Looking for how many Return from HandleReq <GET_PRIORITY... come betweem <$matchedbegin> and <$matchedendafterbegin> - "
+		print "Looking for how many Return from HandleReq <GET_PRIORITY... come betweem <$matchedbegin> and <$matchedendafterbegin> - ";
 		if($match eq $failure) {
 			print "$failure\n";
 		} else {
@@ -207,7 +207,7 @@ my $on_submit = sub {
 			match_callback => $on_match,
 		);
 
-		print "Looking for how many ...Got SIGHUP.  Re-reading config files.... come betweem <$matchedbegin> and <$matchedendafterbegin> - "
+		print "Looking for how many ...Got SIGHUP.  Re-reading config files.... come betweem <$matchedbegin> and <$matchedendafterbegin> - ";
 		if($match eq $failure) {
 			print "$failure\n";
 		} else {
@@ -228,7 +228,7 @@ my $on_submit = sub {
 		);
 		$matchedbeginafterend = 0;
 
-		print "Looking for new - Started Negotiation Cycle - "
+		print "Looking for new - Started Negotiation Cycle - ";
 		if($matchbeginafterend eq $failure) {
 			print "$failure\n";
 		} else {
@@ -251,7 +251,7 @@ my $on_submit = sub {
 		);
 		$matchonfinalfinish = 0;
 		# could I not be getting the Finsh I expect?
-		print "Looking for new Finsh after this Begin - $matchbeginafterend - "
+		print "Looking for new Finsh after this Begin - $matchbeginafterend - ";
 		if($matchedfinalfinish eq $failure) {
 			print "$failure\n";
 		} else {
@@ -268,7 +268,7 @@ my $on_submit = sub {
 			match_callback => $on_match,
 		);
 
-		print "Looking for Got SIGQUIT.  Performing fast shutdown. After this - $matchedfinalfinish - "
+		print "Looking for Got SIGQUIT.  Performing fast shutdown. After this - $matchedfinalfinish - ";
 		if($match eq $failure) {
 			print "$failure\n";
 		} else {
