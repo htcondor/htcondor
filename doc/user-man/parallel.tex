@@ -248,6 +248,49 @@ the scheduler considering the specific allocation that
 could satisfy the requirements.
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection*{\label{sec:Configure-Clusters-Processes-Subprocesses}
+Parallel Universe: Clusters, Processes, and Subprocesses} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{parallel-clusters-proceses-subprocesses}
+
+When 
+a user submits a job to HTCondor with \verb=condor_submit=, HTCondor in parallel 
+universe processes the submit file and assumes that all jobs submitted in this 
+file are part of a single parallel (e.g.~MPI) job. HTCondor processes the submit 
+file as a single job and
+creates a new cluster with a new \Attr{ClusterID} for the job. The user though can 
+specify different requirements for different parts of the job and queue each 
+part separately with each part being part of the same cluster but receiving a 
+different \Attr{ProcID}. Within each processes, the user can specify particular
+requirements.
+% (by using 
+%partitionable slots) can also request more than one CPU (\verb+num_cpus = 2+) or
+%(by using static slots) \verb+machine_count = 2+. 
+Each request for a slot is known as a subprocess; each subprocess has the same 
+\Attr{ClusterID} and \Attr{ProcID} as the over-arching process but has its 
+own unique 
+\Attr{SubprocID}. Note that \Attr{SubprocID} is not advertised in ClassAds.
+
+The way to create multiple processes is to place a number after the \verb=queue= 
+command, such as \verb=queue 8= to create eight different processes with the 
+same cluster. After a particular \verb=queue= command, the user can also change 
+parameters previously specified in the submit file or add parameters not 
+previously specified. For example, suppose that the head node of a parallel job 
+needs additional RAM compared to the rest of the nodes. The user can write
+
+\begin{verbatim}
+request_memory = 5G
+queue
+request_meory = 1G
+queue 31
+\end{verbatim}
+
+If a user wishes to submit multiple independent parallel universe jobs, the 
+user cannot simply append a number to the \verb=queue= command. HTCondor will 
+assume that each job is not independent -- as by definition, a parallel job is a 
+job is at least setup to handle multiple (sub)processes. Instead, the user will
+need to run \Condor{submit} multiple times.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:parallel-mpi-submit}MPI Applications Within HTCondor's Parallel Universe}
@@ -255,8 +298,13 @@ could satisfy the requirements.
 \index{parallel universe!running MPI applications}
 \index{MPI application}
 
-MPI applications consist of a single executable that is invoked 
-in parallel on one or more machines. 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:parallel-mpi-submit-multiple}
+Running MPI Jobs On Multiple Machines}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+MPI applications consist of a single executable that is invoked in order to
+execute in parallel on one or more machines. 
 HTCondor's parallel universe provides the environment within
 which this executable is executed in parallel.
 However, the various implementations of MPI
@@ -271,7 +319,7 @@ and then invokes the MPI application's executable.
 HTCondor provides these scripts in the
 \File{\MacroUNI{RELEASE\_DIR}/etc/examples}
 directory.
-The script for the LAM implementation is \File{lamscript}.
+The script for the OpenMPI implementation is \File{openmpiscript}.
 The script for the MPICH implementation is \File{mp1script}.
 Therefore, an HTCondor submit description file for these
 implementations would appear similar to:
@@ -297,15 +345,15 @@ or
 \begin{verbatim}
 ######################################
 ## Example submit description file
-## for LAM MPI
+## for OpenMPI
 ######################################
 universe = parallel
-executable = lamscript
-arguments = my_lam_linked_executable arg1 arg2
+executable = openmpiscript
+arguments = my_openmpi_linked_executable arg1 arg2
 machine_count = 4
 should_transfer_files = yes
 when_to_transfer_output = on_exit
-transfer_input_files = my_lam_linked_executable
+transfer_input_files = my_openmpi_linked_executable
 queue
 \end{verbatim}
 
@@ -362,16 +410,18 @@ but should work with more recent versions.
 Configuration variable \Macro{CONDOR\_SSH\_KEYGEN} points
 to the corresponding \Prog{ssh-keygen} executable.
 
-Scripts \Prog{lamscript} and \Prog{mp1script}
+Scripts \Prog{openmpiscript} and \Prog{mp1script}
 each have their own idiosyncrasies.
 In \Prog{mp1script}, the \Env{PATH} to the MPICH installation must be set.
 The shell variable MPDIR indicates its proper value.
-This directory contains the MPICH \Prog{mpirun} executable.
-For LAM, there is a similar path setting, but it is called \Env{LAMDIR}
-in the \Prog{lamscript} script.  In addition, this path must be part of the
-path set in the user's \File{.cshrc} script.
-As of this writing, the LAM implementation does not work
-if the user's login shell is the Bourne or compatible shell.
+This directory contains the MPICH \Prog{mpirun} executable; OpenMPI also
+uses MPDIR.
+%For OpenMPI, there is a similar path setting, but it is called \Env{LAMDIR}
+%in the \Prog{openmpiscript} script.  
+%In addition, this path must be part of the
+%path set in the user's \File{.cshrc} script.
+%As of this writing, the LAM implementation does not work
+%if the user's login shell is the Bourne or compatible shell.
 
 These MPI jobs operate as all parallel universe jobs do.
 The default policy is that when the first node exits,
@@ -386,3 +436,85 @@ such that HTCondor will wait until every node in the parallel
 job has completed to consider the job finished. 
 
 \index{parallel universe|)}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:parallel-mpi-submit-single}MPI Applications Within HTCondor's Parallel Universe}
+%Within HTCondor's Parallel Universe}
+%Running MPI Jobs On A Single Machine}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+With partitionable slots, a user may wish to run a parallel job written with
+MPI but run only on one machine. Parallel universe is designed to help 
+coordinate a job on multiple machines and thus is not the correct route for
+this kind of job. Instead, vanilla universe should be used with partitionable
+slots and the \verb|request_cpus| option should be used in the HTCondor submit
+file.
+
+\begin{verbatim}
+request_cpus = 8
+\end{verbatim}
+
+A frequent question that gets asked is: ``How do I make sure my MPI job can run 
+on any machine that it lands on?'' There are two answers:
+\begin{enumerate}
+\item Statically build an MPI library and statically compile your MPI code.
+\item Use CDE to create a directory tree that contains all of the libraries 
+needed to execute your code.
+\end{enumerate}
+
+For Linux machines, we have found that building static MPI libraries can be 
+difficult and that 
+using CDE and some shell scripts provides the requested results. CDE can be
+found at \URL{http://www.pgbovine.net/cde.html}.
+
+If you have MPI installed on all machines on which your program could run, this
+submit description file works well.
+\begin{verbatim}
+################################################################################
+##   Submit Description File for a Parallel Program in Vanilla Universe
+################################################################################
+universe = vanilla
+executable = /path/to/mpirun
+request_cpus = 2
+arguments = -np 2 my_openmpi_linked_executable arg1 arg2 arge
+should_transfer_files = yes
+when_to_transfer_output = on_exit
+transfer_input_files = my_openmpi_linked_executable
+
+queue
+\end{verbatim}
+
+If you do not have MPI installed on all potential machines and want to use CDE,
+this submit description file works well.
+\begin{verbatim}
+#############################################
+##   submit description file for a parallel program
+#############################################
+universe = vanilla
+executable = cde_script.sh
+request_cpus = 2
+should_transfer_files = yes
+when_to_transfer_output = on_exit
+transfer_input_files = cde_my_mpi_linked_executable.tar
+transfer_output_files = cde-package/cde-root/path/to/original/directory
+queue
+\end{verbatim}
+
+We assume that you the user have created a tarball called 
+\File{cde\_my\_mpi\_linked\_executable.tar} which contains the directory tree
+created by CDE.
+The contents of \Prog{cde\_script.sh} are:
+\begin{verbatim}
+#!/bin/sh
+# Untar the CDE package
+tar xpf cde_my_mpi_linked_executable.tar
+# cd to the subdirectory where I need to run
+cd cde-package/cde-root/path/to/original/directory
+# Run my command
+./mpirun.cde -n 2 ./my_mpi_linked_executable
+# Normally, HTCondor will transfer the contents of this directory.
+# However, we don't want the .cde command and the executable transfered back
+# To prevent this from happening, we manually remove both files.
+rm -f mpirun.cde
+rm -f my_mpi_linked_executable
+\end{verbatim}
