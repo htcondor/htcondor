@@ -249,7 +249,7 @@ could satisfy the requirements.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection*{\label{sec:Configure-Clusters-Processes-Subprocesses}
+\subsubsection{\label{sec:Configure-Clusters-Processes-Subprocesses}
 Parallel Universe: Clusters, Processes, and Subprocesses} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{parallel-clusters-proceses-subprocesses}
@@ -271,6 +271,61 @@ Each request for a slot is known as a subprocess; each subprocess has the same
 \Attr{ClusterID} and \Attr{ProcID} as the over-arching process but has its 
 own unique 
 \Attr{SubprocID}. Note that \Attr{SubprocID} is not advertised in ClassAds.
+
+%\subsubsection{\label{sec:parallel-machine-count-vs-request-cpus}
+%\Arg{machine\_count} vs.~\Arg{request\_cpus}}
+
+\subsubsection{CPU Hierarchy}
+
+%Cluster-MPI Job - Entire job can have multiple processes
+%NOOO %Process-Each slot has Machine
+%Process - Each process can have multiple slots
+%Subprocess-Slot (which can have multiple CPUs)
+
+How do you create subprocesses?
+
+Related to clusters, processes, and subprocesses, we have commands that will 
+let us specify properties for each process and subprocess. A hierarchy exists 
+related to how you specify what goes into each process and subprocess, which are
+part of an overarching cluster. The submission of a job in parallel universe 
+constitutes the entirety of a particular cluster. To create multiple processes,
+the submit description file must have multiple \Expr{queue} commands (or have
+an integer appended after whitespace). To create multiple subprocesses, the 
+submit description file must have \SubmitCmd{machine\_count} have an integer
+value greater than 1. Then within each subprocess, we can use commands like
+\SubmitCmd{request\_cpus} or \SubmitCmd{request\_memory} to request that each 
+slot has that many CPUs or that much memory.
+
+When creating a submit description file, the hierarchy of submission commands
+works in descending order:
+\begin{description}
+\item[queue \Arg{N}] Gives the job \Arg{N} processes with all the properties
+listed above the \SubmitCmd{queue} command in the submit description file (with 
+a default value of $N=1$). The command \SubmitCmd{machine\_count} must be given.
+%How many processes with the previously listed 
+%\Attr{machine\_count} and \Attr{request\_cpus} you want.
+\item[machine\_count] For each processes, it will spawn a number of subprocesses
+equal to the value provided by this command. Each subprocess corresponds to a
+particular slot.
+%\item[machine\_count] How many slots/machines/hosts you want associated with a given process.
+%\item[machine\_count] How many machines/hosts you want.
+\item[request\_X] How much/many of a particular resource a slot should have. In 
+particular, \SubmitCmd{request\_cpus} is useful for partitionable slots so as to
+give the slot the ability to have multiple CPUs. Note that setting this value 
+could restrict the number of matching machines because it creates additional
+requirements that the host machine has.
+%\item[request\_cpus] How many CPUs each machine/host should have. Each 
+%\item[request\_cpus] How many CPUs each machine/host should have available. Each 
+%combination of machines and CPUs is a process with its own unique \Attr{ProcID}.
+%When the 
+%\item[request\_memory] How much RAM each slot should have
+\end{description}
+
+% Machine count <- how many machines/hosts you want. Each host can have multipel CPUs
+% Machine count <- how many machines/hosts you want. Each host can have multiple CPUs
+% Request CPUs <- how many CPUs you want on a given machine
+% Make sure you do the math for your call to mpirun. Make sure that the sum of 
+% the requested CPUs adds up to the number of nodes you want.
 
 The way to create multiple processes is to place a number after the \verb=queue= 
 command, such as \verb=queue 8= to create eight different processes with the 
@@ -438,7 +493,7 @@ job has completed to consider the job finished.
 \index{parallel universe|)}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:parallel-mpi-submit-single}MPI Applications Within HTCondor's Parallel Universe}
+\subsection{\label{sec:parallel-mpi-submit-single}MPI Applications Within HTCondor's Vanilla Universe}
 %Within HTCondor's Parallel Universe}
 %Running MPI Jobs On A Single Machine}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -446,7 +501,7 @@ job has completed to consider the job finished.
 With partitionable slots, a user may wish to run a parallel job written with
 MPI but run only on one machine. Parallel universe is designed to help 
 coordinate a job on multiple machines and thus is not the correct route for
-this kind of job. Instead, vanilla universe should be used with partitionable
+this kind of job. Instead, the vanilla universe should be used with partitionable
 slots and the \verb|request_cpus| option should be used in the HTCondor submit
 file.
 
