@@ -2573,4 +2573,48 @@ sub CreateLocalConfig
     return($name);
 }
 
+sub VerifyNoJobsInState
+{
+	my $state = shift;
+	my $number = shift;
+    my $maxtries = shift;
+    my $done = 0;
+    my $count  = 0;
+    my @queue = ();
+    my $jobsrunning = 0;
+	my %jobsstatus = ();;
+
+
+    while( $done != 1)
+    {
+        if($count > $maxtries) {
+			return($jobsstatus{$state});
+        }
+        $count += 1;
+        @queue = `condor_q`;
+        foreach my $line (@queue) {
+            chomp($line);
+            if($line =~ /^(\d+)\s\jobs;\s+(\d+)\s+completed,\s+(\d+)\s+removed,\s+(\d+)\s+idle,\s+(\d+)\s+running,\s+(\d+)\s+held,\s+(\d+)\s+suspended.*$/) {
+				#print "$line\n";
+				$jobsstatus{jobs} = $1;
+				$jobsstatus{completed} = $2;
+				$jobsstatus{removed} = $3;
+				$jobsstatus{idle} = $4;
+				$jobsstatus{running} = $5;
+				$jobsstatus{held} = $6;
+				$jobsstatus{suspended} = $7;
+				if($jobsstatus{$state} == $number){
+                    $done = 1;
+					print "$number $state\n";
+					return($number)
+				}
+            }
+        }
+        if($done == 0) {
+            print "Waiting for $number $state\n";
+            sleep 1;
+        }
+    }
+}
+
 1;
