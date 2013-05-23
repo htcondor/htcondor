@@ -37,15 +37,15 @@ class Distribution
 
 	Distribution( );
 	~Distribution( );
-	void	SetDistribution( const char *name = "condor" );
 
   private:
-	char	distribution[ MAX_DISTRIBUTION_NAME + 1 ];
-	char	distribution_uc[ MAX_DISTRIBUTION_NAME + 1];
-	char	distribution_cap[ MAX_DISTRIBUTION_NAME + 1];
+	const char * distribution;
+	const char * distribution_uc;
+	const char * distribution_cap;
 	int		distribution_length;
 
 	int Init( const char *argv0 );
+	void	SetDistribution( const char *names );
 };
 
 extern Distribution	myDistribution, *myDistro;
