@@ -42,6 +42,10 @@ number of bytes.
 % would have been in 7.9.7, but there was no 7.9.7 release
 \item The HTCondor Python bindings now build on Mac OS X.
 
+\item Updated the sample \File{condor.plist} file to work better with
+current versions of Mac OS X.
+\Ticket{3624}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -104,6 +108,15 @@ to its default value of \Expr{GRACEFUL}.
 \item Fixed a bug that caused redundant usage lines to show up at the end of
 the partitionable resource usage summary in the user log.
 \Ticket{3621}
+
+\item Fixed several bugs that can cause the \Condor{procd} to fail on MacOSX
+and not be restartable.
+\Ticket{3617}
+\Ticket{3618}
+\Ticket{3620}
+
+\item The \Condor{procd} now ignores process id 0 on Mac OS X.
+\Ticket{3516}
 
 \end{itemize}
 

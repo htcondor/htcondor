@@ -517,15 +517,15 @@ DCStarter::peek(bool transfer_stdout, ssize_t &stdout_offset, bool transfer_stde
 		response.EvaluateAttrString(ATTR_ERROR_STRING, error_msg);
 		return false;
 	}
-	classad::Value value;
+	classad::Value valueX;
 	classad_shared_ptr<classad::ExprList> list;
-	if (!response.EvaluateAttr("TransferFiles", value) || !value.IsSListValue(list))
+	if (!response.EvaluateAttr("TransferFiles", valueX) || !valueX.IsSListValue(list))
 	{
 		error_msg = "Unable to evaluate starter response";
 		return false;
 	}
 	classad_shared_ptr<classad::ExprList> offlist;
-	if (!response.EvaluateAttr("TransferOffsets", value) || !value.IsSListValue(offlist))
+	if (!response.EvaluateAttr("TransferOffsets", valueX) || !valueX.IsSListValue(offlist))
 	{
 		error_msg = "Unable to evaluate starter response (missing offsets)";
 		return false;

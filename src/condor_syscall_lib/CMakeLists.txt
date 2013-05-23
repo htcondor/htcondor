@@ -147,5 +147,6 @@ if( STD_UNIVERSE )
 
 	if (UNIX)
 		set_source_files_properties(receivers.cpp senders.cpp PROPERTIES COMPILE_FLAGS "-Wno-uninitialized -Wno-unused-variable -Wno-unused-parameter")
+		set_source_files_properties(getcwd.c remote_startup.c PROPERTIES COMPILE_FLAGS "-Wno-nonnull -Wno-deprecated-declarations")
 	endif(UNIX)
 endif( STD_UNIVERSE )
