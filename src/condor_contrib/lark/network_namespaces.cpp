@@ -517,6 +517,11 @@ int NetworkNamespaceManager::PerformJobAccounting(classad::ClassAd *classad) {
 	if (m_state == EXECUTING) {
 		dprintf(D_FULLDEBUG, "Polling netfilter for network statistics on chain %s.\n", m_network_namespace.c_str());
 		rc = perform_accounting(m_network_namespace.c_str(), JobAccountingCallback, (void *)&m_statistics);
+        time_t timestamp = time(NULL);
+        std::string attr_name("PreviousTimestamp");
+        if(classad){
+            classad->InsertAttr(attr_name, double(timestamp));
+        }
 	}
 	if (classad) {
 		classad->Update(m_statistics);
@@ -526,10 +531,30 @@ int NetworkNamespaceManager::PerformJobAccounting(classad::ClassAd *classad) {
 
 int NetworkNamespaceManager::JobAccountingCallback(const unsigned char * rule_name, long long bytes, void * callback_data) {
 	classad::ClassAd &classad = *(classad::ClassAd*)callback_data;
+    time_t current_timestamp = time(NULL);
+    double previous_timestamp;
+    double time_interval;
+    std::string prev_timestamp_attr("PreviousTimestamp");
+    if(! classad.EvaluateAttrReal(prev_timestamp_attr, previous_timestamp)) {
+        int initial_update_interval = param_integer("STARTER_INITIAL_UPDATE_INTERVAL", 8);
+        time_interval = double(initial_update_interval);
+    } else {
+        time_interval = double(current_timestamp) - previous_timestamp;
+    }
+
 	std::string attr_name("Network");
 	attr_name.append((const char *)rule_name);
+    double prev_num_bytes;
+    if(! classad.EvaluateAttrReal(attr_name, prev_num_bytes)){
+        prev_num_bytes = 0;
+    }
+    std::string average_bandwidth("AverageBandwidthUsage");
+    average_bandwidth.append((const char *)rule_name);
+    double bandwidth_usage = (double(bytes)-prev_num_bytes)/time_interval;
+    classad.InsertAttr(average_bandwidth, bandwidth_usage);
 	classad.InsertAttr(attr_name, double(bytes), classad::Value::B_FACTOR);
 	dprintf(D_FULLDEBUG, "Network accounting: %s = %lld\n", attr_name.c_str(), bytes);
+    dprintf(D_FULLDEBUG, "Network average bandwidth usage: %s = %f\n", average_bandwidth.c_str(), bandwidth_usage);
 	//classad.Assign(attr_name, bytes);
 	return 0;
 }
