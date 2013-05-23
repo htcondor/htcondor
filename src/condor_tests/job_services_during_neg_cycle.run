@@ -123,7 +123,7 @@ my $on_submit = sub {
 		my @prioutput = `condor_userprio`;
 		my @condorreconfig = `condor_reconfig`;
 		RunNTimes("condor_reconfig",1);
-		RunNTimes("condor_userprio",50);
+		RunNTimes("condor_userprio",5);
 
 		# find the next end of a negotiation cycle
 		$matchonnextend = 1;
@@ -193,7 +193,7 @@ my $on_submit = sub {
 			print "OK got $match\n";
 		}
 
-		CheckExpectations("Condor_userprio handlings during cycle",$match,51);
+		CheckExpectations("Condor_userprio handlings during cycle",$match,6);
 
 		# Did the reconfig wait for the end of the cycle
 		CondorLog::RunCheckMultiple(
