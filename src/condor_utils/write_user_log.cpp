@@ -242,9 +242,9 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 	Configure(false);
 	bool ret = true;
 	if ( m_userlog_enable ) {
-		for(std::vector<const char*>::const_iterator p = file.begin();
-				p != file.end(); ++p) {
-			log_file log(*p);
+		for(std::vector<const char*>::const_iterator it = file.begin();
+				it != file.end(); ++it) {
+			log_file log(*it);
 			if(!openFile(log.path.c_str(), true, m_enable_locking, true,
 					log.lock, log.fp) ) {
 				dprintf(D_ALWAYS, "WriteUserLog::initialize: failed to open file %s\n",
