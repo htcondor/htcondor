@@ -27,5 +27,21 @@ encourage users to use the halt file feature and release their \Condor{dagman}
 jobs before the upgrade.  Running \Condor{rm} on a held \Condor{dagman} job is
 not advised in this case, unless the user is abandoning the DAG job.
 
+\item The upgrade will change the \AdAttr{CheckpointPlatform} for all
+machines.  If you're using the standard universe, checkpoints from before
+the upgrade will not resume afterwards.  You may either: change your machines'
+\AdAttr{CheckpointPlatform} to its previous value using the
+\Macro{CHECKPOINT\_PLATFORM} configuration macro, or change the checkpointed
+jobs' \AdAttr{LastCheckpointPlatform} using \Condor{qedit}.
+
+For example, if a machine changed its CheckpointPlatform
+from \verb;LINUX INTEL 2.6.x normal N/A; to 
+\verb;LINUX INTEL 2.6.x normal N/A ssse3 sse4\_1 sse4\_2;, you could
+use the following command:
+
+\begin{verbatim}
+condor_qedit -constraint 'LastCheckpointPlatform == "LINUX INTEL 2.6.x normal N/A"' LastCheckpointPlatform "LINUX INTEL 2.6.x normal N/A ssse3 sse4_1 sse4_2"
+\end{verbatim}
+
 \end{itemize}
 

@@ -1,113 +1,124 @@
 \begin{ManPage}{\label{man-condor-qsub}\Condor{qsub}}{1}
-{Queue jobs for execution under HTCondor with PBS/SGE style submission}
+{Queue jobs that use PBS/SGE-style submission}
 \Synopsis \SynProg{\Condor{qsub}}
+[\verb@--@\textbf{version}]
 
-\oOpt{\Condor{qsub} Specific Options}
-\oOpt{Directory Options}
-\oOpt{Environmental Options}
-\oOpt{File Options}
-\oOpt{Notification Options}
-\oOpt{Resource Options}
-\oOpt{Status Options}
-\oOpt{Submission Options}
+\SynProg{\Condor{qsub}}
+\oOpt{Specific options}
+\oOpt{Directory options}
+\oOpt{Environmental options}
+\oOpt{File options}
+\oOpt{Notification options}
+\oOpt{Resource options}
+\oOpt{Status options}
+\oOpt{Submission options}
 
 \Description
 
-The primary purpose of this emulation is to allow PBS/Torque-style and 
-SGE-style submission of dependent jobs without the need to specify the full
-dependency graph at submission time. This implementation is neither as efficient
-as HTCondor's DAGMan, nor as functional as SGE's qsub/qalter. It merely serves 
-as a minimal adapter to be able to use software original written to interact 
-with PBS/Torque/SGE in an HTCondor pool. In Version 0.2, many additional 
-features have been added.
+\Condor{qsub} submits an HTCondor job.
+This job is specified in a PBS/Torque style or an SGE style.
+\Condor{qsub} permits the 
+submission of dependent jobs without the need to specify the full
+dependency graph at submission time.
+Doing things this way is neither as efficient
+as HTCondor's DAGMan, nor as functional as SGE's \Prog{qsub} or \Prog{qalter}.
+\Condor{qsub} serves as a minimal translator to be able to use 
+software originally written to interact 
+with PBS, Torque, and SGE in an HTCondor pool. 
 
-In general \Condor{qsub} behaves just like qsub. However, only a fraction of the
-original functionality is available (about 1/3). The following list of options only
-describes the differences in the behavior of PBS/Torque/SGE's qsub and this 
-emulation. Qsub options not listed here are not supported.
+\Condor{qsub} attempts to behave like \Prog{qsub}. 
+Less than half of the \Prog{qsub}
+functionality is implemented. 
+Option descriptions 
+describe the differences between the behavior of \Prog{qsub} and 
+\Condor{qsub}.
+\Prog{qsub} options not listed here are not supported.
 
-For a full listing of options, please see
+For a full listing of \Prog{qsub} options, please see
 \begin{description}
 \item[POSIX]: \URL{http://pubs.opengroup.org/onlinepubs/9699919799/utilities/qsub.html}
 \item[SGE]: \URL{http://gridscheduler.sourceforge.net/htmlman/htmlman1/qsub.html}
 \item[PBS/Torque]: \URL{http://docs.adaptivecomputing.com/torque/4-1-3/Content/topics/commands/qsub.htm}
 \end{description}
 
-\Condor{qsub} is a shell script that submits jobs to HTCondor for execution, but 
-uses the syntax of Torque/PBS or SGE/Open Grid Scheduler. \Condor{qsub} accepts
-both command line options and arguments or a single file that contains all of the 
-commands. This works in the reverse direction of \SubmitCmd{grid} universe's 
-\SubmitCmd{batch} grid type (see section~\ref{sec:batch} on 
-page~\pageref{sec:batch}), which takes HTCondor jobs submitted with HTCondor
+\Condor{qsub} accepts
+either command line options or a single file that contains all of the 
+commands. 
+
+\Condor{qsub} does the opposite of job submission within the 
+\SubmitCmd{grid} universe 
+\SubmitCmd{batch} grid type (section~\ref{sec:batch}),
+which takes HTCondor jobs submitted with HTCondor
 syntax and submits them to PBS, SGE, or LSF.
 
-Some concepts present in PBS/SGE do not apply to HTCondor and so these options are
-not enabled.
+Some concepts present in PBS and SGE do not apply to HTCondor,
+and so these options are not implemented.
 
 \begin{Options}
-\OptItem{\OptArg{-a}{date\_time}}{(Submission Option)
-  Specifies a deferred execution date and time (see 
-  We follow the PBS/Torque implementation of this option. The \Arg{date\_time} 
-  argument is a string in the form \Arg{[[[[CC]YY]MM]DD]hhmm[.SS]}.  
-  \Arg{CC}, \Arg{YY}, \Arg{MM}, \Arg{DD}, and \Arg{SS} are optional. SGE does not
-  permit \Arg{MM} or \Arg{DD} to be optional, although PBS does; 
-  we follow the PBS style.}
-\OptItem{\OptArg{-A}{account\_string}}{(Status Option)
-  Allows you to use group accounting (see section~\ref{sec:group-accounting} on 
-  page~\pageref{sec:group-accounting}) and have the string \Arg{account\_string} 
-  be the accounting group associated with this job. Unlike SGE, we do not give a
-  default group of \"sge\".}
-\OptItem{\OptArg{-b}{y|n}}{(Submission Option)
- Tells \Condor{qsub} whether the command given to \Condor{qsub} should be treated
- as a binary or as a script. This option follows the SGE version 
-}
-\OptItem{\OptArg{-c}{checkpoint\_options}}{(Submission Option)  
-  Standard universe only. By default, HTCondor uses checkpointing and this option
-  controls the how HTCondor checkpoints.  Currently, these options from POSIX,
-  SGE, and PBS are the only ones that work.
+\OptItem{\OptArg{-a}{date\_time}}{(Submission option)
+  Specify a deferred execution date and time.
+  The PBS/Torque syntax of \Arg{date\_time} 
+  is a string in the form \Arg{[[[[CC]YY]MM]DD]hhmm[.SS]}.  
+  The portions of this string which are optional are
+  \Arg{CC}, \Arg{YY}, \Arg{MM}, \Arg{DD}, and \Arg{SS}.
+  For SGE, \Arg{MM} and \Arg{DD} are \emph{not} optional. 
+  For PBS, \Arg{MM} and \Arg{DD} are optional. 
+  \Condor{qsub} follows the PBS style. }
+\OptItem{\OptArg{-A}{account\_string}}{(Status option)
+  Uses group accounting (see section~\ref{sec:group-accounting})
+  where the string \Arg{account\_string} 
+  is the accounting group associated with this job. 
+  Unlike SGE, there is no default group of \texttt{"sge"}. }
+\OptItem{\OptArg{-b}{y|n}}{(Submission option)
+  Using the SGE definition of its \Arg{-b} option,
+  a value of \Arg{y} causes \Condor{qsub} to \emph{not}
+  parse the file for additional \Condor{qsub} commands.
+  The default value is \Arg{n}.
+  If the command line argument \OptArg{-f}{filename} is also specified,
+  it negates a value of \Arg{y}.  }
+\OptItem{\OptArg{-c}{checkpoint\_options}}{(Submission option)  
+  For standard universe jobs only, 
+  controls the how HTCondor produces checkpoints.  \Arg{checkpoint\_options}
+  may be one of
   \begin{description}
-  \item[n/N] Disable checkpointing.
-  \item[s/S] Disable periodic checkpointing. A job will only checkpoint when it
-    is evicted.
+  \item[n/N] Do not produce checkpoints.
+  \item[s/S] Do not produce periodic checkpoints.  A job will only produce a checkpoint when the job is evicted.
   \end{description}
-  We hope to implement options more in the future.
-}
-\OptItem{\Opt{--condor-keep-files}}{(\Condor{qsub} Specific Option)
-  \Condor{qsub} specific. \Condor{qsub} creates some temporary files (generated
-  HTCondor submit files, sentinel jobs) and using this option will cause these 
-  files to remain around after \Condor{qsub} finishes. Mostly important for
-  debugging.}
-\OptItem{\Opt{-cwd}}{(Directory Option)
-  If this option is present, the initial directory in which the job will run 
-  will be set to the current 
-  directory from where the job was submitted from. It sets 
-  \SubmitCmd{initialdir} for \Condor{submit} to the current directory.
-}
-\OptItem{\OptArg{-d}{path} or \OptArg{-wd}{path}}{(Directory Option)
+  More options may be implemented in the future. }
+\OptItem{\Opt{---condor-keep-files}}{(Specific option)
+  Directs HTCondor to \emph{not} remove temporary files
+  generated by \Condor{qsub},
+  such as HTCondor submit files and sentinel jobs.
+  These temporary files may be important for debugging. }
+\OptItem{\Opt{-cwd}}{(Directory option)
+  Specifies the initial directory in which the job will run to the current 
+  directory from which the job was submitted.
+  This sets \SubmitCmd{initialdir} for \Condor{submit}.  }
+\OptItem{\OptArg{-d}{path} or \OptArg{-wd}{path}}{(Directory option)
   Specifies the initial directory to be the to the value given by
   \Arg{path}. It sets \SubmitCmd{initialdir} for \Condor{submit} to \Arg{path}.
   See section~\ref{man-condor-submit-initialdir} on 
   page~\pageref{man-condor-submit-initialdir} for further explanation of 
   \SubmitCmd{initialdir}.}
-\OptItem{\OptArg{-e}{filename}}{(File Option)
+\OptItem{\OptArg{-e}{filename}}{(File option)
   Specifies the file which should contain the standard error stream. See 
   section~\ref{man-condor-submit-error} on 
   page~\pageref{man-condor-submit-error}.}
-\OptItem{\OptArg{-f}{qsub\_file}}{(\Condor{qsub} Specific Option)
+\OptItem{\OptArg{---f}{qsub\_file}}{(\Condor{qsub} Specific option)
   \Condor{qsub} specific. \Condor{qsub} nominally accepts command line arguments. 
   However, submissions to \Shell{qsub} are often done in a batch
   file with commands like \Env{\#PBS} or \Env{\#SGE}. When this option is used,
   \Condor{qsub} will parse the batch file listed as \Arg{qsub\_file}. This 
   command may be replaced with \Opt{-@} in the future to emulate SGE's 
   implementation of dealing with these kinds of files.}
-\OptItem{\Opt{-h}}{(Status Option)
+\OptItem{\Opt{-h}}{(Status option)
   Job submitted with this option gets placed into the hold state at submission
   time.}
-\OptItem{\Opt{--help}}{(\Condor{qsub} Specific Option)
+\OptItem{\Opt{---help}}{(\Condor{qsub} Specific option)
   \Condor{qsub} will print out a help message. Please refer to this manual page
   as it is more complete and up to date than the help message. We hope to
   synchronize them soon.}
-\OptItem{\OptArg{-hold\_jid}{<jid>}}{(Status Option)
+\OptItem{\OptArg{-hold\_jid}{<jid>}}{(Status option)
   If given, the job will be submitted in the hold state. Along with the actual 
   job, a `sentinel' job will be submitted to HTCondor's local universe. This 
   sentinel then watches the specified job and releases the submitted job whenever
@@ -115,16 +126,16 @@ not enabled.
   to detect a job exiting with code 100 and not start the dependent job in this 
   case. If a cluster id of an array job is given, the dependent job will only be 
   released after all individual jobs of a cluster have completed.}
-\OptItem{\OptArg{-i}{[[hostname]:]file,...}}{(File Option)
+\OptItem{\OptArg{-i}{[[hostname]:]file,...}}{(File option)
   Specifies the file which should contain the standard input stream. See 
   section~\ref{man-condor-submit-input} on 
   page~\pageref{man-condor-submit-input}.
 }
-\OptItem{\OptArg{-j}{characters}}{(File Option)
+\OptItem{\OptArg{-j}{characters}}{(File option)
   Determines if the standard error stream and the standard output stream of the
   job will be merged into one stream. For HTCondor, this means merging them into
   one file that will eventually be placed back into the submitting directory.}
-\OptItem{\OptArg{-l}{resource\_spec}}{(Resource Option)
+\OptItem{\OptArg{-l}{resource\_spec}}{(Resource option)
   Specifies various requirements for the job, e.g.~amount of RAM, number of CPUs.
   We currently support only PBS style resource requests, though we hope to have 
   SGE options soon.
@@ -151,7 +162,7 @@ nodes &
 \Shell{\{<node\_count> | <hostname>\} [:ppn=<ppn>] [:gpus=<gpu>] [:<property> [:<property>] \ldots] [+ \ldots]}
 %\{<node_count> | <hostname>\} [:ppn=<ppn>][:gpus=<gpu>][:<property>[:<property>]\ldots] [+ \ldots]}
 & Number and/or properties of nodes to be used. We are working on having 
-arbitrary properties be supported. For exmaples, please see
+arbitrary properties be supported. For examples, please see
 %\URL{http://docs.adaptivecomputing.com/torque/4-1-3/Content/topics/2-jobs/requestingRes.htm#qsub}
 \parbox{2in}{ 
 \URL{http://docs.adaptivecomputing.com/torque/4-1-3/Content/topics/2-jobs/requestingRes.htm\#qsub}
@@ -164,10 +175,10 @@ procs & procs=<integer>  & Number of CPUs requested \\ \hline
 \end{tabular*}
 For the value size, it should be in the format of an integer. PBS/Torque 
 defaults to having the value represent the number of bytes; HTCondor defaults 
-to using kilobytes. Both recognize the appending of kb, mb, gb, and tb. We do 
+to using kilobytes. Both recognize the appending of Kb, mb, Gb, and Tb. We do 
 not currently support the use of words (w, kw, mw, gw, and tw).
 }
-\OptItem{\OptArg{-m}{a|e|n}}{(Notification Option)
+\OptItem{\OptArg{-m}{a|e|n}}{(Notification option)
 Set notification level. See section~\ref{man-condor-submit-notification} on 
 page~\pageref{man-condor-submit-notification} for how \Condor{submit} handles 
 notification. When an e-mail is sent to the owners of an HTCondor job depends on 
@@ -184,31 +195,31 @@ There are two additional options that may become supported in the future:
 \end{description}
 We hope to implement these options.
 }
-\OptItem{\OptArg{-M}{e-mail address}}{(Notification Option)
+\OptItem{\OptArg{-M}{e-mail address}}{(Notification option)
 Sets the e-mail address to use when HTCondor sends e-mail. See 
 section~\ref{man-condor-submit-notify-user} on 
 page~\pageref{man-condor-submit-notify-user}
 for further details.}
-\OptItem{\OptArg{-o}{filename}}{(File Option)
+\OptItem{\OptArg{-o}{filename}}{(File option)
   Specifies the file which should contain the standard error stream. See 
   section~\ref{man-condor-submit-output} on 
 page~\pageref{man-condor-submit-output}.}
-\OptItem{\OptArg{-p}{integer}}{(Status Option)
+\OptItem{\OptArg{-p}{integer}}{(Status option)
 Sets the priority, with 0 being the default. Jobs with higher numerical priority will
 run before jobs with lower numerical priority.
 See section~\ref{man-condor-submit-priority} on 
 page~\pageref{man-condor-submit-priority}
 for more information.}
-\OptItem{\Opt{--print}}{(\Condor{qsub} Specific Option) 
+\OptItem{\Opt{---print}}{(\Condor{qsub} Specific option) 
 \Condor{qsub} specific. Prints to \File{stdout} the contents of the HTCondor submit
 file that \Condor{qsub} generates.}
-\OptItem{\OptArg{-r}{y|n}}{(Status Option)
+\OptItem{\OptArg{-r}{y|n}}{(Status option)
 Specifies whether or not a job is re-runnable. Normally, HTCondor tries to rerun jobs,
 so this tries as best as possible ensure that this does not occur. \Arg{y} is the 
 default value.}
-\OptItem{\OptArg{-S}{shell}}{(Submission Option)
+\OptItem{\OptArg{-S}{shell}}{(Submission option)
 Specifies the path to the shell that should interpret the job.}
-\OptItem{\OptArg{-t}{<start>[-<stop>[:<step>]]}}{(Submission Option)
+\OptItem{\OptArg{-t}{<start>[ -<stop>[:<step>] ] }} {(Submission option)
 Specifies that this array jobs a number of essentially identical jobs should be
 submitted. Currently, only the SGE style syntax is supported. \Arg{start}, 
 \Arg{stop}, and \Arg{step} are all integers. \Arg{start} is the start index of the 
@@ -217,10 +228,10 @@ step size of the indices.
 \Warn 
 Currently, trying to use more than more than one processor or 
 node in a job will not work with this option.}
-\OptItem{\Opt{--test}}{(\Condor{qsub} Specific Option)
+\OptItem{\Opt{---test}}{(\Condor{qsub} Specific option)
 \Condor{qsub} specific. It makes \Condor{qsub} not submit the job, but \Condor{qsub}
 will still generate an HTCondor submit file.}
-\OptItem{\OptArg{-v}{variable list}}{(Environmental Option)
+\OptItem{\OptArg{-v}{variable list}}{(Environmental option)
 \Arg{variable list} is a comma separated string with the format of
 \Env{variable[=value][,variable[=value],...]}. Since \Env{[=value]} can be optional
 and HTCondor does not accept a variable without a value, \Condor{qsub} appends 
@@ -228,21 +239,27 @@ and HTCondor does not accept a variable without a value, \Condor{qsub} appends
 well as they must be contained by quotes. Also, all single and double quotes need to
 be escaped by backslashes.
 }
-\OptItem{\Opt{-V}}{(Environmental Option)
+\OptItem{\Opt{-V}}{(Environmental option)
   If given, HTCondor will copy all of the user's current shell environment variables
 for submission by having 'getenv = True' added to the HTCondor submit file. See 
 section~\ref{man-condor-submit-getenv} on page~\pageref{man-condor-submit-getenv} 
 for more details.}
 \OptItem{\OptArg{-W}{attr\_name=attr\_value[,attr\_name=attr\_value\ldots]}}{
-(File Option)
+(File option)
 PBS/Torque supports a number of attributes. However, \Condor{qsub} only supports
 the names \Arg{stagein} and \Arg{stageout} for \Arg{attr\_name}.
 The format of \Arg{attr\_value} for \Arg{stagein} and \Arg{stageout} is
 \Env{local\_file@hostname:remote\_file[,\ldots]} and we strip it to 
 \Env{remote\_file[,\ldots]}. HTCondor's file transfer mechanism is then used if needed.}
-\OptItem{\Opt{--version}}{(\Condor{qsub} Specific Option)
-  Print version information of \Condor{qsub} and exit.}
+\OptItem{\Opt{---version}}{(Specific option)
+  Print version information of \Condor{qsub} (not the version of HTCondor) 
+  and exit.}
 \end{Options}
+
+\ExitStatus
+
+\Condor{qsub} will exit with a status value of 0 (zero) upon success,
+and it will exit with the value 1 (one) upon failure to submit a job. 
 
 \end{ManPage}
 

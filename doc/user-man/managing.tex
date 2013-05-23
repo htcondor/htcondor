@@ -629,20 +629,30 @@ have been received for 15 minutes.
 remote status was previous logged as unknown.
 
 \noindent\Bold{Event Number:} 031 \\
-\Bold{Event Name:} Job Stage In \\
-\Bold{Event Description:} Job performing stage-in of input files.
+\Bold{Event Name:} Job stage in \\
+\Bold{Event Description:} A grid universe job is doing the stage in of 
+input files.
 
 \noindent\Bold{Event Number:} 032 \\
-\Bold{Event Name:} Job Stage Out \\
-\Bold{Event Description:} Job Performing stage-out of output files.
+\Bold{Event Name:} Job stage out \\
+\Bold{Event Description:} A grid universe job is doing the  stage out of
+output files.
 
 \noindent\Bold{Event Number:} 033 \\
-\Bold{Event Name:} Attribute update \\
-\Bold{Event Description:} Changing or setting job attribute.
+\Bold{Event Name:} Job ClassAd attribute update \\
+\Bold{Event Description:} A Job ClassAd attribute is changed due to action
+by the \Condor{schedd} daemon.  Examples include changes by 
+\Condor{qedit} and \Condor{prio}.
 
 \noindent\Bold{Event Number:} 034 \\
-\Bold{Event Name:} Pre Skip Event \\
-\Bold{Event Description:} PRE script return value is PRE\_SKIP value.
+\Bold{Event Name:} Pre Skip event \\
+\Bold{Event Description:} For DAGMan, this event is logged
+if a PRE SCRIPT exits with the defined PRE\_SKIP value in the DAG input file.
+This makes it possible for DAGMan to do recovery in a workflow that has
+such an event, 
+as it would otherwise not have any event for the DAGMan node to
+which the script belongs, 
+and in recovery, DAGMan's internal tables would become corrupted.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%e
 \subsection{\label{sec:job-completion}Job Completion}

@@ -101,7 +101,7 @@ sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus)
 #elif defined(WIN32)
 	if(!_sysapi_count_hyperthread_cpus)
 	{
-		LPFN_GLPI glpi;
+		LPFN_GLPI glpi = NULL;
 		DWORD returnLength = 0;
 		int byteOffset = 0;
 		int coreCount = 0;
@@ -109,9 +109,10 @@ sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus)
 		bool done = false;
 		PSYSTEM_LOGICAL_PROCESSOR_INFORMATION buffer = NULL;
 		PSYSTEM_LOGICAL_PROCESSOR_INFORMATION info = NULL;
-		glpi = (LPFN_GLPI) GetProcAddress(
-                            GetModuleHandle(TEXT("kernel32")),
-                            "GetLogicalProcessorInformation");
+		HMODULE hmod = GetModuleHandle(TEXT("kernel32"));
+		if (hmod) {
+			glpi = (LPFN_GLPI) GetProcAddress(hmod, "GetLogicalProcessorInformation");
+		}
 		if(glpi == NULL)
 		{
 			EXCEPT("Error: COUNT_HYPERTHREAD_CPUS can only be set to false on Windows XP SP3 or Windows 2003 SP1 or higher.\n");
@@ -137,6 +138,8 @@ sysapi_ncpus_raw_no_param(int *num_cpus,int *num_hyperthread_cpus)
 			else
 			{
 				done = true;
+				if (!buffer)
+					EXCEPT("Error: Failed to get SYSTEM_LOGICAL_PROCESSOR_INFORMATION\n");
 			}
 		}
 

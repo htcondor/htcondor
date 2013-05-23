@@ -2248,15 +2248,11 @@ format_owner_common (char *owner, AttrList *ad)
 	}
 
 	int niceUser;
-	char tmp[100];
 	if (ad->LookupInteger( ATTR_NICE_USER, niceUser) && niceUser ) {
-		strncpy(tmp,NiceUserName,80);
-		strcat(tmp, ".");
-		strcat(tmp, owner);
-		owner = tmp;
+		sprintf(result_str, "%s.%s", NiceUserName, owner);
 	} else {
+		strcpy_len(result_str, owner, COUNTOF(result_str));
 	}
-	strcpy_len(result_str, owner, COUNTOF(result_str));
 	return result_str;
 }
 
@@ -2510,7 +2506,8 @@ format_gridResource( char * grid_res, AttrList * ad, Formatter & /*fmt*/ )
     } else {
     	snprintf(result_str, 1024, "%s->%s %s", grid_type.c_str(), mgr.c_str(), host.c_str());
     }
-        	
+	result_str[COUNTOF(result_str)-1] = 0;
+
 	ix2 = strlen(result_str);
 	if ( ! widescreen) ix2 = width;
 	result_str[ix2] = 0;
@@ -3025,10 +3022,10 @@ print_jobs_analysis(ClassAdList & jobs, const char * source_label, Daemon * psch
 					}
 					jobs.Close();
 				} else {
-					int cNoAuto = (int)job_autoclusters[-1].size();
-					int cAutoclusters = (int)job_autoclusters.size()-1; // -1 because [-1] is not actually an autocluster
+					int cNoAutoT = (int)job_autoclusters[-1].size();
+					int cAutoclustersT = (int)job_autoclusters.size()-1; // -1 because [-1] is not actually an autocluster
 					if (verbose) {
-						printf("Analyzing %d jobs in %d autoclusters\n", jobs.Length(), cAutoclusters+cNoAuto);
+						printf("Analyzing %d jobs in %d autoclusters\n", jobs.Length(), cAutoclustersT+cNoAutoT);
 					} else {
 						printf("Analyzing matches for %d jobs\n", jobs.Length());
 					}
@@ -4207,8 +4204,8 @@ static const char * GetIndentPrefix(int) { return ""; }
 static const bool analyze_show_work = false;
 #endif
 
-static std::string strStep;
-#define StepLbl(ii) subs[ii].StepLabel(strStep, ii, 3)
+static std::string s_strStep;
+#define StepLbl(ii) subs[ii].StepLabel(s_strStep, ii, 3)
 
 int AnalyzeThisSubExpr(ClassAd *myad, classad::ExprTree* expr, std::vector<AnalSubExpr> & clauses, bool must_store, int depth)
 {
@@ -4300,10 +4297,10 @@ int AnalyzeThisSubExpr(ClassAd *myad, classad::ExprTree* expr, std::vector<AnalS
 		}
 
 		case classad::ExprTree::CLASSAD_NODE: {
-			vector< std::pair<string, classad::ExprTree*> > attrs;
-			((classad::ClassAd*)expr)->GetComponents(attrs);
+			vector< std::pair<string, classad::ExprTree*> > attrsT;
+			((classad::ClassAd*)expr)->GetComponents(attrsT);
 			if (chatty) {
-				printf("     %d:ad    : %d attrs\n", kind, (int)attrs.size());
+				printf("     %d:ad    : %d attrs\n", kind, (int)attrsT.size());
 			}
 			break;
 		}
@@ -4646,6 +4643,7 @@ static void AnalyzeRequirementsForEachTarget(ClassAd *request, ClassAdList & tar
 
 	std::vector<AnalSubExpr> subs;
 	std::string strStep;
+	#undef StepLbl
 	#define StepLbl(ii) subs[ii].StepLabel(strStep, ii, 3)
 
 	if (show_work) { printf("\nDump ExprTree in evaluation order\n"); }
@@ -6065,9 +6063,9 @@ static bool read_classad_file(const char *filename, ClassAdList &classads, Class
 
 			bool include_classad = cAttrs > 0 && error >= 0;
 			if (include_classad && constr) {
-				classad::Value result;
-				if (classad->EvaluateExpr(constr,result)) {
-					if ( ! result.IsBooleanValueEquiv(include_classad)) {
+				classad::Value val;
+				if (classad->EvaluateExpr(constr,val)) {
+					if ( ! val.IsBooleanValueEquiv(include_classad)) {
 						include_classad = false;
 					}
 				}
