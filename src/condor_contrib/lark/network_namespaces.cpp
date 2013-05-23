@@ -309,7 +309,7 @@ int NetworkNamespaceManager::CreateNetworkPipe() {
 
 int NetworkNamespaceManager::PreFork() {
 	NetworkLock sentry;
-	if (m_state == UNCREATED)
+	if (m_state == UNCREATED || m_state == EXECUTING)
 		return 0;
 
 	if ((pipe(m_p2c) < 0) || (pipe(m_c2p) < 0)) {
@@ -331,7 +331,7 @@ int NetworkNamespaceManager::PostForkChild() {
 	pp.Unparse(ad_str, m_ad.get());
 	dprintf(D_FULLDEBUG, "Child network classad: \n%s\n", ad_str.c_str());
 
-	if (m_state == UNCREATED)
+	if (m_state == UNCREATED || m_state == EXECUTING)
 		return 0;
 
 	// Close the end of the pipes that aren't ours
@@ -420,7 +420,7 @@ int NetworkNamespaceManager::PostForkChild() {
 		goto finalize_child;
 	}
 
-	m_state = INTERNAL_CONFIGURED;
+	m_state = EXECUTING;
 
 	// Note we don't write anything to the parent, on success or failure.
 	// This is because the parent must wait until the child exits, and the fact
@@ -437,7 +437,7 @@ failed_socket:
 
 int NetworkNamespaceManager::PostForkParent(pid_t pid) {
 	NetworkLock sentry;
-	if (m_state == UNCREATED)
+	if (m_state == UNCREATED || m_state == EXECUTING)
 		return 0;
 
         // Close the end of the pipes that aren't ours
@@ -476,7 +476,7 @@ int NetworkNamespaceManager::PostForkParent(pid_t pid) {
 	m_state = PASSED;
 
 	// Advance automatically, in case we didn't use clone.
-	m_state = INTERNAL_CONFIGURED;
+	m_state = EXECUTING;
 
 	// Inform the child it can advance.
 	if (rc == 0) {
@@ -514,9 +514,15 @@ int NetworkNamespaceManager::PerformJobAccounting(classad::ClassAd *classad) {
 		return 0;
 
 	int rc = 0;
-	if (m_state == INTERNAL_CONFIGURED) {
+	if (m_state == EXECUTING) {
 		dprintf(D_FULLDEBUG, "Polling netfilter for network statistics on chain %s.\n", m_network_namespace.c_str());
 		rc = perform_accounting(m_network_namespace.c_str(), JobAccountingCallback, (void *)&m_statistics);
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+        double timestamp = (tv.tv_sec)*1000 + (tv.tv_usec)/1000;
+        std::string attr_name("PreviousTimestamp");
+        m_statistics.InsertAttr(attr_name, timestamp);
+        
 	}
 	if (classad) {
 		classad->Update(m_statistics);
@@ -526,10 +532,32 @@ int NetworkNamespaceManager::PerformJobAccounting(classad::ClassAd *classad) {
 
 int NetworkNamespaceManager::JobAccountingCallback(const unsigned char * rule_name, long long bytes, void * callback_data) {
 	classad::ClassAd &classad = *(classad::ClassAd*)callback_data;
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    double current_timestamp = (tv.tv_sec)*1000 + (tv.tv_usec)/1000;
+    double previous_timestamp;
+    double time_interval;
+    std::string prev_timestamp_attr("PreviousTimestamp");
+    if(! classad.EvaluateAttrReal(prev_timestamp_attr, previous_timestamp)) {
+        int initial_update_interval = param_integer("STARTER_INITIAL_UPDATE_INTERVAL", 8);
+        time_interval = double(initial_update_interval * 1000);
+    } else {
+        time_interval = current_timestamp - previous_timestamp;
+    }
+
 	std::string attr_name("Network");
 	attr_name.append((const char *)rule_name);
+    double prev_num_bytes;
+    if(! classad.EvaluateAttrReal(attr_name, prev_num_bytes)){
+        prev_num_bytes = 0;
+    }
+    std::string average_bandwidth("AverageBandwidthUsage");
+    average_bandwidth.append((const char *)rule_name);
+    double bandwidth_usage = (double(bytes)-prev_num_bytes)/time_interval * 1000; /* bandwidth in bytes/second */
+    classad.InsertAttr(average_bandwidth, bandwidth_usage);
 	classad.InsertAttr(attr_name, double(bytes), classad::Value::B_FACTOR);
 	dprintf(D_FULLDEBUG, "Network accounting: %s = %lld\n", attr_name.c_str(), bytes);
+    dprintf(D_FULLDEBUG, "Network average bandwidth usage: %s = %f bytes/sceond\n", average_bandwidth.c_str(), bandwidth_usage);
 	//classad.Assign(attr_name, bytes);
 	return 0;
 }

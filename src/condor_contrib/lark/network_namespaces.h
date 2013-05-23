@@ -93,7 +93,7 @@ private:
 		UNCREATED,
 		CREATED,
 		PASSED,
-		INTERNAL_CONFIGURED,
+		EXECUTING,
 		FAILED,
 		CLEANED
 	} m_state;
