@@ -6,7 +6,9 @@ if (-e $file) {
 	unlink $file or die "Unlink failed: $!";
 
 	# Sleep here so we have consistency in which events show up.
-	sleep 5;
+	# (To be really deterministic, we would have to wait here until
+	# this job's execute event shows up in the log.)
+	sleep 10;
 
 	open (OUTPUT, "condor_hold $ARGV[0] 2>&1 |") or die "Can't fork: $!";
 	while (<OUTPUT>) {
