@@ -272,6 +272,15 @@ Each request for a slot is known as a subprocess; each subprocess has the same
 own unique 
 \Attr{SubprocID}. Note that \Attr{SubprocID} is not advertised in ClassAds.
 
+%\subsubsection{\label{sec:parallel-machine-count-vs-request-cpus}
+%\Arg{machine\_count} vs.~\Arg{request\_cpus}}
+
+\subsubsection{CPU Hierarchy}
+
+%Cluster-MPI Job - Entire job
+%Process-Machine
+%Subprocess-Slot (which can have multiple CPUs)
+
 The way to create multiple processes is to place a number after the \verb=queue= 
 command, such as \verb=queue 8= to create eight different processes with the 
 same cluster. After a particular \verb=queue= command, the user can also change 
@@ -292,22 +301,18 @@ assume that each job is not independent -- as by definition, a parallel job is a
 job is at least setup to handle multiple (sub)processes. Instead, the user will
 need to run \Condor{submit} multiple times.
 
-%\subsubsection{\label{sec:parallel-machine-count-vs-request-cpus}
-%\Arg{machine\_count} vs.~\Arg{request\_cpus}}
-
-\subsubsection{Creating heterogenous }
-
 How do you create subprocesses?
 
 \begin{description}
 \item[machine\_count] How many machines/hosts you want.
-\item[request\_cpus] How many CPUs each machine/host should have. Each 
+\item[request\_cpus] How many CPUs each machine/host should have available. Each 
 combination of machines and CPUs is a process with its own unique \Attr{ProcID}.
+When the 
 \item[queue \Arg{N}] How many processes with the previously listed 
 \Attr{machine\_count} and \Attr{request\_cpus} you want.
 \end{description}
 
-% Machine count <- how many machines/hosts you want. Each host can have multipel CPUs
+% Machine count <- how many machines/hosts you want. Each host can have multiple CPUs
 % Request CPUs <- how many CPUs you want on a given machine
 % Make sure you do the math for your call to mpirun. Make sure that the sum of 
 % the requested CPUs adds up to the number of nodes you want.
@@ -466,7 +471,7 @@ job has completed to consider the job finished.
 \index{parallel universe|)}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:parallel-mpi-submit-single}MPI Applications Within HTCondor's Parallel Universe}
+\subsection{\label{sec:parallel-mpi-submit-single}MPI Applications Within HTCondor's Vanilla Universe}
 %Within HTCondor's Parallel Universe}
 %Running MPI Jobs On A Single Machine}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -474,7 +479,7 @@ job has completed to consider the job finished.
 With partitionable slots, a user may wish to run a parallel job written with
 MPI but run only on one machine. Parallel universe is designed to help 
 coordinate a job on multiple machines and thus is not the correct route for
-this kind of job. Instead, vanilla universe should be used with partitionable
+this kind of job. Instead, the vanilla universe should be used with partitionable
 slots and the \verb|request_cpus| option should be used in the HTCondor submit
 file.
 
