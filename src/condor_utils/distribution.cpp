@@ -66,7 +66,7 @@ void Distribution :: SetDistribution( const char *names )
 	// names is expected to be of the form "name\0NAME\0Name\0";
 	distribution_cap = distribution_uc = distribution = names;
 	distribution_length = strlen(distribution);
-	ASSERT(distribution_length <= MAX_DISTRIBUTION_NAME);
+	//ASSERT(distribution_length <= MAX_DISTRIBUTION_NAME);
 	if (distribution_length > 0) {
 		distribution_uc = distribution + distribution_length +1;
 		distribution_cap = distribution_uc + strlen(distribution_uc) +1;
