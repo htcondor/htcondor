@@ -2594,7 +2594,7 @@ sub VerifyNoJobsInState
         @queue = `condor_q`;
         foreach my $line (@queue) {
             chomp($line);
-            if($line =~ /^(\d+)\s\jobs;\s+(\d+)\s+completed,\s+(\d+)\s+removed,\s+(\d+)\s+idle,\s+(\d+)\s+running,\s+(\d+)\s+held,\s+(\d+)\s+suspended.*$/) {
+            if($line =~ /^(\d+)\s+jobs;\s+(\d+)\s+completed,\s+(\d+)\s+removed,\s+(\d+)\s+idle,\s+(\d+)\s+running,\s+(\d+)\s+held,\s+(\d+)\s+suspended.*$/) {
 				#print "$line\n";
 				$jobsstatus{jobs} = $1;
 				$jobsstatus{completed} = $2;
