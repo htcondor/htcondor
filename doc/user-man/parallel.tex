@@ -292,6 +292,34 @@ assume that each job is not independent -- as by definition, a parallel job is a
 job is at least setup to handle multiple (sub)processes. Instead, the user will
 need to run \Condor{submit} multiple times.
 
+%\subsubsection{\label{sec:parallel-machine-count-vs-request-cpus}
+%\Arg{machine\_count} vs.~\Arg{request\_cpus}}
+
+\subsubsection{Creating heterogenous }
+
+How do you create subprocesses?
+
+\begin{description}
+\item[machine\_count] How many machines/hosts you want.
+\item[request\_cpus] How many CPUs each machine/host should have. Each 
+combination of machines and CPUs is a process with its own unique \Attr{ProcID}.
+\item[queue \Arg{N}] How many processes with the previously listed 
+\Attr{machine\_count} and \Attr{request\_cpus} you want.
+\end{description}
+
+% Machine count <- how many machines/hosts you want. Each host can have multipel CPUs
+% Request CPUs <- how many CPUs you want on a given machine
+% Make sure you do the math for your call to mpirun. Make sure that the sum of 
+% the requested CPUs adds up to the number of nodes you want.
+% The queue command should match up to the machine count as well?
+
+Be sure to add them up correctly in your submit description file.
+
+\begin{equation}
+  \label{eq:sum-number-of-cpus}
+  N_{p} = \sum^{N_q}_{q=1} n_q m_q c_q
+\end{equation}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:parallel-mpi-submit}MPI Applications Within HTCondor's Parallel Universe}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
