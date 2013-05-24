@@ -2697,8 +2697,7 @@ Dag::DumpDotFile(void)
 
 		temp_dot_file_name = current_dot_file_name + ".temp";
 
-		MSC_SUPPRESS_WARNING_FIXME(6031) // return falue of unlink ignored.
-		unlink(temp_dot_file_name.Value());
+		tolerant_unlink(temp_dot_file_name.Value());
 		temp_dot_file = safe_fopen_wrapper_follow(temp_dot_file_name.Value(), "w");
 		if (temp_dot_file == NULL) {
 			debug_dprintf(D_ALWAYS, DEBUG_NORMAL,
@@ -2733,10 +2732,17 @@ Dag::DumpDotFile(void)
 
 			fprintf(temp_dot_file, "}\n");
 			fclose(temp_dot_file);
-			MSC_SUPPRESS_WARNING_FIXME(6031) // return falue of unlink ignored.
-			unlink(current_dot_file_name.Value());
-			MSC_SUPPRESS_WARNING_FIXME(6031) // return falue of rename ignored.
-			rename(temp_dot_file_name.Value(), current_dot_file_name.Value());
+			tolerant_unlink(current_dot_file_name.Value());
+			if ( rename(temp_dot_file_name.Value(),
+						current_dot_file_name.Value()) != 0 ) {
+				debug_printf( DEBUG_NORMAL,
+					  		"Warning: can't rename temporary dot "
+					  		"file (%s) to permanent file (%s): %s\n",
+					  		temp_dot_file_name.Value(),
+							current_dot_file_name.Value(),
+					  		strerror( errno ) );
+				check_warning_strictness( DAG_STRICT_1 );
+			}
 		}
 	}
 	return;
@@ -2808,8 +2814,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	tmpStatusFile += ".tmp";
 		// Note: it's not an error if this fails (file may not
 		// exist).
-	MSC_SUPPRESS_WARNING_FIXME(6031) // return falue of unlink ignored.
-	unlink( tmpStatusFile.Value() );
+	tolerant_unlink( tmpStatusFile.Value() );
 
 	FILE *outfile = safe_fopen_wrapper_follow( tmpStatusFile.Value(), "w" );
 	if ( outfile == NULL ) {
