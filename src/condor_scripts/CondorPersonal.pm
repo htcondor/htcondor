@@ -230,6 +230,7 @@ sub StartCondor
 	$personal_condor_params{"test_name"} = $testname;
 	$personal_condor_params{"condor_name"} = $version;
 	$personal_condor_params{"owner_pid"} = $mpid;
+	$personal_condor_params{"fresh_local"} = "TRUE";
 
 	return StartCondorWithParams(%personal_condor_params);
 }
