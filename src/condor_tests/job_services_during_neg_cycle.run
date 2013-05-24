@@ -289,8 +289,9 @@ my $on_submit = sub {
 };
 
 #Do a job before setting tesing exit codes
-print "First test basic job\n";
-$result = SimpleJob::RunCheck(); # jobid 1
+#print "First test basic job\n";
+#$result = SimpleJob::RunCheck(); # jobid 1
+# Don't expect to run any jobs START = False
 
 # submit a bunch of jobs and when the submitted count reaches target count
 # we will use RunCheckMultiple to find and return by a callback with the found line.
