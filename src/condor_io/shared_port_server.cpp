@@ -34,7 +34,7 @@ SharedPortServer::~SharedPortServer() {
 	}
 
 	if( !m_shared_port_server_ad_file.IsEmpty() ) {
-		unlink( m_shared_port_server_ad_file.Value() );
+		IGNORE_RETURN unlink( m_shared_port_server_ad_file.Value() );
 	}
 
 	if( m_publish_addr_timer != -1 ) {
