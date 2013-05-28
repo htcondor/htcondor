@@ -208,7 +208,111 @@ The different subsets of machines executing a parallel universe job
 may specify different machine requirements.  A common example requires that the
 head node execute on a specific machine.  It may be also useful for debugging purposes.
 
-Consider the following example.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:Configure-Clusters-Processes-Subprocesses}
+Parallel Universe: Clusters, Processes, and Subprocesses} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{parallel-clusters-proceses-subprocesses}
+
+When 
+a user submits a job to HTCondor with \Condor{submit}, HTCondor in parallel 
+universe processes the submit file and assumes that all jobs submitted in this 
+file are part of a single parallel (e.g.~MPI) job. HTCondor processes the submit 
+file as a single job and
+creates a new cluster with a new \Attr{ClusterID} for the job. The user though can 
+specify different requirements for different parts of the job and queue each 
+part separately with each part being part of the same cluster but receiving a 
+different \Attr{ProcID}. Within each processes, the user can specify particular
+requirements.
+% (by using 
+%partitionable slots) can also request more than one CPU (\verb+num_cpus = 2+) or
+%(by using static slots) \verb+machine_count = 2+. 
+Each request for a slot is known as a subprocess; each subprocess has the same 
+\Attr{ClusterID} and \Attr{ProcID} as the over-arching process but has its 
+own unique 
+\Attr{SubprocID}. Note that \Attr{SubprocID} is not advertised in ClassAds.
+
+
+%\subsubsection{\label{sec:parallel-machine-count-vs-request-cpus}
+%\Arg{machine\_count} vs.~\Arg{request\_cpus}}
+
+\subsubsection{CPU Hierarchy}
+
+%Cluster-MPI Job - Entire job can have multiple processes
+%NOOO %Process-Each slot has Machine
+%Process - Each process can have multiple slots
+%Subprocess-Slot (which can have multiple CPUs)
+
+%How do you create subprocesses?
+
+Related to clusters, processes, and subprocesses, we have commands that will 
+let us specify properties for each process and subprocess. A hierarchy exists 
+related to how you specify what goes into each process and subprocess, which are
+part of an overarching cluster. The submission of a job in parallel universe 
+constitutes the entirety of a particular cluster. To create multiple processes,
+the submit description file must have multiple \Expr{queue} commands (or have
+an integer appended after whitespace). To create multiple subprocesses, the 
+submit description file must have \SubmitCmd{machine\_count} have an integer
+value greater than 1. Then within each subprocess, we can use commands like
+\SubmitCmd{request\_cpus} or \SubmitCmd{request\_memory} to request that each 
+slot has that many CPUs or that much memory.
+
+When creating a submit description file, the hierarchy of submission commands
+works in descending order:
+\begin{description}
+\item[queue \Arg{N}] Gives the job \Arg{N} processes with all the properties
+listed above the \SubmitCmd{queue} command in the submit description file (with 
+a default value of $N=1$). The command \SubmitCmd{machine\_count} must be given.
+%How many processes with the previously listed 
+%\Attr{machine\_count} and \Attr{request\_cpus} you want.
+\item[machine\_count] For each processes, it will spawn a number of subprocesses
+equal to the value provided by this command. Each subprocess corresponds to a
+particular slot.
+%\item[machine\_count] How many slots/machines/hosts you want associated with a given process.
+%\item[machine\_count] How many machines/hosts you want.
+\item[request\_X] How much/many of a particular resource a slot should have. In 
+particular, \SubmitCmd{request\_cpus} is useful for partitionable slots so as to
+give the slot the ability to have multiple CPUs. Note that setting this value 
+could restrict the number of matching machines because it creates additional
+requirements that the host machine has.
+%\item[request\_cpus] How many CPUs each machine/host should have. Each 
+%\item[request\_cpus] How many CPUs each machine/host should have available. Each 
+%combination of machines and CPUs is a process with its own unique \Attr{ProcID}.
+%When the 
+%\item[request\_memory] How much RAM each slot should have
+\end{description}
+
+% Machine count <- how many machines/hosts you want. Each host can have multipel CPUs
+% Machine count <- how many machines/hosts you want. Each host can have multiple CPUs
+% Request CPUs <- how many CPUs you want on a given machine
+% Make sure you do the math for your call to mpirun. Make sure that the sum of 
+% the requested CPUs adds up to the number of nodes you want.
+
+With the ability to set \SubmitCmd{queue N}, \SubmitCmd{machine\_count}, and 
+\SubmitCmd{request\_cpus}, the user needs to ensure that MPI is given the 
+correct number of CPUs. To that end, we have a brief formula in 
+equation~\ref{eq:sum-number-of-cpus}:
+
+%Be sure to add them up correctly in your submit description file.
+\begin{equation}
+  \label{eq:sum-number-of-cpus}
+  N_{p} = \sum^{N_q}_{q=1} n_q m_q c_q
+\end{equation}
+where
+\begin{eqnarray*}
+  \label{eq:explanation-of-sum-number-of-cpus}
+  n_q & = & \textrm{\Arg{N} from \SubmitCmd{queue N} with a default value of 1 
+if not present} \\
+  m_q & = & \textrm{The value given to \SubmitCmd{machine\_count}} \\
+  c_q & = & \textrm{The value given to \SubmitCmd{request\_cpus}}
+\end{eqnarray*}
+
+
+\subsubsection{Parallel Universe Example Submit Description Files}
+
+To demonstrate how to have parallel jobs with different requirements,
+consider the following example.
 
 \begin{verbatim}
 ######################################
@@ -247,34 +351,9 @@ The ordering within the submit description file may preclude
 the scheduler considering the specific allocation that
 could satisfy the requirements.
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection*{\label{sec:Configure-Clusters-Processes-Subprocesses}
-Parallel Universe: Clusters, Processes, and Subprocesses} 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{parallel-clusters-proceses-subprocesses}
-
-When 
-a user submits a job to HTCondor with \verb=condor_submit=, HTCondor in parallel 
-universe processes the submit file and assumes that all jobs submitted in this 
-file are part of a single parallel (e.g.~MPI) job. HTCondor processes the submit 
-file as a single job and
-creates a new cluster with a new \Attr{ClusterID} for the job. The user though can 
-specify different requirements for different parts of the job and queue each 
-part separately with each part being part of the same cluster but receiving a 
-different \Attr{ProcID}. Within each processes, the user can specify particular
-requirements.
-% (by using 
-%partitionable slots) can also request more than one CPU (\verb+num_cpus = 2+) or
-%(by using static slots) \verb+machine_count = 2+. 
-Each request for a slot is known as a subprocess; each subprocess has the same 
-\Attr{ClusterID} and \Attr{ProcID} as the over-arching process but has its 
-own unique 
-\Attr{SubprocID}. Note that \Attr{SubprocID} is not advertised in ClassAds.
-
-The way to create multiple processes is to place a number after the \verb=queue= 
-command, such as \verb=queue 8= to create eight different processes with the 
-same cluster. After a particular \verb=queue= command, the user can also change 
+The way to create multiple processes is to place a number after the \SubmitCmd{queue}
+command, such as \SubmitCmd{queue 8} to create eight different processes with the 
+same cluster. After a particular \SubmitCmd{queue} command, the user can also change 
 parameters previously specified in the submit file or add parameters not 
 previously specified. For example, suppose that the head node of a parallel job 
 needs additional RAM compared to the rest of the nodes. The user can write
@@ -287,10 +366,27 @@ queue 31
 \end{verbatim}
 
 If a user wishes to submit multiple independent parallel universe jobs, the 
-user cannot simply append a number to the \verb=queue= command. HTCondor will 
+user cannot simply append a number to the \SubmitCmd{queue} command. HTCondor will 
 assume that each job is not independent -- as by definition, a parallel job is a 
 job is at least setup to handle multiple (sub)processes. Instead, the user will
 need to run \Condor{submit} multiple times.
+
+%How do you create subprocesses?
+
+%\begin{description}
+%\item[machine\_count] How many machines/hosts you want.
+%\item[request\_cpus] How many CPUs each machine/host should have available. Each 
+%combination of machines and CPUs is a process with its own unique \Attr{ProcID}.
+%When the 
+%\item[queue \Arg{N}] How many processes with the previously listed 
+%\Attr{machine\_count} and \Attr{request\_cpus} you want.
+%\end{description}
+
+% Machine count <- how many machines/hosts you want. Each host can have multiple CPUs
+% Request CPUs <- how many CPUs you want on a given machine
+% Make sure you do the math for your call to mpirun. Make sure that the sum of 
+% the requested CPUs adds up to the number of nodes you want.
+% The queue command should match up to the machine count as well?
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:parallel-mpi-submit}MPI Applications Within HTCondor's Parallel Universe}
@@ -299,8 +395,8 @@ need to run \Condor{submit} multiple times.
 \index{MPI application}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:parallel-mpi-submit-multiple}
-Running MPI Jobs On Multiple Machines}
+%\subsubsection{\label{sec:parallel-mpi-submit-multiple}
+%Running MPI Jobs On Multiple Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 MPI applications consist of a single executable that is invoked in order to
@@ -308,7 +404,7 @@ execute in parallel on one or more machines.
 HTCondor's parallel universe provides the environment within
 which this executable is executed in parallel.
 However, the various implementations of MPI
-(for example, LAM or MPICH) require further framework items within
+(for example, OpenMPI or MPICH) require further framework items within
 a system-wide environment.
 HTCondor supports this necessary framework through 
 user visible and modifiable scripts.
@@ -438,7 +534,7 @@ job has completed to consider the job finished.
 \index{parallel universe|)}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{\label{sec:parallel-mpi-submit-single}MPI Applications Within HTCondor's Parallel Universe}
+\subsection{\label{sec:parallel-mpi-submit-single}MPI Applications Within HTCondor's Vanilla Universe}
 %Within HTCondor's Parallel Universe}
 %Running MPI Jobs On A Single Machine}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -446,15 +542,15 @@ job has completed to consider the job finished.
 With partitionable slots, a user may wish to run a parallel job written with
 MPI but run only on one machine. Parallel universe is designed to help 
 coordinate a job on multiple machines and thus is not the correct route for
-this kind of job. Instead, vanilla universe should be used with partitionable
-slots and the \verb|request_cpus| option should be used in the HTCondor submit
-file.
+this kind of job. Instead, the vanilla universe should be used with partitionable
+slots and the \SubmitCmd{request\_cpus} option should be used in the HTCondor submit
+file. To have a machine use 8 CPUs, simple put in your submit description file:
 
 \begin{verbatim}
 request_cpus = 8
 \end{verbatim}
 
-A frequent question that gets asked is: ``How do I make sure my MPI job can run 
+A frequently asked question is: ``How do I make sure my MPI job can run 
 on any machine that it lands on?'' There are two answers:
 \begin{enumerate}
 \item Statically build an MPI library and statically compile your MPI code.
@@ -467,7 +563,9 @@ difficult and that
 using CDE and some shell scripts provides the requested results. CDE can be
 found at \URL{http://www.pgbovine.net/cde.html}.
 
-If you have MPI installed on all machines on which your program could run, this
+Ff MPI is installed dynamically on all machines/nodes on which the program 
+could run or if the code was built static libraries and a static version of 
+\File{mpirun} is available, the following
 submit description file works well.
 \begin{verbatim}
 ################################################################################
@@ -476,16 +574,30 @@ submit description file works well.
 universe = vanilla
 executable = /path/to/mpirun
 request_cpus = 2
-arguments = -np 2 my_openmpi_linked_executable arg1 arg2 arge
+arguments = -np 2 my_mpi_linked_executable arg1 arg2 arge
 should_transfer_files = yes
 when_to_transfer_output = on_exit
-transfer_input_files = my_openmpi_linked_executable
+transfer_input_files = my_mpi_linked_executable
 
 queue
 \end{verbatim}
 
-If you do not have MPI installed on all potential machines and want to use CDE,
-this submit description file works well.
+If MPI is not installed on all potential machines and CDE is to be used,
+then CDE needs to be run first to create the directory tree. On the host machine
+which has the original program, the command
+
+\begin{verbatim}
+prompt-> cde mpirun -n 2 my_mpi_linked_executable
+\end{verbatim}
+
+will create a directory tree that will contain all libraries needed for the 
+program. By creating a tarball of this directory, the user can easily package up
+the executable itself, any files needed for the executable, and all necessary
+libraries. In the following example, we assume that the user has created a 
+tarball called \File{cde\_my\_mpi\_linked\_executable.tar} which contains the 
+directory tree created by CDE.
+
+%this submit description file works well.
 \begin{verbatim}
 #############################################
 ##   submit description file for a parallel program
@@ -500,9 +612,9 @@ transfer_output_files = cde-package/cde-root/path/to/original/directory
 queue
 \end{verbatim}
 
-We assume that you the user have created a tarball called 
-\File{cde\_my\_mpi\_linked\_executable.tar} which contains the directory tree
-created by CDE.
+%We assume that the user has created a tarball called 
+%\File{cde\_my\_mpi\_linked\_executable.tar} which contains the directory tree
+%created by CDE.
 The contents of \Prog{cde\_script.sh} are:
 \begin{verbatim}
 #!/bin/sh
@@ -518,3 +630,10 @@ cd cde-package/cde-root/path/to/original/directory
 rm -f mpirun.cde
 rm -f my_mpi_linked_executable
 \end{verbatim}
+
+Any additional input files needed for the executable not alrady in the tarball
+should be included in the list in \SubmitCmd{transfer\_input\_files} command. 
+The corresponding script should then also be updated to move those files into
+the directory that where the executable will be run.
+
+
