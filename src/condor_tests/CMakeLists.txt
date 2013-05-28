@@ -382,6 +382,7 @@ if (BUILD_TESTING)
 	condor_pl_test(job_local_resources "test local resources" "core;quick;full")
 	condor_pl_test(job_check_exitcode_in_classad "test exit code" "core;quick;full")
 	condor_pl_test(job_services_during_neg_cycle "test cmds during neg cycle" "core;quick;full")
+	condor_pl_test(job_basic_start_test "START reserve defines a dedicated slot" "core;quick;full")
 	condor_pl_test(cmd_condor_ping_basic "Basic default test of condor_ping" "core;quick;full")
 	condor_pl_test(job_aggressive_flocking "Test aggressive flocking" "core;quick;full")
 	##### job tests
