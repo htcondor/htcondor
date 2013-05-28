@@ -96,6 +96,7 @@ const char* sysapi_opsys_long_name(void);
 const char* sysapi_opsys_short_name(void);
         int sysapi_opsys_major_version(void);
 const char* sysapi_opsys_legacy(void);
+void sysapi_opsys_dump(int category);
 
 // temporary attributes for raw utsname info
 const char* sysapi_utsname_sysname(void);
