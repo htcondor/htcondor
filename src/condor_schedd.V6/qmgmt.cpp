@@ -4240,7 +4240,7 @@ RecvSpoolFileBytes(const char *path)
 		Q_SOCK->getReliSock()->end_of_message();
 		return -1;
 	}
-	chmod(path,00755);
+	IGNORE_RETURN chmod(path,00755);
 	Q_SOCK->getReliSock()->end_of_message();
 	dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
 	return 0;

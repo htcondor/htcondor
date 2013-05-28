@@ -177,8 +177,8 @@ CCBServer::InitAndReconfig()
 	{
 		// reconnect filename changed
 		// not worth freaking out on error here
-		remove( m_reconnect_fname.Value() );
-		rename( old_reconnect_fname.Value(), m_reconnect_fname.Value() );
+		IGNORE_RETURN remove( m_reconnect_fname.Value() );
+		IGNORE_RETURN rename( old_reconnect_fname.Value(), m_reconnect_fname.Value() );
 	}
 	if( old_reconnect_fname.IsEmpty() &&
 		!m_reconnect_fname.IsEmpty() &&
@@ -1144,7 +1144,7 @@ CCBServer::SaveAllReconnectInfo()
 	CloseReconnectFile();
 
 	if( m_reconnect_info.getNumElements()==0 ) {
-		remove( m_reconnect_fname.Value() );
+		IGNORE_RETURN remove( m_reconnect_fname.Value() );
 		return;
 	}
 
