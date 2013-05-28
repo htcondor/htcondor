@@ -522,10 +522,11 @@ int NetworkNamespaceManager::PerformJobAccounting(classad::ClassAd *classad) {
         double timestamp = (tv.tv_sec)*1000 + (tv.tv_usec)/1000;
         std::string attr_name("PreviousTimestamp");
         m_statistics.InsertAttr(attr_name, timestamp);
+
+        if(classad) {
+            classad->Update(m_statistics);
+        }
         
-	}
-	if (classad) {
-		classad->Update(m_statistics);
 	}
 	return rc;
 }
