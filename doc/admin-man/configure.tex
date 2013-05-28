@@ -9469,6 +9469,12 @@ section~\ref{sec:Security} on Security.
   If set to less than 512, the value will be ignored, and the key size
   will be 512 bits.
   Setting the value greater than 4096 is likely to cause long compute times.
+
+\label{param:GSIDelegationClockSkewAllowable}
+\item[\Macro{GSI\_DELEGATION\_CLOCK\_SKEW\_ALLOWABLE}]
+  The number of seconds of clock skew permitted for delegated proxies.
+  The default value is 300 (5 minutes).  This default value is also used
+  if this variable is set to 0.
   
 \label{param:GridMap}
 \item[\Macro{GRIDMAP}]

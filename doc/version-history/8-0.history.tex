@@ -89,13 +89,14 @@ The details of each version are described below.
 \begin{itemize}
 
 % would have been in 7.9.7, but there was no 7.9.7 release
-\item The \Condor{chirp} write command now accepts an option length parameter
-after the local file name, which allows the write to be limited to the given
-number of bytes.
+\item The \Condor{chirp} \Opt{write} command now accepts an 
+optional \Arg{numbytes} parameter following the local file name.
+This allows the write to be limited to the specified number of bytes.
 \Ticket{3548}
 
 % would have been in 7.9.7, but there was no 7.9.7 release
 \item The HTCondor Python bindings now build on Mac OS X.
+\Ticket{3584}
 
 \item Updated the sample \File{condor.plist} file to work better with
 current versions of Mac OS X.
@@ -146,8 +147,9 @@ such as inode numbers.
 \Ticket{3605}
 
 % would have been in 7.9.7, but there was no 7.9.7 release
-\item \Condor{dagman} would fail to react correctly if a nested DAG file
-did not exist. The error message was not helpful.
+\item \Condor{dagman} failed to react correctly if a nested DAG file
+did not exist. It now reacts correctly and prints a more
+helpful error message.
 \Ticket{3623}
 
 % would have been in 7.8.9, but there was no 7.8.9 release
@@ -164,7 +166,7 @@ to its default value of \Expr{GRACEFUL}.
 the partitionable resource usage summary in the user log.
 \Ticket{3621}
 
-\item Fixed several bugs that can cause the \Condor{procd} to fail on MacOSX
+\item Fixed several bugs that can cause the \Condor{procd} to fail on Mac OS X
 and not be restartable.
 \Ticket{3617}
 \Ticket{3618}
