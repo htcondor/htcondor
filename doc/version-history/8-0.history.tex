@@ -87,7 +87,7 @@ used on an empty file.
 
 % would have been in 7.9.7, but there was no 7.9.7 release
 \item The 32-bit \Condor{starter} could fail to execute jobs when the initial
-working directory of the job was on a filesystem containing 64-bit metadata,
+working directory of the job was on a subsystem containing 64-bit metadata,
 such as inode numbers.
 \Ticket{3605}
 
@@ -119,6 +119,10 @@ and not be restartable.
 
 \item The \Condor{procd} now ignores process id 0 on Mac OS X.
 \Ticket{3516}
+
+\item Fixed memory leaks in the \Condor{shadow} and the \Condor{startd};
+fixed a file descriptor leak in the standard universe \Condor{starter}.
+\Ticket{3590}
 
 \end{itemize}
 
