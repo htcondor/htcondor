@@ -543,6 +543,10 @@ int NetworkNamespaceManager::JobAccountingCallback(const unsigned char * rule_na
         int initial_update_interval = param_integer("STARTER_INITIAL_UPDATE_INTERVAL", 8);
         time_interval = double(initial_update_interval * 1000);
     } else {
+        // Sometimes, the job accounting is called one right after another, the accounting data
+        // does not change in that case, thus there is no need to do bandwidth usage calcaulation.
+        // We fix it by check the timestamp difference, if it is smaller than a set threshold, we
+        // ignore the bandwith usage update.
         time_interval = current_timestamp - previous_timestamp;
     }
 
@@ -553,8 +557,13 @@ int NetworkNamespaceManager::JobAccountingCallback(const unsigned char * rule_na
         prev_num_bytes = 0;
     }
     std::string average_bandwidth("AverageBandwidthUsage");
+    double bandwidth_usage = 0;
     average_bandwidth.append((const char *)rule_name);
-    double bandwidth_usage = (double(bytes)-prev_num_bytes)/time_interval * 1000; /* bandwidth in bytes/second */
+    if(time_interval >= 0.3) {
+        bandwidth_usage = (double(bytes)-prev_num_bytes)/time_interval * 1000; /* bandwidth in bytes/second */
+    } else {
+        classad.EvaluateAttrReal(average_bandwidth, bandwidth_usage);
+    }
     classad.InsertAttr(average_bandwidth, bandwidth_usage);
 	classad.InsertAttr(attr_name, double(bytes), classad::Value::B_FACTOR);
 	dprintf(D_FULLDEBUG, "Network accounting: %s = %lld\n", attr_name.c_str(), bytes);
