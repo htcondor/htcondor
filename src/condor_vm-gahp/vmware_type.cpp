@@ -532,11 +532,11 @@ VMwareType::deleteLockFiles()
 	while( (tmp_file = m_initial_working_files.next()) != NULL ) {
 		if( has_suffix(tmp_file, VMWARE_WRITELOCK_SUFFIX) ||
 			has_suffix(tmp_file, VMWARE_READLOCK_SUFFIX)) {
-			unlink(tmp_file);
+			IGNORE_RETURN unlink(tmp_file);
 			m_initial_working_files.deleteCurrent();
 		}else if( has_suffix(tmp_file, ".vmdk") ) {
 			// modify permission for vmdk files
-			chmod(tmp_file, VMWARE_VMDK_FILE_PERM);
+			IGNORE_RETURN chmod(tmp_file, VMWARE_VMDK_FILE_PERM);
 		}
 	}
 
@@ -1779,7 +1779,7 @@ VMwareType::CreateConfigFile()
 
 	if( readVMXfile(ori_vmx_file.Value(), m_vmware_dir.Value()) 
 			== false ) {
-		unlink(tmp_config_name.Value());
+		IGNORE_RETURN unlink(tmp_config_name.Value());
 		return false;
 	}
 
@@ -1850,7 +1850,7 @@ VMwareType::CreateConfigFile()
 				"with write mode: safe_fopen_wrapper_follow(%s) returns %s\n", 
 				tmp_config_name.Value(), strerror(errno));
 
-		unlink(tmp_config_name.Value());
+		IGNORE_RETURN unlink(tmp_config_name.Value());
 		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
@@ -1864,7 +1864,7 @@ VMwareType::CreateConfigFile()
 					tmp_config_name.Value(), strerror(errno));
 
 			fclose(config_fp);
-			unlink(tmp_config_name.Value());
+			IGNORE_RETURN unlink(tmp_config_name.Value());
 			m_result_msg = VMGAHP_ERR_INTERNAL;
 			return false;
 		}
@@ -1878,7 +1878,7 @@ VMwareType::CreateConfigFile()
 		vmprintf(D_ALWAYS,
 		         "failed to add local settings in CreateConfigFile\n");
 		fclose(config_fp);
-		unlink(tmp_config_name.Value());
+		IGNORE_RETURN unlink(tmp_config_name.Value());
 		m_result_msg = VMGAHP_ERR_INTERNAL;
 		return false;
 	}
@@ -1891,7 +1891,7 @@ VMwareType::CreateConfigFile()
 		// to create a configuration file for VM
 
 		if( createConfigUsingScript(tmp_config_name.Value()) == false ) {
-			unlink(tmp_config_name.Value());
+			IGNORE_RETURN unlink(tmp_config_name.Value());
 			m_result_msg = VMGAHP_ERR_CRITICAL;
 			return false;
 		}
