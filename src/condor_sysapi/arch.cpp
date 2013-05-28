@@ -189,16 +189,6 @@ sysapi_get_windows_info(void)
                 opsys_legacy = strdup("Unknown");
         }
 
-	// Print out param values to the logfiles for debugging
-	dprintf(D_FULLDEBUG, "OpSysMajorVersion:  %d \n", opsys_major_version);
-	dprintf(D_FULLDEBUG, "OpSysShortName:  %s \n", opsys_short_name);
-	dprintf(D_FULLDEBUG, "OpSysLongName:  %s \n", opsys_long_name);
-	dprintf(D_FULLDEBUG, "OpSysAndVer:  %s \n", opsys_versioned);
-	dprintf(D_FULLDEBUG, "OpSysLegacy:  %s \n", opsys_legacy);
-	dprintf(D_FULLDEBUG, "OpSysName:  %s \n", opsys_name);
-	dprintf(D_FULLDEBUG, "OpSysVer:  %d \n", opsys_version);
-	dprintf(D_FULLDEBUG, "OpSys:  %s \n", opsys);
-
 	if ( opsys ) {
 		windows_inited = TRUE;
 	}
@@ -275,6 +265,19 @@ sysapi_opsys_legacy(void)
                 sysapi_get_windows_info();
         }
         return opsys_legacy;
+}
+
+void sysapi_opsys_dump(int category)
+{
+	// Print out param values to the logfiles for debugging
+	dprintf(category, "OpSysMajorVersion:  %d \n", opsys_major_version);
+	dprintf(category, "OpSysShortName:  %s \n", opsys_short_name);
+	dprintf(category, "OpSysLongName:  %s \n", opsys_long_name);
+	dprintf(category, "OpSysAndVer:  %s \n", opsys_versioned);
+	dprintf(category, "OpSysLegacy:  %s \n", opsys_legacy);
+	dprintf(category, "OpSysName:  %s \n", opsys_name);
+	dprintf(category, "OpSysVer:  %d \n", opsys_version);
+	dprintf(category, "OpSys:  %s \n", opsys);
 }
 
 #else
@@ -458,15 +461,6 @@ init_arch(void)
                 opsys_legacy = strdup("Unknown");
         }
 
-	// Print out param values to the logfiles for debugging
-	dprintf(D_FULLDEBUG, "OpSysMajorVersion:  %d \n", opsys_major_version);
-	dprintf(D_FULLDEBUG, "OpSysShortName:  %s \n", opsys_short_name);
-	dprintf(D_FULLDEBUG, "OpSysLongName:  %s \n", opsys_long_name);
-	dprintf(D_FULLDEBUG, "OpSysAndVer:  %s \n", opsys_versioned);
-	dprintf(D_FULLDEBUG, "OpSysLegacy:  %s \n", opsys_legacy);
-	dprintf(D_FULLDEBUG, "OpSysName:  %s \n", opsys_name);
-	dprintf(D_FULLDEBUG, "OpSysVer:  %d \n", opsys_version);
-	dprintf(D_FULLDEBUG, "OpSys:  %s \n", opsys);
 
 	// Now find the arch
 	arch = sysapi_translate_arch( buf.machine, buf.sysname );
@@ -474,6 +468,19 @@ init_arch(void)
 	if ( arch && opsys ) {
 		arch_inited = TRUE;
 	}
+}
+
+void sysapi_opsys_dump(int category)
+{
+	// Print out param values to the logfiles for debugging
+	dprintf(category, "OpSysMajorVersion:  %d \n", opsys_major_version);
+	dprintf(category, "OpSysShortName:  %s \n", opsys_short_name);
+	dprintf(category, "OpSysLongName:  %s \n", opsys_long_name);
+	dprintf(category, "OpSysAndVer:  %s \n", opsys_versioned);
+	dprintf(category, "OpSysLegacy:  %s \n", opsys_legacy);
+	dprintf(category, "OpSysName:  %s \n", opsys_name);
+	dprintf(category, "OpSysVer:  %d \n", opsys_version);
+	dprintf(category, "OpSys:  %s \n", opsys);
 }
 
 // Darwin (MacOS) methods
