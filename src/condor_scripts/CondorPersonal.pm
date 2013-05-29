@@ -572,7 +572,9 @@ sub InstallPersonalCondor
 		$personal_condor_params{"condortemplate"} = shift @configfiles;
 		if(exists $personal_condor_params{fresh_local}) {
 		} else {
-			$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
+			# Always start with a freshly constructed local config file
+			# so we know what we get  bt 5/13
+			#$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
 		}
 
 		debug("condor_q: $condorq\n",$debuglevel);
