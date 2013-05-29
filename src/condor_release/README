@@ -6,29 +6,26 @@ the terms listed in the LICENSE-2.0.txt.
 
 This directory contains the following files:
 
-DOC              - file containing directions for where to find the 
-                   Condor documentation
-INSTALL	         - instructions on how to install Condor on your machines
 LICENSE-2.0.txt  - by installing Condor, you agree to the contents of
                    the LICENSE-2.0.txt file
 README	         - this file
 bin              - directory containing command-line tools
 condor_configure - perl script to install and configure Condor
 condor_install   - perl script to install Condor
-etc              - directory to contain configuration file
+etc              - directory to contain configuration files
 examples         - directory containing C, Fortran and C++ example
                    programs to run with Condor
 include          - directory containing header files
 lib              - directory containing libraries
-libexec          - directory containing auxilliary files
+libexec          - directory containing auxiliary files
 man              - directory containing man pages
 sbin             - directory containing daemon binaries and admin tools
 src              - directory containing source for some interfaces
 
 A complete manual for Condor is available on the World Wide Web at
-http://www.cs.wisc.edu/condor/manual/.  You can also find various
-papers, publications and research about Condor on the web page, at
-http://www.cs.wisc.edu/condor.
+http://www.cs.wisc.edu/htcondor/manual/.  You can also find various
+papers, publications and research about HTCondor on the web page, at
+http://www.cs.wisc.edu/htcondor.
 
 If you have any problems, questions, or bugs, please send them to
-condor-admin@cs.wisc.edu.  
+htcondor-admin@cs.wisc.edu.  

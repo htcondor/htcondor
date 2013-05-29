@@ -26,6 +26,11 @@ The HTCondor configuration files are used to customize how HTCondor
 operates at a given site.  The basic configuration as shipped with
 HTCondor works well for most sites.
 
+Several sample configuration files have been published, in addition to the
+basic configuration shipped with HTCondor.  Example configurations are
+available under the heading of ``Helpful guides to new users running HTCondor''
+at https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=GettingStarted.
+
 Each HTCondor program will, as part of its initialization process,
 configure itself by calling a library routine which parses the
 various configuration files that might be used, including pool-wide,
@@ -9469,6 +9474,12 @@ section~\ref{sec:Security} on Security.
   If set to less than 512, the value will be ignored, and the key size
   will be 512 bits.
   Setting the value greater than 4096 is likely to cause long compute times.
+
+\label{param:GSIDelegationClockSkewAllowable}
+\item[\Macro{GSI\_DELEGATION\_CLOCK\_SKEW\_ALLOWABLE}]
+  The number of seconds of clock skew permitted for delegated proxies.
+  The default value is 300 (5 minutes).  This default value is also used
+  if this variable is set to 0.
   
 \label{param:GridMap}
 \item[\Macro{GRIDMAP}]
