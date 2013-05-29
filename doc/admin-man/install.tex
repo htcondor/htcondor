@@ -9,8 +9,8 @@ Sections of the manual below explain customization.
 
 Please read this \emph{entire} section before starting installation.
 
-Please read the copyright and disclaimer information on
-page~\pageref{sec:license} of the manual.
+Please read the copyright and disclaimer information in
+section~\ref{sec:license}.
 Installation and
 use of HTCondor is acknowledgment that you have read and agree to the
 terms.
@@ -70,8 +70,8 @@ list.
 Traffic on this list is kept to an absolute minimum;
 it is only used to announce new releases of HTCondor.
 To subscribe, go to
-\texttt{https://lists.cs.wisc.edu/mailman/listinfo/htcondor-world} and fill out
-the online form.
+\URL{https://lists.cs.wisc.edu/mailman/listinfo/htcondor-world},
+and fill out the online form.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Preparing-to-Install}Preparation} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -178,11 +178,13 @@ HTCondor is started up as root, it should be clearly understood that
 whoever has the ability to edit the condor configuration files can
 effectively run arbitrary programs as root.
 
-The HTCondor administrator will be regularly updating HTCondor, by following
+The HTCondor administrator will be regularly updating HTCondor by following
 these instructions or by using the system-specific installation methods below.
-He will also customize policies of the HTCondor schedd and execute nodes.  This
-person will also receive information from HTCondor if something goes wrong with
-the pool, as described in the documentation of the \texttt{CONDOR\_ADMIN}
+The administrator
+will also customize policies of the HTCondor submit and execute nodes.
+This person will also receive information from HTCondor if 
+something goes wrong with the pool, 
+as described in the documentation of the \Macro{CONDOR\_ADMIN}
 configuration variable.
 
 \item[5. Will you have a Unix user named condor, and will its home
@@ -334,7 +336,7 @@ for the HTCondor directories. Then, the only consequence of filling up
 the directories
 will be HTCondor's malfunction, not your whole machine.
 
-\item[7. Where should the parts of the HTCondor system be installed?]\hfil\break
+\item[7. Where should the parts of the HTCondor system be installed?]
 
 	\begin{itemize}
 	\item Configuration Files
@@ -379,7 +381,8 @@ error message and exit:
    \item \File{/etc/condor/condor\_config}
    \item \File{/usr/local/etc/condor\_config}
    \item \File{\Tilde condor/condor\_config}
-   \item Files in the directory specified by the \Macro{LOCAL\_CONFIG\_DIR}.
+   \item Files in the directory specified by the configuration variable 
+\Macro{LOCAL\_CONFIG\_DIR}.
 \end{enumerate}
 
 If you specify a file in the \Env{CONDOR\_CONFIG} environment variable
