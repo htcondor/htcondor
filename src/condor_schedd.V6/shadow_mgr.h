@@ -64,7 +64,6 @@ public:
 	void	printInfo( int debug_level );
 
 	bool builtSinceVersion(int major, int minor, int sub_minor);
-	bool builtSinceDate(int month, int day, int year);
 
 private:
 	ClassAd* s_ad;
