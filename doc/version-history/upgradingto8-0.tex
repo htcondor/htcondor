@@ -35,21 +35,28 @@ and encourage users to use the halt file feature and release their
 Running \Condor{rm} on a held \Condor{dagman} job is
 not advised in this case, unless the user is abandoning the job.
 
-\item The upgrade will change the \AdAttr{CheckpointPlatform} for all
-machines.  If you're using the standard universe, checkpoints from before
-the upgrade will not resume afterward.  You may either: change your machines'
-\AdAttr{CheckpointPlatform} to its previous value using the
-\Macro{CHECKPOINT\_PLATFORM} configuration macro, or change the checkpointed
-jobs' \AdAttr{LastCheckpointPlatform} using \Condor{qedit}.
+\item The upgrade will change the machine ClassAd attribute
+\AdAttr{CheckpointPlatform} for all machines.
+This implies that any standard universe job with a checkpoint 
+from before the upgrade will not resume after the upgrade.
+To work around this potential difficulty, either change the 
+attribute \AdAttr{CheckpointPlatform} on all machines to their previous value 
+by setting the \Macro{CHECKPOINT\_PLATFORM} configuration variable,
+or change the \AdAttr{LastCheckpointPlatform} attribute for all jobs
+that have produced a checkpoint.
+Make the change by using \Condor{qedit}.
 
-For example, if a machine changed its CheckpointPlatform
+For example, if machine attribute \AdAttr{CheckpointPlatform} changed 
 from \verb;LINUX INTEL 2.6.x normal N/A; to 
-\verb;LINUX INTEL 2.6.x normal N/A ssse3 sse4\_1 sse4\_2;, you could
+\verb;LINUX INTEL 2.6.x normal N/A ssse3 sse4_1 sse4_2;,
 use the following command:
 
+\footnotesize
 \begin{verbatim}
-condor_qedit -constraint 'LastCheckpointPlatform == "LINUX INTEL 2.6.x normal N/A"' LastCheckpointPlatform "LINUX INTEL 2.6.x normal N/A ssse3 sse4_1 sse4_2"
+condor_qedit -constraint 'LastCheckpointPlatform == "LINUX INTEL 2.6.x normal N/A"'
+    LastCheckpointPlatform "LINUX INTEL 2.6.x normal N/A ssse3 sse4_1 sse4_2"
 \end{verbatim}
+\normalsize
 
 \end{itemize}
 
