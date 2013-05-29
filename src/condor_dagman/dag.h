@@ -267,7 +267,7 @@ class Dag {
 	/** Process a released event for a job.
 		@param The job corresponding to this event.
 	*/
-	void ProcessReleasedEvent(Job *job);
+	void ProcessReleasedEvent(Job *job, const ULogEvent *event);
 
     /** Get pointer to job with id jobID
         @param the handle of the job in the DAG
