@@ -417,6 +417,12 @@ HTCondor provides these scripts in the
 directory.
 The script for the OpenMPI implementation is \File{openmpiscript}.
 The script for the MPICH implementation is \File{mp1script}.
+One restriction of these scripts is that they rely on running
+the ssh command from one node to another.  The ssh daemon 
+on unix does not allow connections if the shell named in
+the password file is not in the set of approved shells
+listed in the /etc/shells file.
+
 Therefore, an HTCondor submit description file for these
 implementations would appear similar to:
 
