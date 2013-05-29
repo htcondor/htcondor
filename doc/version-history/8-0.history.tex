@@ -129,8 +129,9 @@ and not be restartable.
 fixed a file descriptor leak in the standard universe \Condor{starter}.
 \Ticket{3590}
 
-\item Fixed problem where \Condor{dagman} would miscount held jobs in the event
-that multiple copies of hold events would be written to the user log.
+\item Fixed a bug in which \Condor{dagman} would miscount the number
+of held jobs when
+multiple copies of hold events were written to the user log.
 \Ticket{3650}
 
 \end{itemize}
