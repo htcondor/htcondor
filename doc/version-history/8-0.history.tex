@@ -53,7 +53,11 @@ current versions of Mac OS X.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable
+\Macro{DEDICATED\_SCHEDULER\_WAIT\_FOR\_SPOOLER}
+permits the specification of a very strict execution order for 
+parallel universe jobs handed to a remote scheduler.
+\Ticket{2946}
 
 \end{itemize}
 
@@ -108,8 +112,8 @@ if configuration variable \Macro{MASTER\_NEW\_BINARY\_RESTART} was set
 to its default value of \Expr{GRACEFUL}.
 \Ticket{3572}
 
-\item Fixed a bug that caused redundant usage lines to show up at the end of
-the partitionable resource usage summary in the user log.
+\item Fixed a bug that caused redundant lines to show up in the user log
+at the end of the partitionable resource usage summary.
 \Ticket{3621}
 
 \item Fixed several bugs that can cause the \Condor{procd} to fail on Mac OS X
