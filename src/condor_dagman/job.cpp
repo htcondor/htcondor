@@ -471,6 +471,9 @@ Job::CanAddChild( Job* child, MyString &whynot )
 bool
 Job::TerminateSuccess()
 {
+	std::vector<unsigned char> s;
+	_onHold.swap(s); // Free memory in _onHold
+
 	SetStatus( STATUS_DONE );
 	return true;
 } 
@@ -478,6 +481,8 @@ Job::TerminateSuccess()
 bool
 Job::TerminateFailure()
 {
+	std::vector<unsigned char> s;
+	s.swap(_onHold); // Free memory in _onHold;
 	SetStatus( STATUS_ERROR );
 	return true;
 } 
@@ -1049,4 +1054,36 @@ bool Job::SetCondorID(const CondorID& cid)
 	}
 	_CondorID = cid;
 	return ret;	
+}
+
+bool Job::Hold(int proc) 
+{
+	if( proc >= static_cast<int>( _onHold.size() ) ) {
+		_onHold.resize( proc+1, 0 );
+	}
+	if( !_onHold[proc] ) {
+		_onHold[proc] = 1;
+		++_jobProcsOnHold;
+		++_timesHeld;
+		return true;
+	} else {
+		dprintf( D_FULLDEBUG, "Received hold event for node %s, and job %d.%d "
+			"is already on hold!\n", GetJobName(), GetCluster(), proc );
+	}
+	return false;
+}
+
+bool Job::Release(int proc)
+{
+	if( proc >= static_cast<int>( _onHold.size() ) ) {
+		dprintf( D_FULLDEBUG, "Received release event for node %s, but job %d.%d "
+			"is not on hold\n", GetJobName(), GetCluster(), GetProc() );
+		return false; // We never marked this as being on hold
+	}
+	if( _onHold[proc] ) {
+		_onHold[proc] = 0;
+		--_jobProcsOnHold;
+		return true;
+	}
+	return false;
 }
