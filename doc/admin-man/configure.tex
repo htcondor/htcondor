@@ -5013,6 +5013,14 @@ These macros control the \Condor{schedd}.
   \normalsize
   
   
+\label{param:ScheddUsesStartdforLocalUniverse}
+\item[\Macro{SCHEDD\_USES\_STARTD\_FOR\_LOCAL\_UNIVERSE}]
+ A boolean value that defaults to false.  When true, the \Condor{schedd}
+ will spawn a special startd process to run local universe jobs.  This
+ allows local universe jobs to run with both a \condor{shadow} and a
+ \condor{starter}, which means that file transfer will work with local
+ universe jobs.
+
 \label{param:MaxJobsRunning}
 \item[\Macro{MAX\_JOBS\_RUNNING}]
   An integer representing a limit on the number of processes

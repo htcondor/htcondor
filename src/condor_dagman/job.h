@@ -502,7 +502,23 @@ public:
 	int _jobProcsOnHold;
 	bool UseDefaultLog() const { return append_default_log; }
 
+		/** Mark a job with ProcId == proc as being on hold
+ 			Returns false if the job is already on hold
+		*/
+ 
+	bool Hold(int proc);
+	
+		/** Mark a job with ProcId == proc as being released
+ 		    Returns false if the job is not on hold
+		*/
+	bool Release(int proc);
 private:
+
+		/** _onHold[proc] is nonzero if the condor job 
+ 			with ProcId == proc is on hold, and zero
+			otherwise
+		*/
+	std::vector<unsigned char> _onHold;	
 		// Mark this node as failed because of an error in monitoring
 		// the log file.
   	void LogMonitorFailed();
