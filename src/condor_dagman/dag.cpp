@@ -636,7 +636,7 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				break;
 
 			case ULOG_JOB_RELEASED:
-				ProcessReleasedEvent(job);
+				ProcessReleasedEvent(job, event);
 				break;
 
 			case ULOG_PRESKIP:
@@ -693,9 +693,8 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 			// don't get a released event for that job.  This may not
 			// work exactly right if some procs of a cluster are held
 			// and some are not.  wenger 2010-08-26
-		if ( job->_jobProcsOnHold > 0 ) {
+		if ( job->_jobProcsOnHold > 0 && job->Release( event->proc ) ) {
 			_numHeldJobProcs--;
-			job->_jobProcsOnHold--;
 		}
 
 			// Only change the node status, error info,
@@ -1221,31 +1220,31 @@ Dag::ProcessHeldEvent(Job *job, const ULogEvent *event) {
 	if ( !job ) {
 		return;
 	}
+	ASSERT( event );
 
-	_numHeldJobProcs++;
-
-	job->_timesHeld++;
-	job->_jobProcsOnHold++;
-	if ( _maxJobHolds > 0 && job->_timesHeld >= _maxJobHolds ) {
-		debug_printf( DEBUG_VERBOSE, "Total hold count for job %d (node %s) "
-					"has reached DAGMAN_MAX_JOB_HOLDS (%d); all job "
-					"proc(s) for this node will now be removed\n",
-					event->cluster, job->GetJobName(), _maxJobHolds );
-		RemoveBatchJob( job );
+	if( job->Hold( event->proc ) ) {
+		_numHeldJobProcs++;
+		if ( _maxJobHolds > 0 && job->_timesHeld >= _maxJobHolds ) {
+			debug_printf( DEBUG_VERBOSE, "Total hold count for job %d (node %s) "
+						"has reached DAGMAN_MAX_JOB_HOLDS (%d); all job "
+						"proc(s) for this node will now be removed\n",
+						event->cluster, job->GetJobName(), _maxJobHolds );
+			RemoveBatchJob( job );
+		}
 	}
 }
 
 //---------------------------------------------------------------------------
 void
-Dag::ProcessReleasedEvent(Job *job) {
+Dag::ProcessReleasedEvent(Job *job,const ULogEvent* event) {
 
+	ASSERT( event );
 	if ( !job ) {
 		return;
 	}
-
-	_numHeldJobProcs--;
-
-	job->_jobProcsOnHold--;
+	if( job->Release( event->proc ) ) {
+		_numHeldJobProcs--;
+	}
 }
 
 //---------------------------------------------------------------------------
