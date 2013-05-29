@@ -560,7 +560,7 @@ int NetworkNamespaceManager::JobAccountingCallback(const unsigned char * rule_na
     double bandwidth_usage = 0;
     average_bandwidth.append((const char *)rule_name);
     // this threshold is 10 milliseconds
-    if(time_interval >= 10 || (double(bytes) != prev_num_bytes && time_interval != 0)) {
+    if(time_interval >= 10) {
         bandwidth_usage = (double(bytes)-prev_num_bytes)/time_interval * 1000; /* bandwidth in bytes/second */
     } else {
         classad.EvaluateAttrReal(average_bandwidth, bandwidth_usage);
