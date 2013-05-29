@@ -559,13 +559,15 @@ int NetworkNamespaceManager::JobAccountingCallback(const unsigned char * rule_na
     std::string average_bandwidth("AverageBandwidthUsage");
     double bandwidth_usage = 0;
     average_bandwidth.append((const char *)rule_name);
-    if(time_interval >= 0.3) {
+    // this threshold is 10 milliseconds
+    if(time_interval >= 10 || double(bytes) != prev_num_bytes) {
         bandwidth_usage = (double(bytes)-prev_num_bytes)/time_interval * 1000; /* bandwidth in bytes/second */
     } else {
         classad.EvaluateAttrReal(average_bandwidth, bandwidth_usage);
     }
     classad.InsertAttr(average_bandwidth, bandwidth_usage);
 	classad.InsertAttr(attr_name, double(bytes), classad::Value::B_FACTOR);
+    dprintf(D_FULLDEBUG, "The time interval between two consecutive job accounting is %f\n", time_interval);
 	dprintf(D_FULLDEBUG, "Network accounting: %s = %lld\n", attr_name.c_str(), bytes);
     dprintf(D_FULLDEBUG, "Network average bandwidth usage: %s = %f bytes/sceond\n", average_bandwidth.c_str(), bandwidth_usage);
 	//classad.Assign(attr_name, bytes);
