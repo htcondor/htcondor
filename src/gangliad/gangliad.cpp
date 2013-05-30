@@ -89,6 +89,27 @@ GangliaD::initAndReconfig()
 	}
 }
 
+bool
+GangliaD::getDaemonIP(std::string const &machine,std::string &result) const
+{
+	if( machine.find("@")!=std::string::npos ) {
+
+		// The machine name being used for publishing purposes is a
+		// daemon name containing '@', so there may be multiple
+		// daemons of the same type on the same machine.  We need the
+		// IP in the ganglia spoof host string to be unique to each
+		// daemon.  Therefore, return the daemon name here rather than
+		// the actual IP.  In all other cases, we return the actual
+		// IP, because we would like the condor metrics to show up in
+		// the same host entry as other ganglia metrics.
+
+		result = machine;
+		return true;
+	}
+	return StatsD::getDaemonIP(machine,result);
+}
+
+
 void
 GangliaD::publishMetric(Metric const &m)
 {

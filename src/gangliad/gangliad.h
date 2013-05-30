@@ -40,6 +40,8 @@ class GangliaD: public StatsD {
 
 	virtual void publishMetric(Metric const &metric);
 
+	virtual bool getDaemonIP(std::string const &machine,std::string &result) const;
+
  private:
 	unsigned m_tmax; // max time between updates
 	unsigned m_dmax; // max time to deletion of metrics that are not updated
