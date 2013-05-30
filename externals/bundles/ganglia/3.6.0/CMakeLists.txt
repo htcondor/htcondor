@@ -49,6 +49,10 @@ if (WITH_GANGLIA)
 
         condor_pre_external( GANGLIA ganglia-3.6.0 "${GANGLIA_LIBDIR};include" "include/ganglia.h")
 
+	# NOTE: for ganglia-3.6.0, I did a slightly sneaky thing: I copied gmond/gmond.service.in
+	# from the ganglia github repository into the official tarball, because a bug in their
+	# packaging omitted this file.  This fixes builds on Fedora 17 and 18.
+
         ExternalProject_Add(ganglia
                     DEPENDS ${APR_REF} ${CONFUSE_REF}
                     #-- Download Step ----------
