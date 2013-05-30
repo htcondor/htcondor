@@ -270,8 +270,14 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	if( strcasecmp(type_str.c_str(),"double")==0 || type_str.empty() ) {
 		type = DOUBLE;
 	}
+	else if( strcasecmp(type_str.c_str(),"string")==0 || type_str.empty() ) {
+		type = STRING;
+	}
+	else if( strcasecmp(type_str.c_str(),"boolean")==0 || type_str.empty() ) {
+		type = BOOLEAN;
+	}
 	else {
-		dprintf(D_ALWAYS,"Invalid metric attribute type=%s for %s",type_str.c_str(),whichMetric().c_str());
+		EXCEPT("Invalid metric attribute type=%s for %s",type_str.c_str(),whichMetric().c_str());
 		return false;
 	}
 
@@ -335,6 +341,7 @@ Metric::getValueString(std::string &result) const {
 			bool v = false;
 			if( value.IsBooleanValue(v) ) {
 				formatstr(result,"%d",v==true);
+				return true;
 			}
 			break;
 		}
