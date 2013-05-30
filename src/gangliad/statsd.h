@@ -21,6 +21,7 @@
 #define __STATSD_H__
 
 #include <list>
+#include "string_list.h"
 
 class Metric {
 public:
@@ -30,7 +31,7 @@ public:
 	// Given a metric definition ad and an ad to monitor,
 	// evaluate the monitored value and other properties such as
 	// name, description, and so on.
-	virtual bool evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,AdTypes daemon_ad_type,int max_verbosity,class StatsD *statsd,ExtArray<MyString> *regex_groups=NULL,char const *regex_attr=NULL);
+	virtual bool evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,int max_verbosity,class StatsD *statsd,ExtArray<MyString> *regex_groups=NULL,char const *regex_attr=NULL);
 
 	// Sets result to a string representation of the value to publish.
 	// Returns false on failure.
@@ -78,7 +79,7 @@ public:
 	double sum;
 	unsigned long count;
 
-	AdTypes daemon; // type of condor daemon this metric applies to
+	StringList daemon; // type of condor daemons this metric applies to
 
 	// True if this metric only looks at slot 1 of the startd
 	// (we do this in lieu of a true machine ad)
@@ -111,7 +112,7 @@ class StatsD: Service {
 
 	virtual void publishMetric(Metric const &metric) = 0;
 
-	bool getDaemonIP(std::string const &machine,std::string &result) const;
+	virtual bool getDaemonIP(std::string const &machine,std::string &result) const;
 
 	std::string const &getDefaultAggregateHost() { return m_default_aggregate_host; }
 
@@ -124,11 +125,7 @@ class StatsD: Service {
 	AggregateMetricList m_aggregate_metrics;
 	std::map< std::string,std::string > m_daemon_ips; // map of daemon machine (and name) to IP address
 	std::string m_default_aggregate_host;
-	unsigned m_schedd_metric_count;
-	unsigned m_negotiator_metric_count;
-	unsigned m_collector_metric_count;
-	unsigned m_startd_metric_count;
-	unsigned m_startd_slot1_metric_count;
+	StringList m_daemon_types;
 
 	unsigned m_derivative_publication_failed;
 	unsigned m_non_derivative_publication_failed;

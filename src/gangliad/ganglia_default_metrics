@@ -3,41 +3,41 @@
   value  = UpdatesLost;
   verbosity = 1;
   desc   = "Number of ClassAd updates that were sent by this daemon but not received by the collector";
-  daemon = "ANY";
+  daemon = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
   name   = strcat(MyType,"UpdatesTotal");
   value  = UpdatesTotal;
   verbosity = 1;
   desc   = "Number of ClassAd updates that were sent by this daemon";
-  daemon = "ANY";
+  daemon = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
   name   = strcat(MyType,"DaemonCoreDutyCycle");
   value  = DaemonCoreDutyCycle;
   desc   = "Recent fraction of busy time in the daemon event loop";
-  daemon = "ANY";
+  daemon = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
   name   = strcat(MyType,"MonitorSelfAge");
   value  = MonitorSelfAge;
   desc   = "Age of this daemon";
   units  = "seconds";
-  daemon = "ANY";
+  daemon = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
   name   = strcat(MyType,"MonitorSelfCPUUsage");
   value  = MonitorSelfCPUUsage;
   verbosity = 1;
   desc   = "The fraction of one CPU recently used by this daemon";
-  daemon = "ANY";
+  daemon = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
   name   = strcat(MyType,"MonitorSelfImageSize");
   value  = MonitorSelfImageSize;
   desc   = "Memory allocated to this daemon (i.e. virtual image size)";
   units  = "kbytes";
-  daemon = "ANY";
+  daemon = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
   name   = strcat(MyType,"MonitorSelfRegisteredSocketCount");
@@ -45,7 +45,7 @@
   verbosity = 1;
   desc   = "Number of sockets registered in this daemon's event loop";
   units  = "sockets";
-  daemon = "ANY";
+  daemon = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
   name   = strcat(MyType,"MonitorSelfResidentSetSize");
@@ -53,100 +53,100 @@
   verbosity = 1;
   desc   = "RAM allocated to this daemon";
   units  = "kbytes";
-  daemon = "ANY";
+  daemon = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
   name   = strcat(MyType,"MonitorSelfSecuritySessions");
   value  = MonitorSelfSecuritySessions;
   verbosity = 1;
   desc   = "Number of security sessions in this daemon's cache";
-  daemon = "ANY";
+  daemon = "Scheduler,Negotiator,Machine_slot1";
 ]
 
 [
   name   = "JobsAccumBadputTime";
   desc   = "Runtime of jobs that were aborted (removed or held) or (standard universe only) evicted without a checkpoint.";
   units  = "seconds";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsAccumExecuteTime";
   desc   = "Time spent running jobs.  Does not include file transfer and other job handling time.";
   units  = "seconds";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsAccumPostExecuteTime";
   verbosity = 1;
   desc   = "Time spent processing a completed job (includes output file transfer)";
   units  = "seconds";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsAccumPreExecuteTime";
   verbosity = 1;
   desc   = "Time spent preparing to run a job (includes input file transfer)";
   units  = "";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsAccumRunningTime";
   desc   = "Time spent running jobs that were not counted as badput (i.e. not removed or held).  Includes file transfer and other handling time.";
   units  = "seconds";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsAccumTimeToStart";
   verbosity = 1;
   desc   = "Time between submit and running of a job";
   units  = "seconds";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsCheckpointed";
   verbosity = 1;
   desc   = "Number of job run attempts that were interrupted and successfully checkpointed";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsCompleted";
   desc   = "Number of jobs that terminated normally (i.e. not via a signal or abort)";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsCoredumped";
   desc   = "Number of jobs that crashed and generated a core file";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsDebugLogError";
   verbosity = 1;
   desc   = "Count of shadows that exited due to debug log errors";
   units  = "shadows";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsExecFailed";
   desc   = "Count of job run attempts that failed to execute the specified command";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsExited";
   verbosity = 1;
   desc   = "Count of job run attempts that have completed (successfully or not)";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsExitedAndClaimClosing";
   verbosity = 1;
   desc   = "Count of job run attempts that have completed when claim was not accepting additional jobs";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 /* JobsExitedNormally is the same as JobsCompleted, so don't bother. */
 /*
@@ -154,7 +154,7 @@
   name   = "JobsExitedNormally";
   desc   = "";
   units  = "";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 */
 [
@@ -162,125 +162,125 @@
   verbosity = 1;
   desc   = "Count of job run attempts that ended with a job handling exception (shadow exception)";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsKilled";
   desc   = "Count of job run attempts in which the job was killed (i.e. evicted)";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsMissedDeferralTime";
   verbosity = 1;
   desc   = "Count of job run attempts that failed because the specified deferral time was missed";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsNotStarted";
   verbosity = 1;
   desc   = "Count of job run attempts that failed because the request to activate the claim failed";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsShadowNoMemory";
   verbosity = 1;
   desc   = "Count of job run attempts that failed because there was not enough memory (RESERVED_SWAP)";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsShouldHold";
   verbosity = 1;
   desc   = "Count of job run attempts that have resulted in the job going on hold";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsShouldRemove";
   verbosity = 1;
   desc   = "Count of job run attempts that have resulted in the job being removed (e.g. periodic_remove policy)";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsShouldRequeue";
   verbosity = 1;
   desc   = "Count of job run attempts that ended with the job being requeued due to handling failures or OnExitRemove=false";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsStarted";
   desc   = "Number of job run attempts started";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "JobsSubmitted";
   desc   = "Number of jobs submitted";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "MaxJobsRunning";
   desc   = "Configured limit on number of running jobs";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "NumUsers";
   desc   = "Number of different users who currently have jobs in the queue";
   units  = "users";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "RecentStatsLifetime";
   verbosity = 1;
   desc   = "Seconds elapsed since the beginning of the current stats collection window";
   units  = "seconds";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "ScheddSwapExhausted";
   verbosity = 1;
   desc   = "Non-zero when jobs cannot be started due to RESERVED_SWAP";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "ShadowsRunning";
   verbosity = 1;
   desc   = "Number of shadow processes currently running";
   units  = "shadows";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "ShadowsStarted";
   verbosity = 1;
   desc   = "Number of shadow processes started";
   units  = "shadows";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "StatsLifetime";
   verbosity = 1;
   desc   = "Seconds of elapsed time since the beginning of the schedd lifetime stat collection window";
   units  = "seconds";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "TotalFlockedJobs";
   desc   = "Number of jobs from this schedd that are flocked to other pools";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "TotalHeldJobs";
   desc   = "Number of jobs in this schedd that are on hold";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   aggregate = "SUM";
@@ -288,13 +288,13 @@
   value  = TotalHeldJobs;
   desc   = "Number of jobs on hold in schedds reporting to this pool";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "TotalIdleJobs";
   desc   = "Number of idle jobs in this schedd's queue";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   aggregate = "SUM";
@@ -302,13 +302,13 @@
   value  = TotalIdleJobs;
   desc   = "Number of idle jobs in schedds reporting to this pool";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "TotalJobAds";
   desc   = "Number of jobs currently in this schedd's queue";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   aggregate = "SUM";
@@ -316,33 +316,33 @@
   value  = TotalJobAds;
   desc   = "Number of jobs currently in schedds reporting to this pool";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "TotalLocalJobsIdle";
   verbosity = 1;
   desc   = "Number of local universe jobs in this schedd's queue";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "TotalLocalJobsRunning";
   verbosity = 1;
   desc   = "Number of running local universe jobs in this schedd's queue";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "TotalRemovedJobs";
   desc   = "Number of jobs that are in the process of being removed";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "TotalRunningJobs";
   desc   = "Number of running jobs in this schedd's queue";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   aggregate = "SUM";
@@ -350,21 +350,21 @@
   value  = TotalRunningJobs;
   desc   = "Number of running jobs in schedds reporting to this pool";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "TotalSchedulerJobsIdle";
   verbosity = 1;
   desc   = "Number of idle scheduler universe jobs in this schedd's queue";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "TotalSchedulerJobsRunning";
   verbosity = 1;
   desc   = "Number of running scheduler universe jobs in this schedd's queue";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 
 [
@@ -373,14 +373,14 @@
   title  = "File Transfer Download Bandwidth";
   desc   = "Output transfers from jobs";
   units  = "bytes";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
   group  = "HTCondor.FileTransfer";
 ]
 [
   name   = "FileTransferDownloadBytesPerSecond_5m";
   desc   = "Rate of output transfers from jobs";
   units  = "bytes/s";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
   group  = "HTCondor.FileTransfer";
 ]
 [
@@ -388,14 +388,14 @@
   verbosity = 1;
   desc   = "Rate of output transfers from jobs by user \\1";
   units  = "bytes/s";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
   group  = "HTCondor.FileTransfer";
 ]
 [
   name   = "FileTransferFileReadLoad_5m";
   desc   = "Number of file transfer processes reading input data from files";
   units  = "processes";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
   group  = "HTCondor.FileTransfer";
 ]
 [
@@ -404,14 +404,14 @@
   title  = "File Transfer File Read Load";
   desc   = "Number of file transfer processes reading input data from files";
   units  = "processes";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
   group  = "HTCondor.FileTransfer";
 ]
 [
   name   = "FileTransferFileWriteLoad_5m";
   desc   = "Number of file transfer processes writing output data to files";
   units  = "processes";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
   group  = "HTCondor.FileTransfer";
 ]
 [
@@ -420,14 +420,14 @@
   title  = "File Transfer File Write Load";
   desc   = "Number of file transfer processes writing output data to files";
   units  = "processes";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
   group  = "HTCondor.FileTransfer";
 ]
 [
   name   = "FileTransferNetReadLoad_5m";
   desc   = "Number of file transfer processes reading output data from the network";
   units  = "processes";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
   group  = "HTCondor.FileTransfer";
 ]
 [
@@ -435,14 +435,14 @@
   derivative = true;
   desc   = "Number of file transfer processes reading output data from the network";
   units  = "processes";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
   group  = "HTCondor.FileTransfer";
 ]
 [
   name   = "FileTransferNetWriteLoad_5m";
   desc   = "Number of file transfer processes writing input data to the network";
   units  = "processes";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
   group  = "HTCondor.FileTransfer";
 ]
 [
@@ -451,7 +451,7 @@
   title  = "File Transfer Net Write Load";
   desc   = "Number of file transfer processes writing input data to the network";
   units  = "processes";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
   group  = "HTCondor.FileTransfer";
 ]
 [
@@ -460,14 +460,14 @@
   title  = "File Transfer Upload Bandwidth";
   desc   = "Input transfers to jobs";
   units  = "bytes";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
   group  = "HTCondor.FileTransfer";
 ]
 [
   name   = "FileTransferUploadBytesPerSecond_5m";
   desc   = "Rate of input transfers to jobs";
   units  = "bytes/s";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
   group  = "HTCondor.FileTransfer";
 ]
 [
@@ -475,14 +475,14 @@
   verbosity = 1;
   desc   = "Rate of input transfers from jobs by user \\1";
   units  = "bytes/s";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
   group  = "HTCondor.FileTransfer";
 ]
 [
   name   = "TransferQueueDownloadWaitTime";
   desc   = "Oldest output file transfer waiting in the transfer queue";
   units  = "seconds";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
   group  = "HTCondor.FileTransfer";
 ]
 [
@@ -491,41 +491,41 @@
   value  = TransferQueueDownloadWaitTime;
   desc   = "Oldest output file transfer waiting in the transfer queues reporting to this pool";
   units  = "seconds";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 [
   name   = "TransferQueueNumDownloading";
   desc   = "Number of jobs actively transferring output";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
   group  = "HTCondor.FileTransfer";
 ]
 [
   name   = "TransferQueueNumUploading";
   desc   = "Number of jobs actively transferring input";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
   group  = "HTCondor.FileTransfer";
 ]
 [
   name   = "TransferQueueNumWaitingToDownload";
   desc   = "Number of jobs waiting in the transfer queue to transfer output";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
   group  = "HTCondor.FileTransfer";
 ]
 [
   name   = "TransferQueueNumWaitingToUpload";
   desc   = "Number of jobs waiting in the transfer queue to transfer input";
   units  = "jobs";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
   group  = "HTCondor.FileTransfer";
 ]
 [
   name   = "TransferQueueUploadWaitTime";
   desc   = "Oldest input file transfer waiting in the transfer queue";
   units  = "seconds";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
   group  = "HTCondor.FileTransfer";
 ]
 [
@@ -534,123 +534,123 @@
   value  = TransferQueueUploadWaitTime;
   desc   = "Oldest input file transfer waiting in the transfer queues reporting to this pool";
   units  = "seconds";
-  daemon = "SCHEDD";
+  daemon = "Scheduler";
 ]
 
 [
   name   = "LastNegotiationCycleActiveSubmitterCount0";
   desc   = "The number of job submitters considered in the negotiation cycle";
   units  = "submitters";
-  daemon = "NEGOTIATOR";
+  daemon = "Negotiator";
 ]
 [
   name   = "LastNegotiationCycleCandidateSlots0";
   verbosity = 1;
   desc   = "The number of slot ClassAds considered for matchmaking (reduced by NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT if applicable)";
   units  = "slots";
-  daemon = "NEGOTIATOR";
+  daemon = "Negotiator";
 ]
 [
   name   = "LastNegotiationCycleDuration0";
   desc   = "The number of seconds that it took to complete the negotiation cycle";
   units  = "seconds";
-  daemon = "NEGOTIATOR";
+  daemon = "Negotiator";
 ]
 [
   name   = "LastNegotiationCycleMatches0";
   desc   = "The number of successful matches that were made in the negotiation cycle";
   units  = "matches";
-  daemon = "NEGOTIATOR";
+  daemon = "Negotiator";
 ]
 [
   name   = "LastNegotiationCycleMatchRate0";
   desc   = "Matches made per second during negotiation cycle";
   units  = "matches/s";
-  daemon = "NEGOTIATOR";
+  daemon = "Negotiator";
 ]
 [
   name   = "LastNegotiationCycleMatchRateSustained0";
   desc   = "Matches made per second, including waiting time between negotiation cycles";
   units  = "matches/s";
-  daemon = "NEGOTIATOR";
+  daemon = "Negotiator";
 ]
 [
   name   = "LastNegotiationCycleNumIdleJobs0";
   desc   = "The number of idle jobs belonging to job submitters";
   units  = "jobs";
-  daemon = "NEGOTIATOR";
+  daemon = "Negotiator";
 ]
 [
   name   = "LastNegotiationCycleNumJobsConsidered0";
   desc   = "The number of jobs considered for matchmaking (may be mutch lower than idle jobs due to auto-cluster optimizations)";
   units  = "jobs";
-  daemon = "NEGOTIATOR";
+  daemon = "Negotiator";
 ]
 [
   name   = "LastNegotiationCycleNumSchedulers0";
   verbosity = 1;
   desc   = "The number of schedds involved in negotiation for resources";
   units  = "schedds";
-  daemon = "NEGOTIATOR";
+  daemon = "Negotiator";
 ]
 [
   name   = "LastNegotiationCyclePeriod0";
   desc   = "Seconds between the end of one cycle the the end of the next";
   units  = "seconds";
-  daemon = "NEGOTIATOR";
+  daemon = "Negotiator";
 ]
 [
   name   = "LastNegotiationCyclePhase1Duration0";
   verbosity = 1;
   desc   = "Duration of Phase 1: getting submitter and machine ClassAds";
   units  = "seconds";
-  daemon = "NEGOTIATOR";
+  daemon = "Negotiator";
 ]
 [
   name   = "LastNegotiationCyclePhase2Duration0";
   verbosity = 1;
   desc   = "Duration of Phase 2: filtering slots and processing accounting group configuration";
   units  = "seconds";
-  daemon = "NEGOTIATOR";
+  daemon = "Negotiator";
 ]
 [
   name   = "LastNegotiationCyclePhase3Duration0";
   verbosity = 1;
   desc   = "Phase 3 of the negotiation cycle: sorting submitters by priority";
   units  = "seconds";
-  daemon = "NEGOTIATOR";
+  daemon = "Negotiator";
 ]
 [
   name   = "LastNegotiationCyclePhase4Duration0";
   verbosity = 1;
   desc   = "Phase 4 of the negotiation cycle: matching slots to jobs";
   units  = "seconds";
-  daemon = "NEGOTIATOR";
+  daemon = "Negotiator";
 ]
 [
   name   = "LastNegotiationCycleRejections0";
   desc   = "The number of rejections that occurred in the negotiation cycle (only one per auto-cluster)";
   units  = "jobs";
-  daemon = "NEGOTIATOR";
+  daemon = "Negotiator";
 ]
 [
   name   = "LastNegotiationCycleSlotShareIter0";
   verbosity = 1;
   desc   = "The number of iterations in the negotiation cycle";
-  daemon = "NEGOTIATOR";
+  daemon = "Negotiator";
 ]
 [
   name   = "LastNegotiationCycleTotalSlots0";
   desc   = "The total number of slot ClassAds that matched NEGOTIATOR_SLOT_CONSTRAINT";
   units  = "slots";
-  daemon = "NEGOTIATOR";
+  daemon = "Negotiator";
 ]
 [
   name   = "LastNegotiationCycleTrimmedSlots0";
   verbosity = 1;
-  desc   = "The number of slot ClassAds considered for matchmaking, after filtering by NEGOTIATOR_CONSIDER_PREEMPTION, if applicable";
+  desc   = "The number of slot ClassAds considered for matchmaking, after filtering by Negotiator_CONSIDER_PREEMPTION, if applicable";
   units  = "slots";
-  daemon = "NEGOTIATOR";
+  daemon = "Negotiator";
 ]
 
 [
@@ -658,7 +658,7 @@
   verbosity = 1;
   desc   = "Job runtime that would be lost if graceful draining were initiated now.";
   units  = "cpus*seconds";
-  daemon = "STARTD_SLOT1";
+  daemon = "Machine_slot1";
 ]
 [
   name   = "ExpectedMachineGracefulDrainingCompletion";
@@ -666,47 +666,47 @@
   verbosity = 1;
   desc   = "Time graceful draining could take to complete, assuming jobs take full retirement and vacate time and there is no suspension";
   units  = "seconds";
-  daemon = "STARTD_SLOT1";
+  daemon = "Machine_slot1";
 ]
 [
   name   = "ExpectedMachineQuickDrainingBadput";
   verbosity = 1;
   desc   = "Job runtime that would be lost if quick draining were initiated now.";
   units  = "cpus*seconds";
-  daemon = "STARTD_SLOT1";
+  daemon = "Machine_slot1";
 ]
 [
   name   = "ExpectedMachineQuickDrainingCompletion";
   verbosity = 1;
   desc   = "Time quick draining could take to complete, assuming jobs take full retirement and vacate time and there is no suspension";
   units  = "seconds";
-  daemon = "STARTD_SLOT1";
+  daemon = "Machine_slot1";
 ]
 [
   name   = "KFlops";
   verbosity = 1;
   desc   = "Linpack floating point benchmark";
   units  = "kflops";
-  daemon = "STARTD_SLOT1";
+  daemon = "Machine_slot1";
 ]
 [
   name   = "Mips";
   verbosity = 1;
   desc   = "Dhrystone integer benchmark";
   units  = "mips";
-  daemon = "STARTD_SLOT1";
+  daemon = "Machine_slot1";
 ]
 [
   name   = "TotalCondorLoadAvg";
   desc   = "The CPU load attributed to jobs";
-  daemon = "STARTD_SLOT1";
+  daemon = "Machine_slot1";
 ]
 [
   name   = "TotalCpus";
   verbosity = 1;
   desc   = "Number of cores";
   units  = "cores";
-  daemon = "STARTD_SLOT1";
+  daemon = "Machine_slot1";
 ]
 [
   aggregate = "SUM";
@@ -715,34 +715,34 @@
   verbosity = 1;
   desc   = "Number of cores in the pool";
   units  = "cores";
-  daemon = "STARTD_SLOT1";
+  daemon = "Machine_slot1";
 ]
 [
   name   = "TotalDisk";
   verbosity = 1;
   desc   = "Disk space in the job execute directory";
   units  = "KB";
-  daemon = "STARTD_SLOT1";
+  daemon = "Machine_slot1";
 ]
 [
   name   = "TotalLoadAvg";
   verbosity = 1;
   desc   = "System load average";
-  daemon = "STARTD_SLOT1";
+  daemon = "Machine_slot1";
 ]
 [
   name   = "TotalMemory";
   verbosity = 1;
   desc   = "RAM in MB";
   units  = "MB";
-  daemon = "STARTD_SLOT1";
+  daemon = "Machine_slot1";
 ]
 [
   name   = "TotalSlots";
   verbosity = 1;
   desc   = "Number of slots";
   units  = "slots";
-  daemon = "STARTD_SLOT1";
+  daemon = "Machine_slot1";
 ]
 [
   aggregate = "SUM";
@@ -750,24 +750,24 @@
   value  = TotalSlots;
   desc   = "Number of slots in the pool";
   units  = "slots";
-  daemon = "STARTD_SLOT1";
+  daemon = "Machine_slot1";
 ]
 [
   name   = "TotalMachineDrainingBadput";
   desc   = "Job runtime that has been lost due to job evictions caused by draining";
   units  = "cpus*seconds";
-  daemon = "STARTD_SLOT1";
+  daemon = "Machine_slot1";
 ]
 [
   name   = "TotalMachineDrainingUnclaimedTime";
   desc   = "Time that has not been used due to draining";
   units  = "cpus*seconds";
-  daemon = "STARTD_SLOT1";
+  daemon = "Machine_slot1";
 ]
 [
   name   = "TotalVirtualMemory";
   verbosity = 1;
   desc   = "Addressable memory (RAM plus swap)";
   units  = "KB";
-  daemon = "STARTD_SLOT1";
+  daemon = "Machine_slot1";
 ]

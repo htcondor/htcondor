@@ -40,11 +40,11 @@ if (WITH_GANGLIA)
         endif( BUILDING_CONFUSE )
 
         if (${SYS_ARCH} MATCHES "64" )
-            # ganglia expects to find libconfuse in lib64, but
-	    # libconfuse by default puts it in lib.
             SET(GANGLIA_LIBDIR lib64)
         else()
             SET(GANGLIA_LIBDIR lib)
+            # inclusion of apr.h fails on 32-bit systems without the following
+            SET(GANGLIA_CFLAGS CFLAGS=-D_LARGEFILE64_SOURCE)
         endif()
 
         condor_pre_external( GANGLIA ganglia-3.6.0 "${GANGLIA_LIBDIR};include" "include/ganglia.h")
@@ -57,7 +57,7 @@ if (WITH_GANGLIA)
                     #--Patch Step ----------
                     PATCH_COMMAND ""
                     #--Configure step ----------
-                    CONFIGURE_COMMAND ./configure --prefix=${GANGLIA_INSTALL_LOC} ${APR_FLAG} ${CONFUSE_FLAG}
+                    CONFIGURE_COMMAND ./configure --prefix=${GANGLIA_INSTALL_LOC} ${APR_FLAG} ${CONFUSE_FLAG} ${GANGLIA_CFLAGS}
                     #--Build Step ----------
                     BUILD_COMMAND make
                     BUILD_IN_SOURCE 1

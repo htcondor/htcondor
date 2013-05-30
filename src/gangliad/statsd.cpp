@@ -47,7 +47,6 @@ Metric::Metric():
 	type(DOUBLE),
 	sum(0),
 	count(0),
-	daemon(ANY_AD),
 	restrict_slot1(false)
 {
 }
@@ -144,7 +143,7 @@ Metric::evaluateOptionalString(char const *attr_name,std::string &result,classad
 }
 
 bool
-Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,AdTypes daemon_ad_type,int max_verbosity,StatsD *statsd,ExtArray<MyString> *regex_groups,char const *regex_attr)
+Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,int max_verbosity,StatsD *statsd,ExtArray<MyString> *regex_groups,char const *regex_attr)
 {
 	if( regex_attr ) {
 		name = regex_attr;
@@ -159,31 +158,25 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 
 	std::string daemon_str;
 	if( !evaluateOptionalString(ATTR_DAEMON,daemon_str,metric_ad,daemon_ad,regex_groups) ) return false;
-	if( strcasecmp(daemon_str.c_str(),"schedd")==0 ) {
-		daemon = SCHEDD_AD;
-	}
-	else if( strcasecmp(daemon_str.c_str(),"negotiator")==0 ) {
-		daemon = NEGOTIATOR_AD;
-	}
-	else if( strcasecmp(daemon_str.c_str(),"startd_slot1")==0 ) {
-		daemon = STARTD_AD;
+	daemon.initializeFromString(daemon_str.c_str());
+	if( daemon.contains_anycase("machine_slot1") ) {
 		restrict_slot1 = true;
-	}
-	else if( strcasecmp(daemon_str.c_str(),"startd")==0 ) {
-		daemon = STARTD_AD;
-	}
-	else if( daemon_str.empty() || strcasecmp(daemon_str.c_str(),"any")==0 ) {
-		daemon = ANY_AD;
-		restrict_slot1 = true;
-	}
-	else {
-		dprintf(D_ALWAYS,"Invalid metric attribute daemon=%s for %s\n",daemon_str.c_str(),whichMetric().c_str());
-		return false;
 	}
 
-	if( daemon != daemon_ad_type && daemon != ANY_AD ) {
-		// avoid doing more work; this is not the right type of source ad
-		return false;
+	std::string my_type;
+	daemon_ad.EvaluateAttrString(ATTR_MY_TYPE,my_type);
+	if( !daemon.isEmpty() && !daemon.contains_anycase("any") ) {
+		if( restrict_slot1 && !strcasecmp(my_type.c_str(),"machine") ) {
+			int slotid = 1;
+			daemon_ad.EvaluateAttrInt(ATTR_SLOT_ID,slotid);
+			if( slotid != 1 ) {
+				return false;
+			}
+		}
+		else if( !daemon.contains_anycase(my_type.c_str()) ) {
+			// avoid doing more work; this is not the right type of daemon ad
+			return false;
+		}
 	}
 
 	classad::Value requirements_val;
@@ -194,17 +187,6 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	bool requirements = true;
 	if( !requirements_val.IsBooleanValue(requirements) || requirements!=true ) {
 		return false;
-	}
-
-	if( restrict_slot1 ) {
-		if( daemon_ad_type == STARTD_AD ) {
-			int slotid = 1;
-			daemon_ad.EvaluateAttrInt(ATTR_SLOT_ID,slotid);
-			if( slotid != 1 ) {
-				// avoid doing more work; this is not slot1
-				return false;
-			}
-		}
 	}
 
 	if( !regex_attr ) {
@@ -225,7 +207,7 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 				if( re.match(itr->first.c_str(),&the_regex_groups) ) {
 					// make a new Metric for this attribute that matched the regex
 					std::auto_ptr<Metric> metric(statsd->newMetric());
-					metric->evaluateDaemonAd(metric_ad,daemon_ad,daemon_ad_type,max_verbosity,statsd,&the_regex_groups,itr->first.c_str());
+					metric->evaluateDaemonAd(metric_ad,daemon_ad,max_verbosity,statsd,&the_regex_groups,itr->first.c_str());
 				}
 			}
 			return false;
@@ -255,14 +237,17 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	if( isAggregateMetric() ) {
 		group = "HTCondor Pool";
 	}
-	else if( daemon_ad_type == SCHEDD_AD ) {
+	else if( !strcasecmp(my_type.c_str(),"scheduler") ) {
 		group = "HTCondor Schedd";
 	}
-	else if( daemon_ad_type == NEGOTIATOR_AD ) {
-		group = "HTCondor Negotiator";
-	}
-	else if( daemon_ad_type == STARTD_AD ) {
+	else if( !strcasecmp(my_type.c_str(),"machine") ) {
 		group = "HTCondor Startd";
+	}
+	else if( !strcasecmp(my_type.c_str(),"daemonmaster") ) {
+		group = "HTCondor Master";
+	}
+	else {
+		formatstr(group,"HTCondor %s",my_type.c_str());
 	}
 
 	if( isAggregateMetric() ) {
@@ -310,12 +295,13 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 		machine = statsd->getDefaultAggregateHost();
 	}
 	else {
-		if( (daemon_ad_type == STARTD_AD && restrict_slot1) || (daemon_ad_type == COLLECTOR_AD) ) {
+		if( (!strcasecmp(my_type.c_str(),"machine") && restrict_slot1) || !strcasecmp(my_type.c_str(),"collector") ) {
 			// for STARTD_SLOT1 metrics, advertise by default as host.name, not slot1.host.name
 			// ditto for the collector, which typically has a daemon name != machine name, even though there is only one collector
 			daemon_ad.EvaluateAttrString(ATTR_MACHINE,machine);
 		}
 		else {
+			// use the daemon name for the metric machine name
 			daemon_ad.EvaluateAttrString(ATTR_NAME,machine);
 		}
 	}
@@ -432,11 +418,6 @@ Metric::convertToNonAggregateValue() {
 StatsD::StatsD():
 	m_stats_pub_interval(0),
 	m_stats_pub_timer(-1),
-	m_schedd_metric_count(0),
-	m_negotiator_metric_count(0),
-	m_collector_metric_count(0),
-	m_startd_metric_count(0),
-	m_startd_slot1_metric_count(0),
 	m_derivative_publication_failed(0),
 	m_non_derivative_publication_failed(0),
 	m_derivative_publication_succeeded(0),
@@ -494,12 +475,6 @@ StatsD::initAndReconfig(char const *service_name)
 
 	formatstr(param_name,"%s_VERBOSITY",service_name);
 	m_verbosity = param_integer(param_name.c_str(),0);
-
-	m_schedd_metric_count = 0;
-	m_negotiator_metric_count = 0;
-	m_collector_metric_count = 0;
-	m_startd_metric_count = 0;
-	m_startd_slot1_metric_count = 0;
 
 	std::string config_dir;
 	formatstr(param_name,"%s_METRICS_CONFIG_DIR",service_name);
@@ -580,7 +555,7 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 		}
 
 		int verbosity = 0;
-		ad->EvaluateAttrInt("Verbosity",verbosity);
+		ad->EvaluateAttrInt(ATTR_VERBOSITY,verbosity);
 		if( verbosity > m_verbosity ) {
 			delete ad;
 			continue;
@@ -589,33 +564,17 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 		// for efficient queries to the collector, keep track of
 		// which type of ads we need
 		std::string daemon;
-		ad->EvaluateAttrString("Daemon",daemon);
-		if( !strcasecmp(daemon.c_str(),"schedd") ) {
-			m_schedd_metric_count++;
+		ad->EvaluateAttrString(ATTR_DAEMON,daemon);
+		if( daemon.empty() ) {
+			classad::ClassAdUnParser unparser;
+			std::string ad_str;
+			unparser.Unparse(ad_str,ad);
+			EXCEPT("CONFIGURATION ERROR: no daemon type specified for metric defined in %s: %s\n",
+				   param_name,
+				   ad_str.c_str());
 		}
-		else if( !strcasecmp(daemon.c_str(),"negotiator") ) {
-			m_negotiator_metric_count++;
-		}
-		else if( !strcasecmp(daemon.c_str(),"collector") ) {
-			m_collector_metric_count++;
-		}
-		else if( !strcasecmp(daemon.c_str(),"startd") ) {
-			m_startd_metric_count++;
-		}
-		else if( !strcasecmp(daemon.c_str(),"startd_slot1") ) {
-			m_startd_slot1_metric_count++;
-		}
-		else if( !strcasecmp(daemon.c_str(),"any") ) {
-			m_schedd_metric_count++;
-			m_negotiator_metric_count++;
-			m_collector_metric_count++;
-			m_startd_slot1_metric_count++;
-		}
-
-		if( ad->Lookup(ATTR_AGGREGATE) ) {
-			// aggregate metrics get published to the collector host(s), so get the collector ad
-			m_collector_metric_count++;
-		}
+		StringList daemons(daemon.c_str());
+		m_daemon_types.create_union(daemons,true);
 
 		stats_metrics.push_back(ad);
 	}
@@ -632,20 +591,18 @@ StatsD::publishMetrics()
 	ClassAdList daemon_ads;
 	CondorQuery query(ANY_AD);
 
-	if( m_schedd_metric_count ) {
-		query.addORConstraint("MyType == \"Scheduler\"");
-	}
-	if( m_negotiator_metric_count ) {
-		query.addORConstraint("MyType == \"Negotiator\"");
-	}
-	if( m_collector_metric_count ) {
-		query.addORConstraint("MyType == \"Collector\"");
-	}
-	if( m_startd_metric_count ) {
-		query.addORConstraint("MyType == \"Machine\"");
-	}
-	else if( m_startd_slot1_metric_count ) {
-		query.addORConstraint("MyType == \"Machine\" && SlotID==1");
+	if( !m_daemon_types.contains_anycase("any") ) {
+		char const *daemon_type;
+		while( (daemon_type=m_daemon_types.next()) ) {
+			std::string constraint;
+			if( !strcasecmp(daemon_type,"machine_slot1") ) {
+				formatstr(constraint,"MyType == \"Machine\" && SlotID==1");
+			}
+			else {
+				formatstr(constraint,"MyType == \"%s\"",daemon_type);
+			}
+			query.addORConstraint(constraint.c_str());
+		}
 	}
 
 	CollectorList* collectors = daemonCore->getCollectorList();
@@ -677,28 +634,13 @@ StatsD::publishMetrics()
 void
 StatsD::publishDaemonMetrics(ClassAd *daemon_ad)
 {
-	std::string my_type;
-
-	daemon_ad->EvaluateAttrString(ATTR_MY_TYPE,my_type);
-
-	AdTypes ad_type;
-	if( strcasecmp(my_type.c_str(),"scheduler")==0 || strcasecmp(my_type.c_str(),"schedd")==0) {
-		ad_type = SCHEDD_AD;
-	}
-	else if( strcasecmp(my_type.c_str(),"negotiator")==0 ) {
-		ad_type = NEGOTIATOR_AD;
-	}
-	else if( strcasecmp(my_type.c_str(),"machine")==0 ) {
-		ad_type = STARTD_AD;
-	}
-
 	for( std::list< classad::ClassAd * >::iterator itr = m_metrics.begin();
 		 itr != m_metrics.end();
 		 itr++ )
 	{
 		std::auto_ptr<Metric> metric(newMetric());
 		// This calls publishMetric() (possibly multiple times) or addToAggregateValue()
-		metric->evaluateDaemonAd(**itr,*daemon_ad,ad_type,m_verbosity,this);
+		metric->evaluateDaemonAd(**itr,*daemon_ad,m_verbosity,this);
 	}
 }
 
