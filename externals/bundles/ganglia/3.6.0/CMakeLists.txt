@@ -61,7 +61,8 @@ if (WITH_GANGLIA)
                     #--Patch Step ----------
                     PATCH_COMMAND ""
                     #--Configure step ----------
-                    CONFIGURE_COMMAND ./configure --prefix=${GANGLIA_INSTALL_LOC} ${APR_FLAG} ${CONFUSE_FLAG} ${GANGLIA_CFLAGS}
+		    # we don't care about systemd, but we must provide a writeable path or it will try and fail to install in the system location
+                    CONFIGURE_COMMAND ./configure --with-systemdsystemunitdir=${GANGLIA_INSTALL_LOC}/etc --prefix=${GANGLIA_INSTALL_LOC} ${APR_FLAG} ${CONFUSE_FLAG} ${GANGLIA_CFLAGS}
                     #--Build Step ----------
                     BUILD_COMMAND make
                     BUILD_IN_SOURCE 1

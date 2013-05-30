@@ -11546,11 +11546,14 @@ Additional metrics may be defined.
 
 \label{param:GangliaMetricsConfigDir}
 \item[\Macro{GANGLIA\_METRICS\_CONFIG\_DIR}]
-  Path to the directory containing files which define Ganglia metrics in terms of HTCondor
-  ClassAd attributes to be published.  Each metric definition file contains a list of ClassAds.
-  The attributes of each ad define the properties of a metric.  The value of each attribute may
-  be a ClassAd expression that references properties of the daemon ad that is being monitored.
-  The recognized metric attributes are the following:
+  Path to the directory containing files which define Ganglia metrics
+  in terms of HTCondor ClassAd attributes to be published.  Each
+  metric definition file contains a list of ClassAds.  The attributes
+  of each ad define the properties of a metric.  The value of each
+  attribute may be a ClassAd expression that references properties of
+  the daemon ad that is being monitored.  The file containing the
+  default metrics is a good source of examples.  The recognized metric
+  attributes are the following:
 
   \begin{description}
 
@@ -11574,6 +11577,10 @@ Additional metrics may be defined.
     useful when monitoring machine-wide attributes.  The special
     value \verb|"ANY"| matches any type of ad.
 
+  \item[requirements] If specified, this may be used to restrict which
+    daemon ads are monitored by this metric.  By default, all daemon
+    ads of the specified type are monitored.
+
   \item[title] The graph title for this metric.  The default is the
     metric name.
 
@@ -11586,8 +11593,9 @@ Additional metrics may be defined.
     graph the derivative of this metric.  Ganglia versions prior to
     3.4 do not support this.
 
-  \item[type] The type of metric.  Possible values are \verb|"double"|
-    and \verb|"string"|.  The default is \verb|"double"|.
+  \item[type] A string specifying the type of the metric.  Possible
+    values are \verb|"double"| and \verb|"string"|.  The default is
+    \verb|"double"|.
 
   \item[regex] This string value specifies a regular expression that
     matches attributes to be monitored by this metric.  This is useful
@@ -11597,12 +11605,13 @@ Additional metrics may be defined.
     metric per matching attribute is created.  The default metric name
     is the name of the matched attribute.  If the value of this
     attribute needs to be modified before publication, it can be
-    referred to as an attribute named ``regex'' in the \verb|value|
-    expression.  Regular expression groups defined by parentheses may
-    be substitued into the values of string attributes such as the
-    name and description.  This is done by putting macros in the
-    string values.  ``\Bs\Bs{}1'' is replaced by the first group,
-    ''\Bs\Bs{}2'' by the second group, and so on.
+    referred to as an attribute named \Attr{regex} in the \Attr{value}
+    expression.  Text matched by regular expression groups defined by
+    parentheses within the regular expression may be substitued into
+    the values of other string attributes such as \Attr{name} and
+    \Attr{desc}.  This is done by putting macros in the string values.
+    \verb|"\\1"| is replaced by the first group, \verb|"\\2"| by the
+    second group, and so on.
 
   \item[aggregate] This string value specifies an aggregation function
     to apply instead of publishing individual metrics for each daemon
@@ -11619,25 +11628,20 @@ Additional metrics may be defined.
 
   \item[machine] The name of the host associated with this metric.
     The default is taken from the daemon ad.  If the daemon name is of
-    the form \verb|extra@machine.name|, this may indicate that there
-    are multiple instances of HTCondor running on the same machine.
-    To avoid the metrics from these instances overwriting each other,
-    the default machine name is set to the daemon name.  For aggregate
-    metrics with no aggregate\_group defined, the default machine
-    value will be the name of the collector host.
+    the form \verb|name@hostname|, this may indicate that there are
+    multiple instances of HTCondor running on the same machine.  To
+    avoid the metrics from these instances overwriting each other, the
+    default machine name is set to the daemon name.  For aggregate
+    metrics with no \Attr{aggregate\_group} defined, the default
+    value of \Attr{machine} will be the name of the collector host.
 
   \item[ip] A string containing the IP address of the host associated
     with this metric.  The default is determined from the daemon ad.
     This value must be unique for each machine published to ganglia.
-    It need not be a valid IP address.  If the value of the machine
-    attribute contains an \verb|"@"| sign, the default IP value
-    will be set to the same value as the machine attribute in order
-    to make the IP value unique to each instance of HTCondor running
-    on the same host.
-
-  \item[requirements] If specified, this may be used to restrict which
-    daemon ads are monitored by this metric.  By default, all daemon
-    ads of the specified type are monitored.
+    It need not be a valid IP address.  If the value of \Attr{machine}
+    contains an \verb|"@"| sign, the default IP value will be set to
+    the same value as \Attr{machine} in order to make the IP value
+    unique to each instance of HTCondor running on the same host.
 
   \end{description}
 
