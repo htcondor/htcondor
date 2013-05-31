@@ -54,7 +54,7 @@ GangliaD::~GangliaD()
 Metric *
 GangliaD::newMetric(Metric const *copy_me) {
 	if( copy_me ) {
-		return new GangliaMetric(*dynamic_cast<GangliaMetric const *>(copy_me));
+		return new GangliaMetric(*static_cast<GangliaMetric const *>(copy_me));
 	}
 	return new GangliaMetric();
 }
@@ -65,11 +65,12 @@ GangliaD::initAndReconfig()
 	std::string ganglia_conf_location;
 	param(ganglia_conf_location, "GANGLIA_CONFIG", "/etc/ganglia/gmond.conf");
 	int fd;
-	if ((fd = open(ganglia_conf_location.c_str(), O_RDONLY)) < 0)
+	if ((fd = safe_open_wrapper_follow(ganglia_conf_location.c_str(), O_RDONLY)) < 0)
 	{
-		dprintf(D_ALWAYS, "Cannot open Ganglia configuration file %s.\n", ganglia_conf_location.c_str());
+		EXCEPT("Cannot open Ganglia configuration file GANGLIA_CONFIG=%s.\n", ganglia_conf_location.c_str());
 		return;
 	}
+	close(fd);
 
 	int rc = ganglia_reconfig(ganglia_conf_location.c_str(),&m_ganglia_context,&m_ganglia_config,&m_ganglia_channels);
 	if( rc != 0 ) {
@@ -89,15 +90,31 @@ GangliaD::initAndReconfig()
 	}
 }
 
+bool
+GangliaD::getDaemonIP(std::string const &machine,std::string &result) const
+{
+	if( machine.find("@")!=std::string::npos ) {
+
+		// The machine name being used for publishing purposes is a
+		// daemon name containing '@', so there may be multiple
+		// daemons of the same type on the same machine.  We need the
+		// IP in the ganglia spoof host string to be unique to each
+		// daemon.  Therefore, return the daemon name here rather than
+		// the actual IP.  In all other cases, we return the actual
+		// IP, because we would like the condor metrics to show up in
+		// the same host entry as other ganglia metrics.
+
+		result = machine;
+		return true;
+	}
+	return StatsD::getDaemonIP(machine,result);
+}
+
+
 void
 GangliaD::publishMetric(Metric const &m)
 {
-	GangliaMetric const &metric = *dynamic_cast<GangliaMetric const *>(&m);
-
-	if( metric.isAggregateMetric() ) {
-		addToAggregateValue(metric);
-		return;
-	}
+	GangliaMetric const &metric = *static_cast<GangliaMetric const *>(&m);
 
 	if( metric.derivative &&
 		m_derivative_publication_failed &&

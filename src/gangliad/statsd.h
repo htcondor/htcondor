@@ -20,8 +20,15 @@
 #ifndef __STATSD_H__
 #define __STATSD_H__
 
-#include <list>
+/*
+ * This file defines base classes for gathering information from the
+ * collector and publishing to some other monitoring system.
+ */
 
+#include <list>
+#include "string_list.h"
+
+// Base class defining a metric to be evaluated against ads in the collector
 class Metric {
 public:
 	Metric();
@@ -30,7 +37,7 @@ public:
 	// Given a metric definition ad and an ad to monitor,
 	// evaluate the monitored value and other properties such as
 	// name, description, and so on.
-	virtual bool evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,AdTypes daemon_ad_type,int max_verbosity,class StatsD *statsd,ExtArray<MyString> *regex_groups=NULL,char const *regex_attr=NULL);
+	virtual bool evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,int max_verbosity,class StatsD *statsd,ExtArray<MyString> *regex_groups=NULL,char const *regex_attr=NULL);
 
 	// Sets result to a string representation of the value to publish.
 	// Returns false on failure.
@@ -78,7 +85,7 @@ public:
 	double sum;
 	unsigned long count;
 
-	AdTypes daemon; // type of condor daemon this metric applies to
+	StringList target_type; // type of condor daemons this metric applies to
 
 	// True if this metric only looks at slot 1 of the startd
 	// (we do this in lieu of a true machine ad)
@@ -105,15 +112,26 @@ class StatsD: Service {
 
 	virtual void initAndReconfig(char const *service_name);
 
+	// Allocate a new Metric object.
+	// This is done via a virtual function so the class derived from StatsD
+	// can create a type derived from Metric.
 	virtual Metric *newMetric(Metric const *copy_me=NULL) = 0;
 
-	void publishMetrics();
-
+	// Publish a metric.
 	virtual void publishMetric(Metric const &metric) = 0;
 
-	bool getDaemonIP(std::string const &machine,std::string &result) const;
+	// Collect ads from the collector and evaluate all metrics.
+	void publishMetrics();
 
+	// Given a machine name or daemon name, return the IP address of it,
+	// using information gathered from the collector.
+	virtual bool getDaemonIP(std::string const &machine,std::string &result) const;
+
+	// Returns the collector host name.
 	std::string const &getDefaultAggregateHost() { return m_default_aggregate_host; }
+
+	// Apply an aggregate function to a data point.
+	void addToAggregateValue(Metric const &metric);
 
  protected:
 	int m_verbosity;
@@ -124,11 +142,7 @@ class StatsD: Service {
 	AggregateMetricList m_aggregate_metrics;
 	std::map< std::string,std::string > m_daemon_ips; // map of daemon machine (and name) to IP address
 	std::string m_default_aggregate_host;
-	unsigned m_schedd_metric_count;
-	unsigned m_negotiator_metric_count;
-	unsigned m_collector_metric_count;
-	unsigned m_startd_metric_count;
-	unsigned m_startd_slot1_metric_count;
+	StringList m_target_types;
 
 	unsigned m_derivative_publication_failed;
 	unsigned m_non_derivative_publication_failed;
@@ -136,12 +150,22 @@ class StatsD: Service {
 	unsigned m_non_derivative_publication_succeeded;
 	bool m_warned_about_derivative;
 
+	// Read metric definition ads.  Add them to the list of metric ads.
 	void ParseMetrics( std::string const &stats_metrics_string, char const *param_name, std::list< classad::ClassAd * > &stats_metrics );
+
+	// Read metric definitions from a file.
 	void ParseMetricsFromFile( std::string const &fname );
+
+	// Evaluate metrics against the provided daemon ad.
 	void publishDaemonMetrics(ClassAd *ad);
+
+	// Publish the final value of all aggreate metrics.
 	void publishAggregateMetrics();
-	void addToAggregateValue(Metric const &metric);
+
+	// Initialize aggregate metrics.
 	void clearAggregateMetrics();
+
+	// Extract IP addresses from daemon ads.
 	void mapDaemonIPs(ClassAdList &daemon_ads,CollectorList &collectors);
 };
 

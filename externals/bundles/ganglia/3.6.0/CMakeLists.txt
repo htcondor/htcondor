@@ -40,14 +40,18 @@ if (WITH_GANGLIA)
         endif( BUILDING_CONFUSE )
 
         if (${SYS_ARCH} MATCHES "64" )
-            # ganglia expects to find libconfuse in lib64, but
-	    # libconfuse by default puts it in lib.
             SET(GANGLIA_LIBDIR lib64)
         else()
             SET(GANGLIA_LIBDIR lib)
+            # inclusion of apr.h fails on 32-bit systems without the following
+            SET(GANGLIA_CFLAGS CFLAGS=-D_LARGEFILE64_SOURCE)
         endif()
 
         condor_pre_external( GANGLIA ganglia-3.6.0 "${GANGLIA_LIBDIR};include" "include/ganglia.h")
+
+	# NOTE: for ganglia-3.6.0, I did a slightly sneaky thing: I copied gmond/gmond.service.in
+	# from the ganglia github repository into the official tarball, because a bug in their
+	# packaging omitted this file.  This fixes builds on Fedora 17 and 18.
 
         ExternalProject_Add(ganglia
                     DEPENDS ${APR_REF} ${CONFUSE_REF}
@@ -57,7 +61,8 @@ if (WITH_GANGLIA)
                     #--Patch Step ----------
                     PATCH_COMMAND ""
                     #--Configure step ----------
-                    CONFIGURE_COMMAND ./configure --prefix=${GANGLIA_INSTALL_LOC} ${APR_FLAG} ${CONFUSE_FLAG}
+		    # we don't care about systemd, but we must provide a writeable path or it will try and fail to install in the system location
+                    CONFIGURE_COMMAND ./configure --with-systemdsystemunitdir=${GANGLIA_INSTALL_LOC}/etc --prefix=${GANGLIA_INSTALL_LOC} ${APR_FLAG} ${CONFUSE_FLAG} ${GANGLIA_CFLAGS}
                     #--Build Step ----------
                     BUILD_COMMAND make
                     BUILD_IN_SOURCE 1

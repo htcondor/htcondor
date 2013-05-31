@@ -36,9 +36,14 @@ class GangliaD: public StatsD {
 
 	virtual void initAndReconfig();
 
+	// create a GangliaMetric
 	virtual Metric *newMetric(Metric const *copy_me=NULL);
 
+	// publish a metric to Ganglia
 	virtual void publishMetric(Metric const &metric);
+
+	// apply ganglia-specific logic relating to the IP address in the spoof host
+	virtual bool getDaemonIP(std::string const &machine,std::string &result) const;
 
  private:
 	unsigned m_tmax; // max time between updates
