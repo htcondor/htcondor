@@ -49,7 +49,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug where scheduler universe jobs with on\_exit\_hold
+expressions that evaluate to true could have duplicate hold messages
+in the user log.
+\Ticket{3651}
 
 \end{itemize}
 
