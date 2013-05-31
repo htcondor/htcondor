@@ -1,0 +1,2 @@
+job 0 job_dagman_repeat_holds_watch.cmd
+job 1 job_dagman_repeat_holds_hold.cmd

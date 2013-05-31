@@ -4692,7 +4692,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		if( jobs[i].cluster == -1 ) {
 			continue;
 		}
-		enqueueActOnJobMyself( jobs[i], action, notify );
+		enqueueActOnJobMyself( jobs[i], action, notify, true );
 	}
 
 		// In case we have removed jobs that were queued to run, scan
@@ -4714,12 +4714,13 @@ Scheduler::actOnJobs(int, Stream* s)
 
 class ActOnJobRec: public ServiceData {
 public:
-	ActOnJobRec(PROC_ID job_id, JobAction action, bool notify):
-		m_job_id(job_id.cluster,job_id.proc,-1), m_action(action), m_notify(notify) {}
+	ActOnJobRec(PROC_ID job_id, JobAction action, bool notify, bool log):
+		m_job_id(job_id.cluster,job_id.proc,-1), m_action(action), m_notify(notify), m_log(log) {}
 
 	CondorID m_job_id;
 	JobAction m_action;
 	bool m_notify;
+	bool m_log;
 
 		/** These are not actually used, because we are
 		 *  using the all_dups option to SelfDrainingQueue. */
@@ -4754,9 +4755,9 @@ ActOnJobRec::HashFn( ) const
 }
 
 void
-Scheduler::enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool notify )
+Scheduler::enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool notify, bool log )
 {
-	ActOnJobRec *act_rec = new ActOnJobRec( job_id, action, notify );
+	ActOnJobRec *act_rec = new ActOnJobRec( job_id, action, notify, log );
 	bool stopping_job = false;
 
 	if( action == JA_HOLD_JOBS ||
@@ -4827,6 +4828,7 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 
 	JobAction action = act_rec->m_action;
 	bool notify = act_rec->m_notify;
+	bool log    = act_rec->m_log;
 	PROC_ID job_id;
 	job_id.cluster = act_rec->m_job_id._cluster;
 	job_id.proc = act_rec->m_job_id._proc;
@@ -4844,7 +4846,7 @@ Scheduler::actOnJobMyselfHandler( ServiceData* data )
 	case JA_REMOVE_JOBS:
 	case JA_VACATE_JOBS:
 	case JA_VACATE_FAST_JOBS: {
-		abort_job_myself( job_id, action, true, notify );		
+		abort_job_myself( job_id, action, log, notify );		
 
 			//
 			// Changes here to fix gittrac #741 and #1490:
@@ -10137,9 +10139,11 @@ Scheduler::scheduler_univ_job_exit(int pid, int status, shadow_rec * srec)
 			break;
 
 		case HOLD_IN_QUEUE:
+				// passing "false" to write_user_log, as
+				// delete_shadow_rec will do that later
 			holdJob(job_id.cluster, job_id.proc, reason.Value(),
 					reason_code, reason_subcode,
-				true,false,false,false,false);
+				true,false,false,false,false,false);
 			break;
 
 		case RELEASE_FROM_HOLD:
@@ -13128,7 +13132,7 @@ bool
 holdJob( int cluster, int proc, const char* reason,
 		 int reason_code, int reason_subcode,
 		 bool use_transaction, bool notify_shadow, bool email_user,
-		 bool email_admin, bool system_hold )
+		 bool email_admin, bool system_hold, bool write_to_user_log )
 {
 	bool result;
 
@@ -13152,7 +13156,7 @@ holdJob( int cluster, int proc, const char* reason,
 		PROC_ID id;
 		id.cluster = cluster;
 		id.proc = proc;
-		scheduler.enqueueActOnJobMyself(id,JA_HOLD_JOBS,true);
+		scheduler.enqueueActOnJobMyself(id,JA_HOLD_JOBS, true, write_to_user_log);
 	}
 
 	return result;

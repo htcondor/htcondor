@@ -53,24 +53,24 @@ open(TASKLIST, '>', $tasklist_file) or die "Can't open $tasklist_file for writin
 
 if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     #Windows
-    print TASKLIST "$EXTERNALS_TASK\n";
-    print TASKLIST "$UNSTRIPPED_TASK\n";
-    print TASKLIST "$NATIVE_TASK\n";
-    print TASKLIST "$TAR_TASK\n";
+    print TASKLIST "$EXTERNALS_TASK 4h\n";
+    print TASKLIST "$UNSTRIPPED_TASK 4h\n";
+    print TASKLIST "$NATIVE_TASK 4h\n";
+    print TASKLIST "$TAR_TASK 4h\n";
 }    
 else {
     # Everything else
-    print TASKLIST "$EXTERNALS_TASK\n";
-    print TASKLIST "$UNSTRIPPED_TASK\n";
-    print TASKLIST "$CHECK_UNSTRIPPED_TASK\n";
-    print TASKLIST "$NATIVE_TASK\n";
-    print TASKLIST "$CHECK_NATIVE_TASK\n";
-    print TASKLIST "$TAR_TASK\n";
-    print TASKLIST "$CHECK_TAR_TASK\n";
+    print TASKLIST "$EXTERNALS_TASK 4h\n";
+    print TASKLIST "$UNSTRIPPED_TASK 4h\n";
+    print TASKLIST "$CHECK_UNSTRIPPED_TASK 4h\n";
+    print TASKLIST "$NATIVE_TASK 4h\n";
+    print TASKLIST "$CHECK_NATIVE_TASK 4h\n";
+    print TASKLIST "$TAR_TASK 4h\n";
+    print TASKLIST "$CHECK_TAR_TASK 4h\n";
 }
 
 if (defined($opt_coverity_analysis)) {
-    print TASKLIST "$COVERITY_ANALYSIS\n";
+    print TASKLIST "$COVERITY_ANALYSIS 4h\n";
 }
 
 close (TASKLIST);

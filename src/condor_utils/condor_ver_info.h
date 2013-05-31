@@ -80,12 +80,8 @@ public:
 
 
 	int compare_versions(const char* other_version_string) const;
-	int compare_build_dates(const char* other_version_string) const;
 	
 	bool built_since_version(int MajorVer, int MinorVer, int SubMinorVer) const;
-
-	// Note: for "month", 1=Jan, 2=Feb, etc, as you'd expect
-	bool built_since_date(int month, int day, int year) const;
 
 	bool is_compatible(const char* other_version_string, 
 					   const char* other_subsys = NULL) const;
@@ -102,7 +98,7 @@ public:
 		int MinorVer;
 		int SubMinorVer;
 		int Scalar;
-		time_t BuildDate;
+		char *Rest;
 		char *Arch;
 		char *OpSys;
 	} VersionData_t;

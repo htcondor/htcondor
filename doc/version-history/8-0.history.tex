@@ -49,7 +49,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug where scheduler universe jobs with on\_exit\_hold
+expressions that evaluate to true could have duplicate hold messages
+in the user log.
+\Ticket{3651}
 
 \end{itemize}
 
@@ -108,7 +111,11 @@ current versions of Mac OS X.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable
+\Macro{DEDICATED\_SCHEDULER\_WAIT\_FOR\_SPOOLER}
+permits the specification of a very strict execution order for 
+parallel universe jobs handed to a remote scheduler.
+\Ticket{2946}
 
 \end{itemize}
 
@@ -121,12 +128,13 @@ been removed and the configuration variable \Macro{CHECKPOINT\_PLATFORM}
 documented.
 \Ticket{3544}
 
-\item A standard universe job will no longer crash, and no longer crash
-the shadow, if it calls mmap() with an unsupported combination of flags.
+\item A standard universe job will no longer crash, and it will no longer 
+cause the \Condor{shadow} to crash
+if the job calls \Procedure{mmap} with an unsupported combination of flags.
 \Ticket{3565}
 
-\item The \SubmitCmd{vm} universe now supports \Prog{VMware Workstation}
-and \Prog{VMware Player} on Windows.
+\item Support for \Prog{VMware Workstation} and \Prog{VMware Player} 
+under the \SubmitCmd{vm} universe now works properly on Windows platforms.
 \Ticket{3627}
 
 % would have been in 7.9.7, but there was no 7.9.7 release
@@ -162,8 +170,8 @@ if configuration variable \Macro{MASTER\_NEW\_BINARY\_RESTART} was set
 to its default value of \Expr{GRACEFUL}.
 \Ticket{3572}
 
-\item Fixed a bug that caused redundant usage lines to show up at the end of
-the partitionable resource usage summary in the user log.
+\item Fixed a bug that caused redundant lines to show up in the user log
+at the end of the partitionable resource usage summary.
 \Ticket{3621}
 
 \item Fixed several bugs that can cause the \Condor{procd} to fail on Mac OS X
@@ -179,8 +187,9 @@ and not be restartable.
 fixed a file descriptor leak in the standard universe \Condor{starter}.
 \Ticket{3590}
 
-\item Fixed problem where \Condor{dagman} would miscount held jobs in the event
-that multiple copies of hold events would be written to the user log.
+\item Fixed a bug in which \Condor{dagman} would miscount the number
+of held jobs when
+multiple copies of hold events were written to the user log.
 \Ticket{3650}
 
 \end{itemize}

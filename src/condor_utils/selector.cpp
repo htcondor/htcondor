@@ -119,7 +119,7 @@ Selector::reset()
 #endif
 
 	if (IsDebugLevel(D_DAEMONCORE)) {
-		dprintf(D_FULLDEBUG, "selector %p resetting\n", this);
+		dprintf(D_DAEMONCORE | D_VERBOSE, "selector %p resetting\n", this);
 	}
 }
 
@@ -202,7 +202,7 @@ Selector::add_fd( int fd, IO_FUNC interest )
 	if(IsDebugLevel(D_DAEMONCORE)) {
 		char *fd_description = describe_fd(fd);
 
-		dprintf(D_FULLDEBUG, "selector %p adding fd %d (%s)\n",
+		dprintf(D_DAEMONCORE | D_VERBOSE, "selector %p adding fd %d (%s)\n",
 				this, fd, fd_description);
 
 		free(fd_description);
@@ -251,7 +251,7 @@ Selector::delete_fd( int fd, IO_FUNC interest )
 #endif
 
 	if (IsDebugLevel(D_DAEMONCORE)) {
-		dprintf(D_FULLDEBUG, "selector %p deleting fd %d\n", this, fd);
+		dprintf(D_DAEMONCORE | D_VERBOSE, "selector %p deleting fd %d\n", this, fd);
 	}
 
 	switch( interest ) {

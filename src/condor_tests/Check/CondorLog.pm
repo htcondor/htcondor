@@ -36,8 +36,9 @@ sub RunCheck
 	$result = CondorTest::SearchCondorLog($daemon,$match_regexp);
 	
 	last if $result;
-	last if ($count >= $num_retries);
-	sleep(1);
+	last if ($count > $num_retries);
+	sleep(6);
+	++$count;
     }
 
     if( $fail_if_found ) {
@@ -92,8 +93,9 @@ sub RunSpecialCheck
 	$result = CondorTest::SearchCondorSpecialLog($logname,$match_regexp,$allmatch);
 	
 	last if $result;
-	last if ($count >= $num_retries);
-	sleep(1);
+	last if ($count > $num_retries);
+	sleep(6);
+	++$count;
     }
 
     if( $fail_if_found ) {
