@@ -57,6 +57,13 @@ my $running_now = 0;
 my $expect_idle = 0;
 my $expect_run = 0;
 
+my $on_match = sub {
+	my $response = shift;
+	if($response eq "HitRetryLimit") {
+		print "About to fail from timeout!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+	}
+};
+
 my $on_execute = sub {
 my $idles = 0;
 	$running_now += 1;
@@ -76,6 +83,7 @@ my $idles = 0;
 					daemon => "Negotiator",
 					match_regexp => "Started Negotiation Cycle",
 					match_instances => 2,
+					match_callback => $on_match,
 					match_timeout => 30,
 					match_new => "true"
 				);
