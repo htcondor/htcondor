@@ -1,773 +1,773 @@
 [
-  name   = strcat(MyType,"UpdatesLost");
-  value  = UpdatesLost;
-  verbosity = 1;
-  desc   = "Number of ClassAd updates that were sent by this daemon but not received by the collector";
-  daemon = "Scheduler,Negotiator,Machine_slot1";
+  Name   = strcat(MyType,"UpdatesLost");
+  Value  = UpdatesLost;
+  Verbosity = 1;
+  Desc   = "Number of ClassAd updates that were sent by this daemon but not received by the collector";
+  TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
-  name   = strcat(MyType,"UpdatesTotal");
-  value  = UpdatesTotal;
-  verbosity = 1;
-  desc   = "Number of ClassAd updates that were sent by this daemon";
-  daemon = "Scheduler,Negotiator,Machine_slot1";
+  Name   = strcat(MyType,"UpdatesTotal");
+  Value  = UpdatesTotal;
+  Verbosity = 1;
+  Desc   = "Number of ClassAd updates that were sent by this daemon";
+  TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
-  name   = strcat(MyType,"DaemonCoreDutyCycle");
-  value  = DaemonCoreDutyCycle;
-  desc   = "Recent fraction of busy time in the daemon event loop";
-  daemon = "Scheduler,Negotiator,Machine_slot1";
+  Name   = strcat(MyType,"DaemonCoreDutyCycle");
+  Value  = DaemonCoreDutyCycle;
+  Desc   = "Recent fraction of busy time in the daemon event loop";
+  TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
-  name   = strcat(MyType,"MonitorSelfAge");
-  value  = MonitorSelfAge;
-  desc   = "Age of this daemon";
-  units  = "seconds";
-  daemon = "Scheduler,Negotiator,Machine_slot1";
+  Name   = strcat(MyType,"MonitorSelfAge");
+  Value  = MonitorSelfAge;
+  Desc   = "Age of this daemon";
+  Units  = "seconds";
+  TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
-  name   = strcat(MyType,"MonitorSelfCPUUsage");
-  value  = MonitorSelfCPUUsage;
-  verbosity = 1;
-  desc   = "The fraction of one CPU recently used by this daemon";
-  daemon = "Scheduler,Negotiator,Machine_slot1";
+  Name   = strcat(MyType,"MonitorSelfCPUUsage");
+  Value  = MonitorSelfCPUUsage;
+  Verbosity = 1;
+  Desc   = "The fraction of one CPU recently used by this daemon";
+  TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
-  name   = strcat(MyType,"MonitorSelfImageSize");
-  value  = MonitorSelfImageSize;
-  desc   = "Memory allocated to this daemon (i.e. virtual image size)";
-  units  = "kbytes";
-  daemon = "Scheduler,Negotiator,Machine_slot1";
+  Name   = strcat(MyType,"MonitorSelfImageSize");
+  Value  = MonitorSelfImageSize;
+  Desc   = "Memory allocated to this daemon (i.e. virtual image size)";
+  Units  = "kbytes";
+  TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
-  name   = strcat(MyType,"MonitorSelfRegisteredSocketCount");
-  value  = MonitorSelfRegisteredSocketCount;
-  verbosity = 1;
-  desc   = "Number of sockets registered in this daemon's event loop";
-  units  = "sockets";
-  daemon = "Scheduler,Negotiator,Machine_slot1";
+  Name   = strcat(MyType,"MonitorSelfRegisteredSocketCount");
+  Value  = MonitorSelfRegisteredSocketCount;
+  Verbosity = 1;
+  Desc   = "Number of sockets registered in this daemon's event loop";
+  Units  = "sockets";
+  TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
-  name   = strcat(MyType,"MonitorSelfResidentSetSize");
-  value  = MonitorSelfResidentSetSize;
-  verbosity = 1;
-  desc   = "RAM allocated to this daemon";
-  units  = "kbytes";
-  daemon = "Scheduler,Negotiator,Machine_slot1";
+  Name   = strcat(MyType,"MonitorSelfResidentSetSize");
+  Value  = MonitorSelfResidentSetSize;
+  Verbosity = 1;
+  Desc   = "RAM allocated to this daemon";
+  Units  = "kbytes";
+  TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
-  name   = strcat(MyType,"MonitorSelfSecuritySessions");
-  value  = MonitorSelfSecuritySessions;
-  verbosity = 1;
-  desc   = "Number of security sessions in this daemon's cache";
-  daemon = "Scheduler,Negotiator,Machine_slot1";
+  Name   = strcat(MyType,"MonitorSelfSecuritySessions");
+  Value  = MonitorSelfSecuritySessions;
+  Verbosity = 1;
+  Desc   = "Number of security sessions in this daemon's cache";
+  TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 
 [
-  name   = "JobsAccumBadputTime";
-  desc   = "Runtime of jobs that were aborted (removed or held) or (standard universe only) evicted without a checkpoint.";
-  units  = "seconds";
-  daemon = "Scheduler";
+  Name   = "JobsAccumBadputTime";
+  Desc   = "Runtime of jobs that were aborted (removed or held) or (standard universe only) evicted without a checkpoint.";
+  Units  = "seconds";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsAccumExecuteTime";
-  desc   = "Time spent running jobs.  Does not include file transfer and other job handling time.";
-  units  = "seconds";
-  daemon = "Scheduler";
+  Name   = "JobsAccumExecuteTime";
+  Desc   = "Time spent running jobs.  Does not include file transfer and other job handling time.";
+  Units  = "seconds";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsAccumPostExecuteTime";
-  verbosity = 1;
-  desc   = "Time spent processing a completed job (includes output file transfer)";
-  units  = "seconds";
-  daemon = "Scheduler";
+  Name   = "JobsAccumPostExecuteTime";
+  Verbosity = 1;
+  Desc   = "Time spent processing a completed job (includes output file transfer)";
+  Units  = "seconds";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsAccumPreExecuteTime";
-  verbosity = 1;
-  desc   = "Time spent preparing to run a job (includes input file transfer)";
-  units  = "";
-  daemon = "Scheduler";
+  Name   = "JobsAccumPreExecuteTime";
+  Verbosity = 1;
+  Desc   = "Time spent preparing to run a job (includes input file transfer)";
+  Units  = "";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsAccumRunningTime";
-  desc   = "Time spent running jobs that were not counted as badput (i.e. not removed or held).  Includes file transfer and other handling time.";
-  units  = "seconds";
-  daemon = "Scheduler";
+  Name   = "JobsAccumRunningTime";
+  Desc   = "Time spent running jobs that were not counted as badput (i.e. not removed or held).  Includes file transfer and other handling time.";
+  Units  = "seconds";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsAccumTimeToStart";
-  verbosity = 1;
-  desc   = "Time between submit and running of a job";
-  units  = "seconds";
-  daemon = "Scheduler";
+  Name   = "JobsAccumTimeToStart";
+  Verbosity = 1;
+  Desc   = "Time between submit and running of a job";
+  Units  = "seconds";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsCheckpointed";
-  verbosity = 1;
-  desc   = "Number of job run attempts that were interrupted and successfully checkpointed";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "JobsCheckpointed";
+  Verbosity = 1;
+  Desc   = "Number of job run attempts that were interrupted and successfully checkpointed";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsCompleted";
-  desc   = "Number of jobs that terminated normally (i.e. not via a signal or abort)";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "JobsCompleted";
+  Desc   = "Number of jobs that terminated normally (i.e. not via a signal or abort)";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsCoredumped";
-  desc   = "Number of jobs that crashed and generated a core file";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "JobsCoredumped";
+  Desc   = "Number of jobs that crashed and generated a core file";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsDebugLogError";
-  verbosity = 1;
-  desc   = "Count of shadows that exited due to debug log errors";
-  units  = "shadows";
-  daemon = "Scheduler";
+  Name   = "JobsDebugLogError";
+  Verbosity = 1;
+  Desc   = "Count of shadows that exited due to debug log errors";
+  Units  = "shadows";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsExecFailed";
-  desc   = "Count of job run attempts that failed to execute the specified command";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "JobsExecFailed";
+  Desc   = "Count of job run attempts that failed to execute the specified command";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsExited";
-  verbosity = 1;
-  desc   = "Count of job run attempts that have completed (successfully or not)";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "JobsExited";
+  Verbosity = 1;
+  Desc   = "Count of job run attempts that have completed (successfully or not)";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsExitedAndClaimClosing";
-  verbosity = 1;
-  desc   = "Count of job run attempts that have completed when claim was not accepting additional jobs";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "JobsExitedAndClaimClosing";
+  Verbosity = 1;
+  Desc   = "Count of job run attempts that have completed when claim was not accepting additional jobs";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 /* JobsExitedNormally is the same as JobsCompleted, so don't bother. */
 /*
 [
-  name   = "JobsExitedNormally";
-  desc   = "";
-  units  = "";
-  daemon = "Scheduler";
+  Name   = "JobsExitedNormally";
+  Desc   = "";
+  Units  = "";
+  TargetType = "Scheduler";
 ]
 */
 [
-  name   = "JobsExitException";
-  verbosity = 1;
-  desc   = "Count of job run attempts that ended with a job handling exception (shadow exception)";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "JobsExitException";
+  Verbosity = 1;
+  Desc   = "Count of job run attempts that ended with a job handling exception (shadow exception)";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsKilled";
-  desc   = "Count of job run attempts in which the job was killed (i.e. evicted)";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "JobsKilled";
+  Desc   = "Count of job run attempts in which the job was killed (i.e. evicted)";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsMissedDeferralTime";
-  verbosity = 1;
-  desc   = "Count of job run attempts that failed because the specified deferral time was missed";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "JobsMissedDeferralTime";
+  Verbosity = 1;
+  Desc   = "Count of job run attempts that failed because the specified deferral time was missed";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsNotStarted";
-  verbosity = 1;
-  desc   = "Count of job run attempts that failed because the request to activate the claim failed";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "JobsNotStarted";
+  Verbosity = 1;
+  Desc   = "Count of job run attempts that failed because the request to activate the claim failed";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsShadowNoMemory";
-  verbosity = 1;
-  desc   = "Count of job run attempts that failed because there was not enough memory (RESERVED_SWAP)";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "JobsShadowNoMemory";
+  Verbosity = 1;
+  Desc   = "Count of job run attempts that failed because there was not enough memory (RESERVED_SWAP)";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsShouldHold";
-  verbosity = 1;
-  desc   = "Count of job run attempts that have resulted in the job going on hold";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "JobsShouldHold";
+  Verbosity = 1;
+  Desc   = "Count of job run attempts that have resulted in the job going on hold";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsShouldRemove";
-  verbosity = 1;
-  desc   = "Count of job run attempts that have resulted in the job being removed (e.g. periodic_remove policy)";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "JobsShouldRemove";
+  Verbosity = 1;
+  Desc   = "Count of job run attempts that have resulted in the job being removed (e.g. periodic_remove policy)";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsShouldRequeue";
-  verbosity = 1;
-  desc   = "Count of job run attempts that ended with the job being requeued due to handling failures or OnExitRemove=false";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "JobsShouldRequeue";
+  Verbosity = 1;
+  Desc   = "Count of job run attempts that ended with the job being requeued due to handling failures or OnExitRemove=false";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsStarted";
-  desc   = "Number of job run attempts started";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "JobsStarted";
+  Desc   = "Number of job run attempts started";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "JobsSubmitted";
-  desc   = "Number of jobs submitted";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "JobsSubmitted";
+  Desc   = "Number of jobs submitted";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "MaxJobsRunning";
-  desc   = "Configured limit on number of running jobs";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "MaxJobsRunning";
+  Desc   = "Configured limit on number of running jobs";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "NumUsers";
-  desc   = "Number of different users who currently have jobs in the queue";
-  units  = "users";
-  daemon = "Scheduler";
+  Name   = "NumUsers";
+  Desc   = "Number of different users who currently have jobs in the queue";
+  Units  = "users";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "RecentStatsLifetime";
-  verbosity = 1;
-  desc   = "Seconds elapsed since the beginning of the current stats collection window";
-  units  = "seconds";
-  daemon = "Scheduler";
+  Name   = "RecentStatsLifetime";
+  Verbosity = 1;
+  Desc   = "Seconds elapsed since the beginning of the current stats collection window";
+  Units  = "seconds";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "ScheddSwapExhausted";
-  verbosity = 1;
-  desc   = "Non-zero when jobs cannot be started due to RESERVED_SWAP";
-  daemon = "Scheduler";
+  Name   = "ScheddSwapExhausted";
+  Verbosity = 1;
+  Desc   = "Non-zero when jobs cannot be started due to RESERVED_SWAP";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "ShadowsRunning";
-  verbosity = 1;
-  desc   = "Number of shadow processes currently running";
-  units  = "shadows";
-  daemon = "Scheduler";
+  Name   = "ShadowsRunning";
+  Verbosity = 1;
+  Desc   = "Number of shadow processes currently running";
+  Units  = "shadows";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "ShadowsStarted";
-  verbosity = 1;
-  desc   = "Number of shadow processes started";
-  units  = "shadows";
-  daemon = "Scheduler";
+  Name   = "ShadowsStarted";
+  Verbosity = 1;
+  Desc   = "Number of shadow processes started";
+  Units  = "shadows";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "StatsLifetime";
-  verbosity = 1;
-  desc   = "Seconds of elapsed time since the beginning of the schedd lifetime stat collection window";
-  units  = "seconds";
-  daemon = "Scheduler";
+  Name   = "StatsLifetime";
+  Verbosity = 1;
+  Desc   = "Seconds of elapsed time since the beginning of the schedd lifetime stat collection window";
+  Units  = "seconds";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "TotalFlockedJobs";
-  desc   = "Number of jobs from this schedd that are flocked to other pools";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "TotalFlockedJobs";
+  Desc   = "Number of jobs from this schedd that are flocked to other pools";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "TotalHeldJobs";
-  desc   = "Number of jobs in this schedd that are on hold";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "TotalHeldJobs";
+  Desc   = "Number of jobs in this schedd that are on hold";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  aggregate = "SUM";
-  name   = "Held Jobs in Pool";
-  value  = TotalHeldJobs;
-  desc   = "Number of jobs on hold in schedds reporting to this pool";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Aggregate = "SUM";
+  Name   = "Held Jobs in Pool";
+  Value  = TotalHeldJobs;
+  Desc   = "Number of jobs on hold in schedds reporting to this pool";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "TotalIdleJobs";
-  desc   = "Number of idle jobs in this schedd's queue";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "TotalIdleJobs";
+  Desc   = "Number of idle jobs in this schedd's queue";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  aggregate = "SUM";
-  name   = "Idle Jobs in Pool";
-  value  = TotalIdleJobs;
-  desc   = "Number of idle jobs in schedds reporting to this pool";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Aggregate = "SUM";
+  Name   = "Idle Jobs in Pool";
+  Value  = TotalIdleJobs;
+  Desc   = "Number of idle jobs in schedds reporting to this pool";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "TotalJobAds";
-  desc   = "Number of jobs currently in this schedd's queue";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "TotalJobAds";
+  Desc   = "Number of jobs currently in this schedd's queue";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  aggregate = "SUM";
-  name   = "Jobs in Pool";
-  value  = TotalJobAds;
-  desc   = "Number of jobs currently in schedds reporting to this pool";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Aggregate = "SUM";
+  Name   = "Jobs in Pool";
+  Value  = TotalJobAds;
+  Desc   = "Number of jobs currently in schedds reporting to this pool";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "TotalLocalJobsIdle";
-  verbosity = 1;
-  desc   = "Number of local universe jobs in this schedd's queue";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "TotalLocalJobsIdle";
+  Verbosity = 1;
+  Desc   = "Number of local universe jobs in this schedd's queue";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "TotalLocalJobsRunning";
-  verbosity = 1;
-  desc   = "Number of running local universe jobs in this schedd's queue";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "TotalLocalJobsRunning";
+  Verbosity = 1;
+  Desc   = "Number of running local universe jobs in this schedd's queue";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "TotalRemovedJobs";
-  desc   = "Number of jobs that are in the process of being removed";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "TotalRemovedJobs";
+  Desc   = "Number of jobs that are in the process of being removed";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "TotalRunningJobs";
-  desc   = "Number of running jobs in this schedd's queue";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "TotalRunningJobs";
+  Desc   = "Number of running jobs in this schedd's queue";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  aggregate = "SUM";
-  name   = "Running Jobs in Pool";
-  value  = TotalRunningJobs;
-  desc   = "Number of running jobs in schedds reporting to this pool";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Aggregate = "SUM";
+  Name   = "Running Jobs in Pool";
+  Value  = TotalRunningJobs;
+  Desc   = "Number of running jobs in schedds reporting to this pool";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "TotalSchedulerJobsIdle";
-  verbosity = 1;
-  desc   = "Number of idle scheduler universe jobs in this schedd's queue";
-  units  = "jobs";
-  daemon = "Scheduler";
+  Name   = "TotalSchedulerJobsIdle";
+  Verbosity = 1;
+  Desc   = "Number of idle scheduler universe jobs in this schedd's queue";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "TotalSchedulerJobsRunning";
-  verbosity = 1;
-  desc   = "Number of running scheduler universe jobs in this schedd's queue";
-  units  = "jobs";
-  daemon = "Scheduler";
-]
-
-[
-  name   = "FileTransferDownloadBytes";
-  derivative = true;
-  title  = "File Transfer Download Bandwidth";
-  desc   = "Output transfers from jobs";
-  units  = "bytes";
-  daemon = "Scheduler";
-  group  = "HTCondor.FileTransfer";
-]
-[
-  name   = "FileTransferDownloadBytesPerSecond_5m";
-  desc   = "Rate of output transfers from jobs";
-  units  = "bytes/s";
-  daemon = "Scheduler";
-  group  = "HTCondor.FileTransfer";
-]
-[
-  regex  = "Owner_([^_]*)_FileTransferDownloadBytesPerSecond_5m";
-  verbosity = 1;
-  desc   = "Rate of output transfers from jobs by user \\1";
-  units  = "bytes/s";
-  daemon = "Scheduler";
-  group  = "HTCondor.FileTransfer";
-]
-[
-  name   = "FileTransferFileReadLoad_5m";
-  desc   = "Number of file transfer processes reading input data from files";
-  units  = "processes";
-  daemon = "Scheduler";
-  group  = "HTCondor.FileTransfer";
-]
-[
-  name   = "FileTransferFileReadSeconds";
-  derivative = true;
-  title  = "File Transfer File Read Load";
-  desc   = "Number of file transfer processes reading input data from files";
-  units  = "processes";
-  daemon = "Scheduler";
-  group  = "HTCondor.FileTransfer";
-]
-[
-  name   = "FileTransferFileWriteLoad_5m";
-  desc   = "Number of file transfer processes writing output data to files";
-  units  = "processes";
-  daemon = "Scheduler";
-  group  = "HTCondor.FileTransfer";
-]
-[
-  name   = "FileTransferFileWriteSeconds";
-  derivative = true;
-  title  = "File Transfer File Write Load";
-  desc   = "Number of file transfer processes writing output data to files";
-  units  = "processes";
-  daemon = "Scheduler";
-  group  = "HTCondor.FileTransfer";
-]
-[
-  name   = "FileTransferNetReadLoad_5m";
-  desc   = "Number of file transfer processes reading output data from the network";
-  units  = "processes";
-  daemon = "Scheduler";
-  group  = "HTCondor.FileTransfer";
-]
-[
-  name   = "FileTransferNetReadSeconds";
-  derivative = true;
-  desc   = "Number of file transfer processes reading output data from the network";
-  units  = "processes";
-  daemon = "Scheduler";
-  group  = "HTCondor.FileTransfer";
-]
-[
-  name   = "FileTransferNetWriteLoad_5m";
-  desc   = "Number of file transfer processes writing input data to the network";
-  units  = "processes";
-  daemon = "Scheduler";
-  group  = "HTCondor.FileTransfer";
-]
-[
-  name   = "FileTransferNetWriteSeconds";
-  derivative = true;
-  title  = "File Transfer Net Write Load";
-  desc   = "Number of file transfer processes writing input data to the network";
-  units  = "processes";
-  daemon = "Scheduler";
-  group  = "HTCondor.FileTransfer";
-]
-[
-  name   = "FileTransferUploadBytes";
-  derivative = true;
-  title  = "File Transfer Upload Bandwidth";
-  desc   = "Input transfers to jobs";
-  units  = "bytes";
-  daemon = "Scheduler";
-  group  = "HTCondor.FileTransfer";
-]
-[
-  name   = "FileTransferUploadBytesPerSecond_5m";
-  desc   = "Rate of input transfers to jobs";
-  units  = "bytes/s";
-  daemon = "Scheduler";
-  group  = "HTCondor.FileTransfer";
-]
-[
-  regex  = "Owner_([^_]*)_FileTransferUploadBytesPerSecond_5m";
-  verbosity = 1;
-  desc   = "Rate of input transfers from jobs by user \\1";
-  units  = "bytes/s";
-  daemon = "Scheduler";
-  group  = "HTCondor.FileTransfer";
-]
-[
-  name   = "TransferQueueDownloadWaitTime";
-  desc   = "Oldest output file transfer waiting in the transfer queue";
-  units  = "seconds";
-  daemon = "Scheduler";
-  group  = "HTCondor.FileTransfer";
-]
-[
-  aggregate = "MAX";
-  name   = "Pool Max TransferQueueDownloadWaitTime";
-  value  = TransferQueueDownloadWaitTime;
-  desc   = "Oldest output file transfer waiting in the transfer queues reporting to this pool";
-  units  = "seconds";
-  daemon = "Scheduler";
-]
-[
-  name   = "TransferQueueNumDownloading";
-  desc   = "Number of jobs actively transferring output";
-  units  = "jobs";
-  daemon = "Scheduler";
-  group  = "HTCondor.FileTransfer";
-]
-[
-  name   = "TransferQueueNumUploading";
-  desc   = "Number of jobs actively transferring input";
-  units  = "jobs";
-  daemon = "Scheduler";
-  group  = "HTCondor.FileTransfer";
-]
-[
-  name   = "TransferQueueNumWaitingToDownload";
-  desc   = "Number of jobs waiting in the transfer queue to transfer output";
-  units  = "jobs";
-  daemon = "Scheduler";
-  group  = "HTCondor.FileTransfer";
-]
-[
-  name   = "TransferQueueNumWaitingToUpload";
-  desc   = "Number of jobs waiting in the transfer queue to transfer input";
-  units  = "jobs";
-  daemon = "Scheduler";
-  group  = "HTCondor.FileTransfer";
-]
-[
-  name   = "TransferQueueUploadWaitTime";
-  desc   = "Oldest input file transfer waiting in the transfer queue";
-  units  = "seconds";
-  daemon = "Scheduler";
-  group  = "HTCondor.FileTransfer";
-]
-[
-  aggregate = "MAX";
-  name   = "Pool Min TransferQueueUploadWaitTime";
-  value  = TransferQueueUploadWaitTime;
-  desc   = "Oldest input file transfer waiting in the transfer queues reporting to this pool";
-  units  = "seconds";
-  daemon = "Scheduler";
+  Name   = "TotalSchedulerJobsRunning";
+  Verbosity = 1;
+  Desc   = "Number of running scheduler universe jobs in this schedd's queue";
+  Units  = "jobs";
+  TargetType = "Scheduler";
 ]
 
 [
-  name   = "LastNegotiationCycleActiveSubmitterCount0";
-  desc   = "The number of job submitters considered in the negotiation cycle";
-  units  = "submitters";
-  daemon = "Negotiator";
+  Name   = "FileTransferDownloadBytes";
+  Derivative = true;
+  Title  = "File Transfer Download Bandwidth";
+  Desc   = "Output transfers from jobs";
+  Units  = "bytes";
+  TargetType = "Scheduler";
+  Group  = "HTCondor.FileTransfer";
 ]
 [
-  name   = "LastNegotiationCycleCandidateSlots0";
-  verbosity = 1;
-  desc   = "The number of slot ClassAds considered for matchmaking (reduced by NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT if applicable)";
-  units  = "slots";
-  daemon = "Negotiator";
+  Name   = "FileTransferDownloadBytesPerSecond_5m";
+  Desc   = "Rate of output transfers from jobs";
+  Units  = "bytes/s";
+  TargetType = "Scheduler";
+  Group  = "HTCondor.FileTransfer";
 ]
 [
-  name   = "LastNegotiationCycleDuration0";
-  desc   = "The number of seconds that it took to complete the negotiation cycle";
-  units  = "seconds";
-  daemon = "Negotiator";
+  Regex  = "Owner_([^_]*)_FileTransferDownloadBytesPerSecond_5m";
+  Verbosity = 1;
+  Desc   = "Rate of output transfers from jobs by user \\1";
+  Units  = "bytes/s";
+  TargetType = "Scheduler";
+  Group  = "HTCondor.FileTransfer";
 ]
 [
-  name   = "LastNegotiationCycleMatches0";
-  desc   = "The number of successful matches that were made in the negotiation cycle";
-  units  = "matches";
-  daemon = "Negotiator";
+  Name   = "FileTransferFileReadLoad_5m";
+  Desc   = "Number of file transfer processes reading input data from files";
+  Units  = "processes";
+  TargetType = "Scheduler";
+  Group  = "HTCondor.FileTransfer";
 ]
 [
-  name   = "LastNegotiationCycleMatchRate0";
-  desc   = "Matches made per second during negotiation cycle";
-  units  = "matches/s";
-  daemon = "Negotiator";
+  Name   = "FileTransferFileReadSeconds";
+  Derivative = true;
+  Title  = "File Transfer File Read Load";
+  Desc   = "Number of file transfer processes reading input data from files";
+  Units  = "processes";
+  TargetType = "Scheduler";
+  Group  = "HTCondor.FileTransfer";
 ]
 [
-  name   = "LastNegotiationCycleMatchRateSustained0";
-  desc   = "Matches made per second, including waiting time between negotiation cycles";
-  units  = "matches/s";
-  daemon = "Negotiator";
+  Name   = "FileTransferFileWriteLoad_5m";
+  Desc   = "Number of file transfer processes writing output data to files";
+  Units  = "processes";
+  TargetType = "Scheduler";
+  Group  = "HTCondor.FileTransfer";
 ]
 [
-  name   = "LastNegotiationCycleNumIdleJobs0";
-  desc   = "The number of idle jobs belonging to job submitters";
-  units  = "jobs";
-  daemon = "Negotiator";
+  Name   = "FileTransferFileWriteSeconds";
+  Derivative = true;
+  Title  = "File Transfer File Write Load";
+  Desc   = "Number of file transfer processes writing output data to files";
+  Units  = "processes";
+  TargetType = "Scheduler";
+  Group  = "HTCondor.FileTransfer";
 ]
 [
-  name   = "LastNegotiationCycleNumJobsConsidered0";
-  desc   = "The number of jobs considered for matchmaking (may be mutch lower than idle jobs due to auto-cluster optimizations)";
-  units  = "jobs";
-  daemon = "Negotiator";
+  Name   = "FileTransferNetReadLoad_5m";
+  Desc   = "Number of file transfer processes reading output data from the network";
+  Units  = "processes";
+  TargetType = "Scheduler";
+  Group  = "HTCondor.FileTransfer";
 ]
 [
-  name   = "LastNegotiationCycleNumSchedulers0";
-  verbosity = 1;
-  desc   = "The number of schedds involved in negotiation for resources";
-  units  = "schedds";
-  daemon = "Negotiator";
+  Name   = "FileTransferNetReadSeconds";
+  Derivative = true;
+  Desc   = "Number of file transfer processes reading output data from the network";
+  Units  = "processes";
+  TargetType = "Scheduler";
+  Group  = "HTCondor.FileTransfer";
 ]
 [
-  name   = "LastNegotiationCyclePeriod0";
-  desc   = "Seconds between the end of one cycle the the end of the next";
-  units  = "seconds";
-  daemon = "Negotiator";
+  Name   = "FileTransferNetWriteLoad_5m";
+  Desc   = "Number of file transfer processes writing input data to the network";
+  Units  = "processes";
+  TargetType = "Scheduler";
+  Group  = "HTCondor.FileTransfer";
 ]
 [
-  name   = "LastNegotiationCyclePhase1Duration0";
-  verbosity = 1;
-  desc   = "Duration of Phase 1: getting submitter and machine ClassAds";
-  units  = "seconds";
-  daemon = "Negotiator";
+  Name   = "FileTransferNetWriteSeconds";
+  Derivative = true;
+  Title  = "File Transfer Net Write Load";
+  Desc   = "Number of file transfer processes writing input data to the network";
+  Units  = "processes";
+  TargetType = "Scheduler";
+  Group  = "HTCondor.FileTransfer";
 ]
 [
-  name   = "LastNegotiationCyclePhase2Duration0";
-  verbosity = 1;
-  desc   = "Duration of Phase 2: filtering slots and processing accounting group configuration";
-  units  = "seconds";
-  daemon = "Negotiator";
+  Name   = "FileTransferUploadBytes";
+  Derivative = true;
+  Title  = "File Transfer Upload Bandwidth";
+  Desc   = "Input transfers to jobs";
+  Units  = "bytes";
+  TargetType = "Scheduler";
+  Group  = "HTCondor.FileTransfer";
 ]
 [
-  name   = "LastNegotiationCyclePhase3Duration0";
-  verbosity = 1;
-  desc   = "Phase 3 of the negotiation cycle: sorting submitters by priority";
-  units  = "seconds";
-  daemon = "Negotiator";
+  Name   = "FileTransferUploadBytesPerSecond_5m";
+  Desc   = "Rate of input transfers to jobs";
+  Units  = "bytes/s";
+  TargetType = "Scheduler";
+  Group  = "HTCondor.FileTransfer";
 ]
 [
-  name   = "LastNegotiationCyclePhase4Duration0";
-  verbosity = 1;
-  desc   = "Phase 4 of the negotiation cycle: matching slots to jobs";
-  units  = "seconds";
-  daemon = "Negotiator";
+  Regex  = "Owner_([^_]*)_FileTransferUploadBytesPerSecond_5m";
+  Verbosity = 1;
+  Desc   = "Rate of input transfers from jobs by user \\1";
+  Units  = "bytes/s";
+  TargetType = "Scheduler";
+  Group  = "HTCondor.FileTransfer";
 ]
 [
-  name   = "LastNegotiationCycleRejections0";
-  desc   = "The number of rejections that occurred in the negotiation cycle (only one per auto-cluster)";
-  units  = "jobs";
-  daemon = "Negotiator";
+  Name   = "TransferQueueDownloadWaitTime";
+  Desc   = "Oldest output file transfer waiting in the transfer queue";
+  Units  = "seconds";
+  TargetType = "Scheduler";
+  Group  = "HTCondor.FileTransfer";
 ]
 [
-  name   = "LastNegotiationCycleSlotShareIter0";
-  verbosity = 1;
-  desc   = "The number of iterations in the negotiation cycle";
-  daemon = "Negotiator";
+  Aggregate = "MAX";
+  Name   = "Pool Max TransferQueueDownloadWaitTime";
+  Value  = TransferQueueDownloadWaitTime;
+  Desc   = "Oldest output file transfer waiting in the transfer queues reporting to this pool";
+  Units  = "seconds";
+  TargetType = "Scheduler";
 ]
 [
-  name   = "LastNegotiationCycleTotalSlots0";
-  desc   = "The total number of slot ClassAds that matched NEGOTIATOR_SLOT_CONSTRAINT";
-  units  = "slots";
-  daemon = "Negotiator";
+  Name   = "TransferQueueNumDownloading";
+  Desc   = "Number of jobs actively transferring output";
+  Units  = "jobs";
+  TargetType = "Scheduler";
+  Group  = "HTCondor.FileTransfer";
 ]
 [
-  name   = "LastNegotiationCycleTrimmedSlots0";
-  verbosity = 1;
-  desc   = "The number of slot ClassAds considered for matchmaking, after filtering by Negotiator_CONSIDER_PREEMPTION, if applicable";
-  units  = "slots";
-  daemon = "Negotiator";
+  Name   = "TransferQueueNumUploading";
+  Desc   = "Number of jobs actively transferring input";
+  Units  = "jobs";
+  TargetType = "Scheduler";
+  Group  = "HTCondor.FileTransfer";
+]
+[
+  Name   = "TransferQueueNumWaitingToDownload";
+  Desc   = "Number of jobs waiting in the transfer queue to transfer output";
+  Units  = "jobs";
+  TargetType = "Scheduler";
+  Group  = "HTCondor.FileTransfer";
+]
+[
+  Name   = "TransferQueueNumWaitingToUpload";
+  Desc   = "Number of jobs waiting in the transfer queue to transfer input";
+  Units  = "jobs";
+  TargetType = "Scheduler";
+  Group  = "HTCondor.FileTransfer";
+]
+[
+  Name   = "TransferQueueUploadWaitTime";
+  Desc   = "Oldest input file transfer waiting in the transfer queue";
+  Units  = "seconds";
+  TargetType = "Scheduler";
+  Group  = "HTCondor.FileTransfer";
+]
+[
+  Aggregate = "MAX";
+  Name   = "Pool Min TransferQueueUploadWaitTime";
+  Value  = TransferQueueUploadWaitTime;
+  Desc   = "Oldest input file transfer waiting in the transfer queues reporting to this pool";
+  Units  = "seconds";
+  TargetType = "Scheduler";
 ]
 
 [
-  name   = "ExpectedMachineGracefulDrainingBadput";
-  verbosity = 1;
-  desc   = "Job runtime that would be lost if graceful draining were initiated now.";
-  units  = "cpus*seconds";
-  daemon = "Machine_slot1";
+  Name   = "LastNegotiationCycleActiveSubmitterCount0";
+  Desc   = "The number of job submitters considered in the negotiation cycle";
+  Units  = "submitters";
+  TargetType = "Negotiator";
 ]
 [
-  name   = "ExpectedMachineGracefulDrainingCompletion";
-  value  = ExpectedMachineGracefulDrainingCompletion - CurrentTime;
-  verbosity = 1;
-  desc   = "Time graceful draining could take to complete, assuming jobs take full retirement and vacate time and there is no suspension";
-  units  = "seconds";
-  daemon = "Machine_slot1";
+  Name   = "LastNegotiationCycleCandidateSlots0";
+  Verbosity = 1;
+  Desc   = "The number of slot ClassAds considered for matchmaking (reduced by NEGOTIATOR_SLOT_POOLSIZE_CONSTRAINT if applicable)";
+  Units  = "slots";
+  TargetType = "Negotiator";
 ]
 [
-  name   = "ExpectedMachineQuickDrainingBadput";
-  verbosity = 1;
-  desc   = "Job runtime that would be lost if quick draining were initiated now.";
-  units  = "cpus*seconds";
-  daemon = "Machine_slot1";
+  Name   = "LastNegotiationCycleDuration0";
+  Desc   = "The number of seconds that it took to complete the negotiation cycle";
+  Units  = "seconds";
+  TargetType = "Negotiator";
 ]
 [
-  name   = "ExpectedMachineQuickDrainingCompletion";
-  verbosity = 1;
-  desc   = "Time quick draining could take to complete, assuming jobs take full retirement and vacate time and there is no suspension";
-  units  = "seconds";
-  daemon = "Machine_slot1";
+  Name   = "LastNegotiationCycleMatches0";
+  Desc   = "The number of successful matches that were made in the negotiation cycle";
+  Units  = "matches";
+  TargetType = "Negotiator";
 ]
 [
-  name   = "KFlops";
-  verbosity = 1;
-  desc   = "Linpack floating point benchmark";
-  units  = "kflops";
-  daemon = "Machine_slot1";
+  Name   = "LastNegotiationCycleMatchRate0";
+  Desc   = "Matches made per second during negotiation cycle";
+  Units  = "matches/s";
+  TargetType = "Negotiator";
 ]
 [
-  name   = "Mips";
-  verbosity = 1;
-  desc   = "Dhrystone integer benchmark";
-  units  = "mips";
-  daemon = "Machine_slot1";
+  Name   = "LastNegotiationCycleMatchRateSustained0";
+  Desc   = "Matches made per second, including waiting time between negotiation cycles";
+  Units  = "matches/s";
+  TargetType = "Negotiator";
 ]
 [
-  name   = "TotalCondorLoadAvg";
-  desc   = "The CPU load attributed to jobs";
-  daemon = "Machine_slot1";
+  Name   = "LastNegotiationCycleNumIdleJobs0";
+  Desc   = "The number of idle jobs belonging to job submitters";
+  Units  = "jobs";
+  TargetType = "Negotiator";
 ]
 [
-  name   = "TotalCpus";
-  verbosity = 1;
-  desc   = "Number of cores";
-  units  = "cores";
-  daemon = "Machine_slot1";
+  Name   = "LastNegotiationCycleNumJobsConsidered0";
+  Desc   = "The number of jobs considered for matchmaking (may be mutch lower than idle jobs due to auto-cluster optimizations)";
+  Units  = "jobs";
+  TargetType = "Negotiator";
 ]
 [
-  aggregate = "SUM";
-  name   = "Cpus in Pool";
-  value  = TotalCpus;
-  verbosity = 1;
-  desc   = "Number of cores in the pool";
-  units  = "cores";
-  daemon = "Machine_slot1";
+  Name   = "LastNegotiationCycleNumSchedulers0";
+  Verbosity = 1;
+  Desc   = "The number of schedds involved in negotiation for resources";
+  Units  = "schedds";
+  TargetType = "Negotiator";
 ]
 [
-  name   = "TotalDisk";
-  verbosity = 1;
-  desc   = "Disk space in the job execute directory";
-  units  = "KB";
-  daemon = "Machine_slot1";
+  Name   = "LastNegotiationCyclePeriod0";
+  Desc   = "Seconds between the end of one cycle the the end of the next";
+  Units  = "seconds";
+  TargetType = "Negotiator";
 ]
 [
-  name   = "TotalLoadAvg";
-  verbosity = 1;
-  desc   = "System load average";
-  daemon = "Machine_slot1";
+  Name   = "LastNegotiationCyclePhase1Duration0";
+  Verbosity = 1;
+  Desc   = "Duration of Phase 1: getting submitter and machine ClassAds";
+  Units  = "seconds";
+  TargetType = "Negotiator";
 ]
 [
-  name   = "TotalMemory";
-  verbosity = 1;
-  desc   = "RAM in MB";
-  units  = "MB";
-  daemon = "Machine_slot1";
+  Name   = "LastNegotiationCyclePhase2Duration0";
+  Verbosity = 1;
+  Desc   = "Duration of Phase 2: filtering slots and processing accounting group configuration";
+  Units  = "seconds";
+  TargetType = "Negotiator";
 ]
 [
-  name   = "TotalSlots";
-  verbosity = 1;
-  desc   = "Number of slots";
-  units  = "slots";
-  daemon = "Machine_slot1";
+  Name   = "LastNegotiationCyclePhase3Duration0";
+  Verbosity = 1;
+  Desc   = "Phase 3 of the negotiation cycle: sorting submitters by priority";
+  Units  = "seconds";
+  TargetType = "Negotiator";
 ]
 [
-  aggregate = "SUM";
-  name   = "Pool Slot Count";
-  value  = TotalSlots;
-  desc   = "Number of slots in the pool";
-  units  = "slots";
-  daemon = "Machine_slot1";
+  Name   = "LastNegotiationCyclePhase4Duration0";
+  Verbosity = 1;
+  Desc   = "Phase 4 of the negotiation cycle: matching slots to jobs";
+  Units  = "seconds";
+  TargetType = "Negotiator";
 ]
 [
-  name   = "TotalMachineDrainingBadput";
-  desc   = "Job runtime that has been lost due to job evictions caused by draining";
-  units  = "cpus*seconds";
-  daemon = "Machine_slot1";
+  Name   = "LastNegotiationCycleRejections0";
+  Desc   = "The number of rejections that occurred in the negotiation cycle (only one per auto-cluster)";
+  Units  = "jobs";
+  TargetType = "Negotiator";
 ]
 [
-  name   = "TotalMachineDrainingUnclaimedTime";
-  desc   = "Time that has not been used due to draining";
-  units  = "cpus*seconds";
-  daemon = "Machine_slot1";
+  Name   = "LastNegotiationCycleSlotShareIter0";
+  Verbosity = 1;
+  Desc   = "The number of iterations in the negotiation cycle";
+  TargetType = "Negotiator";
 ]
 [
-  name   = "TotalVirtualMemory";
-  verbosity = 1;
-  desc   = "Addressable memory (RAM plus swap)";
-  units  = "KB";
-  daemon = "Machine_slot1";
+  Name   = "LastNegotiationCycleTotalSlots0";
+  Desc   = "The total number of slot ClassAds that matched NEGOTIATOR_SLOT_CONSTRAINT";
+  Units  = "slots";
+  TargetType = "Negotiator";
+]
+[
+  Name   = "LastNegotiationCycleTrimmedSlots0";
+  Verbosity = 1;
+  Desc   = "The number of slot ClassAds considered for matchmaking, after filtering by Negotiator_CONSIDER_PREEMPTION, if applicable";
+  Units  = "slots";
+  TargetType = "Negotiator";
+]
+
+[
+  Name   = "ExpectedMachineGracefulDrainingBadput";
+  Verbosity = 1;
+  Desc   = "Job runtime that would be lost if graceful draining were initiated now.";
+  Units  = "cpus*seconds";
+  TargetType = "Machine_slot1";
+]
+[
+  Name   = "ExpectedMachineGracefulDrainingCompletion";
+  Value  = ExpectedMachineGracefulDrainingCompletion - CurrentTime;
+  Verbosity = 1;
+  Desc   = "Time graceful draining could take to complete, assuming jobs take full retirement and vacate time and there is no suspension";
+  Units  = "seconds";
+  TargetType = "Machine_slot1";
+]
+[
+  Name   = "ExpectedMachineQuickDrainingBadput";
+  Verbosity = 1;
+  Desc   = "Job runtime that would be lost if quick draining were initiated now.";
+  Units  = "cpus*seconds";
+  TargetType = "Machine_slot1";
+]
+[
+  Name   = "ExpectedMachineQuickDrainingCompletion";
+  Verbosity = 1;
+  Desc   = "Time quick draining could take to complete, assuming jobs take full retirement and vacate time and there is no suspension";
+  Units  = "seconds";
+  TargetType = "Machine_slot1";
+]
+[
+  Name   = "KFlops";
+  Verbosity = 1;
+  Desc   = "Linpack floating point benchmark";
+  Units  = "kflops";
+  TargetType = "Machine_slot1";
+]
+[
+  Name   = "Mips";
+  Verbosity = 1;
+  Desc   = "Dhrystone integer benchmark";
+  Units  = "mips";
+  TargetType = "Machine_slot1";
+]
+[
+  Name   = "TotalCondorLoadAvg";
+  Desc   = "The CPU load attributed to jobs";
+  TargetType = "Machine_slot1";
+]
+[
+  Name   = "TotalCpus";
+  Verbosity = 1;
+  Desc   = "Number of cores";
+  Units  = "cores";
+  TargetType = "Machine_slot1";
+]
+[
+  Aggregate = "SUM";
+  Name   = "Cpus in Pool";
+  Value  = TotalCpus;
+  Verbosity = 1;
+  Desc   = "Number of cores in the pool";
+  Units  = "cores";
+  TargetType = "Machine_slot1";
+]
+[
+  Name   = "TotalDisk";
+  Verbosity = 1;
+  Desc   = "Disk space in the job execute directory";
+  Units  = "KB";
+  TargetType = "Machine_slot1";
+]
+[
+  Name   = "TotalLoadAvg";
+  Verbosity = 1;
+  Desc   = "System load average";
+  TargetType = "Machine_slot1";
+]
+[
+  Name   = "TotalMemory";
+  Verbosity = 1;
+  Desc   = "RAM in MB";
+  Units  = "MB";
+  TargetType = "Machine_slot1";
+]
+[
+  Name   = "TotalSlots";
+  Verbosity = 1;
+  Desc   = "Number of slots";
+  Units  = "slots";
+  TargetType = "Machine_slot1";
+]
+[
+  Aggregate = "SUM";
+  Name   = "Pool Slot Count";
+  Value  = TotalSlots;
+  Desc   = "Number of slots in the pool";
+  Units  = "slots";
+  TargetType = "Machine_slot1";
+]
+[
+  Name   = "TotalMachineDrainingBadput";
+  Desc   = "Job runtime that has been lost due to job evictions caused by draining";
+  Units  = "cpus*seconds";
+  TargetType = "Machine_slot1";
+]
+[
+  Name   = "TotalMachineDrainingUnclaimedTime";
+  Desc   = "Time that has not been used due to draining";
+  Units  = "cpus*seconds";
+  TargetType = "Machine_slot1";
+]
+[
+  Name   = "TotalVirtualMemory";
+  Verbosity = 1;
+  Desc   = "Addressable memory (RAM plus swap)";
+  Units  = "KB";
+  TargetType = "Machine_slot1";
 ]

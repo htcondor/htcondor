@@ -79,7 +79,7 @@ public:
 	double sum;
 	unsigned long count;
 
-	StringList daemon; // type of condor daemons this metric applies to
+	StringList target_type; // type of condor daemons this metric applies to
 
 	// True if this metric only looks at slot 1 of the startd
 	// (we do this in lieu of a true machine ad)
@@ -125,7 +125,7 @@ class StatsD: Service {
 	AggregateMetricList m_aggregate_metrics;
 	std::map< std::string,std::string > m_daemon_ips; // map of daemon machine (and name) to IP address
 	std::string m_default_aggregate_host;
-	StringList m_daemon_types;
+	StringList m_target_types;
 
 	unsigned m_derivative_publication_failed;
 	unsigned m_non_derivative_publication_failed;

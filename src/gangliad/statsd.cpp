@@ -22,6 +22,7 @@
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
 #include "directory.h"
 #include "dc_collector.h"
+#include "counted_ptr.h"
 #include "statsd.h"
 
 #include <memory>
@@ -29,7 +30,6 @@
 
 #define ATTR_REGEX  "Regex"
 #define ATTR_VERBOSITY "Verbosity"
-#define ATTR_DAEMON "Daemon"
 #define ATTR_TITLE  "Title"
 #define ATTR_GROUP  "Group"
 #define ATTR_DESC   "Desc"
@@ -38,7 +38,7 @@
 #define ATTR_VALUE  "Value"
 #define ATTR_TYPE   "Type"
 #define ATTR_AGGREGATE "Aggregate"
-#define ATTR_AGGREGATE_GROUP "Aggregate_Group"
+#define ATTR_AGGREGATE_GROUP "AggregateGroup"
 #define ATTR_IP "IP"
 
 Metric::Metric():
@@ -156,16 +156,16 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 		return false;
 	}
 
-	std::string daemon_str;
-	if( !evaluateOptionalString(ATTR_DAEMON,daemon_str,metric_ad,daemon_ad,regex_groups) ) return false;
-	daemon.initializeFromString(daemon_str.c_str());
-	if( daemon.contains_anycase("machine_slot1") ) {
+	std::string target_type_str;
+	if( !evaluateOptionalString(ATTR_TARGET_TYPE,target_type_str,metric_ad,daemon_ad,regex_groups) ) return false;
+	target_type.initializeFromString(target_type_str.c_str());
+	if( target_type.contains_anycase("machine_slot1") ) {
 		restrict_slot1 = true;
 	}
 
 	std::string my_type;
 	daemon_ad.EvaluateAttrString(ATTR_MY_TYPE,my_type);
-	if( !daemon.isEmpty() && !daemon.contains_anycase("any") ) {
+	if( !target_type.isEmpty() && !target_type.contains_anycase("any") ) {
 		if( restrict_slot1 && !strcasecmp(my_type.c_str(),"machine") ) {
 			int slotid = 1;
 			daemon_ad.EvaluateAttrInt(ATTR_SLOT_ID,slotid);
@@ -173,7 +173,7 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 				return false;
 			}
 		}
-		else if( !daemon.contains_anycase(my_type.c_str()) ) {
+		else if( !target_type.contains_anycase(my_type.c_str()) ) {
 			// avoid doing more work; this is not the right type of daemon ad
 			return false;
 		}
@@ -206,7 +206,7 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 				ExtArray<MyString> the_regex_groups;
 				if( re.match(itr->first.c_str(),&the_regex_groups) ) {
 					// make a new Metric for this attribute that matched the regex
-					std::auto_ptr<Metric> metric(statsd->newMetric());
+					counted_ptr<Metric> metric(statsd->newMetric());
 					metric->evaluateDaemonAd(metric_ad,daemon_ad,max_verbosity,statsd,&the_regex_groups,itr->first.c_str());
 				}
 			}
@@ -570,18 +570,18 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 
 		// for efficient queries to the collector, keep track of
 		// which type of ads we need
-		std::string daemon;
-		ad->EvaluateAttrString(ATTR_DAEMON,daemon);
-		if( daemon.empty() ) {
+		std::string target_type;
+		ad->EvaluateAttrString(ATTR_TARGET_TYPE,target_type);
+		if( target_type.empty() ) {
 			classad::ClassAdUnParser unparser;
 			std::string ad_str;
 			unparser.Unparse(ad_str,ad);
-			EXCEPT("CONFIGURATION ERROR: no daemon type specified for metric defined in %s: %s\n",
+			EXCEPT("CONFIGURATION ERROR: no target type specified for metric defined in %s: %s\n",
 				   param_name,
 				   ad_str.c_str());
 		}
-		StringList daemons(daemon.c_str());
-		m_daemon_types.create_union(daemons,true);
+		StringList target_types(target_type.c_str());
+		m_target_types.create_union(target_types,true);
 
 		stats_metrics.push_back(ad);
 	}
@@ -598,15 +598,15 @@ StatsD::publishMetrics()
 	ClassAdList daemon_ads;
 	CondorQuery query(ANY_AD);
 
-	if( !m_daemon_types.contains_anycase("any") ) {
-		char const *daemon_type;
-		while( (daemon_type=m_daemon_types.next()) ) {
+	if( !m_target_types.contains_anycase("any") ) {
+		char const *target_type;
+		while( (target_type=m_target_types.next()) ) {
 			std::string constraint;
-			if( !strcasecmp(daemon_type,"machine_slot1") ) {
+			if( !strcasecmp(target_type,"machine_slot1") ) {
 				formatstr(constraint,"MyType == \"Machine\" && SlotID==1");
 			}
 			else {
-				formatstr(constraint,"MyType == \"%s\"",daemon_type);
+				formatstr(constraint,"MyType == \"%s\"",target_type);
 			}
 			query.addORConstraint(constraint.c_str());
 		}
@@ -645,7 +645,7 @@ StatsD::publishDaemonMetrics(ClassAd *daemon_ad)
 		 itr != m_metrics.end();
 		 itr++ )
 	{
-		std::auto_ptr<Metric> metric(newMetric());
+		counted_ptr<Metric> metric(newMetric());
 		// This calls publishMetric() (possibly multiple times) or addToAggregateValue()
 		metric->evaluateDaemonAd(**itr,*daemon_ad,m_verbosity,this);
 	}
