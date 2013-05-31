@@ -65,11 +65,12 @@ GangliaD::initAndReconfig()
 	std::string ganglia_conf_location;
 	param(ganglia_conf_location, "GANGLIA_CONFIG", "/etc/ganglia/gmond.conf");
 	int fd;
-	if ((fd = open(ganglia_conf_location.c_str(), O_RDONLY)) < 0)
+	if ((fd = safe_open_wrapper_follow(ganglia_conf_location.c_str(), O_RDONLY)) < 0)
 	{
-		dprintf(D_ALWAYS, "Cannot open Ganglia configuration file %s.\n", ganglia_conf_location.c_str());
+		EXCEPT("Cannot open Ganglia configuration file GANGLIA_CONFIG=%s.\n", ganglia_conf_location.c_str());
 		return;
 	}
+	close(fd);
 
 	int rc = ganglia_reconfig(ganglia_conf_location.c_str(),&m_ganglia_context,&m_ganglia_config,&m_ganglia_channels);
 	if( rc != 0 ) {
