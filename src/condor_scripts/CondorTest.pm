@@ -1736,6 +1736,8 @@ sub SearchCondorLogMultiple
 
 	my $count = 0;
 	my $begin = 0;
+	my $foundanything = 0;
+	my $tolerance = 3;
 	my $done = 0;
 	while($found < $goal) {
        	CondorTest::debug("Searching Try $tried\n",2);
@@ -1771,6 +1773,7 @@ sub SearchCondorLogMultiple
        		} elsif( $_ =~ /$regexp/) {
            		CondorTest::debug("FOUND IT! $_\n",2);
 				$found += 1;
+				$foundanything += 1;
 				#print "instances $instances found $found goal $goal\n";
 				if((defined $findcallback) and (!(defined $findafter)) and 
 					 ($found == $goal)) {
@@ -1803,10 +1806,22 @@ sub SearchCondorLogMultiple
 		}
 		$tried += 1;
 		if($tried >= $timeout) {
-			if(defined $findcallback) {
-				&$findcallback("HitRetryLimit");
+			if($tolerance == 0) {
+				CondorTest::debug("SearchCondorLogMultiple: About to fail from timeout!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",1);
+				if(defined $findcallback) {
+					&$findcallback("HitRetryLimit");
+				}
+				last;
+			} else {
+				if($foundanything > 0) {
+					CondorTest::debug("SearchCondorLogMultiple: Using builtin tolerance\n",1);
+					$tolerance -= 1;
+					$tried = 1;
+				} else {
+					$tolerance = 0;
+					$tried -= 2;
+				}
 			}
-			last;
 		}
 	}
 	if($found < $goal) {
