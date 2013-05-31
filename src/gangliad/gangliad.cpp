@@ -54,7 +54,7 @@ GangliaD::~GangliaD()
 Metric *
 GangliaD::newMetric(Metric const *copy_me) {
 	if( copy_me ) {
-		return new GangliaMetric(*dynamic_cast<GangliaMetric const *>(copy_me));
+		return new GangliaMetric(*static_cast<GangliaMetric const *>(copy_me));
 	}
 	return new GangliaMetric();
 }
@@ -114,12 +114,7 @@ GangliaD::getDaemonIP(std::string const &machine,std::string &result) const
 void
 GangliaD::publishMetric(Metric const &m)
 {
-	GangliaMetric const &metric = *dynamic_cast<GangliaMetric const *>(&m);
-
-	if( metric.isAggregateMetric() ) {
-		addToAggregateValue(metric);
-		return;
-	}
+	GangliaMetric const &metric = *static_cast<GangliaMetric const *>(&m);
 
 	if( metric.derivative &&
 		m_derivative_publication_failed &&

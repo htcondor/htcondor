@@ -316,7 +316,12 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	statsd->getDaemonIP(machine,ip);
 	if( !evaluateOptionalString(ATTR_IP,ip,metric_ad,daemon_ad,regex_groups) ) return false;
 
-	statsd->publishMetric(*this);
+	if( isAggregateMetric() ) {
+		statsd->addToAggregateValue(*this);
+	}
+	else {
+		statsd->publishMetric(*this);
+	}
 	return true;
 }
 

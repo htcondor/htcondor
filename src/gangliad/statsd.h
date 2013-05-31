@@ -20,9 +20,15 @@
 #ifndef __STATSD_H__
 #define __STATSD_H__
 
+/*
+ * This file defines base classes for gathering information from the
+ * collector and publishing to some other monitoring system.
+ */
+
 #include <list>
 #include "string_list.h"
 
+// Base class defining a metric to be evaluated against ads in the collector
 class Metric {
 public:
 	Metric();
@@ -106,15 +112,26 @@ class StatsD: Service {
 
 	virtual void initAndReconfig(char const *service_name);
 
+	// Allocate a new Metric object.
+	// This is done via a virtual function so the class derived from StatsD
+	// can create a type derived from Metric.
 	virtual Metric *newMetric(Metric const *copy_me=NULL) = 0;
 
-	void publishMetrics();
-
+	// Publish a metric.
 	virtual void publishMetric(Metric const &metric) = 0;
 
+	// Collect ads from the collector and evaluate all metrics.
+	void publishMetrics();
+
+	// Given a machine name or daemon name, return the IP address of it,
+	// using information gathered from the collector.
 	virtual bool getDaemonIP(std::string const &machine,std::string &result) const;
 
+	// Returns the collector host name.
 	std::string const &getDefaultAggregateHost() { return m_default_aggregate_host; }
+
+	// Apply an aggregate function to a data point.
+	void addToAggregateValue(Metric const &metric);
 
  protected:
 	int m_verbosity;
@@ -133,12 +150,22 @@ class StatsD: Service {
 	unsigned m_non_derivative_publication_succeeded;
 	bool m_warned_about_derivative;
 
+	// Read metric definition ads.  Add them to the list of metric ads.
 	void ParseMetrics( std::string const &stats_metrics_string, char const *param_name, std::list< classad::ClassAd * > &stats_metrics );
+
+	// Read metric definitions from a file.
 	void ParseMetricsFromFile( std::string const &fname );
+
+	// Evaluate metrics against the provided daemon ad.
 	void publishDaemonMetrics(ClassAd *ad);
+
+	// Publish the final value of all aggreate metrics.
 	void publishAggregateMetrics();
-	void addToAggregateValue(Metric const &metric);
+
+	// Initialize aggregate metrics.
 	void clearAggregateMetrics();
+
+	// Extract IP addresses from daemon ads.
 	void mapDaemonIPs(ClassAdList &daemon_ads,CollectorList &collectors);
 };
 
