@@ -11520,11 +11520,13 @@ discussion of \Condor{defrag} may be found in section~\ref{sec:SMP-defrag}.
 
 \index{configuration!condor\_gangliad configuration variables}
 \Condor{gangliad} is an optional daemon that may be added to the
-\Condor{master} daemon's \MacroNI{DAEMON\_LIST}.
-It is responsible for publishing information about HTCondor daemons to the
-\TM{Ganglia} monitoring system.  In the typical case, a pool runs a single
-instance of \Condor{gangliad}.  A default set of metrics are provided.
-Additional metrics may be defined.
+\Condor{master} daemon's \MacroNI{DAEMON\_LIST}.  It is responsible
+for publishing information about HTCondor daemons to the \TM{Ganglia}
+monitoring system, which must be installed and configured separately.
+In the typical case, a single instance of \Condor{gangliad} per pool
+is run.  A default set of metrics are provided.  Additional metrics
+may be defined to publish any information available in ClassAds that
+are published to the \Condor{collector}.
 
 \begin{description}
 
@@ -11555,14 +11557,28 @@ Additional metrics may be defined.
   metric definition file contains a list of ClassAds.  The attributes
   of each ad define the properties of a metric.  The value of each
   attribute may be a ClassAd expression that references properties of
-  the daemon ad that is being monitored.  The file containing the
-  default metrics is a good source of examples.  The recognized metric
-  attributes are the following:
+  the daemon ad that is being monitored.
+
+  Example of a metric definition:
+
+\begin{verbatim}
+[
+  Name   = "JobsSubmitted";
+  Desc   = "Number of jobs submitted";
+  Units  = "jobs";
+  TargetType = "Scheduler";
+]
+\end{verbatim}
+
+  The file containing the default metrics is a good source of
+  additional examples: \File{\$(GANGLIA\_METRICS\_CONFIG\_DIR)/00\_default\_metrics}.
+
+  The recognized metric attributes are the following:
 
   \begin{description}
 
-  \item[Name] The name of this metric.  Each metric must have a unique
-    name for each machine.
+  \item[Name] The name of this metric.  Metrics published for the same
+    machine must have unique names.
 
   \item[Value] A ClassAd expression that produces the value of this
     metric.  The default value is the value in the daemon ad of the
@@ -11571,7 +11587,9 @@ Additional metrics may be defined.
   \item[Desc] A description of the metric.  This is displayed when the
     user holds the mouse over the metric's graph.
 
-  \item[Verbosity] The integer verbosity level of this metric.
+  \item[Verbosity] The integer verbosity level of this metric.  Metrics
+    with a higher verbosity level than \Macro{GANGLIA\_VERBOSITY} will
+    not be published.
 
   \item[TargetType] A string containing a comma-separated list of daemon
     ClassAd types this metric monitors.  The specified values should
@@ -11588,8 +11606,10 @@ Additional metrics may be defined.
   \item[Title] The graph title for this metric.  The default is the
     metric name.
 
-  \item[Group] A string specifying the metric group.  The default is
-    determined by the daemon type.
+  \item[Group] A string specifying the name of this metric's group.
+    Metrics are arranged by group in the Ganglia web page.  The
+    default is determined by the daemon type.  Metrics in different
+    groups must still have unique names.
 
   \item[Units] A string describing the units of this metric.
 
@@ -11607,37 +11627,52 @@ Additional metrics may be defined.
     because their names depend on dynamic information such as the
     users who are currently running jobs.  When this is specified, one
     metric per matching attribute is created.  The default metric name
-    is the name of the matched attribute.  If the value of this
-    attribute needs to be modified before publication, it can be
-    referred to as an attribute named \Attr{Regex} in the \Attr{Value}
-    expression.  Text matched by regular expression groups defined by
-    parentheses within the regular expression may be substitued into
-    the values of other string attributes such as \Attr{Name} and
-    \Attr{Desc}.  This is done by putting macros in the string values.
-    \verb|"\\1"| is replaced by the first group, \verb|"\\2"| by the
-    second group, and so on.
+    is the name of the matched attribute, and the default value is the
+    value of that attribute.  As usual, the \Attr{Value} expression
+    may be used when the raw attribute value needs to be manipulated
+    before publication.  However, since the name of the attribute is
+    not known in advance, a special ClassAd attribute in the daemon ad
+    is provided to allow the \Attr{Value} expression to refer to it.
+    This special attribute is named \Attr{Regex}.  Another special
+    feature is the ability to refer to text matched by regular
+    expression groups defined by parentheses within the regular
+    expression.  These may be substitued into the values of other
+    string attributes such as \Attr{Name} and \Attr{Desc}.  This is
+    done by putting macros in the string values.  \verb|"\\1"| is
+    replaced by the first group, \verb|"\\2"| by the second group, and
+    so on.
 
   \item[Aggregate] This string value specifies an aggregation function
     to apply instead of publishing individual metrics for each daemon
     ad.  Possible values are \verb|"sum"|, \verb|"avg"|, \verb|"max"|,
     and \verb|"min"|.
 
-  \item[AggregateGroup] When an aggregate function has been
-    specified, this string value specifies which aggregation group the
-    current daemon ad belongs to.  The default is the metric name.
-    Example use of aggregate grouping: if one wished to publish the
-    sum of some attribute across different types of slot ads, one
-    could make the metric name an expression that is unique to each
-    type.  The default \Attr{AggregateGroup} would be set accordingly.
+  \item[AggregateGroup] When an aggregate function has been specified,
+    this string value specifies which aggregation group the current
+    daemon ad belongs to.  The default is the metric name.  This
+    feature works like GROUP BY in SQL.  The aggregation function
+    produces one result per value of \Attr{AggregateGroup}.  A single
+    aggreate group would therefore be appropriate for a pool-wide
+    metric.  Example use of aggregate grouping: if one wished to
+    publish the sum of an attribute across different types of slot
+    ads, one could make the metric name an expression that is unique
+    to each type.  The default \Attr{AggregateGroup} would be set
+    accordingly.  Note that the assumption is still that the result
+    is a pool-wide metric, so by default it is associated with the
+    collector host.  To group by machine and publish the result into
+    the Ganglia page associated with each machine, one should make
+    the \Attr{AggregateGroup} contain the machine name and override
+    the default \Attr{Machine} attribute to be the daemon's machine
+    name, rather than the collector's.
 
   \item[Machine] The name of the host associated with this metric.
     The default is taken from the daemon ad.  If the daemon name is of
     the form \verb|name@hostname|, this may indicate that there are
     multiple instances of HTCondor running on the same machine.  To
     avoid the metrics from these instances overwriting each other, the
-    default machine name is set to the daemon name.  For aggregate
-    metrics with no \Attr{AggregateGroup} defined, the default
-    value of \Attr{Machine} will be the name of the collector host.
+    default machine name is set to the daemon name in this case.  For
+    aggregate metrics, the default value of \Attr{Machine} will be the
+    name of the collector host.
 
   \item[IP] A string containing the IP address of the host associated
     with this metric.  The default is determined from the daemon ad.
