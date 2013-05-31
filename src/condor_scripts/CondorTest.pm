@@ -406,6 +406,20 @@ sub RegisterRelease
 
     $test{$handle}{"RegisterRelease"} = $function_ref;
 }
+sub RegisterSuspended
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterSuspended"} = $function_ref;
+}
+sub RegisterUnsuspended
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterUnsuspended"} = $function_ref;
+}
 sub RegisterDisconnected
 {
     my $handle = shift || croak "missing handle argument";
@@ -1009,6 +1023,66 @@ sub CheckRegistrations
 	Condor::RegisterULog( sub {
 	    my %info = @_;
 	    die "$handle: FAILURE (job ulog)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterSuspended"} )
+    {
+	Condor::RegisterSuspended( $test{$handle}{"RegisterSuspended"} );
+    }
+    else
+    {
+	Condor::RegisterSuspended( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (Suspension not expected)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterUnsuspended"} )
+    {
+	Condor::RegisterUnsuspended( $test{$handle}{"RegisterUnsuspended"} );
+    }
+    else
+    {
+	Condor::RegisterUnsuspended( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (Unsuspension not expected)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterDisconnected"} )
+    {
+	Condor::RegisterDisconnected( $test{$handle}{"RegisterDisconnected"} );
+    }
+    else
+    {
+	Condor::RegisterDisconnected( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (Disconnect not expected)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterReconnected"} )
+    {
+	Condor::RegisterReconnected( $test{$handle}{"RegisterReconnected"} );
+    }
+    else
+    {
+	Condor::RegisterReconnected( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (reconnect not expected)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterReconnectFailed"} )
+    {
+	Condor::RegisterReconnectFailed( $test{$handle}{"RegisterReconnectFailed"} );
+    }
+    else
+    {
+	Condor::RegisterReconnectFailed( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (reconnect failed)\n";
 	} );
     }
 
