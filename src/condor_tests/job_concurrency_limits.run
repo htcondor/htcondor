@@ -74,6 +74,7 @@ my $idles = 0;
 		# remove jobs and return
 		if($expect_idle == 0) {
 			runcmd("condor_rm -all");
+			runcmd("condor_rm -forcex -all");
 		} else {
 			$idles = CountIdle($expect_idle);
 			if($idles == $expect_idle) {
@@ -88,6 +89,7 @@ my $idles = 0;
 					match_new => "true"
 				);
 				runcmd("condor_rm -all");
+				runcmd("condor_rm -forcex -all");
 			}
 		}
 	} else {
@@ -123,10 +125,15 @@ if($result == 1) {
 	print "bad\n";
 }
 
+# clean queue bwtween all checks
+
+runcmd("condor_rm -all");
+runcmd("condor_rm -forcex -all");
 
 # OK turn it on with concurrency limits
 CondorTest::StartCondorWithParams(
-    append_condor_config => $nextappend_condor_config
+    append_condor_config => $nextappend_condor_config,
+	local_fresh => "TRUE",
 );
 
 $expect_run = 2;
@@ -144,6 +151,11 @@ if($result == 1) {
 } else {
 	print "bad\n";
 }
+
+# clean queue bwtween all checks
+
+runcmd("condor_rm -all");
+runcmd("condor_rm -forcex -all");
 
 my $append_submit_commands = '
 concurrency_limits = UNDEFINED:2;
@@ -165,6 +177,11 @@ if($result == 1) {
 	print "bad\n";
 }
 
+# clean queue bwtween all checks
+
+runcmd("condor_rm -all");
+runcmd("condor_rm -forcex -all");
+
 my $append_submit_commands = '
 concurrency_limits = large.license;
 ';
@@ -185,6 +202,11 @@ if($result == 1) {
 	print "bad\n";
 }
 
+# clean queue bwtween all checks
+
+runcmd("condor_rm -all");
+runcmd("condor_rm -forcex -all");
+
 my $append_submit_commands = '
 concurrency_limits = small.license;
 ';
@@ -204,6 +226,11 @@ if($result == 1) {
 } else {
 	print "bad\n";
 }
+
+# clean queue bwtween all checks
+
+runcmd("condor_rm -all");
+runcmd("condor_rm -forcex -all");
 
 
 
@@ -228,7 +255,7 @@ sub CountIdle
 		}
 	}
 	if($idlecount != $expectidle) {
-		die "Expected $expectidle idle but found $idlecount\n";
+		die "Expected $expectidle idle but found $idlecount - die\n";
 	}
 
 	return($idlecount);
