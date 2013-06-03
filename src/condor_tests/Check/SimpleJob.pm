@@ -20,6 +20,16 @@
 package SimpleJob;
 
 use CondorTest;
+my $timeout = 0;
+my $defaulttimeout = 60;
+$timeout = $defaulttimeout;
+
+$timed_callback = sub
+{
+	print "SimpleJob timeout expired!\n";
+	CondorTest::RegisterResult( 0, %args );
+    return $result;
+};
 
 $submitted = sub
 {
@@ -53,6 +63,11 @@ sub RunCheck
 	if(exists $args{duration}) {
 		$duration = $args{duration};
 	}
+
+	if(exists $args{tmeout}){
+		$timeout = $args{tmeout};
+		print "Test getting requested timeout of <$timeout> seconds\n";
+	}
 	 
 	#print "Checking duration being passsed to RunCheck <$args{duration}>\n";
     my $execute_fn = $args{on_execute} || $dummy;
@@ -66,6 +81,9 @@ sub RunCheck
 	my $donewithsuccess_fn = $args{on_success} || $ExitSuccess;
 
 
+	if(exists $args{tmeout}){
+		CondorTest::RegisterTimed( $testname, $timed_callback, $timeout);
+	}
     CondorTest::RegisterAbort( $testname, $abort_fn );
     CondorTest::RegisterExitedSuccess( $testname, $donewithsuccess_fn );
     CondorTest::RegisterExecute($testname, $execute_fn);
