@@ -54,6 +54,15 @@ expressions that evaluate to true could have duplicate hold messages
 in the user log.
 \Ticket{3651}
 
+\item Fixed a bug where \Condor{dagman} would submit multiple copies of the
+same job, fail, write a rescue DAG, and leave the jobs in the queue. This was
+due to a warning from \Condor{submit} that the submit file was not using lines
+containing the string ``cluster''. Now \Condor{dagman} will search for the
+string ``\ submitted to cluster\ '', which will have fewer false alarms. If the
+submit succeeds and \Condor{dagman} gets confused, the jobs will be removed
+when \Condor{dagman} writes a rescue DAG.
+\Ticket{3658}
+
 \end{itemize}
 
 \noindent Known Bugs:
