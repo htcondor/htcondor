@@ -37,6 +37,7 @@ my $nextappend_condor_config = '
 	CONCURRENCY_LIMIT_DEFAULT_SMALL = 5
 	CONCURRENCY_LIMIT_DEFAULT_LARGE = 2
 	NEGOTIATOR_INTERVAL = 5
+	NUM_CPUS = 12
 ';
 
 CondorTest::StartCondorWithParams(
@@ -127,8 +128,7 @@ if($result == 1) {
 
 # clean queue bwtween all checks
 
-runcmd("condor_rm -all");
-runcmd("condor_rm -forcex -all");
+ExamineQueue();
 
 # OK turn it on with concurrency limits
 CondorTest::StartCondorWithParams(
@@ -154,8 +154,7 @@ if($result == 1) {
 
 # clean queue bwtween all checks
 
-runcmd("condor_rm -all");
-runcmd("condor_rm -forcex -all");
+ExamineQueue();
 
 my $append_submit_commands = '
 concurrency_limits = UNDEFINED:2;
@@ -179,8 +178,7 @@ if($result == 1) {
 
 # clean queue bwtween all checks
 
-runcmd("condor_rm -all");
-runcmd("condor_rm -forcex -all");
+ExamineQueue();
 
 my $append_submit_commands = '
 concurrency_limits = large.license;
@@ -204,8 +202,9 @@ if($result == 1) {
 
 # clean queue bwtween all checks
 
-runcmd("condor_rm -all");
-runcmd("condor_rm -forcex -all");
+
+
+ExamineQueue();
 
 my $append_submit_commands = '
 concurrency_limits = small.license;
@@ -229,10 +228,7 @@ if($result == 1) {
 
 # clean queue bwtween all checks
 
-runcmd("condor_rm -all");
-runcmd("condor_rm -forcex -all");
-
-
+ExamineQueue();
 
 CondorTest::EndTest();
 
@@ -259,4 +255,24 @@ sub CountIdle
 	}
 
 	return($idlecount);
+}
+
+sub ExamineQueue
+{
+	my $line = "";
+
+	print "\nExpecting all jobs to be gone. Lets See.\n";
+	#runcmd("condor_q");
+	my @jobs = `condor_q`;
+	foreach my $job (@jobs) {
+		chomp($job);
+		$line = $job;
+		print "JOB: $line\n";
+		if($line =~ /^\s*(\d+)\s*jobs; .*$/) {
+			$idlecount += 1;
+			print "<$1> jobs still running\n";
+		}
+	}
+	print "Total slots available here:\n\n";
+	system("condor_status");
 }
