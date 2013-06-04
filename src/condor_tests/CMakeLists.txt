@@ -173,6 +173,10 @@ if (BUILD_TESTING)
 	condor_pl_test(lib_shared_port-collector_van "Test of shared port feature with collector usage." "core;quick;full;quicknolink")
 	condor_pl_test(lib_shared_port-check-ports_van "Test of shared port feature with respect to open ports." "core;quick;full;quicknolink")
 
+	if(WITH_GANGLIA)
+          condor_pl_test(gangliad "Basic test of condor_gangliad." "core;quick;full;quicknolink")
+        endif()
+
 	if (NOT AIX)
 	  condor_pl_test(lib_procapi_pidtracking-snapshot "Fast Termination Child Cleanup Test" "core;quick;full;quicknolink")
 	endif()

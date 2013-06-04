@@ -1,0 +1,5 @@
+
+udp_send_channel {
+  host = localhost
+  port = 22
+}
