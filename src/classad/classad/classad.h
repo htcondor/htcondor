@@ -98,6 +98,9 @@ class ClassAd : public ExprTree
 		virtual ~ClassAd ();
 		//@}
 
+		/// node type
+		virtual NodeKind GetKind (void) const { return CLASSAD_NODE; }
+
 		/**@name Insertion Methods */
 		//@{	
 		/** Inserts an attribute into the ClassAd.  The setParentScope() method

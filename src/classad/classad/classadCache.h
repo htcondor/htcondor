@@ -51,6 +51,9 @@ class CachedExprEnvelope : public ExprTree
 public:
 	virtual ~CachedExprEnvelope();
 	
+	/// node type
+	virtual NodeKind GetKind (void) const { return EXPR_ENVELOPE; }
+
 	/**
 	 * cache () - will cache a copy of the pTree and return 
 	 * an indirect envelope
