@@ -1,0 +1,148 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+##
+## This test will submit 10000 sleep jobs to get a longer negotiation
+## cycle and when they are all submitted will do four things:
+##  1. Find the next start of a negotiation cycle
+##  2. run a condor_userprio
+##	3. find the next end of a negotation cycle
+##  4. determine if condor_userprio happened during negotiation cycle
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+
+my $ClusterId = 0;
+my $expect_return = 0;
+
+	#NEGOTIATE_ALL_JOBS_IN_CLUSTER = True
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	MAX_NEGOTIATOR_LOG = 5000000000
+	MAX_SCHEDD_LOG = 5000000000
+	SUSPEND = TotalClaimRunTime > 20
+	CONTINUE = TotalClaimSuspendTime > 20
+	WANT_SUSPEND = True
+	PREEMPT = FALSE
+	KILL = FALSE
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"negotiator");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "suspendandcontinue",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+my $on_execute = sub {
+};
+
+my $on_suspend = sub {
+	print "Job suspended\n";
+};
+
+my $on_unsuspend = sub {
+	print "Job suspended\n";
+};
+
+my $on_disconnected = sub {
+	print "Job disconnected\n";
+};
+
+my $on_reconnected = sub {
+	print "Job reconnected\n";
+};
+
+
+my $result = 1;
+my $test_name = "job_basic_suspend_continue_test";
+
+
+#Do a job before setting tesing exit codes
+print "First test basic job\n";
+$result = SimpleJob::RunCheck(); # jobid 1
+
+$result = SimpleJob::RunCheck(
+	test_name => "$test_name",
+	on_suspended => $on_suspended,
+	on_unsuspended => $on_unsuspended,
+	on_execute => $on_execute,
+	on_disconnected => $ondisconnected,
+	on_reconnected => $on_reconnected,
+	duration => 60,
+);
+
+print "******************** Test should be suspended and continued to completeion \n";
+if($result == 1) {
+	print "ok\n\n\n";
+} else {
+	print "bad\n\n\n";
+}
+
+
+CondorTest::EndTest();
+
+
+sub CheckExpectations
+{
+	my $ad = shift;
+	my $got = shift;
+	my $expected = shift;
+
+	CondorTest::debug("CheckExpectations: $ad Got,$got Expected,$expected\n",2);
+	if($got != $expected) {
+		die "$ad: Expected <$expected> but only got <$got>\n";
+	} 
+}
+
+sub RunNTimes
+{
+	my $cmd = shift;
+	my $goal = shift;
+	my $wantoutput = shift;
+
+	my $count = 0;
+	my $stop = 0;
+	my @cmdout = ();
+	my @date = ();
+	$stop = $goal;
+
+	while($count < $stop) {
+		@cmdout = ();
+		@date = ();
+		@date = `date`;
+		chomp $date[0];
+		print "$date[0] $cmd $count\n";
+		@cmdout = `$cmd`;
+
+		if(defined $wantoutput) {
+			foreach my $line (@cmdout) {
+				print "$line\n";
+			}
+		}
+		$count += 1;
+	}
+}

@@ -380,7 +380,7 @@ SchedulerObject::suspend(std::string key, std::string &/*reason*/, std::string &
 		return false;
 	}
 
-	scheduler.enqueueActOnJobMyself(id,JA_SUSPEND_JOBS,true);
+	scheduler.enqueueActOnJobMyself(id,JA_SUSPEND_JOBS,true,true);
 
 	return true;
 }
@@ -395,7 +395,7 @@ SchedulerObject::_continue(std::string key, std::string &/*reason*/, std::string
 		return false;
 	}
 
-	scheduler.enqueueActOnJobMyself(id,JA_CONTINUE_JOBS,true);
+	scheduler.enqueueActOnJobMyself(id,JA_CONTINUE_JOBS,true,true);
 
 	return true;
 }

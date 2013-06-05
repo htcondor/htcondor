@@ -11536,11 +11536,27 @@ are published to the \Condor{collector}.
   The default value is 300.
 
 \label{param:GangliaVerbosity}
-\item[\Macro{GANGLIA\_VERBOSITY}]
-  An integer that specifies the maximum verbosity level of metrics to be published
-  to Ganglia.  Basic metrics have a verbosity level of 0, which is the default.
-  Additional metrics can be enabled by increasing the verbosity to 1.  In the default
-  configuration, there are no metrics with verbosity levels higher than 1.
+\item[\Macro{GANGLIA\_VERBOSITY}] An integer that specifies the
+  maximum verbosity level of metrics to be published to Ganglia.
+  Basic metrics have a verbosity level of 0, which is the default.
+  Additional metrics can be enabled by increasing the verbosity to 1.
+  In the default configuration, there are no metrics with verbosity
+  levels higher than 1.  Some metrics depend on attributes that are
+  not published to the collector when using the default value of
+  \Macro{STATISTICS\_TO\_PUBLISH}.  For example, per-user file
+  transfer statistics will only be published to Ganglia if
+  \Macro{GANGLIA\_VERBOSITY} is set to 1 or higher in the
+  \Condor{gangliad} configuration \emph{and}
+  \Macro{STATISTICS\_TO\_PUBLISH} in the \Condor{schedd} configuration
+  contains \Expr{TRANSFER:2}.
+
+\label{param:GangliaRequirements}
+\item[\Macro{GANGLIA\_REQUIREMENTS}] An optional ClassAd expression
+  that restricts the set of daemon ads to be monitored.  This could be
+  used to monitor a subset of the pool.  The default is an empty
+  expression, which has the effect of placing no restriction on the
+  monitored ads.  Keep in mind that this expression is applied to
+  all types of monitored ads, not just startd ads.
 
 \label{param:GangliaConfig}
 \item[\Macro{GANGLIA\_CONFIG}]

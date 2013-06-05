@@ -316,7 +316,12 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	statsd->getDaemonIP(machine,ip);
 	if( !evaluateOptionalString(ATTR_IP,ip,metric_ad,daemon_ad,regex_groups) ) return false;
 
-	statsd->publishMetric(*this);
+	if( isAggregateMetric() ) {
+		statsd->addToAggregateValue(*this);
+	}
+	else {
+		statsd->publishMetric(*this);
+	}
 	return true;
 }
 
@@ -435,6 +440,7 @@ StatsD::StatsD():
 
 StatsD::~StatsD()
 {
+	clearMetricDefinitions();
 	clearAggregateMetrics();
 }
 
@@ -483,6 +489,10 @@ StatsD::initAndReconfig(char const *service_name)
 	formatstr(param_name,"%s_VERBOSITY",service_name);
 	m_verbosity = param_integer(param_name.c_str(),0);
 
+	formatstr(param_name,"%s_REQUIREMENTS",service_name);
+	param(m_requirements,param_name.c_str());
+
+	clearMetricDefinitions();
 	std::string config_dir;
 	formatstr(param_name,"%s_METRICS_CONFIG_DIR",service_name);
 	param(config_dir,param_name.c_str());
@@ -599,6 +609,11 @@ StatsD::publishMetrics()
 	CondorQuery query(ANY_AD);
 
 	if( !m_target_types.contains_anycase("any") ) {
+		if( !m_requirements.empty() ) {
+			query.addANDConstraint(m_requirements.c_str());
+		}
+	}
+	else {
 		char const *target_type;
 		while( (target_type=m_target_types.next()) ) {
 			std::string constraint;
@@ -607,6 +622,11 @@ StatsD::publishMetrics()
 			}
 			else {
 				formatstr(constraint,"MyType == \"%s\"",target_type);
+			}
+			if( !m_requirements.empty() ) {
+				constraint += " && (";
+				constraint += m_requirements;
+				constraint += ")";
 			}
 			query.addORConstraint(constraint.c_str());
 		}
@@ -663,6 +683,18 @@ StatsD::publishAggregateMetrics()
 		publishMetric(*metric);
 		delete metric;
 	}
+}
+
+void
+StatsD::clearMetricDefinitions()
+{
+	for( std::list< classad::ClassAd * >::iterator itr = m_metrics.begin();
+		 itr != m_metrics.end();
+		 itr++ )
+	{
+		delete *itr;
+	}
+	m_metrics.clear();
 }
 
 void
