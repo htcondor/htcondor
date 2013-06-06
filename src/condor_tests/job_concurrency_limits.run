@@ -93,6 +93,8 @@ my $idles = 0;
 				runcmd("condor_rm -forcex -all");
 			}
 		}
+	} elsif($running_now > $expect_run) {
+		die "Concurrency possibly broken:running $running_now expected only $expect_run\n";
 	} else {
 		print "running $running_now expecting $expect_run: not removing jobs\n";
 	}
