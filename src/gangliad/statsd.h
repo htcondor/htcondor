@@ -135,6 +135,7 @@ class StatsD: Service {
 
  protected:
 	int m_verbosity;
+	std::string m_requirements;
 	int m_stats_pub_interval;
 	int m_stats_pub_timer;
 	std::list< classad::ClassAd * > m_metrics;
@@ -164,6 +165,9 @@ class StatsD: Service {
 
 	// Initialize aggregate metrics.
 	void clearAggregateMetrics();
+
+	// Remove all previously parsed metric definitions
+	void clearMetricDefinitions();
 
 	// Extract IP addresses from daemon ads.
 	void mapDaemonIPs(ClassAdList &daemon_ads,CollectorList &collectors);

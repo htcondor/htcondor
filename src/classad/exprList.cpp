@@ -28,14 +28,12 @@ namespace classad {
 ExprList::
 ExprList()
 {
-	nodeKind = EXPR_LIST_NODE;
 	return;
 }
 
 ExprList::
 ExprList(const vector<ExprTree*>& exprs)
 {
-	nodeKind = EXPR_LIST_NODE;
     CopyList(exprs);
 	return;
 }
@@ -43,7 +41,6 @@ ExprList(const vector<ExprTree*>& exprs)
 ExprList::
 ExprList(const ExprList &other_list)
 {
-	nodeKind = EXPR_LIST_NODE;
     CopyFrom(other_list);
     return;
 }

@@ -105,14 +105,25 @@ class Operation : public ExprTree
 			__LAST_OP__             = __MISC_END__
 		};
 
+#ifdef TJ_REFACTOR
         /// Copy Constructor
         Operation(const Operation &op);
+#endif
 
 		/// Destructor
 		virtual ~Operation ();
 
+#ifdef TJ_REFACTOR
         /// Assignment operator
         Operation &operator=(const Operation &op);
+#endif
+
+		/// node type
+		virtual NodeKind GetKind (void) const { return OP_NODE; }
+#ifdef TJ_REFACTOR
+#else
+		virtual OpKind GetOpKind(void) const { return __NO_OP__; }
+#endif
 
 		/** Factory method to create an operation expression node
 			@param kind The kind of operation.
@@ -130,7 +141,11 @@ class Operation : public ExprTree
 			@param e2 The second sub-expression child of the node (if any).
 			@param e3 The third sub-expression child of the node (if any).
 		*/
+#ifdef TJ_REFACTOR
 		void GetComponents( OpKind&, ExprTree*&, ExprTree*&, ExprTree *& )const;
+#else
+		virtual void GetComponents( OpKind&, ExprTree*&, ExprTree*&, ExprTree *& )const;
+#endif
 
 		// public access to operation function
 		/** Convenience method which operates on binary operators.
@@ -169,7 +184,9 @@ class Operation : public ExprTree
 		/// Make a deep copy of the expression
 		virtual ExprTree* Copy( ) const;
 
+#ifdef TJ_REFACTOR
         bool CopyFrom(const Operation &op);
+#endif
 
         virtual bool SameAs(const ExprTree *tree) const;
 
@@ -177,10 +194,19 @@ class Operation : public ExprTree
 
 	protected:
 		/// Constructor
+#ifdef TJ_REFACTOR
 		Operation ();
+#else
+		Operation() {};
+#endif
 
   	private:
+#ifdef TJ_REFACTOR
         bool SameChild(const ExprTree *tree1, const ExprTree *tree2) const;
+#else
+        static bool SameChild(const ExprTree *tree1, const ExprTree *tree2);
+        static bool SameChildren(const Operation * op1, const Operation * op2);
+#endif
 
 		virtual void _SetParentScope( const ClassAd* );
 		virtual bool _Evaluate( EvalState &, Value &) const;
@@ -218,11 +244,195 @@ class Operation : public ExprTree
 		static void compareRelativeTimes(OpKind, Value&, Value&, Value&);
 
 		// operation specific information
+#ifdef TJ_REFACTOR
 		OpKind		operation;
 		ExprTree 	*child1;
 		ExprTree	*child2;
 		ExprTree	*child3;
+#else
+		//ExprTree 	*child1;
+		friend class Operation1;
+		friend class OperationParens;
+		friend class Operation2;
+		friend class Operation3;
+#endif
 };
+
+#ifdef TJ_REFACTOR
+#else
+
+class Operation1 : public Operation
+{
+	public:
+        /// Copy Constructor
+		Operation1(const Operation1 &op);
+
+		/// Destructor
+		virtual ~Operation1 ();
+
+        /// Assignment operator
+        Operation1 &operator=(const Operation1 &op);
+
+		virtual OpKind GetOpKind(void) const { return operation; }
+
+		/** Deconstructor to obtain the components of an operation node
+			@param kind The kind of operation.
+			@param e1 The first sub-expression child of the node.
+			@param e2 The second sub-expression child of the node (if any).
+			@param e3 The third sub-expression child of the node (if any).
+		*/
+		virtual void GetComponents( OpKind&, ExprTree*&, ExprTree*&, ExprTree *& )const;
+
+		/// Make a deep copy of the expression
+		virtual ExprTree* Copy( ) const;
+
+	protected:
+		/// Constructor
+		Operation1 (OpKind op=__NO_OP__, ExprTree *c1=NULL) : child1(c1), operation(op) {};
+		friend class Operation;
+
+	private:
+		bool flatten( EvalState &, Value &, ExprTree *& ) const;
+		ExprTree	*child1;
+		OpKind		operation;
+};
+
+class OperationParens : public Operation
+{
+	public:
+        /// Copy Constructor
+		OperationParens(const Operation1 &op);
+
+		/// Destructor
+		virtual ~OperationParens ();
+
+        /// Assignment operator
+        OperationParens &operator=(const OperationParens &op);
+
+		virtual OpKind GetOpKind(void) const { return PARENTHESES_OP; }
+
+		/** Deconstructor to obtain the components of an operation node
+			@param kind The kind of operation.
+			@param e1 The first sub-expression child of the node.
+			@param e2 The second sub-expression child of the node (if any).
+			@param e3 The third sub-expression child of the node (if any).
+		*/
+		virtual void GetComponents( OpKind&, ExprTree*&, ExprTree*&, ExprTree *& )const;
+
+		/// Make a deep copy of the expression
+		virtual ExprTree* Copy( ) const;
+
+	protected:
+		/// Constructor
+		OperationParens (ExprTree *c1=NULL) : child1(c1) {};
+		friend class Operation;
+
+	private:
+		bool flatten( EvalState &, Value &, ExprTree *& ) const;
+		ExprTree	*child1;
+};
+
+class Operation2 : public Operation
+{
+	public:
+        /// Copy Constructor
+		Operation2(const Operation2 &op);
+
+		/// Destructor
+		virtual ~Operation2 ();
+
+        /// Assignment operator
+        Operation2 &operator=(const Operation2 &op);
+
+		virtual OpKind GetOpKind(void) const { return operation; }
+
+		/** Deconstructor to obtain the components of an operation node
+			@param kind The kind of operation.
+			@param e1 The first sub-expression child of the node.
+			@param e2 The second sub-expression child of the node (if any).
+			@param e3 The third sub-expression child of the node (if any).
+		*/
+		virtual void GetComponents( OpKind&, ExprTree*&, ExprTree*&, ExprTree *& )const;
+
+		/// Make a deep copy of the expression
+		virtual ExprTree* Copy( ) const;
+
+	protected:
+		/// Constructor
+		Operation2 (OpKind op=__NO_OP__, ExprTree *c1=NULL, ExprTree *c2=NULL) : child1(c1), child2(c2), operation(op) {};
+		friend class Operation;
+
+	private:
+		//virtual bool _Evaluate( EvalState &, Value &) const;
+		//virtual bool _Evaluate( EvalState &, Value &, ExprTree*& ) const;
+		//virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
+		bool flatten( EvalState &, Value &, ExprTree *& ) const;
+
+			// returns true if result is determined for this operation
+			// based on the evaluated arg1
+		bool shortCircuit( EvalState &state, Value const &arg1, Value &result ) const;
+
+		// auxillary functionms
+		bool combine( OpKind&, Value&, ExprTree*&,
+				int, Value&, ExprTree*, int, Value&, ExprTree* ) const;
+		bool flattenSpecials( EvalState &, Value &, ExprTree *& ) const;
+
+		ExprTree	*child1;
+		ExprTree	*child2;
+		OpKind		operation;
+};
+
+class Operation3 : public Operation
+{
+	public:
+        /// Copy Constructor
+		Operation3(const Operation3 &op);
+
+		/// Destructor
+		virtual ~Operation3 ();
+
+        /// Assignment operator
+        Operation3 &operator=(const Operation3 &op);
+
+		virtual OpKind GetOpKind(void) const { return TERNARY_OP; }
+
+		/** Deconstructor to obtain the components of an operation node
+			@param kind The kind of operation.
+			@param e1 The first sub-expression child of the node.
+			@param e2 The second sub-expression child of the node (if any).
+			@param e3 The third sub-expression child of the node (if any).
+		*/
+		virtual void GetComponents( OpKind&, ExprTree*&, ExprTree*&, ExprTree *& )const;
+
+		/// Make a deep copy of the expression
+		virtual ExprTree* Copy( ) const;
+
+			// returns true if result is determined for this operation
+			// based on the evaluated arg1
+		bool shortCircuit( EvalState &state, Value const &arg1, Value &result ) const;
+
+	protected:
+		/// Constructor
+		Operation3 (ExprTree *c1=NULL, ExprTree* c2 = NULL, ExprTree *c3 = NULL) : child1(c1), child2(c2), child3(c3) {};
+		friend class Operation;
+
+	private:
+		//virtual bool _Evaluate( EvalState &, Value &) const;
+		//virtual bool _Evaluate( EvalState &, Value &, ExprTree*& ) const;
+		//virtual bool _Flatten( EvalState&, Value&, ExprTree*&, int* ) const;
+		bool flatten( EvalState &, Value &, ExprTree *& ) const;
+
+		// auxillary functionms
+		bool combine( OpKind&, Value&, ExprTree*&,
+				int, Value&, ExprTree*, int, Value&, ExprTree* ) const;
+		bool flattenSpecials( EvalState &, Value &, ExprTree *& ) const;
+
+		ExprTree	*child1;
+		ExprTree	*child2;
+		ExprTree	*child3;
+};
+
+#endif // TJ_REFACTOR
 
 } // classad
 

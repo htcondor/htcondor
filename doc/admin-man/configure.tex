@@ -11550,6 +11550,14 @@ are published to the \Condor{collector}.
   \Macro{STATISTICS\_TO\_PUBLISH} in the \Condor{schedd} configuration
   contains \Expr{TRANSFER:2}.
 
+\label{param:GangliaRequirements}
+\item[\Macro{GANGLIA\_REQUIREMENTS}] An optional ClassAd expression
+  that restricts the set of daemon ads to be monitored.  This could be
+  used to monitor a subset of the pool.  The default is an empty
+  expression, which has the effect of placing no restriction on the
+  monitored ads.  Keep in mind that this expression is applied to
+  all types of monitored ads, not just startd ads.
+
 \label{param:GangliaConfig}
 \item[\Macro{GANGLIA\_CONFIG}]
   Path to the Ganglia configuration file.  The default is \File{/etc/ganglia/gmond.conf}.

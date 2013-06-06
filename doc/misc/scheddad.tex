@@ -612,7 +612,8 @@
 
 \index{ClassAd Scheduler attribute!TotalIdleJobs}
 \item[\AdAttr{TotalIdleJobs}:] The total number of jobs from this
-  \Condor{schedd} daemon that are currently idle.
+  \Condor{schedd} daemon that are currently idle, not including
+  local or scheduler universe jobs.
 
 \index{ClassAd Scheduler attribute!TotalJobAds}
 \item[\AdAttr{TotalJobAds}:] The total number of all jobs (in all 
@@ -634,7 +635,8 @@
 
 \index{ClassAd Scheduler attribute!TotalRunningJobs}
 \item[\AdAttr{TotalRunningJobs}:] The total number of jobs from this
-  \Condor{schedd} daemon that are currently running.
+  \Condor{schedd} daemon that are currently running, not including
+  local or scheduler universe jobs.
 
 \index{ClassAd Scheduler attribute!TotalSchedulerIdleJobs}
 \item[\AdAttr{TotalSchedulerIdleJobs}:] The total number of 
