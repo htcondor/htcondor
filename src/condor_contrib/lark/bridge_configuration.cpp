@@ -58,12 +58,26 @@ BridgeConfiguration::Setup() {
 	if(!m_ad->EvaluateAttrString(ATTR_IPTABLE_NAME, chain_name)) {
 		dprintf(D_ALWAYS, "Missing required ClassAd attribute " ATTR_IPTABLE_NAME "\n");
 	}
-
-	int result;
-	if ((result = create_bridge(bridge_name.c_str())) && (result != EEXIST)) {
-		dprintf(D_ALWAYS, "Unable to create a bridge (%s); error=%d.\n", bridge_name.c_str(), result);
-		return result;
-	}
+    
+    int result = 0;
+    std::string configuration_type;
+    m_ad->EvaluateAttrString(ATTR_NETWORK_TYPE, configuration_type);
+    if(configuration_type == "bridge")
+    {
+        if ((result = create_bridge(bridge_name.c_str())) && (result != EEXIST))
+        {
+            dprintf(D_ALWAYS, "Unable to create linux bridge (%s); error=%d.\n", bridge_name.c_str(), result);
+            return result;
+        }
+    }
+    else if (configuration_type == "ovs_bridge")
+    {
+        if((result = ovs_create_bridge(bridge_name.c_str())) && (result != EEXIST))
+        {
+            dprintf(D_ALWAYS, "Unable to create ovs bridge (%s); error=%d.\n", bridge_name.c_str(), result);
+            return result;
+        }
+    }
 
 	// Manipulate the routing and state of the link.  Done internally; no callouts.
 	NetworkNamespaceManager & manager = NetworkNamespaceManager::GetManager();
@@ -74,27 +88,70 @@ BridgeConfiguration::Setup() {
 	{
 		if (set_status(fd, bridge_name.c_str(), IFF_UP))
 		{
-			delete_bridge(bridge_name.c_str());
-			return 1;
+			if(configuration_type == "bridge")
+            {
+                delete_bridge(bridge_name.c_str());
+			    return 1;
+            }
+            else if (configuration_type == "ovs_bridge")
+            {
+                ovs_delete_bridge(bridge_name.c_str());
+                return 1;
+            }
 		}
-		if ((result = set_bridge_fd(bridge_name.c_str(), 0)))
-		{
-			dprintf(D_ALWAYS, "Unable to set bridge %s forwarding delay to 0.\n", bridge_name.c_str());
-			delete_bridge(bridge_name.c_str());
-			return result;
-		}
+        // For ovs bridge, currently we just simply disable stp to make sure
+        // the bridge can go to forwarding state after it is brought up
+        if(configuration_type == "bridge")
+        {
+            if ((result = set_bridge_fd(bridge_name.c_str(), 0)))
+            {
+                dprintf(D_ALWAYS, "Unable to set bridge %s forwarding delay to 0.\n", bridge_name.c_str());
+                delete_bridge(bridge_name.c_str());
+                return result;
+            }
+        }
+        else if(configuration_type == "ovs_bridge")
+        {
+            if((result = ovs_disable_stp(bridge_name.c_str())))
+            {
+                dprintf(D_ALWAYS, "Unable to disable ovs bridge %s stp.\n", bridge_name.c_str());
+                ovs_delete_bridge(bridge_name.c_str());
+                return result;
+            }
+        }
+        
+        if(configuration_type == "bridge")
+        {
+		    if ((result = add_interface_to_bridge(bridge_name.c_str(), bridge_device.c_str())))
+            {
+			    dprintf(D_ALWAYS, "Unable to add device %s to bridge %s\n", bridge_device.c_str(), bridge_name.c_str());
+			    set_status(fd, bridge_name.c_str(), 0);
+                delete_bridge(bridge_name.c_str());
+                return result;
+            }
+        }
+        else if(configuration_type == "ovs_bridge")
+        {
+		    if ((result = ovs_add_interface_to_bridge(bridge_name.c_str(), bridge_device.c_str())))
+            {
+			    dprintf(D_ALWAYS, "Unable to add device %s to openvswitch bridge %s\n", bridge_device.c_str(), bridge_name.c_str());
+			    set_status(fd, bridge_name.c_str(), 0);
+                ovs_delete_bridge(bridge_name.c_str());
+                return result;
+            }
+        }
 
-		if ((result = add_interface_to_bridge(bridge_name.c_str(), bridge_device.c_str()))) {
-			dprintf(D_ALWAYS, "Unable to add device %s to bridge %s\n", bridge_device.c_str(), bridge_name.c_str());
-			set_status(fd, bridge_name.c_str(), 0);
-			delete_bridge(bridge_name.c_str());
-			return result;
-		}
 		// If either of these fail, we likely knock the system off the network.
-		if ((result = move_routes_to_bridge(fd, bridge_device.c_str(), bridge_name.c_str()))) {
+		if ((result = move_routes_to_bridge(fd, bridge_device.c_str(), bridge_name.c_str())))
+        {
 			dprintf(D_ALWAYS, "Failed to move routes from %s to bridge %s\n", bridge_device.c_str(), bridge_name.c_str());
 			set_status(fd, bridge_name.c_str(), 0);
-			delete_bridge(bridge_name.c_str());
+            if(configuration_type == "bridge"){
+                delete_bridge(bridge_name.c_str());
+            }
+            else if(configuration_type == "ovs_bridge"){
+			    ovs_delete_bridge(bridge_name.c_str());
+            }
 			return result;
 		}
 		if ((result = move_addresses_to_bridge(fd, bridge_device.c_str(), bridge_name.c_str())))
@@ -105,11 +162,23 @@ BridgeConfiguration::Setup() {
 			return result;
 		}
 	}
-
-	if ((result = add_interface_to_bridge(bridge_name.c_str(), external_device.c_str())) && (result != EEXIST)) {
-		dprintf(D_ALWAYS, "Unable to add device %s to bridge %s\n", external_device.c_str(), bridge_name.c_str());
-		return result;
-	}
+    
+    if(configuration_type == "bridge")
+    {
+	    if ((result = add_interface_to_bridge(bridge_name.c_str(), external_device.c_str())) && (result != EEXIST))
+        {
+		    dprintf(D_ALWAYS, "Unable to add device %s to bridge %s\n", external_device.c_str(), bridge_name.c_str());
+		    return result;
+	    }
+    }
+    else if(configuration_type == "ovs_bridge")
+    {
+	    if ((result = ovs_add_interface_to_bridge(bridge_name.c_str(), external_device.c_str())) && (result != EEXIST))
+        {
+            dprintf(D_ALWAYS, "Unable to add device %s to openvswitch bridge %s\n", external_device.c_str(), bridge_name.c_str());
+            return result;
+        }
+    }
 
 	if ((m_has_default_route = interface_has_default_route(fd, bridge_name.c_str())) < 0) {
 		dprintf(D_ALWAYS, "Unable to determine if bridge %s has a default route.\n", bridge_name.c_str());

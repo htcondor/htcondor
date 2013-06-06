@@ -185,6 +185,15 @@ int open_bridge_socket();
 int set_bridge_fd(const char * bridge_name, unsigned delay);
 
 /*
+ * Disable the openvswitch bridge stp
+ *
+ * - bridge_name: String containing the bridge name.
+ *
+ * Return 0 on success and non-zero on failure.
+ */
+int ovs_disable_stp(const char * bridge_name);
+
+/*
  * Create a bridge device.
  *
  * - bridge_name: String containing the bridge name; must be less than IFNAMSIZ
@@ -193,6 +202,15 @@ int set_bridge_fd(const char * bridge_name, unsigned delay);
  * Return 0 on success and non-zero on failure.
  */
 int create_bridge(const char * bridge_name);
+
+/*
+ * Create a openvswitch bridge device.
+ *
+ * -bridge_name: String containing the bridge name; must be less than 8 bytes in length
+ *
+ *  Return 0 on success and non-zero on failure
+ */
+int ovs_create_bridge(const char * bridge_name);
 
 /*
  * Delete a bridge device.
@@ -205,6 +223,15 @@ int create_bridge(const char * bridge_name);
 int delete_bridge(const char * bridge_name);
 
 /*
+ * Delete a openvswitch bridge device.
+ *
+ * - bridge_name: String containing the bridge name; must be less than 8 bytes in length
+ *
+ * Return 0 on success and non-zero on failure.
+ */
+int ovs_delete_bridge(const char * bridge_name);
+
+/*
  * Add a network interface to the bridge.
  *
  * - bridge_name: Name of the bridge device.
@@ -213,6 +240,16 @@ int delete_bridge(const char * bridge_name);
  * Return 0 on success and non-zero on failure.
  */
 int add_interface_to_bridge(const char *bridge_name, const char *dev);
+
+/*
+ * Add a network interface to the openvswitch bridge
+ *
+ * - bridge_name: Name of the bridge device.
+ * - dev: Name of the device to add.
+ *
+ * Return 0 on success and non-zero on failure.
+ */
+int ovs_add_interface_to_bridge(const char * bridge_name, const char * dev);
 
 /*
  * Delete a network interface from the bridge.
