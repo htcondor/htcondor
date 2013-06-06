@@ -11558,6 +11558,14 @@ are published to the \Condor{collector}.
   monitored ads.  Keep in mind that this expression is applied to
   all types of monitored ads, not just startd ads.
 
+\label{param:GangliaPerExecuteNodeMetrics}
+\item[\Macro{GANGLIA\_PER\_EXECUTE\_NODE\_METRICS}] A boolean value
+  that when \Expr{False} causes metrics from execute node daemons to
+  not be published.  Aggregate values from these machines will still
+  be published.  The default is \Expr{True}.  This option is useful
+  for pools such as glidein pools in which it is not desired to
+  record metrics for individual execute nodes.
+
 \label{param:GangliaConfig}
 \item[\Macro{GANGLIA\_CONFIG}]
   Path to the Ganglia configuration file.  The default is \File{/etc/ganglia/gmond.conf}.
