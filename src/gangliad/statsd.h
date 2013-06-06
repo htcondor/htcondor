@@ -133,9 +133,14 @@ class StatsD: Service {
 	// Apply an aggregate function to a data point.
 	void addToAggregateValue(Metric const &metric);
 
+	bool publishPerExecuteNodeMetrics() {return m_per_execute_node_metrics; }
+	bool isExecuteOnlyNode(std::string &machine) {return m_execute_only_nodes.count(machine)!=0;}
+
  protected:
 	int m_verbosity;
 	std::string m_requirements;
+	bool m_per_execute_node_metrics;
+	std::set< std::string > m_execute_only_nodes;
 	int m_stats_pub_interval;
 	int m_stats_pub_timer;
 	std::list< classad::ClassAd * > m_metrics;
@@ -171,6 +176,9 @@ class StatsD: Service {
 
 	// Extract IP addresses from daemon ads.
 	void mapDaemonIPs(ClassAdList &daemon_ads,CollectorList &collectors);
+
+	// Determine which machines are execute-only nodes
+	void determineExecuteNodes(ClassAdList &daemon_ads);
 };
 
 #endif

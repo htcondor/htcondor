@@ -242,9 +242,20 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	}
 	else if( !strcasecmp(my_type.c_str(),"machine") ) {
 		group = "HTCondor Startd";
+		if( !statsd->publishPerExecuteNodeMetrics() ) {
+			return false;
+		}
 	}
 	else if( !strcasecmp(my_type.c_str(),"daemonmaster") ) {
 		group = "HTCondor Master";
+
+		if( !statsd->publishPerExecuteNodeMetrics() ) {
+			std::string machine_name;
+			daemon_ad.EvaluateAttrString(ATTR_MACHINE,machine_name);
+			if( statsd->isExecuteOnlyNode(machine_name) ) {
+				return false;
+			}
+		}
 	}
 	else {
 		formatstr(group,"HTCondor %s",my_type.c_str());
@@ -473,7 +484,7 @@ StatsD::initAndReconfig(char const *service_name)
 	}
 	else {
 		m_stats_pub_timer = daemonCore->Register_Timer(
-			m_stats_pub_interval,
+			10 < m_stats_pub_interval ? 10 : m_stats_pub_interval,
 			m_stats_pub_interval,
 			(TimerHandlercpp)&StatsD::publishMetrics,
 			"Statsd::publishMetrics",
@@ -491,6 +502,9 @@ StatsD::initAndReconfig(char const *service_name)
 
 	formatstr(param_name,"%s_REQUIREMENTS",service_name);
 	param(m_requirements,param_name.c_str());
+
+	formatstr(param_name,"%s_PER_EXECUTE_NODE_METRICS",service_name);
+	m_per_execute_node_metrics = param_boolean(param_name.c_str(),true);
 
 	clearMetricDefinitions();
 	std::string config_dir;
@@ -600,7 +614,7 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 void
 StatsD::publishMetrics()
 {
-	dprintf(D_FULLDEBUG,"StatsD::PublishMetrics called\n");
+	dprintf(D_ALWAYS,"Gathering ClassAds\n");
 
 	// reset all aggregate sums, counts, etc.
 	clearAggregateMetrics();
@@ -648,6 +662,10 @@ StatsD::publishMetrics()
 
 	mapDaemonIPs(daemon_ads,*collectors);
 
+	if( !m_per_execute_node_metrics ) {
+		determineExecuteNodes(daemon_ads);
+	}
+
 	daemon_ads.Open();
 	ClassAd *daemon;
 	while( (daemon=daemon_ads.Next()) ) {
@@ -656,6 +674,47 @@ StatsD::publishMetrics()
 	daemon_ads.Close();
 
 	publishAggregateMetrics();
+
+	dprintf(D_ALWAYS,"Done publishing\n");
+}
+
+void
+StatsD::determineExecuteNodes(ClassAdList &daemon_ads) {
+	std::set< std::string > submit_nodes;
+	std::set< std::string > execute_nodes;
+	std::set< std::string > cm_nodes;
+
+	daemon_ads.Open();
+	ClassAd *daemon;
+	while( (daemon=daemon_ads.Next()) ) {
+		std::string machine,my_type;
+		daemon->EvaluateAttrString(ATTR_MACHINE,machine);
+		daemon->EvaluateAttrString(ATTR_MY_TYPE,my_type);
+		if( strcasecmp(my_type.c_str(),"machine")==0 ) {
+			execute_nodes.insert( std::set< std::string >::value_type(machine) );
+		}
+		else if( strcasecmp(my_type.c_str(),"scheduler")==0 ) {
+			submit_nodes.insert( std::set< std::string >::value_type(machine) );
+		}
+		else if( strcasecmp(my_type.c_str(),"negotiator")==0 || strcasecmp(my_type.c_str(),"collector")==0 ) {
+			cm_nodes.insert( std::set< std::string >::value_type(machine) );
+		}
+	}
+	daemon_ads.Close();
+
+	m_execute_only_nodes.clear();
+	for( std::set< std::string >::iterator itr = execute_nodes.begin();
+		 itr != execute_nodes.end();
+		 itr++ )
+	{
+		if( !submit_nodes.count(*itr) && !cm_nodes.count(*itr) ) {
+			m_execute_only_nodes.insert(*itr);
+		}
+	}
+	if( !m_per_execute_node_metrics && m_execute_only_nodes.size()>0 ) {
+		dprintf(D_FULLDEBUG,"Filtering out metrics for %d execute nodes because PER_EXECUTE_NODE_METRICS=False.\n",
+				(int)m_execute_only_nodes.size());
+	}
 }
 
 void

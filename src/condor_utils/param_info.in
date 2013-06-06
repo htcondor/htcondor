@@ -11082,3 +11082,19 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,gangliad
 id=600
+
+[GANGLIA_PER_EXECUTE_NODE_METRICS]
+aliases=
+default=true
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Publish metrics for individual execute nodes
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=c++_util,gangliad
+id=600
