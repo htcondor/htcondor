@@ -149,6 +149,7 @@ print "Wrote " . scalar(keys %tasklist) . " unique tests.\n";
 if(-f "TASKLIST.NMI") {
 	print "Over-writing tasklist.nmi with condor_tests/TASKLIST.NMI\n";
 	system("cp TASKLIST.NMI ../tasklist.nmi");
+	system("cp TASKLIST.NMI tasklist.nmi");
 }
 
 exit(0);
