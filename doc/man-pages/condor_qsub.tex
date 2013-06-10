@@ -211,9 +211,13 @@ for more information.}
 Send to \File{stdout} the contents of the HTCondor submit description
 file that \Condor{qsub} generates.}
 \OptItem{\OptArg{-r}{y|n}}{(Status option)
-Specifies whether or not a job is re-runnable. Normally, HTCondor tries to rerun jobs,
-so this tries as best as possible ensure that this does not occur. \Arg{y} is the 
-default value.}
+The default value of \Arg{y} implements the default HTCondor policy 
+of assuming that jobs that do not complete are placed back in the queue 
+to be run again. 
+When \Arg{n},
+job submission is restricted to only running the job if the job
+ClassAd attribute \Attr{NumJobStarts} is currently 0. 
+This identifies the job as not re-runnable, limiting it to start once.  }
 \OptItem{\OptArg{-S}{shell}}{(Submission option)
 Specifies the path and executable name of a shell.  
 Alters the HTCondor submit description file produced, such that
@@ -224,15 +228,16 @@ Within the submit description file will be
 % html is bad; nothing tried so far corrects it
 %\OptItem{\OptArg{-t}{start[-stop[:step]] }} {(Submission option)
 %\OptItem{\OptArg{-t}{ start[-stop[:step]] }} {(Submission option)
-\OptItem{\OptArg{-t}{ start[-stop[:step]] }}{(Submission option)
-Specifies that this array jobs a number of essentially identical jobs should be
-submitted. Currently, only the SGE style syntax is supported. \Arg{start}, 
-\Arg{stop}, and \Arg{step} are all integers. \Arg{start} is the start index of the 
-jobs, \Arg{stop} is the end index (inclusive) of the jobs, and \Arg{step} is the 
-step size of the indices.
-\Warn 
-Currently, trying to use more than more than one processor or 
-node in a job will not work with this option.}
+%\OptItem{\OptArg{-t}{ start[-stop[:step]] }}{(Submission option)
+\OptItem{\OptArg{-t}{start [-stop:step] }}{(Submission option)
+Queues a set of nearly identical jobs.
+The SGE-style syntax is supported. \Arg{start}, 
+\Arg{stop}, and \Arg{step} are all integers.
+\Arg{start} is the starting index of the jobs,
+\Arg{stop} is the ending index (inclusive) of the jobs,
+and \Arg{step} is the step size through the indices.
+Note that using more than one processor or 
+node in a job will not work with this option. }
 \OptItem{\Opt{---test}}{(Specific option)
 With the intention of testing a potential job submission,
 parse files and commands to generate error output.
@@ -247,10 +252,9 @@ well as they must be contained by quotes. Also, all single and double quotes nee
 be escaped by backslashes.
 }
 \OptItem{\Opt{-V}}{(Environmental option)
-  If given, HTCondor will copy all of the user's current shell environment variables
-for submission by having 'getenv = True' added to the HTCondor submit file. See 
-section~\ref{man-condor-submit-getenv} on page~\pageref{man-condor-submit-getenv} 
-for more details.}
+Set \Expr{getenv = True} in the submit description file.
+See section~\ref{man-condor-submit-getenv} for a description of 
+\SubmitCmd{getenv}.  }
 \OptItem{\OptArg{-W}{attr\_name=attr\_value[,attr\_name=attr\_value\ldots]}}{
 (File option)
 PBS/Torque supports a number of attributes. However, \Condor{qsub} only supports
@@ -259,8 +263,9 @@ The format of \Arg{attr\_value} for \Arg{stagein} and \Arg{stageout} is
 \Env{local\_file@hostname:remote\_file[,\ldots]} and we strip it to 
 \Env{remote\_file[,\ldots]}. HTCondor's file transfer mechanism is then used if needed.}
 \OptItem{\Opt{---version}}{(Specific option)
-  Print version information of \Condor{qsub} (not the version of HTCondor) 
-  and exit.}
+  Print version information for the \Condor{qsub} program and exit.
+  Note that \Condor{qsub} has its own version numbers which are
+  separate from those of HTCondor.  } 
 \end{Options}
 
 \ExitStatus
