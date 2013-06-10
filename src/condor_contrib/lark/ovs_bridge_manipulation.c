@@ -9,6 +9,7 @@
 #include "condor_config.h"
 
 #include <errno.h>
+#include <stdio.h>
 #include <string.h>
 #include <net/if.h>
 #include <linux/if_bridge.h>
@@ -142,6 +143,54 @@ ovs_add_interface_to_bridge(const char * bridge_name, const char * dev)
         }
         else if (WIFSIGNALED(status)) {
             dprintf(D_ALWAYS, "ovs-vsctl add-port %s %s terminated abnormally. Killed by signal %d\n", brname, dev, WTERMSIG(status));
+            errno = WTERMSIG(status);
+        }
+        return errno;
+    }
+}
+
+int
+ovs_set_bridge_fd(const char * bridge_name, unsigned delay)
+{
+    errno = 0;
+    char brname[OVS_BRNAME_MAX_LENGTH];
+    strncpy(brname, bridge_name, OVS_BRNAME_MAX_LENGTH);
+
+    int ifindex = if_nametoindex(bridge_name);
+    if(ifindex == 0) {
+        return ENODEV;
+    }
+
+    pid_t pid = fork();
+    if(pid < 0) {
+        dprintf(D_ALWAYS, "Error in creating child process in ovs_set_bridge_fd (errno=%d, %s)\n", errno, strerror(errno));
+        return errno;
+    }
+    else if(pid == 0) {// This is the child process
+        // equivalent to execute 'ovs-vsctl set Bridge brname other_config:stp-forward-delay=delay'
+        char delay_value[4];
+        sprintf(delay_value, "%d", delay);
+        char delay_str[40] = "other_config:stp-forward-delay=";
+        strcat(delay_str, delay_value);
+        char * args[] = {"ovs-vsctl", "set", "Bridge", "brname", delay_str, NULL};
+        if(execvp("ovs-vsctl", args) < 0) {
+            dprintf(D_ALWAYS, "execvp in child to spawn ovs-vsctl command failed. (errno=%d, %s)\n", errno, strerror(errno));
+            exit(errno);
+        }
+        exit(0);
+    }
+    else {// This is the parent process
+        int status;
+        if(waitpid(pid, &status, 0) == -1){
+            dprintf(D_ALWAYS, "waitpid error in ovs_set_bridge_fd (errno=%d, %s)\n", errno, strerror(errno));
+            return errno;
+        }
+        if (WIFEXITED(status)) {
+            dprintf(D_FULLDEBUG, "ovs-vsctl set Bridge %s other_config:stp-forward-delay=%d terminated normally. Exit status = %d\n", brname, delay, WEXITSTATUS(status));
+            errno = WEXITSTATUS(status);
+        }
+        else if (WIFSIGNALED(status)) {
+            dprintf(D_ALWAYS, "ovs-vsctl set Bridge %s other_config:stp-forward-delay=%d terminated abnormally. Killed by signal %d\n", brname, delay, WTERMSIG(status));
             errno = WTERMSIG(status);
         }
         return errno;
