@@ -207,15 +207,20 @@ run before jobs with lower numerical priority.
 See section~\ref{man-condor-submit-priority} on 
 page~\pageref{man-condor-submit-priority}
 for more information.}
-\OptItem{\Opt{---print}}{(\Condor{qsub} Specific option) 
-\Condor{qsub} specific. Prints to \File{stdout} the contents of the HTCondor submit
+\OptItem{\Opt{---print}}{(Specific option) 
+Send to \File{stdout} the contents of the HTCondor submit description
 file that \Condor{qsub} generates.}
 \OptItem{\OptArg{-r}{y|n}}{(Status option)
 Specifies whether or not a job is re-runnable. Normally, HTCondor tries to rerun jobs,
 so this tries as best as possible ensure that this does not occur. \Arg{y} is the 
 default value.}
 \OptItem{\OptArg{-S}{shell}}{(Submission option)
-Specifies the path to the shell that should interpret the job.}
+Specifies the path and executable name of a shell.  
+Alters the HTCondor submit description file produced, such that
+the executable becomes a wrapper script.
+Within the submit description file will be
+\Expr{executable = <shell>} and \Expr{arguments = <commandfile>}.
+}
 % html is bad; nothing tried so far corrects it
 %\OptItem{\OptArg{-t}{start[-stop[:step]] }} {(Submission option)
 %\OptItem{\OptArg{-t}{ start[-stop[:step]] }} {(Submission option)
@@ -228,9 +233,11 @@ step size of the indices.
 \Warn 
 Currently, trying to use more than more than one processor or 
 node in a job will not work with this option.}
-\OptItem{\Opt{---test}}{(\Condor{qsub} Specific option)
-\Condor{qsub} specific. It makes \Condor{qsub} not submit the job, but \Condor{qsub}
-will still generate an HTCondor submit file.}
+\OptItem{\Opt{---test}}{(Specific option)
+With the intention of testing a potential job submission,
+parse files and commands to generate error output.
+Produces, but then removes the HTCondor submit description file.
+Never submits the job, even if no errors are encountered. }
 \OptItem{\OptArg{-v}{variable list}}{(Environmental option)
 \Arg{variable list} is a comma separated string with the format of
 \Env{variable[=value][,variable[=value],...]}. Since \Env{[=value]} can be optional
