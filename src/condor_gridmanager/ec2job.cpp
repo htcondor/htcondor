@@ -330,11 +330,13 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 		token = GetNextToken( " ", false );
 		if ( token ) {
 			m_client_token = token;
+            dprintf( D_FULLDEBUG, "Found client token '%s'.\n", m_client_token.c_str() );
 		}
 
 		token = GetNextToken( " ", false );
 		if ( token ) {
 			m_remoteJobId = token;
+            dprintf( D_FULLDEBUG, "Found remote job ID '%s'.\n", m_remoteJobId.c_str() );
 		}
 	}
 
@@ -1794,9 +1796,10 @@ void EC2Job::SetKeypairId( const char *keypair_id )
 
 void EC2Job::SetClientToken(const char *client_token)
 {
-	m_client_token.clear();
-	if ( client_token ) {
-		m_client_token = client_token;
+    if( client_token != NULL ) {
+        m_client_token = client_token;
+    } else {
+        m_client_token.clear();
 	}
 	EC2SetRemoteJobId(m_client_token.empty() ? NULL : m_client_token.c_str(),
 				   m_remoteJobId.c_str());
@@ -1804,8 +1807,12 @@ void EC2Job::SetClientToken(const char *client_token)
 
 void EC2Job::SetInstanceId( const char *instance_id )
 {
-	m_remoteJobId.clear();
-	if ( instance_id ) {
+    // Don't unconditionally clear the remote job ID -- if we do,
+    // SetInstanceId( m_remoteJobId.c_str() ) does exactly the opposite
+    // of what you'd expect, because the c_str() is cleared as well.
+    if( instance_id == NULL ) {
+        m_remoteJobId.clear();
+    } else {
 		m_remoteJobId = instance_id;
         jobAd->Assign( ATTR_EC2_INSTANCE_NAME, m_remoteJobId );
 	}
