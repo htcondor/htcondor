@@ -265,15 +265,28 @@ BridgeConfiguration::SetupPostForkParent()
 		dprintf(D_ALWAYS, "Required ClassAd attribute " ATTR_EXTERNAL_INTERFACE " is missing.\n");
 		return 1;
 	}
-
-	// Wait for the bridge to come up.
+	
+	// We handle bridge status differently with linux bridge and ovs bridge
+	// For linux bridge, stp is enabled we wait for the bridge to come up.
+	// For ovs bridge, by default stp is disabled, we can assume the ports on
+	// ovs bridge gets to forwarding state immediately, thus we don't check the 
+	// state of ports connected to ovs bridge.
+	
 	int err;
-	NetworkNamespaceManager & manager = NetworkNamespaceManager::GetManager();
-        int fd = manager.GetNetlinkSocket();
-	if ((err = wait_for_bridge_status(fd, external_device.c_str()))) {
-		return err;
+	std::string configuration_type;
+	m_ad->EvaluateAttrString(ATTR_NETWORK_TYPE, configuration_type);
+	if(configuration_type == "bridge")
+	{
+		NetworkNamespaceManager & manager = NetworkNamespaceManager::GetManager();
+        	int fd = manager.GetNetlinkSocket();
+		if ((err = wait_for_bridge_status(fd, external_device.c_str()))) {
+			return err;
+		}
 	}
-
+	else if (configuration_type == "ovs_bridge")
+	{
+		// do nothing here
+	}
 	char go = 1;
 	while (((err = write(m_p2c[1], &go, 1)) < 0) && (errno == EINTR)) {}
 	if (err < 0) {
