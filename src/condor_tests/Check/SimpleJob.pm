@@ -64,8 +64,8 @@ sub RunCheck
 		$duration = $args{duration};
 	}
 
-	if(exists $args{tmeout}){
-		$timeout = $args{tmeout};
+	if(exists $args{timeout}){
+		$timeout = $args{timeout};
 		print "Test getting requested timeout of <$timeout> seconds\n";
 	}
 	 
@@ -81,7 +81,7 @@ sub RunCheck
 	my $donewithsuccess_fn = $args{on_success} || $ExitSuccess;
 
 
-	if(exists $args{tmeout}){
+	if(exists $args{timeout}){
 		CondorTest::RegisterTimed( $testname, $timed_callback, $timeout);
 	}
     CondorTest::RegisterAbort( $testname, $abort_fn );
