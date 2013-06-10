@@ -75,7 +75,6 @@ my $idles = 0;
 		# remove jobs and return
 		if($expect_idle == 0) {
 			runcmd("condor_rm -all");
-			runcmd("condor_rm -forcex -all");
 		} else {
 			$idles = CountIdle($expect_idle);
 			if($idles == $expect_idle) {
@@ -90,11 +89,8 @@ my $idles = 0;
 					match_new => "true"
 				);
 				runcmd("condor_rm -all");
-				runcmd("condor_rm -forcex -all");
 			}
 		}
-	} elsif($running_now > $expect_run) {
-		die "Concurrency possibly broken:running $running_now expected only $expect_run\n";
 	} else {
 		print "running $running_now expecting $expect_run: not removing jobs\n";
 	}
@@ -119,6 +115,7 @@ $result = SimpleJob::RunCheck(
 	on_execute => $on_execute,
 	queue_sz => 3,
 	duration => 0,
+	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
 print "First test basic job. 3 jobs no concurrency settings\n";
@@ -145,6 +142,7 @@ $result = SimpleJob::RunCheck(
 	on_execute => $on_execute,
 	queue_sz => 3,
 	duration => 0,
+	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
 print "Test specified concurrency\n";
@@ -169,6 +167,7 @@ $result = SimpleJob::RunCheck(
 	on_execute => $on_execute,
 	queue_sz => 2,
 	duration => 0,
+	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
 print "Test default concurrency and colon usage spec\n";
@@ -193,6 +192,7 @@ $result = SimpleJob::RunCheck(
 	on_execute => $on_execute,
 	queue_sz => 3,
 	duration => 0,
+	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
 print "Test class default\n";
@@ -219,6 +219,7 @@ $result = SimpleJob::RunCheck(
 	on_execute => $on_execute,
 	queue_sz => 7,
 	duration => 0,
+	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
 print "Test class default\n";
