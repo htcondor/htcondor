@@ -1,0 +1,286 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2013, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+
+
+my $testname = "job_consumption_policies_basic_van";
+my $negotiate_test_passed = 0;
+my $slot_test_passed = 0;
+my $execute_test_passed = 0;
+my $executing = 0;
+
+
+# trip whitespace from beginning and end of a string
+sub trimws($) {
+    my $string = shift;
+    $string =~ s/^\s+//;
+    $string =~ s/\s+$//;
+    return $string;
+}
+
+
+sub timed_callback {
+    if (!$executing) {
+        # jobs aren't running yet, we can skip this callback.
+        return;
+    }
+
+    # only do this check if it hasn't already passed:
+    if (!$negotiate_test_passed) {
+        my $neglog = trimws(`condor_config_val NEGOTIATOR_LOG`);
+	my @slines = grep(/(Started Negotiation|Finished Negotiation|Successfully matched with)/, CondorTest::slurp($neglog));
+        my $started = 0;
+        my %hist = ();
+        my $last = "_";
+        my $n = 0;
+        foreach $line (@slines) {
+            # I require that I see all slot matches in single cycle, so quit
+            # first cycle-end after I see first match:
+            if ($started && ($line =~ /Finished/)) { last; } 
+            if ($line =~ /matched with/) { 
+                $started = 1;
+                my @f = split / +/, $line;
+                my @f2 = split /@/, $f[5];
+                my $k = $f2[0];
+                if ($k ne $last) {
+                    # Part of negotiator-side resource consumption is that
+                    # each slot gets used repeatedly until it runs out, so
+                    # if I see non-continguous slot names here, I want to quit
+                    # and induce test to fail
+                    if (defined $hist{$k}) { last; }
+                    if ($last ne "_") { $hist{$last} = $n; }
+                    $last = $k;
+                    $n = 1;
+                } else {
+                    $n++;
+                }
+            }
+        }
+        $hist{$last} = $n;
+
+        # check to see if the expected number of matches for each slot actually happened:
+        my $sz = scalar keys %hist;
+        if (($sz == 4) && ($hist{"slot1"} == 5) && ($hist{"slot2"} == 4) && ($hist{"slot3"} == 3) && ($hist{"slot4"} == 1)) {
+            print "negotiate test passed\n";
+            $negotiate_test_passed = 1;
+        } else {
+            # if it failed, wait a little until we check again
+            print "negotiate test did not pass yet, retry...\n";
+            sleep(5);
+        }
+    }
+
+    if ($negotiate_test_passed && !$slot_test_passed) {
+        # notice I'm ignoring Disk - it's hard to check disk directly because you have to use a 
+        # percentage or fraction, and that means I can't know ahead of time how much disk to expect
+        my @res = `condor_status -constraint "SlotTypeID > 0" -format "%d" SlotTypeID -format " %d" SlotWeight -format " %d" Cpus -format " %d" Memory -format " %d\n" Tokens`;
+        my %hist = ();
+        foreach $rec (@res) {
+            chomp $rec;
+            print "1    $rec\n";
+            if (defined $hist{$rec}) {
+                $hist{$rec}++;
+            } else {
+                $hist{$rec} = 1;
+            }
+        }
+
+        my @res2 = `condor_status -constraint "SlotTypeID < 0" -format "%d" SlotTypeID -format " %d" SlotWeight -format " %d" Cpus -format " %d" Memory -format " %d\n" Tokens`;
+        my %hist2 = ();
+        foreach $rec (@res2) {
+            chomp $rec;
+            print "2    $rec\n";
+            if (defined $hist2{$rec}) {
+                $hist2{$rec}++;
+            } else {
+                $hist2{$rec} = 1;
+            }
+        }
+
+        my $sz = scalar keys %hist;
+        my $sz2 = scalar keys %hist2;
+        if (($sz == 4) && ($hist{"1 0 0 95 0"} == 1) && ($hist{"2 0 1 0 0"} == 1) && ($hist{"3 0 5 100 0"} == 1) && ($hist{"4 0 0 0 0"} == 1) && ($sz2 == 4) && ($hist2{"-1 1 1 1 0"} == 5) && ($hist2{"-2 1 1 25 0"} == 4) && ($hist2{"-3 1 0 0 1"} == 3) && ($hist2{"-4 5 5 100 0"} == 1)) {
+            print "slot test passed\n";
+            $slot_test_passed = 1;
+        } else {
+            print "slot test did not pass yet, retry...\n";
+            sleep(5);
+        }
+    }
+
+    if ($slot_test_passed && !$execute_test_passed) {
+        my @res = `condor_q -format "%s\n" ProcID -constraint 'JobStatus == 2'`;
+        if (scalar(@res) == 13) {
+            print "execute test passed\n";
+            $execute_test_passed = 1;
+        } else {
+            print "execute test did not pass yet, retry...\n";
+            sleep(5);
+        }
+    }
+}
+
+
+sub execute_callback {
+    if (!$executing) {
+        # only do this once, to let all jobs have a chance to spin up
+        sleep(10);
+    }
+    # flag that jobs have started
+    $executing = 1;
+}
+
+
+sub exit_callback {
+    unless ($execute_test_passed  &&  $slot_test_passed  &&   $negotiate_test_passed) {
+        die "Failed to find expected negotiation order or pattern of running jobs";
+    }
+}
+
+
+
+my $append_condor_config = '
+#COLLECTOR_ARGS = -p 42424
+#COLLECTOR_HOST = $(CONDOR_HOST):0
+#COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
+
+# spoof some cores
+NUM_CPUS = 20
+
+# declare an extensible resource for a claim-based consumption policy
+MACHINE_RESOURCE_tokens = 3
+
+# startd-wide consumption policy config
+# defaults for cpus/memory/disk consumption
+CONSUMPTION_POLICY = True
+
+# startd defaults, can be overridden on a per-slot-type basis
+CONSUMPTION_CPUS = ifthenelse(target.Cpus isnt undefined, quantize(target.Cpus, {1}), 1)
+CONSUMPTION_MEMORY = ifthenelse(target.Memory isnt undefined, quantize(target.Memory, {1}), 1)
+CONSUMPTION_DISK = ifthenelse(target.Disk isnt undefined, quantize(target.Disk, {100}), 100)
+CONSUMPTION_TOKENS = ifthenelse(target.Tokens isnt undefined, target.Tokens, 0)
+
+# defaults, can be overridden on a per-slot-type basis
+SLOT_WEIGHT = Cpus
+NUM_CLAIMS = 5
+
+# slot type 1: a traditional cpu-centric policy
+SLOT_TYPE_1 = cpus=5,memory=100,disk=25%,tokens=0
+SLOT_TYPE_1_PARTITIONABLE = True
+SLOT_TYPE_1_NUM_CLAIMS = 10
+NUM_SLOTS_TYPE_1 = 1
+
+# slot type 2: will demo/test a memory-centric policy
+SLOT_TYPE_2 = cpus=5,memory=100,disk=25%,tokens=0
+SLOT_TYPE_2_PARTITIONABLE = True
+NUM_SLOTS_TYPE_2 = 1
+SLOT_TYPE_2_CONSUMPTION_MEMORY = quantize(target.RequestMemory, {25})
+SLOT_TYPE_2_SLOT_WEIGHT = floor(Memory / 25)
+
+# slot type 3: a claim-based policy
+# (not tied to resource such as cpu, mem, etc)
+SLOT_TYPE_3 = cpus=5,memory=100,disk=25%,tokens=3
+SLOT_TYPE_3_PARTITIONABLE = True
+NUM_SLOTS_TYPE_3 = 1
+# always consume 1 token, and none of anything else
+SLOT_TYPE_3_CONSUMPTION_TOKENS = 1
+SLOT_TYPE_3_CONSUMPTION_CPUS = 0
+SLOT_TYPE_3_CONSUMPTION_MEMORY = 0
+SLOT_TYPE_3_CONSUMPTION_DISK = 0
+# define cost in terms of available tokens for serving jobs
+SLOT_TYPE_3_SLOT_WEIGHT = Tokens
+
+# slot type 4: a static-slot policy
+# (always consume all resources)
+SLOT_TYPE_4 = cpus=5,memory=100,disk=25%,tokens=0
+SLOT_TYPE_4_PARTITIONABLE = True
+NUM_SLOTS_TYPE_4 = 1
+# consume all resources - emulate static slot
+SLOT_TYPE_4_CONSUMPTION_CPUS = Cpus
+SLOT_TYPE_4_CONSUMPTION_MEMORY = Memory
+SLOT_TYPE_4_CONSUMPTION_DISK = Disk
+SLOT_TYPE_4_CONSUMPTION_TOKENS = Tokens
+
+# turn this off to demonstrate that consumption policy will handle this kind of logic
+MUST_MODIFY_REQUEST_EXPRS = False
+
+# turn off schedd-side resource splitting since we are demonstrating neg-side alternative
+CLAIM_PARTITIONABLE_LEFTOVERS = False
+
+# keep slot weights enabled for match costing
+NEGOTIATOR_USE_SLOT_WEIGHTS = True
+
+# for simplicity, turn off preemption, caching, worklife
+CLAIM_WORKLIFE=0
+MAXJOBRETIREMENTTIME = 3600
+PREEMPT = False
+RANK = 0
+PREEMPTION_REQUIREMENTS = False
+NEGOTIATOR_CONSIDER_PREEMPTION = False
+NEGOTIATOR_MATCHLIST_CACHING = False
+
+# verbose logging
+ALL_DEBUG = D_FULLDEBUG |  D_MACHINE
+
+# reduce daemon update latencies
+NEGOTIATOR_INTERVAL = 30
+SCHEDD_INTERVAL = 15
+';
+
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $append_condor_config
+);
+
+# submit jobs
+my $submit_body = "
+universe = vanilla
+executable = x_sleep.pl
+arguments = 30
+request_cpus = 1
+request_memory = 1
+request_disk = 1
+log = $testname.log
+output = $testname.out
+error = $testname.err
+notification = never
+queue 13
+";
+
+my $submit_filename = CondorTest::TempFileName("$testname.submit");
+open(SUBMIT, ">$submit_filename") || die "Failed to open $submit_filename\n";
+print SUBMIT $submit_body;
+close(SUBMIT);
+
+
+CondorTest::RegisterTimed($testname, \&timed_callback, 5);
+CondorTest::RegisterExecute($testname, \&execute_callback);
+CondorTest::RegisterExitedSuccess($testname, \&exit_callback);
+
+
+print "RunTest()...\n";
+if (CondorTest::RunTest($testname, $submit_filename, 0)) {
+    CondorTest::debug("$testname: SUCCESS\n",1);
+    exit(0);
+} else {
+    die "$testname: CondorTest::RunTest() failed\n";
+}
