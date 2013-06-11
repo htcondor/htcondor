@@ -152,6 +152,7 @@ my $DEBUGLEVEL = 2; # nothing higher shows up
 my $debuglevel = 3; # take all the ones we don't want to see
 					# and allowed easy changing and remove hard
 					# coded value
+my @debugcollection = ();
 my $isnightly = IsThisNightly($topleveldir);
 my $wrap_test;
 
@@ -324,16 +325,27 @@ sub StartCondorWithParams
 sub debug {
     my $string = shift;
     my $level = shift;
-    if($DEBUG) {
+	my $time = `date`;
+	chomp($time);
+	push @debugcollection, "$time: CondorPersonal - $string";
+print "sub debug level <$level>, DEBUGLEVEL <$DEBUGLEVEL>\n";
+    #if($DEBUG) {
         if(!(defined $level) or ($level <= $DEBUGLEVEL)) {
-            print( "", timestamp(), ":<CondorPersonal> $string" );
+            print( "", timestamp(), ":<CondorPersonal>(L=$level) $string" );
         }
-    }
+    #}
+}
+
+sub debug_flush {
+	foreach my $line (@debugcollection) {
+		print "$line\n";
+	}
 }
 
 sub DebugLevel
 {
     my $newlevel = shift;
+	print "CondorPersonal: changing from $DEBUGLEVEL to $newlevel\n";
     $DEBUGLEVEL = $newlevel;
 }
 
@@ -591,6 +603,7 @@ sub InstallPersonalCondor
 		else
 		{
 			print "which condor_q responded <<<$condorq>>>! CondorPersonal Failing now\n";
+			debug_flush();
 			die "Can not seem to find a Condor install!\n";
 		}
 		
@@ -602,6 +615,7 @@ sub InstallPersonalCondor
 		}
 		else
 		{
+			debug_flush();
 			die "Can not seem to locate Condor release binaries\n";
 		}
 
@@ -652,6 +666,7 @@ sub InstallPersonalCondor
 		else
 		{
 			print "which condor_q responded <<<$condorq>>>! CondorPersonal Failing now\n";
+			debug_flush();
 			die "Can not seem to find a Condor install!\n";
 		}
 		
@@ -663,6 +678,7 @@ sub InstallPersonalCondor
 		}
 		else
 		{
+			debug_flush();
 			die "Can not seem to locate Condor release binaries\n";
 		}
 		#$binloc = "../../condor/bin/";
@@ -705,6 +721,7 @@ sub InstallPersonalCondor
 	}
 	else
 	{
+		debug_flush();
 		die "Undiscernable install directive! (condor = $condordistribution)\n";
 	}
 
@@ -1010,7 +1027,8 @@ debug( "HMMMMMMMMMMM opening to write <$topleveldir/$personal_local>\n",$debugle
 		print NEW "# Done Adding for portchanges equal standard\n";
 	}
 	else
-	{
+	{		
+		debug_flush();
 		die "Misdirected request for ports\n";
 		exit(1);
 	}
@@ -1188,11 +1206,13 @@ sub StartPersonalCondor
 		system("$personalmaster");
 		#system("condor_config_val -v log");
 	} else {
+		debug_flush();
 		die "Bad state for a new personal condor configuration!<<running :-(>>\n";
 	}
 
 	my $res = IsRunningYet();
 	if($res == 0) {
+		debug_flush();
 		die "Can not continue because condor is not running!!!!\n";
 	}
 
@@ -1260,6 +1280,7 @@ sub IsPersonalRunning
     }
 
     if( $matchedconfig eq "" ) {
+		debug_flush();
         die "lost: config does not match expected config setting......\n";
     }
 
@@ -1302,7 +1323,7 @@ sub IsPersonalRunning
 #################################################################
 
 sub IsRunningYet {
-    print "Testing if Condor is up.\n";
+    #print "Testing if Condor is up.\n";
     print "\tCONDOR_CONFIG=$ENV{CONDOR_CONFIG}\n";
 	my $daemonlist = `condor_config_val daemon_list`;
 	CondorUtils::fullchomp($daemonlist);
@@ -1312,7 +1333,7 @@ sub IsRunningYet {
 	my $first = 1;
 	my @status;
 
-	my $runlimit = 8;
+	my $runlimit = 16;
 	my $backoff = 2;
 	my $loopcount;
 
@@ -1370,6 +1391,7 @@ sub IsRunningYet {
             	debug( "Found it!!!! master address file\n",$debuglevel);
             	$havemasteraddr = "yes";
         	} elsif ( $loopcount == $runlimit ) {
+				debug_flush();
 				debug( "Gave up waiting for master address file\n",$debuglevel);
 				return 0;
         	} else {
@@ -1400,6 +1422,7 @@ sub IsRunningYet {
             	$havecollectoraddr = "yes";
         	} elsif ( $loopcount == $runlimit ) {
 				debug( "Gave up waiting for collector address file\n",$debuglevel);
+				debug_flush();
 				return 0;
         	} else {
             	sleep ($loopcount * $backoff);
@@ -1429,6 +1452,7 @@ sub IsRunningYet {
             	$havenegotiatoraddr = "yes";
         	} elsif ( $loopcount == $runlimit ) {
 				debug( "Gave up waiting for negotiator address file\n",$debuglevel);
+				debug_flush();
 				return 0;
         	} else {
             	sleep ($loopcount * $backoff);
@@ -1458,6 +1482,7 @@ sub IsRunningYet {
             	$havestartdaddr = "yes";
         	} elsif ( $loopcount == $runlimit ) {
 				debug( "Gave up waiting for startd address file\n",$debuglevel);
+				debug_flush();
 				return 0;
         	} else {
             	sleep ($loopcount * $backoff);
@@ -1489,6 +1514,7 @@ sub IsRunningYet {
             	$havescheddaddr = "yes";
         	} elsif ( $loopcount == $runlimit ) {
 				debug( "Gave up waiting for schedd address file\n",$debuglevel);
+				debug_flush();
 				return 0;
         	} else {
             	sleep 1;
@@ -1523,6 +1549,7 @@ sub IsRunningYet {
 			}
 			else {
 			    print timestamp(), " Hit the retry limit.  Erroring out.\n";
+				debug_flush();
 			    return 0;
 			}
                     }
@@ -1566,6 +1593,7 @@ sub IsRunningYet {
     			}
 				if($loopcount == $runlimit) { 
 					print "schedd did not start - bad\n";
+					debug_flush();
 					last; 
 				}
 				sleep ($loopcount * $backoff);
@@ -1598,6 +1626,7 @@ sub IsRunningYet {
     			}
 				if($loopcount == $runlimit) { 
 					print "negotiator did not start - bad\n";
+					debug_flush();
 					last; 
 				}
 				sleep ($loopcount * $backoff);

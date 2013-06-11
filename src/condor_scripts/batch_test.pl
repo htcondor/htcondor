@@ -84,6 +84,7 @@ Condor::DebugOff();
 Condor::DebugLevel(0);
 CondorPersonal::DebugLevel(0);
 CondorPersonal::DebugOff();
+my @debugcollection = ();
 
 #################################################################
 #
@@ -321,9 +322,9 @@ while( $_ = shift( @ARGV ) ) {
       }
       if( /^-v.*/ ) {
           Condor::DebugOn();
-          Condor::DebugLevel(5);
+          Condor::DebugLevel(2);
           CondorPersonal::DebugOn();
-          CondorPersonal::DebugLevel(5);
+          CondorPersonal::DebugLevel(2);
       }
     }
 }
@@ -554,6 +555,7 @@ foreach my $compiler (@compilers) {
 	    if( $hush == 0 ) {
 		debug( "forking for $test_program pid returned is $pid\n",3);
 	    }
+		debug_flush();
 	    die "error calling fork(): $!\n" unless defined $pid;
 
 	    # two modes 
@@ -1415,7 +1417,16 @@ sub DoChild
 # Call down to Condor Perl Module for now
 sub debug {
     my ($msg, $level) = @_;
-    Condor::debug("batch_test - $msg", $level);
+	my $time = `date`;
+	chomp($time);
+	push @debugcollection, "$time: batch_test - $msg";
+    Condor::debug("batch_test(L=$level) - $msg", $level);
+}
+
+sub debug_flush {
+	foreach my $line (@debugcollection) {
+		print "$line\n";
+	}
 }
 
 
