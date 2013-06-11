@@ -52,6 +52,21 @@ $ExitSuccess = sub {
 sub RunCheck
 {
     my %args = @_;
+	my $availableslots = 0;
+    my $result = 0;
+
+	my $queuesz = $args{queue_sz} || 1;
+
+	if($args{check_slots}) {
+		# Make sure we never try to start more jobs then slots we have!!!!!!
+		$availableslots = ExamineSlots();
+	
+		if($availableslots < $queuesz) {
+    		CondorTest::RegisterResult( $result, %args );
+    		return $result;
+		}
+	}
+
     my $testname = $args{test_name} || CondorTest::GetDefaultTestName();
     my $universe = $args{universe} || "vanilla";
     my $user_log = $args{user_log} || CondorTest::TempFileName("$testname.user_log");
@@ -130,10 +145,9 @@ sub RunCheck
     if( $append_submit_commands ne "" ) {
         print SUBMIT "\n" . $append_submit_commands . "\n";
     }
-    print SUBMIT "queue $args{queue_sz}\n";
+    print SUBMIT "queue $queuesz\n";
     close( SUBMIT );
 
-    my $result = 0;
 	if (defined $args{GetClusterId}) {
     	$result = CondorTest::RunTest($testname, $submit_fname, 0, $args{GetClusterId});
 	} else {
@@ -141,6 +155,23 @@ sub RunCheck
 	}
     CondorTest::RegisterResult( $result, %args );
     return $result;
+}
+
+sub ExamineSlots
+{
+	my $line = "";
+
+	my $available = 0;
+	my @jobs = `condor_status`;
+	foreach my $job (@jobs) {
+		chomp($job);
+		$line = $job;
+		if($line =~ /^\s*Total\s+(\d+)\s*(\d+)\s*(\d+)\s*(\d+).*/) {
+			print "<$4> unclaimed slots\n";
+			$available = $4;
+		}
+	}
+	return($available);
 }
 
 1;
