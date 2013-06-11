@@ -49,8 +49,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug where scheduler universe jobs with on\_exit\_hold
-expressions that evaluate to true could have duplicate hold messages
+\item Fixed a bug in which scheduler universe jobs that
+have an \SubmitCmd{on\_exit\_hold}
+expression that evaluates to \Expr{True} could have duplicate hold messages
 in the user log.
 \Ticket{3651}
 
