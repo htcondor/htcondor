@@ -374,6 +374,19 @@ BridgeConfiguration::Cleanup() {
 		}
 	}
 	GratuitousArp(bridge_device);
+	// For ovs bridge, we also need to delete the external deivce connected to the bridge for clean up
+	/*std::string bridge_name;
+	m_ad->EvaluateAttrString(ATTR_BRIDGE_NAME, bridge_name);
+	std::string configuration_type;
+    	m_ad->EvaluateAttrString(ATTR_NETWORK_TYPE, configuration_type);
+	if(configuration_type == "ovs_bridge") {
+		std::string external_device;
+		if (!m_ad->EvaluateAttrString(ATTR_EXTERNAL_INTERFACE, external_device)) {
+			dprintf(D_ALWAYS, "Required ClassAd attribute " ATTR_EXTERNAL_INTERFACE " is missing.\n");
+			return 1;
+		}
+		ovs_delete_interface_from_bridge(bridge_name.c_str(), external_device.c_str());
+	}*/
 
 	return 0;
 }

@@ -36,8 +36,9 @@ ovs_create_bridge(const char * bridge_name)
         return errno;
     }
     else if (pid == 0) { // This is the child process
-        // equivalent to execute 'ovs-vsctl add-br bridge_name'
-        char * args[] = {"ovs-vsctl", "add-br", brname, NULL};
+        // equivalent to execute 'ovs-vsctl -- --may-exist add-br bridge_name'
+        // with --may-exist, this command will do nothing is the bridge with the same name is already existed.
+        char * args[] = {"ovs-vsctl", "--", "--may-exist", "add-br", brname, NULL};
         if(execvp("ovs-vsctl", args) < 0){
             dprintf(D_ALWAYS, "execvp in child to spawn ovs-vsctl command failed. (errno=%d, %s)\n", errno, strerror(errno));
             exit(errno);
@@ -123,8 +124,8 @@ ovs_add_interface_to_bridge(const char * bridge_name, const char * dev)
         return errno;
     }
     else if (pid == 0) { // This is the child process
-        // equivalent to execute 'ovs-vsctl add-port bridge_name device_name'
-        char * args[] = {"ovs-vsctl", "add-port", brname, devname, NULL};
+        // equivalent to execute 'ovs-vsctl -- --may-exist add-port bridge_name device_name'
+        char * args[] = {"ovs-vsctl", "--", "--may-exist", "add-port", brname, devname, NULL};
         if(execvp("ovs-vsctl", args) < 0){
             dprintf(D_ALWAYS, "execvp in child to spawn ovs-vsctl command failed. (errno=%d, %s)\n", errno, strerror(errno));
             exit(errno);
@@ -143,6 +144,53 @@ ovs_add_interface_to_bridge(const char * bridge_name, const char * dev)
         }
         else if (WIFSIGNALED(status)) {
             dprintf(D_ALWAYS, "ovs-vsctl add-port %s %s terminated abnormally. Killed by signal %d\n", brname, dev, WTERMSIG(status));
+            errno = WTERMSIG(status);
+        }
+        return errno;
+    }
+}
+
+int
+ovs_delete_interface_from_bridge(const char * bridge_name, const char * dev)
+{
+    errno = 0;
+    char brname[OVS_BRNAME_MAX_LENGTH];
+    strncpy(brname, bridge_name, OVS_BRNAME_MAX_LENGTH);
+    char devname[IFNAMSIZ];
+    strncpy(devname, dev, IFNAMSIZ);
+
+    int ifindex = if_nametoindex(dev);
+    if(ifindex == 0) {
+        return ENODEV;
+    }
+
+    pid_t pid = fork();
+
+    if(pid < 0) {
+        dprintf(D_ALWAYS, "Error in creating child process in ovs_delete_interface from bridge (errno=%d, %s).\n", errno, strerror(errno));
+        return errno;
+    }
+    else if (pid == 0) { // This is the child process
+        // equivalent to execute 'ovs-vsctl -- --if-exist del-port bridge_name device_name'
+        char * args[] = {"ovs-vsctl", "--", "--if-exist", "del-port", brname, devname, NULL};
+        if(execvp("ovs-vsctl", args) < 0){
+            dprintf(D_ALWAYS, "execvp in child to spawn ovs-vsctl command failed. (errno=%d, %s)\n", errno, strerror(errno));
+            exit(errno);
+        }
+        exit(0);
+    }
+    else { // This is the parent process
+        int status;
+        if(waitpid(pid, &status, 0) == -1){
+            dprintf(D_ALWAYS, "waitpid error in ovs_delete_interface_from_bridge. (errno=%d, %s)\n", errno, strerror(errno));
+            return errno;
+        }
+        if(WIFEXITED(status)) {
+            dprintf(D_FULLDEBUG, "ovs-vsctl del-port %s %s terminated normally. Exit status = %d\n", brname, dev, WEXITSTATUS(status));
+            errno = WEXITSTATUS(status);
+        }
+        else if (WIFSIGNALED(status)) {
+            dprintf(D_ALWAYS, "ovs-vsctl del-port %s %s terminated abnormally. Killed by signal %d\n", brname, dev, WTERMSIG(status));
             errno = WTERMSIG(status);
         }
         return errno;

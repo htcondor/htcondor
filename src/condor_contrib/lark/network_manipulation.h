@@ -262,6 +262,16 @@ int ovs_add_interface_to_bridge(const char * bridge_name, const char * dev);
 int delete_interface_from_bridge(const char *bridge_name, const char *dev);
 
 /*
+ * Delete a network interface from the the openvswitch bridge.
+ *
+ * - bridge_name: Name of the bridge device.
+ * - dev: Name of the device to delete.
+ *
+ * Return 0 on success and non-zero on failure.
+ */
+int ovs_delete_interface_from_bridge(const char *bridge_name, const char *dev);
+
+/*
  * Wait for a bridge interface to go into forwarding state.
  *
  * - sock: Netlink socket to the kernel.
