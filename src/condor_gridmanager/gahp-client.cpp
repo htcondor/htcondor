@@ -6173,7 +6173,7 @@ int GahpClient::ec2_vm_status_all( std::string service_url,
                 break;
 
             default:
-                if( (result->argc - 2) % 4 != 0 ) { EXCEPT( "Bad %s result", command ); }
+                if( (result->argc - 2) % 6 != 0 ) { EXCEPT( "Bad %s result", command ); }
                 for( int i = 2; i < result->argc; ++i ) {
                     returnStatus.append( strdup( result->argv[i] ) );
                 }

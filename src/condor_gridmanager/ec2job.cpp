@@ -960,92 +960,32 @@ void EC2Job::doEvaluateState()
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_SUBMITTED; // GM_SUBMITTED knows how to handle this
 				} else {
-					StringList returnStatus;
+                    if( remoteJobState == "purged" ) {
+                        // The instance has been purged, act like we
+                        // got back 'terminated'
+                        remoteJobState = EC2_VM_STATE_TERMINATED;
+                        m_state_reason_code = "purged";
+                    }
 
-					// need to call ec2_vm_status(), ec2_vm_status()
-					// will check input arguments
-					// The VM status we need is saved in the second
-					// string of the returned status StringList
-					rc = gahp->ec2_vm_status(m_serviceUrl,
-											 m_public_key_file,
-											 m_private_key_file,
-											 m_remoteJobId,
-											 returnStatus,
-											 gahp_error_code );
-					
-					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-						 rc == GAHPCLIENT_COMMAND_PENDING ) {
-						break;
-					}
-					
-					// processing error code received
-					if ( rc != 0 ) {
-						// What to do about failure?
-						errorString = gahp->getErrorString();
-						dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s: %s\n",
-								 procID.cluster, procID.proc, gahp_error_code,
-								 errorString.c_str() );
-						gmState = GM_HOLD;
-						break;
-					} else {
-                        if ( returnStatus.number() == 0 ) {
-							// The instance has been purged, act like we
-							// got back 'terminated'
-							returnStatus.append( m_remoteJobId.c_str() );
-							returnStatus.append( EC2_VM_STATE_TERMINATED );
-							returnStatus.append( "dummy-ami-id" );
-							returnStatus.append( "dummy-sr-code" );
-						}
+                    // We don't check for a status change, because this
+                    // state is now only entered if we had one.
+                    if( remoteJobState == EC2_VM_STATE_RUNNING ||
+                        remoteJobState == EC2_VM_STATE_SHUTTINGDOWN ||
+                        remoteJobState == EC2_VM_STATE_TERMINATED ) {
+                        JobRunning();
 
-                        //
-                        // Grab everything out of returnStatus in one pass.
-                        //
-                        returnStatus.rewind();
-                        
-                        // Required; srCode may be null.
-                        std::string instance_id = returnStatus.next();
-                        std::string new_status = returnStatus.next();
-                        std::string ami_id = returnStatus.next();
-                        std::string srCode = returnStatus.next();
-                        
-                        // Optional.
-                        std::string public_dns, private_dns, keyname;
-                        if( returnStatus.number() >= 5 ) {
-                            public_dns = returnStatus.next();
-                            private_dns = returnStatus.next();
-                            keyname = returnStatus.next();
+                        // On a state change to running we perform all associations
+                        // the are non-blocking and we continue even if they fail.
+                        if ( remoteJobState == EC2_VM_STATE_RUNNING ) {
+                            associate_n_attach();
                         }
-                        
-                        // Any remaining values are the security groups.
+                    }
 
-                        // We don't check for a status change, because this
-                        // state is now only entered if we had one.
-					    if( new_status == EC2_VM_STATE_RUNNING ||
-						    new_status == EC2_VM_STATE_SHUTTINGDOWN ||
-						    new_status == EC2_VM_STATE_TERMINATED )
-						{
-							JobRunning();
-                            
-                            // On a state change to running we perform all associations
-							// the are non-blocking and we continue even if they fail.
-                            if ( new_status == EC2_VM_STATE_RUNNING )
-                            {
-                                associate_n_attach(returnStatus);
-                            }
-						}
-
-						remoteJobState = new_status;
-						SetRemoteJobStatus( new_status.c_str() );
-
-                        if( ! public_dns.empty() ) {
-                            SetRemoteVMName( public_dns.c_str() );
-                        }
-
-                        // dprintf( D_ALWAYS, "DEBUG: srCode = %s (assuming 'NULL')\n", srCode.c_str() );
-                        if( srCode != "NULL" ) {
-                            // Send the user a copy of the reason code.
-                            jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, srCode.c_str() );
-                            requestScheddUpdate( this, false );
+                    // dprintf( D_ALWAYS, "DEBUG: m_state_reason_code = %s (assuming 'NULL')\n", m_state_reason_code.c_str() );
+                    if( ! m_state_reason_code.empty() ) {
+                        // Send the user a copy of the reason code.
+                        jobAd->Assign( ATTR_EC2_STATUS_REASON_CODE, m_state_reason_code.c_str() );
+                        requestScheddUpdate( this, false );
                             
                             //
                             // http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-ItemType-StateReasonType.html
@@ -1077,36 +1017,41 @@ void EC2Job::doEvaluateState()
                             // it later.
                             //
                             
-                            if(
-                                 srCode == "Client.InstanceInitiatedShutdown"
-                              || srCode == "Client.UserInitiatedShutdown"
-                              || srCode == "Server.SpotInstanceTermination" ) {
-                                // Normal instance terminations are normal.
-                            } else if(
-                                 srCode == "Server.InternalError"
-                              || srCode == "Server.InsufficientInstanceCapacity"
-                              || srCode == "Client.VolumeLimitExceeded"
-                              || srCode == "Client.InternalError"
-                              || srCode == "Client.InvalidSnapshot.NotFound" ) {
-                                // Put abnormal instance terminations on hold.
-                                formatstr( errorString, "Abnormal instance termination: %s.", srCode.c_str() );
-                                dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
-                                gmState = GM_HOLD;
-                                break;
-                            } else {
-                                // Treat all unrecognized reasons as abnormal.
-                                formatstr( errorString, "Unrecognized reason for instance termination: %s.  Treating as abnormal.", srCode.c_str() );
-                                dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
-                                gmState = GM_HOLD;
-                                break;
-                            }
+                        if(
+                            m_state_reason_code == "Client.InstanceInitiatedShutdown"
+                         || m_state_reason_code == "Client.UserInitiatedShutdown"
+                         || m_state_reason_code == "Server.SpotInstanceTermination" ) {
+                            // Normal instance terminations are normal.
+                        } else if(
+                            m_state_reason_code == "purged" ) {
+                            // This isn't normal, but if the job was purged,
+                            // there's no reason to hold onto it.  Added this
+                            // so that we wouldn't complain but still write
+                            // purged as the EC2StatusReasonCode to the
+                            // history file.
+                        } else if(
+                            m_state_reason_code == "Server.InternalError"
+                         || m_state_reason_code == "Server.InsufficientInstanceCapacity"
+                         || m_state_reason_code == "Client.VolumeLimitExceeded"
+                         || m_state_reason_code == "Client.InternalError"
+                         || m_state_reason_code == "Client.InvalidSnapshot.NotFound" ) {
+                            // Put abnormal instance terminations on hold.
+                            formatstr( errorString, "Abnormal instance termination: %s.", m_state_reason_code.c_str() );
+                            dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
+                            gmState = GM_HOLD;
+                            break;
+                        } else {
+                            // Treat all unrecognized reasons as abnormal.
+                            formatstr( errorString, "Unrecognized reason for instance termination: %s.  Treating as abnormal.", m_state_reason_code.c_str() );
+                            dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
+                            gmState = GM_HOLD;
+                            break;
                         }
-					}
+                    }
 					
                     lastProbeTime = now;
                     gmState = GM_SUBMITTED;
 				}
-
 				break;				
 				
 			case GM_CANCEL:
@@ -1770,15 +1715,18 @@ BaseResource* EC2Job::GetResource()
 
 
 // steup the public name of ec2 remote VM, which can be used the clients 
-void EC2Job::SetRemoteVMName(const char * name)
+void EC2Job::SetRemoteVMName( const char * newName )
 {
-	if ( name ) {
-		jobAd->Assign( ATTR_EC2_REMOTE_VM_NAME, name );
-	} else {
-		jobAd->AssignExpr( ATTR_EC2_REMOTE_VM_NAME, "Undefined" );
-	}
-	
-	requestScheddUpdate( this, false );
+    if( newName == NULL ) {
+        newName = "Undefined";
+    }
+    
+    std::string oldName;
+    jobAd->LookupString( ATTR_EC2_REMOTE_VM_NAME, oldName );
+    if( oldName != newName ) {
+        jobAd->Assign( ATTR_EC2_REMOTE_VM_NAME, newName );
+	    requestScheddUpdate( this, false );
+    }
 }
 
 void EC2Job::SetKeypairId( const char *keypair_id )
@@ -1971,10 +1919,11 @@ void EC2Job::print_error_code( const char* error_code,
 			 error_code, function_name );	
 }
 
-void EC2Job::associate_n_attach(StringList & returnStatus)
+void EC2Job::associate_n_attach()
 {
 
 	char *gahp_error_code = NULL;
+    StringList returnStatus;
 	int rc;
 
 	char *buffer = NULL;
@@ -2102,17 +2051,61 @@ void EC2Job::associate_n_attach(StringList & returnStatus)
 	}
 }
 
-void EC2Job::StatusUpdate( const char * newStatus ) {
-    if( newStatus == NULL ) {
-        // This job wasn't in the batched update, so try looking for
-        // it individually, and letting GM_PROBE_JOB figure thins out.
-        probeNow = true;
-        SetEvaluateState();
-    } else if( SetRemoteJobStatus( newStatus ) ) {
-        // SetRemoteJobStatus() sets the last-update timestamp, but
-        // only returns true if the status has changed.
-        remoteJobState = newStatus;
+void EC2Job::StatusUpdate( const char * instanceID,
+                           const char * status,
+                           const char * stateReasonCode,
+                           const char * publicDNSName ) {
+    // This avoids having to store the public DNS name for GM_PROBE_JOB.
+    if( publicDNSName != NULL && strlen( publicDNSName ) != 0 
+     && strcmp( publicDNSName, "NULL" ) != 0 ) {
+        SetRemoteVMName( publicDNSName );
+    }
 
+    if( stateReasonCode != NULL && strlen( stateReasonCode ) != 0
+     && strcmp( stateReasonCode, "NULL" ) != 0 ) {
+        m_state_reason_code = stateReasonCode;
+    } else {
+        m_state_reason_code.clear();
+    }        
+
+    // To avoid concurrency issues, we could delay calling SetEvaluateState()
+    // until just before we exit the function.
+
+    // If the bulk status update didn't find this job, assume it's gone.
+    // The job will be unblocked after the SetRemoteStatus() call below
+    // if it wasn't previously purged.
+    //
+    // I've seen this state fire after a GM_SPOT_START - > GM_SPOT_SUBMITTED
+    // transition, and after a GM_SPOT_SUBMITTED -> GM_SPOT_QUERY transition,
+    // both of which had updated their EC2SpotRequestIDs -- that is, the
+    // SIRs we knew about weren't immediately in the server's response.
+    // What's truly disconcerting is that (after GM_SPOT_QUERY ignores the
+    // status field) and makes it own query, it gets the right answer...
+    // .. for now, let's not scare the user by passing through the "purged"
+    // state on spot instances.
+    if( m_spot_price.empty() && status == NULL ) {
+        status = "purged";
+    }
+
+    // Update the instance ID, if this is the first time we've seen it.
+    if( m_spot_price.empty() && m_remoteJobId.empty() ) {
+        if( instanceID == NULL || strlen( instanceID ) == 0 ) {
+            EXCEPT( "Dedicated instances must have instance IDs." );
+        }
+        EC2SetRemoteJobId( m_client_token.c_str(), instanceID );
+        
+        // We only consider discovering the instance ID a status change
+        // when it occurs while we're blocked in GM_SEEK_INSTANCE_ID.
+        if( gmState == GM_SEEK_INSTANCE_ID ) {
+            probeNow = true;
+            SetEvaluateState();
+        }
+    }
+    
+    // SetRemoteJobStatus() sets the last-update timestamp, but
+    // only returns true if the status has changed.
+    if( SetRemoteJobStatus( status ) ) {
+        remoteJobState = status;
         probeNow = true;
         SetEvaluateState();
     }

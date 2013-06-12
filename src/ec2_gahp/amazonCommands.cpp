@@ -1649,8 +1649,11 @@ bool AmazonVMStatusAll::workerFunction(char **argv, int argc, std::string &resul
                 AmazonStatusResult & asr = saRequest.results[i];
                 resultList.append( asr.instance_id.c_str() );
                 resultList.append( asr.status.c_str() );
-                resultList.append( asr.ami_id.c_str() );                
+                // For GT #3682: only one of the following two may be null.
                 resultList.append( nullStringIfEmpty( asr.clientToken ) );
+                resultList.append( nullStringIfEmpty( asr.keyname ) );
+                resultList.append( nullStringIfEmpty( asr.stateReasonCode ) );
+                resultList.append( nullStringIfEmpty( asr.public_dns ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }

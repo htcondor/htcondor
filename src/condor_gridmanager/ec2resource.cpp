@@ -209,33 +209,70 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
         }
 
         returnStatus.rewind();
-        ASSERT( returnStatus.number() % 4 == 0 );
-        for( int i = 0; i < returnStatus.number(); i += 4 ) {
+        ASSERT( returnStatus.number() % 6 == 0 );
+        for( int i = 0; i < returnStatus.number(); i += 6 ) {
             std::string instanceID = returnStatus.next();
             std::string status = returnStatus.next();
-            /* std::string amiID = */ returnStatus.next();
-            /* std::string clientToken = */ returnStatus.next();
-       
+            std::string clientToken = returnStatus.next();
+            std::string keyName = returnStatus.next();
+            std::string stateReasonCode = returnStatus.next();
+            std::string publicDNSName = returnStatus.next();
+
+            // Efficiency suggests we look via the instance ID first,
+            // and then try to look things up via the client token
+            // (or, for GT #3682, via the keypair ID).
+
             // We can't use BaseJob::JobsByRemoteId because OpenStack doesn't
             // include the client token in its status responses, and therefore
             // we can't always fully reconstruct the remoteJobID used as the key.
             EC2Job * job = NULL;
             rc = jobsByInstanceID.lookup( HashKey( instanceID.c_str() ), job );
-            if( rc != 0 ) {
-                dprintf( D_FULLDEBUG, "Found unknown instance '%s'; skipping.\n", instanceID.c_str() );
+            if( rc == 0 ) {
+                ASSERT( job );
+        
+                dprintf( D_FULLDEBUG, "Found job object for '%s', updating status ('%s').\n", instanceID.c_str(), status.c_str() );
+                job->StatusUpdate( instanceID.c_str(), status.c_str(),
+                                   stateReasonCode.c_str(), publicDNSName.c_str() );
+                myJobs.Delete( job );
                 continue;
             }
-            ASSERT( job );
-        
-            dprintf( D_FULLDEBUG, "Found job object for '%s', updating status ('%s').\n", instanceID.c_str(), status.c_str() );
-            job->StatusUpdate( status.c_str() );
-            myJobs.Delete( job );
+
+            // If we got a client token, use that to look up the job.  We
+            // don't use the instance ID because we may discover it in
+            // this function.  Since we need instance ID -based dispatch
+            // code for OpenStack anyway, we'll just use it, rather than
+            // trying the remoteJobID with the instance ID if we don't
+            // find it using only the client token.
+            if( ! clientToken.empty() && clientToken != "NULL" ) {
+                std::string remoteJobID;
+                formatstr( remoteJobID, "ec2 %s %s", resourceName, clientToken.c_str() );
+                
+                BaseJob * tmp = NULL;
+                rc = BaseJob::JobsByRemoteId.lookup( HashKey( remoteJobID.c_str() ), tmp );
+                
+                if( rc == 0 ) {
+                    ASSERT( tmp );
+                    EC2Job * job = dynamic_cast< EC2Job * >( tmp );
+                    if( job == NULL ) {
+                        EXCEPT( "Found non-EC2Job identified by '%s'.", remoteJobID.c_str() );
+                    }
+                    
+                    dprintf( D_FULLDEBUG, "Found job object via client token for '%s', updating status ('%s').\n", instanceID.c_str(), status.c_str() );
+                    job->StatusUpdate( instanceID.c_str(), status.c_str(),
+                                       stateReasonCode.c_str(), publicDNSName.c_str() );
+                    myJobs.Delete( job );
+                    continue;
+                }
+            }
+            
+            dprintf( D_FULLDEBUG, "Found unknown instance '%s'; skipping.\n", instanceID.c_str() );
+            continue;
         }
     
         myJobs.Rewind();
         while( ( nextJob = myJobs.Next() ) ) {
             dprintf( D_FULLDEBUG, "Informing job %p it got no status.\n", nextJob );
-            nextJob->StatusUpdate( NULL );
+            nextJob->StatusUpdate( NULL, NULL, NULL, NULL );
         }
     
         // Don't ask for spot results unless we know about a spot job.  This
@@ -274,7 +311,6 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
         spotReturnStatus.rewind();
         ASSERT( spotReturnStatus.number() % 5 == 0 );
         for( int i = 0; i < spotReturnStatus.number(); i += 5 ) {
-            // Note that we called 
             std::string requestID = spotReturnStatus.next();
             std::string state = spotReturnStatus.next();
             /* std::string launchGroup = */ spotReturnStatus.next();
@@ -292,14 +328,14 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
             if( ! statusCode.empty() ) { state = statusCode; }
 
             dprintf( D_FULLDEBUG, "Found spot job object for '%s', updating status ('%s').\n", requestID.c_str(), state.c_str() );
-            spotJob->StatusUpdate( state.c_str() );
+            spotJob->StatusUpdate( NULL, state.c_str(), NULL, NULL );
             mySpotJobs.Delete( spotJob );
         }
 
         mySpotJobs.Rewind();
         while( ( nextSpotJob = mySpotJobs.Next() ) ) {
             dprintf( D_FULLDEBUG, "Informing spot job %p it got no status.\n", nextSpotJob );
-            nextSpotJob->StatusUpdate( NULL );
+            nextSpotJob->StatusUpdate( NULL, NULL, NULL, NULL );
         }
         
         m_checkSpotNext = false;
