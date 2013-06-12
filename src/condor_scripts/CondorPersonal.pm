@@ -328,7 +328,6 @@ sub debug {
 	my $time = `date`;
 	chomp($time);
 	push @debugcollection, "$time: CondorPersonal - $string";
-print "sub debug level <$level>, DEBUGLEVEL <$DEBUGLEVEL>\n";
     #if($DEBUG) {
         if(!(defined $level) or ($level <= $DEBUGLEVEL)) {
             print( "", timestamp(), ":<CondorPersonal>(L=$level) $string" );
