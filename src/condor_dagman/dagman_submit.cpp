@@ -243,7 +243,7 @@ do_submit( ArgList &args, CondorID &condorID, Job::job_type_t jobType,
 bool
 condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, MyString &DAGParentNodeNames,
-			   List<MyString>* names, List<MyString>* vals,
+			   List<Job::NodeVar> *vars,
 			   const char* directory, const char *defaultLog, bool appendDefaultLog,
 			   const char *logFile, bool prohibitMultiJobs, bool hold_claim )
 {
@@ -395,13 +395,12 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 		// set any VARS specified in the DAG file
 	MyString anotherLine;
-	ListIterator<MyString> nameIter(*names);
-	ListIterator<MyString> valIter(*vals);
-	MyString name, val;
-	while(nameIter.Next(name) && valIter.Next(val)) {
+	ListIterator<Job::NodeVar> varsIter(*vars);
+	Job::NodeVar nodeVar;
+	while ( varsIter.Next(nodeVar) ) {
 		args.AppendArg( "-a" );
-		MyString var = name + " = " + val;
-		args.AppendArg( var.Value() );
+		MyString varStr = nodeVar._name + " = " + nodeVar._value;
+		args.AppendArg( varStr.Value() );
 	}
 
 		// Set the special DAG_STATUS variable (mainly for use by
