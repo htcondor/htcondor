@@ -1631,57 +1631,20 @@ void EC2Job::doEvaluateState()
                 } break;
 
             case GM_SEEK_INSTANCE_ID: {
-                //
-                // During recovery, if we have a client token but not an
-                // instance ID, and we don't want to start a VM (that is,
-                // we're removing the job), we need to be able to check
-                // if our client token has a corresponding instance.
-                //
-                StringList returnStatus;
-                rc = gahp->ec2_vm_status_all(   m_serviceUrl,
-                                                m_public_key_file,
-                                                m_private_key_file,
-                                                returnStatus,
-                                                gahp_error_code );
-                if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED
-                 || rc == GAHPCLIENT_COMMAND_PENDING ) {
-                    break;
-                }
-                
-                if( rc != 0 ) {
-                    errorString = gahp->getErrorString();
-                    dprintf( D_ALWAYS, "(%d.%d) Attempt to locate job during recovery failed: %s: %s\n",
-                             procID.cluster, procID.proc, gahp_error_code,
-                             errorString.c_str() );
-                    gmState = GM_HOLD;
-                    break;
+                // Wait for the next scheduled bulk query.
+                if( ! probeNow ) { break; }
+
+                // If the bulk query found this job, it has an instance ID.
+                // (If the job had an instance ID before, we would be in
+                // an another state.)  Otherwise, the service doesn't know
+                // about this job, and we can remove it from the queue.
+                if( ! m_remoteJobId.empty() ) {
+                    WriteGridSubmitEventToUserLog( jobAd );
+                    gmState = GM_SAVE_INSTANCE_ID;
                 } else {
-                    ASSERT( returnStatus.number() % 4 == 0 );
-                    
-                    returnStatus.rewind();
-                    std::string instanceID;
-                    std::string iid, status, amiID, clientToken;
-                    for( int i = 0; i < returnStatus.number(); i += 4 ) {
-                        iid = returnStatus.next();
-                        status = returnStatus.next();
-                        amiID = returnStatus.next();
-                        clientToken = returnStatus.next();
-                        
-                        if( clientToken == m_client_token ) {
-                            instanceID = iid;
-                            break;
-                        }
-                    }
-                        
-                    if( ! instanceID.empty() ) {
-                        // Copied from the success case of GM_START_VM.
-                        SetInstanceId( instanceID.c_str() );
-                        WriteGridSubmitEventToUserLog( jobAd );
-                        gmState = GM_SAVE_INSTANCE_ID;
-                    } else {
-                        gmState = GM_DELETE;
-                    }
+                    gmState = GM_DELETE;
                 }
+
                 } break;
                     
 			default:
