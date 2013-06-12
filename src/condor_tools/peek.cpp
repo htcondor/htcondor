@@ -350,7 +350,7 @@ HTCondorPeek::get_transfer_queue_slot()
 
 	int timeout = 60;
 	MyString error_msg;
-	if( !m_xfer_q->RequestTransferQueueSlot(true,fname,jobid,queue_user.c_str(),timeout,error_msg) ) {
+	if( !m_xfer_q->RequestTransferQueueSlot(true,0,fname,jobid,queue_user.c_str(),timeout,error_msg) ) {
 		std::cerr << error_msg.Value() << std::endl;
 		return false;
 	}
