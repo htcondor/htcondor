@@ -393,7 +393,7 @@ sub Reset
 
 sub ParsePersonalCondorParams
 {
-    my $submit_file = shift || croak "missing submit file argument";
+    my $submit_file = shift || die "missing submit file argument";
     my $line = 0;
 
     if( ! open( SUBMIT_FILE, $submit_file ) )
