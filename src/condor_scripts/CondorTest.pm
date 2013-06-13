@@ -1092,13 +1092,21 @@ sub CheckRegistrations
         Condor::RegisterEvictedWithRequeue( $test{$handle}{"RegisterEvictedWithRequeue"} );
     } 
 
+	if(defined $test{$handle}{"RegisterEvicted"} ) {
+		Condor::RegisterEvicted( $test{$handle}{"RegisterEvicted"} );
+	} else {
+		Condor::RegisterEvicted( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (Unexpected Eviction)\n";
+	} );
+	}
     # if evicted, call condor_resched so job runs again quickly
-    if( !defined $test{$handle}{"RegisterEvicted"} )
-    {
-        Condor::RegisterEvicted( sub { sleep 5; Condor::Reschedule } );
-    } else {
-	Condor::RegisterEvicted( $test{$handle}{"RegisterEvicted"} );
-    }
+    #if( !defined $test{$handle}{"RegisterEvicted"} )
+    #{
+        #Condor::RegisterEvicted( sub { sleep 5; Condor::Reschedule } );
+    #} else {
+	#Condor::RegisterEvicted( $test{$handle}{"RegisterEvicted"} );
+    #}
 
     if( defined $test{$handle}{"RegisterTimed"} )
     {
