@@ -47,8 +47,6 @@ package CondorPersonal;
 
 use strict;
 use warnings;
-
-use Carp;
 use Cwd;
 use POSIX qw/sys_wait_h strftime/;
 use Socket;
@@ -344,7 +342,6 @@ sub debug_flush {
 sub DebugLevel
 {
     my $newlevel = shift;
-	print "CondorPersonal: changing from $DEBUGLEVEL to $newlevel\n";
     $DEBUGLEVEL = $newlevel;
 }
 
