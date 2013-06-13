@@ -190,7 +190,7 @@ GangliaD::publishMetric(Metric const &m)
 
 	if( rc != 0 ) {
 		dprintf(D_ALWAYS,"Failed to publish %s%s\n",
-				metric.derivative ? " derivative of " : "",
+				metric.derivative ? "derivative of " : "",
 				metric.whichMetric().c_str());
 		if( metric.derivative ) {
 			m_derivative_publication_failed += 1;

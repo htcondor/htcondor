@@ -172,6 +172,11 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 			if( slotid != 1 ) {
 				return false;
 			}
+			bool dynamic_slot = false;
+			daemon_ad.EvaluateAttrBool(ATTR_SLOT_DYNAMIC,dynamic_slot);
+			if( dynamic_slot ) {
+				return false;
+			}
 		}
 		else if( !target_type.contains_anycase(my_type.c_str()) ) {
 			// avoid doing more work; this is not the right type of daemon ad
@@ -632,7 +637,7 @@ StatsD::publishMetrics()
 		while( (target_type=m_target_types.next()) ) {
 			std::string constraint;
 			if( !strcasecmp(target_type,"machine_slot1") ) {
-				formatstr(constraint,"MyType == \"Machine\" && SlotID==1");
+				formatstr(constraint,"MyType == \"Machine\" && SlotID==1 && DynamicSlot =!= True");
 			}
 			else {
 				formatstr(constraint,"MyType == \"%s\"",target_type);
