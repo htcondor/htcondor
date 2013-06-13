@@ -384,7 +384,7 @@ class RemoteResource : public Service {
 	bool allowRemoteReadAttributeAccess( char const * name );
 
 	// return true if job should be allowed to write to attribute
-	bool allowRemoteWriteAttributeAccess( char const * name );
+	bool allowRemoteWriteAttributeAccess( const std::string & name );
 
  protected:
 
@@ -409,6 +409,8 @@ class RemoteResource : public Service {
 	bool m_want_chirp;
 	bool m_want_remote_updates;
 	bool m_want_streaming_io;
+	bool m_want_volatile;
+	std::string m_remote_update_prefix;
 
 		// If we specially create a security session for file transfer,
 		// this records all the information we need to know about it.

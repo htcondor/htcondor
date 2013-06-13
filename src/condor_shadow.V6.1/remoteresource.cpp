@@ -57,7 +57,8 @@ static const char *Resource_State_String [] = {
 
 
 RemoteResource::RemoteResource( BaseShadow *shad ) 
-	: m_want_remote_updates(false)
+	: m_want_remote_updates(false),
+	  m_want_volatile(true)
 {
 	shadow = shad;
 	dc_startd = NULL;
@@ -96,6 +97,8 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	m_started_attempting_shutdown = 0;
 	m_upload_xfer_status = XFER_STATUS_UNKNOWN;
 	m_download_xfer_status = XFER_STATUS_UNKNOWN;
+
+	param(m_remote_update_prefix, "REMOTE_UPDATE_PREFIX", "CHIRP");
 }
 
 
@@ -992,6 +995,7 @@ RemoteResource::setJobAd( ClassAd *jA )
 
 	jA->LookupBool( ATTR_WANT_IO_PROXY, m_want_chirp );
 	jA->LookupBool( ATTR_WANT_REMOTE_UPDATES, m_want_remote_updates );
+	jA->LookupBool( ATTR_WANT_VOLATILE_UPDATES, m_want_volatile );
 
 	bool stream_input=false, stream_output=false, stream_error=false;
 	jA->LookupBool(ATTR_STREAM_INPUT,stream_input);
@@ -1137,10 +1141,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 	}
 
 		// Process all chrip-based updates from the starter.
-	std::string prefix;
-	param(prefix, "REMOTE_UPDATE_PREFIX", "CHIRP");
 	for (classad::ClassAd::const_iterator it = update_ad->begin(); it != update_ad->end(); it++) {
-		if (strcasecmp(it->first.substr(0, prefix.length()).c_str(), prefix.c_str()) == 0)
+		if (allowRemoteWriteAttributeAccess(it->first))
 		{
 			classad::ExprTree *expr_copy = it->second->Copy();
 			jobAd->Insert(it->first, expr_copy);
@@ -2316,10 +2318,14 @@ RemoteResource::allowRemoteReadAttributeAccess( char const * name )
 }
 
 bool
-RemoteResource::allowRemoteWriteAttributeAccess( char const * name )
+RemoteResource::allowRemoteWriteAttributeAccess( const std::string &name )
 {
 	bool response = m_want_chirp || m_want_remote_updates;
-	logRemoteAccessCheck(response,"write access to attribute",name);
+	if (!response && m_want_volatile)
+	{
+                response = strcasecmp(name.substr(0, m_remote_update_prefix.length()).c_str(), m_remote_update_prefix.c_str()) == 0;
+	}
+	logRemoteAccessCheck(response,"write access to attribute",name.c_str());
 	return response;
 }
 
