@@ -1391,8 +1391,10 @@ Dag::StartNode( Job *node, bool isRetry )
 		_readyQ->Prepend( node, -node->_nodePriority );
 	} else {
 		if(node->_hasNodePriority){
-			node->varNamesFromDag->Append(new MyString("priority"));
-			node->varValsFromDag->Append(new MyString(node->_nodePriority));
+			Job::NodeVar *var = new Job::NodeVar();
+			var->_name = "priority";
+			var->_value = node->_nodePriority;
+			node->varsFromDag->Append( var );
 		}
 		if ( _submitDepthFirst ) {
 			_readyQ->Prepend( node, -node->_nodePriority );
@@ -2281,19 +2283,17 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 		}
 
 			// Print the VARS line, if any.
-		if ( !node->varNamesFromDag->IsEmpty() ) {
+		if ( !node->varsFromDag->IsEmpty() ) {
 			fprintf( fp, "VARS %s", node->GetJobName() );
 	
-			ListIterator<MyString> names( *node->varNamesFromDag );
-			ListIterator<MyString> vals( *node->varValsFromDag );
-			names.ToBeforeFirst();
-			vals.ToBeforeFirst();
-			MyString *strName, *strVal;
-			while ( (strName = names.Next() ) && (strVal = vals.Next()) ) {
-				fprintf(fp, " %s=\"", strName->Value());
+			ListIterator<Job::NodeVar> vars( *node->varsFromDag );
+			vars.ToBeforeFirst();
+			Job::NodeVar *nodeVar;
+			while ( ( nodeVar = vars.Next() ) ) {
+				fprintf(fp, " %s=\"", nodeVar->_name.Value());
 					// now we print the value, but we have to re-escape certain characters
-				for( int i = 0; i < strVal->Length(); i++ ) {
-					char c = (*strVal)[i];
+				for( int i = 0; i < nodeVar->_value.Length(); i++ ) {
+					char c = (nodeVar->_value)[i];
 					if ( c == '\"' ) {
 						fprintf( fp, "\\\"" );
 					} else if (c == '\\') {
@@ -3909,7 +3909,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 				MyString parents = ParentListString( node );
       			submit_success = condor_submit( dm, cmd_file.Value(), condorID,
 							node->GetJobName(), parents,
-							node->varNamesFromDag, node->varValsFromDag,
+							node->varsFromDag,
 							node->GetDirectory(), DefaultNodeLog(),
 							_use_default_node_log && node->UseDefaultLog(),
 							logFile, ProhibitMultiJobs(),
