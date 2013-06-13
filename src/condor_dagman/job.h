@@ -472,14 +472,12 @@ public:
 	//DFS ordering of the node
 	int _dfsOrder; 
 
-	// DAG definition files can now pass named variables into job submit files.
-	// For lack of a pair<> class, I made two lists, and these lists work together
-	// closely. The order of their items defines the mapping between names
-	// and values of these named variables, i.e., for the first named variable, its
-	// name is the first item in varNamesFromDag, and its value is the first item
-	// in varValsFromDag.
-	List<MyString> *varNamesFromDag;
-	List<MyString> *varValsFromDag;
+	struct NodeVar {
+		MyString _name;
+		MyString _value;
+	};
+
+	List<NodeVar> *varsFromDag;
 
 		// Count of the number of job procs currently in the batch system
 		// queue for this node.

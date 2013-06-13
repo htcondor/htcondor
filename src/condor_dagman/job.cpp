@@ -77,19 +77,12 @@ Job::~Job() {
 	delete [] _jobName;
 	delete [] _logFile;
 
-	varNamesFromDag->Rewind();
-	MyString *name;
-	while ( (name = varNamesFromDag->Next()) ) {
-		delete name;
+	varsFromDag->Rewind();
+	NodeVar *var;
+	while ( (var = varsFromDag->Next()) ) {
+		delete var;
 	}
-	delete varNamesFromDag;
-
-	varValsFromDag->Rewind();
-	MyString *val;
-	while ( (val = varValsFromDag->Next()) ) {
-		delete val;
-	}
-	delete varValsFromDag;
+	delete varsFromDag;
 
 	delete _scriptPre;
 	delete _scriptPost;
@@ -155,8 +148,7 @@ Job::Job( const job_type_t jobType, const char* jobName,
 	_jobstateSeqNum = 0;
 	_lastEventTime = 0;
 
-	varNamesFromDag = new List<MyString>;
-	varValsFromDag = new List<MyString>;
+	varsFromDag = new List<NodeVar>;
 
 	snprintf( error_text, JOB_ERROR_TEXT_MAXLEN, "unknown" );
 
@@ -767,14 +759,14 @@ Job::PrefixName(const MyString &prefix)
 void
 Job::ResolveVarsInterpolations(void)
 {
-	MyString *val;
+	NodeVar *var;
 
-	varValsFromDag->Rewind();
-	while( (val = varValsFromDag->Next()) != NULL ) {
+	varsFromDag->Rewind();
+	while( (var = varsFromDag->Next()) != NULL ) {
 		// XXX No way to escape $(JOB) in case, for some crazy reason, you
 		// want a filename component actually to be '$(JOB)'.
 		// It isn't hard to fix, I'll do it later.
-		val->replaceString("$(JOB)", GetJobName());
+		var->_value.replaceString("$(JOB)", GetJobName());
 	}
 }
 

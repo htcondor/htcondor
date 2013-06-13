@@ -160,8 +160,10 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
 	}
   }
 
-  int status = my_pclose(fp) & 0xff;
-  {
+  { // Relocated this curly bracket to its previous position to hopefully
+    // fix Coverity warning.  Not sure why these curly brackets are here
+	// at all...  wenger 2013-06-12
+    int status = my_pclose(fp) & 0xff;
 
     if (keyLine == "") {
       debug_printf(DEBUG_NORMAL, "failed while reading from pipe.\n");
@@ -181,7 +183,6 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
 
   int	jobProcCount;
   if ( !parseFnc( keyLine.Value(), jobProcCount, condorID._cluster) ) {
-    if( !status ) {
 		// We are going forward (do not return false here)
 		// Expectation is that higher levels will catch that we
 		// did not get a cluster initialized properly here, fail,
@@ -191,14 +192,11 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
 		// DAGMAN_MAX_SUBMIT_ATTEMPT copies of the same job.
       debug_printf( DEBUG_NORMAL, "WARNING: submit returned 0, but "
         "parsing submit output failed!\n" );
-    }
-  } else {
-    if( status ) {
-      debug_printf( DEBUG_NORMAL, "WARNING: submit returned nonzero but "
-        "parsing submit output succeeded!\n" );
-      return false;
-    }
-	}
+		// Returning here so we don't try to process invalid values
+		// below.  (This should really return something like "submit failed
+		// don't retry" -- see gittrac #3685.)
+  	  return true;
+  }
 
   // Stork job specs have only 1 dimension.  The Stork user log forces the proc
   // and sub-proc ids to "-1", so do the same here for the returned submit id.
@@ -244,8 +242,8 @@ do_submit( ArgList &args, CondorID &condorID, Job::job_type_t jobType,
 //-------------------------------------------------------------------------
 bool
 condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
-			   const char* DAGNodeName, MyString DAGParentNodeNames,
-			   List<MyString>* names, List<MyString>* vals,
+			   const char* DAGNodeName, MyString &DAGParentNodeNames,
+			   List<Job::NodeVar> *vars,
 			   const char* directory, const char *defaultLog, bool appendDefaultLog,
 			   const char *logFile, bool prohibitMultiJobs, bool hold_claim )
 {
@@ -397,13 +395,12 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 		// set any VARS specified in the DAG file
 	MyString anotherLine;
-	ListIterator<MyString> nameIter(*names);
-	ListIterator<MyString> valIter(*vals);
-	MyString name, val;
-	while(nameIter.Next(name) && valIter.Next(val)) {
+	ListIterator<Job::NodeVar> varsIter(*vars);
+	Job::NodeVar nodeVar;
+	while ( varsIter.Next(nodeVar) ) {
 		args.AppendArg( "-a" );
-		MyString var = name + " = " + val;
-		args.AppendArg( var.Value() );
+		MyString varStr = nodeVar._name + " = " + nodeVar._value;
+		args.AppendArg( varStr.Value() );
 	}
 
 		// Set the special DAG_STATUS variable (mainly for use by
