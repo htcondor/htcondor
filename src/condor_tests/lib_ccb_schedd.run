@@ -22,11 +22,12 @@ use CondorTest;
 use Check::SimpleJob;
 use Check::CondorLog;
 
+
 my $append_condor_config = '
   # test with submit daemons using CCB
   SCHEDD.CCB_ADDRESS = $(COLLECTOR_HOST)
   SHADOW.CCB_ADDRESS = $(COLLECTOR_HOST)
-
+  DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, STARTD, SCHEDD
   COLLECTOR_DEBUG = $(COLLECTOR_DEBUG) D_FULLDEBUG
 ';
 

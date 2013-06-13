@@ -37,6 +37,9 @@ class AttributeReference : public ExprTree
         /// Assignment operator
         AttributeReference &operator=(const AttributeReference &ref);
 
+		/// node type
+		virtual NodeKind GetKind (void) const { return ATTRREF_NODE; }
+
 		/** Factory method to create attribute reference nodes.
 			@param expr The expression part of the reference (i.e., in
 				case of expr.attr).  This parameter is NULL if the reference

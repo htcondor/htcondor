@@ -1596,7 +1596,7 @@ ssize_t readv( int fd, const struct iovec *iov, int iovcnt )
 		cc = read( fd, iov->iov_base, iov->iov_len );
 		if( cc < 0 ) return cc;
 		rval += cc;
-		if( cc != iov->iov_len ) return rval;
+		if( ((unsigned) cc) != iov->iov_len ) return rval;
 		iov++;
 	}
 
@@ -1618,7 +1618,7 @@ ssize_t writev( int fd, const struct iovec *iov, int iovcnt )
 		cc = write( fd, iov->iov_base, iov->iov_len );
 		if( cc < 0 ) return cc;
 		rval += cc;
-		if( cc != iov->iov_len ) return rval;
+		if( ((unsigned) cc) != iov->iov_len ) return rval;
 		iov++;
 	}
 

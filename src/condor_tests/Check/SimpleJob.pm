@@ -20,6 +20,16 @@
 package SimpleJob;
 
 use CondorTest;
+my $timeout = 0;
+my $defaulttimeout = 60;
+$timeout = $defaulttimeout;
+
+$timed_callback = sub
+{
+	print "SimpleJob timeout expired!\n";
+	CondorTest::RegisterResult( 0, %args );
+    return $result;
+};
 
 $submitted = sub
 {
@@ -53,29 +63,55 @@ sub RunCheck
 	if(exists $args{duration}) {
 		$duration = $args{duration};
 	}
+
+	if(exists $args{tmeout}){
+		$timeout = $args{tmeout};
+		print "Test getting requested timeout of <$timeout> seconds\n";
+	}
 	 
 	#print "Checking duration being passsed to RunCheck <$args{duration}>\n";
     my $execute_fn = $args{on_execute} || $dummy;
+    my $suspended_fn = $args{on_suspended} || $dummy;
+    my $unsuspended_fn = $args{on_unsuspended} || $dummy;
+    my $disconnected_fn = $args{on_disconnected} || $dummy;
+    my $reconnected_fn = $args{on_reconnected} || $dummy;
     my $submit_fn = $args{on_submit} || $submitted;
     my $ulog_fn = $args{on_ulog} || $dummy;
-	# if we want to remove these jobs, better override aborted function
-	# this change is for running forever sleep jobs to test concurrency limits
-	# we'll want to see some running and some waiting to run
-    my $abort = $args{on_abort} || $aborted;
-	my $donewithsuccess = $args{on_success} || $ExitSuccess;
+    my $abort_fn = $args{on_abort} || $aborted;
+	my $donewithsuccess_fn = $args{on_success} || $ExitSuccess;
 
-	my $program = $args{runthis} || "x_sleep.pl";
 
-    CondorTest::RegisterAbort( $testname, $abort );
-    CondorTest::RegisterExitedSuccess( $testname, $donewithsuccess );
+	if(exists $args{tmeout}){
+		CondorTest::RegisterTimed( $testname, $timed_callback, $timeout);
+	}
+    CondorTest::RegisterAbort( $testname, $abort_fn );
+    CondorTest::RegisterExitedSuccess( $testname, $donewithsuccess_fn );
     CondorTest::RegisterExecute($testname, $execute_fn);
     CondorTest::RegisterULog($testname, $ulog_fn);
     CondorTest::RegisterSubmit( $testname, $submit_fn );
-	if(defined $args{on_failure}) {
+
+	#If we register thees to dummy, then we don't get
+	#the error function registered which says this is bad
+
+	if( exists $args{on_disconnected} ) {
+    	CondorTest::RegisterDisconnected( $testname, $disconnected_fn );
+	}
+	if( exists $args{on_reconnected} ) {
+    	CondorTest::RegisterReconnected( $testname, $reconnected_fn );
+	}
+	if( exists $args{on_suspended} ) {
+    	CondorTest::RegisterSuspended( $testname, $suspended_fn );
+	}
+	if( exists $args{on_unsuspended} ) {
+    	CondorTest::RegisterUnsuspended( $testname, $unsuspended_fn );
+	}
+	if(exists $args{on_failure}) {
 		CondorTest::RegisterExitedFailure( $testname, $args{on_failure} );
 	}
 
+	my $program = $args{runthis} || "x_sleep.pl";
     my $submit_fname = CondorTest::TempFileName("$testname.submit");
+
     open( SUBMIT, ">$submit_fname" ) || die "error writing to $submit_fname: $!\n";
     print SUBMIT "universe = $universe\n";
     print SUBMIT "executable = $program\n";

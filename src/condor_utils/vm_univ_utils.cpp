@@ -153,7 +153,7 @@ delete_all_files_in_filelist(StringList *file_list)
 	char *tmp = NULL;
 	file_list->rewind();
 	while( (tmp = file_list->next()) ) {
-		unlink(tmp);
+		IGNORE_RETURN unlink(tmp);
 		file_list->deleteCurrent();
 	}
 }

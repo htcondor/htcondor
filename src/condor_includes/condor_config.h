@@ -158,6 +158,8 @@ class ParamValue {
 	/* A function to fill in a wrapper class for the param functions. */
 	param_functions * get_param_functions();
 
+	bool get_config_dir_file_list( char const *dirpath, class StringList &files );
+
 /* here we provide C linkage to C++ defined functions. This seems a bit
 	odd since if a .c file includes this, these prototypes technically don't
 	exist.... */

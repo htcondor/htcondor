@@ -24,7 +24,7 @@ use File::Basename;
 use File::Spec;
 use IO::File;
 use FindBin;
-use lib $ENV{'NMI_LIB'} || "/nmi/lib";
+use lib $ENV{'NMI_LIB'} || "/usr/local/nmi/lib";
 
 BEGIN { eval "use NmiConf;" }
 my $HAS_NMICONF = $INC{"NmiConf.pm"};
@@ -44,6 +44,8 @@ use vars qw/ $opt_build $opt_test
 	$opt_skip_doc $opt_sha1 $opt_private_build
     $opt_buildid $opt_test_src $opt_test_timeout $opt_test_class
     $opt_input_platform $opt_tests_at_once $opt_coverity_analysis
+	$opt_ignore_missing_platforms $opt_test_sources_from_workspace
+
     /;
 
 sub TRUE { 1; };
@@ -81,8 +83,8 @@ my $default_condor_bin = "/usr/bin";
 
 # Config file encapsulating dependencies on NMI framework.
 my $nmiconf;
-if( -f '/nmi/etc/nmi.conf' ) {
-    $nmiconf = '/nmi/etc/nmi.conf';
+if( -f '/usr/local/nmi/etc/nmi.conf' ) {
+    $nmiconf = '/usr/local/nmi/etc/nmi.conf';
 }
 
 ######################################################################
@@ -366,6 +368,8 @@ sub parseOptions
            'test-class=s'   => \$opt_test_class,
            'input-platform=s' => \$opt_input_platform,
 		   'tests-at-once=i' => \$opt_tests_at_once,
+		   'ignore-missing-platforms' => \$opt_ignore_missing_platforms,
+		   'test-sources-from-workspace' => \$opt_test_sources_from_workspace,
     );
 
     if( !$rc ) {
@@ -1563,34 +1567,47 @@ sub generateTestFetchFiles
     }
     # else: Not workspace build.  Using --nmi_glue 
     # (handled in generateSharedFetchFiles()).  Nothing to do.
-    
-    # generate the runid input file
-    my $runid_file = "input_build_runid.src";
-    open(RUNIDFILE, ">$runid_file") || 
-        die "Can't open $runid_file for writing: $!\n";
-    print RUNIDFILE "method = nmi\n";
-    print RUNIDFILE "input_runids = $opt_buildid\n";
-    print RUNIDFILE "untar_results = false\n";     
 
+	# if we want different tests then the build we are using had, bring sources
+	# along. We could bring less then the entire workspace
+    if(( defined $opt_test_sources_from_workspace ) && (defined $src_workspace)) {
+		my $test_sources = "source-workspace.src";
+		makeFetchFileSCP($test_sources, $src_workspace, "recursive");
+		push(@fetch_files, $test_sources);
+	}
+
+	# generate the runid input file
+	my $runid_file = "input_build_runid.src";
+	open(RUNIDFILE, ">$runid_file") || 
+	    die "Can't open $runid_file for writing: $!\n";
+	print RUNIDFILE "method = nmi\n";
+	print RUNIDFILE "input_runids = $opt_buildid\n";
+	print RUNIDFILE "untar_results = false\n";     
+
+	# well if we are testing off a previous build missing some results...
+	if( defined $opt_ignore_missing_platforms ){
+	    print RUNIDFILE "ignore_missing_platforms = true\n";
+	} else {
 	# allow non-matching test bimaries for cross tests
-	if( defined($opt_submit_xtests) && $opt_submit_xtests == 1) {
-        print RUNIDFILE "ignore_missing_platforms = true\n";
-    } else {
-        print RUNIDFILE "ignore_missing_platforms = false\n";
-    }
+		if( defined($opt_submit_xtests) && $opt_submit_xtests == 1) {
+	        print RUNIDFILE "ignore_missing_platforms = true\n";
+	    } else {
+	        print RUNIDFILE "ignore_missing_platforms = false\n";
+	    }
+	}
 
-    if( defined $opt_input_platform ) {
-        my @fetch_platforms;
-        my $platform;
-        foreach $platform (@platforms ) {        
+	if( defined $opt_input_platform ) {
+	    my @fetch_platforms;
+	    my $platform;
+	    foreach $platform (@platforms ) {        
 			# new double colon syntax as of 2.5.0
 			my $target = "$opt_input_platform" . "::" . "$platform";
-            push( @fetch_platforms, $target );
-        }
-        print RUNIDFILE "platforms = " . join(', ', @fetch_platforms);
-    }
-    close RUNIDFILE;
-    push( @fetch_files, $runid_file );
+	        push( @fetch_platforms, $target );
+	    }
+	    print RUNIDFILE "platforms = " . join(', ', @fetch_platforms);
+	}
+	close RUNIDFILE;
+	push( @fetch_files, $runid_file );
 
     if( defined $opt_test_src ) {
         my $test_src_file = "test_sources.src";

@@ -71,6 +71,8 @@ my $ExitedSuccessCallback;
 my $ExitedFailureCallback;
 my $ExitedAbnormalCallback;
 my $AbortCallback;
+my $SuspendedCallback;
+my $UnsuspendedCallback;
 my $ShadowCallback;
 my $HoldCallback;
 my $ReleaseCallback;
@@ -523,11 +525,13 @@ sub RegisterDisconnected
 {
     my $sub = shift || croak "missing argument";
     $DisconnectedCallback = $sub;
+	debug("Registering Disconnnected callback\n",2);
 }
 sub RegisterReconnected
 {
     my $sub = shift || croak "missing argument";
     $ReconnectedCallback = $sub;
+	debug("Registering Reconnnected callback\n",2);
 }
 sub RegisterReconnectFailed
 {
@@ -548,6 +552,20 @@ sub RegisterWantError
 {
     my $sub = shift || croak "missing argument";
     $WantErrorCallback = $sub;
+}
+sub RegisterSuspended
+{
+    my $sub = shift || croak "missing argument";
+    $SuspendedCallback = $sub;
+
+	debug("Registering Suspended callback\n",2);
+}
+sub RegisterUnsuspended
+{
+    my $sub = shift || croak "missing argument";
+    $UnsuspendedCallback = $sub;
+
+	debug("Registering Unsuspended callback\n",2);
 }
 
 sub RegisterTimed
@@ -897,7 +915,7 @@ sub Monitor
 	    $info{'cluster'} = $1;
 	    $info{'job'} = $2;
 
-	    debug( "Saw Job Disconnected\n" ,2);
+	    debug( "Saw Job Disconnected\n" ,1);
 
 	    # read next line to see cause
 	    $line = <SUBMIT_LOG>;
@@ -944,7 +962,7 @@ sub Monitor
 	    $info{'cluster'} = $1;
 	    $info{'job'} = $2;
 
-	    debug( "Saw Job Reconnected\n" ,2);
+	    debug( "Saw Job Reconnected\n" ,1);
 
 	    # read next line to see cause
 	    $line = <SUBMIT_LOG>;
@@ -1028,6 +1046,52 @@ sub Monitor
 		# execute callback if one is registered
 		&$ReconnectedCallback( %info )
 		    if defined $ReconnectedCallback;
+
+	    next LINE;
+	}
+
+	# 010: Job Suspended
+	if( $line =~ /^010\s+\(0*(\d+)\.0*(\d+)/ )
+	{
+	    $info{'cluster'} = $1;
+	    $info{'job'} = $2;
+
+	    debug( "Saw Job Suspended\n" ,1);
+
+	    # read next line to see processes affected
+	    $line = <SUBMIT_LOG>;
+		while( ! defined $line )
+		{
+			sleep 2;
+			if(defined $TimedCallback)
+			{
+				CheckTimedCallback();
+			}
+			$line = <SUBMIT_LOG>;
+		}
+	    CondorUtils::fullchomp($line);
+	    $linenum++;
+
+		$info{'processes'} = $line;
+
+		# execute callback if one is registered
+		&$SuspendedCallback( %info )
+		    if defined $SuspendedCallback;
+
+	    next LINE;
+	}
+
+	# 010: Job Unsuspended
+	if( $line =~ /^011\s+\(0*(\d+)\.0*(\d+)/ )
+	{
+	    $info{'cluster'} = $1;
+	    $info{'job'} = $2;
+
+	    debug( "Saw Job Unsuspended\n" ,1);
+
+		# execute callback if one is registered
+		&$UnsuspendedCallback( %info )
+		    if defined $UnsuspendedCallback;
 
 	    next LINE;
 	}

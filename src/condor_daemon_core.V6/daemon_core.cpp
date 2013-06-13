@@ -413,7 +413,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	dc_ssock = NULL;
     m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 8);
     if( m_iMaxAcceptsPerCycle != 1 ) {
-        dprintf(D_ALWAYS,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
+        dprintf(D_TEST | D_VERBOSE,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
     }
 
 	inheritedSocks[0] = NULL;
@@ -2718,7 +2718,7 @@ DaemonCore::reconfig(void) {
 
     m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 8);
     if( m_iMaxAcceptsPerCycle != 1 ) {
-        dprintf(D_ALWAYS,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
+        dprintf(D_FULLDEBUG,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
     }
 
 		// Initialize the collector list for ClassAd updates

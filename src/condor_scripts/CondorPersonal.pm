@@ -230,6 +230,7 @@ sub StartCondor
 	$personal_condor_params{"test_name"} = $testname;
 	$personal_condor_params{"condor_name"} = $version;
 	$personal_condor_params{"owner_pid"} = $mpid;
+	$personal_condor_params{"fresh_local"} = "TRUE";
 
 	return StartCondorWithParams(%personal_condor_params);
 }
@@ -571,7 +572,9 @@ sub InstallPersonalCondor
 		$personal_condor_params{"condortemplate"} = shift @configfiles;
 		if(exists $personal_condor_params{fresh_local}) {
 		} else {
-			$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
+			# Always start with a freshly constructed local config file
+			# so we know what we get  bt 5/13
+			#$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
 		}
 
 		debug("condor_q: $condorq\n",$debuglevel);
@@ -907,28 +910,6 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 debug( "HMMMMMMMMMMM opening to write <$topleveldir/$personal_local>\n",$debuglevel);
 
 	open(NEW,">$topleveldir/$personal_local")  || die "Can not open template: $!\n";
-	if($personal_local_src ne "")
-	{
-		print NEW "# Requested local config<$personal_local_src>\n";
-		#print "******************** Must seed condor_config.local <<$personal_local_src>> ************************\n";
-
-debug( "HMMMMMMMMMMM opening to read <$personal_local_src>\n",$debuglevel);
-
-		open(LOCSRC,"<$personal_local_src") || die "Can not open local config template: $!\n";
-		while(<LOCSRC>)
-		{
-			CondorUtils::fullchomp($_);
-			$line = $_;
-			print NEW "$line\n";
-		}
-		# now make sure we have the local dir we want after the generic .local file is seeded in
-		$line = $personal_config_changes{"LOCAL_DIR"};
-		print NEW "$line\n";
-		# and a lock directory we like
-		print NEW "LOCK = \$(LOG)\n";
-		close(LOCSRC);
-	}
-
 	# Dan: Jan 30, '08 added D_NETWORK in order to debug condor_rm timeout
 	print NEW "ALL_DEBUG = D_FULLDEBUG\n";
 	# bill: 8/13/09 speed up dagman
@@ -1050,6 +1031,28 @@ debug( "HMMMMMMMMMMM opening to read <$personal_local_src>\n",$debuglevel);
 		print NEW "NUM_CPUS = $myslots\n";
 		print NEW "SLOTS = $myslots\n";
 		print NEW "# Done Adding slot request from param file\n";
+	}
+
+	if($personal_local_src ne "")
+	{
+		print NEW "# Requested local config<$personal_local_src>\n";
+		#print "******************** Must seed condor_config.local <<$personal_local_src>> ************************\n";
+
+debug( "HMMMMMMMMMMM opening to read <$personal_local_src>\n",$debuglevel);
+
+		open(LOCSRC,"<$personal_local_src") || die "Can not open local config template: $!\n";
+		while(<LOCSRC>)
+		{
+			CondorUtils::fullchomp($_);
+			$line = $_;
+			print NEW "$line\n";
+		}
+		# now make sure we have the local dir we want after the generic .local file is seeded in
+		$line = $personal_config_changes{"LOCAL_DIR"};
+		print NEW "$line\n";
+		# and a lock directory we like
+		print NEW "LOCK = \$(LOG)\n";
+		close(LOCSRC);
 	}
 
 	if($personal_sec_prepost_src ne "")

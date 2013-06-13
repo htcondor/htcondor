@@ -221,7 +221,7 @@ VMType::parseCommonParamFromClassAd(bool /* is_root false*/)
 		}
 		if( fprintf(argfile_fp, "%s", m_classad_arg.Value()) < 0) {
 			fclose(argfile_fp);
-			unlink(VM_UNIV_ARGUMENT_FILE);
+			IGNORE_RETURN unlink(VM_UNIV_ARGUMENT_FILE);
 			vmprintf(D_ALWAYS, "failed to fprintf in CreateConfigFile(%s:%s)\n",
 					VM_UNIV_ARGUMENT_FILE, strerror(errno));
 			m_result_msg = VMGAHP_ERR_CANNOT_CREATE_ARG_FILE;
@@ -315,7 +315,7 @@ VMType::deleteNonTransferredFiles()
 	while( (tmp_file = m_initial_working_files.next()) != NULL ) {
 		if( m_transfer_input_files.contains(tmp_file) == false ) {
 			// This file was created after starting a job
-			unlink(tmp_file);
+			IGNORE_RETURN unlink(tmp_file);
 			m_initial_working_files.deleteCurrent();
 		}
 	}

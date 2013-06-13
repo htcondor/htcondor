@@ -231,3 +231,21 @@ HaltFileName( const MyString &primaryDagFile )
 
 	return haltFile;
 }
+
+//-------------------------------------------------------------------------
+void
+tolerant_unlink( const char *pathname )
+{
+	if ( unlink( pathname ) != 0 ) {
+		if ( errno == ENOENT ) {
+			dprintf( D_SYSCALLS,
+						"Warning: failure (%d (%s)) attempting to unlink file %s\n",
+						errno, strerror( errno ), pathname );
+		} else {
+			dprintf( D_ALWAYS,
+						"Error (%d (%s)) attempting to unlink file %s\n",
+						errno, strerror( errno ), pathname );
+
+		}
+	}
+}

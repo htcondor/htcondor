@@ -162,7 +162,7 @@ bool IOProxy::init( JICShadow *shadow, const char *config_file, bool want_io, bo
 	failure:
 	if(cookie) free(cookie);
 	if(file) fclose(file);
-	unlink(config_file);
+	IGNORE_RETURN unlink(config_file);
 	server->close();
 	return false;
 }

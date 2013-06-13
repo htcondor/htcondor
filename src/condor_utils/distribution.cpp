@@ -24,7 +24,7 @@
 Distribution::Distribution()
 {
 	// Are we 'Condor' or 'Hawkeye'?
-	SetDistribution( "condor" );
+	SetDistribution( "condor\0CONDOR\0Condor\0" );
 }
 
 int
@@ -47,9 +47,9 @@ Distribution::Init( const char *argv0 )
 	if (  ( strstr ( argv0, "hawkeye" ) ) ||
 		  ( strstr ( argv0, "Hawkeye" ) ) ||
 		  ( strstr ( argv0, "HAWKEYE" ) )  ) {
-		SetDistribution( "hawkeye" );
+		SetDistribution( "hawkeye\0HAWKEYE\0Hawkeye\0" );
 	} else {
-		SetDistribution( "condor" );
+		SetDistribution( "condor\0CONDOR\0Condor\0" );
 	}
 
 	return 1;
@@ -60,28 +60,15 @@ Distribution::~Distribution( )
 {
 }
 
-// Set my actual distro name
-void Distribution :: SetDistribution( const char *name )
+// Set my actual distro name, in lowercase, all UPPERCASE, and Capitalized
+void Distribution :: SetDistribution( const char *names )
 {
-	// Make my own private copies of the name
-	strncpy( distribution, name, MAX_DISTRIBUTION_NAME );
-	distribution[MAX_DISTRIBUTION_NAME] = 0;
-	strcpy( distribution_uc, distribution );
-	strcpy( distribution_cap, distribution );
-
-	// Make the 'uc' version upper case
-	char	*cp = distribution_uc;
-	while ( *cp )
-	{
-		char	c = *cp;
-		*cp = toupper( c );
-		cp++;
+	// names is expected to be of the form "name\0NAME\0Name\0";
+	distribution_cap = distribution_uc = distribution = names;
+	distribution_length = strlen(distribution);
+	//ASSERT(distribution_length <= MAX_DISTRIBUTION_NAME);
+	if (distribution_length > 0) {
+		distribution_uc = distribution + distribution_length +1;
+		distribution_cap = distribution_uc + strlen(distribution_uc) +1;
 	}
-
-	// Capitalize the first char of the Cap version
-	char	c = distribution_cap[0];
-	distribution_cap[0] = toupper( c );
-
-	// Cache away it's length
-	distribution_length = strlen( distribution );
 }

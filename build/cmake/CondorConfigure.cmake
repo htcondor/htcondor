@@ -220,6 +220,7 @@ if( NOT WINDOWS)
 	check_include_files("procfs.h" HAVE_PROCFS_H)
 	check_include_files("sys/procfs.h" HAVE_SYS_PROCFS_H)
 
+
 	check_type_exists("struct ifconf" "sys/socket.h;net/if.h" HAVE_STRUCT_IFCONF)
 	check_type_exists("struct ifreq" "sys/socket.h;net/if.h" HAVE_STRUCT_IFREQ)
 	check_struct_has_member("struct ifreq" ifr_hwaddr "sys/socket.h;net/if.h" HAVE_STRUCT_IFREQ_IFR_HWADDR)
@@ -584,6 +585,27 @@ if (NOT WINDOWS)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.0.6)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.12.1_14)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/wso2/2.1.0)
+
+        if (LINUX)
+          if( NOT PROPER )
+            option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
+          else()
+            find_multiple( "ganglia" GANGLIA_FOUND )
+            check_include_files("ganglia.h" HAVE_GANGLIA_H)
+            if( GANGLIA_FOUND AND HAVE_GANGLIA_H )
+              option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
+            else()
+              option(WITH_GANGLIA "Compiling with support for GANGLIA" OFF)
+            endif()
+          endif()
+        endif(LINUX)
+
+        if( WITH_GANGLIA )
+          # currently, libapr and libconfuse are only needed for ganglia
+	  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/apr/1.4.6)
+	  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/confuse/2.7)
+	  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/ganglia/3.6.0)
+        endif()
 
 	# the following logic if for standard universe *only*
 	if (LINUX AND NOT CLIPPED AND GLIBC_VERSION AND NOT PROPER)

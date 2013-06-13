@@ -21,6 +21,10 @@
  *
  * We're ignoring SSE2 because every processor built in the last 10 years
  * supports it.
+ *
+ * We're also (implicitly) asserting homogeneous cores; we simply don't have
+ * a way to represent anything else at this level of the code.  Instead, we
+ * complain to the log if the processor flag strings aren't all the same.
  */
 
 const char * sysapi_processor_flags_raw( void ) {
@@ -34,20 +38,49 @@ const char * sysapi_processor_flags_raw( void ) {
        during parsing (or if /proc/cpuinfo doesn't exist), we stop trying. */
     _sysapi_processor_flags_raw = "";
 
+    /* If we check for the null string, we could leak memory for processors
+       without flags.  (We shouldn't see any, but...) */
+    int foundProcessorFlags = 0;
+    
     /* You can adapt this to ncpus.cpp's _SysapiProcCpuinfo for debugging. */
     FILE * fp = safe_fopen_wrapper_follow( "/proc/cpuinfo", "r", 0644 );
     dprintf( D_LOAD, "Reading from /proc/cpuinfo\n" );
     if( fp ) {
-        /* See comment in npcus.cpp for an explanation of this constant. */
-        char buffer[1024];
-        while( fgets( buffer, sizeof( buffer ) - sizeof(char), fp ) ) {
+        size_t size = 128;
+        char * buffer = (char *)malloc( size );
+        if( buffer == NULL ) {
+            EXCEPT( "Failed to allocate buffer for parsing /proc/cpuinfo.\n" );
+        }            
+        
+        while( fgets( buffer, size, fp ) ) {
+            while( strchr( buffer, '\n' ) == NULL ) {
+                char * newBuffer = (char *)realloc( buffer, size + size );
+                if( newBuffer == NULL ) {
+                    EXCEPT( "Failed to allocate memory for a long line in /proc/cpuinfo.\n" );
+                }
+                buffer = newBuffer;
+                
+                newBuffer = buffer + strlen( buffer );
+                if( ! fgets( newBuffer, size, fp ) ) {
+                    /* If we fail a read before finding the end of the line,
+                       something has probably gone terribly, terribly wrong. */
+                    EXCEPT( "Failed to find end of line ('%s') before end of file.\n", buffer );
+                    // If /proc/cpuinfo regularly terminates without a newline,
+                    // we could do this instead.
+                    // free( buffer );
+                    // fclose( fp );
+                    // return _sysapi_processor_flags_raw;
+                }
+                size += size;
+            }
+
             char * colon = strchr( buffer, ':' );
             
             const char * value = "";
             const char * attribute = NULL;
             if( colon != NULL ) {
-                if( *(colon + 1) != '\0' ) {
-                    value = colon + 2;
+                for( unsigned int v = 1; colon[v] != '\0' && isspace( colon[v] ); ++v ) {
+                    value = colon + v;
                 }
                 
                 char * tmp = colon;
@@ -58,16 +91,24 @@ const char * sysapi_processor_flags_raw( void ) {
                 attribute = buffer;
                 
                 if( strcmp( attribute, "flags" ) == 0 ) {
-                    /* This is where we assume flags into buffer. */
-                    _sysapi_processor_flags_raw = strdup( value );
-                    if( _sysapi_processor_flags_raw == NULL ) {
-                        EXCEPT( "Failed to allocate memory for the raw processor flags." );
+                    if( foundProcessorFlags == 0 ) {
+                        /* This is where we assume flags fits into buffer. */
+                        _sysapi_processor_flags_raw = strdup( value );
+                        if( _sysapi_processor_flags_raw == NULL ) {
+                            EXCEPT( "Failed to allocate memory for the raw processor flags.\n" );
+                        }
+                    } else {
+                        if( strcmp( _sysapi_processor_flags_raw, value ) != 0 ) {
+                            dprintf( D_ALWAYS, "WARNING: Processor flags '%s' and '%s' are not the same; using the former.\n", _sysapi_processor_flags_raw, value );
+                        }
                     }
-                    break;
+                    
+                    foundProcessorFlags += 1;
                 }
             }
         }
         
+        free( buffer );
         fclose( fp );
     }
     

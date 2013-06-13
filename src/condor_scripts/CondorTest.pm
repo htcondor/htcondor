@@ -406,6 +406,20 @@ sub RegisterRelease
 
     $test{$handle}{"RegisterRelease"} = $function_ref;
 }
+sub RegisterSuspended
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterSuspended"} = $function_ref;
+}
+sub RegisterUnsuspended
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterUnsuspended"} = $function_ref;
+}
 sub RegisterDisconnected
 {
     my $handle = shift || croak "missing handle argument";
@@ -641,7 +655,8 @@ sub RunDagTest
 	if($count == 5) {
 		DoTest(@_);
 	} else {
-		my @newrgs = ($_[0],$_[1],$_[2],$undead,$_[3])
+		my @newrgs = ($_[0],$_[1],$_[2],$undead,$_[3]);
+		DoTest(@newrgs);
 	}
 }
 
@@ -1008,6 +1023,66 @@ sub CheckRegistrations
 	Condor::RegisterULog( sub {
 	    my %info = @_;
 	    die "$handle: FAILURE (job ulog)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterSuspended"} )
+    {
+	Condor::RegisterSuspended( $test{$handle}{"RegisterSuspended"} );
+    }
+    else
+    {
+	Condor::RegisterSuspended( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (Suspension not expected)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterUnsuspended"} )
+    {
+	Condor::RegisterUnsuspended( $test{$handle}{"RegisterUnsuspended"} );
+    }
+    else
+    {
+	Condor::RegisterUnsuspended( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (Unsuspension not expected)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterDisconnected"} )
+    {
+	Condor::RegisterDisconnected( $test{$handle}{"RegisterDisconnected"} );
+    }
+    else
+    {
+	Condor::RegisterDisconnected( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (Disconnect not expected)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterReconnected"} )
+    {
+	Condor::RegisterReconnected( $test{$handle}{"RegisterReconnected"} );
+    }
+    else
+    {
+	Condor::RegisterReconnected( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (reconnect not expected)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterReconnectFailed"} )
+    {
+	Condor::RegisterReconnectFailed( $test{$handle}{"RegisterReconnectFailed"} );
+    }
+    else
+    {
+	Condor::RegisterReconnectFailed( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (reconnect failed)\n";
 	} );
     }
 
@@ -1735,6 +1810,8 @@ sub SearchCondorLogMultiple
 
 	my $count = 0;
 	my $begin = 0;
+	my $foundanything = 0;
+	my $tolerance = 3;
 	my $done = 0;
 	while($found < $goal) {
        	CondorTest::debug("Searching Try $tried\n",2);
@@ -1770,6 +1847,7 @@ sub SearchCondorLogMultiple
        		} elsif( $_ =~ /$regexp/) {
            		CondorTest::debug("FOUND IT! $_\n",2);
 				$found += 1;
+				$foundanything += 1;
 				#print "instances $instances found $found goal $goal\n";
 				if((defined $findcallback) and (!(defined $findafter)) and 
 					 ($found == $goal)) {
@@ -1802,7 +1880,22 @@ sub SearchCondorLogMultiple
 		}
 		$tried += 1;
 		if($tried >= $timeout) {
-			last;
+			if($tolerance == 0) {
+				CondorTest::debug("SearchCondorLogMultiple: About to fail from timeout!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",1);
+				if(defined $findcallback) {
+					&$findcallback("HitRetryLimit");
+				}
+				last;
+			} else {
+				if($foundanything > 0) {
+					CondorTest::debug("SearchCondorLogMultiple: Using builtin tolerance\n",1);
+					$tolerance -= 1;
+					$tried = 1;
+				} else {
+					$tolerance = 0;
+					$tried -= 2;
+				}
+			}
 		}
 	}
 	if($found < $goal) {
@@ -2567,6 +2660,50 @@ sub CreateLocalConfig
     runcmd("cat $name");
     close(FI);
     return($name);
+}
+
+sub VerifyNoJobsInState
+{
+	my $state = shift;
+	my $number = shift;
+    my $maxtries = shift;
+    my $done = 0;
+    my $count  = 0;
+    my @queue = ();
+    my $jobsrunning = 0;
+	my %jobsstatus = ();;
+
+
+    while( $done != 1)
+    {
+        if($count > $maxtries) {
+			return($jobsstatus{$state});
+        }
+        $count += 1;
+        @queue = `condor_q`;
+        foreach my $line (@queue) {
+            chomp($line);
+            if($line =~ /^(\d+)\s+jobs;\s+(\d+)\s+completed,\s+(\d+)\s+removed,\s+(\d+)\s+idle,\s+(\d+)\s+running,\s+(\d+)\s+held,\s+(\d+)\s+suspended.*$/) {
+				#print "$line\n";
+				$jobsstatus{jobs} = $1;
+				$jobsstatus{completed} = $2;
+				$jobsstatus{removed} = $3;
+				$jobsstatus{idle} = $4;
+				$jobsstatus{running} = $5;
+				$jobsstatus{held} = $6;
+				$jobsstatus{suspended} = $7;
+				if($jobsstatus{$state} == $number){
+                    $done = 1;
+					print "$number $state\n";
+					return($number)
+				}
+            }
+        }
+        if($done == 0) {
+            print "Waiting for $number $state\n";
+            sleep 1;
+        }
+    }
 }
 
 1;

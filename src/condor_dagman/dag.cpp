@@ -636,7 +636,7 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				break;
 
 			case ULOG_JOB_RELEASED:
-				ProcessReleasedEvent(job);
+				ProcessReleasedEvent(job, event);
 				break;
 
 			case ULOG_PRESKIP:
@@ -693,9 +693,8 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 			// don't get a released event for that job.  This may not
 			// work exactly right if some procs of a cluster are held
 			// and some are not.  wenger 2010-08-26
-		if ( job->_jobProcsOnHold > 0 ) {
+		if ( job->_jobProcsOnHold > 0 && job->Release( event->proc ) ) {
 			_numHeldJobProcs--;
-			job->_jobProcsOnHold--;
 		}
 
 			// Only change the node status, error info,
@@ -1221,31 +1220,31 @@ Dag::ProcessHeldEvent(Job *job, const ULogEvent *event) {
 	if ( !job ) {
 		return;
 	}
+	ASSERT( event );
 
-	_numHeldJobProcs++;
-
-	job->_timesHeld++;
-	job->_jobProcsOnHold++;
-	if ( _maxJobHolds > 0 && job->_timesHeld >= _maxJobHolds ) {
-		debug_printf( DEBUG_VERBOSE, "Total hold count for job %d (node %s) "
-					"has reached DAGMAN_MAX_JOB_HOLDS (%d); all job "
-					"proc(s) for this node will now be removed\n",
-					event->cluster, job->GetJobName(), _maxJobHolds );
-		RemoveBatchJob( job );
+	if( job->Hold( event->proc ) ) {
+		_numHeldJobProcs++;
+		if ( _maxJobHolds > 0 && job->_timesHeld >= _maxJobHolds ) {
+			debug_printf( DEBUG_VERBOSE, "Total hold count for job %d (node %s) "
+						"has reached DAGMAN_MAX_JOB_HOLDS (%d); all job "
+						"proc(s) for this node will now be removed\n",
+						event->cluster, job->GetJobName(), _maxJobHolds );
+			RemoveBatchJob( job );
+		}
 	}
 }
 
 //---------------------------------------------------------------------------
 void
-Dag::ProcessReleasedEvent(Job *job) {
+Dag::ProcessReleasedEvent(Job *job,const ULogEvent* event) {
 
+	ASSERT( event );
 	if ( !job ) {
 		return;
 	}
-
-	_numHeldJobProcs--;
-
-	job->_jobProcsOnHold--;
+	if( job->Release( event->proc ) ) {
+		_numHeldJobProcs--;
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -2697,8 +2696,7 @@ Dag::DumpDotFile(void)
 
 		temp_dot_file_name = current_dot_file_name + ".temp";
 
-		MSC_SUPPRESS_WARNING_FIXME(6031) // return falue of unlink ignored.
-		unlink(temp_dot_file_name.Value());
+		tolerant_unlink(temp_dot_file_name.Value());
 		temp_dot_file = safe_fopen_wrapper_follow(temp_dot_file_name.Value(), "w");
 		if (temp_dot_file == NULL) {
 			debug_dprintf(D_ALWAYS, DEBUG_NORMAL,
@@ -2733,10 +2731,17 @@ Dag::DumpDotFile(void)
 
 			fprintf(temp_dot_file, "}\n");
 			fclose(temp_dot_file);
-			MSC_SUPPRESS_WARNING_FIXME(6031) // return falue of unlink ignored.
-			unlink(current_dot_file_name.Value());
-			MSC_SUPPRESS_WARNING_FIXME(6031) // return falue of rename ignored.
-			rename(temp_dot_file_name.Value(), current_dot_file_name.Value());
+			tolerant_unlink(current_dot_file_name.Value());
+			if ( rename(temp_dot_file_name.Value(),
+						current_dot_file_name.Value()) != 0 ) {
+				debug_printf( DEBUG_NORMAL,
+					  		"Warning: can't rename temporary dot "
+					  		"file (%s) to permanent file (%s): %s\n",
+					  		temp_dot_file_name.Value(),
+							current_dot_file_name.Value(),
+					  		strerror( errno ) );
+				check_warning_strictness( DAG_STRICT_1 );
+			}
 		}
 	}
 	return;
@@ -2808,8 +2813,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	tmpStatusFile += ".tmp";
 		// Note: it's not an error if this fails (file may not
 		// exist).
-	MSC_SUPPRESS_WARNING_FIXME(6031) // return falue of unlink ignored.
-	unlink( tmpStatusFile.Value() );
+	tolerant_unlink( tmpStatusFile.Value() );
 
 	FILE *outfile = safe_fopen_wrapper_follow( tmpStatusFile.Value(), "w" );
 	if ( outfile == NULL ) {

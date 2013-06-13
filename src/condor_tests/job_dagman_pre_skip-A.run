@@ -116,6 +116,9 @@ CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
 if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	if (! -e $logfile) {
+		die "$testname: failed -- no $logfile file!  DAG not run?\n";
+	}
 	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {

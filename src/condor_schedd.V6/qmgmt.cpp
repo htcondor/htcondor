@@ -2402,7 +2402,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		}
 		delete tree;
 
-		if ( attr_type == classad::Value::INTEGER_VALUE || classad::Value::REAL_VALUE ) {
+		if ( attr_type == classad::Value::INTEGER_VALUE || attr_type == classad::Value::REAL_VALUE ) {
 			// first, store the actual value
 			MyString raw_attribute = attr_name;
 			raw_attribute += "_RAW";
@@ -4240,7 +4240,7 @@ RecvSpoolFileBytes(const char *path)
 		Q_SOCK->getReliSock()->end_of_message();
 		return -1;
 	}
-	chmod(path,00755);
+	IGNORE_RETURN chmod(path,00755);
 	Q_SOCK->getReliSock()->end_of_message();
 	dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
 	return 0;

@@ -20,6 +20,16 @@
 package CondorLog;
 
 use CondorTest;
+my $timeout = 0;
+my $defaulttimeout = 60;
+$timeout = $defaulttimeout;
+
+$timed_callback = sub
+{
+print "LogCheck timeout expired!\n";
+CondorTest::RegisterResult( 0, %args );
+return $result;
+};
 
 sub RunCheck
 {
@@ -63,7 +73,10 @@ sub RunCheckMultiple
     my $result;
     my $count = 0;
 	my $undead = undef;
+	my $testname = "RunCheckMultiple Tool";
+	system("date");
 
+	CondorTest::RegisterTimed( $testname, $timed_callback, $match_timeout);
 	if(defined $args{match_callback}) {
 		# we don't just want to look for it, we want to get it back
 		#print "Match Callback set\n";

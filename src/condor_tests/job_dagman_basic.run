@@ -81,7 +81,7 @@ CondorTest::RegisterSubmit( $testname, $submitted );
 
 if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
 	if (! -e $outfile) {
-		die "$testname: failed -- no $outfile file!\n";
+		die "$testname: failed -- no $outfile file!  DAG not run?\n";
 	}
 	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);

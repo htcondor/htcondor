@@ -157,24 +157,6 @@ Shadow::builtSinceVersion(int major, int minor, int sub_minor) {
 }
 
 
-bool
-Shadow::builtSinceDate(int month, int day, int year) {
-	if (m_version_info) {
-		return m_version_info->built_since_date(month, day, year);
-	}
-		/*
-		  It doesn't even have a version string, we should return
-		  false and assume it's older than whatever we care about
-		  (e.g. this functionality was added for 6.8.5, and we *know*
-		  the shadow is returning a version string there).
-		*/
-	dprintf(D_ALWAYS, "ERROR: shadow classad does not contain version "
-			"information, it must be REALLY OLD.  "
-			"Please upgrade your shadow immediately.");
-	return false;
-}
-
-
 //--------------------------------------------------
 // ShadowMgr:: object
 //--------------------------------------------------

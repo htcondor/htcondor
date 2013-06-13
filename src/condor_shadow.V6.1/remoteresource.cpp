@@ -690,7 +690,7 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 	m_claim_session = ClaimIdParser(claim_id);
 	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
 		if( m_claim_session.secSessionId() == NULL ) {
-			dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create security session from claim id, because claim id does not contain session information: %s\n",m_claim_session.publicClaimId());
+			dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: warning - failed to create security session from claim id %s because claim has no session information, likely because the matched startd has SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION set to False\n",m_claim_session.publicClaimId());
 		}
 		else {
 			bool rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(

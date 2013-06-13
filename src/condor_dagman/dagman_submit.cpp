@@ -122,7 +122,7 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
   parse_submit_fnc parseFnc = NULL;
 
   if ( type == Job::TYPE_CONDOR ) {
-    marker = "cluster";
+    marker = " submitted to cluster ";
 
 	  // Note: we *could* check how many jobs got submitted here, and
 	  // correlate that with how many submit events we see later on.
@@ -160,8 +160,8 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
 	}
   }
 
+  int status = my_pclose(fp) & 0xff;
   {
-    int status = my_pclose(fp) & 0xff;
 
     if (keyLine == "") {
       debug_printf(DEBUG_NORMAL, "failed while reading from pipe.\n");
@@ -181,8 +181,24 @@ submit_try( ArgList &args, CondorID &condorID, Job::job_type_t type,
 
   int	jobProcCount;
   if ( !parseFnc( keyLine.Value(), jobProcCount, condorID._cluster) ) {
-	  return false;
-  }
+    if( !status ) {
+		// We are going forward (do not return false here)
+		// Expectation is that higher levels will catch that we
+		// did not get a cluster initialized properly here, fail,
+		// and write a rescue DAG. gt3658 2013-06-03
+		//
+		// This is better than the old failure that would submit
+		// DAGMAN_MAX_SUBMIT_ATTEMPT copies of the same job.
+      debug_printf( DEBUG_NORMAL, "WARNING: submit returned 0, but "
+        "parsing submit output failed!\n" );
+    }
+  } else {
+    if( status ) {
+      debug_printf( DEBUG_NORMAL, "WARNING: submit returned nonzero but "
+        "parsing submit output succeeded!\n" );
+      return false;
+    }
+	}
 
   // Stork job specs have only 1 dimension.  The Stork user log forces the proc
   // and sub-proc ids to "-1", so do the same here for the returned submit id.

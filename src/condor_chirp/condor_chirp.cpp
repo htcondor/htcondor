@@ -592,6 +592,10 @@ int chirp_write(int argc, char **argv) {
 	}
 	
 	buf = (char*)malloc(length+1);
+	if ( ! buf) {
+		errno = ENOMEM;
+		CLOSE_DISCONNECT_AND_RETURN(client, fd, -1);
+	}
 
 	int ret_val = -1;
 	// Use pwrite
