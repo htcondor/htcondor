@@ -1425,7 +1425,7 @@ sub debug {
 
 sub debug_flush {
 	foreach my $line (@debugcollection) {
-		print "$line\n";
+		print "$line";
 	}
 }
 
