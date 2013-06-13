@@ -680,7 +680,15 @@ DedicatedScheddNegotiate::scheduler_skipJob(PROC_ID jobid)
 			return true;
 		}
 	}
+
 	FreeJobAd( jobad );
+
+	int job_universe;
+	GetAttributeInt(jobid.cluster, jobid.proc, ATTR_JOB_UNIVERSE, &job_universe);
+	if( job_universe == CONDOR_UNIVERSE_MPI ) {
+		return true;
+	}
+
 	return false;
 }
 

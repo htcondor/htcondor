@@ -962,8 +962,9 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 				continue;
 			}
 
-			if( universe <= CONDOR_UNIVERSE_MIN ||
-				universe >= CONDOR_UNIVERSE_MAX ) {
+			if( ( universe <= CONDOR_UNIVERSE_MIN ||
+				  universe >= CONDOR_UNIVERSE_MAX ) || 
+				( universe == CONDOR_UNIVERSE_MPI) ) {
 				dprintf( D_ALWAYS,
 						 "Job %s has invalid %s = %d.  Removing....\n",
 						 tmp, ATTR_JOB_UNIVERSE, universe );

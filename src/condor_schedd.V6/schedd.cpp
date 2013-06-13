@@ -1829,7 +1829,9 @@ count( ClassAd *job )
 
 		int sendToDS = 0;
 		job->LookupBool("WantParallelScheduling", sendToDS);
-		if( (sendToDS || universe == CONDOR_UNIVERSE_MPI ||
+		if( (sendToDS || 
+				 // Slightly problematic
+				 // universe == CONDOR_UNIVERSE_MPI || //Eliminate MPI universe
 			 universe == CONDOR_UNIVERSE_PARALLEL) && status == IDLE ) {
 			if( max_hosts > cur_hosts ) {
 				int cluster = 0;
@@ -7624,6 +7626,12 @@ Scheduler::addRunnableJob( shadow_rec* srec )
 		EXCEPT( "Scheduler::addRunnableJob called with NULL srec!" );
 	}
 
+	if( srec->universe == CONDOR_UNIVERSE_MPI ) {
+		dprintf( D_ALWAYS, "MPI universe not supported.\n");
+//		return;
+		EXCEPT( "MPI universe not supported.\n");
+	}
+
 	dprintf( D_FULLDEBUG, "Queueing job %d.%d in runnable job queue\n",
 			 srec->job_id.cluster, srec->job_id.proc );
 
@@ -12497,8 +12505,8 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	case CONDOR_UNIVERSE_STANDARD:
 	case CONDOR_UNIVERSE_GRID:
 	case CONDOR_UNIVERSE_SCHEDULER:
-		break; // these universes not supported
 	case CONDOR_UNIVERSE_MPI:
+		break; // these universes not supported
 	case CONDOR_UNIVERSE_PARALLEL:
 	{
 		MyString claim_ids;
