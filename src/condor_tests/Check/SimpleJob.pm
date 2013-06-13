@@ -59,7 +59,7 @@ sub RunCheck
 
 	if($args{check_slots}) {
 		# Make sure we never try to start more jobs then slots we have!!!!!!
-		$availableslots = ExamineSlots();
+		$availableslots = ExamineSlots(queuesz);
 	
 		if($availableslots < $queuesz) {
     		CondorTest::RegisterResult( $result, %args );
@@ -159,19 +159,37 @@ sub RunCheck
 
 sub ExamineSlots
 {
+	my $waitforit = shift;
 	my $line = "";
 
+	my @jobs = ();
 	my $available = 0;
-	my @jobs = `condor_status`;
-	foreach my $job (@jobs) {
-		chomp($job);
-		$line = $job;
-		if($line =~ /^\s*Total\s+(\d+)\s*(\d+)\s*(\d+)\s*(\d+).*/) {
-			print "<$4> unclaimed slots\n";
-			$available = $4;
+	my $looplimit = 24;
+	my $count = 24; # go just once
+	if(defined $waitforit) {
+		$count = 0; #enable looping with 10 second sleep
+	}
+	while($count <= $looplimit) {
+		$count += 1;
+		@jobs = ();
+		@jobs = `condor_status`;
+		foreach my $job (@jobs) {
+			chomp($job);
+			$line = $job;
+			if($line =~ /^\s*Total\s+(\d+)\s*(\d+)\s*(\d+)\s*(\d+).*/) {
+				print "<$4> unclaimed <$1> Total slots\n";
+				$available = $4;
+			}
+		}
+		if(defined $waitforit) {
+			if($available >= $waitforit) {
+				last;
+			} else {
+				sleep 10;
+			}
+		} else{
 		}
 	}
 	return($available);
 }
-
 1;
