@@ -593,7 +593,8 @@ void EC2Job::doEvaluateState()
 					    // May need to add back retry logic, but why?
 					    errorString = gahp->getErrorString();
 					    dprintf(D_ALWAYS,"(%d.%d) job create keypair failed: %s: %s\n",
-							    procID.cluster, procID.proc, gahp_error_code,
+							    procID.cluster, procID.proc, 
+								gahp_error_code ? gahp_error_code : "",
 							    errorString.c_str() );
 					    gmState = GM_HOLD;
 					    break;
@@ -668,7 +669,7 @@ void EC2Job::doEvaluateState()
 
 					lastSubmitAttempt = time(NULL);
 
-					if ( rc != 0 &&
+					if ( rc != 0 && gahp_error_code &&
 						 strcmp( gahp_error_code, "NEED_CHECK_VM_START" ) == 0 ) {
 						// get an error code from gahp server said that we should check if 
 						// the VM has been started successfully in EC2
@@ -689,7 +690,7 @@ void EC2Job::doEvaluateState()
 											
 						gmState = GM_SAVE_INSTANCE_ID;
 						
-					} else if ( strcmp( gahp_error_code, "InstanceLimitExceeded" ) == 0 ) {
+					} else if ( gahp_error_code && strcmp( gahp_error_code, "InstanceLimitExceeded" ) == 0 ) {
 						// meet the resource limitation (maximum 20 instances)
 						// should retry this command later
 						myResource->CancelSubmit( this );
@@ -698,7 +699,8 @@ void EC2Job::doEvaluateState()
 					 } else {
 						errorString = gahp->getErrorString();
 						dprintf(D_ALWAYS,"(%d.%d) job submit failed: %s: %s\n",
-								procID.cluster, procID.proc, gahp_error_code,
+								procID.cluster, procID.proc,
+								gahp_error_code ? gahp_error_code : "",
 								errorString.c_str() );
 						gmState = GM_HOLD;
 					}
@@ -981,7 +983,8 @@ void EC2Job::doEvaluateState()
 						// What to do about failure?
 						errorString = gahp->getErrorString();
 						dprintf( D_ALWAYS, "(%d.%d) job probe failed: %s: %s\n",
-								 procID.cluster, procID.proc, gahp_error_code,
+								 procID.cluster, procID.proc,
+								 gahp_error_code ? gahp_error_code : "",
 								 errorString.c_str() );
 						gmState = GM_HOLD;
 						break;
@@ -1160,7 +1163,8 @@ void EC2Job::doEvaluateState()
 					// What to do about a failed cancel?
 					errorString = gahp->getErrorString();
 					dprintf( D_ALWAYS, "(%d.%d) job cancel failed: %s: %s\n",
-							 procID.cluster, procID.proc, gahp_error_code,
+							 procID.cluster, procID.proc,
+							 gahp_error_code ? gahp_error_code : "",
 							 errorString.c_str() );
 					gmState = GM_HOLD;
 				}
@@ -1262,7 +1266,8 @@ void EC2Job::doEvaluateState()
                                 errorString = gahp->getErrorString();
                                 dprintf( D_ALWAYS, "(%d.%d) job destroy keypair (%s) failed: %s: %s\n",
                                     procID.cluster, procID.proc, m_key_pair.c_str(),
-                                    gahp_error_code, errorString.c_str() );
+                                    gahp_error_code ? gahp_error_code : "",
+                                    errorString.c_str() );
                             }
                         }
                     }
@@ -1349,7 +1354,8 @@ void EC2Job::doEvaluateState()
                 } else {
                     errorString = gahp->getErrorString();
                     dprintf( D_ALWAYS, "(%d.%d) spot instance request failed: %s: %s\n",
-                                procID.cluster, procID.proc, gahp_error_code,
+                                procID.cluster, procID.proc,
+                                gahp_error_code ? gahp_error_code : "",
                                 errorString.c_str() );
                     dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_START + <GAHP failure> = GM_HOLD\n" );
                     
@@ -1391,7 +1397,8 @@ void EC2Job::doEvaluateState()
                     if( rc != 0 ) {
                         errorString = gahp->getErrorString();
                         dprintf( D_ALWAYS, "(%d.%d) spot request stop failed: %s: %s\n",
-                                    procID.cluster, procID.proc, gahp_error_code,
+                                    procID.cluster, procID.proc,
+                                    gahp_error_code ? gahp_error_code : "",
                                     errorString.c_str() );
                         dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_CANCEL + <GAHP failure> = GM_HOLD\n" );
                         gmState = GM_HOLD;
@@ -1476,7 +1483,8 @@ void EC2Job::doEvaluateState()
                 if( rc != 0 ) {
                     errorString = gahp->getErrorString();
                     dprintf( D_ALWAYS, "(%d.%d) spot request probe failed: %s: %s\n",
-                                procID.cluster, procID.proc, gahp_error_code,
+                                procID.cluster, procID.proc,
+                                gahp_error_code ? gahp_error_code : "",
                                 errorString.c_str() );
                     dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <GAHP failure> = GM_HOLD\n" );
                     gmState = GM_HOLD;
@@ -1704,7 +1712,8 @@ void EC2Job::doEvaluateState()
                 if( rc != 0 ) {
                     errorString = gahp->getErrorString();
                     dprintf( D_ALWAYS, "(%d.%d) Attempt to locate job during recovery failed: %s: %s\n",
-                             procID.cluster, procID.proc, gahp_error_code,
+                             procID.cluster, procID.proc,
+                             gahp_error_code ? gahp_error_code : "",
                              errorString.c_str() );
                     gmState = GM_HOLD;
                     break;
@@ -2015,9 +2024,10 @@ void EC2Job::associate_n_attach(StringList & returnStatus)
 		default:
 			dprintf(D_ALWAYS,
 					"Failed ec2_create_tags returned %s continuing w/job\n",
-					gahp_error_code);
+					gahp_error_code ? gahp_error_code : "");
 			break;
 		}
+		if (gahp_error_code) { free(gahp_error_code); gahp_error_code = NULL; }
 	}
 	if (buffer) { free(buffer); buffer = NULL; }
 
@@ -2044,9 +2054,10 @@ void EC2Job::associate_n_attach(StringList & returnStatus)
 			default:
 				dprintf(D_ALWAYS,
 						"Failed ec2_associate_address returned %s continuing w/job\n",
-						gahp_error_code);
+						gahp_error_code ? gahp_error_code : "");
 				break;
 		}
+		if (gahp_error_code) { free(gahp_error_code); gahp_error_code = NULL; }
 	}
 
 	if (!m_ebs_volumes.empty())
@@ -2088,9 +2099,10 @@ void EC2Job::associate_n_attach(StringList & returnStatus)
 					bcontinue=false;
 					dprintf(D_ALWAYS,
 							"Failed ec2_attach_volume returned %s continuing w/job\n",
-							gahp_error_code);
+							gahp_error_code ? gahp_error_code : "");
 					break;
 			}
+			if (gahp_error_code) { free(gahp_error_code); gahp_error_code = NULL; }
 		}
 	}
 }
