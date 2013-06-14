@@ -172,7 +172,7 @@ ovs_delete_interface_from_bridge(const char * bridge_name, const char * dev)
     }
     else if (pid == 0) { // This is the child process
         // equivalent to execute 'ovs-vsctl -- --if-exist del-port bridge_name device_name'
-        char * args[] = {"ovs-vsctl", "--", "--if-exist", "del-port", brname, devname, NULL};
+        char * args[] = {"ovs-vsctl", "--", "--if-exists", "del-port", brname, devname, NULL};
         if(execvp("ovs-vsctl", args) < 0){
             dprintf(D_ALWAYS, "execvp in child to spawn ovs-vsctl command failed. (errno=%d, %s)\n", errno, strerror(errno));
             exit(errno);

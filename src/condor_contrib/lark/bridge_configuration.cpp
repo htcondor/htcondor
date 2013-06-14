@@ -2,6 +2,7 @@
 #include "condor_common.h"
 
 #include <string>
+#include <sstream>
 #include <linux/if_ether.h>
 #include <linux/if_arp.h>
 
@@ -293,6 +294,47 @@ BridgeConfiguration::SetupPostForkParent()
 		dprintf(D_ALWAYS, "Error writing to child for bridge sync (errno=%d, %s).\n", errno, strerror(errno));
 		return errno;
 	}
+    // At this point, the bridge can forward packets to the external_device,
+    // If ovs bridge is used, we add the ovs QoS ingressrate limiting according
+    // to the submitted job request.
+    /*std::string bandwidth_attr("Bandwidth");
+    int bandwidth;
+    if(!m_ad->EvaluateAttrInt(bandwidth_attr, bandwidth)){
+        dprintf(D_ALWAYS, "Submitted job does not request for bandwidth resource. Bandwith rate limiting is skipped.\n");
+    }
+    else {
+        // we utilize openvswitch QoS rate limiting, thus we need to make sure configuration type is "ovs_bridge"
+        if (configuration_type == "ovs_bridge") {
+            // The unit of "bandwidth is in Mbps, need to convert it to Kbps"
+            // and make the burst 15% of the bandwidth rate limit
+            int ingress_policing_rate = bandwidth * 1000;
+            int ingress_policing_burst = ingress_policing_rate * 0.15;
+            std::stringstream ingress_rate_value;
+            std::stringstream ingress_burst_value;
+            ingress_rate_value << ingress_policing_rate;
+            ingress_burst_value << ingress_policing_burst;
+            std::string ingress_rate_str = std::string("ingress_policing_rate=") + ingress_rate_value.str();
+            std::string ingress_burst_str = std::string("ingress_policing_burst=") + ingress_burst_value.str();
+            {
+            ArgList args;
+            args.AppendArg("ovs-vsctl");
+            args.AppendArg("set");
+            args.AppendArg("Interface");
+            args.AppendArg(external_device);
+            args.AppendArg(ingress_rate_str);
+            RUN_ARGS_AND_LOG(BridgeConfiguration::SetupPostForkParent, set_ovs_ingress_rate_lmit)
+            }
+            {
+            ArgList args;
+            args.AppendArg("ovs-vsctl");
+            args.AppendArg("set");
+            args.AppendArg("Interface");
+            args.AppendArg(external_device);
+            args.AppendArg(ingress_burst_str);
+            RUN_ARGS_AND_LOG(BridgeConfiguration::SetupPostForkParent, set_ovs_ingress_burst)
+            }
+        }
+    }*/
 	return 0;
 }
 
@@ -375,7 +417,7 @@ BridgeConfiguration::Cleanup() {
 	}
 	GratuitousArp(bridge_device);
 	// For ovs bridge, we also need to delete the external deivce connected to the bridge for clean up
-	/*std::string bridge_name;
+	std::string bridge_name;
 	m_ad->EvaluateAttrString(ATTR_BRIDGE_NAME, bridge_name);
 	std::string configuration_type;
     	m_ad->EvaluateAttrString(ATTR_NETWORK_TYPE, configuration_type);
@@ -386,7 +428,7 @@ BridgeConfiguration::Cleanup() {
 			return 1;
 		}
 		ovs_delete_interface_from_bridge(bridge_name.c_str(), external_device.c_str());
-	}*/
+	}
 
 	return 0;
 }
