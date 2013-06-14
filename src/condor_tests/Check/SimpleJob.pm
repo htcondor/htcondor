@@ -52,6 +52,21 @@ $ExitSuccess = sub {
 sub RunCheck
 {
     my %args = @_;
+	my $availableslots = 0;
+    my $result = 0;
+
+	my $queuesz = $args{queue_sz} || 1;
+
+	if($args{check_slots}) {
+		# Make sure we never try to start more jobs then slots we have!!!!!!
+		$availableslots = ExamineSlots(queuesz);
+	
+		if($availableslots < $queuesz) {
+    		CondorTest::RegisterResult( $result, %args );
+    		return $result;
+		}
+	}
+
     my $testname = $args{test_name} || CondorTest::GetDefaultTestName();
     my $universe = $args{universe} || "vanilla";
     my $user_log = $args{user_log} || CondorTest::TempFileName("$testname.user_log");
@@ -64,8 +79,8 @@ sub RunCheck
 		$duration = $args{duration};
 	}
 
-	if(exists $args{tmeout}){
-		$timeout = $args{tmeout};
+	if(exists $args{timeout}){
+		$timeout = $args{timeout};
 		print "Test getting requested timeout of <$timeout> seconds\n";
 	}
 	 
@@ -81,7 +96,7 @@ sub RunCheck
 	my $donewithsuccess_fn = $args{on_success} || $ExitSuccess;
 
 
-	if(exists $args{tmeout}){
+	if(exists $args{timeout}){
 		CondorTest::RegisterTimed( $testname, $timed_callback, $timeout);
 	}
     CondorTest::RegisterAbort( $testname, $abort_fn );
@@ -130,10 +145,9 @@ sub RunCheck
     if( $append_submit_commands ne "" ) {
         print SUBMIT "\n" . $append_submit_commands . "\n";
     }
-    print SUBMIT "queue $args{queue_sz}\n";
+    print SUBMIT "queue $queuesz\n";
     close( SUBMIT );
 
-    my $result = 0;
 	if (defined $args{GetClusterId}) {
     	$result = CondorTest::RunTest($testname, $submit_fname, 0, $args{GetClusterId});
 	} else {
@@ -143,4 +157,39 @@ sub RunCheck
     return $result;
 }
 
+sub ExamineSlots
+{
+	my $waitforit = shift;
+	my $line = "";
+
+	my @jobs = ();
+	my $available = 0;
+	my $looplimit = 24;
+	my $count = 24; # go just once
+	if(defined $waitforit) {
+		$count = 0; #enable looping with 10 second sleep
+	}
+	while($count <= $looplimit) {
+		$count += 1;
+		@jobs = ();
+		@jobs = `condor_status`;
+		foreach my $job (@jobs) {
+			chomp($job);
+			$line = $job;
+			if($line =~ /^\s*Total\s+(\d+)\s*(\d+)\s*(\d+)\s*(\d+).*/) {
+				print "<$4> unclaimed <$1> Total slots\n";
+				$available = $4;
+			}
+		}
+		if(defined $waitforit) {
+			if($available >= $waitforit) {
+				last;
+			} else {
+				sleep 10;
+			}
+		} else{
+		}
+	}
+	return($available);
+}
 1;

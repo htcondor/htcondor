@@ -25,6 +25,7 @@ use Check::CondorLog;
 
 my $firstappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	NUM_CPUS = 12
 	ALL_DEBUG = 
 ';
 
@@ -53,7 +54,7 @@ my $on_abort = sub {
 };
 
 my $testname = "job_concurrency_limits.run";
-my $result = 1;
+my $result = 0;
 my $running_now = 0;
 my $expect_idle = 0;
 my $expect_run = 0;
@@ -99,6 +100,17 @@ my $idles = 0;
 		die "Running jobs <$running_now> exceeded concurrency lints <$expect_run>\n";
 	}
 };
+
+# enter most slots needed. We will verify
+my $neededslots = 7;
+my $haveslots = ExamineSlots($neededslots);
+
+if($haveslots < $neededslots) {
+	print "We need <$neededslots> but only have <$haveslots>\n";
+	system("condor_config_val -dump | sort");
+	system("condor_config_val -v NUM_CPUS");
+	die "We need <$neededslots> but only have <$haveslots>\n";
+}
 
 #Do a couple things before setting currency limits
 print "First test basic job\n";
@@ -258,6 +270,42 @@ sub CountIdle
 	}
 
 	return($idlecount);
+}
+
+sub ExamineSlots
+{
+	my $waitforit = shift;
+	my $line = "";
+
+	my @jobs = ();
+	my $available = 0;
+	my $looplimit = 24;
+	my $count = 24; # go just once
+	if(defined $waitforit) {
+		$count = 0; #enable looping with 10 second sleep
+	}
+	while($count <= $looplimit) {
+		$count += 1;
+		@jobs = ();
+		@jobs = `condor_status`;
+		foreach my $job (@jobs) {
+			chomp($job);
+			$line = $job;
+			if($line =~ /^\s*Total\s+(\d+)\s*(\d+)\s*(\d+)\s*(\d+).*/) {
+				print "<$4> unclaimed <$1> Total slots\n";
+				$available = $4;
+			}
+		}
+		if(defined $waitforit) {
+			if($available >= $waitforit) {
+				last;
+			} else {
+				sleep 10;
+			}
+		} else{
+		}
+	}
+	return($available);
 }
 
 sub ExamineQueue
