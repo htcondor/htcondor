@@ -920,6 +920,14 @@ ResMgr::get_by_cur_id( char* id )
 		if( resources[i]->r_cur->idMatches(id) ) {
 			return resources[i];
 		}
+        if (resources[i]->get_feature() == Resource::PARTITIONABLE_SLOT) {
+            for (Resource::claims_t::iterator j(resources[i]->r_claims.begin());  j != resources[i]->r_claims.end();  ++j) {
+                if ((*j)->idMatches(id)) {
+                    resources[i]->r_cur = *j;
+                    return resources[i];
+                }
+            }
+        }
 	}
 	return NULL;
 }
@@ -944,6 +952,14 @@ ResMgr::get_by_any_id( char* id )
 			resources[i]->r_pre_pre->idMatches(id) ) {
 			return resources[i];
 		}
+        if (resources[i]->get_feature() == Resource::PARTITIONABLE_SLOT) {
+            for (Resource::claims_t::iterator j(resources[i]->r_claims.begin());  j != resources[i]->r_claims.end();  ++j) {
+                if ((*j)->idMatches(id)) {
+                    resources[i]->r_cur = *j;
+                    return resources[i];
+                }
+            }
+        }
 	}
 	return NULL;
 }
