@@ -1,7 +1,5 @@
 #!/bin/sh
 
-echo $0 "$@" > /tmp/glkout
-
 if [ $# != 6 ]
 then
 	echo "usage: $0 <glexec> <proxy> <pid> <signal> <max-glexec-retries> <min-glexec-retry-delay>" >&2
