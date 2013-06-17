@@ -77,7 +77,7 @@ GangliaD::initAndReconfig()
 		EXCEPT("Failed to configure ganglia library.");
 	}
 
-	StatsD::initAndReconfig("GANGLIA");
+	StatsD::initAndReconfig("GANGLIAD");
 
 	// the interval we tell ganglia is the max time between updates
 	m_tmax = m_stats_pub_interval*2;

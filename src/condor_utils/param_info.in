@@ -11067,7 +11067,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,condor_config
 id=375
 
-[GANGLIA_METRICS_CONFIG_DIR]
+[GANGLIAD_METRICS_CONFIG_DIR]
 aliases=
 default=/etc/condor/ganglia.d
 version=0.0.0
@@ -11083,7 +11083,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,condor_config
 id=375
 
-[GANGLIA_VERBOSITY]
+[GANGLIAD_VERBOSITY]
 aliases=
 default=0
 version=0.0.0
@@ -11099,7 +11099,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,condor_config
 id=375
 
-[GANGLIA_INTERVAL]
+[GANGLIAD_INTERVAL]
 aliases=
 default=300
 version=0.0.0
@@ -11147,7 +11147,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,gangliad
 id=600
 
-[GANGLIA_REQUIREMENTS]
+[GANGLIAD_REQUIREMENTS]
 aliases=
 default=
 version=0.0.0
@@ -11163,7 +11163,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,gangliad
 id=600
 
-[GANGLIA_PER_EXECUTE_NODE_METRICS]
+[GANGLIAD_PER_EXECUTE_NODE_METRICS]
 aliases=
 default=true
 version=0.0.0
