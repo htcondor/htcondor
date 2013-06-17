@@ -63,6 +63,7 @@ public:
 	std::string group;
 	std::string machine;
 	std::string ip;
+	std::string cluster;
 	bool derivative;
 	int verbosity;
 
@@ -148,6 +149,7 @@ class StatsD: Service {
 	AggregateMetricList m_aggregate_metrics;
 	std::map< std::string,std::string > m_daemon_ips; // map of daemon machine (and name) to IP address
 	std::string m_default_aggregate_host;
+	classad::ClassAd m_default_metric_ad;
 	StringList m_target_types;
 
 	unsigned m_derivative_publication_failed;

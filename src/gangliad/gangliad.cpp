@@ -170,8 +170,8 @@ GangliaD::publishMetric(Metric const &m)
 
 	int slope = metric.gangliaSlope();
 
-	dprintf(D_FULLDEBUG,"publishing %s=%s, group=%s, units=%s, derivative=%d, type=%s, title=%s, desc=%s, spoof_host=%s\n",
-			metric.name.c_str(), value.c_str(), metric.group.c_str(),  metric.units.c_str(), metric.derivative, metric.gangliaMetricType(), metric.title.c_str(), metric.desc.c_str(), spoof_host.c_str());
+	dprintf(D_FULLDEBUG,"publishing %s=%s, group=%s, units=%s, derivative=%d, type=%s, title=%s, desc=%s, cluster=%s, spoof_host=%s\n",
+			metric.name.c_str(), value.c_str(), metric.group.c_str(),  metric.units.c_str(), metric.derivative, metric.gangliaMetricType(), metric.title.c_str(), metric.desc.c_str(), metric.cluster.c_str(), spoof_host.c_str());
 
 	int rc = ganglia_send(
 						  m_ganglia_context,
@@ -185,6 +185,7 @@ GangliaD::publishMetric(Metric const &m)
 						  metric.title.c_str(),
 						  metric.desc.c_str(),
 						  spoof_host.c_str(),
+						  metric.cluster.c_str(),
 						  m_tmax,
 						  m_dmax);
 

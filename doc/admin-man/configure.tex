@@ -11638,6 +11638,21 @@ are published to the \Condor{collector}.
 \item[\Macro{GANGLIA\_CONFIG}]
   Path to the Ganglia configuration file.  The default is \File{/etc/ganglia/gmond.conf}.
 
+\label{param:GangliadCluster}
+\item[\Macro{GANGLIAD\_DEFAULT\_CLUSTER}]
+  An expression specifying the default name of the Ganglia cluster for all metrics.  The
+  expression may refer to attributes of the machine.
+
+\label{param:GangliadCluster}
+\item[\Macro{GANGLIAD\_DEFAULT\_MACHINE}]
+  An expression specifying the default machine name of Ganglia metrics.  The
+  expression may refer to attributes of the machine.
+
+\label{param:GangliadCluster}
+\item[\Macro{GANGLIAD\_DEFAULT\_IP}]
+  An expression specifying the default IP of Ganglia metrics.  The
+  expression may refer to attributes of the machine.
+
 \label{param:GangliadLog}
 \item[\Macro{GANGLIAD\_LOG}] The path to the \Condor{gangliad} daemon's log file.
   The default log location is \File{\$(LOG)/GangliadLog}.
@@ -11703,6 +11718,10 @@ are published to the \Condor{collector}.
     default is determined by the daemon type.  Metrics in different
     groups must still have unique names.
 
+  \item[Cluster] A string specifying the cluster name for this metric.
+    The default cluster name is taken from the configuration variable
+    \Macro{GANGLIAD\_DEFAULT\_CLUSTER}.
+
   \item[Units] A string describing the units of this metric.
 
   \item[Derivative] A boolean value that specifies if Ganglia should
@@ -11757,22 +11776,25 @@ are published to the \Condor{collector}.
     the default \Attr{Machine} attribute to be the daemon's machine
     name, rather than the collector's.
 
-  \item[Machine] The name of the host associated with this metric.
-    The default is taken from the daemon ad.  If the daemon name is of
-    the form \verb|name@hostname|, this may indicate that there are
-    multiple instances of HTCondor running on the same machine.  To
-    avoid the metrics from these instances overwriting each other, the
-    default machine name is set to the daemon name in this case.  For
-    aggregate metrics, the default value of \Attr{Machine} will be the
-    name of the collector host.
+  \item[Machine] The name of the host associated with this metric.  If
+    \Macro{GANGLIAD\_DEFAULT\_MACHINE} is not specified, the default
+    is taken from the \Attr{Machine} attribute of the daemon ad.  If
+    the daemon name is of the form \verb|name@hostname|, this may
+    indicate that there are multiple instances of HTCondor running on
+    the same machine.  To avoid the metrics from these instances
+    overwriting each other, the default machine name is set to the
+    daemon name in this case.  For aggregate metrics, the default
+    value of \Attr{Machine} will be the name of the collector host.
 
   \item[IP] A string containing the IP address of the host associated
-    with this metric.  The default is determined from the daemon ad.
-    This value must be unique for each machine published to ganglia.
-    It need not be a valid IP address.  If the value of \Attr{Machine}
-    contains an \verb|"@"| sign, the default IP value will be set to
-    the same value as \Attr{Machine} in order to make the IP value
-    unique to each instance of HTCondor running on the same host.
+    with this metric.  If \Macro{GANGLIAD\_DEFAULT\_IP} is not
+    specified, the default is extracted from the \Attr{MyAddress}
+    attribute of the daemon ad.  This value must be unique for each
+    machine published to ganglia.  It need not be a valid IP address.
+    If the value of \Attr{Machine} contains an \verb|"@"| sign, the
+    default IP value will be set to the same value as \Attr{Machine}
+    in order to make the IP value unique to each instance of HTCondor
+    running on the same host.
 
   \end{description}
 
