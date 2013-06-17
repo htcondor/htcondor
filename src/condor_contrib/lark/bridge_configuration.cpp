@@ -296,9 +296,9 @@ BridgeConfiguration::SetupPostForkParent()
 		return errno;
 	}
     // At this point, the bridge can forward packets to the external_device,
-    // If ovs bridge is used, we add the ovs QoS ingressrate limiting according
+    // If ovs bridge is used, we add the ovs QoS configuration according
     // to the submitted job request.
-    /*std::string bandwidth_attr("Bandwidth");
+    std::string bandwidth_attr("Bandwidth");
     int bandwidth;
     if(!m_ad->EvaluateAttrInt(bandwidth_attr, bandwidth)){
         dprintf(D_ALWAYS, "Submitted job does not request for bandwidth resource. Bandwith rate limiting is skipped.\n");
@@ -306,36 +306,36 @@ BridgeConfiguration::SetupPostForkParent()
     else {
         // we utilize openvswitch QoS rate limiting, thus we need to make sure configuration type is "ovs_bridge"
         if (configuration_type == "ovs_bridge") {
-            // The unit of "bandwidth is in Mbps, need to convert it to Kbps"
-            // and make the burst 15% of the bandwidth rate limit
-            int ingress_policing_rate = bandwidth * 1000;
-            int ingress_policing_burst = ingress_policing_rate * 0.15;
-            std::stringstream ingress_rate_value;
-            std::stringstream ingress_burst_value;
-            ingress_rate_value << ingress_policing_rate;
-            ingress_burst_value << ingress_policing_burst;
-            std::string ingress_rate_str = std::string("ingress_policing_rate=") + ingress_rate_value.str();
-            std::string ingress_burst_str = std::string("ingress_policing_burst=") + ingress_burst_value.str();
+            // The unit of "bandwidth is in Mbps, need to convert it to bps"
+            int request_rate = bandwidth * 1000 * 1000;
+            std::stringstream request_rate_value;
+            request_rate_value << request_rate;
+            std::string request_min_rate_str = std::string("other-config:min-rate=") + request_rate_value.str();
+            std::string request_max_rate_str = std::string("other-config:max-rate=") + request_rate_value.str();
             {
             ArgList args;
             args.AppendArg("ovs-vsctl");
             args.AppendArg("set");
-            args.AppendArg("Interface");
+            args.AppendArg("port");
             args.AppendArg(external_device);
-            args.AppendArg(ingress_rate_str);
-            RUN_ARGS_AND_LOG(BridgeConfiguration::SetupPostForkParent, set_ovs_ingress_rate_lmit)
-            }
-            {
-            ArgList args;
-            args.AppendArg("ovs-vsctl");
-            args.AppendArg("set");
-            args.AppendArg("Interface");
-            args.AppendArg(external_device);
-            args.AppendArg(ingress_burst_str);
-            RUN_ARGS_AND_LOG(BridgeConfiguration::SetupPostForkParent, set_ovs_ingress_burst)
+            args.AppendArg("qos=@newqos");
+            args.AppendArg("--");
+            args.AppendArg("--id=@newqos");
+            args.AppendArg("create");
+            args.AppendArg("qos");
+            args.AppendArg("type=linux-htb");
+            args.AppendArg(request_max_rate_str);
+            args.AppendArg("queues:0=@newqueue");
+            args.AppendArg("--");
+            args.AppendArg("--id=@newqueue");
+            args.AppendArg("create");
+            args.AppendArg("queue");
+            args.AppendArg(request_min_rate_str);
+            args.AppendArg(request_max_rate_str);
+            RUN_ARGS_AND_LOG(BridgeConfiguration::SetupPostForkParent, set_ovs_qos)
             }
         }
-    }*/
+    }
 	return 0;
 }
 
@@ -430,6 +430,16 @@ BridgeConfiguration::Cleanup() {
 		}
 		ovs_delete_interface_from_bridge(bridge_name.c_str(), external_device.c_str());
 	}
+    // destroy all qos records in ovsdb
+    {
+    ArgList args;
+    args.AppendArg("ovs-vsctl");
+    args.AppendArg("--");
+    args.AppendArg("--all");
+    args.AppendArg("destroy");
+    args.AppendArg("Queue");
+    RUN_ARGS_AND_LOG(BridgeConfiguration::Cleanup, destroy_qos_record)
+    }
 
 	return 0;
 }
