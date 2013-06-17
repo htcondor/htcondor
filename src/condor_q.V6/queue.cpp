@@ -1662,9 +1662,11 @@ processCommandLineArguments (int argc, char *argv[])
 					 ATTR_JOB_STATUS, TRANSFERRING_OUTPUT, ATTR_JOB_STATUS, SUSPENDED );
 			Q.addAND( expr.c_str() );
 			dash_run = true;
-			attrs.append( ATTR_REMOTE_HOST );
-			attrs.append( ATTR_JOB_UNIVERSE );
-			attrs.append( ATTR_EC2_REMOTE_VM_NAME ); // for displaying HOST(s) in EC2
+			if( !dag ) {
+				attrs.append( ATTR_REMOTE_HOST );
+				attrs.append( ATTR_JOB_UNIVERSE );
+				attrs.append( ATTR_EC2_REMOTE_VM_NAME ); // for displaying HOST(s) in EC2
+			}
 		}
 		else
 		if (is_arg_prefix(arg, "hold", 2) || is_arg_prefix( arg, "held", 2)) {
