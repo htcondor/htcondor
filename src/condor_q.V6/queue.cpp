@@ -5541,7 +5541,7 @@ doJobRunAnalysisToBuffer(ClassAd *request, anaCounters & ac, int details, bool n
 			append_to_fail_list(fPreemptPrioStr, buffer, verb_width);
 			/*
 			if( verbose ) {
-				sprintf_cat( return_buff, "%nsufficient priority to preempt %s\n", remoteUser.c_str() );
+				sprintf_cat( return_buff, "Insufficient priority to preempt %s\n", remoteUser.c_str() );
 			}
 			*/
 			continue;
