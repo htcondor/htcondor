@@ -1,0 +1,20 @@
+
+CONDOR_HOST = hcc-lark01.unl.edu
+COLLECTOR_NAME = Nebraska Lark Testbed
+
+ALLOW_WRITE = hcc-lark01.unl.edu, hcc-lark02.unl.edu, hcc-lark03.unl.edu
+
+STARTER_NETWORK_POLICY_SCRIPT_PATH = /usr/libexec/condor/lark_network_policy.py
+
+USE_NETWORK_NAMESPACES = true
+STARTER_DEBUG = D_FULLDEBUG
+STARTD_DEBUG = D_FULLDEBUG
+
+MACHINE_RESOURCE_INVENTORY_BANDWIDTH = /home/bockelman/zzhang/ethtooltest
+
+SLOT_TYPE_1 = cpus=100%,auto
+SLOT_TYPE_1_PARTITIONABLE = true
+NUM_SLOTS_TYPE_1 = 1
+
+STARTER_INITIAL_UPDATE_INTERVAL = 5
+STARTER_UPDATE_INTERVAL = 2

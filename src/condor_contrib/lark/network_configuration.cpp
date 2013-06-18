@@ -47,7 +47,7 @@ NetworkConfiguration::GetNetworkConfiguration(classad_shared_ptr<classad::ClassA
 	}
 	if (configuration_type == "nat") {
 		return new NATConfiguration(machine_ad);
-	} else if (configuration_type == "bridge") {
+	} else if (configuration_type == "bridge" || configuration_type == "ovs_bridge") {
 		return new BridgeConfiguration(machine_ad);
 	} else {
 		dprintf(D_ALWAYS, "Unknown configuration type \"%s\".\n", configuration_type.c_str());

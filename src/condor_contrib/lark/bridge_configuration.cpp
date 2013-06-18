@@ -2,6 +2,7 @@
 #include "condor_common.h"
 
 #include <string>
+#include <sstream>
 #include <linux/if_ether.h>
 #include <linux/if_arp.h>
 
@@ -58,12 +59,26 @@ BridgeConfiguration::Setup() {
 	if(!m_ad->EvaluateAttrString(ATTR_IPTABLE_NAME, chain_name)) {
 		dprintf(D_ALWAYS, "Missing required ClassAd attribute " ATTR_IPTABLE_NAME "\n");
 	}
-
-	int result;
-	if ((result = create_bridge(bridge_name.c_str())) && (result != EEXIST)) {
-		dprintf(D_ALWAYS, "Unable to create a bridge (%s); error=%d.\n", bridge_name.c_str(), result);
-		return result;
-	}
+    
+    int result = 0;
+    std::string configuration_type;
+    m_ad->EvaluateAttrString(ATTR_NETWORK_TYPE, configuration_type);
+    if(configuration_type == "bridge")
+    {
+        if ((result = create_bridge(bridge_name.c_str())) && (result != EEXIST))
+        {
+            dprintf(D_ALWAYS, "Unable to create linux bridge (%s); error=%d.\n", bridge_name.c_str(), result);
+            return result;
+        }
+    }
+    else if (configuration_type == "ovs_bridge")
+    {
+        if((result = ovs_create_bridge(bridge_name.c_str())) && (result != EEXIST))
+        {
+            dprintf(D_ALWAYS, "Unable to create ovs bridge (%s); error=%d.\n", bridge_name.c_str(), result);
+            return result;
+        }
+    }
 
 	// Manipulate the routing and state of the link.  Done internally; no callouts.
 	NetworkNamespaceManager & manager = NetworkNamespaceManager::GetManager();
@@ -74,27 +89,70 @@ BridgeConfiguration::Setup() {
 	{
 		if (set_status(fd, bridge_name.c_str(), IFF_UP))
 		{
-			delete_bridge(bridge_name.c_str());
-			return 1;
+			if(configuration_type == "bridge")
+            {
+                delete_bridge(bridge_name.c_str());
+			    return 1;
+            }
+            else if (configuration_type == "ovs_bridge")
+            {
+                ovs_delete_bridge(bridge_name.c_str());
+                return 1;
+            }
 		}
-		if ((result = set_bridge_fd(bridge_name.c_str(), 0)))
-		{
-			dprintf(D_ALWAYS, "Unable to set bridge %s forwarding delay to 0.\n", bridge_name.c_str());
-			delete_bridge(bridge_name.c_str());
-			return result;
-		}
+        // For ovs bridge, currently we just simply disable stp to make sure
+        // the bridge can go to forwarding state after it is brought up
+        if(configuration_type == "bridge")
+        {
+            if ((result = set_bridge_fd(bridge_name.c_str(), 0)))
+            {
+                dprintf(D_ALWAYS, "Unable to set bridge %s forwarding delay to 0.\n", bridge_name.c_str());
+                delete_bridge(bridge_name.c_str());
+                return result;
+            }
+        }
+        else if(configuration_type == "ovs_bridge")
+        {
+            if((result = ovs_disable_stp(bridge_name.c_str())))
+            {
+                dprintf(D_ALWAYS, "Unable to disable ovs bridge %s stp.\n", bridge_name.c_str());
+                ovs_delete_bridge(bridge_name.c_str());
+                return result;
+            }
+        }
+        
+        if(configuration_type == "bridge")
+        {
+		    if ((result = add_interface_to_bridge(bridge_name.c_str(), bridge_device.c_str())))
+            {
+			    dprintf(D_ALWAYS, "Unable to add device %s to bridge %s\n", bridge_device.c_str(), bridge_name.c_str());
+			    set_status(fd, bridge_name.c_str(), 0);
+                delete_bridge(bridge_name.c_str());
+                return result;
+            }
+        }
+        else if(configuration_type == "ovs_bridge")
+        {
+		    if ((result = ovs_add_interface_to_bridge(bridge_name.c_str(), bridge_device.c_str())))
+            {
+			    dprintf(D_ALWAYS, "Unable to add device %s to openvswitch bridge %s\n", bridge_device.c_str(), bridge_name.c_str());
+			    set_status(fd, bridge_name.c_str(), 0);
+                ovs_delete_bridge(bridge_name.c_str());
+                return result;
+            }
+        }
 
-		if ((result = add_interface_to_bridge(bridge_name.c_str(), bridge_device.c_str()))) {
-			dprintf(D_ALWAYS, "Unable to add device %s to bridge %s\n", bridge_device.c_str(), bridge_name.c_str());
-			set_status(fd, bridge_name.c_str(), 0);
-			delete_bridge(bridge_name.c_str());
-			return result;
-		}
 		// If either of these fail, we likely knock the system off the network.
-		if ((result = move_routes_to_bridge(fd, bridge_device.c_str(), bridge_name.c_str()))) {
+		if ((result = move_routes_to_bridge(fd, bridge_device.c_str(), bridge_name.c_str())))
+        {
 			dprintf(D_ALWAYS, "Failed to move routes from %s to bridge %s\n", bridge_device.c_str(), bridge_name.c_str());
 			set_status(fd, bridge_name.c_str(), 0);
-			delete_bridge(bridge_name.c_str());
+            if(configuration_type == "bridge"){
+                delete_bridge(bridge_name.c_str());
+            }
+            else if(configuration_type == "ovs_bridge"){
+			    ovs_delete_bridge(bridge_name.c_str());
+            }
 			return result;
 		}
 		if ((result = move_addresses_to_bridge(fd, bridge_device.c_str(), bridge_name.c_str())))
@@ -105,11 +163,24 @@ BridgeConfiguration::Setup() {
 			return result;
 		}
 	}
-
-	if ((result = add_interface_to_bridge(bridge_name.c_str(), external_device.c_str())) && (result != EEXIST)) {
-		dprintf(D_ALWAYS, "Unable to add device %s to bridge %s\n", external_device.c_str(), bridge_name.c_str());
-		return result;
-	}
+    
+    if(configuration_type == "bridge")
+    {
+	    if ((result = add_interface_to_bridge(bridge_name.c_str(), external_device.c_str())) && (result != EEXIST))
+        {
+		    dprintf(D_ALWAYS, "Unable to add device %s to bridge %s\n", external_device.c_str(), bridge_name.c_str());
+		    return result;
+	    }
+    }
+    else if(configuration_type == "ovs_bridge")
+    {
+        ovs_delete_interface_from_bridge(bridge_name.c_str(), external_device.c_str());
+	    if ((result = ovs_add_interface_to_bridge(bridge_name.c_str(), external_device.c_str())) && (result != EEXIST))
+        {
+            dprintf(D_ALWAYS, "Unable to add device %s to openvswitch bridge %s\n", external_device.c_str(), bridge_name.c_str());
+            return result;
+        }
+    }
 
 	if ((m_has_default_route = interface_has_default_route(fd, bridge_name.c_str())) < 0) {
 		dprintf(D_ALWAYS, "Unable to determine if bridge %s has a default route.\n", bridge_name.c_str());
@@ -196,21 +267,75 @@ BridgeConfiguration::SetupPostForkParent()
 		dprintf(D_ALWAYS, "Required ClassAd attribute " ATTR_EXTERNAL_INTERFACE " is missing.\n");
 		return 1;
 	}
-
-	// Wait for the bridge to come up.
+	
+	// We handle bridge status differently with linux bridge and ovs bridge
+	// For linux bridge, stp is enabled we wait for the bridge to come up.
+	// For ovs bridge, by default stp is disabled, we can assume the ports on
+	// ovs bridge gets to forwarding state immediately, thus we don't check the 
+	// state of ports connected to ovs bridge.
+	
 	int err;
-	NetworkNamespaceManager & manager = NetworkNamespaceManager::GetManager();
-        int fd = manager.GetNetlinkSocket();
-	if ((err = wait_for_bridge_status(fd, external_device.c_str()))) {
-		return err;
+	std::string configuration_type;
+	m_ad->EvaluateAttrString(ATTR_NETWORK_TYPE, configuration_type);
+	if(configuration_type == "bridge")
+	{
+		NetworkNamespaceManager & manager = NetworkNamespaceManager::GetManager();
+        	int fd = manager.GetNetlinkSocket();
+		if ((err = wait_for_bridge_status(fd, external_device.c_str()))) {
+			return err;
+		}
 	}
-
+	else if (configuration_type == "ovs_bridge")
+	{
+		// do nothing here
+	}
 	char go = 1;
 	while (((err = write(m_p2c[1], &go, 1)) < 0) && (errno == EINTR)) {}
 	if (err < 0) {
 		dprintf(D_ALWAYS, "Error writing to child for bridge sync (errno=%d, %s).\n", errno, strerror(errno));
 		return errno;
 	}
+    // At this point, the bridge can forward packets to the external_device,
+    // If ovs bridge is used, we add the ovs QoS configuration according
+    // to the submitted job request.
+    std::string bandwidth_attr("Bandwidth");
+    int bandwidth;
+    if(!m_ad->EvaluateAttrInt(bandwidth_attr, bandwidth)){
+        dprintf(D_ALWAYS, "Submitted job does not request for bandwidth resource. Bandwith rate limiting is skipped.\n");
+    }
+    else {
+        // we utilize openvswitch QoS rate limiting, thus we need to make sure configuration type is "ovs_bridge"
+        if (configuration_type == "ovs_bridge") {
+            // The unit of "bandwidth is in Mbps, need to convert it to bps"
+            int request_rate = bandwidth * 1000 * 1000;
+            std::stringstream request_rate_value;
+            request_rate_value << request_rate;
+            std::string request_min_rate_str = std::string("other-config:min-rate=") + request_rate_value.str();
+            std::string request_max_rate_str = std::string("other-config:max-rate=") + request_rate_value.str();
+            {
+            ArgList args;
+            args.AppendArg("ovs-vsctl");
+            args.AppendArg("set");
+            args.AppendArg("port");
+            args.AppendArg(external_device);
+            args.AppendArg("qos=@newqos");
+            args.AppendArg("--");
+            args.AppendArg("--id=@newqos");
+            args.AppendArg("create");
+            args.AppendArg("qos");
+            args.AppendArg("type=linux-htb");
+            args.AppendArg(request_max_rate_str);
+            args.AppendArg("queues:0=@newqueue");
+            args.AppendArg("--");
+            args.AppendArg("--id=@newqueue");
+            args.AppendArg("create");
+            args.AppendArg("queue");
+            args.AppendArg(request_min_rate_str);
+            args.AppendArg(request_max_rate_str);
+            RUN_ARGS_AND_LOG(BridgeConfiguration::SetupPostForkParent, set_ovs_qos)
+            }
+        }
+    }
 	return 0;
 }
 
@@ -292,6 +417,29 @@ BridgeConfiguration::Cleanup() {
 		}
 	}
 	GratuitousArp(bridge_device);
+	// For ovs bridge, we also need to delete the external deivce connected to the bridge for clean up
+	std::string bridge_name;
+	m_ad->EvaluateAttrString(ATTR_BRIDGE_NAME, bridge_name);
+	std::string configuration_type;
+    	m_ad->EvaluateAttrString(ATTR_NETWORK_TYPE, configuration_type);
+	if(configuration_type == "ovs_bridge") {
+		std::string external_device;
+		if (!m_ad->EvaluateAttrString(ATTR_EXTERNAL_INTERFACE, external_device)) {
+			dprintf(D_ALWAYS, "Required ClassAd attribute " ATTR_EXTERNAL_INTERFACE " is missing.\n");
+			return 1;
+		}
+		ovs_delete_interface_from_bridge(bridge_name.c_str(), external_device.c_str());
+	}
+    // destroy all qos records in ovsdb
+    {
+    ArgList args;
+    args.AppendArg("ovs-vsctl");
+    args.AppendArg("--");
+    args.AppendArg("--all");
+    args.AppendArg("destroy");
+    args.AppendArg("Queue");
+    RUN_ARGS_AND_LOG(BridgeConfiguration::Cleanup, destroy_qos_record)
+    }
 
 	return 0;
 }
