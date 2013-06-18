@@ -4,87 +4,89 @@
 \index{parallel universe|(}
 \index{MPI application}
 
-HTCondor's parallel universe supports jobs that span multiple machines.
-All other job universe in HTCondor are serial, that is, each job runs
-on exactly one machine, only in the parallel universe are jobs consisting
-of multiple processes allowed to be concurrently scheduled across multiple
-machines.  The parallel universe provides machine scheduling and allocation,
-but does not enforce any particular programming paradigm.  Thus, with
-the parallel universe, users can launch jobs using various MPI implementations, 
-or other programming environments. The parallel universe supersedes the mpi universe.
+HTCondor's parallel universe supports jobs that span multiple machines,
+where the multiple processes within a job must be running concurrently
+on the various matched and claimed machines.
+The parallel universe provides machine scheduling,
+but does not enforce a particular programming paradigm for the
+underlying applications.
+Thus, parallel universe jobs may run under various MPI implementations
+as well as under other programming environments. 
+
+The parallel universe supersedes the mpi universe.
 The mpi universe eventually will be removed from HTCondor.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:parallel-model}How Parallel Jobs Run}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Parallel universe jobs are be submitted from the machine running 
+the dedicated scheduler.
+The dedicated scheduler matches and claims a fixed number machines (slots)
+for the parallel universe job,
+and when the correct number of machines are claimed,
+the parallel job is started.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:parallel-setup}Prerequisites to Running Parallel Jobs}
+\subsection{\label{sec:parallel-setup}Parallel Jobs and the Dedicated Scheduler}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-To run parallel universe jobs, HTCondor must be configured such that machines running
-parallel jobs are dedicated.  
+To run parallel universe jobs, HTCondor must be configured such that 
 \index{scheduling!dedicated}
-Note that \Term{dedicated} has a very specific meaning in HTCondor:
-while dedicated machine can run serial jobs, they prefer to run
-parallel jobs, and never preempt a parallel job once it starts running.
+machines running parallel jobs are \Term{dedicated}.  
+Note that dedicated has a very specific meaning in HTCondor:
+while dedicated machines can run serial jobs, they prefer to run
+parallel jobs, and dedicated machines never preempt a parallel job 
+once it starts running.
+
 A machine becomes a dedicated machine when an administrator configures
-it to accept parallel jobs from one specific dedicated scheduler.  Note
-the difference from serial jobs.  Generally speaking, any scheduler in
-a pool can send serial jobs to a any machine, but for parallel jobs,
-only the designated dedicated scheduler can send parallel universe
-jobs to a given machine.
-
-Since HTCondor does not ordinarily run this way, (HTCondor usually uses
-opportunistic scheduling), dedicated machines must be specially
-configured.  Section~\ref{sec:Config-Dedicated-Jobs} of the
-Administrator's Manual describes the necessary configuration and
-provides detailed examples.
-
+it to accept parallel jobs from one specific dedicated scheduler.  
+Note the difference between parallel and serial jobs.
+While any scheduler in a pool can send serial jobs to any machine,
+only the designated dedicated scheduler may send parallel universe
+jobs to a dedicated machine.
+Dedicated machines must be specially configured.  
+See section~\ref{sec:Config-Dedicated-Jobs} for a description
+of the necessary configuration, as well as examples.
 Usually, a single dedicated scheduler is configured for a pool
-which can run parallel universe jobs, and this \Condor{schedd}
+which can run parallel universe jobs, and this \Condor{schedd} daemon
 becomes the single machine from which parallel universe
 jobs are submitted.
 
 The following command line will list the execute machines 
 in the local pool which have been configured to use a dedicated
-scheduler, and print out the name of that dedicated scheduler.
-In order to run parallel jobs, this name must be defined to be
-the string "DedicatedScheduler@" prepended to the name of the
-scheduler.
+scheduler, also printing the name of that dedicated scheduler.
+In order to run parallel jobs, this name will be defined to be
+the string \AdStr{DedicatedScheduler@}, prepended to the name of the
+scheduler host.
 
+\footnotesize
 \begin{verbatim}
-$ condor_status -const '!isundefined(DedicatedScheduler)' \
+  condor_status -const '!isUndefined(DedicatedScheduler)' \
 	-format "%s\t" Machine -format "%s\n" DedicatedScheduler
 
 execute1.example.com	DedicatedScheduler@submit.example.com
 execute2.example.com	DedicatedScheduler@submit.example.com
 
 \end{verbatim}
+\normalsize
 
 If this command emits no lines of output, then then pool is
-not correctly configured to run parallel jobs.  Make sure that
-the name of the scheduler is correct, the string after the
-at sign should match the name of the schedd, as returned by the
-command
+not correctly configured to run parallel jobs.
+Make sure that the name of the scheduler is correct. 
+The string after the \Expr{@} sign should match the name of the 
+\Condor{schedd} daemon, as returned by the command
 
 \begin{verbatim}
-$ condor_status -sched
+  condor_status -schedd
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:parallel-submit}Parallel Job Submission}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Given correct configuration, parallel universe jobs may be submitted
-from the machine running the dedicated scheduler.
-The dedicated scheduler claims machines for the parallel universe job,
-and starts the job when the correct number of machines which match
-the job's requirements are claimed.
-Note that the job likely consists of more than one process,
-each to be executed on a separate machine.  If the pool is
-not correctly configured, the job will stay in the Idle state
-indefinitely.
-
-An overly simplified submit description file for a parallel universe
-job appears as
+A simple submit description file for a parallel universe
+job example appears as
 
 \begin{verbatim}
 #############################################
@@ -95,11 +97,8 @@ executable = /bin/sleep
 arguments = 30
 machine_count = 8
 log = log
-output = output
-error  = error
-notification = never
-should_transfer_files = always
-when_to_transfer_output = on_exit
+should_transfer_files = If_NEEDED
+when_to_transfer_output = ON_EXIT
 queue 
 \end{verbatim}
 
@@ -114,7 +113,7 @@ machine.  It waits until all eight machines are available before
 starting the job.  When all the machines are ready, it invokes the
 \Prog{/bin/sleep} command, with a command line argument of 30
 on all eight machines more or less simultaneously.  As with serial
-jobs, important event in the lifecycle of the job are written
+jobs, important event in the life cycle of the job are written
 to the user log noted in the log command.
 
 Parallel universe jobs have the familiar Requirements expression
@@ -213,14 +212,14 @@ head node execute on a specific machine.  It may be also useful for debugging pu
 \subsubsection{\label{sec:Configure-Clusters-Processes-Subprocesses}
 Parallel Universe: Clusters, Processes, and Subprocesses} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{parallel-clusters-proceses-subprocesses}
+\index{parallel-clusters-processes-subprocesses}
 
 When 
 a user submits a job to HTCondor with \Condor{submit}, HTCondor in parallel 
 universe processes the submit file and assumes that all jobs submitted in this 
 file are part of a single parallel (e.g.~MPI) job. HTCondor processes the submit 
 file as a single job and
-creates a new cluster with a new \Attr{ClusterID} for the job. The user though can 
+creates a new cluster with a new \Attr{ClusterId} for the job. The user though can 
 specify different requirements for different parts of the job and queue each 
 part separately with each part being part of the same cluster but receiving a 
 different \Attr{ProcID}. Within each processes, the user can specify particular
@@ -229,7 +228,7 @@ requirements.
 %partitionable slots) can also request more than one CPU (\verb+num_cpus = 2+) or
 %(by using static slots) \verb+machine_count = 2+. 
 Each request for a slot is known as a subprocess; each subprocess has the same 
-\Attr{ClusterID} and \Attr{ProcID} as the over-arching process but has its 
+\Attr{ClusterId} and \Attr{ProcID} as the over-arching process but has its 
 own unique 
 \Attr{SubprocID}. Note that \Attr{SubprocID} is not advertised in ClassAds.
 
@@ -252,7 +251,7 @@ related to how you specify what goes into each process and subprocess, which are
 part of an overarching cluster. The submission of a job in parallel universe 
 constitutes the entirety of a particular cluster. To create multiple processes,
 the submit description file must have multiple \Expr{queue} commands (or have
-an integer appended after whitespace). To create multiple subprocesses, the 
+an integer appended after white space). To create multiple subprocesses, the 
 submit description file must have \SubmitCmd{machine\_count} have an integer
 value greater than 1. Then within each subprocess, we can use commands like
 \SubmitCmd{request\_cpus} or \SubmitCmd{request\_memory} to request that each 
@@ -361,7 +360,7 @@ needs additional RAM compared to the rest of the nodes. The user can write
 \begin{verbatim}
 request_memory = 5G
 queue
-request_meory = 1G
+request_memory = 1G
 queue 31
 \end{verbatim}
 
@@ -404,7 +403,7 @@ execute in parallel on one or more machines.
 HTCondor's parallel universe provides the environment within
 which this executable is executed in parallel.
 However, the various implementations of MPI
-(for example, OpenMPI or MPICH) require further framework items within
+(for example, Open MPI or MPICH) require further framework items within
 a system-wide environment.
 HTCondor supports this necessary framework through 
 user visible and modifiable scripts.
@@ -415,11 +414,11 @@ and then invokes the MPI application's executable.
 HTCondor provides these scripts in the
 \File{\MacroUNI{RELEASE\_DIR}/etc/examples}
 directory.
-The script for the OpenMPI implementation is \File{openmpiscript}.
+The script for the Open MPI implementation is \File{openmpiscript}.
 The script for the MPICH implementation is \File{mp1script}.
 One restriction of these scripts is that they rely on running
 the ssh command from one node to another.  The ssh daemon 
-on unix does not allow connections if the shell named in
+on Unix does not allow connections if the shell named in
 the password file is not in the set of approved shells
 listed in the /etc/shells file.
 
@@ -447,7 +446,7 @@ or
 \begin{verbatim}
 ######################################
 ## Example submit description file
-## for OpenMPI
+## for Open MPI
 ######################################
 universe = parallel
 executable = openmpiscript
@@ -516,7 +515,7 @@ Scripts \Prog{openmpiscript} and \Prog{mp1script}
 each have their own idiosyncrasies.
 In \Prog{mp1script}, the \Env{PATH} to the MPICH installation must be set.
 The shell variable MPDIR indicates its proper value.
-This directory contains the MPICH \Prog{mpirun} executable; OpenMPI also
+This directory contains the MPICH \Prog{mpirun} executable; Open MPI also
 uses MPDIR.
 %For OpenMPI, there is a similar path setting, but it is called \Env{LAMDIR}
 %in the \Prog{openmpiscript} script.  
@@ -631,13 +630,13 @@ cd cde-package/cde-root/path/to/original/directory
 # Run my command
 ./mpirun.cde -n 2 ./my_mpi_linked_executable
 # Normally, HTCondor will transfer the contents of this directory.
-# However, we don't want the .cde command and the executable transfered back
+# However, we don't want the .cde command and the executable transferred back
 # To prevent this from happening, we manually remove both files.
 rm -f mpirun.cde
 rm -f my_mpi_linked_executable
 \end{verbatim}
 
-Any additional input files needed for the executable not alrady in the tarball
+Any additional input files needed for the executable not already in the tarball
 should be included in the list in \SubmitCmd{transfer\_input\_files} command. 
 The corresponding script should then also be updated to move those files into
 the directory that where the executable will be run.
