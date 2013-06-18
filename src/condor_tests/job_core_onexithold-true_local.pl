@@ -54,6 +54,10 @@ $executed = sub {
 	CondorTest::debug("Good - Job $cluster.$job began execution.\n",1);
 };
 
+my $on_evictedwithoutcheckpoint = sub {
+	CondorTest::debug("Evicted Without Checkpoint from removing jobs.\n",1);
+};
+
 ##
 ## aborted
 ## The job is being aborted, so we need to make sure that
@@ -120,6 +124,7 @@ $success = sub {
 	exit(1);
 };
 
+CondorTest::RegisterEvictedWithoutCheckpoint($testname, $on_evictedwithoutcheckpoint);
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedSuccess( $testname, $success );
 CondorTest::RegisterAbort( $testname, $aborted );

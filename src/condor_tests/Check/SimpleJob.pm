@@ -91,6 +91,9 @@ sub RunCheck
     my $disconnected_fn = $args{on_disconnected} || $dummy;
     my $reconnected_fn = $args{on_reconnected} || $dummy;
     my $evicted_fn = $args{on_evicted} || $dummy;
+    my $evicted_ewc_fn = $args{on_evictedwithcheckpoint} || $dummy;
+    my $evicted_ewoc_fn = $args{on_evictedwithoutcheckpoint} || $dummy;
+    my $evicted_wreq_fn = $args{on_evictedwithrequeue} || $dummy;
     my $submit_fn = $args{on_submit} || $submitted;
     my $ulog_fn = $args{on_ulog} || $dummy;
     my $abort_fn = $args{on_abort} || $aborted;
@@ -109,6 +112,15 @@ sub RunCheck
 	#If we register thees to dummy, then we don't get
 	#the error function registered which says this is bad
 
+	if( exists $args{on_evictedwithcheckpoint} ) {
+    	CondorTest::RegisterEvictedWithCheckpoint( $testname, $evicted_ewc_fn );
+	}
+	if( exists $args{on_evictedwithoutcheckpoint} ) {
+    	CondorTest::RegisterEvictedWithoutCheckpoint( $testname, $evicted_ewoc_fn );
+	}
+	if( exists $args{on_evictedwithrequeue} ) {
+    	CondorTest::RegisterEvictedWithRequeue( $testname, $evicted__wreqfn );
+	}
 	if( exists $args{on_evicted} ) {
     	CondorTest::RegisterEvicted( $testname, $evicted_fn );
 	}

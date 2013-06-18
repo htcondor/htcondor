@@ -62,7 +62,7 @@ my $timer_time = 0;
 my $TimedCallbackWait = 0;
 my $SubmitCallback;
 my $ExecuteCallback;
-my $EvictedCallback;
+#my $EvictedCallback;
 my $EvictedWithCheckpointCallback;
 my $EvictedWithRequeueCallback;
 my $EvictedWithoutCheckpointCallback;
@@ -98,7 +98,7 @@ sub Reset
 
     undef $SubmitCallback;
     undef $ExecuteCallback;
-    undef $EvictedCallback;
+    #undef $EvictedCallback;
     undef $EvictedWithCheckpointCallback;
     undef $EvictedWithRequeueCallback;
     undef $EvictedWithoutCheckpointCallback;
@@ -454,11 +454,12 @@ sub RegisterExecute
     $ExecuteCallback = $sub;
 }
 
-sub RegisterEvicted
-{
-    my $sub = shift || croak "missing argument";
-    $EvictedCallback = $sub;
-}
+# only spcific evictions are enabled
+#sub RegisterEvicted
+#{
+    #my $sub = shift || croak "missing argument";
+    #$EvictedCallback = $sub;
+#}
 
 sub RegisterEvictedWithCheckpoint
 {
@@ -717,10 +718,6 @@ sub Monitor
 
 	    debug( "Saw job ($1.$2) evicted\n" ,2);
 
-	    # execute callback if one is registered
-	    &$EvictedCallback( %info )
-		if defined $EvictedCallback;
-
 	    # read next line to see if job was checkpointed (but first
 	    # sleep for 5 seconds to give it a chance to appear)
 	    # [this should really loop like above, not sleep like this...]
@@ -765,9 +762,16 @@ sub Monitor
 		debug( "parse error on line $linenum of $info{'log'}:\n" .
 		       "   no checkpoint message found after eviction: " .
 		       "continuing...\n" ,1);
+		debug( "Eviction type expected:<$line>\n", 1);
 		# re-parse line so we don't miss whatever it said
 		goto PARSE;
 	    }
+		# let all the special callbacks got first
+	    # execute callback if one is registered
+		# Are there any other types of evictions?
+	    #&$EvictedCallback( %info )
+		#if defined $EvictedCallback;
+
 	    next LINE;
 	}
 

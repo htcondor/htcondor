@@ -53,6 +53,10 @@ my $on_abort = sub {
 	CondorTest::debug("Abort from removing sleep 0 jobs.\n",1);
 };
 
+my $on_evictedwitoutcheckpoint = sub {
+	CondorTest::debug("Evicted Without Checkpoint from removing sleep 0 jobs.\n",1);
+};
+
 my $testname = "job_concurrency_limits.run";
 my $result = 0;
 my $running_now = 0;
@@ -124,6 +128,7 @@ $expect_run = 3;
 $expect_idle = 0;
 $result = SimpleJob::RunCheck(
 	on_abort => $on_abort,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	on_execute => $on_execute,
 	queue_sz => 3,
 	duration => 0,
@@ -151,6 +156,7 @@ $expect_run = 2;
 $expect_idle = 1;
 $result = SimpleJob::RunCheck(
 	on_abort => $on_abort,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	on_execute => $on_execute,
 	queue_sz => 3,
 	duration => 0,
@@ -176,6 +182,7 @@ $expect_run = 1;
 $expect_idle = 1;
 $result = SimpleJob::RunCheck(
 	on_abort => $on_abort,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	on_execute => $on_execute,
 	queue_sz => 2,
 	duration => 0,
@@ -201,6 +208,7 @@ $expect_run = 2;
 $expect_idle = 1;
 $result = SimpleJob::RunCheck(
 	on_abort => $on_abort,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	on_execute => $on_execute,
 	queue_sz => 3,
 	duration => 0,
@@ -228,6 +236,7 @@ $expect_run = 5;
 $expect_idle = 2;
 $result = SimpleJob::RunCheck(
 	on_abort => $on_abort,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	on_execute => $on_execute,
 	queue_sz => 7,
 	duration => 0,
