@@ -3974,8 +3974,12 @@ WANT_HOLD_REASON = \
 
 \label{param:MaxJobRetirementTime}
 \item[\Macro{MAXJOBRETIREMENTTIME}]
-  An integer value representing the number of seconds a preempted job
-  will be allowed to run before being evicted. The default value of 0
+  When the \Condor{startd} wants to evict a job, a job which has run
+  for less than the number of seconds specified by this expression
+  will not be hard-killed.  The \Condor{startd} will wait for the job to
+  finish or to exceed this amount of time, whichever comes sooner.
+  Time spent in suspension does not count against the job.
+  The default value of 0
   (when the configuration variable is not present) means that the job
   gets no retirement time.  If the job vacating policy grants the job
   X seconds of vacating time, a preempted job will be soft-killed X seconds
