@@ -3975,8 +3975,12 @@ WANT_HOLD_REASON = \
 
 \label{param:MaxJobRetirementTime}
 \item[\Macro{MAXJOBRETIREMENTTIME}]
-  An integer value representing the number of seconds a preempted job
-  will be allowed to run before being evicted. The default value of 0
+  When the \Condor{startd} wants to evict a job, a job which has run
+  for less than the number of seconds specified by this expression
+  will not be hard-killed.  The \Condor{startd} will wait for the job to
+  finish or to exceed this amount of time, whichever comes sooner.
+  Time spent in suspension does not count against the job.
+  The default value of 0
   (when the configuration variable is not present) means that the job
   gets no retirement time.  If the job vacating policy grants the job
   X seconds of vacating time, a preempted job will be soft-killed X seconds
@@ -4638,6 +4642,74 @@ search for the corresponding attribute names using \Expr{slot}, instead.
   unsuccessfully for the string \MacroNI{SLOT}. 
 
 \end{description}
+
+
+The following variables are for the configuration of Consumption Policies
+for slots advertised by the \Condor{startd} daemon.
+
+\begin{description}
+
+\label{param:ConsumptionPolicy}
+\item[\Macro{CONSUMPTION\_POLICY}]
+  A boolean configuration variable that defaults to \Expr{False}.
+  When \Expr{True}, enables consumption policies for partitionable
+  slots on the \Condor{startd} daemon.  May be overridden on a 
+  per-slot-type basis using SLOT\_TYPE\_<N>\_CONSUMPTION\_POLICY.
+
+\label{param:ConsumptionResource}
+\item[\Macro{CONSUMPTION\_<Resource>}]
+  Specifies a consumption policy for a particular resource partitionable
+  slot.  The following example configures a consumption policy that rounds
+  the requested memory up to the next multiple of 128 MB:
+\begin{verbatim}
+# 'target' refers to the job ad requesting resources:
+CONSUMPTION_MEMORY = quantize(target.RequestMemory, {128})
+\end{verbatim}
+  To support a consumption policy, each resource advertised by the
+  slot must have such a policy configured, including any extensible
+  resources if they are configured.  Each resource consumption policy
+  may be overridden on a per-slot-type basis using
+  SLOT\_TYPE\_<N>\_CONSUMPTION\_<Resource>.  The following resources
+  are always advertised by \Condor{startd}, and therefore have
+  default values:
+\begin{verbatim}
+# Consumption policies for resources with default values:
+CONSUMPTION_CPUS = quantize(target.RequestCpus,{1})
+CONSUMPTION_MEMORY = quantize(target.RequestMemory,{128})
+CONSUMPTION_DISK = quantize(target.RequestDisk,{1024})
+\end{verbatim}
+  Note that extensible resources have no default consumption policy.
+
+\label{param:SlotWeight}
+\item[\Macro{SLOT\_WEIGHT}]
+  Specifies an expression that evaluates to a slot's weight, as used by
+  the \Condor{negotiator} daemon during matchmaking.
+  Defaults to \Expr{Cpus}.  In this example, a memory-centric slot
+  weight is configured that corresponds with the slot's memory consumption
+  policy:
+\begin{verbatim}
+# slot weight corresponds to the number of jobs that could be
+# matched, given the memory consumption policy:
+CONSUMPTION_MEMORY = quantize(target.RequestMemory, {512})
+SLOT_WEIGHT = floor(Memory / 512)
+\end{verbatim}
+  In the case of slots with consumption policies, the cost of each match is
+  is assessed as the difference in the slot weight expression before and after
+  the resources consumed by the match are deducted from the slot.
+  Slot weights may be overridden on a per-slot-type basis using
+  SLOT\_TYPE\_<N>\_SLOT\_WEIGHT.
+
+\label{param:NumClaims}
+\item[\Macro{NUM\_CLAIMS}]
+  Specifies the number of claims a partitionable slot will advertise for use
+  by the \Condor{negotiator} daemon.  In the case of slots advertising a
+  consumption policy, the negotiator may match more than one job to the slot
+  in a single negotiation cycle.  For partitionable slots with a consumption
+  policy, NUM\_CLAIMS defaults to the number of cpus owned by the slot.  Otherwise,
+  it defaults to 1.
+
+\end{description}
+
 
 The following configuration variables support java universe jobs.
 
@@ -11530,13 +11602,13 @@ are published to the \Condor{collector}.
 
 \begin{description}
 
-\label{param:GangliaInterval}
-\item[\Macro{GANGLIA\_INTERVAL}]
+\label{param:GangliadInterval}
+\item[\Macro{GANGLIAD\_INTERVAL}]
   The integer number of seconds between publication of metrics to Ganglia.
   The default value is 300.
 
-\label{param:GangliaVerbosity}
-\item[\Macro{GANGLIA\_VERBOSITY}] An integer that specifies the
+\label{param:GangliadVerbosity}
+\item[\Macro{GANGLIAD\_VERBOSITY}] An integer that specifies the
   maximum verbosity level of metrics to be published to Ganglia.
   Basic metrics have a verbosity level of 0, which is the default.
   Additional metrics can be enabled by increasing the verbosity to 1.
@@ -11550,16 +11622,16 @@ are published to the \Condor{collector}.
   \Macro{STATISTICS\_TO\_PUBLISH} in the \Condor{schedd} configuration
   contains \Expr{TRANSFER:2}.
 
-\label{param:GangliaRequirements}
-\item[\Macro{GANGLIA\_REQUIREMENTS}] An optional ClassAd expression
+\label{param:GangliadRequirements}
+\item[\Macro{GANGLIAD\_REQUIREMENTS}] An optional ClassAd expression
   that restricts the set of daemon ads to be monitored.  This could be
   used to monitor a subset of the pool.  The default is an empty
   expression, which has the effect of placing no restriction on the
   monitored ads.  Keep in mind that this expression is applied to
   all types of monitored ads, not just startd ads.
 
-\label{param:GangliaPerExecuteNodeMetrics}
-\item[\Macro{GANGLIA\_PER\_EXECUTE\_NODE\_METRICS}] A boolean value
+\label{param:GangliadPerExecuteNodeMetrics}
+\item[\Macro{GANGLIAD\_PER\_EXECUTE\_NODE\_METRICS}] A boolean value
   that when \Expr{False} causes metrics from execute node daemons to
   not be published.  Aggregate values from these machines will still
   be published.  The default is \Expr{True}.  This option is useful
@@ -11570,12 +11642,27 @@ are published to the \Condor{collector}.
 \item[\Macro{GANGLIA\_CONFIG}]
   Path to the Ganglia configuration file.  The default is \File{/etc/ganglia/gmond.conf}.
 
+\label{param:GangliadCluster}
+\item[\Macro{GANGLIAD\_DEFAULT\_CLUSTER}]
+  An expression specifying the default name of the Ganglia cluster for all metrics.  The
+  expression may refer to attributes of the machine.
+
+\label{param:GangliadCluster}
+\item[\Macro{GANGLIAD\_DEFAULT\_MACHINE}]
+  An expression specifying the default machine name of Ganglia metrics.  The
+  expression may refer to attributes of the machine.
+
+\label{param:GangliadCluster}
+\item[\Macro{GANGLIAD\_DEFAULT\_IP}]
+  An expression specifying the default IP of Ganglia metrics.  The
+  expression may refer to attributes of the machine.
+
 \label{param:GangliadLog}
 \item[\Macro{GANGLIAD\_LOG}] The path to the \Condor{gangliad} daemon's log file.
   The default log location is \File{\$(LOG)/GangliadLog}.
 
-\label{param:GangliaMetricsConfigDir}
-\item[\Macro{GANGLIA\_METRICS\_CONFIG\_DIR}]
+\label{param:GangliadMetricsConfigDir}
+\item[\Macro{GANGLIAD\_METRICS\_CONFIG\_DIR}]
   Path to the directory containing files which define Ganglia metrics
   in terms of HTCondor ClassAd attributes to be published.  Each
   metric definition file contains a list of ClassAds.  The attributes
@@ -11595,7 +11682,7 @@ are published to the \Condor{collector}.
 \end{verbatim}
 
   The file containing the default metrics is a good source of
-  additional examples: \File{\$(GANGLIA\_METRICS\_CONFIG\_DIR)/00\_default\_metrics}.
+  additional examples: \File{\$(GANGLIAD\_METRICS\_CONFIG\_DIR)/00\_default\_metrics}.
 
   The recognized metric attributes are the following:
 
@@ -11634,6 +11721,10 @@ are published to the \Condor{collector}.
     Metrics are arranged by group in the Ganglia web page.  The
     default is determined by the daemon type.  Metrics in different
     groups must still have unique names.
+
+  \item[Cluster] A string specifying the cluster name for this metric.
+    The default cluster name is taken from the configuration variable
+    \Macro{GANGLIAD\_DEFAULT\_CLUSTER}.
 
   \item[Units] A string describing the units of this metric.
 
@@ -11689,22 +11780,25 @@ are published to the \Condor{collector}.
     the default \Attr{Machine} attribute to be the daemon's machine
     name, rather than the collector's.
 
-  \item[Machine] The name of the host associated with this metric.
-    The default is taken from the daemon ad.  If the daemon name is of
-    the form \verb|name@hostname|, this may indicate that there are
-    multiple instances of HTCondor running on the same machine.  To
-    avoid the metrics from these instances overwriting each other, the
-    default machine name is set to the daemon name in this case.  For
-    aggregate metrics, the default value of \Attr{Machine} will be the
-    name of the collector host.
+  \item[Machine] The name of the host associated with this metric.  If
+    \Macro{GANGLIAD\_DEFAULT\_MACHINE} is not specified, the default
+    is taken from the \Attr{Machine} attribute of the daemon ad.  If
+    the daemon name is of the form \verb|name@hostname|, this may
+    indicate that there are multiple instances of HTCondor running on
+    the same machine.  To avoid the metrics from these instances
+    overwriting each other, the default machine name is set to the
+    daemon name in this case.  For aggregate metrics, the default
+    value of \Attr{Machine} will be the name of the collector host.
 
   \item[IP] A string containing the IP address of the host associated
-    with this metric.  The default is determined from the daemon ad.
-    This value must be unique for each machine published to ganglia.
-    It need not be a valid IP address.  If the value of \Attr{Machine}
-    contains an \verb|"@"| sign, the default IP value will be set to
-    the same value as \Attr{Machine} in order to make the IP value
-    unique to each instance of HTCondor running on the same host.
+    with this metric.  If \Macro{GANGLIAD\_DEFAULT\_IP} is not
+    specified, the default is extracted from the \Attr{MyAddress}
+    attribute of the daemon ad.  This value must be unique for each
+    machine published to ganglia.  It need not be a valid IP address.
+    If the value of \Attr{Machine} contains an \verb|"@"| sign, the
+    default IP value will be set to the same value as \Attr{Machine}
+    in order to make the IP value unique to each instance of HTCondor
+    running on the same host.
 
   \end{description}
 

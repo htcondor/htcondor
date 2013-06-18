@@ -43,20 +43,19 @@ page~\pageref{sec:Preparing-to-Install} for details on these issues.
 Configuration Examples for Dedicated Resources} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-Each machine may have its own policy for the execution of jobs.
-This policy is set by configuration.
+Each execute machine may have its own policy for the execution of jobs,
+as set by configuration.
 Each machine with aspects of its configuration that are dedicated
 identifies the dedicated scheduler.
 And, the ClassAd representing a job to be executed on
 one or more of these dedicated machines includes an identifying attribute.
 An example configuration file with the following various policy settings
-is \File{/etc/condor\_config.local.dedicated.resource}.
+is \File{/etc/examples/condor\_config.local.dedicated.resource}.
 
-Each dedicated machine defines the configuration variable
+Each execute machine defines the configuration variable
 \Macro{DedicatedScheduler}, which identifies
 the dedicated scheduler it is managed by.
-The local configuration file for any dedicated resource contains
-a modified form of
+The local configuration file contains a modified form of
 
 \begin{verbatim}
 DedicatedScheduler = "DedicatedScheduler@full.host.name"
@@ -74,7 +73,7 @@ DedicatedScheduler = "DedicatedScheduler@username@full.host.name"
 STARTD_ATTRS = $(STARTD_ATTRS), DedicatedScheduler
 \end{verbatim}
 
-All dedicated resources must have policy expressions which allow for
+All dedicated execute machines must have policy expressions which allow for
 jobs to always run, but not be preempted.
 The resource must also be configured to prefer jobs from the dedicated 
 scheduler over all other jobs.
@@ -101,7 +100,7 @@ by varying the local configuration.
 
 One possible scenario for the use of a dedicated resource
 is to only run jobs that require the dedicated resource.
-To enact this policy, the configure with the following expressions:
+To enact this policy, configure the following expressions:
 
 \begin{verbatim}
 START     = Scheduler =?= $(DedicatedScheduler)
@@ -121,8 +120,9 @@ The \Macro{RANK} expression specifies that this same job
 (with the \Attr{Scheduler} attribute)
 has the highest rank.
 This prevents other jobs from preempting it based on user priorities.
-The rest of the expressions disable all of the \Condor{startd} daemon's
-regular policies for evicting jobs when keyboard and CPU activity is
+The rest of the expressions disable any other of the \Condor{startd} daemon's
+pool-wide policies, 
+such as those for evicting jobs when keyboard and CPU activity is
 discovered on the machine.
 
 
@@ -141,23 +141,22 @@ configured to prefer jobs that require dedicated resources,
 but not prevent others from running.
 
 To implement this,
-configure the machine as a dedicated resource (as above)
+configure the machine as a dedicated resource as above,
 modifying only the \MacroNI{START} expression:
 
 \begin{verbatim}
 START = True
 \end{verbatim}
 
-\item[Policy Scenario: Adding Desk-Top Resources To The Mix]
+\item[Policy Scenario: Adding Desktop Resources To The Mix]
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 A third policy example allows all jobs.
-These desk-top machines use a preexisting \MacroNI{START} expression that
+These desktop machines use a preexisting \MacroNI{START} expression that
 takes the machine owner's usage into account for some jobs.
 The machine does not preempt jobs that must run on dedicated
 resources,
-while it will preempt other jobs based on a previously set
-policy.
+while it may preempt other jobs as defined by policy.
 So, the default pool policy is used for starting and
 stopping jobs, while jobs that require a dedicated resource always start 
 and are not preempted.
@@ -178,8 +177,8 @@ START  = (Scheduler =?= $(DedicatedScheduler)) || ($(START))
 
 Define \Macro{RANK\_FACTOR} to be a
 larger value than the maximum value possible for the existing rank expression.
-\Macro{RANK} is just a floating point value, so there is no harm in
-having a value that is very large. 
+\Macro{RANK} is a floating point value, so there is no harm in
+assigning a very large value. 
 
 \end{description}
 
@@ -188,16 +187,21 @@ having a value that is very large.
 Preemption with Dedicated Jobs}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The dedicated scheduler can optionally preempt running MPI jobs in
-favor of higher priority MPI jobs in its queue.  Note that this is
-different from preemption in non-parallel universes, and MPI jobs cannot
+The dedicated scheduler can be configured to preempt running parallel
+universe jobs in favor of higher priority parallel universe jobs.
+Note that this is
+different from preemption in other universes, and parallel universe
+jobs cannot
 be preempted either by a machine's user pressing a key or by other means.
 
-By default, the dedicated scheduler will never preempt running MPI jobs.
-Two configuration file items control dedicated preemption: 
+By default, the dedicated scheduler will never preempt running 
+parallel universe jobs.
+Two configuration variables control preemption of these dedicated 
+resources: 
 \Macro{SCHEDD\_PREEMPTION\_REQUIREMENTS} and \Macro{SCHEDD\_PREEMPTION\_RANK}.
-These have no default value, so if either are not defined, preemption will
-never occur. \MacroNI{SCHEDD\_PREEMPTION\_REQUIREMENTS} must evaluate to 
+These variables have no default value, 
+so if either are not defined, preemption will never occur. 
+\MacroNI{SCHEDD\_PREEMPTION\_REQUIREMENTS} must evaluate to 
 \Expr{True}
 for a machine to be a candidate for this kind of preemption.
 If more machines are 
@@ -205,14 +209,15 @@ candidates for preemption than needed to satisfy a higher priority job, the
 machines are sorted by \MacroNI{SCHEDD\_PREEMPTION\_RANK}, and
 only the highest ranked machines are taken.
 
-Note that preempting one node of a running MPI job requires killing
-the entire job on all of its nodes.  So, when preemption happens, it
-may end up freeing more machines than strictly speaking are needed.
-Also, as HTCondor cannot produce checkpoints for MPI jobs,
+Note that preempting one node of a running parallel universe job 
+requires killing the entire job on all of its nodes.  
+So, when preemption occurs, 
+it may end up freeing more machines than are needed for the new job.
+Also, as HTCondor cannot produce checkpoints for parallel universe jobs,
 preempted jobs will be re-run, starting again from the beginning.
 Thus, the administrator should be careful when
-enabling dedicated preemption.  The following example shows how to
-enable dedicated preemption.
+enabling preemption of these dedicated resources.
+Enable dedicated preemption with the configuration:
 
 \begin{verbatim}
 STARTD_JOB_EXPRS = JobPrio
@@ -220,11 +225,12 @@ SCHEDD_PREEMPTION_REQUIREMENTS = (My.JobPrio < Target.JobPrio)
 SCHEDD_PREEMPTION_RANK = 0.0
 \end{verbatim}
 
-In this case, preemption is enabled by the user job priority. If a set
-of machines is running a job at user priority 5, and the user submits
-a new job at user priority 10, the running job will be preempted for
-the new job.  The old job is put back in the queue, and will begin again
-from the beginning when assigned to a new set of machines.
+In this example, preemption is enabled by user-defined job priority. 
+If a set of machines is running a job at user priority 5,
+and the user submits a new job at user priority 10, 
+the running job will be preempted for the new job.
+The old job is put back in the queue, and will begin again
+from the beginning when assigned to a newly acquired set of machines.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Configure-Dedicated-Groups}
