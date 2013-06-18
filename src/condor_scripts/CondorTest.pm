@@ -1093,7 +1093,7 @@ sub CheckRegistrations
     {
         Condor::RegisterEvictedWithRequeue( $test{$handle}{"RegisterEvictedWithRequeue"} );
     } else { 
-		Condor::RegisterEvicted( sub {
+		Condor::RegisterEvictedWithRequeue( sub {
 	    my %info = @_;
 	    die "$handle: FAILURE (Unexpected Eviction with requeue)\n";
 	} );
@@ -1104,7 +1104,7 @@ sub CheckRegistrations
     {
         Condor::RegisterEvictedWithCheckpoint( $test{$handle}{"RegisterEvictedWithCheckpoint"} );
     } else { 
-		Condor::RegisterEvicted( sub {
+		Condor::RegisterEvictedWithCheckpoint( sub {
 	    my %info = @_;
 	    die "$handle: FAILURE (Unexpected Eviction with checkpoint)\n";
 	} );
@@ -1115,7 +1115,7 @@ sub CheckRegistrations
     {
         Condor::RegisterEvictedWithoutCheckpoint( $test{$handle}{"RegisterEvictedWithoutCheckpoint"} );
     } else { 
-		Condor::RegisterEvicted( sub {
+		Condor::RegisterEvictedWithoutCheckpoint( sub {
 	    my %info = @_;
 	    die "$handle: FAILURE (Unexpected Eviction with checkpoint)\n";
 	} );
