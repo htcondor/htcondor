@@ -15,7 +15,8 @@
 
 \Description
 \Condor{q} displays information about jobs in the HTCondor job queue.  By
-default, \Condor{q} queries the local job queue but this behavior may be 
+default, \Condor{q} queries the local job queue,
+but this behavior may be 
 modified by specifying one of the general options.
 
 To restrict the display to jobs of interest, a list of zero or more 
@@ -25,15 +26,16 @@ restriction options may be supplied.  Each restriction may be one of:
 		belong to the specified cluster and have the specified process number
 	\item a \Arg{cluster} without a \Arg{process} matches all jobs belonging
 		to the specified cluster
-	\item a \Arg{owner} matches all jobs owned by the specified owner
+	\item an \Arg{owner} matches all jobs owned by the specified owner
 	\item a \OptArg{-constraint}{expression} which matches all jobs that
 		satisfy the specified ClassAd expression. (See section~\ref{sec:classad-reference}
 		for a discussion of ClassAd expressions.)
 \end{itemize}
-If no \Arg{owner} restrictions are present in the list, the job matches the 
+If no restrictions are present in the list to specify an
+\Arg{owner}, the job matches the 
 restriction list if it matches at least one restriction in the list.  If 
 \Arg{owner} restrictions are present, the job matches the list if it matches 
-one of the \Arg{owner} restrictions \emph{and} at least one non-owner 
+one of the \Arg{owner} restrictions \emph{and} at least one non-\Arg{owner} 
 restriction.
 
 If the \Opt{-long} option is specified, \Condor{q} displays a long description 
@@ -365,6 +367,8 @@ the values of relevant attributes of the machine ClassAd are also displayed.
     speed up analysis in situations where the \Condor{negotiator} daemon is
     slow to respond to \Condor{userprio} requests.  The file should be in 
     the format produced by \Condor{userprio} \Opt{-long}.  }
+  \OptItem{\Opt{-nouserprios}}{(analyze option)
+    Do not consider user priority during the analysis. }
   \OptItem{\Opt{-reverse}}{(analyze option) 
     Analyze machine requirements against jobs.  }
   \OptItem{\Opt{-verbose}}{(analyze option) 
@@ -450,6 +454,46 @@ set of output) using the \Opt{-globus} option:
 
  ID      OWNER          STATUS  MANAGER  HOST                EXECUTABLE
  100.0   smith         ACTIVE fork     grid.example.com       /bin/sleep
+\end{verbatim}
+\normalsize
+
+An example that shows the analysis in summary format:
+\footnotesize
+\begin{verbatim}
+$ condor_q -analyze:summary
+
+-- Submitter: submit-1.chtc.wisc.edu : <192.168.100.43:9618?sock=11794_95bb_3> :
+ submit-1.chtc.wisc.edu
+Analyzing matches for 5979 slots
+            Autocluster  Matches    Machine     Running  Serving
+ JobId     Members/Idle  Reqmnts  Rejects Job  Users Job Other User Avail Owner
+---------- ------------ -------- ------------ ---------- ---------- ----- -----
+25764522.0  7/0             5910        820   7/10       5046        34   smith
+25764682.0  9/0             2172        603   9/9        1531        29   smith
+25765082.0  18/0            2172        603   18/9       1531        29   smith
+25765900.0  1/0             2172        603   1/9        1531        29   smith 
+\end{verbatim}
+\normalsize
+
+An example that shows summary information by machine:
+\footnotesize
+\begin{verbatim}
+$ condor_q -ana:sum,rev
+
+-- Submitter: s-1.chtc.wisc.edu : <192.168.100.43:9618?sock=11794_95bb_3> : s-1.chtc.wisc.edu
+Analyzing matches for 2885 jobs
+                                Slot  Slot's Req    Job's Req     Both
+Name                            Type  Matches Job  Matches Slot    Match %
+------------------------        ---- ------------  ------------ ----------
+slot1@INFO.wisc.edu             Stat         2729  0                  0.00
+slot2@INFO.wisc.edu             Stat         2729  0                  0.00
+slot1@aci-001.chtc.wisc.edu     Part            0  2793               0.00
+slot1_1@a-001.chtc.wisc.edu     Dyn          2644  2792              91.37
+slot1_2@a-001.chtc.wisc.edu     Dyn          2623  2601              85.10
+slot1_3@a-001.chtc.wisc.edu     Dyn          2644  2632              85.82
+slot1_4@a-001.chtc.wisc.edu     Dyn          2644  2792              91.37
+slot1@a-002.chtc.wisc.edu       Part            0  2633               0.00
+slot1_10@a-002.chtc.wisc.edu    Dyn          2623  2601              85.10 
 \end{verbatim}
 \normalsize
 

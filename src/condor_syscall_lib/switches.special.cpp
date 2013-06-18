@@ -224,8 +224,12 @@ extern "C" int getdents ( int fd, struct dirent *buf, size_t nbytes )
 }
 
 /* getdents, for some unknown reason, requires a special register passing
-	convention. */
+	convention. But only on 32 bit machines */
+#ifdef X86_64
+extern "C" int __getdents( int fd, struct dirent *dirp, size_t count ); 
+#else
 extern "C" int __getdents( int fd, struct dirent *dirp, size_t count ) __attribute__ ((regparm (3), stdcall));
+#endif
 
 extern "C" int __getdents( int fd, struct dirent *dirp, size_t count ) {
 	return getdents(fd,dirp,count);
@@ -241,7 +245,11 @@ extern "C" int __getdents( int fd, struct dirent *dirp, size_t count ) {
 	getdents/getdents64 and the implementation of it was, and is,
 	a crime against all that is rational and good. */
 
+#ifdef X86_64
+extern "C" int __getdents64( int fd, struct dirent64 *dirp, size_t count );
+#else
 extern "C" int __getdents64( int fd, struct dirent64 *dirp, size_t count ) __attribute__ ((regparm (3), stdcall));
+#endif
 
 extern "C" int getdents64(int, struct dirent64*, size_t);
 
@@ -729,6 +737,7 @@ mmap( MMAP_T a, size_t l, int p, int f, int fd, off_t o )
         } else {
                 if( LocalSysCalls() ) {
                         rval = (MMAP_T) MAP_FAILED;
+                        errno = ENOSYS;
                 } else {
                     rval = (MMAP_T) REMOTE_CONDOR_mmap( a, l, p, f, fd, o );
                 }
@@ -856,7 +865,7 @@ int _xstat(int version, const char *path, struct stat *buf)
 }
 
 
-int __xstat(int version, const char *path, struct stat *buf)
+int __xstat(int version, const char *path, struct stat *buf) __THROW
 {
 	return _condor_xstat( version, path, buf );
 }
@@ -866,7 +875,7 @@ int _fxstat(int version, int fd, struct stat *buf)
 	return _condor_fxstat( version, fd, buf );
 }
 
-int __fxstat(int version, int fd, struct stat *buf)
+int __fxstat(int version, int fd, struct stat *buf) __THROW
 {
 	return _condor_fxstat( version, fd, buf );
 }
@@ -878,7 +887,7 @@ int _lxstat(int version, const char *path, struct stat *buf)
 }
 
 
-int __lxstat(int version, const char *path, struct stat *buf)
+int __lxstat(int version, const char *path, struct stat *buf) __THROW
 {
 	return _condor_lxstat( version, path, buf );
 }
@@ -889,7 +898,7 @@ int _xstat64(int version, const char *path, struct stat64 *buf)
 	return _condor_xstat64( version, path, buf );
 }
 
-int __xstat64(int version, const char *path, struct stat64 *buf)
+int __xstat64(int version, const char *path, struct stat64 *buf) __THROW
 {
 	return _condor_xstat64( version, path, buf );
 }
@@ -899,7 +908,7 @@ int _fxstat64(int version, int fd, struct stat64 *buf)
 	return _condor_fxstat64( version, fd, buf );
 }
 
-int __fxstat64(int version, int fd, struct stat64 *buf)
+int __fxstat64(int version, int fd, struct stat64 *buf) __THROW
 {
 	return _condor_fxstat64( version, fd, buf );
 }
@@ -909,7 +918,7 @@ int _lxstat64(int version, const char *path, struct stat64 *buf)
 	return _condor_lxstat64( version, path, buf );
 }
 
-int __lxstat64(int version, const char *path, struct stat64 *buf)
+int __lxstat64(int version, const char *path, struct stat64 *buf) __THROW
 {
 	return _condor_lxstat64( version, path, buf );
 }
@@ -1587,7 +1596,7 @@ ssize_t readv( int fd, const struct iovec *iov, int iovcnt )
 		cc = read( fd, iov->iov_base, iov->iov_len );
 		if( cc < 0 ) return cc;
 		rval += cc;
-		if( cc != iov->iov_len ) return rval;
+		if( ((unsigned) cc) != iov->iov_len ) return rval;
 		iov++;
 	}
 
@@ -1609,7 +1618,7 @@ ssize_t writev( int fd, const struct iovec *iov, int iovcnt )
 		cc = write( fd, iov->iov_base, iov->iov_len );
 		if( cc < 0 ) return cc;
 		rval += cc;
-		if( cc != iov->iov_len ) return rval;
+		if( ((unsigned) cc) != iov->iov_len ) return rval;
 		iov++;
 	}
 
@@ -1624,6 +1633,8 @@ void _exit( int status )
 {
 	/* XXX this breaks atexit() and global C++ destructors */
 	(void) syscall( SYS_exit, status );
+
+	exit(status); // shouldn't get here, but supresses "_exit didn't exit" warning
 }
 
 /*
@@ -1648,7 +1659,7 @@ getrusage( int who, struct rusage *rusage )
 	int rval1 = 0;
 	int scm;
 	static struct rusage accum_rusage;
-	static int num_restarts = 50;  /* must not initialize to 0 */
+	static unsigned int num_restarts = 50;  /* must not initialize to 0 */
 
 	sigset_t omask = _condor_signals_disable();
 
@@ -1910,7 +1921,7 @@ static int remote_system_posix(const char *command, int len)
 	}
 
 	/* else just do what the user wanted of me */
-	rval = REMOTE_CONDOR_shell( (char*)command, len );
+	rval = REMOTE_CONDOR_shell( const_cast<char*>(command), len );
 	return rval;
 }
 

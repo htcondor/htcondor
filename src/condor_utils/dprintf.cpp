@@ -348,7 +348,7 @@ _dprintf_global_func(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, c
 	int rc = 0;
 	static char* buffer = NULL;
 	static int buflen = 0;
-	if (dbgInfo) hdr_flags |= dbgInfo->headerOpts;
+	hdr_flags |= dbgInfo->headerOpts;
 	const char* header = _format_global_header(cat_and_flags, hdr_flags, info);
 	if(header)
 	{

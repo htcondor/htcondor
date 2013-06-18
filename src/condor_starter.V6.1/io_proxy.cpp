@@ -152,7 +152,7 @@ bool IOProxy::init( const char *config_file )
 	failure:
 	if(cookie) free(cookie);
 	if(file) fclose(file);
-	unlink(config_file);
+	IGNORE_RETURN unlink(config_file);
 	server->close();
 	return false;
 }

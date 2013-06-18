@@ -55,10 +55,17 @@ the new copy into place.
 #	define O_BINARY 0
 #endif
 
+#if _MSC_VER >= 1400 /* VC++ 2005 version */
+#define PREFAST_NORETURN __declspec(noreturn)
+#else
+#define PREFAST_NORETURN
+#endif
+
+
 bool readline(FILE * f, std::string & out);
 std::string search_and_replace(std::string data, std::string search, std::string replace);
 void rename_or_die(const char * src, const char * dst);
-void fatal(const char * fmt, ...);
+void PREFAST_NORETURN fatal(const char * fmt, ...);
 
 int main(int argc, char ** argv)
 {

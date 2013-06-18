@@ -436,7 +436,7 @@ and then send a \Condor{restart} to the submit machine.
 \subsection{\label{sec:job-log-events}In the Log File}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{job!log events}
-\index{log files!event descriptions}
+\index{log files!event codes and descriptions}
 In a job's log file are a listing of events in
 chronological order that occurred during the life of the job.
 The formatting of the events is always the same, 
@@ -629,16 +629,30 @@ have been received for 15 minutes.
 remote status was previous logged as unknown.
 
 \noindent\Bold{Event Number:} 031 \\
-\Bold{Event Name:} Unused \\
-\Bold{Event Description:} This event number is not used.
+\Bold{Event Name:} Job stage in \\
+\Bold{Event Description:} A grid universe job is doing the stage in of 
+input files.
 
 \noindent\Bold{Event Number:} 032 \\
-\Bold{Event Name:} Unused \\
-\Bold{Event Description:} This event number is not used.
+\Bold{Event Name:} Job stage out \\
+\Bold{Event Description:} A grid universe job is doing the  stage out of
+output files.
 
 \noindent\Bold{Event Number:} 033 \\
-\Bold{Event Name:} Attribute update \\
-\Bold{Event Description:} Definition not yet written.
+\Bold{Event Name:} Job ClassAd attribute update \\
+\Bold{Event Description:} A Job ClassAd attribute is changed due to action
+by the \Condor{schedd} daemon.  Examples include changes by 
+\Condor{qedit} and \Condor{prio}.
+
+\noindent\Bold{Event Number:} 034 \\
+\Bold{Event Name:} Pre Skip event \\
+\Bold{Event Description:} For DAGMan, this event is logged
+if a PRE SCRIPT exits with the defined PRE\_SKIP value in the DAG input file.
+This makes it possible for DAGMan to do recovery in a workflow that has
+such an event, 
+as it would otherwise not have any event for the DAGMan node to
+which the script belongs, 
+and in recovery, DAGMan's internal tables would become corrupted.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%e
 \subsection{\label{sec:job-completion}Job Completion}
@@ -656,7 +670,7 @@ If there is a log file specified in the submit description file for the job,
 then the job exit status will be recorded there as well.
 
 \index{submit commands!notification}
-By default, HTCondor sends an email message when the job completes.
+By default, HTCondor does not send an email message when the job completes.
 Modify this behavior with the
 \SubmitCmd{notification} command in the submit description file.
 The message will include the exit status of the job,

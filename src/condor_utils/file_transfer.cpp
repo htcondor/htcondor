@@ -2119,7 +2119,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 						rc = 0;
 					}
 					else {
-						remove(fullname.Value());
+						IGNORE_RETURN remove(fullname.Value());
 						rc = mkdir(fullname.Value(),file_mode);
 					}
 				}

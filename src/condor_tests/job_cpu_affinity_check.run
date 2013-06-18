@@ -19,27 +19,25 @@
 ##**************************************************************
 
 use CondorTest;
+use CondorUtils;
 use Check::SimpleJob;
 #use Check::CondorLog;
 use Check::ProcInfo;
+
+my $configfile = "";
+
 
 my $firstappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	ALL_DEBUG = 
 ';
 
-my $nextappend_condor_config = '
-	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	ALL_DEBUG = 
-	ENFORCE_CPU_AFFINITY = true
-	NUM_SLOTS=1
-	NUM_SLOTS_TYPE_1 = 1
-	SLOT_TYPE_1_PARTITIONABLE = TRUE
-	SLOT_TYPE_1 = cpus=100%,disk=100%,swap=100%
-';
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"affinityoff");
 
 CondorTest::StartCondorWithParams(
-    append_condor_config => $firstappend_condor_config
+	condor_name => "affinityoff",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
 );
 
 #Do a couple things before setting cpu affinity
@@ -57,10 +55,22 @@ $count = ProcInfo::RunAffinityCheck(
 		CondorTest::EndTest();
 	}
 
+my $nextappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	ALL_DEBUG = 
+	ASSIGN_CPU_AFFINITY = true
+	NUM_SLOTS=1
+	NUM_SLOTS_TYPE_1 = 1
+	SLOT_TYPE_1_PARTITIONABLE = TRUE
+	SLOT_TYPE_1 = cpus=100%,disk=100%,swap=100%
+';
 
-# OK turn it on and do affinity testing
+$configfile = CondorTest::CreateLocalConfig($nextappend_condor_config,"affinity1");
+
 CondorTest::StartCondorWithParams(
-    append_condor_config => $nextappend_condor_config
+	condor_name => "affinityon1",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
 );
 
 
@@ -69,6 +79,14 @@ $count = ProcInfo::RunAffinityCheck(
 	proc_file_pattern => "Cpus_allowed:",
 	cores_desired => 1);
 
+$configfile = CondorTest::CreateLocalConfig($nextappend_condor_config,"affinity2");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "affinityon2",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
 $count = ProcInfo::RunAffinityCheck(
 	proc_file => "status",
 	proc_file_pattern => "Cpus_allowed:",
@@ -76,4 +94,3 @@ $count = ProcInfo::RunAffinityCheck(
 
 
 CondorTest::EndTest();
-

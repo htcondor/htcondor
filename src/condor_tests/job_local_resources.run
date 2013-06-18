@@ -1,0 +1,335 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+##
+## This test check availability and usage contol of the new
+## local, resources in both a static configuration and in psolts.
+## It is model after what we did to test concurrency limits
+## as we are checking the same sorts of things. bt
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Check::CondorLog;
+use Net::Domain qw(hostfqdn);
+my $host = hostfqdn();
+print "$host\n";
+
+# Static slot set up for local resources
+# also test 50% and 1/2
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	ALL_DEBUG = 
+	NEGOTIATOR_INTERVAL = 5
+	MACHINE_RESOURCE_gpu = 2
+	MACHINE_RESOURCE_boats = 2
+	MACHINE_RESOURCE_sails = 2
+	SLOT_TYPE_1 = cpus=1, gpu=1, boats=50%, sails=1/2
+	SLOT_TYPE_1_PATITIONABLE = FALSE
+	NUM_SLOTS_TYPE_1 = 1
+	SUSPEND = FALSE
+';
+ 
+my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"static");
+my $testname = "job_local_resources.run";
+
+CondorTest::StartCondorWithParams(
+	condor_name => "staticslots",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+my $on_abort = sub {
+	CondorTest::debug("Abort from removing sleep 0 jobs.\n",1);
+};
+
+my $result = 1;
+my $running_now = 0;
+my $expect_idle = 0;
+my $expect_run = 0;
+my $checkpslot = "no";
+
+my $on_execute = sub {
+my $idles = 0;
+	$running_now += 1;
+	CondorTest::debug("Job started running.\n",1);
+	# compare current running to expected total
+	if($running_now == $expect_run) {
+		# if we expect no idle jobs, don't check.
+		# remove jobs and return
+		CondorLog::RunCheckMultiple(
+			daemon => "Negotiator",
+			match_regexp => "Started Negotiation Cycle",
+			match_instances => 4,
+			match_timeout => 60,
+			match_new => "true"
+				);
+	} else {
+		print "running $running_now expecting $expect_run: not removing jobs\n";
+	}
+
+	if($running_now > $expect_run) {
+		die "Running jobs <$running_now> exceeded concurrency lints <$expect_run>\n";
+	}
+
+	#runcmd("condor_status -l",{emit_output=>1});
+
+	#my $szadarray = 0;
+	#my @StaticClassadsLong = `condor_status -l | grep Gpu`;
+	my $partial = "";
+	my $count = 0;
+	if($checkpslot eq "yes") {
+		$partial = "slot1" . "@" . "$host";
+	} else {
+		$partial = "slot1_1" . "@" . "$host";
+	}
+	my $statusline = "condor_status -l \"$partial\" | grep Gpu | ";
+	my $AdType = "Gpu";
+	print "About to do <$statusline>\n";
+
+	my $longad = "";
+	open(CSTATUS,"$statusline") or die "<$statusline> failed:$!\n";
+	print "did <$statusline>\n";
+	while(<CSTATUS>) {
+		chomp();
+		$longad = $_;
+		$count += 1;
+		if($longad =~ /^TotalGpu\s*=\s*(\d+)\s*$/) {
+			CondorTest::debug("Total$AdType = $1\n",1);;
+			CheckExpectations("Total$AdType", $1, 2);
+		} elsif($longad =~ /^Gpu\s*=\s*(\d+)\s*$/) {
+			CondorTest::debug("$AdType = $1\n",1);;
+			CheckExpectations("$AdType", $1, 1);
+		} elsif($longad =~ /^DetectedGpu\s*=\s*(\d+)\s*$/) {
+			CondorTest::debug("Detected$AdType = $1\n",1);;
+			CheckExpectations("Detected$AdType", $1, 2);
+		} 
+	}
+	print "After looking at <$statusline>\n";
+
+	if($count != 4){
+		die "There are expected to be 4 resource uniqu ads. There were $szadarray for Gpu\n";
+	}
+
+
+	runcmd("condor_rm -all");
+	runcmd("condor_q ",{emit_output=>1});
+
+};
+
+#Do a couple things before setting currency limits
+print "First test basic job\n";
+$result = SimpleJob::RunCheck();
+
+my $szadarray = 0;
+my @StaticClassadsLong = `condor_status -l | grep Gpu`;
+my $AdType = "Gpu";
+$szadarray = @StaticClassadsLong;
+if($szadarray != 4){
+	die "There are expected to be 4 resource uniqu ads. There were $szadarray for Gpu\n";
+}
+foreach my $longad (@StaticClassadsLong) {
+	chomp($longad);
+	CondorTest::debug("ad: $longad\n",2);
+	if($longad =~ /^TotalGpu\s*=\s*(\d+)\s*$/) {
+		CondorTest::debug("Total$AdType = $1\n",2);;
+		CheckExpectations("Total$AdType", $1, 2);
+	} elsif($longad =~ /^Gpu\s*=\s*(\d+)\s*$/) {
+		CondorTest::debug("$AdType = $1\n",2);;
+		CheckExpectations("$AdType", $1, 1);
+	} elsif($longad =~ /^DetectedGpu\s*=\s*(\d+)\s*$/) {
+		CondorTest::debug("Detected$AdType = $1\n",2);;
+		CheckExpectations("Detected$AdType", $1, 2);
+	} 
+}
+
+@StaticClassadsLong = `condor_status -l | grep Sails`;
+$szadarray = @StaticClassadsLong;
+my $AdType = "Sails";
+if($szadarray != 4){
+	die "There are expected to be 4 resource uniqu ads. There were $szadarray for Sails\n";
+}
+foreach my $longad (@StaticClassadsLong) {
+	chomp($longad);
+	CondorTest::debug("ad: $longad\n",2);
+	if($longad =~ /^TotalSails\s*=\s*(\d+)\s*$/) {
+		CondorTest::debug("Total$AdType = $1\n",2);;
+		CheckExpectations("Total$AdType", $1, 2);
+	} elsif($longad =~ /^TotalSlotSails\s*=\s*(\d+)\s*$/) {
+		CondorTest::debug("TotalSlot$AdType = $1\n",2);;
+		CheckExpectations("TotalSlot$AdType", $1, 1);
+	} elsif($longad =~ /^Sails\s*=\s*(\d+)\s*$/) {
+		CondorTest::debug("$AdType = $1\n",2);;
+		CheckExpectations("$AdType", $1, 1);
+	} elsif($longad =~ /^DetectedSails\s*=\s*(\d+)\s*$/) {
+		CondorTest::debug("Detected$AdType = $1\n",2);;
+		CheckExpectations("Detected$AdType", $1, 2);
+	} else {
+		die "Failed to match this line<$longad>\n";
+	}
+}
+
+@StaticClassadsLong = `condor_status -l | grep Boats`;
+$szadarray = @StaticClassadsLong;
+my $AdType = "Boats";
+if($szadarray != 4){
+	die "There are expected to be 4 resource uniqu ads. There were $szadarray for Boats\n";
+}
+
+foreach my $longad (@StaticClassadsLong) {
+	chomp($longad);
+	CondorTest::debug("ad: $longad\n",2);
+	if($longad =~ /^TotalBoats\s*=\s*(\d+)\s*$/) {
+		CondorTest::debug("Total$AdType = $1\n",2);;
+		CheckExpectations("Total$AdType", $1, 2);
+	} elsif($longad =~ /^TotalSlotBoats\s*=\s*(\d+)\s*$/) {
+		CondorTest::debug("TotalSlot$AdType = $1\n",2);;
+		CheckExpectations("TotalSlot$AdType", $1, 1);
+	} elsif($longad =~ /^Boats\s*=\s*(\d+)\s*$/) {
+		CondorTest::debug("$AdType = $1\n",2);;
+		CheckExpectations("$AdType", $1, 1);
+	} elsif($longad =~ /^DetectedBoats\s*=\s*(\d+)\s*$/) {
+		CondorTest::debug("Detected$AdType = $1\n",2);;
+		CheckExpectations("Detected$AdType", $1, 2);
+	} else {
+		die "Failed to match this line<$longad>\n";
+	}
+}
+
+
+print "\n\n*************** Testing Slot Ads for local resources:\n";
+print "ok\n\n\n";
+
+# Static slot set up for local resources
+my $negotiatorcycle = 5;
+my $nextappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	ALL_DEBUG = 
+	MACHINE_RESOURCE_gpu = 2
+	NEGOTIATOR_INTERVAL = 5
+	NUM_SLOTS=1
+	NUM_SLOTS_TYPE_1 = 1
+	SLOT_TYPE_1_PARTITIONABLE = TRUE
+	SLOT_TYPE_1 = cpus=100%,disk=100%,swap=100%,gpu=100%
+	SUSPEND = FALSE
+';
+
+$configfile = CondorTest::CreateLocalConfig($nextappend_condor_config,"pslot");
+
+# spin up with two gpus and ask for a dynamic slot with two
+# then check the ads.
+# OK turn it on with concurrency limits
+CondorTest::StartCondorWithParams(
+	condor_name => "pslots",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+runcmd("condor_config_val -config",{emit_output=>1});
+#################################
+#
+#	StartCondorWithParams is additive so we need to start
+#	a fresh personal condor to test local resources on a pslot
+#
+#################################
+
+
+$append_submit_commands = '
+request_gpu = 1
+';
+
+# on this on-execute, check the ads like above
+$expect_run = 1;
+$expect_idle = 0;
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	on_execute => $on_execute,
+	queue_sz => 1,
+	duration => 0,
+	append_submit_commands => $append_submit_commands
+);
+print "******************** Test for correct local resource ClassAds on dynamic slot\n";
+if($result == 1) {
+	print "ok\n\n\n";
+} else {
+	print "bad\n\n\n";
+}
+
+$checkpslot = "yes";
+
+# on this on-execute, check the ads like above
+# checking left over resources on partiionable slot, do not ask for a qpu
+# and expectation will match the dynamic slot
+$expect_run = 1;
+$expect_idle = 0;
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	on_execute => $on_execute,
+	queue_sz => 1,
+	duration => 0,
+	append_submit_commands => $append_submit_commands
+);
+print "******************** Test for correct local resource ClassAds on partionable slot\n";
+if($result == 1) {
+	print "ok\n\n\n";
+} else {
+	print "bad\n\n\n";
+}
+
+
+CondorTest::EndTest();
+
+
+sub CountIdle
+{
+	my $expectidle = shift;
+	my $idlecount = 0;
+	my $line = "";
+
+	#runcmd("condor_q");
+	my @jobs = `condor_q`;
+	foreach my $job (@jobs) {
+		chomp($job);
+		$line = $job;
+		#print "JOB: $line\n";
+		if($line =~ /^.*?\sI\s.*$/) {
+			$idlecount += 1;
+			#print "Idle count now <$idlecount>, expecting <$expectidle>\n";
+		}
+	}
+	if($idlecount != $expectidle) {
+		die "Expected $expectidle idle but found $idlecount\n";
+	}
+
+	return($idlecount);
+}
+
+sub CheckExpectations
+{
+	my $ad = shift;
+	my $got = shift;
+	my $expected = shift;
+
+	CondorTest::debug("CheckExpectations Ad,$ad Got,$got Expected,$expected\n",2);
+	if($got != $expected) {
+		die "$ad: Expected <$expected> but only got <$got>\n";
+	} 
+}

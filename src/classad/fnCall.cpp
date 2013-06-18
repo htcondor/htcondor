@@ -72,7 +72,6 @@ stringListsIntersect(const char*,const ArgumentList &argList,EvalState &state,Va
 FunctionCall::
 FunctionCall( )
 {
-	nodeKind = FN_CALL_NODE;
 	function = NULL;
 
 	if( !initialized ) {

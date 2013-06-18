@@ -421,7 +421,14 @@ class Job {
 	bool HasPreSkip() const { return _preskip != PRE_SKIP_INVALID; }
 	int GetPreSkip() const;
 	
+	int GetCluster() const { return _CondorID._cluster; }
+	int GetProc() const { return _CondorID._proc; }
+	int GetSubProc() const { return _CondorID._subproc; }
+	bool SetCondorID(const CondorID& cid);
+	const CondorID& GetID() const { return _CondorID; }
+private:
     /** */ CondorID _CondorID;
+public:
 
     // maximum number of times to retry this node
     int retry_max;
@@ -495,7 +502,23 @@ class Job {
 	int _jobProcsOnHold;
 	bool UseDefaultLog() const { return append_default_log; }
 
+		/** Mark a job with ProcId == proc as being on hold
+ 			Returns false if the job is already on hold
+		*/
+ 
+	bool Hold(int proc);
+	
+		/** Mark a job with ProcId == proc as being released
+ 		    Returns false if the job is not on hold
+		*/
+	bool Release(int proc);
 private:
+
+		/** _onHold[proc] is nonzero if the condor job 
+ 			with ProcId == proc is on hold, and zero
+			otherwise
+		*/
+	std::vector<unsigned char> _onHold;	
 		// Mark this node as failed because of an error in monitoring
 		// the log file.
   	void LogMonitorFailed();

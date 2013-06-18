@@ -364,8 +364,8 @@ JobstateLog::WriteScriptStarted( Job *node, bool isPost )
 	MyString condorID( "-" );
 	if ( isPost ) {
 			// See Dag::PostScriptReaper().
-		int procID = node->GetNoop() ? node->_CondorID._proc : 0;
-		CondorID2Str( node->_CondorID._cluster, procID, condorID );
+		int procID = node->GetNoop() ? node->GetProc() : 0;
+		CondorID2Str( node->GetCluster(), procID, condorID );
 	}
 	time_t timestamp = node->GetLastEventTime();
 	Write( &timestamp, node, eventName, condorID.Value() );
@@ -393,8 +393,8 @@ JobstateLog::WriteScriptSuccessOrFailure( Job *node, bool isPost )
 	MyString condorID( "-" );
 	if ( isPost ) {
 			// See Dag::PostScriptReaper().
-		int procID = node->GetNoop() ? node->_CondorID._proc : 0;
-		CondorID2Str( node->_CondorID._cluster, procID, condorID );
+		int procID = node->GetNoop() ? node->GetProc() : 0;
+		CondorID2Str( node->GetCluster(), procID, condorID );
 	}
 
 	time_t timestamp = node->GetLastEventTime();

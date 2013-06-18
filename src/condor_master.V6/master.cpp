@@ -138,7 +138,7 @@ char	default_dc_daemon_list[] =
 "MASTER, STARTD, SCHEDD, KBDD, COLLECTOR, NEGOTIATOR, EVENTD, "
 "VIEW_SERVER, CONDOR_VIEW, VIEW_COLLECTOR, CREDD, HAD, HDFS, "
 "REPLICATION, DBMSD, QUILL, JOB_ROUTER, ROOSTER, SHARED_PORT, "
-"DEFRAG";
+"DEFRAG, GANGLIAD";
 
 // create an object of class daemons.
 class Daemons daemons;

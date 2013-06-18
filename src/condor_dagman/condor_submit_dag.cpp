@@ -451,14 +451,14 @@ void ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 	}
 
 		// Get rid of the halt file (if one exists).
-	unlink( HaltFileName( shallowOpts.primaryDagFile ).Value() );
+	tolerant_unlink( HaltFileName( shallowOpts.primaryDagFile ).Value() );
 
 	if (deepOpts.bForce)
 	{
-		unlink(shallowOpts.strSubFile.Value());
-		unlink(shallowOpts.strSchedLog.Value());
-		unlink(shallowOpts.strLibOut.Value());
-		unlink(shallowOpts.strLibErr.Value());
+		tolerant_unlink(shallowOpts.strSubFile.Value());
+		tolerant_unlink(shallowOpts.strSchedLog.Value());
+		tolerant_unlink(shallowOpts.strLibOut.Value());
+		tolerant_unlink(shallowOpts.strLibErr.Value());
 		RenameRescueDagsAfter(shallowOpts.primaryDagFile.Value(),
 					shallowOpts.dagFiles.number() > 1, 0, maxRescueDagNum);
 	}

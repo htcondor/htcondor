@@ -37,6 +37,7 @@ my $nextappend_condor_config = '
 	CONCURRENCY_LIMIT_DEFAULT_SMALL = 5
 	CONCURRENCY_LIMIT_DEFAULT_LARGE = 2
 	NEGOTIATOR_INTERVAL = 5
+	NUM_CPUS = 12
 ';
 
 CondorTest::StartCondorWithParams(
@@ -57,6 +58,13 @@ my $running_now = 0;
 my $expect_idle = 0;
 my $expect_run = 0;
 
+my $on_match = sub {
+	my $response = shift;
+	if($response eq "HitRetryLimit") {
+		print "About to fail from timeout!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+	}
+};
+
 my $on_execute = sub {
 my $idles = 0;
 	$running_now += 1;
@@ -76,6 +84,7 @@ my $idles = 0;
 					daemon => "Negotiator",
 					match_regexp => "Started Negotiation Cycle",
 					match_instances => 2,
+					match_callback => $on_match,
 					match_timeout => 30,
 					match_new => "true"
 				);
@@ -106,6 +115,7 @@ $result = SimpleJob::RunCheck(
 	on_execute => $on_execute,
 	queue_sz => 3,
 	duration => 0,
+	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
 print "First test basic job. 3 jobs no concurrency settings\n";
@@ -115,10 +125,14 @@ if($result == 1) {
 	print "bad\n";
 }
 
+# clean queue bwtween all checks
+
+ExamineQueue();
 
 # OK turn it on with concurrency limits
 CondorTest::StartCondorWithParams(
-    append_condor_config => $nextappend_condor_config
+    append_condor_config => $nextappend_condor_config,
+	local_fresh => "TRUE",
 );
 
 $expect_run = 2;
@@ -128,6 +142,7 @@ $result = SimpleJob::RunCheck(
 	on_execute => $on_execute,
 	queue_sz => 3,
 	duration => 0,
+	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
 print "Test specified concurrency\n";
@@ -136,6 +151,10 @@ if($result == 1) {
 } else {
 	print "bad\n";
 }
+
+# clean queue bwtween all checks
+
+ExamineQueue();
 
 my $append_submit_commands = '
 concurrency_limits = UNDEFINED:2;
@@ -148,6 +167,7 @@ $result = SimpleJob::RunCheck(
 	on_execute => $on_execute,
 	queue_sz => 2,
 	duration => 0,
+	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
 print "Test default concurrency and colon usage spec\n";
@@ -156,6 +176,10 @@ if($result == 1) {
 } else {
 	print "bad\n";
 }
+
+# clean queue bwtween all checks
+
+ExamineQueue();
 
 my $append_submit_commands = '
 concurrency_limits = large.license;
@@ -168,6 +192,7 @@ $result = SimpleJob::RunCheck(
 	on_execute => $on_execute,
 	queue_sz => 3,
 	duration => 0,
+	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
 print "Test class default\n";
@@ -176,6 +201,12 @@ if($result == 1) {
 } else {
 	print "bad\n";
 }
+
+# clean queue bwtween all checks
+
+
+
+ExamineQueue();
 
 my $append_submit_commands = '
 concurrency_limits = small.license;
@@ -188,6 +219,7 @@ $result = SimpleJob::RunCheck(
 	on_execute => $on_execute,
 	queue_sz => 7,
 	duration => 0,
+	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
 print "Test class default\n";
@@ -197,7 +229,9 @@ if($result == 1) {
 	print "bad\n";
 }
 
+# clean queue bwtween all checks
 
+ExamineQueue();
 
 CondorTest::EndTest();
 
@@ -220,8 +254,28 @@ sub CountIdle
 		}
 	}
 	if($idlecount != $expectidle) {
-		die "Expected $expectidle idle but found $idlecount\n";
+		die "Expected $expectidle idle but found $idlecount - die\n";
 	}
 
 	return($idlecount);
+}
+
+sub ExamineQueue
+{
+	my $line = "";
+
+	print "\nExpecting all jobs to be gone. Lets See.\n";
+	#runcmd("condor_q");
+	my @jobs = `condor_q`;
+	foreach my $job (@jobs) {
+		chomp($job);
+		$line = $job;
+		print "JOB: $line\n";
+		if($line =~ /^\s*(\d+)\s*jobs; .*$/) {
+			$idlecount += 1;
+			print "<$1> jobs still running\n";
+		}
+	}
+	print "Total slots available here:\n\n";
+	system("condor_status");
 }

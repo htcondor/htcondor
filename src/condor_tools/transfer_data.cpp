@@ -172,7 +172,6 @@ int
 main(int argc, char *argv[])
 {
 	char	*arg;
-	char	**args = (char **)malloc(sizeof(char *)*(argc - 1)); // args 
 	int		nArgs = 0;				// number of args 
 	int	 i, result;
 	char* pool = NULL;
@@ -198,6 +197,9 @@ main(int argc, char *argv[])
 		free( tmp );
 		string_to_stm( method, st_method );
 	}
+
+	char **args = (char **)malloc(sizeof(char *) * argc); // args 
+	if ( ! args) exit(2);
 
 	// parse the arguments.
 	for( argv++; (arg = *argv); argv++ ) {

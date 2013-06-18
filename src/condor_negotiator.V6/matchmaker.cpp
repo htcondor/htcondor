@@ -2968,7 +2968,6 @@ obtainAdsFromCollector (
 			subReqs = newReqs = NULL;
 			negReqTree = reqTree = NULL;
 			int length;
-			// TODO: Does this leak memory?
 			negReqTree = ad->LookupExpr(ATTR_NEGOTIATOR_REQUIREMENTS);
 			if ( negReqTree != NULL ) {
 
@@ -2976,6 +2975,8 @@ obtainAdsFromCollector (
 				reqTree = ad->LookupExpr(ATTR_REQUIREMENTS);
 				if( reqTree != NULL ) {
 				// Now, put the old requirements back into the ad
+				// (note: ExprTreeToString uses a static buffer, so do not
+				//        deallocate the buffer it returns)
 				subReqs = ExprTreeToString(reqTree);
 				length = strlen(subReqs) + strlen(ATTR_REQUIREMENTS) + 7;
 				newReqs = (char *)malloc(length+16);

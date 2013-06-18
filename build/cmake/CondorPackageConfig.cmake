@@ -128,6 +128,7 @@ set( C_SERVICES     services)
 set( C_INIT			etc/init.d )
 set( C_ETC			etc/examples )
 set( C_CONFIGD		etc/condor/config.d )
+set( C_GANGLIAD		etc/condor/ganglia.d )
 set( C_SYSCONFIG	etc/sysconfig )
 
 set( C_ETC_EXAMPLES etc/examples )
@@ -291,7 +292,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set ( CPACK_DEBIAN_PACKAGE_MAINTAINER "Condor Team <${CPACK_PACKAGE_CONTACT}>" )
 		set ( CPACK_DEBIAN_PACKAGE_VERSION "${PACKAGE_VERSION}-${PACKAGE_REVISION}")
 		set ( CPACK_DEBIAN_PACKAGE_HOMEPAGE "${URL}")
-		set ( CPACK_DEBIAN_PACKAGE_DEPENDS "python, adduser")
+		set ( CPACK_DEBIAN_PACKAGE_DEPENDS "python, adduser, libdate-manip-perl")
 
 		#Control files
 		set( CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
@@ -316,6 +317,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set( C_INIT			etc/init.d )
 		set( C_ETC			etc/condor )
 		set( C_CONFIGD		etc/condor/config.d )
+		set( C_GANGLIAD         etc/condor/ganglia.d )
 
 		#Debian specific
 		set( C_ETC_EXAMPLES	usr/share/doc/condor/etc/examples )
@@ -391,6 +393,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 		set( C_INIT			etc/init.d )
 		set( C_ETC			etc/condor )
 		set( C_CONFIGD		etc/condor/config.d )
+		set( C_GANGLIAD		etc/condor/ganglia.d )
 		set( C_SYSCONFIG	etc/sysconfig )
 		set( C_ETC_EXAMPLES	usr/share/doc/${CONDOR_VERSION}/etc/examples )
 		set( C_SHARE_EXAMPLES usr/share/doc/${CONDOR_VERSION})

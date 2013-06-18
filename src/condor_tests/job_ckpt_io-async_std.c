@@ -52,7 +52,7 @@ const char* create_unique_name(const char* prefix) {
 	// time_t could be either 32bit or 64bit. so we change it to 64bit
 	uint64_t timestamp = (uint64_t)time(NULL);
 	static char buf[256];
-	sprintf(buf, "%s_%lld", prefix, timestamp);
+	sprintf(buf, "%s_%lu", prefix, timestamp);
 	return buf;
 }
 

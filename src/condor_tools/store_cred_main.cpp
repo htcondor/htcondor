@@ -421,7 +421,7 @@ parseCommandLine(StoreCredOptions *opts, int argc, char *argv[]) {
 							err = true;
 						}
 						else {
-							strncpy(opts->username, argv[i+1], MAX_PASSWORD_LENGTH);
+							strcpy_len(opts->username, argv[i+1], COUNTOF(opts->username));
 							i++;
 							char* at_ptr = strchr(opts->username, '@');
 							// '@' must be in the string, but not the beginning

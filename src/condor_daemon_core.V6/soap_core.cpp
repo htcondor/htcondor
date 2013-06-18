@@ -35,7 +35,11 @@
 #define realpath(P,B) _fullpath((B),(P),_MAX_PATH)
 #endif
 
+namespace condor_soap {
+
 extern int soap_serve(struct soap *);
+
+}
 
 extern DaemonCore *daemonCore;
 
@@ -61,7 +65,19 @@ dc_soap_accept(Sock *socket, const struct soap *soap)
 		//   3. increase size of send and receive buffers
 		//   4. set SO_KEEPALIVE [done automatically by CEDAR accept()]
 	cursoap->socket = socket->get_file_desc();
-	cursoap->peer = socket->peer_addr().to_sin();
+		// If you use Fedora's IPv6 patch for gsoap, peer is sockaddr_storage.
+		// Upstream has peer of type sockaddr_in.
+		// This trickery is done to keep the code compatible with both.
+	if (sizeof(cursoap->peer) == sizeof(sockaddr_storage))
+	{
+		sockaddr_storage store = socket->peer_addr().to_storage();
+		memcpy(&cursoap->peer, &store, sizeof(cursoap->peer));
+	}
+	else
+	{
+		sockaddr_in store = socket->peer_addr().to_sin();
+		memcpy(&cursoap->peer, &store, sizeof(cursoap->peer));
+	}
 	cursoap->recvfd = soap->socket;
 	cursoap->sendfd = soap->socket;
 	if ( cursoap->recv_timeout > 0 ) {
@@ -78,7 +94,7 @@ dc_soap_accept(Sock *socket, const struct soap *soap)
 int
 dc_soap_serve(struct soap *soap)
 {
-	return soap_serve(soap);
+	return condor_soap::soap_serve(soap);
 }
 
 void
@@ -454,7 +470,7 @@ handle_soap_ssl_socket(Service *, Stream *stream)
 	}
 
 	current_soap->user = soap_strdup(current_soap, canonical_user.Value());
-	soap_serve(current_soap);	// process RPC request
+	condor_soap::soap_serve(current_soap);	// process RPC request
 	soap_destroy(current_soap);	// clean up class instances
 	soap_end(current_soap);	// clean up everything and close socket
 	soap_done(current_soap);

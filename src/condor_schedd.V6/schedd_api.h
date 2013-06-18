@@ -118,7 +118,7 @@ class Job
 
 		   @param jobAd The Job's ClassAd.
 		 */
-	int submit(const struct condor__ClassAdStruct &jobAd,
+	int submit(const struct soap_schedd::condor__ClassAdStruct &jobAd,
 			   CondorError &errstack);
 
 		/**
@@ -390,7 +390,7 @@ protected:
 
 class NullScheddTransaction: protected ScheddTransaction
 {
-	friend bool stub_prefix(const char*, const soap*, int, int, DCpermission, bool, condor__Transaction*&, condor__Status&, ScheddTransaction*&);
+	friend bool stub_prefix(const char*, const soap*, int, int, DCpermission, bool, soap_schedd::condor__Transaction*&, soap_schedd::condor__Status&, ScheddTransaction*&);
 
 public:
 	virtual int begin();

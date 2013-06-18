@@ -104,7 +104,7 @@ void
 StateMachine::execute()
 {
 	State		*state_ptr;
-	Transition	*transition = 0;
+	Transition	* volatile transition = 0;
 	int			next_state;
 	int			event;
 	EventHandler	h( fsa_sig_handler, asynch_events );

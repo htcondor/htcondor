@@ -2434,7 +2434,7 @@ int dc_main( int argc, char** argv )
 
 	daemonCore->Register_Command( DC_NOP_WRITE, "DC_NOP_WRITE",
 								  (CommandHandler)handle_nop,
-								  "handle_nop()", 0, READ );
+								  "handle_nop()", 0, WRITE );
 
 	daemonCore->Register_Command( DC_NOP_NEGOTIATOR, "DC_NOP_NEGOTIATOR",
 								  (CommandHandler)handle_nop,

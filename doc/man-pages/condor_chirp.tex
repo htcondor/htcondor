@@ -70,10 +70,13 @@ vanilla, parallel and java universes.
     implement a stride by
     starting the read at \Arg{offset} and reading \Arg{length} bytes
     with a stride of \Arg{skip} bytes.}
-  \OptItem{\Opt{write} \oOptArg{-offset}{offset} \oOptArg{-stride}{length skip} \Arg{RemoteFileName} \Arg{LocalFileName}}
+  \OptItem{\Opt{write} \oOptArg{-offset}{offset} \oOptArg{-stride}{length skip} \Arg{RemoteFileName} \Arg{LocalFileName} [\Arg{numbytes}]}
     {Write the contents of \Arg{LocalFileName} to \Arg{RemoteFileName}.
     Optionally, start writing to the remote file at \Arg{offset} and write
-	\Arg{length} bytes with a stride of \Arg{skip} bytes.}
+    \Arg{length} bytes with a stride of \Arg{skip} bytes.  If the optional
+    \Arg{numbytes} follows \Arg{LocalFileName}, then the
+    write will halt after \Arg{numbytes} input bytes have been written.
+    Otherwise, the entire contents of \Arg{LocalFileName} will be written.}
   \OptItem{\Opt{rmdir} \oOpt{-r} \Arg{RemotePath}}
     {Delete the directory specified by \Arg{RemotePath}. 
     If the optional \Opt{-r} is specified, 

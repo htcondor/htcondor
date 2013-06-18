@@ -1027,11 +1027,11 @@ int Condor_Auth_X509::authenticate_server_gss(CondorError* errstack)
 
 void Condor_Auth_X509::setFQAN(const char *fqan) {
 	dprintf (D_FULLDEBUG, "ZKM: setting FQAN: %s\n", fqan ? fqan : "");
-	m_fqan = fqan;
+	m_fqan = fqan ? fqan : "";
 }
 
 const char *Condor_Auth_X509::getFQAN() {
-	return m_fqan.Value();
+	return m_fqan.empty() ? NULL : m_fqan.c_str();
 }
 
 #endif

@@ -26,6 +26,7 @@ my $append_condor_config = '
   # test with submit daemons using CCB
   SCHEDD.CCB_ADDRESS = $(COLLECTOR_HOST)
   SHADOW.CCB_ADDRESS = $(COLLECTOR_HOST)
+  DAEMON_LIST = MASTER, COLLECTOR, NEGOTIATOR, STARTD, SCHEDD
 
   # all daemons with same private network name
   PRIVATE_NETWORK_NAME = MyPrivateNet

@@ -317,7 +317,7 @@ class Scheduler : public Service
     friend  void    add_shadow_birthdate(int cluster, int proc, bool is_reconnect = false);
 	void			display_shadow_recs();
 	int				actOnJobs(int, Stream *);
-	void            enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool notify );
+	void            enqueueActOnJobMyself( PROC_ID job_id, JobAction action, bool notify, bool log );
 	int             actOnJobMyselfHandler( ServiceData* data );
 	int				updateGSICred(int, Stream* s);
 	void            setNextJobDelay( ClassAd *job_ad, ClassAd *machine_ad );
@@ -795,7 +795,8 @@ extern bool holdJob( int cluster, int proc, const char* reason = NULL,
 					 bool use_transaction = false, 
 					 bool notify_shadow = true,  
 					 bool email_user = false, bool email_admin = false,
-					 bool system_hold = true);
+					 bool system_hold = true,
+					 bool write_to_user_log = true);
 extern bool releaseJob( int cluster, int proc, const char* reason = NULL, 
 					 bool use_transaction = false, 
 					 bool email_user = false, bool email_admin = false,

@@ -4816,7 +4816,7 @@ globus_ftp_client_abort(
     globus_bool_t                   active;
     globus_object_t *				err;
     globus_result_t				result;
-    globus_i_ftp_client_handle_t *		handle;
+    globus_i_ftp_client_handle_t *		handle = 0;
     GlobusFuncName(globus_ftp_client_abort);
     
     globus_i_ftp_client_debug_printf(1, 

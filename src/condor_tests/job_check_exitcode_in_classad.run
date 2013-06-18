@@ -1,0 +1,252 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+##
+## This test check availability and usage contol of the new
+## local, resources in both a static configuration and in psolts.
+## It is model after what we did to test concurrency limits
+## as we are checking the same sorts of things. bt
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+
+my $ClusterId = 0;
+my $expect_return = 0;
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	ALL_DEBUG = 
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"affinityoff");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "affinityoff",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+my $on_abort = sub {
+	CondorTest::debug("Abort from removing sleep 0 jobs.\n",1);
+};
+
+my $result = 1;
+my $test_name = "job_check_exitcode_in_classad";
+my $on_execute = sub {
+	#print "********************************** OnExecute *****************************\n";
+
+};
+
+my $on_failure = sub {
+	#print "********************************** OnFailure *****************************\n";
+	ValidateExit($expect_return);
+};
+
+my $on_success = sub {
+	#print "********************************** OnSuccess *****************************\n";
+	ValidateExit($expect_return);
+};
+
+my $GetClusterId = sub {
+	my $cid = shift;
+	$ClusterId = $cid;
+	print "Resquestd Cluster Got $ClusterId\n";
+	##########################
+	#
+	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
+	# position which is always an undefined variable EXCEPT when it is a call back routine 
+	# to pass out the cluster Id.
+	#
+	##########################
+	#runcmd("condor_q",{emit_output => 1});
+};
+
+#Do a job before setting tesing exit codes
+print "First test basic job\n";
+$result = SimpleJob::RunCheck(); # jobid 1
+
+$expect_return = 0;
+$result = SimpleJob::RunCheck(
+	test_name => "$test_name",
+	on_abort => $on_abort,
+	on_execute => $on_execute,
+	queue_sz => 1,
+	duration => $expect_return,
+	runthis => "x_setexitcode.pl",
+	on_failure => $on_failure,
+	on_success => $on_success,
+	GetClusterId => $GetClusterId,
+);
+print "******************** Test for zero exit code\n";
+if($result == 1) {
+	print "ok\n\n\n";
+} else {
+	print "bad\n\n\n";
+}
+
+$expect_return = 66;
+$result = SimpleJob::RunCheck(
+	test_name => "$test_name",
+	on_abort => $on_abort,
+	on_execute => $on_execute,
+	queue_sz => 1,
+	duration => $expect_return,
+	runthis => "x_setexitcode.pl",
+	on_failure => $on_failure,
+	on_success => $on_success,
+	GetClusterId => $GetClusterId,
+);
+print "******************** Test for positive exit code\n";
+if($result == 1) {
+	print "ok\n\n\n";
+} else {
+	print "bad\n\n\n";
+}
+
+
+CondorTest::EndTest();
+
+# I think there is a race condition. The test failed a couple times
+# and was not able to get the userlog so I was not able to verify
+# expected terminate code. Going to make sure all the jobs have gone.
+sub VerifyNoJobs
+{
+	my $done = 0;
+	my $count  = 0;
+	my $maxtries = 10;
+	my @queue = ();
+	my $jobsrunning = 0;
+
+	if($ClusterId == 0) {
+		die "Cluster ID should not be zero\n";
+	}
+
+	while( $done != 1)
+	{
+		if($count > $maxtries) {
+			die "TOOO MANY tries to find empty queue with condor_q\n";
+		}
+		$count += 1;
+		@queue = `condor_q`;
+		foreach my $line (@queue) {
+			chomp($line);
+			if($line =~ /^(\d+)\s\jobs;.*$/) {
+				$jobsrunning = $1;
+				if($1 eq "0") {
+					$done = 1;
+				}
+			}
+		}
+		if($done == 0) {
+			print "Waiting for $jobsrunning job/s to leave queue\n";
+			sleep 1;
+		}
+	}
+}
+
+sub  ValidateExit
+{
+	my $expected_value = shift;
+	my $userlog = "";
+
+	my @history = 0;
+	if($ClusterId == 0) {
+		die "Cluster ID should not be zero\n";
+	}
+	VerifyNoJobs();
+	@history = `condor_history -l $ClusterId | grep UserLog`;
+
+	foreach my $ad (@history) {
+		chomp($ad);
+		print "USERLOG = $ad\n";
+		print "$ad\n";
+		if( $ad =~ /^UserLog\s*=\s*?"(.*)"$/) {
+			$userlog = $1;
+			#print "Userlog is $userlog\n";
+			last;
+		}
+	}
+	ParseTerminateValue( $expected_value, $userlog); 
+	GetExitClassAd($expected_value, $ClusterId); 
+}
+
+sub GetExitClassAd
+{
+	my $expected = shift;
+	my $cluster = shift;
+	my @history = 0;
+	my $returncode = "";
+
+	VerifyNoJobs();
+	CondorTest::debug("GetExitClassAd: Expected,$expected\n",2);
+	@history = `condor_history -l $ClusterId | grep ExitCode`;
+
+	foreach my $ad (@history) {
+		chomp($ad);
+		#print "ExitCode = $ad\n";
+		if( $ad =~ /^ExitCode\s*=\s*(\d+)\s*$/) {
+			$returncode = $1;
+			#print "returncode is $returncode\n";
+			last;
+		}
+	}
+	CheckExpectations("ExitCode", $returncode, $expected);
+}
+
+sub ParseTerminateValue
+{
+	my $expected = shift;
+	my $userlog = shift;
+
+	CondorTest::debug("ParseTerminateValue: Expected,$expected\n",2);
+	my $line = "";
+	my $returncode = "";
+	open(UL,"<$userlog") or die "tried to open <$userlog>:$!\n";
+	while(<UL>) {
+		chomp();
+		$line = $_;
+		if($line =~ /^005\s.*Job\sterminated.\s*.*$/) {
+			#print "Found terminate event <$line>\n";
+			last;
+		}
+	}
+	$line = <UL>; # this should hold return value
+	chomp($line);
+	if($line =~ /^.*?\(return\svalue\s(.*?)\).*$/) {
+	}
+	CheckExpectations("Terminate Value", $1, $expected);
+}
+
+
+sub CheckExpectations
+{
+	my $ad = shift;
+	my $got = shift;
+	my $expected = shift;
+
+	CondorTest::debug("CheckExpectations: $ad Got,$got Expected,$expected\n",2);
+	if($got != $expected) {
+		die "$ad: Expected <$expected> but only got <$got>\n";
+	} 
+}

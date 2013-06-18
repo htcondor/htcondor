@@ -330,7 +330,7 @@ int get_fields_from_tabular_stream(FILE * stream, TABULAR_MAP & out, bool fMulti
 		if (subhead.empty()) {
 			// use whitespace as a field separator
 			// assume all but last field headings/data have no spaces in them.
-			size_t ixh=0, ixd=0, ixh2, ixd2, ixhN;
+			size_t ixh=0, ixd=0, ixh2, ixd2=0, ixhN;
 			for (;;) {
 				if (ixh == string::npos)
 					break;
@@ -1764,8 +1764,8 @@ static void scan_a_log_for_info(
 							if (App.diagnostic)
 								printf("From Started DaemonCore process: %s = %s\n", daemon.c_str(), pid.c_str());
 							if (info.find(daemon) != info.end()) {
-								LOG_INFO * pliDaemon = info[daemon];
-								if (pliDaemon->pid.empty())
+								LOG_INFO * pliD = info[daemon];
+								if (pliD->pid.empty())
 									info[daemon]->pid = pid;
 							}
 						}
@@ -1794,9 +1794,9 @@ static void scan_a_log_for_info(
 									daemon.c_str(), exited_pid.c_str(), exit_code.c_str());
 						}
 						if (info.find(daemon) != info.end()) {
-							LOG_INFO * pliDaemon = info[daemon];
-							pliDaemon->pid = exited_pid;
-							pliDaemon->exit_code = exit_code;
+							LOG_INFO * pliD = info[daemon];
+							pliD->pid = exited_pid;
+							pliD->exit_code = exit_code;
 						}
 					}
 				}
@@ -1839,7 +1839,7 @@ static void scan_a_log_for_info(
 
 			// top line of JobStartup is " Communicating with shadow <"
 			//
-			size_t ix = line.find(" Communicating with shadow <");
+			ix = line.find(" Communicating with shadow <");
 			if (ix != string::npos) {
 				bInsideJobStartup = false;
 				//possible_job_shadow_addr = line.substr(line.find("<",ix));

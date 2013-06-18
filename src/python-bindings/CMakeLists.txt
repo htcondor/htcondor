@@ -1,7 +1,5 @@
 
 
-option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
-
 if ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND AND NOT SOLARIS )
   configure_file (
 	"${PROJECT_SOURCE_DIR}/src/python-bindings/test_driver.in"

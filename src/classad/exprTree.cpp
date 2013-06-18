@@ -55,7 +55,7 @@ void ExprTree::debug_format_value(Value &value, double time) const {
 
 			// Unparsing this of kind CLASSAD_NODE will result in the
 			// entire classad, which is unnecessarily verbose
-		if (CLASSAD_NODE == nodeKind) return;
+		if (CLASSAD_NODE == GetKind()) return;
 
 		PrettyPrint	unp;
 		string		buffer;
@@ -143,7 +143,6 @@ CopyFrom(const ExprTree &tree)
 {
     if (this != &tree) {
         parentScope = tree.parentScope;
-        nodeKind    = tree.nodeKind;
     }
     return;
 }
@@ -259,7 +258,7 @@ bool ExprTree::isClassad(ClassAd ** ptr)
 	bool bRet = false;
 	
 	
-	if ( CLASSAD_NODE == nodeKind )
+	if ( CLASSAD_NODE == GetKind() )
 	{
 		if (ptr){
 			*ptr = (ClassAd *) this;

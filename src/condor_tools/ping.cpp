@@ -193,7 +193,7 @@ void print_useful_info_10(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *a
 	printf("%20s", name.Value());
 
 	if(!rv) {
-		printf ("           FAIL       FAIL      FAIL  FAIL FAIL\n");
+		printf ("           FAIL       FAIL      FAIL     FAIL FAIL  (use -verbose for more info)\n");
 		return;
 	}
 
@@ -223,7 +223,7 @@ void print_useful_info_10(bool rv, MyString name, Sock*, ClassAd *ad, ClassAd *a
 
 	bool bval;
 	authz_ad->LookupBool(ATTR_SEC_AUTHORIZATION_SUCCEEDED, bval);
-	printf(bval ? " ALLOW " : "  DENY ");
+	printf(bval ? "    ALLOW " : "     DENY ");
 
 	ad->LookupString("myremoteusername", val);
 	printf("%s", val.Value());
@@ -358,7 +358,7 @@ bool do_item(Daemon* d, MyString name, int num, int output_mode) {
 
 	print_info(fn_success, d->addr(), sock, name, num, &authz_ad, &errstack, output_mode);
 
-	return true;
+	return fn_success;
 
 }
 
@@ -384,7 +384,7 @@ int main( int argc, char *argv[] )
 	config();
 
 	for( i=1; i<argc; i++ ) {
-		if(!strcmp(argv[i],"-help")) {
+		if(!strncmp(argv[i],"-help",strlen(argv[i]))) {
 			usage(argv[0]);
 			exit(0);
 		} else if(!strncmp(argv[i],"-quiet",strlen(argv[i]))) {	
@@ -569,7 +569,7 @@ int main( int argc, char *argv[] )
 
 	// do we need to print headers?
 	if(output_mode == 10) {
-		printf ("         Instruction Authentication Encryption Integrity Authz Identity\n");
+		printf ("         Instruction Authentication Encryption Integrity Decision Identity\n");
 	}
 
 	// load the supplied config if specified

@@ -78,11 +78,22 @@ Stream :: Stream(stream_code c) :
 }
 
 int
-Stream::code( void *&)
+Stream::code( void *& p )
 {
-	/* This is a noop just to make stub generation happy. All of the functions
-		that wish to use this overload we don't support or ignore. -psilord */
-	return TRUE;
+	switch(_coding){
+		case stream_encode:
+			return put( reinterpret_cast<unsigned long &>(p) );
+		case stream_decode:
+			return get( reinterpret_cast<unsigned long &>(p) );
+		case stream_unknown:
+			EXCEPT("ERROR: Stream::code(char &c) has unknown direction!");
+			break;
+		default:
+			EXCEPT("ERROR: Stream::code(char &c)'s _coding is illegal!");
+			break;
+	}
+
+	return FALSE;	/* will never get here	*/
 }
 
 Stream :: ~Stream()

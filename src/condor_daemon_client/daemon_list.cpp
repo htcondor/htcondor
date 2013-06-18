@@ -286,7 +286,7 @@ CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *er
 
 	std::vector<DCCollector *> vCollectors;
 	DCCollector * daemon;
-	QueryResult result;
+	QueryResult result = Q_COMMUNICATION_ERROR;
 
 	bool problems_resolving = false;
 
@@ -357,7 +357,7 @@ CollectorList::query(CondorQuery & cQuery, ClassAdList & adList, CondorError *er
 	}
 
 		// If we've gotten here, there are no good collectors
-	return Q_COMMUNICATION_ERROR;
+	return result;
 }
 
 

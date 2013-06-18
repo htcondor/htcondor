@@ -500,36 +500,40 @@ int chirp_write(int argc, char **argv) {
 			more = false;
 		}
 	}
-
-	if(fileOffset + 2 != argc) {
+	int length = 0;
+	bool backward_compat = false;
+	if(fileOffset + 2 == argc) {
+		//backward compat
+		backward_compat = true;
+		if(stride_length != 0 || stride_skip != 0) {
+			length = stride_length;
+		} else {
+			length = 1024;
+		}
+	} else if(fileOffset + 3 == argc) {
+		length = strtol(argv[fileOffset + 2], NULL, 10);
+	} else {
 		printf("condor_chirp write [-offset offset] [-stride length skip] "
-			"remote_file local_file\n");
+			"remote_file local_file length %d %d\n",fileOffset , argc);
 		return -1;
 	}
+	
 	char *remote_file = argv[fileOffset];
 	char *local_file = argv[fileOffset+1];
-
+	
 	struct chirp_client *client = 0;
 	CONNECT_STARTER(client);
 
-	int num_read = 0, num_written = 0, size = 0, add = 0;
+	int num_read = 0, num_written = 0, add = 0;
 	FILE *rfd;
 	char *buf;
 
-	if(stride_length != 0 || stride_skip != 0) {
-		size = stride_length;
-	} else {
-		size = 1024;
-	}
-	buf = (char*)malloc(size);
-	
 		// Use stdin or a local file
 	if (strcmp(local_file, "-") == 0) {
 		rfd = stdin;
 	} else {
 		rfd = ::safe_fopen_wrapper_follow(local_file, "rb");
 		if (!rfd) {
-			free((char*)buf);
 			fprintf(stderr, "Can't open local file %s\n", local_file);
 			DISCONNECT_AND_RETURN(client, -1);
 		}
@@ -539,46 +543,78 @@ int chirp_write(int argc, char **argv) {
 	int fd = chirp_client_open(client, remote_file, "w", 0);
 	if(fd < 0) {
 		fclose(rfd);
-		free((char*)buf);
 		DISCONNECT_AND_RETURN(client, fd);
 	}
+	
+	buf = (char*)malloc(length+1);
+	if ( ! buf) {
+		errno = ENOMEM;
+		CLOSE_DISCONNECT_AND_RETURN(client, fd, -1);
+	}
 
-		// Do the write(s)
-	do {
-		num_read = ::fread(buf, 1, size, rfd);
+	int ret_val = -1;
+	// Use pwrite
+	if(stride_length == 0 && stride_skip == 0) {
+		//offset is remote offset so we don't read using the offset value
+		num_read = ::fread(buf, 1, length, rfd);
 		if (num_read < 0) {
 			fclose(rfd);
 			free((char*)buf);
 			fprintf(stderr, "Local read error on %s\n", local_file);
 			CLOSE_DISCONNECT_AND_RETURN(client, fd, -1);
 		}
-
-			// EOF
-		if (num_read == 0) {
-			break;
-		}
+		ret_val = chirp_client_pwrite(client, fd, buf, num_read, offset);
+	} else {
+		if (!backward_compat){
+			num_read = ::fread(buf, 1, length, rfd);
+			if (num_read < 0) {
+				fclose(rfd);
+				free((char*)buf);
+				fprintf(stderr, "Local read error on %s\n", local_file);
+				CLOSE_DISCONNECT_AND_RETURN(client, fd, -1);
+			}
 		
-		// Use pwrite
-		num_written = chirp_client_pwrite(client, fd, buf, num_read, offset+add);
-
-			// Make sure we wrote the expected number of bytes
-		if(num_written != num_read) {
-			fclose(rfd);
-			free((char*)buf);
-			fprintf(stderr, "pwrite unable to write %d bytes\n", num_read);
-			CLOSE_DISCONNECT_AND_RETURN(client, fd, -1);
-		}
-		
-		if(stride_length != 0 || stride_skip != 0) {
-			add += stride_skip;
+			ret_val = chirp_client_swrite(client, fd, buf, length, offset,
+				stride_length, stride_skip);	
 		} else {
-			add += num_read;
-		}
-	} while (num_read > 0);
+			unsigned int total = 0;
+			do {
+				num_read = ::fread(buf, 1, length, rfd);
+				if (num_read < 0) {
+					fclose(rfd);
+					free((char*)buf);
+					fprintf(stderr, "Local read error on %s\n", local_file);
+					CLOSE_DISCONNECT_AND_RETURN(client, fd, -1);
+				}
 	
+				// EOF
+				if (num_read == 0) {
+					break;
+				}
+		
+				// Use pwrite
+				num_written = chirp_client_pwrite(client, fd, buf, num_read, offset+add);
+	
+				// Make sure we wrote the expected number of bytes
+				if(num_written != num_read) {
+					fclose(rfd);
+					free((char*)buf);
+					fprintf(stderr, "pwrite unable to write %d bytes\n", num_read);
+					CLOSE_DISCONNECT_AND_RETURN(client, fd, -1);
+				}
+				total += num_written;
+				if(stride_length != 0 || stride_skip != 0) {
+					add += stride_skip;
+				} else {
+					add += num_read;
+				}
+			} while (num_read > 0);
+			ret_val = total;
+		}
+	}
 	fclose(rfd);
 	free((char*)buf);
-	DISCONNECT_AND_RETURN(client, 0);
+	CLOSE_DISCONNECT_AND_RETURN(client, fd, ret_val);
 }
 
 int chirp_rmdir(int argc, char **argv) {

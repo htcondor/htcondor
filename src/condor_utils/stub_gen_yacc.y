@@ -132,6 +132,8 @@ input
 #endif
 
 
+/* removes compiler warnings */
+#define lint
 %}
 
 %%

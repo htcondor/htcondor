@@ -66,6 +66,9 @@ class FunctionCall : public ExprTree
 	
     FunctionCall & operator=(FunctionCall &functioncall);
 
+	/// node type
+	virtual NodeKind GetKind (void) const { return FN_CALL_NODE; }
+
 	/** Factory method to make a function call expression
 	 * 	@param fnName	The name of the function to be called
 	 * 	@param argList	A vector representing the argument list

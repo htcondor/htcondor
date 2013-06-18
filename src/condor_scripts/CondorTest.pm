@@ -406,6 +406,20 @@ sub RegisterRelease
 
     $test{$handle}{"RegisterRelease"} = $function_ref;
 }
+sub RegisterSuspended
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterSuspended"} = $function_ref;
+}
+sub RegisterUnsuspended
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterUnsuspended"} = $function_ref;
+}
 sub RegisterDisconnected
 {
     my $handle = shift || croak "missing handle argument";
@@ -619,12 +633,31 @@ END
 		$want_checkpoint = 0;
 	}
 
-	return DoTest($name, $submit_file, $want_checkpoint, $args{dagman_args});
+	my $undead = undef;
+	return DoTest($name, $submit_file, $want_checkpoint, $undead, $args{dagman_args});
 }
  
+###################################################################################
+##
+## We want to pass a call back function to secure the cluster id after DoTest
+## submits the job. We were expecting 3 defined values and one possible. We are adding
+## another possible which will have stack location alllowing an undefined then
+## followed by a defined on for dag args. We want this to work for dag tests too
+## so we will expand the 4 dag args to 5 with an undef at poision 3 , the fourth element
+##
+###################################################################################
+
 sub RunDagTest
 {
-	DoTest(@_);
+	my $undead = undef;
+	my $count = 0;
+	$count = @_;
+	if($count == 5) {
+		DoTest(@_);
+	} else {
+		my @newrgs = ($_[0],$_[1],$_[2],$undead,$_[3]);
+		DoTest(@newrgs);
+	}
 }
 
 sub DoTest
@@ -632,6 +665,7 @@ sub DoTest
     $handle              = shift || croak "missing handle argument";
     $submit_file      = shift || croak "missing submit file argument";
     my $wants_checkpoint = shift;
+	my $clusterIDcallback = shift;
 	my $dagman_args = 	shift;
 
     my $status           = -1;
@@ -709,6 +743,10 @@ sub DoTest
     	$cluster = Condor::TestSubmitDagman( $submit_file, $dagman_args );
 	}
     
+	if(defined $clusterIDcallback) {
+		&$clusterIDcallback($cluster);
+	}
+
     # if condor_submit failed for some reason return an error
     if($cluster == 0){
 		print "Why is cluster 0 in RunTest??????\n";
@@ -985,6 +1023,66 @@ sub CheckRegistrations
 	Condor::RegisterULog( sub {
 	    my %info = @_;
 	    die "$handle: FAILURE (job ulog)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterSuspended"} )
+    {
+	Condor::RegisterSuspended( $test{$handle}{"RegisterSuspended"} );
+    }
+    else
+    {
+	Condor::RegisterSuspended( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (Suspension not expected)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterUnsuspended"} )
+    {
+	Condor::RegisterUnsuspended( $test{$handle}{"RegisterUnsuspended"} );
+    }
+    else
+    {
+	Condor::RegisterUnsuspended( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (Unsuspension not expected)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterDisconnected"} )
+    {
+	Condor::RegisterDisconnected( $test{$handle}{"RegisterDisconnected"} );
+    }
+    else
+    {
+	Condor::RegisterDisconnected( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (Disconnect not expected)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterReconnected"} )
+    {
+	Condor::RegisterReconnected( $test{$handle}{"RegisterReconnected"} );
+    }
+    else
+    {
+	Condor::RegisterReconnected( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (reconnect not expected)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterReconnectFailed"} )
+    {
+	Condor::RegisterReconnectFailed( $test{$handle}{"RegisterReconnectFailed"} );
+    }
+    else
+    {
+	Condor::RegisterReconnectFailed( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (reconnect failed)\n";
 	} );
     }
 
@@ -1639,7 +1737,7 @@ sub SearchCondorLog
     my $logloc = `condor_config_val ${daemon}_log`;
     CondorUtils::fullchomp($logloc);
 
-    CondorTest::debug("Search this log <$logloc> for <$regexp>\n",2);
+    CondorTest::debug("Search this log <$logloc> for <$regexp>\n",3);
     open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
     while(<LOG>) {
         if( $_ =~ /$regexp/) {
@@ -1655,6 +1753,19 @@ sub SearchCondorLog
 # SearchCondorLogMultiple`
 #
 # Search a log for a regexp pattern N times on some interval
+# 
+# May 2103 extension by bt
+#
+# Find N new patterns in the file lets you wait for a new say negotiator
+# 	cycle to start. ($findnew [true/false]
+#
+# Find the next pattern after this pattern (next $findafter after regexp) 
+#
+# Find number of matches between two patterns and use call back for count.
+#	Count $findbetween which come after $regexp but before $findafter
+#
+#	see test job_services_during_neg_cycle.run
+#
 #
 ##############################################################################
 
@@ -1665,13 +1776,17 @@ sub SearchCondorLogMultiple
 	my $instances = shift;
 	my $timeout = shift;
 	my $findnew = shift;
+	my $findcallback = shift;
+	my $findafter = shift;
+	my $findbetween = shift;
 	my $currentcount = 0;
 	my $found = 0;
 	my $tried = 0;
+	my $goal = 0;
 
     my $logloc = `condor_config_val ${daemon}_log`;
     CondorUtils::fullchomp($logloc);
-    CondorTest::debug("Search this log <$logloc> for <$regexp>\n",2);
+    CondorTest::debug("Search this log <$logloc> for <$regexp> instances = <$instances>\n",1);
 
 	# do we want to see X new events
 	if($findnew eq "true") {
@@ -1686,24 +1801,78 @@ sub SearchCondorLogMultiple
 			}
    		}
 		close(LOG);
-		$instances = $currentcount + $instances;
+		$goal = $currentcount + $instances;
+		CondorTest::debug("Raised request to $goal since current count is $currentcount\n",2);
+	} else {
+		$goal = $instances;
 	}
 
-	while($found < $instances) {
+
+	my $count = 0;
+	my $begin = 0;
+	my $foundanything = 0;
+	my $tolerance = 3;
+	my $done = 0;
+	while($found < $goal) {
        	CondorTest::debug("Searching Try $tried\n",2);
 		$found = 0;
    		open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
    		while(<LOG>) {
-       		if( $_ =~ /$regexp/) {
+			chomp($_);
+			if(defined $findbetween) {
+				# start looking for between string after first pattern
+				# and stop when you find after string. call match callback
+				# with actual count.
+				if( $_ =~ /$regexp/) {
+					CondorTest::debug("Found start <$_>\n",2);
+					$begin = 1;
+					$goal = 100000;
+				} elsif( $_ =~ /$findafter/) {
+					CondorTest::debug("Found done <$_>\n",2);
+					$done = 1;
+					if(defined $findcallback) {
+						 &$findcallback($count);
+					}
+					$found = $goal;
+					last;
+				} elsif($_ =~ /$findbetween/) {
+					if($begin == 1) {
+						$count += 1;
+
+						CondorTest::debug("Found Match <$_>\n",2);
+					}
+				} else {
+					#print ".";
+				}
+       		} elsif( $_ =~ /$regexp/) {
            		CondorTest::debug("FOUND IT! $_\n",2);
 				$found += 1;
+				$foundanything += 1;
+				#print "instances $instances found $found goal $goal\n";
+				if((defined $findcallback) and (!(defined $findafter)) and 
+					 ($found == $goal)) {
+					&$findcallback($_);
+				}
+				if((defined $findcallback) and (defined $findafter) and 
+					 ($found == $goal)) {
+					#&$findcallback($_);
+				}
+				if((defined $findafter) and ($found == $goal)) {
+					# change the pattern we are looking for. really only
+					# works well when looking for one particular item.
+					# undef the second pattern so we get a crack at the callback
+					$found = 0;
+					$goal = 1;
+					$regexp = $findafter;
+					$findafter = undef;
+				}
        		} else {
            		CondorTest::debug(".",2);
 			}
    		}
 		close(LOG);
-		CondorTest::debug("Found <$found> want <$instances>\n",2);
-		if($found < $instances) {
+		CondorTest::debug("Found <$found> want <$goal>\n",2);
+		if($found < $goal) {
 			sleep 1;
 		} else {
 			#Done
@@ -1711,16 +1880,28 @@ sub SearchCondorLogMultiple
 		}
 		$tried += 1;
 		if($tried >= $timeout) {
-			last;
-		}
-		if($found >= $instances) {
-			CondorTest::debug("Found <$found> want <$instances> LEAVING\n",2);
-			#done
-			return(1);;
+			if($tolerance == 0) {
+				CondorTest::debug("SearchCondorLogMultiple: About to fail from timeout!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",1);
+				if(defined $findcallback) {
+					&$findcallback("HitRetryLimit");
+				}
+				last;
+			} else {
+				if($foundanything > 0) {
+					CondorTest::debug("SearchCondorLogMultiple: Using builtin tolerance\n",1);
+					$tolerance -= 1;
+					$tried = 1;
+				} else {
+					$tolerance = 0;
+					$tried -= 2;
+				}
+			}
 		}
 	}
-	if($found < $instances) {
+	if($found < $goal) {
 		return(0);
+	} else {
+		return(1);
 	}
 }
 
@@ -2072,7 +2253,7 @@ sub KillPersonal
 		$logdir = $1 . "/log";
 	} else {
 		debug("KillPersonal passed this config<<$personal_config>>\n",2);
-		die "Can not extract log directory\n";
+		e ie "Can not extract log directory\n";
 	}
 	debug("Doing core ERROR check in  KillPersonal\n",2);
 	$failed_coreERROR = CoreCheck($handle, $logdir, $teststrt, $teststop);
@@ -2466,5 +2647,63 @@ sub WriteFileOrDie
 	close OUT;
 }
 
+# we want to produce a temporary file to use as a fresh start
+# through StartCondorWithParams. 
+sub CreateLocalConfig
+{
+    my $text = shift;
+    my $name = shift;
+    $name = "$name$$";
+    open(FI,">$name") or die "Failed to create local config starter file<$name>:$!\n";
+    print "Created <$name>\n";
+    print FI "$text";
+    runcmd("cat $name");
+    close(FI);
+    return($name);
+}
+
+sub VerifyNoJobsInState
+{
+	my $state = shift;
+	my $number = shift;
+    my $maxtries = shift;
+    my $done = 0;
+    my $count  = 0;
+    my @queue = ();
+    my $jobsrunning = 0;
+	my %jobsstatus = ();;
+
+
+    while( $done != 1)
+    {
+        if($count > $maxtries) {
+			return($jobsstatus{$state});
+        }
+        $count += 1;
+        @queue = `condor_q`;
+        foreach my $line (@queue) {
+            chomp($line);
+            if($line =~ /^(\d+)\s+jobs;\s+(\d+)\s+completed,\s+(\d+)\s+removed,\s+(\d+)\s+idle,\s+(\d+)\s+running,\s+(\d+)\s+held,\s+(\d+)\s+suspended.*$/) {
+				#print "$line\n";
+				$jobsstatus{jobs} = $1;
+				$jobsstatus{completed} = $2;
+				$jobsstatus{removed} = $3;
+				$jobsstatus{idle} = $4;
+				$jobsstatus{running} = $5;
+				$jobsstatus{held} = $6;
+				$jobsstatus{suspended} = $7;
+				if($jobsstatus{$state} == $number){
+                    $done = 1;
+					print "$number $state\n";
+					return($number)
+				}
+            }
+        }
+        if($done == 0) {
+            print "Waiting for $number $state\n";
+            sleep 1;
+        }
+    }
+}
 
 1;
