@@ -1117,7 +1117,7 @@ sub CheckRegistrations
     } else { 
 		Condor::RegisterEvictedWithoutCheckpoint( sub {
 	    my %info = @_;
-	    die "$handle: FAILURE (Unexpected Eviction with checkpoint)\n";
+	    die "$handle: FAILURE (Unexpected Eviction without checkpoint)\n";
 	} );
 	}
 
