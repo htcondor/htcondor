@@ -146,7 +146,7 @@ void EC2Resource::DoPing( time_t& ping_delay, bool& ping_complete, bool& ping_su
 	
 	ping_delay = 0;
 
-	char * error_code = NULL;	
+	std::string error_code;
 	int rc = gahp->ec2_ping( resourceName, m_public_key_file, m_private_key_file, error_code );
 
 	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -159,13 +159,12 @@ void EC2Resource::DoPing( time_t& ping_delay, bool& ping_complete, bool& ping_su
 		// the service is up, so return true.  Individual jobs with
 		// invalid authentication tokens will then go on hold, which is
 		// what we want (rather than saying idle).
-		if( error_code != NULL ) {
-			if( strstr( error_code, "(401)" ) != NULL ) {
+		if( error_code != "" ) {
+			if( strstr( error_code.c_str(), "(401)" ) != NULL ) {
 				ping_succeeded = true;
 				m_hadAuthFailure = true;
-				formatstr( authFailureMessage, "(%s): '%s'", error_code, gahp->getErrorString() );
+				formatstr( authFailureMessage, "(%s): '%s'", error_code.c_str(), gahp->getErrorString() );
 			}    		    
-			free( error_code );
 		} else {
 		    ping_succeeded = false;
 		}
@@ -184,7 +183,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
     // m_checkSpotNext starts out false
     if( ! m_checkSpotNext ) {
         StringList returnStatus;
-        char * errorCode = NULL;
+        std::string errorCode;
         int rc = status_gahp->ec2_vm_status_all( resourceName,
                     m_public_key_file, m_private_key_file,
                     returnStatus, errorCode );
@@ -194,8 +193,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
         if( rc != 0 ) {
             std::string errorString = status_gahp->getErrorString();
             dprintf( D_ALWAYS, "Error doing batched EC2 status query: %s: %s.\n",
-                     errorCode ? errorCode : "", errorString.c_str() );
-            free( errorCode );
+                     errorCode.c_str(), errorString.c_str() );
             return BSR_ERROR;
         }
 
@@ -288,7 +286,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
     
     if( m_checkSpotNext ) {
         StringList spotReturnStatus;
-        char * spotErrorCode = NULL;
+        std::string spotErrorCode;
         int spotRC = status_gahp->ec2_spot_status_all( resourceName,
                         m_public_key_file, m_private_key_file,
                         spotReturnStatus, spotErrorCode );
@@ -298,8 +296,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
         if( spotRC != 0 ) {
             std::string errorString = status_gahp->getErrorString();
             dprintf( D_ALWAYS, "Error doing batched EC2 spot status query: %s: %s.\n",
-                     spotErrorCode ? spotErrorCode : "", errorString.c_str() );
-            free( spotErrorCode );
+                     spotErrorCode.c_str(), errorString.c_str() );
             return BSR_ERROR;
         }
 

@@ -400,6 +400,7 @@ void EC2Job::doEvaluateState()
 	bool attr_exists;
 	bool attr_dirty;
 	int rc;
+	std::string gahp_error_code;
 
 	daemonCore->Reset_Timer( evaluateStateTid, TIMER_NEVER );
 
@@ -416,7 +417,7 @@ void EC2Job::doEvaluateState()
 	
 	do {
 		
-		char *gahp_error_code = NULL;
+		gahp_error_code = "";
 
 		// JEF: Crash the gridmanager if requested by the job
 		int should_crash = 0;
@@ -596,7 +597,7 @@ void EC2Job::doEvaluateState()
 					    errorString = gahp->getErrorString();
 					    dprintf(D_ALWAYS,"(%d.%d) job create keypair failed: %s: %s\n",
 							    procID.cluster, procID.proc, 
-								gahp_error_code ? gahp_error_code : "",
+								gahp_error_code.c_str(),
 							    errorString.c_str() );
 					    gmState = GM_HOLD;
 					    break;
@@ -638,7 +639,7 @@ void EC2Job::doEvaluateState()
 					}
 
 					// construct input parameters for ec2_vm_start()
-					char* instance_id = NULL;
+					std::string instance_id = "";
 					
 					// For a given EC2 Job, in its life cycle, the attributes will not change
 					
@@ -671,8 +672,8 @@ void EC2Job::doEvaluateState()
 
 					lastSubmitAttempt = time(NULL);
 
-					if ( rc != 0 && gahp_error_code &&
-						 strcmp( gahp_error_code, "NEED_CHECK_VM_START" ) == 0 ) {
+					if ( rc != 0 && 
+						 gahp_error_code == "NEED_CHECK_VM_START" ) {
 						// get an error code from gahp server said that we should check if 
 						// the VM has been started successfully in EC2
 						
@@ -685,14 +686,13 @@ void EC2Job::doEvaluateState()
 
 					if ( rc == 0 ) {
 						
-						ASSERT( instance_id != NULL );
-						SetInstanceId( instance_id );
+						ASSERT( instance_id != "" );
+						SetInstanceId( instance_id.c_str() );
 						WriteGridSubmitEventToUserLog(jobAd);
-						free( instance_id );
 											
 						gmState = GM_SAVE_INSTANCE_ID;
 						
-					} else if ( gahp_error_code && strcmp( gahp_error_code, "InstanceLimitExceeded" ) == 0 ) {
+					} else if ( gahp_error_code == "InstanceLimitExceeded" ) {
 						// meet the resource limitation (maximum 20 instances)
 						// should retry this command later
 						myResource->CancelSubmit( this );
@@ -702,7 +702,7 @@ void EC2Job::doEvaluateState()
 						errorString = gahp->getErrorString();
 						dprintf(D_ALWAYS,"(%d.%d) job submit failed: %s: %s\n",
 								procID.cluster, procID.proc,
-								gahp_error_code ? gahp_error_code : "",
+								gahp_error_code.c_str(),
 								errorString.c_str() );
 						gmState = GM_HOLD;
 					}
@@ -1110,7 +1110,7 @@ void EC2Job::doEvaluateState()
 					errorString = gahp->getErrorString();
 					dprintf( D_ALWAYS, "(%d.%d) job cancel failed: %s: %s\n",
 							 procID.cluster, procID.proc,
-							 gahp_error_code ? gahp_error_code : "",
+							 gahp_error_code.c_str(),
 							 errorString.c_str() );
 					gmState = GM_HOLD;
 				}
@@ -1212,7 +1212,7 @@ void EC2Job::doEvaluateState()
                                 errorString = gahp->getErrorString();
                                 dprintf( D_ALWAYS, "(%d.%d) job destroy keypair (%s) failed: %s: %s\n",
                                     procID.cluster, procID.proc, m_key_pair.c_str(),
-                                    gahp_error_code ? gahp_error_code : "",
+                                    gahp_error_code.c_str(),
                                     errorString.c_str() );
                             }
                         }
@@ -1251,7 +1251,7 @@ void EC2Job::doEvaluateState()
                 }
                 
                 // Send a command to the GAHP, or poll for its result(s).
-                char * spot_request_id = NULL;
+                std::string spot_request_id;
                 rc = gahp->ec2_spot_start(  m_serviceUrl,
                                             m_public_key_file,
                                             m_private_key_file,
@@ -1270,8 +1270,7 @@ void EC2Job::doEvaluateState()
                 dprintf( D_ALWAYS, "GM_FAILURE_INJECTION = '%s'\n", m_failure_injection );
                 if( strcmp( m_failure_injection, "1" ) == 0 ) {
                     rc = 1;
-                    // gahp_error_code is free()d below.
-                    gahp_error_code = strdup( "E_TESTING" );
+                    gahp_error_code = "E_TESTING";
                     gahp->setErrorString( "GM_FAILURE_INJECTION #1" );
                 }
 
@@ -1289,10 +1288,9 @@ void EC2Job::doEvaluateState()
                 // distinguish between instance and spot request IDs, and
                 // it's not clear they're required to be distinguishable.
                 if( rc == 0 ) {
-                    ASSERT( spot_request_id != NULL );
+                    ASSERT( spot_request_id != "" );
 
-                    SetRequestID( spot_request_id );
-                    free( spot_request_id );
+                    SetRequestID( spot_request_id.c_str() );
                     requestScheddUpdate( this, false );
                     
                     gmState = GM_SPOT_SUBMITTED;
@@ -1301,7 +1299,7 @@ void EC2Job::doEvaluateState()
                     errorString = gahp->getErrorString();
                     dprintf( D_ALWAYS, "(%d.%d) spot instance request failed: %s: %s\n",
                                 procID.cluster, procID.proc,
-                                gahp_error_code ? gahp_error_code : "",
+                                gahp_error_code.c_str(),
                                 errorString.c_str() );
                     dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_START + <GAHP failure> = GM_HOLD\n" );
                     
@@ -1328,8 +1326,7 @@ void EC2Job::doEvaluateState()
 
                     if( strcmp( m_failure_injection, "2" ) == 0 ) {
                         rc = 1;
-                        // gahp_error_code is free()d below.
-                        gahp_error_code = strdup( "E_TESTING" );
+                        gahp_error_code = "E_TESTING";
                         gahp->setErrorString( "GM_FAILURE_INJECTION #2" );
                     }
 
@@ -1344,7 +1341,7 @@ void EC2Job::doEvaluateState()
                         errorString = gahp->getErrorString();
                         dprintf( D_ALWAYS, "(%d.%d) spot request stop failed: %s: %s\n",
                                     procID.cluster, procID.proc,
-                                    gahp_error_code ? gahp_error_code : "",
+                                    gahp_error_code.c_str(),
                                     errorString.c_str() );
                         dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_CANCEL + <GAHP failure> = GM_HOLD\n" );
                         gmState = GM_HOLD;
@@ -1413,8 +1410,7 @@ void EC2Job::doEvaluateState()
 
                 if( strcmp( m_failure_injection, "3" ) == 0 ) {
                     rc = 1;
-                    // gahp_error_code is free()d below.
-                    gahp_error_code = strdup( "E_TESTING" );
+                    gahp_error_code = "E_TESTING";
                     gahp->setErrorString( "GM_FAILURE_INJECTION #3" );
                 }
 
@@ -1430,7 +1426,7 @@ void EC2Job::doEvaluateState()
                     errorString = gahp->getErrorString();
                     dprintf( D_ALWAYS, "(%d.%d) spot request probe failed: %s: %s\n",
                                 procID.cluster, procID.proc,
-                                gahp_error_code ? gahp_error_code : "",
+                                gahp_error_code.c_str(),
                                 errorString.c_str() );
                     dprintf( D_FULLDEBUG, "Error transition: GM_SPOT_QUERY + <GAHP failure> = GM_HOLD\n" );
                     gmState = GM_HOLD;
@@ -1574,8 +1570,7 @@ void EC2Job::doEvaluateState()
 
                 if( strcmp( m_failure_injection, "6" ) == 0 ) {
                     rc = 1;
-                    // gahp_error_code is free()d below.
-                    gahp_error_code = strdup( "E_TESTING" );
+                    gahp_error_code = "E_TESTING";
                     gahp->setErrorString( "GM_FAILURE_INJECTION #6" );
                 }
 
@@ -1660,11 +1655,6 @@ void EC2Job::doEvaluateState()
 				break;
 		} // end of switch_case
 		
-			// This string is used for gahp calls, but is never needed beyond
-			// this point. This should really be a MyString.
-		free( gahp_error_code );
-		gahp_error_code = NULL;
-
 		if ( gmState != old_gm_state ) {
 			reevaluate_state = true;
 			dprintf(D_FULLDEBUG, "(%d.%d) gm state change: %s -> %s\n",
@@ -1892,7 +1882,7 @@ void EC2Job::print_error_code( const char* error_code,
 void EC2Job::associate_n_attach()
 {
 
-	char *gahp_error_code = NULL;
+	std::string gahp_error_code;
     StringList returnStatus;
 	int rc;
 
@@ -1941,10 +1931,10 @@ void EC2Job::associate_n_attach()
 		default:
 			dprintf(D_ALWAYS,
 					"Failed ec2_create_tags returned %s continuing w/job\n",
-					gahp_error_code ? gahp_error_code : "");
+					gahp_error_code.c_str());
 			break;
 		}
-		if (gahp_error_code) { free(gahp_error_code); gahp_error_code = NULL; }
+		gahp_error_code = "";
 	}
 	if (buffer) { free(buffer); buffer = NULL; }
 
@@ -1971,10 +1961,10 @@ void EC2Job::associate_n_attach()
 			default:
 				dprintf(D_ALWAYS,
 						"Failed ec2_associate_address returned %s continuing w/job\n",
-						gahp_error_code ? gahp_error_code : "");
+						gahp_error_code.c_str());
 				break;
 		}
-		if (gahp_error_code) { free(gahp_error_code); gahp_error_code = NULL; }
+		gahp_error_code = "";
 	}
 
 	if (!m_ebs_volumes.empty())
@@ -2016,10 +2006,10 @@ void EC2Job::associate_n_attach()
 					bcontinue=false;
 					dprintf(D_ALWAYS,
 							"Failed ec2_attach_volume returned %s continuing w/job\n",
-							gahp_error_code ? gahp_error_code : "");
+							gahp_error_code.c_str());
 					break;
 			}
-			if (gahp_error_code) { free(gahp_error_code); gahp_error_code = NULL; }
+			gahp_error_code = "";
 		}
 	}
 }
