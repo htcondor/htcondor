@@ -28,6 +28,7 @@ $testname = "job_ckpt_io-buffer-async_std";
 
 my $on_evictedwithcheckpoint = sub {
 	CondorTest::debug("Evicted With Checkpoint expected.\n",1);
+	CondorTest::AddCheckpoint();
 };
 
 sub OutputTest

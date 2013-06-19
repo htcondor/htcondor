@@ -695,7 +695,7 @@ sub DoTest
 	if( $wants_checkpoint )
 	{
 		Condor::RegisterExecute( \&ForceVacate );
-		Condor::RegisterEvictedWithCheckpoint( sub { $checkpoints++ } );
+		#Condor::RegisterEvictedWithCheckpoint( sub { $checkpoints++ } );
 	} else {
 		if(defined $test{$handle}{"RegisterExecute"}) {
 			Condor::RegisterExecute($test{$handle}{"RegisterExecute"});
@@ -2742,6 +2742,16 @@ sub VerifyNoJobsInState
             sleep 1;
         }
     }
+}
+
+sub AddCheckpoint
+{
+	$checkpoints++;
+}
+
+sub GetCheckpoints
+{
+	return($checkpoints);
 }
 
 1;

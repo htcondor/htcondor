@@ -90,7 +90,7 @@ sub RunCheck
     my $unsuspended_fn = $args{on_unsuspended} || $dummy;
     my $disconnected_fn = $args{on_disconnected} || $dummy;
     my $reconnected_fn = $args{on_reconnected} || $dummy;
-    my $evicted_fn = $args{on_evicted} || $dummy;
+    #my $evicted_fn = $args{on_evicted} || $dummy;
     my $evicted_ewc_fn = $args{on_evictedwithcheckpoint} || $dummy;
     my $evicted_ewoc_fn = $args{on_evictedwithoutcheckpoint} || $dummy;
     my $evicted_wreq_fn = $args{on_evictedwithrequeue} || $dummy;

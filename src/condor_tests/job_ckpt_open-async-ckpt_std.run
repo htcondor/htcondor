@@ -30,6 +30,7 @@ CondorTest::SetExpected(\@expected_output);
 
 my $on_evictedwithcheckpoint = sub {
 	CondorTest::debug("Evicted With Checkpoint expected.\n",1);
+	CondorTest::AddCheckpoint();
 };
 
 CondorTest::RegisterEvictedWithCheckpoint($testname, $on_evictedwithcheckpoint);

@@ -555,7 +555,7 @@ foreach my $compiler (@compilers) {
 	    if( $hush == 0 ) {
 		debug( "forking for $test_program pid returned is $pid\n",3);
 	    }
-		debug_flush();
+		#debug_flush();
 	    die "error calling fork(): $!\n" unless defined $pid;
 
 	    # two modes 

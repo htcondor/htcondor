@@ -328,7 +328,11 @@ sub debug {
 	push @debugcollection, "$time: CondorPersonal - $string";
     #if($DEBUG) {
         if(!(defined $level) or ($level <= $DEBUGLEVEL)) {
-            print( "", timestamp(), ":<CondorPersonal>(L=$level) $string" );
+			if(defined $level) {
+            	print( "", timestamp(), ":<CondorPersonal>(L=$level) $string" );
+			} else {
+            	print( "", timestamp(), ":<CondorPersonal>(L=?) $string" );
+			}
         }
     #}
 }
