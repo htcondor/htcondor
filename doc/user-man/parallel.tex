@@ -116,11 +116,15 @@ The string after the \Expr{@} sign should match the name of the
 \end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:parallel-submit}Parallel Job Submission}
+\subsection{\label{sec:parallel-submit}Submission Examples}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-A simple submit description file for a parallel universe
-job example appears as
+\begin{description}
+\item[Simplest Example]
+\end{description}
+
+Here is a submit description file for a parallel universe
+job example that is as simple as possible:
 
 \begin{verbatim}
 #############################################
@@ -149,6 +153,10 @@ starting the job.  When all the machines are ready, it invokes the
 on all eight machines more or less simultaneously.  As with serial
 jobs, important event in the life cycle of the job are written
 to the user log noted in the log command.
+
+\begin{description}
+\item[Example with Operating System Requirements]
+\end{description}
 
 Parallel universe jobs have the familiar Requirements expression
 that serial jobs do, and setting the requirements expression will
@@ -196,6 +204,10 @@ requirements = (OpSysAndVer == "RedHat6")
 queue
 \end{verbatim}
 
+\begin{description}
+\item[Using the \MacroUNI{Node} Macro]
+\end{description}
+
 A more realistic example of a parallel job utilizes other features.
 
 \begin{verbatim}
@@ -230,9 +242,9 @@ It can therefore be used to identify individual aspects of the computation.
 In this example, it is used to utilize and assign unique names to
 input and output files.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:parallel-multi-proc}Parallel Jobs with Separate Requirements}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{description}
+\item[Differing Requirements for the Machines]
+\end{description}
 
 Usually, all the machines running a parallel job will have the
 same requirements.  Sometimes, though, one machine will need
@@ -240,10 +252,6 @@ to be different than the rest.
 The different subsets of machines executing a parallel universe job
 may specify different machine requirements.  A common example requires that the
 head node execute on a specific machine.  It may be also useful for debugging purposes.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsubsection{Parallel Universe Example Submit Description Files}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 To demonstrate how to have parallel jobs with different requirements,
 consider the following example.
@@ -305,33 +313,13 @@ assume that each job is not independent -- as by definition, a parallel job is a
 job is at least setup to handle multiple (sub)processes. Instead, the user will
 need to run \Condor{submit} multiple times.
 
-%How do you create subprocesses?
+\label{sec:parallel-mpi-submit}
+\begin{description}
+\item[MPI Applications]
+\end{description}
 
-%\begin{description}
-%\item[machine\_count] How many machines/hosts you want.
-%\item[request\_cpus] How many CPUs each machine/host should have available. Each 
-%combination of machines and CPUs is a process with its own unique \Attr{ProcID}.
-%When the 
-%\item[queue \Arg{N}] How many processes with the previously listed 
-%\Attr{machine\_count} and \Attr{request\_cpus} you want.
-%\end{description}
-
-% Machine count <- how many machines/hosts you want. Each host can have multiple CPUs
-% Request CPUs <- how many CPUs you want on a given machine
-% Make sure you do the math for your call to mpirun. Make sure that the sum of 
-% the requested CPUs adds up to the number of nodes you want.
-% The queue command should match up to the machine count as well?
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:parallel-mpi-submit}MPI Applications Within HTCondor's Parallel Universe}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{parallel universe!running MPI applications}
 \index{MPI application}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\subsubsection{\label{sec:parallel-mpi-submit-multiple}
-%Running MPI Jobs On Multiple Machines}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 MPI applications consist of a single executable that is invoked in order to
 execute in parallel on one or more machines. 
@@ -458,18 +446,6 @@ uses MPDIR.
 %path set in the user's \File{.cshrc} script.
 %As of this writing, the LAM implementation does not work
 %if the user's login shell is the Bourne or compatible shell.
-
-These MPI jobs operate as all parallel universe jobs do.
-The default policy is that when the first node exits,
-the whole job is considered done, 
-and HTCondor kills all other running nodes in that parallel job.
-Alternatively, a parallel universe job that sets the attribute
-\begin{verbatim}
-+ParallelShutdownPolicy = "WAIT_FOR_ALL"
-\end{verbatim}
-in its submit description file changes the policy,
-such that HTCondor will wait until every node in the parallel 
-job has completed to consider the job finished. 
 
 \index{parallel universe|)}
 
