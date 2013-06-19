@@ -52,12 +52,21 @@ if "OutboundConnectivity" in job_ad.keys():
 if "NetworkAccounting" in job_ad.keys():
     flag3 = True
     expr3 = job_ad.lookup("NetworkAccounting")
+if "OpenflowSupport" in job_ad.keys():
+    flag4 = True
+    expr4 = job_ad.lookup("OpenflowSupport")
 
 if  flag1 == True and flag2 == True:
     if expr1.eval() == False and expr2.eval() == True:
         machine_ad_update["LarkNetworkType"] = 'nat'
     if expr1.eval() == True and expr2.eval() == True:
-        machine_ad_update["LarkNetworkType"] = 'bridge'
+        if flag4 == True:
+            if expr4.eval() == True:
+                machine_ad_update["LarkNetworkType"] = 'ovs_bridge'
+            else:
+                machine_ad_update["LarkNetworkType"] = 'bridge'
+        else:
+            machine_ad_update["LarkNetworkType"] = 'bridge'
         machine_ad_update["LarkBridgeDevice"] = 'eth0'
         machine_ad_update["LarkAddressType"] = 'dhcp'
 if flag3 == True:

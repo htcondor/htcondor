@@ -1,0 +1,10 @@
+[
+Err = "tests_tmp/lark_test_4.err";
+Out = "tests_tmp/lark_test_4.out";
+Cmd = "/usr/bin/curl";
+Arguments = "www.google.com";
+InboundConnectivity = true;
+OutboundConnectivity = true;
+NetworkAccounting = true;
+OpenflowSupport = true;
+]
