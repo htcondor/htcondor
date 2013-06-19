@@ -732,6 +732,7 @@ class Dag {
 	*/
 	inline bool Recovery() const { return _recovery; }
 
+	inline void UseDefaultNodeLog(bool useit) { _use_default_node_log = useit; }
   private:
 
 	// If this DAG is a splice, then this is what the DIR was set to, it 

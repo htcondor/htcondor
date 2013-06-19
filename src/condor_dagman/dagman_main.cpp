@@ -1201,6 +1201,24 @@ void main_init (int argc, char ** const argv) {
 					// We should never get to here!
 				}
 			}
+
+			if(dagman._submitDagDeepOpts.always_use_node_log) {
+				bool has_new_default_log = access(dagman._defaultNodeLog, F_OK) == 0; // Check for existence of the default log file
+				if(!has_new_default_log) {
+						// We are in recovery, but the default log does not exist.
+						// Fall back to 7.8 behavior
+					debug_printf( DEBUG_QUIET, "Default node log does not exist. "
+						"Falling back to 7.8 behavior of not using the default node log\n");
+					dagman._submitDagDeepOpts.always_use_node_log = false;
+					dagman.dag->UseDefaultNodeLog(false);
+				}
+				if(!submitFileVersion.built_since_version(7,9,1)) {
+					debug_printf( DEBUG_QUIET, "Submit file version indicates submit is too old. "
+						"Falling back to 7.8 behavior of not using the default node log\n");
+					dagman._submitDagDeepOpts.always_use_node_log = false;
+					dagman.dag->UseDefaultNodeLog(false);
+				}
+			}
         }
 
 			//
