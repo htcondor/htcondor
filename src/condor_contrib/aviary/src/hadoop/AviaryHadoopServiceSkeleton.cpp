@@ -80,6 +80,7 @@ HadoopID * setHadoopID(const tHadoopRef & ref)
     
     pID->setId(ref.id);
     pID->setIpc(ref.ipcid);
+    pID->setHttp(ref.http);
     
     return pID;
 }
@@ -185,7 +186,8 @@ HadoopQueryResponse* query (tHadoopType qType, vector<HadoopID*>* refs)
     if (refs)
     {   
         refId.id = (*refs)[iCtr]->getId();
-        refId.ipcid = (*refs)[iCtr]->getIpc(); 
+        refId.ipcid = (*refs)[iCtr]->getIpc();
+        refId.http = (*refs)[iCtr]->getHttp();
     }
     
     if ( !ho->query( refId, hStatus ) )
@@ -210,7 +212,6 @@ HadoopQueryResponse* query (tHadoopType qType, vector<HadoopID*>* refs)
             hResult->setDescription(hStatus[jCtr].description);
             hResult->setSubmitted(hStatus[jCtr].qdate);
             hResult->setUptime(hStatus[jCtr].uptime);
-            hResult->setHttp(hStatus[jCtr].http);
             hResult->setState(new HadoopStateType(hStatus[jCtr].state));
             hResult->setStatus( setOKResponse() );
             
@@ -243,6 +244,12 @@ StartNameNodeResponse* AviaryHadoopServiceSkeleton::startNameNode(MessageContext
     HadoopStartResponse* hresp = new HadoopStartResponse;
     HadoopObject * ho = HadoopObject::getInstance();
     tHadoopInit hInit;
+
+    // TODO: User may want to attach to an unmanaged existing NameNode
+    if (!_startNameNode->getStartNameNode()->isUnmanagedNil()) {
+        // fill in appropriate logic here...
+        //HadoopID* pId = _startNameNode->getStartNameNode()->getUnmanaged();
+    }
     
     // setup the initialization struct
     hInit.idref.type = NAME_NODE;
@@ -334,6 +341,12 @@ StartJobTrackerResponse* AviaryHadoopServiceSkeleton::startJobTracker(MessageCon
 {
     StartJobTrackerResponse* response = new StartJobTrackerResponse;
     HadoopStartResponse* hresp ;
+
+    // TODO: User may want to attach to an unmanaged existing DataNode
+    if (!_startJobTracker->getStartJobTracker()->isRefNil()) {
+        // fill in appropriate logic here...
+        //HadoopID* pId = _startJobTracker->getStartJobTracker()->getRef();
+    }
     
     tHadoopInit hInit;
     hInit.idref.type = JOB_TRACKER;

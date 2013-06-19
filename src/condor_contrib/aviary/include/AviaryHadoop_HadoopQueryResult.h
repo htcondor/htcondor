@@ -7,7 +7,7 @@
         * HadoopQueryResult.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Jan 28, 2013 (02:30:05 CST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jan 28, 2013 (03:27:15 EST)
         */
 
        /**
@@ -78,10 +78,6 @@ namespace AviaryHadoop
 
                 
                 bool isValidBin_file;
-            std::string property_Http;
-
-                
-                bool isValidHttp;
             
 
         /*** Private methods ***/
@@ -123,10 +119,6 @@ namespace AviaryHadoop
         setBin_fileNil();
             
 
-        bool WSF_CALL
-        setHttpNil();
-            
-
 
 
         /******************************* public functions *********************************/
@@ -159,10 +151,9 @@ namespace AviaryHadoop
          * @param State AviaryHadoop::HadoopStateType*
          * @param Status AviaryCommon::Status*
          * @param Bin_file std::string
-         * @param Http std::string
          * @return newly created HadoopQueryResult object
          */
-        HadoopQueryResult(AviaryHadoop::HadoopID* arg_Ref,AviaryHadoop::HadoopID* arg_Parent,std::string arg_Owner,std::string arg_Description,int arg_Submitted,int arg_Uptime,AviaryHadoop::HadoopStateType* arg_State,AviaryCommon::Status* arg_Status,std::string arg_Bin_file,std::string arg_Http);
+        HadoopQueryResult(AviaryHadoop::HadoopID* arg_Ref,AviaryHadoop::HadoopID* arg_Parent,std::string arg_Owner,std::string arg_Description,int arg_Submitted,int arg_Uptime,AviaryHadoop::HadoopStateType* arg_State,AviaryCommon::Status* arg_Status,std::string arg_Bin_file);
         
 
         /**
@@ -388,30 +379,6 @@ namespace AviaryHadoop
         WSF_EXTERN bool WSF_CALL
         resetBin_file();
         
-        
-
-        /**
-         * Getter for http. 
-         * @return std::string*
-         */
-        WSF_EXTERN std::string WSF_CALL
-        getHttp();
-
-        /**
-         * Setter for http.
-         * @param arg_Http std::string*
-         * @return true on success, false otherwise
-         */
-        WSF_EXTERN bool WSF_CALL
-        setHttp(const std::string  arg_Http);
-
-        /**
-         * Re setter for http
-         * @return true on success, false
-         */
-        WSF_EXTERN bool WSF_CALL
-        resetHttp();
-        
 
 
         /******************************* Checking and Setting NIL values *********************************/
@@ -509,16 +476,6 @@ namespace AviaryHadoop
          */
         bool WSF_CALL
         isBin_fileNil();
-
-
-        
-
-        /**
-         * Check whether http is Nill
-         * @return true if the element is Nil, false otherwise
-         */
-        bool WSF_CALL
-        isHttpNil();
 
 
         
@@ -674,17 +631,6 @@ namespace AviaryHadoop
 
         std::string WSF_CALL
         getProperty9();
-
-    
-        
-
-        /**
-         * Getter for http by property number (10)
-         * @return std::string
-         */
-
-        std::string WSF_CALL
-        getProperty10();
 
     
 

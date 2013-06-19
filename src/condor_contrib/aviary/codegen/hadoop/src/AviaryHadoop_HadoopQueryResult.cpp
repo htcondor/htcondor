@@ -80,13 +80,9 @@
                 
             isValidBin_file  = false;
         
-                    property_Http;
-                
-            isValidHttp  = false;
-        
         }
 
-       AviaryHadoop::HadoopQueryResult::HadoopQueryResult(AviaryHadoop::HadoopID* arg_Ref,AviaryHadoop::HadoopID* arg_Parent,std::string arg_Owner,std::string arg_Description,int arg_Submitted,int arg_Uptime,AviaryHadoop::HadoopStateType* arg_State,AviaryCommon::Status* arg_Status,std::string arg_Bin_file,std::string arg_Http)
+       AviaryHadoop::HadoopQueryResult::HadoopQueryResult(AviaryHadoop::HadoopID* arg_Ref,AviaryHadoop::HadoopID* arg_Parent,std::string arg_Owner,std::string arg_Description,int arg_Submitted,int arg_Uptime,AviaryHadoop::HadoopStateType* arg_State,AviaryCommon::Status* arg_Status,std::string arg_Bin_file)
         {
              
                property_Ref  = NULL;
@@ -121,10 +117,6 @@
              
             isValidBin_file  = true;
             
-                 property_Http;
-             
-            isValidHttp  = true;
-            
                     property_Ref = arg_Ref;
             
                     property_Parent = arg_Parent;
@@ -142,8 +134,6 @@
                     property_Status = arg_Status;
             
                     property_Bin_file = arg_Bin_file;
-            
-                    property_Http = arg_Http;
             
         }
         AviaryHadoop::HadoopQueryResult::~HadoopQueryResult()
@@ -1087,141 +1077,6 @@
                      element_qname = NULL;
                   }
                  
-
-                     
-                     /*
-                      * building http element
-                      */
-                     
-                     
-                     
-                                    /*
-                                     * because elements are ordered this works fine
-                                     */
-                                  
-                                   
-                                   if(current_node != NULL && is_early_node_valid)
-                                   {
-                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                       
-                                       
-                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
-                                        {
-                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
-                                        }
-                                        if(current_node != NULL)
-                                        {
-                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
-                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
-                                        }
-                                       
-                                   }
-                                   is_early_node_valid = false;
-                                 
-                                 element_qname = axutil_qname_create(Environment::getEnv(), "http", NULL, NULL);
-                                 
-
-                           if ( 
-                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("http", axiom_element_get_localname(current_element, Environment::getEnv())))))
-                           {
-                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("http", axiom_element_get_localname(current_element, Environment::getEnv()))))
-                              {
-                                is_early_node_valid = true;
-                              }
-                              
-                                 
-                                      text_value = axiom_element_get_text(current_element, Environment::getEnv(), current_node);
-                                      if(text_value != NULL)
-                                      {
-                                            status = setHttp(text_value);
-                                      }
-                                      
-                                      else
-                                      {
-                                            /*
-                                             * axis2_qname_t *qname = NULL;
-                                             * axiom_attribute_t *the_attri = NULL;
-                                             * 
-                                             * qname = axutil_qname_create(Environment::getEnv(), "nil", "http://www.w3.org/2001/XMLSchema-instance", "xsi");
-                                             * the_attri = axiom_element_get_attribute(current_element, Environment::getEnv(), qname);
-                                             */
-                                            /* currently thereis a bug in the axiom_element_get_attribute, so we have to go to this bad method */
-
-                                            axiom_attribute_t *the_attri = NULL;
-                                            axis2_char_t *attrib_text = NULL;
-                                            axutil_hash_t *attribute_hash = NULL;
-
-                                            attribute_hash = axiom_element_get_all_attributes(current_element, Environment::getEnv());
-
-                                            attrib_text = NULL;
-                                            if(attribute_hash)
-                                            {
-                                                 axutil_hash_index_t *hi;
-                                                 void *val;
-                                                 const void *key;
-                                        
-                                                 for (hi = axutil_hash_first(attribute_hash, Environment::getEnv()); hi; hi = axutil_hash_next(Environment::getEnv(), hi))
-                                                 {
-                                                     axutil_hash_this(hi, &key, NULL, &val);
-                                                     
-                                                     if(strstr((axis2_char_t*)key, "nil|http://www.w3.org/2001/XMLSchema-instance"))
-                                                     {
-                                                         the_attri = (axiom_attribute_t*)val;
-                                                         break;
-                                                     }
-                                                 }
-                                            }
-
-                                            if(the_attri)
-                                            {
-                                                attrib_text = axiom_attribute_get_value(the_attri, Environment::getEnv());
-                                            }
-                                            else
-                                            {
-                                                /* this is hoping that attribute is stored in "http://www.w3.org/2001/XMLSchema-instance", this happnes when name is in default namespace */
-                                                attrib_text = axiom_element_get_attribute_value_by_name(current_element, Environment::getEnv(), "nil");
-                                            }
-
-                                            if(attrib_text && 0 == axutil_strcmp(attrib_text, "1"))
-                                            {
-                                                WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "NULL value is set to a non nillable element http");
-                                                status = AXIS2_FAILURE;
-                                            }
-                                            else
-                                            {
-                                                /* after all, we found this is a empty string */
-                                                status = setHttp("");
-                                            }
-                                      }
-                                      
-                                 if(AXIS2_FAILURE ==  status)
-                                 {
-                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for http ");
-                                     if(element_qname)
-                                     {
-                                         axutil_qname_free(element_qname, Environment::getEnv());
-                                     }
-                                     return AXIS2_FAILURE;
-                                 }
-                              }
-                           
-                              else if(!dont_care_minoccurs)
-                              {
-                                  if(element_qname)
-                                  {
-                                      axutil_qname_free(element_qname, Environment::getEnv());
-                                  }
-                                  /* this is not a nillable element*/
-				  WSF_LOG_ERROR_MSG(Environment::getEnv()->log,WSF_LOG_SI, "non nillable or minOuccrs != 0 element http missing");
-                                  return AXIS2_FAILURE;
-                              }
-                           
-                  if(element_qname)
-                  {
-                     axutil_qname_free(element_qname, Environment::getEnv());
-                     element_qname = NULL;
-                  }
-                 
           return status;
        }
 
@@ -1289,9 +1144,6 @@
                     
                     axis2_char_t *text_value_9;
                     axis2_char_t *text_value_9_temp;
-                    
-                    axis2_char_t *text_value_10;
-                    axis2_char_t *text_value_10_temp;
                     
                axis2_char_t *start_input_str = NULL;
                axis2_char_t *end_input_str = NULL;
@@ -1869,73 +1721,6 @@
                            else
                            {
                                axutil_stream_write(stream, Environment::getEnv(), text_value_9, axutil_strlen(text_value_9));
-                           }
-                           
-                           axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
-                           
-                     
-                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
-                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
-                 } 
-
-                 
-                       p_prefix = NULL;
-                      
-
-                   if (!isValidHttp)
-                   {
-                      
-                            
-                            WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"Nil value found in non-nillable property http");
-                            return NULL;
-                          
-                   }
-                   else
-                   {
-                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (4 + axutil_strlen(p_prefix) + 
-                                  axutil_strlen("http"))); 
-                                 
-                                 /* axutil_strlen("<:>") + 1 = 4 */
-                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
-                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("http")));
-                                  /* axutil_strlen("</:>") + 1 = 5 */
-                                  
-                     
-
-                   
-                   
-                     
-                     /*
-                      * parsing http element
-                      */
-
-                    
-                    
-                            sprintf(start_input_str, "<%s%shttp>",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
-                            
-                        start_input_str_len = axutil_strlen(start_input_str);
-                        sprintf(end_input_str, "</%s%shttp>",
-                                 p_prefix?p_prefix:"",
-                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
-                        end_input_str_len = axutil_strlen(end_input_str);
-                    
-                           text_value_10 = (axis2_char_t*)property_Http.c_str();
-                           
-                           axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
-                           
-                            
-                           text_value_10_temp = axutil_xml_quote_string(Environment::getEnv(), text_value_10, true);
-                           if (text_value_10_temp)
-                           {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_10_temp, axutil_strlen(text_value_10_temp));
-                               AXIS2_FREE(Environment::getEnv()->allocator, text_value_10_temp);
-                           }
-                           else
-                           {
-                               axutil_stream_write(stream, Environment::getEnv(), text_value_10, axutil_strlen(text_value_10));
                            }
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
@@ -2833,96 +2618,6 @@
            AviaryHadoop::HadoopQueryResult::setBin_fileNil()
            {
                return resetBin_file();
-           }
-
-           
-
-            /**
-             * Getter for http by  Property Number 10
-             */
-            std::string WSF_CALL
-            AviaryHadoop::HadoopQueryResult::getProperty10()
-            {
-                return getHttp();
-            }
-
-            /**
-             * getter for http.
-             */
-            std::string WSF_CALL
-            AviaryHadoop::HadoopQueryResult::getHttp()
-             {
-                return property_Http;
-             }
-
-            /**
-             * setter for http
-             */
-            bool WSF_CALL
-            AviaryHadoop::HadoopQueryResult::setHttp(
-                    const std::string  arg_Http)
-             {
-                
-
-                if(isValidHttp &&
-                        arg_Http == property_Http)
-                {
-                    
-                    return true;
-                }
-
-                
-                  if(arg_Http.empty())
-                       
-                  {
-                      WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"http is being set to NULL, but it is not a nullable element");
-                      return AXIS2_FAILURE;
-                  }
-                
-
-                
-                resetHttp();
-
-                
-                        property_Http = std::string(arg_Http.c_str());
-                        isValidHttp = true;
-                    
-                return true;
-             }
-
-             
-
-           /**
-            * resetter for http
-            */
-           bool WSF_CALL
-           AviaryHadoop::HadoopQueryResult::resetHttp()
-           {
-               int i = 0;
-               int count = 0;
-
-
-               
-               isValidHttp = false; 
-               return true;
-           }
-
-           /**
-            * Check whether http is nill
-            */
-           bool WSF_CALL
-           AviaryHadoop::HadoopQueryResult::isHttpNil()
-           {
-               return !isValidHttp;
-           }
-
-           /**
-            * Set http to nill (currently the same as reset)
-            */
-           bool WSF_CALL
-           AviaryHadoop::HadoopQueryResult::setHttpNil()
-           {
-               return resetHttp();
            }
 
            
