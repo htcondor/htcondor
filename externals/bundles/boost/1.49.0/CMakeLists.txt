@@ -157,6 +157,12 @@ if (BOOST_VER)
 	set( BOOST_VER ${BOOST_VER} PARENT_SCOPE )
 	set( BOOST_INCLUDE ${BOOST_INCLUDE} PARENT_SCOPE )
 	set( BOOST_LD ${BOOST_LD} PARENT_SCOPE )
+	
+	if (Boost_PYTHON_LIBRARY)
+        set( Boost_PYTHON_LIBRARY ${Boost_PYTHON_LIBRARY} PARENT_SCOPE )
+        dprint("Found Python Library: ${Boost_PYTHON_LIBRARY} ")
+    endif()
+	
 else(BOOST_VER)
 	message (WARNING "**boost not found **, unit tests will NOT be built.")
 endif(BOOST_VER)
