@@ -76,6 +76,13 @@ It is required in order to run the \Condor{gather\_info} script.
 when requests to an EC2 service fail.
 \Ticket{3701}
 
+\item Fixed a bug in the \Condor{gridmanager} that can cause EC2 jobs to be
+submitted a second time during recovery.
+\Ticket{3705}
+
+\item Fixed a bug that caused some log messages to be terminated with binary characters.
+\Ticket{3706}
+
 \end{itemize}
 
 \noindent Known Bugs:
