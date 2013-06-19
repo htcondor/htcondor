@@ -135,6 +135,10 @@ open(SUBMIT, ">$submit_filename") || die "Failed to open $submit_filename\n";
 print SUBMIT $submit_body;
 close(SUBMIT);
 
+my $on_evictedwithoutcheckpoint = sub {
+	CondorTest::debug("Evicted Without Checkpoint from removing jobs.\n",1);
+};
+CondorTest::RegisterEvictedWithoutCheckpoint($testname, $on_evictedwithoutcheckpoint);
 
 CondorTest::RegisterTimed($testname, \&timed_callback, 15);
 CondorTest::RegisterExitedSuccess($testname, \&exit_success_callback);
