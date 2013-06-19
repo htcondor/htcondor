@@ -73,6 +73,7 @@ typedef struct href
 {
     string id;          ///< ClusterId
     string ipcid;       ///< ipc url
+    string http;
     tHadoopType type;   ///< input type
     string tarball;      ///< input tarball
 }tHadoopRef;
