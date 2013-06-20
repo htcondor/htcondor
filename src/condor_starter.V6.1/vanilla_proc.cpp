@@ -52,6 +52,32 @@ extern dynuser* myDynuser;
 extern CStarter *Starter;
 FilesystemRemap * fs_remap = NULL;
 
+bool
+GetMachineInfo(classad_shared_ptr<classad::ClassAd> &machineAd, std::string &network_name)
+{
+	std::string tmp_network_name;
+	std::string starter_name;
+	if (!Starter->jic->machClassAd()->EvalString(ATTR_NAME, NULL, starter_name))
+	{
+		dprintf(D_ALWAYS, "'Name' attribute not in machine classad.\n");
+		return false;
+	}
+	size_t at_pos = starter_name.find("@");
+	if (at_pos == std::string::npos) {
+		tmp_network_name = starter_name;
+	} else {
+		tmp_network_name = starter_name.substr(0, at_pos);
+	}
+	if (tmp_network_name.size() == 0) {
+		dprintf(D_ALWAYS, "Unable to determine starter slot name.\n");
+		return false;
+	}
+	machineAd = Starter->jic->machClassAdSharedPtr();
+	network_name = tmp_network_name;
+
+	return true;
+}
+
 VanillaProc::VanillaProc(ClassAd* jobAd) : OsProc(jobAd),
 	m_network_name(),
 	m_memory_limit(-1),
@@ -509,21 +535,12 @@ VanillaProc::StartJob()
 
 	std::string network_name = "";
 	if (param_boolean("USE_NETWORK_NAMESPACES", false) && JobAd) {
-		std::string starter_name;
-		Starter->jic->machClassAd()->EvalString(ATTR_NAME, NULL, starter_name);
-		size_t at_pos = starter_name.find("@");
-		std::string network_name;
-		if (at_pos == std::string::npos) {
-			network_name = starter_name;
-		} else {
-			network_name = starter_name.substr(0, at_pos);
+		classad_shared_ptr<classad::ClassAd> machine_classad;
+		if (!GetMachineInfo(machine_classad, m_network_name))
+		{
+			return false;
 		}
-		if (network_name.size() == 0) {
-			dprintf(D_ALWAYS, "Unable to determine starter slot name.\n");
-			return FALSE;
-		}
-		classad_shared_ptr<classad::ClassAd> machine_classad = Starter->jic->machClassAdSharedPtr();
-		m_network_name = network_name;
+		dprintf(D_FULLDEBUG, "Using network namespaces with network name '%s'.\n", m_network_name);
 		int rc = NetworkPluginManager::PrepareNetwork(network_name, *JobAd, machine_classad);
 		if (rc) {
 			dprintf(D_ALWAYS, "Failed to prepare network namespace - bailing.\n");

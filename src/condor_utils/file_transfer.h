@@ -355,6 +355,7 @@ class FileTransfer: public Service {
 	StringList* FilesToSend;
 	StringList* EncryptFiles;
 	StringList* DontEncryptFiles;
+	std::string m_network_name;
 	char* OutputDestination;
 	char* SpooledIntermediateFiles;
 	char* ExecFile;
