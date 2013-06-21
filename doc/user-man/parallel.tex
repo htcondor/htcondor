@@ -243,74 +243,84 @@ The \MacroUNI{Node} value is fixed for the entire length of the job.
 \item[Differing Requirements for the Machines]
 \end{description}
 
-Usually, all the machines running a parallel job will have the
-same requirements.  Sometimes, though, one machine will need
-to be different than the rest.  
-The different subsets of machines executing a parallel universe job
-may specify different machine requirements.  A common example requires that the
-head node execute on a specific machine.  It may be also useful for debugging purposes.
-
-To demonstrate how to have parallel jobs with different requirements,
-consider the following example.
+Sometimes one machine's part in a parallel job will have specialized needs.
+These can be handled with a \SubmitCmd{Requirements} submit command
+that also specifies the number of needed  machines. 
 
 \footnotesize
 \begin{verbatim}
 ######################################
 ## Example submit description file
-## with multiple procs
+## with 4 total machines and differing requirements
 ######################################
 universe = parallel
-executable = example
+executable = special.exe
 machine_count = 1
-requirements = ( machine == "machine1")
+requirements = ( machine == "machine1@example.com")
 queue
 
-requirements = ( machine =!= "machine1")
+requirements = ( machine =!= "machine1@example.com")
 machine_count = 3
 queue
 \end{verbatim}
 \normalsize
 
-The dedicated scheduler allocates four machines.
-All four executing jobs have the same value for \MacroUNI{Cluster}
-macro.
-The \MacroUNI{Process} macro takes on two values;
-the value 0 will be assigned for the single executable
-that must be executed on machine1, and
+The dedicated scheduler acquires and claims four machines.
+All four share the same value of \Attr{ClusterId} macro.
+The existence of a second \SubmitCmd{queue} command causes a total of two
+\Attr{ProcId} values to be assigned for this parallel job.
+The \Attr{ProcId} values are assigned based on ordering
+within the submit description file. 
+Value 0 will be assigned for the single executable
+that must be executed on machine1@example.com, and
 the value 1 will be assigned for the other three 
-that must be executed anywhere but on machine1.
+that must be executed elsewhere.
 
-Carefully consider the ordering and nature of multiple
-sets of requirements in the same submit description file.
-The scheduler matches jobs to machines based on the ordering
-within the submit description file.
-Mutually exclusive requirements eliminate the dependence on
-ordering within the submit description file.
-Without mutually exclusive requirements,
-the scheduler may be unable to schedule the job.
-The ordering within the submit description file may preclude
-the scheduler considering the specific allocation that
-could satisfy the requirements.
+\begin{description}
+\item[Requesting multiple cores per slot]
+\end{description}
 
-The way to create multiple processes is to place a number after the \SubmitCmd{queue}
-command, such as \SubmitCmd{queue 8} to create eight different processes with the 
-same cluster. After a particular \SubmitCmd{queue} command, the user can also change 
-parameters previously specified in the submit file or add parameters not 
-previously specified. For example, suppose that the head node of a parallel job 
-needs additional RAM compared to the rest of the nodes. The user can write
+If the parallel program has a structure that benefits from
+running instances of the executable on multiple cores within the same slot,
+multi-core slots may be specified.
 
+\footnotesize
 \begin{verbatim}
-request_memory = 5G
+######################################
+## submit description file for a parallel program
+## that needs 8-core slots
+######################################
+universe = parallel
+executable = foo.sh
+log = logfile
+input = infile.$(Node)
+output = outfile.$(Node)
+error = errfile.$(Node)
+machine_count = 2
+request_cpus = 8
+should_transfer_files = IF_NEEDED
+when_to_transfer_output = ON_EXIT
 queue
-request_memory = 1G
-queue 31
 \end{verbatim}
+\normalsize
 
-If a user wishes to submit multiple independent parallel universe jobs, the 
-user cannot simply append a number to the \SubmitCmd{queue} command. HTCondor will 
-assume that each job is not independent -- as by definition, a parallel job is a 
-job is at least setup to handle multiple (sub)processes. Instead, the user will
-need to run \Condor{submit} multiple times.
+This parallel job causes the scheduler to match and claim two
+machines, where each of the machines (slots) has eight cores.
+The parallel job is assigned a single \Attr{ClusterId}
+and a single \Attr{ProcId}, meaning that there is a single job
+ClassAd for this job.
+
+Potentially fewer machines are impacted with this specification,
+as compared with the request that contains
+\footnotesize
+\begin{verbatim}
+machine_count = 16
+request_cpus = 1
+\end{verbatim}
+\normalsize
+The interaction of the eight cores within the single slot may 
+be advantageous with respect to communication delay or memory access.
+But, 8-core slots must be available within the pool.
 
 \label{sec:parallel-mpi-submit}
 \begin{description}
