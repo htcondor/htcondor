@@ -27,7 +27,7 @@ from aviary.util import *
 wsdl = 'file:/var/lib/condor/aviary/services/query/aviary-query.wsdl'
 cmds = ['getJobStatus', 'getJobSummary', 'getJobDetails']
 
-parser = build_basic_parser('Query jobs remotely via SOAP.','http://localhost:9091/services/query/')
+parser = build_basic_parser('Query jobs remotely via SOAP.','http://localhost:39091/services/query/')
 parser.add_option('--cmd', action="store", choices=(cmds), dest='cmd', help=str(cmds))
 parser.add_option('--cproc', action="store", help="a cluster.proc id like '1.0' or '5.3'")
 (opts,args) =  parser.parse_args()
