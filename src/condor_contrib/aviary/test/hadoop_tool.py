@@ -131,7 +131,7 @@ class HadoopCtrlCmd(cmd.Cmd):
                     if 'NameNode' in self.nodetype:
                         result = func(None,self.owner,'Unmanaged from: '+DEFAULTS['description'],ref)
                     elif 'JobTracker' in self.nodetype:
-                        result = func(ref,self.owner,'Unmanaged from: '+DEFAULTS['description'],None)
+                        result = func(ref,None,self.owner,'Unmanaged from: '+DEFAULTS['description'],None)
                     else:
                         print "add not valid for "+self.nodetype
                 else:
