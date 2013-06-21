@@ -219,7 +219,7 @@ class HadoopCtrlCmd(cmd.Cmd):
             self.print_header()
             for r in response.results:
                 print str(r.ref.id).ljust(7),str(ctime(r.submitted)).ljust(27),str(r.state).ljust(10), \
-                    str(strftime('%H:%M:%S',gmtime(r.uptime))).ljust(10), str(r.owner).ljust(16), str(r.ref.ipc).ljust(20), str(r.http).ljust(20), str(r.bin_file)
+                    str(strftime('%H:%M:%S',gmtime(r.uptime))).ljust(10), str(r.owner).ljust(16), str(r.ref.ipc).ljust(20), str(r.ref.http).ljust(20), str(r.bin_file)
         else: 
             print "Query Response:",str(response.status.code)
 
