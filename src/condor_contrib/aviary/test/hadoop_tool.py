@@ -88,11 +88,12 @@ class HadoopCtrlCmd(cmd.Cmd):
         ref = None
         tokens = val.split()
         ref = client.factory.create("ns1:HadoopID")
+        ref.ipc = None
         for s in tokens:
-            if "ipc://" in s:
-                ref.ipc = s
-            elif "http://" or "https://" in s:
+            if ("http://" in s or "https://" in s):
                 ref.http = s
+            elif ("://" in s):
+                ref.ipc = s
         if not ref.ipc:
             print "no IPC URL supplied"
             return None
