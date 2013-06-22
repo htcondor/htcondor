@@ -31,3 +31,9 @@ KILL = FALSE
 ##  The list is a comma or space separated list of subsystem names
 
 DAEMON_LIST = COLLECTOR, MASTER, NEGOTIATOR, SCHEDD, STARTD
+
+## For a simple personal condor setup there are issues 
+## with default AUTH.  
+
+SEC_CLIENT_AUTHENTICATION_METHODS = CLAIMTOBE
+SEC_DEFAULT_AUTHENTICATION_METHODS = CLAIMTOBE

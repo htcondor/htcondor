@@ -103,7 +103,7 @@ class HadoopCtrlCmd(cmd.Cmd):
         ref = None
         client = self.aviary.getClient(None)
         if self.isFloatish(val):
-            ref = ref_client.factory.create("ns1:HadoopID")
+            ref = client.factory.create("ns1:HadoopID")
             ref.id = val
         elif "://" in val:
             ref = self.create_url_ref(val,client)

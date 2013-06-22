@@ -73,9 +73,9 @@ typedef struct href
 {
     string id;          ///< ClusterId
     string ipcid;       ///< ipc url
-    string http;
+    string http;        /// http url
     tHadoopType type;   ///< input type
-    string tarball;      ///< input tarball
+    string tarball;     ///< input tarball
 }tHadoopRef;
 
 ///< Initialization structure for starting a hadoop job
@@ -86,6 +86,7 @@ typedef struct hinit
     string newcluster;   ///< output new clusterid
     string owner;        ///< owner field
     string description;  ///< description field
+    bool unmanaged;      ///< unmanaged placeholder.
 }tHadoopInit;
 
 typedef struct hstatus
