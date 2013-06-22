@@ -333,8 +333,8 @@ int HadoopObject::start( tHadoopInit & hInit )
     if (hInit.unmanaged)
     {
         ::SetAttribute(cluster, proc, "GridoopManaged", quote_it("UNMANAGED").c_str());
-        ::SetAttribute(cluster, proc, "IPCAddress", quote_it(hInit.idref.http.c_str()).c_str());
-        ::SetAttribute(cluster, proc, "HTTPAddress", quote_it(hInit.idref.ipcid.c_str()).c_str());
+        ::SetAttribute(cluster, proc, "IPCAddress", quote_it(hInit.idref.ipcid.c_str()).c_str());
+        ::SetAttribute(cluster, proc, "HTTPAddress", quote_it(hInit.idref.http.c_str()).c_str());
         
         // EARLY SET: These attribute are set early so the incoming ad
         // has a change to override them.
