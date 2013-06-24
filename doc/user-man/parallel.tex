@@ -330,32 +330,26 @@ But, 8-core slots must be available within the pool.
 \index{parallel universe!running MPI applications}
 \index{MPI application}
 
-MPI applications consist of a single executable that is invoked in order to
-execute in parallel on one or more machines. 
-HTCondor's parallel universe provides the environment within
-which this executable is executed in parallel.
-However, the various implementations of MPI
-(for example, Open MPI or MPICH) require further framework items within
-a system-wide environment.
+MPI applications use a single executable, 
+invoked on one or more machines (slots), executing in parallel. 
+The various implementations of MPI
+such as Open MPI and MPICH require further framework.
 HTCondor supports this necessary framework through 
-user visible and modifiable scripts.
-An MPI implementation-dependent script becomes the HTCondor job.
-The script sets up the extra, necessary framework,
-and then invokes the MPI application's executable.
+a user-modified script.
+This implementation-dependent script becomes the HTCondor executable.
+The script sets up the framework,
+and then it invokes the MPI application's executable.
 
-HTCondor provides these scripts in the
-\File{\MacroUNI{RELEASE\_DIR}/etc/examples}
-directory.
+The scripts are located in the
+\File{\MacroUNI{RELEASE\_DIR}/etc/examples} directory.
 The script for the Open MPI implementation is \File{openmpiscript}.
 The script for the MPICH implementation is \File{mp1script}.
-One restriction of these scripts is that they rely on running
-the ssh command from one node to another.  The ssh daemon 
-on Unix does not allow connections if the shell named in
-the password file is not in the set of approved shells
-listed in the /etc/shells file.
+These scripts rely on running \Prog{ssh} 
+for communication between the nodes of the MPI application.
+The \Prog{ssh} daemon on Unix platforms restricts
+connections to the approved shells listed in the \File{/etc/shells} file.
 
-Therefore, an HTCondor submit description file for these
-implementations would appear similar to:
+Here is a sample submit description file for an MPICH MPI application:
 
 \begin{verbatim}
 ######################################
@@ -373,7 +367,20 @@ transfer_input_files = my_mpich_linked_executable
 queue
 \end{verbatim}
 
-or
+The \SubmitCmd{executable} is the \File{mp1script} script that will have been
+modified for this MPI application.
+This script is invoked on each slot or core.
+The script, in turn, is expected to invoke the MPI application's executable.
+To know the MPI application's executable,
+it is the first in the list of \SubmitCmd{Arguments}.
+And, since HTCondor must transfer this executable to the machine where
+it will run,
+it is listed with the \SubmitCmd{transfer\_input\_files} command,
+and the file transfer mechanism is enabled with
+the \SubmitCmd{should\_transfer\_files} command.
+
+Here is the equivalent sample submit description file,
+but for an Open MPI application:
 
 \begin{verbatim}
 ######################################
@@ -390,51 +397,17 @@ transfer_input_files = my_openmpi_linked_executable
 queue
 \end{verbatim}
 
-The \SubmitCmd{executable} is the MPI implementation-dependent script.
-The first argument to the script is the MPI application's 
-executable.
-Further arguments to the script are the MPI application's arguments.
-HTCondor must transfer this executable;
-do this with the \SubmitCmd{transfer\_input\_files} command.
-
-For other implementations of MPI,
-copy and modify one of the given scripts.
 Most MPI implementations require two system-wide prerequisites.
 The first prerequisite is the ability to run a command
 on a remote machine without being prompted for a password.
-\Prog{ssh} is commonly used, but other
-commands may be used.
+\Prog{ssh} is commonly used, but other commands may be used.
 The second prerequisite is an ASCII file containing the
 list of machines that may utilize \Prog{ssh}.
 These common prerequisites are implemented in a further script
 called \File{sshd.sh}.
-\File{sshd.sh} generates ssh keys 
-(to enable password-less remote execution),
+\File{sshd.sh} generates ssh keys to enable password-less remote execution
 and starts an \Prog{sshd} daemon.
-The machine name and MPI rank are given to the submit machine.
-
-%So, to run MPI application in the parallel universe, we run a script
-%on each node we submit to.  This script generates ssh keys, to enable
-%password-less remote execution, start an sshd daemon, and send the
-%names and rank (node number) back to the submit directory.  Thus, for
-%each HTCondor job submitted, the scripts set up an ad-hoc MPI
-%environment, which is torn down at the end of the job run.  This ssh
-%script is a common requirement for running MPI jobs, so we have
-%factored it out into a common script, which is called from each of the
-%MPI-specific scripts.  After the ssh script has been started, the
-%MPI-specific script runs, starts the rest of the MPI job by looking at
-%its arguments, and waits for the MPI job to finish.  HTCondor provides
-%the ssh script, and example MPI scripts for both LAM and MPICH.  The
-%former is named ``lamscript'', and the latter ``mp1script''.  The
-%first argument to each script is the name of the real MPI executable,
-%and any subsequent arguments are arguments to that executable.  Other
-%implementations should be easy to add, by modifying the given
-%examples.  Note that because the actual MPI executable (i.e. the
-%output of mpicc) is not the named executable in the submit script, it
-%must be accessible either via a network file system, or by condor file
-%transfer.
-
-The \Prog{sshd.sh} script requires the definition of
+Use of the \Prog{sshd.sh} script requires the definition of
 two HTCondor configuration variables.
 Configuration variable \Macro{CONDOR\_SSHD} is an absolute path to
 an implementation of \Prog{sshd}.
@@ -443,12 +416,12 @@ but should work with more recent versions.
 Configuration variable \Macro{CONDOR\_SSH\_KEYGEN} points
 to the corresponding \Prog{ssh-keygen} executable.
 
-Scripts \Prog{openmpiscript} and \Prog{mp1script}
-each have their own idiosyncrasies.
-In \Prog{mp1script}, the \Env{PATH} to the MPICH installation must be set.
-The shell variable MPDIR indicates its proper value.
-This directory contains the MPICH \Prog{mpirun} executable; Open MPI also
-uses MPDIR.
+Both \Prog{mp1script} and \Prog{openmpiscript}
+require environmental support.
+\Prog{mp1script} requires the \Env{PATH} to the MPICH installation to be set.
+The shell variable \Env{MPdir} indicates its proper value.
+This directory contains the MPICH \Prog{mpirun} executable.
+Open MPI also uses \Env{MPdir}.
 %For OpenMPI, there is a similar path setting, but it is called \Env{LAMDIR}
 %in the \Prog{openmpiscript} script.  
 %In addition, this path must be part of the
@@ -499,7 +472,7 @@ submit description file works well.
 universe = vanilla
 executable = /path/to/mpirun
 request_cpus = 2
-arguments = -np 2 my_mpi_linked_executable arg1 arg2 arge
+arguments = -np 2 my_mpi_linked_executable arg1 arg2 arg3
 should_transfer_files = yes
 when_to_transfer_output = on_exit
 transfer_input_files = my_mpi_linked_executable
