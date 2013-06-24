@@ -60,6 +60,7 @@
 static int comparisonFunction (AttrList *, AttrList *, void *);
 #include "matchmaker.h"
 
+
 /* This extracts the machine name from the global job ID user@machine.name#timestamp#cluster.proc*/
 static int get_scheddname_from_gjid(const char * globaljobid, char * scheddname );
 
@@ -1540,7 +1541,7 @@ negotiationTime ()
                     }
 
                     if ((group->usage >= group->allocated) && !ConsiderPreemption) {
-                        dprintf(D_ALWAYS, "Group %s - skipping, at or over quota (usage=%g)\n", group->name.c_str(), group->usage);
+                        dprintf(D_ALWAYS, "Group %s - skipping, at or over quota (usage=%g) (quota=%g)\n", group->name.c_str(), group->usage, group->allocated);
                         continue;
                     }
 		    
@@ -1563,6 +1564,34 @@ negotiationTime ()
                     if (!accountant.UsingWeightedSlots()) {
                         slots = floor(slots);
                     }
+					
+					if (param_boolean("NEGOTIATOR_STRICT_ENFORCE_QUOTA", true)) {
+						dprintf(D_FULLDEBUG, "NEGOTIATOR_STRICT_ENFORCE_QUOTA is true, current proposed allocation for %s is %g\n", group->name.c_str(), slots);
+						calculate_subtree_usage(hgq_root_group); // usage changes with every negotiation
+						GroupEntry *limitingGroup = group;
+
+						double my_new_allocation = slots - group->usage; // resources above what we already have
+						if (my_new_allocation < 0) {
+							continue; // shouldn't get here
+						}
+
+						while (limitingGroup != NULL) {
+							if ((limitingGroup->accept_surplus == false) && limitingGroup->static_quota) {
+								// This is the extra available at this node
+								double subtree_available = limitingGroup->config_quota - limitingGroup->subtree_usage;
+								if (subtree_available < 0) subtree_available = 0;
+								dprintf(D_ALWAYS, "my_new_allocation is %g subtree_available is %g\n", my_new_allocation, subtree_available);
+								if (my_new_allocation > subtree_available) {
+									dprintf(D_FULLDEBUG, "Group %s with accept_surplus=false has total usage = %g and config quota of %g -- constraining allocation in group %s to %g\n",
+											limitingGroup->name.c_str(), limitingGroup->subtree_usage, limitingGroup->config_quota, group->name.c_str(), subtree_available + group->usage);
+		
+									my_new_allocation = subtree_available; // cap new allocation to the available
+								}
+							}
+							limitingGroup = limitingGroup->parent;
+						}
+						slots = my_new_allocation + group->usage; // negotiation units are absolute quota, not new
+					}
 
                     if (autoregroup && (group == hgq_root_group)) {
                         // note that in autoregroup mode, root group is guaranteed to be last group to negotiate
@@ -2279,6 +2308,7 @@ GroupEntry::GroupEntry():
     allocated(0),
     subtree_quota(0),
     subtree_requested(0),
+    subtree_usage(0),
     rr(false),
     rr_time(0),
     subtree_rr_time(0),
@@ -5613,6 +5643,20 @@ Matchmaker::publishNegotiationCycleStats( ClassAd *ad )
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME, i, s->submitters_out_of_time);
         SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_SHARE_LIMIT, i, s->submitters_share_limit);
 	}
+}
+
+double 
+Matchmaker::calculate_subtree_usage(GroupEntry *group) {
+	double subtree_usage = 0.0;
+
+    for (vector<GroupEntry*>::iterator i(group->children.begin());  i != group->children.end();  i++) {
+		subtree_usage += calculate_subtree_usage(*i);
+	}
+	subtree_usage += accountant.GetWeightedResourcesUsed(group->name.c_str());
+
+	group->subtree_usage = subtree_usage;;
+	dprintf(D_ALWAYS, "subtree_usage at %s is %g\n", group->name.c_str(), subtree_usage);
+	return subtree_usage;
 }
 
 GCC_DIAG_ON(float-equal)
