@@ -49,6 +49,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug with hierarchical group quotas in the \Condor{negotiator}
+where group hierarchies with internal nodes that set accept\_surplus to
+false would be assigned allocations above their quota.
+\Ticket{3695}
+
 \item Fixed a bug in which scheduler universe jobs that
 have an \SubmitCmd{on\_exit\_hold}
 expression that evaluates to \Expr{True} could have duplicate hold messages
