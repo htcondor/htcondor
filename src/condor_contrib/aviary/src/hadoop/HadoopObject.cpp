@@ -178,6 +178,7 @@ int HadoopObject::start( tHadoopInit & hInit )
     }
     
     args = hInit.idref.tarball;
+    bool wantsHadoopRequest = false;
     
     switch (hInit.idref.type)
     {
@@ -199,6 +200,12 @@ int HadoopObject::start( tHadoopInit & hInit )
             ::SetAttribute(cluster, proc, ATTR_REQUIREMENTS, "( HasJava =?= TRUE ) && ( TARGET.OpSys == \"LINUX\" ) && ( TARGET.Memory >= RequestMemory ) && ( TARGET.HasFileTransfer )");
         }
         
+        // "spindle" configuration
+        wantsHadoopRequest = param_boolean("HADOOP_ENABLE_REQUEST_NAMENODE",false);
+        if (wantsHadoopRequest) {
+            ::SetAttributeInt(cluster, proc, ATTR_HADOOP_REQUEST_NAMENODE, 1);
+        }
+
         break;
         case JOB_TRACKER:
         hadoopType = ATTR_JOB_TRACKER;
@@ -216,6 +223,12 @@ int HadoopObject::start( tHadoopInit & hInit )
             ::SetAttribute(cluster, proc, ATTR_REQUIREMENTS, "( HasJava =?= TRUE ) && ( TARGET.OpSys == \"LINUX\" ) && ( TARGET.HasFileTransfer )");
         }
         
+        // "spindle" configuration
+        wantsHadoopRequest = param_boolean("HADOOP_ENABLE_REQUEST_JOBTRACKER",false);
+        if (wantsHadoopRequest) {
+            ::SetAttributeInt(cluster, proc, ATTR_HADOOP_REQUEST_JOBTRACKER, 1);
+        }
+
         // fall through
         case DATA_NODE:
         // special case case only a small part the rest is common.
@@ -268,6 +281,12 @@ int HadoopObject::start( tHadoopInit & hInit )
         ::SetAttribute(cluster, proc, "NameNodeIPCAddress", quote_it(IPCAddress.Value()).c_str());
         ///////////////////////////////////////////////////////////////////////////////////////
         
+        // "spindle" configuration
+        wantsHadoopRequest = param_boolean("HADOOP_ENABLE_REQUEST_DATANODE",false);
+        if (wantsHadoopRequest) {
+            ::SetAttributeInt(cluster, proc, ATTR_HADOOP_REQUEST_DATANODE, 1);
+        }
+
         break;
         
         case TASK_TRACKER:
@@ -315,6 +334,12 @@ int HadoopObject::start( tHadoopInit & hInit )
         args += IPCAddress.Value();
         ::SetAttribute(cluster, proc, "JobTrackerIPCAddress", quote_it(IPCAddress.Value()).c_str());
         
+        // "spindle" configuration
+        wantsHadoopRequest = param_boolean("HADOOP_ENABLE_REQUEST_TASKTRACKER",false);
+        if (wantsHadoopRequest) {
+            ::SetAttributeInt(cluster, proc, ATTR_HADOOP_REQUEST_TASKTRACKER, 1);
+        }
+
         break;
     }
 
