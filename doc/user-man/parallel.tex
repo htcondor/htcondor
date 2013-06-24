@@ -259,14 +259,15 @@ machine_count = 1
 requirements = ( machine == "machine1@example.com")
 queue
 
-requirements = ( machine =!= "machine1@example.com")
 machine_count = 3
+requirements = ( machine =!= "machine1@example.com")
 queue
 \end{verbatim}
 \normalsize
 
 The dedicated scheduler acquires and claims four machines.
-All four share the same value of \Attr{ClusterId} macro.
+All four share the same value of \Attr{ClusterId},
+as this value is associated with this single parallel job.
 The existence of a second \SubmitCmd{queue} command causes a total of two
 \Attr{ProcId} values to be assigned for this parallel job.
 The \Attr{ProcId} values are assigned based on ordering
@@ -281,7 +282,7 @@ that must be executed elsewhere.
 \end{description}
 
 If the parallel program has a structure that benefits from
-running instances of the executable on multiple cores within the same slot,
+running on multiple cores within the same slot,
 multi-core slots may be specified.
 
 \footnotesize
@@ -310,6 +311,12 @@ The parallel job is assigned a single \Attr{ClusterId}
 and a single \Attr{ProcId}, meaning that there is a single job
 ClassAd for this job.
 
+The executable, \File{foo.sh}, is started at the same time
+on a single core within each of the two machines (slots).
+It is presumed that the executable will take care of invoking
+processes that are to run on the other seven CPUs (cores)
+associated with the slot. 
+
 Potentially fewer machines are impacted with this specification,
 as compared with the request that contains
 \footnotesize
@@ -330,33 +337,28 @@ But, 8-core slots must be available within the pool.
 \index{parallel universe!running MPI applications}
 \index{MPI application}
 
-MPI applications consist of a single executable that is invoked in order to
-execute in parallel on one or more machines. 
-HTCondor's parallel universe provides the environment within
-which this executable is executed in parallel.
-However, the various implementations of MPI
-(for example, Open MPI or MPICH) require further framework items within
-a system-wide environment.
+MPI applications use a single executable, 
+invoked on one or more machines (slots), executing in parallel. 
+The various implementations of MPI
+such as Open MPI and MPICH require further framework.
 HTCondor supports this necessary framework through 
-user visible and modifiable scripts.
-An MPI implementation-dependent script becomes the HTCondor job.
-The script sets up the extra, necessary framework,
-and then invokes the MPI application's executable.
+a user-modified script.
+This implementation-dependent script becomes the HTCondor executable.
+The script sets up the framework,
+and then it invokes the MPI application's executable.
 
-HTCondor provides these scripts in the
-\File{\MacroUNI{RELEASE\_DIR}/etc/examples}
-directory.
+The scripts are located in the
+\File{\MacroUNI{RELEASE\_DIR}/etc/examples} directory.
 The script for the Open MPI implementation is \File{openmpiscript}.
 The script for the MPICH implementation is \File{mp1script}.
-One restriction of these scripts is that they rely on running
-the ssh command from one node to another.  The ssh daemon 
-on Unix does not allow connections if the shell named in
-the password file is not in the set of approved shells
-listed in the /etc/shells file.
+These scripts rely on running \Prog{ssh} 
+for communication between the nodes of the MPI application.
+The \Prog{ssh} daemon on Unix platforms restricts
+connections to the approved shells listed in the \File{/etc/shells} file.
 
-Therefore, an HTCondor submit description file for these
-implementations would appear similar to:
+Here is a sample submit description file for an MPICH MPI application:
 
+\footnotesize
 \begin{verbatim}
 ######################################
 ## Example submit description file
@@ -372,9 +374,24 @@ when_to_transfer_output = on_exit
 transfer_input_files = my_mpich_linked_executable
 queue
 \end{verbatim}
+\normalsize
 
-or
+The \SubmitCmd{executable} is the \File{mp1script} script that will have been
+modified for this MPI application.
+This script is invoked on each slot or core.
+The script, in turn, is expected to invoke the MPI application's executable.
+To know the MPI application's executable,
+it is the first in the list of \SubmitCmd{Arguments}.
+And, since HTCondor must transfer this executable to the machine where
+it will run,
+it is listed with the \SubmitCmd{transfer\_input\_files} command,
+and the file transfer mechanism is enabled with
+the \SubmitCmd{should\_transfer\_files} command.
 
+Here is the equivalent sample submit description file,
+but for an Open MPI application:
+
+\footnotesize
 \begin{verbatim}
 ######################################
 ## Example submit description file
@@ -389,52 +406,19 @@ when_to_transfer_output = on_exit
 transfer_input_files = my_openmpi_linked_executable
 queue
 \end{verbatim}
+\normalsize
 
-The \SubmitCmd{executable} is the MPI implementation-dependent script.
-The first argument to the script is the MPI application's 
-executable.
-Further arguments to the script are the MPI application's arguments.
-HTCondor must transfer this executable;
-do this with the \SubmitCmd{transfer\_input\_files} command.
-
-For other implementations of MPI,
-copy and modify one of the given scripts.
 Most MPI implementations require two system-wide prerequisites.
 The first prerequisite is the ability to run a command
 on a remote machine without being prompted for a password.
-\Prog{ssh} is commonly used, but other
-commands may be used.
+\Prog{ssh} is commonly used, but other commands may be used.
 The second prerequisite is an ASCII file containing the
 list of machines that may utilize \Prog{ssh}.
 These common prerequisites are implemented in a further script
 called \File{sshd.sh}.
-\File{sshd.sh} generates ssh keys 
-(to enable password-less remote execution),
+\File{sshd.sh} generates ssh keys to enable password-less remote execution
 and starts an \Prog{sshd} daemon.
-The machine name and MPI rank are given to the submit machine.
-
-%So, to run MPI application in the parallel universe, we run a script
-%on each node we submit to.  This script generates ssh keys, to enable
-%password-less remote execution, start an sshd daemon, and send the
-%names and rank (node number) back to the submit directory.  Thus, for
-%each HTCondor job submitted, the scripts set up an ad-hoc MPI
-%environment, which is torn down at the end of the job run.  This ssh
-%script is a common requirement for running MPI jobs, so we have
-%factored it out into a common script, which is called from each of the
-%MPI-specific scripts.  After the ssh script has been started, the
-%MPI-specific script runs, starts the rest of the MPI job by looking at
-%its arguments, and waits for the MPI job to finish.  HTCondor provides
-%the ssh script, and example MPI scripts for both LAM and MPICH.  The
-%former is named ``lamscript'', and the latter ``mp1script''.  The
-%first argument to each script is the name of the real MPI executable,
-%and any subsequent arguments are arguments to that executable.  Other
-%implementations should be easy to add, by modifying the given
-%examples.  Note that because the actual MPI executable (i.e. the
-%output of mpicc) is not the named executable in the submit script, it
-%must be accessible either via a network file system, or by condor file
-%transfer.
-
-The \Prog{sshd.sh} script requires the definition of
+Use of the \Prog{sshd.sh} script requires the definition of
 two HTCondor configuration variables.
 Configuration variable \Macro{CONDOR\_SSHD} is an absolute path to
 an implementation of \Prog{sshd}.
@@ -443,12 +427,12 @@ but should work with more recent versions.
 Configuration variable \Macro{CONDOR\_SSH\_KEYGEN} points
 to the corresponding \Prog{ssh-keygen} executable.
 
-Scripts \Prog{openmpiscript} and \Prog{mp1script}
-each have their own idiosyncrasies.
-In \Prog{mp1script}, the \Env{PATH} to the MPICH installation must be set.
-The shell variable MPDIR indicates its proper value.
-This directory contains the MPICH \Prog{mpirun} executable; Open MPI also
-uses MPDIR.
+Both \Prog{mp1script} and \Prog{openmpiscript}
+require environmental support.
+\Prog{mp1script} requires the \Env{PATH} to the MPICH installation to be set.
+The shell variable \Env{MPdir} indicates its proper value.
+This directory contains the MPICH \Prog{mpirun} executable.
+Open MPI also uses \Env{MPdir}.
 %For OpenMPI, there is a similar path setting, but it is called \Env{LAMDIR}
 %in the \Prog{openmpiscript} script.  
 %In addition, this path must be part of the
@@ -460,73 +444,77 @@ uses MPDIR.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:parallel-mpi-submit-single}MPI Applications Within HTCondor's Vanilla Universe}
-%Within HTCondor's Parallel Universe}
-%Running MPI Jobs On A Single Machine}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-With partitionable slots, a user may wish to run a parallel job written with
-MPI but run only on one machine. Parallel universe is designed to help 
-coordinate a job on multiple machines and thus is not the correct route for
-this kind of job. Instead, the vanilla universe should be used with partitionable
-slots and the \SubmitCmd{request\_cpus} option should be used in the HTCondor submit
-file. To have a machine use 8 CPUs, simple put in your submit description file:
+The vanilla universe may be preferred over the parallel universe
+for certain parallel applications such as MPI ones.
+These applications are ones in which the allocated cores need
+to be within a single slot.
+The \SubmitCmd{request\_cpus} command causes a claimed slot to
+have the required number of CPUs (cores).
 
-\begin{verbatim}
-request_cpus = 8
-\end{verbatim}
-
-A frequently asked question is: ``How do I make sure my MPI job can run 
-on any machine that it lands on?'' There are two answers:
+There are two ways to ensure that the MPI job can run 
+on any machine that it lands on:
 \begin{enumerate}
-\item Statically build an MPI library and statically compile your MPI code.
+\item Statically build an MPI library and statically compile the MPI code.
 \item Use CDE to create a directory tree that contains all of the libraries 
-needed to execute your code.
+needed to execute the MPI code.
 \end{enumerate}
 
-For Linux machines, we have found that building static MPI libraries can be 
-difficult and that 
-using CDE and some shell scripts provides the requested results. CDE can be
-found at \URL{http://www.pgbovine.net/cde.html}.
+For Linux machines, our experience recommends using CDE,
+as building static MPI libraries can be difficult.
+CDE can be found at \URL{http://www.pgbovine.net/cde.html}.
 
-Ff MPI is installed dynamically on all machines/nodes on which the program 
-could run or if the code was built static libraries and a static version of 
-\File{mpirun} is available, the following
-submit description file works well.
+Here is a submit description file example assuming that
+MPI is installed on all machines on which the MPI job
+may run, 
+or that the code was built using static libraries and a static version of 
+\File{mpirun} is available.
+
+\footnotesize
 \begin{verbatim}
-################################################################################
-##   Submit Description File for a Parallel Program in Vanilla Universe
-################################################################################
+############################################################
+##   submit description file for 
+##   static build of MPI under the vanilla universe
+############################################################
 universe = vanilla
 executable = /path/to/mpirun
 request_cpus = 2
-arguments = -np 2 my_mpi_linked_executable arg1 arg2 arge
+arguments = -np 2 my_mpi_linked_executable arg1 arg2 arg3
 should_transfer_files = yes
 when_to_transfer_output = on_exit
 transfer_input_files = my_mpi_linked_executable
 
 queue
 \end{verbatim}
+\normalsize
 
-If MPI is not installed on all potential machines and CDE is to be used,
-then CDE needs to be run first to create the directory tree. On the host machine
-which has the original program, the command
+If CDE is to be used,
+then CDE needs to be run first to create the directory tree. 
+On the host machine which has the original program, the command
 
+\footnotesize
 \begin{verbatim}
 prompt-> cde mpirun -n 2 my_mpi_linked_executable
 \end{verbatim}
+\normalsize
 
-will create a directory tree that will contain all libraries needed for the 
-program. By creating a tarball of this directory, the user can easily package up
-the executable itself, any files needed for the executable, and all necessary
-libraries. In the following example, we assume that the user has created a 
+creates a directory tree that will contain all libraries needed for the 
+program.
+By creating a tarball of this directory, the user can package up
+the executable itself, 
+any files needed for the executable, 
+and all necessary libraries. 
+The following example assumes that the user has created a 
 tarball called \File{cde\_my\_mpi\_linked\_executable.tar} which contains the 
 directory tree created by CDE.
 
-%this submit description file works well.
+\footnotesize
 \begin{verbatim}
-#############################################
-##   submit description file for a parallel program
-#############################################
+############################################################
+##   submit description file for 
+##   MPI under the vanilla universe; CDE used
+############################################################
 universe = vanilla
 executable = cde_script.sh
 request_cpus = 2
@@ -536,11 +524,12 @@ transfer_input_files = cde_my_mpi_linked_executable.tar
 transfer_output_files = cde-package/cde-root/path/to/original/directory
 queue
 \end{verbatim}
+\normalsize
 
-%We assume that the user has created a tarball called 
-%\File{cde\_my\_mpi\_linked\_executable.tar} which contains the directory tree
-%created by CDE.
-The contents of \Prog{cde\_script.sh} are:
+The executable is now a specialized shell script tailored to this job.
+In this example, \Prog{cde\_script.sh} contains:
+
+\footnotesize
 \begin{verbatim}
 #!/bin/sh
 # Untar the CDE package
@@ -549,16 +538,19 @@ tar xpf cde_my_mpi_linked_executable.tar
 cd cde-package/cde-root/path/to/original/directory
 # Run my command
 ./mpirun.cde -n 2 ./my_mpi_linked_executable
-# Normally, HTCondor will transfer the contents of this directory.
-# However, we don't want the .cde command and the executable transferred back
-# To prevent this from happening, we manually remove both files.
+# Since HTCondor will transfer the contents of this directory
+# back upon job completion.
+# We do not want the .cde command and the executable transferred back.
+# To prevent the transfer, remove both files.
 rm -f mpirun.cde
 rm -f my_mpi_linked_executable
 \end{verbatim}
+\normalsize
 
-Any additional input files needed for the executable not already in the tarball
+Any additional input files that will be needed for the executable
+that are not already in the tarball
 should be included in the list in \SubmitCmd{transfer\_input\_files} command. 
 The corresponding script should then also be updated to move those files into
-the directory that where the executable will be run.
+the directory where the executable will be run.
 
 
