@@ -60,21 +60,23 @@ expression that evaluates to \Expr{True} could have duplicate hold messages
 in the user log.
 \Ticket{3651}
 
-\item Fixed a bug where \Condor{dagman} would submit multiple copies of the
-same job, fail, write a rescue DAG, and leave the jobs in the queue. This was
-due to a warning from \Condor{submit} that the submit file was not using lines
-containing the string ``cluster''. Now \Condor{dagman} will search for the
-string ``\ submitted to cluster\ '', which will have fewer false alarms. If the
-submit succeeds and \Condor{dagman} gets confused, the jobs will be removed
-when \Condor{dagman} writes a rescue DAG.
+\item Fixed a bug in which \Condor{dagman} would submit multiple copies of the
+same job, fail, write a Rescue DAG, and leave the jobs in the queue. 
+This was due to a warning from \Condor{submit} that the submit description file
+was not using lines containing the string \Expr{"cluster"}. 
+As a fix, \Condor{dagman} will search for the
+string \Expr{" submitted to cluster "}.
+This will generate fewer false alarms. 
+If the submission succeeds and \Condor{dagman} gets confused, 
+the jobs will be removed when \Condor{dagman} writes a Rescue DAG.
 \Ticket{3658}
 
 \item Added \Expr{libdate-manip-perl} as a dependency to the Debian packages.
 It is required in order to run the \Condor{gather\_info} script.
 \Ticket{3692}
 
-\item \Macro{CCB\_ADDRESS} did not correctly support a list of CCB
-  servers.  Only the first one was used.
+\item Configuration variable \Macro{CCB\_ADDRESS} did not correctly 
+support a list of CCB servers.  Only the first one in the list was used.
 \Ticket{3699}
 
 \item Fixed a memory leak and potential crash in the \Condor{gridmanager}
@@ -85,7 +87,8 @@ when requests to an EC2 service fail.
 submitted a second time during recovery.
 \Ticket{3705}
 
-\item Fixed a bug that caused some log messages to be terminated with binary characters.
+\item Fixed a bug that caused some communication layer log messages 
+to end with binary characters.
 \Ticket{3706}
 
 \end{itemize}
