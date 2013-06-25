@@ -952,9 +952,7 @@ pseudo_put_file_stream(
 
 			/* Send status assuring peer that we got everything */
 		answer = htonl( bytes_read );
-		if (write( data_sock, &answer, sizeof(answer) != sizeof(answer))) {
-			dprintf(D_ALWAYS, "ERROR writing status result to parent\n");
-		} 
+		write( data_sock, &answer, sizeof(answer));
 		dprintf( D_ALWAYS,
 			"\tSTREAM FILE RECEIVED OK (%d bytes)\n", bytes_read );
 
