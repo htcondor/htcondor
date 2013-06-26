@@ -1576,13 +1576,18 @@ negotiationTime ()
 						}
 
 						while (limitingGroup != NULL) {
-							if ((limitingGroup->accept_surplus == false) && limitingGroup->static_quota) {
+							if (limitingGroup->accept_surplus == false) {
 								// This is the extra available at this node
-								double subtree_available = limitingGroup->config_quota - limitingGroup->subtree_usage;
+								double subtree_available = -1;
+								if (limitingGroup->static_quota) {
+									subtree_available = limitingGroup->config_quota - limitingGroup->subtree_usage;
+								} else {
+									subtree_available = limitingGroup->subtree_quota - limitingGroup->subtree_usage;
+								}
 								if (subtree_available < 0) subtree_available = 0;
-								dprintf(D_ALWAYS, "my_new_allocation is %g subtree_available is %g\n", my_new_allocation, subtree_available);
+								dprintf(D_FULLDEBUG, "\tmy_new_allocation is %g subtree_available is %g\n", my_new_allocation, subtree_available);
 								if (my_new_allocation > subtree_available) {
-									dprintf(D_FULLDEBUG, "Group %s with accept_surplus=false has total usage = %g and config quota of %g -- constraining allocation in group %s to %g\n",
+									dprintf(D_ALWAYS, "Group %s with accept_surplus=false has total usage = %g and config quota of %g -- constraining allocation in subgroup %s to %g\n",
 											limitingGroup->name.c_str(), limitingGroup->subtree_usage, limitingGroup->config_quota, group->name.c_str(), subtree_available + group->usage);
 		
 									my_new_allocation = subtree_available; // cap new allocation to the available
