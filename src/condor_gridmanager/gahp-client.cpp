@@ -6175,7 +6175,7 @@ int GahpClient::ec2_vm_status_all( std::string service_url,
             default:
                 if( (result->argc - 2) % 4 != 0 ) { EXCEPT( "Bad %s result", command ); }
                 for( int i = 2; i < result->argc; ++i ) {
-                    returnStatus.append( strdup( result->argv[i] ) );
+                    returnStatus.append( result->argv[i] );
                 }
                 returnStatus.rewind();
                 break;
@@ -6290,7 +6290,7 @@ int GahpClient::ec2_vm_status( std::string service_url,
 				{
 					// get the status info
 					for (int i=2; i<result->argc; i++) {
-						returnStatus.append( strdup(result->argv[i]) );
+						returnStatus.append( result->argv[i] );
 					}
 				}
 				returnStatus.rewind();
@@ -6312,7 +6312,7 @@ int GahpClient::ec2_vm_status( std::string service_url,
 				{
 					// get the status info
 					for (int i=2; i<result->argc; i++) {
-						returnStatus.append( strdup(result->argv[i]) );
+						returnStatus.append( result->argv[i] );
 					}
 				}
 				returnStatus.rewind();
@@ -6678,7 +6678,7 @@ int GahpClient::ec2_vm_vm_keypair_all( std::string service_url,
 			} else {
 				// get the status info
 				for (int i=2; i<result->argc; i++) {
-					returnStatus.append( strdup(result->argv[i]) );
+					returnStatus.append( result->argv[i] );
 				}
 				returnStatus.rewind();
 			}
@@ -6784,7 +6784,7 @@ int GahpClient::ec2_associate_address(std::string service_url,
             } else {
                 // get the status info
                 for (int i=2; i<result->argc; i++) {
-                    returnStatus.append( strdup(result->argv[i]) );
+                    returnStatus.append( result->argv[i] );
                 }
                 returnStatus.rewind();
             }
@@ -6889,7 +6889,7 @@ GahpClient::ec2_create_tags(std::string service_url,
             } else {
                 // get the status info
                 for (int i=2; i<result->argc; i++) {
-                    returnStatus.append(strdup(result->argv[i]));
+                    returnStatus.append(result->argv[i]);
                 }
                 returnStatus.rewind();
             }
@@ -6984,7 +6984,7 @@ int GahpClient::ec2_attach_volume(std::string service_url,
             } else {
                 // get the status info
                 for (int i=2; i<result->argc; i++) {
-                    returnStatus.append( strdup(result->argv[i]) );
+                    returnStatus.append( result->argv[i] );
                 }
                 returnStatus.rewind();
             }
@@ -7236,9 +7236,9 @@ int GahpClient::ec2_spot_status(    std::string service_url,
         } else if( (result->argc - 2) % 5 == 0 ) {
             for( int i = 2; i < result->argc; ++i ) {
                 if( strcmp( result->argv[i], NULLSTRING ) ) {
-                    returnStatus.append( strdup( result->argv[i] ) );
+                    returnStatus.append( result->argv[i] );
                 } else {
-                    returnStatus.append( strdup( "" ) );
+                    returnStatus.append( "" );
                 }
             }
         } else {
@@ -7308,9 +7308,9 @@ int GahpClient::ec2_spot_status_all(    std::string service_url,
         } else if( (result->argc - 2) % 5 == 0 ) {
             for( int i = 2; i < result->argc; ++i ) {
                 if( strcmp( result->argv[i], NULLSTRING ) ) {
-                    returnStatus.append( strdup( result->argv[i] ) );
+                    returnStatus.append( result->argv[i] );
                 } else {
-                    returnStatus.append( strdup( "" ) );
+                    returnStatus.append( "" );
                 }
             }
         } else {

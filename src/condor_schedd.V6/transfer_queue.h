@@ -36,6 +36,8 @@ class IOStats {
 	stats_entry_sum_ema_rate<double> file_write;
 	stats_entry_sum_ema_rate<double> net_read;
 	stats_entry_sum_ema_rate<double> net_write;
+	stats_entry_abs<double> upload_MB_waiting;
+	stats_entry_abs<double> download_MB_waiting;
 
 	void Add(IOStats &s);
 	void ConfigureEMAHorizons(classy_counted_ptr<stats_ema_config> config);
@@ -44,7 +46,7 @@ class IOStats {
 // transfer queue server's representation of a client
 class TransferQueueRequest {
  public:
-	TransferQueueRequest(ReliSock *sock,char const *fname,char const *jobid,char const *queue_user,bool downloading,time_t max_queue_age);
+	TransferQueueRequest(ReliSock *sock,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,bool downloading,time_t max_queue_age);
 	~TransferQueueRequest();
 
 	char const *Description();
@@ -58,6 +60,7 @@ class TransferQueueRequest {
 	std::string m_up_down_queue_user; // queue user prefixed by "U" or "D" for upload/download
 	MyString m_jobid;   // For information purposes, the job associated with
 	                    // this file transfer.
+	double m_sandbox_size_MB;
 	MyString m_fname;   // File this client originally requested to transfer.
 	                    // In current implementation, it may silently move on
 	                    // to a different file without notifying us.
@@ -114,6 +117,15 @@ class TransferQueueManager: public Service {
 	int m_max_downloads; // 0 if unlimited
 	time_t m_default_max_queue_age; // 0 if unlimited
 
+	bool m_throttle_disk_load;
+	double m_disk_load_low_throttle;
+	double m_disk_load_high_throttle;
+	int m_throttle_disk_load_max_concurrency;
+	time_t m_throttle_disk_load_incremented;
+	time_t m_throttle_disk_load_increment_wait;
+	std::string m_disk_throttle_short_horizon;
+	std::string m_disk_throttle_long_horizon;
+
 	int m_check_queue_timer;
 
 	int m_uploading;
@@ -131,6 +143,12 @@ class TransferQueueManager: public Service {
 	stats_entry_abs<int> m_waiting_to_download_stat;
 	stats_entry_abs<int> m_upload_wait_time_stat;
 	stats_entry_abs<int> m_download_wait_time_stat;
+
+	stats_entry_abs<double> m_disk_throttle_low_stat;
+	stats_entry_abs<double> m_disk_throttle_high_stat;
+	stats_entry_abs<int> m_disk_throttle_limit_stat;
+	stats_entry_ema<double> m_disk_throttle_excess;
+	stats_entry_ema<double> m_disk_throttle_shortfall;
 
 	unsigned int m_round_robin_counter; // increments each time we send GoAhead to a client
 
@@ -165,10 +183,14 @@ class TransferQueueManager: public Service {
 	void ClearRoundRobinRecency();
 	void ClearTransferCounts();
 	void UpdateIOStats();
+	void IOStatsChanged();
 	void RegisterStats(char const *user,IOStats &iostats,bool unregister=false,ClassAd *unpublish_ad=NULL);
 	void UnregisterStats(char const *user,IOStats &iostats,ClassAd *unpublish_ad) {
 		RegisterStats(user,iostats,true,unpublish_ad);
 	}
+
+	void parseThrottleConfig(char const *config_param,bool &enable_throttle,double &low,double &high,std::string &throttle_short_horizon,std::string &throttle_long_horizon,time_t &throttle_increment_wait);
+
 };
 
 

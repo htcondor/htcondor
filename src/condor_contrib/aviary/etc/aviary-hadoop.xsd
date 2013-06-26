@@ -24,6 +24,7 @@
 			<xs:enumeration value="PENDING"/>
 			<xs:enumeration value="RUNNING"/>
 			<xs:enumeration value="EXITING"/>
+			<xs:enumeration value="UNMANAGED"/>
 		</xs:restriction>
 	</xs:simpleType>
 	<xs:complexType name="HadoopID">

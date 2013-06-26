@@ -28,6 +28,8 @@
 //     * use stats_entry_recent<T> for probes that need a value and a recent value (i.e. number of jobs that have finished)
 //     * use stats_entry_recent<Probe> for general statistics value (min,max,avg,std)
 //     * use stats_recent_counter_timer for runtime accumulators (int count, double runtime with overall and recent)
+//     * use stats_ema for exponential moving averages
+//     * use stats_sum_ema_rate for computing a running total and exponential moving averages of the rate of change
 //   * use Add() or Set() methods of the probes (+= and =) to update the probe
 //       probes will calculate total value, as well as windowed values and/or min/max,std, or peak values. 
 //   * Then EITHER
@@ -139,7 +141,8 @@ enum {
    IS_RCT         = 0x0600, // is stats_recent_counter_timer 
    IS_REPROBE     = 0x0700, // is stats_entry_recent<Probe> class
    IS_HISTOGRAM   = 0x0800, // is stats_entry_histgram class
-   IS_CLS_SUM_EMA_RATE = 0x1000, // is stats_entry_sum_ema_rate class
+   IS_CLS_EMA     = 0x0900, // is stats_entry_sum_ema_rate class
+   IS_CLS_SUM_EMA_RATE = 0x0A00, // is stats_entry_sum_ema_rate class
 
    // values above AS_TYPE_MASK are flags
    //
@@ -630,18 +633,16 @@ bool ParseEMAHorizonConfiguration(char const *ema_conf,classy_counted_ptr<stats_
 // Example: track sum of bytes transferred since startup
 // and average bytes transferred per second over 1m, 5m, 1h, and 1d horizons.
 //
-template <class T> class stats_entry_sum_ema_rate : public stats_entry_count<T> {
+template <class T> class stats_entry_ema_base : public stats_entry_count<T> {
 public:
-	stats_entry_sum_ema_rate() { Clear(); }
+	stats_entry_ema_base() { Clear(); }
 
 	stats_ema_list ema;
 	time_t recent_start_time;
-	T recent_sum;
 	classy_counted_ptr<stats_ema_config> ema_config;
 
 	void Clear() {
 		this->value = 0;
-		this->recent_sum = 0;
 		this->recent_start_time = time(NULL);
 		for(stats_ema_list::iterator ema_itr = ema.begin();
 			ema_itr != ema.end();
@@ -650,7 +651,48 @@ public:
 			ema_itr->Clear();
 		}
 	}
+	void SkipInterval() {
+			// Add 1 second of slop time so immediately calling Update() after this
+			// will likely be a no-op.
+		this->recent_start_time = time(NULL)+1;
+	}
 
+		// Allocate variables to track exponential moving averages.
+		// Can be called to reconfigure or initialize this object.
+		// Args:
+		//   ema_config serves as a template; it can be created with ParseEMAHorizonConfiguration()
+	void ConfigureEMAHorizons(classy_counted_ptr<stats_ema_config> config);
+
+		// Return the biggest EMA rate value
+	double BiggestEMAValue() const;
+
+		// Return the name of EMA value with the shortest horizon
+	char const *ShortestHorizonEMAName() const;
+
+		// Return the named EMA rate value
+	double EMAValue(char const *horizon_name) const;
+
+	bool HasEMAHorizonNamed(char const *horizon_name) const;
+
+		// bits used in Publish() flags
+	static const int PubValue = 1;
+	static const int PubEMA = 2;
+	static const int PubDecorateAttr = 0x100;
+	static const int PubDecorateLoadAttr = 0x200;
+	static const int PubSuppressInsufficientDataEMA = 0x300;
+
+	void Publish(ClassAd & ad, const char * pattr, int flags) const;
+	void Unpublish(ClassAd & ad, const char * pattr) const;
+};
+
+template <class T> class stats_entry_sum_ema_rate : public stats_entry_ema_base<T> {
+public:
+	T recent_sum;
+
+	void Clear() {
+		this->recent_sum = 0;
+		stats_entry_ema_base<T>::Clear();
+	}
 	T Set(T val) { 
 		this->recent_sum = val - this->value;
 		this->value = val;
@@ -672,41 +714,14 @@ public:
 			time_t interval = now - this->recent_start_time;
 			double recent_rate = (double)this->recent_sum/interval;
 
-			for(size_t i = ema.size(); i--; ) {
-				ema[i].Update(recent_rate,interval,ema_config->horizons[i]);
+			for(size_t i = this->ema.size(); i--; ) {
+				this->ema[i].Update(recent_rate,interval,this->ema_config->horizons[i]);
 			}
 		}
 
 		this->recent_sum = 0;
 		this->recent_start_time = now;
 	}
-
-		// Allocate variables to track exponential moving averages.
-		// Can be called to reconfigure or initialize this object.
-		// Args:
-		//   ema_config serves as a template; it can be created with ParseEMAHorizonConfiguration()
-	void ConfigureEMAHorizons(classy_counted_ptr<stats_ema_config> config);
-
-		// Return the biggest EMA rate value
-	double BiggestEMARate() const;
-
-		// Return the name of EMA value with the shortest horizon
-	char const *ShortestHorizonEMARateName() const;
-
-		// Return the named EMA rate value
-	double EMARate(char const *horizon_name) const;
-
-		// bits used in Publish() flags
-	static const int PubValue = 1;
-	static const int PubEMA = 2;
-	static const int PubDecorateAttr = 0x100;
-	static const int PubDecorateLoadAttr = 0x200;
-	static const int PubSuppressInsufficientDataEMA = 0x300;
-	static const int PubDefault = PubValue | PubEMA | PubDecorateAttr | PubDecorateLoadAttr | PubSuppressInsufficientDataEMA;
-
-	void Publish(ClassAd & ad, const char * pattr, int flags) const;
-	void Unpublish(ClassAd & ad, const char * pattr) const;
-
 		// We don't have a ring buffer, so cSlots has no meaning, but we still define AdvanceBy()
 		// so that our Update() function will get called automatically by the statistics pool.
 	void AdvanceBy(int cSlots) { 
@@ -715,15 +730,81 @@ public:
 		Update( time(NULL) );
 	}
 
-		// operator overloads
-	stats_entry_sum_ema_rate<T>& operator=(T val)  { Set(val); return *this; }
-	stats_entry_sum_ema_rate<T>& operator+=(T val) { Add(val); return *this; }
+
+	static const int PubDefault =
+		stats_entry_sum_ema_rate<T>::PubValue |
+		stats_entry_sum_ema_rate<T>::PubEMA |
+		stats_entry_sum_ema_rate<T>::PubDecorateAttr |
+		stats_entry_sum_ema_rate<T>::PubDecorateLoadAttr |
+		stats_entry_sum_ema_rate<T>::PubSuppressInsufficientDataEMA;
+
+	void Publish(ClassAd & ad, const char * pattr, int flags) const;
+	void Unpublish(ClassAd & ad, const char * pattr) const;
 
 		// callback methods/fetchers for use by the StatisticsPool class
 	static const int unit = IS_CLS_SUM_EMA_RATE | stats_entry_type<T>::id;
 	static void Delete(stats_entry_sum_ema_rate<T> * probe) { delete probe; }
 	static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return (FN_STATS_ENTRY_UNPUBLISH)&stats_entry_sum_ema_rate<T>::Unpublish; };
 	static FN_STATS_ENTRY_ADVANCE GetFnAdvance() { return (FN_STATS_ENTRY_ADVANCE)&stats_entry_sum_ema_rate<T>::AdvanceBy; };
+
+		// operator overloads
+	stats_entry_sum_ema_rate<T>& operator=(T val)  { this->Set(val); return *this; }
+	stats_entry_sum_ema_rate<T>& operator+=(T val) { this->Add(val); return *this; }
+};
+
+template <class T> class stats_entry_ema : public stats_entry_ema_base<T> {
+public:
+	T Set(T val) { 
+		this->value = val;
+		return this->value;
+	}
+
+	T Add(T val) {
+		this->value += val;
+		return this->value;
+	}
+
+		// update the exponential moving averages of the rate of growth
+	void Update(time_t now) {
+			// Throw out data points during which time jumps into the past.
+			// We could be more correct and use clock_gettime(CLOCK_MONOTONIC),
+			// but that is overkill for our current uses of this code.
+		if( now > this->recent_start_time ) {
+			time_t interval = now - this->recent_start_time;
+
+			for(size_t i = this->ema.size(); i--; ) {
+				this->ema[i].Update(this->value,interval,this->ema_config->horizons[i]);
+			}
+		}
+		this->recent_start_time = now;
+	}
+		// We don't have a ring buffer, so cSlots has no meaning, but we still define AdvanceBy()
+		// so that our Update() function will get called automatically by the statistics pool.
+	void AdvanceBy(int cSlots) { 
+		if (cSlots <= 0) 
+			return;
+		Update( time(NULL) );
+	}
+
+
+	static const int PubDefault =
+		stats_entry_sum_ema_rate<T>::PubEMA |
+		stats_entry_sum_ema_rate<T>::PubDecorateAttr |
+		stats_entry_sum_ema_rate<T>::PubSuppressInsufficientDataEMA;
+
+
+	void Publish(ClassAd & ad, const char * pattr, int flags) const;
+	void Unpublish(ClassAd & ad, const char * pattr) const;
+
+		// callback methods/fetchers for use by the StatisticsPool class
+	static const int unit = IS_CLS_EMA | stats_entry_type<T>::id;
+	static void Delete(stats_entry_ema<T> * probe) { delete probe; }
+	static FN_STATS_ENTRY_UNPUBLISH GetFnUnpublish() { return (FN_STATS_ENTRY_UNPUBLISH)&stats_entry_ema<T>::Unpublish; };
+	static FN_STATS_ENTRY_ADVANCE GetFnAdvance() { return (FN_STATS_ENTRY_ADVANCE)&stats_entry_ema<T>::AdvanceBy; };
+
+		// operator overloads
+	stats_entry_ema<T>& operator=(T val)  { this->Set(val); return *this; }
+	stats_entry_ema<T>& operator+=(T val) { this->Add(val); return *this; }
 };
 
 // use stats_entry_recent for values that are constantly increasing, such 

@@ -324,6 +324,9 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 			// ditto for the collector, which typically has a daemon name != machine name, even though there is only one collector
 			daemon_ad.EvaluateAttrString(ATTR_MACHINE,machine);
 		}
+		else if( !strcasecmp(my_type.c_str(),"submitter") ) {
+			daemon_ad.EvaluateAttrString(ATTR_SCHEDD_NAME,machine);
+		}
 		else {
 			// use the daemon name for the metric machine name
 			daemon_ad.EvaluateAttrString(ATTR_NAME,machine);

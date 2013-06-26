@@ -105,24 +105,33 @@ int HadoopObject::start( tHadoopInit & hInit )
 { 
     int cluster, proc;
     
-    dprintf( D_FULLDEBUG, "Called HadoopObject::start w/%s count:%d owner:(%s)\n", 
-             hInit.idref.tarball.c_str(), 
+    dprintf( D_FULLDEBUG, "Called HadoopObject::start count:%d owner:(%s) unmanaged(%s) tarball:%s \n",  
              hInit.count, 
-             hInit.owner.c_str());
+             hInit.owner.c_str(),
+             hInit.unmanaged?"TRUE":"FALSE",
+             hInit.idref.tarball.size()?hInit.idref.tarball.c_str():"EMPTY"
+           );
          
     // check input tarball.
-    if ( 0 == hInit.idref.tarball.size() )
+    if ( 0 == hInit.idref.tarball.size() && !hInit.unmanaged )
     {
-        char * binball = param("HADOOP_BIN_TARBALL");
-        if (!binball)
+        if (hInit.unmanaged)
         {
-            m_lasterror = "No hadoop tarball specified.";
-            return false;
+            hInit.idref.tarball = "EMPTY";
         }
         else
         {
-            hInit.idref.tarball = binball;
-            delete binball;
+            char * binball = param("HADOOP_BIN_TARBALL");
+            if (!binball )
+            {
+                m_lasterror = "No hadoop tarball specified.";
+                return false;
+            }
+            else
+            {
+                hInit.idref.tarball = binball;
+                delete binball;
+            }
         }
     }
     
@@ -151,7 +160,7 @@ int HadoopObject::start( tHadoopInit & hInit )
 
     // now we will 
     string hadoopType, inputscript, args;
-    MyString IPCAddress, HTTPAddress="";
+    MyString IPCAddress, HTTPAddress="", ManagedState;
     bool hasInputScript=false, bValidId=false;
     string Iwd="/tmp";
     int iStatus=1;
@@ -163,11 +172,13 @@ int HadoopObject::start( tHadoopInit & hInit )
         bValidId = true;
 
         ::GetAttributeInt( id.cluster, id.proc, ATTR_JOB_STATUS, &iStatus);
+        ::GetAttributeString( id.cluster, id.proc,  "GridoopManaged", ManagedState);
 
         dprintf(D_FULLDEBUG, "Valid ClusterId Ref: %s status: %d\n", hInit.idref.id.c_str(), iStatus);
     }
     
     args = hInit.idref.tarball;
+    bool wantsHadoopRequest = false;
     
     switch (hInit.idref.type)
     {
@@ -189,6 +200,12 @@ int HadoopObject::start( tHadoopInit & hInit )
             ::SetAttribute(cluster, proc, ATTR_REQUIREMENTS, "( HasJava =?= TRUE ) && ( TARGET.OpSys == \"LINUX\" ) && ( TARGET.Memory >= RequestMemory ) && ( TARGET.HasFileTransfer )");
         }
         
+        // "spindle" configuration
+        wantsHadoopRequest = param_boolean("HADOOP_ENABLE_REQUEST_NAMENODE",false);
+        if (wantsHadoopRequest) {
+            ::SetAttributeInt(cluster, proc, ATTR_HADOOP_REQUEST_NAMENODE, 1);
+        }
+
         break;
         case JOB_TRACKER:
         hadoopType = ATTR_JOB_TRACKER;
@@ -206,6 +223,12 @@ int HadoopObject::start( tHadoopInit & hInit )
             ::SetAttribute(cluster, proc, ATTR_REQUIREMENTS, "( HasJava =?= TRUE ) && ( TARGET.OpSys == \"LINUX\" ) && ( TARGET.HasFileTransfer )");
         }
         
+        // "spindle" configuration
+        wantsHadoopRequest = param_boolean("HADOOP_ENABLE_REQUEST_JOBTRACKER",false);
+        if (wantsHadoopRequest) {
+            ::SetAttributeInt(cluster, proc, ATTR_HADOOP_REQUEST_JOBTRACKER, 1);
+        }
+
         // fall through
         case DATA_NODE:
         // special case case only a small part the rest is common.
@@ -230,7 +253,7 @@ int HadoopObject::start( tHadoopInit & hInit )
         ///////////////////////////////////////////////////////////////////////////////////////
         // NOTE: This section is common to both JOB_TRACKER && DATA_NODES
         // It could possibly be refactored into a function but it's not really pretty/clean.
-        if (bValidId && iStatus == RUNNING )
+        if (bValidId && (iStatus == RUNNING || ManagedState == "UNMANAGED" ))
         {
             ::GetAttributeString( id.cluster, id.proc,  "IPCAddress", IPCAddress);
             ::GetAttributeString( id.cluster, id.proc,  "HTTPAddress", HTTPAddress);
@@ -258,6 +281,12 @@ int HadoopObject::start( tHadoopInit & hInit )
         ::SetAttribute(cluster, proc, "NameNodeIPCAddress", quote_it(IPCAddress.Value()).c_str());
         ///////////////////////////////////////////////////////////////////////////////////////
         
+        // "spindle" configuration
+        wantsHadoopRequest = param_boolean("HADOOP_ENABLE_REQUEST_DATANODE",false);
+        if (wantsHadoopRequest) {
+            ::SetAttributeInt(cluster, proc, ATTR_HADOOP_REQUEST_DATANODE, 1);
+        }
+
         break;
         
         case TASK_TRACKER:
@@ -305,6 +334,12 @@ int HadoopObject::start( tHadoopInit & hInit )
         args += IPCAddress.Value();
         ::SetAttribute(cluster, proc, "JobTrackerIPCAddress", quote_it(IPCAddress.Value()).c_str());
         
+        // "spindle" configuration
+        wantsHadoopRequest = param_boolean("HADOOP_ENABLE_REQUEST_TASKTRACKER",false);
+        if (wantsHadoopRequest) {
+            ::SetAttributeInt(cluster, proc, ATTR_HADOOP_REQUEST_TASKTRACKER, 1);
+        }
+
         break;
     }
 
@@ -319,6 +354,30 @@ int HadoopObject::start( tHadoopInit & hInit )
     // Set the owner attribute
     ::SetAttribute(cluster, proc, ATTR_OWNER, quote_it(hInit.owner.c_str()).c_str());
     
+    
+    if (hInit.unmanaged)
+    {
+        ::SetAttribute(cluster, proc, "GridoopManaged", quote_it("UNMANAGED").c_str());
+        ::SetAttribute(cluster, proc, "IPCAddress", quote_it(hInit.idref.ipcid.c_str()).c_str());
+        ::SetAttribute(cluster, proc, "HTTPAddress", quote_it(hInit.idref.http.c_str()).c_str());
+        
+        // EARLY SET: These attribute are set early so the incoming ad
+        // has a change to override them.
+        ::SetAttribute(cluster, proc, ATTR_JOB_STATUS, "5"); // 1 = held
+        
+    }
+    else
+    {
+        ::SetAttribute(cluster, proc, "GridoopManaged", quote_it("MANAGED").c_str());
+        ::SetAttribute(cluster, proc, ATTR_TRANSFER_INPUT_FILES, quote_it(hInit.idref.tarball.c_str()).c_str());
+        ::SetAttribute(cluster, proc, ATTR_HADOOP_BIN_VERSION, quote_it(hInit.idref.tarball.c_str()).c_str());
+        
+        // EARLY SET: These attribute are set early so the incoming ad
+        // has a change to override them.
+        ::SetAttribute(cluster, proc, ATTR_JOB_STATUS, "1"); // 1 = idle
+        
+    }
+    
     if ( !hInit.description.length() )
     {
         hInit.description="N/A";
@@ -331,8 +390,6 @@ int HadoopObject::start( tHadoopInit & hInit )
     
     ::SetAttribute(cluster, proc, ATTR_JOB_CMD, quote_it(inputscript.c_str()).c_str());
     ::SetAttribute(cluster, proc, ATTR_JOB_ARGUMENTS1, quote_it(args.c_str()).c_str());
-    ::SetAttribute(cluster, proc, ATTR_TRANSFER_INPUT_FILES, quote_it(hInit.idref.tarball.c_str()).c_str());
-    ::SetAttribute(cluster, proc, ATTR_HADOOP_BIN_VERSION, quote_it(hInit.idref.tarball.c_str()).c_str());
     ::SetAttribute(cluster, proc, ATTR_HADOOP_TYPE, quote_it(hadoopType.c_str()).c_str() );
     ::SetAttribute(cluster, proc, ATTR_SHOULD_TRANSFER_FILES, quote_it("YES").c_str());
     ::SetAttribute(cluster, proc, ATTR_WANT_IO_PROXY, "true");
@@ -342,10 +399,7 @@ int HadoopObject::start( tHadoopInit & hInit )
     
     ::SetAttribute(cluster, proc, ATTR_KILL_SIG, quote_it("SIGTERM").c_str());
     
-    // EARLY SET: These attribute are set early so the incoming ad
-    // has a change to override them.
-    ::SetAttribute(cluster, proc, ATTR_JOB_STATUS, "1"); // 1 = idle
-
+    
     // Junk that condor_q wants, but really shouldn't be necessary
     ::SetAttribute(cluster, proc, ATTR_JOB_REMOTE_USER_CPU, "0.0"); // float
     ::SetAttribute(cluster, proc, ATTR_JOB_PRIO, "0");              // int
@@ -438,8 +492,7 @@ bool HadoopObject::status (ClassAd* cAd, const tHadoopType & type, tHadoopJobSta
     
     if (!cAd->LookupString( ATTR_HADOOP_BIN_VERSION, hStatus.idref.tarball))
     {
-    m_lasterror = "Could not find Hadoop Version";
-    return false;
+        hStatus.idref.tarball = "UNMANAGED";
     }
      
     aviUtilFmt(hStatus.idref.id,"%d.%d", cluster, proc);
@@ -457,35 +510,52 @@ bool HadoopObject::status (ClassAd* cAd, const tHadoopType & type, tHadoopJobSta
     }
  
     hStatus.uptime = 0;
-    switch (JobStatus)
+    
+    // 1st check to see if we are unmanaged.
+    cAd->LookupString( "GridoopManaged", hStatus.state);
+    
+    // if we are not unmanaged then fill in the state
+    if ( strcmp("UNMANAGED", hStatus.state.c_str()) )
     {
-    case 1:
-        hStatus.state = "PENDING";
-        break;
-    case 2:
-        hStatus.state = "RUNNING";
+        dprintf( D_ALWAYS, "ANything but 0 on comparison\n");
         
-        if ( cAd->LookupInteger(ATTR_ENTERED_CURRENT_STATUS, EnteredStatus) )
-        {
-        hStatus.uptime=((int)time(NULL)-EnteredStatus);
-        }
-        break;
-    case 3:
-    case 4:
-        hStatus.state = "EXITING";
-        break;
-    default: 
-        hStatus.state = "ERROR";
-    }
+            switch (JobStatus)
+            {
+                case 1:
+                    hStatus.state = "PENDING";
+                    break;
+                case 2:
+                    hStatus.state = "RUNNING";
+                    
+                    if ( cAd->LookupInteger(ATTR_ENTERED_CURRENT_STATUS, EnteredStatus) )
+                    {
+                        hStatus.uptime=((int)time(NULL)-EnteredStatus);
+                    }
+                    break;
+                case 3:
+                case 4:
+                    hStatus.state = "EXITING";
+                    break;
+                default: 
+                    hStatus.state = "ERROR";
+            }
+        
+    }  
 
     if (!cAd->LookupString( "IPCAddress", hStatus.idref.ipcid))
     {
        hStatus.idref.ipcid="N/A";
     }
     
+    if (!cAd->LookupString( "HTTPAddress", hStatus.idref.http))
+    {
+        hStatus.idref.http="N/A";
+    }
+    
     // default the parent data
-    hStatus.idparent.ipcid="";
-    hStatus.idparent.id="";
+    hStatus.idparent.ipcid="N/A";
+    hStatus.idparent.id="N/A";
+    hStatus.idparent.http="N/A";
     
     switch (type)
     {
@@ -503,7 +573,7 @@ bool HadoopObject::status (ClassAd* cAd, const tHadoopType & type, tHadoopJobSta
     }
 
     
-    dprintf( D_FULLDEBUG, "Called HadoopObject::status() STATUS:%s, ID:%d.%d OWNER:%s PARENT:(%s,%s) DESCRIPTION:%s\n", 
+    dprintf( D_ALWAYS, "Called HadoopObject::status() STATUS:%s, ID:%d.%d OWNER:%s PARENT:(%s,%s) DESCRIPTION:%s\n", 
              hStatus.state.c_str(), 
              cluster, proc, 
              hStatus.owner.c_str(),

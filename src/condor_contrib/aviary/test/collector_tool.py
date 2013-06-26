@@ -34,7 +34,7 @@ import pwd
 # change these for other default locations and ports
 DEFAULTS = {'wsdl':'file:/var/lib/condor/aviary/services/collector/aviary-collector.wsdl',
             'host':'localhost',
-            'port':'9000',
+            'port':'39000',
             'service':'/services/collector/',
             'verbose': False
             }
@@ -258,7 +258,7 @@ if __name__ == '__main__':
         setattr(parser.values, option.dest, value.split(','))
 
     if len(argv) > 1:
-        parser = build_basic_parser('Retrieve HTCondor collector data remotely via SOAP.','http://localhost:9000/services/collector/')
+        parser = build_basic_parser('Retrieve HTCondor collector data remotely via SOAP.','http://localhost:39000/services/collector/')
         parser.add_option('-n','--names', type='string',
                   action='callback', callback=names_callback, help="comma-separated list of attribute names to retrieve")
         (opts,args) =  parser.parse_args()
