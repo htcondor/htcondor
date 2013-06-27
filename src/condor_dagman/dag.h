@@ -52,6 +52,7 @@ enum SpliceLayer {
 
 class Dagman;
 class MyString;
+class DagmanMetrics;
 
 // used for RelinquishNodeOwnership and AssumeOwnershipofNodes
 // This class owns the containers with which it was constructed, but
@@ -90,6 +91,8 @@ class OwnedMaterials
     appeared in the condor log file.
 */
 class Dag {
+  friend class DagmanMetrics;
+
   public:
   
     /** Create a DAG
@@ -143,6 +146,12 @@ class Dag {
 
     ///
     ~Dag();
+
+		//TEMPTEMP -- document
+	void CreateMetrics( const char *primaryDagFile, int rescueDagNum );
+
+		//TEMPTEMP -- document
+	void ReportMetrics( int exitCode );
 
 	/** Set the _abortOnScarySubmit value -- controls whether we abort
 		the DAG on "scary" submit events.
@@ -483,7 +492,9 @@ class Dag {
 
 	void PrintReadyQ( debug_level_t level ) const;
 
+#if 0
 	bool RemoveNode( const char *name, MyString &whynot );
+#endif
 
 	bool RemoveDependency( Job *parent, Job *child );
 	bool RemoveDependency( Job *parent, Job *child, MyString &whynot );
@@ -926,9 +937,11 @@ class Dag {
 		// (including PRE and POST scripts, if any.
 	bool _runningFinalNode;
 
+protected:
     /// List of Job objects
     List<Job>     _jobs;
 
+private:
 		// Note: the final node is in the _jobs list; this pointer is just
 		// for convenience.
 	Job* _final_job;
@@ -1172,6 +1185,9 @@ class Dag {
 		// This must be false if dagman is communicating with a pre-7.9.0
 		// schedd/shadow or submit.
 	bool _use_default_node_log;
+
+		// Object to deal with reporting DAGMan metrics (to Pegasus).
+	DagmanMetrics *_metrics;
 };
 
 #endif /* #ifndef DAG_H */

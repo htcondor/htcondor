@@ -37,6 +37,7 @@
 #include "condor_getcwd.h"
 #include "condor_version.h"
 #include "subsystem_info.h"
+#include "dagman_metrics.h"
 
 void ExitSuccess();
 
@@ -556,6 +557,9 @@ void ExitSuccess() {
 	print_status();
 	dagman.dag->DumpNodeStatus( false, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_OKAY );
+	//TEMPTEMP -- write metrics file about here...
+	dagman.dag->ReportMetrics( EXIT_OKAY );
+	//TEMPTEMP -- also a bunch of other places...
 	tolerant_unlink( lockFileName ); 
 	dagman.CleanUp();
 	DC_Exit( EXIT_OKAY );
@@ -610,6 +614,9 @@ void main_init (int argc, char ** const argv) {
     }
 
     if (argc < 2) Usage();  //  Make sure an input file was specified
+
+	//TEMPTEMP -- make sure this is the right place
+	DagmanMetrics::SetStartTime();
 
 		// get dagman job id from environment, if it's there
 		// (otherwise it will be set to "-1.-1.-1")
@@ -1021,6 +1028,8 @@ void main_init (int argc, char ** const argv) {
         EXCEPT( "ERROR: out of memory!\n");
     }
 
+	//TEMPTEMP -- make sure this is the right place to do this!
+	// dagman.dag->CreateMetrics( dagman.primaryDagFile.Value() );
 	dagman.dag->SetAbortOnScarySubmit( dagman.abortOnScarySubmit );
 	dagman.dag->SetAllowEvents( dagman.allow_events );
 	dagman.dag->SetConfigFile( dagman._dagmanConfigFile );
@@ -1128,6 +1137,11 @@ void main_init (int argc, char ** const argv) {
 					 	dagFile );
     	}
 	}
+
+	//TEMPTEMP -- make sure this is the right place to do this!
+	//TEMPTEMP -- note:  node counts must be initialized *after* parsing rescue DAG!
+	//TEMPTEMP -- may need to split node initialization out into another method
+	dagman.dag->CreateMetrics( dagman.primaryDagFile.Value(), rescueDagNum );
 
 	dagman.dag->CheckThrottleCats();
 

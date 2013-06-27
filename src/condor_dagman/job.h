@@ -45,7 +45,7 @@ class Dag;
 
 typedef int JobID_t;
 
-/**  The job class represents a job in the DAG and it's state in the Condor
+/**  The job class represents a job in the DAG and its state in the Condor
      system.  A job is given a name, a CondorID, and three queues.  The
      parents queue is a list of parent jobs that this one depends on.  That
      queue never changes once set.  The waiting queue is the same as the
@@ -422,6 +422,7 @@ class Job {
 	int GetPreSkip() const;
 	
 	int GetCluster() const { return _CondorID._cluster; }
+	//TEMPTEMP -- how do these work for multi-proc nodes???
 	int GetProc() const { return _CondorID._proc; }
 	int GetSubProc() const { return _CondorID._subproc; }
 	bool SetCondorID(const CondorID& cid);

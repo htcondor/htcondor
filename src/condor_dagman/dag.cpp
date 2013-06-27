@@ -49,6 +49,7 @@
 #include "HashTable.h"
 #include <set>
 #include "dagman_recursive_submit.h"
+#include "dagman_metrics.h"
 
 using namespace std;
 
@@ -126,7 +127,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_reject			  (false),
 	_alwaysRunPost		  (true),
 	_defaultPriority	  (0),
-	_use_default_node_log  (true)
+	_use_default_node_log  (true),
+	_metrics			  (NULL)
 {
 
 	// If this dag is a splice, then it may have been specified with a DIR
@@ -239,7 +241,23 @@ Dag::~Dag() {
 
 	delete[] _statusFileName;
 
+	delete _metrics;
+
     return;
+}
+
+//-------------------------------------------------------------------------
+void
+Dag::CreateMetrics( const char *primaryDagFile, int rescueDagNum )
+{
+	_metrics = new DagmanMetrics( this, primaryDagFile, rescueDagNum );
+}
+
+//-------------------------------------------------------------------------
+void
+Dag::ReportMetrics( int exitCode )
+{
+	_metrics->Report( exitCode, _dagStatus );
 }
 
 //-------------------------------------------------------------------------
@@ -902,6 +920,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 			}
 			if ( job->_queuedNodeJobProcs == 0 ) {
 				_numNodesFailed++;
+				_metrics->NodeFinished( job->GetDagFile() != NULL, false );
 				if ( _dagStatus == DAG_STATUS_OK ) {
 					_dagStatus = DAG_STATUS_NODE_FAILED;
 				}
@@ -1010,6 +1029,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 			} else {
 					// no more retries -- node failed
 				_numNodesFailed++;
+				_metrics->NodeFinished( job->GetDagFile() != NULL, false );
 				if ( _dagStatus == DAG_STATUS_OK ) {
 					_dagStatus = DAG_STATUS_NODE_FAILED;
 				}
@@ -1693,6 +1713,8 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 			// Check for retries.
 		else if( job->GetRetries() < job->GetRetryMax() ) {
 			job->TerminateFailure();
+			// Note: don't update count in metrics here because we're
+			// retrying!
 			RestartNode( job, false );
 		}
 
@@ -1700,6 +1722,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 		else {
 			job->TerminateFailure();
 			_numNodesFailed++;
+			_metrics->NodeFinished( job->GetDagFile() != NULL, false );
 			if ( _dagStatus == DAG_STATUS_OK ) {
 				_dagStatus = DAG_STATUS_NODE_FAILED;
 			}
@@ -2397,6 +2420,7 @@ Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 		// careful not to double-count...
 	if( job->countedAsDone == false ) {
 		_numNodesDone++;
+		_metrics->NodeFinished( job->GetDagFile() != NULL, true );
 		job->countedAsDone = true;
 		ASSERT( _numNodesDone <= _jobs.Number() );
 	}
@@ -2468,6 +2492,7 @@ Dag::RestartNode( Job *node, bool recovery )
                       "(last attempt returned %d)\n",
                       node->GetJobName(), node->retval);
         _numNodesFailed++;
+		_metrics->NodeFinished( node->GetDagFile() != NULL, false );
 		if ( _dagStatus == DAG_STATUS_OK ) {
 			_dagStatus = DAG_STATUS_NODE_FAILED;
 		}
@@ -3334,6 +3359,7 @@ bool Dag::Add( Job& job )
 	return _jobs.Append(&job);
 }
 
+#if 0
 //---------------------------------------------------------------------------
 bool
 Dag::RemoveNode( const char *name, MyString &whynot )
@@ -3365,6 +3391,7 @@ Dag::RemoveNode( const char *name, MyString &whynot )
 	if( node->GetStatus() == Job::STATUS_DONE ) {
 		_numNodesDone--;
 		ASSERT( _numNodesDone >= 0 );
+		// Need to update metrics here!!!
 	}
 	else if( node->GetStatus() == Job::STATUS_ERROR ) {
 		_numNodesFailed--;
@@ -3432,7 +3459,7 @@ Dag::RemoveNode( const char *name, MyString &whynot )
 	whynot = "n/a";
 	return true;
 }
-
+#endif
 
 //---------------------------------------------------------------------------
 bool
@@ -3879,6 +3906,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 					"No 'log =' value found in submit file %s",
 					node->GetCmdFile() );
 	  	_numNodesFailed++;
+		_metrics->NodeFinished( node->GetDagFile() != NULL, false );
 		if ( _dagStatus == DAG_STATUS_OK ) {
 			_dagStatus = DAG_STATUS_NODE_FAILED;
 		}
@@ -4024,6 +4052,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 		} else {
 			node->TerminateFailure();
 			_numNodesFailed++;
+			_metrics->NodeFinished( node->GetDagFile() != NULL, false );
 			if ( _dagStatus == DAG_STATUS_OK ) {
 				_dagStatus = DAG_STATUS_NODE_FAILED;
 			}
