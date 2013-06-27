@@ -6418,9 +6418,11 @@ int GahpClient::ec2_vm_create_keypair( std::string service_url,
 	if ( service_url.empty() ||
 		 publickeyfile.empty() ||
 		 privatekeyfile.empty() ||
-		 keyname.empty() ||
-		 outputfile.empty() ) {
+		 keyname.empty() ) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	if ( outputfile.empty() ) {
+		outputfile = NULL_FILE;
 	}
 	
 	// construct command line

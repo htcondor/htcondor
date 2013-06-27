@@ -160,6 +160,7 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	m_group_names = NULL;
 	m_should_gen_key_pair = false;
 	m_keypair_created = false;
+	m_is_openstack = false;
 	
 	// check the public_key_file
 	jobAd->LookupString( ATTR_EC2_ACCESS_KEY_ID, m_public_key_file );
@@ -217,12 +218,24 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	
 	m_vm_check_times = 0;
 
+	// We have to handle job recovery differently for OpenStack
+	jobAd->LookupBool( "IsOpenstack", m_is_openstack );
+
 	// Only generate a keypair if the user asked for one.
+	// Note: We assume that if both the key_pair and key_pair_file
+	//   attributes exist, then we created the keypair in a previous
+	//   incarnation (and need to destroy them during job cleanup).
+	//   This requires that the user not submit a job with
+	//   both attributes set. There's no reason for the user to do so,
+	//   and condor_submit will not allow it.
 	jobAd->LookupString( ATTR_EC2_KEY_PAIR, m_key_pair );
 	jobAd->LookupString( ATTR_EC2_KEY_PAIR_FILE, m_key_pair_file );
-	if( m_key_pair.empty() && ! m_key_pair_file.empty() ) {
-	    m_should_gen_key_pair = true;
+	if ( !m_key_pair_file.empty() || m_is_openstack ) {
+		m_should_gen_key_pair = true;
     }
+	if ( !m_key_pair.empty() && !m_key_pair_file.empty() ) {
+		m_keypair_created = true;
+	}
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start (unless the job is already held).
@@ -529,7 +542,7 @@ void EC2Job::doEvaluateState()
 		    		    	// with 5000 status update requests, which is
 		    		    	// precisely what we're trying to avoid.
     			    		gmState = GM_SUBMITTED;
-	    			    } else if( condorState == REMOVED ) {
+						} else if( condorState == REMOVED || m_is_openstack ) {
 	    			        // We don't know if the corresponding instance
 	    			        // exists or not.  Rather than unconditionally
 	    			        // create it (in GM_START_VM), check to see if
@@ -550,6 +563,13 @@ void EC2Job::doEvaluateState()
 				}
 				
 				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
+
+				if ( m_should_gen_key_pair && m_key_pair.empty() ) {
+					SetKeypairId( build_keypair().c_str() );
+					attr_exists = true;
+					attr_dirty = true;
+				}
+
 				if ( attr_exists && attr_dirty ) {
 					requestScheddUpdate( this, true );
 					break;
@@ -571,11 +591,6 @@ void EC2Job::doEvaluateState()
                 // keypair).
 				if ( m_should_gen_key_pair && !m_keypair_created )
 				{	
-				    if (m_key_pair.empty())
-				    {
-				      SetKeypairId( build_keypair().c_str() );
-				    }
-				
 				    rc = gahp->ec2_vm_create_keypair(m_serviceUrl, 
 								     m_public_key_file, 
 								     m_private_key_file, 
@@ -588,9 +603,11 @@ void EC2Job::doEvaluateState()
 					    break;
 				    }
 
-				    if (rc == 0) {
-				      m_keypair_created = true;
-				      gmState = gmTargetState;
+					if ( rc == 0 ||
+						 strstr( gahp->getErrorString(), "KeyPairExists" ) ||
+						 strstr( gahp->getErrorString(), "InvalidKeyPair.Duplicate" ) ) {
+						m_keypair_created = true;
+						gmState = gmTargetState;
 				    } else {
 				
 					    // May need to add back retry logic, but why?
@@ -1155,69 +1172,48 @@ void EC2Job::doEvaluateState()
 			    // that by looking the the condorState and the job attributes
 			    // we (would) use for recovery.
 			    //
-                if( condorState == REMOVED
-                  || condorState == COMPLETED
-                  || ( m_client_token.empty() && m_remoteJobId.empty() ) ) {
+				if( condorState == REMOVED
+					|| condorState == COMPLETED
+					|| ( m_client_token.empty() && m_remoteJobId.empty() ) ) {
 
-                    //
-                    // We can't just check m_keypair_created, because we may
-                    // have created the keypair in a prior gridmanager (if this
-                    // job was recovered).  This means we leak keys, both on
-                    // EC2 and on disk.  We can't unconditionally delete keys
-                    // on EC2 because they might not be ours; and we can't
-                    // delete keys on disk until we know recovery is
-                    // impossible (the user may want to use them).
-                    //
-                    // However, since condor_submit does not permit the non-
-                    // sensical case of setting both m_key_pair and 
-                    // m_key_pair_file, (saying both to use a specific keypair
-                    // and create a new one), we know that m_key_pair_file
-                    // will only be set if we (may) have created a new 
-                    // keypair.  Therefore, if m_key_pair is set as well, we 
-                    // know it's the ID of keypair we're responsible for
-                    // cleaning up.
-		    	    //
-			    
-                    if( ! m_key_pair_file.empty() ) {
-                        if( ! m_key_pair.empty() ) {
-                            rc = gahp->ec2_vm_destroy_keypair( m_serviceUrl,
-                                    m_public_key_file, m_private_key_file,
-		    	                    m_key_pair, gahp_error_code );
-    
-                            if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
-                                break;
-                            }
-                            
-                            // If we don't remove the file until after we
-                            // remove the server-side copy, we'll try to delete
-                            // it twice, the first time before issuing the
-                            // command to the GAHP, the second after.
-                            if( ! remove_keypair_file( m_key_pair_file.c_str() ) ) {
-                                dprintf( D_ALWAYS, "(%d.%d) job destroy keypair local file (%s) failed.\n", procID.cluster, procID.proc, m_key_pair_file.c_str() );
-                            }
+					if( m_keypair_created && ! m_key_pair.empty() ) {
+						rc = gahp->ec2_vm_destroy_keypair( m_serviceUrl,
+									m_public_key_file, m_private_key_file,
+									m_key_pair, gahp_error_code );
 
-                            // In order for putting the job on hold to make
-                            // sense, we'd need to be sure that the gridmanager
-                            // saw the job again.  While we may not have the
-                            // original job information, if all we want to do
-                            // is try to remove the keypair again, we could
-                            // ask the gahp('s resource) where it lives and
-                            // cons up an artificial gridJobID, something like
-                            // 'ec2 URL remove-keypair', which we'd recognize
-                            // during recovery (initialization/parsing)
-                            // and react to appropriately -- since we haven't
-                            // deleted the keypair ID yet, it'll still be in
-                            // the job ad...
-                            if( rc != 0 ) {
-                                errorString = gahp->getErrorString();
-                                dprintf( D_ALWAYS, "(%d.%d) job destroy keypair (%s) failed: %s: %s\n",
-                                    procID.cluster, procID.proc, m_key_pair.c_str(),
-                                    gahp_error_code.c_str(),
-                                    errorString.c_str() );
-                            }
-                        }
-                    }
-                }
+						if( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED || rc == GAHPCLIENT_COMMAND_PENDING ) {
+							break;
+						}
+
+						// If we don't remove the file until after we
+						// remove the server-side copy, we'll try to delete
+						// it twice, the first time before issuing the
+						// command to the GAHP, the second after.
+						if( !m_key_pair_file.empty() && ! remove_keypair_file( m_key_pair_file.c_str() ) ) {
+							dprintf( D_ALWAYS, "(%d.%d) job destroy keypair local file (%s) failed.\n", procID.cluster, procID.proc, m_key_pair_file.c_str() );
+						}
+
+						// In order for putting the job on hold to make
+						// sense, we'd need to be sure that the gridmanager
+						// saw the job again.  While we may not have the
+						// original job information, if all we want to do
+						// is try to remove the keypair again, we could
+						// ask the gahp('s resource) where it lives and
+						// cons up an artificial gridJobID, something like
+						// 'ec2 URL remove-keypair', which we'd recognize
+						// during recovery (initialization/parsing)
+						// and react to appropriately -- since we haven't
+						// deleted the keypair ID yet, it'll still be in
+						// the job ad...
+						if( rc != 0 ) {
+							errorString = gahp->getErrorString();
+							dprintf( D_ALWAYS, "(%d.%d) job destroy keypair (%s) failed: %s: %s\n",
+									 procID.cluster, procID.proc, m_key_pair.c_str(),
+									 gahp_error_code.c_str(),
+									 errorString.c_str() );
+						}
+					}
+				}
 
 				// We are done with the job. Propagate any remaining updates
 				// to the schedd, then delete this object.
@@ -1643,9 +1639,11 @@ void EC2Job::doEvaluateState()
                 if( ! m_remoteJobId.empty() ) {
                     WriteGridSubmitEventToUserLog( jobAd );
                     gmState = GM_SAVE_INSTANCE_ID;
-                } else {
+                } else if ( condorState == REMOVED ) {
                     gmState = GM_DELETE;
-                }
+                } else {
+					gmState = GM_SAVE_CLIENT_TOKEN;
+				}
 
                 } break;
                     
@@ -1729,6 +1727,9 @@ void EC2Job::SetInstanceId( const char *instance_id )
 }
 
 // EC2SetRemoteJobId() is used to set the value of global variable "remoteJobID"
+// Don't call this function directly!
+// It doesn't update m_client_token or m_remoteJobId!
+// Use SetClientToken() or SetInstanceId() instead.
 void EC2Job::EC2SetRemoteJobId( const char *client_token, const char *instance_id )
 {
 	string full_job_id;
@@ -2046,16 +2047,15 @@ void EC2Job::StatusUpdate( const char * instanceID,
     // status field) and makes it own query, it gets the right answer...
     // .. for now, let's not scare the user by passing through the "purged"
     // state on spot instances.
-    if( m_spot_price.empty() && status == NULL ) {
+    if( m_spot_price.empty() && !m_remoteJobId.empty() && status == NULL ) {
         status = "purged";
     }
 
     // Update the instance ID, if this is the first time we've seen it.
     if( m_spot_price.empty() && m_remoteJobId.empty() ) {
-        if( instanceID == NULL || strlen( instanceID ) == 0 ) {
-            EXCEPT( "Dedicated instances must have instance IDs." );
+        if( instanceID && *instanceID ) {
+			SetInstanceId( instanceID );
         }
-        EC2SetRemoteJobId( m_client_token.c_str(), instanceID );
         
         // We only consider discovering the instance ID a status change
         // when it occurs while we're blocked in GM_SEEK_INSTANCE_ID.

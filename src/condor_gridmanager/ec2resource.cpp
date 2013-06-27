@@ -202,10 +202,15 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
         //
         List<EC2Job> myJobs;
         EC2Job * nextJob = NULL;
-        jobsByInstanceID.startIterations();
-        while( jobsByInstanceID.iterate( nextJob ) ) {
-            myJobs.Append( nextJob );
-        }
+		BaseJob *nextBaseJob = NULL;
+		registeredJobs.Rewind();
+		while ( (nextBaseJob = registeredJobs.Next()) ) {
+			nextJob = dynamic_cast< EC2Job * >( nextBaseJob );
+			ASSERT( nextJob );
+			if ( !nextJob->m_client_token.empty() ) {
+				myJobs.Append( nextJob );
+			}
+		}
 
         returnStatus.rewind();
         ASSERT( returnStatus.number() % 6 == 0 );
@@ -264,6 +269,23 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
                 }
             }
             
+			// OpenStack silently ignores client tokens. So we need to use
+			// the ssh keypair to find jobs that were submitted but which
+			// we don't have an instance ID for.
+			if ( !keyName.empty() && keyName != "NULL" ) {
+				myJobs.Rewind();
+				while ( ( job = myJobs.Next() ) ) {
+					if ( job->m_is_openstack && job->m_key_pair == keyName ) {
+						dprintf( D_FULLDEBUG, "Found job object via ssh keypair for '%s', updating status ('%s').\n", instanceID.c_str(), status.c_str() );
+						job->StatusUpdate( instanceID.c_str(), status.c_str(),
+										   stateReasonCode.c_str(),
+										   publicDNSName.c_str() );
+						myJobs.Delete( job );
+						continue;
+					}
+				}
+			}
+
             dprintf( D_FULLDEBUG, "Found unknown instance '%s'; skipping.\n", instanceID.c_str() );
             continue;
         }

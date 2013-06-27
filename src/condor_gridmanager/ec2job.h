@@ -84,6 +84,8 @@ public:
                        const char * stateReasonCode,
                        const char * publicDNSName );
 
+	friend class EC2Resource;
+
 private:
 	// create dynamic input parameters
 	std::string build_ami_id();
@@ -107,6 +109,7 @@ private:
 	std::string m_key_pair_file;
 	bool m_should_gen_key_pair;
 	bool m_keypair_created;
+	bool m_is_openstack;
 
 	int m_vm_check_times;
 	
