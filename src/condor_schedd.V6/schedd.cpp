@@ -7347,13 +7347,21 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	}
 
 
+	FamilyInfo fi;
+	FamilyInfo *fip = NULL;
+
+	if (IsLocalUniverse(srec)) {
+		fip = &fi;
+		fi.max_snapshot_interval = 15;
+	}
+	
 	/* For now, we should create the handler as PRIV_ROOT so it can do
 	   priv switching between PRIV_USER (for handling syscalls, moving
 	   files, etc), and PRIV_CONDOR (for writing to log files).
 	   Someday, hopefully soon, we'll fix this and spawn the
 	   shadow/handler with PRIV_USER_FINAL... */
 	pid = daemonCore->Create_Process( path, args, PRIV_ROOT, rid, 
-	                                  is_dc, env, NULL, NULL, NULL, 
+	                                  is_dc, env, NULL, fip, NULL, 
 	                                  std_fds_p, NULL, niceness,
 									  NULL, create_process_opts);
 	if( pid == FALSE ) {
@@ -9481,6 +9489,7 @@ Scheduler::child_exit(int pid, int status)
 			// Local Universe
 			//
 		if( IsLocalUniverse(srec) ) {
+			daemonCore->Kill_Family(pid);
 			srec_was_local_universe = true;
 			name = "Local starter";
 				//
