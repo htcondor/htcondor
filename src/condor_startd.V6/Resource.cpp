@@ -1824,13 +1824,13 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// And then include everything from SLOTx_STARTD_EXPRS
 		daemonCore->publish(cap);
 
-		// config_fill_ad can not take strings with "." in it's prefix
-		// e.g. slot1.1, instead needs to be slot1
+		// config_fill_ad can not take strings with "_" in it's prefix
+		// e.g. slot1_1, instead needs to be slot1
 		MyString szTmp(r_id_str);
-		int iPeriodPos = szTmp.find(".");
+		int iUnderPos = szTmp.find("_");
 
-		if ( iPeriodPos >=0 ) {
-			szTmp.setChar ( iPeriodPos,  '\0' );
+		if ( iUnderPos >=0 ) {
+			szTmp.setChar ( iUnderPos,  '\0' );
 		}
 		
 		config_fill_ad( cap, szTmp.Value() );
@@ -2464,6 +2464,10 @@ Resource::willingToRun(ClassAd* request_ad)
 			}
 			else if (!req_requirements) {
 				dprintf(D_FAILURE|D_ALWAYS, "Job requirements not satisfied.\n");
+				dprintf(D_ALWAYS, "Job ad was ============================\n");
+				dPrintAd(D_ALWAYS, *request_ad);
+				dprintf(D_ALWAYS, "Slot ad was ============================\n");
+				dPrintAd(D_ALWAYS, *r_classad);
 			}
 		}
 
