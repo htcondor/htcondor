@@ -1115,7 +1115,6 @@ Scheduler::count_jobs()
 				// This is needed as the HGQ code in the negotitator needs to
 				// know weighted demand to dole out surplus properly.
 			int request_cpus = 1;
-			++Owners[OwnerNum].JobsRunning;
 			if (rec->my_match_ad) {
 				if(0 == rec->my_match_ad->LookupInteger(ATTR_CPUS, request_cpus)) {
 					request_cpus = 1;
