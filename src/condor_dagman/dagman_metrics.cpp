@@ -26,13 +26,34 @@
 #include "condor_string.h" // for getline()
 #include "MyString.h"
 
-double DagmanMetrics::_startTime;
+double DagmanMetrics::_startTime = 0.0;
+MyString DagmanMetrics::_dagmanId = "";
+MyString DagmanMetrics::_parentDagmanId = "";
 
 //---------------------------------------------------------------------------
 void
 DagmanMetrics::SetStartTime()
 {
 	_startTime = GetTime();
+}
+
+//---------------------------------------------------------------------------
+void
+DagmanMetrics::SetDagmanIds( const char *scheddAddr,
+			const CondorID &DAGManJobId, int parentDagmanCluster )
+{
+	debug_printf( DEBUG_NORMAL, "DIAG DagmanMetrics::SetDagmanIds(%s)\n", scheddAddr );
+	MyString schedd = scheddAddr;
+	schedd.replaceString( "<", "" );
+	schedd.replaceString( ">", "" );
+
+	_dagmanId = schedd + ";";
+	_dagmanId += DAGManJobId._cluster;
+
+	if ( parentDagmanCluster >= 0 ) {
+		_parentDagmanId = schedd + ";";
+		_parentDagmanId += parentDagmanCluster;
+	}
 }
 
 //---------------------------------------------------------------------------
@@ -64,7 +85,7 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 	}
 
 	tmp = param( "CONDOR_DEVELOPERS" );
-	if ( strcmp( tmp, "NONE" ) == 0 ) _sendMetrics = false;
+	if ( tmp && strcmp( tmp, "NONE" ) == 0 ) _sendMetrics = false;
 
 		//
 		// Set the metrics file name.
@@ -160,17 +181,17 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 	fprintf( fp, "    \"client\": \"%s\"\n", _plannerName.Value() );
 	fprintf( fp, "    \"version\": \"%s\"\n", _plannerVersion.Value() );
 	fprintf( fp, "    \"type\": \"metrics\"\n" );
-	fprintf( fp, "    \"wf_uuid\": \"%s\"\n", _workflowID.Value() );
-	fprintf( fp, "    \"root_wf_uuid\": \"%s\"\n", _rootWorkflowID.Value() );
+	fprintf( fp, "    \"wf_uuid\": \"%s\"\n", _workflowId.Value() );
+	fprintf( fp, "    \"root_wf_uuid\": \"%s\"\n", _rootWorkflowId.Value() );
 	fprintf( fp, "    \"start_time\": %.3lf\n", _startTime );
 	fprintf( fp, "    \"end_time\": %.3lf\n", endTime );
 	fprintf( fp, "    \"duration\": %.3lf\n", duration );
 	fprintf( fp, "    \"exitcode\": %d\n", exitCode );
 		//TEMPTEMP -- I think we just want something like "8.1.0" here...
 	fprintf( fp, "    \"dagman_version\": \"%s\"\n", CondorVersion() );
-	fprintf( fp, "    \"dagman_id\": \"TEMPTEMP\"\n" );
-	fprintf( fp, "    \"parent_dagman_id\": \"TEMPTEMP\"\n" );
-		//TEMPTEMP -- crap -- I didn't think about how to pass parent ID to sub-DAGs...
+	fprintf( fp, "    \"dagman_id\": \"%s\"\n", _dagmanId.Value() );
+	fprintf( fp, "    \"parent_dagman_id\": \"%s\"\n",
+				_parentDagmanId.Value() );
 	fprintf( fp, "    \"rescue_dag_number\": %d\n", _rescueDagNum );
 	fprintf( fp, "    \"jobs\": %d\n", _simpleNodes );
 	fprintf( fp, "    \"jobs_failed\": %d\n", _simpleNodesFailed );
@@ -246,9 +267,9 @@ DagmanMetrics::ParseBraindumpFile()
 			const char *token2 = lineStr.GetNextToken( " \t", true );
 			if ( token2 ) {
 				if ( strcmp( token1, "wf_uuid" ) == 0 ) {
-					_workflowID = token2;
+					_workflowId = token2;
 				} else if ( strcmp( token1, "root_wf_uuid" ) == 0 ) {
-					_rootWorkflowID = token2;
+					_rootWorkflowId = token2;
 				} else if ( strcmp( token1, "planner" ) == 0 ) {
 					_plannerName = token2;
 				} else if ( strcmp( token1, "planner_version" ) == 0 ) {

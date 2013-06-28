@@ -39,6 +39,9 @@ public:
 	DagmanMetrics( /*const*/ Dag * dag, const char *primaryDagFile,
 				int rescueDagNum );
 
+	static void SetDagmanIds( const char *scheddAddr,
+				const CondorID &DAGManJobId, int parentDagmanCluster );
+
 	/** Destructor.
 	*/
 	~DagmanMetrics();
@@ -58,13 +61,16 @@ private:
 
 	static double _startTime;
 
+	static MyString _dagmanId;
+	static MyString _parentDagmanId;
+
 	bool _sendMetrics;
 
 	int _rescueDagNum;
 	MyString _metricsFile;
 
-	MyString _workflowID;
-	MyString _rootWorkflowID;
+	MyString _workflowId;
+	MyString _rootWorkflowId;
 	MyString _plannerName;
 	MyString _plannerVersion;
 

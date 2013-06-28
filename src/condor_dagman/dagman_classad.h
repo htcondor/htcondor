@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "condor_id.h"
 #include "dag.h"
+#include "condor_qmgr.h"
 
 class DCSchedd;
 
@@ -54,6 +55,16 @@ class DagmanClassad {
 				Dag::dag_status dagStatus, bool recovery );
 
   private:
+	//TEMPTEMP -- document
+	void InitializeMetrics();
+
+	//TEMPTEMP -- document
+	Qmgr_connection *OpenConnection();
+
+	//TEMPTEMP -- document
+	void CloseConnection( Qmgr_connection *queue );
+
+	//TEMPTEMP -- document
 	void SetDagAttribute( const char *attrName, int attrVal );
 
 		// Whether this object is valid.
