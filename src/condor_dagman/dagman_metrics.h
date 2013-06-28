@@ -54,6 +54,8 @@ public:
 private:
 	static double GetTime();
 
+	void ParseBraindumpFile();
+
 	static double _startTime;
 
 	bool _sendMetrics;
@@ -61,7 +63,10 @@ private:
 	int _rescueDagNum;
 	MyString _metricsFile;
 
-	//TEMPTEMP -- start time, end time
+	MyString _workflowID;
+	MyString _rootWorkflowID;
+	MyString _plannerName;
+	MyString _plannerVersion;
 
 		// Node counts.
 	int _simpleNodes;
@@ -70,6 +75,8 @@ private:
 	int _simpleNodesFailed;
 	int _subdagNodesSuccessful;
 	int _subdagNodesFailed;
+
+	double _totalNodeJobTime;
 };
 
 #endif	// _DAGMAN_METRICS_H
