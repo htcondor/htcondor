@@ -178,33 +178,35 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 	}
 
 	fprintf( fp, "{\n" );
-	fprintf( fp, "    \"client\": \"%s\"\n", _plannerName.Value() );
-	fprintf( fp, "    \"version\": \"%s\"\n", _plannerVersion.Value() );
-	fprintf( fp, "    \"type\": \"metrics\"\n" );
-	fprintf( fp, "    \"wf_uuid\": \"%s\"\n", _workflowId.Value() );
-	fprintf( fp, "    \"root_wf_uuid\": \"%s\"\n", _rootWorkflowId.Value() );
-	fprintf( fp, "    \"start_time\": %.3lf\n", _startTime );
-	fprintf( fp, "    \"end_time\": %.3lf\n", endTime );
-	fprintf( fp, "    \"duration\": %.3lf\n", duration );
-	fprintf( fp, "    \"exitcode\": %d\n", exitCode );
+	fprintf( fp, "    \"client\":\"%s\",\n", _plannerName.Value() );
+	fprintf( fp, "    \"version\":\"%s\",\n", _plannerVersion.Value() );
+	fprintf( fp, "    \"type\":\"metrics\",\n" );
+	fprintf( fp, "    \"wf_uuid\":\"%s\",\n", _workflowId.Value() );
+	fprintf( fp, "    \"root_wf_uuid\":\"%s\",\n", _rootWorkflowId.Value() );
+	fprintf( fp, "    \"start_time\":%.3lf,\n", _startTime );
+	fprintf( fp, "    \"end_time\":%.3lf,\n", endTime );
+	fprintf( fp, "    \"duration\":%.3lf,\n", duration );
+	fprintf( fp, "    \"exitcode\":%d,\n", exitCode );
 		//TEMPTEMP -- I think we just want something like "8.1.0" here...
-	fprintf( fp, "    \"dagman_version\": \"%s\"\n", CondorVersion() );
-	fprintf( fp, "    \"dagman_id\": \"%s\"\n", _dagmanId.Value() );
-	fprintf( fp, "    \"parent_dagman_id\": \"%s\"\n",
+	MyString cv = "8.1.0";//TEMPTEMP
+	fprintf( fp, "    \"dagman_version\":\"%s\",\n", cv.Value() );
+	fprintf( fp, "    \"dagman_id\":\"%s\",\n", _dagmanId.Value() );
+	fprintf( fp, "    \"parent_dagman_id\":\"%s\",\n",
 				_parentDagmanId.Value() );
-	fprintf( fp, "    \"rescue_dag_number\": %d\n", _rescueDagNum );
-	fprintf( fp, "    \"jobs\": %d\n", _simpleNodes );
-	fprintf( fp, "    \"jobs_failed\": %d\n", _simpleNodesFailed );
-	fprintf( fp, "    \"jobs_succeeded\": %d\n", _simpleNodesSuccessful );
-	fprintf( fp, "    \"dag_jobs\": %d\n", _subdagNodes );
-	fprintf( fp, "    \"dag_jobs_failed\": %d\n", _subdagNodesFailed );
-	fprintf( fp, "    \"dag_jobs_succeeded\": %d\n", _subdagNodesSuccessful );
-	fprintf( fp, "    \"total_jobs\": %d\n", _simpleNodes + _subdagNodes );
+	fprintf( fp, "    \"rescue_dag_number\":%d,\n", _rescueDagNum );
+	fprintf( fp, "    \"jobs\":%d,\n", _simpleNodes );
+	fprintf( fp, "    \"jobs_failed\":%d,\n", _simpleNodesFailed );
+	fprintf( fp, "    \"jobs_succeeded\":%d,\n", _simpleNodesSuccessful );
+	fprintf( fp, "    \"dag_jobs\":%d,\n", _subdagNodes );
+	fprintf( fp, "    \"dag_jobs_failed\":%d,\n", _subdagNodesFailed );
+	fprintf( fp, "    \"dag_jobs_succeeded\":%d,\n", _subdagNodesSuccessful );
+	fprintf( fp, "    \"total_jobs\":%d,\n", _simpleNodes + _subdagNodes );
 	int totalNodesRun = _simpleNodesSuccessful + _simpleNodesFailed +
 				_subdagNodesSuccessful + _subdagNodesFailed;
-	fprintf( fp, "    \"total_jobs_run\": %d\n", totalNodesRun );
-	fprintf( fp, "    \"total_job_time\": TEMPTEMP\n" );
-	fprintf( fp, "    \"dag_status\": %d\n", status );
+	fprintf( fp, "    \"total_jobs_run\":%d,\n", totalNodesRun );
+	_totalNodeJobTime = 123.456;//TEMPTEMP
+	fprintf( fp, "    \"total_job_time\":%.3lf,\n", _totalNodeJobTime );
+	fprintf( fp, "    \"dag_status\":%d,\n", status );
 	fprintf( fp, "}\n" );
 
 	//TEMPTEMP -- check return value?
@@ -288,5 +290,4 @@ DagmanMetrics::ParseBraindumpFile()
 
 	//TEMPTEMP --check return value
 	fclose( fp );
-
 }
