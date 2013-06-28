@@ -1251,15 +1251,6 @@ Scheduler::count_jobs()
 	cad->Assign(ATTR_JOB_QUEUE_BIRTHDATE, job_queue_birthdate);
 	m_adBase->Assign(ATTR_JOB_QUEUE_BIRTHDATE, job_queue_birthdate);
 
-	// we do these at Init time now
-#if 0
-		// Tell negotiator to send us the startd ad
-		// As of 7.1.3, the negotiator no longer pays attention to this
-		// attribute; it _always_ sends the resource request ad.
-		// For backward compatibility with older negotiators, we still set it.
-	cad->Assign(ATTR_WANT_RESOURCE_AD, true);
-#endif
-
 	daemonCore->UpdateLocalAd(cad);
 
 		// log classad into sql log so that it can be updated to DB
@@ -1569,7 +1560,6 @@ int Scheduler::make_ad_list(
    // submitter ad, note that chained ad's dont delete the 
    // chain parent when they are deleted, so it's safe to 
    // put these ads into the list. 
-#if 1
    MyString submitter_name;
    for (int ii = 0; ii < N_Owners; ++ii) {
       cad = new ClassAd();
@@ -1586,41 +1576,6 @@ int Scheduler::make_ad_list(
       cad->Assign(ATTR_FLOCKED_JOBS, Owners[ii].JobsFlocked);
       ads.Insert(cad);
    }
-#else
-   ClassAd * pAdGeneric = new ClassAd(*m_adBase);
-   pAdGeneric->Delete (ATTR_NUM_USERS);
-   pAdGeneric->Delete (ATTR_TOTAL_RUNNING_JOBS);
-   pAdGeneric->Delete (ATTR_TOTAL_IDLE_JOBS);
-   pAdGeneric->Delete (ATTR_TOTAL_JOB_ADS);
-   pAdGeneric->Delete (ATTR_TOTAL_HELD_JOBS);
-   pAdGeneric->Delete (ATTR_TOTAL_FLOCKED_JOBS);
-   pAdGeneric->Delete (ATTR_TOTAL_REMOVED_JOBS);
-   pAdGeneric->Delete (ATTR_TOTAL_LOCAL_IDLE_JOBS);
-   pAdGeneric->Delete (ATTR_TOTAL_LOCAL_RUNNING_JOBS);
-   pAdGeneric->Delete (ATTR_TOTAL_SCHEDULER_IDLE_JOBS);
-   pAdGeneric->Delete (ATTR_TOTAL_SCHEDULER_RUNNING_JOBS);
-
-   daemonCore->dc_stats.Unpublish(*pAdGeneric);
-   stats.Unpublish(*pAdGeneric);
-
-   pAdGeneric->Assign(ATTR_SCHEDD_NAME, Name);
-   pAdGeneric->Assign (ATTR_MY_TYPE, SUBMITTER_ADTYPE);
-
-   MyString submitter_name;
-   for (int ii = 0; ii < N_Owners; ++ii) {
-      pAd = new ClassAd(*pAdGeneric);
-      submitter_name.formatstr("%s@%s", Owners[ii].Name, UidDomain);
-      pAd->Assign(ATTR_NAME, submitter_name.Value());
-      pAd->Assign(ATTR_SUBMITTER_TAG,HOME_POOL_SUBMITTER_TAG);
-
-      pAd->Assign(ATTR_RUNNING_JOBS, Owners[ii].JobsRunning);
-      pAd->Assign(ATTR_IDLE_JOBS, Owners[ii].JobsIdle);
-      pAd->Assign(ATTR_HELD_JOBS, Owners[ii].JobsHeld);
-      pAd->Assign(ATTR_FLOCKED_JOBS, Owners[ii].JobsFlocked);
-      ads.Insert(pAd);
-   }
-   delete pAdGeneric;
-#endif
 
    return ads.Length();
 }
@@ -7392,13 +7347,21 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	}
 
 
+	FamilyInfo fi;
+	FamilyInfo *fip = NULL;
+
+	if (IsLocalUniverse(srec)) {
+		fip = &fi;
+		fi.max_snapshot_interval = 15;
+	}
+	
 	/* For now, we should create the handler as PRIV_ROOT so it can do
 	   priv switching between PRIV_USER (for handling syscalls, moving
 	   files, etc), and PRIV_CONDOR (for writing to log files).
 	   Someday, hopefully soon, we'll fix this and spawn the
 	   shadow/handler with PRIV_USER_FINAL... */
 	pid = daemonCore->Create_Process( path, args, PRIV_ROOT, rid, 
-	                                  is_dc, env, NULL, NULL, NULL, 
+	                                  is_dc, env, NULL, fip, NULL, 
 	                                  std_fds_p, NULL, niceness,
 									  NULL, create_process_opts);
 	if( pid == FALSE ) {
@@ -9526,6 +9489,7 @@ Scheduler::child_exit(int pid, int status)
 			// Local Universe
 			//
 		if( IsLocalUniverse(srec) ) {
+			daemonCore->Kill_Family(pid);
 			srec_was_local_universe = true;
 			name = "Local starter";
 				//
@@ -10195,14 +10159,6 @@ Scheduler::scheduler_univ_job_leave_queue(PROC_ID job_id, int status, ClassAd *a
 void
 Scheduler::kill_zombie(int, PROC_ID* job_id )
 {
-#if 0
-		// This always happens now, no need for a dprintf() 
-		// Derek 3/13/98
-	 dprintf( D_ALWAYS,
-		  "Shadow %d died, and left job %d.%d marked RUNNING\n",
-		  pid, job_id->cluster, job_id->proc );
-#endif
-
 	 mark_job_stopped( job_id );
 }
 
