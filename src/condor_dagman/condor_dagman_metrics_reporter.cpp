@@ -143,12 +143,16 @@ int main(int argc,char* argv[])
 		metrics.close();
 
 			// Now set curl options
-		if(curl_easy_setopt(handle.get(),CURLOPT_POST,data_to_send.c_str())) {
+		if(curl_easy_setopt(handle.get(),CURLOPT_POST,1)) {
 			metrics_out << "Failed  to set POST option" << std::endl;
 			continue;
 		}
-		if(curl_easy_setopt(handle.get(),CURLOPT_POSTFIELDSIZE,data_to_send.size())) {
+		if(curl_easy_setopt(handle.get(),CURLOPT_POSTFIELDS,data_to_send.data())) {
 			metrics_out << "Failed to set data to send in POST" << std::endl;
+			continue;
+		}
+		if(curl_easy_setopt(handle.get(),CURLOPT_POSTFIELDSIZE,data_to_send.size())) {
+			metrics_out << "Failed to set data size to send in POST" << std::endl;
 			continue;
 		}
 		if(curl_easy_setopt(handle.get(),CURLOPT_HTTPHEADER,slist.get())) {
