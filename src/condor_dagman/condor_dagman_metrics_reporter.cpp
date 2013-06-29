@@ -279,11 +279,12 @@ int main(int argc,char* argv[])
 					// Finally, send the data
 				CURLcode res = curl_easy_perform(handle.get());
 				if(!res) {
-					metrics_out << "Successfully sent data to server!" << std::endl;
+					metrics_out << "Successfully sent data to server " << srv->server << std::endl;
 					srv->connected = true;
 				} else {
+					metrics_out << "Failed to send data to " << srv->server << std::endl;
 					metrics_out << "curl_easy_perform failed with code " << res << std::endl;
-					metrics_out << "Curl error message: " << error_buffer << std::endl;
+					metrics_out << "Curl says: " << error_buffer << std::endl;
 				}
 			}
 		}
