@@ -25,6 +25,7 @@
 #include "condor_version.h"
 #include "condor_string.h" // for getline()
 #include "MyString.h"
+#include "condor_arglist.h"
 
 double DagmanMetrics::_startTime = 0.0;
 MyString DagmanMetrics::_dagmanId = "";
@@ -68,6 +69,7 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 	_subdagNodesFailed( 0 ), 
 	_totalNodeJobTime( 0.0 )
 {
+	_primaryDagFile = strnewp(primaryDagFile);
 	debug_printf( DEBUG_NORMAL, "DIAG DagmanMetrics::DagmanMetrics(%s)\n", primaryDagFile );//TEMPTEMP
 	debug_printf( DEBUG_NORMAL, "  DIAG num nodes: %d\n", dag->NumNodes( true ) );//TEMPTEMP
 
@@ -117,6 +119,7 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 //---------------------------------------------------------------------------
 DagmanMetrics::~DagmanMetrics()
 {
+	delete[] _primaryDagFile;
 	debug_printf( DEBUG_NORMAL, "DIAG DagmanMetrics::~DagmanMetrics()\n" );//TEMPTEMP
 }
 
@@ -150,7 +153,21 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 	}
 
 	if ( _sendMetrics ) {
-		//TEMPTEMP -- send metrics file
+		const char* exe = param("DAGMAN_PEGASUS_REPORT_METRICS");	
+		if(!exe) {
+			exe = "condor_dagman_metrics_reporter";
+		}
+		ArgList args;
+		args.AppendArg(exe);	
+		args.AppendArg("-f");
+		args.AppendArg(_metricsFile.Value());
+		args.AppendArg("-s");
+		args.AppendArg(MyString(status));
+		args.AppendArg("-d");
+		args.AppendArg(_primaryDagFile);
+			// Dump the args to the dagman.out file
+			// TEMPTEMP
+		daemonCore->Create_Process(exe,args);
 	} else {
 		debug_printf( DEBUG_NORMAL, "Metrics not sent because of PEGASUS_METRICS, CONDOR_DEVELOPERS or setting.\n" );
 	}

@@ -81,7 +81,7 @@ private:
 	int _simpleNodesFailed;
 	int _subdagNodesSuccessful;
 	int _subdagNodesFailed;
-
+	char* _primaryDagFile;
 	double _totalNodeJobTime;
 };
 
