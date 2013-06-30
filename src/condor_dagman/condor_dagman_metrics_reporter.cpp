@@ -11,7 +11,7 @@
 class Curl {
 public:
 	Curl() { curlp = curl_easy_init(); }
-	~Curl() { if(curlp) curl_easy_cleanup(curlp); }
+	~Curl() { if( curlp ) { curl_easy_cleanup( curlp ); } }
 	CURL* get() { return curlp; }
 private:
 	CURL* curlp;
@@ -21,16 +21,16 @@ private:
 class Curl_slist {
 public:
 	Curl_slist() { slist = NULL; }
-	~Curl_slist() { if(slist) curl_slist_free_all(slist); }
+	~Curl_slist() { if( slist ) { curl_slist_free_all( slist ); } }
 	struct curl_slist* get() { return slist; }
-	struct curl_slist* append(const char* s);
+	struct curl_slist* append( const char* s );
 private:
 	struct curl_slist* slist;
 };
 
-struct curl_slist* Curl_slist::append(const char* s)
+struct curl_slist* Curl_slist::append( const char* s )
 {
-	return slist = curl_slist_append(slist,s);
+	return slist = curl_slist_append( slist, s );
 }
 
 // The default url we send to
@@ -57,29 +57,30 @@ const char duration = 100;
 // }
 
 int sep[] = {
-	0,0,0,0,0,0,0,0,
-	0,1,1,1,1,1,0,0,
-	0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,
-	1,0,0,0,0,0,0,0,
-	0,0,0,0,1,0,0,0,
-	0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 1, 1, 1, 1, 1, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	1, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 1, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0, 0, 0, 0
 };
 
 struct server_data {
 	std::string server;
 	bool connected;
-	server_data() : connected(false) {}
-	server_data(const char* p) : server(p), connected(false) {}
+	server_data() : connected( false ) {}
+	server_data( const char* p ) : server( p ), connected( false ) {}
+	server_data( const std::string& p ) : server( p ), connected( false ) {}
 };
 
 // We are assuming that the environment variable is specified as, say
@@ -93,43 +94,43 @@ struct server_data {
 // That is, each server url is separated by either whitespace or a comma
 //
 
-void parse_metrics_server_env(std::vector<server_data>* servers,const char* list)
+void parse_metrics_server_env( std::vector<server_data>* servers, const char* list )
 {
-	if(!list) return;
+	if( !list ) {
+		return;
+	}
 	server_data server;
-	for(; *list; ++list) {
-		if(sep[int(*list)]) {
-			if(!server.server.empty()) {
-				servers->push_back(server);
+	for( ; *list; ++list ) {
+		if( sep[ int( *list ) ] ) {
+			if( !server.server.empty() ) {
+				servers->push_back( server );
 				server.server.clear();
 			}
 		} else {
-			server.server.append(1,*list);
+			server.server.append( 1, *list );
 		}
 	}
-	if(!server.server.empty()) servers->push_back(server);
+	if( !server.server.empty() ) {
+		servers->push_back( server );
+	}
 }
 
-int main(int argc,char* argv[])
+int main( int argc, char* argv[] )
 {
 		// Need to read some environment variables here
 		// Which ones? TEMPTEMP
-	std::string metrics_from_dagman,dagman_status,dag_file,metrics_url;
+	std::string metrics_from_dagman, dagman_status, dag_file, metrics_url;
 
 	std::vector<server_data> servers_to_contact;
-	char* default_metrics_server=getenv("PEGASUS_USER_METRICS_DEFAULT_SERVER");
-	if(default_metrics_server) {
-		servers_to_contact.push_back(server_data(default_metrics_server));
-	}
-	char* env_metrics_server=getenv("PEGASUS_USER_METRICS_SERVER");
-	if(env_metrics_server) {
-		parse_metrics_server_env(&servers_to_contact,env_metrics_server);
+	char* env_metrics_server = getenv( "PEGASUS_USER_METRICS_SERVER" );
+	if( env_metrics_server ) {
+		parse_metrics_server_env( &servers_to_contact, env_metrics_server );
 	}
 		// Pull parameters off the command line
-	for(int ii=1;ii<argc; ++ii) {
-		if(!std::strcmp(argv[ii],"-f")) {
+	for( int ii = 1; ii < argc; ++ii ) {
+		if( !std::strcmp( argv[ii], "-f" ) ) {
 			++ii;
-			if(argv[ii]) {
+			if( argv[ii] ) {
 				metrics_from_dagman = argv[ii];
 			} else {
 				std::cerr << "No metrics file specified" << std::endl;
@@ -137,165 +138,172 @@ int main(int argc,char* argv[])
 		}
 			// Status indicates whether the DAG was condor_rm'd
 			// What is the range of values that can be passed in here
-			// Is it just 0/1 for condor_rm'd/not condor_rm'd?
-			// TEMPTEMP
-		if(!std::strcmp(argv[ii],"-s")) {
+			// Looks like 4 indicates condor_rm'd
+		if( !std::strcmp( argv[ii], "-s" ) ) {
 			++ii;
-			if(argv[ii]) {
+			if( argv[ii] ) {
 				dagman_status = argv[ii];
 			} else {
 				std::cerr << "No status specified" << std::endl;
 			}
-			// Do something here to indicate whether we should sleep.
 		}
-		if(!std::strcmp(argv[ii],"-d")) {
+		if( !std::strcmp( argv[ii], "-d" ) ) {
 			++ii;
-			if(argv[ii]) {
+			if( argv[ii] ) {
 				dag_file = argv[ii];
 			} else {
 				std::cerr << "No dagfile specified" << std::endl;
 			}
 		}
-		if(!std::strcmp(argv[ii],"-u")) { // For testing
+		if( !std::strcmp( argv[ii], "-u" ) ) { // For testing
 			++ii;
-			if(argv[ii]) {
+			if( argv[ii] ) {
 				metrics_url = argv[ii];
 			} else {
 				std::cerr << "No dagfile specified" << std::endl;
 			}
 		}
 	}
-	if(dag_file.empty()) {
+	if( dag_file.empty() ) {
 		std::cerr << "No dagfile specified.  Terminating now" << std::endl;
 		return 1;
 	}
 		// Now check the command line parameters
 	std::string metrics_out_name = dag_file;
-	metrics_out_name.append(".metrics.out");
-	std::ofstream metrics_out(metrics_out_name.c_str());
-	if(!metrics_out) {
+	metrics_out_name.append( ".metrics.out" );
+	std::ofstream metrics_out( metrics_out_name.c_str() );
+	if( !metrics_out ) {
 		std::cerr << "Cannot open " << metrics_out_name << " for writing" << std::endl;
 		return 1;
 	}
 	metrics_out << "Executing:";
-	for(char**p = &argv[0]; *p; ++p) {
+	for( char**p = &argv[0]; *p; ++p ) {
 		metrics_out << " \"" << *p << "\"";
 	}
 	metrics_out << std::endl;
-	if(metrics_from_dagman.empty()) {
+	if( metrics_from_dagman.empty() ) {
 		metrics_out << "Metrics from dagman is not specified. Terminating" << std::endl;
 		return 1;
 	}
-	if(dagman_status.empty()) {
+	if( dagman_status.empty() ) {
 		metrics_out << "No dagman status specified. Terminating" << std::endl;
 		return 1;
 	}
-	if(metrics_url.empty() && !default_metrics_server) {
-		servers_to_contact.push_back(server_data(cc_metrics_url));
+	if( metrics_url.empty() ) {
+		char* default_metrics_server = getenv( "PEGASUS_USER_METRICS_DEFAULT_SERVER" );
+		if( default_metrics_server ) {
+			servers_to_contact.push_back( server_data( default_metrics_server ) );
+		} else {
+			servers_to_contact.push_back( server_data( cc_metrics_url ) );
+		}
+	} else {
+		servers_to_contact.push_back( server_data( metrics_url ) );
 	}
 	metrics_out << "Will attempt to contact the following metrics servers:" << std::endl;
-	for(std::vector<server_data>::iterator p = servers_to_contact.begin();
-			p != servers_to_contact.end(); ++p) {
+	for( std::vector<server_data>::iterator p = servers_to_contact.begin();
+	        p != servers_to_contact.end(); ++p ) {
 		metrics_out << '\t' << p->server << std::endl;
 	}
 
 	bool status = false;
 	time_t stop_time;
-	time(&stop_time);
+	time( &stop_time );
 	stop_time += duration;
 
-		// Loop ten times in attempts to contact the server
+	Curl handle;
+	Curl_slist slist;
+	if( !handle.get() ) {
+		metrics_out << "Failed to initialize curl. Nothing to do" << std::endl;
+		return 1;
+	}
+	curl_easy_setopt( handle.get(), CURLOPT_POST, 1 );
+	if( !slist.append( "Content-Type: application/json" ) ) {
+		metrics_out << "Failed to set header" << std::endl;
+		return 1;
+	}
+	std::ifstream metrics( metrics_from_dagman.c_str() );
+	if( !metrics ) {
+		metrics_out << "Failed to open " << metrics_from_dagman << " for reading" << std::endl;
+		return 1;
+	}
+	std::string data_to_send;
+	std::string data_line;
+
+		// Slurp all the data into a single string
+	while( getline( metrics, data_line ) ) {
+		std::string::iterator p = data_line.begin();
+		for( ; p != data_line.end(); ++p ) {
+			if( !std::isspace( *p ) ) {
+				break;
+			}
+		}
+		data_line.erase( data_line.begin(), p );
+		std::string::reverse_iterator q = data_line.rbegin();
+		for( ; q != data_line.rend(); ++q ) {
+			if( !std::isspace( *q ) ) {
+				break;
+			}
+		}
+		data_line.erase( q.base(), data_line.end() );
+		data_to_send.append( data_line );
+	}
+	metrics.close();
+
+		// Now set curl options
+	if( curl_easy_setopt( handle.get(), CURLOPT_POST, 1 ) ) {
+		metrics_out << "Failed  to set POST option" << std::endl;
+		return 1;
+	}
+	if( curl_easy_setopt( handle.get(), CURLOPT_POSTFIELDS, data_to_send.data() ) ) {
+		metrics_out << "Failed to set data to send in POST" << std::endl;
+		return 1;
+	}
+	if( curl_easy_setopt( handle.get(), CURLOPT_POSTFIELDSIZE, data_to_send.size() ) ) {
+		metrics_out << "Failed to set data size to send in POST" << std::endl;
+		return 1;
+	}
+	if( curl_easy_setopt( handle.get(), CURLOPT_HTTPHEADER, slist.get() ) ) {
+		metrics_out << "Failed to set header option to use json" << std::endl;
+		return 1;
+	}
+	char error_buffer[CURL_ERROR_SIZE];
+	if( curl_easy_setopt( handle.get(), CURLOPT_ERRORBUFFER, &error_buffer[0] ) ) {
+		metrics_out << "Failed to set error buffer" << std::endl;
+		return 1;
+	}
 		// Design document says try until 100 seconds are up
 	do {
-		for(std::vector<server_data>::iterator srv = servers_to_contact.begin();
-				srv != servers_to_contact.end(); ++srv) {
-			if(srv->connected) continue;
-			for(int numtries = 0;!status && numtries < 10; ++numtries) {
-					// Only sleep if we were condor_rm'd
-					// TEMPTEMP
-				sleep(1+(get_random_int() % 10));
-				Curl handle;
-				Curl_slist slist;
-				if(!handle.get()) {
-					metrics_out << "Failed to initialize curl. Nothing to do" << std::endl;
-					continue;
-				}
-				curl_easy_setopt(handle.get(),CURLOPT_POST,1);
-				if(!slist.append("Content-Type: application/json")) {
-					metrics_out << "Failed to set header" << std::endl;
-					continue;
-				}
-				std::ifstream metrics(metrics_from_dagman.c_str());
-				if(!metrics) {
-					metrics_out << "Failed to open " << metrics_from_dagman << " for reading" << std::endl;
-					continue;
-				}
-				std::string data_to_send;
-				std::string data_line;
+		for( std::vector<server_data>::iterator srv = servers_to_contact.begin();
+				srv != servers_to_contact.end(); ++srv ) {
+			if( srv->connected ) continue;
+			if( dagman_status == "4" ) { // DAGMan was condor_rm'd
+				sleep( 1 + ( get_random_int() % 10 ) );
+			}
 
-				// Slurp all the data into a single string
-				while(getline(metrics,data_line)){
-					std::string::iterator p = data_line.begin();
-					for(; p != data_line.end(); ++p) {
-						if(!std::isspace(*p)) break;
-					}
-					data_line.erase(data_line.begin(),p);
-					std::string::reverse_iterator q = data_line.rbegin();
-					for(; q != data_line.rend(); ++q) {
-						if(!std::isspace(*q)) break;
-					}
-					data_line.erase(q.base(),data_line.end());
-					data_to_send.append(data_line);
-				}
-				metrics.close();
-
-				// Now set curl options
-				if(curl_easy_setopt(handle.get(),CURLOPT_POST,1)) {
-					metrics_out << "Failed  to set POST option" << std::endl;
-					continue;
-				}
-				if(curl_easy_setopt(handle.get(),CURLOPT_POSTFIELDS,data_to_send.data())) {
-					metrics_out << "Failed to set data to send in POST" << std::endl;
-					continue;
-				}
-				if(curl_easy_setopt(handle.get(),CURLOPT_POSTFIELDSIZE,data_to_send.size())) {
-					metrics_out << "Failed to set data size to send in POST" << std::endl;
-					continue;
-				}
-				if(curl_easy_setopt(handle.get(),CURLOPT_HTTPHEADER,slist.get())) {
-					metrics_out << "Failed to set header option to use json" << std::endl;
-					continue;
-				}
-				if(curl_easy_setopt(handle.get(),CURLOPT_URL,metrics_url.c_str())) {
-					metrics_out << "Failed to set URL to send to" << std::endl;
-					continue;
-				}
-				char error_buffer[CURL_ERROR_SIZE];
-				if(curl_easy_setopt(handle.get(),CURLOPT_ERRORBUFFER,&error_buffer[0])) {
-					metrics_out << "Failed to set error buffer" << std::endl;
-					continue;
-				}
-
-					// Finally, send the data
-				CURLcode res = curl_easy_perform(handle.get());
-				if(!res) {
-					metrics_out << "Successfully sent data to server " << srv->server << std::endl;
-					srv->connected = true;
-				} else {
-					metrics_out << "Failed to send data to " << srv->server << std::endl;
-					metrics_out << "curl_easy_perform failed with code " << res << std::endl;
-					metrics_out << "Curl says: " << error_buffer << std::endl;
-				}
+			if( curl_easy_setopt( handle.get(), CURLOPT_URL, srv->server.c_str() ) ) {
+				metrics_out << "Failed to set URL to send to" << std::endl;
+				metrics_out << "Curl says: " << error_buffer << std::endl;
+				continue;
+			}
+				// Finally, send the data
+			CURLcode res = curl_easy_perform( handle.get() );
+			if( !res ) {
+				metrics_out << "Successfully sent data to server " << srv->server << std::endl;
+				srv->connected = true;
+			} else {
+				metrics_out << "Failed to send data to " << srv->server << std::endl;
+				metrics_out << "curl_easy_perform failed with code " << res << std::endl;
+				metrics_out << "Curl says: " << error_buffer << std::endl;
 			}
 		}
 		status = true;
-		for(std::vector<server_data>::iterator srv = servers_to_contact.begin();
-				srv != servers_to_contact.end(); ++srv) {
-			if(!srv->connected) {
+		for( std::vector<server_data>::iterator srv = servers_to_contact.begin();
+				srv != servers_to_contact.end(); ++srv ) {
+			if( !srv->connected ) {
 				status = false;
 				break;
 			}
 		}
-	} while(!status && time(0) < stop_time);
-	return status?0:1;
+	} while( !status && time( 0 ) < stop_time );
+	return status ? 0 : 1;
 }
