@@ -29,4 +29,4 @@ condor_exe(condor_submit_dag "condor_submit_dag.cpp;dagman_multi_dag.cpp;dagman_
 
 condor_exe(condor_dagman_metrics_reporter
 	"condor_dagman_metrics_reporter.cpp;${DAGHdrs}"
-	${C_BIN} "${CONDOR_TOOL_LIBS};${CURL_FOUND}" OFF)
+	${C_LIBEXEC} "${CONDOR_TOOL_LIBS};${CURL_FOUND}" OFF)
