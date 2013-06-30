@@ -216,7 +216,6 @@ int main( int argc, char* argv[] )
 		metrics_out << "Failed to initialize curl. Nothing to do" << std::endl;
 		return 1;
 	}
-	curl_easy_setopt( handle.get(), CURLOPT_POST, 1 );
 	if( !slist.append( "Content-Type: application/json" ) ) {
 		metrics_out << "Failed to set header" << std::endl;
 		return 1;
@@ -250,25 +249,30 @@ int main( int argc, char* argv[] )
 	metrics.close();
 
 		// Now set curl options
-	if( curl_easy_setopt( handle.get(), CURLOPT_POST, 1 ) ) {
+	if( CURLcode res = curl_easy_setopt( handle.get(), CURLOPT_POST, 1 ) ) {
 		metrics_out << "Failed  to set POST option" << std::endl;
+		metrics_out << curl_easy_strerror(res) << std::endl;
 		return 1;
 	}
-	if( curl_easy_setopt( handle.get(), CURLOPT_POSTFIELDS, data_to_send.data() ) ) {
+	if( CURLcode res = curl_easy_setopt( handle.get(), CURLOPT_POSTFIELDS, data_to_send.data() ) ) {
 		metrics_out << "Failed to set data to send in POST" << std::endl;
+		metrics_out << curl_easy_strerror(res) << std::endl;
 		return 1;
 	}
-	if( curl_easy_setopt( handle.get(), CURLOPT_POSTFIELDSIZE, data_to_send.size() ) ) {
+	if( CURLcode res = curl_easy_setopt( handle.get(), CURLOPT_POSTFIELDSIZE, data_to_send.size() ) ) {
 		metrics_out << "Failed to set data size to send in POST" << std::endl;
+		metrics_out << curl_easy_strerror(res) << std::endl;
 		return 1;
 	}
-	if( curl_easy_setopt( handle.get(), CURLOPT_HTTPHEADER, slist.get() ) ) {
+	if( CURLcode res = curl_easy_setopt( handle.get(), CURLOPT_HTTPHEADER, slist.get() ) ) {
 		metrics_out << "Failed to set header option to use json" << std::endl;
+		metrics_out << curl_easy_strerror(res) << std::endl;
 		return 1;
 	}
 	char error_buffer[CURL_ERROR_SIZE];
-	if( curl_easy_setopt( handle.get(), CURLOPT_ERRORBUFFER, &error_buffer[0] ) ) {
+	if( CURLcode res = curl_easy_setopt( handle.get(), CURLOPT_ERRORBUFFER, &error_buffer[0] ) ) {
 		metrics_out << "Failed to set error buffer" << std::endl;
+		metrics_out << curl_easy_strerror(res) << std::endl;
 		return 1;
 	}
 		// Design document says try until 100 seconds are up
@@ -280,9 +284,9 @@ int main( int argc, char* argv[] )
 				sleep( 1 + ( get_random_int() % 10 ) );
 			}
 
-			if( curl_easy_setopt( handle.get(), CURLOPT_URL, srv->server.c_str() ) ) {
+			if( CURLcode res = curl_easy_setopt( handle.get(), CURLOPT_URL, srv->server.c_str() ) ) {
 				metrics_out << "Failed to set URL to send to" << std::endl;
-				metrics_out << "Curl says: " << error_buffer << std::endl;
+				metrics_out << curl_easy_strerror(res) << std::endl;
 				continue;
 			}
 				// Finally, send the data
