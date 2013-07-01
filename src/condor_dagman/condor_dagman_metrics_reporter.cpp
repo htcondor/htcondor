@@ -1,3 +1,4 @@
+#include "condor_common.h"
 #include <vector>
 #include <iostream>
 #include <string>
