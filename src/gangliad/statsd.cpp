@@ -46,6 +46,7 @@ Metric::Metric():
 	derivative(false),
 	verbosity(0),
 	type(DOUBLE),
+	aggregate(NO_AGGREGATE),
 	sum(0),
 	count(0),
 	restrict_slot1(false)
