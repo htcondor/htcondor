@@ -43,7 +43,6 @@ void
 DagmanMetrics::SetDagmanIds( const char *scheddAddr,
 			const CondorID &DAGManJobId, int parentDagmanCluster )
 {
-	debug_printf( DEBUG_NORMAL, "DIAG DagmanMetrics::SetDagmanIds(%s)\n", scheddAddr );
 	MyString schedd = scheddAddr;
 	schedd.replaceString( "<", "" );
 	schedd.replaceString( ">", "" );
@@ -60,7 +59,7 @@ DagmanMetrics::SetDagmanIds( const char *scheddAddr,
 //---------------------------------------------------------------------------
 DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 			const char *primaryDagFile, int rescueDagNum ) :
-	_sendMetrics( true ),
+	_sendMetrics( false ),
 	_simpleNodes( 0 ),
 	_subdagNodes( 0 ),
 	_simpleNodesSuccessful( 0 ),
@@ -70,24 +69,25 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 	_totalNodeJobTime( 0.0 )
 {
 	_primaryDagFile = strnewp(primaryDagFile);
-	debug_printf( DEBUG_NORMAL, "DIAG DagmanMetrics::DagmanMetrics(%s)\n", primaryDagFile );//TEMPTEMP
-	debug_printf( DEBUG_NORMAL, "  DIAG num nodes: %d\n", dag->NumNodes( true ) );//TEMPTEMP
 
 	_rescueDagNum = rescueDagNum;
 
 		//
-		// Figure out whether to actually report the metrics.
+		// Figure out whether to actually report the metrics.  We only
+		// send metrics if it's enabled with the PEGASUS_METRICS
+		// environment variable.  But that can be overridden by the
+		// CONDOR_DEVELOPERS config macro.
 		//
 	const char *tmp = getenv( "PEGASUS_METRICS" );
-	if ( tmp ) {
-		if ( ( strcasecmp( tmp, "true" ) != 0 ) &&
-					( strcasecmp( tmp, "1" ) != 0 ) ) {
-			_sendMetrics = false;
-		}
+	if ( tmp && ( ( strcasecmp( tmp, "true" ) == 0 ) ||
+				( strcasecmp( tmp, "1" ) == 0 ) ) ) {
+		_sendMetrics = true;
 	}
 
 	tmp = param( "CONDOR_DEVELOPERS" );
-	if ( tmp && strcmp( tmp, "NONE" ) == 0 ) _sendMetrics = false;
+	if ( tmp && strcmp( tmp, "NONE" ) == 0 ) {
+		_sendMetrics = false;
+	}
 
 		//
 		// Set the metrics file name.
@@ -95,8 +95,14 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 	_metricsFile = primaryDagFile;
 	_metricsFile += ".metrics";
 
-	//TEMPTEMP -- maybe only do this if metrics are turned on...
-	ParseBraindumpFile();
+		//
+		// If we're actually sending metrics, Pegasus should have
+		// created a braindump.txt file that includes a bunch of
+		// Pegasus information.
+		//
+	if ( _sendMetrics ) {
+		ParseBraindumpFile();
+	}
 
 		//
 		// Get DAG node counts.
@@ -113,14 +119,12 @@ DagmanMetrics::DagmanMetrics( /*const*/ Dag *dag,
 			_simpleNodes++;
 		}
 	}
-
 }
 
 //---------------------------------------------------------------------------
 DagmanMetrics::~DagmanMetrics()
 {
 	delete[] _primaryDagFile;
-	debug_printf( DEBUG_NORMAL, "DIAG DagmanMetrics::~DagmanMetrics()\n" );//TEMPTEMP
 }
 
 //---------------------------------------------------------------------------
@@ -146,8 +150,6 @@ DagmanMetrics::NodeFinished( bool isSubdag, bool successful )
 bool
 DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 {
-	debug_printf( DEBUG_NORMAL, "DIAG DagmanMetrics::Report()\n" );//TEMPTEMP
-
 	if ( !WriteMetricsFile( exitCode, status ) ) {
 		return false;
 	}
@@ -169,7 +171,7 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 			// TEMPTEMP
 		daemonCore->Create_Process(exe,args);
 	} else {
-		debug_printf( DEBUG_NORMAL, "Metrics not sent because of PEGASUS_METRICS, CONDOR_DEVELOPERS or setting.\n" );
+		debug_printf( DEBUG_NORMAL, "Metrics not sent because of PEGASUS_METRICS or CONDOR_DEVELOPERS setting.\n" );
 	}
 
 	return true;
@@ -179,8 +181,6 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 bool
 DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 {
-	debug_printf( DEBUG_NORMAL, "DIAG DagmanMetrics::WriteMetricsFile(%d, %d)\n", exitCode, status );//TEMPTEMP
-
 	double endTime = GetTime();
 	double duration = endTime - _startTime;
 
@@ -258,7 +258,6 @@ DagmanMetrics::GetTime()
 void
 DagmanMetrics::ParseBraindumpFile()
 {
-	//TEMPTEMP -- check for env var
 	const char *filename = getenv( "PEGASUS_BRAINDUMP_FILE" );
 	if ( !filename ) {
 		filename = "braindump.txt";
@@ -269,15 +268,13 @@ DagmanMetrics::ParseBraindumpFile()
 		debug_printf( DEBUG_QUIET,
 					"Warning:  could not open Pegasus braindump file %s\n",
 					filename );
-		check_warning_strictness( _sendMetrics ?
-					DAG_STRICT_1 : DAG_STRICT_3 );
+		check_warning_strictness( DAG_STRICT_2 );
 		return;
 	}
 
 	const char *line;
 		// Note:  getline() frees memory from the previous call each time.
 	while ( (line = getline( fp ) ) ) {
-		debug_printf( DEBUG_QUIET, "DIAG line: <%s>\n", line );//TEMPTEMP
 		MyString lineStr( line );
 		lineStr.Tokenize();
 		const char *token1;
@@ -298,9 +295,7 @@ DagmanMetrics::ParseBraindumpFile()
 				debug_printf( DEBUG_QUIET,
 							"Warning:  no value for %s in braindump file\n",
 							token1 );
-				//TEMPTEMP -- think about strictness
-				check_warning_strictness( _sendMetrics ?
-							DAG_STRICT_1 : DAG_STRICT_3 );
+				check_warning_strictness( DAG_STRICT_2 );
 			}
 		}
 	}

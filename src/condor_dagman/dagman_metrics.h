@@ -64,11 +64,15 @@ private:
 	static MyString _dagmanId;
 	static MyString _parentDagmanId;
 
+		// Actually send metrics iff this is true.
 	bool _sendMetrics;
 
+	char *_primaryDagFile;
 	int _rescueDagNum;
+
 	MyString _metricsFile;
 
+		// Pegasus information.
 	MyString _workflowId;
 	MyString _rootWorkflowId;
 	MyString _plannerName;
@@ -81,7 +85,8 @@ private:
 	int _simpleNodesFailed;
 	int _subdagNodesSuccessful;
 	int _subdagNodesFailed;
-	char* _primaryDagFile;
+
+		// Total execute time of all node jobs.
 	double _totalNodeJobTime;
 };
 
