@@ -55,8 +55,9 @@ as many jobs running as were actually running. This bug appeared in 7.9.6 and
 \Ticket{3713}
 
 \item Fixed a bug with hierarchical group quotas in the \Condor{negotiator}
-where group hierarchies with internal nodes that set accept\_surplus to
-false would be assigned allocations above their quota.
+in which group hierarchies with parent groups that set 
+configuration variable \Macro{GROUP\_ACCEPT\_SURPLUS} to
+\Expr{False} would be assigned allocations above their quota.
 \Ticket{3695}
 
 \item Fixed a bug in which scheduler universe jobs that
