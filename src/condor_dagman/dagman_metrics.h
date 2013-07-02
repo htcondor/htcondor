@@ -27,34 +27,34 @@
 #include "MyString.h"
 #include "dag.h"
 
-//TEMPTEMP -- ah, we have to pass in the dag file name here somewhere so we know what to call the metrics file
 class DagmanMetrics {
 public:
+		//TEMPTEMP -- document
 	static void SetStartTime();
 
-	/** Constructor.
-	*/
-	//TEMPTEMP -- need to break out DAG stats from constructor (for timing)
-	//TEMPTEMP -- or have a static method to do start time
+		/** Constructor.
+		*/
 	DagmanMetrics( /*const*/ Dag * dag, const char *primaryDagFile,
 				int rescueDagNum );
 
 	static void SetDagmanIds( const char *scheddAddr,
 				const CondorID &DAGManJobId, int parentDagmanCluster );
 
-	/** Destructor.
-	*/
+		/** Destructor.
+		*/
 	~DagmanMetrics();
 
-	//TEMPTEMP -- add count updates here
+		//TEMPTEMP -- add count updates here
 	void NodeFinished( bool isSubdag, bool successful );
 
-	//TEMPTEMP -- need to pass exitcode, dag status
+		//TEMPTEMP -- document
 	bool Report( int exitCode, Dag::dag_status status );
 
+		//TEMPTEMP -- document
 	bool WriteMetricsFile( int exitCode, Dag::dag_status status );
 
 private:
+		//TEMPTEMP -- document
 	static double GetTime();
 
 	void ParseBraindumpFile();

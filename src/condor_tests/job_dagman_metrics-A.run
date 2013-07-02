@@ -28,6 +28,7 @@ $testdesc =  'Condor submit dag - basic metrics test A - scheduler U';
 $testname = "job_dagman_metrics-A";
 $dagman_args = "-verbose";
 $ENV{'PEGASUS_METRICS'} = 'true';
+$ENV{'PEGASUS_BRAINDUMP_FILE'} = 'job_dagman_metrics-A-braindump.txt';
 
 @outfiles = ("job_dagman_metrics-A-upper.dag.dagman.out",
 	"job_dagman_metrics-A-splice-lower.dag.dagman.out",

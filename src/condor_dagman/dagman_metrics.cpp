@@ -219,8 +219,11 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 	}
 
 	fprintf( fp, "{\n" );
-	fprintf( fp, "    \"client\":\"%s\",\n", _plannerName.Value() );
-	fprintf( fp, "    \"version\":\"%s\",\n", _plannerVersion.Value() );
+	fprintf( fp, "    \"client\":\"%s\",\n", "condor_dagman" );
+	MyString cv = "8.1.0";//TEMPTEMP
+	fprintf( fp, "    \"version\":\"%s\",\n", cv.Value() );
+	fprintf( fp, "    \"planner\":\"%s\",\n", _plannerName.Value() );
+	fprintf( fp, "    \"planner_version\":\"%s\",\n", _plannerVersion.Value() );
 	fprintf( fp, "    \"type\":\"metrics\",\n" );
 	fprintf( fp, "    \"wf_uuid\":\"%s\",\n", _workflowId.Value() );
 	fprintf( fp, "    \"root_wf_uuid\":\"%s\",\n", _rootWorkflowId.Value() );
@@ -229,8 +232,6 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 	fprintf( fp, "    \"duration\":%.3lf,\n", duration );
 	fprintf( fp, "    \"exitcode\":%d,\n", exitCode );
 		//TEMPTEMP -- I think we just want something like "8.1.0" here...
-	MyString cv = "8.1.0";//TEMPTEMP
-	fprintf( fp, "    \"dagman_version\":\"%s\",\n", cv.Value() );
 	fprintf( fp, "    \"dagman_id\":\"%s\",\n", _dagmanId.Value() );
 	fprintf( fp, "    \"parent_dagman_id\":\"%s\",\n",
 				_parentDagmanId.Value() );
