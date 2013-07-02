@@ -1,0 +1,243 @@
+#!/usr/bin/python
+"""
+htsub command to submit high throughput jobs via BOSCO/HTCondor:
+http://jira.opensciencegrid.org/browse/CAMPUS-54
+
+htsub [option] executable [options/arguments for the executable]
+-i --input default none
+-e --error default bosco-%id%.err (none -> /dev/null)
+-o --output default bosco-%id%.out (none -> /dev/null)
+-d --directory default pwd
+-l --local-executable (Transfer executable == false)
+-a --arguments ()
+--input-sandbox=DIRECTORY
+--input-list=FILE (1 file/directory per line)
+?--transfer-output=none/new/file_list
+?--transfer-new-output
+# requirements instead: -C --constraint or
+-r --requirements (condor requirements)
+-m --mail-user=
+-n --ntasks
+? -a --attribute
+--prolog
+--epilog
+-t, --time=<time> max run time
+-? -h --help --usage
+-V --version
+-v --verbose
+
+It creates all the necessary HTCondor files and submits the job
+
+Other commands:
+htq
+htstat
+htqueue
+htquery
+"""
+__author__ = 'marco'
+
+import sys
+import os
+import tempfile
+import logging
+import shutil
+
+
+def log(message=None, level=None):
+    """
+    Log messages
+    :param message:
+    :param level:
+    """
+    logger = logging.getLogger('htsub_logger')
+    if not level:
+        if not message:
+            return logger
+        level = logging.DEBUG
+    logger.log(level, message )
+
+
+# Root temporary directory. otherwise: None
+ROOT_TMP="/tmp"
+
+def make_sandbox():
+  tmp_dir = tempfile.mkdtemp(dir=ROOT_TMP)
+  return tmp_dir
+
+
+# Submit file templates
+SUBMIT_GRID="""universe = grid
+%(job_str)s
+%(file_str)s
+queue %(queue)s
+"""
+
+# Prefix used in default file names (stdout, stderr, log, ...)
+# htjob, bosco, condor, ...
+FILE_PREFIX='htjob'
+
+def make_submit_file(options, args):
+    """
+    Build the submit file using templates and options
+    :param options:
+    """
+    dir_str = ""
+    if not options.directory:
+        options.directory = os.path.abspath(os.path.curdir)
+    else:
+        dir_str = 'initialdir = %s' % options.directory
+    if options.output=='':
+        options.output = "%s-${Cluster}.${Process}.out" % FILE_PREFIX
+    if options.error=='':
+        options.error = "%s-${Cluster}.${Process}.err" % FILE_PREFIX
+    if options.logfile=='':
+        options.logfile = "%s-${Cluster}.log" % FILE_PREFIX
+    # Should input, output and error be checked for absolute paths?
+    # Should path concatenation be avoided since setting initialdir?
+    # Should all files in infiles and outfiles be filtered adding the working directory (options.directory) if they are not an absolute path?
+    # Add input files
+    file_str = ""
+    if options.input:
+        file_str = "%s\ninput = %s" % (file_str, os.path.join(options.directory, options.input))
+    if options.infiles:
+        file_str = "%s\ntransfer_input_files = %s" % (file_str, options.infiles)
+    if options.output:
+        file_str = "%s\noutput = %s" % (file_str, os.path.join(options.directory, options.output))
+    if options.outfiles:
+        file_str = "%s\ntransfer_output_files = %s" % (file_str, options.output)
+    if options.error:
+        file_str = "%s\nerror = %s" % (file_str, os.path.join(options.directory, options.error))
+    if file_str:
+        file_str =  "%s\nshould_transfer_files = YES\nwhen_to_transfer_output = ON_EXIT" % file_str
+    else:
+        file_str = "%s\nshould_transfer_files = NO" % file_str
+    if dir_str:
+        file_str = "%s\n%s" % dir_str
+    if options.logfile:
+        file_str = "%s\nlog = %s" % (file_str, os.path.join(options.directory, options.logfile))
+    # Job execution options
+    job_str = ""
+    if options.compat11:
+        ec, out = commands.getstatusoutput('bosco_cluster.new --list grid_resource')
+        if not ec==0:
+            log("Unable to find Bosco cluster in compatibility mode: %s" % out, logging.ERROR)
+        job_str = "grid_resource = %s" % out
+    if options.local:
+        job_str = "%s\ntransfer_executable = False" % job_str
+    if args:
+        job_str = "%s\nexecutable = %s" % (job_str, args[0])
+    if options.arguments:
+        job_str = "%s\narguments = %s" % (job_str, options.arguments)
+    else:
+        if len(args)>1:
+            job_str = "%s\narguments = %s" % (job_str, ' '.join(args[1:]))
+    # Fill the template
+    if not options.queue:
+        options.queue = ''
+    rets = SUBMIT_GRID % dict(job_str=job_str, file_str=file_str, queue=options.queue)
+    return rets
+
+
+import commands
+
+def do_submit(sub_dir, sub_str):
+    """
+    Create the files and submit the job
+    """
+    if not sub_dir:
+        print "Submit dir not defined!"
+        exit(1)
+    fname = os.path.join(sub_dir, "htjob.submit")
+    #log("Condor submit file: %s" % fname, logging.DEBUG)
+    fd = open(fname, 'w')
+    fd.write(sub_str)
+    fd.close()
+    log("Submitting HTCondor job: condor_submit %s" % fname, logging.DEBUG)
+    log("Submit file:\n%s" % sub_str, logging.DEBUG)
+    ec, out = commands.getstatusoutput('condor_submit %s' % fname)
+    if ec==0:
+        print "Job submitted successfully: %s" % out
+    else:
+        print "Error in submitting job (%s): %s" % (ec, out)
+
+
+def do_cleanup(tmp_dir):
+    try:
+        shutil.rmtree(tmp_dir) # delete directory
+    except OSError, e:
+        if e.errno != 2: # code 2 - no such file or directory
+            raise
+
+def do_all(options, args):
+    """
+    Make the submit file and submit the HTCondor job
+    :param options:
+    :param args:
+    """
+    tmp_dir = make_sandbox()
+    log("Temporary directory: %s" % tmp_dir)
+    sub_str = make_submit_file(options, args)
+    log("HTCondor submit file content:\n%s" % sub_str, logging.DEBUG)
+    do_submit(tmp_dir, sub_str)
+    if not log().isEnabledFor(logging.DEBUG):
+        do_cleanup(tmp_dir)
+
+if __name__ == "__main__" :
+    from optparse import OptionParser
+    cmd_list = ['debug', 'getval', 'setval', 'getlines', 'getfile', 'get_config_files']
+    usage = 'Usage: %prog [options] executable [options/arguments for the executable]'
+    parser = OptionParser(usage=usage)
+    #parser.add_option("-l", "--literal", dest="literal",
+    #    help='literal interpretation', action="store_true", default=False)
+    parser.add_option("-i", "--input", dest="input",
+        help='Standard input for the job', action="store", default=None)
+    parser.add_option("--infiles", dest="infiles",
+        help='Additional input files for the job (comma separated list)', action="store", default=None)
+    parser.add_option("-o", "--output", dest="output",
+        help='Standard output for the job', action="store", default=None)
+    parser.add_option("-e", "--error", dest="error",
+        help='Standard error for the job', action="store", default=None)
+    parser.add_option("--outfiles", dest="outfiles",
+        help='Additional output files for the job (comma separated list)', action="store", default=None)
+    parser.add_option("-l", "--log", dest="logfile",
+        help='Log file for the job', action="store", default=None)
+    parser.add_option("-d", "--directory", dest="directory",
+        help='Directory for the relative paths', action="store", default=None)
+    parser.add_option("--local-executable", dest="local",
+        help='Set to run a command/executable local to the remote cluster', action="store_true", default=False)
+    parser.add_option("-a", "--arguments", dest="arguments",
+        help='Job arguments', action="store", default=None)
+    parser.add_option("-r", "--requirements", dest="requirements",
+        help="Job requirements", action="store", default=None)
+    parser.add_option("-n", "--ntasks", dest="queue",
+        help="Number of jobs to send", action="store", default=None)
+    parser.add_option("-m", "--mail-user", dest="mail",
+        help="Send email notification", action="store", default=None)
+    parser.add_option("-v", "--verbose", "--debug", dest="verbose",
+        help="Print verbose output", action="store_true", default=False)
+    parser.add_option("--compat11", dest="compat11",
+        help="Bosco 1.1 compatibility", action="store_true", default=False)
+    parser.add_option("--loglevel", dest="loglevel",
+        help="Set logging level (DEBUG, INFO, WARNING, ERROR, CRRITICAL)", action="store", default=None)
+    (options, args) = parser.parse_args()
+
+    if not args:
+        parser.error('Need to specify a program to run.')
+    # Setup the logger
+    logging.basicConfig()
+    logger = logging.getLogger('htsub_logger')
+    if options.loglevel:
+        numeric_level = getattr(logging, options.loglevel.upper(), None)
+        if not isinstance(numeric_level, int):
+            parser.error('Invalid log level: %s' % options.loglevel)
+        logger.setLevel(numeric_level)
+    else:
+        if options.verbose:
+            logger.setLevel(logging.DEBUG)
+        else:
+            logger.setLevel(logging.ERROR)
+
+
+
+    #main(sys.argv)
+    do_all(options, args)

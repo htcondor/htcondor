@@ -1,5 +1,10 @@
 #!/bin/bash
 # bosco_add_host: Used to install ssh keys and blahp on remote hosts.
+#
+# BOSCO can manage max 254 clusters, the # of clusters is returned sometime
+# as function exit code (by return) and this is modulo 256
+# see cluster_list_iterator, list
+
 
 # Bosco key location
 bosco_key=$HOME/.ssh/bosco_key.rsa
@@ -29,15 +34,44 @@ usage: $0 command
 
 commands:
  -l|--list                  List the installed clusters
- -a|--add host [sched]      Install and add a cluster, with scheduler sched
- -r|--remove host           Remove the installed cluster
- -s|--status host           Get status of installed cluster
- -t|--test host             Test the installed cluster
+ -a|--add host sched        Install and add a cluster, with scheduler sched
+ -r|--remove [host]         Remove the installed cluster (first in list)
+ -s|--status [host]         Get status of installed cluster
+ -t|--test [host]           Test the installed cluster (all clusters)
  -h|--help                  Show this help message
 
 Where host is user@fqdn.example.com
+$0 can manage max 254 clustars
 
 EOM
+}
+
+cluster_list_iterator () {
+    # $1 function iterating on list, will accept 3 parameters
+    #  if the return value is 1, the loop is interropted
+    # File:  $CLUSTERLIST_LOCATION
+    # Line looks like:
+    # entry=user@host.edu max_queued=2000 cluster_type=pbs
+    # Check for the clusterlist file
+    # call the function on each entry
+    # The exit code is the number of entries visited (iterations on the cluster list)
+    let counter=0
+    if [ -s $CLUSTERLIST_LOCATION ]; then
+        while read line; do
+            name=`expr "$line" : "entry=\(.*\) max"`
+            max_q=`expr "$line" : ".*max_queued=\(.*\) cluster"`
+            type_q=`expr "$line" : ".*cluster_type=\(.*\)"`
+            $1 $name $type_q $max_q
+            [ $? -eq 1 ] && break
+            let counter+=1
+        done < $CLUSTERLIST_LOCATION
+    else
+        # file not existing or zero length
+        echo "No clusters configured"
+        return 255
+    fi
+    return $counter
+
 }
 
 list()
@@ -45,13 +79,31 @@ list()
     # Line looks like:
     # entry=user@host.edu max_queued=2000 cluster_type=pbs
     # Check for the clusterlist file
+    # $1 control the output format (default user@host.edu/cluster_type)
+    #  host - user@host.edu
+    #  remote_gahp - user@host.edu  (to use in HTCondor remote_gahp)
+    #  queue - queue_type
+    #  all -  user@host.edu cluster_type max_queued
     # The exit code is the number of entries (lines)
     let counter=0
     if [ -e $CLUSTERLIST_LOCATION ]; then
         while read line; do
             name=`expr "$line" : "entry=\(.*\) max"`
-            type=`expr "$line" : ".*cluster_type=\(.*\)"`
-            echo $name/$type
+            max_q=`expr "$line" : ".*max_queued=\(.*\) cluster"`
+            type_q=`expr "$line" : ".*cluster_type=\(.*\)"`
+            if [ "x$1" = "xhost" ]; then
+                echo $name
+            elif [ "x$1" = "xremote_gahp" ]; then
+                echo $name
+                return 1
+            elif [ "x$1" = "xgrid_resource" ]; then
+                echo "batch $type_q $name"
+                return 1
+            elif [ "x$1" = "xall" ]; then
+                echo $name $type_q $max_q
+            else
+                echo $name/$type_q
+            fi
             let counter+=1
         done < $CLUSTERLIST_LOCATION
     else
@@ -61,6 +113,28 @@ list()
     return $counter
 }
 
+# grid_resource = batch queue name@host
+# SUBMIT_EXPRS = grid_resource
+# no reconfig needed because only condor_submit using it, no daemon
+set_bosco_routing () {
+    # $1 file to write the routing info into
+    #  default to  LOCAL_CONFIG_DIR`/condor_config.bosco_routing
+    if [ "x$1" != "x" ]; then
+        dest_file=$1
+    else
+        dest_file="`condor_config_val LOCAL_CONFIG_DIR`/condor_config.bosco_routing"
+    fi
+    grid_res=$(list grid_resource)
+    if [ $? -ne 1 ]; then
+        # No default cluster 
+        rm $dest_file 2>/dev/null
+    else
+        cat > $dest_file << EOF 
+grid_resource = $grid_res
+SUBMIT_EXPRS = grid_resource
+EOF
+    fi
+}
 
 start_ssh () {
     # Copy blahp
@@ -142,7 +216,7 @@ show_progress () {
     dots_pid=$!
 
     # Run the command
-    "$@"
+    "$@"  
     exit_code=$?
     disown $dots_pid
     kill -9 $dots_pid
@@ -151,6 +225,7 @@ show_progress () {
     return $exit_code
 
 }
+
 
 
 ssh_find_remote () {
@@ -184,17 +259,6 @@ ssh_find_remote () {
     return 1
 }
 
-check_cluster_list () {
-    # $1 = cluster to check for
-    remote_host=$1
-
-    grep "$remote_host" $CLUSTERLIST_LOCATION >/dev/null 2>/dev/null
-    if [ $? -eq 0 ]; then
-        return 0
-    else
-        return 1
-    fi
-}
 
 check_cluster_list2 () {
     # $1 = cluster to check for
@@ -274,6 +338,8 @@ add_cluster_to_list () {
 
     echo "entry=$remote_host max_queued=$max_queued cluster_type=$cluster_type" >> $CLUSTERLIST_LOCATION
 
+    # Always after add/remove
+    set_bosco_routing
 }
 
 get_min_queue () {
@@ -308,8 +374,38 @@ stop_ssh () {
 
 remove_cluster () {
     # $1 = cluster to remove 
+    # If no cluster is provided, remove all clusters
+    if [ "x$1" != "x" ]; then
+        # $1 could be user@hostname/queue, queue part removed
+        # bash specific, generic no removing queue: remote_host=$1 
+ 
+        remote_host=$1
+
+        # First, check if the cluster is in the cluster list, exit if not
+        check_cluster_list2 $remote_host "ve"
+
+        # Remove the cluster
+        do_remove_cluster $remote_host 
+        return $?
+    else
+        #list > /dev/null
+        #[ $? = "0" ] && echo "No cluster " 
+        # This is removing only one cluster because do_remove_cluster creates a new cluster file
+        cluster_list_iterator  do_remove_cluster
+        retv=$?
+        if [ $retv = 255 ]; then
+            echo "No clusters configured."
+        else
+            echo "$retv cluster/s removed."
+        fi
+    fi
+}
+
+do_remove_cluster () {
+    # $1 = cluster to remove 
     # $1 could be user@hostname/queue, queue part removed
     # bash specific, generic no removing queue: remote_host=$1 
+    # $2 and $3 ignored
     remote_host=${1%%/*}
 
     # First, check if the cluster is in the cluster list, exit if not
@@ -319,13 +415,16 @@ remove_cluster () {
 
     # Remove bosco from the remote cluster
     start_ssh
-    ssh $1 "rm -rf bosco"
+    ssh $remote_host "rm -rf bosco"
     stop_ssh
 
     # Remove the host from the cluster list
     tmpfile=`mktemp -t tmpclusterlist.XXXXXX`
     sed "/$remote_host/d" $CLUSTERLIST_LOCATION > $tmpfile
     mv $tmpfile $CLUSTERLIST_LOCATION
+
+    #  Always after add/remove
+    set_bosco_routing
 }
 
 
@@ -355,33 +454,57 @@ check_condor_q_classad () {
 test_cluster () {
     if [ "x$1" != "x" ]; then
         remote_host=$1
+
+        # First, check if the cluster is in the cluster list, exit if not
+        check_cluster_list2 $remote_host "ve"
+
+        # Get the cluster type
+        cluster_out=`grep "$remote_host" $CLUSTERLIST_LOCATION`
+        cluster_type=`expr "$cluster_out" : ".*cluster_type=\(.*\)"`
+
+        # Do the test
+        do_test_cluster $remote_host $cluster_type
+        return $?
+    else
+        # This is stopping at the first cluster failing
+        cluster_list_iterator  do_test_cluster
+        if [ $? = 255 ]; then
+            echo "No clusters configured."
+        else
+            echo "$? cluster/s testsed successfully."
+        fi
+    fi
+}
+
+do_test_cluster () {
+    # Testing the cluster. No checks are done on the parameters
+    # $1 remote_host (user@fqdn)
+    # $2 cluster_type (pbs, condor, ...)
+    # other parameters are ignored
+    if [ "x$1" != "x" ]; then
+        remote_host=$1
     else
         echo "ERROR - No remote host given for the test.  Please list one of the cluster you have added"
         exit 1
     fi
 
-    # First, check if the cluster is in the clusterlist
-    cluster_out=`grep "$remote_host" $CLUSTERLIST_LOCATION`
-    if [ $? -ne 0 ]; then
-        echo "Unable to find $remote_host in list of installed clusters."
-        echo "Available clusters:"
-        list
+    if [ "x$2" != "x" ]; then
+        cluster_type=$2
+    else
+        echo "ERROR - No remote cluster type provided.  Please specify the correct one."
         exit 1
     fi
 
-    # Get the cluster type
-    cluster_type=`expr "$cluster_out" : ".*cluster_type=\(.*\)"`
-
     # Check if passwordless ssh works
-    echo -n "Testing ssh to $1..."
+    echo -n "Testing ssh to $remote_host..."
     start_ssh
     # Get the pwd from the remote cluster, for use later in the submission file
-    default_pwd=`ssh -o "PasswordAuthentication=no" $1 "pwd"`
+    default_pwd=`ssh -o "PasswordAuthentication=no" $remote_host "pwd"`
     ssh_exit=$?
     stop_ssh
     if [ $ssh_exit -ne 0 ]; then
         echo "Failed to run simple ssh on remote cluster."
-        echo "Passwordless ssh to $1 is not working."
+        echo "Passwordless ssh to $remote_host is not working."
         exit 1
     else
         echo "Passed!"
@@ -512,7 +635,8 @@ End_of_Submit
         echo "Maybe condor is waiting longer to poll for job completion?"
         echo "Here is the current status of the job:"
         condor_q $condor_jobid
-        exit 1
+        # returning zero anyway, test considered successful 
+        exit 0
     else
         echo "Passed!"
     fi
@@ -601,19 +725,20 @@ eval set -- "$TEMP"
 
 platform_force=
 
+# test and remove could have 0 or 1 parameter
 while true; do
     case "$1" in
         -h|--help) usage; exit 1; shift ;;
         -p|--platform) platform_force=$2; shift 2;;
         -a|--add) remote_host=$2; shift 2; break;;
-        -l|--list) list 
+        -l|--list) list $2
                    if [ $? -eq 0 ]; then
                        exit 2
                    fi
                    exit 0 ;;
         -s|--status) get_status $2;  shift 2; exit 0 ;;
-        -t|--test) test_cluster $2; shift 2; exit 0 ;;
-        -r|--remove) remove_cluster $2; shift 2; exit 0;;
+        -t|--test) test_cluster $2; exit 0 ;;
+        -r|--remove) remove_cluster $2; exit 0;;
         
         --) echo "No command found" >&2; usage; exit 1;;
         *) echo "Unknown option: $1" >&2; usage; exit 1;;
@@ -639,6 +764,9 @@ if [ "x$1" == "x" ]; then
     cluster_type="pbs"
 else
     cluster_type=$(echo $1 | $TR '[:upper:]' '[:lower:]')
+    if [ "$cluster_type" == "htcondor" ]; then
+        cluster_type="condor"
+    fi
     if [ ! "$cluster_type" == "pbs" -a ! "$cluster_type" == "lsf" -a ! "$cluster_type" == "sge" -a ! "$cluster_type" == "condor" ]; then
         echo "Unrecognized batch system: $1 (normalized: $cluster_type)"
         echo "Please specify one of the following: pbs, lsf, sge, condor"
