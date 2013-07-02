@@ -1,0 +1,96 @@
+
+*******************************************
+       Bandwidth Management in Lark
+*******************************************
+
+--------
+Overview
+--------
+We introduce serverl features in terms of bandwidth management we bring 
+to htcondor jobs via Lark. The main functionalities are list as follows:
+
+- Have the ability to determine the bandwidth resource when condor startd
+  daemons starts and insert this bandwidth resource attribute into machine 
+  classad and advertise it accordngly.
+
+- Treat this bandwidth resource as an extensible machine resource, which 
+  user can request in their submission script when they submit jobs. The 
+  bandwidth resource can be shared simialrly like cpu and memory. For 
+  example, if it isdetermined that the totoal available bandwidth is 100Mbps, 
+  and one job comes in and requests for 60Mbps bandwidth, this portion of 
+  bandwidth resource can be allocated to the job, if another job comes in 
+  with bandwidth request as 50Mbps, it cannot run on this worker node because 
+  there is only 40Mbps bandwidth left.
+
+- Can perform QoS control on the running jobs by utilizing openvswitch egress
+  QoS functionality. For instance, if the user request 40Mbps bandwidth for 
+  submitted job, QoS control can make the minimum guarantee for the running 
+  job to have this much rate, but also limit the running job not to exceed 
+  this constraint.
+
+- Can perform bandwidth usage monitoring for running jobs periodically based 
+  on the update interval indicated in the condor configuration file.
+
+------------------------
+Implementation and Usage
+------------------------
+To make sure you can use these features, there are several modifications you 
+need to make in your condor configuration files.
+
+First, to make startd daemon get the bandwidth resource when it starts up, we 
+need a callout script or executable to do the actual job to get the bandwidth 
+info. Here we provided an simply example c program "ethtooltest.c" within the 
+same directory, which finds out the link speed of the ethernet device. This is
+by no means the best way to do that, here we just provide an example to show 
+the mechanism. System admins feel free to replace this with their own tools. For 
+this specific executable, you need to set the suid to root to make sure condor 
+can run this executable as the same permission of root because there are ioctl 
+calls in it and require root permission. To set the suid with root permission, 
+you should first compile the code as root and then do something like this:
+
+$chmod u+s "your_callout_script"
+
+After the callout script is setup, we need to add the macro MACHINE_RESOURCE_INVENTORY_* 
+in the configuration file. The * should be the name of resource you want to add. 
+Here we just use BANDWIDTH. Thus, in your config file, you can have something like: 
+MACHINE_RESOURCE_INVENTORY_BANDWITH = /path/to/your/callout/script. Partitionable 
+slot also should be setup in configuration file.
+
+This single line of configuration has two effects: 1. Automatically set Bandwidth 
+as a type of extensible resource. Use can request bandwidth by putting something 
+like: "request_bandwidth = 50" in their submission script. The unit of bandwidth 
+is Mb/s. 2. The available bandwidth resource is determined by executing the callout 
+script when startd daemons starts up. The stdout of this callout script should be 
+in the form like "DetectedBandwidth = 1000". This key-value pair will be inserted 
+into the machine classad.
+
+To utilize the QoS control feature, there is no extra setup. The QoS will be set
+according to the user's bandwidth request when the external end of network veth 
+pair is attached to the bridge and is brougth up. This is equivalent to use the
+following ovs-vsctl command:
+$vs−vsctl −− set port veth qos=@newqos −− −−id=@newqos create qos type=linux−htb \
+other−config:max−rate=1000000 queues:0=@newqueue −− −−id=@newqueue create queue \
+other−config:min−rate=1000000 other−config:max−rate=1000000
+There are two type of linux QoS implementation: linux-htb (hierarchy token bucket) 
+and linux-hfsc (hierarchical fair service curve). We choose linux-htb. We also set 
+the max and min rate to be the same for the QoS queue. This can be changed according
+to the actual adopted policy. Although right now this is hard coded in the code, it
+is easy to be extended to be controlled by admins.
+
+To use the bandwith monitoring effectively, the following two macros can be inserted 
+into the configuration file. STARTER_INITIAL_UPDATE_INTERVAL and STARTER_UPDATE_INTERVAL.
+The unit of both of the two attributes is second. These first attribute determines 
+how long the starter should wait to do the first stats update since it is running. 
+The second attribute deterines the period that the starter does stats update. For each
+stats update, the network accounting data for incoming and outing traffic is gathered
+via iptables-based IP accounting. The bandwidth for incoming and outgoing flows are
+calculated as the average bandwidth during each period.
+
+An example local condor config file  is also provided for completeness.
+
+------------
+Known issues
+------------
+- openvswitch does not work well with iptables, thus, when bridging and qos are setup
+  using openvswitch, netowrk accounting and bandwidth usage monitoring cannot work
+  correclty. Basically, the code will report 0 accounting data and bandwidth usage.
