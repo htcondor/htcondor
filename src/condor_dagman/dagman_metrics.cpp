@@ -154,21 +154,37 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 		return false;
 	}
 
+//TEMPTEMP -- exe needs to be full path!
 	if ( _sendMetrics ) {
 		const char* exe = param("DAGMAN_PEGASUS_REPORT_METRICS");	
 		if(!exe) {
 			exe = "condor_dagman_metrics_reporter";
+			exe = "/scratch/wenger/condor_build/git2/CONDOR_SRC/personal_condor/release_dir/bin/condor_dagman_metrics_reporter";//TEMPTEMP!!!!!!
 		}
+
+		MyString metricsOutputFile( _primaryDagFile );
+		metricsOutputFile += ".metrics.out";
+
+		debug_printf( DEBUG_NORMAL,
+					"Reporting metrics to Pegasus metrics server(s); output is in %s.\n",
+					metricsOutputFile.Value() );
+
+//TEMPTEMP -- probably do output/error redirect here instead of having the metrics program open its own output file -- that loses stuff that libcurl just prints...
 		ArgList args;
 		args.AppendArg(exe);	
 		args.AppendArg("-f");
 		args.AppendArg(_metricsFile.Value());
+		//TEMPTEMP -- instead of passing status here, I think we should just pass whether we want the reporter to sleep -- avoids "magic constant" in reporter code
 		args.AppendArg("-s");
 		args.AppendArg(MyString(status));
-		args.AppendArg("-d");
-		args.AppendArg(_primaryDagFile);
+		args.AppendArg("-o");
+		args.AppendArg(metricsOutputFile.Value());
+
 			// Dump the args to the dagman.out file
-			// TEMPTEMP
+		MyString cmd; // for debug output
+		args.GetArgsStringForDisplay( &cmd );
+		debug_printf( DEBUG_NORMAL, "Running command <%s>\n", cmd.Value() );
+
 		daemonCore->Create_Process(exe,args);
 	} else {
 		debug_printf( DEBUG_NORMAL, "Metrics not sent because of PEGASUS_METRICS or CONDOR_DEVELOPERS setting.\n" );
@@ -223,7 +239,9 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 	fprintf( fp, "    \"total_jobs_run\":%d,\n", totalNodesRun );
 	_totalNodeJobTime = 123.456;//TEMPTEMP
 	fprintf( fp, "    \"total_job_time\":%.3lf,\n", _totalNodeJobTime );
-	fprintf( fp, "    \"dag_status\":%d,\n", status );
+
+		// Last item must NOT have trailing comma!
+	fprintf( fp, "    \"dag_status\":%d\n", status );
 	fprintf( fp, "}\n" );
 
 	//TEMPTEMP -- check return value?
@@ -254,7 +272,6 @@ DagmanMetrics::GetTime()
 }
 
 //---------------------------------------------------------------------------
-//TEMPTEMP -- only do this if reporting metrics?
 void
 DagmanMetrics::ParseBraindumpFile()
 {

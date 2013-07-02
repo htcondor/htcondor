@@ -1,3 +1,22 @@
+/***************************************************************
+ *
+ * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ * 
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
+
 #include "condor_common.h"
 #include <vector>
 #include <iostream>
@@ -120,7 +139,8 @@ int main( int argc, char* argv[] )
 {
 		// Need to read some environment variables here
 		// Which ones? TEMPTEMP
-	std::string metrics_from_dagman, dagman_status, dag_file, metrics_url;
+	std::string metrics_from_dagman, dagman_status, metrics_out_name,
+				metrics_url;
 
 	std::vector<server_data> servers_to_contact;
 	char* env_metrics_server = getenv( "PEGASUS_USER_METRICS_SERVER" );
@@ -148,12 +168,12 @@ int main( int argc, char* argv[] )
 				std::cerr << "No status specified" << std::endl;
 			}
 		}
-		if( !std::strcmp( argv[ii], "-d" ) ) {
+		if( !std::strcmp( argv[ii], "-o" ) ) {
 			++ii;
 			if( argv[ii] ) {
-				dag_file = argv[ii];
+				metrics_out_name = argv[ii];
 			} else {
-				std::cerr << "No dagfile specified" << std::endl;
+				std::cerr << "No metrics output file specified" << std::endl;
 			}
 		}
 		if( !std::strcmp( argv[ii], "-u" ) ) { // For testing
@@ -161,17 +181,15 @@ int main( int argc, char* argv[] )
 			if( argv[ii] ) {
 				metrics_url = argv[ii];
 			} else {
-				std::cerr << "No dagfile specified" << std::endl;
+				std::cerr << "No metrics URL specified" << std::endl;
 			}
 		}
 	}
-	if( dag_file.empty() ) {
-		std::cerr << "No dagfile specified.  Terminating now" << std::endl;
+	if( metrics_out_name.empty() ) {
+		std::cerr << "No metrics output file specified.  Terminating now" << std::endl;
 		return 1;
 	}
 		// Now check the command line parameters
-	std::string metrics_out_name = dag_file;
-	metrics_out_name.append( ".metrics.out" );
 	std::ofstream metrics_out( metrics_out_name.c_str() );
 	if( !metrics_out ) {
 		std::cerr << "Cannot open " << metrics_out_name << " for writing" << std::endl;
@@ -245,9 +263,11 @@ int main( int argc, char* argv[] )
 			}
 		}
 		data_line.erase( q.base(), data_line.end() );
+
 		data_to_send.append( data_line );
 	}
 	metrics.close();
+	metrics_out << "Data to send: <" << data_to_send << ">" << std::endl;
 
 		// Now set curl options
 	if( CURLcode res = curl_easy_setopt( handle.get(), CURLOPT_POST, 1 ) ) {
