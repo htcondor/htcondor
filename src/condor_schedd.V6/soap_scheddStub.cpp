@@ -43,6 +43,7 @@
 
 #include "schedd_api.h"
 
+using namespace soap_schedd;
 #include "../condor_utils/soap_helpers.cpp"
 #include "../condor_utils/dc_service.cpp"
 
@@ -55,6 +56,7 @@ extern Scheduler scheduler;
 
 static ScheddTransactionManager transactionManager;
 static NullScheddTransaction *null_entry_ptr = NULL;
+
 
 /*************************************
 	HELPER FUNCTIONS
@@ -387,10 +389,20 @@ stub_suffix(const char* stub_name,   // IN
 	return true;
 }
 
+namespace condor_soap {
+
+int
+soap_serve(struct soap *soap)
+{
+	return soap_schedd::soap_serve(soap);
+}
+
+}
+
 /*************************************
 	SOAP STUBS
 ************************************/
-
+namespace soap_schedd {
 int
 condor__beginTransaction(struct soap *soap,
 						 int duration,
@@ -1638,9 +1650,9 @@ return_from_stub:
 	return SOAP_OK;
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////
 // TODO : This should move into daemonCore once we figure out how we wanna link
 ///////////////////////////////////////////////////////////////////////////////
 
 #include "soap_daemon_core.cpp"
+}

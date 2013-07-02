@@ -269,4 +269,46 @@ REMOTE_CONDOR_get_file(char *remote, char *local, int mode)
 	return rval;
 }
 
+// Stolen from the code generator.
+#if defined(LINUX)
+
+#if defined( SYS_mmap )
+void * REMOTE_CONDOR_mmap(void * a, size_t l, int p, int f, int fd, off_t o) {
+    int scm;
+    void *    ret_val;
+    condor_errno_t   terrno;
+    sigset_t    omask;
+
+    scm = SetSyscalls( SYS_LOCAL | SYS_UNMAPPED );
+    omask = _condor_signals_disable();
+    CurrentSysCall = CONDOR_mmap;
+
+    syscall_sock->encode();
+    assert( syscall_sock->code(CurrentSysCall) );
+    assert( syscall_sock->code(l) );
+    assert( syscall_sock->code(p) );
+    assert( syscall_sock->code(f) );
+    assert( syscall_sock->code(fd) );
+    assert( syscall_sock->code(o) );
+    assert( syscall_sock->end_of_message() );
+
+    syscall_sock->decode();
+    assert( syscall_sock->code(ret_val) );
+    if(  ret_val == MAP_FAILED  ) {
+        assert( syscall_sock->code(terrno) );
+        assert( syscall_sock->end_of_message() );
+        _condor_signals_enable( omask );
+        SetSyscalls( scm );
+        errno = (int)terrno;
+        return ret_val;
+    }
+    assert( syscall_sock->end_of_message() );
+    _condor_signals_enable( omask );
+    SetSyscalls( scm );
+    return ret_val;
+}
+#endif // defined( SYS_mmap )
+
+#endif // defined( LINUX )
+
 } /* end of extern "C" from prologue */

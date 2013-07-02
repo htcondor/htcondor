@@ -565,6 +565,7 @@ static void writeUsageAd(FILE * file, ClassAd * pusageAd)
 			key = iter->first;
 		}
 		if (key.size() != 0) {
+			title_case(key); // capitalize it to make it consistent for map lookup.
 			SlotResTermSumy * psumy = useMap[key];
 			if ( ! psumy) {
 				psumy = new SlotResTermSumy();
@@ -630,6 +631,7 @@ static void writeUsageAd(FILE * file, ClassAd * pusageAd)
 		if (lbl.compare("Memory") == 0) lbl += " (MB)";
 		else if (lbl.compare("Disk") == 0) lbl += " (KB)";
 		fprintf(file, fmt.Value(), lbl.c_str(), psumy->use.c_str(), psumy->req.c_str(), psumy->alloc.c_str());
+		delete psumy;
 	}
 	//fprintf(file, "\t  *See Section %d.%d in the manual for information about requesting resources\n", 2, 5);
 }
@@ -3958,7 +3960,7 @@ ULogEvent::readRusage (FILE *file, rusage &usage)
 }
 
 char*
-ULogEvent::rusageToStr (rusage usage)
+ULogEvent::rusageToStr (const rusage &usage)
 {
 	char* result = (char*) malloc(128);
 	ASSERT( result != NULL );

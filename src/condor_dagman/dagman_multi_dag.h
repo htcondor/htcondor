@@ -94,4 +94,11 @@ void RenameRescueDagsAfter(const char *primaryDagFile,
 */
 MyString HaltFileName( const MyString &primaryDagFile );
 
+/** Attempts to unlink the given file, and prints an appropriate error
+	message if this fails (but doesn't return an error, so only call
+	this if a failure of the unlink is okay).
+	@param pathname The path of the file to unlink
+*/
+void tolerant_unlink( const char *pathname );
+
 #endif /* #ifndef DAGMAN_MULTI_DAG_H */

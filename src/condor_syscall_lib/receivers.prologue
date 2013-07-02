@@ -248,5 +248,44 @@ do_REMOTE_syscall(StdUnivSock *sock, int process)
 
 		assert( syscall_sock->end_of_message() );;
 		return 0;
-		
-	}
+      }
+#if defined(LINUX)
+	case CONDOR_mmap:
+	  {
+        // Copied from generated code...
+        void *  ret_val;
+        void *  a;
+        size_t   l;
+        int   p;
+        int   f;
+        int   fd;
+        off_t   o;
+        condor_errno_t terrno;
+
+        assert( syscall_sock->code(l) );
+        dprintf( D_SYSCALLS, "  l = %lu\n", l );
+        assert( syscall_sock->code(p) );
+        dprintf( D_SYSCALLS, "  p = %d\n", p );
+        assert( syscall_sock->code(f) );
+        dprintf( D_SYSCALLS, "  f = %d\n", f );
+        assert( syscall_sock->code(fd) );
+        dprintf( D_SYSCALLS, "  fd = %d\n", fd );
+        assert( syscall_sock->code(o) );
+        dprintf( D_SYSCALLS, "  o = %lu\n", o );
+        assert( syscall_sock->end_of_message() );;
+
+        errno = (condor_errno_t)0;
+        ret_val = (void * ) CONDOR_NotSupported( CONDOR_mmap );
+        terrno = (condor_errno_t)errno;
+        dprintf( D_SYSCALLS, "\tret_val = %p, errno = %d\n", ret_val, (int)terrno);
+
+        syscall_sock->encode();
+        assert( syscall_sock->code(ret_val) );
+        // MAP_FAILED != NULL
+        if( ret_val == MAP_FAILED ) {
+            assert( syscall_sock->code(terrno) );
+        }
+        assert( syscall_sock->end_of_message() );;
+        return 0;
+	  }
+#endif // defined( LINUX )

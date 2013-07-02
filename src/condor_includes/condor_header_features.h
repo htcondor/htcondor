@@ -50,6 +50,9 @@
 #define MSC_DISABLE_WARNING(nn)  MSC_PRAGMA3(warning,disable,nn)
 #define MSC_RESTORE_WARNING(nn)  MSC_PRAGMA3(warning,default,nn)
 
+/* disable warning about not checking the return value of a function
+*/
+#define IGNORE_RETURN (void)
 
 /* If this platform doesn't give us __FUNCTION__ create a default.
  */

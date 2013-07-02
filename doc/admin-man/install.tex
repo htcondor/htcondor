@@ -5,13 +5,12 @@
 This section contains the instructions for installing HTCondor.
 The installation will have a default configuration that can
 be customized.
-Sections of the manual that follow this one explain customization.
+Sections of the manual below explain customization.
 
-Read this entire section before starting installation.
+Please read this \emph{entire} section before starting installation.
 
-Please read the copyright and disclaimer information in 
-section~\ref{sec:license} on
-page~\pageref{sec:license} of the manual.
+Please read the copyright and disclaimer information in
+section~\ref{sec:license}.
 Installation and
 use of HTCondor is acknowledgment that you have read and agree to the
 terms.
@@ -41,42 +40,38 @@ The HTCondor binary distribution is packaged in the following files
 and directories:
 
 \begin{description}
-\item[\File{DOC}] directions on where to find HTCondor documentation
-\item[\File{INSTALL}] these installation directions
 \item[\File{LICENSE-2.0.TXT}] the licensing agreement.
                   By installing HTCondor, you agree to the contents of
 		  this file
 \item[\File{README}] general information
-\item[\File{condor\_configure}] the Perl script used to install and
-                  configure HTCondor
-\item[\File{condor\_install}] the Perl script used to install HTCondor
-\item[\File{examples}] directory containing C, Fortran and C++ example
-		  programs to run with HTCondor
 \item[\File{bin}] directory which contains the distribution HTCondor
 		  user programs.
-\item[\File{sbin}] directory which contains the distribution HTCondor
-		  system programs.
+\item[\File{condor\_configure}] the Perl script used to install and
+                  configure HTCondor.
+\item[\File{condor\_install}] the Perl script used to install HTCondor.
 \item[\File{etc}] directory which contains the distribution HTCondor
 		  configuration data.
+\item[\File{examples}] directory containing C, Fortran and C++ example
+		  programs to run with HTCondor.
+\item[\File{include}] directory containing HTCondor header files.
 \item[\File{lib}] directory which contains the distribution HTCondor
 		  libraries.
 \item[\File{libexec}] directory which contains the distribution HTCondor
-		  programs that are only used internally by HTCondor.
+		  auxiliary programs for use internally by HTCondor.
 \item[\File{man}] directory which contains the distribution HTCondor
 		  manual pages.
-\item[\File{src}] directory which contains the distribution HTCondor
-		  source code for CHIRP and DRMAA.
+\item[\File{sbin}] directory containing HTCondor daemon binaries and admin
+		  tools.
+\item[\File{src}] directory containing source for some interfaces.
 \end{description}
 
-Before you install, please consider joining the condor-world mailing
+Before you install, please consider joining the htcondor-world mailing
 list.
-Traffic on this list is kept to an absolute minimum.
-It is only used to announce new releases of HTCondor.
-To subscribe, send a message to \Email{majordomo@cs.wisc.edu} with the body:
-\begin{verbatim}
-   subscribe condor-world 
-\end{verbatim}
-
+Traffic on this list is kept to an absolute minimum;
+it is only used to announce new releases of HTCondor.
+To subscribe, go to
+\URL{https://lists.cs.wisc.edu/mailman/listinfo/htcondor-world},
+and fill out the online form.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Preparing-to-Install}Preparation} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -132,30 +127,24 @@ network traffic and your network layout when choosing your central
 manager.
 All the daemons send updates (by default, every 5 minutes) to this machine.
 Memory requirements for the central manager differ by the number of machines
-in the pool.
-A pool with up to about 100 machines will require approximately
-25 Mbytes of memory for the central manager's tasks.
-A pool with about 1000 machines will require approximately
+in the pool:
+a pool with up to about 100 machines will require approximately
+25 Mbytes of memory for the central manager's tasks,
+and a pool with about 1000 machines will require approximately
 100 Mbytes of memory for the central manager's tasks.
 
-A faster CPU will improve the time to do matchmaking. 
+A faster CPU will speed up matchmaking. 
 
 \item[2. Which machines should be allowed to submit jobs?]
 
 HTCondor can restrict the machines allowed to submit jobs.  Alternatively, 
 it can allow any machine the network allows to connect to a submit machine
 to submit jobs.  If the HTCondor pool is behind a firewall, and all machines
-inside the firewall are trusted, the \Macro{HOSTALLOW\_WRITE} configuration
-entry can be set to *.  Otherwise, it should be set to reflect
+inside the firewall are trusted, the \Macro{ALLOW\_WRITE} configuration
+entry can be set to */*.  Otherwise, it should be set to reflect
 the set of machines permitted to submit jobs to this pool.
-HTCondor tries to be secure by default,
-so out of the box, the configuration file ships with an invalid definition
-for this configuration variable.
-This invalid value allows no machine to connect and submit
-jobs, so after installation, change this entry.
-Look for the
-entry defined with the value
-\Expr{YOU\_MUST\_CHANGE\_THIS\_INVALID\_CONDOR\_CONFIGURATION\_VALUE}.
+HTCondor tries to be secure by default: it is shipped with an invalid value
+that allows no machine to connect and submit jobs.
 
 \item[3. Will HTCondor run as root or not?]
 
@@ -183,12 +172,20 @@ running HTCondor as a Unix user other than root.
 % 3. to receive e-mail
 
 Either root will be administering HTCondor directly, or someone else
-would be acting as the HTCondor administrator.  If root has delegated
+will be acting as the HTCondor administrator.  If root has delegated
 the responsibility to another person, keep in mind that as long as
 HTCondor is started up as root, it should be clearly understood that
 whoever has the ability to edit the condor configuration files can
 effectively run arbitrary programs as root.
 
+The HTCondor administrator will be regularly updating HTCondor by following
+these instructions or by using the system-specific installation methods below.
+The administrator
+will also customize policies of the HTCondor submit and execute nodes.
+This person will also receive information from HTCondor if 
+something goes wrong with the pool, 
+as described in the documentation of the \Macro{CONDOR\_ADMIN}
+configuration variable.
 
 \item[5. Will you have a Unix user named condor, and will its home
 directory be shared?]
@@ -289,7 +286,9 @@ submit) are still stored in the spool directory, so you will need
 %
 % how much?!?
 %
-some space, even with a checkpoint server.
+some space, even with a checkpoint server. The amount of space will 
+depend on how many executables, and what size they are, that need to be stored
+in the spool directory.
 
 \index{Unix directory!\File{log}}
 \index{disk space requirement!\File{log} directory}
@@ -382,6 +381,8 @@ error message and exit:
    \item \File{/etc/condor/condor\_config}
    \item \File{/usr/local/etc/condor\_config}
    \item \File{\Tilde condor/condor\_config}
+   \item Files in the directory specified by the configuration variable 
+\Macro{LOCAL\_CONFIG\_DIR}.
 \end{enumerate}
 
 If you specify a file in the \Env{CONDOR\_CONFIG} environment variable
@@ -396,6 +397,10 @@ The only way to specify the local configuration file(s) is in the global configu
 file, with the \Macro{LOCAL\_CONFIG\_FILE} macro.  If that macro is not
 set, no local configuration file is used.  This macro can be a list of files
 or a single file.
+
+If configured, HTCondor also uses the \Macro{LOCAL\_CONFIG\_DIR} setting get a
+directory where a list of configuration files is held.  The files are searched
+for configuration settings.
 
 \item[Release Directory]
 
@@ -487,12 +492,9 @@ section~\ref{sec:HTCondor-AFS} for all the details.
 \item[8. Do I have enough disk space for HTCondor?]
 
 \index{disk space requirement!all versions}
-HTCondor takes up a fair amount of space.
-This is another reason why it is a good idea to have it on a shared
-file system.
-The compressed downloads currently range from a low of about 100 Mbytes
-for Windows to about 500 Mbytes for Linux.
-The compressed source code takes approximately 16 Mbytes.
+The compressed downloads of HTCondor currently range from a low of about 12
+Mbytes for 32-bit Debian 6.0 GNU/Linux to about 94 Mbytes for Windows.  The
+compressed source code takes approximately 18 Mbytes.
 
 In addition, you will need a lot of disk space in the local directory
 of any machines that are submitting jobs to HTCondor.  See question 6
@@ -536,7 +538,7 @@ install HTCondor, whereas \Condor{configure} is used to modify the
 configuration of an existing HTCondor install.
 
 \Condor{configure} and \Condor{install} are completely command-line
-driven; it is not interactive.  Several command-line arguments are
+driven and are not interactive.  Several command-line arguments are
 always needed with \Condor{configure} and \Condor{install}.
 The argument
 \begin{verbatim}

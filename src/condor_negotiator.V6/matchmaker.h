@@ -76,6 +76,9 @@ struct GroupEntry {
     double subtree_quota;
     // all slots requested by this group and its subtree
     double subtree_requested;
+
+	// sum of usage of this node and all children
+	double subtree_usage;
     // true if this group got served by most recent round robin
     bool rr;
     // timestamp of most recent allocation from round robin
@@ -109,7 +112,8 @@ class Matchmaker : public Service
 		// reinitialization method (reconfig)
 		int reinitialize ();	
 
-		typedef HashTable<MyString, MyString> ClaimIdHash;
+            //typedef HashTable<MyString, MyString> ClaimIdHash;
+        typedef std::map<std::string, std::set<std::string> > ClaimIdHash;
 
 		// command handlers
 		int RESCHEDULE_commandHandler (int, Stream*);
@@ -283,7 +287,7 @@ class Matchmaker : public Service
 			// trim out startd ads that are not in the Unclaimed state.
 		int trimStartdAds(ClassAdListDoesNotDeleteAds &startdAds);
 
-		bool SubmitterLimitPermits(ClassAd *candidate, double used, double allowed, double pieLeft);
+		bool SubmitterLimitPermits(ClassAd* request, ClassAd* candidate, double used, double allowed, double pieLeft);
 		double sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds,double *minSlotWeight, ExprTree* constraint);
 
 		/* ODBC insert functions */
@@ -494,6 +498,8 @@ class Matchmaker : public Service
 
 		void StartNewNegotiationCycleStat();
 		void publishNegotiationCycleStats( ClassAd *ad );
+
+		double calculate_subtree_usage(GroupEntry *group);
 };
 GCC_DIAG_ON(float-equal)
 

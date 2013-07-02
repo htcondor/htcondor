@@ -1026,12 +1026,13 @@ get_job_info()
 			break;
 #endif
 		default:
-			if(s.cmd)
+			if(s.cmd) {
 				u_proc = new UserProc( s );
+				u_proc->display();
+			}
 			break;
 	}
 
-	u_proc->display();
 
 	// We need to clean up the memory allocated in the STARTUP_INFO I
 	// think that STARTUP_INFO should probably be a class with a
@@ -1192,10 +1193,8 @@ init_environment_info()
 		free(my_uid_domain);
 	}
 
-    ckptpltfrm = param( ATTR_CHECKPOINT_PLATFORM );
-    if( ckptpltfrm == NULL ) {
-    	ckptpltfrm = sysapi_ckptpltfrm();
-    }    	
+    ckptpltfrm = sysapi_ckptpltfrm();
+
 	/* don't forget one more for the NULL which needs to go over as well */
 	REMOTE_CONDOR_register_ckpt_platform( ckptpltfrm, strlen(ckptpltfrm) + 1);
 

@@ -1,9 +1,22 @@
 
-
+\index{exit codes!of condor\_shadow}
+When a \Condor{shadow} daemon exits, 
+the \Condor{shadow} exit code is recorded in the \Condor{schedd} log,
+and it identifies why the job exited. 
+Prose in the log appears of the form
+\begin{verbatim}
+Shadow pid XXXXX for job XX.X exited with status YYY 
+\end{verbatim}
+where \Expr{YYY} is the exit code,  or
+\begin{verbatim}
+Shadow pid XXXXX for job XX.X reports job exit reason 100. 
+\end{verbatim}
+where the exit code is the value 100.
+Table~\ref{table:shadow-exit-codes} lists these codes.
 % shadow error codes
 \begin{center}
 \begin{table}[H]
-\caption{\label{shadow-exit-codes}\Condor{shadow} Exit Codes}
+\caption{\label{table:shadow-exit-codes}\Condor{shadow} Exit Codes}
 \begin{tabular}{|c|l|l|} \hline
 \emph{Value} & \emph{Error Name} & \emph{Description} \\ \hline \hline
 4   &   JOB\_EXCEPTION    & the job exited with an exception \\ \hline
@@ -36,45 +49,51 @@
 
 %\afterpage{\clearpage}
 
+\index{log files!event codes}
+Table~\ref{table:user-log-event-codes} lists codes that appear as 
+the first field within a job's log file.
+See more detailed descriptions of these values in
+section~\ref{sec:job-log-events}.
 \begin{center}
 \begin{table}[H]
-\caption{\label{user-log-event-codes}User Log Event Codes}
+\caption{\label{table:user-log-event-codes}Event Codes in a Job Log}
 \begin{tabular}{|l|c|} \hline
 \emph{Event Code} & \emph{Description}   \\ \hline \hline
-0   &   Submit  \\ \hline
-1   &   Execute  \\ \hline
-2   &   Executable error  \\ \hline
-3   &   Checkpointed  \\ \hline
-4   &   Job evicted  \\ \hline
-5   &   Job terminated  \\ \hline
-6   &   Image size  \\ \hline
-7   &   Shadow exception  \\ \hline
-8   &   Generic  \\ \hline
-9   &   Job aborted  \\ \hline
-10  &   Job suspended  \\ \hline
-11  &   Job unsuspended  \\ \hline
-12  &   Job held  \\ \hline
-13  &   Job released  \\ \hline
-14  &   Node execute  \\ \hline
-15  &   Node terminated  \\ \hline
-16  &   Post script terminated  \\ \hline
-17  &   Globus submit (no longer used)  \\ \hline
-18  &   Globus submit failed  \\ \hline
-19  &   Globus resource up (no longer used)  \\ \hline
-20  &   Globus resource down (no longer used)  \\ \hline
-21  &   Remote error  \\ \hline
-22  &   Job disconnected  \\ \hline
-23  &   Job reconnected  \\ \hline
-24  &   Job reconnect failed  \\ \hline
-25  &   Grid resource up \\ \hline
-26  &   Grid resource down \\ \hline
-27  &   Grid submit \\ \hline
-28  &   Job ClassAd attribute values added to event log  \\ \hline
-29  &   Job status unknown \\ \hline
-30  &   Job status known \\ \hline
-31  &   Unused \\ \hline
-32  &   Unused \\ \hline
-33  &   Attribute update \\ \hline
+000   &   Submit  \\ \hline
+001   &   Execute  \\ \hline
+002   &   Executable error  \\ \hline
+003   &   Checkpointed  \\ \hline
+004   &   Job evicted  \\ \hline
+005   &   Job terminated  \\ \hline
+006   &   Image size  \\ \hline
+007   &   Shadow exception  \\ \hline
+008   &   Generic  \\ \hline
+009   &   Job aborted  \\ \hline
+010  &   Job suspended  \\ \hline
+011  &   Job unsuspended  \\ \hline
+012  &   Job held  \\ \hline
+013  &   Job released  \\ \hline
+014  &   Node execute  \\ \hline
+015  &   Node terminated  \\ \hline
+016  &   Post script terminated  \\ \hline
+017  &   Globus submit (no longer used)  \\ \hline
+018  &   Globus submit failed  \\ \hline
+019  &   Globus resource up (no longer used)  \\ \hline
+020  &   Globus resource down (no longer used)  \\ \hline
+021  &   Remote error  \\ \hline
+022  &   Job disconnected  \\ \hline
+023  &   Job reconnected  \\ \hline
+024  &   Job reconnect failed  \\ \hline
+025  &   Grid resource up \\ \hline
+026  &   Grid resource down \\ \hline
+027  &   Grid submit \\ \hline
+028  &   Job ClassAd attribute values added to event log  \\ \hline
+029  &   Job status unknown \\ \hline
+030  &   Job status known \\ \hline
+031  &   Grid job stage in \\ \hline
+032  &   Grid job stage out \\ \hline
+033  &   Job ClassAd attribute update \\ \hline
+034  &   DAGMan PRE\_SKIP defined \\ \hline
 \end{tabular}
 \end{table}
 \end{center}

@@ -416,6 +416,10 @@ if ($opt_central_manager) {
     }
 }
 
+# Path to ganglia.d for condor_gangliad configuration
+if ( -d "${release_dir}/etc/condor/ganglia.d" ) {
+	$global_config{GANGLIAD_METRICS_CONFIG_DIR}="${release_dir}/etc/condor/ganglia.d";
+}
 
 
 # Determine daemons needed to run and other settings based on
@@ -1236,7 +1240,7 @@ sub install( $ )
 
     $local_config{UID_DOMAIN}="\$(FULL_HOSTNAME)";
     $local_config{FILESYSTEM_DOMAIN}="\$(FULL_HOSTNAME)";
-    $local_config{LOCK}="/tmp/condor-lock.\$(HOSTNAME)".rand();
+    $local_config{LOCK}="/tmp/condor-lock.".rand();
 
     # This is necessary so that if no collector host is specified, 
     # Condor doesn't start using "central-manager-hostname.your.domain"

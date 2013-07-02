@@ -30,6 +30,7 @@ class ExtArray
 	// ctors/dtor
 	ExtArray (int = 64); // initial size of array
 	ExtArray (const ExtArray &);
+	ExtArray &operator =(const ExtArray &);
 	~ExtArray ();
 
 	// accessor functions
@@ -66,7 +67,7 @@ class ExtArray
 
 template <class Element>
 ExtArray<Element>::
-ExtArray (int sz)
+ExtArray (int sz) : filler()
 {
 	// create array of required size
 	size = sz;
@@ -77,6 +78,23 @@ ExtArray (int sz)
 		dprintf (D_ALWAYS, "ExtArray: Out of memory");
 		exit (1);
 	}
+}
+
+template <class Element>
+ExtArray<Element> &
+ExtArray<Element>::
+operator =(const ExtArray &old)
+{
+	truncate(0);
+	int i;
+	resize(old.size);
+	for(i=0; i<size; i++) {
+		array[i] = old.array[i];
+	}
+	last = old.last;
+	// copy filler element as well
+	filler = old.filler;
+	return *this;
 }
 
 template <class Element>

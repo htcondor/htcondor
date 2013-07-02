@@ -32,7 +32,7 @@ $testdesc =  'Condor submit dag - basic propogate_priorities test - scheduler U'
 $testname = "job_dagman_propogate_priorities";
 $dagman_args = "-verbose";
 
-$logfile = "job_dagman_propogate_priorities-A.dag.dagman.out";
+$logfile = "job_dagman_propogate_priorities.dag.dagman.out";
 @outfiles = (
 	'job_dagman_propogate_priorities-A.out',
 	'job_dagman_propogate_priorities-B.out',
@@ -135,6 +135,9 @@ CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
 if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+	if (! -e $logfile) {
+		die "$testname: failed -- no $logfile file!  DAG not run?\n";
+	}
 	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
 } else {

@@ -308,6 +308,9 @@
                  if (axutil_strcmp(property_HadoopStateType.c_str(), "EXITING") == 0)
                     return HadoopStateType_EXITING;
              
+                 if (axutil_strcmp(property_HadoopStateType.c_str(), "UNMANAGED") == 0)
+                    return HadoopStateType_UNMANAGED;
+             
              
                  /* Error: none of the strings matched; invalid enum value */
                  return (ADBHadoopStateTypeEnum)-1;
@@ -345,6 +348,12 @@
                             
                             
                             property_HadoopStateType = "EXITING";
+                          break;
+                     
+                       case HadoopStateType_UNMANAGED :
+                            
+                            
+                            property_HadoopStateType = "UNMANAGED";
                           break;
                      
                      

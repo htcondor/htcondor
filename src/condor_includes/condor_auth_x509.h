@@ -146,7 +146,7 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     int                 token_status;
     //X509_Credential *   my_credential;
     OM_uint32	        ret_flags ;
-	MyString			m_fqan;
+	std::string			m_fqan;
 #ifdef WIN32
     typedef HashTable<MyString, MyString> Grid_Map_t;
     static Grid_Map_t * GridMap;

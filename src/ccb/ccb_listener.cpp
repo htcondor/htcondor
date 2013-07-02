@@ -596,8 +596,11 @@ CCBListeners::GetCCBListener(char const *address)
 		return NULL;
 	}
 
-	m_ccb_listeners.Rewind();
-	while( m_ccb_listeners.Next(ccb_listener) ) {
+	for(CCBListenerList::iterator itr = m_ccb_listeners.begin();
+		itr != m_ccb_listeners.end();
+		itr++)
+	{
+		ccb_listener = (*itr);
 		if( !strcmp(address,ccb_listener->getAddress()) ) {
 			return ccb_listener.get();
 		}
@@ -610,8 +613,11 @@ CCBListeners::GetCCBContactString(MyString &result)
 {
 	classy_counted_ptr<CCBListener> ccb_listener;
 
-	m_ccb_listeners.Rewind();
-	while( m_ccb_listeners.Next(ccb_listener) ) {
+	for(CCBListenerList::iterator itr = m_ccb_listeners.begin();
+		itr != m_ccb_listeners.end();
+		itr++)
+	{
+		ccb_listener = (*itr);
 		char const *ccbid = ccb_listener->getCCBID();
 		if( ccbid && *ccbid ) {
 			if( !result.IsEmpty() ) {
@@ -628,9 +634,11 @@ CCBListeners::RegisterWithCCBServer(bool blocking)
 	bool result = true;
 
 	classy_counted_ptr<CCBListener> ccb_listener;
-
-	m_ccb_listeners.Rewind();
-	while( m_ccb_listeners.Next(ccb_listener) ) {
+	for(CCBListenerList::iterator itr = m_ccb_listeners.begin();
+		itr != m_ccb_listeners.end();
+		itr++)
+	{
+		ccb_listener = (*itr);
 		if( !ccb_listener->RegisterWithCCBServer(blocking) && blocking ) {
 			result = false;
 		}
@@ -643,7 +651,7 @@ CCBListeners::Configure(char const *addresses)
 {
 	StringList addrlist(addresses," ,");
 
-	SimpleList< classy_counted_ptr<CCBListener> > new_ccbs;
+	CCBListenerList new_ccbs;
 
 	char const *address;
 	addrlist.rewind();
@@ -673,19 +681,22 @@ CCBListeners::Configure(char const *addresses)
 			listener = new CCBListener(address);
 		}
 
-		new_ccbs.Append( listener );
+		new_ccbs.push_back( listener );
 	}
 
-	m_ccb_listeners.Clear();
-	classy_counted_ptr<CCBListener> ccb_listener;
+	m_ccb_listeners.clear();
 
-	new_ccbs.Rewind();
-	while( new_ccbs.Next(ccb_listener) ) {
+	classy_counted_ptr<CCBListener> ccb_listener;
+	for(CCBListenerList::iterator itr = new_ccbs.begin();
+		itr != new_ccbs.end();
+		itr++)
+	{
+		ccb_listener = (*itr);
 		if( GetCCBListener( ccb_listener->getAddress() ) ) {
 				// ignore duplicate entries with same address
 			continue;
 		}
-		m_ccb_listeners.Append( ccb_listener );
+		m_ccb_listeners.push_back( ccb_listener );
 
 		ccb_listener->InitAndReconfig();
 	}

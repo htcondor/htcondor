@@ -629,9 +629,12 @@ ProcFamilyProxy::recover_from_procd_error()
 	//
 	delete m_client;
 	m_client = NULL;
+	int ntries = 5;
 
-	while (m_client == NULL) {
+	while (ntries > 0 && m_client == NULL) {
 	
+		ntries--;
+
 		// the ProcD has failed. we know this either because communication
 		// has failed or the ProcD's reaper has fired
 		//
@@ -667,6 +670,11 @@ ProcFamilyProxy::recover_from_procd_error()
 			delete m_client;
 			m_client = NULL;
 		}
+	}
+
+	if ( m_client == NULL ) {
+		// Ran out of attempts to restart procd
+		EXCEPT("unable to restart the ProcD after several tries");
 	}
 }
 

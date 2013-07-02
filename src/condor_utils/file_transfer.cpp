@@ -43,6 +43,8 @@
 #include "subsystem_info.h"
 #include "condor_url.h"
 #include "my_popen.h"
+#include "NetworkPluginManager.h"
+
 #include <list>
 
 const char * const StdoutRemapName = "_condor_stdout";
@@ -71,12 +73,30 @@ bool FileTransfer::ServerShouldBlock = true;
 const int FINAL_UPDATE_XFER_PIPE_CMD = 1;
 const int IN_PROGRESS_UPDATE_XFER_PIPE_CMD = 0;
 
+#ifdef WIN32
+        #define __ATTRIBUTE__WEAK__
+        #define SHUT_RDWR 2
+#else
+        #define __ATTRIBUTE__WEAK__ __attribute__ ((weak))
+#endif
+
+// Only in the starter executable is this a strong symbol
+// This allows the file transfer object to get the starter classad for
+// the network plugin - but only the starter!
+bool
+__ATTRIBUTE__WEAK__
+GetMachineInfo(classad_shared_ptr<classad::ClassAd> &, std::string &)
+{
+	return false;
+}
+
 class FileTransferItem {
 public:
 	FileTransferItem():
 		is_directory(false),
 		is_symlink(false),
-		file_mode(NULL_FILE_PERMISSIONS) {}
+		file_mode(NULL_FILE_PERMISSIONS),
+		file_size(0) {}
 
 	char const *srcName() { return src_name.c_str(); }
 	char const *destDir() { return dest_dir.c_str(); }
@@ -86,6 +106,7 @@ public:
 	bool is_directory;
 	bool is_symlink;
 	condor_mode_t file_mode;
+	filesize_t file_size;
 };
 
 const int GO_AHEAD_FAILED = -1; // failed to contact transfer queue manager
@@ -131,6 +152,7 @@ FileTransfer::FileTransfer()
 	PeerDoesTransferAck = false;
 	PeerDoesGoAhead = false;
 	PeerUnderstandsMkdir = false;
+	PeerDoesXferInfo = false;
 	TransferUserLog = false;
 	Iwd = NULL;
 	ExceptionFiles = NULL;
@@ -1368,6 +1390,13 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 	transobject->ActiveTransferTid = -1;
 	TransThreadTable->remove(pid);
 
+
+	if (NetworkPluginManager::HasPlugins() && transobject->m_network_name.size())
+	{
+		int rc = NetworkPluginManager::Cleanup(transobject->m_network_name);
+		if (rc) dprintf(D_ALWAYS, "Failed to cleanup network namespace (rc=%d)\n", rc);
+	}
+
 	transobject->Info.duration = time(NULL)-transobject->TransferStart;
 	transobject->Info.in_progress = false;
 	if( WIFSIGNALED(exit_status) ) {
@@ -1650,9 +1679,30 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 		download_info *info = (download_info *)malloc(sizeof(download_info));
 		ASSERT ( info );
 		info->myobj = this;
+
+		classad_shared_ptr<classad::ClassAd> machineAdPtr;
+		if (param_boolean("USE_NETWORK_NAMESPACES", false) && GetJobAd() && GetMachineInfo(machineAdPtr, m_network_name))
+		{
+			ClassAd fakeMachineAd;
+			int rc = NetworkPluginManager::PrepareNetwork(m_network_name, *GetJobAd(), machineAdPtr);
+			if (rc) {
+				dprintf(D_ALWAYS, "Failed to prepare network namespace - bailing.\n");
+				rc = NetworkPluginManager::Cleanup(m_network_name);
+				if (rc) dprintf(D_ALWAYS, "Failed to cleanup unprepared network namespace (rc=%d)\n", rc);
+				return false;
+			}
+		}
+
+		if (NetworkPluginManager::PreFork())
+		{
+			dprintf(D_ALWAYS, "Preparation for fork failed in the network manager.\n");
+			return false;
+		}
+
 		ActiveTransferTid = daemonCore->
 			Create_Thread((ThreadStartFunc)&FileTransfer::DownloadThread,
 						  (void *)info, s, ReaperId);
+
 		if (ActiveTransferTid == FALSE) {
 			dprintf(D_ALWAYS,
 					"Failed to create FileTransfer DownloadThread!\n");
@@ -1660,6 +1710,20 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 			free(info);
 			return FALSE;
 		}
+
+		if (NetworkPluginManager::HasPlugins())
+		{
+			if (NetworkPluginManager::PostForkParent(ActiveTransferTid))
+			{
+				kill(ActiveTransferTid, SIGKILL);
+				dprintf(D_ALWAYS, "Failed to alter the child (%d) network namespace in post-fork of parent.\n", ActiveTransferTid);
+			}
+			else
+			{
+				dprintf(D_FULLDEBUG, "Post-fork network namespace operation in parent successful.\n");
+			}
+		}
+
 		dprintf(D_FULLDEBUG,
 				"FileTransfer: created download transfer process with id %d\n",
 				ActiveTransferTid);
@@ -1677,8 +1741,26 @@ FileTransfer::DownloadThread(void *arg, Stream *s)
 	filesize_t	total_bytes;
 
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DownloadThread\n");
+
+	int net_rc;
+	if (NetworkPluginManager::HasPlugins())
+	{
+		if ((net_rc = NetworkPluginManager::PostForkChild()))
+		{
+			dprintf(D_ALWAYS,"Failed to finish creating network namespace in child (rc=%d)\n", net_rc);
+			return false;
+		}
+		else
+		{
+			dprintf(D_FULLDEBUG, "Download thread believes network namespace is completely configured.\n");
+		}
+	}
+
 	FileTransfer * myobj = ((download_info *)arg)->myobj;
 	int status = myobj->DoDownload( &total_bytes, (ReliSock *)s );
+
+	//int rc = NetworkPluginManager::Cleanup(myobj->m_network_name);
+	//if (rc) dprintf(D_ALWAYS, "Failed to cleanup network namespace (rc=%d)\n", rc);
 
 	if(!myobj->WriteStatusToTransferPipe(total_bytes)) {
 		return 0;
@@ -1772,6 +1854,17 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 		return_and_resetpriv( -1 );
 	}
 //	dprintf(D_FULLDEBUG,"TODD filetransfer DoDownload final_transfer=%d\n",final_transfer);
+
+	filesize_t sandbox_size = 0;
+	if( PeerDoesXferInfo ) {
+		ClassAd xfer_info;
+		if( !getClassAd(s,xfer_info) ) {
+			dprintf(D_FULLDEBUG,"DoDownload: failed to receive xfer info; exiting at %d\n",__LINE__);
+			return_and_resetpriv( -1 );
+		}
+		xfer_info.LookupInteger(ATTR_SANDBOX_SIZE,sandbox_size);
+	}
+
 	if( !s->end_of_message() ) {
 		dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 		return_and_resetpriv( -1 );
@@ -1918,7 +2011,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 					// (e.g.  from the local schedd) to receive the
 					// file.  It then sends a message to our peer
 					// telling it to go ahead.
-				if( !ObtainAndSendTransferGoAhead(xfer_queue,true,s,fullname.Value(),I_go_ahead_always) ) {
+				if( !ObtainAndSendTransferGoAhead(xfer_queue,true,s,sandbox_size,fullname.Value(),I_go_ahead_always) ) {
 					dprintf(D_FULLDEBUG,"DoDownload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
@@ -2119,7 +2212,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 						rc = 0;
 					}
 					else {
-						remove(fullname.Value());
+						IGNORE_RETURN remove(fullname.Value());
 						rc = mkdir(fullname.Value(),file_mode);
 					}
 				}
@@ -2768,20 +2861,6 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 		saved_priv = set_priv( desired_priv_state );
 	}
 
-	s->encode();
-
-	// tell the server if this is the final transfer our not.
-	// if it is the final transfer, the server places the files
-	// into the user's Iwd.  if not, the files go into SpoolSpace.
-	if( !s->code(m_final_transfer_flag) ) {
-		dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
-		return_and_resetpriv( -1 );
-	}
-	if( !s->end_of_message() ) {
-		dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
-		return_and_resetpriv( -1 );
-	}
-
 	// record the state it was in when we started... the "default" state
 	bool socket_default_crypto = s->get_encryption();
 
@@ -2792,7 +2871,39 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 	FileTransferList filelist;
 	ExpandFileTransferList( FilesToSend, filelist );
 
+	filesize_t sandbox_size = 0;
 	FileTransferList::iterator filelist_it;
+	for( filelist_it = filelist.begin();
+		 filelist_it != filelist.end();
+		 filelist_it++ )
+	{
+		if( sandbox_size + filelist_it->file_size >= sandbox_size ) {
+			sandbox_size += filelist_it->file_size;
+		}
+	}
+
+	s->encode();
+
+	// tell the server if this is the final transfer or not.
+	// if it is the final transfer, the server places the files
+	// into the user's Iwd.  if not, the files go into SpoolSpace.
+	if( !s->code(m_final_transfer_flag) ) {
+		dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
+		return_and_resetpriv( -1 );
+	}
+	if( PeerDoesXferInfo ) {
+		ClassAd xfer_info;
+		xfer_info.Assign(ATTR_SANDBOX_SIZE,sandbox_size);
+		if( !putClassAd(s,xfer_info) ) {
+			dprintf(D_FULLDEBUG,"DoUpload: failed to send xfer_info; exiting at %d\n",__LINE__);
+			return_and_resetpriv( -1 );
+		}
+	}
+	if( !s->end_of_message() ) {
+		dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",__LINE__);
+		return_and_resetpriv( -1 );
+	}
+
 	for( filelist_it = filelist.begin();
 		 filelist_it != filelist.end();
 		 filelist_it++ )
@@ -3012,7 +3123,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes, ReliSock *s)
 			if( !I_go_ahead_always ) {
 					// Now tell our peer when it is ok for us to read data
 					// from disk for sending.
-				if( !ObtainAndSendTransferGoAhead(xfer_queue,false,s,fullname.Value(),I_go_ahead_always) ) {
+				if( !ObtainAndSendTransferGoAhead(xfer_queue,false,s,sandbox_size,fullname.Value(),I_go_ahead_always) ) {
 					dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
@@ -3300,7 +3411,7 @@ FileTransfer::setTransferQueueContactInfo(char const *contact) {
 }
 
 bool
-FileTransfer::ObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,char const *full_fname,bool &go_ahead_always)
+FileTransfer::ObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,filesize_t sandbox_size,char const *full_fname,bool &go_ahead_always)
 {
 	bool result;
 	bool try_again = true;
@@ -3308,7 +3419,7 @@ FileTransfer::ObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool down
 	int hold_subcode = 0;
 	MyString error_desc;
 
-	result = DoObtainAndSendTransferGoAhead(xfer_queue,downloading,s,full_fname,go_ahead_always,try_again,hold_code,hold_subcode,error_desc);
+	result = DoObtainAndSendTransferGoAhead(xfer_queue,downloading,s,sandbox_size,full_fname,go_ahead_always,try_again,hold_code,hold_subcode,error_desc);
 
 	if( !result ) {
 		SaveTransferInfo(false,try_again,hold_code,hold_subcode,error_desc.Value());
@@ -3343,7 +3454,7 @@ FileTransfer::GetTransferQueueUser()
 }
 
 bool
-FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,char const *full_fname,bool &go_ahead_always,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc)
+FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,filesize_t sandbox_size,char const *full_fname,bool &go_ahead_always,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc)
 {
 	ClassAd msg;
 	int go_ahead = GO_AHEAD_UNDEFINED;
@@ -3382,7 +3493,7 @@ FileTransfer::DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool do
 	ASSERT( timeout > alive_slop );
 	timeout -= alive_slop;
 
-	if( !xfer_queue.RequestTransferQueueSlot(downloading,full_fname,m_jobid.Value(),queue_user.c_str(),timeout,error_desc) )
+	if( !xfer_queue.RequestTransferQueueSlot(downloading,sandbox_size,full_fname,m_jobid.Value(),queue_user.c_str(),timeout,error_desc) )
 	{
 		go_ahead = GO_AHEAD_FAILED;
 	}
@@ -3897,6 +4008,13 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 	} else {
 		TransferUserLog = true;
 	}
+
+	if( peer_version.built_since_version(8,1,0) ) {
+		PeerDoesXferInfo = true;
+	}
+	else {
+		PeerDoesXferInfo = false;
+	}
 }
 
 
@@ -4338,6 +4456,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 	file_xfer_item.is_directory = st.IsDirectory();
 
 	if( !file_xfer_item.is_directory ) {
+		file_xfer_item.file_size = st.GetFileSize();
 		return true;
 	}
 

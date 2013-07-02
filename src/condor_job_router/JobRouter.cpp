@@ -100,7 +100,7 @@ JobRouter::~JobRouter() {
 	DeallocateRoutingTable(m_routes);
 
 	if(m_router_lock) {
-		unlink(m_router_lock_fname.c_str());
+		IGNORE_RETURN unlink(m_router_lock_fname.c_str());
 		delete m_router_lock;
 	}
 	if(m_router_lock_fd != -1) {

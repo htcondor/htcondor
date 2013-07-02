@@ -132,6 +132,7 @@ sub RunAffinityCheck
 	} else {
 		# count must equal reques
 		if($bitcount != $requestedbits) {
+			print "Expected $requestedbits Got $bitcount!\n";
 			$reportedresult = 0;
 		}
 	}

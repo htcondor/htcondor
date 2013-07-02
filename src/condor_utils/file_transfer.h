@@ -343,6 +343,7 @@ class FileTransfer: public Service {
 	bool PeerDoesTransferAck;
 	bool PeerDoesGoAhead;
 	bool PeerUnderstandsMkdir;
+	bool PeerDoesXferInfo;
 	bool TransferUserLog;
 	char* Iwd;
 	StringList* ExceptionFiles;
@@ -355,6 +356,7 @@ class FileTransfer: public Service {
 	StringList* FilesToSend;
 	StringList* EncryptFiles;
 	StringList* DontEncryptFiles;
+	std::string m_network_name;
 	char* OutputDestination;
 	char* SpooledIntermediateFiles;
 	char* ExecFile;
@@ -437,9 +439,9 @@ class FileTransfer: public Service {
 	// Obtain permission to receive a file download and then tell our
 	// peer to go ahead and send it.
 	// Save failure information with SaveTransferInfo().
-	bool ObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,char const *full_fname,bool &go_ahead_always);
+	bool ObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,filesize_t sandbox_size,char const *full_fname,bool &go_ahead_always);
 
-	bool DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,char const *full_fname,bool &go_ahead_always,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc);
+	bool DoObtainAndSendTransferGoAhead(DCTransferQueue &xfer_queue,bool downloading,Stream *s,filesize_t sandbox_size,char const *full_fname,bool &go_ahead_always,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc);
 
 	std::string GetTransferQueueUser();
 

@@ -26,7 +26,7 @@ from aviary.util import *
 wsdl = 'file:/var/lib/condor/aviary/services/query/aviary-query.wsdl'
 modes = ['AFTER', 'BEFORE']
 
-parser = build_basic_parser('Query submission IDs remotely via SOAP.','http://localhost:9091/services/query/getSubmissionID')
+parser = build_basic_parser('Query submission IDs remotely via SOAP.','http://localhost:39091/services/query/getSubmissionID')
 parser.add_option('--size', action="store", dest='size', help='page size')
 parser.add_option('--name', action="store", dest='name', help='a name index')
 parser.add_option('--qdate', action="store", dest='qdate', help='a qdate index')

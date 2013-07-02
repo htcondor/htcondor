@@ -166,6 +166,9 @@ char* tdp_input = NULL;
 char* RunAsOwnerCredD = NULL;
 #endif
 
+// For mpi universe testing
+bool use_condor_mpi_universe = false;
+
 // For vm universe
 MyString VMType;
 int VMMemoryMb = 0;
@@ -1046,6 +1049,8 @@ main( int argc, char *argv[] )
 				// schedd to query the credentials from...
 				query_credential = false;
 #endif				
+			} else if ( match_prefix( ptr[0], "-force-mpi-universe" ) ) {
+				use_condor_mpi_universe = true;
 			} else if ( match_prefix( ptr[0], "-help" ) ) {
 				usage();
 				exit( 0 );
@@ -1754,10 +1759,21 @@ SetExecutable()
 		buffer.formatstr( "%s = TRUE", ATTR_WANT_CHECKPOINT);
 		InsertJobExpr (buffer);
 		break;
+	case CONDOR_UNIVERSE_MPI:  // for now
+		if(!use_condor_mpi_universe) {
+			fprintf(stderr, "\nERROR: mpi universe no longer suppported. Please use parallel universe.\n"
+					"You can submit mpi jobs using parallel universe. Most likely, a substitution of\n"
+					"\nuniverse = parallel\n\n"
+					"in place of\n"
+					"\nuniverse = mpi\n\n"
+					"in you submit description file will suffice.\n"
+					"See the HTCondor Manual Parallel Applications section (2.9) for further details.\n");
+			DoCleanup(0,0,NULL);
+			exit( 1 );
+		} //Purposely fall through if use_condor_mpi_universe is true
 	case CONDOR_UNIVERSE_VANILLA:
 	case CONDOR_UNIVERSE_LOCAL:
 	case CONDOR_UNIVERSE_SCHEDULER:
-	case CONDOR_UNIVERSE_MPI:  // for now
 	case CONDOR_UNIVERSE_PARALLEL:
 	case CONDOR_UNIVERSE_GRID:
 	case CONDOR_UNIVERSE_JAVA:
