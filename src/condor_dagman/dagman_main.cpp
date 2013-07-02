@@ -469,15 +469,18 @@ void
 main_shutdown_fast()
 {
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_RESTART );
+	// Don't report metrics here because we should restart.
     DC_Exit( EXIT_RESTART );
 }
 
 // this can be called by other functions, or by DC when the schedd is
-// shutdown gracefully
+// shutdown gracefully; this also gets called if condor_hold is done
+// on the DAGMan job
 void main_shutdown_graceful() {
 	print_status();
 	dagman.dag->DumpNodeStatus( true, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_RESTART );
+	// Don't report metrics here because we should restart.
 	dagman.CleanUp();
 	DC_Exit( EXIT_RESTART );
 }
@@ -538,6 +541,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 		dagman.dag->DumpNodeStatus( false, true );
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	}
+	dagman.dag->ReportMetrics( exitVal );
 	tolerant_unlink( lockFileName ); 
 	dagman.CleanUp();
 	inShutdownRescue = false;
@@ -557,9 +561,7 @@ void ExitSuccess() {
 	print_status();
 	dagman.dag->DumpNodeStatus( false, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_OKAY );
-	//TEMPTEMP -- write metrics file about here...
 	dagman.dag->ReportMetrics( EXIT_OKAY );
-	//TEMPTEMP -- also a bunch of other places...
 	tolerant_unlink( lockFileName ); 
 	dagman.CleanUp();
 	DC_Exit( EXIT_OKAY );
@@ -615,7 +617,6 @@ void main_init (int argc, char ** const argv) {
 
     if (argc < 2) Usage();  //  Make sure an input file was specified
 
-	//TEMPTEMP -- make sure this is the right place
 	DagmanMetrics::SetStartTime();
 
 		// get dagman job id from environment, if it's there
@@ -1028,8 +1029,6 @@ void main_init (int argc, char ** const argv) {
         EXCEPT( "ERROR: out of memory!\n");
     }
 
-	//TEMPTEMP -- make sure this is the right place to do this!
-	// dagman.dag->CreateMetrics( dagman.primaryDagFile.Value() );
 	dagman.dag->SetAbortOnScarySubmit( dagman.abortOnScarySubmit );
 	dagman.dag->SetAllowEvents( dagman.allow_events );
 	dagman.dag->SetConfigFile( dagman._dagmanConfigFile );
@@ -1138,9 +1137,7 @@ void main_init (int argc, char ** const argv) {
     	}
 	}
 
-	//TEMPTEMP -- make sure this is the right place to do this!
-	//TEMPTEMP -- note:  node counts must be initialized *after* parsing rescue DAG!
-	//TEMPTEMP -- may need to split node initialization out into another method
+		// This must come after splices are lifted.
 	dagman.dag->CreateMetrics( dagman.primaryDagFile.Value(), rescueDagNum );
 
 	dagman.dag->CheckThrottleCats();
