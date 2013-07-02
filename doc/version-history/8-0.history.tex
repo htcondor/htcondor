@@ -65,6 +65,13 @@ parallel universe jobs handed to a remote scheduler.
 
 \begin{itemize}
 
+\item Fixed a bug that happened with partitionable slots, jobs that
+requested more than one cpu, and a negotiator with
+\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} was false.  This would
+cause the negotiator to incorrectly assume that each slot had
+a slot weight of one.
+\Ticket{3737}
+
 \item The redundant configuration variable \Macro{CheckpointPlatform} has
 been removed and the configuration variable \Macro{CHECKPOINT\_PLATFORM}
 documented.
