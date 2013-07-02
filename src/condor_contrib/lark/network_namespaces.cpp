@@ -39,8 +39,8 @@ NetworkNamespaceManager::GetManager()
 int NetworkNamespaceManager::PrepareNetwork(const std::string &uniq_namespace, const classad::ClassAd & job_ad, classad_shared_ptr<classad::ClassAd> machine_ad) {
 	NetworkLock sentry;
 
-	if (m_state != UNCREATED) {
-		dprintf(D_FULLDEBUG, "Internal bug: NetworkNamespaceManager::CreateNamespace has already been invoked.\n");
+	if ((m_state != UNCREATED) && (m_state != CLEANED)) {
+		dprintf(D_FULLDEBUG, "Internal bug: NetworkNamespaceManager::PrepareNetwork has already been invoked (state=%d).\n", m_state);
 		m_state = FAILED;
 		return 1;
 	}
@@ -577,6 +577,8 @@ int NetworkNamespaceManager::Cleanup(const std::string & name) {
 		return 0;
 	}
 
+	// We always advance to the cleaned state -- assume it works.
+	m_state = CLEANED;
 	if (!m_created_pipe) {
 		// Not much to do in this case.
 		return 0;
@@ -614,6 +616,10 @@ int NetworkNamespaceManager::Cleanup(const std::string & name) {
 		dprintf(D_ALWAYS, "Failed to delete the veth interface; rc=%d\n", rc);
 		rc = rc3;
 	}
+
+	// Close the netlink socket.
+	close(m_sock);
+	m_sock = -1;
 
 	// Prefer the network configuration error code, then the admin-provided script,
 	// then the result of attempting to delete the veth device.

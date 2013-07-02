@@ -1390,6 +1390,13 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 	transobject->ActiveTransferTid = -1;
 	TransThreadTable->remove(pid);
 
+
+	if (NetworkPluginManager::HasPlugins() && transobject->m_network_name.size())
+	{
+		int rc = NetworkPluginManager::Cleanup(transobject->m_network_name);
+		if (rc) dprintf(D_ALWAYS, "Failed to cleanup network namespace (rc=%d)\n", rc);
+	}
+
 	transobject->Info.duration = time(NULL)-transobject->TransferStart;
 	transobject->Info.in_progress = false;
 	if( WIFSIGNALED(exit_status) ) {
@@ -1752,8 +1759,8 @@ FileTransfer::DownloadThread(void *arg, Stream *s)
 	FileTransfer * myobj = ((download_info *)arg)->myobj;
 	int status = myobj->DoDownload( &total_bytes, (ReliSock *)s );
 
-	int rc = NetworkPluginManager::Cleanup(myobj->m_network_name);
-	if (rc) dprintf(D_ALWAYS, "Failed to cleanup network namespace (rc=%d)\n", rc);
+	//int rc = NetworkPluginManager::Cleanup(myobj->m_network_name);
+	//if (rc) dprintf(D_ALWAYS, "Failed to cleanup network namespace (rc=%d)\n", rc);
 
 	if(!myobj->WriteStatusToTransferPipe(total_bytes)) {
 		return 0;

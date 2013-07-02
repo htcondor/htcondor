@@ -533,18 +533,18 @@ VanillaProc::StartJob()
  		}
 	}
 
-	std::string network_name = "";
 	if (param_boolean("USE_NETWORK_NAMESPACES", false) && JobAd) {
+		dprintf(D_FULLDEBUG, "We will prepare a network namespace.\n");
 		classad_shared_ptr<classad::ClassAd> machine_classad;
 		if (!GetMachineInfo(machine_classad, m_network_name))
 		{
 			return false;
 		}
-		dprintf(D_FULLDEBUG, "Using network namespaces with network name '%s'.\n", m_network_name);
-		int rc = NetworkPluginManager::PrepareNetwork(network_name, *JobAd, machine_classad);
+		dprintf(D_FULLDEBUG, "Using network namespaces with network name '%s'.\n", m_network_name.c_str());
+		int rc = NetworkPluginManager::PrepareNetwork(m_network_name, *JobAd, machine_classad);
 		if (rc) {
 			dprintf(D_ALWAYS, "Failed to prepare network namespace - bailing.\n");
-			rc = NetworkPluginManager::Cleanup(network_name);
+			rc = NetworkPluginManager::Cleanup(m_network_name);
                 	if (rc) dprintf(D_ALWAYS, "Failed to cleanup unprepared network namespace (rc=%d)\n", rc);
 			return FALSE;
 		}
@@ -619,7 +619,7 @@ VanillaProc::StartJob()
 
 #endif
 	if (!retval) {
-		int rc = NetworkPluginManager::Cleanup(network_name);
+		int rc = NetworkPluginManager::Cleanup(m_network_name);
 		if (rc) dprintf(D_ALWAYS, "Failed to cleanup network namespace (rc=%d)\n", rc);
 	}
 
