@@ -903,6 +903,11 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_TOTAL_SLOT_PREFIX  "TotalSlot"
 #define ATTR_MACHINE_RESOURCES  "MachineResources"
 
+// multiclaim / negside resource consumption
+#define ATTR_NUM_CLAIMS "NumClaims"
+#define ATTR_CLAIM_ID_LIST "ClaimIdList"
+#define ATTR_CONSUMPTION_PREFIX "Consumption"
+
 // This is a record of the job exit status from a standard universe job exit
 // via waitpid. It is in the job ad to implement the terminate_pending
 // feature. It has to be here because of rampant global variable usage in the
@@ -985,12 +990,18 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD  "TransferQueueNumWaitingToDownload"
 #define ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME  "TransferQueueUploadWaitTime"
 #define ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME  "TransferQueueDownloadWaitTime"
+#define ATTR_SANDBOX_SIZE "SandboxSize"
 #define ATTR_FILE_TRANSFER_UPLOAD_BYTES_PER_SECOND "FileTransferUploadBytesPerSecond"
 #define ATTR_FILE_TRANSFER_DOWNLOAD_BYTES_PER_SECOND "FileTransferDownloadBytesPerSecond"
 #define ATTR_FILE_TRANSFER_UPLOAD_DISK_LOAD "FileTransferUploadDiskLoad"
 #define ATTR_FILE_TRANSFER_DOWNLOAD_DISK_LOAD "FileTransferDownloadDiskLoad"
 #define ATTR_FILE_TRANSFER_UPLOAD_NET_LOAD "FileTransferUploadNetLoad"
 #define ATTR_FILE_TRANSFER_DOWNLOAD_NET_LOAD "FileTransferDownloadNetLoad"
+#define ATTR_FILE_TRANSFER_DISK_THROTTLE_LOW "FileTransferDiskThrottleLow"
+#define ATTR_FILE_TRANSFER_DISK_THROTTLE_HIGH "FileTransferDiskThrottleHigh"
+#define ATTR_FILE_TRANSFER_DISK_THROTTLE_LIMIT "FileTransferDiskThrottleLimit"
+#define ATTR_FILE_TRANSFER_DISK_THROTTLE_EXCESS "FileTransferDiskThrottleExcess"
+#define ATTR_FILE_TRANSFER_DISK_THROTTLE_SHORTFALL "FileTransferDiskThrottleShortfall"
 #define ATTR_MACHINE_MAX_VACATE_TIME  "MachineMaxVacateTime"
 #define ATTR_JOB_MAX_VACATE_TIME  "JobMaxVacateTime"
 #define ATTR_WANT_GRACEFUL_REMOVAL  "WantGracefulRemoval"

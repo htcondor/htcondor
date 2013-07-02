@@ -2877,7 +2877,7 @@ static void init_output_mask()
 							  "[??????????]");
 		if (dash_run && ! dash_goodput) {
 			mask_headings = (cputime) ? " ID\0 \0OWNER\0  SUBMITTED\0    CPU_TIME\0HOST(S)\0"
-			                          : " ID\0 \0OWNER\0. SUBMITTED\0    RUN_TIME\0HOST(S)\0";
+			                          : " ID\0 \0OWNER\0  SUBMITTED\0    RUN_TIME\0HOST(S)\0";
 			//mask.registerFormat(" ", "*bogus*", " "); // force space
 			// We send in ATTR_OWNER since we know it is always
 			// defined, and we need to make sure
@@ -5541,7 +5541,7 @@ doJobRunAnalysisToBuffer(ClassAd *request, anaCounters & ac, int details, bool n
 			append_to_fail_list(fPreemptPrioStr, buffer, verb_width);
 			/*
 			if( verbose ) {
-				sprintf_cat( return_buff, "%nsufficient priority to preempt %s\n", remoteUser.c_str() );
+				sprintf_cat( return_buff, "Insufficient priority to preempt %s\n", remoteUser.c_str() );
 			}
 			*/
 			continue;

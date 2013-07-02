@@ -920,6 +920,14 @@ ResMgr::get_by_cur_id( char* id )
 		if( resources[i]->r_cur->idMatches(id) ) {
 			return resources[i];
 		}
+        if (resources[i]->get_feature() == Resource::PARTITIONABLE_SLOT) {
+            for (Resource::claims_t::iterator j(resources[i]->r_claims.begin());  j != resources[i]->r_claims.end();  ++j) {
+                if ((*j)->idMatches(id)) {
+                    resources[i]->r_cur = *j;
+                    return resources[i];
+                }
+            }
+        }
 	}
 	return NULL;
 }
@@ -944,6 +952,14 @@ ResMgr::get_by_any_id( char* id )
 			resources[i]->r_pre_pre->idMatches(id) ) {
 			return resources[i];
 		}
+        if (resources[i]->get_feature() == Resource::PARTITIONABLE_SLOT) {
+            for (Resource::claims_t::iterator j(resources[i]->r_claims.begin());  j != resources[i]->r_claims.end();  ++j) {
+                if ((*j)->idMatches(id)) {
+                    resources[i]->r_cur = *j;
+                    return resources[i];
+                }
+            }
+        }
 	}
 	return NULL;
 }
@@ -1218,6 +1234,8 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 
 	starter_mgr.publish( cp, how_much );
 	m_vmuniverse_mgr.publish(cp, how_much);
+	startd_stats.pool.Publish(*cp, 0);
+	startd_stats.pool.Advance(time(0));
 
 #if HAVE_HIBERNATION
     m_hibernation_manager->publish( *cp );

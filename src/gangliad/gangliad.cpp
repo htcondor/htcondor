@@ -77,7 +77,7 @@ GangliaD::initAndReconfig()
 		EXCEPT("Failed to configure ganglia library.");
 	}
 
-	StatsD::initAndReconfig("GANGLIA");
+	StatsD::initAndReconfig("GANGLIAD");
 
 	// the interval we tell ganglia is the max time between updates
 	m_tmax = m_stats_pub_interval*2;
@@ -170,8 +170,8 @@ GangliaD::publishMetric(Metric const &m)
 
 	int slope = metric.gangliaSlope();
 
-	dprintf(D_FULLDEBUG,"publishing %s=%s, group=%s, units=%s, derivative=%d, type=%s, title=%s, desc=%s, spoof_host=%s\n",
-			metric.name.c_str(), value.c_str(), metric.group.c_str(),  metric.units.c_str(), metric.derivative, metric.gangliaMetricType(), metric.title.c_str(), metric.desc.c_str(), spoof_host.c_str());
+	dprintf(D_FULLDEBUG,"publishing %s=%s, group=%s, units=%s, derivative=%d, type=%s, title=%s, desc=%s, cluster=%s, spoof_host=%s\n",
+			metric.name.c_str(), value.c_str(), metric.group.c_str(),  metric.units.c_str(), metric.derivative, metric.gangliaMetricType(), metric.title.c_str(), metric.desc.c_str(), metric.cluster.c_str(), spoof_host.c_str());
 
 	int rc = ganglia_send(
 						  m_ganglia_context,
@@ -185,12 +185,13 @@ GangliaD::publishMetric(Metric const &m)
 						  metric.title.c_str(),
 						  metric.desc.c_str(),
 						  spoof_host.c_str(),
+						  metric.cluster.c_str(),
 						  m_tmax,
 						  m_dmax);
 
 	if( rc != 0 ) {
 		dprintf(D_ALWAYS,"Failed to publish %s%s\n",
-				metric.derivative ? " derivative of " : "",
+				metric.derivative ? "derivative of " : "",
 				metric.whichMetric().c_str());
 		if( metric.derivative ) {
 			m_derivative_publication_failed += 1;

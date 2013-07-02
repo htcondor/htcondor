@@ -44,9 +44,9 @@ my $append_condor_config = '
   DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD,GANGLIAD
 
   GANGLIA_CONFIG = ' . $cwd . '/x_ganglia_config
-  GANGLIA_INTERVAL = 5
+  GANGLIAD_INTERVAL = 5
   GANGLIAD_DEBUG = D_FULLDEBUG
-  GANGLIA_METRICS_CONFIG_DIR = ' . $configd . '
+  GANGLIAD_METRICS_CONFIG_DIR = ' . $configd . '
 ';
 
 CondorTest::StartCondorWithParams(

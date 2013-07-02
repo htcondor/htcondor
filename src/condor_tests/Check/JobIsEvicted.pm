@@ -71,7 +71,7 @@ sub RunCheck
     CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
     CondorTest::RegisterExecute($testname, $execute_fn);
     CondorTest::RegisterSubmit( $testname, $submitted );
-    CondorTest::RegisterEvicted( $testname, $evicted );
+    CondorTest::RegisterEvictedWithoutCheckpoint( $testname, $evicted );
 
     $eviction_flag_file = CondorTest::TempFileName("testname.evicted");
 

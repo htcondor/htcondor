@@ -59,7 +59,7 @@ ganglia_reconfig(const char *config_file, Ganglia_pool *context, Ganglia_gmond_c
 
 
 int
-ganglia_send(Ganglia_pool context, Ganglia_udp_send_channels channels, const char *group, const char *name, const char *value, const char *type, const char *units, int slope, const char *title, const char *desc, const char *spoof_host, int tmax, int dmax)
+ganglia_send(Ganglia_pool context, Ganglia_udp_send_channels channels, const char *group, const char *name, const char *value, const char *type, const char *units, int slope, const char *title, const char *desc, const char *spoof_host, const char *cluster, int tmax, int dmax)
 {
     Ganglia_metric metric = Ganglia_metric_create(context);
     if (!metric) return 1;
@@ -72,6 +72,7 @@ ganglia_send(Ganglia_pool context, Ganglia_udp_send_channels channels, const cha
 	char * my_title = strdup(title ? title : ""); if (!my_title) return 4;
 	char * my_desc = strdup(desc ? desc : "");    if (!my_desc)  return 4;
 	char * my_spoof_host = strdup(spoof_host ? spoof_host : ""); if (!my_spoof_host)  return 4;
+	char * my_cluster = strdup(cluster ? cluster : ""); if(!my_cluster) return 4;
 
     int retval = 0;
     if (!Ganglia_metric_set(metric, my_name, my_value, my_type, my_units, slope, tmax, dmax))
@@ -85,6 +86,9 @@ ganglia_send(Ganglia_pool context, Ganglia_udp_send_channels channels, const cha
 		}
 		if( *my_spoof_host ) {
 			Ganglia_metadata_add(metric, "SPOOF_HOST", my_spoof_host);
+		}
+		if( *my_cluster ) {
+			Ganglia_metadata_add(metric, "CLUSTER", my_cluster);
 		}
         if (Ganglia_metric_send(metric, channels))
         {
@@ -103,6 +107,7 @@ ganglia_send(Ganglia_pool context, Ganglia_udp_send_channels channels, const cha
 	free(my_title);
 	free(my_desc);
 	free(my_spoof_host);
+	free(my_cluster);
     return retval;
 }
 

@@ -315,13 +315,15 @@ sub RegisterExecute
 
     $test{$handle}{"RegisterExecute"} = $function_ref;
 }
-sub RegisterEvicted
-{
-    my $handle = shift || croak "missing handle argument";
-    my $function_ref = shift || croak "evict: missing function reference argument";
-
-    $test{$handle}{"RegisterEvicted"} = $function_ref;
-}
+#	Use a specific type of eviction only, plain one is gone
+#
+#sub RegisterEvicted
+#{
+    #my $handle = shift || croak "missing handle argument";
+    #my $function_ref = shift || croak "evict: missing function reference argument";
+#
+    #$test{$handle}{"RegisterEvicted"} = $function_ref;
+#}
 sub RegisterEvictedWithCheckpoint
 {
     my $handle = shift || croak "missing handle argument";
@@ -693,7 +695,7 @@ sub DoTest
 	if( $wants_checkpoint )
 	{
 		Condor::RegisterExecute( \&ForceVacate );
-		Condor::RegisterEvictedWithCheckpoint( sub { $checkpoints++ } );
+		#Condor::RegisterEvictedWithCheckpoint( sub { $checkpoints++ } );
 	} else {
 		if(defined $test{$handle}{"RegisterExecute"}) {
 			Condor::RegisterExecute($test{$handle}{"RegisterExecute"});
@@ -1090,15 +1092,51 @@ sub CheckRegistrations
     if( defined $test{$handle}{"RegisterEvictedWithRequeue"} )
     {
         Condor::RegisterEvictedWithRequeue( $test{$handle}{"RegisterEvictedWithRequeue"} );
-    } 
+    } else { 
+		Condor::RegisterEvictedWithRequeue( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (Unexpected Eviction with requeue)\n";
+	} );
+	}
 
-    # if evicted, call condor_resched so job runs again quickly
-    if( !defined $test{$handle}{"RegisterEvicted"} )
+    # if we wanted to know about With Checkpoints .....
+    if( defined $test{$handle}{"RegisterEvictedWithCheckpoint"} )
     {
-        Condor::RegisterEvicted( sub { sleep 5; Condor::Reschedule } );
-    } else {
-	Condor::RegisterEvicted( $test{$handle}{"RegisterEvicted"} );
-    }
+        Condor::RegisterEvictedWithCheckpoint( $test{$handle}{"RegisterEvictedWithCheckpoint"} );
+    } else { 
+		Condor::RegisterEvictedWithCheckpoint( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (Unexpected Eviction with checkpoint)\n";
+	} );
+	}
+
+    # if we wanted to know about Without checkpoints.....
+    if( defined $test{$handle}{"RegisterEvictedWithoutCheckpoint"} )
+    {
+        Condor::RegisterEvictedWithoutCheckpoint( $test{$handle}{"RegisterEvictedWithoutCheckpoint"} );
+    } else { 
+		Condor::RegisterEvictedWithoutCheckpoint( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (Unexpected Eviction without checkpoint)\n";
+	} );
+	}
+
+	# Use specific eviction bt 6/18/13
+	#if(defined $test{$handle}{"RegisterEvicted"} ) {
+		#Condor::RegisterEvicted( $test{$handle}{"RegisterEvicted"} );
+	#} else {
+		#Condor::RegisterEvicted( sub {
+	    #my %info = @_;
+	    #die "$handle: FAILURE (Unexpected Eviction type)\n";
+	#} );
+	#}
+    # if evicted, call condor_resched so job runs again quickly
+    #if( !defined $test{$handle}{"RegisterEvicted"} )
+    #{
+        #Condor::RegisterEvicted( sub { sleep 5; Condor::Reschedule } );
+    #} else {
+	#Condor::RegisterEvicted( $test{$handle}{"RegisterEvicted"} );
+    #}
 
     if( defined $test{$handle}{"RegisterTimed"} )
     {
@@ -2704,6 +2742,16 @@ sub VerifyNoJobsInState
             sleep 1;
         }
     }
+}
+
+sub AddCheckpoint
+{
+	$checkpoints++;
+}
+
+sub GetCheckpoints
+{
+	return($checkpoints);
 }
 
 1;

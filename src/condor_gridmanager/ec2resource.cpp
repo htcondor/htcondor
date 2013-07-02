@@ -194,7 +194,8 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
         if( rc != 0 ) {
             std::string errorString = status_gahp->getErrorString();
             dprintf( D_ALWAYS, "Error doing batched EC2 status query: %s: %s.\n",
-                        errorCode, errorString.c_str() );
+                     errorCode ? errorCode : "", errorString.c_str() );
+            free( errorCode );
             return BSR_ERROR;
         }
 
@@ -260,7 +261,8 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
         if( spotRC != 0 ) {
             std::string errorString = status_gahp->getErrorString();
             dprintf( D_ALWAYS, "Error doing batched EC2 spot status query: %s: %s.\n",
-                    spotErrorCode, errorString.c_str() );
+                     spotErrorCode ? spotErrorCode : "", errorString.c_str() );
+            free( spotErrorCode );
             return BSR_ERROR;
         }
 

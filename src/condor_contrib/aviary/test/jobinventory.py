@@ -27,7 +27,7 @@ from aviary.util import *
 # change these for other default locations and ports
 wsdl = 'file:/var/lib/condor/aviary/services/query/aviary-query.wsdl'
 
-parser = build_basic_parser('Reconcile job info between HTCondor and Aviary','http://localhost:9091/services/query/getJobStatus')
+parser = build_basic_parser('Reconcile job info between HTCondor and Aviary','http://localhost:39091/services/query/getJobStatus')
 (opts,args) =  parser.parse_args()
 
 client = create_suds_client(opts,wsdl,None)

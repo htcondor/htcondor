@@ -7,7 +7,7 @@
         * HadoopID.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Jan 28, 2013 (02:30:05 CST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jan 28, 2013 (03:27:15 EST)
         */
 
        /**
@@ -42,6 +42,10 @@ namespace AviaryHadoop
 
                 
                 bool isValidIpc;
+            std::string property_Http;
+
+                
+                bool isValidHttp;
             
 
         /*** Private methods ***/
@@ -53,6 +57,10 @@ namespace AviaryHadoop
 
         bool WSF_CALL
         setIpcNil();
+            
+
+        bool WSF_CALL
+        setHttpNil();
             
 
 
@@ -80,9 +88,10 @@ namespace AviaryHadoop
          * @param 
          * @param Id std::string
          * @param Ipc std::string
+         * @param Http std::string
          * @return newly created HadoopID object
          */
-        HadoopID(std::string arg_Id,std::string arg_Ipc);
+        HadoopID(std::string arg_Id,std::string arg_Ipc,std::string arg_Http);
         
 
         /**
@@ -140,6 +149,30 @@ namespace AviaryHadoop
         WSF_EXTERN bool WSF_CALL
         resetIpc();
         
+        
+
+        /**
+         * Getter for http. 
+         * @return std::string*
+         */
+        WSF_EXTERN std::string WSF_CALL
+        getHttp();
+
+        /**
+         * Setter for http.
+         * @param arg_Http std::string*
+         * @return true on success, false otherwise
+         */
+        WSF_EXTERN bool WSF_CALL
+        setHttp(const std::string  arg_Http);
+
+        /**
+         * Re setter for http
+         * @return true on success, false
+         */
+        WSF_EXTERN bool WSF_CALL
+        resetHttp();
+        
 
 
         /******************************* Checking and Setting NIL values *********************************/
@@ -167,6 +200,16 @@ namespace AviaryHadoop
          */
         bool WSF_CALL
         isIpcNil();
+
+
+        
+
+        /**
+         * Check whether http is Nill
+         * @return true if the element is Nil, false otherwise
+         */
+        bool WSF_CALL
+        isHttpNil();
 
 
         
@@ -245,6 +288,17 @@ namespace AviaryHadoop
 
         std::string WSF_CALL
         getProperty2();
+
+    
+        
+
+        /**
+         * Getter for http by property number (3)
+         * @return std::string
+         */
+
+        std::string WSF_CALL
+        getProperty3();
 
     
 

@@ -43,7 +43,7 @@ if not uid:
 # change these for other default locations and ports
 wsdl = 'file:/var/lib/condor/aviary/services/job/aviary-job.wsdl'
 
-parser = build_basic_parser('Submit a sample job remotely via SOAP.','http://localhost:9090/services/job/submitJob')
+parser = build_basic_parser('Submit a sample job remotely via SOAP.','http://localhost:39090/services/job/submitJob')
 (opts,args) =  parser.parse_args()
 
 client = create_suds_client(opts,wsdl,plugins)

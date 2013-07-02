@@ -41,7 +41,7 @@ plugins = []
 wsdl = 'file:/var/lib/condor/aviary/services/locator/aviary-locator.wsdl'
 res_types = ['ANY','COLLECTOR','CUSTOM','MASTER','NEGOTIATOR','SCHEDULER','SLOT']
 
-parser = build_basic_parser('Retrieve Aviary SOAP endpoints.','http://localhost:9000/services/locator/locate')
+parser = build_basic_parser('Retrieve Aviary SOAP endpoints.','http://localhost:39000/services/locator/locate')
 parser.add_option('--type', action="store", choices=(res_types), dest='type', help=str(res_types))
 parser.add_option('--custom', action="store", help="a custom sub-type name like 'QUERY_SERVER' (no value will return all for CUSTOM)")
 parser.add_option('--name', action="store", help="a hostname to match (will match any part by default)")

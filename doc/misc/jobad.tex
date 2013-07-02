@@ -518,9 +518,23 @@ its value will be included in the e-mail notification upon job completion.
 epoch time of when the job entered into its current status
 So for example, if the job is on hold, the ClassAd expression
 \begin{verbatim}
-    CurrentTime - EnteredCurrentStatus
+    time() - EnteredCurrentStatus
 \end{verbatim}
 will equal the number of seconds that the job has been on hold.
+
+%%% ClassAd attribute: Env
+\index{ClassAd job attribute!Env}
+\index{Args!job ClassAd attribute}
+\item[\AdAttr{Args}:]  A string representing the environment variables 
+passed to the job, when those arguments are specified using the
+\emph{old} syntax, as specified in section~\ref{man-condor-submit-environment}.
+
+%%% ClassAd attribute: Environment
+\index{ClassAd job attribute!Environment}
+\index{Arguments!job ClassAd attribute}
+\item[\AdAttr{Arguments}:]  A string representing the environment variables
+passed to the job, when those arguments are specified using the
+\emph{new} syntax, as specified in section~\ref{man-condor-submit-environment}.
 
 %%% ClassAd attribute: ExecutableSize
 \index{ClassAd job attribute!ExecutableSize}
@@ -834,6 +848,7 @@ status of the job.
 4 & Completed \\ \hline
 5 & Held \\ \hline
 6 & Transferring Output \\ \hline
+7 & Suspended \\ \hline
 \end{tabular}
 \end{table}
 \end{center}
