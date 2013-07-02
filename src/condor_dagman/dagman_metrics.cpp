@@ -154,12 +154,21 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 		return false;
 	}
 
-//TEMPTEMP -- exe needs to be full path!
 	if ( _sendMetrics ) {
+		MyString reporterPath;
 		const char* exe = param("DAGMAN_PEGASUS_REPORT_METRICS");	
-		if(!exe) {
-			exe = "condor_dagman_metrics_reporter";
-			exe = "/scratch/wenger/condor_build/git2/CONDOR_SRC/personal_condor/release_dir/bin/condor_dagman_metrics_reporter";//TEMPTEMP!!!!!!
+		if(exe) {
+			reporterPath = exe;
+		} else {
+			const char *libexec = param( "LIBEXEC" );
+			if ( !libexec ) {
+				debug_printf( DEBUG_QUIET,
+							"LIBEXEC not defined; can't find condor_dagman_metrics_reporter\n" );
+				return false;
+			}
+			reporterPath = libexec;
+			reporterPath += "/";
+			reporterPath += "condor_dagman_metrics_reporter";
 		}
 
 		MyString metricsOutputFile( _primaryDagFile );
@@ -171,12 +180,13 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 
 //TEMPTEMP -- probably do output/error redirect here instead of having the metrics program open its own output file -- that loses stuff that libcurl just prints...
 		ArgList args;
-		args.AppendArg(exe);	
+		args.AppendArg(reporterPath.Value());	
 		args.AppendArg("-f");
 		args.AppendArg(_metricsFile.Value());
-		//TEMPTEMP -- instead of passing status here, I think we should just pass whether we want the reporter to sleep -- avoids "magic constant" in reporter code
-		args.AppendArg("-s");
-		args.AppendArg(MyString(status));
+			// If the DAG was condor_rm'ed, we want the reporter to sleep.
+		if ( status == Dag::DAG_STATUS_RM ) {
+			args.AppendArg("-s");
+		}
 		args.AppendArg("-o");
 		args.AppendArg(metricsOutputFile.Value());
 
@@ -185,7 +195,7 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 		args.GetArgsStringForDisplay( &cmd );
 		debug_printf( DEBUG_NORMAL, "Running command <%s>\n", cmd.Value() );
 
-		daemonCore->Create_Process(exe,args);
+		daemonCore->Create_Process(reporterPath.Value(),args);
 	} else {
 		debug_printf( DEBUG_NORMAL, "Metrics not sent because of PEGASUS_METRICS or CONDOR_DEVELOPERS setting.\n" );
 	}
@@ -199,8 +209,6 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 {
 	double endTime = GetTime();
 	double duration = endTime - _startTime;
-
-	//TEMPTEMP -- hmm -- do we have to do the 'create a tmp file and move' thing?
 
 	//TEMPTEMP -- is this the right open function?
 	FILE *fp = safe_fopen_wrapper_follow( _metricsFile.Value(), "w" );

@@ -57,6 +57,7 @@ struct curl_slist* Curl_slist::append( const char* s )
 const char* cc_metrics_url = "http://metrics.pegasus.isi.edu/metrics";
 
 // Will only try for about 100 seconds, then die
+// TEMP: This should be configurable via the environment.
 const char duration = 100;
 
 // Separators are space and ','
@@ -139,8 +140,8 @@ int main( int argc, char* argv[] )
 {
 		// Need to read some environment variables here
 		// Which ones? TEMPTEMP
-	std::string metrics_from_dagman, dagman_status, metrics_out_name,
-				metrics_url;
+	std::string metrics_from_dagman, metrics_out_name, metrics_url;
+	bool do_sleep = false;
 
 	std::vector<server_data> servers_to_contact;
 	char* env_metrics_server = getenv( "PEGASUS_USER_METRICS_SERVER" );
@@ -157,16 +158,11 @@ int main( int argc, char* argv[] )
 				std::cerr << "No metrics file specified" << std::endl;
 			}
 		}
-			// Status indicates whether the DAG was condor_rm'd
-			// What is the range of values that can be passed in here
-			// Looks like 4 indicates condor_rm'd
+			// -s means we should sleep for a random amount of time
+			// so we don't clobber the server if a bunch of
+			// sub-DAGs have been condor_rm'ed at once.
 		if( !std::strcmp( argv[ii], "-s" ) ) {
-			++ii;
-			if( argv[ii] ) {
-				dagman_status = argv[ii];
-			} else {
-				std::cerr << "No status specified" << std::endl;
-			}
+			do_sleep = true;
 		}
 		if( !std::strcmp( argv[ii], "-o" ) ) {
 			++ii;
@@ -202,10 +198,6 @@ int main( int argc, char* argv[] )
 	metrics_out << std::endl;
 	if( metrics_from_dagman.empty() ) {
 		metrics_out << "Metrics from dagman is not specified. Terminating" << std::endl;
-		return 1;
-	}
-	if( dagman_status.empty() ) {
-		metrics_out << "No dagman status specified. Terminating" << std::endl;
 		return 1;
 	}
 	if( metrics_url.empty() ) {
@@ -301,7 +293,9 @@ int main( int argc, char* argv[] )
 		for( std::vector<server_data>::iterator srv = servers_to_contact.begin();
 				srv != servers_to_contact.end(); ++srv ) {
 			if( srv->connected ) continue;
-			if( dagman_status == "4" ) { // DAGMan was condor_rm'd
+			if( do_sleep ) {
+					// TEMP:  Sleep duration should be configurable via
+					// the environment.
 				sleep( 1 + ( get_random_int() % 10 ) );
 			}
 

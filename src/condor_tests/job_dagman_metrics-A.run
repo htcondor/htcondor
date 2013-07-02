@@ -31,7 +31,10 @@ $ENV{'PEGASUS_METRICS'} = 'true';
 
 @outfiles = ("job_dagman_metrics-A-upper.dag.dagman.out",
 	"job_dagman_metrics-A-splice-lower.dag.dagman.out",
-	"job_dagman_metrics-A-lower.dag.dagman.out");
+	"job_dagman_metrics-A-lower.dag.dagman.out",
+	"job_dagman_metrics-A-upper.dag.metrics.out",
+	"job_dagman_metrics-A-splice-lower.dag.metrics.out",
+	"job_dagman_metrics-A-lower.dag.metrics.out");
 
 @metricsfiles = ("job_dagman_metrics-A-upper.dag.metrics",
 	"job_dagman_metrics-A-splice-lower.dag.metrics",
