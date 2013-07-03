@@ -314,6 +314,11 @@ class FileTransfer: public Service {
 
   protected:
 
+		/** 
+		 * Connect the given socket object to the relevant server.
+		 */
+	int DownloadConnect(ReliSock &sock);
+
 	int Download(ReliSock *s, bool blocking);
 	int Upload(ReliSock *s, bool blocking);
 	static int DownloadThread(void *arg, Stream *s);

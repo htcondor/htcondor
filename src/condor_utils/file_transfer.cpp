@@ -848,6 +848,46 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 }
 
 int
+FileTransfer::DownloadConnect(ReliSock &sock)
+{
+	dprintf(D_FULLDEBUG, "Connecting new socket to server.\n");
+	sock.timeout(clientSockTimeout);
+
+	Daemon d( DT_ANY, TransSock );
+
+	if ( !d.connectSock(&sock,0) ) {
+		dprintf( D_ALWAYS, "FileTransfer: Unable to connect to server "
+		"%s\n", TransSock );
+		Info.success = 0;
+		Info.in_progress = false;
+		formatstr( Info.error_desc, "FileTransfer: Unable to connecto to server %s",
+			TransSock );
+		return 0;
+	}
+
+	CondorError err_stack;
+	if ( !d.startCommand(FILETRANS_UPLOAD, &sock, 0, &err_stack, NULL, false, m_sec_session_id) ) {
+		Info.success = 0;
+		Info.in_progress = 0;
+		formatstr( Info.error_desc, "FileTransfer: Unable to start "
+			"transfer with server %s: %s", TransSock,
+			err_stack.getFullText().c_str() );
+	}
+
+	sock.encode();
+
+	if ( !sock.put_secret(TransKey) ||
+			!sock.end_of_message() ) {
+		Info.success = 0;
+		Info.in_progress = false;
+		formatstr( Info.error_desc, "FileTransfer: Unable to start transfer with server %s",
+			TransSock );
+		return 0;
+	}
+	return 1;
+}
+
+int
 FileTransfer::DownloadFiles(bool blocking)
 {
 	int ret_value;
@@ -872,38 +912,13 @@ FileTransfer::DownloadFiles(bool blocking)
 			EXCEPT("FileTransfer: DownloadFiles called on server side");
 		}
 
-		sock.timeout(clientSockTimeout);
-
-		Daemon d( DT_ANY, TransSock );
-
-		if ( !d.connectSock(&sock,0) ) {
-			dprintf( D_ALWAYS, "FileTransfer: Unable to connect to server "
-					 "%s\n", TransSock );
-			Info.success = 0;
-			Info.in_progress = false;
-			formatstr( Info.error_desc, "FileTransfer: Unable to connecto to server %s",
-					 TransSock );
-			return FALSE;
-		}
-
-		CondorError err_stack;
-		if ( !d.startCommand(FILETRANS_UPLOAD, &sock, 0, &err_stack, NULL, false, m_sec_session_id) ) {
-			Info.success = 0;
-			Info.in_progress = 0;
-			formatstr( Info.error_desc, "FileTransfer: Unable to start "
-					   "transfer with server %s: %s", TransSock,
-					   err_stack.getFullText().c_str() );
-		}
-
-		sock.encode();
-
-		if ( !sock.put_secret(TransKey) ||
-			!sock.end_of_message() ) {
-			Info.success = 0;
-			Info.in_progress = false;
-			formatstr( Info.error_desc, "FileTransfer: Unable to start transfer with server %s",
-					 TransSock );
-			return 0;
+		if ((!NetworkPluginManager::HasPlugins() || blocking))
+		{
+			if (!DownloadConnect(sock))
+			{
+				dprintf(D_ALWAYS, "Failed to connect socket to server.\n");
+				return false;
+			}
 		}
 
 		sock_to_use = &sock;
@@ -1393,6 +1408,7 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 
 	if (NetworkPluginManager::HasPlugins() && transobject->m_network_name.size())
 	{
+		NetworkPluginManager::PerformJobAccounting(NULL);
 		int rc = NetworkPluginManager::Cleanup(transobject->m_network_name);
 		if (rc) dprintf(D_ALWAYS, "Failed to cleanup network namespace (rc=%d)\n", rc);
 	}
@@ -1630,7 +1646,7 @@ FileTransfer::TransferPipeHandler(int p)
 }
 
 int
-FileTransfer::Download(ReliSock *s, bool blocking)
+FileTransfer::Download(ReliSock *sock, bool blocking)
 {
 	dprintf(D_FULLDEBUG,"entering FileTransfer::Download\n");
 	
@@ -1647,7 +1663,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 
 	if (blocking) {
 
-		int status = DoDownload( &Info.bytes, (ReliSock *) s );
+		int status = DoDownload( &Info.bytes, (ReliSock *) sock );
 		Info.duration = time(NULL)-TransferStart;
 		Info.success = ( status >= 0 );
 		Info.in_progress = false;
@@ -1701,7 +1717,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 
 		ActiveTransferTid = daemonCore->
 			Create_Thread((ThreadStartFunc)&FileTransfer::DownloadThread,
-						  (void *)info, s, ReaperId);
+						  (void *)info, sock, ReaperId);
 
 		if (ActiveTransferTid == FALSE) {
 			dprintf(D_ALWAYS,
@@ -1736,7 +1752,7 @@ FileTransfer::Download(ReliSock *s, bool blocking)
 }
 
 int
-FileTransfer::DownloadThread(void *arg, Stream *s)
+FileTransfer::DownloadThread(void *arg, Stream *sock)
 {
 	filesize_t	total_bytes;
 
@@ -1757,10 +1773,7 @@ FileTransfer::DownloadThread(void *arg, Stream *s)
 	}
 
 	FileTransfer * myobj = ((download_info *)arg)->myobj;
-	int status = myobj->DoDownload( &total_bytes, (ReliSock *)s );
-
-	//int rc = NetworkPluginManager::Cleanup(myobj->m_network_name);
-	//if (rc) dprintf(D_ALWAYS, "Failed to cleanup network namespace (rc=%d)\n", rc);
+	int status = myobj->DoDownload( &total_bytes, (ReliSock *)sock );
 
 	if(!myobj->WriteStatusToTransferPipe(total_bytes)) {
 		return 0;
@@ -1824,6 +1837,12 @@ FileTransfer::DoDownload( filesize_t *total_bytes, ReliSock *s)
 
 	priv_state saved_priv = PRIV_UNKNOWN;
 	*total_bytes = 0;
+
+	if (!s->is_connected() && !DownloadConnect(*s))
+	{
+		dprintf(D_ALWAYS, "Failed to connect socket to remote server.\n");
+		return_and_resetpriv( -1 );
+	}
 
 	downloadStartTime = time(NULL);
 
