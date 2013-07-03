@@ -1210,6 +1210,11 @@ void main_init (int argc, char ** const argv) {
 					debug_printf( DEBUG_QUIET, "Submit file version indicates submit is too old. "
 						"Falling back to 7.8 behavior of not using the default node log\n");
 					dagman._submitDagDeepOpts.always_use_node_log = false;
+						// Note:  we have to explicitly turn off the default
+						// log file here because
+						// _submitDagDeepOpts.always_use_node_log is
+						// referenced in the Dag constructor, so just
+						// changing that here won't do us any good.
 					dagman.dag->UseDefaultNodeLog(false);
 				} else {
 					if(!has_new_default_log) {
