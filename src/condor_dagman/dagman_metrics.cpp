@@ -18,7 +18,6 @@
  ***************************************************************/
 
 #include <stdlib.h>
-#include <sys/time.h>
 #include "dagman_metrics.h"
 #include "debug.h"
 #include "safe_fopen.h"
@@ -26,6 +25,7 @@
 #include "condor_string.h" // for getline()
 #include "MyString.h"
 #include "condor_arglist.h"
+#include "utc_time.h"
 
 double DagmanMetrics::_startTime = 0.0;
 MyString DagmanMetrics::_dagmanId = "";
@@ -289,18 +289,8 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 double
 DagmanMetrics::GetTime()
 {
-	double result = 0.0;
-
-	struct timeval tv;
-	if ( gettimeofday( &tv, NULL ) != 0 ) {
-		debug_printf( DEBUG_QUIET,
-					"Warning: gettimeofday() failed (%d, %s)\n",
-					errno, strerror( errno ) );
-	} else {
-		result = ((double)tv.tv_sec) + (tv.tv_usec * 1.0e-6);
-	}
-
-	return result;
+	UtcTime curTime( true );
+	return curTime.combined();
 }
 
 //---------------------------------------------------------------------------
