@@ -156,7 +156,7 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 
 	if ( _sendMetrics ) {
 		MyString reporterPath;
-		const char* exe = param("DAGMAN_PEGASUS_REPORT_METRICS");	
+		const char* exe = param( "DAGMAN_PEGASUS_REPORT_METRICS" );	
 		if(exe) {
 			reporterPath = exe;
 		} else {
@@ -178,7 +178,6 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 					"Reporting metrics to Pegasus metrics server(s); output is in %s.\n",
 					metricsOutputFile.Value() );
 
-//TEMPTEMP -- probably do output/error redirect here instead of having the metrics program open its own output file -- that loses stuff that libcurl just prints...
 		ArgList args;
 		args.AppendArg(reporterPath.Value());	
 		args.AppendArg("-f");
@@ -187,15 +186,39 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 		if ( status == Dag::DAG_STATUS_RM ) {
 			args.AppendArg("-s");
 		}
-		args.AppendArg("-o");
-		args.AppendArg(metricsOutputFile.Value());
 
 			// Dump the args to the dagman.out file
 		MyString cmd; // for debug output
 		args.GetArgsStringForDisplay( &cmd );
 		debug_printf( DEBUG_NORMAL, "Running command <%s>\n", cmd.Value() );
 
-		daemonCore->Create_Process(reporterPath.Value(),args);
+		int stdFds[3];
+		stdFds[0] = -1; // stdin
+		stdFds[1] = safe_open_wrapper_follow( metricsOutputFile.Value(),
+					O_WRONLY | O_CREAT | O_TRUNC | O_APPEND ); // stdout
+		stdFds[2] = stdFds[1]; // stderr goes to the same file as stdout
+
+		int pid = daemonCore->Create_Process(
+					reporterPath.Value(),
+					args,
+					PRIV_UNKNOWN,
+					1, // reaper
+					false, // no command port
+					NULL, // no env
+					NULL, // no cwd
+					NULL, // no FamilyInfo
+					NULL, // no sock_inherit_list
+					stdFds);
+
+		if ( pid == 0 ) {
+			debug_printf( DEBUG_QUIET,
+						"Error: failed to start condor_dagman_metrics_reporter (%d, %s)\n",
+						errno, strerror( errno ) );
+		}
+
+		//TEMPTEMP -- check return value?
+		close( stdFds[1] );
+
 	} else {
 		debug_printf( DEBUG_NORMAL, "Metrics not sent because of PEGASUS_METRICS or CONDOR_DEVELOPERS setting.\n" );
 	}
@@ -220,6 +243,7 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 
 	fprintf( fp, "{\n" );
 	fprintf( fp, "    \"client\":\"%s\",\n", "condor_dagman" );
+		//TEMPTEMP -- I think we just want something like "8.1.0" here...
 	MyString cv = "8.1.0";//TEMPTEMP
 	fprintf( fp, "    \"version\":\"%s\",\n", cv.Value() );
 	fprintf( fp, "    \"planner\":\"%s\",\n", _plannerName.Value() );
@@ -231,7 +255,6 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 	fprintf( fp, "    \"end_time\":%.3lf,\n", endTime );
 	fprintf( fp, "    \"duration\":%.3lf,\n", duration );
 	fprintf( fp, "    \"exitcode\":%d,\n", exitCode );
-		//TEMPTEMP -- I think we just want something like "8.1.0" here...
 	fprintf( fp, "    \"dagman_id\":\"%s\",\n", _dagmanId.Value() );
 	fprintf( fp, "    \"parent_dagman_id\":\"%s\",\n",
 				_parentDagmanId.Value() );

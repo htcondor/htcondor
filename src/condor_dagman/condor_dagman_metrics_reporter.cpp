@@ -140,7 +140,7 @@ int main( int argc, char* argv[] )
 {
 		// Need to read some environment variables here
 		// Which ones? TEMPTEMP
-	std::string metrics_from_dagman, metrics_out_name, metrics_url;
+	std::string metrics_from_dagman, metrics_url;
 	bool do_sleep = false;
 
 	std::vector<server_data> servers_to_contact;
@@ -164,14 +164,6 @@ int main( int argc, char* argv[] )
 		if( !std::strcmp( argv[ii], "-s" ) ) {
 			do_sleep = true;
 		}
-		if( !std::strcmp( argv[ii], "-o" ) ) {
-			++ii;
-			if( argv[ii] ) {
-				metrics_out_name = argv[ii];
-			} else {
-				std::cerr << "No metrics output file specified" << std::endl;
-			}
-		}
 		if( !std::strcmp( argv[ii], "-u" ) ) { // For testing
 			++ii;
 			if( argv[ii] ) {
@@ -181,23 +173,14 @@ int main( int argc, char* argv[] )
 			}
 		}
 	}
-	if( metrics_out_name.empty() ) {
-		std::cerr << "No metrics output file specified.  Terminating now" << std::endl;
-		return 1;
-	}
 		// Now check the command line parameters
-	std::ofstream metrics_out( metrics_out_name.c_str() );
-	if( !metrics_out ) {
-		std::cerr << "Cannot open " << metrics_out_name << " for writing" << std::endl;
-		return 1;
-	}
-	metrics_out << "Executing:";
+	std::cout << "Executing:";
 	for( char**p = &argv[0]; *p; ++p ) {
-		metrics_out << " \"" << *p << "\"";
+		std::cout << " \"" << *p << "\"";
 	}
-	metrics_out << std::endl;
+	std::cout << std::endl;
 	if( metrics_from_dagman.empty() ) {
-		metrics_out << "Metrics from dagman is not specified. Terminating" << std::endl;
+		std::cout << "Metrics from dagman is not specified. Terminating" << std::endl;
 		return 1;
 	}
 	if( metrics_url.empty() ) {
@@ -210,10 +193,12 @@ int main( int argc, char* argv[] )
 	} else {
 		servers_to_contact.push_back( server_data( metrics_url ) );
 	}
-	metrics_out << "Will attempt to contact the following metrics servers:" << std::endl;
+	std::cout << std::endl <<
+				"Will attempt to contact the following metrics servers:" <<
+				std::endl;
 	for( std::vector<server_data>::iterator p = servers_to_contact.begin();
 	        p != servers_to_contact.end(); ++p ) {
-		metrics_out << '\t' << p->server << std::endl;
+		std::cout << '\t' << p->server << std::endl;
 	}
 
 	bool status = false;
@@ -224,16 +209,16 @@ int main( int argc, char* argv[] )
 	Curl handle;
 	Curl_slist slist;
 	if( !handle.get() ) {
-		metrics_out << "Failed to initialize curl. Nothing to do" << std::endl;
+		std::cout << "Failed to initialize curl. Nothing to do" << std::endl;
 		return 1;
 	}
 	if( !slist.append( "Content-Type: application/json" ) ) {
-		metrics_out << "Failed to set header" << std::endl;
+		std::cout << "Failed to set header" << std::endl;
 		return 1;
 	}
 	std::ifstream metrics( metrics_from_dagman.c_str() );
 	if( !metrics ) {
-		metrics_out << "Failed to open " << metrics_from_dagman << " for reading" << std::endl;
+		std::cout << "Failed to open " << metrics_from_dagman << " for reading" << std::endl;
 		return 1;
 	}
 	std::string data_to_send;
@@ -259,33 +244,34 @@ int main( int argc, char* argv[] )
 		data_to_send.append( data_line );
 	}
 	metrics.close();
-	metrics_out << "Data to send: <" << data_to_send << ">" << std::endl;
+	std::cout << std::endl << "Data to send: <" << data_to_send <<
+				">" << std::endl << std::endl;
 
 		// Now set curl options
 	if( CURLcode res = curl_easy_setopt( handle.get(), CURLOPT_POST, 1 ) ) {
-		metrics_out << "Failed  to set POST option" << std::endl;
-		metrics_out << curl_easy_strerror(res) << std::endl;
+		std::cout << "Failed  to set POST option" << std::endl;
+		std::cout << curl_easy_strerror(res) << std::endl;
 		return 1;
 	}
 	if( CURLcode res = curl_easy_setopt( handle.get(), CURLOPT_POSTFIELDS, data_to_send.data() ) ) {
-		metrics_out << "Failed to set data to send in POST" << std::endl;
-		metrics_out << curl_easy_strerror(res) << std::endl;
+		std::cout << "Failed to set data to send in POST" << std::endl;
+		std::cout << curl_easy_strerror(res) << std::endl;
 		return 1;
 	}
 	if( CURLcode res = curl_easy_setopt( handle.get(), CURLOPT_POSTFIELDSIZE, data_to_send.size() ) ) {
-		metrics_out << "Failed to set data size to send in POST" << std::endl;
-		metrics_out << curl_easy_strerror(res) << std::endl;
+		std::cout << "Failed to set data size to send in POST" << std::endl;
+		std::cout << curl_easy_strerror(res) << std::endl;
 		return 1;
 	}
 	if( CURLcode res = curl_easy_setopt( handle.get(), CURLOPT_HTTPHEADER, slist.get() ) ) {
-		metrics_out << "Failed to set header option to use json" << std::endl;
-		metrics_out << curl_easy_strerror(res) << std::endl;
+		std::cout << "Failed to set header option to use json" << std::endl;
+		std::cout << curl_easy_strerror(res) << std::endl;
 		return 1;
 	}
 	char error_buffer[CURL_ERROR_SIZE];
 	if( CURLcode res = curl_easy_setopt( handle.get(), CURLOPT_ERRORBUFFER, &error_buffer[0] ) ) {
-		metrics_out << "Failed to set error buffer" << std::endl;
-		metrics_out << curl_easy_strerror(res) << std::endl;
+		std::cout << "Failed to set error buffer" << std::endl;
+		std::cout << curl_easy_strerror(res) << std::endl;
 		return 1;
 	}
 		// Design document says try until 100 seconds are up
@@ -300,19 +286,19 @@ int main( int argc, char* argv[] )
 			}
 
 			if( CURLcode res = curl_easy_setopt( handle.get(), CURLOPT_URL, srv->server.c_str() ) ) {
-				metrics_out << "Failed to set URL to send to" << std::endl;
-				metrics_out << curl_easy_strerror(res) << std::endl;
+				std::cout << "Failed to set URL to send to" << std::endl;
+				std::cout << curl_easy_strerror(res) << std::endl;
 				continue;
 			}
 				// Finally, send the data
 			CURLcode res = curl_easy_perform( handle.get() );
 			if( !res ) {
-				metrics_out << "Successfully sent data to server " << srv->server << std::endl;
+				std::cout << "Successfully sent data to server " << srv->server << std::endl;
 				srv->connected = true;
 			} else {
-				metrics_out << "Failed to send data to " << srv->server << std::endl;
-				metrics_out << "curl_easy_perform failed with code " << res << std::endl;
-				metrics_out << "Curl says: " << error_buffer << std::endl;
+				std::cout << "Failed to send data to " << srv->server << std::endl;
+				std::cout << "curl_easy_perform failed with code " << res << std::endl;
+				std::cout << "Curl says: " << error_buffer << std::endl;
 			}
 		}
 		status = true;
