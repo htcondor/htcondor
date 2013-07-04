@@ -216,8 +216,11 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 						errno, strerror( errno ) );
 		}
 
-		//TEMPTEMP -- check return value?
-		close( stdFds[1] );
+		if ( close( stdFds[1] ) != 0 ) {
+			debug_printf( DEBUG_QUIET, "ERROR: closing stdout for metrics "
+						"reporter; errno %d (%s)\n", errno,
+						strerror( errno ) );
+		}
 
 	} else {
 		debug_printf( DEBUG_NORMAL, "Metrics not sent because of PEGASUS_METRICS or CONDOR_DEVELOPERS setting.\n" );
@@ -276,8 +279,11 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 	fprintf( fp, "    \"dag_status\":%d\n", status );
 	fprintf( fp, "}\n" );
 
-	//TEMPTEMP -- check return value?
-	fclose( fp );
+	if ( fclose( fp ) != 0 ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: closing metrics file %s; errno %d (%s)\n",
+					_metricsFile.Value(), errno, strerror( errno ) );
+	}
 
 	debug_printf( DEBUG_NORMAL, "Wrote metrics file %s.\n",
 				_metricsFile.Value() );
@@ -339,6 +345,9 @@ DagmanMetrics::ParseBraindumpFile()
 		}
 	}
 
-	//TEMPTEMP --check return value
-	fclose( fp );
+	if ( fclose( fp ) != 0 ) {
+		debug_printf( DEBUG_QUIET,
+					"ERROR: closing Pegasus braindump file %s; errno %d (%s)\n",
+					filename, errno, strerror( errno ) );
+	}
 }
