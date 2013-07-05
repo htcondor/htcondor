@@ -171,6 +171,8 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 			reporterPath += "condor_dagman_metrics_reporter";
 		}
 
+		MyString duration = param_integer( "DAGMAN_PEGASUS_REPORT_TIMEOUT", 100, 0 );
+
 		MyString metricsOutputFile( _primaryDagFile );
 		metricsOutputFile += ".metrics.out";
 
@@ -186,7 +188,8 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 		if ( status == Dag::DAG_STATUS_RM ) {
 			args.AppendArg("-s");
 		}
-
+		args.AppendArg( "-t" );
+		args.AppendArg( duration.Value() );
 			// Dump the args to the dagman.out file
 		MyString cmd; // for debug output
 		args.GetArgsStringForDisplay( &cmd );
