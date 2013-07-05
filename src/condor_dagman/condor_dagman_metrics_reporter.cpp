@@ -228,14 +228,14 @@ int main( int argc, char* argv[] )
 	while( getline( metrics, data_line ) ) {
 		std::string::iterator p = data_line.begin();
 		for( ; p != data_line.end(); ++p ) {
-			if( !std::isspace( *p ) ) {
+			if( !isspace( *p ) ) {
 				break;
 			}
 		}
 		data_line.erase( data_line.begin(), p );
 		std::string::reverse_iterator q = data_line.rbegin();
 		for( ; q != data_line.rend(); ++q ) {
-			if( !std::isspace( *q ) ) {
+			if( !isspace( *q ) ) {
 				break;
 			}
 		}
