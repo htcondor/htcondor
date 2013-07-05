@@ -399,7 +399,7 @@ create_success_result( int req_id, StringList *result_list)
 		index_count = result_list->number();
 	}
 
-	const char *tmp_result[index_count];
+	const char *tmp_result[index_count + 1];
 
 	tmp_result[0] = AMAZON_COMMAND_SUCCESS_OUTPUT;
 
