@@ -328,6 +328,10 @@ int main( int argc, char* argv[] )
 				break;
 			}
 		}
+		if( !status ) {
+				// We failed, so sleep to let everything relax
+			sleep( 1 );
+		}
 	} while( !status && time( 0 ) < stop_time );
 	return status ? 0 : 1;
 }
