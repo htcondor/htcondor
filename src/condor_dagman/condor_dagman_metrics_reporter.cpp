@@ -33,9 +33,25 @@ public:
 	Curl() { curlp = curl_easy_init(); }
 	~Curl() { if( curlp ) { curl_easy_cleanup( curlp ); } }
 	CURL* get() { return curlp; }
+	template<class T> void setopt( CURLoption option, T parameter );
+	struct CurlException {
+		CURLcode res;
+		CurlException( CURLcode r ) : res( r ) {}
+	};
 private:
 	CURL* curlp;
 };
+
+// The compiler can figure out which functions to generate here
+// So we do not have to hand-generate a bunch of overloaded functions...
+template<class T>
+void Curl::setopt( CURLoption option, T parameter )
+{
+	CURLcode res = curl_easy_setopt( curlp, option, parameter );
+	if( res ) {
+		throw CurlException( res );
+	}
+}
 
 // Class to support RAII technique for curl slist
 class Curl_slist {
@@ -180,7 +196,14 @@ int main( int argc, char* argv[] )
 		}
 	}
 		// Now check the command line parameters
+	char* default_metrics_server = getenv( "PEGASUS_USER_METRICS_DEFAULT_SERVER" );
 	std::cout << "Executing:";
+	if( env_metrics_server ) {
+		std::cout << "PEGASUS_USER_METRICS_SERVER=\"" << env_metrics_server << "\" ";
+	}
+	if( default_metrics_server ) {
+		std::cout << "PEGASUS_USER_METRICS_DEFAULT_SERVER=\"" << default_metrics_server << "\" ";
+	}
 	for( char**p = &argv[0]; *p; ++p ) {
 		std::cout << " \"" << *p << "\"";
 	}
@@ -190,7 +213,6 @@ int main( int argc, char* argv[] )
 		return 1;
 	}
 	if( metrics_url.empty() ) {
-		char* default_metrics_server = getenv( "PEGASUS_USER_METRICS_DEFAULT_SERVER" );
 		if( default_metrics_server ) {
 			servers_to_contact.push_back( server_data( default_metrics_server ) );
 		} else {
@@ -203,11 +225,10 @@ int main( int argc, char* argv[] )
 				"Will attempt to contact the following metrics servers:" <<
 				std::endl;
 	for( std::vector<server_data>::iterator p = servers_to_contact.begin();
-	        p != servers_to_contact.end(); ++p ) {
+			p != servers_to_contact.end(); ++p ) {
 		std::cout << '\t' << p->server << std::endl;
 	}
 
-	bool status = false;
 	time_t stop_time;
 	time( &stop_time );
 	stop_time += duration;
@@ -254,57 +275,49 @@ int main( int argc, char* argv[] )
 				">" << std::endl << std::endl;
 
 		// Now set curl options
-	if( CURLcode res = curl_easy_setopt( handle.get(), CURLOPT_POST, 1 ) ) {
-		std::cout << "Failed  to set POST option" << std::endl;
-		std::cout << curl_easy_strerror(res) << std::endl;
-		return 1;
-	}
-	if( CURLcode res = curl_easy_setopt( handle.get(), CURLOPT_POSTFIELDS, data_to_send.data() ) ) {
-		std::cout << "Failed to set data to send in POST" << std::endl;
-		std::cout << curl_easy_strerror(res) << std::endl;
-		return 1;
-	}
-	if( CURLcode res = curl_easy_setopt( handle.get(), CURLOPT_POSTFIELDSIZE, data_to_send.size() ) ) {
-		std::cout << "Failed to set data size to send in POST" << std::endl;
-		std::cout << curl_easy_strerror(res) << std::endl;
-		return 1;
-	}
-	if( CURLcode res = curl_easy_setopt( handle.get(), CURLOPT_HTTPHEADER, slist.get() ) ) {
-		std::cout << "Failed to set header option to use json" << std::endl;
-		std::cout << curl_easy_strerror(res) << std::endl;
-		return 1;
-	}
 	char error_buffer[CURL_ERROR_SIZE];
-	if( CURLcode res = curl_easy_setopt( handle.get(), CURLOPT_ERRORBUFFER, &error_buffer[0] ) ) {
-		std::cout << "Failed to set error buffer" << std::endl;
-		std::cout << curl_easy_strerror(res) << std::endl;
+	try {
+		std::cout << "Setting the POST option... ";
+		handle.setopt( CURLOPT_POST, 1 );
+		std::cout << "Success!\nSetting the data to send... ";
+		handle.setopt( CURLOPT_POSTFIELDS, data_to_send.data() );
+		std::cout << "Success!\nSet the content length... ";
+		handle.setopt( CURLOPT_POSTFIELDSIZE, data_to_send.size() );
+		std::cout << "Success!\nTelling server we are sending json... ";
+		handle.setopt( CURLOPT_HTTPHEADER, slist.get() );
+		std::cout << "Success!\nInitializing the error buffer... ";
+		handle.setopt( CURLOPT_ERRORBUFFER, &error_buffer[0] );
+		std::cout << "Success!" << std::endl;
+	} catch( Curl::CurlException e ) {
+		std::cout << "Failure!" << std::endl;
+		std::cout << curl_easy_strerror( e.res ) << std::endl;
 		return 1;
 	}
 		// Design document says try until 100 seconds are up
+	bool status = false;
 	do {
 		for( std::vector<server_data>::iterator srv = servers_to_contact.begin();
 				srv != servers_to_contact.end(); ++srv ) {
 			if( srv->connected ) continue;
 			if( do_sleep ) {
-					// TEMP:  Sleep duration should be configurable via
-					// the environment.
 				sleep( 1 + ( get_random_int() % 10 ) );
 			}
-
-			if( CURLcode res = curl_easy_setopt( handle.get(), CURLOPT_URL, srv->server.c_str() ) ) {
-				std::cout << "Failed to set URL to send to" << std::endl;
-				std::cout << curl_easy_strerror(res) << std::endl;
+			try {
+				handle.setopt( CURLOPT_URL, srv->server.c_str() );
+			} catch( Curl::CurlException e ) {
+				std::cout << "Failed to set URL to " << srv->server.c_str()
+					<< " to send to" << std::endl;
+				std::cout << curl_easy_strerror( e.res ) << std::endl;
 				continue;
 			}
 				// Finally, send the data
-			CURLcode res = curl_easy_perform( handle.get() );
-			if( !res ) {
-				std::cout << "Successfully sent data to server " << srv->server << std::endl;
-				srv->connected = true;
-			} else {
+			if( CURLcode res = curl_easy_perform( handle.get() ) ) {
 				std::cout << "Failed to send data to " << srv->server << std::endl;
 				std::cout << "curl_easy_perform failed with code " << res << std::endl;
 				std::cout << "Curl says: " << error_buffer << std::endl;
+			} else {
+				std::cout << "Successfully sent data to server " << srv->server << std::endl;
+				srv->connected = true;
 			}
 		}
 		status = true;
