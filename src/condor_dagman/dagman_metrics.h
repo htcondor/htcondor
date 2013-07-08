@@ -44,6 +44,10 @@ public:
 		*/
 	~DagmanMetrics();
 
+	void ProcStarted( const struct tm &eventTime );
+
+	void ProcFinished( const struct tm &eventTime );
+
 		//TEMPTEMP -- add count updates here
 	void NodeFinished( bool isSubdag, bool successful );
 
@@ -56,6 +60,9 @@ public:
 private:
 		//TEMPTEMP -- document
 	static double GetTime();
+
+		//TEMPTEMP -- document
+	static double GetTime( const struct tm &eventTime );
 
 	void ParseBraindumpFile();
 

@@ -104,16 +104,16 @@ DagmanClassad::InitializeMetrics()
 		return;
 	}
 
-#if 1 //TEMPTEMP
 	int parentDagmanCluster;
 	if ( GetAttributeInt( _dagmanId._cluster, _dagmanId._proc,
 				ATTR_DAGMAN_JOB_ID, &parentDagmanCluster ) != 0 ) {
-debug_printf( DEBUG_QUIET, "DIAG can't get parent dagman cluster\n" );//TEMPTEMP
+		debug_printf( DEBUG_DEBUG_1,
+					"Can't get parent DAGMan cluster\n" );
 		parentDagmanCluster = -1;
 	} else {
-debug_printf( DEBUG_QUIET, "DIAG parent dag cluster: %d\n", parentDagmanCluster );//TEMPTEMP
+		debug_printf( DEBUG_DEBUG_1, "Parent DAGMan cluster: %d\n",
+					parentDagmanCluster );
 	}
-#endif //TEMPTEMP
 
 	CloseConnection( queue );
 

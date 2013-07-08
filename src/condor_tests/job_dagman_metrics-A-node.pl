@@ -1,6 +1,6 @@
 #! /usr/bin/env perl
 
-#sleep(10);#TEMPTEMP?
+sleep(10);
 
 print "Running node @ARGV\n";
 

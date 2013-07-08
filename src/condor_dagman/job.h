@@ -34,6 +34,7 @@
 
 class ThrottleByCategory;
 class Dag;
+class DagmanMetrics;
 
 //
 // Local DAGMan includes
@@ -427,6 +428,15 @@ class Job {
 	int GetSubProc() const { return _CondorID._subproc; }
 	bool SetCondorID(const CondorID& cid);
 	const CondorID& GetID() const { return _CondorID; }
+
+		//TEMPTEMP -- document
+	void ExecMetrics( int proc, const struct tm &eventTime,
+				DagmanMetrics *metrics );
+
+		//TEMPTEMP -- document
+	void TermAbortMetrics( int proc, const struct tm &eventTime,
+				DagmanMetrics *metrics );
+
 private:
     /** */ CondorID _CondorID;
 public:
@@ -511,13 +521,17 @@ public:
  		    Returns false if the job is not on hold
 		*/
 	bool Release(int proc);
+
 private:
+		//TEMPTEMP -- document
+	void Cleanup();
 
 		/** _onHold[proc] is nonzero if the condor job 
  			with ProcId == proc is on hold, and zero
 			otherwise
 		*/
 	std::vector<unsigned char> _onHold;	
+
 		// Mark this node as failed because of an error in monitoring
 		// the log file.
   	void LogMonitorFailed();
@@ -628,6 +642,20 @@ private:
 	// whether this is a final job
 	bool _final;
 	bool append_default_log;
+
+		//
+		// For metrics reporting.
+		//
+	enum {
+		EXEC_MASK = 0x1,
+		ABORT_TERM_MASK = 0x2
+	};
+
+		// _gotEvents[proc] & EXEC_MASK is true iff we've gotten an
+		// execute event for proc; _gotEvents[proc] & ABORT_TERM_MASK
+		// is true iff we've gotten an aborted or terminated event
+		// for proc.
+	std::vector<unsigned char> _gotEvents;	
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.

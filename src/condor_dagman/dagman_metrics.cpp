@@ -129,6 +129,34 @@ DagmanMetrics::~DagmanMetrics()
 
 //---------------------------------------------------------------------------
 void
+DagmanMetrics::ProcStarted( const struct tm &eventTime )
+{
+		// Avoid possible mktime() craziness unless we really need the
+		// metrics -- see gittrac #2898.
+	if ( _sendMetrics ) {
+		double et = GetTime( eventTime );
+			// We decrement by et - _startTime instead of just et here to
+			// reduce numerical error.
+		_totalNodeJobTime -= ( et - _startTime );
+	}
+}
+
+//---------------------------------------------------------------------------
+void
+DagmanMetrics::ProcFinished( const struct tm &eventTime )
+{
+		// Avoid possible mktime() craziness unless we really need the
+		// metrics -- see gittrac #2898.
+	if ( _sendMetrics ) {
+		double et = GetTime( eventTime );
+			// We increment by et - _startTime instead of just et here to
+			// reduce numerical error.
+		_totalNodeJobTime += ( et - _startTime );
+	}
+}
+
+//---------------------------------------------------------------------------
+void
 DagmanMetrics::NodeFinished( bool isSubdag, bool successful )
 {
 	if ( isSubdag ) {
@@ -207,11 +235,11 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 					PRIV_UNKNOWN,
 					1, // reaper
 					false, // no command port
-					NULL, // no env
+					NULL, // just inherit env of parent
 					NULL, // no cwd
 					NULL, // no FamilyInfo
 					NULL, // no sock_inherit_list
-					stdFds);
+					stdFds );
 
 		if ( pid == 0 ) {
 			debug_printf( DEBUG_QUIET,
@@ -275,7 +303,6 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 	int totalNodesRun = _simpleNodesSuccessful + _simpleNodesFailed +
 				_subdagNodesSuccessful + _subdagNodesFailed;
 	fprintf( fp, "    \"total_jobs_run\":%d,\n", totalNodesRun );
-	_totalNodeJobTime = 123.456;//TEMPTEMP
 	fprintf( fp, "    \"total_job_time\":%.3lf,\n", _totalNodeJobTime );
 
 		// Last item must NOT have trailing comma!
@@ -300,6 +327,17 @@ DagmanMetrics::GetTime()
 {
 	UtcTime curTime( true );
 	return curTime.combined();
+}
+
+//---------------------------------------------------------------------------
+double
+DagmanMetrics::GetTime( const struct tm &eventTime )
+{
+	struct tm tmpTime = eventTime;
+	//TEMPTEMP -- make sure this is okay on Windows
+	time_t result = mktime( &tmpTime );
+
+	return (double)result;
 }
 
 //---------------------------------------------------------------------------
