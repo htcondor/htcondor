@@ -1891,22 +1891,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ckpt_server,server2
 id=84
 
-[NETWORK_HORIZON]
-aliases=
-default=300
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Network Horizon
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=ckpt_server,server2
-id=86
-
 [CKPT_SERVER_HOSTS]
 aliases=
 default=
@@ -1971,22 +1955,6 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=kbdd,XInterface
 id=93
-
-[TOOLS_PROVIDE_OLD_MESSAGES]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Tools Provide Old Messages
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=rm,rm
-id=94
 
 [GROUP_NAMES]
 aliases=
@@ -6022,54 +5990,6 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,proc_family_proxy
 id=371
-
-[NET_REMAP_SERVICE]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Net Remap Service
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=c++_util,condor_config
-id=372
-
-[NET_REMAP_INAGENT]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Net Remap Inagent
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=c++_util,condor_config
-id=373
-
-[NET_REMAP_ROUTE]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Net Remap Route
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=c++_util,condor_config
-id=374
 
 [LOCAL_CONFIG_DIR]
 aliases=

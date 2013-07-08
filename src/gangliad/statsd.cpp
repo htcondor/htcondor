@@ -46,6 +46,7 @@ Metric::Metric():
 	derivative(false),
 	verbosity(0),
 	type(DOUBLE),
+	aggregate(NO_AGGREGATE),
 	sum(0),
 	count(0),
 	restrict_slot1(false)
@@ -449,6 +450,8 @@ Metric::convertToNonAggregateValue() {
 }
 
 StatsD::StatsD():
+	m_verbosity(0),
+	m_per_execute_node_metrics(true),
 	m_stats_pub_interval(0),
 	m_stats_pub_timer(-1),
 	m_derivative_publication_failed(0),

@@ -49,9 +49,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that caused \Condor{status} \Opt{-submitters} to report twice
+as many jobs running as were actually running. This bug appeared in 7.9.6 and
+8.0.0.
+\Ticket{3713}
+
 \item Fixed a bug with hierarchical group quotas in the \Condor{negotiator}
-where group hierarchies with internal nodes that set accept\_surplus to
-false would be assigned allocations above their quota.
+in which group hierarchies with parent groups that set 
+configuration variable \Macro{GROUP\_ACCEPT\_SURPLUS} to
+\Expr{False} would be assigned allocations above their quota.
 \Ticket{3695}
 
 \item Fixed a bug in which scheduler universe jobs that
@@ -90,6 +96,14 @@ submitted a second time during recovery.
 \item Fixed a bug that caused some communication layer log messages 
 to end with binary characters.
 \Ticket{3706}
+
+\item Fixed a bug that can cause the \Condor{procd} to erroneously exit
+on Mac OS X when many processes are created in a short period of time.
+\Ticket{3725}
+
+\item Removed a bug that caused \Condor{dagman} to have problems restarting
+after an upgrade from HTCondor version 7.8.
+\Ticket{3707}
 
 \end{itemize}
 
@@ -159,6 +173,13 @@ parallel universe jobs handed to a remote scheduler.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item Fixed a bug that happened with partitionable slots, jobs that
+requested more than one cpu, and a negotiator with
+\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} was false.  This would
+cause the negotiator to incorrectly assume that each slot had
+a slot weight of one.
+\Ticket{3737}
 
 \item The redundant configuration variable \Macro{CheckpointPlatform} has
 been removed and the configuration variable \Macro{CHECKPOINT\_PLATFORM}
@@ -244,6 +265,10 @@ the HTCondor tarballs:
   \item \Condor{userlog\_job\_counter}
   \end{itemize}
 \Ticket{3670}
+
+\item \Condor{status} \Opt{-submitters} reports twice
+as many jobs running as were actually running.
+\Ticket{3713}
 
 \end{itemize}
 

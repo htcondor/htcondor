@@ -1690,7 +1690,14 @@ void EC2Job::doEvaluateState()
                 // it succeed" apply here, so it makes sense to submit
                 // in both cases.
                 // 
-                gmState = GM_SPOT_START;
+                // However, if we're removing the job, this just means
+                // that we have nothing else to do.
+                //
+                if( condorState == REMOVED ) {
+                    gmState = GM_DELETE;
+                } else {
+                    gmState = GM_SPOT_START;
+                }
                 } break;
 
             case GM_SEEK_INSTANCE_ID: {

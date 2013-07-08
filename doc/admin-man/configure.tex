@@ -9523,6 +9523,7 @@ section~\ref{sec:Security} on Security.
   \begin{verbatim}
   GSI_DAEMON_TRUSTED_CA_DIR  = $(GSI_DAEMON_DIRECTORY)/certificates
   \end{verbatim}
+  The EC2 GAHP may use this directory in the specification a trusted CA.
 
 \label{param:GSIDaemonProxy}
 \item[\Macro{GSI\_DAEMON\_PROXY}]
@@ -10585,6 +10586,7 @@ Configuration File Macros Affecting APIs}
   When SOAP over SSL is enabled, this parameter or
   \Macro{SOAP\_SSL\_CA\_DIR} must be set.
   There is no default value.
+  The EC2 GAHP may use this file to specify a trusted CA.
 
 \label{param:SoapSSLCaDir}
 \item[\Macro{SOAP\_SSL\_CA\_DIR}]
@@ -10595,6 +10597,7 @@ Configuration File Macros Affecting APIs}
   When SOAP over SSL is enabled, this variable or the variable
   \Macro{SOAP\_SSL\_CA\_FILE} must be defined.
   There is no default value.
+  The EC2 GAHP may use this directory in the specification a trusted CA.
 
 \label{param:SoapSSLDhFile}
 \item[\Macro{SOAP\_SSL\_DH\_FILE}]
