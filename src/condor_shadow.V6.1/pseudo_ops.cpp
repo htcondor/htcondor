@@ -328,10 +328,7 @@ int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 	if( use_local_access(full_path.Value()) ) {
 		method = "local";
 	} else {
-		const CondorVersionInfo *vi = NULL;
-		if (syscall_sock) vi = syscall_sock->get_peer_version();
-		if ( ! vi || ! vi->built_since_version(7,9,6))
-			method = "remote";
+		method = "remote";
 	}
 
 	if( use_fetch(method,full_path.Value()) ) {
