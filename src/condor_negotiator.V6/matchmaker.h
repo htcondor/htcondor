@@ -200,6 +200,7 @@ class Matchmaker : public Service
                                       double limitUsed, double limitUsedUnclaimed,
                                       double submitterLimit, double submitterLimitUnclaimed, 
                                       double pieLeft, bool only_for_startdrank);
+		bool insertClaimRequirements(ClassAd &request, ClassAd *offer);
 		int matchmakingProtocol(ClassAd &request, ClassAd *offer, 
 						ClaimIdHash &claimIds, Sock *sock,
 						const char* scheddName, const char* scheddAddr);

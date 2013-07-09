@@ -4438,6 +4438,60 @@ insertNegotiatorMatchExprs(ClassAd *ad)
 	}
 }
 
+
+// returns true on success
+bool Matchmaker::
+insertClaimRequirements(ClassAd &request, ClassAd *offer)
+{
+  std::vector<std::string> req_list;
+
+  { // The default one is based on owner
+    MyString owner;
+    
+    if (request.LookupString(ATTR_OWNER,owner)) {
+      std::string req=std::string("(TARGET.")+ATTR_OWNER+"=?=\""+owner+"\")";
+      req_list.push_back(req);
+    } else {
+      dprintf (D_ALWAYS, "Could not find job Owner!\n" );
+      return false;
+    }
+  }
+
+  { // concurrency limits constraint
+    MyString limits;
+    if (request.LookupString(ATTR_CONCURRENCY_LIMITS, limits)) {
+      // request exactly the same limits, if the current one has any
+      limits.lower_case();
+      std::string req=std::string("(toLower(TARGET.")+ATTR_CONCURRENCY_LIMITS+")=?=\""+limits+"\")";
+      req_list.push_back(req);
+    } else {
+      // or prevent jobs with any limits to match
+      std::string req=std::string("TARGET.")+ATTR_CONCURRENCY_LIMITS+"=?=UNDEFINED";
+      req_list.push_back(req);
+    }
+  }
+  
+  {// now joint them all together with AND
+    bool first=true;
+    std::string req;
+    for (std::vector<std::string>::iterator it = req_list.begin();
+	 it != req_list.end(); ++it) {
+      if (first) {
+	req=*it;
+	first=false;
+      } else {
+	req.append(" && ");
+	req.append(*it);
+      }
+    }
+    offer->AssignExpr(ATTR_MATCH_CLAIM_REQUIREMENTS,req.c_str());
+    dprintf( D_FULLDEBUG, "Inserting %s=%s\n",ATTR_MATCH_CLAIM_REQUIREMENTS,req.c_str());
+  }
+
+  return true;
+}
+
+
 /*
 Warning: scheddAddr may not be the actual address we'll use to contact the
 schedd, thanks to CCB.  It _is_ suitable for use as a unique identifier, for
@@ -4529,25 +4583,54 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 				 ATTR_REQUIREMENTS, savedReqStr );
 	}	
 
-		// Stash the Concurrency Limits in the offer, they are part of
-		// what's being provided to the request after all. The limits
-		// will be available to the Accountant when the match is added
-		// and also to the Schedd when considering to reuse a
-		// claim. Both are key, first so the Accountant can properly
-		// recreate its state on startup, and second so the Schedd has
-		// the option of checking if a claim should be reused for a
-		// job incase it has different limits. The second part is
-		// because the limits are not in the Requirements.
-		//
-		// NOTE: Because the Concurrency Limits should be available to
-		// the Schedd, they must be stashed before PERMISSION_AND_AD
-		// is sent.
-	MyString limits;
-	if (request.LookupString(ATTR_CONCURRENCY_LIMITS, limits)) {
-		limits.lower_case();
-		offer->Assign(ATTR_MATCHED_CONCURRENCY_LIMITS, limits);
-	} else {
-		offer->Delete(ATTR_MATCHED_CONCURRENCY_LIMITS);
+
+	// We will add claim specific requirements here
+	// So save the old Machine requirements first
+	// and reference them later in the new requirements
+
+	if ( offer->find(ATTR_MATCH_SAVED_MACHINE_REQUIREMENTS)==offer->end()) {
+	  // but only if we did not do it already
+	  {
+	    ExprTree *requirements = offer->Remove(ATTR_REQUIREMENTS);
+	    if ( !requirements ) {
+	      dprintf (D_ALWAYS, "Could not find Machine requirements!\n" );
+	      return MM_ERROR;
+	    }
+	    offer->Insert(ATTR_MATCH_SAVED_MACHINE_REQUIREMENTS,requirements);
+	    dprintf( D_FULLDEBUG, "Renaming %s->%s\n",ATTR_REQUIREMENTS,ATTR_MATCH_SAVED_MACHINE_REQUIREMENTS);
+	  }
+	  {
+	    char buf[256];
+	    sprintf(buf,"(MY.%s) && (MY.%s)",
+		    ATTR_MATCH_CLAIM_REQUIREMENTS,ATTR_MATCH_SAVED_MACHINE_REQUIREMENTS);
+	    offer->AssignExpr(ATTR_REQUIREMENTS,buf);
+	    dprintf( D_FULLDEBUG, "Redefining: %s=%s\n",ATTR_REQUIREMENTS,buf);
+	  }
+	}
+
+	// Now insert the claim requirements
+	if (not insertClaimRequirements(request, offer)) {
+	  return MM_ERROR;
+	}
+
+	{
+	  // Stash the Concurrency Limits in the offer, they are part of
+	  // what's being provided to the request after all. This is needed for 2 reasons:
+          // 1) The limits will be available to the Accountant when the match is added.
+	  //    So the Accountant can properly recreate its state on startup.
+          // 2) Older schedds have hardcoded logic that compares the provided 
+	  //    ATTR_MATCHED_CONCURRENCY_LIMITS with their own ATTR_CONCURRENCY_LIMITS
+          //    and bail out if not there
+	  MyString limits;
+	  if (request.LookupString(ATTR_CONCURRENCY_LIMITS, limits)) {
+	    limits.lower_case();
+	    offer->Assign(ATTR_MATCHED_CONCURRENCY_LIMITS, limits);
+	  } else {
+	    offer->Delete(ATTR_MATCHED_CONCURRENCY_LIMITS);
+	  }
+	  // Declare the above attribute as optional, for newer schedds to use
+	  const bool enforce_concurrency_limits=false;
+	  offer->Assign(ATTR_ENFORCE_CONCURRENCY_LIMITS,enforce_concurrency_limits);
 	}
 
     // these propagate into the slot ad in the schedd match rec, and from there eventually to the claim
