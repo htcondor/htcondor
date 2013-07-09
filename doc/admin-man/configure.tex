@@ -11694,6 +11694,36 @@ are published to the \Condor{collector}.
 \item[\Macro{GANGLIA\_CONFIG}]
   Path to the Ganglia configuration file.  The default is \File{/etc/ganglia/gmond.conf}.
 
+\label{param:GangliaGmetric}
+\item[\Macro{GANGLIA\_GMETRIC}]
+  Full path of the \Prog{gmetric} executable to use.  If none is
+  specified, \File{libganglia} will be used instead if possible,
+  because the library interface is more efficient than invoking
+  \Prog{gmetric}.  Some versions of \File{libganglia} are not
+  compatible.  When failure to use \File{libganglia} is detected,
+  \Prog{gmetric} will be used if it can be found in HTCondor's
+  \Env{PATH}.
+
+\label{param:GangliaLib}
+\item[\Macro{GANGLIA\_LIB}]
+  Full path of the \File{libganglia} shared library to use.  If none is
+  specified, and \Macro{GANGLIA\_GMETRIC} is also not specified, then
+  a search for \File{libganglia} will be performed in the directories listed
+  in \Macro{GANGLIA\_LIB\_PATH} or \Macro{GANGLIA\_LIB64\_PATH}.  The
+  special value NOOP indicates that \Condor{gangliad} should not
+  publish statistics to Ganglia but should otherwise go through all
+  the motions it normally does.
+
+\label{param:GangliaLibPath}
+\item[\Macro{GANGLIA\_LIB\_PATH}]
+  Comma-separated list of directories in which to search for \File{libganglia} if
+  \Macro{GANGLIA\_LIB} is not configured.  This is used in 32-bit versions of HTCondor.
+
+\label{param:GangliaLib64Path}
+\item[\Macro{GANGLIA\_LIB64\_PATH}]
+  Comma-separated list of directories in which to search for \File{libganglia} if
+  \Macro{GANGLIA\_LIB} is not configured.  This is used in 64-bit versions of HTCondor.
+
 \label{param:GangliadCluster}
 \item[\Macro{GANGLIAD\_DEFAULT\_CLUSTER}]
   An expression specifying the default name of the Ganglia cluster for all metrics.  The
