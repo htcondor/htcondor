@@ -928,8 +928,6 @@ init_condor_ids()
 		 * the default is INT_MAX */
 	RealCondorUid = INT_MAX;
 	RealCondorGid = INT_MAX;
-	pcache()->get_user_uid( myDistro->Get(), RealCondorUid );
-	pcache()->get_user_gid( myDistro->Get(), RealCondorGid );
 
 	const char	*envName = EnvGetName( ENV_UG_IDS ); 
 	if( (env_val = getenv(envName)) ) {
@@ -970,6 +968,15 @@ init_condor_ids()
 			fprintf(stderr, "should be used by %s.\n", myDistro->Get() );
 			exit(1);
 		}
+
+		// If CONDOR_IDS is set, that account is always the "real"
+		// Condor account.
+		RealCondorUid = envCondorUid;
+		RealCondorGid = envCondorGid;
+	} else {
+		// If CONDOR_IDS isn't set, then look for the "condor" account.
+		pcache()->get_user_uid( myDistro->Get(), RealCondorUid );
+		pcache()->get_user_gid( myDistro->Get(), RealCondorGid );
 	}
 	if( config_val ) {
 		free( config_val );
@@ -1028,16 +1035,6 @@ init_condor_ids()
 			if (CondorUserName == NULL) {
 				EXCEPT("Out of memory. Aborting.");
 			}
-		}
-
-		/* If CONDOR_IDS environment variable is set, and set to the same uid
-		   that we are running as, then behave as if the daemons are running
-		   as user "condor" -- i.e. allow any user to submit jobs to these daemons,
-		   not just the user running the daemons.
-		*/
-		if ( MyUid == envCondorUid ) {
-			RealCondorUid = MyUid;
-			RealCondorGid = MyGid;
 		}
 	}
 	
