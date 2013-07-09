@@ -9392,6 +9392,17 @@ in section~\ref{sec:DAG-configuration}.
   rather than thousands of notifications from each of the jobs submitted by
   \Condor{dagman}. 
 
+\label{param:DAGmanPegasusReportMetrics}
+\item[\Macro{DAGMAN\_PEGASUS\_REPORT\_METRICS}]
+The path the the \Condor{dagman\_metrics\_reporter} executable.  Defaults to
+\Macro{\$(LIBEXEC)/condor\_dagman\_metrics\_reporter}.
+
+\label{param:DAGmanPegasusReportTimeout}
+\item[\Macro{DAGMAN\_PEGASUS\_REPORT\_TIMEOUT}]
+This integer value defaults to 100 seconds.  The
+\Condor{dagman\_metrics\_reporter} will exit after successfully contacting all
+its metrics servers or after it has executed for more than this duration of
+time.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
