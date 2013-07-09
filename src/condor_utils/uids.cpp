@@ -863,6 +863,12 @@ static gid_t CondorGid, UserGid, RealCondorGid, OwnerGid;
 static int CondorIdsInited = FALSE;
 static char* UserName = NULL;
 static char* OwnerName = NULL;
+static gid_t *CondorGidList = NULL;
+static size_t CondorGidListSize = 0;
+static gid_t *UserGidList = NULL;
+static size_t UserGidListSize = 0;
+static gid_t *OwnerGidList = NULL;
+static size_t OwnerGidListSize = 0;
 
 static int set_condor_euid();
 static int set_condor_egid();
@@ -1047,6 +1053,22 @@ init_condor_ids()
 		}
 	}
 	
+	if ( CondorUserName && can_switch_ids() ) {
+		free( CondorGidList );
+		CondorGidList = NULL;
+		CondorGidListSize = 0;
+		int size = pcache()->num_groups( CondorUserName );
+		if ( size > 0 ) {
+			CondorGidListSize = size;
+			CondorGidList = (gid_t *)malloc( CondorGidListSize * sizeof(gid_t) );
+			if ( !pcache()->get_groups( CondorUserName, CondorGidListSize, CondorGidList ) ) {
+				CondorGidListSize = 0;
+				free( CondorGidList );
+				CondorGidList = NULL;
+			}
+		}
+	}
+
 	(void)endpwent();
 	(void)SetSyscalls( scm );
 	
@@ -1100,6 +1122,28 @@ set_user_ids_implementation( uid_t uid, gid_t gid, const char *username,
 	} else {
 		UserName = strdup( username );
 	}
+
+	// UserGidList is always allocated and always has room for an
+	// extra gid_t beyond UserGidListSize. This allows us to add the
+	// TrackingGid to the list (if it's configured). Here, we don't
+	// know yet if there will be a TrackingGid.
+	int size = 0;
+	if ( UserName && can_switch_ids() ) {
+		priv_state old_priv = set_root_priv();
+		size = pcache()->num_groups( UserName );
+		set_priv( old_priv );
+		if ( size < 0 ) {
+			size = 0;
+		}
+	}
+	UserGidListSize = size;
+	UserGidList = (gid_t *)malloc( (UserGidListSize + 1) * sizeof(gid_t) );
+	if ( size > 0 ) {
+		if ( !pcache()->get_groups( UserName, UserGidListSize, UserGidList ) ) {
+			UserGidListSize = 0;
+		}
+	}
+
 	return TRUE;
 }
 
@@ -1269,6 +1313,9 @@ void
 uninit_user_ids()
 {
 	UserIdsInited = FALSE;
+	free( UserGidList );
+	UserGidList = NULL;
+	UserGidListSize = 0;
 }
 
 
@@ -1276,6 +1323,9 @@ void
 uninit_file_owner_ids() 
 {
 	OwnerIdsInited = FALSE;
+	free( OwnerGidList );
+	OwnerGidList = NULL;
+	OwnerGidListSize = 0;
 }
 
 
@@ -1300,6 +1350,22 @@ set_file_owner_ids( uid_t uid, gid_t gid )
 	if ( !(pcache()->get_user_name( OwnerUid, OwnerName )) ) {
 		OwnerName = NULL;
 	}
+
+	if ( OwnerName && can_switch_ids() ) {
+		priv_state old_priv = set_root_priv();
+		int size = pcache()->num_groups( OwnerName );
+		set_priv( old_priv );
+		if ( size > 0 ) {
+			OwnerGidListSize = size;
+			OwnerGidList = (gid_t *)malloc( OwnerGidListSize * sizeof(gid_t) );
+			if ( !pcache()->get_groups( OwnerName, OwnerGidListSize, OwnerGidList ) ) {
+				OwnerGidListSize = 0;
+				free( OwnerGidList );
+				OwnerGidList = NULL;
+			}
+		}
+	}
+
 	return TRUE;
 }
 
@@ -1575,9 +1641,10 @@ set_user_egid()
 		
 	if( UserName ) {
 		errno = 0;
-		if(!(pcache()->init_groups(UserName)) ) {
+		if ( setgroups( UserGidListSize, UserGidList ) < 0 &&
+			 _setpriv_dologging ) {
 			dprintf( D_ALWAYS, 
-					 "set_user_egid - ERROR: initgroups(%s, %d) failed, "
+					 "set_user_egid - ERROR: setgroups for %s (gid %d) failed, "
 					 "errno: %s\n", UserName, UserGid, strerror(errno) );
 		}			
 	}
@@ -1619,11 +1686,20 @@ set_user_rgid()
 		
 	if( UserName ) {
 		errno = 0;
-		if( !(pcache()->init_groups(UserName, TrackingGid)) ) {
+		// UserGidList is guaranteed to be allocated and able to hold
+		// one more gid_t beyond UserGidListSize.
+		// If we have a TrackingGid, we stick it in that slot.
+		int size = UserGidListSize;
+		if ( TrackingGid > 0 ) {
+			UserGidList[size] = TrackingGid;
+			size++;
+		}
+		if ( setgroups( size, UserGidList ) < 0 &&
+			 _setpriv_dologging ) {
 			dprintf( D_ALWAYS, 
-					 "set_user_rgid - ERROR: initgroups(%s, %d) failed, "
+					 "set_user_rgid - ERROR: setgroups for %s (gid %d) failed, "
 					 "errno: %d\n", UserName, UserGid, errno );
-		}			
+		}
 	}
 	return SET_REAL_GID(UserGid);
 }
@@ -1674,11 +1750,12 @@ set_owner_egid()
 		// belonging to his/her default group, and might be left
 		// with access to the groups that root belongs to, which 
 		// is a serious security problem.
-	if( OwnerName ) {
+	if( OwnerName && OwnerGidListSize > 0 ) {
 		errno = 0;
-		if(!(pcache()->init_groups(OwnerName)) ) {
+		if ( setgroups( OwnerGidListSize, OwnerGidList ) < 0 &&
+			 _setpriv_dologging ) {
 			dprintf( D_ALWAYS, 
-					 "set_owner_egid - ERROR: initgroups(%s, %d) failed, "
+					 "set_owner_egid - ERROR: setgroups for %s (gid %d) failed, "
 					 "errno: %s\n", OwnerName, OwnerGid, strerror(errno) );
 		}			
 	}
@@ -1704,13 +1781,14 @@ set_condor_rgid()
 		init_condor_ids();
 	}
 
-	if( CondorUserName ) {
+	if( CondorUserName && CondorGidListSize > 0 ) {
 		errno = 0;
-		if(!(pcache()->init_groups(CondorUserName)) ) {
+		if ( setgroups( CondorGidListSize, CondorGidList ) < 0 &&
+			 _setpriv_dologging ) {
 			dprintf( D_ALWAYS, 
-					 "set_condor_rgid - ERROR: initgroups(%s) failed, "
+					 "set_condor_rgid - ERROR: setgroups for %s failed, "
 					 "errno: %s\n", CondorUserName, strerror(errno) );
-		}                       
+		}
 	}
 
 	return SET_REAL_GID(CondorGid);
