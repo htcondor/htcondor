@@ -108,6 +108,10 @@ after an upgrade from HTCondor version 7.8.
 \item Fixed a bug that caused \Condor{q} \Opt{-dag} \Opt{-run}.to print garbage.
 \Ticket{3578}
 
+\item Fixed a memory leak in the \Condor{gridmanager} triggered when
+submitting grid-type ec2 jobs.
+\Ticket{3720}
+
 \end{itemize}
 
 \noindent Known Bugs:
