@@ -140,6 +140,11 @@ if (BUILD_TESTING)
 		if(${RPM_SYSTEM_NAME} MATCHES "rhel5" AND ${SYS_ARCH} MATCHES "X86_64")
 			condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
 		endif()
+		
+        if(${SYSTEM_NAME} MATCHES "Debian-7" AND ${SYS_ARCH} MATCHES "X86_64")
+            dprint( "Will run LIGO test on Debian 7" )
+			condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
+		endif()
 	endif(STD_UNIVERSE)
 
 	##########################################################
