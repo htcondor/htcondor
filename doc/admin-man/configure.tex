@@ -1272,8 +1272,8 @@ File System Configuration File Entries''.
   and group information in large pools. In order to avoid this problem,
   HTCondor caches UID and group information internally. This integer value allows
   pool administrators to specify (in seconds) how long HTCondor should wait
-  until refreshes a cache entry. The default is set to 300 seconds, or
-  5 minutes, plus a random number of seconds between 0 and 60 to avoid
+  until refreshes a cache entry. The default is set to 72000 seconds, or
+  20 hours, plus a random number of seconds between 0 and 60 to avoid
   having lots of processes refreshing at the same time.
   This means that if a pool administrator updates the user
   or group database (for example, \File{/etc/passwd} or \File{/etc/group}),

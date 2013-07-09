@@ -64,13 +64,21 @@ monitoring file transfer activity:
 \AdAttr{FileTransferDiskThrottleLevel}.
 \Ticket{3613}
 
+\item The default value for the configuration variable
+\Macro{PASSWD\_CACHE\_REFRESH} has been changed from 300 seconds to
+72000 seconds (20 hours).
+\Ticket{3723}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
 
 \begin{itemize}
 
-\item None.
+\item Fixed a bug that could cause the daemons to crash on unix if the
+OS reported that a job owner's account didn't exist (e.g. due to a
+temporary NIS or LDAP failure).
+\Ticket{3723}
 
 \end{itemize}
 
