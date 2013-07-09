@@ -6474,7 +6474,7 @@ id=402
 
 [PASSWD_CACHE_REFRESH]
 aliases=
-default=300
+default=72000
 version=0.0.0
 range=.*
 state=default
