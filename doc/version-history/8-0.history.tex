@@ -49,6 +49,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that prevented jobs with an invalid \SubmitCmd{ec2\_keypair}
+from being removed.
+\Ticket{3485}
+
 \item Fixed a bug that caused \Condor{status} \Opt{-submitters} to report twice
 as many jobs running as were actually running. This bug appeared in 7.9.6 and
 8.0.0.
