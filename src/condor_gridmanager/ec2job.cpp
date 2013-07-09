@@ -564,6 +564,14 @@ void EC2Job::doEvaluateState()
 				
 				jobAd->GetDirtyFlag( ATTR_GRID_JOB_ID, &attr_exists, &attr_dirty );
 
+				std::string type;
+				jobAd->LookupString( ATTR_EC2_SERVER_TYPE, type );
+				if ( type != myResource->m_serverType ) {
+					jobAd->Assign( ATTR_EC2_SERVER_TYPE, myResource->m_serverType );
+					attr_exists = true;
+					attr_dirty = true;
+				}
+
 				if ( m_should_gen_key_pair && m_key_pair.empty() ) {
 					SetKeypairId( build_keypair().c_str() );
 					attr_exists = true;
@@ -856,7 +864,7 @@ void EC2Job::doEvaluateState()
 				break;
 						
 				
-			case GM_CLEAR_REQUEST:
+			case GM_CLEAR_REQUEST: {
 
 				// Remove all knowledge of any previous or present job
 				// submission, in both the gridmanager and the schedd.
@@ -919,6 +927,11 @@ void EC2Job::doEvaluateState()
 					SetRequestID( NULL );
 				}
 
+				std::string type;
+				if ( jobAd->LookupString( ATTR_EC2_SERVER_TYPE, type ) ) {
+					jobAd->AssignExpr( ATTR_EC2_SERVER_TYPE, "Undefined" );
+				}
+
 				if ( wantRematch ) {
 					dprintf(D_ALWAYS, "(%d.%d) Requesting schedd to rematch job because %s==TRUE\n",
 						procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
@@ -965,8 +978,7 @@ void EC2Job::doEvaluateState()
 				} else {
 					gmState = GM_SAVE_CLIENT_TOKEN;
 				}
-
-				break;				
+			} break;
 
 
 			case GM_PROBE_JOB:

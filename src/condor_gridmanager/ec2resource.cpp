@@ -147,7 +147,7 @@ void EC2Resource::DoPing( time_t& ping_delay, bool& ping_complete, bool& ping_su
 	ping_delay = 0;
 
 	std::string error_code;
-	int rc = gahp->ec2_ping( resourceName, m_public_key_file, m_private_key_file, error_code );
+	int rc = gahp->ec2_vm_server_type( resourceName, m_public_key_file, m_private_key_file, m_serverType, error_code );
 
 	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 		ping_complete = false;
@@ -369,4 +369,19 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
 
 EC2Resource::BatchStatusResult EC2Resource::FinishBatchStatus() {
     return StartBatchStatus();
+}
+
+bool EC2Resource::ClientTokenWorks( EC2Job *job )
+{
+	if ( m_serverType == "Amazon" || m_serverType == "Nimbus" ) {
+		return true;
+	}
+	std::string type;
+	if ( m_serverType.empty() && job &&
+		 job->jobAd->LookupString( ATTR_EC2_SERVER_TYPE, type ) ) {
+		if ( type == "Amazon" || type == "Nimbus" ) {
+			return true;
+		}
+	}
+	return false;
 }

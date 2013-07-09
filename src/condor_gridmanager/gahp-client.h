@@ -597,6 +597,12 @@ class GahpClient : public Service {
 					  std::string privatekeyfile,
 					  std::string & error_code );
 
+		int ec2_vm_server_type( std::string service_url,
+								std::string publickeyfile,
+								std::string privatekeyfile,
+								std::string & server_type,
+								std::string & error_code );
+
 		int ec2_vm_create_keypair( std::string service_url,
 								   std::string publickeyfile,
 								   std::string privatekeyfile,

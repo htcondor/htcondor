@@ -6397,6 +6397,85 @@ int GahpClient::ec2_ping(std::string service_url,
 }
 
 
+// Determine what implementation of EC2 we're talking to
+int GahpClient::ec2_vm_server_type(std::string service_url,
+								   std::string publickeyfile,
+								   std::string privatekeyfile,
+								   std::string & server_type,
+								   std::string & error_code )
+{
+	// we can use "Status All" command to make sure EC2 Server is alive.
+	static const char* command = "EC2_VM_SERVER_TYPE";
+
+	// Generate request line
+	char* esc1 = strdup( escapeGahpString(service_url) );
+	char* esc2 = strdup( escapeGahpString(publickeyfile) );
+	char* esc3 = strdup( escapeGahpString(privatekeyfile) );
+
+	std::string reqline;
+	formatstr( reqline, "%s %s %s", esc1, esc2, esc3 );
+	const char *buf = reqline.c_str();
+
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	// The result should look like:
+	//		seq_id 0 server_type
+	//		seq_id 1
+	//		seq_id error_code error_string
+	if ( result ) {
+		int rc = 0;
+		if ( result->argc == 2 ) {
+			rc = atoi(result->argv[1]);
+			if ( rc == 0 ) {
+				EXCEPT( "Bad %s result", command );
+				rc = 1;
+			} else {
+				error_string = "";
+			}
+		} else if ( result->argc == 3 ) {
+			rc = atoi(result->argv[1]);
+			server_type = result->argv[2];
+		} else if ( result->argc == 4 ) {
+			// get the error code
+			rc = atoi( result->argv[1] );
+			error_code = result->argv[2];
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+
 // Create and register SSH keypair
 int GahpClient::ec2_vm_create_keypair( std::string service_url,
 									   std::string publickeyfile,
