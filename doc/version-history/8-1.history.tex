@@ -42,8 +42,9 @@ See page~\pageref{sec:Config-gangliad} for more information.
 at sites that do not observer daylight savings times.
 \Ticket{2898}
 
-\item Fixed a typo in \Condor{q} output.
-\Ticket{3703}
+\item \Condor{q}, \Condor{rm}, \Condor{status} and \Condor{qedit} are now more consistent
+in the way the handle \Opt{-constraint}.
+\Ticket{1156}
 
 \end{itemize}
 
@@ -84,6 +85,9 @@ temporary NIS or LDAP failure).
 \Condor{status} \Opt{-constraint} was given a constraint that could not
 be parsed.
 \Ticket{1319}
+
+\item Fixed a typo in \Condor{q} output.
+\Ticket{3703}
 
 \end{itemize}
 
