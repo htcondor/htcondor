@@ -1174,6 +1174,13 @@ PREEN_ARGS			= -m -r
 ##  COLLECTOR_HOST, a useful technique for personal Condor installs.
 COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
 
+##
+##  Conventional HTCondor installations start up as root, and can thus
+##  set their own file descriptor limit.  Upping the collector's doesn't
+##  hurt anything and ameliorates a common scalability problem.
+##
+# COLLECTOR_MAX_FILE_DESCRIPTORS = 10240
+
 
 ##--------------------------------------------------------------------
 ##  condor_negotiator
@@ -1559,6 +1566,14 @@ SCHEDD_DAEMON_AD_FILE = $(SPOOL)/.schedd_classad
 ## periodic job actions given by the user in the submit file.
 ## (Currently, these are periodic_hold, periodic_release, and periodic_remove.)
 #PERIODIC_EXPR_INTERVAL = 60
+
+##
+##  Conventional HTCondor installations start up as root, and can thus
+##  set their own file descriptor limit.  Upping the schedd's limit has
+##  some minor downsides (larger buffers passed to select() and the like), 
+##  but upping it makes a class of difficult-to-debug problems much rarer.
+##
+# SCHEDD_MAX_FILE_DESCRIPTORS = 4096
 
 ######
 ## Queue management settings:

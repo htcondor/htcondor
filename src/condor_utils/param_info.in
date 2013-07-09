@@ -11162,3 +11162,35 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,schedd
 id=600
+
+[COLLECTOR_MAX_FILE_DESCRIPTORS]
+aliases=
+default=10240
+version=0.0.0
+range=0,
+state=default
+type=int
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=Collector Max File Descriptors
+usage=Set the limit on file descriptor usage for the collector.
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=
+id=616
+
+[SCHEDD_MAX_FILE_DESCRIPTORS]
+aliases=
+default=4096
+version=0.0.0
+range=0,
+state=default
+type=int
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=Schedd Max File Descriptors
+usage=Set the limit on file descriptor usage for the scheduler.
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=
+id=617
