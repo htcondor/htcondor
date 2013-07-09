@@ -855,6 +855,9 @@ delete_passwd_cache() {
 
 #define ROOT 0
 
+#define NOT_IN_SET_PRIV 2
+static int _setpriv_dologging = NOT_IN_SET_PRIV;
+
 static uid_t CondorUid, UserUid, RealCondorUid, OwnerUid;
 static gid_t CondorGid, UserGid, RealCondorGid, OwnerGid;
 static int CondorIdsInited = FALSE;
@@ -903,6 +906,12 @@ delete_passwd_cache() {
 	pcache_ptr = NULL;
 }
 
+// This function can be called from _set_priv(). Normally, _set_priv()
+// and its callees need to be careful about calling dprintf() and
+// changing memory in certain instances (based on the dologging
+// parameter). init_condor_ids() is only called once and currently,
+// it doesn't happen in any of the sensitive situations (called from
+// dprintf() or from child process between clone()/fork() and exec()).
 void
 init_condor_ids()
 {
@@ -1301,15 +1310,20 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 	priv_state PrevPrivState = CurrentPrivState;
 	if (s == CurrentPrivState) return s;
 	if (CurrentPrivState == PRIV_USER_FINAL) {
-		dprintf(D_ALWAYS,
-				"warning: attempted switch out of PRIV_USER_FINAL\n");
+		if ( dologging ) {
+			dprintf(D_ALWAYS,
+					"warning: attempted switch out of PRIV_USER_FINAL\n");
+		}
 		return PRIV_USER_FINAL;
 	}
 	if (CurrentPrivState == PRIV_CONDOR_FINAL) {
-		dprintf(D_ALWAYS,
-				"warning: attempted switch out of PRIV_CONDOR_FINAL\n");
+		if ( dologging ) {
+			dprintf(D_ALWAYS,
+					"warning: attempted switch out of PRIV_CONDOR_FINAL\n");
+		}
 		return PRIV_CONDOR_FINAL;
 	}
+	int old_logging = _setpriv_dologging;
 	CurrentPrivState = s;
 
 	if (can_switch_ids()) {
@@ -1345,7 +1359,9 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 		case PRIV_UNKNOWN:		/* silently ignore */
 			break;
 		default:
-			dprintf( D_ALWAYS, "set_priv: Unknown priv state %d\n", (int)s);
+			if ( dologging ) {
+				dprintf( D_ALWAYS, "set_priv: Unknown priv state %d\n", (int)s);
+			}
 		}
 	}
 	if( dologging == NO_PRIV_MEMORY_CHANGES ) {
@@ -1366,6 +1382,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 		log_priv(PrevPrivState, CurrentPrivState, file, line);
 	}
 
+	_setpriv_dologging = old_logging;
 	return PrevPrivState;
 }	
 
@@ -1528,7 +1545,9 @@ int
 set_user_euid()
 {
 	if( !UserIdsInited ) {
-		dprintf(D_ALWAYS, "set_user_euid() called when UserIds not inited!\n");
+		if ( _setpriv_dologging ) {
+			dprintf(D_ALWAYS, "set_user_euid() called when UserIds not inited!\n");
+		}
 		return -1;
 	}
 
@@ -1540,7 +1559,9 @@ int
 set_user_egid()
 {
 	if( !UserIdsInited ) {
-		dprintf(D_ALWAYS, "set_user_egid() called when UserIds not inited!\n");
+		if ( _setpriv_dologging ) {
+			dprintf(D_ALWAYS, "set_user_egid() called when UserIds not inited!\n");
+		}
 		return -1;
 	}
 	
@@ -1568,7 +1589,9 @@ int
 set_user_ruid()
 {
 	if( !UserIdsInited ) {
-		dprintf(D_ALWAYS, "set_user_ruid() called when UserIds not inited!\n");
+		if ( _setpriv_dologging ) {
+			dprintf(D_ALWAYS, "set_user_ruid() called when UserIds not inited!\n");
+		}
 		return -1;
 	}
 
@@ -1580,7 +1603,9 @@ int
 set_user_rgid()
 {
 	if( !UserIdsInited ) {
-		dprintf(D_ALWAYS, "set_user_rgid() called when UserIds not inited!\n");
+		if ( _setpriv_dologging ) {
+			dprintf(D_ALWAYS, "set_user_rgid() called when UserIds not inited!\n");
+		}
 		return -1;
 	}
 
@@ -1621,8 +1646,10 @@ int
 set_owner_euid()
 {
 	if( !OwnerIdsInited ) {
-		dprintf( D_ALWAYS,
-				 "set_owner_euid() called when OwnerIds not inited!\n" );
+		if ( _setpriv_dologging ) {
+			dprintf( D_ALWAYS,
+					 "set_owner_euid() called when OwnerIds not inited!\n" );
+		}
 		return -1;
 	}
 	return SET_EFFECTIVE_UID(OwnerUid);
@@ -1633,8 +1660,10 @@ int
 set_owner_egid()
 {
 	if( !OwnerIdsInited ) {
-		dprintf( D_ALWAYS,
-				 "set_owner_egid() called when OwnerIds not inited!\n" );
+		if ( _setpriv_dologging ) {
+			dprintf( D_ALWAYS,
+					 "set_owner_egid() called when OwnerIds not inited!\n" );
+		}
 		return -1;
 	}
 	
