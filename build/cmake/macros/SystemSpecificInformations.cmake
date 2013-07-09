@@ -154,7 +154,7 @@ if(UNIX)
       endif(LINUX_ISSUE MATCHES "Ubuntu")		
       # Debian case
       if(LINUX_ISSUE MATCHES "Debian")
-        string(REGEX MATCH "Debian .*ux ([0-9]+\\.[0-9]+)" DEBIAN "${LINUX_ISSUE}")
+        string(REGEX MATCH "Debian .*ux ([0-9]+(\\.[0-9]+)?)" DEBIAN "${LINUX_ISSUE}")
         set(LINUX_NAME "Debian")
 	set(LINUX_VER "${CMAKE_MATCH_1}")        
 	set(SYSTEM_NAME "Debian-${CMAKE_MATCH_1}")
