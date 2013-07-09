@@ -3131,14 +3131,7 @@ obtainAdsFromCollector (
 			OptimizeMachineAdForMatchmaking( ad );
 
 			startdAds.Insert(ad);
-		} else if( !strcmp(GetMyTypeName(*ad),SUBMITTER_ADTYPE) ||
-				   ( !strcmp(GetMyTypeName(*ad),SCHEDD_ADTYPE) &&
-					 !ad->LookupExpr(ATTR_NUM_USERS) ) ) {
-				// CRUFT: Before 7.3.2, submitter ads had a MyType of
-				//   "Scheduler". The only way to tell the difference
-				//   was that submitter ads didn't have ATTR_NUM_USERS.
-				//   Before 7.7.3, submitter ads for parallel universe
-				//   jobs had a MyType of "Scheduler".
+		} else if( !strcmp(GetMyTypeName(*ad),SUBMITTER_ADTYPE) ) {
 
             MyString subname;
             if (!ad->LookupString(ATTR_NAME, subname)) {
