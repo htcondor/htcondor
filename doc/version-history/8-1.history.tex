@@ -80,6 +80,11 @@ OS reported that a job owner's account didn't exist (e.g. due to a
 temporary NIS or LDAP failure).
 \Ticket{3723}
 
+\item Fixed a bug that resulted in a misleading error message when
+\Condor{status} \Opt{-constraint} was given a constraint that could not
+be parsed.
+\Ticket{1319}
+
 \end{itemize}
 
 \noindent Known Bugs:
