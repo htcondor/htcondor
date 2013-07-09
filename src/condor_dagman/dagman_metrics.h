@@ -27,6 +27,11 @@
 #include "MyString.h"
 #include "dag.h"
 
+// Note:  the code i Job::ExecMetrics() and Job::TermAbortMetrics() is
+// not compatible with NOOP nodes, which goofs up the really large DAG
+// test.  wenger 2013-07-09
+#define DISABLE_NODE_TIME_METRICS
+
 class DagmanMetrics {
 public:
 		//TEMPTEMP -- document

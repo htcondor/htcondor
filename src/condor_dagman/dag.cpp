@@ -616,16 +616,20 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				break;
 
 			case ULOG_JOB_ABORTED:
+#if !defined(DISABLE_NODE_TIME_METRICS)
 				job->TermAbortMetrics( event->proc, event->eventTime,
 							_metrics );
+#endif
 				ProcessAbortEvent(event, job, recovery);
 					// Make sure we don't count finished jobs as idle.
 				ProcessNotIdleEvent(job);
 				break;
               
 			case ULOG_JOB_TERMINATED:
+#if !defined(DISABLE_NODE_TIME_METRICS)
 				job->TermAbortMetrics( event->proc, event->eventTime,
 							_metrics );
+#endif
 				ProcessTerminatedEvent(event, job, recovery);
 					// Make sure we don't count finished jobs as idle.
 				ProcessNotIdleEvent(job);
@@ -657,8 +661,10 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				break;
 
 			case ULOG_EXECUTE:
+#if !defined(DISABLE_NODE_TIME_METRICS)
 				job->ExecMetrics( event->proc, event->eventTime,
 							_metrics );
+#endif
 				ProcessNotIdleEvent(job);
 				break;
 
