@@ -309,9 +309,7 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 	int totalNodesRun = _simpleNodesSuccessful + _simpleNodesFailed +
 				_subdagNodesSuccessful + _subdagNodesFailed;
 	fprintf( fp, "    \"total_jobs_run\":%d,\n", totalNodesRun );
-#if !defined(DISABLE_NODE_TIME_METRICS)
 	fprintf( fp, "    \"total_job_time\":%.3lf,\n", _totalNodeJobTime );
-#endif
 
 		// Last item must NOT have trailing comma!
 	fprintf( fp, "    \"dag_status\":%d\n", status );
