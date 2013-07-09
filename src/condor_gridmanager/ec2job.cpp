@@ -159,8 +159,6 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	gahp = NULL;
 	m_group_names = NULL;
 	m_should_gen_key_pair = false;
-	m_keypair_created = false;
-	m_is_openstack = false;
 	
 	// check the public_key_file
 	jobAd->LookupString( ATTR_EC2_ACCESS_KEY_ID, m_public_key_file );
@@ -218,9 +216,6 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	
 	m_vm_check_times = 0;
 
-	// We have to handle job recovery differently for OpenStack
-	jobAd->LookupBool( "IsOpenstack", m_is_openstack );
-
 	// Only generate a keypair if the user asked for one.
 	// Note: We assume that if both the key_pair and key_pair_file
 	//   attributes exist, then we created the keypair in a previous
@@ -228,14 +223,15 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	//   This requires that the user not submit a job with
 	//   both attributes set. There's no reason for the user to do so,
 	//   and condor_submit will not allow it.
+	// Note: We also want to generate the keypair if the client token
+	//   can't be used for failure recovery during submission. But we
+	//   may not know about that until we've pinged the server at least
+	//   once. So we check for that in GM_INIT.
 	jobAd->LookupString( ATTR_EC2_KEY_PAIR, m_key_pair );
 	jobAd->LookupString( ATTR_EC2_KEY_PAIR_FILE, m_key_pair_file );
-	if ( !m_key_pair_file.empty() || m_is_openstack ) {
+	if ( !m_key_pair_file.empty() ) {
 		m_should_gen_key_pair = true;
     }
-	if ( !m_key_pair.empty() && !m_key_pair_file.empty() ) {
-		m_keypair_created = true;
-	}
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start (unless the job is already held).
@@ -489,6 +485,13 @@ void EC2Job::doEvaluateState()
                     }
                 }
 
+				// If we can't rely on the client token for failure
+				// recovery during submission, then we need to use the
+				// old ssh keypair trick.
+				if ( !myResource->ClientTokenWorks( this ) ) {
+					m_should_gen_key_pair = true;
+				}
+
                 // If we're not doing recovery, start with GM_CLEAR_REQUEST.
 				gmState = GM_CLEAR_REQUEST;
 
@@ -542,7 +545,7 @@ void EC2Job::doEvaluateState()
 		    		    	// with 5000 status update requests, which is
 		    		    	// precisely what we're trying to avoid.
     			    		gmState = GM_SUBMITTED;
-						} else if( condorState == REMOVED || m_is_openstack ) {
+						} else if( condorState == REMOVED ) {
 	    			        // We don't know if the corresponding instance
 	    			        // exists or not.  Rather than unconditionally
 	    			        // create it (in GM_START_VM), check to see if
@@ -558,6 +561,21 @@ void EC2Job::doEvaluateState()
 
 
 			case GM_SAVE_CLIENT_TOKEN: {
+				// If we don't know yet what type of server we're talking
+				// to (e.g. all pings have failed because the server's
+				// down), we have to wait here, as that affects how we'll
+				// submit the job.
+				// TODO Allow a condor_hold or condor_rm to break us out
+				//   of here if we haven't issued the gahp command yet.
+				if ( !myResource->ServerTypeQueried() &&
+					 !myResource->hadAuthFailure() ) {
+					dprintf( D_FULLDEBUG, "(%d.%d) Don't know server type yet, waiting...\n", procID.cluster, procID.proc );
+					break;
+				}
+				if ( !myResource->ClientTokenWorks( this ) ) {
+					m_should_gen_key_pair = true;
+				}
+
 				if (m_client_token.empty()) {
 					SetClientToken(build_client_token().c_str());
 				}
@@ -592,12 +610,10 @@ void EC2Job::doEvaluateState()
 				// Here we create the keypair only 
 				// if we need to.  
 				
-                // If we did this before writing the client token, we could
-                // be sure that we the keypair ID we use later actually
-                // exists (even if we crashed between setting the ID
-                // in the job ad and succesfully generating the corresponding
-                // keypair).
-				if ( m_should_gen_key_pair && !m_keypair_created )
+				// We save the client token in the job ad first so
+				// that if we fail and then the user holds or removes
+				// the job, we'll still clean up the keypair properly.
+				if ( m_should_gen_key_pair )
 				{	
 				    rc = gahp->ec2_vm_create_keypair(m_serviceUrl, 
 								     m_public_key_file, 
@@ -611,10 +627,18 @@ void EC2Job::doEvaluateState()
 					    break;
 				    }
 
+					// If the keypair already exists, treat it as a
+					// success. We do this instead of checking whether
+					// the keypair exists during recovery.
+					// Each server type uses a different error message.
+					// Amazon: "InvalidKeyPair.Duplicate"
+					// Eucalyptus: "Keypair already exists"
+					// OpenStack: "KeyPairExists"
+					// Nimbus: No error
 					if ( rc == 0 ||
 						 strstr( gahp->getErrorString(), "KeyPairExists" ) ||
+						 strstr( gahp->getErrorString(), "Keypair already exists" ) ||
 						 strstr( gahp->getErrorString(), "InvalidKeyPair.Duplicate" ) ) {
-						m_keypair_created = true;
 						gmState = gmTargetState;
 				    } else {
 				
@@ -1188,7 +1212,7 @@ void EC2Job::doEvaluateState()
 					|| condorState == COMPLETED
 					|| ( m_client_token.empty() && m_remoteJobId.empty() ) ) {
 
-					if( m_keypair_created && ! m_key_pair.empty() ) {
+					if( m_should_gen_key_pair && ! m_key_pair.empty() ) {
 						rc = gahp->ec2_vm_destroy_keypair( m_serviceUrl,
 									m_public_key_file, m_private_key_file,
 									m_key_pair, gahp_error_code );
