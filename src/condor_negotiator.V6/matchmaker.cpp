@@ -4609,7 +4609,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	}
 
 	// Now insert the claim requirements
-	if (not insertClaimRequirements(request, offer)) {
+	if ( ! insertClaimRequirements(request, offer)) {
 	  return MM_ERROR;
 	}
 
