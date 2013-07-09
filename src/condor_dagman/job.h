@@ -428,11 +428,19 @@ class Job {
 	bool SetCondorID(const CondorID& cid);
 	const CondorID& GetID() const { return _CondorID; }
 
-		//TEMPTEMP -- document
+		/** Update the DAGMan metrics for an execute event.
+			@param proc The proc ID of this event.
+			@param eventTime The time at which this event occurred.
+			@param metrics The DagmanMetrics object to update.
+		*/
 	void ExecMetrics( int proc, const struct tm &eventTime,
 				DagmanMetrics *metrics );
 
-		//TEMPTEMP -- document
+		/** Update the DAGMan metrics for a terminated or aborted event.
+			@param proc The proc ID of this event.
+			@param eventTime The time at which this event occurred.
+			@param metrics The DagmanMetrics object to update.
+		*/
 	void TermAbortMetrics( int proc, const struct tm &eventTime,
 				DagmanMetrics *metrics );
 
@@ -522,7 +530,12 @@ public:
 	bool Release(int proc);
 
 private:
-		//TEMPTEMP -- document
+		/** Clean up memory that's no longer needed once a node has
+			finished.  (Note that this doesn't mean that the Job object
+			is not valid -- it just cleans up some temporary memory.)
+			Also check that we got a consistent set of events for the
+			metrics.
+		*/
 	void Cleanup();
 
 		/** _onHold[proc] is nonzero if the condor job 

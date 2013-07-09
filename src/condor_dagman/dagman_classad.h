@@ -55,16 +55,25 @@ class DagmanClassad {
 				Dag::dag_status dagStatus, bool recovery );
 
   private:
-	//TEMPTEMP -- document
+		/** Initialize metrics information related to our classad.
+		*/
 	void InitializeMetrics();
 
-	//TEMPTEMP -- document
+		/** Open a connection to the schedd.
+			@return Qmgr_connection An opaque connection object -- NULL
+					if connection fails.
+		*/
 	Qmgr_connection *OpenConnection();
 
-	//TEMPTEMP -- document
+		/** Close the given connection to the schedd.
+			@param Qmgr_connection An opaque connection object.
+		*/
 	void CloseConnection( Qmgr_connection *queue );
 
-	//TEMPTEMP -- document
+		/** Set an attribute in this DAGMan's classad.
+			@param attrName The name of the attribute to set.
+			@param attrVal The value of the attribute.
+		*/
 	void SetDagAttribute( const char *attrName, int attrVal );
 
 		// Whether this object is valid.

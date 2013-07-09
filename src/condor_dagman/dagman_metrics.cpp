@@ -182,8 +182,16 @@ DagmanMetrics::Report( int exitCode, Dag::dag_status status )
 		return false;
 	}
 
-//TEMPTEMP -- don't do this on windows or solaris!
-	if ( _sendMetrics ) {
+	bool disabled = false;
+
+#if defined(WIN32)
+	disabled = true;
+#endif
+
+	if ( disabled ) {
+		debug_printf( DEBUG_NORMAL,
+					"Metrics reporting is not available on this platform.\n" );
+	} else if ( _sendMetrics ) {
 		MyString reporterPath;
 		const char* exe = param( "DAGMAN_PEGASUS_REPORT_METRICS" );	
 		if(exe) {

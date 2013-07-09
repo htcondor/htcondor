@@ -147,10 +147,17 @@ class Dag {
     ///
     ~Dag();
 
-		//TEMPTEMP -- document
+		/** Create the DagmanMetrics object for this DAGMan.
+			@param primaryDagFile The primary (first) DAG file specified.
+			@param rescueDagNum The number of the rescue DAG we're
+					running (0 if not running a rescue DAG).
+		*/
 	void CreateMetrics( const char *primaryDagFile, int rescueDagNum );
 
-		//TEMPTEMP -- document
+		/** Report the metrics for this run (if metrics reporting is
+			enabled).
+			@param exitCode The exit code of this DAGMan.
+		*/
 	void ReportMetrics( int exitCode );
 
 	/** Set the _abortOnScarySubmit value -- controls whether we abort
