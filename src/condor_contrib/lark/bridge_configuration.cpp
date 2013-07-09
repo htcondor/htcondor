@@ -429,16 +429,17 @@ BridgeConfiguration::Cleanup() {
 			return 1;
 		}
 		ovs_delete_interface_from_bridge(bridge_name.c_str(), external_device.c_str());
-	}
-    // destroy all qos records in ovsdb
-    {
-    ArgList args;
-    args.AppendArg("ovs-vsctl");
-    args.AppendArg("--");
-    args.AppendArg("--all");
-    args.AppendArg("destroy");
-    args.AppendArg("Queue");
-    RUN_ARGS_AND_LOG(BridgeConfiguration::Cleanup, destroy_qos_record)
+        // destroy all qos records in ovsdb, note that the option "--all"
+        // requires openvswitch with version > 1.8
+        {
+        ArgList args;
+        args.AppendArg("ovs-vsctl");
+        args.AppendArg("--");
+        args.AppendArg("--all");
+        args.AppendArg("destroy");
+        args.AppendArg("Queue");
+        RUN_ARGS_AND_LOG(BridgeConfiguration::Cleanup, destroy_qos_record)
+        }
     }
 
 	return 0;
