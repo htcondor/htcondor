@@ -267,7 +267,6 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 	double endTime = GetTime();
 	double duration = endTime - _startTime;
 
-	//TEMPTEMP -- is this the right open function?
 	FILE *fp = safe_fopen_wrapper_follow( _metricsFile.Value(), "w" );
 	if ( !fp ) {
 		debug_printf( DEBUG_QUIET, "Could not open %s for writing.\n",
@@ -277,9 +276,7 @@ DagmanMetrics::WriteMetricsFile( int exitCode, Dag::dag_status status )
 
 	fprintf( fp, "{\n" );
 	fprintf( fp, "    \"client\":\"%s\",\n", "condor_dagman" );
-		//TEMPTEMP -- I think we just want something like "8.1.0" here...
-	MyString cv = "8.1.0";//TEMPTEMP
-	fprintf( fp, "    \"version\":\"%s\",\n", cv.Value() );
+	fprintf( fp, "    \"version\":\"%s\",\n", GetVersion().Value() );
 	fprintf( fp, "    \"planner\":\"%s\",\n", _plannerName.Value() );
 	fprintf( fp, "    \"planner_version\":\"%s\",\n", _plannerVersion.Value() );
 	fprintf( fp, "    \"type\":\"metrics\",\n" );
@@ -334,10 +331,29 @@ double
 DagmanMetrics::GetTime( const struct tm &eventTime )
 {
 	struct tm tmpTime = eventTime;
-	//TEMPTEMP -- make sure this is okay on Windows
 	time_t result = mktime( &tmpTime );
 
 	return (double)result;
+}
+
+//---------------------------------------------------------------------------
+MyString
+DagmanMetrics::GetVersion()
+{
+	MyString result;
+
+	const char *cv = CondorVersion();
+
+	const char *ptr = cv;
+	while ( *ptr && !isdigit( *ptr ) ) {
+		++ptr;
+	}
+	while ( *ptr && !isspace( *ptr ) ) {
+		result += *ptr;
+		++ptr;
+	}
+
+	return result;
 }
 
 //---------------------------------------------------------------------------

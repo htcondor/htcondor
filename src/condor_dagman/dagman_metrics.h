@@ -64,6 +64,10 @@ private:
 		//TEMPTEMP -- document
 	static double GetTime( const struct tm &eventTime );
 
+		//TEMPTEMP -- document
+	static MyString GetVersion();
+
+		//TEMPTEMP -- document
 	void ParseBraindumpFile();
 
 	static double _startTime;

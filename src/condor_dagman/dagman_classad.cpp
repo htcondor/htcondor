@@ -74,7 +74,6 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 		return;
 	}
 
-	//TEMPTEMP -- do we need to delete queue?
 	Qmgr_connection *queue = OpenConnection();
 	if ( !queue ) {
 		return;

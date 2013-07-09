@@ -423,7 +423,6 @@ class Job {
 	int GetPreSkip() const;
 	
 	int GetCluster() const { return _CondorID._cluster; }
-	//TEMPTEMP -- how do these work for multi-proc nodes???
 	int GetProc() const { return _CondorID._proc; }
 	int GetSubProc() const { return _CondorID._subproc; }
 	bool SetCondorID(const CondorID& cid);
