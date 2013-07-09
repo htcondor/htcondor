@@ -33,7 +33,7 @@ void fill_buf( char *buf, char fill_char, size_t size );
 #include "x_fake_ckpt.h"
 #include "x_waste_second.h"
 
-#if defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212)
+#if defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213)
 
 /* see condor_ckpt/machdep.h about this code */
 #if defined(I386)

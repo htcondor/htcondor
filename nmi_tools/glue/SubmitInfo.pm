@@ -266,7 +266,9 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_Debian7'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @default_build_configure_args,
+								  '-DCLIPPED:BOOL' => 'OFF',
+			},
 			'prereqs'	=> [ ],
 			'xtests'	=>	undef,
 		},
