@@ -1098,10 +1098,13 @@ set_user_ids_implementation( uid_t uid, gid_t gid, const char *username,
 		gid = get_my_gid();
 	}
 
-	if( UserIdsInited && UserUid != uid && !is_quiet ) {
-		dprintf( D_ALWAYS, 
-				 "warning: setting UserUid to %d, was %d previously\n",
-				 uid, UserUid );
+	if( UserIdsInited ) {
+		if ( UserUid != uid && !is_quiet ) {
+			dprintf( D_ALWAYS, 
+					 "warning: setting UserUid to %d, was %d previously\n",
+					 uid, UserUid );
+		}
+		uninit_user_ids();
 	}
 	UserUid = uid;
 	UserGid = gid;
@@ -1332,10 +1335,13 @@ uninit_file_owner_ids()
 int
 set_file_owner_ids( uid_t uid, gid_t gid )
 {
-	if( OwnerIdsInited && OwnerUid != uid  ) {
-		dprintf( D_ALWAYS, 
-				 "warning: setting OwnerUid to %d, was %d previosly\n",
-				 (int)uid, (int)OwnerUid );
+	if( OwnerIdsInited ) {
+		if ( OwnerUid != uid ) {
+			dprintf( D_ALWAYS, 
+					 "warning: setting OwnerUid to %d, was %d previosly\n",
+					 (int)uid, (int)OwnerUid );
+		}
+		uninit_file_owner_ids();
 	}
 	OwnerUid = uid;
 	OwnerGid = gid;
