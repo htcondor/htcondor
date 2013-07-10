@@ -588,25 +588,8 @@ if (NOT WINDOWS)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/wso2/2.1.0)
 
         if (LINUX)
-          if( NOT PROPER )
-            option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
-          else()
-            find_multiple( "ganglia" GANGLIA_FOUND )
-            check_include_files("ganglia.h" HAVE_GANGLIA_H)
-            if( GANGLIA_FOUND AND HAVE_GANGLIA_H )
-              option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
-            else()
-              option(WITH_GANGLIA "Compiling with support for GANGLIA" OFF)
-            endif()
-          endif()
+          option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
         endif(LINUX)
-
-        if( WITH_GANGLIA )
-          # currently, libapr and libconfuse are only needed for ganglia
-	  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/apr/1.4.6)
-	  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/confuse/2.7)
-	  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/ganglia/3.6.0)
-        endif()
 
 	# the following logic if for standard universe *only*
 	if (LINUX AND NOT CLIPPED AND GLIBC_VERSION AND NOT PROPER)
