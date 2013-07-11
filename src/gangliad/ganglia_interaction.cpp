@@ -63,8 +63,8 @@ Ganglia_pool (*Ganglia_pool_create_dl)( Ganglia_pool parent );
 Ganglia_gmond_config (*Ganglia_gmond_config_create_dl)(char *path, int fallback_to_default);
 Ganglia_udp_send_channels (*Ganglia_udp_send_channels_create_dl)(Ganglia_pool p, Ganglia_gmond_config config);
 Ganglia_metric (*Ganglia_metric_create_dl)( Ganglia_pool parent_pool );
-void (*Ganglia_metadata_add_dl)( Ganglia_metric gmetric, char *name, char *value );
-int (*Ganglia_metric_set_dl)( Ganglia_metric gmetric, char *name, char *value, char *type, char *units, unsigned int slope, unsigned int tmax, unsigned int dmax);
+void (*Ganglia_metadata_add_dl)( Ganglia_metric gmetric, char const *name, char const *value );
+int (*Ganglia_metric_set_dl)( Ganglia_metric gmetric, char const *name, char const *value, char const *type, char const *units, unsigned int slope, unsigned int tmax, unsigned int dmax);
 int (*Ganglia_metric_send_dl)( Ganglia_metric gmetric, Ganglia_udp_send_channels send_channels );
 void (*Ganglia_metric_destroy_dl)( Ganglia_metric gmetric );
 
@@ -329,31 +329,21 @@ ganglia_send(Ganglia_pool context, Ganglia_udp_send_channels channels, const cha
     Ganglia_metric metric = (*Ganglia_metric_create_dl)(context);
     if (!metric) return false;
 
-    char * my_group = strdup(group); if (!my_group) return false;
-    char * my_name  = strdup(name);  if (!my_name)  return false;
-    char * my_value = strdup(value); if (!my_value) return false;
-    char * my_units = strdup(units); if (!my_units) return false;
-    char * my_type  = strdup(type);  if (!my_type)  return false;
-	char * my_title = strdup(title ? title : ""); if (!my_title) return false;
-	char * my_desc = strdup(desc ? desc : "");    if (!my_desc)  return false;
-	char * my_spoof_host = strdup(spoof_host ? spoof_host : ""); if (!my_spoof_host)  return false;
-	char * my_cluster = strdup(cluster ? cluster : ""); if(!my_cluster) return false;
-
     int retval = 0;
-	if (!(*Ganglia_metric_set_dl)(metric, my_name, my_value, my_type, my_units, slope, tmax, dmax))
+	if (!(*Ganglia_metric_set_dl)(metric, name, value, type, units, slope, tmax, dmax))
     {
-        (*Ganglia_metadata_add_dl)(metric, const_cast<char*>("GROUP"), my_group);
-		if( *my_title ) {
-			(*Ganglia_metadata_add_dl)(metric, const_cast<char*>("TITLE"), my_title);
+        (*Ganglia_metadata_add_dl)(metric, const_cast<char*>("GROUP"), group);
+		if( title && *title ) {
+			(*Ganglia_metadata_add_dl)(metric, const_cast<char*>("TITLE"), title);
 		}
-		if( *my_desc ) {
-			(*Ganglia_metadata_add_dl)(metric, const_cast<char*>("DESC"), my_desc);
+		if( desc && *desc ) {
+			(*Ganglia_metadata_add_dl)(metric, const_cast<char*>("DESC"), desc);
 		}
-		if( *my_spoof_host ) {
-			(*Ganglia_metadata_add_dl)(metric, const_cast<char*>("SPOOF_HOST"), my_spoof_host);
+		if( spoof_host && *spoof_host ) {
+			(*Ganglia_metadata_add_dl)(metric, const_cast<char*>("SPOOF_HOST"), spoof_host);
 		}
-		if( *my_cluster ) {
-			(*Ganglia_metadata_add_dl)(metric, const_cast<char*>("CLUSTER"), my_cluster);
+		if( cluster && *cluster ) {
+			(*Ganglia_metadata_add_dl)(metric, const_cast<char*>("CLUSTER"), cluster);
 		}
         if ((*Ganglia_metric_send_dl)(metric, channels))
         {
@@ -364,14 +354,6 @@ ganglia_send(Ganglia_pool context, Ganglia_udp_send_channels channels, const cha
         retval = 3;
     }
 	(*Ganglia_metric_destroy_dl)(metric);
-    free(my_group);
-    free(my_name);
-    free(my_value);
-    free(my_units);
-    free(my_type);
-	free(my_title);
-	free(my_desc);
-	free(my_spoof_host);
-	free(my_cluster);
+
     return retval==0;
 }
