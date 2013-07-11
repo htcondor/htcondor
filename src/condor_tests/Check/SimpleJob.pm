@@ -88,6 +88,7 @@ sub RunCheck
 	 
 	#print "Checking duration being passsed to RunCheck <$args{duration}>\n";
     my $execute_fn = $args{on_execute} || $dummy;
+    my $hold_fn = $args{on_hold} || $dummy;
     my $suspended_fn = $args{on_suspended} || $dummy;
     my $unsuspended_fn = $args{on_unsuspended} || $dummy;
     my $disconnected_fn = $args{on_disconnected} || $dummy;
@@ -122,6 +123,9 @@ sub RunCheck
 	}
 	if( exists $args{on_evictedwithrequeue} ) {
     	CondorTest::RegisterEvictedWithRequeue( $testname, $evicted__wreqfn );
+	}
+	if( exists $args{on_hold} ) {
+    	CondorTest::RegisterHold( $testname, $hold_fn );
 	}
 	if( exists $args{on_evicted} ) {
     	CondorTest::RegisterEvicted( $testname, $evicted_fn );
