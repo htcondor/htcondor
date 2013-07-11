@@ -106,13 +106,9 @@ universe.
 
 \begin{itemize}
 
-\item Fixed a bug that prevented jobs with an invalid \SubmitCmd{ec2\_keypair}
-from being removed.
-\Ticket{3485}
-
 \item Fixed a bug that caused \Condor{status} \Opt{-submitters} to report twice
-as many jobs running as were actually running. This bug appeared in 7.9.6 and
-8.0.0.
+as many jobs running as were actually running. 
+This bug appeared in HTCondor versions 7.9.6 and 8.0.0.
 \Ticket{3713}
 
 \item Fixed a bug with hierarchical group quotas in the \Condor{negotiator}
@@ -146,14 +142,6 @@ It is required in order to run the \Condor{gather\_info} script.
 support a list of CCB servers.  Only the first one in the list was used.
 \Ticket{3699}
 
-\item Fixed a memory leak and potential crash in the \Condor{gridmanager}
-when requests to an EC2 service fail.
-\Ticket{3701}
-
-\item Fixed a bug in the \Condor{gridmanager} that can cause EC2 jobs to be
-submitted a second time during recovery.
-\Ticket{3705}
-
 \item Fixed a bug that caused some communication layer log messages 
 to end with binary characters.
 \Ticket{3706}
@@ -166,11 +154,27 @@ on Mac OS X when many processes are created in a short period of time.
 after an upgrade from HTCondor version 7.8.
 \Ticket{3707}
 
-\item Fixed a bug that caused \Condor{q} \Opt{-dag} \Opt{-run}.to print garbage.
+\item Fixed a bug that caused the command 
+\begin{verbatim}
+  condor_q -dag -run
+\end{verbatim}
+to print garbage.
 \Ticket{3578}
 
-\item Fixed a memory leak in the \Condor{gridmanager} triggered when
-submitting grid-type ec2 jobs.
+\item Fixed a bug that prevented jobs with an invalid \SubmitCmd{ec2\_keypair}
+from being removed.
+\Ticket{3485}
+
+\item Fixed a memory leak and potential crash in the \Condor{gridmanager}
+when requests to an EC2 service fail.
+\Ticket{3701}
+
+\item Fixed a bug in the \Condor{gridmanager} that can cause EC2 jobs to be
+submitted a second time during recovery.
+\Ticket{3705}
+
+\item Fixed a memory leak in the \Condor{gridmanager} that was triggered when
+submitting EC2 grid universe jobs.
 \Ticket{3720}
 
 \end{itemize}
