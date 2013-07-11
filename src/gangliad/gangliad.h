@@ -51,6 +51,7 @@ class GangliaD: public StatsD {
 	Ganglia_pool m_ganglia_context;
 	Ganglia_gmond_config m_ganglia_config;
 	Ganglia_udp_send_channels m_ganglia_channels;
+	bool m_ganglia_noop;
 };
 
 #endif

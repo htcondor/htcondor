@@ -237,7 +237,8 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 				// TJ: for some reason get_peer_version() is not set here, so I have to assume that the other side
 				// *might* be 7.9.6 and tolerate the missing url prefix.
 				const CondorVersionInfo *vi = r->get_peer_version();
-				dprintf(D_SYSCALLS,"File %s maps to url %s, peer version is %s\n", path, url, vi ? vi->get_version_string() : "NULL");
+				dprintf(D_SYSCALLS | D_VERBOSE,"File %s maps to url %s, peer version is %d.%d.%d\n", path, url, 
+					    vi ? vi->getMajorVer() : 0, vi ? vi->getMinorVer() : 0, vi ? vi->getSubMinorVer() : 0);
 				if (vi && ! vi->built_since_version(7,9,6)) {
 					EXCEPT("File %s maps to url %s, which I don't know how to open.\n",path,url);
 				}

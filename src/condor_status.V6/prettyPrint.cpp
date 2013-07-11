@@ -222,18 +222,6 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 	adList.Open();
 	while ((ad = adList.Next())) {
 		if (!wantOnlyTotals) {
-				// CRUFT: Before 7.3.2, submitter ads had a MyType of
-				//   "Scheduler". The only way to tell the difference
-				//   was that submitter ads didn't have ATTR_NUM_USERS.
-				//   Coerce MyStype to "Submitter" for ads coming from
-				//   these older schedds. This used to be done inside
-				//   the ClassAd library.
-				//   Before 7.7.3, submitter ads for parallel universe
-				//   jobs had a MyType of "Scheduler".
-			if ( !strcmp( GetMyTypeName(*ad), SCHEDD_ADTYPE ) &&
-				 !ad->LookupExpr( ATTR_NUM_USERS ) ) {
-				SetMyTypeName( *ad, SUBMITTER_ADTYPE );
-			}
 			switch (ppStyle) {
 			  case PP_STARTD_NORMAL:
 				if (absentMode) {

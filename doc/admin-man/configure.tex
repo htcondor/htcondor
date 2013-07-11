@@ -1272,8 +1272,8 @@ File System Configuration File Entries''.
   and group information in large pools. In order to avoid this problem,
   HTCondor caches UID and group information internally. This integer value allows
   pool administrators to specify (in seconds) how long HTCondor should wait
-  until refreshes a cache entry. The default is set to 300 seconds, or
-  5 minutes, plus a random number of seconds between 0 and 60 to avoid
+  until refreshes a cache entry. The default is set to 72000 seconds, or
+  20 hours, plus a random number of seconds between 0 and 60 to avoid
   having lots of processes refreshing at the same time.
   This means that if a pool administrator updates the user
   or group database (for example, \File{/etc/passwd} or \File{/etc/group}),
@@ -6856,6 +6856,7 @@ These macros affect \Condor{preen}.
   directory. There is no default value. \Condor{preen} will add to the
   list files and directories that are normally present in the
   \MacroUNI{SPOOL} directory.
+  A single wildcard is permitted in each entry.
   
 \label{param:InvalidLogFiles}
 \item[\Macro{INVALID\_LOG\_FILES}]
@@ -9392,6 +9393,17 @@ in section~\ref{sec:DAG-configuration}.
   rather than thousands of notifications from each of the jobs submitted by
   \Condor{dagman}. 
 
+\label{param:DAGmanPegasusReportMetrics}
+\item[\Macro{DAGMAN\_PEGASUS\_REPORT\_METRICS}]
+The path the the \Condor{dagman\_metrics\_reporter} executable.  Defaults to
+\Macro{\$(LIBEXEC)/condor\_dagman\_metrics\_reporter}.
+
+\label{param:DAGmanPegasusReportTimeout}
+\item[\Macro{DAGMAN\_PEGASUS\_REPORT\_TIMEOUT}]
+This integer value defaults to 100 seconds.  The
+\Condor{dagman\_metrics\_reporter} will exit after successfully contacting all
+its metrics servers or after it has executed for more than this duration of
+time.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -11682,6 +11694,36 @@ are published to the \Condor{collector}.
 \label{param:GangliaConfig}
 \item[\Macro{GANGLIA\_CONFIG}]
   Path to the Ganglia configuration file.  The default is \File{/etc/ganglia/gmond.conf}.
+
+\label{param:GangliaGmetric}
+\item[\Macro{GANGLIA\_GMETRIC}]
+  Full path of the \Prog{gmetric} executable to use.  If none is
+  specified, \File{libganglia} will be used instead if possible,
+  because the library interface is more efficient than invoking
+  \Prog{gmetric}.  Some versions of \File{libganglia} are not
+  compatible.  When failure to use \File{libganglia} is detected,
+  \Prog{gmetric} will be used if it can be found in HTCondor's
+  \Env{PATH}.
+
+\label{param:GangliaLib}
+\item[\Macro{GANGLIA\_LIB}]
+  Full path of the \File{libganglia} shared library to use.  If none is
+  specified, and \Macro{GANGLIA\_GMETRIC} is also not specified, then
+  a search for \File{libganglia} will be performed in the directories listed
+  in \Macro{GANGLIA\_LIB\_PATH} or \Macro{GANGLIA\_LIB64\_PATH}.  The
+  special value NOOP indicates that \Condor{gangliad} should not
+  publish statistics to Ganglia but should otherwise go through all
+  the motions it normally does.
+
+\label{param:GangliaLibPath}
+\item[\Macro{GANGLIA\_LIB\_PATH}]
+  Comma-separated list of directories in which to search for \File{libganglia} if
+  \Macro{GANGLIA\_LIB} is not configured.  This is used in 32-bit versions of HTCondor.
+
+\label{param:GangliaLib64Path}
+\item[\Macro{GANGLIA\_LIB64\_PATH}]
+  Comma-separated list of directories in which to search for \File{libganglia} if
+  \Macro{GANGLIA\_LIB} is not configured.  This is used in 64-bit versions of HTCondor.
 
 \label{param:GangliadCluster}
 \item[\Macro{GANGLIAD\_DEFAULT\_CLUSTER}]

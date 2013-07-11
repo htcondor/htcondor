@@ -19,13 +19,12 @@
 ##
 ##**************************************************************
 
-
+use File::Temp;
 
 # Simple perl script to find the arch/opsys of the local system, and
 # create a symlink to the file given as an argument which contains
 # them.  
 # 6/15/00 - Written by Derek Wright <wright@cs.wisc.edu>
-
 
 $target = shift || die "Must specify a target name\n";
 
@@ -35,8 +34,18 @@ $ENV{PATH} = "$ENV{PATH}:../condor_tools";
 $ENV{PATH} = "$ENV{PATH}:../../condor_tools";
 $ENV{PATH} = "$ENV{PATH}:../../../condor_tools";
 
+# Since arch and opsys are generated values, we neither need nor
+# want a condor_config file.  Generate an empty temporary file
+# (because /dev/null doesn't exist everywhere) and use that.
+
+my( $fh, $fname ) = File::Temp::tempfile();
+close( $fh );
+$ENV{CONDOR_CONFIG} = $fname;
+
 $arch = `condor_config_val arch`;
 $opsys = `condor_config_val opsys`;
+
+unlink( $fname );
 
 chomp($arch);
 chomp($opsys);

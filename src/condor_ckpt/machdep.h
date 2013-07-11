@@ -44,7 +44,7 @@
 #	define LONGJMP longjmp
 	extern "C" int kill( pid_t, int );
 
-#	if defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212)
+#	if defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213)
 	/* glibc27 (starting with 26, but we leapt over that revision in our stdunv
 		support) encrypts pointer values in the glibc runtime, such as the stack
 		pointer in the jmp_buf. This piece of code is the algortihm used in 

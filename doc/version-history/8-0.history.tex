@@ -16,15 +16,15 @@ New features will be added in the 8.1.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-8-0-1}Version 8.0.1}
+\subsection*{\label{sec:New-8-0-2}Version 8.0.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item HTCondor version 8.0.1 not yet released.
-%\item HTCondor version 8.0.1 released on Month Date, 2013.
+\item HTCondor version 8.0.2 not yet released.
+%\item HTCondor version 8.0.2 released on Month Date, 2013.
 
 \end{itemize}
 
@@ -48,6 +48,67 @@ The details of each version are described below.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-0-1}Version 8.0.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.0.1 not yet released.
+%\item HTCondor version 8.0.1 released on Month Date, 2013.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Add 64-bit Debian 7 as a supported platform, including the standard
+universe.
+\Ticket{3665}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug that prevented jobs with an invalid \SubmitCmd{ec2\_keypair}
+from being removed.
+\Ticket{3485}
 
 \item Fixed a bug that caused \Condor{status} \Opt{-submitters} to report twice
 as many jobs running as were actually running. This bug appeared in 7.9.6 and
@@ -104,6 +165,13 @@ on Mac OS X when many processes are created in a short period of time.
 \item Removed a bug that caused \Condor{dagman} to have problems restarting
 after an upgrade from HTCondor version 7.8.
 \Ticket{3707}
+
+\item Fixed a bug that caused \Condor{q} \Opt{-dag} \Opt{-run}.to print garbage.
+\Ticket{3578}
+
+\item Fixed a memory leak in the \Condor{gridmanager} triggered when
+submitting grid-type ec2 jobs.
+\Ticket{3720}
 
 \end{itemize}
 
