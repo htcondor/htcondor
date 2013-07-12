@@ -40,6 +40,7 @@
  */
 
 void *libganglia = NULL;
+std::string libganglia_libfile;
 
 std::string gmetric_path;
 std::string gmetric_conf_file;
@@ -84,6 +85,10 @@ bool
 ganglia_load_library(const char *libfile)
 {
 	if( libganglia ) {
+		if( libganglia_libfile == libfile ) {
+			return true; // already have this library loaded
+		}
+
 		dlclose(libganglia);
 		libganglia = NULL;
 	}
@@ -93,6 +98,7 @@ ganglia_load_library(const char *libfile)
 		dprintf(D_ALWAYS,"Failed to load %s: %s\n",libfile,e ? e : "");
 		return false;
 	}
+	libganglia_libfile = libfile;
 
 	char const *s = NULL;
 	if( !(dlsym_assign(libganglia,(s="Ganglia_pool_destroy"),(void **)&Ganglia_pool_destroy_dl)) ||
@@ -159,16 +165,9 @@ ganglia_init_gmetric(char const *_gmetric_path)
 	return true;
 }
 
-bool
-ganglia_reconfig(const char *config_file, Ganglia_pool *context, Ganglia_gmond_config *config, Ganglia_udp_send_channels *send_channels)
+void
+ganglia_config_destroy(Ganglia_pool *context, Ganglia_gmond_config *config, Ganglia_udp_send_channels *send_channels)
 {
-	gmetric_conf_file = config_file ? config_file : "";
-	if( !libganglia ) {
-		if( !gmetric_path.empty() ) {
-			return true;
-		}
-		return false;
-	}
     if (*config)
     {
         // This function is defined in the header but does not actually exist in the library.
@@ -186,6 +185,20 @@ ganglia_reconfig(const char *config_file, Ganglia_pool *context, Ganglia_gmond_c
         (*Ganglia_pool_destroy_dl)(*context);
         *context = NULL;
     }
+}
+
+bool
+ganglia_reconfig(const char *config_file, Ganglia_pool *context, Ganglia_gmond_config *config, Ganglia_udp_send_channels *send_channels)
+{
+	gmetric_conf_file = config_file ? config_file : "";
+	if( !libganglia ) {
+		if( !gmetric_path.empty() ) {
+			return true;
+		}
+		return false;
+	}
+
+	ganglia_config_destroy(context,config,send_channels);
 
     *context = (*Ganglia_pool_create_dl)(NULL);
     if (!*context)
