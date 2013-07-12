@@ -49,6 +49,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that prevented per-slot STARTD\_ATTRS from being set
+correctly with partitionable slots with the SLOTX\_ prefix.
+\Ticket{3726}
+
 \item Fixed a bug that caused \Condor{status} \Opt{-submitters} to report twice
 as many jobs running as were actually running. 
 This bug appeared in HTCondor versions 7.9.6 and 8.0.0.
