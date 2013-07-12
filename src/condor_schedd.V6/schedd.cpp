@@ -11623,7 +11623,7 @@ Scheduler::invalidate_ads()
 					  ATTR_REQUIREMENTS,
 					  ATTR_SCHEDD_NAME, Name,
 					  ATTR_NAME, owner.Value() );
-		cad->InsertOrUpdate( line.Value() );
+		cad->Insert( line.Value() );
 
 		Daemon* d;
 		if( FlockCollectors && FlockLevel > 0 ) {

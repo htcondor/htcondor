@@ -3260,7 +3260,7 @@ DedicatedScheduler::makeGenericAdFromJobAd(ClassAd *job)
 	buf.formatstr( "%s = (Target.DedicatedScheduler == \"%s\") && "
 				 "(Target.RemoteOwner =!= \"%s\") && (%s)", 
 				 ATTR_REQUIREMENTS, name(), name(), rhs );
-	req->InsertOrUpdate( buf.Value() );
+	req->Insert( buf.Value() );
 
 	return req;
 }

@@ -108,11 +108,6 @@ class ClassAd : public classad::ClassAd
 		 */
 	int Insert(const char *str);
 
-		/** Insert an attribute/value into the ClassAd 
-		 *  @param expr A string of the form "Attribute = Value"
-		 */
-	int InsertOrUpdate(const char *expr) { return Insert(expr); }
-
 		/* Insert an attribute/value into the Classad
 		 */
 	int AssignExpr(char const *name,char const *value);

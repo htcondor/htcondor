@@ -599,14 +599,14 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 		// Publish the info we care about into the ad.
 	char buf[200];
 	sprintf( buf, "%s=%lu", ATTR_JOB_REMOTE_SYS_CPU, usage->sys_cpu_time );
-	ad->InsertOrUpdate( buf );
+	ad->Insert( buf );
 	sprintf( buf, "%s=%lu", ATTR_JOB_REMOTE_USER_CPU, usage->user_cpu_time );
-	ad->InsertOrUpdate( buf );
+	ad->Insert( buf );
 
 	sprintf( buf, "%s=%lu", ATTR_IMAGE_SIZE, usage->max_image_size );
-	ad->InsertOrUpdate( buf );
+	ad->Insert( buf );
 	sprintf( buf, "%s=%lu", ATTR_RESIDENT_SET_SIZE, usage->total_resident_set_size );
-	ad->InsertOrUpdate( buf );
+	ad->Insert( buf );
 
 	std::string memory_usage;
 	if (param(memory_usage, "MEMORY_USAGE_METRIC", "((ResidentSetSize+1023)/1024)")) {
@@ -621,11 +621,11 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 
 	if (usage->block_read_bytes >= 0) {
 		sprintf( buf, "%s=%lu", ATTR_BLOCK_READ_KBYTES, usage->block_read_bytes/1024 );
-		ad->InsertOrUpdate( buf );
+		ad->Insert( buf );
 	}
 	if (usage->block_write_bytes >= 0) {
 		sprintf( buf, "%s=%lu", ATTR_BLOCK_WRITE_KBYTES, usage->block_write_bytes/1024 );
-		ad->InsertOrUpdate( buf );
+		ad->Insert( buf );
 	}
 
 		// Update our knowledge of how many processes the job has

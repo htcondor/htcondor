@@ -1069,7 +1069,7 @@ Resource::publish_for_update ( ClassAd *public_ad ,ClassAd *private_ad )
 {
     this->publish( public_ad, A_ALL_PUB );
     if( vmapi_is_usable_for_condor() == FALSE ) {
-        public_ad->InsertOrUpdate( "Start = False" );
+        public_ad->Insert( "Start = False" );
     }
 
     if( vmapi_is_virtual_machine() == TRUE ) {

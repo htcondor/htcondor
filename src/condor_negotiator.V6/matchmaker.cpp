@@ -3021,7 +3021,7 @@ obtainAdsFromCollector (
 				ASSERT( newReqs != NULL );
 				snprintf(newReqs, length+15, "Saved%s = %s", 
 							ATTR_REQUIREMENTS, subReqs); 
-				ad->InsertOrUpdate(newReqs);
+				ad->Insert(newReqs);
 				free(newReqs);
 				}
 		
@@ -3035,7 +3035,7 @@ obtainAdsFromCollector (
 
 				snprintf(newReqs, length+15, "%s = %s", ATTR_REQUIREMENTS, 
 							subReqs); 
-				ad->InsertOrUpdate(newReqs);
+				ad->Insert(newReqs);
 
 				free(newReqs);
 				
@@ -3806,7 +3806,7 @@ updateNegCycleEndTime(time_t startTime, ClassAd *submitter) {
 	submitter->LookupInteger(ATTR_TOTAL_TIME_IN_CYCLE, oldTotalTime);
 	buffer.formatstr("%s = %ld", ATTR_TOTAL_TIME_IN_CYCLE, (oldTotalTime + 
 					(endTime - startTime)) );
-	submitter->InsertOrUpdate(buffer.Value());
+	submitter->Insert(buffer.Value());
 }
 
 float Matchmaker::
@@ -4906,7 +4906,7 @@ reeval(ClassAd *ad)
 		
 	cur_matches++;
 	snprintf(buffer, 255, "CurMatches = %d", cur_matches);
-	ad->InsertOrUpdate(buffer);
+	ad->Insert(buffer);
 	if(oldAdEntry) {
 		delete(oldAdEntry->oldAd);
 		oldAdEntry->oldAd = new ClassAd(*ad);
