@@ -1687,7 +1687,7 @@ sub CollectDaemonPids {
 
     my $pidfile = "$logdir/PIDS";
     open(PIDS, '>', $pidfile) or die "Can not create file '$pidfile': $!\n";
-    debug("Master pid: $master\n");
+    #debug("Master pid: $master\n");
     print PIDS "$master MASTER\n";
     foreach my $daemon (keys %pids) {
         debug("\t$daemon pid: $pids{$daemon}\n", $debuglevel);
