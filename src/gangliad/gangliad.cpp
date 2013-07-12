@@ -51,6 +51,7 @@ GangliaD::GangliaD():
 
 GangliaD::~GangliaD()
 {
+	ganglia_config_destroy(&m_ganglia_context,&m_ganglia_config,&m_ganglia_channels);
 }
 
 Metric *
@@ -130,12 +131,21 @@ GangliaD::initAndReconfig()
 			}
 		}
 		if( !libname.empty() ) {
-			dprintf(D_ALWAYS,"Loading libganglia %s\n",libname.c_str());
-			if( ganglia_load_library(libname.c_str()) ) {
-				libganglia_initialized = true;
+			if( libname == m_ganglia_libname ) {
+				dprintf(D_ALWAYS,"Already loaded libganglia %s\n",libname.c_str());
+				// I have observed instabilities when reloading the library, so
+				// it is best to not do that unless it is really necessary.
 			}
-			else if( gmetric_initialized ) {
-				dprintf(D_ALWAYS,"WARNING: failed to load %s, so gmetric (which is slower) will be used instead.\n",libname.c_str());
+			else {
+				dprintf(D_ALWAYS,"Loading libganglia %s\n",libname.c_str());
+				ganglia_config_destroy(&m_ganglia_context,&m_ganglia_config,&m_ganglia_channels);
+				if( ganglia_load_library(libname.c_str()) ) {
+					libganglia_initialized = true;
+					m_ganglia_libname = libname;
+				}
+				else if( gmetric_initialized ) {
+					dprintf(D_ALWAYS,"WARNING: failed to load %s, so gmetric (which is slower) will be used instead.\n",libname.c_str());
+				}
 			}
 		}
 
