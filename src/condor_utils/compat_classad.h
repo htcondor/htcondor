@@ -370,12 +370,6 @@ class ClassAd : public classad::ClassAd
 	// CopyAttribute(target_attr,target_attr,source_ad).
 	void CopyAttribute(char const *target_attr, classad::ClassAd *source_ad );
 
-    /** Basically just calls an Unparser so we can escape strings
-     *  @param val The string we're escaping stuff in. 
-     *  @return The escaped string.
-     */
-    static char const *EscapeStringValue(char const *val, MyString &buf);
-
     /** Takes the ad this is chained to, copies over all the 
      *  attributes from the parent ad that aren't in this classad
      *  (so attributes in both the parent ad and this ad retain the 
@@ -507,6 +501,12 @@ int sPrintAdAsXML(std::string &output, classad::ClassAd &ad,
  *  @return Returns a malloc'd buffer.
  */
 char* sPrintExpr(const classad::ClassAd &ad, const char* name);
+
+/** Basically just calls an Unparser so we can escape strings
+ *  @param val The string we're escaping stuff in. 
+ *  @return The escaped string.
+ */
+char const *EscapeAdStringValue(char const *val, std::string &buf);
 
 	/** Set the MyType attribute */
 void SetMyTypeName(classad::ClassAd &ad, const char *);

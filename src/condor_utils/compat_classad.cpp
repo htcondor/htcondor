@@ -2209,23 +2209,21 @@ sPrintAdAsXML(std::string &output, classad::ClassAd &ad, StringList *attr_white_
 ///////////// end XML functions /////////
 
 char const *
-ClassAd::EscapeStringValue(char const *val, MyString &buf)
+EscapeAdStringValue(char const *val, std::string &buf)
 {
     if(val == NULL)
         return NULL;
 
     classad::Value tmpValue;
-    string stringToAppeaseUnparse;
     classad::ClassAdUnParser unparse;
 
 	unparse.SetOldClassAd( true );
 
     tmpValue.SetStringValue(val);
-    unparse.Unparse(stringToAppeaseUnparse, tmpValue);
+    unparse.Unparse(buf, tmpValue);
 
-    buf = stringToAppeaseUnparse.c_str();
-	buf = buf.Substr( 1, buf.Length() - 2 );
-    return buf.Value();
+	buf = buf.substr( 1, buf.length() - 2 );
+    return buf.c_str();
 }
 
 void ClassAd::ChainCollapse()

@@ -1092,7 +1092,7 @@ Resource::final_update( void )
 {
 	ClassAd invalidate_ad;
 	MyString line;
-	MyString escaped_name;
+	string escaped_name;
 
 		// Set the correct types
 	SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
@@ -1103,8 +1103,8 @@ Resource::final_update( void )
 	 * if you change here you will need to CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query)
 	 * the IP was added to allow the collector to create a hash key to delete in O(1).
      */
-	 ClassAd::EscapeStringValue( r_name, escaped_name );
-     line.formatstr( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.Value() );
+	 EscapeAdStringValue( r_name, escaped_name );
+     line.formatstr( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.c_str() );
      invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value() );
      invalidate_ad.Assign( ATTR_NAME, r_name );
      invalidate_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());

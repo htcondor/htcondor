@@ -56,10 +56,10 @@ int
 SetAttributeString(int cl, int pr, const char *name, const char *val, SetAttributeFlags_t flags )
 {
 	MyString buf;
-	MyString escape_buf;
+	string escape_buf;
 	int rval;
 
-	val = ClassAd::EscapeStringValue(val,escape_buf);
+	val = EscapeAdStringValue(val,escape_buf);
 
 	buf += '"';
 	buf +=  val;
@@ -96,10 +96,10 @@ SetAttributeStringByConstraint(const char *con, const char *name,
 							 SetAttributeFlags_t flags)
 {
 	MyString buf;
-	MyString escape_buf;
+	string escape_buf;
 	int rval;
 
-	val = ClassAd::EscapeStringValue(val,escape_buf);
+	val = EscapeAdStringValue(val,escape_buf);
 
 	buf += '"';
 	buf +=  val;

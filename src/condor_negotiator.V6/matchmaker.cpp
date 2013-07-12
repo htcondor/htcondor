@@ -4800,7 +4800,8 @@ addRemoteUserPrios( ClassAd	*ad )
 	MyString	remoteUser;
 	MyString	buffer,buffer1,buffer2,buffer3;
 	MyString    slot_prefix;
-	MyString    expr,expr_buffer;
+	MyString    expr;
+	string expr_buffer;
 	float	prio;
 	int     total_slots, i;
 	float     preemptingRank;
@@ -4822,12 +4823,12 @@ addRemoteUserPrios( ClassAd	*ad )
 	{
 		prio = (float) accountant.GetPriority( remoteUser.Value() );
 		ad->Assign(ATTR_REMOTE_USER_PRIO, prio);
-		expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USER_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
+		expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USER_FN_NAME,EscapeAdStringValue(remoteUser.Value(),expr_buffer));
 		ad->AssignExpr(ATTR_REMOTE_USER_RESOURCES_IN_USE,expr.Value());
 		if (getGroupInfoFromUserId(remoteUser.Value(), temp_groupName, temp_groupQuota, temp_groupUsage)) {
 			// this is a group, so enter group usage info
             ad->Assign(ATTR_REMOTE_GROUP, temp_groupName);
-			expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
+			expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,EscapeAdStringValue(remoteUser.Value(),expr_buffer));
 			ad->AssignExpr(ATTR_REMOTE_GROUP_RESOURCES_IN_USE,expr.Value());
 			ad->Assign(ATTR_REMOTE_GROUP_QUOTA,temp_groupQuota);
 		}
@@ -4874,14 +4875,14 @@ addRemoteUserPrios( ClassAd	*ad )
 			ad->Assign(buffer.Value(),prio);
 			buffer.formatstr("%s%s", slot_prefix.Value(), 
 					ATTR_REMOTE_USER_RESOURCES_IN_USE);
-			expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USER_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
+			expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USER_FN_NAME,EscapeAdStringValue(remoteUser.Value(),expr_buffer));
 			ad->AssignExpr(buffer.Value(),expr.Value());
 			if (getGroupInfoFromUserId(remoteUser.Value(), temp_groupName, temp_groupQuota, temp_groupUsage)) {
 				// this is a group, so enter group usage info
 				buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP);
 				ad->Assign( buffer.Value(), temp_groupName );
 				buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP_RESOURCES_IN_USE);
-				expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
+				expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,EscapeAdStringValue(remoteUser.Value(),expr_buffer));
 				ad->AssignExpr( buffer.Value(), expr.Value() );
 				buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP_QUOTA);
 				ad->Assign( buffer.Value(), temp_groupQuota );
