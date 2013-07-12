@@ -1561,38 +1561,6 @@ initFromString( char const *str,MyString *err_msg )
 }
 
 
-int ClassAd::
-initFromStream(Stream& s)
-{
-	if( !getClassAd( &s, *this ) ) {
-		return FALSE;
-	}
-
-		// Reinsert CurrentTime, emulating the special version in old
-		// ClassAds
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
-	}
-
-	return TRUE;
-}
-
-int ClassAd::
-initAttrListFromStream(Stream& s)
-{
-	if( !getClassAdNoTypes( &s, *this ) ) {
-		return FALSE;
-	}
-
-		// Reinsert CurrentTime, emulating the special version in old
-		// ClassAds
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
-	}
-
-	return TRUE;
-}
-
 		// output functions
 int
 fPrintAd( FILE *file, classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )

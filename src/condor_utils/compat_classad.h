@@ -327,17 +327,6 @@ class ClassAd : public classad::ClassAd
 
 	bool initFromString(char const *str,MyString *err_msg=NULL);
 
-		/** Read the old ClassAd from the stream, and fill in this ClassAd.
-		 * @param s the stream
-		 */
-	int initFromStream(Stream& s);
-
-		/** Read the old ClassAd as an old AttrList from the stream,
-		 * and fill in this ClassAd.
-		 * @param s the stream
-		 */
-	int initAttrListFromStream(Stream& s);
-
     void ResetExpr();
 
 	void ResetName();
