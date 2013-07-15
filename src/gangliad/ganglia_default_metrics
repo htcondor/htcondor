@@ -453,6 +453,52 @@
 ]
 
 [
+  Name = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"),"-TotalRunningJobs");
+  Title = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"), " Total Running Jobs");
+  Aggregate = "SUM";
+  Value = RunningJobs;
+  Verbosity = 1;
+  Desc   = strcat("Total number of running jobs from ", ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "group \\1"),"no group"));
+  Units  = "jobs";
+  TargetType = "Submitter";
+  Group  = "HTCondor Accounting Groups";
+]
+[
+  Name = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"),"-TotalIdleJobs");
+  Title = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"), " Total Idle Jobs");
+  Aggregate = "SUM";
+  Value = IdleJobs;
+  Verbosity = 1;
+  Desc   = strcat("Total number of idle jobs from ", ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "group \\1"),"no group"));
+  Units  = "jobs";
+  TargetType = "Submitter";
+  Group  = "HTCondor Accounting Groups";
+]
+[
+  Name = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"),"-TotalHeldJobs");
+  Title = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"), " Total Held Jobs");
+  Aggregate = "SUM";
+  Value = HeldJobs;
+  Verbosity = 1;
+  Desc   = strcat("Total number of held jobs from ", ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "group \\1"),"no group"));
+  Units  = "jobs";
+  TargetType = "Submitter";
+  Group  = "HTCondor Accounting Groups";
+]
+[
+  Name = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"),"-TotalFlockedJobs");
+  Title = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"), " Total Flocked Jobs");
+  Aggregate = "SUM";
+  Value = FlockedJobs;
+  Verbosity = 1;
+  Desc   = strcat("Total number of flocked jobs from ", ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "group \\1"),"no group"));
+  Units  = "jobs";
+  TargetType = "Submitter";
+  Group  = "HTCondor Accounting Groups";
+]
+
+
+[
   Name   = "FileTransferDownloadBytes";
   Derivative = true;
   Title  = "File Transfer Download Bandwidth";
