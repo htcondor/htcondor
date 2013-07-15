@@ -289,24 +289,24 @@ Python 2.6.6 (r266:84292, Jun 18 2012, 09:57:52)
 Type "help", "copyright", "credits" or "license" for more information.
 >>> import htcondor
 >>> import classad
->>> coll = condor.Collector("red-condor.unl.edu")
->>> results = coll.query(condor.AdTypes.Startd, "true", ["Name"])
+>>> coll = htcondor.Collector("red-condor.unl.edu")
+>>> results = coll.query(htcondor.AdTypes.Startd, "true", ["Name"])
 >>> len(results)
 3812
 >>> results[0]
 [ Name = "slot1@red-d20n35"; MyType = "Machine"; TargetType = "Job"; CurrentTime = time() ]
->>> scheddAd = coll.locate(condor.DaemonTypes.Schedd, "red-gw1.unl.edu")
+>>> scheddAd = coll.locate(htcondor.DaemonTypes.Schedd, "red-gw1.unl.edu")
 >>> scheddAd["ScheddIpAddr"]
 '<129.93.239.132:53020>'
->>> schedd = condor.Schedd(scheddAd)
+>>> schedd = htcondor.Schedd(scheddAd)
 >>> results = schedd.query('Owner =?= "cmsprod088"', ["ClusterId", "ProcId"])
 >>> len(results)
 63
 >>> results[0]
 [ MyType = "Job"; TargetType = "Machine"; ServerTime = 1356722353; ClusterId = 674143; ProcId = 0; CurrentTime = time() ]
->>> condor.param["COLLECTOR_HOST"]
+>>> htcondor.param["COLLECTOR_HOST"]
 'hcc-briantest.unl.edu'
->>> schedd = condor.Schedd() # Defaults to the local schedd.
+>>> schedd = htcondor.Schedd() # Defaults to the local schedd.
 >>> results = schedd.query()
 >>> results[0]["RequestMemory"]
 ifthenelse(MemoryUsage isnt undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
@@ -315,7 +315,7 @@ ifthenelse(MemoryUsage isnt undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
 >>> ad=classad.parse(open("test.submit.ad"))
 >>> print schedd.submit(ad, 2) # Submits two jobs in the cluster; edit test.submit.ad to preference.
 110
->>> print schedd.act(condor.JobAction.Remove, ["111.0", "110.0"])'
+>>> print schedd.act(htcondor.JobAction.Remove, ["111.0", "110.0"])'
     [
         TotalNotFound = 0; 
         TotalPermissionDenied = 0; 
@@ -326,7 +326,7 @@ ifthenelse(MemoryUsage isnt undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
         TotalBadStatus = 0; 
         TotalError = 0
     ]
->>> print schedd.act(condor.JobAction.Hold, "Owner =?= \"bbockelm\"")'
+>>> print schedd.act(htcondor.JobAction.Hold, "Owner =?= \"bbockelm\"")'
     [
         TotalNotFound = 0; 
         TotalPermissionDenied = 0; 
@@ -339,12 +339,12 @@ ifthenelse(MemoryUsage isnt undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
     ]
 >>> schedd.edit('Owner =?= "bbockelm"', "Foo", classad.ExprTree('"baz"'))
 >>> schedd.edit(["110.0"], "Foo", '"bar"')
->>> coll = condor.Collector()
->>> master_ad = coll.locate(condor.DaemonTypes.Master)
->>> condor.send_command(master_ad, condor.DaemonCommands.Reconfig) # Reconfigures the local master and all children
->>> condor.version()
+>>> coll = htcondor.Collector()
+>>> master_ad = coll.locate(htcondor.DaemonTypes.Master)
+>>> htcondor.send_command(master_ad, htcondor.DaemonCommands.Reconfig) # Reconfigures the local master and all children
+>>> htcondor.version()
 '$CondorVersion: 7.9.4 Jan 02 2013 PRE-RELEASE-UWCS $'
->>> condor.platform()
+>>> htcondor.platform()
 '$CondorPlatform: X86_64-ScientificLinux_6.3 $'
 
 \end{verbatim}
