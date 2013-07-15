@@ -49,8 +49,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug that prevented per-slot STARTD\_ATTRS from being set
-correctly with partitionable slots with the SLOTX\_ prefix.
+\item Fixed a bug that prevented per-slot settings of the 
+\MacroNI{STARTD\_ATTRS} configuration variable from being set
+correctly for partitionable slots named with a \Expr{SLOTX\_} prefix.
 \Ticket{3726}
 
 \item Fixed a bug that caused \Condor{status} \Opt{-submitters} to report twice
