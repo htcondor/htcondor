@@ -84,5 +84,6 @@ $SIG{RTMIN} = \&handler;
 while(1)
 {
 	system("date");
+	sleep(1);
 }
 
