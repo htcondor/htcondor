@@ -60,8 +60,16 @@ my $return = "";
 my $executecount = 0;
 my $result = 1;
 my $test_name = "job_basic_kill";
+
 my $on_execute = sub {
 	print "********************************** OnExecute *****************************\n";
+	print "waiting for size signal catching output to grow\n";
+	my $sizenow = 0;
+
+	while($sizenow < 1000) {
+		$sizenow = -s "catchallsignals.out";
+		print "<$sizenow>\n";
+	}
 	if($executecount == 0) {
 		system("condor_hold $ClusterId");
 		$executecount += 1;
@@ -82,12 +90,6 @@ my $on_hold = sub {
 
 my $on_evictedwithoutcheckpoint = sub {
 	print "Evicted Without Checkpoint\n";
-	$return = CheckForSigTermIgnore();
-	if($return eq "Bad") {
-		print "Never found that sigterm was ignore. \nRemoving job before death!\n";
-		die "No ignored sigterm, can not prove KILL =TRUE worked.\n";
-	}
-	system("condor_rm $ClusterId");
 };
 
 my $GetClusterId = sub {
@@ -123,7 +125,7 @@ $result = SimpleJob::RunCheck(
 	output => "catchallsignals.out",
 	stream_output => "True",
 	should_transfer_files => "YES",
-	when_to_transfer_output => "ON_EXIT_OR_EVICT",
+	when_to_transfer_output => "ON_EXIT",
 	queue_sz => 1,
 	duration => $expect_return,
 	GetClusterId => $GetClusterId,
