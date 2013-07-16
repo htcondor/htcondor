@@ -332,12 +332,6 @@ class ClassAd : public classad::ClassAd
 	void ResetName();
 	const char *NextNameOriginal();
 
-	/* Create a new ExprTree based on the given one. The new tree will
-	 * be modified suched that any boolean value is converted to a
-	 * literal '0' or '1'.
-	 */
-	bool AddExplicitConditionals( classad::ExprTree *expr, classad::ExprTree *&newExpr );
-
 	// AddExplicitTargets creates a new ClassAd (the caller owns it)
 	// that is similar to the original ClassAd, except that if it refers
 	// to attributes that are not in the current classad and they are not
@@ -392,7 +386,6 @@ class ClassAd : public classad::ClassAd
 
  private:
 	void evalFromEnvironment( const char *name, classad::Value val );
-	classad::ExprTree *AddExplicitConditionals( classad::ExprTree * );
 
 	enum ItrStateEnum {
 		ItrUninitialized,
