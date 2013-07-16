@@ -231,6 +231,11 @@ class GahpClient : public Service {
 		///
 		void purgePendingRequests() { clear_pending(); }
 
+		// Return true if this GahpClient has a pending request that has
+		// been issued to the GAHP server (and possibly a result returned
+		// waiting to be collected).
+		bool pendingRequestIssued() { return pending_submitted_to_gahp || pending_result; }
+
 		/** @name Mode methods.
 		 * Methods to set/get the mode.
 		 */
