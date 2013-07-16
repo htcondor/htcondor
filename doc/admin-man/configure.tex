@@ -4571,6 +4571,24 @@ search for the corresponding attribute names using \Expr{slot}, instead.
   The portion of this configuration variable's name identified with
   \Expr{<name>} is as defined in \Macro{MACHINE\_RESOURCE\_NAMES}.
 
+\label{param:MachineResourceInventoryResourcename}
+\item[\Macro{MACHINE\_RESOURCE\_INVENTORY\_<name>}]
+  Specifies a command line that is executed upon start up of the 
+  \Condor{startd} daemon.  The script is expected to output an attribute
+  definition of the form
+\begin{verbatim}
+  Detected<xxx>=y
+\end{verbatim}
+  where \Expr{<xxx>} is the name of a resource that exists on the machine,
+  and \Expr{y} is the number of that resource that exist on the machine.
+  This attribute is added to the machine ClassAd,
+  such that
+  these resources may be statically divided or partitioned.
+  A script may be a convenient way to specify a calculated or 
+  detected number of the resource, 
+  instead of specifying a fixed number of the resource
+  in the the configuration when set by \Macro{MACHINE\_RESOURCE\_<name>}.
+
 \label{param:MustModifyRequestExprs}
 \item[\Macro{MUST\_MODIFY\_REQUEST\_EXPRS}]
   A boolean value that defaults to \Expr{False}.
