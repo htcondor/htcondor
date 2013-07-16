@@ -1628,7 +1628,7 @@ sPrintAd( MyString &output, classad::ClassAd &ad, bool exclude_private, StringLi
 int
 sPrintAd( std::string &output, classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
 {
-	MyString myout = output;
+	MyString myout;
 	int rc = sPrintAd( myout, ad, exclude_private, attr_white_list );
 	output += myout;
 	return rc;
