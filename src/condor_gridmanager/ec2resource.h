@@ -65,7 +65,12 @@ public:
 
     bool hadAuthFailure() { return m_hadAuthFailure; }
 
+	bool ServerTypeQueried( EC2Job *job = NULL );
+	bool ClientTokenWorks( EC2Job *job = NULL );
+
     std::string authFailureMessage;
+
+	std::string m_serverType;
 
     BatchStatusResult StartBatchStatus();
     BatchStatusResult FinishBatchStatus();
