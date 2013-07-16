@@ -106,8 +106,10 @@ released with HTCondor.  This list includes:
 
   \OptItem{\Opt{---usage}} {Print short usage and exit}
 
-  \OptItem{\Opt{---install}} {Perform installation, assuming that
-    the current working directory contains the release directories.
+  \OptItem{\Opt{---install[=$<$path/to/release$>$]}} {Perform installation, 
+    assuming that
+    the current working directory contains the release directory,
+    if the optional \Expr{=<path/to/release>} is not specified.
     Without further options, the configuration is that of
     a Personal HTCondor, a complete one-machine pool.
     If used as an 
