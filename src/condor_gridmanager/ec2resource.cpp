@@ -371,6 +371,17 @@ EC2Resource::BatchStatusResult EC2Resource::FinishBatchStatus() {
     return StartBatchStatus();
 }
 
+bool EC2Resource::ServerTypeQueried( EC2Job *job ) {
+	if ( !m_serverType.empty() ) {
+		return true;
+	}
+	std::string type;
+	if ( job && job->jobAd->LookupString( ATTR_EC2_SERVER_TYPE, type ) ) {
+		return true;
+	}
+	return false;
+}
+
 bool EC2Resource::ClientTokenWorks( EC2Job *job )
 {
 	if ( m_serverType == "Amazon" || m_serverType == "Nimbus" ) {

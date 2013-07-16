@@ -57,6 +57,7 @@ using namespace std;
 #define GM_SPOT_CHECK                   15
 
 #define GM_SEEK_INSTANCE_ID             16
+#define GM_CREATE_KEY_PAIR              17
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
@@ -75,7 +76,8 @@ static const char *GMStateNames[] = {
 	"GM_SPOT_SUBMITTED",
 	"GM_SPOT_QUERY",
 	"GM_SPOT_CHECK",
-	"GM_SEEK_INSTANCE_ID"
+	"GM_SEEK_INSTANCE_ID",
+	"GM_CREATE_KEY_PAIR",
 };
 
 #define EC2_VM_STATE_RUNNING            "running"
@@ -159,6 +161,7 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	gahp = NULL;
 	m_group_names = NULL;
 	m_should_gen_key_pair = false;
+	m_keypair_created = false;
 	
 	// check the public_key_file
 	jobAd->LookupString( ATTR_EC2_ACCESS_KEY_ID, m_public_key_file );
@@ -232,6 +235,9 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	if ( !m_key_pair_file.empty() ) {
 		m_should_gen_key_pair = true;
     }
+	if ( !m_key_pair.empty() && !m_key_pair_file.empty() ) {
+		m_keypair_created = true;
+	}
 
 	// In GM_HOLD, we assume HoldReason to be set only if we set it, so make
 	// sure it's unset when we start (unless the job is already held).
@@ -485,17 +491,20 @@ void EC2Job::doEvaluateState()
                     }
                 }
 
-				// If we can't rely on the client token for failure
-				// recovery during submission, then we need to use the
-				// old ssh keypair trick.
-				if ( !myResource->ClientTokenWorks( this ) ) {
-					m_should_gen_key_pair = true;
-				}
-
                 // If we're not doing recovery, start with GM_CLEAR_REQUEST.
 				gmState = GM_CLEAR_REQUEST;
 
                 if( ! m_client_token.empty() ) {
+
+					// If we can't rely on the client token for failure
+					// recovery during submission, then we need to use the
+					// old ssh keypair trick.
+					if ( !myResource->ClientTokenWorks( this ) ) {
+						m_should_gen_key_pair = true;
+						m_keypair_created = true;
+					}
+
+
                     // Recovery happens differently for spot instances.
 	    			if( ! m_spot_price.empty() ) {
 	    			    // If we have only a client token, check to see if
@@ -545,9 +554,12 @@ void EC2Job::doEvaluateState()
 		    		    	// with 5000 status update requests, which is
 		    		    	// precisely what we're trying to avoid.
     			    		gmState = GM_SUBMITTED;
-						} else if( condorState == REMOVED ) {
+						} else if( condorState == REMOVED ||
+								   m_should_gen_key_pair ) {
 	    			        // We don't know if the corresponding instance
-	    			        // exists or not.  Rather than unconditionally
+	    			        // exists or not. And if we're creating the
+	    			        // ssh keypair, we don't know if that exists.
+	    			        // Rather than unconditionally
 	    			        // create it (in GM_START_VM), check to see if
 	    			        // exists first.  While this may be more efficient,
 	    			        // the real benefit is that invalid jobs won't
@@ -565,15 +577,23 @@ void EC2Job::doEvaluateState()
 				// to (e.g. all pings have failed because the server's
 				// down), we have to wait here, as that affects how we'll
 				// submit the job.
-				// TODO Allow a condor_hold or condor_rm to break us out
-				//   of here if we haven't issued the gahp command yet.
-				if ( !myResource->ServerTypeQueried() &&
-					 !myResource->hadAuthFailure() ) {
+				if ( condorState == REMOVED || condorState == HELD ) {
+					gmState = GM_CLEAR_REQUEST;
+					break;
+				}
+				if ( !myResource->ServerTypeQueried() ) {
 					dprintf( D_FULLDEBUG, "(%d.%d) Don't know server type yet, waiting...\n", procID.cluster, procID.proc );
 					break;
 				}
 				if ( !myResource->ClientTokenWorks( this ) ) {
 					m_should_gen_key_pair = true;
+
+					if ( m_client_token.empty() && m_key_pair_file.empty() &&
+						 !m_key_pair.empty() ) {
+						formatstr( errorString, "Can't use existing ssh keypair for server type %s", myResource->m_serverType.c_str() );
+						gmState = GM_HOLD;
+						break;
+					}
 				}
 
 				if (m_client_token.empty()) {
@@ -601,6 +621,14 @@ void EC2Job::doEvaluateState()
 					break;
 				}
 				
+				gmState = GM_CREATE_KEY_PAIR;
+
+				} break;
+
+			case GM_CREATE_KEY_PAIR: {
+				// Create the ssh keypair for this instance, if we need
+				// to.
+
 				int gmTargetState = GM_START_VM;
 				if( ! m_spot_price.empty() ) {
 				    gmTargetState = GM_SPOT_START;
@@ -615,6 +643,13 @@ void EC2Job::doEvaluateState()
 				// the job, we'll still clean up the keypair properly.
 				if ( m_should_gen_key_pair )
 				{	
+					if ( ( condorState == REMOVED || condorState == HELD ) &&
+						 !gahp->pendingRequestIssued() ) {
+						gahp->purgePendingRequests();
+						gmState = GM_CLEAR_REQUEST;
+						break;
+					}
+
 				    rc = gahp->ec2_vm_create_keypair(m_serviceUrl, 
 								     m_public_key_file, 
 								     m_private_key_file, 
@@ -639,6 +674,7 @@ void EC2Job::doEvaluateState()
 						 strstr( gahp->getErrorString(), "KeyPairExists" ) ||
 						 strstr( gahp->getErrorString(), "Keypair already exists" ) ||
 						 strstr( gahp->getErrorString(), "InvalidKeyPair.Duplicate" ) ) {
+						m_keypair_created = true;
 						gmState = gmTargetState;
 				    } else {
 				
@@ -1212,7 +1248,7 @@ void EC2Job::doEvaluateState()
 					|| condorState == COMPLETED
 					|| ( m_client_token.empty() && m_remoteJobId.empty() ) ) {
 
-					if( m_should_gen_key_pair && ! m_key_pair.empty() ) {
+					if( m_keypair_created && ! m_key_pair.empty() ) {
 						rc = gahp->ec2_vm_destroy_keypair( m_serviceUrl,
 									m_public_key_file, m_private_key_file,
 									m_key_pair, gahp_error_code );
@@ -1678,7 +1714,7 @@ void EC2Job::doEvaluateState()
                 } else if ( condorState == REMOVED ) {
                     gmState = GM_DELETE;
                 } else {
-					gmState = GM_SAVE_CLIENT_TOKEN;
+					gmState = GM_CREATE_KEY_PAIR;
 				}
 
                 } break;

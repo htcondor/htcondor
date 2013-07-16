@@ -65,7 +65,7 @@ public:
 
     bool hadAuthFailure() { return m_hadAuthFailure; }
 
-	bool ServerTypeQueried() { return !m_serverType.empty(); }
+	bool ServerTypeQueried( EC2Job *job = NULL );
 	bool ClientTokenWorks( EC2Job *job = NULL );
 
     std::string authFailureMessage;
