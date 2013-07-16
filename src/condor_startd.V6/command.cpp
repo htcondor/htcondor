@@ -641,7 +641,7 @@ command_query_ads( Service*, int, Stream* stream)
 	}
 
 #if !defined(WANT_OLD_CLASSADS)
-	queryAd.AddExplicitTargetRefs();
+	AddExplicitTargetRefs( queryAd );
 #endif
 
    MyString stats_config;

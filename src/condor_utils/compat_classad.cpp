@@ -1756,29 +1756,29 @@ NextNameOriginal()
 
 // Back compatibility helper methods
 
-void ClassAd::AddExplicitTargetRefs(  ) 
+void AddExplicitTargetRefs( classad::ClassAd &ad ) 
 {
 	set< string, classad::CaseIgnLTStr > definedAttrs;
-	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
+	for( classad::AttrList::iterator a = ad.begin( ); a != ad.end( ); a++ ) {
 		definedAttrs.insert(a->first);
 	}
 	
-	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
+	for( classad::AttrList::iterator a = ad.begin( ); a != ad.end( ); a++ ) {
 		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) 
 		{
 		  classad::ExprTree * pTree = compat_classad::AddExplicitTargetRefs( a->second, definedAttrs );
-			this->Insert( a->first, pTree ) ;
+			ad.Insert( a->first, pTree ) ;
 		}
 	}
 }
 
-void ClassAd::RemoveExplicitTargetRefs( )
+void RemoveExplicitTargetRefs( classad::ClassAd &ad )
 {
-	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
+	for( classad::AttrList::iterator a = ad.begin( ); a != ad.end( ); a++ ) {
 		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) 
 		{
 		  classad::ExprTree * pTree = compat_classad::RemoveExplicitTargetRefs( a->second );
-			this->Insert( a->first, pTree );
+			ad.Insert( a->first, pTree );
 		}
 	}
 }  
@@ -2281,17 +2281,6 @@ AddExplicitTargetRefs(classad::ExprTree *tree,
 	}
 	}
 } 
-
-classad::ExprTree *
-AddExplicitTargetRefs(classad::ExprTree *eTree, classad::ClassAd *ad ) 
-{
-	set< string, classad::CaseIgnLTStr > definedAttrs;
-	
-	for( classad::AttrList::iterator a = ad->begin( ); a != ad->end( ); a++ ) {
-		definedAttrs.insert( a->first );
-	}
-	return AddExplicitTargetRefs(eTree, definedAttrs);
-}
 
 classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree *tree )
 {

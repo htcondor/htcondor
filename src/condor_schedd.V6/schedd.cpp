@@ -1599,7 +1599,7 @@ int Scheduler::command_query_ads(int, Stream* stream)
 	}
 
 #if !defined(WANT_OLD_CLASSADS)
-	queryAd.AddExplicitTargetRefs();
+	AddExplicitTargetRefs( queryAd );
 #endif
 
 		// Construct a list of all our ClassAds. we pass queryAd 

@@ -332,14 +332,6 @@ class ClassAd : public classad::ClassAd
 	void ResetName();
 	const char *NextNameOriginal();
 
-	// AddExplicitTargets creates a new ClassAd (the caller owns it)
-	// that is similar to the original ClassAd, except that if it refers
-	// to attributes that are not in the current classad and they are not
-	// scoped, then they are renamed "target.attribute"
-	void AddExplicitTargetRefs(  );
-	
-	void RemoveExplicitTargetRefs(  );
-	
 	void AddTargetRefs( TargetAdType target_type, bool do_version_check = true );
 
 	bool NextExpr( const char *&name, ExprTree *&value );
@@ -519,10 +511,24 @@ classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
 void releaseTheMatchAd();
 
 
+// Modify all expressions in the given ad, such that if they refer
+// to attributes that are not in the current classad and they are not
+// scoped, then they are renamed "target.attribute"
+void AddExplicitTargetRefs( classad::ClassAd &ad );
+
+// Return a new ExprTree identical to the given one, except that for any
+// attributes referred to which are not scoped and don't appear in the
+// given set are renamed "target.attribute".
 classad::ExprTree *AddExplicitTargetRefs(classad::ExprTree *,
 						std::set < std::string, classad::CaseIgnLTStr > & );
 						
-classad::ExprTree *AddExplicitTargetRefs(classad::ExprTree *, classad::ClassAd*);
+// Modify all expressions in the given ad, removing the "target" scope
+// from all attributes references.
+void RemoveExplicitTargetRefs( classad::ClassAd &ad );
+
+// Return a new ExprTree identical to the given one, but removing any
+// "target" scope from all attribute references.
+// For example, Target.Foo will become Foo.
 classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree * );
 
 
