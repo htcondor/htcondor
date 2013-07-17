@@ -64,8 +64,8 @@ class CondorConfig:
         else:
             (stdout, stderr) = RunExternal("condor_config_val %s" % key)
             if len(stdout) == 0:
-                logging.error("Unable to get any output from condor_config_val.  Is key = %s correct?" % key)
-                logging.error("Stderr: %s" % stderr)
+                logging.warning("Unable to get any output from condor_config_val.  Is key = %s correct?" % key)
+                logging.warning("Stderr: %s" % stderr)
 
             self.config_dict[key] = stdout.strip()
             return stdout.strip()
