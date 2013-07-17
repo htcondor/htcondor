@@ -1849,7 +1849,7 @@ sub SearchCondorLogMultiple
 	my $count = 0;
 	my $begin = 0;
 	my $foundanything = 0;
-	my $tolerance = 3;
+	#my $tolerance = 5;
 	my $done = 0;
 	while($found < $goal) {
        	CondorTest::debug("Searching Try $tried\n",2);
@@ -1917,24 +1917,24 @@ sub SearchCondorLogMultiple
 			last;
 		}
 		$tried += 1;
-		if($tried >= $timeout) {
-			if($tolerance == 0) {
-				CondorTest::debug("SearchCondorLogMultiple: About to fail from timeout!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",1);
-				if(defined $findcallback) {
-					&$findcallback("HitRetryLimit");
-				}
-				last;
-			} else {
-				if($foundanything > 0) {
-					CondorTest::debug("SearchCondorLogMultiple: Using builtin tolerance\n",1);
-					$tolerance -= 1;
-					$tried = 1;
-				} else {
-					$tolerance = 0;
-					$tried -= 2;
-				}
-			}
-		}
+		#if($tried >= $timeout) {
+			#if($tolerance == 0) {
+				#CondorTest::debug("SearchCondorLogMultiple: About to fail from timeout!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",1);
+				#if(defined $findcallback) {
+					#&$findcallback("HitRetryLimit");
+				#}
+				#last;
+			#} else {
+				#if($foundanything > 0) {
+					#CondorTest::debug("SearchCondorLogMultiple: Using builtin tolerance\n",1);
+					#$tolerance -= 1;
+					#$tried = 1;
+				#} else {
+					#$tolerance = 0;
+					#$tried -= 2;
+				#}
+			#}
+		#}
 	}
 	if($found < $goal) {
 		return(0);
