@@ -7056,11 +7056,12 @@ int GahpClient::ec2_spot_start( std::string service_url,
     requestLine += escapeGahpString( vpc_subnet ) + space;
     requestLine += escapeGahpString( vpc_ip ) + space;
     requestLine += escapeGahpString( client_token );
-    
-    const char * groupName = NULL;
-    for( groupnames.rewind(); groupName != NULL; groupName = groupnames.next() ) {
-        requestLine += space + groupName;
+
+    char * groups = groupnames.print_to_delimed_string( " " );
+    if( groups != NULL ) {
+        requestLine += space + groups;
     }
+    free( groups );
     
     const char * arguments = requestLine.c_str();
     if( ! is_pending( command, arguments ) ) {
