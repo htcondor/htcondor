@@ -44,7 +44,7 @@ my $firstappend_condor_config = '
 	MAX_SCHEDD_LOG = 5000000000
 	SIGNIFICANT_ATTRIBUTES = Procid
 	START = False
-	NEGOTIATOR_DEBUG = D_COMMAND, D_MATCH, D_FULLDEBUG
+	NEGOTIATOR_DEBUG = D_COMMAND, D_MATCH
 ';
 
 $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"negotiator");
