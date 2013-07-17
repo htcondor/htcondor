@@ -165,7 +165,10 @@ size_t appendToString( const void * ptr, size_t size, size_t nmemb, void * str )
     return (size * nmemb);
 }
 
-AmazonRequest::AmazonRequest() { }
+AmazonRequest::AmazonRequest()
+{
+	includeResponseHeader = false;
+}
 
 AmazonRequest::~AmazonRequest() { }
 
@@ -419,6 +422,17 @@ bool AmazonRequest::SendRequest() {
         return false;
     }
     
+	if ( includeResponseHeader ) {
+		rv = curl_easy_setopt( curl, CURLOPT_HEADER, 1 );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_HEADER ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_HEADER ) failed (%d): '%s', failing.\n",
+					 rv, curl_easy_strerror( rv ) );
+			return false;
+		}
+	}
+
     rv = curl_easy_setopt( curl, CURLOPT_WRITEFUNCTION, & appendToString );
     if( rv != CURLE_OK ) {
         this->errorCode = "E_CURL_LIB";
@@ -1649,8 +1663,11 @@ bool AmazonVMStatusAll::workerFunction(char **argv, int argc, std::string &resul
                 AmazonStatusResult & asr = saRequest.results[i];
                 resultList.append( asr.instance_id.c_str() );
                 resultList.append( asr.status.c_str() );
-                resultList.append( asr.ami_id.c_str() );                
+                // For GT #3682: only one of the following two may be null.
                 resultList.append( nullStringIfEmpty( asr.clientToken ) );
+                resultList.append( nullStringIfEmpty( asr.keyname ) );
+                resultList.append( nullStringIfEmpty( asr.stateReasonCode ) );
+                resultList.append( nullStringIfEmpty( asr.public_dns ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }
@@ -2138,4 +2155,123 @@ bool AmazonAttachVolume::workerFunction(char **argv, int argc, std::string &resu
 
     return true;
 	
+}
+
+
+// ---------------------------------------------------------------------------
+
+// This command issues a DescribeKeyPairs request and analyzes the
+// response to detect which of several popular implementations of EC2
+// the server is running.
+// The types detected are Amazon, OpenStack, Nimbus, and Eucalyptus.
+// If the server's response doesn't match any of these types, then
+// "Unknown" is returned.
+// The following checks are performed:
+// * Amazon's header includes "Server: AmazonEC2"
+// * Nimbus's header includes "Server: Jetty"
+// * Eucalyptus's body doesn't include an "<?xml ...?>" tag
+// * Amazon and Nimbus's <?xml?> tag includes version="1.0" and
+//   encoding="UTF-8" properties
+// * Nimbus and Eucalyptus's response doesn't include a <requestId> tag
+// * Eucalyptus's response puts all XML elements in a "euca" scope
+
+AmazonVMServerType::AmazonVMServerType() { }
+
+AmazonVMServerType::~AmazonVMServerType() { }
+
+bool AmazonVMServerType::SendRequest() {
+	bool result = AmazonRequest::SendRequest();
+	if( result ) {
+		serverType = "Unknown";
+		size_t idx = this->resultString.find( "\r\n\r\n" );
+		if ( idx == std::string::npos ) {
+			return result;
+		}
+
+		std::string header = this->resultString.substr( 0, idx + 4 );
+		std::string body = this->resultString.substr( idx + 4 );
+
+		bool server_amazon = false;
+		bool server_jetty = false;
+		bool xml_tag = false;
+		bool xml_encoding = false;
+		bool request_id = false;
+		bool euca_tag = false;
+
+		if ( header.find( "Server: AmazonEC2" ) != std::string::npos ) {
+			server_amazon = true;
+		}
+		if ( header.find( "Server: Jetty" ) != std::string::npos ) {
+			server_jetty = true;
+		}
+		if ( body.find( "<?xml " ) != std::string::npos ) {
+			xml_tag = true;
+		}
+		if ( body.find( "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" ) != std::string::npos ) {
+			xml_encoding = true;
+		}
+		if ( body.find( "<requestId>" ) != std::string::npos ) {
+			request_id = true;
+		}
+		if ( body.find( "<euca:Describe" ) != std::string::npos ) {
+			euca_tag = true;
+		}
+
+		if ( server_amazon && !server_jetty && xml_tag &&
+			 xml_encoding && request_id && !euca_tag ) {
+			serverType = "Amazon";
+		} else if ( !server_amazon && !server_jetty && xml_tag &&
+					!xml_encoding && request_id && !euca_tag ) {
+			serverType = "OpenStack";
+		} else if ( !server_amazon && server_jetty && xml_tag &&
+					xml_encoding && !request_id && !euca_tag ) {
+			serverType = "Nimbus";
+		} else if ( !server_amazon && !server_jetty && !xml_tag &&
+					!xml_encoding && !request_id && euca_tag ) {
+			serverType = "Eucalyptus";
+		}
+	}
+	return result;
+}
+
+// Expecting:EC2_VM_SERVER_TYPE <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
+bool AmazonVMServerType::workerFunction(char **argv, int argc, std::string &result_string) {
+	assert( strcmp( argv[0], "EC2_VM_SERVER_TYPE" ) == 0 );
+
+	// Uses the Query API function 'DescribeKeyPairs', as documented at
+	// http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeKeyPairs.html
+
+	int requestID;
+	get_int( argv[1], & requestID );
+
+	if( ! verify_min_number_args( argc, 5 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+				 argc, 5, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes & parameters.
+	AmazonVMServerType serverTypeRequest;
+	serverTypeRequest.serviceURL = argv[2];
+	serverTypeRequest.accessKeyFile = argv[3];
+	serverTypeRequest.secretKeyFile = argv[4];
+	serverTypeRequest.query_parameters[ "Action" ] = "DescribeKeyPairs";
+
+	// We need the header in the response to help determine what
+	// implementation we're talking with.
+	serverTypeRequest.includeResponseHeader = true;
+
+	// Send the request.
+	if( ! serverTypeRequest.SendRequest() ) {
+		result_string = create_failure_result( requestID,
+										serverTypeRequest.errorMessage.c_str(),
+										serverTypeRequest.errorCode.c_str() );
+	} else {
+		StringList resultList;
+		resultList.append( serverTypeRequest.serverType.c_str() );
+		result_string = create_success_result( requestID, & resultList );
+	}
+
+	return true;
 }

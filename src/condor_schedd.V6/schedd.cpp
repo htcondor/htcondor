@@ -1599,7 +1599,7 @@ int Scheduler::command_query_ads(int, Stream* stream)
 	}
 
 #if !defined(WANT_OLD_CLASSADS)
-	queryAd.AddExplicitTargetRefs();
+	AddExplicitTargetRefs( queryAd );
 #endif
 
 		// Construct a list of all our ClassAds. we pass queryAd 
@@ -11623,7 +11623,7 @@ Scheduler::invalidate_ads()
 					  ATTR_REQUIREMENTS,
 					  ATTR_SCHEDD_NAME, Name,
 					  ATTR_NAME, owner.Value() );
-		cad->InsertOrUpdate( line.Value() );
+		cad->Insert( line.Value() );
 
 		Daemon* d;
 		if( FlockCollectors && FlockLevel > 0 ) {

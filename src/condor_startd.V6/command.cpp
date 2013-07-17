@@ -24,10 +24,6 @@
 #include "startd.h"
 #include "vm_common.h"
 #include "ipv6_hostname.h"
-#include "consumption_policy.h"
-
-#include <map>
-using std::map;
 
 /* XXX fix me */
 #include "../condor_sysapi/sysapi.h"
@@ -641,7 +637,7 @@ command_query_ads( Service*, int, Stream* stream)
 	}
 
 #if !defined(WANT_OLD_CLASSADS)
-	queryAd.AddExplicitTargetRefs();
+	AddExplicitTargetRefs( queryAd );
 #endif
 
    MyString stats_config;
@@ -1135,13 +1131,6 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		refuse(stream);
 		ABORT;
 	}
-
-    map<string, double> consumption;
-    bool has_cp = cp_supports_policy(*rip->r_classad);
-    if (has_cp) {
-        cp_override_requested(*req_classad, *rip->r_classad, consumption);
-    }
-
 	if( new_rip != rip) { new_dynamic_slot = true; }
 	rip = new_rip;
 
@@ -1151,10 +1140,6 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		refuse(stream);
 		ABORT;
 	}
-
-    if (has_cp) {
-        cp_restore_requested(*req_classad, consumption);
-    }
 
 		// Now, make sure it's got a high enough rank to preempt us.
 	rank = rip->compute_rank(req_classad);
@@ -1566,20 +1551,12 @@ activate_claim( Resource* rip, Stream* stream )
 		// See if machine and job meet each other's requirements, if
 		// so start the job and tell shadow, otherwise refuse and
 		// clean up.  
-    map<string, double> consumption;
-    bool has_cp = cp_supports_policy(*mach_classad, false);
-    bool cp_sufficient = true;
-    if (has_cp) {
-        cp_override_requested(*req_classad, *mach_classad, consumption);
-        cp_sufficient = cp_sufficient_assets(*mach_classad, consumption);
-    }
-
 	rip->r_reqexp->restore();
 	if( mach_classad->EvalBool( ATTR_REQUIREMENTS, 
 								req_classad, mach_requirements ) == 0 ) {
 		mach_requirements = 0;
 	}
-	if (!(cp_sufficient && mach_requirements)) {
+	if( !mach_requirements ) {
 		rip->dprintf( D_ALWAYS, "Machine Requirements check failed!\n" );
 		refuse( stream );
 	    ABORT;
@@ -1611,11 +1588,6 @@ activate_claim( Resource* rip, Stream* stream )
 												   mach_classad,
 												   no_starter,
 												   starter );
-
-    if (has_cp) {
-        cp_restore_requested(*req_classad, consumption);
-    }
-
 	if( ! tmp_starter ) {
 		if( no_starter ) {
 			rip->dprintf( D_ALWAYS, "No valid starter found to run this job!  Is something wrong with your Condor installation?\n" );
@@ -1822,7 +1794,7 @@ match_info( Resource* rip, char* id )
 #endif /* HAVE_BACKFILL */
 	case unclaimed_state:
 	case owner_state:
-        if (rip->r_cur->idMatches(id)) {
+		if( rip->r_cur->idMatches(id) ) {
 			rip->dprintf( D_ALWAYS, "Received match %s\n", idp.publicClaimId() );
 
 			if( rip->destination_state() != no_state ) {

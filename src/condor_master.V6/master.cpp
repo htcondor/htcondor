@@ -1081,14 +1081,14 @@ invalidate_ads() {
 	SetTargetTypeName( cmd_ad, MASTER_ADTYPE );
 	
 	MyString line;
-	MyString escaped_name;
+	std::string escaped_name;
 	char* default_name = ::strnewp(MasterName);
 	if(!default_name) {
 		default_name = default_daemon_name();
 	}
 	
-	ClassAd::EscapeStringValue( default_name, escaped_name );
-	line.formatstr( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.Value() );
+	EscapeAdStringValue( default_name, escaped_name );
+	line.formatstr( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.c_str() );
 	cmd_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value() );
 	cmd_ad.Assign( ATTR_NAME, default_name );
 	cmd_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());

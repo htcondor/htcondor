@@ -53,11 +53,11 @@ TransferD::dump_state_handler(int  /*cmd*/, Stream *sock)
 
 	// what uid am I running under?
 	tmp.formatstr("Uid = %d", getuid());
-	state.InsertOrUpdate(tmp.Value());
+	state.Insert(tmp.Value());
 
 	// count how many pending requests I've had
 	tmp.formatstr("OutstandingTransferRequests = %d", m_treqs.getNumElements());
-	state.InsertOrUpdate(tmp.Value());
+	state.Insert(tmp.Value());
 
 	// add more later
 

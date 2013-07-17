@@ -349,7 +349,7 @@ Init()
 	new_type->CreateFunc = NordugridJobCreate;
 	jobTypes.Append( new_type );
 	
-#if defined( LINUX )
+#if defined( LINUX ) || defined(DARWIN) || defined(WIN32)
 	new_type = new JobType;
 	new_type->Name = strdup( "EC2" );
 	new_type->InitFunc = EC2JobInit;
@@ -357,7 +357,9 @@ Init()
 	new_type->AdMatchFunc = EC2JobAdMatch;
 	new_type->CreateFunc = EC2JobCreate;
 	jobTypes.Append( new_type );
+#endif
 	
+#if defined( LINUX )
 	new_type = new JobType;
 	new_type->Name = strdup( "Deltacloud" );
 	new_type->InitFunc = DCloudJobInit;

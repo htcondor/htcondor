@@ -884,6 +884,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_EC2_SPOT_PRICE  "EC2SpotPrice"
 #define ATTR_EC2_SPOT_REQUEST_ID  "EC2SpotRequestID"
 #define ATTR_EC2_STATUS_REASON_CODE  "EC2StatusReasonCode"
+#define ATTR_EC2_SERVER_TYPE  "EC2ServerType"
 
 //************* End of changes for EC2 Jobs *****************//
 
@@ -902,11 +903,6 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_TOTAL_PREFIX  "Total"
 #define ATTR_TOTAL_SLOT_PREFIX  "TotalSlot"
 #define ATTR_MACHINE_RESOURCES  "MachineResources"
-
-// multiclaim / negside resource consumption
-#define ATTR_NUM_CLAIMS "NumClaims"
-#define ATTR_CLAIM_ID_LIST "ClaimIdList"
-#define ATTR_CONSUMPTION_PREFIX "Consumption"
 
 // This is a record of the job exit status from a standard universe job exit
 // via waitpid. It is in the job ad to implement the terminate_pending

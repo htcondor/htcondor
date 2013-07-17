@@ -578,7 +578,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 				fakeAd = new ClassAd(*clientAdToRepeat);
 				snprintf(newname,sizeof(newname),
 						 "Name=\"fake%d-%s\"",n,oldname);
-				fakeAd->InsertOrUpdate(newname);
+				fakeAd->Insert(newname);
 				makeStartdAdHashKey (hk, fakeAd);
 				hashString.Build( hk );
 				if (! updateClassAd (StartdAds, "StartdAd     ", "Start",

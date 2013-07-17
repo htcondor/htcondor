@@ -551,7 +551,7 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
         return FALSE;
     }
 #if !defined(WANT_OLD_CLASSADS)
-	cad.RemoveExplicitTargetRefs();
+	RemoveExplicitTargetRefs( cad );
 #endif
 
     // cancel timeout --- collector engine sets up its own timeout for
@@ -933,7 +933,7 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 											List<ClassAd>* results)
 {
 #if !defined(WANT_OLD_CLASSADS)
-	query->RemoveExplicitTargetRefs();
+	RemoveExplicitTargetRefs( *query );
 #endif
 	// set up for hashtable scan
 	__query__ = query;

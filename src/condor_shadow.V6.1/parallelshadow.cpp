@@ -97,7 +97,7 @@ ParallelShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer
 	replaceNode( job_ad, 0 );
 	rr->setNode( 0 );
 	snprintf( buf, 256, "%s = 0", ATTR_NODE );
-	job_ad->InsertOrUpdate( buf );
+	job_ad->Insert( buf );
     rr->setJobAd( job_ad );
 
 	rr->setStartdInfo( job_ad );
@@ -292,10 +292,10 @@ ParallelShadow::getResources( void )
 			replaceNode ( job_ad, nodenum );
 			rr->setNode( nodenum );
 			snprintf( buf, 128, "%s = %d", ATTR_NODE, nodenum );
-			job_ad->InsertOrUpdate( buf );
+			job_ad->Insert( buf );
 			snprintf( buf, 128, "%s = \"%s\"", ATTR_MY_ADDRESS,
 					 daemonCore->InfoCommandSinfulString() );
-			job_ad->InsertOrUpdate( buf );
+			job_ad->Insert( buf );
 
 			char *lspool = param("SPOOL");
 			char *dir = gen_ckpt_name(lspool, job_cluster, 0, 0);

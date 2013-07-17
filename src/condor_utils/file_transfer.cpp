@@ -691,7 +691,7 @@ FileTransfer::Init( ClassAd *Ad, bool want_check_perms, priv_state priv,
 		TransKey = strdup(tempbuf);
 		user_supplied_key = FALSE;
 		sprintf(tempbuf,"%s=\"%s\"",ATTR_TRANSFER_KEY,TransKey);
-		Ad->InsertOrUpdate(tempbuf);
+		Ad->Insert(tempbuf);
 
 		// since we generated the key, it is only good on our socket.
 		// so update TRANSFER_SOCK now as well.

@@ -1231,9 +1231,9 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 		ad->Assign(ATTR_JOB_REMOTE_USER_CPU, float(user_time));
 
 		buf.formatstr("%s=%lu", ATTR_IMAGE_SIZE, max_image );
-		ad->InsertOrUpdate( buf.Value());
+		ad->Insert( buf.Value());
 		buf.formatstr("%s=%lu", ATTR_RESIDENT_SET_SIZE, rss );
-		ad->InsertOrUpdate( buf.Value());
+		ad->Insert( buf.Value());
 		if( pss_available ) {
 			ad->Assign(ATTR_PROPORTIONAL_SET_SIZE,pss);
 		}
