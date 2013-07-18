@@ -74,7 +74,7 @@ BOOST_AUTO_TEST_CASE( example_test )
         }
     }
     
-    if ( infile.fail() ) {
+    if ( infile.fail() && !infile.eof() ) {
         cout << "File IO failure" << endl;
         throw std::exception();
     }
