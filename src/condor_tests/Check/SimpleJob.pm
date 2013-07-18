@@ -71,6 +71,7 @@ sub RunCheck
     my $universe = $args{universe} || "vanilla";
     my $user_log = $args{user_log} || CondorTest::TempFileName("$testname.user_log");
     my $output = $args{output} || "";
+    my $error = $args{error} || "";
     my $streamoutput = $args{stream_output} || "";
     my $append_submit_commands = $args{append_submit_commands} || "";
     my $grid_resource = $args{grid_resource} || "";
@@ -159,16 +160,19 @@ sub RunCheck
 	print SUBMIT "GridResource = $grid_resource\n"
     }
 	if($output ne "") {
-	print SUBMIT "output = $output\n";
+		print SUBMIT "output = $output\n";
+	}
+	if($error ne "") {
+		print SUBMIT "error = $error\n";
 	}
 	if($streamoutput ne "") {
-	print SUBMIT "stream_output = $streamoutput\n";
+		print SUBMIT "stream_output = $streamoutput\n";
 	}
     if( $should_transfer_files ne "" ) {
-	print SUBMIT "should_transfer_files = $should_transfer_files\n";
+		print SUBMIT "should_transfer_files = $should_transfer_files\n";
     }
     if( $when_to_transfer_output ne "" ) {
-	print SUBMIT "when_to_transfer_output = $when_to_transfer_output\n";
+		print SUBMIT "when_to_transfer_output = $when_to_transfer_output\n";
     }
     if( $append_submit_commands ne "" ) {
         print SUBMIT "\n" . $append_submit_commands . "\n";
