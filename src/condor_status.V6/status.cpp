@@ -657,6 +657,10 @@ firstPass (int argc, char *argv[])
 			while (argv[i+1] && *(argv[i+1]) != '-') {
 				++i;
 			}
+			// if autoformat list ends in a '-' without any characters after it, just eat the arg and keep going.
+			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
+				++i;
+			}
 		} else
 		if (matchPrefix (argv[i], "-wide", 3)) {
 			wide_display = true; // when true, don't truncate field data
@@ -1024,6 +1028,10 @@ secondPass (int argc, char *argv[])
 							i, lbl.Value(), wid, opts,  argv[i]);
 				}
 				pm.registerFormat(lbl.Value(), wid, opts, argv[i]);
+			}
+			// if autoformat list ends in a '-' without any characters after it, just eat the arg and keep going.
+			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
+				++i;
 			}
 			continue;
 		}
