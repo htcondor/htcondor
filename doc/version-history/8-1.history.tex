@@ -102,6 +102,12 @@ in the way the handle \Opt{-constraint}.
 
 \begin{itemize}
 
+\item The default values of the configuration variables
+\Macro{COLLECTOR\_MAX\_FILE\_DESCRIPTORS} and 
+\Macro{SCHEDD\_MAX\_FILE\_DESCRIPTORS} have become 10240 and 4096,
+respectively.  This increases the scalability of the default configuration.
+\Ticket{3626}
+
 \item The new configuration variable
 \Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE} enables dynamic
 adjustment of the level of file transfer concurrency in order to
