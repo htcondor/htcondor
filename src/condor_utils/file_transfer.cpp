@@ -410,7 +410,9 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			// so we must make certain the user has permission to read
 			// this file; if so, we can record it as the Executable to send.
 #ifdef WIN32
-			if ( perm_obj && (perm_obj->read_access(buf) != 1) ) {
+			// buf doesn't refer to a real file when this code is executed in the SCHEDD when spooling
+			// so instead of failing here, we just don't bother with the access test in that case.
+			if ( !simple_init && perm_obj && (perm_obj->read_access(buf) != 1) ) {
 				// we do _not_ have permission to read this file!!
 				dprintf(D_ALWAYS,
 					"FileTrans: permission denied reading %s\n",buf);
