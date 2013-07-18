@@ -67,6 +67,7 @@ if (BUILD_TESTING)
 
 	if (NOT WINDOWS)
 	  condor_exe_test(x_trapsig.exe "x_trapsig.cpp" "" )
+	  condor_exe_test(x_job_mem_checker.exe "x_job_mem_checker.c" "" )
 	endif(NOT WINDOWS)
 	
 	if (STD_UNIVERSE)
