@@ -49,10 +49,15 @@ BOOST_AUTO_TEST_CASE( example_test )
     ifstream infile;
     
     infile.open ("testdata.txt");
+    if ( infile.fail() ) {
+        cout << "Failed to open file" << endl;
+        throw std::exception();
+    }
+
 #if 1
     clock_t Start = clock();
 
-    while ( !infile.eof() )
+    while ( !infile.fail() && !infile.eof() )
     {
        getline( infile, szInput );
 
@@ -69,6 +74,11 @@ BOOST_AUTO_TEST_CASE( example_test )
         }
     }
     
+    if ( infile.fail() && !infile.eof() ) {
+        cout << "File IO failure" << endl;
+        throw std::exception();
+    }
+
     cout<<"Clock Time:"<<(1.0*(clock() - Start))/CLOCKS_PER_SEC<<endl;
 
     infile.close();
