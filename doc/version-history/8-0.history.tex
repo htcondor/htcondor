@@ -49,7 +49,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item When invoking \Prog{glexec}, \Env{GLEXEC\_TARGET\_PROXY} is now
+  set to \File{/dev/null}.  In some situations, it was previously set
+  to a nonexistent path, which caused errors in some configurations.
+\Ticket{3794}
 
 \end{itemize}
 
