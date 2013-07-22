@@ -49,6 +49,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fix a bug causing security groups for EC2 jobs to be ignored.  Also,
+you may now, as documented, separate the list of security groups for
+an EC2 Spot job by commas.
+\Ticket{3787}
+
 \item When invoking \Prog{glexec}, \Env{GLEXEC\_TARGET\_PROXY} is now
   set to \File{/dev/null}.  In some situations, it was previously set
   to a nonexistent path, which caused errors in some configurations.
