@@ -1,23 +1,25 @@
 \begin{ManPage}{\label{man-condor-dagman-metrics-reporter}\Condor{dagman\_metrics\_reporter}}{1}
 {Report the statistics of a DAGMan run to a central HTTP server}
-\Synopsis \SynProg{\Condor{dagman\_metrics\_reporter}}
-\oOpt{-s}
-\oOptArg{-f}{/path/to/metrics/file}
-\oOptArg{-u}{url of a HTTP server to receive metrics}
-\oOptArg{-t}{maximum time to run}
 
 \index{HTCondor commands!condor\_dagman\_metrics\_reporter}
 \index{condor\_dagman\_metrics\_reporter command}
 
+\Synopsis \SynProg{\Condor{dagman\_metrics\_reporter}}
+\oOpt{-s}
+\oOptArg{-u}{URL}
+\oOptArg{-t}{maxtime}
+\OptArg{-f}{/path/to/metrics/file}
+
 \Description
 
 \Condor{dagman\_metrics\_reporter} reports statistics of a DAGMan run to a
-central server.  This behavior is needed for running DAGMan under Pegasus.  See
-http://pegasus.isi.edu/wms/docs/latest/funding\_citing\_usage.php\#usage\_statistics
-and https://confluence.pegasus.isi.edu/display/pegasus/DAGMan+Metrics+Reporting
-for the requirement to collect this data.
+central server.  This behavior is needed for running DAGMan under Pegasus.  
+See \URL{http://pegasus.isi.edu/wms/docs/latest/funding\_citing\_usage.php\#usage\_statistics}
+and \URL{https://confluence.pegasus.isi.edu/display/pegasus/DAGMan+Metrics+Reporting}
+for the requirements to collect this data.
 
-The data sent to the server is in JSON format.  Here is an example of what is sent:
+The data sent to the server is in JSON format.  
+Here is an example of what is sent:
 \begin{verbatim}
 {
     "client": "pegasus-plan",
@@ -47,30 +49,46 @@ The data sent to the server is in JSON format.  Here is an example of what is se
 \end{verbatim}
 
 Metrics are sent only if the \Condor{dagman} process has
-\Macro{PEGASUS\_METRICS} set to ``true'' in its environment and the
-\Macro{CONDOR\_DEVELOPERS} configuration variable does not have value NONE
+\Env{PEGASUS\_METRICS} set to \Expr{True} in its environment,
+and the \Macro{CONDOR\_DEVELOPERS} configuration variable does \emph{not}
+have the value \Expr{NONE}.
 
-Ordinarily, this program will be run by \Condor{dagman}, and users do not need to interact with it.
+Ordinarily, this program will be run by \Condor{dagman}, 
+and users do not need to interact with it.
 This program uses the following environment variables:
-\begin{Options}
-	\OptItem{\Macro{PEGASUS\_USER\_METRICS\_SERVER}}{A comma separated list of URLs that will receive the
-data.} 
-	\OptItem{\Macro{PEGASUS\_USER\_METRICS\_DEFAULT\_SERVER}}{The default server to send the data to.  It defaults to http://metrics.pegasus.isi.edu/metrics. It can be overridden at the command line with the -u option.}
-\end{Options}
+\begin{description}
+  \item[\Env{PEGASUS\_USER\_METRICS\_SERVER}]
+    A comma separated list of URLs that will receive the data. 
+  \item[\Env{PEGASUS\_USER\_METRICS\_DEFAULT\_SERVER}]
+    The default server to send the data to.
+    It defaults to \File{http://metrics.pegasus.isi.edu/metrics}.
+    It can be overridden at the command line with the \Opt{-u} option.
+\end{description}
 
-The -f command line option that specifies the metrics file is required.
+The \Arg{-f} argument specifies the metrics file to be sent
+to the HTTP server.
 
 \begin{Options}
-	\OptItem{\Opt{-s}}{Sleep for a random number of seconds (between 1 and 10), before attempting to
-send data.}
-	\OptItem{\OptArg{-f}{The path of the metrics file}}{The metrics file that contains the data to be sent to the HTTP server.}
-	\OptItem{\OptArg{-u}{URL to send metrics to}}{This command line option will override \Macro{PEGASUS\_USER\_METRICS\_DEFAULT\_SERVER}. Unused by \Condor{dagman}, it is for testing by developers.}
-	\OptItem{\OptArg{-t}{Number of seconds to attempt communication.}}{This defaults to 100 seconds.  A setting of zero will result in a single attempt per server. \Condor{dagman} retrieves this value from the \Macro{DAGMAN\_PEGASUS\_REPORT\_TIMEOUT} configuration variable.}
+  \OptItem{\Opt{-s}}{Sleep for a random number of seconds 
+    between 1 and 10, before attempting to send data.}
+  \OptItem{\OptArg{-u}{URL}}
+     {Overrides setting of the environment variable
+     \Env{PEGASUS\_USER\_METRICS\_DEFAULT\_SERVER}. 
+     This option is unused by \Condor{dagman}; it is for testing by developers.}
+  \OptItem{\OptArg{-t}{maxtime}}
+    {A maximum time in seconds that defaults to 100 seconds,
+    setting a limit on the amount of time this program will wait for
+    communication from the server.  
+    A setting of zero will result in a single attempt per server. 
+    \Condor{dagman} retrieves this value from the 
+    \Macro{DAGMAN\_PEGASUS\_REPORT\_TIMEOUT} configuration variable.}
 \end{Options}
 
 \ExitStatus
 
-The exit status of \Condor{dagman\_metrics\_reporter} is zero on success, and one on failure.
+\Condor{dagman\_metrics\_reporter} will exit with a status value of 0 (zero)
+ upon success,
+and it will exit with a value of 1 (one) upon failure.
 
 \end{ManPage}
 
