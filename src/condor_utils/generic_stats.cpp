@@ -333,7 +333,7 @@ void stats_recent_counter_timer::Publish(ClassAd & ad, const char * pattr, int f
 
 void stats_recent_counter_timer::PublishDebug(ClassAd & ad, const char * pattr, int flags) const
 {
-   if ( ! canStringBeUsedAsAttr(pattr))
+   if ( ! IsValidAttrName(pattr))
       return;
 
    this->count.PublishDebug(ad, pattr, flags);
