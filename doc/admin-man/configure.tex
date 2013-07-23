@@ -5170,33 +5170,42 @@ MAX_JOBS_RUNNING	= \
   load from exceeding the specified level.  Disk load is computed as
   the average number of file transfer processes conducting read/write
   operations at the same time.  The throttle may be specified as a
-  single floating point number or as a range.  Example: \Expr{5 to
-  6.5}.  If only a single number is provided, this serves as the
+  single floating point number or as a range.  
+  Syntax for the range is the smaller number
+  followed by 1 or more spaces or tabs, the string \Expr{"to"},
+  1 or more spaces or tabs, and then the larger number.
+  Example: 
+\begin{verbatim}
+  FILE_TRANSFER_DISK_LOAD_THROTTLE = 5 to 6.5
+\end{verbatim}
+  If only a single number is provided, this serves as the
   upper limit, and the lower limit is set to 90\% of the upper limit.
   When the disk load is above the upper limit, no new transfers
   will be started.  When between the lower and upper limits, new
   transfers will only be started to replace ones that finish.
+  There is no default value if this variable is not defined.
 
 \label{param:FileTransferDiskLoadThrottleWaitBetweenIncrements}
 \item[\Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE\_WAIT\_BETWEEN\_INCREMENTS}]
   This rarely configured variable sets the waiting period between
-  increments to the concurrency level set by \Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE}.
+  increments to the concurrency level set by 
+  \MacroNI{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE}.
   The default is 1 minute.  A value that is too short risks starting
   too many transfers before their effect on the disk load becomes apparent.
 
 \label{param:FileTransferDiskLoadThrottleShortHorizon}
 \item[\Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE\_SHORT\_HORIZON}]
-  This rarely configured variable specifies the name of the short
-  monitoring timespan to use for throttling.  The named timespan must
+  This rarely configured variable specifies the string name of the short
+  monitoring time span to use for throttling.  The named time span must
   exist in \Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}.  The default is
-  \Expr{"1m"}.
+  \Expr{1m}, which is 1 minute.
 
 \label{param:FileTransferDiskLoadThrottleLongHorizon}
 \item[\Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE\_LONG\_HORIZON}]
-  This rarely configured variable specifies the name of the long
-  monitoring timespan to use for throttling.  The named timespan must
+  This rarely configured variable specifies the string name of the long
+  monitoring time span to use for throttling.  The named time span must
   exist in \Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}.  The default is
-  \Expr{"5m"}.
+  \Expr{5m}, which is 5 minutes.
 
 \label{param:TransferQueueNameExpr}
 \item[\Macro{TRANSFER\_QUEUE\_USER\_EXPR}]
@@ -5265,7 +5274,7 @@ MAX_JOBS_RUNNING	= \
   file transfer.  The default is 10 seconds.  To provide sufficient
   resolution, the sampling interval should be small compared to the
   smallest time span that is configured in
-  \Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}.  The shorter the sampling
+  \MacroNI{TRANSFER\_IO\_REPORT\_TIMESPANS}.  The shorter the sampling
   interval, the more overhead of data collection, which may slow down
   the \Condor{schedd}.  See
   page~\pageref{sec:FT-Scheduler-ClassAd-Attributes} for a description
@@ -5281,7 +5290,7 @@ MAX_JOBS_RUNNING	= \
   \verb|1m:60 5m:300 1h:3600 1d:86400|.  To provide sufficient
   resolution, the smallest reported time span should be large compared
   to the sampling interval, which is configured by
-  \Macro{TRANSFER\_IO\_REPORT\_INTERVAL}.  See
+  \MacroNI{TRANSFER\_IO\_REPORT\_INTERVAL}.  See
   page~\pageref{sec:FT-Scheduler-ClassAd-Attributes} for a description
   of the published attributes.
 
