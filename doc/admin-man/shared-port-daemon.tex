@@ -9,8 +9,7 @@ The \Condor{shared\_port} is an optional daemon
 responsible for creating a TCP listener port shared by all of the
 HTCondor daemons for which the configuration variable
 \Macro{USE\_SHARED\_PORT} is \Expr{True}.
-The \Condor{master} will invoke the \Condor{shared\_port} daemon
-if it is listed in \MacroNI{DAEMON\_LIST}.  For further configuration
+The \Condor{shared\_port} daemon must also be listed in \MacroNI{DAEMON\_LIST}.  For further configuration
 options, such as specifying the port number to use, see page~\pageref{sec:Config-shared-port}.
 
 The main purpose of the \Condor{shared\_port} daemon is to reduce the
@@ -70,8 +69,9 @@ They are simply passed to the requested daemon,
 which is then responsible for enforcing the security policy.
 
 When the \Condor{master} is configured to use the shared port
-by setting the configuration variable
+by setting the configuration variables
 \begin{verbatim}
+  DAEMON_LIST = $(DAEMON_LIST) SHARED_PORT
   USE_SHARED_PORT = True
 \end{verbatim}
 the \Condor{shared\_port} daemon is treated specially. 

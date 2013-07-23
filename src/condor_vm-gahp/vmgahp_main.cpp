@@ -241,7 +241,7 @@ void main_init(int argc, char *argv[])
 
 #ifdef vmprintf
 	// use D_PID to prefix log lines with (pid:NNN), note that vmprintf output "VMGAHP[NNN]" instead
-	set_debug_flags(NULL, D_PID);
+	//set_debug_flags(NULL, D_PID);
 #else
 	// save DebugFlags for vmprintf
 	oriDebugFlags = DebugFlags;

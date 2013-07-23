@@ -310,6 +310,24 @@ VMProc::StartJob()
 	}
 	*/
 
+	// For Xen and KVM jobs, the vm-gahp issues libvirt commands as root
+	// (since some common configurations only allow root to create VMs).
+	// Libvirt will refuse to create the VM if the acting user doesn't
+	// have explicit permission to access the VM's disk image files,
+	// even though root can ignore those permission settings.
+	// Therefore, we need to relax the permissions on the execute
+	// directory.
+	if ( strcasecmp( m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM ) == MATCH ||
+		 strcasecmp( m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN ) == MATCH ) {
+		priv_state oldpriv = set_user_priv();
+		if ( chmod( Starter->GetWorkingDir(), 0755 ) == -1 ) {
+			set_priv( oldpriv );
+			dprintf( D_ALWAYS, "Failed to chmod execute directory for Xen/KVM job: %s\n", strerror( errno ) );
+			return false;
+		}
+		set_priv( oldpriv );
+	}
+
 	ClassAd recovery_ad = *JobAd;
 	MyString vm_name;
 	if ( strcasecmp( m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM ) == MATCH ||
