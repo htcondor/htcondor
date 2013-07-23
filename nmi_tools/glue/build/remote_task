@@ -131,7 +131,7 @@ elsif ($taskname eq $NATIVE_TASK) {
         print "Detected OS is Ubuntu.  Creating Deb package.\n";
         $execstr = create_deb();
     }
-    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat)/i) {
+    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora)/i) {
         print "Detected OS is Red Hat.  Creating RPM package.\n";
         $execstr = create_rpm();
     }
