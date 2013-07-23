@@ -41,6 +41,10 @@ at sites that do not observe daylight savings time.
 in the way the handle \Opt{-constraint}.
 \Ticket{1156}
 
+\item The new \Condor{dagman\_metrics\_reporter} executable reports metrics 
+for DAGMan jobs running under Pegasus.
+\Ticket{3532}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -77,10 +81,12 @@ monitoring file transfer activity:
 72000 seconds (20 hours).
 \Ticket{3723}
 
-\item Created the \Condor{dagman\_metrics\_reporter} executable to report metrics for
-DAGMan jobs running under Pegasus
+\item The new configuration variables
+\Macro{DAGMAN\_PEGASUS\_REPORT\_METRICS} and
+\Macro{DAGMAN\_PEGASUS\_REPORT\_TIMEOUT}
+set defaults used by the new \Condor{dagman\_metrics\_reporter} executable,
+which reports metrics for DAGMan jobs running under Pegasus.
 \Ticket{3532}
-
 \end{itemize}
 
 \noindent Bugs Fixed:
