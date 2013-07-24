@@ -49,6 +49,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug in the condor\_qsub script that caused it to exit
+with a syntax error when a job with a memory requirement was
+submitted.
+\Ticket{3808}
+
 \item Fix a bug causing security groups for EC2 jobs to be ignored.  Also,
 you may now, as documented, separate the list of security groups for
 an EC2 Spot job by commas.

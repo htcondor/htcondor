@@ -838,10 +838,7 @@ if [ -n "$resource_list" ]; then
 				fi;;
 #				printf "requirements = \"Machine == $host_value\"\n" >> $submit_file;;
 			mem=*) mem_value=${resource_type#*=}
-<<<<<<< Updated upstream
 				mem_value="echo $mem_value | tr a-z A-Z"
-=======
->>>>>>> Stashed changes
 				printf "request_memory = $mem_value\n" >> $submit_file;;
 #			nice=*) nice_value=(((${resource_type#*=})*(-1))) #issues with *-1
 #				printf "JobPriority = $nice_value\n" >> $submit_file;;
