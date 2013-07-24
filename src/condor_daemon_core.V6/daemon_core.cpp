@@ -4144,6 +4144,9 @@ int DaemonCore::ServiceCommandSocket()
 		else if( ((*sockTable)[i].iosock) && 
 				 (i != initial_command_sock) && 
 				 ((*sockTable)[i].waiting_for_data) &&
+				 ((*sockTable)[i].servicing_tid==0) &&
+				 ((*sockTable)[i].remove_asap == false) &&
+				 ((*sockTable)[i].is_reverse_connect_pending == false) &&
 				 ((*sockTable)[i].is_connect_pending == false)) {
 			selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
 		}
