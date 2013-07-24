@@ -5184,9 +5184,7 @@ init_public_ad()
 	}
 	publicAd->Assign(ATTR_NAME, NegotiatorName );
 
-	line.formatstr ("%s = \"%s\"", ATTR_NEGOTIATOR_IP_ADDR,
-			daemonCore->InfoCommandSinfulString() );
-	publicAd->Insert(line.Value());
+	publicAd->Assign(ATTR_NEGOTIATOR_IP_ADDR,daemonCore->InfoCommandSinfulString());
 
 #if !defined(WIN32)
 	line.formatstr("%s = %d", ATTR_REAL_UID, (int)getuid() );

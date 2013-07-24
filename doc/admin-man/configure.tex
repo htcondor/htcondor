@@ -2364,10 +2364,16 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   \Condor{shared\_port} for receiving incoming connections.  
   Under Unix, write access to the location defined by 
   \Macro{DAEMON\_SOCKET\_DIR} is required for this to take
-  effect.  The default is \Expr{False}.  If set to \Expr{True},
-  \MacroNI{SHARED\_PORT} should be added to \MacroNI{DAEMON\_LIST}.
+  effect.  The default is \Expr{False}.
   For more information about using
   a shared port, see page~\pageref{sec:Config-shared-port}.
+
+\label{param:AutoIncludeSharedPortInDaemonList}
+\item[\Macro{AUTO\_INCLUDE\_SHARED\_PORT\_IN\_DAEMON\_LIST}] A boolean
+  value that specifies whether \Macro{SHARED\_PORT} should be
+  automatically inserted into \Condor{master}'s \Macro{DAEMON\_LIST}
+  when \Macro{USE\_SHARED\_PORT} is \Expr{True}.  The default for this
+  setting is \Expr{True}.
 
 \label{param:SubsysMaxFileDescriptors}
 \item[\MacroB{<SUBSYS>\_MAX\_FILE\_DESCRIPTORS}]
