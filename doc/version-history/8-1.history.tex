@@ -153,6 +153,13 @@ which reports metrics for DAGMan jobs running under Pegasus.
 
 \begin{itemize}
 
+\item HTCondor 8.0.0 had an unintended change in the chirp wire protocol.
+This change causeed \Condor{chirp} \Opt{put} to fail when the execute node
+was running HTCondor 7.8.x or earlier versions. HTCondor 8.0.1 and later
+versions will now send the original wire protocol, and accept either the
+original protocol, or the variant that HTCondor 8.0.0 sends.
+\Ticket{3735}
+
 \item Fixed a bug that could cause the daemons to crash on Unix platforms,
 if the operating system reported that a job owner's account 
 did not exist, for example due to a temporary NIS or LDAP failure.
