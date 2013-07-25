@@ -89,8 +89,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added support for publishing information about an HTCondor pool to \TM{Ganglia}.
-See page~\pageref{sec:Config-gangliad} for more information.
+\item Added support for publishing information about an HTCondor pool 
+to \TM{Ganglia}.
+See section~\ref{sec:Config-gangliad} on 
+page~\pageref{sec:Config-gangliad} for configuration variable details.
 \Ticket{3515}
 
 \item Improved the performance of the \Condor{collector} daemon when running
@@ -111,10 +113,11 @@ for DAGMan jobs running under Pegasus.
 
 \begin{itemize}
 
-\item The default values of the configuration variables
-\Macro{COLLECTOR\_MAX\_FILE\_DESCRIPTORS} and 
-\Macro{SCHEDD\_MAX\_FILE\_DESCRIPTORS} have become 10240 and 4096,
-respectively.  This increases the scalability of the default configuration.
+\item The default value of configuration variable
+\Macro{COLLECTOR\_MAX\_FILE\_DESCRIPTORS} has changed to 10240,
+and the default value of configuration variable 
+\Macro{SCHEDD\_MAX\_FILE\_DESCRIPTORS} has changed to 4096.
+This increases the scalability of the default configuration.
 \Ticket{3626}
 
 \item The new configuration variable
@@ -153,11 +156,14 @@ which reports metrics for DAGMan jobs running under Pegasus.
 
 \begin{itemize}
 
-\item HTCondor 8.0.0 had an unintended change in the chirp wire protocol.
-This change causeed \Condor{chirp} \Opt{put} to fail when the execute node
-was running HTCondor 7.8.x or earlier versions. HTCondor 8.0.1 and later
+\item HTCondor version 8.0.0 had an unintended change in the Chirp 
+wire protocol.
+This change caused \Condor{chirp} with the \Opt{put} option
+to fail when the execute node
+was running HTCondor version 7.8.x or earlier versions. 
+HTCondor 8.0.1 and later
 versions will now send the original wire protocol, and accept either the
-original protocol, or the variant that HTCondor 8.0.0 sends.
+original protocol, or the variant that HTCondor version 8.0.0 sends.
 \Ticket{3735}
 
 \item Fixed a bug that could cause the daemons to crash on Unix platforms,
@@ -170,7 +176,8 @@ did not exist, for example due to a temporary NIS or LDAP failure.
 that could not be parsed.
 \Ticket{1319}
 
-\item Fixed a typo in \Condor{q} output.
+\item Fixed a typo in the output of \Condor{q},
+where a period was erroneously present within a heading.
 \Ticket{3703}
 
 \end{itemize}

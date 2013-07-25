@@ -2379,10 +2379,11 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
 \item[\MacroB{<SUBSYS>\_MAX\_FILE\_DESCRIPTORS}]
 \index{SUBSYS\_MAX\_FILE\_DESCRIPTORS macro@\texttt{<SUBSYS>\_MAX\_FILE\_DESCRIPTORS}}
 This setting is identical to \MacroNI{MAX\_FILE\_DESCRIPTORS}, but it
-only applies to a specific condor subsystem.  If the
+only applies to a specific subsystem.  If the
 subsystem-specific setting is unspecified, \MacroNI{MAX\_FILE\_DESCRIPTORS}
-is used, except for the collector and the schedd, which default to 10240 and
-4096, respectively.
+is used.
+For the \Condor{collector} daemon, the value defaults to 10240, and
+for the \Condor{schedd} daemon, the value defaults to 4096.
 
 \label{param:MaxFileDescriptors}
 \item[\Macro{MAX\_FILE\_DESCRIPTORS}] Under Unix, this specifies the
