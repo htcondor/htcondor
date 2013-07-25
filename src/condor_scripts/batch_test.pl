@@ -705,19 +705,18 @@ exit $num_failed;
 
 sub start_condor {
     if($isolated) {
-	$testpersonalcondorlocation = $_[0];
-	if($iswindows == 1) {
-	    if ($iscygwin) {
-		$wintestpersonalcondorlocation = `cygpath -m $testpersonalcondorlocation`;
-		CondorUtils::fullchomp($wintestpersonalcondorlocation);
-	    }
-	    else {
-		($wintestpersonalcondorlocation = $testpersonalcondorlocation) =~ s|/|\\|g;
-	    }
-	}
-	$targetconfig      = "$testpersonalcondorlocation/condor_config";
-	$targetconfiglocal = "$testpersonalcondorlocation/condor_config.local";
-	$localdir          = "$testpersonalcondorlocation/local";
+		$testpersonalcondorlocation = $_[0];
+		if($iswindows == 1) {
+	    	if ($iscygwin) {
+				$wintestpersonalcondorlocation = `cygpath -m $testpersonalcondorlocation`;
+				CondorUtils::fullchomp($wintestpersonalcondorlocation);
+	    	} else {
+				($wintestpersonalcondorlocation = $testpersonalcondorlocation) =~ s|/|\\|g;
+	    	}
+		}
+		$targetconfig      = "$testpersonalcondorlocation/condor_config";
+		$targetconfiglocal = "$testpersonalcondorlocation/condor_config.local";
+		$localdir          = "$testpersonalcondorlocation/local";
 
         $condorpidfile     = "$testpersonalcondorlocation/.pidfile";
         push(@extracondorargs, "-pidfile $condorpidfile");
@@ -966,16 +965,15 @@ sub CreateConfig {
 
     # Windows needs config file preparation, wrapper scripts etc
     if($iswindows == 1) {
-	# pre-process config file src and windowize it
-	# create config file with todd's awk script
-	my $configcmd = "gawk -f $awkscript $genericconfig";
-	if ($^O =~ /MSWin32/) {  $configcmd =~ s/gawk/awk/; $configcmd =~ s|/|\\|g; }
-	debug("awk cmd is $configcmd\n",2);
-
-	open(OLDFIG, " $configcmd 2>&1 |") || die "Can't run script file\"$configcmd\": $!\n";    
-    }
-    else {
-	open(OLDFIG, '<', $configmain ) || die "Can't read base config file $configmain: $!\n";
+		# pre-process config file src and windowize it
+		# create config file with todd's awk script
+		my $configcmd = "gawk -f $awkscript $genericconfig";
+		if ($^O =~ /MSWin32/) {  $configcmd =~ s/gawk/awk/; $configcmd =~ s|/|\\|g; }
+		debug("awk cmd is $configcmd\n",2);
+	
+		open(OLDFIG, " $configcmd 2>&1 |") || die "Can't run script file\"$configcmd\": $!\n";    
+    } else {
+		open(OLDFIG, '<', $configmain ) || die "Can't read base config file $configmain: $!\n";
     }
 
     open(NEWFIG, '>', $targetconfig ) || die "Can't write to new config file $targetconfig: $!\n";    
@@ -1029,6 +1027,7 @@ sub CreateConfig {
 	}    
     }    
     close( OLDFIG );    
+	print NEWFIG "TOOL_TIMEOUT_MULTIPLIER = 10\n";	
     close( NEWFIG );
 }
 

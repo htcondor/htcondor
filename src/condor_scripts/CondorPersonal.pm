@@ -931,6 +931,8 @@ debug( "HMMMMMMMMMMM opening to write <$topleveldir/$personal_local>\n",$debugle
 	print NEW "ALL_DEBUG = D_FULLDEBUG\n";
 	# bill: 8/13/09 speed up dagman
 	print NEW "DAGMAN_USER_LOG_SCAN_INTERVAL = 1\n";
+	# bill make tools more forgiving of being busy
+	print NEW "TOOL_TIMEOUT_MULTIPLIER = 10\n";
 
 	if($personal_daemons ne "")
 	{
