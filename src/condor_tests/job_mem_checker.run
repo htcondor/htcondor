@@ -27,6 +27,8 @@ use CondorTest;
 use CondorUtils;
 use Check::SimpleJob;
 use Net::Domain qw(hostfqdn);
+use POSIX qw/sys_wait_h strftime/;
+
 my $host = hostfqdn();
 print "$host\n";
 
@@ -41,6 +43,8 @@ my $firstappend_condor_config = '
  
 my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"memchecker");
 my $testname = "job_mem_checker";
+my $ClusterId;
+my $updatecount = 0;
 
 CondorTest::StartCondorWithParams(
 	condor_name => "memchecker",
@@ -52,17 +56,76 @@ my $on_abort = sub {
 	CondorTest::debug("Abort from removing sleep 0 jobs.\n",1);
 };
 
+sub timestamp {
+    return strftime("%Y/%m/%d %H:%M:%S", localtime);
+};
+
+my $on_imageupdated = sub {
+	my %info = @_; # contains cluster, job, imagesize, megs and rss
+	my $stamp = timestamp();
+
+	print "$stamp Cluster $info{cluster} job $info{job} imagesize $info{imagesize} megs $info{megs} rss $info{rss}\n";
+	CondorTest::debug("Image Updated.\n",1);
+	my @running = `condor_q -run`;
+	foreach my $line (@running) {
+		chomp($line);
+		if($line =~ /^.*?(slot.*)$/) {
+			print "Found slot <$1>\n";
+			$slot = $1;
+		}
+	}
+	print "$stamp Machine ads from $slot\n";
+	my @machineads = `condor_status -l $slot`;
+	foreach my $line (@machineads) {
+		chomp($line);
+		if($line =~ /ImageSize/) {
+			print "$line\n";
+		} elsif($line =~ /Memory/) {
+			print "$line\n";
+		} elsif($line =~ /TotalMemory/) {
+			print "$line\n";
+		} elsif($line =~ /TotalVirtual/) {
+			print "$line\n";
+		}
+	}
+	my @jobads = `condor_q -l $ClusterId`;
+	my $adcount = @jobads;
+	if($adcount == 0) {
+		@jobads = `condor_history -l $ClusterId`;
+	}
+	print "$stamp Jobs ads cluster $ClusterId out of $adcount ads\n";
+	foreach my $line (@jobads) {
+		chomp($line);
+		if($line =~ /^\s*ImageSize\s+=\s+(\d+).*$/) {
+			print "$line\n";
+		} elsif($line =~ /ResidentSetSize/) {
+			print "$line\n";
+		}
+	}
+};
+
 my $on_evictedwithoutcheckpoint = sub {
 	CondorTest::debug("Evicted Without Checkpoint from removing jobs.\n",1);
 };
 
-my $result = 1;
-my $running_now = 0;
-my $expect_idle = 0;
-my $expect_run = 0;
-my $checkpslot = "no";
 
+my $slot = "";
 my $on_execute = sub {
+	print "Executing now....... Check ads\n";
+};
+
+my $GetClusterId = sub {
+	my $cid = shift;
+	$ClusterId = $cid;
+	print "Resquestd Cluster Got $ClusterId\n";
+	##########################
+	#
+	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
+	# position which is always an undefined variable EXCEPT when it is a call back routine 
+	# to pass out the cluster Id.
+	#
+	##########################
+	#runcmd("condor_q",{emit_output => 1});
 };
 
 #Do a couple things before setting currency limits
@@ -75,31 +138,83 @@ $append_submit_commands = '
 transfer_input_files = x_job_mem_checker.exe
 ';
 
+system("rm -rf mem_checker.out mem_checker.err mem_checker.log mem_checker.pid");
+
 # on this on-execute, check the ads like above
-$expect_run = 1;
-$expect_idle = 0;
 $result = SimpleJob::RunCheck(
-	runthis => "x_job_mem_checker.pl",
+	runthis => "x_job_mem_checker.exe",
 	test_name => $testname,
 	on_abort => $on_abort,
+	on_imageupdated => $on_imageupdated,
+	GetClusterId => $GetClusterId,
 	output => "mem_checker.out",
 	error => "mem_checker.err",
 	user_log => "mem_checker.log",
 	on_execute => $on_execute,
 	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	queue_sz => 1,
-	should_transfer_files => True,
+	duration => "128 10 20 20 20 10 20",
+	should_transfer_files => "YES",
 	when_to_transfer_output => ON_EXIT,
 	append_submit_commands => $append_submit_commands,
 );
-print "******************** Test for correct local resource ClassAds on dynamic slot\n";
+print "******************** Test for memory usage \n";
 if($result == 1) {
 	print "ok\n\n\n";
 } else {
 	print "bad\n\n\n";
 }
 
+print "Now lets check results..........\n";
+
 
 CondorTest::EndTest();
 
+
+sub SampleCheckerLog
+{
+	my $state = shift;
+	my $file = shift;
+	my $options = shift;
+	my @alloptions = split /,/, $options;
+	foreach my $option (@alloptions) {
+		#print "$option\n";
+	}
+
+	my $counter = 0;
+
+
+	my $line = "";
+	open(UL,"<$file") or die "failed to open <$file>:$!\n";
+	while(<UL>) {
+		chomp();
+		$line = $_;
+		if($line =~ /^006.*Image size of job updated:\s+(\d+).*$/) {
+			$counter += 1;
+			#print "$alloptions[0] $alloptions[1] $counter\n";
+			if(($alloptions[0] eq "update") && ($alloptions[1] eq $counter)) {
+				print "Image size changed to $1\n";
+				# eat next two lines, get memory and rss
+				$line = <UL>;
+				print "$line";
+				$line = <UL>;
+				print "$line";
+			}
+		} elsif($line =~ /^005.*Job terminated.*$/) {
+			if($alloptions[0] eq "terminated") {
+				my $skip = 0;
+				my $fetch = "";
+				print "$line\n";
+				while($skip < 12) {
+					$fetch = <UL>;
+					$skip += 1;
+				}
+				$fetch = <UL>;
+				print "$fetch\n";
+			}
+		} else {
+			print "skip: $line \n";
+		}
+	}
+}
 
