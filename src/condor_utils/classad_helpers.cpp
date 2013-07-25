@@ -76,22 +76,6 @@ int cleanStringForUseAsAttr(MyString &str, char chReplace/*=0*/, bool compact/*=
    return str.Length();
 }
 
-bool canStringBeUsedAsAttr(const char * pattr)
-{
-   if ( ! pattr || ! pattr[0])
-      return false;
-
-   for (const char * psz = pattr; *psz; ++psz)
-      {
-      char ch = *psz;
-      if (ch == '_' || (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z'))
-         continue;
-      return false;
-      }
-
-   return true;
-}
-
 /*
   This method is static to this file and shouldn't be used directly.
   it just does the actual work for findSoftKillSig() and

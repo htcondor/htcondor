@@ -49,7 +49,38 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item As of 7.9.6, when using CCB to connect to the \Condor{startd},
+  the \Condor{negotiator} would sometimes crash (and be restarted)
+  with the following error message in the log:
+
+\begin{verbatim}
+ERROR "Selector::add_fd(): fd -1 outside valid range 0-1023"
+\end{verbatim}
+
+The workaround for this problem is to configure
+\begin{verbatim}
+SERVICE_COMMAND_SOCKET_MAX_SOCKET_INDEX=-1
+\end{verbatim}
+or to disable communication with the \Condor{startd} by setting
+\begin{verbatim}
+NEGOTIATOR_INFORM_STARTD=False
+\end{verbatim}
+\Ticket{3801}
+
+\item Fixed a bug in the condor\_qsub script that caused it to exit
+with a syntax error when a job with a memory requirement was
+submitted.
+\Ticket{3808}
+
+\item Fix a bug causing security groups for EC2 jobs to be ignored.  Also,
+you may now, as documented, separate the list of security groups for
+an EC2 Spot job by commas.
+\Ticket{3787}
+
+\item When invoking \Prog{glexec}, \Env{GLEXEC\_TARGET\_PROXY} is now
+  set to \File{/dev/null}.  In some situations, it was previously set
+  to a nonexistent path, which caused errors in some configurations.
+\Ticket{3794}
 
 \end{itemize}
 

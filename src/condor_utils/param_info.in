@@ -9690,6 +9690,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=555
 
+[AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST]
+aliases=
+default=true
+version=8.1.1
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Auto Include Shared Port In Daemon List
+usage=True if SHARED_PORT should be automatically added to DAEMON_LIST when USE_SHARED_PORT=true
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=
+id=555
+
 [CCB_HEARTBEAT_INTERVAL]
 aliases=
 default=1200

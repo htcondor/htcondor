@@ -48,9 +48,9 @@ bool printExitString( ClassAd* ad, int exit_reason, MyString &str );
 // if compact is true, then multiple consecutive runs of chReplace
 // are changed to a single instance.
 // return value is the length of the resulting string.
-//
+// NOTE: This function does not ensure that the first character isn't
+//   a digit. For current callers, this is not a problem.
 int cleanStringForUseAsAttr(MyString &str, char chReplace=0, bool compact=true);
-bool canStringBeUsedAsAttr(const char * pattr);
 
 // Create an empty job ad, with sensible defaults for all of the attributes
 // that the schedd expects to be set, like condor_submit would set them.

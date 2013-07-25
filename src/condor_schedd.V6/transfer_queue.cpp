@@ -163,29 +163,36 @@ TransferQueueManager::parseThrottleConfig(char const *config_param,bool &enable_
 
 	char *endptr=NULL;
 	low = strtod(throttle_config.c_str(),&endptr);
-	if( !endptr || !(*endptr == ' ' || *endptr == '\0') ) {
-		EXCEPT("Invalid configuration for %s: %s\n",config_param,throttle_config.c_str());
+	if( !endptr || !(isspace(*endptr) || *endptr == '\0') ) {
+		EXCEPT("Invalid configuration for %s: %s",config_param,throttle_config.c_str());
 		return;
 	}
 
-	while( *endptr == ' ' ) endptr++;
+	while( isspace(*endptr) ) endptr++;
 
 	if( *endptr == '\0' ) {
 		high = low;
 		low = 0.9*high;
 	}
-	else if( strncmp(endptr,"to ",3)==0 ) {
+	else if( strncmp(endptr,"to",2)==0 && isspace(endptr[2]) ) {
 		endptr += 3;
-		while( *endptr == ' ' ) endptr++;
+		while( isspace(*endptr) ) endptr++;
 
 		high = strtod(endptr,&endptr);
 		if( !endptr || *endptr != '\0' ) {
-			dprintf(D_ALWAYS,"Invalid configuration for %s: %s\n",config_param,throttle_config.c_str());
+			EXCEPT("Invalid configuration for %s: %s",config_param,throttle_config.c_str());
 			return;
 		}
 	}
 	else {
-		EXCEPT("Invalid configuration for %s: %s\n",config_param,throttle_config.c_str());
+		EXCEPT("Invalid configuration for %s: %s",config_param,throttle_config.c_str());
+	}
+
+	if( high < low ) {
+		EXCEPT("Invalid configuration for %s (first value must be less than second): %s",config_param,throttle_config.c_str());
+	}
+	if( high < 0 || low < 0 ) {
+		EXCEPT("Invalid configuration for %s (values must be positive): %s",config_param,throttle_config.c_str());
 	}
 
 		// for now, these are hard-coded
