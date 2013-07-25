@@ -74,6 +74,7 @@ my $AbortCallback;
 my $SuspendedCallback;
 my $UnsuspendedCallback;
 my $ShadowCallback;
+my $ImageUpdatedCallback;
 my $HoldCallback;
 my $ReleaseCallback;
 my $DisconnectedCallback;
@@ -108,6 +109,7 @@ sub Reset
     undef $ExitedAbnormalCallback;
     undef $AbortCallback;
     undef $ShadowCallback;
+	undef $ImageUpdatedCallback;
     undef $HoldCallback;
     undef $ReleaseCallback;
     undef $DisconnectedCallback;
@@ -507,6 +509,11 @@ sub RegisterAbort
     my $sub = shift || croak "missing argument";
     $AbortCallback = $sub;
 }
+sub RegisterImageUpdated
+{
+    my $sub = shift || croak "missing argument";
+    $ImageUpdatedCallback = $sub;
+}
 sub RegisterShadow
 {
     my $sub = shift || croak "missing argument";
@@ -871,6 +878,64 @@ sub Monitor
 		goto PARSE;
 	    }
 	    next LINE;
+	}
+
+	# 006: Image Size Updated
+	if( $line =~ /^006\s+\(0*(\d+)\.0*(\d+).*?Image\s+size\s+of\s+job\s+updated:\s+(\d+)\s*$/ )
+	{
+	    $info{'cluster'} = $1;
+	    $info{'job'} = $2;
+		$info{'imagesize'} = $3;
+
+	    debug( "Saw Image Size Update <$3>\n" ,2);
+		print "Saw Image Size Update <$3>\n";
+
+	    # read next line to see current Megs
+	    $line = <SUBMIT_LOG>;
+		while( ! defined $line )
+		{
+			sleep 2;
+			if(defined $TimedCallback)
+			{
+				CheckTimedCallback();
+			}
+			$line = <SUBMIT_LOG>;
+		}
+	    CondorUtils::fullchomp($line);
+	    $linenum++;
+
+		# Grab current memory in Megs
+		if($line =~ /^\s*(\d+).*$/) {
+			$info{'megs'} = $1;
+			debug( "Memory usage $1 (MB)\n",2);
+		}
+
+	    # read next line to see current RSS
+	    $line = <SUBMIT_LOG>;
+		while( ! defined $line )
+		{
+			sleep 2;
+			if(defined $TimedCallback)
+			{
+				CheckTimedCallback();
+			}
+			$line = <SUBMIT_LOG>;
+		}
+	    CondorUtils::fullchomp($line);
+	    $linenum++;
+
+		# Grab current memory in Megs
+		if($line =~ /^\s*(\d+).*$/) {
+			$info{'rss'} = $1;
+			debug( "RSS usage $1 (K)\n",2);
+		}
+
+		# execute callback if one is registered
+		&$ImageUpdatedCallback( %info )
+		    if defined $ImageUpdatedCallback;
+
+	    next LINE;
+
 	}
 
 	# 007: shadow exception

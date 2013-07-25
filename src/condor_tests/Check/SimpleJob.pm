@@ -94,7 +94,7 @@ sub RunCheck
     my $unsuspended_fn = $args{on_unsuspended} || $dummy;
     my $disconnected_fn = $args{on_disconnected} || $dummy;
     my $reconnected_fn = $args{on_reconnected} || $dummy;
-    #my $evicted_fn = $args{on_evicted} || $dummy;
+    my $imageupdated_fn = $args{on_imageupdated} || $dummy;
     my $evicted_ewc_fn = $args{on_evictedwithcheckpoint} || $dummy;
     my $evicted_ewoc_fn = $args{on_evictedwithoutcheckpoint} || $dummy;
     my $evicted_wreq_fn = $args{on_evictedwithrequeue} || $dummy;
@@ -116,6 +116,9 @@ sub RunCheck
 	#If we register thees to dummy, then we don't get
 	#the error function registered which says this is bad
 
+	if( exists $args{on_imageupdated} ) {
+    	CondorTest::RegisterImageUpdated( $testname, $imageupdated_fn );
+	}
 	if( exists $args{on_evictedwithcheckpoint} ) {
     	CondorTest::RegisterEvictedWithCheckpoint( $testname, $evicted_ewc_fn );
 	}

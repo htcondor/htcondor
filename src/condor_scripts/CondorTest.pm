@@ -387,6 +387,13 @@ sub RegisterShadow
 
     $test{$handle}{"RegisterShadow"} = $function_ref;
 }
+sub RegisterImageUpdated
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterImageUpdated"} = $function_ref;
+}
 sub RegisterWantError
 {
     my $handle = shift || croak "missing handle argument";
@@ -956,6 +963,18 @@ sub CheckRegistrations
     if( defined $test{$handle}{"RegisterShadow"} )
     {
 	Condor::RegisterShadow( $test{$handle}{"RegisterShadow"} );
+    }
+    else
+    {
+	Condor::RegisterShadow( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (got unexpected shadow exceptions)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterImageUpdated"} )
+    {
+	Condor::RegisterImageUpdated( $test{$handle}{"RegisterImageUpdated"} );
     }
 
     if( defined $test{$handle}{"RegisterWantError"} )
