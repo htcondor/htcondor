@@ -49,6 +49,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added \AdAttr{ConcurrencyLimits} to the projection for claimed
+resources in \Condor{negotiator}, so that concurrency limit accounting 
+works properly across negotiation cycles when 
+\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} is \Expr{False}.
+\Ticket{3815}
+
 \item As of 7.9.6, when using CCB to connect to the \Condor{startd},
   the \Condor{negotiator} would sometimes crash (and be restarted)
   with the following error message in the log:
