@@ -1,5 +1,9 @@
 \begin{ManPage}{\label{man-condor-q}\Condor{q}}{1}
 {Display information about jobs in queue}
+
+\index{HTCondor commands!condor\_q}
+\index{condor\_q command}
+
 \Synopsis \SynProg{\Condor{q}}
 \oOpt{-help [Universe | State]} 
 
@@ -9,9 +13,6 @@
 \oArg{restriction list}
 \oArg{output options}
 \oArg{analyze options}
-
-\index{HTCondor commands!condor\_q}
-\index{condor\_q command}
 
 \Description
 \Condor{q} displays information about jobs in the HTCondor job queue.  By
@@ -202,11 +203,11 @@ the values of relevant attributes of the machine ClassAd are also displayed.
     The ClassAds appear as if
     \Condor{q} \Opt{-long} is used with the header stripped out.}
   \OptItem{\OptArg{-userlog}{file}}{(general option) 
-    Display jobs, with job information coming from a user log,
+    Display jobs, with job information coming from a job event log,
     instead of from the real ClassAds from the \Condor{schedd} daemon.
     This is most useful for automated testing of the status of jobs known to be
-    in the given user log, because it reduces the load on the \Condor{schedd}.
-    A user log does not contain all of the job information, so some fields in
+    in the given job event log, because it reduces the load on the \Condor{schedd}.
+    A job event log does not contain all of the job information, so some fields in
     the normal output of \Condor{q} will be blank.}
   \OptItem{\Opt{-cputime}} {(output option) 
     Instead of wall-clock allocation time (RUN\_TIME), 

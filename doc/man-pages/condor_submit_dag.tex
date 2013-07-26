@@ -118,7 +118,7 @@ description.
      (see section~\ref{param:DAGManAllowEvents}).}
   \OptItem{\Opt{-allowlogerror}}{This optional argument has
      \Condor{dagman} try to run the specified DAG, even in the case
-     of detected errors in the user log specification.
+     of detected errors in the job event log specification.
      As of version 7.3.2, this argument has an effect only on
      DAGs containing Stork job nodes.}
   \OptItem{\OptArg{-r}{schedd\_name}}{
@@ -288,7 +288,7 @@ description.
      to use the file specified by the job ClassAd
      attribute \Attr{UserLog} to monitor job status.
      If this command line argument is used,
-     then the user log file cannot be defined with a macro.
+     then the job event log file cannot be defined with a macro.
      This is necessary if using a \Condor{dagman} version of 7.9.0 or later
 % Any version prior to 7.9.0 will need this flag defined
      and submitting to a \Condor{schedd} daemon that is earlier than 7.9.0,
