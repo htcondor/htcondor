@@ -206,7 +206,7 @@ auxiliary job log:
 \end{itemize}
 If \Attr{DAGManNodesLog} is
 not defined, it has no effect. The value of \Attr{DAGManNodesMask} does not
-affect events recorded in the user log file referred to by \Attr{UserLog}.
+affect events recorded in the job event log file referred to by \Attr{UserLog}.
 
 %%% ClassAd attribute: DelegateJobGSICredentialsLifetime
 \index{ClassAd job attribute!DelegateJobGSICredentialsLifetime}
@@ -670,7 +670,7 @@ reason that a job was put on hold.
 19 & \Macro{<Keyword>\_HOOK\_PREPARE\_JOB} was defined but could not be executed or returned failure. \\ \hline
 20 & The job missed its deferred execution time and therefore failed to run. \\ \hline
 21 & The job was put on hold because \Macro{WANT\_HOLD} in the machine policy was true. \\ \hline
-22 & Unable to initialize user log. \\ \hline
+22 & Unable to initialize job event log. \\ \hline
 23 & Failed to access user account. \\ \hline
 24 & No compatible shadow. \\ \hline
 25 & Invalid cron settings. \\ \hline
@@ -733,11 +733,11 @@ attribute, setting it to \Expr{False}.
 \label{JobAdInformationAttrs-job-attribute}
 \item[\AdAttr{JobAdInformationAttrs}:] A comma-separated list
 of attribute names.  The named attributes and their values are written
-in the user log whenever any event is being written to the log.
+in the job event log whenever any event is being written to the log.
 This is the same as the configuration setting
 \MacroNI{EVENT\_LOG\_INFORMATION\_ATTRS} (see
 page~\pageref{param:EventLogJobAdInformationAttrs}) but it applies to
-the user log instead of the system event log.
+the job event log instead of the system event log.
 
 %%% ClassAd attribute: JobDescription
 \index{ClassAd job attribute!JobDescription}
