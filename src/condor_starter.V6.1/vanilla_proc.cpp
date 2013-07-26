@@ -263,7 +263,12 @@ VanillaProc::StartJob()
 		param(execute_str, "EXECUTE", "EXECUTE_UNKNOWN");
 			// Note: Starter is a global variable from os_proc.cpp
 		Starter->jic->machClassAd()->EvalString(ATTR_NAME, NULL, starter_name);
-		ASSERT (starter_name.size());
+		if (starter_name.size() == 0) {
+			char buf[16];
+			sprintf(buf, "%d", getpid());
+			starter_name = buf;
+		}
+		//ASSERT (starter_name.size());
 		cgroup_uniq.formatstr("%s_%s", execute_str.c_str(), starter_name.c_str());
 		const char dir_delim[2] = {DIR_DELIM_CHAR, '\0'};
 		cgroup_uniq.replaceString(dir_delim, "_");
