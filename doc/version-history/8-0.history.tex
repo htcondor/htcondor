@@ -49,6 +49,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that prevented work fetch scripts from running
+on systems where cgroup based tracking and management was enabled.
+\Ticket{3819}
+
 \item Added \AdAttr{ConcurrencyLimits} to the projection for claimed
 resources in \Condor{negotiator}, so that concurrency limit accounting 
 works properly across negotiation cycles when 
