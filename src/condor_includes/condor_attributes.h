@@ -904,6 +904,11 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_TOTAL_SLOT_PREFIX  "TotalSlot"
 #define ATTR_MACHINE_RESOURCES  "MachineResources"
 
+// multiclaim / negside resource consumption
+#define ATTR_NUM_CLAIMS "NumClaims"
+#define ATTR_CLAIM_ID_LIST "ClaimIdList"
+#define ATTR_CONSUMPTION_PREFIX "Consumption"
+
 // This is a record of the job exit status from a standard universe job exit
 // via waitpid. It is in the job ad to implement the terminate_pending
 // feature. It has to be here because of rampant global variable usage in the

@@ -61,6 +61,8 @@ static char const *StartTimeAttr="StartTime";
 
 static char const *SlotWeightAttr=ATTR_SLOT_WEIGHT;
 
+static char const* NumCpMatches = "NumCpMatches";
+
 /* Disable gcc warnings about floating point comparisons */
 GCC_DIAG_OFF(float-equal)
 
@@ -584,17 +586,39 @@ void Accountant::AddMatch(const MyString& CustomerName, ClassAd* ResourceAd)
 
   dprintf(D_ACCOUNTANT,"Accountant::AddMatch - CustomerName=%s, ResourceName=%s\n",CustomerName.Value(),ResourceName.Value());
 
-  // Check if the resource is used
-  MyString RemoteUser;
-  if (GetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,RemoteUser)) {
-    if (CustomerName==RemoteUser) {
-	  dprintf(D_ACCOUNTANT,"Match already existed!\n");
-      return;
-    }
-    RemoveMatch(ResourceName,T);
-  }
+  float SlotWeight = 0;
+  double match_cost = 0;
+  if (ResourceAd->LookupFloat(CP_MATCH_COST, match_cost)) {
+      // If CP_MATCH_COST attribute is present, we are dealing with a p-slot resource
+      // having a consumption policy, during the matchmaking process.  In this
+      // situation, we need to maintain multiple matches against a single resource.
+      // This allows resource usage accounting and also concurrency limit accounting
+      // to work properly with multiple matches against one resource ad.
 
-  float SlotWeight = GetSlotWeight(ResourceAd);
+      // For CP matches, maintain a count of matches during this negotiation cycle:
+      int num_cp_matches = 0;
+      if (!GetAttributeInt(ResourceRecord+ResourceName, NumCpMatches, num_cp_matches)) num_cp_matches = 0;
+      string suffix;
+      formatstr(suffix, "_cp_match_%03d", num_cp_matches);
+      num_cp_matches += 1;
+      SetAttributeInt(ResourceRecord+ResourceName, NumCpMatches, num_cp_matches);
+
+      // Now insert a match under a unique pseudonym for resource name,
+      // and using match cost for slot weight:
+      SlotWeight = match_cost;
+      ResourceName += suffix.c_str();
+  } else {
+      // Check if the resource is used
+      MyString RemoteUser;
+      if (GetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,RemoteUser)) {
+        if (CustomerName==RemoteUser) {
+    	  dprintf(D_ACCOUNTANT,"Match already existed!\n");
+          return;
+        }
+        RemoveMatch(ResourceName,T);
+      }
+      SlotWeight = GetSlotWeight(ResourceAd);
+  }
 
   int ResourcesUsed=0;
   GetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
@@ -674,6 +698,21 @@ void Accountant::RemoveMatch(const MyString& ResourceName)
 void Accountant::RemoveMatch(const MyString& ResourceName, time_t T)
 {
   dprintf(D_ACCOUNTANT,"Accountant::RemoveMatch - ResourceName=%s\n",ResourceName.Value());
+
+  int num_cp_matches = 0;
+  if (GetAttributeInt(ResourceRecord+ResourceName, NumCpMatches, num_cp_matches)) {
+      // If this attribute is present, this p-slot match is a placeholder for one or more
+      // pseudo-matches with resource name having a suffix of "_cp_match_xxx".   These
+      // special matches are created to allow proper accounting for resources having a
+      // consumption policy.  They are removed during the CheckMatches stage on the 
+      // cycle after they are created, due to not actually existing in the resource list.
+      // They are replaced by a "real" d-slot record, similar to the way in which a
+      // "traditional" p-slot record is removed and replaced by a d-slot match.
+
+      // Delete the placeholder p-slot rec
+      DeleteClassAd(ResourceRecord+ResourceName);
+      return;
+  }
 
   MyString CustomerName;
   if (!GetAttributeString(ResourceRecord+ResourceName,RemoteUserAttr,CustomerName)) {
