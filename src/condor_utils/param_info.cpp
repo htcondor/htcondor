@@ -42,31 +42,26 @@ bucket_t** param_info;
 #include "param_info_init.c"
 
 const char*
-param_default_string(const char* param)
+param_default_string(const char* param, const char * /*subsys*/)
 {
-	const param_info_t *p;
 	const char* ret = NULL;
-
 	param_info_init();
-	p = param_info_hash_lookup(param_info, param);
+	const param_info_t *p = param_info_hash_lookup(param_info, param);
 
 	// Don't check the type here, since this is used in param and is used
 	// to look up values for all types.
 	if (p && p->default_valid) {
 		ret = p->str_val;
 	}
-
 	return ret;
 }
 
 int
 param_default_integer(const char* param, int* valid) {
-	const param_info_t* p;
 	int ret = 0;
-
 	param_info_init();
 
-	p = param_info_hash_lookup(param_info, param);
+	const param_info_t* p = param_info_hash_lookup(param_info, param);
 
 	if (p && (p->type == PARAM_TYPE_INT || p->type == PARAM_TYPE_BOOL)) {
         *valid = p->default_valid;
@@ -75,7 +70,6 @@ param_default_integer(const char* param, int* valid) {
 	} else {
 		*valid = 0;
 	}
-
 	return ret;
 }
 
@@ -86,14 +80,11 @@ param_default_boolean(const char* param, int* valid) {
 
 double
 param_default_double(const char* param, int* valid) {
-
-
-	const param_info_t* p;
 	double ret = 0.0;
 
 	param_info_init();
 
-	p = param_info_hash_lookup(param_info, param);
+	const param_info_t* p = param_info_hash_lookup(param_info, param);
 
 	if (p && (p->type == PARAM_TYPE_DOUBLE)) {
 		*valid = p->default_valid;
@@ -102,16 +93,13 @@ param_default_double(const char* param, int* valid) {
 	} else {
 		*valid = 0;
 	}
-
 	return ret;
 }
 
 int
 param_range_integer(const char* param, int* min, int* max) {
 
-	const param_info_t* p;
-
-	p = param_info_hash_lookup(param_info, param);
+	const param_info_t* p = param_info_hash_lookup(param_info, param);
 
 	if (p) {
 		if (p->type != PARAM_TYPE_INT) {
@@ -135,9 +123,7 @@ param_range_integer(const char* param, int* min, int* max) {
 int
 param_range_double(const char* param, double* min, double* max) {
 
-	const param_info_t* p;
-
-	p = param_info_hash_lookup(param_info, param);
+	const param_info_t* p = param_info_hash_lookup(param_info, param);
 
 	if (p) {
 		if(p->type != PARAM_TYPE_DOUBLE) {
