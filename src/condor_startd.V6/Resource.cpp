@@ -2458,6 +2458,10 @@ Resource::willingToRun(ClassAd* request_ad)
 		if (!slot_requirements || !req_requirements) {
 			if (!slot_requirements) {
 				dprintf(D_FAILURE|D_ALWAYS, "Slot requirements not satisfied.\n");
+				dprintf(D_ALWAYS, "Job ad was ============================\n");
+				dPrintAd(D_ALWAYS, *request_ad);
+				dprintf(D_ALWAYS, "Slot ad was ============================\n");
+				dPrintAd(D_ALWAYS, *r_classad);
 			}
 			if (no_starter) {
 				dprintf(D_FAILURE|D_ALWAYS, "No starter found to run this job!  Is something wrong with your Condor installation?\n");

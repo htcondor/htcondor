@@ -6270,7 +6270,7 @@ char *
 condor_param( const char* name, const char* alt_name )
 {
 	bool used_alt = false;
-	char *pval = lookup_macro( name, ProcVars, PROCVARSIZE );
+	char *pval = lookup_macro( name, NULL, ProcVars, PROCVARSIZE );
 
 	static StringList* submit_exprs = NULL;
 	static bool submit_exprs_initialized = false;
@@ -6284,7 +6284,7 @@ condor_param( const char* name, const char* alt_name )
 	}
 
 	if( ! pval && alt_name ) {
-		pval = lookup_macro( alt_name, ProcVars, PROCVARSIZE );
+		pval = lookup_macro( alt_name, NULL, ProcVars, PROCVARSIZE );
 		used_alt = true;
 	}
 

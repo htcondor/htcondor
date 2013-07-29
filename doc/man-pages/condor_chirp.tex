@@ -7,8 +7,8 @@
 \Description 
 \index{HTCondor commands!condor\_chirp}
 \index{condor\_chirp}
-\Condor{chirp} is not a command-line tool.
-\Condor{chirp} is invoked by an HTCondor job, while the job is executing.
+\Condor{chirp} is not intended for use as a command-line tool.
+It is most often invoked by an HTCondor job, while the job is executing.
 It accesses files or job ClassAd attributes on the submit machine.
 Files can be read, written or removed.
 Job attributes can be read, and most attributes can be updated.
@@ -64,7 +64,7 @@ vanilla, parallel and java universes.
   \OptItem{\OptArg{set\_job\_attr}{JobAttributeName AttributeValue}}
     {Sets the named job ClassAd attribute with the given attribute value.}
   \OptItem{\OptArg{ulog}{Message}}
-    {Appends \Arg{Message} to the job's user log.}
+    {Appends \Arg{Message} to the job event log.}
   \OptItem{\Opt{read} \oOptArg{-offset}{offset} \oOptArg{-stride}{length skip} \Arg{RemoteFileName} \Arg{Length}}
     {Read \Arg{Length} bytes from \Arg{RemoteFileName}. Optionally,
     implement a stride by
@@ -157,7 +157,7 @@ on the submit machine, run
 \end{verbatim}
 \normalsize
 
-To append the message "Hello World" to the user log, run
+To append the message "Hello World" to the job event log, run
 
 \footnotesize
 \begin{verbatim}

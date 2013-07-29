@@ -27,25 +27,26 @@
 	int totalK = 0;
 	int chunkK;
 
- 	int push(int chunks);
-	int pop(int chunks);
-	int init_storage(int size);
+ 	void push(int chunks);
+	void pop(int chunks);
+	void init_storage(int size);
 	static char *stamp();
-	int report();
+	void report();
+        int match_prefix(const char *s1, const char *s2);
 
 /*
  * This gets us to an argc of 21
 */
-main(int argc,char **argv)
+int main(int argc,char **argv)
 {
-	int szchng;
+	//int szchng;
 	int myarg;
-	char *pint;
-	void *got;
+	//char *pint;
+	//void *got;
 	struct sizerequest *request ;
-	FILE *out, *fopen();
-	const char *name = "mem_checker.pid";
-	const char *mode = "w";
+	//FILE *out, *fopen();
+	//const char *name = "mem_checker.pid";
+	//const char *mode = "w";
 	int chunkdiff;
 
 	if(argc > ((2 * MAXCHANGES) + 1)) {
@@ -131,26 +132,29 @@ main(int argc,char **argv)
 			request++;
 		}
 	}
+        return 0;
 }
 
-int report()
+void report()
 {
 	FILE *fp;
 	size_t len = STATUSSPACE;
-	size_t read;
+	int read;
 	
 	int vmpeak=-1, vmsize=-1, vmhwm=-1, vmrss=-1;
 
 	fp = fopen("/proc/self/status","r");
 	printf("%s PID %d, ",stamp(),jobpid);
-	while ((read = getline(&status, &len, fp)) != -1) {
+	while ((read = (int)getline(&status, &len, fp)) != -1) {
 	    char label[32]; int size;
-		int items = sscanf(status, "%s %d", &label, &size);
+	    int items = sscanf(status, "%s %d", label, &size);
+            if (items == 2) {
 		//printf("scan `%s` found %d items: '%s' %d\n", status, items, label, size);
 		if (match_prefix(label,"VmPeak")) vmpeak = size;
 		else if (match_prefix(label, "VmSize")) vmsize = size;
 		else if (match_prefix(label, "VmHWM")) vmhwm = size;
 		else if (match_prefix(label, "VmRSS")) vmrss = size;
+            }
 	}
 	printf("VmPeak %6d, VmSize %6d, VmHWM %6d, VmRSS %6d, alloced %d kB\n", vmpeak, vmsize, vmhwm, vmrss, totalK);
 }
@@ -159,7 +163,7 @@ int report()
  * stackpointer always on location which can be filled
  */
 
-int push(int chunks) {
+void push(int chunks) {
 	int units;
 
 	//printf("push %d chunks\n",chunks);
@@ -175,7 +179,7 @@ int push(int chunks) {
 	}
 }
 
-int pop(int chunks) {
+void pop(int chunks) {
 	int units;
 
 	//printf("pop %d chunks\n",chunks);
@@ -190,7 +194,7 @@ int pop(int chunks) {
 	}
 }
 
-int init_storage(int size) {
+void init_storage(int size) {
 	int szchng;
 	struct sizerequest *request ;
 
@@ -205,7 +209,7 @@ int init_storage(int size) {
 
 }
 
-int display_storage(int size) {
+void display_storage(int size) {
 	int szchng;
 	struct sizerequest *request ;
 

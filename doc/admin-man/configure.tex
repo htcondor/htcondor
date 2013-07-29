@@ -1930,7 +1930,7 @@ Log files may optionally be specified per debug level as follows:
 
 The following macros control where and what is written to the 
 event log,
-a file that receives job user log events, 
+a file that receives job events, 
 but across all users and user's jobs.
 
 \begin{description}
@@ -6769,7 +6769,7 @@ do not specify their own with:
 \label{param:LogOnNfsIsError}
 \item[\Macro{LOG\_ON\_NFS\_IS\_ERROR}]
   A boolean value that controls whether \Condor{submit} prohibits
-  job submit files with user log files on NFS.  If
+  job submit description files with job event log files on NFS.  If
   \MacroNI{LOG\_ON\_NFS\_IS\_ERROR} is set to \Expr{True}, such
   submit files will be rejected.  If \MacroNI{LOG\_ON\_NFS\_IS\_ERROR}
   is set to \Expr{False},
@@ -9064,7 +9064,7 @@ in section~\ref{sec:DAG-configuration}.
 \label{param:DAGManLogOnNfsIsError}
 \item[\Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}]
   A boolean value that controls whether \Condor{dagman} prohibits
-  node job submit description files with user log files on NFS.
+  node job submit description files with job event log files on NFS.
   This value is ignored if \MacroNI{CREATE\_LOCKS\_ON\_LOCAL\_DISK} is 
   \Expr{True} and
   \MacroNI{ENABLE\_USERLOG\_LOCKING} is \Expr{True}.
@@ -9157,7 +9157,7 @@ in section~\ref{sec:DAG-configuration}.
   will print a report of pending nodes to the \File{dagman.out} file.
   The report will only be printed if \Condor{dagman} has
   been waiting at least \MacroNI{DAGMAN\_PENDING\_REPORT\_INTERVAL}
-  seconds without seeing any node job user log events, in order to
+  seconds without seeing any node job events, in order to
   avoid cluttering the \File{dagman.out} file.
   This feature is mainly intended to help diagnose \Condor{dagman} processes 
   that are stuck waiting indefinitely for a job to finish.
@@ -9227,7 +9227,7 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManDefaultNodeLog}
 \item[\Macro{DAGMAN\_DEFAULT\_NODE\_LOG}]
-  The name of a file to be used as a user log by any node jobs that
+  The name of a file to be used as a job event log by any node jobs that
   do not define their own log files.
   The default value if not defined is \File{<DagFile>.nodes.log},
   where \verb@<DagFile>@ is replaced by the command line argument
@@ -9296,7 +9296,7 @@ in section~\ref{sec:DAG-configuration}.
 \label{param:DAGManAllowLogError}
 \item[\Macro{DAGMAN\_ALLOW\_LOG\_ERROR}]
   A boolean value defining whether \Condor{dagman} will still attempt
-  to run a node job, even if errors are detected in the user log
+  to run a node job, even if errors are detected in the job event log
   specification.  This setting has an effect only on nodes that are
   Stork jobs (not HTCondor jobs).  The default value if not defined is
   \Expr{False}.
@@ -9340,7 +9340,7 @@ in section~\ref{sec:DAG-configuration}.
   The default value is \Expr{True}.
   If \Expr{True},
   then \Condor{dagman} writes POST script terminate events to the default log,
-  and not to the user log specified in the submit description file.
+  and not to the job event log specified in the submit description file.
   \Condor{dagman} will also only read events from the default log file.
   This variable must be \Expr{False} if \Condor{dagman} from Condor
   version 7.9.0 or later is submitting jobs to a \Condor{schedd} daemon
