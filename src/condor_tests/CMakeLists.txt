@@ -385,6 +385,7 @@ if (BUILD_TESTING)
 
 	if(LINUX)
 		condor_pl_test(job_cpu_affinity_check "ensure Matlog has only matches" "core;quick;full")
+		condor_pl_test(job_mem_checker "Look at reported memory usage" "core;quick;full")
 	endif ( LINUX )
 
 	condor_pl_test(job_concurrency_limits "ensure Matlog has only matches" "core;quick;full")
