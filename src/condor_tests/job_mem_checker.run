@@ -40,7 +40,7 @@ my $firstappend_condor_config = '
 	STARTD_JOB_EXPRS = MemoryUsage, ResidentSetSize_RAW, ResidentSetSize
 	ALL_DEBUG = 
 	NEGOTIATOR_INTERVAL = 5
-	NUM_SLOTS = 4
+	NUM_CPUS = 4
 	SUSPEND = FALSE
 ';
  
