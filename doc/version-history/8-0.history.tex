@@ -92,6 +92,11 @@ an EC2 Spot job by commas.
   to a nonexistent path, which caused errors in some configurations.
 \Ticket{3794}
 
+\item Fixed a file permission bug introduced in HTCondor 7.9.2 that
+prevented VM universe jobs from working when using the Xen or KVM
+hypervisor.
+\Ticket{3781}
+
 \end{itemize}
 
 \noindent Known Bugs:
