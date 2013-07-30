@@ -72,6 +72,7 @@ my $on_match = sub {
 
 my $on_execute = sub {
 my $idles = 0;
+	print "Running now has value <$running_now>\n";
 	$running_now += 1;
 	CondorTest::debug("Job started running.\n",1);
 	# compare current running to expected total
@@ -93,6 +94,8 @@ my $idles = 0;
 					match_timeout => 30,
 					match_new => "true"
 				);
+				print "About to remove these jobs\n";
+				system("condor_q");
 				runcmd("condor_rm -all");
 			}
 		}
@@ -123,7 +126,7 @@ $result = SimpleJob::RunCheck();
 # then test behaviour of non cuncurrency jobs first
 # all from each batch should run. Remove and do next set.
 my $count = 0;
-my $running_now = 0;
+$running_now = 0;
 $expect_run = 3;
 $expect_idle = 0;
 $result = SimpleJob::RunCheck(
@@ -152,6 +155,8 @@ CondorTest::StartCondorWithParams(
 	local_fresh => "TRUE",
 );
 
+print "Test specified concurrency\n";
+$running_now = 0;
 $expect_run = 2;
 $expect_idle = 1;
 $result = SimpleJob::RunCheck(
@@ -178,6 +183,8 @@ my $append_submit_commands = '
 concurrency_limits = UNDEFINED:2;
 ';
 
+print "Test default concurrency and colon usage spec\n";
+$running_now = 0;
 $expect_run = 1;
 $expect_idle = 1;
 $result = SimpleJob::RunCheck(
@@ -204,6 +211,7 @@ my $append_submit_commands = '
 concurrency_limits = large.license;
 ';
 
+$running_now = 0;
 $expect_run = 2;
 $expect_idle = 1;
 $result = SimpleJob::RunCheck(
@@ -232,6 +240,7 @@ my $append_submit_commands = '
 concurrency_limits = small.license;
 ';
 
+$running_now = 0;
 $expect_run = 5;
 $expect_idle = 2;
 $result = SimpleJob::RunCheck(
@@ -322,7 +331,7 @@ sub ExamineQueue
 	my $line = "";
 
 	print "\nExpecting all jobs to be gone. Lets See.\n";
-	#runcmd("condor_q");
+	runcmd("condor_q");
 	my @jobs = `condor_q`;
 	foreach my $job (@jobs) {
 		chomp($job);
