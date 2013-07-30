@@ -26,7 +26,7 @@ typedef enum param_info_t_type_e {
 	PARAM_TYPE_INT = 1,
 	PARAM_TYPE_BOOL = 2,
 	PARAM_TYPE_DOUBLE = 3,
-//	PARAM_TYPE_LONG = 4,
+	PARAM_TYPE_LONG = 4,
 } param_info_t_type_t;
 
 // This struct is common to all params, int and double params
