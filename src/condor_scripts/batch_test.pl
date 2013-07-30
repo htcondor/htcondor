@@ -81,8 +81,8 @@ use CondorUtils;
 #################################################################
 
 Condor::DebugOff();
-Condor::DebugLevel(0);
-CondorPersonal::DebugLevel(0);
+Condor::DebugLevel(2);
+CondorPersonal::DebugLevel(2);
 CondorPersonal::DebugOff();
 my @debugcollection = ();
 
