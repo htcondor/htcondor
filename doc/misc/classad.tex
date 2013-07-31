@@ -199,7 +199,7 @@ error types.  The syntax of these literals is as follows:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{ClassAd!attributes}
 Every expression in a ClassAd is named by an \Term{attribute name}.  Together,
-the (name,expression) pair is called an \Term{attribute}.  An attributes may be
+the (name,expression) pair is called an \Term{attribute}.  An attribute may be
 referred to in other expressions through its attribute name.
 
 Attribute names are sequences of alphabetic characters, digits and underscores,
@@ -252,7 +252,7 @@ may be typed (as given) or not.
 Nested or recursive function calls are allowed.
 
 Here are descriptions of each of these predefined functions.
-The possible types are the same as itemized in 
+The possible types are the same as itemized
 in Section~\ref{ClassAd:literals}.
 Where the type may be any of these literal types, it is
 called out as \verb@AnyType@.
@@ -592,7 +592,7 @@ Optional parameters are given within square brackets.
     If the argument evaluates to \Expr{ERROR} or \Expr{UNDEFINED},
     \Expr{ERROR} is returned.
 
-    This function returns \Expr{ERROR} if greater than 1
+    This function returns \Expr{ERROR} if other than exactly 1
     argument is given.
 
   \index{ClassAd functions!toLower()}
@@ -656,7 +656,7 @@ Optional parameters are given within square brackets.
   \item[\Code{String formatTime(\Lbr\ Integer time \Rbr\ \Lbr\ , String format \Rbr)}]
 
     Returns a formatted string that is a representation of \Expr{time}.
-    The argument \Expr{time} is interpreted as coordinated universe time in
+    The argument \Expr{time} is interpreted as coordinated universal time in
     seconds, since midnight of January 1, 1970. If not specified,
     \Expr{time} will default to the value of attribute \Attr{CurrentTime}.
 		
@@ -826,9 +826,9 @@ Inclusion of characters other than these as options are ignored.
   \item[\Expr{I} or \Expr{i}]
     Ignore letter case.
   \item[\Expr{M} or \Expr{m}]
-    Modifies the interpretation of the carat (\verb@^@) and dollar sign
+    Modifies the interpretation of the caret (\verb@^@) and dollar sign
     (\verb@$@) characters.
-    The carat character matches the start of a string, as well as
+    The caret character matches the start of a string, as well as
     after each newline character.
     The dollar sign character matches before a newline character.
   \item[\Expr{S} or \Expr{s}]
@@ -864,11 +864,11 @@ Inclusion of characters other than these as options are ignored.
     are not strings.
 
   \index{ClassAd functions!stringList\_regexpMember()}
-  \item[\Code{Boolean stringList\_regexpMember(String pattern, String list \Lbr\ , String delimiter \Rbr \Lbr, String options \Rbr})]
+  \item[\Code{Boolean stringList\_regexpMember(String pattern, String list \Lbr\ , String delimiter, String options \Rbr})]
     Returns \Expr{TRUE} if the string \Expr{pattern} is a regular expression
-    that matches an item in the string \Expr{list},
-    as delimited by the optional \Expr{delimiter} string.
-    String \Expr{options} modifies how the match is performed.
+    that matches an item in the string \Expr{list}.
+    The optional \Expr{delimiter} string says how to delimit,
+    while string \Expr{options} modifies how the match is performed.
     Returns \Expr{FALSE} if \Expr{pattern} does not match any entries in
     \Expr{list}.
     The return value is \Expr{ERROR}, if any of the arguments
@@ -996,10 +996,10 @@ if either of their operands have these exceptional values.
 		similar to \verb@==@ and \verb@!=@, but are not strict.  Semantically,
 		the \verb@=?=@ tests if its operands are ``identical,'' i.e., have
 		the same type and the same value.  For example, \verb@10 == UNDEFINED@ 
-		and \verb@UNDEFINED == UNDEFINED@ both evaluate to \texttt{UNDEFINED},
+		and \verb@UNDEFINED == UNDEFINED@ both evaluate to \Expr{UNDEFINED},
 		but \verb@10 =?= UNDEFINED@ and \verb@UNDEFINED =?= UNDEFINED@ 
 		evaluate to \Expr{FALSE} and \Expr{TRUE} respectively.  The
-		\verb@=!=@ operator test for the ``is not identical to'' condition.
+		\verb@=!=@ operator tests for the ``is not identical to'' condition.
 	\end{enumerate}
 
 	\item\textbf{Logical operators:}
@@ -1320,41 +1320,53 @@ Spaces appear in this example where they are permitted.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:classad-userfunctions}
-Extending classads with user written functions}
+Extending ClassAds with User-written Functions}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The classad language provides a rich set of functions.  It is possible
-to add new functions to the classad language without recompiling
-the condor system or the classad library.  This requires implementing the
-new function in the C++ programming language, compiling the code into a shared
-library, and telling Condor where in the filesystem the share library lives.
+The ClassAd language provides a rich set of functions.  It is possible
+to add new functions to the ClassAd language without recompiling
+the HTCondor system or the ClassAd library.  
+This requires implementing the
+new function in the C++ programming language, 
+compiling the code into a shared library, 
+and telling HTCondor where in the file system the shared library lives.
 
-While the details of the classad implementation are beyond the scope of this document,
-the classad source distribution ships with an example source file that extends classads
-by adding two new functions,named todays\_date and double.  This can be used as a model for users to implement
-their own functions. To deploy this example extension, follow the following steps on Linux:
+While the details of the ClassAd implementation are beyond the scope of 
+this document,
+the ClassAd source distribution ships with an example source file that 
+extends ClassAds by adding two new functions,
+named \Procedure{todays\_date} and \Procedure{double}.  
+This can be used as a model for users to implement
+their own functions. 
+To deploy this example extension, follow the following steps on Linux:
 
 \begin{itemize}
-\item{Download the classad source distribution from \URL{http://www.cs.wisc.edu/condor/classad}}
-\item{Unpack the tarball}
-\item{Inspect the source file shared.cpp  This one file contains the whole extension.}
-\item{Build shared.cpp into a shared library.  On Linux, the command line to do so is
+\item{Download the ClassAd source distribution from 
+\URL{http://www.cs.wisc.edu/condor/classad}.}
+\item{Unpack the tarball.}
+\item{Inspect the source file \File{shared.cpp}.
+This one file contains the whole extension.}
+\item{Build \File{shared.cpp} into a shared library.  
+On Linux, the command line to do so is
 \begin{verbatim}
 $ g++ -DWANT_CLASSAD_NAMESPACE -I. -shared -o shared.so \
   -Wl,-soname,shared.so -o shared.so -fPIC shared.cpp
 \end{verbatim}
 }
-\item{Copy the file shared.so somewhere all the condor tools and daemons can read.
+\item{Copy the file \File{shared.so} to a location that all of 
+the HTCondor tools and daemons can read.
 \begin{verbatim}
 $ cp shared.so `condor_config_val LIBEXEC`
 \end{verbatim}
 }
-\item{Tell condor to load the shared library into all tools and daemons, by setting the \Macro{CLASSAD\_USER\_LIBS} parameter to the full name of the shared library.  In this case,
+\item{Tell HTCondor to load the shared library into all tools and daemons, 
+by setting the \Macro{CLASSAD\_USER\_LIBS} configuration variable
+ to the full name of the shared library.  In this case,
 \begin{verbatim}
 CLASSAD_USER_LIBS = $(LIBEXEC)/shared.so
 \end{verbatim}
 }
-\item{Restart condor}
+\item{Restart HTCondor.}
 \item{Test the new functions by running
 \begin{verbatim}
 $ condor_status -format "%s\n" todays_date()
