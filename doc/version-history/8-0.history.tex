@@ -49,6 +49,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that could cause jobs to be incorrectly placed on hold upon
+	completion with a hold reason claiming an out-of-memory event.
+\Ticket{3824}
+
 \item Fixed a bug that prevented work fetch scripts from running
 on systems where cgroup based tracking and management was enabled.
 \Ticket{3819}
@@ -91,6 +95,11 @@ an EC2 Spot job by commas.
   set to \File{/dev/null}.  In some situations, it was previously set
   to a nonexistent path, which caused errors in some configurations.
 \Ticket{3794}
+
+\item Fixed a file permission bug introduced in HTCondor 7.9.2 that
+prevented VM universe jobs from working when using the Xen or KVM
+hypervisor.
+\Ticket{3781}
 
 \end{itemize}
 

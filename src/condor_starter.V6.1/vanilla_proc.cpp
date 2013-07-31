@@ -803,6 +803,26 @@ VanillaProc::finishShutdownFast()
 int
 VanillaProc::outOfMemoryEvent(int /* fd */)
 {
+
+	/* The cgroup API generates this notification whenever the OOM fires OR
+	 * the cgroup is removed. If the cgroups are not pre-created, the kernel will
+	 * remove the cgroup when the job completes. So if we land here and there are
+	 * no more job pids, we assume the cgroup was removed and just ignore the event.
+	 * However, if we land here and we still have job pids, we assume the OOM fired
+	 * and thus we place the job on hold. See gt#3824.
+	 */
+
+	// If we have no jobs left, prolly just cgroup removed, so do nothing and return
+	if (num_pids == 0) {
+		dprintf(D_FULLDEBUG, "Closing event FD pipe %d.\n", m_oom_efd);
+		daemonCore->Close_Pipe(m_oom_efd);
+		close(m_oom_fd);
+		m_oom_efd = -1;
+		m_oom_fd = -1;
+
+		return 0;
+	}
+
 	std::stringstream ss;
 	if (m_memory_limit >= 0) {
 		ss << "Job has gone over memory limit of " << m_memory_limit << " megabytes.";
