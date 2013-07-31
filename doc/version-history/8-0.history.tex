@@ -101,6 +101,12 @@ prevented VM universe jobs from working when using the Xen or KVM
 hypervisor.
 \Ticket{3781}
 
+\item HTCondor daemons are now less vulnerable to long connection delays
+when attempting to connect to hosts that are offline.  A specific case
+where this helps is when \Condor{schedd} is using a high availability
+configuration, and the primary collector machine is offline.
+\Ticket{3828}
+
 \end{itemize}
 
 \noindent Known Bugs:
