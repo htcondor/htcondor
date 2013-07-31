@@ -49,6 +49,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that could cause jobs to be incorrectly placed on hold upon
+	completion with a hold reason claiming an out-of-memory event.
+\Ticket{3824}
+
 \item Fixed a bug that prevented work fetch scripts from running
 on systems where cgroup based tracking and management was enabled.
 \Ticket{3819}
