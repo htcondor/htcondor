@@ -205,7 +205,7 @@ our %submit_info = (
 			  '-DCMAKE_SUPPRESS_REGENERATION:BOOL' => 'TRUE', # because the windows VM doesn't keep time very well.
             },
 			'prereqs'	=> undef,
-			'xtests'	=> undef,
+			'xtests'	=> [],
 		},
 
 		'test' => {
@@ -289,7 +289,7 @@ our %submit_info = (
 				'-DCLIPPED:BOOL' => 'OFF',
 			 },
 			'prereqs'	=> [ @default_prereqs ],
-			'xtests'	=> undef,
+			'xtests'	=> ['x86_64_SL6'],
 		},
 
 		'test' => {
