@@ -188,10 +188,11 @@ if (BUILD_TESTING)
 	endif()
 
 	condor_pl_test(classad_cache-basic "classad-cache smoke test" "core;quick;full;quicknolink")
-	condor_pl_test(shadow_mem_usage-basic "report shadow memory use" "core;quick;full;quicknolink")
-	if (LINUX OR DARWIN)
+	if (LINUX)
+		# test gives false positives on darwin and windows
+		condor_pl_test(shadow_mem_usage-basic "report shadow memory use" "core;quick;full;quicknolink")
 		condor_pl_test(shadow_s_mem_usage-basic "report static shadow memory use" "core;quick;full;quicknolink")
-	endif(LINUX OR DARWIN)
+	endif(LINUXN)
 
 	##########################################################
 	# feature specific tests
