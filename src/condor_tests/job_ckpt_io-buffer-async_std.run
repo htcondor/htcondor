@@ -25,6 +25,12 @@ $cmd = 'job_ckpt_io-buffer-async_std.cmd';
 $testdesc =  'job_ckpt_io-buffer-async_std test';
 $testname = "job_ckpt_io-buffer-async_std";
 
+
+my $on_evictedwithcheckpoint = sub {
+	CondorTest::debug("Evicted With Checkpoint expected.\n",1);
+	CondorTest::AddCheckpoint();
+};
+
 sub OutputTest
 {
     my %info = @_;
@@ -48,6 +54,7 @@ sub OutputTest
 }
 
 CondorTest::RegisterExitedSuccess( $testname, \&OutputTest );
+CondorTest::RegisterEvictedWithCheckpoint($testname, $on_evictedwithcheckpoint);
 
 if( CondorTest::RunTest($testname, $cmd, 1) ) {
     CondorTest::debug("$testname: SUCCESS\n",1);

@@ -54,6 +54,7 @@ my $common_condor_config = '
 my $pool1 = CondorTest::StartCondorWithParams(
     condor_name => "pool1",
     append_condor_config => $common_condor_config,
+	  fresh_local => "TRUE",
     daemon_list => "MASTER, COLLECTOR, NEGOTIATOR, SCHEDD, STARTD, DEFRAG"
 );
 
@@ -71,6 +72,7 @@ my $partitionable_condor_config = '
 for(my $i=2; $i<5; $i++) {
   CondorTest::StartCondorWithParams(
       condor_name => "startd$i",
+	  fresh_local => "TRUE",
       append_condor_config => $common_condor_config . $partitionable_condor_config . "\nDrainRank = $i\n"
   );
 }

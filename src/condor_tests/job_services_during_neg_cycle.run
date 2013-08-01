@@ -44,7 +44,7 @@ my $firstappend_condor_config = '
 	MAX_SCHEDD_LOG = 5000000000
 	SIGNIFICANT_ATTRIBUTES = Procid
 	START = False
-	NEGOTIATOR_DEBUG = D_COMMAND, D_MATCH, D_FULLDEBUG
+	NEGOTIATOR_DEBUG = D_COMMAND, D_MATCH
 ';
 
 $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"negotiator");
@@ -123,7 +123,7 @@ my $on_submit = sub {
 		my @prioutput = `condor_userprio`;
 		my @condorreconfig = `condor_reconfig`;
 		RunNTimes("condor_reconfig",1);
-		RunNTimes("condor_userprio",50);
+		RunNTimes("condor_userprio",5);
 
 		# find the next end of a negotiation cycle
 		$matchonnextend = 1;
@@ -193,7 +193,7 @@ my $on_submit = sub {
 			print "OK got $match\n";
 		}
 
-		CheckExpectations("Condor_userprio handlings during cycle",$match,51);
+		CheckExpectations("Condor_userprio handlings during cycle",$match,6);
 
 		# Did the reconfig wait for the end of the cycle
 		CondorLog::RunCheckMultiple(
@@ -289,8 +289,9 @@ my $on_submit = sub {
 };
 
 #Do a job before setting tesing exit codes
-print "First test basic job\n";
-$result = SimpleJob::RunCheck(); # jobid 1
+#print "First test basic job\n";
+#$result = SimpleJob::RunCheck(); # jobid 1
+# Don't expect to run any jobs START = False
 
 # submit a bunch of jobs and when the submitted count reaches target count
 # we will use RunCheckMultiple to find and return by a callback with the found line.

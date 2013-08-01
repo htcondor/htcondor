@@ -93,6 +93,10 @@ my $abort = sub {
 	CondorTest::debug("Job is gone now, cool.\n",$debuglevel);
 };
 
+my $on_evictedwithoutcheckpoint = sub {
+	CondorTest::debug("Evicted Without Checkpoint from removing jobs.\n",1);
+};
+
 my $success = sub
 {
 	die "/Remove/Abort is expected event trail!\n";
@@ -102,6 +106,7 @@ print "Start a long runniing job - ";
 CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterAbort($testname, $abort);
 CondorTest::RegisterExitedSuccess($testname, $success);
+CondorTest::RegisterEvictedWithoutCheckpoint($testname, $on_evictedwithoutcheckpoint);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	CondorTest::debug("$testname: SUCCESS\n",$debuglevel);
