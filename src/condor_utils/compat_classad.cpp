@@ -1622,7 +1622,7 @@ sPrintAd( MyString &output, classad::ClassAd &ad, bool exclude_private, StringLi
 	classad::ClassAd::iterator itr;
 
 	classad::ClassAdUnParser unp;
-	unp.SetOldClassAd( true );
+	unp.SetOldClassAd( true, true );
 	string value;
 
 	classad::ClassAd *parent = ad.GetChainedParentAd();
@@ -1681,7 +1681,7 @@ sPrintExpr(const classad::ClassAd &ad, const char* name)
     string parsedString;
 	classad::ExprTree* expr;
 
-	unp.SetOldClassAd( true );
+	unp.SetOldClassAd( true, true );
 
     expr = ad.Lookup(name);
 
@@ -2251,7 +2251,7 @@ ClassAd::EscapeStringValue(char const *val, MyString &buf)
     string stringToAppeaseUnparse;
     classad::ClassAdUnParser unparse;
 
-	unparse.SetOldClassAd( true );
+	unparse.SetOldClassAd( true, true );
 
     tmpValue.SetStringValue(val);
     unparse.Unparse(stringToAppeaseUnparse, tmpValue);

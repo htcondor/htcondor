@@ -278,7 +278,7 @@ calc_widths(AttrList * al, AttrList *target /*=NULL*/ )
 					std::string buff;
 					if ( fQuote || !result.IsStringValue( buff ) ) {
 						classad::ClassAdUnParser unparser;
-						unparser.SetOldClassAd( true );
+						unparser.SetOldClassAd( true, true );
 						unparser.Unparse( buff, val );
 					}
 					colval = buff.c_str();
@@ -615,7 +615,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 							bool fQuote = (fmt_info.fmt_letter == 'V');
 							if ( fQuote || !result.IsStringValue(buff) ) {
 								classad::ClassAdUnParser unparser;
-								unparser.SetOldClassAd( true );
+								unparser.SetOldClassAd( true, true );
 								unparser.Unparse( buff, result );
 							}
 							pszValue = buff.c_str();
@@ -658,7 +658,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 							// %v vs %V
 							if ( fQuote || !val.IsStringValue( buff ) ) {
 								classad::ClassAdUnParser unparser;
-								unparser.SetOldClassAd( true );
+								unparser.SetOldClassAd( true, true );
 								unparser.Unparse( buff, val );
 								stringValue.sprintf( tfmt, buff.c_str() );
 							}
