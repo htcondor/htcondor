@@ -84,7 +84,7 @@ const char *ExprTreeToString( classad::ExprTree *expr )
 	classad::ClassAdUnParser unparser;
 
 	buffer = "";
-	unparser.SetOldClassAd( true );
+	unparser.SetOldClassAd( true, true );
 	unparser.Unparse( buffer, expr );
 
 	return buffer.c_str();

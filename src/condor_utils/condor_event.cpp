@@ -543,7 +543,7 @@ static void writeUsageAd(FILE * file, ClassAd * pusageAd)
 		return;
 
 	classad::ClassAdUnParser unp;
-	unp.SetOldClassAd( true );
+	unp.SetOldClassAd( true, true );
 
 	std::map<std::string, SlotResTermSumy*> useMap;
 
