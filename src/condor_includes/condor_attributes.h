@@ -516,6 +516,7 @@
 #define ATTR_REMOVE_REASON  "RemoveReason"
 #define ATTR_REQUEUE_REASON  "RequeueReason"
 #define ATTR_REQUIREMENTS  "Requirements"
+#define ATTR_RESOURCE_REQUEST_COUNT "_condor_RESOURCE_COUNT"  // used in resource request ad
 #define ATTR_SLOT_TYPE  "SlotType"
 #define ATTR_SLOT_TYPE_ID  "SlotTypeID"
 #define ATTR_SLOT_WEIGHT  "SlotWeight"
