@@ -5087,8 +5087,8 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id,C
 	ASSERT( claim_id );
 	ASSERT( slot_name );
 
-	dprintf(D_FULLDEBUG,"Received match for job %d.%d: %s\n",
-			job_id.cluster, job_id.proc, slot_name);
+	dprintf(D_FULLDEBUG,"Received match for job %d.%d (delivered=%d): %s\n",
+			job_id.cluster, job_id.proc, m_current_resources_delivered, slot_name);
 
 	if( scheduler_skipJob(job_id) ) {
 
@@ -5178,8 +5178,8 @@ MainScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const *reas
 {
 	ASSERT( reason );
 
-	dprintf(D_FULLDEBUG, "Job %d.%d rejected: %s\n",
-			job_id.cluster, job_id.proc, reason);
+	dprintf(D_FULLDEBUG, "Job %d.%d (delivered=%d) rejected: %s\n",
+			job_id.cluster, job_id.proc, m_current_resources_delivered, reason);
 
 	SetAttributeString(
 		job_id.cluster, job_id.proc,

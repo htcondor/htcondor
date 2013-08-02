@@ -4891,15 +4891,17 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				continue;
 			}
 
-			if(!Runnable(&PrioRec[i].id) || scheduler.AlreadyMatched(&PrioRec[i].id)) {
+			int isRunnable = Runnable(&PrioRec[i].id);
+			int isMatched = scheduler.AlreadyMatched(&PrioRec[i].id);
+			if( !isRunnable || isMatched ) {
 					// This job's status must have changed since the
 					// time it was added to the runnable job list.
 					// Prevent this job from being considered in any
 					// future iterations through the list.
 				PrioRec[i].owner[0] = '\0';
 				dprintf(D_FULLDEBUG,
-						"record for job %d.%d skipped until PrioRec rebuild\n",
-						jobid.cluster, jobid.proc);
+						"record for job %d.%d skipped until PrioRec rebuild (%s)\n",
+						jobid.cluster, jobid.proc, isRunnable ? "already matched" : "no longer runnable");
 
 					// Ensure that PrioRecArray is rebuilt
 					// eventually, because changes in the status
