@@ -1844,8 +1844,8 @@ processCommandLineArguments (int argc, char *argv[])
 	}
 }
 
-static float
-job_time(float cpu_time,ClassAd *ad)
+static double
+job_time(double cpu_time,ClassAd *ad)
 {
 	if ( cputime ) {
 		return cpu_time;
@@ -1855,7 +1855,7 @@ job_time(float cpu_time,ClassAd *ad)
 	int job_status = 0;
 	int cur_time = 0;
 	int shadow_bday = 0;
-	float previous_runs = 0;
+	double previous_runs = 0;
 
 	ad->LookupInteger( ATTR_JOB_STATUS, job_status);
 	ad->LookupInteger( ATTR_SERVER_TIME, cur_time);
@@ -1883,7 +1883,7 @@ job_time(float cpu_time,ClassAd *ad)
 	 * RUNNING.  So we only compute the time on this run if shadow_bday
 	 * is not zero and the job status is RUNNING.  -Todd <tannenba@cs.wisc.edu>
 	 */
-	float total_wall_time = previous_runs;
+	double total_wall_time = previous_runs;
 	if ( ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT || job_status == SUSPENDED) && shadow_bday ) {
 		total_wall_time += cur_time - shadow_bday;
 	}
@@ -1981,7 +1981,7 @@ bufferJobShort( ClassAd *ad ) {
 	char encoded_status;
 	int last_susp_time;
 
-	float utime  = 0.0;
+	double utime  = 0.0;
 	char owner[64];
 	char *cmd = NULL;
 	MyString buffer;
@@ -2158,7 +2158,7 @@ format_remote_host (char *, AttrList *ad)
 }
 
 static const char *
-format_cpu_time (float utime, AttrList *ad)
+format_cpu_time (double utime, AttrList *ad)
 {
 	return format_time( (int) job_time(utime,(ClassAd *)ad) );
 }
@@ -2187,10 +2187,10 @@ format_goodput (int job_status, AttrList *ad)
 }
 
 static const char *
-format_mbps (float bytes_sent, AttrList *ad)
+format_mbps (double bytes_sent, AttrList *ad)
 {
 	static char result_format[10];
-	float wall_clock=0.0, bytes_recvd=0.0, total_mbits;
+	double wall_clock=0.0, bytes_recvd=0.0, total_mbits;
 	int shadow_bday = 0, last_ckpt = 0, job_status = IDLE;
 	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
 	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
@@ -2207,13 +2207,13 @@ format_mbps (float bytes_sent, AttrList *ad)
 }
 
 static const char *
-format_cpu_util (float utime, AttrList *ad)
+format_cpu_util (double utime, AttrList *ad)
 {
 	static char result_format[10];
 	int ckpt_time = 0;
 	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time);
 	if (ckpt_time == 0) return " [??????]";
-	float util = utime/ckpt_time*100.0;
+	double util = utime/ckpt_time*100.0;
 	if (util > 100.0) util = 100.0;
 	else if (util < 0.0) return " [??????]";
 	sprintf(result_format, "  %6.1f%%", util);

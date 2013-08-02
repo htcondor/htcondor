@@ -929,8 +929,8 @@ void
 update_job_status( struct rusage *localp, struct rusage *remotep )
 {
 	int		status = -1;
-	float utime = 0.0;
-	float stime = 0.0;
+	double utime = 0.0;
+	double stime = 0.0;
 	int tot_sus=0, cum_sus=0, last_sus=0;
 	char buf[1024*50];
 
