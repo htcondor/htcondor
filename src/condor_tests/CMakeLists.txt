@@ -188,10 +188,11 @@ if (BUILD_TESTING)
 	endif()
 
 	condor_pl_test(classad_cache-basic "classad-cache smoke test" "core;quick;full;quicknolink")
-	condor_pl_test(shadow_mem_usage-basic "report shadow memory use" "core;quick;full;quicknolink")
-	if (LINUX OR DARWIN)
+	if (LINUX)
+		# test gives false positives on darwin and windows
+		condor_pl_test(shadow_mem_usage-basic "report shadow memory use" "core;quick;full;quicknolink")
 		condor_pl_test(shadow_s_mem_usage-basic "report static shadow memory use" "core;quick;full;quicknolink")
-	endif(LINUX OR DARWIN)
+	endif(LINUXN)
 
 	##########################################################
 	# feature specific tests
@@ -565,7 +566,6 @@ if (BUILD_TESTING)
 	condor_pl_test(job_dagman_classad "Test the DAGMan classad status update capability" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_repeat_holds "Test the suppression of repeat hold events" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_submit_parse "Test parsing of submit output" "dagman;quick;full;quicknolink")
-	condor_pl_test(job_dagman_metrics-A "Test reporting of DAGMan metrics" "dagman;quick;full;quicknolink")
 	#condor_pl_test(perf_jobs_sue_10_10_30_van "Generated jobs performance test" "performance;long")
 	#condor_pl_test(perf_xfer_deb_10_10_30_van "Generated transfer performance test" "performance;long")
 	condor_pl_test(job_filexfer_sandbox-empty_van "Are job sandboxes with bad permissions cleaned up?" "framework;quick;full;quicknolink")
