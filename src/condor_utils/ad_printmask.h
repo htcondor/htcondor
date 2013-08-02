@@ -35,7 +35,7 @@ enum {
 };
 
 typedef const char *(*IntCustomFmt)(int,AttrList*,struct Formatter &);
-typedef const char *(*FloatCustomFmt)(float,AttrList*,struct Formatter &);
+typedef const char *(*FloatCustomFmt)(double,AttrList*,struct Formatter &);
 typedef const char *(*StringCustomFmt)(char*,AttrList*,struct Formatter &);
 
 // This struct holds information on how to format (and possibly generate)

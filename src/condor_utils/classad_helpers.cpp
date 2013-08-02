@@ -262,11 +262,11 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_Q_DATE, (int)time(NULL) );
 	job_ad->Assign( ATTR_COMPLETION_DATE, 0 );
 
-	job_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, (float)0.0 );
-	job_ad->Assign( ATTR_JOB_LOCAL_USER_CPU, (float)0.0 );
-	job_ad->Assign( ATTR_JOB_LOCAL_SYS_CPU, (float)0.0 );
-	job_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, (float)0.0 );
-	job_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, (float)0.0 );
+	job_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, 0.0 );
+	job_ad->Assign( ATTR_JOB_LOCAL_USER_CPU, 0.0 );
+	job_ad->Assign( ATTR_JOB_LOCAL_SYS_CPU, 0.0 );
+	job_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, 0.0 );
+	job_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, 0.0 );
 
 		// This is a magic cookie, see how condor_submit sets it
 	job_ad->Assign( ATTR_CORE_SIZE, -1 );
