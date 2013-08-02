@@ -9355,16 +9355,18 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManPegasusReportMetrics}
 \item[\Macro{DAGMAN\_PEGASUS\_REPORT\_METRICS}]
-  The path the the \Condor{dagman\_metrics\_reporter} executable.  
+  The path the the \Condor{dagman\_metrics\_reporter} executable,
+  which is optionally used to anonymously report workflow metrics
+  for Pegasus workflows.  
   Defaults to
   \File{\$(LIBEXEC)/condor\_dagman\_metrics\_reporter}.
 
 \label{param:DAGManPegasusReportTimeout}
 \item[\Macro{DAGMAN\_PEGASUS\_REPORT\_TIMEOUT}]
-  An integer value representing seconds that defaults to 100 seconds.
-  The \Condor{dagman\_metrics\_reporter} will exit after successfully 
-  contacting all its metrics servers,
-  or after it has executed for more than this duration of time.
+  An integer value specifying the maximum number of seconds that
+  the \Condor{dagman\_metrics\_reporter} will spend attempting
+  to report metrics to the Pegasus metrics server.
+  Defaults to 100.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
