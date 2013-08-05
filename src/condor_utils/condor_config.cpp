@@ -1440,17 +1440,17 @@ param_without_default( const char *name )
 		return NULL;
 	}
 
-	if ( IsDebugLevel( D_CONFIG ) ) {
+	if (IsDebugVerbose(D_CONFIG)) {
 		if (fLocalMatch || fSubsysMatch) {
 			std::string param_name;
 			if (fSubsysMatch) { param_name += subsys; param_name += "."; }
 			if (fLocalMatch) { param_name += local; param_name += "."; }
 			param_name += name;
-			dprintf( D_CONFIG, "Config '%s': using prefix '%s' ==> '%s'\n",
+			dprintf( D_CONFIG | D_VERBOSE, "Config '%s': using prefix '%s' ==> '%s'\n",
 					 name, param_name.c_str(), val );
 		}
 		else {
-			dprintf( D_CONFIG, "Config '%s': no prefix ==> '%s'\n", name, val );
+			dprintf( D_CONFIG | D_VERBOSE, "Config '%s': no prefix ==> '%s'\n", name, val );
 		}
 	}
 
@@ -1655,7 +1655,7 @@ param_integer( const char *name, int &value,
 	ASSERT( name );
 	string = param( name );
 	if( ! string ) {
-		dprintf( D_CONFIG, "%s is undefined, using default value of %d\n",
+		dprintf( D_CONFIG | D_VERBOSE, "%s is undefined, using default value of %d\n",
 				 name, default_value );
 		if ( use_default ) {
 			value = default_value;
@@ -1801,7 +1801,7 @@ param_double( const char *name, double default_value,
 	string = param( name );
 	
 	if( ! string ) {
-		dprintf( D_CONFIG, "%s is undefined, using default value of %f\n",
+		dprintf( D_CONFIG | D_VERBOSE, "%s is undefined, using default value of %f\n",
 				 name, default_value );
 		return default_value;
 	}
@@ -1919,7 +1919,7 @@ param_boolean( const char *name, bool default_value, bool do_log,
 	
 	if (!string) {
 		if (do_log) {
-			dprintf( D_CONFIG, "%s is undefined, using default value of %s\n",
+			dprintf( D_CONFIG | D_VERBOSE, "%s is undefined, using default value of %s\n",
 					 name, default_value ? "True" : "False" );
 		}
 		return default_value;

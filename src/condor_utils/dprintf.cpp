@@ -125,6 +125,45 @@ int		DebugUseTimestamps = 0;
 char *	DebugTimeFormat = NULL;
 
 /*
+ * if TOOL_DEBUG_ON_ERROR is set, then every dprintf writes to this buffer
+ * in addition to anything defined in TOOL_DEBUG.  The contents of this buffer
+ * can be flushed and written by calling dprintf_WriteOnErrorBuffer
+ */
+static std::stringstream DebugOnErrorBuffer;
+void * dprintf_get_onerror_data() { return (void*)&DebugOnErrorBuffer; }
+int dprintf_WriteOnErrorBuffer(FILE * out, int fClearBuffer) {
+	int cch = 0;
+	if (out) {
+		if ( ! DebugOnErrorBuffer.str().empty()) {
+			cch = (int)fwrite(DebugOnErrorBuffer.str().c_str(), 1, DebugOnErrorBuffer.str().length(), out);
+		}
+	}
+	if (fClearBuffer) {
+		DebugOnErrorBuffer.clear();
+	}
+	return cch;
+}
+
+static class dpf_on_error_trigger {
+	FILE * file;
+	int    code; // write if code is non-zero
+public:
+	dpf_on_error_trigger() : file(NULL), code(1) {}
+	~dpf_on_error_trigger() {
+		if (code && file && ! DebugOnErrorBuffer.str().empty()) {
+			fprintf(file, "\n---------------- TOOL_DEBUG_ON_ERROR output -----------------\n");
+			dprintf_WriteOnErrorBuffer(file, true);
+			fprintf(file, "---------------- TOOL_DEBUG_ON_ERROR ends -------------------\n");
+		}
+	}
+	FILE * WriteOnErrorExit(FILE * out) { FILE * tmp = file; file = out; return tmp; }
+	int ExitCode(int n) { return code = n; }
+} _dprintf_on_error_trigger;
+FILE * dprintf_OnExitDumpOnErrorBuffer(FILE * out) { return _dprintf_on_error_trigger.WriteOnErrorExit(out); }
+int dprintf_SetExitCode(int code) { return _dprintf_on_error_trigger.ExitCode(code); }
+
+
+/*
  * When true, don't exit even if we fail to open the debug output file.
  * Added so that on Win32 the kbdd (which is running as a user) won't quit 
  * if it does't have access to the directory where log files live.
@@ -1909,6 +1948,19 @@ dprintf_dump_stack(void) {
 		// this platform does not support backtrace()
 }
 #endif
+
+void _dprintf_to_buffer(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, const char* message, DebugFileInfo* dbgInfo)
+{
+	void * pvUser = dbgInfo->userData;
+	if (pvUser) {
+		std::stringstream * pstm = (std::stringstream *)pvUser;
+		const char* header = _format_global_header(cat_and_flags, hdr_flags, info);
+		if (header) {
+			(*pstm) << header;
+		}
+		(*pstm) << message;
+	}
+}
 
 #ifdef WIN32
 void dprintf_to_outdbgstr(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, const char* message, DebugFileInfo* dbgInfo)

@@ -57,13 +57,9 @@
 #include "../classad_analysis/analysis.h"
 #include "classad/classadCache.h" // for CachedExprEnvelope
 
-/*
-#ifndef WIN32
-#include <sys/types.h>
-#include <unistd.h>
-#include <pwd.h>
-#endif
-*/
+// pass the exit code through dprintf_SetExitCode so that it knows
+// whether to print out the on-error buffer or not.
+#define exit(n) (exit)(dprintf_SetExitCode(n))
 
 #ifdef HAVE_EXT_POSTGRESQL
 #include "sqlquery.h"
@@ -593,8 +589,9 @@ int main (int argc, char **argv)
 	// load up configuration file
 	myDistro->Init( argc, argv );
 	config();
-
-	classad::ClassAdSetExpressionCaching( param_boolean( "ENABLE_CLASSAD_CACHING", false ) );
+	dprintf_config_tool_on_error(0);
+	dprintf_OnExitDumpOnErrorBuffer(stderr);
+	//classad::ClassAdSetExpressionCaching( param_boolean( "ENABLE_CLASSAD_CACHING", false ) );
 
 #ifdef HAVE_EXT_POSTGRESQL
 		/* by default check the configuration for local database */

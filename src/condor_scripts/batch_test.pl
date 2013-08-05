@@ -1027,7 +1027,8 @@ sub CreateConfig {
 	}    
     }    
     close( OLDFIG );    
-	print NEWFIG "TOOL_TIMEOUT_MULTIPLIER = 10\n";	
+	print NEWFIG "TOOL_TIMEOUT_MULTIPLIER = 10\n";
+	print NEWFIG "TOOL_DEBUG_ON_ERROR = D_ANY D_ALWAYS:2\n";
     close( NEWFIG );
 }
 
