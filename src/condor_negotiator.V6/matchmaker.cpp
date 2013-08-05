@@ -4231,14 +4231,8 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			MatchList->sort();
 			dprintf(D_FULLDEBUG,"Finished sorting MatchList\n");
 		}
-		// compare
-		ClassAd *bestCached = MatchList->pop_candidate();
-		// TODO - do bestCached and bestSoFar refer to the same
-		// machine preference? (sanity check)
-		if(bestCached != bestSoFar) {
-			dprintf(D_ALWAYS, "INSANE: bestCached != bestSoFar\n");
-		}
-		bestCached = NULL; // just to remove unused variable warning
+		// Pop top candidate off the list to hand out as best match
+		bestSoFar = MatchList->pop_candidate();
 	}
 
 	if(!bestSoFar)

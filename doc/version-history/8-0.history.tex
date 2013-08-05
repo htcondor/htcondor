@@ -57,6 +57,11 @@ The details of each version are described below.
 on systems where cgroup based tracking and management was enabled.
 \Ticket{3819}
 
+\item Fixed a bug that could cause the negotiator to give out the same
+	slot twice and result in a scary entry in the NegotiatorLog file with the 
+	wording ``INSANE: bestCached != bestSoFar''.
+\Ticket{2245}
+
 \item Added \AdAttr{ConcurrencyLimits} to the projection for claimed
 resources in \Condor{negotiator}, so that concurrency limit accounting 
 works properly across negotiation cycles when 
