@@ -50,6 +50,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The \Condor{gridmanager} now does proper failure recovery when
+submitting EC2 jobs to services that don't support EC2's ClientToken
+parameter.
+Previously, if there was a failure when submitting jobs to OpenStack
+or Eucalyptus, the jobs could be submitted twice.
+\Ticket{3682}
+
 \item Fixed printing of nested ClassAds so that they can be read back
 properly.
 \Ticket{3772}
