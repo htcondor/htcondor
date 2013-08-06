@@ -76,7 +76,7 @@ Overview of How COD Works}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{COD!overview} 
 
-The resources of a HTCondor pool (nodes)
+The resources of an HTCondor pool (nodes)
 run jobs.
 When a high-priority COD job appears at a node,
 the lower-priority (currently running) batch job is
@@ -86,8 +86,8 @@ When the COD job completes, the batch job instantly resumes execution.
 
 Administratively,
 an interactive COD application puts claims on nodes.
-While the COD application does not need the nodes (to run the
-COD jobs),  the claims are suspended, allowing batch jobs to run.
+While the COD application does not need the nodes to run the
+COD jobs,  the claims are suspended, allowing batch jobs to run.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -113,8 +113,7 @@ configuration for the machine (usually in a local configuration file).
 In addition, the tools to request and manage COD claims
 require that the user issuing the commands be authenticated. 
 Use one of the strong authentication methods described
-in section~\ref{sec:Config-Security} ``Security Configuration'' on
-page~\pageref{sec:Config-Security}.
+in section~\ref{sec:Config-Security} on HTCondor's Security Model.
 If one of these methods cannot be used,
 then file system authentication may be used
 when directly logging in to that machine (to be claimed)
@@ -137,7 +136,7 @@ To run an application on a claimed COD resource,
 an authorized user defines 
 characteristics of the application.
 Examples of characteristics are the executable or script to use,
-the directory to run the application in,
+the directory in which to run the application,
 command-line arguments, and
 files to use for standard input and output.
 COD users specify a ClassAd that describes these characteristics
@@ -155,13 +154,12 @@ For example, the user can define some attributes
 in the configuration file, and only provide a few dynamically defined
 attributes with the \Condor{cod} tool.
 
-Regardless of how the COD application's ClassAd is defined,
+Independent of how the COD application's ClassAd is defined,
 the application's executable and input
 data must be pre-staged at the node.
-This is a current limitation of HTCondor's support for COD that will
-eventually go away.
-For now, there is no mechanism to transfer files for a COD
-application, and all I/O must be performed locally or onto a network
+This is a current limitation of HTCondor's support.
+There is no mechanism to transfer files for a COD application, 
+and all I/O must be handled locally or put onto a network
 file system that is accessible by a node.
 
 The following three sections detail defining the attributes.
@@ -203,18 +201,17 @@ The following attributes are \emph{required}:
    the resource where a COD application will run, the user must also
    define \Attr{Owner} to specify what user name the application will
    run as.
-   (On Windows, the \Condor{startd} daemon always runs as an Administrator
-   service, which is equivalent to running as root on UNIX platforms).
+   On Windows, the \Condor{startd} daemon always runs as an Administrator
+   service, which is equivalent to running as root on Unix platforms.
    If the user specifies any COD application attributes with the
-   \Condor{cod\_activate} command-line tool, the \Attr{Owner}
+   \Condor{cod} \Arg{activate} command-line tool, the \Attr{Owner}
    attribute will be defined as the user name that ran
-   \Condor{cod\_activate}.
+   \Condor{cod} \Arg{activate}.
    However, if the user defines all attributes of their COD
    application in the HTCondor configuration files, and does not define
-   any attributes with the \Condor{cod\_activate} command-line tool
-   (both methods are described below in more detail), there is no
-   default and \Attr{Owner} must be specified in the configuration
-   file.
+   any attributes with the \Condor{cod} \Arg{activate} command-line tool,
+   there is no default,
+    and \Attr{Owner} must be specified in the configuration file.
    \Attr{Owner} must contain a valid user
    name on the given COD resource. 
    It is a string attribute, and must therefore be enclosed in 
@@ -232,9 +229,9 @@ The following list of attributes are \emph{optional}:
  \item[\Attr{JobUniverse}] This attribute defines what HTCondor job
 \index{COD!optional attributes!JobUniverse} 
    universe to use for the given COD application.
-   At this point, the only supported universes are vanilla and Java.
+   The only tested universes are vanilla and java.
    This attribute must be an integer, with vanilla using the value 5,
-   and Java the value 10.
+   and java using the value 10.
 
  \item[\Attr{IWD}] IWD is an acronym for Initial Working Directory.
 \index{COD!optional attributes!IWD} 
@@ -259,6 +256,8 @@ The following list of attributes are \emph{optional}:
    This file (and all parent directories) must be readable by whatever
    user the COD application will run as.
    If not specified, the default is \File{/dev/null}.
+   It is a string attribute, and must therefore be enclosed in 
+   quotation marks (\verb@"@).
  
  \item[\Attr{Out}] This string defines the path to the file on the
 \index{COD!optional attributes!Out} 
@@ -326,11 +325,11 @@ The following list of attributes are \emph{optional}:
    log file that the \Condor{starter} daemon can write with entries
    for relevant 
    events in the life of a given COD application.
-   It is similar to the UserLog file specified for regular HTCondor
-   jobs with the \Attr{Log} setting in a submit description
+   It is similar to the job event log file specified for regular HTCondor
+   jobs with the \SubmitCmd{Log} command in a submit description
    file.
-   However, certain attributes that are placed in the regular UserLog
-   file do not make sense in the COD environment, and are therefore
+   However, certain attributes that are placed in a job event log
+   do not make sense in the COD environment, and are therefore
    omitted.
    The default is not to write this log file.
    It is a string attribute, and must therefore be enclosed in 
@@ -342,13 +341,13 @@ The following list of attributes are \emph{optional}:
    human-readable format.
    However, HTCondor can write out this log in an XML representation,
    instead.
-   To enable the XML format for this UserLog, the
+   To enable the XML format for this job event log, the
    \Attr{StarterUserLogUseXML} boolean is set to \verb@TRUE@.
    The default if not specified is \verb@FALSE@.
 
 \end{description}
 
-\Note If any path attribute (\Attr{Cmd}, \Attr{In},
+If any attribute that specifies a path (\Attr{Cmd}, \Attr{In},
 \Attr{Out},\Attr{Err}, \Attr{StarterUserLog}) is not a full path name,
 HTCondor automatically prepends the value of \Attr{IWD}.
 
@@ -358,14 +357,14 @@ HTCondor automatically prepends the value of \Attr{IWD}.
 
 The final set of attributes define an identification for a COD application.
 The job ID is made up of both the \Attr{ClusterId} and \Attr{ProcId}
-attributes (as described below).
+attributes.
 This job ID is similar to the job ID that is created whenever a
 regular HTCondor batch job is submitted.
 For regular HTCondor batch jobs, the job ID is assigned automatically by
 the \Condor{schedd} whenever a new job is submitted into the
 persistent job queue.
 However, since there is no persistent job queue for COD, the usual
-mechanism to identify the jobs does not exist.
+mechanism to identify jobs does not exist.
 Moreover, commands that require the job ID for batch jobs such as
 \Condor{q} and \Condor{rm} do not exist for COD.
 Instead, the claim ID is the unique identifier for COD jobs and
@@ -378,15 +377,15 @@ events written to the \Attr{StarterUserLog}
 regarding a given job.
 The COD job ID is also used in the HTCondor debugging logs described in
 section~\ref{sec:Daemon-Logging-Config-File-Entries} on
-page~\pageref{sec:Daemon-Logging-Config-File-Entries}
+page~\pageref{sec:Daemon-Logging-Config-File-Entries}.
 For example, in the \Condor{starter} daemon's log file for COD jobs
 (called \File{StarterLog.cod} by default) or in the \Condor{startd}
 daemon's log
 file (called \File{StartLog} by default).
 
-These COD IDs are optional.
+These COD job IDs are optional.
 The job ID is useful to define where it helps a
-user with accounting or debugging of their own application.
+user with the accounting or debugging of their own application.
 In this case, it is the user's responsibility to ensure uniqueness,
 if so desired.
   
@@ -396,8 +395,8 @@ if so desired.
    cluster identifier for a COD job.
    The default value is 1.
    The \Attr{ClusterId} can also be defined with the
-\index{COD!condor\_cod\_activate command} 
-   \Condor{cod\_activate} command-line tool using the \Opt{-cluster}
+\index{COD!condor\_cod activate command} 
+   \Condor{cod} \Arg{activate} command-line tool using the \Opt{-cluster}
    option.
 
  \item[\Attr{ProcId}]  This integer defines the
@@ -405,16 +404,17 @@ if so desired.
    process identifier (within a cluster) for a COD job.
    The default value is 0.
    The \Attr{ProcId} can also be defined with the
-   \Condor{cod\_activate} command-line tool using the \Opt{-cluster}
+   \Condor{cod} \Arg{activate} command-line tool using the \Opt{-cluster}
    option.
 
 \end{description}
 
-\Note The cluster and proc identifiers can also be specified as
-command-line arguments to the \Condor{cod\_activate} tool when
+Note that the \Attr{ClusterId} and \Attr{ProcId} identifiers can 
+also be specified as
+command-line arguments to the \Condor{cod} \Arg{activate} when
 spawning a given COD application.
 See section~\ref{sec:cod-claim-activate} below for details on using
-\Condor{cod\_activate}. 
+\Condor{cod} \Arg{activate}. 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -428,9 +428,9 @@ To define COD attributes in the HTCondor configuration file for a given
 application, the user selects a keyword to uniquely name 
 ClassAd attributes of the application.
 This case-insensitive keyword is used as a prefix for the various
-configuration file attribute names.
+configuration file variable names.
 When a user wishes to spawn a given application, the
-keyword is given as an argument to the \Condor{cod} tool and the keyword
+keyword is given as an argument to the \Condor{cod} tool, and the keyword
 is used at the remote COD resource to find attributes which define the
 application.
 
@@ -439,7 +439,7 @@ specified in the configuration file with the keyword prefix followed
 by an underscore character (\verb@"_"@).
 
 For example, if the user's keyword for a given fractal generation
-application is ``FractGen'', the resulting entries in the HTCondor
+application is \Expr{FractGen}, the resulting entries in the HTCondor
 configuration file may appear as:
 
 \begin{verbatim}
@@ -456,14 +456,16 @@ configuration file are only for standard output and standard error
 redirection.
 
 When the user wishes to spawn an instance of this application,
-they use the \Opt{-keyword} option of \OptArg{FractGen} 
-in the command-line of the \Condor{cod\_activate} command.
+the command line 
+  \verb@condor_cod  activate@
+appears with the
+  \verb@-keyword FractGen@
+option.
 
 \Note If a user is defining all attributes of their COD application in
 the HTCondor configuration files, and the \Condor{startd} daemon on the COD
 resource they are using is running as root, the user must also define
-\Attr{Owner} to be the user that the COD application should run as
-(see section~\ref{sec:cod-application-attributes} above). 
+\Attr{Owner} to be the user that the COD application should run as.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -475,28 +477,24 @@ Defining Attributes with the \Condor{cod} Tool}
 COD users may define attributes dynamically (at the time they spawn a
 COD application).
 In this case, the user writes the ClassAd attributes into a file, and the
-file name is passed to the \Condor{cod\_activate} tool using the
-\Opt{-jobad} command-line option.
+file name is passed to the \Condor{cod} \Arg{activate} command  using the
+\Opt{-jobad} option.
 These attributes are read by the \Condor{cod} tool and passed through
-the system onto the \Condor{starter} daemon which spawns the COD application. 
+the system to the \Condor{starter} daemon, which spawns the COD application. 
 If the file name given is \File{-}, the \Condor{cod} tool will read
 from standard input (\File{stdin}).
 
-% TODO
-% For more information about using \Condor{cod\_activate}, see the
-% command reference on page~\pageref{man-condor-submit}
-
 Users should not add a keyword prefix 
-when defining attributes with the \Condor{cod\_activate} tool.
+when defining attributes with \Condor{cod} \Arg{activate}.
 The attribute names can be used in the file directly.
 
 \Warn The current syntax for this file is not the same as the syntax
 in the file used with \Condor{submit}.
 
 \Note Users should not define the \Attr{Owner} attribute
-when using \Condor{cod\_activate} on the command line, since HTCondor
+when using \Condor{cod} \Arg{activate} on the command line, since HTCondor
 will automatically insert the correct value based on what user runs the
-\Condor{cod\_activate} command and how that user authenticates to the
+\Condor{cod} command and how that user authenticates to the
 COD resource.
 If a user defines an attribute that does not match the authenticated
 identity, HTCondor treats this case as an error, and it will fail to launch the
@@ -572,7 +570,7 @@ However, for a command like \Condor{cod\_activate} that supports both
 If the user specifies an ambiguous option, the \Condor{cod} tool will
 exit with an error message.
 
-In addition, there is now a \Opt{-cod} option to \Condor{status}.
+In addition, there is a \Opt{-cod} option to \Condor{status}.
 
 The following sections describe each option in greater detail.
 
@@ -991,35 +989,18 @@ should only happen after the existing COD claim has been deactivated.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{COD!limitations} 
 
-HTCondor's support for COD has a few limitations.
-
-The following items are all limitations we plan to remove in future
-releases of HTCondor:
+HTCondor's support for COD has a few limitations:
 
 \begin{itemize}
 
 \item Applications and data must be pre-staged at a given machine. 
 
 \item There is no way to define limits for how long a given COD claim
-  can be active, how often it is run, and so on.
+  can be active and how often it is run.
 
-\item There is no accounting done for applications run under COD
-  claims.
+\item There is no accounting done for applications run under COD claims.
   Therefore, use of a lot of COD resources in a given HTCondor pool
   does not adversely affect user priority.
-
-\end{itemize}
-
-None of the above items are fundamentally difficult to add and we hope
-to address them relatively quickly.
-If you run into one of these limitations, and it is a barrier to
-using COD, please contact \Email{condor-admin@cs.wisc.edu} with the
-subject ``COD limitation'' to gain quick help.
-
-The following list are more fundamental limitations that we do not
-plan to address:
-
-\begin{itemize}
 
 \item COD claims are not persistent on a given \Condor{startd} daemon.
 
