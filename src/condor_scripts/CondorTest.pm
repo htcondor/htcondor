@@ -208,7 +208,7 @@ sub RegisterResult
     my $testname = $args{test_name} || GetDefaultTestName();
 
     my $result_str = $result == 1 ? "PASSED" : "FAILED";
-    debug( "\n\n$result_str check $checkname in test $testname\n\n", 1 );
+    debug( "\n$result_str check $checkname in test $testname\n\n", 1 );
     if( $result != 1 ) {
 	$test_failure_count += 1;
     }
@@ -273,7 +273,7 @@ sub SetExpected
 {
 	my $expected_ref = shift;
 	foreach my $line (@{$expected_ref}) {
-		debug( "$line\n", 2);
+		debug( "expected: $line\n", 2);
 	}
 	@expected_output = @{$expected_ref};
 }
@@ -282,7 +282,7 @@ sub SetSkipped
 {
 	my $skipped_ref = shift;
 	foreach my $line (@{$skipped_ref}) {
-		debug( "$line\n", 2);
+		debug( "skip: $line\n", 2);
 	}
 	@skipped_output_lines = @{$skipped_ref};
 }
@@ -1476,7 +1476,7 @@ sub runCondorTool
 		debug( "Try command <$cmd>\n",4);
 		#open(PULL, "_condor_TOOL_TIMEOUT_MULTIPLIER=4 $cmd 2>$catch |");
 
-		$hashref = runcmd("_condor_TOOL_TIMEOUT_MULTIPLIER=10 $cmd", $options);
+		$hashref = runcmd("_condor_TOOL_TIMEOUT_MULTIPLIER=4 $cmd", $options);
 		my @output =  @{${$hashref}{"stdout"}};
 		my @error =  @{${$hashref}{"stderr"}};
 
@@ -2146,6 +2146,7 @@ sub findOutput
 sub debug {
     my $string = shift;
     my $level = shift;
+	#my ($package, $filename, $line) = caller();
     Condor::debug("<CondorTest> $string", $level);
 }
 
@@ -2511,7 +2512,7 @@ sub AddFileTrace
 	print TF $buildentry;
 	close TF;
 
-	debug("\n$buildentry",2);
+	debug("\nFile Trace - $buildentry",2);
 }
 
 sub MoveCoreFile
