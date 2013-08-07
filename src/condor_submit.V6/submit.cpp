@@ -7599,7 +7599,7 @@ SaveClassAd ()
 				}
 			}
 
-			if( SetAttribute(ClusterId, myprocid, lhstr, rhstr) == -1 ) {
+			if( SetAttribute(ClusterId, myprocid, lhstr, rhstr, SetAttribute_NoAck) == -1 ) {
 				fprintf( stderr, "\nERROR: Failed to set %s=%s for job %d.%d (%d)\n", 
 						 lhstr, rhstr, ClusterId, ProcId, errno );
 				retval = -1;
