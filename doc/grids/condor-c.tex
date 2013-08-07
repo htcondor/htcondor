@@ -43,9 +43,10 @@ requires a few extra configuration variables:
 
 \footnotesize
 \begin{verbatim}
-CONDOR_GAHP=$(SBIN)/condor_c-gahp
-C_GAHP_LOG=/tmp/CGAHPLog.$(USERNAME)
-C_GAHP_WORKER_THREAD_LOG=/tmp/CGAHPWorkerLog.$(USERNAME)
+CONDOR_GAHP = $(SBIN)/condor_c-gahp
+C_GAHP_LOG = /tmp/CGAHPLog.$(USERNAME)
+C_GAHP_WORKER_THREAD_LOG = /tmp/CGAHPWorkerLog.$(USERNAME)
+C_GAHP_WORKER_THREAD_LOCK = /tmp/CGAHPWorkerLock.$(USERNAME)
 \end{verbatim}
 \normalsize
 
@@ -108,7 +109,8 @@ GSI, SSL, KERBEROS, and FS.
 \index{universe!grid}
 Job submission of HTCondor-C jobs is the same as for any HTCondor job.
 The \SubmitCmd{universe} is \SubmitCmd{grid}.
-\SubmitCmd{grid\_resource} specifies the remote \Condor{schedd} daemon to which
+The submit command \SubmitCmd{grid\_resource} specifies 
+the remote \Condor{schedd} daemon to which
 the job should be submitted, and its value consists of three fields.
 The first field is the grid type, which is \SubmitCmd{condor}.
 The second field is the name of the remote \Condor{schedd} daemon.
@@ -224,7 +226,7 @@ This implies that the file systems for the resulting submit machine
 the execute machine (the machine that runs the job) will
 \emph{not} be shared.
 Thus,
-the two inserted ClassAds
+the two inserted ClassAd attributes
 \footnotesize
 \begin{verbatim}
 +remote_ShouldTransferFiles = "YES"
