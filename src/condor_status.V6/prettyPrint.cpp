@@ -1290,7 +1290,7 @@ formatLoadAvg (double fl, AttrList *, Formatter &)
 
 #if 0 // not currently used
 static const char *
-formatFloat (float fl, AttrList *, Formatter & fmt)
+formatFloat (double fl, AttrList *, Formatter & fmt)
 {
 	static char buf[60];
 	sprintf(buf, fmt.printfFmt, fl);
