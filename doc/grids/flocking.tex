@@ -5,8 +5,8 @@
 \index{HTCondor!flocking}
 
 Flocking is HTCondor's way of allowing jobs that cannot immediately
-run (within the pool of machines where the job was
-submitted) to instead run on a different HTCondor pool. 
+run within the pool of machines where the job was
+submitted to instead run on a different HTCondor pool. 
 If a machine within HTCondor pool A can send jobs to be run on HTCondor pool B,
 then we say that jobs from machine A flock to pool B.
 Flocking can occur in a one way manner,
@@ -52,7 +52,7 @@ set the following configuration variables:
   FLOCK_NEGOTIATOR_HOSTS = $(FLOCK_TO)
   \end{verbatim}
   \item[\Macro{HOSTALLOW\_NEGOTIATOR\_SCHEDD}]
-  provides a host-based access level and authorization list for the
+  provides an access level and authorization list for the
   \Condor{schedd} daemon to allow negotiation (for security
   reasons) with the machines within the pools
   that jobs from machine A may flock to.
@@ -63,7 +63,7 @@ set the following configuration variables:
   ##  Now, with flocking we need to let the SCHEDD trust the other
   ##  negotiators we are flocking with as well.  You should normally
   ##  not have to change this either.
-  HOSTALLOW_NEGOTIATOR_SCHEDD = $(COLLECTOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
+ALLOW_NEGOTIATOR_SCHEDD = $(CONDOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS), $(IP_ADDRESS)
   \end{verbatim}
   \normalsize
   % NEGOTIATOR_HOST is no longer used since ports are dynamically
@@ -80,17 +80,17 @@ The configuration macros that must be set in
 pool B are ones that authorize jobs from machine A
 to flock to pool B.
 
-The host-based configuration macros are more easily
+The configuration variables are more easily
 set by introducing a list of machines where the jobs may flock from. 
 \Macro{FLOCK\_FROM} is a comma separated list of machines,
 and  it is used in the default configuration setting
-of the security macros that do host-based authorization:
+of the security macros that do authorization:
 \footnotesize
 \begin{verbatim}
-HOSTALLOW_WRITE_COLLECTOR = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
-HOSTALLOW_WRITE_STARTD    = $(HOSTALLOW_WRITE), $(FLOCK_FROM)
-HOSTALLOW_READ_COLLECTOR  = $(HOSTALLOW_READ), $(FLOCK_FROM)
-HOSTALLOW_READ_STARTD     = $(HOSTALLOW_READ), $(FLOCK_FROM)
+ALLOW_WRITE_COLLECTOR = $(ALLOW_WRITE), $(FLOCK_FROM)
+ALLOW_WRITE_STARTD    = $(ALLOW_WRITE), $(FLOCK_FROM)
+ALLOW_READ_COLLECTOR  = $(ALLOW_READ), $(FLOCK_FROM)
+ALLOW_READ_STARTD     = $(ALLOW_READ), $(FLOCK_FROM)
 \end{verbatim}
 \normalsize
 
@@ -98,14 +98,6 @@ Wild cards may be used when setting the \MacroNI{FLOCK\_FROM}
 configuration variable.
 For example, \verb@*.cs.wisc.edu@ specifies all hosts
 from the \verb@cs.wisc.edu@ domain. 
-
-If the user-based configuration macros for security are used,
-then the default will be:
-\footnotesize
-\begin{verbatim}
-ALLOW_NEGOTIATOR =  $(COLLECTOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS)
-\end{verbatim}
-\normalsize
 
 Further, if using Kerberos or GSI authentication, then the setting
 becomes:
@@ -129,7 +121,7 @@ The submission of jobs other than standard universe jobs must consider
 the location of input, output and error files.
 The common case will be that machines within separate pools
 do not have a shared file system.
-Therefore, when submitting jobs, the user will need to consider
+Therefore, when submitting jobs, the user will need to enable
 file transfer mechanisms.
 These mechanisms are discussed in
 section~\ref{sec:file-transfer} on page~\pageref{sec:file-transfer}.
