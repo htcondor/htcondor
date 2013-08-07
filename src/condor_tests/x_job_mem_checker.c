@@ -6,10 +6,17 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <string.h>
 #include <time.h>
+
+#ifdef WIN32
+#include <windows.h>
+#include <psapi.h>
+void sleep(int sec) { Sleep(sec * 1000); }
+#pragma comment(lib, "kernel32.lib")
+#pragma comment(lib, "psapi.lib")
+#endif
 
 	struct sizerequest {
 		int memtimeatsize;
@@ -27,12 +34,12 @@
 	int totalK = 0;
 	int chunkK;
 
- 	void push(int chunks);
+	void push(int chunks);
 	void pop(int chunks);
 	void init_storage(int size);
 	static char *stamp();
 	void report();
-        int match_prefix(const char *s1, const char *s2);
+	int match_prefix(const char *s1, const char *s2);
 
 /*
  * This gets us to an argc of 21
@@ -132,30 +139,43 @@ int main(int argc,char **argv)
 			request++;
 		}
 	}
-        return 0;
+	return 0;
 }
 
 void report()
 {
-	FILE *fp;
-	size_t len = STATUSSPACE;
-	int read;
-	
 	int vmpeak=-1, vmsize=-1, vmhwm=-1, vmrss=-1;
 
-	fp = fopen("/proc/self/status","r");
-	printf("%s PID %d, ",stamp(),jobpid);
-	while ((read = (int)getline(&status, &len, fp)) != -1) {
-	    char label[32]; int size;
-	    int items = sscanf(status, "%s %d", label, &size);
-            if (items == 2) {
-		//printf("scan `%s` found %d items: '%s' %d\n", status, items, label, size);
-		if (match_prefix(label,"VmPeak")) vmpeak = size;
-		else if (match_prefix(label, "VmSize")) vmsize = size;
-		else if (match_prefix(label, "VmHWM")) vmhwm = size;
-		else if (match_prefix(label, "VmRSS")) vmrss = size;
-            }
+#ifdef WIN32
+
+	PROCESS_MEMORY_COUNTERS_EX mem;
+	ZeroMemory(&mem, sizeof(mem)); mem.cb = sizeof(mem);
+	if (GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&mem, sizeof(mem))) {
+		vmpeak = (int)(mem.PeakPagefileUsage /  1024);
+		vmsize = (int)(mem.PrivateUsage /  1024);
+		vmhwm = (int)(mem.PeakWorkingSetSize / 1024);
+		vmrss = (int)(mem.WorkingSetSize / 1024);
 	}
+
+#else
+
+	FILE * fp = fopen("/proc/self/status","r");
+	while (fgets(status, STATUSSPACE, fp)) {
+		char label[32]; int size;
+		int items = sscanf(status, "%s %d", label, &size);
+		if (items == 2) {
+			//printf("scan `%s` found %d items: '%s' %d\n", status, items, label, size);
+			if (match_prefix(label,"VmPeak")) vmpeak = size;
+			else if (match_prefix(label, "VmSize")) vmsize = size;
+			else if (match_prefix(label, "VmHWM")) vmhwm = size;
+			else if (match_prefix(label, "VmRSS")) vmrss = size;
+		}
+		fclose(fp);
+	}
+
+#endif
+
+	printf("%s PID %d, ",stamp(),jobpid);
 	printf("VmPeak %6d, VmSize %6d, VmHWM %6d, VmRSS %6d, alloced %d kB\n", vmpeak, vmsize, vmhwm, vmrss, totalK);
 }
 
