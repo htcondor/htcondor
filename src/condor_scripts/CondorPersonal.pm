@@ -47,8 +47,6 @@ package CondorPersonal;
 
 use strict;
 use warnings;
-
-use Carp;
 use Cwd;
 use POSIX qw/sys_wait_h strftime/;
 use Socket;
@@ -152,6 +150,7 @@ my $DEBUGLEVEL = 2; # nothing higher shows up
 my $debuglevel = 3; # take all the ones we don't want to see
 					# and allowed easy changing and remove hard
 					# coded value
+my @debugcollection = ();
 my $isnightly = IsThisNightly($topleveldir);
 my $wrap_test;
 
@@ -230,6 +229,7 @@ sub StartCondor
 	$personal_condor_params{"test_name"} = $testname;
 	$personal_condor_params{"condor_name"} = $version;
 	$personal_condor_params{"owner_pid"} = $mpid;
+	$personal_condor_params{"fresh_local"} = "TRUE";
 
 	return StartCondorWithParams(%personal_condor_params);
 }
@@ -323,11 +323,24 @@ sub StartCondorWithParams
 sub debug {
     my $string = shift;
     my $level = shift;
-    if($DEBUG) {
+	my $time = `date`;
+	chomp($time);
+	push @debugcollection, "$time: CondorPersonal - $string";
+    #if($DEBUG) {
         if(!(defined $level) or ($level <= $DEBUGLEVEL)) {
-            print( "", timestamp(), ":<CondorPersonal> $string" );
+			if(defined $level) {
+            	print( "", timestamp(), ":<CondorPersonal>(L=$level) $string" );
+			} else {
+            	print( "", timestamp(), ":<CondorPersonal>(L=?) $string" );
+			}
         }
-    }
+    #}
+}
+
+sub debug_flush {
+	foreach my $line (@debugcollection) {
+		print "$line\n";
+	}
 }
 
 sub DebugLevel
@@ -384,7 +397,7 @@ sub Reset
 
 sub ParsePersonalCondorParams
 {
-    my $submit_file = shift || croak "missing submit file argument";
+    my $submit_file = shift || die "missing submit file argument";
     my $line = 0;
 
     if( ! open( SUBMIT_FILE, $submit_file ) )
@@ -571,7 +584,9 @@ sub InstallPersonalCondor
 		$personal_condor_params{"condortemplate"} = shift @configfiles;
 		if(exists $personal_condor_params{fresh_local}) {
 		} else {
-			$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
+			# Always start with a freshly constructed local config file
+			# so we know what we get  bt 5/13
+			#$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
 		}
 
 		debug("condor_q: $condorq\n",$debuglevel);
@@ -588,6 +603,7 @@ sub InstallPersonalCondor
 		else
 		{
 			print "which condor_q responded <<<$condorq>>>! CondorPersonal Failing now\n";
+			debug_flush();
 			die "Can not seem to find a Condor install!\n";
 		}
 		
@@ -599,6 +615,7 @@ sub InstallPersonalCondor
 		}
 		else
 		{
+			debug_flush();
 			die "Can not seem to locate Condor release binaries\n";
 		}
 
@@ -649,6 +666,7 @@ sub InstallPersonalCondor
 		else
 		{
 			print "which condor_q responded <<<$condorq>>>! CondorPersonal Failing now\n";
+			debug_flush();
 			die "Can not seem to find a Condor install!\n";
 		}
 		
@@ -660,6 +678,7 @@ sub InstallPersonalCondor
 		}
 		else
 		{
+			debug_flush();
 			die "Can not seem to locate Condor release binaries\n";
 		}
 		#$binloc = "../../condor/bin/";
@@ -702,6 +721,7 @@ sub InstallPersonalCondor
 	}
 	else
 	{
+		debug_flush();
 		die "Undiscernable install directive! (condor = $condordistribution)\n";
 	}
 
@@ -907,32 +927,13 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 debug( "HMMMMMMMMMMM opening to write <$topleveldir/$personal_local>\n",$debuglevel);
 
 	open(NEW,">$topleveldir/$personal_local")  || die "Can not open template: $!\n";
-	if($personal_local_src ne "")
-	{
-		print NEW "# Requested local config<$personal_local_src>\n";
-		#print "******************** Must seed condor_config.local <<$personal_local_src>> ************************\n";
-
-debug( "HMMMMMMMMMMM opening to read <$personal_local_src>\n",$debuglevel);
-
-		open(LOCSRC,"<$personal_local_src") || die "Can not open local config template: $!\n";
-		while(<LOCSRC>)
-		{
-			CondorUtils::fullchomp($_);
-			$line = $_;
-			print NEW "$line\n";
-		}
-		# now make sure we have the local dir we want after the generic .local file is seeded in
-		$line = $personal_config_changes{"LOCAL_DIR"};
-		print NEW "$line\n";
-		# and a lock directory we like
-		print NEW "LOCK = \$(LOG)\n";
-		close(LOCSRC);
-	}
-
 	# Dan: Jan 30, '08 added D_NETWORK in order to debug condor_rm timeout
 	print NEW "ALL_DEBUG = D_FULLDEBUG\n";
 	# bill: 8/13/09 speed up dagman
 	print NEW "DAGMAN_USER_LOG_SCAN_INTERVAL = 1\n";
+	# bill make tools more forgiving of being busy
+	print NEW "TOOL_TIMEOUT_MULTIPLIER = 10\n";
+	print NEW "TOOL_DEBUG_ON_ERROR = D_ANY D_ALWAYS:2\n";
 
 	if($personal_daemons ne "")
 	{
@@ -1029,7 +1030,8 @@ debug( "HMMMMMMMMMMM opening to read <$personal_local_src>\n",$debuglevel);
 		print NEW "# Done Adding for portchanges equal standard\n";
 	}
 	else
-	{
+	{		
+		debug_flush();
 		die "Misdirected request for ports\n";
 		exit(1);
 	}
@@ -1050,6 +1052,28 @@ debug( "HMMMMMMMMMMM opening to read <$personal_local_src>\n",$debuglevel);
 		print NEW "NUM_CPUS = $myslots\n";
 		print NEW "SLOTS = $myslots\n";
 		print NEW "# Done Adding slot request from param file\n";
+	}
+
+	if($personal_local_src ne "")
+	{
+		print NEW "# Requested local config<$personal_local_src>\n";
+		#print "******************** Must seed condor_config.local <<$personal_local_src>> ************************\n";
+
+debug( "HMMMMMMMMMMM opening to read <$personal_local_src>\n",$debuglevel);
+
+		open(LOCSRC,"<$personal_local_src") || die "Can not open local config template: $!\n";
+		while(<LOCSRC>)
+		{
+			CondorUtils::fullchomp($_);
+			$line = $_;
+			print NEW "$line\n";
+		}
+		# now make sure we have the local dir we want after the generic .local file is seeded in
+		$line = $personal_config_changes{"LOCAL_DIR"};
+		print NEW "$line\n";
+		# and a lock directory we like
+		print NEW "LOCK = \$(LOG)\n";
+		close(LOCSRC);
 	}
 
 	if($personal_sec_prepost_src ne "")
@@ -1185,11 +1209,13 @@ sub StartPersonalCondor
 		system("$personalmaster");
 		#system("condor_config_val -v log");
 	} else {
+		debug_flush();
 		die "Bad state for a new personal condor configuration!<<running :-(>>\n";
 	}
 
 	my $res = IsRunningYet();
 	if($res == 0) {
+		debug_flush();
 		die "Can not continue because condor is not running!!!!\n";
 	}
 
@@ -1257,6 +1283,7 @@ sub IsPersonalRunning
     }
 
     if( $matchedconfig eq "" ) {
+		debug_flush();
         die "lost: config does not match expected config setting......\n";
     }
 
@@ -1299,7 +1326,7 @@ sub IsPersonalRunning
 #################################################################
 
 sub IsRunningYet {
-    print "Testing if Condor is up.\n";
+    #print "Testing if Condor is up.\n";
     print "\tCONDOR_CONFIG=$ENV{CONDOR_CONFIG}\n";
 	my $daemonlist = `condor_config_val daemon_list`;
 	CondorUtils::fullchomp($daemonlist);
@@ -1309,7 +1336,7 @@ sub IsRunningYet {
 	my $first = 1;
 	my @status;
 
-	my $runlimit = 8;
+	my $runlimit = 16;
 	my $backoff = 2;
 	my $loopcount;
 
@@ -1367,6 +1394,7 @@ sub IsRunningYet {
             	debug( "Found it!!!! master address file\n",$debuglevel);
             	$havemasteraddr = "yes";
         	} elsif ( $loopcount == $runlimit ) {
+				debug_flush();
 				debug( "Gave up waiting for master address file\n",$debuglevel);
 				return 0;
         	} else {
@@ -1397,6 +1425,7 @@ sub IsRunningYet {
             	$havecollectoraddr = "yes";
         	} elsif ( $loopcount == $runlimit ) {
 				debug( "Gave up waiting for collector address file\n",$debuglevel);
+				debug_flush();
 				return 0;
         	} else {
             	sleep ($loopcount * $backoff);
@@ -1426,6 +1455,7 @@ sub IsRunningYet {
             	$havenegotiatoraddr = "yes";
         	} elsif ( $loopcount == $runlimit ) {
 				debug( "Gave up waiting for negotiator address file\n",$debuglevel);
+				debug_flush();
 				return 0;
         	} else {
             	sleep ($loopcount * $backoff);
@@ -1455,6 +1485,7 @@ sub IsRunningYet {
             	$havestartdaddr = "yes";
         	} elsif ( $loopcount == $runlimit ) {
 				debug( "Gave up waiting for startd address file\n",$debuglevel);
+				debug_flush();
 				return 0;
         	} else {
             	sleep ($loopcount * $backoff);
@@ -1486,6 +1517,7 @@ sub IsRunningYet {
             	$havescheddaddr = "yes";
         	} elsif ( $loopcount == $runlimit ) {
 				debug( "Gave up waiting for schedd address file\n",$debuglevel);
+				debug_flush();
 				return 0;
         	} else {
             	sleep 1;
@@ -1520,6 +1552,7 @@ sub IsRunningYet {
 			}
 			else {
 			    print timestamp(), " Hit the retry limit.  Erroring out.\n";
+				debug_flush();
 			    return 0;
 			}
                     }
@@ -1563,6 +1596,7 @@ sub IsRunningYet {
     			}
 				if($loopcount == $runlimit) { 
 					print "schedd did not start - bad\n";
+					debug_flush();
 					last; 
 				}
 				sleep ($loopcount * $backoff);
@@ -1595,6 +1629,7 @@ sub IsRunningYet {
     			}
 				if($loopcount == $runlimit) { 
 					print "negotiator did not start - bad\n";
+					debug_flush();
 					last; 
 				}
 				sleep ($loopcount * $backoff);
@@ -1655,7 +1690,7 @@ sub CollectDaemonPids {
 
     my $pidfile = "$logdir/PIDS";
     open(PIDS, '>', $pidfile) or die "Can not create file '$pidfile': $!\n";
-    debug("Master pid: $master\n");
+    #debug("Master pid: $master\n");
     print PIDS "$master MASTER\n";
     foreach my $daemon (keys %pids) {
         debug("\t$daemon pid: $pids{$daemon}\n", $debuglevel);

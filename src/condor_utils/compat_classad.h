@@ -108,11 +108,6 @@ class ClassAd : public classad::ClassAd
 		 */
 	int Insert(const char *str);
 
-		/** Insert an attribute/value into the ClassAd 
-		 *  @param expr A string of the form "Attribute = Value"
-		 */
-	int InsertOrUpdate(const char *expr) { return Insert(expr); }
-
 		/* Insert an attribute/value into the Classad
 		 */
 	int AssignExpr(char const *name,char const *value);
@@ -332,36 +327,11 @@ class ClassAd : public classad::ClassAd
 
 	bool initFromString(char const *str,MyString *err_msg=NULL);
 
-		/** Read the old ClassAd from the stream, and fill in this ClassAd.
-		 * @param s the stream
-		 */
-	int initFromStream(Stream& s);
-
-		/** Read the old ClassAd as an old AttrList from the stream,
-		 * and fill in this ClassAd.
-		 * @param s the stream
-		 */
-	int initAttrListFromStream(Stream& s);
-
     void ResetExpr();
 
 	void ResetName();
 	const char *NextNameOriginal();
 
-	/* Create a new ExprTree based on the given one. The new tree will
-	 * be modified suched that any boolean value is converted to a
-	 * literal '0' or '1'.
-	 */
-	bool AddExplicitConditionals( classad::ExprTree *expr, classad::ExprTree *&newExpr );
-
-	// AddExplicitTargets creates a new ClassAd (the caller owns it)
-	// that is similar to the original ClassAd, except that if it refers
-	// to attributes that are not in the current classad and they are not
-	// scoped, then they are renamed "target.attribute"
-	void AddExplicitTargetRefs(  );
-	
-	void RemoveExplicitTargetRefs(  );
-	
 	void AddTargetRefs( TargetAdType target_type, bool do_version_check = true );
 
 	bool NextExpr( const char *&name, ExprTree *&value );
@@ -386,12 +356,6 @@ class ClassAd : public classad::ClassAd
 	// CopyAttribute(target_attr,target_attr,source_ad).
 	void CopyAttribute(char const *target_attr, classad::ClassAd *source_ad );
 
-    /** Basically just calls an Unparser so we can escape strings
-     *  @param val The string we're escaping stuff in. 
-     *  @return The escaped string.
-     */
-    static char const *EscapeStringValue(char const *val, MyString &buf);
-
     /** Takes the ad this is chained to, copies over all the 
      *  attributes from the parent ad that aren't in this classad
      *  (so attributes in both the parent ad and this ad retain the 
@@ -414,7 +378,6 @@ class ClassAd : public classad::ClassAd
 
  private:
 	void evalFromEnvironment( const char *name, classad::Value val );
-	classad::ExprTree *AddExplicitConditionals( classad::ExprTree * );
 
 	enum ItrStateEnum {
 		ItrUninitialized,
@@ -524,6 +487,12 @@ int sPrintAdAsXML(std::string &output, classad::ClassAd &ad,
  */
 char* sPrintExpr(const classad::ClassAd &ad, const char* name);
 
+/** Basically just calls an Unparser so we can escape strings
+ *  @param val The string we're escaping stuff in. 
+ *  @return The escaped string.
+ */
+char const *EscapeAdStringValue(char const *val, std::string &buf);
+
 	/** Set the MyType attribute */
 void SetMyTypeName(classad::ClassAd &ad, const char *);
 	/** Get the value of the MyType attribute */
@@ -542,10 +511,24 @@ classad::MatchClassAd *getTheMatchAd( classad::ClassAd *source,
 void releaseTheMatchAd();
 
 
+// Modify all expressions in the given ad, such that if they refer
+// to attributes that are not in the current classad and they are not
+// scoped, then they are renamed "target.attribute"
+void AddExplicitTargetRefs( classad::ClassAd &ad );
+
+// Return a new ExprTree identical to the given one, except that for any
+// attributes referred to which are not scoped and don't appear in the
+// given set are renamed "target.attribute".
 classad::ExprTree *AddExplicitTargetRefs(classad::ExprTree *,
 						std::set < std::string, classad::CaseIgnLTStr > & );
 						
-classad::ExprTree *AddExplicitTargetRefs(classad::ExprTree *, classad::ClassAd*);
+// Modify all expressions in the given ad, removing the "target" scope
+// from all attributes references.
+void RemoveExplicitTargetRefs( classad::ClassAd &ad );
+
+// Return a new ExprTree identical to the given one, but removing any
+// "target" scope from all attribute references.
+// For example, Target.Foo will become Foo.
 classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree * );
 
 

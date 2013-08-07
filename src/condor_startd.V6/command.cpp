@@ -637,7 +637,7 @@ command_query_ads( Service*, int, Stream* stream)
 	}
 
 #if !defined(WANT_OLD_CLASSADS)
-	queryAd.AddExplicitTargetRefs();
+	AddExplicitTargetRefs( queryAd );
 #endif
 
    MyString stats_config;
@@ -1221,10 +1221,13 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 				if( rank > rip->r_cur->rank() ) {
 					rip->dprintf( D_ALWAYS, 
 					 "State change: preempting claim based on machine rank\n" );
+					 resmgr->startd_stats.total_rank_preemptions += 1;
 				} else {
 					rip->dprintf( D_ALWAYS, 
 					 "State change: preempting claim based on user priority\n" );
+					 resmgr->startd_stats.total_user_prio_preemptions += 1;
 				}
+				resmgr->startd_stats.total_preemptions += 1;
 
 				    // Force resource to take note of the preempting claim.
 				    // This results in a reversible transition to the

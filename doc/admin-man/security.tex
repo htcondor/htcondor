@@ -2905,7 +2905,7 @@ are classified for each daemon:
 
     Consider installing \Condor{submit} as a setgid \Login{condor}
     program so that at least the \File{stdout}, \File{stderr} and
-    user log files get created with the right permissions.  If
+    job event log files get created with the right permissions.  If
     \Condor{submit} is a setgid program, it will automatically set
     its umask to 002 and create group-writable files.  This
     way, the simple case of a job that only writes to \File{stdout}

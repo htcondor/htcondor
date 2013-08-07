@@ -208,7 +208,7 @@ close(NEWCMD);
 CondorTest::RegisterHold($testname, $hold);
 CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterShadow($testname, $shadow);
-CondorTest::RegisterEvicted($testname, $evicted);
+CondorTest::RegisterEvictedWithoutCheckpoint($testname, $evicted);
 CondorTest::RegisterAbort($testname, $aborted);
 CondorTest::RegisterExitedSuccess($testname, $success);
 #CondorTest::RegisterTimed($testname, $timed, 3600);

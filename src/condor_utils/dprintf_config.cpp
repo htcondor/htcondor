@@ -54,6 +54,49 @@ dprintf_config_ContinueOnFailure ( int fContinue )
 	return fOld;
 }
 
+// configure tool_on_error output from cat_and_flags, or if cat_and_flags is 0
+// configure it from the TOOL_ON_ERROR_DEBUG parameter.
+int
+dprintf_config_tool_on_error(int cat_and_flags)
+{
+	dprintf_output_settings tool_output[1];
+	int cOutputs = 0;
+
+	if (cat_and_flags) {
+		extern void _condor_set_debug_flags_ex(const char *, int, unsigned int &, DebugOutputChoice &, DebugOutputChoice &);
+		tool_output[cOutputs].logPath = ">BUFFER";
+		tool_output[cOutputs].HeaderOpts = 0;
+		tool_output[cOutputs].choice = 0;
+		tool_output[cOutputs].VerboseCats = 0;
+		_condor_set_debug_flags_ex(NULL, cat_and_flags,
+			tool_output[cOutputs].HeaderOpts,
+			tool_output[cOutputs].choice,
+			tool_output[cOutputs].VerboseCats);
+		if (tool_output[cOutputs].choice & 1<<D_ALWAYS) tool_output[cOutputs].accepts_all = true;
+		++cOutputs;
+	} else {
+		char * pval = param("TOOL_DEBUG_ON_ERROR");
+		if (pval) {
+			tool_output[cOutputs].logPath = ">BUFFER";
+			tool_output[cOutputs].HeaderOpts = 0;
+			tool_output[cOutputs].choice |= (1<<D_ALWAYS | 1<<D_ERROR);
+			tool_output[cOutputs].VerboseCats = 0;
+			tool_output[cOutputs].accepts_all = true;
+			_condor_parse_merge_debug_flags( pval, 0,
+				tool_output[cOutputs].HeaderOpts,
+				tool_output[cOutputs].choice,
+				tool_output[cOutputs].VerboseCats);
+			++cOutputs;
+			free(pval);
+		}
+	}
+
+	if (cOutputs > 0) {
+		dprintf_set_outputs(tool_output, cOutputs);
+	}
+	return cOutputs;
+}
+
 int
 dprintf_config_tool(const char* subsys, int /*flags*/)
 {
@@ -64,16 +107,16 @@ dprintf_config_tool(const char* subsys, int /*flags*/)
 
 	PRAGMA_REMIND("TJ: allow callers of dprintf_config_tool to pass logging verbosity and flags");
 
-	dprintf_output_settings tool_output;
-	tool_output.choice = 1<<D_ALWAYS | 1<<D_ERROR;
-	tool_output.accepts_all = true;
+	dprintf_output_settings tool_output[2];
+	tool_output[0].choice = 1<<D_ALWAYS | 1<<D_ERROR;
+	tool_output[0].accepts_all = true;
 	
 	/*
 	** First, add the debug flags that are shared by everyone.
 	*/
 	pval = param("ALL_DEBUG");//dprintf_param_funcs->param("ALL_DEBUG");
 	if( pval ) {
-		_condor_parse_merge_debug_flags( pval, 0, HeaderOpts, tool_output.choice, verbose);
+		_condor_parse_merge_debug_flags( pval, 0, HeaderOpts, tool_output[0].choice, verbose);
 		free( pval );
 	}
 
@@ -86,7 +129,7 @@ dprintf_config_tool(const char* subsys, int /*flags*/)
 		pval = param("DEFAULT_DEBUG");//dprintf_param_funcs->param("DEFAULT_DEBUG");
 	}
 	if( pval ) {
-		_condor_parse_merge_debug_flags( pval, 0, HeaderOpts, tool_output.choice, verbose);
+		_condor_parse_merge_debug_flags( pval, 0, HeaderOpts, tool_output[0].choice, verbose);
 		free( pval );
 	}
 
@@ -112,11 +155,12 @@ dprintf_config_tool(const char* subsys, int /*flags*/)
 		}
 	}
 
-	tool_output.logPath = "2>";
-	tool_output.HeaderOpts = HeaderOpts;
-	tool_output.VerboseCats = verbose;
+	tool_output[0].logPath = "2>";
+	tool_output[0].HeaderOpts = HeaderOpts;
+	tool_output[0].VerboseCats = verbose;
+	int cOutputs = 1;
 
-	dprintf_set_outputs(&tool_output, 1);
+	dprintf_set_outputs(tool_output, cOutputs);
 
 	return 0;
 }

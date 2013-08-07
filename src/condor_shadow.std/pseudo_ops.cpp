@@ -952,7 +952,7 @@ pseudo_put_file_stream(
 
 			/* Send status assuring peer that we got everything */
 		answer = htonl( bytes_read );
-		write( data_sock, &answer, sizeof(answer) );
+		write( data_sock, &answer, sizeof(answer));
 		dprintf( D_ALWAYS,
 			"\tSTREAM FILE RECEIVED OK (%d bytes)\n", bytes_read );
 
@@ -1851,8 +1851,7 @@ JobPreCkptServerScheddNameChange()
 	job_version[0] = '\0';
 	if (JobAd && JobAd->LookupString(ATTR_VERSION, job_version, sizeof(job_version))) {
 		CondorVersionInfo ver(job_version, "JOB");
-		if (ver.built_since_version(6,2,0) &&
-			ver.built_since_date(11,16,2000)) {
+		if (ver.built_since_version(6,2,0)) {
 			return false;
 		}
 	}

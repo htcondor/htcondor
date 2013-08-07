@@ -117,8 +117,8 @@ WSFCPP_HOME=/var/lib/condor/aviary/axis2.xml
 # Aviary Schedd plugin, provides submission and job control endpoint
 SCHEDD.PLUGINS = $(SCHEDD.PLUGINS) $(LIB)/plugins/AviaryScheddPlugin-plugin.so
 
-# Port the Aviary Schedd plugin listens on, default 9090
-#SCHEDD.HTTP_PORT = 9090
+# Port the Aviary Schedd plugin listens on, default 39090
+#SCHEDD.HTTP_PORT = 39090
 
 # Aviary query server, provides endpoint for job and submission queries
 QUERY_SERVER = $(SBIN)/aviary_query_server
@@ -127,8 +127,8 @@ QUERY_SERVER.QUERY_SERVER_LOG = $(LOG)/QueryServerLog
 QUERY_SERVER.QUERY_SERVER_DEBUG = D_ALWAYS
 DAEMON_LIST = $(DAEMON_LIST), QUERY_SERVER
 
-# Port the QueryServer listens on, default 9091
-#QUERY_SERVER.HTTP_PORT = 9091
+# Port the QueryServer listens on, default 39091
+#QUERY_SERVER.HTTP_PORT = 39091
 
 # HISTORY_INTERVAL specifies the number of seconds between polls of the HISTORY file, default 120
 #QUERY_SERVER.HISTORY_INTERVAL = 120
@@ -391,8 +391,8 @@ ad invalidation. For failed endpoints, the plugin monitors regular updates of
 the published ads and prune them using a policy of missed update count over a 
 configurable interval.
 
-The default locator can be invoked at port 9000 on the Collector host (e.g.,
-http://localhost:9000/services/locator/locate)
+The default locator can be invoked at port 39000 on the Collector host (e.g.,
+http://localhost:39000/services/locator/locate)
 
 Arguments to the locate operation:
 * ResourceType (required and one of 'ANY','COLLECTOR','CUSTOM','MASTER',
@@ -491,7 +491,7 @@ require "openssl"
 
 client = Savon::Client.new do |wsdl|
   wsdl.document = "/var/lib/condor/aviary/services/job/aviary-job.wsdl"
-  wsdl.endpoint = "http://localhost:9090/services/job/submitJob"
+  wsdl.endpoint = "http://localhost:39090/services/job/submitJob"
 end
 
 xml =  Builder::XmlMarkup.new
@@ -529,7 +529,7 @@ cmds = ['getJobStatus', 'getJobSummary', 'getJobDetails']
 
 cmdarg = len(argv) > 1 and argv[1]
 cproc =  len(argv) > 2 and argv[2]
-job_url = len(argv) > 3 and argv[3] or "http://localhost:9091/services/query/"
+job_url = len(argv) > 3 and argv[3] or "http://localhost:39091/services/query/"
 
 if cmdarg not in cmds:
     print "error unknown command: ", cmdarg

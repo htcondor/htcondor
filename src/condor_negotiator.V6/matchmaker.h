@@ -76,6 +76,9 @@ struct GroupEntry {
     double subtree_quota;
     // all slots requested by this group and its subtree
     double subtree_requested;
+
+	// sum of usage of this node and all children
+	double subtree_usage;
     // true if this group got served by most recent round robin
     bool rr;
     // timestamp of most recent allocation from round robin
@@ -494,6 +497,8 @@ class Matchmaker : public Service
 
 		void StartNewNegotiationCycleStat();
 		void publishNegotiationCycleStats( ClassAd *ad );
+
+		double calculate_subtree_usage(GroupEntry *group);
 };
 GCC_DIAG_ON(float-equal)
 

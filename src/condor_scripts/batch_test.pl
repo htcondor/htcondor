@@ -81,9 +81,10 @@ use CondorUtils;
 #################################################################
 
 Condor::DebugOff();
-Condor::DebugLevel(0);
-CondorPersonal::DebugLevel(0);
+Condor::DebugLevel(2);
+CondorPersonal::DebugLevel(2);
 CondorPersonal::DebugOff();
+my @debugcollection = ();
 
 #################################################################
 #
@@ -321,9 +322,9 @@ while( $_ = shift( @ARGV ) ) {
       }
       if( /^-v.*/ ) {
           Condor::DebugOn();
-          Condor::DebugLevel(5);
+          Condor::DebugLevel(2);
           CondorPersonal::DebugOn();
-          CondorPersonal::DebugLevel(5);
+          CondorPersonal::DebugLevel(2);
       }
     }
 }
@@ -354,7 +355,7 @@ if($pretestsetuponly == 1) {
     exit(0);
 }
 
-print "Ready for Testing\n";
+#print "Ready for Testing\n";
 
 # figure out what tests to try to run.  first, figure out what
 # compilers we're trying to test.  if that was given on the command
@@ -368,11 +369,11 @@ if($timestamp == 1) {
     print scalar localtime() . "\n";
 }
 
-foreach my $name (@compilers) {
-    if($hush == 0) { 
-	print "Compiler:$name\n";
-    }
-}
+#foreach my $name (@compilers) {
+    #if($hush == 0) { 
+	#print "Compiler:$name\n";
+    #}
+#}
 
 # now we find the tests we care about.
 if( @testlist ) {
@@ -482,7 +483,7 @@ if ($isXML){
 }
 
 # Now we'll run each test.
-print "Testing: " . join(" ", @compilers) . "\n";
+#print "Testing: " . join(" ", @compilers) . "\n";
 
 my $hashsize = 0;
 my %test;
@@ -493,7 +494,7 @@ foreach my $compiler (@compilers) {
     my $testspercompiler = $#{$test_suite{$compiler}} + 1;
     my $currenttest = 0;
 
-    debug("Compiler/Directory <$compiler> has $testspercompiler tests\n",2); 
+    #debug("Compiler/Directory <$compiler> has $testspercompiler tests\n",2); 
     if ($isXML){
 	CondorTest::verbose_system ("mkdir -p $ResultDir/$compiler",{emit_output=>0});
     } 
@@ -506,9 +507,9 @@ foreach my $compiler (@compilers) {
     $ENV{PATH} = $ENV{PATH} . ":" . $compilerdir;
 
     # fork a child to run each test program
-    if($hush == 0) { 
-    	print "submitting $compiler tests\n";
-    }
+    #if($hush == 0) { 
+    	#print "submitting $compiler tests\n";
+    #}
 
     # if batching tests, randomize order
     if(($groupsize > 0) && ($sortfirst == 0)){
@@ -521,6 +522,7 @@ foreach my $compiler (@compilers) {
     foreach my $test_program (@currenttests) {
         print "----------------------------\n";
         print "Starting test: $test_program\n";
+		debug(" *********** Starting test: $test_program *********** \n",2);
 
 	# doing this next test
 	$currenttest = $currenttest + 1;
@@ -534,9 +536,9 @@ foreach my $compiler (@compilers) {
 
 	# allow multiple runs easily
 	my $repeatcounter = 0;
-	if( $hush == 0 ) {
-	    debug("Want $repeat runs of each test\n",3);
-	}
+	#if( $hush == 0 ) {
+	    #debug("Want $repeat runs of each test\n",3);
+	#}
 	while($repeatcounter < $repeat) {
 	    if($isolated) {
                 my $state_dir = "$BaseDir/$test_program.$repeatcounter";
@@ -547,13 +549,14 @@ foreach my $compiler (@compilers) {
                 start_condor("$state_dir.$time.saveme");
 	    }
 
-	    debug( "About to fork test<$currentgroup>\n",2);
+	    #debug( "About to fork test<$currentgroup>\n",2);
 	    $currentgroup += 1;
-	    debug( "About to fork test new size<$currentgroup>\n",2);
+	    #debug( "About to fork test new size<$currentgroup>\n",2);
 	    my $pid = fork();
 	    if( $hush == 0 ) {
 		debug( "forking for $test_program pid returned is $pid\n",3);
 	    }
+		#debug_flush();
 	    die "error calling fork(): $!\n" unless defined $pid;
 
 	    # two modes 
@@ -662,6 +665,10 @@ if( $hush == 0 ) {
     print "$num_success successful, $num_failed failed\n";
 }
 
+if($num_failed > 0) {
+	debug_flush();
+}
+
 open( SUMOUTF, ">>successful_tests_summary" )
     || die "error opening \"successful_tests_summary\": $!\n";
 open( OUTF, ">successful_tests" )
@@ -670,6 +677,7 @@ foreach my $test_name (@successful_tests)
 {
     print OUTF "$test_name 0\n";
     print SUMOUTF "$test_name 0\n";
+	print "$test_name passed\n";
 }
 close OUTF;
 close SUMOUTF;
@@ -682,6 +690,7 @@ foreach my $test_name (@failed_tests)
 {
     print OUTF "$test_name 1\n";
     print SUMOUTF "$test_name 1\n";
+	print "$test_name failed\n";
 }
 close OUTF;
 close SUMOUTF;
@@ -696,19 +705,18 @@ exit $num_failed;
 
 sub start_condor {
     if($isolated) {
-	$testpersonalcondorlocation = $_[0];
-	if($iswindows == 1) {
-	    if ($iscygwin) {
-		$wintestpersonalcondorlocation = `cygpath -m $testpersonalcondorlocation`;
-		CondorUtils::fullchomp($wintestpersonalcondorlocation);
-	    }
-	    else {
-		($wintestpersonalcondorlocation = $testpersonalcondorlocation) =~ s|/|\\|g;
-	    }
-	}
-	$targetconfig      = "$testpersonalcondorlocation/condor_config";
-	$targetconfiglocal = "$testpersonalcondorlocation/condor_config.local";
-	$localdir          = "$testpersonalcondorlocation/local";
+		$testpersonalcondorlocation = $_[0];
+		if($iswindows == 1) {
+	    	if ($iscygwin) {
+				$wintestpersonalcondorlocation = `cygpath -m $testpersonalcondorlocation`;
+				CondorUtils::fullchomp($wintestpersonalcondorlocation);
+	    	} else {
+				($wintestpersonalcondorlocation = $testpersonalcondorlocation) =~ s|/|\\|g;
+	    	}
+		}
+		$targetconfig      = "$testpersonalcondorlocation/condor_config";
+		$targetconfiglocal = "$testpersonalcondorlocation/condor_config.local";
+		$localdir          = "$testpersonalcondorlocation/local";
 
         $condorpidfile     = "$testpersonalcondorlocation/.pidfile";
         push(@extracondorargs, "-pidfile $condorpidfile");
@@ -719,21 +727,21 @@ sub start_condor {
     my $genericlocalconfig = "../condor_examples/condor_config.local.central.manager";
 
     if( -d $testpersonalcondorlocation ) {
-	debug( "Test Personal Condor Directory Established prior\n",2);
+		#debug( "Test Personal Condor Directory Established prior\n",2);
     }
     else {
-	debug( "Test Personal Condor Directory being Established now\n",2);
-	system("mkdir -p $testpersonalcondorlocation");
+		#debug( "Test Personal Condor Directory being Established now\n",2);
+		system("mkdir -p $testpersonalcondorlocation");
     }
 
     WhereIsInstallDir();
 
     my $res = IsPersonalTestDirSetup();
     if($res == 0) {
-	debug("Need to set up config files for test condor\n",2);
-	CreateConfig($awkscript, $genericconfig);
-	CreateLocalConfig($awkscript, $genericlocalconfig);
-	CreateLocal();
+		debug("Need to set up config files for test condor\n",2);
+		CreateConfig($awkscript, $genericconfig);
+		CreateLocalConfig($awkscript, $genericlocalconfig);
+		CreateLocal();
     }
 
     if($iswindows == 1) {
@@ -748,7 +756,7 @@ sub start_condor {
 	# at CONDOR_CONFIG so we know if we have to uniqify ports & pipes
     }
     else {
-	$ENV{CONDOR_CONFIG} = $targetconfig;
+		$ENV{CONDOR_CONFIG} = $targetconfig;
     }
 
     $res = 0;
@@ -759,31 +767,31 @@ sub start_condor {
     chdir("$BaseDir");
 
     if($res == 0) {
-	debug("Starting Personal Condor\n",2);
-	unlink("$testpersonalcondorlocation/local/log/.master_address");
-	unlink("$testpersonalcondorlocation/local/log/.collector_address");
-	unlink("$testpersonalcondorlocation/local/log/.negotiator_address");
-	unlink("$testpersonalcondorlocation/local/log/.startd_address");
-	unlink("$testpersonalcondorlocation/local/log/.schedd_address");
+		debug("Starting Personal Condor\n",2);
+		unlink("$testpersonalcondorlocation/local/log/.master_address");
+		unlink("$testpersonalcondorlocation/local/log/.collector_address");
+		unlink("$testpersonalcondorlocation/local/log/.negotiator_address");
+		unlink("$testpersonalcondorlocation/local/log/.startd_address");
+		unlink("$testpersonalcondorlocation/local/log/.schedd_address");
 
-	if($iswindows == 1) {
-	    my $mcmd = "$wininstalldir/bin/condor_master.exe -f &";
-	    if ($iscygwin) {
-		$mcmd =~ s|\\|/|g;
-	    }
+		if($iswindows == 1) {
+	    	my $mcmd = "$wininstalldir/bin/condor_master.exe -f &";
+	    	if ($iscygwin) {
+				$mcmd =~ s|\\|/|g;
+	    	}
             else {
-		my $keep = ($cmd_prompt) ? "/k" : "/c";
-		#$mcmd = "$ENV[COMSPEC] /c \"$wininstalldir\\bin\\condor_master.exe\" -f"; 
-		$mcmd = "cmd /s $keep start /b $wininstalldir\\bin\\condor_master.exe -f"; 
-	    }
-	    debug( "Starting master like this:\n",2);
-	    debug( "\"$mcmd\"\n",2);
-	    CondorTest::verbose_system("$mcmd",{emit_output=>0,use_system=>1});
-	}
+				my $keep = ($cmd_prompt) ? "/k" : "/c";
+				#$mcmd = "$ENV[COMSPEC] /c \"$wininstalldir\\bin\\condor_master.exe\" -f"; 
+				$mcmd = "cmd /s $keep start /b $wininstalldir\\bin\\condor_master.exe -f"; 
+	    	}
+	    	#debug( "Starting master like this:\n",2);
+	    	#debug( "\"$mcmd\"\n",2);
+	    	CondorTest::verbose_system("$mcmd",{emit_output=>0,use_system=>1});
+		}
         else {
-	    CondorTest::verbose_system("$installdir/sbin/condor_master @extracondorargs -f &",{emit_output=>0,use_system=>1});
-	}
-	debug("Done Starting Personal Condor\n",2);
+	    	CondorTest::verbose_system("$installdir/sbin/condor_master @extracondorargs -f &",{emit_output=>0,use_system=>1});
+		}
+		#debug("Done Starting Personal Condor\n",2);
     }
     CondorPersonal::IsRunningYet() || die "Failed to start Condor";
 }
@@ -806,7 +814,10 @@ sub stop_condor {
 	$pid = undef;
     }
 
-    system("condor_off","-master");
+	#shhhhhhhhh
+    #system("condor_off","-master");
+	my @condoroff = `condor_off -master`;
+
     if($pid) {
 	if( ! wait_for_process_gone($pid, 5) ) {
 	    kill('QUIT', $pid);
@@ -954,16 +965,15 @@ sub CreateConfig {
 
     # Windows needs config file preparation, wrapper scripts etc
     if($iswindows == 1) {
-	# pre-process config file src and windowize it
-	# create config file with todd's awk script
-	my $configcmd = "gawk -f $awkscript $genericconfig";
-	if ($^O =~ /MSWin32/) {  $configcmd =~ s/gawk/awk/; $configcmd =~ s|/|\\|g; }
-	debug("awk cmd is $configcmd\n",2);
-
-	open(OLDFIG, " $configcmd 2>&1 |") || die "Can't run script file\"$configcmd\": $!\n";    
-    }
-    else {
-	open(OLDFIG, '<', $configmain ) || die "Can't read base config file $configmain: $!\n";
+		# pre-process config file src and windowize it
+		# create config file with todd's awk script
+		my $configcmd = "gawk -f $awkscript $genericconfig";
+		if ($^O =~ /MSWin32/) {  $configcmd =~ s/gawk/awk/; $configcmd =~ s|/|\\|g; }
+		debug("awk cmd is $configcmd\n",2);
+	
+		open(OLDFIG, " $configcmd 2>&1 |") || die "Can't run script file\"$configcmd\": $!\n";    
+    } else {
+		open(OLDFIG, '<', $configmain ) || die "Can't read base config file $configmain: $!\n";
     }
 
     open(NEWFIG, '>', $targetconfig ) || die "Can't write to new config file $targetconfig: $!\n";    
@@ -1017,6 +1027,8 @@ sub CreateConfig {
 	}    
     }    
     close( OLDFIG );    
+	print NEWFIG "TOOL_TIMEOUT_MULTIPLIER = 10\n";
+	print NEWFIG "TOOL_DEBUG_ON_ERROR = D_ANY D_ALWAYS:2\n";
     close( NEWFIG );
 }
 
@@ -1286,30 +1298,31 @@ sub CompleteTestOutput
     my $status = shift;
     my $failure = "";
 
+	debug(" *********** Completing test: $test_name *********** \n",2);
     if( WIFEXITED( $status ) && WEXITSTATUS( $status ) == 0 )
     {
-	if ($isXML){
-	    print XML "<status>SUCCESS</status>\n";
-	    print "succeeded\n";
-	} else {
-	    print "succeeded\n";
-	}
-	$num_success++;
-	@successful_tests = (@successful_tests, "$compiler/$test_name");
+		if ($isXML){
+	    	print XML "<status>SUCCESS</status>\n";
+	    	print "succeeded\n";
+		} else {
+	    	print "succeeded\n";
+		}
+		$num_success++;
+		@successful_tests = (@successful_tests, "$compiler/$test_name");
     } else {
-	$failure = `grep 'FAILURE' $test{$child}.out`;
-	$failure =~ s/^.*FAILURE[: ]//;
-	CondorUtils::fullchomp($failure);
-	$failure = "failed" if $failure =~ /^\s*$/;
-	
-	if ($isXML){
-	    print XML "<status>FAILURE</status>\n";
-	    print "$failure\n";
-	} else {
-	    print "$failure\n";
-	}
-	$num_failed++;
-	@failed_tests = (@failed_tests, "$compiler/$test_name");
+		$failure = `grep 'FAILURE' $test{$child}.out`;
+		$failure =~ s/^.*FAILURE[: ]//;
+		CondorUtils::fullchomp($failure);
+		$failure = "failed" if $failure =~ /^\s*$/;
+		
+		if ($isXML){
+	    	print XML "<status>FAILURE</status>\n";
+	    	print "$failure\n";
+		} else {
+	    	print "$failure\n";
+		}
+		$num_failed++;
+		@failed_tests = (@failed_tests, "$compiler/$test_name");
     }
 
     if ($isXML){
@@ -1415,7 +1428,18 @@ sub DoChild
 # Call down to Condor Perl Module for now
 sub debug {
     my ($msg, $level) = @_;
-    Condor::debug("batch_test - $msg", $level);
+	my $time = Condor::timestamp();
+	chomp($time);
+	push @debugcollection, "$time: $msg";
+    Condor::debug("batch_test(L=$level) - $msg", $level);
+}
+
+sub debug_flush {
+    print "\n\n\n---------------------------- Flushing Test Info Cache ----------------------------\n";
+	foreach my $line (@debugcollection) {
+		print "$line";
+	}
+    print "---------------------------- Done Flushing Test Info Cache ----------------------------\n\n\n\n";
 }
 
 

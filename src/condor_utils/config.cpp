@@ -632,7 +632,8 @@ expand_macro( const char *value,
 			  BUCKET **table,
 			  int table_size,
 			  const char *self,
-			  bool use_default_param_table )
+			  bool use_default_param_table,
+			  const char *subsys)
 {
 	char *tmp = strdup( value );
 	char *left, *name, *right;
@@ -740,13 +741,15 @@ expand_macro( const char *value,
 
 		if( find_config_macro(tmp, &left, &name, &right, self) ) {
 			all_done = false;
-			tvalue = lookup_macro( name, table, table_size );
+			tvalue = lookup_macro( name, subsys, table, table_size );
+			if (subsys && ! tvalue)
+				tvalue = lookup_macro( name, NULL, table, table_size );
 
 				// Note that if 'name' has been explicitly set to nothing,
 				// tvalue will _not_ be NULL so we will not call
 				// param_default_string().  See gittrack #1302
 			if( !self && use_default_param_table && tvalue == NULL ) {
-				tvalue = param_default_string(name);
+				tvalue = param_default_string(name, subsys);
 			}
 			if( tvalue == NULL ) {
 				tvalue = "";
@@ -1100,13 +1103,17 @@ lookup_macro_lower( const char *name, BUCKET **table, int table_size )
 	return NULL;
 }
 char *
-lookup_macro( const char *name, BUCKET **table, int table_size )
+lookup_macro( const char *name, const char *prefix, BUCKET **table, int table_size )
 {
 	char			tmp_name[ MAX_PARAM_LEN ];
 
+	if (prefix) {
+		snprintf(tmp_name, MAX_PARAM_LEN, "%s.%s", prefix, name);
+	} else {
 		// snprintf() is faster than strncpy() for large target buffers,
 		// because strncpy() nulls out rest of buffer
-	snprintf(tmp_name,MAX_PARAM_LEN,"%s",name);
+		snprintf(tmp_name, MAX_PARAM_LEN, "%s", name);
+	}
 	tmp_name[MAX_PARAM_LEN-1] = '\0';
 	strlwr( tmp_name );
 	return lookup_macro_lower(tmp_name,table,table_size);

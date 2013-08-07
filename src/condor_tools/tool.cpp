@@ -1263,6 +1263,7 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 			if( real_dt == DT_STARTD && ! strchr(name, '@') ) {
 				host = get_host_part( name );
 				ad->LookupString( ATTR_MACHINE, &tmp );
+				dprintf (D_FULLDEBUG, "TOOL: checking startd (%s,%s,%s)\n", name,host,tmp);
 				if( ! tmp ) {
 						// weird, malformed ad.
 						// should we print a warning?
@@ -1304,12 +1305,23 @@ resolveNames( DaemonList* daemon_list, StringList* name_list )
 						// should we print a warning?
 					continue;
 				}
-				if( ! strchr(name, '@') ) {
-					host = get_host_part( tmp );
+				if( strchr(tmp, '@') ) {
+					// could be slot1@foo@something, or slot1@hostname.
+					// for this comparison we strip off the first part.
+					host = 1 + strchr(tmp, '@');
 				} else {
 					host = tmp;
 				}
-				if( ! strcasecmp(host, name) ) {
+				dprintf (D_FULLDEBUG, "TOOL: checking %s (%s,%s,%s)\n",
+						real_dt ? daemonString(real_dt) : "daemon", name, host, tmp);
+
+					/* See comment above, "Because we need..." */
+				ad->Assign( ATTR_NAME, name);
+
+					/* look for a couple variations */
+				if( ! strcasecmp(name, host) ) {
+					d = new Daemon( ad, real_dt, pool_addr );
+				} else if( ! strcasecmp(name, tmp) ) {
 					d = new Daemon( ad, real_dt, pool_addr );
 				}
 				free( tmp );

@@ -91,9 +91,11 @@ The \verb@RUN_TIME@ time reported for a job is the time that has been
 committed to the job.
 
 Another useful method of tracking the progress of jobs is through the
-user log.  If you have specified a \AdAttr{log} command in 
-your submit file, the progress of the job may be followed by viewing the
-log file.  Various events such as execution commencement, checkpoint, eviction 
+job event log.  The specification of a \AdAttr{log} in 
+the submit description file causes the progress of the job 
+to be logged in a file.  Follow the events by viewing the
+job event log file.  
+Various events such as execution commencement, checkpoint, eviction 
 and termination are logged in the file.
 Also logged is the time at which the event occurred.
 
@@ -287,51 +289,60 @@ For jobs that have never run,
 \index{HTCondor commands!condor\_q}
 many problems can be diagnosed by using the \Opt{-analyze}
 option of the \Condor{q} command.
-For example, a job (assigned the cluster.process value of
-121.000) submitted to the local pool at UW-Madison
-is not running.
-Running \Condor{q}'s analyzer provided the following information:
+Here is an example; 
+running \Condor{q}'s analyzer provided the following information:
 
 \footnotesize
 \begin{verbatim}
-% condor_q -pool -analyze 121.000
--- Submitter: puffin.cs.wisc.edu : <128.105.185.14:34203> : puffin.cs.wisc.edu
+$ condor_q -analyze 27497829
+
+-- Submitter: submit-1.chtc.wisc.edu : <128.104.100.43:9618?sock=5557_e660_3> : submit-1.chtc.wisc.edu
+User priority for einstein@submit.chtc.wisc.edu is not available, attempting to analyze without it.
 ---
-121.000:  Run analysis summary.  Of 1592 machines,
-   1382 are rejected by your job's requirements
-     25 reject your job because of their own requirements
-    185 match but are serving users with a better priority in the pool
-      0 match but reject the job for unknown reasons
-      0 match but will not currently preempt their existing job
-      0 match but are currently offline
+27497829.000:  Run analysis summary.  Of 5257 machines,
+   5257 are rejected by your job's requirements
+      0 reject your job because of their own requirements
+      0 match and are already running your jobs
+      0 match but are serving other users
       0 are available to run your job
+        No successful match recorded.
+        Last failed match: Tue Jun 18 14:36:25 2013
+
+        Reason for last match failure: no match found
+
+WARNING:  Be advised:
+   No resources matched request's constraints
 
 The Requirements expression for your job is:
-( ( target.Arch == "X86_64" || target.Arch == "INTEL" ) &&
-( target.Group == "TestPool" ) ) && ( target.OpSys == "LINUX" ) &&
-( target.Disk >= DiskUsage ) && ( ( target.Memory * 1024 ) >= ImageSize ) &&
-( TARGET.FileSystemDomain == MY.FileSystemDomain )
 
-    Condition                         Machines Matched    Suggestion
-    ---------                         ----------------    ----------
-1   ( target.Group == "TestPool" )    274                  
-2   ( TARGET.FileSystemDomain == "cs.wisc.edu" )1258                 
-3   ( target.OpSys == "LINUX" )       1453                 
-4   ( target.Arch == "X86_64" || target.Arch == "INTEL" )
-                                      1573                 
-5   ( target.Disk >= 100000 )         1589                 
-6   ( ( 1024 * target.Memory ) >= 100000 )1592                 
+    ( OpSys == "OSX" ) && ( TARGET.Arch == "X86_64" ) &&
+    ( TARGET.Disk >= RequestDisk ) && ( TARGET.Memory >= RequestMemory ) &&
+    ( ( TARGET.HasFileTransfer ) || ( TARGET.FileSystemDomain == MY.FileSystemDomain ) )
 
-The following attributes are missing from the job ClassAd:
 
-CheckpointPlatform
-
+Suggestions:
+    Condition                         Machines Matched Suggestion
+    ---------                         ---------------- ----------
+1   ( target.OpSys == "OSX" )         0                MODIFY TO "LINUX"
+2   ( TARGET.Arch == "X86_64" )       5190
+3   ( TARGET.Disk >= 1 )              5257
+4   ( TARGET.Memory >= ifthenelse(MemoryUsage isnt undefined,MemoryUsage,1) )
+                                      5257
+5   ( ( TARGET.HasFileTransfer ) || ( TARGET.FileSystemDomain == "submit-1.chtc.wisc.edu" ) )
+                                      5257 
 \end{verbatim}
 \normalsize
 
-This example also shows that the job does not run because the job
-does not have a high enough priority to cause any of 185 other running jobs
-to be preempted.
+This example also shows that the job does not run because the 
+platform requested, Mac OS X, is not available on any of the 
+machines in the pool.
+Recall that unless informed otherwise in the \SubmitCmd{Requirements}
+expression in the submit description file,
+the platform requested for an execute machine will be the same
+as the platform where \Condor{submit} is run to submit the job.
+And, while Mac OS X is a Unix-type operating system, it is
+not the same as Linux, and thus will not match with machines
+running Linux.
 
 While the analyzer can diagnose most common problems, there are some situations
 that it cannot reliably detect due to the instantaneous and local nature of the
@@ -433,12 +444,12 @@ and then send a \Condor{restart} to the submit machine.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:job-log-events}In the Log File}
+\subsection{\label{sec:job-log-events}In the Job Event Log File}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{job!log events}
-\index{log files!event codes and descriptions}
-In a job's log file are a listing of events in
-chronological order that occurred during the life of the job.
+\index{job!event log file}
+\index{log files!job event codes and descriptions}
+In a job event log file are a listing of events in
+chronological order that occurred during the life of one or more jobs.
 The formatting of the events is always the same, 
 so that they may be machine readable.
 Four fields are always present,
@@ -448,7 +459,7 @@ information that is specific to the type of event.
 The first field in an event is the numeric value assigned as the
 event type in a 3-digit format.
 The second field identifies the job which generated the event. 
-Within parentheses are the ClassAd job attributes of
+Within parentheses are the job ClassAd attributes of
 \AdAttr{ClusterId} value, 
 \AdAttr{ProcId} value, 
 and the node number  for parallel universe jobs or a set of zeros

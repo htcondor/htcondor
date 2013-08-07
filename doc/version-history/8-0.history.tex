@@ -16,15 +16,15 @@ New features will be added in the 8.1.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-8-0-0}Version 8.0.0}
+\subsection*{\label{sec:New-8-0-2}Version 8.0.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item HTCondor version 8.0.0 not yet released.
-%\item HTCondor version 8.0.0 released on Month Date, 2013.
+\item HTCondor version 8.0.2 not yet released.
+%\item HTCondor version 8.0.2 released on Month Date, 2013.
 
 \end{itemize}
 
@@ -33,14 +33,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-% would have been in 7.9.7, but there was no 7.9.7 release
-\item The \Condor{chirp} write command now accepts an option length parameter
-after the local file name, which allows the write to be limited to the given
-number of bytes.
-\Ticket{3548}
-
-% would have been in 7.9.7, but there was no 7.9.7 release
-\item The HTCondor Python bindings now build on Mac OS X.
+\item None.
 
 \end{itemize}
 
@@ -56,54 +49,68 @@ number of bytes.
 
 \begin{itemize}
 
-\item The redundant configuration variable \Macro{CheckpointPlatform} has
-been removed and the configuration variable \Macro{CHECKPOINT\_PLATFORM}
-documented.
-\Ticket{3544}
+\item Fixed a bug that could cause jobs to be incorrectly placed on hold upon
+	completion with a hold reason claiming an out-of-memory event.
+\Ticket{3824}
 
-\item A standard universe job will no longer crash, and no longer crash
-the shadow, if it calls mmap() with an unsupported combination of flags.
-\Ticket{3565}
+\item Fixed a bug that prevented work fetch scripts from running
+on systems where cgroup based tracking and management was enabled.
+\Ticket{3819}
 
-\item The \SubmitCmd{vm} universe now supports \Prog{VMware Workstation}
-and \Prog{VMware Player} on Windows.
-\Ticket{3627}
+\item Fixed a bug that could cause the negotiator to give out the same
+	slot twice and result in a scary entry in the NegotiatorLog file with the 
+	wording ``INSANE: bestCached != bestSoFar''.
+\Ticket{2245}
 
-% would have been in 7.9.7, but there was no 7.9.7 release
-\item For grid universe jobs intended for an EC2 grid resource,
-errors which have no response body now report the HTTP code.
-\Ticket{3541}
+\item Added \AdAttr{ConcurrencyLimits} to the projection for claimed
+resources in \Condor{negotiator}, so that concurrency limit accounting 
+works properly across negotiation cycles when 
+\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} is \Expr{False}.
+\Ticket{3815}
 
-% would have been in 7.9.7, but there was no 7.9.7 release
-\item \Condor{chirp} \Opt{put} would experience an assertion failure when
-used on an empty file.  This bug has been fixed, and \Opt{put} can now be
-used on an empty file.
-\Ticket{3542}
+\item As of 7.9.6, when using CCB to connect to the \Condor{startd},
+  the \Condor{negotiator} would sometimes crash (and be restarted)
+  with the following error message in the log:
 
-% would have been in 7.9.7, but there was no 7.9.7 release
-\item The 32-bit \Condor{starter} could fail to execute jobs when the initial
-working directory of the job was on a filesystem containing 64-bit metadata,
-such as inode numbers.
-\Ticket{3605}
+\begin{verbatim}
+ERROR "Selector::add_fd(): fd -1 outside valid range 0-1023"
+\end{verbatim}
 
-% would have been in 7.9.7, but there was no 7.9.7 release
-\item \Condor{dagman} would fail to react correctly if a nested DAG file
-did not exist. The error message was not helpful.
-\Ticket{3623}
+The workaround for this problem is to configure
+\begin{verbatim}
+SERVICE_COMMAND_SOCKET_MAX_SOCKET_INDEX=-1
+\end{verbatim}
+or to disable communication with the \Condor{startd} by setting
+\begin{verbatim}
+NEGOTIATOR_INFORM_STARTD=False
+\end{verbatim}
+\Ticket{3801}
 
-% would have been in 7.8.9, but there was no 7.8.9 release
-\item Fixed a bug that caused the \Condor{master} daemon on Windows platforms
-to think there were new binaries
-when changing to and from daylight savings time.
-The \Condor{master} daemon would then kill and restart itself,
-as well as all of the daemons,
-if configuration variable \Macro{MASTER\_NEW\_BINARY\_RESTART} was set
-to its default value of \Expr{GRACEFUL}.
-\Ticket{3572}
+\item Fixed a bug in the condor\_qsub script that caused it to exit
+with a syntax error when a job with a memory requirement was
+submitted.
+\Ticket{3808}
 
-\item Fixed a bug that caused redundant usage lines to show up at the end of
-the partitionable resource usage summary in the user log.
-\Ticket{3621}
+\item Fix a bug causing security groups for EC2 jobs to be ignored.  Also,
+you may now, as documented, separate the list of security groups for
+an EC2 Spot job by commas.
+\Ticket{3787}
+
+\item When invoking \Prog{glexec}, \Env{GLEXEC\_TARGET\_PROXY} is now
+  set to \File{/dev/null}.  In some situations, it was previously set
+  to a nonexistent path, which caused errors in some configurations.
+\Ticket{3794}
+
+\item Fixed a file permission bug introduced in HTCondor 7.9.2 that
+prevented VM universe jobs from working when using the Xen or KVM
+hypervisor.
+\Ticket{3781}
+
+\item HTCondor daemons are now less vulnerable to long connection delays
+when attempting to connect to hosts that are offline.  A specific case
+where this helps is when \Condor{schedd} is using a high availability
+configuration, and the primary collector machine is offline.
+\Ticket{3828}
 
 \end{itemize}
 
@@ -120,6 +127,298 @@ the partitionable resource usage summary in the user log.
 \begin{itemize}
 
 \item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-0-1}Version 8.0.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.0.1 released on July 17, 2013.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item HTCondor now provides the Debian Linux 7.0 (wheezy) platform,
+including support for the standard universe.
+\Ticket{3665}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug that prevented per-slot settings of the 
+\MacroNI{STARTD\_ATTRS} configuration variable from being set
+correctly for partitionable slots named with a \Expr{SLOTX\_} prefix.
+\Ticket{3726}
+
+\item Fixed a bug that caused \Condor{status} \Opt{-submitters} to report twice
+as many jobs running as were actually running. 
+This bug appeared in HTCondor versions 7.9.6 and 8.0.0.
+\Ticket{3713}
+
+\item Fixed a bug with hierarchical group quotas in the \Condor{negotiator}
+in which group hierarchies with parent groups that set 
+configuration variable \Macro{GROUP\_ACCEPT\_SURPLUS} to
+\Expr{False} would be assigned allocations above their quota.
+\Ticket{3695}
+
+\item Fixed a bug in which scheduler universe jobs that
+have an \SubmitCmd{on\_exit\_hold}
+expression that evaluates to \Expr{True} could have duplicate hold messages
+in the user log.
+\Ticket{3651}
+
+\item Fixed a bug in which \Condor{dagman} would submit multiple copies of the
+same job, fail, write a Rescue DAG, and leave the jobs in the queue. 
+This was due to a warning from \Condor{submit} that the submit description file
+was not using lines containing the string \Expr{"cluster"}. 
+As a fix, \Condor{dagman} will search for the
+string \Expr{" submitted to cluster "}.
+This will generate fewer false alarms. 
+If the submission succeeds and \Condor{dagman} gets confused, 
+the jobs will be removed when \Condor{dagman} writes a Rescue DAG.
+\Ticket{3658}
+
+\item Added \Expr{libdate-manip-perl} as a dependency to the Debian packages.
+It is required in order to run the \Condor{gather\_info} script.
+\Ticket{3692}
+
+\item Configuration variable \Macro{CCB\_ADDRESS} did not correctly 
+support a list of CCB servers.  Only the first one in the list was used.
+\Ticket{3699}
+
+\item Fixed a bug that caused some communication layer log messages 
+to end with binary characters.
+\Ticket{3706}
+
+\item Fixed a bug that can cause the \Condor{procd} to erroneously exit
+on Mac OS X when many processes are created in a short period of time.
+\Ticket{3725}
+
+\item Removed a bug that caused \Condor{dagman} to have problems restarting
+after an upgrade from HTCondor version 7.8.
+\Ticket{3707}
+
+\item Fixed a bug that caused the command 
+\begin{verbatim}
+  condor_q -dag -run
+\end{verbatim}
+to print garbage.
+\Ticket{3578}
+
+\item Fixed a bug that prevented jobs with an invalid \SubmitCmd{ec2\_keypair}
+from being removed.
+\Ticket{3485}
+
+\item Fixed a memory leak and potential crash in the \Condor{gridmanager}
+when requests to an EC2 service fail.
+\Ticket{3701}
+
+\item Fixed a bug in the \Condor{gridmanager} that can cause EC2 jobs to be
+submitted a second time during recovery.
+\Ticket{3705}
+
+\item Fixed a memory leak in the \Condor{gridmanager} that was triggered when
+submitting EC2 grid universe jobs.
+\Ticket{3720}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-0-0}Version 8.0.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+%\item HTCondor version 8.0.0 not yet released.
+\item HTCondor version 8.0.0 released on June 6, 2013.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+% would have been in 7.9.7, but there was no 7.9.7 release
+\item The \Condor{chirp} \Opt{write} command now accepts an 
+optional \Arg{numbytes} parameter following the local file name.
+This allows the write to be limited to the specified number of bytes.
+\Ticket{3548}
+
+% would have been in 7.9.7, but there was no 7.9.7 release
+\item The HTCondor Python bindings now build on Mac OS X.
+\Ticket{3584}
+
+\item Updated the sample \File{condor.plist} file to work better with
+current versions of Mac OS X.
+\Ticket{3624}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item The new configuration variable
+\Macro{DEDICATED\_SCHEDULER\_WAIT\_FOR\_SPOOLER}
+permits the specification of a very strict execution order for 
+parallel universe jobs handed to a remote scheduler.
+\Ticket{2946}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed a bug that happened with partitionable slots, jobs that
+requested more than one cpu, and a negotiator with
+\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} was false.  This would
+cause the negotiator to incorrectly assume that each slot had
+a slot weight of one.
+\Ticket{3737}
+
+\item The redundant configuration variable \Macro{CheckpointPlatform} has
+been removed and the configuration variable \Macro{CHECKPOINT\_PLATFORM}
+documented.
+\Ticket{3544}
+
+\item A standard universe job will no longer crash, and it will no longer 
+cause the \Condor{shadow} to crash
+if the job calls \Procedure{mmap} with an unsupported combination of flags.
+\Ticket{3565}
+
+\item Support for \Prog{VMware Workstation} and \Prog{VMware Player} 
+under the \SubmitCmd{vm} universe now works properly on Windows platforms.
+\Ticket{3627}
+
+% would have been in 7.9.7, but there was no 7.9.7 release
+\item For grid universe jobs intended for an EC2 grid resource,
+errors which have no response body now report the HTTP code.
+\Ticket{3541}
+
+% would have been in 7.9.7, but there was no 7.9.7 release
+\item \Condor{chirp} \Opt{put} would experience an assertion failure when
+used on an empty file.  This bug has been fixed, and \Opt{put} can now be
+used on an empty file.
+\Ticket{3542}
+
+% would have been in 7.9.7, but there was no 7.9.7 release
+\item The 32-bit \Condor{starter} could fail to execute jobs when the initial
+working directory of the job was on a subsystem containing 64-bit metadata,
+such as inode numbers.
+\Ticket{3605}
+
+% would have been in 7.9.7, but there was no 7.9.7 release
+\item \Condor{dagman} failed to react correctly if a nested DAG file
+did not exist. It now reacts correctly and prints a more
+helpful error message.
+\Ticket{3623}
+
+% would have been in 7.8.9, but there was no 7.8.9 release
+\item Fixed a bug that caused the \Condor{master} daemon on Windows platforms
+to think there were new binaries
+when changing to and from daylight savings time.
+The \Condor{master} daemon would then kill and restart itself,
+as well as all of the daemons,
+if configuration variable \Macro{MASTER\_NEW\_BINARY\_RESTART} was set
+to its default value of \Expr{GRACEFUL}.
+\Ticket{3572}
+
+\item Fixed a bug that caused redundant lines to show up in the user log
+at the end of the partitionable resource usage summary.
+\Ticket{3621}
+
+\item Fixed several bugs that can cause the \Condor{procd} to fail on Mac OS X
+and not be restartable.
+\Ticket{3617}
+\Ticket{3618}
+\Ticket{3620}
+
+\item The \Condor{procd} now ignores process id 0 on Mac OS X.
+\Ticket{3516}
+
+\item Fixed memory leaks in the \Condor{shadow} and the \Condor{startd};
+fixed a file descriptor leak in the standard universe \Condor{starter}.
+\Ticket{3590}
+
+\item Fixed a bug in which \Condor{dagman} would miscount the number
+of held jobs when
+multiple copies of hold events were written to the user log.
+\Ticket{3650}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item The following obsolete binaries have not yet been removed from
+the HTCondor tarballs:  
+  \begin{itemize}
+  \item \emph{classad\_functional\_tester}
+  \item \emph{classad\_version}
+  \item \Condor{test\_match}
+  \item \Condor{userlog\_job\_counter}
+  \end{itemize}
+\Ticket{3670}
+
+\item \Condor{status} \Opt{-submitters} reports twice
+as many jobs running as were actually running.
+\Ticket{3713}
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item Fixed the \Condor{configure} man page and added a corresponding
+\Condor{install} man page.
+\Ticket{3619}
+
+\item Added stub man pages for the Bosco commands.
+\Ticket{3634}
 
 \end{itemize}
 

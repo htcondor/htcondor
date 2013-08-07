@@ -84,14 +84,13 @@ const char *ExprTreeToString( classad::ExprTree *expr )
 	classad::ClassAdUnParser unparser;
 
 	buffer = "";
-	unparser.SetOldClassAd( true );
+	unparser.SetOldClassAd( true, true );
 	unparser.Unparse( buffer, expr );
 
 	return buffer.c_str();
 }
 
-#define IS_DOUBLE_ZERO(_value_) \
-	(  ( (_value_) >= -0.000001 ) && ( (_value_) <= 0.000001 )  )
+#define IS_DOUBLE_TRUE(val) (bool)(int)((val)*100000)
 
 bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 {
@@ -141,7 +140,7 @@ bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 	} else if( result.IsIntegerValue( intVal ) ) {
 		return intVal != 0;
 	} else if( result.IsRealValue( doubleVal ) ) {
-		return !IS_DOUBLE_ZERO(doubleVal);
+		return IS_DOUBLE_TRUE(doubleVal);
 	}
 	dprintf( D_ALWAYS, "constraint (%s) does not evaluate to bool\n",
 		constraint );
@@ -166,7 +165,7 @@ bool EvalBool(compat_classad::ClassAd *ad, classad::ExprTree *tree)
 	} else if( result.IsIntegerValue( intVal ) ) {
 		return intVal != 0;
 	} else if( result.IsRealValue( doubleVal ) ) {
-		return !IS_DOUBLE_ZERO(doubleVal);
+		return IS_DOUBLE_TRUE(doubleVal);
 	}
 
 	return false;

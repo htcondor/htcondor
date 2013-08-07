@@ -2533,7 +2533,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	int universe;
 	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
 	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_UNIVERSE, &universe );
-	if( ( flags & SETDIRTY ) && ( status == RUNNING || (( universe == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( ad ) ) ) ) {
+	if( (universe != CONDOR_UNIVERSE_SCHEDULER) &&
+		( flags & SETDIRTY ) && 
+		( status == RUNNING || (( universe == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( ad ) ) ) ) {
+
 		// Add the key to list of dirty classads
 		DirtyJobIDs.rewind();
 		if( ! DirtyJobIDs.contains( key ) ) {
@@ -4240,7 +4243,7 @@ RecvSpoolFileBytes(const char *path)
 		Q_SOCK->getReliSock()->end_of_message();
 		return -1;
 	}
-	chmod(path,00755);
+	IGNORE_RETURN chmod(path,00755);
 	Q_SOCK->getReliSock()->end_of_message();
 	dprintf(D_FULLDEBUG, "done with transfer, errno = %d\n", errno);
 	return 0;

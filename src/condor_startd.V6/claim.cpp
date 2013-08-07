@@ -790,6 +790,8 @@ Claim::beginActivation( time_t now )
 			(univ == CONDOR_UNIVERSE_VM)) {
 		c_last_pckpt = (int)now;
 	}
+
+	resmgr->startd_stats.total_job_starts += 1;
 }
 
 

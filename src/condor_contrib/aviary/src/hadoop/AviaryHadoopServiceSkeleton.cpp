@@ -80,6 +80,7 @@ HadoopID * setHadoopID(const tHadoopRef & ref)
     
     pID->setId(ref.id);
     pID->setIpc(ref.ipcid);
+    pID->setHttp(ref.http);
     
     return pID;
 }
@@ -90,17 +91,29 @@ HadoopStartResponse* start (tHadoopInit & hInit, HadoopStart* pHS)
     HadoopObject * ho = HadoopObject::getInstance();
     HadoopStartResponse* hresp = new HadoopStartResponse;
     
-    hInit.idref.tarball = pHS->getBin_file();
-    hInit.idref.id = pHS->getRef()->getId();
-    
-    // if ClusterId comes in without ProcId set it to zero
-    if ( hInit.idref.id.length() && !strstr( hInit.idref.id.c_str(), ".") )
+    if( pHS->getRef()->isIdNil() && pHS->isBin_fileNil() )
     {
-       hInit.idref.id +=".0";
+        hInit.unmanaged = true;
+        hInit.idref.id ="0.0";
+        hInit.count = 1;
+    }
+    else
+    {
+        hInit.idref.id = pHS->getRef()->getId();
+        hInit.idref.tarball = pHS->getBin_file();
+        hInit.unmanaged = false;
+        
+        // if ClusterId comes in without ProcId set it to zero
+        if ( hInit.idref.id.length() && !strstr( hInit.idref.id.c_str(), ".") )
+        {
+           hInit.idref.id +=".0";
+        }
+        
+        hInit.count = pHS->getCount();
     }
 
     hInit.idref.ipcid = pHS->getRef()->getIpc();
-    hInit.count = pHS->getCount();
+    hInit.idref.http = pHS->getRef()->getHttp();
     hInit.owner = pHS->getOwner();
     hInit.description = pHS->getDescription();
 
@@ -185,7 +198,8 @@ HadoopQueryResponse* query (tHadoopType qType, vector<HadoopID*>* refs)
     if (refs)
     {   
         refId.id = (*refs)[iCtr]->getId();
-        refId.ipcid = (*refs)[iCtr]->getIpc(); 
+        refId.ipcid = (*refs)[iCtr]->getIpc();
+        refId.http = (*refs)[iCtr]->getHttp();
     }
     
     if ( !ho->query( refId, hStatus ) )
@@ -210,7 +224,6 @@ HadoopQueryResponse* query (tHadoopType qType, vector<HadoopID*>* refs)
             hResult->setDescription(hStatus[jCtr].description);
             hResult->setSubmitted(hStatus[jCtr].qdate);
             hResult->setUptime(hStatus[jCtr].uptime);
-            hResult->setHttp(hStatus[jCtr].http);
             hResult->setState(new HadoopStateType(hStatus[jCtr].state));
             hResult->setStatus( setOKResponse() );
             
@@ -243,13 +256,26 @@ StartNameNodeResponse* AviaryHadoopServiceSkeleton::startNameNode(MessageContext
     HadoopStartResponse* hresp = new HadoopStartResponse;
     HadoopObject * ho = HadoopObject::getInstance();
     tHadoopInit hInit;
+    hInit.unmanaged = false;
+    
+    // we have an unmanaged element
+    if (!_startNameNode->getStartNameNode()->isUnmanagedNil()) 
+    {
+        hInit.unmanaged = true;
+        hInit.idref.http = _startNameNode->getStartNameNode()->getUnmanaged()->getHttp();
+        hInit.idref.ipcid = _startNameNode->getStartNameNode()->getUnmanaged()->getIpc();
+    }
+    else
+    {
+        hInit.idref.tarball = _startNameNode->getStartNameNode()->getBin_file();
+    }
     
     // setup the initialization struct
     hInit.idref.type = NAME_NODE;
-    hInit.idref.tarball = _startNameNode->getStartNameNode()->getBin_file();
     hInit.count = 1;
     hInit.owner = _startNameNode->getStartNameNode()->getOwner();
     hInit.description = _startNameNode->getStartNameNode()->getDescription();
+    
 
     qmgmt_all_users_trusted = true;
     
@@ -334,10 +360,9 @@ StartJobTrackerResponse* AviaryHadoopServiceSkeleton::startJobTracker(MessageCon
 {
     StartJobTrackerResponse* response = new StartJobTrackerResponse;
     HadoopStartResponse* hresp ;
-    
     tHadoopInit hInit;
+    
     hInit.idref.type = JOB_TRACKER;
-   
     hresp = start( hInit, _startJobTracker->getStartJobTracker() );
     
     response->setStartJobTrackerResponse(hresp);

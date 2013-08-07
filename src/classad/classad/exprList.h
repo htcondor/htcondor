@@ -42,6 +42,9 @@ class ExprList : public ExprTree
 
         ExprList &operator=(const ExprList &other_list);
 
+		/// node type
+		virtual NodeKind GetKind (void) const { return EXPR_LIST_NODE; }
+
 		/** Factory to make an expression list expression
 		 * 	@param	list A vector of the expressions to be contained in the
 		 * 		list

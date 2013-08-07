@@ -47,7 +47,7 @@
 	consume that space in the structure. The structure sizes between glibc22
 	and glibc23 haven't changed, just the field name for a few things. */
 
-#if defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212)
+#if defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213)
 
 struct kernel_stat
   {

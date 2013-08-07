@@ -58,6 +58,7 @@
 static int comparisonFunction (AttrList *, AttrList *, void *);
 #include "matchmaker.h"
 
+
 /* This extracts the machine name from the global job ID user@machine.name#timestamp#cluster.proc*/
 static int get_scheddname_from_gjid(const char * globaljobid, char * scheddname );
 
@@ -1537,7 +1538,7 @@ negotiationTime ()
                     }
 
                     if ((group->usage >= group->allocated) && !ConsiderPreemption) {
-                        dprintf(D_ALWAYS, "Group %s - skipping, at or over quota (usage=%g)\n", group->name.c_str(), group->usage);
+                        dprintf(D_ALWAYS, "Group %s - skipping, at or over quota (usage=%g) (quota=%g)\n", group->name.c_str(), group->usage, group->allocated);
                         continue;
                     }
 		    
@@ -1560,6 +1561,39 @@ negotiationTime ()
                     if (!accountant.UsingWeightedSlots()) {
                         slots = floor(slots);
                     }
+					
+					if (param_boolean("NEGOTIATOR_STRICT_ENFORCE_QUOTA", true)) {
+						dprintf(D_FULLDEBUG, "NEGOTIATOR_STRICT_ENFORCE_QUOTA is true, current proposed allocation for %s is %g\n", group->name.c_str(), slots);
+						calculate_subtree_usage(hgq_root_group); // usage changes with every negotiation
+						GroupEntry *limitingGroup = group;
+
+						double my_new_allocation = slots - group->usage; // resources above what we already have
+						if (my_new_allocation < 0) {
+							continue; // shouldn't get here
+						}
+
+						while (limitingGroup != NULL) {
+							if (limitingGroup->accept_surplus == false) {
+								// This is the extra available at this node
+								double subtree_available = -1;
+								if (limitingGroup->static_quota) {
+									subtree_available = limitingGroup->config_quota - limitingGroup->subtree_usage;
+								} else {
+									subtree_available = limitingGroup->subtree_quota - limitingGroup->subtree_usage;
+								}
+								if (subtree_available < 0) subtree_available = 0;
+								dprintf(D_FULLDEBUG, "\tmy_new_allocation is %g subtree_available is %g\n", my_new_allocation, subtree_available);
+								if (my_new_allocation > subtree_available) {
+									dprintf(D_ALWAYS, "Group %s with accept_surplus=false has total usage = %g and config quota of %g -- constraining allocation in subgroup %s to %g\n",
+											limitingGroup->name.c_str(), limitingGroup->subtree_usage, limitingGroup->config_quota, group->name.c_str(), subtree_available + group->usage);
+		
+									my_new_allocation = subtree_available; // cap new allocation to the available
+								}
+							}
+							limitingGroup = limitingGroup->parent;
+						}
+						slots = my_new_allocation + group->usage; // negotiation units are absolute quota, not new
+					}
 
                     if (autoregroup && (group == hgq_root_group)) {
                         // note that in autoregroup mode, root group is guaranteed to be last group to negotiate
@@ -2276,6 +2310,7 @@ GroupEntry::GroupEntry():
     allocated(0),
     subtree_quota(0),
     subtree_requested(0),
+    subtree_usage(0),
     rr(false),
     rr_time(0),
     subtree_rr_time(0),
@@ -2913,7 +2948,7 @@ obtainAdsFromCollector (
 
 	if (!ConsiderPreemption) {
 		const char *projectionString =
-			"ifThenElse(State == \"Claimed\",\"Name State Activity StartdIpAddr AccountingGroup Owner RemoteUser Requirements\",\"\") ";
+			"ifThenElse(State == \"Claimed\",\"Name State Activity StartdIpAddr AccountingGroup Owner RemoteUser Requirements SlotWeight ConcurrencyLimits\",\"\") ";
 		publicQuery.setDesiredAttrsExpr(projectionString);
 
 		dprintf(D_ALWAYS, "Not considering preemption, therefore constraining idle machines with %s\n", projectionString);
@@ -2968,7 +3003,6 @@ obtainAdsFromCollector (
 			subReqs = newReqs = NULL;
 			negReqTree = reqTree = NULL;
 			int length;
-			// TODO: Does this leak memory?
 			negReqTree = ad->LookupExpr(ATTR_NEGOTIATOR_REQUIREMENTS);
 			if ( negReqTree != NULL ) {
 
@@ -2976,13 +3010,15 @@ obtainAdsFromCollector (
 				reqTree = ad->LookupExpr(ATTR_REQUIREMENTS);
 				if( reqTree != NULL ) {
 				// Now, put the old requirements back into the ad
+				// (note: ExprTreeToString uses a static buffer, so do not
+				//        deallocate the buffer it returns)
 				subReqs = ExprTreeToString(reqTree);
 				length = strlen(subReqs) + strlen(ATTR_REQUIREMENTS) + 7;
 				newReqs = (char *)malloc(length+16);
 				ASSERT( newReqs != NULL );
 				snprintf(newReqs, length+15, "Saved%s = %s", 
 							ATTR_REQUIREMENTS, subReqs); 
-				ad->InsertOrUpdate(newReqs);
+				ad->Insert(newReqs);
 				free(newReqs);
 				}
 		
@@ -2996,7 +3032,7 @@ obtainAdsFromCollector (
 
 				snprintf(newReqs, length+15, "%s = %s", ATTR_REQUIREMENTS, 
 							subReqs); 
-				ad->InsertOrUpdate(newReqs);
+				ad->Insert(newReqs);
 
 				free(newReqs);
 				
@@ -3092,14 +3128,7 @@ obtainAdsFromCollector (
 			OptimizeMachineAdForMatchmaking( ad );
 
 			startdAds.Insert(ad);
-		} else if( !strcmp(GetMyTypeName(*ad),SUBMITTER_ADTYPE) ||
-				   ( !strcmp(GetMyTypeName(*ad),SCHEDD_ADTYPE) &&
-					 !ad->LookupExpr(ATTR_NUM_USERS) ) ) {
-				// CRUFT: Before 7.3.2, submitter ads had a MyType of
-				//   "Scheduler". The only way to tell the difference
-				//   was that submitter ads didn't have ATTR_NUM_USERS.
-				//   Before 7.7.3, submitter ads for parallel universe
-				//   jobs had a MyType of "Scheduler".
+		} else if( !strcmp(GetMyTypeName(*ad),SUBMITTER_ADTYPE) ) {
 
             MyString subname;
             if (!ad->LookupString(ATTR_NAME, subname)) {
@@ -3748,7 +3777,7 @@ updateNegCycleEndTime(time_t startTime, ClassAd *submitter) {
 	submitter->LookupInteger(ATTR_TOTAL_TIME_IN_CYCLE, oldTotalTime);
 	buffer.formatstr("%s = %ld", ATTR_TOTAL_TIME_IN_CYCLE, (oldTotalTime + 
 					(endTime - startTime)) );
-	submitter->InsertOrUpdate(buffer.Value());
+	submitter->Insert(buffer.Value());
 }
 
 float Matchmaker::
@@ -4202,14 +4231,8 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			MatchList->sort();
 			dprintf(D_FULLDEBUG,"Finished sorting MatchList\n");
 		}
-		// compare
-		ClassAd *bestCached = MatchList->pop_candidate();
-		// TODO - do bestCached and bestSoFar refer to the same
-		// machine preference? (sanity check)
-		if(bestCached != bestSoFar) {
-			dprintf(D_ALWAYS, "INSANE: bestCached != bestSoFar\n");
-		}
-		bestCached = NULL; // just to remove unused variable warning
+		// Pop top candidate off the list to hand out as best match
+		bestSoFar = MatchList->pop_candidate();
 	}
 
 	if(!bestSoFar)
@@ -4715,7 +4738,8 @@ addRemoteUserPrios( ClassAd	*ad )
 	MyString	remoteUser;
 	MyString	buffer,buffer1,buffer2,buffer3;
 	MyString    slot_prefix;
-	MyString    expr,expr_buffer;
+	MyString    expr;
+	string expr_buffer;
 	float	prio;
 	int     total_slots, i;
 	float     preemptingRank;
@@ -4737,12 +4761,12 @@ addRemoteUserPrios( ClassAd	*ad )
 	{
 		prio = (float) accountant.GetPriority( remoteUser.Value() );
 		ad->Assign(ATTR_REMOTE_USER_PRIO, prio);
-		expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USER_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
+		expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USER_FN_NAME,EscapeAdStringValue(remoteUser.Value(),expr_buffer));
 		ad->AssignExpr(ATTR_REMOTE_USER_RESOURCES_IN_USE,expr.Value());
 		if (getGroupInfoFromUserId(remoteUser.Value(), temp_groupName, temp_groupQuota, temp_groupUsage)) {
 			// this is a group, so enter group usage info
             ad->Assign(ATTR_REMOTE_GROUP, temp_groupName);
-			expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
+			expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,EscapeAdStringValue(remoteUser.Value(),expr_buffer));
 			ad->AssignExpr(ATTR_REMOTE_GROUP_RESOURCES_IN_USE,expr.Value());
 			ad->Assign(ATTR_REMOTE_GROUP_QUOTA,temp_groupQuota);
 		}
@@ -4789,14 +4813,14 @@ addRemoteUserPrios( ClassAd	*ad )
 			ad->Assign(buffer.Value(),prio);
 			buffer.formatstr("%s%s", slot_prefix.Value(), 
 					ATTR_REMOTE_USER_RESOURCES_IN_USE);
-			expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USER_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
+			expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USER_FN_NAME,EscapeAdStringValue(remoteUser.Value(),expr_buffer));
 			ad->AssignExpr(buffer.Value(),expr.Value());
 			if (getGroupInfoFromUserId(remoteUser.Value(), temp_groupName, temp_groupQuota, temp_groupUsage)) {
 				// this is a group, so enter group usage info
 				buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP);
 				ad->Assign( buffer.Value(), temp_groupName );
 				buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP_RESOURCES_IN_USE);
-				expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,ClassAd::EscapeStringValue(remoteUser.Value(),expr_buffer));
+				expr.formatstr("%s(\"%s\")",RESOURCES_IN_USE_BY_USERS_GROUP_FN_NAME,EscapeAdStringValue(remoteUser.Value(),expr_buffer));
 				ad->AssignExpr( buffer.Value(), expr.Value() );
 				buffer.formatstr("%s%s", slot_prefix.Value(), ATTR_REMOTE_GROUP_QUOTA);
 				ad->Assign( buffer.Value(), temp_groupQuota );
@@ -4821,7 +4845,7 @@ reeval(ClassAd *ad)
 		
 	cur_matches++;
 	snprintf(buffer, 255, "CurMatches = %d", cur_matches);
-	ad->InsertOrUpdate(buffer);
+	ad->Insert(buffer);
 	if(oldAdEntry) {
 		delete(oldAdEntry->oldAd);
 		oldAdEntry->oldAd = new ClassAd(*ad);
@@ -5154,9 +5178,7 @@ init_public_ad()
 	}
 	publicAd->Assign(ATTR_NAME, NegotiatorName );
 
-	line.formatstr ("%s = \"%s\"", ATTR_NEGOTIATOR_IP_ADDR,
-			daemonCore->InfoCommandSinfulString() );
-	publicAd->Insert(line.Value());
+	publicAd->Assign(ATTR_NEGOTIATOR_IP_ADDR,daemonCore->InfoCommandSinfulString());
 
 #if !defined(WIN32)
 	line.formatstr("%s = %d", ATTR_REAL_UID, (int)getuid() );
@@ -5556,6 +5578,20 @@ Matchmaker::publishNegotiationCycleStats( ClassAd *ad )
 		SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_OUT_OF_TIME, i, s->submitters_out_of_time);
         SetAttrN( ad, ATTR_LAST_NEGOTIATION_CYCLE_SUBMITTERS_SHARE_LIMIT, i, s->submitters_share_limit);
 	}
+}
+
+double 
+Matchmaker::calculate_subtree_usage(GroupEntry *group) {
+	double subtree_usage = 0.0;
+
+    for (vector<GroupEntry*>::iterator i(group->children.begin());  i != group->children.end();  i++) {
+		subtree_usage += calculate_subtree_usage(*i);
+	}
+	subtree_usage += accountant.GetWeightedResourcesUsed(group->name.c_str());
+
+	group->subtree_usage = subtree_usage;;
+	dprintf(D_ALWAYS, "subtree_usage at %s is %g\n", group->name.c_str(), subtree_usage);
+	return subtree_usage;
 }
 
 GCC_DIAG_ON(float-equal)

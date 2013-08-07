@@ -89,6 +89,11 @@ $ExitSuccess = sub {
 
 # before the test let's throw some weird crap into the environment
 
+my $on_evictedwithoutcheckpoint = sub {
+	CondorTest::debug("Evicted Without Checkpoint from removing jobs.\n",1);
+};
+
+CondorTest::RegisterEvictedWithoutCheckpoint($testname, $on_evictedwithoutcheckpoint);
 CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
 CondorTest::RegisterExecute($testname, $execute);

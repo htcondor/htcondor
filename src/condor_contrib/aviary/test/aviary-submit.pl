@@ -23,7 +23,7 @@ use SOAP::Lite;
 my $client = SOAP::Lite     
 	-> uri('http://job.aviary.grid.redhat.com')
     # update hostname:port as needed
-	-> proxy('http://localhost:9090/services/job/submitJob');
+	-> proxy('http://localhost:39090/services/job/submitJob');
 
 # turn on debugging
 SOAP::Lite->import(trace => debug);

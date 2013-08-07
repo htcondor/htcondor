@@ -21,13 +21,12 @@
 #ifndef __PARAM_INFO_H__
 #define __PARAM_INFO_H__
 
-#include "condor_common.h"
-
 typedef enum param_info_t_type_e {
 	PARAM_TYPE_STRING = 0,
 	PARAM_TYPE_INT = 1,
 	PARAM_TYPE_BOOL = 2,
-	PARAM_TYPE_DOUBLE = 3
+	PARAM_TYPE_DOUBLE = 3,
+	PARAM_TYPE_LONG = 4,
 } param_info_t_type_t;
 
 // This struct is common to all params, int and double params
@@ -104,6 +103,7 @@ typedef struct param_info_int_ranged_t_s param_info_PARAM_TYPE_INT_ranged;
 typedef struct param_info_dbl_ranged_t_s param_info_PARAM_TYPE_DOUBLE_ranged;
 
 typedef union param_info_storage_u {
+   struct param_info_t_s hdr;
    param_info_PARAM_TYPE_STRING type_string;
    param_info_PARAM_TYPE_BOOL type_bool;
    param_info_PARAM_TYPE_INT type_int;
@@ -113,7 +113,10 @@ typedef union param_info_storage_u {
    param_info_PARAM_TYPE_DOUBLE_ranged type_double_ranged;
 } param_info_storage_t;
 
-BEGIN_C_DECLS
+
+#ifdef  __cplusplus
+extern "C" {
+#endif
 
 	void param_info_init(void);
 
@@ -121,7 +124,7 @@ BEGIN_C_DECLS
 	int param_default_boolean(const char* param, int* valid);
 	double param_default_double(const char* param, int* valid);
 	//returns pointer to internal object (or null), do not free
-	const char* param_default_string(const char* param);
+	const char* param_default_string(const char* param, const char * subsys);
 
 	// Returns -1 if param is not of the specified type.
 	// Otherwise, returns 0 and sets min and max to the minimum and maximum
@@ -134,8 +137,9 @@ BEGIN_C_DECLS
 	void iterate_params(int (*callPerElement)
 			(const param_info_t* /*value*/, void* /*user data*/), void* user_data);
 
-END_C_DECLS
-
+#ifdef  __cplusplus
+} // extern "C"
+#endif
 
 ///////////////////
 // hash table stuff

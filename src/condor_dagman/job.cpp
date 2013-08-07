@@ -26,6 +26,7 @@
 #include "read_multiple_logs.h"
 #include "throttle_by_category.h"
 #include "dag.h"
+#include "dagman_metrics.h"
 #include <set>
 
 static const char *JOB_TAG_NAME = "+job_tag_name";
@@ -77,19 +78,12 @@ Job::~Job() {
 	delete [] _jobName;
 	delete [] _logFile;
 
-	varNamesFromDag->Rewind();
-	MyString *name;
-	while ( (name = varNamesFromDag->Next()) ) {
-		delete name;
+	varsFromDag->Rewind();
+	NodeVar *var;
+	while ( (var = varsFromDag->Next()) ) {
+		delete var;
 	}
-	delete varNamesFromDag;
-
-	varValsFromDag->Rewind();
-	MyString *val;
-	while ( (val = varValsFromDag->Next()) ) {
-		delete val;
-	}
-	delete varValsFromDag;
+	delete varsFromDag;
 
 	delete _scriptPre;
 	delete _scriptPost;
@@ -155,8 +149,7 @@ Job::Job( const job_type_t jobType, const char* jobName,
 	_jobstateSeqNum = 0;
 	_lastEventTime = 0;
 
-	varNamesFromDag = new List<MyString>;
-	varValsFromDag = new List<MyString>;
+	varsFromDag = new List<NodeVar>;
 
 	snprintf( error_text, JOB_ERROR_TEXT_MAXLEN, "unknown" );
 
@@ -471,6 +464,7 @@ Job::CanAddChild( Job* child, MyString &whynot )
 bool
 Job::TerminateSuccess()
 {
+	Cleanup();
 	SetStatus( STATUS_DONE );
 	return true;
 } 
@@ -478,6 +472,7 @@ Job::TerminateSuccess()
 bool
 Job::TerminateFailure()
 {
+	Cleanup();
 	SetStatus( STATUS_ERROR );
 	return true;
 } 
@@ -762,14 +757,14 @@ Job::PrefixName(const MyString &prefix)
 void
 Job::ResolveVarsInterpolations(void)
 {
-	MyString *val;
+	NodeVar *var;
 
-	varValsFromDag->Rewind();
-	while( (val = varValsFromDag->Next()) != NULL ) {
+	varsFromDag->Rewind();
+	while( (var = varsFromDag->Next()) != NULL ) {
 		// XXX No way to escape $(JOB) in case, for some crazy reason, you
 		// want a filename component actually to be '$(JOB)'.
 		// It isn't hard to fix, I'll do it later.
-		val->replaceString("$(JOB)", GetJobName());
+		var->_value.replaceString("$(JOB)", GetJobName());
 	}
 }
 
@@ -1049,4 +1044,100 @@ bool Job::SetCondorID(const CondorID& cid)
 	}
 	_CondorID = cid;
 	return ret;	
+}
+
+bool Job::Hold(int proc) 
+{
+	if( proc >= static_cast<int>( _onHold.size() ) ) {
+		_onHold.resize( proc+1, 0 );
+	}
+	if( !_onHold[proc] ) {
+		_onHold[proc] = 1;
+		++_jobProcsOnHold;
+		++_timesHeld;
+		return true;
+	} else {
+		dprintf( D_FULLDEBUG, "Received hold event for node %s, and job %d.%d "
+			"is already on hold!\n", GetJobName(), GetCluster(), proc );
+	}
+	return false;
+}
+
+bool Job::Release(int proc)
+{
+	if( proc >= static_cast<int>( _onHold.size() ) ) {
+		dprintf( D_FULLDEBUG, "Received release event for node %s, but job %d.%d "
+			"is not on hold\n", GetJobName(), GetCluster(), GetProc() );
+		return false; // We never marked this as being on hold
+	}
+	if( _onHold[proc] ) {
+		_onHold[proc] = 0;
+		--_jobProcsOnHold;
+		return true;
+	}
+	return false;
+}
+
+//---------------------------------------------------------------------------
+void
+Job::ExecMetrics( int proc, const struct tm &eventTime,
+			DagmanMetrics *metrics )
+{
+	if ( proc >= static_cast<int>( _gotEvents.size() ) ) {
+		_gotEvents.resize( proc+1, 0 );
+	}
+
+	if ( _gotEvents[proc] & ABORT_TERM_MASK ) {
+		debug_printf( DEBUG_NORMAL,
+					"Warning for node %s: got execute event for proc %d, but already have terminated or aborted event!\n",
+					GetJobName(), proc );
+		check_warning_strictness( DAG_STRICT_2 );
+	}
+
+	if ( !( _gotEvents[proc] & EXEC_MASK ) ) {
+		_gotEvents[proc] |= EXEC_MASK;
+		metrics->ProcStarted( eventTime );
+	}
+}
+
+//---------------------------------------------------------------------------
+void
+Job::TermAbortMetrics( int proc, const struct tm &eventTime,
+			DagmanMetrics *metrics )
+{
+	if ( proc >= static_cast<int>( _gotEvents.size() ) ) {
+		debug_printf( DEBUG_NORMAL,
+					"Warning for node %s: got terminated or aborted event for proc %d, but no execute event!\n",
+					GetJobName(), proc );
+		check_warning_strictness( DAG_STRICT_2 );
+
+		_gotEvents.resize( proc+1, 0 );
+	}
+
+	if ( !( _gotEvents[proc] & ABORT_TERM_MASK ) ) {
+		_gotEvents[proc] |= ABORT_TERM_MASK;
+		metrics->ProcFinished( eventTime );
+	}
+}
+
+//---------------------------------------------------------------------------
+void
+Job::Cleanup()
+{
+	std::vector<unsigned char> s;
+	_onHold.swap(s); // Free memory in _onHold
+
+	for ( int proc = 0; proc < static_cast<int>( _gotEvents.size() );
+				proc++ ) {
+		if ( _gotEvents[proc] != ( EXEC_MASK | ABORT_TERM_MASK ) ) {
+			debug_printf( DEBUG_NORMAL,
+					"Warning for node %s: unexpected _gotEvents value for proc %d: %d!\n",
+					GetJobName(), proc, (int)_gotEvents[proc] );
+			check_warning_strictness( DAG_STRICT_2 );
+		}
+	}
+
+	std::vector<unsigned char> s2;
+	_gotEvents.swap(s2); // Free memory in _gotEvents
+
 }

@@ -67,6 +67,7 @@ if (BUILD_TESTING)
 
 	if (NOT WINDOWS)
 	  condor_exe_test(x_trapsig.exe "x_trapsig.cpp" "" )
+	  condor_exe_test(x_job_mem_checker.exe "x_job_mem_checker.c" "" )
 	endif(NOT WINDOWS)
 	
 	if (STD_UNIVERSE)
@@ -140,6 +141,11 @@ if (BUILD_TESTING)
 		if(${RPM_SYSTEM_NAME} MATCHES "rhel5" AND ${SYS_ARCH} MATCHES "X86_64")
 			condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
 		endif()
+		
+        if(${SYSTEM_NAME} MATCHES "Debian-7" AND ${SYS_ARCH} MATCHES "X86_64")
+            dprint( "Will run LIGO test on Debian 7" )
+			condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
+		endif()
 	endif(STD_UNIVERSE)
 
 	##########################################################
@@ -173,15 +179,20 @@ if (BUILD_TESTING)
 	condor_pl_test(lib_shared_port-collector_van "Test of shared port feature with collector usage." "core;quick;full;quicknolink")
 	condor_pl_test(lib_shared_port-check-ports_van "Test of shared port feature with respect to open ports." "core;quick;full;quicknolink")
 
+	if(WITH_GANGLIA)
+          condor_pl_test(gangliad "Basic test of condor_gangliad." "core;quick;full;quicknolink")
+        endif()
+
 	if (NOT AIX)
 	  condor_pl_test(lib_procapi_pidtracking-snapshot "Fast Termination Child Cleanup Test" "core;quick;full;quicknolink")
 	endif()
 
 	condor_pl_test(classad_cache-basic "classad-cache smoke test" "core;quick;full;quicknolink")
-	condor_pl_test(shadow_mem_usage-basic "report shadow memory use" "core;quick;full;quicknolink")
-	if (LINUX OR DARWIN)
+	if (LINUX)
+		# test gives false positives on darwin and windows
+		condor_pl_test(shadow_mem_usage-basic "report shadow memory use" "core;quick;full;quicknolink")
 		condor_pl_test(shadow_s_mem_usage-basic "report static shadow memory use" "core;quick;full;quicknolink")
-	endif(LINUX OR DARWIN)
+	endif(LINUXN)
 
 	##########################################################
 	# feature specific tests
@@ -375,13 +386,19 @@ if (BUILD_TESTING)
 
 	if(LINUX)
 		condor_pl_test(job_cpu_affinity_check "ensure Matlog has only matches" "core;quick;full")
+		condor_pl_test(job_mem_checker "Look at reported memory usage" "core;quick;full")
 	endif ( LINUX )
 
 	condor_pl_test(job_concurrency_limits "ensure Matlog has only matches" "core;quick;full")
+	condor_pl_test(job_basic_preempt "preempt and nopreempt tests" "core;quick;full")
 	condor_pl_test(job_schedd_restart-check_reconnect "test reconnects" "core;quick;full")
 	condor_pl_test(job_local_resources "test local resources" "core;quick;full")
 	condor_pl_test(job_check_exitcode_in_classad "test exit code" "core;quick;full")
 	condor_pl_test(job_services_during_neg_cycle "test cmds during neg cycle" "core;quick;full")
+	condor_pl_test(job_basic_kill "kill test" "core;quick;full")
+	condor_pl_test(basic_startd_slot_attrs "STARTD_SLOT_ATTRS test" "core;quick;full")
+	#condor_pl_test(job_basic_suspend_continue_test "test suspends and continue" "core;quick;full")
+	condor_pl_test(job_basic_start_test "START reserve defines a dedicated slot" "core;quick;full")
 	condor_pl_test(cmd_condor_ping_basic "Basic default test of condor_ping" "core;quick;full")
 	condor_pl_test(job_aggressive_flocking "Test aggressive flocking" "core;quick;full")
 	##### job tests
@@ -547,6 +564,8 @@ if (BUILD_TESTING)
 	condor_pl_test(job_dagman_suppress_notification "Make sure DAG suppresses notification" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_suppress_notification-cmd_line "Make sure DAG respects -dont_suppress_notification command line flag" "dagman;quick;full;quicknolink")
 	condor_pl_test(job_dagman_classad "Test the DAGMan classad status update capability" "dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_repeat_holds "Test the suppression of repeat hold events" "dagman;quick;full;quicknolink")
+	condor_pl_test(job_dagman_submit_parse "Test parsing of submit output" "dagman;quick;full;quicknolink")
 	#condor_pl_test(perf_jobs_sue_10_10_30_van "Generated jobs performance test" "performance;long")
 	#condor_pl_test(perf_xfer_deb_10_10_30_van "Generated transfer performance test" "performance;long")
 	condor_pl_test(job_filexfer_sandbox-empty_van "Are job sandboxes with bad permissions cleaned up?" "framework;quick;full;quicknolink")
@@ -564,7 +583,7 @@ if (BUILD_TESTING)
 	condor_pl_test(job_starter_script-A "Test starter pre and post scripts" "core;quick;full;quicknolink")
 
 	if ( NOT WITHOUT_SOAP_TEST AND HAVE_EXT_GSOAP )
-		condor_pl_test(soap_job_tests "Soap: currently 10 different interface tests" "core;quick;full;quicknolink")
+		#condor_pl_test(soap_job_tests "Soap: currently 10 different interface tests" "core;quick;full;quicknolink")
 	endif()
 
 endif(BUILD_TESTING)

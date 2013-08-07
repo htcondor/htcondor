@@ -8,6 +8,7 @@
 
 \Synopsis \SynProg{\Condor{configure} or \Condor{install}}
 [\verb@--@\textbf{help}]
+[\verb@--@\textbf{usage}]
 
 \SynProg{\Condor{configure}} or \SynProg{\Condor{install}}
 [\verb@--@\textbf{install[=$<$path/to/release$>$] }]
@@ -15,9 +16,12 @@
 [\verb@--@\textbf{prefix=$<$path$>$}]
 [\verb@--@\textbf{local-dir=$<$path$>$}]
 [\verb@--@\textbf{make-personal-condor}]
+[\verb@--@\textbf{bosco}]
 [\verb@--@\textbf{type = $<$ submit, execute, manager $>$}]
 [\verb@--@\textbf{central-manager = $<$ hostname$>$}]
 [\verb@--@\textbf{owner = $<$ ownername $>$}]
+[\verb@--@\textbf{maybe-daemon-owner}]
+[\verb@--@\textbf{install-log = $<$ file $>$}]
 [\verb@--@\textbf{overwrite}]
 [\verb@--@\textbf{ignore-missing-libs}]
 [\verb@--@\textbf{force}]
@@ -100,8 +104,12 @@ released with HTCondor.  This list includes:
 \begin{Options}
   \OptItem{\Opt{---help}} {Print help screen and exit}
 
-  \OptItem{\Opt{---install}} {Perform installation, assuming that
-    the current working directory contains the release directories.
+  \OptItem{\Opt{---usage}} {Print short usage and exit}
+
+  \OptItem{\Opt{---install[=$<$path/to/release$>$]}} {Perform installation, 
+    assuming that
+    the current working directory contains the release directory,
+    if the optional \Expr{=<path/to/release>} is not specified.
     Without further options, the configuration is that of
     a Personal HTCondor, a complete one-machine pool.
     If used as an 
@@ -138,6 +146,9 @@ released with HTCondor.  This list includes:
   \OptItem{\Opt{---make-personal-condor}} {Installs and configures for 
      Personal HTCondor, a fully-functional, one-machine pool.}
 
+  \OptItem{\Opt{---bosco}} {Installs and configures Bosco, a personal
+     HTCondor that submits jobs to remote batch systems.}
+
   \OptItem{\Opt{---type= $<$ submit, execute, manager $>$}} {One
     or more of the types may be listed.
     This determines the roles that a machine may play in a pool.
@@ -168,7 +179,18 @@ released with HTCondor.  This list includes:
     If not run as root, the owner is the user running
     the \Condor{configure} command.  }
 
-  \OptItem{\Opt{--overwrite}} {
+  \OptItem{\Opt{---maybe-daemon-owner}} {If \Opt{--owner} is not specified and
+    no appropriate user can be found to run Condor, then this option
+    will allow the daemon user to be selected. This option is rarely
+    needed by users but can be useful for scripts that invoke
+    condor\_configure to install Condor.}
+
+  \OptItem{\Opt{---install-log=$<$file$>$}} {Save information about the
+    installation in the specified file. This is normally only needed
+    when condor\_configure is called by a higher-level script, not when
+    invoked by a person.}
+
+  \OptItem{\Opt{---overwrite}} {
     Always overwrite the contents of the \File{sbin} directory in
     the installation directory.  By default, \Condor{install}
     will not install if it finds an existing \File{sbin} directory

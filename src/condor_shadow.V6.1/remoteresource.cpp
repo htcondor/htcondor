@@ -686,7 +686,7 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 	m_claim_session = ClaimIdParser(claim_id);
 	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
 		if( m_claim_session.secSessionId() == NULL ) {
-			dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create security session from claim id, because claim id does not contain session information: %s\n",m_claim_session.publicClaimId());
+			dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: warning - failed to create security session from claim id %s because claim has no session information, likely because the matched startd has SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION set to False\n",m_claim_session.publicClaimId());
 		}
 		else {
 			bool rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
@@ -954,14 +954,14 @@ RemoteResource::setJobAd( ClassAd *jA )
 
 	int int_value;
 	int64_t int64_value;
-	float float_value;
+	double real_value;
 
-	if( jA->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, float_value) ) {
-		remote_rusage.ru_stime.tv_sec = (int) float_value; 
+	if( jA->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, real_value) ) {
+		remote_rusage.ru_stime.tv_sec = (time_t) real_value;
 	}
 			
-	if( jA->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, float_value) ) {
-		remote_rusage.ru_utime.tv_sec = (int) float_value; 
+	if( jA->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, real_value) ) {
+		remote_rusage.ru_utime.tv_sec = (time_t) real_value;
 	}
 
 	if( jA->LookupInteger(ATTR_IMAGE_SIZE, int64_value) ) {
@@ -1013,7 +1013,6 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 {
 	int int_value;
 	int64_t int64_value;
-	float float_value;
 	MyString string_value;
 
 	dprintf( D_FULLDEBUG, "Inside RemoteResource::updateFromStarter()\n" );
@@ -1025,14 +1024,15 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		dprintf( D_MACHINE, "--- End of ClassAd ---\n" );
 	}
 
-	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, float_value) ) {
-		remote_rusage.ru_stime.tv_sec = (int) float_value; 
-		jobAd->Assign(ATTR_JOB_REMOTE_SYS_CPU, float_value);
+	double real_value;
+	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, real_value) ) {
+		remote_rusage.ru_stime.tv_sec = (time_t) real_value;
+		jobAd->Assign(ATTR_JOB_REMOTE_SYS_CPU, real_value);
 	}
 			
-	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, float_value) ) {
-		remote_rusage.ru_utime.tv_sec = (int) float_value; 
-		jobAd->Assign(ATTR_JOB_REMOTE_USER_CPU, float_value);
+	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, real_value) ) {
+		remote_rusage.ru_utime.tv_sec = (time_t) real_value;
+		jobAd->Assign(ATTR_JOB_REMOTE_USER_CPU, real_value);
 	}
 
 	if( update_ad->LookupInteger(ATTR_IMAGE_SIZE, int64_value) ) {
@@ -1048,8 +1048,8 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->Insert(ATTR_MEMORY_USAGE, tree, false);
 	}
 
-	if( update_ad->LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, float_value) ) { 
-		  jobAd->Assign(ATTR_JOB_VM_CPU_UTILIZATION, float_value);
+	if( update_ad->LookupFloat(ATTR_JOB_VM_CPU_UTILIZATION, real_value) ) {
+		  jobAd->Assign(ATTR_JOB_VM_CPU_UTILIZATION, real_value);
 	}
 	
 	if( update_ad->LookupInteger(ATTR_RESIDENT_SET_SIZE, int_value) ) {

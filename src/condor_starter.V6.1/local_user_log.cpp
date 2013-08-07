@@ -498,14 +498,14 @@ LocalUserLog::getRusageFromAd( ClassAd* ad )
     struct rusage local_rusage;
     memset( &local_rusage, 0, sizeof(struct rusage) );
 
-	float sys_time = 0;
-	float user_time = 0;
+	double sys_time = 0;
+	double user_time = 0;
 
 	if( ad->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, sys_time) ) {
-        local_rusage.ru_stime.tv_sec = (int) sys_time; 
+        local_rusage.ru_stime.tv_sec = (time_t) sys_time;
     }
     if( ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, user_time) ) {
-        local_rusage.ru_utime.tv_sec = (int) user_time; 
+        local_rusage.ru_utime.tv_sec = (time_t) user_time;
     }
 
 	return local_rusage;

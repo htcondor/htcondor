@@ -364,7 +364,7 @@ config( int wantsQuiet, bool ignore_invalid_entry, bool wantsExtraInfo )
 {
 #ifdef WIN32
 	char *locale = setlocale( LC_ALL, "English" );
-	dprintf ( D_ALWAYS, "Locale: %s\n", locale );
+	dprintf ( D_FULLDEBUG, "Locale: %s\n", locale );
 #endif
 	real_config( NULL, wantsQuiet, wantsExtraInfo );
 	validate_entries( ignore_invalid_entry );
@@ -873,62 +873,64 @@ get_exclude_regex(Regex &excludeFilesRegex)
 	free(excludeRegex);
 }
 
+bool
+get_config_dir_file_list( char const *dirpath, StringList &files )
+{
+	Regex excludeFilesRegex;
+	get_exclude_regex(excludeFilesRegex);
+
+	Directory dir(dirpath);
+	if(!dir.Rewind()) {
+		dprintf(D_ALWAYS, "Cannot open %s: %s\n", dirpath, strerror(errno));
+		return false;
+	}
+
+	const char *file;
+	while( (file = dir.Next()) ) {
+		// don't consider directories
+		// maybe we should squash symlinks here...
+		if(! dir.IsDirectory() ) {
+			if(!excludeFilesRegex.isInitialized() ||
+			   !excludeFilesRegex.match(file)) {
+				files.append(dir.GetFullPath());
+			} else {
+				dprintf(D_FULLDEBUG|D_CONFIG,
+						"Ignoring config file "
+						"based on "
+						"LOCAL_CONFIG_DIR_EXCLUDE_REGEXP, "
+						"'%s'\n", dir.GetFullPath());
+			}
+		}
+	}
+
+	files.qsort();
+	return true;
+}
+
 // examine each file in a directory and treat it as a config file
 void
 process_directory( char* dirlist, char* host )
 {
 	StringList locals;
-	Directory *files;
-	const char *file, *dirpath;
-	char **paths;
+	const char *dirpath;
 	int local_required;
-	Regex excludeFilesRegex;
 	
 	local_required = param_boolean_crufty("REQUIRE_LOCAL_CONFIG_FILE", true);
 
 	if(!dirlist) { return; }
 	locals.initializeFromString( dirlist );
 	locals.rewind();
-	get_exclude_regex(excludeFilesRegex);
 	while( (dirpath = locals.next()) ) {
+		StringList file_list;
+		get_config_dir_file_list(dirpath,file_list);
+		file_list.rewind();
 
-		paths = (char **)calloc(65536, sizeof(char *));
-		files = new Directory(dirpath);
-		int i = 0;
-		if(files == NULL) {
-			fprintf(stderr, "Cannot open %s\n", dirpath);
-		} else {
-			while( (file = files->Next()) && i < 65536) {
-				// don't consider directories
-				// maybe we should squash symlinks here...
-				if(! files->IsDirectory() ) {
-					if(!excludeFilesRegex.isInitialized() ||
-					   !excludeFilesRegex.match(file)) {
-						paths[i] = strdup(files->GetFullPath());
-						i++;
-					} else {
-						dprintf(D_FULLDEBUG|D_CONFIG,
-							"Ignoring config file "
-							"based on "
-							"LOCAL_CONFIG_DIR_EXCLUDE_REGEXP, "
-							"'%s'\n", files->GetFullPath());
-					}
-				}
-			}
-			delete files;
+		char const *file;
+		while( (file=file_list.next()) ) {
+			process_config_source( file, "config source", host, local_required );
+
+			local_config_sources.append(file);
 		}
-		qsort(paths, i, sizeof(char *), compareFiles);
-		char **pathCopy = paths;
-		while(*pathCopy) {
-			process_config_source( *pathCopy, "config source", host,
-								   local_required );
-
-			local_config_sources.append(*pathCopy);
-
-			free(*pathCopy);
-			pathCopy++;
-		}
-		free(paths);
 	}
 }
 
@@ -1402,7 +1404,6 @@ char *
 param_without_default( const char *name )
 {
 	char		*val = NULL;
-	char param_name[MAX_PARAM_LEN];
 
 	// Try in order to find the parameter
 	// As we walk through, any value (including empty string) will
@@ -1410,61 +1411,51 @@ param_without_default( const char *name )
 	// specifically to clear this parameter for this specific
 	// subsystem / local.
 
-	// 1. "subsys.local.name"
-	const char	*local = get_mySubSystem()->getLocalName();
-	if (  (NULL == val) && local ) {
-		snprintf(param_name,MAX_PARAM_LEN,"%s.%s.%s",
-				 get_mySubSystem()->getName(),
-				 local,
-				 name);
-		param_name[MAX_PARAM_LEN-1]='\0';
-		strlwr(param_name);
-		val = lookup_macro_lower( param_name, ConfigTab, TABLESIZE );
+	const char *subsys = get_mySubSystem()->getName();
+	if (subsys && ! subsys[0]) subsys = NULL;
+	const char *local = get_mySubSystem()->getLocalName();
+	bool fLocalMatch = false, fSubsysMatch = false;
+	if (local && local[0]) {
+		// "subsys.local.name" and "local.name"
+		std::string local_name;
+		formatstr(local_name, "%s.%s", local, name);
+		fLocalMatch = true; fSubsysMatch = subsys != NULL;
+		val = lookup_macro(local_name.c_str(), subsys, ConfigTab, TABLESIZE);
+		if (subsys && ! val) {
+			val = lookup_macro(local_name.c_str(), NULL, ConfigTab, TABLESIZE);
+			fSubsysMatch = false;
+		}
 	}
-	// 2. "local.name"
-	if (  (NULL == val) && local ) {
-		snprintf(param_name,MAX_PARAM_LEN,"%s.%s",
-				 local,
-				 name);
-		param_name[MAX_PARAM_LEN-1]='\0';
-		strlwr(param_name);
-		val = lookup_macro_lower( param_name, ConfigTab, TABLESIZE );
+	if ( ! val) {
+		// lookup "subsys.name" and "name"
+		fLocalMatch = false; fSubsysMatch = subsys != NULL;
+		val = lookup_macro(name, subsys, ConfigTab, TABLESIZE);
+		if (subsys && ! val) {
+			val = lookup_macro(name, NULL, ConfigTab, TABLESIZE);
+			fSubsysMatch = false;
+		}
 	}
-	// 3. "subsys.name"
-	if ( NULL == val ) {
-		snprintf(param_name,MAX_PARAM_LEN,"%s.%s",
-				 get_mySubSystem()->getName(),
-				 name);
-		param_name[MAX_PARAM_LEN-1]='\0';
-		strlwr(param_name);
-		val = lookup_macro_lower( param_name, ConfigTab, TABLESIZE );
-	}
-	// 4. "name"
-	if ( NULL == val ) {
-		snprintf(param_name,MAX_PARAM_LEN,"%s",name);
-		param_name[MAX_PARAM_LEN-1]='\0';
-		strlwr(param_name);
-		val = lookup_macro_lower( param_name, ConfigTab, TABLESIZE );
-	}
-
 	// Still nothing (or empty)?  Give up.
-	if ( (NULL == val) || (*val=='\0') ) {
+	if ( ! val || ! val[0] ) {
 		return NULL;
 	}
 
-	if( IsDebugLevel( D_CONFIG ) ) {
-		if( strlen(name) < strlen(param_name) ) {
-			param_name[strlen(param_name)-strlen(name)] = '\0';
-			dprintf( D_CONFIG, "Config '%s': using prefix '%s' ==> '%s'\n",
-					 name, param_name, val );
+	if (IsDebugVerbose(D_CONFIG)) {
+		if (fLocalMatch || fSubsysMatch) {
+			std::string param_name;
+			if (fSubsysMatch) { param_name += subsys; param_name += "."; }
+			if (fLocalMatch) { param_name += local; param_name += "."; }
+			param_name += name;
+			dprintf( D_CONFIG | D_VERBOSE, "Config '%s': using prefix '%s' ==> '%s'\n",
+					 name, param_name.c_str(), val );
 		}
 		else {
-			dprintf( D_CONFIG, "Config '%s': no prefix ==> '%s'\n", name, val );
+			dprintf( D_CONFIG | D_VERBOSE, "Config '%s': no prefix ==> '%s'\n", name, val );
 		}
 	}
 
 	// Ok, now expand it out...
-	val = expand_macro( val, ConfigTab, TABLESIZE );
+	val = expand_macro( val, ConfigTab, TABLESIZE, NULL, false, subsys );
 
 	// If it returned an empty string, free it before returning NULL
 	if( val == NULL ) {
@@ -1496,8 +1487,33 @@ param(const char* name)
 char *
 param_with_default_abort(const char *name, int abort) 
 {
-	char *val = NULL;
-	char *next_param_name = NULL;
+	const char *val = NULL;
+#ifdef NEW_PARAM_GENERATOR	// don't copy params from default table to ConfigTab
+	const char* subsys = get_mySubSystem()->getName();
+	if (subsys && ! subsys[0]) subsys = NULL;
+
+	// params in the local namespace will not exist in the default param table
+	// so look them up only in ConfigTab
+	const char* local = get_mySubSystem()->getLocalName();
+	if (local && local[0]) {
+		std::string local_name(local);
+		local_name += "."; local_name += name;
+		val = lookup_macro(local_name.c_str(), subsys, ConfigTab, TABLESIZE);
+		if (subsys && ! val) {
+			val = lookup_macro(local_name.c_str(), NULL, ConfigTab, TABLESIZE);
+		}
+	}
+	// if not found in the local namespace, search the sybsystem and generic namespaces
+	if ( ! val) {
+		val = lookup_macro(name, subsys, ConfigTab, TABLESIZE);
+		if (subsys && ! val) {
+			val = lookup_macro(name, NULL, ConfigTab, TABLESIZE);
+		}
+		if ( ! val) {
+			val = param_default_string(name, subsys);
+		}
+	}
+#else
 	MyString subsys = get_mySubSystem()->getName();
 	MyString local = get_mySubSystem()->getLocalName();
 	MyString subsys_local_name;
@@ -1522,9 +1538,10 @@ param_with_default_abort(const char *name, int abort)
 	// Search in left to right order until we find a meaningful val or
 	// can bail out early from the search.
 	sl.rewind();
+	char *next_param_name = NULL;
 	while(val == NULL && (next_param_name = sl.next())) {
 		// See if the candidate is in the Config Table
-		val = lookup_macro(next_param_name, ConfigTab, TABLESIZE);
+		val = lookup_macro(next_param_name, NULL, ConfigTab, TABLESIZE);
 
 		if (val != NULL && val[0] == '\0') {
 			// The config table specifically wanted the value to be empty, 
@@ -1542,7 +1559,7 @@ param_with_default_abort(const char *name, int abort)
 		// something in the Default Table.
 
 		// The candidate wasn't in the Config Table, so check the Default Table
-		const char * def = param_default_string(next_param_name);
+		const char * def = param_default_string(next_param_name, NULL);
 		if (def != NULL) {
 			// Yay! Found something! Add the entry found in the Default 
 			// Table to the Config Table. This could be adding an empty
@@ -1557,9 +1574,10 @@ param_with_default_abort(const char *name, int abort)
 				// validly found in the Default Table, but empty.
 				return NULL;
 			}
-            val = const_cast<char*>(def); // TJ: this is naughty, but expand_macro will replace it soon.
+			val = def;
 		}
 	}
+#endif
 
 	// If we don't find any value at all, determine if we must abort or 
 	// simply return NULL which will allow older code calling param to do
@@ -1576,21 +1594,20 @@ param_with_default_abort(const char *name, int abort)
 
 	// if we get here, it means that we found a val of note, so expand it and
 	// return the canonical value of it. expand_macro returns allocated memory.
-
-	val = expand_macro( val, ConfigTab, TABLESIZE, NULL, true );
-
-	if( val == NULL ) {
+	// note that expand_macro will first try and expand
+	char * expanded_val = expand_macro(val, ConfigTab, TABLESIZE, NULL, true, subsys.Value());
+	if (expanded_val == NULL) {
 		return NULL;
 	}
 	
 	// If expand_macro returned an empty string, free it before returning NULL
-	if ( val[0] == '\0' ) {
-		free( val );
+	if (expanded_val[0] == '\0') {
+		free(expanded_val);
 		return NULL;
 	}
 
 	// return the fully expanded value
-	return val;
+	return expanded_val;
 }
 
 /*
@@ -1638,7 +1655,7 @@ param_integer( const char *name, int &value,
 	ASSERT( name );
 	string = param( name );
 	if( ! string ) {
-		dprintf( D_CONFIG, "%s is undefined, using default value of %d\n",
+		dprintf( D_CONFIG | D_VERBOSE, "%s is undefined, using default value of %d\n",
 				 name, default_value );
 		if ( use_default ) {
 			value = default_value;
@@ -1784,7 +1801,7 @@ param_double( const char *name, double default_value,
 	string = param( name );
 	
 	if( ! string ) {
-		dprintf( D_CONFIG, "%s is undefined, using default value of %f\n",
+		dprintf( D_CONFIG | D_VERBOSE, "%s is undefined, using default value of %f\n",
 				 name, default_value );
 		return default_value;
 	}
@@ -1902,7 +1919,7 @@ param_boolean( const char *name, bool default_value, bool do_log,
 	
 	if (!string) {
 		if (do_log) {
-			dprintf( D_CONFIG, "%s is undefined, using default value of %s\n",
+			dprintf( D_CONFIG | D_VERBOSE, "%s is undefined, using default value of %s\n",
 					 name, default_value ? "True" : "False" );
 		}
 		return default_value;

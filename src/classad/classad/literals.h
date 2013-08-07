@@ -42,6 +42,9 @@ class Literal : public ExprTree
         /// Assignment operator
         Literal &operator=(const Literal &literal);
 
+		/// node type
+		virtual NodeKind GetKind (void) const { return LITERAL_NODE; }
+
 		/** Create an absolute time literal.
 		 * 	@param now The time in UNIX epoch.  If a value of NULL is passed in
 		 * 	the system's current time will be used.

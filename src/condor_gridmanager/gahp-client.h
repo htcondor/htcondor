@@ -240,6 +240,11 @@ class GahpClient : public Service {
 		///
 		void purgePendingRequests() { clear_pending(); }
 
+		// Return true if this GahpClient has a pending request that has
+		// been issued to the GAHP server (and possibly a result returned
+		// waiting to be collected).
+		bool pendingRequestIssued() { return pending_submitted_to_gahp || pending_result; }
+
 		/** @name Mode methods.
 		 * Methods to set/get the mode.
 		 */
@@ -581,51 +586,57 @@ class GahpClient : public Service {
 						  std::string vpc_ip,
 						  std::string client_token,
 						  StringList & groupnames,
-						  char* & instance_id,
-						  char* & error_code );
+						  std::string & instance_id,
+						  std::string & error_code );
 
 		int ec2_vm_stop( std::string service_url,
 						 std::string publickeyfile,
 						 std::string privatekeyfile,
 						 std::string instance_id,
-						 char* & error_code );
+						 std::string & error_code );
 
 		int ec2_vm_status( std::string service_url,
 							  std::string publickeyfile,
 							  std::string privatekeyfile,
 							  std::string instance_id,
 							  StringList & returnStatus,
-							  char* & error_code );
+							  std::string & error_code );
 
 		int ec2_vm_status_all( std::string service_url,
 							   std::string publickeyfile,
 							   std::string privatekeyfile,
 							   StringList & returnStatus,
-							   char* & error_code );
+							   std::string & error_code );
 
 		int ec2_ping( std::string service_url,
 					  std::string publickeyfile,
 					  std::string privatekeyfile,
-					  char* & error_code );
+					  std::string & error_code );
+
+		int ec2_vm_server_type( std::string service_url,
+								std::string publickeyfile,
+								std::string privatekeyfile,
+								std::string & server_type,
+								std::string & error_code );
 
 		int ec2_vm_create_keypair( std::string service_url,
 								   std::string publickeyfile,
 								   std::string privatekeyfile,
 								   std::string keyname,
 								   std::string outputfile,
-								   char* & error_code );
+								   std::string & error_code );
 
 		int ec2_vm_destroy_keypair( std::string service_url,
 									std::string publickeyfile,
 									std::string privatekeyfile,
 									std::string keyname,
-									char* & error_code );
+									std::string & error_code );
 
 		int ec2_vm_vm_keypair_all( std::string service_url,
 								   std::string publickeyfile,
 								   std::string privatekeyfile,
 								   StringList & returnStatus,
-								   char* & error_code );
+								   std::string & error_code );
 
         /**
          * Used to associate an elastic ip with a running instance
@@ -636,7 +647,7 @@ class GahpClient : public Service {
                                   std::string instance_id, 
                                   std::string elastic_ip,
                                   StringList & returnStatus,
-                                  char* & error_code );
+                                  std::string & error_code );
 
 		// Used to associate a tag with an resource, like a running instance
         int ec2_create_tags(std::string service_url,
@@ -645,7 +656,7 @@ class GahpClient : public Service {
 							std::string instance_id, 
 							StringList & tags,
 							StringList & returnStatus,
-							char* & error_code );
+							std::string & error_code );
 		
         /**
          * Used to release an elastic ip from an instance
@@ -656,7 +667,7 @@ class GahpClient : public Service {
                                       const char * privatekeyfile,
                                       const char * elastic_ip,
                                       StringList & returnStatus,
-                                      char* & error_code ); */
+                                      std::string & error_code ); */
 
 		/**
 		 * Used to attach to an ecs volume(s).
@@ -668,7 +679,7 @@ class GahpClient : public Service {
 							  std::string instance_id, 
                               std::string device_id,
                               StringList & returnStatus,
-                              char* & error_code );
+                              std::string & error_code );
 
         // Is there a particular reason these aren't const references?
         int ec2_spot_start( std::string service_url,
@@ -685,27 +696,27 @@ class GahpClient : public Service {
                             std::string vpc_ip,
                             std::string client_token,
                             StringList & groupnames,
-                            char * & request_id,
-                            char * & error_code
+                            std::string & request_id,
+                            std::string & error_code
                           );
         int ec2_spot_stop(  std::string service_url,
                             std::string publickeyfile,
                             std::string privatekeyfile,
                             std::string request_id,
-                            char * & error_code
+                            std::string & error_code
                          );
         int ec2_spot_status(    std::string service_url,
                                 std::string publickeyfile,
                                 std::string privatekeyfile,
                                 std::string request_id,
                                 StringList & returnStatus,
-                                char * & error_code
+                                std::string & error_code
                            );
         int ec2_spot_status_all(    std::string service_url,
                                     std::string publickeyfile,
                                     std::string privatekeyfile,
                                     StringList & returnStatus,
-                                    char * & error_code
+                                    std::string & error_code
                                );
 
 		int

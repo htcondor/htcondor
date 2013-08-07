@@ -333,7 +333,7 @@ void stats_recent_counter_timer::Publish(ClassAd & ad, const char * pattr, int f
 
 void stats_recent_counter_timer::PublishDebug(ClassAd & ad, const char * pattr, int flags) const
 {
-   if ( ! canStringBeUsedAsAttr(pattr))
+   if ( ! IsValidAttrName(pattr))
       return;
 
    this->count.PublishDebug(ad, pattr, flags);
@@ -1141,7 +1141,7 @@ stats_ema_config::sameAs( stats_ema_config const *other )
 }
 
 template <class T>
-void stats_entry_sum_ema_rate<T>::ConfigureEMAHorizons(classy_counted_ptr<stats_ema_config> new_config) {
+void stats_entry_ema_base<T>::ConfigureEMAHorizons(classy_counted_ptr<stats_ema_config> new_config) {
 	classy_counted_ptr<stats_ema_config> old_config(ema_config);
 	ema_config = new_config;
 
@@ -1210,13 +1210,13 @@ void stats_entry_sum_ema_rate<T>::Publish(ClassAd & ad, const char * pattr, int 
 		ClassAdAssign(ad, pattr, this->value);
 	}
 	if (flags & this->PubEMA) {
-		for(size_t i = ema.size(); i--; ) {
-			stats_ema_config::horizon_config &config = ema_config->horizons[i];
-			if( (flags & PubSuppressInsufficientDataEMA) && ema[i].insufficientData(config) ) {
+		for(size_t i = this->ema.size(); i--; ) {
+			stats_ema_config::horizon_config &config = this->ema_config->horizons[i];
+			if( (flags & stats_entry_ema_base<T>::PubSuppressInsufficientDataEMA) && this->ema[i].insufficientData(config) ) {
 				continue;
 			}
 			if( !(flags & this->PubDecorateAttr) ) {
-				ClassAdAssign(ad, pattr, ema[i].ema);
+				ClassAdAssign(ad, pattr, this->ema[i].ema);
 			}
 			else {
 				std::string attr_name;
@@ -1228,7 +1228,7 @@ void stats_entry_sum_ema_rate<T>::Publish(ClassAd & ad, const char * pattr, int 
 				else {
 					formatstr(attr_name,"%sPerSecond_%s",pattr,config.horizon_name.c_str());
 				}
-				ClassAdAssign(ad, attr_name.c_str(), ema[i].ema);
+				ClassAdAssign(ad, attr_name.c_str(), this->ema[i].ema);
 			}
 		}
 	}
@@ -1237,8 +1237,8 @@ void stats_entry_sum_ema_rate<T>::Publish(ClassAd & ad, const char * pattr, int 
 template <class T>
 void stats_entry_sum_ema_rate<T>::Unpublish(ClassAd & ad, const char * pattr) const {
 	ad.Delete(pattr);
-	for(size_t i=ema.size(); i--;) {
-		stats_ema_config::horizon_config &config = ema_config->horizons[i];
+	for(size_t i=this->ema.size(); i--;) {
+		stats_ema_config::horizon_config &config = this->ema_config->horizons[i];
 		std::string attr_name;
 		size_t pattr_len;
 		if( (pattr_len=strlen(pattr)) >= 7 && strcmp(pattr+pattr_len-7,"Seconds")==0 ) {
@@ -1252,7 +1252,42 @@ void stats_entry_sum_ema_rate<T>::Unpublish(ClassAd & ad, const char * pattr) co
 }
 
 template <class T>
-double stats_entry_sum_ema_rate<T>::BiggestEMARate() const {
+void stats_entry_ema<T>::Publish(ClassAd & ad, const char * pattr, int flags) const { 
+	if ( ! flags) flags = PubDefault;
+	if (flags & this->PubValue) {
+		ClassAdAssign(ad, pattr, this->value);
+	}
+	if (flags & this->PubEMA) {
+		for(size_t i = this->ema.size(); i--; ) {
+			stats_ema_config::horizon_config &config = this->ema_config->horizons[i];
+			if( (flags & stats_entry_ema_base<T>::PubSuppressInsufficientDataEMA) && this->ema[i].insufficientData(config) ) {
+				continue;
+			}
+			if( !(flags & this->PubDecorateAttr) ) {
+				ClassAdAssign(ad, pattr, this->ema[i].ema);
+			}
+			else {
+				std::string attr_name;
+				formatstr(attr_name,"%s_%s",pattr,config.horizon_name.c_str());
+				ClassAdAssign(ad, attr_name.c_str(), this->ema[i].ema);
+			}
+		}
+	}
+}
+
+template <class T>
+void stats_entry_ema<T>::Unpublish(ClassAd & ad, const char * pattr) const {
+	ad.Delete(pattr);
+	for(size_t i=this->ema.size(); i--;) {
+		stats_ema_config::horizon_config &config = this->ema_config->horizons[i];
+		std::string attr_name;
+		formatstr(attr_name,"%s_%s",pattr,config.horizon_name.c_str());
+		ad.Delete(attr_name.c_str());
+	}
+}
+
+template <class T>
+double stats_entry_ema_base<T>::BiggestEMAValue() const {
 	double biggest = 0.0;
 	bool first = true;
 	for(stats_ema_list::const_iterator ema_itr = ema.begin();
@@ -1268,7 +1303,7 @@ double stats_entry_sum_ema_rate<T>::BiggestEMARate() const {
 }
 
 template <class T>
-char const *stats_entry_sum_ema_rate<T>::ShortestHorizonEMARateName() const {
+char const *stats_entry_ema_base<T>::ShortestHorizonEMAName() const {
 	char const *shortest_horizon_name = NULL;
 	time_t shortest_horizon = 0;
 	bool first = true;
@@ -1284,7 +1319,7 @@ char const *stats_entry_sum_ema_rate<T>::ShortestHorizonEMARateName() const {
 }
 
 template <class T>
-double stats_entry_sum_ema_rate<T>::EMARate(char const *horizon_name) const {
+double stats_entry_ema_base<T>::EMAValue(char const *horizon_name) const {
 	for(size_t i = ema.size(); i--; ) {
 		stats_ema_config::horizon_config &config = ema_config->horizons[i];
 		if( config.horizon_name == horizon_name ) {
@@ -1292,6 +1327,17 @@ double stats_entry_sum_ema_rate<T>::EMARate(char const *horizon_name) const {
 		}
 	}
 	return 0.0;
+}
+
+template <class T>
+bool stats_entry_ema_base<T>::HasEMAHorizonNamed(char const *horizon_name) const {
+	for(size_t i = ema.size(); i--; ) {
+		stats_ema_config::horizon_config &config = ema_config->horizons[i];
+		if( config.horizon_name == horizon_name ) {
+			return true;
+		}
+	}
+	return false;
 }
 
 // Force template instantiation
@@ -1314,7 +1360,9 @@ template class stats_entry_recent_histogram<long long>;
 template class stats_entry_recent_histogram<long>;
 template class stats_entry_recent_histogram<int>;
 template class stats_entry_recent_histogram<double>;
+template class stats_entry_ema_base<double>;
 template class stats_entry_sum_ema_rate<double>;
+template class stats_entry_ema<double>;
 
 //
 // This is how you use the generic_stats functions.

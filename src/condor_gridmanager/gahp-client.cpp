@@ -5959,8 +5959,8 @@ int GahpClient::ec2_vm_start( std::string service_url,
 							  std::string vpc_ip,
 							  std::string client_token,
 							  StringList & groupnames,
-							  char * &instance_id,
-							  char * &error_code)
+							  std::string &instance_id,
+							  std::string &error_code)
 {
 	// command line looks like:
 	// EC2_COMMAND_VM_START <req_id> <publickeyfile> <privatekeyfile> <ami-id> <keypair> <groupname> <groupname> ...
@@ -6078,11 +6078,11 @@ int GahpClient::ec2_vm_start( std::string service_url,
 			}			
 		} else if ( result->argc == 3 ) {
 			rc = atoi(result->argv[1]);
-			instance_id = strdup(result->argv[2]);
+			instance_id = result->argv[2];
 		} else if ( result->argc == 4 ) {
 			// get the error code
 			rc = atoi( result->argv[1] );
- 			error_code = strdup(result->argv[2]);	
+ 			error_code = result->argv[2];
  			error_string = result->argv[3];		
 		} else {
 			EXCEPT( "Bad %s result", command );
@@ -6110,7 +6110,7 @@ int GahpClient::ec2_vm_stop( std::string service_url,
 							 std::string publickeyfile,
 							 std::string privatekeyfile,
 							 std::string instance_id,
-							 char* & error_code )
+							 std::string & error_code )
 {	
 	// command line looks like:
 	// EC2_COMMAND_VM_STOP <req_id> <publickeyfile> <privatekeyfile> <instance-id>
@@ -6175,7 +6175,7 @@ int GahpClient::ec2_vm_stop( std::string service_url,
 		} else if ( result->argc == 4 ) {
 			// get the error code
 			rc = atoi( result->argv[1] );
-			error_code = strdup(result->argv[2]);
+			error_code = result->argv[2];
 			error_string = result->argv[3];			
 		} else {
 			EXCEPT( "Bad %s result", command );
@@ -6202,7 +6202,7 @@ int GahpClient::ec2_vm_status_all( std::string service_url,
                                    std::string publickeyfile,
                                    std::string privatekeyfile,
                                    StringList & returnStatus,
-                                   char* & error_code )
+                                   std::string & error_code )
 {
     static const char * command = "EC2_VM_STATUS_ALL";
 
@@ -6243,14 +6243,14 @@ int GahpClient::ec2_vm_status_all( std::string service_url,
 
 		    case 4:
 		        if( rc == 0 ) { EXCEPT( "Bad %s result", command ); }
-    		    error_code = strdup( result->argv[2] );
+    		    error_code = result->argv[2];
 	    	    error_string = result->argv[3];
                 break;
 
             default:
-                if( (result->argc - 2) % 4 != 0 ) { EXCEPT( "Bad %s result", command ); }
+                if( (result->argc - 2) % 6 != 0 ) { EXCEPT( "Bad %s result", command ); }
                 for( int i = 2; i < result->argc; ++i ) {
-                    returnStatus.append( strdup( result->argv[i] ) );
+                    returnStatus.append( result->argv[i] );
                 }
                 returnStatus.rewind();
                 break;
@@ -6278,7 +6278,7 @@ int GahpClient::ec2_vm_status( std::string service_url,
 							   std::string privatekeyfile,
 							   std::string instance_id,
 							   StringList &returnStatus,
-							   char* & error_code )
+							   std::string & error_code )
 {	
 	// command line looks like:
 	// EC2_COMMAND_VM_STATUS <return 0;"EC2_VM_STATUS";
@@ -6348,7 +6348,7 @@ int GahpClient::ec2_vm_status( std::string service_url,
 		} 
 		else if (result->argc == 4) {
 			rc = atoi( result->argv[1] );
-			error_code = strdup(result->argv[2]);
+			error_code = result->argv[2];
 			error_string = result->argv[3];
 		}
 		else if (result->argc == 6)
@@ -6365,7 +6365,7 @@ int GahpClient::ec2_vm_status( std::string service_url,
 				{
 					// get the status info
 					for (int i=2; i<result->argc; i++) {
-						returnStatus.append( strdup(result->argv[i]) );
+						returnStatus.append( result->argv[i] );
 					}
 				}
 				returnStatus.rewind();
@@ -6387,7 +6387,7 @@ int GahpClient::ec2_vm_status( std::string service_url,
 				{
 					// get the status info
 					for (int i=2; i<result->argc; i++) {
-						returnStatus.append( strdup(result->argv[i]) );
+						returnStatus.append( result->argv[i] );
 					}
 				}
 				returnStatus.rewind();
@@ -6416,7 +6416,7 @@ int GahpClient::ec2_vm_status( std::string service_url,
 int GahpClient::ec2_ping(std::string service_url,
 						 std::string publickeyfile,
 						 std::string privatekeyfile,
-						 char *& error_code )
+						 std::string & error_code )
 {
 	// we can use "Status All" command to make sure EC2 Server is alive.
 	static const char* command = "EC2_VM_STATUS_ALL";
@@ -6452,7 +6452,7 @@ int GahpClient::ec2_ping(std::string service_url,
 		int rc = atoi(result->argv[1]);
 		
 		if( result->argc == 4 ) {
-		    error_code = strdup( result->argv[2] );
+		    error_code = result->argv[2];
 		    error_string = result->argv[3];
 		}
 		
@@ -6472,13 +6472,92 @@ int GahpClient::ec2_ping(std::string service_url,
 }
 
 
+// Determine what implementation of EC2 we're talking to
+int GahpClient::ec2_vm_server_type(std::string service_url,
+								   std::string publickeyfile,
+								   std::string privatekeyfile,
+								   std::string & server_type,
+								   std::string & error_code )
+{
+	// we can use "Status All" command to make sure EC2 Server is alive.
+	static const char* command = "EC2_VM_SERVER_TYPE";
+
+	// Generate request line
+	char* esc1 = strdup( escapeGahpString(service_url) );
+	char* esc2 = strdup( escapeGahpString(publickeyfile) );
+	char* esc3 = strdup( escapeGahpString(privatekeyfile) );
+
+	std::string reqline;
+	formatstr( reqline, "%s %s %s", esc1, esc2, esc3 );
+	const char *buf = reqline.c_str();
+
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	// The result should look like:
+	//		seq_id 0 server_type
+	//		seq_id 1
+	//		seq_id error_code error_string
+	if ( result ) {
+		int rc = 0;
+		if ( result->argc == 2 ) {
+			rc = atoi(result->argv[1]);
+			if ( rc == 0 ) {
+				EXCEPT( "Bad %s result", command );
+				rc = 1;
+			} else {
+				error_string = "";
+			}
+		} else if ( result->argc == 3 ) {
+			rc = atoi(result->argv[1]);
+			server_type = result->argv[2];
+		} else if ( result->argc == 4 ) {
+			// get the error code
+			rc = atoi( result->argv[1] );
+			error_code = result->argv[2];
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+
 // Create and register SSH keypair
 int GahpClient::ec2_vm_create_keypair( std::string service_url,
 									   std::string publickeyfile,
 									   std::string privatekeyfile,
 									   std::string keyname,
 									   std::string outputfile,
-									   char* & error_code)
+									   std::string & error_code)
 {
 	// command line looks like:
 	// EC2_COMMAND_VM_CREATE_KEYPAIR <req_id> <publickeyfile> <privatekeyfile> <groupname> <outputfile> 
@@ -6493,9 +6572,11 @@ int GahpClient::ec2_vm_create_keypair( std::string service_url,
 	if ( service_url.empty() ||
 		 publickeyfile.empty() ||
 		 privatekeyfile.empty() ||
-		 keyname.empty() ||
-		 outputfile.empty() ) {
+		 keyname.empty() ) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	if ( outputfile.empty() ) {
+		outputfile = NULL_FILE;
 	}
 	
 	// construct command line
@@ -6549,7 +6630,7 @@ int GahpClient::ec2_vm_create_keypair( std::string service_url,
 		} 
 		else if ( result->argc == 4 ) {
 			rc = atoi( result->argv[1] );
-			error_code = strdup(result->argv[2]);
+			error_code = result->argv[2];
 			error_string = result->argv[3];
 		} else {
 			EXCEPT( "Bad %s result", command );
@@ -6580,7 +6661,7 @@ int GahpClient::ec2_vm_destroy_keypair( std::string service_url,
 										std::string publickeyfile,
 										std::string privatekeyfile,
 										std::string keyname,
-										char* & error_code )
+										std::string & error_code )
 {
 	// command line looks like:
 	// EC2_COMMAND_VM_DESTROY_KEYPAIR <req_id> <publickeyfile> <privatekeyfile> <groupname> 
@@ -6648,7 +6729,7 @@ int GahpClient::ec2_vm_destroy_keypair( std::string service_url,
 		} 
 		else if ( result->argc == 4 ) {
 			rc = atoi( result->argv[1] );
-			error_code = strdup(result->argv[2]);
+			error_code = result->argv[2];
 			error_string = result->argv[3];
 		} else {
 			EXCEPT( "Bad %s result", command );
@@ -6676,7 +6757,7 @@ int GahpClient::ec2_vm_vm_keypair_all( std::string service_url,
 									   std::string publickeyfile,
 									   std::string privatekeyfile,
 									   StringList & returnStatus,
-									   char* & error_code )
+									   std::string & error_code )
 {
 	// command line looks like:
 	// EC2_COMMAND_VM_KEYPAIR_ALL <req_id> <publickeyfile> <privatekeyfile>
@@ -6740,7 +6821,7 @@ int GahpClient::ec2_vm_vm_keypair_all( std::string service_url,
 			if (result->argc == 2) {
 				error_string = "";
 			} else if (result->argc == 4) {
-				error_code = strdup(result->argv[2]);
+				error_code = result->argv[2];
 				error_string = result->argv[3];
 			} else {
 				EXCEPT("Bad %s Result",command);
@@ -6753,7 +6834,7 @@ int GahpClient::ec2_vm_vm_keypair_all( std::string service_url,
 			} else {
 				// get the status info
 				for (int i=2; i<result->argc; i++) {
-					returnStatus.append( strdup(result->argv[i]) );
+					returnStatus.append( result->argv[i] );
 				}
 				returnStatus.rewind();
 			}
@@ -6782,7 +6863,7 @@ int GahpClient::ec2_associate_address(std::string service_url,
                                       std::string instance_id, 
                                       std::string elastic_ip,
                                       StringList & returnStatus,
-                                      char* & error_code )
+                                      std::string & error_code )
 {
 
     static const char* command = "EC2_VM_ASSOCIATE_ADDRESS";
@@ -6846,7 +6927,7 @@ int GahpClient::ec2_associate_address(std::string service_url,
             if (result->argc == 2) {
                 error_string = "";
             } else if (result->argc == 4) {
-                error_code = strdup(result->argv[2]);
+                error_code = result->argv[2];
                 error_string = result->argv[3];
             } else {
                 EXCEPT("Bad %s Result",command);
@@ -6859,7 +6940,7 @@ int GahpClient::ec2_associate_address(std::string service_url,
             } else {
                 // get the status info
                 for (int i=2; i<result->argc; i++) {
-                    returnStatus.append( strdup(result->argv[i]) );
+                    returnStatus.append( result->argv[i] );
                 }
                 returnStatus.rewind();
             }
@@ -6881,7 +6962,7 @@ GahpClient::ec2_create_tags(std::string service_url,
 							std::string instance_id, 
 							StringList &tags,
 							StringList &returnStatus,
-							char* &error_code)
+							std::string &error_code)
 {
     static const char* command = "EC2_VM_CREATE_TAGS";
 
@@ -6953,7 +7034,7 @@ GahpClient::ec2_create_tags(std::string service_url,
             if (result->argc == 2) {
                 error_string = "";
             } else if (result->argc == 4) {
-                error_code = strdup(result->argv[2]);
+                error_code = result->argv[2];
                 error_string = result->argv[3];
             } else {
                 EXCEPT("Bad %s Result",command);
@@ -6964,7 +7045,7 @@ GahpClient::ec2_create_tags(std::string service_url,
             } else {
                 // get the status info
                 for (int i=2; i<result->argc; i++) {
-                    returnStatus.append(strdup(result->argv[i]));
+                    returnStatus.append(result->argv[i]);
                 }
                 returnStatus.rewind();
             }
@@ -6981,7 +7062,7 @@ int GahpClient::ec2_attach_volume(std::string service_url,
 							  std::string instance_id, 
                               std::string device_id,
                               StringList & returnStatus,
-                              char* & error_code )
+                              std::string & error_code )
 {
     static const char* command = "EC_VM_ATTACH_VOLUME";
 
@@ -7046,7 +7127,7 @@ int GahpClient::ec2_attach_volume(std::string service_url,
             if (result->argc == 2) {
                 error_string = "";
             } else if (result->argc == 4) {
-                error_code = strdup(result->argv[2]);
+                error_code = result->argv[2];
                 error_string = result->argv[3];
             } else {
                 EXCEPT("Bad %s Result",command);
@@ -7059,7 +7140,7 @@ int GahpClient::ec2_attach_volume(std::string service_url,
             } else {
                 // get the status info
                 for (int i=2; i<result->argc; i++) {
-                    returnStatus.append( strdup(result->argv[i]) );
+                    returnStatus.append( result->argv[i] );
                 }
                 returnStatus.rewind();
             }
@@ -7090,8 +7171,8 @@ int GahpClient::ec2_spot_start( std::string service_url,
                                 std::string vpc_ip,
                                 std::string client_token,
                                 StringList & groupnames,
-                                char * & request_id,
-                                char * & error_code )
+                                std::string & request_id,
+                                std::string & error_code )
 {
     static const char * command = "EC2_VM_START_SPOT";
     
@@ -7131,11 +7212,12 @@ int GahpClient::ec2_spot_start( std::string service_url,
     requestLine += escapeGahpString( vpc_subnet ) + space;
     requestLine += escapeGahpString( vpc_ip ) + space;
     requestLine += escapeGahpString( client_token );
-    
-    const char * groupName = NULL;
-    for( groupnames.rewind(); groupName != NULL; groupName = groupnames.next() ) {
-        requestLine += space + groupName;
+
+    char * groups = groupnames.print_to_delimed_string( " " );
+    if( groups != NULL ) {
+        requestLine += space + groups;
     }
+    free( groups );
     
     const char * arguments = requestLine.c_str();
     if( ! is_pending( command, arguments ) ) {
@@ -7157,12 +7239,12 @@ int GahpClient::ec2_spot_start( std::string service_url,
 
             case 3:
                 rc = atoi( result->argv[1] );
-                request_id = strdup( result->argv[2] );
+                request_id = result->argv[2];
                 break;
 
             case 4:
                 rc = atoi( result->argv[1] );
-                error_code = strdup( result->argv[2] );
+                error_code = result->argv[2];
                 error_string = result->argv[3];
                 break;
 
@@ -7186,7 +7268,7 @@ int GahpClient::ec2_spot_stop(  std::string service_url,
                                 std::string publickeyfile,
                                 std::string privatekeyfile,
                                 std::string request_id,
-                                char * & error_code )
+                                std::string & error_code )
 {
     static const char * command = "EC2_VM_STOP_SPOT";
     
@@ -7233,7 +7315,7 @@ int GahpClient::ec2_spot_stop(  std::string service_url,
             
             case 4:
                 if( rc != 0 ) {
-                    error_code = strdup( result->argv[2] );
+                    error_code = result->argv[2];
                     error_string = result->argv[3];
                 } else {
                     EXCEPT( "Bad %s result", command );
@@ -7262,7 +7344,7 @@ int GahpClient::ec2_spot_status(    std::string service_url,
                                     std::string privatekeyfile,
                                     std::string request_id,
                                     StringList & returnStatus,
-                                    char * & error_code )
+                                    std::string & error_code )
 {
     static const char * command = "EC2_VM_STATUS_SPOT";
 
@@ -7306,14 +7388,14 @@ int GahpClient::ec2_spot_status(    std::string service_url,
             if( rc == 1 ) { error_string = ""; }
         } else if( result->argc == 4 ) {
             if( rc != 1 ) { EXCEPT( "Bad %s result", command ); }
-            error_code = strdup( result->argv[2] );
+            error_code = result->argv[2];
             error_string = result->argv[3];
         } else if( (result->argc - 2) % 5 == 0 ) {
             for( int i = 2; i < result->argc; ++i ) {
                 if( strcmp( result->argv[i], NULLSTRING ) ) {
-                    returnStatus.append( strdup( result->argv[i] ) );
+                    returnStatus.append( result->argv[i] );
                 } else {
-                    returnStatus.append( strdup( "" ) );
+                    returnStatus.append( "" );
                 }
             }
         } else {
@@ -7336,7 +7418,7 @@ int GahpClient::ec2_spot_status_all(    std::string service_url,
                                         std::string publickeyfile,
                                         std::string privatekeyfile,
                                         StringList & returnStatus,
-                                        char * & error_code )
+                                        std::string & error_code )
 {
     static const char * command = "EC2_VM_STATUS_ALL_SPOT";
 
@@ -7378,14 +7460,14 @@ int GahpClient::ec2_spot_status_all(    std::string service_url,
             if( rc == 1 ) { error_string = ""; }
         } else if( result->argc == 4 ) {
             if( rc != 1 ) { EXCEPT( "Bad %s result", command ); }
-            error_code = strdup( result->argv[2] );
+            error_code = result->argv[2];
             error_string = result->argv[3];
         } else if( (result->argc - 2) % 5 == 0 ) {
             for( int i = 2; i < result->argc; ++i ) {
                 if( strcmp( result->argv[i], NULLSTRING ) ) {
-                    returnStatus.append( strdup( result->argv[i] ) );
+                    returnStatus.append( result->argv[i] );
                 } else {
-                    returnStatus.append( strdup( "" ) );
+                    returnStatus.append( "" );
                 }
             }
         } else {

@@ -33,7 +33,7 @@
 
 #define DEFAULT_LOG_FILE "./axis2.log"
 #define DEFAULT_REPO_FILE "../axis2.xml"
-#define DEFAULT_PORT 9090
+#define DEFAULT_PORT 39000
 
 // NOTE: these types are not in the public
 // Axis2/C API via headers but we need them;

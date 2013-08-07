@@ -151,6 +151,9 @@ registerAllAmazonCommands(void)
 	 registerAmazonGahpCommand(AMAZON_COMMAND_VM_CREATE_TAGS, 
             AmazonCreateTags::ioCheck, AmazonCreateTags::workerFunction);
 
+	 registerAmazonGahpCommand(AMAZON_COMMAND_VM_SERVER_TYPE, 
+            AmazonVMServerType::ioCheck, AmazonVMServerType::workerFunction);
+
     //registerAmazonGahpCommand(AMAZON_COMMAND_VM_RELEASE_ADDRESS, 
     //        AmazonReleaseAddress::ioCheck, AmazonReleaseAddress::workerFunction);
 

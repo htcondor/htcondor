@@ -1,0 +1,238 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+##
+## This test check availability and usage contol of the new
+## local, resources in both a static configuration and in psolts.
+## It is model after what we did to test concurrency limits
+## as we are checking the same sorts of things. bt
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+
+my $ClusterId = 0;
+my $expect_return = 0;
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	WANT_SUSPEND = FALSE
+	KILLING_TIMEOUT = 1
+	MachineMaxVacateTime = 5
+	NEGOTIATION_INTERVAL = 10
+	KILL = FALSE
+	START = TRUE
+	TOOL_DEBUG = D_FULLDEBUG
+	ALL_DEBUG = D_ALWAYS
+	NUM_CPUS = 4
+	STARTD_SLOT_ATTRS = activity,state,memory
+	SLOT_TYPE_1 = cpus=25%,mem=500
+	SLOT_TYPE_1_PATITIONABLE = FALSE
+	NUM_SLOTS_TYPE_1 = 1
+	SLOT_TYPE_2 = cpus=25%,mem=200
+	SLOT_TYPE_2_PATITIONABLE = FALSE
+	NUM_SLOTS_TYPE_2 = 1
+	SLOT_TYPE_3 = cpus=25%,mem=700
+	SLOT_TYPE_3_PATITIONABLE = FALSE
+	NUM_SLOTS_TYPE_3 = 1
+	SLOT_TYPE_4 = cpus=25%,mem=300
+	SLOT_TYPE_4_PATITIONABLE = FALSE
+	NUM_SLOTS_TYPE_4 = 1
+';
+
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"startdslotattrs");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "startdslotattrs",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+my $on_abort = sub {
+	CondorTest::debug("Abort from removing trap signal job.\n",1);
+};
+
+my %startdslotattrs = ();
+my $return = "";
+my $executecount = 0;
+my $namelist = "";
+my $result = 1;
+my $test_name = "basic_startd_slot_atttrs";
+my $on_execute = sub {
+	print "********************************** OnExecute *****************************\n";
+	$namelist = GetSlotNames(3);
+	print "SlotNames:<$namelist>\n";
+	GetStartdSlotAttrs($namelist);
+	system("condor_status ");
+	#system("condor_status -l");
+	system("condor_rm $ClusterId");
+};
+
+my $on_evictedwithoutcheckpoint = sub {
+	print "Evicted Without Checkpoint\n";
+};
+
+my $GetClusterId = sub {
+	my $cid = shift;
+	$ClusterId = $cid;
+	print "Resquestd Cluster Got $ClusterId\n";
+	##########################
+	#
+	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
+	# position which is always an undefined variable EXCEPT when it is a call back routine 
+	# to pass out the cluster Id.
+	#
+	##########################
+	#runcmd("condor_q",{emit_output => 1});
+};
+
+#Do a job before setting tesing exit codes
+print "First test basic job\n";
+$result = SimpleJob::RunCheck(); # jobid 1
+
+my $catchlog  = "catchallsignals.out";
+system("rm -f $catchlog");
+
+$expect_return = 0;
+$result = SimpleJob::RunCheck(
+	test_name => "$test_name",
+	on_abort => $on_abort,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	on_execute => $on_execute,
+	timeout => 120,
+	queue_sz => 1,
+	duration => $expect_return,
+	GetClusterId => $GetClusterId,
+);
+print "******************** Test for startd slot attrs/publishing\n";
+if($result == 1) {
+	print "ok\n\n\n";
+} else {
+	print "bad\n\n\n";
+}
+
+
+CondorTest::EndTest();
+
+sub GetSlotNames
+{
+	my $target = shift;
+	my $line = "";
+	my $names = "";
+	my $count = 0;
+
+	my @name = `condor_status -format "%s\n" name`;
+
+	foreach my $try (@name) {
+		chomp($try);
+		if($count == 0) {
+			$names = $try;
+		} else {
+			$names = $names . ",$try"
+		}
+		$count += 1;
+		#print "$names\n";
+		if($count == $target) {
+			last;
+		}
+	}
+	return($names);
+}
+
+# stash expected atrributs into hash and expect the counts of all
+# to match count of slots passed  %stardslotattrs
+
+sub GetStartdSlotAttrs
+{
+	my $names = shift;
+	my @namearray = split /,/, $names;
+	my $namecount = @namearray;
+	my $count = 1;
+	my $measuredslot = "";
+	my $measuredslotmem = "";
+	my $memorydescription = "";
+	my @fullslot1 = ();
+	my $trycount = 0;
+
+	foreach my $slot (@namearray) {
+		$trycount = 0;
+		if($count == 1) {
+			$count += 1;
+			if($slot =~ /(.*?)@.*/) {
+				print "Found slot name: $1\n";
+				$measuredslot = $1;
+				$memorydescription = "$measuredslot" . "_memory";
+			}
+			@fullslot1 = `condor_status -debug -l $slot | grep Memory | sort`;
+			foreach my $thing (@fullslot1) {
+				chomp($thing);
+				#print "$slot: --- $thing ---\n";
+				if($thing =~ /^Memory\s+=\s+(\d+).*$/) {
+					print "$slot has $1 memory\n";
+					$measuredslotmem = $1;
+				}
+			}
+		}
+		my @results = `condor_status -debug -l $slot | grep slot | sort`;
+		my $statusres = @results;
+		print "condor_status for slot <$slot> returned <$statusres> lines\n";
+		foreach my $item (@results) {
+			chomp($item);
+			print "$slot: $item\n";
+			if($item =~ /^$memorydescription\s+=\s+(\d+)/) {
+				if($1 ne $measuredslotmem) {
+					die "Advertised memory for $measuredslot is $1 and should be $measuredslotmem\n";
+				}
+			}
+			if($item =~ /(slot\d_memory)\s.*/) {
+				#print "*************** $1 *********************\n";
+				if(exists $stardslotattrs{$1}) {
+					$stardslotattrs{$1} += 1;
+				} else {
+					$stardslotattrs{$1} = 1;
+				}
+			} elsif($item =~ /(slot\d_state)\s.*/) {
+				#print "*************** $1 *********************\n";
+				if(exists $stardslotattrs{$1}) {
+					$stardslotattrs{$1} += 1;
+				} else {
+					$stardslotattrs{$1} = 1;
+				}
+			} elsif($item =~ /(slot\d_activity)\s.*/) {
+				#print "*************** $1 *********************\n";
+				if(exists $stardslotattrs{$1}) {
+					$stardslotattrs{$1} += 1;
+				} else {
+					$stardslotattrs{$1} = 1;
+				}
+			}
+
+		}
+	}
+	foreach my $key(sort keys %stardslotattrs) {
+		if($stardslotattrs{$key} != $namecount) {
+			die "Ad<$key> has $stardslotattrs{$key} and should be $namecount\n";
+		}
+	}
+}

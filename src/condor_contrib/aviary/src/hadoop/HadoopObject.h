@@ -73,8 +73,9 @@ typedef struct href
 {
     string id;          ///< ClusterId
     string ipcid;       ///< ipc url
+    string http;        /// http url
     tHadoopType type;   ///< input type
-    string tarball;      ///< input tarball
+    string tarball;     ///< input tarball
 }tHadoopRef;
 
 ///< Initialization structure for starting a hadoop job
@@ -85,6 +86,7 @@ typedef struct hinit
     string newcluster;   ///< output new clusterid
     string owner;        ///< owner field
     string description;  ///< description field
+    bool unmanaged;      ///< unmanaged placeholder.
 }tHadoopInit;
 
 typedef struct hstatus
@@ -108,6 +110,10 @@ const char * const ATTR_TASK_TRACKER = "TaskTracker";
 const char * const ATTR_HADOOP_BIN_VERSION = "HadoopVersion";
 const char * const ATTR_HTTP_ADDRESS = "HTTPAddress";
 const char * const ATTR_HADOOP_DESCRIPTION = "JobDescription";
+const char * const ATTR_HADOOP_REQUEST_NAMENODE = "RequestNameNode";
+const char * const ATTR_HADOOP_REQUEST_DATANODE = "RequestDataNode";
+const char * const ATTR_HADOOP_REQUEST_JOBTRACKER = "RequestJobTracker";
+const char * const ATTR_HADOOP_REQUEST_TASKTRACKER = "RequestTaskTracker";
 
 const char * const HADOOP_NAMENODE_REQUIREMENTS="NAME_NODE_REQUIREMENTS";
 const char * const HADOOP_DATANODE_REQUIREMENTS="DATA_NODE_REQUIREMENTS";

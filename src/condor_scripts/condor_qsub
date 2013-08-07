@@ -314,6 +314,11 @@ parse_args() {
 	command_line_flags="-o A:,a:,b:,c:,d:,e:,f:,h,i:,I,j:,l:,m:,M:,N:,o:,p:,q:,r:,S:,t:,v:,V,W:,z --long condor-keep-files,cwd,help,hold_jid:,print,shell:,test,verbose,version,wd:"
 	CLOPTS=`getopt -a $command_line_flags -n "$scriptname" -- "$@"`
 
+	if [ $? != 0 ] ; then
+	  echo "Terminating..." >&2
+	  exit 1
+	fi
+
 	# If we have #PBS commands or #SGE commands
 	# Parse the file for PBS or SGE commands
 	if [ "$1" = "-f" ]; then
@@ -347,12 +352,6 @@ parse_args() {
 		CLOPTS=`getopt -a $command_line_flags -n "$scriptname" -- "$@"`
 	fi
 		
-
-	if [ $? != 0 ] ; then
-	  echo "Terminating..." >&2
-	  exit 1
-	fi
-
 	# Note the quotes around `$CLOPTS': they are essential!
 	eval set -- "$CLOPTS"
 
@@ -839,10 +838,7 @@ if [ -n "$resource_list" ]; then
 				fi;;
 #				printf "requirements = \"Machine == $host_value\"\n" >> $submit_file;;
 			mem=*) mem_value=${resource_type#*=}
-<<<<<<< Updated upstream
 				mem_value="echo $mem_value | tr a-z A-Z"
-=======
->>>>>>> Stashed changes
 				printf "request_memory = $mem_value\n" >> $submit_file;;
 #			nice=*) nice_value=(((${resource_type#*=})*(-1))) #issues with *-1
 #				printf "JobPriority = $nice_value\n" >> $submit_file;;

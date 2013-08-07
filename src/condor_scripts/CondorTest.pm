@@ -315,13 +315,15 @@ sub RegisterExecute
 
     $test{$handle}{"RegisterExecute"} = $function_ref;
 }
-sub RegisterEvicted
-{
-    my $handle = shift || croak "missing handle argument";
-    my $function_ref = shift || croak "evict: missing function reference argument";
-
-    $test{$handle}{"RegisterEvicted"} = $function_ref;
-}
+#	Use a specific type of eviction only, plain one is gone
+#
+#sub RegisterEvicted
+#{
+    #my $handle = shift || croak "missing handle argument";
+    #my $function_ref = shift || croak "evict: missing function reference argument";
+#
+    #$test{$handle}{"RegisterEvicted"} = $function_ref;
+#}
 sub RegisterEvictedWithCheckpoint
 {
     my $handle = shift || croak "missing handle argument";
@@ -385,6 +387,13 @@ sub RegisterShadow
 
     $test{$handle}{"RegisterShadow"} = $function_ref;
 }
+sub RegisterImageUpdated
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterImageUpdated"} = $function_ref;
+}
 sub RegisterWantError
 {
     my $handle = shift || croak "missing handle argument";
@@ -405,6 +414,20 @@ sub RegisterRelease
     my $function_ref = shift || croak "missing function reference argument";
 
     $test{$handle}{"RegisterRelease"} = $function_ref;
+}
+sub RegisterSuspended
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterSuspended"} = $function_ref;
+}
+sub RegisterUnsuspended
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterUnsuspended"} = $function_ref;
 }
 sub RegisterDisconnected
 {
@@ -679,7 +702,7 @@ sub DoTest
 	if( $wants_checkpoint )
 	{
 		Condor::RegisterExecute( \&ForceVacate );
-		Condor::RegisterEvictedWithCheckpoint( sub { $checkpoints++ } );
+		#Condor::RegisterEvictedWithCheckpoint( sub { $checkpoints++ } );
 	} else {
 		if(defined $test{$handle}{"RegisterExecute"}) {
 			Condor::RegisterExecute($test{$handle}{"RegisterExecute"});
@@ -742,42 +765,60 @@ sub DoTest
 		# note 1/2/09 bt
 		# any exits cause monitor to never return allowing us
 		# to kill personal condor wrapping the test :-(
+# July 26, 2013
+#
+# Major architecture change as we used more callbacks for testing
+# I stumbled on value in the test which were to be changed by the callbacks were not being
+# changed. What was happening in DoTest was that we would fork and the child was
+# running monitor and that callbacks were changing the variables in the child's copy.
+# The process that is the test calling DoTest was simply waiting for the child to die
+# so it could clean up. Now The test switches to be doing the monitoring and the 
+# callbacks switch it back up to the test code for a bit. The monitor and the 
+# test had always been lock-steped anyways so getting rid of the child
+# has had little change except that call backs can be fully functional now.
 		
-		$monitorpid = fork();
-		if($monitorpid == 0) {
-			# child does monitor
-    		$monitorret = Condor::Monitor();
-
-			debug( "Monitor did return on its own status<<<$monitorret>>>\n",4);
-    		die "$handle: FAILURE (job never checkpointed)\n"
-			if $wants_checkpoint && $checkpoints < 1;
-
-			if(  $monitorret == 1 ) {
-				debug( "child happy to exit 0\n",4);
-				exit(0);
-			} else {
-				debug( "child not happy to exit 1\n",4);
-				exit(1);
-			}
+    	$monitorret = Condor::Monitor();
+		if(  $monitorret == 1 ) {
+			debug( "Monitor happy to exit 0\n",4);
 		} else {
-			# parent cleans up
-			$waitpid = waitpid($monitorpid, 0);
-			if($waitpid == -1) {
-				debug( "No such process <<$monitorpid>>\n",4);
-			} else {
-				$retval = $?;
-				debug( "Child status was <<$retval>>\n",4);
-				if( WIFEXITED( $retval ) && WEXITSTATUS( $retval ) == 0 )
-				{
-					debug( "Monitor done and status good!\n",4);
-					$retval = 1;
-				} else {
-					$status = WEXITSTATUS( $retval );
-					debug( "Monitor done and status bad<<$status>>!\n",4);
-					$retval = 0;
-				}
-			}
+			debug( "Monitor not happy to exit 1\n",4);
 		}
+		$retval = $monitorret;
+# 		$monitorpid = fork();
+# 		if($monitorpid == 0) {
+# 			# child does monitor
+#     		$monitorret = Condor::Monitor();
+
+# 			debug( "Monitor did return on its own status<<<$monitorret>>>\n",4);
+#     		die "$handle: FAILURE (job never checkpointed)\n"
+# 			if $wants_checkpoint && $checkpoints < 1;
+
+# 			if(  $monitorret == 1 ) {
+# 				debug( "child happy to exit 0\n",4);
+# 				exit(0);
+# 			} else {
+# 				debug( "child not happy to exit 1\n",4);
+# 				exit(1);
+# 			}
+# 		} else {
+# 			# parent cleans up
+# 			$waitpid = waitpid($monitorpid, 0);
+# 			if($waitpid == -1) {
+# 				debug( "No such process <<$monitorpid>>\n",4);
+# 			} else {
+# 				$retval = $?;
+# 				debug( "Child status was <<$retval>>\n",4);
+# 				if( WIFEXITED( $retval ) && WEXITSTATUS( $retval ) == 0 )
+# 				{
+# 					debug( "Monitor done and status good!\n",4);
+# 					$retval = 1;
+# 				} else {
+# 					$status = WEXITSTATUS( $retval );
+# 					debug( "Monitor done and status bad<<$status>>!\n",4);
+# 					$retval = 0;
+# 				}
+# 			}
+# 		}
 	}
 
 	debug( "************** condor_monitor back ************************ \n",4);
@@ -941,6 +982,18 @@ sub CheckRegistrations
     {
 	Condor::RegisterShadow( $test{$handle}{"RegisterShadow"} );
     }
+    else
+    {
+	Condor::RegisterShadow( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (got unexpected shadow exceptions)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterImageUpdated"} )
+    {
+	Condor::RegisterImageUpdated( $test{$handle}{"RegisterImageUpdated"} );
+    }
 
     if( defined $test{$handle}{"RegisterWantError"} )
     {
@@ -1012,19 +1065,115 @@ sub CheckRegistrations
 	} );
     }
 
+    if( defined $test{$handle}{"RegisterSuspended"} )
+    {
+	Condor::RegisterSuspended( $test{$handle}{"RegisterSuspended"} );
+    }
+    else
+    {
+	Condor::RegisterSuspended( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (Suspension not expected)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterUnsuspended"} )
+    {
+	Condor::RegisterUnsuspended( $test{$handle}{"RegisterUnsuspended"} );
+    }
+    else
+    {
+	Condor::RegisterUnsuspended( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (Unsuspension not expected)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterDisconnected"} )
+    {
+	Condor::RegisterDisconnected( $test{$handle}{"RegisterDisconnected"} );
+    }
+    else
+    {
+	Condor::RegisterDisconnected( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (Disconnect not expected)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterReconnected"} )
+    {
+	Condor::RegisterReconnected( $test{$handle}{"RegisterReconnected"} );
+    }
+    else
+    {
+	Condor::RegisterReconnected( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (reconnect not expected)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterReconnectFailed"} )
+    {
+	Condor::RegisterReconnectFailed( $test{$handle}{"RegisterReconnectFailed"} );
+    }
+    else
+    {
+	Condor::RegisterReconnectFailed( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (reconnect failed)\n";
+	} );
+    }
+
     # if we wanted to know about requeues.....
     if( defined $test{$handle}{"RegisterEvictedWithRequeue"} )
     {
         Condor::RegisterEvictedWithRequeue( $test{$handle}{"RegisterEvictedWithRequeue"} );
-    } 
+    } else { 
+		Condor::RegisterEvictedWithRequeue( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (Unexpected Eviction with requeue)\n";
+	} );
+	}
 
-    # if evicted, call condor_resched so job runs again quickly
-    if( !defined $test{$handle}{"RegisterEvicted"} )
+    # if we wanted to know about With Checkpoints .....
+    if( defined $test{$handle}{"RegisterEvictedWithCheckpoint"} )
     {
-        Condor::RegisterEvicted( sub { sleep 5; Condor::Reschedule } );
-    } else {
-	Condor::RegisterEvicted( $test{$handle}{"RegisterEvicted"} );
-    }
+        Condor::RegisterEvictedWithCheckpoint( $test{$handle}{"RegisterEvictedWithCheckpoint"} );
+    } else { 
+		Condor::RegisterEvictedWithCheckpoint( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (Unexpected Eviction with checkpoint)\n";
+	} );
+	}
+
+    # if we wanted to know about Without checkpoints.....
+    if( defined $test{$handle}{"RegisterEvictedWithoutCheckpoint"} )
+    {
+        Condor::RegisterEvictedWithoutCheckpoint( $test{$handle}{"RegisterEvictedWithoutCheckpoint"} );
+    } else { 
+		Condor::RegisterEvictedWithoutCheckpoint( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (Unexpected Eviction without checkpoint)\n";
+	} );
+	}
+
+	# Use specific eviction bt 6/18/13
+	#if(defined $test{$handle}{"RegisterEvicted"} ) {
+		#Condor::RegisterEvicted( $test{$handle}{"RegisterEvicted"} );
+	#} else {
+		#Condor::RegisterEvicted( sub {
+	    #my %info = @_;
+	    #die "$handle: FAILURE (Unexpected Eviction type)\n";
+	#} );
+	#}
+    # if evicted, call condor_resched so job runs again quickly
+    #if( !defined $test{$handle}{"RegisterEvicted"} )
+    #{
+        #Condor::RegisterEvicted( sub { sleep 5; Condor::Reschedule } );
+    #} else {
+	#Condor::RegisterEvicted( $test{$handle}{"RegisterEvicted"} );
+    #}
 
     if( defined $test{$handle}{"RegisterTimed"} )
     {
@@ -1327,7 +1476,7 @@ sub runCondorTool
 		debug( "Try command <$cmd>\n",4);
 		#open(PULL, "_condor_TOOL_TIMEOUT_MULTIPLIER=4 $cmd 2>$catch |");
 
-		$hashref = runcmd("_condor_TOOL_TIMEOUT_MULTIPLIER=4 $cmd", $options);
+		$hashref = runcmd("_condor_TOOL_TIMEOUT_MULTIPLIER=10 $cmd", $options);
 		my @output =  @{${$hashref}{"stdout"}};
 		my @error =  @{${$hashref}{"stderr"}};
 
@@ -1736,6 +1885,8 @@ sub SearchCondorLogMultiple
 
 	my $count = 0;
 	my $begin = 0;
+	my $foundanything = 0;
+	#my $tolerance = 5;
 	my $done = 0;
 	while($found < $goal) {
        	CondorTest::debug("Searching Try $tried\n",2);
@@ -1771,6 +1922,7 @@ sub SearchCondorLogMultiple
        		} elsif( $_ =~ /$regexp/) {
            		CondorTest::debug("FOUND IT! $_\n",2);
 				$found += 1;
+				$foundanything += 1;
 				#print "instances $instances found $found goal $goal\n";
 				if((defined $findcallback) and (!(defined $findafter)) and 
 					 ($found == $goal)) {
@@ -1802,12 +1954,24 @@ sub SearchCondorLogMultiple
 			last;
 		}
 		$tried += 1;
-		if($tried >= $timeout) {
-			if(defined $findcallback) {
-				&$findcallback("HitRetryLimit");
-			}
-			last;
-		}
+		#if($tried >= $timeout) {
+			#if($tolerance == 0) {
+				#CondorTest::debug("SearchCondorLogMultiple: About to fail from timeout!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",1);
+				#if(defined $findcallback) {
+					#&$findcallback("HitRetryLimit");
+				#}
+				#last;
+			#} else {
+				#if($foundanything > 0) {
+					#CondorTest::debug("SearchCondorLogMultiple: Using builtin tolerance\n",1);
+					#$tolerance -= 1;
+					#$tried = 1;
+				#} else {
+					#$tolerance = 0;
+					#$tried -= 2;
+				#}
+			#}
+		#}
 	}
 	if($found < $goal) {
 		return(0);
@@ -2571,6 +2735,60 @@ sub CreateLocalConfig
     runcmd("cat $name");
     close(FI);
     return($name);
+}
+
+sub VerifyNoJobsInState
+{
+	my $state = shift;
+	my $number = shift;
+    my $maxtries = shift;
+    my $done = 0;
+    my $count  = 0;
+    my @queue = ();
+    my $jobsrunning = 0;
+	my %jobsstatus = ();;
+
+
+    while( $done != 1)
+    {
+        if($count > $maxtries) {
+			return($jobsstatus{$state});
+        }
+        $count += 1;
+        @queue = `condor_q`;
+        foreach my $line (@queue) {
+            chomp($line);
+            if($line =~ /^(\d+)\s+jobs;\s+(\d+)\s+completed,\s+(\d+)\s+removed,\s+(\d+)\s+idle,\s+(\d+)\s+running,\s+(\d+)\s+held,\s+(\d+)\s+suspended.*$/) {
+				#print "$line\n";
+				$jobsstatus{jobs} = $1;
+				$jobsstatus{completed} = $2;
+				$jobsstatus{removed} = $3;
+				$jobsstatus{idle} = $4;
+				$jobsstatus{running} = $5;
+				$jobsstatus{held} = $6;
+				$jobsstatus{suspended} = $7;
+				if($jobsstatus{$state} == $number){
+                    $done = 1;
+					print "$number $state\n";
+					return($number)
+				}
+            }
+        }
+        if($done == 0) {
+            print "Waiting for $number $state\n";
+            sleep 1;
+        }
+    }
+}
+
+sub AddCheckpoint
+{
+	$checkpoints++;
+}
+
+sub GetCheckpoints
+{
+	return($checkpoints);
 }
 
 1;

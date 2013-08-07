@@ -220,6 +220,7 @@ if( NOT WINDOWS)
 	check_include_files("procfs.h" HAVE_PROCFS_H)
 	check_include_files("sys/procfs.h" HAVE_SYS_PROCFS_H)
 
+
 	check_type_exists("struct ifconf" "sys/socket.h;net/if.h" HAVE_STRUCT_IFCONF)
 	check_type_exists("struct ifreq" "sys/socket.h;net/if.h" HAVE_STRUCT_IFREQ)
 	check_struct_has_member("struct ifreq" ifr_hwaddr "sys/socket.h;net/if.h" HAVE_STRUCT_IFREQ_IFR_HWADDR)
@@ -447,6 +448,7 @@ option(WANT_FULL_DEPLOYMENT "Install condors deployment scripts, libs, and inclu
 option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
+option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
 
 #####################################
 # PROPER option
@@ -564,7 +566,7 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1 )
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/postgresql/8.2.3-p1)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
@@ -584,6 +586,10 @@ if (NOT WINDOWS)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.0.6)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/cream/1.12.1_14)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/wso2/2.1.0)
+
+        if (LINUX)
+          option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
+        endif(LINUX)
 
 	# the following logic if for standard universe *only*
 	if (LINUX AND NOT CLIPPED AND GLIBC_VERSION AND NOT PROPER)
