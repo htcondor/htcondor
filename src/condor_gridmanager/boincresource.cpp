@@ -284,6 +284,7 @@ void BoincResource::UnregisterJob( BaseJob *base_job )
 			}
 			delete (*batch_itr);
 			m_batches.erase( batch_itr );
+			break;
 		}
 	}
 }
@@ -316,6 +317,7 @@ bool BoincResource::JoinBatch( BoincJob *job, std::string &batch_name,
 			batch->m_batch_name = batch_name;
 			batch->m_lease_time = 0;
 			batch->m_submit_status = BatchMaybeSubmitted;
+			m_batches.push_back( batch );
 		}
 
 		// TODO update batch->m_lease_time based in job's lease expiration
@@ -351,6 +353,7 @@ bool BoincResource::JoinBatch( BoincJob *job, std::string &batch_name,
 					   job->procID.cluster, (int)time(NULL) );
 			batch->m_lease_time = 0;
 			batch->m_submit_status = BatchUnsubmitted;
+			m_batches.push_back( batch );
 		}
 
 		batch->m_last_insert = time(NULL);
@@ -429,7 +432,7 @@ void BoincResource::DoPing( time_t& ping_delay, bool& ping_complete,
 {
 	int rc;
 
-	if ( gahp->isInitialized() == false ) {
+	if ( gahp->isStarted() == false ) {
 		dprintf( D_ALWAYS,"gahp server not up yet, delaying ping\n" );
 		ping_delay = 5;
 		return;
@@ -455,7 +458,8 @@ BoincResource::BatchStatusResult BoincResource::StartBatchStatus()
 {
 	for ( std::list<BoincBatch*>::iterator itr = m_batches.begin();
 		  itr != m_batches.end(); itr++ ) {
-		if ( (*itr)->m_submit_status == BatchSubmitted ) {
+		if ( (*itr)->m_submit_status == BatchSubmitted ||
+			 (*itr)->m_submit_status == BatchMaybeSubmitted ) {
 			m_statusBatches.append( (*itr)->m_batch_name.c_str() );
 		}
 	}
@@ -465,6 +469,10 @@ BoincResource::BatchStatusResult BoincResource::StartBatchStatus()
 
 BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 {
+	if ( m_statusBatches.isEmpty() ) {
+		return BSR_DONE;
+	}
+
 	GahpClient::BoincQueryResults results;
 	int rc = m_statusGahp->boinc_query_batches( m_statusBatches, results );
 	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -526,7 +534,7 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 				continue;
 			}
 			BaseJob *base_job;
-			if ( BaseJob::JobsByProcId.lookup( proc_id, base_job ) != 0 ) {
+			if ( BaseJob::JobsByProcId.lookup( proc_id, base_job ) == 0 ) {
 				BoincJob *boinc_job = dynamic_cast<BoincJob*>( base_job );
 				ASSERT( boinc_job != NULL );
 				boinc_job->NewBoincState( j->second.c_str() );

@@ -369,7 +369,7 @@ void BoincJob::doEvaluateState()
 					executeLogged = true;
 				}
 
-				std::string name = remoteJobName;
+				std::string name = remoteBatchName;
 				std::string err;
 				bool rv = myResource->JoinBatch( this, name, err );
 				ASSERT( rv == true );
@@ -896,6 +896,9 @@ void BoincJob::GetInputFilenames( vector<pair<std::string, std::string> > &files
 	std::string tmp_str;
 	const char *filename;
 
+	std::string iwd = "/";
+	jobAd->LookupString( ATTR_JOB_IWD, iwd );
+
 	files.clear();
 
 	jobAd->LookupString( ATTR_TRANSFER_INPUT_FILES, tmp_str );
@@ -910,6 +913,11 @@ void BoincJob::GetInputFilenames( vector<pair<std::string, std::string> > &files
 
 	strlist.rewind();
 	while ( (filename = strlist.next()) != NULL ) {
-		files.push_back( pair<std::string, std::string>( filename, condor_basename(filename) ) );
+		if ( filename[0] == '/' ) {
+			tmp_str = filename;
+		} else {
+			formatstr( tmp_str, "%s/%s", iwd.c_str(), filename );
+		}
+		files.push_back( pair<std::string, std::string>( tmp_str, condor_basename(filename) ) );
 	}
 }

@@ -8154,7 +8154,7 @@ int GahpClient::boinc_submit( const char *batch_name,
 		ArgList *args_list = (*itr)->GetArgs();
 		char **args = args_list->GetStringArray();
 		int arg_cnt = args_list->Count();
-		formatstr_cat( reqline, " %d", arg_cnt );
+		formatstr_cat( reqline, " %s %d", (*itr)->remoteJobName, arg_cnt );
 		for ( int i = 0; i < arg_cnt; i++ ) {
 			reqline += " ";
 			reqline += escapeGahpString( args[i] );
@@ -8164,7 +8164,7 @@ int GahpClient::boinc_submit( const char *batch_name,
 
 		vector<pair<string, string> > inputs;
 		(*itr)->GetInputFilenames( inputs );
-		formatstr_cat( reqline, " %d", inputs.size() );
+		formatstr_cat( reqline, " %d", (int)inputs.size() );
 		for ( vector<pair<string, string> >::iterator jtr = inputs.begin();
 				  jtr != inputs.end(); jtr++ ) {
 			reqline += " ";
@@ -8231,6 +8231,7 @@ int GahpClient::boinc_query_batches( StringList &batch_names,
 
 		// Generate request line
 	std::string reqline;
+	formatstr( reqline, "%d", batch_names.number() );
 	const char *name;
 	batch_names.rewind();
 	while ( (name = batch_names.next()) ) {
@@ -8306,7 +8307,7 @@ int GahpClient::boinc_fetch_output( const char *job_name,
 									double &cpu_time,
 									double &wallclock_time )
 {
-	static const char* command = "BOINC_ABORT_JOBS";
+	static const char* command = "BOINC_FETCH_OUTPUT";
 
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
@@ -8330,7 +8331,7 @@ int GahpClient::boinc_fetch_output( const char *job_name,
 	} else {
 		reqline += "SOME ";
 	}
-	formatstr_cat( reqline, "%d", output_files.size() );
+	formatstr_cat( reqline, "%d", (int)output_files.size() );
 	for ( BoincOutputFiles::const_iterator itr = output_files.begin();
 		  itr != output_files.end(); itr++ ) {
 		reqline += " ";
