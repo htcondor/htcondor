@@ -6819,12 +6819,13 @@ These macros affect \Condor{preen}.
 
 \label{param:ValidSpoolFiles}
 \item[\Macro{VALID\_SPOOL\_FILES}]
-  This macro contains a (comma or space separated) list of files that
+  A comma or space separated list of files that
   \Condor{preen} considers valid files to find in the \MacroUNI{SPOOL}
   directory. There is no default value. \Condor{preen} will add to the
   list files and directories that are normally present in the
   \MacroUNI{SPOOL} directory.
-  A single wildcard is permitted in each entry.
+  A single asterisk (\verb|*|) wild card character is permitted in each 
+  file item within the list.
   
 \label{param:InvalidLogFiles}
 \item[\Macro{INVALID\_LOG\_FILES}]

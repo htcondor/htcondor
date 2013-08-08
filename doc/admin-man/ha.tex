@@ -74,7 +74,7 @@ The configuration specifies the shared space
 and the URL of the lock.
 \Condor{preen} is not currently aware of the lock file and will
 delete it if it is placed in the \MacroNI{SPOOL} directory, so be
-sure to add SCHEDD.lock to \Macro{VALID\_SPOOL\_FILES}.
+sure to add file \File{SCHEDD.lock} to \Macro{VALID\_SPOOL\_FILES}.
 
 As HTCondor starts on machines that are configured to run
 the single \Condor{schedd} daemon, 
