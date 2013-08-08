@@ -119,6 +119,7 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 
 	if (PYTHONINTERP_FOUND AND PYTHONLIBS_FOUND)
 		message("Bootstrapping python for boost")
+		set(Boost_PYTHON_LIBRARY "external")
 		set(BOOTSTRAP_PYTHON_OPTION "--with-python=${PYTHON_EXECUTABLE}")
 	else ()
 		set(BOOTSTRAP_PYTHON_OPTION )
