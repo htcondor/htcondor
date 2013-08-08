@@ -5,7 +5,8 @@
 \index{cloud computing!submitting jobs to Deltacloud}
 
 HTCondor jobs may be submitted to Deltacloud services.
-Deltacloud is a translation service for cloud services.
+Deltacloud is a translation service for cloud services,
+with more information at \URL{http://deltacloud.apache.org/}.
 Cloud services allow the rental of computers by the hour to run
 computation applications.
 Many cloud services define their own protocol for users to communicate
@@ -15,8 +16,6 @@ commands into the appropriate protocol for the cloud service the user
 specifies.
 Anyone can set up a Deltacloud service and configure it to translate
 for a specific cloud service.
-See the Deltacloud web page at \URL{http://deltacloud.apache.org/}
-for more information about Deltacloud.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Deltacloud-submit}Deltacloud Job Submission}
@@ -25,7 +24,7 @@ for more information about Deltacloud.
 HTCondor jobs are submitted to Deltacloud
 using the \SubmitCmd{grid} universe and the
 \SubmitCmd{grid\_resource} command
-into the submit description file
+in the submit description file
 following this example:
 \begin{verbatim}
 grid_resource = deltacloud https://deltacloud.foo.org/api
@@ -55,7 +54,7 @@ Both are specified in the submit description file:
 
 \begin{verbatim}
 deltacloud_username = your_username
-deltacloud_password_file = /path/to/password/file
+deltacloud_password_file = /path/to/file/with/password
 \end{verbatim}
 
 You can create and register an SSH key pair with the cloud service,
@@ -94,9 +93,9 @@ EC2 services allow up to 16Kb of data.
 \subsubsection{\label{sec:Deltacloud-config}Configuration for Deltacloud}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The deltacloud grid type requires one configuration variable 
-to be set,
-to specify the path and executable of the \Prog{deltacloud\_gahp}:
+One configuration variable 
+must be set for Deltacloud.
+It specifies the path and executable of the \Prog{deltacloud\_gahp}:
 
 \footnotesize
 \begin{verbatim}
