@@ -16,6 +16,17 @@
 void sleep(int sec) { Sleep(sec * 1000); }
 #pragma comment(lib, "kernel32.lib")
 #pragma comment(lib, "psapi.lib")
+#else
+#include <errno.h>
+#endif
+
+#ifdef Darwin
+#include <sys/sysctl.h>
+#include <mach/mach.h>
+#include <mach/task_info.h>
+#include <mach/bootstrap.h>
+#include <mach/mach_error.h>
+#include <mach/mach_types.h>
 #endif
 
 	struct sizerequest {
@@ -32,6 +43,7 @@ void sleep(int sec) { Sleep(sec * 1000); }
 	int jobpid;
 	int totalchunks;
 	int totalK = 0;
+	int memdiff = 0;
 	int chunkK;
 
 	void push(int chunks);
@@ -40,6 +52,134 @@ void sleep(int sec) { Sleep(sec * 1000); }
 	static char *stamp();
 	void report();
 	int match_prefix(const char *s1, const char *s2);
+
+	// Things grabbed from the HTCondor sysapi.h file
+	// return values of different procapi calls
+	enum {
+		// general success
+		PROCAPI_SUCCESS,
+	
+		// general failure
+		PROCAPI_FAILURE
+	};
+	
+	// status about various calls to procapi.
+enum {
+	// for when everything worked as desired
+	PROCAPI_OK,
+
+	// when you ask procapi for a pid family, and absolutely nothing is found
+	PROCAPI_FAMILY_NONE,
+
+	// when the daddy pid is included in the returned family
+	PROCAPI_FAMILY_ALL,
+
+	// when the daddy pid is NOT found, but others known to be its child are.
+	PROCAPI_FAMILY_SOME,
+
+	// failure due to nonexistance of pid
+	PROCAPI_NOPID,
+
+	// failure due to permissions
+	PROCAPI_PERM,
+
+	// sometimes a kernel simply screws up and gives us back garbage
+	PROCAPI_GARBLED,
+
+	// an error happened, but we didn't specify exactly what it was
+	PROCAPI_UNSPECIFIED,
+
+	// the process is definitely alive
+	PROCAPI_ALIVE,
+
+	// the process is definitely dead
+	PROCAPI_DEAD,
+
+	// it is uncertain whether the process is 
+	// alive or dead
+	PROCAPI_UNCERTAIN
+};
+
+
+/** This type serves to hold an opaque value representing a process's time
+ *     of creation. It is platform-dependent since it holds whatever value the
+ *         kernel gives us AS IS, so we can avoid rounding effects when using these
+ *             values in comparisons to see if two processes share a birthday.
+ *             */
+#if defined(WIN32)
+typedef __int64 birthday_t;
+#define PROCAPI_BIRTHDAY_FORMAT "%I64d"
+#elif defined(LINUX)
+typedef unsigned long long birthday_t;
+#define PROCAPI_BIRTHDAY_FORMAT "%llu"
+#else
+typedef long birthday_t;
+#define PROCAPI_BIRTHDAY_FORMAT "%ld"
+#endif
+
+
+/*
+ *   Special structure for holding the raw, unchecked, unconverted,
+ *     values returned by the OS when inquiring about a process.
+ *       The range, units and in some cases even the type of each field 
+ *         are determined by the OS.
+ *         */
+typedef struct procInfoRaw{
+
+        // Virtual size and working set size
+        // are reported as 64-bit quantities
+        // on Windows
+#ifndef WIN32
+        unsigned long imgsize;
+        unsigned long rssize;
+#else
+        __int64 imgsize;
+        __int64 rssize;
+#endif
+        //
+#if HAVE_PSS
+        unsigned long pssize;
+        bool pssize_available;
+#endif
+        
+        long minfault;
+        long majfault;
+        pid_t pid;
+        pid_t ppid;
+#if !defined(WIN32)
+        uid_t owner;
+#endif
+        
+        // Times are different on Windows
+#ifndef WIN32
+        // some systems return these times
+        // in a combination of 2 units
+        // *_1 is always the larger units
+        long user_time_1;
+        long user_time_2;
+        long sys_time_1;
+        long sys_time_2;
+        birthday_t creation_time;
+        long sample_time;
+#endif // not defined WIN32
+        
+        // Windows does it different
+#ifdef WIN32 
+        __int64 user_time;
+        __int64 sys_time;
+        __int64 creation_time;
+        __int64 sample_time;
+        __int64 object_frequency;
+        __int64 cpu_time;
+#endif //WIN32
+        
+        // special process flags for Linux
+#ifdef LINUX
+        unsigned long proc_flags;
+#endif //LINUX
+        }procInfoRaw;
+
+procInfoRaw procRaw;
 
 /*
  * This gets us to an argc of 21
@@ -144,7 +284,7 @@ int main(int argc,char **argv)
 
 void report()
 {
-	int vmpeak=-1, vmsize=-1, vmhwm=-1, vmrss=-1;
+	unsigned int vmpeak=-1, vmsize=-1, vmhwm=-1, vmrss=-1;
 
 #ifdef WIN32
 
@@ -157,26 +297,175 @@ void report()
 		vmrss = (int)(mem.WorkingSetSize / 1024);
 	}
 
-#else
+#endif
 
-	FILE * fp = fopen("/proc/self/status","r");
-	while (fgets(status, STATUSSPACE, fp)) {
-		char label[32]; int size;
-		int items = sscanf(status, "%s %d", label, &size);
-		if (items == 2) {
-			//printf("scan `%s` found %d items: '%s' %d\n", status, items, label, size);
-			if (match_prefix(label,"VmPeak")) vmpeak = size;
-			else if (match_prefix(label, "VmSize")) vmsize = size;
-			else if (match_prefix(label, "VmHWM")) vmhwm = size;
-			else if (match_prefix(label, "VmRSS")) vmrss = size;
+#ifdef Linux
+
+	FILE *fp;
+	fp = fopen("/proc/self/status","r");
+	if(!fp) {
+		printf("Failed to open /proc/self/status\n");
+	} else {
+		printf("%s PID %d, ",stamp(),jobpid);
+		while (fgets(status, STATUSSPACE, fp)) {
+	    	char label[32]; int size;
+	    	int items = sscanf(status, "%s %d", label, &size);
+            	if (items == 2) {
+					//printf("scan `%s` found %d items: '%s' %d\n", status, items, label, size);
+					if (match_prefix(label,"VmPeak")) vmpeak = size;
+					else if (match_prefix(label, "VmSize")) vmsize = size;
+					else if (match_prefix(label, "VmHWM")) vmhwm = size;
+					else if (match_prefix(label, "VmRSS")) vmrss = size;
+            	}
+		}
+		fclose(fp);
+	}
+
+	fp = fopen("/proc/self/smaps","r");
+	if(!fp) {
+		printf("Failed to open /proc/self/smaps\n");
+	} else {
+		printf("%s\n",stamp());
+		while (fgets(status, STATUSSPACE, fp)) {
+			printf("smaps: %s",status);
 		}
 		fclose(fp);
 	}
 
 #endif
 
-	printf("%s PID %d, ",stamp(),jobpid);
-	printf("VmPeak %6d, VmSize %6d, VmHWM %6d, VmRSS %6d, alloced %d kB\n", vmpeak, vmsize, vmhwm, vmrss, totalK);
+#ifdef Darwin
+	int procstatus;
+	procstatus = PROCAPI_OK;
+ 
+	// clear memory for procRaw
+	// initProcInfoRaw(procRaw);
+	//printf("Entering Darwin only code\n");
+ 
+	// set the sample time
+	// Don't care procRaw.sample_time = secsSinceEpoch();
+ 
+/* Collect the data from the system */
+ 
+	// First, let's get the BSD task info for this stucture. This
+	// will tell us things like the pid, ppid, etc. 
+	int mib[4];
+	struct kinfo_proc *kp, *kprocbuf;
+	task_port_t task;
+	struct task_basic_info     ti;
+	unsigned int count;
+	size_t bufSize = 0;
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_PROC;
+	mib[2] = KERN_PROC_PID;
+	mib[3] = jobpid;
+
+	if (sysctl(mib, 4, NULL, &bufSize, NULL, 0) < 0) {
+		if (errno == ESRCH) {
+			// No such process
+			procstatus = PROCAPI_NOPID;
+		} else if (errno == EPERM) {
+			// Operation not permitted
+			procstatus = PROCAPI_PERM;
+		} else {
+			procstatus = PROCAPI_UNSPECIFIED;
+		}
+		printf( "ProcAPI: sysctl() (pass 1) on pid %d failed with %d(%s)\n",
+			jobpid, errno, strerror(errno) );
+
+  		//return PROCAPI_FAILURE;
+	} else {
+		//printf("sysctl worked..........\n");
+	}
+
+  
+	kprocbuf = kp = (struct kinfo_proc *)malloc(bufSize);
+	if (kp == NULL) { 
+		printf("ProcAPI: getProcInfo() Out of memory!\n");
+	} else {
+		//printf("Got memory for further calls to sysctl\n");
+	}
+
+ 
+ 
+	if (sysctl(mib, 4, kp, &bufSize, NULL, 0) < 0) {
+		if (errno == ESRCH) {
+			// No such process
+			procstatus = PROCAPI_NOPID;
+		} else if (errno == EPERM) {
+			// Operation not permitted
+			procstatus = PROCAPI_PERM;
+		} else {
+			procstatus = PROCAPI_UNSPECIFIED;
+		}
+		printf( "ProcAPI: sysctl() (pass 2) on pid %d failed with %d(%s)\n",
+			jobpid, errno, strerror(errno) );
+  
+		free(kp);
+  
+		//return PROCAPI_FAILURE;
+	} else {
+		//printf("Fetch of kproc stuff worked.\n");
+	}
+
+  	if ( bufSize == 0 ) {
+  		procstatus = PROCAPI_NOPID;
+  		printf( "ProcAPI: sysctl() (pass 2) on pid %d returned no data\n",
+  			jobpid );
+  		free(kp);
+  	 	//return PROCAPI_FAILURE;
+	}
+  
+  	// figure out the image,rss size and the sys/usr time for the process.
+  	kern_return_t results;
+  	results = task_for_pid(mach_task_self(), jobpid, &task);
+  	
+	if(results != KERN_SUCCESS) {
+  		printf("Call to task_for_pid for pid %d worked\n",jobpid);
+	} else {
+  	
+		/* We successfully got a mach port... */
+  
+  	
+		count = TASK_BASIC_INFO_COUNT;
+  	
+		results = task_info(task, TASK_BASIC_INFO, (task_info_t)&ti,&count);
+		if(results != KERN_SUCCESS) {
+			procstatus = PROCAPI_UNSPECIFIED;
+ 
+			printf( "ProcAPI: task_info() on pid %d failed with %d(%s)\n",
+				jobpid, results, mach_error_string(results) );
+ 
+			mach_port_deallocate(mach_task_self(), task);
+			free(kp);
+  
+			//return PROCAPI_FAILURE;
+	}
+  
+  // fill in the values we got from the kernel
+  procRaw.imgsize = (u_long)ti.virtual_size;
+  procRaw.rssize = ti.resident_size;
+  procRaw.user_time_1 = ti.user_time.seconds;
+  procRaw.user_time_2 = 0;
+  procRaw.sys_time_1 = ti.system_time.seconds;
+  procRaw.sys_time_2 = 0;
+
+  vmsize = (unsigned int)(procRaw.imgsize/1024);
+  vmpeak = 0;
+  vmhwm = 0;
+  vmrss = (unsigned int)(procRaw.rssize/1024);
+
+  //printf("Imagesize = %u K(%u) RSS = %u K(%u)\n",(unsigned int)procRaw.imgsize,vmsize,(unsigned int)procRaw.rssize,vmrss);
+  
+  // clean up our port
+  mach_port_deallocate(mach_task_self(), task);
+
+  }
+#endif
+
+	memdiff = vmrss - totalK;
+	printf("%s PID %d, Alloc %d,  ",stamp(),jobpid,totalK);
+	printf("VmPeak %6u, VmSize %6u, VmHWM %6u, VmRSS %6u, alloc diff %d kB\n", vmpeak, vmsize, vmhwm, vmrss, memdiff);
 }
 
 /*
