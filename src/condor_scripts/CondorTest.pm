@@ -2770,13 +2770,13 @@ sub VerifyNoJobsInState
 				$jobsstatus{suspended} = $7;
 				if($jobsstatus{$state} == $number){
                     $done = 1;
-					print "$number $state\n";
+					print "$number $state\n\n";
 					return($number)
 				}
             }
         }
         if($done == 0) {
-            print "Waiting for $number $state\n";
+            #print "Waiting for $number $state\n";
             sleep 1;
         }
     }
