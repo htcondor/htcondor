@@ -49,6 +49,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that could cause the \Condor{collector} to 
+	become unresponsive if a view collector ( specified 
+	via \Macro{CONDOR\_VIEW\_HOST} ) becomes unavailable.
+\Ticket{3758}
+
 \item Fixed a bug that could cause jobs to be incorrectly placed on hold upon
 	completion with a hold reason claiming an out-of-memory event.
 \Ticket{3824}
@@ -59,7 +64,10 @@ on systems where cgroup based tracking and management was enabled.
 
 \item Fixed a bug that could cause the negotiator to give out the same
 	slot twice and result in a scary entry in the NegotiatorLog file with the 
-	wording ``INSANE: bestCached != bestSoFar''.
+	wording:
+\begin{verbatim}
+INSANE: bestCached != bestSoFar
+\end{verbatim}
 \Ticket{2245}
 
 \item Added \AdAttr{ConcurrencyLimits} to the projection for claimed
