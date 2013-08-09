@@ -29,7 +29,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item When \Macro{USE\_SHARED\_PORT} is \Expr{True},
+\item When configuration variable \Macro{USE\_SHARED\_PORT} is \Expr{True},
   \Macro{SHARED\_PORT} will now be automatically added to
   \Macro{DAEMON\_LIST}.  To disable this new behavior, set
   \Expr{AUTO\_INSERT\_SHARED\_PORT\_IN\_DAEMON\_LIST=False}
@@ -61,8 +61,8 @@ to accept a single asterisk wild card character in each listed file name.
 \begin{itemize}
 
 \item The \Condor{gridmanager} now does proper failure recovery when
-submitting EC2 jobs to services that don't support EC2's ClientToken
-parameter.
+submitting EC2 grid universe jobs to services that do not support 
+the EC2 ClientToken parameter.
 Previously, if there was a failure when submitting jobs to OpenStack
 or Eucalyptus, the jobs could be submitted twice.
 \Ticket{3682}
