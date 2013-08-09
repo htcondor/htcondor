@@ -8,6 +8,6 @@
 #
 condor_daemon {
   # Note the C++ mangling here.
-  global: _Z14dc_soap_acceptP4SockPK4soap; _Z13dc_soap_serveP4soap; _Z12dc_soap_freeP4soap; _Z12dc_soap_initRP4soap; soap_putheader; soap_serializeheader; soap_faultstring; soap_faultsubcode; soap_faultcode; soap_getheader; soap_getfault; namespaces; soap_faultdetail; soap_putfault; soap_serializefault;
+  global: _Z14dc_soap_acceptP4SockPK4soap; _Z13dc_soap_serveP4soap; _Z12dc_soap_freeP4soap; _Z12dc_soap_initRP4soap; soap_putheader; soap_serializeheader; soap_faultstring; soap_faultsubcode; soap_faultcode; soap_getheader; soap_getfault; namespaces; soap_faultdetail; soap_putfault; soap_serializefault; soap_check_faultdetail; soap_markelement; soap_check_faultsubcode; soap_getelement; soap_putelement;
   local: *;
 };

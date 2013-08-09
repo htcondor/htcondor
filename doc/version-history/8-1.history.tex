@@ -29,15 +29,22 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item When \Macro{USE\_SHARED\_PORT} is \Expr{True},
-  \Macro{SHARED\_PORT} will now be automatically added to
-  \Macro{DAEMON\_LIST}.  To disable this new behavior, set
-  \Expr{AUTO\_INSERT\_SHARED\_PORT\_IN\_DAEMON\_LIST=False}
+\item Reduced the number of calls to the service when managing EC2 jobs. This
+should increase the number of EC2 jobs HTCondor can manage on a given service
+without overloading it.
+\Ticket{3683}
+
+\item When configuration variable \Macro{USE\_SHARED\_PORT} is \Expr{True},
+\Macro{SHARED\_PORT} will now be automatically added to \Macro{DAEMON\_LIST}.
+To disable this new behavior, set the new configuration variable:
+\begin{verbatim}
+  AUTO_INSERT_SHARED_PORT_IN_DAEMON_LIST = False
+\end{verbatim}
 \Ticket{3799}
 
-\item Floating-point values in ClassAds are now printed as 64-bit
-double-precision values when sent over the network, written to disk, and
-displayed when using the \Opt{-long} or \Opt{-autoformat} options of
+\item Floating point values in ClassAds are now printed as 64-bit
+double precision values when sent over the network, written to disk, and
+displayed using the \Opt{-long} or \Opt{-autoformat} options of
 \Condor{status} and \Condor{q}.
 \Ticket{3363}
 
@@ -61,14 +68,14 @@ to accept a single asterisk wild card character in each listed file name.
 \begin{itemize}
 
 \item The \Condor{gridmanager} now does proper failure recovery when
-submitting EC2 jobs to services that don't support EC2's ClientToken
-parameter.
+submitting EC2 grid universe jobs to services that do not support 
+the EC2 ClientToken parameter.
 Previously, if there was a failure when submitting jobs to OpenStack
 or Eucalyptus, the jobs could be submitted twice.
 \Ticket{3682}
 
-\item Fixed printing of nested ClassAds so that they can be read back
-properly.
+\item Fixed the printing of nested ClassAds, so that the nested ClassAds
+can be read back properly.
 \Ticket{3772}
 
 \end{itemize}
