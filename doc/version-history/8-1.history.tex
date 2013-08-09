@@ -35,9 +35,11 @@ without overloading it.
 \Ticket{3683}
 
 \item When configuration variable \Macro{USE\_SHARED\_PORT} is \Expr{True},
-  \Macro{SHARED\_PORT} will now be automatically added to
-  \Macro{DAEMON\_LIST}.  To disable this new behavior, set
-  \Expr{AUTO\_INSERT\_SHARED\_PORT\_IN\_DAEMON\_LIST=False}
+\Macro{SHARED\_PORT} will now be automatically added to \Macro{DAEMON\_LIST}.
+To disable this new behavior, set the new configuration variable:
+\begin{verbatim}
+  AUTO_INSERT_SHARED_PORT_IN_DAEMON_LIST = False
+\end{verbatim}
 \Ticket{3799}
 
 \item Floating point values in ClassAds are now printed as 64-bit
