@@ -1,0 +1,425 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+#use Check::CondorLog;
+use Check::ProcInfo;
+
+my $configfile = "";
+my $ClusterId = 0;
+my $testname =  "cmd_condor_submit_dashspool";
+
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	NUM_CPUS = 5
+	ALL_DEBUG = 
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"submitdashspool");
+
+my $condorinfo =CondorTest::StartCondorWithParams(
+	condor_name => "submitdashspool",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+print "We know this about the just started personal condor <$condorinfo>\n";
+
+# arguments == 0, don't muck with any files and no return files
+my $submitdashpool1 = '
+	universe = vanilla
+	executable = x_condorsubmitdashspool.pl
+	log = dashspool.log
+	error = dashspool.err
+	output = dashspool.out
+	should_transfer_files = YES
+	when_to_transfer_output = ON_EXIT
+	notification = never
+	arguments = 0
+	queue
+';
+
+# arguments = 1, don't muck with any files
+# return dashspool.file1 and dashspool.file2
+
+my $submitdashpool2 = '
+	universe = vanilla
+	executable = x_condorsubmitdashspool.pl
+	log = dashspool.log
+	error = dashspool.err
+	output = dashspool.out
+	should_transfer_files = YES
+	when_to_transfer_output = ON_EXIT
+	notification = never
+	arguments = 1
+	queue
+';
+
+# arguments = 2, don't muck with any files and no return files
+
+my $submitdashpool3 = '
+	universe = vanilla
+	executable = x_condorsubmitdashspool.pl
+	log = dashspool.log
+	error = dashspool.err
+	output = dashspool.out
+	transfer_input_files = realdata
+	should_transfer_files = YES
+	when_to_transfer_output = ON_EXIT
+	notification = never
+	arguments = 2
+	queue
+';
+
+# arguments = 3, don't muck with any files and no return files
+
+my $submitdashpool4 = '
+	universe = vanilla
+	executable = x_condorsubmitdashspool.pl
+	log = dashspool.log
+	error = dashspool.err
+	output = dashspool.out
+	transfer_input_files = realdata
+	should_transfer_files = YES
+	when_to_transfer_output = ON_EXIT
+	notification = never
+	arguments = 3
+	queue
+';
+
+# ensure pristine realdata and dummydata files
+initialreset();
+
+my $file3 = '
+	dummy data
+	dummy data
+	dummy data
+	dummy data
+';
+
+my $file4 = '
+	real data
+	real data
+	real data
+	real data
+';
+
+my $realdata = "realdata";
+open(RD,">$realdata") or die "Can not create <$sleepf1>:$!\n";
+print RD "$file4";
+close(RD);
+
+my $dummydata = "dummydata";
+open(DD,">$dummydata") or die "Can not create <$sleepf1>:$!\n";
+print DD "$file3";
+
+print "First test basic job\n";
+SimpleJob::RunCheck();
+
+print "Config file follows\n";
+#system("cat $configfile");
+
+print "Starting sleep forever job\n";
+
+my $sleepf1 = $$ . "sf1";
+open(SF1,">$sleepf1") or die "Can not create <$sleepf1>\n";
+print SF1 "$submitdashpool1";
+#system("cat $sleepf1");
+close(SF1);
+
+print "Basic condor_submit -spool job started\n";
+my $plain = 0;
+$plain = SubmitReturnCluster($sleepf1,"-spool");
+
+
+my $numberinstate = 0;
+my $result = 0;
+
+# verify it even gets running
+$numberinstate = CondorTest::VerifyNoJobsInState("running",1,30);
+
+print "\nBasic condor_submit -spool job starts to run:";
+if($numberinstate != 1) {
+	$result = 0;
+	print " Failed\n\n";
+} else {
+	$result = 1;
+	print " Passed\n\n";
+}
+#system(" condor_q");
+`condor_rm $plain`;
+CondorTest::RegisterResult($result);
+dashspoolreset();
+
+
+print "Basic condor_submit -spool job started\n";
+$plain = SubmitReturnCluster($sleepf1,"-spool");
+$numberinstate = CondorTest::VerifyNoJobsInState("running",1,30);
+#system(" condor_q");
+$numberinstate = CondorTest::VerifyNoJobsInState("completed",1,30);
+
+print "\nBasic condor_submit -spool job starts to run and completes:";
+if($numberinstate != 1) {
+	$result = 0;
+	print " Failed\n\n";
+} else {
+	$result = 1;
+	print " Passed\n\n";
+}
+#system(" condor_q");
+`condor_rm $plain`;
+CondorTest::RegisterResult($result);
+dashspoolreset();
+
+my $sleepf2 = $$ . "sf2";
+open(SF2,">$sleepf2") or die "Can not create <$sleepf2>\n";
+print SF2 "$submitdashpool2";
+#system("cat $sleepf2");
+close(SF2);
+
+print "Basic condor_submit -spool job started\n";
+$plain = SubmitReturnCluster($sleepf2,"-spool");
+
+$numberinstate = CondorTest::VerifyNoJobsInState("running",1,30);
+$numberinstate = CondorTest::VerifyNoJobsInState("completed",1,30);
+my $missing = 0;
+$missing = MissingFiles("dashspool.file1,dashspool.file2");
+
+print "\nLoooking for result files not here till we condor_transfer_data: ";
+if($missing != 2) {
+	$result = 0;
+	print "Failed\n\n";
+} else {
+	$result = 1;
+	print "Passed\n\n";
+}
+CondorTest::RegisterResult($result);
+dashspoolreset();
+
+system("condor_transfer_data $plain");
+my $present = 0;
+$present = PresentFiles("dashspool.file1,dashspool.file2");
+
+print "\nLoooking for result files after condor_transfer_data: ";
+if($present != 2) {
+	$result = 0;
+	print "Failed\n\n";
+} else {
+	$result = 1;
+	print "Passed\n\n";
+}
+CondorTest::RegisterResult($result);
+`condor_rm $plain`;
+dashspoolreset();
+
+my $sleepf3 = $$ . "sf3";
+open(SF1,">$sleepf3") or die "Can not create <$sleepf3>\n";
+print SF1 "$submitdashpool3";
+#system("cat $sleepf3");
+
+print "Basic condor_submit -spool job started with transfer input file\n";
+$plain = SubmitReturnCluster($sleepf3,"-spool");
+
+$numberinstate = CondorTest::VerifyNoJobsInState("running",1,30);
+#system(" condor_q");
+$numberinstate = CondorTest::VerifyNoJobsInState("completed",1,30);
+
+print "\nBasic condor_submit -spool job starts to run and completes with an input file:";
+if($numberinstate != 1) {
+	$result = 0;
+	print " Failed\n\n";
+} else {
+	$result = 1;
+	print " Passed\n\n";
+}
+#system(" condor_q");
+`condor_rm $plain`;
+CondorTest::RegisterResult($result);
+dashspoolreset();
+
+my $sleepf4 = $$ . "sf4";
+open(SF1,">$sleepf4") or die "Can not create <$sleepf4>\n";
+print SF1 "$submitdashpool4";
+#system("cat $sleepf4");
+
+print "Basic condor_submit -spool job started with transfer input file\n";
+$plain = SubmitReturnCluster($sleepf4,"-spool");
+
+$numberinstate = CondorTest::VerifyNoJobsInState("running",1,30);
+#system(" condor_q");
+$numberinstate = CondorTest::VerifyNoJobsInState("completed",1,30);
+# get output data
+system("condor_transfer_data $plain");
+$present = PresentFiles("dashspool.file1,dashspool.file2");
+
+print "\nLoooking for result files after condor_transfer_data: ";
+if($present != 2) {
+	$result = 0;
+	print "Failed\n\n";
+} else {
+	$result = 1;
+	print "Passed\n\n";
+}
+
+my $gooddata = VerifyRealData("dashspool.file1");
+
+print "\nBasic condor_submit -spool job starts to run and completes with an input file \n
+		That becomes output file:";
+if($gooddata != 1) {
+	$result = 0;
+	print " Failed\n\n";
+} else {
+	$result = 1;
+	print " Passed\n\n";
+}
+#system(" condor_q");
+`condor_rm $plain`;
+CondorTest::RegisterResult($result);
+
+# this test is just like last except we are going to copy
+# bad data onto the imput file after the submit to test that
+# all the job files were spooled.
+print "Basic condor_submit -spool job started with transfer input file\n";
+$plain = SubmitReturnCluster($sleepf4,"-spool");
+system("cp dummydata realdata");
+
+$numberinstate = CondorTest::VerifyNoJobsInState("running",1,30);
+#system(" condor_q");
+$numberinstate = CondorTest::VerifyNoJobsInState("completed",1,30);
+# get output data
+system("condor_transfer_data $plain");
+$present = PresentFiles("dashspool.file1,dashspool.file2");
+
+print "\nLoooking for result files after condor_transfer_data: ";
+if($present != 2) {
+	$result = 0;
+	print "Failed\n\n";
+} else {
+	$result = 1;
+	print "Passed\n\n";
+}
+
+my $gooddata = VerifyRealData("dashspool.file1");
+
+print "\nBasic condor_submit -spool job starts to run and completes with an input file \n
+		That becomes output file(and we mucked with it after the submit):";
+if($gooddata != 1) {
+	$result = 0;
+	print " Failed\n\n";
+} else {
+	$result = 1;
+	print " Passed\n\n";
+}
+#system(" condor_q");
+`condor_rm $plain`;
+CondorTest::RegisterResult($result);
+dashspoolreset();
+
+
+CondorTest::EndTest();
+
+sub VerifyRealData
+{
+	my $file = shift;
+	my $return = 1;
+	my $line = "";
+	open(RD,"<$file") or die "Could not open <$file>:$!\n";
+	while(<RD>) {
+		chomp();
+		$line = $_;
+		if($line =~ /^\s+real\sdata\s*$/) {
+		} else {
+			$result = 0;
+			last;
+		}
+	}
+	return($return);
+}
+
+sub dashspoolreset
+{
+	system("rm -f dashspool.file1 dashspool.file2 ");
+}
+
+sub initialreset
+{
+	system("rm -f dashspool.file1 dashspool.file2 dummydata realdata");
+}
+
+sub MissingFiles
+{
+	my $filelist = shift;
+	my @files = split /,/, $filelist;
+	my $missing = @files;
+	my $missingcount = 0;
+	
+	foreach my $file (@files) {
+		if(!(-f "$file")) {
+			$missingcount += 1;
+		}
+	}
+	if($missing != $missingcount) {
+		print "Hmmmm Looking for $missing missing but $missingcount were\n";
+	}
+
+	return($missingcount);
+}
+
+sub PresentFiles
+{
+	my $filelist = shift;
+	my @files = split /,/, $filelist;
+	my $present = @files;
+	my $presentcount = 0;
+	
+	foreach my $file (@files) {
+		if(-f "$file") {
+			$presentcount += 1;
+		}
+	}
+	if($present != $presentcount) {
+		print "Hmmmm Looking for $present present but $presentcount were\n";
+	}
+
+	return($presentcount);
+}
+
+sub SubmitReturnCluster
+{
+	my $submitfile = shift;
+	my $submitargs = shift;
+	my $cluster = 0;
+
+	my @output = `condor_submit $submitargs $submitfile`;
+
+	foreach my $line (@output) {
+		chomp($line);
+		if($line =~ /^.*cluster (\d+).*$/) {
+			#print "$line\n";
+			#print "returning $1\n";
+			$cluster = $1;
+			return($cluster);
+		}
+	}
+	return(0);
+}
