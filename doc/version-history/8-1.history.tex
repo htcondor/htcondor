@@ -29,6 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Reduced the number of calls to the service when managing EC2 jobs. This
+should increase the number of EC2 jobs HTCondor can manage on a given service
+without overloading it.
+\Ticket{3683}
+
 \item When \Macro{USE\_SHARED\_PORT} is \Expr{True},
   \Macro{SHARED\_PORT} will now be automatically added to
   \Macro{DAEMON\_LIST}.  To disable this new behavior, set
