@@ -65,7 +65,7 @@ if (WITH_GSOAP)
 				    DEPENDS ${GSOAP_DEPENDS}
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${GSOAP_STAGE}/dl
-				    URL http://parrot.cs.wisc.edu/externals/gsoap-2.7.10.tar.gz
+				    URL ${EXTERNALS_SOURCE_URL}/gsoap-2.7.10.tar.gz
 					#--Patch step ----------
 					PATCH_COMMAND ${GSOAP_PATCH}
 					#--Configure step ----------

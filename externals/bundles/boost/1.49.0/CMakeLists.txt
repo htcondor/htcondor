@@ -129,7 +129,7 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 	ExternalProject_Add(boost
 		#-- Download Step ----------
 		 DOWNLOAD_DIR ${BOOST_STAGE}/dl
-		 URL http://parrot.cs.wisc.edu/externals/${BOOST_FILENAME}.tar.gz
+		 URL ${EXTERNALS_SOURCE_URL}/${BOOST_FILENAME}.tar.gz
 		#--Patch step ----------
 		 PATCH_COMMAND ${BOOST_PATCH}
 		#--Configure step ----------
