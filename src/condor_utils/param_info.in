@@ -10685,7 +10685,7 @@ id=610
 
 [ENABLE_DEPRECATION_WARNINGS]
 aliases=
-default=true
+default=false
 version=7.7.6
 range=.*
 state=default
