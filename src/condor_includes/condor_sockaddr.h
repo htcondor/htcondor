@@ -57,6 +57,7 @@ public:
 
 private:
 	void init(uint32_t ip, unsigned port);
+	void init(const sockaddr* saddr);
 public:
 
 	// the caller is responsible for checking is_ipv4().

@@ -68,13 +68,10 @@ dc_soap_accept(Sock *socket, const struct soap *soap)
 		// If you use Fedora's IPv6 patch for gsoap, peer is sockaddr_storage.
 		// Upstream has peer of type sockaddr_in.
 		// This trickery is done to keep the code compatible with both.
-	if (sizeof(cursoap->peer) == sizeof(sockaddr_storage))
-	{
+	if (sizeof(cursoap->peer) == sizeof(sockaddr_storage)) {
 		sockaddr_storage store = socket->peer_addr().to_storage();
 		memcpy(&cursoap->peer, &store, sizeof(cursoap->peer));
-	}
-	else
-	{
+	} else {
 		sockaddr_in store = socket->peer_addr().to_sin();
 		memcpy(&cursoap->peer, &store, sizeof(cursoap->peer));
 	}

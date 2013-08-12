@@ -29,6 +29,21 @@ void condor_sockaddr::init(uint32_t ip, unsigned port)
 	v4.sin_addr.s_addr = ip;
 }
 
+void condor_sockaddr::init(const sockaddr* sa)
+{
+	sockaddr_storage_ptr sock_address;
+	sock_address.raw = sa; 
+	if (sa->sa_family == AF_INET) {
+		sockaddr_in* sin = sock_address.in;
+		init(sin->sin_addr.s_addr, sin->sin_port);
+	} else if (sa->sa_family == AF_INET6) {
+		sockaddr_in6* sin6 = sock_address.in6;
+		v6 = *sin6;
+	} else {
+		clear();
+	}
+}
+
 condor_sockaddr::condor_sockaddr()
 {
 	clear();
@@ -52,22 +67,12 @@ condor_sockaddr::condor_sockaddr(const in6_addr& in6, unsigned short port)
 
 condor_sockaddr::condor_sockaddr(const sockaddr* sa)
 {
-	sockaddr_storage_ptr sock_address;
-	sock_address.raw = sa;
-	if (sa->sa_family == AF_INET) {
-		sockaddr_in* sin = sock_address.in;
-		init(sin->sin_addr.s_addr, sin->sin_port);
-	} else if (sa->sa_family == AF_INET6) {
-		sockaddr_in6* sin6 = sock_address.in6;
-		v6 = *sin6;
-	} else {
-		clear();
-	}
+	init(sa);
 }
 
 condor_sockaddr::condor_sockaddr(const sockaddr_storage *sa)
 {
-	condor_sockaddr(reinterpret_cast<const sockaddr*>(sa));
+	init(reinterpret_cast<const sockaddr*>(sa));
 }
 
 condor_sockaddr::condor_sockaddr(const sockaddr_in* sin) 
@@ -92,16 +97,7 @@ sockaddr_in6 condor_sockaddr::to_sin6() const
 
 sockaddr_storage condor_sockaddr::to_storage() const
 {
-	sockaddr_storage tmp;
-	if (is_ipv4())
-	{
-		memcpy(&tmp, &v4, sizeof(v4));
-	}
-	else
-	{
-		memcpy(&tmp, &v6, sizeof(v6));
-	}
-	return tmp;
+	return storage;
 }
 
 bool condor_sockaddr::is_ipv4() const
