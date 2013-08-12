@@ -104,9 +104,10 @@ you may now, as documented, separate the list of security groups for
 an EC2 Spot job by commas.
 \Ticket{3787}
 
-\item When invoking \Prog{glexec}, \Env{GLEXEC\_TARGET\_PROXY} is now
-  set to \File{/dev/null}.  In some situations, it was previously set
-  to a nonexistent path, which caused errors in some configurations.
+\item When invoking \Prog{glexec}, environment variable
+\Env{GLEXEC\_TARGET\_PROXY} is now set to \File{/dev/null}.  
+In some situations, it was previously set
+to a nonexistent path, which caused errors in some configurations.
 \Ticket{3794}
 
 \item Fixed a file permission bug introduced in HTCondor 7.9.2 that
