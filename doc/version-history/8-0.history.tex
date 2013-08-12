@@ -70,10 +70,9 @@ INSANE: bestCached != bestSoFar
 \end{verbatim}
 \Ticket{2245}
 
-\item Added \AdAttr{ConcurrencyLimits} to the projection for claimed
-resources in \Condor{negotiator}, so that concurrency limit accounting 
-works properly across negotiation cycles when 
-\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} is \Expr{False}.
+\item Fixed a bug introduced in HTCondor version 7.9.3,
+in which concurrency limits were not respected across negotiation cycles when
+\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} was \Expr{False}.
 \Ticket{3815}
 
 \item Fixed a bug from HTCondor version 7.9.6. 
