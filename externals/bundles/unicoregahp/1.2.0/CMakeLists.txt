@@ -25,7 +25,7 @@ if ( WITH_UNICOREGAHP AND NOT PROPER )
 	ExternalProject_Add(unicoregahp
 			    #-- Download Step ----------
 			    DOWNLOAD_DIR ${UNICOREGAHP_STAGE}/dl
-			    URL http://parrot.cs.wisc.edu/externals/${UNICOREGAHP_VER}.tar.gz
+			    URL ${EXTERNALS_SOURCE_URL}/${UNICOREGAHP_VER}.tar.gz
 				#--Configure step ----------
 				CONFIGURE_COMMAND echo "nothing to do"
 				#--Build Step ----------

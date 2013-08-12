@@ -42,7 +42,7 @@ if ( NOT PROPER )
 		ExternalProject_Add(creamsoap
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${CREAMSOAP_STAGE}/dl
-				    URL http://parrot.cs.wisc.edu/externals/gsoap_2.7.6b.tar.gz
+				    URL ${EXTERNALS_SOURCE_URL}/gsoap_2.7.6b.tar.gz
 				    #--Patch step ----------
 				    PATCH_COMMAND patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/gsoap_cast.patch
 				    #--Configure step ----------
@@ -65,7 +65,7 @@ if ( NOT PROPER )
 		ExternalProject_Add(cares
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${CARES_STAGE}/dl
-				    URL http://parrot.cs.wisc.edu/externals/c-ares-1.3.0.tar.gz
+				    URL ${EXTERNALS_SOURCE_URL}/c-ares-1.3.0.tar.gz
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND ./configure --prefix=${CREAM_INSTALL_LOC}
 				    #--Build Step ----------
@@ -83,7 +83,7 @@ if ( NOT PROPER )
 		ExternalProject_Add(log4cpp
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${LOG4CPP_STAGE}/dl
-				    URL http://parrot.cs.wisc.edu/externals/${LOG4CPP_VER}.tar.gz
+				    URL ${EXTERNALS_SOURCE_URL}/${LOG4CPP_VER}.tar.gz
 					#--Patch step ----------
 				    PATCH_COMMAND patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/log4errors.patch &&
 					  patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/log4configure.patch
@@ -111,7 +111,7 @@ if ( NOT PROPER )
 				    DEPENDS ${GRIDSITE_DEPENDS}
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${GRIDSITE_STAGE}/dl
-				    URL http://parrot.cs.wisc.edu/externals/gridsite-1.6.0.src.tar.gz
+				    URL ${EXTERNALS_SOURCE_URL}/gridsite-1.6.0.src.tar.gz
 				    #--Patch step ----------
 				    PATCH_COMMAND patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/gridsite_extern.patch
 				    #--Configure step ----------
@@ -136,7 +136,7 @@ if ( NOT PROPER )
 				    DEPENDS ${GLOBUS_REF} ${GRIDSITE_REF} ${CARES_REF}
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${GLITE_SECURITY_STAGE}/dl
-				    URL http://parrot.cs.wisc.edu/externals/org.glite.security.gss-2.0.1-1.tar.gz
+				    URL ${EXTERNALS_SOURCE_URL}/org.glite.security.gss-2.0.1-1.tar.gz
 				    #--Patch step ----------
 				    PATCH_COMMAND patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/gss_import.patch
 				    #--Configure step ----------
@@ -166,7 +166,7 @@ if ( NOT PROPER )
 					DEPENDS ${CREAMSOAP_REF} ${GLITE_SECURITY_REF}
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${CREAM_SOAP_PLUGIN_STAGE}/dl
-				    URL http://parrot.cs.wisc.edu/externals/org.glite.security.gsoap-plugin-2.0.1-3.tar.gz
+				    URL ${EXTERNALS_SOURCE_URL}/org.glite.security.gsoap-plugin-2.0.1-3.tar.gz
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND cd src &&
 				    	${CMAKE_CURRENT_SOURCE_DIR}/cream_soap_plugin_patch.sh
@@ -189,7 +189,7 @@ if ( NOT PROPER )
 		ExternalProject_Add(cream_wsdl
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${CREAM_WSDL_STAGE}/dl
-				    URL http://parrot.cs.wisc.edu/externals/org.glite.ce.wsdl-1.12.1-14.tar.gz
+				    URL ${EXTERNALS_SOURCE_URL}/org.glite.ce.wsdl-1.12.1-14.tar.gz
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND echo "nothing to do"
 				    #--Build Step ----------
@@ -224,7 +224,7 @@ if ( NOT PROPER )
 				    DEPENDS ${VOMS_REF} ${CREAMSOAP_REF} ${BOOST_REF} ${LOG4CPP_REF} ${GRIDSITE_REF} ${CARES_REF} ${CREAM_SOAP_PLUGIN_REF} ${CREAM_WSDL_REF}
 				    #-- Download Step -------
 				    DOWNLOAD_DIR ${CREAM_STAGE}/dl
-				    URL http://parrot.cs.wisc.edu/externals/org.glite.ce.cream-client-api-c-1.12.1-14.tar.gz
+				    URL ${EXTERNALS_SOURCE_URL}/org.glite.ce.cream-client-api-c-1.12.1-14.tar.gz
 					#--Patch step ----------
 					PATCH_COMMAND ${CREAM_PATCH}
 				    #--Configure step ----------

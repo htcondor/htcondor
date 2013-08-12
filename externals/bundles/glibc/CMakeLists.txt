@@ -195,7 +195,7 @@ patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warn
 	  ExternalProject_Add(glibc
 					  #-- Download Step ----------
 					  DOWNLOAD_DIR ${GLIBC_STAGE}/dl
-					  URL http://parrot.cs.wisc.edu/externals/${GLIBC_TARNAME}.tar.gz
+					  URL ${EXTERNALS_SOURCE_URL}/${GLIBC_TARNAME}.tar.gz
 					  #--Patch step ----------
 					  PATCH_COMMAND ${GLIBC_PATCH}
 					  #--Configure step ----------

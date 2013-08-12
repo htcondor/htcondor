@@ -30,7 +30,7 @@ if (WITH_COREDUMPER)
 		ExternalProject_Add(coredumper
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${COREDUMPER_STAGE}/dl
-				    URL http://parrot.cs.wisc.edu/externals/${COREDUMPER_VER}.tar.gz
+				    URL ${EXTERNALS_SOURCE_URL}/${COREDUMPER_VER}.tar.gz
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND ./configure --prefix=${COREDUMPER_INSTALL_LOC}
 				    #--Build Step ----------
