@@ -55,7 +55,7 @@ if ( WITH_BLAHP )
 						DEPENDS ${BLAHP_DEPENDS}
 					    #-- Download Step ----------
 					    DOWNLOAD_DIR ${BLAHP_STAGE}/dl
-						URL http://parrot.cs.wisc.edu/externals/blahp-1.16.5.1.tar.gz
+						URL ${EXTERNALS_SOURCE_URL}/blahp-1.16.5.1.tar.gz
 						#--Patch step ----------
 						PATCH_COMMAND patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/iclassad.patch -p1 &&
 							patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/classad.patch -p1 &&

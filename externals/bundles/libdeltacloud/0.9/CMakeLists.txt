@@ -33,7 +33,7 @@ if (WITH_LIBDELTACLOUD)
 		ExternalProject_Add(libdeltacloud
 				#-- Download Step ----------
 				DOWNLOAD_DIR ${LIBDELTACLOUD_STAGE}/dl
-				URL http://parrot.cs.wisc.edu/externals/${LIBDELTACLOUD_VER}.tar.gz
+				URL ${EXTERNALS_SOURCE_URL}/${LIBDELTACLOUD_VER}.tar.gz
 				#--Configure step ----------
 				CONFIGURE_COMMAND ./configure --prefix=${LIBDELTACLOUD_INSTALL_LOC}
 				#--Build Step ----------

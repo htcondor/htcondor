@@ -537,6 +537,12 @@ if (NOT PROPER)
 	cmake_minimum_required(VERSION 2.8)
 endif()
 
+# directory that externals are downloaded from. may be a local directory
+# http or https url.
+if (NOT EXTERNALS_SOURCE_URL)
+   set (EXTERNALS_SOURCE_URL "http://parrot.cs.wisc.edu/externals")
+endif()
+
 option(CACHED_EXTERNALS "enable/disable cached externals" OFF)
 set (EXTERNAL_STAGE $ENV{CONDOR_BLD_EXTERNAL_STAGE})
 if (NOT EXTERNAL_STAGE)

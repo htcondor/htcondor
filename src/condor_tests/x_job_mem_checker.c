@@ -18,6 +18,7 @@ void sleep(int sec) { Sleep(sec * 1000); }
 #pragma comment(lib, "psapi.lib")
 #else
 #include <errno.h>
+#include <unistd.h> // for sleep and getpid
 #endif
 
 #ifdef Darwin

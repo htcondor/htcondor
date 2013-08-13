@@ -61,7 +61,7 @@ if (WITH_GLOBUS)
 			ExternalProject_Add(libtool
 					#-- Download Step ----------
 					DOWNLOAD_DIR ${LIBTOOL_STAGE}/dl
-					URL http://parrot.cs.wisc.edu/externals/libtool-2.4.2.tar.gz
+					URL ${EXTERNALS_SOURCE_URL}/libtool-2.4.2.tar.gz
 					#--Configure step ----------
 					CONFIGURE_COMMAND ./configure --prefix=${GLOBUS_INSTALL_LOC}
 					#--Build Step ----------
@@ -111,7 +111,7 @@ if (WITH_GLOBUS)
 							DEPENDS ${GLOBUS_DEPENDS}
 							#-- Download Step ----------
 							DOWNLOAD_DIR ${GLOBUS_STAGE}/dl
-							URL http://parrot.cs.wisc.edu/externals/globus-5.2.1.tar.gz
+							URL ${EXTERNALS_SOURCE_URL}/globus-5.2.1.tar.gz
 							#--Patch step ----------
 							PATCH_COMMAND ${GLOBUS_PATCH}
 							#--Configure step ----------

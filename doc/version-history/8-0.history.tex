@@ -49,6 +49,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that could cause the \Condor{collector} to 
+	become unresponsive if a view collector ( specified 
+	via \Macro{CONDOR\_VIEW\_HOST} ) becomes unavailable.
+\Ticket{3758}
+
 \item Fixed a bug that could cause jobs to be incorrectly placed on hold upon
 	completion with a hold reason claiming an out-of-memory event.
 \Ticket{3824}
@@ -59,34 +64,38 @@ on systems where cgroup based tracking and management was enabled.
 
 \item Fixed a bug that could cause the negotiator to give out the same
 	slot twice and result in a scary entry in the NegotiatorLog file with the 
-	wording ``INSANE: bestCached != bestSoFar''.
+	wording:
+\begin{verbatim}
+INSANE: bestCached != bestSoFar
+\end{verbatim}
 \Ticket{2245}
 
-\item Added \AdAttr{ConcurrencyLimits} to the projection for claimed
-resources in \Condor{negotiator}, so that concurrency limit accounting 
-works properly across negotiation cycles when 
-\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} is \Expr{False}.
+\item Fixed a bug introduced in HTCondor version 7.9.3,
+in which concurrency limits were not respected across negotiation cycles when
+\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} was \Expr{False}.
 \Ticket{3815}
 
-\item As of 7.9.6, when using CCB to connect to the \Condor{startd},
-  the \Condor{negotiator} would sometimes crash (and be restarted)
-  with the following error message in the log:
+\item Fixed a bug from HTCondor version 7.9.6. 
+The bug exhibited itself when using CCB to connect to the \Condor{startd};
+the \Condor{negotiator} would sometimes crash and then be restarted
+with the following error message in the log:
 
 \begin{verbatim}
 ERROR "Selector::add_fd(): fd -1 outside valid range 0-1023"
 \end{verbatim}
 
-The workaround for this problem is to configure
+A workaround for the problem is relevant to HTCondor versions 7.9.6 through
+8.0.1. Configure
 \begin{verbatim}
-SERVICE_COMMAND_SOCKET_MAX_SOCKET_INDEX=-1
+  SERVICE_COMMAND_SOCKET_MAX_SOCKET_INDEX = -1
 \end{verbatim}
-or to disable communication with the \Condor{startd} by setting
+or disable communication with the \Condor{startd} by setting
 \begin{verbatim}
-NEGOTIATOR_INFORM_STARTD=False
+  NEGOTIATOR_INFORM_STARTD = False
 \end{verbatim}
 \Ticket{3801}
 
-\item Fixed a bug in the condor\_qsub script that caused it to exit
+\item Fixed a bug in the \Condor{qsub} script that caused it to exit
 with a syntax error when a job with a memory requirement was
 submitted.
 \Ticket{3808}
@@ -96,9 +105,10 @@ you may now, as documented, separate the list of security groups for
 an EC2 Spot job by commas.
 \Ticket{3787}
 
-\item When invoking \Prog{glexec}, \Env{GLEXEC\_TARGET\_PROXY} is now
-  set to \File{/dev/null}.  In some situations, it was previously set
-  to a nonexistent path, which caused errors in some configurations.
+\item When invoking \Prog{glexec}, environment variable
+\Env{GLEXEC\_TARGET\_PROXY} is now set to \File{/dev/null}.  
+In some situations, it was previously set
+to a nonexistent path, which caused errors in some configurations.
 \Ticket{3794}
 
 \item Fixed a file permission bug introduced in HTCondor 7.9.2 that
