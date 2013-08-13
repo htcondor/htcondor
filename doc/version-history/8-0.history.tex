@@ -26,6 +26,10 @@ The details of each version are described below.
 \item HTCondor version 8.0.2 not yet released.
 %\item HTCondor version 8.0.2 released on Month Date, 2013.
 
+\item Debian 5 is past its end of life. 
+It is no longer included with this release.
+\Ticket{3852}
+
 \end{itemize}
 
 
@@ -121,6 +125,11 @@ when attempting to connect to hosts that are offline.  A specific case
 where this helps is when \Condor{schedd} is using a high availability
 configuration, and the primary collector machine is offline.
 \Ticket{3828}
+
+\item Fixed a bug in \Condor{dagman} that could (in rare cases) cause
+\Condor{dagman} to hang when using the
+\OptArg{-maxidle}/\Macro{DAGMAN\_MAX\_JOBS\_IDLE} option.
+\Ticket{3834}
 
 \end{itemize}
 

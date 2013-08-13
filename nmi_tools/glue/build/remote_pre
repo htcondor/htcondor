@@ -47,6 +47,7 @@ my $externals_loc="/scratch/condor_externals";
 my $platform = "$ENV{NMI_PLATFORM}";
 my %defines = (
     prefix => "-DCMAKE_INSTALL_PREFIX:PATH=$BaseDir/release_dir",
+    parrot => "-DEXTERNALS_SOURCE_URL:STRING=\"http://mirror.batlab.org/pub/export/externals\"",
     );
 
 # autoflush our STDOUT
