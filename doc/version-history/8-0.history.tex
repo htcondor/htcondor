@@ -126,6 +126,11 @@ where this helps is when \Condor{schedd} is using a high availability
 configuration, and the primary collector machine is offline.
 \Ticket{3828}
 
+\item Fixed a bug in \Condor{dagman} that could (in rare cases) cause
+\Condor{dagman} to hang when using the
+\OptArg{-maxidle}/\Macro{DAGMAN\_MAX\_JOBS\_IDLE} option.
+\Ticket{3834}
+
 \end{itemize}
 
 \noindent Known Bugs:
