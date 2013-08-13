@@ -40,18 +40,14 @@ DagmanMetrics::SetStartTime()
 
 //---------------------------------------------------------------------------
 void
-DagmanMetrics::SetDagmanIds( const char *scheddAddr,
-			const CondorID &DAGManJobId, int parentDagmanCluster )
+DagmanMetrics::SetDagmanIds( const CondorID &DAGManJobId,
+			int parentDagmanCluster )
 {
-	MyString schedd = scheddAddr;
-	schedd.replaceString( "<", "" );
-	schedd.replaceString( ">", "" );
-
-	_dagmanId = schedd + ";";
+	_dagmanId = "";
 	_dagmanId += DAGManJobId._cluster;
 
 	if ( parentDagmanCluster >= 0 ) {
-		_parentDagmanId = schedd + ";";
+		_parentDagmanId = "";
 		_parentDagmanId += parentDagmanCluster;
 	}
 }
