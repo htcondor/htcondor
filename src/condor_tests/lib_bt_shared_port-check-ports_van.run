@@ -30,15 +30,24 @@ my @listeningdaemons = (
 
 $on_execute = sub {
 	# use netstat to find open ports
-	my $netstat_result = `netstat -tlpn | grep condor`;
+	my @netstat_result = `netstat -tlpn | grep condor`;
+	my $netstatlength = @netstat_result;
+
+	print "$netstatlength == <$netstatlength>\nResults Follow:\n"";
+
+	foreach my $line (@netstat_result) {
+		chomp($line);
+		print "nstat: $line\n"
+	}
 
 	# allow netstat to fail as some nmi platforms (macos_10.4) don't support it
-	if(length($netstat_result) == 0) {
-		CondorTest::debug("Warning: 'netstat -tlpn | grep condor' failed, skipping tcp port checks\n");
+	if($netstatlength == 0) {
+		CondorTest::debug("Warning: 'netstat -tlpn | grep condor' failed, skipping tcp port checks\n",1);
 		return;
 	}
 	CondorTest::debug("netstat -tlpn | grep condor\n$netstat_result\n", 1);
-	my @lines = split /\n/, $netstat_result;
+	#my @lines = split /\n/, $netstat_result;
+	my @lines = @netstat_result;
 
 	# get the log directory for this test
 	my $logdir = `condor_config_val log`;
@@ -108,6 +117,8 @@ $on_execute = sub {
 					$unexpected_listening_daemon = 0;
 				}
 			}
+		} else {
+			print "Regx failed <$candiate>\n";
 		}
 	}
 
