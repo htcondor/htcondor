@@ -598,15 +598,15 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				break;
 
 			case ULOG_JOB_ABORTED:
+					// Make sure we don't count finished jobs as idle.
 				ProcessNotIdleEvent(job);
 				ProcessAbortEvent(event, job, recovery);
-					// Make sure we don't count finished jobs as idle.
 				break;
               
 			case ULOG_JOB_TERMINATED:
+					// Make sure we don't count finished jobs as idle.
 				ProcessNotIdleEvent(job);
 				ProcessTerminatedEvent(event, job, recovery);
-					// Make sure we don't count finished jobs as idle.
 				break;
 
 			case ULOG_POST_SCRIPT_TERMINATED:
