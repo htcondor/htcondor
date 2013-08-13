@@ -3292,8 +3292,8 @@ Here is an example metrics output file:
     "end_time":1375313491.498,
     "duration":31.895,
     "exitcode":1,
-    "dagman_id":"111.222.33.444:35423;26",
-    "parent_dagman_id":"111.222.33.444:35423;11",
+    "dagman_id":"26",
+    "parent_dagman_id":"11",
     "rescue_dag_number":0,
     "jobs":4,
     "jobs_failed":1,
@@ -3332,7 +3332,7 @@ in epoch seconds, with millisecond precision.
 in seconds, with millisecond precision.
 \item \Expr{exitcode}: the \Condor{dagman} exit code.
 \item \Expr{dagman\_id}: an identifier of the DAGMan instance of the form
-\Expr{<hostname>:<schedd\_port>:<DAGMan\_cluster\_id>}.
+\Expr{<DAGMan\_cluster\_id>}.
 \item \Expr{parent\_dagman\_id}: an identifier of the parent of this DAG
 given in the same form as the metric \Expr{dagman\_id}; 
 empty if this DAG is not a SUBDAG.

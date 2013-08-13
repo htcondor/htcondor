@@ -13,6 +13,7 @@
 #ifdef WIN32
 #include <windows.h>
 #include <psapi.h>
+int getpid() { return (int)GetCurrentProcessId(); }
 void sleep(int sec) { Sleep(sec * 1000); }
 #pragma comment(lib, "kernel32.lib")
 #pragma comment(lib, "psapi.lib")
@@ -53,13 +54,7 @@ void sleep(int sec) { Sleep(sec * 1000); }
 	const char *stamp();
 	void report();
 
-#if defined(WIN32)
-	void * win_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, unsigned int *vmrss);
-#elif defined(LINUX)
-	void * lin_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, unsigned int *vmrss);
-#elif defined( Darwin )
-	void * darwin_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, unsigned int *vmrss);
-#endif
+	void get_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, unsigned int *vmrss);
 
 	int match_prefix(const char *s1, const char *s2);
 
@@ -128,68 +123,6 @@ typedef long birthday_t;
 #endif
 
 
-/*
- *   Special structure for holding the raw, unchecked, unconverted,
- *     values returned by the OS when inquiring about a process.
- *       The range, units and in some cases even the type of each field 
- *         are determined by the OS.
- *         */
-typedef struct procInfoRaw{
-
-        // Virtual size and working set size
-        // are reported as 64-bit quantities
-        // on Windows
-#ifndef WIN32
-        unsigned long imgsize;
-        unsigned long rssize;
-#else
-        __int64 imgsize;
-        __int64 rssize;
-#endif
-        //
-#if HAVE_PSS
-        unsigned long pssize;
-        bool pssize_available;
-#endif
-        
-        long minfault;
-        long majfault;
-        pid_t pid;
-        pid_t ppid;
-#if !defined(WIN32)
-        uid_t owner;
-#endif
-        
-        // Times are different on Windows
-#ifndef WIN32
-        // some systems return these times
-        // in a combination of 2 units
-        // *_1 is always the larger units
-        long user_time_1;
-        long user_time_2;
-        long sys_time_1;
-        long sys_time_2;
-        birthday_t creation_time;
-        long sample_time;
-#endif // not defined WIN32
-        
-        // Windows does it different
-#ifdef WIN32 
-        __int64 user_time;
-        __int64 sys_time;
-        __int64 creation_time;
-        __int64 sample_time;
-        __int64 object_frequency;
-        __int64 cpu_time;
-#endif //WIN32
-        
-        // special process flags for Linux
-#ifdef LINUX
-        unsigned long proc_flags;
-#endif //LINUX
-        }procInfoRaw;
-
-procInfoRaw procRaw;
 
 /*
  * This gets us to an argc of 21
@@ -296,19 +229,7 @@ void report()
 {
 	unsigned int vmpeak=-1, vmsize=-1, vmhwm=-1, vmrss=-1;
 
-#if defined(WIN32)
-
-	win_mem_data(&vmpeak, &vmsize, &vmhwm, &vmrss);
-
-#elif defined(LINUX)
-
-	lin_mem_data(&vmpeak, &vmsize, &vmhwm, &vmrss);
-
-#elif defined( Darwin )
-
-	darwin_mem_data(&vmpeak, &vmsize, &vmhwm, &vmrss);
-
-#endif
+	get_mem_data(&vmpeak, &vmsize, &vmhwm, &vmrss);
 
 	memdiff = vmrss - totalK;
 	printf("%s PID %d, Alloc %d,  ",stamp(),jobpid,totalK);
@@ -406,8 +327,8 @@ match_prefix(const char *s1, const char *s2)
 //unsigned int vmpeak=-1, vmsize=-1, vmhwm=-1, vmrss=-1;
 
 #if defined(WIN32)
-void *
-win_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, unsigned int *vmrss)
+void
+get_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, unsigned int *vmrss)
 {
 	PROCESS_MEMORY_COUNTERS_EX mem;
 	ZeroMemory(&mem, sizeof(mem)); mem.cb = sizeof(mem);
@@ -421,8 +342,8 @@ win_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, un
 #endif
 
 #if defined(LINUX)
-void *
-lin_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, unsigned int *vmrss)
+void
+get_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, unsigned int *vmrss)
 {
 	FILE *fp;
 	fp = fopen("/proc/self/status","r");
@@ -460,8 +381,72 @@ lin_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, un
 #endif
 
 #if defined(DARWIN)
-void *
-darwin_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, unsigned int *vmrss)
+
+/*
+ *   Special structure for holding the raw, unchecked, unconverted,
+ *     values returned by the OS when inquiring about a process.
+ *       The range, units and in some cases even the type of each field 
+ *         are determined by the OS.
+ *         */
+typedef struct procInfoRaw{
+
+        // Virtual size and working set size
+        // are reported as 64-bit quantities
+        // on Windows
+#ifndef WIN32
+        unsigned long imgsize;
+        unsigned long rssize;
+#else
+        __int64 imgsize;
+        __int64 rssize;
+#endif
+        //
+#if HAVE_PSS
+        unsigned long pssize;
+        bool pssize_available;
+#endif
+        
+        long minfault;
+        long majfault;
+        pid_t pid;
+        pid_t ppid;
+#if !defined(WIN32)
+        uid_t owner;
+#endif
+        
+        // Times are different on Windows
+#ifndef WIN32
+        // some systems return these times
+        // in a combination of 2 units
+        // *_1 is always the larger units
+        long user_time_1;
+        long user_time_2;
+        long sys_time_1;
+        long sys_time_2;
+        birthday_t creation_time;
+        long sample_time;
+#endif // not defined WIN32
+        
+        // Windows does it different
+#ifdef WIN32 
+        __int64 user_time;
+        __int64 sys_time;
+        __int64 creation_time;
+        __int64 sample_time;
+        __int64 object_frequency;
+        __int64 cpu_time;
+#endif //WIN32
+        
+        // special process flags for Linux
+#ifdef LINUX
+        unsigned long proc_flags;
+#endif //LINUX
+        }procInfoRaw;
+
+procInfoRaw procRaw;
+
+void
+get_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, unsigned int *vmrss)
 {
 	int procstatus;
 	procstatus = PROCAPI_OK;

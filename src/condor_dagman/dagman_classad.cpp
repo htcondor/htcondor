@@ -116,8 +116,7 @@ DagmanClassad::InitializeMetrics()
 
 	CloseConnection( queue );
 
-	DagmanMetrics::SetDagmanIds( _schedd->addr(), _dagmanId,
-				parentDagmanCluster );
+	DagmanMetrics::SetDagmanIds( _dagmanId, parentDagmanCluster );
 }
 
 //---------------------------------------------------------------------------

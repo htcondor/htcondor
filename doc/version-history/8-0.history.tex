@@ -45,7 +45,8 @@ It is no longer included with this release.
 
 \begin{itemize}
 
-\item None.
+\item The default value of \Macro{ENABLE\_DEPRECATION\_WARNINGS} has been changed to false.
+\Ticket{3848}
 
 \end{itemize}
 
@@ -125,6 +126,15 @@ when attempting to connect to hosts that are offline.  A specific case
 where this helps is when \Condor{schedd} is using a high availability
 configuration, and the primary collector machine is offline.
 \Ticket{3828}
+
+\item Fixed a bug in \Condor{dagman} that could (in rare cases) cause
+\Condor{dagman} to hang when using the
+\OptArg{-maxidle}/\Macro{DAGMAN\_MAX\_JOBS\_IDLE} option.
+\Ticket{3834}
+
+\item Fixed a bug that caused \Condor{submit} \Opt{-spool} to always fail
+on Windows.
+\Ticket{3791}
 
 \end{itemize}
 

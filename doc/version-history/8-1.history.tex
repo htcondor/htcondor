@@ -48,6 +48,13 @@ displayed using the \Opt{-long} or \Opt{-autoformat} options of
 \Condor{status} and \Condor{q}.
 \Ticket{3363}
 
+\item In the Pegasus/\Condor{dagman} workflow metrics
+(see ~\pageref{sec:DAGMetrics}),
+\Expr{dagman\_id} and \Expr{parent\_dagman\_id} are now reported
+simply as the HTCondor cluster ID of the \Condor{dagman} job.  This
+eliminates any privacy concerns with reporting the schedd address
+(which includes the submit machine's IP address).
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
