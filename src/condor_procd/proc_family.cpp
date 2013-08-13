@@ -60,7 +60,8 @@ ProcFamily::ProcFamily(ProcFamilyMonitor* monitor,
 	, m_cgroup_string(""),
 	m_cm(CgroupManager::getInstance()),
 	m_initial_user_cpu(0),
-	m_initial_sys_cpu(0)
+	m_initial_sys_cpu(0),
+	m_last_signal_was_sigstop(false)
 #endif
 {
 #if !defined(WIN32)
@@ -331,7 +332,18 @@ ProcFamily::spree_cgroup(int sig)
 	// Note that if the FREEZE call could be attempted, but not 100% completed, we
 	// proceed anyway.
 
-	int err = freezer_cgroup(FROZEN);
+	bool use_freezer = !m_last_signal_was_sigstop;
+	m_last_signal_was_sigstop = sig == SIGSTOP ? true : false;
+	if (!use_freezer) {
+		dprintf(D_ALWAYS,
+			"Not using freezer controller to send signal; last "
+			"signal was SIGSTOP.\n");
+	} else {
+		dprintf(D_FULLDEBUG,
+			"Using freezer controller to send signal to process family.\n");
+	}
+
+	int err = use_freezer ? freezer_cgroup(FROZEN) : 0;
 	if ((err != 0) && (err != -EBUSY)) {
 		return err;
 	}
@@ -363,7 +375,7 @@ ProcFamily::spree_cgroup(int sig)
 		free(handle);
 	}
 
-	freezer_cgroup(THAWED);
+	if (use_freezer) freezer_cgroup(THAWED);
 
 	return err;
 }
