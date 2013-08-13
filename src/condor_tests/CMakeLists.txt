@@ -59,6 +59,7 @@ if (BUILD_TESTING)
 	condor_exe_test(lib_eventlog_base.exe "lib_eventlog_base.cpp" "condorapi")
 	condor_exe_test(job_core_bigenv.exe "job_core_bigenv.c" "")
 	condor_exe_test(lib_eventlog_build.exe "lib_eventlog_base.cpp" "condorapi")
+	condor_exe_test(x_job_mem_checker.exe "x_job_mem_checker.c" "" )
 	
 	# Not all of our gccs support -Wno-div-by-zero.
 	#if (UNIX)
@@ -67,7 +68,6 @@ if (BUILD_TESTING)
 
 	if (NOT WINDOWS)
 	  condor_exe_test(x_trapsig.exe "x_trapsig.cpp" "" )
-	  condor_exe_test(x_job_mem_checker.exe "x_job_mem_checker.c" "" )
 	endif(NOT WINDOWS)
 	
 	if (STD_UNIVERSE)
@@ -385,10 +385,10 @@ if (BUILD_TESTING)
 	condor_pl_test(lib_eventlog_rotation-reader_missed_1 "Event Log Rotation: reader, missed events 1" "core;quick;full")
 	condor_pl_test(lib_eventlog_rotation-reader_missed_2 "Event Log Rotation: reader, missed events 2" "core;quick;full")
 	condor_pl_test(negotiator_match_log_exists "ensure Matlog has only matches" "core;quick;full")
+	condor_pl_test(job_mem_checker "Look at reported memory usage" "core;quick;full")
 
 	if(LINUX)
 		condor_pl_test(job_cpu_affinity_check "ensure Matlog has only matches" "core;quick;full")
-		condor_pl_test(job_mem_checker "Look at reported memory usage" "core;quick;full")
 	endif ( LINUX )
 
 	condor_pl_test(job_concurrency_limits "ensure Matlog has only matches" "core;quick;full")

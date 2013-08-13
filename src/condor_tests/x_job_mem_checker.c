@@ -50,8 +50,17 @@ void sleep(int sec) { Sleep(sec * 1000); }
 	void push(int chunks);
 	void pop(int chunks);
 	void init_storage(int size);
-	static char *stamp();
+	const char *stamp();
 	void report();
+
+#if defined(WIN32)
+	void * win_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, unsigned int *vmrss);
+#elif defined(LINUX)
+	void * lin_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, unsigned int *vmrss);
+#elif defined( Darwin )
+	void * darwin_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, unsigned int *vmrss);
+#endif
+
 	int match_prefix(const char *s1, const char *s2);
 
 	// Things grabbed from the HTCondor sysapi.h file
@@ -287,21 +296,134 @@ void report()
 {
 	unsigned int vmpeak=-1, vmsize=-1, vmhwm=-1, vmrss=-1;
 
-#ifdef WIN32
+#if defined(WIN32)
 
-	PROCESS_MEMORY_COUNTERS_EX mem;
-	ZeroMemory(&mem, sizeof(mem)); mem.cb = sizeof(mem);
-	if (GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&mem, sizeof(mem))) {
-		vmpeak = (int)(mem.PeakPagefileUsage /  1024);
-		vmsize = (int)(mem.PrivateUsage /  1024);
-		vmhwm = (int)(mem.PeakWorkingSetSize / 1024);
-		vmrss = (int)(mem.WorkingSetSize / 1024);
-	}
+	win_mem_data(&vmpeak, &vmsize, &vmhwm, &vmrss);
+
+#elif defined(LINUX)
+
+	lin_mem_data(&vmpeak, &vmsize, &vmhwm, &vmrss);
+
+#elif defined( Darwin )
+
+	darwin_mem_data(&vmpeak, &vmsize, &vmhwm, &vmrss);
 
 #endif
 
-#ifdef Linux
+	memdiff = vmrss - totalK;
+	printf("%s PID %d, Alloc %d,  ",stamp(),jobpid,totalK);
+	printf("VmPeak %6u, VmSize %6u, VmHWM %6u, VmRSS %6u, alloc diff %d kB\n", vmpeak, vmsize, vmhwm, vmrss, memdiff);
+}
 
+/*
+ * stackpointer always on location which can be filled
+ */
+
+void push(int chunks) {
+	int units;
+
+	//printf("push %d chunks\n",chunks);
+	for(units = 0; units < chunks; units++) {
+		stack[stackpointer] = malloc((size_t) chunksize);
+		memset(stack[stackpointer],units,(size_t) chunksize);
+		if(stackpointer != 999) {
+			stackpointer++;
+		} else {
+			printf("exceeded the size of the stack");
+			exit(1);
+		}
+	}
+}
+
+void pop(int chunks) {
+	int units;
+
+	//printf("pop %d chunks\n",chunks);
+	for(units = 0; units < chunks; units++) {
+		if(stackpointer != 0) {
+			stackpointer--;
+		} else {
+			printf("Tried to pop empty stack");
+			exit(1);
+		}
+		free(stack[stackpointer]);
+	}
+}
+
+void init_storage(int size) {
+	int szchng;
+	struct sizerequest *request ;
+
+	request = timesteps;
+
+	for( szchng = 0; szchng < size; szchng++) {
+		request->memtimeatsize = 0;
+		request->memsize = 0;
+		request->memchunk = NULL;
+		request++;
+	}
+
+}
+
+void display_storage(int size) {
+	int szchng;
+	struct sizerequest *request ;
+
+	request = timesteps;
+
+	for( szchng = 0; szchng < size; szchng++) {
+		printf("Time %d ",request->memtimeatsize);
+		printf("size %d\n",request->memsize);
+		request++;
+	}
+
+}
+
+const char *stamp()
+{
+	static char timebuf[80];
+	time_t now;
+			
+	time(&now);
+	strftime(timebuf, 80, "%m/%d/%y %H:%M:%S ", localtime(&now));
+	return timebuf;
+}
+
+int
+match_prefix(const char *s1, const char *s2)
+{
+    size_t  s1l = strlen(s1);
+    size_t  s2l = strlen(s2);
+    size_t min = (s1l < s2l) ? s1l : s2l;
+
+	/* return true if the strings match (i.e., strcmp() returns 0) */
+	if (strncmp(s1, s2, min) == 0)
+		return 1;
+ 
+	return 0;
+}
+
+//unsigned int vmpeak=-1, vmsize=-1, vmhwm=-1, vmrss=-1;
+
+#if defined(WIN32)
+void *
+win_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, unsigned int *vmrss)
+{
+	PROCESS_MEMORY_COUNTERS_EX mem;
+	ZeroMemory(&mem, sizeof(mem)); mem.cb = sizeof(mem);
+	if (GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&mem, sizeof(mem))) {
+		*vmpeak = (int)(mem.PeakPagefileUsage /  1024);
+		*vmsize = (int)(mem.PrivateUsage /  1024);
+		*vmhwm = (int)(mem.PeakWorkingSetSize / 1024);
+		*vmrss = (int)(mem.WorkingSetSize / 1024);
+	}
+}
+#endif
+
+#if defined(LINUX)
+void *
+lin_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, unsigned int *vmrss)
+{
 	FILE *fp;
 	fp = fopen("/proc/self/status","r");
 	if(!fp) {
@@ -312,30 +434,35 @@ void report()
 	    	char label[32]; int size;
 	    	int items = sscanf(status, "%s %d", label, &size);
             	if (items == 2) {
-					//printf("scan `%s` found %d items: '%s' %d\n", status, items, label, size);
-					if (match_prefix(label,"VmPeak")) vmpeak = size;
-					else if (match_prefix(label, "VmSize")) vmsize = size;
-					else if (match_prefix(label, "VmHWM")) vmhwm = size;
-					else if (match_prefix(label, "VmRSS")) vmrss = size;
-            	}
+					printf("scan `%s` found %d items: '%s' %d\n", status, items, label, size);
+					if (match_prefix(label,"VmPeak")) *vmpeak = size;
+					else if (match_prefix(label, "VmSize")) *vmsize = size;
+					else if (match_prefix(label, "VmHWM")) *vmhwm = size;
+					else if (match_prefix(label, "VmRSS")) *vmrss = size;
+            	} else {
+					printf("scan `%s` expetc 2 entities\n", status);
+				}
 		}
 		fclose(fp);
-	}
 
-	fp = fopen("/proc/self/smaps","r");
-	if(!fp) {
-		printf("Failed to open /proc/self/smaps\n");
-	} else {
-		printf("%s\n",stamp());
-		while (fgets(status, STATUSSPACE, fp)) {
-			printf("smaps: %s",status);
+		fp = fopen("/proc/self/smaps","r");
+		if(!fp) {
+			printf("Failed to open /proc/self/smaps\n");
+		} else {
+			printf("%s\n",stamp());
+			while (fgets(status, STATUSSPACE, fp)) {
+				printf("smaps: %s",status);
+			}
+			fclose(fp);
 		}
-		fclose(fp);
 	}
-
+}
 #endif
 
-#ifdef Darwin
+#if defined(DARWIN)
+void *
+darwin_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, unsigned int *vmrss)
+{
 	int procstatus;
 	procstatus = PROCAPI_OK;
  
@@ -443,116 +570,24 @@ void report()
 			//return PROCAPI_FAILURE;
 	}
   
-  // fill in the values we got from the kernel
-  procRaw.imgsize = (u_long)ti.virtual_size;
-  procRaw.rssize = ti.resident_size;
-  procRaw.user_time_1 = ti.user_time.seconds;
-  procRaw.user_time_2 = 0;
-  procRaw.sys_time_1 = ti.system_time.seconds;
-  procRaw.sys_time_2 = 0;
+	// fill in the values we got from the kernel
+	procRaw.imgsize = (u_long)ti.virtual_size;
+	procRaw.rssize = ti.resident_size;
+	procRaw.user_time_1 = ti.user_time.seconds;
+	procRaw.user_time_2 = 0;
+	procRaw.sys_time_1 = ti.system_time.seconds;
+	procRaw.sys_time_2 = 0;
 
-  vmsize = (unsigned int)(procRaw.imgsize/1024);
-  vmpeak = 0;
-  vmhwm = 0;
-  vmrss = (unsigned int)(procRaw.rssize/1024);
+	*vmsize = (unsigned int)(procRaw.imgsize/1024);
+	*vmpeak = 0;
+	*vmhwm = 0;
+	*vmrss = (unsigned int)(procRaw.rssize/1024);
 
-  //printf("Imagesize = %u K(%u) RSS = %u K(%u)\n",(unsigned int)procRaw.imgsize,vmsize,(unsigned int)procRaw.rssize,vmrss);
+	//printf("Imagesize = %u K(%u) RSS = %u K(%u)\n",(unsigned int)procRaw.imgsize,vmsize,(unsigned int)procRaw.rssize,vmrss);
   
-  // clean up our port
-  mach_port_deallocate(mach_task_self(), task);
+	// clean up our port
+	mach_port_deallocate(mach_task_self(), task);
 
-  }
+	}
+}
 #endif
-
-	memdiff = vmrss - totalK;
-	printf("%s PID %d, Alloc %d,  ",stamp(),jobpid,totalK);
-	printf("VmPeak %6u, VmSize %6u, VmHWM %6u, VmRSS %6u, alloc diff %d kB\n", vmpeak, vmsize, vmhwm, vmrss, memdiff);
-}
-
-/*
- * stackpointer always on location which can be filled
- */
-
-void push(int chunks) {
-	int units;
-
-	//printf("push %d chunks\n",chunks);
-	for(units = 0; units < chunks; units++) {
-		stack[stackpointer] = malloc((size_t) chunksize);
-		memset(stack[stackpointer],units,(size_t) chunksize);
-		if(stackpointer != 999) {
-			stackpointer++;
-		} else {
-			printf("exceeded the size of the stack");
-			exit(1);
-		}
-	}
-}
-
-void pop(int chunks) {
-	int units;
-
-	//printf("pop %d chunks\n",chunks);
-	for(units = 0; units < chunks; units++) {
-		if(stackpointer != 0) {
-			stackpointer--;
-		} else {
-			printf("Tried to pop empty stack");
-			exit(1);
-		}
-		free(stack[stackpointer]);
-	}
-}
-
-void init_storage(int size) {
-	int szchng;
-	struct sizerequest *request ;
-
-	request = timesteps;
-
-	for( szchng = 0; szchng < size; szchng++) {
-		request->memtimeatsize = 0;
-		request->memsize = 0;
-		request->memchunk = NULL;
-		request++;
-	}
-
-}
-
-void display_storage(int size) {
-	int szchng;
-	struct sizerequest *request ;
-
-	request = timesteps;
-
-	for( szchng = 0; szchng < size; szchng++) {
-		printf("Time %d ",request->memtimeatsize);
-		printf("size %d\n",request->memsize);
-		request++;
-	}
-
-}
-
-static char *stamp()
-{
-	static char timebuf[80];
-	time_t now;
-			
-	time(&now);
-	strftime(timebuf, 80, "%m/%d/%y %H:%M:%S ", localtime(&now));
-	return timebuf;
-}
-
-int
-match_prefix(const char *s1, const char *s2)
-{
-    size_t  s1l = strlen(s1);
-    size_t  s2l = strlen(s2);
-    size_t min = (s1l < s2l) ? s1l : s2l;
-
-	/* return true if the strings match (i.e., strcmp() returns 0) */
-	if (strncmp(s1, s2, min) == 0)
-		return 1;
- 
-	return 0;
-}
