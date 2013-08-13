@@ -45,7 +45,8 @@ It is no longer included with this release.
 
 \begin{itemize}
 
-\item None.
+\item The default value of \Macro{ENABLE\_DEPRECATION\_WARNINGS} has been changed to false.
+\Ticket{3848}
 
 \end{itemize}
 
@@ -130,6 +131,10 @@ configuration, and the primary collector machine is offline.
 \Condor{dagman} to hang when using the
 \OptArg{-maxidle}/\Macro{DAGMAN\_MAX\_JOBS\_IDLE} option.
 \Ticket{3834}
+
+\item Fixed a bug that caused \Condor{submit} \Opt{-spool} to always fail
+on Windows.
+\Ticket{3791}
 
 \end{itemize}
 
