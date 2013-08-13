@@ -620,9 +620,9 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				job->TermAbortMetrics( event->proc, event->eventTime,
 							_metrics );
 #endif
-				ProcessAbortEvent(event, job, recovery);
 					// Make sure we don't count finished jobs as idle.
 				ProcessNotIdleEvent(job);
+				ProcessAbortEvent(event, job, recovery);
 				break;
               
 			case ULOG_JOB_TERMINATED:
@@ -630,9 +630,9 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				job->TermAbortMetrics( event->proc, event->eventTime,
 							_metrics );
 #endif
-				ProcessTerminatedEvent(event, job, recovery);
 					// Make sure we don't count finished jobs as idle.
 				ProcessNotIdleEvent(job);
+				ProcessTerminatedEvent(event, job, recovery);
 				break;
 
 			case ULOG_POST_SCRIPT_TERMINATED:
@@ -1211,12 +1211,20 @@ Dag::ProcessIsIdleEvent(Job *job) {
 		return;
 	}
 
-	if ( !job->GetIsIdle() ) {
+	if ( !job->GetIsIdle() &&
+				( job->GetStatus() == Job::STATUS_SUBMITTED ) ) {
 		job->SetIsIdle(true);
 		_numIdleJobProcs++;
 	}
 
-	// Do some consistency checks here?
+	// Do some consistency checks here.
+	if ( _numIdleJobProcs > 0 && NumJobsSubmitted() < 1 ) {
+        debug_printf( DEBUG_NORMAL,
+					"Warning:  DAGMan thinks there are %d idle job procs, even though there are no jobs in the queue!  Setting idle count to 0 so DAG continues.\n",
+					_numIdleJobProcs );
+		check_warning_strictness( DAG_STRICT_2 );
+		_numIdleJobProcs = 0;
+	}
 
 	debug_printf( DEBUG_VERBOSE, "Number of idle job procs: %d\n",
 				_numIdleJobProcs);
@@ -1230,7 +1238,8 @@ Dag::ProcessNotIdleEvent(Job *job) {
 		return;
 	}
 
-	if ( job->GetIsIdle() ) {
+	if ( job->GetIsIdle() &&
+				( job->GetStatus() == Job::STATUS_SUBMITTED ) ) {
 		job->SetIsIdle(false);
 		_numIdleJobProcs--;
 	}
@@ -1240,6 +1249,14 @@ Dag::ProcessNotIdleEvent(Job *job) {
         debug_printf( DEBUG_NORMAL,
 					"WARNING: DAGMan thinks there are %d idle job procs!\n",
 					_numIdleJobProcs );
+	}
+
+	if ( _numIdleJobProcs > 0 && NumJobsSubmitted() < 1 ) {
+        debug_printf( DEBUG_NORMAL,
+					"Warning:  DAGMan thinks there are %d idle job procs, even though there are no jobs in the queue!  Setting idle count to 0 so DAG continues.\n",
+					_numIdleJobProcs );
+		check_warning_strictness( DAG_STRICT_2 );
+		_numIdleJobProcs = 0;
 	}
 
 	debug_printf( DEBUG_VERBOSE, "Number of idle job procs: %d\n",
