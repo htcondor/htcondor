@@ -19,6 +19,7 @@ cmd_q_shows-pool
 cmd_q_shows-xml
 cmd_q_shows-cputime
 cmd_q_shows-format
+job_mem_checker
 cmd_drain
 defrag
 #cmd_status_shows-any

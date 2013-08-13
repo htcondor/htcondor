@@ -8,6 +8,7 @@ job_core_crontab_local
 job_core_time-deferral_local
 job_core_time-deferral-hold_local
 job_core_time-deferral-remove_local
+job_mem_checker
 #job_filexfer_sandbox-empty_van unsure of why error 6/25/07
 cmd_q_shows-sub
 # next set
