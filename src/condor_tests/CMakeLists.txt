@@ -386,6 +386,7 @@ if (BUILD_TESTING)
 	condor_pl_test(lib_eventlog_rotation-reader_missed_2 "Event Log Rotation: reader, missed events 2" "core;quick;full")
 	condor_pl_test(negotiator_match_log_exists "ensure Matlog has only matches" "core;quick;full")
 	condor_pl_test(job_mem_checker "Look at reported memory usage" "core;quick;full")
+	condor_pl_test(cmd_condor_submit_dashspool "Look at condor_submit -spool" "core;quick;full")
 
 	if(LINUX)
 		condor_pl_test(job_cpu_affinity_check "ensure Matlog has only matches" "core;quick;full")
