@@ -33,7 +33,7 @@ $on_execute = sub {
 	my @netstat_result = `netstat -tlpn | grep condor`;
 	my $netstatlength = @netstat_result;
 
-	print "$netstatlength == <$netstatlength>\nResults Follow:\n"";
+	print "$netstatlength == <$netstatlength>\nResults Follow:\n";
 
 	foreach my $line (@netstat_result) {
 		chomp($line);
