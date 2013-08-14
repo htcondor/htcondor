@@ -102,8 +102,8 @@ $on_execute = sub {
 	my $unexpected_listening_daemon = 1;
 	foreach my $candidate (@netstat_result) {
 		chomp($candidate);
-		print "considering <$1>\n";
-		if($candidate =~ /^.*LISTEN\s+(\d+\/\w+)\s+$/) {
+		print "considering <$candidate>\n";
+		if($candidate =~ /^.*LISTEN\s+(\d+\/\w+)\s*$/) {
 			print "Yes $1\n";
 			my @pdpairing = split /\//, $1;
 			print "PID - $pdpairing[0]\n";
