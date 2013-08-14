@@ -383,11 +383,11 @@ get_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, un
 #if defined(Solaris)
 
 get_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, unsigned int *vmrss)
+{
 }
 
 #endif
 
-}
 #if defined(DARWIN)
 
 /*
