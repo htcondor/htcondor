@@ -55,8 +55,9 @@ It is no longer included with this release.
 \begin{itemize}
 
 \item Fixed a bug that could cause the \Condor{collector} to 
-	become unresponsive if a view collector ( specified 
-	via \Macro{CONDOR\_VIEW\_HOST} ) becomes unavailable.
+become unresponsive if the remote HTCondorView server, 
+specified with configuration variable \Macro{CONDOR\_VIEW\_HOST},
+becomes unavailable.
 \Ticket{3758}
 
 \item Fixed a bug that could cause jobs to be incorrectly placed on hold upon
