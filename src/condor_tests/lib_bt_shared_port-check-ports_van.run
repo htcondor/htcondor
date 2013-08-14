@@ -44,10 +44,10 @@ $on_execute = sub {
 	if($netstatlength == 0) {
 		CondorTest::debug("Warning: 'netstat -tlpn | grep condor' failed, skipping tcp port checks\n",1);
 		return;
+	} else {
+		print "We have <$netstatlength> lines of netstat info\n";
 	}
 	CondorTest::debug("netstat -tlpn | grep condor\n$netstat_result\n", 1);
-	#my @lines = split /\n/, $netstat_result;
-	my @lines = @netstat_result;
 
 	# get the log directory for this test
 	my $logdir = `condor_config_val log`;
@@ -100,10 +100,11 @@ $on_execute = sub {
 	my $answer = "";
 	my $found_listening_daemon = 0;
 	my $unexpected_listening_daemon = 1;
-	foreach my $candidate (@lines) {
+	foreach my $candidate (@netstat_result) {
 		chomp($candidate);
+		print "considering <$1>\n";
 		if($candidate =~ /^.*LISTEN\s+(\d+\/\w+)\s+$/) {
-			#print "$1\n";
+			print "Yes $1\n";
 			my @pdpairing = split /\//, $1;
 			print "PID - $pdpairing[0]\n";
 			if(exists $familypids{$pdpairing[0]}) {
@@ -118,7 +119,7 @@ $on_execute = sub {
 				}
 			}
 		} else {
-			print "Regx failed <$candiate>\n";
+			print "Regx failed <$candidate>\n";
 		}
 	}
 
