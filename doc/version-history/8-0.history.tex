@@ -81,9 +81,10 @@ in which concurrency limits were not respected across negotiation cycles when
 \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} was \Expr{False}.
 \Ticket{3815}
 
+<<<<<<< HEAD
 \item Fixed a bug from HTCondor version 7.9.6. 
 The bug exhibited itself when using CCB to connect to the \Condor{startd};
-the \Condor{negotiator} would sometimes crash and then be restarted
+the \Condor{negotiator} and \Condor{schedd} would sometimes crash and then be restarted
 with the following error message in the log:
 
 \begin{verbatim}
@@ -94,10 +95,6 @@ A workaround for the problem is relevant to HTCondor versions 7.9.6 through
 8.0.1. Configure
 \begin{verbatim}
   SERVICE_COMMAND_SOCKET_MAX_SOCKET_INDEX = -1
-\end{verbatim}
-or disable communication with the \Condor{startd} by setting
-\begin{verbatim}
-  NEGOTIATOR_INFORM_STARTD = False
 \end{verbatim}
 \Ticket{3801}
 
