@@ -67,11 +67,11 @@ It is no longer included with this release.
 on systems where cgroup based tracking and management was enabled.
 \Ticket{3819}
 
-\item Fixed a bug that could cause the negotiator to give out the same
-	slot twice and result in a scary entry in the NegotiatorLog file with the 
-	wording:
+\item Fixed a bug that could cause the \Condor{negotiator} to give out the same
+slot twice, and result in a scary entry in the \File{NegotiatorLog} file 
+with the wording:
 \begin{verbatim}
-INSANE: bestCached != bestSoFar
+  INSANE: bestCached != bestSoFar
 \end{verbatim}
 \Ticket{2245}
 
