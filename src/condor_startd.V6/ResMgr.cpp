@@ -1219,7 +1219,7 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 	starter_mgr.publish( cp, how_much );
 	m_vmuniverse_mgr.publish(cp, how_much);
 	startd_stats.pool.Publish(*cp, 0);
-	startd_stats.pool.Advance(time(0));
+	startd_stats.Tick(time(0));
 
 #if HAVE_HIBERNATION
     m_hibernation_manager->publish( *cp );
