@@ -54,6 +54,14 @@ It is no longer included with this release.
 
 \begin{itemize}
 
+\item Workaround triggering a Linux kernel defect when using cgroups
+and suspending jobs.
+\ticket{#3487}
+
+\item Fix missing converters in python bindings by providing
+pyclassad shared library.
+\ticket{#3780}
+
 \item Fixed a bug that could cause the \Condor{collector} to 
 become unresponsive if the remote HTCondorView server, 
 specified with configuration variable \Macro{CONDOR\_VIEW\_HOST},
@@ -85,7 +93,6 @@ in which concurrency limits were not respected across negotiation cycles when
 \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} was \Expr{False}.
 \Ticket{3815}
 
-<<<<<<< HEAD
 \item Fixed a bug from HTCondor version 7.9.6. 
 The bug exhibited itself when using CCB to connect to the \Condor{startd};
 the \Condor{negotiator} and \Condor{schedd} would sometimes crash and then be restarted
