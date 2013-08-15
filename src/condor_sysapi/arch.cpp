@@ -637,7 +637,7 @@ sysapi_get_linux_info(void)
 	ASSERT(temp_opsys_name);
 	if ( strcmp(temp_opsys_name,"LINUX")==0 ) {
 		// failed to find what we want in this issue file; try another
-		free((void*)temp_opsys_name);
+		free(const_cast<char*>(temp_opsys_name));
 		free(info_str);
 		info_str = NULL;
 	} else {
