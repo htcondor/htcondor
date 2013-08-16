@@ -33,6 +33,8 @@
 #include "_unordered_map.h"
 #include "basename.h"
 #include "my_username.h"
+#include "condor_claimid_parser.h"
+#include "authentication.h"
 #include "condor_version.h"
 
 
@@ -56,6 +58,8 @@ StringList result_list;
 PipeBuffer stdin_buffer; 
 
 std::string peer_condor_version;
+
+std::string sec_session_id;
 
 // this appears at the bottom of this file
 extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
@@ -268,7 +272,18 @@ stdin_pipe_handler(Service*, int) {
 
 		const char * command = line->c_str();
 
-		dprintf (D_ALWAYS, "got stdin: %s\n", command);
+		// CREATE_CONDOR_SECURITY_SESSION contains sensitive data that
+		// normally shouldn't be written to a publically-readable log.
+		// We should conceal it unless GAHP_DEBUG_HIDE_SENSITIVE_DATA
+		// says not to.
+		if ( param_boolean( "GAHP_DEBUG_HIDE_SENSITIVE_DATA", true ) &&
+			 strncmp( command, GAHP_COMMAND_CREATE_CONDOR_SECURITY_SESSION,
+					  strlen( GAHP_COMMAND_CREATE_CONDOR_SECURITY_SESSION ) ) == 0 ) {
+			dprintf( D_ALWAYS, "got stdin: %s XXXXXXXX\n",
+					 GAHP_COMMAND_CREATE_CONDOR_SECURITY_SESSION );
+		} else {
+			dprintf (D_ALWAYS, "got stdin: %s\n", command);
+		}
 
 		Gahp_Args args;
 
@@ -319,6 +334,7 @@ stdin_pipe_handler(Service*, int) {
 					GAHP_COMMAND_DOWNLOAD_SANDBOX,
 					GAHP_COMMAND_UPLOAD_SANDBOX,
 					GAHP_COMMAND_DESTROY_SANDBOX,
+					GAHP_COMMAND_CREATE_CONDOR_SECURITY_SESSION,
 					GAHP_COMMAND_CONDOR_VERSION,
 					GAHP_COMMAND_ASYNC_MODE_ON,
 					GAHP_COMMAND_ASYNC_MODE_OFF,
@@ -326,7 +342,23 @@ stdin_pipe_handler(Service*, int) {
 					GAHP_COMMAND_QUIT,
 					GAHP_COMMAND_VERSION,
 					GAHP_COMMAND_COMMANDS};
-				gahp_output_return (commands, 11);
+				gahp_output_return (commands, 12);
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_CREATE_CONDOR_SECURITY_SESSION) == 0) {
+				ClaimIdParser claimid( args.argv[1] );
+				if ( !daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+										DAEMON,
+										claimid.secSessionId(),
+										claimid.secSessionKey(),
+										claimid.secSessionInfo(),
+										CONDOR_PARENT_FQU,
+										NULL,
+										0 ) ) {
+					gahp_output_return_error();
+				} else {
+					sec_session_id = claimid.secSessionId();
+					gahp_output_return_success();
+				}
+
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_CONDOR_VERSION) == 0) {
 				peer_condor_version = args.argv[1];
 
@@ -501,7 +533,8 @@ verify_gahp_command(char ** argv, int argc) {
 				strcasecmp (argv[0], GAHP_COMMAND_ASYNC_MODE_OFF) == 0) {
 	    // These are no-arg commands
 	    return verify_number_args (argc, 1);
-	} else if (strcasecmp (argv[0], GAHP_COMMAND_CONDOR_VERSION) == 0 ) {
+	} else if (strcasecmp (argv[0], GAHP_COMMAND_CONDOR_VERSION) == 0 ||
+			   strcasecmp (argv[0], GAHP_COMMAND_CREATE_CONDOR_SECURITY_SESSION) == 0 ) {
 		return verify_number_args (argc, 2);
 	}
 
@@ -883,6 +916,10 @@ int do_command_download_sandbox(void *arg, Stream*) {
 		ft.setPeerVersion( ver );
 	}
 
+	if ( !sec_session_id.empty() ) {
+		ft.setSecuritySession( sec_session_id.c_str() );
+	}
+
 	// lookup ATTR_VERSION and set it.  this changes the wire
 	// protocol and it is important that this happens before
 	// calling DownloadFiles.
@@ -950,6 +987,10 @@ int do_command_upload_sandbox(void *arg, Stream*) {
 	} else {
 		CondorVersionInfo ver( 8, 0, 0 );
 		ft.setPeerVersion( ver );
+	}
+
+	if ( !sec_session_id.empty() ) {
+		ft.setSecuritySession( sec_session_id.c_str() );
 	}
 
 	// lookup ATTR_VERSION and set it.  this changes the wire

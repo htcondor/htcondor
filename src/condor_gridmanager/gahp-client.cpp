@@ -29,6 +29,8 @@
 #include "gahp_common.h"
 #include "env.h"
 #include "condor_string.h"
+#include "condor_claimid_parser.h"
+#include "authentication.h"
 #include "condor_version.h"
 
 #include "gahp-client.h"
@@ -230,8 +232,14 @@ GahpServer::DeleteMe()
 	}
 }
 
+// Some GAHP commands may contain sensitive data that should be written
+// to a publically-readable log. If debug_cmd != NULL, it contains a
+// sanitized version to log.
+// For now, the caller is responsible for checking
+// GAHP_DEBUG_HIDE_SENSITIVE_DATA to see if sensitive data should be
+// sanitized.
 void
-GahpServer::write_line(const char *command)
+GahpServer::write_line(const char *command, const char *debug_cmd)
 {
 	if ( !command || m_gahp_writefd == -1 ) {
 		return;
@@ -241,8 +249,8 @@ GahpServer::write_line(const char *command)
 	daemonCore->Write_Pipe(m_gahp_writefd,"\r\n",2);
 
 	if ( logGahpIo ) {
-		std::string debug = command;
-		formatstr( debug, "'%s'", command );
+		std::string debug;
+		formatstr( debug, "'%s'", debug_cmd ? debug_cmd : command );
 		if ( logGahpIoSize > 0 && debug.length() > logGahpIoSize ) {
 			debug.erase( logGahpIoSize, std::string::npos );
 			debug += "...";
@@ -317,6 +325,9 @@ GahpServer::Reaper(Service *,int pid,int status)
 	}
 
 	if ( dead_server ) {
+		if ( !dead_server->m_sec_session_id.empty() ) {
+			daemonCore->getSecMan()->session_cache->remove( dead_server->m_sec_session_id.c_str() );
+		}
 		formatstr_cat( buf, " unexpectedly" );
 		if ( dead_server->m_gahp_startup_failed ) {
 			dprintf( D_ALWAYS, "%s\n", buf.c_str() );
@@ -958,6 +969,80 @@ GahpServer::Initialize( Proxy *proxy )
 
 	is_initialized = true;
 
+	return true;
+}
+
+bool
+GahpClient::CreateSecuritySession()
+{
+	return server->CreateSecuritySession();
+}
+
+bool
+GahpServer::CreateSecuritySession()
+{
+	static const char *command = "CREATE_CONDOR_SECURITY_SESSION";
+
+	// Only create one security session per gahp
+	if ( !m_sec_session_id.empty() ) {
+		return true;
+	}
+
+		// Check if this command is supported
+	if  (m_commands_supported->contains_anycase(command)==FALSE) {
+		return false;
+	}
+
+	char *session_id = Condor_Crypt_Base::randomHexKey();
+	char *session_key = Condor_Crypt_Base::randomHexKey();
+
+	if ( !daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession( DAEMON,
+										session_id, session_key, NULL,
+										CONDOR_CHILD_FQU, NULL, 0 ) ) {
+		free( session_id );
+		free( session_key );
+		return false;
+	}
+
+	MyString session_info;
+	if ( !daemonCore->getSecMan()->ExportSecSessionInfo( session_id,
+														 session_info ) ) {
+		free( session_id );
+		free( session_key );
+		return false;
+	}
+
+	ClaimIdParser claimId( session_id, session_info.Value(), session_key );
+
+	free( session_id );
+	free( session_key );
+
+	std::string buf;
+	int x = formatstr( buf, "%s %s", command, escapeGahpString( claimId.claimId() ) );
+	ASSERT( x > 0 );
+	if ( param_boolean( "GAHP_DEBUG_HIDE_SENSITIVE_DATA", true ) ) {
+		std::string debug_buf;
+		formatstr( debug_buf, "%s XXXXXXXX", command );
+		write_line( buf.c_str(), debug_buf.c_str() );
+	} else {
+		write_line(buf.c_str());
+	}
+
+	Gahp_Args result;
+	read_argv(result);
+	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
+		const char *reason;
+		if ( result.argc > 1 ) {
+			reason = result.argv[1];
+		} else {
+			reason = "Unspecified error";
+		}
+		dprintf( D_ALWAYS, "GAHP command '%s' failed: %s\n", command, reason );
+		daemonCore->getSecMan()->session_cache->remove( claimId.secSessionId() );
+		return false;
+	}
+
+	m_sec_session_id = claimId.secSessionId();
 	return true;
 }
 

@@ -3909,6 +3909,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gahp-client
 id=214
 
+[GAHP_DEBUG_HIDE_SENSITIVE_DATA]
+aliases=
+default=true
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Gahp Debug Hide Sensitive Data
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=gridmanager,gahp-client
+id=213
+
 [GAHP_USE_XML_CLASSADS]
 aliases=
 default=false

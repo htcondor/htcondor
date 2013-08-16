@@ -393,6 +393,7 @@ void INFNBatchJob::doEvaluateState()
 			if ( myResource->GahpIsRemote() ) {
 				// This job requires a transfer gahp
 				ASSERT( m_xfer_gahp );
+				bool already_started = m_xfer_gahp->isStarted();
 				if ( m_xfer_gahp->Startup() == false ) {
 					dprintf( D_ALWAYS, "(%d.%d) Error starting transfer GAHP\n",
 							 procID.cluster, procID.proc );
@@ -403,6 +404,17 @@ void INFNBatchJob::doEvaluateState()
 					jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
 					gmState = GM_HOLD;
 					break;
+				}
+				// Try creating the security session only when we first
+				// start up the FT GAHP.
+				// For now, failure to create the security session is
+				// not fatal. FT GAHPs older than 8.1.1 didn't have a
+				// CEDAR security session command and BOSCO had another
+				// way to authenticate FileTransfer connections.
+				if ( !already_started &&
+					 m_xfer_gahp->CreateSecuritySession() == false ) {
+					dprintf( D_ALWAYS, "(%d.%d) Error creating security session with transfer GAHP\n",
+							 procID.cluster, procID.proc );
 				}
 			}
 			if ( jobProxy ) {

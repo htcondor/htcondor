@@ -73,6 +73,7 @@ class GahpServer : public Service {
 
 	bool Startup();
 	bool Initialize(Proxy * proxy);
+	bool CreateSecuritySession();
 
 	void DeleteMe();
 
@@ -93,7 +94,7 @@ class GahpServer : public Service {
 
 	void read_argv(Gahp_Args &g_args);
 	void read_argv(Gahp_Args *g_args) { read_argv(*g_args); }
-	void write_line(const char *command);
+	void write_line(const char *command, const char *debug_cmd = NULL);
 	void write_line(const char *command,int req,const char *args);
 	int pipe_ready(int pipe_end);
 	int err_pipe_ready(int pipe_end);
@@ -189,6 +190,8 @@ class GahpServer : public Service {
 	char *my_id;
 	int m_ssh_forward_port;
 
+	std::string m_sec_session_id;
+
 	char *globus_gass_server_url;
 	char *globus_gt2_gram_callback_contact;
 	void *globus_gt2_gram_user_callback_arg;
@@ -229,6 +232,8 @@ class GahpClient : public Service {
 
 		///
 		bool Initialize(Proxy *proxy);
+
+		bool CreateSecuritySession();
 
 		///
 		void purgePendingRequests() { clear_pending(); }
