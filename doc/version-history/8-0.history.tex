@@ -100,7 +100,8 @@ It is no longer included with this release.
 
 \begin{itemize}
 
-\item The default value of \Macro{ENABLE\_DEPRECATION\_WARNINGS} has been changed to false.
+\item The default value of \Macro{ENABLE\_DEPRECATION\_WARNINGS} 
+has been changed to \Expr{False}.
 \Ticket{3848}
 
 \end{itemize}
@@ -111,11 +112,11 @@ It is no longer included with this release.
 
 \item Workaround triggering a Linux kernel defect when using cgroups
 and suspending jobs.
-\ticket{#3487}
+\Ticket{3487}
 
-\item Fix missing converters in python bindings by providing
-pyclassad shared library.
-\ticket{#3780}
+\item Fixed a python bindings problem of missing converters by providing
+\Code{pyclassad} as a shared library.
+\Ticket{3780}
 
 \item Fixed a bug that could cause the \Condor{collector} to 
 become unresponsive if the remote HTCondorView server, 
@@ -169,9 +170,10 @@ with a syntax error when a job with a memory requirement was
 submitted.
 \Ticket{3808}
 
-\item Fix a bug causing security groups for EC2 jobs to be ignored.  Also,
-you may now, as documented, separate the list of security groups for
-an EC2 Spot job by commas.
+\item Fix a bug causing security groups for EC2 jobs to be ignored.  
+Also, the code respects the use of commas, as documented, 
+to separate the items in the list of security groups specified by
+the submit description file command \SubmitCmd{ec2\_security\_groups}. 
 \Ticket{3787}
 
 \item When invoking \Prog{glexec}, environment variable
