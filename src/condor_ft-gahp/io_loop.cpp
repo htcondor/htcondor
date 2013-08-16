@@ -883,10 +883,6 @@ int do_command_download_sandbox(void *arg, Stream*) {
 		ft.setPeerVersion( ver );
 	}
 
-	if ( !sec_session_id.empty() ) {
-		ft.setSecuritySession( sec_session_id.c_str() );
-	}
-
 	// lookup ATTR_VERSION and set it.  this changes the wire
 	// protocol and it is important that this happens before
 	// calling DownloadFiles.
@@ -954,10 +950,6 @@ int do_command_upload_sandbox(void *arg, Stream*) {
 	} else {
 		CondorVersionInfo ver( 8, 0, 0 );
 		ft.setPeerVersion( ver );
-	}
-
-	if ( !sec_session_id.empty() ) {
-		ft.setSecuritySession( sec_session_id.c_str() );
 	}
 
 	// lookup ATTR_VERSION and set it.  this changes the wire
