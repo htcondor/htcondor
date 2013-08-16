@@ -29,6 +29,7 @@
 #include "gahp_common.h"
 #include "env.h"
 #include "condor_string.h"
+#include "condor_version.h"
 
 #include "gahp-client.h"
 #include "gridmanager.h"
@@ -830,6 +831,8 @@ GahpServer::Startup()
 		goto error_exit;
 	}
 
+	command_condor_version();
+
 		// Try and use a reponse prefix, to shield against
 		// errors which could arise if the Globus libraries
 		// linked with the GAHP server spit out information to stdout.
@@ -1361,6 +1364,12 @@ GahpClient::getVersion()
 	return server->m_gahp_version;
 }
 
+const char *
+GahpClient::getCondorVersion()
+{
+	return server->m_gahp_condor_version.c_str();
+}
+
 void
 GahpClient::setNormalProxy( Proxy *proxy )
 {
@@ -1618,6 +1627,32 @@ GahpServer::command_version()
 	}
 
 	return ret_val;
+}
+
+bool
+GahpServer::command_condor_version()
+{
+	static const char *command = "CONDOR_VERSION";
+
+		// Check if this command is supported
+	if ( m_commands_supported->contains_anycase( command ) == FALSE ) {
+		return false;
+	}
+
+	std::string buf;
+	int x = formatstr( buf, "%s %s", command, escapeGahpString( CondorVersion() ) );
+	ASSERT( x > 0 );
+	write_line( buf.c_str() );
+
+	Gahp_Args result;
+	read_argv(result);
+	if ( result.argc != 2 || result.argv[0][0] != 'S' ) {
+		dprintf(D_ALWAYS,"GAHP command '%s' failed\n",command);
+		return false;
+	}
+	m_gahp_condor_version = result.argv[1];
+
+	return true;
 }
 
 const char *
