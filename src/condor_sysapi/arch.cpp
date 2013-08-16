@@ -642,6 +642,7 @@ sysapi_get_linux_info(void)
 		info_str = NULL;
 	} else {
 		// we found distro info in this line, stop searching
+		free(const_cast<char*>(temp_opsys_name));
 		break;
 	}
 	}
