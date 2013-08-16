@@ -422,6 +422,11 @@ CondorVersionInfo::string_to_VersionData(const char *verstring,
 		// but we're not using them anymore, but others may be so we
 		// hold on to them.  See CondorVersion() for complete format.
 	ver.Rest = strdup(ptr);
+		// Strip the trailing " $"
+	char *end = strstr( ver.Rest, " $" );
+	if ( end ) {
+		*end = '\0';
+	}
 
 	return true;
 }
