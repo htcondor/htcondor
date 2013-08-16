@@ -114,9 +114,10 @@ with a syntax error when a job with a memory requirement was
 submitted.
 \Ticket{3808}
 
-\item Fix a bug causing security groups for EC2 jobs to be ignored.  Also,
-you may now, as documented, separate the list of security groups for
-an EC2 Spot job by commas.
+\item Fix a bug causing security groups for EC2 jobs to be ignored.  
+Also, the code respects the use of commas, as documented, 
+to separate the items in the list of security groups specified by
+the submit description file command \SubmitCmd{ec2\_security\_groups}. 
 \Ticket{3787}
 
 \item When invoking \Prog{glexec}, environment variable
