@@ -42,6 +42,9 @@ public:
 	CondorVersionInfo(const char *versionstring = NULL, 
 		const char *subsystem = NULL, const char *platformstring = NULL);
 
+	CondorVersionInfo(int major, int minor, int subminor, const char *rest = NULL,
+		const char *subsystem = NULL, const char *platformstring = NULL);
+
 	CondorVersionInfo(CondorVersionInfo const &);
 
 	/// Destructor.
@@ -109,6 +112,8 @@ private:
 	VersionData_t myversion;
 	char *mysubsys;
 
+	bool numbers_to_VersionData( int major, int minor, int subminor,
+								 const char *rest, VersionData_t &ver ) const;
 	bool string_to_VersionData(const char *,VersionData_t &) const;
 	bool string_to_PlatformData(const char *,VersionData_t &) const;
 
