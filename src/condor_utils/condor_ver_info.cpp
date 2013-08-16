@@ -54,6 +54,31 @@ CondorVersionInfo::CondorVersionInfo(const char *versionstring,
 	}
 }
 
+CondorVersionInfo::CondorVersionInfo(int major, int minor, int subminor,
+									 const char *rest,
+									 const char *subsystem,
+									 const char *platformstring)
+{
+	myversion.MajorVer = 0;
+	myversion.Rest = NULL;
+	myversion.Arch = NULL;
+	myversion.OpSys = NULL;
+	mysubsys = NULL;
+
+	if ( platformstring == NULL ) {
+		platformstring = CondorPlatform();
+	}
+
+	numbers_to_VersionData( major, minor, subminor, rest, myversion );
+	string_to_PlatformData( platformstring, myversion );
+
+	if ( subsystem ) {
+		mysubsys = strdup( subsystem );
+	} else {
+		mysubsys = strdup( get_mySubSystem()->getName() );
+	}
+}
+
 CondorVersionInfo::CondorVersionInfo(CondorVersionInfo const &other)
 {
 	myversion = other.myversion;
@@ -380,6 +405,32 @@ CondorVersionInfo::VersionData_to_string(VersionData_t const &ver) const
 }
 
 bool
+CondorVersionInfo::numbers_to_VersionData( int major, int minor, int subminor,
+										   const char *rest, VersionData_t & ver ) const
+{
+	ver.MajorVer = major;
+	ver.MinorVer = minor;
+	ver.SubMinorVer = subminor;
+
+		// Sanity check: the world starts with Condor V6 !
+	if ( ver.MajorVer < 6  || ver.MinorVer > 99 || ver.SubMinorVer > 99 ) {
+		ver.MajorVer = 0;
+		return false;
+	}
+
+	ver.Scalar = ver.MajorVer * 1000000 + ver.MinorVer * 1000 
+					+ ver.SubMinorVer;
+
+	if ( rest ) {
+		ver.Rest = strdup( rest );
+	} else {
+		ver.Rest = strdup( "" );
+	}
+
+	return true;
+}
+
+bool
 CondorVersionInfo::string_to_VersionData(const char *verstring, 
 										 VersionData_t & ver) const
 {
@@ -422,6 +473,11 @@ CondorVersionInfo::string_to_VersionData(const char *verstring,
 		// but we're not using them anymore, but others may be so we
 		// hold on to them.  See CondorVersion() for complete format.
 	ver.Rest = strdup(ptr);
+		// Strip the trailing " $"
+	char *end = strstr( ver.Rest, " $" );
+	if ( end ) {
+		*end = '\0';
+	}
 
 	return true;
 }

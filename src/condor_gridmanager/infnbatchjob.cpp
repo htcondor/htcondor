@@ -520,9 +520,19 @@ void INFNBatchJob::doEvaluateState()
 					gmState = GM_HOLD;
 					break;
 				}
-				// TODO Can we determine the ft-gahp's Condor version?
-				CondorVersionInfo ver_info;
-				m_filetrans->setPeerVersion( ver_info );
+
+				// Set the Condor version of the FT GAHP. If we don't know
+				// its version, then assume it's pre-8.1.0.
+				// In 8.1, the file transfer protocol changed and we added
+				// a command to exchange Condor version strings with the
+				// FT GAHP.
+				const char *ver_str = m_xfer_gahp->getCondorVersion();
+				if ( ver_str && ver_str[0] ) {
+					m_filetrans->setPeerVersion( ver_str );
+				} else {
+					CondorVersionInfo ver( 8, 0, 0 );
+					m_filetrans->setPeerVersion( ver );
+				}
 			}
 
 			// If available, use SSH tunnel for file transfer connections.
@@ -749,9 +759,19 @@ void INFNBatchJob::doEvaluateState()
 					gmState = GM_HOLD;
 					break;
 				}
-				// TODO Can we determine the ft-gahp's Condor version?
-				CondorVersionInfo ver_info;
-				m_filetrans->setPeerVersion( ver_info );
+
+				// Set the Condor version of the FT GAHP. If we don't know
+				// its version, then assume it's pre-8.1.0.
+				// In 8.1, the file transfer protocol changed and we added
+				// a command to exchange Condor version strings with the
+				// FT GAHP.
+				const char *ver_str = m_xfer_gahp->getCondorVersion();
+				if ( ver_str && ver_str[0] ) {
+					m_filetrans->setPeerVersion( ver_str );
+				} else {
+					CondorVersionInfo ver( 8, 0, 0 );
+					m_filetrans->setPeerVersion( ver );
+				}
 
 				// Add extra remaps for the canonical stdout/err filenames.
 				// If using the FileTransfer object, the starter will rename the

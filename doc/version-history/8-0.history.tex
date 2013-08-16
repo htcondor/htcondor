@@ -100,7 +100,8 @@ It is no longer included with this release.
 
 \begin{itemize}
 
-\item The default value of \Macro{ENABLE\_DEPRECATION\_WARNINGS} has been changed to false.
+\item The default value of \Macro{ENABLE\_DEPRECATION\_WARNINGS} 
+has been changed to \Expr{False}.
 \Ticket{3848}
 
 \end{itemize}
@@ -109,11 +110,23 @@ It is no longer included with this release.
 
 \begin{itemize}
 
+\item Workaround triggering a Linux kernel defect when using cgroups
+and suspending jobs.
+\Ticket{3487}
+
+\item Fixed a python bindings problem of missing converters by providing
+\Code{pyclassad} as a shared library.
+\Ticket{3780}
+
 \item Fixed a bug that could cause the \Condor{collector} to 
 become unresponsive if the remote HTCondorView server, 
 specified with configuration variable \Macro{CONDOR\_VIEW\_HOST},
 becomes unavailable.
 \Ticket{3758}
+
+\item Code to publish Linux distribution attributes in machine ad was made more
+	robust in the event that /etc/issue file was edited.
+\Ticket{3854}
 
 \item Fixed a bug that could cause jobs to be incorrectly placed on hold upon
 	completion with a hold reason claiming an out-of-memory event.
@@ -136,7 +149,6 @@ in which concurrency limits were not respected across negotiation cycles when
 \Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} was \Expr{False}.
 \Ticket{3815}
 
-<<<<<<< HEAD
 \item Fixed a bug from HTCondor version 7.9.6. 
 The bug exhibited itself when using CCB to connect to the \Condor{startd};
 the \Condor{negotiator} and \Condor{schedd} would sometimes crash and then be restarted
@@ -158,9 +170,10 @@ with a syntax error when a job with a memory requirement was
 submitted.
 \Ticket{3808}
 
-\item Fix a bug causing security groups for EC2 jobs to be ignored.  Also,
-you may now, as documented, separate the list of security groups for
-an EC2 Spot job by commas.
+\item Fix a bug causing security groups for EC2 jobs to be ignored.  
+Also, the code respects the use of commas, as documented, 
+to separate the items in the list of security groups specified by
+the submit description file command \SubmitCmd{ec2\_security\_groups}. 
 \Ticket{3787}
 
 \item When invoking \Prog{glexec}, environment variable

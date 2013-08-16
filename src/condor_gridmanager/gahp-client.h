@@ -152,6 +152,7 @@ class GahpServer : public Service {
 	bool command_commands();
 	bool command_async_mode_on();
 	bool command_response_prefix(const char *prefix);
+	bool command_condor_version();
 
 	int new_reqid();
 
@@ -172,6 +173,7 @@ class GahpServer : public Service {
 	std::list<std::string> m_gahp_error_list;
 	bool m_gahp_startup_failed;
 	char m_gahp_version[150];
+	std::string m_gahp_condor_version;
 	StringList * m_commands_supported;
 	bool use_prefix;
 	unsigned int m_pollInterval;
@@ -316,6 +318,8 @@ class GahpClient : public Service {
 		const char *getGahpStderr();
 
 		const char *getVersion();
+
+		const char *getCondorVersion();
 
 		int getSshForwardPort() { return server->m_ssh_forward_port; }
 
