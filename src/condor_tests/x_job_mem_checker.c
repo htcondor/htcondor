@@ -18,8 +18,15 @@ void sleep(int sec) { Sleep(sec * 1000); }
 #pragma comment(lib, "kernel32.lib")
 #pragma comment(lib, "psapi.lib")
 #else
+#include <sys/mman.h>
+#include <errno.h>
+
 #include <errno.h>
 #include <unistd.h> // for sleep and getpid
+#endif
+
+#if defined(Solaris)
+#include <procfs.h>
 #endif
 
 #ifdef Darwin
@@ -236,6 +243,7 @@ void report()
 	printf("VmPeak %6u, VmSize %6u, VmHWM %6u, VmRSS %6u, alloc diff %d kB\n", vmpeak, vmsize, vmhwm, vmrss, memdiff);
 }
 
+#if defined(WIN32)
 /*
  * stackpointer always on location which can be filled
  */
@@ -270,6 +278,80 @@ void pop(int chunks) {
 		free(stack[stackpointer]);
 	}
 }
+
+#else
+/*
+ * stackpointer always on location which can be filled
+ */
+
+void push(int chunks) {
+	int units;
+
+	//printf("push %d chunks\n",chunks);
+	for(units = 0; units < chunks; units++) {
+#if defined(Darwin)
+		stack[stackpointer] = mmap(NULL,(size_t) chunksize, PROT_WRITE | PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 0);
+#else
+		stack[stackpointer] = mmap(NULL,(size_t) chunksize, PROT_WRITE | PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+#endif
+		if(stack[stackpointer] == MAP_FAILED) {
+			switch (errno) {
+				case EACCES:
+						printf("Failed EACCES\n");
+						break;
+				case EAGAIN:
+						printf("Failed EAGAIN\n");
+						break;
+				case EBADF:
+						printf("Failed EBADF\n");
+						break;
+				case EINVAL:
+						printf("Failed EINVAL\n");
+						break;
+				case ENFILE:
+						printf("Failed ENFILE\n");
+						break;
+				case ENODEV:
+						printf("Failed ENODEV\n");
+						break;
+				case ENOMEM:
+						printf("Failed ENOMEM\n");
+						break;
+				case EPERM:
+						printf("Failed EPERM\n");
+						break;
+				//case ETXTBSY:
+						//printf("Failed ETXTBSY\n");
+						//break;
+			}
+		}
+		//printf("Push got us address %u\n",(unsigned int)stack[stackpointer]);
+		memset(stack[stackpointer],units,(size_t) chunksize);
+		if(stackpointer != 999) {
+			stackpointer++;
+		} else {
+			printf("exceeded the size of the stack\n");
+			exit(1);
+		}
+	}
+}
+
+void pop(int chunks) {
+	int units;
+
+	printf("pop %d chunks\n",chunks);
+	for(units = 0; units < chunks; units++) {
+		if(stackpointer != 0) {
+			stackpointer--;
+		} else {
+			printf("Tried to pop empty stack\n");
+			exit(1);
+		}
+		munmap(stack[stackpointer],(size_t) chunksize);
+	}
+}
+
+#endif
 
 void init_storage(int size) {
 	int szchng;
@@ -355,13 +437,13 @@ get_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, un
 	    	char label[32]; int size;
 	    	int items = sscanf(status, "%s %d", label, &size);
             	if (items == 2) {
-					printf("scan `%s` found %d items: '%s' %d\n", status, items, label, size);
+					//printf("scan `%s` found %d items: '%s' %d\n", status, items, label, size);
 					if (match_prefix(label,"VmPeak")) *vmpeak = size;
 					else if (match_prefix(label, "VmSize")) *vmsize = size;
 					else if (match_prefix(label, "VmHWM")) *vmhwm = size;
 					else if (match_prefix(label, "VmRSS")) *vmrss = size;
             	} else {
-					printf("scan `%s` expetc 2 entities\n", status);
+					//printf("scan `%s` expetc 2 entities\n", status);
 				}
 		}
 		fclose(fp);
@@ -382,13 +464,41 @@ get_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, un
 
 #if defined(Solaris)
 
+void
 get_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, unsigned int *vmrss)
 {
+	char path[64];
+	FILE *fp;
+	psinfo_t psinfo;
+	int fd;
+	size_t dataread = 0;
+
+	sprintf( path, "/proc/%d/psinfo", jobpid );
+	fp = fopen(path,"r");
+	if(!fp) {
+		printf("Failed to open /proc/self/status\n");
+	} else {
+		printf("Opened psinfo file\n");
+		//size_t fread(void *ptr, size_t size, size_t nitems, FILE *stream)
+		dataread = fread(&psinfo, sizeof(psinfo_t), 1, fp);
+		//dataread = read(fd, &psinfo, sizeof(psinfo_t));
+		if( dataread != 1 ) {
+			printf("Failed to get full read of psinfo_t\n Got %d Wanted %d\n",dataread,sizeof(psinfo_t));
+		} else {
+			printf("Got full read of psinfo_t\n");
+			printf("Size %u RSSS %u\n",(psinfo.pr_size),(psinfo.pr_rssize));
+			*vmpeak = 0;
+			*vmsize = (psinfo.pr_size);
+			*vmhwm = 0;
+			*vmrss = (psinfo.pr_rssize);
+		}
+	}
+	fclose(fp);
 }
 
 #endif
 
-#if defined(DARWIN)
+#if defined(Darwin)
 
 /*
  *   Special structure for holding the raw, unchecked, unconverted,
