@@ -226,10 +226,14 @@ Defaults to \texttt{True}.
 \end{flushleft}
 
 \textbf{The \texttt{SecMan} class accesses the internal security object.}
-Currently, the class only allows the developer to reset security sessions.
-If a security session becomes invalid, 
-for example if the remote daemon restarts and reuses the same port 
-and the client continues to use the session, 
+This class allows access to the security layer of HTCondor.
+
+Currently, this is limited to resetting security sessions and doing
+test authorizations against remote daemons.
+
+If a security session becomes invalid
+(for example, if the remote daemon restarts, reuses the same port, 
+and the client continues to use the session)
 then all future commands will fail with strange connection errors.
 This is the only mechanism to invalidate in-memory sessions.
 
@@ -245,6 +249,24 @@ Create a \texttt{SecMan} object.
 Invalidate all security sessions.
 Any future connections to a daemon will cause a new security session 
 to be created.
+
+\\ \hline
+\texttt{ping ( (ClassAd)ad, (str)command )}
+or
+\texttt{ping ( (string)sinful, (str)command )}
+
+Perform a test authorization against a remote daemon for a given
+command.
+
+Returns the ClassAd of the security session.
+
+Parameter \texttt{ad} is the ClassAd of the daemon as returned by
+Collector.locate; alternately, the `sinful string' can be given
+directly as the first parameter.
+
+Optional parameter \texttt{command} is the DaemonCore command to
+try; if not given, DC\_NOP will be used.
+
 \\ \hline
 
 \end{tabular}
