@@ -63,10 +63,10 @@ ScheddNegotiate::ScheddNegotiate
 ):
 	DCMsg(cmd),
 	m_jobs(jobs),
-	m_owner(owner ? owner : ""),
-	m_remote_pool(remote_pool ? remote_pool : ""),
 	m_current_resources_requested(1),
 	m_current_resources_delivered(0),
+	m_remote_pool(remote_pool ? remote_pool : ""),
+	m_owner(owner ? owner : ""),
 	m_current_auto_cluster_id(-1),
 	m_jobs_rejected(0),
 	m_jobs_matched(0),
