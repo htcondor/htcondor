@@ -139,9 +139,11 @@ configuration, and the primary machine running the \Condor{collector}
 is off-line.
 \Ticket{3828}
 
-\item Fixed a bug in \Condor{dagman} that could (in rare cases) cause
-\Condor{dagman} to hang when using the
-\OptArg{-maxidle}/\Macro{DAGMAN\_MAX\_JOBS\_IDLE} option.
+\item Fixed a bug that could cause \Condor{dagman} to hang 
+due to a rarely seen event ordering.
+This bug could have been triggered when using the
+configuration variable \Macro{DAGMAN\_MAX\_JOBS\_IDLE},
+or its equivalent command line option \Opt{-maxidle}.
 \Ticket{3834}
 
 \item Fixed a bug that caused job submission from Windows platforms
