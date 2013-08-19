@@ -59,6 +59,12 @@ const char* getCollectorCommandString( int );
 /** Given a collector command/signal name, return the number. */
 int getCollectorCommandNum( const char* );
 
+/** Given an authz level, return an example command needing that authorization.
+ *  This is useful for performing condor_ping where we need to ask about a specific
+ *  command.
+ */
+int getSampleCommand( int authz_level );
+
 /** All the possible results of a ClassAd command */  
 
 typedef enum { 

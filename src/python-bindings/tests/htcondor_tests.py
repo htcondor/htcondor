@@ -70,14 +70,14 @@ class TestWithDaemons(unittest.TestCase):
 
     def setUp(self):
         self.pid = -1
-        os.environ["_condor_MASTER"] = os.path.join(os.getcwd(), "../../condor_master.V6/condor_master")
-        os.environ["_condor_COLLECTOR"] = os.path.join(os.getcwd(), "../../condor_collector.V6/condor_collector")
-        os.environ["_condor_SCHEDD"] = os.path.join(os.getcwd(), "../../condor_schedd.V6/condor_schedd")
-        os.environ["_condor_PROCD"] = os.path.join(os.getcwd(), "../../condor_procd/condor_procd")
-        os.environ["_condor_STARTD"] = os.path.join(os.getcwd(), "../../condor_startd.V6/condor_startd")
-        os.environ["_condor_STARTER"] = os.path.join(os.getcwd(), "../../condor_starter.V6.1/condor_starter")
-        os.environ["_condor_NEGOTIATOR"] = os.path.join(os.getcwd(), "../../condor_negotiator.V6/condor_negotiator")
-        os.environ["_condor_SHADOW"] = os.path.join(os.getcwd(), "../../condor_shadow.V6.1/condor_shadow")
+        os.environ["_condor_MASTER"] = os.path.join(os.getcwd(), "../condor_master.V6/condor_master")
+        os.environ["_condor_COLLECTOR"] = os.path.join(os.getcwd(), "../condor_collector.V6/condor_collector")
+        os.environ["_condor_SCHEDD"] = os.path.join(os.getcwd(), "../condor_schedd.V6/condor_schedd")
+        os.environ["_condor_PROCD"] = os.path.join(os.getcwd(), "../condor_procd/condor_procd")
+        os.environ["_condor_STARTD"] = os.path.join(os.getcwd(), "../condor_startd.V6/condor_startd")
+        os.environ["_condor_STARTER"] = os.path.join(os.getcwd(), "../condor_starter.V6.1/condor_starter")
+        os.environ["_condor_NEGOTIATOR"] = os.path.join(os.getcwd(), "../condor_negotiator.V6/condor_negotiator")
+        os.environ["_condor_SHADOW"] = os.path.join(os.getcwd(), "../condor_shadow.V6.1/condor_shadow")
         os.environ["_condor_CONDOR_HOST"] = socket.getfqdn()
         os.environ["_condor_LOCAL_DIR"] = testdir
         os.environ["_condor_LOG"] =  '$(LOCAL_DIR)/log'
@@ -98,6 +98,7 @@ class TestWithDaemons(unittest.TestCase):
         os.environ["_condor_KILL"] = "FALSE"
         os.environ["_condor_WANT_SUSPEND"] = "FALSE"
         os.environ["_condor_WANT_VACATE"] = "FALSE"
+        os.environ["_condor_MachineMaxVacateTime"] = "5"
         htcondor.reload_config()
         htcondor.SecMan().invalidateAllSessions()
 
@@ -244,6 +245,31 @@ class TestWithDaemons(unittest.TestCase):
         ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
         self.assertEquals(len(ads), 0)
         self.assertEquals(open(output_file).read(), "hello world\n");
+
+    def testPing(self):
+        self.launch_daemons(["COLLECTOR"])
+        coll = htcondor.Collector()
+        coll_ad = coll.locate(htcondor.DaemonTypes.Collector)
+        self.assertTrue("MyAddress" in coll_ad)
+        secman = htcondor.SecMan()
+        authz_ad = secman.ping(coll_ad, "WRITE")
+        self.assertTrue("AuthCommand" in authz_ad)
+        self.assertEquals(authz_ad['AuthCommand'], 60021)
+        self.assertTrue("AuthorizationSucceeded" in authz_ad)
+        self.assertTrue(authz_ad['AuthorizationSucceeded'])
+
+        authz_ad = secman.ping(coll_ad["MyAddress"], "WRITE")
+        self.assertTrue("AuthCommand" in authz_ad)
+        self.assertEquals(authz_ad['AuthCommand'], 60021)
+        self.assertTrue("AuthorizationSucceeded" in authz_ad)
+        self.assertTrue(authz_ad['AuthorizationSucceeded'])
+
+        authz_ad = secman.ping(coll_ad["MyAddress"])
+        self.assertTrue("AuthCommand" in authz_ad)
+        self.assertEquals(authz_ad['AuthCommand'], 60021)
+        self.assertTrue("AuthorizationSucceeded" in authz_ad)
+        self.assertTrue(authz_ad['AuthorizationSucceeded'])
+
 
 if __name__ == '__main__':
     unittest.main()
