@@ -58,7 +58,7 @@ static const char *Resource_State_String [] = {
 
 RemoteResource::RemoteResource( BaseShadow *shad ) 
 	: m_want_remote_updates(false),
-	  m_want_volatile(true)
+	  m_want_delayed(true)
 {
 	shadow = shad;
 	dc_startd = NULL;
@@ -98,7 +98,9 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	m_upload_xfer_status = XFER_STATUS_UNKNOWN;
 	m_download_xfer_status = XFER_STATUS_UNKNOWN;
 
-	param(m_remote_update_prefix, "REMOTE_UPDATE_PREFIX", "CHIRP");
+	std::string prefix;
+	param(prefix, "DELAYED_UPDATE_PREFIX", "CHIRP*");
+	m_delayed_update_prefix.initializeFromString(prefix.c_str());
 }
 
 
@@ -995,7 +997,7 @@ RemoteResource::setJobAd( ClassAd *jA )
 
 	jA->LookupBool( ATTR_WANT_IO_PROXY, m_want_chirp );
 	jA->LookupBool( ATTR_WANT_REMOTE_UPDATES, m_want_remote_updates );
-	jA->LookupBool( ATTR_WANT_VOLATILE_UPDATES, m_want_volatile );
+	jA->LookupBool( ATTR_WANT_DELAYED_UPDATES, m_want_delayed );
 
 	bool stream_input=false, stream_output=false, stream_error=false;
 	jA->LookupBool(ATTR_STREAM_INPUT,stream_input);
@@ -2321,9 +2323,9 @@ bool
 RemoteResource::allowRemoteWriteAttributeAccess( const std::string &name )
 {
 	bool response = m_want_chirp || m_want_remote_updates;
-	if (!response && m_want_volatile)
+	if (!response && m_want_delayed)
 	{
-                response = strcasecmp(name.substr(0, m_remote_update_prefix.length()).c_str(), m_remote_update_prefix.c_str()) == 0;
+		response = m_delayed_update_prefix.contains_anycase_withwildcard(name.c_str());
 	}
 	logRemoteAccessCheck(response,"write access to attribute",name.c_str());
 	return response;

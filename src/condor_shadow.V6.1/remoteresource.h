@@ -409,8 +409,8 @@ class RemoteResource : public Service {
 	bool m_want_chirp;
 	bool m_want_remote_updates;
 	bool m_want_streaming_io;
-	bool m_want_volatile;
-	std::string m_remote_update_prefix;
+	bool m_want_delayed;
+	StringList m_delayed_update_prefix;
 
 		// If we specially create a security session for file transfer,
 		// this records all the information we need to know about it.

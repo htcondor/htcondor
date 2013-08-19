@@ -402,12 +402,12 @@ chirp_client_get_job_attr( struct chirp_client *c, const char *name, char **expr
 }
 
 DLLEXPORT int
-chirp_client_get_job_attr_volatile( struct chirp_client *c, const char *name, char **expr )
+chirp_client_get_job_attr_delayed( struct chirp_client *c, const char *name, char **expr )
 {
 	int result;
 	int actual;
 
-	result = simple_command(c,"get_job_attr_volatile %s\n",name);
+	result = simple_command(c,"get_job_attr_delayed %s\n",name);
 	if(result>0) {
 		*expr = (char*)malloc(result);
 		if(*expr) {
@@ -428,9 +428,9 @@ chirp_client_set_job_attr( struct chirp_client *c, const char *name, const char 
 }
 
 DLLEXPORT int
-chirp_client_set_job_attr_volatile( struct chirp_client *c, const char *name, const char *expr )
+chirp_client_set_job_attr_delayed( struct chirp_client *c, const char *name, const char *expr )
 {
-	return simple_command(c,"set_job_attr_volatile %s %s\n",name,expr);
+	return simple_command(c,"set_job_attr_delayed %s %s\n",name,expr);
 }
 
 DLLEXPORT int

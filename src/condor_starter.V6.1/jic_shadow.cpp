@@ -1831,15 +1831,21 @@ JICShadow::setX509ProxyExpirationTimer()
 
 
 bool
-JICShadow::recordVolatileUpdate( const std::string &name, const classad::ExprTree &expr )
+JICShadow::recordDelayedUpdate( const std::string &name, const classad::ExprTree &expr )
 {
 	std::string prefix;
-	param(prefix, "REMOTE_UPDATE_PREFIX", "CHIRP");
-	if (strcasecmp(name.substr(0, prefix.length()).c_str(), prefix.c_str()) == 0) {
+	param(prefix, "DELAYED_UPDATE_PREFIX", "CHIRP*");
+	if (!prefix.size())
+	{
+		dprintf(D_ALWAYS, "Got an invalid prefix for updates: %s\n", name.c_str());
+	}
+	StringList sl(prefix.c_str());
+	if (sl.contains_anycase_withwildcard(name.c_str()))
+	{
 		// Note that the ClassAd takes ownership of the copy.
-		dprintf(D_FULLDEBUG, "Got a volatile update for attribute %s.\n", name.c_str());
+		dprintf(D_FULLDEBUG, "Got a delayed update for attribute %s.\n", name.c_str());
 		classad::ExprTree *expr_copy = expr.Copy();
-		m_volatile_updates.Insert(name, expr_copy);
+		m_delayed_updates.Insert(name, expr_copy);
 		return true;
 	}
 	else
@@ -1852,13 +1858,13 @@ JICShadow::recordVolatileUpdate( const std::string &name, const classad::ExprTre
 
 
 std::auto_ptr<classad::ExprTree>
-JICShadow::getVolatileUpdate( const std::string &name )
+JICShadow::getDelayedUpdate( const std::string &name )
 {
 	std::auto_ptr<classad::ExprTree> expr;
 	classad::ExprTree *borrowed_expr = NULL;
 	ClassAd *ad = jobClassAd();
-	dprintf(D_FULLDEBUG, "Looking up volatile attribute named %s.\n", name.c_str());
-	if (!(borrowed_expr = m_volatile_updates.Lookup(name)) && (!ad || !(borrowed_expr = ad->Lookup(name))))
+	dprintf(D_FULLDEBUG, "Looking up delayed attribute named %s.\n", name.c_str());
+	if (!(borrowed_expr = m_delayed_updates.Lookup(name)) && (!ad || !(borrowed_expr = ad->Lookup(name))))
 	{
 		return expr;
 	}
@@ -1870,8 +1876,8 @@ bool
 JICShadow::publishUpdateAd( ClassAd* ad )
 {
 	// These are updates taken from Chirp
-	ad->Update(m_volatile_updates);
-	m_volatile_updates.Clear();
+	ad->Update(m_delayed_updates);
+	m_delayed_updates.Clear();
 
 	filesize_t execsz = 0;
 
@@ -1917,7 +1923,14 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 		// walk through all the UserProcs and have those publish, as
 		// well.  It returns true if there was anything published,
 		// false if not.
-	return Starter->publishUpdateAd( ad );
+	bool retval = Starter->publishUpdateAd( ad );
+
+	// These are updates taken from Chirp
+	// Note they should not go to the starter!
+	ad->Update(m_delayed_updates);
+	m_delayed_updates.Clear();
+
+	return retval;
 }
 
 
@@ -2188,10 +2201,10 @@ JICShadow::initIOProxy( void )
 	bool enableFiles = false;
 	enableFiles = param_boolean("ENABLE_CHIRP_IO", true);
 
-	bool enableVolatile = false;
-	enableVolatile = param_boolean("ENABLE_CHIRP_VOLATILE", true);
+	bool enableDelayed = false;
+	enableDelayed = param_boolean("ENABLE_CHIRP_DELAYED", true);
 
-	if (!enableIOProxy || (!enableUpdates && !enableFiles && !enableVolatile)) {
+	if (!enableIOProxy || (!enableUpdates && !enableFiles && !enableDelayed)) {
 		dprintf(D_ALWAYS, "ENABLE_CHIRP is false in config file, not enabling chirp\n");
 		return false;
 	}
@@ -2225,30 +2238,30 @@ JICShadow::initIOProxy( void )
 		dprintf(D_ALWAYS, "Starter config prevents us from enabling remote updates.\n");
 		want_updates = false;
 	}
-	bool want_volatile = true;
-	if ( ! job_ad->EvaluateAttrBool(ATTR_WANT_VOLATILE_UPDATES, want_volatile) ) {
-		want_volatile = true;
+	bool want_delayed = true;
+	if ( ! job_ad->EvaluateAttrBool(ATTR_WANT_DELAYED_UPDATES, want_delayed) ) {
+		want_delayed = true;
 		dprintf(D_FULLDEBUG, "JICShadow::initIOProxy(): "
-				"Job does not define %s; enabling volatile updates.\n", ATTR_WANT_VOLATILE_UPDATES);
+				"Job does not define %s; enabling delayed updates.\n", ATTR_WANT_DELAYED_UPDATES);
 	} else {
-		dprintf(D_ALWAYS, "Job has %s=%s\n", ATTR_WANT_VOLATILE_UPDATES,
-				want_volatile ? "true" : "false");
+		dprintf(D_ALWAYS, "Job has %s=%s\n", ATTR_WANT_DELAYED_UPDATES,
+				want_delayed ? "true" : "false");
 	}
-	if (!enableIOProxy && !enableVolatile && want_volatile)
+	if (!enableIOProxy && !enableDelayed && want_delayed)
 	{
-		dprintf(D_ALWAYS, "Starter config prevents us from enabling volatile updates.\n");
-		want_volatile = false;
+		dprintf(D_ALWAYS, "Starter config prevents us from enabling delayed updates.\n");
+		want_delayed = false;
 	}
-	dprintf(D_ALWAYS, "Chirp config summary: IO %s, Updates %s, Volatile updates %s.\n",
+	dprintf(D_ALWAYS, "Chirp config summary: IO %s, Updates %s, Delayed updates %s.\n",
 		want_io_proxy ? "true" : "false", want_updates ? "true" : "false",
-		want_volatile ? "true" : "false");
-	if( want_io_proxy || want_updates || want_volatile || job_universe==CONDOR_UNIVERSE_JAVA ) {
+		want_delayed ? "true" : "false");
+	if( want_io_proxy || want_updates || want_delayed || job_universe==CONDOR_UNIVERSE_JAVA ) {
 		m_wrote_chirp_config = true;
 		io_proxy_config_file.formatstr( "%s%c%s" ,
 				 Starter->GetWorkingDir(), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
 		m_chirp_config_filename = io_proxy_config_file;
 		dprintf(D_FULLDEBUG, "Initializing IO proxy with config file at %s.\n", io_proxy_config_file.Value());
-		if( !io_proxy.init(this, io_proxy_config_file.Value(), want_io_proxy, want_updates, want_volatile) ) {
+		if( !io_proxy.init(this, io_proxy_config_file.Value(), want_io_proxy, want_updates, want_delayed) ) {
 			dprintf( D_FAILURE|D_ALWAYS, 
 					 "Couldn't initialize IO Proxy.\n" );
 			return false;

@@ -409,9 +409,9 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	}
 
 	std::string remoteUpdate;
-	param(remoteUpdate, "REMOTE_UPDATE_PREFIX", "CHIRP");
-	if( ! job_env.SetEnv("_CONDOR_REMOTE_UPDATE_PREFIX", remoteUpdate) ) {
-		dprintf( D_ALWAYS, "Failed to set _CONDOR_REMOTE_UPDATE_PREFIX environment variable\n");
+	param(remoteUpdate, "DELAYED_UPDATE_PREFIX", "CHIRP");
+	if( ! job_env.SetEnv("_CONDOR_DELAYED_UPDATE_PREFIX", remoteUpdate) ) {
+		dprintf( D_ALWAYS, "Failed to set _CONDOR_DELAYED_UPDATE_PREFIX environment variable\n");
 	}
 
 		// Grab the full environment back out of the Env object 

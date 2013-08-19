@@ -10971,9 +10971,9 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter
 id=615
 
-[REMOTE_UPDATE_PREFIX]
+[DELAYED_UPDATE_PREFIX]
 aliases=
-default=Chirp
+default=Chirp*
 version=8.1.0
 range=.*
 state=default
@@ -11019,7 +11019,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter
 id=618
 
-[ENABLE_CHIRP_VOLATILE]
+[ENABLE_CHIRP_DELAYED]
 aliases=
 default=true
 version=8.1.0
@@ -11029,7 +11029,7 @@ type=bool
 is_macro=true
 reconfig=true
 customization=seldom
-friendly_name=Enables volatile job updates (inserting qedits) with a required prefix at little resource cost from the running job back to the submitter machine.  The safest of the ENABLE_CHIRP_* settings
+friendly_name=Enables delayed job updates (inserting qedits) with a required prefix at little resource cost from the running job back to the submitter machine.  The safest of the ENABLE_CHIRP_* settings
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter

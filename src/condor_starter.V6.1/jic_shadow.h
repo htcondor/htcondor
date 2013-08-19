@@ -239,10 +239,10 @@ public:
 	void updateCkptInfo(void);
 
 		/* Record an attribute to update */
-	bool recordVolatileUpdate( const std::string &name, const classad::ExprTree &expr );
+	bool recordDelayedUpdate( const std::string &name, const classad::ExprTree &expr );
 
-		/* Return an attribute from the combination of the volatile ad and the starter */
-	std::auto_ptr<classad::ExprTree> getVolatileUpdate( const std::string &name );
+		/* Return an attribute from the combination of the delayed ad and the starter */
+	std::auto_ptr<classad::ExprTree> getDelayedUpdate( const std::string &name );
 
 	virtual bool wroteChirpConfig() { return m_wrote_chirp_config; }
 	virtual const std::string chirpConfigFilename() { return m_chirp_config_filename; }
@@ -447,7 +447,7 @@ private:
 		/// hostname (or whatever the startd gave us) of our shadow 
 	char* m_shadow_name;
 
-	classad::ClassAd m_volatile_updates;
+	classad::ClassAd m_delayed_updates;
 	IOProxy io_proxy;
 
 	FileTransfer *filetrans;

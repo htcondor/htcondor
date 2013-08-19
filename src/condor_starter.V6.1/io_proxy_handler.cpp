@@ -31,13 +31,13 @@
 
 static int sscanf_chirp( char const *input,char const *fmt,... );
 
-IOProxyHandler::IOProxyHandler(JICShadow *shadow, bool enable_file, bool enable_updates, bool enable_volatile)
+IOProxyHandler::IOProxyHandler(JICShadow *shadow, bool enable_file, bool enable_updates, bool enable_delayed)
 	: m_shadow(shadow),
 	  cookie(NULL),
 	  got_cookie(false),
 	  m_enable_files(enable_file),
 	  m_enable_updates(enable_updates),
-	  m_enable_volatile(enable_volatile)
+	  m_enable_delayed(enable_delayed)
 {
 }
 
@@ -352,14 +352,14 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 		free( url );
 		url = NULL;
-	} else if(m_enable_volatile && sscanf_chirp(line,"set_job_attr_volatile %s %s",name,expr)==2) {
+	} else if(m_enable_delayed && sscanf_chirp(line,"set_job_attr_delayed %s %s",name,expr)==2) {
 
 		classad::ClassAdParser parser;
 		classad::ExprTree *expr_tree;
 		result = parser.ParseExpression(expr, expr_tree);
 		if (result)
 		{
-			result = !m_shadow->recordVolatileUpdate(name, *expr_tree);
+			result = !m_shadow->recordDelayedUpdate(name, *expr_tree);
 		}
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
@@ -381,10 +381,10 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 			r->put_line_raw(line);
 		}	
 		free( recv_expr );
-	} else if(m_enable_volatile && sscanf_chirp(line,"get_job_attr_volatile %s",name)==1) {
+	} else if(m_enable_delayed && sscanf_chirp(line,"get_job_attr_delayed %s",name)==1) {
 		std::string value;
 		classad::ClassAdUnParser unparser;
-		std::auto_ptr<classad::ExprTree> expr = m_shadow->getVolatileUpdate(name);
+		std::auto_ptr<classad::ExprTree> expr = m_shadow->getDelayedUpdate(name);
 		if (expr.get()) {
 			unparser.Unparse(value, expr.get());
 			sprintf(line,"%u",(unsigned int)value.size());

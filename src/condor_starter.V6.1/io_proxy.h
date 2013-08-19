@@ -36,7 +36,7 @@ public:
 	IOProxy();
 	~IOProxy();
 
-	bool init( JICShadow * shadow, const char *config_file, bool want_io, bool want_updates, bool want_volatile );
+	bool init( JICShadow * shadow, const char *config_file, bool want_io, bool want_updates, bool want_delayed );
 
 private:
 	int connect_callback( Stream * );
@@ -48,7 +48,7 @@ private:
 
 	bool m_want_io;
 	bool m_want_updates;
-	bool m_want_volatile;
+	bool m_want_delayed;
 };
 
 #endif

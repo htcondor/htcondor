@@ -36,7 +36,7 @@ IOProxy::IOProxy()
 	socket_registered(false),
 	m_want_io(false),
 	m_want_updates(false),
-	m_want_volatile(false)
+	m_want_delayed(false)
 {
 }
 
@@ -77,7 +77,7 @@ int IOProxy::connect_callback( Stream * /*stream*/ )
 	}
 	
 	if(accept_client) {
-		IOProxyHandler *handler = new IOProxyHandler(m_shadow, m_want_io, m_want_updates, m_want_volatile);
+		IOProxyHandler *handler = new IOProxyHandler(m_shadow, m_want_io, m_want_updates, m_want_delayed);
 		if(!handler->init(client,cookie)) {
 			dprintf(D_ALWAYS,"IOProxy: couldn't register request callback!\n");
 			client->close();
@@ -97,12 +97,12 @@ Initialize this proxy and dump the contact information into the given file.
 Returns true on success, false otherwise.
 */
 
-bool IOProxy::init( JICShadow *shadow, const char *config_file, bool want_io, bool want_updates, bool want_volatile )
+bool IOProxy::init( JICShadow *shadow, const char *config_file, bool want_io, bool want_updates, bool want_delayed )
 {
 	m_shadow = shadow;
 	m_want_io = want_io;
 	m_want_updates = want_updates;
-	m_want_volatile = want_volatile;
+	m_want_delayed = want_delayed;
 
 	FILE *file=0;
 	int fd=-1;
