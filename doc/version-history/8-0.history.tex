@@ -110,9 +110,9 @@ has been changed to \Expr{False}.
 
 \begin{itemize}
 
-\item Workaround triggering a Linux kernel defect when using cgroups
-and suspending jobs.
-\Ticket{3487}
+\item Implemented a workaround to avoid triggering a Linux kernel defect 
+when using cgroups and suspending jobs.
+\Ticket{3847}
 
 \item Fixed a python bindings problem of missing converters by providing
 \Code{pyclassad} as a shared library.
@@ -124,8 +124,8 @@ specified with configuration variable \Macro{CONDOR\_VIEW\_HOST},
 becomes unavailable.
 \Ticket{3758}
 
-\item Code to publish Linux distribution attributes in machine ad was made more
-	robust in the event that /etc/issue file was edited.
+\item Code to publish Linux distribution attributes in the machine ClassAd
+is now more robust in the event that the \File{/etc/issue} file was edited.
 \Ticket{3854}
 
 \item Fixed a bug that could cause jobs to be incorrectly placed on hold upon
@@ -194,13 +194,15 @@ configuration, and the primary machine running the \Condor{collector}
 is off-line.
 \Ticket{3828}
 
-\item Fixed a bug in \Condor{dagman} that could (in rare cases) cause
-\Condor{dagman} to hang when using the
-\OptArg{-maxidle}/\Macro{DAGMAN\_MAX\_JOBS\_IDLE} option.
+\item Fixed a bug that could cause \Condor{dagman} to hang 
+due to a rarely seen event ordering.
+This bug could have been triggered when using the
+configuration variable \Macro{DAGMAN\_MAX\_JOBS\_IDLE},
+or its equivalent command line option \Opt{-maxidle}.
 \Ticket{3834}
 
-\item Fixed a bug that caused \Condor{submit} \Opt{-spool} to always fail
-on Windows.
+\item Fixed a bug that caused job submission from Windows platforms
+using \Condor{submit} with the \Opt{-spool} option to always fail.
 \Ticket{3791}
 
 \end{itemize}
