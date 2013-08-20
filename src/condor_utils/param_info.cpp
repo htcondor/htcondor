@@ -103,33 +103,26 @@ int ComparePrefixBeforeDot(const char * p1, const char * p2)
 // as the subsys value in order to locate the master table.
 //
 typedef const struct condor_params::key_table_pair param_table_map_entry_t;
-const param_table_entry_t * param_default_subsys_lookup(const char * subsys, const char * param)
+const param_table_entry_t * param_subsys_default_lookup(const char * subsys, const char * param)
 {
-	if (subsys) {
-		const param_table_map_entry_t* subtab = NULL;
-		subtab = BinaryLookup<param_table_map_entry_t>(
-			condor_params::subsystems,
-			condor_params::subsystems_count,
-			subsys, ComparePrefixBeforeDot);
+	const param_table_map_entry_t* subtab = NULL;
+	subtab = BinaryLookup<param_table_map_entry_t>(
+		condor_params::subsystems,
+		condor_params::subsystems_count,
+		subsys, ComparePrefixBeforeDot);
 
-		if (subtab) {
-			const param_table_entry_t * item;
-			item = BinaryLookup<param_table_entry_t>(subtab->aTable, subtab->cElms, param, strcasecmp);
-			if (item) return item;
-		}
-		// not found in the subsys table, so fall through to look in the generic table.
+	if (subtab) {
+		return BinaryLookup<param_table_entry_t>(subtab->aTable, subtab->cElms, param, strcasecmp);
 	}
-
-	return BinaryLookup<param_table_entry_t>(
-		condor_params::defaults,
-		condor_params::defaults_count,
-		param, strcasecmp);
+	return NULL;
 }
 
 const param_table_entry_t * param_default_lookup(const char * param, const char * subsys)
 {
 	if (subsys) {
-		return param_default_subsys_lookup(subsys, param);
+		const param_table_entry_t * p = param_subsys_default_lookup(subsys, param);
+		if (p) return p;
+		// fall through to do generic lookup.
 	}
 	return param_generic_default_lookup(param);
 }
@@ -143,11 +136,14 @@ const param_table_entry_t * param_default_lookup(const char * param)
 {
 	const char * pdot = strchr(param, '.');
 	if (pdot) {
-		return param_default_subsys_lookup(param, pdot+1);
+		const param_table_entry_t * p = param_subsys_default_lookup(param, pdot+1);
+		if (p) return p;
+		// fall through to do generic lookup.
 	}
 
-	return param_default_subsys_lookup(NULL, param);
+	return param_generic_default_lookup(param);
 }
+
 
 int param_entry_get_type(const param_table_entry_t * p) {
 	if ( ! p || ! p->def)
@@ -173,20 +169,35 @@ int param_entry_get_type(const param_table_entry_t * p, bool & ranged) {
 const char*
 param_default_string(const char* param, const char * subsys)
 {
-	const char* ret = NULL;
 	const param_table_entry_t* p = param_default_lookup(param, subsys);
 	if (p && p->def) {
-		ret = p->def->psz;
+		return p->def->psz;
 	}
-	return ret;
+	return NULL;
+}
+
+const char*
+param_exact_default_string(const char* param)
+{
+	const param_table_entry_t* p = NULL;
+	const char * pdot = strchr(param, '.');
+	if (pdot) {
+		p = param_subsys_default_lookup(param, pdot+1);
+	} else {
+		p = param_generic_default_lookup(param);
+	}
+	if (p && p->def) {
+		return p->def->psz;
+	}
+	return NULL;
 }
 
 int
-param_default_integer(const char* param, int* valid) {
+param_default_integer(const char* param, const char* subsys, int* valid) {
 	int ret = 0;
 #ifdef PARAM_DEFAULTS_SORTED
 	if (valid) *valid = false;
-	const param_table_entry_t* p = param_default_lookup(param);
+	const param_table_entry_t* p = param_default_lookup(param, subsys);
 	if (p && p->def) {
 		int type = param_entry_get_type(p);
 		switch (type) {
@@ -228,16 +239,16 @@ param_default_integer(const char* param, int* valid) {
 }
 
 int
-param_default_boolean(const char* param, int* valid) {
-	return (param_default_integer(param, valid) != 0);
+param_default_boolean(const char* param, const char* subsys, int* valid) {
+	return (param_default_integer(param, subsys, valid) != 0);
 }
 
 double
-param_default_double(const char* param, int* valid) {
+param_default_double(const char* param, const char * subsys, int* valid) {
 	double ret = 0.0;
 
 #ifdef PARAM_DEFAULTS_SORTED
-	const param_table_entry_t* p = param_default_lookup(param);
+	const param_table_entry_t* p = param_default_lookup(param, subsys);
 	if (valid) *valid = false;
 	if (p && p->def) {
 		int type = param_entry_get_type(p);

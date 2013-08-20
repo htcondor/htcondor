@@ -1193,7 +1193,7 @@ Starter::percentCpuUsage( void )
 	}
 
 	if( IsDebugVerbose(D_LOAD) ) {
-		dprintf(D_LOAD,
+		dprintf(D_LOAD | D_VERBOSE,
 		        "Starter::percentCpuUsage(): Percent CPU usage "
 		        "for the family of starter with pid %u is: %f\n",
 		        s_pid,
