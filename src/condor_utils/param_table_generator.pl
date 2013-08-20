@@ -340,14 +340,17 @@ sub reconstitute {
 		if ($param_name =~ /\./) {
 			my @aaa = split(/\./, $param_name);
 			# print "$aaa[0] of $aaa[1]\n";
-			$daemon_prefix = $aaa[0].'$';
+
+			# param subsys is case insensitive, so covert subsys to uppercase before using as a key.
+			my $subsys = uc($aaa[0]);
+			$daemon_prefix = $subsys.'$';
 			$param_name = $aaa[1];
-			if (defined $var_daemons{$aaa[0]}) {
-				push @{$var_daemons{$aaa[0]}}, $param_name;
+			if (defined $var_daemons{$subsys}) {
+				push @{$var_daemons{$subsys}}, $param_name;
 			} else {
 				my @daemon_var_names;
 				push @daemon_var_names, $param_name;
-				$var_daemons{$aaa[0]} = \@daemon_var_names;
+				$var_daemons{$subsys} = \@daemon_var_names;
 			}
 		} else {
 			push @var_names, $param_name;
@@ -556,7 +559,7 @@ sub reconstitute {
 					. " * global defaults[]\n"
 					. " *=====================*/\n");
 	continue_output("const key_value_pair defaults[] = {\n");
-	for(sort @var_names) {
+	for(sort { uc($a) cmp uc($b) } @var_names) {
 		if ($empty_vars{$_}) {
 			continue_output("\t{ \"$_\", 0 },\n");
 		} else {
@@ -609,7 +612,7 @@ sub reconstitute {
 					. " * param id's. index into global defaults[].\n"
 					. " *==========================================*/\n");
 	continue_output("enum {\n");
-	for(sort @var_names) {
+	for(sort { uc($a) cmp uc($b) } @var_names) {
 		continue_output("\tix$_,\n");
 	}
 	continue_output("}; // param id's\n\n");

@@ -364,7 +364,7 @@ config( int wantsQuiet, bool ignore_invalid_entry, bool wantsExtraInfo )
 {
 #ifdef WIN32
 	char *locale = setlocale( LC_ALL, "English" );
-	dprintf ( D_FULLDEBUG, "Locale: %s\n", locale );
+	dprintf ( D_LOAD | D_VERBOSE, "Locale: %s\n", locale );
 #endif
 	real_config( NULL, wantsQuiet, wantsExtraInfo );
 	validate_entries( ignore_invalid_entry );
@@ -1559,7 +1559,7 @@ param_with_default_abort(const char *name, int abort)
 		// something in the Default Table.
 
 		// The candidate wasn't in the Config Table, so check the Default Table
-		const char * def = param_default_string(next_param_name, NULL);
+		const char * def = param_exact_default_string(next_param_name);
 		if (def != NULL) {
 			// Yay! Found something! Add the entry found in the Default 
 			// Table to the Config Table. This could be adding an empty
@@ -1628,9 +1628,11 @@ param_integer( const char *name, int &value,
 			   bool use_param_table )
 {
 	if(use_param_table) {
-		int tbl_default_valid;
-		int tbl_default_value = 
-			param_default_integer( name, &tbl_default_valid );
+		const char* subsys = get_mySubSystem()->getName();
+		if (subsys && ! subsys[0]) subsys = NULL;
+
+		int def_valid = 0;
+		int tbl_default_value = param_default_integer(name, subsys, &def_valid);
 		bool tbl_check_ranges = 
 			(param_range_integer(name, &min_value, &max_value)==-1) 
 				? false : true;
@@ -1638,7 +1640,7 @@ param_integer( const char *name, int &value,
 		// if found in the default table, then we overwrite the arguments
 		// to this function with the defaults from the table. This effectively
 		// nullifies the hard coded defaults in the higher level layers.
-		if (tbl_default_valid) {
+		if (def_valid) {
 			use_default = true;
 			default_value = tbl_default_value;
 		}
@@ -1778,9 +1780,11 @@ param_double( const char *name, double default_value,
 			  bool use_param_table )
 {
 	if(use_param_table) {
-		int tbl_default_valid;
-		double tbl_default_value = 
-			param_default_double( name, &tbl_default_valid );
+		const char* subsys = get_mySubSystem()->getName();
+		if (subsys && ! subsys[0]) subsys = NULL;
+
+		int def_valid = 0;
+		double tbl_default_value = param_default_double(name, subsys, &def_valid);
 
 		// if the min_value & max_value are changed, we use it.
 		param_range_double(name, &min_value, &max_value);
@@ -1788,7 +1792,7 @@ param_double( const char *name, double default_value,
 		// if found in the default table, then we overwrite the arguments
 		// to this function with the defaults from the table. This effectively
 		// nullifies the hard coded defaults in the higher level layers.
-		if (tbl_default_valid) {
+		if (def_valid) {
 			default_value = tbl_default_value;
 		}
 	}
@@ -1897,14 +1901,16 @@ param_boolean( const char *name, bool default_value, bool do_log,
 			   bool use_param_table )
 {
 	if(use_param_table) {
-		int tbl_default_valid;
-		bool tbl_default_value = 
-			param_default_boolean( name, &tbl_default_valid );
+		const char* subsys = get_mySubSystem()->getName();
+		if (subsys && ! subsys[0]) subsys = NULL;
+
+		int def_valid = 0;
+		bool tbl_default_value = param_default_boolean(name, subsys, &def_valid);
 
 		// if found in the default table, then we overwrite the arguments
 		// to this function with the defaults from the table. This effectively
 		// nullifies the hard coded defaults in the higher level layers.
-		if (tbl_default_valid) {
+		if (def_valid) {
 			default_value = tbl_default_value;
 		}
 	}
