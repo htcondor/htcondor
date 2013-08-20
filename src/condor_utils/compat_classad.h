@@ -461,7 +461,7 @@ bool IsValidAttrName(const char *name);
  * @param An optional white-list of attributes to be printed.
  * @return TRUE as long as the file existed.
  */
-int fPrintAdAsXML(FILE *fp, classad::ClassAd &ad,
+int fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad,
 				  StringList *attr_white_list = NULL);
 
 /* Prints the classad as XML to a string. fPrintAdAsXML calls this.
@@ -471,9 +471,9 @@ int fPrintAdAsXML(FILE *fp, classad::ClassAd &ad,
  * @param An optional white-list of attributes to be printed.
  * @return TRUE
  */
-int sPrintAdAsXML(MyString &output, classad::ClassAd &ad,
+int sPrintAdAsXML(MyString &output, const classad::ClassAd &ad,
 				  StringList *attr_white_list = NULL);
-int sPrintAdAsXML(std::string &output, classad::ClassAd &ad,
+int sPrintAdAsXML(std::string &output, const classad::ClassAd &ad,
 				  StringList *attr_white_list = NULL);
 
 /** Given an attribute name, return a buffer containing the name
