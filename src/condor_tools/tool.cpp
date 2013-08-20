@@ -956,7 +956,18 @@ doCommands(int /*argc*/,char * argv[],char *MyName)
 				all_good = false;
 				continue;
 			}
-			names.append( daemonname );
+			// if daemonname is NULL, we "continue" above and never reach here,
+			// so we know daemonname points to something.  however, it is
+			// possibly it will point to an empty string, if the name failed to
+			// resolve.  in this case, we'll just add the unresolved value from
+			// argv, in case that is the "name" of the daemon but it doesn't
+			// resolve to a hostname (definitely possible with NAT'd nodes, in
+			// EC2, or a number of other scenarios.)
+			if (*daemonname) {
+				names.append( daemonname );
+			} else {
+				names.append( *argv );
+			}
 			delete [] daemonname;
 			daemonname = NULL;
 			break;
