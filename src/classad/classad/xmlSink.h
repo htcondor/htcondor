@@ -46,14 +46,20 @@ class ClassAdXMLUnParser
 	 * 	@param buffer The string to unparse to
 	 * 	@param expr The expression to unparse
 		 */
-	void Unparse(std::string &buffer, ExprTree *expr);
+	void Unparse(std::string &buffer, const ExprTree *expr);
+	/* This version is provided for backwards SO compatibility.
+	 * It should be removed the next time we have to bump the
+	 * SO version.
+	 */
+	void Unparse(std::string &buffer, ExprTree *expr)
+	{ Unparse(buffer, (const ExprTree *)expr); }
 
  private:
 	/** Unparse a value 
 	 * 	@param buffer The string to unparse to
 	 * 	@param val The value to unparse
 	 */
-	void Unparse(std::string &buffer, ExprTree *expr, int indent);
+	void Unparse(std::string &buffer, const ExprTree *expr, int indent);
 
 	void Unparse(std::string &buffer, Value &val, int indent);
 	virtual void UnparseAux(std::string &buffer, 
