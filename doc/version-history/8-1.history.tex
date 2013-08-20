@@ -48,12 +48,14 @@ displayed using the \Opt{-long} or \Opt{-autoformat} options of
 \Condor{status} and \Condor{q}.
 \Ticket{3363}
 
-\item In the Pegasus/\Condor{dagman} workflow metrics
-(see ~\pageref{sec:DAGMetrics}),
+\item In the Pegasus/DAGMan workflow metrics,
+as documented in section ~\ref{sec:DAGMetrics},
+the two metrics
 \Expr{dagman\_id} and \Expr{parent\_dagman\_id} are now reported
-simply as the HTCondor cluster ID of the \Condor{dagman} job.  This
-eliminates any privacy concerns with reporting the schedd address
-(which includes the submit machine's IP address).
+as the \Attr{ClusterId} of the \Condor{dagman} job.  This
+eliminates any privacy concerns with reporting the \Condor{schedd} 
+daemon's address,
+which includes the submit machine's IP address.
 
 \item The python bindings now can perform the equivalent of 
 \Condor{ping} as a part of the \texttt{SecMan} object.
