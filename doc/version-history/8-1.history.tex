@@ -61,6 +61,12 @@ which includes the submit machine's IP address.
 \Condor{ping} as a part of the \texttt{SecMan} object.
 \Ticket{3857}
 
+\item The \Condor{gridmanager} and \Condor{ft-gahp} can now create a
+dynamic security session for performing file transfers.
+Before, the security configuration parameters had to be set in a special
+way for file transfers with the \Condor{ft-gahp} to work.
+\Ticket{3536}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -73,6 +79,12 @@ which includes the submit machine's IP address.
 \item Configuration variable \Macro{VALID\_SPOOL\_FILES} has been expanded
 to accept a single asterisk wild card character in each listed file name.
 \Ticket{3764}
+
+\item The new configuration variable \Macro{GAHP\_DEBUG\_HIDE\_SENSITIVE\_DATA}
+controls whether sensitive data (e.g. security keys or passwords) should be
+hidden when communication with a GAHP server is written to a dameon log.
+The default is True.
+\Ticket{3536}
 
 \end{itemize}
 
