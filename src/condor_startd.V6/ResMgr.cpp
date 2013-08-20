@@ -1255,8 +1255,8 @@ ResMgr::assign_load( void )
 	}
 	if( is_smp() ) {
 			// Print out the totals we already know.
-		if( IsDebugLevel( D_LOAD ) ) {
-			dprintf( D_FULLDEBUG,
+		if( IsDebugVerbose( D_LOAD ) ) {
+			dprintf( D_LOAD | D_VERBOSE,
 					 "%s %.3f\t%s %.3f\t%s %.3f\n",
 					 "SystemLoad:", m_attr->load(),
 					 "TotalCondorLoad:", m_attr->condor_load(),
