@@ -3331,10 +3331,10 @@ in epoch seconds, with millisecond precision.
 \item \Expr{duration}: the duration of the client,
 in seconds, with millisecond precision.
 \item \Expr{exitcode}: the \Condor{dagman} exit code.
-\item \Expr{dagman\_id}: an identifier of the DAGMan instance of the form
-\Expr{<DAGMan\_cluster\_id>}.
-\item \Expr{parent\_dagman\_id}: an identifier of the parent of this DAG
-given in the same form as the metric \Expr{dagman\_id}; 
+\item \Expr{dagman\_id}: the value of the \Attr{ClusterId} attribute 
+of the \Condor{dagman} instance.
+\item \Expr{parent\_dagman\_id}: the value of the \Attr{ClusterId} attribute 
+of the parent \Condor{dagman} instance of this DAG;
 empty if this DAG is not a SUBDAG.
 \item \Expr{rescue\_dag\_number}: the number of the Rescue DAG being run,
 or 0 if not running a Rescue DAG.
