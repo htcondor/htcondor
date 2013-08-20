@@ -1562,7 +1562,7 @@ initFromString( char const *str,MyString *err_msg )
 
 		// output functions
 int
-fPrintAd( FILE *file, classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
+fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
 {
 	MyString buffer;
 
@@ -1573,7 +1573,7 @@ fPrintAd( FILE *file, classad::ClassAd &ad, bool exclude_private, StringList *at
 }
 
 void
-dPrintAd( int level, classad::ClassAd &ad )
+dPrintAd( int level, const classad::ClassAd &ad )
 {
 	MyString buffer;
 
@@ -1583,15 +1583,15 @@ dPrintAd( int level, classad::ClassAd &ad )
 }
 
 int
-sPrintAd( MyString &output, classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
+sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
 {
-	classad::ClassAd::iterator itr;
+	classad::ClassAd::const_iterator itr;
 
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true, true );
 	string value;
 
-	classad::ClassAd *parent = ad.GetChainedParentAd();
+	const classad::ClassAd *parent = ad.GetChainedParentAd();
 
 	if ( parent ) {
 		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
@@ -1625,7 +1625,7 @@ sPrintAd( MyString &output, classad::ClassAd &ad, bool exclude_private, StringLi
 }
 
 int
-sPrintAd( std::string &output, classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
+sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
 {
 	MyString myout;
 	int rc = sPrintAd( myout, ad, exclude_private, attr_white_list );
