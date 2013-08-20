@@ -90,7 +90,7 @@ extern "C" {
 // Function prototypes
 void real_config(char* host, int wantsQuiet, bool wantExtraInfo);
 int Read_config(const char*, BUCKET**, int, int, bool,
-				ExtraParamTable* = NULL);
+				ExtraParamTable* = NULL, const char * subsys = NULL);
 bool is_piped_command(const char* filename);
 bool is_valid_command(const char* cmdToExecute);
 int SetSyscalls(int);
@@ -780,7 +780,7 @@ process_config_source( const char* file, const char* name,
 		}
 	} else {
 		rval = Read_config( file, ConfigTab, TABLESIZE, EXPAND_LAZY,
-							false, extra_info );
+							false, extra_info, get_mySubSystem()->getName());
 		if( rval < 0 ) {
 			fprintf( stderr,
 					 "Configuration Error Line %d while reading %s %s\n",
@@ -2485,7 +2485,7 @@ process_persistent_configs()
 		processed = true;
 
 		rval = Read_config( toplevel_persistent_config.Value(), ConfigTab,
-							TABLESIZE, EXPAND_LAZY, true, extra_info );
+							TABLESIZE, EXPAND_LAZY, true, extra_info, get_mySubSystem()->getName() );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d while reading "
 					 "top-level persistent config source: %s\n",
@@ -2507,7 +2507,7 @@ process_persistent_configs()
 		config_source.formatstr( "%s.%s", toplevel_persistent_config.Value(),
 							   tmp );
 		rval = Read_config( config_source.Value(), ConfigTab, TABLESIZE,
-							 EXPAND_LAZY, true, extra_info );
+							 EXPAND_LAZY, true, extra_info, get_mySubSystem()->getName() );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
 					 "while reading persistent config source: %s\n",
@@ -2555,7 +2555,7 @@ process_runtime_configs()
 			exit(1);
 		}
 		rval = Read_config( tmp_file, ConfigTab, TABLESIZE,
-							EXPAND_LAZY, false, extra_info );
+							EXPAND_LAZY, false, extra_info, get_mySubSystem()->getName() );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
 					 "while reading %s, runtime config: %s\n",

@@ -153,7 +153,8 @@ int
 Read_config( const char* config_source, BUCKET** table, 
 			 int table_size, int expand_flag,
 			 bool check_runtime_security,
-			 ExtraParamTable *extra_info)
+			 ExtraParamTable *extra_info,
+			 const char * subsys)
 {
   	FILE*	conf_fp = NULL;
 	char*	name = NULL;
@@ -164,6 +165,8 @@ Read_config( const char* config_source, BUCKET** table,
 	int		retval = 0;
 	bool	is_pipe_cmd = false;
 	bool	firstRead = true;
+
+	if (subsys && ! *subsys) subsys = NULL;
 
 	ConfigLineNo = 0;
    
@@ -347,7 +350,8 @@ Read_config( const char* config_source, BUCKET** table,
 			}
 		} else  {
 			/* expand self references only */
-			value = expand_macro( rhs, table, table_size, name );
+			PRAGMA_REMIND("tj: this handles only trivial self-refs, needs rethink.")
+			value = expand_macro( rhs, table, table_size, name, false, subsys );
 			if( value == NULL ) {
 				retval = -1;
 				goto cleanup;
@@ -639,6 +643,20 @@ expand_macro( const char *value,
 	char *left, *name, *right;
 	const char *tvalue;
 	char *rval;
+	const char *selfless = NULL;
+
+	// to avoid infinite recursive expansion, we have to look for both "subsys.self" and "self"
+	if (self && subsys) {
+		const char * a = subsys;
+		const char * b = self;
+		while (*a && (tolower(*a) == tolower(*b))) {
+			++a; ++b;
+		}
+		// if a now points to a 0, and b now points to ".", then self contains subsys as a prefix.
+		if (0 == a[0] && '.' == b[0] && b[1] != 0) {
+			selfless = b+1;
+		}
+	}
 
 	bool all_done = false;
 	while( !all_done ) {		// loop until all done expanding
@@ -739,7 +757,8 @@ expand_macro( const char *value,
 			tmp = rval;
 		}
 
-		if( find_config_macro(tmp, &left, &name, &right, self) ) {
+		if (find_config_macro(tmp, &left, &name, &right, self) ||
+			(selfless && find_config_macro(tmp, &left, &name, &right, selfless)) ) {
 			all_done = false;
 			tvalue = lookup_macro( name, subsys, table, table_size );
 			if (subsys && ! tvalue)
