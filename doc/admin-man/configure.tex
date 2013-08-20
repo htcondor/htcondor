@@ -8155,6 +8155,12 @@ These macros affect the \Condor{gridmanager}.
   Arguments to be passed to the GAHP server.
   This configuration variable is no longer used.
 
+\label{param:GahpDebugHideSensitiveData}
+\item[\Macro{GAHP\_DEBUG\_HIDE\_SENSITIVE\_DATA}]
+  When communication to/from a GAHP server is written to a daemon log,
+  should sensitive data (e.g. security keys or passwords) be hidden.
+  The default is True.
+
 \label{param:GridmanagerGahpCallTimeout}
 \item[\Macro{GRIDMANAGER\_GAHP\_CALL\_TIMEOUT}]
   The number of seconds after
