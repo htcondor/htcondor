@@ -265,7 +265,7 @@ ResMgr::init_config_classad( void )
 	// STARTD_ATTRS for us.
 	daemonCore->publish(config_classad);
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	config_classad->AddTargetRefs( TargetJobAttrs, false );
 #endif
 }

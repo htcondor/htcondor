@@ -7562,7 +7562,7 @@ SaveClassAd ()
 		}
 	}
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	if ( JobUniverse == CONDOR_UNIVERSE_SCHEDULER ||
 		 JobUniverse == CONDOR_UNIVERSE_LOCAL ) {
 		job->AddTargetRefs( TargetScheddAttrs, false );

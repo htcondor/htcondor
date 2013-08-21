@@ -489,7 +489,7 @@ reinitialize ()
 			EXCEPT ("Error parsing PREEMPTION_REQUIREMENTS expression: %s",
 					tmp);
 		}
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 		if(PreemptionReq){
 			tmp_expr = AddTargetRefs( PreemptionReq, TargetJobAttrs );
 			delete PreemptionReq;
@@ -558,7 +558,7 @@ reinitialize ()
 			EXCEPT ("Error parsing PREEMPTION_RANK expression: %s", tmp);
 		}
 	}
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 		if(PreemptionRank){
 			tmp_expr = AddTargetRefs( PreemptionRank, TargetJobAttrs );
 			delete PreemptionRank;
@@ -577,7 +577,7 @@ reinitialize ()
 		if( ParseClassAdRvalExpr(tmp, NegotiatorPreJobRank) ) {
 			EXCEPT ("Error parsing NEGOTIATOR_PRE_JOB_RANK expression: %s", tmp);
 		}
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 		if(NegotiatorPreJobRank){
 			tmp_expr = AddTargetRefs( NegotiatorPreJobRank, TargetJobAttrs );
 			delete NegotiatorPreJobRank;
@@ -597,7 +597,7 @@ reinitialize ()
 		if( ParseClassAdRvalExpr(tmp, NegotiatorPostJobRank) ) {
 			EXCEPT ("Error parsing NEGOTIATOR_POST_JOB_RANK expression: %s", tmp);
 		}
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 		if(NegotiatorPostJobRank){
 			tmp_expr = AddTargetRefs( NegotiatorPostJobRank, TargetJobAttrs );
 			delete NegotiatorPostJobRank;
@@ -2990,7 +2990,7 @@ obtainAdsFromCollector (
 				continue;
 			}
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 			ad->AddTargetRefs( TargetJobAttrs );
 #endif
 
@@ -3583,7 +3583,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 			resource_request_offers+1,resource_request_count);
         negotiation_cycle_stats[0]->num_jobs_considered += 1;
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 		request.AddTargetRefs( TargetMachineAttrs );
 #endif
 

@@ -93,7 +93,7 @@ OfflineCollectorPlugin::configure ()
 			EXCEPT ("Error parsing ABSENT_REQUIREMENTS expression: %s",
 					tmp);
 		}
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 		if(AbsentReq){
 			tmp_expr = AddTargetRefs( AbsentReq, TargetMachineAttrs );
 			delete AbsentReq;

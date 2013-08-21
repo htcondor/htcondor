@@ -506,7 +506,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 	{
 	  case UPDATE_STARTD_AD:
 	  case UPDATE_STARTD_AD_WITH_ACK:
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 		  clientAd->AddTargetRefs( TargetJobAttrs );
 #endif
 		if ( repeatStartdAds > 0 ) {
@@ -594,7 +594,7 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 		break;
 
 	  case MERGE_STARTD_AD:
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 		  clientAd->AddTargetRefs( TargetJobAttrs );
 #endif
 		if (!makeStartdAdHashKey (hk, clientAd))
