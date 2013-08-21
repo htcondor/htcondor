@@ -2199,7 +2199,7 @@ which use DaemonCore).
     STRING = This is a string 
     NUMBER = 666
     BOOL1 = True
-    BOOL2 = CurrentTime >= $(NUMBER) || $(BOOL1)
+    BOOL2 = time() >= $(NUMBER) || $(BOOL1)
     MY_STRING = "$(STRING)"
     STARTD_ATTRS = MY_STRING, NUMBER, BOOL1, BOOL2
   \end{verbatim}
@@ -5805,7 +5805,7 @@ SYSTEM_PERIODIC_HOLD = \
 \footnotesize
 \begin{verbatim}
 SYSTEM_PERIODIC_RELEASE = \
-  (JobRunCount < 20 && (CurrentTime - EnteredCurrentStatus) > 1200 ) &&  \
+  (JobRunCount < 20 && (time() - EnteredCurrentStatus) > 1200 ) &&  \
     (HoldReasonCode == 6 && HoldReasonSubCode == 110) 
 \end{verbatim} 
 \normalsize
@@ -5825,7 +5825,7 @@ SYSTEM_PERIODIC_RELEASE = \
 \footnotesize
 \begin{verbatim}
 SYSTEM_PERIODIC_REMOVE = \
-  (JobStatus == 5 && CurrentTime - EnteredCurrentStatus > 3600*24*30)
+  (JobStatus == 5 && time() - EnteredCurrentStatus > 3600*24*30)
 \end{verbatim}
 \normalsize
 

@@ -284,7 +284,7 @@ fillRequirements( ClassAd* req )
 		exit( 1 );
 	}
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 		// The user may have entered some references to machine attributes
 		// without explicitly specifying the TARGET scope.
 	req->AddTargetRefs( TargetMachineAttrs );
@@ -368,7 +368,7 @@ dumpAdIntoRequest( ClassAd* req )
     }
 	fclose( JOBAD_PATH );
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 		// The user may have entered some references to machine attributes
 		// without explicitly specifying the TARGET scope.
 	req->AddTargetRefs( TargetMachineAttrs );

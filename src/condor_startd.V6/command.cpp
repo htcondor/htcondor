@@ -636,7 +636,7 @@ command_query_ads( Service*, int, Stream* stream)
 		return FALSE;
 	}
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	AddExplicitTargetRefs( queryAd );
 #endif
 
@@ -1080,7 +1080,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		ABORT;
 	}
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	req_classad->AddTargetRefs( TargetMachineAttrs );
 #endif
 
@@ -1525,7 +1525,7 @@ activate_claim( Resource* rip, Stream* stream )
 		ABORT;
 	}
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	req_classad->AddTargetRefs( TargetMachineAttrs );
 #endif
 
@@ -2083,7 +2083,7 @@ command_classad_handler( Service*, int dc_cmd, Stream* s )
 		cmd = getCmdFromReliSock( rsock, &ad, false );
 	}
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	ad.AddTargetRefs( TargetMachineAttrs );
 #endif
 

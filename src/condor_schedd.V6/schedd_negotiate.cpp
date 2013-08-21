@@ -456,7 +456,7 @@ ScheddNegotiate::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 					 "Can't get my match ad from negotiator\n" );
 			return false;
 		}
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 		m_match_ad.AddTargetRefs( TargetJobAttrs );
 #endif
 

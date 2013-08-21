@@ -327,7 +327,7 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 		// ClassAds happened around 7.5.1.
 		// At some future point in time, this code should be removed
 		// (no earlier than the 7.7 series).
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	if ( universe == CONDOR_UNIVERSE_SCHEDULER ||
 		 universe == CONDOR_UNIVERSE_LOCAL ) {
 		job_ad->AddTargetRefs( TargetScheddAttrs );
@@ -2343,7 +2343,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
 		SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, status, flags );
 	}
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 /* Disable AddTargetRefs() for now
 	else if ( strcasecmp( attr_name, ATTR_REQUIREMENTS ) == 0 ||
 			  strcasecmp( attr_name, ATTR_RANK ) ) {

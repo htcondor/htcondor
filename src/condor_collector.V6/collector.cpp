@@ -550,7 +550,7 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 				 sock->type() == Stream::reli_sock ? "TCP" : "UDP" );
         return FALSE;
     }
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	RemoveExplicitTargetRefs( cad );
 #endif
 
@@ -932,7 +932,7 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 											ClassAd *query,
 											List<ClassAd>* results)
 {
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	RemoveExplicitTargetRefs( *query );
 #endif
 	// set up for hashtable scan

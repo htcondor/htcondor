@@ -2008,7 +2008,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		resmgr->publishSlotAttrs( cap );
 	}
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	cap->AddTargetRefs( TargetJobAttrs, false );
 #endif
 }
