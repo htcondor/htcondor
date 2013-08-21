@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include "condor_debug.h"
 #include "local_client.h"
 
 double pfc_lc_rt_start_connection = 0;
