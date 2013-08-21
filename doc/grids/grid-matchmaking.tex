@@ -403,7 +403,7 @@ this is unlikely.
 periodic_release = ( NumSystemHolds <= ((NumGlobusSubmits * 4) + 4) ) \
    && (NumGlobusSubmits < 4) && \
    ( HoldReason != "via condor_hold (by user $ENV(USER))" ) && \
-   ((CurrentTime - EnteredCurrentStatus) > ( NumSystemHolds *60*5 ))
+   ((time() - EnteredCurrentStatus) > ( NumSystemHolds *60*5 ))
 \end{verbatim}
 \normalsize
 
