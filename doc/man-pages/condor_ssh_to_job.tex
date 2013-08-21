@@ -26,14 +26,18 @@ The job is specified with the argument.
 If only the job \Arg{cluster} id is given,
 then the job \Arg{process} id defaults to the value 0.
 
-It is available in Unix HTCondor distributions, 
-and it works for vanilla, vm, java, local, and parallel universe jobs.
-The user must be the owner of the job or must be a queue super user, 
+\Condor{ssh\_to\_job} is available in Unix HTCondor distributions,
+and works with two kinds of jobs: those in the vanilla, vm, java, local,
+or parallel universes; and those jobs in the grid universe which use EC2
+resources.  It will not work with other kinds of jobs.
+
+For jobs in the vanilla, vm, java, local, or parallel universes,
+the user must be the owner of the job or must be a queue super user, 
 and both the \Condor{schedd} and \Condor{starter} daemons
 must allow \Condor{ssh\_to\_job} access.
 If no \Arg{remote-command} is specified, an interactive shell is created.
 An alternate \Prog{ssh} program such as \Prog{sftp} may be specified,
-using the \Opt{-ssh} option for uploading and downloading files.
+using the \Opt{-ssh} option, for uploading and downloading files.
 
 The remote command or shell runs with the same user id as the running job,
 and it is initialized with the same working directory.
@@ -111,6 +115,22 @@ and possibly modification of the
 \verb@$(LIBEXEC)/condor_ssh_to_job_sshd_setup@ script 
 used by the \Condor{starter} to set up \Prog{sshd}.
 
+For jobs in the grid universe which use EC2 resources,
+if you requested that HTCondor have the EC2 service create a new keypair 
+for the job (by specifying \Attr{ec2\_keypair\_file}), 
+\Condor{ssh\_to\_job} will attempt to connect you to the corresponding 
+instance via \Prog{ssh}.  This attempts invokes \Prog{ssh} directly, 
+bypassing the HTCondor networking layer; it supplies \Prog{ssh} with the 
+public DNS name of the instance and the name of the file with the new 
+keypair's private key.  For the connection to succeed, the instance must 
+have started an \Prog{ssh} server, and its security group(s) must allow 
+connections on port 22.  Conventionally, images will allow logins using
+the keypair on a single specific account; because \Prog{ssh} defaults to 
+logging in as the current user, you may need to supply the '-l 
+<username>' option (or its equivalent for your version of \Prog{ssh}) as 
+part of the \Arg{remote-command}.  Although the \Opt{-X} does not apply to
+EC2 jobs, you may add the appropriate option (usually '-X' or '-Y') to 
+\Arg{remote-command} to duplicate the effect.
 
 \begin{Options}
   \OptItem{\Opt{-help}}{ Display brief usage information and exit. }
@@ -118,7 +138,7 @@ used by the \Condor{starter} to set up \Prog{sshd}.
   \OptItem{\OptArg{-name}{schedd-name}}{Specify an alternate \Condor{schedd},
     if the default (local) one is not desired.}
   \OptItem{\OptArg{-pool}{pool-name}}{Specify an alternate HTCondor pool,
-    if the default one is not desired.}
+    if the default one is not desired.  Does not apply to EC2 jobs.}
   \OptItem{\OptArg{-ssh}{ssh-command}}{Specify an alternate \Prog{ssh} program
     to run in place of \Prog{ssh}, for example \Prog{sftp} or \Prog{scp}.
     Additional arguments are specified as \Arg{ssh-command}.
@@ -126,12 +146,14 @@ used by the \Condor{starter} to set up \Prog{sshd}.
     place double quote marks around the whole command,
     to prevent the shell from splitting it into multiple arguments
     to \Condor{ssh\_to\_job}.
-    If any arguments must contain spaces, enclose them within single quotes.}
+    If any arguments must contain spaces, enclose them within single quotes.
+    Does not apply to EC2 jobs.}
   \OptItem{\OptArg{-keygen-options}{ssh-keygen-options}}{Specify additional
     arguments to the \Prog{ssh\_keygen} program,
     for creating the ssh key that is used for the duration of the session.
     For example, a different number of bits could be used,
-    or a different key type than the default.}
+    or a different key type than the default.
+    Does not apply to EC2 jobs.}
   \OptItem{\OptArg{-shells}{shell1,shell2,...}}{Specify a comma-separated list
     of shells to attempt to launch.
     If the first shell does not exist on the remote machine,
@@ -139,14 +161,15 @@ used by the \Condor{starter} to set up \Prog{sshd}.
     If none of the specified shells can be found, \Prog{/bin/sh} is used
     by default.
     If this option is not specified, it defaults to the environment variable
-    \Env{SHELL} from within the \Condor{ssh\_to\_job} environment.}
+    \Env{SHELL} from within the \Condor{ssh\_to\_job} environment.
+    Does not apply to EC2 jobs.}
   \OptItem{\Opt{-auto-retry}}{Specifies that if the job is not yet running,
     \Condor{ssh\_to\_job} should keep trying periodically until it succeeds 
     or encounters some other error.}
   \OptItem{\Opt{-remove-on-interrupt}}{If specified, attempt to remove the job
     from the queue if \Condor{ssh\_to\_job} is interrupted via a ctrl-c or
     otherwise terminated abnormally.}
-  \OptItem{\Opt{-X}}{Enable X11 forwarding.}
+  \OptItem{\Opt{-X}}{Enable X11 forwarding.  Does not apply to EC2 jobs.}
 \end{Options}
 
 \Examples
