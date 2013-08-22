@@ -444,6 +444,9 @@
 /* Define to 1 if you have the 'eventfd' function. (USED)*/
 #cmakedefine HAVE_EVENTFD 1
 
+/* Define to 1 if we have the netgroup innetgr() function */
+#cmakedefine HAVE_INNETGR 1
+
 /* Define to 1 if you have the 'stat64' function. (USED)*/
 #cmakedefine HAVE_STAT64 1
 
