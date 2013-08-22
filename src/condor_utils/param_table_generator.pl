@@ -101,20 +101,26 @@ use constant {
 # (property types and names are defined farther below in $property_types) 
 ##################################################################################
 
-use constant { RECONSTITUTE_TEMPLATE_EMPTY =>
+# use this template to get actual declarations for the value of a param without a default value (wasteful)
+use constant { RECONSTITUTE_TEMPLATE_EMPTY_ORIG =>
 'static const nodef_value def_%parameter_var% = { 0 };
 '};
 
+# this template emits a comment for the value of a param without a default value
+use constant { RECONSTITUTE_TEMPLATE_EMPTY =>
+'//static const nodef_value def_%parameter_var% = { %default% };
+'};
+
 use constant { RECONSTITUTE_TEMPLATE => 
-'static const %typequal%_value def_%parameter_var% = { %default%, PARAM_TYPE_%type%%range_valid% %cooked_values% };
+'static const %typequal%_value def_%parameter_var% = { %default%, PARAM_TYPE_%type%%range_valid%%cooked_values% };
 '};
 
 use constant { RECONSTITUTE_TEMPLATE_IFDEF => 
 'static const %typequal%_value def_%parameter_var% = {
 	#ifdef WIN32
-	 %win32_default%, PARAM_TYPE_%type%%range_valid% %win_cooked_values%
+	 %win32_default%, PARAM_TYPE_%type%%range_valid%%win_cooked_values%
 	#else
-	 %default%, PARAM_TYPE_%type%%range_valid% %cooked_values%
+	 %default%, PARAM_TYPE_%type%%range_valid%%cooked_values%
 	#endif
 };
 '
@@ -125,28 +131,28 @@ use constant { RECONSTITUTE_TEMPLATE_IFDEF =>
 # pointing toward a hash, containing the following metadata:
 #      type      =>   (String specifying the type of that property. Types are defined in 
 #                       the $type_subs variable below)
-#      optional  =>   (Set this to 1 to make this property optional.)
+#      required  =>   (Set this to 1 to make this property required.)
 #      dont_trim =>   (Set this to 1 to not trim trailing whitespace on value.) 
 ##################################################################################
 my $property_types = {
-	daemon_name     => { type => "literal",	optional => 1  },
-	parameter_name 	=> { type => "char[]" },
-	parameter_var 	=> { type => "nodots" },
-	default 		=> { type => "char[]", dont_trim => 1  },
-#	win32_default	=> { type => "char[]", dont_trim => 1, optional => 1 },
+	parameter_name 	=> { type => "char[]", required => 1 },
+	parameter_var 	=> { type => "nodots", required => 1 },
+	type 			=> { type => "param_type", def => "STRING" },
+	default 		=> { type => "char[]", required => 1, dont_trim => 1 },
+	win32_default	=> { type => "char[]", dont_trim => 1 },
+	range 			=> { type => "char[]" },
+	reconfig 		=> { type => "reconfig_type", def => 1 },
 	friendly_name 	=> { type => "char[]" },
-	type 			=> { type => "param_type" },
-	state 			=> { type => "state_type" },
-	version 		=> { type => "char[]",	optional => 1 },
-	tags 			=> { type => "char[]" },
 	usage 			=> { type => "char[]" },
-#	id 				=> { type => "int", optional => 1}, 
-	aliases 		=> { type => "char[]", optional => 1 },
-	range 			=> { type => "char[]", optional => 1 },
-	is_macro 		=> { type => "is_macro_type", optional => 1 },
-	reconfig 		=> { type => "reconfig_type", optional => 1 },
-	customization	=> { type => "customization_type", optional => 1 },
-	url				=> { type => "char[]", optional => 1 }
+	tags 			=> { type => "char[]" },
+	aliases 		=> { type => "char[]" },
+#	customization	=> { type => "customization_type", def => "SELDOM" },
+#	state 			=> { type => "state_type" },
+#	is_macro 		=> { type => "is_macro_type" },
+#	version 		=> { type => "char[]" },
+#	id 				=> { type => "int"}, 
+#	daemon_name     => { type => "literal" },
+#	url				=> { type => "char[]" }
 };
 
 ##################################################################################
@@ -251,7 +257,7 @@ sub reconstitute {
 	# the default value instead.
 	sub do_one_property {
 		# $s is a ref to the structure of this parameter (ie, {name=>'foo',usage=>'bar'}) 
-		# $i is the metadata of the field (ie, {type=>'char[]',optional=1})
+		# $i is the metadata of the field (ie, {type=>'char[]', required=1})
 		# $p is the name of the property (ie, 'friendly_name')
 		my ($s,$i,$p) = @_;
 		##############################################################################
@@ -384,13 +390,17 @@ sub reconstitute {
 		# rules. (This hash is defined at the top of this file and it details 
 		# how every property should be treated).
 		while(my($name, $info) = each %{$property_types}) {
-			# unless the $sub_structure contains the property or if that property
-			# is optional, summon an error. 
-			unless(defined $sub_structure->{$name} or $info->{'optional'}){
-				param_err ("$param_name does not have required property $name.");}
+			# generate an error for required properties that are not defined
+			unless(defined $sub_structure->{$name} or ! $info->{'required'}){
+				param_err ("$param_name does not have required property $name.");
+			}
 			# Get the property value; procesed, formatted, and ready for insertion
 			# by do_one_property().
-			$replace{"%$name%"}=do_one_property($sub_structure,$info,$name);
+			if (defined $sub_structure->{$name}) {
+				$replace{"%$name%"} = do_one_property($sub_structure,$info,$name);
+			} else {
+				$replace{"%$name%"} = "";
+			}
 
 			# TYPECHECK: certain parameters types must have a non-empty default
 			# this is also where we set convert string default value to int or double as needed
@@ -539,12 +549,12 @@ sub reconstitute {
 		# Here we actually apply the template and output the parameter.
 		if (defined $win_default) {
 		    $replace{"%win32_default%"} = '"'.escape($win_default).'"';
-			$replace{"%win_valid%"} = $win_valid;
+			#$replace{"%win_valid%"} = $win_valid;
 			$replace{"%win_cooked_values%"} = "";
 			$cooked = $win_cooked_values.$cooked_range;
 			if (length $cooked) { $replace{"%win_cooked_values%"} = ", ".$cooked; }
 			continue_output(replace_by_hash(\%replace, RECONSTITUTE_TEMPLATE_IFDEF));
-		} elsif ($def_valid) {
+		} elsif (length $replace{"%default%"} > 2) {
 			continue_output(replace_by_hash(\%replace, RECONSTITUTE_TEMPLATE));
 		} else {
 			continue_output(replace_by_hash(\%replace, RECONSTITUTE_TEMPLATE_EMPTY));

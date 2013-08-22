@@ -120,9 +120,10 @@ extern "C" {
 
 	void param_info_init(void);
 
-	int param_default_integer(const char* param, const char * subsys, int* valid);
+	int param_default_integer(const char* param, const char * subsys, int* valid, int* is_long);
 	int param_default_boolean(const char* param, const char * subsys, int* valid);
 	double param_default_double(const char* param, const char * subsys, int* valid);
+	long long param_default_long(const char* param, const char * subsys, int* valid);
 	//returns pointer to internal object (or null), do not free
 	const char* param_default_string(const char* param, const char * subsys);
 	// param may be param or subsys.param, will return non-null only on exact name match
@@ -132,6 +133,7 @@ extern "C" {
 	// Otherwise, returns 0 and sets min and max to the minimum and maximum
 	// possible values.
 	int param_range_integer(const char* param, int* min, int* max);
+	int param_range_long(const char* param, long long* min, long long* max);
 	int param_range_double(const char* param, double* min, double* max);
 	
 	// Iterate the list of parameter information.
