@@ -3061,22 +3061,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,soap_core
 id=162
 
-[MASTER.PID_SNAPSHOT_INTERVAL]
-aliases=
-default=60
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Master Pid Snapshot Interval
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=daemon_core,HookClientMgr
-id=163
-
 [PID_SNAPSHOT_INTERVAL]
 aliases=
 default=15
@@ -3092,6 +3076,11 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,HookClientMgr
 id=163
+
+[MASTER.PID_SNAPSHOT_INTERVAL]
+default=60
+type=int
+friendly_name=Master Pid Snapshot Interval
 
 [SEC_DEBUG_PRINT_KEYS]
 aliases=
@@ -5367,68 +5356,25 @@ tags=classad,ast
 id=314
 
 [ENABLE_CLASSAD_CACHING]
-aliases=
 default=true
-version=0.0.0
-range=.*
-state=default
 type=bool
 is_macro=false
 reconfig=true
 customization=seldom
 friendly_name=Enable ClassAd Caching
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=classad
-id=315
 
 [MASTER.ENABLE_CLASSAD_CACHING]
-aliases=
-default=false
-version=0.0.0
-range=.*
-state=default
 type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Enable ClassAd Caching
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=classad
-id=315
+default=false
 
 [SHADOW.ENABLE_CLASSAD_CACHING]
-aliases=
-default=false
-version=0.0.0
-range=.*
-state=default
 type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Enable ClassAd Caching
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=classad
-id=315
+default=false
 
 [STARTER.ENABLE_CLASSAD_CACHING]
-aliases=
-default=false
-version=0.0.0
-range=.*
-state=default
 type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Enable ClassAd Caching
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=classad
-id=315
+default=false
 
 [QUILL_MAINTAIN_DB_CONN]
 aliases=

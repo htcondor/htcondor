@@ -1632,10 +1632,15 @@ param_integer( const char *name, int &value,
 		if (subsys && ! subsys[0]) subsys = NULL;
 
 		int def_valid = 0;
-		int tbl_default_value = param_default_integer(name, subsys, &def_valid);
+		int is_long = false;
+		int tbl_default_value = param_default_integer(name, subsys, &def_valid, &is_long);
 		bool tbl_check_ranges = 
 			(param_range_integer(name, &min_value, &max_value)==-1) 
 				? false : true;
+
+		if (is_long) {
+			dprintf (D_CONFIG | D_FAILURE, "Warning - long param %s fetched as integer\n", name);
+		}
 
 		// if found in the default table, then we overwrite the arguments
 		// to this function with the defaults from the table. This effectively
