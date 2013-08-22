@@ -2308,6 +2308,8 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold,
 			scheduler.sendSignalToShadow(srec->pid,kill_sig,job_id);
 
 			set_priv(priv);
+
+			uninit_user_ids();
 		}
 
 		if (mode == REMOVED) {
@@ -2790,6 +2792,8 @@ jobIsFinished( int cluster, int proc, void* )
 			free( sync_filename );
 
 			set_priv( priv );
+
+			uninit_user_ids();
 		}
 	}
 #endif /* WIN32 */
@@ -4044,6 +4048,8 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 #ifndef WIN32
 		// Now switch back to our old priv state
 	set_priv( priv );
+
+	uninit_user_ids();
 #endif
 
 		// Send our reply back to the client
@@ -8127,6 +8133,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	retval =  add_shadow_rec( pid, job_id, CONDOR_UNIVERSE_SCHEDULER, NULL, -1 );
 
 wrapup:
+	uninit_user_ids();
 	if(userJob) {
 		FreeJobAd(userJob);
 	}
