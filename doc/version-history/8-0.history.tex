@@ -119,6 +119,11 @@ when using cgroups and suspending jobs.
 \Code{pyclassad} as a shared library.
 \Ticket{3780}
 
+\item Fixed a file permission bug introduced in HTCondor version 7.9.2 that
+prevented vm universe jobs from working when using the Xen or KVM
+hypervisor.
+\Ticket{3781}
+
 \item Fixed a bug that could cause the \Condor{collector} to 
 become unresponsive if the remote HTCondorView server, 
 specified with configuration variable \Macro{CONDOR\_VIEW\_HOST},
@@ -182,11 +187,6 @@ the submit description file command \SubmitCmd{ec2\_security\_groups}.
 In some situations, it was previously set
 to a nonexistent path, which caused errors in some configurations.
 \Ticket{3794}
-
-\item Fixed a file permission bug introduced in HTCondor version 7.9.2 that
-prevented vm universe jobs from working when using the Xen or KVM
-hypervisor.
-\Ticket{3781}
 
 \item HTCondor daemons are now less vulnerable to long connection delays
 when attempting to connect to hosts that are off-line.  A specific case
