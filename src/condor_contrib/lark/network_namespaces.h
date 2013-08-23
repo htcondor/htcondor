@@ -58,8 +58,9 @@ public:
 	/*
 	 * Perform any network accounting for this namespace.
 	 * - classad: Reference to a classad to insert network accounting into.
+     * - jobphase: string to indicate which phase job is in (stage_in, execution or stage_out)
 	 */
-	int PerformJobAccounting(classad::ClassAd *classad);
+	int PerformJobAccounting(classad::ClassAd *classad, const std::string &);
 
 	/*
 	 * Cleanup any persistent OS structures created by the manager.

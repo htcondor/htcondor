@@ -508,13 +508,22 @@ int NetworkNamespaceManager::PostForkParent(pid_t pid) {
 
 }
 
-int NetworkNamespaceManager::PerformJobAccounting(classad::ClassAd *classad) {
+int NetworkNamespaceManager::PerformJobAccounting(classad::ClassAd *classad, const std::string & jobphase) {
 	NetworkLock sentry;
 	if (m_state == UNCREATED)
 		return 0;
 
 	int rc = 0;
 	if (m_state == EXECUTING) {
+        std::string prev_jobphase_attr("PreviousJobPhase");
+        std::string prev_jobphase;
+        std::string cur_jobphase_attr("CurrentJobPhase");
+        std::string cur_jobphase(jobphase);
+        if(! m_statistics.EvaluateAttrString(prev_jobphase_attr, prev_jobphase)) {
+            prev_jobphase = "stage_in";
+            m_statistics.InsertAttr(prev_jobphase_attr, prev_jobphase);
+        }
+        m_statistics.InsertAttr(cur_jobphase_attr, cur_jobphase);
 		dprintf(D_FULLDEBUG, "Polling netfilter for network statistics on chain %s.\n", m_network_namespace.c_str());
 		rc = perform_accounting(m_network_namespace.c_str(), JobAccountingCallback, (void *)&m_statistics);
         struct timeval tv;
@@ -522,6 +531,7 @@ int NetworkNamespaceManager::PerformJobAccounting(classad::ClassAd *classad) {
         double timestamp = (tv.tv_sec)*1000 + (tv.tv_usec)/1000;
         std::string attr_name("PreviousTimestamp");
         m_statistics.InsertAttr(attr_name, timestamp);
+        m_statistics.InsertAttr(prev_jobphase_attr, cur_jobphase);
 
         if(classad) {
             classad->Update(m_statistics);
@@ -550,6 +560,15 @@ int NetworkNamespaceManager::JobAccountingCallback(const unsigned char * rule_na
         time_interval = current_timestamp - previous_timestamp;
     }
 
+    std::string prev_jobphase_attr("PreviousJobPhase");
+    std::string prev_jobphase;
+    std::string cur_jobphase_attr("CurrentJobPhase");
+    std::string cur_jobphase;
+    classad.EvaluateAttrString(prev_jobphase_attr, prev_jobphase);
+    dprintf(D_FULLDEBUG, "Previous job phase has been evaluated to be %s\n", prev_jobphase.c_str());
+    classad.EvaluateAttrString(cur_jobphase_attr, cur_jobphase);
+    dprintf(D_FULLDEBUG, "Current job phase has been evaluated to be %s\n", cur_jobphase.c_str());
+    
 	std::string attr_name("Network");
 	attr_name.append((const char *)rule_name);
     double prev_num_bytes;
@@ -559,8 +578,21 @@ int NetworkNamespaceManager::JobAccountingCallback(const unsigned char * rule_na
     std::string average_bandwidth("AverageBandwidthUsage");
     double bandwidth_usage = 0;
     average_bandwidth.append((const char *)rule_name);
-    // this threshold is 10 milliseconds
-    if(time_interval >= 10) {
+    
+    std::string file_transfer_download_attr("FileTransferDownload");
+    file_transfer_download_attr.append((const char *)rule_name);
+    if( !strcmp(prev_jobphase.c_str(), "stage_in") && !strcmp(cur_jobphase.c_str(), "execution") ) {
+        classad.InsertAttr(file_transfer_download_attr, prev_num_bytes);
+        dprintf(D_FULLDEBUG, "%s has been inserted into job classad with value %f\n", file_transfer_download_attr.c_str(), prev_num_bytes);
+    }
+    double file_transfer_download_size;
+    if( classad.EvaluateAttrReal(file_transfer_download_attr, file_transfer_download_size)) {
+        dprintf(D_FULLDEBUG, "Before adding file transfer download data, network accounting data is %lld\n", bytes);
+        bytes = bytes + file_transfer_download_size;
+        dprintf(D_FULLDEBUG, "After adding file transfer download data, network accounting data is %lld\n", bytes);
+    }
+    // this threshold is 50 milliseconds
+    if(time_interval >= 50) {
         bandwidth_usage = (double(bytes)-prev_num_bytes)/time_interval * 1000; /* bandwidth in bytes/second */
     } else {
         classad.EvaluateAttrReal(average_bandwidth, bandwidth_usage);

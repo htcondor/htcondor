@@ -92,10 +92,11 @@ class NetworkManager {
 		 * we will call it with a valid ClassAd later, post invoking Cleanup.
 		 *
 		 * - classad: Reference to a ClassAd for resulting changes.
+         * - jobphase: String to indicate the phase of the job.
 		 *
 		 * 0 on success, non-zero on failure.
 		 */
-	        virtual int PerformJobAccounting(classad::ClassAd * /*classad*/) = 0;
+	        virtual int PerformJobAccounting(classad::ClassAd *,/*classad*/ const std::string & /*jobphase*/) = 0;
 
 		/*
 		 * Cleanup any persistent OS structures created by the manager.
@@ -188,14 +189,14 @@ class NetworkPluginManager : public PluginManager<NetworkManager> {
 			return result;
 		}
 
-		static int PerformJobAccounting(classad::ClassAd *classad) {
+		static int PerformJobAccounting(classad::ClassAd *classad, const std::string & jobphase) {
 			NetworkManager *plugin;
 			SimpleList<NetworkManager *> plugins = getPlugins();
 			plugins.Rewind();
 			TemporaryPrivSentry sentry(PRIV_ROOT);
 			while (plugins.Next(plugin)) {
 				int result;
-				if ((result = plugin->PerformJobAccounting(classad))) {
+				if ((result = plugin->PerformJobAccounting(classad, jobphase))) {
 					return result;
 				}
 			}
