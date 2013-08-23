@@ -3684,6 +3684,14 @@ will not want to change them for any reason.
   descendants of processes it creates. This can cause problems when
   HTCondor is run under another job execution system.
 
+\label{param:ProcInfoNumAttempts}
+\item[\Macro{PROC\_INFO\_NUM\_ATTEMPTS}]
+  An integer value greater than or equal to 1.  Specifies the number of
+  attempts made to obtain information about a process id.  Its value
+  defaults to 5.  Setting this value smaller can reduce \Condor{master}
+  blocking due to multiple failed attempts at querying defunct process
+  ids which cannot succeed.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

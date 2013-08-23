@@ -452,8 +452,11 @@ class ProcAPI {
       @return A 0 on success, and number less than 0 on failure.
       @see procInfo
   */
-  static int getProcInfo ( pid_t pid, piPTR& pi, int &status );
-
+#if defined(LINUX)
+  static int getProcInfo ( pid_t pid, piPTR& pi, int &status, int num_attempts=5);
+#else
+  static int getProcInfo ( pid_t pid, piPTR& pi, int &status);
+#endif
   /** Feed this function a procInfo struct and it'll print it out for you. 
 
       @param pi A pointer to a procInfo structure.
@@ -591,10 +594,13 @@ class ProcAPI {
 	@param status An indicator of the reason why a success or failure happened
 	@return A 0 on success, and number less than 0 on failure.
   */
-  static int getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int &status);
-
+#if defined(LINUX)
+  static int getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int &status, int num_attempts =5);
+#else
+  static int getProcInfoRaw(pid_t pid, procInfoRaw& procRaw, int &status);	  
+#endif
 	  /**
-		 Clears the memory of a procInfoRaw struct.
+	  	 Clears the memory of a procInfoRaw struct.
 		 @param procRaw A reference to a procInfoRaw structure.
 	  
 	  */

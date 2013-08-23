@@ -376,7 +376,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 #elif defined(LINUX)
 
 int
-ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status ) 
+ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status, int num_attempts) 
 {
 
 
@@ -386,7 +386,7 @@ ProcAPI::getProcInfo( pid_t pid, piPTR& pi, int &status )
 
 		// get the raw system process data
 	procInfoRaw procRaw;
-	int retVal = ProcAPI::getProcInfoRaw(pid, procRaw, status);
+	int retVal = ProcAPI::getProcInfoRaw(pid, procRaw, status, num_attempts);
 	
 		// if a failure occurred
 	if( retVal != 0 ){
@@ -644,7 +644,7 @@ size_t ProcAPI::getBasicUsage(pid_t pid, double * puser_time, double * psys_time
    proc_flags	: special process flags
 */
 int
-ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status ) 
+ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status, int num_attempts ) 
 {
 
 // This is the Linux version of getProcInfoRaw.  Everything is easier and
@@ -659,7 +659,6 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	unsigned long long imgsize_bytes;
 	char c;
 	char s[256];
-	int num_attempts = 5;
 
 		// assume success
 	status = PROCAPI_OK;

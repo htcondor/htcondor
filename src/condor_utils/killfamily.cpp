@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include "condor_config.h"
 #include "killfamily.h"
 #include "../condor_procapi/procapi.h"
 #include "dynuser.h"
@@ -267,7 +268,9 @@ KillFamily::takesnapshot()
 
 	new_pids = new ExtArray<a_pid>;
 	newpidindex = 0;
-
+	
+	int num_attempts = param_integer("PROC_INFO_NUM_ATTEMPTS", 5);
+	
 	// On some systems, we can only see process we own, so we must be either
 	// the user or root. However, being the user in this function causes many,
 	// many priv state changes from user to root and back again since
@@ -334,9 +337,13 @@ KillFamily::takesnapshot()
 					// found) but yet it returned something it thought was
 					// family anyway, check against the old pids but don't
 					// consider the daddy pid to even be alive.
-
+#if defined(LINUX)
+				        if ( ProcAPI::getProcInfo(currpid,pinfo,info_status, num_attempts)
+							== PROCAPI_SUCCESS )
+#else	
 					if ( ProcAPI::getProcInfo(currpid,pinfo,info_status)
 							== PROCAPI_SUCCESS )
+#endif							
 					{
 						// compare birthdays
 						if ( pinfo->birthday == (*old_pids)[i].birthday ) {
@@ -429,9 +436,16 @@ KillFamily::takesnapshot()
 	alive_cpu_sys_time = 0;
 	alive_cpu_user_time = 0;
 	unsigned long curr_image_size = 0;
+	
+	
 	for ( j=0; pidfamily[j]; j++ ) {
+#if defined(LINUX)
+		if ( ProcAPI::getProcInfo(pidfamily[j],pinfo,ignore_status, num_attempts)
+				== PROCAPI_SUCCESS )
+#else	
 		if ( ProcAPI::getProcInfo(pidfamily[j],pinfo,ignore_status)
 				== PROCAPI_SUCCESS )
+#endif				
 		{
 			(*new_pids)[newpidindex].pid = pinfo->pid;
 			(*new_pids)[newpidindex].ppid = pinfo->ppid;

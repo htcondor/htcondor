@@ -962,6 +962,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter,user_proc
 id=26
 
+[PROC_INFO_NUM_ATTEMPTS]
+aliases=
+default=5
+version=0.0.0
+range=1,
+state=default
+type=int
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Proc Info Number of Attempts
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=master
+id=370
+
 [BIND_ALL_INTERFACES]
 aliases=
 default=true
