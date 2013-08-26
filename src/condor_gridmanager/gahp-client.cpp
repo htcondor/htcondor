@@ -8453,8 +8453,8 @@ int GahpClient::boinc_fetch_output( const char *job_name,
 			}
 			rc = 0;
 			exit_status = atoi( result->argv[2] );
-			cpu_time = atof( result->argv[3] );
-			wallclock_time = atof( result->argv[4] );
+			wallclock_time = atof( result->argv[3] );
+			cpu_time = atof( result->argv[4] );
 		}
 
 		delete result;

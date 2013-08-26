@@ -135,7 +135,11 @@ BoincResource::~BoincResource()
 	delete m_statusGahp;
 	delete m_leaseGahp;
 	delete m_submitGahp;
-	// TODO need to clean up m_batches?
+
+	while ( !m_batches.empty() ) {
+		delete m_batches.front();
+		m_batches.pop_front();
+	}
 }
 
 bool BoincResource::Init()
