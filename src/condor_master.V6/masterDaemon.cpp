@@ -805,6 +805,10 @@ int daemon::RealStart( )
 				NULL,
 				daemon_sock);
 
+	if ( priv_mode == PRIV_USER_FINAL ) {
+		uninit_user_ids();
+	}
+
 	if ( pid == FALSE ) {
 		// Create_Process failed!
 		dprintf( D_FAILURE|D_ALWAYS,
