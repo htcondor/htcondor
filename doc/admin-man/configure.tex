@@ -223,7 +223,7 @@ The \Condor{master} uses this configuration variable,
 and the prefix of \MacroNI{MASTER.} causes this configuration
 to be specific to the \Condor{master} daemon.
 
-Evaluation works in an unexpected way
+As of HTCondor version 8.1.1, evaluation works in the expected manner
 when combining the definition of a macro with
 use of a prefix that gives the subsystem name and a period. 
 Consider the example
@@ -237,8 +237,8 @@ in a macro:
   USEFILE = mydir/$(FILESPEC)
 \end{verbatim}
 When the \Condor{master} evaluates variable \MacroNI{USEFILE},
-it evaluates to \Expr{mydir/A}, 
-\emph{not} the (expected) value of \Expr{mydir/B}.
+it evaluates to \Expr{mydir/B}. 
+Previous to HTCondor version 8.1.1, it evaluated to \Expr{mydir/A}.
 When any other subsystem evaluates variable \MacroNI{USEFILE},
 it evaluates to \Expr{mydir/A}.
 
