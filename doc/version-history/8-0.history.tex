@@ -49,7 +49,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Fixed a performance problem with the \Condor{qedit} command that would cause the \Condor{schedd} to run very slowly when \Condor{qedit} is run on a large number of jobs.  \Condor{qedit} will no longer write an event to the job log. 
+\Ticket{3827}
 
 \end{itemize}
 
