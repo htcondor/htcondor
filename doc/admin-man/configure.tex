@@ -223,6 +223,25 @@ The \Condor{master} uses this configuration variable,
 and the prefix of \MacroNI{MASTER.} causes this configuration
 to be specific to the \Condor{master} daemon.
 
+Evaluation works in an unexpected way
+when combining the definition of a macro with
+use of a prefix that gives the subsystem name and a period. 
+Consider the example
+\begin{verbatim}
+  FILESPEC = A
+  MASTER.FILESPEC = B 
+\end{verbatim}
+combined with a later definition that incorporates \Expr{FILESPEC}
+in a macro:
+\begin{verbatim}
+  USEFILE = mydir/$(FILESPEC)
+\end{verbatim}
+When the \Condor{master} evaluates variable \MacroNI{USEFILE},
+it evaluates to \Expr{mydir/A}, 
+\emph{not} the (expected) value of \Expr{mydir/B}.
+When any other subsystem evaluates variable \MacroNI{USEFILE},
+it evaluates to \Expr{mydir/A}.
+
 % the local functionality added in 7.1.4
 This syntax has been further expanded to allow for the
 specification of a local name on the command line 
