@@ -569,7 +569,7 @@ sub reconstitute {
 					. " * global defaults[]\n"
 					. " *=====================*/\n");
 	continue_output("const key_value_pair defaults[] = {\n");
-	for(sort { uc($a) cmp uc($b) } @var_names) {
+	for(sort { lc($a) cmp lc($b) } @var_names) {
 		if ($empty_vars{$_}) {
 			continue_output("\t{ \"$_\", 0 },\n");
 		} else {
@@ -622,7 +622,7 @@ sub reconstitute {
 					. " * param id's. index into global defaults[].\n"
 					. " *==========================================*/\n");
 	continue_output("enum {\n");
-	for(sort { uc($a) cmp uc($b) } @var_names) {
+	for(sort { lc($a) cmp lc($b) } @var_names) {
 		continue_output("\tix$_,\n");
 	}
 	continue_output("}; // param id's\n\n");
