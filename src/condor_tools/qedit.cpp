@@ -190,7 +190,7 @@ main(int argc, char *argv[])
 			if (SetAttributeByConstraint(constraint.Value(),
 							argv[nextarg],
 							argv[nextarg+1],
-							SETDIRTY|SHOULDLOG) < 0) {
+							SETDIRTY) < 0) {
 				if (SetAttributeByConstraint(constraint.Value(),
 							argv[nextarg],
 							argv[nextarg+1]) < 0) {
@@ -203,7 +203,7 @@ main(int argc, char *argv[])
 			}
 		} else {
 			if (SetAttribute(cluster, proc, argv[nextarg],
-							 argv[nextarg+1], SETDIRTY|SHOULDLOG) < 0) {
+							 argv[nextarg+1], SETDIRTY) < 0) {
 				fprintf(stderr,
 						"Failed to set attribute \"%s\" for job %d.%d.\n",
 						argv[nextarg], cluster, proc);
