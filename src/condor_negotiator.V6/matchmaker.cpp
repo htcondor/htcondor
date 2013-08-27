@@ -437,7 +437,6 @@ reinitialize ()
 {
 	char *tmp;
 	static bool first_time = true;
-	ExprTree *tmp_expr = 0;
 
     // (re)build the HGQ group tree from configuration
     // need to do this prior to initializing the accountant
@@ -491,10 +490,10 @@ reinitialize ()
 		}
 #if defined(ADD_TARGET_SCOPING)
 		if(PreemptionReq){
-			tmp_expr = AddTargetRefs( PreemptionReq, TargetJobAttrs );
+			ExprTree *tmp_expr = AddTargetRefs( PreemptionReq, TargetJobAttrs );
 			delete PreemptionReq;
+			PreemptionReq = tmp_expr;
 		}
-		PreemptionReq = tmp_expr;
 #endif
 		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS = %s\n", tmp);
 		free( tmp );
