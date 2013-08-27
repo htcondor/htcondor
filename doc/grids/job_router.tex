@@ -50,7 +50,7 @@ the original copy of the job passively mirrors the state of the routed job.
 During this time,
 the original job is not available for matchmaking,
 because it is tied to the routed copy.
-The original jobs also does not evaluate periodic expressions,
+The original job also does not evaluate periodic expressions,
 such as \Attr{PeriodicHold}.
 Periodic expressions are evaluated for the routed copy.
 When the routed copy completes,
@@ -72,10 +72,10 @@ The \Condor{job\_router} daemon utilizes a \Term{routing table},
 in which a ClassAd describes each site to where jobs may be sent.
 The routing table is given in the New ClassAd language,
 as currently used by HTCondor internally.
+
 A good place to learn about the syntax of New ClassAds
 is the Informal Language Description in the C++ ClassAds
-tutorial: \URL{http://www.cs.wisc.edu/condor/classad/c++tut.html}.
-
+tutorial: \URL{http://research.cs.wisc.edu/htcondor/classad/c++tut.html}.
 Two essential differences distinguish the New ClassAd language
 from the current one.
 In the New ClassAd language,
@@ -127,7 +127,9 @@ transfer_output_files = output1, output2
 Vanilla universe jobs and most types of grid universe jobs differ in the
 set of files transferred back when the job completes.
 Vanilla universe jobs transfer back all files created or modified,
-while all grid universe jobs except for HTCondor-C only transfer back the \SubmitCmd{output} file,
+while all grid universe jobs,
+except for HTCondor-C,
+only transfer back the \SubmitCmd{output} file,
 as well as those explicitly listed
 with \SubmitCmd{transfer\_output\_files}.
 Therefore, when routing jobs to grid universes other than HTCondor-C, it is
@@ -261,7 +263,7 @@ is an X.509 trusted certification authority directory,
 in a place recognized by HTCondor
 (for example,  \File{/etc/grid-security/certificates}).
 The VDT (\URL{http://vdt.cs.wisc.edu}) project provides 
-a convenient way to set up and install a trusted CAs,
+a convenient way to set up and install a trusted CA,
 if needed.
 
 \footnotesize
