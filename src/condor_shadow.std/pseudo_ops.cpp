@@ -247,7 +247,9 @@ pseudo_reallyexit( int *status, struct rusage *use_p )
 int
 pseudo_free_fs_blocks( const char *path )
 {
-	return sysapi_disk_space( path );
+	long long ck = sysapi_disk_space( path );
+	PRAGMA_REMIND("FIXME: disk_space truncation to INT_MAX here")
+	return (int)MIN(INT_MAX, ck);
 }
 
 int

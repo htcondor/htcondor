@@ -12320,8 +12320,7 @@ Scheduler::publish( ClassAd *cad ) {
 	unsigned long phys_mem = sysapi_phys_memory( );
 	cad->Assign( ATTR_MEMORY, (int)phys_mem );
 	
-	unsigned long disk_space = sysapi_disk_space( this->LocalUnivExecuteDir );
-	cad->Assign( ATTR_DISK, (int)disk_space );
+	cad->Assign( ATTR_DISK, sysapi_disk_space(this->LocalUnivExecuteDir) );
 
 	cad->Assign( ATTR_CPUS, 1 );
 

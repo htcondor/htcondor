@@ -805,6 +805,9 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 				// "ad" is a deep copy and therefore below we can set
 				// private attrs, delete it, etc, without messing up
 				// the schedd's canonical copy.
+				if ( cluster_ad ) {
+					ad = new ClassAd(*cluster_ad);
+				}
 			}
 		}
 		terrno = errno;
