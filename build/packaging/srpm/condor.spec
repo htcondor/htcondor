@@ -647,7 +647,7 @@ exit 0
 %if %std_univ
 # % patch11 -p1
 # % patch12 -p1
-%patch13 -p1
+# % patch13 -p1
 %endif
 
 # fix errant execute permissions

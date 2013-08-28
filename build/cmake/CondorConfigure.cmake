@@ -598,7 +598,7 @@ if (NOT WINDOWS)
         endif(LINUX)
 
 	# the following logic if for standard universe *only*
-	if (LINUX AND NOT CLIPPED AND GLIBC_VERSION AND NOT PROPER)
+	if (LINUX AND NOT CLIPPED AND GLIBC_VERSION)
 
 		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/zlib/1.2.3)
 		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/glibc)
@@ -881,7 +881,7 @@ else(MSVC)
 
 	check_cxx_compiler_flag(-shared HAVE_CC_SHARED)
 
-	if ( NOT PROPER AND ${SYS_ARCH} MATCHES "86")
+	if ( NOT CLIPPED AND ${SYS_ARCH} MATCHES "86")
 
 		if (NOT ${SYS_ARCH} MATCHES "64" )
 			add_definitions( -DI386=${SYS_ARCH} )
