@@ -66,7 +66,7 @@ os.environ["CONDOR_CONFIG"] = config_file
 os.environ["_condor_TOOL_LOG"] = os.path.join(logdir, "ToolLog")
 import htcondor
 
-class TestWithDaemons(unittest.TestCase):
+class WithDaemons(unittest.TestCase):
 
     def setUp(self):
         self.pid = -1
@@ -159,6 +159,9 @@ class TestWithDaemons(unittest.TestCase):
                 pass
             time.sleep(1)
         return coll.locate(dtype, dname)
+
+
+class TestPythonBindings(WithDaemons):
 
     def testDaemon(self):
         self.launch_daemons(["COLLECTOR"])
