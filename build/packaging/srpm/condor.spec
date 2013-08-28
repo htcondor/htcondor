@@ -637,7 +637,7 @@ exit 0
 %patch8 -p1
 
 %if %cream
-%patch9 -p1
+# % patch9 -p1
 %endif
 
 %if %blahp && ! %uw_build

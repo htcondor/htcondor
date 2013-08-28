@@ -256,9 +256,9 @@ if ( NOT PROPER )
 else( NOT PROPER )
 
         if ( ${SYSTEM_NAME} MATCHES "rhel6" OR ${SYSTEM_NAME} MATCHES "centos6" OR ${SYSTEM_NAME} MATCHES "sl6")
-            find_multiple("glite_ce_cream_client_soap;glite_ce_cream_client_util;glite_security_gsoap_plugin_2716_cxx;glite_security_gss;gridsite" CREAM_FOUND )
+            find_multiple("glite_ce_cream_client_soap;glite_ce_cream_client_util;glite_security_gsoap_plugin_2716_cxx;glite_security_gss;log4cpp;gridsite;boost_thread;boost_regex" CREAM_FOUND )
         else()
-            find_multiple("glite_ce_cream_client_soap;glite_ce_cream_client_util;glite_security_gsoap_plugin_2713_cxx;glite_security_gss;gridsite" CREAM_FOUND )
+            find_multiple("glite_ce_cream_client_soap;glite_ce_cream_client_util;glite_security_gsoap_plugin_2713_cxx;glite_security_gss;log4cpp;gridsite;boost_thread;boost_regex" CREAM_FOUND )
         endif()
 
         if (CREAM_FOUND)
