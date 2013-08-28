@@ -32,6 +32,7 @@
 #define ATTR_VERBOSITY "Verbosity"
 #define ATTR_TITLE  "Title"
 #define ATTR_GROUP  "Group"
+#define ATTR_CLUSTER "Cluster"
 #define ATTR_DESC   "Desc"
 #define ATTR_UNITS  "Units"
 #define ATTR_DERIVATIVE "Derivative"
@@ -45,6 +46,7 @@ Metric::Metric():
 	derivative(false),
 	verbosity(0),
 	type(DOUBLE),
+	aggregate(NO_AGGREGATE),
 	sum(0),
 	count(0),
 	restrict_slot1(false)
@@ -172,6 +174,11 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 			if( slotid != 1 ) {
 				return false;
 			}
+			bool dynamic_slot = false;
+			daemon_ad.EvaluateAttrBool(ATTR_SLOT_DYNAMIC,dynamic_slot);
+			if( dynamic_slot ) {
+				return false;
+			}
 		}
 		else if( !target_type.contains_anycase(my_type.c_str()) ) {
 			// avoid doing more work; this is not the right type of daemon ad
@@ -273,6 +280,7 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	if( !evaluateOptionalString(ATTR_TITLE,title,metric_ad,daemon_ad,regex_groups) ) return false;
 	if( !evaluateOptionalString(ATTR_DESC,desc,metric_ad,daemon_ad,regex_groups) ) return false;
 	if( !evaluateOptionalString(ATTR_UNITS,units,metric_ad,daemon_ad,regex_groups) ) return false;
+	if( !evaluateOptionalString(ATTR_CLUSTER,cluster,metric_ad,daemon_ad,regex_groups) ) return false;
 
 	metric_ad.EvaluateAttrBool(ATTR_DERIVATIVE,derivative);
 
@@ -316,6 +324,9 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 			// for STARTD_SLOT1 metrics, advertise by default as host.name, not slot1.host.name
 			// ditto for the collector, which typically has a daemon name != machine name, even though there is only one collector
 			daemon_ad.EvaluateAttrString(ATTR_MACHINE,machine);
+		}
+		else if( !strcasecmp(my_type.c_str(),"submitter") ) {
+			daemon_ad.EvaluateAttrString(ATTR_SCHEDD_NAME,machine);
 		}
 		else {
 			// use the daemon name for the metric machine name
@@ -439,6 +450,8 @@ Metric::convertToNonAggregateValue() {
 }
 
 StatsD::StatsD():
+	m_verbosity(0),
+	m_per_execute_node_metrics(true),
 	m_stats_pub_interval(0),
 	m_stats_pub_timer(-1),
 	m_derivative_publication_failed(0),
@@ -461,6 +474,8 @@ StatsD::initAndReconfig(char const *service_name)
 	std::string param_name;
 
 	ASSERT( service_name );
+
+	m_default_metric_ad.Clear();
 
 	int old_stats_pub_interval = m_stats_pub_interval;
 	formatstr(param_name,"%s_INTERVAL",service_name);
@@ -505,6 +520,48 @@ StatsD::initAndReconfig(char const *service_name)
 
 	formatstr(param_name,"%s_PER_EXECUTE_NODE_METRICS",service_name);
 	m_per_execute_node_metrics = param_boolean(param_name.c_str(),true);
+
+	formatstr(param_name,"%s_DEFAULT_CLUSTER",service_name);
+	std::string default_cluster_expr;
+	param(default_cluster_expr,param_name.c_str());
+
+	if( !default_cluster_expr.empty() ) {
+		classad::ClassAdParser parser;
+		classad::ExprTree *expr=NULL;
+		if( !parser.ParseExpression(default_cluster_expr,expr,true) || !expr ) {
+			EXCEPT("Invalid %s=%s",param_name.c_str(),default_cluster_expr.c_str());
+		}
+		// The classad takes ownership of expr
+		m_default_metric_ad.Insert(ATTR_CLUSTER,expr);
+	}
+
+	formatstr(param_name,"%s_DEFAULT_MACHINE",service_name);
+	std::string default_machine_expr;
+	param(default_machine_expr,param_name.c_str());
+
+	if( !default_machine_expr.empty() ) {
+		classad::ClassAdParser parser;
+		classad::ExprTree *expr=NULL;
+		if( !parser.ParseExpression(default_machine_expr,expr,true) || !expr ) {
+			EXCEPT("Invalid %s=%s",param_name.c_str(),default_machine_expr.c_str());
+		}
+		// The classad takes ownership of expr
+		m_default_metric_ad.Insert(ATTR_MACHINE,expr);
+	}
+
+	formatstr(param_name,"%s_DEFAULT_IP",service_name);
+	std::string default_ip_expr;
+	param(default_ip_expr,param_name.c_str());
+
+	if( !default_ip_expr.empty() ) {
+		classad::ClassAdParser parser;
+		classad::ExprTree *expr=NULL;
+		if( !parser.ParseExpression(default_ip_expr,expr,true) || !expr ) {
+			EXCEPT("Invalid %s=%s",param_name.c_str(),default_ip_expr.c_str());
+		}
+		// The classad takes ownership of expr
+		m_default_metric_ad.Insert(ATTR_IP,expr);
+	}
 
 	clearMetricDefinitions();
 	std::string config_dir;
@@ -585,6 +642,11 @@ StatsD::ParseMetrics( std::string const &stats_metrics_string, char const *param
 				   param_name,error_msg.c_str(),stats_metrics_string.c_str() + this_offset);
 		}
 
+		classad::ClassAd *ad2 = new ClassAd(m_default_metric_ad);
+		ad2->Update(*ad);
+		delete ad;
+		ad = ad2;
+
 		int verbosity = 0;
 		ad->EvaluateAttrInt(ATTR_VERBOSITY,verbosity);
 		if( verbosity > m_verbosity ) {
@@ -632,7 +694,7 @@ StatsD::publishMetrics()
 		while( (target_type=m_target_types.next()) ) {
 			std::string constraint;
 			if( !strcasecmp(target_type,"machine_slot1") ) {
-				formatstr(constraint,"MyType == \"Machine\" && SlotID==1");
+				formatstr(constraint,"MyType == \"Machine\" && SlotID==1 && DynamicSlot =!= True");
 			}
 			else {
 				formatstr(constraint,"MyType == \"%s\"",target_type);

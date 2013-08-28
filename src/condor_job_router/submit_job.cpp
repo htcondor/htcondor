@@ -33,7 +33,6 @@
 #include "format_time.h"
 #include "set_user_priv_from_ad.h"
 #include "classad/classad_distribution.h"
-#include "set_user_from_ad.h"
 #include "file_transfer.h"
 #include "exit.h"
 #include "spooled_job_files.h"
@@ -109,13 +108,6 @@ private:
 	Qmgr_connection * qmgr;
 	MyString *save_error_msg;
 };
-
-
-static priv_state set_user_priv_from_ad(classad::ClassAd const &ad)
-{
-	set_user_from_ad(ad);
-	return set_user_priv();
-}
 
 
 ClaimJobResult claim_job(int cluster, int proc, MyString * error_details, const char * my_identity)
@@ -979,12 +971,12 @@ bool InitializeTerminateEvent( TerminatedEvent *event, classad::ClassAd const &j
 
 	double real_val = 0;
 	if ( job_ad.EvaluateAttrReal( ATTR_JOB_REMOTE_USER_CPU, real_val ) ) {
-		event->run_remote_rusage.ru_utime.tv_sec = (int)real_val;
-		event->total_remote_rusage.ru_utime.tv_sec = (int)real_val;
+		event->run_remote_rusage.ru_utime.tv_sec = (time_t)real_val;
+		event->total_remote_rusage.ru_utime.tv_sec = (time_t)real_val;
 	}
 	if ( job_ad.EvaluateAttrReal( ATTR_JOB_REMOTE_SYS_CPU, real_val ) ) {
-		event->run_remote_rusage.ru_stime.tv_sec = (int)real_val;
-		event->total_remote_rusage.ru_stime.tv_sec = (int)real_val;
+		event->run_remote_rusage.ru_stime.tv_sec = (time_t)real_val;
+		event->total_remote_rusage.ru_stime.tv_sec = (time_t)real_val;
 	}
 
 	return true;

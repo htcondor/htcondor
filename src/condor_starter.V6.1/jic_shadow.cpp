@@ -1423,7 +1423,7 @@ JICShadow::initWithFileTransfer()
 	line += " = \"";
 	line += job_iwd;
 	line+= '"';
-	job_ad->InsertOrUpdate( line.Value() );
+	job_ad->Insert( line.Value() );
 
 		// now that we've got the iwd we're using and all our
 		// transfer-related flags set, we can finally initialize the
@@ -1962,7 +1962,7 @@ JICShadow::publishJobExitAd( ClassAd* ad )
 		Directory starter_dir( Starter->GetWorkingDir(), PRIV_USER );
 		execsz = starter_dir.GetDirectorySize();
 		sprintf( buf, "%s=%lu", ATTR_DISK_USAGE, (long unsigned)((execsz+1023)/1024) ); 
-		ad->InsertOrUpdate( buf );
+		ad->Insert( buf );
 
 	}
 	MyString spooled_files;

@@ -106,8 +106,10 @@ released with HTCondor.  This list includes:
 
   \OptItem{\Opt{---usage}} {Print short usage and exit}
 
-  \OptItem{\Opt{---install}} {Perform installation, assuming that
-    the current working directory contains the release directories.
+  \OptItem{\Opt{---install[=$<$path/to/release$>$]}} {Perform installation, 
+    assuming that
+    the current working directory contains the release directory,
+    if the optional \Expr{=<path/to/release>} is not specified.
     Without further options, the configuration is that of
     a Personal HTCondor, a complete one-machine pool.
     If used as an 
@@ -144,7 +146,7 @@ released with HTCondor.  This list includes:
   \OptItem{\Opt{---make-personal-condor}} {Installs and configures for 
      Personal HTCondor, a fully-functional, one-machine pool.}
 
-  \OptItem{\Opt{---bosco}} {Installs and configures BOSCO, a personal
+  \OptItem{\Opt{---bosco}} {Installs and configures Bosco, a personal
      HTCondor that submits jobs to remote batch systems.}
 
   \OptItem{\Opt{---type= $<$ submit, execute, manager $>$}} {One

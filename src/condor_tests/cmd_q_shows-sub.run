@@ -100,6 +100,16 @@ my $execute = sub {
     die "We never found ourselves with <condor_q -sub $whoami>\n"
 };
 
+my $abort = sub {
+	print "Got expected abort from the condor_rm\n";
+};
+
+my $evictedwithoutchpt = sub {
+	print "Got expected without checkpoint from the condor_rm\n";
+};
+
+CondorTest::RegisterAbort($testname, $abort);
+CondorTest::RegisterEvictedWithoutCheckpoint($testname, $abort);
 CondorTest::RegisterSubmit($testname, $submit);
 CondorTest::RegisterExecute($testname, $execute);
 

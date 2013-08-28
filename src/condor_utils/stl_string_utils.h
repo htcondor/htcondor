@@ -34,6 +34,7 @@
 // memory/buffer safe.
 int formatstr(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 int formatstr(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
+int vformatstr(std::string& s, const char* format, va_list pargs);
 
 // Appending versions of above.
 // These return number of new chars appended.

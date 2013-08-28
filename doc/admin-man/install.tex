@@ -864,7 +864,7 @@ Debian packages are available in HTCondor \VersionNotice.
 We provide an APT repository, as well as 
 installation and configuration in one easy step.
 These Debian packages of HTCondor are currently available for 
-Debian 5 (Lenny) and Debian 6 (Squeeze).
+Debian 6 (squeeze) and Debian 7 (wheezy).
 As of HTCondor version 7.5.1, 
 the HTCondor Debian package installs into FHS locations.
 
@@ -888,10 +888,10 @@ operating system-specific lines is in
 the file \File{/etc/apt/sources.list} .
 \footnotesize
 \begin{verbatim}
-deb http://research.cs.wisc.edu/htcondor/debian/stable/ lenny contrib
-deb http://research.cs.wisc.edu/htcondor/debian/development/ lenny contrib
 deb http://research.cs.wisc.edu/htcondor/debian/stable/ squeeze contrib
 deb http://research.cs.wisc.edu/htcondor/debian/development/ squeeze contrib
+deb http://research.cs.wisc.edu/htcondor/debian/stable/ wheezy contrib
+deb http://research.cs.wisc.edu/htcondor/debian/development/ wheezy contrib
 \end{verbatim}
 \normalsize
 Note that this step need be done only once;

@@ -9,8 +9,7 @@ The \Condor{shared\_port} is an optional daemon
 responsible for creating a TCP listener port shared by all of the
 HTCondor daemons for which the configuration variable
 \Macro{USE\_SHARED\_PORT} is \Expr{True}.
-The \Condor{master} will invoke the \Condor{shared\_port} daemon
-if it is listed in \MacroNI{DAEMON\_LIST}.  For further configuration
+For further configuration
 options, such as specifying the port number to use, see page~\pageref{sec:Config-shared-port}.
 
 The main purpose of the \Condor{shared\_port} daemon is to reduce the
@@ -75,6 +74,7 @@ by setting the configuration variable
   USE_SHARED_PORT = True
 \end{verbatim}
 the \Condor{shared\_port} daemon is treated specially. 
+\Macro{SHARED\_PORT} is automatically added to \Macro{DAEMON\_LIST}.
 A command such as \Condor{off},
 which shuts down all daemons except for the \Condor{master},
 will also leave the \Condor{shared\_port} running.
@@ -83,7 +83,10 @@ where it can no longer receive commands.
 
 The \Condor{collector} daemon typically has its own port;
 it uses 9618 by default.
-However, it can be configured to use a shared port.
+Setting \Expr{USE\_SHARED\_PORT=True} does not alter the
+\Condor{collector} address, so communication with it will
+not use the shared port.
+However, \Condor{collector} can be configured to use a shared port.
 Since the address of the \Condor{collector} must be set in 
 the configuration file,
 it is necessary to specify the shared port socket name of 
@@ -113,7 +116,8 @@ COLLECTOR_ARGS = -sock collector
 \end{verbatim}
 
 When the \Condor{collector} address is a shared port,
-TCP updates will be automatically used instead of UDP.
+TCP updates will be automatically used instead of UDP,
+because the shared port does not work with UDP messages.
 Under Unix, this means that the
 \Condor{collector} daemon should be configured to have enough file descriptors.
 See section~\ref{sec:tcp-collector-update} for more information on using
@@ -127,5 +131,7 @@ This is done both by setting
 using \verb|<SUBSYS>_ARGS = -p <portnum>|.
 
 The TCP connections required to manage standard universe jobs do not
-make use of shared ports.
+make use of shared ports.  Therefore, if the firewall is configured to
+only allow connections through the shared port, standard universe jobs
+will not be able to run.
 

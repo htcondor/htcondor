@@ -855,11 +855,20 @@ delete_passwd_cache() {
 
 #define ROOT 0
 
+#define NOT_IN_SET_PRIV 2
+static int _setpriv_dologging = NOT_IN_SET_PRIV;
+
 static uid_t CondorUid, UserUid, RealCondorUid, OwnerUid;
 static gid_t CondorGid, UserGid, RealCondorGid, OwnerGid;
 static int CondorIdsInited = FALSE;
 static char* UserName = NULL;
 static char* OwnerName = NULL;
+static gid_t *CondorGidList = NULL;
+static size_t CondorGidListSize = 0;
+static gid_t *UserGidList = NULL;
+static size_t UserGidListSize = 0;
+static gid_t *OwnerGidList = NULL;
+static size_t OwnerGidListSize = 0;
 
 static int set_condor_euid();
 static int set_condor_egid();
@@ -903,6 +912,12 @@ delete_passwd_cache() {
 	pcache_ptr = NULL;
 }
 
+// This function can be called from _set_priv(). Normally, _set_priv()
+// and its callees need to be careful about calling dprintf() and
+// changing memory in certain instances (based on the dologging
+// parameter). init_condor_ids() is only called once and currently,
+// it doesn't happen in any of the sensitive situations (called from
+// dprintf() or from child process between clone()/fork() and exec()).
 void
 init_condor_ids()
 {
@@ -928,8 +943,6 @@ init_condor_ids()
 		 * the default is INT_MAX */
 	RealCondorUid = INT_MAX;
 	RealCondorGid = INT_MAX;
-	pcache()->get_user_uid( myDistro->Get(), RealCondorUid );
-	pcache()->get_user_gid( myDistro->Get(), RealCondorGid );
 
 	const char	*envName = EnvGetName( ENV_UG_IDS ); 
 	if( (env_val = getenv(envName)) ) {
@@ -970,6 +983,15 @@ init_condor_ids()
 			fprintf(stderr, "should be used by %s.\n", myDistro->Get() );
 			exit(1);
 		}
+
+		// If CONDOR_IDS is set, that account is always the "real"
+		// Condor account.
+		RealCondorUid = envCondorUid;
+		RealCondorGid = envCondorGid;
+	} else {
+		// If CONDOR_IDS isn't set, then look for the "condor" account.
+		pcache()->get_user_uid( myDistro->Get(), RealCondorUid );
+		pcache()->get_user_gid( myDistro->Get(), RealCondorGid );
 	}
 	if( config_val ) {
 		free( config_val );
@@ -1029,18 +1051,24 @@ init_condor_ids()
 				EXCEPT("Out of memory. Aborting.");
 			}
 		}
-
-		/* If CONDOR_IDS environment variable is set, and set to the same uid
-		   that we are running as, then behave as if the daemons are running
-		   as user "condor" -- i.e. allow any user to submit jobs to these daemons,
-		   not just the user running the daemons.
-		*/
-		if ( MyUid == envCondorUid ) {
-			RealCondorUid = MyUid;
-			RealCondorGid = MyGid;
-		}
 	}
 	
+	if ( CondorUserName && can_switch_ids() ) {
+		free( CondorGidList );
+		CondorGidList = NULL;
+		CondorGidListSize = 0;
+		int size = pcache()->num_groups( CondorUserName );
+		if ( size > 0 ) {
+			CondorGidListSize = size;
+			CondorGidList = (gid_t *)malloc( CondorGidListSize * sizeof(gid_t) );
+			if ( !pcache()->get_groups( CondorUserName, CondorGidListSize, CondorGidList ) ) {
+				CondorGidListSize = 0;
+				free( CondorGidList );
+				CondorGidList = NULL;
+			}
+		}
+	}
+
 	(void)endpwent();
 	(void)SetSyscalls( scm );
 	
@@ -1070,10 +1098,13 @@ set_user_ids_implementation( uid_t uid, gid_t gid, const char *username,
 		gid = get_my_gid();
 	}
 
-	if( UserIdsInited && UserUid != uid && !is_quiet ) {
-		dprintf( D_ALWAYS, 
-				 "warning: setting UserUid to %d, was %d previously\n",
-				 uid, UserUid );
+	if( UserIdsInited ) {
+		if ( UserUid != uid && !is_quiet ) {
+			dprintf( D_ALWAYS, 
+					 "warning: setting UserUid to %d, was %d previously\n",
+					 uid, UserUid );
+		}
+		uninit_user_ids();
 	}
 	UserUid = uid;
 	UserGid = gid;
@@ -1094,6 +1125,28 @@ set_user_ids_implementation( uid_t uid, gid_t gid, const char *username,
 	} else {
 		UserName = strdup( username );
 	}
+
+	// UserGidList is always allocated and always has room for an
+	// extra gid_t beyond UserGidListSize. This allows us to add the
+	// TrackingGid to the list (if it's configured). Here, we don't
+	// know yet if there will be a TrackingGid.
+	int size = 0;
+	if ( UserName && can_switch_ids() ) {
+		priv_state old_priv = set_root_priv();
+		size = pcache()->num_groups( UserName );
+		set_priv( old_priv );
+		if ( size < 0 ) {
+			size = 0;
+		}
+	}
+	UserGidListSize = size;
+	UserGidList = (gid_t *)malloc( (UserGidListSize + 1) * sizeof(gid_t) );
+	if ( size > 0 ) {
+		if ( !pcache()->get_groups( UserName, UserGidListSize, UserGidList ) ) {
+			UserGidListSize = 0;
+		}
+	}
+
 	return TRUE;
 }
 
@@ -1263,6 +1316,9 @@ void
 uninit_user_ids()
 {
 	UserIdsInited = FALSE;
+	free( UserGidList );
+	UserGidList = NULL;
+	UserGidListSize = 0;
 }
 
 
@@ -1270,16 +1326,22 @@ void
 uninit_file_owner_ids() 
 {
 	OwnerIdsInited = FALSE;
+	free( OwnerGidList );
+	OwnerGidList = NULL;
+	OwnerGidListSize = 0;
 }
 
 
 int
 set_file_owner_ids( uid_t uid, gid_t gid )
 {
-	if( OwnerIdsInited && OwnerUid != uid  ) {
-		dprintf( D_ALWAYS, 
-				 "warning: setting OwnerUid to %d, was %d previosly\n",
-				 (int)uid, (int)OwnerUid );
+	if( OwnerIdsInited ) {
+		if ( OwnerUid != uid ) {
+			dprintf( D_ALWAYS, 
+					 "warning: setting OwnerUid to %d, was %d previosly\n",
+					 (int)uid, (int)OwnerUid );
+		}
+		uninit_file_owner_ids();
 	}
 	OwnerUid = uid;
 	OwnerGid = gid;
@@ -1294,6 +1356,22 @@ set_file_owner_ids( uid_t uid, gid_t gid )
 	if ( !(pcache()->get_user_name( OwnerUid, OwnerName )) ) {
 		OwnerName = NULL;
 	}
+
+	if ( OwnerName && can_switch_ids() ) {
+		priv_state old_priv = set_root_priv();
+		int size = pcache()->num_groups( OwnerName );
+		set_priv( old_priv );
+		if ( size > 0 ) {
+			OwnerGidListSize = size;
+			OwnerGidList = (gid_t *)malloc( OwnerGidListSize * sizeof(gid_t) );
+			if ( !pcache()->get_groups( OwnerName, OwnerGidListSize, OwnerGidList ) ) {
+				OwnerGidListSize = 0;
+				free( OwnerGidList );
+				OwnerGidList = NULL;
+			}
+		}
+	}
+
 	return TRUE;
 }
 
@@ -1304,15 +1382,20 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 	priv_state PrevPrivState = CurrentPrivState;
 	if (s == CurrentPrivState) return s;
 	if (CurrentPrivState == PRIV_USER_FINAL) {
-		dprintf(D_ALWAYS,
-				"warning: attempted switch out of PRIV_USER_FINAL\n");
+		if ( dologging ) {
+			dprintf(D_ALWAYS,
+					"warning: attempted switch out of PRIV_USER_FINAL\n");
+		}
 		return PRIV_USER_FINAL;
 	}
 	if (CurrentPrivState == PRIV_CONDOR_FINAL) {
-		dprintf(D_ALWAYS,
-				"warning: attempted switch out of PRIV_CONDOR_FINAL\n");
+		if ( dologging ) {
+			dprintf(D_ALWAYS,
+					"warning: attempted switch out of PRIV_CONDOR_FINAL\n");
+		}
 		return PRIV_CONDOR_FINAL;
 	}
+	int old_logging = _setpriv_dologging;
 	CurrentPrivState = s;
 
 	if (can_switch_ids()) {
@@ -1348,7 +1431,9 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 		case PRIV_UNKNOWN:		/* silently ignore */
 			break;
 		default:
-			dprintf( D_ALWAYS, "set_priv: Unknown priv state %d\n", (int)s);
+			if ( dologging ) {
+				dprintf( D_ALWAYS, "set_priv: Unknown priv state %d\n", (int)s);
+			}
 		}
 	}
 	if( dologging == NO_PRIV_MEMORY_CHANGES ) {
@@ -1369,6 +1454,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 		log_priv(PrevPrivState, CurrentPrivState, file, line);
 	}
 
+	_setpriv_dologging = old_logging;
 	return PrevPrivState;
 }	
 
@@ -1531,7 +1617,9 @@ int
 set_user_euid()
 {
 	if( !UserIdsInited ) {
-		dprintf(D_ALWAYS, "set_user_euid() called when UserIds not inited!\n");
+		if ( _setpriv_dologging ) {
+			dprintf(D_ALWAYS, "set_user_euid() called when UserIds not inited!\n");
+		}
 		return -1;
 	}
 
@@ -1543,7 +1631,9 @@ int
 set_user_egid()
 {
 	if( !UserIdsInited ) {
-		dprintf(D_ALWAYS, "set_user_egid() called when UserIds not inited!\n");
+		if ( _setpriv_dologging ) {
+			dprintf(D_ALWAYS, "set_user_egid() called when UserIds not inited!\n");
+		}
 		return -1;
 	}
 	
@@ -1557,9 +1647,10 @@ set_user_egid()
 		
 	if( UserName ) {
 		errno = 0;
-		if(!(pcache()->init_groups(UserName)) ) {
+		if ( setgroups( UserGidListSize, UserGidList ) < 0 &&
+			 _setpriv_dologging ) {
 			dprintf( D_ALWAYS, 
-					 "set_user_egid - ERROR: initgroups(%s, %d) failed, "
+					 "set_user_egid - ERROR: setgroups for %s (gid %d) failed, "
 					 "errno: %s\n", UserName, UserGid, strerror(errno) );
 		}			
 	}
@@ -1571,7 +1662,9 @@ int
 set_user_ruid()
 {
 	if( !UserIdsInited ) {
-		dprintf(D_ALWAYS, "set_user_ruid() called when UserIds not inited!\n");
+		if ( _setpriv_dologging ) {
+			dprintf(D_ALWAYS, "set_user_ruid() called when UserIds not inited!\n");
+		}
 		return -1;
 	}
 
@@ -1583,7 +1676,9 @@ int
 set_user_rgid()
 {
 	if( !UserIdsInited ) {
-		dprintf(D_ALWAYS, "set_user_rgid() called when UserIds not inited!\n");
+		if ( _setpriv_dologging ) {
+			dprintf(D_ALWAYS, "set_user_rgid() called when UserIds not inited!\n");
+		}
 		return -1;
 	}
 
@@ -1597,11 +1692,20 @@ set_user_rgid()
 		
 	if( UserName ) {
 		errno = 0;
-		if( !(pcache()->init_groups(UserName, TrackingGid)) ) {
+		// UserGidList is guaranteed to be allocated and able to hold
+		// one more gid_t beyond UserGidListSize.
+		// If we have a TrackingGid, we stick it in that slot.
+		int size = UserGidListSize;
+		if ( TrackingGid > 0 ) {
+			UserGidList[size] = TrackingGid;
+			size++;
+		}
+		if ( setgroups( size, UserGidList ) < 0 &&
+			 _setpriv_dologging ) {
 			dprintf( D_ALWAYS, 
-					 "set_user_rgid - ERROR: initgroups(%s, %d) failed, "
+					 "set_user_rgid - ERROR: setgroups for %s (gid %d) failed, "
 					 "errno: %d\n", UserName, UserGid, errno );
-		}			
+		}
 	}
 	return SET_REAL_GID(UserGid);
 }
@@ -1624,8 +1728,10 @@ int
 set_owner_euid()
 {
 	if( !OwnerIdsInited ) {
-		dprintf( D_ALWAYS,
-				 "set_owner_euid() called when OwnerIds not inited!\n" );
+		if ( _setpriv_dologging ) {
+			dprintf( D_ALWAYS,
+					 "set_owner_euid() called when OwnerIds not inited!\n" );
+		}
 		return -1;
 	}
 	return SET_EFFECTIVE_UID(OwnerUid);
@@ -1636,8 +1742,10 @@ int
 set_owner_egid()
 {
 	if( !OwnerIdsInited ) {
-		dprintf( D_ALWAYS,
-				 "set_owner_egid() called when OwnerIds not inited!\n" );
+		if ( _setpriv_dologging ) {
+			dprintf( D_ALWAYS,
+					 "set_owner_egid() called when OwnerIds not inited!\n" );
+		}
 		return -1;
 	}
 	
@@ -1648,11 +1756,12 @@ set_owner_egid()
 		// belonging to his/her default group, and might be left
 		// with access to the groups that root belongs to, which 
 		// is a serious security problem.
-	if( OwnerName ) {
+	if( OwnerName && OwnerGidListSize > 0 ) {
 		errno = 0;
-		if(!(pcache()->init_groups(OwnerName)) ) {
+		if ( setgroups( OwnerGidListSize, OwnerGidList ) < 0 &&
+			 _setpriv_dologging ) {
 			dprintf( D_ALWAYS, 
-					 "set_owner_egid - ERROR: initgroups(%s, %d) failed, "
+					 "set_owner_egid - ERROR: setgroups for %s (gid %d) failed, "
 					 "errno: %s\n", OwnerName, OwnerGid, strerror(errno) );
 		}			
 	}
@@ -1678,13 +1787,14 @@ set_condor_rgid()
 		init_condor_ids();
 	}
 
-	if( CondorUserName ) {
+	if( CondorUserName && CondorGidListSize > 0 ) {
 		errno = 0;
-		if(!(pcache()->init_groups(CondorUserName)) ) {
+		if ( setgroups( CondorGidListSize, CondorGidList ) < 0 &&
+			 _setpriv_dologging ) {
 			dprintf( D_ALWAYS, 
-					 "set_condor_rgid - ERROR: initgroups(%s) failed, "
+					 "set_condor_rgid - ERROR: setgroups for %s failed, "
 					 "errno: %s\n", CondorUserName, strerror(errno) );
-		}                       
+		}
 	}
 
 	return SET_REAL_GID(CondorGid);

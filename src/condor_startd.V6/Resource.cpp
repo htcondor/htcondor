@@ -670,11 +670,11 @@ Resource::hackLoadForCOD( void )
 
 	if( IsDebugVerbose( D_LOAD ) ) {
 		if( r_cod_mgr->isRunning() ) {
-			dprintf( D_LOAD, "COD job current running, using "
+			dprintf( D_LOAD | D_VERBOSE, "COD job current running, using "
 					 "'%s', '%s' for internal policy evaluation\n",
 					 load.Value(), c_load.Value() );
 		} else {
-			dprintf( D_LOAD, "COD job recently ran, using '%s', '%s' "
+			dprintf( D_LOAD | D_VERBOSE, "COD job recently ran, using '%s', '%s' "
 					 "for internal policy evaluation\n",
 					 load.Value(), c_load.Value() );
 		}
@@ -1041,7 +1041,7 @@ Resource::publish_for_update ( ClassAd *public_ad ,ClassAd *private_ad )
 {
     this->publish( public_ad, A_ALL_PUB );
     if( vmapi_is_usable_for_condor() == FALSE ) {
-        public_ad->InsertOrUpdate( "Start = False" );
+        public_ad->Insert( "Start = False" );
     }
 
     if( vmapi_is_virtual_machine() == TRUE ) {
@@ -1064,7 +1064,7 @@ Resource::final_update( void )
 {
 	ClassAd invalidate_ad;
 	MyString line;
-	MyString escaped_name;
+	string escaped_name;
 
 		// Set the correct types
 	SetMyTypeName( invalidate_ad, QUERY_ADTYPE );
@@ -1075,8 +1075,8 @@ Resource::final_update( void )
 	 * if you change here you will need to CollectorEngine::remove (AdTypes t_AddType, const ClassAd & c_query)
 	 * the IP was added to allow the collector to create a hash key to delete in O(1).
      */
-	 ClassAd::EscapeStringValue( r_name, escaped_name );
-     line.formatstr( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.Value() );
+	 EscapeAdStringValue( r_name, escaped_name );
+     line.formatstr( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.c_str() );
      invalidate_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value() );
      invalidate_ad.Assign( ATTR_NAME, r_name );
      invalidate_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());
@@ -1824,13 +1824,13 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			// And then include everything from SLOTx_STARTD_EXPRS
 		daemonCore->publish(cap);
 
-		// config_fill_ad can not take strings with "." in it's prefix
-		// e.g. slot1.1, instead needs to be slot1
+		// config_fill_ad can not take strings with "_" in it's prefix
+		// e.g. slot1_1, instead needs to be slot1
 		MyString szTmp(r_id_str);
-		int iPeriodPos = szTmp.find(".");
+		int iUnderPos = szTmp.find("_");
 
-		if ( iPeriodPos >=0 ) {
-			szTmp.setChar ( iPeriodPos,  '\0' );
+		if ( iUnderPos >=0 ) {
+			szTmp.setChar ( iUnderPos,  '\0' );
 		}
 		
 		config_fill_ad( cap, szTmp.Value() );
@@ -2008,7 +2008,7 @@ Resource::publish( ClassAd* cap, amask_t mask )
 		resmgr->publishSlotAttrs( cap );
 	}
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	cap->AddTargetRefs( TargetJobAttrs, false );
 #endif
 }
@@ -2219,7 +2219,7 @@ Resource::compute_condor_load( void )
 	}
 
 	if( IsDebugVerbose( D_LOAD ) ) {
-		dprintf( D_FULLDEBUG, "LoadQueue: Adding %d entries of value %f\n",
+		dprintf( D_LOAD | D_VERBOSE, "LoadQueue: Adding %d entries of value %f\n",
 				 num_since_last, cpu_usage );
 	}
 	r_load_queue->push( num_since_last, cpu_usage );
@@ -2228,7 +2228,7 @@ Resource::compute_condor_load( void )
 
 	if( IsDebugVerbose( D_LOAD ) ) {
 		r_load_queue->display( this );
-		dprintf( D_FULLDEBUG,
+		dprintf( D_LOAD | D_VERBOSE,
 				 "LoadQueue: Size: %d  Avg value: %.2f  "
 				 "Share of system load: %.2f\n",
 				 r_load_queue->size(), r_load_queue->avg(), avg );
@@ -2458,12 +2458,20 @@ Resource::willingToRun(ClassAd* request_ad)
 		if (!slot_requirements || !req_requirements) {
 			if (!slot_requirements) {
 				dprintf(D_FAILURE|D_ALWAYS, "Slot requirements not satisfied.\n");
+				dprintf(D_ALWAYS, "Job ad was ============================\n");
+				dPrintAd(D_ALWAYS, *request_ad);
+				dprintf(D_ALWAYS, "Slot ad was ============================\n");
+				dPrintAd(D_ALWAYS, *r_classad);
 			}
 			if (no_starter) {
 				dprintf(D_FAILURE|D_ALWAYS, "No starter found to run this job!  Is something wrong with your Condor installation?\n");
 			}
 			else if (!req_requirements) {
 				dprintf(D_FAILURE|D_ALWAYS, "Job requirements not satisfied.\n");
+				dprintf(D_ALWAYS, "Job ad was ============================\n");
+				dPrintAd(D_ALWAYS, *request_ad);
+				dprintf(D_ALWAYS, "Slot ad was ============================\n");
+				dPrintAd(D_ALWAYS, *r_classad);
 			}
 		}
 
@@ -2976,6 +2984,9 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			 param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true) ) 
 		{
 			leftover_claim = rip->r_cur;
+			leftover_claim->setad(new ClassAd(*req_classad));
+			leftover_claim->loadRequestInfo();
+			leftover_claim->setad(0);
 			ASSERT(leftover_claim);
 		}
 

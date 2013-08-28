@@ -452,9 +452,12 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	if( max_fds > 0 ) {
 		dprintf(D_ALWAYS,"Setting maximum file descriptors to %d.\n",max_fds);
 
-		priv_state priv = set_root_priv();
-		limit(RLIMIT_NOFILE,max_fds,CONDOR_REQUIRED_LIMIT,"MAX_FILE_DESCRIPTORS");
-		set_priv(priv);
+        TemporaryPrivSentry sentry( PRIV_ROOT );
+        if( is_root() ) {
+	        limit(RLIMIT_NOFILE,max_fds,CONDOR_REQUIRED_LIMIT,"MAX_FILE_DESCRIPTORS");
+        } else {
+    	    limit(RLIMIT_NOFILE,max_fds,CONDOR_HARD_LIMIT,"MAX_FILE_DESCRIPTORS");
+        }
 	}
 #endif
 
@@ -3194,6 +3197,9 @@ void DaemonCore::Driver()
 		selector.reset();
 		min_deadline = 0;
 		for (i = 0; i < nSock; i++) {
+				// NOTE: keep the following logic for building the
+				// fdset in sync with DaemonCore::ServiceCommandSocket()
+
 				// if a valid entry not already being serviced, add to select
 			if ( (*sockTable)[i].iosock && 
 				 (*sockTable)[i].servicing_tid==0 &&
@@ -4144,6 +4150,9 @@ int DaemonCore::ServiceCommandSocket()
 		else if( ((*sockTable)[i].iosock) && 
 				 (i != initial_command_sock) && 
 				 ((*sockTable)[i].waiting_for_data) &&
+				 ((*sockTable)[i].servicing_tid==0) &&
+				 ((*sockTable)[i].remove_asap == false) &&
+				 ((*sockTable)[i].is_reverse_connect_pending == false) &&
 				 ((*sockTable)[i].is_connect_pending == false)) {
 			selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
 		}

@@ -61,6 +61,10 @@ my $on_abort = sub {
 	CondorTest::debug("Abort from removing sleep 0 jobs.\n",1);
 };
 
+my $on_evictedwithoutcheckpoint = sub {
+	CondorTest::debug("Evicted Without Checkpoint from removing jobs.\n",1);
+};
+
 my $result = 1;
 my $running_now = 0;
 my $expect_idle = 0;
@@ -257,11 +261,13 @@ request_gpu = 1
 ';
 
 # on this on-execute, check the ads like above
+$running_now = 0;
 $expect_run = 1;
 $expect_idle = 0;
 $result = SimpleJob::RunCheck(
 	on_abort => $on_abort,
 	on_execute => $on_execute,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	queue_sz => 1,
 	duration => 0,
 	append_submit_commands => $append_submit_commands
@@ -278,11 +284,13 @@ $checkpslot = "yes";
 # on this on-execute, check the ads like above
 # checking left over resources on partiionable slot, do not ask for a qpu
 # and expectation will match the dynamic slot
+$running_now = 0;
 $expect_run = 1;
 $expect_idle = 0;
 $result = SimpleJob::RunCheck(
 	on_abort => $on_abort,
 	on_execute => $on_execute,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	queue_sz => 1,
 	duration => 0,
 	append_submit_commands => $append_submit_commands

@@ -43,10 +43,12 @@ else {
 my $append_condor_config = '
   DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD,GANGLIAD
 
+  # NOOP is a special hack for testing; no actual interaction with ganglia happens
+  GANGLIA_LIB = NOOP
   GANGLIA_CONFIG = ' . $cwd . '/x_ganglia_config
-  GANGLIA_INTERVAL = 5
+  GANGLIAD_INTERVAL = 5
   GANGLIAD_DEBUG = D_FULLDEBUG
-  GANGLIA_METRICS_CONFIG_DIR = ' . $configd . '
+  GANGLIAD_METRICS_CONFIG_DIR = ' . $configd . '
 ';
 
 CondorTest::StartCondorWithParams(
@@ -57,9 +59,8 @@ CondorTest::StartCondorWithParams(
 sleep(10);
 
 # Verify that at least one metric was successfully parsed and
-# attempted to be published.  The actual publication will fail,
-# because we have not set up ganglia, and we are intentionally using a
-# port that will not work.
+# attempted to be published.  The actual publication will not happen,
+# because we have not set up ganglia for real.
 CondorLog::RunCheck(
     daemon => "GANGLIAD",
     match_regexp => "publishing Jobs in Pool"

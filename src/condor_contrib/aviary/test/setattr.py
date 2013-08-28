@@ -27,7 +27,7 @@ from aviary.util import *
 wsdl = 'file:/var/lib/condor/aviary/services/job/aviary-job.wsdl'
 types = ['BOOLEAN','EXPRESSION','FLOAT','INTEGER','STRING']
 
-parser = build_basic_parser('Set job attributes remotely via SOAP.','http://localhost:9090/services/job/setJobAttribute')
+parser = build_basic_parser('Set job attributes remotely via SOAP.','http://localhost:39090/services/job/setJobAttribute')
 parser.add_option('--name', action="store", dest='name', help='attribute name')
 parser.add_option('--type', action="store", choices=(types), dest='type', help=str(types))
 parser.add_option('--value', action="store", dest='value', help='attribute value')

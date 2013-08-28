@@ -361,7 +361,7 @@ static bool write_classad_input_file( ClassAd *classad,
 	CmdExpr += condor_basename( executable_path.c_str() );
 	CmdExpr += '"';
 	// TODO: Store old Cmd as OrigCmd?
-	tmpclassad.InsertOrUpdate(CmdExpr.c_str());
+	tmpclassad.Insert(CmdExpr.c_str());
 
 	PROC_ID procID;
 	if( ! tmpclassad.LookupInteger( ATTR_CLUSTER_ID, procID.cluster ) ) {
@@ -398,7 +398,7 @@ static bool write_classad_input_file( ClassAd *classad,
 
 		// Fix the universe, too, since the starter is going to expect
 		// "VANILLA", not "GLOBUS"...
-	tmpclassad.InsertOrUpdate( "JobUniverse = 5" );
+	tmpclassad.Insert( "JobUniverse = 5" );
 
 	dprintf(D_FULLDEBUG,"(%d.%d) Writing ClassAd to file %s\n",
 		procID.cluster, procID.proc, out_filename.c_str());

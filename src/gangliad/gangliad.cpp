@@ -20,6 +20,7 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "../condor_daemon_core.V6/condor_daemon_core.h"
+#include "directory.h"
 #include "gangliad.h"
 
 char const *
@@ -43,12 +44,14 @@ GangliaD::GangliaD():
 	m_dmax(86400),
 	m_ganglia_context(NULL),
 	m_ganglia_config(NULL),
-	m_ganglia_channels(NULL)
+	m_ganglia_channels(NULL),
+	m_ganglia_noop(0)
 {
 }
 
 GangliaD::~GangliaD()
 {
+	ganglia_config_destroy(&m_ganglia_context,&m_ganglia_config,&m_ganglia_channels);
 }
 
 Metric *
@@ -59,25 +62,119 @@ GangliaD::newMetric(Metric const *copy_me) {
 	return new GangliaMetric();
 }
 
+static bool
+locateSharedLib(std::string libpath,std::string libname,std::string &result)
+{
+	StringList pathlist(libpath.c_str());
+	pathlist.rewind();
+	char const *path;
+	while( (path=pathlist.next()) ) {
+		Directory d(path);
+		d.Rewind();
+		char const *fname;
+		while( (fname=d.Next()) ) {
+			if( d.IsDirectory() ) continue;
+			if( strncmp(fname,libname.c_str(),libname.size())==0 ) {
+				size_t l = strlen(fname);
+				if( l >= 2 && strcmp(&(fname[l-2]),".a")==0 ) {
+					continue; // ignore this; it is a static lib
+				}
+				result = d.GetFullPath();
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 void
 GangliaD::initAndReconfig()
 {
-	std::string ganglia_conf_location;
-	param(ganglia_conf_location, "GANGLIA_CONFIG", "/etc/ganglia/gmond.conf");
-	int fd;
-	if ((fd = safe_open_wrapper_follow(ganglia_conf_location.c_str(), O_RDONLY)) < 0)
-	{
-		EXCEPT("Cannot open Ganglia configuration file GANGLIA_CONFIG=%s.\n", ganglia_conf_location.c_str());
-		return;
-	}
-	close(fd);
+	std::string libname;
+	std::string gmetric_path;
+	param(libname,"GANGLIA_LIB");
+	param(gmetric_path,"GANGLIA_GMETRIC");
+	if( libname.empty() && gmetric_path.empty()) {
+		std::string libpath;
+		char const *libpath_param = "GANGLIA_LIB_PATH";
+		if( __WORDSIZE == 64 ) {
+			libpath_param = "GANGLIA_LIB64_PATH";
+		}
+		param(libpath,libpath_param);
 
-	int rc = ganglia_reconfig(ganglia_conf_location.c_str(),&m_ganglia_context,&m_ganglia_config,&m_ganglia_channels);
-	if( rc != 0 ) {
-		EXCEPT("Failed to configure ganglia library.");
+		dprintf(D_FULLDEBUG,"Searching for libganglia in %s=%s\n",libpath_param,libpath.c_str());
+		locateSharedLib(libpath,"libganglia",libname);
+
+		gmetric_path = "gmetric";
+
+		if( libname.empty() && gmetric_path.empty()) {
+			EXCEPT("libganglia was not found via %s, and GANGLIA_LIB is not configured, "
+				   "and GANGLIA_GMETRIC is not configured.  "
+				   "Ensure that libganglia is installed in a location included in %s "
+				   "or configure GANGLIA_LIB and/or GANGLIA_GMETRIC.",
+				   libpath_param, libpath_param);
+		}
+	}
+	m_ganglia_noop = false;
+	if( libname == "NOOP" ) {
+		dprintf(D_ALWAYS,"GANGLIA_LIB=NOOP, so we will go through the motions, but not actually interact with ganglia\n");
+		m_ganglia_noop = true;
 	}
 
-	StatsD::initAndReconfig("GANGLIA");
+	if( !m_ganglia_noop ) {
+		bool gmetric_initialized = false;
+		bool libganglia_initialized = false;
+		if( !gmetric_path.empty() ) {
+			dprintf(D_ALWAYS,"Testing %s\n",gmetric_path.c_str());
+			if( ganglia_init_gmetric(gmetric_path.c_str()) ) {
+				gmetric_initialized = true;
+			}
+		}
+		if( !libname.empty() ) {
+			if( libname == m_ganglia_libname ) {
+				dprintf(D_ALWAYS,"Already loaded libganglia %s\n",libname.c_str());
+				// I have observed instabilities when reloading the library, so
+				// it is best to not do that unless it is really necessary.
+			}
+			else {
+				dprintf(D_ALWAYS,"Loading libganglia %s\n",libname.c_str());
+				ganglia_config_destroy(&m_ganglia_context,&m_ganglia_config,&m_ganglia_channels);
+				if( ganglia_load_library(libname.c_str()) ) {
+					libganglia_initialized = true;
+					m_ganglia_libname = libname;
+				}
+				else if( gmetric_initialized ) {
+					dprintf(D_ALWAYS,"WARNING: failed to load %s, so gmetric (which is slower) will be used instead.\n",libname.c_str());
+				}
+			}
+		}
+
+		if( libganglia_initialized ) {
+			dprintf(D_ALWAYS,"Will use libganglia to interact with ganglia.\n");
+		}
+		else if( gmetric_initialized ) {
+			dprintf(D_ALWAYS,"Will use gmetric to interact with ganglia.\n");
+		}
+		else {
+			EXCEPT("Neither gmetric nor libganglia were successfully initialized.  Aborting");
+		}
+
+		std::string ganglia_conf_location;
+		param(ganglia_conf_location, "GANGLIA_CONFIG", "/etc/ganglia/gmond.conf");
+		int fd;
+		if ((fd = safe_open_wrapper_follow(ganglia_conf_location.c_str(), O_RDONLY)) < 0)
+		{
+			EXCEPT("Cannot open Ganglia configuration file GANGLIA_CONFIG=%s.", ganglia_conf_location.c_str());
+			return;
+		}
+		close(fd);
+
+		if( !ganglia_reconfig(ganglia_conf_location.c_str(),&m_ganglia_context,&m_ganglia_config,&m_ganglia_channels) ) {
+			EXCEPT("Failed to configure ganglia library.");
+		}
+	}
+
+	StatsD::initAndReconfig("GANGLIAD");
 
 	// the interval we tell ganglia is the max time between updates
 	m_tmax = m_stats_pub_interval*2;
@@ -170,10 +267,12 @@ GangliaD::publishMetric(Metric const &m)
 
 	int slope = metric.gangliaSlope();
 
-	dprintf(D_FULLDEBUG,"publishing %s=%s, group=%s, units=%s, derivative=%d, type=%s, title=%s, desc=%s, spoof_host=%s\n",
-			metric.name.c_str(), value.c_str(), metric.group.c_str(),  metric.units.c_str(), metric.derivative, metric.gangliaMetricType(), metric.title.c_str(), metric.desc.c_str(), spoof_host.c_str());
+	dprintf(D_FULLDEBUG,"%spublishing %s=%s, group=%s, units=%s, derivative=%d, type=%s, title=%s, desc=%s, cluster=%s, spoof_host=%s\n",
+			m_ganglia_noop ? "noop mode: " : "",
+			metric.name.c_str(), value.c_str(), metric.group.c_str(),  metric.units.c_str(), metric.derivative, metric.gangliaMetricType(), metric.title.c_str(), metric.desc.c_str(), metric.cluster.c_str(), spoof_host.c_str());
 
-	int rc = ganglia_send(
+	if( !m_ganglia_noop ) {
+		bool ok = ganglia_send(
 						  m_ganglia_context,
 						  m_ganglia_channels,
 						  metric.group.c_str(),
@@ -185,26 +284,28 @@ GangliaD::publishMetric(Metric const &m)
 						  metric.title.c_str(),
 						  metric.desc.c_str(),
 						  spoof_host.c_str(),
+						  metric.cluster.c_str(),
 						  m_tmax,
 						  m_dmax);
 
-	if( rc != 0 ) {
-		dprintf(D_ALWAYS,"Failed to publish %s%s\n",
-				metric.derivative ? " derivative of " : "",
-				metric.whichMetric().c_str());
-		if( metric.derivative ) {
-			m_derivative_publication_failed += 1;
+		if( !ok ) {
+			dprintf(D_ALWAYS,"Failed to publish %s%s\n",
+					metric.derivative ? "derivative of " : "",
+					metric.whichMetric().c_str());
+			if( metric.derivative ) {
+				m_derivative_publication_failed += 1;
+			}
+			else {
+				m_non_derivative_publication_failed += 1;
+			}
 		}
 		else {
-			m_non_derivative_publication_failed += 1;
-		}
-	}
-	else {
-		if( metric.derivative ) {
-			m_derivative_publication_succeeded += 1;
-		}
-		else {
-			m_non_derivative_publication_succeeded += 1;
+			if( metric.derivative ) {
+				m_derivative_publication_succeeded += 1;
+			}
+			else {
+				m_non_derivative_publication_succeeded += 1;
+			}
 		}
 	}
 }

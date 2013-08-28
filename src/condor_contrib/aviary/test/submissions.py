@@ -25,7 +25,7 @@ from aviary.util import *
 
 wsdl = 'file:/var/lib/condor/aviary/services/query/aviary-query.wsdl'
 
-parser = build_basic_parser('Query submission summaries remotely via SOAP.','http://localhost:9091/services/query/getSubmissionSummary')
+parser = build_basic_parser('Query submission summaries remotely via SOAP.','http://localhost:39091/services/query/getSubmissionSummary')
 parser.add_option('--name', action="store", dest='name', help='submission name')
 (opts,args) =  parser.parse_args()
 

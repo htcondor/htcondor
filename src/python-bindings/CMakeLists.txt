@@ -1,8 +1,6 @@
 
 
-option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
-
-if ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND AND NOT SOLARIS )
+if ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND AND Boost_PYTHON_LIBRARY AND NOT SOLARIS )
   configure_file (
 	"${PROJECT_SOURCE_DIR}/src/python-bindings/test_driver.in"
 	"${CMAKE_CURRENT_BINARY_DIR}/test_driver"
@@ -15,12 +13,14 @@ if ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND AND NOT SOLARIS )
   include_directories(${PYTHON_INCLUDE_DIRS} ${BOOST_INCLUDE})
   link_directories(${BOOST_LD})
 
+  GET_FILENAME_COMPONENT(PYTHON_LIBRARY_FILENAME ${PYTHON_LIBRARIES} NAME)
+  STRING(REGEX REPLACE ".*python([0-9]+[.]?[0-9]+).*" "\\1" _PYTHON_VERSION ${PYTHON_LIBRARY_FILENAME})
   if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
-    set( PYCLASSAD_LIB_NAME "pyclassad_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
+    set( PYCLASSAD_LIB_NAME "pyclassad${_PYTHON_VERSION}_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
   else()
     message(FATAL_ERROR "Can't determine HTCondor version!")
   endif()
-  condor_static_lib( pyclassad classad.cpp classad_wrapper.h exprtree_wrapper.h )
+  condor_shared_lib( pyclassad classad.cpp classad_wrapper.h exprtree_wrapper.h )
   target_link_libraries( pyclassad ${CLASSADS_FOUND} ${PYTHON_LIBRARIES} -lboost_python )
   set_target_properties( pyclassad PROPERTIES OUTPUT_NAME "${PYCLASSAD_LIB_NAME}" )
   set_target_properties( pyclassad PROPERTIES COMPILE_FLAGS "-fPIC")
@@ -65,4 +65,4 @@ if ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND AND NOT SOLARIS )
       add_test(python_htcondor_test test_driver tests/htcondor_tests.py TestConfig TestVersion)
     endif ( LINUX )
   endif (BUILD_TESTING)
-endif ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND AND NOT SOLARIS )
+endif ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND AND Boost_PYTHON_LIBRARY AND NOT SOLARIS )

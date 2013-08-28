@@ -25,11 +25,17 @@ $cmd = 'job_ckpt_floats-async_std.cmd';
 $testdesc =  'Condition Test';
 $testname = "job_ckpt_floats-async_std";
 
+my $on_evictedwithcheckpoint = sub {
+	CondorTest::debug("Evicted With Checkpoint expected.\n",1);
+	CondorTest::AddCheckpoint();
+};
+
 my @expected_output = 
 ( 'Program completed successfully.',
   'Be sure that it checkpointed at least once.' );
 CondorTest::SetExpected(\@expected_output);
 
+CondorTest::RegisterEvictedWithCheckpoint($testname, $on_evictedwithcheckpoint);
 CondorTest::RegisterExitedSuccess( $testname, 
 				   \&CondorTest::DefaultOutputTest );
 

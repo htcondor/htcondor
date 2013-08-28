@@ -364,7 +364,7 @@ check_spool_dir()
 		// Check each file in the directory
 	while( (f = dir.Next()) ) {
 			// see if it's on the list
-		if( well_known_list.contains(f) ) {
+		if( well_known_list.contains_withwildcard(f) ) {
 			good_file( Spool, f );
 			continue;
 		}

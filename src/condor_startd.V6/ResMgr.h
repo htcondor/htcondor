@@ -52,6 +52,8 @@
 #  endif /* HAVE_BOINC */
 #endif /* HAVE_BACKFILL */
 
+#include "generic_stats.h"
+
 #ifndef NUM_ELEMENTS
 #define NUM_ELEMENTS(_ary)   (sizeof(_ary) / sizeof((_ary)[0]))
 #endif
@@ -61,6 +63,60 @@ typedef void (Resource::*ResourceMaskMember)(amask_t);
 typedef void (Resource::*VoidResourceMember)();
 typedef int (*ComparisonFunc)(const void *, const void *);
 
+// Statistics to publish global to the startd
+class StartdStats {
+public:
+	StartdStats() : init_time(0), lifetime(0), last_update_time(0), recent_lifetime(0), recent_tick_time(0) { Init();}
+
+	stats_entry_recent<int>	total_preemptions;
+	stats_entry_recent<int>	total_rank_preemptions;
+	stats_entry_recent<int>	total_user_prio_preemptions;
+	stats_entry_recent<int>	total_job_starts;
+
+	time_t init_time;
+	time_t lifetime;
+	time_t last_update_time;
+	time_t recent_lifetime;
+	time_t recent_tick_time;
+
+	StatisticsPool pool;
+
+	void Init() {
+		const int recent_window = 60 * 20;
+		const int window_quantum = 60 * 4;
+
+		pool.AddProbe("TotalPreemptions", &total_preemptions);
+		pool.AddProbe("TotalRankPreemptions", &total_rank_preemptions);
+		pool.AddProbe("TotalUserPrioPreemptions", &total_user_prio_preemptions);
+		pool.AddProbe("TotalJobStarts", &total_job_starts);
+
+		pool.SetRecentMax(recent_window, window_quantum);
+	}
+
+	void Publish(ClassAd &ad, int flags) const {
+		pool.Publish(ad, flags);	
+	}
+
+	void Tick(time_t now) {
+		const int my_window =  60 * 20;
+		const int my_quantum =  60 * 4;
+
+		if (!now) now = time(NULL);
+
+		int advance = generic_stats_Tick(
+			now,
+			my_window,
+			my_quantum,
+			this->init_time,
+			this->last_update_time,
+			this->recent_tick_time,
+			this->lifetime,
+			this->recent_lifetime);
+		if (advance) {
+			pool.Advance(advance);
+		}
+	}
+};
 
 class ResMgr : public Service
 {
@@ -191,6 +247,8 @@ public:
 #endif /* HAVE_HIBERNATION */
 
 	time_t	now( void ) { return cur_time; };
+
+	StartdStats startd_stats;  
 
     class Stats {
 	public:

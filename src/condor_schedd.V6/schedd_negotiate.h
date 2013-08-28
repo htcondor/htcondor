@@ -139,6 +139,11 @@ class ScheddNegotiate: public DCMsg {
 
  protected:
 	ResourceRequestList *m_jobs;
+		// how many resources are we requesting with this request?
+	int m_current_resources_requested;
+		// how many resources have been delivered so far with this request?
+	int m_current_resources_delivered;
+
  private:
 	std::set<int> m_rejected_auto_clusters;
 

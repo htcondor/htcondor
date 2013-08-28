@@ -2315,7 +2315,7 @@ DedicatedScheduler::computeSchedule( void )
 			int nodes;
 			int proc;
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 			ExprTree *tmp_expr;
 			tmp_expr = AddTargetRefs( preemption_req, TargetJobAttrs );
 			delete preemption_req;
@@ -3260,7 +3260,7 @@ DedicatedScheduler::makeGenericAdFromJobAd(ClassAd *job)
 	buf.formatstr( "%s = (Target.DedicatedScheduler == \"%s\") && "
 				 "(Target.RemoteOwner =!= \"%s\") && (%s)", 
 				 ATTR_REQUIREMENTS, name(), name(), rhs );
-	req->InsertOrUpdate( buf.Value() );
+	req->Insert( buf.Value() );
 
 	return req;
 }

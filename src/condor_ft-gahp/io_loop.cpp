@@ -33,6 +33,9 @@
 #include "_unordered_map.h"
 #include "basename.h"
 #include "my_username.h"
+#include "condor_claimid_parser.h"
+#include "authentication.h"
+#include "condor_version.h"
 
 
 const char * version = "$GahpVersion 2.0.1 Jul 30 2012 Condor_FT_GAHP $";
@@ -54,6 +57,10 @@ StringList result_list;
 // pipe buffers
 PipeBuffer stdin_buffer; 
 
+std::string peer_condor_version;
+
+std::string sec_session_id;
+
 // this appears at the bottom of this file
 extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 
@@ -61,6 +68,27 @@ extern "C" int display_dprintf_header(char **buf,int *bufpos,int *buflen);
 int STDIN_FILENO = fileno(stdin);
 #endif
 
+const char *
+escapeGahpString(const char * input)
+{
+	static std::string output;
+
+	if (!input) return NULL;
+
+	output = "";
+
+	unsigned int i = 0;
+	size_t input_len = strlen(input);
+	for (i=0; i < input_len; i++) {
+		if ( input[i] == ' ' || input[i] == '\\' || input[i] == '\r' ||
+			 input[i] == '\n' ) {
+			output += '\\';
+		}
+		output += input[i];
+	}
+
+	return output.c_str();
+}
 
 void
 usage()
@@ -244,7 +272,18 @@ stdin_pipe_handler(Service*, int) {
 
 		const char * command = line->c_str();
 
-		dprintf (D_ALWAYS, "got stdin: %s\n", command);
+		// CREATE_CONDOR_SECURITY_SESSION contains sensitive data that
+		// normally shouldn't be written to a publically-readable log.
+		// We should conceal it unless GAHP_DEBUG_HIDE_SENSITIVE_DATA
+		// says not to.
+		if ( param_boolean( "GAHP_DEBUG_HIDE_SENSITIVE_DATA", true ) &&
+			 strncmp( command, GAHP_COMMAND_CREATE_CONDOR_SECURITY_SESSION,
+					  strlen( GAHP_COMMAND_CREATE_CONDOR_SECURITY_SESSION ) ) == 0 ) {
+			dprintf( D_ALWAYS, "got stdin: %s XXXXXXXX\n",
+					 GAHP_COMMAND_CREATE_CONDOR_SECURITY_SESSION );
+		} else {
+			dprintf (D_ALWAYS, "got stdin: %s\n", command);
+		}
 
 		Gahp_Args args;
 
@@ -295,13 +334,38 @@ stdin_pipe_handler(Service*, int) {
 					GAHP_COMMAND_DOWNLOAD_SANDBOX,
 					GAHP_COMMAND_UPLOAD_SANDBOX,
 					GAHP_COMMAND_DESTROY_SANDBOX,
+					GAHP_COMMAND_CREATE_CONDOR_SECURITY_SESSION,
+					GAHP_COMMAND_CONDOR_VERSION,
 					GAHP_COMMAND_ASYNC_MODE_ON,
 					GAHP_COMMAND_ASYNC_MODE_OFF,
 					GAHP_COMMAND_RESULTS,
 					GAHP_COMMAND_QUIT,
 					GAHP_COMMAND_VERSION,
 					GAHP_COMMAND_COMMANDS};
-				gahp_output_return (commands, 10);
+				gahp_output_return (commands, 12);
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_CREATE_CONDOR_SECURITY_SESSION) == 0) {
+				ClaimIdParser claimid( args.argv[1] );
+				if ( !daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
+										DAEMON,
+										claimid.secSessionId(),
+										claimid.secSessionKey(),
+										claimid.secSessionInfo(),
+										CONDOR_PARENT_FQU,
+										NULL,
+										0 ) ) {
+					gahp_output_return_error();
+				} else {
+					sec_session_id = claimid.secSessionId();
+					gahp_output_return_success();
+				}
+
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_CONDOR_VERSION) == 0) {
+				peer_condor_version = args.argv[1];
+
+				const char *reply [] = { GAHP_RESULT_SUCCESS,
+										 escapeGahpString( CondorVersion() ) };
+				gahp_output_return( reply, 2 );
+
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_DOWNLOAD_SANDBOX) == 0) {
 
 				int fds[2];
@@ -469,6 +533,9 @@ verify_gahp_command(char ** argv, int argc) {
 				strcasecmp (argv[0], GAHP_COMMAND_ASYNC_MODE_OFF) == 0) {
 	    // These are no-arg commands
 	    return verify_number_args (argc, 1);
+	} else if (strcasecmp (argv[0], GAHP_COMMAND_CONDOR_VERSION) == 0 ||
+			   strcasecmp (argv[0], GAHP_COMMAND_CREATE_CONDOR_SECURITY_SESSION) == 0 ) {
+		return verify_number_args (argc, 2);
 	}
 
 	dprintf (D_ALWAYS, "Unknown command\n");
@@ -837,6 +904,22 @@ int do_command_download_sandbox(void *arg, Stream*) {
 		return 1;
 	}
 
+	// Set the Condor version of our peer, as given by the CONDOR_VERSION
+	// command.
+	// If we don't have a version, then assume it's pre-8.1.0.
+	// In 8.1, the file transfer protocol changed and we added
+	// the CONDOR_VERSION command.
+	if ( !peer_condor_version.empty() ) {
+		ft.setPeerVersion( peer_condor_version.c_str() );
+	} else {
+		CondorVersionInfo ver( 8, 0, 0 );
+		ft.setPeerVersion( ver );
+	}
+
+	if ( !sec_session_id.empty() ) {
+		ft.setSecuritySession( sec_session_id.c_str() );
+	}
+
 	// lookup ATTR_VERSION and set it.  this changes the wire
 	// protocol and it is important that this happens before
 	// calling DownloadFiles.
@@ -892,6 +975,22 @@ int do_command_upload_sandbox(void *arg, Stream*) {
 		// FAIL
 		write_to_pipe( ChildErrorPipe, "Failed to initialize FileTransfer" );
 		return 1;
+	}
+
+	// Set the Condor version of our peer, as given by the CONDOR_VERSION
+	// command.
+	// If we don't have a version, then assume it's pre-8.1.0.
+	// In 8.1, the file transfer protocol changed and we added
+	// the CONDOR_VERSION command.
+	if ( !peer_condor_version.empty() ) {
+		ft.setPeerVersion( peer_condor_version.c_str() );
+	} else {
+		CondorVersionInfo ver( 8, 0, 0 );
+		ft.setPeerVersion( ver );
+	}
+
+	if ( !sec_session_id.empty() ) {
+		ft.setSecuritySession( sec_session_id.c_str() );
 	}
 
 	// lookup ATTR_VERSION and set it.  this changes the wire

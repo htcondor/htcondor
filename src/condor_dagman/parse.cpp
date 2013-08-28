@@ -1302,28 +1302,28 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 		}
 		// This will be inefficient for jobs with lots of variables
 		// As in O(N^2)
-		job->varNamesFromDag->Rewind();
-		job->varValsFromDag->Rewind();
-		while(MyString* s = job->varNamesFromDag->Next()){
-			job->varValsFromDag->Next(); // To keep up with varNamesFromDag
-			if(varName == *s){
+		job->varsFromDag->Rewind();
+		while(Job::NodeVar *var = job->varsFromDag->Next()){
+			if ( varName == var->_name ) {
 				debug_printf(DEBUG_NORMAL,"Warning: VAR \"%s\" "
 					"is already defined in job \"%s\" "
 					"(Discovered at file \"%s\", line %d)\n",
-					varName.Value(),job->GetJobName(),filename,
+					varName.Value(), job->GetJobName(), filename,
 					lineNumber);
 				check_warning_strictness( DAG_STRICT_2 );
 				debug_printf(DEBUG_NORMAL,"Warning: Setting VAR \"%s\" "
-					"= \"%s\"\n",varName.Value(),varValue.Value());
-				job->varNamesFromDag->DeleteCurrent();
-				job->varValsFromDag->DeleteCurrent();
+					"= \"%s\"\n", varName.Value(), varValue.Value());
+				job->varsFromDag->DeleteCurrent();
 			}
 		}
-		debug_printf(DEBUG_DEBUG_1, "Argument added, Name=\"%s\"\tValue=\"%s\"\n", varName.Value(), varValue.Value());
+		debug_printf(DEBUG_DEBUG_1,
+					"Argument added, Name=\"%s\"\tValue=\"%s\"\n",
+					varName.Value(), varValue.Value());
+		Job::NodeVar *var = new Job::NodeVar();
+		var->_name = varName;
+		var->_value = varValue;
 		bool appendResult;
-		appendResult = job->varNamesFromDag->Append(new MyString(varName));
-		ASSERT( appendResult );
-		appendResult = job->varValsFromDag->Append(new MyString(varValue));
+		appendResult = job->varsFromDag->Append( var );
 		ASSERT( appendResult );
 	}
 

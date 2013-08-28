@@ -110,6 +110,10 @@ if( TestGlue::is_windows() ) {
 		system("cp src/condor_examples/* $BaseDir/condor_examples");
 		print "Getting fresh perl modules from workspace\n";
 		system("cp src/condor_scripts/*.pm $BaseDir/condor_tests");
+		print "Getting a fresh batch_test.pl from workspace\n";
+		system("cp src/condor_scripts/batch_test.pl $BaseDir/condor_tests");
+		print "Getting a fresh safe_append.pl from workspace\n";
+		system("cp src/condor_scripts/safe_append.pl $BaseDir/condor_tests");
 	}
     print "All steps completed successfully\n";
     print "Contents of '$BaseDir':\n";
@@ -184,6 +188,10 @@ if(!-f $extractdone) {
 		system("cp src/condor_examples/* $BaseDir/condor_examples");
 		print "Getting fresh perl modules from workspace\n";
 		system("cp src/condor_scripts/*.pm $BaseDir/condor_tests");
+		print "Getting a fresh batch_test.pl from workspace\n";
+		system("cp src/condor_scripts/batch_test.pl $BaseDir/condor_tests");
+		print "Getting a fresh safe_append.pl from workspace\n";
+		system("cp src/condor_scripts/safe_append.pl $BaseDir/condor_tests");
 	}
     print "Writing tarball filename to $tarball_file.\n";
     open(TARBALL_FILE, '>', $tarball_file ) || die "Can't open $tarball_file for writing: $!\n";

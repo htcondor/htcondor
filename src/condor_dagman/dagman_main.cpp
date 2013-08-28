@@ -37,6 +37,7 @@
 #include "condor_getcwd.h"
 #include "condor_version.h"
 #include "subsystem_info.h"
+#include "dagman_metrics.h"
 
 void ExitSuccess();
 
@@ -468,15 +469,18 @@ void
 main_shutdown_fast()
 {
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_RESTART );
+	// Don't report metrics here because we should restart.
     DC_Exit( EXIT_RESTART );
 }
 
 // this can be called by other functions, or by DC when the schedd is
-// shutdown gracefully
+// shutdown gracefully; this also gets called if condor_hold is done
+// on the DAGMan job
 void main_shutdown_graceful() {
 	print_status();
 	dagman.dag->DumpNodeStatus( true, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_RESTART );
+	// Don't report metrics here because we should restart.
 	dagman.CleanUp();
 	DC_Exit( EXIT_RESTART );
 }
@@ -537,6 +541,7 @@ void main_shutdown_rescue( int exitVal, Dag::dag_status dagStatus ) {
 		dagman.dag->DumpNodeStatus( false, true );
 		dagman.dag->GetJobstateLog().WriteDagmanFinished( exitVal );
 	}
+	dagman.dag->ReportMetrics( exitVal );
 	tolerant_unlink( lockFileName ); 
 	dagman.CleanUp();
 	inShutdownRescue = false;
@@ -556,6 +561,7 @@ void ExitSuccess() {
 	print_status();
 	dagman.dag->DumpNodeStatus( false, false );
 	dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_OKAY );
+	dagman.dag->ReportMetrics( EXIT_OKAY );
 	tolerant_unlink( lockFileName ); 
 	dagman.CleanUp();
 	DC_Exit( EXIT_OKAY );
@@ -610,6 +616,8 @@ void main_init (int argc, char ** const argv) {
     }
 
     if (argc < 2) Usage();  //  Make sure an input file was specified
+
+	DagmanMetrics::SetStartTime();
 
 		// get dagman job id from environment, if it's there
 		// (otherwise it will be set to "-1.-1.-1")
@@ -1129,6 +1137,9 @@ void main_init (int argc, char ** const argv) {
     	}
 	}
 
+		// This must come after splices are lifted.
+	dagman.dag->CreateMetrics( dagman.primaryDagFile.Value(), rescueDagNum );
+
 	dagman.dag->CheckThrottleCats();
 
 	// fix up any use of $(JOB) in the vars values for any node
@@ -1199,6 +1210,36 @@ void main_init (int argc, char ** const argv) {
     				dagman.CleanUp();
 					DC_Exit( EXIT_ERROR );
 					// We should never get to here!
+				}
+			}
+
+				// Not using the node log is the backward compatible thing to do,
+				// so we do not need to check below.
+			if(dagman._submitDagDeepOpts.always_use_node_log) { 
+				bool has_new_default_log = access(dagman._defaultNodeLog, F_OK) == 0; // Check for existence of the default log file
+				if(!submitFileVersion.built_since_version(7,9,1)) {
+					debug_printf( DEBUG_QUIET, "Submit file version indicates submit is too old. "
+						"Falling back to 7.8 behavior of not using the default node log\n");
+					dagman._submitDagDeepOpts.always_use_node_log = false;
+						// Note:  we have to explicitly turn off the default
+						// log file here because
+						// _submitDagDeepOpts.always_use_node_log is
+						// referenced in the Dag constructor, so just
+						// changing that here won't do us any good.
+					dagman.dag->UseDefaultNodeLog(false);
+				} else {
+					if(!has_new_default_log) {
+							// We are in recovery, but the default log does not exist.
+							// Fall back to 7.8 behavior
+						debug_printf( DEBUG_QUIET, "Default node log does not exist. "
+							"Falling back to 7.8 behavior of not using the default node log\n");
+						dagman._submitDagDeepOpts.always_use_node_log = false;
+						dagman.dag->UseDefaultNodeLog(false);
+					} else if(submitFileVersion.compare_versions("$CondorVersion: 7.9.0 May 2 2012 $") == 0) {
+						debug_printf( DEBUG_QUIET, "WARNING: Submit file version 7.9.0 detected.  Bad behavior "
+							"may occur going forward.  Since you were using a development version of HTCondor, "
+							"you probably know what to do to resolve the problem...\n");
+					}
 				}
 			}
         }

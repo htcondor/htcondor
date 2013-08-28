@@ -1,7 +1,5 @@
 #!/bin/sh
 
-echo $0 "$@" > /tmp/glkout
-
 if [ $# != 6 ]
 then
 	echo "usage: $0 <glexec> <proxy> <pid> <signal> <max-glexec-retries> <min-glexec-retry-delay>" >&2
@@ -15,17 +13,9 @@ SIGNAL="$4"
 MAX_GLEXEC_ERRORS="$5"
 MIN_GLEXEC_RETRY_DELAY="$6"
 
-# in case glexec creates a target proxy, we will control
-# where it puts it, and we will make sure it gets cleaned up
-if [ -d /tmp ]; then
-  GLEXEC_TARGET_PROXY=/tmp/condor_glexec_kill_proxy.$$
-  if [ -f "$GLEXEC_TARGET_PROXY" ]; then
-    # a file by this name already exists, so do not mess with it
-    unset GLEXEC_TARGET_PROXY
-  else
-    export GLEXEC_TARGET_PROXY
-  fi
-fi
+# prevent glexec from creating a proxy in /tmp that is not cleaned up
+GLEXEC_TARGET_PROXY=/dev/null
+export GLEXEC_TARGET_PROXY
 
 # use glexec to kill the given PID with the given signal
 #
@@ -35,7 +25,7 @@ export GLEXEC_CLIENT_CERT
 
 glexec_errors=0
 while [ 1 ]; do
-  "$GLEXEC" "$SH" -c "if [ -f '$GLEXEC_TARGET_PROXY' ]; then rm '$GLEXEC_TARGET_PROXY'; fi; /bin/kill -$SIGNAL $PID"
+  "$GLEXEC" "$SH" -c "/bin/kill -$SIGNAL $PID"
 
   glexec_rc=$?
   if [ $glexec_rc -eq 0 ]; then

@@ -47,3 +47,13 @@ grid_resource = cream https://cream-12.pd.infn.it:8443/ce-cream/services/CREAM2
 This is a single line within the submit description file,
 although it is shown here on two lines for formatting reasons.
 
+CREAM uses ClassAd syntax to describe jobs, although the attributes used
+are different than those for HTCondor.
+The submit description file command
+\SubmitCmd{cream\_attributes}
+adds additional attributes to the CREAM-style job ClassAd that HTCondor
+constructs. 
+The format for this submit description file command is
+\begin{verbatim}
+cream_attributes = name=value;name=value
+\end{verbatim}

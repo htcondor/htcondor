@@ -2526,24 +2526,26 @@ ProcAPI::buildPidList() {
 	mib[2] = KERN_PROC_ALL;
 	mib[3] = 0;
 
+	do {
+		ntries--;
 		//
 		// Returns back the size of the kinfo_proc struct
 		//
-	if (sysctl(mib, 4, NULL, &bufSize, NULL, 0) < 0) {
-		dprintf(D_ALWAYS, "ProcAPI: Failed to get list of pids: %s\n",
-				strerror(errno));
-		deallocPidList();
-		return PROCAPI_FAILURE;
-	}	
+		if (sysctl(mib, 4, NULL, &bufSize, NULL, 0) < 0) {
+			dprintf(D_ALWAYS, "ProcAPI: Failed to get list of pids: %s\n",
+					strerror(errno));
+			deallocPidList();
+			free( kp );
+			return PROCAPI_FAILURE;
+		}
 
-	do {
-		ntries--;
+		ASSERT( bufSize );
 		kp = (struct kinfo_proc *)realloc(kp, bufSize);
 
 		rc = sysctl(mib, 4, kp, &bufSize, NULL, 0);
-	} while ( ntries >= 0 && rc == -1 && errno == ENOMEM );
+	} while ( ntries >= 0 && ( ( rc == -1 && errno == ENOMEM ) || ( rc == 0 && bufSize == 0 ) ) );
 
-	if ( rc == -1 ) {
+	if ( rc == -1 || bufSize == 0 ) {
 		dprintf(D_ALWAYS, "ProcAPI: Failed to get list of pids: %s\n",
 				strerror(errno));
 		free(kp);

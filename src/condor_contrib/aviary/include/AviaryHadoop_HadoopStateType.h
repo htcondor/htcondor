@@ -7,7 +7,7 @@
         * HadoopStateType.h
         *
         * This file was auto-generated from WSDL
-        * by the Apache Axis2/Java version: 1.0  Built on : Jan 28, 2013 (02:30:05 CST)
+        * by the Apache Axis2/Java version: 1.0  Built on : Jan 28, 2013 (03:27:15 EST)
         */
 
        /**
@@ -35,7 +35,8 @@ namespace AviaryHadoop
         typedef enum {
             HadoopStateType_PENDING,
             HadoopStateType_RUNNING,
-            HadoopStateType_EXITING
+            HadoopStateType_EXITING,
+            HadoopStateType_UNMANAGED
         } ADBHadoopStateTypeEnum;
         
         

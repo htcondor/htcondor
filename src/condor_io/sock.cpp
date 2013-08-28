@@ -1144,6 +1144,14 @@ Sock::setConnectFailureErrno(int error,char const *syscall)
 		connect_state.connect_refused = true;
 		errdesc = " connection refused";
 	}
+	else if(error == WSAEHOSTDOWN) {
+		connect_state.connect_refused = true;
+		errdesc = " host down";
+	}
+	else if(error == WSAEHOSTUNREACH) {
+		connect_state.connect_refused = true;
+		errdesc = " no route to host";
+	}
 	snprintf( errmsg, sizeof(errmsg), "%.15s errno = %d%.30s",
 	         syscall,
 	         error,
@@ -1151,7 +1159,7 @@ Sock::setConnectFailureErrno(int error,char const *syscall)
 	setConnectFailureReason( errmsg );
 #else
 	char errmsg[150];
-	if(error == ECONNREFUSED) {
+	if(error == ECONNREFUSED || error == EHOSTDOWN || error == EHOSTUNREACH) {
 		connect_state.connect_refused = true;
 	}
 	snprintf( errmsg, sizeof(errmsg), "%.80s (%.15s errno = %d)",

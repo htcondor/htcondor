@@ -31,6 +31,11 @@ CondorTest::StartCondorWithParams(
     append_condor_config => $append_condor_config
 );
 
+my $on_evictedwithcheckpoint = sub {
+	CondorTest::debug("Evicted With Checkpoint expected.\n",1);
+	CondorTest::AddCheckpoint();
+};
+
 # This is a personal condor pool with a checkpoint server
 my $poolWithCkptServer = CondorTest::StartCondorWithParams(
     condor_name => "PoolWithCkptServer",
@@ -56,6 +61,7 @@ $OutputTest = sub
 };
 
 CondorTest::RegisterExitedSuccess( "CheckpointServer", $OutputTest);
+CondorTest::RegisterEvictedWithCheckpoint("CheckpointServer", $on_evictedwithcheckpoint);
 
 my $cmd = "job_ckpt_stack_with_ckpt_server_std.cmd";
 if( CondorTest::RunTest("CheckpointServer", $cmd, 1) ) {

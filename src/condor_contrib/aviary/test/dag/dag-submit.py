@@ -45,7 +45,7 @@ exe_file = Popen('which condor_dagman', shell=True, stdout=PIPE).stdout.readline
 iwd = Popen('pwd', shell=True, stdout=PIPE).stdout.readline().rstrip('\n')
 UNIVERSE = {"VANILLA": 5, "SCHEDULER": 7, "GRID": 9, "JAVA": 10, "PARALLEL": 11, "LOCAL": 12, "VM": 13}
 
-parser = build_basic_parser('Submit a DAG job remotely via SOAP.','http://localhost:9090/services/job/submitJob')
+parser = build_basic_parser('Submit a DAG job remotely via SOAP.','http://localhost:39090/services/job/submitJob')
 parser.add_option('--d','--dag', action='store', dest='dag', help='full path to dag file')
 (opts, args) =  parser.parse_args()
 

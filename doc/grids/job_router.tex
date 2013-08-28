@@ -138,7 +138,7 @@ An additional difference between the vanilla universe jobs
 and \SubmitCmd{gt2} grid universe jobs
 is that \SubmitCmd{gt2} jobs do not return
 any information about the job's exit status.
-The exit status as reported in the job ClassAd and user log are
+The exit status as reported in the job ClassAd and job event log are
 always 0.
 Therefore, jobs that may be routed to a \SubmitCmd{gt2} grid site
 must not rely upon a non-zero job exit status.
@@ -277,7 +277,7 @@ JOB_ROUTER_DEFAULTS = \
     /* now modify routed job attributes */ \
     /* remove routed job if it goes on hold or stays idle for over 6 hours */ \
     set_PeriodicRemove = JobStatus == 5 || \
-                        (JobStatus == 1 && (CurrentTime - QDate) > 3600*6); \
+                        (JobStatus == 1 && (time() - QDate) > 3600*6); \
     delete_WantJobRouter = true; \
     set_requirements = true; \
   ]

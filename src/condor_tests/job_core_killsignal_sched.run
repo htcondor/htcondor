@@ -37,6 +37,10 @@ $abnormal = sub {
 	#print "Want to see $killsig in this file $outfile\n";
 };
 
+my $on_evictedwithoutcheckpoint = sub {
+	CondorTest::debug("Evicted Without Checkpoint from killing jobs.\n",1);
+};
+
 $aborted = sub {
 	my %info = @_;
 	my $done;
@@ -83,6 +87,7 @@ $executed = sub
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
 CondorTest::RegisterAbort         ( $testname, $aborted );
+CondorTest::RegisterEvictedWithoutCheckpoint($testname, $on_evictedwithoutcheckpoint);
 
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);

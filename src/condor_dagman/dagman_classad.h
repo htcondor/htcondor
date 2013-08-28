@@ -24,6 +24,7 @@
 #include "condor_common.h"
 #include "condor_id.h"
 #include "dag.h"
+#include "condor_qmgr.h"
 
 class DCSchedd;
 
@@ -54,6 +55,25 @@ class DagmanClassad {
 				Dag::dag_status dagStatus, bool recovery );
 
   private:
+		/** Initialize metrics information related to our classad.
+		*/
+	void InitializeMetrics();
+
+		/** Open a connection to the schedd.
+			@return Qmgr_connection An opaque connection object -- NULL
+					if connection fails.
+		*/
+	Qmgr_connection *OpenConnection();
+
+		/** Close the given connection to the schedd.
+			@param Qmgr_connection An opaque connection object.
+		*/
+	void CloseConnection( Qmgr_connection *queue );
+
+		/** Set an attribute in this DAGMan's classad.
+			@param attrName The name of the attribute to set.
+			@param attrVal The value of the attribute.
+		*/
 	void SetDagAttribute( const char *attrName, int attrVal );
 
 		// Whether this object is valid.

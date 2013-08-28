@@ -693,6 +693,45 @@ reported once a full time span has accumulated.
 
 \begin{description}
 
+\index{ClassAd Scheduler attribute!FileTransferDiskThrottleExcess}
+\item[\AdAttr{FileTransferDiskThrottleExcess\_<timespan>}]
+  The exponential moving average of the disk load that exceeds the
+  upper limit set for the disk load throttle.  Periods of time in
+  which there is no excess and no waiting transfers do not contribute
+  to the average.
+  This attribute is published only if configuration variable 
+  \MacroNI{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE} is defined.
+
+\index{ClassAd Scheduler attribute!FileTransferDiskThrottleHigh}
+\item[\AdAttr{FileTransferDiskThrottleHigh}]
+  The desired upper limit for the disk load from file transfers, as configured
+  by \Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE}.
+  This attribute is published only if configuration variable 
+  \MacroNI{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE} is defined.
+
+\index{ClassAd Scheduler attribute!FileTransferDiskThrottleLevel}
+\item[\AdAttr{FileTransferDiskThrottleLevel}]
+  The current concurrency limit set by the disk load throttle.  The limit is
+  applied to the sum of uploads and downloads.
+  This attribute is published only if configuration variable 
+  \MacroNI{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE} is defined.
+
+\index{ClassAd Scheduler attribute!FileTransferDiskThrottleLow}
+\item[\AdAttr{FileTransferDiskThrottleLow}]
+  The lower limit for the disk load from file transfers, as configured
+  by \Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE}.
+  This attribute is published only if configuration variable 
+  \MacroNI{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE} is defined.
+
+\index{ClassAd Scheduler attribute!FileTransferDiskThrottleShortfall}
+\item[\AdAttr{FileTransferDiskThrottleShortfall\_<timespan>}]
+  The exponential moving average of the disk load that falls below the
+  upper limit set for the disk load throttle.  Periods of time in
+  which there is no excess and no waiting transfers do not contribute
+  to the average.
+  This attribute is published only if configuration variable 
+  \MacroNI{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE} is defined.
+
 \index{ClassAd Scheduler attribute!FileTransferDownloadBytes}
 \item[\AdAttr{FileTransferDownloadBytes}] Total number of bytes
   downloaded as output from jobs since this \Condor{schedd} was
@@ -877,6 +916,22 @@ reported once a full time span has accumulated.
   \AdAttr{Owner\_<username>\_FileTransferUploadBytesPerSecond\_<timespan>}.
   The published user name is actually the file transfer queue name, as
   defined by configuration variable \Macro{TRANSFER\_QUEUE\_USER\_EXPR}.
+
+\index{ClassAd Scheduler attribute!TransferQueueMBWaitingToDownload}
+\item[\AdAttr{TransferQueueMBWaitingToDownload}]
+  Number of megabytes of output files waiting to be downloaded.
+
+\index{ClassAd Scheduler attribute!TransferQueueMBWaitingToUpload}
+\item[\AdAttr{TransferQueueMBWaitingToUpload}]
+  Number of megabytes of input files waiting to be uploaded.
+
+\index{ClassAd Scheduler attribute!TransferQueueNumWaitingToDownload}
+\item[\AdAttr{TransferQueueNumWaitingToDownload}]
+  Number of jobs waiting to transfer output files.
+
+\index{ClassAd Scheduler attribute!TransferQueueNumWaitingToUpload}
+\item[\AdAttr{TransferQueueNumWaitingToUpload}]
+  Number of jobs waiting to transfer input files.
 
 \end{description}
 

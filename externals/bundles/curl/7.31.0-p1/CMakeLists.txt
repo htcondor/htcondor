@@ -26,7 +26,7 @@ if (WITH_CURL)
 
 	if ( NOT CURL_FOUND AND NOT PROPER AND NOT LINUX AND NOT DARWIN )
 		
-		condor_pre_external( CURL curl-7.19.6-p1 "lib;include" "include/curl/curl.h")
+		condor_pre_external( CURL curl-7.31.0-p1 "lib;include" "include/curl/curl.h")
 
 		if (WINDOWS)
 			set (CURL_PATCH pushd "lib" ${CMD_TERM}
@@ -55,7 +55,7 @@ if (WITH_CURL)
 							DEPENDS ${CURL_DEPENDS}
 							#-- Download Step ----------
 							DOWNLOAD_DIR ${CURL_STAGE}/dl
-							URL http://parrot.cs.wisc.edu/externals/curl-7.19.6.tar.gz
+							URL ${EXTERNALS_SOURCE_URL}/curl-7.31.0.tar.gz
 							#--Patch Step ----------
 							PATCH_COMMAND ${CURL_PATCH}
 							#--Configure step ----------

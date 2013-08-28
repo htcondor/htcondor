@@ -79,7 +79,14 @@ Timeslice::setFinishTimeNow()
 {
 	UtcTime finish_time;
 	finish_time.getTime();
-	m_last_duration = finish_time.difference(&m_start_time);
+	processEvent( m_start_time, finish_time );
+}
+void
+Timeslice::processEvent(UtcTime start,UtcTime finish)
+{
+	m_start_time = start;
+	double duration = finish.difference(&start);
+	m_last_duration = duration;
 	if( m_never_ran_before ) {
 		m_avg_duration = m_last_duration;
 	} else {

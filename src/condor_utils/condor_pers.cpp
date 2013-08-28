@@ -44,13 +44,13 @@ void patch_personality(void)
         // effects.
 
 #if defined(I386)
-#   if defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212)
+#   if defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213)
 #       define  MAGIC_NUMBER (PER_LINUX32|ADDR_COMPAT_LAYOUT|ADDR_NO_RANDOMIZE)
 #   else
 #       define  MAGIC_NUMBER (PER_LINUX32 | 0x0200000 | 0x0040000)
 #   endif
 #elif defined(X86_64)
-#   if defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212)
+#   if defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213)
 #       define  MAGIC_NUMBER (ADDR_COMPAT_LAYOUT | ADDR_NO_RANDOMIZE)
 #   else
 #       define  MAGIC_NUMBER (0x0200000 | 0x0040000)

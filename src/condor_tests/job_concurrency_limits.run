@@ -25,6 +25,7 @@ use Check::CondorLog;
 
 my $firstappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	NUM_CPUS = 12
 	ALL_DEBUG = 
 ';
 
@@ -52,8 +53,12 @@ my $on_abort = sub {
 	CondorTest::debug("Abort from removing sleep 0 jobs.\n",1);
 };
 
+my $on_evictedwitoutcheckpoint = sub {
+	CondorTest::debug("Evicted Without Checkpoint from removing sleep 0 jobs.\n",1);
+};
+
 my $testname = "job_concurrency_limits.run";
-my $result = 1;
+my $result = 0;
 my $running_now = 0;
 my $expect_idle = 0;
 my $expect_run = 0;
@@ -67,6 +72,7 @@ my $on_match = sub {
 
 my $on_execute = sub {
 my $idles = 0;
+	print "Running now has value <$running_now>\n";
 	$running_now += 1;
 	CondorTest::debug("Job started running.\n",1);
 	# compare current running to expected total
@@ -88,6 +94,8 @@ my $idles = 0;
 					match_timeout => 30,
 					match_new => "true"
 				);
+				print "About to remove these jobs\n";
+				system("condor_q");
 				runcmd("condor_rm -all");
 			}
 		}
@@ -100,6 +108,17 @@ my $idles = 0;
 	}
 };
 
+# enter most slots needed. We will verify
+my $neededslots = 7;
+my $haveslots = ExamineSlots($neededslots);
+
+if($haveslots < $neededslots) {
+	print "We need <$neededslots> but only have <$haveslots>\n";
+	system("condor_config_val -dump | sort");
+	system("condor_config_val -v NUM_CPUS");
+	die "We need <$neededslots> but only have <$haveslots>\n";
+}
+
 #Do a couple things before setting currency limits
 print "First test basic job\n";
 $result = SimpleJob::RunCheck();
@@ -107,11 +126,12 @@ $result = SimpleJob::RunCheck();
 # then test behaviour of non cuncurrency jobs first
 # all from each batch should run. Remove and do next set.
 my $count = 0;
-my $running_now = 0;
+$running_now = 0;
 $expect_run = 3;
 $expect_idle = 0;
 $result = SimpleJob::RunCheck(
 	on_abort => $on_abort,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	on_execute => $on_execute,
 	queue_sz => 3,
 	duration => 0,
@@ -135,10 +155,13 @@ CondorTest::StartCondorWithParams(
 	local_fresh => "TRUE",
 );
 
+print "Test specified concurrency\n";
+$running_now = 0;
 $expect_run = 2;
 $expect_idle = 1;
 $result = SimpleJob::RunCheck(
 	on_abort => $on_abort,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	on_execute => $on_execute,
 	queue_sz => 3,
 	duration => 0,
@@ -160,10 +183,13 @@ my $append_submit_commands = '
 concurrency_limits = UNDEFINED:2;
 ';
 
+print "Test default concurrency and colon usage spec\n";
+$running_now = 0;
 $expect_run = 1;
 $expect_idle = 1;
 $result = SimpleJob::RunCheck(
 	on_abort => $on_abort,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	on_execute => $on_execute,
 	queue_sz => 2,
 	duration => 0,
@@ -185,10 +211,12 @@ my $append_submit_commands = '
 concurrency_limits = large.license;
 ';
 
+$running_now = 0;
 $expect_run = 2;
 $expect_idle = 1;
 $result = SimpleJob::RunCheck(
 	on_abort => $on_abort,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	on_execute => $on_execute,
 	queue_sz => 3,
 	duration => 0,
@@ -212,10 +240,12 @@ my $append_submit_commands = '
 concurrency_limits = small.license;
 ';
 
+$running_now = 0;
 $expect_run = 5;
 $expect_idle = 2;
 $result = SimpleJob::RunCheck(
 	on_abort => $on_abort,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	on_execute => $on_execute,
 	queue_sz => 7,
 	duration => 0,
@@ -260,12 +290,48 @@ sub CountIdle
 	return($idlecount);
 }
 
+sub ExamineSlots
+{
+	my $waitforit = shift;
+	my $line = "";
+
+	my @jobs = ();
+	my $available = 0;
+	my $looplimit = 24;
+	my $count = 24; # go just once
+	if(defined $waitforit) {
+		$count = 0; #enable looping with 10 second sleep
+	}
+	while($count <= $looplimit) {
+		$count += 1;
+		@jobs = ();
+		@jobs = `condor_status`;
+		foreach my $job (@jobs) {
+			chomp($job);
+			$line = $job;
+			if($line =~ /^\s*Total\s+(\d+)\s*(\d+)\s*(\d+)\s*(\d+).*/) {
+				print "<$4> unclaimed <$1> Total slots\n";
+				$available = $4;
+			}
+		}
+		if(defined $waitforit) {
+			if($available >= $waitforit) {
+				last;
+			} else {
+				sleep 10;
+			}
+		} else{
+		}
+	}
+	return($available);
+}
+
 sub ExamineQueue
 {
 	my $line = "";
 
 	print "\nExpecting all jobs to be gone. Lets See.\n";
-	#runcmd("condor_q");
+	runcmd("condor_q");
 	my @jobs = `condor_q`;
 	foreach my $job (@jobs) {
 		chomp($job);

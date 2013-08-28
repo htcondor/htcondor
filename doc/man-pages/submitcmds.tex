@@ -346,7 +346,8 @@ the \SubmitCmd{arguments} command.
 \label{man-condor-submit-log}
 \item[log = $<$pathname$>$] 
 Use \SubmitCmd{log} to specify a file name where
-HTCondor will write a log file of what is happening with this job cluster.
+HTCondor will write a log file of what is happening with this job cluster,
+called a job event log.
 For example, HTCondor will place a log entry into this file
 when and where the job begins running,
 when the job produces a checkpoint, or moves (migrates) to another machine,
@@ -363,13 +364,13 @@ HTCondor does not create a log for this cluster.
 \label{man-condor-submit-log-xml}
 \item[log\_xml = $<$True \Bar\ False$>$]
 If \SubmitCmd{log\_xml} is \Expr{True}, 
-then the log file will be written in ClassAd XML.
+then the job event log file will be written in ClassAd XML.
 If not specified, XML is not used.
 Note that the file is an XML fragment; it is
 missing the file header and footer.
 Do not mix XML and non-XML within a single file.
 If multiple jobs write to a
-single log file, ensure that all of the jobs specify
+single job event log file, ensure that all of the jobs specify
 this option in the same way.
 
 %%%%%%%%%%%%%%%%%%%
@@ -1252,7 +1253,7 @@ instead of being allowed to leave the queue.
 
 \footnotesize
 \begin{verbatim}
-  on_exit_hold = (CurrentTime - JobStartDate) < (60 * $(MINUTE))
+  on_exit_hold = (time() - JobStartDate) < (60 * $(MINUTE))
 \end{verbatim}
 \normalsize
 
@@ -3016,7 +3017,7 @@ For example, for an image size of 8 Megabytes, \Arg{size} should be 8000.
 Used to give jobs a directory with respect to file input and output.
 Also provides a directory 
 (on the machine from which the job is submitted)
-for the user log, when a full path is not specified. 
+for the job event log, when a full path is not specified. 
 
 For vanilla universe jobs where there is a shared file system,
 it is the current working directory on the machine where the
@@ -3052,12 +3053,12 @@ directory in which the \Condor{submit} command is run.
 \label{man-condor-submit-job-ad-information-attrs}
 \item[job\_ad\_information\_attrs =  $<$attribute-list$>$]
 A comma-separated list of job ClassAd attribute names.
-The named attributes and their values are written to the user log
+The named attributes and their values are written to the job event log
 whenever any event is being written to the log.
 This implements the same thing as the configuration variable
 \MacroNI{EVENT\_LOG\_INFORMATION\_ATTRS} (see
 page~\pageref{param:EventLogJobAdInformationAttrs}),
-but it applies to the user log, instead of the system event log.
+but it applies to the job event log, instead of the system event log.
 
 
 %%%%%%%%%%%%%%%%%%%
@@ -3534,9 +3535,7 @@ defined by lines in the form of
 \begin{verbatim} 
         <macro_name> = <string> 
 \end{verbatim} 
-Three pre-defined macros are supplied by the submit description file parser.
-The third of the pre-defined macros is only relevant to MPI applications
-under the parallel universe.
+Two pre-defined macros are supplied by the submit description file parser.
 The
 \MacroU{Cluster} macro supplies the value of the
 \index{ClassAd job attribute!ClusterId}
@@ -3552,12 +3551,14 @@ intended to aid in the specification of input/output files, arguments,
 etc., for clusters with lots of jobs, and/or could be used to supply an
 HTCondor process with its own cluster and process numbers on the command
 line.
-The 
-\MacroU{Node} macro is defined for MPI applications run
-as parallel universe jobs.
+
+The \MacroU{Node} macro is defined for parallel universe jobs,
+and is especially relevant for MPI applications.
 It is a unique value assigned for the duration of the job
-that essentially identifies the machine on which a program is
+that essentially identifies the machine (slot) on which a program is
 executing.
+Values assigned start at 0 and increase monotonically.
+The values are assigned as the parallel job is about to start.
 
 Recursive definition of macros is permitted.
 An example of a construction that works is the following: 

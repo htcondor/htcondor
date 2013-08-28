@@ -221,7 +221,9 @@ DCMsg::addError( int code, char const *format, ... )
 	va_list args;
 	va_start(args, format);
 
-	m_errstack.pushf( "CEDAR", code, format, args );
+	std::string msg;
+	vformatstr(msg,format,args);
+	m_errstack.push( "CEDAR", code, msg.c_str() );
 
 	va_end(args);
 }

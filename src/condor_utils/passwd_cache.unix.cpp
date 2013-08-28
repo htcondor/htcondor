@@ -42,7 +42,7 @@ passwd_cache::passwd_cache() {
 		/* set the number of seconds until a cache entry expires */
 		// Randomize this timer a bit to decrease chances of lots of
 		// processes all pounding on NIS at the same time.
-	int default_lifetime = 300 + get_random_int() % 60;
+	int default_lifetime = 72000 + get_random_int() % 60;
 	Entry_lifetime = param_integer("PASSWD_CACHE_REFRESH", default_lifetime );
 	loadConfig();
 }

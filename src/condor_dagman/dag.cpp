@@ -49,6 +49,7 @@
 #include "HashTable.h"
 #include <set>
 #include "dagman_recursive_submit.h"
+#include "dagman_metrics.h"
 
 using namespace std;
 
@@ -126,7 +127,8 @@ Dag::Dag( /* const */ StringList &dagFiles,
 	_reject			  (false),
 	_alwaysRunPost		  (true),
 	_defaultPriority	  (0),
-	_use_default_node_log  (true)
+	_use_default_node_log  (true),
+	_metrics			  (NULL)
 {
 
 	// If this dag is a splice, then it may have been specified with a DIR
@@ -239,7 +241,23 @@ Dag::~Dag() {
 
 	delete[] _statusFileName;
 
+	delete _metrics;
+
     return;
+}
+
+//-------------------------------------------------------------------------
+void
+Dag::CreateMetrics( const char *primaryDagFile, int rescueDagNum )
+{
+	_metrics = new DagmanMetrics( this, primaryDagFile, rescueDagNum );
+}
+
+//-------------------------------------------------------------------------
+void
+Dag::ReportMetrics( int exitCode )
+{
+	_metrics->Report( exitCode, _dagStatus );
 }
 
 //-------------------------------------------------------------------------
@@ -598,15 +616,23 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				break;
 
 			case ULOG_JOB_ABORTED:
-				ProcessAbortEvent(event, job, recovery);
+#if !defined(DISABLE_NODE_TIME_METRICS)
+				job->TermAbortMetrics( event->proc, event->eventTime,
+							_metrics );
+#endif
 					// Make sure we don't count finished jobs as idle.
 				ProcessNotIdleEvent(job);
+				ProcessAbortEvent(event, job, recovery);
 				break;
               
 			case ULOG_JOB_TERMINATED:
-				ProcessTerminatedEvent(event, job, recovery);
+#if !defined(DISABLE_NODE_TIME_METRICS)
+				job->TermAbortMetrics( event->proc, event->eventTime,
+							_metrics );
+#endif
 					// Make sure we don't count finished jobs as idle.
 				ProcessNotIdleEvent(job);
+				ProcessTerminatedEvent(event, job, recovery);
 				break;
 
 			case ULOG_POST_SCRIPT_TERMINATED:
@@ -631,7 +657,14 @@ bool Dag::ProcessOneEvent (int logsource, ULogEventOutcome outcome,
 				break;
 
 			case ULOG_JOB_UNSUSPENDED:
+				ProcessNotIdleEvent(job);
+				break;
+
 			case ULOG_EXECUTE:
+#if !defined(DISABLE_NODE_TIME_METRICS)
+				job->ExecMetrics( event->proc, event->eventTime,
+							_metrics );
+#endif
 				ProcessNotIdleEvent(job);
 				break;
 
@@ -902,6 +935,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 			}
 			if ( job->_queuedNodeJobProcs == 0 ) {
 				_numNodesFailed++;
+				_metrics->NodeFinished( job->GetDagFile() != NULL, false );
 				if ( _dagStatus == DAG_STATUS_OK ) {
 					_dagStatus = DAG_STATUS_NODE_FAILED;
 				}
@@ -1010,6 +1044,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 			} else {
 					// no more retries -- node failed
 				_numNodesFailed++;
+				_metrics->NodeFinished( job->GetDagFile() != NULL, false );
 				if ( _dagStatus == DAG_STATUS_OK ) {
 					_dagStatus = DAG_STATUS_NODE_FAILED;
 				}
@@ -1176,12 +1211,20 @@ Dag::ProcessIsIdleEvent(Job *job) {
 		return;
 	}
 
-	if ( !job->GetIsIdle() ) {
+	if ( !job->GetIsIdle() &&
+				( job->GetStatus() == Job::STATUS_SUBMITTED ) ) {
 		job->SetIsIdle(true);
 		_numIdleJobProcs++;
 	}
 
-	// Do some consistency checks here?
+	// Do some consistency checks here.
+	if ( _numIdleJobProcs > 0 && NumJobsSubmitted() < 1 ) {
+        debug_printf( DEBUG_NORMAL,
+					"Warning:  DAGMan thinks there are %d idle job procs, even though there are no jobs in the queue!  Setting idle count to 0 so DAG continues.\n",
+					_numIdleJobProcs );
+		check_warning_strictness( DAG_STRICT_2 );
+		_numIdleJobProcs = 0;
+	}
 
 	debug_printf( DEBUG_VERBOSE, "Number of idle job procs: %d\n",
 				_numIdleJobProcs);
@@ -1195,7 +1238,8 @@ Dag::ProcessNotIdleEvent(Job *job) {
 		return;
 	}
 
-	if ( job->GetIsIdle() ) {
+	if ( job->GetIsIdle() &&
+				( job->GetStatus() == Job::STATUS_SUBMITTED ) ) {
 		job->SetIsIdle(false);
 		_numIdleJobProcs--;
 	}
@@ -1205,6 +1249,14 @@ Dag::ProcessNotIdleEvent(Job *job) {
         debug_printf( DEBUG_NORMAL,
 					"WARNING: DAGMan thinks there are %d idle job procs!\n",
 					_numIdleJobProcs );
+	}
+
+	if ( _numIdleJobProcs > 0 && NumJobsSubmitted() < 1 ) {
+        debug_printf( DEBUG_NORMAL,
+					"Warning:  DAGMan thinks there are %d idle job procs, even though there are no jobs in the queue!  Setting idle count to 0 so DAG continues.\n",
+					_numIdleJobProcs );
+		check_warning_strictness( DAG_STRICT_2 );
+		_numIdleJobProcs = 0;
 	}
 
 	debug_printf( DEBUG_VERBOSE, "Number of idle job procs: %d\n",
@@ -1391,8 +1443,10 @@ Dag::StartNode( Job *node, bool isRetry )
 		_readyQ->Prepend( node, -node->_nodePriority );
 	} else {
 		if(node->_hasNodePriority){
-			node->varNamesFromDag->Append(new MyString("priority"));
-			node->varValsFromDag->Append(new MyString(node->_nodePriority));
+			Job::NodeVar *var = new Job::NodeVar();
+			var->_name = "priority";
+			var->_value = node->_nodePriority;
+			node->varsFromDag->Append( var );
 		}
 		if ( _submitDepthFirst ) {
 			_readyQ->Prepend( node, -node->_nodePriority );
@@ -1691,6 +1745,8 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 			// Check for retries.
 		else if( job->GetRetries() < job->GetRetryMax() ) {
 			job->TerminateFailure();
+			// Note: don't update count in metrics here because we're
+			// retrying!
 			RestartNode( job, false );
 		}
 
@@ -1698,6 +1754,7 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 		else {
 			job->TerminateFailure();
 			_numNodesFailed++;
+			_metrics->NodeFinished( job->GetDagFile() != NULL, false );
 			if ( _dagStatus == DAG_STATUS_OK ) {
 				_dagStatus = DAG_STATUS_NODE_FAILED;
 			}
@@ -2281,19 +2338,17 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 		}
 
 			// Print the VARS line, if any.
-		if ( !node->varNamesFromDag->IsEmpty() ) {
+		if ( !node->varsFromDag->IsEmpty() ) {
 			fprintf( fp, "VARS %s", node->GetJobName() );
 	
-			ListIterator<MyString> names( *node->varNamesFromDag );
-			ListIterator<MyString> vals( *node->varValsFromDag );
-			names.ToBeforeFirst();
-			vals.ToBeforeFirst();
-			MyString *strName, *strVal;
-			while ( (strName = names.Next() ) && (strVal = vals.Next()) ) {
-				fprintf(fp, " %s=\"", strName->Value());
+			ListIterator<Job::NodeVar> vars( *node->varsFromDag );
+			vars.ToBeforeFirst();
+			Job::NodeVar *nodeVar;
+			while ( ( nodeVar = vars.Next() ) ) {
+				fprintf(fp, " %s=\"", nodeVar->_name.Value());
 					// now we print the value, but we have to re-escape certain characters
-				for( int i = 0; i < strVal->Length(); i++ ) {
-					char c = (*strVal)[i];
+				for( int i = 0; i < nodeVar->_value.Length(); i++ ) {
+					char c = (nodeVar->_value)[i];
 					if ( c == '\"' ) {
 						fprintf( fp, "\\\"" );
 					} else if (c == '\\') {
@@ -2397,6 +2452,7 @@ Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 		// careful not to double-count...
 	if( job->countedAsDone == false ) {
 		_numNodesDone++;
+		_metrics->NodeFinished( job->GetDagFile() != NULL, true );
 		job->countedAsDone = true;
 		ASSERT( _numNodesDone <= _jobs.Number() );
 	}
@@ -2468,6 +2524,7 @@ Dag::RestartNode( Job *node, bool recovery )
                       "(last attempt returned %d)\n",
                       node->GetJobName(), node->retval);
         _numNodesFailed++;
+		_metrics->NodeFinished( node->GetDagFile() != NULL, false );
 		if ( _dagStatus == DAG_STATUS_OK ) {
 			_dagStatus = DAG_STATUS_NODE_FAILED;
 		}
@@ -3334,6 +3391,7 @@ bool Dag::Add( Job& job )
 	return _jobs.Append(&job);
 }
 
+#if 0
 //---------------------------------------------------------------------------
 bool
 Dag::RemoveNode( const char *name, MyString &whynot )
@@ -3365,6 +3423,7 @@ Dag::RemoveNode( const char *name, MyString &whynot )
 	if( node->GetStatus() == Job::STATUS_DONE ) {
 		_numNodesDone--;
 		ASSERT( _numNodesDone >= 0 );
+		// Need to update metrics here!!!
 	}
 	else if( node->GetStatus() == Job::STATUS_ERROR ) {
 		_numNodesFailed--;
@@ -3432,7 +3491,7 @@ Dag::RemoveNode( const char *name, MyString &whynot )
 	whynot = "n/a";
 	return true;
 }
-
+#endif
 
 //---------------------------------------------------------------------------
 bool
@@ -3879,6 +3938,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 					"No 'log =' value found in submit file %s",
 					node->GetCmdFile() );
 	  	_numNodesFailed++;
+		_metrics->NodeFinished( node->GetDagFile() != NULL, false );
 		if ( _dagStatus == DAG_STATUS_OK ) {
 			_dagStatus = DAG_STATUS_NODE_FAILED;
 		}
@@ -3909,7 +3969,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 				MyString parents = ParentListString( node );
       			submit_success = condor_submit( dm, cmd_file.Value(), condorID,
 							node->GetJobName(), parents,
-							node->varNamesFromDag, node->varValsFromDag,
+							node->varsFromDag,
 							node->GetDirectory(), DefaultNodeLog(),
 							_use_default_node_log && node->UseDefaultLog(),
 							logFile, ProhibitMultiJobs(),
@@ -4024,6 +4084,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 		} else {
 			node->TerminateFailure();
 			_numNodesFailed++;
+			_metrics->NodeFinished( node->GetDagFile() != NULL, false );
 			if ( _dagStatus == DAG_STATUS_OK ) {
 				_dagStatus = DAG_STATUS_NODE_FAILED;
 			}

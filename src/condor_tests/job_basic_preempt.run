@@ -1,0 +1,207 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+##
+## This test will submit 10000 sleep jobs to get a longer negotiation
+## cycle and when they are all submitted will do four things:
+##  1. Find the next start of a negotiation cycle
+##  2. run a condor_userprio
+##	3. find the next end of a negotation cycle
+##  4. determine if condor_userprio happened during negotiation cycle
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+
+my $ClusterId = 0;
+my $expect_return = 0;
+
+	#NEGOTIATE_ALL_JOBS_IN_CLUSTER = True
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	MAX_NEGOTIATOR_LOG = 5000000000
+	MAX_SCHEDD_LOG = 5000000000
+	WANT_SUSPEND = False
+	PREEMPT = TotalClaimRunTime > 20
+	MAXJOBRETIREMENTTIME = 0
+	KILL = FALSE
+	NUM_CPUS = 4
+';
+
+my $retireappend = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	MAX_NEGOTIATOR_LOG = 5000000000
+	MAX_SCHEDD_LOG = 5000000000
+	WANT_SUSPEND = False
+	PREEMPT = TotalClaimRunTime > 20
+	MAXVACATETIME =  10
+	MAXJOBRETIREMENTTIME = 180
+	KILL = FALSE
+	NUM_CPUS = 4
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"preempt1");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "basicpreempt",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+my $wantevict = 0;
+my $wantcompleated = 0;
+my $result = 0;
+
+my $on_abort = sub {
+	print "Job Aborted - expected on removal\n";
+};
+
+my $on_execute = sub {
+	print "Job Running\n";
+};
+
+my $on_success = sub {
+	print "Job completed\n";
+	if($wantcompleated == 1) {
+		$result = 1;
+	} else {
+		$result = 0;
+	}
+	CondorTest::RegisterResult($result);
+
+};
+
+my $on_evict = sub {
+	print "Job Evicted\n";
+	if($wantevict == 1) {
+		$result = 1;
+	} else {
+		$result = 0;
+	}
+	CondorTest::RegisterResult($result);
+	system("condor_config_val -dump | sort");
+	system("condor_rm -all");
+};
+
+my $on_completed = sub {
+	print "Job Completed\n";
+};
+
+
+my $result = 1;
+my $test_name = "job_basic_preempt";
+
+
+#Do a job before setting tesing exit codes
+print "First test basic job\n";
+$result = SimpleJob::RunCheck(); # jobid 1
+
+$wantevict = 1;
+$wantcompleated = 0;
+$result = SimpleJob::RunCheck(
+	test_name => "$test_name",
+	on_execute => $on_execute,
+	on_abort => $on_abort,
+	on_evictedwithoutcheckpoint => $on_evict,
+	duration => 120,
+);
+
+print "******************** Test should be evicted \n";
+if($result == 1) {
+	print "ok\n\n\n";
+} else {
+	print "bad\n\n\n";
+}
+
+$configfile = CondorTest::CreateLocalConfig($retireappend,"preempt2");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "basicpreempt2",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+$test_name = "job_basic_preempt2";
+
+$wantevict = 0;
+$wantcompleated = 1;
+$result = SimpleJob::RunCheck(
+	test_name => "$test_name",
+	on_execute => $on_execute,
+	on_success => $on_success,
+	on_evictedwithoutcheckpoint => $on_evict,
+	duration => 120,
+);
+
+print "******************** Test should NOT be evicted \n";
+if($result == 1) {
+	print "ok\n\n\n";
+} else {
+	print "bad\n\n\n";
+}
+
+
+CondorTest::EndTest();
+
+
+sub CheckExpectations
+{
+	my $ad = shift;
+	my $got = shift;
+	my $expected = shift;
+
+	CondorTest::debug("CheckExpectations: $ad Got,$got Expected,$expected\n",2);
+	if($got != $expected) {
+		die "$ad: Expected <$expected> but only got <$got>\n";
+	} 
+}
+
+sub RunNTimes
+{
+	my $cmd = shift;
+	my $goal = shift;
+	my $wantoutput = shift;
+
+	my $count = 0;
+	my $stop = 0;
+	my @cmdout = ();
+	my @date = ();
+	$stop = $goal;
+
+	while($count < $stop) {
+		@cmdout = ();
+		@date = ();
+		@date = `date`;
+		chomp $date[0];
+		print "$date[0] $cmd $count\n";
+		@cmdout = `$cmd`;
+
+		if(defined $wantoutput) {
+			foreach my $line (@cmdout) {
+				print "$line\n";
+			}
+		}
+		$count += 1;
+	}
+}

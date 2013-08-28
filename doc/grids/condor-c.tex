@@ -43,9 +43,10 @@ requires a few extra configuration variables:
 
 \footnotesize
 \begin{verbatim}
-CONDOR_GAHP=$(SBIN)/condor_c-gahp
-C_GAHP_LOG=/tmp/CGAHPLog.$(USERNAME)
-C_GAHP_WORKER_THREAD_LOG=/tmp/CGAHPWorkerLog.$(USERNAME)
+CONDOR_GAHP = $(SBIN)/condor_c-gahp
+C_GAHP_LOG = /tmp/CGAHPLog.$(USERNAME)
+C_GAHP_WORKER_THREAD_LOG = /tmp/CGAHPWorkerLog.$(USERNAME)
+C_GAHP_WORKER_THREAD_LOCK = /tmp/CGAHPWorkerLock.$(USERNAME)
 \end{verbatim}
 \normalsize
 
@@ -108,7 +109,8 @@ GSI, SSL, KERBEROS, and FS.
 \index{universe!grid}
 Job submission of HTCondor-C jobs is the same as for any HTCondor job.
 The \SubmitCmd{universe} is \SubmitCmd{grid}.
-\SubmitCmd{grid\_resource} specifies the remote \Condor{schedd} daemon to which
+The submit command \SubmitCmd{grid\_resource} specifies 
+the remote \Condor{schedd} daemon to which
 the job should be submitted, and its value consists of three fields.
 The first field is the grid type, which is \SubmitCmd{condor}.
 The second field is the name of the remote \Condor{schedd} daemon.
@@ -224,7 +226,7 @@ This implies that the file systems for the resulting submit machine
 the execute machine (the machine that runs the job) will
 \emph{not} be shared.
 Thus,
-the two inserted ClassAds
+the two inserted ClassAd attributes
 \footnotesize
 \begin{verbatim}
 +remote_ShouldTransferFiles = "YES"
@@ -232,43 +234,6 @@ the two inserted ClassAds
 \end{verbatim}
 \normalsize
 are used to invoke HTCondor's file transfer mechanism. 
-
-
-
-As HTCondor-C is a recent addition to HTCondor,
-the universes, associated integer assignments,
-and notes about the existence of functionality are given in 
-Table~\ref{working-remote-universes}.
-The note "untested" implies that
-submissions under the given universe have not yet
-been thoroughly tested.
-They may already work.
-
-% universes, and whether they work in HTCondor-C
-% NEED TO UPDATE THIS TABLE FOR gt5 and cream
-\begin{center}
-\begin{table}[hbt]
-\begin{tabular}{|l|l|l}
-\textbf{Universe Name} & \textbf{Value} & \textbf{Notes}\\ \hline \hline
-standard  & 1 & untested \\ \hline
-vanilla   & 5 & works well \\ \hline
-scheduler & 7 & works well \\ \hline
-grid      & 9 & \\
- & grid\_resource is condor & works well \\
- & grid\_resource is cream & untested \\
- & grid\_resource is gt2  & works well \\
- & grid\_resource is gt5 & untested \\ 
- & grid\_resource is nordugrid & untested \\ 
- & grid\_resource is unicore & untested \\
- & grid\_resource is lsf & works well \\
- & grid\_resource is pbs & works well \\ \hline
-java & 10 & untested \\ \hline
-parallel & 11 & untested \\ \hline
-local & 12 & works well \\ \hline
-\end{tabular}
-\caption{\label{working-remote-universes}Functionality of remote job universes with HTCondor-C}
-\end{table}
-\end{center}
 
 For communication between \Condor{schedd} daemons on the submit
 and remote machines,

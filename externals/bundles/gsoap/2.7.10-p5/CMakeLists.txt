@@ -45,9 +45,9 @@ if (WITH_GSOAP)
 							  patch -N --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/nmi_prereq_hack.patch &&
 							  patch -N --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/openssl_1_0.patch)
 			if(DARWIN AND cxx_11)
-				set (GSOAP_CONFIGURE ./configure --prefix=${GSOAP_INSTALL_LOC} --disable-dependency-tracking "CPPFLAGS=-I${OPENSSL_INSTALL_LOC}/include/" "CXXFLAGS=-std=c++11 -stdlib=libc++" )
+				set (GSOAP_CONFIGURE ./configure --prefix=${GSOAP_INSTALL_LOC} --disable-dependency-tracking "CPPFLAGS=-I${OPENSSL_INSTALL_LOC}/include/ -DWITH_IPV6" "CXXFLAGS=-std=c++11 -stdlib=libc++ -DWITH_IPV6" "CFLAGS=-DWITH_IPV6" )
 			else()
-				set (GSOAP_CONFIGURE ./configure --prefix=${GSOAP_INSTALL_LOC} --disable-dependency-tracking "CPPFLAGS=-I${OPENSSL_INSTALL_LOC}/include/" )
+				set (GSOAP_CONFIGURE ./configure --prefix=${GSOAP_INSTALL_LOC} --disable-dependency-tracking "CPPFLAGS=-I${OPENSSL_INSTALL_LOC}/include/ -DWITH_IPV6" "CXXFLAGS=-DWITH_IPV6" "CFLAGS=-DWITH_IPV6" )
 			endif()
 			set (GSOAP_MAKE make )
 			set (GSOAP_INSTALL make install )
@@ -65,7 +65,7 @@ if (WITH_GSOAP)
 				    DEPENDS ${GSOAP_DEPENDS}
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${GSOAP_STAGE}/dl
-				    URL http://parrot.cs.wisc.edu/externals/gsoap-2.7.10.tar.gz
+				    URL ${EXTERNALS_SOURCE_URL}/gsoap-2.7.10.tar.gz
 					#--Patch step ----------
 					PATCH_COMMAND ${GSOAP_PATCH}
 					#--Configure step ----------
@@ -158,6 +158,9 @@ if (WITH_GSOAP)
 		set( SOAPCPP2 ${SOAPCPP2} PARENT_SCOPE )
 		set( GSOAP_SHARE ${GSOAP_SHARE} PARENT_SCOPE )
 		set( HAVE_EXT_GSOAP ON PARENT_SCOPE )
+		# TODO: use pkg-config to detect the correct flags on proper
+		# builds
+		set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DWITH_IPV6" PARENT_SCOPE )
 
 		message ( STATUS "external configured (GSOAP_FOUND=${GSOAP_FOUND})" )
 

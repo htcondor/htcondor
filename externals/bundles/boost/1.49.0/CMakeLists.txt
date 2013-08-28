@@ -36,7 +36,7 @@ if (NOT WINDOWS)
 
     # The following is helpful if you are trying to debug cmake find module
     #  set (Boost_DEBUG TRUE)
-    message ("Boost components: ${BOOST_COMPONENTS}" )
+    message (STATUS "Boost components: ${BOOST_COMPONENTS}" )
     find_package( Boost 1.33.1 COMPONENTS ${BOOST_COMPONENTS} )
 
     # always prefer system libraries where possible
@@ -118,7 +118,8 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 	unset(BOOST_INCLUDE)
 
 	if (PYTHONINTERP_FOUND AND PYTHONLIBS_FOUND)
-		message("Bootstrapping python for boost")
+		message(STATUS "Bootstrapping python for boost")
+		set(Boost_PYTHON_LIBRARY "external" PARENT_SCOPE)
 		set(BOOTSTRAP_PYTHON_OPTION "--with-python=${PYTHON_EXECUTABLE}")
 	else ()
 		set(BOOTSTRAP_PYTHON_OPTION )
@@ -128,7 +129,7 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 	ExternalProject_Add(boost
 		#-- Download Step ----------
 		 DOWNLOAD_DIR ${BOOST_STAGE}/dl
-		 URL http://parrot.cs.wisc.edu/externals/${BOOST_FILENAME}.tar.gz
+		 URL ${EXTERNALS_SOURCE_URL}/${BOOST_FILENAME}.tar.gz
 		#--Patch step ----------
 		 PATCH_COMMAND ${BOOST_PATCH}
 		#--Configure step ----------
@@ -157,6 +158,12 @@ if (BOOST_VER)
 	set( BOOST_VER ${BOOST_VER} PARENT_SCOPE )
 	set( BOOST_INCLUDE ${BOOST_INCLUDE} PARENT_SCOPE )
 	set( BOOST_LD ${BOOST_LD} PARENT_SCOPE )
+	
+	if (Boost_PYTHON_LIBRARY)
+        set( Boost_PYTHON_LIBRARY ${Boost_PYTHON_LIBRARY} PARENT_SCOPE )
+        dprint("Found Python Library: ${Boost_PYTHON_LIBRARY} ")
+    endif()
+	
 else(BOOST_VER)
 	message (WARNING "**boost not found **, unit tests will NOT be built.")
 endif(BOOST_VER)

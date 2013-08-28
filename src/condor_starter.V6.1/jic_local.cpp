@@ -390,7 +390,7 @@ JICLocal::initJobInfo( void )
 		iwd_str += "=\"";
 		iwd_str += Starter->origCwd();
 		iwd_str += '"';
-		job_ad->InsertOrUpdate( iwd_str.Value() );
+		job_ad->Insert( iwd_str.Value() );
 	}
 	job_ad->LookupString( ATTR_JOB_IWD, &job_iwd );
 	if( ! job_iwd ) {

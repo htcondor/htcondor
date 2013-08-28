@@ -61,7 +61,18 @@ class ClassAdUnParser
 		void Unparse( std::string &buffer, const ExprTree *expr );
 
 			//	for backcompatibility only - NAC
-		void SetOldClassAd( bool );
+			// In old ClassAd syntax, nested ads should be delimited in
+			// the new syntax (ad enclosed by square brackets and
+			// attributes separated by semicolons), but the outer-most ad
+			// is delimited in the old syntax (no brackets and newlines
+			// instead of semicolons).
+			// If you want to unparse an attribute value (and not a
+			// standalone ad) in the old style, use the second form of
+			// SetOldClassAd() and pass true for attr_value. That will
+			// cause the outermost ClassAd to be delimited in the new
+			// syntax (as well as any nested ads).
+		void SetOldClassAd( bool old_syntax );
+		void SetOldClassAd( bool old_syntax, bool attr_value );
 		bool GetOldClassAd();
 
 		virtual void UnparseAux( std::string &buffer,
@@ -87,6 +98,7 @@ class ClassAdUnParser
 		bool oldClassAd;
 		bool xmlUnparse;
 		char delimiter; // string delimiter - initialized to '\"' in the constructor
+		bool oldClassAdValue;
 };
 
 

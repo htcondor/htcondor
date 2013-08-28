@@ -13,27 +13,35 @@ Here is a list of items that administrators should be aware of.
 
 \begin{itemize}
 
-\item \Condor{dagman} jobs that are on hold during an upgrade from 
-7.8 to 8.0 will have
-problems running when those jobs are released after the upgrade. 
-This is because of
-the new feature introduced in HTCondor version 7.9.0, 
-in which \Condor{dagman} uses a single log file to monitor events.
-The suggested workaround is for the
-DAG input file to set the configuration variable 
-\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} to
-\Expr{False} in a DAG configuration file
- before running \Condor{release} on the held DAG job.
-\Condor{dagman} jobs that have a chance to write out a rescue
-DAG
-are expected to successfully restart after the upgrade.
-These jobs are those that are the target of \Condor{rm} or that have failed.
-Administrators can be proactive by
-checking that no \Condor{dagman} jobs are on hold when the upgrade occurs,
-and encourage users to use the halt file feature and release their 
-\Condor{dagman} jobs before the upgrade.  
-Running \Condor{rm} on a held \Condor{dagman} job is
-not advised in this case, unless the user is abandoning the job.
+\item There is an issue with DAGMan jobs upon upgrade
+from HTCondor version 7.8.x or an earlier version
+to version 8.0.0.
+Without administrative intervention,
+queued DAGMan jobs will restart from the beginning of the DAG
+after the upgrade.
+There will be no issue if the upgrade is 
+from HTCondor version 7.8.x or an earlier version to HTCondor version 8.0.1
+or later versions.
+
+To avoid starting DAGMan jobs from the beginning after the upgrade,
+the administrator should ensure that no \Condor{dagman} jobs are queued.
+Do a \Condor{rm} on all \Condor{dagman} jobs and wait for Rescue DAGs
+to be written before shutting down HTCondor to perform the upgrade.
+Any \Condor{dagman} jobs that are on hold should be released before
+being removed.
+After the upgrade is complete and HTCondor has restarted,
+all of these DAGMan jobs should be re-submitted.
+This will cause them to read the appropriate Rescue DAGs and 
+continue on.
+
+To avoid losing work within partially-completed node jobs,
+an alternative is to use the halt file feature,
+as described in section~\ref{sec:DagSuspend}.
+This will cause all
+\Condor{dagman} jobs to eventually drain from the queue(s).
+This will take longer than doing a \Condor{rm} on those jobs.
+\Condor{dagman} jobs drained via the halt file method will also
+have to be re-submitted after the upgrade.
 
 \item The upgrade will change the machine ClassAd attribute
 \AdAttr{CheckpointPlatform} for all machines.

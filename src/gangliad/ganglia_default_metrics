@@ -368,35 +368,167 @@
 ]
 
 [
+  Name = strcat(Name,"-TotalRunningJobs");
+  Title = strcat(Name, " Total Running Jobs");
+  Aggregate = "SUM";
+  Value = RunningJobs;
+  Verbosity = 1;
+  Desc   = strcat("Total number of running jobs from user ", Name);
+  Units  = "jobs";
+  TargetType = "Submitter";
+  Group  = "HTCondor Submitters";
+]
+[
+  Name = strcat(Name, "RunningJobs");
+  Title = strcat(Name, " Running Jobs");
+  Value = RunningJobs;
+  Verbosity = 1;
+  Desc   = strcat("Number of running jobs from user ", Name);
+  Units  = "jobs";
+  TargetType = "Submitter";
+  Group  = "HTCondor Submitters";
+]
+[
+  Name = strcat(Name,"-TotalIdleJobs");
+  Title = strcat(Name, " Total Idle Jobs");
+  Aggregate = "SUM";
+  Value = IdleJobs;
+  Verbosity = 1;
+  Desc   = strcat("Total number of idle jobs from user ", Name);
+  Units  = "jobs";
+  TargetType = "Submitter";
+  Group  = "HTCondor Submitters";
+]
+[
+  Name = strcat(Name, "IdleJobs");
+  Title = strcat(Name, " Idle Jobs");
+  Value = IdleJobs;
+  Verbosity = 1;
+  Desc   = strcat("Number of idle jobs from user ", Name);
+  Units  = "jobs";
+  TargetType = "Submitter";
+  Group  = "HTCondor Submitters";
+]
+[
+  Name = strcat(Name,"-TotalHeldJobs");
+  Title = strcat(Name, " Total Held Jobs");
+  Aggregate = "SUM";
+  Value = HeldJobs;
+  Verbosity = 1;
+  Desc   = strcat("Total number of held jobs from user ", Name);
+  Units  = "jobs";
+  TargetType = "Submitter";
+  Group  = "HTCondor Submitters";
+]
+[
+  Name = strcat(Name, "HeldJobs");
+  Title = strcat(Name, " Held Jobs");
+  Value = HeldJobs;
+  Verbosity = 1;
+  Desc   = strcat("Number of held jobs from user ", Name);
+  Units  = "jobs";
+  TargetType = "Submitter";
+  Group  = "HTCondor Submitters";
+]
+[
+  Name = strcat(Name,"-TotalFlockedJobs");
+  Title = strcat(Name, " Total Flocked Jobs");
+  Aggregate = "SUM";
+  Value = FlockedJobs;
+  Verbosity = 1;
+  Desc   = strcat("Total number of flocked jobs from user ", Name);
+  Units  = "jobs";
+  TargetType = "Submitter";
+  Group  = "HTCondor Submitters";
+]
+[
+  Name = strcat(Name, "FlockedJobs");
+  Title = strcat(Name, " Flocked Jobs");
+  Value = FlockedJobs;
+  Verbosity = 1;
+  Desc   = strcat("Number of flocked jobs from user ", Name);
+  Units  = "jobs";
+  TargetType = "Submitter";
+  Group  = "HTCondor Submitters";
+]
+
+[
+  Name = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"),"-TotalRunningJobs");
+  Title = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"), " Total Running Jobs");
+  Aggregate = "SUM";
+  Value = RunningJobs;
+  Verbosity = 1;
+  Desc   = strcat("Total number of running jobs from ", ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "group \\1"),"no group"));
+  Units  = "jobs";
+  TargetType = "Submitter";
+  Group  = "HTCondor Accounting Groups";
+]
+[
+  Name = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"),"-TotalIdleJobs");
+  Title = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"), " Total Idle Jobs");
+  Aggregate = "SUM";
+  Value = IdleJobs;
+  Verbosity = 1;
+  Desc   = strcat("Total number of idle jobs from ", ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "group \\1"),"no group"));
+  Units  = "jobs";
+  TargetType = "Submitter";
+  Group  = "HTCondor Accounting Groups";
+]
+[
+  Name = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"),"-TotalHeldJobs");
+  Title = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"), " Total Held Jobs");
+  Aggregate = "SUM";
+  Value = HeldJobs;
+  Verbosity = 1;
+  Desc   = strcat("Total number of held jobs from ", ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "group \\1"),"no group"));
+  Units  = "jobs";
+  TargetType = "Submitter";
+  Group  = "HTCondor Accounting Groups";
+]
+[
+  Name = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"),"-TotalFlockedJobs");
+  Title = strcat(ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "\\1"),"nogroup"), " Total Flocked Jobs");
+  Aggregate = "SUM";
+  Value = FlockedJobs;
+  Verbosity = 1;
+  Desc   = strcat("Total number of flocked jobs from ", ifThenElse(regexp("([a-zA-Z0-9.]+)\\.[a-zA-z0-9]+", splitUserName(Name)[0]),regexps("([a-zA-Z0-9.]+)\\.[a-zA-Z0-9]+", splitUserName(Name)[0], "group \\1"),"no group"));
+  Units  = "jobs";
+  TargetType = "Submitter";
+  Group  = "HTCondor Accounting Groups";
+]
+
+
+[
   Name   = "FileTransferDownloadBytes";
   Derivative = true;
   Title  = "File Transfer Download Bandwidth";
   Desc   = "Output transfers from jobs";
   Units  = "bytes";
   TargetType = "Scheduler";
-  Group  = "HTCondor.FileTransfer";
+  Group  = "HTCondor File Transfer";
 ]
 [
   Name   = "FileTransferDownloadBytesPerSecond_5m";
   Desc   = "Rate of output transfers from jobs";
   Units  = "bytes/s";
   TargetType = "Scheduler";
-  Group  = "HTCondor.FileTransfer";
+  Group  = "HTCondor File Transfer";
 ]
 [
   Regex  = "Owner_([^_]*)_FileTransferDownloadBytesPerSecond_5m";
+  Title = "\\1 Download Bytes Per Second";
   Verbosity = 1;
   Desc   = "Rate of output transfers from jobs by user \\1";
   Units  = "bytes/s";
   TargetType = "Scheduler";
-  Group  = "HTCondor.FileTransfer";
+  Group  = "HTCondor File Transfer";
 ]
 [
   Name   = "FileTransferFileReadLoad_5m";
   Desc   = "Number of file transfer processes reading input data from files";
   Units  = "processes";
   TargetType = "Scheduler";
-  Group  = "HTCondor.FileTransfer";
+  Group  = "HTCondor File Transfer";
 ]
 [
   Name   = "FileTransferFileReadSeconds";
@@ -405,14 +537,14 @@
   Desc   = "Number of file transfer processes reading input data from files";
   Units  = "processes";
   TargetType = "Scheduler";
-  Group  = "HTCondor.FileTransfer";
+  Group  = "HTCondor File Transfer";
 ]
 [
   Name   = "FileTransferFileWriteLoad_5m";
   Desc   = "Number of file transfer processes writing output data to files";
   Units  = "processes";
   TargetType = "Scheduler";
-  Group  = "HTCondor.FileTransfer";
+  Group  = "HTCondor File Transfer";
 ]
 [
   Name   = "FileTransferFileWriteSeconds";
@@ -421,14 +553,14 @@
   Desc   = "Number of file transfer processes writing output data to files";
   Units  = "processes";
   TargetType = "Scheduler";
-  Group  = "HTCondor.FileTransfer";
+  Group  = "HTCondor File Transfer";
 ]
 [
   Name   = "FileTransferNetReadLoad_5m";
   Desc   = "Number of file transfer processes reading output data from the network";
   Units  = "processes";
   TargetType = "Scheduler";
-  Group  = "HTCondor.FileTransfer";
+  Group  = "HTCondor File Transfer";
 ]
 [
   Name   = "FileTransferNetReadSeconds";
@@ -436,14 +568,14 @@
   Desc   = "Number of file transfer processes reading output data from the network";
   Units  = "processes";
   TargetType = "Scheduler";
-  Group  = "HTCondor.FileTransfer";
+  Group  = "HTCondor File Transfer";
 ]
 [
   Name   = "FileTransferNetWriteLoad_5m";
   Desc   = "Number of file transfer processes writing input data to the network";
   Units  = "processes";
   TargetType = "Scheduler";
-  Group  = "HTCondor.FileTransfer";
+  Group  = "HTCondor File Transfer";
 ]
 [
   Name   = "FileTransferNetWriteSeconds";
@@ -452,7 +584,7 @@
   Desc   = "Number of file transfer processes writing input data to the network";
   Units  = "processes";
   TargetType = "Scheduler";
-  Group  = "HTCondor.FileTransfer";
+  Group  = "HTCondor File Transfer";
 ]
 [
   Name   = "FileTransferUploadBytes";
@@ -461,29 +593,30 @@
   Desc   = "Input transfers to jobs";
   Units  = "bytes";
   TargetType = "Scheduler";
-  Group  = "HTCondor.FileTransfer";
+  Group  = "HTCondor File Transfer";
 ]
 [
   Name   = "FileTransferUploadBytesPerSecond_5m";
   Desc   = "Rate of input transfers to jobs";
   Units  = "bytes/s";
   TargetType = "Scheduler";
-  Group  = "HTCondor.FileTransfer";
+  Group  = "HTCondor File Transfer";
 ]
 [
   Regex  = "Owner_([^_]*)_FileTransferUploadBytesPerSecond_5m";
+  Title = "\\1 Upload Bytes Per Second";
   Verbosity = 1;
   Desc   = "Rate of input transfers from jobs by user \\1";
   Units  = "bytes/s";
   TargetType = "Scheduler";
-  Group  = "HTCondor.FileTransfer";
+  Group  = "HTCondor File Transfer";
 ]
 [
   Name   = "TransferQueueDownloadWaitTime";
   Desc   = "Oldest output file transfer waiting in the transfer queue";
   Units  = "seconds";
   TargetType = "Scheduler";
-  Group  = "HTCondor.FileTransfer";
+  Group  = "HTCondor File Transfer";
 ]
 [
   Aggregate = "MAX";
@@ -498,35 +631,35 @@
   Desc   = "Number of jobs actively transferring output";
   Units  = "jobs";
   TargetType = "Scheduler";
-  Group  = "HTCondor.FileTransfer";
+  Group  = "HTCondor File Transfer";
 ]
 [
   Name   = "TransferQueueNumUploading";
   Desc   = "Number of jobs actively transferring input";
   Units  = "jobs";
   TargetType = "Scheduler";
-  Group  = "HTCondor.FileTransfer";
+  Group  = "HTCondor File Transfer";
 ]
 [
   Name   = "TransferQueueNumWaitingToDownload";
   Desc   = "Number of jobs waiting in the transfer queue to transfer output";
   Units  = "jobs";
   TargetType = "Scheduler";
-  Group  = "HTCondor.FileTransfer";
+  Group  = "HTCondor File Transfer";
 ]
 [
   Name   = "TransferQueueNumWaitingToUpload";
   Desc   = "Number of jobs waiting in the transfer queue to transfer input";
   Units  = "jobs";
   TargetType = "Scheduler";
-  Group  = "HTCondor.FileTransfer";
+  Group  = "HTCondor File Transfer";
 ]
 [
   Name   = "TransferQueueUploadWaitTime";
   Desc   = "Oldest input file transfer waiting in the transfer queue";
   Units  = "seconds";
   TargetType = "Scheduler";
-  Group  = "HTCondor.FileTransfer";
+  Group  = "HTCondor File Transfer";
 ]
 [
   Aggregate = "MAX";

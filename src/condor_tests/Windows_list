@@ -19,6 +19,9 @@ cmd_q_shows-pool
 cmd_q_shows-xml
 cmd_q_shows-cputime
 cmd_q_shows-format
+job_mem_checker
+cmd_condor_submit_dashspool
+lib_bt_shared_port-check-ports_van
 cmd_drain
 defrag
 #cmd_status_shows-any

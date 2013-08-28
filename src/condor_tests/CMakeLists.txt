@@ -59,6 +59,7 @@ if (BUILD_TESTING)
 	condor_exe_test(lib_eventlog_base.exe "lib_eventlog_base.cpp" "condorapi")
 	condor_exe_test(job_core_bigenv.exe "job_core_bigenv.c" "")
 	condor_exe_test(lib_eventlog_build.exe "lib_eventlog_base.cpp" "condorapi")
+	condor_exe_test(x_job_mem_checker.exe "x_job_mem_checker.c" "" )
 	
 	# Not all of our gccs support -Wno-div-by-zero.
 	#if (UNIX)
@@ -140,6 +141,11 @@ if (BUILD_TESTING)
 		if(${RPM_SYSTEM_NAME} MATCHES "rhel5" AND ${SYS_ARCH} MATCHES "X86_64")
 			condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
 		endif()
+		
+        if(${SYSTEM_NAME} MATCHES "Debian-7" AND ${SYS_ARCH} MATCHES "X86_64")
+            dprint( "Will run LIGO test on Debian 7" )
+			condor_pl_test(job_ligo_x86-64-chkpttst "Special LIGO test" "core;quick;full;quicknolink")
+		endif()
 	endif(STD_UNIVERSE)
 
 	##########################################################
@@ -172,6 +178,8 @@ if (BUILD_TESTING)
 	condor_pl_test(lib_shared_port_van "Test of shared port feature." "core;quick;full;quicknolink")
 	condor_pl_test(lib_shared_port-collector_van "Test of shared port feature with collector usage." "core;quick;full;quicknolink")
 	condor_pl_test(lib_shared_port-check-ports_van "Test of shared port feature with respect to open ports." "core;quick;full;quicknolink")
+	condor_pl_test(lib_bt_shared_port-check-ports_van "Test of shared port feature with respect to open ports." "core;quick;full;quicknolink")
+	condor_pl_test (cmd_condor_submit_dashspool "Test condor_submit -spool" "core;quick;full;quicknolink")
 
 	if(WITH_GANGLIA)
           condor_pl_test(gangliad "Basic test of condor_gangliad." "core;quick;full;quicknolink")
@@ -182,10 +190,11 @@ if (BUILD_TESTING)
 	endif()
 
 	condor_pl_test(classad_cache-basic "classad-cache smoke test" "core;quick;full;quicknolink")
-	condor_pl_test(shadow_mem_usage-basic "report shadow memory use" "core;quick;full;quicknolink")
-	if (LINUX OR DARWIN)
+	if (LINUX)
+		# test gives false positives on darwin and windows
+		condor_pl_test(shadow_mem_usage-basic "report shadow memory use" "core;quick;full;quicknolink")
 		condor_pl_test(shadow_s_mem_usage-basic "report static shadow memory use" "core;quick;full;quicknolink")
-	endif(LINUX OR DARWIN)
+	endif(LINUX)
 
 	##########################################################
 	# feature specific tests
@@ -376,18 +385,25 @@ if (BUILD_TESTING)
 	condor_pl_test(lib_eventlog_rotation-reader_missed_1 "Event Log Rotation: reader, missed events 1" "core;quick;full")
 	condor_pl_test(lib_eventlog_rotation-reader_missed_2 "Event Log Rotation: reader, missed events 2" "core;quick;full")
 	condor_pl_test(negotiator_match_log_exists "ensure Matlog has only matches" "core;quick;full")
+	condor_pl_test(job_mem_checker "Look at reported memory usage" "core;quick;full")
+	condor_pl_test(cmd_condor_submit_dashspool "Look at condor_submit -spool" "core;quick;full")
 
 	if(LINUX)
 		condor_pl_test(job_cpu_affinity_check "ensure Matlog has only matches" "core;quick;full")
 	endif ( LINUX )
 
 	condor_pl_test(job_concurrency_limits "ensure Matlog has only matches" "core;quick;full")
+	condor_pl_test(job_basic_preempt "preempt and nopreempt tests" "core;quick;full")
 	condor_pl_test(job_schedd_restart-check_reconnect "test reconnects" "core;quick;full")
 	condor_pl_test(job_local_resources "test local resources" "core;quick;full")
 	condor_pl_test(job_check_exitcode_in_classad "test exit code" "core;quick;full")
 	condor_pl_test(job_services_during_neg_cycle "test cmds during neg cycle" "core;quick;full")
-	condor_pl_test(job_basic_suspend_continue_test "test suspends and continue" "core;quick;full")
+	condor_pl_test(job_basic_kill "kill test" "core;quick;full")
+	condor_pl_test(basic_startd_slot_attrs "STARTD_SLOT_ATTRS test" "core;quick;full")
+	#condor_pl_test(job_basic_suspend_continue_test "test suspends and continue" "core;quick;full")
 	condor_pl_test(job_basic_start_test "START reserve defines a dedicated slot" "core;quick;full")
+	condor_pl_test(job_basic_param_config_check "START param system with
+	daemon localizations" "core;quick;full")
 	condor_pl_test(cmd_condor_ping_basic "Basic default test of condor_ping" "core;quick;full")
 	condor_pl_test(job_aggressive_flocking "Test aggressive flocking" "core;quick;full")
 	##### job tests
@@ -572,7 +588,7 @@ if (BUILD_TESTING)
 	condor_pl_test(job_starter_script-A "Test starter pre and post scripts" "core;quick;full;quicknolink")
 
 	if ( NOT WITHOUT_SOAP_TEST AND HAVE_EXT_GSOAP )
-		condor_pl_test(soap_job_tests "Soap: currently 10 different interface tests" "core;quick;full;quicknolink")
+		#condor_pl_test(soap_job_tests "Soap: currently 10 different interface tests" "core;quick;full;quicknolink")
 	endif()
 
 endif(BUILD_TESTING)

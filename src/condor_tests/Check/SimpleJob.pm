@@ -52,9 +52,27 @@ $ExitSuccess = sub {
 sub RunCheck
 {
     my %args = @_;
+	my $availableslots = 0;
+    my $result = 0;
+
+	my $queuesz = $args{queue_sz} || 1;
+
+	if($args{check_slots}) {
+		# Make sure we never try to start more jobs then slots we have!!!!!!
+		$availableslots = ExamineSlots(queuesz);
+	
+		if($availableslots < $queuesz) {
+    		CondorTest::RegisterResult( $result, %args );
+    		return $result;
+		}
+	}
+
     my $testname = $args{test_name} || CondorTest::GetDefaultTestName();
     my $universe = $args{universe} || "vanilla";
     my $user_log = $args{user_log} || CondorTest::TempFileName("$testname.user_log");
+    my $output = $args{output} || "";
+    my $error = $args{error} || "";
+    my $streamoutput = $args{stream_output} || "";
     my $append_submit_commands = $args{append_submit_commands} || "";
     my $grid_resource = $args{grid_resource} || "";
     my $should_transfer_files = $args{should_transfer_files} || "";
@@ -64,24 +82,29 @@ sub RunCheck
 		$duration = $args{duration};
 	}
 
-	if(exists $args{tmeout}){
-		$timeout = $args{tmeout};
+	if(exists $args{timeout}){
+		$timeout = $args{timeout};
 		print "Test getting requested timeout of <$timeout> seconds\n";
 	}
 	 
 	#print "Checking duration being passsed to RunCheck <$args{duration}>\n";
     my $execute_fn = $args{on_execute} || $dummy;
+    my $hold_fn = $args{on_hold} || $dummy;
     my $suspended_fn = $args{on_suspended} || $dummy;
     my $unsuspended_fn = $args{on_unsuspended} || $dummy;
     my $disconnected_fn = $args{on_disconnected} || $dummy;
     my $reconnected_fn = $args{on_reconnected} || $dummy;
+    my $imageupdated_fn = $args{on_imageupdated} || $dummy;
+    my $evicted_ewc_fn = $args{on_evictedwithcheckpoint} || $dummy;
+    my $evicted_ewoc_fn = $args{on_evictedwithoutcheckpoint} || $dummy;
+    my $evicted_wreq_fn = $args{on_evictedwithrequeue} || $dummy;
     my $submit_fn = $args{on_submit} || $submitted;
     my $ulog_fn = $args{on_ulog} || $dummy;
     my $abort_fn = $args{on_abort} || $aborted;
 	my $donewithsuccess_fn = $args{on_success} || $ExitSuccess;
 
 
-	if(exists $args{tmeout}){
+	if(exists $args{timeout}){
 		CondorTest::RegisterTimed( $testname, $timed_callback, $timeout);
 	}
     CondorTest::RegisterAbort( $testname, $abort_fn );
@@ -93,6 +116,24 @@ sub RunCheck
 	#If we register thees to dummy, then we don't get
 	#the error function registered which says this is bad
 
+	if( exists $args{on_imageupdated} ) {
+    	CondorTest::RegisterImageUpdated( $testname, $imageupdated_fn );
+	}
+	if( exists $args{on_evictedwithcheckpoint} ) {
+    	CondorTest::RegisterEvictedWithCheckpoint( $testname, $evicted_ewc_fn );
+	}
+	if( exists $args{on_evictedwithoutcheckpoint} ) {
+    	CondorTest::RegisterEvictedWithoutCheckpoint( $testname, $evicted_ewoc_fn );
+	}
+	if( exists $args{on_evictedwithrequeue} ) {
+    	CondorTest::RegisterEvictedWithRequeue( $testname, $evicted__wreqfn );
+	}
+	if( exists $args{on_hold} ) {
+    	CondorTest::RegisterHold( $testname, $hold_fn );
+	}
+	if( exists $args{on_evicted} ) {
+    	CondorTest::RegisterEvicted( $testname, $evicted_fn );
+	}
 	if( exists $args{on_disconnected} ) {
     	CondorTest::RegisterDisconnected( $testname, $disconnected_fn );
 	}
@@ -121,19 +162,27 @@ sub RunCheck
     if( $grid_resource ne "" ) {
 	print SUBMIT "GridResource = $grid_resource\n"
     }
+	if($output ne "") {
+		print SUBMIT "output = $output\n";
+	}
+	if($error ne "") {
+		print SUBMIT "error = $error\n";
+	}
+	if($streamoutput ne "") {
+		print SUBMIT "stream_output = $streamoutput\n";
+	}
     if( $should_transfer_files ne "" ) {
-	print SUBMIT "ShouldTransferFiles = $should_transfer_files\n";
+		print SUBMIT "should_transfer_files = $should_transfer_files\n";
     }
     if( $when_to_transfer_output ne "" ) {
-	print SUBMIT "WhenToTransferOutput = $when_to_transfer_output\n";
+		print SUBMIT "when_to_transfer_output = $when_to_transfer_output\n";
     }
     if( $append_submit_commands ne "" ) {
         print SUBMIT "\n" . $append_submit_commands . "\n";
     }
-    print SUBMIT "queue $args{queue_sz}\n";
+    print SUBMIT "queue $queuesz\n";
     close( SUBMIT );
 
-    my $result = 0;
 	if (defined $args{GetClusterId}) {
     	$result = CondorTest::RunTest($testname, $submit_fname, 0, $args{GetClusterId});
 	} else {
@@ -141,6 +190,23 @@ sub RunCheck
 	}
     CondorTest::RegisterResult( $result, %args );
     return $result;
+}
+
+sub ExamineSlots
+{
+	my $line = "";
+
+	my $available = 0;
+	my @jobs = `condor_status`;
+	foreach my $job (@jobs) {
+		chomp($job);
+		$line = $job;
+		if($line =~ /^\s*Total\s+(\d+)\s*(\d+)\s*(\d+)\s*(\d+).*/) {
+			print "<$4> unclaimed slots\n";
+			$available = $4;
+		}
+	}
+	return($available);
 }
 
 1;

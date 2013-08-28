@@ -393,6 +393,7 @@ void INFNBatchJob::doEvaluateState()
 			if ( myResource->GahpIsRemote() ) {
 				// This job requires a transfer gahp
 				ASSERT( m_xfer_gahp );
+				bool already_started = m_xfer_gahp->isStarted();
 				if ( m_xfer_gahp->Startup() == false ) {
 					dprintf( D_ALWAYS, "(%d.%d) Error starting transfer GAHP\n",
 							 procID.cluster, procID.proc );
@@ -403,6 +404,17 @@ void INFNBatchJob::doEvaluateState()
 					jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
 					gmState = GM_HOLD;
 					break;
+				}
+				// Try creating the security session only when we first
+				// start up the FT GAHP.
+				// For now, failure to create the security session is
+				// not fatal. FT GAHPs older than 8.1.1 didn't have a
+				// CEDAR security session command and BOSCO had another
+				// way to authenticate FileTransfer connections.
+				if ( !already_started &&
+					 m_xfer_gahp->CreateSecuritySession() == false ) {
+					dprintf( D_ALWAYS, "(%d.%d) Error creating security session with transfer GAHP\n",
+							 procID.cluster, procID.proc );
 				}
 			}
 			if ( jobProxy ) {
@@ -520,9 +532,19 @@ void INFNBatchJob::doEvaluateState()
 					gmState = GM_HOLD;
 					break;
 				}
-				// TODO Can we determine the ft-gahp's Condor version?
-				CondorVersionInfo ver_info;
-				m_filetrans->setPeerVersion( ver_info );
+
+				// Set the Condor version of the FT GAHP. If we don't know
+				// its version, then assume it's pre-8.1.0.
+				// In 8.1, the file transfer protocol changed and we added
+				// a command to exchange Condor version strings with the
+				// FT GAHP.
+				const char *ver_str = m_xfer_gahp->getCondorVersion();
+				if ( ver_str && ver_str[0] ) {
+					m_filetrans->setPeerVersion( ver_str );
+				} else {
+					CondorVersionInfo ver( 8, 0, 0 );
+					m_filetrans->setPeerVersion( ver );
+				}
 			}
 
 			// If available, use SSH tunnel for file transfer connections.
@@ -749,9 +771,19 @@ void INFNBatchJob::doEvaluateState()
 					gmState = GM_HOLD;
 					break;
 				}
-				// TODO Can we determine the ft-gahp's Condor version?
-				CondorVersionInfo ver_info;
-				m_filetrans->setPeerVersion( ver_info );
+
+				// Set the Condor version of the FT GAHP. If we don't know
+				// its version, then assume it's pre-8.1.0.
+				// In 8.1, the file transfer protocol changed and we added
+				// a command to exchange Condor version strings with the
+				// FT GAHP.
+				const char *ver_str = m_xfer_gahp->getCondorVersion();
+				if ( ver_str && ver_str[0] ) {
+					m_filetrans->setPeerVersion( ver_str );
+				} else {
+					CondorVersionInfo ver( 8, 0, 0 );
+					m_filetrans->setPeerVersion( ver );
+				}
 
 				// Add extra remaps for the canonical stdout/err filenames.
 				// If using the FileTransfer object, the starter will rename the

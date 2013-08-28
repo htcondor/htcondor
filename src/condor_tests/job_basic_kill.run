@@ -1,0 +1,161 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+##
+## This test check availability and usage contol of the new
+## local, resources in both a static configuration and in psolts.
+## It is model after what we did to test concurrency limits
+## as we are checking the same sorts of things. bt
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+
+my $ClusterId = 0;
+my $expect_return = 0;
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	WANT_SUSPEND = FALSE
+	KILLING_TIMEOUT = 1
+	MachineMaxVacateTime = 5
+	NEGOTIATION_INTERVAL = 10
+	KILL = TRUE
+	ALL_DEBUG = D_ALWAYS
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"jobbasickill");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "basickill",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+my $on_abort = sub {
+	CondorTest::debug("Abort from removing trap signal job.\n",1);
+};
+
+my $return = "";
+my $executecount = 0;
+my $result = 1;
+my $test_name = "job_basic_kill";
+
+my $on_execute = sub {
+	print "********************************** OnExecute *****************************\n";
+	print "waiting for size signal catching output to grow\n";
+	my $sizenow = 0;
+
+	while($sizenow < 1000) {
+		$sizenow = -s "catchallsignals.out";
+		print "<$sizenow>\n";
+	}
+	if($executecount == 0) {
+		system("condor_hold $ClusterId");
+		$executecount += 1;
+	} else {
+			print "Job ran more then once and all normal signals are being ignored even SIGTERM\n";
+	}
+};
+
+my $on_hold = sub {
+	print "Expected to be on hold\n Calling CheckForSigTermIgnore \n";
+	$return = CheckForSigTermIgnore();
+	if($return eq "Bad") {
+		print "Never found that sigterm was ignore. \nRemoving job before death!\n";
+		die "No ignored sigterm, can not prove KILL =TRUE worked.\n";
+	}
+	system("condor_rm $ClusterId");
+};
+
+my $on_evictedwithoutcheckpoint = sub {
+	print "Evicted Without Checkpoint\n";
+};
+
+my $GetClusterId = sub {
+	my $cid = shift;
+	$ClusterId = $cid;
+	print "Resquestd Cluster Got $ClusterId\n";
+	##########################
+	#
+	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
+	# position which is always an undefined variable EXCEPT when it is a call back routine 
+	# to pass out the cluster Id.
+	#
+	##########################
+	#runcmd("condor_q",{emit_output => 1});
+};
+
+#Do a job before setting tesing exit codes
+print "First test basic job\n";
+$result = SimpleJob::RunCheck(); # jobid 1
+
+my $catchlog  = "catchallsignals.out";
+system("rm -f $catchlog");
+
+$expect_return = 0;
+$result = SimpleJob::RunCheck(
+	test_name => "$test_name",
+	on_abort => $on_abort,
+	on_hold => $on_hold,
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	on_execute => $on_execute,
+	runthis => "x_catchallsignals.pl",
+	timeout => 120,
+	output => "catchallsignals.out",
+	stream_output => "True",
+	should_transfer_files => "YES",
+	when_to_transfer_output => "ON_EXIT",
+	queue_sz => 1,
+	duration => $expect_return,
+	GetClusterId => $GetClusterId,
+);
+print "******************** Test for KILL = TRUE\n";
+if($result == 1) {
+	print "ok\n\n\n";
+} else {
+	print "bad\n\n\n";
+}
+
+
+CondorTest::EndTest();
+
+sub CheckForSigTermIgnore
+{
+	my $line = "";
+	while(!(-f $catchlog)) {
+		print "Waiting for $catchlog\n";
+		sleep( 1 );
+	}
+	open(CL,"<$catchlog") or die "Can not open <$catchlog>:$!\n";
+	while(<CL>) {
+		chomp();
+		$line = $_;
+		#print "****$line****\n";
+		if($line =~ /sigterm/) {
+			print "Ignored Sigterm!\n";
+			return("Good");
+		}
+	}
+	return("Bad");
+}

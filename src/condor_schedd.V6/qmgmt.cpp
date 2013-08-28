@@ -327,7 +327,7 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 		// ClassAds happened around 7.5.1.
 		// At some future point in time, this code should be removed
 		// (no earlier than the 7.7 series).
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	if ( universe == CONDOR_UNIVERSE_SCHEDULER ||
 		 universe == CONDOR_UNIVERSE_LOCAL ) {
 		job_ad->AddTargetRefs( TargetScheddAttrs );
@@ -2343,7 +2343,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
 		SetAttributeInt( cluster_id, proc_id, ATTR_LAST_JOB_STATUS, status, flags );
 	}
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 /* Disable AddTargetRefs() for now
 	else if ( strcasecmp( attr_name, ATTR_REQUIREMENTS ) == 0 ||
 			  strcasecmp( attr_name, ATTR_RANK ) ) {
@@ -2533,7 +2533,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	int universe;
 	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
 	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_UNIVERSE, &universe );
-	if( ( flags & SETDIRTY ) && ( status == RUNNING || (( universe == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( ad ) ) ) ) {
+	if( (universe != CONDOR_UNIVERSE_SCHEDULER) &&
+		( flags & SETDIRTY ) && 
+		( status == RUNNING || (( universe == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( ad ) ) ) ) {
+
 		// Add the key to list of dirty classads
 		DirtyJobIDs.rewind();
 		if( ! DirtyJobIDs.contains( key ) ) {
@@ -4873,15 +4876,17 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				continue;
 			}
 
-			if(!Runnable(&PrioRec[i].id) || scheduler.AlreadyMatched(&PrioRec[i].id)) {
+			int isRunnable = Runnable(&PrioRec[i].id);
+			int isMatched = scheduler.AlreadyMatched(&PrioRec[i].id);
+			if( !isRunnable || isMatched ) {
 					// This job's status must have changed since the
 					// time it was added to the runnable job list.
 					// Prevent this job from being considered in any
 					// future iterations through the list.
 				PrioRec[i].owner[0] = '\0';
 				dprintf(D_FULLDEBUG,
-						"record for job %d.%d skipped until PrioRec rebuild\n",
-						jobid.cluster, jobid.proc);
+						"record for job %d.%d skipped until PrioRec rebuild (%s)\n",
+						jobid.cluster, jobid.proc, isRunnable ? "already matched" : "no longer runnable");
 
 					// Ensure that PrioRecArray is rebuilt
 					// eventually, because changes in the status

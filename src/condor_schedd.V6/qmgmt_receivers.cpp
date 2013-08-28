@@ -64,9 +64,10 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 
 	case CONDOR_InitializeConnection:
 	{
+		// dprintf( D_ALWAYS, "InitializeConnection()\n" );
 		bool authenticated = true;
-	
-			// Authenticate socket, if not already done by daemonCore
+
+		// Authenticate socket, if not already done by daemonCore
 		if( !syscall_sock->triedAuthentication() ) {
 			if( IsDebugLevel(D_SECURITY) ) {
 				MyString methods;
@@ -76,25 +77,42 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 			CondorError errstack;
 			if( ! SecMan::authenticate_sock(syscall_sock, WRITE, &errstack) ) {
 					// Failed to authenticate
-				dprintf( D_ALWAYS, "SCHEDD: authentication failed: %s\n", 
+				dprintf( D_ALWAYS, "SCHEDD: authentication failed: %s\n",
 						 errstack.getFullText().c_str() );
 				authenticated = false;
 			}
 		}
 
 		if ( authenticated ) {
-			InitializeConnection( syscall_sock->getOwner(), 
-					syscall_sock->getDomain() );			
+			InitializeConnection( syscall_sock->getOwner(),
+					syscall_sock->getDomain() );
 		} else {
-			InitializeConnection( NULL, NULL );			
+			InitializeConnection( NULL, NULL );
 		}
 		return 0;
 	}
 
 	case CONDOR_InitializeReadOnlyConnection:
 	{
-			// same as InitializeConnection but no authenticate()
-		InitializeConnection( NULL, NULL );			
+		// dprintf( D_ALWAYS, "InitializeReadOnlyConnection()\n" );
+
+		// Since InitializeConnection() does nothing, and we need
+		// to record the fact that this is a read-only connection,
+		// but we have to do it in the socket (since we don't have
+		// any other persistent data structure, and it's probably
+		// the right place anyway), set the FQU.
+		//
+		// We need to record if this is a read-only connection so that
+		// we can avoid expanding $$ in GetJobAd; simply checking if the
+		// connection is authenticated isn't sufficient, because the
+		// security session cache means that read-only connection could
+		// be authenticated by a previous authenticated connection from
+		// the same address (when using host-based security) less than
+		// the expiration period ago.
+		syscall_sock->setFullyQualifiedUser( "read-only" );
+
+		// same as InitializeConnection but no authenticate()
+		InitializeConnection( NULL, NULL );
 
 		may_fork = true;
 		return 0;
@@ -753,28 +771,43 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
 		assert( syscall_sock->end_of_message() );;
 
+		// dprintf( D_ALWAYS, "(%d.%d) isAuthenticated() = %d\n", cluster_id, proc_id, syscall_sock->isAuthenticated() );
+		// dprintf( D_ALWAYS, "(%d.%d) getOwner() = %s\n", cluster_id, proc_id, syscall_sock->getOwner() );
+
 		errno = 0;
 		// Only fetch the jobad for legal values of cluster/proc
-		if ( cluster_id >= 1 && proc_id >= 0 ) {
-			// expand $$() macros in the jobad as required by GridManager.
-			// The GridManager depends on the fact that the following call
-			// expands $$ and saves the expansions to disk in case of
-			// restart.
-			ad = GetJobAd( cluster_id, proc_id, true, true );
-			// note : since we expanded the ad, ad is now a deep
-			// copy of the ad in memory, so we must delete it below.
-		}
-		if ( cluster_id >= 1 && proc_id == -1 ) {
-			// allow cluster ad to be queried as required by preen, but
-			// do NOT ask to expand $$() macros in a cluster ad!
-			ClassAd *cluster_ad = GetJobAd( cluster_id, proc_id, false, false );
-			// since we did not expand, ad is not a deep copy.
-			// thus we deep copy it now, since the below code assumes
-			// "ad" is a deep copy and therefore below we can set
-			// private attrs, delete it, etc, without messing up 
-			// the schedd's canonical copy.
-			if ( cluster_ad ) {
-				ad = new ClassAd(*cluster_ad);			
+		if( cluster_id >= 1 ) {
+			if( proc_id >= 0 ) {
+				const char * fqu = syscall_sock->getFullyQualifiedUser();
+				if( fqu != NULL && strcmp( fqu, "read-only" ) != 0 ) {
+					// expand $$() macros in the jobad as required by GridManager.
+					// The GridManager depends on the fact that the following call
+					// expands $$ and saves the expansions to disk in case of
+					// restart.
+					ad = GetJobAd( cluster_id, proc_id, true, true );
+					// note : since we expanded the ad, ad is now a deep
+					// copy of the ad in memory, so we must delete it below.
+				} else {
+					// Since we don't expand macros here, we need to make a
+					// deep copy for the code below (at least according to the
+					// original comment), despite appearances.
+					ClassAd *cluster_ad = GetJobAd( cluster_id, proc_id, false, false );
+					if ( cluster_ad ) {
+						ad = new ClassAd(*cluster_ad);
+					}
+				}
+			} else if( proc_id == -1 ) {
+				// allow cluster ad to be queried as required by preen, but
+				// do NOT ask to expand $$() macros in a cluster ad!
+				ClassAd *cluster_ad = GetJobAd( cluster_id, proc_id, false, false );
+				// since we did not expand, ad is not a deep copy.
+				// thus we deep copy it now, since the below code assumes
+				// "ad" is a deep copy and therefore below we can set
+				// private attrs, delete it, etc, without messing up
+				// the schedd's canonical copy.
+				if ( cluster_ad ) {
+					ad = new ClassAd(*cluster_ad);
+				}
 			}
 		}
 		terrno = errno;

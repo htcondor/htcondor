@@ -28,6 +28,12 @@ $testname = "job_ckpt_memory-file_std";
 my @expected_output = ( 'SUCCESS' );
 my @skipped_output_lines = ( 1, 2, 3, 4 );
 
+my $on_evictedwithcheckpoint = sub {
+	CondorTest::debug("Evicted With Checkpoint expected.\n",1);
+	CondorTest::AddCheckpoint();
+};
+
+CondorTest::RegisterEvictedWithCheckpoint($testname, $on_evictedwithcheckpoint);
 CondorTest::SetExpected(\@expected_output);
 CondorTest::SetSkipped(\@skipped_output_lines);
 

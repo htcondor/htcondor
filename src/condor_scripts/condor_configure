@@ -418,7 +418,7 @@ if ($opt_central_manager) {
 
 # Path to ganglia.d for condor_gangliad configuration
 if ( -d "${release_dir}/etc/condor/ganglia.d" ) {
-	$global_config{GANGLIA_METRICS_CONFIG_DIR}="${release_dir}/etc/condor/ganglia.d";
+	$global_config{GANGLIAD_METRICS_CONFIG_DIR}="${release_dir}/etc/condor/ganglia.d";
 }
 
 
@@ -440,6 +440,7 @@ if ($opt_bosco) {
     $local_config{CREATE_CORE_FILES }="False";
     $local_config{CONDOR_ADMIN}=" ";
     $local_config{PREEN_ARGS}="-r";
+    $local_config{NETWORK_INTERFACE}="127.0.0.1";
 
 	$daemon_list{SCHEDD} = 1;
     $daemon_list{COLLECTOR} = 1;

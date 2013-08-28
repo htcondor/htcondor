@@ -759,9 +759,10 @@ JobInfoCommunicator::checkForStarterDebugging( void )
 		// For debugging, see if there's a special attribute in the
 		// job ad that sends us into an infinite loop, waiting for
 		// someone to attach with a debugger
-	int starter_should_wait = 0;
-	job_ad->LookupInteger( ATTR_STARTER_WAIT_FOR_DEBUG,
-						  starter_should_wait );
+	volatile int starter_should_wait = 0;
+	int tmp = 0; // Can't pass volatile int into LookupInteger
+	job_ad->LookupInteger( ATTR_STARTER_WAIT_FOR_DEBUG, tmp );
+	starter_should_wait = tmp;
 	if( starter_should_wait ) {
 		dprintf( D_ALWAYS, "Job requested starter should wait for "
 				 "debugger with %s=%d, going into infinite loop\n",

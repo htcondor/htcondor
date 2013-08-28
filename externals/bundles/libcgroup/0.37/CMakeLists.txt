@@ -36,7 +36,7 @@ if (WITH_LIBCGROUP)
 		ExternalProject_Add( libcgroup
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${LIBCGROUP_STAGE}/dl
-				    URL http://parrot.cs.wisc.edu/externals/${LIBCGROUP_VER}.tar.bz2
+				    URL ${EXTERNALS_SOURCE_URL}/${LIBCGROUP_VER}.tar.bz2
 				    #--Configure step ----------
 				    CONFIGURE_COMMAND ./configure --prefix=${LIBCGROUP_INSTALL_LOC} --enable-static=yes --disable-dependency-tracking
 				    #--Build Step ----------

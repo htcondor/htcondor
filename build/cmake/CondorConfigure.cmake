@@ -448,6 +448,7 @@ option(WANT_FULL_DEPLOYMENT "Install condors deployment scripts, libs, and inclu
 option(WANT_GLEXEC "Build and install condor glexec functionality" ON)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
+option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
 
 #####################################
 # PROPER option
@@ -536,6 +537,12 @@ if (NOT PROPER)
 	cmake_minimum_required(VERSION 2.8)
 endif()
 
+# directory that externals are downloaded from. may be a local directory
+# http or https url.
+if (NOT EXTERNALS_SOURCE_URL)
+   set (EXTERNALS_SOURCE_URL "http://parrot.cs.wisc.edu/externals")
+endif()
+
 option(CACHED_EXTERNALS "enable/disable cached externals" OFF)
 set (EXTERNAL_STAGE $ENV{CONDOR_BLD_EXTERNAL_STAGE})
 if (NOT EXTERNAL_STAGE)
@@ -565,7 +572,7 @@ add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.19.6-p1 )
+add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1 )
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/postgresql/8.2.3-p1)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
@@ -587,25 +594,8 @@ if (NOT WINDOWS)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/wso2/2.1.0)
 
         if (LINUX)
-          if( NOT PROPER )
-            option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
-          else()
-            find_multiple( "ganglia" GANGLIA_FOUND )
-            check_include_files("ganglia.h" HAVE_GANGLIA_H)
-            if( GANGLIA_FOUND AND HAVE_GANGLIA_H )
-              option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
-            else()
-              option(WITH_GANGLIA "Compiling with support for GANGLIA" OFF)
-            endif()
-          endif()
+          option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)
         endif(LINUX)
-
-        if( WITH_GANGLIA )
-          # currently, libapr and libconfuse are only needed for ganglia
-	  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/apr/1.4.6)
-	  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/confuse/2.7)
-	  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/ganglia/3.6.0)
-        endif()
 
 	# the following logic if for standard universe *only*
 	if (LINUX AND NOT CLIPPED AND GLIBC_VERSION AND NOT PROPER)

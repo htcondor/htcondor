@@ -12,15 +12,15 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-8-1-0}Version 8.1.0}
+\subsection*{\label{sec:New-8-1-2}Version 8.1.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item HTCondor version 8.1.0 not yet released.
-%\item HTCondor version 8.1.0 released on Month Date, 2013.
+\item HTCondor version 8.1.2 not yet released.
+%\item HTCondor version 8.1.2 released on Month Date, 2013.
 
 \end{itemize}
 
@@ -29,13 +29,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added support for publishing information about an HTCondor pool to \TM{Ganglia}.
-See page~\pageref{sec:Config-gangliad} for more information.
-\Ticket{3515}
-
-\item Improved performance of the \Condor{collector} when running
-at sites that do not observer daylight savings times.
-\Ticket{2898}
+\item None.
 
 \end{itemize}
 
@@ -52,6 +46,253 @@ at sites that do not observer daylight savings times.
 \begin{itemize}
 
 \item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-1-1}Version 8.1.1}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.1.1 not yet released.
+%\item HTCondor version 8.1.1 released on Month Date, 2013.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Reduced the number of calls to the service when managing EC2 jobs. This
+should increase the number of EC2 jobs HTCondor can manage on a given service
+without overloading it.
+\Ticket{3683}
+
+\item When configuration variable \Macro{USE\_SHARED\_PORT} is \Expr{True},
+\Macro{SHARED\_PORT} will now be automatically added to \Macro{DAEMON\_LIST}.
+To disable this new behavior, set the new configuration variable:
+\begin{verbatim}
+  AUTO_INSERT_SHARED_PORT_IN_DAEMON_LIST = False
+\end{verbatim}
+\Ticket{3799}
+
+\item Floating point values in ClassAds are now printed as 64-bit
+double precision values when sent over the network, written to disk, and
+displayed using the \Opt{-long} or \Opt{-autoformat} options of
+\Condor{status} and \Condor{q}.
+\Ticket{3363}
+
+\item In the Pegasus/DAGMan workflow metrics,
+as documented in section ~\ref{sec:DAGMetrics},
+the two metrics
+\Expr{dagman\_id} and \Expr{parent\_dagman\_id} are now reported
+as the \Attr{ClusterId} of the \Condor{dagman} job.  This
+eliminates any privacy concerns with reporting the \Condor{schedd} 
+daemon's address,
+which includes the submit machine's IP address.
+
+\item The python bindings now can perform the equivalent of 
+\Condor{ping} as a part of the \texttt{SecMan} object.
+\Ticket{3857}
+
+\item The \Condor{gridmanager} and \Condor{ft-gahp} now create
+dynamic security session for performing file transfers.
+Previously, the security configuration had to be set in a special
+way for file transfers with the \Condor{ft-gahp} to work.
+\Ticket{3536}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item \Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE} now accepts tabs in addition to spaces as delimiters.
+\Ticket{3798}
+
+\item Configuration variable \Macro{VALID\_SPOOL\_FILES} has been expanded
+to accept a single asterisk wild card character in each listed file name.
+\Ticket{3764}
+
+\item The new configuration variable \Macro{GAHP\_DEBUG\_HIDE\_SENSITIVE\_DATA}
+is a boolean value that defaults to hiding sensitive data 
+such as security keys and passwords
+when communication with a GAHP server is written to a daemon log.
+\Ticket{3536}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item The \Condor{gridmanager} now does proper failure recovery when
+submitting EC2 grid universe jobs to services that do not support 
+the EC2 ClientToken parameter.
+Previously, if there was a failure when submitting jobs to OpenStack
+or Eucalyptus, the jobs could be submitted twice.
+\Ticket{3682}
+
+\item Fixed the printing of nested ClassAds, so that the nested ClassAds
+can be read back properly.
+\Ticket{3772}
+
+\item Fixed a bug between the \Condor{gridmanager} and \Condor{ft-gahp}
+that caused file transfers to fail if one of the two daemons was older
+than version 8.1.0.
+\Ticket{3856}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-1-0}Version 8.1.0}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.1.0 released on August 5, 2013.
+This release contains all bug fixes from the stable release version 8.0.1.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item Added support for publishing information about an HTCondor pool 
+to \TM{Ganglia}.
+See section~\ref{sec:Config-gangliad} on 
+page~\pageref{sec:Config-gangliad} for configuration variable details.
+\Ticket{3515}
+
+\item Improved the performance of the \Condor{collector} daemon when running
+at sites that do not observe daylight savings time.
+\Ticket{2898}
+
+\item \Condor{q}, \Condor{rm}, \Condor{status} and \Condor{qedit} are now 
+more consistent in the way they handle the \Opt{-constraint} option.
+\Ticket{1156}
+
+\item The new \Condor{dagman\_metrics\_reporter} executable
+with manual page at ~\pageref{man-condor-dagman-metrics-reporter},
+reports metrics for DAGMan workflows running under Pegasus.  \Condor{dagman}
+now generates an output file of the relevant metrics,
+as described at ~\pageref{sec:DAGMetrics}.
+\Ticket{3532}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item The default value of configuration variable
+\Macro{COLLECTOR\_MAX\_FILE\_DESCRIPTORS} has changed to 10240,
+and the default value of configuration variable 
+\Macro{SCHEDD\_MAX\_FILE\_DESCRIPTORS} has changed to 4096.
+This increases the scalability of the default configuration.
+\Ticket{3626}
+
+\item The new configuration variable
+\Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE} enables dynamic
+adjustment of the level of file transfer concurrency in order to
+keep the disk load generated by transfers below a specified level.
+Supporting this new feature are configuration variables
+\Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE\_WAIT\_BETWEEN\_INCREMENTS},
+\Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE\_SHORT\_HORIZON}, and
+\Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE\_LONG\_HORIZON}.
+\Ticket{3613}
+
+\item The following new \Condor{schedd} ClassAd attributes are for
+monitoring file transfer activity:
+\AdAttr{TransferQueueMBWaitingToDownload},
+\AdAttr{TransferQueueMBWaitingToUpload},
+\AdAttr{FileTransferDiskThrottleLevel},
+\AdAttr{FileTransferDiskThrottleHigh}, and
+\AdAttr{FileTransferDiskThrottleLow}.
+\Ticket{3613}
+
+\item The default value for the configuration variable
+\Macro{PASSWD\_CACHE\_REFRESH} has been changed from 300 seconds to
+72000 seconds (20 hours).
+\Ticket{3723}
+
+\item The new configuration variables
+\Macro{DAGMAN\_PEGASUS\_REPORT\_METRICS} and
+\Macro{DAGMAN\_PEGASUS\_REPORT\_TIMEOUT}
+set defaults used by the new \Condor{dagman\_metrics\_reporter} executable,
+which reports metrics for DAGMan jobs running under Pegasus.
+\Ticket{3532}
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item HTCondor version 8.0.0 had an unintended change in the Chirp 
+wire protocol.
+This change caused \Condor{chirp} with the \Opt{put} option
+to fail when the execute node
+was running HTCondor version 7.8.x or earlier versions. 
+HTCondor 8.0.1 and later
+versions will now send the original wire protocol, and accept either the
+original protocol, or the variant that HTCondor version 8.0.0 sends.
+\Ticket{3735}
+
+\item Fixed a bug that could cause the daemons to crash on Unix platforms,
+if the operating system reported that a job owner's account 
+did not exist, for example due to a temporary NIS or LDAP failure.
+\Ticket{3723}
+
+\item Fixed a bug that resulted in a misleading error message when
+\Condor{status} with the \Opt{-constraint} option specified a constraint 
+that could not be parsed.
+\Ticket{1319}
+
+\item Fixed a typo in the output of \Condor{q},
+where a period was erroneously present within a heading.
+\Ticket{3703}
 
 \end{itemize}
 

@@ -157,6 +157,30 @@ patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warn
 		# The enable-static-nss patch works, and disable link warning about dynamic nss
 		set (GLIBC_PATCH patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/enable-static-nss.patch && patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-static-link-warning.patch && patch --binary -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warning.patch && patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-nscd.patch)
 
+	elseif(${GLIBC_VERSION} STREQUAL "213")
+		if (${SYS_ARCH} STREQUAL "X86_64")
+			set (VER 2.13-38)
+			set (GLIBC_TARNAME glibc-2.13-38)
+
+			set (GLIBC_FLAGS export CC=gcc-4.4 && export CXX=g++-4.4 && export AUTOCONF=false && export MAKEINFO=: && export "CFLAGS=-pipe -O2 -fstrict-aliasing -g")
+
+            # Omitted --enable-stackguard-randomization
+            # Debian's ./debian/rules constructs a local include/ directory
+            # that's duplicated in /usr/include, but only if you install
+            # the 'gcc-multilib' package.  Installing a gcc-specific multilib
+            # won't work.  *sigh*
+			set (GLIBC_CONFIGURE ./configure CC=gcc-4.4 CXX=g++-4.4 "CFLAGS=-pipe -O2 -fstrict-aliasing -g" --host=x86_64-linux-gnu --build=x86_64-linux-gnu --without-cvs --enable-add-ons=libidn,nptl --enable-profile --without-selinux "--with-pkgversion=Debian EGLIBC 2.13-38" --with-bugurl=http://www.debian.org/Bugs/ --with-headers=/usr/include --enable-kernel=2.6.26 --enable-multi-arch --enable-static-nss)
+
+			set (GLIBC_MAKE make -j2 -r)
+		else()
+		    message(STATUS "HTCondor will not build 32-bit standard universe for glibc version ${GLIBC_VERSION}" )
+		    set(GLIBC_DETECTED OFF)
+		    set(CLIPPED ON PARENT_SCOPE)
+		endif()
+
+		# The enable-static-nss patch works, and disable link warning about dynamic nss
+		set (GLIBC_PATCH patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/enable-static-nss.patch && patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-static-link-warning.patch && patch --binary -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warning.patch && patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-nscd.patch)
+
 	else()
 		message(STATUS "Condor can not build standard universe for glibc version:${GLIBC_VERSION}")
 		set(GLIBC_DETECTED OFF)
@@ -171,7 +195,7 @@ patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warn
 	  ExternalProject_Add(glibc
 					  #-- Download Step ----------
 					  DOWNLOAD_DIR ${GLIBC_STAGE}/dl
-					  URL http://parrot.cs.wisc.edu/externals/${GLIBC_TARNAME}.tar.gz
+					  URL ${EXTERNALS_SOURCE_URL}/${GLIBC_TARNAME}.tar.gz
 					  #--Patch step ----------
 					  PATCH_COMMAND ${GLIBC_PATCH}
 					  #--Configure step ----------

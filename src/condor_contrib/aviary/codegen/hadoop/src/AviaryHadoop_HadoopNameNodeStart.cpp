@@ -60,9 +60,13 @@
                 
             isValidDescription  = false;
         
+                property_Unmanaged  = NULL;
+              
+            isValidUnmanaged  = false;
+        
         }
 
-       AviaryHadoop::HadoopNameNodeStart::HadoopNameNodeStart(std::string arg_Bin_file,std::string arg_Owner,std::string arg_Description)
+       AviaryHadoop::HadoopNameNodeStart::HadoopNameNodeStart(std::string arg_Bin_file,std::string arg_Owner,std::string arg_Description,AviaryHadoop::HadoopID* arg_Unmanaged)
         {
              
                  property_Bin_file;
@@ -77,11 +81,17 @@
              
             isValidDescription  = true;
             
+               property_Unmanaged  = NULL;
+             
+            isValidUnmanaged  = true;
+            
                     property_Bin_file = arg_Bin_file;
             
                     property_Owner = arg_Owner;
             
                     property_Description = arg_Description;
+            
+                    property_Unmanaged = arg_Unmanaged;
             
         }
         AviaryHadoop::HadoopNameNodeStart::~HadoopNameNodeStart()
@@ -94,6 +104,7 @@
             //calls reset method for all the properties owned by this method which are pointers.
 
             
+             resetUnmanaged();//AviaryHadoop::HadoopID
             return true;
 
         }
@@ -494,6 +505,77 @@
                      element_qname = NULL;
                   }
                  
+
+                     
+                     /*
+                      * building unmanaged element
+                      */
+                     
+                     
+                     
+                                    /*
+                                     * because elements are ordered this works fine
+                                     */
+                                  
+                                   
+                                   if(current_node != NULL && is_early_node_valid)
+                                   {
+                                       current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                       
+                                       
+                                        while(current_node && axiom_node_get_node_type(current_node, Environment::getEnv()) != AXIOM_ELEMENT)
+                                        {
+                                            current_node = axiom_node_get_next_sibling(current_node, Environment::getEnv());
+                                        }
+                                        if(current_node != NULL)
+                                        {
+                                            current_element = (axiom_element_t *)axiom_node_get_data_element(current_node, Environment::getEnv());
+                                            mqname = axiom_element_get_qname(current_element, Environment::getEnv(), current_node);
+                                        }
+                                       
+                                   }
+                                   is_early_node_valid = false;
+                                 
+                                 element_qname = axutil_qname_create(Environment::getEnv(), "unmanaged", NULL, NULL);
+                                 
+
+                           if (isParticle() ||  
+                                (current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("unmanaged", axiom_element_get_localname(current_element, Environment::getEnv())))))
+                           {
+                              if( current_node   && current_element && (axutil_qname_equals(element_qname, Environment::getEnv(), mqname) || !axutil_strcmp("unmanaged", axiom_element_get_localname(current_element, Environment::getEnv()))))
+                              {
+                                is_early_node_valid = true;
+                              }
+                              
+                                 AviaryHadoop::HadoopID* element = new AviaryHadoop::HadoopID();
+
+                                      status =  element->deserialize(&current_node, &is_early_node_valid, false);
+                                      if(AXIS2_FAILURE == status)
+                                      {
+                                          WSF_LOG_ERROR_MSG(Environment::getEnv()->log, WSF_LOG_SI, "failed in building adb object for element unmanaged");
+                                      }
+                                      else
+                                      {
+                                          status = setUnmanaged(element);
+                                      }
+                                    
+                                 if(AXIS2_FAILURE ==  status)
+                                 {
+                                     WSF_LOG_ERROR_MSG( Environment::getEnv()->log,WSF_LOG_SI,"failed in setting the value for unmanaged ");
+                                     if(element_qname)
+                                     {
+                                         axutil_qname_free(element_qname, Environment::getEnv());
+                                     }
+                                     return AXIS2_FAILURE;
+                                 }
+                              }
+                           
+                  if(element_qname)
+                  {
+                     axutil_qname_free(element_qname, Environment::getEnv());
+                     element_qname = NULL;
+                  }
+                 
           return status;
        }
 
@@ -549,6 +631,8 @@
                     
                     axis2_char_t *text_value_3;
                     axis2_char_t *text_value_3_temp;
+                    
+                    axis2_char_t text_value_4[ADB_DEFAULT_DIGIT_LIMIT];
                     
                axis2_char_t *start_input_str = NULL;
                axis2_char_t *end_input_str = NULL;
@@ -769,6 +853,66 @@
                            
                            axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
                            
+                     
+                     AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
+                     AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
+                 } 
+
+                 
+                       p_prefix = NULL;
+                      
+
+                   if (!isValidUnmanaged)
+                   {
+                      
+                           /* no need to complain for minoccurs=0 element */
+                            
+                          
+                   }
+                   else
+                   {
+                     start_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (4 + axutil_strlen(p_prefix) + 
+                                  axutil_strlen("unmanaged"))); 
+                                 
+                                 /* axutil_strlen("<:>") + 1 = 4 */
+                     end_input_str = (axis2_char_t*)AXIS2_MALLOC(Environment::getEnv()->allocator, sizeof(axis2_char_t) *
+                                 (5 + axutil_strlen(p_prefix) + axutil_strlen("unmanaged")));
+                                  /* axutil_strlen("</:>") + 1 = 5 */
+                                  
+                     
+
+                   
+                   
+                     
+                     /*
+                      * parsing unmanaged element
+                      */
+
+                    
+                    
+                            sprintf(start_input_str, "<%s%sunmanaged",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":""); 
+                            
+                        start_input_str_len = axutil_strlen(start_input_str);
+                        sprintf(end_input_str, "</%s%sunmanaged>",
+                                 p_prefix?p_prefix:"",
+                                 (p_prefix && axutil_strcmp(p_prefix, ""))?":":"");
+                        end_input_str_len = axutil_strlen(end_input_str);
+                     
+                            if(!property_Unmanaged->isParticle())
+                            {
+                                axutil_stream_write(stream, Environment::getEnv(), start_input_str, start_input_str_len);
+                            }
+                            property_Unmanaged->serialize(current_node, parent_element,
+                                                                                 property_Unmanaged->isParticle() || false, namespaces, next_ns_index);
+                            
+                            if(!property_Unmanaged->isParticle())
+                            {
+                                axutil_stream_write(stream, Environment::getEnv(), end_input_str, end_input_str_len);
+                            }
+                            
                      
                      AXIS2_FREE(Environment::getEnv()->allocator,start_input_str);
                      AXIS2_FREE(Environment::getEnv()->allocator,end_input_str);
@@ -1027,6 +1171,111 @@
            AviaryHadoop::HadoopNameNodeStart::setDescriptionNil()
            {
                return resetDescription();
+           }
+
+           
+
+            /**
+             * Getter for unmanaged by  Property Number 4
+             */
+            AviaryHadoop::HadoopID* WSF_CALL
+            AviaryHadoop::HadoopNameNodeStart::getProperty4()
+            {
+                return getUnmanaged();
+            }
+
+            /**
+             * getter for unmanaged.
+             */
+            AviaryHadoop::HadoopID* WSF_CALL
+            AviaryHadoop::HadoopNameNodeStart::getUnmanaged()
+             {
+                return property_Unmanaged;
+             }
+
+            /**
+             * setter for unmanaged
+             */
+            bool WSF_CALL
+            AviaryHadoop::HadoopNameNodeStart::setUnmanaged(
+                    AviaryHadoop::HadoopID*  arg_Unmanaged)
+             {
+                
+
+                if(isValidUnmanaged &&
+                        arg_Unmanaged == property_Unmanaged)
+                {
+                    
+                    return true;
+                }
+
+                
+
+                
+                resetUnmanaged();
+
+                
+                    if(NULL == arg_Unmanaged)
+                         
+                {
+                    /* We are already done */
+                    return true;
+                }
+                
+                        property_Unmanaged = arg_Unmanaged;
+                        isValidUnmanaged = true;
+                    
+                return true;
+             }
+
+             
+
+           /**
+            * resetter for unmanaged
+            */
+           bool WSF_CALL
+           AviaryHadoop::HadoopNameNodeStart::resetUnmanaged()
+           {
+               int i = 0;
+               int count = 0;
+
+
+               
+            
+                
+
+                if(property_Unmanaged != NULL)
+                {
+                   
+                   
+                         delete  property_Unmanaged;
+                     
+
+                   }
+
+                
+                
+                
+               isValidUnmanaged = false; 
+               return true;
+           }
+
+           /**
+            * Check whether unmanaged is nill
+            */
+           bool WSF_CALL
+           AviaryHadoop::HadoopNameNodeStart::isUnmanagedNil()
+           {
+               return !isValidUnmanaged;
+           }
+
+           /**
+            * Set unmanaged to nill (currently the same as reset)
+            */
+           bool WSF_CALL
+           AviaryHadoop::HadoopNameNodeStart::setUnmanagedNil()
+           {
+               return resetUnmanaged();
            }
 
            

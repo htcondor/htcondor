@@ -24,12 +24,14 @@
 			<xs:enumeration value="PENDING"/>
 			<xs:enumeration value="RUNNING"/>
 			<xs:enumeration value="EXITING"/>
+			<xs:enumeration value="UNMANAGED"/>
 		</xs:restriction>
 	</xs:simpleType>
 	<xs:complexType name="HadoopID">
 		<xs:sequence>
 			<xs:element name="id" type="xs:string" minOccurs="0"/>
 			<xs:element name="ipc" type="xs:string" minOccurs="0"/>
+			<xs:element name="http" type="xs:string" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:complexType name="HadoopNameNodeStart">
@@ -38,6 +40,8 @@
 			<xs:element name="bin_file" type="xs:string" minOccurs="0"/>
 			<xs:element name="owner" type="xs:string" minOccurs="0"/>
 			<xs:element name="description" type="xs:string" minOccurs="0"/>
+			<!--reference to an unmanaged NameNode -->
+			<xs:element name="unmanaged" type="hdp:HadoopID" minOccurs="0"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:complexType name="HadoopStart">
@@ -90,7 +94,6 @@
 			<xs:element name="state" type="hdp:HadoopStateType"/>
 			<xs:element name="status" type="mrg:Status"/>
 			<xs:element name="bin_file" type="xs:string"/>
-			<xs:element name="http" type="xs:string"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:complexType name="HadoopQueryResponse">

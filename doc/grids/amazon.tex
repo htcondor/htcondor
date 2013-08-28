@@ -182,3 +182,60 @@ EC2_GAHP_LOG = /tmp/EC2GahpLog.$(USERNAME)
 
 The \SubmitCmd{ec2} grid type does not presently permit the explicit use 
 of an HTTP proxy.
+
+The specification of a service with an \Expr{https://}, an \Expr{x509://},
+or an \Expr{euca3s://} URL validates that service's certificate,
+checking that a trusted certificate authority (CA) signed it.
+Commercial EC2 service providers generally use certificates signed by 
+widely-recognized CAs.
+These CAs will usually work without any additional configuration.  
+For other providers, a specification of trusted CAs may be needed.
+Without, errors such as the following will be in the EC2 GAHP log:
+
+\footnotesize
+\begin{verbatim}
+06/13/13 15:16:16 curl_easy_perform() failed (60): 
+'Peer certificate cannot be authenticated with given CA certificates'.
+\end{verbatim}
+\normalsize
+
+Specify trusted CAs by including their certificates in a group of trusted CAs
+either in an on disk directory or in a single file. 
+Either of these alternatives may contain multiple certificates.  
+Which is used will vary from system to system, 
+depending on the system's SSL implementation. 
+HTCondor uses \Prog{libcurl}; 
+information about the \Prog{libcurl} specification of trusted CAs
+is available at 
+
+\URL{http://curl.haxx.se/libcurl/c/curl\_easy\_setopt.html}
+
+Versions of HTCondor with standard universe support ship with their 
+own \Prog{libcurl}, which will be linked against \Prog{OpenSSL}.
+
+The behavior when specifying both a directory and a file is undefined, 
+although the EC2 GAHP allows it.
+
+The EC2 GAHP will set the CA file to whichever variable it finds first, 
+checking these in the following order:
+
+\begin{enumerate}
+\item The environment variable \Env{X509\_CERT\_FILE},
+  set when the \Condor{master} starts up.
+\item The HTCondor configuration variable \Macro{SOAP\_SSL\_CA\_FILE}.
+\end{enumerate}
+
+The EC2 GAHP supplies no default value, if it does not find a CA file.
+
+The EC2 GAHP will set the CA directory given whichever of these
+variables it finds first, 
+checking in the following order:
+
+\begin{enumerate}
+\item The HTCondor configuration variable \Macro{GSI\_DAEMON\_TRUSTED\_CA\_DIR}.
+\item The environment variable \Env{X509\_CERT\_DIR},
+  set when the \Condor{master} starts up.
+\item The HTCondor configuration variable \Macro{SOAP\_SSL\_CA\_DIR}.
+\end{enumerate}
+
+The EC2 GAHP supplies no default value, if it does not find a CA directory.

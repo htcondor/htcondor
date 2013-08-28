@@ -197,7 +197,7 @@ sub runcmd {
 	$t1 = [Time::HiRes::gettimeofday];
 
 	if(${$options}{use_system} == TRUE) {
-		print "Request to bypass open3<use_system=>TRUE>\n";
+		#print "Request to bypass open3<use_system=>TRUE>\n";
 		$rc = system("$args");
 		$t1 = [Time::HiRes::gettimeofday];
 	} else {

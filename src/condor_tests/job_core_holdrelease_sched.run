@@ -62,6 +62,11 @@ $abort = sub {
 	CondorTest::debug("Job is gone now, cool.\n",1);
 };
 
+my $on_evictedwithoutcheckpoint = sub {
+	CondorTest::debug("Evicted Without Checkpoint from removing sleep 0 jobs.\n",1);
+};
+
+
 $hold = sub
 {
 	my %args = @_;
@@ -113,6 +118,7 @@ $timed = sub
 	die "Job should have ended by now. Hold/Realease broken!\n";
 };
 
+CondorTest::RegisterEvictedWithoutCheckpoint($testname, $on_evictedwithoutcheckpoint);
 CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterAbort($testname, $abort);
 CondorTest::RegisterHold($testname, $hold);

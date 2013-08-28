@@ -26,11 +26,13 @@
 #include "condor_config.h"
 #include "dc_transfer_queue.h"
 #include "condor_email.h"
+#include "algorithm"
 
-TransferQueueRequest::TransferQueueRequest(ReliSock *sock,char const *fname,char const *jobid,char const *queue_user,bool downloading,time_t max_queue_age):
+TransferQueueRequest::TransferQueueRequest(ReliSock *sock,filesize_t sandbox_size,char const *fname,char const *jobid,char const *queue_user,bool downloading,time_t max_queue_age):
 	m_sock(sock),
 	m_queue_user(queue_user),
 	m_jobid(jobid),
+	m_sandbox_size_MB(sandbox_size/1024.0/1024.0),
 	m_fname(fname),
 	m_downloading(downloading),
 	m_max_queue_age(max_queue_age)
@@ -59,11 +61,12 @@ TransferQueueRequest::~TransferQueueRequest() {
 
 char const *
 TransferQueueRequest::Description() {
-	m_description.formatstr("%s %s job %s for %s (initial file %s)",
+	m_description.formatstr("%s %s job %s for %s (sandbox size %g MB, initial file %s)",
 					m_sock ? m_sock->peer_description() : "",
 					m_downloading ? "downloading" : "uploading",
 					m_jobid.Value(),
 					m_queue_user.Value(),
+					m_sandbox_size_MB,
 					m_fname.Value());
 	return m_description.Value();
 }
@@ -101,6 +104,12 @@ TransferQueueManager::TransferQueueManager() {
 	m_max_downloads = 0;
 	m_check_queue_timer = -1;
 	m_default_max_queue_age = 0;
+	m_throttle_disk_load = false;
+	m_disk_load_low_throttle = 0;
+	m_disk_load_high_throttle = 0;
+	m_throttle_disk_load_max_concurrency = 0;
+	m_throttle_disk_load_incremented = 0;
+	m_throttle_disk_load_increment_wait = 60;
 	m_uploading = 0;
 	m_downloading = 0;
 	m_waiting_to_upload = 0;
@@ -115,7 +124,7 @@ TransferQueueManager::TransferQueueManager() {
 	m_publish_flags = 0;
 
 	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_MAX_UPLOADING,&m_max_uploading_stat,NULL,IF_BASICPUB|m_max_uploading_stat.PubValue);
-	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING,&m_max_downloading_stat,NULL,IF_BASICPUB|m_max_uploading_stat.PubValue);
+	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING,&m_max_downloading_stat,NULL,IF_BASICPUB|m_max_downloading_stat.PubValue);
 	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_UPLOADING,&m_uploading_stat,NULL,IF_BASICPUB|m_uploading_stat.PubDefault);
 	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_DOWNLOADING,&m_downloading_stat,NULL,IF_BASICPUB|m_downloading_stat.PubDefault);
 	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD,&m_waiting_to_upload_stat,NULL,IF_BASICPUB|m_waiting_to_upload_stat.PubDefault);
@@ -143,10 +152,85 @@ TransferQueueManager::~TransferQueueManager() {
 }
 
 void
+TransferQueueManager::parseThrottleConfig(char const *config_param,bool &enable_throttle,double &low,double &high,std::string &throttle_short_horizon,std::string &throttle_long_horizon,time_t &throttle_increment_wait)
+{
+	enable_throttle = false;
+
+	std::string throttle_config;
+	if( !param(throttle_config,config_param) ) {
+		return;
+	}
+
+	char *endptr=NULL;
+	low = strtod(throttle_config.c_str(),&endptr);
+	if( !endptr || !(isspace(*endptr) || *endptr == '\0') ) {
+		EXCEPT("Invalid configuration for %s: %s",config_param,throttle_config.c_str());
+		return;
+	}
+
+	while( isspace(*endptr) ) endptr++;
+
+	if( *endptr == '\0' ) {
+		high = low;
+		low = 0.9*high;
+	}
+	else if( strncmp(endptr,"to",2)==0 && isspace(endptr[2]) ) {
+		endptr += 3;
+		while( isspace(*endptr) ) endptr++;
+
+		high = strtod(endptr,&endptr);
+		if( !endptr || *endptr != '\0' ) {
+			EXCEPT("Invalid configuration for %s: %s",config_param,throttle_config.c_str());
+			return;
+		}
+	}
+	else {
+		EXCEPT("Invalid configuration for %s: %s",config_param,throttle_config.c_str());
+	}
+
+	if( high < low ) {
+		EXCEPT("Invalid configuration for %s (first value must be less than second): %s",config_param,throttle_config.c_str());
+	}
+	if( high < 0 || low < 0 ) {
+		EXCEPT("Invalid configuration for %s (values must be positive): %s",config_param,throttle_config.c_str());
+	}
+
+		// for now, these are hard-coded
+	std::string horizon_param;
+	formatstr(horizon_param,"%s_SHORT_HORIZON",config_param);
+	param(throttle_short_horizon,horizon_param.c_str(),"1m");
+	formatstr(horizon_param,"%s_LONG_HORIZON",config_param);
+	param(throttle_long_horizon,horizon_param.c_str(),"5m");
+
+	std::string wait_param;
+	formatstr(wait_param,"%s_WAIT_BETWEEN_INCREMENTS",config_param);
+	throttle_increment_wait = (time_t) param_integer(wait_param.c_str(),60,0);
+
+	m_throttle_disk_load = true;
+}
+
+void
 TransferQueueManager::InitAndReconfig() {
 	m_max_downloads = param_integer("MAX_CONCURRENT_DOWNLOADS",10,0);
 	m_max_uploads = param_integer("MAX_CONCURRENT_UPLOADS",10,0);
 	m_default_max_queue_age = param_integer("MAX_TRANSFER_QUEUE_AGE",3600*2,0);
+
+	parseThrottleConfig("FILE_TRANSFER_DISK_LOAD_THROTTLE",m_throttle_disk_load,m_disk_load_low_throttle,m_disk_load_high_throttle,m_disk_throttle_short_horizon,m_disk_throttle_long_horizon,m_throttle_disk_load_increment_wait);
+
+	if( m_throttle_disk_load ) {
+		m_stat_pool.AddProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_LOW,&m_disk_throttle_low_stat,NULL,IF_BASICPUB|m_disk_throttle_low_stat.PubValue);
+		m_stat_pool.AddProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_HIGH,&m_disk_throttle_high_stat,NULL,IF_BASICPUB|m_disk_throttle_high_stat.PubValue);
+		m_stat_pool.AddProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_LIMIT,&m_disk_throttle_limit_stat,NULL,IF_BASICPUB|m_disk_throttle_limit_stat.PubValue);
+		m_stat_pool.AddProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_EXCESS,&m_disk_throttle_excess,NULL,IF_BASICPUB|m_disk_throttle_excess.PubDefault);
+		m_stat_pool.AddProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_SHORTFALL,&m_disk_throttle_shortfall,NULL,IF_BASICPUB|m_disk_throttle_shortfall.PubDefault);
+	}
+	else {
+		m_stat_pool.RemoveProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_LOW);
+		m_stat_pool.RemoveProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_HIGH);
+		m_stat_pool.RemoveProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_LIMIT);
+		m_stat_pool.RemoveProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_EXCESS);
+		m_stat_pool.RemoveProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_SHORTFALL);
+	}
 
 	m_update_iostats_interval = param_integer("TRANSFER_IO_REPORT_INTERVAL",10,0);
 	if( m_update_iostats_interval != 0 ) {
@@ -179,12 +263,34 @@ TransferQueueManager::InitAndReconfig() {
 
 	m_iostats.ConfigureEMAHorizons(ema_config);
 
+	if( m_throttle_disk_load ) {
+		if( !m_iostats.file_read.HasEMAHorizonNamed(m_disk_throttle_short_horizon.c_str()) ) {
+			std::string shortest_horizon = m_iostats.file_read.ShortestHorizonEMAName();
+			dprintf(D_ALWAYS,"WARNING: FILE_TRANSFER_DISK_LOAD_THROTTLE_SHORT_HORIZON=%s does not match a timespan listed in TRANSFER_IO_REPORT_TIMESPANS=%s; using %s instead\n",
+					m_disk_throttle_short_horizon.c_str(),
+					iostat_timespans.c_str(),
+					shortest_horizon.c_str());
+			m_disk_throttle_short_horizon = shortest_horizon;
+		}
+		if( !m_iostats.file_read.HasEMAHorizonNamed(m_disk_throttle_long_horizon.c_str()) ) {
+			std::string shortest_horizon = m_iostats.file_read.ShortestHorizonEMAName();
+			dprintf(D_ALWAYS,"WARNING: FILE_TRANSFER_DISK_LOAD_THROTTLE_LONG_HORIZON=%s does not match a timespan listed in TRANSFER_IO_REPORT_TIMESPANS=%s; using %s instead\n",
+					m_disk_throttle_long_horizon.c_str(),
+					iostat_timespans.c_str(),
+					shortest_horizon.c_str());
+			m_disk_throttle_long_horizon = shortest_horizon;
+		}
+	}
+
 	for( QueueUserMap::iterator user_itr = m_queue_users.begin();
 		 user_itr != m_queue_users.end();
 		 ++user_itr )
 	{
 		user_itr->second.iostats.ConfigureEMAHorizons(ema_config);
 	}
+
+	m_disk_throttle_excess.ConfigureEMAHorizons(ema_config);
+	m_disk_throttle_shortfall.ConfigureEMAHorizons(ema_config);
 }
 
 void
@@ -217,10 +323,12 @@ int TransferQueueManager::HandleRequest(int cmd,Stream *stream)
 	MyString fname;
 	MyString jobid;
 	MyString queue_user;
+	filesize_t sandbox_size;
 	if( !msg.LookupBool(ATTR_DOWNLOADING,downloading) ||
 		!msg.LookupString(ATTR_FILE_NAME,fname) ||
 		!msg.LookupString(ATTR_JOB_ID,jobid) ||
-		!msg.LookupString(ATTR_USER,queue_user) )
+		!msg.LookupString(ATTR_USER,queue_user) ||
+		!msg.LookupInteger(ATTR_SANDBOX_SIZE,sandbox_size))
 	{
 		MyString msg_str;
 		sPrintAd(msg_str, msg);
@@ -236,6 +344,7 @@ int TransferQueueManager::HandleRequest(int cmd,Stream *stream)
 	TransferQueueRequest *client =
 		new TransferQueueRequest(
 			sock,
+			sandbox_size,
 			fname.Value(),
 			jobid.Value(),
 			queue_user.Value(),
@@ -420,12 +529,12 @@ TransferQueueManager::TransferQueueUser::Stale(unsigned int stale_recency)
 	}
 		// Check for non-negligible iostat moving averages, so we
 		// don't lose interesting data about big I/O users.
-	if( iostats.bytes_sent.BiggestEMARate()     > 100000 ||
-		iostats.bytes_received.BiggestEMARate() > 100000 ||
-		iostats.file_read.BiggestEMARate()      > 0.1 ||
-		iostats.file_write.BiggestEMARate()     > 0.1 ||
-		iostats.net_read.BiggestEMARate()       > 0.1 ||
-		iostats.net_write.BiggestEMARate()      > 0.1 )
+	if( iostats.bytes_sent.BiggestEMAValue()     > 100000 ||
+		iostats.bytes_received.BiggestEMAValue() > 100000 ||
+		iostats.file_read.BiggestEMAValue()      > 0.1 ||
+		iostats.file_write.BiggestEMAValue()     > 0.1 ||
+		iostats.net_read.BiggestEMAValue()       > 0.1 ||
+		iostats.net_write.BiggestEMAValue()      > 0.1 )
 	{
 		return false; // not stale
 	}
@@ -505,7 +614,7 @@ TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unreg
 		user_attr += "_";
 	}
 
-	flags |= stats_entry_sum_ema_rate<double>::PubDefault;
+	const int ema_flags = flags | stats_entry_sum_ema_rate<double>::PubDefault;
 
 	if( downloading ) {
 		formatstr(attr,"%sFileTransferDownloadBytes",user_attr.c_str());
@@ -514,7 +623,7 @@ TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unreg
 			iostats.bytes_received.Unpublish(*unpublish_ad,attr.c_str());
 		}
 		else {
-			m_stat_pool.AddProbe(attr.c_str(),&iostats.bytes_received,NULL,flags);
+			m_stat_pool.AddProbe(attr.c_str(),&iostats.bytes_received,NULL,ema_flags);
 		}
 		formatstr(attr,"%sFileTransferFileWriteSeconds",user_attr.c_str());
 		if( unregister ) {
@@ -522,7 +631,7 @@ TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unreg
 			iostats.file_write.Unpublish(*unpublish_ad,attr.c_str());
 		}
 		else {
-			m_stat_pool.AddProbe(attr.c_str(),&iostats.file_write,NULL,flags);
+			m_stat_pool.AddProbe(attr.c_str(),&iostats.file_write,NULL,ema_flags);
 		}
 		formatstr(attr,"%sFileTransferNetReadSeconds",user_attr.c_str());
 		if( unregister ) {
@@ -530,7 +639,15 @@ TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unreg
 			iostats.net_read.Unpublish(*unpublish_ad,attr.c_str());
 		}
 		else {
-			m_stat_pool.AddProbe(attr.c_str(),&iostats.net_read,NULL,flags);
+			m_stat_pool.AddProbe(attr.c_str(),&iostats.net_read,NULL,ema_flags);
+		}
+		formatstr(attr,"%s%s",user_attr.c_str(),"FileTransferMBWaitingToDownload");
+		if( unregister ) {
+			m_stat_pool.RemoveProbe(attr.c_str());
+			iostats.download_MB_waiting.Unpublish(*unpublish_ad,attr.c_str());
+		}
+		else {
+			m_stat_pool.AddProbe(attr.c_str(),&iostats.download_MB_waiting,NULL,flags|iostats.download_MB_waiting.PubValue);
 		}
 	}
 	if( uploading ) {
@@ -540,7 +657,7 @@ TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unreg
 			iostats.bytes_sent.Unpublish(*unpublish_ad,attr.c_str());
 		}
 		else {
-			m_stat_pool.AddProbe(attr.c_str(),&iostats.bytes_sent,NULL,flags);
+			m_stat_pool.AddProbe(attr.c_str(),&iostats.bytes_sent,NULL,ema_flags);
 		}
 		formatstr(attr,"%sFileTransferFileReadSeconds",user_attr.c_str());
 		if( unregister ) {
@@ -548,7 +665,7 @@ TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unreg
 			iostats.file_read.Unpublish(*unpublish_ad,attr.c_str());
 		}
 		else {
-			m_stat_pool.AddProbe(attr.c_str(),&iostats.file_read,NULL,flags);
+			m_stat_pool.AddProbe(attr.c_str(),&iostats.file_read,NULL,ema_flags);
 		}
 		formatstr(attr,"%sFileTransferNetWriteSeconds",user_attr.c_str());
 		if( unregister ) {
@@ -556,7 +673,15 @@ TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unreg
 			iostats.net_write.Unpublish(*unpublish_ad,attr.c_str());
 		}
 		else {
-			m_stat_pool.AddProbe(attr.c_str(),&iostats.net_write,NULL,flags);
+			m_stat_pool.AddProbe(attr.c_str(),&iostats.net_write,NULL,ema_flags);
+		}
+		formatstr(attr,"%s%s",user_attr.c_str(),"FileTransferMBWaitingToUpload");
+		if( unregister ) {
+			m_stat_pool.RemoveProbe(attr.c_str());
+			iostats.upload_MB_waiting.Unpublish(*unpublish_ad,attr.c_str());
+		}
+		else {
+			m_stat_pool.AddProbe(attr.c_str(),&iostats.upload_MB_waiting,NULL,flags|iostats.upload_MB_waiting.PubValue);
 		}
 	}
 }
@@ -568,6 +693,8 @@ TransferQueueManager::ClearTransferCounts()
 	m_waiting_to_download = 0;
 	m_upload_wait_time = 0;
 	m_download_wait_time = 0;
+	m_iostats.upload_MB_waiting = 0;
+	m_iostats.download_MB_waiting = 0;
 
 	for( QueueUserMap::iterator itr = m_queue_users.begin();
 		 itr != m_queue_users.end();
@@ -575,6 +702,19 @@ TransferQueueManager::ClearTransferCounts()
 	{
 		itr->second.running = 0;
 		itr->second.idle = 0;
+		itr->second.iostats.upload_MB_waiting = 0;
+		itr->second.iostats.download_MB_waiting = 0;
+	}
+}
+
+void
+TransferQueueManager::IOStatsChanged() {
+	if( m_throttle_disk_load &&
+		(m_waiting_to_upload > 0 || m_waiting_to_download > 0) &&
+		m_throttle_disk_load &&
+		m_throttle_disk_load_max_concurrency == m_uploading + m_downloading )
+	{
+		TransferQueueChanged();
 	}
 }
 
@@ -605,6 +745,56 @@ TransferQueueManager::CheckTransferQueue() {
 		}
 	}
 
+	if( m_throttle_disk_load ) {
+		int old_concurrency_limit = m_throttle_disk_load_max_concurrency;
+
+		double disk_load_short = m_iostats.file_read.EMAValue(m_disk_throttle_short_horizon.c_str()) +
+		                         m_iostats.file_write.EMAValue(m_disk_throttle_short_horizon.c_str());
+		double disk_load_long =  m_iostats.file_read.EMAValue(m_disk_throttle_long_horizon.c_str()) +
+		                         m_iostats.file_write.EMAValue(m_disk_throttle_long_horizon.c_str());
+
+		if( disk_load_short > m_disk_load_high_throttle ) {
+				// above the high water mark, do not start more transfers
+			m_throttle_disk_load_max_concurrency = uploading + downloading;
+		}
+		else if( disk_load_long > m_disk_load_low_throttle || disk_load_short > m_disk_load_low_throttle ) {
+				// between the high and low water mark, keep the concurrency limit as is (but at least 1)
+			if( m_throttle_disk_load_max_concurrency < 1 ) {
+				m_throttle_disk_load_max_concurrency = 1;
+				m_throttle_disk_load_incremented = time(NULL);
+			}
+		}
+		else {
+				// below the low water mark, slowly increase the concurrency limit if we are running into it
+			if( uploading + downloading == m_throttle_disk_load_max_concurrency ) {
+				time_t now = time(NULL);
+				if( m_throttle_disk_load_incremented > now ) {
+					m_throttle_disk_load_incremented = now; // clock jumped back
+				}
+				if( m_throttle_disk_load_incremented == 0 || now-m_throttle_disk_load_incremented >= m_throttle_disk_load_increment_wait ) {
+					m_throttle_disk_load_incremented = now;
+					m_throttle_disk_load_max_concurrency += 1;
+					if( m_throttle_disk_load_max_concurrency < floor(m_disk_load_low_throttle) ) {
+						m_throttle_disk_load_max_concurrency = floor(m_disk_load_low_throttle);
+					}
+				}
+			}
+		}
+
+		if( old_concurrency_limit != m_throttle_disk_load_max_concurrency ) {
+			dprintf(D_ALWAYS,
+					"TransferQueueManager: adjusted concurrency limit by %+d based on disk load: "
+					"new limit %d, load %s %f %s %f, throttle %f to %f\n",
+					m_throttle_disk_load_max_concurrency-old_concurrency_limit,
+					m_throttle_disk_load_max_concurrency,
+					m_disk_throttle_short_horizon.c_str(),
+					disk_load_short,
+					m_disk_throttle_long_horizon.c_str(),
+					disk_load_long,
+					m_disk_load_low_throttle,
+					m_disk_load_high_throttle);
+		}
+	}
 
 		// schedule new transfers
 	while( uploading < m_max_uploads || m_max_uploads <= 0 ||
@@ -613,6 +803,10 @@ TransferQueueManager::CheckTransferQueue() {
 		TransferQueueRequest *best_client = NULL;
 		int best_recency = 0;
 		unsigned int best_running_count = 0;
+
+		if( m_throttle_disk_load && (uploading + downloading >= m_throttle_disk_load_max_concurrency) ) {
+			break;
+		}
 
 		m_xfer_queue.Rewind();
 		while( m_xfer_queue.Next(client) ) {
@@ -695,39 +889,26 @@ TransferQueueManager::CheckTransferQueue() {
 		// examine requests that are still waiting
 	m_xfer_queue.Rewind();
 	while( m_xfer_queue.Next(client) ) {
-		if( !client->m_gave_go_ahead
-			&& ( (client->m_downloading && downloading==0)
- 			     || (!client->m_downloading && uploading==0) ) )
-		{
-				// This request has not been granted, but no requests
-				// are active.  This shouldn't happen for simple
-				// upload/download requests, but for future generality, we
-				// check for this case and treat it appropriately.
-			dprintf(D_ALWAYS,"TransferQueueManager: forcibly "
-					"dequeueing entry for %s, "
-					"because it is not allowed by the queue policy.\n",
-					client->Description());
-			delete client;
-			m_xfer_queue.DeleteCurrent();
-			TransferQueueChanged();
-			continue;
-		}
-
 		if( !client->m_gave_go_ahead ) {
 			clients_waiting = true;
 
+			TransferQueueUser &user = GetUserRec(client->m_up_down_queue_user);
 			int age = time(NULL) - client->m_time_born;
 			if( client->m_downloading ) {
 				m_waiting_to_download++;
 				if( age > m_download_wait_time ) {
 					m_download_wait_time = age;
 				}
+				m_iostats.download_MB_waiting += client->m_sandbox_size_MB;
+				user.iostats.download_MB_waiting += client->m_sandbox_size_MB;
 			}
 			else {
 				m_waiting_to_upload++;
 				if( age > m_upload_wait_time ) {
 					m_upload_wait_time = age;
 				}
+				m_iostats.upload_MB_waiting += client->m_sandbox_size_MB;
+				user.iostats.upload_MB_waiting += client->m_sandbox_size_MB;
 			}
 		}
 	}
@@ -853,8 +1034,32 @@ TransferQueueManager::UpdateIOStats()
 	m_waiting_to_download_stat = m_waiting_to_download;
 	m_upload_wait_time_stat = m_upload_wait_time;
 	m_download_wait_time_stat = m_download_wait_time;
+	m_disk_throttle_low_stat = m_disk_load_low_throttle;
+	m_disk_throttle_high_stat = m_disk_load_high_throttle;
+	m_disk_throttle_limit_stat = m_throttle_disk_load_max_concurrency;
+
+	double disk_load_short = m_iostats.file_read.EMAValue(m_disk_throttle_short_horizon.c_str()) +
+	                         m_iostats.file_write.EMAValue(m_disk_throttle_short_horizon.c_str());
+	double excess = disk_load_short - m_disk_load_high_throttle;
+	if( excess < 0 || !m_throttle_disk_load ) {
+		excess = 0.0;
+	}
+	double shortfall = m_disk_load_high_throttle - disk_load_short;
+	if( shortfall < 0 || !m_throttle_disk_load ) {
+		shortfall = 0.0;
+	}
+	if( excess > 0 || m_waiting_to_upload>0 || m_waiting_to_download>0 ) {
+		m_disk_throttle_excess = excess;
+		m_disk_throttle_shortfall = shortfall;
+	}
+	else {
+		m_disk_throttle_excess.SkipInterval();
+		m_disk_throttle_shortfall.SkipInterval();
+	}
 
 	m_stat_pool.Advance(1);
+
+	IOStatsChanged();
 }
 
 void
@@ -886,19 +1091,19 @@ TransferQueueManager::publish(ClassAd *ad,int pubflags)
 			m_upload_wait_time,
 			m_download_wait_time);
 
-	char const *ema_horizon = m_iostats.bytes_sent.ShortestHorizonEMARateName();
+	char const *ema_horizon = m_iostats.bytes_sent.ShortestHorizonEMAName();
 	if( ema_horizon ) {
 		dprintf(D_ALWAYS,"TransferQueueManager upload %s I/O load: %.0f bytes/s  %.3f disk load  %.3f net load\n",
 				ema_horizon,
-				m_iostats.bytes_sent.EMARate(ema_horizon),
-				m_iostats.file_read.EMARate(ema_horizon),
-				m_iostats.net_write.EMARate(ema_horizon));
+				m_iostats.bytes_sent.EMAValue(ema_horizon),
+				m_iostats.file_read.EMAValue(ema_horizon),
+				m_iostats.net_write.EMAValue(ema_horizon));
 
 		dprintf(D_ALWAYS,"TransferQueueManager download %s I/O load: %.0f bytes/s  %.3f disk load  %.3f net load\n",
 				ema_horizon,
-				m_iostats.bytes_received.EMARate(ema_horizon),
-				m_iostats.file_write.EMARate(ema_horizon),
-				m_iostats.net_read.EMARate(ema_horizon));
+				m_iostats.bytes_received.EMAValue(ema_horizon),
+				m_iostats.file_write.EMAValue(ema_horizon),
+				m_iostats.net_read.EMAValue(ema_horizon));
 	}
 
 	m_stat_pool.Publish(*ad,pubflags);

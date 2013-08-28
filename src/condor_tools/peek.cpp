@@ -32,8 +32,6 @@
 #include "condor_attributes.h"
 #include "dc_transfer_queue.h"
 
-#include <boost/lexical_cast.hpp>
-
 #include <iostream>
 
 void
@@ -118,6 +116,22 @@ private:
 	DCTransferQueue *m_xfer_q;
 };
 
+template <class T>
+static bool parse_integer(const char * str, T& val)
+{
+	char * p;
+	long long ll;
+#ifdef WIN32
+	ll = _strtoi64(str, &p, 10);
+#else
+	ll = strtol(str, &p, 10);
+#endif
+	if (p == str || (*p && ! isspace((unsigned char)*p)))
+		return false;
+	val = static_cast<T>(ll);
+	return true;
+}
+
 bool
 HTCondorPeek::parse_args(int argc, char *argv[])
 {
@@ -148,15 +162,13 @@ HTCondorPeek::parse_args(int argc, char *argv[])
 			m_name = argv[i];
 		} else if (!strcmp(argv[i],"-maxbytes")) {
 			i++;
-			if(i==argc || !argv[i]) {
+			if(i==argc || !argv[i] || *argv[i] == '-') {
 				fprintf(stderr,"-maxbytes requires an argument.\n\n");
 				usage(argv[0]);
 				exit(1);
 			}
-			try {
-				m_max_bytes = boost::lexical_cast<size_t>( argv[i] );
-			} catch( boost::bad_lexical_cast const& ) {
-				std::cerr << "Error: maxbytes (" << argv[i] << ") is not valid" << std::endl;
+			if ( ! parse_integer<size_t>(argv[i], m_max_bytes)) {
+				fprintf(stderr, "Error: maxbytes (%s) is not valid\n\n", argv[i]);
 				usage(argv[0]);
 				exit(1);
 			}
@@ -338,7 +350,7 @@ HTCondorPeek::get_transfer_queue_slot()
 
 	int timeout = 60;
 	MyString error_msg;
-	if( !m_xfer_q->RequestTransferQueueSlot(true,fname,jobid,queue_user.c_str(),timeout,error_msg) ) {
+	if( !m_xfer_q->RequestTransferQueueSlot(true,0,fname,jobid,queue_user.c_str(),timeout,error_msg) ) {
 		std::cerr << error_msg.Value() << std::endl;
 		return false;
 	}

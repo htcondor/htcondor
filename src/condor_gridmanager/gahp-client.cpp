@@ -29,6 +29,9 @@
 #include "gahp_common.h"
 #include "env.h"
 #include "condor_string.h"
+#include "condor_claimid_parser.h"
+#include "authentication.h"
+#include "condor_version.h"
 
 #include "gahp-client.h"
 #include "gridmanager.h"
@@ -42,7 +45,6 @@
 
 bool logGahpIo = true;
 unsigned long logGahpIoSize = 0;
-bool useXMLClassads = false;
 
 HashTable <HashKey, GahpServer *>
     GahpServer::GahpServersById( HASH_TABLE_SIZE,
@@ -61,8 +63,6 @@ void GahpReconfig()
 
 	logGahpIo = param_boolean( "GRIDMANAGER_GAHPCLIENT_DEBUG", true );
 	logGahpIoSize = param_integer( "GRIDMANAGER_GAHPCLIENT_DEBUG_SIZE", 0 );
-
-	useXMLClassads = param_boolean( "GAHP_USE_XML_CLASSADS", false );
 
 	tmp_int = param_integer( "GRIDMANAGER_MAX_PENDING_REQUESTS", 50 );
 
@@ -229,8 +229,14 @@ GahpServer::DeleteMe()
 	}
 }
 
+// Some GAHP commands may contain sensitive data that should be written
+// to a publically-readable log. If debug_cmd != NULL, it contains a
+// sanitized version to log.
+// For now, the caller is responsible for checking
+// GAHP_DEBUG_HIDE_SENSITIVE_DATA to see if sensitive data should be
+// sanitized.
 void
-GahpServer::write_line(const char *command)
+GahpServer::write_line(const char *command, const char *debug_cmd)
 {
 	if ( !command || m_gahp_writefd == -1 ) {
 		return;
@@ -240,8 +246,8 @@ GahpServer::write_line(const char *command)
 	daemonCore->Write_Pipe(m_gahp_writefd,"\r\n",2);
 
 	if ( logGahpIo ) {
-		std::string debug = command;
-		formatstr( debug, "'%s'", command );
+		std::string debug;
+		formatstr( debug, "'%s'", debug_cmd ? debug_cmd : command );
 		if ( logGahpIoSize > 0 && debug.length() > logGahpIoSize ) {
 			debug.erase( logGahpIoSize, std::string::npos );
 			debug += "...";
@@ -316,6 +322,9 @@ GahpServer::Reaper(Service *,int pid,int status)
 	}
 
 	if ( dead_server ) {
+		if ( !dead_server->m_sec_session_id.empty() ) {
+			daemonCore->getSecMan()->session_cache->remove( dead_server->m_sec_session_id.c_str() );
+		}
 		formatstr_cat( buf, " unexpectedly" );
 		if ( dead_server->m_gahp_startup_failed ) {
 			dprintf( D_ALWAYS, "%s\n", buf.c_str() );
@@ -830,6 +839,8 @@ GahpServer::Startup()
 		goto error_exit;
 	}
 
+	command_condor_version();
+
 		// Try and use a reponse prefix, to shield against
 		// errors which could arise if the Globus libraries
 		// linked with the GAHP server spit out information to stdout.
@@ -955,6 +966,80 @@ GahpServer::Initialize( Proxy *proxy )
 
 	is_initialized = true;
 
+	return true;
+}
+
+bool
+GahpClient::CreateSecuritySession()
+{
+	return server->CreateSecuritySession();
+}
+
+bool
+GahpServer::CreateSecuritySession()
+{
+	static const char *command = "CREATE_CONDOR_SECURITY_SESSION";
+
+	// Only create one security session per gahp
+	if ( !m_sec_session_id.empty() ) {
+		return true;
+	}
+
+		// Check if this command is supported
+	if  (m_commands_supported->contains_anycase(command)==FALSE) {
+		return false;
+	}
+
+	char *session_id = Condor_Crypt_Base::randomHexKey();
+	char *session_key = Condor_Crypt_Base::randomHexKey();
+
+	if ( !daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession( DAEMON,
+										session_id, session_key, NULL,
+										CONDOR_CHILD_FQU, NULL, 0 ) ) {
+		free( session_id );
+		free( session_key );
+		return false;
+	}
+
+	MyString session_info;
+	if ( !daemonCore->getSecMan()->ExportSecSessionInfo( session_id,
+														 session_info ) ) {
+		free( session_id );
+		free( session_key );
+		return false;
+	}
+
+	ClaimIdParser claimId( session_id, session_info.Value(), session_key );
+
+	free( session_id );
+	free( session_key );
+
+	std::string buf;
+	int x = formatstr( buf, "%s %s", command, escapeGahpString( claimId.claimId() ) );
+	ASSERT( x > 0 );
+	if ( param_boolean( "GAHP_DEBUG_HIDE_SENSITIVE_DATA", true ) ) {
+		std::string debug_buf;
+		formatstr( debug_buf, "%s XXXXXXXX", command );
+		write_line( buf.c_str(), debug_buf.c_str() );
+	} else {
+		write_line(buf.c_str());
+	}
+
+	Gahp_Args result;
+	read_argv(result);
+	if ( result.argc == 0 || result.argv[0][0] != 'S' ) {
+		const char *reason;
+		if ( result.argc > 1 ) {
+			reason = result.argv[1];
+		} else {
+			reason = "Unspecified error";
+		}
+		dprintf( D_ALWAYS, "GAHP command '%s' failed: %s\n", command, reason );
+		daemonCore->getSecMan()->session_cache->remove( claimId.secSessionId() );
+		return false;
+	}
+
+	m_sec_session_id = claimId.secSessionId();
 	return true;
 }
 
@@ -1361,6 +1446,12 @@ GahpClient::getVersion()
 	return server->m_gahp_version;
 }
 
+const char *
+GahpClient::getCondorVersion()
+{
+	return server->m_gahp_condor_version.c_str();
+}
+
 void
 GahpClient::setNormalProxy( Proxy *proxy )
 {
@@ -1618,6 +1709,32 @@ GahpServer::command_version()
 	}
 
 	return ret_val;
+}
+
+bool
+GahpServer::command_condor_version()
+{
+	static const char *command = "CONDOR_VERSION";
+
+		// Check if this command is supported
+	if ( m_commands_supported->contains_anycase( command ) == FALSE ) {
+		return false;
+	}
+
+	std::string buf;
+	int x = formatstr( buf, "%s %s", command, escapeGahpString( CondorVersion() ) );
+	ASSERT( x > 0 );
+	write_line( buf.c_str() );
+
+	Gahp_Args result;
+	read_argv(result);
+	if ( result.argc != 2 || result.argv[0][0] != 'S' ) {
+		dprintf(D_ALWAYS,"GAHP command '%s' failed\n",command);
+		return false;
+	}
+	m_gahp_condor_version = result.argv[1];
+
+	return true;
 }
 
 const char *
@@ -2667,14 +2784,8 @@ GahpClient::condor_job_submit(const char *schedd_name, ClassAd *job_ad,
 	if (!job_ad) {
 		ad_string=NULLSTRING;
 	} else {
-		if ( useXMLClassads ) {
-			classad::ClassAdXMLUnParser unparser;
-			unparser.SetCompactSpacing( true );
-			unparser.Unparse( ad_string, job_ad );
-		} else {
-			classad::ClassAdUnParser unparser;
-			unparser.Unparse( ad_string, job_ad );
-		}
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( ad_string, job_ad );
 	}
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
@@ -2752,14 +2863,8 @@ GahpClient::condor_job_update_constrained(const char *schedd_name,
 	if (!update_ad) {
 		ad_string=NULLSTRING;
 	} else {
-		if ( useXMLClassads ) {
-			classad::ClassAdXMLUnParser unparser;
-			unparser.SetCompactSpacing( true );
-			unparser.Unparse( ad_string, update_ad );
-		} else {
-			classad::ClassAdUnParser unparser;
-			unparser.Unparse( ad_string, update_ad );
-		}
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( ad_string, update_ad );
 	}
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
@@ -2878,20 +2983,11 @@ GahpClient::condor_job_status_constrained(const char *schedd_name,
 			ASSERT( *ads != NULL );
 			int idst = 0;
 			for ( int i = 0; i < *num_ads; i++,idst++ ) {
-				if ( useXMLClassads ) {
-					classad::ClassAdXMLParser parser;
-					(*ads)[idst] = new ClassAd;
-					if ( !parser.ParseClassAd( result->argv[4 + i], *(*ads)[idst] ) ) {
-						delete (*ads)[idst];
-						(*ads)[idst] = NULL;
-					}
-				} else {
-					classad::ClassAdParser parser;
-					(*ads)[idst] = new ClassAd;
-					if ( !parser.ParseClassAd( result->argv[4 + i], *(*ads)[idst] ) ) {
-						delete (*ads)[idst];
-						(*ads)[idst] = NULL;
-					}
+				classad::ClassAdParser parser;
+				(*ads)[idst] = new ClassAd;
+				if ( !parser.ParseClassAd( result->argv[4 + i], *(*ads)[idst] ) ) {
+					delete (*ads)[idst];
+					(*ads)[idst] = NULL;
 				}
 				if( (*ads)[idst] == NULL) {
 					dprintf(D_ALWAYS, "ERROR: Condor-C GAHP returned "
@@ -3003,14 +3099,8 @@ GahpClient::condor_job_update(const char *schedd_name, PROC_ID job_id,
 	if (!update_ad) {
 		ad_string=NULLSTRING;
 	} else {
-		if ( useXMLClassads ) {
-			classad::ClassAdXMLUnParser unparser;
-			unparser.SetCompactSpacing( true );
-			unparser.Unparse( ad_string, update_ad );
-		} else {
-			classad::ClassAdUnParser unparser;
-			unparser.Unparse( ad_string, update_ad );
-		}
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( ad_string, update_ad );
 	}
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
@@ -3219,14 +3309,8 @@ GahpClient::condor_job_stage_in(const char *schedd_name, ClassAd *job_ad)
 	if (!job_ad) {
 		ad_string=NULLSTRING;
 	} else {
-		if ( useXMLClassads ) {
-			classad::ClassAdXMLUnParser unparser;
-			unparser.SetCompactSpacing( true );
-			unparser.Unparse( ad_string, job_ad );
-		} else {
-			classad::ClassAdUnParser unparser;
-			unparser.Unparse( ad_string, job_ad );
-		}
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( ad_string, job_ad );
 	}
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
@@ -5884,8 +5968,8 @@ int GahpClient::ec2_vm_start( std::string service_url,
 							  std::string vpc_ip,
 							  std::string client_token,
 							  StringList & groupnames,
-							  char * &instance_id,
-							  char * &error_code)
+							  std::string &instance_id,
+							  std::string &error_code)
 {
 	// command line looks like:
 	// EC2_COMMAND_VM_START <req_id> <publickeyfile> <privatekeyfile> <ami-id> <keypair> <groupname> <groupname> ...
@@ -6003,11 +6087,11 @@ int GahpClient::ec2_vm_start( std::string service_url,
 			}			
 		} else if ( result->argc == 3 ) {
 			rc = atoi(result->argv[1]);
-			instance_id = strdup(result->argv[2]);
+			instance_id = result->argv[2];
 		} else if ( result->argc == 4 ) {
 			// get the error code
 			rc = atoi( result->argv[1] );
- 			error_code = strdup(result->argv[2]);	
+ 			error_code = result->argv[2];
  			error_string = result->argv[3];		
 		} else {
 			EXCEPT( "Bad %s result", command );
@@ -6035,7 +6119,7 @@ int GahpClient::ec2_vm_stop( std::string service_url,
 							 std::string publickeyfile,
 							 std::string privatekeyfile,
 							 std::string instance_id,
-							 char* & error_code )
+							 std::string & error_code )
 {	
 	// command line looks like:
 	// EC2_COMMAND_VM_STOP <req_id> <publickeyfile> <privatekeyfile> <instance-id>
@@ -6100,7 +6184,7 @@ int GahpClient::ec2_vm_stop( std::string service_url,
 		} else if ( result->argc == 4 ) {
 			// get the error code
 			rc = atoi( result->argv[1] );
-			error_code = strdup(result->argv[2]);
+			error_code = result->argv[2];
 			error_string = result->argv[3];			
 		} else {
 			EXCEPT( "Bad %s result", command );
@@ -6127,7 +6211,7 @@ int GahpClient::ec2_vm_status_all( std::string service_url,
                                    std::string publickeyfile,
                                    std::string privatekeyfile,
                                    StringList & returnStatus,
-                                   char* & error_code )
+                                   std::string & error_code )
 {
     static const char * command = "EC2_VM_STATUS_ALL";
 
@@ -6168,14 +6252,14 @@ int GahpClient::ec2_vm_status_all( std::string service_url,
 
 		    case 4:
 		        if( rc == 0 ) { EXCEPT( "Bad %s result", command ); }
-    		    error_code = strdup( result->argv[2] );
+    		    error_code = result->argv[2];
 	    	    error_string = result->argv[3];
                 break;
 
             default:
-                if( (result->argc - 2) % 4 != 0 ) { EXCEPT( "Bad %s result", command ); }
+                if( (result->argc - 2) % 6 != 0 ) { EXCEPT( "Bad %s result", command ); }
                 for( int i = 2; i < result->argc; ++i ) {
-                    returnStatus.append( strdup( result->argv[i] ) );
+                    returnStatus.append( result->argv[i] );
                 }
                 returnStatus.rewind();
                 break;
@@ -6203,7 +6287,7 @@ int GahpClient::ec2_vm_status( std::string service_url,
 							   std::string privatekeyfile,
 							   std::string instance_id,
 							   StringList &returnStatus,
-							   char* & error_code )
+							   std::string & error_code )
 {	
 	// command line looks like:
 	// EC2_COMMAND_VM_STATUS <return 0;"EC2_VM_STATUS";
@@ -6273,7 +6357,7 @@ int GahpClient::ec2_vm_status( std::string service_url,
 		} 
 		else if (result->argc == 4) {
 			rc = atoi( result->argv[1] );
-			error_code = strdup(result->argv[2]);
+			error_code = result->argv[2];
 			error_string = result->argv[3];
 		}
 		else if (result->argc == 6)
@@ -6290,7 +6374,7 @@ int GahpClient::ec2_vm_status( std::string service_url,
 				{
 					// get the status info
 					for (int i=2; i<result->argc; i++) {
-						returnStatus.append( strdup(result->argv[i]) );
+						returnStatus.append( result->argv[i] );
 					}
 				}
 				returnStatus.rewind();
@@ -6312,7 +6396,7 @@ int GahpClient::ec2_vm_status( std::string service_url,
 				{
 					// get the status info
 					for (int i=2; i<result->argc; i++) {
-						returnStatus.append( strdup(result->argv[i]) );
+						returnStatus.append( result->argv[i] );
 					}
 				}
 				returnStatus.rewind();
@@ -6341,7 +6425,7 @@ int GahpClient::ec2_vm_status( std::string service_url,
 int GahpClient::ec2_ping(std::string service_url,
 						 std::string publickeyfile,
 						 std::string privatekeyfile,
-						 char *& error_code )
+						 std::string & error_code )
 {
 	// we can use "Status All" command to make sure EC2 Server is alive.
 	static const char* command = "EC2_VM_STATUS_ALL";
@@ -6377,7 +6461,7 @@ int GahpClient::ec2_ping(std::string service_url,
 		int rc = atoi(result->argv[1]);
 		
 		if( result->argc == 4 ) {
-		    error_code = strdup( result->argv[2] );
+		    error_code = result->argv[2];
 		    error_string = result->argv[3];
 		}
 		
@@ -6397,13 +6481,92 @@ int GahpClient::ec2_ping(std::string service_url,
 }
 
 
+// Determine what implementation of EC2 we're talking to
+int GahpClient::ec2_vm_server_type(std::string service_url,
+								   std::string publickeyfile,
+								   std::string privatekeyfile,
+								   std::string & server_type,
+								   std::string & error_code )
+{
+	// we can use "Status All" command to make sure EC2 Server is alive.
+	static const char* command = "EC2_VM_SERVER_TYPE";
+
+	// Generate request line
+	char* esc1 = strdup( escapeGahpString(service_url) );
+	char* esc2 = strdup( escapeGahpString(publickeyfile) );
+	char* esc3 = strdup( escapeGahpString(privatekeyfile) );
+
+	std::string reqline;
+	formatstr( reqline, "%s %s %s", esc1, esc2, esc3 );
+	const char *buf = reqline.c_str();
+
+	free( esc1 );
+	free( esc2 );
+	free( esc3 );
+
+	// Check if this request is currently pending. If not, make it the pending request.
+	if ( !is_pending(command,buf) ) {
+		// Command is not pending, so go ahead and submit a new one if our command mode permits.
+		if ( m_mode == results_only ) {
+			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
+		}
+		now_pending(command, buf, deleg_proxy);
+	}
+
+	// If we made it here, command is pending.
+
+	// Check first if command completed.
+	Gahp_Args* result = get_pending_result(command, buf);
+
+	// The result should look like:
+	//		seq_id 0 server_type
+	//		seq_id 1
+	//		seq_id error_code error_string
+	if ( result ) {
+		int rc = 0;
+		if ( result->argc == 2 ) {
+			rc = atoi(result->argv[1]);
+			if ( rc == 0 ) {
+				EXCEPT( "Bad %s result", command );
+				rc = 1;
+			} else {
+				error_string = "";
+			}
+		} else if ( result->argc == 3 ) {
+			rc = atoi(result->argv[1]);
+			server_type = result->argv[2];
+		} else if ( result->argc == 4 ) {
+			// get the error code
+			rc = atoi( result->argv[1] );
+			error_code = result->argv[2];
+			error_string = result->argv[3];
+		} else {
+			EXCEPT( "Bad %s result", command );
+		}
+
+		delete result;
+		return rc;
+	}
+
+	// Now check if pending command timed out.
+	if ( check_pending_timeout(command,buf) ) {
+		// pending command timed out.
+		formatstr( error_string, "%s timed out", command );
+		return GAHPCLIENT_COMMAND_TIMED_OUT;
+	}
+
+	// If we made it here, command is still pending...
+	return GAHPCLIENT_COMMAND_PENDING;
+}
+
+
 // Create and register SSH keypair
 int GahpClient::ec2_vm_create_keypair( std::string service_url,
 									   std::string publickeyfile,
 									   std::string privatekeyfile,
 									   std::string keyname,
 									   std::string outputfile,
-									   char* & error_code)
+									   std::string & error_code)
 {
 	// command line looks like:
 	// EC2_COMMAND_VM_CREATE_KEYPAIR <req_id> <publickeyfile> <privatekeyfile> <groupname> <outputfile> 
@@ -6418,9 +6581,11 @@ int GahpClient::ec2_vm_create_keypair( std::string service_url,
 	if ( service_url.empty() ||
 		 publickeyfile.empty() ||
 		 privatekeyfile.empty() ||
-		 keyname.empty() ||
-		 outputfile.empty() ) {
+		 keyname.empty() ) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
+	}
+	if ( outputfile.empty() ) {
+		outputfile = NULL_FILE;
 	}
 	
 	// construct command line
@@ -6474,7 +6639,7 @@ int GahpClient::ec2_vm_create_keypair( std::string service_url,
 		} 
 		else if ( result->argc == 4 ) {
 			rc = atoi( result->argv[1] );
-			error_code = strdup(result->argv[2]);
+			error_code = result->argv[2];
 			error_string = result->argv[3];
 		} else {
 			EXCEPT( "Bad %s result", command );
@@ -6505,7 +6670,7 @@ int GahpClient::ec2_vm_destroy_keypair( std::string service_url,
 										std::string publickeyfile,
 										std::string privatekeyfile,
 										std::string keyname,
-										char* & error_code )
+										std::string & error_code )
 {
 	// command line looks like:
 	// EC2_COMMAND_VM_DESTROY_KEYPAIR <req_id> <publickeyfile> <privatekeyfile> <groupname> 
@@ -6573,7 +6738,7 @@ int GahpClient::ec2_vm_destroy_keypair( std::string service_url,
 		} 
 		else if ( result->argc == 4 ) {
 			rc = atoi( result->argv[1] );
-			error_code = strdup(result->argv[2]);
+			error_code = result->argv[2];
 			error_string = result->argv[3];
 		} else {
 			EXCEPT( "Bad %s result", command );
@@ -6601,7 +6766,7 @@ int GahpClient::ec2_vm_vm_keypair_all( std::string service_url,
 									   std::string publickeyfile,
 									   std::string privatekeyfile,
 									   StringList & returnStatus,
-									   char* & error_code )
+									   std::string & error_code )
 {
 	// command line looks like:
 	// EC2_COMMAND_VM_KEYPAIR_ALL <req_id> <publickeyfile> <privatekeyfile>
@@ -6665,7 +6830,7 @@ int GahpClient::ec2_vm_vm_keypair_all( std::string service_url,
 			if (result->argc == 2) {
 				error_string = "";
 			} else if (result->argc == 4) {
-				error_code = strdup(result->argv[2]);
+				error_code = result->argv[2];
 				error_string = result->argv[3];
 			} else {
 				EXCEPT("Bad %s Result",command);
@@ -6678,7 +6843,7 @@ int GahpClient::ec2_vm_vm_keypair_all( std::string service_url,
 			} else {
 				// get the status info
 				for (int i=2; i<result->argc; i++) {
-					returnStatus.append( strdup(result->argv[i]) );
+					returnStatus.append( result->argv[i] );
 				}
 				returnStatus.rewind();
 			}
@@ -6707,7 +6872,7 @@ int GahpClient::ec2_associate_address(std::string service_url,
                                       std::string instance_id, 
                                       std::string elastic_ip,
                                       StringList & returnStatus,
-                                      char* & error_code )
+                                      std::string & error_code )
 {
 
     static const char* command = "EC2_VM_ASSOCIATE_ADDRESS";
@@ -6771,7 +6936,7 @@ int GahpClient::ec2_associate_address(std::string service_url,
             if (result->argc == 2) {
                 error_string = "";
             } else if (result->argc == 4) {
-                error_code = strdup(result->argv[2]);
+                error_code = result->argv[2];
                 error_string = result->argv[3];
             } else {
                 EXCEPT("Bad %s Result",command);
@@ -6784,7 +6949,7 @@ int GahpClient::ec2_associate_address(std::string service_url,
             } else {
                 // get the status info
                 for (int i=2; i<result->argc; i++) {
-                    returnStatus.append( strdup(result->argv[i]) );
+                    returnStatus.append( result->argv[i] );
                 }
                 returnStatus.rewind();
             }
@@ -6806,7 +6971,7 @@ GahpClient::ec2_create_tags(std::string service_url,
 							std::string instance_id, 
 							StringList &tags,
 							StringList &returnStatus,
-							char* &error_code)
+							std::string &error_code)
 {
     static const char* command = "EC2_VM_CREATE_TAGS";
 
@@ -6878,7 +7043,7 @@ GahpClient::ec2_create_tags(std::string service_url,
             if (result->argc == 2) {
                 error_string = "";
             } else if (result->argc == 4) {
-                error_code = strdup(result->argv[2]);
+                error_code = result->argv[2];
                 error_string = result->argv[3];
             } else {
                 EXCEPT("Bad %s Result",command);
@@ -6889,7 +7054,7 @@ GahpClient::ec2_create_tags(std::string service_url,
             } else {
                 // get the status info
                 for (int i=2; i<result->argc; i++) {
-                    returnStatus.append(strdup(result->argv[i]));
+                    returnStatus.append(result->argv[i]);
                 }
                 returnStatus.rewind();
             }
@@ -6906,7 +7071,7 @@ int GahpClient::ec2_attach_volume(std::string service_url,
 							  std::string instance_id, 
                               std::string device_id,
                               StringList & returnStatus,
-                              char* & error_code )
+                              std::string & error_code )
 {
     static const char* command = "EC_VM_ATTACH_VOLUME";
 
@@ -6971,7 +7136,7 @@ int GahpClient::ec2_attach_volume(std::string service_url,
             if (result->argc == 2) {
                 error_string = "";
             } else if (result->argc == 4) {
-                error_code = strdup(result->argv[2]);
+                error_code = result->argv[2];
                 error_string = result->argv[3];
             } else {
                 EXCEPT("Bad %s Result",command);
@@ -6984,7 +7149,7 @@ int GahpClient::ec2_attach_volume(std::string service_url,
             } else {
                 // get the status info
                 for (int i=2; i<result->argc; i++) {
-                    returnStatus.append( strdup(result->argv[i]) );
+                    returnStatus.append( result->argv[i] );
                 }
                 returnStatus.rewind();
             }
@@ -7015,8 +7180,8 @@ int GahpClient::ec2_spot_start( std::string service_url,
                                 std::string vpc_ip,
                                 std::string client_token,
                                 StringList & groupnames,
-                                char * & request_id,
-                                char * & error_code )
+                                std::string & request_id,
+                                std::string & error_code )
 {
     static const char * command = "EC2_VM_START_SPOT";
     
@@ -7056,11 +7221,12 @@ int GahpClient::ec2_spot_start( std::string service_url,
     requestLine += escapeGahpString( vpc_subnet ) + space;
     requestLine += escapeGahpString( vpc_ip ) + space;
     requestLine += escapeGahpString( client_token );
-    
-    const char * groupName = NULL;
-    for( groupnames.rewind(); groupName != NULL; groupName = groupnames.next() ) {
-        requestLine += space + groupName;
+
+    char * groups = groupnames.print_to_delimed_string( " " );
+    if( groups != NULL ) {
+        requestLine += space + groups;
     }
+    free( groups );
     
     const char * arguments = requestLine.c_str();
     if( ! is_pending( command, arguments ) ) {
@@ -7082,12 +7248,12 @@ int GahpClient::ec2_spot_start( std::string service_url,
 
             case 3:
                 rc = atoi( result->argv[1] );
-                request_id = strdup( result->argv[2] );
+                request_id = result->argv[2];
                 break;
 
             case 4:
                 rc = atoi( result->argv[1] );
-                error_code = strdup( result->argv[2] );
+                error_code = result->argv[2];
                 error_string = result->argv[3];
                 break;
 
@@ -7111,7 +7277,7 @@ int GahpClient::ec2_spot_stop(  std::string service_url,
                                 std::string publickeyfile,
                                 std::string privatekeyfile,
                                 std::string request_id,
-                                char * & error_code )
+                                std::string & error_code )
 {
     static const char * command = "EC2_VM_STOP_SPOT";
     
@@ -7158,7 +7324,7 @@ int GahpClient::ec2_spot_stop(  std::string service_url,
             
             case 4:
                 if( rc != 0 ) {
-                    error_code = strdup( result->argv[2] );
+                    error_code = result->argv[2];
                     error_string = result->argv[3];
                 } else {
                     EXCEPT( "Bad %s result", command );
@@ -7187,7 +7353,7 @@ int GahpClient::ec2_spot_status(    std::string service_url,
                                     std::string privatekeyfile,
                                     std::string request_id,
                                     StringList & returnStatus,
-                                    char * & error_code )
+                                    std::string & error_code )
 {
     static const char * command = "EC2_VM_STATUS_SPOT";
 
@@ -7231,14 +7397,14 @@ int GahpClient::ec2_spot_status(    std::string service_url,
             if( rc == 1 ) { error_string = ""; }
         } else if( result->argc == 4 ) {
             if( rc != 1 ) { EXCEPT( "Bad %s result", command ); }
-            error_code = strdup( result->argv[2] );
+            error_code = result->argv[2];
             error_string = result->argv[3];
         } else if( (result->argc - 2) % 5 == 0 ) {
             for( int i = 2; i < result->argc; ++i ) {
                 if( strcmp( result->argv[i], NULLSTRING ) ) {
-                    returnStatus.append( strdup( result->argv[i] ) );
+                    returnStatus.append( result->argv[i] );
                 } else {
-                    returnStatus.append( strdup( "" ) );
+                    returnStatus.append( "" );
                 }
             }
         } else {
@@ -7261,7 +7427,7 @@ int GahpClient::ec2_spot_status_all(    std::string service_url,
                                         std::string publickeyfile,
                                         std::string privatekeyfile,
                                         StringList & returnStatus,
-                                        char * & error_code )
+                                        std::string & error_code )
 {
     static const char * command = "EC2_VM_STATUS_ALL_SPOT";
 
@@ -7303,14 +7469,14 @@ int GahpClient::ec2_spot_status_all(    std::string service_url,
             if( rc == 1 ) { error_string = ""; }
         } else if( result->argc == 4 ) {
             if( rc != 1 ) { EXCEPT( "Bad %s result", command ); }
-            error_code = strdup( result->argv[2] );
+            error_code = result->argv[2];
             error_string = result->argv[3];
         } else if( (result->argc - 2) % 5 == 0 ) {
             for( int i = 2; i < result->argc; ++i ) {
                 if( strcmp( result->argv[i], NULLSTRING ) ) {
-                    returnStatus.append( strdup( result->argv[i] ) );
+                    returnStatus.append( result->argv[i] );
                 } else {
-                    returnStatus.append( strdup( "" ) );
+                    returnStatus.append( "" );
                 }
             }
         } else {

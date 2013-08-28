@@ -69,6 +69,8 @@ The memory size used in both cases is the machine ClassAd attribute
 Note that \Attr{Memory} is 
 a static amount when using static slots, but it is dynamic when partitionable 
 slots are used.
+Jobs that exceed the memory limit are put into the Hold state with an
+appropriate hold reason and hold code.
 
 In addition to memory, the \Condor{starter} can also control 
 the total amount of CPU used by all processes within a job.

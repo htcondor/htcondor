@@ -225,11 +225,15 @@ Defaults to \texttt{True}.
 \end{tabular}
 \end{flushleft}
 
-\textbf{The \texttt{SecMan} class accesses the internal security object.}
-Currently, the class only allows the developer to reset security sessions.
-If a security session becomes invalid, 
-for example if the remote daemon restarts and reuses the same port 
-and the client continues to use the session, 
+\textbf{The \texttt{SecMan} class} accesses the internal security object.
+This class allows access to the security layer of HTCondor.
+
+Currently, this is limited to resetting security sessions and doing
+test authorizations against remote daemons.
+
+If a security session becomes invalid,
+for example, because the remote daemon restarts, reuses the same port, 
+and the client continues to use the session,
 then all future commands will fail with strange connection errors.
 This is the only mechanism to invalidate in-memory sessions.
 
@@ -245,6 +249,26 @@ Create a \texttt{SecMan} object.
 Invalidate all security sessions.
 Any future connections to a daemon will cause a new security session 
 to be created.
+
+\\ \hline
+\texttt{ping ( (ClassAd)ad, (str)command )}
+
+or
+
+\texttt{ping ( (string)sinful, (str)command )}
+
+Perform a test authorization against a remote daemon for a given
+command.
+
+Returns the ClassAd of the security session.
+
+Parameter \texttt{ad} is the ClassAd of the daemon as returned by
+\texttt{Collector.locate}; alternately, the sinful string can be given
+directly as the first parameter.
+
+Optional parameter \texttt{command} is the DaemonCore command to
+try; if not given, \texttt{DC\_NOP} will be used.
+
 \\ \hline
 
 \end{tabular}
@@ -287,26 +311,26 @@ $ python
 Python 2.6.6 (r266:84292, Jun 18 2012, 09:57:52) 
 [GCC 4.4.6 20110731 (Red Hat 4.4.6-3)] on linux2
 Type "help", "copyright", "credits" or "license" for more information.
->>> import condor
+>>> import htcondor
 >>> import classad
->>> coll = condor.Collector("red-condor.unl.edu")
->>> results = coll.query(condor.AdTypes.Startd, "true", ["Name"])
+>>> coll = htcondor.Collector("red-condor.unl.edu")
+>>> results = coll.query(htcondor.AdTypes.Startd, "true", ["Name"])
 >>> len(results)
 3812
 >>> results[0]
 [ Name = "slot1@red-d20n35"; MyType = "Machine"; TargetType = "Job"; CurrentTime = time() ]
->>> scheddAd = coll.locate(condor.DaemonTypes.Schedd, "red-gw1.unl.edu")
+>>> scheddAd = coll.locate(htcondor.DaemonTypes.Schedd, "red-gw1.unl.edu")
 >>> scheddAd["ScheddIpAddr"]
 '<129.93.239.132:53020>'
->>> schedd = condor.Schedd(scheddAd)
+>>> schedd = htcondor.Schedd(scheddAd)
 >>> results = schedd.query('Owner =?= "cmsprod088"', ["ClusterId", "ProcId"])
 >>> len(results)
 63
 >>> results[0]
 [ MyType = "Job"; TargetType = "Machine"; ServerTime = 1356722353; ClusterId = 674143; ProcId = 0; CurrentTime = time() ]
->>> condor.param["COLLECTOR_HOST"]
+>>> htcondor.param["COLLECTOR_HOST"]
 'hcc-briantest.unl.edu'
->>> schedd = condor.Schedd() # Defaults to the local schedd.
+>>> schedd = htcondor.Schedd() # Defaults to the local schedd.
 >>> results = schedd.query()
 >>> results[0]["RequestMemory"]
 ifthenelse(MemoryUsage isnt undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
@@ -315,7 +339,7 @@ ifthenelse(MemoryUsage isnt undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
 >>> ad=classad.parse(open("test.submit.ad"))
 >>> print schedd.submit(ad, 2) # Submits two jobs in the cluster; edit test.submit.ad to preference.
 110
->>> print schedd.act(condor.JobAction.Remove, ["111.0", "110.0"])'
+>>> print schedd.act(htcondor.JobAction.Remove, ["111.0", "110.0"])'
     [
         TotalNotFound = 0; 
         TotalPermissionDenied = 0; 
@@ -326,7 +350,7 @@ ifthenelse(MemoryUsage isnt undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
         TotalBadStatus = 0; 
         TotalError = 0
     ]
->>> print schedd.act(condor.JobAction.Hold, "Owner =?= \"bbockelm\"")'
+>>> print schedd.act(htcondor.JobAction.Hold, "Owner =?= \"bbockelm\"")'
     [
         TotalNotFound = 0; 
         TotalPermissionDenied = 0; 
@@ -339,12 +363,12 @@ ifthenelse(MemoryUsage isnt undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
     ]
 >>> schedd.edit('Owner =?= "bbockelm"', "Foo", classad.ExprTree('"baz"'))
 >>> schedd.edit(["110.0"], "Foo", '"bar"')
->>> coll = condor.Collector()
->>> master_ad = coll.locate(condor.DaemonTypes.Master)
->>> condor.send_command(master_ad, condor.DaemonCommands.Reconfig) # Reconfigures the local master and all children
->>> condor.version()
+>>> coll = htcondor.Collector()
+>>> master_ad = coll.locate(htcondor.DaemonTypes.Master)
+>>> htcondor.send_command(master_ad, htcondor.DaemonCommands.Reconfig) # Reconfigures the local master and all children
+>>> htcondor.version()
 '$CondorVersion: 7.9.4 Jan 02 2013 PRE-RELEASE-UWCS $'
->>> condor.platform()
+>>> htcondor.platform()
 '$CondorPlatform: X86_64-ScientificLinux_6.3 $'
 
 \end{verbatim}

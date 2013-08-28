@@ -9,7 +9,7 @@ on specific platforms.
 This in turn restricts the machines within an HTCondor pool where
 a job may be executed.
 An HTCondor job may now be executed on a 
-virtual machine system running VMware, Xen, or KVM.
+virtual machine running VMware, Xen, or KVM.
 This allows Windows executables to run on a Linux machine,
 and Linux executables to run on a Windows machine.
 
@@ -27,12 +27,16 @@ machine.
 Also, be careful not to confuse the virtual machines discussed here
 with the Java Virtual Machine (JVM) referenced in other parts of this
 manual.
+Targeting an HTCondor job to run on an inner virtual machine is
+also different than using the \SubmitCmd{vm} universe. 
+The \SubmitCmd{vm} universe lands and starts up a virtual machine
+instance, which is the HTCondor job, on an execute machine.
 
 HTCondor has the flexibility to run a job on either the host
 or the inner virtual machine, 
 hence two platforms appear to exist on a single machine.
 Since two platforms are an illusion, HTCondor understands the illusion, 
-allowing an HTCondor job to be execute on only
+allowing an HTCondor job to be executed on only
 one at a time.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

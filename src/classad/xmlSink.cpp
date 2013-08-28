@@ -62,7 +62,7 @@ SetCompactSpacing(
 
 void ClassAdXMLUnParser::Unparse(
 	string    &buffer, 
-	ExprTree  *expr)
+	const ExprTree  *expr)
 {
 	Unparse(buffer, expr, 0);
 	return;
@@ -71,7 +71,7 @@ void ClassAdXMLUnParser::Unparse(
 void ClassAdXMLUnParser::
 Unparse(
 	string   &buffer, 
-	ExprTree *tree, 
+	const ExprTree *tree, 
 	int      indent)
 {
 	if( !tree ) {

@@ -21,17 +21,6 @@
 #  THIS SCRIPT IS BEST VIEWED WITH TAB STOPS IN YOUR EDITOR AT 4 SPACES
 #	Author Todd Tannenbaum, 6/97
 
-# First, make sure we can find condor_config_val.  If not, print 
-# out an error message so the user can fix the problem, instead of
-# having condor_compile fail in mysterious ways.
-CONDOR_LIBDIR=`condor_config_val LIB 2> /dev/null`
-if [ $? != 0 ]; then
-    echo "ERROR: Cannot execute condor_config_val"
-    echo "You must put the directory that contains condor_config_val"
-    echo "in your \$PATH for condor_compile to work."
-    exit 1
-fi
-
 # This is an env var used to see if a condor specific ld call had
 # been invoked. It is set to an environment variable that if it is not 
 # defined means that this is the "root" call of a possibly recursive
@@ -119,21 +108,6 @@ invoke_linker () {
 	exit $linker_ret_code
 }
 
-
-# Here are the default paths/directories to use.
-# These defaults can be overidden with command-line args.
-# Customize these if desired.  The defaults provided should be
-# correct for most installations, however.
-
-CONDOR_LIBDIR=`condor_config_val LIB`
-CONDOR_CLIB=$CONDOR_LIBDIR/libcondorsyscall.a
-STATIC_ZLIB=$CONDOR_LIBDIR/libcondor_z.a
-CONDOR_ZCLIB=$CONDOR_LIBDIR/libcondorzsyscall.a
-CONDOR_RT0=$CONDOR_LIBDIR/condor_rt0.o
-CONDOR_CPLUS=$CONDOR_LIBDIR/libcondorc++support.a
-CONDOR_LD_DIR=$CONDOR_LIBDIR
-CONDOR_SPECIAL_CLIB=/not-there-bull
-
 # --------------------------------------------------
 
 # Tell our "ld" to link to with the Condor libs
@@ -203,6 +177,54 @@ do
 	# if we made it here, there are no more command-line options
 	break
 done
+
+#
+# If the user didn't tell us which library directory to use, it's OK
+# to fail if we can't find one using condor_config_val.
+#
+if [ "X$CONDOR_LIBDIR" = "X" ]; then
+    CONDOR_LIBDIR=`condor_config_val LIB 2> /dev/null`
+
+    if [ $? != 0 ]; then
+        echo "ERROR: Failed to find LIB using condor_config_val."
+        echo "You may need to add the directory containing condor_config_val"
+        echo "to your \$PATH, or you may need to set \$CONDOR_CONFIG in"
+        echo "your environment."
+        echo
+        echo "Re-running 'condor_config_val LIB' so you can see the error..."
+        condor_config_val LIB
+
+        exit 1
+    fi                                    
+fi
+
+if [ "X$CONDOR_CLIB" = "X" ]; then
+    CONDOR_CLIB=$CONDOR_LIBDIR/libcondorsyscall.a
+fi
+    
+if [ "X$CONDOR_ZLIB" = "X" ]; then
+    STATIC_ZLIB=$CONDOR_LIBDIR/libcondor_z.a
+fi
+    
+if [ "X$CONDOR_ZCLIB" = "X" ]; then
+    CONDOR_ZCLIB=$CONDOR_LIBDIR/libcondorzsyscall.a
+fi
+    
+if [ "X$CONDOR_RT0" = "X" ]; then        
+    CONDOR_RT0=$CONDOR_LIBDIR/condor_rt0.o
+fi
+
+if [ "X$CONDOR_CPLUS" = "X" ]; then
+    CONDOR_CPLUS=$CONDOR_LIBDIR/libcondorc++support.a
+fi
+
+if [ "X$CONDOR_LD_DIR" = "X" ]; then
+    CONDOR_LD_DIR=$CONDOR_LIBDIR
+fi
+    
+if [ "X$CONDOR_SPECIAL_CLIB" = "X" ]; then        
+    CONDOR_SPECIAL_CLIB=/not-there-bull
+fi
 
 #
 # If the compressed ckpt library is available, use it.

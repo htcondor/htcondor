@@ -223,6 +223,25 @@ The \Condor{master} uses this configuration variable,
 and the prefix of \MacroNI{MASTER.} causes this configuration
 to be specific to the \Condor{master} daemon.
 
+As of HTCondor version 8.1.1, evaluation works in the expected manner
+when combining the definition of a macro with
+use of a prefix that gives the subsystem name and a period. 
+Consider the example
+\begin{verbatim}
+  FILESPEC = A
+  MASTER.FILESPEC = B 
+\end{verbatim}
+combined with a later definition that incorporates \Expr{FILESPEC}
+in a macro:
+\begin{verbatim}
+  USEFILE = mydir/$(FILESPEC)
+\end{verbatim}
+When the \Condor{master} evaluates variable \MacroNI{USEFILE},
+it evaluates to \Expr{mydir/B}. 
+Previous to HTCondor version 8.1.1, it evaluated to \Expr{mydir/A}.
+When any other subsystem evaluates variable \MacroNI{USEFILE},
+it evaluates to \Expr{mydir/A}.
+
 % the local functionality added in 7.1.4
 This syntax has been further expanded to allow for the
 specification of a local name on the command line 
@@ -435,6 +454,7 @@ the changed value.
   \begin{itemize}
   \label{list:subsystem names}
   \item \verb@C_GAHP@
+  \item \verb@C_GAHP_WORKER_THREAD@
   \item \verb@CKPT_SERVER@
   \item \verb@COLLECTOR@
   \item \verb@DBMSD@
@@ -454,6 +474,7 @@ the changed value.
   \item \verb@ROOSTER@
   \item \verb@SCHEDD@
   \item \verb@SHADOW@
+  \item \verb@SHARED_PORT@
   \item \verb@STARTD@
   \item \verb@STARTER@
   %\item \verb@STORK@
@@ -1272,8 +1293,8 @@ File System Configuration File Entries''.
   and group information in large pools. In order to avoid this problem,
   HTCondor caches UID and group information internally. This integer value allows
   pool administrators to specify (in seconds) how long HTCondor should wait
-  until refreshes a cache entry. The default is set to 300 seconds, or
-  5 minutes, plus a random number of seconds between 0 and 60 to avoid
+  until refreshes a cache entry. The default is set to 72000 seconds, or
+  20 hours, plus a random number of seconds between 0 and 60 to avoid
   having lots of processes refreshing at the same time.
   This means that if a pool administrator updates the user
   or group database (for example, \File{/etc/passwd} or \File{/etc/group}),
@@ -1930,7 +1951,7 @@ Log files may optionally be specified per debug level as follows:
 
 The following macros control where and what is written to the 
 event log,
-a file that receives job user log events, 
+a file that receives job events, 
 but across all users and user's jobs.
 
 \begin{description}
@@ -2197,7 +2218,7 @@ which use DaemonCore).
     STRING = This is a string 
     NUMBER = 666
     BOOL1 = True
-    BOOL2 = CurrentTime >= $(NUMBER) || $(BOOL1)
+    BOOL2 = time() >= $(NUMBER) || $(BOOL1)
     MY_STRING = "$(STRING)"
     STARTD_ATTRS = MY_STRING, NUMBER, BOOL1, BOOL2
   \end{verbatim}
@@ -2364,18 +2385,26 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   \Condor{shared\_port} for receiving incoming connections.  
   Under Unix, write access to the location defined by 
   \Macro{DAEMON\_SOCKET\_DIR} is required for this to take
-  effect.  The default is \Expr{False}.  If set to \Expr{True},
-  \MacroNI{SHARED\_PORT} should be added to \MacroNI{DAEMON\_LIST}.
+  effect.  The default is \Expr{False}.
   For more information about using
   a shared port, see page~\pageref{sec:Config-shared-port}.
+
+\label{param:AutoIncludeSharedPortInDaemonList}
+\item[\Macro{AUTO\_INCLUDE\_SHARED\_PORT\_IN\_DAEMON\_LIST}] A boolean
+  value that specifies whether \Macro{SHARED\_PORT} should be
+  automatically inserted into \Condor{master}'s \Macro{DAEMON\_LIST}
+  when \Macro{USE\_SHARED\_PORT} is \Expr{True}.  The default for this
+  setting is \Expr{True}.
 
 \label{param:SubsysMaxFileDescriptors}
 \item[\MacroB{<SUBSYS>\_MAX\_FILE\_DESCRIPTORS}]
 \index{SUBSYS\_MAX\_FILE\_DESCRIPTORS macro@\texttt{<SUBSYS>\_MAX\_FILE\_DESCRIPTORS}}
 This setting is identical to \MacroNI{MAX\_FILE\_DESCRIPTORS}, but it
-only applies to a specific condor subsystem.  If the
+only applies to a specific subsystem.  If the
 subsystem-specific setting is unspecified, \MacroNI{MAX\_FILE\_DESCRIPTORS}
 is used.
+For the \Condor{collector} daemon, the value defaults to 10240, and
+for the \Condor{schedd} daemon, the value defaults to 4096.
 
 \label{param:MaxFileDescriptors}
 \item[\Macro{MAX\_FILE\_DESCRIPTORS}] Under Unix, this specifies the
@@ -3975,8 +4004,12 @@ WANT_HOLD_REASON = \
 
 \label{param:MaxJobRetirementTime}
 \item[\Macro{MAXJOBRETIREMENTTIME}]
-  An integer value representing the number of seconds a preempted job
-  will be allowed to run before being evicted. The default value of 0
+  When the \Condor{startd} wants to evict a job, a job which has run
+  for less than the number of seconds specified by this expression
+  will not be hard-killed.  The \Condor{startd} will wait for the job to
+  finish or to exceed this amount of time, whichever comes sooner.
+  Time spent in suspension does not count against the job.
+  The default value of 0
   (when the configuration variable is not present) means that the job
   gets no retirement time.  If the job vacating policy grants the job
   X seconds of vacating time, a preempted job will be soft-killed X seconds
@@ -4567,6 +4600,24 @@ search for the corresponding attribute names using \Expr{slot}, instead.
   The portion of this configuration variable's name identified with
   \Expr{<name>} is as defined in \Macro{MACHINE\_RESOURCE\_NAMES}.
 
+\label{param:MachineResourceInventoryResourcename}
+\item[\Macro{MACHINE\_RESOURCE\_INVENTORY\_<name>}]
+  Specifies a command line that is executed upon start up of the 
+  \Condor{startd} daemon.  The script is expected to output an attribute
+  definition of the form
+\begin{verbatim}
+  Detected<xxx>=y
+\end{verbatim}
+  where \Expr{<xxx>} is the name of a resource that exists on the machine,
+  and \Expr{y} is the number of that resource that exist on the machine.
+  This attribute is added to the machine ClassAd,
+  such that
+  these resources may be statically divided or partitioned.
+  A script may be a convenient way to specify a calculated or 
+  detected number of the resource, 
+  instead of specifying a fixed number of the resource
+  in the the configuration when set by \Macro{MACHINE\_RESOURCE\_<name>}.
+
 \label{param:MustModifyRequestExprs}
 \item[\Macro{MUST\_MODIFY\_REQUEST\_EXPRS}]
   A boolean value that defaults to \Expr{False}.
@@ -5137,6 +5188,53 @@ MAX_JOBS_RUNNING	= \
   limit is reached, additional transfers will queue up and wait before
   proceeding.
 
+\label{param:FileTransferDiskLoadThrottle}
+\item[\Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE}]
+  This configures throttling of file transfers based on the disk load
+  generated by file transfers.  The maximum number of concurrent file
+  transfers is specified by \Macro{MAX\_CONCURRENT\_UPLOADS} and
+  \Macro{MAX\_CONCURRENT\_DOWNLOADS}.  Throttling will dynamically
+  reduce the level of concurrency further to attempt to prevent disk
+  load from exceeding the specified level.  Disk load is computed as
+  the average number of file transfer processes conducting read/write
+  operations at the same time.  The throttle may be specified as a
+  single floating point number or as a range.  
+  Syntax for the range is the smaller number
+  followed by 1 or more spaces or tabs, the string \Expr{"to"},
+  1 or more spaces or tabs, and then the larger number.
+  Example: 
+\begin{verbatim}
+  FILE_TRANSFER_DISK_LOAD_THROTTLE = 5 to 6.5
+\end{verbatim}
+  If only a single number is provided, this serves as the
+  upper limit, and the lower limit is set to 90\% of the upper limit.
+  When the disk load is above the upper limit, no new transfers
+  will be started.  When between the lower and upper limits, new
+  transfers will only be started to replace ones that finish.
+  There is no default value if this variable is not defined.
+
+\label{param:FileTransferDiskLoadThrottleWaitBetweenIncrements}
+\item[\Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE\_WAIT\_BETWEEN\_INCREMENTS}]
+  This rarely configured variable sets the waiting period between
+  increments to the concurrency level set by 
+  \MacroNI{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE}.
+  The default is 1 minute.  A value that is too short risks starting
+  too many transfers before their effect on the disk load becomes apparent.
+
+\label{param:FileTransferDiskLoadThrottleShortHorizon}
+\item[\Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE\_SHORT\_HORIZON}]
+  This rarely configured variable specifies the string name of the short
+  monitoring time span to use for throttling.  The named time span must
+  exist in \Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}.  The default is
+  \Expr{1m}, which is 1 minute.
+
+\label{param:FileTransferDiskLoadThrottleLongHorizon}
+\item[\Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE\_LONG\_HORIZON}]
+  This rarely configured variable specifies the string name of the long
+  monitoring time span to use for throttling.  The named time span must
+  exist in \Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}.  The default is
+  \Expr{5m}, which is 5 minutes.
+
 \label{param:TransferQueueNameExpr}
 \item[\Macro{TRANSFER\_QUEUE\_USER\_EXPR}]
   This rarely configured expression specifies the username to be used
@@ -5204,7 +5302,7 @@ MAX_JOBS_RUNNING	= \
   file transfer.  The default is 10 seconds.  To provide sufficient
   resolution, the sampling interval should be small compared to the
   smallest time span that is configured in
-  \Macro{TRANSFER\_IO\_REPORT\_TIMESPANS}.  The shorter the sampling
+  \MacroNI{TRANSFER\_IO\_REPORT\_TIMESPANS}.  The shorter the sampling
   interval, the more overhead of data collection, which may slow down
   the \Condor{schedd}.  See
   page~\pageref{sec:FT-Scheduler-ClassAd-Attributes} for a description
@@ -5220,7 +5318,7 @@ MAX_JOBS_RUNNING	= \
   \verb|1m:60 5m:300 1h:3600 1d:86400|.  To provide sufficient
   resolution, the smallest reported time span should be large compared
   to the sampling interval, which is configured by
-  \Macro{TRANSFER\_IO\_REPORT\_INTERVAL}.  See
+  \MacroNI{TRANSFER\_IO\_REPORT\_INTERVAL}.  See
   page~\pageref{sec:FT-Scheduler-ClassAd-Attributes} for a description
   of the published attributes.
 
@@ -5726,7 +5824,7 @@ SYSTEM_PERIODIC_HOLD = \
 \footnotesize
 \begin{verbatim}
 SYSTEM_PERIODIC_RELEASE = \
-  (JobRunCount < 20 && (CurrentTime - EnteredCurrentStatus) > 1200 ) &&  \
+  (JobRunCount < 20 && (time() - EnteredCurrentStatus) > 1200 ) &&  \
     (HoldReasonCode == 6 && HoldReasonSubCode == 110) 
 \end{verbatim} 
 \normalsize
@@ -5746,7 +5844,7 @@ SYSTEM_PERIODIC_RELEASE = \
 \footnotesize
 \begin{verbatim}
 SYSTEM_PERIODIC_REMOVE = \
-  (JobStatus == 5 && CurrentTime - EnteredCurrentStatus > 3600*24*30)
+  (JobStatus == 5 && time() - EnteredCurrentStatus > 3600*24*30)
 \end{verbatim}
 \normalsize
 
@@ -6692,7 +6790,7 @@ do not specify their own with:
 \label{param:LogOnNfsIsError}
 \item[\Macro{LOG\_ON\_NFS\_IS\_ERROR}]
   A boolean value that controls whether \Condor{submit} prohibits
-  job submit files with user log files on NFS.  If
+  job submit description files with job event log files on NFS.  If
   \MacroNI{LOG\_ON\_NFS\_IS\_ERROR} is set to \Expr{True}, such
   submit files will be rejected.  If \MacroNI{LOG\_ON\_NFS\_IS\_ERROR}
   is set to \Expr{False},
@@ -6741,11 +6839,13 @@ These macros affect \Condor{preen}.
 
 \label{param:ValidSpoolFiles}
 \item[\Macro{VALID\_SPOOL\_FILES}]
-  This macro contains a (comma or space separated) list of files that
+  A comma or space separated list of files that
   \Condor{preen} considers valid files to find in the \MacroUNI{SPOOL}
   directory. There is no default value. \Condor{preen} will add to the
   list files and directories that are normally present in the
   \MacroUNI{SPOOL} directory.
+  A single asterisk (\verb|*|) wild card character is permitted in each 
+  file item within the list.
   
 \label{param:InvalidLogFiles}
 \item[\Macro{INVALID\_LOG\_FILES}]
@@ -8074,6 +8174,14 @@ These macros affect the \Condor{gridmanager}.
   Arguments to be passed to the GAHP server.
   This configuration variable is no longer used.
 
+\label{param:GahpDebugHideSensitiveData}
+\item[\Macro{GAHP\_DEBUG\_HIDE\_SENSITIVE\_DATA}]
+  A boolean value that determines when 
+  sensitive data such as security keys and passwords are hidden,
+  when communication to or from a GAHP server 
+  is written to a daemon log.
+  The default is \Expr{True}, hiding sensitive data.
+
 \label{param:GridmanagerGahpCallTimeout}
 \item[\Macro{GRIDMANAGER\_GAHP\_CALL\_TIMEOUT}]
   The number of seconds after
@@ -8986,7 +9094,7 @@ in section~\ref{sec:DAG-configuration}.
 \label{param:DAGManLogOnNfsIsError}
 \item[\Macro{DAGMAN\_LOG\_ON\_NFS\_IS\_ERROR}]
   A boolean value that controls whether \Condor{dagman} prohibits
-  node job submit description files with user log files on NFS.
+  node job submit description files with job event log files on NFS.
   This value is ignored if \MacroNI{CREATE\_LOCKS\_ON\_LOCAL\_DISK} is 
   \Expr{True} and
   \MacroNI{ENABLE\_USERLOG\_LOCKING} is \Expr{True}.
@@ -9079,7 +9187,7 @@ in section~\ref{sec:DAG-configuration}.
   will print a report of pending nodes to the \File{dagman.out} file.
   The report will only be printed if \Condor{dagman} has
   been waiting at least \MacroNI{DAGMAN\_PENDING\_REPORT\_INTERVAL}
-  seconds without seeing any node job user log events, in order to
+  seconds without seeing any node job events, in order to
   avoid cluttering the \File{dagman.out} file.
   This feature is mainly intended to help diagnose \Condor{dagman} processes 
   that are stuck waiting indefinitely for a job to finish.
@@ -9149,7 +9257,7 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManDefaultNodeLog}
 \item[\Macro{DAGMAN\_DEFAULT\_NODE\_LOG}]
-  The name of a file to be used as a user log by any node jobs that
+  The name of a file to be used as a job event log by any node jobs that
   do not define their own log files.
   The default value if not defined is \File{<DagFile>.nodes.log},
   where \verb@<DagFile>@ is replaced by the command line argument
@@ -9218,7 +9326,7 @@ in section~\ref{sec:DAG-configuration}.
 \label{param:DAGManAllowLogError}
 \item[\Macro{DAGMAN\_ALLOW\_LOG\_ERROR}]
   A boolean value defining whether \Condor{dagman} will still attempt
-  to run a node job, even if errors are detected in the user log
+  to run a node job, even if errors are detected in the job event log
   specification.  This setting has an effect only on nodes that are
   Stork jobs (not HTCondor jobs).  The default value if not defined is
   \Expr{False}.
@@ -9262,7 +9370,7 @@ in section~\ref{sec:DAG-configuration}.
   The default value is \Expr{True}.
   If \Expr{True},
   then \Condor{dagman} writes POST script terminate events to the default log,
-  and not to the user log specified in the submit description file.
+  and not to the job event log specified in the submit description file.
   \Condor{dagman} will also only read events from the default log file.
   This variable must be \Expr{False} if \Condor{dagman} from Condor
   version 7.9.0 or later is submitting jobs to a \Condor{schedd} daemon
@@ -9282,6 +9390,20 @@ in section~\ref{sec:DAG-configuration}.
   rather than thousands of notifications from each of the jobs submitted by
   \Condor{dagman}. 
 
+\label{param:DAGManPegasusReportMetrics}
+\item[\Macro{DAGMAN\_PEGASUS\_REPORT\_METRICS}]
+  The path to the \Condor{dagman\_metrics\_reporter} executable,
+  which is optionally used to anonymously report workflow metrics
+  for Pegasus workflows.  
+  Defaults to
+  \File{\$(LIBEXEC)/condor\_dagman\_metrics\_reporter}.
+
+\label{param:DAGManPegasusReportTimeout}
+\item[\Macro{DAGMAN\_PEGASUS\_REPORT\_TIMEOUT}]
+  An integer value specifying the maximum number of seconds that
+  the \Condor{dagman\_metrics\_reporter} will spend attempting
+  to report metrics to the Pegasus metrics server.
+  Defaults to 100.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -9413,6 +9535,7 @@ section~\ref{sec:Security} on Security.
   \begin{verbatim}
   GSI_DAEMON_TRUSTED_CA_DIR  = $(GSI_DAEMON_DIRECTORY)/certificates
   \end{verbatim}
+  The EC2 GAHP may use this directory in the specification a trusted CA.
 
 \label{param:GSIDaemonProxy}
 \item[\Macro{GSI\_DAEMON\_PROXY}]
@@ -10475,6 +10598,7 @@ Configuration File Macros Affecting APIs}
   When SOAP over SSL is enabled, this parameter or
   \Macro{SOAP\_SSL\_CA\_DIR} must be set.
   There is no default value.
+  The EC2 GAHP may use this file to specify a trusted CA.
 
 \label{param:SoapSSLCaDir}
 \item[\Macro{SOAP\_SSL\_CA\_DIR}]
@@ -10485,6 +10609,7 @@ Configuration File Macros Affecting APIs}
   When SOAP over SSL is enabled, this variable or the variable
   \Macro{SOAP\_SSL\_CA\_FILE} must be defined.
   There is no default value.
+  The EC2 GAHP may use this directory in the specification a trusted CA.
 
 \label{param:SoapSSLDhFile}
 \item[\Macro{SOAP\_SSL\_DH\_FILE}]
@@ -11530,19 +11655,19 @@ are published to the \Condor{collector}.
 
 \begin{description}
 
-\label{param:GangliaInterval}
-\item[\Macro{GANGLIA\_INTERVAL}]
+\label{param:GangliadInterval}
+\item[\Macro{GANGLIAD\_INTERVAL}]
   The integer number of seconds between publication of metrics to Ganglia.
   The default value is 300.
 
-\label{param:GangliaVerbosity}
-\item[\Macro{GANGLIA\_VERBOSITY}] An integer that specifies the
+\label{param:GangliadVerbosity}
+\item[\Macro{GANGLIAD\_VERBOSITY}] An integer that specifies the
   maximum verbosity level of metrics to be published to Ganglia.
   Basic metrics have a verbosity level of 0, which is the default.
   Additional metrics can be enabled by increasing the verbosity to 1.
   In the default configuration, there are no metrics with verbosity
   levels higher than 1.  Some metrics depend on attributes that are
-  not published to the collector when using the default value of
+  not published to the \Condor{collector} when using the default value of
   \Macro{STATISTICS\_TO\_PUBLISH}.  For example, per-user file
   transfer statistics will only be published to Ganglia if
   \Macro{GANGLIA\_VERBOSITY} is set to 1 or higher in the
@@ -11550,40 +11675,90 @@ are published to the \Condor{collector}.
   \Macro{STATISTICS\_TO\_PUBLISH} in the \Condor{schedd} configuration
   contains \Expr{TRANSFER:2}.
 
-\label{param:GangliaRequirements}
-\item[\Macro{GANGLIA\_REQUIREMENTS}] An optional ClassAd expression
-  that restricts the set of daemon ads to be monitored.  This could be
+\label{param:GangliadRequirements}
+\item[\Macro{GANGLIAD\_REQUIREMENTS}] An optional ClassAd expression
+  that restricts the set of daemon ClassAds to be monitored.  This could be
   used to monitor a subset of the pool.  The default is an empty
   expression, which has the effect of placing no restriction on the
-  monitored ads.  Keep in mind that this expression is applied to
-  all types of monitored ads, not just startd ads.
+  monitored ClassAds.  Keep in mind that this expression is applied to
+  all types of monitored ClassAds, not just machine ClassAds.
 
-\label{param:GangliaPerExecuteNodeMetrics}
-\item[\Macro{GANGLIA\_PER\_EXECUTE\_NODE\_METRICS}] A boolean value
+\label{param:GangliadPerExecuteNodeMetrics}
+\item[\Macro{GANGLIAD\_PER\_EXECUTE\_NODE\_METRICS}] A boolean value
   that when \Expr{False} causes metrics from execute node daemons to
   not be published.  Aggregate values from these machines will still
   be published.  The default is \Expr{True}.  This option is useful
-  for pools such as glidein pools in which it is not desired to
+  for pools such as glidein pools, in which it is not desired to
   record metrics for individual execute nodes.
 
 \label{param:GangliaConfig}
 \item[\Macro{GANGLIA\_CONFIG}]
-  Path to the Ganglia configuration file.  The default is \File{/etc/ganglia/gmond.conf}.
+  The path and file name of the Ganglia configuration file.  
+  The default is \File{/etc/ganglia/gmond.conf}.
+
+\label{param:GangliaGmetric}
+\item[\Macro{GANGLIA\_GMETRIC}]
+  The full path of the \Prog{gmetric} executable to use.  If none is
+  specified, \File{libganglia} will be used instead when possible,
+  because the library interface is more efficient than invoking
+  \Prog{gmetric}.  Some versions of \File{libganglia} are not
+  compatible.  When a failure to use \File{libganglia} is detected,
+  \Prog{gmetric} will be used, if it can be found in HTCondor's
+  \Env{PATH} environment variable.
+
+\label{param:GangliaLib}
+\item[\Macro{GANGLIA\_LIB}]
+  The full path of the \File{libganglia} shared library to use.  If none is
+  specified, and \Macro{GANGLIA\_GMETRIC} is also not specified, then
+  a search for \File{libganglia} will be performed in the directories listed
+  in \Macro{GANGLIA\_LIB\_PATH} or \Macro{GANGLIA\_LIB64\_PATH}.  The
+  special value \Expr{NOOP} indicates that \Condor{gangliad} should not
+  publish statistics to Ganglia, but should otherwise go through all
+  the motions it normally does.
+
+\label{param:GangliaLibPath}
+\item[\Macro{GANGLIA\_LIB\_PATH}]
+  A comma-separated list of directories within which to search for 
+  the \File{libganglia} executable, if \Macro{GANGLIA\_LIB} is not configured.
+  This is used in 32-bit versions of HTCondor.
+
+\label{param:GangliaLib64Path}
+\item[\Macro{GANGLIA\_LIB64\_PATH}]
+  A comma-separated list of directories within which to search for 
+  the \File{libganglia} executable, if \Macro{GANGLIA\_LIB} is not configured.
+  This is used in 64-bit versions of HTCondor.
+
+\label{param:GangliadCluster}
+\item[\Macro{GANGLIAD\_DEFAULT\_CLUSTER}]
+  An expression specifying the default name of the Ganglia cluster 
+  for all metrics.
+  The expression may refer to attributes of the machine.
+
+\label{param:GangliadCluster}
+\item[\Macro{GANGLIAD\_DEFAULT\_MACHINE}]
+  An expression specifying the default machine name of Ganglia metrics.  The
+  expression may refer to attributes of the machine.
+
+\label{param:GangliadCluster}
+\item[\Macro{GANGLIAD\_DEFAULT\_IP}]
+  An expression specifying the default IP address of Ganglia metrics.
+  The expression may refer to attributes of the machine.
 
 \label{param:GangliadLog}
-\item[\Macro{GANGLIAD\_LOG}] The path to the \Condor{gangliad} daemon's log file.
-  The default log location is \File{\$(LOG)/GangliadLog}.
+\item[\Macro{GANGLIAD\_LOG}] 
+  The path and file name of the \Condor{gangliad} daemon's log file.
+  The default log is \File{\$(LOG)/GangliadLog}.
 
-\label{param:GangliaMetricsConfigDir}
-\item[\Macro{GANGLIA\_METRICS\_CONFIG\_DIR}]
+\label{param:GangliadMetricsConfigDir}
+\item[\Macro{GANGLIAD\_METRICS\_CONFIG\_DIR}]
   Path to the directory containing files which define Ganglia metrics
   in terms of HTCondor ClassAd attributes to be published.  Each
   metric definition file contains a list of ClassAds.  The attributes
-  of each ad define the properties of a metric.  The value of each
+  of each ClassAd define the properties of a metric.  The value of each
   attribute may be a ClassAd expression that references properties of
-  the daemon ad that is being monitored.
+  the daemon ClassAd that is being monitored.
 
-  Example of a metric definition:
+  An example of a metric definition:
 
 \begin{verbatim}
 [
@@ -11594,8 +11769,9 @@ are published to the \Condor{collector}.
 ]
 \end{verbatim}
 
-  The file containing the default metrics is a good source of
-  additional examples: \File{\$(GANGLIA\_METRICS\_CONFIG\_DIR)/00\_default\_metrics}.
+  This file containing the default metrics is a good source of
+  additional examples: 
+  \File{\$(GANGLIAD\_METRICS\_CONFIG\_DIR)/00\_default\_metrics}.
 
   The recognized metric attributes are the following:
 
@@ -11605,7 +11781,7 @@ are published to the \Condor{collector}.
     machine must have unique names.
 
   \item[Value] A ClassAd expression that produces the value of this
-    metric.  The default value is the value in the daemon ad of the
+    metric.  The default value is the value in the daemon ClassAd of the
     attribute with the same name as this metric.
 
   \item[Desc] A description of the metric.  This is displayed when the
@@ -11617,15 +11793,15 @@ are published to the \Condor{collector}.
 
   \item[TargetType] A string containing a comma-separated list of daemon
     ClassAd types this metric monitors.  The specified values should
-    match \Attr{MyType} of the daemon ad.  In addition, there are
+    match \Attr{MyType} of the daemon ClassAd.  In addition, there are
     special values that may be included. \verb|"Machine_slot1"| may be
-    specified to monitor the startd ad for slot 1 only.  This is
+    specified to monitor the machine ClassAd for slot 1 only.  This is
     useful when monitoring machine-wide attributes.  The special
-    value \verb|"ANY"| matches any type of ad.
+    value \verb|"ANY"| matches any type of ClassAd.
 
   \item[Requirements] If specified, this may be used to restrict which
-    daemon ads are monitored by this metric.  By default, all daemon
-    ads of the specified type are monitored.
+    daemon ClassAds are monitored by this metric.  By default, all daemon
+    ClassAds of the specified type are monitored.
 
   \item[Title] The graph title for this metric.  The default is the
     metric name.
@@ -11634,6 +11810,10 @@ are published to the \Condor{collector}.
     Metrics are arranged by group in the Ganglia web page.  The
     default is determined by the daemon type.  Metrics in different
     groups must still have unique names.
+
+  \item[Cluster] A string specifying the cluster name for this metric.
+    The default cluster name is taken from the configuration variable
+    \Macro{GANGLIAD\_DEFAULT\_CLUSTER}.
 
   \item[Units] A string describing the units of this metric.
 
@@ -11655,56 +11835,60 @@ are published to the \Condor{collector}.
     value of that attribute.  As usual, the \Attr{Value} expression
     may be used when the raw attribute value needs to be manipulated
     before publication.  However, since the name of the attribute is
-    not known in advance, a special ClassAd attribute in the daemon ad
+    not known in advance, a special ClassAd attribute in the daemon ClassAd
     is provided to allow the \Attr{Value} expression to refer to it.
     This special attribute is named \Attr{Regex}.  Another special
     feature is the ability to refer to text matched by regular
     expression groups defined by parentheses within the regular
-    expression.  These may be substitued into the values of other
+    expression.  These may be substituted into the values of other
     string attributes such as \Attr{Name} and \Attr{Desc}.  This is
     done by putting macros in the string values.  \verb|"\\1"| is
     replaced by the first group, \verb|"\\2"| by the second group, and
     so on.
 
   \item[Aggregate] This string value specifies an aggregation function
-    to apply instead of publishing individual metrics for each daemon
-    ad.  Possible values are \verb|"sum"|, \verb|"avg"|, \verb|"max"|,
+    to apply, instead of publishing individual metrics for each daemon
+    ClassAd.  Possible values are \verb|"sum"|, \verb|"avg"|, \verb|"max"|,
     and \verb|"min"|.
 
   \item[AggregateGroup] When an aggregate function has been specified,
     this string value specifies which aggregation group the current
-    daemon ad belongs to.  The default is the metric name.  This
+    daemon ClassAd belongs to.  The default is the metric name.  This
     feature works like GROUP BY in SQL.  The aggregation function
     produces one result per value of \Attr{AggregateGroup}.  A single
-    aggreate group would therefore be appropriate for a pool-wide
+    aggregate group would therefore be appropriate for a pool-wide
     metric.  Example use of aggregate grouping: if one wished to
     publish the sum of an attribute across different types of slot
-    ads, one could make the metric name an expression that is unique
+    ClassAds, one could make the metric name an expression that is unique
     to each type.  The default \Attr{AggregateGroup} would be set
     accordingly.  Note that the assumption is still that the result
     is a pool-wide metric, so by default it is associated with the
-    collector host.  To group by machine and publish the result into
+    \Condor{collector} daemon's host.
+    To group by machine and publish the result into
     the Ganglia page associated with each machine, one should make
     the \Attr{AggregateGroup} contain the machine name and override
     the default \Attr{Machine} attribute to be the daemon's machine
-    name, rather than the collector's.
+    name, rather than the \Condor{collector}'s.
 
-  \item[Machine] The name of the host associated with this metric.
-    The default is taken from the daemon ad.  If the daemon name is of
-    the form \verb|name@hostname|, this may indicate that there are
-    multiple instances of HTCondor running on the same machine.  To
-    avoid the metrics from these instances overwriting each other, the
-    default machine name is set to the daemon name in this case.  For
-    aggregate metrics, the default value of \Attr{Machine} will be the
-    name of the collector host.
+  \item[Machine] The name of the host associated with this metric.  If
+    \Macro{GANGLIAD\_DEFAULT\_MACHINE} is not specified, the default
+    is taken from the \Attr{Machine} attribute of the daemon ClassAd.
+    If the daemon name is of the form \verb|name@hostname|, this may
+    indicate that there are multiple instances of HTCondor running on
+    the same machine.  To avoid the metrics from these instances
+    overwriting each other, the default machine name is set to the
+    daemon name in this case.  For aggregate metrics, the default
+    value of \Attr{Machine} will be the name of the \Condor{collector} host.
 
   \item[IP] A string containing the IP address of the host associated
-    with this metric.  The default is determined from the daemon ad.
-    This value must be unique for each machine published to ganglia.
-    It need not be a valid IP address.  If the value of \Attr{Machine}
-    contains an \verb|"@"| sign, the default IP value will be set to
-    the same value as \Attr{Machine} in order to make the IP value
-    unique to each instance of HTCondor running on the same host.
+    with this metric.  If \Macro{GANGLIAD\_DEFAULT\_IP} is not
+    specified, the default is extracted from the \Attr{MyAddress}
+    attribute of the daemon ClassAd.  This value must be unique for each
+    machine published to Ganglia.  It need not be a valid IP address.
+    If the value of \Attr{Machine} contains an \verb|"@"| sign, the
+    default IP value will be set to the same value as \Attr{Machine}
+    in order to make the IP value unique to each instance of HTCondor
+    running on the same host.
 
   \end{description}
 

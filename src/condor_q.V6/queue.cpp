@@ -57,13 +57,9 @@
 #include "../classad_analysis/analysis.h"
 #include "classad/classadCache.h" // for CachedExprEnvelope
 
-/*
-#ifndef WIN32
-#include <sys/types.h>
-#include <unistd.h>
-#include <pwd.h>
-#endif
-*/
+// pass the exit code through dprintf_SetExitCode so that it knows
+// whether to print out the on-error buffer or not.
+#define exit(n) (exit)(dprintf_SetExitCode(n))
 
 #ifdef HAVE_EXT_POSTGRESQL
 #include "sqlquery.h"
@@ -593,8 +589,9 @@ int main (int argc, char **argv)
 	// load up configuration file
 	myDistro->Init( argc, argv );
 	config();
-
-	classad::ClassAdSetExpressionCaching( param_boolean( "ENABLE_CLASSAD_CACHING", false ) );
+	dprintf_config_tool_on_error(0);
+	dprintf_OnExitDumpOnErrorBuffer(stderr);
+	//classad::ClassAdSetExpressionCaching( param_boolean( "ENABLE_CLASSAD_CACHING", false ) );
 
 #ifdef HAVE_EXT_POSTGRESQL
 		/* by default check the configuration for local database */
@@ -1662,9 +1659,11 @@ processCommandLineArguments (int argc, char *argv[])
 					 ATTR_JOB_STATUS, TRANSFERRING_OUTPUT, ATTR_JOB_STATUS, SUSPENDED );
 			Q.addAND( expr.c_str() );
 			dash_run = true;
-			attrs.append( ATTR_REMOTE_HOST );
-			attrs.append( ATTR_JOB_UNIVERSE );
-			attrs.append( ATTR_EC2_REMOTE_VM_NAME ); // for displaying HOST(s) in EC2
+			if( !dag ) {
+				attrs.append( ATTR_REMOTE_HOST );
+				attrs.append( ATTR_JOB_UNIVERSE );
+				attrs.append( ATTR_EC2_REMOTE_VM_NAME ); // for displaying HOST(s) in EC2
+			}
 		}
 		else
 		if (is_arg_prefix(arg, "hold", 2) || is_arg_prefix( arg, "held", 2)) {
@@ -1842,8 +1841,8 @@ processCommandLineArguments (int argc, char *argv[])
 	}
 }
 
-static float
-job_time(float cpu_time,ClassAd *ad)
+static double
+job_time(double cpu_time,ClassAd *ad)
 {
 	if ( cputime ) {
 		return cpu_time;
@@ -1853,7 +1852,7 @@ job_time(float cpu_time,ClassAd *ad)
 	int job_status = 0;
 	int cur_time = 0;
 	int shadow_bday = 0;
-	float previous_runs = 0;
+	double previous_runs = 0;
 
 	ad->LookupInteger( ATTR_JOB_STATUS, job_status);
 	ad->LookupInteger( ATTR_SERVER_TIME, cur_time);
@@ -1881,7 +1880,7 @@ job_time(float cpu_time,ClassAd *ad)
 	 * RUNNING.  So we only compute the time on this run if shadow_bday
 	 * is not zero and the job status is RUNNING.  -Todd <tannenba@cs.wisc.edu>
 	 */
-	float total_wall_time = previous_runs;
+	double total_wall_time = previous_runs;
 	if ( ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT || job_status == SUSPENDED) && shadow_bday ) {
 		total_wall_time += cur_time - shadow_bday;
 	}
@@ -1979,7 +1978,7 @@ bufferJobShort( ClassAd *ad ) {
 	char encoded_status;
 	int last_susp_time;
 
-	float utime  = 0.0;
+	double utime  = 0.0;
 	char owner[64];
 	char *cmd = NULL;
 	MyString buffer;
@@ -2156,7 +2155,7 @@ format_remote_host (char *, AttrList *ad)
 }
 
 static const char *
-format_cpu_time (float utime, AttrList *ad)
+format_cpu_time (double utime, AttrList *ad)
 {
 	return format_time( (int) job_time(utime,(ClassAd *)ad) );
 }
@@ -2185,10 +2184,10 @@ format_goodput (int job_status, AttrList *ad)
 }
 
 static const char *
-format_mbps (float bytes_sent, AttrList *ad)
+format_mbps (double bytes_sent, AttrList *ad)
 {
 	static char result_format[10];
-	float wall_clock=0.0, bytes_recvd=0.0, total_mbits;
+	double wall_clock=0.0, bytes_recvd=0.0, total_mbits;
 	int shadow_bday = 0, last_ckpt = 0, job_status = IDLE;
 	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, wall_clock );
 	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
@@ -2205,13 +2204,13 @@ format_mbps (float bytes_sent, AttrList *ad)
 }
 
 static const char *
-format_cpu_util (float utime, AttrList *ad)
+format_cpu_util (double utime, AttrList *ad)
 {
 	static char result_format[10];
 	int ckpt_time = 0;
 	ad->LookupInteger( ATTR_JOB_COMMITTED_TIME, ckpt_time);
 	if (ckpt_time == 0) return " [??????]";
-	float util = utime/ckpt_time*100.0;
+	double util = utime/ckpt_time*100.0;
 	if (util > 100.0) util = 100.0;
 	else if (util < 0.0) return " [??????]";
 	sprintf(result_format, "  %6.1f%%", util);
@@ -2877,7 +2876,7 @@ static void init_output_mask()
 							  "[??????????]");
 		if (dash_run && ! dash_goodput) {
 			mask_headings = (cputime) ? " ID\0 \0OWNER\0  SUBMITTED\0    CPU_TIME\0HOST(S)\0"
-			                          : " ID\0 \0OWNER\0. SUBMITTED\0    RUN_TIME\0HOST(S)\0";
+			                          : " ID\0 \0OWNER\0  SUBMITTED\0    RUN_TIME\0HOST(S)\0";
 			//mask.registerFormat(" ", "*bogus*", " "); // force space
 			// We send in ATTR_OWNER since we know it is always
 			// defined, and we need to make sure
@@ -3920,7 +3919,7 @@ setupAnalysis()
 					ad->Insert( buffer );
 				}
 			}
-			#if !defined(WANT_OLD_CLASSADS)
+			#if defined(ADD_TARGET_SCOPING)
 			ad->AddTargetRefs( TargetJobAttrs );
 			#endif
 		}
@@ -3950,7 +3949,7 @@ setupAnalysis()
 				"PREEMPTION_REQUIREMENTS expression: \n\t%s\n", preq );
 			exit( 1 );
 		}
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 		ExprTree *tmp_expr = AddTargetRefs( preemptionReq, TargetJobAttrs );
 		delete preemptionReq;
 		preemptionReq = tmp_expr;
@@ -5339,7 +5338,7 @@ doJobRunAnalysisToBuffer(ClassAd *request, anaCounters & ac, int details, bool n
 	ac.clear();
 	return_buff[0]='\0';
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	request->AddTargetRefs( TargetMachineAttrs );
 #endif
 
@@ -5541,7 +5540,7 @@ doJobRunAnalysisToBuffer(ClassAd *request, anaCounters & ac, int details, bool n
 			append_to_fail_list(fPreemptPrioStr, buffer, verb_width);
 			/*
 			if( verbose ) {
-				sprintf_cat( return_buff, "%nsufficient priority to preempt %s\n", remoteUser.c_str() );
+				sprintf_cat( return_buff, "Insufficient priority to preempt %s\n", remoteUser.c_str() );
 			}
 			*/
 			continue;
@@ -5816,7 +5815,7 @@ doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, Daemon * /*sc
 
 	return_buff[0] = 0;
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	slot->AddTargetRefs(TargetJobAttrs);
 #endif
 
@@ -5858,7 +5857,7 @@ doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, Daemon * /*sc
 			jobs.Insert(job);
 			cUniqueJobs += 1;
 
-			#if !defined(WANT_OLD_CLASSADS)
+			#if defined(ADD_TARGET_SCOPING)
 			job->AddTargetRefs(TargetMachineAttrs);
 			#endif
 

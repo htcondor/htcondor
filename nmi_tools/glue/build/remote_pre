@@ -47,6 +47,7 @@ my $externals_loc="/scratch/condor_externals";
 my $platform = "$ENV{NMI_PLATFORM}";
 my %defines = (
     prefix => "-DCMAKE_INSTALL_PREFIX:PATH=$BaseDir/release_dir",
+    parrot => "-DEXTERNALS_SOURCE_URL:STRING=\"http://mirror.batlab.org/pub/export/externals\"",
     );
 
 # autoflush our STDOUT
@@ -90,6 +91,7 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	# in the definition of $installcmakecmd to point to the correct
 	# thing.
 	$cmake = "cmake";
+	$defines{visualstudio} = '-G"Visual Studio 9 2008"';
 } else {
 	$cmake = `$installcmakecmd ${CONDOR_SCRATCH_DIR} 2>&1 | sed -n \\\$p`;
 	if ($? != 0 || !defined($cmake) || $cmake =~ m/^FAILURE:/) {

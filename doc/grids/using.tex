@@ -87,7 +87,7 @@ Where available in the other, more recent versions of the protocol,
 
 \item[gt5]
 This latest GRAM protocol is an extension of GRAM2 that is intended to
-be more scalable and robust. It's usually referred to as GRAM5.
+be more scalable and robust. It is usually referred to as GRAM5.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -572,9 +572,9 @@ MyProxyCredentialName = my_executable_run
 queue
 \end{verbatim}
 \normalsize
-Note that placing the password within the submit file
+Note that placing the password within the submit description file
 is not really secure,
-as it relies upon whatever file system security there is.
+as it relies upon security provided by the file system.
 This may still be better than option 5.
 
 \item{Use the \Opt{-p} option to \Condor{submit}.}
@@ -586,7 +586,7 @@ condor_submit -p mypassword /home/user/myjob.submit
 \normalsize
 The argument list for \Condor{submit} defaults to
 being publicly available.
-An attacker with a log in to the local machine could
+An attacker with a login on that local machine could
 generate a simple shell script
 %  such as:
 %  while 1; ps -efwww| grep 'condor_submit.*-p';done

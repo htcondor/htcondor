@@ -41,6 +41,11 @@ $executed = sub
 	CondorTest::debug("Good. for on_exit_remove cluster $cluster must run first\n",1);
 };
 
+my $on_evictedwithoutcheckpoint = sub {
+	CondorTest::debug("Evicted Without Checkpoint from removing jobs.\n",1);
+};
+
+CondorTest::RegisterEvictedWithoutCheckpoint($testname, $on_evictedwithoutcheckpoint);
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterAbort( $testname, $aborted );
 

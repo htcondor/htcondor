@@ -149,7 +149,7 @@ CondorTest::RegisterExitedFailure( $testname, $failure );
 CondorTest::RegisterExecute($testname, $executed );
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
 CondorTest::RegisterAbort( $testname, $aborted );
-CondorTest::RegisterEvicted( $testname, $evicted );
+CondorTest::RegisterEvictedWithoutCheckpoint( $testname, $evicted );
 CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterSubmit( $testname, $submitted );
 

@@ -100,7 +100,8 @@ class CCBListeners {
 	bool RegisterWithCCBServer(bool blocking=false);
 
  private:
-	SimpleList< classy_counted_ptr<CCBListener> > m_ccb_listeners;
+	typedef std::list< classy_counted_ptr<CCBListener> > CCBListenerList;
+	CCBListenerList m_ccb_listeners;
 	MyString m_ccb_contact;
 };
 

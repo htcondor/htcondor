@@ -184,3 +184,13 @@ bool AmazonVMKeypairNames::ioCheck(char **argv, int argc)
 		verify_string_name(argv[3]) &&
 		verify_string_name(argv[4]);
 }
+
+// Expecting:EC2_VM_SERVER_TYPE <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
+bool AmazonVMServerType::ioCheck(char **argv, int argc)
+{
+	return verify_number_args(argc, 5) &&
+		verify_request_id(argv[1]) &&
+		verify_string_name(argv[2]) &&
+		verify_string_name(argv[3]) &&
+		verify_string_name(argv[4]);
+}

@@ -318,8 +318,8 @@ void MarkJobClean(PROC_ID job_id);
 void MarkJobClean(int cluster_id, int proc_id);
 void MarkJobClean(const char* job_id_str);
 
-int rusage_to_float(const struct rusage &, float *, float *);
-int float_to_rusage(float, float, struct rusage *);
+int rusage_to_float(const struct rusage &, double *, double *);
+int float_to_rusage(double, double, struct rusage *);
 
 bool Reschedule();
 

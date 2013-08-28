@@ -160,7 +160,10 @@ private:
 	char* tcp_update_destination;
 	char* udp_update_destination;
 
-	Timeslice blacklisted;
+	UtcTime m_blacklist_monitor_query_started;
+	static std::map< std::string, Timeslice > blacklist;
+
+	Timeslice &getBlacklistTimeslice();
 
 	void displayResults( void );
 

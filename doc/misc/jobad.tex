@@ -7,6 +7,23 @@
 \index{Absent!job ClassAd attribute}
 \item[\AdAttr{Absent}:] Boolean set to true \Expr{True} if the ad is absent.
 
+%%% ClassAd attribute: AcctGroup
+\index{ClassAd job attribute!AcctGroup}
+\index{AcctGroup!job ClassAd attribute}
+\item[\AdAttr{AcctGroup}:] The accounting group name, as set in the
+submit description file via the \SubmitCmd{accounting\_group} command.
+This attribute is only present if an accounting group was requested by the
+submission. See section~\ref{sec:group-accounting} for more 
+information about accounting groups.
+
+%%% ClassAd attribute: AcctGroupUser
+\index{ClassAd job attribute!AcctGroupUser}
+\index{AcctGroupUser!job ClassAd attribute}
+\item[\AdAttr{AcctGroupUser}:] The user name associated with the
+accounting group.  This attribute is only present if an
+accounting group was requested by the submission.
+
+%%% ClassAd attribute: HoldKillSig
 %%% ClassAd attribute: AllRemoteHosts
 \index{ClassAd job attribute!AllRemoteHosts}
 \index{AllRemoteHosts!job ClassAd attribute}
@@ -206,7 +223,7 @@ auxiliary job log:
 \end{itemize}
 If \Attr{DAGManNodesLog} is
 not defined, it has no effect. The value of \Attr{DAGManNodesMask} does not
-affect events recorded in the user log file referred to by \Attr{UserLog}.
+affect events recorded in the job event log file referred to by \Attr{UserLog}.
 
 %%% ClassAd attribute: DelegateJobGSICredentialsLifetime
 \index{ClassAd job attribute!DelegateJobGSICredentialsLifetime}
@@ -518,9 +535,23 @@ its value will be included in the e-mail notification upon job completion.
 epoch time of when the job entered into its current status
 So for example, if the job is on hold, the ClassAd expression
 \begin{verbatim}
-    CurrentTime - EnteredCurrentStatus
+    time() - EnteredCurrentStatus
 \end{verbatim}
 will equal the number of seconds that the job has been on hold.
+
+%%% ClassAd attribute: Env
+\index{ClassAd job attribute!Env}
+\index{Args!job ClassAd attribute}
+\item[\AdAttr{Args}:]  A string representing the environment variables 
+passed to the job, when those arguments are specified using the
+\emph{old} syntax, as specified in section~\ref{man-condor-submit-environment}.
+
+%%% ClassAd attribute: Environment
+\index{ClassAd job attribute!Environment}
+\index{Arguments!job ClassAd attribute}
+\item[\AdAttr{Arguments}:]  A string representing the environment variables
+passed to the job, when those arguments are specified using the
+\emph{new} syntax, as specified in section~\ref{man-condor-submit-environment}.
 
 %%% ClassAd attribute: ExecutableSize
 \index{ClassAd job attribute!ExecutableSize}
@@ -579,23 +610,6 @@ of the the submit description file command \SubmitCmd{grid\_resource}.
 It specifies the target grid type, plus additional parameters
 specific to the grid type.
 
-%%% ClassAd attribute: AcctGroup
-\index{ClassAd job attribute!AcctGroup}
-\index{AcctGroup!job ClassAd attribute}
-\item[\AdAttr{AcctGroup}:] The accounting group name, as set in the
-\Condor{submit} file via the accounting\_group command.  This attribute
-is only present if an accounting group was requested by the
-submission. See section~\ref{sec:group-accounting} for more 
-information about accounting groups.
-
-%%% ClassAd attribute: AcctGroupUser
-\index{ClassAd job attribute!AcctGroupUser}
-\index{AcctGroupUser!job ClassAd attribute}
-\item[\AdAttr{AcctGroupUser}:] The user name associated with the
-accounting group.  This attribute is only present if an
-accounting group was requested by the submission.
-
-%%% ClassAd attribute: HoldKillSig
 \index{ClassAd job attribute!HoldKillSig}
 \index{HoldKillSig!job ClassAd attribute}
 \item[\AdAttr{HoldKillSig}:]    Currently only for scheduler and local
@@ -656,12 +670,14 @@ reason that a job was put on hold.
 19 & \Macro{<Keyword>\_HOOK\_PREPARE\_JOB} was defined but could not be executed or returned failure. \\ \hline
 20 & The job missed its deferred execution time and therefore failed to run. \\ \hline
 21 & The job was put on hold because \Macro{WANT\_HOLD} in the machine policy was true. \\ \hline
-22 & Unable to initialize user log. \\ \hline
+22 & Unable to initialize job event log. \\ \hline
 23 & Failed to access user account. \\ \hline
 24 & No compatible shadow. \\ \hline
 25 & Invalid cron settings. \\ \hline
 26 & \Macro{SYSTEM\_PERIODIC\_HOLD} evaluated to true. \\ \hline
 27 & The system periodic job policy evaluated to undefined. \\ \hline
+28 & Failed while using glexec to set up the job's working directory (chown sandbox to the user). \\ \hline
+30 & Failed while using glexec to prepare output for transfer (chown sandbox to condor). \\ \hline
 32 & The maximum total input file transfer size was exceeded.  (See \Macro{MAX\_TRANSFER\_INPUT\_MB}.) \\ \hline
 33 & The maximum total output file transfer size was exceeded. (See \Macro{MAX\_TRANSFER\_OUTPUT\_MB}.) \\ \hline
 \end{tabular}
@@ -719,11 +735,11 @@ attribute, setting it to \Expr{False}.
 \label{JobAdInformationAttrs-job-attribute}
 \item[\AdAttr{JobAdInformationAttrs}:] A comma-separated list
 of attribute names.  The named attributes and their values are written
-in the user log whenever any event is being written to the log.
+in the job event log whenever any event is being written to the log.
 This is the same as the configuration setting
 \MacroNI{EVENT\_LOG\_INFORMATION\_ATTRS} (see
 page~\pageref{param:EventLogJobAdInformationAttrs}) but it applies to
-the user log instead of the system event log.
+the job event log instead of the system event log.
 
 %%% ClassAd attribute: JobDescription
 \index{ClassAd job attribute!JobDescription}
@@ -834,6 +850,7 @@ status of the job.
 4 & Completed \\ \hline
 5 & Held \\ \hline
 6 & Transferring Output \\ \hline
+7 & Suspended \\ \hline
 \end{tabular}
 \end{table}
 \end{center}

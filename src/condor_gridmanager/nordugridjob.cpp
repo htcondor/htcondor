@@ -614,8 +614,8 @@ void NordugridJob::doEvaluateState()
 					jobAd->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
 					jobAd->Assign( ATTR_ON_EXIT_CODE, exit_code );
 				}
-				jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, wallclock * 60 );
-				jobAd->Assign( ATTR_JOB_REMOTE_USER_CPU, cpu * 60 );
+				jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, wallclock * 60.0 );
+				jobAd->Assign( ATTR_JOB_REMOTE_USER_CPU, cpu * 60.0 );
 				gmState = GM_STAGE_OUT;
 			}
 			} break;

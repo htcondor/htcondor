@@ -233,6 +233,26 @@ _condor_parse_merge_debug_flags(
 	}
 }
 
+// convert old style flags to DebugOutputChoice
+//
+void
+_condor_set_debug_flags_ex(
+	const char *strflags,
+	int cat_and_flags,
+	unsigned int & header,
+	DebugOutputChoice & choice,
+	DebugOutputChoice & verbose)
+{
+	// special case. if a single category to be passed in cat_and_flags
+	// in practice, this category is always D_ALWAYS which is set above anyway.
+	choice |= 1<<(cat_and_flags & D_CATEGORY_MASK);
+	PRAGMA_REMIND("TJ: fix this to handle more than just basic & verbose levels")
+	if (cat_and_flags & (D_FULLDEBUG | D_VERBOSE_MASK)) { verbose |= choice; }
+
+	// parse and merge strflags and cat_and_flags into header & choice
+	_condor_parse_merge_debug_flags(strflags, (cat_and_flags & ~D_CATEGORY_RESERVED_MASK), header, choice, verbose);
+}
+
 // set global debug global flags and header options
 //
 void
@@ -242,16 +262,7 @@ _condor_set_debug_flags( const char *strflags, int cat_and_flags )
 	unsigned int      header = 0;
 	DebugOutputChoice choice = (1<<D_ALWAYS) | (1<<D_ERROR) | (1<<D_STATUS);
 	DebugOutputChoice verbose = 0;
-
-	// special case. if a single category to be passed in cat_and_flags
-	// in practice, this category is always D_ALWAYS which is set above anyway.
-	choice |= 1<<(cat_and_flags & D_CATEGORY_MASK);
-	PRAGMA_REMIND("TJ: fix this to handle more than just basic & verbose levels")
-	if (cat_and_flags & (D_FULLDEBUG | D_VERBOSE_MASK)) { verbose |= choice; }
-
-	// parse and merge strflags and cat_and_flags into header & choice
-	_condor_parse_merge_debug_flags(strflags, (cat_and_flags & ~D_CATEGORY_RESERVED_MASK), header, choice, verbose);
-
+	_condor_set_debug_flags_ex(strflags, cat_and_flags, header, choice, verbose);
 	DebugHeaderOptions = header;
 	AnyDebugBasicListener = choice;
 	AnyDebugVerboseListener = verbose;

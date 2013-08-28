@@ -62,10 +62,10 @@ AviaryProviderFactory::create(const string& log_file,
     // which flavor of transport
     bool have_ssl = param_boolean("AVIARY_SSL",FALSE);
 	if (!have_ssl) {
-		port = param_integer("HTTP_PORT",9000);
+		port = param_integer("HTTP_PORT",39000);
 	}
 	else {
-		port = param_integer("HTTP_PORT",9443);
+		port = param_integer("HTTP_PORT",39443);
 	}
 
 	// see if we are using locator to publish our endpoint
