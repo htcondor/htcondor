@@ -2908,51 +2908,30 @@ Tracking process family by login "cndrusr1"
 
 \label{param:FilesystemDomain}
 \item[\Macro{FILESYSTEM\_DOMAIN}]
-  The \MacroNI{FILESYSTEM\_DOMAIN}
-  macro is an arbitrary string that is used to decide if
-  two machines (a submitting machine and an execute machine) share a
-  file system.
-  Although the macro name contains the word ``DOMAIN'',
-  the macro is not required to be a domain name. 
+  An arbitrary string that is used to decide if
+  the two machines, a submit machine and an execute machine,
+  share a file system.
+  Although this configuration variable name contains the word ``DOMAIN'',
+  its value is not required to be a domain name. 
   It often is a domain name.
-
-  % NO LONGER TRUE
-  % Vanilla Unix jobs currently require a shared file system in order to
-  % share any data files or see the output of the program.
-  % HTCondor decides if there is a shared filesystem by comparing the values
-  % of 
-  % \MacroUNI{FILESYSTEM\_DOMAIN}
-  % of both the submitting and execute machines.
-  % If the values are the same,
-  % HTCondor assume there is a shared file system.
-  % HTCondor implements the check
-  % by extending the Requirements for your job.
-  % You can see these requirements by using the \oArg{-v} argument
-  % to \Condor{submit}.
 
   Note that this implementation is not ideal: machines may share some
   file systems but not others. HTCondor currently has no way to express
-  this automatically. You can express the need to use a
-  particular file system by adding additional attributes to your machines
-  and submit files, similar to the example given in 
-  Frequently Asked Questions, 
-  section~\ref{sec:FAQ} on
-  how to run jobs only on machines that have 
-  certain software packages.
+  this automatically. 
+  A job can express the need to use a particular file system where
+  machines advertise an additional ClassAd attribute
+  and the job requires machines with the attribute, 
+  as described on the question within the
+  \URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToAdminRecipes}
+  page for how to run jobs on a subset of machines that have required
+  software installed.
 
   Note that if you do not set 
-  \MacroUNI{FILESYSTEM\_DOMAIN}, HTCondor defaults
-  to setting the macro's value to be the fully qualified host name
-  of the local machine.
+  \MacroUNI{FILESYSTEM\_DOMAIN}, the value defaults
+  to the fully qualified host name of the local machine.
   Since each machine will have a different
   \MacroUNI{FILESYSTEM\_DOMAIN},
   they will not be considered to have shared file systems.
-
-  
-  % no longer used, and gone from the sample config file as of 5/30/03.
-  %\item[\Macro{HAS\_AFS}] \label{param:HasAfs} Set this macro to \Expr{True} if
-  %  all the machines you plan on adding in your pool can all access a
-  %  common set of AFS fileservers.  Otherwise, set it to \Expr{False}.
   
 \label{param:ReserveAfsCache}
 \item[\Macro{RESERVE\_AFS\_CACHE}]
