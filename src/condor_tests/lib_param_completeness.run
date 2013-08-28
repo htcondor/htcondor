@@ -1,0 +1,110 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+#use Check::CondorLog;
+use Check::ProcInfo;
+
+my $configfile = "";
+my $ClusterId = 0;
+my $testname =  "lib_param_completeness";
+
+
+my $firstappend_condor_config = '
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"name1");
+
+my $condorinfo =CondorTest::StartCondorWithParams(
+	condor_name => "name1",
+	fresh_local => "TRUE",
+	config_minimal => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+my $paraminput = "param_perl_input";
+my %params = ();
+my $line = "";
+my $errors = 0;
+
+open(PPI, "<$paraminput") or die "Could not open <$paraminput>:$!\n";
+while(<PPI>) {
+	chomp();
+	$line = $_;
+	my @parampair = split /,/, $line;
+	#print "key $parampair[0] Value $parampair[1]\n";
+	@configval = `condor_config_val -v $parampair[0]`;
+	$configvals = shift @configval;
+	$configloc = shift @configval;
+	chomp($configvals);
+	chomp($configloc);
+	print "VAL $configvals LOC $configloc\n";
+	if((!(defined $configvals))&&(!(defined $configloc))) {
+		print "Bad? failed to get $parampair[1] for $parampair[0]\n";
+	}
+	if($configvals =~ /(.*):\s+(.*)\s*/) {
+		print "Expect $parampair[1] Got $2\n";
+		if($2 ne $parampair[1]) {
+			print "BAD? LOC $configloc $2/-/$parampair[1]\n";
+		}
+	}
+	#chomp($configval);
+	#if($configval eq $parampair[1]) {
+		##print "$parampair[0] OK\n";
+	#} else {
+		##print "$parampair[0]- ($configval/$parampair[1])  Bad\n";
+		#if(($configval ne defined)&&($parampair[1] eq "NULL")){
+			##print "$parampair[0] NULL - OK\n";
+		#} else {
+			#print "$parampair[0]- ($configval/-/$parampair[1])  Bad\n";
+			#$errors += 1;
+		#}
+	#}
+}
+
+print "We had <$errors> param default failures\n";
+
+
+
+CondorTest::RegisterResult(1,{test_name => $testname});
+
+CondorTest::EndTest();
+
+
+sub SubmitReturnCluster
+{
+	my $submitfile = shift;
+	my $cluster = 0;
+
+	my @output = `condor_submit $submitfile`;
+
+	foreach my $line (@output) {
+		chomp($line);
+		if($line =~ /^.*cluster (\d+).*$/) {
+			#print "$line\n";
+			#print "returning $1\n";
+			$cluster = $1;
+			return($cluster);
+		}
+	}
+	return(0);
+}
