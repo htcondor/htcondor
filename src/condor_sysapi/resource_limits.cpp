@@ -35,9 +35,10 @@ sysapi_set_resource_limits(int stack_size)
 	if(stack_size == 0) {
 		stack_size = (int) RLIM_INFINITY;
 	}
-	int free_blocks = sysapi_disk_space( "." );
-	unsigned long core_lim = (free_blocks - SLOP) * 1024;
+	long long free_blocks = sysapi_disk_space( "." );
+	long long core_lim = (free_blocks - SLOP) * 1024;
 
+	PRAGMA_REMIND("FIXME: disk_space truncation to INT_MAX here")
 	if( core_lim > INT_MAX ) {
 		lim = INT_MAX;
 	} else {

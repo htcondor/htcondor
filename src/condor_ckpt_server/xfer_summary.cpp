@@ -188,8 +188,7 @@ XferSummary::time_out(time_t now, char *hostaddr)
 	}
 	info.Insert(line);
 
-	sprintf(line, "Disk = %d", sysapi_disk_space(pwd.Value()) );
-	info.Insert(line);
+	info.Assign("Disk", sysapi_disk_space(pwd.Value()));
 	
 	// Send to collector
 	if ( Collectors ) {

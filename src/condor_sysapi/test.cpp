@@ -124,6 +124,7 @@ extern "C" void
 sysapi_test_dump_functions(void)
 {
 	int foo = 0;
+	long long loo = 0;
 	float bar = 0;
 	const char *qux = NULL;
 	time_t t0, t1;
@@ -140,10 +141,10 @@ sysapi_test_dump_functions(void)
 	foo = sysapi_phys_memory();
 	dprintf(D_ALWAYS, "SysAPI: sysapi_phys_memory() -> %d\n", foo);
 
-	foo = sysapi_disk_space_raw("/");
-	dprintf(D_ALWAYS, "SysAPI: sysapi_disk_space_raw() -> %d\n", foo);
-	foo = sysapi_disk_space("/");
-	dprintf(D_ALWAYS, "SysAPI: sysapi_disk_space() -> %d\n", foo);
+	loo = sysapi_disk_space_raw("/");
+	dprintf(D_ALWAYS, "SysAPI: sysapi_disk_space_raw() -> %" PRIi64 "\n", loo);
+	loo = sysapi_disk_space("/");
+	dprintf(D_ALWAYS, "SysAPI: sysapi_disk_space() -> %" PRIi64 "\n", loo);
 
 	foo = sysapi_ncpus_raw();
 	dprintf(D_ALWAYS, "SysAPI: sysapi_ncpus_raw() -> %d\n", foo);
