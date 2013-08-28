@@ -1119,7 +1119,9 @@ CpuAttributes::compute( amask_t how_much )
 		// Dynamic, non-shared attributes we need to actually compute
 		c_condor_load = rip->compute_condor_load();
 
-		c_total_disk = sysapi_disk_space(rip->executeDir());
+		PRAGMA_REMIND("FIXME: disk_space truncation to INT_MAX here")
+		long long ck = sysapi_disk_space(rip->executeDir());
+		c_total_disk = (unsigned long)MIN(INT_MAX, ck);
 		if (IS_UPDATE(how_much)) {
 			dprintf(D_FULLDEBUG, "Total execute space: %lu\n", c_total_disk);
 		}

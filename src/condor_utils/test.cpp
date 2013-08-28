@@ -64,7 +64,7 @@ char	*argv[];
 do_it( name )
 char	*name;
 {
-	dprintf( D_ALWAYS, "%s: %d K free\n", name, sysapi_disk_space(name) );
+	dprintf( D_ALWAYS, "%s: %" PRIi64d " K free\n", name, sysapi_disk_space(name) );
 }
 
 int

@@ -40,7 +40,7 @@ static int reserve_for_fs(void);
 
 #include <limits.h>
 
-int
+long long
 sysapi_disk_space_raw(const char *filename)
 {
 	ULARGE_INTEGER FreeBytesAvailableToCaller, TotalNumberOfBytes, TotalNumberOfFreeBytes;
@@ -55,7 +55,9 @@ sysapi_disk_space_raw(const char *filename)
 		&TotalNumberOfFreeBytes) == 0) {
 		return -1;
 	} else {
-		
+#if 1
+		return FreeBytesAvailableToCaller.QuadPart;
+#else
 		// we have to shift everything down 10 bits since we report the number
 		// of kbytes free. There's a HighPart and a LowPart, so it gets a little ugly.
 
@@ -78,6 +80,7 @@ sysapi_disk_space_raw(const char *filename)
 		} else {
 			return (int)t_lo;
 		}
+#endif
 	}
 }
 
@@ -173,9 +176,9 @@ reserve_for_fs()
 
 
 #if defined(__STDC__)
-int sysapi_disk_space_raw( const char *filename);
+long long sysapi_disk_space_raw( const char *filename);
 #else
-int sysapi_disk_space_raw();
+long long sysapi_disk_space_raw();
 #endif
 
 #if defined(LINUX) || defined(AIX) || defined(HPUX) || defined(Solaris) || defined(Darwin) || defined(CONDOR_FREEBSD)
@@ -188,15 +191,20 @@ int sysapi_disk_space_raw();
 #include <sys/statvfs.h>
 #endif
 
-int sysapi_disk_space_raw(const char * filename)
+long long sysapi_disk_space_raw(const char * filename)
 {
 #if defined(Solaris)
 	struct statvfs statfsbuf;
 #else
 	struct statfs statfsbuf;
 #endif
+#if 1
+	long long free_kbytes;
+	double kbytes_per_block;
+#else
 	double free_kbytes;
 	float kbytes_per_block;
+#endif
 
 	sysapi_internal_reconfig();
 
@@ -237,13 +245,17 @@ int sysapi_disk_space_raw(const char * filename)
 	kbytes_per_block = ( (unsigned long)statfsbuf.f_bsize / 1024.0 );
 #endif
 
+#if 1
+	free_kbytes = (long long)(statfsbuf.f_bavail * kbytes_per_block);
+#else
 	free_kbytes = (double)statfsbuf.f_bavail * (double)kbytes_per_block; 
 	if(free_kbytes > INT_MAX) {
 		dprintf( D_ALWAYS, "sysapi_disk_space_raw: Free disk space kbytes overflow, capping to INT_MAX\n");
 		return(INT_MAX);
 	}
+#endif
 
-	return (int)free_kbytes;
+	return free_kbytes;
 }
 #endif
 
@@ -263,10 +275,10 @@ int sysapi_disk_space_raw(const char * filename)
   sysapi_disk_space("."), which is why it isn't implemented here. -- mike
 
 */
-int
+long long
 sysapi_disk_space(const char *filename)
 {
-	int answer;
+	long long answer;
 
 	sysapi_internal_reconfig();
 

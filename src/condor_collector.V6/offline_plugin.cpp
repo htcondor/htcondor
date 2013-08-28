@@ -83,7 +83,6 @@ OfflineCollectorPlugin::configure ()
 
 	/**** Handle ABSENT_REQUIREMENTS PARAM ****/
 	char *tmp;
-	ExprTree *tmp_expr = 0 ;
 
 	if (AbsentReq) delete AbsentReq;
 	AbsentReq = NULL;
@@ -95,10 +94,10 @@ OfflineCollectorPlugin::configure ()
 		}
 #if defined(ADD_TARGET_SCOPING)
 		if(AbsentReq){
-			tmp_expr = AddTargetRefs( AbsentReq, TargetMachineAttrs );
+			ExprTree *tmp_expr = AddTargetRefs( AbsentReq, TargetMachineAttrs );
 			delete AbsentReq;
+			AbsentReq = tmp_expr;
 		}
-		AbsentReq = tmp_expr;
 #endif
 		dprintf (D_ALWAYS,"ABSENT_REQUIREMENTS = %s\n", tmp);
 		free( tmp );
