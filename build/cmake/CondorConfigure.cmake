@@ -184,6 +184,7 @@ if( NOT WINDOWS)
 	check_function_exists("snprintf" HAVE_WORKING_SNPRINTF)
 	check_include_files("sys/eventfd.h" HAVE_EVENTFD)
         check_function_exists("innetgr" HAVE_INNETGR)
+        check_function_exists("getgrnam" HAVE_GETGRNAM)
 
 	check_function_exists("stat64" HAVE_STAT64)
 	check_function_exists("_stati64" HAVE__STATI64)
