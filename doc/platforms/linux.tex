@@ -6,8 +6,8 @@
 This section provides information specific to the Linux port of
 HTCondor.
 Linux is a difficult platform to support.
-It changes very frequently, and HTCondor has some extremely
-system-dependent code (for example, the checkpointing library).
+It changes frequently, and HTCondor has some extremely
+system-dependent code, such as the checkpointing library.
 
 HTCondor is sensitive to changes in the following elements of the
 system: 
@@ -15,8 +15,8 @@ system:
 \item The kernel version
 \item The version of the GNU C library (glibc)
 \item the version of GNU C Compiler (GCC) used to build and link
-  HTCondor jobs (this only matters for HTCondor's Standard universe which
-  provides checkpointing and remote system calls)
+  HTCondor jobs. This matters for HTCondor's standard universe, which
+  provides checkpoints and remote system calls.
 \end{itemize}
 
 The HTCondor Team tries to provide support for various releases of the
@@ -39,28 +39,7 @@ the currently available versions of Red Hat Linux on x86 architecture
 machines.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:platform-linux-activity}Linux Kernel-specific Information}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{platform-specific information!Linux keyboard and mouse activity}
-\index{Linux!keyboard and mouse activity}
-
-Distributions that rely on the Linux 2.4.x and all Linux 2.6.x kernels
-through version 2.6.10
-do not modify the \Code{atime} of the input device file.
-This leads to difficulty when HTCondor is run using one of these
-kernels. 
-The problem manifests itself in that HTCondor cannot properly
-detect keyboard or mouse activity.
-Therefore, using the activity in policy setting cannot
-signal that HTCondor should stop running a job on a machine.
-
-HTCondor additionally has problems running on some older Xen kernels,
-which interact badly with assumptions made by the \Condor{procd}
-daemon. See the FAQ entry in section~\ref{sec:xen-jiffies-bug} for
-details.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:platform-linux-addrspace-random}Address Space Randomization}
+\subsection{\label{sec:platform-linux-addrspace-random}Linux Address Space Randomization}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{platform-specific information!address space randomization}
 
