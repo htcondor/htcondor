@@ -43,6 +43,7 @@
 #include "condor_mkstemp.h"
 #include "globus_utils.h"
 
+#include <algorithm>
 
 extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
@@ -1842,6 +1843,17 @@ JICShadow::recordDelayedUpdate( const std::string &name, const classad::ExprTree
 	StringList sl(prefix.c_str());
 	if (sl.contains_anycase_withwildcard(name.c_str()))
 	{
+		std::vector<std::string>::const_iterator it = std::find(m_delayed_update_attrs.begin(),
+			m_delayed_update_attrs.end(), name);
+		if (it != m_delayed_update_attrs.end())
+		{
+			m_delayed_update_attrs.push_back(name);
+		}
+		if (m_delayed_update_attrs.size() >= 50)
+		{
+			dprintf(D_ALWAYS, "Ignoring update for %s because more than 50 attributes have already been set.\n", name.c_str());
+			return false;
+		}
 		// Note that the ClassAd takes ownership of the copy.
 		dprintf(D_FULLDEBUG, "Got a delayed update for attribute %s.\n", name.c_str());
 		classad::ExprTree *expr_copy = expr.Copy();

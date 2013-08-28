@@ -448,6 +448,7 @@ private:
 	char* m_shadow_name;
 
 	classad::ClassAd m_delayed_updates;
+	std::vector<std::string> m_delayed_update_attrs;
 	IOProxy io_proxy;
 
 	FileTransfer *filetrans;

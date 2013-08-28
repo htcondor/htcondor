@@ -356,10 +356,18 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 		classad::ClassAdParser parser;
 		classad::ExprTree *expr_tree;
-		result = parser.ParseExpression(expr, expr_tree);
-		if (result)
+		if (strlen(expr) > 1000)
 		{
-			result = !m_shadow->recordDelayedUpdate(name, *expr_tree);
+			result = 1;
+			errno = ENAMETOOLONG;
+		}
+		else
+		{
+			result = parser.ParseExpression(expr, expr_tree);
+			if (result)
+			{
+				result = !m_shadow->recordDelayedUpdate(name, *expr_tree);
+			}
 		}
 		sprintf(line,"%d",convert(result,errno));
 		r->put_line_raw(line);
