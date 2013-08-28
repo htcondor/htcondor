@@ -1,12 +1,31 @@
 ######################################################################
+######################################################################
+###                                                                ###
+###  N O T I C E:   D O   N O T   E D I T   T H I S   F I L E      ###
+###                                                                ###
+###      Customization should be done via the LOCAL_CONFIG_DIR.    ###
+###                                                                ###
+######################################################################
+######################################################################
+
+
+######################################################################
 ##
 ##  condor_config
 ##
 ##  This is the global configuration file for condor.  Any settings
-##  made here may potentially be overridden in the local configuration
-##  file.  KEEP THAT IN MIND!  To double-check that a variable is
-##  getting set from the configuration file that you expect, use
-##  condor_config_val -v <variable name>
+##  found here * * s h o u l d   b e   c u s t o m i z e d   i n
+##  a   l o c a l   c o n f i g u r a t i o n   f i l e. * *
+##
+##  The local configuration files are located in LOCAL_CONFIG_DIR, set
+##  below.
+##
+##  For a basic configuration, you may only want to start by
+##  customizing CONDOR_HOST and DAEMON_LIST.
+##
+##  Note: To double-check where a configuration variable is set from
+##  you can use condor_config_val -v -config <variable name>,
+##  e.g. condor_config_val -v -config CONDOR_HOST.
 ##
 ##  The file is divided into four main parts:
 ##  Part 1:  Settings you likely want to customize 
@@ -47,31 +66,36 @@
 ######################################################################
 
 ##  What machine is your central manager?
-CONDOR_HOST	= central-manager-hostname.your.domain
+CONDOR_HOST	= $(FULL_HOSTNAME)
 
 ##--------------------------------------------------------------------
 ##  Pathnames:
 ##--------------------------------------------------------------------
 ##  Where have you installed the bin, sbin and lib condor directories?   
-RELEASE_DIR		= /usr/local/condor
+RELEASE_DIR		= /usr
 
 ##  Where is the local condor directory for each host?  
 ##  This is where the local config file(s), logs and
 ##  spool/execute directories are located
-LOCAL_DIR		= $(TILDE)
+LOCAL_DIR       = /var/lib/condor 
+#LOCAL_DIR		= $(TILDE)
 #LOCAL_DIR		= $(RELEASE_DIR)/hosts/$(HOSTNAME)
 
-##  Where is the machine-specific local config file for each host?
-LOCAL_CONFIG_FILE	= $(LOCAL_DIR)/condor_config.local
-#LOCAL_CONFIG_FILE	= $(RELEASE_DIR)/etc/$(HOSTNAME).local
+## Looking for LOCAL_CONFIG_FILE? Do not use the one here. Instead
+## put a file in the LOCAL_CONFIG_DIR below. It is a more extensible
+## means to manage configuration. The order in which configuration
+## files are read from the LOCAL_CONFIG_DIR is lexicographic. For
+## instance, config in 00MyConfig will be overridden by config in
+## 97MyConfig.
+LOCAL_CONFIG_FILE	= $(ETC)/condor_config.local
 
 ##  Where are optional machine-specific local config files located?
 ##  Config files are included in lexicographic order.
-LOCAL_CONFIG_DIR	= $(LOCAL_DIR)/config
-#LOCAL_CONFIG_DIR	= $(LOCAL_DIR)/config
+##  No default.
+LOCAL_CONFIG_DIR        = $(ETC)/config.d
 
 ## Blacklist for file processing in the LOCAL_CONFIG_DIR
-## LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
+LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
 
 ## If the local config file is not present, is it an error?
 ## WARNING: This is a potential security issue. 
@@ -409,7 +433,22 @@ ALLOW_READ_STARTD     = $(ALLOW_READ), $(FLOCK_FROM)
 ##  condor account, it is probably condor.  Otherwise, it is whatever
 ##  you've set in the CONDOR_IDS environment variable.  See the Admin
 ##  manual for details on this.
-LOCK		= $(LOG)
+LOCK		= /var/lock/condor
+
+# Condor allows for creating surrogate lock files that always live on
+# local disk. This is useful for the times when Condor would otherwise
+# lock a file on a network filesystem, such as a UserLog.
+# CREATE_LOCKS_ON_LOCAL_DISK controls this feature, and
+# LOCAL_DISK_LOCK_DIR controls where the lock files are created. The
+# local dir must have tmp-like permissions (1777), because multiple
+# users, e.g. via condor_submit or condor_dagman, will need to
+# add/remove lock files.
+# NOTE: This will not provide proper locking if a shared file is
+# simultaneously accessed from multiple machines. However, that is not
+# a common event. One example where it is possible is remote
+# submission with condor_submit -remote.
+#CREATE_LOCKS_ON_LOCAL_DISK = TRUE
+LOCAL_DISK_LOCK_DIR = $(LOCK)/local
 
 ##  If you don't use a fully qualified name in your /etc/hosts file
 ##  (or NIS, etc.) for either your official hostname or as an alias,
@@ -454,7 +493,8 @@ LOCK		= $(LOG)
 ##  the execute machine and just make sure the two strings match.  The
 ##  default for this setting is False, since it is more secure this
 ##  way.
-#TRUST_UID_DOMAIN = False
+##   Default is False
+TRUST_UID_DOMAIN = True
 
 ## If you would like to be informed in near real-time via condor_q when
 ## a vanilla/standard/java job is in a suspension state, set this attribute to
@@ -493,8 +533,9 @@ LOCK		= $(LOG)
 ## just disable it).
 #NEGOTIATOR_IGNORE_USER_PRIORITIES = False
 
-## This is a list of libraries containing ClassAd plug-in functions.
-#CLASSAD_USER_LIBS =
+## These are the directories used to locate classad plug-in functions
+#CLASSAD_SCRIPT_DIRECTORY =
+#CLASSAD_LIB_PATH =
 
 ## This setting tells Condor whether to delegate or copy GSI X509
 ## credentials when sending them over the wire between daemons.
@@ -599,6 +640,12 @@ TRANSFERER_DEBUG	=
 ## instance of a daemon stopped running. This parameter controls how often
 ## the daemons touch the file (in seconds).
 #TOUCH_LOG_INTERVAL = 60
+
+
+## What type of restart should condor_master do when it notices its binary has
+## changed?  Valid values are GRACEFUL, PEACEFUL, and NEVER, with a default
+## value of GRACEFUL.
+MASTER_NEW_BINARY_RESTART=PEACEFUL
 
 ######################################################################
 ######################################################################
@@ -913,14 +960,18 @@ TESTINGMODE_CLAIM_WORKLIFE = 1200
 ######################################################################
 
 ##  Pathnames
-LOG		= $(LOCAL_DIR)/log
+LOG		= /var/log/condor
 SPOOL		= $(LOCAL_DIR)/spool
 EXECUTE		= $(LOCAL_DIR)/execute
 BIN		= $(RELEASE_DIR)/bin
 LIB		= $(RELEASE_DIR)/lib
-INCLUDE		= $(RELEASE_DIR)/include
+INCLUDE		= $(RELEASE_DIR)/include/condor
 SBIN		= $(RELEASE_DIR)/sbin
-LIBEXEC		= $(RELEASE_DIR)/libexec
+SHARE		= $(RELEASE_DIR)/share/condor
+RUN		= /var/run/condor
+DATA		= $(SPOOL)
+ETC		= /etc/condor
+LIBEXEC		= $(RELEASE_DIR)/libexec/condor
 
 ## If you leave HISTORY undefined (comment it out), no history file
 ## will be created. 
@@ -944,6 +995,7 @@ HAD_LOG		= $(LOG)/HADLog
 REPLICATION_LOG	= $(LOG)/ReplicationLog
 TRANSFERER_LOG	= $(LOG)/TransfererLog
 HDFS_LOG	= $(LOG)/HDFSLog
+TRIGGERD_LOG	= $(LOG)/TriggerLog
 
 ##  Lock files
 SHADOW_LOCK	= $(LOCK)/ShadowLock
@@ -1079,7 +1131,6 @@ CKPT_SERVER			= $(SBIN)/condor_ckpt_server
 STARTER_LOCAL			= $(SBIN)/condor_starter
 JOB_ROUTER                      = $(LIBEXEC)/condor_job_router
 ROOSTER                         = $(LIBEXEC)/condor_rooster
-HDFS				= $(SBIN)/condor_hdfs
 SHARED_PORT			= $(LIBEXEC)/condor_shared_port
 TRANSFERER			= $(LIBEXEC)/condor_transferer
 DEFRAG                          = $(LIBEXEC)/condor_defrag
@@ -1160,11 +1211,13 @@ PREEN_ARGS			= -m -r
 ##--------------------------------------------------------------------
 ## Address to which Condor will send a weekly e-mail with output of
 ## condor_status.
-#CONDOR_DEVELOPERS = condor-admin@cs.wisc.edu
+##  Default is condor-admin@cs.wisc.edu
+CONDOR_DEVELOPERS = NONE
 
 ## Global Collector to periodically advertise basic information about
 ## your pool.
-#CONDOR_DEVELOPERS_COLLECTOR = condor.cs.wisc.edu
+##  Default is condor.cs.wisc.edu
+CONDOR_DEVELOPERS_COLLECTOR = NONE
 
 ##  When the collector starts up, it can place it's address (IP and port)
 ##  into a file.  This way, tools running on the local machine don't
@@ -1188,6 +1241,7 @@ COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
 ## Determine if the Negotiator will honor SlotWeight attributes, which
 ## may be used to give a slot greater weight when calculating usage.
 #NEGOTIATOR_USE_SLOT_WEIGHTS = True
+NEGOTIATOR_USE_SLOT_WEIGHTS = False
 
 
 ## How often the Negotaitor starts a negotiation cycle, defined in
@@ -1633,7 +1687,7 @@ QUEUE_SUPER_USERS	= root, condor
 ##--------------------------------------------------------------------
 ##  condor_starter
 ##--------------------------------------------------------------------
-##  The condor_starter can renice the processes of Condor
+##  The condor_starter can renice the processes from remote Condor
 ##  jobs on your execute machines.  If you want this, uncomment the
 ##  following entry and set it to how "nice" you want the user
 ##  jobs. (1-19)  The larger the number, the lower priority the
@@ -1686,13 +1740,12 @@ PROCD = $(SBIN)/condor_procd
 #     UNIX); the name will be something like:
 #         \\.\pipe\condor_procd
 #
-PROCD_ADDRESS = $(LOCK)/procd_pipe
+PROCD_ADDRESS = $(RUN)/procd_pipe
 
-# Note that in other Condor daemons, turning on D_PROCFAMILY will
-# result in that daemon logging all of its interactions with the
-# ProcD.
-#
-PROCD_LOG = $(LOG)/ProcLog
+## Note that in other Condor daemons, turning on D_PROCFAMILY will
+## result in that daemon logging all of its interactions with the
+## ProcD.
+#PROCD_LOG = $(LOG)/ProcLog
 
 # This is the maximum period that the procd will use for taking
 # snapshots (the actual period may be lower if a condor daemon registers
@@ -1785,7 +1838,7 @@ JAVA = /usr/bin/java
 ## them here.  However, do not remove the existing entries, as Condor
 ## needs them.
 
-JAVA_CLASSPATH_DEFAULT = $(LIB) $(LIB)/scimark2lib.jar .
+JAVA_CLASSPATH_DEFAULT = $(SHARE) $(SHARE)/scimark2lib.jar .
 
 ##  JAVA_CLASSPATH_ARGUMENT describes the command-line parameter
 ##  used to introduce a new classpath:
@@ -2394,7 +2447,7 @@ KBDD_ADDRESS_FILE = $(LOG)/.kbdd_address
 #SSH_TO_JOB_SSHD_ARGS = "-i -e -f %f"
 
 # sshd configuration template used by condor_ssh_to_job_sshd_setup.
-#SSH_TO_JOB_SSHD_CONFIG_TEMPLATE = $(LIB)/condor_ssh_to_job_sshd_config_template
+SSH_TO_JOB_SSHD_CONFIG_TEMPLATE = $(ETC)/condor_ssh_to_job_sshd_config_template
 
 # Path to ssh-keygen
 #SSH_TO_JOB_SSH_KEYGEN = /usr/bin/ssh-keygen
@@ -2403,97 +2456,6 @@ KBDD_ADDRESS_FILE = $(LOG)/.kbdd_address
 # %f --> key file to generate
 # %% --> %
 #SSH_TO_JOB_SSH_KEYGEN_ARGS = "-N '' -C '' -q -f %f -t rsa"
-
-######################################################################
-##
-##  Condor HDFS
-##
-##  This is the default local configuration file for configuring Condor
-##  daemon responsible for running services related to hadoop 
-##  distributed storage system.  You should copy this file to the
-##  appropriate location and customize it for your needs.  
-##
-##  Unless otherwise specified, settings that are commented out show
-##  the defaults that are used if you don't define a value.  Settings
-##  that are defined here MUST BE DEFINED since they have no default
-##  value.
-##
-######################################################################
-
-######################################################################
-## FOLLOWING MUST BE CHANGED
-######################################################################
-
-## The location for hadoop installation directory. The default location
-## is under 'libexec' directory. The directory pointed by HDFS_HOME 
-## should contain a lib folder that contains all the required Jars necessary
-## to run HDFS name and data nodes. 
-#HDFS_HOME = $(RELEASE_DIR)/libexec/hdfs
-
-## The host and port for hadoop's name node. If this machine is the
-## name node (see HDFS_SERVICES) then the specified port will be used
-## to run name node. 
-HDFS_NAMENODE = hdfs://example.com:9000
-HDFS_NAMENODE_WEB = example.com:8000
-
-HDFS_BACKUPNODE = hdfs://example.com:50100
-HDFS_BACKUPNODE_WEB = example.com:50105
-
-## You need to pick one machine as name node by setting this parameter
-## to HDFS_NAMENODE. The remaining machines in a storage cluster will
-## act as data nodes (HDFS_DATANODE).
-HDFS_NODETYPE = HDFS_DATANODE
-
-## If machine is selected to be NameNode then by a role should defined.
-## If it selected to be DataNode then this parameter is ignored.
-## Available options:
-## ACTIVE: Active NameNode role (default value)
-## BACKUP: Always synchronized with the active NameNode state, thus 
-##         creating a backup of the namespace. Currently the NameNode
-##         supports one Backup node at a time.
-## CHECKPOINT: Periodically creates checkpoints of the namespace. 
-HDFS_NAMENODE_ROLE = ACTIVE
-
-## The two set of directories that are required by HDFS are for name 
-## node (HDFS_NAMENODE_DIR) and data node (HDFS_DATANODE_DIR). The 
-## directory for name node is only required for a machine running 
-## name node service and  is used to store critical meta data for 
-## files. The data node needs its directory to store file blocks and 
-## their replicas.
-HDFS_NAMENODE_DIR = /tmp/hadoop_name
-HDFS_DATANODE_DIR = /scratch/tmp/hadoop_data
-
-## Unlike name node address settings (HDFS_NAMENODE), that needs to be 
-## well known across the storage cluster, data node can run on any 
-## arbitrary port of given host.
-#HDFS_DATANODE_ADDRESS = 0.0.0.0:0
-
-####################################################################
-## OPTIONAL
-#####################################################################
-
-## Sets the log4j debug level. All the emitted debug output from HDFS
-## will go in 'hdfs.log' under $(LOG) directory.
-#HDFS_LOG4J=DEBUG
-
-## The access to HDFS services both name node and data node can be 
-## restricted by specifying IP/host based filters. By default settings
-## from ALLOW_READ/ALLOW_WRITE and DENY_READ/DENY_WRITE
-## are used to specify allow and deny list. The below two parameters can
-## be used to override these settings. Read the Condor manual for 
-## specification of these filters.
-## WARN: HDFS doesn't make any distinction between read or write based connection.
-#HDFS_ALLOW=*
-#HDFS_DENY=*
-
-#Fully qualified name for Name node and Datanode class.
-#HDFS_NAMENODE_CLASS=org.apache.hadoop.hdfs.server.namenode.NameNode
-#HDFS_DATANODE_CLASS=org.apache.hadoop.hdfs.server.datanode.DataNode
-#HDFS_DFSADMIN_CLASS=org.apache.hadoop.hdfs.tools.DFSAdmin
-
-## In case an old name for hdfs configuration files is required.
-#HDFS_SITE_FILE = hdfs-site.xml
-
 
 ##
 ##--------------------------------------------------------------------

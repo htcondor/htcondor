@@ -629,7 +629,8 @@ exit 0
 %setup -q -n %{name}-%{tarball_version}
 %endif
 
-%patch0 -p1
+# merged into master
+# % patch0 -p1
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
