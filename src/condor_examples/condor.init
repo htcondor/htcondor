@@ -35,6 +35,9 @@ pidfile=/var/run/condor/$prog.pid
 # Check that networking is up
 [ "${NETWORKING}" = "no" ] && exit 1
 
+if [ -n "$ULIMIT_FLAGS" ]; then
+  ulimit $ULIMIT_FLAGS > /dev/null 2>&1
+fi
 
 start() {
     echo -n $"Starting Condor daemons: "

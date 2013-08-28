@@ -632,7 +632,7 @@ exit 0
 # merged into master-unified_rpm-branch
 # % patch0 -p1
 # % patch1 -p1
-%patch2 -p1
+# % patch2 -p1
 %patch3 -p1
 %patch8 -p1
 
