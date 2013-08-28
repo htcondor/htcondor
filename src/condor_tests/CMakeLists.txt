@@ -402,8 +402,8 @@ if (BUILD_TESTING)
 	condor_pl_test(basic_startd_slot_attrs "STARTD_SLOT_ATTRS test" "core;quick;full")
 	#condor_pl_test(job_basic_suspend_continue_test "test suspends and continue" "core;quick;full")
 	condor_pl_test(job_basic_start_test "START reserve defines a dedicated slot" "core;quick;full")
-	condor_pl_test(job_basic_param_config_check "START param system with
-	daemon localizations" "core;quick;full")
+	condor_pl_test(job_basic_param_config_check "param system checks" "core;quick;full")
+	#condor_pl_test(lib_python_bindings "check python bindings" "core;quick;full")
 	condor_pl_test(cmd_condor_ping_basic "Basic default test of condor_ping" "core;quick;full")
 	condor_pl_test(job_aggressive_flocking "Test aggressive flocking" "core;quick;full")
 	##### job tests
