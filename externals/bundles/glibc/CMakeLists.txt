@@ -61,7 +61,7 @@ if (NOT CLIPPED)
 
 			set (GLIBC_CONFIGURE ./configure --enable-add-ons=nptl,rtkaio,c_stubs,libidn --without-cvs --enable-kernel=2.6.9 --with-headers=$HOME/junk/glibc-2.5-20061008T1257/override_headers:/usr/include --enable-bind-now --with-tls --with-__thread --build x86_64-redhat-linux --host x86_64-redhat-linux --disable-profile --enable-static-nss)
 
-			set (GLIBC_MAKE export "CFLAGS=-mtune=generic -DNDEBUG=1 -g -O3" && make -j2 -r PARALLELMFLAGS=-s)
+			set (GLIBC_MAKE export "CFLAGS=-mtune=generic -DNDEBUG=1 -g -O3" && $(MAKE) -r PARALLELMFLAGS=-s)
 
 		else()
 			set (VER 2.5-20061008T1257-p0)
@@ -69,7 +69,7 @@ if (NOT CLIPPED)
 
 			set (GLIBC_CONFIGURE ./configure --enable-add-ons=nptl,rtkaio,c_stubs,libidn --without-cvs --enable-kernel=2.6.9 --with-headers=$HOME/junk/glibc-2.5-20061008T1257/override_headers:/usr/include --enable-bind-now --with-tls --with-__thread --build i486-redhat-linux --host i486-redhat-linux --disable-profile --enable-static-nss)
 
-			set (GLIBC_MAKE export "CFLAGS=-march=i386 -mtune=generic -mno-tls-direct-seg-refs -DNDEBUG=1 -g -O3" && make -j2 -r PARALLELMFLAGS=-s )
+			set (GLIBC_MAKE export "CFLAGS=-march=i386 -mtune=generic -mno-tls-direct-seg-refs -DNDEBUG=1 -g -O3" && $(MAKE) -r PARALLELMFLAGS=-s )
 		endif()
 
 		set (GLIBC_PATCH patch -N --binary -p1 -i
@@ -88,7 +88,7 @@ patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warn
 
             set (GLIBC_CONFIGURE ./configure --host=x86_64-linux-gnu --build=x86_64-linux-gnu --without-cvs --enable-add-ons=libidn,nptl --without-selinux --enable-kernel=2.6.8 --disable-profile --with-headers=${GLIBC_BUILD_PREFIX}/debian/include --enable-bind-now --with-tls --with-__thread --enable-static-nss)
 
-			set (GLIBC_MAKE make -j2 -r)
+			set (GLIBC_MAKE $(MAKE) -r)
 		else()
 			set (VER 2.7-18)
 			set (GLIBC_TARNAME glibc-2.7-18)
@@ -97,7 +97,7 @@ patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warn
 
 			set (GLIBC_CONFIGURE ./configure --host=i686-linux --build=i486-linux-gnu --without-cvs --enable-add-ons=libidn,nptl --without-selinux --enable-kernel=2.6.8 --disable-profile --with-headers=${GLIBC_BUILD_PREFIX}/debian/include --enable-bind-now --with-tls --with-__thread --enable-static-nss)
 
-			set (GLIBC_MAKE export "CFLAGS=-pipe -O2 -fstrict-aliasing -g -march=i686 -mtune=i686 -O3" && make -j2 -r PARALLELMFLAGS=-s)
+			set (GLIBC_MAKE export "CFLAGS=-pipe -O2 -fstrict-aliasing -g -march=i686 -mtune=i686 -O3" && $(MAKE) -r PARALLELMFLAGS=-s)
 		endif()
 
 		set (GLIBC_PATCH patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/enable-static-nss.patch && patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-nscd.patch )
@@ -112,7 +112,7 @@ patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warn
 
 			set (GLIBC_CONFIGURE ./configure CC=gcc-4.4 CXX=g++-4.4 "CFLAGS=-pipe -O2 -fstrict-aliasing -g" --host=x86_64-linux-gnu --build=x86_64-linux-gnu --without-cvs --enable-add-ons=libidn,nptl --disable-profile --without-selinux "--with-pkgversion=Debian EGLIBC 2.11.2-10" --with-bugurl=http://www.debian.org/Bugs/ --enable-kernel=2.6.18 --enable-multi-arch --enable-static-nss )
 
-			set (GLIBC_MAKE make -j2 -r)
+			set (GLIBC_MAKE $(MAKE) -r)
 		else()
 			set (VER 2.11.2-10)
 			set (GLIBC_TARNAME glibc-2.11.2-10)
@@ -124,7 +124,7 @@ patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warn
 			set (GLIBC_CONFIGURE ./configure CC=gcc-4.4 CXX=g++-4.4 "CFLAGS=-pipe -O2 -fstrict-aliasing -g" --host=x86_64-linux-gnu --build=x86_64-linux-gnu --without-cvs --enable-add-ons=libidn,nptl --disable-profile --without-selinux --with-pkgversion="Debian EGLIBC 2.11.2-10" --with-bugurl="http://www.debian.org/Bugs/" --with-headers=${GLIBC_BUILD_PREFIX}/debian/include --enable-kernel=2.6.18 --enable-multi-arch --enable-static-nss )
 
 			# XXX FIXME
-			set (GLIBC_MAKE export "CFLAGS=-pipe -O2 -fstrict-aliasing -g -march=i686 -mtune=i686 -O3" && make -j2 -r PARALLELMFLAGS=-s)
+			set (GLIBC_MAKE export "CFLAGS=-pipe -O2 -fstrict-aliasing -g -march=i686 -mtune=i686 -O3" && $(MAKE) -r PARALLELMFLAGS=-s)
 
 		endif()
 
@@ -141,7 +141,7 @@ patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warn
 
             set (GLIBC_CONFIGURE ./configure CC=gcc CXX=g++ "CFLAGS=-mtune=generic -fasynchronous-unwind-tables -DNDEBUG -g -O3" --enable-add-ons=nptl,rtkaio,c_stubs,libidn --without-cvs --enable-kernel=2.6.18 --with-headers=/usr/include --enable-bind-now --with-tls --with-__thread --build x86_64-redhat-linux --host x86_64-redhat-linux --enable-multi-arch --disable-profile --enable-experimental-malloc --enable-nss-crypt --enable-static-nss )
 
-			set (GLIBC_MAKE make -j2 -r)
+			set (GLIBC_MAKE $(MAKE) -r)
 		else()
 			set (VER 2.12-2)
 			set (GLIBC_TARNAME glibc-2.12-2)
@@ -151,7 +151,7 @@ patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warn
 			# XXX FIXME
 			set (GLIBC_CONFIGURE ./configure --host=i686-linux --build=i486-linux-gnu --without-cvs --enable-add-ons=libidn,nptl --without-selinux --enable-kernel=2.6.8 --disable-profile --with-headers=${GLIBC_BUILD_PREFIX}/debian/include --enable-bind-now --with-tls --with-__thread --enable-static-nss)
 
-			set (GLIBC_MAKE export "CFLAGS=-pipe -O2 -fstrict-aliasing -g -march=i686 -mtune=i686 -O3" && make -j2 -r PARALLELMFLAGS=-s)
+			set (GLIBC_MAKE export "CFLAGS=-pipe -O2 -fstrict-aliasing -g -march=i686 -mtune=i686 -O3" && $(MAKE) -r PARALLELMFLAGS=-s)
 		endif()
 
 		# The enable-static-nss patch works, and disable link warning about dynamic nss
@@ -171,7 +171,7 @@ patch -N --binary -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/${VER}/disable-tempnam-warn
             # won't work.  *sigh*
 			set (GLIBC_CONFIGURE ./configure CC=gcc-4.4 CXX=g++-4.4 "CFLAGS=-pipe -O2 -fstrict-aliasing -g" --host=x86_64-linux-gnu --build=x86_64-linux-gnu --without-cvs --enable-add-ons=libidn,nptl --enable-profile --without-selinux "--with-pkgversion=Debian EGLIBC 2.13-38" --with-bugurl=http://www.debian.org/Bugs/ --with-headers=/usr/include --enable-kernel=2.6.26 --enable-multi-arch --enable-static-nss)
 
-			set (GLIBC_MAKE make -j2 -r)
+			set (GLIBC_MAKE $(MAKE) -r)
 		else()
 		    message(STATUS "HTCondor will not build 32-bit standard universe for glibc version ${GLIBC_VERSION}" )
 		    set(GLIBC_DETECTED OFF)

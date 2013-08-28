@@ -645,8 +645,7 @@ exit 0
 %endif
 
 %if %std_univ
-%patch11 -p1
-# already merged into master
+# % patch11 -p1
 # % patch12 -p1
 %patch13 -p1
 %endif
