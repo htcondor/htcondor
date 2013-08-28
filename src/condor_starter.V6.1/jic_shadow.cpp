@@ -1835,7 +1835,7 @@ bool
 JICShadow::recordDelayedUpdate( const std::string &name, const classad::ExprTree &expr )
 {
 	std::string prefix;
-	param(prefix, "DELAYED_UPDATE_PREFIX", "CHIRP*");
+	param(prefix, "CHIRP_DELAYED_UPDATE_PREFIX", "CHIRP*");
 	if (!prefix.size())
 	{
 		dprintf(D_ALWAYS, "Got an invalid prefix for updates: %s\n", name.c_str());
@@ -1845,13 +1845,13 @@ JICShadow::recordDelayedUpdate( const std::string &name, const classad::ExprTree
 	{
 		std::vector<std::string>::const_iterator it = std::find(m_delayed_update_attrs.begin(),
 			m_delayed_update_attrs.end(), name);
-		if (it != m_delayed_update_attrs.end())
+		if (it == m_delayed_update_attrs.end())
 		{
 			m_delayed_update_attrs.push_back(name);
 		}
-		if (m_delayed_update_attrs.size() >= 50)
+		if (m_delayed_update_attrs.size() > 50)
 		{
-			dprintf(D_ALWAYS, "Ignoring update for %s because more than 50 attributes have already been set.\n", name.c_str());
+			dprintf(D_ALWAYS, "Ignoring update for %s because 50 attributes have already been set.\n", name.c_str());
 			return false;
 		}
 		// Note that the ClassAd takes ownership of the copy.
@@ -2230,7 +2230,7 @@ JICShadow::initIOProxy( void )
 		dprintf( D_ALWAYS, "Job has %s=%s\n", ATTR_WANT_IO_PROXY,
 				 want_io_proxy ? "true" : "false" );
 	}
-	if (!enableIOProxy && !enableFiles && want_io_proxy)
+	if (!enableFiles && want_io_proxy)
 	{
 		dprintf(D_ALWAYS, "Starter config prevents us from enabling IO proxy.\n");
 		want_io_proxy = false;
@@ -2245,7 +2245,7 @@ JICShadow::initIOProxy( void )
 		dprintf(D_ALWAYS, "Job has %s=%s\n", ATTR_WANT_REMOTE_UPDATES,
 				want_updates ? "true" : "false");
 	}
-	if (!enableIOProxy && !enableUpdates && want_updates)
+	if (!enableUpdates && want_updates)
 	{
 		dprintf(D_ALWAYS, "Starter config prevents us from enabling remote updates.\n");
 		want_updates = false;
@@ -2259,7 +2259,7 @@ JICShadow::initIOProxy( void )
 		dprintf(D_ALWAYS, "Job has %s=%s\n", ATTR_WANT_DELAYED_UPDATES,
 				want_delayed ? "true" : "false");
 	}
-	if (!enableIOProxy && !enableDelayed && want_delayed)
+	if (!enableDelayed && want_delayed)
 	{
 		dprintf(D_ALWAYS, "Starter config prevents us from enabling delayed updates.\n");
 		want_delayed = false;

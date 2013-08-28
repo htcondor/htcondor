@@ -99,7 +99,7 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	m_download_xfer_status = XFER_STATUS_UNKNOWN;
 
 	std::string prefix;
-	param(prefix, "DELAYED_UPDATE_PREFIX", "CHIRP*");
+	param(prefix, "CHIRP_DELAYED_UPDATE_PREFIX", "CHIRP*");
 	m_delayed_update_prefix.initializeFromString(prefix.c_str());
 }
 
@@ -1142,7 +1142,7 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		jobAd->AssignExpr(ATTR_SPOOLED_OUTPUT_FILES,"UNDEFINED");
 	}
 
-		// Process all chrip-based updates from the starter.
+		// Process all chirp-based updates from the starter.
 	for (classad::ClassAd::const_iterator it = update_ad->begin(); it != update_ad->end(); it++) {
 		if (allowRemoteWriteAttributeAccess(it->first))
 		{
@@ -2327,7 +2327,9 @@ RemoteResource::allowRemoteWriteAttributeAccess( const std::string &name )
 	{
 		response = m_delayed_update_prefix.contains_anycase_withwildcard(name.c_str());
 	}
-	logRemoteAccessCheck(response,"write access to attribute",name.c_str());
+	// Do NOT log failures -- unfortunately, this routine doesn't know about the other
+	// whitelisted attributes (for example, ExitCode)
+	if (response) logRemoteAccessCheck(response,"write access to attribute",name.c_str());
 	return response;
 }
 

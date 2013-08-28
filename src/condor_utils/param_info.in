@@ -10901,7 +10901,7 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter
 id=615
 
-[DELAYED_UPDATE_PREFIX]
+[CHIRP_DELAYED_UPDATE_PREFIX]
 aliases=
 default=Chirp*
 version=8.1.0

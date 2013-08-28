@@ -372,9 +372,10 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 		classad::ClassAdParser parser;
 		classad::ExprTree *expr_tree;
-		if (strlen(expr) > 1000)
+		if (strlen(expr) > 993)
 		{
-			result = 1;
+			dprintf(D_FULLDEBUG, "Chirp update too long! (%lu)\n", strlen(expr));
+			result = -1;
 			errno = ENAMETOOLONG;
 		}
 		else
@@ -383,6 +384,10 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 			if (result)
 			{
 				result = !m_shadow->recordDelayedUpdate(name, *expr_tree);
+			}
+			else
+			{
+				dprintf(D_ALWAYS, "Failed to parse line to a ClassAd expression: %s\n", expr);
 			}
 		}
 		sprintf(line,"%d",convert(result,errno));
