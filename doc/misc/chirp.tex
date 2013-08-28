@@ -4,4 +4,15 @@
 \index{API!Chirp}
 \index{Chirp API}
 
-\Todo
+Chirp is a wire protocol and API that supports communication between a
+running job and a chirp server.  The HTCondor system provides a Chirp
+server running in the \Condor{starter} that allows a job to perform
+file I/O to and from the submit machine, update attribute in its own job
+ad, and append the the user log file.  This service is off by default, 
+and may be enabled by setting +WantIOProxy = true in the job ad.
+
+The Chirp protocol is fully documented at \URL{http://www3.nd.edu/~ccl/software/chirp}
+
+To provide easier access to this wire protocol, the \Condor{chirp} 
+command line tool is shipped with HTCondor.  This tool provides full
+access to the chirp commands.
