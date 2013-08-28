@@ -71,6 +71,12 @@ reload() {
     return $RETVAL
 }
 
+peaceful-off() {
+    condor_off -peaceful
+    rc=$?
+    exit $rc
+}
+
 #
 # Determine if a process is running only by looking in a pidfile.
 # There is no use of pidof, which can find processes that are not
@@ -226,8 +232,14 @@ case "$1" in
 	status -p $pidfile $prog
 	RETVAL=$?
 	;;
+
+    peaceful-off)
+	[ $running -eq 0 ] || exit 0
+	peaceful-off
+	RETVAL=$?
+       ;;
     *)
-	echo $"Usage: $0 {start|stop|restart|condrestart|try-restart|reload|force-reload|status}"
+	echo $"Usage: $0 {start|stop|restart|condrestart|try-restart|reload|force-reload|status|peaceful-off}"
 	RETVAL=2
 esac
 

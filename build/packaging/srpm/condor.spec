@@ -629,9 +629,9 @@ exit 0
 %setup -q -n %{name}-%{tarball_version}
 %endif
 
-# merged into master
+# merged into master-unified_rpm-branch
 # % patch0 -p1
-%patch1 -p1
+# % patch1 -p1
 %patch2 -p1
 %patch3 -p1
 %patch8 -p1
