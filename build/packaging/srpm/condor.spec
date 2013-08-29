@@ -841,6 +841,11 @@ populate %_sysconfdir/condor/config.d %{buildroot}/etc/examples/63aviary-hadoop.
 mkdir -p %{buildroot}/%{_var}/lib/condor/aviary
 populate %{_var}/lib/condor/aviary %{buildroot}/usr/axis2.xml
 populate %{_var}/lib/condor/aviary %{buildroot}/usr/services/
+populate %{_libdir}/condor/plugins src/condor_contrib/aviary/src/collector/libaviary_collector_axis.so
+populate %{_libdir}/condor/plugins src/condor_contrib/aviary/src/collector/AviaryCollectorPlugin-plugin.so
+populate %{_libdir}/condor/plugins src/condor_contrib/aviary/src/hadoop/AviaryHadoopPlugin-plugin.so
+populate %{_libdir}/condor/plugins src/condor_contrib/aviary/src/job/AviaryScheddPlugin-plugin.so
+populate %{_libdir}/condor/plugins src/condor_contrib/aviary/src/locator/AviaryLocatorPlugin-plugin.so
 %endif
 
 %if %plumage
@@ -1383,6 +1388,7 @@ rm -rf %{buildroot}
 %_var/lib/condor/aviary/services/collector/aviary-common.xsd
 %_var/lib/condor/aviary/services/collector/aviary-collector.xsd
 %_var/lib/condor/aviary/services/collector/aviary-collector.wsdl
+%_var/lib/condor/aviary/services/collector/libaviary_collector_axis.so
 
 %files aviary
 %defattr(-,root,root,-)
