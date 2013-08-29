@@ -170,23 +170,21 @@ Source4: condor.osg-sysconfig
 %endif
 Source5: condor_config.local.dedicated.resource
 
-Patch0: condor_config.generic.patch
-# This patch is here until it is pushed into upstream
-# https://htcondor-wiki.cs.wisc.edu/index.cgi/tktview?tn=3635
-Patch1: condor_peaceful_off.patch
-Patch2: condor_ulimit.patch
-Patch3: chkconfig_off.patch
+# Patch0: condor_config.generic.patch
+# Patch1: condor_peaceful_off.patch
+# Patch2: condor_ulimit.patch
+# Patch3: chkconfig_off.patch
 #% if 0%osg
 Patch8: osg_sysconfig_in_init_script.patch
 #% endif
-Patch9: proper_cream_v3.diff
+# Patch9: proper_cream_v3.diff
 %if %blahp
 Patch10: config_batch_gahp_path.patch
 %endif
 %if %std_univ
-Patch11: cmake-glibc.patch
-Patch12: std_local_ref-stub_gen-dep.patch
-Patch13: std-proper.patch
+# Patch11: cmake-glibc.patch
+# Patch12: std_local_ref-stub_gen-dep.patch
+# Patch13: std-proper.patch
 %endif
 
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
