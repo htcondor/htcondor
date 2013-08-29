@@ -61,13 +61,21 @@
 %else
 %endif
 
-%define blahp 1
-%define glexec 1
-%define cream 1
-%define parallel_setup 1
-
 # Things not turned on, or don't have Fedora packages yet
 %define qmf 0
+
+%if 0%{?fedora}
+%define blahp 0
+%define cream 0
+# a handful of std universe files don't seem to get built in fedora...
+%define std_univ 0
+%else
+%define blahp 1
+%define cream 1
+%endif
+
+%define glexec 1
+%define parallel_setup 1
 
 # These flags are meant for developers; it allows one to build HTCondor
 # based upon a git-derived tarball, instead of an upstream release tarball
