@@ -7,6 +7,7 @@
 
 #include <classad/source.h>
 #include <classad/sink.h>
+#include <classad/classadCache.h>
 
 #include "classad_wrapper.h"
 #include "exprtree_wrapper.h"
@@ -37,6 +38,12 @@ ExprTreeHolder::~ExprTreeHolder()
 
 bool ExprTreeHolder::ShouldEvaluate() const
 {
+    if (m_expr->GetKind() == classad::ExprTree::EXPR_ENVELOPE)
+    {
+        classad::CachedExprEnvelope *expr = static_cast<classad::CachedExprEnvelope*>(m_expr);
+        return expr->get()->GetKind() == classad::ExprTree::LITERAL_NODE ||
+               expr->get()->GetKind() == classad::ExprTree::CLASSAD_NODE;
+    }
     return m_expr->GetKind() == classad::ExprTree::LITERAL_NODE ||
            m_expr->GetKind() == classad::ExprTree::CLASSAD_NODE;
 }
