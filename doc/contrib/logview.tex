@@ -6,27 +6,49 @@
 
 The HTCondor Job Monitor is a Java application designed to allow users to 
 view user log files. 
-It is identified as the Contrib Module called log\_viewer. 
+It is identified as the Contrib Module called HTCondor Log Viewer. 
 
-To view a user log file, select it using the open file command in the File menu.  After the file is parsed, it will be visually represented.  Each horizontal line represents an individual job.  The x-axis
-is time.  Whether a job is running at a particular time is represented by its color at that time -- white for running, black for idle.  For example, a job which appears predominantly white has made
-efficient progress, whereas a job which appears predominantly black has received an inordinately small proportion of computational time. 
+To view a user log file, select it using the open file command in 
+the File menu.  
+After the file is parsed, it will be visually represented.  
+Each horizontal line represents an individual job.  
+The x-axis is time.  
+Whether a job is running at a particular time is represented by 
+its color at that time -- white for running, black for idle.  
+For example, a job which appears predominantly white has made
+efficient progress, 
+whereas a job which appears predominantly black has received 
+an inordinately small proportion of computational time. 
 
 
 \subsection{\label{sec:transition-states}Transition States}
 
-A transition state is the state of a job at any time.  It is called a "transition" because it is defined by the two events which bookmark it.  There are two basic transition states: running and idle. 
-An idle job typically is a job which has just been submitted into the HTCondor pool and is waiting to be matched with an appropriate machine or a job which has vacated from a machine and has been
-returned to the pool.  A running job, by contrast, is a job which is making active progress. 
+A transition state is the state of a job at any time.  
+It is called a transition, 
+because it is defined by the two events which bookmark it.  
+There are two basic transition states: running and idle. 
+An idle job typically is a job which has just been submitted into 
+the HTCondor pool and is waiting to be matched with an appropriate machine 
+or a job which has vacated from a machine and has been returned to the pool.  
+A running job, by contrast, is a job which is making active progress. 
 
-Advanced users may want a visual distinction between two types of running transitions: "goodput" or "badput".  Goodput is the transition state preceding an eventual job completion or
-checkpoint.  Badput is the transition state preceding a non-checkpointed eviction event.  Note that "badput" is potentially a misleading nomenclature; a job which is not checkpointed by the
-HTCondor program may checkpoint itself or make progress in some other way.  To view these two transition as distinct transitions, select the appropriate option from the "View" menu. 
+Advanced users may want a visual distinction between two types of 
+running transitions: \Term{goodput} or \Term{badput}.  
+Goodput is the transition state preceding an eventual job completion or
+checkpoint.  
+Badput is the transition state preceding a non-checkpointed eviction event.
+Note that badput is potentially a misleading nomenclature; 
+a job which does not produce a checkpoint by the
+HTCondor program may produce the checkpoint itself or make progress 
+in some other way.  
+To view these two transition as distinct transitions, 
+select the appropriate option from the "View" menu. 
 
 
 \subsection{\label{sec:events}Events}
 
-There are two basic kinds of events: checkpoint events and error events.   Plus advanced users can ask to see more events. 
+There are two basic kinds of events: checkpoint events and error events.   
+Plus, advanced users can ask to see more events. 
 
 
 \subsection{\label{sec:job-selector}Selecting Jobs}
@@ -51,10 +73,10 @@ off in the zoom menu if you prefer.
 \item The Keyboard shortcuts: 
 
 \begin{itemize}
-\item Arrows - an approximate ten percent scrollbar movement
-\item PageUp and PageDown - an approximate one hundred percent scrollbar movement 
-\item Control + Left or Right - approximate one hundred percent scrollbar movement 
-\item End and Home - scrollbar movement to the vertical extreme 
+\item Arrows - an approximate ten percent scroll bar movement
+\item PageUp and PageDown - an approximate one hundred percent scroll bar movement 
+\item Control + Left or Right - approximate one hundred percent scroll bar movement 
+\item End and Home - scroll bar movement to the vertical extreme 
 \item Others - as seen beside menu items
 \end{itemize}
 
