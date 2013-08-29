@@ -318,10 +318,6 @@ Requires: condor-procd = %{version}-%{release}
 Requires: blahp >= 1.16.1
 %endif
 
-%if %glexec
-Requires: glexec
-%endif
-
 %if %gsoap
 Requires: gsoap >= 2.7.12
 %endif
