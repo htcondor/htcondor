@@ -18,19 +18,35 @@ esac
 tmpd=$(mktemp -d)
 trap 'rm -rf "$tmpd"' EXIT
 
+pushd "$(dirname "$0")"   >/dev/null  # go to srpm dir
+pushd ../../..            >/dev/null  # go to root of git tree
+
+# why is it so hard to do a "git cat" ?
+condor_version=$( git archive HEAD CMakeLists.txt | tar xO \
+                  | awk -F\" '/^set\(VERSION / {print $2}' )
+
+git archive HEAD | gzip > "$tmpd/condor.tar.gz"
+
 git_rev=$(git log -1 --pretty=format:%h)
-sed -i "s/^%define git_rev .*/%define git_rev $git_rev/" condor.spec
+
+popd >/dev/null  # back to srpm dir
+
+
+# should verify this: [[ $condor_version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+
+sed -i "
+  s/^%define git_rev .*/%define git_rev $git_rev/
+  s/^%define tarball_version .*/%define tarball_version $condor_version/
+" condor.spec
 
 mkdir "$tmpd/SOURCES"
-pushd "$(dirname "$0")" >/dev/null
-cp -p * "$tmpd/SOURCES/"
-
-(cd ../../..; git archive HEAD) | gzip > "$tmpd/SOURCES/condor.tar.gz"
+cp -p -- * "$tmpd/SOURCES/"
+mv "$tmpd/condor.tar.gz" "$tmpd/SOURCES/"
 
 srpm=$(rpmbuild -bs -D"_topdir $tmpd" condor.spec)
 srpm=${srpm#Wrote: }
 
-popd >/dev/null
-cp "$srpm" .
+popd >/dev/null  # back to original working dir
+mv "$srpm" .
 echo "Wrote: ${srpm##*/}"
 
