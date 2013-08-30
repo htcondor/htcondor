@@ -4,7 +4,7 @@ if [ "X$VERBOSE" != "X" ]; then
   set -x
 fi
 
-# makesrpm.sh - generates a .src.rpm from the currently checked out HEAD,
+# makerpm.sh - generates a .rpm from the currently checked out HEAD,
 # along with condor.spec and the sources in this directory
 
 usage () {
@@ -21,7 +21,7 @@ esac
 tmpd=$(mktemp -d -p $PWD .tmpXXXXXX)
 trap 'rm -rf "$tmpd"' EXIT
 
-pushd "$(dirname "$0")"   >/dev/null  # go to srpm dir
+pushd "$(dirname "$0")"/../srpm   >/dev/null  # go to srpm dir
 if [ "$#" -eq 1 ]; then
   pushd $1                >/dev/null
 else
@@ -49,10 +49,10 @@ mkdir "$tmpd/SOURCES"
 cp -p -- * "$tmpd/SOURCES/"
 mv "$tmpd/condor.tar.gz" "$tmpd/SOURCES/"
 
-srpm=$(rpmbuild -bs -D"_topdir $tmpd" condor.spec)
-srpm=${srpm#Wrote: }
+rpm=$(rpmbuild -ba -D"_topdir $tmpd" condor.spec)
+rpm=${rpm#Wrote: }
 
 popd >/dev/null # back to original working dir
-mv "$srpm" .
-echo "Wrote: ${srpm##*/}"
+mv "$rpm" .
+echo "Wrote: ${rpm##*/}"
 
