@@ -53,6 +53,8 @@ rpmbuild -ba -D"_topdir $tmpd" condor.spec
 rpm=$(find $tmpd/SRPMS $tmpd/RPMS -name "*.rpm")
 
 popd >/dev/null # back to original working dir
-mv "$rpm" .
-echo "Wrote: ${rpm##*/}"
+for i in $rpm; do
+  mv "$i" .
+done
+#echo "Finished writing RPMs."
 

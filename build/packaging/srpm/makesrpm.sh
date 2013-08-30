@@ -54,5 +54,5 @@ srpm=${srpm#Wrote: }
 
 popd >/dev/null # back to original working dir
 mv "$srpm" .
-echo "Wrote: ${srpm##*/}"
+#echo "Wrote: ${srpm##*/}"
 
