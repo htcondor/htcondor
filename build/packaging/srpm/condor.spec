@@ -145,12 +145,12 @@ Source0: %{name}-%{tarball_version}.tar.gz
 Source1: generate-tarball.sh
 %endif
 
-%if %systemd
+# % if %systemd
 Source2: %{name}-tmpfiles.conf
 Source3: %{name}.service
-%else
+# % else
 Source4: condor.osg-sysconfig
-%endif
+# % endif
 Source5: condor_config.local.dedicated.resource
 
 # Patch0: condor_config.generic.patch
