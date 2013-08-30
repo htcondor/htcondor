@@ -49,8 +49,8 @@ mkdir "$tmpd/SOURCES"
 cp -p -- * "$tmpd/SOURCES/"
 mv "$tmpd/condor.tar.gz" "$tmpd/SOURCES/"
 
-rpm=$(rpmbuild -ba -D"_topdir $tmpd" condor.spec)
-rpm=${rpm#Wrote: }
+rpmbuild -ba -D"_topdir $tmpd" condor.spec
+rpm=$(find $tmpd/SRPMS $tmpd/RPMS -name "*.rpm")
 
 popd >/dev/null # back to original working dir
 mv "$rpm" .
