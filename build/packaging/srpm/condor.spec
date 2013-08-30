@@ -83,17 +83,6 @@
 # If building with git tarball, Fedora requests us to record the rev.  Use:
 # git log -1 --pretty=format:'%h'
 %define git_rev d65ec71
-%define git_build_man 0
-
-# Determine whether man pages will be included.
-%if !%git_build || (%git_build && %git_build_man)
-%define include_man 1
-%else
-%define include_man 0
-%endif
-
-# define this anyway...
-%define include_man 1
 
 %if ! (0%{?fedora} > 12 || 0%{?rhel} > 5)
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
@@ -108,9 +97,9 @@ Version: %{tarball_version}
 # Only edit the %condor_base_release to bump the rev number
 %define condor_base_release 0.unif.1
 %if %git_build
-%define condor_release %condor_base_release.%{git_rev}git
+        %define condor_release %condor_base_release.%{git_rev}.git
 %else
-%define condor_release %condor_base_release
+        %define condor_release %condor_base_release
 %endif
 Release: %condor_release%{?dist}
 # Release: 0.unif.1.pre20130821.d65ec71%{?dist}
@@ -121,20 +110,14 @@ URL: http://www.cs.wisc.edu/condor/
 
 # This allows developers to test the RPM with a non-release, git tarball
 %if %git_build
+
 # git clone http://condor-git.cs.wisc.edu/repos/condor.git
 # cd condor
-# git-archive master --prefix=condor-<version>/ | gzip -7 > ~/rpmbuild/SOURCES/condor.tar.gz
+# git archive master | gzip -7 > ~/rpmbuild/SOURCES/condor.tar.gz
 Source0: condor.tar.gz
 
-# Also potentially allow a git-based doc tarball
-%if %git_build_man
-# git clone http://condor-git.cs.wisc.edu/repos/condor_docs.git
-# cd condor
-# git-archive V7_6_0 | gzip -7 > ~/rpmbuild/SOURCES/condor_docs.tar.gz
-Source1: condor_docs.tar.gz
-%endif
-
 %else
+
 # The upstream HTCondor source tarball contains some source that cannot
 # be shipped as well as extraneous copies of packages the source
 # depends on. Additionally, the upstream HTCondor source requires a
@@ -311,10 +294,8 @@ BuildRequires: qpid-qmf-devel
 BuildRequires: systemd-units
 %endif
 
-%if %git_build_man || %include_man
 BuildRequires: transfig
 BuildRequires: latex2html
-%endif
 
 Requires: mailx
 Requires: condor-classads = %{version}-%{release}
@@ -620,12 +601,7 @@ exit 0
 
 %prep
 %if %git_build
-%if %git_build_man
-%setup -q -c -n %{name}-%{tarball_version} -a 1
-%else
-#% setup -q -c -n %{name}-%{tarball_version}
-%setup -q -n %{name}-%{tarball_version}
-%endif
+%setup -q -c -n %{name}-%{tarball_version}
 %else
 # For release tarballs
 %setup -q -n %{name}-%{tarball_version}
@@ -658,10 +634,8 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 
 %build
 
-# Possibly build man files
-%if %git_build_man || %include_man
+# build man files
 make -C doc just-man-pages
-%endif
 
 export CMAKE_PREFIX_PATH=/usr
 
@@ -799,10 +773,8 @@ populate %{_libdir}/condor/plugins %{buildroot}/%{_usr}/libexec/*-plugin.so
 populate %_libexecdir/condor %{buildroot}/usr/libexec/*
 
 # man pages go under %{_mandir}
-%if %include_man
 mkdir -p %{buildroot}/%{_mandir}
 mv %{buildroot}/usr/man/man1 %{buildroot}/%{_mandir}
-%endif
 
 mkdir -p %{buildroot}/%{_sysconfdir}/condor
 # the default condor_config file is not architecture aware and thus
@@ -879,12 +851,9 @@ echo "TRUST_UID_DOMAIN = TRUE" >> %{buildroot}/%_sysconfdir/condor/condor_config
 
 # no master shutdown program for now
 rm -f %{buildroot}/%{_sbindir}/condor_set_shutdown
-%if %include_man
 rm -f %{buildroot}/%{_mandir}/man1/condor_set_shutdown.1
-%endif
 
 # not packaging deployment tools
-%if %include_man
 rm -f %{buildroot}/%{_mandir}/man1/condor_config_bind.1
 rm -f %{buildroot}/%{_mandir}/man1/condor_cold_start.1
 rm -f %{buildroot}/%{_mandir}/man1/condor_cold_stop.1
@@ -908,7 +877,6 @@ rm -f %{buildroot}/%{_mandir}/man1/condor_load_history.1
 
 # this one got removed but the manpage was left around
 rm -f %{buildroot}/%{_mandir}/man1/condor_glidein.1
-%endif
 
 # Remove junk
 rm -rf %{buildroot}/%{_sysconfdir}/sysconfig
@@ -1163,7 +1131,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/glexec_starter_setup.sh
 %_libexecdir/condor/condor_defrag
 %_libexecdir/condor/interactive.sub
-%if %include_man
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
@@ -1209,7 +1176,6 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_power.1.gz
 %_mandir/man1/condor_gather_info.1.gz
 %_mandir/man1/condor_router_rm.1.gz
-%endif
 # bin/condor is a link for checkpoint, reschedule, vacate
 %_bindir/condor_submit_dag
 %_bindir/condor_who
@@ -1307,11 +1273,9 @@ rm -rf %{buildroot}
 %_sbindir/condor_procd
 %_sbindir/gidd_alloc
 %_sbindir/procd_ctl
-%if %include_man
 %_mandir/man1/procd_ctl.1.gz
 %_mandir/man1/gidd_alloc.1.gz
 %_mandir/man1/condor_procd.1.gz
-%endif
 
 #################
 %if %qmf
