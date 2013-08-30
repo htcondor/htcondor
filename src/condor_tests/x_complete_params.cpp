@@ -22,7 +22,6 @@ typedef enum param_info_t_type_e {
 
 int jobpid = 0;
 int myarg = 0;
-int getpid();
 const int cDefaults = sizeof(condor_params::defaults)/sizeof(condor_params::defaults[0]);
 
 
@@ -34,8 +33,6 @@ int main(int argc,char **argv)
 
 	int idx = 0;
 	FILE *fp;
-	jobpid = getpid();
-	printf("my pid %d\n",jobpid);
 
 	printf("Array members == %d\n", cDefaults);
 	fp = fopen("param_perl_input","w+");
