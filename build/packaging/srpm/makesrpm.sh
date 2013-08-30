@@ -18,6 +18,9 @@ esac
 tmpd=$(mktemp -d)
 trap 'rm -rf "$tmpd"' EXIT
 
+git_rev=$(git log -1 --pretty=format:%h)
+sed -i "s/^%define git_rev .*/%define git_rev $git_rev/" condor.spec
+
 mkdir "$tmpd/SOURCES"
 pushd "$(dirname "$0")" >/dev/null
 cp -p * "$tmpd/SOURCES/"
