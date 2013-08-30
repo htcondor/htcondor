@@ -282,7 +282,7 @@ sub StartCondorWithParams
 	}
 
 	$personal_config_file = $topleveldir ."/condor_config";
-print " ****** StartCondorWithParams: our new config file is <$personal_config_file>\n";
+	#print " ****** StartCondorWithParams: our new config file is <$personal_config_file>\n";
 
 	# what if we want to change what goes on here? Like really bare bones config
 	# file for checking internal param table defaults and values.
@@ -589,7 +589,7 @@ sub InstallPersonalCondor
 		close(CONFIG);
 		$personal_condor_params{"condortemplate"} = shift @configfiles;
 
-print " ****** Condortemplate set to <$personal_condor_params{condortemplate}>\n";
+		#print " ****** Condortemplate set to <$personal_condor_params{condortemplate}>\n";
 
 		if(exists $personal_condor_params{fresh_local}) {
 		} else {
@@ -663,7 +663,7 @@ print " ****** Condortemplate set to <$personal_condor_params{condortemplate}>\n
 		$personal_condor_params{"condortemplate"} = shift @configfiles;
 		$personal_condor_params{"condorlocalsrc"} = shift @configfiles;
 
-print " ****** Case nightlies leading to <$personal_condor_params{condortemplate}> and $personal_condor_params{condorlocalsrc}\n";
+		#print " ****** Case nightlies leading to <$personal_condor_params{condortemplate}> and $personal_condor_params{condorlocalsrc}\n";
 		debug( "My path to condor_q is $condorq and topleveldir is $topleveldir\n",$debuglevel);
 
 		if( $condorq =~ /^(\/.*\/)(\w+)\s*$/ )
@@ -765,7 +765,7 @@ sub TunePersonalCondor
 		$mpid = shift; # assign process id
 	}
 
-print " ****** TunePersonalCondor with localdir set to <$localdir>\n";
+	#print " ****** TunePersonalCondor with localdir set to <$localdir>\n";
 
 	debug( "TunePersonalCondor setting LOCAL_DIR to $localdir\n",$debuglevel);
 	#print "domain parts follow:";
@@ -883,10 +883,10 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 
 	my $line;
 	#system("ls;pwd");
-	print "***************** opening $personal_template as config file template *****************\n";
-	print " ****** writing template to <$topleveldir/$personal_config> \n";
+	#print "***************** opening $personal_template as config file template *****************\n";
+	#print " ****** writing template to <$topleveldir/$personal_config> \n";
 	if(exists $control{config_minimal}) {
-		print " ****** writing template have request for config_minimal!!!!!\n";
+		#print " ****** writing template have request for config_minimal!!!!!\n";
 		$minimalconfig += 1;
 	}
 
@@ -961,6 +961,7 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 		}
 	}
 	close(TEMPLATE);
+	close(NEW);
 
 	open(NEW,">$topleveldir/$personal_local")  || die "Can not open template: $!\n";
 
@@ -970,7 +971,6 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 			$personal_config_changes{"CONDOR_HOST"} = "CONDOR_HOST = $condorhost\n";
 		}
 
-		close(NEW);
 
 		if( exists $control{"ports"} )
 		{
