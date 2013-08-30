@@ -60,6 +60,7 @@ if (BUILD_TESTING)
 	condor_exe_test(job_core_bigenv.exe "job_core_bigenv.c" "")
 	condor_exe_test(lib_eventlog_build.exe "lib_eventlog_base.cpp" "condorapi")
 	condor_exe_test(x_job_mem_checker.exe "x_job_mem_checker.c" "" )
+	condor_exe_test(x_complete_params.exe "x_complete_params.cpp" "" )
 	
 	# Not all of our gccs support -Wno-div-by-zero.
 	#if (UNIX)
