@@ -402,3 +402,16 @@ bool EC2Resource::ClientTokenWorks( EC2Job *job )
 	}
 	return false;
 }
+
+bool EC2Resource::ShuttingDownTrusted( EC2Job *job ) {
+	std::string type = m_serverType;
+	if( type.empty() && job ) {
+		// CODE REVIEWER: This assumes that LookupString() will leave
+		// type alone when it fails.
+		job->jobAd->LookupString( ATTR_EC2_SERVER_TYPE, type );
+	}
+
+	if( type == "Amazon" ) { return true; }
+	return false;
+}
+

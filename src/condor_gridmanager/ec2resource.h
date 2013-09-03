@@ -67,6 +67,7 @@ public:
 
 	bool ServerTypeQueried( EC2Job *job = NULL );
 	bool ClientTokenWorks( EC2Job *job = NULL );
+	bool ShuttingDownTrusted( EC2Job *job = NULL );
 
     std::string authFailureMessage;
 

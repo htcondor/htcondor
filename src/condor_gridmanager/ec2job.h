@@ -109,8 +109,9 @@ private:
 	std::string m_key_pair_file;
 	bool m_should_gen_key_pair;
 	bool m_keypair_created;
+	bool m_was_job_completion;
 
-	int m_vm_check_times;
+	int m_retry_times;
 	
 	std::string m_ami_id;
 	std::string m_client_token;
