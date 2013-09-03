@@ -1379,7 +1379,9 @@ File System Configuration File Entries''.
   A boolean value that controls the caching of ClassAds.
   Caching saves memory when an HTCondor process contains
   many ClassAds with the same expressions.
-  The default value is \Expr{False}, which disables caching.
+  The default value is \Expr{True} for all daemons other than the
+  \Condor{shadow}, \Condor{starter}, and \Condor{master}.
+  A value of \Expr{True} enables caching.
 
 \label{param:StrictClassadEvaluation}
 \item[\Macro{STRICT\_CLASSAD\_EVALUATION}]
