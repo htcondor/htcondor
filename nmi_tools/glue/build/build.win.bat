@@ -239,8 +239,16 @@ goto finis
 :EXTERNALS
 ::where devenv
 ::grep -E "# Visual Studio" CONDOR.sln
-@echo devenv CONDOR_EXTERNALS.sln /Build RelWithDebInfo /project ALL_EXTERN
+@echo devenv CONDOR.sln /Build RelWithDebInfo /project ALL_EXTERN
 devenv CONDOR.sln /Build RelWithDebInfo /project ALL_EXTERN
+goto finis
+
+:BUILD_TESTS
+:BLD_TESTS
+@echo devenv CONDOR.sln /Build RelWithDebInfo /project BLD_TESTS
+devenv CONDOR.sln /Build RelWithDebInfo /project BLD_TESTS
+move src\condor_tests\RelWithDebInfo\*.exe src\condor_tests
+move src\condor_tests\RelWithDebInfo\*.pdb src\condor_tests
 goto finis
 
 REM common exit

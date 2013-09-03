@@ -188,13 +188,15 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     my $buildid = "";
     if ($cmake_args =~ /-DBUILDID:STRING=([0-9]+)/) { $buildid = $1; }
     if ($cmake_args =~ /-G[ ]*"Visual Studio ([0-9]+)/i) {
-        print "TJ: cmake was invoked with a Visual Studio $1 generator\n";
+        print "cmake was invoked with a Visual Studio $1 generator\n";
         $VCVER = "VC$1"; 
     }
     if ($taskname eq $EXTERNALS_TASK) {
         $execstr= "nmi_tools\\glue\\build\\build.win.bat EXTERNALS $VCVER";
     } elsif ($taskname eq $UNSTRIPPED_TASK) {
         $execstr= "nmi_tools\\glue\\build\\build.win.bat BUILD $VCVER";
+    } elsif ($taskname eq $CHECK_UNSTRIPPED_TASK) {
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat BLD_TESTS $VCVER";
     } elsif ($taskname eq $NATIVE_TASK) {
         print "Windows NATIVE (MSI) task\n";
         $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE $VCVER $buildid";
