@@ -90,6 +90,7 @@ sub RunCheck
 	#print "Checking duration being passsed to RunCheck <$args{duration}>\n";
     my $execute_fn = $args{on_execute} || $dummy;
     my $hold_fn = $args{on_hold} || $dummy;
+    my $shadow = $args{on_shadow} || $dummy;
     my $suspended_fn = $args{on_suspended} || $dummy;
     my $unsuspended_fn = $args{on_unsuspended} || $dummy;
     my $disconnected_fn = $args{on_disconnected} || $dummy;
@@ -116,6 +117,9 @@ sub RunCheck
 	#If we register thees to dummy, then we don't get
 	#the error function registered which says this is bad
 
+	if( exists $args{on_shadow} ) {
+    	CondorTest::RegisterShadow( $testname, $shadow );
+	}
 	if( exists $args{on_imageupdated} ) {
     	CondorTest::RegisterImageUpdated( $testname, $imageupdated_fn );
 	}
