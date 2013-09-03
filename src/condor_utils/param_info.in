@@ -5341,6 +5341,7 @@ id=314
 
 [ENABLE_CLASSAD_CACHING]
 default=true
+win32_default=false
 type=bool
 is_macro=false
 reconfig=true
