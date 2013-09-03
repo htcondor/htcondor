@@ -255,6 +255,10 @@ sub StartCondor
 sub StartCondorWithParams
 {
 	%personal_condor_params = @_;
+	#print "StartCondorWithParams: Hash <personal_condor_params > holds:\n";
+	#foreach my $key (sort keys %personal_condor_params) {
+		#print "StartCondorWithParams: $key $personal_condor_params{$key}\n";
+	#}
 
 	my $testname = $personal_condor_params{"test_name"} || die "Missing test_name\n";
 	$version = $personal_condor_params{"condor_name"} || die "Missing condor_name!\n";
@@ -286,7 +290,17 @@ sub StartCondorWithParams
 
 	# what if we want to change what goes on here? Like really bare bones config
 	# file for checking internal param table defaults and values.
-	$localdir = CondorPersonal::InstallPersonalCondor(@_);
+	#print "StartCondorWithParams: Hash <personal_condor_params > <pre-InstallPersonalCondor>holds:\n";
+	#foreach my $key (sort keys %personal_condor_params) {
+		#print "StartCondorWithParams: $key $personal_condor_params{$key}\n";
+	#}
+
+	$localdir = CondorPersonal::InstallPersonalCondor();
+
+	#print "StartCondorWithParams: Hash <personal_condor_params > <post-InstallPersonalCondor>holds:\n";
+	#foreach my $key (sort keys %personal_condor_params) {
+		#print "StartCondorWithParams: $key $personal_condor_params{$key}\n";
+	#}
 
 	if($localdir eq "")
 	{
@@ -302,7 +316,17 @@ sub StartCondorWithParams
 		CondorPersonal::TunePersonalCondor($localdir, $mpid);
 	}
 
+	#print "StartCondorWithParams: Hash <personal_condor_params > <post-TunePersonalCondor>holds:\n";
+	#foreach my $key (sort keys %personal_condor_params) {
+		#print "StartCondorWithParams: $key $personal_condor_params{$key}\n";
+	#}
+
 	$collector_port = CondorPersonal::StartPersonalCondor();
+	#print "StartCondorWithParams: Hash <personal_condor_params > <post-StartPersonalCondor>holds:\n";
+	#foreach my $key (sort keys %personal_condor_params) {
+		#print "StartCondorWithParams: $key $personal_condor_params{$key}\n";
+	#}
+
 
 	debug( "collector port is $collector_port\n",$debuglevel);
 
@@ -448,6 +472,7 @@ sub ParsePersonalCondorParams
 	    	}
 
 	    	debug( "(CondorPersonal.pm) $variable = $value\n" ,$debuglevel);
+	    	#print "(CondorPersonal.pm) $variable = $value\n";
 
 	    	# save the variable/value pair
 	    	$personal_condor_params{$variable} = $value;
@@ -457,6 +482,9 @@ sub ParsePersonalCondorParams
 		}
     }
 	close(SUBMIT_FILE);
+	#foreach my $key (%personal_condor_params) {
+		#print "ParsePersonalCondorParams: param: $key , $personal_condor_params{$key}\n";
+	#}
     return 1;
 }
 
@@ -549,7 +577,7 @@ sub InstallPersonalCondor
 {
 	# this used to be used globally but now passwed
 	# in from StartCondorWithParams
-	%personal_condor_params = @_;
+	#%personal_condor_params = @_;
 	my %control = %personal_condor_params;
 
 	my $schedd;
@@ -777,6 +805,11 @@ sub TunePersonalCondor
 
 	#$myhost = @domainparts[0];
 
+	#foreach my $key (sort keys %control) {
+		#print "TunePersonal:\n";
+		#print "CONTROL: $key, $control{$key}\n";
+	#}
+
 	debug( "My basic name is $myhost\n",$debuglevel);
 
 
@@ -827,6 +860,7 @@ sub TunePersonalCondor
 	# was a special daemon list called out?
 	if( exists $control{"daemon_list"} )
 	{
+		#print "New daemon list called out <$control{daemon_list}>\n";
 		$personal_daemons = $control{"daemon_list"};
 	}
 
@@ -886,7 +920,7 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 	#print "***************** opening $personal_template as config file template *****************\n";
 	#print " ****** writing template to <$topleveldir/$personal_config> \n";
 	if(exists $control{config_minimal}) {
-		#print " ****** writing template have request for config_minimal!!!!!\n";
+		print " ****** writing template have request for config_minimal!!!!!\n";
 		$minimalconfig += 1;
 	}
 

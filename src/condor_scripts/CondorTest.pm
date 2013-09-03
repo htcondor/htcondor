@@ -206,6 +206,7 @@ sub RegisterResult
     my $checkname = GetCheckName($caller_file,%args);
 
     my $testname = $args{test_name} || GetDefaultTestName();
+	print "RegisterResult: test name is <$testname>\n";
 
     my $result_str = $result == 1 ? "PASSED" : "FAILED";
     debug( "\n$result_str check $checkname in test $testname\n\n", 1 );
@@ -2107,7 +2108,7 @@ sub PersonalCondorTest
 			$locconfig = shift @local;
 			my $locport = shift @local;
 			
-			debug("---local config is $locconfig and local port is $locport---\n",2);
+			debug("---local config is $locconfig and local port is $locport---\n",3);
 
 			#$ENV{CONDOR_CONFIG} = $locconfig;
 		}
@@ -2252,10 +2253,12 @@ sub StartPersonal {
     debug("Starting Perosnal($$) for $testname/$paramfile/$version\n",2);
 
     my $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    print "$time: About to start a personal Condor in CondorTest::StartPersonal\n";
+    #print "$time: About to start a personal Condor in CondorTest::StartPersonal\n";
+	#print "Param file is <$paramfile> which contains:\n";
+	#system("cat $paramfile");
     my $condor_info = CondorPersonal::StartCondor( $testname, $paramfile ,$version);
     $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    print "$time: Finished starting personal Condor in CondorTest::StartPersonal\n";
+    #print "$time: Finished starting personal Condor in CondorTest::StartPersonal\n";
 
     my @condor_info = split /\+/, $condor_info;
     my $condor_config = shift @condor_info;
@@ -2263,10 +2266,10 @@ sub StartPersonal {
     my $collector_addr = CondorPersonal::FindCollectorAddress();
 
     $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    print "$time: Calling PersonalCondorInstance in CondorTest::StartPersonal\n";
+    #print "$time: Calling PersonalCondorInstance in CondorTest::StartPersonal\n";
     $personal_condors{$version} = new PersonalCondorInstance( $version, $condor_config, $collector_addr, 1 );
     $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    print "$time: Finished calling PersonalCondorInstance in CondorTest::StartPersonal\n";
+    #print "$time: Finished calling PersonalCondorInstance in CondorTest::StartPersonal\n";
 
     return($condor_info);
 }
