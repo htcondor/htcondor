@@ -42,6 +42,29 @@ my $condorinfo =CondorTest::StartCondorWithParams(
 );
 
 my $paraminput = "param_perl_input";
+my $convertinput = "param_info_tables.h";
+my $converttool = "x_complete_params.exe";
+
+if(!(-f "$converttool")) {
+	die "Needed conversion program <$converttool> not available\n";
+}
+
+if(!(-f "$convertinput")) {
+	die "Needed conversion program input file <$convertinput> not available\n";
+}
+
+my $conversionstatus = 0;
+$conversionstatus = system("$converttool");
+if($conversionstatus != 0) {
+	die "Running <$converttool> returned status <$conversionstatus>\n";
+}
+
+if(!(-f "$paraminput")) {
+	die "Needed conversion program failed to create <$paraminput>\n";
+}
+
+print "Past Initial Stages\n";
+
 my %params = ();
 my $line = "";
 my $errors = 0;
