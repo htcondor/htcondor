@@ -22,11 +22,7 @@ tmpd=$(mktemp -d -p $PWD .tmpXXXXXX)
 trap 'rm -rf "$tmpd"' EXIT
 
 pushd "$(dirname "$0")"/../srpm   >/dev/null  # go to srpm dir
-if [ "$#" -eq 1 ]; then
-  pushd $1                >/dev/null
-else
-  pushd ../../..          >/dev/null  # go to root of git tree
-fi
+pushd ../../..                    >/dev/null  # go to root of git tree
 
 # why is it so hard to do a "git cat" ?
 condor_version=$( git archive HEAD CMakeLists.txt | tar xO \
