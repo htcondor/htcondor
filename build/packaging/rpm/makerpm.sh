@@ -49,7 +49,7 @@ sed -i "
   s/^%define tarball_version .*/%define tarball_version $condor_version/
 " "$tmpd/SOURCES/condor.spec"
 
-rpmbuild -ba -D"_topdir $tmpd" condor.spec
+rpmbuild -ba -D"_topdir $tmpd" "$tmpd/SOURCES/condor.spec"
 rpm=$(find $tmpd/SRPMS $tmpd/RPMS -name "*.rpm")
 
 popd >/dev/null # back to original working dir
