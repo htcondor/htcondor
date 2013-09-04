@@ -83,6 +83,24 @@ void *convert_to_FILEptr(PyObject* obj) {
     return PyFile_Check(obj) ? PyFile_AsFile(obj) : 0;
 }
 
+struct classad_from_python_dict {
+
+    static void* convertible(PyObject* obj_ptr)
+    {
+        return PyMapping_Check(obj_ptr) ? obj_ptr : 0;
+    }
+
+    static void construct(PyObject* obj,  boost::python::converter::rvalue_from_python_stage1_data* data)
+    {
+        void* storage = ((boost::python::converter::rvalue_from_python_storage<ClassAdWrapper>*)data)->storage.bytes;
+        new (storage) ClassAdWrapper;
+        boost::python::handle<> handle(obj);
+        boost::python::object boost_obj(handle);
+        static_cast<ClassAdWrapper*>(storage)->update(boost_obj);
+        data->convertible = storage;
+    }
+};
+
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(setdefault_overloads, setdefault, 1, 2);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(get_overloads, get, 1, 2);
 
@@ -125,6 +143,7 @@ BOOST_PYTHON_MODULE(classad)
         .def("printOld", &ClassAdWrapper::toOldString, "Represent this ClassAd as a string in the \"old ClassAd\" format.")
         .def("get", &ClassAdWrapper::get, get_overloads("Retrieve a value from the ClassAd"))
         .def("setdefault", &ClassAdWrapper::setdefault, setdefault_overloads("Set a default value for a ClassAd"))
+        .def("update", &ClassAdWrapper::update, "Copy the contents of a given ClassAd into the current object")
         ;
 
     class_<ExprTreeHolder>("ExprTree", "An expression in the ClassAd language", init<std::string>())
@@ -143,4 +162,10 @@ BOOST_PYTHON_MODULE(classad)
 
     boost::python::converter::registry::insert(convert_to_FILEptr,
         boost::python::type_id<FILE>());
+
+    boost::python::converter::registry::push_back(
+        &classad_from_python_dict::convertible,
+        &classad_from_python_dict::construct,
+        boost::python::type_id<ClassAdWrapper>());
+
 }

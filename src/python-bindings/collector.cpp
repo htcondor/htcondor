@@ -258,7 +258,7 @@ struct Collector {
             sock.reset();
             for (int i=0; i<list_len; i++)
             {
-                ClassAdWrapper &wrapper = extract<ClassAdWrapper &>(ads[i]);
+                const ClassAdWrapper wrapper = extract<const ClassAdWrapper>(ads[i]);
                 ad.CopyFrom(wrapper);
                 if (use_tcp)
                 {

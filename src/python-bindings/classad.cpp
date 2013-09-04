@@ -13,6 +13,8 @@
 #include "exprtree_wrapper.h"
 #include "old_boost.h"
 
+#include <boost/python/stl_iterator.hpp>
+
 ExprTreeHolder::ExprTreeHolder(const std::string &str)
     : m_expr(NULL), m_owns(true)
 {
@@ -262,6 +264,31 @@ boost::python::object ClassAdWrapper::setdefault(const std::string attr, boost::
     ExprTreeHolder holder(expr);
     boost::python::object result(holder);
     return result;
+}
+
+void ClassAdWrapper::update(boost::python::object source)
+{
+    // First, try to use ClassAd's built-in update.
+    boost::python::extract<ClassAdWrapper&> source_ad_obj(source);
+    if (source_ad_obj.check())
+    {
+        this->Update(source_ad_obj()); return;
+    }
+
+    // Next, see if we have a dictionary-like object.
+    if (PyObject_HasAttrString(source.ptr(), "items"))
+    {
+        return this->update(source.attr("items")());
+    }
+
+    boost::python::stl_input_iterator<boost::python::object> begin(source), end;
+    
+    for (boost::python::stl_input_iterator<boost::python::object> it = begin; it != end; it++)
+    {
+        boost::python::tuple tup = boost::python::extract<boost::python::tuple>(*it);
+        std::string attr = boost::python::extract<std::string>(tup[0]);
+        InsertAttrObject(attr, tup[1]);
+    }
 }
 
 ExprTreeHolder ClassAdWrapper::LookupExpr(const std::string &attr) const
