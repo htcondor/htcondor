@@ -40,14 +40,14 @@ popd >/dev/null # back to srpm dir or initial dir.
 
 # should verify this: [[ $condor_version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
 
-sed -i "
-  s/^%define git_rev .*/%define git_rev $git_rev/
-  s/^%define tarball_version .*/%define tarball_version $condor_version/
-" condor.spec
-
 mkdir "$tmpd/SOURCES"
 cp -p -- * "$tmpd/SOURCES/"
 mv "$tmpd/condor.tar.gz" "$tmpd/SOURCES/"
+
+sed -i "
+  s/^%define git_rev .*/%define git_rev $git_rev/
+  s/^%define tarball_version .*/%define tarball_version $condor_version/
+" "$tmpd/SOURCES/condor.spec"
 
 srpm=$(rpmbuild -bs -D"_topdir $tmpd" condor.spec)
 srpm=${srpm#Wrote: }
