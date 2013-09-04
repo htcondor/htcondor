@@ -363,7 +363,7 @@ struct Schedd {
         return actOnJobs(action, job_spec, object("Python-initiated action."));
     }
 
-    int submit(ClassAdWrapper &wrapper, int count=1, bool spool=false, object ad_results=object())
+    int submit(const ClassAdWrapper &wrapper, int count=1, bool spool=false, object ad_results=object())
     {
         ConnectionSentry sentry(*this); // Automatically connects / disconnects.
 
@@ -465,7 +465,7 @@ struct Schedd {
         job_tmp_array.reserve(len);
         for (int i=0; i<len; i++)
         {
-            ClassAdWrapper &wrapper = extract<ClassAdWrapper&>(jobs[i]);
+            const ClassAdWrapper wrapper = extract<ClassAdWrapper>(jobs[i]);
             boost::shared_ptr<compat_classad::ClassAd> tmp_ad(new compat_classad::ClassAd());
             job_tmp_array.push_back(tmp_ad);
             tmp_ad->CopyFrom(wrapper);
