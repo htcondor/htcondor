@@ -19,7 +19,7 @@ StaticAddressSelection::SelectAddresses()
 		dprintf(D_ALWAYS, "The required classad attribute " ATTR_INTERNAL_ADDRESS_IPV4 " is missing; cannot assign internal static IPv4 address.\n");
 		return 1;
 	}
-	if (!m_ad->EvaluateAttrString(ATTR_EXTERNAL_ADDRESS_IPV6, address_str)) {
+	if (!m_ad->EvaluateAttrString(ATTR_EXTERNAL_ADDRESS_IPV4, address_str)) {
 		dprintf(D_ALWAYS, "The required classad attribute " ATTR_EXTERNAL_ADDRESS_IPV4 " is missing; cannot assign external static IPv4 address.\n");
 		return 1;
 	}
