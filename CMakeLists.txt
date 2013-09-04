@@ -37,7 +37,7 @@ set(VERSION "8.0.3")
 #   perhaps because you are working on a feature branch and need to
 #   ship test binaries to a user, change this to identify your work.
 #   Avoid whitespace.
-set(PRE_RELEASE "PRE-RELEASE-UWCS")
+set(PRE_RELEASE "gittrac_3882-branch")
 #set(PRE_RELEASE OFF)
 
 # If set via the cmake command line, FORCE_PRE_RELEASE allows for

@@ -1205,6 +1205,9 @@ void main_init (int argc, char ** const argv) {
 				// Not using the node log is the backward compatible thing to do,
 				// so we do not need to check below.
 			if(dagman._submitDagDeepOpts.always_use_node_log) { 
+#if 1 //TEMPTEMP
+			debug_printf( DEBUG_QUIET, "Warning: bypassing check for needing to fall back to not using default node log (temporary fix for LIGO)\n" );
+#else //TEMPTEMP
 				bool has_new_default_log = access(dagman._defaultNodeLog, F_OK) == 0; // Check for existence of the default log file
 				if(!submitFileVersion.built_since_version(7,9,1)) {
 					debug_printf( DEBUG_QUIET, "Submit file version indicates submit is too old. "
@@ -1230,6 +1233,7 @@ void main_init (int argc, char ** const argv) {
 							"you probably know what to do to resolve the problem...\n");
 					}
 				}
+#endif //TEMPTEMP
 			}
         }
 
