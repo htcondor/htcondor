@@ -427,9 +427,17 @@ void BoincJob::doEvaluateState()
 
 			rc = myResource->Submit( this, err_msg );
 			if ( rc == BoincSubmitWait ) {
+				// If we have an err_msg, then there was a failure,
+				// but the batch may have been submitted.
+				// Put the job on hold, but don't clear out GridJobId.
+				if ( !err_msg.empty() ) {
+					errorString = err_msg;
+					gmState = GM_HOLD;
+				}
 				break;
 			}
 			if ( rc == BoincSubmitFailure ) {
+				SetRemoteBatchName( NULL );
 				errorString = err_msg;
 				gmState = GM_HOLD;
 				break;

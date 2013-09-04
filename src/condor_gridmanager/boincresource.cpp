@@ -408,6 +408,14 @@ BoincSubmitResponse BoincResource::Submit( BoincJob *job,
 	// TODO any other cases where we're not waiting for submission?
 
 	batch->m_jobs_ready.insert( job );
+	// If we in BatchMaybeSubmitted and m_error_message is set, then
+	// the batch query failed and we should return the error message
+	// to the job. We don't return BoincSubmitFailure, because that
+	// indicates the batch has not been submitted and no cancelation
+	// is required.
+	if ( batch->m_submit_status == BatchMaybeSubmitted ) {
+		error_str = batch->m_error_message;
+	}
 	if ( BatchReadyToSubmit( batch ) ) {
 		daemonCore->Reset_Timer( m_submitTid, 0 );
 	}
@@ -460,6 +468,7 @@ void BoincResource::DoPing( time_t& ping_delay, bool& ping_complete,
 
 BoincResource::BatchStatusResult BoincResource::StartBatchStatus()
 {
+	m_statusBatches.clearAll();
 	for ( std::list<BoincBatch*>::iterator itr = m_batches.begin();
 		  itr != m_batches.end(); itr++ ) {
 		if ( (*itr)->m_submit_status == BatchSubmitted ||
@@ -486,6 +495,25 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 		// TODO Save error string for use in hold messages?
 		dprintf( D_ALWAYS, "Error getting BOINC status: %s\n",
 				 m_statusGahp->getErrorString() );
+
+		// If this error looks like it would affect a submit command,
+		// notify all jobs in BatchMaybeSubmitted state.
+		if ( !strstr( m_statusGahp->getErrorString(), "no batch named" ) ) {
+			for ( std::list<BoincBatch*>::iterator batch_itr = m_batches.begin();
+				  batch_itr != m_batches.end(); batch_itr++ ) {
+				if ( (*batch_itr)->m_submit_status != BatchMaybeSubmitted ||
+					 !(*batch_itr)->m_error_message.empty() ) {
+					continue;
+				}
+				(*batch_itr)->m_error_message = m_statusGahp->getErrorString();
+				for ( set<BoincJob *>::iterator job_itr = (*batch_itr)->m_jobs.begin();
+					  job_itr != (*batch_itr)->m_jobs.end(); job_itr++ ) {
+					(*job_itr)->SetEvaluateState();
+				}
+			}
+		}
+
+		m_statusBatches.clearAll();
 		return BSR_ERROR;
 	}
 
