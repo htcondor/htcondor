@@ -14,6 +14,8 @@ usage () {
   exit
 }
 
+fail () { echo "$@" >&2; exit 1; }
+
 case $1 in
    -ba | -bs ) buildmethod=$1 ;;
           '' ) buildmethod=-bs ;;
@@ -31,13 +33,15 @@ condor_version=$(
   git show HEAD:CMakeLists.txt | awk -F\" '/^set\(VERSION / {print $2}'
 )
 
+[[ $condor_version ]] || fail "Condor version string not found"
+[[ $condor_version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] \
+|| fail "Bad condor version string '$condor_version'"
+
 git archive HEAD | gzip > "$tmpd/condor.tar.gz"
 
 git_rev=$(git rev-parse --short HEAD)
 
 popd >/dev/null # back to srpm dir or initial dir.
-
-# should verify this: [[ $condor_version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
 
 mkdir "$tmpd/SOURCES"
 cp -p -- * "$tmpd/SOURCES/"
