@@ -26,8 +26,10 @@ esac
 tmpd=$(mktemp -d "$PWD/.tmpXXXXXX")
 trap 'rm -rf "$tmpd"' EXIT
 
-pushd "$(dirname "$0")"   >/dev/null  # go to srpm dir
-pushd ../../..            >/dev/null  # go to root of git tree
+WD=$PWD                 # save working dir
+cd "$(dirname "$0")"    # go to srpm dir
+srpm_dir=$PWD
+cd ../../..             # go to root of git tree
 
 condor_version=$(
   git show HEAD:CMakeLists.txt | awk -F\" '/^set\(VERSION / {print $2}'
@@ -41,19 +43,17 @@ git archive HEAD | gzip > "$tmpd/condor.tar.gz"
 
 git_rev=$(git rev-parse --short HEAD)
 
-popd >/dev/null # back to srpm dir or initial dir.
-
-mkdir "$tmpd/SOURCES"
-cp -p -- * "$tmpd/SOURCES/"
-mv "$tmpd/condor.tar.gz" "$tmpd/SOURCES/"
+cd "$tmpd"
+mkdir SOURCES
+cp -p "$srpm_dir"/* SOURCES
+mv condor.tar.gz SOURCES
 
 sed -i "
   s/^%define git_rev .*/%define git_rev $git_rev/
   s/^%define tarball_version .*/%define tarball_version $condor_version/
-" "$tmpd/SOURCES/condor.spec"
+" SOURCES/condor.spec
 
-rpmbuild $buildmethod -D"_topdir $tmpd" "$tmpd/SOURCES/condor.spec"
+rpmbuild $buildmethod -D"_topdir $tmpd" SOURCES/condor.spec
 
-popd >/dev/null  # back to original working dir
-mv "$tmpd"/*RPMS/*.rpm .
+mv *RPMS/*.rpm "$WD"
 
