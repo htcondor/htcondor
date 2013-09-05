@@ -26,10 +26,10 @@ esac
 tmpd=$(mktemp -d "$PWD/.tmpXXXXXX")
 trap 'rm -rf "$tmpd"' EXIT
 
-WD=$PWD                 # save working dir
-cd "$(dirname "$0")"    # go to srpm dir
+WD=$PWD                                # save working dir
+cd "$(dirname "$0")"                   # go to srpm source dir
 srpm_dir=$PWD
-cd ../../..             # go to root of git tree
+cd "$(git rev-parse --show-toplevel)"  # go to root of git tree
 
 condor_version=$(
   git show HEAD:CMakeLists.txt | awk -F\" '/^set\(VERSION / {print $2}'
