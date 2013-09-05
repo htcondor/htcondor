@@ -119,7 +119,15 @@ than version 8.1.0.
 
 \begin{itemize}
 
-\item None.
+\item DAG recovery mode does not work for Pegasus-generated sub-DAGs.
+This means that, for such DAGs, doing \Condor{hold}/\Condor{release} on
+the DAGMan job, or stopping and re-starting the schedd with the DAGMan
+job in the queue, will result in a failure of the DAG.  This can be
+avoided by doing a \Condor{rm} of the DAGMan job, which produces a rescue
+DAG, and re-submitting the DAG (which then automatically runs the
+rescue DAG).
+This bug was introduced in version 8.1.0 in the development series.
+\Ticket{3882}
 
 \end{itemize}
 
