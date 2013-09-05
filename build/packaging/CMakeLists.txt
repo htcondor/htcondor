@@ -7,7 +7,7 @@ if ( RPM_SYSTEM_NAME )
 
         add_custom_target( srpm COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/srpm/makesrpm.sh WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/srpm DEPENDS srpm_dir )
 
-        add_custom_target( rpm COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/rpm/makerpm.sh WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/rpm DEPENDS rpm_dir )
+        add_custom_target( rpm COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/srpm/makesrpm.sh -ba WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/rpm DEPENDS rpm_dir )
 
 endif ( RPM_SYSTEM_NAME )
 

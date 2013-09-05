@@ -4,17 +4,20 @@ if [ "X$VERBOSE" != "X" ]; then
   set -x
 fi
 
-# makesrpm.sh - generates a .src.rpm from the currently checked out HEAD,
+# makesrpm.sh - generates rpms from the currently checked out HEAD,
 # along with condor.spec and the sources in this directory
 
 usage () {
-  echo "usage: $(basename "$0")"
-  echo "Sorry, no options yet..."
+  echo "usage: $(basename "$0") [-ba|-bs]"
+  echo "  -ba    Build binary and source packages"
+  echo "  -bs    Build source package only (default)"
   exit
 }
 
 case $1 in
-  --help ) usage ;;
+   -ba | -bs ) buildmethod=$1 ;;
+          '' ) buildmethod=-bs ;;
+  --help | * ) usage ;;
 esac
 
 # Do everything in a temp dir that will go away on errors or end of script
@@ -45,10 +48,8 @@ sed -i "
   s/^%define tarball_version .*/%define tarball_version $condor_version/
 " "$tmpd/SOURCES/condor.spec"
 
-srpm=$(rpmbuild -bs -D"_topdir $tmpd" "$tmpd/SOURCES/condor.spec")
-srpm=${srpm#Wrote: }
+rpmbuild $buildmethod -D"_topdir $tmpd" "$tmpd/SOURCES/condor.spec"
 
-popd >/dev/null # back to original working dir
-mv "$srpm" .
-#echo "Wrote: ${srpm##*/}"
+popd >/dev/null  # back to original working dir
+mv "$tmpd"/*RPMS/*.rpm .
 
