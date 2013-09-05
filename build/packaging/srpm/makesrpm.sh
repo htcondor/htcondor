@@ -27,13 +27,13 @@ trap 'rm -rf "$tmpd"' EXIT
 pushd "$(dirname "$0")"   >/dev/null  # go to srpm dir
 pushd ../../..            >/dev/null  # go to root of git tree
 
-# why is it so hard to do a "git cat" ?
-condor_version=$( git archive HEAD CMakeLists.txt | tar xO \
-                  | awk -F\" '/^set\(VERSION / {print $2}' )
+condor_version=$(
+  git show HEAD:CMakeLists.txt | awk -F\" '/^set\(VERSION / {print $2}'
+)
 
 git archive HEAD | gzip > "$tmpd/condor.tar.gz"
 
-git_rev=$(git log -1 --pretty=format:%h)
+git_rev=$(git rev-parse --short HEAD)
 
 popd >/dev/null # back to srpm dir or initial dir.
 
