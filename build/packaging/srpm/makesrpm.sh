@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-if [ "X$VERBOSE" != "X" ]; then
+if [[ $VERBOSE ]]; then
   set -x
 fi
 
@@ -8,7 +8,7 @@ fi
 # along with condor.spec and the sources in this directory
 
 usage () {
-  echo "usage: $(basename "$0") [-ba|-bs]"
+  echo "usage: [VERBOSE=1] $(basename "$0") [-ba|-bs]"
   echo "  -ba    Build binary and source packages"
   echo "  -bs    Build source package only (default)"
   exit
@@ -23,7 +23,7 @@ case $1 in
 esac
 
 # Do everything in a temp dir that will go away on errors or end of script
-tmpd=$(mktemp -d -p $PWD .tmpXXXXXX)
+tmpd=$(mktemp -d "$PWD/.tmpXXXXXX")
 trap 'rm -rf "$tmpd"' EXIT
 
 pushd "$(dirname "$0")"   >/dev/null  # go to srpm dir
