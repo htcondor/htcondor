@@ -48,7 +48,7 @@ static void printJob(std::vector<std::string> & exprs, classad::ExprTree *constr
 		return;
 
 	classad::ClassAd ad;
-	for (std::vector<std::string>::const_iterator it = exprs.begin(); it != exprs.end(); it++)
+	for (std::vector<std::string>::const_reverse_iterator it = exprs.rbegin(); it != exprs.rend(); it++)
 	{
 		if ( ! ad.Insert(*it)) {
 			failCount++;
@@ -84,7 +84,10 @@ static void printJob(std::vector<std::string> & exprs, classad::ExprTree *constr
 		{
 			projected.Update(ad);
 		}
-		if (!projected.size()) return;
+		// NOTE: I considered "not counting" empty ads.
+		// However, this can have the side-effect of searching all the history if
+		// the projection has a spelling mistake in it.
+		//if (!projected.size()) return;
 		if (output_sock == NULL)
 		{
 			std::string buff;
@@ -129,7 +132,7 @@ readHistoryFromFileEx(const char *filename, classad::ExprTree *constraintExpr)
 		}
 	}
 
-	std::vector<std::string> exprs;
+	std::vector<std::string> exprs; exprs.reserve(100);
 	while (reader.PrevLine(line))
 	{
                 if (starts_with(line.c_str(), "*** "))
@@ -150,6 +153,7 @@ readHistoryFromFileEx(const char *filename, classad::ExprTree *constraintExpr)
 			{
 				exprs.push_back(line);
 			}
+			printf("%s\n", line.c_str());
 		}
 	}
 	if (exprs.size() > 0)
