@@ -22,6 +22,8 @@ usage () {
   echo "  --git-revision COMMIT   Use condor source from git tag or hash" \
                                                          "(default=HEAD)"
   echo "  --condor-release X.Y.Z  Use condor release tarball for version X.Y.Z"
+  echo "  --rpm-base-release REL  Define base release for use in spec"
+  echo "                          Eg, 0.1 for git builds, 1 for condor-release"
   echo
   echo "Environment:"
   echo "  VERBOSE=1                         Show all commands run by script"
@@ -48,8 +50,9 @@ case $1 in
   --externals-location        ) externals_location=$2;       shift 2 ;;
   --externals-location=*      ) externals_location=${1#*=};  shift ;;
 
-  --git-revision   ) checkout_commit=$2; shift 2 ;;
-  --condor-release ) condor_release=$2; shift 2 ;;
+  --git-revision     ) checkout_commit=$2;  shift 2 ;;
+  --condor-release   ) condor_release=$2;   shift 2 ;;
+  --rpm-base-release ) rpm_base_release=$2; shift 2 ;;
 
   --help ) usage ;;
   -- ) shift; break ;;
@@ -135,6 +138,15 @@ update_spec_define git_rev         "$git_rev"
 update_spec_define tarball_version "$condor_version"
 if [[ $condor_release ]]; then
   update_spec_define git_build 0
+else
+  update_spec_define git_build 1
+fi
+if [[ $rpm_base_release ]]; then
+  if [[ $condor_release ]]; then
+    update_spec_define condor_base_release "$rpm_base_release"
+  else
+    update_spec_define condor_git_base_release "$rpm_base_release"
+  fi
 fi
 
 get_sources_from_file () {
