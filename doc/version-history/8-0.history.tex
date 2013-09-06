@@ -217,14 +217,14 @@ using \Condor{submit} with the \Opt{-spool} option to always fail.
 
 \begin{itemize}
 
-\item DAG recovery mode does not work for Pegasus-generated sub-DAGs.
-This means that, for such DAGs, doing \Condor{hold}/\Condor{release} on
-the DAGMan job, or stopping and re-starting the schedd with the DAGMan
-job in the queue, will result in a failure of the DAG.  This can be
-avoided by doing a \Condor{rm} of the DAGMan job, which produces a rescue
-DAG, and re-submitting the DAG (which then automatically runs the
-rescue DAG).
-This bug was introduced in version 8.0.1 in the stable series.
+\item DAGMan recovery mode does not work for Pegasus-generated SUBDAGs.
+For SUBDAGs, doing \Condor{hold} or \Condor{release} on
+the \Condor{dagman} job, or stopping and re-starting the 
+\Condor{schedd} with the DAGMan
+job in the queue will result in failure of the DAG.  This can be
+avoided by doing a \Condor{rm} of the DAGMan job, which produces a Rescue
+DAG, and re-submitting the DAG; the Rescue DAG is automatically run.
+This bug was introduced in HTCondor version 8.0.1.
 \Ticket{3882}
 
 \end{itemize}
