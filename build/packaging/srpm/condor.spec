@@ -99,9 +99,10 @@ Version: %{tarball_version}
 %global version_ %(tr . _ <<< %{version})
 
 # Only edit the %condor_base_release to bump the rev number
-%define condor_base_release 0.unif.1
+%define condor_git_base_release 0.unif.1
+%define condor_base_release 1.unif
 %if %git_build
-        %define condor_release %condor_base_release.%{git_rev}.git
+        %define condor_release %condor_git_base_release.%{git_rev}.git
 %else
         %define condor_release %condor_base_release
 %endif
