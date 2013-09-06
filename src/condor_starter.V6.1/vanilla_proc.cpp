@@ -516,11 +516,13 @@ VanillaProc::StartJob()
 			EXCEPT("USE_PID_NAMESPACES enabled, but can't perform this "
 				"call in Linux unless running as root.");
 		}
-		fi.want_pid_namespace = true;
+		fi.want_pid_namespace = this->SupportsPIDNamespace();
+		if (fi.want_pid_namespace) {
 		if (!fs_remap) {
 			fs_remap = new FilesystemRemap();
 		}
 		fs_remap->RemapProc();
+		}
 	}
 	dprintf(D_FULLDEBUG, "PID namespace option: %s\n", fi.want_pid_namespace ? "true" : "false");
 #endif
