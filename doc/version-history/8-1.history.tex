@@ -173,8 +173,16 @@ than version 8.1.0.
 \noindent Known Bugs:
 
 \begin{itemize}
-
-\item None.
+\item DAGMan recovery mode does not work for Pegasus-generated SUBDAGs.
+For SUBDAGs, doing \Condor{hold} or \Condor{release} on
+the \Condor{dagman} job, or stopping and re-starting the
+\Condor{schedd} with the DAGMan
+job in the queue will result in failure of the DAG.  This can be
+avoided by doing a \Condor{rm} of the DAGMan job, which produces a Rescue
+DAG, and re-submitting the DAG; the Rescue DAG is automatically run.
+This bug was introduced in HTCondor version 8.0.1, and it also appears
+in versions 8.0.2, 8.1.0, and 8.1.1.
+\Ticket{3882}
 
 \end{itemize}
 
