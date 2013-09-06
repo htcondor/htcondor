@@ -28,6 +28,7 @@ usage () {
   echo "Environment:"
   echo "  VERBOSE=1                         Show all commands run by script"
   echo "  BUNDLE_EXTERNALS_FROM={PATH|URL}  Provide default externals location"
+  echo
   exit $1
 }
 
@@ -43,16 +44,16 @@ while [[ $1 = -* ]]; do
 case $1 in
   -ba | -bs ) buildmethod=$1; shift ;;
 
-  --bundle-uw-externals       ) uw_externals=1;              shift ;;
-  --bundle-std-univ-externals ) std_univ_externals=1;        shift ;;
-  --bundle-all-externals      ) uw_externals=1
-                                std_univ_externals=1;        shift ;;
-  --externals-location        ) externals_location=$2;       shift 2 ;;
-  --externals-location=*      ) externals_location=${1#*=};  shift ;;
+  --bundle-uw-externals       ) uw_externals=1;                       shift ;;
+  --bundle-std-univ-externals ) std_univ_externals=1;                 shift ;;
+  --bundle-all-externals      ) uw_externals=1 std_univ_externals=1;  shift ;;
 
-  --git-revision     ) checkout_commit=$2;  shift 2 ;;
-  --condor-release   ) condor_release=$2;   shift 2 ;;
-  --rpm-base-release ) rpm_base_release=$2; shift 2 ;;
+  --externals-location ) externals_location=$2;  shift 2 ;;
+  --git-revision       ) checkout_commit=$2;     shift 2 ;;
+  --condor-release     ) condor_release=$2;      shift 2 ;;
+  --rpm-base-release   ) rpm_base_release=$2;    shift 2 ;;
+
+  --*=*  ) set -- "${1%%=*}" "${1#*=}" "${@:2}" ;;  # parse --option=value
 
   --help ) usage ;;
   -- ) shift; break ;;
