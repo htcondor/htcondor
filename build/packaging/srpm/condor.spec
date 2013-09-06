@@ -682,6 +682,9 @@ export CMAKE_PREFIX_PATH=/usr
 %if ! %std_univ
        -DCLIPPED:BOOL=TRUE \
 %endif
+%if %bundle_uw_externals || %bundle_std_univ_externals
+       -DEXTERNALS_SOURCE_URL:STRING="$RPM_SOURCE_DIR" \
+%endif
        -D_DEBUG:BOOL=TRUE \
        -D_VERBOSE:BOOL=TRUE \
        -DBUILD_TESTING:BOOL=FALSE \
@@ -696,6 +699,9 @@ export CMAKE_PREFIX_PATH=/usr
        -DBUILD_TESTING:BOOL=FALSE \
 %if %std_univ
        -DCLIPPED:BOOL=FALSE \
+%endif
+%if %bundle_uw_externals || %bundle_std_univ_externals
+       -DEXTERNALS_SOURCE_URL:STRING="$RPM_SOURCE_DIR" \
 %endif
 %if 0%{?fedora}
        -DBUILDID:STRING=RH-%{version}-%{release} \
