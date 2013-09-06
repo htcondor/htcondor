@@ -635,6 +635,7 @@ private:
 	bool			fill_submitter_ad(ClassAd & pAd, int owner_num, int flock_level=-1); 
     int             make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
     int             command_query_ads(int, Stream* stream);
+	int			command_history(int, Stream* stream);
 	void   			check_claim_request_timeouts( void );
 	int				insert_owner(char const*);
 	void			child_exit(int, int);

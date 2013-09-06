@@ -1631,6 +1631,93 @@ int Scheduler::command_query_ads(int, Stream* stream)
 	return TRUE;
 }
 
+static bool
+sendHistoryErrorAd(Stream *stream, int errorCode, std::string errorString)
+{
+	classad::ClassAd ad;
+	ad.InsertAttr(ATTR_OWNER, 0);
+	ad.InsertAttr(ATTR_ERROR_STRING, errorString);
+	ad.InsertAttr(ATTR_ERROR_CODE, errorCode);
+
+	stream->encode();
+	if (!putClassAd(stream, ad) || !stream->end_of_message())
+	{
+		dprintf(D_ALWAYS, "Failed to send error ad for remote history query\n");
+	}
+	return false;
+}
+
+int Scheduler::command_history(int, Stream* stream)
+{
+	ClassAd queryAd;
+
+	stream->decode();
+	stream->timeout(15);
+	if( !getClassAd(stream, queryAd) || !stream->end_of_message()) {
+		dprintf( D_ALWAYS, "Failed to receive query on TCP: aborting\n" );
+		return FALSE;
+	}
+
+	classad::ExprTree *requirements = queryAd.Lookup(ATTR_REQUIREMENTS);
+	if (!requirements)
+	{
+		classad::Value val; val.SetBooleanValue(true);
+		requirements = classad::Literal::MakeLiteral(val);
+		if (!requirements) return sendHistoryErrorAd(stream, 1, "Failed to create default requirements");
+	}
+	classad::ClassAdUnParser unparser;
+	std::string requirements_str;
+	unparser.Unparse(requirements_str, requirements);
+
+	classad::Value value;
+	classad::ExprList *list = NULL;
+	if ((queryAd.find(ATTR_PROJECTION) != queryAd.end()) &&
+		(!queryAd.EvaluateAttr(ATTR_PROJECTION, value) || !value.IsListValue(list)))
+	{
+		return sendHistoryErrorAd(stream, 2, "Unable to evaluate projection list");
+	}
+	std::stringstream ss;
+	bool multiple = false;
+	if (list) for (classad::ExprList::const_iterator it = list->begin(); it != list->end(); it++)
+	{
+		std::string attr;
+		if (!(*it)->Evaluate(value) || !value.IsStringValue(attr))
+		{
+			return sendHistoryErrorAd(stream, 3, "Unable to convert projection list to string");
+		}
+		if (multiple) ss << ",";
+		multiple = true;
+		ss << attr;
+	}
+
+	int matchCount;
+	if (!queryAd.EvaluateAttr(ATTR_NUM_MATCHES, value) || !value.IsIntegerValue(matchCount))
+	{
+		matchCount = -1;
+	}
+	std::stringstream ss2;
+	ss2 << matchCount;
+
+	std::string history_helper;
+	param(history_helper, "HISTORY_HELPER", "$(LIBEXEC)/condor_history_helper");
+        history_helper = macro_expand(history_helper.c_str());
+	ArgList args;
+	args.AppendArg("-t");
+	args.AppendArg(requirements_str);
+	args.AppendArg(ss.str());
+	args.AppendArg(ss2.str());
+
+	Stream *inherit_list[] = {stream, NULL};
+
+	FamilyInfo fi;
+	pid_t pid = daemonCore->Create_Process(history_helper.c_str(), args, PRIV_ROOT, 0,
+		false, NULL, NULL, NULL, inherit_list);
+	if (!pid)
+	{
+		return sendHistoryErrorAd(stream, 4, "Failed to launch history helper process");
+	}
+	return true;
+}
 
 int 
 clear_autocluster_id( ClassAd *job )
@@ -11176,6 +11263,12 @@ Scheduler::Register()
 	daemonCore->Register_CommandWithPayload(QUERY_SUBMITTOR_ADS,"QUERY_SUBMITTOR_ADS",
                                 (CommandHandlercpp)&Scheduler::command_query_ads,
                                  "command_query_ads", this, READ);
+
+	// Command handler for remote history	
+	daemonCore->Register_CommandWithPayload(QUERY_SCHEDD_HISTORY,"QUERY_SCHEDD_HISTORY",
+				(CommandHandlercpp)&Scheduler::command_history,
+				"command_history", this, READ);
+
 
 	// Note: The QMGMT READ/WRITE commands have the same command handler.
 	// This is ok, because authorization to do write operations is verified
