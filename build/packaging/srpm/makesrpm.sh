@@ -17,7 +17,11 @@ usage () {
   echo "  --bundle-uw-externals        Include other UW externals in src.rpm"
   echo "  --bundle-all-externals       Include all externals in src.rpm"
   echo "  --externals-location {PATH|URL}  Use external sources from location"
-  echo "                       (default=http://parrot.cs.wisc.edu/externals)"
+  echo "                       (default=$externals_download)"
+  echo
+  echo "Environment:"
+  echo "  VERBOSE=1                         Show all commands run by script"
+  echo "  BUNDLE_EXTERNALS_FROM={PATH|URL}  Provide default externals location"
   exit $1
 }
 
@@ -25,7 +29,8 @@ fail () { echo "$@" >&2; exit 1; }
 
 # defaults
 buildmethod=-bs
-externals_location=http://parrot.cs.wisc.edu/externals
+externals_download=http://parrot.cs.wisc.edu/externals
+externals_location=${BUNDLE_EXTERNALS_FROM:-$externals_download}
 
 while [[ $1 = -* ]]; do
 case $1 in
