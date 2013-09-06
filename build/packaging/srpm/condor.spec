@@ -61,6 +61,10 @@
 %else
 %endif
 
+# define these to 1 if you want to include externals in source rpm
+%define bundle_uw_externals 0
+%define bundle_std_univ_externals 0
+
 # Things not turned on, or don't have Fedora packages yet
 %define qmf 0
 
@@ -152,6 +156,35 @@ Source3: %{name}.service
 Source4: condor.osg-sysconfig
 # % endif
 Source5: condor_config.local.dedicated.resource
+
+%if %bundle_uw_externals
+Source101: blahp-1.16.5.1.tar.gz
+Source102: boost_1_49_0.tar.gz
+Source103: c-ares-1.3.0.tar.gz
+Source104: coredumper-2011.05.24-r31.tar.gz
+Source105: drmaa-1.6.tar.gz
+Source106: globus-5.2.1.tar.gz
+Source107: gridsite-1.6.0.src.tar.gz
+Source108: gsoap-2.7.10.tar.gz
+Source109: gsoap_2.7.6b.tar.gz
+Source110: libcgroup-0.37.tar.bz2
+Source111: libdeltacloud-0.9.tar.gz
+Source112: log4cpp-1.0-3.tar.gz
+Source113: org.glite.ce.cream-client-api-c-1.12.1-14.tar.gz
+Source114: org.glite.ce.wsdl-1.12.1-14.tar.gz
+Source115: org.glite.security.gsoap-plugin-2.0.1-3.tar.gz
+Source116: org.glite.security.gss-2.0.1-1.tar.gz
+Source117: unicoregahp-1.2.0.tar.gz
+Source118: voms-2.0.6.tar.gz
+%endif
+
+%if %bundle_std_univ_externals
+Source120: glibc-2.12-2-x86_64.tar.gz
+Source121: glibc-2.5-20061008T1257-p0.tar.gz
+Source122: glibc-2.5-20061008T1257-x86_64-p0.tar.gz
+Source123: zlib-1.2.3.tar.gz
+%endif
+
 
 # Patch0: condor_config.generic.patch
 # Patch1: condor_peaceful_off.patch
