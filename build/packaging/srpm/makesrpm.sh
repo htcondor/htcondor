@@ -19,6 +19,10 @@ usage () {
   echo "  --externals-location {PATH|URL}  Use external sources from location"
   echo "                       (default=$externals_download)"
   echo
+  echo "  --git-revision COMMIT   Use condor source from git tag or hash" \
+                                                         "(default=HEAD)"
+  echo "  --condor-release X.Y.Z  Use condor release tarball for version X.Y.Z"
+  echo
   echo "Environment:"
   echo "  VERBOSE=1                         Show all commands run by script"
   echo "  BUNDLE_EXTERNALS_FROM={PATH|URL}  Provide default externals location"
@@ -31,6 +35,7 @@ fail () { echo "$@" >&2; exit 1; }
 buildmethod=-bs
 externals_download=http://parrot.cs.wisc.edu/externals
 externals_location=${BUNDLE_EXTERNALS_FROM:-$externals_download}
+checkout_commit=HEAD
 
 while [[ $1 = -* ]]; do
 case $1 in
@@ -42,12 +47,28 @@ case $1 in
                                 std_univ_externals=1;        shift ;;
   --externals-location        ) externals_location=$2;       shift 2 ;;
   --externals-location=*      ) externals_location=${1#*=};  shift ;;
+
+  --git-revision   ) checkout_commit=$2; shift 2 ;;
+  --condor-release ) condor_release=$2; shift 2 ;;
+
   --help ) usage ;;
   -- ) shift; break ;;
 # *  ) break ;;               # assume remaining args are rpmbuild-options
   *  ) usage 1 ;;             # assume remaining args are usage errors
 esac
 done
+
+check_version_string () {
+  [[ ${!1} =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "Bad ${1//_/ }: '${!1}'"
+}
+
+if [[ $condor_release ]]; then
+  if [[ $checkout_commit != HEAD ]]; then
+    fail "Options --git-revision and --condor-release are mutually exclusive."
+  fi
+  check_version_string  condor_release
+  checkout_commit=V${condor_release//./_}
+fi
 
 download_external () { wget -nv -O "$1" "$externals_location/$1"; }
 copy_external     () { cp -p "$externals_location/$1" .;          }
@@ -76,17 +97,18 @@ cd "$(dirname "$0")"                   # go to srpm source dir
 srpm_dir=$PWD
 cd "$(git rev-parse --show-toplevel)"  # go to root of git tree
 
+git_rev=$(git rev-parse --short "$checkout_commit") \
+|| fail "Couldn't find git rev for '$checkout_commit'"
+
 condor_version=$(
-  git show HEAD:CMakeLists.txt | awk -F\" '/^set\(VERSION / {print $2}'
+  git show "$checkout_commit":CMakeLists.txt \
+  | awk -F\" '/^set\(VERSION / {print $2}'
 )
 
 [[ $condor_version ]] || fail "Condor version string not found"
-[[ $condor_version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] \
-|| fail "Bad condor version string '$condor_version'"
+check_version_string  condor_version
 
-git archive HEAD | gzip > "$tmpd/condor.tar.gz"
-
-git_rev=$(git rev-parse --short HEAD)
+git archive "$checkout_commit" | gzip > "$tmpd/condor.tar.gz"
 
 cd "$tmpd"
 mkdir SOURCES
