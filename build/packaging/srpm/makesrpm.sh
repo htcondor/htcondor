@@ -4,14 +4,16 @@ if [[ $VERBOSE ]]; then
   set -x
 fi
 
-# makesrpm.sh - generates rpms from the currently checked out HEAD,
-# along with condor.spec and the sources in this directory
+# makesrpm.sh - generates source and binary rpms with a source tarball
+# from git, along with condor.spec and the source files in this directory
 
 usage () {
   echo "usage: [VERBOSE=1] $(basename "$0") [options] [--] [rpmbuild-options]"
   echo "Options:"
-  echo "  -ba    Build binary and source packages"
-  echo "  -bs    Build source package only (default)"
+  echo "  -ba          Build binary and source packages"
+  echo "  -bs          Build source package only (default)"
+  echo
+  echo "  -o DESTDIR   Output rpms to DESTDIR (default=\$PWD)"
   echo
   echo "  --bundle-std-univ-externals  Include std univ externals in src.rpm"
   echo "  --bundle-uw-externals        Include other UW externals in src.rpm"
@@ -42,7 +44,8 @@ checkout_commit=HEAD
 
 while [[ $1 = -* ]]; do
 case $1 in
-  -ba | -bs ) buildmethod=$1; shift ;;
+  -ba | -bs ) buildmethod=$1;              shift ;;
+         -o ) dest_dir=$(cd "$2" && pwd);  shift 2 ;;
 
   --bundle-uw-externals       ) uw_externals=1;                       shift ;;
   --bundle-std-univ-externals ) std_univ_externals=1;                 shift ;;
@@ -61,6 +64,8 @@ case $1 in
   *  ) usage 1 ;;             # assume remaining args are usage errors
 esac
 done
+
+[[ $dest_dir ]] || dest_dir=$PWD
 
 check_version_string () {
   [[ ${!1} =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "Bad ${1//_/ }: '${!1}'"
@@ -96,7 +101,6 @@ fi
 tmpd=$(mktemp -d "$PWD/.tmpXXXXXX")
 trap 'rm -rf "$tmpd"' EXIT
 
-WD=$PWD                                # save working dir
 cd "$(dirname "$0")"                   # go to srpm source dir
 srpm_dir=$PWD
 cd "$(git rev-parse --show-toplevel)"  # go to root of git tree
@@ -170,5 +174,5 @@ fi
 
 rpmbuild $buildmethod "$@" -D"_topdir $tmpd" SOURCES/condor.spec
 
-mv *RPMS/*.rpm "$WD"
+mv *RPMS/*.rpm "$dest_dir"
 
