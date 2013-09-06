@@ -108,19 +108,34 @@ condor_version=$(
 [[ $condor_version ]] || fail "Condor version string not found"
 check_version_string  condor_version
 
-git archive "$checkout_commit" | gzip > "$tmpd/condor.tar.gz"
+if [[ $condor_release && $condor_version != $condor_release ]]; then
+  fail "git release tag does not match version in CMakeLists.txt:" \
+       "'$condor_release' vs '$condor_version'"
+fi
+
+if [[ $condor_release ]]; then
+  condor_tarball_name=condor-$condor_release
+  archive_prefix=--prefix=$condor_tarball_name/
+else
+  condor_tarball_name=condor
+fi
+git archive "$checkout_commit" $archive_prefix \
+| gzip > "$tmpd/$condor_tarball_name.tar.gz"
 
 cd "$tmpd"
 mkdir SOURCES
 cp -p "$srpm_dir"/* SOURCES
-mv condor.tar.gz SOURCES
+mv $condor_tarball_name.tar.gz SOURCES
 
 update_spec_define () {
-  sed -i "s|^ *%define  *$1 .*|%define $1 $2|" SOURCES/condor.spec
+  sed -i "s|^ *%define * $1 .*|%define $1 $2|" SOURCES/condor.spec
 }
 
-update_spec_define git_rev "$git_rev"
+update_spec_define git_rev         "$git_rev"
 update_spec_define tarball_version "$condor_version"
+if [[ $condor_release ]]; then
+  update_spec_define git_build 0
+fi
 
 get_sources_from_file () {
   cd SOURCES
