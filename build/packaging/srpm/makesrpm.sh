@@ -172,7 +172,30 @@ if [[ $std_univ_externals ]]; then
   update_spec_define    bundle_std_univ_externals 1
 fi
 
-rpmbuild $buildmethod "$@" -D"_topdir $tmpd" SOURCES/condor.spec
+if [[ $(rpm -E %rhel) = 5 ]]; then
+  # the following cruft is all necessary on el5, where -D"_topdir $tmpd"
+  # doesn't take priority over what's in the rpmmacros files, nor does
+  # the --macros option seem to be honored...
+
+  rcfiles=
+  for rc in /usr/lib/rpm/rpmrc \
+            /usr/lib/rpm/redhat/rpmrc \
+            /etc/rpmrc \
+            ~/.rpmrc; do
+    [[ -e $rc ]] && rcfiles+=$rc:
+  done
+  rcfiles+=rpmrc
+  rpmbuild --showrc | grep '^macrofiles *:' | sed "s|$|:rpmmacros|" > rpmrc
+  echo "%_topdir $tmpd" > rpmmacros
+
+  if [[ $buildmethod = -bs ]]; then
+    buildmethod+=" --nodeps"
+  fi
+  mkdir BUILD BUILDROOT RPMS SPECS SRPMS
+  rpmbuild $buildmethod --rcfile="$rcfiles" "$@" SOURCES/condor.spec
+else
+  rpmbuild $buildmethod "$@" -D"_topdir $tmpd" SOURCES/condor.spec
+fi
 
 mv *RPMS/*.rpm "$dest_dir"
 
