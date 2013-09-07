@@ -34,7 +34,7 @@
 %endif
 
 # default to uw_build if neither fedora nor osg is enabled
-%if 0%{!?uw_build:1}
+%if %undefined uw_build
 %if 0%{?fedora} || 0%{?osg}
 %define uw_build 0
 %else
@@ -43,7 +43,7 @@
 %endif
 
 # enable std universe by default 
-%if 0%{!?std_univ:1}
+%if %undefined std_univ
 %define std_univ 1
 %endif
 
