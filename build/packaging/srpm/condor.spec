@@ -54,15 +54,6 @@
 %endif
 %endif
 
-%if 0%{?rhel} == 5
-# a change introduced in 7.9.7 (c2f6034b) breaks the glibc external build
-# in el5 for some reason... Seems to have to do with the distinction between
-# 'export CFLAGS=...; make xyz' vs 'make CFLAGS=... xyz', and also involves
-# the CFLAGS that the % cmake macro would otherwise export.
-# In any case, std univ won't build in el5 until that gets fixed...
-%define std_univ 0
-%endif
-
 %if %uw_build
 %define debug 1
 %define verbose 1
