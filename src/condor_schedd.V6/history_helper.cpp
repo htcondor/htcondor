@@ -18,6 +18,8 @@
 long failCount = 0;
 long matchCount = 0;
 long specifiedMatch = -1;
+long maxAds = -1;
+long adCount = 0;
 Stream *output_sock = NULL;
 classad::PrettyPrint sink;
 std::vector<std::string> projection;
@@ -58,6 +60,7 @@ static void printJob(std::vector<std::string> & exprs, classad::ExprTree *constr
 			return;
 		}
 	}
+	adCount++;
 
 	classad::Value result;
 	if (!ad.EvaluateExpr(constraintExpr, result))
@@ -107,7 +110,7 @@ readHistoryFromFileEx(const char *filename, classad::ExprTree *constraintExpr)
 {
 	// In case of rotated history files, check if we have already reached the number of 
 	// matches specified by the user before reading the next file
-	if ((specifiedMatch > 0) && (matchCount >= specifiedMatch))
+	if (((maxAds > 0) && (adCount >= maxAds)) || ((specifiedMatch > 0) && (matchCount >= specifiedMatch)))
 	{
 		return;
 	}
@@ -142,7 +145,7 @@ readHistoryFromFileEx(const char *filename, classad::ExprTree *constraintExpr)
 				exprs.clear();
 			}
 			banner_line = line;
-			if ((specifiedMatch > 0) && (matchCount >= specifiedMatch))
+			if (((maxAds > 0) && (adCount >= maxAds)) || ((specifiedMatch > 0) && (matchCount >= specifiedMatch)))
 				break;
 		}
 		else if (!line.empty())
@@ -158,7 +161,7 @@ readHistoryFromFileEx(const char *filename, classad::ExprTree *constraintExpr)
 	}
 	if (exprs.size() > 0)
 	{
-		if ((specifiedMatch <= 0) || (matchCount < specifiedMatch))
+		if (((maxAds <= 0) || (adCount < maxAds)) && ((specifiedMatch <= 0) || (matchCount < specifiedMatch)))
 			printJob(exprs, constraintExpr);
 		exprs.clear();
 	}
@@ -177,11 +180,12 @@ main_init(int argc, char *argv[])
 		else break;
 	}
 
-	if (argc != 4)
+	if (argc != 5)
 	{
-		fprintf(stderr, "Usage: %s -t REQUIREMENT PROJECTION MATCH_COUNT\n", argv[0]);
+		fprintf(stderr, "Usage: %s -t REQUIREMENT PROJECTION MATCH_COUNT MAX_ADS\n", argv[0]);
 		fprintf(stderr, "- Use an empty string to return all attributes\n");
 		fprintf(stderr, "- Use a negative number for match count for all matches\n");
+		fprintf(stderr, "- Use a negative number for considering an unlimited number of history ads\n");
 		fprintf(stderr, "If there are no inherited DaemonCore sockets, print results to stdout\n");
 		exit(1);
 	}
@@ -207,6 +211,11 @@ main_init(int argc, char *argv[])
 	if (errno)
 	{
 		setError(7, "Error when converting match count to long");
+	}
+	maxAds = strtol(argv[4], NULL, 10);
+	if (errno)
+	{
+		setError(8, "Error when converting max ads to long");
 	}
 
 	Stream **socks = daemonCore->GetInheritedSocks();
@@ -237,6 +246,7 @@ main_init(int argc, char *argv[])
 	ad.InsertAttr(ATTR_OWNER, 0);
 	ad.InsertAttr(ATTR_NUM_MATCHES, matchCount);
 	ad.InsertAttr("MalformedAds", failCount);
+	ad.InsertAttr("AdCount", adCount);
 	if (output_sock)
 	{
 		if (!putClassAd(output_sock, ad) || !output_sock->end_of_message())

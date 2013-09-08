@@ -550,7 +550,8 @@ Scheduler::Scheduler() :
 	stop_job_queue( "stop_job_queue" ),
 	act_on_job_myself_queue( "act_on_job_myself_queue" ),
 	job_is_finished_queue( "job_is_finished_queue", 1 ),
-	m_local_startd_pid(-1)
+	m_local_startd_pid(-1),
+	m_history_helper_count(0)
 {
 	MyShadowSockName = NULL;
 	shadowCommandrsock = NULL;
@@ -1658,6 +1659,10 @@ int Scheduler::command_history(int, Stream* stream)
 		return FALSE;
 	}
 
+	if ((param_integer("HISTORY_HELPER_MAX_HISTORY", 10000) == 0) || param_integer("HISTORY_HELPER_MAX_CONCURRENCY") == 0) {
+		return sendHistoryErrorAd(stream, 10, "Remote history has been disabled on this schedd");
+	}
+
 	classad::ExprTree *requirements = queryAd.Lookup(ATTR_REQUIREMENTS);
 	if (!requirements)
 	{
@@ -1698,24 +1703,56 @@ int Scheduler::command_history(int, Stream* stream)
 	std::stringstream ss2;
 	ss2 << matchCount;
 
+	if (m_history_helper_count >= m_history_helper_max) {
+		if (m_history_helper_queue.size() > 1000) {
+			return sendHistoryErrorAd(stream, 9, "Cowardly refusing to queue more than 1000 requests.");
+		}
+		classad_shared_ptr<Stream> stream_shared(stream);
+		HistoryHelperState state(stream_shared, requirements_str, ss.str(), ss2.str());
+		m_history_helper_queue.push_back(state);
+		return KEEP_STREAM;
+	} else {
+		HistoryHelperState state(*stream, requirements_str, ss.str(), ss2.str());
+		return history_helper_launcher(state);
+	}
+}
+
+int Scheduler::history_helper_reaper(int, int) {
+	m_history_helper_count--;
+	while ((m_history_helper_count < m_history_helper_max) && m_history_helper_queue.size()) {
+		std::vector<HistoryHelperState>::iterator it = m_history_helper_queue.begin();
+		history_helper_launcher(*it);
+		m_history_helper_queue.erase(it);
+	}
+	return TRUE;
+}
+
+int Scheduler::history_helper_launcher(const HistoryHelperState &state) {
+
 	std::string history_helper;
 	param(history_helper, "HISTORY_HELPER", "$(LIBEXEC)/condor_history_helper");
         history_helper = macro_expand(history_helper.c_str());
 	ArgList args;
+	args.AppendArg("condor_history_helper");
+	args.AppendArg("-f");
 	args.AppendArg("-t");
-	args.AppendArg(requirements_str);
+	args.AppendArg(state.Requirements());
+	args.AppendArg(state.Projection());
+	args.AppendArg(state.MatchCount());
+	std::stringstream ss;
+	ss << param_integer("HISTORY_HELPER_MAX_HISTORY", 10000);
 	args.AppendArg(ss.str());
-	args.AppendArg(ss2.str());
 
-	Stream *inherit_list[] = {stream, NULL};
+	Stream *inherit_list[] = {state.GetStream(), NULL};
 
 	FamilyInfo fi;
-	pid_t pid = daemonCore->Create_Process(history_helper.c_str(), args, PRIV_ROOT, 0,
+	pid_t pid = daemonCore->Create_Process(history_helper.c_str(), args, PRIV_ROOT, m_history_helper_rid,
 		false, NULL, NULL, NULL, inherit_list);
 	if (!pid)
 	{
-		return sendHistoryErrorAd(stream, 4, "Failed to launch history helper process");
+		return sendHistoryErrorAd(state.GetStream(), 4, "Failed to launch history helper process");
 	}
+	m_history_helper_count++;
 	return true;
 }
 
@@ -11166,6 +11203,8 @@ Scheduler::Init()
 
 	m_job_machine_attrs_history_length = param_integer("SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH",1,0);
 
+	m_history_helper_max = param_integer("HISTORY_HELPER_MAX_CONCURRENCY", 2);
+
 	first_time_in_init = false;
 }
 
@@ -11321,6 +11360,11 @@ Scheduler::Register()
 		"reaper",
 		(ReaperHandlercpp)&Scheduler::child_exit,
 		"child_exit", this );
+
+	m_history_helper_rid = daemonCore->Register_Reaper(
+		"history_reaper",
+		(ReaperHandlercpp)&Scheduler::history_helper_reaper,
+		"history_helper_exit", this );
 
 	// register all the timers
 	RegisterTimers();

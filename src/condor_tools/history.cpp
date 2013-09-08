@@ -959,13 +959,13 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 	while (true) {
 		compat_classad::ClassAd ad;
 		if (!getClassAd(sock, ad)) {
-			fprintf(stderr, "Failed to recieve remote ad.");
+			fprintf(stderr, "Failed to recieve remote ad.\n");
 			exit(1);
 		}
 		long long intVal;
 		if (ad.EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0)) { // Last ad.
 			if (!sock->end_of_message()) {
-				fprintf(stderr, "Unable to close remote socket");
+				fprintf(stderr, "Unable to close remote socket.\n");
 			}
 			sock->close();
 			std::string errorMsg;
@@ -979,7 +979,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr)
 			}
 			if (!ad.EvaluateAttrInt(ATTR_NUM_MATCHES, intVal) || (intVal != matchCount)) {
 				fprintf(stderr, "Client and server do not agree on number of ads sent;\n"
-					"Indicates lost network packets or an internal error");
+					"Indicates lost network packets or an internal error\n");
 				exit(1);
 			}
 			break;
