@@ -61,7 +61,7 @@ if (NOT CLIPPED)
 
 			set (GLIBC_CONFIGURE ./configure --enable-add-ons=nptl,rtkaio,c_stubs,libidn --without-cvs --enable-kernel=2.6.9 --with-headers=$HOME/junk/glibc-2.5-20061008T1257/override_headers:/usr/include --enable-bind-now --with-tls --with-__thread --build x86_64-redhat-linux --host x86_64-redhat-linux --disable-profile --enable-static-nss)
 
-			set (GLIBC_MAKE export "CFLAGS=-mtune=generic -DNDEBUG=1 -g -O3" && $(MAKE) -r PARALLELMFLAGS=-s)
+			set (GLIBC_MAKE $(MAKE) "CFLAGS=-mtune=generic -DNDEBUG=1 -g -O3" -r PARALLELMFLAGS=-s)
 
 		else()
 			set (VER 2.5-20061008T1257-p0)
@@ -69,7 +69,7 @@ if (NOT CLIPPED)
 
 			set (GLIBC_CONFIGURE ./configure --enable-add-ons=nptl,rtkaio,c_stubs,libidn --without-cvs --enable-kernel=2.6.9 --with-headers=$HOME/junk/glibc-2.5-20061008T1257/override_headers:/usr/include --enable-bind-now --with-tls --with-__thread --build i486-redhat-linux --host i486-redhat-linux --disable-profile --enable-static-nss)
 
-			set (GLIBC_MAKE export "CFLAGS=-march=i386 -mtune=generic -mno-tls-direct-seg-refs -DNDEBUG=1 -g -O3" && $(MAKE) -r PARALLELMFLAGS=-s )
+			set (GLIBC_MAKE $(MAKE) "CFLAGS=-march=i386 -mtune=generic -mno-tls-direct-seg-refs -DNDEBUG=1 -g -O3" -r PARALLELMFLAGS=-s )
 		endif()
 
 		set (GLIBC_PATCH patch -N --binary -p1 -i
