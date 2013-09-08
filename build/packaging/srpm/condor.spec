@@ -86,7 +86,7 @@
 %define git_build 1
 # If building with git tarball, Fedora requests us to record the rev.  Use:
 # git log -1 --pretty=format:'%h'
-%define git_rev d65ec71
+%define git_rev f9e8f64
 
 %if ! (0%{?fedora} > 12 || 0%{?rhel} > 5)
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
@@ -99,7 +99,7 @@ Version: %{tarball_version}
 %global version_ %(tr . _ <<< %{version})
 
 # Only edit the %condor_base_release to bump the rev number
-%define condor_git_base_release 0.unif.1
+%define condor_git_base_release 0.1.unif
 %define condor_base_release 1.unif
 %if %git_build
         %define condor_release %condor_git_base_release.%{git_rev}.git
@@ -107,7 +107,6 @@ Version: %{tarball_version}
         %define condor_release %condor_base_release
 %endif
 Release: %condor_release%{?dist}
-# Release: 0.unif.1.pre20130821.d65ec71%{?dist}
 
 License: ASL 2.0
 Group: Applications/System
@@ -1687,6 +1686,15 @@ fi
 %endif
 
 %changelog
+* Sun Sep 08 2013  <edquist@cs.wisc.edu> - 8.1.2-0.1.unif
+- Packaging fixes to work with latest 8.1.2 source from master
+- Move condor.spec into git master-unified_rpm-branch
+- Apply patches to upstream branch and remove from rpm / spec
+- Always build man pages / remove references to include_man
+- Always include systemd sources for passthrough rebuilds of source rpms
+- Add macros to bundle external source tarballs with the source rpm to support
+  offline builds with externals
+
 * Tue Aug 20 2013 Carl Edquist <edquist@cs.wisc.edu> - 7.9.6-8.unif.8
 - Remove externals dependency from std-universe subpackage
 
