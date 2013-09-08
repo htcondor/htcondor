@@ -187,21 +187,11 @@ Source123: zlib-1.2.3.tar.gz
 %endif
 
 
-# Patch0: condor_config.generic.patch
-# Patch1: condor_peaceful_off.patch
-# Patch2: condor_ulimit.patch
-# Patch3: chkconfig_off.patch
 #% if 0%osg
 Patch8: osg_sysconfig_in_init_script.patch
 #% endif
-# Patch9: proper_cream_v3.diff
 %if %blahp
 Patch10: config_batch_gahp_path.patch
-%endif
-%if %std_univ
-# Patch11: cmake-glibc.patch
-# Patch12: std_local_ref-stub_gen-dep.patch
-# Patch13: std-proper.patch
 %endif
 
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
@@ -641,25 +631,10 @@ exit 0
 %setup -q -n %{name}-%{tarball_version}
 %endif
 
-# merged into master-unified_rpm-branch
-# % patch0 -p1
-# % patch1 -p1
-# % patch2 -p1
-# % patch3 -p1
 %patch8 -p1
-
-%if %cream
-# % patch9 -p1
-%endif
 
 %if %blahp && ! %uw_build
 %patch10 -p1 -b .config_batch_gahp_path
-%endif
-
-%if %std_univ
-# % patch11 -p1
-# % patch12 -p1
-# % patch13 -p1
 %endif
 
 # fix errant execute permissions
