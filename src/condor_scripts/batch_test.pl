@@ -900,31 +900,36 @@ sub WhereIsInstallDir {
     CondorUtils::fullchomp($tmp);
     debug( "Install Directory \"$tmp\"\n",2);
     if ($iswindows) {
-	if ($iscygwin) {
-	    $tmp =~ s|\\|/|g; # convert backslashes to forward slashes.
-	    if($tmp =~ /^(.*)\/bin\/condor_master.exe\s*$/) {
-		$installdir = $1;
-		$tmp = `cygpath -m $1`;
-		CondorUtils::fullchomp($tmp);
-		$wininstalldir = $tmp;
-	    }
-	} else {
-	    $tmp =~ s/\\bin\\condor_master.exe$//i;
-	    $installdir = $tmp;
-	    $wininstalldir = $tmp;
-	}
-	$wininstalldir =~ s|/|\\|g; # forward slashes.to backslashes
-	$installdir =~ s|\\|/|g; # convert backslashes to forward slashes.
-	print "Testing this Install Directory: \"$wininstalldir\"\n";
+		if ($iscygwin) {
+	    	$tmp =~ s|\\|/|g; # convert backslashes to forward slashes.
+	    	if($tmp =~ /^(.*)\/bin\/condor_master.exe\s*$/) {
+			$installdir = $1;
+			$tmp = `cygpath -m $1`;
+			CondorUtils::fullchomp($tmp);
+			$wininstalldir = $tmp;
+	    	}
+		} else {
+	    	$tmp =~ s/\\bin\\condor_master.exe$//i;
+	    	$installdir = $tmp;
+	    	$wininstalldir = $tmp;
+		}
+		$wininstalldir =~ s|/|\\|g; # forward slashes.to backslashes
+		$installdir =~ s|\\|/|g; # convert backslashes to forward slashes.
+		print "Testing this Install Directory: \"$wininstalldir\"\n";
     } else {
-	$tmp =~ s|//|/|g;
-	if( ($tmp =~ /^(.*)\/sbin\/condor_master\s*$/) || \
-	    ($tmp =~ /^(.*)\/bin\/condor_master\s*$/) ) {
-	    $installdir = $1;
-	    print "Testing This Install Directory: \"$installdir\"\n";
-	} else {
-	    die "'$tmp' didn't match path RE\n";
-	}
+		$tmp =~ s|//|/|g;
+		if( ($tmp =~ /^(.*)\/sbin\/condor_master\s*$/) || \
+	    	($tmp =~ /^(.*)\/bin\/condor_master\s*$/) ) {
+	    	$installdir = $1;
+	    	print "Testing This Install Directory: \"$installdir\"\n";
+		} else {
+	    	die "'$tmp' didn't match path RE\n";
+		}
+		if(defined $ENV{LD_LIBRARY_PATH}) {
+			$ENV{LD_LIBRARY_PATH} = "$installdir/lib:$ENV{LD_LIBRARY_PATH}";
+		} else {
+			$ENV{LD_LIBRARY_PATH} = "$installdir/lib";
+		}
     }
 }
 
