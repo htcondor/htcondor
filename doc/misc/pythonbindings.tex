@@ -225,6 +225,69 @@ Defaults to \texttt{True}.
 \end{tabular}
 \end{flushleft}
 
+%%%%%%%%%%%%%%%%%%%%%%%
+\textbf{The \texttt{Negotiator} class:}
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+
+\texttt{\_\_init\_\_( (ClassAd)ad = None ) }
+
+Create an instance of the \texttt{Negotiator} class.  
+
+Optional parameter \texttt{ad} is a ClassAd containing the location of 
+the \Condor{negotiator} daemon.
+If omitted, uses the local pool.
+\\ \hline
+\texttt{deleteUser( (str)user )}
+
+Delete a user from the accounting.
+
+\texttt{user} is a fully-qualified user name, \Expr{"USER@DOMAIN"}.
+\\ \hline
+\texttt{getPriorities( [(bool)rollup = False ] ) }
+
+Retrieve the pool accounting information.
+Returns a list of accounting ClassAds.
+
+Optional parameter \texttt{rollup} identifies if accounting information,
+as applied to hierarchical group quotas,
+should be summed for groups and subgroups (\Expr{True}) 
+or not (\Expr{False}, the default).
+\\ \hline
+\texttt{getResourceUsage( (str)user ) }
+
+Parameter \texttt{user} is a fully-qualified user name, \Expr{"USER@DOMAIN"}.
+\\ \hline
+\texttt{resetAllUsage(  ) }
+
+Reset all usage accounting.
+
+\\ \hline
+\texttt{resetUsage( (str)user )}
+
+Reset all usage accounting of the specified \texttt{user}.
+
+Parameter \texttt{user} is a fully-qualified user name, 
+\Expr{"USER@DOMAIN"}; resets the usage of only this user.
+\\ \hline
+\texttt{setBeginUsage( (str)user, (time\_t)value ) }
+
+Initialize the time that a user begins using the pool.
+
+Parameter \texttt{user} is a fully-qualified user name, \Expr{"USER@DOMAIN"}.
+Parameter \texttt{value} is the time of initial usage.
+\\ \hline
+\texttt{setLastUsage( (str)user, (time\_t)value ) }
+
+Set the time that a user last began using the pool.
+
+Parameter \texttt{user} is a fully-qualified user name, \Expr{"USER@DOMAIN"}.
+Parameter \texttt{value} is the time of last usage.
+\\ \hline
+\end{tabular}
+\end{flushleft}
+%%%%%%%%%%%%%%%%%%%%%%%
+
 \textbf{The \texttt{SecMan} class} accesses the internal security object.
 This class allows access to the security layer of HTCondor.
 
