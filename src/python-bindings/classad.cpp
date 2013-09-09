@@ -13,8 +13,6 @@
 #include "exprtree_wrapper.h"
 #include "old_boost.h"
 
-#include <boost/python/stl_iterator.hpp>
-
 ExprTreeHolder::ExprTreeHolder(const std::string &str)
     : m_expr(NULL), m_owns(true)
 {
@@ -280,12 +278,19 @@ void ClassAdWrapper::update(boost::python::object source)
     {
         return this->update(source.attr("items")());
     }
+    if (!PyObject_HasAttrString(source.ptr(), "__iter__")) THROW_EX(ValueError, "Must provide a dictionary-like object to update()");
 
-    boost::python::stl_input_iterator<boost::python::object> begin(source), end;
-    
-    for (boost::python::stl_input_iterator<boost::python::object> it = begin; it != end; it++)
-    {
-        boost::python::tuple tup = boost::python::extract<boost::python::tuple>(*it);
+    boost::python::object iter = source.attr("__iter__")();
+    while (true) {
+        PyObject *pyobj = PyIter_Next(iter.ptr());
+        if (!pyobj) break;
+        if (PyErr_Occurred()) {
+            boost::python::throw_error_already_set();
+        }
+
+        boost::python::object obj = boost::python::object(boost::python::handle<>(pyobj));
+
+        boost::python::tuple tup = boost::python::extract<boost::python::tuple>(obj);
         std::string attr = boost::python::extract<std::string>(tup[0]);
         InsertAttrObject(attr, tup[1]);
     }
