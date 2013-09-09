@@ -49,6 +49,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug with \Condor{ssh\_to\_job} and USE\_PID\_NAMESPACES.  If the latter option was enabled, a user running the \Condor{ssh\_to\_job} tool would run in a private pid namespace, and not be able to see their job with ps or gdb.  \Condor{ssh\_to\_job} now runs in the global namespace, so that it can see the processes in the user's job.
+\Ticket{3872}
+
 \item Fixed a performance problem with the \Condor{qedit} command that would cause the \Condor{schedd} to run very slowly when \Condor{qedit} is run on a large number of jobs.  \Condor{qedit} will no longer write an event to the job log. 
 \Ticket{3827}
 
