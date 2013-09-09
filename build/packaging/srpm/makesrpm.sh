@@ -65,6 +65,10 @@ case $1 in
 esac
 done
 
+if [[ $buildmethod = -bs ]]; then
+  buildmethod+=" --nodeps"
+fi
+
 [[ $dest_dir ]] || dest_dir=$PWD
 
 check_version_string () {
@@ -131,7 +135,7 @@ git archive "$checkout_commit" $archive_prefix \
 | gzip > "$tmpd/$condor_tarball_name.tar.gz"
 
 cd "$tmpd"
-mkdir SOURCES
+mkdir SOURCES BUILD BUILDROOT RPMS SPECS SRPMS
 cp -p "$srpm_dir"/* SOURCES
 mv $condor_tarball_name.tar.gz SOURCES
 
@@ -172,30 +176,7 @@ if [[ $std_univ_externals ]]; then
   update_spec_define    bundle_std_univ_externals 1
 fi
 
-if [[ $(rpm -E %rhel) = 5 ]]; then
-  # the following cruft is all necessary on el5, where -D"_topdir $tmpd"
-  # doesn't take priority over what's in the rpmmacros files, nor does
-  # the --macros option seem to be honored...
-
-  rcfiles=
-  for rc in /usr/lib/rpm/rpmrc \
-            /usr/lib/rpm/redhat/rpmrc \
-            /etc/rpmrc \
-            ~/.rpmrc; do
-    [[ -e $rc ]] && rcfiles+=$rc:
-  done
-  rcfiles+=rpmrc
-  rpmbuild --showrc | grep '^macrofiles *:' | sed "s|$|:rpmmacros|" > rpmrc
-  echo "%_topdir $tmpd" > rpmmacros
-
-  if [[ $buildmethod = -bs ]]; then
-    buildmethod+=" --nodeps"
-  fi
-  mkdir BUILD BUILDROOT RPMS SPECS SRPMS
-  rpmbuild $buildmethod --rcfile="$rcfiles" "$@" SOURCES/condor.spec
-else
-  rpmbuild $buildmethod "$@" -D"_topdir $tmpd" SOURCES/condor.spec
-fi
+rpmbuild $buildmethod "$@" --define="_topdir $tmpd" SOURCES/condor.spec
 
 mv *RPMS/*.rpm "$dest_dir"
 
