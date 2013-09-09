@@ -78,6 +78,13 @@
 %define cream 1
 %endif
 
+%if 0%{?hcc}
+%define blahp 1
+%define cream 1
+%define std_univ 1
+%define aviary 1
+%endif
+
 %define glexec 1
 %define parallel_setup 1
 
@@ -192,6 +199,11 @@ Patch8: osg_sysconfig_in_init_script.patch
 %if %blahp
 Patch10: config_batch_gahp_path.patch
 %endif
+
+# HCC patches
+# See gt3158
+Patch14: 0001-Apply-the-user-s-condor_config-last-rather-than-firs.patch
+Patch15: wso2-axis2.patch
 
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
@@ -634,6 +646,11 @@ exit 0
 
 %if %blahp && ! %uw_build
 %patch10 -p1 -b .config_batch_gahp_path
+%endif
+
+%if 0%{?hcc}
+%patch14 -p1
+%patch15 -p0
 %endif
 
 # fix errant execute permissions
