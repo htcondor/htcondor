@@ -35,7 +35,7 @@
 
 # default to uw_build if neither fedora nor osg is enabled
 %if %undefined uw_build
-%if 0%{?fedora} || 0%{?osg}
+%if 0%{?fedora} || 0%{?osg} || 0%{?hcc}
 %define uw_build 0
 %else
 %define uw_build 1
@@ -80,7 +80,7 @@
 
 %if 0%{?hcc}
 %define blahp 1
-%define cream 1
+%define cream 0
 %define std_univ 1
 %define aviary 1
 %endif
