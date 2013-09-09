@@ -73,6 +73,12 @@ way for file transfers with the \Condor{ft-gahp} to work.
 
 \begin{itemize}
 
+\item Added startd attributes \Macro{TotalJobStarts}, \Macro{RecentTotalJobStarts} which respective, report
+the total number of jobs started by this startd since it booted, and the number of jobs started in the
+last twenty minutes.  Similiarly, the startd now also reports \Macro{TotalPreemptions} and
+\Macro{RecentTotalPreemptions}, the number of jobs preempted since the started has started, and
+the number in the last 20 minutes.
+
 \item \Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE} now accepts tabs in addition to spaces as delimiters.
 \Ticket{3798}
 
