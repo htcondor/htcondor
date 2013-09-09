@@ -270,16 +270,16 @@ void export_negotiator()
             ":param value: New fairshare priority.")
         .def("setFactor", &Negotiator::setFactor, "Set the usage factor of a user\n"
             ":param user: A fully-qualified (USER@DOMAIN) username.\n"
-            ":param value: New fairshare priority.")
+            ":param value: New priority factor.")
         .def("setUsage", &Negotiator::setUsage, "Set the usage of a user\n"
             ":param user: A fully-qualified (USER@DOMAIN) username.\n"
-            ":param value: New fairshare priority.")
+            ":param value: New usage value.")
         .def("setBeginUsage", &Negotiator::setBeginUsage, "Set the first time a user began using the pool\n"
             ":param user: A fully-qualified (USER@DOMAIN) username.\n"
-            ":param value: New fairshare priority.")
+            ":param value: New time of first usage.")
         .def("setLastUsage", &Negotiator::setLastUsage, "Set the last time the user began using the pool\n"
             ":param user: A fully-qualified (USER@DOMAIN) username.\n"
-            ":param value: New fairshare priority.")
+            ":param value: New time of last usage.")
         .def("resetUsage", &Negotiator::resetUsage, "Reset the usage of user\n"
             ":param user: A fully-qualified (USER@DOMAIN) username.")
         .def("deleteUser", &Negotiator::deleteUser, "Delete a user from the accounting\n"
