@@ -1060,27 +1060,6 @@ populate %{_libdir}/condor %{buildroot}/%{_datadir}/condor/ugahp.jar
 %endif
 
 
-# TODO: add these to the appropriate places...
-rm -f %{buildroot}%{_sysconfdir}/condor/ganglia.d/00_default_metrics
-rm -f %{buildroot}%{_bindir}/bosco_quickstart
-rm -f %{buildroot}%{_bindir}/htsub
-rm -f %{buildroot}%{_libexecdir}/condor/condor_dagman_metrics_reporter
-rm -f %{buildroot}%{_libexecdir}/condor/condor_gangliad
-rm -f %{buildroot}%{_mandir}/man1/bosco_cluster.1*
-rm -f %{buildroot}%{_mandir}/man1/bosco_findplatform.1*
-rm -f %{buildroot}%{_mandir}/man1/bosco_install.1*
-rm -f %{buildroot}%{_mandir}/man1/bosco_ssh_start.1*
-rm -f %{buildroot}%{_mandir}/man1/bosco_start.1*
-rm -f %{buildroot}%{_mandir}/man1/bosco_stop.1*
-rm -f %{buildroot}%{_mandir}/man1/bosco_uninstall.1*
-rm -f %{buildroot}%{_mandir}/man1/condor_drain.1*
-rm -f %{buildroot}%{_mandir}/man1/condor_install.1*
-rm -f %{buildroot}%{_mandir}/man1/condor_ping.1*
-rm -f %{buildroot}%{_mandir}/man1/condor_rmdir.1*
-rm -f %{buildroot}%{_mandir}/man1/condor_tail.1*
-rm -f %{buildroot}%{_mandir}/man1/condor_who.1*
-
-
 %clean
 rm -rf %{buildroot}
 
@@ -1161,6 +1140,8 @@ rm -rf %{buildroot}
 %_libexecdir/condor/glexec_starter_setup.sh
 %_libexecdir/condor/condor_defrag
 %_libexecdir/condor/interactive.sub
+%_libexecdir/condor/condor_dagman_metrics_reporter
+%_libexecdir/condor/condor_gangliad
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_check_userlogs.1.gz
 %_mandir/man1/condor_chirp.1.gz
@@ -1206,6 +1187,12 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_power.1.gz
 %_mandir/man1/condor_gather_info.1.gz
 %_mandir/man1/condor_router_rm.1.gz
+%_mandir/man1/condor_drain.1.gz
+%_mandir/man1/condor_install.1.gz
+%_mandir/man1/condor_ping.1.gz
+%_mandir/man1/condor_rmdir.1.gz
+%_mandir/man1/condor_tail.1.gz
+%_mandir/man1/condor_who.1.gz
 # bin/condor is a link for checkpoint, reschedule, vacate
 %_bindir/condor_submit_dag
 %_bindir/condor_who
@@ -1284,6 +1271,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_gpu_discovery
 %_sbindir/condor_vm_vmware
 %config(noreplace) %_sysconfdir/condor/condor_config.local
+%config(noreplace) %_sysconfdir/condor/ganglia.d/00_default_metrics
 %defattr(-,condor,condor,-)
 %dir %_var/lib/condor/
 %dir %_var/lib/condor/execute/
@@ -1536,10 +1524,19 @@ rm -rf %{buildroot}
 %_bindir/bosco_stop
 %_bindir/bosco_findplatform
 %_bindir/bosco_uninstall
+%_bindir/bosco_quickstart
+%_bindir/htsub
 %_sbindir/glidein_creation
 %_datadir/condor/campus_factory
 %{python_sitelib}/GlideinWMS
 %{python_sitelib}/campus_factory
+%_mandir/man1/bosco_cluster.1.gz
+%_mandir/man1/bosco_findplatform.1.gz
+%_mandir/man1/bosco_install.1.gz
+%_mandir/man1/bosco_ssh_start.1.gz
+%_mandir/man1/bosco_start.1.gz
+%_mandir/man1/bosco_stop.1.gz
+%_mandir/man1/bosco_uninstall.1.gz
 
 %if %std_univ
 %files std-universe
