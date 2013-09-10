@@ -66,6 +66,8 @@ public:
 		*/
 	virtual bool PublishUpdateAd( ClassAd* ad );
 
+	virtual bool SupportsPIDNamespace() { return true;}
+
 	bool finishShutdownFast();
 
 private:
