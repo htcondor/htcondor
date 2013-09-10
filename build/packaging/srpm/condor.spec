@@ -105,8 +105,8 @@ Version: %{tarball_version}
 %global version_ %(tr . _ <<< %{version})
 
 # Only edit the %condor_base_release to bump the rev number
-%define condor_git_base_release 0.1.unif
-%define condor_base_release 1.unif
+%define condor_git_base_release 0.3
+%define condor_base_release 1
 %if %git_build
         %define condor_release %condor_git_base_release.%{git_rev}.git
 %else
@@ -1699,6 +1699,9 @@ fi
 %endif
 
 %changelog
+* Mon Sep 09 2013  <edquist@cs.wisc.edu> - 8.1.2-0.3
+- Include misc unpackaged files from 8.x.x
+
 * Sun Sep 08 2013  <edquist@cs.wisc.edu> - 8.1.2-0.1.unif
 - Packaging fixes to work with latest 8.1.2 source from master
 - Move condor.spec into git master-unified_rpm-branch
