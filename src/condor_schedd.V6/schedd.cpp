@@ -10951,6 +10951,22 @@ Scheduler::Init()
     m_adSchedd = new ClassAd(*m_adBase);
 	SetMyTypeName(*m_adSchedd, SCHEDD_ADTYPE);
 	m_adSchedd->Assign(ATTR_NAME, Name);
+	
+	// Record the transfer queue expression so the negotiator can predict
+	// which transfer queue a job will use if it starts in the schedd.
+	std::string transfer_queue_expr_str;
+	param(transfer_queue_expr_str, "TRANSFER_QUEUE_USER_EXPR");
+	classad::ClassAdParser parser;
+	classad::ExprTree *transfer_queue_expr = NULL;
+	if (parser.ParseExpression(transfer_queue_expr_str, transfer_queue_expr) && transfer_queue_expr)
+	{
+		dprintf(D_FULLDEBUG, "TransferQueueUserExpr = %s\n", transfer_queue_expr_str.c_str());
+	}
+	else
+	{
+		dprintf(D_ALWAYS, "TransferQueueUserExpr is set to an invalid expression: %s\n", transfer_queue_expr_str.c_str());
+	}
+	m_adSchedd->Insert(ATTR_TRANSFER_QUEUE_USER_EXPR, transfer_queue_expr);
 
 	// This is foul, but a SCHEDD_ADTYPE _MUST_ have a NUM_USERS attribute
 	// (see condor_classad/classad.C
