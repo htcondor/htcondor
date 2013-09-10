@@ -256,7 +256,40 @@ JICShadow::config( void )
 
 void
 JICShadow::setupJobEnvironment( void )
-{ 
+{   
+#if HAVE_JOB_HOOKS
+    if(m_hook_mgr) {
+        std::string stage("stage_in");
+        m_hook_mgr->setHookPrepareMachineStage(stage);
+        int rval = m_hook_mgr->tryHookPrepareMachine();
+        switch (rval) {
+        case -1:    // Error
+            dprintf(D_ALWAYS, "tryHookPrepareMachine failed.\n");
+            Starter->RemoteShutdownFast(0);
+            return;
+            break;
+        case 0:     // Hook not configured
+            dprintf(D_ALWAYS, "tryHookPrepareMachine is not configured.\n");
+            // Do nothing here, just break and call
+            // jobEnvironmentReady
+            break;
+        case 1:     // Spawned the hook.
+                // We need to bail now, and let the handler call
+                // jobEnvironmentReady() when the hook returns.
+            dprintf(D_ALWAYS, "tryHookPrepareMachine has been spawned.\n");
+            return;
+            break;
+        }
+    }
+#endif /* HAVE_JOB_HOOKS */
+
+    performFileTransfer();
+
+}
+
+void
+JICShadow::performFileTransfer( void )
+{
 		// call our helper method to see if we want to do a file
 		// transfer at all, and if so, initiate it.
 	if( beginFileTransfer() ) {

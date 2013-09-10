@@ -44,6 +44,7 @@ class JobInfoCommunicator : public Service {
 public:
 
 	friend void HookPrepareJobClient::hookExited(int exit_status);
+    friend void HookPrepareMachineClient::hookExited(int exit_status);
 		/// Constructor
 	JobInfoCommunicator();
 
@@ -73,6 +74,9 @@ public:
 
 		/// Setup the execution environment for the job.  
 	virtual void setupJobEnvironment( void );
+        /// Perform the file transfer once file transfer environment is ready
+        /// only used for JICShadow to implement
+    virtual void performFileTransfer( void );
 
 	void setStdin( const char* path );
 	void setStdout( const char* path );
