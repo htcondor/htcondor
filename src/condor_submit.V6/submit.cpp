@@ -928,13 +928,8 @@ main( int argc, char *argv[] )
 
 	for( ptr=argv+1,argc--; argc > 0; argc--,ptr++ ) {
 		if( ptr[0][0] == '-' ) {
-//tj: go ahead an parse this on windows, even though we can't currently support it.
-//#if !defined(WIN32)
-			if ( match_prefix( ptr[0], "-interactive" ) ) {
-				InteractiveJob = 1;
-				extraLines.Append( "+InteractiveJob=True" );
-			} else
-//#endif
+			// HACK!! this MUST be first in order for "condor_submit -" to work
+			PRAGMA_REMIND("TJ: add explicit support for - as an argument meaning stdin")
 			if ( match_prefix( ptr[0], "-verbose" ) ) {
 				Quiet = 0;
 			} else if ( match_prefix( ptr[0], "-disable" ) ) {
@@ -1054,6 +1049,10 @@ main( int argc, char *argv[] )
 			} else if ( match_prefix( ptr[0], "-help" ) ) {
 				usage();
 				exit( 0 );
+			} else if (is_dash_arg_prefix(ptr[0], "interactive", 1)) {
+				// we don't currently support -interactive on Windows, but we parse for it anyway.
+				InteractiveJob = 1;
+				extraLines.Append( "+InteractiveJob=True" );
 			} else {
 				usage();
 				exit( 1 );
