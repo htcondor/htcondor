@@ -79,8 +79,8 @@
 %endif
 
 %if 0%{?hcc}
-%define blahp 0
-%define cream 0
+%define blahp 1
+%define cream 1
 %define aviary 1
 %endif
 
