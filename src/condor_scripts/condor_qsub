@@ -1070,7 +1070,7 @@ if [ $test_qsub_flag = 0 ]; then
 	cluster_id_with_period="$(condor_submit $interactive_option < $submit_file | grep 'cluster' | awk '{print $6}')"
 	cluster_id=${cluster_id_with_period%.}
 	# Hanke's original (V0.1) submit line is below
-	#cluster_id="$(condor_submit - $interactive_option < $submit_file |grep '^** Proc' || true)"
+	#cluster_id="$(condor_submit -verbose $interactive_option < $submit_file |grep '^** Proc' || true)"
 	#printf "Post condor_submit\n"
 	if [ -z "$cluster_id" ]; then
 		printf "Job submission failed.\n"
@@ -1090,7 +1090,7 @@ if [ $test_qsub_flag = 0 ]; then
 	if [ -n "$job_deps" ]; then
 		sentinel_file="$(mktemp --tmpdir cluster${cluster_id}_sentinel.XXXXXXXXXXXXX)"
 		create_dep_sentinel $sentinel_file "$job_deps" "$cluster_id"
-		condor_submit - < $sentinel_file.submit > /dev/null
+		condor_submit < $sentinel_file.submit > /dev/null
 		[ $condor_keep_files -eq 0 ] && rm $sentinel_file.submit || true
 	fi
 else
