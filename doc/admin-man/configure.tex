@@ -6098,6 +6098,13 @@ SYSTEM_PERIODIC_REMOVE = \
   If this variable is not defined for a particular \Expr{<Name>},
   then the default value will be \Expr{60*60*24*7}, which is one week's time.
 
+\label{param:SignificantAttributes}
+\item[\Macro{SIGNIFICANT\_ATTRIBUTES}]
+  A comma and/or space separated list of job ClassAd attributes that
+  are to be added to the list of attributes for determining
+  the sets of jobs considered as a unit (an auto cluster) in negotiation,
+  when auto clustering is enabled.
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
