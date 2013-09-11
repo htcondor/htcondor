@@ -56,6 +56,12 @@ The details of each version are described below.
 incorrect results when ClassAd caching is enabled.
 \Ticket{3879}
 
+\item Fixed a bug that caused DAG recovery mode to fail on
+Pegasus-generated sub-DAGs.  (Recovery mode is invoked, for example,
+when a \Condor{dagman} is held and released, or when a schedd is
+restarted, as happens on a version upgrade.)
+\Ticket{3882}
+
 \end{itemize}
 
 \noindent Known Bugs:
