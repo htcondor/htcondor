@@ -106,6 +106,8 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(get_overloads, get, 1, 2);
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(init_overloads, init, 0, 1);
 
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(evaluate_overloads, Evaluate, 0, 1);
+
 BOOST_PYTHON_MODULE(classad)
 {
     using namespace boost::python;
@@ -150,7 +152,7 @@ BOOST_PYTHON_MODULE(classad)
         .def("__str__", &ExprTreeHolder::toString)
         .def("__repr__", &ExprTreeHolder::toRepr)
         .def("__getitem__", &ExprTreeHolder::getItem, condor::classad_expr_return_policy<>())
-        .def("eval", &ExprTreeHolder::Evaluate)
+        .def("eval", &ExprTreeHolder::Evaluate, evaluate_overloads("Evalaute the expression, possibly within context of a ClassAd"))
         ;
 
     register_ptr_to_python< boost::shared_ptr<ClassAdWrapper> >();

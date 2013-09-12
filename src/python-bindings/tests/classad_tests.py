@@ -117,5 +117,19 @@ class TestClassad(unittest.TestCase):
         self.assertTrue("3" in ad)
         self.assertEquals(ad["3"], "5")
 
+    def test_invalid_ref(self):
+        expr = classad.ExprTree("foo")
+        self.assertEquals(classad.Value.Undefined, expr.eval())
+
+    def test_temp_scope(self):
+        expr = classad.ExprTree("foo")
+        self.assertEquals("bar", expr.eval({"foo": "bar"}))
+        ad = classad.ClassAd({"foo": "baz", "test": classad.ExprTree("foo")})
+        expr = ad["test"]
+        self.assertEquals("baz", expr.eval())
+        self.assertEquals("bar", expr.eval({"foo": "bar"}))
+        self.assertEquals("bar", expr.eval({"foo": "bar"}))
+        self.assertEquals("baz", expr.eval())
+
 if __name__ == '__main__':
     unittest.main()

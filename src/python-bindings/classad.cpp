@@ -48,16 +48,47 @@ bool ExprTreeHolder::ShouldEvaluate() const
            m_expr->GetKind() == classad::ExprTree::CLASSAD_NODE;
 }
 
-boost::python::object ExprTreeHolder::Evaluate() const
+class ScopeGuard
 {
+public:
+    ScopeGuard(classad::ExprTree &expr, const classad::ClassAd *scope_ptr)
+       : m_orig(expr.GetParentScope()), m_expr(expr), m_new(scope_ptr)
+    {
+        if (m_new) m_expr.SetParentScope(scope_ptr);
+    }
+    ~ScopeGuard()
+    {
+        if (m_new) m_expr.SetParentScope(m_orig);
+    }
+
+private:
+    const classad::ClassAd *m_orig;
+    classad::ExprTree &m_expr;
+    const classad::ClassAd *m_new;
+    
+};
+
+boost::python::object ExprTreeHolder::Evaluate(boost::python::object scope) const
+{
+    const ClassAdWrapper *scope_ptr = NULL;
+    boost::python::extract<ClassAdWrapper> ad_extract(scope);
+    ClassAdWrapper tmp_ad;
+    if (ad_extract.check())
+    {
+        tmp_ad = ad_extract();
+        scope_ptr = &tmp_ad;
+    }
+
     if (!m_expr)
     {
         PyErr_SetString(PyExc_RuntimeError, "Cannot operate on an invalid ExprTree");
         boost::python::throw_error_already_set();
     }
     classad::Value value;
-    if (m_expr->GetParentScope())
+    const classad::ClassAd *origParent = m_expr->GetParentScope();
+    if (origParent || scope_ptr)
     {
+        ScopeGuard guard(*m_expr, scope_ptr);
         if (!m_expr->Evaluate(value))
         {
             PyErr_SetString(PyExc_TypeError, "Unable to evaluate expression");
