@@ -45,7 +45,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Improved how the \condor{schedd} notifies the \condor{shadow}
+and \condor{gridmanager} about modifications to job ads made via
+\condor{qedit}.
+\Ticket{3909}
 
 \end{itemize}
 
@@ -128,6 +131,17 @@ way for file transfers with the \Condor{ft-gahp} to work.
 
 \begin{itemize}
 
+\item Four new machine ClassAd attributes are advertised.
+\Attr{TotalJobStarts} is the total number of jobs started by 
+this \Condor{startd} daemon since it booted. 
+\Attr{RecentTotalJobStarts} is the number of jobs started in the
+last twenty minutes.  
+Similarly, \Attr{TotalPreemptions} is
+the number of jobs preempted since the \Condor{startd} daemon started,
+and \Attr{RecentTotalPreemptions} is 
+the number in the last 20 minutes.
+\Ticket{3712}
+
 \item \Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE} now accepts tabs in addition to spaces as delimiters.
 \Ticket{3798}
 
@@ -167,6 +181,12 @@ can be read back properly.
 that caused file transfers to fail if one of the two daemons was older
 than version 8.1.0.
 \Ticket{3856}
+
+\ticket Fixed a bug that caused substitution in configuration values to ignore
+per-daemon overrides. This is a long-standing bug that may result in subtle changes
+in the way your configuration files are processed.
+See section \ref{sec:Config-File-Macros} for an example.
+\Ticket{3822}
 
 \end{itemize}
 
