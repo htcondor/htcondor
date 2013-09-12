@@ -365,6 +365,13 @@ sub debug {
 }
 
 sub debug_flush {
+	print "\nDEBUG_FLUSH:\n";
+	my $logdir = `condor_config_val log`;
+	chomp($logdir);
+	print "\nLog directory is <$logdir> and contains:\n";
+	system("ls -lh $logdir");
+	print "\ncondor_who -verb says:\n";
+	system("condor_who -verb");
 	foreach my $line (@debugcollection) {
 		print "$line\n";
 	}
