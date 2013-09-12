@@ -1465,6 +1465,16 @@ sub runCondorTool
 	my $quiet = shift;
 	my $options = shift;
 	my $count = 0;
+	my %altoptions = ();
+
+	# provide an expect_result=>ANY as a hash reference options
+	$altoptions{expect_resilt} = ANY;
+	if(defined $options) {
+		#simply use altoptions
+		${$options}{expect_result} = ANY;
+	} else {
+		$options = \%altoptions;
+	}
 	#Condor::DebugLevel(4);
 
 	# clean array before filling
