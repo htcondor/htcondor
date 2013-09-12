@@ -84,10 +84,10 @@ ClassAdWrapper *parseOld(object input)
 std::string quote(std::string input)
 {
     classad::Value val; val.SetStringValue(input);
-    classad::ExprTree * expr = classad::Literal::MakeLiteral(val);
+    classad_shared_ptr<classad::ExprTree> expr(classad::Literal::MakeLiteral(val));
     classad::ClassAdUnParser sink;
     std::string result;
-    sink.Unparse(result, expr);
+    sink.Unparse(result, expr.get());
     return result;
 }
 
@@ -96,6 +96,7 @@ std::string unquote(std::string input)
     classad::ClassAdParser source;
     classad::ExprTree *expr = NULL;
     if (!source.ParseExpression(input, expr, true)) THROW_EX(ValueError, "Invalid string to unquote");
+    classad_shared_ptr<classad::ExprTree> expr_guard(expr);
     if (!expr || expr->GetKind() != classad::ExprTree::LITERAL_NODE) THROW_EX(ValueError, "String does not parse to ClassAd string literal");
     classad::Literal &literal = *static_cast<classad::Literal *>(expr);
     classad::Value val; literal.GetValue(val);
