@@ -490,7 +490,8 @@ sub Which {
     }
     foreach my $path (split /:/, $ENV{PATH}) {
         chomp $path;
-        if(-x "$path/$exe") {
+		#print "Checking <$path>\n";
+        if(-f "$path/$exe") {
             return "$path/$exe";
         }
     }

@@ -65,11 +65,16 @@ my $on_execute = sub {
 	print "********************************** OnExecute *****************************\n";
 	print "waiting for size signal catching output to grow\n";
 	my $sizenow = 0;
+	my $loopcount = 0;
 
 	while($sizenow < 1000) {
 		$sizenow = -s "catchallsignals.out";
-		print "<$sizenow>\n";
+		if(($loopcount % 100) == 0) {
+			print "<$sizenow>\n";
+		}
+		sleep(1);
 	}
+
 	if($executecount == 0) {
 		system("condor_hold $ClusterId");
 		$executecount += 1;

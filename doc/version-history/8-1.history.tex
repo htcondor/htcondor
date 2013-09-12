@@ -45,7 +45,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item Improved how the \condor{schedd} notifies the \condor{shadow}
+and \condor{gridmanager} about modifications to job ads made via
+\condor{qedit}.
+\Ticket{3909}
 
 \end{itemize}
 
@@ -128,6 +131,17 @@ way for file transfers with the \Condor{ft-gahp} to work.
 
 \begin{itemize}
 
+\item Four new machine ClassAd attributes are advertised.
+\Attr{TotalJobStarts} is the total number of jobs started by 
+this \Condor{startd} daemon since it booted. 
+\Attr{RecentTotalJobStarts} is the number of jobs started in the
+last twenty minutes.  
+Similarly, \Attr{TotalPreemptions} is
+the number of jobs preempted since the \Condor{startd} daemon started,
+and \Attr{RecentTotalPreemptions} is 
+the number in the last 20 minutes.
+\Ticket{3712}
+
 \item \Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE} now accepts tabs in addition to spaces as delimiters.
 \Ticket{3798}
 
@@ -168,13 +182,40 @@ that caused file transfers to fail if one of the two daemons was older
 than version 8.1.0.
 \Ticket{3856}
 
+\item Fixed a bug that caused substitution in configuration variable
+evaluation to ignore per-daemon overrides. 
+This is a long standing bug that may result in subtle changes
+to the way your configuration files are processed.
+An example of how substitution works with the per-daemon overrides
+is in section \ref{sec:Config-File-Macros}.
+\Ticket{3822}
+
+\item Fixed a bug that caused the command
+\begin{verbatim}
+  condor_submit -
+\end{verbatim}
+to be interpreted as an interactive submit,
+rather than a request to read input from \File{stdin}.
+\Condor{qsub} was also modified to be immune to this bug,
+such that it will still work with other versions of HTCondor containing
+the bug.
+\Ticket{3902}
+
 \end{itemize}
 
 \noindent Known Bugs:
 
 \begin{itemize}
-
-\item None.
+\item DAGMan recovery mode does not work for Pegasus-generated SUBDAGs.
+For SUBDAGs, doing \Condor{hold} or \Condor{release} on
+the \Condor{dagman} job, or stopping and re-starting the
+\Condor{schedd} with the DAGMan
+job in the queue will result in failure of the DAG.  This can be
+avoided by doing a \Condor{rm} of the DAGMan job, which produces a Rescue
+DAG, and re-submitting the DAG; the Rescue DAG is automatically run.
+This bug was introduced in HTCondor version 8.0.1, and it also appears
+in versions 8.0.2, 8.1.0, and 8.1.1.
+\Ticket{3882}
 
 \end{itemize}
 

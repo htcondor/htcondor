@@ -87,7 +87,8 @@ is_dash_arg_prefix(const char * parg, const char * pval, int must_match_length /
 {
 	if (*parg != '-') return false;
 	++parg;
-	if (*parg == '-') ++parg; // allow -- as well as - for an arg prefix.
+	// if arg begins with --, then we require an exact match for pval.
+	if (*parg == '-') { ++parg; must_match_length = -1; }
 	return is_arg_prefix(parg, pval, must_match_length);
 }
 

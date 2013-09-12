@@ -32,6 +32,10 @@ sub IDLE{1};
 sub HELD{5};
 sub RUNNING{2};
 
+my $numsubmitted = 0;
+my $numaborted = 0;
+
+system("printenv");
 my $joblog;
 
 $abnormal = sub 
@@ -41,13 +45,28 @@ $abnormal = sub
 
 $aborted = sub 
 {
-	CondorTest::debug("Abort event expected\n",1);
-	my $result = system("/bin/sleep 10 && ./x_read_joblog.exe $joblog FULLREMOVE");
-	if( $result != 0)
-	{
-		die "Not all dag nodes removed!\n";
+	$numaborted += 1;
+	my $tries = 4; #Used to be a 10 try now try 4 5 second tries
+	CondorTest::debug("Abort event expected <$numaborted>\n",1);
+	print "Abort event expected <$numaborted>\n";
+
+	if($numsubmitted == $numaborted) {
+		while($tries > 0) {
+			my $result = system("/bin/sleep 5 && ./x_read_joblog.exe $joblog FULLREMOVE");
+			if( $result != 0)
+			{
+			} else {
+				$tries -= 1;
+				last;
+			}
+
+		}
+		if( $result != 0)
+		{
+			die "Not all dag nodes removed!\n";
+		}
+		CondorTest::debug("x_read_joblog verified all removed!\n",1);
 	}
-	CondorTest::debug("x_read_joblog verified all removed!\n",1);
 };
 
 $held = sub 
@@ -75,6 +94,8 @@ $executed = sub
 
 $submitted = sub
 {
+	$numsubmitted += 1;
+	print "submit event expected <$numsubmitted>\n";
 	$joblog = "job_dagman_fullremove.log";
 	CondorTest::debug("submitted: This test will see submit, executing and abort\n",1);
 };

@@ -2,6 +2,7 @@
 
 import re
 import classad
+import datetime
 import unittest
 
 class TestClassad(unittest.TestCase):
@@ -116,6 +117,51 @@ class TestClassad(unittest.TestCase):
         del other
         self.assertTrue("3" in ad)
         self.assertEquals(ad["3"], "5")
+
+    def test_invalid_ref(self):
+        expr = classad.ExprTree("foo")
+        self.assertEquals(classad.Value.Undefined, expr.eval())
+
+    def test_temp_scope(self):
+        expr = classad.ExprTree("foo")
+        self.assertEquals("bar", expr.eval({"foo": "bar"}))
+        ad = classad.ClassAd({"foo": "baz", "test": classad.ExprTree("foo")})
+        expr = ad["test"]
+        self.assertEquals("baz", expr.eval())
+        self.assertEquals("bar", expr.eval({"foo": "bar"}))
+        self.assertEquals("bar", expr.eval({"foo": "bar"}))
+        self.assertEquals("baz", expr.eval())
+
+    def test_abstime(self):
+        expr = classad.ExprTree('absTime("2013-09-12T07:50:23")')
+        dt = expr.eval()
+        self.assertTrue(isinstance(dt, datetime.datetime))
+        self.assertEquals(dt.year, 2013)
+        self.assertEquals(dt.month, 9)
+        self.assertEquals(dt.day, 12)
+        self.assertEquals(dt.hour, 7)
+        self.assertEquals(dt.minute, 50)
+        self.assertEquals(dt.second, 23)
+
+        ad = classad.ClassAd({"foo": dt})
+        dt2 = ad["foo"]
+        self.assertTrue(isinstance(dt2, datetime.datetime))
+        self.assertEquals(dt, dt2)
+
+        ad = classad.ClassAd({"foo": datetime.datetime.now()});
+        td = (datetime.datetime.now()-ad["foo"])
+        self.assertEquals(td.days, 0)
+        self.assertTrue(td.seconds < 300)
+
+    def test_reltime(self):
+        expr = classad.ExprTree('relTime(5)')
+        self.assertEquals(expr.eval(), 5)
+
+    def test_quote(self):
+        self.assertEquals(classad.quote("foo"), '"foo"')
+        self.assertEquals(classad.quote('"foo'), '"\\"foo"')
+        for i in ["foo", '"foo', '"\\"foo']:
+            self.assertEquals(i, classad.unquote(classad.quote(i)))
 
 if __name__ == '__main__':
     unittest.main()

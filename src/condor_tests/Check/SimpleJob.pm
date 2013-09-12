@@ -95,6 +95,7 @@ sub RunCheck
     my $unsuspended_fn = $args{on_unsuspended} || $dummy;
     my $disconnected_fn = $args{on_disconnected} || $dummy;
     my $reconnected_fn = $args{on_reconnected} || $dummy;
+    my $reconnectfailed_fn = $args{on_reconnectfailed} || $dummy;
     my $imageupdated_fn = $args{on_imageupdated} || $dummy;
     my $evicted_ewc_fn = $args{on_evictedwithcheckpoint} || $dummy;
     my $evicted_ewoc_fn = $args{on_evictedwithoutcheckpoint} || $dummy;
@@ -140,6 +141,9 @@ sub RunCheck
 	}
 	if( exists $args{on_disconnected} ) {
     	CondorTest::RegisterDisconnected( $testname, $disconnected_fn );
+	}
+	if( exists $args{on_reconnectfailed} ) {
+    	CondorTest::RegisterReconnectFailed( $testname, $reconnectfailed_fn );
 	}
 	if( exists $args{on_reconnected} ) {
     	CondorTest::RegisterReconnected( $testname, $reconnected_fn );
