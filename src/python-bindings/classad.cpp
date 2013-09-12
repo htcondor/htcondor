@@ -32,6 +32,7 @@ ExprTreeHolder::ExprTreeHolder(const std::string &str)
         boost::python::throw_error_already_set();
     }
     m_expr = expr;
+    m_refcount.reset(m_expr);
 }
 
 
@@ -155,6 +156,7 @@ boost::python::object ExprTreeHolder::Evaluate(boost::python::object scope) cons
     case classad::Value::RELATIVE_TIME_VALUE:
         value.IsRelativeTimeValue(realvalue);
         result = boost::python::object(realvalue);
+        break;
     case classad::Value::REAL_VALUE:
         value.IsRealValue(realvalue);
         result = boost::python::object(realvalue);
@@ -418,6 +420,20 @@ convert_python_to_exprtree(boost::python::object value)
     {
         double cppvalue = boost::python::extract<double>(value);
         classad::Value val; val.SetRealValue(cppvalue);
+        return classad::Literal::MakeLiteral(val);
+    }
+    if (PyDateTime_Check(value.ptr()))
+    {
+        classad::abstime_t atime;
+        boost::python::object timestamp = py_import("calendar").attr("timegm")(value.attr("timetuple")());
+        // Determine the UTC offset; timetuple above is in local time, but timegm assumes UTC.
+        std::time_t current_time;
+        std::time(&current_time);
+        struct std::tm *timeinfo = std::localtime(&current_time);
+        long offset = timeinfo->tm_gmtoff;
+        atime.secs = boost::python::extract<time_t>(timestamp) - offset;
+        atime.offset = 0;
+        classad::Value val; val.SetAbsoluteTimeValue(atime);
         return classad::Literal::MakeLiteral(val);
     }
     if (PyDict_Check(value.ptr()))

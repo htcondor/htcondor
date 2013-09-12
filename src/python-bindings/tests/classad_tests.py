@@ -143,6 +143,16 @@ class TestClassad(unittest.TestCase):
         self.assertEquals(dt.minute, 50)
         self.assertEquals(dt.second, 23)
 
+        ad = classad.ClassAd({"foo": dt})
+        dt2 = ad["foo"]
+        self.assertTrue(isinstance(dt2, datetime.datetime))
+        self.assertEquals(dt, dt2)
+
+        ad = classad.ClassAd({"foo": datetime.datetime.now()});
+        td = (datetime.datetime.now()-ad["foo"])
+        self.assertEquals(td.days, 0)
+        self.assertTrue(td.seconds < 300)
+
     def test_reltime(self):
         expr = classad.ExprTree('relTime(5)')
         self.assertEquals(expr.eval(), 5)
