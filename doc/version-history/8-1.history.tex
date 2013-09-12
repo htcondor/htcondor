@@ -132,6 +132,17 @@ An example of how substitution works with the per-daemon overrides
 is in section \ref{sec:Config-File-Macros}.
 \Ticket{3822}
 
+\item Fixed a bug that caused the command
+\begin{verbatim}
+  condor_submit -
+\end{verbatim}
+to be interpreted as an interactive submit,
+rather than a request to read input from \File{stdin}.
+\Condor{qsub} was also modified to be immune to this bug,
+such that it will still work with other versions of HTCondor containing
+the bug.
+\Ticket{3902}
+
 \end{itemize}
 
 \noindent Known Bugs:
