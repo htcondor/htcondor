@@ -25,6 +25,8 @@ struct ExprTreeHolder
 
     boost::python::object getItem(ssize_t);
 
+    static void init();
+
 private:
     classad::ExprTree *m_expr;
     boost::shared_ptr<classad::ExprTree> m_refcount;

@@ -2,6 +2,7 @@
 
 import re
 import classad
+import datetime
 import unittest
 
 class TestClassad(unittest.TestCase):
@@ -130,6 +131,21 @@ class TestClassad(unittest.TestCase):
         self.assertEquals("bar", expr.eval({"foo": "bar"}))
         self.assertEquals("bar", expr.eval({"foo": "bar"}))
         self.assertEquals("baz", expr.eval())
+
+    def test_abstime(self):
+        expr = classad.ExprTree('absTime("2013-09-12T07:50:23")')
+        dt = expr.eval()
+        self.assertTrue(isinstance(dt, datetime.datetime))
+        self.assertEquals(dt.year, 2013)
+        self.assertEquals(dt.month, 9)
+        self.assertEquals(dt.day, 12)
+        self.assertEquals(dt.hour, 7)
+        self.assertEquals(dt.minute, 50)
+        self.assertEquals(dt.second, 23)
+
+    def test_reltime(self):
+        expr = classad.ExprTree('relTime(5)')
+        self.assertEquals(expr.eval(), 5)
 
 if __name__ == '__main__':
     unittest.main()

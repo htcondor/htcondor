@@ -2,6 +2,8 @@
 // Note - pyconfig.h must be included before condor_common to avoid
 // re-definition warnings.
 # include <pyconfig.h>
+#include <Python.h>
+#include <datetime.h>
 
 #include <string>
 
@@ -12,6 +14,12 @@
 #include "classad_wrapper.h"
 #include "exprtree_wrapper.h"
 #include "old_boost.h"
+
+void
+ExprTreeHolder::init()
+{
+    PyDateTime_IMPORT;
+}
 
 ExprTreeHolder::ExprTreeHolder(const std::string &str)
     : m_expr(NULL), m_owns(true)
@@ -112,6 +120,9 @@ boost::python::object ExprTreeHolder::Evaluate(boost::python::object scope) cons
     classad::ClassAd *advalue = NULL;
     boost::shared_ptr<ClassAdWrapper> wrap;
     PyObject* obj;
+    classad::abstime_t atime;
+    boost::python::object timestamp;
+    boost::python::object args;
     classad_shared_ptr<classad::ExprList> exprlist;
     switch (value.GetType())
     {
@@ -131,11 +142,19 @@ boost::python::object ExprTreeHolder::Evaluate(boost::python::object scope) cons
         result = boost::python::str(strvalue);
         break;
     case classad::Value::ABSOLUTE_TIME_VALUE:
+        value.IsAbsoluteTimeValue(atime);
+        timestamp = boost::python::long_(atime.secs);
+        args = boost::python::make_tuple(timestamp);
+        obj = PyDateTime_FromTimestamp(args.ptr());
+        result = boost::python::object(boost::python::handle<>(obj));
+        break;
     case classad::Value::INTEGER_VALUE:
         value.IsIntegerValue(intvalue);
         result = boost::python::long_(intvalue);
         break;
     case classad::Value::RELATIVE_TIME_VALUE:
+        value.IsRelativeTimeValue(realvalue);
+        result = boost::python::object(realvalue);
     case classad::Value::REAL_VALUE:
         value.IsRealValue(realvalue);
         result = boost::python::object(realvalue);
