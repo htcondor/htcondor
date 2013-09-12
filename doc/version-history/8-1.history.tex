@@ -124,10 +124,12 @@ that caused file transfers to fail if one of the two daemons was older
 than version 8.1.0.
 \Ticket{3856}
 
-\ticket Fixed a bug that caused substitution in configuration values to ignore
-per-daemon overrides. This is a long-standing bug that may result in subtle changes
-in the way your configuration files are processed.
-See section \ref{sec:Config-File-Macros} for an example.
+\item Fixed a bug that caused substitution in configuration variable
+evaluation to ignore per-daemon overrides. 
+This is a long standing bug that may result in subtle changes
+to the way your configuration files are processed.
+An example of how substitution works with the per-daemon overrides
+is in section \ref{sec:Config-File-Macros}.
 \Ticket{3822}
 
 \end{itemize}
