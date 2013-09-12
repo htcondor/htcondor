@@ -49,6 +49,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that prevented the use of simple hostnames to identify
+machines when using the command-line tools. For example, 
+\Expr{condor\_status bar.foo.org} would show machine ads, but
+\Expr{condor\_status bar} would not.
+\Ticket{3694}
+
 \item Fixed a bug with \Condor{ssh\_to\_job} and USE\_PID\_NAMESPACES.  If the latter option was enabled, a user running the \Condor{ssh\_to\_job} tool would run in a private pid namespace, and not be able to see their job with ps or gdb.  \Condor{ssh\_to\_job} now runs in the global namespace, so that it can see the processes in the user's job.
 \Ticket{3872}
 
