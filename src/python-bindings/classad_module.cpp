@@ -1,5 +1,7 @@
 #include <boost/python.hpp>
 #include <classad/source.h>
+#include <classad/sink.h>
+#include <classad/literals.h>
 
 #include "old_boost.h"
 #include "classad_wrapper.h"
@@ -79,6 +81,29 @@ ClassAdWrapper *parseOld(object input)
     return wrapper;
 }
 
+std::string quote(std::string input)
+{
+    classad::Value val; val.SetStringValue(input);
+    classad::ExprTree * expr = classad::Literal::MakeLiteral(val);
+    classad::ClassAdUnParser sink;
+    std::string result;
+    sink.Unparse(result, expr);
+    return result;
+}
+
+std::string unquote(std::string input)
+{
+    classad::ClassAdParser source;
+    classad::ExprTree *expr = NULL;
+    if (!source.ParseExpression(input, expr, true)) THROW_EX(ValueError, "Invalid string to unquote");
+    if (!expr || expr->GetKind() != classad::ExprTree::LITERAL_NODE) THROW_EX(ValueError, "String does not parse to ClassAd string literal");
+    classad::Literal &literal = *static_cast<classad::Literal *>(expr);
+    classad::Value val; literal.GetValue(val);
+    std::string result;
+    if (!val.IsStringValue(result)) THROW_EX(ValueError, "ClassAd literal is not string value");
+    return result;
+}
+
 void *convert_to_FILEptr(PyObject* obj) {
     return PyFile_Check(obj) ? PyFile_AsFile(obj) : 0;
 }
@@ -123,6 +148,9 @@ BOOST_PYTHON_MODULE(classad)
         "Parse old ClassAd format input into a ClassAd.\n"
         ":param input: A string or a file pointer.\n"
         ":return: A ClassAd object.");
+
+    def("quote", quote, "Convert a python string into a string corresponding ClassAd string literal");
+    def("unquote", unquote, "Convert a python string escaped as a ClassAd string back to python");
 
     class_<ClassAdWrapper, boost::noncopyable>("ClassAd", "A classified advertisement.")
         .def(init<std::string>())

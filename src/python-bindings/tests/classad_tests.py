@@ -147,5 +147,11 @@ class TestClassad(unittest.TestCase):
         expr = classad.ExprTree('relTime(5)')
         self.assertEquals(expr.eval(), 5)
 
+    def test_quote(self):
+        self.assertEquals(classad.quote("foo"), '"foo"')
+        self.assertEquals(classad.quote('"foo'), '"\\"foo"')
+        for i in ["foo", '"foo', '"\\"foo']:
+            self.assertEquals(i, classad.unquote(classad.quote(i)))
+
 if __name__ == '__main__':
     unittest.main()
