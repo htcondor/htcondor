@@ -135,6 +135,14 @@ class ParamValue {
 
 	bool param_get_location(const char *parameter, MyString &filename,
 							int &line_number);
+
+	const char * param_get_info(const char * name,
+								const char * subsys,
+								const char * local,
+								MyString &name_used,
+								MyString &filename,
+								int &line_number);
+
 	
 	/** Look up a value by the name 'name' from the table 'table' which is table_size big.
 	
@@ -166,7 +174,7 @@ class ParamValue {
 	exist.... */
 extern "C" {
 	void config( int wantsQuiet=0 , bool ignore_invalid_entry = false, bool wantsExtra = true );
-	void config_host( char* host=NULL );
+	void config_host( const char* host=NULL );
 	bool config_continue_if_no_config(bool contin);
 	void config_fill_ad( ClassAd*, const char *prefix = NULL );
 	void condor_net_remap_config( bool force_param=false );

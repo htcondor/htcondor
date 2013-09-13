@@ -45,6 +45,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item If the config knob STARTER\_RLIMIT\_AS is set to the default
+value, there is no limit.  However, in this case, we logged that the
+limit was set to 0 mb, which means ulimited to the kernel, but
+was confusing.  Now, no message is logged in the default case.
+\Ticket{3914}
+
 \item Improved how the \condor{schedd} notifies the \condor{shadow}
 and \condor{gridmanager} about modifications to job ads made via
 \condor{qedit}.
