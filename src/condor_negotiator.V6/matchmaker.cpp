@@ -1906,7 +1906,7 @@ void Matchmaker::hgq_assign_quotas(GroupEntry* group, double quota) {
 
         if (child->static_quota && (q < child->config_quota)) {
             dprintf(D_ALWAYS, "group quotas: WARNING: static quota for group %s rescaled from %g to %g\n", child->name.c_str(), child->config_quota, q);
-        } else if (Zd > 1) {
+        } else if (Zd - 1 > 0.0001) {
             dprintf(D_ALWAYS, "group quotas: WARNING: dynamic quota for group %s rescaled from %g to %g\n", child->name.c_str(), child->config_quota, child->config_quota / Zd);
         }
 
