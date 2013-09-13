@@ -47,6 +47,7 @@ sub FAIL {
 # return 0 for false (expectation not met), 1 for true (expectation met)
 sub ANY {
 	# always true
+	#print "ANY called, return 1\n";
 	return 1;
 }
 
@@ -337,10 +338,15 @@ sub runcmd {
 	$returnthings{"stdout"} = \@outlines;
 	$returnthings{"stderr"} = \@errlines;
 
+	#print "about to check expected result function signal <$signal> rc <$rc>\n";
 	my $expected = ${$options}{expect_result}($signal, $signal, $rc, \@outlines, \@errlines);
+	#my $expected = ${$options}{expect_result}();
+	#print "expected returnval was <$expected>\n";
 	$returnthings{"expectation"} = $expected;
 	if(!$expected && (${$options}{die_on_failed_expectation} == TRUE)) {
 		die "Expectation Failed on cmd <$args>\n";
+	} else {
+		#print "runcmd: Told Failure was OK\n";
 	}
 	return \%returnthings;
 }
