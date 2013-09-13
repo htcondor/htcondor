@@ -460,7 +460,9 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 						// so just don't set a limit.
 						rlimit_as_hard_limit = 0;
 					}
-					dprintf(D_ALWAYS, "Setting job's virtual memory rlimit to %ld megabytes\n", rlimit_as_hard_limit);
+					if (rlimit_as_hard_limit > 0) {
+						dprintf(D_ALWAYS, "Setting job's virtual memory rlimit to %ld megabytes\n", rlimit_as_hard_limit);
+					}
 			} else {
 				dprintf(D_ALWAYS, "Can't evaluate STARTER_RLIMIT_AS expression %s\n", rlimit_expr);
 			}
