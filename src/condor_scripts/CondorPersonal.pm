@@ -372,6 +372,7 @@ sub debug_flush {
 	system("ls -lh $logdir");
 	print "\ncondor_who -verb says:\n";
 	system("condor_who -verb");
+	print "\nDebug collection starts now:\n";
 	foreach my $line (@debugcollection) {
 		print "$line\n";
 	}
