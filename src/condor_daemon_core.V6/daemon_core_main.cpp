@@ -1244,7 +1244,7 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 	// DC_CONFIG_VAL command has extended behavior not shared by CONFIG_VAL.
 	// if param name begins with ? then it is a command name rather than a param name.
 	//   ?names[:pattern] - return a set of strings containing the names of all paramters in the param table.
-	if ((DC_CONFIG_VAL == idCmd) && (param_name != NULL) && '?' == param_name[0]) {
+	if ((DC_CONFIG_VAL == idCmd) && ('?' == param_name[0])) {
 		int retval = TRUE; // assume success
 
 		const char * pcolon;
@@ -1318,10 +1318,12 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 		}
 
 		// DC_CONFIG_VAL command has extended behavior not shared by CONFIG_VAL.
-		// in addition to returning. the param() value, return
-		//   NAME_USED = raw_value
-		//   filename, line N
-		//   default_value
+		// in addition to returning. the param() value, it returns consecutive strings containing
+		//   <NAME_USED> = <raw_value>
+		//   <filename>[, line <num>]
+		//   <default_value>
+		//note: ", line <num>" is present only when the line number is meaningful
+		//and "<default_value>" may be NULL
 		if (idCmd == DC_CONFIG_VAL) {
 			MyString name_used, filename;
 			int line_number;
