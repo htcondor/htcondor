@@ -121,7 +121,7 @@ boost::python::object ExprTreeHolder::Evaluate(boost::python::object scope) cons
     classad::ClassAd *advalue = NULL;
     boost::shared_ptr<ClassAdWrapper> wrap;
     PyObject* obj;
-    classad::abstime_t atime;
+    classad::abstime_t atime; atime.secs=0; atime.offset=0;
     boost::python::object timestamp;
     boost::python::object args;
     classad_shared_ptr<classad::ExprList> exprlist;
@@ -144,6 +144,8 @@ boost::python::object ExprTreeHolder::Evaluate(boost::python::object scope) cons
         break;
     case classad::Value::ABSOLUTE_TIME_VALUE:
         value.IsAbsoluteTimeValue(atime);
+        // Note we don't use offset -- atime.secs is always in UTC, which is
+        // what python wants for PyDateTime_FromTimestamp
         timestamp = boost::python::long_(atime.secs);
         args = boost::python::make_tuple(timestamp);
         obj = PyDateTime_FromTimestamp(args.ptr());
