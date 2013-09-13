@@ -83,7 +83,7 @@ my $on_execute = sub {
 	}
 
 	if($executecount == 0) {
-		runTollNTimes("condor_hold $ClusterId",1);
+		runToolNTimes("condor_hold $ClusterId",1);
 		$executecount += 1;
 	} else {
 			print "Job ran more then once and all normal signals are being ignored even SIGTERM\n";
