@@ -2534,6 +2534,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
 	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_UNIVERSE, &universe );
 	if( (universe != CONDOR_UNIVERSE_SCHEDULER) &&
+		(universe != CONDOR_UNIVERSE_STANDARD) && 
 		( flags & SETDIRTY ) && 
 		( status == RUNNING || (( universe == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( ad ) ) ) ) {
 
