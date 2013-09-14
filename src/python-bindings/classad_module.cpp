@@ -4,6 +4,7 @@
 #include <classad/literals.h>
 
 #include "old_boost.h"
+#include "classad_parsers.h"
 #include "classad_wrapper.h"
 #include "exprtree_wrapper.h"
 #include "classad_expr_return_policy.h"
@@ -16,69 +17,6 @@ std::string ClassadLibraryVersion()
     std::string val;
     classad::ClassAdLibraryVersion(val);
     return val;
-}
-
-
-ClassAdWrapper *parseString(const std::string &str)
-{
-    classad::ClassAdParser parser;
-    classad::ClassAd *result = parser.ParseClassAd(str);
-    if (!result)
-    {
-        PyErr_SetString(PyExc_SyntaxError, "Unable to parse string into a ClassAd.");
-        boost::python::throw_error_already_set();
-    }
-    ClassAdWrapper * wrapper_result = new ClassAdWrapper();
-    wrapper_result->CopyFrom(*result);
-    delete result;
-    return wrapper_result;
-}
-
-
-ClassAdWrapper *parseFile(FILE *stream)
-{
-    classad::ClassAdParser parser;
-    classad::ClassAd *result = parser.ParseClassAd(stream);
-    if (!result)
-    {
-        PyErr_SetString(PyExc_SyntaxError, "Unable to parse input stream into a ClassAd.");
-        boost::python::throw_error_already_set();
-    }
-    ClassAdWrapper * wrapper_result = new ClassAdWrapper();
-    wrapper_result->CopyFrom(*result);
-    delete result;
-    return wrapper_result;
-}
-
-ClassAdWrapper *parseOld(object input)
-{
-    ClassAdWrapper * wrapper = new ClassAdWrapper();
-    object input_list;
-    extract<std::string> input_extract(input);
-    if (input_extract.check())
-    {
-        input_list = input.attr("splitlines")();
-    }
-    else
-    {
-        input_list = input.attr("readlines")();
-    }
-    unsigned input_len = py_len(input_list);
-    for (unsigned idx=0; idx<input_len; idx++)
-    {
-        object line = input_list[idx].attr("strip")();
-        if (line.attr("startswith")("#"))
-        {
-            continue;
-        }
-        std::string line_str = extract<std::string>(line);
-        if (!wrapper->Insert(line_str))
-        {
-            PyErr_SetString(PyExc_SyntaxError, line_str.c_str());
-            throw_error_already_set();
-        }
-    }
-    return wrapper;
 }
 
 std::string quote(std::string input)
@@ -145,10 +83,20 @@ BOOST_PYTHON_MODULE(classad)
         "Parse input into a ClassAd.\n"
         ":param input: A string or a file pointer.\n"
         ":return: A ClassAd object.");
+    def("parseAds", parseAdsString);
+    def("parseAds", parseAdsFile, with_custodian_and_ward_postcall<0, 1>(),
+        "Parse input iterator into an iterator of ClassAds.\n"
+        ":param input: A string or a file pointer.\n"
+        ":return: A iterator which produces ClassAd objects.");
+
     def("parseOld", parseOld, return_value_policy<manage_new_object>(),
         "Parse old ClassAd format input into a ClassAd.\n"
         ":param input: A string or a file pointer.\n"
         ":return: A ClassAd object.");
+    def("parseOldAds", parseOldAds, "Parse a stream of old ClassAd format into \n"
+        "an iterator of ClassAd objects\n"
+        ":param input: A string or iterable object.\n"
+        ":return: An iterator of ClassAd objects.");
 
     def("quote", quote, "Convert a python string into a string corresponding ClassAd string literal");
     def("unquote", unquote, "Convert a python string escaped as a ClassAd string back to python");
@@ -190,6 +138,21 @@ BOOST_PYTHON_MODULE(classad)
     boost::python::enum_<classad::Value::ValueType>("Value")
         .value("Error", classad::Value::ERROR_VALUE)
         .value("Undefined", classad::Value::UNDEFINED_VALUE)
+        ;
+
+    class_<OldClassAdIterator>("OldClassAdIterator", no_init)
+        .def("next", &OldClassAdIterator::next)
+        .def("__iter__", &OldClassAdIterator::pass_through)
+        ;
+
+    class_<ClassAdStringIterator>("ClassAdStringIterator", no_init)
+        .def("next", &ClassAdStringIterator::next)
+        .def("__iter__", &ClassAdStringIterator::pass_through)
+        ;
+
+    class_<ClassAdFileIterator>("ClassAdFileIterator", no_init)
+        .def("next", &ClassAdFileIterator::next)
+        .def("__iter__", &OldClassAdIterator::pass_through)
         ;
 
     boost::python::converter::registry::insert(convert_to_FILEptr,
