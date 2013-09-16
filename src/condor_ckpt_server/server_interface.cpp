@@ -550,7 +550,7 @@ extern "C" int RemoveLocalOrRemoteFile(const char* owner,
 	MSC_SUPPRESS_WARNING_FIXME(6031) // return value of unlink ignored.
 	unlink(filename);
 	if (server_host == NULL) { // NULL means we have no checkpoint server
-		return 1;
+		return 0;
 	}
 	return (RequestService(owner, schedd, filename, NULL, SERVICE_DELETE, NULL,
 						   NULL, NULL, NULL));
