@@ -19,6 +19,34 @@ class TestClassad(unittest.TestCase):
         self.assertEqual(ad["baz"], classad.Value.Undefined)
         self.assertRaises(KeyError, ad.__getitem__, "bar")
 
+    def new_ads_verify(self, ads):
+        ads = list(ads)
+        self.assertEqual(len(ads), 2)
+        ad1, ad2 = ads
+        self.assertEqual(ad1["foo"], "bar")
+        self.assertEqual(ad1["baz"], classad.Value.Undefined)
+        self.assertEqual(ad2["bar"], 1)
+        self.assertEqual(len(ad1), 2)
+        self.assertEqual(len(ad2), 1)
+        self.assertRaises(KeyError, ad1.__getitem__, "bar")
+
+    def old_ads_verify(self, ads):
+        ads = list(ads)
+        self.assertEqual(len(ads), 2)
+        ad1, ad2 = ads
+        self.assertEqual(ad1["MaxHosts"], 1)
+        self.assertEqual(ad1["Managed"], "Schedd")
+        self.assertEqual(ad2["User"], "bbockelm@users.opensciencegrid.org")
+        self.assertEqual(ad2["SUBMIT_x509userproxy"], "/tmp/x509up_u1221")
+        self.assertEqual(len(ad1), 2)
+        self.assertEqual(len(ad2), 2)
+
+    def test_load_classads(self):
+        self.new_ads_verify(classad.parseAds(open("tests/test_multiple.ad")))
+        self.new_ads_verify(classad.parseAds(open("tests/test_multiple.ad").read()))
+        self.old_ads_verify(classad.parseOldAds(open("tests/test_multiple.old.ad")))
+        self.old_ads_verify(classad.parseOldAds(open("tests/test_multiple.old.ad").read()))
+
     def test_old_classad(self):
         ad = classad.parseOld(open("tests/test.old.ad"))
         contents = open("tests/test.old.ad").read()
