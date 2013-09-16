@@ -496,20 +496,56 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 		dprintf( D_ALWAYS, "Error getting BOINC status: %s\n",
 				 m_statusGahp->getErrorString() );
 
-		// If this error looks like it would affect a submit command,
-		// notify all jobs in BatchMaybeSubmitted state.
-		if ( !strstr( m_statusGahp->getErrorString(), "no batch named" ) ) {
+		// Check if one of the batches we queried for doesn't exist on
+		// the server.
+		const char *ptr = strstr( m_statusGahp->getErrorString(),
+								  "no batch named " );
+		if ( ptr ) {
+			// Advance pointer to name of missing batch
+			ptr += 15;
+
+			BoincBatch *batch = NULL;
 			for ( std::list<BoincBatch*>::iterator batch_itr = m_batches.begin();
 				  batch_itr != m_batches.end(); batch_itr++ ) {
-				if ( (*batch_itr)->m_submit_status != BatchMaybeSubmitted ||
-					 !(*batch_itr)->m_error_message.empty() ) {
-					continue;
+				if ( (*batch_itr)->m_batch_name == ptr ) {
+					batch = *batch_itr;
+					break;
 				}
-				(*batch_itr)->m_error_message = m_statusGahp->getErrorString();
-				for ( set<BoincJob *>::iterator job_itr = (*batch_itr)->m_jobs.begin();
-					  job_itr != (*batch_itr)->m_jobs.end(); job_itr++ ) {
-					(*job_itr)->SetEvaluateState();
-				}
+			}
+			if ( batch == NULL ) {
+				dprintf( D_ALWAYS, "Failed to find batch %s!\n", ptr );
+			}
+			m_statusBatches.remove( ptr );
+			if ( batch->m_submit_status == BatchMaybeSubmitted ) {
+				batch->m_submit_status = BatchUnsubmitted;
+				daemonCore->Reset_Timer( m_submitTid, 0 );
+			} else {
+				dprintf( D_ALWAYS, "Submitted batch %s not found on server!\n",
+						 ptr );
+				// TODO How do we react?
+				//   Notify the jobs that they don't exist?
+				//   At the very least, we should avoid querying this batch
+				//   in the future.
+			}
+			// Careful about recusrion here!
+			// TODO Avoid recursing?
+			return FinishBatchStatus();
+		}
+
+		// TODO Check for error "not owner of <batch name>"
+
+		// If this error looks like it would affect a submit command,
+		// notify all jobs in BatchMaybeSubmitted state.
+		for ( std::list<BoincBatch*>::iterator batch_itr = m_batches.begin();
+			  batch_itr != m_batches.end(); batch_itr++ ) {
+			if ( (*batch_itr)->m_submit_status != BatchMaybeSubmitted ||
+				 !(*batch_itr)->m_error_message.empty() ) {
+				continue;
+			}
+			(*batch_itr)->m_error_message = m_statusGahp->getErrorString();
+			for ( set<BoincJob *>::iterator job_itr = (*batch_itr)->m_jobs.begin();
+				  job_itr != (*batch_itr)->m_jobs.end(); job_itr++ ) {
+				(*job_itr)->SetEvaluateState();
 			}
 		}
 
