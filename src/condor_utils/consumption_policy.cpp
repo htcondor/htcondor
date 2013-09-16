@@ -196,9 +196,15 @@ void cp_override_requested(ClassAd& job, ClassAd& resource, map<string, double>&
 
     for (map<string, double>::iterator j(consumption.begin());  j != consumption.end();  ++j) {
         const char* asset = j->first.c_str();
+
         string ra;
-        string oa;
         formatstr(ra, "%s%s", ATTR_REQUEST_PREFIX, asset);
+
+        // If there was no RequestXXX to begin with, don't screw things up by creating one
+        ClassAd::iterator f(job.find(ra));
+        if (job.end() == f) continue;
+
+        string oa;
         formatstr(oa, "_cp_orig_%s%s", ATTR_REQUEST_PREFIX, asset);
         job.CopyAttribute(oa.c_str(), ra.c_str());
         assign_preserve_integers(job, ra.c_str(), j->second);
