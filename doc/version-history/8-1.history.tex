@@ -73,6 +73,13 @@ way for file transfers with the \Condor{ft-gahp} to work.
 
 \begin{itemize}
 
+\item The new configuration variable \Macro{USE\_RESOURCE\_REQUEST\_COUNTS}
+is a boolean value that defaults to \Expr{True}, 
+reducing the latency of negotiation 
+when there are many jobs next to each other in the queue 
+with the same auto cluster, and many matches are being made.
+\Ticket{3585}
+
 \item Four new machine ClassAd attributes are advertised.
 \Attr{TotalJobStarts} is the total number of jobs started by 
 this \Condor{startd} daemon since it booted. 

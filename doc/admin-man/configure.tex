@@ -7493,6 +7493,19 @@ These macros affect the \Condor{negotiator}.
   See section~\ref{sec:PieSlice} on page~\pageref{sec:PieSlice}
   for a description of a pie slice.
 
+\label{param:UseResourceRequestCounts}
+\item[\Macro{USE\_RESOURCE\_REQUEST\_COUNTS}]
+  A boolean value that defaults to \Expr{True}. 
+  When \Expr{True},
+  the latency of negotiation will be reduced 
+  when there are many jobs next to each other in the queue
+  with the same auto cluster, and many matches are being made.
+  When \Expr{True},
+  the \Condor{schedd} tells the \Condor{negotiator} 
+  to send X matches at a time,
+  where X equals number of consecutive jobs in the queue 
+  within the same auto cluster.
+
 \label{param:NegotiatorMatchExprs}
 \item[\Macro{NEGOTIATOR\_MATCH\_EXPRS}]
   A comma-separated list of macro names that are inserted as
