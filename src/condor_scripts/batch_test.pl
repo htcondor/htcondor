@@ -577,7 +577,7 @@ foreach my $compiler (@compilers) {
 		
 		    		# Wait for job before starting the next one
 	
-					print "Calling StartTestOutput $compiler/$test_program <$pid>\n";
+					#print "Calling StartTestOutput $compiler/$test_program <$pid>\n";
 		    		StartTestOutput($compiler,$test_program);
 		
 		    		#print "kindwait: Waiting on test\n";
@@ -634,7 +634,7 @@ foreach my $compiler (@compilers) {
 			    	}
 				} else { # child
 			    	# if we're the child, start test program
-			    	DoChild($test_program, $test_retirement);
+			    	DoChild($test_program, $test_retirement,$currentgroup);
 				}
 			}
 		    #*****************************************************************
@@ -1379,11 +1379,19 @@ sub CompleteTestOutput
     }
 }
 
-# DoChild($test_program, $test_retirement);
+# DoChild($test_program, $test_retirement,groupmemebercount);
 sub DoChild
 {
     my $test_program = shift;
     my $test_retirement = shift;
+	my $test_id = shift;
+	my $id = 0;
+
+	if(defined $test_id) {
+		print "Starting batch id <$test_id> PID <$$>\n";
+		$id = $test_id;
+		print "ID = <$id>\n";
+	}
     my $test_starttime = time();
     # with wrapping all test(most) in a personal condor
     # we know where the published directories are if we ask by name
@@ -1403,16 +1411,47 @@ sub DoChild
     my $pidcmd = "mkdir -p " . $save . "/" . "$$";
     verbose_system("$pidcmd",{emit_output=>0});
 
-    my $log = $testname . ".log";
-    my $cmd = $testname . ".cmd";
-    my $out = $testname . ".out";
-    my $err = $testname . ".err";
-    my $runout = $testname . ".run.out";
-    my $cmdout = $testname . ".cmd.out";
+    my $log = "";
+    my $cmd = "";
+    my $out = "";
+    my $err = "";
+    my $runout = "";
+    my $cmdout = "";
+
 
     # before starting test clean trace of earlier run
     my $rmcmd = "rm -f $log $out $err $runout $cmdout";
     CondorTest::verbose_system("$rmcmd",{emit_output=>0});
+
+    my $corecount = 0;
+    my $res;
+    eval {
+	alarm($test_retirement);
+	if(defined $test_id) {
+    	$testname . ".$test_id" . ".log";
+    	$testname . ".$test_id" . ".cmd";
+    	$testname . ".$test_id" . ".out";
+    	$testname . ".$test_id" . ".err";
+    	$testname . ".$test_id" . ".run.out";
+    	$testname . ".$test_id" . ".cmd.out";
+
+		if( $hush == 0 ) {
+	    	debug( "Child Starting:perl $test_program > $test_program.$test_id.out\n",2);
+		}
+		$res = system("perl $test_program > $test_program.$test_id.out 2>&1");
+	} else {
+    	$testname . ".log";
+    	$testname . ".cmd";
+    	$testname . ".out";
+    	$testname . ".err";
+    	$testname . ".run.out";
+    	$testname . ".cmd.out";
+
+		if( $hush == 0 ) {
+	    	debug( "Child Starting:perl $test_program > $test_program.out\n",2);
+		}
+		$res = system("perl $test_program > $test_program.out 2>&1");
+	}
 
     my $newlog =  $piddir . "/" . $log;
     my $newcmd =  $piddir . "/" . $cmd;
@@ -1420,15 +1459,6 @@ sub DoChild
     my $newerr =  $piddir . "/" . $err;
     my $newrunout =  $piddir . "/" . $runout;
     my $newcmdout =  $piddir . "/" . $cmdout;
-
-    my $corecount = 0;
-    my $res;
-    eval {
-	alarm($test_retirement);
-	if( $hush == 0 ) {
-	    debug( "Child Starting:perl $test_program > $test_program.out\n",2);
-	}
-	$res = system("perl $test_program > $test_program.out 2>&1");
 
 
 	# generate file names
@@ -1554,7 +1584,7 @@ sub wait_for_test_children {
 
 	$hashsize = keys %{$test};
 	debug("Tests remaining: $hashsize\n",2);
-	print "Hash size of tests = <$hashsize>\n";
+	#print "Hash size of tests = <$hashsize>\n";
 
     while( my $child = wait() ) {
 
@@ -1577,6 +1607,7 @@ sub wait_for_test_children {
 	    	next;
 		} else {
 	    	debug($debug_message.". Test: $test->{$child}.\n", 2);
+			print "processing PID <$child>: ";
 			#print "Test known: $test->{$child}\n";
 		}
 
