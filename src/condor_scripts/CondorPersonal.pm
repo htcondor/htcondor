@@ -1483,7 +1483,7 @@ sub IsRunningYet {
 		close(CCV);
 	}
 
-
+	print "These Daemons are up: ";
 	if($daemonlist =~ /MASTER/i) {
 		#print "Has master dropped an address file yet - ";
 		# now wait for the master to start running... get address file loc
@@ -1512,6 +1512,7 @@ sub IsRunningYet {
         	}
     	}
 		#print "ok\n";
+		print "Master ";
 	}
 
 	if($daemonlist =~ /COLLECTOR/i){
@@ -1542,6 +1543,7 @@ sub IsRunningYet {
         	}
     	}
 		#print "ok\n";
+		print "Collector ";
 	}
 
 	if($daemonlist =~ /NEGOTIATOR/i) {
@@ -1572,6 +1574,7 @@ sub IsRunningYet {
         	}
     	}
 		#print "ok\n";
+		print "Negotiator ";
 	}
 
 	if($daemonlist =~ /STARTD/i) {
@@ -1602,6 +1605,7 @@ sub IsRunningYet {
         	}
     	}
 		#print "ok\n";
+		print "Startd ";
 	}
 
 	####################################################################
@@ -1634,6 +1638,7 @@ sub IsRunningYet {
         	}
     	}
 		#print "ok\n";
+		print "Schedd ";
 	}
 
 	if($daemonlist =~ /STARTD/i) {
@@ -1680,6 +1685,7 @@ sub IsRunningYet {
                     sleep ($loopcount * $backoff);
                 }
             }
+			print "Startd in Collector now ";
 	}
 
 	if($daemonlist =~ /SCHEDD/i) {
@@ -1712,6 +1718,7 @@ sub IsRunningYet {
 				sleep ($loopcount * $backoff);
 			}
 		}
+		print "Schedd in Collector now ";
 	}
 
 
@@ -1745,6 +1752,7 @@ sub IsRunningYet {
 				sleep ($loopcount * $backoff);
 			}
 		}
+		print "Negotiator in Collector now\n";
 	}
 
 	debug("In IsRunningYet calling CollectDaemonPids\n",$debuglevel);
