@@ -159,6 +159,7 @@ sub runcmd {
 		die_on_failed_expectation
 		emit_output
 		expect_result
+		emit_string
 		use_system
 		sh_wrap
 		);
@@ -190,7 +191,12 @@ sub runcmd {
 	my @errlines;
 
 	if(${$options}{emit_output} == TRUE) {
-		PrintHeader();
+		if(exists ${$options}{emit_string}) {
+			PrintAddComment(${$options}{emit_string});
+			PrintAltHeader();
+		} else {
+			PrintHeader();
+		}
 		PrintStart($date,$args);
 	}
 
@@ -435,6 +441,17 @@ sub PrintStdErr {
 		}
 		print "+ END STDERR\n";
 	}
+}
+
+sub PrintAddComment
+{
+	my $message = shift;
+	print "\n+-------------------------------------------------------------------------------\n";
+	print "+ $message\n";
+}
+
+sub PrintAltHeader {
+	print "+-------------------------------------------------------------------------------\n";
 }
 
 sub PrintHeader {
