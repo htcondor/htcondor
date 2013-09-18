@@ -105,8 +105,13 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, map<string, double>
         string ca;
         formatstr(ca, "%s%s", ATTR_CONSUMPTION_PREFIX, asset);
         double cv = 0;
-        if (!resource.EvalFloat(ca.c_str(), &job, cv)) {
-            EXCEPT("Evaluation of %s attribute failed", ca.c_str());
+        if (!resource.EvalFloat(ca.c_str(), &job, cv) || (cv < 0)) {
+            string name;
+            resource.LookupString(ATTR_NAME, name);
+            dprintf(D_ALWAYS, "WARNING: consumption policy for %s on resource %s failed to evaluate to a non-negative numeric value\n", ca.c_str(), name.c_str());
+            // flag this failure with a negative value, for the benefit of cp_sufficient_assets()
+            // if it evaluated to a negative value, preserve that value for informational purposes
+            if (cv >= 0) cv = -999;
         }
         consumption[asset] = cv;
 
@@ -133,6 +138,7 @@ bool cp_sufficient_assets(ClassAd& job, ClassAd& resource) {
 
 
 bool cp_sufficient_assets(ClassAd& resource, const map<string, double>& consumption) {
+    int npos = 0;
     for (map<string, double>::const_iterator j(consumption.begin());  j != consumption.end();  ++j) {
         const char* asset = j->first.c_str();
         double av=0;
@@ -142,7 +148,22 @@ bool cp_sufficient_assets(ClassAd& resource, const map<string, double>& consumpt
         if (av < j->second) {
             return false;
         }
+        if (j->second < 0) {
+            string name;
+            resource.LookupString(ATTR_NAME, name);
+            dprintf(D_ALWAYS, "WARNING: Consumption for asset %s on resource %s was negative: %g\n", asset, name.c_str(), j->second);
+            return false;
+        }
+        if (j->second > 0) npos += 1;
     }
+
+    if (npos <= 0) {
+        string name;
+        resource.LookupString(ATTR_NAME, name);
+        dprintf(D_ALWAYS, "WARNING: Consumption for all assets on resource %s was zero\n", name.c_str());
+        return false;
+    }
+
     return true;
 }
 
