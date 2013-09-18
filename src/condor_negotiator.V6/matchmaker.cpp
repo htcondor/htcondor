@@ -295,6 +295,8 @@ Matchmaker ()
     autoregroup = false;
     allow_quota_oversub = false;
 
+    cp_resources = false;
+
 	rejForNetwork = 0;
 	rejForNetworkShare = 0;
 	rejPreemptForPrio = 0;
@@ -2934,6 +2936,8 @@ obtainAdsFromCollector (
 	MyString buffer;
 	CollectorList* collects = daemonCore->getCollectorList();
 
+    cp_resources = false;
+
     // build a query for Scheduler, Submitter and (constrained) machine ads
     //
 	CondorQuery publicQuery(ANY_AD);
@@ -3127,6 +3131,12 @@ obtainAdsFromCollector (
 					allAds.Insert(ad);
 				}
 			}
+
+            if (!cp_resources && cp_supports_policy(*ad)) {
+                // we need to know if we will be encountering resource ads that
+                // advertise a consumption policy
+                cp_resources = true;
+            }
 
 			OptimizeMachineAdForMatchmaking( ad );
 
@@ -3608,7 +3618,13 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 			request.Assign(ATTR_SUBMITTER_GROUP_QUOTA,temp_groupQuota);
 		}
 
-		OptimizeJobAdForMatchmaking( &request );
+        // when resource ads with consumption policies are in play, optimizing 
+        // the Requirements attribute can break the augmented consumption policy logic
+        // that overrides RequestXXX attributes with corresponding values supplied by
+        // the consumption policy 
+        if (!cp_resources) {
+            OptimizeJobAdForMatchmaking( &request );
+        }
 
 		if( IsDebugLevel( D_JOB ) ) {
 			dprintf(D_JOB,"Searching for a matching machine for the following job ad:\n");

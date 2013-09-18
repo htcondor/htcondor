@@ -490,6 +490,10 @@ class Matchmaker : public Service
             }
         };
 
+        // true if resource ads with consumption policies are present
+        // for the current negotiation cycle
+        bool cp_resources;
+
 		int prevLHF;
 
 		#define MAX_NEGOTIATION_CYCLE_STATS 100
