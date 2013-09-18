@@ -36,6 +36,9 @@ use Condor;
 use CondorUtils;
 use CondorPersonal;
 
+use base 'Exporter';
+
+our @EXPORT = qw(runCondorTool runToolNTimes);
 my %securityoptions =
 (
 "NEVER" => "1",
@@ -1315,10 +1318,23 @@ sub runCondorTool
 	my $quiet = shift;
 	my $options = shift;
 	my $count = 0;
+	my %altoptions = ();
+
+	# provide an expect_result=>ANY as a hash reference options
+	$altoptions{expect_result} = \&ANY;
+	if(defined $options) {
+		#simply use altoptions
+		${$options}{expect_result} = \&ANY;
+	} else {
+		$options = \%altoptions;
+	}
+
+	# Add a message to runcmd output
+	${$options}{emit_string} = "runCondorTool: Attempt: <$count>";
 
 	# clean array before filling
 
-	my $attempts = 6;
+	my $attempts = 15;
 	$count = 0;
 	my $hashref;
 	while( $count < $attempts) {
@@ -1327,7 +1343,7 @@ sub runCondorTool
 		debug( "Try command <$cmd>\n",4);
 		#open(PULL, "_condor_TOOL_TIMEOUT_MULTIPLIER=4 $cmd 2>$catch |");
 
-		$hashref = runcmd("_condor_TOOL_TIMEOUT_MULTIPLIER=4 $cmd", $options);
+		$hashref = runcmd("_condor_TOOL_TIMEOUT_MULTIPLIER=10 $cmd", $options);
 		my @output =  @{${$hashref}{"stdout"}};
 		my @error =  @{${$hashref}{"stderr"}};
 
@@ -1374,6 +1390,44 @@ sub runCondorTool
 
 	return(0);
 }
+
+sub runToolNTimes
+{
+    my $cmd = shift;
+    my $goal = shift;
+    my $wantoutput = shift;
+
+    my $count = 0;
+    my $stop = 0;
+    my @cmdout = ();
+    my @date = ();
+    my @outarrray;
+    my $cmdstatus = 0;
+    $stop = $goal;
+
+    while($count < $stop) {
+        @cmdout = ();
+        @outarrray = ();
+        @date = ();
+        @date = `date`;
+        chomp $date[0];
+        #print "$date[0] $cmd $count\n";
+		#@cmdout = `$cmd`;
+		$cmdstatus = runCondorTool($cmd, \@outarrray, 2);
+		if(!$cmdstatus) {
+			print "runCondorTool<$cmd> attempt<$count> SHOULD NOT fail!\n";
+		}
+		 
+		if(defined $wantoutput) {
+			foreach my $line (@outarrray) {
+				print "$line\n";
+			}
+		}
+		$count += 1;
+	}
+	return($cmdstatus);
+}
+        
 
 
 # Lets be able to drop some extra information if runCondorTool
