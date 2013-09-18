@@ -429,6 +429,29 @@ condor_hash( register const char *string, register int size )
 	return answer;
 }
 
+// case-insensitive hash, usable when the character set of name
+// is restricted to A-Za-Z0-9 and symbols except []{}\|^~
+int
+condor_hash_symbol_name(const char *name, int size)
+{
+	register const char * psz = name;
+	unsigned int answer = 1;
+
+	// in order to make this hash interoperate with strlwr/condor_hash
+	// _ is the only legal character for symbol name for which |= 0x20
+	// is not benign.  the test for _ is needed only to make this hash
+	// behave identically to strlwr/condor_hash. 
+	for( ; *psz; ++psz) {
+		answer <<= 1;
+		int ch = (int)*psz;
+		if (ch != '_') ch |= 0x20;
+		answer += ch;
+	}
+	answer >>= 1;	/* Make sure not negative */
+	answer %= size;
+	return answer;
+}
+
 /*
 ** Insert the parameter name and value into the given hash table.
 */
@@ -459,7 +482,12 @@ insert( const char *name, const char *value, BUCKET **table, int table_size )
 	ASSERT( bucket != NULL );
 	bucket->name = strdup( tmp_name );
 	bucket->value = strdup( value );
+#ifdef PARAM_USE_COUNTING
+	bucket->use_count = 0;
+	bucket->ref_count = 0;
+#else
 	bucket->used = 0;
+#endif
 	bucket->next = table[ loc ];
 	table[loc] = bucket;
 }
@@ -467,6 +495,58 @@ insert( const char *name, const char *value, BUCKET **table, int table_size )
 /*
 ** Sets the given macro's state to used
 */
+#ifdef PARAM_USE_COUNTING
+static BUCKET* find_bucket (const char *name, BUCKET *table[], int table_size)
+{
+	/* find the macro in the hash table */
+	int loc = condor_hash_symbol_name( name, table_size );
+	for (BUCKET * ptr = table[loc]; ptr; ptr = ptr->next ) {
+		if (MATCH == strcasecmp(name, ptr->name)) {
+			return ptr;
+		}
+	}
+	return 0;
+}
+
+int
+increment_macro_use_count ( const char *name, BUCKET *table[], int table_size )
+{
+	BUCKET	*ptr = find_bucket(name, table, table_size);
+	if (ptr) {
+		return ++(ptr->use_count);
+	}
+	return -1;
+}
+
+void
+clear_macro_use_count ( const char *name, BUCKET *table[], int table_size )
+{
+	BUCKET	*ptr = find_bucket(name, table, table_size);
+	if (ptr) {
+		ptr->use_count = 0;
+	}
+}
+
+int
+get_macro_use_count ( const char *name, BUCKET *table[], int table_size )
+{
+	BUCKET	*ptr = find_bucket(name, table, table_size);
+	if (ptr) {
+		return ptr->use_count;
+	}
+	return -1;
+}
+
+int
+get_macro_ref_count ( const char *name, BUCKET *table[], int table_size )
+{
+	BUCKET	*ptr = find_bucket(name, table, table_size);
+	if (ptr) {
+		return ptr->ref_count;
+	}
+	return -1;
+}
+#else
 void 
 set_macro_used ( const char *name, int used, BUCKET *table[], int table_size )
 {
@@ -486,6 +566,7 @@ set_macro_used ( const char *name, int used, BUCKET *table[], int table_size )
 		}
 	}
 }
+#endif
 
 /*
 ** Read one line and any continuation lines that go with it.  Lines ending
@@ -637,7 +718,8 @@ expand_macro( const char *value,
 			  int table_size,
 			  const char *self,
 			  bool use_default_param_table,
-			  const char *subsys)
+			  const char *subsys,
+			  int use)
 {
 	char *tmp = strdup( value );
 	char *left, *name, *right;
@@ -760,9 +842,9 @@ expand_macro( const char *value,
 		if (find_config_macro(tmp, &left, &name, &right, self) ||
 			(selfless && find_config_macro(tmp, &left, &name, &right, selfless)) ) {
 			all_done = false;
-			tvalue = lookup_macro( name, subsys, table, table_size );
+			tvalue = lookup_and_use_macro( name, subsys, table, table_size, use );
 			if (subsys && ! tvalue)
-				tvalue = lookup_macro( name, NULL, table, table_size );
+				tvalue = lookup_and_use_macro( name, NULL, table, table_size, use );
 
 				// Note that if 'name' has been explicitly set to nothing,
 				// tvalue will _not_ be NULL so we will not call
@@ -875,7 +957,11 @@ hash_iter_used_value(HASHITER iter)
 	ASSERT(iter);
 	ASSERT(iter->table); // Probably trying to use a iter already hash_iter_delete()d
 	ASSERT( ! hash_iter_done(iter) );
+#ifdef PARAM_USE_COUNTING
+	return iter->current->use_count;
+#else
 	return iter->current->used;
+#endif
 }
 
 void 
@@ -1106,8 +1192,20 @@ tryagain:
 ** Return the value associated with the named parameter.  Return NULL
 ** if the given parameter is not defined.
 */
+BUCKET *
+lookup_macro_bucket(const char *name, BUCKET **table, int table_size)
+{
+	int loc = condor_hash(name, table_size);
+	for (BUCKET* ptr = table[loc]; ptr; ptr = ptr->next) {
+		if ( ! strcmp(name,ptr->name)) {
+			return ptr;
+		}
+	}
+	return NULL;
+}
+
 char *
-lookup_macro_lower( const char *name, BUCKET **table, int table_size )
+lookup_macro_lower( const char *name, BUCKET **table, int table_size, int use )
 {
 	int				loc;
 	register BUCKET	*ptr;
@@ -1115,12 +1213,18 @@ lookup_macro_lower( const char *name, BUCKET **table, int table_size )
 	loc = condor_hash( name, table_size );
 	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
 		if( !strcmp(name,ptr->name) ) {
-			ptr->used = 1;
+#ifdef PARAM_USE_COUNTING
+			ptr->use_count += (use&1);
+			ptr->ref_count += (use>>1)&1;
+#else
+			ptr->used |= use;
+#endif
 			return ptr->value;
 		}
 	}
 	return NULL;
 }
+
 char *
 lookup_macro( const char *name, const char *prefix, BUCKET **table, int table_size )
 {
@@ -1135,7 +1239,24 @@ lookup_macro( const char *name, const char *prefix, BUCKET **table, int table_si
 	}
 	tmp_name[MAX_PARAM_LEN-1] = '\0';
 	strlwr( tmp_name );
-	return lookup_macro_lower(tmp_name,table,table_size);
+	return lookup_macro_lower(tmp_name, table, table_size, 3);
+}
+
+char *
+lookup_and_use_macro( const char *name, const char *prefix, BUCKET **table, int table_size, int use )
+{
+	char	tmp_name[ MAX_PARAM_LEN ];
+
+	if (prefix) {
+		snprintf(tmp_name, MAX_PARAM_LEN, "%s.%s", prefix, name);
+	} else {
+		// snprintf() is faster than strncpy() for large target buffers,
+		// because strncpy() nulls out rest of buffer
+		snprintf(tmp_name, MAX_PARAM_LEN, "%s", name);
+	}
+	tmp_name[MAX_PARAM_LEN-1] = '\0';
+	strlwr( tmp_name );
+	return lookup_macro_lower(tmp_name, table, table_size, use);
 }
 
 #endif

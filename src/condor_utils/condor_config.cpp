@@ -1999,6 +1999,12 @@ macro_expand( const char *str )
 	return( expand_macro(str, ConfigTab, TABLESIZE) );
 }
 
+char *
+expand_param( const char *str, const char *subsys, int use)
+{
+	return expand_macro(str, ConfigTab, TABLESIZE, NULL, true, subsys, use);
+}
+
 /*
 ** Same as param_boolean but for C -- returns 0 or 1
 ** The parameter value is expected to be set to the string
@@ -2035,6 +2041,8 @@ const char * param_get_info(
 	const char * subsys,
 	const char * local,
 	MyString &name_used,
+	int & use_count,
+	int & ref_count,
 	MyString &filename,
 	int &line_number)
 {
@@ -2046,15 +2054,15 @@ const char * param_get_info(
 	if (local && ! local[0]) local = NULL;
 	if (subsys && local) {
 		name_used.formatstr("%s.%s.%s", subsys, local, name);
-		val = lookup_macro(name_used.Value(), NULL, ConfigTab, TABLESIZE);
+		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigTab, TABLESIZE, 0);
 	}
 	if ( ! val && local) {
 		name_used.formatstr("%s.%s", local, name);
-		val = lookup_macro(name_used.Value(), NULL, ConfigTab, TABLESIZE);
+		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigTab, TABLESIZE, 0);
 	}
 	if ( ! val && subsys) {
 		name_used.formatstr("%s.%s", subsys, name);
-		val = lookup_macro(name_used.Value(), NULL, ConfigTab, TABLESIZE);
+		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigTab, TABLESIZE, 0);
 		if ( ! val) {
 			val = param_exact_default_string(name_used.Value());
 			if (val) { filename = "<Internal>"; line_number = -2; }
@@ -2062,11 +2070,15 @@ const char * param_get_info(
 	}
 	if ( ! val) {
 		name_used = name;
-		val = lookup_macro(name_used.Value(), NULL, ConfigTab, TABLESIZE);
+		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigTab, TABLESIZE, 0);
 		if ( ! val) {
 			val = param_exact_default_string(name);
 			if (val) { filename = "<Internal>"; line_number = -2; }
 		}
+	}
+	if (val) {
+		use_count = get_macro_use_count(name_used.Value(), ConfigTab, TABLESIZE);
+		ref_count = get_macro_ref_count(name_used.Value(), ConfigTab, TABLESIZE);
 	}
 	if (val && extra_info && line_number != -2) {
 		extra_info->GetParam(name_used.Value(), filename, line_number);

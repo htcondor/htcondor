@@ -6350,7 +6350,11 @@ set_condor_param( const char *name, const char *value )
 void
 set_condor_param_used( const char *name ) 
 {
+#ifdef PARAM_USE_COUNTING
+	increment_macro_use_count(name, ProcVars, PROCVARSIZE);
+#else
 	set_macro_used(name, 1, ProcVars, PROCVARSIZE);
+#endif
 }
 
 int

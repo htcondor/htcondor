@@ -133,7 +133,7 @@ usage(int retval = 1)
 
 
 char* GetRemoteParam( Daemon*, char* );
-char* GetRemoteParamRaw(Daemon*, const char* name, bool & raw_supported, MyString & raw_value, MyString & file_and_line, MyString & def_value);
+char* GetRemoteParamRaw(Daemon*, const char* name, bool & raw_supported, MyString & raw_value, MyString & file_and_line, MyString & def_value, MyString & usage_report);
 int   GetRemoteParamNamesMatching(Daemon*, const char* name, std::vector<std::string> & names);
 void  SetRemoteParam( Daemon*, char*, ModeType );
 static void PrintConfigSources(void);
@@ -196,8 +196,11 @@ main( int argc, const char* argv[] )
 	const char *subsys = "TOOL";
 	bool	ask_a_daemon = false;
 	bool    verbose = false;
+	bool    dash_usage = false;
 	bool    dump_all_variables = false;
 	bool    expand_dumped_variables = false;
+	bool    show_by_usage = false;
+	bool    show_by_usage_unused = false;
 	bool    evaluate_daemon_vars = false;
 	bool    print_config_sources = false;
 	bool	write_config = false;
@@ -279,14 +282,28 @@ main( int argc, const char* argv[] )
 			dash_default = true;
 		} else if (is_arg_prefix(arg, "config", 2)) {
 			print_config_sources = true;
-		} else if (is_arg_prefix(arg, "verbose", 1)) {
+		} else if (is_arg_colon_prefix(arg, "verbose", &pcolon, 1)) {
 			verbose = true;
+			if (pcolon) {
+				++pcolon;
+				if (is_arg_prefix(pcolon, "usage", 2) || 
+					is_arg_prefix(pcolon, "use", -1)) {
+					dash_usage = true;
+				}
+			}
 		} else if (is_arg_prefix(arg, "dump", 1)) {
 			dump_all_variables = true;
 		} else if (is_arg_prefix(arg, "expanded", 2)) {
 			expand_dumped_variables = true;
 		} else if (is_arg_prefix(arg, "evaluate", 2)) {
 			evaluate_daemon_vars = true;
+		} else if (is_arg_prefix(arg, "unused", 4)) {
+			show_by_usage = true;
+			show_by_usage_unused = true;
+		} else if (is_arg_prefix(arg, "used", 2)) {
+			show_by_usage = true;
+			show_by_usage_unused = false;
+			//dash_usage = true;
 		} else if (is_arg_prefix(arg, "writeconfig", 2)) {
 			write_config = true;
 		} else if (is_arg_colon_prefix(arg, "debug", &pcolon, 2)) {
@@ -513,11 +530,18 @@ main( int argc, const char* argv[] )
 						for (int ii = 0; ii < (int)names.size(); ++ii) {
 							const char * name = names[ii].c_str();
 							MyString name_used, filename, def_value;
-							int line_number;
-							const char * rawval = param_get_info(name, subsys, local_name, name_used, filename, line_number);
+							int line_number, use_count, ref_count;
+							const char * rawval = param_get_info(name, subsys, local_name,
+															name_used, use_count, ref_count,
+															filename, line_number);
 							if ( ! rawval)
 								continue;
-
+							if (show_by_usage) {
+								if (show_by_usage_unused && use_count+ref_count > 0)
+									continue;
+								if ( ! show_by_usage_unused && use_count+ref_count <= 0)
+									continue;
+							}
 							if (expand_dumped_variables) {
 								MyString upname = name; upname.upper_case();
 								fprintf(stdout, "%s = %s\n", upname.Value(), param(name));
@@ -529,7 +553,7 @@ main( int argc, const char* argv[] )
 							}
 							if (verbose) {
 								if (line_number < 0) {
-									fprintf(stdout, " # %s\n", filename.Value());
+									fprintf(stdout, " # at: %s\n", filename.Value());
 								} else {
 									fprintf(stdout, " # at: %s, Line %d\n", filename.Value(), line_number);
 									const char * def_val = param_default_string(name, subsys);
@@ -539,6 +563,10 @@ main( int argc, const char* argv[] )
 									fprintf(stdout, " # raw: %s\n", rawval);
 								} else {
 									fprintf(stdout, " # expanded: %s\n", param(name));
+								}
+								if (dash_usage) {
+									if (ref_count) fprintf(stdout, " # use_count: %d / %d\n", use_count, ref_count);
+									else fprintf(stdout, " # use_count: %d\n", use_count);
 								}
 							}
 						}
@@ -664,7 +692,7 @@ main( int argc, const char* argv[] )
 			mt == CONDOR_UNSET || mt == CONDOR_RUNTIME_UNSET ) {
 			SetRemoteParam( target, tmp, mt );
 		} else {
-			MyString raw_value, file_and_line, def_value;
+			MyString raw_value, file_and_line, def_value, usage_report;
 			bool raw_supported = false;
 			//fprintf(stderr, "param = %s\n", tmp);
 			if( target ) {
@@ -682,7 +710,13 @@ main( int argc, const char* argv[] )
 					}
 					if (iret > 0) {
 						for (int ii = 0; ii < (int)names.size(); ++ii) {
-							value = GetRemoteParamRaw(target, names[ii].c_str(), raw_supported, raw_value, file_and_line, def_value);
+							value = GetRemoteParamRaw(target, names[ii].c_str(), raw_supported, raw_value, file_and_line, def_value, usage_report);
+							if (show_by_usage && ! usage_report.IsEmpty()) {
+								if (show_by_usage_unused && usage_report != "0")
+									continue;
+								if ( ! show_by_usage_unused && usage_report == "0")
+									continue;
+							}
 							MyString ucname = names[ii];
 							ucname.upper_case();
 							if (expand_dumped_variables || ! raw_supported) {
@@ -705,6 +739,9 @@ main( int argc, const char* argv[] )
 								if ( ! def_value.IsEmpty()) {
 									printf(" # default: %s\n", def_value.Value());
 								}
+								if (dash_usage && ! usage_report.IsEmpty()) {
+									printf(" # use_count: %s\n", usage_report.Value());
+								}
 							}
 							//free(value);
 						}
@@ -712,7 +749,7 @@ main( int argc, const char* argv[] )
 					}
 					continue;
 				} else if (dash_raw || verbose) {
-					value = GetRemoteParamRaw(target, tmp, raw_supported, raw_value, file_and_line, def_value);
+					value = GetRemoteParamRaw(target, tmp, raw_supported, raw_value, file_and_line, def_value, usage_report);
 					if ( ! verbose && ! raw_value.IsEmpty()) {
 						free(value);
 						value = strdup(RemoteRawValuePart(raw_value));
@@ -732,8 +769,10 @@ main( int argc, const char* argv[] )
 			} else {
 				if (dash_raw || verbose) {
 					MyString name_used;
-					int line_number;
-					const char * val = param_get_info(tmp, subsys, local_name, name_used, file_and_line, line_number);
+					int line_number, use_count, ref_count;
+					const char * val = param_get_info(tmp, subsys, local_name,
+											name_used, use_count, ref_count,
+											file_and_line, line_number);
 					if (val) {
 						raw_supported = true;
 						if ( ! verbose) {
@@ -748,6 +787,11 @@ main( int argc, const char* argv[] )
 								file_and_line.formatstr_cat(", line %d", line_number);
 							if (line_number != -2)
 								def_value = param_exact_default_string(name_used.Value());
+							if (ref_count) {
+								usage_report.formatstr("%d / %d", use_count, ref_count);
+							} else {
+								usage_report.formatstr("%d", use_count);
+							}
 						}
 					}
 				} else {
@@ -788,6 +832,9 @@ main( int argc, const char* argv[] )
 					}
 					if ( ! def_value.IsEmpty()) {
 						printf(" # default: %s\n", def_value.Value());
+					}
+					if (dash_usage && ! usage_report.IsEmpty()) {
+						printf(" # use_count: %s\n", usage_report.Value());
 					}
 					printf("\n");
 #else  // this is the old format, do we need to match this exactly?
@@ -876,12 +923,18 @@ GetRemoteParamRaw(
 	bool & raw_supported,
 	MyString & raw_value,
 	MyString & file_and_line,
-	MyString & def_value)
+	MyString & def_value,
+	MyString & usage_report)
 {
 	ReliSock s;
 	s.timeout(30);
 	char *val = NULL;
+
 	raw_supported = false;
+	raw_value = "";
+	file_and_line = "";
+	def_value = "";
+	usage_report = "";
 
 	char* addr = NULL;
 	const char* name = NULL;
@@ -903,6 +956,7 @@ GetRemoteParamRaw(
 	target->startCommand(DC_CONFIG_VAL, &s, 30);
 	s.encode();
 
+	if (diagnostic) fprintf(stderr, "sending %s\n", param_name);
 	if ( ! s.code(const_cast<char*&>(param_name))) {
 		fprintf(stderr, "Can't send request (%s)\n", param_name);
 		return NULL;
@@ -917,6 +971,7 @@ GetRemoteParamRaw(
 		fprintf(stderr, "Can't receive reply from %s on %s %s\n", daemonString(dt), name ? name : "", addr );
 		return NULL;
 	}
+	if (diagnostic) fprintf(stderr, "result: '%s'\n", val);
 
 	// daemons from 8.1.2 and later will return more than one string from this query.
 	// after the param value, we expect to see
@@ -930,15 +985,16 @@ GetRemoteParamRaw(
 		if (0 == ix) ps = &raw_value;
 		else if (1 == ix) ps = &file_and_line;
 		else if (2 == ix) ps = &def_value;
+		else if (3 == ix) ps = &usage_report;
 
 		if ( ! s.code(*ps)) { 
 			fprintf(stderr, "Can't read line %d\n", ix); 
 			break; 
 		}
+		if (diagnostic) fprintf(stderr, "result[%d]: '%s'\n", ix, ps->Value());
 		++ix;
 		// if we got more than one string in the reply, then the remote daemon supports -raw
 		raw_supported = true;
-		if (diagnostic) fprintf(stderr, "\t%s\n", ps->Value());
 	}
 	if ( ! s.end_of_message()) {
 		fprintf( stderr, "Can't receive end of message\n" );

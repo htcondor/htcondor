@@ -1294,70 +1294,101 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 		return retval;
 	}
 
+	// DC_CONFIG_VAL command has extended behavior not shared by CONFIG_VAL.
+	// in addition to returning. the param() value, it returns consecutive strings containing
+	//   <NAME_USED> = <raw_value>
+	//   <filename>[, line <num>]
+	//   <default_value>
+	//note: ", line <num>" is present only when the line number is meaningful
+	//and "<default_value>" may be NULL
+	if (idCmd == DC_CONFIG_VAL) {
+		int retval = TRUE; // assume success
+
+		MyString value, name_used, filename;
+		int line_number, use_count, ref_count;
+		const char * subsys = get_mySubSystem()->getName();
+		const char * local_name  = get_mySubSystem()->getLocalName();
+		if (subsys && !subsys[0]) subsys = NULL;
+		if (local_name && !local_name[0]) local_name = NULL;
+
+		const char * val = param_get_info(param_name, subsys, local_name,
+								name_used, use_count, ref_count, filename, line_number);
+		if (val) {
+			const char * def_val = param_exact_default_string(name_used.Value());
+			dprintf(D_ALWAYS, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.Value(), def_val ? def_val : "NULL");
+
+			tmp = expand_param(val, subsys, 0);
+			if( ! stream->code(tmp) ) {
+				dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
+				retval = FALSE;
+			}
+			free(tmp); tmp = NULL;
+
+			name_used.upper_case();
+			name_used += " = ";
+			name_used += val;
+			if ( ! stream->code(name_used)) {
+				dprintf( D_ALWAYS, "Can't send raw reply for DC_CONFIG_VAL\n" );
+			}
+			if (line_number >= 0)
+				filename.formatstr_cat(", line %d", line_number);
+			if ( ! stream->code(filename)) {
+				dprintf( D_ALWAYS, "Can't send filename reply for DC_CONFIG_VAL\n" );
+			}
+			if ( ! stream->code(const_cast<char*&>(def_val))) {
+				dprintf( D_ALWAYS, "Can't send default reply for DC_CONFIG_VAL\n" );
+			}
+			if (ref_count) { value.formatstr("%d / %d", use_count, ref_count);
+			} else  { value.formatstr("%d", use_count); }
+			if ( ! stream->code(value)) {
+				dprintf( D_ALWAYS, "Can't send use count reply for DC_CONFIG_VAL\n" );
+			}
+		} else {
+			dprintf( D_FULLDEBUG, 
+					 "Got DC_CONFIG_VAL request for unknown parameter (%s)\n", 
+					 param_name );
+			// send a NULL to indicate undefined. (val is NULL here)
+			if( ! stream->code(const_cast<char*&>(val)) ) {
+				dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
+				retval = FALSE;
+			}
+		}
+
+		if( ! stream->end_of_message() ) {
+			dprintf( D_ALWAYS, "Can't send end of message for DC_CONFIG_VAL\n" );
+			retval = FALSE;
+		}
+		free (param_name);
+		return retval;
+	}
+
 	tmp = param( param_name );
 	if( ! tmp ) {
 		dprintf( D_FULLDEBUG, 
-				 "Got DC_CONFIG_VAL request for unknown parameter (%s)\n", 
+				 "Got CONFIG_VAL request for unknown parameter (%s)\n", 
 				 param_name );
 		free( param_name );
 		if( ! stream->put("Not defined") ) {
-			dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
+			dprintf( D_ALWAYS, "Can't send reply for CONFIG_VAL\n" );
 			return FALSE;
 		}
 		if( ! stream->end_of_message() ) {
-			dprintf( D_ALWAYS, "Can't send end of message for DC_CONFIG_VAL\n" );
+			dprintf( D_ALWAYS, "Can't send end of message for CONFIG_VAL\n" );
 			return FALSE;
 		}
 		return FALSE;
 	} else {
 		if( ! stream->code(tmp) ) {
-			dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
+			dprintf( D_ALWAYS, "Can't send reply for CONFIG_VAL\n" );
 			free( param_name );
 			free( tmp );
 			return FALSE;
 		}
 
-		// DC_CONFIG_VAL command has extended behavior not shared by CONFIG_VAL.
-		// in addition to returning. the param() value, it returns consecutive strings containing
-		//   <NAME_USED> = <raw_value>
-		//   <filename>[, line <num>]
-		//   <default_value>
-		//note: ", line <num>" is present only when the line number is meaningful
-		//and "<default_value>" may be NULL
-		if (idCmd == DC_CONFIG_VAL) {
-			MyString name_used, filename;
-			int line_number;
-			const char * subsys = get_mySubSystem()->getName();
-			const char * local_name  = get_mySubSystem()->getLocalName();
-			if (subsys && !subsys[0]) subsys = NULL;
-			if (local_name && !local_name[0]) local_name = NULL;
-
-			const char * val = param_get_info(param_name, subsys, local_name, name_used, filename, line_number);
-			if (val != NULL) {
-				const char * def_val = param_exact_default_string(name_used.Value());
-				dprintf(D_ALWAYS, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.Value(), def_val ? def_val : "NULL");
-
-				name_used.upper_case();
-				name_used += " = ";
-				name_used += val;
-				if ( ! stream->code(name_used)) {
-					dprintf( D_ALWAYS, "Can't send raw reply for DC_CONFIG_VAL\n" );
-				}
-				if (line_number >= 0)
-					filename.formatstr_cat(", line %d", line_number);
-				if ( ! stream->code(filename)) {
-					dprintf( D_ALWAYS, "Can't send filename reply for DC_CONFIG_VAL\n" );
-				}
-				if ( ! stream->code(const_cast<char*&>(def_val))) {
-					dprintf( D_ALWAYS, "Can't send default reply for DC_CONFIG_VAL\n" );
-				}
-			}
-		}
-
 		free( param_name );
 		free( tmp );
 		if( ! stream->end_of_message() ) {
-			dprintf( D_ALWAYS, "Can't send end of message for DC_CONFIG_VAL\n" );
+			dprintf( D_ALWAYS, "Can't send end of message for CONFIG_VAL\n" );
 			return FALSE;
 		}
 	}
