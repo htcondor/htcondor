@@ -108,6 +108,12 @@ non-existent checkpoint server.  This bug has been fixed.
 
 \begin{itemize}
 
+\item For the expressions evaluated by the \Condor{startd} \Macro{SUSPEND},
+\Macro{CONTINUE}, \Macro{PREEMPT}, and \Macro{KILL}, if the expression results
+in UNDEFINED or ERROR it is treated as false instead of having the
+\Condor{startd} except.
+\Ticket{3869}
+
 \item Fixed a bug that prevented the use of simple hostnames to identify
 machines when using the command-line tools. For example, 
 \Expr{condor\_status bar.foo.org} would show machine ads, but
