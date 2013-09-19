@@ -68,7 +68,7 @@ void Usage(char* name, int iExitCode)
 		"\t\t-wide\t\t\tDon't truncate fields to fit into screen width\n"
 		"\t\t-constraint <expr>\tAdd constraint on classads\n"
 #ifdef HAVE_EXT_POSTGRESQL
-		"\t\t-name <schedd-name>\tRead history data from Quill database\n"
+		"\t\t-dbname <schedd-name>\tRead history data from Quill database\n"
 		"\t\t-completedsince <time>\tDisplay jobs completed on/after time\n"
 #endif
                 "\t\t-name <schedd-name>\tRemote schedd to read from\n"
@@ -203,11 +203,11 @@ main(int argc, char* argv[])
     }
 
 #ifdef HAVE_EXT_POSTGRESQL
-    else if(is_dash_arg_prefix(argv[i], "name",1)) {
+    else if(is_dash_arg_prefix(argv[i], "dbname",1)) {
 		i++;
 		if (argc <= i) {
 			fprintf( stderr,
-					 "Error: Argument -name requires the name of a quilld as a parameter\n" );
+					 "Error: Argument -dbname requires the name of a quilld as a parameter\n" );
 			exit(1);
 		}
 		
@@ -217,7 +217,7 @@ main(int argc, char* argv[])
 			fprintf( stderr, "Error: unknown host %s\n",
 					 get_host_part(argv[i]) );
 			printf("\n");
-			print_wrapped_text("Extra Info: The name given with the -name "
+			print_wrapped_text("Extra Info: The name given with the -dbname "
 							   "should be the name of a condor_quilld process. "
 							   "Normally it is either a hostname, or "
 							   "\"name@hostname\". "
