@@ -64,6 +64,12 @@ and \condor{gridmanager} about modifications to job ads made via
 \condor{qedit}.
 \Ticket{3909}
 
+\item The grid universe now uses the correct executable file when
+\SubmitCmd{copy\_to\_spool} is set to \Expr{True}.
+Previously, the executable file named in the submit file would be copied
+to the remote server, rather than the copy stored in the spool directory.
+\Ticket{3589}
+
 \end{itemize}
 
 \noindent Known Bugs:
