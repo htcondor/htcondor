@@ -1,0 +1,242 @@
+#!/bin/bash
+# first version 5/2/2013 - Marco Mambelli
+
+# Download URL
+#INSTALLER_URL=ftp://ftp.cs.wisc.edu/condor/bosco/latest/boscoinstaller
+INSTALLER_URL=ftp://ftp.cs.wisc.edu/condor/bosco/1.2/boscoinstaller
+
+# Change this to download a patch for bosco_cluster
+#PATCH_B_CLUSTER_URL=https://twiki.grid.iu.edu/twiki/bin/viewfile/CampusGrids/BoscoQuickStart_draft/bosco_cluster
+
+# Change to have a different log file
+LOG_FILE=./bosco_quickstart.log
+# To have no log file use:
+# LOG_FILE=/dev/null
+
+# Binaries used
+# which
+# python
+# wget or curl if download needed
+# netstat to check for a free port
+
+display_dots () {
+    if [ "x$1" != "x" ]; then
+        sleep $1
+    fi
+    while [ 1 ]; do
+        # Get parent ID
+        ppid=`ps -p $$ -o ppid=`
+        if [ "$ppid" -eq 1 ]; then
+            exit
+        fi
+        echo -n "."
+        sleep 1
+    done
+
+}
+
+
+show_progress () {
+    message=$1
+    shift
+    command=$@
+
+    # Display the message & dots
+    #echo -n $message
+    if [ "x$message" == "x-20-" ]; then
+        display_dots 20 2>/dev/null &
+    else
+        echo -n $message    
+        display_dots 2>/dev/null &
+    fi
+    dots_pid=$!
+
+    # Run the command
+    "$@"  >> $LOG_FILE 2>&1
+    exit_code=$?
+    disown $dots_pid
+    kill -9 $dots_pid
+    echo ""
+    
+    return $exit_code
+
+}
+
+fix_port () {
+  # Checks if the port is available
+  # If the port is already used it sweeps until a port is available
+  which netstat &> /dev/null
+  if [ $? -ne 0 ]; then
+    echo "No netstat available, unable to verify if port $1 is free" >> $LOG_FILE
+    return 1
+  fi
+  let start_port=$1
+  let tmp_max=$start_port+2000
+  let tmp_port=$start_port
+  while [ $tmp_port -le $tmp_max ]; do
+    netstat -tulpn 2> /dev/null | grep $tmp_port > /dev/null 2>&1
+    [ $? -eq 1 ]  && break
+    let tmp_port=$tmp_port+1
+  done
+  if [ $tmp_port -eq $start_port ]; then
+    # Initil port is available
+    return 0
+  fi
+  if [ $tmp_port -le $tmp_max ]; then
+    # Found a free port in the range
+    factory_config=$HOME/bosco/local.bosco/config/condor_config.factory
+    echo "Port $start_port is busy. Replacing port $start_port with $tmp_port. Before:" >> $LOG_FILE
+    grep $start_port $factory_config >> $LOG_FILE
+    sed "s;$start_port;$tmp_port;" < $factory_config > ${factory_config}.new
+    mv ${factory_config}.new ${factory_config}
+    echo "After replacement:" >> $LOG_FILE
+    grep $tmp_port $factory_config >> $LOG_FILE
+    return 0
+  fi
+  echo "No free port in range $start_port to $tmp_port" >> $LOG_FILE
+  return 1
+}
+
+
+# Check if setup needs to be invoked
+env_missing=0
+echo "Bosco Quickstart"
+echo "Detailed logging of this run is in $LOG_FILE"
+echo
+which bosco_cluster &> /dev/null
+if [ $? -ne 0 ]; then
+  if [ ! -e $HOME/bosco/bosco_setenv ]; then
+    # No Bosco available -> install Bosco
+    echo "Bosco is not installed. You need Bosco to run this quickstart."
+    while [ 1 ]; do
+      read -p "Do you want to install Bosco? Select y/n and press [ENTER]): " q_tmp
+      [ "x$q_tmp" = "xn" ] && exit 0
+      [ "x$q_tmp" = "xno" ] && exit 0
+      [ "x$q_tmp" = "xy" ] && break
+      [ "x$q_tmp" = "xyes" ] && break
+    done
+    echo "************** Downloading and Installing Bosco ***********"
+    which wget &> /dev/null
+    if [ $? -eq 0 ]; then
+      wget -O $HOME/boscoinstaller $INSTALLER_URL  >> $LOG_FILE 2>&1
+    else
+      which curl &> /dev/null
+      if [ $? -eq 0 ]; then
+        curl -o $HOME/boscoinstaller $INSTALLER_URL  >> $LOG_FILE 2>&1
+      fi
+    fi
+    if [ ! -e $HOME/boscoinstaller ]; then
+      echo "Unable to download Bosco. Please see "
+      echo "https://twiki.grid.iu.edu/bin/view/CampusGrids/BoscoQuickStart"
+      echo "to download manually Bosco and install it."
+      exit 0
+    fi
+    show_progress "Installing BOSCO" python $HOME/boscoinstaller
+    rm $HOME/boscoinstaller
+    # TMP Patching bosco_cluster
+    if [ "x$PATCH_B_CLUSTER_URL" != "x" ]; then
+      which wget &> /dev/null
+      if [ $? -eq 0 ]; then
+        rm $HOME/bosco/bin/bosco_cluster
+        wget -O $HOME/bosco/bin/bosco_cluster --no-check-certificate $PATCH_B_CLUSTER_URL  >> $LOG_FILE 2>&1
+      else
+        which curl &> /dev/null
+        if [ $? -eq 0 ]; then
+          rm $HOME/bosco/bin/bosco_cluster
+          curl -o $HOME/bosco/bin/bosco_cluster $PATCH_B_CLUSTER_URL  >> $LOG_FILE 2>&1
+        fi
+      fi
+      chmod +x $HOME/bosco/bin/bosco_cluster  >> $LOG_FILE 2>&1
+    fi
+    echo "BOSCO Installed"
+  fi
+  env_missing=1
+  source $HOME/bosco/bosco_setenv
+fi
+
+# Check if port 11000 (BOSCO default) is available
+fix_port 11000
+
+# Start Bosco
+echo "************** Starting Bosco: ***********"
+bosco_start
+
+# Connect one cluster
+REMOTE_HOST=""
+REMOTE_USER=""
+REMOTE_TYPE=""
+echo "************** Connect one cluster (resource) to BOSCO: ***********"
+echo "At any time hit [CTRL+C] to interrupt."
+echo 
+q_tmp=""
+read -p "Type the submit host name for the BOSCO resource and press [ENTER]: " q_tmp
+while [ "x$q_tmp" = "x" ]; do
+  read -p "No default, please type the name and press [ENTER]: " q_tmp
+done
+REMOTE_HOST=$q_tmp
+
+q_tmp=""
+read -p "Type your username on $REMOTE_HOST (default $USER) and press [ENTER]: " q_tmp
+if [ "x$q_tmp" = "x" ]; then 
+  REMOTE_USER=$USER
+else
+  REMOTE_USER=$q_tmp
+fi
+
+q_tmp=""
+read -p "Type the queue manager for $REMOTE_HOST (pbs, condor, lsf, sge, slurm) and press [ENTER]: " q_tmp
+while [ "x$q_tmp" = "x" ]; do
+  read -p "No default, please type the queue manager and press [ENTER]: " q_tmp
+done
+if [ "x$q_tmp" = "xslurm" ]; then
+  # SLURM is using PBS emulation
+  q_tmp="pbs"
+fi
+REMOTE_TYPE=$q_tmp
+
+echo "Connecting $REMOTE_HOST, user: $REMOTE_USER, queue manager: $REMOTE_TYPE"
+show_progress "-20-" bosco_cluster --add $REMOTE_USER@$REMOTE_HOST $REMOTE_TYPE 
+if [ $? -ne 0 ]; then
+  echo "Failed to connect the cluster $REMOTE_HOST. Please check your data and retry."
+  exit 1
+fi
+
+echo "$REMOTE_HOST connected"
+
+echo "************** Testing the cluster (resource): ***********"
+#echo "This may take up to 2 minutes... please wait."
+show_progress "This may take up to 2 minutes... please wait." bosco_cluster --test $REMOTE_USER@$REMOTE_HOST 
+# MMDB move this underneath 
+echo "BOSCO on $REMOTE_HOST Tested"
+if [ $? -ne 0 ]; then
+  echo "Failed to test the cluster $REMOTE_HOST. Please check your data and retry."
+  echo "The BOSCO install document contains some troubleshooting information:"
+  echo "https://twiki.grid.iu.edu/bin/view/CampusGrids/BoscoInstall"
+  exit 1
+fi
+
+
+echo "************** Congratulations, Bosco is now setup to work with $REMOTE_HOST! ***********"
+cat << EOF
+You are ready to submit jobs with the "condor_submit" command.
+Remember to setup the environment all the time you want to use Bosco:
+source ~/bosco/bosco_setenv
+
+Here is a quickstart guide about BOSCO:
+https://twiki.grid.iu.edu/bin/view/CampusGrids/BoscoQuickStart
+
+To remove Bosco you can run:
+source ~/bosco/bosco_setenv; bosco_uninstall --all
+
+Here is a submit file example (supposing you want to run "myjob.sh"):
+universe = grid
+Executable = myjob.sh
+arguments = 
+output = myjob.output.txt
+error = myjob.error.txt
+log = myjob.log
+transfer_output_files = 
+should_transfer_files = YES
+when_to_transfer_output = ON_EXIT
+queue 1
+EOF

@@ -216,7 +216,6 @@ MatchTest::MatchTest():
 void
 MatchTest::OptimizeMachineAdForMatchmaking(ClassAd *ad)
 {
-#if !defined(WANT_OLD_CLASSADS)
 		// The machine ad will be passed as the RIGHT ad during
 		// matchmaking (i.e. in the call to IsAMatch()), so
 		// optimize it accordingly.
@@ -229,13 +228,11 @@ MatchTest::OptimizeMachineAdForMatchmaking(ClassAd *ad)
 			name.Value(),
 				error_msg.c_str());
 	}
-#endif
 }
 
 void
 MatchTest::OptimizeJobAdForMatchmaking(ClassAd *ad)
 {
-#if !defined(WANT_OLD_CLASSADS)
 		// The job ad will be passed as the LEFT ad during
 		// matchmaking (i.e. in the call to IsAMatch()), so
 		// optimize it accordingly.
@@ -250,7 +247,6 @@ MatchTest::OptimizeJobAdForMatchmaking(ClassAd *ad)
 				proc_id,
 				error_msg.c_str());
 	}
-#endif
 }
 
 void

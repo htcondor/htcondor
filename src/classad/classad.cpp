@@ -2048,6 +2048,11 @@ ClassAd *ClassAd::GetChainedParentAd(void)
 	return chained_parent_ad;
 }
 
+const ClassAd *ClassAd::GetChainedParentAd(void) const
+{
+	return chained_parent_ad;
+}
+
 void ClassAd::ClearAllDirtyFlags(void)
 { 
 	dirtyAttrList.clear();

@@ -76,22 +76,6 @@ int cleanStringForUseAsAttr(MyString &str, char chReplace/*=0*/, bool compact/*=
    return str.Length();
 }
 
-bool canStringBeUsedAsAttr(const char * pattr)
-{
-   if ( ! pattr || ! pattr[0])
-      return false;
-
-   for (const char * psz = pattr; *psz; ++psz)
-      {
-      char ch = *psz;
-      if (ch == '_' || (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z'))
-         continue;
-      return false;
-      }
-
-   return true;
-}
-
 /*
   This method is static to this file and shouldn't be used directly.
   it just does the actual work for findSoftKillSig() and
@@ -278,11 +262,11 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_Q_DATE, (int)time(NULL) );
 	job_ad->Assign( ATTR_COMPLETION_DATE, 0 );
 
-	job_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, (float)0.0 );
-	job_ad->Assign( ATTR_JOB_LOCAL_USER_CPU, (float)0.0 );
-	job_ad->Assign( ATTR_JOB_LOCAL_SYS_CPU, (float)0.0 );
-	job_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, (float)0.0 );
-	job_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, (float)0.0 );
+	job_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, 0.0 );
+	job_ad->Assign( ATTR_JOB_LOCAL_USER_CPU, 0.0 );
+	job_ad->Assign( ATTR_JOB_LOCAL_SYS_CPU, 0.0 );
+	job_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, 0.0 );
+	job_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, 0.0 );
 
 		// This is a magic cookie, see how condor_submit sets it
 	job_ad->Assign( ATTR_CORE_SIZE, -1 );

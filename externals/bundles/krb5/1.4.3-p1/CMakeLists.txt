@@ -62,9 +62,9 @@ if (WITH_KRB5)
 			set (KRB5_INSTALL cp -r src/lib/obj/i386/rel/* ${KRB5_INSTALL_LOC}/lib \r\n
 							  cp -r src/include/* ${KRB5_INSTALL_LOC}/include \r\n
 							  cp ${CMAKE_CURRENT_SOURCE_DIR}/win-mac.post.h  ${KRB5_INSTALL_LOC}/include/win-mac.h \r\n
-							  cd \"\\\" \r\n
+							#  cd \"\\\" \r\n
 							  cd /D "${KRB5_INSTALL_LOC}/lib" \r\n 
-							  ${CMAKE_CURRENT_SOURCE_DIR}/manifest.bat )
+							  ${CMAKE_CURRENT_SOURCE_DIR}/manifest.bat "${KRB5_INSTALL_LOC}/lib" )
 
 		else()
 			set (KRB5_PATCH  
@@ -80,7 +80,7 @@ if (WITH_KRB5)
 		ExternalProject_Add(krb5
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${KRB5_STAGE}/dl
-				    URL http://parrot.cs.wisc.edu/externals/${KRB5_VER}.tar.gz
+				    URL ${EXTERNALS_SOURCE_URL}/${KRB5_VER}.tar.gz
 				    #URL C:/Scratch/Build/test-externals/${KRB5_VER}.tar.gz
 					#--Patch step ----------
 					PATCH_COMMAND ${KRB5_PATCH}

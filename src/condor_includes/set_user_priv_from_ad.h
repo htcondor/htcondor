@@ -32,6 +32,6 @@
 // EXCEPT is invoked if the given ad is missing its ATTR_OWNER or if
 // init_user_ids with the owner and domain from the ad fails
 //
-priv_state set_user_priv_from_ad(ClassAd const &ad);
+priv_state set_user_priv_from_ad(classad::ClassAd const &ad);
 
 #endif

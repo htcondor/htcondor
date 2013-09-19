@@ -125,13 +125,14 @@ if( STD_UNIVERSE )
 	# part 2:
 	# set dependencies to ensure build dep order for parallel builds
 	##################################################
-	add_dependencies( condorsyscall stub_gen )
+	add_dependencies( condorsyscall senders switches )
 	if (DOES_COMPRESS_CKPT)
-		add_dependencies( condorzsyscall stub_gen )
+		add_dependencies( condorzsyscall senders switches )
 	endif()
 	add_dependencies( switches syscall_numbers stub_gen )
 	add_dependencies( senders syscall_numbers stub_gen )
 	add_dependencies( receivers syscall_numbers stub_gen )
+	add_dependencies( std_local_ref senders receivers )
 	add_dependencies( sys-list syscall_numbers stub_gen )
 
 	#################################################

@@ -541,12 +541,17 @@ extern "C" int RemoveRemoteFile(const char* owner,
 }
 
 
+static char *server_host = NULL;
+
 extern "C" int RemoveLocalOrRemoteFile(const char* owner,
 							const char* schedd,
 							const char* filename)
 {
 	MSC_SUPPRESS_WARNING_FIXME(6031) // return value of unlink ignored.
 	unlink(filename);
+	if (server_host == NULL) { // NULL means we have no checkpoint server
+		return 0;
+	}
 	return (RequestService(owner, schedd, filename, NULL, SERVICE_DELETE, NULL,
 						   NULL, NULL, NULL));
 }
@@ -561,7 +566,6 @@ extern "C" int RenameRemoteFile(const char* owner,
 						   SERVICE_RENAME, NULL, NULL, NULL, NULL));
 }
 
-static char *server_host = NULL;
 
 extern "C" int SetCkptServerHost(const char *host)
 {

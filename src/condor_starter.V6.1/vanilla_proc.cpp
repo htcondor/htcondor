@@ -293,12 +293,19 @@ VanillaProc::StartJob()
 		param(execute_str, "EXECUTE", "EXECUTE_UNKNOWN");
 			// Note: Starter is a global variable from os_proc.cpp
 		Starter->jic->machClassAd()->EvalString(ATTR_NAME, NULL, starter_name);
-		ASSERT (starter_name.size());
+		if (starter_name.size() == 0) {
+			char buf[16];
+			sprintf(buf, "%d", getpid());
+			starter_name = buf;
+		}
+		//ASSERT (starter_name.size());
 		cgroup_uniq.formatstr("%s_%s", execute_str.c_str(), starter_name.c_str());
 		const char dir_delim[2] = {DIR_DELIM_CHAR, '\0'};
 		cgroup_uniq.replaceString(dir_delim, "_");
 		cgroup_str.formatstr("%s%ccondor%s", cgroup_base.c_str(), DIR_DELIM_CHAR,
 			cgroup_uniq.Value());
+		cgroup_str += this->CgroupSuffix();
+		
 		cgroup = cgroup_str.Value();
 		ASSERT (cgroup != NULL);
 		fi.cgroup = cgroup;
@@ -558,11 +565,13 @@ VanillaProc::StartJob()
 			EXCEPT("USE_PID_NAMESPACES enabled, but can't perform this "
 				"call in Linux unless running as root.");
 		}
-		fi.want_pid_namespace = true;
+		fi.want_pid_namespace = this->SupportsPIDNamespace();
+		if (fi.want_pid_namespace) {
 		if (!fs_remap) {
 			fs_remap = new FilesystemRemap();
 		}
 		fs_remap->RemapProc();
+		}
 	}
 	dprintf(D_FULLDEBUG, "PID namespace option: %s\n", fi.want_pid_namespace ? "true" : "false");
 #endif
@@ -647,16 +656,11 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 	}
 
 		// Publish the info we care about into the ad.
-	char buf[200];
-	sprintf( buf, "%s=%lu", ATTR_JOB_REMOTE_SYS_CPU, usage->sys_cpu_time );
-	ad->InsertOrUpdate( buf );
-	sprintf( buf, "%s=%lu", ATTR_JOB_REMOTE_USER_CPU, usage->user_cpu_time );
-	ad->InsertOrUpdate( buf );
+	ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, (double)usage->sys_cpu_time);
+	ad->Assign(ATTR_JOB_REMOTE_USER_CPU, (double)usage->user_cpu_time);
 
-	sprintf( buf, "%s=%lu", ATTR_IMAGE_SIZE, usage->max_image_size );
-	ad->InsertOrUpdate( buf );
-	sprintf( buf, "%s=%lu", ATTR_RESIDENT_SET_SIZE, usage->total_resident_set_size );
-	ad->InsertOrUpdate( buf );
+	ad->Assign(ATTR_IMAGE_SIZE, usage->max_image_size);
+	ad->Assign(ATTR_RESIDENT_SET_SIZE, usage->total_resident_set_size);
 
 	std::string memory_usage;
 	if (param(memory_usage, "MEMORY_USAGE_METRIC", "((ResidentSetSize+1023)/1024)")) {
@@ -670,12 +674,10 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 #endif
 
 	if (usage->block_read_bytes >= 0) {
-		sprintf( buf, "%s=%lu", ATTR_BLOCK_READ_KBYTES, usage->block_read_bytes/1024 );
-		ad->InsertOrUpdate( buf );
+		ad->Assign(ATTR_BLOCK_READ_KBYTES, usage->block_read_bytes/1024);
 	}
 	if (usage->block_write_bytes >= 0) {
-		sprintf( buf, "%s=%lu", ATTR_BLOCK_WRITE_KBYTES, usage->block_write_bytes/1024 );
-		ad->InsertOrUpdate( buf );
+		ad->Assign(ATTR_BLOCK_WRITE_KBYTES, usage->block_write_bytes/1024);
 	}
 
 		// Update our knowledge of how many processes the job has
@@ -861,6 +863,26 @@ VanillaProc::finishShutdownFast()
 int
 VanillaProc::outOfMemoryEvent(int /* fd */)
 {
+
+	/* The cgroup API generates this notification whenever the OOM fires OR
+	 * the cgroup is removed. If the cgroups are not pre-created, the kernel will
+	 * remove the cgroup when the job completes. So if we land here and there are
+	 * no more job pids, we assume the cgroup was removed and just ignore the event.
+	 * However, if we land here and we still have job pids, we assume the OOM fired
+	 * and thus we place the job on hold. See gt#3824.
+	 */
+
+	// If we have no jobs left, prolly just cgroup removed, so do nothing and return
+	if (num_pids == 0) {
+		dprintf(D_FULLDEBUG, "Closing event FD pipe %d.\n", m_oom_efd);
+		daemonCore->Close_Pipe(m_oom_efd);
+		close(m_oom_fd);
+		m_oom_efd = -1;
+		m_oom_fd = -1;
+
+		return 0;
+	}
+
 	std::stringstream ss;
 	if (m_memory_limit >= 0) {
 		ss << "Job has gone over memory limit of " << m_memory_limit << " megabytes.";

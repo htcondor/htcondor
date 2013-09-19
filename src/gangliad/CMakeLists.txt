@@ -20,7 +20,7 @@ if (WITH_GANGLIA)
 
   condor_selective_glob( "ganglia*;statsd*" GANGLIAD )
 
-  condor_exe( condor_gangliad "${GANGLIAD}" ${C_LIBEXEC} "${GANGLIA_FOUND};${CONDOR_LIBS}" OFF )
+  condor_exe( condor_gangliad "${GANGLIAD}" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
 
   install ( FILES ganglia_default_metrics DESTINATION "${C_GANGLIAD}" RENAME 00_default_metrics)
 

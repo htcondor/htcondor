@@ -25,8 +25,6 @@
 #include "classad/classad_distribution.h"
 #include "condor_classad.h"
 
-//classad::ExprTree *AddExplicitConditionals( classad::ExprTree *expr );
-
 // AddExplicitTargets creates a new ClassAd (the caller owns it)
 // that is similar to the original ClassAd, except that if it refers
 // to attributes that are not in the current classad and they are not

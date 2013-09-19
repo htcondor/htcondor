@@ -42,6 +42,7 @@ my $firstappend_condor_config = '
 	NEGOTIATION_INTERVAL = 10
 	KILL = FALSE
 	START = TRUE
+	TOOL_DEBUG = D_FULLDEBUG
 	ALL_DEBUG = D_ALWAYS
 	NUM_CPUS = 4
 	STARTD_SLOT_ATTRS = activity,state,memory
@@ -63,7 +64,7 @@ my $firstappend_condor_config = '
 $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"startdslotattrs");
 
 CondorTest::StartCondorWithParams(
-	condor_name => "basickill",
+	condor_name => "startdslotattrs",
 	fresh_local => "TRUE",
 	condorlocalsrc => "$configfile",
 );
@@ -77,7 +78,7 @@ my $return = "";
 my $executecount = 0;
 my $namelist = "";
 my $result = 1;
-my $test_name = "job_basic_kill";
+my $test_name = "basic_startd_slot_atttrs";
 my $on_execute = sub {
 	print "********************************** OnExecute *****************************\n";
 	$namelist = GetSlotNames(3);
@@ -110,9 +111,6 @@ my $GetClusterId = sub {
 print "First test basic job\n";
 $result = SimpleJob::RunCheck(); # jobid 1
 
-my $catchlog  = "catchallsignals.out";
-system("rm -f $catchlog");
-
 $expect_return = 0;
 $result = SimpleJob::RunCheck(
 	test_name => "$test_name",
@@ -124,7 +122,7 @@ $result = SimpleJob::RunCheck(
 	duration => $expect_return,
 	GetClusterId => $GetClusterId,
 );
-print "******************** Test for KILL = TRUE\n";
+print "******************** Test for startd slot attrs/publishing\n";
 if($result == 1) {
 	print "ok\n\n\n";
 } else {
@@ -172,8 +170,10 @@ sub GetStartdSlotAttrs
 	my $measuredslotmem = "";
 	my $memorydescription = "";
 	my @fullslot1 = ();
+	my $trycount = 0;
 
 	foreach my $slot (@namearray) {
+		$trycount = 0;
 		if($count == 1) {
 			$count += 1;
 			if($slot =~ /(.*?)@.*/) {
@@ -181,7 +181,7 @@ sub GetStartdSlotAttrs
 				$measuredslot = $1;
 				$memorydescription = "$measuredslot" . "_memory";
 			}
-			@fullslot1 = `condor_status -l $slot | grep Memory | sort`;
+			@fullslot1 = `condor_status -debug -l $slot | grep Memory | sort`;
 			foreach my $thing (@fullslot1) {
 				chomp($thing);
 				#print "$slot: --- $thing ---\n";
@@ -191,7 +191,9 @@ sub GetStartdSlotAttrs
 				}
 			}
 		}
-		my @results = `condor_status -l $slot | grep slot | sort`;
+		my @results = `condor_status -debug -l $slot | grep slot | sort`;
+		my $statusres = @results;
+		print "condor_status for slot <$slot> returned <$statusres> lines\n";
 		foreach my $item (@results) {
 			chomp($item);
 			print "$slot: $item\n";

@@ -189,7 +189,7 @@ TransferRequest::set_num_transfers(int nt)
 	str += " = ";
 	str += nt;
 
-	m_ip->InsertOrUpdate(str.Value());
+	m_ip->Insert(str.Value());
 }
 
 int
@@ -224,7 +224,7 @@ TransferRequest::set_transfer_service(const char *mode)
 	str += mode;
 	str += "\"";
 
-	m_ip->InsertOrUpdate(str.Value());
+	m_ip->Insert(str.Value());
 }
 
 void
@@ -258,7 +258,7 @@ TransferRequest::set_protocol_version(int pv)
 	str += " = ";
 	str += pv;
 
-	m_ip->InsertOrUpdate(str.Value());
+	m_ip->Insert(str.Value());
 }
 
 int
@@ -284,7 +284,7 @@ TransferRequest::set_xfer_protocol(int xp)
 	str += " = ";
 	str += xp;
 
-	m_ip->InsertOrUpdate(str.Value());
+	m_ip->Insert(str.Value());
 }
 
 int
@@ -310,7 +310,7 @@ TransferRequest::set_direction(int dir)
 	str += " = ";
 	str += dir;
 
-	m_ip->InsertOrUpdate(str.Value());
+	m_ip->Insert(str.Value());
 }
 
 int
@@ -337,7 +337,7 @@ TransferRequest::set_used_constraint(bool con)
 	str += " = ";
 	str += con==true?"TRUE":"FALSE";
 
-	m_ip->InsertOrUpdate(str.Value());
+	m_ip->Insert(str.Value());
 }
 
 bool
@@ -364,7 +364,7 @@ TransferRequest::set_peer_version(MyString &pv)
 	str += pv;
 	str += "\"";
 
-	m_ip->InsertOrUpdate(str.Value());
+	m_ip->Insert(str.Value());
 }
 
 void

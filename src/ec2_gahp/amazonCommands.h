@@ -49,6 +49,7 @@
 //#define AMAZON_COMMAND_VM_DISASSOCIATE_ADDRESS   "EC2_VM_DISASSOCIATE_ADDRESS"
 #define AMAZON_COMMAND_VM_ATTACH_VOLUME		"EC_VM_ATTACH_VOLUME"
 #define AMAZON_COMMAND_VM_CREATE_TAGS		"EC2_VM_CREATE_TAGS"
+#define AMAZON_COMMAND_VM_SERVER_TYPE		"EC2_VM_SERVER_TYPE"
 
 #define AMAZON_COMMAND_VM_START_SPOT        "EC2_VM_START_SPOT"
 #define AMAZON_COMMAND_VM_STOP_SPOT         "EC2_VM_STOP_SPOT"
@@ -88,6 +89,8 @@ class AmazonRequest {
         std::string errorCode;
         
         std::string resultString;
+
+		bool includeResponseHeader;
 };
 
 // EC2 Commands
@@ -292,5 +295,19 @@ class AmazonAttachVolume : public AmazonRequest {
         static bool workerFunction(char **argv, int argc, std::string &result_string);
 };
 
+
+class AmazonVMServerType : public AmazonRequest {
+	public:
+		AmazonVMServerType();
+		virtual ~AmazonVMServerType();
+
+		virtual bool SendRequest();
+
+		static bool ioCheck(char **argv, int argc);
+		static bool workerFunction(char **argv, int argc, std::string &result_string);
+
+	protected:
+		std::string serverType;
+};
 
 #endif

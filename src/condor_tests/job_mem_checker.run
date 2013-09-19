@@ -1,0 +1,326 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+##
+## This test looks at memory reported in image size plus
+## job and machine ads
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Net::Domain qw(hostfqdn);
+use POSIX qw/sys_wait_h strftime/;
+use strict;
+use warnings;
+
+my $host = hostfqdn();
+print "$host\n";
+
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	STARTD_JOB_EXPRS = MemoryUsage, ResidentSetSize_RAW, ResidentSetSize
+	ALL_DEBUG = 
+	NEGOTIATOR_INTERVAL = 5
+	STARTER_UPDATE_INTERVAL = 5
+	PID_SNAPSHOT_INTERVAL = 5
+	SHADOW_QUEUE_UPDATE_INTERVAL = $(STARTER_UPDATE_INTERVAL)
+	PROCD_MAX_SNAPSHOT_INTERVAL = 5
+	NUM_CPUS = 4
+	SUSPEND = FALSE
+';
+ 
+my $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"memchecker");
+my $testname = "job_mem_checker";
+my $ClusterId;
+
+my $myupdates = 0;
+my $slot = "";
+my @updatejobads = ();
+my @updateslotads = ();
+my @updatetimestamps = ();
+
+CondorTest::StartCondorWithParams(
+	condor_name => "memchecker",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+my $on_abort = sub {
+	print "Abort from removing sleep 0 jobs.\n";
+};
+
+sub timestamp {
+    return strftime("%Y/%m/%d %H:%M:%S", localtime);
+};
+
+my $on_imageupdated = sub {
+	my %info = @_; # contains cluster, job, imagesize, megs and rss
+	my $stamp = timestamp();
+	$myupdates += 1;
+	push @updatetimestamps, $stamp;
+	print "myupdates now <$myupdates>\n";
+
+	print "$stamp Cluster $info{cluster} job $info{job} imagesize $info{imagesize} megs $info{megs} rss $info{rss}\n";
+	CondorTest::debug("Image Updated.\n",1);
+	if($slot eq "") {
+		my @running = `condor_q -run`;
+		foreach my $line (@running) {
+			chomp($line);
+			if($line =~ /^.*?(slot.*)$/) {
+				print "Found slot <$1>\n";
+				$slot = $1;
+			}
+		}
+	}
+	my $direct = "";
+	if($slot =~ /slot\d+@(.*)/) {
+		$direct = $1;
+		print "startd = <$direct>\n";
+	} else {
+		print "Failed to get base startd name\n";
+	}
+	print "startd = <$direct>\n";
+	print "$stamp Machine ads from $slot $direct\n";
+	my %slotads = ();
+	#my @machineads = `condor_status -l $slot`;
+	my @machineads = `condor_status -l -direct $direct`;
+	foreach my $line (@machineads) {
+		chomp($line);
+		if($line =~ /^\s*(.*?)\s+=\s+(.*)\s*/) {
+			$slotads{$1} = $2;
+			if($1 eq "ImageSize") {
+				print "Setting $1 to $2 in slot ads\n";
+			}
+		} 
+	}
+	push @updateslotads,\%slotads;
+
+	my %jobadhash = ();
+	my @jobads = `condor_q -l $ClusterId`;
+	my $adcount = @jobads;
+	if($adcount == 0) {
+		@jobads = `condor_history -l $ClusterId`;
+	}
+	print "$stamp Jobs ads cluster $ClusterId out of $adcount ads\n";
+	foreach my $line (@jobads) {
+		chomp($line);
+		if($line =~ /^\s*(.*?)\s+=\s+(.*)\s*/) {
+			$jobadhash{$1} = $2;
+		}
+	}
+	push @updatejobads,\%jobadhash;
+};
+
+my $on_evictedwithoutcheckpoint = sub {
+	print "Evicted Without Checkpoint from removing jobs.\n"
+};
+
+my $GetClusterId = sub {
+	my $cid = shift;
+	$ClusterId = $cid;
+	print "Resquestd Cluster Got $ClusterId\n";
+	##########################
+	#
+	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
+	# position which is always an undefined variable EXCEPT when it is a call back routine 
+	# to pass out the cluster Id.
+	#
+	##########################
+	#runcmd("condor_q",{emit_output => 1});
+};
+
+#Do a couple things before setting currency limits
+print "First test basic job\n";
+my $result = SimpleJob::RunCheck();
+
+
+
+my $append_submit_commands = '
+transfer_input_files = x_job_mem_checker.exe
+';
+
+system("rm -rf mem_checker.out mem_checker.err mem_checker.log mem_checker.pid");
+
+# on this on-execute, check the ads like above
+	$result = SimpleJob::RunCheck(
+	runthis => "x_job_mem_checker.exe",
+	test_name => $testname,
+	on_abort => $on_abort,
+	on_imageupdated => $on_imageupdated,
+	GetClusterId => $GetClusterId,
+	output => "mem_checker.out",
+	error => "mem_checker.err",
+	user_log => "mem_checker.log",
+	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	queue_sz => 1,
+	duration => "1024 10 60 30 60 50 60 25 60 5 60 50 60",
+	should_transfer_files => "YES",
+	when_to_transfer_output => "ON_EXIT",
+	append_submit_commands => $append_submit_commands,
+);
+print "******************** Test for memory usage \n";
+if($result == 1) {
+	print "ok\n\n\n";
+} else {
+	print "bad\n\n\n";
+}
+
+print "Now lets check results..........\n";
+
+my $userlog = "mem_checker.log";
+my $growthlog = "mem_checker.out";
+
+my $harveststep = 0;
+my $grew = 0;
+my $shrunk = 0;
+my $previousrss = 0;
+my $rssresult = 0;
+my %rssvalues = ();
+my $rssname = "";
+my $count = 1;
+open(GL,"<$growthlog") or die "Failed to open growth output<$growthlog>:$!\n";
+while(<GL>) {
+	print "$_";
+	$rssname = "rss" . "$count";
+	if($_ =~ /^.*?VmRSS\s+(\d+),.*$/) {
+		if($previousrss == 0){
+			$previousrss = $1;
+		} else {
+			if($previousrss < $1) {
+				$grew =1;
+			} elsif($1 < $previousrss) {
+				$shrunk = 1;
+			}
+			$previousrss = $1;
+		}
+		$rssvalues{$rssname} = $1;
+	}
+	$count += 1;
+}
+if(($shrunk == 1) && ($grew == 1)) {
+	print "\nRSS size reflected growth and shrinkage\n";
+	$rssresult = 1;
+	CondorTest::RegisterResult( $rssresult, %rssvalues );
+} else {
+	print "\nRSS size FAILED to reflect growth and shrinkage\n";
+	CondorTest::RegisterResult( $rssresult, %rssvalues );
+}
+
+
+while($harveststep < $myupdates)
+{
+	# print interesting slot ads
+	my $myslothashref = $updateslotads[$harveststep];
+	my $myjobhashref = $updatejobads[$harveststep];
+	my $interval = ($harveststep + 1);
+
+	print "\n$updatetimestamps[$harveststep]: AT IMAGESIZE UPDATE **** $interval ****\n";
+	print "SLOT ADS:\n";
+	if(exists ${$myslothashref}{ImageSize}) {
+		print "Imagesize for $slot = ${$myslothashref}{ImageSize}\n";
+	} else {
+		print "can not find slot ads\n";
+	}
+	if(exists ${$myslothashref}{MemoryUsage}) {
+		print "MemoryUsage for $slot = ${$myslothashref}{MemoryUsage}\n";
+	}
+	if(exists ${$myslothashref}{ResidentSetSize_RAW}) {
+		print "Raw ResidentSetSize for $slot = ${$myslothashref}{ResidentSetSize_RAW}\n";
+	}
+	if(exists ${$myslothashref}{ResidentSetSize}) {
+		print "ResidentSetSize for $slot = ${$myslothashref}{ResidentSetSize}\n";
+	}
+	# print interesting job ads
+	print "\nJOB ADS:\n";
+	if(exists ${$myjobhashref}{ImageSize}) {
+		print "Imagesize for $slot = ${$myjobhashref}{ImageSize}\n";
+	} else {
+		print "can not find job ads\n";
+	}
+	if(exists ${$myjobhashref}{MemoryUsage}) {
+		print "MemoryUsage for $slot = ${$myjobhashref}{MemoryUsage}\n";
+	}
+	if(exists ${$myjobhashref}{ResidentSetSize_RAW}) {
+		print "Raw ResidentSetSize for $slot = ${$myjobhashref}{ResidentSetSize_RAW}\n";
+	}
+	if(exists ${$myjobhashref}{ResidentSetSize}) {
+		print "ResidentSetSize for $slot = ${$myjobhashref}{ResidentSetSize}\n";
+	}
+
+	# increment in the middle because arrays of hash references are
+	# zero based while update fetches from use log are opne based
+	$harveststep += 1;
+	print "\nUSERLOG ENTRIES:\n";
+	SampleCheckerLog("userlog",$userlog,"update-$harveststep");
+}
+SampleCheckerLog("userlog",$userlog,"terminated");
+
+CondorTest::EndTest();
+
+sub SampleCheckerLog
+{
+	my $state = shift;
+	my $file = shift;
+	my $options = shift;
+	my @alloptions = split /-/, $options;
+	foreach my $option (@alloptions) {
+		#print "$option\n";
+	}
+
+	my $counter = 0;
+
+
+	my $line = "";
+	open(UL,"<$file") or die "failed to open <$file>:$!\n";
+	while(<UL>) {
+		chomp();
+		$line = $_;
+		if($line =~ /^006.*Image size of job updated:\s+(\d+).*$/) {
+			$counter += 1;
+			#print "$alloptions[0] $alloptions[1] $counter\n";
+			if(($alloptions[0] eq "update") && ($alloptions[1] eq $counter)) {
+				#print "Image size changed to $1\n";
+				print "$line\n";
+				# eat next two lines, get memory and rss
+				$line = <UL>;
+				print "$line";
+				$line = <UL>;
+				print "$line";
+			}
+		} elsif($line =~ /^005.*Job terminated.*$/) {
+			if($alloptions[0] eq "terminated") {
+				my $skip = 0;
+				my $fetch = "";
+				print "$line\n";
+				while($skip < 12) {
+					$fetch = <UL>;
+					$skip += 1;
+				}
+				$fetch = <UL>;
+				print "$fetch\n";
+			}
+		} else {
+			#print "skip: $line \n";
+		}
+	}
+}
+

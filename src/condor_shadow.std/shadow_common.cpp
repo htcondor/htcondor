@@ -681,9 +681,10 @@ checkForDebugging( ClassAd* ad )
 	// For debugging, see if there's a special attribute in the
     // job ad that sends us into an infinite loop, waiting for
     // someone to attach with a debugger
-    int shadow_should_wait = 0;
-    ad->LookupInteger( ATTR_SHADOW_WAIT_FOR_DEBUG,
-					   shadow_should_wait );
+    volatile int shadow_should_wait = 0;
+	int tmp = 0; // Can't pass volatile int to LookupInteger
+    ad->LookupInteger( ATTR_SHADOW_WAIT_FOR_DEBUG, tmp );
+	shadow_should_wait = tmp;
     if( shadow_should_wait ) {
         dprintf( D_ALWAYS, "Job requested shadow should wait for "
             "debugger with %s=%d, going into infinite loop\n",
@@ -972,7 +973,7 @@ int
 MakeProc(ClassAd *ad, PROC *p)
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
-	float	utime,stime;
+	double utime,stime;
 	ExprTree *e;
 	
 	p->version_num = 3;

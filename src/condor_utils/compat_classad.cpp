@@ -78,18 +78,8 @@ Reconfig()
 	}
 }
 
-// TSTCLAIR: this really needs to be killed off now.
-// static classad::AttributeReference *the_my_ref = NULL;
-static bool the_my_ref_in_use = false;
 void getTheMyRef( classad::ClassAd *ad )
 {
-	ASSERT( !the_my_ref_in_use );
-	the_my_ref_in_use = true;
-
-	//if( !the_my_ref ) {
-	//	the_my_ref = classad::AttributeReference::MakeAttributeReference( NULL, "self" );
-	//}
-
 	if ( !ClassAd::m_strictEvaluation ) {
 		ExprTree * pExpr=classad::AttributeReference::MakeAttributeReference( NULL, "self" );
 		ad->Insert( "my", pExpr );
@@ -98,14 +88,10 @@ void getTheMyRef( classad::ClassAd *ad )
 
 void releaseTheMyRef( classad::ClassAd *ad )
 {
-	ASSERT( the_my_ref_in_use );
-
 	if ( !ClassAd::m_strictEvaluation ) {
-		ad->Delete("my"); //Remove( "my" ); 
+		ad->Delete("my");
 		ad->MarkAttributeClean( "my" );
 	}
-
-	the_my_ref_in_use = false;
 }
 
 static classad::MatchClassAd *the_match_ad = NULL;
@@ -1445,8 +1431,7 @@ EvalFloat (const char *name, classad::ClassAd *target, double &value)
 	return rc;
 }
 
-#define IS_DOUBLE_ZERO(_value_) \
-	(  ( (_value_) >= -0.000001 ) && ( (_value_) <= 0.000001 )  )
+#define IS_DOUBLE_TRUE(val) (bool)(int)((val)*100000)
 
 int ClassAd::
 EvalBool  (const char *name, classad::ClassAd *target, int &value)
@@ -1467,7 +1452,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 				value = intVal ? 1 : 0;
 				rc = 1;
 			} else if( val.IsRealValue( doubleVal ) ) {
-				value = IS_DOUBLE_ZERO(doubleVal) ? 0 : 1;
+				value = IS_DOUBLE_TRUE(doubleVal) ? 1 : 0;
 				rc = 1;
 			}
 		}
@@ -1487,7 +1472,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 				rc = 1;
 			}
 			if( val.IsRealValue( doubleVal ) ) {
-				value = IS_DOUBLE_ZERO(doubleVal) ? 1 : 0;
+				value = IS_DOUBLE_TRUE(doubleVal) ? 1 : 0;
 				rc = 1;
 			}
 		}
@@ -1502,7 +1487,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 				rc = 1;
 			}
 			if( val.IsRealValue( doubleVal ) ) {
-				value = IS_DOUBLE_ZERO(doubleVal) ? 1 : 0;
+				value = IS_DOUBLE_TRUE(doubleVal) ? 1 : 0;
 				rc = 1;
 			}
 		}
@@ -1561,41 +1546,9 @@ initFromString( char const *str,MyString *err_msg )
 }
 
 
-int ClassAd::
-initFromStream(Stream& s)
-{
-	if( !getClassAd( &s, *this ) ) {
-		return FALSE;
-	}
-
-		// Reinsert CurrentTime, emulating the special version in old
-		// ClassAds
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
-	}
-
-	return TRUE;
-}
-
-int ClassAd::
-initAttrListFromStream(Stream& s)
-{
-	if( !getClassAdNoTypes( &s, *this ) ) {
-		return FALSE;
-	}
-
-		// Reinsert CurrentTime, emulating the special version in old
-		// ClassAds
-	if ( !m_strictEvaluation ) {
-		AssignExpr( ATTR_CURRENT_TIME, "time()" );
-	}
-
-	return TRUE;
-}
-
 		// output functions
 int
-fPrintAd( FILE *file, classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
+fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
 {
 	MyString buffer;
 
@@ -1606,7 +1559,7 @@ fPrintAd( FILE *file, classad::ClassAd &ad, bool exclude_private, StringList *at
 }
 
 void
-dPrintAd( int level, classad::ClassAd &ad )
+dPrintAd( int level, const classad::ClassAd &ad )
 {
 	MyString buffer;
 
@@ -1616,15 +1569,15 @@ dPrintAd( int level, classad::ClassAd &ad )
 }
 
 int
-sPrintAd( MyString &output, classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
+sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
 {
-	classad::ClassAd::iterator itr;
+	classad::ClassAd::const_iterator itr;
 
 	classad::ClassAdUnParser unp;
-	unp.SetOldClassAd( true );
+	unp.SetOldClassAd( true, true );
 	string value;
 
-	classad::ClassAd *parent = ad.GetChainedParentAd();
+	const classad::ClassAd *parent = ad.GetChainedParentAd();
 
 	if ( parent ) {
 		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
@@ -1658,9 +1611,9 @@ sPrintAd( MyString &output, classad::ClassAd &ad, bool exclude_private, StringLi
 }
 
 int
-sPrintAd( std::string &output, classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
+sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
 {
-	MyString myout = output;
+	MyString myout;
 	int rc = sPrintAd( myout, ad, exclude_private, attr_white_list );
 	output += myout;
 	return rc;
@@ -1680,7 +1633,7 @@ sPrintExpr(const classad::ClassAd &ad, const char* name)
     string parsedString;
 	classad::ExprTree* expr;
 
-	unp.SetOldClassAd( true );
+	unp.SetOldClassAd( true, true );
 
     expr = ad.Lookup(name);
 
@@ -1788,39 +1741,29 @@ NextNameOriginal()
 
 // Back compatibility helper methods
 
-bool ClassAd::
-AddExplicitConditionals( classad::ExprTree *expr, classad::ExprTree *&newExpr )
-{
-	if( expr == NULL ) {
-		return false;
-	}
-	newExpr = AddExplicitConditionals( expr );
-	return true;
-}
-
-void ClassAd::AddExplicitTargetRefs(  ) 
+void AddExplicitTargetRefs( classad::ClassAd &ad ) 
 {
 	set< string, classad::CaseIgnLTStr > definedAttrs;
-	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
+	for( classad::AttrList::iterator a = ad.begin( ); a != ad.end( ); a++ ) {
 		definedAttrs.insert(a->first);
 	}
 	
-	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
+	for( classad::AttrList::iterator a = ad.begin( ); a != ad.end( ); a++ ) {
 		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) 
 		{
 		  classad::ExprTree * pTree = compat_classad::AddExplicitTargetRefs( a->second, definedAttrs );
-			this->Insert( a->first, pTree ) ;
+			ad.Insert( a->first, pTree ) ;
 		}
 	}
 }
 
-void ClassAd::RemoveExplicitTargetRefs( )
+void RemoveExplicitTargetRefs( classad::ClassAd &ad )
 {
-	for( classad::AttrList::iterator a = begin( ); a != end( ); a++ ) {
+	for( classad::AttrList::iterator a = ad.begin( ); a != ad.end( ); a++ ) {
 		if ( a->second->GetKind() != classad::ExprTree::LITERAL_NODE ) 
 		{
 		  classad::ExprTree * pTree = compat_classad::RemoveExplicitTargetRefs( a->second );
-			this->Insert( a->first, pTree );
+			ad.Insert( a->first, pTree );
 		}
 	}
 }  
@@ -1851,171 +1794,6 @@ AddTargetRefs( TargetAdType /*target_type*/, bool /*do_version_check*/ )
 	}
 #endif
 }
-
-classad::ExprTree *ClassAd::
-AddExplicitConditionals( classad::ExprTree *expr )
-{
-	if( expr == NULL ) {
-		return NULL;
-	}
-	classad::ExprTree::NodeKind nKind = expr->GetKind( );
-	switch( nKind ) {
-	case classad::ExprTree::ATTRREF_NODE: {
-			// replace "attr" with "(IsBoolean(attr) ? ( attr ? 1 : 0) : attr)"
-		classad::ExprTree *fnExpr = NULL;
-		vector< classad::ExprTree * > params( 1 );
-		params[0] = expr->Copy( );
-		classad::ExprTree *condExpr = NULL;
-		classad::ExprTree *parenExpr = NULL;
-		classad::ExprTree *condExpr2 = NULL;
-		classad::ExprTree *parenExpr2 = NULL;
-		classad::Value val0, val1;
-		val0.SetIntegerValue( 0 );
-		val1.SetIntegerValue( 1 );
-		fnExpr = classad::FunctionCall::MakeFunctionCall( "IsBoolean", params );
-		condExpr = classad::Operation::MakeOperation( classad::Operation::TERNARY_OP,
-										expr->Copy( ), 
-										classad::Literal::MakeLiteral( val1 ),
-										classad::Literal::MakeLiteral( val0 ) );
-		parenExpr = classad::Operation::MakeOperation( classad::Operation::PARENTHESES_OP,
-											  condExpr, NULL, NULL );
-		condExpr2 = classad::Operation::MakeOperation( classad::Operation::TERNARY_OP,
-											  fnExpr, parenExpr, 
-											  expr->Copy( ) );
-		parenExpr2 = classad::Operation::MakeOperation( classad::Operation::PARENTHESES_OP,
-										 condExpr2, NULL, NULL );
-		return parenExpr2;
-	}
-	case classad::ExprTree::EXPR_ENVELOPE:
-		return ( AddExplicitConditionals( ( (classad::CachedExprEnvelope*)expr )->get() ) );
-	case classad::ExprTree::FN_CALL_NODE:
-	case classad::ExprTree::CLASSAD_NODE:
-	case classad::ExprTree::EXPR_LIST_NODE: {
-		return NULL;
-	}
-	case classad::ExprTree::LITERAL_NODE: {
-		classad::Value val;
-		( ( classad::Literal *)expr )->GetValue( val );
-		bool b;
-		if( val.IsBooleanValue( b ) ) {
-			if( b ) {
-					// replace "true" with "1"
-				val.SetIntegerValue( 1 );
-			}
-			else {
-					// replace "false" with "0"
-				val.SetIntegerValue( 0 );
-			}
-			return classad::Literal::MakeLiteral( val );
-		}
-		else {
-			return NULL;
-		}
-	}
-	case classad::ExprTree::OP_NODE: {
-		classad::Operation::OpKind oKind;
-		classad::ExprTree * expr1 = NULL;
-		classad::ExprTree * expr2 = NULL;
-		classad::ExprTree * expr3 = NULL;
-		( ( classad::Operation * )expr )->GetComponents( oKind, expr1, expr2, expr3 );
-		if ( oKind == classad::Operation::PARENTHESES_OP ) {
-			ExprTree *newExpr1 = AddExplicitConditionals( expr1 );
-			return classad::Operation::MakeOperation( classad::Operation::PARENTHESES_OP,
-											 newExpr1, NULL, NULL );
-		}
-		else if( ( classad::Operation::__COMPARISON_START__ <= oKind &&
-				   oKind <= classad::Operation::__COMPARISON_END__ ) ||
-				 ( classad::Operation::__LOGIC_START__ <= oKind &&
-				   oKind <= classad::Operation::__LOGIC_END__ ) ) {
-				// Comparison/Logic Operation expression
-				// replace "expr" with "expr ? 1 : 0"
-
-			classad::ExprTree *newExpr = expr;
-			if( oKind == classad::Operation::LESS_THAN_OP ||
-				oKind == classad::Operation::LESS_OR_EQUAL_OP ||
-				oKind == classad::Operation::GREATER_OR_EQUAL_OP ||
-				oKind == classad::Operation::GREATER_THAN_OP ) {				
-				classad::ExprTree *newExpr1 = AddExplicitConditionals( expr1 );
-				classad::ExprTree *newExpr2 = AddExplicitConditionals( expr2 );
-				if( newExpr1 != NULL || newExpr2 != NULL ) {
-					if( newExpr1 == NULL ) {
-						newExpr1 = expr1->Copy( );
-					}
-					if( newExpr2 == NULL ) {
-						newExpr2 = expr2->Copy( );
-					}
-					newExpr = classad::Operation::MakeOperation( oKind, newExpr1,
-														newExpr2, NULL );
-				}
-			}
-
-			classad::Value val0, val1;
-			val0.SetIntegerValue( 0 );
-			val1.SetIntegerValue( 1 );
-			classad::ExprTree *tern = NULL;
-			tern = classad::Operation::MakeOperation( classad::Operation::TERNARY_OP,
-											 newExpr->Copy( ),
-											 classad::Literal::MakeLiteral( val1 ),
-											 classad::Literal::MakeLiteral( val0 ) );
-			return classad::Operation::MakeOperation( classad::Operation::PARENTHESES_OP,
-											 tern, NULL, NULL );
-		}
-		else if( classad::Operation::__ARITHMETIC_START__ <= oKind &&
-				 oKind <= classad::Operation::__ARITHMETIC_END__ ) {
-			classad::ExprTree *newExpr1 = AddExplicitConditionals( expr1 );
-			if( oKind == classad::Operation::UNARY_PLUS_OP || 
-				oKind == classad::Operation::UNARY_MINUS_OP ) {
-				if( newExpr1 != NULL ) {
-					return classad::Operation::MakeOperation(oKind,newExpr1,NULL,NULL);
-				}
-				else {
-					return NULL;
-				}
-			}
-			else {
-				classad::ExprTree *newExpr2 = AddExplicitConditionals( expr2 );
-				if( newExpr1 != NULL || newExpr2 != NULL ) {
-					if( newExpr1 == NULL ) {
-						newExpr1 = expr1->Copy( );
-					}
-					if( newExpr2 == NULL ) {
-						newExpr2 = expr2->Copy( );
-					}
-					return classad::Operation::MakeOperation( oKind, newExpr1, newExpr2,
-													 NULL );
-				}
-				else {
-					return NULL;
-				}
-			}
-		}
-		else if( oKind == classad::Operation::TERNARY_OP ) {
-			ExprTree *newExpr2 = AddExplicitConditionals( expr2 );
-			ExprTree *newExpr3 = AddExplicitConditionals( expr3 );
-			if( newExpr2 != NULL || newExpr3 != NULL ) {
-				if( newExpr2 == NULL ) {
-					newExpr2 = expr2->Copy( );
-				}
-				if( newExpr3 == NULL ) {
-					newExpr3 = expr3->Copy( );
-				}
-				return classad::Operation::MakeOperation( oKind, expr1->Copy( ), 
-												 newExpr2, newExpr3 );
-			}
-			else {
-				return NULL;
-			}
-		}
-		return NULL;
-	}
-	default: {
-		return NULL;
-	}
-	}
-		
-	return NULL;
-}
-
 
 // Determine if a value is valid to be written to the log. The value
 // is a RHS of an expression. According to LogSetAttribute::WriteBody,
@@ -2188,7 +1966,7 @@ CopyAttribute( char const *target_attr, char const *source_attr,
 //////////////XML functions///////////
 
 int
-fPrintAdAsXML(FILE *fp, classad::ClassAd &ad, StringList *attr_white_list)
+fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list)
 {
     if(!fp)
     {
@@ -2202,7 +1980,7 @@ fPrintAdAsXML(FILE *fp, classad::ClassAd &ad, StringList *attr_white_list)
 }
 
 int
-sPrintAdAsXML(MyString &output, classad::ClassAd &ad, StringList *attr_white_list)
+sPrintAdAsXML(MyString &output, const classad::ClassAd &ad, StringList *attr_white_list)
 {
 	std::string std_output;
 	int rc = sPrintAdAsXML(std_output, ad, attr_white_list);
@@ -2211,7 +1989,7 @@ sPrintAdAsXML(MyString &output, classad::ClassAd &ad, StringList *attr_white_lis
 }
 
 int
-sPrintAdAsXML(std::string &output, classad::ClassAd &ad, StringList *attr_white_list)
+sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_white_list)
 {
 	classad::ClassAdXMLUnParser unparser;
 	std::string xml;
@@ -2241,23 +2019,21 @@ sPrintAdAsXML(std::string &output, classad::ClassAd &ad, StringList *attr_white_
 ///////////// end XML functions /////////
 
 char const *
-ClassAd::EscapeStringValue(char const *val, MyString &buf)
+EscapeAdStringValue(char const *val, std::string &buf)
 {
     if(val == NULL)
         return NULL;
 
     classad::Value tmpValue;
-    string stringToAppeaseUnparse;
     classad::ClassAdUnParser unparse;
 
-	unparse.SetOldClassAd( true );
+	unparse.SetOldClassAd( true, true );
 
     tmpValue.SetStringValue(val);
-    unparse.Unparse(stringToAppeaseUnparse, tmpValue);
+    unparse.Unparse(buf, tmpValue);
 
-    buf = stringToAppeaseUnparse.c_str();
-	buf = buf.Substr( 1, buf.Length() - 2 );
-    return buf.Value();
+	buf = buf.substr( 1, buf.length() - 2 );
+    return buf.c_str();
 }
 
 void ClassAd::ChainCollapse()
@@ -2490,17 +2266,6 @@ AddExplicitTargetRefs(classad::ExprTree *tree,
 	}
 	}
 } 
-
-classad::ExprTree *
-AddExplicitTargetRefs(classad::ExprTree *eTree, classad::ClassAd *ad ) 
-{
-	set< string, classad::CaseIgnLTStr > definedAttrs;
-	
-	for( classad::AttrList::iterator a = ad->begin( ); a != ad->end( ); a++ ) {
-		definedAttrs.insert( a->first );
-	}
-	return AddExplicitTargetRefs(eTree, definedAttrs);
-}
 
 classad::ExprTree *RemoveExplicitTargetRefs( classad::ExprTree *tree )
 {

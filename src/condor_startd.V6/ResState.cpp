@@ -270,7 +270,7 @@ ResState::eval( void )
 			//had PREEMPT turn TRUE, in which case, we don't need
 			//to keep trying to retire over and over.
 
-			if( rip->eval_preempt() ) {
+			if( 1 == rip->eval_preempt() ) {
 				dprintf( D_ALWAYS, "State change: PREEMPT is TRUE\n" );
 				// irreversible retirement
 				// STATE TRANSITION #12 or #16
@@ -292,7 +292,7 @@ ResState::eval( void )
 			}
 		}
 		if( (r_act == busy_act || r_act == retiring_act) && want_suspend ) {
-			if( rip->eval_suspend() ) {
+			if( 1 == rip->eval_suspend() ) {
 				// STATE TRANSITION #14 or #17
 				dprintf( D_ALWAYS, "State change: SUSPEND is TRUE\n" );
 				change( suspended_act );
@@ -300,7 +300,7 @@ ResState::eval( void )
 			}
 		}
 		if( r_act == suspended_act ) {
-			if( rip->eval_continue() ) {
+			if( 1 == rip->eval_continue() ) {
 				// STATE TRANSITION #15
 				dprintf( D_ALWAYS, "State change: CONTINUE is TRUE\n" );
 				if( !rip->inRetirement() ) {
@@ -368,7 +368,7 @@ ResState::eval( void )
 
 	case preempting_state:
 		if( r_act == vacating_act ) {
-			if( rip->eval_kill() ) {
+			if( 1 == rip->eval_kill() ) {
 				dprintf( D_ALWAYS, "State change: KILL is TRUE\n" );
 					// STATE TRANSITION #19
 				change( killing_act );

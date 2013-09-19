@@ -71,6 +71,7 @@ sub RunCheck
     my $universe = $args{universe} || "vanilla";
     my $user_log = $args{user_log} || CondorTest::TempFileName("$testname.user_log");
     my $output = $args{output} || "";
+    my $error = $args{error} || "";
     my $streamoutput = $args{stream_output} || "";
     my $append_submit_commands = $args{append_submit_commands} || "";
     my $grid_resource = $args{grid_resource} || "";
@@ -88,11 +89,14 @@ sub RunCheck
 	 
 	#print "Checking duration being passsed to RunCheck <$args{duration}>\n";
     my $execute_fn = $args{on_execute} || $dummy;
+    my $hold_fn = $args{on_hold} || $dummy;
+    my $shadow = $args{on_shadow} || $dummy;
     my $suspended_fn = $args{on_suspended} || $dummy;
     my $unsuspended_fn = $args{on_unsuspended} || $dummy;
     my $disconnected_fn = $args{on_disconnected} || $dummy;
     my $reconnected_fn = $args{on_reconnected} || $dummy;
-    #my $evicted_fn = $args{on_evicted} || $dummy;
+    my $reconnectfailed_fn = $args{on_reconnectfailed} || $dummy;
+    my $imageupdated_fn = $args{on_imageupdated} || $dummy;
     my $evicted_ewc_fn = $args{on_evictedwithcheckpoint} || $dummy;
     my $evicted_ewoc_fn = $args{on_evictedwithoutcheckpoint} || $dummy;
     my $evicted_wreq_fn = $args{on_evictedwithrequeue} || $dummy;
@@ -114,6 +118,12 @@ sub RunCheck
 	#If we register thees to dummy, then we don't get
 	#the error function registered which says this is bad
 
+	if( exists $args{on_shadow} ) {
+    	CondorTest::RegisterShadow( $testname, $shadow );
+	}
+	if( exists $args{on_imageupdated} ) {
+    	CondorTest::RegisterImageUpdated( $testname, $imageupdated_fn );
+	}
 	if( exists $args{on_evictedwithcheckpoint} ) {
     	CondorTest::RegisterEvictedWithCheckpoint( $testname, $evicted_ewc_fn );
 	}
@@ -123,11 +133,17 @@ sub RunCheck
 	if( exists $args{on_evictedwithrequeue} ) {
     	CondorTest::RegisterEvictedWithRequeue( $testname, $evicted__wreqfn );
 	}
+	if( exists $args{on_hold} ) {
+    	CondorTest::RegisterHold( $testname, $hold_fn );
+	}
 	if( exists $args{on_evicted} ) {
     	CondorTest::RegisterEvicted( $testname, $evicted_fn );
 	}
 	if( exists $args{on_disconnected} ) {
     	CondorTest::RegisterDisconnected( $testname, $disconnected_fn );
+	}
+	if( exists $args{on_reconnectfailed} ) {
+    	CondorTest::RegisterReconnectFailed( $testname, $reconnectfailed_fn );
 	}
 	if( exists $args{on_reconnected} ) {
     	CondorTest::RegisterReconnected( $testname, $reconnected_fn );
@@ -155,16 +171,19 @@ sub RunCheck
 	print SUBMIT "GridResource = $grid_resource\n"
     }
 	if($output ne "") {
-	print SUBMIT "output = $output\n";
+		print SUBMIT "output = $output\n";
+	}
+	if($error ne "") {
+		print SUBMIT "error = $error\n";
 	}
 	if($streamoutput ne "") {
-	print SUBMIT "stream_output = $streamoutput\n";
+		print SUBMIT "stream_output = $streamoutput\n";
 	}
     if( $should_transfer_files ne "" ) {
-	print SUBMIT "should_transfer_files = $should_transfer_files\n";
+		print SUBMIT "should_transfer_files = $should_transfer_files\n";
     }
     if( $when_to_transfer_output ne "" ) {
-	print SUBMIT "when_to_transfer_output = $when_to_transfer_output\n";
+		print SUBMIT "when_to_transfer_output = $when_to_transfer_output\n";
     }
     if( $append_submit_commands ne "" ) {
         print SUBMIT "\n" . $append_submit_commands . "\n";

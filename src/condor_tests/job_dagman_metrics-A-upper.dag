@@ -1,0 +1,25 @@
+Job A1 job_dagman_metrics-A-node.cmd
+Vars A1 nodename="$(JOB)"
+
+Job A2 job_dagman_metrics-A-node.cmd
+Vars A2 nodename="$(JOB)"
+
+Job A3 job_dagman_metrics-A-node.cmd
+Vars A3 nodename="$(JOB)"
+
+Job A4 job_dagman_metrics-A-node.cmd
+Vars A4 nodename="$(JOB)"
+
+Job A5 job_dagman_metrics-A-node.cmd
+Vars A5 nodename="$(JOB)"
+
+Splice B job_dagman_metrics-A-splice.dag
+
+Subdag external C job_dagman_metrics-A-lower.dag
+
+Job D job_dagman_metrics-A-node.cmd
+Vars D nodename="$(JOB)"
+
+Parent A1 A2 A3 A4 A5 Child B
+Parent B Child C
+Parent C Child D

@@ -559,6 +559,7 @@ GridUniverseLogic::StartOrFindGManager(const char* owner, const char* domain,
 		failed = true;
 	}
 	set_priv(saved_priv);
+	uninit_user_ids();
 	args.AppendArg("-S");	// -S = "ScratchDir" argument
 	args.AppendArg(finalpath);
 	delete [] finalpath;

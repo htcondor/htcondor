@@ -955,7 +955,6 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 
 	if (kind == US_TERMINATE_PENDING) {
 
-		float float_value;
 		int exited_by_signal = FALSE;
 		int exit_signal = 0;
 		int exit_code = 0;
@@ -972,12 +971,13 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 		}
 
 		/* grab usage information out of job ad */
-		if( jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, float_value) ) {
-			run_remote_rusage.ru_stime.tv_sec = (int) float_value;
+		double real_value;
+		if( jobAd->LookupFloat(ATTR_JOB_REMOTE_SYS_CPU, real_value) ) {
+			run_remote_rusage.ru_stime.tv_sec = (time_t) real_value;
 		}
 
-		if( jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, float_value) ) {
-			run_remote_rusage.ru_utime.tv_sec = (int) float_value;
+		if( jobAd->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, real_value) ) {
+			run_remote_rusage.ru_utime.tv_sec = (time_t) real_value;
 		}
 
 		event.run_remote_rusage = run_remote_rusage;

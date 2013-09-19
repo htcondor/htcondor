@@ -71,8 +71,8 @@ static const char *formatDueDate( int , AttrList* , Formatter &);
 static const char *formatElapsedTime( int , AttrList* , Formatter &);
 static const char *formatRealTime( int , AttrList * , Formatter &);
 static const char *formatRealDate( int , AttrList * , Formatter &);
-//static const char *formatFloat (float, AttrList *, Formatter &);
-static const char *formatLoadAvg (float, AttrList *, Formatter &);
+//static const char *formatFloat (double, AttrList *, Formatter &);
+static const char *formatLoadAvg (double, AttrList *, Formatter &);
 
 static void ppInit()
 {
@@ -222,18 +222,6 @@ prettyPrint (ClassAdList &adList, TrackTotals *totals)
 	adList.Open();
 	while ((ad = adList.Next())) {
 		if (!wantOnlyTotals) {
-				// CRUFT: Before 7.3.2, submitter ads had a MyType of
-				//   "Scheduler". The only way to tell the difference
-				//   was that submitter ads didn't have ATTR_NUM_USERS.
-				//   Coerce MyStype to "Submitter" for ads coming from
-				//   these older schedds. This used to be done inside
-				//   the ClassAd library.
-				//   Before 7.7.3, submitter ads for parallel universe
-				//   jobs had a MyType of "Scheduler".
-			if ( !strcmp( GetMyTypeName(*ad), SCHEDD_ADTYPE ) &&
-				 !ad->LookupExpr( ATTR_NUM_USERS ) ) {
-				SetMyTypeName( *ad, SUBMITTER_ADTYPE );
-			}
 			switch (ppStyle) {
 			  case PP_STARTD_NORMAL:
 				if (absentMode) {
@@ -1293,7 +1281,7 @@ printCustom (ClassAd *ad)
 }
 
 static const char *
-formatLoadAvg (float fl, AttrList *, Formatter &)
+formatLoadAvg (double fl, AttrList *, Formatter &)
 {
 	static char buf[60];
 	sprintf(buf, "%.3f", fl);
@@ -1302,7 +1290,7 @@ formatLoadAvg (float fl, AttrList *, Formatter &)
 
 #if 0 // not currently used
 static const char *
-formatFloat (float fl, AttrList *, Formatter & fmt)
+formatFloat (double fl, AttrList *, Formatter & fmt)
 {
 	static char buf[60];
 	sprintf(buf, fmt.printfFmt, fl);

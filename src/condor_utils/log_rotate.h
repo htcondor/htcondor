@@ -46,16 +46,3 @@ long long quantizeTimestamp(time_t tt, long long secs);
 /** Rotate away all old history files exceeding maxNum count */
 int cleanUpOldLogFiles(int maxNum);
 
-/** is it a *.old file? */
-int isOldString(char *str);
-
-/** is the argument an ISO timestamp? */
-int isTimestampString(char *str);
-
-/** is the argument a valid log filename? */
-int isLogFilename( char *filename);
-
-/** find the oldest file in the directory matching the 
-  *current base name according to iso time ending 
- */
-char *findOldest(char *dirName, int *count);

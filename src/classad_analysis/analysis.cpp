@@ -60,7 +60,7 @@ ClassAdAnalyzer( bool ras ) :
       // Failed to parse PREEMPTION_REQUIREMENTS; defaulting to FALSE
       ParseClassAdRvalExpr( "FALSE", preemption_req );
     }
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	ExprTree *tmp_expr = AddTargetRefs( preemption_req, TargetJobAttrs );
 	delete preemption_req;
 	preemption_req = tmp_expr;

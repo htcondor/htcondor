@@ -43,6 +43,7 @@
 #include "setenv.h"
 #include "file_lock.h"
 #include "shared_port_server.h"
+#include "shared_port_endpoint.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #if defined(HAVE_DLOPEN) || defined(WIN32)
@@ -823,6 +824,7 @@ init_daemon_list()
 			// Tolerate a trailing comma in the list
 		daemon_names.remove( "" );
 
+
 			/*
 			  Make sure that if COLLECTOR is in the list, put it at
 			  the front...  unfortunately, our List template (what
@@ -851,6 +853,14 @@ init_daemon_list()
 			daemon_names.rewind();
 			daemon_names.next();
 			daemon_names.insert( "SHARED_PORT" );
+		}
+		else if( SharedPortEndpoint::UseSharedPort() ) {
+			if( param_boolean("AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST",true) ) {
+				dprintf(D_ALWAYS,"Adding SHARED_PORT to DAEMON_LIST, because USE_SHARED_PORT=true (to disable this, set AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST=False)\n");
+				daemon_names.rewind();
+				daemon_names.next();
+				daemon_names.insert( "SHARED_PORT" );
+			}
 		}
 		daemons.ordered_daemon_names.create_union( daemon_names, false );
 
@@ -1081,14 +1091,14 @@ invalidate_ads() {
 	SetTargetTypeName( cmd_ad, MASTER_ADTYPE );
 	
 	MyString line;
-	MyString escaped_name;
+	std::string escaped_name;
 	char* default_name = ::strnewp(MasterName);
 	if(!default_name) {
 		default_name = default_daemon_name();
 	}
 	
-	ClassAd::EscapeStringValue( default_name, escaped_name );
-	line.formatstr( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.Value() );
+	EscapeAdStringValue( default_name, escaped_name );
+	line.formatstr( "( TARGET.%s == \"%s\" )", ATTR_NAME, escaped_name.c_str() );
 	cmd_ad.AssignExpr( ATTR_REQUIREMENTS, line.Value() );
 	cmd_ad.Assign( ATTR_NAME, default_name );
 	cmd_ad.Assign( ATTR_MY_ADDRESS, daemonCore->publicNetworkIpAddr());

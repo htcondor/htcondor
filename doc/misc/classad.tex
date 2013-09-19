@@ -11,8 +11,9 @@ and other HTCondor daemons.  An understanding of this mechanism is required
 to harness the full flexibility of the HTCondor system.
 
 A ClassAd is is a set of uniquely named expressions.  Each named expression
-is called an \Term{attribute}.  Figure~\ref{ClassAd:example} shows an example 
-of a ClassAd with ten attributes.
+is called an \Term{attribute}.  Figure~\ref{ClassAd:example} 
+shows ten attributes,
+a portion of an example ClassAd.
 
 \begin{figure}[hbt]
 \footnotesize
@@ -85,10 +86,10 @@ A complete description of New ClassAds can be found at
 and in the ClassAd Language Reference Manual found on this web page.
 
 Some of the features of New ClassAds that are \emph{not} in Old ClassAds are
-lists, nested ads, time values, and matching groups of ads.
+lists, nested ClassAds, time values, and matching groups of ClassAds.
 HTCondor has avoided using these features,
 as using them makes it difficult to interact with older versions of HTCondor.
-But users can start using them if they don't need to interact with
+But, users can start using them if they do not need to interact with
 versions of HTCondor older than 7.5.1.
 
 The syntax varies slightly between Old and New ClassAds.
@@ -199,7 +200,7 @@ error types.  The syntax of these literals is as follows:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{ClassAd!attributes}
 Every expression in a ClassAd is named by an \Term{attribute name}.  Together,
-the (name,expression) pair is called an \Term{attribute}.  An attributes may be
+the (name,expression) pair is called an \Term{attribute}.  An attribute may be
 referred to in other expressions through its attribute name.
 
 Attribute names are sequences of alphabetic characters, digits and underscores,
@@ -252,7 +253,7 @@ may be typed (as given) or not.
 Nested or recursive function calls are allowed.
 
 Here are descriptions of each of these predefined functions.
-The possible types are the same as itemized in 
+The possible types are the same as itemized
 in Section~\ref{ClassAd:literals}.
 Where the type may be any of these literal types, it is
 called out as \verb@AnyType@.
@@ -592,7 +593,7 @@ Optional parameters are given within square brackets.
     If the argument evaluates to \Expr{ERROR} or \Expr{UNDEFINED},
     \Expr{ERROR} is returned.
 
-    This function returns \Expr{ERROR} if greater than 1
+    This function returns \Expr{ERROR} if other than exactly 1
     argument is given.
 
   \index{ClassAd functions!toLower()}
@@ -656,7 +657,7 @@ Optional parameters are given within square brackets.
   \item[\Code{String formatTime(\Lbr\ Integer time \Rbr\ \Lbr\ , String format \Rbr)}]
 
     Returns a formatted string that is a representation of \Expr{time}.
-    The argument \Expr{time} is interpreted as coordinated universe time in
+    The argument \Expr{time} is interpreted as coordinated universal time in
     seconds, since midnight of January 1, 1970. If not specified,
     \Expr{time} will default to the value of attribute \Attr{CurrentTime}.
 		
@@ -826,9 +827,9 @@ Inclusion of characters other than these as options are ignored.
   \item[\Expr{I} or \Expr{i}]
     Ignore letter case.
   \item[\Expr{M} or \Expr{m}]
-    Modifies the interpretation of the carat (\verb@^@) and dollar sign
+    Modifies the interpretation of the caret (\verb@^@) and dollar sign
     (\verb@$@) characters.
-    The carat character matches the start of a string, as well as
+    The caret character matches the start of a string, as well as
     after each newline character.
     The dollar sign character matches before a newline character.
   \item[\Expr{S} or \Expr{s}]
@@ -864,11 +865,11 @@ Inclusion of characters other than these as options are ignored.
     are not strings.
 
   \index{ClassAd functions!stringList\_regexpMember()}
-  \item[\Code{Boolean stringList\_regexpMember(String pattern, String list \Lbr\ , String delimiter \Rbr \Lbr, String options \Rbr})]
+  \item[\Code{Boolean stringList\_regexpMember(String pattern, String list \Lbr\ , String delimiter, String options \Rbr})]
     Returns \Expr{TRUE} if the string \Expr{pattern} is a regular expression
-    that matches an item in the string \Expr{list},
-    as delimited by the optional \Expr{delimiter} string.
-    String \Expr{options} modifies how the match is performed.
+    that matches an item in the string \Expr{list}.
+    The optional \Expr{delimiter} string says how to delimit,
+    while string \Expr{options} modifies how the match is performed.
     Returns \Expr{FALSE} if \Expr{pattern} does not match any entries in
     \Expr{list}.
     The return value is \Expr{ERROR}, if any of the arguments
@@ -903,9 +904,10 @@ error values evaluate to themselves.
 \index{TARGET., ClassAd scope resolution prefix}
 \index{MY., ClassAd scope resolution prefix}
 Since the expression evaluation is being carried out in the context of two
-ClassAds, there is a potential for name space ambiguities.  The following
-rules define the semantics of attribute references made by ad $A$ that is being 
-evaluated in a context with another ad $B$:
+ClassAds, there is a potential for name space ambiguities.  
+The following rules define the semantics of attribute references made 
+by ClassAd $A$ that is being 
+evaluated in a context with another ClassAd $B$:
 \begin{enumerate}
     \item If the reference is prefixed by a scope resolution prefix, 
     \begin{itemize}
@@ -996,10 +998,10 @@ if either of their operands have these exceptional values.
 		similar to \verb@==@ and \verb@!=@, but are not strict.  Semantically,
 		the \verb@=?=@ tests if its operands are ``identical,'' i.e., have
 		the same type and the same value.  For example, \verb@10 == UNDEFINED@ 
-		and \verb@UNDEFINED == UNDEFINED@ both evaluate to \texttt{UNDEFINED},
+		and \verb@UNDEFINED == UNDEFINED@ both evaluate to \Expr{UNDEFINED},
 		but \verb@10 =?= UNDEFINED@ and \verb@UNDEFINED =?= UNDEFINED@ 
 		evaluate to \Expr{FALSE} and \Expr{TRUE} respectively.  The
-		\verb@=!=@ operator test for the ``is not identical to'' condition.
+		\verb@=!=@ operator tests for the ``is not identical to'' condition.
 	\end{enumerate}
 
 	\item\textbf{Logical operators:}
@@ -1009,7 +1011,7 @@ if either of their operands have these exceptional values.
 		\Expr{FALSE} and non-zero values \Expr{TRUE}.
 
 		\item The operators are \emph{not} strict, and exploit the 
-		``don't care'' properties of the operators to squash \Expr{UNDEFINED}
+		"don't care" properties of the operators to squash \Expr{UNDEFINED}
 		and \Expr{ERROR} values when possible.  For example,
 		\verb@UNDEFINED && FALSE@ evaluates to \Expr{FALSE}, but	
 		\verb@UNDEFINED || FALSE@ evaluates to \Expr{UNDEFINED}.
@@ -1121,10 +1123,13 @@ The simplicity and flexibility of ClassAds is heavily exploited in the HTCondor
 system.  ClassAds are not only used to represent machines and jobs in the 
 HTCondor pool, but also other entities that exist in the pool such as 
 checkpoint servers, submitters of jobs and master daemons.  Since arbitrary
-expressions may be supplied and evaluated over these ads, users have a uniform
-and powerful mechanism to specify constraints over these ads.  These constraints
-can take the form of \Attr{Requirements} expressions in resource and job ads,
-or queries over other ads.
+expressions may be supplied and evaluated over these ClassAds, 
+users have a uniform
+and powerful mechanism to specify constraints over these ClassAds.
+These constraints
+can take the form of \Attr{Requirements} expressions in resource 
+and job ClassAds,
+or queries over other ClassAds.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Constraints and Preferences}
@@ -1143,22 +1148,22 @@ constraints and preferences of the machines.
 For both machine and job, 
 the \Attr{rank} expression specifies
 the desirability of the match (where higher numbers mean better matches).
-For example, a job ad may contain the following expressions:
+For example, a job ClassAd may contain the following expressions:
 \footnotesize
 \begin{verbatim}
-Requirements = Arch=="INTEL" && OpSys == "LINUX"
+Requirements = (Arch == "INTEL") && (OpSys == "LINUX")
 Rank         = TARGET.Memory + TARGET.Mips
 \end{verbatim}
 \normalsize
-In this case, the job requires an Intel 32-bit computer running RHEL 3
-as its operating system.
+In this case, the job requires a 32-bit Intel processor running a Linux
+operating system.
 Among all such computers,
 the customer prefers those with large physical memories and high MIPS ratings.  
 Since the \Attr{Rank} is a user-specified metric,
 \emph{any} expression may be used to specify the
 perceived desirability of the match.
 The \Condor{negotiator} daemon runs algorithms
-to deliver the best resource (as defined by the \Attr{rank} expression)
+to deliver the best resource (as defined by the \Attr{rank} expression),
 while satisfying other required criteria.
 
 Similarly, the machine may place constraints and preferences on 
@@ -1213,42 +1218,35 @@ quote mark. There may not be spaces in between.
 
 Here are several examples.
 To find all computers which have had their keyboards idle for 
-more than 20 minutes and have more than 100 MB of memory,
+more than 60 minutes and have more than 4000 MB of memory,
 the desired ClassAd expression is
 \footnotesize
 \begin{verbatim}
-KeyboardIdle > 20*60 && Memory > 100
+KeyboardIdle > 60*60 && Memory > 4000
 \end{verbatim}
 \normalsize
 On a Unix platform, the command appears as
 \footnotesize
 \begin{verbatim}
-% condor_status -const 'KeyboardIdle > 20*60 && Memory > 100'
+% condor_status -const 'KeyboardIdle > 60*60 && Memory > 4000'
 
-Name       Arch     OpSys        State      Activity   LoadAv Mem  ActvtyTime
-
-amul.cs.wi SUN4u    SOLARIS251   Claimed    Busy       1.000  128   0+03:45:01
-aura.cs.wi SUN4u    SOLARIS251   Claimed    Busy       1.000  128   0+00:15:01
-balder.cs. INTEL    SOLARIS251   Claimed    Busy       1.000  1024  0+01:05:00
-beatrice.c INTEL    SOLARIS251   Claimed    Busy       1.000  128   0+01:30:02
+Name               OpSys   Arch   State     Activity LoadAv Mem  ActvtyTime
+100
+slot1@altair.cs.wi LINUX   X86_64 Owner     Idle     0.000 8018 13+00:31:46
+slot2@altair.cs.wi LINUX   X86_64 Owner     Idle     0.000 8018 13+00:31:47
 ...
 ...
-                     Machines Owner Claimed Unclaimed Matched Preempting
-
-    SUN4u/SOLARIS251        3     0       3         0       0          0
-    INTEL/SOLARIS251       21     0      21         0       0          0
-    SUN4x/SOLARIS251        3     0       3         0       0          0
-       INTEL/WINDOWS        1     0       0         1       0          0
-         INTEL/LINUX        1     0       1         0       0          0
-
-               Total       29     0      28         1       0          0
+slot1@athena.stat. LINUX   X86_64 Unclaimed Idle     0.000 7946  0+00:25:04
+slot2@athena.stat. LINUX   X86_64 Unclaimed Idle     0.000 7946  0+00:25:05
+...
+...
 \end{verbatim}
 \normalsize
 
 The Windows equivalent command is
 \footnotesize
 \begin{verbatim}
->condor_status -const "KeyboardIdle > 20*60 && Memory > 100"
+>condor_status -const "KeyboardIdle > 60*60 && Memory > 4000"
 \end{verbatim}
 \normalsize
 
@@ -1272,7 +1270,8 @@ UpdateSequenceNumber = 1
 
 % condor_advertise UPDATE_AD_GENERIC ad
 
-% condor_status -any -constraint 'FauxType=="DBMS" && regexp("random.*", Name, "i")'
+% condor_status -any -constraint 'FauxType=="DBMS" && 
+  regexp("random.*", Name, "i")'
 
 MyType               TargetType           Name                          
 
@@ -1282,14 +1281,14 @@ Generic              None                 random-test
 \normalsize
 
 The ClassAd expression describing a machine that
-advertises a Windows NT operating system:
+advertises a Windows operating system:
 \footnotesize
 \begin{verbatim}
 OpSys == "WINDOWS"
 \end{verbatim}
 \normalsize
 Here are three equivalent ways on a Unix platform to list all machines
-advertising a Windows NT operating system.
+advertising a Windows operating system.
 Spaces appear in these examples to show where they are permitted.
 \footnotesize
 \begin{verbatim}
@@ -1308,7 +1307,7 @@ Spaces appear in these examples to show where they are permitted.
 \normalsize
 
 The equivalent command on a Windows platform to list all machines
-advertising a Windows NT operating system must delimit the single
+advertising a Windows operating system must delimit the single
 argument with double quote marks, and then escape the needed
 double quote marks that identify the string within the expression. 
 Spaces appear in this example where they are permitted.
@@ -1320,41 +1319,53 @@ Spaces appear in this example where they are permitted.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:classad-userfunctions}
-Extending classads with user written functions}
+Extending ClassAds with User-written Functions}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-The classad language provides a rich set of functions.  It is possible
-to add new functions to the classad language without recompiling
-the condor system or the classad library.  This requires implementing the
-new function in the C++ programming language, compiling the code into a shared
-library, and telling Condor where in the filesystem the share library lives.
+The ClassAd language provides a rich set of functions.  It is possible
+to add new functions to the ClassAd language without recompiling
+the HTCondor system or the ClassAd library.  
+This requires implementing the
+new function in the C++ programming language, 
+compiling the code into a shared library, 
+and telling HTCondor where in the file system the shared library lives.
 
-While the details of the classad implementation are beyond the scope of this document,
-the classad source distribution ships with an example source file that extends classads
-by adding two new functions,named todays\_date and double.  This can be used as a model for users to implement
-their own functions. To deploy this example extension, follow the following steps on Linux:
+While the details of the ClassAd implementation are beyond the scope of 
+this document,
+the ClassAd source distribution ships with an example source file that 
+extends ClassAds by adding two new functions,
+named \Procedure{todays\_date} and \Procedure{double}.  
+This can be used as a model for users to implement
+their own functions. 
+To deploy this example extension, follow the following steps on Linux:
 
 \begin{itemize}
-\item{Download the classad source distribution from \URL{http://www.cs.wisc.edu/condor/classad}}
-\item{Unpack the tarball}
-\item{Inspect the source file shared.cpp  This one file contains the whole extension.}
-\item{Build shared.cpp into a shared library.  On Linux, the command line to do so is
+\item{Download the ClassAd source distribution from 
+\URL{http://www.cs.wisc.edu/condor/classad}.}
+\item{Unpack the tarball.}
+\item{Inspect the source file \File{shared.cpp}.
+This one file contains the whole extension.}
+\item{Build \File{shared.cpp} into a shared library.  
+On Linux, the command line to do so is
 \begin{verbatim}
 $ g++ -DWANT_CLASSAD_NAMESPACE -I. -shared -o shared.so \
   -Wl,-soname,shared.so -o shared.so -fPIC shared.cpp
 \end{verbatim}
 }
-\item{Copy the file shared.so somewhere all the condor tools and daemons can read.
+\item{Copy the file \File{shared.so} to a location that all of 
+the HTCondor tools and daemons can read.
 \begin{verbatim}
 $ cp shared.so `condor_config_val LIBEXEC`
 \end{verbatim}
 }
-\item{Tell condor to load the shared library into all tools and daemons, by setting the \Macro{CLASSAD\_USER\_LIBS} parameter to the full name of the shared library.  In this case,
+\item{Tell HTCondor to load the shared library into all tools and daemons, 
+by setting the \Macro{CLASSAD\_USER\_LIBS} configuration variable
+ to the full name of the shared library.  In this case,
 \begin{verbatim}
 CLASSAD_USER_LIBS = $(LIBEXEC)/shared.so
 \end{verbatim}
 }
-\item{Restart condor}
+\item{Restart HTCondor.}
 \item{Test the new functions by running
 \begin{verbatim}
 $ condor_status -format "%s\n" todays_date()

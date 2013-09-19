@@ -1339,7 +1339,7 @@ static bool test_expr_tree_to_string_long2() {
 	classad.initFromString(classad_string, NULL);
 	const char* attribute_name = "Requirements";
 	ExprTree* expr = classad.LookupExpr(attribute_name);
-    const char* expect = "( a > 3 ) && ( b >= 1.300000 ) && "
+    const char* expect = "( a > 3 ) && ( b >= 1.300000000000000E+00 ) && "
 		"( c < MY.rank ) && ( ( d <= TARGET.RANK ) || ( g == \"alain\" ) || "
 		"( g != \"roy\" ) || ( h =?= 5 ) || ( i =!= 6 ) ) && "
 		"( ( a + b ) < ( c - d ) ) && ( ( e * false ) > ( g / h ) ) && "

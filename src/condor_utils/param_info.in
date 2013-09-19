@@ -1891,22 +1891,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=ckpt_server,server2
 id=84
 
-[NETWORK_HORIZON]
-aliases=
-default=300
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Network Horizon
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=ckpt_server,server2
-id=86
-
 [CKPT_SERVER_HOSTS]
 aliases=
 default=
@@ -1971,22 +1955,6 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=kbdd,XInterface
 id=93
-
-[TOOLS_PROVIDE_OLD_MESSAGES]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Tools Provide Old Messages
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=rm,rm
-id=94
 
 [GROUP_NAMES]
 aliases=
@@ -3093,22 +3061,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,soap_core
 id=162
 
-[MASTER.PID_SNAPSHOT_INTERVAL]
-aliases=
-default=60
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Master Pid Snapshot Interval
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=daemon_core,HookClientMgr
-id=163
-
 [PID_SNAPSHOT_INTERVAL]
 aliases=
 default=15
@@ -3124,6 +3076,11 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,HookClientMgr
 id=163
+
+[MASTER.PID_SNAPSHOT_INTERVAL]
+default=60
+type=int
+friendly_name=Master Pid Snapshot Interval
 
 [SEC_DEBUG_PRINT_KEYS]
 aliases=
@@ -3543,7 +3500,7 @@ id=189
 
 [CREATE_CORE_FILES]
 aliases=
-default=
+default=true
 version=0.0.0
 range=.*
 state=default
@@ -3941,9 +3898,9 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gahp-client
 id=214
 
-[GAHP_USE_XML_CLASSADS]
+[GAHP_DEBUG_HIDE_SENSITIVE_DATA]
 aliases=
-default=false
+default=true
 version=0.0.0
 range=.*
 state=default
@@ -3951,11 +3908,11 @@ type=bool
 is_macro=false
 reconfig=true
 customization=seldom
-friendly_name=Gahp Use Xml Classads
+friendly_name=Gahp Debug Hide Sensitive Data
 usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gahp-client
-id=215
+id=213
 
 [GRIDMANAGER_MAX_PENDING_REQUESTS]
 aliases=
@@ -5383,20 +5340,26 @@ tags=classad,ast
 id=314
 
 [ENABLE_CLASSAD_CACHING]
-aliases=
-default=false
-version=0.0.0
-range=.*
-state=default
+default=true
+win32_default=false
 type=bool
 is_macro=false
 reconfig=true
 customization=seldom
 friendly_name=Enable ClassAd Caching
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=classad
-id=315
+
+[MASTER.ENABLE_CLASSAD_CACHING]
+type=bool
+default=false
+
+[SHADOW.ENABLE_CLASSAD_CACHING]
+type=bool
+default=false
+
+[STARTER.ENABLE_CLASSAD_CACHING]
+type=bool
+default=false
 
 [QUILL_MAINTAIN_DB_CONN]
 aliases=
@@ -6023,54 +5986,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,proc_family_proxy
 id=371
 
-[NET_REMAP_SERVICE]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Net Remap Service
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=c++_util,condor_config
-id=372
-
-[NET_REMAP_INAGENT]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Net Remap Inagent
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=c++_util,condor_config
-id=373
-
-[NET_REMAP_ROUTE]
-aliases=
-default=
-version=0.0.0
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Net Remap Route
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=c++_util,condor_config
-id=374
-
 [LOCAL_CONFIG_DIR]
 aliases=
 default=
@@ -6554,7 +6469,7 @@ id=402
 
 [PASSWD_CACHE_REFRESH]
 aliases=
-default=300
+default=72000
 version=0.0.0
 range=.*
 state=default
@@ -9770,6 +9685,22 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=555
 
+[AUTO_INCLUDE_SHARED_PORT_IN_DAEMON_LIST]
+aliases=
+default=true
+version=8.1.1
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Auto Include Shared Port In Daemon List
+usage=True if SHARED_PORT should be automatically added to DAEMON_LIST when USE_SHARED_PORT=true
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=
+id=555
+
 [CCB_HEARTBEAT_INTERVAL]
 aliases=
 default=1200
@@ -10110,7 +10041,7 @@ id=602
 aliases=
 default=
 version=0.0.0
-range=1,1000000000
+range=.*
 state=default
 type=string
 is_macro=false
@@ -10126,7 +10057,7 @@ id=602
 aliases=
 default=
 version=0.0.0
-range=1,1000000000
+range=.*
 state=default
 type=string
 is_macro=false
@@ -10158,7 +10089,7 @@ id=602
 aliases=
 default=
 version=0.0.0
-range=1,1000000000
+range=.*
 state=default
 type=string
 is_macro=false
@@ -10683,86 +10614,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd
 id=610
 
-[CONSUMPTION_POLICY]
-aliases=
-default=false
-version=7.7.6
-range=.*
-state=default
-type=bool
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Does a slot ad support a consumption policy?
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=startd
-id=607
-
-[CONSUMPTION_CPUS]
-aliases=
-default=quantize(target.RequestCpus,{1})
-version=7.7.6
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Consumption policy for cpu resource assets
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=startd,negotiator
-id=608
-
-[CONSUMPTION_MEMORY]
-aliases=
-default=quantize(target.RequestMemory,{128})
-version=7.7.6
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Consumption policy for memory resource assets
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=startd,negotiator
-id=609
-
-[CONSUMPTION_DISK]
-aliases=
-default=quantize(target.RequestDisk,{1024})
-version=7.7.6
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Consumption policy for disk resource assets
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=startd,negotiator
-id=610
-
-[SLOT_WEIGHT]
-aliases=
-default=Cpus
-version=7.7.6
-range=.*
-state=default
-type=string
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Slot weight expression, resides on SlotWeight attribute
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=negotiator
-id=608
-
 [ENABLE_DEPRECATION_WARNINGS]
 aliases=
 default=true
@@ -11051,6 +10902,70 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter
 id=615
 
+[GANGLIA_GMETRIC]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Ganglia gmetric Executable
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=c++_util,condor_config
+id=375
+
+[GANGLIA_LIB]
+aliases=
+default=
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Ganglia Library
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=c++_util,condor_config
+id=375
+
+[GANGLIA_LIB_PATH]
+aliases=
+default=/lib,/usr/lib,/usr/local/lib
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Ganglia Library Search Path
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=c++_util,condor_config
+id=375
+
+[GANGLIA_LIB64_PATH]
+aliases=
+default=/lib64,/usr/lib64,/usr/local/lib64
+version=0.0.0
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Ganglia 64-bit Library Search Path
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=c++_util,condor_config
+id=375
+
 [GANGLIA_CONFIG]
 aliases=
 default=/etc/ganglia/gmond.conf
@@ -11242,3 +11157,84 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,schedd
 id=600
+
+[COLLECTOR_MAX_FILE_DESCRIPTORS]
+aliases=
+default=10240
+version=0.0.0
+range=0,
+state=default
+type=int
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=Collector Max File Descriptors
+usage=Set the limit on file descriptor usage for the collector.
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=
+id=616
+
+[SCHEDD_MAX_FILE_DESCRIPTORS]
+aliases=
+default=4096
+version=0.0.0
+range=0,
+state=default
+type=int
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=Schedd Max File Descriptors
+usage=Set the limit on file descriptor usage for the scheduler.
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=
+id=617
+
+[USE_RESOURCE_REQUEST_COUNTS]
+aliases=
+default=true
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Use Resource Request Counts
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,matchmaker
+id=618
+
+[HISTORY_HELPER_MAX_HISTORY]
+aliases=
+default=10000
+version=0.0.0
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=History Helper max number of history ads
+usage=Set the limit on the number of history ads remote history will consider
+url=http://cs.wisc.edu/condor/manual/v8.1/3_3Configuration.html#SECTION
+tags=
+id=619
+
+[HISTORY_HELPER_MAX_CONCURRENCY]
+aliases=
+default=10000
+version=0.0.0
+range=0,
+state=default
+type=int
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=History Helper max number of helper sub-processes
+usage=Set the limit on the number of condor_history_helper sub-processes
+url=http://cs.wisc.edu/condor/manual/v8.1/3_3Configuration.html#SECTION
+tags=
+id=620
+

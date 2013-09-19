@@ -337,17 +337,6 @@ int CollectorDaemon::receive_query_cedar(Service* /*s*/,
 	// Initial query handler
 	AdTypes whichAds = receive_query_public( command );
 
-	// CRUFT: Before 7.3.2, submitter ads had a MyType of
-	//   "Scheduler". The only way to tell the difference
-	//   was that submitter ads didn't have ATTR_NUM_USERS.
-	//   The correosponding query ads had a TargetType of
-	//   "Scheduler", which we now coerce to "Submitter".
-	//   Before 7.7.3, submitter ads for parallel universe
-	//   jobs had a MyType of "Scheduler".
-	if ( whichAds == SUBMITTOR_AD ) {
-		SetTargetTypeName( cad, SUBMITTER_ADTYPE );
-	}
-
 	UtcTime begin(true);
 
 	// Perform the query
@@ -561,8 +550,8 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 				 sock->type() == Stream::reli_sock ? "TCP" : "UDP" );
         return FALSE;
     }
-#if !defined(WANT_OLD_CLASSADS)
-	cad.RemoveExplicitTargetRefs();
+#if defined(ADD_TARGET_SCOPING)
+	RemoveExplicitTargetRefs( cad );
 #endif
 
     // cancel timeout --- collector engine sets up its own timeout for
@@ -943,8 +932,8 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 											ClassAd *query,
 											List<ClassAd>* results)
 {
-#if !defined(WANT_OLD_CLASSADS)
-	query->RemoveExplicitTargetRefs();
+#if defined(ADD_TARGET_SCOPING)
+	RemoveExplicitTargetRefs( *query );
 #endif
 	// set up for hashtable scan
 	__query__ = query;
@@ -1608,9 +1597,15 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
             if (view_sock_timeslice.isTimeToRun()) {
                 dprintf(D_ALWAYS,"Connecting to CONDOR_VIEW_HOST %s\n", view_name);
 
-                view_sock_timeslice.setStartTimeNow();
+                // Only run timeslice timer for TCP, since connect on UDP 
+                // is instantaneous.
+                if (view_sock->type() == Stream::reli_sock) {
+	                view_sock_timeslice.setStartTimeNow();
+                }
                 view_coll->connectSock(view_sock,20);
-                view_sock_timeslice.setFinishTimeNow();
+                if (view_sock->type() == Stream::reli_sock) {
+	                view_sock_timeslice.setFinishTimeNow();
+                }
 
                 if (!view_sock->is_connected()) {
                     dprintf(D_ALWAYS,"Failed to connect to CONDOR_VIEW_HOST %s so not forwarding ad.\n", view_name);
@@ -1627,8 +1622,21 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
             raw_command = true;
         }
 
-        if (! view_coll->startCommand(cmd, view_sock, 20, NULL, NULL, raw_command)) {
-            dprintf( D_ALWAYS, "Can't send command %d to View Collector %s\n", cmd, view_name);
+        // Run timeslice timer if raw_command is false, since this means 
+        // startCommand() may need to initiate an authentication round trip 
+        // and thus could block if the remote view collector is unresponsive.
+        if ( raw_command == false ) {
+	        view_sock_timeslice.setStartTimeNow();
+        }
+        bool start_command_result = 
+			view_coll->startCommand(cmd, view_sock, 20, NULL, NULL, raw_command);
+        if ( raw_command == false ) {
+	        view_sock_timeslice.setFinishTimeNow();
+        }
+
+        if (! start_command_result ) {
+            dprintf( D_ALWAYS, "Can't send command %d to View Collector %s\n", 
+					cmd, view_name);
             view_sock->end_of_message();
             view_sock->close();
             continue;
@@ -1778,18 +1786,6 @@ CollectorUniverseStats::publish( const char *label, ClassAd *ad )
 void
 computeProjection(ClassAd *full_ad, SimpleList<MyString> *projectionList,StringList &expanded_projection) {
     projectionList->Rewind();
-
-	// CRUFT: Before 7.3.2, submitter ads had a MyType of
-	//   "Scheduler". The only way to tell the difference
-	//   was that submitter ads didn't have ATTR_NUM_USERS.
-	//   If we don't include ATTR_NUM_USERS in our projection,
-	//   older clients will morph scheduler ads into
-	//   submitter ads, regardless of MyType.
-	//   Before 7.7.3, submitter ads for parallel universe
-	//   jobs had a MyType of "Scheduler".
-	if (strcmp("Scheduler", GetMyTypeName(*full_ad)) == 0) {
-		expanded_projection.append(ATTR_NUM_USERS);
-	}
 
 		// For each expression in the list...
 	MyString attr;

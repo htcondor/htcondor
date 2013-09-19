@@ -278,7 +278,7 @@ calc_widths(AttrList * al, AttrList *target /*=NULL*/ )
 					std::string buff;
 					if ( fQuote || !result.IsStringValue( buff ) ) {
 						classad::ClassAdUnParser unparser;
-						unparser.SetOldClassAd( true );
+						unparser.SetOldClassAd( true, true );
 						unparser.Unparse( buff, val );
 					}
 					colval = buff.c_str();
@@ -297,9 +297,9 @@ calc_widths(AttrList * al, AttrList *target /*=NULL*/ )
 
 		case FLT_CUSTOM_FMT:
 			{
-				float floatValue;
-				if (al->EvalFloat(attr, target, floatValue)) {
-					colval = (fmt->ff)(floatValue , al, *fmt);
+				double realValue;
+				if (al->EvalFloat(attr, target, realValue)) {
+					colval = (fmt->ff)(realValue , al, *fmt);
 				}
 			}
 			break;
@@ -466,7 +466,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 	classad::Value result;
 	MyString  retval("");
 	int		intValue;
-	float 	floatValue;
+	double	realValue;
 	MyString stringValue;
 	const char*	bool_str = NULL;
 	char *value_from_classad = NULL;
@@ -615,7 +615,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 							bool fQuote = (fmt_info.fmt_letter == 'V');
 							if ( fQuote || !result.IsStringValue(buff) ) {
 								classad::ClassAdUnParser unparser;
-								unparser.SetOldClassAd( true );
+								unparser.SetOldClassAd( true, true );
 								unparser.Unparse( buff, result );
 							}
 							pszValue = buff.c_str();
@@ -658,7 +658,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 							// %v vs %V
 							if ( fQuote || !val.IsStringValue( buff ) ) {
 								classad::ClassAdUnParser unparser;
-								unparser.SetOldClassAd( true );
+								unparser.SetOldClassAd( true, true );
 								unparser.Unparse( buff, val );
 								stringValue.sprintf( tfmt, buff.c_str() );
 							}
@@ -687,8 +687,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 								stringValue.formatstr( fmt->printfFmt, 
 													 (int)d );
 							} else {
-								stringValue.formatstr( fmt->printfFmt, 
-													 (float)d );
+								stringValue.formatstr( fmt->printfFmt, d );
 							}
 							retval += stringValue;
 							break;
@@ -701,7 +700,7 @@ display (AttrList *al, AttrList *target /* = NULL */)
 													 i );
 							} else {
 								stringValue.formatstr( fmt->printfFmt, 
-													 (float)i );
+													 (double)i );
 							}
 							retval += stringValue;
 							break;
@@ -763,8 +762,8 @@ display (AttrList *al, AttrList *target /* = NULL */)
 				break;
 
 		  	case FLT_CUSTOM_FMT:
-				if( al->EvalFloat( attr, target, floatValue ) ) {
-					pszVal = (fmt->ff)(floatValue , al, *fmt);
+				if( al->EvalFloat( attr, target, realValue ) ) {
+					pszVal = (fmt->ff)(realValue , al, *fmt);
 				} else {
 					pszVal = alt;
 				}

@@ -593,19 +593,21 @@ sysapi_get_bsd_info( const char *tmp_opsys_short_name, const char *tmp_release)
 const char *
 sysapi_get_linux_info(void)
 {
-	char* info_str;
+	char* info_str = NULL;
 	FILE *my_fp;
-	const char * etc_issue_path = "/etc/issue";
+	const char * etc_issue_path[] = { "/etc/issue","/etc/redhat-release","/etc/issue.net",NULL };
+	int i;
 
+	for (i=0;etc_issue_path[i];i++) {
 	// read the first line only
-	my_fp = safe_fopen_wrapper_follow(etc_issue_path, "r");
+	my_fp = safe_fopen_wrapper_follow(etc_issue_path[i], "r");
 	if ( my_fp != NULL ) {
 		char tmp_str[200] = {0};
 		char *ret = fgets(tmp_str, sizeof(tmp_str), my_fp);
-		if (ret == 0) {
-			dprintf(D_FULLDEBUG, "Result of reading /etc/issue:  %s \n", ret);
+		if (ret == NULL) {
 			strcpy( tmp_str, "Unknown" );
-		}
+		} 
+		dprintf(D_FULLDEBUG, "Result of reading %s:  %s \n", etc_issue_path[i], tmp_str);
 		fclose(my_fp);
 
 		// trim trailing spaces and other cruft
@@ -626,10 +628,26 @@ sysapi_get_linux_info(void)
 				break;
 			}
 		}
-
+ 
 		info_str = strdup( tmp_str );
-
 	} else {
+		continue;
+	}
+	const char *temp_opsys_name = sysapi_find_linux_name( info_str );
+	ASSERT(temp_opsys_name);
+	if ( strcmp(temp_opsys_name,"LINUX")==0 ) {
+		// failed to find what we want in this issue file; try another
+		free(const_cast<char*>(temp_opsys_name));
+		free(info_str);
+		info_str = NULL;
+	} else {
+		// we found distro info in this line, stop searching
+		free(const_cast<char*>(temp_opsys_name));
+		break;
+	}
+	}
+	
+	if (!info_str) {
 		info_str = strdup( "Unknown" );
 	}
 

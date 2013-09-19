@@ -36,6 +36,9 @@ use Condor;
 use CondorUtils;
 use CondorPersonal;
 
+use base 'Exporter';
+
+our @EXPORT = qw(runCondorTool runToolNTimes);
 my %securityoptions =
 (
 "NEVER" => "1",
@@ -206,9 +209,10 @@ sub RegisterResult
     my $checkname = GetCheckName($caller_file,%args);
 
     my $testname = $args{test_name} || GetDefaultTestName();
+	print "RegisterResult: test name is <$testname>\n";
 
     my $result_str = $result == 1 ? "PASSED" : "FAILED";
-    debug( "\n\n$result_str check $checkname in test $testname\n\n", 1 );
+    debug( "\n$result_str check $checkname in test $testname\n\n", 1 );
     if( $result != 1 ) {
 	$test_failure_count += 1;
     }
@@ -273,7 +277,7 @@ sub SetExpected
 {
 	my $expected_ref = shift;
 	foreach my $line (@{$expected_ref}) {
-		debug( "$line\n", 2);
+		debug( "expected: $line\n", 2);
 	}
 	@expected_output = @{$expected_ref};
 }
@@ -282,7 +286,7 @@ sub SetSkipped
 {
 	my $skipped_ref = shift;
 	foreach my $line (@{$skipped_ref}) {
-		debug( "$line\n", 2);
+		debug( "skip: $line\n", 2);
 	}
 	@skipped_output_lines = @{$skipped_ref};
 }
@@ -386,6 +390,13 @@ sub RegisterShadow
     my $function_ref = shift || croak "missing function reference argument";
 
     $test{$handle}{"RegisterShadow"} = $function_ref;
+}
+sub RegisterImageUpdated
+{
+    my $handle = shift || croak "missing handle argument";
+    my $function_ref = shift || croak "missing function reference argument";
+
+    $test{$handle}{"RegisterImageUpdated"} = $function_ref;
 }
 sub RegisterWantError
 {
@@ -758,42 +769,60 @@ sub DoTest
 		# note 1/2/09 bt
 		# any exits cause monitor to never return allowing us
 		# to kill personal condor wrapping the test :-(
+# July 26, 2013
+#
+# Major architecture change as we used more callbacks for testing
+# I stumbled on value in the test which were to be changed by the callbacks were not being
+# changed. What was happening in DoTest was that we would fork and the child was
+# running monitor and that callbacks were changing the variables in the child's copy.
+# The process that is the test calling DoTest was simply waiting for the child to die
+# so it could clean up. Now The test switches to be doing the monitoring and the 
+# callbacks switch it back up to the test code for a bit. The monitor and the 
+# test had always been lock-steped anyways so getting rid of the child
+# has had little change except that call backs can be fully functional now.
 		
-		$monitorpid = fork();
-		if($monitorpid == 0) {
-			# child does monitor
-    		$monitorret = Condor::Monitor();
-
-			debug( "Monitor did return on its own status<<<$monitorret>>>\n",4);
-    		die "$handle: FAILURE (job never checkpointed)\n"
-			if $wants_checkpoint && $checkpoints < 1;
-
-			if(  $monitorret == 1 ) {
-				debug( "child happy to exit 0\n",4);
-				exit(0);
-			} else {
-				debug( "child not happy to exit 1\n",4);
-				exit(1);
-			}
+    	$monitorret = Condor::Monitor();
+		if(  $monitorret == 1 ) {
+			debug( "Monitor happy to exit 0\n",4);
 		} else {
-			# parent cleans up
-			$waitpid = waitpid($monitorpid, 0);
-			if($waitpid == -1) {
-				debug( "No such process <<$monitorpid>>\n",4);
-			} else {
-				$retval = $?;
-				debug( "Child status was <<$retval>>\n",4);
-				if( WIFEXITED( $retval ) && WEXITSTATUS( $retval ) == 0 )
-				{
-					debug( "Monitor done and status good!\n",4);
-					$retval = 1;
-				} else {
-					$status = WEXITSTATUS( $retval );
-					debug( "Monitor done and status bad<<$status>>!\n",4);
-					$retval = 0;
-				}
-			}
+			debug( "Monitor not happy to exit 1\n",4);
 		}
+		$retval = $monitorret;
+# 		$monitorpid = fork();
+# 		if($monitorpid == 0) {
+# 			# child does monitor
+#     		$monitorret = Condor::Monitor();
+
+# 			debug( "Monitor did return on its own status<<<$monitorret>>>\n",4);
+#     		die "$handle: FAILURE (job never checkpointed)\n"
+# 			if $wants_checkpoint && $checkpoints < 1;
+
+# 			if(  $monitorret == 1 ) {
+# 				debug( "child happy to exit 0\n",4);
+# 				exit(0);
+# 			} else {
+# 				debug( "child not happy to exit 1\n",4);
+# 				exit(1);
+# 			}
+# 		} else {
+# 			# parent cleans up
+# 			$waitpid = waitpid($monitorpid, 0);
+# 			if($waitpid == -1) {
+# 				debug( "No such process <<$monitorpid>>\n",4);
+# 			} else {
+# 				$retval = $?;
+# 				debug( "Child status was <<$retval>>\n",4);
+# 				if( WIFEXITED( $retval ) && WEXITSTATUS( $retval ) == 0 )
+# 				{
+# 					debug( "Monitor done and status good!\n",4);
+# 					$retval = 1;
+# 				} else {
+# 					$status = WEXITSTATUS( $retval );
+# 					debug( "Monitor done and status bad<<$status>>!\n",4);
+# 					$retval = 0;
+# 				}
+# 			}
+# 		}
 	}
 
 	debug( "************** condor_monitor back ************************ \n",4);
@@ -956,6 +985,18 @@ sub CheckRegistrations
     if( defined $test{$handle}{"RegisterShadow"} )
     {
 	Condor::RegisterShadow( $test{$handle}{"RegisterShadow"} );
+    }
+    else
+    {
+	Condor::RegisterShadow( sub {
+	    my %info = @_;
+	    die "$handle: FAILURE (got unexpected shadow exceptions)\n";
+	} );
+    }
+
+    if( defined $test{$handle}{"RegisterImageUpdated"} )
+    {
+	Condor::RegisterImageUpdated( $test{$handle}{"RegisterImageUpdated"} );
     }
 
     if( defined $test{$handle}{"RegisterWantError"} )
@@ -1427,23 +1468,39 @@ sub runCondorTool
 	my $quiet = shift;
 	my $options = shift;
 	my $count = 0;
+	my %altoptions = ();
+
+	# provide an expect_result=>ANY as a hash reference options
+	$altoptions{expect_result} = \&ANY;
+	if(defined $options) {
+		#simply use altoptions
+		${$options}{expect_result} = \&ANY;
+	} else {
+		$options = \%altoptions;
+	}
+
+	# Add a message to runcmd output
+	${$options}{emit_string} = "runCondorTool: Attempt: <$count>";
+	#Condor::DebugLevel(4);
 
 	# clean array before filling
 
-	my $attempts = 6;
+	my $attempts = 15;
 	$count = 0;
 	my $hashref;
 	while( $count < $attempts) {
+		#print "runCondorTool: Attempt: <$count>\n";
 		@{$arrayref} = (); #empty return array...
 		my @tmparray;
 		debug( "Try command <$cmd>\n",4);
 		#open(PULL, "_condor_TOOL_TIMEOUT_MULTIPLIER=4 $cmd 2>$catch |");
 
-		$hashref = runcmd("_condor_TOOL_TIMEOUT_MULTIPLIER=4 $cmd", $options);
+		$hashref = runcmd("_condor_TOOL_TIMEOUT_MULTIPLIER=10 $cmd", $options);
 		my @output =  @{${$hashref}{"stdout"}};
 		my @error =  @{${$hashref}{"stderr"}};
 
 		$status = ${$hashref}{"exitcode"};
+		#print "runCondorTool: Status was <$status>\n";
 		debug("Status is $status after command\n",4);
 		if( $status != 0 ) {
 				#print "************* std out ***************\n";
@@ -1476,17 +1533,59 @@ sub runCondorTool
 			my $current_time = time;
 			$delta_time = $current_time - $start_time;
 			debug("runCondorTool: its been $delta_time since call\n",4);
+			#Condor::DebugLevel(2);
 			return(1);
 		}
 		$count = $count + 1;
 		debug("runCondorTool: iteration<$count> failed sleep 10 * $count \n",1);
+		my $delaynow = 10*$count;
+		if(!defined $quiet) {
+			print "runCondorTool: this delay <$delaynow>\n";
+		}
 		sleep((10*$count));
 	}
 	debug( "runCondorTool: $cmd failed!\n",1);
+	#Condor::DebugLevel(2);
 
 	return(0);
 }
 
+sub runToolNTimes
+{
+	my $cmd = shift;
+    my $goal = shift;
+    my $wantoutput = shift;
+
+    my $count = 0;
+    my $stop = 0;
+    my @cmdout = ();
+    my @date = ();
+	my @outarrray;
+	my $cmdstatus = 0;
+    $stop = $goal;
+
+    while($count < $stop) {
+        @cmdout = ();
+		@outarrray = ();
+        @date = ();
+        @date = `date`;
+        chomp $date[0];
+        #print "$date[0] $cmd $count\n";
+        #@cmdout = `$cmd`;
+		$cmdstatus = runCondorTool($cmd, \@outarrray, 2);
+		if(!$cmdstatus) {
+			print "runCondorTool<$cmd> attempt<$count> SHOULD NOT fail!\n";
+		}
+
+        if(defined $wantoutput) {
+            foreach my $line (@outarrray) {
+                print "$line\n";
+            }
+        }
+        $count += 1;
+    }
+	return($cmdstatus);
+}
 
 # Lets be able to drop some extra information if runCondorTool
 # can not do what it is supposed to do....... short and full
@@ -1849,7 +1948,7 @@ sub SearchCondorLogMultiple
 	my $count = 0;
 	my $begin = 0;
 	my $foundanything = 0;
-	my $tolerance = 3;
+	#my $tolerance = 5;
 	my $done = 0;
 	while($found < $goal) {
        	CondorTest::debug("Searching Try $tried\n",2);
@@ -1917,24 +2016,24 @@ sub SearchCondorLogMultiple
 			last;
 		}
 		$tried += 1;
-		if($tried >= $timeout) {
-			if($tolerance == 0) {
-				CondorTest::debug("SearchCondorLogMultiple: About to fail from timeout!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",1);
-				if(defined $findcallback) {
-					&$findcallback("HitRetryLimit");
-				}
-				last;
-			} else {
-				if($foundanything > 0) {
-					CondorTest::debug("SearchCondorLogMultiple: Using builtin tolerance\n",1);
-					$tolerance -= 1;
-					$tried = 1;
-				} else {
-					$tolerance = 0;
-					$tried -= 2;
-				}
-			}
-		}
+		#if($tried >= $timeout) {
+			#if($tolerance == 0) {
+				#CondorTest::debug("SearchCondorLogMultiple: About to fail from timeout!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",1);
+				#if(defined $findcallback) {
+					#&$findcallback("HitRetryLimit");
+				#}
+				#last;
+			#} else {
+				#if($foundanything > 0) {
+					#CondorTest::debug("SearchCondorLogMultiple: Using builtin tolerance\n",1);
+					#$tolerance -= 1;
+					#$tried = 1;
+				#} else {
+					#$tolerance = 0;
+					#$tried -= 2;
+				#}
+			#}
+		#}
 	}
 	if($found < $goal) {
 		return(0);
@@ -2070,7 +2169,7 @@ sub PersonalCondorTest
 			$locconfig = shift @local;
 			my $locport = shift @local;
 			
-			debug("---local config is $locconfig and local port is $locport---\n",2);
+			debug("---local config is $locconfig and local port is $locport---\n",3);
 
 			#$ENV{CONDOR_CONFIG} = $locconfig;
 		}
@@ -2109,6 +2208,7 @@ sub findOutput
 sub debug {
     my $string = shift;
     my $level = shift;
+	#my ($package, $filename, $line) = caller();
     Condor::debug("<CondorTest> $string", $level);
 }
 
@@ -2214,10 +2314,12 @@ sub StartPersonal {
     debug("Starting Perosnal($$) for $testname/$paramfile/$version\n",2);
 
     my $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    print "$time: About to start a personal Condor in CondorTest::StartPersonal\n";
+    #print "$time: About to start a personal Condor in CondorTest::StartPersonal\n";
+	#print "Param file is <$paramfile> which contains:\n";
+	#system("cat $paramfile");
     my $condor_info = CondorPersonal::StartCondor( $testname, $paramfile ,$version);
     $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    print "$time: Finished starting personal Condor in CondorTest::StartPersonal\n";
+    #print "$time: Finished starting personal Condor in CondorTest::StartPersonal\n";
 
     my @condor_info = split /\+/, $condor_info;
     my $condor_config = shift @condor_info;
@@ -2225,10 +2327,10 @@ sub StartPersonal {
     my $collector_addr = CondorPersonal::FindCollectorAddress();
 
     $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    print "$time: Calling PersonalCondorInstance in CondorTest::StartPersonal\n";
+    #print "$time: Calling PersonalCondorInstance in CondorTest::StartPersonal\n";
     $personal_condors{$version} = new PersonalCondorInstance( $version, $condor_config, $collector_addr, 1 );
     $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    print "$time: Finished calling PersonalCondorInstance in CondorTest::StartPersonal\n";
+    #print "$time: Finished calling PersonalCondorInstance in CondorTest::StartPersonal\n";
 
     return($condor_info);
 }
@@ -2474,7 +2576,7 @@ sub AddFileTrace
 	print TF $buildentry;
 	close TF;
 
-	debug("\n$buildentry",2);
+	debug("\nFile Trace - $buildentry",2);
 }
 
 sub MoveCoreFile
@@ -2732,13 +2834,13 @@ sub VerifyNoJobsInState
 				$jobsstatus{suspended} = $7;
 				if($jobsstatus{$state} == $number){
                     $done = 1;
-					print "$number $state\n";
+					print "$number $state\n\n";
 					return($number)
 				}
             }
         }
         if($done == 0) {
-            print "Waiting for $number $state\n";
+            #print "Waiting for $number $state\n";
             sleep 1;
         }
     }

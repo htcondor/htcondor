@@ -55,7 +55,7 @@ if (WITH_CURL)
 							DEPENDS ${CURL_DEPENDS}
 							#-- Download Step ----------
 							DOWNLOAD_DIR ${CURL_STAGE}/dl
-							URL http://parrot.cs.wisc.edu/externals/curl-7.31.0.tar.gz
+							URL ${EXTERNALS_SOURCE_URL}/curl-7.31.0.tar.gz
 							#--Patch Step ----------
 							PATCH_COMMAND ${CURL_PATCH}
 							#--Configure step ----------

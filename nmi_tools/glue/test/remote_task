@@ -152,7 +152,10 @@ chdir($test_dir) || c_die("Can't chdir($test_dir): $!\n");
 # personal condor configured from release generic config files.
 out("About to run batch_test.pl");
 
-system("$perl_exe batch_test.pl -d $compiler -t $testname -b --isolated -v");
+# Now that we stash all debug messages, we'll only dump them all
+# when the test fails. This will be debugs at all levels.
+#system("$perl_exe batch_test.pl -d $compiler -t $testname -b --isolated -v");
+system("$perl_exe batch_test.pl -d $compiler -t $testname -b --isolated");
 my $batchteststatus = $?;
 
 # figure out here if the test passed or failed.  
@@ -208,30 +211,30 @@ else {
 # add test.out and test.err to run output if they exist
 
 # spit out the contents of the test.out file to the stdout of the task
-if( open(RES, '<', $test_out_path) ) {
-    out("\n\n----- Start of $test_out -----");
-    while(<RES>) {
-        print "$_";
-    }
-    close RES;
-    print "\n----- End of $test_out -----\n";
-}
-else {
-    out("\n\nERROR: failed to open $test_out_path: $!");
-}
+#if( open(RES, '<', $test_out_path) ) {
+    #out("\n\n----- Start of $test_out -----");
+    #while(<RES>) {
+        #print "$_";
+    #}
+    #close RES;
+    #print "\n----- End of $test_out -----\n";
+#}
+#else {
+    #out("\n\nERROR: failed to open $test_out_path: $!");
+#}
 
 # spit err the contents of the test.err file to the stdout of the task
-if( open(RES, '<', $test_err_path) ) {
-    out("\n\n----- Start of $test_err -----");
-    while(<RES>) {
-        print "$_";
-    }
-    close RES;
-    print "\n----- End of $test_err -----\n";
-}
-else {
-    out("\n\nERROR: failed to open $test_err_path: $!");
-}
+#if( open(RES, '<', $test_err_path) ) {
+    #out("\n\n----- Start of $test_err -----");
+    #while(<RES>) {
+        #print "$_";
+    #}
+    #close RES;
+    #print "\n----- End of $test_err -----\n";
+#}
+#else {
+    #out("\n\nERROR: failed to open $test_err_path: $!");
+#}
 
 exit $teststatus;
 

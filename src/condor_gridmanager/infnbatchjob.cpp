@@ -29,6 +29,7 @@
 #include "ipv6_hostname.h"
 #include "condor_netaddr.h"
 #include "directory.h"
+#include "spooled_job_files.h"
 
 #include "gridmanager.h"
 #include "infnbatchjob.h"
@@ -393,6 +394,7 @@ void INFNBatchJob::doEvaluateState()
 			if ( myResource->GahpIsRemote() ) {
 				// This job requires a transfer gahp
 				ASSERT( m_xfer_gahp );
+				bool already_started = m_xfer_gahp->isStarted();
 				if ( m_xfer_gahp->Startup() == false ) {
 					dprintf( D_ALWAYS, "(%d.%d) Error starting transfer GAHP\n",
 							 procID.cluster, procID.proc );
@@ -403,6 +405,17 @@ void INFNBatchJob::doEvaluateState()
 					jobAd->Assign( ATTR_HOLD_REASON, error_string.c_str() );
 					gmState = GM_HOLD;
 					break;
+				}
+				// Try creating the security session only when we first
+				// start up the FT GAHP.
+				// For now, failure to create the security session is
+				// not fatal. FT GAHPs older than 8.1.1 didn't have a
+				// CEDAR security session command and BOSCO had another
+				// way to authenticate FileTransfer connections.
+				if ( !already_started &&
+					 m_xfer_gahp->CreateSecuritySession() == false ) {
+					dprintf( D_ALWAYS, "(%d.%d) Error creating security session with transfer GAHP\n",
+							 procID.cluster, procID.proc );
 				}
 			}
 			if ( jobProxy ) {
@@ -520,9 +533,19 @@ void INFNBatchJob::doEvaluateState()
 					gmState = GM_HOLD;
 					break;
 				}
-				// TODO Can we determine the ft-gahp's Condor version?
-				CondorVersionInfo ver_info;
-				m_filetrans->setPeerVersion( ver_info );
+
+				// Set the Condor version of the FT GAHP. If we don't know
+				// its version, then assume it's pre-8.1.0.
+				// In 8.1, the file transfer protocol changed and we added
+				// a command to exchange Condor version strings with the
+				// FT GAHP.
+				const char *ver_str = m_xfer_gahp->getCondorVersion();
+				if ( ver_str && ver_str[0] ) {
+					m_filetrans->setPeerVersion( ver_str );
+				} else {
+					CondorVersionInfo ver( 8, 0, 0 );
+					m_filetrans->setPeerVersion( ver );
+				}
 			}
 
 			// If available, use SSH tunnel for file transfer connections.
@@ -749,9 +772,19 @@ void INFNBatchJob::doEvaluateState()
 					gmState = GM_HOLD;
 					break;
 				}
-				// TODO Can we determine the ft-gahp's Condor version?
-				CondorVersionInfo ver_info;
-				m_filetrans->setPeerVersion( ver_info );
+
+				// Set the Condor version of the FT GAHP. If we don't know
+				// its version, then assume it's pre-8.1.0.
+				// In 8.1, the file transfer protocol changed and we added
+				// a command to exchange Condor version strings with the
+				// FT GAHP.
+				const char *ver_str = m_xfer_gahp->getCondorVersion();
+				if ( ver_str && ver_str[0] ) {
+					m_filetrans->setPeerVersion( ver_str );
+				} else {
+					CondorVersionInfo ver( 8, 0, 0 );
+					m_filetrans->setPeerVersion( ver );
+				}
 
 				// Add extra remaps for the canonical stdout/err filenames.
 				// If using the FileTransfer object, the starter will rename the
@@ -1213,7 +1246,7 @@ BaseResource *INFNBatchJob::GetResource()
 
 ClassAd *INFNBatchJob::buildSubmitAd()
 {
-	MyString expr;
+	std::string expr;
 	ClassAd *submit_ad;
 	ExprTree *next_expr;
 
@@ -1247,27 +1280,18 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 	expr = "";
 	jobAd->LookupString( ATTR_JOB_REMOTE_IWD, expr );
-	if ( !expr.IsEmpty() ) {
+	if ( !expr.empty() ) {
 		submit_ad->Assign( ATTR_JOB_IWD, expr );
 	}
 
 	expr = "";
 	jobAd->LookupString( ATTR_BATCH_QUEUE, expr );
-	if ( !expr.IsEmpty() ) {
+	if ( !expr.empty() ) {
 		submit_ad->Assign( "Queue", expr );
 	}
 
-	// The blahp expects the Cmd attribute to contain the full pathname
-	// of the job executable.
-	jobAd->LookupString( ATTR_JOB_CMD, expr );
-	if ( expr.FindChar( '/' ) < 0 ) {
-		std::string fullpath;
-		submit_ad->LookupString( ATTR_JOB_IWD, fullpath );
-		formatstr_cat( fullpath, "/%s", expr.Value() );
-		submit_ad->Assign( ATTR_JOB_CMD, fullpath );
-	} else {
-		submit_ad->Assign( ATTR_JOB_CMD, expr );
-	}
+	GetJobExecutable( jobAd, expr );
+	submit_ad->Assign( ATTR_JOB_CMD, expr );
 
 	// The blahp expects the proxy attribute to contain the full pathname
 	// of the proxy file.
@@ -1275,7 +1299,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		if ( expr[0] != '/' ) {
 			std::string fullpath;
 			submit_ad->LookupString( ATTR_JOB_IWD, fullpath );
-			formatstr_cat( fullpath, "/%s", expr.Value() );
+			formatstr_cat( fullpath, "/%s", expr.c_str() );
 			submit_ad->Assign( ATTR_X509_USER_PROXY, fullpath );
 		} else {
 			submit_ad->Assign( ATTR_X509_USER_PROXY, expr );
@@ -1422,6 +1446,8 @@ ClassAd *INFNBatchJob::buildTransferAd()
 {
 	int index;
 	const char *attrs_to_copy[] = {
+		ATTR_CLUSTER_ID,
+		ATTR_PROC_ID,
 		ATTR_JOB_CMD,
 		ATTR_JOB_INPUT,
 		ATTR_TRANSFER_EXECUTABLE,

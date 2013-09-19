@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -87,7 +87,7 @@ std::string amazonURLEncode( const std::string & input )
             output.append( percentEncode );
         }
     }
-    
+
     return output;
 }
 
@@ -101,7 +101,7 @@ bool writeShortFile( const std::string & fileName, const std::string & contents 
         dprintf( D_ALWAYS, "Failed to open file '%s' for writing: '%s' (%d).\n", fileName.c_str(), strerror( errno ), errno );
         return false;
     }
-    
+
     unsigned long written = full_write( fd, contents.c_str(), contents.length() );
     close( fd );
     if( written != contents.length() ) {
@@ -109,12 +109,13 @@ bool writeShortFile( const std::string & fileName, const std::string & contents 
 				 fileName.c_str(), (unsigned long)contents.length(), written );
         return false;
     }
-    
+
     return true;
 }
 
 //
 // Utility function; inefficient.
+// FIXME: GT #3924.  Also, broken for binary data with embedded NULs.
 //
 bool readShortFile( const std::string & fileName, std::string & contents ) {
     int fd = safe_open_wrapper_follow( fileName.c_str(), O_RDONLY, 0600 );
@@ -123,10 +124,10 @@ bool readShortFile( const std::string & fileName, std::string & contents ) {
         dprintf( D_ALWAYS, "Failed to open file '%s' for reading: '%s' (%d).\n", fileName.c_str(), strerror( errno ), errno );
         return false;
     }
-        
+
     StatWrapper sw( fd );
     unsigned long fileSize = sw.GetBuf()->st_size;
-        
+
     char * rawBuffer = (char *)malloc( fileSize + 1 );
     assert( rawBuffer != NULL );
     unsigned long totalRead = full_read( fd, rawBuffer, fileSize );
@@ -136,11 +137,11 @@ bool readShortFile( const std::string & fileName, std::string & contents ) {
             fileName.c_str(), fileSize, totalRead );
         free( rawBuffer );
         return false;
-    }    
+    }
     rawBuffer[ fileSize ] = '\0';
     contents = rawBuffer;
     free( rawBuffer );
-    
+
     return true;
 }
 
@@ -157,7 +158,7 @@ bool readShortFile( const std::string & fileName, std::string & contents ) {
 //
 size_t appendToString( const void * ptr, size_t size, size_t nmemb, void * str ) {
     if( size == 0 || nmemb == 0 ) { return 0; }
-    
+
     std::string source( (const char *)ptr, size * nmemb );
     std::string * ssptr = (std::string *)str;
     ssptr->append( source );
@@ -165,7 +166,10 @@ size_t appendToString( const void * ptr, size_t size, size_t nmemb, void * str )
     return (size * nmemb);
 }
 
-AmazonRequest::AmazonRequest() { }
+AmazonRequest::AmazonRequest()
+{
+	includeResponseHeader = false;
+}
 
 AmazonRequest::~AmazonRequest() { }
 
@@ -188,7 +192,7 @@ bool AmazonRequest::SendRequest() {
     //      Action, Version, AWSAccessKeyId, Timestamp (or Expires),
     //      Signature, SignatureMethod, and SignatureVersion.
     //
-    
+
     if( query_parameters.find( "Action" ) == query_parameters.end() ) {
         this->errorCode = "E_INTERNAL";
         this->errorMessage = "No action specified in request.";
@@ -245,21 +249,21 @@ bool AmazonRequest::SendRequest() {
             return false;
         }
         if( keyID[ keyID.length() - 1 ] == '\n' ) { keyID.erase( keyID.length() - 1 ); }
-    }        
+    }
     query_parameters.insert( std::make_pair( "AWSAccessKeyId", keyID ) );
 
     //
     // This implementation computes signature version 2,
     // using the "HmacSHA256" method.
-    // 
+    //
     query_parameters.insert( std::make_pair( "SignatureVersion", "2" ) );
     query_parameters.insert( std::make_pair( "SignatureMethod", "HmacSHA256" ) );
-    
+
     //
     // This implementation was written against the 2010-11-15 documentation.
     //
     // query_parameters.insert( std::make_pair( "Version", "2010-11-15" ) );
-    
+
     // Upgrading (2012-10-01 is the oldest version that will work) allows us
     // to report the Spot Instance 'status-code's, which are much more
     // useful than the status codes.  *sigh*
@@ -281,28 +285,28 @@ bool AmazonRequest::SendRequest() {
      * http://docs.amazonwebservices.com/AWSEC2/2010-11-15/DeveloperGuide/using-query-api.html
      *
      */
-        
+
     // Step 1: Create the canonicalized query string.
     std::string canonicalizedQueryString;
     AttributeValueMap encodedParameters;
     AttributeValueMap::const_iterator i;
     for( i = query_parameters.begin(); i != query_parameters.end(); ++i ) {
         // Step 1A: The map sorts the query parameters for us.
-        
+
         // Step 1B: Encode the parameter names and values.
         std::string name = amazonURLEncode( i->first );
         std::string value = amazonURLEncode( i->second );
         encodedParameters.insert( std::make_pair( name, value ) );
-        
+
         // Step 1C: Separate parameter names from values with '='.
         canonicalizedQueryString += name + '=' + value;
-        
+
         // Step 1D: Separate name-value pairs with '&';
         canonicalizedQueryString += '&';
     }
     // We'll always have a superflous trailing ampersand.
     canonicalizedQueryString.erase( canonicalizedQueryString.end() - 1 );
-    
+
     // Step 2: Create the string to sign.
     std::string stringToSign = "GET\n"
                              + valueOfHostHeaderInLowercase + "\n"
@@ -329,7 +333,7 @@ bool AmazonRequest::SendRequest() {
         }
         if( saKey[ saKey.length() - 1 ] == '\n' ) { saKey.erase( saKey.length() - 1 ); }
     }
-    
+
     unsigned int mdLength = 0;
     unsigned char messageDigest[EVP_MAX_MD_SIZE];
     const unsigned char * hmac = HMAC( EVP_sha256(), saKey.c_str(), saKey.length(),
@@ -340,12 +344,12 @@ bool AmazonRequest::SendRequest() {
         dprintf( D_ALWAYS, "Unable to calculate SHA256 HMAC to sign query, failing.\n" );
         return false;
     }
-    
+
     // Step 4: "Convert the resulting value to base64."
     char * base64Encoded = condor_base64_encode( messageDigest, mdLength );
     std::string signatureInBase64 = base64Encoded;
     free( base64Encoded );
-    
+
     // Generate the final URI.
     canonicalizedQueryString += "&Signature=" + amazonURLEncode( signatureInBase64 );
     std::string finalURI;
@@ -359,7 +363,7 @@ bool AmazonRequest::SendRequest() {
         finalURI = this->serviceURL + "?" + canonicalizedQueryString;
     }
     dprintf( D_FULLDEBUG, "Request URI is '%s'\n", finalURI.c_str() );
-    
+
     // curl_global_init() is not thread-safe.  However, it's safe to call
     // multiple times.  Therefore, we'll just call it before we drop the
     // mutex, since we know that means only one thread is running.
@@ -370,7 +374,7 @@ bool AmazonRequest::SendRequest() {
         dprintf( D_ALWAYS, "curl_global_init() failed, failing.\n" );
         return false;
     }
-    
+
     CURL * curl = curl_easy_init();
     if( curl == NULL ) {
         this->errorCode = "E_CURL_LIB";
@@ -397,7 +401,7 @@ bool AmazonRequest::SendRequest() {
         this->errorMessage = "curl_easy_setopt( CURLOPT_VERBOSE ) failed.";
         dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_VERBOSE ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
-        return false;    
+        return false;
     }
 */
 
@@ -418,7 +422,18 @@ bool AmazonRequest::SendRequest() {
             rv, curl_easy_strerror( rv ) );
         return false;
     }
-    
+
+	if ( includeResponseHeader ) {
+		rv = curl_easy_setopt( curl, CURLOPT_HEADER, 1 );
+		if( rv != CURLE_OK ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_easy_setopt( CURLOPT_HEADER ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_HEADER ) failed (%d): '%s', failing.\n",
+					 rv, curl_easy_strerror( rv ) );
+			return false;
+		}
+	}
+
     rv = curl_easy_setopt( curl, CURLOPT_WRITEFUNCTION, & appendToString );
     if( rv != CURLE_OK ) {
         this->errorCode = "E_CURL_LIB";
@@ -426,7 +441,7 @@ bool AmazonRequest::SendRequest() {
         dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_WRITEFUNCTION ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
         return false;
-    }    
+    }
 
     rv = curl_easy_setopt( curl, CURLOPT_WRITEDATA, & this->resultString );
     if( rv != CURLE_OK ) {
@@ -436,7 +451,7 @@ bool AmazonRequest::SendRequest() {
             rv, curl_easy_strerror( rv ) );
         return false;
     }
-    
+
     //
     // Set security options.
     //
@@ -446,7 +461,7 @@ bool AmazonRequest::SendRequest() {
     // NB: Contrary to libcurl's manual, it doesn't strdup() strings passed
     // to it, so they MUST remain in scope until after we call
     // curl_easy_cleanup().  Otherwise, curl_perform() will fail with
-    // a completely bogus error, number 60, claiming that there's a 
+    // a completely bogus error, number 60, claiming that there's a
     // 'problem with the SSL CA cert'.
     std::string CAFile = "";
     std::string CAPath = "";
@@ -460,7 +475,7 @@ bool AmazonRequest::SendRequest() {
     if( x509_ca_file != NULL ) {
         CAFile = x509_ca_file;
     }
-        
+
     if( CAPath.empty() ) {
         char * soap_ssl_ca_dir = getenv( "SOAP_SSL_CA_DIR" );
         if( soap_ssl_ca_dir != NULL ) {
@@ -480,12 +495,12 @@ bool AmazonRequest::SendRequest() {
         dprintf( D_FULLDEBUG, "Setting CA path to '%s'\n", CAPath.c_str() );
         SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAPATH, CAPath.c_str() );
     }
-        
+
     if( ! CAFile.empty() ) {
         dprintf( D_FULLDEBUG, "Setting CA file to '%s'\n", CAFile.c_str() );
         SET_CURL_SECURITY_OPTION( curl, CURLOPT_CAINFO, CAFile.c_str() );
     }
-        
+
     if( setenv( "OPENSSL_ALLOW_PROXY", "1", 0 ) != 0 ) {
         dprintf( D_FULLDEBUG, "Failed to set OPENSSL_ALLOW_PROXY.\n" );
     }
@@ -502,7 +517,7 @@ bool AmazonRequest::SendRequest() {
         SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLCERTTYPE, "PEM" );
         SET_CURL_SECURITY_OPTION( curl, CURLOPT_SSLCERT, this->accessKeyFile.c_str() );
     }
-            
+
     amazon_gahp_release_big_mutex();
     pthread_mutex_lock( & globalCurlMutex );
     rv = curl_easy_perform( curl );
@@ -527,9 +542,9 @@ bool AmazonRequest::SendRequest() {
             rv, curl_easy_strerror( rv ) );
         return false;
     }
-            
+
     curl_easy_cleanup( curl );
-    
+
     if( responseCode != 200 ) {
         // this->errorCode = "E_HTTP_RESPONSE_NOT_200";
         formatstr( this->errorCode, "E_HTTP_RESPONSE_NOT_200 (%lu)", responseCode );
@@ -542,7 +557,7 @@ bool AmazonRequest::SendRequest() {
         dprintf( D_ALWAYS, "Failure response text was '%s'.\n", resultString.c_str() );
         return false;
     }
-    
+
     dprintf( D_FULLDEBUG, "Response was '%s'\n", resultString.c_str() );
     return true;
 }
@@ -662,7 +677,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
 
     int requestID;
     get_int( argv[1], & requestID );
-    
+
     if( ! verify_min_number_args( argc, 14 ) ) {
         result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
         dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
@@ -680,7 +695,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     vmStartRequest.query_parameters[ "MinCount" ] = "1";
     vmStartRequest.query_parameters[ "MaxCount" ] = "1";
 	vmStartRequest.query_parameters[ "InstanceInitiatedShutdownBehavior" ] = "terminate";
-    
+
     // Fill in optional parameters.
     if( strcasecmp( argv[6], NULLSTRING ) ) {
         vmStartRequest.query_parameters[ "KeyName" ] = argv[6];
@@ -693,11 +708,11 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     if( strcasecmp( argv[10], NULLSTRING ) ) {
         vmStartRequest.query_parameters[ "Placement.AvailabilityZone" ] = argv[10];
     }
-    
+
     if( strcasecmp( argv[11], NULLSTRING ) ) {
         vmStartRequest.query_parameters[ "SubnetId" ] = argv[11];
     }
-    
+
     if( strcasecmp( argv[12], NULLSTRING ) ) {
         vmStartRequest.query_parameters[ "PrivateIpAddress" ] = argv[12];
     }
@@ -710,7 +725,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
         std::ostringstream groupName;
         groupName << "SecurityGroup." << ( i - 13 + 1 );
         vmStartRequest.query_parameters[ groupName.str() ] = argv[ i ];
-    }    
+    }
 
     //
     // Handle user data.
@@ -727,14 +742,28 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
             dprintf( D_ALWAYS, "Failed to read userdata file '%s'.\n", udFileName.c_str() );
             return false;
             }
-        buffer += udFileContents;            
+        buffer += udFileContents;
     }
     if( ! buffer.empty() ) {
         char * base64Encoded = condor_base64_encode( (const unsigned char *)buffer.c_str(), buffer.length() );
+
+        // OpenNebula barfs on embedded newlines in this data.
+        char * read = base64Encoded;
+        char * write = base64Encoded;
+        for( ; * read != '\0'; ++read ) {
+            char tmp = * read;
+            // We may need to check for \r on Windows (depends on OpenSSL).
+            if( tmp != '\n' ) {
+                * write = tmp;
+                ++write;
+            }
+        }
+        * write = '\0';
+
         vmStartRequest.query_parameters[ "UserData" ] = base64Encoded;
         free( base64Encoded );
     }
-    
+
     // Send the request.
     if( ! vmStartRequest.SendRequest() ) {
         result_string = create_failure_result( requestID,
@@ -1649,8 +1678,11 @@ bool AmazonVMStatusAll::workerFunction(char **argv, int argc, std::string &resul
                 AmazonStatusResult & asr = saRequest.results[i];
                 resultList.append( asr.instance_id.c_str() );
                 resultList.append( asr.status.c_str() );
-                resultList.append( asr.ami_id.c_str() );                
+                // For GT #3682: only one of the following two may be null.
                 resultList.append( nullStringIfEmpty( asr.clientToken ) );
+                resultList.append( nullStringIfEmpty( asr.keyname ) );
+                resultList.append( nullStringIfEmpty( asr.stateReasonCode ) );
+                resultList.append( nullStringIfEmpty( asr.public_dns ) );
             }
             result_string = create_success_result( requestID, & resultList );
         }
@@ -2138,4 +2170,123 @@ bool AmazonAttachVolume::workerFunction(char **argv, int argc, std::string &resu
 
     return true;
 	
+}
+
+
+// ---------------------------------------------------------------------------
+
+// This command issues a DescribeKeyPairs request and analyzes the
+// response to detect which of several popular implementations of EC2
+// the server is running.
+// The types detected are Amazon, OpenStack, Nimbus, and Eucalyptus.
+// If the server's response doesn't match any of these types, then
+// "Unknown" is returned.
+// The following checks are performed:
+// * Amazon's header includes "Server: AmazonEC2"
+// * Nimbus's header includes "Server: Jetty"
+// * Eucalyptus's body doesn't include an "<?xml ...?>" tag
+// * Amazon and Nimbus's <?xml?> tag includes version="1.0" and
+//   encoding="UTF-8" properties
+// * Nimbus and Eucalyptus's response doesn't include a <requestId> tag
+// * Eucalyptus's response puts all XML elements in a "euca" scope
+
+AmazonVMServerType::AmazonVMServerType() { }
+
+AmazonVMServerType::~AmazonVMServerType() { }
+
+bool AmazonVMServerType::SendRequest() {
+	bool result = AmazonRequest::SendRequest();
+	if( result ) {
+		serverType = "Unknown";
+		size_t idx = this->resultString.find( "\r\n\r\n" );
+		if ( idx == std::string::npos ) {
+			return result;
+		}
+
+		std::string header = this->resultString.substr( 0, idx + 4 );
+		std::string body = this->resultString.substr( idx + 4 );
+
+		bool server_amazon = false;
+		bool server_jetty = false;
+		bool xml_tag = false;
+		bool xml_encoding = false;
+		bool request_id = false;
+		bool euca_tag = false;
+
+		if ( header.find( "Server: AmazonEC2" ) != std::string::npos ) {
+			server_amazon = true;
+		}
+		if ( header.find( "Server: Jetty" ) != std::string::npos ) {
+			server_jetty = true;
+		}
+		if ( body.find( "<?xml " ) != std::string::npos ) {
+			xml_tag = true;
+		}
+		if ( body.find( "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" ) != std::string::npos ) {
+			xml_encoding = true;
+		}
+		if ( body.find( "<requestId>" ) != std::string::npos ) {
+			request_id = true;
+		}
+		if ( body.find( "<euca:Describe" ) != std::string::npos ) {
+			euca_tag = true;
+		}
+
+		if ( server_amazon && !server_jetty && xml_tag &&
+			 xml_encoding && request_id && !euca_tag ) {
+			serverType = "Amazon";
+		} else if ( !server_amazon && !server_jetty && xml_tag &&
+					!xml_encoding && request_id && !euca_tag ) {
+			serverType = "OpenStack";
+		} else if ( !server_amazon && server_jetty && xml_tag &&
+					xml_encoding && !request_id && !euca_tag ) {
+			serverType = "Nimbus";
+		} else if ( !server_amazon && !server_jetty && !xml_tag &&
+					!xml_encoding && !request_id && euca_tag ) {
+			serverType = "Eucalyptus";
+		}
+	}
+	return result;
+}
+
+// Expecting:EC2_VM_SERVER_TYPE <req_id> <serviceurl> <accesskeyfile> <secretkeyfile>
+bool AmazonVMServerType::workerFunction(char **argv, int argc, std::string &result_string) {
+	assert( strcmp( argv[0], "EC2_VM_SERVER_TYPE" ) == 0 );
+
+	// Uses the Query API function 'DescribeKeyPairs', as documented at
+	// http://docs.amazonwebservices.com/AWSEC2/latest/APIReference/ApiReference-query-DescribeKeyPairs.html
+
+	int requestID;
+	get_int( argv[1], & requestID );
+
+	if( ! verify_min_number_args( argc, 5 ) ) {
+		result_string = create_failure_result( requestID, "Wrong_Argument_Number" );
+		dprintf( D_ALWAYS, "Wrong number of arguments (%d should be >= %d) to %s\n",
+				 argc, 5, argv[0] );
+		return false;
+	}
+
+	// Fill in required attributes & parameters.
+	AmazonVMServerType serverTypeRequest;
+	serverTypeRequest.serviceURL = argv[2];
+	serverTypeRequest.accessKeyFile = argv[3];
+	serverTypeRequest.secretKeyFile = argv[4];
+	serverTypeRequest.query_parameters[ "Action" ] = "DescribeKeyPairs";
+
+	// We need the header in the response to help determine what
+	// implementation we're talking with.
+	serverTypeRequest.includeResponseHeader = true;
+
+	// Send the request.
+	if( ! serverTypeRequest.SendRequest() ) {
+		result_string = create_failure_result( requestID,
+										serverTypeRequest.errorMessage.c_str(),
+										serverTypeRequest.errorCode.c_str() );
+	} else {
+		StringList resultList;
+		resultList.append( serverTypeRequest.serverType.c_str() );
+		result_string = create_success_result( requestID, & resultList );
+	}
+
+	return true;
 }

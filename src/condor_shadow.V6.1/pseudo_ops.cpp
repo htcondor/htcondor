@@ -37,6 +37,12 @@ extern BaseShadow *Shadow;
 extern RemoteResource *thisRemoteResource;
 extern RemoteResource *parallelMasterResource;
 
+static void append_buffer_info( MyString &url, const char *method, char const *path );
+static int use_append( const char *method, const char *path );
+static int use_compress( const char *method, const char *path );
+static int use_fetch( const char *method, const char *path );
+static int use_local_access( const char *file );
+
 int
 pseudo_register_machine_info(char * /* uiddomain */, char * /* fsdomain */, 
 							 char * starterAddr, char *full_hostname )
@@ -271,6 +277,7 @@ int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 	MyString	full_path;
 	MyString	remap;
 	MyString urlbuf;
+	const char	*method = NULL;
 
 	dprintf( D_SYSCALLS, "\tlogical_name = \"%s\"\n", logical_name );
 
@@ -318,12 +325,113 @@ int pseudo_get_file_info_new( const char *logical_name, char *&actual_url )
 		full_path = "/usr/lib/nls/C/strerror.cat\0";
 #endif
 
+	if( use_local_access(full_path.Value()) ) {
+		method = "local";
+	} else {
+		method = "remote";
+	}
+
+	if( use_fetch(method,full_path.Value()) ) {
+		urlbuf += "fetch:";
+	}
+
+	if( use_compress(method,full_path.Value()) ) {
+		urlbuf += "compress:";
+	}
+
+	append_buffer_info(urlbuf,method,full_path.Value());
+
+	if( use_append(method,full_path.Value()) ) {
+		urlbuf += "append:";
+	}
+
+	if (method) {
+		urlbuf += method;
+		urlbuf += ":";
+	}
 	urlbuf += full_path;
 	actual_url = strdup(urlbuf.Value());
 
 	dprintf(D_SYSCALLS,"\tactual_url: %s\n",actual_url);
 
 	return 0;
+}
+
+static void append_buffer_info( MyString &url, const char *method, char const *path )
+{
+	MyString buffer_list;
+	MyString buffer_string;
+	MyString dir;
+	MyString file;
+	int s,bs,ps;
+	int result;
+
+	filename_split(path,dir,file);
+
+	/* Do not buffer special device files, whether local or remote */
+	if(!strncmp(path,"/dev/",5)) return;
+
+	/* Get the default buffer setting */
+	pseudo_get_buffer_info( &s, &bs, &ps );
+
+	/* Now check for individual file overrides */
+	/* These lines have the same syntax as a remap list */
+
+	if(Shadow->getJobAd()->LookupString(ATTR_BUFFER_FILES,buffer_list)) {
+		if( filename_remap_find(buffer_list.Value(),path,buffer_string) ||
+		    filename_remap_find(buffer_list.Value(),file.Value(),buffer_string) ) {
+
+			/* If the file is merely mentioned, turn on the default buffer */
+			url += "buffer:";
+
+			/* If there is also a size setting, use that */
+			result = sscanf(buffer_string.Value(),"(%d,%d)",&s,&bs);
+			if( result==2 ) url += buffer_string;
+
+			return;
+		}
+	}
+
+	/* Turn on buffering if the value is set and is not special or local */
+	/* In this case, use the simple syntax 'buffer:' so as not to confuse old libs */
+
+	if( s>0 && bs>0 && method && strcmp(method,"local") && strcmp(method,"special")  ) {
+		url += "buffer:";
+	}
+}
+
+/* Return true if this JobAd attribute contains this path */
+
+static int attr_list_has_file( const char *attr, const char *path )
+{
+	char const *file;
+	MyString str;
+
+	file = condor_basename(path);
+
+	Shadow->getJobAd()->LookupString(attr,str);
+	StringList list(str.Value());
+
+	if( list.contains_withwildcard(path) || list.contains_withwildcard(file) ) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+static int use_append( const char * /* method */, const char *path )
+{
+	return attr_list_has_file( ATTR_APPEND_FILES, path );
+}
+
+static int use_compress( const char * /* method */, const char *path )
+{
+	return attr_list_has_file( ATTR_COMPRESS_FILES, path );
+}
+
+static int use_fetch( const char * /* method */, const char *path )
+{
+	return attr_list_has_file( ATTR_FETCH_FILES, path );
 }
 
 /*
@@ -349,6 +457,14 @@ int pseudo_get_buffer_info( int *bytes_out, int *block_size_out, int *prefetch_b
 	dprintf(D_SYSCALLS,"\tbuffer configuration is bytes=%d block_size=%d\n",bytes, block_size );
 
 	return 0;
+}
+
+static int use_local_access( const char *file )
+{
+	return
+		!strcmp(file,"/dev/null") ||
+		!strcmp(file,"/dev/zero") ||
+		attr_list_has_file( ATTR_LOCAL_FILES, file );
 }
 
 int

@@ -371,10 +371,10 @@ Email::writeExit( ClassAd* ad, int exit_reason )
 	int q_date = 0;
 	ad->LookupInteger( ATTR_Q_DATE, q_date );
 	
-	float remote_sys_cpu = 0.0;
+	double remote_sys_cpu = 0.0;
 	ad->LookupFloat( ATTR_JOB_REMOTE_SYS_CPU, remote_sys_cpu );
 	
-	float remote_user_cpu = 0.0;
+	double remote_user_cpu = 0.0;
 	ad->LookupFloat( ATTR_JOB_REMOTE_USER_CPU, remote_user_cpu );
 	
 	int image_size = 0;
@@ -383,7 +383,7 @@ Email::writeExit( ClassAd* ad, int exit_reason )
 	int shadow_bday = 0;
 	ad->LookupInteger( ATTR_SHADOW_BIRTHDATE, shadow_bday );
 	
-	float previous_runs = 0;
+	double previous_runs = 0;
 	ad->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, previous_runs );
 	
 	time_t arch_time=0;	/* time_t is 8 bytes some archs and 4 bytes on other

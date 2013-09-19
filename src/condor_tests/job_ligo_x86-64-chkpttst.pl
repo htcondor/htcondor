@@ -66,8 +66,12 @@ $ExitSuccess = sub {
 	}
 };
 
+# We can be more clever about this later.
+$CheckpointSuccess = sub { CondorTest::AddCheckpoint(); return 0; };
 
 CondorTest::RegisterExitedSuccess( $testname, $ExitSuccess );
+CondorTest::RegisterEvictedWithCheckpoint( $testname, $CheckpointSuccess );
+
 
 if( CondorTest::RunTest($testname, $cmd, 1) ) {
     CondorTest::debug("$testname: SUCCESS\n",1);

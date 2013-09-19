@@ -167,7 +167,7 @@ The job always waits 60 seconds before
 beginning execution:
 
 \begin{verbatim} 
-   deferral_time = (CurrentTime + 60)
+   deferral_time = (time() + 60)
 \end{verbatim}
 
 In this example, assume that the deferral time is 45 seconds
@@ -428,11 +428,11 @@ following pseudo-code boolean expression evaluates to \Expr{True}:
 
 \footnotesize
 \begin{verbatim}
-   ( CurrentTime + SCHEDD_INTERVAL ) >= ( DeferralTime - CronPrepTime )
+   ( time() + SCHEDD_INTERVAL ) >= ( DeferralTime - CronPrepTime )
 \end{verbatim}
 \normalsize
 
-If the \Attr{CurrentTime} plus the number of seconds 
+If the \Attr{time()} plus the number of seconds 
 until the next time HTCondor checks 
 the job queue is greater than or equal to the time that the job 
 should be submitted to the execution machine, 

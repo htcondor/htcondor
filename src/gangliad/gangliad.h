@@ -48,9 +48,11 @@ class GangliaD: public StatsD {
  private:
 	unsigned m_tmax; // max time between updates
 	unsigned m_dmax; // max time to deletion of metrics that are not updated
+	std::string m_ganglia_libname;
 	Ganglia_pool m_ganglia_context;
 	Ganglia_gmond_config m_ganglia_config;
 	Ganglia_udp_send_channels m_ganglia_channels;
+	bool m_ganglia_noop;
 };
 
 #endif

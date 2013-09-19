@@ -74,6 +74,7 @@ my $AbortCallback;
 my $SuspendedCallback;
 my $UnsuspendedCallback;
 my $ShadowCallback;
+my $ImageUpdatedCallback;
 my $HoldCallback;
 my $ReleaseCallback;
 my $DisconnectedCallback;
@@ -108,6 +109,7 @@ sub Reset
     undef $ExitedAbnormalCallback;
     undef $AbortCallback;
     undef $ShadowCallback;
+	undef $ImageUpdatedCallback;
     undef $HoldCallback;
     undef $ReleaseCallback;
     undef $DisconnectedCallback;
@@ -507,6 +509,11 @@ sub RegisterAbort
     my $sub = shift || croak "missing argument";
     $AbortCallback = $sub;
 }
+sub RegisterImageUpdated
+{
+    my $sub = shift || croak "missing argument";
+    $ImageUpdatedCallback = $sub;
+}
 sub RegisterShadow
 {
     my $sub = shift || croak "missing argument";
@@ -599,6 +606,17 @@ sub IsAbsolutePath {
 
 # spawn process to monitor the submit log file and execute callbacks
 # upon seeing registered events
+# July 26, 2013
+#
+# Major architecture change as we used more callbacks for testing
+# I stumbled on value in the test which were to be changed by the callbacks were not being
+# changed. What was happening in DoTest was that we would fork and the child was
+# running monitor and that callbacks were changing the variables in the child's copy.
+# The process that is the test calling DoTest was simply waiting for the child to die
+# so it could clean up. Now The test switches to be doing the monitoring and the 
+# callbacks switch it back up to the test code for a bit. The monitor and the 
+# test had always been lock-steped anyways so getting rid of the child
+# has had little change except that call backs can be fully functional now.
 sub Monitor
 {
     my $timeout = shift;
@@ -606,7 +624,6 @@ sub Monitor
     my $line;
     #my %info;
 	my $timestamp = 0;
-    my $parent_pid = getppid();
 
     debug( "Entering Monitor\n" ,5);
 
@@ -683,11 +700,6 @@ sub Monitor
 	while( ! defined $line )
 	{
 		sleep 2;
-		if( getppid() != $parent_pid )
-		{
-		    print "\nCondor::Monitor: our parent pid $parent_pid has gone away.  Aborting.\n";
-		    return 0;
-		}
 
 		if(defined $TimedCallback)
 		{
@@ -873,6 +885,64 @@ sub Monitor
 	    next LINE;
 	}
 
+	# 006: Image Size Updated
+	if( $line =~ /^006\s+\(0*(\d+)\.0*(\d+).*?Image\s+size\s+of\s+job\s+updated:\s+(\d+)\s*$/ )
+	{
+	    $info{'cluster'} = $1;
+	    $info{'job'} = $2;
+		$info{'imagesize'} = $3;
+
+	    debug( "Saw Image Size Update <$3>\n" ,2);
+		print "Saw Image Size Update <$3>\n";
+
+	    # read next line to see current Megs
+	    $line = <SUBMIT_LOG>;
+		while( ! defined $line )
+		{
+			sleep 2;
+			if(defined $TimedCallback)
+			{
+				CheckTimedCallback();
+			}
+			$line = <SUBMIT_LOG>;
+		}
+	    CondorUtils::fullchomp($line);
+	    $linenum++;
+
+		# Grab current memory in Megs
+		if($line =~ /^\s*(\d+).*$/) {
+			$info{'megs'} = $1;
+			debug( "Memory usage $1 (MB)\n",2);
+		}
+
+	    # read next line to see current RSS
+	    $line = <SUBMIT_LOG>;
+		while( ! defined $line )
+		{
+			sleep 2;
+			if(defined $TimedCallback)
+			{
+				CheckTimedCallback();
+			}
+			$line = <SUBMIT_LOG>;
+		}
+	    CondorUtils::fullchomp($line);
+	    $linenum++;
+
+		# Grab current memory in Megs
+		if($line =~ /^\s*(\d+).*$/) {
+			$info{'rss'} = $1;
+			debug( "RSS usage $1 (K)\n",2);
+		}
+
+		# execute callback if one is registered
+		&$ImageUpdatedCallback( %info )
+		    if defined $ImageUpdatedCallback;
+
+	    next LINE;
+
+	}
+
 	# 007: shadow exception
 	if( $line =~ /^007\s+\(0*(\d+)\.0*(\d+)/ )
 	{
@@ -1014,6 +1084,7 @@ sub Monitor
 	    $info{'job'} = $2;
 
 	    debug( "Saw Job Reconnect Fail\n" ,2);
+		print "Saw reconnect fail\n";
 
 	    # read next line to see cause
 	    $line = <SUBMIT_LOG>;
@@ -1048,8 +1119,8 @@ sub Monitor
 		$info{'recovery'} = $line;
 
 		# execute callback if one is registered
-		&$ReconnectedCallback( %info )
-		    if defined $ReconnectedCallback;
+		&$ReconnectFailedCallback( %info )
+		    if defined $ReconnectFailedCallback;
 
 	    next LINE;
 	}

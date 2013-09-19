@@ -79,7 +79,12 @@ public:
 	EC2Resource *myResource;
 	GahpClient *gahp;
 
-    void StatusUpdate( const char * newStatus );
+    void StatusUpdate( const char * instanceID,
+                       const char * status,
+                       const char * stateReasonCode,
+                       const char * publicDNSName );
+
+	friend class EC2Resource;
 
 private:
 	// create dynamic input parameters
@@ -104,8 +109,9 @@ private:
 	std::string m_key_pair_file;
 	bool m_should_gen_key_pair;
 	bool m_keypair_created;
+	bool m_was_job_completion;
 
-	int m_vm_check_times;
+	int m_retry_times;
 	
 	std::string m_ami_id;
 	std::string m_client_token;
@@ -116,6 +122,8 @@ private:
 	// This is actually a global.
 	const char * m_failure_injection;
 	
+	std::string m_state_reason_code;
+	
 	// remove created temporary keypair file
 	bool remove_keypair_file(const char* filename);
 	
@@ -123,7 +131,7 @@ private:
 	 * associate_n_attach - sends the gahp commands to associate addresses and volumes
 	 * with a running instance.
 	 */ 
-	void associate_n_attach(StringList & returnStatus);
+	void associate_n_attach();
 
 	// print out error codes returned from grid_manager
 	void print_error_code( const char* error_code, const char* function_name );

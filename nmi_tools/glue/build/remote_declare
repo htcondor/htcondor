@@ -55,6 +55,7 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     #Windows
     print TASKLIST "$EXTERNALS_TASK 4h\n";
     print TASKLIST "$UNSTRIPPED_TASK 4h\n";
+    print TASKLIST "$CHECK_UNSTRIPPED_TASK 4h\n";
     print TASKLIST "$NATIVE_TASK 4h\n";
     print TASKLIST "$TAR_TASK 4h\n";
 }    

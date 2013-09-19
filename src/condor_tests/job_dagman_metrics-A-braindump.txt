@@ -1,0 +1,24 @@
+root_wf_uuid htcondor-test-job_dagman_metrics-A
+wf_uuid htcondor-test-job_dagman_metrics-A-subdag
+dax /lfs1/work/pegasus-features/bugs/PM-667-dax-jobs/outer.dax
+dax_label local-hierarchy
+dax_index 0
+dax_version 3.4
+pegasus_wf_name local-hierarchy-0
+timestamp 20130614T141747-0700
+basedir /lfs1/work/pegasus-features/bugs/PM-667-dax-jobs/dags
+submit_dir /lfs1/work/pegasus-features/bugs/PM-667-dax-jobs/dags/vahi/pegasus/local-hierarchy/run0063
+properties pegasus.5161086777753443025.properties
+planner /lfs1/devel/Pegasus/pegasus/bin/pegasus-plan
+planner_version 4.3.0cvs
+pegasus_build 20130607223404Z
+planner_arguments "--conf pegasusrc --sites local,condorpool --dir dags --output-site local --dax outer.dax -vvvv --force "
+jsd jobstate.log
+rundir run0063
+bindir /lfs1/devel/Pegasus/pegasus/bin
+vogroup pegasus
+uses_pmc false
+condor_log local-hierarchy-0.log
+notify local-hierarchy-0.notify
+dag local-hierarchy-0.dag
+type dag

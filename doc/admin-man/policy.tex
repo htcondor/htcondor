@@ -219,9 +219,9 @@ policies usually constructed, it is also a part of the \Expr{Requirements}
 to allow the job to run.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Rank-Expression}
 \index{RANK expression@\texttt{RANK} expression}
 \index{configuration macro!\texttt{RANK}}
+\subsection{\label{sec:Rank-Expression}
 The \MacroNI{RANK} expression}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -918,7 +918,7 @@ The startd automatically inserts an attribute, \Attr{LastBenchmark},
 whenever it runs benchmarks, so commonly \Attr{RunBenchmarks} is
 defined in terms of this attribute, for example:
 \begin{verbatim}
-        BenchmarkTimer = (CurrentTime - LastBenchmark)
+        BenchmarkTimer = (time() - LastBenchmark)
         RunBenchmarks = $(BenchmarkTimer) >= (4 * $(HOUR))
 \end{verbatim}
 Here, a macro, \MacroNI{BenchmarkTimer} is defined to help write the
@@ -1606,10 +1606,10 @@ clearly.
 ##  These macros are here to help write legible expressions:
 MINUTE          = 60
 HOUR            = (60 * $(MINUTE))
-StateTimer      = (CurrentTime - EnteredCurrentState)
-ActivityTimer   = (CurrentTime - EnteredCurrentActivity)
-ActivationTimer = (CurrentTime - JobStart)
-LastCkpt        = (CurrentTime - LastPeriodicCheckpoint)
+StateTimer      = (time() - EnteredCurrentState)
+ActivityTimer   = (time() - EnteredCurrentActivity)
+ActivationTimer = (time() - JobStart)
+LastCkpt        = (time() - LastPeriodicCheckpoint)
 
 NonCondorLoadAvg        = (LoadAvg - CondorLoadAvg)
 BackgroundLoad          = 0.3
@@ -1723,10 +1723,10 @@ once more without comments:
 ##  These macros are here to help write legible expressions:
 MINUTE          = 60
 HOUR            = (60 * $(MINUTE))
-StateTimer      = (CurrentTime - EnteredCurrentState)
-ActivityTimer   = (CurrentTime - EnteredCurrentActivity)
-ActivationTimer = (CurrentTime - JobStart)
-LastCkpt        = (CurrentTime - LastPeriodicCheckpoint)
+StateTimer      = (time() - EnteredCurrentState)
+ActivityTimer   = (time() - EnteredCurrentActivity)
+ActivationTimer = (time() - JobStart)
+LastCkpt        = (time() - LastPeriodicCheckpoint)
 
 NonCondorLoadAvg        = (LoadAvg - CondorLoadAvg)
 BackgroundLoad          = 0.3

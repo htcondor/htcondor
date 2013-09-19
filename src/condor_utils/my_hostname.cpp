@@ -148,7 +148,6 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 
 		condor_sockaddr this_addr;
 		if (!this_addr.from_ip_string(dev->IP())) {
-		//if( !is_ipaddr_no_wildcard(dev->IP(),&this_sin_addr) ) {
 			dprintf(D_HOSTNAME,"Ignoring network interface %s (%s) because it does not have a useable IP address.\n",
 					dev->name(), dev->IP());
 			continue;
@@ -431,7 +430,6 @@ void ConvertDefaultIPToSocketIP(char const *attr_name,char const *old_expr_strin
 		return;
 	}
 	condor_sockaddr sock_addr;
-	//if(is_loopback_net_str(my_sock_ip)) {
 	if (sock_addr.from_ip_string(my_sock_ip) && sock_addr.is_loopback()) {
             // We must be talking to another daemon on the same
 			// machine as us.  We don't want to replace the default IP

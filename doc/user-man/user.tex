@@ -12,32 +12,23 @@
 \label{sec:usermanual}
 \index{HTCondor!user manual|(}
 \index{user manual|(}
-Presenting HTCondor \VersionNotice! HTCondor is developed by
+HTCondor is developed by
 the Center for High Throughput Computing at the University of Wisconsin-Madison (UW-Madison), and
 was first installed as a production system in the UW-Madison Computer
-Sciences department more than 15 years ago. This HTCondor pool has since
+Sciences department more than 15 years ago. HTCondor pools have since
 served as a major source of computing cycles to UW faculty and students.
 For many, it has revolutionized the role computing plays in their
 research. An increase of one, and sometimes even two, orders of
 magnitude in the computing throughput of a research organization can
-have a profound impact on its size, complexity, and scope. Over the
-years, the Center for High Throughput Computing has established collaborations with scientists
-from around the world, and it has provided them with access to surplus
-cycles (one scientist has consumed 100 CPU years!). Today, our
-department's pool consists of more than 700 desktop Unix workstations
-and more than 100 Windows machines.
-On a typical day, our pool delivers more than 500 CPU days to UW
-researchers. Additional HTCondor pools have been established over the
-years across our campus and the world. Groups of researchers, engineers,
-and scientists have used HTCondor to establish compute pools ranging in
-size from a handful to hundreds of workstations. We hope that HTCondor
-will help revolutionize your compute environment as well.
-
+have a profound impact on research size, complexity, and scope. 
+Over the years, the project, and now the Center for High Throughput Computing 
+have established collaborations with scientists
+from around the world, and have provided them with access to many
+cycles. One scientist consumed 100 CPU years!
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Introduction}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 
 In a nutshell, HTCondor is a specialized batch system 
 \index{batch system}
@@ -241,7 +232,7 @@ MyType = "Machine"
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Road-map for Running Jobs}
+\section{Running a Job: the Steps To Take}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{job!preparation}
@@ -258,9 +249,9 @@ run as a background batch job.
 HTCondor runs the program unattended and in the background. 
 A program that runs in the background will not be able
 to do interactive input and output.
-HTCondor can redirect console output (stdout and stderr)
-and keyboard input (stdin)
-to and from files for you.
+HTCondor can redirect console output (\File{stdout} and \File{stderr})
+and keyboard input (\File{stdin})
+to and from files for the program.
 Create any needed files that contain
 the proper keystrokes needed for program input.
 Make certain the program will run correctly with the files.
@@ -297,15 +288,14 @@ Controlling the details of a job submission is a
 submit description file.
 The file contains information
 about the job such as what executable to run, the
-files to use for keyboard and screen data,
-the platform type required to run the program, and
-where to send e-mail when the job completes.
-You can also tell HTCondor how many times to run a program;
+files to use in place of \File{stdin} and \File{stdout}, and
+the platform type required to run the program.
+The number of times to run a program may be included;
 it is simple to run the same program
 multiple times with multiple data sets.
 
 Write a submit description file to go with the job, using
-the examples provided in section~\ref{sec:sample-submit-files}
+the examples provided in section~\ref{sec:submitting}
 for guidance.
 
 \item[Submit the Job.]Submit the program to HTCondor with
@@ -598,7 +588,7 @@ Please see section~\ref{sec:vmuniverse} for details.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Submitting a Job}
+\section{\label{sec:submitting}Submitting a Job}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{job!submitting}
@@ -619,27 +609,29 @@ ClassAd based upon the information,
 and HTCondor
 works toward running the job.
 
-The contents of a submit file
 \index{submit description file!contents of}
-can save time for HTCondor users.
-It is easy to submit multiple runs of a program to
-HTCondor. To run the same program 500 times on 500
-different input data sets, arrange your data files
+The contents of a submit description file have been designed to
+save time for HTCondor users.
+It is easy to submit multiple runs of a program to HTCondor
+with a single submit description file.
+To run the same program many times on
+different input data sets, arrange the data files
 accordingly so that each run reads its own input, and each run
 writes its own output.
 Each individual run may have its own initial
-working directory, stdin, stdout, stderr, command-line arguments, and
-shell environment.
+working directory, files mapped for \File{stdin}, \File{stdout},
+\File{stderr}, command-line arguments, and
+shell environment;  these are all specified in the submit description file.
 A program that directly opens its own
-files will read the file names to use either from stdin
+files will read the file names to use either from \File{stdin}
 or from the command line. 
-A program that opens a static filename every time
+A program that opens a static file, given by file name, every time
 will need to use a separate subdirectory for the output of each run.
 
 The \Condor{submit} manual page 
 is on page~\pageref{man-condor-submit} and
 contains a complete and full description of how to use \Condor{submit}.
-It also includes descriptions of all the commands that may be placed
+It also includes descriptions of all the many commands that may be placed
 into a submit description file.
 In addition, the index lists entries for each command under the
 heading of Submit Commands.

@@ -371,7 +371,7 @@ All of these calls manipulate the open file table.
 	      at least 32 bit offsets work now. :) 
 	      Derek Wright <wright@cs.wisc.edu> 2/4/00
 	   */
-#		if defined(GLIBC22) || defined(GLIBC23) || defined (GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) 
+#		if defined(GLIBC22) || defined(GLIBC23) || defined (GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213)
 			off64_t llseek( int fd, off64_t offset, int whence )
 				: file_table_name(lseek), remote_name(lseek), no_sys_chk, 
 				local_name(lseek);
@@ -520,7 +520,7 @@ version.
 	Most of the switches are special.
 	*/
 
-#	if defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212))
+#	if defined(LINUX) && (defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213))
 #		define STAT_NEEDS_SPECIAL_SWITCH
 #	endif
 
@@ -832,7 +832,7 @@ report an error if reside on different devices.
 	}
 
 
-#if	defined(LINUX) && (defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212))
+#if	defined(LINUX) && (defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213))
 	ssize_t readlink( map_name(const char *path), char *buf, size_t buf_size ) {
 #else
 	int readlink( map_name(const char *path), char *buf, size_t buf_size ) {
@@ -986,7 +986,7 @@ They are not needed for remote I/O or for the condor daemons.
 	int getpagesize();
 
 	int getgroups( int gidsetsize, gid_t grouplist[] ) 
-#if defined(LINUX) && (defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212)) && defined(I386)
+#if defined(LINUX) && (defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213)) && defined(I386)
 	/* I'm not sure why, but SYS_getgroups32 seems to be in fashion for this
 		glibc revision in the i386. The normal SYS_getgroups just returns
 		garbage... */
@@ -1526,7 +1526,7 @@ not_supported {
 not_supported {
 	pid_t fork() : EXTRACT;
 #	if defined(LINUX)
-#		if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212)
+#		if defined(GLIBC22) || defined(GLIBC23) || defined(GLIBC24) || defined(GLIBC25) || defined(GLIBC27) || defined(GLIBC211) || defined(GLIBC212) || defined(GLIBC213)
 			/* XXX the stub generator doesn't understand function prototypes */
 /*			pid_t clone(int (*)(void*), void *sp, int *, void *);*/
 #		else

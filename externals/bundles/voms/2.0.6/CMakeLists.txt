@@ -72,7 +72,7 @@ if ( WITH_VOMS )
 			DEPENDS ${GLOBUS_REF}
 			#-- Download Step ----------
 			DOWNLOAD_DIR ${VOMS_STAGE}/dl
-			URL http://parrot.cs.wisc.edu/externals/voms-2.0.6.tar.gz
+			URL ${EXTERNALS_SOURCE_URL}/voms-2.0.6.tar.gz
 			#--Patch step ----------
 			PATCH_COMMAND ${VOMS_PATCH}
 			#--Configure step ----------

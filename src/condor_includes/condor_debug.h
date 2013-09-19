@@ -177,6 +177,7 @@ int dprintf_config(
 	int c_info = 0); // in: number of entries in p_info array on input.                  
 
 int dprintf_config_tool(const char* subsys = NULL, int flags = 0);
+int dprintf_config_tool_on_error(int flags = 0);
 
 // parse strflags and cat_and_flags and merge them into the in,out args
 // for backward compatibility, the D_ALWAYS bit will always be set in basic
@@ -233,6 +234,18 @@ double dprintf_get_lock_delay(void);
 /* get a count of dprintf messages written (for statistics)
 */
 int dprintf_getCount(void);
+
+/* flush the buffered output that is created when TOOL_DEBUG_ON_ERROR is set
+ */
+int dprintf_WriteOnErrorBuffer(FILE * out, int fClearBuffer);
+
+/* flush the buffered output that is created when TOOL_DEBUG_ON_ERROR is set
+ * to this file on exit (during global class destruction), if code passed to 
+ * dprintf_SetExitCode is 0, the OnErrorBuffer is discarded, otherwise it is 
+ * written to out
+ */
+FILE * dprintf_OnExitDumpOnErrorBuffer(FILE * out);
+int dprintf_SetExitCode(int code);
 
 /* wrapper for fclose() that soaks up EINTRs up to maxRetries number of times.
  */

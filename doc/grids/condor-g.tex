@@ -18,47 +18,6 @@ jobs as for other jobs.
 From HTCondor, a user may effectively submit jobs, manage jobs,
 and have jobs execute on widely distributed machines.
 
-% HTCondor-G is a ``window to the grid.''
-% The function of HTCondor-G becomes clear
-% with a brief overview of the software that forms an HTCondor pool.
-% For this discussion, the software of an HTCondor pool is divided
-% into two parts.
-% The first part does job management.
-% It keeps track of a user's jobs.
-% You can ask the job management part of HTCondor to show
-% you the job queue, to submit new jobs to the system,
-% to put jobs on hold,
-% and to request information about jobs that have completed.
-% The other part of the HTCondor software
-% does resource management.
-% It keeps track of which machines are available to run jobs,
-% how the available machines should be utilized given all the users
-% who want to run jobs on them,
-% and when a machine is no longer available.
-% HTCondor-G works with grid resources, allowing users to
-% effectively submit jobs, manage jobs, and have jobs execute
-% on widely distributed machines.
-
-% A machine with the job management part installed
-% is called a submit machine.
-% A machine with the resource management part installed 
-% is called an execute machine.
-% Each machine may have one part or both.
-% HTCondor-G is the job management part of HTCondor.
-% \index{HTCondor-G!functionality}
-% HTCondor-G lets you submit jobs into a queue,
-% have a log detailing the life cycle of your jobs,
-% manage your input and output files,
-% along with everything else you expect from a job queuing system.
-
-% HTCondor-G is a program that manages both a queue of jobs
-% and the resources from one or more sites where those jobs can execute. 
-% For some of these jobs,
-% it communicates with these resources and transfers files
-% to and from these resources using Globus mechanisms.
-% (In particular, HTCondor-G uses the GRAM protocol for job submission,
-% and it runs a local GASS server for file transfers).
-
 It may appear that HTCondor-G is a simple replacement
 for the Globus Toolkit's \Prog{globusrun} command.
 However, HTCondor-G does much more.
@@ -70,7 +29,6 @@ that may expire while a job is running.
 On top of this, HTCondor-G is a fault-tolerant system;
 if a machine crashes,
 all of these functions are again available as the machine returns.
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -93,11 +51,8 @@ The following is a list of known limitations:
 
 \begin{enumerate}
 \item{No checkpoints.}
-\item{No job exit codes.}
-Job exit codes are not available when using
-\SubmitCmd{gt2}.
-\item{Limited platform availability.}
-Windows support is not yet available.
+\item{No job exit codes are available when using \SubmitCmd{gt2}.  }
+\item{Limited platform availability.  Windows support is not available.  }
 \end{enumerate}
 
 \index{HTCondor-G|)}

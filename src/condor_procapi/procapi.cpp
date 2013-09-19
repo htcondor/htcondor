@@ -2539,6 +2539,7 @@ ProcAPI::buildPidList() {
 			return PROCAPI_FAILURE;
 		}
 
+		ASSERT( bufSize );
 		kp = (struct kinfo_proc *)realloc(kp, bufSize);
 
 		rc = sysctl(mib, 4, kp, &bufSize, NULL, 0);

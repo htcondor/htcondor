@@ -41,7 +41,7 @@ my $firstappend_condor_config = '
 	MachineMaxVacateTime = 5
 	NEGOTIATION_INTERVAL = 10
 	KILL = TRUE
-	ALL_DEBUG = D_ALWAYS
+	ALL_DEBUG = D_ALWAYS D_CMD D_DAEMONCORE
 ';
 
 $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"jobbasickill");
@@ -60,24 +60,48 @@ my $return = "";
 my $executecount = 0;
 my $result = 1;
 my $test_name = "job_basic_kill";
+my $catchlog  = "catchallsignals.out";
+
 my $on_execute = sub {
 	print "********************************** OnExecute *****************************\n";
+	print "waiting for size signal catching output to grow\n";
+	my $sizenow = 0;
+	my $loopcount = 0;
+
+	while($sizenow < 1000) {
+		if(!(-f "catchallsignals.out")) {
+			if($sizenow > 0) {
+				system("ls -lh catchallsignals.out");
+				die "What happened to <$catchlog>? It used to exist!\n";
+			}
+		}
+		$sizenow = -s "catchallsignals.out";
+		if(($loopcount % 100) == 0) {
+			print "<$sizenow>\n";
+		}
+		sleep(1);
+	}
+
 	if($executecount == 0) {
-		system("condor_vacate_job $ClusterId");
+		runToolNTimes("condor_hold $ClusterId",1);
 		$executecount += 1;
 	} else {
 			print "Job ran more then once and all normal signals are being ignored even SIGTERM\n";
-			system("condor_rm $ClusterId");
 	}
 };
 
-my $on_evictedwithoutcheckpoint = sub {
-	print "Evicted Without Checkpoint\n";
+my $on_hold = sub {
+	print "Expected to be on hold\n Calling CheckForSigTermIgnore \n";
 	$return = CheckForSigTermIgnore();
 	if($return eq "Bad") {
 		print "Never found that sigterm was ignore. \nRemoving job before death!\n";
 		die "No ignored sigterm, can not prove KILL =TRUE worked.\n";
 	}
+	runToolNTimes("condor_rm $ClusterId", 1);
+};
+
+my $on_evictedwithoutcheckpoint = sub {
+	print "Evicted Without Checkpoint\n";
 };
 
 my $GetClusterId = sub {
@@ -98,13 +122,13 @@ my $GetClusterId = sub {
 print "First test basic job\n";
 $result = SimpleJob::RunCheck(); # jobid 1
 
-my $catchlog  = "catchallsignals.out";
 system("rm -f $catchlog");
 
 $expect_return = 0;
 $result = SimpleJob::RunCheck(
 	test_name => "$test_name",
 	on_abort => $on_abort,
+	on_hold => $on_hold,
 	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	on_execute => $on_execute,
 	runthis => "x_catchallsignals.pl",
@@ -112,7 +136,7 @@ $result = SimpleJob::RunCheck(
 	output => "catchallsignals.out",
 	stream_output => "True",
 	should_transfer_files => "YES",
-	when_to_transfer_output => "ON_EXIT_OR_EVICT",
+	when_to_transfer_output => "ON_EXIT",
 	queue_sz => 1,
 	duration => $expect_return,
 	GetClusterId => $GetClusterId,

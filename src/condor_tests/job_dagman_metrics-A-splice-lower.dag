@@ -1,0 +1,8 @@
+Job SL1 job_dagman_metrics-A-node.cmd
+Vars SL1 nodename="$(JOB)"
+
+Job SL2 job_dagman_metrics-A-node.cmd
+Vars SL2 nodename="$(JOB)"
+
+Job SL3 job_dagman_metrics-A-node.cmd
+Vars SL3 nodename="$(JOB)"

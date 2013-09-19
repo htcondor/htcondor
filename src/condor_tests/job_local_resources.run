@@ -261,6 +261,7 @@ request_gpu = 1
 ';
 
 # on this on-execute, check the ads like above
+$running_now = 0;
 $expect_run = 1;
 $expect_idle = 0;
 $result = SimpleJob::RunCheck(
@@ -283,6 +284,7 @@ $checkpslot = "yes";
 # on this on-execute, check the ads like above
 # checking left over resources on partiionable slot, do not ask for a qpu
 # and expectation will match the dynamic slot
+$running_now = 0;
 $expect_run = 1;
 $expect_idle = 0;
 $result = SimpleJob::RunCheck(

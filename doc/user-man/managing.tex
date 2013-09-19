@@ -91,9 +91,11 @@ The \verb@RUN_TIME@ time reported for a job is the time that has been
 committed to the job.
 
 Another useful method of tracking the progress of jobs is through the
-user log.  If you have specified a \AdAttr{log} command in 
-your submit file, the progress of the job may be followed by viewing the
-log file.  Various events such as execution commencement, checkpoint, eviction 
+job event log.  The specification of a \AdAttr{log} in 
+the submit description file causes the progress of the job 
+to be logged in a file.  Follow the events by viewing the
+job event log file.  
+Various events such as execution commencement, checkpoint, eviction 
 and termination are logged in the file.
 Also logged is the time at which the event occurred.
 
@@ -442,12 +444,12 @@ and then send a \Condor{restart} to the submit machine.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:job-log-events}In the Log File}
+\subsection{\label{sec:job-log-events}In the Job Event Log File}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{job!log events}
-\index{log files!event codes and descriptions}
-In a job's log file are a listing of events in
-chronological order that occurred during the life of the job.
+\index{job!event log file}
+\index{log files!job event codes and descriptions}
+In a job event log file are a listing of events in
+chronological order that occurred during the life of one or more jobs.
 The formatting of the events is always the same, 
 so that they may be machine readable.
 Four fields are always present,
@@ -457,7 +459,7 @@ information that is specific to the type of event.
 The first field in an event is the numeric value assigned as the
 event type in a 3-digit format.
 The second field identifies the job which generated the event. 
-Within parentheses are the ClassAd job attributes of
+Within parentheses are the job ClassAd attributes of
 \AdAttr{ClusterId} value, 
 \AdAttr{ProcId} value, 
 and the node number  for parallel universe jobs or a set of zeros
@@ -650,8 +652,8 @@ output files.
 \noindent\Bold{Event Number:} 033 \\
 \Bold{Event Name:} Job ClassAd attribute update \\
 \Bold{Event Description:} A Job ClassAd attribute is changed due to action
-by the \Condor{schedd} daemon.  Examples include changes by 
-\Condor{qedit} and \Condor{prio}.
+by the \Condor{schedd} daemon.  
+This includes changes by \Condor{prio}.
 
 \noindent\Bold{Event Number:} 034 \\
 \Bold{Event Name:} Pre Skip event \\

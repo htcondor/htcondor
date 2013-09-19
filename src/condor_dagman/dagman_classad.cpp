@@ -23,13 +23,13 @@
 #include "dc_schedd.h"
 #include "condor_qmgr.h"
 #include "debug.h"
+#include "dagman_metrics.h"
 
 //---------------------------------------------------------------------------
-DagmanClassad::DagmanClassad( const CondorID &DAGManJobId )
+DagmanClassad::DagmanClassad( const CondorID &DAGManJobId ) :
+	_valid( false ),
+	_schedd( NULL )
 {
-	_valid = false;
-	_schedd = NULL;
-
 	CondorID defaultCondorId;
 	if ( DAGManJobId == defaultCondorId ) {
 		debug_printf( DEBUG_QUIET, "No Condor ID available for DAGMan (running on command line?); DAG status will not be reported to classad\n" );
@@ -49,6 +49,8 @@ DagmanClassad::DagmanClassad( const CondorID &DAGManJobId )
 	}
 
 	_valid = true;
+
+	InitializeMetrics();
 }
 
 //---------------------------------------------------------------------------
@@ -72,15 +74,8 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 		return;
 	}
 
-		// Open job queue
-	CondorError errstack;
-	Qmgr_connection *queue = ConnectQ( _schedd->addr(), 0, false,
-				&errstack, NULL, _schedd->version() );
+	Qmgr_connection *queue = OpenConnection();
 	if ( !queue ) {
-		debug_printf( DEBUG_QUIET,
-					"WARNING: failed to connect to queue manager (%s)\n",
-					errstack.getFullText().c_str() );
-		check_warning_strictness( DAG_STRICT_3 );
 		return;
 	}
 
@@ -95,6 +90,58 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 	SetDagAttribute( ATTR_DAG_STATUS, (int)dagStatus );
 	SetDagAttribute( ATTR_DAG_IN_RECOVERY, recovery );
 
+	CloseConnection( queue );
+}
+
+//---------------------------------------------------------------------------
+void
+DagmanClassad::InitializeMetrics()
+{
+
+	Qmgr_connection *queue = OpenConnection();
+	if ( !queue ) {
+		return;
+	}
+
+	int parentDagmanCluster;
+	if ( GetAttributeInt( _dagmanId._cluster, _dagmanId._proc,
+				ATTR_DAGMAN_JOB_ID, &parentDagmanCluster ) != 0 ) {
+		debug_printf( DEBUG_DEBUG_1,
+					"Can't get parent DAGMan cluster\n" );
+		parentDagmanCluster = -1;
+	} else {
+		debug_printf( DEBUG_DEBUG_1, "Parent DAGMan cluster: %d\n",
+					parentDagmanCluster );
+	}
+
+	CloseConnection( queue );
+
+	DagmanMetrics::SetDagmanIds( _dagmanId, parentDagmanCluster );
+}
+
+//---------------------------------------------------------------------------
+Qmgr_connection *
+DagmanClassad::OpenConnection()
+{
+		// Open job queue
+	CondorError errstack;
+	Qmgr_connection *queue = ConnectQ( _schedd->addr(), 0, false,
+				&errstack, NULL, _schedd->version() );
+	if ( !queue ) {
+		debug_printf( DEBUG_QUIET,
+					"WARNING: failed to connect to queue manager (%s)\n",
+					errstack.getFullText().c_str() );
+		check_warning_strictness( DAG_STRICT_3 );
+		return NULL;
+	}
+
+	return queue;
+}
+
+//---------------------------------------------------------------------------
+void
+DagmanClassad::CloseConnection( Qmgr_connection *queue )
+{
 	if ( !DisconnectQ( queue ) ) {
 		debug_printf( DEBUG_QUIET,
 					"WARNING: queue transaction failed.  No attributes were set.\n" );
@@ -107,13 +154,9 @@ void
 DagmanClassad::SetDagAttribute( const char *attrName, int attrVal )
 {
 	if ( SetAttributeInt( _dagmanId._cluster, _dagmanId._proc,
-				attrName, attrVal, SETDIRTY|SHOULDLOG ) != 0 ) {
-			// Try again without SETDIRTY|SHOULDLOG.
-		if ( SetAttributeInt( _dagmanId._cluster, _dagmanId._proc,
-					attrName, attrVal ) != 0 ) {
-			debug_printf( DEBUG_QUIET,
-						"WARNING: failed to set attribute %s\n", attrName );
-			check_warning_strictness( DAG_STRICT_3 );
-		}
+						  attrName, attrVal ) != 0 ) {
+		debug_printf( DEBUG_QUIET,
+					  "WARNING: failed to set attribute %s\n", attrName );
+		check_warning_strictness( DAG_STRICT_3 );
 	}
 }

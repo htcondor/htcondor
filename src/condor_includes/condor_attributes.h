@@ -436,6 +436,7 @@
 #define ATTR_NOTIFY_USER  "NotifyUser"
 #define ATTR_NOTIFY_JOB_SCHEDULER  "NotifyJobScheduler"
 #define ATTR_NT_DOMAIN  "NTDomain"
+#define ATTR_TRANSFER_QUEUE_USER_EXPR "TransferQueueUserExpr"
 //extern const char ATTR_WINDOWS_VERSION [];
 #define ATTR_WINDOWS_MAJOR_VERSION  "WindowsMajorVersion"
 #define ATTR_WINDOWS_MINOR_VERSION  "WindowsMinorVersion"
@@ -516,6 +517,7 @@
 #define ATTR_REMOVE_REASON  "RemoveReason"
 #define ATTR_REQUEUE_REASON  "RequeueReason"
 #define ATTR_REQUIREMENTS  "Requirements"
+#define ATTR_RESOURCE_REQUEST_COUNT "_condor_RESOURCE_COUNT"  // used in resource request ad
 #define ATTR_SLOT_TYPE  "SlotType"
 #define ATTR_SLOT_TYPE_ID  "SlotTypeID"
 #define ATTR_SLOT_WEIGHT  "SlotWeight"
@@ -884,6 +886,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_EC2_SPOT_PRICE  "EC2SpotPrice"
 #define ATTR_EC2_SPOT_REQUEST_ID  "EC2SpotRequestID"
 #define ATTR_EC2_STATUS_REASON_CODE  "EC2StatusReasonCode"
+#define ATTR_EC2_SERVER_TYPE  "EC2ServerType"
 
 //************* End of changes for EC2 Jobs *****************//
 
@@ -902,11 +905,6 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_TOTAL_PREFIX  "Total"
 #define ATTR_TOTAL_SLOT_PREFIX  "TotalSlot"
 #define ATTR_MACHINE_RESOURCES  "MachineResources"
-
-// multiclaim / negside resource consumption
-#define ATTR_NUM_CLAIMS "NumClaims"
-#define ATTR_CLAIM_ID_LIST "ClaimIdList"
-#define ATTR_CONSUMPTION_PREFIX "Consumption"
 
 // This is a record of the job exit status from a standard universe job exit
 // via waitpid. It is in the job ad to implement the terminate_pending

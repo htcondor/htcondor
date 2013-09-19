@@ -561,7 +561,7 @@ linux_count_cpus_id( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 
 		/* Current processor record */
 		Processor		*proc = &cpuinfo->processors[pnum];
-		dprintf( D_LOAD,
+		dprintf( D_LOAD | D_VERBOSE,
 				 "Looking at processor #%d (PID:%d, CID:%d):\n",
 				 pnum, proc->physical_id, proc->core_id );
 
@@ -595,7 +595,7 @@ linux_count_cpus_id( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 						( proc->physical_id != tproc->physical_id )  ) ||
 					  ( ( proc->core_id >= 0 ) &&
 						( proc->core_id != tproc->core_id ) )  ) {
-					dprintf( D_LOAD,
+					dprintf( D_LOAD | D_VERBOSE,
 							 "Comparing P#%-3d and P#%-3d: "
 							 "pid:%d!=%d or  cid:%d!=%d (match=No)\n",
 							 pnum, tpnum,
@@ -614,7 +614,7 @@ linux_count_cpus_id( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 					cpuinfo->num_cpus++;
 				}
 
-				dprintf( D_LOAD,
+				dprintf( D_LOAD | D_VERBOSE,
 						 "Comparing P#%-3d and P#%-3d: "
 						 "pid:%d==%d and cid:%d==%d (match=%d)\n",
 						 pnum, tpnum,
@@ -622,12 +622,12 @@ linux_count_cpus_id( CpuInfo *cpuinfo, BOOLEAN count_hthreads )
 						 proc->core_id, tproc->core_id, match_count );
 			}
 		}
-		dprintf( D_LOAD, "ncpus = %d\n", cpuinfo->num_cpus );
+		dprintf( D_LOAD | D_VERBOSE, "ncpus = %d\n", cpuinfo->num_cpus );
 
 		/* Now, walk through the list of matches, store match count */
 		for( tproc = proc; tproc != NULL;  tproc = tproc->next_match ) {
 			tproc->match_count = match_count;
-			dprintf( D_LOAD, "P%d: match->%d\n",
+			dprintf( D_LOAD | D_VERBOSE, "P%d: match->%d\n",
 					 tproc->processor, match_count );
 		}
 	}

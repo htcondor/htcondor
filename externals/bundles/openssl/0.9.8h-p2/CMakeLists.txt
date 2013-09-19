@@ -63,7 +63,7 @@ if (WITH_OPENSSL)
 		ExternalProject_Add( openssl
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${OPENSSL_STAGE}/dl
-				    URL http://parrot.cs.wisc.edu/externals/${OPENSSL_VER}.tar.gz
+				    URL ${EXTERNALS_SOURCE_URL}/${OPENSSL_VER}.tar.gz
 					#--Patch step ----------
 					PATCH_COMMAND ${OPENSSL_PATCH}
 				    #--Configure step ----------

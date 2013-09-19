@@ -52,6 +52,7 @@ enum SpliceLayer {
 
 class Dagman;
 class MyString;
+class DagmanMetrics;
 
 // used for RelinquishNodeOwnership and AssumeOwnershipofNodes
 // This class owns the containers with which it was constructed, but
@@ -90,6 +91,8 @@ class OwnedMaterials
     appeared in the condor log file.
 */
 class Dag {
+  friend class DagmanMetrics;
+
   public:
   
     /** Create a DAG
@@ -143,6 +146,19 @@ class Dag {
 
     ///
     ~Dag();
+
+		/** Create the DagmanMetrics object for this DAGMan.
+			@param primaryDagFile The primary (first) DAG file specified.
+			@param rescueDagNum The number of the rescue DAG we're
+					running (0 if not running a rescue DAG).
+		*/
+	void CreateMetrics( const char *primaryDagFile, int rescueDagNum );
+
+		/** Report the metrics for this run (if metrics reporting is
+			enabled).
+			@param exitCode The exit code of this DAGMan.
+		*/
+	void ReportMetrics( int exitCode );
 
 	/** Set the _abortOnScarySubmit value -- controls whether we abort
 		the DAG on "scary" submit events.
@@ -483,7 +499,9 @@ class Dag {
 
 	void PrintReadyQ( debug_level_t level ) const;
 
+#if 0
 	bool RemoveNode( const char *name, MyString &whynot );
+#endif
 
 	bool RemoveDependency( Job *parent, Job *child );
 	bool RemoveDependency( Job *parent, Job *child, MyString &whynot );
@@ -732,6 +750,7 @@ class Dag {
 	*/
 	inline bool Recovery() const { return _recovery; }
 
+	inline void UseDefaultNodeLog(bool useit) { _use_default_node_log = useit; }
   private:
 
 	// If this DAG is a splice, then this is what the DIR was set to, it 
@@ -926,9 +945,11 @@ class Dag {
 		// (including PRE and POST scripts, if any.
 	bool _runningFinalNode;
 
+protected:
     /// List of Job objects
     List<Job>     _jobs;
 
+private:
 		// Note: the final node is in the _jobs list; this pointer is just
 		// for convenience.
 	Job* _final_job;
@@ -1172,6 +1193,9 @@ class Dag {
 		// This must be false if dagman is communicating with a pre-7.9.0
 		// schedd/shadow or submit.
 	bool _use_default_node_log;
+
+		// Object to deal with reporting DAGMan metrics (to Pegasus).
+	DagmanMetrics *_metrics;
 };
 
 #endif /* #ifndef DAG_H */

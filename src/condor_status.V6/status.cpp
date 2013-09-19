@@ -134,6 +134,7 @@ main (int argc, char *argv[])
 	myDistro->Init( argc, argv );
 	myName = argv[0];
 	config();
+	dprintf_config_tool_on_error(0);
 
 	// The arguments take two passes to process --- the first pass
 	// figures out the mode, after which we can instantiate the required
@@ -148,6 +149,7 @@ main (int argc, char *argv[])
 
 	// instantiate query object
 	if (!(query = new CondorQuery (type))) {
+		dprintf_WriteOnErrorBuffer(stderr, true);
 		fprintf (stderr, "Error:  Out of memory\n");
 		exit (1);
 	}
@@ -428,11 +430,12 @@ main (int argc, char *argv[])
 				addr = d->addr();
 				requested_daemon = d;
 			} else {
-			        const char* id = d->idStr();
-                                if (NULL == id) id = d->name();
+				const char* id = d->idStr();
+				if (NULL == id) id = d->name();
+				dprintf_WriteOnErrorBuffer(stderr, true);
 				if (NULL == id) id = "daemon";
-           	                fprintf(stderr, "Error: Failed to locate %s\n", id);
-                                fprintf(stderr, "%s\n", d->error());
+				fprintf(stderr, "Error: Failed to locate %s\n", id);
+				fprintf(stderr, "%s\n", d->error());
 				exit( 1 );
 			}
 		}
@@ -455,6 +458,7 @@ main (int argc, char *argv[])
 
 	// if any error was encountered during the query, report it and exit 
         if (Q_OK != q) {
+            dprintf_WriteOnErrorBuffer(stderr, true);
                 // we can always provide these messages:
 	        fprintf( stderr, "Error: %s\n", getStrQueryResult(q) );
 		fprintf( stderr, "%s\n", errstack.getFullText(true).c_str() );
@@ -620,6 +624,7 @@ firstPass (int argc, char *argv[])
 			}
 			pool = new DCCollector( argv[i] );
 			if( !pool->addr() ) {
+				dprintf_WriteOnErrorBuffer(stderr, true);
 				fprintf( stderr, "Error: %s\n", pool->error() );
 				if (!expert) {
 					printf("\n");
@@ -655,6 +660,10 @@ firstPass (int argc, char *argv[])
 			}
 			setPPstyle (PP_CUSTOM, i, argv[i]);
 			while (argv[i+1] && *(argv[i+1]) != '-') {
+				++i;
+			}
+			// if autoformat list ends in a '-' without any characters after it, just eat the arg and keep going.
+			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
 				++i;
 			}
 		} else
@@ -1025,6 +1034,10 @@ secondPass (int argc, char *argv[])
 				}
 				pm.registerFormat(lbl.Value(), wid, opts, argv[i]);
 			}
+			// if autoformat list ends in a '-' without any characters after it, just eat the arg and keep going.
+			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
+				++i;
+			}
 			continue;
 		}
 		if (matchPrefix (argv[i], "-target", 2)) {
@@ -1079,6 +1092,7 @@ secondPass (int argc, char *argv[])
 					// use what we are given and do not flag an error.
 					daemonname = strnewp(argv[i]);
 				} else {
+					dprintf_WriteOnErrorBuffer(stderr, true);
 					fprintf( stderr, "%s: unknown host %s\n",
 								 argv[0], get_host_part(argv[i]) );
 					exit(1);

@@ -222,7 +222,7 @@ bool _putClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
 	std::string					buf;
     bool send_server_time = false;
 
-	unp.SetOldClassAd( true );
+	unp.SetOldClassAd( true, true );
 
 	int numExprs=0;
 

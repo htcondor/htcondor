@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "command_strings.h"
+#include "condor_perms.h"
 #include <map>
 
 const struct Translation DCTranslation[] = {
@@ -231,6 +232,7 @@ const struct Translation DCTranslation[] = {
 	{ "REPLICATION_GIVING_UP_VERSION", REPLICATION_GIVING_UP_VERSION },
 	{ "REPLICATION_SOLICIT_VERSION", REPLICATION_SOLICIT_VERSION },
 	{ "REPLICATION_SOLICIT_VERSION_REPLY", REPLICATION_SOLICIT_VERSION_REPLY },
+	{ "QUERY_SCHEDD_HISTORY", QUERY_SCHEDD_HISTORY },
 	{ "", 0 }
 };
 
@@ -416,3 +418,32 @@ getDrainingScheduleName( int num )
 {
 	return getNameFromNum( num, DrainingScheduleTranslation );
 }
+
+int getSampleCommand( int authz_level ) {
+        switch(authz_level) {
+                case ALLOW:
+                        return DC_NOP;
+                case READ:
+                        return DC_NOP_READ;
+                case WRITE:
+                        return DC_NOP_WRITE;
+                case NEGOTIATOR:
+                        return DC_NOP_NEGOTIATOR;
+                case ADMINISTRATOR:
+                        return DC_NOP_ADMINISTRATOR;
+                case OWNER:
+                        return DC_NOP_OWNER;
+                case CONFIG_PERM:
+                        return DC_NOP_CONFIG;
+                case DAEMON:
+                        return DC_NOP_DAEMON;
+                case ADVERTISE_STARTD_PERM:
+                        return DC_NOP_ADVERTISE_STARTD;
+                case ADVERTISE_SCHEDD_PERM:
+                        return DC_NOP_ADVERTISE_SCHEDD;
+                case ADVERTISE_MASTER_PERM:
+                        return DC_NOP_ADVERTISE_MASTER;
+        }
+        return -1;
+}
+

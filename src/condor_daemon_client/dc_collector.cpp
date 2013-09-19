@@ -29,6 +29,8 @@
 #include "dc_collector.h"
 #include "daemon_core_sock_adapter.h"
 
+std::map< std::string, Timeslice > DCCollector::blacklist;
+
 // Instantiate things
 
 DCCollector::DCCollector( const char* dcName, UpdateType uType ) 
@@ -184,16 +186,6 @@ DCCollector::reconfig( void )
 			return;
 		}
 	}
-
-		// Blacklist this collector if last failed contact took more
-		// than 1% of the time that has passed since that operation
-		// started.  (i.e. if contact fails quickly, don't worry, but
-		// if it takes a long time to fail, be cautious.
-	blacklisted.setTimeslice(0.01);
-		// Set an upper bound of one hour for the collector to be blacklisted.
-	int avoid_time = param_integer("DEAD_COLLECTOR_MAX_AVOIDANCE_TIME",3600);
-	blacklisted.setMaxInterval(avoid_time);
-	blacklisted.setInitialInterval(0);
 
 	parseTCPInfo();
 	initDestinationStrings();
@@ -921,23 +913,49 @@ DCCollector::~DCCollector( void )
 	}
 }
 
+Timeslice &DCCollector::getBlacklistTimeslice()
+{
+	std::map< std::string, Timeslice >::iterator itr;
+	itr = blacklist.find(addr());
+	if( itr == blacklist.end() ) {
+		Timeslice ts;
+		
+			// Blacklist this collector if last failed contact took more
+			// than 1% of the time that has passed since that operation
+			// started.  (i.e. if contact fails quickly, don't worry, but
+			// if it takes a long time to fail, be cautious.
+		ts.setTimeslice(0.01);
+			// Set an upper bound of one hour for the collector to be blacklisted.
+		int avoid_time = param_integer("DEAD_COLLECTOR_MAX_AVOIDANCE_TIME",3600);
+		ts.setMaxInterval(avoid_time);
+		ts.setInitialInterval(0);
+
+		itr = blacklist.insert( std::map< std::string, Timeslice >::value_type(addr(),ts) ).first;
+	}
+	return itr->second;
+}
+
 bool
 DCCollector::isBlacklisted() {
+	Timeslice &blacklisted = getBlacklistTimeslice();
 	return !blacklisted.isTimeToRun();
 }
 
 void
 DCCollector::blacklistMonitorQueryStarted() {
-	blacklisted.setStartTimeNow();
+	m_blacklist_monitor_query_started.getTime();
 }
 
 void
 DCCollector::blacklistMonitorQueryFinished( bool success ) {
+	Timeslice &blacklisted = getBlacklistTimeslice();
 	if( success ) {
 		blacklisted.reset();
 	}
 	else {
-		blacklisted.setFinishTimeNow();
+		UtcTime finished;
+		finished.getTime();
+		blacklisted.processEvent(m_blacklist_monitor_query_started,finished);
 
 		unsigned int delta = blacklisted.getTimeToNextRun();
 		if( delta > 0 ) {

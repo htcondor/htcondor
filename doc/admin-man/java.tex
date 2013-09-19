@@ -17,8 +17,6 @@ JVM installation.
 
 Begin by installing a Java distribution according to the vendor's
 instructions.
-We have successfully used the Sun Java Developer's Kit,
-but any distribution should suffice.
 Your machine may have
 been delivered with a JVM already installed -- installed code
 is frequently found in \File{/usr/bin/java}.
@@ -99,9 +97,9 @@ If the Java installation is incorrect, then any error
 messages from the shell or Java will be printed
 on the error stream instead.
 
-The Sun JVM sets a value of 64 Mbytes for the Java Maxheap Argument,
-which HTCondor uses.
-This value is often too small for the application.
+Many implementations of the JVM set a value of the Java maximum heap size
+that is too small for particular applications.
+HTCondor uses this value.
 The administrator can change this value through configuration by setting
 a different value for \Macro{JAVA\_EXTRA\_ARGUMENTS}.
 
@@ -112,6 +110,6 @@ JAVA_EXTRA_ARGUMENTS = -Xmx1024m
 \normalsize
 Note that if a specific job sets the value in the submit description
 file, using the submit command \SubmitCmd{java\_vm\_args},
-this job's value takes precedence over a configured value.
+the job's value takes precedence over a configured value.
 
 
