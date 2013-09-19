@@ -55,10 +55,11 @@ in UNDEFINED or ERROR it is treated as false instead of having the
 \Condor{startd} except.
 \Ticket{3869}
 
-\item Fixed a bug that prevented the use of simple hostnames to identify
-machines when using the command-line tools. For example, 
-\Expr{condor\_status bar.foo.org} would show machine ads, but
+\item Fixed a bug that prevented the use of simple host names to identify
+machines when using the command-line tools. Before the fix,
+\Expr{condor\_status bar.foo.org} would show machine ClassAds, but
 \Expr{condor\_status bar} would not.
+Both now show machine ClassAds.
 \Ticket{3694}
 
 \item Fixed a bug with \Condor{ssh\_to\_job} that occurs when
