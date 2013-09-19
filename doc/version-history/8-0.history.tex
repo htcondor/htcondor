@@ -49,6 +49,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item If cgroups were enabled, \Condor{ssh\_to\_job} would
+kill the job when the ssh session exited.  This bug has been fixed.
+\Ticket{3921}
+
 \item If a standard universe job exited and never used a checkpoint
 server, two spurious error messages would be logged to the 
 SchedLog, as it tried to remove the old checkpoint images from the
