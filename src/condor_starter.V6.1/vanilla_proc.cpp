@@ -274,6 +274,8 @@ VanillaProc::StartJob()
 		cgroup_uniq.replaceString(dir_delim, "_");
 		cgroup_str.formatstr("%s%ccondor%s", cgroup_base.c_str(), DIR_DELIM_CHAR,
 			cgroup_uniq.Value());
+		cgroup_str += this->CgroupSuffix();
+		
 		cgroup = cgroup_str.Value();
 		ASSERT (cgroup != NULL);
 		fi.cgroup = cgroup;
