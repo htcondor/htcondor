@@ -100,9 +100,10 @@ the bug.
 it would not conflict with the MaxTransferInputSizeExceeded hold code.
 \Ticket{3858}
 
-\item The values of the job ClassAd attributes RemoteSysCpu and RemoteUserCpu
-are sometimes impossibly large. The problem is rare and not well understood,
-but Changes have been made to the code in an attempt to fix this problem.
+\item The values of the job ClassAd attributes \Attr{RemoteSysCpu} 
+and \Attr{RemoteUserCpu} are sometimes impossibly large.
+This bug rarely occurs and is not well understood.
+Code changes attempt to fix this problem.
 \Ticket{3814}
 
 \item Fixed a bug that caused DAG recovery mode to fail on
