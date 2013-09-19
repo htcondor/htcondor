@@ -11205,3 +11205,36 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=618
+
+[HISTORY_HELPER_MAX_HISTORY]
+aliases=
+default=10000
+version=0.0.0
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=History Helper max number of history ads
+usage=Set the limit on the number of history ads remote history will consider
+url=http://cs.wisc.edu/condor/manual/v8.1/3_3Configuration.html#SECTION
+tags=
+id=619
+
+[HISTORY_HELPER_MAX_CONCURRENCY]
+aliases=
+default=10000
+version=0.0.0
+range=0,
+state=default
+type=int
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=History Helper max number of helper sub-processes
+usage=Set the limit on the number of condor_history_helper sub-processes
+url=http://cs.wisc.edu/condor/manual/v8.1/3_3Configuration.html#SECTION
+tags=
+id=620
+
