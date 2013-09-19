@@ -49,10 +49,13 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item For the expressions evaluated by the \Condor{startd} \Macro{SUSPEND},
-\Macro{CONTINUE}, \Macro{PREEMPT}, and \Macro{KILL}, if the expression results
-in UNDEFINED or ERROR it is treated as false instead of having the
-\Condor{startd} except.
+\item When expressions for \Macro{SUSPEND},
+\Macro{CONTINUE}, \Macro{PREEMPT}, and \Macro{KILL}
+were evaluated by the \Condor{startd},
+a resulting value of
+\Expr{UNDEFINED} or \Expr{ERROR} caused an exception in the \Condor{startd}.
+These values are now treated as \Expr{False},
+eliminating the exception.
 \Ticket{3869}
 
 \item Fixed a bug that prevented the use of simple host names to identify
