@@ -100,8 +100,11 @@ such that it will still work with other versions of HTCondor containing
 the bug.
 \Ticket{3902}
 
-\item The value of the JobOutOfResource hold code was changed to 34 so that
-it would not conflict with the MaxTransferInputSizeExceeded hold code.
+\item Value 032 of the job ClassAd attribute \Attr{HoldReasonCode}
+was being used for two different reasons.
+Now, value 032 identifies that the maximum total input file 
+transfer size was exceeded. 
+Value 034 identifies that memory usage exceeds a memory limit.
 \Ticket{3858}
 
 \item The values of the job ClassAd attributes \Attr{RemoteSysCpu} 
