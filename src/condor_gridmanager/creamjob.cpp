@@ -1742,8 +1742,7 @@ TransferRequest *CreamJob::MakeStageInRequest()
 	result = true;
 	jobAd->LookupBool(ATTR_TRANSFER_EXECUTABLE, result);
 	if (result) {
-			//here, JOB_CMD = full path to executable
-		jobAd->LookupString(ATTR_JOB_CMD, tmp_str);
+		GetJobExecutable( jobAd, tmp_str );
 		tmp_str2 = "file://" + tmp_str;
 		local_urls.insert(tmp_str2.c_str());
 
