@@ -1407,10 +1407,10 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 	transobject->ActiveTransferTid = -1;
 	TransThreadTable->remove(pid);
 
-
 	if (NetworkPluginManager::HasPlugins() && transobject->m_network_name.size())
 	{
-		NetworkPluginManager::PerformJobAccounting(NULL);
+        const std::string job_phase = "stage_in";
+		NetworkPluginManager::PerformJobAccounting(NULL, job_phase);
 		int rc = NetworkPluginManager::Cleanup(transobject->m_network_name);
 		if (rc) dprintf(D_ALWAYS, "Failed to cleanup network namespace (rc=%d)\n", rc);
 	}

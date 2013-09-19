@@ -682,8 +682,8 @@ VanillaProc::PublishUpdateAd( ClassAd* ad )
 
 		// Update our knowledge of how many processes the job has
 	num_pids = usage->num_procs;
-
-	NetworkPluginManager::PerformJobAccounting(ad);
+    const std::string jobphase = "execution";
+	NetworkPluginManager::PerformJobAccounting(ad, jobphase);
 
 		// Now, call our parent class's version
 	return OsProc::PublishUpdateAd( ad );
@@ -726,7 +726,8 @@ VanillaProc::JobReaper(int pid, int status)
 		}
 		if (m_network_name.length() && NetworkPluginManager::HasPlugins()) {
 			// Call this before removing the statistics; PublishUpdateAd is called after JobReaper
-			NetworkPluginManager::PerformJobAccounting(NULL);
+            const std::string jobphase = "execution";
+			NetworkPluginManager::PerformJobAccounting(NULL, jobphase);
 			// TODO: cleanup correct namespace
 			int rc = NetworkPluginManager::Cleanup(m_network_name);
 			if (rc) {

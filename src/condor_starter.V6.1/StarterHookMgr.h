@@ -50,7 +50,7 @@ public:
 		*/
 	int tryHookPrepareJob();
 		/**
- 		   Invode HOOK_PREPARE_MACHINE to update the machine classad with
+ 		   Invoke HOOK_PREPARE_MACHINE to update the machine classad with
 		   network configuration info inserted.
 		*/
 	int tryHookPrepareMachine();
@@ -84,6 +84,10 @@ public:
 
 	int getExitHookTimeout() { return m_hook_job_exit_timeout; };
 
+    void setHookPrepareMachineStage(std::string stage) { m_hook_prepare_machine_stage = stage; };
+
+    std::string getHookPrepareMachineStage() { return m_hook_prepare_machine_stage; };
+
 private:
 
 		/// The hook keyword defined in the job, or NULL if not present.
@@ -93,6 +97,8 @@ private:
 	char* m_hook_prepare_job;
 		/// The path to HOOK_PREPARE_MACHINE, if defined.
 	char* m_hook_prepare_machine;
+        /// The stage of HOOK_PREPARE_MACHINE, "stage_in", "execution", "stage_out"
+    std::string m_hook_prepare_machine_stage;
 		/// The path to HOOK_UPDATE_JOB_INFO, if defined.
 	char* m_hook_update_job_info;
 		/// The path to HOOK_JOB_EXIT, if defined.

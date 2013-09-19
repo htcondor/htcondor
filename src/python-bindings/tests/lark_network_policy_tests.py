@@ -38,15 +38,15 @@ class TestWithDaemons(unittest.TestCase):
 
     def setUp(self):
         self.pid = -1
-        os.environ["_condor_MASTER"] = os.path.join(os.getcwd(), "../../condor_master.V6/condor_master")
-        os.environ["_condor_COLLECTOR"] = os.path.join(os.getcwd(), "../../condor_collector.V6/condor_collector")
-        os.environ["_condor_SCHEDD"] = os.path.join(os.getcwd(), "../../condor_schedd.V6/condor_schedd")
-        os.environ["_condor_PROCD"] = os.path.join(os.getcwd(), "../../condor_procd/condor_procd")
-        os.environ["_condor_STARTD"] = os.path.join(os.getcwd(), "../../condor_startd.V6/condor_startd")
-        os.environ["_condor_STARTER"] = os.path.join(os.getcwd(), "../../condor_starter.V6.1/condor_starter")
-        os.environ["_condor_NEGOTIATOR"] = os.path.join(os.getcwd(), "../../condor_negotiator.V6/condor_negotiator")
-        os.environ["_condor_SHADOW"] = os.path.join(os.getcwd(), "../../condor_shadow.V6.1/condor_shadow")
-        os.environ["_condor_STARTER.PLUGINS"] = os.path.join(os.getcwd(), "../lark/lark-plugin.so")
+        os.environ["_condor_MASTER"] = os.path.join(os.getcwd(), "../condor_master.V6/condor_master")
+        os.environ["_condor_COLLECTOR"] = os.path.join(os.getcwd(), "../condor_collector.V6/condor_collector")
+        os.environ["_condor_SCHEDD"] = os.path.join(os.getcwd(), "../condor_schedd.V6/condor_schedd")
+        os.environ["_condor_PROCD"] = os.path.join(os.getcwd(), "../condor_procd/condor_procd")
+        os.environ["_condor_STARTD"] = os.path.join(os.getcwd(), "../condor_startd.V6/condor_startd")
+        os.environ["_condor_STARTER"] = os.path.join(os.getcwd(), "../condor_starter.V6.1/condor_starter")
+        os.environ["_condor_NEGOTIATOR"] = os.path.join(os.getcwd(), "../condor_negotiator.V6/condor_negotiator")
+        os.environ["_condor_SHADOW"] = os.path.join(os.getcwd(), "../condor_shadow.V6.1/condor_shadow")
+        os.environ["_condor_STARTER.PLUGINS"] = os.path.join(os.getcwd(), "../condor_contrib/lark/lark-plugin.so")
         os.environ["_condor_USE_NETWORK_NAMESPACES"] = "TRUE"
         #os.environ["_condor_LARK_NETWORK_ACCOUNTING"] = "TRUE"
         #now make the default configuration to be "bridge"
@@ -76,7 +76,7 @@ class TestWithDaemons(unittest.TestCase):
         os.environ["_condor_WANT_SUSPEND"] = "FALSE"
         os.environ["_condor_WANT_VACATE"] = "FALSE"
         # Remember to check the correctness of network policy script path defined
-        os.environ["_condor_STARTER_NETWORK_POLICY_SCRIPT_PATH"] = os.path.join(os.getcwd(), "../lark/LarkNetworkPolicy/lark_network_policy.py")
+        os.environ["_condor_STARTER_NETWORK_POLICY_SCRIPT_PATH"] = os.path.join(os.getcwd(), "../condor_contrib/lark/LarkNetworkPolicy/lark_network_policy.py")
         os.environ["_condor_STARTER_DEBUG"] = "D_FULLDEBUG"
         htcondor.reload_config()
         htcondor.SecMan().invalidateAllSessions()
@@ -219,6 +219,31 @@ class TestWithDaemons(unittest.TestCase):
         self.assertTrue(len(ads) == 1)
         self.assertTrue("LarkNetworkType" in ads[0].keys())
         self.assertEquals(job_ad["LarkNetworkType"], "bridge")
+
+    def testNetworkPolicyOVS(self):
+        jobqueue_log_dir = os.path.join(os.getcwd(), "tests_tmp/spool")
+        if(os.path.exists(jobqueue_log_dir)):
+            filelist = [f for f in os.listdir(jobqueue_log_dir) if f.startswith("job_queue.log")]
+            for f in filelist:
+                print "Removing", f
+                os.remove(os.path.join(jobqueue_log_dir, f))
+        self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
+        output_file = os.path.join(testdir, "lark_test_4.out")
+        if os.path.exists(output_file):
+            os.unlink(output_file)
+        fd = os.popen("curl www.google.com")
+        content = fd.read()
+        schedd = htcondor.Schedd()
+        ad = classad.parse(open("tests/lark_submit_4.ad"))
+        ads = []
+        cluster = schedd.submit(ad, 1, False, ads)
+        for i in range(60):
+            ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
+            print ads
+            if len(ads) == 0:
+                break
+            time.sleep(1)
+        self.assertEquals(open(output_file).read(), content)
 
 if __name__ == '__main__':
     unittest.main()

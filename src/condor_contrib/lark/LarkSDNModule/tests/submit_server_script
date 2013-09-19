@@ -1,0 +1,10 @@
+Universe = vanilla
+Executable = tcp_server.py
+Output = test_server.out 
+Error = test_server.err
+Log = test_server.log
++InboundConnectivity = True
++OutboundConnectivity = True
++NetworkAccounting = True
+request_bandwidth = 10
+Queue

@@ -822,8 +822,7 @@ JobInfoCommunicator::setupJobEnvironment( void )
 		int rval = m_hook_mgr->tryHookPrepareJob();
 		switch (rval) {
 		case -1:   // Error
-			// Debug purpose, need to be deleted
-			dprintf(D_ALWAYS, "tryHookPrepareJob failed(zhe)\n");
+			dprintf(D_ALWAYS, "tryHookPrepareJob failed\n");
 			Starter->RemoteShutdownFast(0);
 			return;
 			break;
@@ -831,20 +830,21 @@ JobInfoCommunicator::setupJobEnvironment( void )
 		case 0:    // Hook not configured
 				// Call tryHookPrepareMachine here
 		{
+            std::string stage("execution");
+            m_hook_mgr->setHookPrepareMachineStage(stage);
 			int rval1 = m_hook_mgr->tryHookPrepareMachine();
 			if(rval1 == -1) { // Error
 				Starter->RemoteShutdownFast(0);
 				return;
 			}
 			if(rval1 == 0) { // Hook not configured
-				// Debug purpose, need to be deleted
-				dprintf(D_ALWAYS, "tryHookPrepareMachine is not configured(zhe)\n");
+				dprintf(D_ALWAYS, "tryHookPrepareMachine is not configured\n");
 				// Do nothing here, just break and call
 				// jobEnvironmentReady
+                break;
 			}
 			if(rval1 == 1) {
-				// Debug purpose, need to be deleted afte working
-				dprintf(D_ALWAYS, "tryHookPrepareMachine has been spawned.(zhe)\n");
+				dprintf(D_ALWAYS, "tryHookPrepareMachine has been spawned.\n");
 				return;
 			}
 		}	
@@ -853,8 +853,7 @@ JobInfoCommunicator::setupJobEnvironment( void )
 		case 1:    // Spawned the hook.
 				// We need to bail now, and let the handler call
 				// jobEnvironmentReady() when the hook returns.
-			//Debug purpose, need to be deleted
-			dprintf(D_ALWAYS, "tryHookPrepareJob has been spawned(zhe)\n");
+			dprintf(D_ALWAYS, "tryHookPrepareJob has been spawned\n");
 			return;
 			break;
 		}
@@ -867,6 +866,11 @@ JobInfoCommunicator::setupJobEnvironment( void )
 	Starter->jobEnvironmentReady();
 }
 
+void
+JobInfoCommunicator::performFileTransfer( void )
+{
+    
+}
 
 void
 JobInfoCommunicator::cancelUpdateTimer( void )
