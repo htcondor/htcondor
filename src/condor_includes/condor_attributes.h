@@ -672,6 +672,8 @@
 #define ATTR_WANT_CHECKPOINT  "WantCheckpoint"
 #define ATTR_WANT_CLAIMING  "WantClaiming"
 #define ATTR_WANT_IO_PROXY  "WantIOProxy"
+#define ATTR_WANT_REMOTE_UPDATES "WantRemoteUpdates"
+#define ATTR_WANT_DELAYED_UPDATES "WantDelayedUpdates"
 #define ATTR_WANT_MATCH_DIAGNOSTICS  "WantMatchDiagnostics"
 #define ATTR_WANT_PARALLEL_SCHEDULING_GROUPS  "WantParallelSchedulingGroups"
 #define ATTR_WANT_REMOTE_SYSCALLS  "WantRemoteSyscalls"

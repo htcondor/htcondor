@@ -19,6 +19,8 @@
 
 file( GLOB starterRmvElements condor_rsh.cpp glexec_job_wrapper* )
 
+set_source_files_properties(jic_shadow.cpp PROPERTIES COMPILE_FLAGS "-Wno-deprecated-declarations")
+
 condor_daemon( starter "${starterRmvElements}" "${CONDOR_LIBS};${LIBCGROUP_FOUND}" "${C_SBIN}" OFF)
 
 if (HAVE_EXT_GLOBUS)

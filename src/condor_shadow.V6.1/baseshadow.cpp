@@ -1259,6 +1259,13 @@ BaseShadow::updateJobAttr( const char *name, int value, bool log )
 }
 
 
+void
+BaseShadow::watchJobAttr( const std::string & name )
+{
+	job_updater->watchAttribute( name.c_str() );
+}
+
+
 bool
 BaseShadow::updateJobInQueue( update_t type )
 {
