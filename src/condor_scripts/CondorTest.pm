@@ -1478,9 +1478,6 @@ sub runCondorTool
 	} else {
 		$options = \%altoptions;
 	}
-
-	# Add a message to runcmd output
-	${$options}{emit_string} = "runCondorTool: Attempt: <$count>";
 	#Condor::DebugLevel(4);
 
 	# clean array before filling
@@ -1490,6 +1487,10 @@ sub runCondorTool
 	my $hashref;
 	while( $count < $attempts) {
 		#print "runCondorTool: Attempt: <$count>\n";
+
+		# Add a message to runcmd output
+		${$options}{emit_string} = "runCondorTool: Attempt: <$count>";
+
 		@{$arrayref} = (); #empty return array...
 		my @tmparray;
 		debug( "Try command <$cmd>\n",4);
