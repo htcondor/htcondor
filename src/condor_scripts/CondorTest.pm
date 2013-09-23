@@ -1490,7 +1490,6 @@ sub runCondorTool
 
 		# Add a message to runcmd output
 		${$options}{emit_string} = "runCondorTool: Attempt: <$count>";
-
 		@{$arrayref} = (); #empty return array...
 		my @tmparray;
 		debug( "Try command <$cmd>\n",4);
