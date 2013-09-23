@@ -1449,6 +1449,7 @@ sub IsRunningYet {
 	my $runlimit = 16;
 	my $backoff = 2;
 	my $loopcount;
+	my @toolarray;
 
 	# first failure was had test where we looked for
 	# a negotiator but MASTER_NEGOTIATOR_CONTROLLER
@@ -1642,40 +1643,52 @@ sub IsRunningYet {
 	}
 
 	if($daemonlist =~ /STARTD/i) {
-            # lets wait for the collector to know about it if we have a collector
+		my $output = "";
+		my @cmd = ();
+		my $done = "no";
+        # lets wait for the collector to know about it if we have a collector
             my $currenthost = CondorTest::getFqdnHost();
             if(($daemonlist =~ /COLLECTOR/i) && ($personal_startup_wait eq "true")) {
                 #print "Waiting for collector to see startd - ";
                 $loopcount = 0;
                 while(1) {
                     $loopcount++;
-                    my $output = `condor_status -startd -format \"%s\\n\" name`;
+					@cmd = ();
+                    @cmd = `condor_status -startd -format \"%s\\n\" name`;
                     
                     my $res = $?;
                     if ($res != 0) {
 			# This might mean that the collector isn't running - but we also sometimes have
 			# a condition where the collector isn't ready yet.  So we'll retry a few times.
-                        print "\n", timestamp(), "condor_status returned error code $res\n";
-                        print timestamp(), " The collector probably is not running after all, giving up\n";
-                        print timestamp(), " Output from condor_status:\n";
-                        print $output;
+                    	print "\n", timestamp(), "condor_status returned error code $res\n";
+                    	print timestamp(), " The collector probably is not running after all, giving up\n";
+                    	print timestamp(), " Output from condor_status:\n";
+                    	print @cmd;
+	
+						if($loopcount < $runlimit) {
+			    			print timestamp(), " Retrying...\n";
+			    			sleep 1;
+			    			next;
+						} else {
+			    			print timestamp(), " Hit the retry limit.  Erroring out.\n";
+							debug_flush();
+			    			return 0;
+						}
+					}
 
-			if($loopcount < $runlimit) {
-			    print timestamp(), " Retrying...\n";
-			    sleep 1;
-			    next;
-			}
-			else {
-			    print timestamp(), " Hit the retry limit.  Erroring out.\n";
-				debug_flush();
-			    return 0;
-			}
-                    }
-                    
-                    if($output =~ /$currenthost/) {
-                        #print "ok\n";
-                        last;
-                    }
+					foreach my $arg (@cmd) {
+						chomp($arg);
+						print "<$arg>\n";
+                    	if($arg =~ /$currenthost/) {
+                        	#print "ok\n";
+							$done = "yes";
+							$output = $arg;
+                        	last;
+                    	}
+					}
+					if($done eq "yes") {
+						last;
+					}
 
                     if($loopcount == $runlimit) { 
                         print "startd did not start - bad\n";
@@ -1685,10 +1698,11 @@ sub IsRunningYet {
                     sleep ($loopcount * $backoff);
                 }
             }
-			print "Startd in Collector now ";
+			print "Startd in Collector now(<$output>) ";
 	}
 
 	if($daemonlist =~ /SCHEDD/i) {
+		my $output = "";
 		# lets wait for the collector to know about it
 		# if we have a collector
 		my $haveschedd = "";
@@ -1703,10 +1717,12 @@ sub IsRunningYet {
 
     			foreach my $line (@cmd)
     			{
+					chomp($line);
         			if( $line =~ /^.*$currenthost.*/)
         			{
 						#print "ok\n";
             			$done = "yes";
+						$output = $line;
 						last TRY;
         			}
     			}
@@ -1718,11 +1734,12 @@ sub IsRunningYet {
 				sleep ($loopcount * $backoff);
 			}
 		}
-		print "Schedd in Collector now ";
+		print "Schedd in Collector now(<$output>) ";
 	}
 
 
 	if($daemonlist =~ /NEGOTIATOR/i) {
+		my $output = "";
 		# lets wait for the collector to know about it
 		# if we have a collector
 		my $havenegotiator = "";
@@ -1737,10 +1754,12 @@ sub IsRunningYet {
 
     			foreach my $line (@cmd)
     			{
+					chomp($line);
         			if( $line =~ /^.*$currenthost.*/)
         			{
 						#print "ok\n";
             			$done = "yes";
+						$output = $line;
 						last TRY;
         			}
     			}
@@ -1752,7 +1771,7 @@ sub IsRunningYet {
 				sleep ($loopcount * $backoff);
 			}
 		}
-		print "Negotiator in Collector now\n";
+		print "Negotiator in Collector now(<$output>)\n";
 	}
 
 	debug("In IsRunningYet calling CollectDaemonPids\n",$debuglevel);
