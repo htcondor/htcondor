@@ -49,6 +49,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item If cgroups were enabled, \Condor{ssh\_to\_job} would
+kill the job when the ssh session exited.  This bug has been fixed.
+\Ticket{3921}
+
 \item If a standard universe job exited and never used a checkpoint
 server, two spurious error messages would be logged to the 
 SchedLog, as it tried to remove the old checkpoint images from the
@@ -82,8 +86,7 @@ non-existent checkpoint server.  This bug has been fixed.
 
 \begin{itemize}
 
-\item HTCondor version 8.0.3 not yet released.
-%\item HTCondor version 8.0.3 released on Month Date, 2013.
+\item HTCondor version 8.0.3 released on September 23, 2013.
 
 \end{itemize}
 
@@ -108,16 +111,20 @@ non-existent checkpoint server.  This bug has been fixed.
 
 \begin{itemize}
 
-\item For the expressions evaluated by the \Condor{startd} \Macro{SUSPEND},
-\Macro{CONTINUE}, \Macro{PREEMPT}, and \Macro{KILL}, if the expression results
-in UNDEFINED or ERROR it is treated as false instead of having the
-\Condor{startd} except.
+\item When expressions for \Macro{SUSPEND},
+\Macro{CONTINUE}, \Macro{PREEMPT}, and \Macro{KILL}
+were evaluated by the \Condor{startd},
+a resulting value of
+\Expr{UNDEFINED} or \Expr{ERROR} caused an exception in the \Condor{startd}.
+These values are now treated as \Expr{False},
+eliminating the exception.
 \Ticket{3869}
 
-\item Fixed a bug that prevented the use of simple hostnames to identify
-machines when using the command-line tools. For example, 
-\Expr{condor\_status bar.foo.org} would show machine ads, but
+\item Fixed a bug that prevented the use of simple host names to identify
+machines when using the command-line tools. Before the fix,
+\Expr{condor\_status bar.foo.org} would show machine ClassAds, but
 \Expr{condor\_status bar} would not.
+Both now show machine ClassAds.
 \Ticket{3694}
 
 \item Fixed a bug with \Condor{ssh\_to\_job} that occurs when
@@ -140,8 +147,8 @@ that would cause the \Condor{schedd} to run very slowly when
 incorrect results when ClassAd caching is enabled.
 \Ticket{3879}
 
-\item DAGMan's updating of its job ad with DAG status attributes no
-longer causes extra events to be written to the user job log and event log.
+\item DAGMan's updating of its job ClassAd with DAG status attributes no
+longer causes extra events to be written to the job event log and event log.
 \Ticket{3863}
 
 \item Fixed a bug that caused the command
@@ -155,13 +162,17 @@ such that it will still work with other versions of HTCondor containing
 the bug.
 \Ticket{3902}
 
-\item The value of the JobOutOfResource hold code was changed to 34 so that
-it would not conflict with the MaxTransferInputSizeExceeded hold code.
+\item Value 032 of the job ClassAd attribute \Attr{HoldReasonCode}
+was being used for two different reasons.
+Now, value 032 identifies that the maximum total input file 
+transfer size was exceeded. 
+Value 034 identifies that memory usage exceeds a memory limit.
 \Ticket{3858}
 
-\item The values of the job ClassAd attributes RemoteSysCpu and RemoteUserCpu
-are sometimes impossibly large. The problem is rare and not well understood,
-but Changes have been made to the code in an attempt to fix this problem.
+\item The values of the job ClassAd attributes \Attr{RemoteSysCpu} 
+and \Attr{RemoteUserCpu} are sometimes impossibly large.
+This bug rarely occurs and is not well understood.
+Code changes attempt to fix this problem.
 \Ticket{3814}
 
 \item Fixed a bug that caused DAG recovery mode to fail on

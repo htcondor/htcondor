@@ -26,19 +26,9 @@ int main(int argc, char **argv) {
 		if((file = fopen(argv[2], "w"))) {
 			curl_easy_setopt(handle, CURLOPT_URL, argv[1]);
 			curl_easy_setopt(handle, CURLOPT_WRITEDATA, file);
-			curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, 1);
-			// Does curl protect against redirect loops otherwise?
-			// curl_easy_setopt(handle, CURLOPT_MAXREDIRS, 1000);
 			rval = curl_easy_perform(handle);
+	
 			fclose(file);
-
-			if( rval == 0 ) {
-				long httpCode = 0;
-				rval = curl_easy_getinfo( handle, CURLINFO_RESPONSE_CODE, & httpCode );
-				if( rval == 0 ) {
-					if( httpCode != 200 ) { rval = 1; }
-				}
-			}
 		}
 		curl_easy_cleanup(handle);
 	}
