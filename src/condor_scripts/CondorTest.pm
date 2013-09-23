@@ -1329,15 +1329,15 @@ sub runCondorTool
 		$options = \%altoptions;
 	}
 
-	# Add a message to runcmd output
-	${$options}{emit_string} = "runCondorTool: Attempt: <$count>";
-
 	# clean array before filling
 
 	my $attempts = 15;
 	$count = 0;
 	my $hashref;
 	while( $count < $attempts) {
+
+		# Add a message to runcmd output
+		${$options}{emit_string} = "runCondorTool: Attempt: <$count>";
 		@{$arrayref} = (); #empty return array...
 		my @tmparray;
 		debug( "Try command <$cmd>\n",4);
