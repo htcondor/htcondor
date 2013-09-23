@@ -27,6 +27,19 @@
 #include <dirent.h>
 #endif
 
+/** is it a *.old file? */
+static int isOldString(const char *str);
+
+/** is the argument an ISO timestamp? */
+static int isTimestampString(const char *str);
+
+/** is the argument a valid log filename? */
+static int isLogFilename(const char *filename);
+
+/** find the oldest file in the directory matching the 
+  *current base name according to iso time ending 
+ */
+static char *findOldest(char *dirName, int *count);
 
 #ifdef WIN32
 char * searchLogName = NULL;
@@ -185,6 +198,7 @@ rotateTimestamp(const char *timeStamp, int maxNum, time_t tt)
 	return save_errno; // will be 0 in case of success.
 }
 
+
 /*
 tj : change to delete files rather than 'rotating' them when the number exceeds 1
 this code currently will take the oldest .timestamp file and rename it to .old
@@ -221,16 +235,13 @@ int cleanUpOldLogFiles(int maxNum) {
 }
 
 
-
-#ifndef WIN32
-
-int isOldString(char *str){
+static int isOldString(const char *str){
 	if (strcmp(str, "old") == 0)
 		return 1;
 	return 0;
 }
 
-int isTimestampString(char *str) {
+static int isTimestampString(const char *str) {
 	int len = strlen(str);
 	if (len != 15) {
 		return 0;
@@ -251,10 +262,13 @@ int isTimestampString(char *str) {
 	return 1;
 } 
 
-int isLogFilename( char *filename) {
+static int isLogFilename(const char *filename) {
 	int dirLen = strlen(baseDirName);
-	if (baseDirName[dirLen-1] != DIR_DELIM_CHAR)
-		++dirLen;
+#ifdef WIN32
+	if (baseDirName[dirLen-1] != DIR_DELIM_CHAR && baseDirName[dirLen-1] != '/') ++dirLen;
+#else
+	if (baseDirName[dirLen-1] != DIR_DELIM_CHAR) ++dirLen;
+#endif
     int fLen = strlen(logBaseName);
     if (strncmp(filename, (logBaseName+dirLen), fLen - dirLen) == 0 ) {
     	if (  (strlen(filename) > unsigned(fLen-dirLen)) && 
@@ -268,10 +282,10 @@ int isLogFilename( char *filename) {
 	return 0;
 }
 
+#ifndef WIN32
+
 int file_select(const struct dirent *entry) {
-	
-	char *entryData = const_cast<char*>(entry->d_name);
-	return isLogFilename(entryData) ? 1 : 0;
+	return isLogFilename(entry->d_name);
 }
 
 
@@ -290,8 +304,10 @@ char *findOldest(char *dirName, int *count) {
 }
 #else
 
+// return a count of files matching the logfile name pattern,
+// and the filename of the oldest of these files.
 char *findOldest(char *dirName, int *count) {
-	char *oldFile;
+	char *oldFile = NULL;
 	WIN32_FIND_DATA ffd;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
 	int result;
@@ -309,20 +325,19 @@ char *findOldest(char *dirName, int *count) {
 	// this should work correctly for .old (because there is only one)
 	// and for .{TIMESTAMP} because the timestamps will sort by date.
 
-	result = FindNextFile(hFind, &ffd);
-	if (result == 0) {
-		return NULL;
-	} else {
-		oldFile = (char*)malloc(strlen(logBaseName) + 2 + MAX_ISO_TIMESTAMP);
-		ASSERT( oldFile );
-		strcpy(oldFile, ffd.cFileName);
-	}
-	while (result != 0) {
+	while ((result = FindNextFile(hFind, &ffd)) != 0) {
+		if ( ! isLogFilename(ffd.cFileName))
+			continue;
 		++(*count);
-		result = FindNextFile(hFind, &ffd);
-		int cch = strlen(ffd.cFileName);
-		if (cch > cchBase && strcmp(ffd.cFileName+cchBase, oldFile+cchBase) < 0) {
+		if ( ! oldFile) {
+			oldFile = (char*)malloc(strlen(logBaseName) + 2 + MAX_ISO_TIMESTAMP);
+			ASSERT( oldFile );
 			strcpy(oldFile, ffd.cFileName);
+		} else {
+			int cch = strlen(ffd.cFileName);
+			if (cch > cchBase && strcmp(ffd.cFileName+cchBase, oldFile+cchBase) < 0) {
+				strcpy(oldFile, ffd.cFileName);
+			}
 		}
 	}
 

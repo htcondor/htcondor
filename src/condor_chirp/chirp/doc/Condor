@@ -8,7 +8,7 @@ the submit file:
 +WantIOProxy = true
 
 
-The job starter will then create a file called "chirp.config" in the
+The job starter will then create a file called ".chirp.config" in the
 execution directory.  When the program calls chirp_client_connect_default()
 or chirp_client_connect_url("chirp:path"), it will connect and authenticate
 itself with the starter, using the connection information in chirp.config.

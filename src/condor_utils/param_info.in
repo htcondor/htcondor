@@ -10902,6 +10902,70 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter
 id=615
 
+[CHIRP_DELAYED_UPDATE_PREFIX]
+aliases=
+default=Chirp*
+version=8.1.0
+range=.*
+state=default
+type=string
+is_macro=true
+reconfig=true
+customization=seldom
+friendly_name=Determines the required prefix for remote updates from the running job
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=starter,shadow
+id=616
+
+[ENABLE_CHIRP_IO]
+aliases=
+default=true
+version=8.1.0
+range=.*
+state=default
+type=bool
+is_macro=true
+reconfig=true
+customization=seldom
+friendly_name=Enables IO from the running job back to the submitter machine
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=starter
+id=617
+
+[ENABLE_CHIRP_UPDATES]
+aliases=
+default=true
+version=8.1.0
+range=.*
+state=default
+type=bool
+is_macro=true
+reconfig=true
+customization=seldom
+friendly_name=Enables job updates (inserting values into the job log or qedits) from the running job back to the submitter machine
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=starter
+id=618
+
+[ENABLE_CHIRP_DELAYED]
+aliases=
+default=true
+version=8.1.0
+range=.*
+state=default
+type=bool
+is_macro=true
+reconfig=true
+customization=seldom
+friendly_name=Enables delayed job updates (inserting qedits) with a required prefix at little resource cost from the running job back to the submitter machine.  The safest of the ENABLE_CHIRP_* settings
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=starter
+id=619
+
 [GANGLIA_GMETRIC]
 aliases=
 default=
@@ -11205,3 +11269,36 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=618
+
+[HISTORY_HELPER_MAX_HISTORY]
+aliases=
+default=10000
+version=0.0.0
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=History Helper max number of history ads
+usage=Set the limit on the number of history ads remote history will consider
+url=http://cs.wisc.edu/condor/manual/v8.1/3_3Configuration.html#SECTION
+tags=
+id=619
+
+[HISTORY_HELPER_MAX_CONCURRENCY]
+aliases=
+default=10000
+version=0.0.0
+range=0,
+state=default
+type=int
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=History Helper max number of helper sub-processes
+usage=Set the limit on the number of condor_history_helper sub-processes
+url=http://cs.wisc.edu/condor/manual/v8.1/3_3Configuration.html#SECTION
+tags=
+id=620
+

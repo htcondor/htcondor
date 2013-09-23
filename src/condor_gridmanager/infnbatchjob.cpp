@@ -29,6 +29,7 @@
 #include "ipv6_hostname.h"
 #include "condor_netaddr.h"
 #include "directory.h"
+#include "spooled_job_files.h"
 
 #include "gridmanager.h"
 #include "infnbatchjob.h"
@@ -1245,7 +1246,7 @@ BaseResource *INFNBatchJob::GetResource()
 
 ClassAd *INFNBatchJob::buildSubmitAd()
 {
-	MyString expr;
+	std::string expr;
 	ClassAd *submit_ad;
 	ExprTree *next_expr;
 
@@ -1279,27 +1280,18 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 	expr = "";
 	jobAd->LookupString( ATTR_JOB_REMOTE_IWD, expr );
-	if ( !expr.IsEmpty() ) {
+	if ( !expr.empty() ) {
 		submit_ad->Assign( ATTR_JOB_IWD, expr );
 	}
 
 	expr = "";
 	jobAd->LookupString( ATTR_BATCH_QUEUE, expr );
-	if ( !expr.IsEmpty() ) {
+	if ( !expr.empty() ) {
 		submit_ad->Assign( "Queue", expr );
 	}
 
-	// The blahp expects the Cmd attribute to contain the full pathname
-	// of the job executable.
-	jobAd->LookupString( ATTR_JOB_CMD, expr );
-	if ( expr.FindChar( '/' ) < 0 ) {
-		std::string fullpath;
-		submit_ad->LookupString( ATTR_JOB_IWD, fullpath );
-		formatstr_cat( fullpath, "/%s", expr.Value() );
-		submit_ad->Assign( ATTR_JOB_CMD, fullpath );
-	} else {
-		submit_ad->Assign( ATTR_JOB_CMD, expr );
-	}
+	GetJobExecutable( jobAd, expr );
+	submit_ad->Assign( ATTR_JOB_CMD, expr );
 
 	// The blahp expects the proxy attribute to contain the full pathname
 	// of the proxy file.
@@ -1307,7 +1299,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		if ( expr[0] != '/' ) {
 			std::string fullpath;
 			submit_ad->LookupString( ATTR_JOB_IWD, fullpath );
-			formatstr_cat( fullpath, "/%s", expr.Value() );
+			formatstr_cat( fullpath, "/%s", expr.c_str() );
 			submit_ad->Assign( ATTR_X509_USER_PROXY, fullpath );
 		} else {
 			submit_ad->Assign( ATTR_X509_USER_PROXY, expr );
@@ -1454,6 +1446,8 @@ ClassAd *INFNBatchJob::buildTransferAd()
 {
 	int index;
 	const char *attrs_to_copy[] = {
+		ATTR_CLUSTER_ID,
+		ATTR_PROC_ID,
 		ATTR_JOB_CMD,
 		ATTR_JOB_INPUT,
 		ATTR_TRANSFER_EXECUTABLE,
