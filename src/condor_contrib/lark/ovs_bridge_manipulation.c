@@ -5,7 +5,7 @@
  * Eventually, these will be replaced by codes similar in openvswitch
  * source code to avoid new process creation.
  */
-
+#include "condor_common.h"
 #include "condor_config.h"
 
 #include <errno.h>
