@@ -160,7 +160,6 @@ BoincJob::BoincJob( ClassAd *classad )
 	remoteState = BOINC_JOB_STATUS_UNSET;
 	gmState = GM_INIT;
 	enteredCurrentGmState = time(NULL);
-	enteredCurrentRemoteState = time(NULL);
 	m_serviceUrl = NULL;
 	myResource = NULL;
 	gahp = NULL;
@@ -720,15 +719,6 @@ void BoincJob::doEvaluateState()
 		if ( gmState != old_gm_state || remoteState != old_remote_state ) {
 			reevaluate_state = true;
 		}
-		if ( remoteState != old_remote_state ) {
-/*
-			dprintf(D_FULLDEBUG, "(%d.%d) remote state change: %s -> %s\n",
-					procID.cluster, procID.proc,
-					old_remote_state.c_str(),
-					remoteState.c_str());
-*/
-			enteredCurrentRemoteState = time(NULL);
-		}
 		if ( gmState != old_gm_state ) {
 			dprintf(D_FULLDEBUG, "(%d.%d) gm state change: %s -> %s\n",
 					procID.cluster, procID.proc, GMStateNames[old_gm_state],
@@ -798,9 +788,8 @@ void BoincJob::NewBoincState( const char *new_state )
 
 		// TODO verify that the string is a valid state name
 
-	SetRemoteJobStatus( new_state );
+	if ( SetRemoteJobStatus( new_state ) ) {
 
-	if ( new_state_str != remoteState ) {
 		dprintf( D_FULLDEBUG, "(%d.%d) boinc state change: %s -> %s\n",
 				 procID.cluster, procID.proc, remoteState.c_str(),
 				 new_state_str.c_str() );
@@ -834,10 +823,6 @@ void BoincJob::NewBoincState( const char *new_state )
 		}
 
 		remoteState = new_state_str;
-		enteredCurrentRemoteState = time(NULL);
-		SetRemoteJobStatus( remoteState.c_str() );
-
-		requestScheddUpdate( this, false );
 
 		SetEvaluateState();
 	}

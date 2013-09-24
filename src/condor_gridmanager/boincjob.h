@@ -71,7 +71,6 @@ class BoincJob : public BaseJob
 	std::string remoteState;
 	BoincResource *myResource;
 	time_t enteredCurrentGmState;
-	time_t enteredCurrentRemoteState;
 	char *m_serviceUrl;
 	int connectFailureCount;
 
