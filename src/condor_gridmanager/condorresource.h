@@ -81,10 +81,10 @@ class CondorResource : public BaseResource
 	void PublishResourceAd( ClassAd *resource_ad );
 
  private:
-	void DoPing( time_t& ping_delay, bool& ping_complete,
-				 bool& ping_succeeded  );
+	void DoPing( unsigned& ping_delay, bool& ping_complete,
+				 bool& ping_succeeded );
 
-	void DoUpdateLeases( time_t& update_delay, bool& update_complete, 
+	void DoUpdateLeases( unsigned& update_delay, bool& update_complete,
 						 SimpleList<PROC_ID>& update_succeeded );
 
 	GahpClient *gahp;

@@ -395,7 +395,7 @@ void GlobusResource::JMAlreadyRunning( GlobusJob *job )
 	}
 }
 
-void GlobusResource::DoPing( time_t& ping_delay, bool& ping_complete,
+void GlobusResource::DoPing( unsigned& ping_delay, bool& ping_complete,
 							 bool& ping_succeeded )
 {
 	int rc;
