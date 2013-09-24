@@ -58,6 +58,7 @@ class BoincResource : public BaseResource
 	bool JoinBatch( BoincJob *job, std::string &batch_name,
 					std::string &error_str );
 	BoincSubmitResponse Submit( BoincJob *job, std::string &error_str );
+	bool JobDone( BoincJob *job );
 
 	static const char *HashName( const char *resource_name,
 								 const char *authenticator );

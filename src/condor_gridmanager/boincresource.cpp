@@ -67,6 +67,7 @@ struct BoincBatch {
 	std::string m_error_message;
 	std::set<BoincJob *> m_jobs;
 	std::set<BoincJob *> m_jobs_ready;
+	std::set<BoincJob *> m_jobs_done;
 };
 
 BoincResource *BoincResource::FindOrCreateResource( const char *resource_name,
@@ -269,6 +270,8 @@ void BoincResource::UnregisterJob( BaseJob *base_job )
 
 			if ( (*job_itr) == job ) {
 				(*batch_itr)->m_jobs.erase( (*job_itr) );
+				(*batch_itr)->m_jobs_ready.erase( (*job_itr) );
+				(*batch_itr)->m_jobs_done.erase( (*job_itr) );
 				break;
 			}
 		}
@@ -441,6 +444,24 @@ bool BoincResource::BatchReadyToSubmit( BoincBatch *batch, unsigned *delay )
 		return false;
 	}
 	return true;
+}
+
+bool BoincResource::JobDone( BoincJob *job )
+{
+	for ( list<BoincBatch *>::iterator batch_itr = m_batches.begin();
+		  batch_itr != m_batches.end(); batch_itr++ ) {
+
+		if ( (*batch_itr)->m_jobs.find( job ) == (*batch_itr)->m_jobs.end() ) {
+			continue;
+		}
+		(*batch_itr)->m_jobs_done.insert( job );
+		if ( (*batch_itr)->m_jobs_done == (*batch_itr)->m_jobs ) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	return false;
 }
 
 void BoincResource::DoPing( time_t& ping_delay, bool& ping_complete,

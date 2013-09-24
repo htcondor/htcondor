@@ -54,6 +54,7 @@ using std::vector;
 #define GM_DELETE				12
 #define GM_CLEAR_REQUEST		13
 #define GM_HOLD					14
+#define GM_CANCEL_COMMIT		15
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
@@ -71,6 +72,7 @@ static const char *GMStateNames[] = {
 	"GM_DELETE",
 	"GM_CLEAR_REQUEST",
 	"GM_HOLD",
+	"GM_CANCEL_COMMIT",
 };
 
 #define BOINC_JOB_STATUS_UNSET			""
@@ -515,8 +517,23 @@ void BoincJob::doEvaluateState()
 		case GM_DONE_COMMIT: {
 			// Allow Boinc batch to be retired once all jobs finish
 			// TODO Signal completion to BoincResource
-			// TODO send retire_batch if we're last job
-			//   (or wait for BoincResource to do so)
+			if ( myResource->JobDone( this ) ) {
+				// This is the last job in the batch, tell the server
+				// it can be retired.
+				rc = gahp->boinc_retire_batch( remoteBatchName );
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
+					break;
+				}
+				if ( rc != GLOBUS_SUCCESS ) {
+					// unhandled error
+					LOG_BOINC_ERROR( "boinc_retire_batch()", rc );
+					gahpErrorString = gahp->getErrorString();
+					// For now, ignore failures and let the job leave
+					// the queue.
+				}
+			}
+
 			if ( condorState == COMPLETED || condorState == REMOVED ) {
 				SetRemoteBatchName( NULL );
 				gmState = GM_DELETE;
@@ -553,6 +570,27 @@ void BoincJob::doEvaluateState()
 			remoteState = BOINC_JOB_STATUS_UNSET;
 			SetRemoteJobStatus( NULL );
 			requestScheddUpdate( this, false );
+
+			gmState = GM_CANCEL_COMMIT;
+		} break;
+		case GM_CANCEL_COMMIT: {
+			// If this is the last job in the batch, we need to retire it.
+			if ( myResource->JobDone( this ) ) {
+				// This is the last job in the batch, tell the server
+				// it can be retired.
+				rc = gahp->boinc_retire_batch( remoteBatchName );
+				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+					 rc == GAHPCLIENT_COMMAND_PENDING ) {
+					break;
+				}
+				if ( rc != GLOBUS_SUCCESS ) {
+					// unhandled error
+					LOG_BOINC_ERROR( "boinc_retire_batch()", rc );
+					gahpErrorString = gahp->getErrorString();
+					// For now, ignore failures and let the job leave
+					// the queue.
+				}
+			}
 
 			if ( condorState == REMOVED ) {
 				gmState = GM_DELETE;
