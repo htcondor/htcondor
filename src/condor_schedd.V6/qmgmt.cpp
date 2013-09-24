@@ -92,6 +92,7 @@ void	FindPrioJob(PROC_ID &);
 static bool qmgmt_was_initialized = false;
 static ClassAdCollection *JobQueue = 0;
 static StringList DirtyJobIDs;
+static std::set<int> DirtyPidsSignaled;
 static int next_cluster_num = -1;
 static int next_proc_num = 0;
 int active_cluster_num = -1;	// client is restricted to only insert jobs to the active cluster
@@ -2530,30 +2531,33 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	}
 
 	// Get the job's status and only mark dirty if it is running
+	// Note: Dirty attribute notification could work for local and
+	// standard universe, but is currently not supported for them.
 	int universe;
 	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
 	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_UNIVERSE, &universe );
-	if( (universe != CONDOR_UNIVERSE_SCHEDULER) &&
+	if( ( universe != CONDOR_UNIVERSE_SCHEDULER &&
+		  universe != CONDOR_UNIVERSE_LOCAL &&
+		  universe != CONDOR_UNIVERSE_STANDARD ) &&
 		( flags & SETDIRTY ) && 
 		( status == RUNNING || (( universe == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( ad ) ) ) ) {
 
 		// Add the key to list of dirty classads
-		DirtyJobIDs.rewind();
-		if( ! DirtyJobIDs.contains( key ) ) {
+		if( ! DirtyJobIDs.contains( key ) &&
+			SendDirtyJobAdNotification( key ) ) {
+
 			DirtyJobIDs.append( key );
-		}
 
-		// Start timer to ensure notice is confirmed
-		if( dirty_notice_timer_id <= 0 ) {
-			dprintf(D_FULLDEBUG, "Starting dirty attribute notification timer\n");
-			dirty_notice_timer_id = daemonCore->Register_Timer(
-				dirty_notice_interval,
-				dirty_notice_interval,
-				PeriodicDirtyAttributeNotification,
-				"PeriodicDirtyAttributeNotification");
+			// Start timer to ensure notice is confirmed
+			if( dirty_notice_timer_id <= 0 ) {
+				dprintf(D_FULLDEBUG, "Starting dirty attribute notification timer\n");
+				dirty_notice_timer_id = daemonCore->Register_Timer(
+									dirty_notice_interval,
+									dirty_notice_interval,
+									PeriodicDirtyAttributeNotification,
+									"PeriodicDirtyAttributeNotification");
+			}
 		}
-
-		SendDirtyJobAdNotification(key);
 	}
 
 	JobQueueDirty = true;
@@ -2561,7 +2565,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	return 0;
 }
 
-void
+bool
 SendDirtyJobAdNotification(char *job_id_str)
 {
 	PROC_ID job_id;
@@ -2576,15 +2580,17 @@ SendDirtyJobAdNotification(char *job_id_str)
 		pid = scheduler.FindGManagerPid(job_id);
 	}
 
-	if( pid > 0 ) {
+	if ( pid <= 0 ) {
+		dprintf(D_ALWAYS, "Failed to send signal %s, no job manager found\n", getCommandString(UPDATE_JOBAD));
+		return false;
+	} else if ( DirtyPidsSignaled.find(pid) == DirtyPidsSignaled.end() ) {
 		dprintf(D_FULLDEBUG, "Sending signal %s, to pid %d\n", getCommandString(UPDATE_JOBAD), pid);
 		classy_counted_ptr<DCSignalMsg> msg = new DCSignalMsg(pid, UPDATE_JOBAD);
 		daemonCore->Send_Signal_nonblocking(msg.get());
-//		daemonCore->Send_Signal(srec->pid, UPDATE_JOBAD);
+		DirtyPidsSignaled.insert(pid);
 	}
-	else {
-		dprintf(D_ALWAYS, "Failed to send signal %s, no job manager found\n", getCommandString(UPDATE_JOBAD));
-	}
+
+	return true;
 }
 
 void
@@ -2592,10 +2598,28 @@ PeriodicDirtyAttributeNotification()
 {
 	char	*job_id;
 
+	DirtyPidsSignaled.clear();
+
 	DirtyJobIDs.rewind();
 	while( (job_id = DirtyJobIDs.next()) != NULL ) {
-		SendDirtyJobAdNotification(job_id);
+		if ( SendDirtyJobAdNotification(job_id) == false ) {
+			// There's no shadow/gridmanager for this job.
+			// Mark it clean and remove it from the dirty list.
+			// We can't call MarkJobClean() here, as that would
+			// disrupt our traversal of DirtyJobIDs.
+			JobQueue->ClearClassAdDirtyBits(job_id);
+			DirtyJobIDs.deleteCurrent();
+		}
 	}
+
+	if( DirtyJobIDs.isEmpty() && dirty_notice_timer_id > 0 )
+	{
+		dprintf(D_FULLDEBUG, "Cancelling dirty attribute notification timer\n");
+		daemonCore->Cancel_Timer(dirty_notice_timer_id);
+		dirty_notice_timer_id = -1;
+	}
+
+	DirtyPidsSignaled.clear();
 }
 
 void
@@ -3293,15 +3317,11 @@ MarkJobClean(int cluster_id, int proc_id)
 void
 MarkJobClean(const char* job_id_str)
 {
-	int cluster;
-	int proc;
-
 	if(JobQueue->ClearClassAdDirtyBits(job_id_str))
 	{
 		dprintf(D_FULLDEBUG, "Cleared dirty attributes for job %s\n", job_id_str);
 	}
 
-	DirtyJobIDs.rewind();
 	DirtyJobIDs.remove(job_id_str);
 
 	if( DirtyJobIDs.isEmpty() && dirty_notice_timer_id > 0 )
@@ -3310,7 +3330,6 @@ MarkJobClean(const char* job_id_str)
 		daemonCore->Cancel_Timer(dirty_notice_timer_id);
 		dirty_notice_timer_id = -1;
 	}
-	StrToId(job_id_str, cluster, proc);
 }
 
 ClassAd *

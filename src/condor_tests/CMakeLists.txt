@@ -60,6 +60,7 @@ if (BUILD_TESTING)
 	condor_exe_test(job_core_bigenv.exe "job_core_bigenv.c" "")
 	condor_exe_test(lib_eventlog_build.exe "lib_eventlog_base.cpp" "condorapi")
 	condor_exe_test(x_job_mem_checker.exe "x_job_mem_checker.c" "" )
+	condor_exe_test(x_complete_params.exe "x_complete_params.cpp" "" )
 	
 	# Not all of our gccs support -Wno-div-by-zero.
 	#if (UNIX)
@@ -402,8 +403,9 @@ if (BUILD_TESTING)
 	condor_pl_test(basic_startd_slot_attrs "STARTD_SLOT_ATTRS test" "core;quick;full")
 	#condor_pl_test(job_basic_suspend_continue_test "test suspends and continue" "core;quick;full")
 	condor_pl_test(job_basic_start_test "START reserve defines a dedicated slot" "core;quick;full")
-	condor_pl_test(job_basic_param_config_check "START param system with
-	daemon localizations" "core;quick;full")
+	condor_pl_test(job_basic_param_config_check "param system checks" "core;quick;full")
+	#condor_pl_test(lib_python_bindings "check python bindings" "core;quick;full")
+	condor_pl_test(lib_param_completeness "minimal knobs" "core;quick;full")
 	condor_pl_test(cmd_condor_ping_basic "Basic default test of condor_ping" "core;quick;full")
 	condor_pl_test(job_aggressive_flocking "Test aggressive flocking" "core;quick;full")
 	##### job tests

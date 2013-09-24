@@ -2,15 +2,24 @@
 // Note - pyconfig.h must be included before condor_common to avoid
 // re-definition warnings.
 # include <pyconfig.h>
+#include <Python.h>
+#include <datetime.h>
 
 #include <string>
 
 #include <classad/source.h>
 #include <classad/sink.h>
+#include <classad/classadCache.h>
 
 #include "classad_wrapper.h"
 #include "exprtree_wrapper.h"
 #include "old_boost.h"
+
+void
+ExprTreeHolder::init()
+{
+    PyDateTime_IMPORT;
+}
 
 ExprTreeHolder::ExprTreeHolder(const std::string &str)
     : m_expr(NULL), m_owns(true)
@@ -23,6 +32,7 @@ ExprTreeHolder::ExprTreeHolder(const std::string &str)
         boost::python::throw_error_already_set();
     }
     m_expr = expr;
+    m_refcount.reset(m_expr);
 }
 
 
@@ -37,20 +47,57 @@ ExprTreeHolder::~ExprTreeHolder()
 
 bool ExprTreeHolder::ShouldEvaluate() const
 {
+    if (m_expr->GetKind() == classad::ExprTree::EXPR_ENVELOPE)
+    {
+        classad::CachedExprEnvelope *expr = static_cast<classad::CachedExprEnvelope*>(m_expr);
+        return expr->get()->GetKind() == classad::ExprTree::LITERAL_NODE ||
+               expr->get()->GetKind() == classad::ExprTree::CLASSAD_NODE;
+    }
     return m_expr->GetKind() == classad::ExprTree::LITERAL_NODE ||
            m_expr->GetKind() == classad::ExprTree::CLASSAD_NODE;
 }
 
-boost::python::object ExprTreeHolder::Evaluate() const
+class ScopeGuard
 {
+public:
+    ScopeGuard(classad::ExprTree &expr, const classad::ClassAd *scope_ptr)
+       : m_orig(expr.GetParentScope()), m_expr(expr), m_new(scope_ptr)
+    {
+        if (m_new) m_expr.SetParentScope(scope_ptr);
+    }
+    ~ScopeGuard()
+    {
+        if (m_new) m_expr.SetParentScope(m_orig);
+    }
+
+private:
+    const classad::ClassAd *m_orig;
+    classad::ExprTree &m_expr;
+    const classad::ClassAd *m_new;
+    
+};
+
+boost::python::object ExprTreeHolder::Evaluate(boost::python::object scope) const
+{
+    const ClassAdWrapper *scope_ptr = NULL;
+    boost::python::extract<ClassAdWrapper> ad_extract(scope);
+    ClassAdWrapper tmp_ad;
+    if (ad_extract.check())
+    {
+        tmp_ad = ad_extract();
+        scope_ptr = &tmp_ad;
+    }
+
     if (!m_expr)
     {
         PyErr_SetString(PyExc_RuntimeError, "Cannot operate on an invalid ExprTree");
         boost::python::throw_error_already_set();
     }
     classad::Value value;
-    if (m_expr->GetParentScope())
+    const classad::ClassAd *origParent = m_expr->GetParentScope();
+    if (origParent || scope_ptr)
     {
+        ScopeGuard guard(*m_expr, scope_ptr);
         if (!m_expr->Evaluate(value))
         {
             PyErr_SetString(PyExc_TypeError, "Unable to evaluate expression");
@@ -74,6 +121,9 @@ boost::python::object ExprTreeHolder::Evaluate() const
     classad::ClassAd *advalue = NULL;
     boost::shared_ptr<ClassAdWrapper> wrap;
     PyObject* obj;
+    classad::abstime_t atime; atime.secs=0; atime.offset=0;
+    boost::python::object timestamp;
+    boost::python::object args;
     classad_shared_ptr<classad::ExprList> exprlist;
     switch (value.GetType())
     {
@@ -93,11 +143,22 @@ boost::python::object ExprTreeHolder::Evaluate() const
         result = boost::python::str(strvalue);
         break;
     case classad::Value::ABSOLUTE_TIME_VALUE:
+        value.IsAbsoluteTimeValue(atime);
+        // Note we don't use offset -- atime.secs is always in UTC, which is
+        // what python wants for PyDateTime_FromTimestamp
+        timestamp = boost::python::long_(atime.secs);
+        args = boost::python::make_tuple(timestamp);
+        obj = PyDateTime_FromTimestamp(args.ptr());
+        result = boost::python::object(boost::python::handle<>(obj));
+        break;
     case classad::Value::INTEGER_VALUE:
         value.IsIntegerValue(intvalue);
         result = boost::python::long_(intvalue);
         break;
     case classad::Value::RELATIVE_TIME_VALUE:
+        value.IsRelativeTimeValue(realvalue);
+        result = boost::python::object(realvalue);
+        break;
     case classad::Value::REAL_VALUE:
         value.IsRealValue(realvalue);
         result = boost::python::object(realvalue);
@@ -257,6 +318,38 @@ boost::python::object ClassAdWrapper::setdefault(const std::string attr, boost::
     return result;
 }
 
+void ClassAdWrapper::update(boost::python::object source)
+{
+    // First, try to use ClassAd's built-in update.
+    boost::python::extract<ClassAdWrapper&> source_ad_obj(source);
+    if (source_ad_obj.check())
+    {
+        this->Update(source_ad_obj()); return;
+    }
+
+    // Next, see if we have a dictionary-like object.
+    if (PyObject_HasAttrString(source.ptr(), "items"))
+    {
+        return this->update(source.attr("items")());
+    }
+    if (!PyObject_HasAttrString(source.ptr(), "__iter__")) THROW_EX(ValueError, "Must provide a dictionary-like object to update()");
+
+    boost::python::object iter = source.attr("__iter__")();
+    while (true) {
+        PyObject *pyobj = PyIter_Next(iter.ptr());
+        if (!pyobj) break;
+        if (PyErr_Occurred()) {
+            boost::python::throw_error_already_set();
+        }
+
+        boost::python::object obj = boost::python::object(boost::python::handle<>(pyobj));
+
+        boost::python::tuple tup = boost::python::extract<boost::python::tuple>(obj);
+        std::string attr = boost::python::extract<std::string>(tup[0]);
+        InsertAttrObject(attr, tup[1]);
+    }
+}
+
 ExprTreeHolder ClassAdWrapper::LookupExpr(const std::string &attr) const
 {
     classad::ExprTree * expr = Lookup(attr);
@@ -307,6 +400,12 @@ convert_python_to_exprtree(boost::python::object value)
         PyErr_SetString(PyExc_ValueError, "Unknown ClassAd Value type.");
         boost::python::throw_error_already_set();
     }
+    if (PyBool_Check(value.ptr()))
+    {
+        bool cppvalue = boost::python::extract<bool>(value);
+        classad::Value val; val.SetBooleanValue(cppvalue);
+        return classad::Literal::MakeLiteral(val);
+    }
     if (PyString_Check(value.ptr()))
     {
         std::string cppvalue = boost::python::extract<std::string>(value);
@@ -329,6 +428,20 @@ convert_python_to_exprtree(boost::python::object value)
     {
         double cppvalue = boost::python::extract<double>(value);
         classad::Value val; val.SetRealValue(cppvalue);
+        return classad::Literal::MakeLiteral(val);
+    }
+    if (PyDateTime_Check(value.ptr()))
+    {
+        classad::abstime_t atime;
+        boost::python::object timestamp = py_import("calendar").attr("timegm")(value.attr("timetuple")());
+        // Determine the UTC offset; timetuple above is in local time, but timegm assumes UTC.
+        std::time_t current_time;
+        std::time(&current_time);
+        struct std::tm *timeinfo = std::localtime(&current_time);
+        long offset = timeinfo->tm_gmtoff;
+        atime.secs = boost::python::extract<time_t>(timestamp) - offset;
+        atime.offset = 0;
+        classad::Value val; val.SetAbsoluteTimeValue(atime);
         return classad::Literal::MakeLiteral(val);
     }
     if (PyDict_Check(value.ptr()))

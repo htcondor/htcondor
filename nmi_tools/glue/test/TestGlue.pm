@@ -48,6 +48,7 @@ sub setup_test_environment {
         set_env("BASE_DIR", $base_dir);
         set_env("PATH", "$base_dir/nmi_tools/glue/test:$base_dir/condor/bin:$base_dir/condor/sbin:$ENV{PATH}");
         set_env("CONDOR_CONFIG", "$base_dir/condor_tests/TestingPersonalCondor/condor_config");
+		set_env("LD_LIBRARY_PATH","$ENV{LD_LIBRARY_PATH}:$base_dir/condor/libexec:$base_dir/condor/lib:$base_dir/condor/lib/python");
     }
     else {
         # Get the right slashes for Windows.  Apparently getcwd() returns forward slashes, even

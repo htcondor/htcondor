@@ -4,10 +4,17 @@ import os
 import re
 import time
 import errno
+import types
+import atexit
 import signal
 import socket
 import classad
 import unittest
+
+master_pid = 0
+def kill_master():
+    if master_pid: os.kill(master_pid, signal.SIGTERM)
+atexit.register(kill_master)
 
 class TestConfig(unittest.TestCase):
 
@@ -66,10 +73,12 @@ os.environ["CONDOR_CONFIG"] = config_file
 os.environ["_condor_TOOL_LOG"] = os.path.join(logdir, "ToolLog")
 import htcondor
 
-class TestWithDaemons(unittest.TestCase):
+class WithDaemons(unittest.TestCase):
 
     def setUp(self):
         self.pid = -1
+        to_delete = [i for i in os.environ if i.lower().startswith("_condor_")]
+        for key in to_delete: del os.environ[key]
         os.environ["_condor_MASTER"] = os.path.join(os.getcwd(), "../condor_master.V6/condor_master")
         os.environ["_condor_COLLECTOR"] = os.path.join(os.getcwd(), "../condor_collector.V6/condor_collector")
         os.environ["_condor_SCHEDD"] = os.path.join(os.getcwd(), "../condor_schedd.V6/condor_schedd")
@@ -89,7 +98,14 @@ class TestWithDaemons(unittest.TestCase):
         os.environ["_condor_COLLECTOR_ADDRESS_FILE"] = "$(LOG)/.collector_address"
         os.environ["_condor_SCHEDD_ADDRESS_FILE"] = "$(LOG)/.schedd_address"
         os.environ["_condor_STARTD_ADDRESS_FILE"] = "$(LOG)/.startd_address"
+        os.environ["_condor_STARTD_DEBUG"] = "D_FULLDEBUG"
+        os.environ["_condor_STARTER_DEBUG"] = "D_FULLDEBUG"
+        os.environ["_condor_SHADOW_DEBUG"] = "D_FULLDEBUG|D_MACHINE"
         os.environ["_condor_NEGOTIATOR_ADDRESS_FILE"] = "$(LOG)/.negotiator_address"
+        os.environ["_condor_NEGOTIATOR_CYCLE_DELAY"] = "1"
+        os.environ["_condor_NEGOTIATOR_INTERVAL"] = "1"
+        os.environ["_condor_SCHEDD_INTERVAL"] = "1"
+        os.environ["_condor_SCHEDD_MIN_INTERVAL"] = "1"
         # Various required attributes for the startd
         os.environ["_condor_START"] = "TRUE"
         os.environ["_condor_SUSPEND"] = "FALSE"
@@ -99,10 +115,11 @@ class TestWithDaemons(unittest.TestCase):
         os.environ["_condor_WANT_SUSPEND"] = "FALSE"
         os.environ["_condor_WANT_VACATE"] = "FALSE"
         os.environ["_condor_MachineMaxVacateTime"] = "5"
+        os.environ["_condor_JOB_INHERITS_STARTER_ENVIRONMENT"] = "TRUE"
         htcondor.reload_config()
         htcondor.SecMan().invalidateAllSessions()
 
-    def launch_daemons(self, daemons=["MASTER", "COLLECTOR"]):
+    def launch_daemons(self, daemons=["MASTER", "COLLECTOR"], config={}):
         makedirs_ignore_exist(htcondor.param["LOG"])
         makedirs_ignore_exist(htcondor.param["LOCK"])
         makedirs_ignore_exist(htcondor.param["EXECUTE"])
@@ -111,6 +128,8 @@ class TestWithDaemons(unittest.TestCase):
         remove_ignore_missing(htcondor.param["MASTER_ADDRESS_FILE"])
         remove_ignore_missing(htcondor.param["COLLECTOR_ADDRESS_FILE"])
         remove_ignore_missing(htcondor.param["SCHEDD_ADDRESS_FILE"])
+        for key, val in config.items():
+            os.environ["_condor_%s" % key] = val
         if "COLLECTOR" in daemons:
             os.environ["_condor_PORT"] = "9622"
             os.environ["_condor_COLLECTOR_ARGS"] = "-port $(PORT)"
@@ -128,11 +147,15 @@ class TestWithDaemons(unittest.TestCase):
                     print str(e)
             finally:
                 os._exit(1)
+        global master_pid
+        master_pid = self.pid
         for daemon in daemons:
             self.waitLocalDaemon(daemon)
 
     def tearDown(self):
         if self.pid > 1:
+            global master_pid
+            master_pid = 0
             os.kill(self.pid, signal.SIGQUIT)
             pid, exit_status = os.waitpid(self.pid, 0)
             self.assertTrue(os.WIFEXITED(exit_status))
@@ -160,6 +183,9 @@ class TestWithDaemons(unittest.TestCase):
                 pass
             time.sleep(1)
         return coll.locate(dtype, dname)
+
+
+class TestPythonBindings(WithDaemons):
 
     def testDaemon(self):
         self.launch_daemons(["COLLECTOR"])
@@ -196,6 +222,7 @@ class TestWithDaemons(unittest.TestCase):
             if ads: break
             time.sleep(1)
         self.assertEquals(len(ads), 1)
+	self.assertTrue(isinstance(ads[0]["Bar"], types.FloatType))
         self.assertEquals(ads[0]["Bar"], now)
         self.assertTrue("Foo" not in ads[0])
 
@@ -266,7 +293,7 @@ class TestWithDaemons(unittest.TestCase):
 
         authz_ad = secman.ping(coll_ad["MyAddress"])
         self.assertTrue("AuthCommand" in authz_ad)
-        self.assertEquals(authz_ad['AuthCommand'], 60021)
+        self.assertEquals(authz_ad['AuthCommand'], 60011)
         self.assertTrue("AuthorizationSucceeded" in authz_ad)
         self.assertTrue(authz_ad['AuthorizationSucceeded'])
 

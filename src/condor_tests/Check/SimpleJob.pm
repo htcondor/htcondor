@@ -90,10 +90,12 @@ sub RunCheck
 	#print "Checking duration being passsed to RunCheck <$args{duration}>\n";
     my $execute_fn = $args{on_execute} || $dummy;
     my $hold_fn = $args{on_hold} || $dummy;
+    my $shadow = $args{on_shadow} || $dummy;
     my $suspended_fn = $args{on_suspended} || $dummy;
     my $unsuspended_fn = $args{on_unsuspended} || $dummy;
     my $disconnected_fn = $args{on_disconnected} || $dummy;
     my $reconnected_fn = $args{on_reconnected} || $dummy;
+    my $reconnectfailed_fn = $args{on_reconnectfailed} || $dummy;
     my $imageupdated_fn = $args{on_imageupdated} || $dummy;
     my $evicted_ewc_fn = $args{on_evictedwithcheckpoint} || $dummy;
     my $evicted_ewoc_fn = $args{on_evictedwithoutcheckpoint} || $dummy;
@@ -116,6 +118,9 @@ sub RunCheck
 	#If we register thees to dummy, then we don't get
 	#the error function registered which says this is bad
 
+	if( exists $args{on_shadow} ) {
+    	CondorTest::RegisterShadow( $testname, $shadow );
+	}
 	if( exists $args{on_imageupdated} ) {
     	CondorTest::RegisterImageUpdated( $testname, $imageupdated_fn );
 	}
@@ -136,6 +141,9 @@ sub RunCheck
 	}
 	if( exists $args{on_disconnected} ) {
     	CondorTest::RegisterDisconnected( $testname, $disconnected_fn );
+	}
+	if( exists $args{on_reconnectfailed} ) {
+    	CondorTest::RegisterReconnectFailed( $testname, $reconnectfailed_fn );
 	}
 	if( exists $args{on_reconnected} ) {
     	CondorTest::RegisterReconnected( $testname, $reconnected_fn );

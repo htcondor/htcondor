@@ -121,7 +121,7 @@ my $iscygwin  = CondorUtils::is_cygwin_perl();
 # configuration options
 my $test_retirement = 3600;	# seconds for an individual test timeout - 30 minutes
 my $BaseDir = getcwd();
-my $hush = 0;
+my $hush = 1;
 my $cmd_prompt = 0;
 my $sortfirst = 0;
 my $timestamp = 0;
@@ -278,6 +278,7 @@ while( $_ = shift( @ARGV ) ) {
       if( /^-e.*/ ) {
 	  $groupsize = shift(@ARGV);
 	  $kindwait = 0;
+	  print "kindwait set to 0 by -e switch\n";
 	  next SWITCH;
       }
       if( /^-a.*/ ) {
@@ -487,6 +488,7 @@ if ($isXML){
 
 my $hashsize = 0;
 my %test;
+my $reaped = 0;
 
 foreach my $compiler (@compilers) {
     # as long as we have tests to start, loop back again and start
@@ -496,7 +498,7 @@ foreach my $compiler (@compilers) {
 
     #debug("Compiler/Directory <$compiler> has $testspercompiler tests\n",2); 
     if ($isXML){
-	CondorTest::verbose_system ("mkdir -p $ResultDir/$compiler",{emit_output=>0});
+		CondorTest::verbose_system ("mkdir -p $ResultDir/$compiler",{emit_output=>0});
     } 
     if($compiler ne "\.") {
 	# Meh, if the directory isn't there, just skip it instead of bailing.
@@ -507,129 +509,143 @@ foreach my $compiler (@compilers) {
     $ENV{PATH} = $ENV{PATH} . ":" . $compilerdir;
 
     # fork a child to run each test program
-    #if($hush == 0) { 
-    	#print "submitting $compiler tests\n";
-    #}
+    if($hush == 0) { 
+    	print "submitting $compiler tests\n";
+    }
 
     # if batching tests, randomize order
     if(($groupsize > 0) && ($sortfirst == 0)){
-	yates_shuffle(\@{$test_suite{"$compiler"}});
+		yates_shuffle(\@{$test_suite{"$compiler"}});
     }
     my @currenttests = @{$test_suite{"$compiler"}};
     if($sortfirst == 1) {
-	@currenttests = sort @currenttests;
+		@currenttests = sort @currenttests;
     }
     foreach my $test_program (@currenttests) {
-        print "----------------------------\n";
-        print "Starting test: $test_program\n";
+        #print "----------------------------\n";
+        #print "Starting test: $test_program\n";
 		debug(" *********** Starting test: $test_program *********** \n",2);
 
-	# doing this next test
-	$currenttest = $currenttest + 1;
+		# doing this next test
+		$currenttest = $currenttest + 1;
 
-	if(($hush == 0) && ($kindwait == 0)) { 
-	    #print ".";
-	}
-	debug("Want to test $test_program\n",2);
+		if(($hush == 0) && ($kindwait == 0)) { 
+	    	print ".";
+		}
+		debug("Want to test $test_program\n",2);
 
         #next if $skip_hash{$compiler}->{$test_program};
 
-	# allow multiple runs easily
-	my $repeatcounter = 0;
-	#if( $hush == 0 ) {
-	    #debug("Want $repeat runs of each test\n",3);
-	#}
-	while($repeatcounter < $repeat) {
-	    if($isolated) {
+		# allow multiple runs easily
+		my $repeatcounter = 0;
+		#if( $hush == 0 ) {
+	    	#debug("Want $repeat runs of each test\n",3);
+		#}
+		while($repeatcounter < $repeat) {
+	    	if($isolated) {
                 my $state_dir = "$BaseDir/$test_program.$repeatcounter";
                 if($compiler ne ".") {
                     $state_dir .= ".$compiler";
                 }
                 my $time = time();
                 start_condor("$state_dir.$time.saveme");
-	    }
+	    	}
 
-	    #debug( "About to fork test<$currentgroup>\n",2);
-	    $currentgroup += 1;
-	    #debug( "About to fork test new size<$currentgroup>\n",2);
-	    my $pid = fork();
-	    if( $hush == 0 ) {
-		debug( "forking for $test_program pid returned is $pid\n",3);
-	    }
-		#debug_flush();
-	    die "error calling fork(): $!\n" unless defined $pid;
+	    	#debug( "About to fork test<$currentgroup>\n",2);
+	    	$currentgroup += 1;
+			#print "currentgroup now <$currentgroup>\n";
+	    	#debug( "About to fork test new size<$currentgroup>\n",2);
+			#print "About to fork...........\n";
+	    	my $pid = fork();
+	    	if( $hush == 0 ) {
+				debug( "forking for $test_program pid returned is $pid\n",3);
+	    	}
+			#print "forking for $test_program pid returned is $pid\n";
+	
+			#debug_flush();
+	    	die "error calling fork(): $!\n" unless defined $pid;
 
-	    # two modes 
-	    #		kindwait = resolve each test after the fork
-	    #		else:	   fork them all and then wait for all
-
-	    if( $kindwait == 1 ) {
-		#*****************************************************************
-		if( $pid > 0 ) {
-		    $test{$pid} = "$test_program";
-		    debug( "Started test: $test_program/$pid\n",2);
-
-		    # Wait for job before starting the next one
-
-		    StartTestOutput($compiler,$test_program);
-
-		    #print "Waiting on test\n";
-		    wait_for_test_children(\%test, $compiler,
-					   suppress_start_test_output=>1);
-		} else {
-		    # if we're the child, start test program
-		    DoChild($test_program, $test_retirement);
-		}
-		#*****************************************************************
-	    } else {
-		if( $pid > 0 ) {
-		    $test{$pid} = "$test_program";
-		    if( $hush == 0 ) {
-			debug( "Started test: $test_program/$pid\n",2);
-		    }
-		    # are we submitting all the tests for a compiler and then
-		    # waiting for them all? Or are we submitting a bunch and waiting
-		    # for them before submitting some more.
-		    if($groupsize != 0) {
-			debug( "current group: $currentgroup Limit: $groupsize\n",2);
-			if($currentgroup == $groupsize) {
-			    debug( "wait for batch\n",2);
-			    my $max_to_reap = 0; # unlimited;
-			    if($currenttest <= $testspercompiler) {
-				$max_to_reap = 1;
-			    }
-			    my $reaped = wait_for_test_children(\%test, 
-								$compiler, max_to_reap => $max_to_reap);
-			    debug( "wait returned test<$currentgroup>\n",2);
-			    $currentgroup -= $reaped;
-			    debug( "wait returned test new size<$currentgroup>\n",2);
-			    debug("currenttest<$currenttest> testspercompiler<$testspercompiler>\n",2);
-
-			    #next;
-			} else {
-			    # batch size not met yet
-			    debug( "batch size not met yet: current group<$currentgroup>\n",2);
-			    sleep 1;
-			    #next;
-			}
+	    	# two modes 
+	    	#		kindwait = resolve each test after the fork
+	    	#		else:	   fork them all and then wait for all
+	
+	    	if( $kindwait == 1 ) {
+			#*****************************************************************
+				if( $pid > 0 ) {
+		    		$test{$pid} = "$test_program";
+		    		debug( "Started test: kindwait: $test_program/$pid\n",2);
+		
+		    		# Wait for job before starting the next one
+	
+					#print "Calling StartTestOutput $compiler/$test_program <$pid>\n";
+		    		StartTestOutput($compiler,$test_program);
+		
+		    		#print "kindwait: Waiting on test\n";
+		    		wait_for_test_children(\%test, $compiler,
+					   	suppress_start_test_output=>1);
+				} else {
+		    		# if we're the child, start test program
+					#print "DoChild kindwait $test_program/$test_retirement\n";
+		    		DoChild($test_program, $test_retirement);
+				}
+			#*****************************************************************
 		    } else {
-	            	sleep 1;
-			#next;
-		    }
-		} else { # child
-		    # if we're the child, start test program
-		    DoChild($test_program, $test_retirement);
-		}
-	    }
-	    #*****************************************************************
+				if( $pid > 0 ) {
+			    	#$test{$pid} = "$test_program <$pid>";
+			    	$test{$pid} = "$test_program";
+			    	if( $hush == 0 ) {
+						debug( "Started test: $test_program/$pid\n",2);
+						print "Started test: $test_program/$pid\n";
+			    	}
+			    	# are we submitting all the tests for a compiler and then
+			    	# waiting for them all? Or are we submitting a bunch and waiting
+			    	# for them before submitting some more.
+			    	if($groupsize != 0) {
+						debug( "current group: $currentgroup Limit: $groupsize\n",2);
+						#print  "current group: $currentgroup Limit: $groupsize\n";
+						if($currentgroup == $groupsize) {
+				    		debug( "wait for batch\n",2);
+							#print "wait for batch as $currentgroup == $groupsize\n";
+				    		my $max_to_reap = 0; # unlimited;
+							#print "test number $currenttest batch size $testspercompiler\n";
+				    		if($currenttest <= $testspercompiler) {
+								#print "currenttest<$currenttest> >= testcompiler:$testspercompiler> maxreap now 1\n";
+								$max_to_reap = 1;
+				    		}
+				    		#my $reaped = wait_for_test_children(\%test, 
+									#$compiler, max_to_reap => $max_to_reap);
+				    		$reaped = wait_for_test_children(\%test, 
+									$compiler);
+				    		debug( "wait returned test<$currentgroup>\n",2);
+				    		$currentgroup -= $reaped;
+				    		debug( "wait returned test new size<$currentgroup>\n",2);
+				    		debug("currenttest<$currenttest> testspercompiler<$testspercompiler>\n",2);
+			
+				    		#next;
+						} else {
+				    		# batch size not met yet
+				    		debug( "batch size not met yet: current group<$currentgroup>\n",2);
+				    		sleep 1;
+				    		#next;
+						}
+			    	} else {
+		            	sleep 1;
+						#next;
+			    	}
+				} else { # child
+			    	# if we're the child, start test program
+			    	DoChild($test_program, $test_retirement,$currentgroup);
+				}
+			}
+		    #*****************************************************************
 
-	    $repeatcounter = $repeatcounter + 1;
+	    	$repeatcounter = $repeatcounter + 1;
 
             if($isolated) {
                 stop_condor();
             }
-	}
-    }
+		} #end of repeater loop
+    } # end of foreach $test_program
 
     # wait for each test to finish and print outcome
     if($hush == 0) { 
@@ -640,9 +656,9 @@ foreach my $compiler (@compilers) {
     $hashsize = keys %test;
     debug("At end of compiler dir hash size <<$hashsize>>\n",2);
     if(($kindwait == 0) && ($hashsize > 0)) {
-	debug("At end of compiler dir about to wait\n",2);
-	my $reaped = wait_for_test_children(\%test, $compiler);
-	$currentgroup -= $reaped;
+		debug("At end of compiler dir about to wait\n",2);
+		$reaped = wait_for_test_children(\%test, $compiler);
+		$currentgroup -= $reaped;
     }
 
     if($hush == 0) {
@@ -900,31 +916,41 @@ sub WhereIsInstallDir {
     CondorUtils::fullchomp($tmp);
     debug( "Install Directory \"$tmp\"\n",2);
     if ($iswindows) {
-	if ($iscygwin) {
-	    $tmp =~ s|\\|/|g; # convert backslashes to forward slashes.
-	    if($tmp =~ /^(.*)\/bin\/condor_master.exe\s*$/) {
-		$installdir = $1;
-		$tmp = `cygpath -m $1`;
-		CondorUtils::fullchomp($tmp);
-		$wininstalldir = $tmp;
-	    }
-	} else {
-	    $tmp =~ s/\\bin\\condor_master.exe$//i;
-	    $installdir = $tmp;
-	    $wininstalldir = $tmp;
-	}
-	$wininstalldir =~ s|/|\\|g; # forward slashes.to backslashes
-	$installdir =~ s|\\|/|g; # convert backslashes to forward slashes.
-	print "Testing this Install Directory: \"$wininstalldir\"\n";
+		if ($iscygwin) {
+	    	$tmp =~ s|\\|/|g; # convert backslashes to forward slashes.
+	    	if($tmp =~ /^(.*)\/bin\/condor_master.exe\s*$/) {
+			$installdir = $1;
+			$tmp = `cygpath -m $1`;
+			CondorUtils::fullchomp($tmp);
+			$wininstalldir = $tmp;
+	    	}
+		} else {
+	    	$tmp =~ s/\\bin\\condor_master.exe$//i;
+	    	$installdir = $tmp;
+	    	$wininstalldir = $tmp;
+		}
+		$wininstalldir =~ s|/|\\|g; # forward slashes.to backslashes
+		$installdir =~ s|\\|/|g; # convert backslashes to forward slashes.
+		print "Testing this Install Directory: \"$wininstalldir\"\n";
     } else {
-	$tmp =~ s|//|/|g;
-	if( ($tmp =~ /^(.*)\/sbin\/condor_master\s*$/) || \
-	    ($tmp =~ /^(.*)\/bin\/condor_master\s*$/) ) {
-	    $installdir = $1;
-	    print "Testing This Install Directory: \"$installdir\"\n";
-	} else {
-	    die "'$tmp' didn't match path RE\n";
-	}
+		$tmp =~ s|//|/|g;
+		if( ($tmp =~ /^(.*)\/sbin\/condor_master\s*$/) || \
+	    	($tmp =~ /^(.*)\/bin\/condor_master\s*$/) ) {
+	    	$installdir = $1;
+	    	print "Testing This Install Directory: \"$installdir\"\n";
+		} else {
+	    	die "'$tmp' didn't match path RE\n";
+		}
+		if(defined $ENV{LD_LIBRARY_PATH}) {
+			$ENV{LD_LIBRARY_PATH} = "$installdir/lib:$ENV{LD_LIBRARY_PATH}";
+		} else {
+			$ENV{LD_LIBRARY_PATH} = "$installdir/lib";
+		}
+		if(defined $ENV{PYTHONPATH}) {
+			$ENV{PYTHONPATH} = "$installdir/lib/python:$ENV{PYTHONPATH}";
+		} else {
+			$ENV{PYTHONPATH} = "$installdir/lib/python";
+		}
     }
 }
 
@@ -1282,10 +1308,10 @@ sub StartTestOutput
     debug("StartTestOutput passed compiler<<$compiler>>\n",2);
 
     if ($isXML){
-	print XML "<test_result>\n<name>$compiler.$test_program</name>\n<description></description>\n";
-	printf( "%-40s ", $test_program );
+		print XML "<test_result>\n<name>$compiler.$test_program</name>\n<description></description>\n";
+		printf( "%-40s ", $test_program );
     } else {
-	printf( "%-6s %-40s ", $compiler, $test_program );
+		#printf( "%-6s %-40s ", $compiler, $test_program );
     }
 }
 
@@ -1303,14 +1329,26 @@ sub CompleteTestOutput
     {
 		if ($isXML){
 	    	print XML "<status>SUCCESS</status>\n";
-	    	print "succeeded\n";
+			if($groupsize == 0) {
+	    		print "succeeded\n";
+			} else {
+				#print "Xml: group size <$groupsize> test <$test_name>\n";
+	    		print "$test_name succeeded\n";
+			}
 		} else {
-	    	print "succeeded\n";
+			if($groupsize == 0) {
+	    		print "succeeded\n";
+			} else {
+				#print "Not Xml: group size <$groupsize> test <$test_name>\n";
+	    		print "$test_name succeeded\n";
+			}
 		}
 		$num_success++;
 		@successful_tests = (@successful_tests, "$compiler/$test_name");
     } else {
-		$failure = `grep 'FAILURE' $test{$child}.out`;
+		my $testname = "$test{$child}";
+		$testname = $testname . ".out";
+		$failure = `grep 'FAILURE' $testname`;
 		$failure =~ s/^.*FAILURE[: ]//;
 		CondorUtils::fullchomp($failure);
 		$failure = "failed" if $failure =~ /^\s*$/;
@@ -1341,11 +1379,19 @@ sub CompleteTestOutput
     }
 }
 
-# DoChild($test_program, $test_retirement);
+# DoChild($test_program, $test_retirement,groupmemebercount);
 sub DoChild
 {
     my $test_program = shift;
     my $test_retirement = shift;
+	my $test_id = shift;
+	my $id = 0;
+
+	if(defined $test_id) {
+		print "Starting batch id <$test_id> PID <$$>\n";
+		$id = $test_id;
+		print "ID = <$id>\n";
+	}
     my $test_starttime = time();
     # with wrapping all test(most) in a personal condor
     # we know where the published directories are if we ask by name
@@ -1365,16 +1411,47 @@ sub DoChild
     my $pidcmd = "mkdir -p " . $save . "/" . "$$";
     verbose_system("$pidcmd",{emit_output=>0});
 
-    my $log = $testname . ".log";
-    my $cmd = $testname . ".cmd";
-    my $out = $testname . ".out";
-    my $err = $testname . ".err";
-    my $runout = $testname . ".run.out";
-    my $cmdout = $testname . ".cmd.out";
+    my $log = "";
+    my $cmd = "";
+    my $out = "";
+    my $err = "";
+    my $runout = "";
+    my $cmdout = "";
+
 
     # before starting test clean trace of earlier run
     my $rmcmd = "rm -f $log $out $err $runout $cmdout";
     CondorTest::verbose_system("$rmcmd",{emit_output=>0});
+
+    my $corecount = 0;
+    my $res;
+    eval {
+	alarm($test_retirement);
+	if(defined $test_id) {
+    	$testname . ".$test_id" . ".log";
+    	$testname . ".$test_id" . ".cmd";
+    	$testname . ".$test_id" . ".out";
+    	$testname . ".$test_id" . ".err";
+    	$testname . ".$test_id" . ".run.out";
+    	$testname . ".$test_id" . ".cmd.out";
+
+		if( $hush == 0 ) {
+	    	debug( "Child Starting:perl $test_program > $test_program.$test_id.out\n",2);
+		}
+		$res = system("perl $test_program > $test_program.$test_id.out 2>&1");
+	} else {
+    	$testname . ".log";
+    	$testname . ".cmd";
+    	$testname . ".out";
+    	$testname . ".err";
+    	$testname . ".run.out";
+    	$testname . ".cmd.out";
+
+		if( $hush == 0 ) {
+	    	debug( "Child Starting:perl $test_program > $test_program.out\n",2);
+		}
+		$res = system("perl $test_program > $test_program.out 2>&1");
+	}
 
     my $newlog =  $piddir . "/" . $log;
     my $newcmd =  $piddir . "/" . $cmd;
@@ -1382,15 +1459,6 @@ sub DoChild
     my $newerr =  $piddir . "/" . $err;
     my $newrunout =  $piddir . "/" . $runout;
     my $newcmdout =  $piddir . "/" . $cmdout;
-
-    my $corecount = 0;
-    my $res;
-    eval {
-	alarm($test_retirement);
-	if( $hush == 0 ) {
-	    debug( "Child Starting:perl $test_program > $test_program.out\n",2);
-	}
-	$res = system("perl $test_program > $test_program.out 2>&1");
 
 
 	# generate file names
@@ -1506,44 +1574,83 @@ sub wait_for_test_children {
     my($suppress_start_test_output) = $options{'suppress_start_test_output'};
 
     my $tests_reaped = 0;
-    while( my $child = wait() ) {
 
-	# if there are no more children, we're done
-	last if $child == -1;
-
-	# record the child's return status
-	my $status = $?;
-
-	my $debug_message = "Child PID $child ".describe_exit_status($status);
-
-	# ignore spurious children
-	if(! defined $test->{$child}) {
-	    debug($debug_message.". It was not known. Ignoring.\n", 2);
-	    next;
-	} else {
-	    debug($debug_message.". Test: $test->{$child}.\n", 2);
+	if(defined $max_to_reap) {
+		#print "wait_for_test_children: max to reap set: $max_to_reap = <$max_to_reap>\n";
+	}
+	if(defined $suppress_start_test_output) {
+		#print "wait_for_test_children: suppress start test output: $suppress_start_test_output = <$suppress_start_test_output>\n";
 	}
 
-	$tests_reaped++;
-
-	#finally
-	(my $test_name) = $test->{$child} =~ /(.*)\.run$/;
-	debug( "Done waiting on test $test_name\n",3);
-
-	StartTestOutput($compiler, $test_name) 
-	    unless $suppress_start_test_output;
-
-	CompleteTestOutput($compiler, $test_name, $child, $status);
-	delete $test->{$child};
 	$hashsize = keys %{$test};
 	debug("Tests remaining: $hashsize\n",2);
-	last if $hashsize == 0;
+	#print "Hash size of tests = <$hashsize>\n";
 
-	last if defined $max_to_reap 
-	    and $max_to_reap != 0
-	    and $max_to_reap <= $tests_reaped;
+    while( my $child = wait() ) {
+
+		#print "Caught pid <$child>\n";
+		# if there are no more children, we're done
+		if ($child == -1) {
+			print "wait_for_test_children: wait returned -1, done\n";
+		}
+
+		# record the child's return status
+		my $status = $?;
+	
+		my $debug_message = "Child PID $child ".describe_exit_status($status);
+	
+		#print "wait_for_test_children: debug message\n";
+		# ignore spurious children
+		if(! defined $test->{$child}) {
+	    	debug($debug_message.". It was not known. Ignoring.\n", 2);
+			#print "Test not known<$test->{$child}>.....\n";
+	    	next;
+		} else {
+	    	debug($debug_message.". Test: $test->{$child}.\n", 2);
+			print "processing PID <$child>: ";
+			#print "Test known: $test->{$child}\n";
+		}
+
+		$tests_reaped++;
+		#print "Reaping test:\n";
+
+		#finally
+		#(my $test_name) = $test->{$child} =~ /(.*)\.run$/;
+		my $hashnamefortest = "";
+		$hashnamefortest = $test->{$child};
+		my $test_name = "";
+		if($hashnamefortest =~ /^(.*?)\.run.*$/) {
+			$test_name = $1;
+			#print "Set Test Name as $test_name\n";
+		} else {
+			print "Name of the test not meeting test.run format<$hashnamefortest>\n";
+		}
+
+		debug( "Done waiting on test $test_name\n",3);
+		my $tname = "pid $child indexed hash value - $test->{$child}\n";
+		#print "Name from hash is <$tname>\n";
+		#print "Done waiting on test $test_name\n";
+
+		StartTestOutput($compiler, $test_name) 
+	    	unless $suppress_start_test_output;
+
+		CompleteTestOutput($compiler, $test_name, $child, $status);
+		delete $test->{$child};
+		$hashsize = keys %{$test};
+		debug("Tests remaining: $hashsize\n",2);
+		#print "Hash size of tests = <$hashsize>\n";
+		last if $hashsize == 0;
+
+		if((defined $max_to_reap) and ($max_to_reap != 0) and ($max_to_reap <= $tests_reaped)){
+			print "Leaving wait_for_test_children max_to_read <$max_to_reap> tests reaped <$tests_reaped>\n";
+			last;
+		}
+		#last if defined $max_to_reap 
+	    	#and $max_to_reap != 0
+	    	#and $max_to_reap <= $tests_reaped;
     }
 
+	#print "Tests Reaped = <$tests_reaped>\n";
     return $tests_reaped;
 }
 

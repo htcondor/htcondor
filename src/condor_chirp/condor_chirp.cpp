@@ -86,6 +86,7 @@ chirp_client_connect_starter()
     FILE *file;
     int fields;
     struct chirp_client *client;
+    char *default_filename;
     char host[CONDOR_HOSTNAME_MAX];
     char cookie[CHIRP_LINE_MAX];
 	MyString path;
@@ -93,10 +94,14 @@ chirp_client_connect_starter()
     int result;
 	const char *dir;
 
-	if (NULL == (dir = getenv("_CONDOR_SCRATCH_DIR"))) {
-		dir = ".";
+	if ((default_filename = getenv("_CONDOR_CHIRP_CONFIG"))) {
+		path.formatstr( "%s", default_filename );
+	} else {
+		if (NULL == (dir = getenv("_CONDOR_SCRATCH_DIR"))) {
+			dir = ".";
+		}
+		path.formatstr( "%s%c%s",dir,DIR_DELIM_CHAR,".chirp.config");
 	}
-	path.formatstr( "%s%c%s",dir,DIR_DELIM_CHAR,"chirp.config");
     file = safe_fopen_wrapper_follow(path.Value(),"r");
     if(!file) {
 		fprintf(stderr, "Can't open %s file\n",path.Value());
@@ -369,6 +374,25 @@ int chirp_get_job_attr(int argc, char **argv) {
 	DISCONNECT_AND_RETURN(client, 0);
 }
 
+int chirp_get_job_attr_delayed(int argc, char **argv) {
+	if (argc != 3) {
+		printf("condor_chirp get_job_attr_delayed AttributeName\n");
+		printf("This retrieves the attribute value from the local starter.\n");
+		printf("While this has no impact on the schedd, the attribute value may\n");
+		printf("differ from the current one in the schedd, depending when the last\n");
+		printf("schedd->starter update occurred.\n");
+		return -1;
+	}
+
+	struct chirp_client *client = NULL;
+	CONNECT_STARTER(client);
+
+	char *p = 0;
+	int len = chirp_client_get_job_attr_delayed(client, argv[2], &p);
+	printf("%.*s\n", len, p);
+	DISCONNECT_AND_RETURN(client, 0);
+}
+
 /*
  * chirp_getattr
  *   call chirp_setattr to do the real work
@@ -384,6 +408,27 @@ int chirp_set_job_attr(int argc, char **argv) {
 	CONNECT_STARTER(client);
 
     int rval = chirp_client_set_job_attr(client, argv[2], argv[3]);
+	DISCONNECT_AND_RETURN(client, rval);
+}
+
+/*
+ * chirp_set_job_attr_delayed
+ * Do an update to the remote shadow.  The update is non-durable - it may be lost by the
+ * schedd, but it will consume less resources on the submit side.
+ */
+
+int chirp_set_job_attr_delayed(int argc, char **argv) {
+	if (argc != 4) {
+		printf("condor_chirp set_job_attr_delayed AttributeName AttributeValue\n");
+		printf("This will perform a non-durable update to the shadow; it consumes\n");
+		printf("less resources than set_job_attr, but may be lost.\n");
+		return -1;
+	}
+
+	struct chirp_client *client = 0;
+	CONNECT_STARTER(client);
+
+	int rval = chirp_client_set_job_attr_delayed(client, argv[2], argv[3]);
 	DISCONNECT_AND_RETURN(client, rval);
 }
 
@@ -889,7 +934,9 @@ void usage() {
 	   "remote_file\n");
 	printf("condor_chirp remove remote_file\n");
 	printf("condor_chirp get_job_attr job_attribute\n");
+	printf("condor_chirp get_job_attr_delayed job_attribute\n");
 	printf("condor_chirp set_job_attr job_attribute attribute_value\n");
+	printf("condor_chirp set_job_attr_delayed job_attribute attribute_value\n");
 	printf("condor_chirp ulog text\n");
 	printf("condor_chirp read [-offset offset] [-stride length skip] "
 		"remote_file length\n");
@@ -928,8 +975,12 @@ main(int argc, char **argv) {
 		ret_val = chirp_put(argc, argv);
 	} else if (strcmp("remove", argv[1]) == 0) {
 		ret_val = chirp_remove(argc, argv);
+	} else if (strcmp("get_job_attr_delayed", argv[1]) == 0) {
+		ret_val = chirp_get_job_attr_delayed(argc, argv);
 	} else if (strcmp("get_job_attr", argv[1]) == 0) {
 		ret_val = chirp_get_job_attr(argc, argv);
+	} else if (strcmp("set_job_attr_delayed", argv[1]) == 0) {
+		ret_val = chirp_set_job_attr_delayed(argc, argv);
 	} else if (strcmp("set_job_attr", argv[1]) == 0) {
 		ret_val = chirp_set_job_attr(argc, argv);
 	} else if (strcmp("ulog", argv[1]) == 0) {

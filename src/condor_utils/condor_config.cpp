@@ -88,7 +88,7 @@
 extern "C" {
 	
 // Function prototypes
-void real_config(char* host, int wantsQuiet, bool wantExtraInfo);
+void real_config(const char* host, int wantsQuiet, bool wantExtraInfo);
 int Read_config(const char*, BUCKET**, int, int, bool,
 				ExtraParamTable* = NULL, const char * subsys = NULL);
 bool is_piped_command(const char* filename);
@@ -100,10 +100,10 @@ void init_tilde();
 void fill_attributes();
 void check_domain_attributes();
 void clear_config();
-void reinsert_specials(char*);
+void reinsert_specials(const char* host);
 void process_config_source(const char*, const char*, const char*, int);
 void process_locals( const char*, const char*);
-void process_directory( char*, char*);
+void process_directory( const char* dirlist, const char* host);
 static int  process_dynamic_configs();
 void check_params();
 
@@ -372,7 +372,7 @@ config( int wantsQuiet, bool ignore_invalid_entry, bool wantsExtraInfo )
 
 
 void
-config_host( char* host )
+config_host( const char* host )
 {
 	real_config( host, 0, true );
 }
@@ -499,7 +499,7 @@ condor_auth_config(int is_daemon)
 }
 
 void
-real_config(char* host, int wantsQuiet, bool wantExtraInfo)
+real_config(const char* host, int wantsQuiet, bool wantExtraInfo)
 {
 	char* config_source = NULL;
 	char* tmp = NULL;
@@ -909,7 +909,7 @@ get_config_dir_file_list( char const *dirpath, StringList &files )
 
 // examine each file in a directory and treat it as a config file
 void
-process_directory( char* dirlist, char* host )
+process_directory( const char* dirlist, const char* host )
 {
 	StringList locals;
 	const char *dirpath;
@@ -1999,6 +1999,12 @@ macro_expand( const char *str )
 	return( expand_macro(str, ConfigTab, TABLESIZE) );
 }
 
+char *
+expand_param( const char *str, const char *subsys, int use)
+{
+	return expand_macro(str, ConfigTab, TABLESIZE, NULL, true, subsys, use);
+}
+
 /*
 ** Same as param_boolean but for C -- returns 0 or 1
 ** The parameter value is expected to be set to the string
@@ -2030,8 +2036,62 @@ bool param_get_location(
 	return found_it;
 }
 
+const char * param_get_info(
+	const char * name,
+	const char * subsys,
+	const char * local,
+	MyString &name_used,
+	int & use_count,
+	int & ref_count,
+	MyString &filename,
+	int &line_number)
+{
+	const char * val = NULL;
+#if 1 //def NEW_PARAM_GENERATOR
+	filename = "";
+	line_number = -1;
+	if (subsys && ! subsys[0]) subsys = NULL;
+	if (local && ! local[0]) local = NULL;
+	if (subsys && local) {
+		name_used.formatstr("%s.%s.%s", subsys, local, name);
+		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigTab, TABLESIZE, 0);
+	}
+	if ( ! val && local) {
+		name_used.formatstr("%s.%s", local, name);
+		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigTab, TABLESIZE, 0);
+	}
+	if ( ! val && subsys) {
+		name_used.formatstr("%s.%s", subsys, name);
+		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigTab, TABLESIZE, 0);
+		if ( ! val) {
+			val = param_exact_default_string(name_used.Value());
+			if (val) { filename = "<Internal>"; line_number = -2; }
+		}
+	}
+	if ( ! val) {
+		name_used = name;
+		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigTab, TABLESIZE, 0);
+		if ( ! val) {
+			val = param_exact_default_string(name);
+			if (val) { filename = "<Internal>"; line_number = -2; }
+		}
+	}
+	if (val) {
+		use_count = get_macro_use_count(name_used.Value(), ConfigTab, TABLESIZE);
+		ref_count = get_macro_ref_count(name_used.Value(), ConfigTab, TABLESIZE);
+	}
+	if (val && extra_info && line_number != -2) {
+		extra_info->GetParam(name_used.Value(), filename, line_number);
+	}
+	return val;
+#else
+	PRAGMA_REMIND("TJ: write this")
+	return NULL;
+#endif
+}
+
 void
-reinsert_specials( char* host )
+reinsert_specials( const char* host )
 {
 	static unsigned int reinsert_pid = 0;
 	static unsigned int reinsert_ppid = 0;

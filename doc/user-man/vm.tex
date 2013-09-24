@@ -188,9 +188,10 @@ such that machines will not start jobs they can not run.
 Note that if snapshot disks are requested and file transfer is not
 being used, the \SubmitCmd{vmware\_dir} setting given in 
 the submit description file
-should not contain any symbolic link path components.
-This is to work around the issue discussed
-in the FAQ entry in section~\ref{sec:vmware-symlink-bug}.
+should not contain any symbolic link path components,
+as described on the
+\URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToAdminRecipes}
+page under the answer to why VMware jobs with symbolic links fail.
 
 Here is a sample submit description file for a VMware virtual machine:
 \begin{verbatim}
