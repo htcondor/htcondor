@@ -68,7 +68,7 @@ class BoincResource : public BaseResource
 	static void setGahpCallTimeout( int new_timeout )
 		{ gahpCallTimeout = new_timeout; }
 
-	static bool BatchReadyToSubmit( BoincBatch *batch, int *delay = NULL );
+	static bool BatchReadyToSubmit( BoincBatch *batch, unsigned *delay = NULL );
 
 	// This should be private, but BoincJob references it directly for now
 	static HashTable <HashKey, BoincResource *> ResourcesByName;

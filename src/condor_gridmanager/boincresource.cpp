@@ -39,6 +39,7 @@ using std::set;
 #define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		100
 #define DEFAULT_LEASE_DURATION		(6 * 60 * 60)
 #define SUBMIT_DELAY				2
+#define LEASE_RETRY_INTERVAL		(5 * 60)
 
 
 int BoincResource::gahpCallTimeout = 300;	// default value
@@ -61,6 +62,7 @@ struct BoincBatch {
 	std::string m_batch_name;
 	BatchSubmitStatus m_submit_status;
 	time_t m_lease_time;
+	time_t m_last_lease_attempt;
 	time_t m_last_insert;
 	std::string m_error_message;
 	std::set<BoincJob *> m_jobs;
@@ -320,6 +322,7 @@ bool BoincResource::JoinBatch( BoincJob *job, std::string &batch_name,
 			batch = new BoincBatch();
 			batch->m_batch_name = batch_name;
 			batch->m_lease_time = 0;
+			batch->m_last_lease_attempt = 0;
 			batch->m_submit_status = BatchMaybeSubmitted;
 			m_batches.push_back( batch );
 		}
@@ -356,6 +359,7 @@ bool BoincResource::JoinBatch( BoincJob *job, std::string &batch_name,
 			formatstr( batch->m_batch_name, "condor#%s#%d#%d", ScheddName,
 					   job->procID.cluster, (int)time(NULL) );
 			batch->m_lease_time = 0;
+			batch->m_last_lease_attempt = 0;
 			batch->m_submit_status = BatchUnsubmitted;
 			m_batches.push_back( batch );
 		}
@@ -422,7 +426,7 @@ BoincSubmitResponse BoincResource::Submit( BoincJob *job,
 	return BoincSubmitWait;
 }
 
-bool BoincResource::BatchReadyToSubmit( BoincBatch *batch, int *delay )
+bool BoincResource::BatchReadyToSubmit( BoincBatch *batch, unsigned *delay )
 {
 	if ( time(NULL) < batch->m_last_insert + SUBMIT_DELAY ) {
 		if ( delay ) {
@@ -583,6 +587,7 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 						  job_itr != (*batch_itr)->m_jobs.end(); job_itr++ ) {
 						(*job_itr)->SetEvaluateState();
 					}
+					daemonCore->Reset_Timer( m_leaseTid, 0 );
 				}
 				break;
 			}
@@ -619,7 +624,7 @@ GahpClient * BoincResource::BatchGahp() { return m_statusGahp; }
 void BoincResource::DoBatchSubmits()
 {
 dprintf(D_FULLDEBUG,"*** DoBatchSubmits()\n");
-	int delay = TIMER_NEVER;
+	unsigned delay = TIMER_NEVER;
 
 	if ( m_submitGahp == NULL || !m_submitGahp->isStarted() ) {
 		dprintf( D_FULLDEBUG, "gahp server not up yet, delaying DoBatchSubmits\n" );
@@ -637,7 +642,7 @@ dprintf(D_FULLDEBUG,"*** DoBatchSubmits()\n");
 		}
 
 		// If we have an active submit command, skip to that batch
-		int this_delay = TIMER_NEVER;
+		unsigned this_delay = TIMER_NEVER;
 		if ( m_activeSubmitBatch != NULL ) {
 			if ( *batch != m_activeSubmitBatch ) {
 				continue;
@@ -680,6 +685,7 @@ dprintf(D_FULLDEBUG,"*** DoBatchSubmits()\n");
 			if ( rc == 0 ) {
 				// success
 				(*batch)->m_submit_status = BatchSubmitted;
+				daemonCore->Reset_Timer( m_leaseTid, 0 );
 			} else {
 				dprintf( D_ALWAYS, "Failed to submit batch %s: %s\n",
 						 (*batch)->m_batch_name.c_str(),
@@ -705,7 +711,8 @@ dprintf(D_FULLDEBUG,"*** DoBatchSubmits()\n");
 void BoincResource::UpdateBoincLeases()
 {
 dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
-	int delay = TIMER_NEVER;
+	unsigned delay = TIME_T_NEVER;
+	time_t now = time(NULL);
 
 	if ( m_leaseGahp == NULL || !m_leaseGahp->isStarted() ) {
 		dprintf( D_FULLDEBUG, "gahp server not up yet, delaying UpdateBoincLeases\n" );
@@ -716,7 +723,7 @@ dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
 	for ( list<BoincBatch*>::iterator batch = m_batches.begin();
 		  batch != m_batches.end(); batch++ ) {
 
-		if ( !(*batch)->m_submit_status == BatchSubmitted ) {
+		if ( (*batch)->m_submit_status != BatchSubmitted ) {
 			continue;
 		}
 
@@ -727,8 +734,19 @@ dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
 
 		if ( m_activeLeaseBatch == NULL ) {
 			// Calculate how long until this batch's lease needs to be updated
-			time_t this_delay = ( (*batch)->m_lease_time + (DEFAULT_LEASE_DURATION / 3) ) - time(NULL);
-			if ( this_delay <= 0 ) {
+			time_t renew_time = (*batch)->m_lease_time - ((2 * DEFAULT_LEASE_DURATION) / 3);
+			if ( renew_time <= now ) {
+
+				if ( ( (*batch)->m_last_lease_attempt + LEASE_RETRY_INTERVAL ) > now ) {
+					unsigned this_delay = ( (*batch)->m_last_lease_attempt + LEASE_RETRY_INTERVAL ) - now;
+					if ( this_delay < delay ) {
+						delay = this_delay;
+					}
+					dprintf(D_FULLDEBUG,"    skipping recently attempted lease renewal\n");
+
+					continue;
+				}
+
 				// lease needs to be updated
 				time_t new_lease_time = time(NULL) + DEFAULT_LEASE_DURATION;
 				int rc = m_leaseGahp->boinc_set_lease( (*batch)->m_batch_name.c_str(),
@@ -744,6 +762,7 @@ dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
 					break; // or reset timer and return?
 				}
 			} else {
+				unsigned this_delay = renew_time - now;
 				if ( this_delay < delay ) {
 					delay = this_delay;
 				}
@@ -757,6 +776,7 @@ dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
 				break;
 			}
 			m_activeLeaseBatch = NULL;
+			(*batch)->m_last_lease_attempt = time(NULL);
 			if ( rc == 0 ) {
 				// success
 				(*batch)->m_lease_time = m_activeLeaseTime;
@@ -771,6 +791,10 @@ dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
 						 m_leaseGahp->getErrorString() );
 				// TODO What else do we do?
 			}
+			// Now that this lease command is done, re-examine all
+			// batches.
+			delay = 0;
+			break;
 
 		}
 	}
