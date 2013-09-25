@@ -65,10 +65,10 @@ non-existent checkpoint server.
 These error messages are no longer logged.
 \Ticket{3919}
 
-\item If the config knob STARTER\_RLIMIT\_AS is set to the default
-value, there is no limit.  However, in this case, we logged that the
-limit was set to 0 mb, which means ulimited to the kernel, but
-was confusing.  Now, no message is logged in the default case.
+\item When configuration variable \Macro{STARTER\_RLIMIT\_AS} is set 
+to its default value of 0, it means that there is no limit.  
+This value was logged as a limit of 0Mb, leading to confusion.
+Now, no message is logged in this default case.
 \Ticket{3914}
 
 \item Improved how the \Condor{schedd} notifies the \Condor{shadow}
