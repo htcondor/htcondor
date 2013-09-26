@@ -76,6 +76,10 @@ class Timeslice {
 
 	void setFinishTimeNow();
 
+		// instead of calling startFinishTimeNow() followed by setFinishTimeNow(),
+		// processEvent() can be passed the start and stop times
+	void processEvent(UtcTime start,UtcTime finish);
+
 	void reset();
 
 	void updateNextStartTime();

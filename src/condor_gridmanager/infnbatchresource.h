@@ -60,7 +60,7 @@ public:
 	const char *RemoteHostname() { return m_remoteHostname.c_str(); };
 
 private:
-	void DoPing(time_t & ping_delay, 
+	void DoPing(unsigned & ping_delay,
 				bool & ping_complete, 
 				bool & ping_succeeded  );
 

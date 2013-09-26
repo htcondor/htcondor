@@ -88,9 +88,9 @@
 extern "C" {
 	
 // Function prototypes
-void real_config(char* host, int wantsQuiet, bool wantExtraInfo);
+void real_config(const char* host, int wantsQuiet, bool wantExtraInfo);
 int Read_config(const char*, BUCKET**, int, int, bool,
-				ExtraParamTable* = NULL);
+				ExtraParamTable* = NULL, const char * subsys = NULL);
 bool is_piped_command(const char* filename);
 bool is_valid_command(const char* cmdToExecute);
 int SetSyscalls(int);
@@ -100,10 +100,10 @@ void init_tilde();
 void fill_attributes();
 void check_domain_attributes();
 void clear_config();
-void reinsert_specials(char*);
+void reinsert_specials(const char* host);
 void process_config_source(const char*, const char*, const char*, int);
 void process_locals( const char*, const char*);
-void process_directory( char*, char*);
+void process_directory( const char* dirlist, const char* host);
 static int  process_dynamic_configs();
 void check_params();
 
@@ -364,7 +364,7 @@ config( int wantsQuiet, bool ignore_invalid_entry, bool wantsExtraInfo )
 {
 #ifdef WIN32
 	char *locale = setlocale( LC_ALL, "English" );
-	dprintf ( D_FULLDEBUG, "Locale: %s\n", locale );
+	dprintf ( D_LOAD | D_VERBOSE, "Locale: %s\n", locale );
 #endif
 	real_config( NULL, wantsQuiet, wantsExtraInfo );
 	validate_entries( ignore_invalid_entry );
@@ -372,7 +372,7 @@ config( int wantsQuiet, bool ignore_invalid_entry, bool wantsExtraInfo )
 
 
 void
-config_host( char* host )
+config_host( const char* host )
 {
 	real_config( host, 0, true );
 }
@@ -499,7 +499,7 @@ condor_auth_config(int is_daemon)
 }
 
 void
-real_config(char* host, int wantsQuiet, bool wantExtraInfo)
+real_config(const char* host, int wantsQuiet, bool wantExtraInfo)
 {
 	char* config_source = NULL;
 	char* tmp = NULL;
@@ -780,7 +780,7 @@ process_config_source( const char* file, const char* name,
 		}
 	} else {
 		rval = Read_config( file, ConfigTab, TABLESIZE, EXPAND_LAZY,
-							false, extra_info );
+							false, extra_info, get_mySubSystem()->getName());
 		if( rval < 0 ) {
 			fprintf( stderr,
 					 "Configuration Error Line %d while reading %s %s\n",
@@ -909,7 +909,7 @@ get_config_dir_file_list( char const *dirpath, StringList &files )
 
 // examine each file in a directory and treat it as a config file
 void
-process_directory( char* dirlist, char* host )
+process_directory( const char* dirlist, const char* host )
 {
 	StringList locals;
 	const char *dirpath;
@@ -1559,7 +1559,7 @@ param_with_default_abort(const char *name, int abort)
 		// something in the Default Table.
 
 		// The candidate wasn't in the Config Table, so check the Default Table
-		const char * def = param_default_string(next_param_name, NULL);
+		const char * def = param_exact_default_string(next_param_name);
 		if (def != NULL) {
 			// Yay! Found something! Add the entry found in the Default 
 			// Table to the Config Table. This could be adding an empty
@@ -1628,17 +1628,24 @@ param_integer( const char *name, int &value,
 			   bool use_param_table )
 {
 	if(use_param_table) {
-		int tbl_default_valid;
-		int tbl_default_value = 
-			param_default_integer( name, &tbl_default_valid );
+		const char* subsys = get_mySubSystem()->getName();
+		if (subsys && ! subsys[0]) subsys = NULL;
+
+		int def_valid = 0;
+		int is_long = false;
+		int tbl_default_value = param_default_integer(name, subsys, &def_valid, &is_long);
 		bool tbl_check_ranges = 
 			(param_range_integer(name, &min_value, &max_value)==-1) 
 				? false : true;
 
+		if (is_long) {
+			dprintf (D_CONFIG | D_FAILURE, "Warning - long param %s fetched as integer\n", name);
+		}
+
 		// if found in the default table, then we overwrite the arguments
 		// to this function with the defaults from the table. This effectively
 		// nullifies the hard coded defaults in the higher level layers.
-		if (tbl_default_valid) {
+		if (def_valid) {
 			use_default = true;
 			default_value = tbl_default_value;
 		}
@@ -1778,9 +1785,11 @@ param_double( const char *name, double default_value,
 			  bool use_param_table )
 {
 	if(use_param_table) {
-		int tbl_default_valid;
-		double tbl_default_value = 
-			param_default_double( name, &tbl_default_valid );
+		const char* subsys = get_mySubSystem()->getName();
+		if (subsys && ! subsys[0]) subsys = NULL;
+
+		int def_valid = 0;
+		double tbl_default_value = param_default_double(name, subsys, &def_valid);
 
 		// if the min_value & max_value are changed, we use it.
 		param_range_double(name, &min_value, &max_value);
@@ -1788,7 +1797,7 @@ param_double( const char *name, double default_value,
 		// if found in the default table, then we overwrite the arguments
 		// to this function with the defaults from the table. This effectively
 		// nullifies the hard coded defaults in the higher level layers.
-		if (tbl_default_valid) {
+		if (def_valid) {
 			default_value = tbl_default_value;
 		}
 	}
@@ -1897,14 +1906,16 @@ param_boolean( const char *name, bool default_value, bool do_log,
 			   bool use_param_table )
 {
 	if(use_param_table) {
-		int tbl_default_valid;
-		bool tbl_default_value = 
-			param_default_boolean( name, &tbl_default_valid );
+		const char* subsys = get_mySubSystem()->getName();
+		if (subsys && ! subsys[0]) subsys = NULL;
+
+		int def_valid = 0;
+		bool tbl_default_value = param_default_boolean(name, subsys, &def_valid);
 
 		// if found in the default table, then we overwrite the arguments
 		// to this function with the defaults from the table. This effectively
 		// nullifies the hard coded defaults in the higher level layers.
-		if (tbl_default_valid) {
+		if (def_valid) {
 			default_value = tbl_default_value;
 		}
 	}
@@ -1988,6 +1999,12 @@ macro_expand( const char *str )
 	return( expand_macro(str, ConfigTab, TABLESIZE) );
 }
 
+char *
+expand_param( const char *str, const char *subsys, int use)
+{
+	return expand_macro(str, ConfigTab, TABLESIZE, NULL, true, subsys, use);
+}
+
 /*
 ** Same as param_boolean but for C -- returns 0 or 1
 ** The parameter value is expected to be set to the string
@@ -2019,8 +2036,62 @@ bool param_get_location(
 	return found_it;
 }
 
+const char * param_get_info(
+	const char * name,
+	const char * subsys,
+	const char * local,
+	MyString &name_used,
+	int & use_count,
+	int & ref_count,
+	MyString &filename,
+	int &line_number)
+{
+	const char * val = NULL;
+#if 1 //def NEW_PARAM_GENERATOR
+	filename = "";
+	line_number = -1;
+	if (subsys && ! subsys[0]) subsys = NULL;
+	if (local && ! local[0]) local = NULL;
+	if (subsys && local) {
+		name_used.formatstr("%s.%s.%s", subsys, local, name);
+		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigTab, TABLESIZE, 0);
+	}
+	if ( ! val && local) {
+		name_used.formatstr("%s.%s", local, name);
+		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigTab, TABLESIZE, 0);
+	}
+	if ( ! val && subsys) {
+		name_used.formatstr("%s.%s", subsys, name);
+		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigTab, TABLESIZE, 0);
+		if ( ! val) {
+			val = param_exact_default_string(name_used.Value());
+			if (val) { filename = "<Internal>"; line_number = -2; }
+		}
+	}
+	if ( ! val) {
+		name_used = name;
+		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigTab, TABLESIZE, 0);
+		if ( ! val) {
+			val = param_exact_default_string(name);
+			if (val) { filename = "<Internal>"; line_number = -2; }
+		}
+	}
+	if (val) {
+		use_count = get_macro_use_count(name_used.Value(), ConfigTab, TABLESIZE);
+		ref_count = get_macro_ref_count(name_used.Value(), ConfigTab, TABLESIZE);
+	}
+	if (val && extra_info && line_number != -2) {
+		extra_info->GetParam(name_used.Value(), filename, line_number);
+	}
+	return val;
+#else
+	PRAGMA_REMIND("TJ: write this")
+	return NULL;
+#endif
+}
+
 void
-reinsert_specials( char* host )
+reinsert_specials( const char* host )
 {
 	static unsigned int reinsert_pid = 0;
 	static unsigned int reinsert_ppid = 0;
@@ -2485,7 +2556,7 @@ process_persistent_configs()
 		processed = true;
 
 		rval = Read_config( toplevel_persistent_config.Value(), ConfigTab,
-							TABLESIZE, EXPAND_LAZY, true, extra_info );
+							TABLESIZE, EXPAND_LAZY, true, extra_info, get_mySubSystem()->getName() );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d while reading "
 					 "top-level persistent config source: %s\n",
@@ -2507,7 +2578,7 @@ process_persistent_configs()
 		config_source.formatstr( "%s.%s", toplevel_persistent_config.Value(),
 							   tmp );
 		rval = Read_config( config_source.Value(), ConfigTab, TABLESIZE,
-							 EXPAND_LAZY, true, extra_info );
+							 EXPAND_LAZY, true, extra_info, get_mySubSystem()->getName() );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
 					 "while reading persistent config source: %s\n",
@@ -2555,7 +2626,7 @@ process_runtime_configs()
 			exit(1);
 		}
 		rval = Read_config( tmp_file, ConfigTab, TABLESIZE,
-							EXPAND_LAZY, false, extra_info );
+							EXPAND_LAZY, false, extra_info, get_mySubSystem()->getName() );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
 					 "while reading %s, runtime config: %s\n",

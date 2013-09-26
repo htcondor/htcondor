@@ -111,9 +111,6 @@ my $GetClusterId = sub {
 print "First test basic job\n";
 $result = SimpleJob::RunCheck(); # jobid 1
 
-my $catchlog  = "catchallsignals.out";
-system("rm -f $catchlog");
-
 $expect_return = 0;
 $result = SimpleJob::RunCheck(
 	test_name => "$test_name",

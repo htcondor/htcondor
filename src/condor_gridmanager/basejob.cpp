@@ -57,7 +57,7 @@ void BaseJob::BaseJobReconfig()
 	}
 
 	tmp_int = param_integer( "PERIODIC_EXPR_INTERVAL", 300 );
-	if ( tmp_int != 0 ) {
+	if ( tmp_int > 0 ) {
 		periodicPolicyEvalTid = daemonCore->Register_Timer( tmp_int, tmp_int,
 							BaseJob::EvalAllPeriodicJobExprs,
 							"EvalAllPeriodicJobExprs" );

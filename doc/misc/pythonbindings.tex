@@ -225,11 +225,102 @@ Defaults to \texttt{True}.
 \end{tabular}
 \end{flushleft}
 
-\textbf{The \texttt{SecMan} class accesses the internal security object.}
-Currently, the class only allows the developer to reset security sessions.
-If a security session becomes invalid, 
-for example if the remote daemon restarts and reuses the same port 
-and the client continues to use the session, 
+\textbf{The \texttt{Negotiator} class:}
+\begin{flushleft}
+\begin{tabular}{|p{14cm}|} \hline
+
+\texttt{\_\_init\_\_( (ClassAd)ad = None ) }
+
+Create an instance of the \texttt{Negotiator} class.  
+
+Optional parameter \texttt{ad} is a ClassAd containing the location of 
+the \Condor{negotiator} daemon.
+If omitted, uses the local pool.
+\\ \hline
+\texttt{deleteUser( (str)user )}
+
+Delete a user from the accounting.
+
+\texttt{user} is a fully-qualified user name, \Expr{"USER@DOMAIN"}.
+\\ \hline
+\texttt{getPriorities( [(bool)rollup = False ] ) }
+
+Retrieve the pool accounting information.
+Returns a list of accounting ClassAds.
+
+Optional parameter \texttt{rollup} identifies if accounting information,
+as applied to hierarchical group quotas,
+should be summed for groups and subgroups (\Expr{True}) 
+or not (\Expr{False}, the default).
+\\ \hline
+\texttt{getResourceUsage( (str)user ) }
+
+Get the resource usage for a specified user.
+Returns a list of ClassAd attributes.
+
+Parameter \texttt{user} is a fully-qualified user name, \Expr{"USER@DOMAIN"}.
+\\ \hline
+\texttt{resetAllUsage(  ) }
+
+Reset all usage accounting.
+
+\\ \hline
+\texttt{resetUsage( (str)user )}
+
+Reset all usage accounting of the specified \texttt{user}.
+
+Parameter \texttt{user} is a fully-qualified user name, 
+\Expr{"USER@DOMAIN"}; resets the usage of only this user.
+\\ \hline
+\texttt{setBeginUsage( (str)user, (time\_t)value ) }
+
+Initialize the time that a user begins using the pool.
+
+Parameter \texttt{user} is a fully-qualified user name, \Expr{"USER@DOMAIN"}.
+Parameter \texttt{value} is the time of initial usage.
+\\ \hline
+\texttt{setLastUsage( (str)user, (time\_t)value ) }
+
+Set the time that a user last began using the pool.
+
+Parameter \texttt{user} is a fully-qualified user name, \Expr{"USER@DOMAIN"}.
+Parameter \texttt{value} is the time of last usage.
+\\ \hline
+\texttt{setFactor( (str)user, (float)factor ) }
+
+Set the priority factor of a specified user.
+
+Parameter \texttt{user} is a fully-qualified user name, \Expr{"USER@DOMAIN"}.
+Parameter \texttt{factor} is the priority factor to be set for the user;
+must be greater than or equal to 1.0.
+\\ \hline
+\texttt{setPriority( (str)user, (float)prio ) }
+
+Set the real priority of a specified user.
+
+Parameter \texttt{user} is a fully-qualified user name, \Expr{"USER@DOMAIN"}.
+Parameter \texttt{prio} is the priority to be set for the user;
+must be greater than 0.0.
+\\ \hline
+\texttt{setUsage( (str)user, (float)usage ) }
+
+Set the accumulated usage of a specified user.
+
+Parameter \texttt{user} is a fully-qualified user name, \Expr{"USER@DOMAIN"}.
+Parameter \texttt{usage} is the usage to be set for the user.
+\\ \hline
+\end{tabular}
+\end{flushleft}
+
+\textbf{The \texttt{SecMan} class} accesses the internal security object.
+This class allows access to the security layer of HTCondor.
+
+Currently, this is limited to resetting security sessions and doing
+test authorizations against remote daemons.
+
+If a security session becomes invalid,
+for example, because the remote daemon restarts, reuses the same port, 
+and the client continues to use the session,
 then all future commands will fail with strange connection errors.
 This is the only mechanism to invalidate in-memory sessions.
 
@@ -245,6 +336,26 @@ Create a \texttt{SecMan} object.
 Invalidate all security sessions.
 Any future connections to a daemon will cause a new security session 
 to be created.
+
+\\ \hline
+\texttt{ping ( (ClassAd)ad, (str)command )}
+
+or
+
+\texttt{ping ( (string)sinful, (str)command )}
+
+Perform a test authorization against a remote daemon for a given
+command.
+
+Returns the ClassAd of the security session.
+
+Parameter \texttt{ad} is the ClassAd of the daemon as returned by
+\texttt{Collector.locate}; alternately, the sinful string can be given
+directly as the first parameter.
+
+Optional parameter \texttt{command} is the DaemonCore command to
+try; if not given, \texttt{DC\_NOP} will be used.
+
 \\ \hline
 
 \end{tabular}
@@ -463,6 +574,14 @@ it will set the attribute to the specified \texttt{value}.
 It returns the value of the attribute.  
 If called with an attribute that is already set,
 it does not change the object.
+\\ \hline
+
+\texttt{update( object )}
+
+Behaves like the corresponding Python dictionary method.
+Updates the ClassAd with the key/value pairs of the given object.
+
+Returns nothing.
 \\ \hline
 
 \end{tabular}

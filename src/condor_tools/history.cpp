@@ -24,6 +24,7 @@
 #include "condor_attributes.h"
 #include "condor_distribution.h"
 #include "dc_collector.h"
+#include "dc_schedd.h"
 #include "get_daemon_name.h"
 #include "internet.h"
 #include "print_wrapped_text.h"
@@ -67,9 +68,12 @@ void Usage(char* name, int iExitCode)
 		"\t\t-wide\t\t\tDon't truncate fields to fit into screen width\n"
 		"\t\t-constraint <expr>\tAdd constraint on classads\n"
 #ifdef HAVE_EXT_POSTGRESQL
-		"\t\t-name <schedd-name>\tRead history data from Quill database\n"
+		"\t\t-dbname <schedd-name>\tRead history data from Quill database\n"
 		"\t\t-completedsince <time>\tDisplay jobs completed on/after time\n"
 #endif
+                "\t\t-name <schedd-name>\tRemote schedd to read from\n"
+                "\t\t-pool <collector-name>\tPool remote schedd lives in.  If neither pool nor name\n"
+		"\t\t\t\t\tis specified, then the local history file is used.\n"
 		"\t\trestriction list\n"
 		"\twhere each restriction may be one of\n"
 		"\t\t<cluster>\t\tGet information about specific cluster\n"
@@ -85,10 +89,12 @@ static bool checkDBconfig();
 static	QueryResult result;
 #endif /* HAVE_EXT_POSTGRESQL */
 
+static void readHistoryRemote(classad::ExprTree *constraintExpr);
 static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr, bool read_backwards);
 static void printJobAds(ClassAdList & jobs);
+static void printJob(ClassAd & ad);
 
 static int parse_autoformat_arg(int argc, char* argv[], int ixArg, const char *popts, AttrListPrintMask & print_mask, List<const char> & print_head);
 
@@ -108,6 +114,7 @@ static  AttrListPrintMask mask;
 static  List<const char> headings; // The list of headings for the mask entries
 static int cluster=-1, proc=-1;
 static int specifiedMatch = 0, matchCount = 0;
+static std::string g_name, g_pool;
 
 int
 main(int argc, char* argv[])
@@ -129,8 +136,9 @@ main(int argc, char* argv[])
   char *dbconn=NULL;
   char *completedsince = NULL;
   char *owner=NULL;
-  bool readfromfile = false;
+  bool readfromfile = true;
   bool fileisuserlog = false;
+  bool remoteread = false;
 
   char* JobHistoryFileName=NULL;
   char *dbIpAddr=NULL, *dbName=NULL,*queryPassword=NULL;
@@ -195,11 +203,11 @@ main(int argc, char* argv[])
     }
 
 #ifdef HAVE_EXT_POSTGRESQL
-    else if(is_dash_arg_prefix(argv[i], "name",1)) {
+    else if(is_dash_arg_prefix(argv[i], "dbname",1)) {
 		i++;
 		if (argc <= i) {
 			fprintf( stderr,
-					 "Error: Argument -name requires the name of a quilld as a parameter\n" );
+					 "Error: Argument -dbname requires the name of a quilld as a parameter\n" );
 			exit(1);
 		}
 		
@@ -209,7 +217,7 @@ main(int argc, char* argv[])
 			fprintf( stderr, "Error: unknown host %s\n",
 					 get_host_part(argv[i]) );
 			printf("\n");
-			print_wrapped_text("Extra Info: The name given with the -name "
+			print_wrapped_text("Extra Info: The name given with the -dbname "
 							   "should be the name of a condor_quilld process. "
 							   "Normally it is either a hostname, or "
 							   "\"name@hostname\". "
@@ -333,6 +341,34 @@ main(int argc, char* argv[])
           // dprintf to console
           dprintf_set_tool_debug("TOOL", 0);
     }
+    else if (is_dash_arg_prefix(argv[i], "name", 1)) {
+        i++;
+        if (argc <= i)
+        {
+            fprintf(stderr,
+                "Error: Argument -name requires name of a remote schedd\n");
+            fprintf(stderr,
+                "\t\te.g. condor_history -name submit.example.com \n");
+            exit(1);
+        }
+        g_name = argv[i];
+        readfromfile = false;
+        remoteread = true;
+    }
+    else if (is_dash_arg_prefix(argv[i], "pool", 1)) {
+        i++;    
+        if (argc <= i)
+        {
+            fprintf(stderr,
+                "Error: Argument -name requires name of a remote schedd\n");
+            fprintf(stderr,
+                "\t\te.g. condor_history -name submit.example.com \n");
+            exit(1);    
+        }       
+        g_pool = argv[i];
+        readfromfile = false;
+        remoteread = true;
+    }
     else {
 		if (constraint!="") {
 			fprintf(stderr, "Error: Cannot provide both -constraint and <owner>\n");
@@ -362,11 +398,9 @@ main(int argc, char* argv[])
   } else {
   	readfromfile = true;
   }
-#else 
-  readfromfile = true;
 #endif /* HAVE_EXT_POSTGRESQL */
 
-  if(readfromfile == false) {
+  if(!readfromfile && !remoteread) {
 #ifdef HAVE_EXT_POSTGRESQL
 	  if(remotequill) {
 		  if (Collectors == NULL) {
@@ -471,6 +505,9 @@ main(int argc, char* argv[])
   
   if(readfromfile == true) {
       readHistoryFromFiles(fileisuserlog, JobHistoryFileName, constraint.c_str(), constraintExpr);
+  }
+  else {
+      readHistoryRemote(constraintExpr);
   }
   
   
@@ -860,20 +897,18 @@ static char * getDBConnStr(char *&quillName,
 
 #endif /* HAVE_EXT_POSTGRESQL */
 
-// Read the history from the specified history file, or from all the history files.
-// There are multiple history files because we do rotation. 
-static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
+static void printHeader()
 {
 	// Print header
 	if ( ! longformat) {
 		if ( ! customFormat) {
 			// hack to get backward-compatible formatting
-			if ( ! wide_format && 80 == wide_format_width) 
+			if ( ! wide_format && 80 == wide_format_width)
 				short_header();
 			else {
 				init_default_custom_format();
 				if ( ! wide_format || 0 != wide_format_width) {
-					int console_width = wide_format_width; 
+					int console_width = wide_format_width;
 					if (console_width <= 0) console_width = getConsoleWindowSize()-1; // -1 because we get double spacing if we use the full width.
 					if (console_width < 0) console_width = 1024;
 					mask.SetOverallWidth(console_width);
@@ -884,6 +919,87 @@ static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileN
 			mask.display_Headings(stdout, headings);
 		}
 	}
+}
+
+// Read history from a remote schedd
+static void readHistoryRemote(classad::ExprTree *constraintExpr)
+{
+	printHeader();
+	if(longformat && use_xml) {
+		std::string out;
+		AddClassAdXMLFileHeader(out);
+		printf("%s\n", out.c_str());
+	}
+
+	classad::ClassAd ad;
+	classad::ExprList *projList(new classad::ExprList());
+	classad::ExprTree *projTree = static_cast<classad::ExprTree*>(projList);
+	ad.Insert(ATTR_PROJECTION, projTree);
+	ad.Insert(ATTR_REQUIREMENTS, constraintExpr);
+	ad.InsertAttr(ATTR_NUM_MATCHES, specifiedMatch <= 0 ? -1 : specifiedMatch);
+
+	DCSchedd schedd(g_name.size() ? g_name.c_str() : NULL, g_pool.size() ? g_pool.c_str() : NULL);
+	if (!schedd.locate()) {
+		fprintf(stderr, "Unable to locate remote schedd (name=%s, pool=%s).\n", g_name.c_str(), g_pool.c_str());
+		exit(1);
+	}
+	Sock* sock;
+	if (!(sock = schedd.startCommand(QUERY_SCHEDD_HISTORY, Stream::reli_sock, 0))) {
+		fprintf(stderr, "Unable to send history command to remote schedd;\n"
+			"Typically, either the schedd is not responding, does not authorize you, or does not support remote history.\n");
+		exit(1);
+	}
+	classad_shared_ptr<Sock> sock_sentry(sock);
+
+	if (!putClassAd(sock, ad) || !sock->end_of_message()) {
+		fprintf(stderr, "Unable to send request to remote schedd; likely a server or network error.\n");
+		exit(1);
+	}
+
+	while (true) {
+		compat_classad::ClassAd ad;
+		if (!getClassAd(sock, ad)) {
+			fprintf(stderr, "Failed to recieve remote ad.\n");
+			exit(1);
+		}
+		long long intVal;
+		if (ad.EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0)) { // Last ad.
+			if (!sock->end_of_message()) {
+				fprintf(stderr, "Unable to close remote socket.\n");
+			}
+			sock->close();
+			std::string errorMsg;
+			if (ad.EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal && ad.EvaluateAttrString(ATTR_ERROR_STRING, errorMsg)) {
+				fprintf(stderr, "Error %lld: %s\n", intVal, errorMsg.c_str());
+				exit(intVal);
+			}
+			if (ad.EvaluateAttrInt("MalformedAds", intVal) && intVal) {
+				fprintf(stderr, "Remote side had parse errors on history file");
+				exit(1);
+			}
+			if (!ad.EvaluateAttrInt(ATTR_NUM_MATCHES, intVal) || (intVal != matchCount)) {
+				fprintf(stderr, "Client and server do not agree on number of ads sent;\n"
+					"Indicates lost network packets or an internal error\n");
+				exit(1);
+			}
+			break;
+		}
+		matchCount++;
+		printJob(ad);
+	}
+
+	if(longformat && use_xml) {
+		std::string out;
+		AddClassAdXMLFileFooter(out);
+		printf("%s\n", out.c_str());
+	}
+}
+
+// Read the history from the specified history file, or from all the history files.
+// There are multiple history files because we do rotation. 
+static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
+{
+	printHeader();
 
     if (JobHistoryFileName) {
         if (fileisuserlog) {

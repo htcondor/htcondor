@@ -188,6 +188,10 @@ private:
 	long m_initial_user_cpu;
 	long m_initial_sys_cpu;
 
+	// See #3847; if the last signal we sent to the cgroup was SIGSTOP,
+	// this flag will be true.  This avoids a Linux kernel panic.
+	bool m_last_signal_was_sigstop;
+
 	int count_tasks_cgroup();
 	int aggregate_usage_cgroup_blockio(ProcFamilyUsage*);
 	int aggregate_usage_cgroup(ProcFamilyUsage*);

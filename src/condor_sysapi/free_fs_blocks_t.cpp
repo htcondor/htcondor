@@ -78,12 +78,12 @@ check_free(const char *type,
 
 int free_fs_blocks_test(const char *dir, int trials, double tolerance,
 						double warn_ok_ratio) {
-	int		dfree1_raw = 0;			/* "Raw" free disk space *before* write */
-	int		dfree1 = 0;				/* Free disk space *before* write */
-	int		dfree2_raw = 0;			/* "Raw" free disk space *after* write */
-	int		dfree2 = 0;				/* Free disk space *after* write */
-	int		dfree3_raw = 0;			/* "Raw" free disk space *after* unlink */
-	int		dfree3 = 0;				/* Free disk space *after* unlink */
+	long long	dfree1_raw = 0;			/* "Raw" free disk space *before* write */
+	long long	dfree1 = 0;				/* Free disk space *before* write */
+	long long	dfree2_raw = 0;			/* "Raw" free disk space *after* write */
+	long long	dfree2 = 0;				/* Free disk space *after* write */
+	long long	dfree3_raw = 0;			/* "Raw" free disk space *after* unlink */
+	long long	dfree3 = 0;				/* Free disk space *after* unlink */
 	int		i;
 	FILE *	stream;
 	char	filename[512];
@@ -112,10 +112,10 @@ int free_fs_blocks_test(const char *dir, int trials, double tolerance,
 
 	sync( );
     dfree1_raw = sysapi_disk_space_raw(dir);
-    dprintf(D_ALWAYS, "SysAPI: Initial sysapi_disk_space_raw(): %dk (%.2fg)\n",
+    dprintf(D_ALWAYS, "SysAPI: Initial sysapi_disk_space_raw(): %" PRIi64d "k (%.2fg)\n",
 			dfree1_raw, k2g(dfree1_raw) );
     dfree1 = sysapi_disk_space(dir);
-    dprintf(D_ALWAYS, "SysAPI: Initial sysapi_disk_space(): %d (%.2fg)\n",
+    dprintf(D_ALWAYS, "SysAPI: Initial sysapi_disk_space(): %" PRIi64d " (%.2fg)\n",
 			dfree1, k2g(dfree1) );
 
 	if (dfree1_raw < 0 || dfree1 < 0) {
@@ -234,11 +234,11 @@ int free_fs_blocks_test(const char *dir, int trials, double tolerance,
 		sync( );
     	dfree2_raw = sysapi_disk_space_raw( dir );
     	dprintf(D_ALWAYS,
-				"SysAPI: After %ldKB (%.2fg) write raw: %dk (%.2fg)\n",
+				"SysAPI: After %ldKB (%.2fg) write raw: %" PRIi64d "k (%.2fg)\n",
 				write_size, k2g(write_size), dfree2_raw, k2g(dfree2_raw) );
     	dfree2 = sysapi_disk_space( dir );
     	dprintf(D_ALWAYS,
-				"SysAPI: After %ldKB (%.2fg) write: %dk (%.2fg)\n",
+				"SysAPI: After %ldKB (%.2fg) write: %" PRIi64d "k (%.2fg)\n",
 				write_size, k2g(write_size), dfree2, k2g(dfree2) );
 		num_tests += 2;
 
@@ -277,11 +277,11 @@ int free_fs_blocks_test(const char *dir, int trials, double tolerance,
 		sync( );
     	dfree3_raw = sysapi_disk_space_raw( dir );
     	dprintf(D_ALWAYS,
-				"SysAPI: After unlinking files raw: %dk (%.2fg)\n",
+				"SysAPI: After unlinking files raw: %" PRIi64d "k (%.2fg)\n",
 				dfree3_raw, k2g(dfree3_raw) );
     	dfree3 = sysapi_disk_space( dir );
     	dprintf(D_ALWAYS,
-				"SysAPI: After unlinking files: %dk (%.2fg)\n",
+				"SysAPI: After unlinking files: %" PRIi64d "k (%.2fg)\n",
 				dfree3, k2g( dfree3) );
 		num_tests += 2;
 

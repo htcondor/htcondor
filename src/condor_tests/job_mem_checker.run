@@ -40,6 +40,10 @@ my $firstappend_condor_config = '
 	STARTD_JOB_EXPRS = MemoryUsage, ResidentSetSize_RAW, ResidentSetSize
 	ALL_DEBUG = 
 	NEGOTIATOR_INTERVAL = 5
+	STARTER_UPDATE_INTERVAL = 5
+	PID_SNAPSHOT_INTERVAL = 5
+	SHADOW_QUEUE_UPDATE_INTERVAL = $(STARTER_UPDATE_INTERVAL)
+	PROCD_MAX_SNAPSHOT_INTERVAL = 5
 	NUM_CPUS = 4
 	SUSPEND = FALSE
 ';
@@ -87,9 +91,18 @@ my $on_imageupdated = sub {
 			}
 		}
 	}
-	print "$stamp Machine ads from $slot\n";
+	my $direct = "";
+	if($slot =~ /slot\d+@(.*)/) {
+		$direct = $1;
+		print "startd = <$direct>\n";
+	} else {
+		print "Failed to get base startd name\n";
+	}
+	print "startd = <$direct>\n";
+	print "$stamp Machine ads from $slot $direct\n";
 	my %slotads = ();
-	my @machineads = `condor_status -l $slot`;
+	#my @machineads = `condor_status -l $slot`;
+	my @machineads = `condor_status -l -direct $direct`;
 	foreach my $line (@machineads) {
 		chomp($line);
 		if($line =~ /^\s*(.*?)\s+=\s+(.*)\s*/) {
@@ -159,7 +172,7 @@ system("rm -rf mem_checker.out mem_checker.err mem_checker.log mem_checker.pid")
 	user_log => "mem_checker.log",
 	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
 	queue_sz => 1,
-	duration => "128 10 20 20 20 15 20",
+	duration => "1024 10 60 30 60 50 60 25 60 5 60 50 60",
 	should_transfer_files => "YES",
 	when_to_transfer_output => "ON_EXIT",
 	append_submit_commands => $append_submit_commands,
@@ -237,7 +250,7 @@ while($harveststep < $myupdates)
 		print "ResidentSetSize for $slot = ${$myslothashref}{ResidentSetSize}\n";
 	}
 	# print interesting job ads
-	print "\nJOB ADS:\nn";
+	print "\nJOB ADS:\n";
 	if(exists ${$myjobhashref}{ImageSize}) {
 		print "Imagesize for $slot = ${$myjobhashref}{ImageSize}\n";
 	} else {

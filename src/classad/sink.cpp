@@ -190,6 +190,14 @@ Unparse( string &buffer, const Value &val )
                 buffer += "real(\"-INF\")";
             } else if (classad_isinf(real) == 1) {
                 buffer += "real(\"INF\")";
+            } else if (oldClassAd) {
+                sprintf(tempBuf, "%.16G", real);
+                // %G may print something that looks like an integer.
+                // In that case, tack on a ".0"
+                if (!strchr(tempBuf, '.')) {
+                    strcat(tempBuf, ".0");
+                }
+                buffer += tempBuf;
             } else {
                 sprintf(tempBuf, "%1.15E", real);
                 buffer += tempBuf;

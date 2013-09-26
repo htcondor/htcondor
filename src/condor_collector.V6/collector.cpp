@@ -550,7 +550,7 @@ int CollectorDaemon::receive_invalidation(Service* /*s*/,
 				 sock->type() == Stream::reli_sock ? "TCP" : "UDP" );
         return FALSE;
     }
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	RemoveExplicitTargetRefs( cad );
 #endif
 
@@ -932,7 +932,7 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 											ClassAd *query,
 											List<ClassAd>* results)
 {
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	RemoveExplicitTargetRefs( *query );
 #endif
 	// set up for hashtable scan
@@ -1597,9 +1597,15 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
             if (view_sock_timeslice.isTimeToRun()) {
                 dprintf(D_ALWAYS,"Connecting to CONDOR_VIEW_HOST %s\n", view_name);
 
-                view_sock_timeslice.setStartTimeNow();
+                // Only run timeslice timer for TCP, since connect on UDP 
+                // is instantaneous.
+                if (view_sock->type() == Stream::reli_sock) {
+	                view_sock_timeslice.setStartTimeNow();
+                }
                 view_coll->connectSock(view_sock,20);
-                view_sock_timeslice.setFinishTimeNow();
+                if (view_sock->type() == Stream::reli_sock) {
+	                view_sock_timeslice.setFinishTimeNow();
+                }
 
                 if (!view_sock->is_connected()) {
                     dprintf(D_ALWAYS,"Failed to connect to CONDOR_VIEW_HOST %s so not forwarding ad.\n", view_name);
@@ -1616,8 +1622,21 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
             raw_command = true;
         }
 
-        if (! view_coll->startCommand(cmd, view_sock, 20, NULL, NULL, raw_command)) {
-            dprintf( D_ALWAYS, "Can't send command %d to View Collector %s\n", cmd, view_name);
+        // Run timeslice timer if raw_command is false, since this means 
+        // startCommand() may need to initiate an authentication round trip 
+        // and thus could block if the remote view collector is unresponsive.
+        if ( raw_command == false ) {
+	        view_sock_timeslice.setStartTimeNow();
+        }
+        bool start_command_result = 
+			view_coll->startCommand(cmd, view_sock, 20, NULL, NULL, raw_command);
+        if ( raw_command == false ) {
+	        view_sock_timeslice.setFinishTimeNow();
+        }
+
+        if (! start_command_result ) {
+            dprintf( D_ALWAYS, "Can't send command %d to View Collector %s\n", 
+					cmd, view_name);
             view_sock->end_of_message();
             view_sock->close();
             continue;

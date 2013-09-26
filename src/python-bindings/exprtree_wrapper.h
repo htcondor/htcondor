@@ -15,7 +15,7 @@ struct ExprTreeHolder
 
     bool ShouldEvaluate() const;
 
-    boost::python::object Evaluate() const;
+    boost::python::object Evaluate(boost::python::object scope=boost::python::object()) const;
 
     std::string toRepr();
 
@@ -24,6 +24,8 @@ struct ExprTreeHolder
     classad::ExprTree *get();
 
     boost::python::object getItem(ssize_t);
+
+    static void init();
 
 private:
     classad::ExprTree *m_expr;

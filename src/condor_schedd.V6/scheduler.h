@@ -267,6 +267,33 @@ private:
 	bool csa_is_dedicated;
 };
 
+class HistoryHelperState
+{
+public:
+	HistoryHelperState(Stream &stream, const std::string &reqs, const std::string &proj, const std::string &match)
+	 : m_stream_ptr(&stream), m_reqs(reqs), m_proj(proj), m_match(match)
+	{}
+
+	HistoryHelperState(classad_shared_ptr<Stream> stream, const std::string &reqs, const std::string &proj, const std::string &match)
+	 : m_stream_ptr(NULL), m_reqs(reqs), m_proj(proj), m_match(match), m_stream(stream)
+	{}
+
+	~HistoryHelperState() { if (m_stream.get() && m_stream.unique()) daemonCore->Cancel_Socket(m_stream.get()); }
+
+	Stream * GetStream() const { return m_stream_ptr ? m_stream_ptr : m_stream.get(); }
+
+	const std::string & Requirements() const { return m_reqs; }
+        const std::string & Projection() const { return m_proj; }
+        const std::string & MatchCount() const { return m_match; }
+
+private:
+	Stream *m_stream_ptr;
+	std::string m_reqs;
+	std::string m_proj;
+	std::string m_match;
+	classad_shared_ptr<Stream> m_stream;
+};
+
 class Scheduler : public Service
 {
   public:
@@ -635,6 +662,9 @@ private:
 	bool			fill_submitter_ad(ClassAd & pAd, int owner_num, int flock_level=-1); 
     int             make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
     int             command_query_ads(int, Stream* stream);
+	int			command_history(int, Stream* stream);
+	int			history_helper_launcher(const HistoryHelperState &state);
+	int			history_helper_reaper(int, int);
 	void   			check_claim_request_timeouts( void );
 	int				insert_owner(char const*);
 	void			child_exit(int, int);
@@ -774,6 +804,12 @@ private:
 	int m_local_startd_pid;
 	std::map<std::string, ClassAd *> m_unclaimedLocalStartds;
 	std::map<std::string, ClassAd *> m_claimedLocalStartds;
+
+	// State for the history helper queue.
+	std::vector<HistoryHelperState> m_history_helper_queue;
+	unsigned m_history_helper_max;
+	unsigned m_history_helper_count;
+	int m_history_helper_rid;
 };
 
 

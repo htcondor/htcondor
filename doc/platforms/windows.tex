@@ -49,8 +49,8 @@ However, the following items are not supported in this version:
 transparent process checkpoint/migration and remote system calls are
 not supported.
 
-\item For \SubmitCmd{grid} universe jobs, the only supported grid type is
-\SubmitCmd{condor}.
+\item \SubmitCmd{grid} universe jobs may not be submitted from a
+Windows platform, unless the grid type is \SubmitCmd{condor}.
 
 \item Accessing files via a network share that requires a Kerberos ticket
 (such as AFS) is not yet supported.
@@ -86,8 +86,6 @@ usage.
 \item Everything necessary to run an HTCondor central manager on Windows.
 
 \item Security mechanisms.
-
-\item Support for SMP machines.
 
 \item HTCondor for Windows can run jobs at a lower operating system
 priority level.
@@ -291,14 +289,14 @@ It also may be useful when the job requires an application,
 and the application requires registry access. 
 This feature is always enabled on the \Condor{startd}, 
 but it is limited to the dedicated run account.
-For security reasons, the profiles are
-removed after the job has completed and exited.  
+For security reasons, the profile is cleaned before a subsequent
+job which uses the dedicated run account begins.
 This ensures 
 that malicious jobs cannot discover what any previous job has done, nor 
 sabotage the registry for future jobs. It also ensures the next job has 
 a fresh registry hive.
 
-A user that then wants a job to run with a profile uses the
+A job that is to run with a profile uses the
 \SubmitCmd{load\_profile} command in the job's submit description file:
 \begin{verbatim}
 load_profile = True
@@ -751,17 +749,16 @@ co-exist in the same HTCondor pool without any problems.
 Jobs submitted on Windows can run on Windows or Unix,
 and jobs submitted on Unix can run on Unix or Windows.
 Without any specification
-(using the \AdAttr{requirements} expression in the submit description file),
+using the \SubmitCmd{Requirements} command in the submit description file,
 the default behavior will be to 
 require the execute machine to be of the same architecture and operating
 system as the submit machine.
 
 There is absolutely no need to run more than one HTCondor central manager,
-even if you have both Unix and Windows machines.  The HTCondor central manager
+even if there are both Unix and Windows machines in the pool.
+The HTCondor central manager
 itself can run on either Unix or Windows; there is no advantage to choosing
-one over the other.  Here at University of Wisconsin-Madison, for
-instance, we have hundreds of Unix and
-Windows machines in our Computer Science Department HTCondor pool.
+one over the other.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Some differences between HTCondor for Unix -vs- HTCondor for Windows}

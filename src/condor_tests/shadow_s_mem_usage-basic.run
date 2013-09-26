@@ -53,8 +53,8 @@ my %memory_data = (
 	"x86_64_Debian6" => "908", 
 	"x86_64_Debian7" => "972", 
 	"x86_Debian6" => "564", 
-	"x86_64_RedHat5 " => "676", 
-	"x86_64_Ubuntu12 " => "856", 
+	"x86_64_RedHat5" => "676", 
+	"x86_64_Ubuntu12" => "856", 
 	"x86_RedHat6" => "528", 
 	"x86_SL5" => "508", 
 	"x86_RedHat5" => "496", 
@@ -65,6 +65,7 @@ my $platform = $ENV{NMI_PLATFORM};
 my $expectedmemory = $memory_data{$platform};
 print "Expected shadow memory = $expectedmemory\n";
 my $allowedmemory = ComputeMemLimit($tolerance, $expectedmemory);
+print "expected platform <$platform> memory usage <$allowedmemory>\n";
 
 # run a job and look at shadow memory usage
 my $on_ulog = sub {

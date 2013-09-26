@@ -103,33 +103,26 @@ int ComparePrefixBeforeDot(const char * p1, const char * p2)
 // as the subsys value in order to locate the master table.
 //
 typedef const struct condor_params::key_table_pair param_table_map_entry_t;
-const param_table_entry_t * param_default_subsys_lookup(const char * subsys, const char * param)
+const param_table_entry_t * param_subsys_default_lookup(const char * subsys, const char * param)
 {
-	if (subsys) {
-		const param_table_map_entry_t* subtab = NULL;
-		subtab = BinaryLookup<param_table_map_entry_t>(
-			condor_params::subsystems,
-			condor_params::subsystems_count,
-			subsys, ComparePrefixBeforeDot);
+	const param_table_map_entry_t* subtab = NULL;
+	subtab = BinaryLookup<param_table_map_entry_t>(
+		condor_params::subsystems,
+		condor_params::subsystems_count,
+		subsys, ComparePrefixBeforeDot);
 
-		if (subtab) {
-			const param_table_entry_t * item;
-			item = BinaryLookup<param_table_entry_t>(subtab->aTable, subtab->cElms, param, strcasecmp);
-			if (item) return item;
-		}
-		// not found in the subsys table, so fall through to look in the generic table.
+	if (subtab) {
+		return BinaryLookup<param_table_entry_t>(subtab->aTable, subtab->cElms, param, strcasecmp);
 	}
-
-	return BinaryLookup<param_table_entry_t>(
-		condor_params::defaults,
-		condor_params::defaults_count,
-		param, strcasecmp);
+	return NULL;
 }
 
 const param_table_entry_t * param_default_lookup(const char * param, const char * subsys)
 {
 	if (subsys) {
-		return param_default_subsys_lookup(subsys, param);
+		const param_table_entry_t * p = param_subsys_default_lookup(subsys, param);
+		if (p) return p;
+		// fall through to do generic lookup.
 	}
 	return param_generic_default_lookup(param);
 }
@@ -143,11 +136,14 @@ const param_table_entry_t * param_default_lookup(const char * param)
 {
 	const char * pdot = strchr(param, '.');
 	if (pdot) {
-		return param_default_subsys_lookup(param, pdot+1);
+		const param_table_entry_t * p = param_subsys_default_lookup(param, pdot+1);
+		if (p) return p;
+		// fall through to do generic lookup.
 	}
 
-	return param_default_subsys_lookup(NULL, param);
+	return param_generic_default_lookup(param);
 }
+
 
 int param_entry_get_type(const param_table_entry_t * p) {
 	if ( ! p || ! p->def)
@@ -173,20 +169,36 @@ int param_entry_get_type(const param_table_entry_t * p, bool & ranged) {
 const char*
 param_default_string(const char* param, const char * subsys)
 {
-	const char* ret = NULL;
 	const param_table_entry_t* p = param_default_lookup(param, subsys);
 	if (p && p->def) {
-		ret = p->def->psz;
+		return p->def->psz;
 	}
-	return ret;
+	return NULL;
+}
+
+const char*
+param_exact_default_string(const char* param)
+{
+	const param_table_entry_t* p = NULL;
+	const char * pdot = strchr(param, '.');
+	if (pdot) {
+		p = param_subsys_default_lookup(param, pdot+1);
+	} else {
+		p = param_generic_default_lookup(param);
+	}
+	if (p && p->def) {
+		return p->def->psz;
+	}
+	return NULL;
 }
 
 int
-param_default_integer(const char* param, int* valid) {
+param_default_integer(const char* param, const char* subsys, int* valid, int* is_long) {
 	int ret = 0;
 #ifdef PARAM_DEFAULTS_SORTED
 	if (valid) *valid = false;
-	const param_table_entry_t* p = param_default_lookup(param);
+	if (is_long) *is_long = false;
+	const param_table_entry_t* p = param_default_lookup(param, subsys);
 	if (p && p->def) {
 		int type = param_entry_get_type(p);
 		switch (type) {
@@ -207,6 +219,7 @@ param_default_integer(const char* param, int* valid) {
 					if (tmp < INT_MIN) ret = INT_MIN;
 				};
 				if (valid) *valid = true;
+				if (is_long) *is_long = true;
 				}
 				break;
 		}
@@ -228,16 +241,55 @@ param_default_integer(const char* param, int* valid) {
 }
 
 int
-param_default_boolean(const char* param, int* valid) {
-	return (param_default_integer(param, valid) != 0);
+param_default_boolean(const char* param, const char* subsys, int* valid) {
+	return (param_default_long(param, subsys, valid) != 0);
+}
+
+long long
+param_default_long(const char* param, const char* subsys, int* valid) {
+	int ret = 0;
+#ifdef PARAM_DEFAULTS_SORTED
+	if (valid) *valid = false;
+	const param_table_entry_t* p = param_default_lookup(param, subsys);
+	if (p && p->def) {
+		int type = param_entry_get_type(p);
+		switch (type) {
+			case PARAM_TYPE_INT:
+				ret = reinterpret_cast<const condor_params::int_value *>(p->def)->val;
+				if (valid) *valid = true;
+				break;
+			case PARAM_TYPE_BOOL:
+				ret = reinterpret_cast<const condor_params::bool_value *>(p->def)->val;
+				if (valid) *valid = true;
+				break;
+			case PARAM_TYPE_LONG:
+				ret = reinterpret_cast<const condor_params::long_value *>(p->def)->val;
+				if (valid) *valid = true;
+				break;
+		}
+	}
+#else
+	param_info_init();
+
+	const param_info_t* p = param_info_hash_lookup(param_info, param);
+
+	if (p && (p->type == PARAM_TYPE_INT || p->type == PARAM_TYPE_BOOL)) {
+        *valid = p->default_valid;
+        if (*valid)
+            ret = reinterpret_cast<const param_info_PARAM_TYPE_INT*>(p)->int_val;
+	} else {
+		*valid = 0;
+	}
+#endif
+	return ret;
 }
 
 double
-param_default_double(const char* param, int* valid) {
+param_default_double(const char* param, const char * subsys, int* valid) {
 	double ret = 0.0;
 
 #ifdef PARAM_DEFAULTS_SORTED
-	const param_table_entry_t* p = param_default_lookup(param);
+	const param_table_entry_t* p = param_default_lookup(param, subsys);
 	if (valid) *valid = false;
 	if (p && p->def) {
 		int type = param_entry_get_type(p);
@@ -277,6 +329,50 @@ param_default_double(const char* param, int* valid) {
 }
 
 int
+param_range_long(const char* param, long long* min, long long* max) {
+
+#ifdef PARAM_DEFAULTS_SORTED
+	int ret = -1; // not ranged.
+	const param_table_entry_t* p = param_default_lookup(param);
+	if (p && p->def) {
+		bool ranged = false;
+		int type = param_entry_get_type(p, ranged);
+		switch (type) {
+			case PARAM_TYPE_INT:
+				if (ranged) {
+					*min = reinterpret_cast<const condor_params::ranged_int_value*>(p->def)->min;
+					*max = reinterpret_cast<const condor_params::ranged_int_value*>(p->def)->max;
+					ret = 0;
+				} else {
+					*min = INT_MIN;
+					*max = INT_MAX;
+					ret = 0;
+				}
+				break;
+
+			case PARAM_TYPE_LONG:
+				if (ranged) {
+					*min = reinterpret_cast<const condor_params::ranged_long_value*>(p->def)->min;
+					*max = reinterpret_cast<const condor_params::ranged_long_value*>(p->def)->max;
+					ret = 0;
+				} else {
+					*min = LLONG_MIN;
+					*max = LLONG_MAX;
+					ret = 0;
+				}
+				break;
+		}
+	}
+	return ret;
+#else
+	PRAGMA_REMIND("write this!")
+	*min = LLONG_MIN;
+	*max = LLONG_MAX;
+	ret = 0;
+#endif
+}
+
+int
 param_range_integer(const char* param, int* min, int* max) {
 
 #ifdef PARAM_DEFAULTS_SORTED
@@ -286,10 +382,23 @@ param_range_integer(const char* param, int* min, int* max) {
 		bool ranged = false;
 		int type = param_entry_get_type(p, ranged);
 		switch (type) {
-			case PARAM_TYPE_LONG:
 			case PARAM_TYPE_INT:
 				if (ranged) {
-					PRAGMA_REMIND("tj: WRITE THIS")
+					*min = reinterpret_cast<const condor_params::ranged_int_value*>(p->def)->min;
+					*max = reinterpret_cast<const condor_params::ranged_int_value*>(p->def)->max;
+					ret = 0;
+				} else {
+					*min = INT_MIN;
+					*max = INT_MAX;
+					ret = 0;
+				}
+				break;
+
+			case PARAM_TYPE_LONG:
+				if (ranged) {
+					*min = MAX(INT_MIN, reinterpret_cast<const condor_params::ranged_long_value*>(p->def)->min);
+					*max = MIN(INT_MAX, reinterpret_cast<const condor_params::ranged_long_value*>(p->def)->max);
+					ret = 0;
 				} else {
 					*min = INT_MIN;
 					*max = INT_MAX;
@@ -335,7 +444,9 @@ param_range_double(const char* param, double* min, double* max) {
 		switch (type) {
 			case PARAM_TYPE_DOUBLE:
 				if (ranged) {
-					PRAGMA_REMIND("tj: WRITE THIS")
+					*min = reinterpret_cast<const condor_params::ranged_double_value*>(p->def)->min;
+					*max = reinterpret_cast<const condor_params::ranged_double_value*>(p->def)->max;
+					ret = 0;
 				} else {
 					*min = DBL_MIN;
 					*max = DBL_MAX;

@@ -653,6 +653,7 @@ e		*/
 		/** Return a pointer to the parent ad.
 		 */
 		ClassAd *   GetChainedParentAd(void);
+		const ClassAd *   GetChainedParentAd(void) const;
 
 		/** Fill in this ClassAd with the contents of the other ClassAd,
 		 *  including any attributes from the other ad's chained parent.

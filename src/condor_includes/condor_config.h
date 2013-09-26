@@ -35,10 +35,17 @@
 
 #include "param_info.h"
 
+#define PARAM_USE_COUNTING
+
 typedef struct bucket {
 	char	*name;
 	char	*value;
-	int		used;	
+#ifdef PARAM_USE_COUNTING
+	int		use_count;
+	int		ref_count;
+#else
+	int		used;
+#endif
 	struct bucket	*next;
 } BUCKET;
 
@@ -135,6 +142,15 @@ class ParamValue {
 
 	bool param_get_location(const char *parameter, MyString &filename,
 							int &line_number);
+
+	const char * param_get_info(const char * name,
+								const char * subsys,
+								const char * local,
+								MyString &name_used,
+								int &use_count,	int & ref_count,
+								MyString &filename,
+								int &line_number);
+
 	
 	/** Look up a value by the name 'name' from the table 'table' which is table_size big.
 	
@@ -144,11 +160,16 @@ class ParamValue {
 	value is owned by the table; do not free it.
 	*/
 	char * lookup_macro ( const char *name, const char *prefix, BUCKET *table[], int table_size );
+	char * lookup_and_use_macro ( const char *name, const char *prefix, BUCKET *table[], int table_size, int use );
 
 	/*This is a faster version of lookup_macro that assumes the param name
 	  has already been converted to the canonical lowercase form.
 	  and prefixed with "prefix." if needed.*/
-	char * lookup_macro_lower( const char *name, BUCKET **table, int table_size );
+	char * lookup_macro_lower( const char *name, BUCKET **table, int table_size, int use );
+
+	/** Like lookup_macro_lower, but returns a BUCKET pointer and doesn't modify the use count
+	 */
+	BUCKET* lookup_macro_bucket (const char *name, BUCKET *table[], int table_size);
 
 	/* A convenience function that calls param() with a MyString buffer. */
 	bool param(MyString &buf,char const *param_name,char const *default_value=NULL);
@@ -166,7 +187,7 @@ class ParamValue {
 	exist.... */
 extern "C" {
 	void config( int wantsQuiet=0 , bool ignore_invalid_entry = false, bool wantsExtra = true );
-	void config_host( char* host=NULL );
+	void config_host( const char* host=NULL );
 	bool config_continue_if_no_config(bool contin);
 	void config_fill_ad( ClassAd*, const char *prefix = NULL );
 	void condor_net_remap_config( bool force_param=false );
@@ -199,7 +220,7 @@ extern "C" {
 	*/
 	char * expand_macro ( const char *value, BUCKET *table[], int table_size,
 						  const char *self=NULL, bool use_default_param_table=false,
-						  const char *subsys=NULL);
+						  const char *subsys=NULL, int use=2);
 
 	// Iterator for the hash array managed by insert() and expand_macro().  See
 	// hash_iter_begin(), hash_iter_next(), hash_iter_key(), hash_iter_value(),
@@ -322,13 +343,22 @@ BEGIN_C_DECLS
 	
 	/** Sets the whether or not a macro has actually been used
 	*/
+#ifdef PARAM_USE_COUNTING
+	int increment_macro_use_count ( const char *name, BUCKET *table[], int table_size );
+	void clear_macro_use_count ( const char *name, BUCKET *table[], int table_size );
+	int get_macro_use_count ( const char *name, BUCKET *table[], int table_size );
+	int get_macro_ref_count ( const char *name, BUCKET *table[], int table_size );
+#else
 	void set_macro_used ( const char *name, int used, BUCKET *table[], int table_size );
+#endif
 
 	/*
 	As expand_macro() (above), but assumes the table 'ConfigTab' which is
 	of size TABLESIZE.
 	*/
 	char * macro_expand ( const char *name );
+	char * expand_param (const char *str, const char *subsys, int use);
+
 	void clear_config ( void );
 	void set_debug_flags( const char * strFlags, int flags );
 	void config_insert( const char* attrName, const char* attrValue);

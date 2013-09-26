@@ -154,8 +154,6 @@ Reconfig()
 	contact_schedd_interval = 
 		param_integer ("C_GAHP_CONTACT_SCHEDD_DELAY", 5);
 
-	useXMLClassads = param_boolean( "GAHP_USE_XML_CLASSADS", false );
-
 		// When GSI authentication is used, we're willing to trust schedds
 		// which have the same credential as the job
 	if ( proxySubjectName ) {

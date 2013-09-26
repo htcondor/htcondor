@@ -265,7 +265,7 @@ ResMgr::init_config_classad( void )
 	// STARTD_ATTRS for us.
 	daemonCore->publish(config_classad);
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	config_classad->AddTargetRefs( TargetJobAttrs, false );
 #endif
 }
@@ -1219,7 +1219,7 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 	starter_mgr.publish( cp, how_much );
 	m_vmuniverse_mgr.publish(cp, how_much);
 	startd_stats.pool.Publish(*cp, 0);
-	startd_stats.pool.Advance(time(0));
+	startd_stats.Tick(time(0));
 
 #if HAVE_HIBERNATION
     m_hibernation_manager->publish( *cp );
@@ -1255,8 +1255,8 @@ ResMgr::assign_load( void )
 	}
 	if( is_smp() ) {
 			// Print out the totals we already know.
-		if( IsDebugLevel( D_LOAD ) ) {
-			dprintf( D_FULLDEBUG,
+		if( IsDebugVerbose( D_LOAD ) ) {
+			dprintf( D_LOAD | D_VERBOSE,
 					 "%s %.3f\t%s %.3f\t%s %.3f\n",
 					 "SystemLoad:", m_attr->load(),
 					 "TotalCondorLoad:", m_attr->condor_load(),
@@ -2092,6 +2092,15 @@ ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_exp
 	draining_id += 1;
 	formatstr(new_request_id,"%d",draining_id);
 	this->resume_on_completion_of_draining = resume_on_completion;
+
+	// Insert draining attributes into the resource ads, in case the
+	// retirement expression uses them.
+	for( int i = 0; i < nresources; i++ ) {
+		ClassAd &ad = *(resources[i]->r_classad);
+		ad.InsertAttr( ATTR_DRAINING, true );
+		ad.InsertAttr( ATTR_DRAINING_REQUEST_ID, new_request_id );
+		ad.InsertAttr( ATTR_LAST_DRAIN_START_TIME, last_drain_start_time );
+	}
 
 	if( how_fast <= DRAIN_GRACEFUL ) {
 			// retirement time and vacate time are honored

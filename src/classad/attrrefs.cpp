@@ -439,6 +439,7 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 		 * scope is the Target ad in matchmaking.
 		 * Expect alternateScope to be removed from a future release.
 		 */
+	if (!current) { return EVAL_UNDEF; }
 	int rc = current->LookupInScope( attributeStr, tree, state );
 	if ( !expr && rc == EVAL_UNDEF && current->alternateScope ) {
 		rc = current->alternateScope->LookupInScope( attributeStr, tree, state );

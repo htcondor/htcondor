@@ -16,15 +16,15 @@ New features will be added in the 8.1.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-8-0-2}Version 8.0.2}
+\subsection*{\label{sec:New-8-0-4}Version 8.0.4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item HTCondor version 8.0.2 not yet released.
-%\item HTCondor version 8.0.2 released on Month Date, 2013.
+\item HTCondor version 8.0.4 not yet released.
+%\item HTCondor version 8.0.4 released on Month Date, 2013.
 
 \end{itemize}
 
@@ -49,68 +49,15 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug that could cause jobs to be incorrectly placed on hold upon
-	completion with a hold reason claiming an out-of-memory event.
-\Ticket{3824}
+\item If cgroups were enabled, \Condor{ssh\_to\_job} would
+kill the job when the ssh session exited.  This bug has been fixed.
+\Ticket{3921}
 
-\item Fixed a bug that prevented work fetch scripts from running
-on systems where cgroup based tracking and management was enabled.
-\Ticket{3819}
-
-\item Fixed a bug that could cause the negotiator to give out the same
-	slot twice and result in a scary entry in the NegotiatorLog file with the 
-	wording ``INSANE: bestCached != bestSoFar''.
-\Ticket{2245}
-
-\item Added \AdAttr{ConcurrencyLimits} to the projection for claimed
-resources in \Condor{negotiator}, so that concurrency limit accounting 
-works properly across negotiation cycles when 
-\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} is \Expr{False}.
-\Ticket{3815}
-
-\item As of 7.9.6, when using CCB to connect to the \Condor{startd},
-  the \Condor{negotiator} would sometimes crash (and be restarted)
-  with the following error message in the log:
-
-\begin{verbatim}
-ERROR "Selector::add_fd(): fd -1 outside valid range 0-1023"
-\end{verbatim}
-
-The workaround for this problem is to configure
-\begin{verbatim}
-SERVICE_COMMAND_SOCKET_MAX_SOCKET_INDEX=-1
-\end{verbatim}
-or to disable communication with the \Condor{startd} by setting
-\begin{verbatim}
-NEGOTIATOR_INFORM_STARTD=False
-\end{verbatim}
-\Ticket{3801}
-
-\item Fixed a bug in the condor\_qsub script that caused it to exit
-with a syntax error when a job with a memory requirement was
-submitted.
-\Ticket{3808}
-
-\item Fix a bug causing security groups for EC2 jobs to be ignored.  Also,
-you may now, as documented, separate the list of security groups for
-an EC2 Spot job by commas.
-\Ticket{3787}
-
-\item When invoking \Prog{glexec}, \Env{GLEXEC\_TARGET\_PROXY} is now
-  set to \File{/dev/null}.  In some situations, it was previously set
-  to a nonexistent path, which caused errors in some configurations.
-\Ticket{3794}
-
-\item Fixed a file permission bug introduced in HTCondor 7.9.2 that
-prevented VM universe jobs from working when using the Xen or KVM
-hypervisor.
-\Ticket{3781}
-
-\item HTCondor daemons are now less vulnerable to long connection delays
-when attempting to connect to hosts that are offline.  A specific case
-where this helps is when \Condor{schedd} is using a high availability
-configuration, and the primary collector machine is offline.
-\Ticket{3828}
+\item If a standard universe job exited and never used a checkpoint
+server, two spurious error messages would be logged to the 
+SchedLog, as it tried to remove the old checkpoint images from the
+non-existent checkpoint server.  This bug has been fixed.
+\Ticket{3919}
 
 \end{itemize}
 
@@ -119,6 +66,291 @@ configuration, and the primary collector machine is offline.
 \begin{itemize}
 
 \item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-0-3}Version 8.0.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.0.3 released on September 23, 2013.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item When expressions for \Macro{SUSPEND},
+\Macro{CONTINUE}, \Macro{PREEMPT}, and \Macro{KILL}
+were evaluated by the \Condor{startd},
+a resulting value of
+\Expr{UNDEFINED} or \Expr{ERROR} caused an exception in the \Condor{startd}.
+These values are now treated as \Expr{False},
+eliminating the exception.
+\Ticket{3869}
+
+\item Fixed a bug that prevented the use of simple host names to identify
+machines when using the command-line tools. Before the fix,
+\Expr{condor\_status bar.foo.org} would show machine ClassAds, but
+\Expr{condor\_status bar} would not.
+Both now show machine ClassAds.
+\Ticket{3694}
+
+\item Fixed a bug with \Condor{ssh\_to\_job} that occurs when
+\Macro{USE\_PID\_NAMESPACES} is enabled.
+The bug presented itself as \Condor{ssh\_to\_job}
+running in a private pid namespace, 
+and the user running \Condor{ssh\_to\_job} not being able to see 
+their job with \Prog{ps} or \Prog{gdb}.
+As a fix, \Condor{ssh\_to\_job} now runs in the global namespace, 
+so that it can see the processes in the user's job.
+\Ticket{3872}
+
+\item Fixed a performance problem with the \Condor{qedit} command 
+that would cause the \Condor{schedd} to run very slowly when 
+\Condor{qedit} is run on a large number of jobs.  
+\Condor{qedit} no longer writes an event to the job event log. 
+\Ticket{3827}
+
+\item Fixed a problem where the \Code{classad} python module would return
+incorrect results when ClassAd caching is enabled.
+\Ticket{3879}
+
+\item DAGMan's updating of its job ClassAd with DAG status attributes no
+longer causes extra events to be written to the job event log and event log.
+\Ticket{3863}
+
+\item Fixed a bug that caused the command
+\begin{verbatim}
+  condor_submit -
+\end{verbatim}
+to be interpreted as an interactive submit,
+rather than a request to read input from \File{stdin}.
+\Condor{qsub} was also modified to be immune to this bug,
+such that it will still work with other versions of HTCondor containing
+the bug.
+\Ticket{3902}
+
+\item Value 032 of the job ClassAd attribute \Attr{HoldReasonCode}
+was being used for two different reasons.
+Now, value 032 identifies that the maximum total input file 
+transfer size was exceeded. 
+Value 034 identifies that memory usage exceeds a memory limit.
+\Ticket{3858}
+
+\item The values of the job ClassAd attributes \Attr{RemoteSysCpu} 
+and \Attr{RemoteUserCpu} are sometimes impossibly large.
+This bug rarely occurs and is not well understood.
+Code changes attempt to fix this problem.
+\Ticket{3814}
+
+\item Fixed a bug that caused DAG recovery mode to fail on
+Pegasus-generated sub-DAGs.  (Recovery mode is invoked, for example,
+when a \Condor{dagman} is held and released, or when a schedd is
+restarted, as happens on a version upgrade.)
+\Ticket{3882}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-0-2}Version 8.0.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+%\item HTCondor version 8.0.2 not yet released.
+\item HTCondor version 8.0.2 released on August 22, 2013.
+
+\item Debian 5 is past its end of life. 
+Starting with this release, we no longer provide native packages or
+tarballs for Debian 5.
+\Ticket{3852}
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item The default value of \Macro{ENABLE\_DEPRECATION\_WARNINGS} 
+has been changed to \Expr{False}.
+\Ticket{3848}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Implemented a workaround to avoid triggering a Linux kernel defect 
+when using cgroups and suspending jobs.
+\Ticket{3847}
+
+\item Fixed a python bindings problem of missing converters by providing
+\Code{pyclassad} as a shared library.
+\Ticket{3780}
+
+\item Fixed a file permission bug introduced in HTCondor version 7.9.2 that
+prevented vm universe jobs from working when using the Xen or KVM
+hypervisor.
+\Ticket{3781}
+
+\item Fixed a bug that could cause the \Condor{collector} to 
+become unresponsive if the remote HTCondorView server, 
+specified with configuration variable \Macro{CONDOR\_VIEW\_HOST},
+becomes unavailable.
+\Ticket{3758}
+
+\item Code to publish Linux distribution attributes in the machine ClassAd
+is now more robust in the event that the \File{/etc/issue} file was edited.
+\Ticket{3854}
+
+\item Fixed a bug that could cause jobs to be incorrectly placed on hold upon
+	completion with a hold reason claiming an out-of-memory event.
+\Ticket{3824}
+
+\item Fixed a bug that prevented work fetch scripts from running
+on systems where cgroup based tracking and management was enabled.
+\Ticket{3819}
+
+\item Fixed a bug that could cause the \Condor{negotiator} to give out the same
+slot twice, and result in a scary entry in the \File{NegotiatorLog} file 
+with the wording:
+\begin{verbatim}
+  INSANE: bestCached != bestSoFar
+\end{verbatim}
+\Ticket{2245}
+
+\item Fixed a bug introduced in HTCondor version 7.9.3,
+in which concurrency limits were not respected across negotiation cycles when
+\Macro{NEGOTIATOR\_CONSIDER\_PREEMPTION} was \Expr{False}.
+\Ticket{3815}
+
+\item Fixed a bug from HTCondor version 7.9.6. 
+The bug exhibited itself when using CCB to connect to the \Condor{startd};
+the \Condor{negotiator} and \Condor{schedd} would sometimes crash and then be restarted
+with the following error message in the log:
+
+\begin{verbatim}
+ERROR "Selector::add_fd(): fd -1 outside valid range 0-1023"
+\end{verbatim}
+
+A workaround for the problem is relevant to HTCondor versions 7.9.6 through
+8.0.1. Configure
+\begin{verbatim}
+  SERVICE_COMMAND_SOCKET_MAX_SOCKET_INDEX = -1
+\end{verbatim}
+\Ticket{3801}
+
+\item Fixed a bug in the \Condor{qsub} script that caused it to exit
+with a syntax error when a job with a memory requirement was
+submitted.
+\Ticket{3808}
+
+\item Fix a bug causing security groups for EC2 jobs to be ignored.  
+Also, the code respects the use of commas, as documented, 
+to separate the items in the list of security groups specified by
+the submit description file command \SubmitCmd{ec2\_security\_groups}. 
+\Ticket{3787}
+
+\item When invoking \Prog{glexec}, environment variable
+\Env{GLEXEC\_TARGET\_PROXY} is now set to \File{/dev/null}.  
+In some situations, it was previously set
+to a nonexistent path, which caused errors in some configurations.
+\Ticket{3794}
+
+\item HTCondor daemons are now less vulnerable to long connection delays
+when attempting to connect to hosts that are off-line.  A specific case
+where this helps is when \Condor{schedd} is using a high availability
+configuration, and the primary machine running the \Condor{collector} 
+is off-line.
+\Ticket{3828}
+
+\item Fixed a bug that could cause \Condor{dagman} to hang 
+due to a rarely seen event ordering.
+This bug could have been triggered when using the
+configuration variable \Macro{DAGMAN\_MAX\_JOBS\_IDLE},
+or its equivalent command line option \Opt{-maxidle}.
+\Ticket{3834}
+
+\item Fixed a bug that caused job submission from Windows platforms
+using \Condor{submit} with the \Opt{-spool} option to always fail.
+\Ticket{3791}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item DAGMan recovery mode does not work for Pegasus-generated SUBDAGs.
+For SUBDAGs, doing \Condor{hold} or \Condor{release} on
+the \Condor{dagman} job, or stopping and re-starting the 
+\Condor{schedd} with the DAGMan
+job in the queue will result in failure of the DAG.  This can be
+avoided by doing a \Condor{rm} of the DAGMan job, which produces a Rescue
+DAG, and re-submitting the DAG; the Rescue DAG is automatically run.
+This bug was introduced in HTCondor version 8.0.1.
+\Ticket{3882}
 
 \end{itemize}
 

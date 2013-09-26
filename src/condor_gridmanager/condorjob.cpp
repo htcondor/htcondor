@@ -1478,6 +1478,13 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, now  );
 	submit_ad->Assign( ATTR_JOB_NOTIFICATION, NOTIFY_NEVER );
 
+	// The job's executable may have been spooled to us without the input
+	// sandbox. The job ad won't reflect this. Check here and overwrite
+	// the Cmd attribute in the submit ad.
+	std::string executable;
+	GetJobExecutable( jobAd, executable );
+	submit_ad->Assign( ATTR_JOB_CMD, executable );
+
 		// If stdout or stderr is not in the job's Iwd, rename them and
 		// add a transfer remap. Otherwise, the file transfer object will
 		// place them in the Iwd when we stage back the job's output files.

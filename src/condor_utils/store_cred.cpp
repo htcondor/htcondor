@@ -80,13 +80,14 @@ int write_password_file(const char* path, const char* password)
 		memset(scrambled_password, 0, MAX_PASSWORD_LENGTH + 1);
 		simple_scramble(scrambled_password, password, password_len);
 		size_t sz = fwrite(scrambled_password, 1, MAX_PASSWORD_LENGTH + 1, fp);
+		int save_errno = errno;
 		fclose(fp);
 		if (sz != MAX_PASSWORD_LENGTH + 1) {
 			dprintf(D_ALWAYS,
 			        "store_cred_service: "
 			            "error writing to password file: %s (%d)\n",
-					strerror(errno),
-			        errno);
+					strerror(save_errno),
+			        save_errno);
 			return FAILURE;
 		}
 		return SUCCESS;
@@ -118,13 +119,14 @@ char* getStoredCredential(const char *username, const char *domain)
 	// open the pool password file with root priv
 	priv_state priv = set_root_priv();
 	FILE* fp = safe_fopen_wrapper_follow(filename, "r");
+	int save_errno = errno;
 	set_priv(priv);
 	if (fp == NULL) {
 		dprintf(D_FULLDEBUG,
 		        "error opening SEC_PASSWORD_FILE (%s), %s (errno: %d)\n",
 		        filename,
-		        strerror(errno),
-		        errno);
+		        strerror(save_errno),
+		        save_errno);
 		free(filename);
 		return NULL;
 	}
@@ -302,7 +304,6 @@ int store_cred_service(const char *user, const char *pw, int mode)
 	wchar_t pwbuf[MAX_PASSWORD_LENGTH];
 	wchar_t userbuf[MAX_PASSWORD_LENGTH];
 	priv_state priv;
-	int errno_result = 0;
 	int answer = FAILURE;
 	lsa_mgr lsa_man;
 	wchar_t *pw_wc;
@@ -418,7 +419,6 @@ void store_cred_handler(void *, int i, Stream *s)
 	char *pw = NULL;
 	int mode;
 	int result;
-	int errno_result = 0;
 	int answer = FAILURE;
 	lsa_mgr lsa_man;
 	

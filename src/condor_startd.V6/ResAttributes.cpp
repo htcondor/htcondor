@@ -1119,7 +1119,9 @@ CpuAttributes::compute( amask_t how_much )
 		// Dynamic, non-shared attributes we need to actually compute
 		c_condor_load = rip->compute_condor_load();
 
-		c_total_disk = sysapi_disk_space(rip->executeDir());
+		PRAGMA_REMIND("FIXME: disk_space truncation to INT_MAX here")
+		long long ck = sysapi_disk_space(rip->executeDir());
+		c_total_disk = (unsigned long)MIN(INT_MAX, ck);
 		if (IS_UPDATE(how_much)) {
 			dprintf(D_FULLDEBUG, "Total execute space: %lu\n", c_total_disk);
 		}
@@ -1149,15 +1151,15 @@ CpuAttributes::display( amask_t how_much )
 				 "CondorLoad:", c_condor_load,
 				 "OwnerLoad:", c_owner_load );
 	} else {
-		if( IsDebugLevel( D_LOAD ) ) {
-			dprintf( D_FULLDEBUG, 
+		if( IsDebugVerbose( D_LOAD ) ) {
+			dprintf( D_LOAD | D_VERBOSE,
 					 "%s %.2f  %s %.2f  %s %.2f\n",  
 					 "SystemLoad:", c_condor_load + c_owner_load,
 					 "CondorLoad:", c_condor_load,
 					 "OwnerLoad:", c_owner_load );
 		}
-		if( IsDebugLevel( D_KEYBOARD ) ) {
-			dprintf( D_FULLDEBUG, 
+		if( IsDebugVerbose( D_KEYBOARD ) ) {
+			dprintf( D_KEYBOARD | D_VERBOSE,
 					 "Idle time: %s %-8d %s %d\n",  
 					 "Keyboard:", (int)c_idle, 
 					 "Console:", (int)c_console_idle );

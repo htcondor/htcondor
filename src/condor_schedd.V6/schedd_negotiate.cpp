@@ -63,6 +63,8 @@ ScheddNegotiate::ScheddNegotiate
 ):
 	DCMsg(cmd),
 	m_jobs(jobs),
+	m_current_resources_requested(1),
+	m_current_resources_delivered(0),
 	m_owner(owner ? owner : ""),
 	m_remote_pool(remote_pool ? remote_pool : ""),
 	m_current_auto_cluster_id(-1),
@@ -130,6 +132,24 @@ ScheddNegotiate::nextJob()
 							m_current_job_id.cluster,m_current_job_id.proc);
 					}
 					else {
+						// Insert the number of jobs remaining in this
+						// resource request cluster into the ad - the negotiator
+						// may use this information to give us more than one match
+						// at a time.
+						// [[Future optimization idea: there may be jobs in this resource request
+						// cluster that no longer exist in the queue; perhaps we should
+						// iterate through them and make sure they still exist to prevent
+						// asking the negotiator for more resources than we can really
+						// use at the moment. ]]
+						// - Todd July 2013 <tannenba@cs.wisc.edu>
+						int universe = CONDOR_UNIVERSE_MIN;
+						m_current_job_ad.LookupInteger(ATTR_JOB_UNIVERSE,universe);
+						// For now, do not use request counts with the dedicated scheduler
+						if ( universe != CONDOR_UNIVERSE_PARALLEL ) {
+							// add one to cluster size to cover the current popped job
+							m_current_job_ad.Assign(ATTR_RESOURCE_REQUEST_COUNT,1+cluster->size());
+						}
+
 						// Copy attributes from chained parent ad into our copy 
 						// so if parent is deleted before we finish negotiation,
 						// we don't crash trying to access a deleted parent ad.
@@ -275,10 +295,14 @@ ScheddNegotiate::sendJobInfo(Sock *sock)
 		return false;
 	}
 
+	m_current_resources_delivered = 0;
+	m_current_resources_requested = 1;
+	m_current_job_ad.LookupInteger(ATTR_RESOURCE_REQUEST_COUNT,m_current_resources_requested);
+
 	dprintf( D_FULLDEBUG,
-			 "Sent job %d.%d (autocluster=%d) to the negotiator\n",
+			 "Sent job %d.%d (autocluster=%d resources_requested=%d) to the negotiator\n",
 			 m_current_job_id.cluster, m_current_job_id.proc,
-			 m_current_auto_cluster_id );
+			 m_current_auto_cluster_id, m_current_resources_requested );
 	return true;
 }
 
@@ -293,7 +317,6 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		m_reject_reason = "Unknown reason";
 	case REJECTED_WITH_REASON:
 		scheduler_handleJobRejected( m_current_job_id, m_reject_reason.c_str() );
-
 		m_jobs_rejected++;
 		setAutoClusterRejected( m_current_auto_cluster_id );
 		nextJob();
@@ -307,6 +330,7 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		break;
 
 	case PERMISSION_AND_AD: {
+
 		// If the slot we matched is partitionable, edit it
 		// so it will look like the resulting dynamic slot. 
 		// NOTE: Seems like we no longer need to do this here,
@@ -318,6 +342,8 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 			break;
 		}
 
+		m_current_resources_delivered++;
+
 		std::string slot_name_buf;
 		m_match_ad.LookupString(ATTR_NAME,slot_name_buf);
 		char const *slot_name = slot_name_buf.c_str();
@@ -326,8 +352,8 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		m_match_ad.EvalBool(ATTR_OFFLINE,NULL,offline);
 
 		if( offline ) {
-			dprintf(D_ALWAYS,"Job %d.%d matched to offline machine %s.\n",
-					m_current_job_id.cluster,m_current_job_id.proc,slot_name);
+			dprintf(D_ALWAYS,"Job %d.%d (delivered=%d) matched to offline machine %s.\n",
+					m_current_job_id.cluster,m_current_job_id.proc,m_current_resources_delivered,slot_name);
 			nextJob();
 			break;
 		}
@@ -336,7 +362,9 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		{
 			m_jobs_matched++;
 		}
+
 		nextJob();
+
 		break;
 	}
 
@@ -428,7 +456,7 @@ ScheddNegotiate::readMsg( DCMessenger * /*messenger*/, Sock *sock )
 					 "Can't get my match ad from negotiator\n" );
 			return false;
 		}
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 		m_match_ad.AddTargetRefs( TargetJobAttrs );
 #endif
 

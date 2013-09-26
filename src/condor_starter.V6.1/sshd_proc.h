@@ -40,6 +40,9 @@ public:
 	virtual bool ThisProcRunsAlongsideMainProc();
 
 	virtual char const *getArgv0();
+
+	virtual bool SupportsPIDNamespace() { return false;}
+	virtual std::string CgroupSuffix() { return "/sshd";}
 };
 
 #endif

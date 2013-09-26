@@ -137,7 +137,7 @@ void NordugridResource::PublishResourceAd( ClassAd *resource_ad )
 	resource_ad->Assign( ATTR_X509_USER_PROXY_FQAN, proxyFQAN );
 }
 
-void NordugridResource::DoPing( time_t& ping_delay, bool& ping_complete,
+void NordugridResource::DoPing( unsigned& ping_delay, bool& ping_complete,
 								bool& ping_succeeded )
 {
 	int rc;
