@@ -33,11 +33,15 @@ The details of each version are described below.
 \Macro{MAX\_TRANSFER\_QUEUE\_AGE} are now grouped together
 to reduce the number of email messages that are sent.
 
-\item Floating point values in ClassAds are now printed in a more
-human-readable format while retaining 64-bit double precision.
-In version 8.1.1, these values were always printed in scientific
+\item Floating point values in Old ClassAds are now printed in a more
+human-readable format, while retaining 64-bit double precision.
+In previous versions, these values were always printed in scientific
 notation.
 \Ticket{3928}
+
+\item \Condor{ssh\_to\_job} now works with grid universe jobs
+which use EC2 resources.
+\Ticket{1548}
 
 \end{itemize}
 
@@ -53,27 +57,30 @@ notation.
 
 \begin{itemize}
 
-\item If a standard universe job exited and never used a checkpoint
-server, two spurious error messages would be logged to the 
-SchedLog, as it tried to remove the old checkpoint images from the
-non-existent checkpoint server.  This bug has been fixed.
+\item If a standard universe job exited without producing any
+checkpoints and no checkpoint server was used, 
+two spurious error messages would be logged to the \File{SchedLog},
+as it tried to remove the old checkpoint images from the
+non-existent checkpoint server.  
+These error messages are no longer logged.
 \Ticket{3919}
 
-\item If the config knob STARTER\_RLIMIT\_AS is set to the default
-value, there is no limit.  However, in this case, we logged that the
-limit was set to 0 mb, which means ulimited to the kernel, but
-was confusing.  Now, no message is logged in the default case.
+\item When configuration variable \Macro{STARTER\_RLIMIT\_AS} is set 
+to its default value of 0, it means that there is no limit.  
+This value was logged as a limit of 0Mb, leading to confusion.
+Now, no message is logged in this default case.
 \Ticket{3914}
 
-\item Improved how the \condor{schedd} notifies the \condor{shadow}
-and \condor{gridmanager} about modifications to job ads made via
-\condor{qedit}.
+\item Improved how the \Condor{schedd} notifies the \Condor{shadow}
+and \Condor{gridmanager} about modifications to job ClassAds made using
+\Condor{qedit}.
 \Ticket{3909}
 
-\item The grid universe now uses the correct executable file when
+\item Grid universe jobs now use the correct executable file when
 \SubmitCmd{copy\_to\_spool} is set to \Expr{True}.
-Previously, the executable file named in the submit file would be copied
-to the remote server, rather than the copy stored in the spool directory.
+Previously, the executable file named in the submit description file 
+would be copied to the remote server, 
+rather than the copy of the executable file stored in the spool directory.
 \Ticket{3589}
 
 \end{itemize}

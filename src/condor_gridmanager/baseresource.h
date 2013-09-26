@@ -81,13 +81,13 @@ class BaseResource : public Service
 	void DeleteMe();
 
 	void Ping();
-	virtual void DoPing( time_t& ping_delay, bool& ping_complete,
+	virtual void DoPing( unsigned& ping_delay, bool& ping_complete,
 						 bool& ping_succeeded );
 
 	void UpdateLeases();
-	virtual void DoUpdateLeases( time_t& update_delay, bool& update_complete,
+	virtual void DoUpdateLeases( unsigned& update_delay, bool& update_complete,
 								 SimpleList<PROC_ID>& update_succeeded );
-	virtual void DoUpdateSharedLease( time_t& update_delay,
+	virtual void DoUpdateSharedLease( unsigned& update_delay,
 									  bool& update_complete,
 									  bool& update_succeeded );
 	bool Invalidate ();

@@ -429,7 +429,7 @@ void CondorResource::DoScheddPoll()
 	}
 }
 
-void CondorResource::DoPing( time_t& ping_delay, bool& ping_complete,
+void CondorResource::DoPing( unsigned& ping_delay, bool& ping_complete,
 							 bool& ping_succeeded )
 {
 	int rc;
@@ -463,7 +463,7 @@ dprintf(D_FULLDEBUG,"*** DoPing called\n");
 	}
 }
 
-void CondorResource::DoUpdateLeases( time_t& update_delay,
+void CondorResource::DoUpdateLeases( unsigned& update_delay,
 									 bool& update_complete,
 									 SimpleList<PROC_ID>& update_succeeded )
 {
