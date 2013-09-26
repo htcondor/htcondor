@@ -78,7 +78,7 @@ class BoincResource : public BaseResource
 	char *m_authenticator;
 
  private:
-	void DoPing( time_t& ping_delay, bool& ping_complete,
+	void DoPing( unsigned& ping_delay, bool& ping_complete,
 				 bool& ping_succeeded );
 
 	void UpdateBoincLeases();
@@ -111,7 +111,7 @@ protected:
 	BatchStatusResult FinishBatchStatus();
 	GahpClient * BatchGahp();
 
-//	void DoUpdateSharedLease( time_t& update_delay, bool& update_complete, 
+//	void DoUpdateSharedLease( unsigned& update_delay, bool& update_complete, 
 //							  bool& update_succeeded );
 };
 

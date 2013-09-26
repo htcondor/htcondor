@@ -464,7 +464,7 @@ bool BoincResource::JobDone( BoincJob *job )
 	return false;
 }
 
-void BoincResource::DoPing( time_t& ping_delay, bool& ping_complete,
+void BoincResource::DoPing( unsigned& ping_delay, bool& ping_complete,
 							bool& ping_succeeded )
 {
 	int rc;
@@ -732,7 +732,7 @@ dprintf(D_FULLDEBUG,"*** DoBatchSubmits()\n");
 void BoincResource::UpdateBoincLeases()
 {
 dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
-	unsigned delay = TIME_T_NEVER;
+	unsigned delay = TIMER_NEVER;
 	time_t now = time(NULL);
 
 	if ( m_leaseGahp == NULL || !m_leaseGahp->isStarted() ) {
@@ -824,7 +824,7 @@ dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
 }
 
 /*
-void BoincResource::DoUpdateSharedLease( time_t& update_delay,
+void BoincResource::DoUpdateSharedLease( unsigned& update_delay,
 										 bool& update_complete,
 										 bool& update_succeeded )
 {
