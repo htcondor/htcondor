@@ -38,7 +38,7 @@ use CondorPersonal;
 
 use base 'Exporter';
 
-our @EXPORT = qw(runCondorTool runToolNTimes);
+our @EXPORT = qw(runCondorTool runToolNTimes RegisterResult);
 my %securityoptions =
 (
 "NEVER" => "1",
@@ -1466,9 +1466,14 @@ sub runCondorTool
 	my $arrayref = shift;
 	# use unused third arg to skip the noise like the time
 	my $quiet = shift;
-	my $options = shift;
+	my $options = shift; #hash ref
 	my $count = 0;
 	my %altoptions = ();
+	my $failconcerns = 1;
+
+	if(exists ${$options}{expect_result}) {
+		$failconcerns = 0;
+	}
 
 	# provide an expect_result=>ANY as a hash reference options
 	$altoptions{expect_result} = \&ANY;
@@ -1502,7 +1507,7 @@ sub runCondorTool
 		$status = ${$hashref}{"exitcode"};
 		#print "runCondorTool: Status was <$status>\n";
 		debug("Status is $status after command\n",4);
-		if( $status != 0 ) {
+		if(( $status != 0 ) && ($failconcerns == 1)){
 				#print "************* std out ***************\n";
 				#print "************* std err ***************\n";
 				print "************* GetQueue() ***************\n";

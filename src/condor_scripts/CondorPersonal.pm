@@ -53,6 +53,7 @@ use Socket;
 use Sys::Hostname;
 
 use CondorUtils;
+use CondorTest;
 
 #################################################################
 #
@@ -1450,6 +1451,7 @@ sub IsRunningYet {
 	my $backoff = 2;
 	my $loopcount;
 	my @toolarray;
+	my $toolres = 0;
 
 	# first failure was had test where we looked for
 	# a negotiator but MASTER_NEGOTIATOR_CONTROLLER
@@ -1467,9 +1469,11 @@ sub IsRunningYet {
 		$line = "";
 		debug("Looking for MASTER_XXXXXX_CONTROLLER for $daemon\n",$debuglevel);
 		my $definedcontrollstr = "condor_config_val MASTER_" . $daemon . "_CONTROLLER";
-		open(CCV, "$definedcontrollstr 2>&1 |") || die "condor_config_val: $!\n";
-		while(<CCV>) {
-			$line = $_;
+		#open(CCV, "$definedcontrollstr 2>&1 |") || die "condor_config_val: $!\n";
+		$toolres = CondorTest::runCondorTool("$definedcontrollstr",\@toolarray,2,{expect_result=>\&ANY,emit_output=>0});
+		#while(<CCV>) {
+		foreach my $line (@toolarray) {
+			chomp($line);
 			if( $line =~ /^.*Not defined.*$/) {
 				debug("Add $daemon to daemon list\n",$debuglevel);
 				if($first == 1) {
@@ -1480,9 +1484,11 @@ sub IsRunningYet {
 				}
 			}
 			debug("looking: $daemonlist\n",$debuglevel);
+			#print "$daemonlist\n";
 		}
-		close(CCV);
+		#close(CCV);
 	}
+	print "Final daemon list:$daemonlist\n";
 
 	print "These Daemons are up: ";
 	if($daemonlist =~ /MASTER/i) {
