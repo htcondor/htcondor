@@ -76,10 +76,11 @@ and \Condor{gridmanager} about modifications to job ClassAds made using
 \Condor{qedit}.
 \Ticket{3909}
 
-\item The grid universe now uses the correct executable file when
+\item Grid universe jobs now use the correct executable file when
 \SubmitCmd{copy\_to\_spool} is set to \Expr{True}.
-Previously, the executable file named in the submit file would be copied
-to the remote server, rather than the copy stored in the spool directory.
+Previously, the executable file named in the submit description file 
+would be copied to the remote server, 
+rather than the copy of the executable file stored in the spool directory.
 \Ticket{3589}
 
 \end{itemize}
