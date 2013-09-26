@@ -1,0 +1,332 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+##
+## This test check availability and usage contol of the new
+## local, resources in both a static configuration and in psolts.
+## It is model after what we did to test concurrency limits
+## as we are checking the same sorts of things. bt
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+
+my $ClusterId = 0;
+my $mismatch = 0;
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	WANT_SUSPEND = FALSE
+	KILLING_TIMEOUT = 1
+	MachineMaxVacateTime = 5
+	NEGOTIATION_INTERVAL = 10
+	KILL = TRUE
+	foo = 1
+	bar = $(foo) + 1
+	master.foo = 2
+	GOO = baz
+	master.GOO = $(GOO), bar
+	ALL_DEBUG = D_ALWAYS D_CMD D_DAEMONCORE
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"ccvremote");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "remotecccv",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+my $return = "";
+my $executecount = 0;
+my $result = 1;
+my $test_name = "job_basic_kill";
+
+my $on_execute = sub {
+	print "********************************** OnExecute *****************************\n";
+};
+
+
+my $GetClusterId = sub {
+	my $cid = shift;
+	$ClusterId = $cid;
+	print "Resquestd Cluster Got $ClusterId\n";
+	##########################
+	#
+	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
+	# position which is always an undefined variable EXCEPT when it is a call back routine 
+	# to pass out the cluster Id.
+	#
+	##########################
+	#runcmd("condor_q",{emit_output => 1});
+};
+
+#Do a job before setting tesing exit codes
+print "First test basic job\n";
+$result = SimpleJob::RunCheck(); # jobid 1
+
+my @localarray = ();
+my @remotearray = ();
+
+
+my %ronly = (
+	"DEBUG_TIME_FORMAT" => "1",
+	"ALLOW_ADMIN_COMMANDS" => "1",
+	"BIND_ALL_INTERFACES" => "1",
+	"DNS_CACHE_REFRESH" => "1",
+	"ENABLE_SOAP" => "1",
+	"ENABLE_SOAP_SSL" => "1",
+	"ENABLE_WEB_SERVER" => "1",
+	"ENABLE_STDOUT_TESTING" => "1",
+	"FILE_LOCK_VIA_MUTEX" => "1",
+	"GLEXEC_JOB" => "1",
+	"LOCK_DEBUG_LOG_TO_APPEND" => "1",
+	"LOGS_USE_TIMESTAMP" => "1",
+	"MASTER.ENABLE_CLASSAD_CACHING" => "1",
+	"MASTER.PID_SNAPSHOT_INTERVAL" => "1",
+	"MASTER_BACKOFF_CEILING" => "1",
+	"MASTER_BACKOFF_CONSTANT" => "1",
+	"MASTER_BACKOFF_FACTOR" => "1",
+	"MASTER_CHECK_NEW_EXEC_INTERVAL" => "1",
+	"MASTER_DEBUG_WAIT" => "1",
+	"MASTER_NEW_BINARY_DELAY" => "1",
+	"MASTER_NEW_BINARY_RESTART" => "1",
+	"MASTER_RECOVER_FACTOR" => "1",
+	"MASTER_TIMEOUT_MULTIPLIER" => "1",
+	"MASTER_UPDATE_INTERVAL" => "1",
+	"MAX_PROCD_LOG" => "1",
+	"NETWORK_MAX_PENDING_CONNECTS" => "1",
+	"NONBLOCKING_COLLECTOR_UPDATE" => "1",
+	"OBITUARY_LOG_LENGTH" => "1",
+	"PREEN_INTERVAL" => "1",
+	"PRIVSEP_ENABLED" => "1",
+	"PROCD_DEBUG" => "1",
+	"QUILL_USE_SQL_LOG" => "1",
+	"SEC_INVALIDATE_SESSIONS_VIA_TCP" => "1",
+	"SEC_SESSION_DURATION_SLOP" => "1",
+	"SEC_TCP_SESSION_TIMEOUT" => "1",
+	"SHUTDOWN_FAST_TIMEOUT" => "1",
+	"STATISTICS_WINDOW_QUANTUM" => "1",
+	"STATISTICS_WINDOW_SECONDS" => "1",
+	"TOUCH_LOG_INTERVAL" => "1",
+	"USE_CLONE_TO_CREATE_PROCESSES" => "1",
+	"USE_GID_PROCESS_TRACKING" => "1",
+	"USE_PROCD" => "1",
+	"USE_PROCESS_GROUPS" => "1",
+	"USE_SHARED_PORT" => "1",
+	"TRUNC_MASTER_LOG_ON_OPEN" => "1",
+	"WANT_UDP_COMMAND_SOCKET" => "1",
+	"WANT_XML_LOG" => "1",
+);
+
+foreach my $ad (sort keys %ronly) {
+	print "ronly: $ad\n";
+}
+
+print "Compare local config dump to remote of master\n";
+runCondorTool("condor_config_val -dump",\@localarray,2,{emit_output=>0});
+runCondorTool("condor_config_val -master -dump",\@remotearray,2,{emit_output=>0});
+
+ShowNonMatches(\@localarray,\@remotearray);
+
+
+
+CondorTest::EndTest();
+
+sub ShowNonMatches
+{
+	my $larrayref = shift;
+	my $rarrayref = shift;
+	my $done = 0;
+	my $ritem = "";
+	my $litem = "";
+	my $rdone = 0;
+	my $ldone = 0;
+	my $rpid = 0;
+	my $lpid = 0;
+	my $rppid = 0;
+	my $lppid = 0;
+
+	my $localcount = @$larrayref;
+	my $remotecount = @$rarrayref;
+
+	print "Dump ads local <$localcount> remote <$remotecount>\n";
+	while($done == 0) {
+		$rdone = $ldone = 0;
+		$ritem = shift @{$rarrayref};
+		$litem = shift @{$larrayref};
+		# test end condition of running out of ads
+		if((!(defined $ritem)) || (!(defined $litem))) {
+			$done = 1;
+			print "===================== Ran Out Of Ads ======================\n";
+			if($mismatch == 0) {
+				print "Matched as expected\n";
+				RegisterResult(1);
+			} else {
+				print "No mismatches in ads expected after filtering known diffs\n";
+				RegisterResult(0);
+			}
+			last;
+		}
+		# drop comments
+		while(($litem =~ /^#\s(.*)$/) || ($litem =~ /^\s(.*)$/)) {
+			#print "################# comment <$litem>\n";
+			$litem = shift @{$larrayref};
+			#print "################# replaced with <$litem>\n";
+		}
+		#print "LOOPING: L <$litem> R <$ritem>\n";
+		# look for and skip remote only ads
+		while($rdone == 0) {
+			if($ritem =~ /^(.*?)\s=.*$/) {
+				#print "AD = <$1>\n";
+				if(exists $ronly{$1}) {
+					#print "EXISTS: skip <$ritem>\n";
+					$ritem = shift @{$rarrayref};
+				} else {
+					#print "NON unique\n";
+					$rdone = 1;
+				}
+			}
+		}
+
+
+		chomp($ritem);
+		chomp($litem);
+
+		# things we toss out
+		# MASTER.GOO sets up a test so ignore it
+		if($litem =~ /^MASTER.GOO\s+=\s+.*$/) {
+			next;
+		}
+		# FOOs should be different
+		if($litem =~ /^FOO\s+=\s+(\d+).*$/) {
+			$lppid = $1;
+			if($ritem =~ /^FOO\s+=\s+(\d+).*$/) {
+				$rppid = $1;
+				print "\n----------------------- FOO found $lppid =?= $rppid ----------------------- \n";
+				if($rppid eq $lppid) {
+					print "FOO should be different (L $lppid/ R $rppid)\n";
+					if(($lppid eq "1") && ($lppid eq "2")) {
+						RegisterResult(1);
+					} else {
+						print "FOO expected as 1 on local and 2 on remote/master\n";
+						RegisterResult(0);
+					}
+				} else {
+					RegisterResult(1);
+				}
+			} else {
+				print "FOO items should match up\n";
+				RegisterResult(0);
+			}
+			next;
+		}
+		# GOOs should be different
+		if($litem =~ /^GOO\s+=\s+(.*)$/) {
+			$lppid = $1;
+			if($ritem =~ /^GOO\s+=\s+(.*)$/) {
+				$rppid = $1;
+				print "\n----------------------- GOO found $lppid =?= $rppid ----------------------- \n";
+				if($rppid eq $lppid) {
+					print "GOO should be different (L $lppid/ R $rppid)\n";
+					if(($lppid eq "baz") && ($lppid eq "baz, bar")) {
+						RegisterResult(1);
+					} else {
+						print "GOO expected as baz on local and baz, bar on remote/master\n";
+						RegisterResult(0);
+					}
+				} else {
+					RegisterResult(1);
+				}
+			} else {
+				print "GOO items should match up\n";
+				RegisterResult(0);
+			}
+			next;
+		}
+		# PPIDs should be different
+		if($litem =~ /^PPID\s+=\s+(\d+).*$/) {
+			$lppid = $1;
+			if($ritem =~ /^PPID\s+=\s+(\d+).*$/) {
+				$rppid = $1;
+				print "\n----------------------- PPID found $lppid =?= $rppid ----------------------- \n";
+				if($rppid eq $lppid) {
+					print "PPIDs should be different (L $lppid/ R $rppid)\n";
+					RegisterResult(0);
+				} else {
+					RegisterResult(1);
+				}
+			} else {
+				print "PPID items should match up\n";
+				RegisterResult(0);
+			}
+			next;
+		}
+		# PIDs should be different
+		if($litem =~ /^PID\s+=\s+(\d+).*$/) {
+			$lpid = $1;
+			if($ritem =~ /^PID\s+=\s+(\d+).*$/) {
+				$rpid = $1;
+				print "\n----------------------- PID found $lpid =?= $rpid ----------------------- \n";
+				if($rpid eq $lpid) {
+					print "PIDs should be different (L $lpid/ R $rpid)\n";
+					RegisterResult(0);
+				} else {
+					RegisterResult(1);
+				}
+			} else {
+				print "PID items should match up\n";
+				RegisterResult(0);
+			}
+			next;
+		}
+		#  SUBSYSTEM should be different
+		if($litem =~ /^SUBSYSTEM\s+=\s+(.*)$/) {
+			$lpid = $1;
+			if($ritem =~ /^SUBSYSTEM\s+=\s+(.*)$/) {
+				$rpid = $1;
+				print "\n----------------------- SUBSYSTEM found $lpid =?= $rpid ----------------------- \n";
+				if($rpid eq $lpid) {
+					print "SUBSYSTEM should be different (L $lpid/ R $rpid)\n";
+					RegisterResult(0);
+				} else {
+					RegisterResult(1);
+				}
+			} else {
+				print "SUBSYSTEM items should match up\n";
+				RegisterResult(0);
+			}
+			next;
+		}
+		if($litem eq $ritem) {
+			#print "\n";
+		} else {
+			print "MISMATCH *************** ";
+			print "L <$litem> R <$ritem>";
+			print " *************** \n";
+			$mismatch += 1;
+		}
+
+
+	}
+}
