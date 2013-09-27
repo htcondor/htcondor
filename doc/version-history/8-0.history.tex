@@ -49,6 +49,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug preventing http file transfers from following redirects.
+HTTP file transfers also now fail if the file does not exist (but the server
+does).
+\Ticket{3904}
+
 \item Fixed a rare bug where the \Condor{schedd} would exit
 with an ERROR message pertaining to select when very
 runnign with a very heavy load and many \Condor{shadows}
