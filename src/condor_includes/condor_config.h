@@ -31,11 +31,17 @@
 #include <vector>
 #include <string>
 
+typedef std::vector<const char *> MACRO_SOURCES;
+#else // ! __cplusplus
+typedef void* MACRO_SOURCES; // placeholder for use in C
 #endif
 
+#include "pool_allocator.h"
 #include "param_info.h"
 
 #define PARAM_USE_COUNTING
+#define CALL_VIA_MACRO_SET
+#define MACRO_SET_KNOWS_DEFAULT
 
 typedef struct bucket {
 	char	*name;
@@ -48,6 +54,55 @@ typedef struct bucket {
 #endif
 	struct bucket	*next;
 } BUCKET;
+
+#ifdef CALL_VIA_MACRO_SET
+
+#ifdef MACRO_SET_KNOWS_DEFAULT
+
+typedef struct macro_item {
+	const char * key;
+	const char * raw_value;
+} MACRO_ITEM;
+typedef struct macro_meta {
+	int          param_id;
+	int          flags;
+	int          use_count;
+	int          ref_count;
+	int          source_id;    // filename or
+	int          source_line;  // line number for files, param.in entry for internal
+} MACRO_META;
+// this holds table and tablesize for use passing to the config functions.
+typedef struct macro_set {
+	int       size;
+	int       allocation_size;
+	int       options;
+	int       is_sorted;
+	MACRO_ITEM *table;
+	MACRO_META *metat; // optional array parallel to table containing metadata.
+	ALLOCATION_POOL apool;
+	MACRO_SOURCES sources;
+} MACRO_SET;
+
+#else // ! MACRO_SET_KNOWS_DEFAULT
+
+class ExtraParamTable;
+// this holds table and tablesize for use passing to the config functions.
+typedef struct macro_set {
+	int       table_size;
+	BUCKET ** table;
+	ExtraParamTable *extra;
+} MACRO_SET;
+
+#endif   //MACRO_SET_KNOWS_DEFAULT
+
+#define MACRO_SET_DECLARE_ARG    MACRO_SET& macro_set
+#define MACRO_SET_PASS_ARG       macro_set
+
+#else // ! CALL_VIA_MACRO_SET
+
+#define MACRO_SET_DECLARE_ARG    BUCKET** table, int table_size
+#define MACRO_SET_PASS_ARG       table, table_size
+
 
 #if defined(__cplusplus)
 // used by param_all();
@@ -97,13 +152,13 @@ class ParamValue {
 };
 #endif
 
+#endif  // CALL_VIA_MACRO_SET
 
 /*
 **  Types of macro expansion
 */
 #define EXPAND_LAZY         1
 #define EXPAND_IMMEDIATE    2
-#define TABLESIZE 113
 
 #if defined(__cplusplus)
 	extern MyString global_config_source;
@@ -111,7 +166,10 @@ class ParamValue {
 	extern StringList local_config_sources;
 	class Regex;
 
+#ifdef CALL_VIA_MACRO_SET
+#else
 	ExtArray<ParamValue>* param_all(void);
+#endif  // CALL_VIA_MACRO_SET
 	int param_names_matching(Regex & re, ExtArray<const char *>& names);
     int param_names_matching(Regex& re, std::vector<std::string>& names);
 
@@ -159,17 +217,29 @@ class ParamValue {
 	table.  On success returns a pointer to the associated value.  The
 	value is owned by the table; do not free it.
 	*/
-	char * lookup_macro ( const char *name, const char *prefix, BUCKET *table[], int table_size );
-	char * lookup_and_use_macro ( const char *name, const char *prefix, BUCKET *table[], int table_size, int use );
+#ifdef MACRO_SET_KNOWS_DEFAULT
+	MACRO_ITEM* find_macro_item (const char *name, MACRO_SET& set);
+	const char * lookup_macro (const char *name, const char *prefix, MACRO_SET& set);
+	const char * lookup_and_use_macro (const char *name, const char *prefix, MACRO_SET& set, int use);
+#else
+	char * lookup_macro ( const char *name, const char *prefix, MACRO_SET_DECLARE_ARG );
+	char * lookup_and_use_macro ( const char *name, const char *prefix, MACRO_SET_DECLARE_ARG, int use );
+#endif
 
 	/*This is a faster version of lookup_macro that assumes the param name
 	  has already been converted to the canonical lowercase form.
 	  and prefixed with "prefix." if needed.*/
-	char * lookup_macro_lower( const char *name, BUCKET **table, int table_size, int use );
+#ifdef MACRO_SET_KNOWS_DEFAULT
+	const char * lookup_macro_lower( const char *name, MACRO_SET_DECLARE_ARG, int use );
+#else
+	char * lookup_macro_lower( const char *name, MACRO_SET_DECLARE_ARG, int use );
+#endif
+
+	void optimize_macros(MACRO_SET_DECLARE_ARG);
 
 	/** Like lookup_macro_lower, but returns a BUCKET pointer and doesn't modify the use count
 	 */
-	BUCKET* lookup_macro_bucket (const char *name, BUCKET *table[], int table_size);
+	BUCKET* lookup_macro_bucket (const char *name, MACRO_SET_DECLARE_ARG);
 
 	/* A convenience function that calls param() with a MyString buffer. */
 	bool param(MyString &buf,char const *param_name,char const *default_value=NULL);
@@ -188,6 +258,7 @@ class ParamValue {
 extern "C" {
 	void config( int wantsQuiet=0 , bool ignore_invalid_entry = false, bool wantsExtra = true );
 	void config_host( const char* host=NULL );
+	void config_dump_string_pool(FILE * fh, const char * sep);
 	bool config_continue_if_no_config(bool contin);
 	void config_fill_ad( ClassAd*, const char *prefix = NULL );
 	void condor_net_remap_config( bool force_param=false );
@@ -218,13 +289,31 @@ extern "C" {
 
 	NOTE: Returns malloc()ed memory; caller is responsible for calling free().
 	*/
-	char * expand_macro ( const char *value, BUCKET *table[], int table_size,
+	char * expand_macro ( const char *value, MACRO_SET_DECLARE_ARG,
 						  const char *self=NULL, bool use_default_param_table=false,
 						  const char *subsys=NULL, int use=2);
-
 	// Iterator for the hash array managed by insert() and expand_macro().  See
 	// hash_iter_begin(), hash_iter_next(), hash_iter_key(), hash_iter_value(),
 	// and hash_iter_delete() for details.
+#ifdef CALL_VIA_MACRO_SET
+	} // extern "C"
+	class HASHITER {
+	public:
+		int index;
+		MACRO_SET & set;
+		MACRO_ITEM * current;
+		HASHITER(MACRO_SET & setIn) : index(0), set(setIn), current(setIn.table) {}
+	};
+	inline HASHITER hash_iter_begin(MACRO_SET & set) { return HASHITER(set); }
+	inline void hash_iter_delete(HASHITER*) {}
+	bool hash_iter_done(HASHITER& it);
+	bool hash_iter_next(HASHITER& it);
+	inline const char * hash_iter_key(HASHITER& it) { return it.current->key; }
+	inline const char * hash_iter_value(HASHITER& it) { return it.current->raw_value; }
+	int hash_iter_used_value(HASHITER& it);
+extern "C" {
+#else
+
 	struct hash_iter {
 		BUCKET ** table;
 		int table_size;
@@ -285,7 +374,7 @@ extern "C" {
 	*/
 	void hash_iter_delete(HASHITER * iter);
 
-
+#endif
 
 
 	/** Find next $(MACRO) or $$(MACRO) in a string
@@ -325,7 +414,7 @@ extern "C" {
 	void init_config ( bool );
 }
 
-#endif
+#endif // __cplusplus
 
 BEGIN_C_DECLS
 
@@ -339,18 +428,32 @@ BEGIN_C_DECLS
 	inserted into the table 'table' which is 'table_size' big.
 	insert keeps copies of the name and value.
 	*/
-	void insert ( const char *name, const char *value, BUCKET *table[], int table_size );
+#ifdef __cplusplus
+#ifdef MACRO_SET_KNOWS_DEFAULT
+	typedef struct macro_source { int inside; int id; int line; } MACRO_SOURCE;
+	void insert_source(const char * filename, MACRO_SET_DECLARE_ARG, MACRO_SOURCE & source);
+	#define MACRO_SET_SOURCE_ARG const MACRO_SOURCE & source
+	extern const MACRO_SOURCE EnvMacro;
+	extern const MACRO_SOURCE WireMacro;
+	extern const MACRO_SOURCE DetectedMacro;
+#else
+	enum { FileMacro=0, EnvMacro, WireMacro, DefaultMacro, DetectedMacro };
+	#define MACRO_SET_SOURCE_ARG int source
+	void insert_extra (const char *name, const char *value, MACRO_SET_DECLARE_ARG, int source, const char * filename, int line_num);
+#endif
+	void insert (const char *name, const char *value, MACRO_SET_DECLARE_ARG, MACRO_SET_SOURCE_ARG);
 	
 	/** Sets the whether or not a macro has actually been used
 	*/
 #ifdef PARAM_USE_COUNTING
-	int increment_macro_use_count ( const char *name, BUCKET *table[], int table_size );
-	void clear_macro_use_count ( const char *name, BUCKET *table[], int table_size );
-	int get_macro_use_count ( const char *name, BUCKET *table[], int table_size );
-	int get_macro_ref_count ( const char *name, BUCKET *table[], int table_size );
+	int increment_macro_use_count ( const char *name, MACRO_SET_DECLARE_ARG );
+	void clear_macro_use_count ( const char *name, MACRO_SET_DECLARE_ARG );
+	int get_macro_use_count ( const char *name, MACRO_SET_DECLARE_ARG );
+	int get_macro_ref_count ( const char *name, MACRO_SET_DECLARE_ARG );
 #else
-	void set_macro_used ( const char *name, int used, BUCKET *table[], int table_size );
+	void set_macro_used ( const char *name, int used, MACRO_SET_DECLARE_ARG );
 #endif
+#endif // __cplusplus
 
 	/*
 	As expand_macro() (above), but assumes the table 'ConfigTab' which is
@@ -359,6 +462,17 @@ BEGIN_C_DECLS
 	char * macro_expand ( const char *name );
 	char * expand_param (const char *str, const char *subsys, int use);
 
+	struct _macro_stats {
+		int cbStrings;
+		int cbTables;
+		int cbFree;
+		int cEntries;
+		int cFiles;
+		int cUsed;
+		int cReferenced;
+		int is_sorted;
+	};
+	int  get_config_stats(struct _macro_stats *pstats);
 	void clear_config ( void );
 	void set_debug_flags( const char * strFlags, int flags );
 	void config_insert( const char* attrName, const char* attrValue);

@@ -164,6 +164,50 @@ int param_entry_get_type(const param_table_entry_t * p, bool & ranged) {
 	return (flags & condor_params::PARAM_FLAGS_TYPE_MASK);
 }
 
+int param_default_get_id(const char*param)
+{
+	int ix = -1;
+	const param_table_entry_t* found = param_generic_default_lookup(param);
+	if ( ! found) {
+		const char * pdot = strchr(param, '.');
+		if (pdot) {
+			found = param_generic_default_lookup(pdot+1);
+		}
+	}
+	if (found) ix = (int)(found - condor_params::defaults);
+	return ix;
+}
+
+const char* param_default_name_by_id(int ix)
+{
+	if (ix >= 0 && ix < condor_params::defaults_count) {
+		return condor_params::defaults[ix].key;
+	}
+	return NULL;
+}
+
+const char* param_default_rawval_by_id(int ix)
+{
+	if (ix >= 0 && ix < condor_params::defaults_count) {
+		const param_table_entry_t* p = &condor_params::defaults[ix];
+		if (p && p->def) {
+			return p->def->psz;
+		}
+	}
+	return NULL;
+}
+
+param_info_t_type_t param_default_type_by_id(int ix)
+{
+	if (ix >= 0 && ix < condor_params::defaults_count) {
+		const param_table_entry_t* p = &condor_params::defaults[ix];
+		if (p && p->def) {
+			return (param_info_t_type_t)param_entry_get_type(p);
+		}
+	}
+	return PARAM_TYPE_STRING;
+}
+
 #endif // PARAM_DEFAULTS_SORTED
 
 const char*
