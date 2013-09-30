@@ -4475,7 +4475,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		const char *savedReqStr = ExprTreeToString(savedRequirements);
 		offer->AssignExpr( ATTR_REQUIREMENTS, savedReqStr );
 		dprintf( D_ALWAYS, "Inserting %s = %s into the ad\n",
-				 ATTR_REQUIREMENTS, savedReqStr );
+				ATTR_REQUIREMENTS, savedReqStr ? savedReqStr : "" );
 	}	
 
 		// Stash the Concurrency Limits in the offer, they are part of

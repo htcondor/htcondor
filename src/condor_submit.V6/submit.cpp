@@ -199,8 +199,18 @@ char* UserNotesVal = NULL;
 char* StackSizeVal = NULL;
 List<const char> extraLines;  // lines passed in via -a argument
 
-#define PROCVARSIZE	32
-BUCKET *ProcVars[ PROCVARSIZE ];
+#ifdef CALL_VIA_MACRO_SET
+  #ifdef MACRO_SET_KNOWS_DEFAULT
+	static MACRO_SET SubmitMacroSet = { 0, 0, 1, FALSE, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>() };
+  #else
+	static BUCKET * SubmitTable[113];
+	static MACRO_SET SubmitMacroSet = { sizeof(SubmitTable)/sizeof(SubmitTable[0]), SubmitTable, NULL };
+  #endif
+#else
+ #define PROCVARSIZE	32
+ BUCKET *ProcVars[ PROCVARSIZE ];
+ #define SubmitMacroSet ProcVars, PROCVARSIZE
+#endif
 
 #define MEG	(1<<20)
 
@@ -552,6 +562,10 @@ bool stream_std_file = false;
 
 extern DLL_IMPORT_MAGIC char **environ;
 
+#ifdef MACRO_SET_KNOWS_DEFAULT
+const MACRO_SOURCE DefaultMacro = { true, 1, -2 };
+MACRO_SOURCE FileMacroSource = { false, 0, 0 };
+#endif
 
 extern "C" {
 int SetSyscalls( int foo );
@@ -1192,12 +1206,14 @@ main( int argc, char *argv[] )
 	if ( ! cmd_file || SubmitFromStdin) {
 		// no file specified, read from stdin
 		fp = stdin;
+		insert_source("<stdin>", SubmitMacroSet, FileMacroSource);
 	} else {
 		if( (fp=safe_fopen_wrapper_follow(cmd_file,"r")) == NULL ) {
 			fprintf( stderr, "\nERROR: Failed to open command file (%s)\n",
 						strerror(errno));
 			exit(1);
 		}
+		insert_source(cmd_file, SubmitMacroSet, FileMacroSource);
 	}
 
 	// in case things go awry ...
@@ -1403,11 +1419,11 @@ main( int argc, char *argv[] )
 		in the submit file */
 	if (WarnOnUnusedMacros) {
 		if (verbose) { fprintf(stdout, "\n"); }
-		HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
+		HASHITER it = hash_iter_begin(SubmitMacroSet);
 		for ( ; !hash_iter_done(it); hash_iter_next(it) ) {
 			if(0 == hash_iter_used_value(it)) {
-				char *key = hash_iter_key(it),
-					 *val = hash_iter_value(it);
+				const char *key = hash_iter_key(it);
+				const char *val = hash_iter_value(it);
 					// Don't warn if DAG_STATUS or FAILED_COUNT is specified
 					// but unused -- these are specified for all DAG node
 					// jobs (see dagman_submit.cpp).  wenger 2012-03-26
@@ -1497,10 +1513,10 @@ SetRemoteAttrs()
 	const int tostringizesz = sizeof(tostringize) / sizeof(tostringize[0]);
 
 
-	HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
+	HASHITER it = hash_iter_begin(SubmitMacroSet);
 	for( ; ! hash_iter_done(it); hash_iter_next(it)) {
 
-		char * key = hash_iter_key(it);
+		const char * key = hash_iter_key(it);
 		int remote_depth = 0;
 		while(strncasecmp(key, REMOTE_PREFIX, REMOTE_PREFIX_LEN) == 0) {
 			remote_depth++;
@@ -2584,7 +2600,7 @@ void SetFileOptions()
 
 
 void SetRequestResources() {
-    HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
+    HASHITER it = hash_iter_begin(SubmitMacroSet);
     for (;  !hash_iter_done(it);  hash_iter_next(it)) {
         std::string key = hash_iter_key(it);
         std::transform(key.begin(), key.end(), key.begin(), ::tolower);
@@ -5248,7 +5264,7 @@ SetForcedAttributes()
 	while( ( forcedAttributes.iterate( name, value ) ) )
 	{
 		// expand the value; and insert it into the job ad
-		exValue = expand_macro( value.Value(), ProcVars, PROCVARSIZE );
+		exValue = expand_macro(value.Value(), SubmitMacroSet);
 		if( !exValue )
 		{
 			fprintf( stderr, "\nWarning: Unable to expand macros in \"%s\"."
@@ -5621,11 +5637,11 @@ SetGridParams()
 		free(tmp); tmp = NULL;
 	}
 
-	HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
+	HASHITER it = hash_iter_begin(SubmitMacroSet);
 	int prefix_len = strlen(ATTR_EC2_TAG_PREFIX);
 	for (;!hash_iter_done(it); hash_iter_next(it)) {
-		char *key = hash_iter_key(it);
-		char *name = NULL;
+		const char *key = hash_iter_key(it);
+		const char *name = NULL;
 		if (!strncasecmp(key, ATTR_EC2_TAG_PREFIX, prefix_len) &&
 			key[prefix_len]) {
 			name = &key[prefix_len];
@@ -6170,7 +6186,7 @@ read_condor_file( FILE *fp )
 				// since the string is still pointed to by name and
 				// will be freed below like any other line...
 			}
-			name = expand_macro( name, ProcVars, PROCVARSIZE );
+			name = expand_macro(name, SubmitMacroSet);
 			if( name == NULL ) {
 				(void)fclose( fp );
 				fprintf( stderr, "\nERROR: Failed to expand macros "
@@ -6242,7 +6258,7 @@ read_condor_file( FILE *fp )
 		if (name != NULL) {
 
 			/* Expand references to other parameters */
-			name = expand_macro( name, ProcVars, PROCVARSIZE );
+			name = expand_macro(name, SubmitMacroSet);
 			if( name == NULL ) {
 				(void)fclose( fp );
 				fprintf( stderr, "\nERROR: Failed to expand macros in: %s\n",
@@ -6274,7 +6290,7 @@ read_condor_file( FILE *fp )
 		 *  wasn't forced into the ad with a '+'
 		 */
 		if ( force == 0 ) {
-			insert( name, value, ProcVars, PROCVARSIZE );
+			insert(name, value, SubmitMacroSet, FileMacroSource);
 		}
 
 		free( name );
@@ -6294,7 +6310,8 @@ char *
 condor_param( const char* name, const char* alt_name )
 {
 	bool used_alt = false;
-	char *pval = lookup_macro( name, NULL, ProcVars, PROCVARSIZE );
+	const char *pval = lookup_macro(name, NULL, SubmitMacroSet);
+	char * pval_expanded = NULL;
 
 	static StringList* submit_exprs = NULL;
 	static bool submit_exprs_initialized = false;
@@ -6308,7 +6325,7 @@ condor_param( const char* name, const char* alt_name )
 	}
 
 	if( ! pval && alt_name ) {
-		pval = lookup_macro( alt_name, NULL, ProcVars, PROCVARSIZE );
+		pval = lookup_macro(alt_name, NULL, SubmitMacroSet);
 		used_alt = true;
 	}
 
@@ -6326,7 +6343,7 @@ condor_param( const char* name, const char* alt_name )
 		return( NULL );
 	}
 
-	pval = expand_macro( pval, ProcVars, PROCVARSIZE );
+	pval_expanded = expand_macro(pval, SubmitMacroSet);
 
 	if( pval == NULL ) {
 		fprintf( stderr, "\nERROR: Failed to expand macros in: %s\n",
@@ -6334,7 +6351,7 @@ condor_param( const char* name, const char* alt_name )
 		exit(1);
 	}
 
-	return( pval );
+	return  pval_expanded;
 }
 
 
@@ -6343,7 +6360,7 @@ set_condor_param( const char *name, const char *value )
 {
 	char *tval = strdup( value );
 
-	insert( name, tval, ProcVars, PROCVARSIZE );
+	insert(name, tval, SubmitMacroSet, DefaultMacro);
 	free(tval);
 }
 
@@ -6351,9 +6368,9 @@ void
 set_condor_param_used( const char *name ) 
 {
 #ifdef PARAM_USE_COUNTING
-	increment_macro_use_count(name, ProcVars, PROCVARSIZE);
+	increment_macro_use_count(name, SubmitMacroSet);
 #else
-	set_macro_used(name, 1, ProcVars, PROCVARSIZE);
+	set_macro_used(name, 1, SubmitMacroSet);
 #endif
 }
 
@@ -6951,7 +6968,7 @@ check_requirements( char const *orig, MyString &answer )
 	}
 
     // identify any custom pslot resource reqs and add them in:
-    HASHITER it = hash_iter_begin(ProcVars, PROCVARSIZE);
+    HASHITER it = hash_iter_begin(SubmitMacroSet);
     for (;  !hash_iter_done(it);  hash_iter_next(it)) {
         std::string key = hash_iter_key(it);
         std::transform(key.begin(), key.end(), key.begin(), ::tolower);

@@ -128,6 +128,10 @@ extern "C" {
 	const char* param_default_string(const char* param, const char * subsys);
 	// param may be param or subsys.param, will return non-null only on exact name match
 	const char* param_exact_default_string(const char* param);
+	int param_default_get_id(const char*param);
+	const char* param_default_name_by_id(int ix);
+	const char* param_default_rawval_by_id(int ix);
+	param_info_t_type_t param_default_type_by_id(int ix);
 
 	// Returns -1 if param is not of the specified type.
 	// Otherwise, returns 0 and sets min and max to the minimum and maximum

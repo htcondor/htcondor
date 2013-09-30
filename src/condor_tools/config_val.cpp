@@ -83,6 +83,13 @@ my_exit( int status )
 {
 	fflush( stdout );
 	fflush( stderr );
+
+	if ( ! status ) {
+		clear_config();
+		// this is here to validate that we can still param() with an empty param table.
+		char *dummy = param("DUMMY"); if (dummy) free(dummy);
+	}
+
 	exit( status );
 }
 
@@ -519,10 +526,16 @@ main( int argc, const char* argv[] )
 			fprintf( stdout, "#\t%s\n", source );
 		}
 
+		// if no param qualifiers were sent, print all.
 		params.rewind();
+		if( ! params.number()) {
+			params.append(strdup(""));
+			params.rewind();
+		}
+
 		if (params.number()) {
 			while ((tmp = params.next()) != NULL) {
-				fprintf(stdout, "\n# Parameters with names that match %s:\n", tmp);
+				if (tmp && tmp[0]) { fprintf(stdout, "\n# Parameters with names that match %s:\n", tmp); }
 				std::vector<std::string> names;
 				Regex re; int err = 0; const char * pszMsg = 0;
 				if (re.compile(tmp, &pszMsg, &err, PCRE_CASELESS)) {
@@ -555,15 +568,15 @@ main( int argc, const char* argv[] )
 								if (line_number < 0) {
 									fprintf(stdout, " # at: %s\n", filename.Value());
 								} else {
-									fprintf(stdout, " # at: %s, Line %d\n", filename.Value(), line_number);
-									const char * def_val = param_default_string(name, subsys);
-									if (def_val) { fprintf(stdout, " # default: %s\n", def_val); }
+									fprintf(stdout, " # at: %s, line %d\n", filename.Value(), line_number);
 								}
 								if (expand_dumped_variables) {
 									fprintf(stdout, " # raw: %s\n", rawval);
 								} else {
 									fprintf(stdout, " # expanded: %s\n", param(name));
 								}
+								const char * def_val = param_default_string(name, subsys);
+								if (def_val) { fprintf(stdout, " # default: %s\n", def_val); }
 								if (dash_usage) {
 									if (ref_count) fprintf(stdout, " # use_count: %d / %d\n", use_count, ref_count);
 									else fprintf(stdout, " # use_count: %d\n", use_count);
@@ -573,7 +586,9 @@ main( int argc, const char* argv[] )
 					}
 				}
 			}
-		} else {
+		}
+		#if 0 // use obsolete param_all method.
+		else {
 
 			fprintf( stdout, "\n");
 
@@ -611,6 +626,7 @@ main( int argc, const char* argv[] )
 			}
 			delete pvs;
 		}
+		#endif
 
 		fflush( stdout );
 
@@ -728,13 +744,13 @@ main( int argc, const char* argv[] )
 								printf(" # remote HTCondor version does not support -verbose");
 							}
 							if (verbose) {
-								if (expand_dumped_variables) {
-									printf(" # from: %s\n", raw_value.Value());
-								} else {
-									printf(" # expanded: %s\n", value);
-								}
 								if ( ! file_and_line.IsEmpty()) {
 									printf(" # at: %s\n", file_and_line.Value());
+								}
+								if (expand_dumped_variables) {
+									printf(" # raw: %s\n", raw_value.Value());
+								} else {
+									printf(" # expanded: %s\n", value);
 								}
 								if ( ! def_value.IsEmpty()) {
 									printf(" # default: %s\n", def_value.Value());
@@ -824,11 +840,11 @@ main( int argc, const char* argv[] )
 				}
 				if (verbose) {
 #if 1
-					if ( ! raw_value.IsEmpty()) {
-						printf(" # from: %s\n", raw_value.Value());
-					}
 					if ( ! file_and_line.IsEmpty()) {
 						printf(" # at: %s\n", file_and_line.Value());
+					}
+					if ( ! raw_value.IsEmpty()) {
+						printf(" # raw: %s\n", raw_value.Value());
 					}
 					if ( ! def_value.IsEmpty()) {
 						printf(" # default: %s\n", def_value.Value());
