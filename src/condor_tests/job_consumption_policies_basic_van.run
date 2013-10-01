@@ -217,10 +217,11 @@ SLOT_TYPE_4 = cpus=5,memory=100,disk=25%,tokens=0
 SLOT_TYPE_4_PARTITIONABLE = True
 NUM_SLOTS_TYPE_4 = 1
 # consume all resources - emulate static slot
-SLOT_TYPE_4_CONSUMPTION_CPUS = Cpus
-SLOT_TYPE_4_CONSUMPTION_MEMORY = Memory
-SLOT_TYPE_4_CONSUMPTION_DISK = Disk
-SLOT_TYPE_4_CONSUMPTION_TOKENS = Tokens
+SLOT_TYPE_4_CONSUMPTION_CPUS = TotalSlotCpus
+SLOT_TYPE_4_CONSUMPTION_MEMORY = TotalSlotMemory
+# Disk is unreliable -- TotalSlotDisk != Disk even on a virgin slot
+SLOT_TYPE_4_CONSUMPTION_DISK = floor(0.9 * TotalSlotDisk)
+SLOT_TYPE_4_CONSUMPTION_TOKENS = TotalSlotTokens
 
 # turn this off to demonstrate that consumption policy will handle this kind of logic
 MUST_MODIFY_REQUEST_EXPRS = False
