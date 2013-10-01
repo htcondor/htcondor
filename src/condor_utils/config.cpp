@@ -577,7 +577,7 @@ void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SO
 	const char * def_value = param_default_rawval_by_id(param_id);
 	if (def_value && MATCH == strcmp(value, def_value)) {
 		matches_default = true; // flag value as matching the default.
-		return; // don't put default-matching values into the config table.
+		// return; // don't put default-matching values into the config table.
 	}
 
 	// for now just append the item.

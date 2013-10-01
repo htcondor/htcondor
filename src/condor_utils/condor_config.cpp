@@ -509,6 +509,8 @@ void optimize_macros(MACRO_SET & set)
 		return;
 
 #if 1
+        if (set.size > 2) return;
+
 	// we (may) have two parallel arrays to sort, only one of which
 	// contains the key, so we have to sort by building a temporary
 	// map between key and index, sort that, then move items in the
