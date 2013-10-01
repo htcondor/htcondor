@@ -602,7 +602,7 @@ struct Schedd {
         std::string val_str;
         extract<ExprTreeHolder &> exprtree_extract(requirement);
         extract<std::string> string_extract(requirement);
-        classad::ExprTree *expr;
+        classad::ExprTree *expr = NULL;
 	boost::shared_ptr<classad::ExprTree> expr_ref;
         if (string_extract.check())
         {
