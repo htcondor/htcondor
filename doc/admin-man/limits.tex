@@ -27,7 +27,7 @@ Here is the contents of that file:
 
 \footnotesize
 \begin{verbatim}
-#!/bin/sh
+#!/bin/bash
 # Copyright 2008 Red Hat, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,10 +44,7 @@ Here is the contents of that file:
 
 if [[ $_CONDOR_MACHINE_AD != "" ]]; then
    mem_limit=$((`egrep '^Memory' $_CONDOR_MACHINE_AD | cut -d ' ' -f 3` * 1024))
-#   block_size=$((`stat -f -c %s .` / 1024))
-#   disk_limit=$((`egrep '^Disk' $_CONDOR_MACHINE_AD | cut -d ' ' -f 3` / $block_size))
    disk_limit=`egrep '^Disk' $_CONDOR_MACHINE_AD | cut -d ' ' -f 3`
-   vm_limit=`egrep '^VirtualMemory' $_CONDOR_MACHINE_AD | cut -d ' ' -f 3`
 
    ulimit -d $mem_limit
    if [[ $? != 0 ]] || [[ $mem_limit = "" ]]; then
@@ -57,11 +54,6 @@ if [[ $_CONDOR_MACHINE_AD != "" ]]; then
    ulimit -f $disk_limit
    if [[ $? != 0 ]] || [[ $disk_limit = "" ]]; then
       echo "Failed to set Disk Resource Limit" > $_CONDOR_WRAPPER_ERROR_FILE
-      exit 1
-   fi
-   ulimit -v $vm_limit
-   if [[ $? != 0 ]] || [[ $vm_limit = "" ]]; then
-      echo "Failed to set Virtual Memory Resource Limit" > $_CONDOR_WRAPPER_ERROR_FILE
       exit 1
    fi
 fi
@@ -75,7 +67,7 @@ exit 1
 
 If used in an unmodified form,
 this script sets the job's limits on a per slot basis for
-memory, disk, and virtual memory usage,
+memory and disk usage,
 with the limits defined by the values in the machine ClassAd.
 This example file will need to be modified and merged for use with a
 preexisting \MacroNI{USER\_JOB\_WRAPPER} script.

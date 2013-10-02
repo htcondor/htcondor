@@ -129,9 +129,12 @@ struct dprintf_output_settings
 
 void dprintf_set_outputs(const struct dprintf_output_settings *p_info, int c_info);
 
+void * dprintf_get_onerror_data();
+
 const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info);
 //Global dprint functions meant as fallbacks.
 void _dprintf_global_func(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, const char* message, DebugFileInfo* dbgInfo);
+void _dprintf_to_buffer(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, const char* message, DebugFileInfo* dbgInfo);
 
 #ifdef WIN32
 //Output to dbg string

@@ -272,36 +272,6 @@ void print_info(bool rv, char * addr, Sock* s, MyString name, int cmd, ClassAd *
 }
 
 
-int getSampleCommand( int authz_level ) {
-	switch(authz_level) {
-		case ALLOW:
-			return DC_NOP;
-		case READ:
-			return DC_NOP_READ;
-		case WRITE:
-			return DC_NOP_WRITE;
-		case NEGOTIATOR:
-			return DC_NOP_NEGOTIATOR;
-		case ADMINISTRATOR:
-			return DC_NOP_ADMINISTRATOR;
-		case OWNER:
-			return DC_NOP_OWNER;
-		case CONFIG_PERM:
-			return DC_NOP_CONFIG;
-		case DAEMON:
-			return DC_NOP_DAEMON;
-		case ADVERTISE_STARTD_PERM:
-			return DC_NOP_ADVERTISE_STARTD;
-		case ADVERTISE_SCHEDD_PERM:
-			return DC_NOP_ADVERTISE_SCHEDD;
-		case ADVERTISE_MASTER_PERM:
-			return DC_NOP_ADVERTISE_MASTER;
-	}
-
-	return -1;
-
-}
-
 int getSomeCommandFromString ( const char * cmdstring ) {
 
 	int res = -1;

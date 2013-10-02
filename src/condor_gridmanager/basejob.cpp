@@ -1146,14 +1146,14 @@ WriteTerminateEventToUserLog( ClassAd *job_ad )
 			// TODO What about event.signalNumber?
 	}
 
-	float float_val = 0;
-	if ( job_ad->LookupFloat( ATTR_JOB_REMOTE_USER_CPU, float_val ) ) {
-		event.run_remote_rusage.ru_utime.tv_sec = (int)float_val;
-		event.total_remote_rusage.ru_utime.tv_sec = (int)float_val;
+	double real_val = 0;
+	if ( job_ad->LookupFloat( ATTR_JOB_REMOTE_USER_CPU, real_val ) ) {
+		event.run_remote_rusage.ru_utime.tv_sec = (time_t)real_val;
+		event.total_remote_rusage.ru_utime.tv_sec = (time_t)real_val;
 	}
-	if ( job_ad->LookupFloat( ATTR_JOB_REMOTE_SYS_CPU, float_val ) ) {
-		event.run_remote_rusage.ru_stime.tv_sec = (int)float_val;
-		event.total_remote_rusage.ru_stime.tv_sec = (int)float_val;
+	if ( job_ad->LookupFloat( ATTR_JOB_REMOTE_SYS_CPU, real_val ) ) {
+		event.run_remote_rusage.ru_stime.tv_sec = (time_t)real_val;
+		event.total_remote_rusage.ru_stime.tv_sec = (time_t)real_val;
 	}
 
 	int rc = ulog->writeEvent(&event,job_ad);

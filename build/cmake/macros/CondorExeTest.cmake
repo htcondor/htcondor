@@ -23,7 +23,8 @@ MACRO (CONDOR_EXE_TEST _CNDR_TARGET _SRCS _LINK_LIBS )
 		set ( LOCAL_${_CNDR_TARGET} ${_CNDR_TARGET} )
 
 		if ( WINDOWS )
-			string (REPLACE ".exe" "" ${LOCAL_${_CNDR_TARGET}} ${LOCAL_${_CNDR_TARGET}})
+			string (REPLACE ".exe" "" LOCAL_${_CNDR_TARGET} "${LOCAL_${_CNDR_TARGET}}")
+			#dprint ("condor_exe_test: ${LOCAL_${_CNDR_TARGET}} : from ${_CNDR_TARGET}")
 		endif( WINDOWS )
 
 		add_executable( ${LOCAL_${_CNDR_TARGET}} EXCLUDE_FROM_ALL ${_SRCS})

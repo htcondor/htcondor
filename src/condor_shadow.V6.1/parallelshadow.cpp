@@ -795,12 +795,10 @@ ParallelShadow::updateFromStarterClassAd(ClassAd* update_ad)
 
     struct rusage cur_rusage = getRUsage();
     if( cur_rusage.ru_stime.tv_sec > prev_rusage.ru_stime.tv_sec ) {
-        job_ad->Assign(ATTR_JOB_REMOTE_SYS_CPU,
-					   (float)cur_rusage.ru_stime.tv_sec);
+        job_ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, (double)cur_rusage.ru_stime.tv_sec);
     }
     if( cur_rusage.ru_utime.tv_sec > prev_rusage.ru_utime.tv_sec ) {
-        job_ad->Assign(ATTR_JOB_REMOTE_USER_CPU,
-					   (float)cur_rusage.ru_utime.tv_sec);
+        job_ad->Assign(ATTR_JOB_REMOTE_USER_CPU, (double)cur_rusage.ru_utime.tv_sec);
     }
 	return TRUE;
 }

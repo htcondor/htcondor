@@ -1,0 +1,203 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+my @listeningdaemons = (
+	"condor_schedd",
+	"condor_collector",
+	"condor_shared_port",
+);
+
+$on_execute = sub {
+	# use netstat to find open ports
+	my @netstat_result = `netstat -tlpn | grep condor`;
+	my $netstatlength = @netstat_result;
+
+	print "$netstatlength == <$netstatlength>\nResults Follow:\n";
+
+	foreach my $line (@netstat_result) {
+		chomp($line);
+		print "nstat: $line\n"
+	}
+
+	# allow netstat to fail as some nmi platforms (macos_10.4) don't support it
+	if($netstatlength == 0) {
+		CondorTest::debug("Warning: 'netstat -tlpn | grep condor' failed, skipping tcp port checks\n",1);
+		return;
+	} else {
+		print "We have <$netstatlength> lines of netstat info\n";
+	}
+	CondorTest::debug("netstat -tlpn | grep condor\n$netstat_result\n", 1);
+
+	# get the log directory for this test
+	my $logdir = `condor_config_val log`;
+	$logdir =~ s/\012+$//;
+	$logdir =~ s/\015+$//;
+
+	# get the pids associated with this personal condor
+	my $pid = $logdir . "/PIDS";
+	my %familypids = ();
+	open(PID_FILE, "<$pid") || die "Can't open pid file $pid.";
+
+	# get just the pid from each line in file
+	my @pid_file_contents = <PID_FILE>;
+	my @pids;
+	foreach(@pid_file_contents) {
+		chomp;
+		print "Processing PIDs <$_>\n";
+		my @temp = split(/[\ \n]/, $_);
+		push(@pids, @temp[0]);
+		print "Adding <@temp[0]> to pid family\n";
+		# be able to test that a listener is part of this personal condor
+		$familypids{@temp[0]} = 1;
+	}
+
+	# get the pid for the shadow
+    my $shadow_log_location = `condor_config_val SHADOW_log`;
+	open(SHADOW_LOG, "<$shadow_log_location") || die "Can't open shadow log ($shadow_log_location).";
+
+	my @shadow_log_contents = <SHADOW_LOG>;
+	foreach(@shadow_log_contents) {
+		chomp;
+		# get line with shadow's pid
+		if(index($_, "PID = ", 0) != -1) {
+			my $r = rindex($_, " ");
+			my $shadow_pid = substr($_, $r+1);
+			push(@pids, $shadow_pid);
+			$familypids{$shadow_pid} = 1;
+			print "added shadow pid <$shadow_pid>\n";
+			last;
+		}
+	}
+
+	CondorTest::debug("pids - @pids\n", 1);
+
+	foreach my $daemon (@listeningdaemons)
+	{
+		print "Good Daemon <$daemon>\n";
+	}
+	# check that only schedd, collector, shared_port have open listening tcp ports
+	my $answer = "";
+	my $found_listening_daemon = 0;
+	my $unexpected_listening_daemon = 1;
+	foreach my $candidate (@netstat_result) {
+		chomp($candidate);
+		print "considering <$candidate>\n";
+		if($candidate =~ /^.*LISTEN\s+(\d+\/\w+)\s*$/) {
+			print "Yes $1\n";
+			my @pdpairing = split /\//, $1;
+			print "PID - $pdpairing[0]\n";
+			if(exists $familypids{$pdpairing[0]}) {
+				print "In my family <$pdpairing[1]>\n";
+				$answer = IsValidListener($pdpairing[1]);
+				if($answer eq "yes"){
+					print "ok listening pid member <$pdpairing[1]>\n";
+					$found_listening_daemon = 1;
+				} else {
+					print "BAD listening pid member <$pdpairing[1]>\n";
+					$unexpected_listening_daemon = 0;
+				}
+			}
+		} else {
+			print "Regx failed <$candidate>\n";
+		}
+	}
+
+   	CondorTest::RegisterResult( $found_listening_daemon,
+		(check_name => "Found expected daemon with open listening tcp port",
+		test_name => "lib_shared_port-check-ports_van") );
+	CondorTest::RegisterResult( $unexpected_listening_daemon, 
+		(check_name => "No unexpected daemons with open listening tcp ports",
+		test_name => "lib_shared_port-check-ports_van") );
+};
+
+$on_exitedsuccess = sub {
+	# verify connection requests made via shared port server for each daemon
+	CondorLog::RunCheck(
+		daemon => "SHARED_PORT",
+		match_regexp => "SharedPortServer: request from COLLECTOR"
+	);
+	CondorLog::RunCheck(
+		daemon => "SHARED_PORT",
+		match_regexp => "SharedPortServer: request from SCHEDD"
+	);
+	CondorLog::RunCheck(
+		daemon => "SHARED_PORT",
+		match_regexp => "SharedPortServer: request from NEGOTIATOR"
+	);
+	CondorLog::RunCheck(
+		daemon => "SHARED_PORT",
+		match_regexp => "SharedPortServer: request from STARTD"
+	);
+
+	CondorTest::EndTest();
+};
+
+my $append_condor_config = '
+  USE_SHARED_PORT = True
+  DAEMON_LIST = MASTER,SHARED_PORT,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+
+  SHARED_PORT_DEBUG = D_COMMAND D_FULLDEBUG
+
+  # named sockets cannot have very long paths (~100 chars), so put them
+  # in /tmp to avoid problems
+  DAEMON_SOCKET_DIR = /tmp/$(USERNAME)-condor-test-sock
+';
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $append_condor_config
+);
+
+my $testname = "lib_bt_shared_port-check-ports_van";
+
+
+#CondorTest::RegisterExecute($testname, $execute);
+#CondorTest::RegisterExitedSuccess ($testname, $success);
+
+$result = SimpleJob::RunCheck(
+	test_name => $testname,
+    on_execute => $on_execute,
+	on_success => $on_exitedsuccess,
+    queue_sz => 1,
+    duration => 10,
+    timeout => 600,
+    append_submit_commands => $append_submit_commands
+);
+print "shared port settings\n";
+if($result == 1) {
+    print "ok\n";
+} else {
+    print "bad\n";
+}
+
+sub IsValidListener
+{
+	my $partialdaemonname = shift;
+	foreach my $gooddaemon (@listeningdaemons) {
+		if(index($gooddaemon,$partialdaemonname,0) != -1) {
+			#print "$partialdaemonname is $gooddaemon\n";
+			return("yes");
+		}
+	}
+	return("no");
+}

@@ -223,6 +223,25 @@ The \Condor{master} uses this configuration variable,
 and the prefix of \MacroNI{MASTER.} causes this configuration
 to be specific to the \Condor{master} daemon.
 
+As of HTCondor version 8.1.1, evaluation works in the expected manner
+when combining the definition of a macro with
+use of a prefix that gives the subsystem name and a period. 
+Consider the example
+\begin{verbatim}
+  FILESPEC = A
+  MASTER.FILESPEC = B 
+\end{verbatim}
+combined with a later definition that incorporates \Expr{FILESPEC}
+in a macro:
+\begin{verbatim}
+  USEFILE = mydir/$(FILESPEC)
+\end{verbatim}
+When the \Condor{master} evaluates variable \MacroNI{USEFILE},
+it evaluates to \Expr{mydir/B}. 
+Previous to HTCondor version 8.1.1, it evaluated to \Expr{mydir/A}.
+When any other subsystem evaluates variable \MacroNI{USEFILE},
+it evaluates to \Expr{mydir/A}.
+
 % the local functionality added in 7.1.4
 This syntax has been further expanded to allow for the
 specification of a local name on the command line 
@@ -435,6 +454,7 @@ the changed value.
   \begin{itemize}
   \label{list:subsystem names}
   \item \verb@C_GAHP@
+  \item \verb@C_GAHP_WORKER_THREAD@
   \item \verb@CKPT_SERVER@
   \item \verb@COLLECTOR@
   \item \verb@DBMSD@
@@ -454,6 +474,7 @@ the changed value.
   \item \verb@ROOSTER@
   \item \verb@SCHEDD@
   \item \verb@SHADOW@
+  \item \verb@SHARED_PORT@
   \item \verb@STARTD@
   \item \verb@STARTER@
   %\item \verb@STORK@
@@ -1358,7 +1379,9 @@ File System Configuration File Entries''.
   A boolean value that controls the caching of ClassAds.
   Caching saves memory when an HTCondor process contains
   many ClassAds with the same expressions.
-  The default value is \Expr{False}, which disables caching.
+  The default value is \Expr{True} for all daemons other than the
+  \Condor{shadow}, \Condor{starter}, and \Condor{master}.
+  A value of \Expr{True} enables caching.
 
 \label{param:StrictClassadEvaluation}
 \item[\Macro{STRICT\_CLASSAD\_EVALUATION}]
@@ -2887,51 +2910,30 @@ Tracking process family by login "cndrusr1"
 
 \label{param:FilesystemDomain}
 \item[\Macro{FILESYSTEM\_DOMAIN}]
-  The \MacroNI{FILESYSTEM\_DOMAIN}
-  macro is an arbitrary string that is used to decide if
-  two machines (a submitting machine and an execute machine) share a
-  file system.
-  Although the macro name contains the word ``DOMAIN'',
-  the macro is not required to be a domain name. 
+  An arbitrary string that is used to decide if
+  the two machines, a submit machine and an execute machine,
+  share a file system.
+  Although this configuration variable name contains the word ``DOMAIN'',
+  its value is not required to be a domain name. 
   It often is a domain name.
-
-  % NO LONGER TRUE
-  % Vanilla Unix jobs currently require a shared file system in order to
-  % share any data files or see the output of the program.
-  % HTCondor decides if there is a shared filesystem by comparing the values
-  % of 
-  % \MacroUNI{FILESYSTEM\_DOMAIN}
-  % of both the submitting and execute machines.
-  % If the values are the same,
-  % HTCondor assume there is a shared file system.
-  % HTCondor implements the check
-  % by extending the Requirements for your job.
-  % You can see these requirements by using the \oArg{-v} argument
-  % to \Condor{submit}.
 
   Note that this implementation is not ideal: machines may share some
   file systems but not others. HTCondor currently has no way to express
-  this automatically. You can express the need to use a
-  particular file system by adding additional attributes to your machines
-  and submit files, similar to the example given in 
-  Frequently Asked Questions, 
-  section~\ref{sec:FAQ} on
-  how to run jobs only on machines that have 
-  certain software packages.
+  this automatically. 
+  A job can express the need to use a particular file system where
+  machines advertise an additional ClassAd attribute
+  and the job requires machines with the attribute, 
+  as described on the question within the
+  \URL{https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToAdminRecipes}
+  page for how to run jobs on a subset of machines that have required
+  software installed.
 
   Note that if you do not set 
-  \MacroUNI{FILESYSTEM\_DOMAIN}, HTCondor defaults
-  to setting the macro's value to be the fully qualified host name
-  of the local machine.
+  \MacroUNI{FILESYSTEM\_DOMAIN}, the value defaults
+  to the fully qualified host name of the local machine.
   Since each machine will have a different
   \MacroUNI{FILESYSTEM\_DOMAIN},
   they will not be considered to have shared file systems.
-
-  
-  % no longer used, and gone from the sample config file as of 5/30/03.
-  %\item[\Macro{HAS\_AFS}] \label{param:HasAfs} Set this macro to \Expr{True} if
-  %  all the machines you plan on adding in your pool can all access a
-  %  common set of AFS fileservers.  Otherwise, set it to \Expr{False}.
   
 \label{param:ReserveAfsCache}
 \item[\Macro{RESERVE\_AFS\_CACHE}]
@@ -6886,12 +6888,13 @@ These macros affect \Condor{preen}.
 
 \label{param:ValidSpoolFiles}
 \item[\Macro{VALID\_SPOOL\_FILES}]
-  This macro contains a (comma or space separated) list of files that
+  A comma or space separated list of files that
   \Condor{preen} considers valid files to find in the \MacroUNI{SPOOL}
   directory. There is no default value. \Condor{preen} will add to the
   list files and directories that are normally present in the
   \MacroUNI{SPOOL} directory.
-  A single wildcard is permitted in each entry.
+  A single asterisk (\verb|*|) wild card character is permitted in each 
+  file item within the list.
   
 \label{param:InvalidLogFiles}
 \item[\Macro{INVALID\_LOG\_FILES}]
@@ -7558,6 +7561,19 @@ These macros affect the \Condor{negotiator}.
   See section~\ref{sec:PieSlice} on page~\pageref{sec:PieSlice}
   for a description of a pie slice.
 
+\label{param:UseResourceRequestCounts}
+\item[\Macro{USE\_RESOURCE\_REQUEST\_COUNTS}]
+  A boolean value that defaults to \Expr{True}. 
+  When \Expr{True},
+  the latency of negotiation will be reduced 
+  when there are many jobs next to each other in the queue
+  with the same auto cluster, and many matches are being made.
+  When \Expr{True},
+  the \Condor{schedd} tells the \Condor{negotiator} 
+  to send X matches at a time,
+  where X equals number of consecutive jobs in the queue 
+  within the same auto cluster.
+
 \label{param:NegotiatorMatchExprs}
 \item[\Macro{NEGOTIATOR\_MATCH\_EXPRS}]
   A comma-separated list of macro names that are inserted as
@@ -8219,6 +8235,14 @@ These macros affect the \Condor{gridmanager}.
 \item[\Macro{GAHP\_ARGS}]
   Arguments to be passed to the GAHP server.
   This configuration variable is no longer used.
+
+\label{param:GahpDebugHideSensitiveData}
+\item[\Macro{GAHP\_DEBUG\_HIDE\_SENSITIVE\_DATA}]
+  A boolean value that determines when 
+  sensitive data such as security keys and passwords are hidden,
+  when communication to or from a GAHP server 
+  is written to a daemon log.
+  The default is \Expr{True}, hiding sensitive data.
 
 \label{param:GridmanagerGahpCallTimeout}
 \item[\Macro{GRIDMANAGER\_GAHP\_CALL\_TIMEOUT}]
@@ -9430,16 +9454,18 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManPegasusReportMetrics}
 \item[\Macro{DAGMAN\_PEGASUS\_REPORT\_METRICS}]
-  The path the the \Condor{dagman\_metrics\_reporter} executable.  
+  The path to the \Condor{dagman\_metrics\_reporter} executable,
+  which is optionally used to anonymously report workflow metrics
+  for Pegasus workflows.  
   Defaults to
   \File{\$(LIBEXEC)/condor\_dagman\_metrics\_reporter}.
 
 \label{param:DAGManPegasusReportTimeout}
 \item[\Macro{DAGMAN\_PEGASUS\_REPORT\_TIMEOUT}]
-  An integer value representing seconds that defaults to 100 seconds.
-  The \Condor{dagman\_metrics\_reporter} will exit after successfully 
-  contacting all its metrics servers,
-  or after it has executed for more than this duration of time.
+  An integer value specifying the maximum number of seconds that
+  the \Condor{dagman\_metrics\_reporter} will spend attempting
+  to report metrics to the Pegasus metrics server.
+  Defaults to 100.
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -3197,6 +3197,9 @@ void DaemonCore::Driver()
 		selector.reset();
 		min_deadline = 0;
 		for (i = 0; i < nSock; i++) {
+				// NOTE: keep the following logic for building the
+				// fdset in sync with DaemonCore::ServiceCommandSocket()
+
 				// if a valid entry not already being serviced, add to select
 			if ( (*sockTable)[i].iosock && 
 				 (*sockTable)[i].servicing_tid==0 &&

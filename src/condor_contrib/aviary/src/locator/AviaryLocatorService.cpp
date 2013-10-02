@@ -170,9 +170,6 @@
         if (omEle) {
             node = omEle->getAxiomNode();
         }
-        else {
-            node = axiom_node_create_from_buffer(Environment::getEnv(),"no SOAP body");
-        }
         error_code = (axutil_error_codes_t)Environment::getEnv()->error->error_number;
 
         if(error_code <= AVIARYLOCATORSERVICESKELETON_ERROR_NONE ||

@@ -143,10 +143,11 @@ class ParamValue {
 	table.  On success returns a pointer to the associated value.  The
 	value is owned by the table; do not free it.
 	*/
-	char * lookup_macro ( const char *name, BUCKET *table[], int table_size );
+	char * lookup_macro ( const char *name, const char *prefix, BUCKET *table[], int table_size );
 
 	/*This is a faster version of lookup_macro that assumes the param name
-	  has already been converted to the canonical lowercase form.*/
+	  has already been converted to the canonical lowercase form.
+	  and prefixed with "prefix." if needed.*/
 	char * lookup_macro_lower( const char *name, BUCKET **table, int table_size );
 
 	/* A convenience function that calls param() with a MyString buffer. */
@@ -197,7 +198,8 @@ extern "C" {
 	NOTE: Returns malloc()ed memory; caller is responsible for calling free().
 	*/
 	char * expand_macro ( const char *value, BUCKET *table[], int table_size,
-						  const char *self=NULL, bool use_default_param_table=false );
+						  const char *self=NULL, bool use_default_param_table=false,
+						  const char *subsys=NULL);
 
 	// Iterator for the hash array managed by insert() and expand_macro().  See
 	// hash_iter_begin(), hash_iter_next(), hash_iter_key(), hash_iter_value(),

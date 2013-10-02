@@ -208,7 +208,7 @@ sub RegisterResult
     my $testname = $args{test_name} || GetDefaultTestName();
 
     my $result_str = $result == 1 ? "PASSED" : "FAILED";
-    debug( "\n\n$result_str check $checkname in test $testname\n\n", 1 );
+    debug( "\n$result_str check $checkname in test $testname\n\n", 1 );
     if( $result != 1 ) {
 	$test_failure_count += 1;
     }
@@ -273,7 +273,7 @@ sub SetExpected
 {
 	my $expected_ref = shift;
 	foreach my $line (@{$expected_ref}) {
-		debug( "$line\n", 2);
+		debug( "expected: $line\n", 2);
 	}
 	@expected_output = @{$expected_ref};
 }
@@ -282,7 +282,7 @@ sub SetSkipped
 {
 	my $skipped_ref = shift;
 	foreach my $line (@{$skipped_ref}) {
-		debug( "$line\n", 2);
+		debug( "skip: $line\n", 2);
 	}
 	@skipped_output_lines = @{$skipped_ref};
 }
@@ -765,42 +765,60 @@ sub DoTest
 		# note 1/2/09 bt
 		# any exits cause monitor to never return allowing us
 		# to kill personal condor wrapping the test :-(
+# July 26, 2013
+#
+# Major architecture change as we used more callbacks for testing
+# I stumbled on value in the test which were to be changed by the callbacks were not being
+# changed. What was happening in DoTest was that we would fork and the child was
+# running monitor and that callbacks were changing the variables in the child's copy.
+# The process that is the test calling DoTest was simply waiting for the child to die
+# so it could clean up. Now The test switches to be doing the monitoring and the 
+# callbacks switch it back up to the test code for a bit. The monitor and the 
+# test had always been lock-steped anyways so getting rid of the child
+# has had little change except that call backs can be fully functional now.
 		
-		$monitorpid = fork();
-		if($monitorpid == 0) {
-			# child does monitor
-    		$monitorret = Condor::Monitor();
-
-			debug( "Monitor did return on its own status<<<$monitorret>>>\n",4);
-    		die "$handle: FAILURE (job never checkpointed)\n"
-			if $wants_checkpoint && $checkpoints < 1;
-
-			if(  $monitorret == 1 ) {
-				debug( "child happy to exit 0\n",4);
-				exit(0);
-			} else {
-				debug( "child not happy to exit 1\n",4);
-				exit(1);
-			}
+    	$monitorret = Condor::Monitor();
+		if(  $monitorret == 1 ) {
+			debug( "Monitor happy to exit 0\n",4);
 		} else {
-			# parent cleans up
-			$waitpid = waitpid($monitorpid, 0);
-			if($waitpid == -1) {
-				debug( "No such process <<$monitorpid>>\n",4);
-			} else {
-				$retval = $?;
-				debug( "Child status was <<$retval>>\n",4);
-				if( WIFEXITED( $retval ) && WEXITSTATUS( $retval ) == 0 )
-				{
-					debug( "Monitor done and status good!\n",4);
-					$retval = 1;
-				} else {
-					$status = WEXITSTATUS( $retval );
-					debug( "Monitor done and status bad<<$status>>!\n",4);
-					$retval = 0;
-				}
-			}
+			debug( "Monitor not happy to exit 1\n",4);
 		}
+		$retval = $monitorret;
+# 		$monitorpid = fork();
+# 		if($monitorpid == 0) {
+# 			# child does monitor
+#     		$monitorret = Condor::Monitor();
+
+# 			debug( "Monitor did return on its own status<<<$monitorret>>>\n",4);
+#     		die "$handle: FAILURE (job never checkpointed)\n"
+# 			if $wants_checkpoint && $checkpoints < 1;
+
+# 			if(  $monitorret == 1 ) {
+# 				debug( "child happy to exit 0\n",4);
+# 				exit(0);
+# 			} else {
+# 				debug( "child not happy to exit 1\n",4);
+# 				exit(1);
+# 			}
+# 		} else {
+# 			# parent cleans up
+# 			$waitpid = waitpid($monitorpid, 0);
+# 			if($waitpid == -1) {
+# 				debug( "No such process <<$monitorpid>>\n",4);
+# 			} else {
+# 				$retval = $?;
+# 				debug( "Child status was <<$retval>>\n",4);
+# 				if( WIFEXITED( $retval ) && WEXITSTATUS( $retval ) == 0 )
+# 				{
+# 					debug( "Monitor done and status good!\n",4);
+# 					$retval = 1;
+# 				} else {
+# 					$status = WEXITSTATUS( $retval );
+# 					debug( "Monitor done and status bad<<$status>>!\n",4);
+# 					$retval = 0;
+# 				}
+# 			}
+# 		}
 	}
 
 	debug( "************** condor_monitor back ************************ \n",4);
@@ -2128,6 +2146,7 @@ sub findOutput
 sub debug {
     my $string = shift;
     my $level = shift;
+	#my ($package, $filename, $line) = caller();
     Condor::debug("<CondorTest> $string", $level);
 }
 
@@ -2493,7 +2512,7 @@ sub AddFileTrace
 	print TF $buildentry;
 	close TF;
 
-	debug("\n$buildentry",2);
+	debug("\nFile Trace - $buildentry",2);
 }
 
 sub MoveCoreFile
@@ -2751,13 +2770,13 @@ sub VerifyNoJobsInState
 				$jobsstatus{suspended} = $7;
 				if($jobsstatus{$state} == $number){
                     $done = 1;
-					print "$number $state\n";
+					print "$number $state\n\n";
 					return($number)
 				}
             }
         }
         if($done == 0) {
-            print "Waiting for $number $state\n";
+            #print "Waiting for $number $state\n";
             sleep 1;
         }
     }

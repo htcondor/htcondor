@@ -71,8 +71,8 @@ static const char *formatDueDate( int , AttrList* , Formatter &);
 static const char *formatElapsedTime( int , AttrList* , Formatter &);
 static const char *formatRealTime( int , AttrList * , Formatter &);
 static const char *formatRealDate( int , AttrList * , Formatter &);
-//static const char *formatFloat (float, AttrList *, Formatter &);
-static const char *formatLoadAvg (float, AttrList *, Formatter &);
+//static const char *formatFloat (double, AttrList *, Formatter &);
+static const char *formatLoadAvg (double, AttrList *, Formatter &);
 
 static void ppInit()
 {
@@ -1281,7 +1281,7 @@ printCustom (ClassAd *ad)
 }
 
 static const char *
-formatLoadAvg (float fl, AttrList *, Formatter &)
+formatLoadAvg (double fl, AttrList *, Formatter &)
 {
 	static char buf[60];
 	sprintf(buf, "%.3f", fl);
@@ -1290,7 +1290,7 @@ formatLoadAvg (float fl, AttrList *, Formatter &)
 
 #if 0 // not currently used
 static const char *
-formatFloat (float fl, AttrList *, Formatter & fmt)
+formatFloat (double fl, AttrList *, Formatter & fmt)
 {
 	static char buf[60];
 	sprintf(buf, fmt.printfFmt, fl);

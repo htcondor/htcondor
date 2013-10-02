@@ -2,13 +2,13 @@
 ##
 ## Copyright (C) 1990-2011, Condor Team, Computer Sciences Department,
 ## University of Wisconsin-Madison, WI.
-## 
+##
 ## Licensed under the Apache License, Version 2.0 (the "License"); you
 ## may not use this file except in compliance with the License.  You may
 ## obtain a copy of the License at
-## 
+##
 ##    http://www.apache.org/licenses/LICENSE-2.0
-## 
+##
 ## Unless required by applicable law or agreed to in writing, software
 ## distributed under the License is distributed on an "AS IS" BASIS,
 ## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,7 +20,7 @@
 
 # CondorPersonal.pm - a Perl API to Condor for Personal Condors
 #
-# Designed to allow a flexible way to have tests and other jobs 
+# Designed to allow a flexible way to have tests and other jobs
 # run in conjunction with other Condor perl modules and control
 # the environment in which they run
 #
@@ -933,6 +933,7 @@ debug( "HMMMMMMMMMMM opening to write <$topleveldir/$personal_local>\n",$debugle
 	print NEW "DAGMAN_USER_LOG_SCAN_INTERVAL = 1\n";
 	# bill make tools more forgiving of being busy
 	print NEW "TOOL_TIMEOUT_MULTIPLIER = 10\n";
+	print NEW "TOOL_DEBUG_ON_ERROR = D_ANY D_ALWAYS:2\n";
 
 	if($personal_daemons ne "")
 	{
@@ -1148,8 +1149,8 @@ sub PostTunePersonalCondor
 
 #################################################################
 #
-#	StartPersonalCondor will start a personal condor which has 
-#	been set up. If the ports are dynamic, it will look up the 
+#	StartPersonalCondor will start a personal condor which has
+#	been set up. If the ports are dynamic, it will look up the
 #   address and return the port number.
 #
 
@@ -1157,6 +1158,15 @@ sub StartPersonalCondor
 {
 	my %control = %personal_condor_params;
 	my $personalmaster = "";
+
+	# If we start a personal Condor as root (for testing the VM universe),
+	# we need to change the permissions/ownership on the directories we
+	# made so that the master (which runs as condor) can use them.
+	if( $> == 0 ) {
+		my $testName = $control{ 'test_name' };
+		system( "chown condor.condor $home/${testName}.saveme >& /dev/null" );
+		system( "chown -R condor.condor $home/${testName}.saveme/$pid >& /dev/null" );
+	}
 
 	my $configfile = $control{"condorconfig"};
 	my $fullconfig = "$topleveldir/$configfile";

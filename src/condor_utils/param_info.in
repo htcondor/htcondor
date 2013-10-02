@@ -3061,22 +3061,6 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,soap_core
 id=162
 
-[MASTER.PID_SNAPSHOT_INTERVAL]
-aliases=
-default=60
-version=0.0.0
-range=.*
-state=default
-type=int
-is_macro=false
-reconfig=true
-customization=seldom
-friendly_name=Master Pid Snapshot Interval
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=daemon_core,HookClientMgr
-id=163
-
 [PID_SNAPSHOT_INTERVAL]
 aliases=
 default=15
@@ -3092,6 +3076,11 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,HookClientMgr
 id=163
+
+[MASTER.PID_SNAPSHOT_INTERVAL]
+default=60
+type=int
+friendly_name=Master Pid Snapshot Interval
 
 [SEC_DEBUG_PRINT_KEYS]
 aliases=
@@ -3511,7 +3500,7 @@ id=189
 
 [CREATE_CORE_FILES]
 aliases=
-default=
+default=true
 version=0.0.0
 range=.*
 state=default
@@ -3908,6 +3897,22 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gahp-client
 id=214
+
+[GAHP_DEBUG_HIDE_SENSITIVE_DATA]
+aliases=
+default=true
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Gahp Debug Hide Sensitive Data
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=gridmanager,gahp-client
+id=213
 
 [GAHP_USE_XML_CLASSADS]
 aliases=
@@ -5351,20 +5356,25 @@ tags=classad,ast
 id=314
 
 [ENABLE_CLASSAD_CACHING]
-aliases=
-default=false
-version=0.0.0
-range=.*
-state=default
+default=true
 type=bool
 is_macro=false
 reconfig=true
 customization=seldom
 friendly_name=Enable ClassAd Caching
-usage=
-url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=classad
-id=315
+
+[MASTER.ENABLE_CLASSAD_CACHING]
+type=bool
+default=false
+
+[SHADOW.ENABLE_CLASSAD_CACHING]
+type=bool
+default=false
+
+[STARTER.ENABLE_CLASSAD_CACHING]
+type=bool
+default=false
 
 [QUILL_MAINTAIN_DB_CONN]
 aliases=
@@ -10046,7 +10056,7 @@ id=602
 aliases=
 default=
 version=0.0.0
-range=1,1000000000
+range=.*
 state=default
 type=string
 is_macro=false
@@ -10062,7 +10072,7 @@ id=602
 aliases=
 default=
 version=0.0.0
-range=1,1000000000
+range=.*
 state=default
 type=string
 is_macro=false
@@ -10094,7 +10104,7 @@ id=602
 aliases=
 default=
 version=0.0.0
-range=1,1000000000
+range=.*
 state=default
 type=string
 is_macro=false
@@ -11274,3 +11284,19 @@ usage=Set the limit on file descriptor usage for the scheduler.
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=617
+
+[USE_RESOURCE_REQUEST_COUNTS]
+aliases=
+default=true
+version=0.0.0
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Use Resource Request Counts
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator,matchmaker
+id=618

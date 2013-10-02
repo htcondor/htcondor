@@ -606,6 +606,17 @@ sub IsAbsolutePath {
 
 # spawn process to monitor the submit log file and execute callbacks
 # upon seeing registered events
+# July 26, 2013
+#
+# Major architecture change as we used more callbacks for testing
+# I stumbled on value in the test which were to be changed by the callbacks were not being
+# changed. What was happening in DoTest was that we would fork and the child was
+# running monitor and that callbacks were changing the variables in the child's copy.
+# The process that is the test calling DoTest was simply waiting for the child to die
+# so it could clean up. Now The test switches to be doing the monitoring and the 
+# callbacks switch it back up to the test code for a bit. The monitor and the 
+# test had always been lock-steped anyways so getting rid of the child
+# has had little change except that call backs can be fully functional now.
 sub Monitor
 {
     my $timeout = shift;
@@ -613,7 +624,6 @@ sub Monitor
     my $line;
     #my %info;
 	my $timestamp = 0;
-    my $parent_pid = getppid();
 
     debug( "Entering Monitor\n" ,5);
 
@@ -690,11 +700,6 @@ sub Monitor
 	while( ! defined $line )
 	{
 		sleep 2;
-		if( getppid() != $parent_pid )
-		{
-		    print "\nCondor::Monitor: our parent pid $parent_pid has gone away.  Aborting.\n";
-		    return 0;
-		}
 
 		if(defined $TimedCallback)
 		{

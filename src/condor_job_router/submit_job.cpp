@@ -979,12 +979,12 @@ bool InitializeTerminateEvent( TerminatedEvent *event, classad::ClassAd const &j
 
 	double real_val = 0;
 	if ( job_ad.EvaluateAttrReal( ATTR_JOB_REMOTE_USER_CPU, real_val ) ) {
-		event->run_remote_rusage.ru_utime.tv_sec = (int)real_val;
-		event->total_remote_rusage.ru_utime.tv_sec = (int)real_val;
+		event->run_remote_rusage.ru_utime.tv_sec = (time_t)real_val;
+		event->total_remote_rusage.ru_utime.tv_sec = (time_t)real_val;
 	}
 	if ( job_ad.EvaluateAttrReal( ATTR_JOB_REMOTE_SYS_CPU, real_val ) ) {
-		event->run_remote_rusage.ru_stime.tv_sec = (int)real_val;
-		event->total_remote_rusage.ru_stime.tv_sec = (int)real_val;
+		event->run_remote_rusage.ru_stime.tv_sec = (time_t)real_val;
+		event->total_remote_rusage.ru_stime.tv_sec = (time_t)real_val;
 	}
 
 	return true;

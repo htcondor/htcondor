@@ -23,7 +23,7 @@ if ( NOT CLIPPED )
 	ExternalProject_Add(zlib
 			    #-- Download Step ----------
 			    DOWNLOAD_DIR ${ZLIB_STAGE}/dl
-			    URL http://parrot.cs.wisc.edu/externals/${ZLIB_VER}.tar.gz
+			    URL ${EXTERNALS_SOURCE_URL}/${ZLIB_VER}.tar.gz
 			    #--Configure step ----------
 			    CONFIGURE_COMMAND ./configure --prefix=${ZLIB_INSTALL_LOC}
 			    #--Build Step ----------

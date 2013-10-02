@@ -973,7 +973,7 @@ int
 MakeProc(ClassAd *ad, PROC *p)
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
-	float	utime,stime;
+	double utime,stime;
 	ExprTree *e;
 	
 	p->version_num = 3;

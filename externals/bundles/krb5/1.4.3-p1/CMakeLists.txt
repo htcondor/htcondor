@@ -80,7 +80,7 @@ if (WITH_KRB5)
 		ExternalProject_Add(krb5
 				    #-- Download Step ----------
 				    DOWNLOAD_DIR ${KRB5_STAGE}/dl
-				    URL http://parrot.cs.wisc.edu/externals/${KRB5_VER}.tar.gz
+				    URL ${EXTERNALS_SOURCE_URL}/${KRB5_VER}.tar.gz
 				    #URL C:/Scratch/Build/test-externals/${KRB5_VER}.tar.gz
 					#--Patch step ----------
 					PATCH_COMMAND ${KRB5_PATCH}

@@ -81,8 +81,8 @@ use CondorUtils;
 #################################################################
 
 Condor::DebugOff();
-Condor::DebugLevel(0);
-CondorPersonal::DebugLevel(0);
+Condor::DebugLevel(2);
+CondorPersonal::DebugLevel(2);
 CondorPersonal::DebugOff();
 my @debugcollection = ();
 
@@ -1027,7 +1027,8 @@ sub CreateConfig {
 	}    
     }    
     close( OLDFIG );    
-	print NEWFIG "TOOL_TIMEOUT_MULTIPLIER = 10\n";	
+	print NEWFIG "TOOL_TIMEOUT_MULTIPLIER = 10\n";
+	print NEWFIG "TOOL_DEBUG_ON_ERROR = D_ANY D_ALWAYS:2\n";
     close( NEWFIG );
 }
 

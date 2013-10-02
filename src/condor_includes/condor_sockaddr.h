@@ -53,6 +53,7 @@ public:
 	condor_sockaddr(const sockaddr* saddr);
 	condor_sockaddr(const sockaddr_in* sin) ;
 	condor_sockaddr(const sockaddr_in6* sin6);
+	condor_sockaddr(const sockaddr_storage* sin);
 
 private:
 	void init(uint32_t ip, unsigned port);

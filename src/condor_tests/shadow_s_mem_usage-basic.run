@@ -44,6 +44,30 @@ output = ' . $testname . '.out
 error  = ' . $testname . '.err
 ';
 
+my %memory_data = (
+	"x86_64_Ubuntu10" => "824", 
+	"x86_64_Fedora17" => "704", 
+	"x86_64_Fedora18" => "944", 
+	"x86_64_SL6" => "708", 
+	"x86_64_RedHat6" => "708", 
+	"x86_64_Debian6" => "908", 
+	"x86_64_Debian7" => "972", 
+	"x86_Debian6" => "564", 
+	"x86_64_RedHat5" => "676", 
+	"x86_64_Ubuntu12" => "856", 
+	"x86_RedHat6" => "528", 
+	"x86_SL5" => "508", 
+	"x86_RedHat5" => "496", 
+);
+
+my $tolerance = 1.05;
+my $platform = $ENV{NMI_PLATFORM};
+my $expectedmemory = $memory_data{$platform};
+print "Expected shadow memory = $expectedmemory\n";
+my $allowedmemory = ComputeMemLimit($tolerance, $expectedmemory);
+print "expected platform <$platform> memory usage <$allowedmemory>\n";
+
+# run a job and look at shadow memory usage
 my $on_ulog = sub {
   my %info = @_; # contains cluster,job,date,time,ulog
   CondorTest::debug("Job $info{cluster} ulog: $info{ulog}.\n",1);
@@ -122,5 +146,16 @@ sub smap_sum_verbose {
           $tot{Private_Dirty}, $tot{Heap}+$tot{Stack}+$tot{Anon}, $tot{Heap}, $tot{Stack}, $tot{Anon},
           $tot{LibRO}, $tot{LibData}, $tot{Exec}, $tot{Utils}, $tot{Classad}, $tot{Globus}, $tot{System}+$tot{Other},
           $tot{Private_Clean};
+		  if($tot{Private_Dirty} > $allowedmemory) {
+		  	die "Shadow on this platform is allowed to be this <$allowedmemory>, this is over <$tot{Private_Dirty}>\n";
+		  }
 }
 
+sub ComputeMemLimit
+{
+	my $changerate = shift;
+	my $memstat = shift;
+	my $newsize = ($changerate * $memstat);
+	print "$changerate * $memstat = $newsize\n";
+	return($newsize);
+}

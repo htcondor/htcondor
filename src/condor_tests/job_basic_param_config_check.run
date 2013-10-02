@@ -1,0 +1,129 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+#use Check::CondorLog;
+use Check::ProcInfo;
+
+my $configfile = "";
+my $ClusterId = 0;
+my $test_name =  "job_basic_param_config_check";
+
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	NUM_CPUS = 5
+	foo = 1
+	bar = $(foo) + 1
+	master.foo = 2
+	ALL_DEBUG = 
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"name1");
+
+my $condorinfo =CondorTest::StartCondorWithParams(
+	condor_name => "name1",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+my $fooindex = 0;
+my @foos = (
+	"1 + 1",
+	"2 + 1",
+);
+
+my @foodata = ();
+my $on_submit = sub {
+	my $fdata = "";
+	@foodata = ();
+	if( $fooindex == 0 ) {
+		@foodata = `condor_config_val bar`;
+		system("condor_config_val bar");
+	} else {
+		@foodata = `condor_config_val -master bar`;
+		system("condor_config_val -master bar");
+	}
+	$fdata = $foodata[0];
+	chomp($fdata);
+	if($fdata ne $foos[$fooindex]) {
+		$fooindex += 1;
+		die "Expected <$foos[$fooindex]> Got <$fdata>\n";
+	} else {
+		print "Got what we wanted <$fdata>\n";
+		$fooindex += 1;
+	}
+};
+
+print "We know this about the just started personal condor <$condorinfo>\n";
+print "First test basic job\n";
+$result = SimpleJob::RunCheck();
+
+my $result = SimpleJob::RunCheck(
+	test_name => "$test_name",
+	on_submit => $on_submit,
+	duration => 10,
+);
+
+print "******************** Check for general value for param foo\n";
+if($result == 1) {
+print "ok\n\n\n";
+} else {
+print "bad\n\n\n";
+}
+
+my $result = SimpleJob::RunCheck(
+	test_name => "$test_name",
+	on_submit => $on_submit,
+	duration => 10,
+);
+
+print "******************** Check for master specific value for param foo\n";
+if($result == 1) {
+print "ok\n\n\n";
+} else {
+print "bad\n\n\n";
+}
+
+#CondorTest::RegisterResult(1,{test_name => $test_name});
+
+CondorTest::EndTest();
+
+
+sub SubmitReturnCluster
+{
+	my $submitfile = shift;
+	my $cluster = 0;
+
+	my @output = `condor_submit $submitfile`;
+
+	foreach my $line (@output) {
+		chomp($line);
+		if($line =~ /^.*cluster (\d+).*$/) {
+			#print "$line\n";
+			#print "returning $1\n";
+			$cluster = $1;
+			return($cluster);
+		}
+	}
+	return(0);
+}

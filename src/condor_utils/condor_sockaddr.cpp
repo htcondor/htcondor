@@ -65,6 +65,11 @@ condor_sockaddr::condor_sockaddr(const sockaddr* sa)
 	}
 }
 
+condor_sockaddr::condor_sockaddr(const sockaddr_storage *sa)
+{
+	condor_sockaddr(reinterpret_cast<const sockaddr*>(sa));
+}
+
 condor_sockaddr::condor_sockaddr(const sockaddr_in* sin) 
 {
 	init(sin->sin_addr.s_addr, sin->sin_port);
@@ -83,6 +88,20 @@ sockaddr_in condor_sockaddr::to_sin() const
 sockaddr_in6 condor_sockaddr::to_sin6() const
 {
 	return v6;
+}
+
+sockaddr_storage condor_sockaddr::to_storage() const
+{
+	sockaddr_storage tmp;
+	if (is_ipv4())
+	{
+		memcpy(&tmp, &v4, sizeof(v4));
+	}
+	else
+	{
+		memcpy(&tmp, &v6, sizeof(v6));
+	}
+	return tmp;
 }
 
 bool condor_sockaddr::is_ipv4() const

@@ -73,6 +73,7 @@ class GahpServer : public Service {
 
 	bool Startup();
 	bool Initialize(Proxy * proxy);
+	bool CreateSecuritySession();
 
 	void DeleteMe();
 
@@ -93,7 +94,7 @@ class GahpServer : public Service {
 
 	void read_argv(Gahp_Args &g_args);
 	void read_argv(Gahp_Args *g_args) { read_argv(*g_args); }
-	void write_line(const char *command);
+	void write_line(const char *command, const char *debug_cmd = NULL);
 	void write_line(const char *command,int req,const char *args);
 	int pipe_ready(int pipe_end);
 	int err_pipe_ready(int pipe_end);
@@ -152,6 +153,7 @@ class GahpServer : public Service {
 	bool command_commands();
 	bool command_async_mode_on();
 	bool command_response_prefix(const char *prefix);
+	bool command_condor_version();
 
 	int new_reqid();
 
@@ -172,6 +174,7 @@ class GahpServer : public Service {
 	std::list<std::string> m_gahp_error_list;
 	bool m_gahp_startup_failed;
 	char m_gahp_version[150];
+	std::string m_gahp_condor_version;
 	StringList * m_commands_supported;
 	bool use_prefix;
 	unsigned int m_pollInterval;
@@ -186,6 +189,8 @@ class GahpServer : public Service {
 	ArgList binary_args;
 	char *my_id;
 	int m_ssh_forward_port;
+
+	std::string m_sec_session_id;
 
 	char *globus_gass_server_url;
 	char *globus_gt2_gram_callback_contact;
@@ -227,6 +232,8 @@ class GahpClient : public Service {
 
 		///
 		bool Initialize(Proxy *proxy);
+
+		bool CreateSecuritySession();
 
 		///
 		void purgePendingRequests() { clear_pending(); }
@@ -316,6 +323,8 @@ class GahpClient : public Service {
 		const char *getGahpStderr();
 
 		const char *getVersion();
+
+		const char *getCondorVersion();
 
 		int getSshForwardPort() { return server->m_ssh_forward_port; }
 

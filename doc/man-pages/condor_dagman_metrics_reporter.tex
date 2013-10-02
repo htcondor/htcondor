@@ -12,9 +12,11 @@
 
 \Description
 
-\Condor{dagman\_metrics\_reporter} reports statistics of a DAGMan run to a
-central server.  This behavior is needed for running DAGMan under Pegasus.  
-See \URL{http://pegasus.isi.edu/wms/docs/latest/funding\_citing\_usage.php\#usage\_statistics}
+\Condor{dagman\_metrics\_reporter} anonymously reports metrics from
+a DAGMan workflow to a central server.  The reporting of workflow metrics
+is only enabled for DAGMan workflows run under Pegasus; metrics reporting
+has been requested by Pegasus' funding sources:
+see \URL{http://pegasus.isi.edu/wms/docs/latest/funding\_citing\_usage.php\#usage\_statistics}
 and \URL{https://confluence.pegasus.isi.edu/display/pegasus/DAGMan+Metrics+Reporting}
 for the requirements to collect this data.
 
@@ -22,29 +24,30 @@ The data sent to the server is in JSON format.
 Here is an example of what is sent:
 \begin{verbatim}
 {
-    "client": "pegasus-plan",
-    "version": "4.2.2",
-    "type": "metrics",
-    "wf_uuid": "efc309d4-0ca8-4492-be02-3bf931451234",
-    "root_wf_uuid": "efc309d4-0ca8-4492-be02-3bf931451234",
-    "start_time": 1371570219.048,
-    "end_time": 1371571617.634,
-    "duration": 1398.586,
-    "exitcode": 1,
-    "dagman_version": "8.0.0",
-    "dagman_id": "manta.cs.wisc.edu:1234:99",
-    "parent_dagman_id": "",
-    "rescue_dag_number": 0,
-    "jobs": 10,
-    "jobs_failed": 1,
-    "jobs_succeeded": 5,
-    "dag_jobs": 2,
-    "dag_jobs_failed": 0,
-    "dag_jobs_succeeded": 2,
-    "total_jobs": 12,
-    "total_jobs_run": 8,
-    "total_job_time": 1968.000,
-    "dag_status": 4
+    "client":"condor_dagman",
+    "version":"8.1.0",
+    "planner":"/lfs1/devel/Pegasus/pegasus/bin/pegasus-plan",
+    "planner_version":"4.3.0cvs",
+    "type":"metrics",
+    "wf_uuid":"htcondor-test-job_dagman_metrics-A-subdag",
+    "root_wf_uuid":"htcondor-test-job_dagman_metrics-A",
+    "start_time":1375313459.603,
+    "end_time":1375313491.498,
+    "duration":31.895,
+    "exitcode":1,
+    "dagman_id":"26",
+    "parent_dagman_id":"11",
+    "rescue_dag_number":0,
+    "jobs":4,
+    "jobs_failed":1,
+    "jobs_succeeded":3,
+    "dag_jobs":0,
+    "dag_jobs_failed":0,
+    "dag_jobs_succeeded":0,
+    "total_jobs":4,
+    "total_jobs_run":4,
+    "total_job_time":0.000,
+    "dag_status":2
 }
 \end{verbatim}
 
@@ -57,12 +60,13 @@ Ordinarily, this program will be run by \Condor{dagman},
 and users do not need to interact with it.
 This program uses the following environment variables:
 \begin{description}
-  \item[\Env{PEGASUS\_USER\_METRICS\_SERVER}]
-    A comma separated list of URLs that will receive the data. 
   \item[\Env{PEGASUS\_USER\_METRICS\_DEFAULT\_SERVER}]
-    The default server to send the data to.
+    The URL of the default server to which to send the data.
     It defaults to \File{http://metrics.pegasus.isi.edu/metrics}.
     It can be overridden at the command line with the \Opt{-u} option.
+  \item[\Env{PEGASUS\_USER\_METRICS\_SERVER}]
+    A comma separated list of URLs of servers that will receive the
+    data, in addition to the default server. 
 \end{description}
 
 The \Arg{-f} argument specifies the metrics file to be sent
@@ -70,7 +74,9 @@ to the HTTP server.
 
 \begin{Options}
   \OptItem{\Opt{-s}}{Sleep for a random number of seconds 
-    between 1 and 10, before attempting to send data.}
+    between 1 and 10, before attempting to send data.  This option
+    is used to space out the reporting from any sub-DAGs when a
+    DAG is removed.}
   \OptItem{\OptArg{-u}{URL}}
      {Overrides setting of the environment variable
      \Env{PEGASUS\_USER\_METRICS\_DEFAULT\_SERVER}. 
@@ -82,6 +88,8 @@ to the HTTP server.
     A setting of zero will result in a single attempt per server. 
     \Condor{dagman} retrieves this value from the 
     \Macro{DAGMAN\_PEGASUS\_REPORT\_TIMEOUT} configuration variable.}
+  \OptItem{\OptArg{-f}{metrics\_file}}
+    {The name of the file containing the metrics values to be reported.}
 \end{Options}
 
 \ExitStatus

@@ -153,7 +153,8 @@ int
 Read_config( const char* config_source, BUCKET** table, 
 			 int table_size, int expand_flag,
 			 bool check_runtime_security,
-			 ExtraParamTable *extra_info)
+			 ExtraParamTable *extra_info,
+			 const char * subsys)
 {
   	FILE*	conf_fp = NULL;
 	char*	name = NULL;
@@ -164,6 +165,8 @@ Read_config( const char* config_source, BUCKET** table,
 	int		retval = 0;
 	bool	is_pipe_cmd = false;
 	bool	firstRead = true;
+
+	if (subsys && ! *subsys) subsys = NULL;
 
 	ConfigLineNo = 0;
    
@@ -347,7 +350,8 @@ Read_config( const char* config_source, BUCKET** table,
 			}
 		} else  {
 			/* expand self references only */
-			value = expand_macro( rhs, table, table_size, name );
+			PRAGMA_REMIND("tj: this handles only trivial self-refs, needs rethink.")
+			value = expand_macro( rhs, table, table_size, name, false, subsys );
 			if( value == NULL ) {
 				retval = -1;
 				goto cleanup;
@@ -632,12 +636,27 @@ expand_macro( const char *value,
 			  BUCKET **table,
 			  int table_size,
 			  const char *self,
-			  bool use_default_param_table )
+			  bool use_default_param_table,
+			  const char *subsys)
 {
 	char *tmp = strdup( value );
 	char *left, *name, *right;
 	const char *tvalue;
 	char *rval;
+	const char *selfless = NULL;
+
+	// to avoid infinite recursive expansion, we have to look for both "subsys.self" and "self"
+	if (self && subsys) {
+		const char * a = subsys;
+		const char * b = self;
+		while (*a && (tolower(*a) == tolower(*b))) {
+			++a; ++b;
+		}
+		// if a now points to a 0, and b now points to ".", then self contains subsys as a prefix.
+		if (0 == a[0] && '.' == b[0] && b[1] != 0) {
+			selfless = b+1;
+		}
+	}
 
 	bool all_done = false;
 	while( !all_done ) {		// loop until all done expanding
@@ -738,15 +757,18 @@ expand_macro( const char *value,
 			tmp = rval;
 		}
 
-		if( find_config_macro(tmp, &left, &name, &right, self) ) {
+		if (find_config_macro(tmp, &left, &name, &right, self) ||
+			(selfless && find_config_macro(tmp, &left, &name, &right, selfless)) ) {
 			all_done = false;
-			tvalue = lookup_macro( name, table, table_size );
+			tvalue = lookup_macro( name, subsys, table, table_size );
+			if (subsys && ! tvalue)
+				tvalue = lookup_macro( name, NULL, table, table_size );
 
 				// Note that if 'name' has been explicitly set to nothing,
 				// tvalue will _not_ be NULL so we will not call
 				// param_default_string().  See gittrack #1302
 			if( !self && use_default_param_table && tvalue == NULL ) {
-				tvalue = param_default_string(name);
+				tvalue = param_default_string(name, subsys);
 			}
 			if( tvalue == NULL ) {
 				tvalue = "";
@@ -1100,13 +1122,17 @@ lookup_macro_lower( const char *name, BUCKET **table, int table_size )
 	return NULL;
 }
 char *
-lookup_macro( const char *name, BUCKET **table, int table_size )
+lookup_macro( const char *name, const char *prefix, BUCKET **table, int table_size )
 {
 	char			tmp_name[ MAX_PARAM_LEN ];
 
+	if (prefix) {
+		snprintf(tmp_name, MAX_PARAM_LEN, "%s.%s", prefix, name);
+	} else {
 		// snprintf() is faster than strncpy() for large target buffers,
 		// because strncpy() nulls out rest of buffer
-	snprintf(tmp_name,MAX_PARAM_LEN,"%s",name);
+		snprintf(tmp_name, MAX_PARAM_LEN, "%s", name);
+	}
 	tmp_name[MAX_PARAM_LEN-1] = '\0';
 	strlwr( tmp_name );
 	return lookup_macro_lower(tmp_name,table,table_size);

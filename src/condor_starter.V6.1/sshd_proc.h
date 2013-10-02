@@ -40,6 +40,8 @@ public:
 	virtual bool ThisProcRunsAlongsideMainProc();
 
 	virtual char const *getArgv0();
+
+	virtual bool SupportsPIDNamespace() { return false;}
 };
 
 #endif

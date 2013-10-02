@@ -698,11 +698,11 @@ Resource::hackLoadForCOD( void )
 
 	if( IsDebugVerbose( D_LOAD ) ) {
 		if( r_cod_mgr->isRunning() ) {
-			dprintf( D_LOAD, "COD job current running, using "
+			dprintf( D_LOAD | D_VERBOSE, "COD job current running, using "
 					 "'%s', '%s' for internal policy evaluation\n",
 					 load.Value(), c_load.Value() );
 		} else {
-			dprintf( D_LOAD, "COD job recently ran, using '%s', '%s' "
+			dprintf( D_LOAD | D_VERBOSE, "COD job recently ran, using '%s', '%s' "
 					 "for internal policy evaluation\n",
 					 load.Value(), c_load.Value() );
 		}
@@ -2313,7 +2313,7 @@ Resource::compute_condor_load( void )
 	}
 
 	if( IsDebugVerbose( D_LOAD ) ) {
-		dprintf( D_FULLDEBUG, "LoadQueue: Adding %d entries of value %f\n",
+		dprintf( D_LOAD | D_VERBOSE, "LoadQueue: Adding %d entries of value %f\n",
 				 num_since_last, cpu_usage );
 	}
 	r_load_queue->push( num_since_last, cpu_usage );
@@ -2322,7 +2322,7 @@ Resource::compute_condor_load( void )
 
 	if( IsDebugVerbose( D_LOAD ) ) {
 		r_load_queue->display( this );
-		dprintf( D_FULLDEBUG,
+		dprintf( D_LOAD | D_VERBOSE,
 				 "LoadQueue: Size: %d  Avg value: %.2f  "
 				 "Share of system load: %.2f\n",
 				 r_load_queue->size(), r_load_queue->avg(), avg );

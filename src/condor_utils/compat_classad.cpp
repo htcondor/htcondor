@@ -1445,8 +1445,7 @@ EvalFloat (const char *name, classad::ClassAd *target, double &value)
 	return rc;
 }
 
-#define IS_DOUBLE_ZERO(_value_) \
-	(  ( (_value_) >= -0.000001 ) && ( (_value_) <= 0.000001 )  )
+#define IS_DOUBLE_TRUE(val) (bool)(int)((val)*100000)
 
 int ClassAd::
 EvalBool  (const char *name, classad::ClassAd *target, int &value)
@@ -1467,7 +1466,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 				value = intVal ? 1 : 0;
 				rc = 1;
 			} else if( val.IsRealValue( doubleVal ) ) {
-				value = IS_DOUBLE_ZERO(doubleVal) ? 0 : 1;
+				value = IS_DOUBLE_TRUE(doubleVal) ? 1 : 0;
 				rc = 1;
 			}
 		}
@@ -1487,7 +1486,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 				rc = 1;
 			}
 			if( val.IsRealValue( doubleVal ) ) {
-				value = IS_DOUBLE_ZERO(doubleVal) ? 1 : 0;
+				value = IS_DOUBLE_TRUE(doubleVal) ? 1 : 0;
 				rc = 1;
 			}
 		}
@@ -1502,7 +1501,7 @@ EvalBool  (const char *name, classad::ClassAd *target, int &value)
 				rc = 1;
 			}
 			if( val.IsRealValue( doubleVal ) ) {
-				value = IS_DOUBLE_ZERO(doubleVal) ? 1 : 0;
+				value = IS_DOUBLE_TRUE(doubleVal) ? 1 : 0;
 				rc = 1;
 			}
 		}
@@ -1589,7 +1588,7 @@ sPrintAd( MyString &output, classad::ClassAd &ad, bool exclude_private, StringLi
 	classad::ClassAd::iterator itr;
 
 	classad::ClassAdUnParser unp;
-	unp.SetOldClassAd( true );
+	unp.SetOldClassAd( true, true );
 	string value;
 
 	classad::ClassAd *parent = ad.GetChainedParentAd();
@@ -1648,7 +1647,7 @@ sPrintExpr(const classad::ClassAd &ad, const char* name)
     string parsedString;
 	classad::ExprTree* expr;
 
-	unp.SetOldClassAd( true );
+	unp.SetOldClassAd( true, true );
 
     expr = ad.Lookup(name);
 
@@ -2042,7 +2041,7 @@ EscapeAdStringValue(char const *val, std::string &buf)
     classad::Value tmpValue;
     classad::ClassAdUnParser unparse;
 
-	unparse.SetOldClassAd( true );
+	unparse.SetOldClassAd( true, true );
 
     tmpValue.SetStringValue(val);
     unparse.Unparse(buf, tmpValue);

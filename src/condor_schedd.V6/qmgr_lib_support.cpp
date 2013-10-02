@@ -251,19 +251,19 @@ WalkJobQueue(scan_func func)
 
 
 int
-rusage_to_float(const struct rusage &ru, float *utime, float *stime )
+rusage_to_float(const struct rusage &ru, double *utime, double *stime )
 {
 	if ( utime )
-		*utime = (float) ru.ru_utime.tv_sec;
+		*utime = (double) ru.ru_utime.tv_sec;
 
 	if ( stime )
-		*stime = (float) ru.ru_stime.tv_sec;
+		*stime = (double) ru.ru_stime.tv_sec;
 
 	return 0;
 }
 
 int
-float_to_rusage(float utime, float stime, struct rusage *ru)
+float_to_rusage(double utime, double stime, struct rusage *ru)
 {
 	ru->ru_utime.tv_sec = (time_t)utime;
 	ru->ru_stime.tv_sec = (time_t)stime;

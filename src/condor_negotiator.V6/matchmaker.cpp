@@ -3337,6 +3337,9 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 	time_t		currentTime;
 	time_t		beginTime = time(NULL);
 	ClassAd		request;
+	ClassAd     cached_resource_request;
+	int			resource_request_count = 0;  // how many resources desired in resource request
+	int			resource_request_offers = 0; // how many resources offered on behalf of this request
 	ClassAd*    offer = NULL;
 	bool		only_consider_startd_rank = false;
 	bool		display_overlimit = true;
@@ -3512,84 +3515,102 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 
 
 		// 2a.  ask for job information
-		int sleepy = param_integer("NEG_SLEEP", 0);
-			//  This sleep is useful for any testing that calls for a
-			//  long negotiation cycle, please do not remove
-			//  it. Examples of such testing are the async negotiation
-			//  protocol w/ schedds and reconfig delaying until after
-			//  a negotiation cycle. -matt 21 mar 2012
-		if ( sleepy ) {
-            dprintf(D_ALWAYS, "begin sleep: %d seconds\n", sleepy);
-			sleep(sleepy); // TODD DEBUG - allow schedd to do other things
-            dprintf(D_ALWAYS, "end sleep: %d seconds\n", sleepy);
-		}
-		dprintf (D_FULLDEBUG, "    Sending SEND_JOB_INFO/eom\n");
-		sock->encode();
-		if (!sock->put(SEND_JOB_INFO) || !sock->end_of_message())
-		{
-			dprintf (D_ALWAYS, "    Failed to send SEND_JOB_INFO/eom\n");
-			sockCache->invalidateSock(scheddAddr.Value());
-			return MM_ERROR;
-		}
-
-		// 2b.  the schedd may either reply with JOB_INFO or NO_MORE_JOBS
-		dprintf (D_FULLDEBUG, "    Getting reply from schedd ...\n");
-		sock->decode();
-		if (!sock->get (reply))
-		{
-			dprintf (D_ALWAYS, "    Failed to get reply from schedd\n");
-			sock->end_of_message ();
-            sockCache->invalidateSock(scheddAddr.Value());
-			return MM_ERROR;
-		}
-
-		// 2c.  if the schedd replied with NO_MORE_JOBS, cleanup and quit
-		if (reply == NO_MORE_JOBS)
-		{
-			dprintf (D_ALWAYS, "    Got NO_MORE_JOBS;  done negotiating\n");
-			sock->end_of_message ();
-				// If we have negotiated above our submitterLimit, we have only
-				// considered matching if the offer strictly prefers the request.
-				// So in this case, return MM_RESUME since there still may be 
-				// jobs which the schedd wants scheduled but have not been considered
-				// as candidates for no preemption or user priority preemption.
-				// Also, if we were limited by submitterLimit, resume
-				// in the next spin of the pie, because our limit might
-				// increase.
-			if( limitUsed >= submitterLimit || limited_by_submitterLimit ) {
-				return MM_RESUME;
-			} else {
-				return MM_DONE;
+		if ( resource_request_count > ++resource_request_offers ) {
+			// no need to go to the schedd to ask for another resource request,
+			// since we have not yet handed out the number of requested matches
+			// for the request we already have cached.
+			request = cached_resource_request;
+		} else {
+			// need to go over the wire and ask the schedd for the request
+			int sleepy = param_integer("NEG_SLEEP", 0);
+				//  This sleep is useful for any testing that calls for a
+				//  long negotiation cycle, please do not remove
+				//  it. Examples of such testing are the async negotiation
+				//  protocol w/ schedds and reconfig delaying until after
+				//  a negotiation cycle. -matt 21 mar 2012
+			if ( sleepy ) {
+				dprintf(D_ALWAYS, "begin sleep: %d seconds\n", sleepy);
+				sleep(sleepy); // TODD DEBUG - allow schedd to do other things
+				dprintf(D_ALWAYS, "end sleep: %d seconds\n", sleepy);
 			}
-		}
-		else
-		if (reply != JOB_INFO)
-		{
-			// something goofy
-			dprintf(D_ALWAYS,"    Got illegal command %d from schedd\n",reply);
-			sock->end_of_message ();
-            sockCache->invalidateSock(scheddAddr.Value());
-			return MM_ERROR;
-		}
+			dprintf (D_FULLDEBUG, "    Sending SEND_JOB_INFO/eom\n");
+			sock->encode();
+			if (!sock->put(SEND_JOB_INFO) || !sock->end_of_message())
+			{
+				dprintf (D_ALWAYS, "    Failed to send SEND_JOB_INFO/eom\n");
+				sockCache->invalidateSock(scheddAddr.Value());
+				return MM_ERROR;
+			}
 
-		// 2d.  get the request 
-		dprintf (D_FULLDEBUG,"    Got JOB_INFO command; getting classad/eom\n");
-		if (!getClassAd(sock, request) || !sock->end_of_message())
-		{
-			dprintf(D_ALWAYS, "    JOB_INFO command not followed by ad/eom\n");
-			sock->end_of_message();
-            sockCache->invalidateSock(scheddAddr.Value());
-			return MM_ERROR;
-		}
-		if (!request.LookupInteger (ATTR_CLUSTER_ID, cluster) ||
-			!request.LookupInteger (ATTR_PROC_ID, proc))
-		{
-			dprintf (D_ALWAYS, "    Could not get %s and %s from request\n",
-					ATTR_CLUSTER_ID, ATTR_PROC_ID);
-			sockCache->invalidateSock( scheddAddr.Value() );
-			return MM_ERROR;
-		}
-		dprintf(D_ALWAYS, "    Request %05d.%05d:\n", cluster, proc);
+			// 2b.  the schedd may either reply with JOB_INFO or NO_MORE_JOBS
+			dprintf (D_FULLDEBUG, "    Getting reply from schedd ...\n");
+			sock->decode();
+			if (!sock->get (reply))
+			{
+				dprintf (D_ALWAYS, "    Failed to get reply from schedd\n");
+				sock->end_of_message ();
+				sockCache->invalidateSock(scheddAddr.Value());
+				return MM_ERROR;
+			}
+
+			// 2c.  if the schedd replied with NO_MORE_JOBS, cleanup and quit
+			if (reply == NO_MORE_JOBS)
+			{
+				dprintf (D_ALWAYS, "    Got NO_MORE_JOBS;  done negotiating\n");
+				sock->end_of_message ();
+					// If we have negotiated above our submitterLimit, we have only
+					// considered matching if the offer strictly prefers the request.
+					// So in this case, return MM_RESUME since there still may be
+					// jobs which the schedd wants scheduled but have not been considered
+					// as candidates for no preemption or user priority preemption.
+					// Also, if we were limited by submitterLimit, resume
+					// in the next spin of the pie, because our limit might
+					// increase.
+				if( limitUsed >= submitterLimit || limited_by_submitterLimit ) {
+					return MM_RESUME;
+				} else {
+					return MM_DONE;
+				}
+			}
+			else
+			if (reply != JOB_INFO)
+			{
+				// something goofy
+				dprintf(D_ALWAYS,"    Got illegal command %d from schedd\n",reply);
+				sock->end_of_message ();
+				sockCache->invalidateSock(scheddAddr.Value());
+				return MM_ERROR;
+			}
+
+			// 2d.  get the request
+			dprintf (D_FULLDEBUG,"    Got JOB_INFO command; getting classad/eom\n");
+			if (!getClassAd(sock, request) || !sock->end_of_message())
+			{
+				dprintf(D_ALWAYS, "    JOB_INFO command not followed by ad/eom\n");
+				sock->end_of_message();
+				sockCache->invalidateSock(scheddAddr.Value());
+				return MM_ERROR;
+			}
+			if (!request.LookupInteger (ATTR_CLUSTER_ID, cluster) ||
+				!request.LookupInteger (ATTR_PROC_ID, proc))
+			{
+				dprintf (D_ALWAYS, "    Could not get %s and %s from request\n",
+						ATTR_CLUSTER_ID, ATTR_PROC_ID);
+				sockCache->invalidateSock( scheddAddr.Value() );
+				return MM_ERROR;
+			}
+			resource_request_offers = 0;
+			resource_request_count = 0;
+			if ( param_boolean("USE_RESOURCE_REQUEST_COUNTS",true) ) {
+				request.LookupInteger(ATTR_RESOURCE_REQUEST_COUNT,resource_request_count);
+				if (resource_request_count > 0) {
+					cached_resource_request = request;
+				}
+			}
+		}	// end of going over wire to ask schedd for request
+
+		dprintf(D_ALWAYS, "    Request %05d.%05d:  (request count %d of %d)\n", cluster, proc,
+			resource_request_offers+1,resource_request_count);
         negotiation_cycle_stats[0]->num_jobs_considered += 1;
 
 #if !defined(WANT_OLD_CLASSADS)
@@ -3752,6 +3773,8 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 		if (result == MM_NO_MATCH) 
 		{
 			numMatched--;		// haven't used any resources this cycle
+
+			resource_request_count = 0;	// do not reuse any cached request
 
             if (rejForSubmitterLimit && !ConsiderPreemption && !accountant.UsingWeightedSlots()) {
                 // If we aren't considering preemption and slots are unweighted, then we can
@@ -4309,14 +4332,8 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			MatchList->sort();
 			dprintf(D_FULLDEBUG,"Finished sorting MatchList\n");
 		}
-		// compare
-		ClassAd *bestCached = MatchList->pop_candidate();
-		// TODO - do bestCached and bestSoFar refer to the same
-		// machine preference? (sanity check)
-		if(bestCached != bestSoFar) {
-			dprintf(D_ALWAYS, "INSANE: bestCached != bestSoFar\n");
-		}
-		bestCached = NULL; // just to remove unused variable warning
+		// Pop top candidate off the list to hand out as best match
+		bestSoFar = MatchList->pop_candidate();
 	}
 
 	if(!bestSoFar)

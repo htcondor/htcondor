@@ -272,6 +272,12 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
 			// Some servers (OpenStack, Eucalyptus) silently ignore client
 			// tokens. So we need to use the ssh keypair to find jobs that
 			// were submitted but which we don't have an instance ID for.
+			//
+			// TODO This code should be made more efficient. We can
+			//   do something better than a linear scan through all
+			//   jobs for each status result. Ideally, we'd parse the
+			//   ssh keypair name and if it looks like one we generated,
+			//   pluck out the job id.
 			if ( !ClientTokenWorks() && !keyName.empty() && keyName != "NULL" ) {
 				myJobs.Rewind();
 				while ( ( job = myJobs.Next() ) ) {

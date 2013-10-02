@@ -1217,10 +1217,9 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 		ad->AssignExpr(ATTR_MEMORY_USAGE, memory_usage.c_str());
 	}
 
-	MyString buf;
 	if( (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_XEN) == MATCH) || (strcasecmp(m_vm_type.Value(), CONDOR_VM_UNIVERSE_KVM) == MATCH) ) {
-		float sys_time = m_vm_cputime;
-		float user_time = 0.0;
+		double sys_time = m_vm_cputime;
+		double user_time = 0.0;
 
 		// Publish it into the ad.
 		ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, sys_time );
@@ -1245,13 +1244,11 @@ VMProc::PublishUpdateAd( ClassAd* ad )
 		}
 
 		// Publish it into the ad.
-		ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, float(sys_time));
-		ad->Assign(ATTR_JOB_REMOTE_USER_CPU, float(user_time));
+		ad->Assign(ATTR_JOB_REMOTE_SYS_CPU, (double)sys_time);
+		ad->Assign(ATTR_JOB_REMOTE_USER_CPU, (double)user_time);
 
-		buf.formatstr("%s=%lu", ATTR_IMAGE_SIZE, max_image );
-		ad->Insert( buf.Value());
-		buf.formatstr("%s=%lu", ATTR_RESIDENT_SET_SIZE, rss );
-		ad->Insert( buf.Value());
+		ad->Assign(ATTR_IMAGE_SIZE, max_image);
+		ad->Assign(ATTR_RESIDENT_SET_SIZE, rss);
 		if( pss_available ) {
 			ad->Assign(ATTR_PROPORTIONAL_SET_SIZE,pss);
 		}

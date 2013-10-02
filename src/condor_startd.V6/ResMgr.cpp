@@ -1241,7 +1241,7 @@ ResMgr::publish( ClassAd* cp, amask_t how_much )
 	starter_mgr.publish( cp, how_much );
 	m_vmuniverse_mgr.publish(cp, how_much);
 	startd_stats.pool.Publish(*cp, 0);
-	startd_stats.pool.Advance(time(0));
+	startd_stats.Tick(time(0));
 
 #if HAVE_HIBERNATION
     m_hibernation_manager->publish( *cp );
@@ -1277,8 +1277,8 @@ ResMgr::assign_load( void )
 	}
 	if( is_smp() ) {
 			// Print out the totals we already know.
-		if( IsDebugLevel( D_LOAD ) ) {
-			dprintf( D_FULLDEBUG,
+		if( IsDebugVerbose( D_LOAD ) ) {
+			dprintf( D_LOAD | D_VERBOSE,
 					 "%s %.3f\t%s %.3f\t%s %.3f\n",
 					 "SystemLoad:", m_attr->load(),
 					 "TotalCondorLoad:", m_attr->condor_load(),

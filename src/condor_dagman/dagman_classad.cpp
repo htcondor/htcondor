@@ -116,8 +116,7 @@ DagmanClassad::InitializeMetrics()
 
 	CloseConnection( queue );
 
-	DagmanMetrics::SetDagmanIds( _schedd->addr(), _dagmanId,
-				parentDagmanCluster );
+	DagmanMetrics::SetDagmanIds( _dagmanId, parentDagmanCluster );
 }
 
 //---------------------------------------------------------------------------
@@ -155,13 +154,9 @@ void
 DagmanClassad::SetDagAttribute( const char *attrName, int attrVal )
 {
 	if ( SetAttributeInt( _dagmanId._cluster, _dagmanId._proc,
-				attrName, attrVal, SETDIRTY|SHOULDLOG ) != 0 ) {
-			// Try again without SETDIRTY|SHOULDLOG.
-		if ( SetAttributeInt( _dagmanId._cluster, _dagmanId._proc,
-					attrName, attrVal ) != 0 ) {
-			debug_printf( DEBUG_QUIET,
-						"WARNING: failed to set attribute %s\n", attrName );
-			check_warning_strictness( DAG_STRICT_3 );
-		}
+						  attrName, attrVal ) != 0 ) {
+		debug_printf( DEBUG_QUIET,
+					  "WARNING: failed to set attribute %s\n", attrName );
+		check_warning_strictness( DAG_STRICT_3 );
 	}
 }

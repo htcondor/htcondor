@@ -90,7 +90,7 @@ extern "C" {
 // Function prototypes
 void real_config(char* host, int wantsQuiet, bool wantExtraInfo);
 int Read_config(const char*, BUCKET**, int, int, bool,
-				ExtraParamTable* = NULL);
+				ExtraParamTable* = NULL, const char * subsys = NULL);
 bool is_piped_command(const char* filename);
 bool is_valid_command(const char* cmdToExecute);
 int SetSyscalls(int);
@@ -364,7 +364,7 @@ config( int wantsQuiet, bool ignore_invalid_entry, bool wantsExtraInfo )
 {
 #ifdef WIN32
 	char *locale = setlocale( LC_ALL, "English" );
-	dprintf ( D_FULLDEBUG, "Locale: %s\n", locale );
+	dprintf ( D_LOAD | D_VERBOSE, "Locale: %s\n", locale );
 #endif
 	real_config( NULL, wantsQuiet, wantsExtraInfo );
 	validate_entries( ignore_invalid_entry );
@@ -780,7 +780,7 @@ process_config_source( const char* file, const char* name,
 		}
 	} else {
 		rval = Read_config( file, ConfigTab, TABLESIZE, EXPAND_LAZY,
-							false, extra_info );
+							false, extra_info, get_mySubSystem()->getName());
 		if( rval < 0 ) {
 			fprintf( stderr,
 					 "Configuration Error Line %d while reading %s %s\n",
@@ -1404,7 +1404,6 @@ char *
 param_without_default( const char *name )
 {
 	char		*val = NULL;
-	char param_name[MAX_PARAM_LEN];
 
 	// Try in order to find the parameter
 	// As we walk through, any value (including empty string) will
@@ -1412,61 +1411,51 @@ param_without_default( const char *name )
 	// specifically to clear this parameter for this specific
 	// subsystem / local.
 
-	// 1. "subsys.local.name"
-	const char	*local = get_mySubSystem()->getLocalName();
-	if (  (NULL == val) && local ) {
-		snprintf(param_name,MAX_PARAM_LEN,"%s.%s.%s",
-				 get_mySubSystem()->getName(),
-				 local,
-				 name);
-		param_name[MAX_PARAM_LEN-1]='\0';
-		strlwr(param_name);
-		val = lookup_macro_lower( param_name, ConfigTab, TABLESIZE );
+	const char *subsys = get_mySubSystem()->getName();
+	if (subsys && ! subsys[0]) subsys = NULL;
+	const char *local = get_mySubSystem()->getLocalName();
+	bool fLocalMatch = false, fSubsysMatch = false;
+	if (local && local[0]) {
+		// "subsys.local.name" and "local.name"
+		std::string local_name;
+		formatstr(local_name, "%s.%s", local, name);
+		fLocalMatch = true; fSubsysMatch = subsys != NULL;
+		val = lookup_macro(local_name.c_str(), subsys, ConfigTab, TABLESIZE);
+		if (subsys && ! val) {
+			val = lookup_macro(local_name.c_str(), NULL, ConfigTab, TABLESIZE);
+			fSubsysMatch = false;
+		}
 	}
-	// 2. "local.name"
-	if (  (NULL == val) && local ) {
-		snprintf(param_name,MAX_PARAM_LEN,"%s.%s",
-				 local,
-				 name);
-		param_name[MAX_PARAM_LEN-1]='\0';
-		strlwr(param_name);
-		val = lookup_macro_lower( param_name, ConfigTab, TABLESIZE );
+	if ( ! val) {
+		// lookup "subsys.name" and "name"
+		fLocalMatch = false; fSubsysMatch = subsys != NULL;
+		val = lookup_macro(name, subsys, ConfigTab, TABLESIZE);
+		if (subsys && ! val) {
+			val = lookup_macro(name, NULL, ConfigTab, TABLESIZE);
+			fSubsysMatch = false;
+		}
 	}
-	// 3. "subsys.name"
-	if ( NULL == val ) {
-		snprintf(param_name,MAX_PARAM_LEN,"%s.%s",
-				 get_mySubSystem()->getName(),
-				 name);
-		param_name[MAX_PARAM_LEN-1]='\0';
-		strlwr(param_name);
-		val = lookup_macro_lower( param_name, ConfigTab, TABLESIZE );
-	}
-	// 4. "name"
-	if ( NULL == val ) {
-		snprintf(param_name,MAX_PARAM_LEN,"%s",name);
-		param_name[MAX_PARAM_LEN-1]='\0';
-		strlwr(param_name);
-		val = lookup_macro_lower( param_name, ConfigTab, TABLESIZE );
-	}
-
 	// Still nothing (or empty)?  Give up.
-	if ( (NULL == val) || (*val=='\0') ) {
+	if ( ! val || ! val[0] ) {
 		return NULL;
 	}
 
-	if( IsDebugLevel( D_CONFIG ) ) {
-		if( strlen(name) < strlen(param_name) ) {
-			param_name[strlen(param_name)-strlen(name)] = '\0';
-			dprintf( D_CONFIG, "Config '%s': using prefix '%s' ==> '%s'\n",
-					 name, param_name, val );
+	if (IsDebugVerbose(D_CONFIG)) {
+		if (fLocalMatch || fSubsysMatch) {
+			std::string param_name;
+			if (fSubsysMatch) { param_name += subsys; param_name += "."; }
+			if (fLocalMatch) { param_name += local; param_name += "."; }
+			param_name += name;
+			dprintf( D_CONFIG | D_VERBOSE, "Config '%s': using prefix '%s' ==> '%s'\n",
+					 name, param_name.c_str(), val );
 		}
 		else {
-			dprintf( D_CONFIG, "Config '%s': no prefix ==> '%s'\n", name, val );
+			dprintf( D_CONFIG | D_VERBOSE, "Config '%s': no prefix ==> '%s'\n", name, val );
 		}
 	}
 
 	// Ok, now expand it out...
-	val = expand_macro( val, ConfigTab, TABLESIZE );
+	val = expand_macro( val, ConfigTab, TABLESIZE, NULL, false, subsys );
 
 	// If it returned an empty string, free it before returning NULL
 	if( val == NULL ) {
@@ -1498,8 +1487,33 @@ param(const char* name)
 char *
 param_with_default_abort(const char *name, int abort) 
 {
-	char *val = NULL;
-	char *next_param_name = NULL;
+	const char *val = NULL;
+#ifdef NEW_PARAM_GENERATOR	// don't copy params from default table to ConfigTab
+	const char* subsys = get_mySubSystem()->getName();
+	if (subsys && ! subsys[0]) subsys = NULL;
+
+	// params in the local namespace will not exist in the default param table
+	// so look them up only in ConfigTab
+	const char* local = get_mySubSystem()->getLocalName();
+	if (local && local[0]) {
+		std::string local_name(local);
+		local_name += "."; local_name += name;
+		val = lookup_macro(local_name.c_str(), subsys, ConfigTab, TABLESIZE);
+		if (subsys && ! val) {
+			val = lookup_macro(local_name.c_str(), NULL, ConfigTab, TABLESIZE);
+		}
+	}
+	// if not found in the local namespace, search the sybsystem and generic namespaces
+	if ( ! val) {
+		val = lookup_macro(name, subsys, ConfigTab, TABLESIZE);
+		if (subsys && ! val) {
+			val = lookup_macro(name, NULL, ConfigTab, TABLESIZE);
+		}
+		if ( ! val) {
+			val = param_default_string(name, subsys);
+		}
+	}
+#else
 	MyString subsys = get_mySubSystem()->getName();
 	MyString local = get_mySubSystem()->getLocalName();
 	MyString subsys_local_name;
@@ -1524,9 +1538,10 @@ param_with_default_abort(const char *name, int abort)
 	// Search in left to right order until we find a meaningful val or
 	// can bail out early from the search.
 	sl.rewind();
+	char *next_param_name = NULL;
 	while(val == NULL && (next_param_name = sl.next())) {
 		// See if the candidate is in the Config Table
-		val = lookup_macro(next_param_name, ConfigTab, TABLESIZE);
+		val = lookup_macro(next_param_name, NULL, ConfigTab, TABLESIZE);
 
 		if (val != NULL && val[0] == '\0') {
 			// The config table specifically wanted the value to be empty, 
@@ -1544,7 +1559,7 @@ param_with_default_abort(const char *name, int abort)
 		// something in the Default Table.
 
 		// The candidate wasn't in the Config Table, so check the Default Table
-		const char * def = param_default_string(next_param_name);
+		const char * def = param_exact_default_string(next_param_name);
 		if (def != NULL) {
 			// Yay! Found something! Add the entry found in the Default 
 			// Table to the Config Table. This could be adding an empty
@@ -1559,9 +1574,10 @@ param_with_default_abort(const char *name, int abort)
 				// validly found in the Default Table, but empty.
 				return NULL;
 			}
-            val = const_cast<char*>(def); // TJ: this is naughty, but expand_macro will replace it soon.
+			val = def;
 		}
 	}
+#endif
 
 	// If we don't find any value at all, determine if we must abort or 
 	// simply return NULL which will allow older code calling param to do
@@ -1578,21 +1594,20 @@ param_with_default_abort(const char *name, int abort)
 
 	// if we get here, it means that we found a val of note, so expand it and
 	// return the canonical value of it. expand_macro returns allocated memory.
-
-	val = expand_macro( val, ConfigTab, TABLESIZE, NULL, true );
-
-	if( val == NULL ) {
+	// note that expand_macro will first try and expand
+	char * expanded_val = expand_macro(val, ConfigTab, TABLESIZE, NULL, true, subsys.Value());
+	if (expanded_val == NULL) {
 		return NULL;
 	}
 	
 	// If expand_macro returned an empty string, free it before returning NULL
-	if ( val[0] == '\0' ) {
-		free( val );
+	if (expanded_val[0] == '\0') {
+		free(expanded_val);
 		return NULL;
 	}
 
 	// return the fully expanded value
-	return val;
+	return expanded_val;
 }
 
 /*
@@ -1613,17 +1628,24 @@ param_integer( const char *name, int &value,
 			   bool use_param_table )
 {
 	if(use_param_table) {
-		int tbl_default_valid;
-		int tbl_default_value = 
-			param_default_integer( name, &tbl_default_valid );
+		const char* subsys = get_mySubSystem()->getName();
+		if (subsys && ! subsys[0]) subsys = NULL;
+
+		int def_valid = 0;
+		int is_long = false;
+		int tbl_default_value = param_default_integer(name, subsys, &def_valid, &is_long);
 		bool tbl_check_ranges = 
 			(param_range_integer(name, &min_value, &max_value)==-1) 
 				? false : true;
 
+		if (is_long) {
+			dprintf (D_CONFIG | D_FAILURE, "Warning - long param %s fetched as integer\n", name);
+		}
+
 		// if found in the default table, then we overwrite the arguments
 		// to this function with the defaults from the table. This effectively
 		// nullifies the hard coded defaults in the higher level layers.
-		if (tbl_default_valid) {
+		if (def_valid) {
 			use_default = true;
 			default_value = tbl_default_value;
 		}
@@ -1640,7 +1662,7 @@ param_integer( const char *name, int &value,
 	ASSERT( name );
 	string = param( name );
 	if( ! string ) {
-		dprintf( D_CONFIG, "%s is undefined, using default value of %d\n",
+		dprintf( D_CONFIG | D_VERBOSE, "%s is undefined, using default value of %d\n",
 				 name, default_value );
 		if ( use_default ) {
 			value = default_value;
@@ -1763,9 +1785,11 @@ param_double( const char *name, double default_value,
 			  bool use_param_table )
 {
 	if(use_param_table) {
-		int tbl_default_valid;
-		double tbl_default_value = 
-			param_default_double( name, &tbl_default_valid );
+		const char* subsys = get_mySubSystem()->getName();
+		if (subsys && ! subsys[0]) subsys = NULL;
+
+		int def_valid = 0;
+		double tbl_default_value = param_default_double(name, subsys, &def_valid);
 
 		// if the min_value & max_value are changed, we use it.
 		param_range_double(name, &min_value, &max_value);
@@ -1773,7 +1797,7 @@ param_double( const char *name, double default_value,
 		// if found in the default table, then we overwrite the arguments
 		// to this function with the defaults from the table. This effectively
 		// nullifies the hard coded defaults in the higher level layers.
-		if (tbl_default_valid) {
+		if (def_valid) {
 			default_value = tbl_default_value;
 		}
 	}
@@ -1786,7 +1810,7 @@ param_double( const char *name, double default_value,
 	string = param( name );
 	
 	if( ! string ) {
-		dprintf( D_CONFIG, "%s is undefined, using default value of %f\n",
+		dprintf( D_CONFIG | D_VERBOSE, "%s is undefined, using default value of %f\n",
 				 name, default_value );
 		return default_value;
 	}
@@ -1882,14 +1906,16 @@ param_boolean( const char *name, bool default_value, bool do_log,
 			   bool use_param_table )
 {
 	if(use_param_table) {
-		int tbl_default_valid;
-		bool tbl_default_value = 
-			param_default_boolean( name, &tbl_default_valid );
+		const char* subsys = get_mySubSystem()->getName();
+		if (subsys && ! subsys[0]) subsys = NULL;
+
+		int def_valid = 0;
+		bool tbl_default_value = param_default_boolean(name, subsys, &def_valid);
 
 		// if found in the default table, then we overwrite the arguments
 		// to this function with the defaults from the table. This effectively
 		// nullifies the hard coded defaults in the higher level layers.
-		if (tbl_default_valid) {
+		if (def_valid) {
 			default_value = tbl_default_value;
 		}
 	}
@@ -1904,7 +1930,7 @@ param_boolean( const char *name, bool default_value, bool do_log,
 	
 	if (!string) {
 		if (do_log) {
-			dprintf( D_CONFIG, "%s is undefined, using default value of %s\n",
+			dprintf( D_CONFIG | D_VERBOSE, "%s is undefined, using default value of %s\n",
 					 name, default_value ? "True" : "False" );
 		}
 		return default_value;
@@ -2470,7 +2496,7 @@ process_persistent_configs()
 		processed = true;
 
 		rval = Read_config( toplevel_persistent_config.Value(), ConfigTab,
-							TABLESIZE, EXPAND_LAZY, true, extra_info );
+							TABLESIZE, EXPAND_LAZY, true, extra_info, get_mySubSystem()->getName() );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d while reading "
 					 "top-level persistent config source: %s\n",
@@ -2492,7 +2518,7 @@ process_persistent_configs()
 		config_source.formatstr( "%s.%s", toplevel_persistent_config.Value(),
 							   tmp );
 		rval = Read_config( config_source.Value(), ConfigTab, TABLESIZE,
-							 EXPAND_LAZY, true, extra_info );
+							 EXPAND_LAZY, true, extra_info, get_mySubSystem()->getName() );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
 					 "while reading persistent config source: %s\n",
@@ -2540,7 +2566,7 @@ process_runtime_configs()
 			exit(1);
 		}
 		rval = Read_config( tmp_file, ConfigTab, TABLESIZE,
-							EXPAND_LAZY, false, extra_info );
+							EXPAND_LAZY, false, extra_info, get_mySubSystem()->getName() );
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
 					 "while reading %s, runtime config: %s\n",
