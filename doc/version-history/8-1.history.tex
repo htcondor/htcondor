@@ -29,6 +29,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item When terminating a job on a non-Amazon service,
+check (at the next polling interval) if the job has terminated,
+and if not, retry.  This means that HTCondor will not lose track of jobs
+on services with unreliable termination.
+\Ticket{3438}
+
 \item Email alerts about file transfers taking longer than
 \Macro{MAX\_TRANSFER\_QUEUE\_AGE} are now grouped together
 to reduce the number of email messages that are sent.

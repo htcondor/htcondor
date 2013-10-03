@@ -3357,9 +3357,16 @@ int main(int argc, char ** argv)
 		_exit(1);
 	}
 
+	globus_mutex_t manager_mutex;
+	globus_cond_t  manager_cond;
+	globus_mutex_init(&manager_mutex, NULL);
+	globus_cond_init(&manager_cond, false);
+
+	globus_mutex_lock(&manager_mutex);
 	for (;;) {
-		globus_poll_blocking();
+		globus_cond_wait(&manager_cond, &manager_mutex);
 	}
+	globus_mutex_unlock(&manager_mutex);
 
 	main_deactivate_globus();
 	_exit(0);

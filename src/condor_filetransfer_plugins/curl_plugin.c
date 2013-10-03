@@ -44,14 +44,34 @@ int main(int argc, char **argv) {
 		if(file) {
 			curl_easy_setopt(handle, CURLOPT_URL, argv[1]);
 			curl_easy_setopt(handle, CURLOPT_WRITEDATA, file);
+			curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, -1);
+			// Does curl protect against redirect loops otherwise?  It's
+			// unclear how to tune this constant.
+			// curl_easy_setopt(handle, CURLOPT_MAXREDIRS, 1000);
 			rval = curl_easy_perform(handle);
-	
+
 			if (diagnostic && rval) {
 				fprintf(stderr, "curl_easy_perform returned CURLcode %d: %s\n", 
 						rval, curl_easy_strerror((CURLcode)rval)); 
 			}
 			if (close_output) {
 				fclose(file); file = NULL; 
+			}
+
+			if( rval == 0 ) {
+				char * finalURL = NULL;
+				rval = curl_easy_getinfo( handle, CURLINFO_EFFECTIVE_URL, & finalURL );
+
+				if( rval == 0 ) {
+					if( strstr( finalURL, "http" ) == finalURL ) {
+						long httpCode = 0;
+						rval = curl_easy_getinfo( handle, CURLINFO_RESPONSE_CODE, & httpCode );
+
+						if( rval == 0 ) {
+							if( httpCode != 200 ) { rval = 1; }
+						}
+					}
+				}
 			}
 		}
 		curl_easy_cleanup(handle);

@@ -1282,7 +1282,6 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 				}
 				names.clear();
 			}
-
 		} else { // unrecognised ?command
 
 			MyString errmsg; errmsg.formatstr("!error:unsup:1: '%s' is not supported", param_name);
@@ -2341,6 +2340,10 @@ int dc_main( int argc, char** argv )
 			dprintf(D_ALWAYS, "   %s\n", source );
 		}
 	}
+	_macro_stats stats;
+	get_config_stats(&stats);
+	dprintf(D_ALWAYS, "config Macros = %d, StringBytes = %d, TablesBytes = %d, Sorted = %d\n", stats.cEntries, stats.cbStrings, stats.cbTables, stats.is_sorted);
+
 
 	// TJ: Aug/2013 we are going to turn on classad caching by default in 8.1.1 we want to see in the log that its on.
 	dprintf (D_ALWAYS, "CLASSAD_CACHING is %s\n", param_boolean("ENABLE_CLASSAD_CACHING", false) ? "ENABLED" : "OFF");
