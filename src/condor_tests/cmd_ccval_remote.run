@@ -88,6 +88,9 @@ $result = SimpleJob::RunCheck(); # jobid 1
 my @localarray = ();
 my @remotearray = ();
 
+my %mismatchOK = (
+	"TOOL_TIMEOUT_MULTIPLIER" => "1",
+);
 
 my %ronly = (
 	"DEBUG_TIME_FORMAT" => "1",
@@ -139,8 +142,8 @@ my %ronly = (
 	"WANT_XML_LOG" => "1",
 );
 
-foreach my $ad (sort keys %ronly) {
-	print "ronly: $ad\n";
+foreach my $rparam (sort keys %ronly) {
+	print "remote only: $rparam\n";
 }
 
 print "Compare local config dump to remote of master\n";
@@ -170,20 +173,20 @@ sub ShowNonMatches
 	my $localcount = @$larrayref;
 	my $remotecount = @$rarrayref;
 
-	print "Dump ads local <$localcount> remote <$remotecount>\n";
+	print "Inspect Params local <$localcount> remote <$remotecount>\n";
 	while($done == 0) {
 		$rdone = $ldone = 0;
 		$ritem = shift @{$rarrayref};
 		$litem = shift @{$larrayref};
-		# test end condition of running out of ads
+		# test end condition of running out of params
 		if((!(defined $ritem)) || (!(defined $litem))) {
 			$done = 1;
-			print "===================== Ran Out Of Ads ======================\n";
+			print "===================== Ran Out Of Params ======================\n";
 			if($mismatch == 0) {
-				print "Matched as expected\n";
+				print "Local and Remote Params Matched As Expected\n";
 				RegisterResult(1);
 			} else {
-				print "No mismatches in ads expected after filtering known diffs\n";
+				print "No mismatches in params were expected after filtering known diffs\n";
 				RegisterResult(0);
 			}
 			last;
@@ -195,10 +198,10 @@ sub ShowNonMatches
 			#print "################# replaced with <$litem>\n";
 		}
 		#print "LOOPING: L <$litem> R <$ritem>\n";
-		# look for and skip remote only ads
+		# look for and skip remote only params
 		while($rdone == 0) {
 			if($ritem =~ /^(.*?)\s=.*$/) {
-				#print "AD = <$1>\n";
+				#print "Param = <$1>\n";
 				if(exists $ronly{$1}) {
 					#print "EXISTS: skip <$ritem>\n";
 					$ritem = shift @{$rarrayref};
@@ -324,9 +327,29 @@ sub ShowNonMatches
 			print "MISMATCH *************** ";
 			print "L <$litem> R <$ritem>";
 			print " *************** \n";
-			$mismatch += 1;
+			my $lparam = "";
+			my $rparam = "";
+			if($litem =~ /^(.*?)\s=.*$/) {
+				$lparam = $1;
+			}
+			if($ritem =~ /^(.*?)\s=.*$/) {
+				$rparam = $1;
+			}
+			print "========================= MISMATCH REMOTE: ($lparam) ccv verbose follows ====================================================\n";
+			runToolNTimes("condor_config_val $lparam -verbose",1,1);
+			print "========================= MISMATCH REMOTE: ($rparam) ccv verbose follows ====================================================\n";
+			runToolNTimes("condor_config_val -master $rparam -verbose",1,1);
+			print "looking up $lparam and $rparam\n";
+			if($lparam eq $rparam) {
+				if(exists $mismatchOK{$lparam}) {
+					#don't flag error for this
+					print "Mismatch of $lparam not an error\n";
+				} else {
+					$mismatch += 1;
+				}
+			} else {
+				$mismatch += 1;
+			}
 		}
-
-
 	}
 }
