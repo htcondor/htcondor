@@ -219,7 +219,7 @@ _condor_parse_merge_debug_flags(
 				verbose &= ~bit;
 			}
 
-			flag = strtok( NULL, ", " );
+			flag = strtok( NULL, "|, " );
 		}
 
 		free( tmp );

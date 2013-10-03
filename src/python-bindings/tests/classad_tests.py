@@ -2,6 +2,7 @@
 
 import re
 import classad
+import datetime
 import unittest
 
 class TestClassad(unittest.TestCase):
@@ -17,6 +18,34 @@ class TestClassad(unittest.TestCase):
         self.assertEqual(ad["foo"], "bar")
         self.assertEqual(ad["baz"], classad.Value.Undefined)
         self.assertRaises(KeyError, ad.__getitem__, "bar")
+
+    def new_ads_verify(self, ads):
+        ads = list(ads)
+        self.assertEqual(len(ads), 2)
+        ad1, ad2 = ads
+        self.assertEqual(ad1["foo"], "bar")
+        self.assertEqual(ad1["baz"], classad.Value.Undefined)
+        self.assertEqual(ad2["bar"], 1)
+        self.assertEqual(len(ad1), 2)
+        self.assertEqual(len(ad2), 1)
+        self.assertRaises(KeyError, ad1.__getitem__, "bar")
+
+    def old_ads_verify(self, ads):
+        ads = list(ads)
+        self.assertEqual(len(ads), 2)
+        ad1, ad2 = ads
+        self.assertEqual(ad1["MaxHosts"], 1)
+        self.assertEqual(ad1["Managed"], "Schedd")
+        self.assertEqual(ad2["User"], "bbockelm@users.opensciencegrid.org")
+        self.assertEqual(ad2["SUBMIT_x509userproxy"], "/tmp/x509up_u1221")
+        self.assertEqual(len(ad1), 2)
+        self.assertEqual(len(ad2), 2)
+
+    def test_load_classads(self):
+        self.new_ads_verify(classad.parseAds(open("tests/test_multiple.ad")))
+        self.new_ads_verify(classad.parseAds(open("tests/test_multiple.ad").read()))
+        self.old_ads_verify(classad.parseOldAds(open("tests/test_multiple.old.ad")))
+        self.old_ads_verify(classad.parseOldAds(open("tests/test_multiple.old.ad").read()))
 
     def test_old_classad(self):
         ad = classad.parseOld(open("tests/test.old.ad"))
@@ -103,6 +132,64 @@ class TestClassad(unittest.TestCase):
         self.assertEquals(ad.get("foo"), "bar")
         ad["bar"] = "baz"
         self.assertEquals(ad.setdefault("bar", "foo"), "baz")
+
+    def test_update(self):
+        ad = classad.ClassAd()
+        ad.update({"1": 2})
+        self.assertTrue("1" in ad)
+        self.assertEquals(ad["1"], 2)
+        ad.update([("1",3)])
+        self.assertEquals(ad["1"], 3)
+        other = classad.ClassAd({"3": "5"})
+        ad.update(other)
+        del other
+        self.assertTrue("3" in ad)
+        self.assertEquals(ad["3"], "5")
+
+    def test_invalid_ref(self):
+        expr = classad.ExprTree("foo")
+        self.assertEquals(classad.Value.Undefined, expr.eval())
+
+    def test_temp_scope(self):
+        expr = classad.ExprTree("foo")
+        self.assertEquals("bar", expr.eval({"foo": "bar"}))
+        ad = classad.ClassAd({"foo": "baz", "test": classad.ExprTree("foo")})
+        expr = ad["test"]
+        self.assertEquals("baz", expr.eval())
+        self.assertEquals("bar", expr.eval({"foo": "bar"}))
+        self.assertEquals("bar", expr.eval({"foo": "bar"}))
+        self.assertEquals("baz", expr.eval())
+
+    def test_abstime(self):
+        expr = classad.ExprTree('absTime("2013-09-12T07:50:23")')
+        dt = expr.eval()
+        self.assertTrue(isinstance(dt, datetime.datetime))
+        self.assertEquals(dt.year, 2013)
+        self.assertEquals(dt.month, 9)
+        self.assertEquals(dt.day, 12)
+        self.assertEquals(dt.hour, 7)
+        self.assertEquals(dt.minute, 50)
+        self.assertEquals(dt.second, 23)
+
+        ad = classad.ClassAd({"foo": dt})
+        dt2 = ad["foo"]
+        self.assertTrue(isinstance(dt2, datetime.datetime))
+        self.assertEquals(dt, dt2)
+
+        ad = classad.ClassAd({"foo": datetime.datetime.now()});
+        td = (datetime.datetime.now()-ad["foo"])
+        self.assertEquals(td.days, 0)
+        self.assertTrue(td.seconds < 300)
+
+    def test_reltime(self):
+        expr = classad.ExprTree('relTime(5)')
+        self.assertEquals(expr.eval(), 5)
+
+    def test_quote(self):
+        self.assertEquals(classad.quote("foo"), '"foo"')
+        self.assertEquals(classad.quote('"foo'), '"\\"foo"')
+        for i in ["foo", '"foo', '"\\"foo']:
+            self.assertEquals(i, classad.unquote(classad.quote(i)))
 
 if __name__ == '__main__':
     unittest.main()

@@ -969,6 +969,9 @@ debug_lock_it(struct DebugFileInfo* it, const char *mode, int force_lock, bool d
 			}
 		}
 	} else {
+		// when we preserve more than 1 old log file, we use rotation times
+		// as file extensions, so we need to have an initialized rotation timestamp.
+		rotation_timestamp = time(NULL);
 
 	#ifdef WIN32
 		length = _lseeki64(fileno(debug_file_ptr), 0, SEEK_END);

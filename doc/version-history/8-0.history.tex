@@ -16,15 +16,15 @@ New features will be added in the 8.1.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-8-0-3}Version 8.0.3}
+\subsection*{\label{sec:New-8-0-4}Version 8.0.4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item HTCondor version 8.0.3 not yet released.
-%\item HTCondor version 8.0.3 released on Month Date, 2013.
+\item HTCondor version 8.0.4 not yet released.
+%\item HTCondor version 8.0.4 released on Month Date, 2013.
 
 \end{itemize}
 
@@ -49,7 +49,161 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added support for more than 2KB of user data with OpenNebula.
+\Ticket{3923}
+
+\item Fixed a bug preventing http file transfers from following redirects.
+HTTP file transfers also now fail if the file does not exist (but the server
+does).
+\Ticket{3904}
+
+\item Fixed a rare bug where the \Condor{schedd} would exit
+with an ERROR message pertaining to select when very
+runnign with a very heavy load and many \Condor{shadows}
+are timing out.
+\Ticket{3947}
+
+\item If cgroups were enabled, \Condor{ssh\_to\_job} would
+kill the job when the ssh session exited.  This bug has been fixed.
+\Ticket{3921}
+
+\item If a standard universe job exited and never used a checkpoint
+server, two spurious error messages would be logged to the 
+SchedLog, as it tried to remove the old checkpoint images from the
+non-existent checkpoint server.  This bug has been fixed.
+\Ticket{3919}
+
+\item The configuration file for Windows erronously had two entries
+for JAVA\_CLASSPATH\_SEPARATOR with the second entry specifying the
+separator for UNIX platforms and overriding the first entry. This bug
+has been fixed.
+\Ticket{3957}
+
+\item The NorduGrid GAHP no longer consumes all of the CPU when run
+with threaded Globus libraries.
+\Ticket{3958}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
 \item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-0-3}Version 8.0.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.0.3 released on September 23, 2013.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item When expressions for \Macro{SUSPEND},
+\Macro{CONTINUE}, \Macro{PREEMPT}, and \Macro{KILL}
+were evaluated by the \Condor{startd},
+a resulting value of
+\Expr{UNDEFINED} or \Expr{ERROR} caused an exception in the \Condor{startd}.
+These values are now treated as \Expr{False},
+eliminating the exception.
+\Ticket{3869}
+
+\item Fixed a bug that prevented the use of simple host names to identify
+machines when using the command-line tools. Before the fix,
+\Expr{condor\_status bar.foo.org} would show machine ClassAds, but
+\Expr{condor\_status bar} would not.
+Both now show machine ClassAds.
+\Ticket{3694}
+
+\item Fixed a bug with \Condor{ssh\_to\_job} that occurs when
+\Macro{USE\_PID\_NAMESPACES} is enabled.
+The bug presented itself as \Condor{ssh\_to\_job}
+running in a private pid namespace, 
+and the user running \Condor{ssh\_to\_job} not being able to see 
+their job with \Prog{ps} or \Prog{gdb}.
+As a fix, \Condor{ssh\_to\_job} now runs in the global namespace, 
+so that it can see the processes in the user's job.
+\Ticket{3872}
+
+\item Fixed a performance problem with the \Condor{qedit} command 
+that would cause the \Condor{schedd} to run very slowly when 
+\Condor{qedit} is run on a large number of jobs.  
+\Condor{qedit} no longer writes an event to the job event log. 
+\Ticket{3827}
+
+\item Fixed a problem where the \Code{classad} python module would return
+incorrect results when ClassAd caching is enabled.
+\Ticket{3879}
+
+\item DAGMan's updating of its job ClassAd with DAG status attributes no
+longer causes extra events to be written to the job event log and event log.
+\Ticket{3863}
+
+\item Fixed a bug that caused the command
+\begin{verbatim}
+  condor_submit -
+\end{verbatim}
+to be interpreted as an interactive submit,
+rather than a request to read input from \File{stdin}.
+\Condor{qsub} was also modified to be immune to this bug,
+such that it will still work with other versions of HTCondor containing
+the bug.
+\Ticket{3902}
+
+\item Value 032 of the job ClassAd attribute \Attr{HoldReasonCode}
+was being used for two different reasons.
+Now, value 032 identifies that the maximum total input file 
+transfer size was exceeded. 
+Value 034 identifies that memory usage exceeds a memory limit.
+\Ticket{3858}
+
+\item The values of the job ClassAd attributes \Attr{RemoteSysCpu} 
+and \Attr{RemoteUserCpu} are sometimes impossibly large.
+This bug rarely occurs and is not well understood.
+Code changes attempt to fix this problem.
+\Ticket{3814}
+
+\item Fixed a bug that caused DAG recovery mode to fail on
+Pegasus-generated sub-DAGs.  (Recovery mode is invoked, for example,
+when a \Condor{dagman} is held and released, or when a schedd is
+restarted, as happens on a version upgrade.)
+\Ticket{3882}
 
 \end{itemize}
 
@@ -119,6 +273,11 @@ when using cgroups and suspending jobs.
 \Code{pyclassad} as a shared library.
 \Ticket{3780}
 
+\item Fixed a file permission bug introduced in HTCondor version 7.9.2 that
+prevented vm universe jobs from working when using the Xen or KVM
+hypervisor.
+\Ticket{3781}
+
 \item Fixed a bug that could cause the \Condor{collector} to 
 become unresponsive if the remote HTCondorView server, 
 specified with configuration variable \Macro{CONDOR\_VIEW\_HOST},
@@ -183,11 +342,6 @@ In some situations, it was previously set
 to a nonexistent path, which caused errors in some configurations.
 \Ticket{3794}
 
-\item Fixed a file permission bug introduced in HTCondor version 7.9.2 that
-prevented vm universe jobs from working when using the Xen or KVM
-hypervisor.
-\Ticket{3781}
-
 \item HTCondor daemons are now less vulnerable to long connection delays
 when attempting to connect to hosts that are off-line.  A specific case
 where this helps is when \Condor{schedd} is using a high availability
@@ -212,7 +366,15 @@ using \Condor{submit} with the \Opt{-spool} option to always fail.
 
 \begin{itemize}
 
-\item None.
+\item DAGMan recovery mode does not work for Pegasus-generated SUBDAGs.
+For SUBDAGs, doing \Condor{hold} or \Condor{release} on
+the \Condor{dagman} job, or stopping and re-starting the 
+\Condor{schedd} with the DAGMan
+job in the queue will result in failure of the DAG.  This can be
+avoided by doing a \Condor{rm} of the DAGMan job, which produces a Rescue
+DAG, and re-submitting the DAG; the Rescue DAG is automatically run.
+This bug was introduced in HTCondor version 8.0.1.
+\Ticket{3882}
 
 \end{itemize}
 

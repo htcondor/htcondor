@@ -84,11 +84,19 @@ void init_local_hostname()
 		return;
 	}
 
+	int retry_count = 20;
 	addrinfo_iterator ai;
+
+retry:
 	ret = ipv6_getaddrinfo(hostname, NULL, ai);
 	if (ret) {
-		dprintf(D_HOSTNAME, "ipv6_getaddrinfo() could not look up %s: %s (%d)\n", 
+		dprintf(D_ALWAYS, "init_local_hostname: ipv6_getaddrinfo() could not look up %s: %s (%d)\n", 
 			hostname, gai_strerror(ret), ret);
+		retry_count--;
+		if ((retry_count > 0) && (ret == EAI_AGAIN)) {
+			sleep(3);
+			goto retry;
+		}
 		return;
 	}
 	
@@ -174,6 +182,9 @@ MyString get_fqdn_from_hostname(const MyString& hostname) {
 		}
 
 		hostent* h = gethostbyname(hostname.Value());
+		if (h && h->h_name && strchr(h->h_name, '.')) {
+			return h->h_name;
+		}
 		if (h && h->h_aliases && *h->h_aliases) {
 			for (char** alias = h->h_aliases; *alias; ++alias) {
 				if (strchr(*alias, '.'))
@@ -229,6 +240,11 @@ int get_fqdn_and_ip_from_hostname(const MyString& hostname,
 		}
 
 		hostent* h = gethostbyname(hostname.Value());
+		if (h && h->h_name && strchr(h->h_name, '.')) {
+			fqdn = h->h_name;
+			addr = condor_sockaddr((sockaddr*)h->h_addr);
+			return 1;
+		}
 		if (h && h->h_aliases && *h->h_aliases) {
 			for (char** alias = h->h_aliases; *alias; ++alias) {
 				if (strchr(*alias, '.')) {

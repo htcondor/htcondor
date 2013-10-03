@@ -40,4 +40,8 @@ if (LINUX AND WANT_FULL_DEPLOYMENT)
 	condor_exe( gidd_alloc "gidd_alloc.cpp" ${C_SBIN} "" OFF)
 endif(LINUX AND WANT_FULL_DEPLOYMENT)
 
+if (WINDOWS AND WANT_FULL_DEPLOYMENT)
+	condor_exe( procd_ctl "procd_ctl.cpp;${ProcClientElements};${SAFE_OPEN_SRC};../condor_utils/distribution.cpp;../condor_utils/my_distribution.cpp;../condor_utils/condor_pidenvid.cpp" ${C_SBIN} "procdutils;condor_utils" OFF)
+endif(WINDOWS AND WANT_FULL_DEPLOYMENT)
+
 set( PROCD_CLIENT_UTIL_SRCS "${ProcClientElements}" PARENT_SCOPE )

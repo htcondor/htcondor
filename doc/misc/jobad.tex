@@ -676,8 +676,11 @@ reason that a job was put on hold.
 25 & Invalid cron settings. \\ \hline
 26 & \Macro{SYSTEM\_PERIODIC\_HOLD} evaluated to true. \\ \hline
 27 & The system periodic job policy evaluated to undefined. \\ \hline
+28 & Failed while using glexec to set up the job's working directory (chown sandbox to the user). \\ \hline
+30 & Failed while using glexec to prepare output for transfer (chown sandbox to condor). \\ \hline
 32 & The maximum total input file transfer size was exceeded.  (See \Macro{MAX\_TRANSFER\_INPUT\_MB}.) \\ \hline
 33 & The maximum total output file transfer size was exceeded. (See \Macro{MAX\_TRANSFER\_OUTPUT\_MB}.) \\ \hline
+34 & Memory usage exceeds a memory limit. \\ \hline
 \end{tabular}
 \end{table}
 \end{center}

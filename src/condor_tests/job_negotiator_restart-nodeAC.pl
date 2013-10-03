@@ -1,5 +1,7 @@
 #! /usr/bin/env perl
 
+use CondorTest;
+
 # Figure out our "HTCondor" username.
 $username = `whoami`;
 chomp($username);
@@ -8,16 +10,22 @@ chomp($machine);
 $user = $username . "@" . $machine;
 print "HTCondor username is $user\n";
 
+my @resarray = ();
+
 # Get our priority factor.
 $priofactor = "";
-open (OUTPUT, "condor_userprio -allusers 2>&1 |") or die "Can't fork: $!";
-while (<OUTPUT>) {
-	if ($_ =~ /$user/) {
-		@fields = split;
+#open (OUTPUT, "condor_userprio -allusers 2>&1 |") or die "Can't fork: $!";
+#while (<OUTPUT>) {
+my $status = runCondorTool("condor_userprio -allusers",\@resarray,2);
+foreach my $line (@resarray) {
+	chomp($line);
+	if ($line =~ /$user/) {
+		@fields = split /\s+/,$line;
 		$priofactor = $fields[2];
+		print "from line <$line> extract this priofactor <$priofactor>\n";
 	}
 }
-close (OUTPUT) or die "condor_userprio failed: $?";
+#close (OUTPUT) or die "condor_userprio failed: $?";
 
 if ($priofactor eq "") {
         if ($ARGV[0] eq "A") {
@@ -41,11 +49,14 @@ if ($ARGV[0] eq "A") {
 	$priofactor *= 3;
 	print "Setting priofactor to $priofactor\n";
 
-	open (OUTPUT, "condor_userprio -setfactor $user $priofactor 2>&1 |") or die "Can't fork: $!";
-	while (<OUTPUT>) {
-		print "$_";
+	@resarray = ();
+	#open (OUTPUT, "condor_userprio -setfactor $user $priofactor 2>&1 |") or die "Can't fork: $!";
+	#while (<OUTPUT>) {
+	$status = runCondorTool("condor_userprio -setfactor $user $priofactor",\@resarray,2);
+	foreach my $line (@resarray) {
+		print "$line";
 	}
-	close (OUTPUT) or die "condor_userprio failed: $?";
+	#close (OUTPUT) or die "condor_userprio failed: $?";
 
 	# Save the priority factor so we can check it after the condor_restart.
 	if (-e $factorfile) {

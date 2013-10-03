@@ -167,7 +167,7 @@ if($numberinstate != 1) {
 	print " Passed\n\n";
 }
 #system(" condor_q");
-`condor_rm $plain`;
+runToolNTimes("condor_rm $plain",1);
 CondorTest::RegisterResult($result);
 dashspoolreset();
 
@@ -187,7 +187,7 @@ if($numberinstate != 1) {
 	print " Passed\n\n";
 }
 #system(" condor_q");
-`condor_rm $plain`;
+runToolNTimes("condor_rm $plain",1);
 CondorTest::RegisterResult($result);
 dashspoolreset();
 
@@ -216,7 +216,7 @@ if($missing != 2) {
 CondorTest::RegisterResult($result);
 dashspoolreset();
 
-system("condor_transfer_data $plain");
+runToolNTimes("condor_transfer_data $plain",1,1);
 my $present = 0;
 $present = PresentFiles("dashspool.file1,dashspool.file2");
 
@@ -229,7 +229,7 @@ if($present != 2) {
 	print "Passed\n\n";
 }
 CondorTest::RegisterResult($result);
-`condor_rm $plain`;
+runToolNTimes("condor_rm $plain",1,1);
 dashspoolreset();
 
 my $sleepf3 = $$ . "sf3";
@@ -253,7 +253,7 @@ if($numberinstate != 1) {
 	print " Passed\n\n";
 }
 #system(" condor_q");
-`condor_rm $plain`;
+runToolNTimes("condor_rm $plain",1,1);
 CondorTest::RegisterResult($result);
 dashspoolreset();
 
@@ -269,7 +269,7 @@ $numberinstate = CondorTest::VerifyNoJobsInState("running",1,30);
 #system(" condor_q");
 $numberinstate = CondorTest::VerifyNoJobsInState("completed",1,30);
 # get output data
-system("condor_transfer_data $plain");
+runToolNTimes("condor_transfer_data $plain",1,1);
 $present = PresentFiles("dashspool.file1,dashspool.file2");
 
 print "\nLoooking for result files after condor_transfer_data: ";
@@ -293,7 +293,7 @@ if($gooddata != 1) {
 	print " Passed\n\n";
 }
 #system(" condor_q");
-`condor_rm $plain`;
+runToolNTimes("condor_rm $plain",1,1);
 CondorTest::RegisterResult($result);
 
 # this test is just like last except we are going to copy
@@ -307,7 +307,7 @@ $numberinstate = CondorTest::VerifyNoJobsInState("running",1,30);
 #system(" condor_q");
 $numberinstate = CondorTest::VerifyNoJobsInState("completed",1,30);
 # get output data
-system("condor_transfer_data $plain");
+runToolNTimes("condor_transfer_data $plain",1,1);
 $present = PresentFiles("dashspool.file1,dashspool.file2");
 
 print "\nLoooking for result files after condor_transfer_data: ";
@@ -331,7 +331,7 @@ if($gooddata != 1) {
 	print " Passed\n\n";
 }
 #system(" condor_q");
-`condor_rm $plain`;
+runToolNTimes("condor_rm $plain",1,1);
 CondorTest::RegisterResult($result);
 dashspoolreset();
 
@@ -410,7 +410,9 @@ sub SubmitReturnCluster
 	my $submitargs = shift;
 	my $cluster = 0;
 
-	my @output = `condor_submit $submitargs $submitfile`;
+	my @output = ();
+	my $res = runCondorTool("condor_submit $submitargs $submitfile", \@output, 2);
+	print "SubmitReturnCluster result from call: SubmitReturnCluster <<<< $res >>>>>\n";
 
 	foreach my $line (@output) {
 		chomp($line);

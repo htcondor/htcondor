@@ -480,6 +480,14 @@ version number.
 	\item[\Expr{601}:] for Windows 7 or Windows Server 2008
 	\end{description}
 %
+\index{ClassAd machine attribute!RecentPreemptions}
+\item[\AdAttr{RecentPreemptions}:] The total number of jobs which 
+have been preempted from this machine in the last twenty minutes.
+%
+\index{ClassAd machine attribute!RecentTotalJobStarts}
+\item[\AdAttr{RecentTotalJobStarts}:] The total number of jobs which 
+have been started on this machine in the last twenty minutes.
+%
 \index{ClassAd machine attribute!Requirements}
 \item[\AdAttr{Requirements}:] A boolean, which when evaluated within the context
 of the machine ClassAd and a job ClassAd, must evaluate to
@@ -571,6 +579,10 @@ always want to be matched with jobs, and vice-versa.
 This is in contrast with \Attr{Cpus},
 which is the number of CPUs in the slot.
 %
+\index{ClassAd machine attribute!TotalJobStarts}
+\item[\AdAttr{TotalJobStarts}:] The total number of jobs which 
+have been started on this machine since the \Condor{startd} started running.
+%
 \index{ClassAd machine attribute!TotalMachineDrainingBadput}
 \item[\AdAttr{TotalMachineDrainingBadput}:] The
 total job runtime in cpu-seconds that has been lost due to job evictions
@@ -583,6 +595,10 @@ checkpointing.
 total machine-wide time in cpu-seconds that has not been used
 (i.e. not matched to a job submitter) due to draining since this
 \Condor{startd} began executing.
+%
+\index{ClassAd machine attribute!TotalPreemptions}
+\item[\AdAttr{TotalPreemptions}:] The total number of times
+a running job has been preempted on this machine.  
 %
 \index{ClassAd machine attribute!TotalTimeBackfillBusy}
 \item[\AdAttr{TotalTimeBackfillBusy}:] The number of seconds

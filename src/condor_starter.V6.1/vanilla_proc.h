@@ -66,6 +66,10 @@ public:
 		*/
 	virtual bool PublishUpdateAd( ClassAd* ad );
 
+	virtual bool SupportsPIDNamespace() { return true;}
+
+	virtual std::string CgroupSuffix() { return "";}
+
 	bool finishShutdownFast();
 
 private:

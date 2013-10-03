@@ -47,6 +47,7 @@ my $COVERITY_ANALYSIS     = "remote_task.coverity_analysis";
 
 my $taskname = "";
 my $execstr = "";
+my $VCVER = "VC9";
 
 # autoflush our STDOUT
 $| = 1;
@@ -94,7 +95,7 @@ if( $taskname eq $EXTERNALS_TASK ) {
 elsif ($taskname eq $UNSTRIPPED_TASK) {
     $execstr = get_cmake_args();
     
-	if ($ENV{NMI_PLATFORM} =~ /_fedora(_)?1[6789]/i) {
+	if ($ENV{NMI_PLATFORM} =~ /_fedora(_)?[12][0-9]/i) {
 	 	$execstr .= " -DCONDOR_CXX_FLAGS:STRING=-Werror"
 	}
 
@@ -140,7 +141,7 @@ elsif ($taskname eq $NATIVE_TASK) {
         $execstr = create_rpm();
     }
     elsif ($ENV{NMI_PLATFORM} =~ /_win/i) {
-        $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE ";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE $VCVER";
     }
     else {
         print "We do not generate a native package for this platform.\n";
@@ -186,16 +187,22 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     print "   cmake_args = $cmake_args\n";
     my $buildid = "";
     if ($cmake_args =~ /-DBUILDID:STRING=([0-9]+)/) { $buildid = $1; }
+    if ($cmake_args =~ /-G[ ]*"Visual Studio ([0-9]+)/i) {
+        print "cmake was invoked with a Visual Studio $1 generator\n";
+        $VCVER = "VC$1"; 
+    }
     if ($taskname eq $EXTERNALS_TASK) {
-        $execstr= "nmi_tools\\glue\\build\\build.win.bat EXTERNALS";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat EXTERNALS $VCVER";
     } elsif ($taskname eq $UNSTRIPPED_TASK) {
-        $execstr= "nmi_tools\\glue\\build\\build.win.bat BUILD";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat BUILD $VCVER";
+    } elsif ($taskname eq $CHECK_UNSTRIPPED_TASK) {
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat BLD_TESTS $VCVER";
     } elsif ($taskname eq $NATIVE_TASK) {
         print "Windows NATIVE (MSI) task\n";
-        $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE $buildid";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat NATIVE $VCVER $buildid";
     } elsif ($taskname eq $TAR_TASK) {
         print "Windows CREATE_TAR (ZIP) task\n";
-        $execstr= "nmi_tools\\glue\\build\\build.win.bat ZIP $buildid";
+        $execstr= "nmi_tools\\glue\\build\\build.win.bat ZIP $VCVER $buildid";
     }
 }
 else {

@@ -265,7 +265,7 @@ ResMgr::init_config_classad( void )
 	// STARTD_ATTRS for us.
 	daemonCore->publish(config_classad);
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	config_classad->AddTargetRefs( TargetJobAttrs, false );
 #endif
 }
@@ -2092,6 +2092,15 @@ ResMgr::startDraining(int how_fast,bool resume_on_completion,ExprTree *check_exp
 	draining_id += 1;
 	formatstr(new_request_id,"%d",draining_id);
 	this->resume_on_completion_of_draining = resume_on_completion;
+
+	// Insert draining attributes into the resource ads, in case the
+	// retirement expression uses them.
+	for( int i = 0; i < nresources; i++ ) {
+		ClassAd &ad = *(resources[i]->r_classad);
+		ad.InsertAttr( ATTR_DRAINING, true );
+		ad.InsertAttr( ATTR_DRAINING_REQUEST_ID, new_request_id );
+		ad.InsertAttr( ATTR_LAST_DRAIN_START_TIME, last_drain_start_time );
+	}
 
 	if( how_fast <= DRAIN_GRACEFUL ) {
 			// retirement time and vacate time are honored

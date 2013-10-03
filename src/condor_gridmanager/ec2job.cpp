@@ -58,6 +58,7 @@ using namespace std;
 
 #define GM_SEEK_INSTANCE_ID				16
 #define GM_CREATE_KEY_PAIR				17
+#define GM_CANCEL_CHECK					18
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
@@ -78,6 +79,7 @@ static const char *GMStateNames[] = {
 	"GM_SPOT_CHECK",
 	"GM_SEEK_INSTANCE_ID",
 	"GM_CREATE_KEY_PAIR",
+	"GM_CANCEL_CHECK",
 };
 
 #define EC2_VM_STATE_RUNNING			"running"
@@ -86,6 +88,10 @@ static const char *GMStateNames[] = {
 #define EC2_VM_STATE_TERMINATED			"terminated"
 #define EC2_VM_STATE_SHUTOFF			"shutoff"
 #define EC2_VM_STATE_STOPPED			"stopped"
+
+// These are pseduostates used internally by the grid manager.
+#define EC2_VM_STATE_PURGED				"purged"
+#define EC2_VM_STATE_CANCELLING			"cancelling"
 
 // TODO: Let the maximum submit attempts be set in the job ad or, better yet,
 // evalute PeriodicHold expression in job ad.
@@ -139,8 +145,11 @@ int EC2Job::pendingWaitTime = 15;
 int EC2Job::maxRetryTimes = 3;
 
 MSC_DISABLE_WARNING(6262) // function uses more than 16k of stack
-EC2Job::EC2Job( ClassAd *classad )
-	: BaseJob( classad ), probeNow( false )
+EC2Job::EC2Job( ClassAd *classad ) :
+	BaseJob( classad ),
+	m_was_job_completion( false ),
+	m_retry_times( 0 ),
+	probeNow( false )
 {
 dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	string error_string = "";
@@ -216,8 +225,6 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	// we should set the default value to NULL and gahp_server
 	// will start VM in EC2 using m1.small mode.
 	jobAd->LookupString( ATTR_EC2_INSTANCE_TYPE, m_instance_type );
-
-	m_vm_check_times = 0;
 
 	// Only generate a keypair if the user asked for one.
 	// Note: We assume that if both the key_pair and key_pair_file
@@ -763,7 +770,7 @@ void EC2Job::doEvaluateState()
 						// the VM has been started successfully in EC2
 
 						// Maxmium retry times is 3, if exceeds this limitation, we fall through
-						if ( m_vm_check_times++ < maxRetryTimes ) {
+						if ( m_retry_times++ < maxRetryTimes ) {
 							gmState = GM_START_VM;
 						}
 						break;
@@ -852,6 +859,20 @@ void EC2Job::doEvaluateState()
 					// the OpenStack bug here -- doing exactly the same thing
 					// as we do for the SHUTOFF state.
 					//
+					// Note that we must set this flag so that we enter
+					// GM_DONE_SAVE after terminating the job, instead of
+					// GM_DELETE.  We don't need to record this in job ad:
+					// either the job is TERMINATED when we come back (and
+					// we go into GM_DONE_SAVE anyway), or it's still
+					// SHUTOFF or STOPPED, and we return here; since cancel
+					// is idempotent, this is OK.
+					//
+					// Since we'd like to retry the cancel no matter how
+					// many times we retried the GM_START_VM, reset the count.
+					//
+
+					m_retry_times = 0;
+					m_was_job_completion = true;
 					gmState = GM_CANCEL;
 					break;
 				}
@@ -925,6 +946,7 @@ void EC2Job::doEvaluateState()
 
 
 			case GM_CLEAR_REQUEST: {
+				m_retry_times = 0;
 
 				// Remove all knowledge of any previous or present job
 				// submission, in both the gridmanager and the schedd.
@@ -1051,11 +1073,11 @@ void EC2Job::doEvaluateState()
 				if ( condorState == REMOVED || condorState == HELD ) {
 					gmState = GM_SUBMITTED; // GM_SUBMITTED knows how to handle this
 				} else {
-					if( remoteJobState == "purged" ) {
-					// The instance has been purged, act like we
-					// got back 'terminated'
-					remoteJobState = EC2_VM_STATE_TERMINATED;
-					m_state_reason_code = "purged";
+					if( remoteJobState == EC2_VM_STATE_PURGED ) {
+						// The instance has been purged, act like we
+						// got back 'terminated'
+						remoteJobState = EC2_VM_STATE_TERMINATED;
+						m_state_reason_code = "purged";
 					}
 
 					// We don't check for a status change, because this
@@ -1146,14 +1168,15 @@ void EC2Job::doEvaluateState()
 				break;
 
 			case GM_CANCEL:
-				// Rather than duplicate code or cleverness in the spot
-				// instance subgraph, just handle the case where we're
-				// cancelling a spot request which has no corresponding
-				// instance here.
-				if( ! m_remoteJobId.empty() ) {
-					// need to call ec2_vm_stop(), it will only return
-					// STOP operation is success or failed
-					// ec2_vm_stop() will check the input arguments
+				remoteJobState = EC2_VM_STATE_CANCELLING;
+				SetRemoteJobStatus( EC2_VM_STATE_CANCELLING );
+
+				// Rather than duplicate code in the spot instance subgraph,
+				// just handle jobs with no corresponding instance here.
+				if( m_remoteJobId.empty() ) {
+					// Bypasses the polling delay in GM_CANCEL_CHECK.
+					probeNow = true;
+				} else {
 					rc = gahp->ec2_vm_stop( m_serviceUrl,
 											m_public_key_file,
 											m_private_key_file,
@@ -1164,46 +1187,91 @@ void EC2Job::doEvaluateState()
 						 rc == GAHPCLIENT_COMMAND_PENDING ) {
 						break;
 					}
-				} else {
-					rc = 0;
+
+					if( rc != 0 ) {
+						errorString = gahp->getErrorString();
+						dprintf( D_ALWAYS, "(%d.%d) job cancel failed: %s: %s\n",
+								 procID.cluster, procID.proc,
+								 gahp_error_code.c_str(),
+							 	errorString.c_str() );
+						gmState = GM_HOLD;
+						break;
+					}
+
+					// We could save some time here for Amazon users by
+					// changing the EC2 GAHP to return the (new) state of
+					// the job.  If it's SHUTTINGDOWN, set probeNow.  We
+					// can't do this for OpenStack because we know they lie.
 				}
 
-				if ( rc == 0 ) {
-					// After we've terminated a 'shutoff' instance, it's done.
-					if( remoteJobState == EC2_VM_STATE_SHUTOFF
-					 || remoteJobState == EC2_VM_STATE_STOPPED ) {
-						gmState = GM_DONE_SAVE;
-					} else if( condorState == COMPLETED || condorState == REMOVED ) {
-						gmState = GM_DELETE;
-					} else {
-							// If the job was not Completed or Removed
-							// then it might run again, clear
-							// everything in preparation.
-							//
-							// This case is hit when a job is Held,
-							// when it is later released it should run
-							// again. If the GridJobId is not cleared,
-							// the second run attempt will find the
-							// first terminated instance and consider
-							// itself complete.
+				gmState = GM_CANCEL_CHECK;
+				break;
 
-							// Clear the contact string here because it may not get
-							// cleared in GM_CLEAR_REQUEST (it might go to GM_HOLD first).
-						myResource->CancelSubmit( this );
-						SetInstanceId( NULL );
-						SetClientToken( NULL );
-						gmState = GM_CLEAR_REQUEST;
+			case GM_CANCEL_CHECK:
+				// Wait for the job's state to change.  This should happen
+				// on the next poll, because the job is in an invalid state.
+				if( ! probeNow ) { break; }
+				probeNow = false;
+
+				// We cancel (terminate) a job for one of two reasons: it
+				// either entered one of the two semi-terminated states
+				// (STOPPED or SHUTOFF) of its own accord, or the job went
+				// on hold or was removed.
+				//
+				// In either case, we need to confirm that the cancel
+				// command succeeded.  However, since Amazon permits
+				// STOPPED instances to enter the TERMINATED state, we
+				// can, presuming the same for SHUTOFF instances, just
+				// retry until the instance becomes TERMINATED.  An
+				// instance that has been purged must have successfully
+				// terminated first, so we will treat it the same.
+				//
+				// All other states, therefore, will cause us to try
+				// terminating the instance again.
+				//
+				// Once we've successfully terminated the instance,
+				// we need to go to GM_DONE_SAVE for instances that were
+				// STOPPED or SHUTOFF, and either GM_DELETE or
+				// GM_CLEAR_REQUEST, depending on the condor state of the
+				// job, otherwise.
+				//
+
+				if( remoteJobState == EC2_VM_STATE_TERMINATED
+				 || remoteJobState == EC2_VM_STATE_PURGED
+				 || ( remoteJobState == EC2_VM_STATE_SHUTTINGDOWN
+				   && myResource->ShuttingDownTrusted( this ) ) ) {
+				 	if( m_was_job_completion ) {
+				 		gmState = GM_DONE_SAVE;
+				 	} else {
+						if( condorState == COMPLETED || condorState == REMOVED ) {
+							gmState = GM_DELETE;
+						} else {
+							// The job may run again, so clear the job state.
+							//
+							// (If a job is held and then released, the job
+							// could find its previous (terminated) instance
+							// and consider itself complete.)
+							//
+							// Clear the contact string here first because
+							// we may enter GM_HOLD before GM_CLEAR_REQUEST
+							// actually clears the request. (*sigh*)
+							myResource->CancelSubmit( this );
+							SetInstanceId( NULL );
+							SetClientToken( NULL );
+							gmState = GM_CLEAR_REQUEST;
+						}
 					}
 				} else {
-					// What to do about a failed cancel?
-					errorString = gahp->getErrorString();
-					dprintf( D_ALWAYS, "(%d.%d) job cancel failed: %s: %s\n",
-							 procID.cluster, procID.proc,
-							 gahp_error_code.c_str(),
-							 errorString.c_str() );
-					gmState = GM_HOLD;
+					if( m_retry_times++ < maxRetryTimes ) {
+						gmState = GM_CANCEL;
+					} else {
+						errorString = gahp->getErrorString();
+						dprintf( D_ALWAYS, "(%d.%d) job cancel did not succeed after %d tries, giving up.\n",
+								 procID.cluster, procID.proc, maxRetryTimes );
+						gmState = GM_HOLD;
+						break;
+					}
 				}
-
 				break;
 
 
@@ -2127,7 +2195,7 @@ void EC2Job::StatusUpdate( const char * instanceID,
 	// .. for now, let's not scare the user by passing through the "purged"
 	// state on spot instances.
 	if( m_spot_price.empty() && !m_remoteJobId.empty() && status == NULL ) {
-		status = "purged";
+		status = EC2_VM_STATE_PURGED;
 	}
 
 	// Update the instance ID, if this is the first time we've seen it.

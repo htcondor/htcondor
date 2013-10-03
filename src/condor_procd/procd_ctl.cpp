@@ -23,10 +23,14 @@
 #include "proc_family_client.h"
 
 static int register_family(ProcFamilyClient& pfc, int argc, char* argv[]);
+#if defined(LINUX)
 static int track_by_associated_gid(ProcFamilyClient& pfc, int argc, 
 	char* argv[]);
+#endif
+#if defined(HAVE_EXT_LIBCGROUP)
 static int track_by_associated_cgroup(ProcFamilyClient& pfc, int argc,
 	char* argv[]);
+#endif
 static int get_usage(ProcFamilyClient& pfc, int argc, char* argv[]);
 static int dump(ProcFamilyClient& pfc, int argc, char* argv[]);
 static int list(ProcFamilyClient& pfc, int argc, char* argv[]);
@@ -47,8 +51,12 @@ list_commands()
 	fprintf(stderr, "  commands:\n");
 	fprintf(stderr,
 		"    REGISTER_FAMILY <pid> <watcher_pid> <max_snapshot_interval>\n");
+#if defined(LINUX)
 	fprintf(stderr, "    TRACK_BY_ASSOCIATED_GID <gid> [<pid>]\n");
+#endif
+#if defined(HAVE_EXT_LIBCGROUP)
 	fprintf(stderr, "    TRACK_BY_ASSOCIATED_CGROUP <cgroup> [<pid>]\n");
+#endif
 	fprintf(stderr, "    GET_USAGE [<pid>]\n");
 	fprintf(stderr, "    DUMP [<pid>]\n");
 	fprintf(stderr, "    LIST [<pid>]\n");
@@ -140,12 +148,16 @@ main(int argc, char* argv[])
 	if (strcasecmp(cmd_argv[0], "REGISTER_FAMILY") == 0) {
 		return register_family(pfc, cmd_argc, cmd_argv);
 	}
+#if defined(LINUX)
 	else if (strcasecmp(cmd_argv[0], "TRACK_BY_ASSOCIATED_GID") == 0) {
 		return track_by_associated_gid(pfc, cmd_argc, cmd_argv);
 	}
+#endif
+#if defined(HAVE_EXT_LIBCGROUP)
 	else if (strcasecmp(cmd_argv[0], "TRACK_BY_ASSOCIATED_CGROUP") == 0) {
 		return track_by_associated_cgroup(pfc, cmd_argc, cmd_argv);
 	}
+#endif
 	else if (strcasecmp(cmd_argv[0], "GET_USAGE") == 0) {
 		return get_usage(pfc, cmd_argc, cmd_argv);
 	}
@@ -213,6 +225,7 @@ register_family(ProcFamilyClient& pfc, int argc, char* argv[])
 	return 0;
 }
 
+#if defined(LINUX)
 static int
 track_by_associated_gid(ProcFamilyClient& pfc, int argc, char* argv[])
 {
@@ -248,6 +261,7 @@ track_by_associated_gid(ProcFamilyClient& pfc, int argc, char* argv[])
 	}
 	return 0;
 }
+#endif
 
 #if defined(HAVE_EXT_LIBCGROUP)
 static int
@@ -419,9 +433,11 @@ get_usage(ProcFamilyClient& pfc, int argc, char* argv[])
 	printf("CPU Percentage (%%): %f\n", pfu.percent_cpu);
 	printf("Maximum Image Size (KB): %lu\n", pfu.max_image_size);
 	printf("Total Image Size(KB): %lu\n", pfu.total_image_size);
+#if HAVE_PSS
 	if (pfu.total_proportional_set_size_available) {
 		printf("Proportional Set Size (KB): %lu\n", pfu.total_proportional_set_size);
 	}
+#endif
 	if (pfu.block_read_bytes >= 0)
 		printf("Bytes read from block devices (KB): %lu\n", pfu.block_read_bytes/1024);
 	if (pfu.block_write_bytes >= 0)

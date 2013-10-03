@@ -29,7 +29,25 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item When terminating a job on a non-Amazon service,
+check (at the next polling interval) if the job has terminated,
+and if not, retry.  This means that HTCondor will not lose track of jobs
+on services with unreliable termination.
+\Ticket{3438}
+
+\item Email alerts about file transfers taking longer than
+\Macro{MAX\_TRANSFER\_QUEUE\_AGE} are now grouped together
+to reduce the number of email messages that are sent.
+
+\item Floating point values in Old ClassAds are now printed in a more
+human-readable format, while retaining 64-bit double precision.
+In previous versions, these values were always printed in scientific
+notation.
+\Ticket{3928}
+
+\item \Condor{ssh\_to\_job} now works with grid universe jobs
+which use EC2 resources.
+\Ticket{1548}
 
 \end{itemize}
 
@@ -45,7 +63,31 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item If a standard universe job exited without producing any
+checkpoints and no checkpoint server was used, 
+two spurious error messages would be logged to the \File{SchedLog},
+as it tried to remove the old checkpoint images from the
+non-existent checkpoint server.  
+These error messages are no longer logged.
+\Ticket{3919}
+
+\item When configuration variable \Macro{STARTER\_RLIMIT\_AS} is set 
+to its default value of 0, it means that there is no limit.  
+This value was logged as a limit of 0Mb, leading to confusion.
+Now, no message is logged in this default case.
+\Ticket{3914}
+
+\item Improved how the \Condor{schedd} notifies the \Condor{shadow}
+and \Condor{gridmanager} about modifications to job ClassAds made using
+\Condor{qedit}.
+\Ticket{3909}
+
+\item Grid universe jobs now use the correct executable file when
+\SubmitCmd{copy\_to\_spool} is set to \Expr{True}.
+Previously, the executable file named in the submit description file 
+would be copied to the remote server, 
+rather than the copy of the executable file stored in the spool directory.
+\Ticket{3589}
 
 \end{itemize}
 
@@ -74,8 +116,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.1.1 not yet released.
-%\item HTCondor version 8.1.1 released on Month Date, 2013.
+\item HTCondor version 8.1.1 released on September 17, 2013.
+This release contains all bug fixes from the stable release version 8.0.2.
 
 \end{itemize}
 
@@ -128,6 +170,24 @@ way for file transfers with the \Condor{ft-gahp} to work.
 
 \begin{itemize}
 
+\item The new configuration variable \Macro{USE\_RESOURCE\_REQUEST\_COUNTS}
+is a boolean value that defaults to \Expr{True}, 
+reducing the latency of negotiation 
+when there are many jobs next to each other in the queue 
+with the same auto cluster, and many matches are being made.
+\Ticket{3585}
+
+\item Four new machine ClassAd attributes are advertised.
+\Attr{TotalJobStarts} is the total number of jobs started by 
+this \Condor{startd} daemon since it booted. 
+\Attr{RecentTotalJobStarts} is the number of jobs started in the
+last twenty minutes.  
+Similarly, \Attr{TotalPreemptions} is
+the number of jobs preempted since the \Condor{startd} daemon started,
+and \Attr{RecentTotalPreemptions} is 
+the number in the last 20 minutes.
+\Ticket{3712}
+
 \item \Macro{FILE\_TRANSFER\_DISK\_LOAD\_THROTTLE} now accepts tabs in addition to spaces as delimiters.
 \Ticket{3798}
 
@@ -140,6 +200,11 @@ is a boolean value that defaults to hiding sensitive data
 such as security keys and passwords
 when communication with a GAHP server is written to a daemon log.
 \Ticket{3536}
+
+\item The default value of configuration variable 
+\Macro{ENABLE\_CLASSAD\_CACHING} has changed to \Expr{True} for all
+daemons other than the \Condor{shadow}, \Condor{starter}, and \Condor{master}.
+\Ticket{3441}
 
 \end{itemize}
 
@@ -163,13 +228,40 @@ that caused file transfers to fail if one of the two daemons was older
 than version 8.1.0.
 \Ticket{3856}
 
+\item Fixed a bug that caused substitution in configuration variable
+evaluation to ignore per-daemon overrides. 
+This is a long standing bug that may result in subtle changes
+to the way your configuration files are processed.
+An example of how substitution works with the per-daemon overrides
+is in section \ref{sec:Config-File-Macros}.
+\Ticket{3822}
+
+\item Fixed a bug that caused the command
+\begin{verbatim}
+  condor_submit -
+\end{verbatim}
+to be interpreted as an interactive submit,
+rather than a request to read input from \File{stdin}.
+\Condor{qsub} was also modified to be immune to this bug,
+such that it will still work with other versions of HTCondor containing
+the bug.
+\Ticket{3902}
+
 \end{itemize}
 
 \noindent Known Bugs:
 
 \begin{itemize}
-
-\item None.
+\item DAGMan recovery mode does not work for Pegasus-generated SUBDAGs.
+For SUBDAGs, doing \Condor{hold} or \Condor{release} on
+the \Condor{dagman} job, or stopping and re-starting the
+\Condor{schedd} with the DAGMan
+job in the queue will result in failure of the DAG.  This can be
+avoided by doing a \Condor{rm} of the DAGMan job, which produces a Rescue
+DAG, and re-submitting the DAG; the Rescue DAG is automatically run.
+This bug was introduced in HTCondor version 8.0.1, and it also appears
+in versions 8.0.2, 8.1.0, and 8.1.1.
+\Ticket{3882}
 
 \end{itemize}
 

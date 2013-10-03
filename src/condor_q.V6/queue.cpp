@@ -3919,7 +3919,7 @@ setupAnalysis()
 					ad->Insert( buffer );
 				}
 			}
-			#if !defined(WANT_OLD_CLASSADS)
+			#if defined(ADD_TARGET_SCOPING)
 			ad->AddTargetRefs( TargetJobAttrs );
 			#endif
 		}
@@ -3949,7 +3949,7 @@ setupAnalysis()
 				"PREEMPTION_REQUIREMENTS expression: \n\t%s\n", preq );
 			exit( 1 );
 		}
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 		ExprTree *tmp_expr = AddTargetRefs( preemptionReq, TargetJobAttrs );
 		delete preemptionReq;
 		preemptionReq = tmp_expr;
@@ -5338,7 +5338,7 @@ doJobRunAnalysisToBuffer(ClassAd *request, anaCounters & ac, int details, bool n
 	ac.clear();
 	return_buff[0]='\0';
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	request->AddTargetRefs( TargetMachineAttrs );
 #endif
 
@@ -5815,7 +5815,7 @@ doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, Daemon * /*sc
 
 	return_buff[0] = 0;
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	slot->AddTargetRefs(TargetJobAttrs);
 #endif
 
@@ -5857,7 +5857,7 @@ doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, Daemon * /*sc
 			jobs.Insert(job);
 			cUniqueJobs += 1;
 
-			#if !defined(WANT_OLD_CLASSADS)
+			#if defined(ADD_TARGET_SCOPING)
 			job->AddTargetRefs(TargetMachineAttrs);
 			#endif
 
