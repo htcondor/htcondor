@@ -41,7 +41,7 @@ my $firstappend_condor_config = '
 	MachineMaxVacateTime = 5
 	NEGOTIATION_INTERVAL = 10
 	KILL = TRUE
-	ALL_DEBUG = D_ALWAYS
+	ALL_DEBUG = D_ALWAYS D_CMD D_DAEMONCORE
 ';
 
 $configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"jobbasickill");
@@ -60,18 +60,30 @@ my $return = "";
 my $executecount = 0;
 my $result = 1;
 my $test_name = "job_basic_kill";
+my $catchlog  = "catchallsignals.out";
 
 my $on_execute = sub {
 	print "********************************** OnExecute *****************************\n";
 	print "waiting for size signal catching output to grow\n";
 	my $sizenow = 0;
+	my $loopcount = 0;
 
 	while($sizenow < 1000) {
+		if(!(-f "catchallsignals.out")) {
+			if($sizenow > 0) {
+				system("ls -lh catchallsignals.out");
+				die "What happened to <$catchlog>? It used to exist!\n";
+			}
+		}
 		$sizenow = -s "catchallsignals.out";
-		print "<$sizenow>\n";
+		if(($loopcount % 100) == 0) {
+			print "<$sizenow>\n";
+		}
+		sleep(1);
 	}
+
 	if($executecount == 0) {
-		system("condor_hold $ClusterId");
+		runToolNTimes("condor_hold $ClusterId",1);
 		$executecount += 1;
 	} else {
 			print "Job ran more then once and all normal signals are being ignored even SIGTERM\n";
@@ -85,7 +97,7 @@ my $on_hold = sub {
 		print "Never found that sigterm was ignore. \nRemoving job before death!\n";
 		die "No ignored sigterm, can not prove KILL =TRUE worked.\n";
 	}
-	system("condor_rm $ClusterId");
+	runToolNTimes("condor_rm $ClusterId", 1);
 };
 
 my $on_evictedwithoutcheckpoint = sub {
@@ -110,7 +122,6 @@ my $GetClusterId = sub {
 print "First test basic job\n";
 $result = SimpleJob::RunCheck(); # jobid 1
 
-my $catchlog  = "catchallsignals.out";
 system("rm -f $catchlog");
 
 $expect_return = 0;

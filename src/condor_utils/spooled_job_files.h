@@ -81,6 +81,22 @@ public:
 	static bool jobRequiresSpoolDirectory(ClassAd const *job_ad);
 };
 
+/* Given the location of the SPOOL directory and a job id, return the
+ * directory where the job's sandbox should reside if the input sandbox
+ * is staged to the schedd.
+ * If ICKPT (-1) is given for proc, then return where the job executable
+ * should reside if the submitter spooled the executable but not the input
+ * sandbox.
+ * The buffer returned must be deallocated with free().
+ */
 char *gen_ckpt_name ( char const *dir, int cluster, int proc, int subproc );
+
+/* Given a job ad, determine where the job's executable resides.
+ * If the filename given by gen_ckpt_name(SPOOL,cluster,ICKPT,0) exists,
+ * then that is returned.
+ * Otherwise, the filename is constructed from the Cmd and Iwd attributes
+ * in the job ad. Existence of this file isn't checked.
+ */
+void GetJobExecutable( const ClassAd *job_ad, std::string &executable );
 
 #endif

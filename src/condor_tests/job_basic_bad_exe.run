@@ -1,0 +1,104 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+#use Check::CondorLog;
+
+my $configfile = "";
+my $ClusterId = 0;
+my $testname =  "job_basic_bad_exe_test";
+
+
+$foo = <<"_EOX";
+"Hello World"
+"Goodby World"
+"This wont run"
+_EOX
+
+my $runmefile = "job_basic_exe_test.exe";
+
+my $on_shadow = sub {
+	print "Expected shodow exception\n";
+};
+
+my $on_reconnectfailed = sub {
+	print "Bad exe, reconnect failure expected\n";
+};
+
+my $on_disconnected = sub {
+	print "Bad exe, disconnect expected\n";
+};
+
+my $on_hold = sub {
+	print "Saw job held\n";
+	system("condor_rm -all");
+};
+
+my $on_abort = sub {
+	print "Job aborted by user\n";
+};
+
+open(NE,">$runmefile") or die "Could not create <$runmefile>:$!\n";
+print NE "$foo";
+close(NE);
+
+system("cat $runmefile");
+system("chmod 755 $runmefile");
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	NUM_CPUS = 5
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"name1");
+
+my $condorinfo =CondorTest::StartCondorWithParams(
+	condor_name => "name1",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+print "We know this about the just started personal condor <$condorinfo>\n";
+
+my $sleepforever = '
+	universe = vanilla
+	executable = x_sleep.pl
+	log = $sleepforeverlog
+	notification = never
+	arguments = 0
+	queue
+';
+
+print "First test basic job\n";
+SimpleJob::RunCheck();
+
+
+SimpleJob::RunCheck(
+	runthis => "$runmefile",
+	on_shadow => $on_shadow,
+	on_disconnected => $on_disconnected,
+	on_reconnectfailed => $on_reconnectfailed,
+	on_hold => $on_hold,
+	on_abort => $on_abort,
+);
+
+CondorTest::EndTest();

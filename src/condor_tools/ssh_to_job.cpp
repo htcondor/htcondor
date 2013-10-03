@@ -43,6 +43,9 @@
 #include "condor_sockfunc.h"
 #include <sys/un.h>
 
+// For ssh-to-job to EC2.
+#include "condor_qmgr.h"
+
 // globals
 char *g_jobid = NULL;	// the jobid as a string, for use in interrupt_handler()
 
@@ -97,6 +100,8 @@ private:
 	MyString m_ssh_keygen_args;
 	bool m_x_forwarding;
 
+	bool m_could_be_ec2_job;
+
 	void logError(char const *fmt,...) CHECK_PRINTF_FORMAT(2,3);
 	void printUsage();
 	int receiveSshConnection(char const *socket_name);
@@ -112,7 +117,8 @@ SSHToJob::SSHToJob():
 	m_auto_retry(false),
 	m_remove_on_interrupt(false),
 	m_retry_delay(5),
-	m_x_forwarding(false)
+	m_x_forwarding(false),
+	m_could_be_ec2_job(true)
 {
 	m_jobid.cluster = m_jobid.proc = -1;
 }
@@ -397,6 +403,99 @@ bool SSHToJob::execute_ssh_retry()
 
 bool SSHToJob::execute_ssh()
 {
+	//
+	// Handle EC2 jobs.
+	//
+	// We only contact the schedd twice the first time: once to determine
+	// if the job is in EC2 job (and if so, what to do), and once when the
+	// isn't, to get the job connect info.  Attempts for EC2 jobs never
+	// try to connect twice, and after the first time a job isn't an EC2
+	// job, m_could_be_ec2_job is false, skipping the superflous connection.
+	//
+
+	if( m_could_be_ec2_job ) {
+		Qmgr_connection * q = ConnectQ( m_schedd_name.IsEmpty() ? NULL : m_schedd_name.Value(), 0, true );
+		if( ! q ) {
+			logError( "Can't connect to schedd\n" );
+			return false;
+		}
+		ClassAd * jobAd = GetJobAd( m_jobid.cluster, m_jobid.proc );
+		DisconnectQ( q );
+
+		// We may have failed to fetch the ad, or the job may have left the q.
+		if( jobAd == NULL ) {
+			logError( "Unable to fetch job ad; is it still in the queue?\n" );
+			return false;
+		}
+
+		std::string gridResource, vmName, kpName;
+		bool gotGridResource = jobAd->EvaluateAttrString( ATTR_GRID_RESOURCE, gridResource );
+		bool gotVMName = jobAd->EvaluateAttrString( ATTR_EC2_REMOTE_VM_NAME, vmName );
+		bool gotKPName = jobAd->EvaluateAttrString( ATTR_EC2_KEY_PAIR_FILE, kpName );
+
+		int jobStatus;
+		if( ! jobAd->EvaluateAttrInt( ATTR_JOB_STATUS, jobStatus ) ) {
+			// Something has gone terribly wrong.
+			logError( "Can't get job status\n" );
+			return false;
+		}
+
+		FreeJobAd( jobAd );
+
+		if( gotGridResource ) {
+			if( gridResource.substr( 0, 3 ) == "ec2" ) {
+				if( gotVMName && gotKPName ) {
+					int pid = fork();
+					if( pid == 0 ) {
+						// Because ssh has a command-line parser that doesn't
+						// suck, only the order of the hostname vs the command
+						// matters -- it will do the right thing with options
+						// wherever they may occur.  Therefore, since we're
+						// supplying the hostname, it doesn't matter what the
+						// user supplies; we can just append it.
+						ArgList sshArgList;
+						sshArgList.AppendArg( "ssh" );
+						sshArgList.AppendArg( "-i" );
+						sshArgList.AppendArg( kpName.c_str() );
+						sshArgList.AppendArg( vmName.c_str() );
+						sshArgList.AppendArgsFromArgList( m_ssh_args_from_command_line );
+
+						char ** argArray = sshArgList.GetStringArray();
+						execvp( argArray[0], argArray );
+						logError( "Error executing SSH: %s\n", strerror( errno ) );
+						_exit( 1 );
+					}
+
+					if( pid < 0 ) {
+						logError( "Error fork()ing to run SSH: %s\n", strerror( errno ) );
+						return false;
+					}
+
+					while( true ) {
+						int exitedPID = waitpid( pid, & m_ssh_exit_status, 0 );
+						if( exitedPID == pid ) { break; }
+						logError( "Unknown child (%d) exited while waiting for SSH.\n", exitedPID );
+					}
+
+					return true;
+				} else {
+					if( jobStatus != RUNNING ) {
+						m_retry_sensible = true;
+					} else {
+						logError( "ERROR: You can not SSH to an EC2 job whose keypair HTCondor is not managing.\n" );
+						m_retry_sensible = false;
+					}
+					return false;
+				}
+			}
+		}
+	}
+	m_could_be_ec2_job = false;
+
+	//
+	// Handle non-EC2 jobs.
+	//
+
 	MyString error_msg;
 
 	m_retry_sensible = false;

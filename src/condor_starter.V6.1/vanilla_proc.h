@@ -68,6 +68,8 @@ public:
 
 	virtual bool SupportsPIDNamespace() { return true;}
 
+	virtual std::string CgroupSuffix() { return "";}
+
 	bool finishShutdownFast();
 
 private:

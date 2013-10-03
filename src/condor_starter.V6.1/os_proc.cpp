@@ -397,11 +397,21 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		dprintf( D_ALWAYS, "Failed to set _CONDOR_MACHINE_AD environment variable\n");
 	}
 
+	if( Starter->jic->wroteChirpConfig() && (! job_env.SetEnv("_CONDOR_CHIRP_CONFIG", Starter->jic->chirpConfigFilename().c_str())) ) {
+		dprintf( D_ALWAYS, "Failed to set _CONDOR_CHIRP_CONFIG environment variable.\n");
+	}
+
 	path.formatstr("%s%c%s", Starter->GetWorkingDir(),
 			 	DIR_DELIM_CHAR,
 				JOB_AD_FILENAME);
 	if( ! job_env.SetEnv("_CONDOR_JOB_AD", path.Value()) ) {
 		dprintf( D_ALWAYS, "Failed to set _CONDOR_JOB_AD environment variable\n");
+	}
+
+	std::string remoteUpdate;
+	param(remoteUpdate, "CHIRP_DELAYED_UPDATE_PREFIX", "CHIRP");
+	if( ! job_env.SetEnv("_CHIRP_DELAYED_UPDATE_PREFIX", remoteUpdate) ) {
+		dprintf( D_ALWAYS, "Failed to set _CHIRP_DELAYED_UPDATE_PREFIX environment variable\n");
 	}
 
 		// Grab the full environment back out of the Env object 
@@ -460,7 +470,9 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 						// so just don't set a limit.
 						rlimit_as_hard_limit = 0;
 					}
-					dprintf(D_ALWAYS, "Setting job's virtual memory rlimit to %ld megabytes\n", rlimit_as_hard_limit);
+					if (rlimit_as_hard_limit > 0) {
+						dprintf(D_ALWAYS, "Setting job's virtual memory rlimit to %ld megabytes\n", rlimit_as_hard_limit);
+					}
 			} else {
 				dprintf(D_ALWAYS, "Can't evaluate STARTER_RLIMIT_AS expression %s\n", rlimit_expr);
 			}

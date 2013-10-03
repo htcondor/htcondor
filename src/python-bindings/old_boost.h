@@ -26,5 +26,5 @@ inline boost::python::object py_import(boost::python::str name)
 #define THROW_EX(exception, message) \
     { \
         PyErr_SetString(PyExc_ ##exception, message); \
-        throw_error_already_set(); \
+        boost::python::throw_error_already_set(); \
     }

@@ -85,6 +85,35 @@ error_cleanup:
 }
 
 void
+GetJobExecutable( const ClassAd *job_ad, std::string &executable )
+{
+	char *Spool = param( "SPOOL" );
+	if ( Spool ) {
+		int cluster = 0;
+		job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
+		char *ickpt = gen_ckpt_name( Spool, cluster, ICKPT, 0 );
+		free( Spool );
+		// TODO Should we just check existence?
+		if ( ickpt && access( ickpt, F_OK | X_OK ) >= 0 ) {
+			// we can access an executable in the spool dir
+			executable = ickpt;
+			free( ickpt );
+			return;
+		}
+		free( ickpt );
+	}
+	std::string cmd;
+	job_ad->LookupString( ATTR_JOB_CMD, cmd );
+	if ( cmd[0] == DIR_DELIM_CHAR ) {
+		executable = cmd;
+	} else {
+		job_ad->LookupString( ATTR_JOB_IWD, executable );
+		executable += DIR_DELIM_CHAR;
+		executable += cmd;
+	}
+}
+
+void
 SpooledJobFiles::getJobSpoolPath(int cluster,int proc,std::string &spool_path)
 {
 	char * spool = param("SPOOL");

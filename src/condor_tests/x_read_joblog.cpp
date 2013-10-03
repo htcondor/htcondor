@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/types.h>
 #ifdef WIN32
 #include "condor_header_features.h"
 #include "condor_sys_nt.h"

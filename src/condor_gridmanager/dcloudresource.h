@@ -67,8 +67,8 @@ public:
 	GahpClient * BatchGahp();
 
 private:
-	void DoPing(time_t & ping_delay, 
-				bool & ping_complete, 
+	void DoPing(unsigned & ping_delay,
+				bool & ping_complete,
 				bool & ping_succeeded  );
 	
 	char* m_username;

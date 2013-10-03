@@ -54,24 +54,24 @@ bool ClassAdAttributeIsPrivate( char const *name );
 		@param file The file handle to print to.
 		@return TRUE
 	*/
-int	fPrintAd(FILE *file, classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL);
+int	fPrintAd(FILE *file, const classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL);
 
 	/** Print the ClassAd as an old ClasAd with dprintf
 		@param level The dprintf level.
 	*/
-void dPrintAd( int level, classad::ClassAd &ad );
+void dPrintAd( int level, const classad::ClassAd &ad );
 
 	/** Format the ClassAd as an old ClassAd into the MyString.
 		@param output The MyString to write into
 		@return TRUE
 	*/
-int sPrintAd( MyString &output, classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL );
+int sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL );
 
 	/** Format the ClassAd as an old ClassAd into the std::string.
 		@param output The std::string to write into
 		@return TRUE
 	*/
-int sPrintAd( std::string &output, classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL );
+int sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private = false, StringList *attr_white_list = NULL );
 
 class ClassAd : public classad::ClassAd
 {
@@ -461,7 +461,7 @@ bool IsValidAttrName(const char *name);
  * @param An optional white-list of attributes to be printed.
  * @return TRUE as long as the file existed.
  */
-int fPrintAdAsXML(FILE *fp, classad::ClassAd &ad,
+int fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad,
 				  StringList *attr_white_list = NULL);
 
 /* Prints the classad as XML to a string. fPrintAdAsXML calls this.
@@ -471,9 +471,9 @@ int fPrintAdAsXML(FILE *fp, classad::ClassAd &ad,
  * @param An optional white-list of attributes to be printed.
  * @return TRUE
  */
-int sPrintAdAsXML(MyString &output, classad::ClassAd &ad,
+int sPrintAdAsXML(MyString &output, const classad::ClassAd &ad,
 				  StringList *attr_white_list = NULL);
-int sPrintAdAsXML(std::string &output, classad::ClassAd &ad,
+int sPrintAdAsXML(std::string &output, const classad::ClassAd &ad,
 				  StringList *attr_white_list = NULL);
 
 /** Given an attribute name, return a buffer containing the name

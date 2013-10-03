@@ -436,6 +436,7 @@
 #define ATTR_NOTIFY_USER  "NotifyUser"
 #define ATTR_NOTIFY_JOB_SCHEDULER  "NotifyJobScheduler"
 #define ATTR_NT_DOMAIN  "NTDomain"
+#define ATTR_TRANSFER_QUEUE_USER_EXPR "TransferQueueUserExpr"
 //extern const char ATTR_WINDOWS_VERSION [];
 #define ATTR_WINDOWS_MAJOR_VERSION  "WindowsMajorVersion"
 #define ATTR_WINDOWS_MINOR_VERSION  "WindowsMinorVersion"
@@ -671,6 +672,8 @@
 #define ATTR_WANT_CHECKPOINT  "WantCheckpoint"
 #define ATTR_WANT_CLAIMING  "WantClaiming"
 #define ATTR_WANT_IO_PROXY  "WantIOProxy"
+#define ATTR_WANT_REMOTE_UPDATES "WantRemoteUpdates"
+#define ATTR_WANT_DELAYED_UPDATES "WantDelayedUpdates"
 #define ATTR_WANT_MATCH_DIAGNOSTICS  "WantMatchDiagnostics"
 #define ATTR_WANT_PARALLEL_SCHEDULING_GROUPS  "WantParallelSchedulingGroups"
 #define ATTR_WANT_REMOTE_SYSCALLS  "WantRemoteSyscalls"

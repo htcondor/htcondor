@@ -45,7 +45,6 @@
 
 bool logGahpIo = true;
 unsigned long logGahpIoSize = 0;
-bool useXMLClassads = false;
 
 HashTable <HashKey, GahpServer *>
     GahpServer::GahpServersById( HASH_TABLE_SIZE,
@@ -64,8 +63,6 @@ void GahpReconfig()
 
 	logGahpIo = param_boolean( "GRIDMANAGER_GAHPCLIENT_DEBUG", true );
 	logGahpIoSize = param_integer( "GRIDMANAGER_GAHPCLIENT_DEBUG_SIZE", 0 );
-
-	useXMLClassads = param_boolean( "GAHP_USE_XML_CLASSADS", false );
 
 	tmp_int = param_integer( "GRIDMANAGER_MAX_PENDING_REQUESTS", 50 );
 
@@ -2787,14 +2784,8 @@ GahpClient::condor_job_submit(const char *schedd_name, ClassAd *job_ad,
 	if (!job_ad) {
 		ad_string=NULLSTRING;
 	} else {
-		if ( useXMLClassads ) {
-			classad::ClassAdXMLUnParser unparser;
-			unparser.SetCompactSpacing( true );
-			unparser.Unparse( ad_string, job_ad );
-		} else {
-			classad::ClassAdUnParser unparser;
-			unparser.Unparse( ad_string, job_ad );
-		}
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( ad_string, job_ad );
 	}
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
@@ -2872,14 +2863,8 @@ GahpClient::condor_job_update_constrained(const char *schedd_name,
 	if (!update_ad) {
 		ad_string=NULLSTRING;
 	} else {
-		if ( useXMLClassads ) {
-			classad::ClassAdXMLUnParser unparser;
-			unparser.SetCompactSpacing( true );
-			unparser.Unparse( ad_string, update_ad );
-		} else {
-			classad::ClassAdUnParser unparser;
-			unparser.Unparse( ad_string, update_ad );
-		}
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( ad_string, update_ad );
 	}
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
@@ -2998,20 +2983,11 @@ GahpClient::condor_job_status_constrained(const char *schedd_name,
 			ASSERT( *ads != NULL );
 			int idst = 0;
 			for ( int i = 0; i < *num_ads; i++,idst++ ) {
-				if ( useXMLClassads ) {
-					classad::ClassAdXMLParser parser;
-					(*ads)[idst] = new ClassAd;
-					if ( !parser.ParseClassAd( result->argv[4 + i], *(*ads)[idst] ) ) {
-						delete (*ads)[idst];
-						(*ads)[idst] = NULL;
-					}
-				} else {
-					classad::ClassAdParser parser;
-					(*ads)[idst] = new ClassAd;
-					if ( !parser.ParseClassAd( result->argv[4 + i], *(*ads)[idst] ) ) {
-						delete (*ads)[idst];
-						(*ads)[idst] = NULL;
-					}
+				classad::ClassAdParser parser;
+				(*ads)[idst] = new ClassAd;
+				if ( !parser.ParseClassAd( result->argv[4 + i], *(*ads)[idst] ) ) {
+					delete (*ads)[idst];
+					(*ads)[idst] = NULL;
 				}
 				if( (*ads)[idst] == NULL) {
 					dprintf(D_ALWAYS, "ERROR: Condor-C GAHP returned "
@@ -3123,14 +3099,8 @@ GahpClient::condor_job_update(const char *schedd_name, PROC_ID job_id,
 	if (!update_ad) {
 		ad_string=NULLSTRING;
 	} else {
-		if ( useXMLClassads ) {
-			classad::ClassAdXMLUnParser unparser;
-			unparser.SetCompactSpacing( true );
-			unparser.Unparse( ad_string, update_ad );
-		} else {
-			classad::ClassAdUnParser unparser;
-			unparser.Unparse( ad_string, update_ad );
-		}
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( ad_string, update_ad );
 	}
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
@@ -3339,14 +3309,8 @@ GahpClient::condor_job_stage_in(const char *schedd_name, ClassAd *job_ad)
 	if (!job_ad) {
 		ad_string=NULLSTRING;
 	} else {
-		if ( useXMLClassads ) {
-			classad::ClassAdXMLUnParser unparser;
-			unparser.SetCompactSpacing( true );
-			unparser.Unparse( ad_string, job_ad );
-		} else {
-			classad::ClassAdUnParser unparser;
-			unparser.Unparse( ad_string, job_ad );
-		}
+		classad::ClassAdUnParser unparser;
+		unparser.Unparse( ad_string, job_ad );
 	}
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );

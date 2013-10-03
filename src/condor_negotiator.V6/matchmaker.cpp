@@ -441,7 +441,6 @@ reinitialize ()
 {
 	char *tmp;
 	static bool first_time = true;
-	ExprTree *tmp_expr = 0;
 
     // (re)build the HGQ group tree from configuration
     // need to do this prior to initializing the accountant
@@ -493,12 +492,12 @@ reinitialize ()
 			EXCEPT ("Error parsing PREEMPTION_REQUIREMENTS expression: %s",
 					tmp);
 		}
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 		if(PreemptionReq){
-			tmp_expr = AddTargetRefs( PreemptionReq, TargetJobAttrs );
+			ExprTree *tmp_expr = AddTargetRefs( PreemptionReq, TargetJobAttrs );
 			delete PreemptionReq;
+			PreemptionReq = tmp_expr;
 		}
-		PreemptionReq = tmp_expr;
 #endif
 		dprintf (D_ALWAYS,"PREEMPTION_REQUIREMENTS = %s\n", tmp);
 		free( tmp );
@@ -562,7 +561,7 @@ reinitialize ()
 			EXCEPT ("Error parsing PREEMPTION_RANK expression: %s", tmp);
 		}
 	}
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 		if(PreemptionRank){
 			tmp_expr = AddTargetRefs( PreemptionRank, TargetJobAttrs );
 			delete PreemptionRank;
@@ -581,7 +580,7 @@ reinitialize ()
 		if( ParseClassAdRvalExpr(tmp, NegotiatorPreJobRank) ) {
 			EXCEPT ("Error parsing NEGOTIATOR_PRE_JOB_RANK expression: %s", tmp);
 		}
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 		if(NegotiatorPreJobRank){
 			tmp_expr = AddTargetRefs( NegotiatorPreJobRank, TargetJobAttrs );
 			delete NegotiatorPreJobRank;
@@ -601,7 +600,7 @@ reinitialize ()
 		if( ParseClassAdRvalExpr(tmp, NegotiatorPostJobRank) ) {
 			EXCEPT ("Error parsing NEGOTIATOR_POST_JOB_RANK expression: %s", tmp);
 		}
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 		if(NegotiatorPostJobRank){
 			tmp_expr = AddTargetRefs( NegotiatorPostJobRank, TargetJobAttrs );
 			delete NegotiatorPostJobRank;
@@ -1916,7 +1915,7 @@ void Matchmaker::hgq_assign_quotas(GroupEntry* group, double quota) {
 
         if (child->static_quota && (q < child->config_quota)) {
             dprintf(D_ALWAYS, "group quotas: WARNING: static quota for group %s rescaled from %g to %g\n", child->name.c_str(), child->config_quota, q);
-        } else if (Zd > 1) {
+        } else if (Zd - 1 > 0.0001) {
             dprintf(D_ALWAYS, "group quotas: WARNING: dynamic quota for group %s rescaled from %g to %g\n", child->name.c_str(), child->config_quota, child->config_quota / Zd);
         }
 
@@ -2997,7 +2996,7 @@ obtainAdsFromCollector (
 				continue;
 			}
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 			ad->AddTargetRefs( TargetJobAttrs );
 #endif
 
@@ -3613,7 +3612,7 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 			resource_request_offers+1,resource_request_count);
         negotiation_cycle_stats[0]->num_jobs_considered += 1;
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 		request.AddTargetRefs( TargetMachineAttrs );
 #endif
 
@@ -4559,7 +4558,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		const char *savedReqStr = ExprTreeToString(savedRequirements);
 		offer->AssignExpr( ATTR_REQUIREMENTS, savedReqStr );
 		dprintf( D_ALWAYS, "Inserting %s = %s into the ad\n",
-				 ATTR_REQUIREMENTS, savedReqStr );
+				ATTR_REQUIREMENTS, savedReqStr ? savedReqStr : "" );
 	}	
 
 		// Stash the Concurrency Limits in the offer, they are part of

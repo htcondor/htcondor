@@ -1,0 +1,7 @@
+[
+foo = "bar";
+baz = undefined;
+] [bar = 1; ]
+
+/* this is a comment */
+

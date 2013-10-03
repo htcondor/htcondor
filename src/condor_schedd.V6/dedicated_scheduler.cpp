@@ -2315,7 +2315,7 @@ DedicatedScheduler::computeSchedule( void )
 			int nodes;
 			int proc;
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 			ExprTree *tmp_expr;
 			tmp_expr = AddTargetRefs( preemption_req, TargetJobAttrs );
 			delete preemption_req;

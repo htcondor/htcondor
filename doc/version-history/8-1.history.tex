@@ -12,6 +12,103 @@ This is the development release series of HTCondor.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-1-2}Version 8.1.2}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.1.2 not yet released.
+%\item HTCondor version 8.1.2 released on Month Date, 2013.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item When terminating a job on a non-Amazon service,
+check (at the next polling interval) if the job has terminated,
+and if not, retry.  This means that HTCondor will not lose track of jobs
+on services with unreliable termination.
+\Ticket{3438}
+
+\item Email alerts about file transfers taking longer than
+\Macro{MAX\_TRANSFER\_QUEUE\_AGE} are now grouped together
+to reduce the number of email messages that are sent.
+
+\item Floating point values in Old ClassAds are now printed in a more
+human-readable format, while retaining 64-bit double precision.
+In previous versions, these values were always printed in scientific
+notation.
+\Ticket{3928}
+
+\item \Condor{ssh\_to\_job} now works with grid universe jobs
+which use EC2 resources.
+\Ticket{1548}
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item If a standard universe job exited without producing any
+checkpoints and no checkpoint server was used, 
+two spurious error messages would be logged to the \File{SchedLog},
+as it tried to remove the old checkpoint images from the
+non-existent checkpoint server.  
+These error messages are no longer logged.
+\Ticket{3919}
+
+\item When configuration variable \Macro{STARTER\_RLIMIT\_AS} is set 
+to its default value of 0, it means that there is no limit.  
+This value was logged as a limit of 0Mb, leading to confusion.
+Now, no message is logged in this default case.
+\Ticket{3914}
+
+\item Improved how the \Condor{schedd} notifies the \Condor{shadow}
+and \Condor{gridmanager} about modifications to job ClassAds made using
+\Condor{qedit}.
+\Ticket{3909}
+
+\item Grid universe jobs now use the correct executable file when
+\SubmitCmd{copy\_to\_spool} is set to \Expr{True}.
+Previously, the executable file named in the submit description file 
+would be copied to the remote server, 
+rather than the copy of the executable file stored in the spool directory.
+\Ticket{3589}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-1-1}Version 8.1.1}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

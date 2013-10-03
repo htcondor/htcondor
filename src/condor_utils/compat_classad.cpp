@@ -78,18 +78,8 @@ Reconfig()
 	}
 }
 
-// TSTCLAIR: this really needs to be killed off now.
-// static classad::AttributeReference *the_my_ref = NULL;
-static bool the_my_ref_in_use = false;
 void getTheMyRef( classad::ClassAd *ad )
 {
-	ASSERT( !the_my_ref_in_use );
-	the_my_ref_in_use = true;
-
-	//if( !the_my_ref ) {
-	//	the_my_ref = classad::AttributeReference::MakeAttributeReference( NULL, "self" );
-	//}
-
 	if ( !ClassAd::m_strictEvaluation ) {
 		ExprTree * pExpr=classad::AttributeReference::MakeAttributeReference( NULL, "self" );
 		ad->Insert( "my", pExpr );
@@ -98,14 +88,10 @@ void getTheMyRef( classad::ClassAd *ad )
 
 void releaseTheMyRef( classad::ClassAd *ad )
 {
-	ASSERT( the_my_ref_in_use );
-
 	if ( !ClassAd::m_strictEvaluation ) {
-		ad->Delete("my"); //Remove( "my" ); 
+		ad->Delete("my");
 		ad->MarkAttributeClean( "my" );
 	}
-
-	the_my_ref_in_use = false;
 }
 
 static classad::MatchClassAd *the_match_ad = NULL;
@@ -1562,7 +1548,7 @@ initFromString( char const *str,MyString *err_msg )
 
 		// output functions
 int
-fPrintAd( FILE *file, classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
+fPrintAd( FILE *file, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
 {
 	MyString buffer;
 
@@ -1573,7 +1559,7 @@ fPrintAd( FILE *file, classad::ClassAd &ad, bool exclude_private, StringList *at
 }
 
 void
-dPrintAd( int level, classad::ClassAd &ad )
+dPrintAd( int level, const classad::ClassAd &ad )
 {
 	MyString buffer;
 
@@ -1583,15 +1569,15 @@ dPrintAd( int level, classad::ClassAd &ad )
 }
 
 int
-sPrintAd( MyString &output, classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
+sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
 {
-	classad::ClassAd::iterator itr;
+	classad::ClassAd::const_iterator itr;
 
 	classad::ClassAdUnParser unp;
 	unp.SetOldClassAd( true, true );
 	string value;
 
-	classad::ClassAd *parent = ad.GetChainedParentAd();
+	const classad::ClassAd *parent = ad.GetChainedParentAd();
 
 	if ( parent ) {
 		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
@@ -1625,7 +1611,7 @@ sPrintAd( MyString &output, classad::ClassAd &ad, bool exclude_private, StringLi
 }
 
 int
-sPrintAd( std::string &output, classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
+sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_white_list )
 {
 	MyString myout;
 	int rc = sPrintAd( myout, ad, exclude_private, attr_white_list );
@@ -1980,7 +1966,7 @@ CopyAttribute( char const *target_attr, char const *source_attr,
 //////////////XML functions///////////
 
 int
-fPrintAdAsXML(FILE *fp, classad::ClassAd &ad, StringList *attr_white_list)
+fPrintAdAsXML(FILE *fp, const classad::ClassAd &ad, StringList *attr_white_list)
 {
     if(!fp)
     {
@@ -1994,7 +1980,7 @@ fPrintAdAsXML(FILE *fp, classad::ClassAd &ad, StringList *attr_white_list)
 }
 
 int
-sPrintAdAsXML(MyString &output, classad::ClassAd &ad, StringList *attr_white_list)
+sPrintAdAsXML(MyString &output, const classad::ClassAd &ad, StringList *attr_white_list)
 {
 	std::string std_output;
 	int rc = sPrintAdAsXML(std_output, ad, attr_white_list);
@@ -2003,7 +1989,7 @@ sPrintAdAsXML(MyString &output, classad::ClassAd &ad, StringList *attr_white_lis
 }
 
 int
-sPrintAdAsXML(std::string &output, classad::ClassAd &ad, StringList *attr_white_list)
+sPrintAdAsXML(std::string &output, const classad::ClassAd &ad, StringList *attr_white_list)
 {
 	classad::ClassAdXMLUnParser unparser;
 	std::string xml;

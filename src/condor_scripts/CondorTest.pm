@@ -36,6 +36,9 @@ use Condor;
 use CondorUtils;
 use CondorPersonal;
 
+use base 'Exporter';
+
+our @EXPORT = qw(runCondorTool runToolNTimes RegisterResult is_windows);
 my %securityoptions =
 (
 "NEVER" => "1",
@@ -53,6 +56,7 @@ my $debuglevel = 2;
 
 my $MAX_CHECKPOINTS = 2;
 my $MAX_VACATES = 3;
+my $MAX_CORES = 10;
 
 my @skipped_output_lines;
 my @expected_output;
@@ -81,7 +85,7 @@ if(!(-d $coredir)) {
 # set up for reading in core/ERROR exemptions
 my $errexempts = "ErrorExemptions";
 my %exemptions;
-my $failed_coreERROR = 0;
+my $failed_coreERROR = "";
 
 my %personal_condors = ();
 my $CondorTestPid = $$;
@@ -105,6 +109,7 @@ BEGIN
 
     $MAX_CHECKPOINTS = 2;
     $MAX_VACATES = 3;
+	$MAX_CORES = 2;
     $checkpoints = 0;
 	$hoststring = "notset:000";
     $vacates = 0;
@@ -151,10 +156,15 @@ sub Cleanup()
     $CleanedUp = 1;
 
     KillAllPersonalCondors();
-    if($failed_coreERROR != 0) {
+    if($failed_coreERROR ne "") {
 
 	print "\nTest being marked as FAILED from discovery of core file or ERROR in logs\n";
+	print "Results indicate: $failed_coreERROR\n";
 	print "Time, Log, message are stored in condor_tests/Cores/core_error_trace\n\n";
+	print "************************************\n";
+	system("head -15 Cores/core_error_trace");
+	print "************************************\n";
+	print "\n\n";
 	return 0;
     }
     return 1;
@@ -173,9 +183,9 @@ sub EndTest
     if( Cleanup() == 0 ) {
 	$exit_status = 1;
     }
-    if($failed_coreERROR != 0) {
+    if($failed_coreERROR ne "") {
 	$exit_status = 1;
-	$extra_notes = "$extra_notes\n  found cores or ERROR in logs";
+	$extra_notes = "$extra_notes\n  Log Directory Check results: $failed_coreERROR\n";
     }
 
     if( $test_failure_count > 0 ) {
@@ -206,6 +216,7 @@ sub RegisterResult
     my $checkname = GetCheckName($caller_file,%args);
 
     my $testname = $args{test_name} || GetDefaultTestName();
+	print "RegisterResult: test name is <$testname>\n";
 
     my $result_str = $result == 1 ? "PASSED" : "FAILED";
     debug( "\n$result_str check $checkname in test $testname\n\n", 1 );
@@ -683,6 +694,7 @@ sub DoTest
 	my $monitorret = 0;
 	my $retval = 0;
 
+	$failed_coreERROR = "";
 	if( !(defined $wants_checkpoint)) {
 		die "DoTest must get at least 3 args!!!!!\n";
 	}
@@ -912,12 +924,17 @@ sub DoTest
 	} else {
 		# ok we think we want to pass it but how did core and ERROR
 		# checking go
-		if($failed_coreERROR == 0) {
+		if($failed_coreERROR eq "") {
     		return $retval;
 		} else {
 			# oops found a problem fail test
 			print "\nTest being marked as FAILED from discovery of core file or ERROR in logs\n";
-			print "Time, Log, message are stored in condor_tests/Cores/core_error_trace\n\n";
+			print "Results indicate: $failed_coreERROR\n";
+			print "Time, Log, message are stored in condor_tests/Cores/core_error_trace Sample follows:\n\n";
+			print "************************************\n";
+			system("head -15 Cores/core_error_trace");
+			print "************************************\n";
+			print "\n\n";
     		return 0;
 		}
 	}
@@ -1462,27 +1479,48 @@ sub runCondorTool
 	my $arrayref = shift;
 	# use unused third arg to skip the noise like the time
 	my $quiet = shift;
-	my $options = shift;
+	my $options = shift; #hash ref
 	my $count = 0;
+	my %altoptions = ();
+	my $failconcerns = 1;
+
+	if(exists ${$options}{expect_result}) {
+		$failconcerns = 0;
+	}
+
+	# provide an expect_result=>ANY as a hash reference options
+	$altoptions{expect_result} = \&ANY;
+	if(defined $options) {
+		#simply use altoptions
+		${$options}{expect_result} = \&ANY;
+	} else {
+		$options = \%altoptions;
+	}
+	#Condor::DebugLevel(4);
 
 	# clean array before filling
 
-	my $attempts = 6;
+	my $attempts = 15;
 	$count = 0;
 	my $hashref;
 	while( $count < $attempts) {
+		#print "runCondorTool: Attempt: <$count>\n";
+
+		# Add a message to runcmd output
+		${$options}{emit_string} = "runCondorTool: Attempt: <$count>";
 		@{$arrayref} = (); #empty return array...
 		my @tmparray;
 		debug( "Try command <$cmd>\n",4);
 		#open(PULL, "_condor_TOOL_TIMEOUT_MULTIPLIER=4 $cmd 2>$catch |");
 
-		$hashref = runcmd("_condor_TOOL_TIMEOUT_MULTIPLIER=4 $cmd", $options);
+		$hashref = runcmd("_condor_TOOL_TIMEOUT_MULTIPLIER=10 $cmd", $options);
 		my @output =  @{${$hashref}{"stdout"}};
 		my @error =  @{${$hashref}{"stderr"}};
 
 		$status = ${$hashref}{"exitcode"};
+		#print "runCondorTool: Status was <$status>\n";
 		debug("Status is $status after command\n",4);
-		if( $status != 0 ) {
+		if(( $status != 0 ) && ($failconcerns == 1)){
 				#print "************* std out ***************\n";
 				#print "************* std err ***************\n";
 				print "************* GetQueue() ***************\n";
@@ -1513,17 +1551,59 @@ sub runCondorTool
 			my $current_time = time;
 			$delta_time = $current_time - $start_time;
 			debug("runCondorTool: its been $delta_time since call\n",4);
+			#Condor::DebugLevel(2);
 			return(1);
 		}
 		$count = $count + 1;
 		debug("runCondorTool: iteration<$count> failed sleep 10 * $count \n",1);
+		my $delaynow = 10*$count;
+		if(!defined $quiet) {
+			print "runCondorTool: this delay <$delaynow>\n";
+		}
 		sleep((10*$count));
 	}
 	debug( "runCondorTool: $cmd failed!\n",1);
+	#Condor::DebugLevel(2);
 
 	return(0);
 }
 
+sub runToolNTimes
+{
+	my $cmd = shift;
+    my $goal = shift;
+    my $wantoutput = shift;
+
+    my $count = 0;
+    my $stop = 0;
+    my @cmdout = ();
+    my @date = ();
+	my @outarrray;
+	my $cmdstatus = 0;
+    $stop = $goal;
+
+    while($count < $stop) {
+        @cmdout = ();
+		@outarrray = ();
+        @date = ();
+        @date = `date`;
+        chomp $date[0];
+        #print "$date[0] $cmd $count\n";
+        #@cmdout = `$cmd`;
+		$cmdstatus = runCondorTool($cmd, \@outarrray, 2);
+		if(!$cmdstatus) {
+			print "runCondorTool<$cmd> attempt<$count> SHOULD NOT fail!\n";
+		}
+
+        if(defined $wantoutput) {
+            foreach my $line (@outarrray) {
+                print "$line\n";
+            }
+        }
+        $count += 1;
+    }
+	return($cmdstatus);
+}
 
 # Lets be able to drop some extra information if runCondorTool
 # can not do what it is supposed to do....... short and full
@@ -1871,8 +1951,10 @@ sub SearchCondorLogMultiple
        		if( $_ =~ /$regexp/) {
            		CondorTest::debug("FOUND IT! $_\n",2);
 				$currentcount += 1;
+				print "FOUND IT! $_";
        		} else {
            		CondorTest::debug(".",2);
+				print "Skipping: $_";
 			}
    		}
 		close(LOG);
@@ -2107,7 +2189,7 @@ sub PersonalCondorTest
 			$locconfig = shift @local;
 			my $locport = shift @local;
 			
-			debug("---local config is $locconfig and local port is $locport---\n",2);
+			debug("---local config is $locconfig and local port is $locport---\n",3);
 
 			#$ENV{CONDOR_CONFIG} = $locconfig;
 		}
@@ -2147,7 +2229,7 @@ sub debug {
     my $string = shift;
     my $level = shift;
 	#my ($package, $filename, $line) = caller();
-    Condor::debug("<CondorTest> $string", $level);
+    Condor::debug("CondorTest: $string", $level);
 }
 
 
@@ -2252,10 +2334,12 @@ sub StartPersonal {
     debug("Starting Perosnal($$) for $testname/$paramfile/$version\n",2);
 
     my $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    print "$time: About to start a personal Condor in CondorTest::StartPersonal\n";
+    #print "$time: About to start a personal Condor in CondorTest::StartPersonal\n";
+	#print "Param file is <$paramfile> which contains:\n";
+	#system("cat $paramfile");
     my $condor_info = CondorPersonal::StartCondor( $testname, $paramfile ,$version);
     $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    print "$time: Finished starting personal Condor in CondorTest::StartPersonal\n";
+    #print "$time: Finished starting personal Condor in CondorTest::StartPersonal\n";
 
     my @condor_info = split /\+/, $condor_info;
     my $condor_config = shift @condor_info;
@@ -2263,10 +2347,10 @@ sub StartPersonal {
     my $collector_addr = CondorPersonal::FindCollectorAddress();
 
     $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    print "$time: Calling PersonalCondorInstance in CondorTest::StartPersonal\n";
+    #print "$time: Calling PersonalCondorInstance in CondorTest::StartPersonal\n";
     $personal_condors{$version} = new PersonalCondorInstance( $version, $condor_config, $collector_addr, 1 );
     $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
-    print "$time: Finished calling PersonalCondorInstance in CondorTest::StartPersonal\n";
+    #print "$time: Finished calling PersonalCondorInstance in CondorTest::StartPersonal\n";
 
     return($condor_info);
 }
@@ -2388,6 +2472,7 @@ sub CoreCheck {
 
 	debug("Checking <$logdir> for test <$test>\n",2);
 	my @files = `ls $logdir`;
+	my $totalerrors = 0;
 	foreach my $perp (@files) {
 		CondorUtils::fullchomp($perp);
 		$fullpath = $logdir . "/" . $perp;
@@ -2400,6 +2485,7 @@ sub CoreCheck {
 				# belong to the current test. Even if the test has ended
 				# assign blame and move file so we can investigate.
 				my $newname = MoveCoreFile($fullpath,$coredir);
+				FindStackDump($logdir);
 				print "\nFound core <$fullpath>\n";
 				AddFileTrace($fullpath,$filechange,$newname);
 				$count += 1;
@@ -2408,7 +2494,7 @@ sub CoreCheck {
 				if($fullpath =~ /^(.*)\.lock$/) { next; }
 				debug("Checking <$fullpath> for test <$test> for ERROR\n",2);
 				$scancount = ScanForERROR($fullpath,$test,$tstart,$tend);
-				$count += $scancount;
+				$totalerrors += $scancount;
 				debug("After ScanForERROR error count <$scancount>\n",2);
 			}
 		} else {
@@ -2416,7 +2502,101 @@ sub CoreCheck {
 		}
 	}
 	
-	return($count);
+	my $retmsg = ""; 
+	if(($count > 0) || ($totalerrors > 0)) {
+		$retmsg = "Found $count Core Files and $scancount ERROR statements";
+	} else {
+		$retmsg = "";
+	}
+	#print "CoreCheck returning <$retmsg>\n";
+	return($retmsg);
+}
+
+sub FindStackDump 
+{
+ 	my $logdir = shift;
+	my @files = `ls $logdir/*Log*`;
+	my $droplines = 0;
+	my $line;
+	my @dumpstore = ();
+	my $leave = 0;
+	my $done = 0;
+	my $size = 0;
+
+	foreach my $perp (@files) {
+		$droplines = 0;
+		$done = 0;
+		$size = 0;
+		chomp($perp);
+		#print "Looking in $perp for a stack dump\n";
+		$droplines = 0;
+		open(PERP,"<$perp") or die "Can not open $perp:$!\n";
+		while(<PERP>) {
+			if($done == 0) {
+				#print "looking at $_";
+				chomp($_);
+				$line = $_;
+				if($line =~ /^.*?Stack dump.*$/) {
+					$droplines = 1;
+					print "Stack dump from $perp follows:\n";
+				}
+				#does it start with a date?
+				if($line =~ /^\d+\/\d+\/\d+.*$/) {
+					if($droplines == 1) {
+						if($size > 0) {
+							$droplines = 0;
+						}
+						#print "Time stamp signaling CPlusPlusfilt\n";
+						CPlusPlusfilt(\@dumpstore);
+						$done = 1; # one dump per file is fine.
+						#last;
+					}
+				}
+				if($droplines == 1) {
+					print "$line\n";
+					push @dumpstore, $line;
+					$size = @dumpstore;
+					#$print "dumpstore size now $size\n";
+					#print "added $line to dumpstore array\n";
+				}
+			}
+		}
+		#print "Done looking at $perp\n";
+	}
+}
+
+sub CPlusPlusfilt
+{
+	my $dumpref = shift;
+	my $tempfile = "encodeddump" . "$$";
+	my $delement = pop @{$dumpref};
+
+	print "------------------------------------------\n";
+	open(TF,">$tempfile") or die "Could not create temp file $tempfile:$!\n";
+
+	# preserve ordering by taking last pushes to array first
+	while(defined $delement) {
+		print TF "$delement\n"; 
+		#print "delement: $delement\n";
+		$delement = shift @{$dumpref};
+	}
+	close(TF);
+	# am I windows? don't look to see if you have c++filt. Otherwise try before
+	# you do system call
+	if(is_windows()) {
+		# will not use c++cfilt to demangle
+	} else {
+		my $filtprog = Which("c++filt");
+		if($filtprog =~ /c\+\+filt/) {
+			system("cat $tempfile | c++filt");
+		} else {
+			print "Can not demangle. No c++filt program\n";
+		}
+	}
+	
+	# clean up
+	system("rm -f $tempfile");
+	print "------------------------------------------\n";
 }
 
 sub ScanForERROR
@@ -2427,7 +2607,7 @@ sub ScanForERROR
 	my $tend = shift;
 	my $count = 0;
 	my $ignore = 1;
-	open(MDL,"<$daemonlog") or die "Can not open daemon log<$daemonlog>:$!\n";
+	open(MDL,"<$daemonlog") or die "Can not open daemon log: $daemonlog:$!\n";
 	my $line = "";
 	while(<MDL>) {
 		CondorUtils::fullchomp();
@@ -2435,22 +2615,24 @@ sub ScanForERROR
 		# ERROR preceeded by white space and trailed by white space, :, ; or -
 		if($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+ERROR[\s;:\-!].*$/){
 			debug("$line TStamp $1\n",2);
+			print "$line TStamp $1\n";
 			$ignore = IgnoreError($testname,$1,$line,$tstart,$tend);
 			if($ignore == 0) {
 				$count += 1;
-				print "\nFound ERROR <$line>\n";
+				print "\nFound ERROR:<$line\n";
 				AddFileTrace($daemonlog, $1, $line);
 			}
 		} elsif($line =~ /^\s*(\d+\/\d+\s+\d+:\d+:\d+)\s+.*\s+ERROR[\s;:\-!].*$/){
 			debug("$line TStamp $1\n",2);
+			print "$line TStamp $1\n";
 			$ignore = IgnoreError($testname,$1,$line,$tstart,$tend);
 			if($ignore == 0) {
 				$count += 1;
-				print "\nFound ERROR <$line>\n";
+				print "\nFound ERROR: $line\n";
 				AddFileTrace($daemonlog, $1, $line);
 			}
 		} elsif($line =~ /^.*ERROR.*$/){
-			debug("Skipping this error<<$line>> \n",2);
+			debug("Skipping this error: $line\n",2);
 		}
 	}
 	close(MDL);
@@ -2513,6 +2695,53 @@ sub AddFileTrace
 	close TF;
 
 	debug("\nFile Trace - $buildentry",2);
+	ForceCoreLimit();
+}
+
+sub ForceCoreLimit
+{
+	my $cwd = getcwd(); # where was I
+	my $count = 0;
+	chdir("$coredir");
+	
+	opendir DS, "." or die "Can not open dataset<$1>\n";
+	foreach my $subfile (readdir DS)
+	{
+		next if $subfile =~ /^\.\.?$/;
+		if(-f $subfile) {
+			if($subfile =~ /^core\.\d+_\d+.*$/) {
+				#print "Found core: $subfile\n";
+				$count += 1;
+			} else {
+				#print "File: $subfile, did not match expected pattern\n";
+			}
+
+		}
+	}
+	close(DS);
+	if($count > $MAX_CORES) {
+		#print "need to trim from $count core files to $MAX_CORES\n";
+		opendir DS, "." or die "Can not open dataset<$1>\n";
+		foreach my $subfile (readdir DS)
+		{
+			next if $subfile =~ /^\.\.?$/;
+			if(-f $subfile) {
+				if($subfile =~ /^core\.\d+_(\d+).*$/) {
+					if($1 >= $MAX_CORES) {
+						system("rm -f $subfile");
+					}
+				} else {
+				}
+	
+			}
+		}
+	close(DS);
+
+	} else {
+		# go home
+	}
+
+	chdir("$cwd");
 }
 
 sub MoveCoreFile
@@ -2591,6 +2820,7 @@ sub IgnoreError
 	# no no.... must acquire array for test and check all substrings
 	# against current large string.... see DropExemptions below
 	debug("IgnoreError called for test <$testname> and string <$errorstring>\n",2);
+	print "IgnoreError called for test <$testname> and string <$errorstring>\n";
 	# get list of per/test specs
 	if( exists $exemptions{$testname}) {
 		my @testarray = @{$exemptions{$testname}};
@@ -2709,6 +2939,13 @@ sub IsThisNightly
 	} else {
 		return(0);
 	}
+}
+
+sub is_windows {
+	if( $ENV{NMI_PLATFORM} =~ /_win/i ) {
+		return 1;
+	}
+	return 0;
 }
 
 # Given a filename and the contents, writes the file to that name.

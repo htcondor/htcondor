@@ -46,9 +46,6 @@
 int contact_schedd_interval = 20;
 
 
-// Do we use XML-formatted classads when talking to our invoker
-bool useXMLClassads = false;
-
 // What is the subject name of our jobs' GSI proxies? This is taken from
 // INITIALIZE_FROM_FILE and is added to GSI_DAEMON_NAME
 char *proxySubjectName = NULL;
@@ -1075,14 +1072,8 @@ submit_report_result:
 			adlist.Rewind();
 			while( (next_ad=adlist.Next()) ) {
 				std::string * da_buffer = new std::string();	// Use a ptr to avoid excessive copying
-				if ( useXMLClassads ) {
-					classad::ClassAdXMLUnParser unparser;
-					unparser.SetCompactSpacing( true );
-					unparser.Unparse( *da_buffer, next_ad );
-				} else {
-					classad::ClassAdUnParser unparser;
-					unparser.Unparse( *da_buffer, next_ad );
-				}
+				classad::ClassAdUnParser unparser;
+				unparser.Unparse( *da_buffer, next_ad );
 				matching_ads.Append (da_buffer);
 			}
 			if ( errno == ETIMEDOUT ) {
@@ -1528,20 +1519,11 @@ get_job_id (const char * s, int * cluster_id, int * proc_id) {
 // String (XML) -> classad
 int
 get_class_ad (const char * s, ClassAd ** class_ad) {
-	if ( useXMLClassads ) {
-		classad::ClassAdXMLParser parser;
-		*class_ad = new ClassAd;
-		if ( !parser.ParseClassAd( s, **class_ad ) ) {
-			delete *class_ad;
-			*class_ad = NULL;
-		}
-	} else {
-		classad::ClassAdParser parser;
-		*class_ad = new ClassAd;
-		if ( !parser.ParseClassAd( s, **class_ad ) ) {
-			delete *class_ad;
-			*class_ad = NULL;
-		}
+	classad::ClassAdParser parser;
+	*class_ad = new ClassAd;
+	if ( !parser.ParseClassAd( s, **class_ad ) ) {
+		delete *class_ad;
+		*class_ad = NULL;
 	}
 	if ( *class_ad ) {
 		return TRUE;

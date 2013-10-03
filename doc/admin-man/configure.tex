@@ -2220,7 +2220,7 @@ which use DaemonCore).
     STRING = This is a string 
     NUMBER = 666
     BOOL1 = True
-    BOOL2 = CurrentTime >= $(NUMBER) || $(BOOL1)
+    BOOL2 = time() >= $(NUMBER) || $(BOOL1)
     MY_STRING = "$(STRING)"
     STARTD_ATTRS = MY_STRING, NUMBER, BOOL1, BOOL2
   \end{verbatim}
@@ -5873,7 +5873,7 @@ SYSTEM_PERIODIC_HOLD = \
 \footnotesize
 \begin{verbatim}
 SYSTEM_PERIODIC_RELEASE = \
-  (JobRunCount < 20 && (CurrentTime - EnteredCurrentStatus) > 1200 ) &&  \
+  (JobRunCount < 20 && (time() - EnteredCurrentStatus) > 1200 ) &&  \
     (HoldReasonCode == 6 && HoldReasonSubCode == 110) 
 \end{verbatim} 
 \normalsize
@@ -5893,7 +5893,7 @@ SYSTEM_PERIODIC_RELEASE = \
 \footnotesize
 \begin{verbatim}
 SYSTEM_PERIODIC_REMOVE = \
-  (JobStatus == 5 && CurrentTime - EnteredCurrentStatus > 3600*24*30)
+  (JobStatus == 5 && time() - EnteredCurrentStatus > 3600*24*30)
 \end{verbatim}
 \normalsize
 
@@ -6165,6 +6165,13 @@ SYSTEM_PERIODIC_REMOVE = \
   to be updated. 
   If this variable is not defined for a particular \Expr{<Name>},
   then the default value will be \Expr{60*60*24*7}, which is one week's time.
+
+\label{param:SignificantAttributes}
+\item[\Macro{SIGNIFICANT\_ATTRIBUTES}]
+  A comma and/or space separated list of job ClassAd attributes that
+  are to be added to the list of attributes for determining
+  the sets of jobs considered as a unit (an auto cluster) in negotiation,
+  when auto clustering is enabled.
 
 \end{description}
 
@@ -9319,11 +9326,17 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManDefaultNodeLog}
 \item[\Macro{DAGMAN\_DEFAULT\_NODE\_LOG}]
-  The name of a file to be used as a job event log by any node jobs that
-  do not define their own log files.
+  The name of a file to be used as a job event log by all node jobs
+  of a DAG (by default, see \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG}
+  below).  Note
+  that even if \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is set to
+  false, the default log file will be used by any node jobs for which
+  a log file is not defined in the job's submit file.
   The default value if not defined is \File{<DagFile>.nodes.log},
   where \verb@<DagFile>@ is replaced by the command line argument
-  to \Condor{submit\_dag} that specifies the DAG input file.
+  to \Condor{submit\_dag} that specifies the DAG input file.  (If
+  more than one DAG file is specified, the name of the first is
+  used to name the default log file.)
 
 \label{param:DAGManGenerateSubDagSubmits}
 \item[\Macro{DAGMAN\_GENERATE\_SUBDAG\_SUBMITS}]
@@ -9426,14 +9439,16 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGmanAlwaysUseNodeLog}
 \item[\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG}]
-  A boolean value defining whether \Condor{dagman} watches for events in its
-  default node log.
-  The default log is defined by the value of \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}.
+  A boolean value defining whether \Condor{dagman} reads events from
+  its default node log file (defined by
+  \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}), instead of from the log file(s)
+  defined in the node job submit files.
+  If \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is \Expr{True},
+  \Condor{dagman} will read events only from the default log
+  file.  Also, in that case, POST script terminated events will
+  be written only to the default log file, and not to the
+  log file(s) defined in the node job submit files.
   The default value is \Expr{True}.
-  If \Expr{True},
-  then \Condor{dagman} writes POST script terminate events to the default log,
-  and not to the job event log specified in the submit description file.
-  \Condor{dagman} will also only read events from the default log file.
   This variable must be \Expr{False} if \Condor{dagman} from Condor
   version 7.9.0 or later is submitting jobs to a \Condor{schedd} daemon
   or using a \Condor{submit} executable that is older than Condor version 7.9.0.

@@ -22,7 +22,7 @@
 #include "JobRouterHookMgr.h"
 #include "status_string.h"
 #include "JobRouter.h"
-#include "set_user_from_ad.h"
+#include "set_user_priv_from_ad.h"
 #include "Scheduler.h"
 #include "submit_job.h"
 
@@ -220,7 +220,7 @@ JobRouterHookMgr::hookTranslateJob(RoutedJob* r_job, std::string &route_info)
 		return -1;
 	}
 
-	set_user_from_ad(r_job->src_ad);
+	set_user_priv_from_ad(r_job->src_ad);
 	if (0 == spawn(translate_client, NULL, &hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
@@ -284,7 +284,7 @@ JobRouterHookMgr::hookUpdateJobInfo(RoutedJob* r_job)
 		return -1;
 	}
 
-	set_user_from_ad(r_job->src_ad);
+	set_user_priv_from_ad(r_job->src_ad);
 	if (0 == spawn(status_client, NULL, &hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
@@ -352,7 +352,7 @@ JobRouterHookMgr::hookJobExit(RoutedJob* r_job)
 		return -1;
 	}
 
-	set_user_from_ad(r_job->src_ad);
+	set_user_priv_from_ad(r_job->src_ad);
 	if (0 == spawn(exit_client, NULL, &hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,
@@ -421,7 +421,7 @@ JobRouterHookMgr::hookJobCleanup(RoutedJob* r_job)
 		return -1;
 	}
 
-	set_user_from_ad(r_job->src_ad);
+	set_user_priv_from_ad(r_job->src_ad);
 	if (0 == spawn(cleanup_client, NULL, &hook_stdin, PRIV_USER_FINAL))
 	{
 		dprintf(D_ALWAYS|D_FAILURE,

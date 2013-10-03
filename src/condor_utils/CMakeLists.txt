@@ -20,7 +20,7 @@
 ##################################################
 # utils library
 file( GLOB RmvSrcs y.tab* lex.yy* ckpt_server_api_stubs* libcondorapi_stubs* 
-soap_helpers* test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_hash.cpp )
+soap_helpers* test_* *.t.cpp *test.cpp cat_url.cpp *Test* param_info_hash.cpp param_info_init.c )
 
 condor_glob( HeaderFiles SourceFiles "${RmvSrcs}" )
 

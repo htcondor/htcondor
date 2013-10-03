@@ -243,7 +243,7 @@ VMRegister::requestHostClassAds(void)
 	adList.Rewind();
 	ad = adList.Next();
 
-#if !defined(WANT_OLD_CLASSADS)
+#if defined(ADD_TARGET_SCOPING)
 	ad->AddTargetRefs( TargetJobAttrs );
 #endif
 

@@ -635,7 +635,7 @@ dprintf(D_FULLDEBUG,"    signalling jobs for %s\n",next_deleg->deleg_uri?next_de
 	}
 }
 
-void CreamResource::DoPing( time_t& ping_delay, bool& ping_complete,
+void CreamResource::DoPing( unsigned& ping_delay, bool& ping_complete,
 							bool& ping_succeeded )
 {
 	int rc;
@@ -751,7 +751,7 @@ const char *CreamResource::getLeaseError()
 	return NULL;
 }
 
-void CreamResource::DoUpdateSharedLease( time_t& update_delay,
+void CreamResource::DoUpdateSharedLease( unsigned& update_delay,
 										 bool& update_complete,
 										 bool& update_succeeded )
 {

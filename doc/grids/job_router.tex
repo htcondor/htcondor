@@ -279,7 +279,7 @@ JOB_ROUTER_DEFAULTS = \
     /* now modify routed job attributes */ \
     /* remove routed job if it goes on hold or stays idle for over 6 hours */ \
     set_PeriodicRemove = JobStatus == 5 || \
-                        (JobStatus == 1 && (CurrentTime - QDate) > 3600*6); \
+                        (JobStatus == 1 && (time() - QDate) > 3600*6); \
     delete_WantJobRouter = true; \
     set_requirements = true; \
   ]

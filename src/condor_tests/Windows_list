@@ -151,3 +151,13 @@ job_dagman_basic
 lib_shared_port_van
 lib_chirp
 condor_view_classad_types
+#added by bt 9/5/13
+negotiator_match_log_exists
+cmd_condor_submit_dashspool
+job_concurrency_limits
+job_schedd_restart-check_reconnect
+job_local_resources
+job_check_exitcode_in_classad
+job_services_during_neg_cycle
+basic_startd_slot_attrs
+job_basic_start_test
