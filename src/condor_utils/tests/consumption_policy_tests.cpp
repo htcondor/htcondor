@@ -39,6 +39,11 @@ struct cpfix {
     cpfix() {
         string attr;
 
+        // currently (circa 8.1.1) there is some weird interaction between
+        // classad caching and calls to quantize() where 2nd arg is a list,
+        // so just disabling caching for the time being.
+        classad::ClassAdSetExpressionCaching(false);
+
         // construct request (job) ad with requested asset values    
         formatstr(attr, "%s%s", ATTR_REQUEST_PREFIX, ATTR_CPUS);
         request.Assign(attr.c_str(), 1);

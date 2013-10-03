@@ -135,6 +135,11 @@ GROUP_AUTOREGROUP = False
 # reduce daemon update latencies
 NEGOTIATOR_INTERVAL = 20
 SCHEDD_INTERVAL = 10
+
+# currently (circa 8.1.1) there is some weird interaction between
+# classad caching and calls to quantize() where 2nd arg is a list,
+# so just disabling caching for the time being.
+ENABLE_CLASSAD_CACHING = False
 ';
 
 CondorTest::StartCondorWithParams(
