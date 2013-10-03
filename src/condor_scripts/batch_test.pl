@@ -1425,27 +1425,26 @@ sub DoChild
 
     my $corecount = 0;
     my $res;
-    eval {
 	alarm($test_retirement);
 	if(defined $test_id) {
-    	$testname . ".$test_id" . ".log";
-    	$testname . ".$test_id" . ".cmd";
-    	$testname . ".$test_id" . ".out";
-    	$testname . ".$test_id" . ".err";
-    	$testname . ".$test_id" . ".run.out";
-    	$testname . ".$test_id" . ".cmd.out";
+    	$log = $testname . ".$test_id" . ".log";
+    	$cmd = $testname . ".$test_id" . ".cmd";
+    	$out = $testname . ".$test_id" . ".out";
+    	$err = $testname . ".$test_id" . ".err";
+    	$runout = $testname . ".$test_id" . ".run.out";
+    	$cmdout = $testname . ".$test_id" . ".cmd.out";
 
 		if( $hush == 0 ) {
 	    	debug( "Child Starting:perl $test_program > $test_program.$test_id.out\n",2);
 		}
 		$res = system("perl $test_program > $test_program.$test_id.out 2>&1");
 	} else {
-    	$testname . ".log";
-    	$testname . ".cmd";
-    	$testname . ".out";
-    	$testname . ".err";
-    	$testname . ".run.out";
-    	$testname . ".cmd.out";
+    	$log = $testname . ".log";
+    	$cmd = $testname . ".cmd";
+    	$out = $testname . ".out";
+    	$err = $testname . ".err";
+    	$runout = $testname . ".run.out";
+    	$cmdout = $testname . ".cmd.out";
 
 		if( $hush == 0 ) {
 	    	debug( "Child Starting:perl $test_program > $test_program.out\n",2);
@@ -1479,7 +1478,6 @@ sub DoChild
 	    exit(1); 
 	}
 	exit(0);
-    };
 
     if($@) {
 	if($@ =~ /timeout/) {
