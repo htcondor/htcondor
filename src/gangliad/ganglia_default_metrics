@@ -904,3 +904,17 @@
   Units  = "KB";
   TargetType = "Machine_slot1";
 ]
+[
+  Name   = "TotalPreemptions";
+  Verbosity = 1;
+  Desc   = "Total number of preempted jobs on this startd";
+  Units  = "preemptions";
+  TargetType = "Machine_slot1";
+]
+[
+  Name   = "TotalJobStarts";
+  Verbosity = 1;
+  Desc   = "Total number of jobs started on this startd since boot";
+  Units  = "jobs";
+  TargetType = "Machine_slot1";
+]

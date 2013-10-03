@@ -29,15 +29,17 @@ my $test_passed = 0;
 sub timed_callback {
     my %args = @_;
     my $cluster = $args{"cluster"};
+	my @resarray = ();
 
-    my $stat = `condor_status -format "%s" 'ifThenElse(PartitionableSlot =?= TRUE, "P", ifThenElse(DynamicSlot =?= TRUE, "D", "S"))' -format " %s" State -format " %s" Activity -format " %s\n" Cpus`;
+    my $stat = runCondorTool("condor_status -format \"%s\" \'ifThenElse(PartitionableSlot =?= TRUE, \"P\", ifThenElse(DynamicSlot =?= TRUE, \"D\", \"S\"))' -format \" %s\" State -format \" %s\" Activity -format \" %s\n\" Cpus",\@resarray,2);
 
     my $expected_pslots = 0;
     my $expected_dslots = 0;
     my $unexpected = 0;
 
     my @slines = split /\n/, $stat;
-    foreach my $line (@slines) {
+    foreach my $line (@resarray) {
+		chomp($line);
         my @f = split ' ', $line;
         if ($f[0]=="P"  &&  $f[1]=="Unclaimed"  &&  $f[2]=="Idle"  &&  $f[3]=="2") {
             $expected_pslots += 1;
@@ -52,29 +54,29 @@ sub timed_callback {
     # 5 partitionable slots unclaimed/idle with 2 slots left
     # 10 dynamic slots claimed/busy with 1 slot
     # and there should be no other slots
+	print "expected_pslots <$expected_pslots> expected_dslots <$expected_dslots> unexpected <$unexpected>\n";
     if ($expected_pslots==5  &&  $expected_dslots==10  &&  $unexpected==0) {
         $test_passed = 1;
-	print "SUCCESS!  Saw the correct breakdown of slots.\n";
-	print "Will now condor_rm job.\n";
+		print "SUCCESS!  Saw the correct breakdown of slots.\n";
+		print "Will now condor_rm job.\n";
 
         # Remove this or it might run again, which will cause a failure the second time condor_rm runs
         CondorTest::RemoveTimed($testname);
 
-	# Now remove 
-	my @adarray;
-	my $cmd = "condor_rm $cluster";
-	my $status = CondorTest::runCondorTool($cmd,\@adarray,2);
-	if(!$status) {
-	    print "bad\n";
-	    CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n", 1);
-	    exit(1)
-	}
-    }
-    else {
-	print "Haven't seen expected condor_status output (yet).  What I saw was...\n";
-	print $stat;
-	print "condor_status shows\n";
-	runcmd("condor_status");
+		# Now remove 
+		my @adarray;
+		my $cmd = "condor_rm $cluster";
+		my $status = runToolNTimes($cmd,1);
+		if(!$status) {
+	    	print "bad\n";
+	    	CondorTest::debug("Test failure due to Condor Tool Failure<$cmd>\n", 1);
+	    	exit(1)
+		}
+    } else {
+		print "Haven't seen expected condor_status output (yet).  What I saw was...\n";
+		print $stat;
+		print "condor_status shows\n";
+		runToolNTimes("condor_status",1);
     }
 }
 

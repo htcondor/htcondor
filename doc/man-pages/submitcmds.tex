@@ -1253,7 +1253,7 @@ instead of being allowed to leave the queue.
 
 \footnotesize
 \begin{verbatim}
-  on_exit_hold = (CurrentTime - JobStartDate) < (60 * $(MINUTE))
+  on_exit_hold = (time() - JobStartDate) < (60 * $(MINUTE))
 \end{verbatim}
 \normalsize
 

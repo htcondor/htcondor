@@ -811,6 +811,23 @@ init_params()
 		Execute = NULL;
 	}
 		// In addition to EXECUTE, there may be SLOT1_EXECUTE, ...
+#if 1
+	ExtArray<const char *> params;
+	Regex re; int err = 0; const char * pszMsg = 0;
+	ASSERT(re.compile("slot([0-9]*)_execute", &pszMsg, &err, PCRE_CASELESS));
+	if (param_names_matching(re, params)) {
+		for (int ii = 0; ii < params.length(); ++ii) {
+			Execute = param(params[ii]);
+			if (Execute) {
+				if ( ! ExecuteDirs.contains(Execute)) {
+					ExecuteDirs.append(Execute);
+				}
+				free(Execute);
+			}
+		}
+	}
+	params.truncate(0);
+#else
 	ExtArray<ParamValue> *params = param_all();
 	for( int p=params->length(); p--; ) {
 		char const *name = (*params)[p].name.Value();
@@ -828,6 +845,7 @@ init_params()
 		}
 	}
 	delete params;
+#endif
 
 	if ( MailFlag ) {
 		if( (PreenAdmin = param("PREEN_ADMIN")) == NULL ) {

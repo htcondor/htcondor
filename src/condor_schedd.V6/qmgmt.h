@@ -83,7 +83,7 @@ time_t GetOriginalJobQueueBirthdate();
 void DestroyJobQueue( void );
 int handle_q(Service *, int, Stream *sock);
 void dirtyJobQueue( void );
-void SendDirtyJobAdNotification(char *job_id_str);
+bool SendDirtyJobAdNotification(char *job_id_str);
 
 bool isQueueSuperUser( const char* user );
 

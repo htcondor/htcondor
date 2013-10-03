@@ -130,7 +130,7 @@ void DCloudResource::PublishResourceAd( ClassAd *resource_ad )
 }
 
 // we will use deltacloud command "status_all" to do the Ping work
-void DCloudResource::DoPing( time_t& ping_delay, bool& ping_complete, bool& ping_succeeded )
+void DCloudResource::DoPing( unsigned& ping_delay, bool& ping_complete, bool& ping_succeeded )
 {
 	if ( gahp->isStarted() == false ) {
 		dprintf( D_ALWAYS,"gahp server not up yet, delaying ping\n" );

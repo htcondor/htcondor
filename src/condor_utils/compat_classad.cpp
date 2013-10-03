@@ -78,18 +78,8 @@ Reconfig()
 	}
 }
 
-// TSTCLAIR: this really needs to be killed off now.
-// static classad::AttributeReference *the_my_ref = NULL;
-static bool the_my_ref_in_use = false;
 void getTheMyRef( classad::ClassAd *ad )
 {
-	ASSERT( !the_my_ref_in_use );
-	the_my_ref_in_use = true;
-
-	//if( !the_my_ref ) {
-	//	the_my_ref = classad::AttributeReference::MakeAttributeReference( NULL, "self" );
-	//}
-
 	if ( !ClassAd::m_strictEvaluation ) {
 		ExprTree * pExpr=classad::AttributeReference::MakeAttributeReference( NULL, "self" );
 		ad->Insert( "my", pExpr );
@@ -98,14 +88,10 @@ void getTheMyRef( classad::ClassAd *ad )
 
 void releaseTheMyRef( classad::ClassAd *ad )
 {
-	ASSERT( the_my_ref_in_use );
-
 	if ( !ClassAd::m_strictEvaluation ) {
-		ad->Delete("my"); //Remove( "my" ); 
+		ad->Delete("my");
 		ad->MarkAttributeClean( "my" );
 	}
-
-	the_my_ref_in_use = false;
 }
 
 static classad::MatchClassAd *the_match_ad = NULL;

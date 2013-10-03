@@ -38,6 +38,7 @@ TransferQueueRequest::TransferQueueRequest(ReliSock *sock,filesize_t sandbox_siz
 	m_max_queue_age(max_queue_age)
 {
 	m_gave_go_ahead = false;
+	m_notified_about_taking_too_long = false;
 	m_time_born = time(NULL);
 	m_time_go_ahead = 0;
 
@@ -69,6 +70,22 @@ TransferQueueRequest::Description() {
 					m_sandbox_size_MB,
 					m_fname.Value());
 	return m_description.Value();
+}
+
+char const *
+TransferQueueRequest::SinlessDescription() {
+	char const *s = Description();
+		// get rid of the sinful string, which is at the beginning of the description
+	char const *pos = strchr(s,'>');
+	if( pos ) {
+		if( pos[1] == ' ' ) {
+			s = pos+2;
+		}
+		else {
+			s = pos+1;
+		}
+	}
+	return s;
 }
 
 bool
@@ -939,39 +956,7 @@ TransferQueueManager::CheckTransferQueue() {
 							max_queue_age);
 
 
-					FILE *email = email_admin_open("file transfer took too long");
-					if( !email ) {
-							// Error sending the message
-						dprintf( D_ALWAYS, 
-								 "ERROR: Can't send email to the Condor "
-								 "Administrator\n" );
-					} else {
-						fprintf( email,
-								 "A file transfer for\n%s\ntook longer than MAX_TRANSFER_QUEUE_AGE=%ds,\n"
-								 "so this transfer is being removed from the transfer queue,\n"
-								 "which will abort further transfers for this attempt to run this job.\n\n"
-								 "To avoid this timeout, MAX_TRANSFER_QUEUE_AGE may be increased,\n"
-								 "but be aware that transfers which take a long time will delay other\n"
-								 "transfers from starting if the maximum number of concurrent transfers\n"
-								 "is exceeded.  Therefore, it is advisable to also review the settings\n"
-								 "of MAX_CONCURRENT_UPLOADS and/or MAX_CONCURRENT_DOWNLOADS.\n\n"
-								 "The transfer queue currently has %d/%d uploads,\n"
-								 "%d/%d downloads, %d transfers waiting %ds to upload,\n"
-								 "and %d transfers waiting %ds to download.\n",
-								 client->Description(),
-								 max_queue_age,
-								 m_uploading,
-								 m_max_uploads,
-								 m_downloading,
-								 m_max_downloads,
-								 m_waiting_to_upload,
-								 m_upload_wait_time,
-								 m_waiting_to_download,
-								 m_download_wait_time
-								 );
-
-						email_close ( email );
-					}
+					notifyAboutTransfersTakingTooLong();
 
 					delete client;
 					m_xfer_queue.DeleteCurrent();
@@ -983,6 +968,80 @@ TransferQueueManager::CheckTransferQueue() {
 				}
 			}
 		}
+	}
+}
+
+void
+TransferQueueManager::notifyAboutTransfersTakingTooLong()
+{
+	SimpleListIterator<TransferQueueRequest *> itr(m_xfer_queue);
+	TransferQueueRequest *client = NULL;
+
+	FILE *email = NULL;
+
+	while( itr.Next(client) ) {
+		if( client->m_gave_go_ahead && !client->m_notified_about_taking_too_long ) {
+			int age = time(NULL) - client->m_time_go_ahead;
+			int max_queue_age = client->m_max_queue_age;
+			if( max_queue_age > 0 && max_queue_age < age ) {
+				client->m_notified_about_taking_too_long = true;
+				if( !email ) {
+					email = email_admin_open("file transfer took too long");
+					if( !email ) {
+							// Error sending the message
+						dprintf( D_ALWAYS, 
+								 "ERROR: Can't send email to the Condor "
+								 "Administrator\n" );
+						return;
+					}
+					fprintf( email,
+							 "Below is a list of file transfers that took longer than\n"
+							 "MAX_TRANSFER_QUEUE_AGE=%ds.  When other transfers are waiting\n"
+							 "to start, these old transfer attempts will be aborted.\n"
+							 "To avoid this timeout, MAX_TRANSFER_QUEUE_AGE may be increased,\n"
+							 "but be aware that transfers which take a long time will delay other\n"
+							 "transfers from starting if the maximum number of concurrent transfers\n"
+							 "is exceeded.  Therefore, it is advisable to also review the settings\n"
+							 "of MAX_CONCURRENT_UPLOADS, MAX_CONCURRENT_DOWNLOADS, and/or\n"
+							 "FILE_TRANSFER_DISK_LOAD_THROTTLE.\n\n"
+							 "The transfer queue currently has %d/%d uploads,\n"
+							 "%d/%d downloads, %d transfers waiting %ds to upload,\n"
+							 "and %d transfers waiting %ds to download.\n",
+							 max_queue_age,
+							 m_uploading,
+							 m_max_uploads,
+							 m_downloading,
+							 m_max_downloads,
+							 m_waiting_to_upload,
+							 m_upload_wait_time,
+							 m_waiting_to_download,
+							 m_download_wait_time);
+
+					char const *ema_horizon = m_iostats.bytes_sent.ShortestHorizonEMAName();
+					if( ema_horizon ) {
+						fprintf(email,
+								"Upload %s I/O load: %.0f bytes/s  %.3f disk load  %.3f net load\n",
+								ema_horizon,
+								m_iostats.bytes_sent.EMAValue(ema_horizon),
+								m_iostats.file_read.EMAValue(ema_horizon),
+								m_iostats.net_write.EMAValue(ema_horizon));
+
+						fprintf(email,
+								"Download %s I/O load: %.0f bytes/s  %.3f disk load  %.3f net load\n",
+								ema_horizon,
+								m_iostats.bytes_received.EMAValue(ema_horizon),
+								m_iostats.file_write.EMAValue(ema_horizon),
+								m_iostats.net_read.EMAValue(ema_horizon));
+					}
+					fprintf(email,"\n\nTransfers older than MAX_TRANSFER_QUEUE_AGE=%ds:\n\n",max_queue_age);
+				}
+
+				fprintf( email, "%s\n", client->SinlessDescription() );
+			}
+		}
+	}
+	if( email ) {
+		email_close ( email );
 	}
 }
 

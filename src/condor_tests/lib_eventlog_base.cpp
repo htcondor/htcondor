@@ -17,22 +17,22 @@
  *
  ***************************************************************/
 
-#ifdef WIN32
-#include "condor_header_features.h"
-#include "condor_sys_nt.h"
-#endif
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <time.h>
 #include <stdio.h>
-#include "write_user_log.h"
-#include "read_user_log.h"
 #include <string.h>
-#ifndef WIN32
+#include <stdlib.h>
+#ifdef WIN32
+#include "condor_header_features.h"
+#include "condor_sys_nt.h"
+#include "condor_sys_types.h"
+#else
 #include <unistd.h>
 #endif
-#include <stdlib.h>
+#include "write_user_log.h"
+#include "read_user_log.h"
 
 int
 WriteStateFile( const ReadUserLog::FileState &state, const char *state_file )

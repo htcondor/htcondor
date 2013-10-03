@@ -1084,6 +1084,7 @@ sub Monitor
 	    $info{'job'} = $2;
 
 	    debug( "Saw Job Reconnect Fail\n" ,2);
+		print "Saw reconnect fail\n";
 
 	    # read next line to see cause
 	    $line = <SUBMIT_LOG>;
@@ -1118,8 +1119,8 @@ sub Monitor
 		$info{'recovery'} = $line;
 
 		# execute callback if one is registered
-		&$ReconnectedCallback( %info )
-		    if defined $ReconnectedCallback;
+		&$ReconnectFailedCallback( %info )
+		    if defined $ReconnectFailedCallback;
 
 	    next LINE;
 	}
