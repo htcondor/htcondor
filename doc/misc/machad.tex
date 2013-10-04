@@ -67,6 +67,8 @@ by HTCondor, either from remote jobs or running benchmarks.
 \index{ClassAd machine attribute!ConsoleIdle}
 \item[\AdAttr{ConsoleIdle}:] The number of seconds since activity on the system
 console keyboard or console mouse has last been detected.
+The value can be modified with \Macro{SLOTS\_CONNECTED\_TO\_CONSOLE}
+as defined at ~\ref{param:SlotsConnectedToConsole}.
 %
 \index{ClassAd machine attribute!Cpus}
 \item[\AdAttr{Cpus}:]  The number of CPUs in this slot.
@@ -214,9 +216,12 @@ in the virtual machine.
 keyboard or mouse associated with this machine has last been detected.
 Unlike \AdAttr{ConsoleIdle}, \AdAttr{KeyboardIdle} also takes activity 
 on pseudo-terminals into
-account (i.e. virtual ``keyboard'' activity from telnet and rlogin
-sessions as well).  Note that \AdAttr{KeyboardIdle} will always be equal to or
+account.
+Pseudo-terminals have virtual keyboard activity from telnet and rlogin
+sessions.  Note that \AdAttr{KeyboardIdle} will always be equal to or
 less than \AdAttr{ConsoleIdle}.
+The value can be modified with \Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD}
+as defined at ~\ref{param:SlotsConnectedToKeyboard}.
 %
 \index{ClassAd machine attribute!KFlops}
 \item[\AdAttr{KFlops}:] Relative floating point performance as determined via a
