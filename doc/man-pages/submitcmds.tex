@@ -495,23 +495,36 @@ one submit description file.
 \label{man-condor-submit-universe}
 \item[universe = $<$vanilla \Bar\ standard \Bar\ scheduler
 \Bar\ local \Bar\ grid \Bar\ java \Bar\ vm$>$]
-Specifies which HTCondor Universe to use when running this job.  The HTCondor
-Universe specifies an HTCondor execution environment.
-The \SubmitCmd{standard} Universe tells HTCondor that this job has been
-re-linked via \Condor{compile} with the HTCondor libraries and therefore
-supports checkpointing and remote system calls.
-The \SubmitCmd{vanilla} Universe is the default (except where the
+Specifies which HTCondor universe to use when running this job.  The HTCondor
+universe specifies an HTCondor execution environment.
+
+The \SubmitCmd{vanilla} universe is the default (except where the
 configuration variable \Macro{DEFAULT\_UNIVERSE} defines it
-otherwise), and is an execution environment for jobs which have not
-been linked with the HTCondor libraries.  \emph{Note:} Use the
-\SubmitCmd{vanilla} Universe to submit shell scripts to HTCondor.
-The \SubmitCmd{scheduler} is for a job that
-should act as a metascheduler.
+otherwise), and is an execution environment for jobs which do not
+use HTCondor's mechanisms for taking checkpoints;
+these are ones that have not been linked with the HTCondor libraries.  
+Use the \SubmitCmd{vanilla} universe to submit shell scripts to HTCondor.
+
+The \SubmitCmd{standard} universe tells HTCondor that this job has been
+re-linked via \Condor{compile} with the HTCondor libraries and therefore
+supports taking checkpoints and remote system calls.
+
+The \SubmitCmd{scheduler} universe is for a job that is to run on the
+machine where the job is submitted.
+This universe is intended for a job that acts as a metascheduler
+and will not be preempted.
+
+The \SubmitCmd{local} universe is for a job that is to run on the
+machine where the job is submitted.
+This universe runs the job immediately and will not be preempt the job.
+
 The \SubmitCmd{grid} universe forwards the job to an external job
 management system.
 Further specification of the \SubmitCmd{grid} universe is done with the
 \SubmitCmd{grid\_resource} command.
+
 The \SubmitCmd{java} universe is for programs written to the Java Virtual Machine.
+
 The \SubmitCmd{vm} universe facilitates the execution of a virtual
 machine.
 
