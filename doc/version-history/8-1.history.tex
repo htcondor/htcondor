@@ -29,6 +29,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The \Macro{ALLOW\_*} and \Macro{DENY\_*} access lists may now include netgroups,
+using the syntax +netgroup\_name.  \Macro{QUEUE\_SUPER\_USERS} may now include 
+user groups.
+\Ticket{3859}
+
 \item When terminating a job on a non-Amazon service,
 check (at the next polling interval) if the job has terminated,
 and if not, retry.  This means that HTCondor will not lose track of jobs
