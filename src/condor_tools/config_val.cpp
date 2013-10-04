@@ -173,7 +173,7 @@ void print_as_type(const char * name, int as_type)
 // increment the ref count of params referenced by default params
 // but preserve the ref count of the param being queried.
 // we use this to generate a pseudo used-param list for condor_config_val.
-bool add_ref_callback(void* pv, HASHITER & it)
+bool add_ref_callback(void* /*pv*/, HASHITER & it)
 {
 	MACRO_META * pmeta = hash_iter_meta(it);
 	if ( ! pmeta) return true;
