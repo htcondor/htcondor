@@ -201,7 +201,7 @@ List<const char> extraLines;  // lines passed in via -a argument
 
 #ifdef CALL_VIA_MACRO_SET
   #ifdef MACRO_SET_KNOWS_DEFAULT
-	static MACRO_SET SubmitMacroSet = { 0, 0, 1, FALSE, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>() };
+	static MACRO_SET SubmitMacroSet = { 0, 0, 1, FALSE, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), NULL };
   #else
 	static BUCKET * SubmitTable[113];
 	static MACRO_SET SubmitMacroSet = { sizeof(SubmitTable)/sizeof(SubmitTable[0]), SubmitTable, NULL };

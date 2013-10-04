@@ -118,7 +118,7 @@ typedef union param_info_storage_u {
 extern "C" {
 #endif
 
-	void param_info_init(void);
+	int param_info_init(const void ** pvdefaults);
 
 	int param_default_integer(const char* param, const char * subsys, int* valid, int* is_long);
 	int param_default_boolean(const char* param, const char * subsys, int* valid);

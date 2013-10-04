@@ -52,6 +52,9 @@
 #include "simplelist.h"
 #include "subsystem_info.h"
 #include "Regex.h"
+#ifdef WIN32
+ #include "exception_handling.WINDOWS.h"
+#endif
 
 #include <sstream>
 #include <algorithm> // for std::sort
@@ -141,9 +144,151 @@ usage(int retval = 1)
 
 char* GetRemoteParam( Daemon*, char* );
 char* GetRemoteParamRaw(Daemon*, const char* name, bool & raw_supported, MyString & raw_value, MyString & file_and_line, MyString & def_value, MyString & usage_report);
+int GetRemoteParamStats(Daemon* target, ClassAd & ad);
 int   GetRemoteParamNamesMatching(Daemon*, const char* name, std::vector<std::string> & names);
 void  SetRemoteParam( Daemon*, char*, ModeType );
 static void PrintConfigSources(void);
+static void do_dump_config_stats(FILE * fh, bool dump_sources, bool dump_strings);
+
+static const char * param_type_names[] = {"STRING","INT","BOOL","DOUBLE","LONG"};
+
+void print_as_type(const char * name, int as_type)
+{
+	if (as_type == PARAM_TYPE_BOOL) {
+		int bvalid = -1;
+		int bval = param_default_boolean(name, NULL, &bvalid);
+		bool bb = param_boolean(name, bval, false);
+		fprintf(stdout, " # eval: %s def=%d (%s)\n", bb ? "true" : "false", bval, bvalid ? "valid" : "invalid");
+	} else if (as_type == PARAM_TYPE_INT) {
+		int ivalid = -1, ilong = 0;
+		int ival = param_default_integer(name, NULL, &ivalid, &ilong);
+		fprintf(stdout, " # eval: %d (%s%s)\n", ival, ivalid ? "valid" : "invalid", ilong ? ", long" : "");
+	} else if (as_type == PARAM_TYPE_DOUBLE) {
+		int dvalid = -1;
+		double dval = param_default_double(name, NULL, &dvalid);
+		fprintf(stdout, " # eval: %.16g (%s)\n", dval, dvalid ? "valid" : "invalid");
+	}
+}
+
+// increment the ref count of params referenced by default params
+// but preserve the ref count of the param being queried.
+// we use this to generate a pseudo used-param list for condor_config_val.
+bool add_ref_callback(void* /*pv*/, HASHITER & it)
+{
+	MACRO_META * pmeta = hash_iter_meta(it);
+	if ( ! pmeta) return true;
+
+	if (pmeta->source_id < 4 && pmeta->param_id >= 0) {
+		int ix = pmeta->param_id;
+
+		// save use/ref count for this item
+		macro_defaults::META tmp;
+		if (it.is_def) {
+			if (it.set.defaults && it.set.defaults->metat && ix < it.set.defaults->size) {
+				tmp = it.set.defaults->metat[ix];
+			}
+		} else {
+			tmp.ref_count = pmeta->ref_count;
+			tmp.use_count = pmeta->use_count;
+		}
+
+		char * value = param(hash_iter_key(it));
+		if (value) free(value);
+
+		// restore item use/ref count.
+		if (it.is_def) {
+			if (it.set.defaults && it.set.defaults->metat && ix < it.set.defaults->size) {
+				it.set.defaults->metat[ix] = tmp;
+			}
+		} else {
+			pmeta->ref_count = tmp.ref_count;
+			pmeta->use_count = tmp.use_count;
+		}
+	}
+	return true;
+}
+
+bool dump_both_verbose = false;
+bool dump_both_type = false;
+bool dump_both_used_only = false;
+int  dump_both_only_type = -1;
+int  dump_both_count = 0;
+bool dump_both_callback(void* pv, HASHITER & it)
+{
+	std::string * pstr = (std::string *)pv;
+
+	MACRO_META * pmeta = hash_iter_meta(it);
+	bool used = pmeta->use_count != 0 || pmeta->ref_count != 0;
+	if (dump_both_used_only && ! used)
+		return true;
+
+	param_info_t_type_t ty = param_default_type_by_id(pmeta->param_id);
+	int effective_type = (int)ty;
+	if (dump_both_only_type == PARAM_TYPE_INT) {
+		if (ty == PARAM_TYPE_LONG) effective_type = (int)PARAM_TYPE_INT;
+	}
+	if (dump_both_only_type > 0 && dump_both_only_type != effective_type)
+		return true;
+
+	const char * tname = "?";
+	if (ty >= PARAM_TYPE_STRING && ty <= PARAM_TYPE_LONG) {
+		tname = param_type_names[ty];
+	}
+
+	const char * name = hash_iter_key(it);
+	const char * rawval = hash_iter_value(it);
+	/* debugging code
+	if ( ! dump_both_verbose) {
+		const char * pre = "  ";
+		switch (pmeta->flags & 6) {
+			case 2: pre = " i"; break;
+			case 4: pre = "d "; break;
+			case 6: pre = "di"; break;
+		}
+		bool dup = (*pstr == name);
+		fprintf(stdout, "%s%s", pre, dup ? "<" : " ");
+	}
+	*/
+	fprintf(stdout, "%s = %s\n", name, rawval ? rawval : "");
+	if (dump_both_verbose) {
+		const char * filename = config_source_by_id(pmeta->source_id);
+		if (pmeta->source_line < 0) {
+			if (pmeta->source_id == 1) {
+				fprintf(stdout, " # at: %s, item %d\n", filename, pmeta->param_id);
+			} else {
+				fprintf(stdout, " # at: %s\n", filename);
+			}
+		} else {
+			fprintf(stdout, " # at: %s, line %d\n", filename, pmeta->source_line);
+		}
+		if (rawval && rawval[0]) {
+			char * val = expand_param(rawval, NULL, 0);
+			if (val) {
+				fprintf(stdout, " # expanded: %s\n", val);
+				free(val);
+			}
+		}
+		if (dump_both_type) {
+			if (tname[0] == '?') {
+				fprintf(stdout, " # type: %s:%d\n", tname, ty);
+			} else {
+				fprintf(stdout, " # type: %s\n", tname);
+			}
+		}
+		if (dump_both_only_type > 0) {
+			print_as_type(name, dump_both_only_type);
+		}
+
+		//const char * def_val = param_default_string(name, subsys);
+		//fprintf(stdout, " # default: %s\n", def_val);
+		if (pmeta->ref_count) fprintf(stdout, " # use_count: %d / %d\n", pmeta->use_count, pmeta->ref_count);
+		else fprintf(stdout, " # use_count: %d\n", pmeta->use_count);
+	}
+
+	pstr->assign(name);
+	++dump_both_count;
+	return true;
+}
 
 
 char* EvaluatedValue(char const* value, ClassAd const* ad) {
@@ -201,10 +346,14 @@ main( int argc, const char* argv[] )
 	const char *pool = NULL;
 	const char *local_name = NULL;
 	const char *subsys = "TOOL";
+	const char *reconfig_source = NULL;
 	bool	ask_a_daemon = false;
 	bool    verbose = false;
+	bool    dump_strings = false;
 	bool    dash_usage = false;
+	bool    dash_dump_both = false;
 	bool    dump_all_variables = false;
+	bool    dump_stats = false;
 	bool    expand_dumped_variables = false;
 	bool    show_by_usage = false;
 	bool    show_by_usage_unused = false;
@@ -215,7 +364,12 @@ main( int argc, const char* argv[] )
 	bool    dash_raw = false;
 	bool    dash_default = false;
 	const char * debug_flags = NULL;
-	
+
+#ifdef WIN32
+	// uncomment this if you need to debug crashes.
+	//g_ExceptionHandler.TurnOff();
+#endif
+
 	PrintType pt = CONDOR_NONE;
 	ModeType mt = CONDOR_QUERY;
 
@@ -289,17 +443,49 @@ main( int argc, const char* argv[] )
 			dash_default = true;
 		} else if (is_arg_prefix(arg, "config", 2)) {
 			print_config_sources = true;
+		} else if (is_arg_prefix(arg, "reconfig", 5)) {
+			reconfig_source = use_next_arg("reconfig", argv, i);
 		} else if (is_arg_colon_prefix(arg, "verbose", &pcolon, 1)) {
 			verbose = true;
 			if (pcolon) {
-				++pcolon;
-				if (is_arg_prefix(pcolon, "usage", 2) || 
-					is_arg_prefix(pcolon, "use", -1)) {
-					dash_usage = true;
+				StringList opts(pcolon+1,":,");
+				opts.rewind();
+				while (NULL != (tmp = opts.next())) {
+					if (is_arg_prefix(tmp, "usage", 2) ||
+						is_arg_prefix(tmp, "use", -1)) {
+						dash_usage = true;
+					} else if (is_arg_prefix(tmp, "both", -1)) {
+						dash_dump_both = true;
+					} else if (is_arg_prefix(tmp, "terse", -1)) {
+						verbose = false;
+					} else if (is_arg_prefix(tmp, "strings", -1)) {
+						dump_strings = true;
+					} else if (is_arg_prefix(tmp, "type", 2)) {
+						dash_dump_both = true;
+						dump_both_type = true;
+					} else if (is_arg_prefix(tmp, "int", -1)) {
+						dash_dump_both = true;
+						dump_both_type = true;
+						dump_both_only_type = PARAM_TYPE_INT;
+					} else if (is_arg_prefix(tmp, "bool", -1)) {
+						dash_dump_both = true;
+						dump_both_type = true;
+						dump_both_only_type = PARAM_TYPE_BOOL;
+					} else if (is_arg_prefix(tmp, "double", -1)) {
+						dash_dump_both = true;
+						dump_both_type = true;
+						dump_both_only_type = PARAM_TYPE_DOUBLE;
+					} else if (is_arg_prefix(tmp, "long", -1)) {
+						dash_dump_both = true;
+						dump_both_type = true;
+						dump_both_only_type = PARAM_TYPE_LONG;
+					}
 				}
 			}
 		} else if (is_arg_prefix(arg, "dump", 1)) {
 			dump_all_variables = true;
+		} else if (is_arg_prefix(arg, "stats", 4)) {
+			dump_stats = true;
 		} else if (is_arg_prefix(arg, "expanded", 2)) {
 			expand_dumped_variables = true;
 		} else if (is_arg_prefix(arg, "evaluate", 2)) {
@@ -473,6 +659,21 @@ main( int argc, const char* argv[] )
 		}
 	}
 
+	if (reconfig_source) {
+		if (dump_stats) {
+			do_dump_config_stats(stdout, verbose, dump_strings);
+		}
+
+		extern const char * simulated_local_config;
+		simulated_local_config = reconfig_source;
+		config(0, true);
+		if (print_config_sources) {
+			fprintf(stdout, "Reconfig with %s appended\n", reconfig_source);
+			PrintConfigSources();
+		}
+	}
+
+
 	if (dash_debug) {
 		dprintf_set_tool_debug("TOOL", 0);
 		if (debug_flags) set_debug_flags(debug_flags, 0);
@@ -529,8 +730,19 @@ main( int argc, const char* argv[] )
 		// if no param qualifiers were sent, print all.
 		params.rewind();
 		if( ! params.number()) {
-			params.append(strdup(""));
-			params.rewind();
+			if (dash_dump_both) {
+				std::string last;
+				int opts = 0;
+				opts = HASHITER_SHOW_DUPS;
+				dump_both_verbose = verbose;
+				dump_both_used_only = show_by_usage && ! show_by_usage_unused;
+				dump_both_count = 0;
+				foreach_param(opts, dump_both_callback, (void*)&last);
+				fprintf(stdout, "%d items\n", dump_both_count);
+			} else {
+				params.append(strdup(""));
+				params.rewind();
+			}
 		}
 
 		if (params.number()) {
@@ -539,8 +751,14 @@ main( int argc, const char* argv[] )
 				std::vector<std::string> names;
 				Regex re; int err = 0; const char * pszMsg = 0;
 				if (re.compile(tmp, &pszMsg, &err, PCRE_CASELESS)) {
+					if (show_by_usage) {
+						// condor_config_val doesn't normally have any valid use counts
+						// so to get some, we expand everthing in the default param table.
+						foreach_param(0, add_ref_callback, NULL);
+					}
 					if (param_names_matching(re, names)) {
 						for (int ii = 0; ii < (int)names.size(); ++ii) {
+
 							const char * name = names[ii].c_str();
 							MyString name_used, filename, def_value;
 							int line_number, use_count, ref_count;
@@ -628,20 +846,26 @@ main( int argc, const char* argv[] )
 		}
 		#endif
 
+		if (dump_stats) {
+			do_dump_config_stats(stdout, verbose, dump_strings);
+		}
 		fflush( stdout );
 
 		if (hostname != NULL) {
 			free(hostname);
 			hostname = NULL;
 		}
-
 		my_exit( 0 );
 
+	} else if (dump_stats && ! ask_a_daemon) {
+		do_dump_config_stats(stdout, verbose, dump_strings);
+		fflush(stdout);
+		my_exit(0);
 	}
 
 	params.rewind();
 	if( ! params.number() && !print_config_sources) {
-		if (dump_all_variables) {
+		if (dump_all_variables || dump_stats) {
 			params.append(strdup(""));
 			params.rewind();
 			//if (diagnostic) fprintf(stderr, "querying all\n");
@@ -712,6 +936,17 @@ main( int argc, const char* argv[] )
 			bool raw_supported = false;
 			//fprintf(stderr, "param = %s\n", tmp);
 			if( target ) {
+				if (dump_stats) {
+					ClassAd stats;
+					int iret = GetRemoteParamStats(target, stats);
+					if (iret == -2) {
+						fprintf(stderr, "-stats is not supported by the remote version of HTCondor\n");
+						my_exit(1);
+					}
+					fPrintAd (stdout, stats);
+					fprintf (stdout, "\n");
+					if ( ! dump_all_variables) continue;
+				}
 				//fprintf(stderr, "dump = %d\n", dump_all_variables);
 				if (dump_all_variables) {
 					value = NULL;
@@ -733,15 +968,18 @@ main( int argc, const char* argv[] )
 								if ( ! show_by_usage_unused && usage_report == "0")
 									continue;
 							}
+							if ( ! value && ! raw_supported)
+								continue;
+
 							MyString ucname = names[ii];
 							ucname.upper_case();
 							if (expand_dumped_variables || ! raw_supported) {
-								printf("%s = %s\n", ucname.Value(), value);
+								printf("%s = %s\n", ucname.Value(), value ? value : "");
 							} else {
 								printf("%s = %s\n", ucname.Value(), RemoteRawValuePart(raw_value));
 							}
 							if ( ! raw_supported && (verbose || ! expand_dumped_variables)) {
-								printf(" # remote HTCondor version does not support -verbose");
+								printf(" # remote HTCondor version does not support -verbose\n");
 							}
 							if (verbose) {
 								if ( ! file_and_line.IsEmpty()) {
@@ -848,6 +1086,9 @@ main( int argc, const char* argv[] )
 					}
 					if ( ! def_value.IsEmpty()) {
 						printf(" # default: %s\n", def_value.Value());
+					}
+					if (dump_both_only_type > 0) {
+						print_as_type(tmp, dump_both_only_type);
 					}
 					if (dash_usage && ! usage_report.IsEmpty()) {
 						printf(" # use_count: %s\n", usage_report.Value());
@@ -1020,6 +1261,87 @@ GetRemoteParamRaw(
 	return val;
 }
 
+int GetRemoteParamStats(Daemon* target, ClassAd & ad)
+{
+	ad.Clear();
+
+	ReliSock s;
+	s.timeout(30);
+
+	char* addr = NULL;
+	const char* name = NULL;
+	bool connect_error = true;
+	do {
+		addr = target->addr();
+		name = target->name();
+		if (s.connect(addr, 0)) {
+			connect_error = false;
+			break;
+		}
+	} while(target->nextValidCm());
+
+	if (connect_error) {
+		fprintf (stderr, "Can't connect to %s on %s %s\n", daemonString(dt), name ? name : "", addr);
+		my_exit(1);
+	}
+
+	target->startCommand(DC_CONFIG_VAL, &s, 30);
+	s.encode();
+
+	// if we do DC_CONFIG_VAL query of "?stats" we will either get
+	// back a set of strings containing config stats, or "Not defined" if the daemon
+	// is pre 8.1.2
+	//
+	MyString query("?stats");
+	if (diagnostic) fprintf(stderr, "sending %s\n", query.Value());
+	if ( ! s.code(query)) {
+		fprintf(stderr, "Can't send request for stats'\n");
+		return 0;
+	}
+	if ( ! s.end_of_message()) {
+		fprintf( stderr, "Can't send end of message\n" );
+		return 0;
+	}
+
+	s.decode();
+	std::string val;
+	if ( ! s.code(val)) {
+		fprintf(stderr, "Can't receive reply from %s on %s %s\n", daemonString(dt), name ? name : "", addr );
+		return 0;
+	}
+
+	// daemons from 8.1.2 and later will return a set of strings
+	// containing statistics or
+	// "!error:type:num: message"
+	// daemons prior to 8.1.2 will return "Not Defined"
+	//
+	if (diagnostic) fprintf(stderr, "result: '%s'\n", val.c_str());
+	if (val == "Not defined") {
+		if ( ! s.end_of_message()) {
+			fprintf(stderr, "Can't receive end of message\n");
+		}
+		return -2; // -2 for not supported.
+	}
+
+	// param names can't start with !, so if the first character is !
+	// then the reply is an error message of the form "!error:type:num: message"
+	if (val[0] == '!') {
+		fprintf(stderr, "%s\n", val.substr(1).c_str());
+		if ( ! s.end_of_message()) {
+			fprintf(stderr, "Can't receive end of message\n");
+		}
+		return -1;
+	}
+
+	if ( ! s.peek_end_of_message()) {
+		if ( ! getClassAd(&s, ad)) {
+			fprintf(stderr, "Can't read stats ad from %s\n", name);
+		}
+	}
+	return 0;
+}
+
+
 int
 GetRemoteParamNamesMatching(Daemon* target, const char * param_pat, std::vector<std::string> & names)
 {
@@ -1047,7 +1369,7 @@ GetRemoteParamNamesMatching(Daemon* target, const char * param_pat, std::vector<
 	s.encode();
 
 	// if we do DC_CONFIG_VAL query of the param name "?names" we will either get
-	// back a set of strings containing parameter names, or "Not defined" if the daemon 
+	// back a set of strings containing parameter names, or "Not defined" if the daemon
 	// is pre 8.1.2
 	//
 	MyString query("?names");
@@ -1334,3 +1656,36 @@ static void PrintConfigSources(void)
 
 	return;
 }
+
+static void do_dump_config_stats(FILE * fh, bool dump_sources, bool dump_strings)
+{
+	struct _macro_stats stats;
+	get_config_stats(&stats);
+	MyString line;
+	line.formatstr("Macros = %d\n", stats.cEntries);
+	fprintf(fh, line.Value());
+	line.formatstr("Used = %d\n", stats.cUsed);
+	fprintf(fh, line.Value());
+	line.formatstr("Referenced = %d\n", stats.cReferenced);
+	fprintf(fh, line.Value());
+	line.formatstr("Files = %d\n", stats.cFiles);
+	fprintf(fh, line.Value());
+	line.formatstr("StringBytes = %d\n", stats.cbStrings);
+	fprintf(fh, line.Value());
+	line.formatstr("TablesBytes = %d\n", stats.cbTables);
+	fprintf(fh, line.Value());
+	line.formatstr("IsSorted = %d\n", stats.cSorted);
+	fprintf(fh, line.Value());
+
+	if (dump_sources) {
+		fprintf(fh, "\nSources -----\n");
+		config_dump_sources(fh, "\n");
+	}
+
+	if (dump_strings) {
+		fprintf(fh, "\nStrings -----\n");
+		config_dump_string_pool(fh, "\n");
+		fprintf(fh, "\n");
+	}
+}
+

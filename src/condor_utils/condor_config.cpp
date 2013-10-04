@@ -87,6 +87,9 @@
 #include "Regex.h"
 #include <algorithm> // for std::sort
 
+// define this to keep param who's values match defaults from going into to runtime param table.
+#define DISCARD_CONFIG_MATCHING_DEFAULT
+
 extern "C" {
 	
 // Function prototypes
@@ -122,7 +125,8 @@ extern int	ConfigLineNo;
 // Global variables
 #ifdef CALL_VIA_MACRO_SET
   #ifdef MACRO_SET_KNOWS_DEFAULT
-	static MACRO_SET ConfigMacroSet = { 0, 0, 0, FALSE, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>() };
+	static MACRO_DEFAULTS ConfigMacroDefaults = { 0, NULL, NULL };
+	static MACRO_SET ConfigMacroSet = { 0, 0, 0, FALSE, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), &ConfigMacroDefaults };
 	#define extra_info (ExtraParamTable*)NULL
 	const MACRO_SOURCE DetectedMacro = { true,  0, -2 };
 	const MACRO_SOURCE DefaultMacro  = { true,  1, -2 };
@@ -151,16 +155,14 @@ void _allocation_hunk::reserve(int cb)
 		return;
 
 	if ( ! this->pb) {
+#if 0 //def WIN32
+		this->pb = (char*)VirtualAlloc(NULL, cb, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+#else
 		this->pb = (char*)malloc(cb);
+#endif
 		this->cbAlloc = cb;
 	} else {
-		char * pb = (char*)realloc(this->pb, this->ixFree + cb);
-		if ( ! pb) {
-			pb = (char*)malloc(this->ixFree + cb);
-			if (this->ixFree) { memcpy(pb, this->pb, this->ixFree); }
-			free(this->pb); this->pb = pb;
-		}
-		this->cbAlloc = this->ixFree + cb;
+		// can't reserve memory if the hunk already has an allocation
 	}
 }
 
@@ -169,7 +171,11 @@ _allocation_pool::clear()
 {
 	for (int ii = 0; ii < this->cMaxHunks; ++ii) {
 		if (ii > this->nHunk) break;
+#if 0 //def WIN32
+		if (this->phunks[ii].pb) { VirtualFree(this->phunks[ii].pb, this->phunks[ii].cbAlloc, MEM_RELEASE); }
+#else
 		if (this->phunks[ii].pb) { free(this->phunks[ii].pb); }
+#endif
 		this->phunks[ii].pb = NULL;
 		this->phunks[ii].cbAlloc = 0;
 		this->phunks[ii].ixFree = 0;
@@ -388,6 +394,20 @@ bool config_continue_if_no_config(bool contin)
 	return old_contin;
 }
 
+void config_dump_sources(FILE * fh, const char * sep)
+{
+	for (int ii = 0; ii < (int)ConfigMacroSet.sources.size(); ++ii) {
+		fprintf(fh, "%s%s", ConfigMacroSet.sources[ii], sep);
+	}
+}
+
+const char* config_source_by_id(int source_id)
+{
+	if (source_id >= 0 && source_id < (int)ConfigMacroSet.sources.size())
+		return ConfigMacroSet.sources[source_id];
+	return NULL;
+}
+
 void config_dump_string_pool(FILE * fh, const char * sep)
 {
 	int cEmptyStrings = 0;
@@ -497,11 +517,33 @@ static bool macro_set_default_sort(MACRO_ITEM const & a, MACRO_ITEM const & b)
 	return strcasecmp(a.key, b.key) < 0;
 }*/
 
+#define USE_SORT_CLASS
+//#define DO_COMPACT_STRING_POOL
+
+#ifdef USE_SORT_CLASS
+class MACRO_SORTER {
+public:
+	MACRO_SET & set;
+	MACRO_SORTER(MACRO_SET & setIn) : set(setIn) {}
+	bool operator()(MACRO_META const & a, MACRO_META const & b) {
+		int ixa = a.index;
+		int ixb = b.index;
+		if  ( !  ((ixa >= 0 && ixa < set.size) && (ixb >= 0 && ixb < set.size)) ) {
+			return false;
+		}
+		return strcasecmp(set.table[ixa].key, set.table[ixb].key) < 0;
+	};
+	bool operator()(MACRO_ITEM const & a, MACRO_ITEM const & b) {
+		return strcasecmp(a.key, b.key) < 0;
+	};
+};
+#else
 struct _macro_opt_item { const char * key; int ix; };
 static bool macro_opt_default_sort(struct _macro_opt_item const & a, struct _macro_opt_item const & b)
 {
 	return strcasecmp(a.key, b.key) < 0;
 }
+#endif
 
 void optimize_macros(MACRO_SET & set)
 {
@@ -509,19 +551,25 @@ void optimize_macros(MACRO_SET & set)
 		return;
 
 #if 1
-        if (set.size > 2) return;
-
+	#ifdef USE_SORT_CLASS
+	MACRO_SORTER sorter(set);
+	if (set.metat) { std::sort(&set.metat[0], &set.metat[set.size], sorter); }
+	std::sort(&set.table[0], &set.table[set.size], sorter);
+	if (set.metat) { for (int ix = 0; ix < set.size; ++ix) { set.metat[ix].index = ix; } }
+	set.sorted = set.size;
+	#else
 	// we (may) have two parallel arrays to sort, only one of which
 	// contains the key, so we have to sort by building a temporary
 	// map between key and index, sort that, then move items in the
 	// other array by index into their new locations.
 	//
-	struct _macro_opt_item * ptmp = new struct _macro_opt_item[set.size];
+	struct _macro_opt_item * ptmp = new struct _macro_opt_item[set.size+1];
 	if (ptmp) {
 		for (int ii = 0; ii < set.size; ++ii) {
 			ptmp[ii].key = set.table[ii].key;
 			ptmp[ii].ix = ii;
 		}
+		ptmp[set.size].key = "zzzzzzzz"; // to make valgrind happy(er)
 		std::sort(&ptmp[0], &ptmp[set.size], macro_opt_default_sort);
 
 		// shrink the macro table if it has more than 4 extra items.
@@ -537,7 +585,7 @@ void optimize_macros(MACRO_SET & set)
 			delete [] set.table;
 			set.table = ptab;
 			set.allocation_size = cAlloc;
-			set.is_sorted = true;
+			set.sorted = set.size;
 
 			if (set.metat) {
 				MACRO_META * pmet = new MACRO_META[cAlloc];
@@ -553,7 +601,7 @@ void optimize_macros(MACRO_SET & set)
 		}
 		delete [] ptmp;
 	}
-
+	#endif
 #else
 	// sort the macro table.
 	std::sort(&set.table[0], &set.table[set.size], macro_set_default_sort);
@@ -573,6 +621,8 @@ void optimize_macros(MACRO_SET & set)
 		set.allocation_size = cAlloc;
 	}
 #endif
+
+#ifdef DO_COMPACT_STRING_POOL
 	// build a compact string pool.
 	int cbFree, cHunks, cb = set.apool.usage(cHunks, cbFree);
 	if (cbFree > 1024) {
@@ -587,12 +637,13 @@ void optimize_macros(MACRO_SET & set)
 		}
 
 		for (int ii = 0; ii < (int)set.sources.size(); ++ii) {
-			if (tmp.contains(set.sources[ii])) set.apool.insert(set.sources[ii]);
+			if (tmp.contains(set.sources[ii])) set.sources[ii] = set.apool.insert(set.sources[ii]);
 		}
 
 		tmp.clear();
 		cb = set.apool.usage(cHunks, cbFree);
 	}
+#endif // DO_COMPACT_STRING_POOL
 }
 
 /*
@@ -606,13 +657,13 @@ const char * FORBIDDEN_CONFIG_VAL = "YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGU
 static void
 validate_entries( bool ignore_invalid_entry ) {
 
-	HASHITER it = hash_iter_begin(ConfigMacroSet);
+	HASHITER it = hash_iter_begin(ConfigMacroSet, HASHITER_NO_DEFAULTS);
 	unsigned int invalid_entries = 0;
 	MyString tmp;
 	MyString output = "The following configuration macros appear to contain default values that must be changed before Condor will run.  These macros are:\n";
 	while( ! hash_iter_done(it) ) {
 		const char * val = hash_iter_value(it);
-		if( strstr(val, FORBIDDEN_CONFIG_VAL) ) {
+		if (val && strstr(val, FORBIDDEN_CONFIG_VAL)) {
 			const char * name = hash_iter_key(it);
 			MyString filename;
 			int line_number;
@@ -714,6 +765,31 @@ param_all(void)
 	return pvs;
 }
 #endif
+
+void foreach_param(int options, bool (*fn)(void* user, HASHITER& it), void* user)
+{
+	HASHITER it = hash_iter_begin(ConfigMacroSet, options);
+	while ( ! hash_iter_done(it)) {
+		if ( ! fn(user, it))
+			break;
+		hash_iter_next(it);
+	}
+	hash_iter_delete(&it);
+}
+
+void foreach_param_matching(Regex & re, int options, bool (*fn)(void* user, HASHITER& it), void* user)
+{
+	HASHITER it = hash_iter_begin(ConfigMacroSet, options);
+	while ( ! hash_iter_done(it)) {
+		const char *name = hash_iter_key(it);
+		if (re.match(name)) {
+			if ( ! fn(user, it))
+				break;
+		}
+		hash_iter_next(it);
+	}
+	hash_iter_delete(&it);
+}
 
 // return a list of param names that match the given regex, this list is in hashtable order (i.e. no order)	
 int param_names_matching(Regex & re, ExtArray<const char *>& names)
@@ -1186,6 +1262,7 @@ process_config_source( const char* file, const char* name,
 	}
 }
 
+const char * simulated_local_config = NULL;
 
 // Param for given name, read it in as a string list, and process each
 // config source listed there.  If the value is actually a cmd whose
@@ -1206,6 +1283,7 @@ process_locals( const char* param_name, const char* host )
 		} else {
 			sources_to_process.initializeFromString( sources_value );
 		}
+		if (simulated_local_config) sources_to_process.append(simulated_local_config);
 		sources_to_process.rewind();
 		while( (source = sources_to_process.next()) ) {
 			process_config_source( source, "config source", host,
@@ -1750,17 +1828,32 @@ init_config(bool wantExtraInfo  /* = true */)
 #ifdef CALL_VIA_MACRO_SET
 #ifdef MACRO_SET_KNOWS_DEFAULT
 	ConfigMacroSet.size = 0;
+	ConfigMacroSet.sorted = 0;
+	#ifdef DISCARD_CONFIG_MATCHING_DEFAULT
+	ConfigMacroSet.options = 2;
+	#else
 	ConfigMacroSet.options = 0;
+	#endif
 	if (ConfigMacroSet.table) delete [] ConfigMacroSet.table;
 	ConfigMacroSet.table = new MACRO_ITEM[512];
 	if (ConfigMacroSet.table) {
 		ConfigMacroSet.allocation_size = 512;
 		clear_config(); // to zero-init the table.
 	}
+	if (ConfigMacroSet.defaults) {
+		// Initialize the default table.
+		if (ConfigMacroSet.defaults->metat) delete [] ConfigMacroSet.defaults->metat;
+		ConfigMacroSet.defaults->metat = NULL;
+		ConfigMacroSet.defaults->size = param_info_init((const void**)&ConfigMacroSet.defaults->table);
+	}
 	if (wantExtraInfo) {
 		if (ConfigMacroSet.metat) delete [] ConfigMacroSet.metat;
 		ConfigMacroSet.metat = new MACRO_META[ConfigMacroSet.allocation_size];
 		ConfigMacroSet.options |= 1;
+		if (ConfigMacroSet.defaults && ConfigMacroSet.defaults->size) {
+			ConfigMacroSet.defaults->metat = new MACRO_DEFAULTS::META[ConfigMacroSet.defaults->size];
+			memset(ConfigMacroSet.defaults->metat, 0, sizeof(ConfigMacroSet.defaults->metat[0]) * ConfigMacroSet.defaults->size);
+		}
 	}
 #else
 	memset((char *)ConfigTable, 0, sizeof(ConfigTable));
@@ -1775,10 +1868,11 @@ init_config(bool wantExtraInfo  /* = true */)
 	} else {
 		extra_info = new DummyExtraParamTable();
 	}
-#endif
 
 	// Initialize the default table.
 	param_info_init();
+#endif
+
 
 	return;
 }
@@ -1795,8 +1889,18 @@ clear_config()
 		memset(ConfigMacroSet.metat, 0, sizeof(ConfigMacroSet.metat[0]) * ConfigMacroSet.allocation_size);
 	}
 	ConfigMacroSet.size = 0;
+	ConfigMacroSet.sorted = 0;
 	ConfigMacroSet.apool.clear();
 	ConfigMacroSet.sources.clear();
+	if (ConfigMacroSet.defaults && ConfigMacroSet.defaults->metat) {
+		memset(ConfigMacroSet.defaults->metat, 0, sizeof(ConfigMacroSet.defaults->metat[0]) * ConfigMacroSet.defaults->size);
+	}
+
+	/* don't want to do this here because of reconfig.
+	ConfigMacroSet.allocation_size = 0;
+	delete[] ConfigMacroSet.table; ConfigMacroSet.table = NULL;
+	delete[] ConfigMacroSet.metat; ConfigMacroSet.metat = NULL;
+	*/
 #else
 	for (int ii = 0; ii < ConfigMacroSet.table_size; ++ii) {
 		BUCKET * ptr = ConfigMacroSet.table[ii];
@@ -1847,6 +1951,49 @@ clear_config()
 	return;
 }
 
+template <typename T>
+int BinaryLookupIndex (const T aTable[], int cElms, const char * key, int (*fncmp)(const char *, const char *))
+{
+	if (cElms <= 0)
+		return -1;
+
+	int ixLower = 0;
+	int ixUpper = cElms-1;
+	for (;;) {
+		if (ixLower > ixUpper)
+			return -1; // -1 for not found
+
+		int ix = (ixLower + ixUpper) / 2;
+		int iMatch = fncmp(aTable[ix].key, key);
+		if (iMatch < 0)
+			ixLower = ix+1;
+		else if (iMatch > 0)
+			ixUpper = ix-1;
+		else
+			return ix;
+	}
+}
+
+static int param_default_get_index(const char * name, MACRO_SET & set)
+{
+	MACRO_DEFAULTS * defs = set.defaults;
+	if ( ! defs || ! defs->table)
+		return -1;
+
+	return BinaryLookupIndex<const MACRO_DEF_ITEM>(defs->table, defs->size, name, strcasecmp);
+}
+
+void param_default_set_use(const char * name, int use, MACRO_SET & set)
+{
+	MACRO_DEFAULTS * defs = set.defaults;
+	if ( ! defs || ! defs->metat)
+		return;
+	int ix = param_default_get_index(name, set);
+	if (ix >= 0) {
+		defs->metat[ix].use_count += (use&1);
+		defs->metat[ix].ref_count += (use>>1)&1;
+	}
+}
 
 /*
 ** Return the value associated with the named parameter.  Return NULL
@@ -1890,6 +2037,7 @@ param_without_default( const char *name )
 	}
 	// Still nothing (or empty)?  Give up.
 	if ( ! val || ! val[0] ) {
+		//dprintf(D_STATUS, "param_without_default(%s) returns NULL\n", name);
 		return NULL;
 	}
 
@@ -1912,21 +2060,28 @@ param_without_default( const char *name )
 
 	// If it returned an empty string, free it before returning NULL
 	if( expanded_val == NULL ) {
+		//dprintf(D_STATUS, "param_without_default(%s) returns NULL\n", name);
 		return NULL;
 	} else if ( expanded_val[0] == '\0' ) {
 		free( expanded_val );
+		//dprintf(D_STATUS, "param_without_default(%s) returns NULL\n", name);
 		return( NULL );
 	} else {
+		//dprintf(D_STATUS, "param_without_default(%s) returns %s\n", name, expanded_val);
 		return expanded_val;
 	}
 }
 
-
+PRAGMA_REMIND("TJ: this gives incorrect result if the param is defined in defaults table.")
 bool param_defined(const char* name) {
+    bool retval = false;
     char* v = param_without_default(name);
-    if (NULL == v) return false;
-    free(v);
-    return true;
+    if (v) {
+        free(v);
+        retval = true;
+    }
+    //dprintf(D_STATUS, "param_defined(%s) returns %s\n", name, retval ? "true" : "false");
+    return retval;
 }
 
 
@@ -1934,14 +2089,16 @@ char*
 param(const char* name) 
 {
 		/* The zero means return NULL on not found instead of EXCEPT */
-	return param_with_default_abort(name, 0);
+	char * psz = param_with_default_abort(name, 0);
+	//dprintf(D_STATUS, "param(%s) returns %s\n", name, psz ? psz : "NULL");
+	return psz;
 }
 
 char *
 param_with_default_abort(const char *name, int abort) 
 {
 	const char *val = NULL;
-#ifdef NEW_PARAM_GENERATOR	// don't copy params from default table to ConfigTab
+#ifdef DISCARD_CONFIG_MATCHING_DEFAULT // don't copy params from default table to ConfigTab
 	const char* subsys = get_mySubSystem()->getName();
 	if (subsys && ! subsys[0]) subsys = NULL;
 
@@ -1964,27 +2121,35 @@ param_with_default_abort(const char *name, int abort)
 		}
 		if ( ! val) {
 			val = param_default_string(name, subsys);
+			if (val) {
+				param_default_set_use(name, 3, ConfigMacroSet);
+				if (val[0] == '\0') {
+					// If indeed it was empty, then just bail since it was
+					// validly found in the Default Table, but empty.
+					return NULL;
+				}
+			}
 		}
 	}
 #else
-	MyString subsys = get_mySubSystem()->getName();
-	MyString local = get_mySubSystem()->getLocalName();
-	MyString subsys_local_name;
-	MyString local_name;
+	const char * subsys = get_mySubSystem()->getName();
+	const char * local = get_mySubSystem()->getLocalName();
 	MyString subsys_name;
 
 	// Set up the namespace search for the param name.
 	// WARNING: The order of appending matters. We search more specific 
 	// to less specific in the namespace.
 	StringList sl;
-	if (local != "") {
-		subsys_local_name = (((subsys + ".") + local) + ".") + name;
+	if (local && local[0]) {
+		MyString subsys_local_name;
+		subsys_local_name.formatstr("%s.%s.%s", subsys, local, name);
 		sl.append(subsys_local_name.Value());
 
-		local_name = (local + ".") + name;
+		MyString local_name;
+		local_name.formatstr("%s.%s", local, name);
 		sl.append(local_name.Value());
 	}
-	subsys_name = (subsys + ".") + name;
+	subsys_name.formatstr("%s.%s", subsys, name);
 	sl.append(subsys_name.Value());
 	sl.append(name);
 
@@ -2046,7 +2211,7 @@ param_with_default_abort(const char *name, int abort)
 	// if we get here, it means that we found a val of note, so expand it and
 	// return the canonical value of it. expand_macro returns allocated memory.
 	// note that expand_macro will first try and expand
-	char * expanded_val = expand_macro(val, ConfigMacroSet, NULL, true, subsys.Value());
+	char * expanded_val = expand_macro(val, ConfigMacroSet, NULL, true, subsys);
 	if (expanded_val == NULL) {
 		return NULL;
 	}
@@ -2510,7 +2675,9 @@ const char * param_get_info(
 	int &line_number)
 {
 	const char * val = NULL;
-#if 1 //def NEW_PARAM_GENERATOR
+#if 1
+	PRAGMA_REMIND("TJ: rewrite this")
+	bool is_default = false;
 	filename = "";
 	line_number = -1;
 	if (subsys && ! subsys[0]) subsys = NULL;
@@ -2528,7 +2695,7 @@ const char * param_get_info(
 		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigMacroSet, 0);
 		if ( ! val) {
 			val = param_exact_default_string(name_used.Value());
-			if (val) { filename = "<Internal>"; line_number = -2; }
+			if (val) { filename = "<Internal>"; line_number = -2; is_default = true; }
 		}
 	}
 	if ( ! val) {
@@ -2536,7 +2703,7 @@ const char * param_get_info(
 		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigMacroSet, 0);
 		if ( ! val) {
 			val = param_exact_default_string(name);
-			if (val) { filename = "<Internal>"; line_number = -2; }
+			if (val) { filename = "<Internal>"; line_number = -2; is_default = true; }
 		}
 	}
 #ifdef MACRO_SET_KNOWS_DEFAULT
@@ -2549,6 +2716,15 @@ const char * param_get_info(
 			if (pmi->source_id >= 0 && pmi->source_id < (int)ConfigMacroSet.sources.size()) {
 				filename = ConfigMacroSet.sources[pmi->source_id];
 				line_number = pmi->source_line;
+			}
+		}
+
+		if (is_default) {
+			MACRO_DEFAULTS * defs = ConfigMacroSet.defaults;
+			int ix = param_default_get_index(name_used.Value(), ConfigMacroSet);
+			if (ix >= 0 && defs->metat) {
+				use_count = defs->metat[ix].use_count;
+				ref_count = defs->metat[ix].ref_count;
 			}
 		}
 	}
@@ -2676,12 +2852,13 @@ int macro_stats(MACRO_SET& set, struct _macro_stats &stats)
 {
 	int cHunks, cQueries = 0;
 	memset((void*)&stats, 0, sizeof(stats));
-	stats.is_sorted = set.is_sorted;
+	stats.cSorted = set.sorted;
+	stats.cFiles = (int)set.sources.size();
+	stats.cEntries = set.size;
 	stats.cbStrings = set.apool.usage(cHunks, stats.cbFree);
 	int cbPer = sizeof(MACRO_ITEM) + (set.metat ? sizeof(MACRO_META) : 0);
 	stats.cbTables = (set.size * cbPer) + (int)set.sources.size() * sizeof(char*);
 	stats.cbFree += (set.allocation_size - set.size) * cbPer;
-	stats.cEntries = set.size;
 	if ( ! set.metat) {
 		cQueries = stats.cReferenced = stats.cUsed = -1;
 	} else {
@@ -2689,6 +2866,14 @@ int macro_stats(MACRO_SET& set, struct _macro_stats &stats)
 			if (set.metat[ii].use_count) ++stats.cUsed;
 			if (set.metat[ii].ref_count) ++stats.cReferenced;
 			if (set.metat[ii].use_count > 0) cQueries += set.metat[ii].use_count;
+		}
+		if (set.defaults && set.defaults->metat) {
+			MACRO_DEFAULTS * defs = set.defaults;
+			for (int ii = 0; ii < defs->size; ++ii) {
+				if (defs->metat[ii].use_count) ++stats.cUsed;
+				if (defs->metat[ii].ref_count) ++stats.cReferenced;
+				if (defs->metat[ii].use_count > 0) cQueries += defs->metat[ii].use_count;
+			}
 		}
 	}
 	return cQueries;
