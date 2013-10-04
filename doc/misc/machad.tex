@@ -61,7 +61,7 @@ where 0 = Sunday, 1 = Monday, \Dots, and 6 = Saturday.
 \item[\AdAttr{ClockMin}:] The number of minutes passed since midnight.
 %
 \index{ClassAd machine attribute!CondorLoadAvg}
-\item[\AdAttr{CondorLoadAvg}:] The portion of the load average generated 
+\item[\AdAttr{CondorLoadAvg}:] The load average contributed  
 by HTCondor, either from remote jobs or running benchmarks.
 %
 \index{ClassAd machine attribute!ConsoleIdle}
@@ -239,8 +239,8 @@ Therefore, you could not use this attribute in defining \Condor{startd}
 expressions (and you would not want to).
 %
 \index{ClassAd machine attribute!LoadAvg}
-\item[\AdAttr{LoadAvg}:] A floating point number with the machine's current load
-average.
+\item[\AdAttr{LoadAvg}:] A floating point number representing the 
+current load average.
 %
 \index{ClassAd machine attribute!Machine}
 \item[\AdAttr{Machine}:] A string with the machine's fully qualified host name.
@@ -566,10 +566,19 @@ because the machine is being drained.
 Always set to the string literal \AdStr{Job}, because machine ClassAds
 always want to be matched with jobs, and vice-versa.
 %
+\index{ClassAd machine attribute!TotalCondorLoadAvg}
+\item[\AdAttr{TotalCondorLoadAvg}:] The load average contributed  
+by HTCondor summed across all slots on the machine, 
+either from remote jobs or running benchmarks.
+%
 \index{ClassAd machine attribute!TotalCpus}
 \item[\AdAttr{TotalCpus}:] The number of CPUs that are on the machine.
 This is in contrast with \Attr{Cpus},
 which is the number of CPUs in the slot.
+%
+\index{ClassAd machine attribute!TotalLoadAvg}
+\item[\AdAttr{TotalLoadAvg}:] A floating point number representing the 
+current load average summed across all slots on the machine.
 %
 \index{ClassAd machine attribute!TotalMachineDrainingBadput}
 \item[\AdAttr{TotalMachineDrainingBadput}:] The
