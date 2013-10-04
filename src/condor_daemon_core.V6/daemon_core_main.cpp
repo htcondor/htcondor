@@ -1282,6 +1282,35 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 				}
 				names.clear();
 			}
+		} else if (is_arg_prefix(param_name, "?stats", -1)) {
+
+			struct _macro_stats stats;
+			int cQueries = get_config_stats(&stats);
+			// for backward compatility, we have to put a single string on the wire
+			// before we can put the stats classad.
+			MyString queries;
+			queries.formatstr("%d", cQueries);
+			if ( ! stream->code(queries)) {
+				dprintf(D_ALWAYS, "Can't send param stats for DC_CONFIG_VAL\n");
+				retval = false;
+			} else {
+				ClassAd ad; ad.Clear(); // remove time()
+				ad.Assign("Macros", stats.cEntries);
+				ad.Assign("Used", stats.cUsed);
+				ad.Assign("Referenced", stats.cReferenced);
+				ad.Assign("Files", stats.cFiles);
+				ad.Assign("StringBytes", stats.cbStrings);
+				ad.Assign("TablesBytes", stats.cbTables);
+				ad.Assign("Sorted", stats.cSorted);
+				if ( ! putClassAd(stream, ad)) {
+					dprintf(D_ALWAYS, "Can't send param stats ad for DC_CONFIG_VAL\n");
+					retval = false;
+				}
+			}
+			if (retval && ! stream->end_of_message()) {
+				retval = false;
+			}
+
 		} else { // unrecognised ?command
 
 			MyString errmsg; errmsg.formatstr("!error:unsup:1: '%s' is not supported", param_name);
@@ -2342,7 +2371,8 @@ int dc_main( int argc, char** argv )
 	}
 	_macro_stats stats;
 	get_config_stats(&stats);
-	dprintf(D_ALWAYS, "config Macros = %d, StringBytes = %d, TablesBytes = %d, Sorted = %d\n", stats.cEntries, stats.cbStrings, stats.cbTables, stats.is_sorted);
+	dprintf(D_ALWAYS, "config Macros = %d, Sorted = %d, StringBytes = %d, TablesBytes = %d\n",
+				stats.cEntries, stats.cSorted, stats.cbStrings, stats.cbTables);
 
 
 	// TJ: Aug/2013 we are going to turn on classad caching by default in 8.1.1 we want to see in the log that its on.

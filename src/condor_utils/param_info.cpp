@@ -41,7 +41,11 @@
 
 #define PARAM_DECLARE_TABLES 1 // so param_info_table will give us the table declarations.
 #include "param_info_tables.h"
-void param_info_init() {} // should remove calls to this, it's dead.
+int param_info_init(const void ** pvdefaults)
+{
+	*pvdefaults = condor_params::defaults;
+	return condor_params::defaults_count;
+}
 
 #ifdef PARAM_DEFAULTS_SORTED
 

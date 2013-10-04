@@ -59,28 +59,46 @@ typedef struct bucket {
 
 #ifdef MACRO_SET_KNOWS_DEFAULT
 
+// structures for param/submit macro storage
+// These structures are carefully tuned to allow for minimal private memory
+// use when param metadata is disabled.
+//
 typedef struct macro_item {
 	const char * key;
 	const char * raw_value;
 } MACRO_ITEM;
+typedef struct macro_def_item {
+	const char * key;
+	const void * def_value;
+} MACRO_DEF_ITEM;
 typedef struct macro_meta {
-	int          param_id;
+	short int    param_id;
+	short int    index;
 	int          flags;
 	int          use_count;
 	int          ref_count;
 	int          source_id;    // filename or
 	int          source_line;  // line number for files, param.in entry for internal
 } MACRO_META;
+typedef struct macro_defaults {
+	int size;
+	const MACRO_DEF_ITEM * table; // points to const table[size] key/default-value pairs
+	struct META {
+		int use_count;
+		int ref_count;
+	} * metat; // optional, points to metat[size] of use counts parallel to table[]
+} MACRO_DEFAULTS;
 // this holds table and tablesize for use passing to the config functions.
 typedef struct macro_set {
 	int       size;
 	int       allocation_size;
 	int       options;
-	int       is_sorted;
+	int       sorted;  // number of items in table which are sorted
 	MACRO_ITEM *table;
-	MACRO_META *metat; // optional array parallel to table containing metadata.
+	MACRO_META *metat; // optional array of metadata, is parallel to table
 	ALLOCATION_POOL apool;
 	MACRO_SOURCES sources;
+	MACRO_DEFAULTS * defaults; // optional reference to const defaults table
 } MACRO_SET;
 
 #else // ! MACRO_SET_KNOWS_DEFAULT
@@ -259,6 +277,8 @@ extern "C" {
 	void config( int wantsQuiet=0 , bool ignore_invalid_entry = false, bool wantsExtra = true );
 	void config_host( const char* host=NULL );
 	void config_dump_string_pool(FILE * fh, const char * sep);
+	void config_dump_sources(FILE * fh, const char * sep);
+	const char * config_source_by_id(int source_id);
 	bool config_continue_if_no_config(bool contin);
 	void config_fill_ad( ClassAd*, const char *prefix = NULL );
 	void condor_net_remap_config( bool force_param=false );
@@ -297,6 +317,17 @@ extern "C" {
 	// and hash_iter_delete() for details.
 #ifdef CALL_VIA_MACRO_SET
 	} // extern "C"
+#if 1
+	class HASHITER {
+	public:
+		int opts;
+		int ix; int id; int is_def;
+		MACRO_SET & set;
+		HASHITER(MACRO_SET & setIn, int options=0) : opts(options), ix(0), id(0), is_def(0), set(setIn) {}
+	};
+	enum { HASHITER_NO_DEFAULTS=1, HASHITER_USED_DEFAULTS=2, HASHITER_USED=4, HASHITER_SHOW_DUPS=8 };
+	inline HASHITER hash_iter_begin(MACRO_SET & set, int options=0) { return HASHITER(set,options); }
+#else
 	class HASHITER {
 	public:
 		int index;
@@ -305,12 +336,16 @@ extern "C" {
 		HASHITER(MACRO_SET & setIn) : index(0), set(setIn), current(setIn.table) {}
 	};
 	inline HASHITER hash_iter_begin(MACRO_SET & set) { return HASHITER(set); }
+#endif
 	inline void hash_iter_delete(HASHITER*) {}
 	bool hash_iter_done(HASHITER& it);
 	bool hash_iter_next(HASHITER& it);
-	inline const char * hash_iter_key(HASHITER& it) { return it.current->key; }
-	inline const char * hash_iter_value(HASHITER& it) { return it.current->raw_value; }
+	const char * hash_iter_key(HASHITER& it);
+	const char * hash_iter_value(HASHITER& it);
 	int hash_iter_used_value(HASHITER& it);
+	MACRO_META * hash_iter_meta(HASHITER& it);
+	void foreach_param(int options, bool (*fn)(void* user, HASHITER& it), void* user);
+	void foreach_param_matching(Regex & re, int options, bool (*fn)(void* user, HASHITER& it), void* user);
 extern "C" {
 #else
 
@@ -467,10 +502,10 @@ BEGIN_C_DECLS
 		int cbTables;
 		int cbFree;
 		int cEntries;
+		int cSorted;
 		int cFiles;
 		int cUsed;
 		int cReferenced;
-		int is_sorted;
 	};
 	int  get_config_stats(struct _macro_stats *pstats);
 	void clear_config ( void );

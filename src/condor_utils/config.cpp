@@ -370,7 +370,7 @@ Read_config( const char* config_source, MACRO_SET_DECLARE_ARG,
 			}
 		} else  {
 			/* expand self references only */
-			PRAGMA_REMIND("tj: this handles only trivial self-refs, needs rethink.")
+			PRAGMA_REMIND("TJ: this handles only trivial self-refs, needs rethink.")
 			value = expand_macro( rhs, MACRO_SET_PASS_ARG, name, false, subsys );
 			if( value == NULL ) {
 				retval = -1;
@@ -488,13 +488,13 @@ extern "C++" MACRO_ITEM* find_macro_item (const char *name, MACRO_SET& set)
 	int cElms = set.size;
 	MACRO_ITEM* aTable = set.table;
 
-	if ( ! set.is_sorted) {
-		// table is not sorted, use a brute force search
-		for (int ii = 0; ii < cElms; ++ii) {
+	if (set.sorted < set.size) {
+		// use a brute force search on the unsorted parts of the table.
+		for (int ii = set.sorted; ii < cElms; ++ii) {
 			if (MATCH == strcasecmp(aTable[ii].key, name))
 				return &aTable[ii];
 		}
-		return NULL;
+		cElms = set.sorted;
 	}
 
 	// table is sorted, so we can binary search it.
@@ -545,9 +545,13 @@ void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SO
 			MACRO_META * pmeta = &set.metat[pitem - set.table];
 			pmeta->source_id = source.id;
 			pmeta->source_line = source.line;
-			if (source.inside) { pmeta->flags |= 2; } // flag value as internal
+			if (source.inside) {
+				pmeta->flags |= 2;  // flag value as internal
+			} else {
+				pmeta->flags &= ~2;
+			}
 		}
-		free(tvalue);
+		if (tvalue) free(tvalue);
 		return;
 	}
 
@@ -555,19 +559,25 @@ void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SO
 		int cAlloc = set.allocation_size*2;
 		if ( ! cAlloc) cAlloc = 32;
 		MACRO_ITEM * ptab = new MACRO_ITEM[cAlloc];
-		if (set.size > 0) {
-			memcpy(ptab, set.table, sizeof(set.table[0]) * set.size);
-			memset(set.table, 0, sizeof(set.table[0]) * set.size);
+		if (set.table) {
+			// transfer existing key/value pairs old allocation to new one.
+			if (set.size > 0) {
+				memcpy(ptab, set.table, sizeof(set.table[0]) * set.size);
+				memset(set.table, 0, sizeof(set.table[0]) * set.size);
+			}
+			delete [] set.table;
 		}
-		free(set.table);
 		set.table = ptab;
 		if (set.metat || (set.options & 1) == 1) {
 			MACRO_META * pmet = new MACRO_META[cAlloc];
-			if (set.size > 0) {
-				memcpy(pmet, set.metat, sizeof(set.metat[0]) * set.size);
-				memset(set.metat, 0, sizeof(set.metat[0]) * set.size);
+			if (set.metat) {
+				// transfer existing metadata from old allocation to new one.
+				if (set.size > 0) {
+					memcpy(pmet, set.metat, sizeof(set.metat[0]) * set.size);
+					memset(set.metat, 0, sizeof(set.metat[0]) * set.size);
+				}
+				delete [] set.metat;
 			}
-			free(set.metat);
 			set.metat = pmet;
 		}
 	}
@@ -577,12 +587,12 @@ void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SO
 	const char * def_value = param_default_rawval_by_id(param_id);
 	if (def_value && MATCH == strcmp(value, def_value)) {
 		matches_default = true; // flag value as matching the default.
-		// return; // don't put default-matching values into the config table.
+		if (set.options & 2)
+			return; // don't put default-matching values into the config table.
 	}
 
 	// for now just append the item.
-	// the set will no longer be sorted.
-	set.is_sorted = false;
+	// the set after this will no longer be sorted.
 	int ixItem = set.size++;
 
 	pitem = &set.table[ixItem];
@@ -605,6 +615,9 @@ void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SO
 		pmeta->source_line = source.line;
 		pmeta->use_count = 0;
 		pmeta->ref_count = 0;
+		pmeta->index = ixItem;
+		pmeta->param_id = param_id;
+
 	}
 }
 #else  // !  MACRO_SET_KNOWS_DEFAULT
@@ -1087,6 +1100,8 @@ expand_macro( const char *value,
 				// param_default_string().  See gittrack #1302
 			if( !self && use_default_param_table && tvalue == NULL ) {
 				tvalue = param_default_string(name, subsys);
+				PRAGMA_REMIND("TJ: need to increment default param ref count here.")
+				//if (use) { param_default_set_use(name, use, MACRO_SET_PASS_ARG); }
 			}
 			if( tvalue == NULL ) {
 				tvalue = "";
@@ -1118,6 +1133,106 @@ expand_macro( const char *value,
 #ifdef CALL_VIA_MACRO_SET
 } // end of extern "C"
 #ifdef MACRO_SET_KNOWS_DEFAULT
+#if 1
+bool hash_iter_done(HASHITER& it) {
+	// the first time this is called, so some setup
+	if (it.ix == 0 && it.id == 0) {
+		if ( ! it.set.defaults || ! it.set.defaults->table || ! it.set.defaults->size) {
+			it.opts |= HASHITER_NO_DEFAULTS;
+		} else if ( ! (it.opts & HASHITER_NO_DEFAULTS)) {
+			// decide whether the first item is in the defaults table or not.
+			const char * pix_key = it.set.table[it.ix].key;
+			const char * pid_key = it.set.defaults->table[it.id].key;
+			int cmp = strcasecmp(pix_key, pid_key);
+			it.is_def = (cmp > 0);
+			if ( ! cmp && ! (it.opts & HASHITER_SHOW_DUPS)) {
+				++it.id;
+			}
+		}
+	}
+	if (it.ix >= it.set.size && ((it.opts & HASHITER_NO_DEFAULTS) != 0 || (it.id >= it.set.defaults->size)))
+		return true;
+	return false;
+}
+bool hash_iter_next(HASHITER& it) {
+	if (hash_iter_done(it)) return false;
+	if (it.is_def) {
+		++it.id;
+	} else {
+		++it.ix;
+	}
+
+	if (it.opts & HASHITER_NO_DEFAULTS) {
+		it.is_def = false;
+		return (it.ix < it.set.size);
+	}
+
+	if (it.ix < it.set.size) {
+		if (it.id < it.set.defaults->size) {
+			const char * pix_key = it.set.table[it.ix].key;
+			const char * pid_key = it.set.defaults->table[it.id].key;
+			int cmp = strcasecmp(pix_key, pid_key);
+			it.is_def = (cmp > 0);
+			if ( ! cmp && ! (it.opts & HASHITER_SHOW_DUPS)) {
+				++it.id;
+			}
+		} else {
+			it.is_def = false;
+		}
+		return true;
+	}
+	it.is_def = (it.id < it.set.defaults->size);
+	return it.is_def;
+}
+const char * hash_iter_key(HASHITER& it) {
+	if (hash_iter_done(it)) return NULL;
+	return it.is_def ? it.set.defaults->table[it.id].key : it.set.table[it.ix].key;
+}
+const char * hash_iter_value(HASHITER& it) {
+	if (hash_iter_done(it)) return NULL;
+	if (it.is_def) {
+		const struct nodef_value { const char * psz; } * pdef = (const struct nodef_value *)it.set.defaults->table[it.id].def_value;
+		if ( ! pdef)
+			return NULL;
+		return pdef->psz;
+	}
+	return it.set.table[it.ix].raw_value;
+}
+MACRO_META * hash_iter_meta(HASHITER& it) {
+	if (hash_iter_done(it)) return NULL;
+	if (it.is_def) {
+		static MACRO_META meta;
+		memset(&meta, 0, sizeof(meta));
+		meta.flags |= (2 | 4);
+		meta.param_id = it.id;
+		meta.index = it.ix;
+		meta.source_id = 1;
+		meta.source_line = -2;
+		if (it.set.defaults && it.set.defaults->metat) {
+			meta.ref_count = it.set.defaults->metat[it.id].ref_count;
+			meta.use_count = it.set.defaults->metat[it.id].ref_count;
+		} else {
+			meta.ref_count = -1;
+			meta.use_count = -1;
+		}
+		return &meta;
+	}
+	return it.set.metat ? &it.set.metat[it.ix] : NULL;
+}
+int hash_iter_used_value(HASHITER& it) {
+	if (hash_iter_done(it)) return -1;
+	if (it.is_def) {
+		if (it.set.defaults && it.set.defaults->metat) {
+			return it.set.defaults->metat[it.id].ref_count + it.set.defaults->metat[it.id].ref_count;
+		}
+		return -1;
+	}
+	if (it.set.metat && (it.ix >= 0 && it.ix < it.set.size))
+		return it.set.metat[it.ix].use_count + it.set.metat[it.ix].ref_count;
+	return -1;
+};
+
+#else
 bool hash_iter_done(HASHITER& iter) {
 	if (iter.index >= iter.set.size)
 		return true;
@@ -1132,12 +1247,29 @@ bool hash_iter_next(HASHITER& iter) {
 	iter.current = &iter.set.table[iter.index];
 	return true;
 }
-int hash_iter_used_value(HASHITER& it) {
-	if ( ! it.set.metat)
-		return 1;
+
+const char * hash_iter_key(HASHITER& it) {
+	return it.current->key;
+}
+const char * hash_iter_value(HASHITER& it) {
+	return it.current->raw_value;
+}
+
+MACRO_META * hash_iter_meta(HASHITER& it) {
 	int ix = it.current - it.set.table;
-	return it.set.metat[ix].use_count + it.set.metat[ix].ref_count;
+	if (it.set.metat && (ix >= 0 && ix < it.set.size))
+		return &it.set.metat[ix];
+	return NULL;
+}
+
+int hash_iter_used_value(HASHITER& it) {
+	int ix = it.current - it.set.table;
+	if (it.set.metat && (ix >= 0 && ix < it.set.size))
+		return it.set.metat[ix].use_count + it.set.metat[ix].ref_count;
+	return -1;
 };
+#endif
+
 
 #else  // !  MACRO_SET_KNOWS_DEFAULT
 HASHITER hash_iter_begin(MACRO_SET & set) {

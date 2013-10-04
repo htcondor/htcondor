@@ -45,7 +45,7 @@ typedef struct _allocation_pool {
 			if ( ! phunks) cMax = 0;
 		}
 	};
-	int alignment() const { return 2; };
+	int alignment() const { return 1; };
 	int def_first_alloc() const { return 4 * 1024; };
 	void clear();
 	char * consume(int cb, int cbAlign);
