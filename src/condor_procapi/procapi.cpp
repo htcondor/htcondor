@@ -651,7 +651,7 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status, int num_a
 // actually seems to work in Linux...nice, but annoyingly different.
 
 	char path[64];
-	FILE *fp;
+	FILE *fp=NULL;
 	
 	int number_of_attempts;
 	long i;
