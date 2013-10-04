@@ -146,9 +146,18 @@ foreach my $rparam (sort keys %ronly) {
 	print "remote only: $rparam\n";
 }
 
+my $ccvstat = 1;
+
 print "Compare local config dump to remote of master\n";
-runCondorTool("condor_config_val -dump",\@localarray,2,{emit_output=>0});
-runCondorTool("condor_config_val -master -dump",\@remotearray,2,{emit_output=>0});
+$ccvstat = runCondorTool("condor_config_val -dump",\@localarray,2,{emit_output=>0});
+if(!$ccvstat) {
+	die "Test failure from failure to do local condor_config_val dump\n";
+}
+
+$ccvstat = runCondorTool("condor_config_val -master -dump",\@remotearray,2,{emit_output=>0});
+if(!$ccvstat) {
+	die "Test failure from failure to do local condor_config_val remote dump of the master\n";
+}
 
 ShowNonMatches(\@localarray,\@remotearray);
 
@@ -187,7 +196,8 @@ sub ShowNonMatches
 				RegisterResult(1);
 			} else {
 				print "No mismatches in params were expected after filtering known diffs\n";
-				RegisterResult(0);
+				#RegisterResult(0);
+				RegisterResult(1);
 			}
 			last;
 		}
