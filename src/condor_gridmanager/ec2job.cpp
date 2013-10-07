@@ -1265,9 +1265,8 @@ void EC2Job::doEvaluateState()
 					if( m_retry_times++ < maxRetryTimes ) {
 						gmState = GM_CANCEL;
 					} else {
-						errorString = gahp->getErrorString();
-						dprintf( D_ALWAYS, "(%d.%d) job cancel did not succeed after %d tries, giving up.\n",
-								 procID.cluster, procID.proc, maxRetryTimes );
+						formatstr( errorString, "Job cancel did not succeed after %d tries, giving up.", maxRetryTimes );
+						dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 						gmState = GM_HOLD;
 						break;
 					}
