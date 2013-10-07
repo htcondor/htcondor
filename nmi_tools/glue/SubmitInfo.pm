@@ -533,7 +533,7 @@ our %submit_info = (
 	
 	'x86_64_Ubuntu12' => {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},
