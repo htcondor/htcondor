@@ -28,15 +28,9 @@
 ## -CsdVersion argument; that goofed up the pre-8.0.3 check for
 ## whether we should fall back to non-workflow log mode.)
 
-## TO DO: add some stuff to verify that each node really only got
-## successfully run once.
-
-#TEMPTEMP -- need to copy modified .condor.sub file and do condor_submit instead of condor_submit_dag to reproduce the bug
-
 use CondorTest;
 use CondorUtils;
 
-#TEMPTEMP? cmd = 'job_dagman_pegasus_recovery.dag';
 $cmd = 'job_dagman_pegasus_recovery.dag.condor.sub';
 $testdesc =  'Condor submit dag - retry-recovery test - scheduler U';
 $testname = "job_dagman_pegasus_recovery";
@@ -66,6 +60,7 @@ runcmd("rm -f job_dagman_pegasus_recovery*.log");
 # Get rid of any existing rescue DAGs.
 runcmd("rm -f job_dagman_pegasus_recovery.dag.rescue*");
 
+# So nodeA and nodeB will work, but only once.
 runcmd("touch job_dagman_pegasus_recovery-nodeA.works");
 runcmd("touch job_dagman_pegasus_recovery-nodeB.works");
 
@@ -160,7 +155,10 @@ CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterRelease( $testname, $released );
 CondorTest::RegisterSubmit( $testname, $submitted );
 
-#TEMPTEMP? if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+# Note that we're doing RunTest here instead of RunDagTest, because
+# we need to use the "special" .condor.sub file we generated in
+# this script, instead of having condor_submit_dag generate the
+# .condor.sub file in the normal way.
 if( CondorTest::RunTest($testname, $cmd, 0) ) {
 	CondorTest::debug("$testname: SUCCESS\n",1);
 	exit(0);
@@ -173,9 +171,6 @@ sub GenerateSubFile {
 	$submit_file = "job_dagman_pegasus_recovery.dag.condor.sub";
 	$dagman_path = `which condor_dagman`;
 	chomp($dagman_path);
-	print "DIAG path: $dagman_path\n";#TEMPTEMP
-
-	#runcmd("cp $template_file $submit_file");#TEMPTEMP!!
 
 	open(TEMPL, "<$template_file") or die "Can't open template file $template_file\n";
 	@template = <TEMPL>;
