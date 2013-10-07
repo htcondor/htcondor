@@ -60,8 +60,13 @@ typedef struct bucket {
 #ifdef MACRO_SET_KNOWS_DEFAULT
 
 // forward ref to structure declarations in param_info_tables.h
-namespace condor_params { typedef struct key_value_pair key_value_pair; }
-typedef const struct condor_params::key_value_pair MACRO_DEF_ITEM;
+#ifdef __cplusplus
+  namespace condor_params { typedef struct key_value_pair key_value_pair; }
+  typedef const struct condor_params::key_value_pair MACRO_DEF_ITEM;
+#else
+  typedef struct key_value_pair { const char * key; const void * def} key_value_pair;
+  typedef const struct key_value_pair MACRO_DEF_ITEM;
+#endif
 
 // structures for param/submit macro storage
 // These structures are carefully tuned to allow for minimal private memory
