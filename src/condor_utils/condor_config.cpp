@@ -84,6 +84,7 @@
 #include "extArray.h"
 #include "subsystem_info.h"
 #include "param_info.h"
+#include "param_info_tables.h"
 #include "Regex.h"
 #include <algorithm> // for std::sort
 
@@ -2664,6 +2665,140 @@ bool param_get_location(
 	return found_it;
 }
 
+#ifdef MACRO_SET_KNOWS_DEFAULT
+
+typedef struct condor_params::key_table_pair param_table_map_entry;
+
+// find an item and return a hash iterator that points to it.
+bool param_find_item (
+	const char * name,
+	const char * subsys,
+	const char * local,
+	MyString & name_found, // out
+	HASHITER& it)          //
+{
+	it = HASHITER(ConfigMacroSet, 0);
+	if (subsys && ! subsys[0]) subsys = NULL;
+	if (local && ! local[0]) local = NULL;
+	it.id = it.set.defaults ? it.set.defaults->size : 0;
+	it.ix = it.set.size;
+	it.is_def = false;
+
+	MACRO_ITEM * pi = NULL;
+	if (subsys && local) {
+		name_found.formatstr("%s.%s.%s", subsys, local, name);
+		pi = find_macro_item(name_found.Value(), ConfigMacroSet);
+		if (pi) {
+			it.ix = (int)(pi - it.set.table);
+			return true;
+		}
+	}
+	if (local) {
+		name_found.formatstr("%s.%s", local, name);
+		pi = find_macro_item(name_found.Value(), ConfigMacroSet);
+		if (pi) {
+			it.ix = (int)(pi - it.set.table);
+			return true;
+		}
+	}
+	if (subsys) {
+		name_found.formatstr("%s.%s", subsys, name);
+		pi = find_macro_item(name_found.Value(), ConfigMacroSet);
+		if (pi) {
+			it.ix = (int)(pi - it.set.table);
+			return true;
+		}
+		const MACRO_DEF_ITEM* pdf = (const MACRO_DEF_ITEM*)param_subsys_default_lookup(subsys, name);
+		if (pdf) {
+			it.is_def = true;
+			it.pdef = pdf;
+			it.id = param_default_get_id(name);
+			return true;
+		}
+	}
+
+	pi = find_macro_item(name, ConfigMacroSet);
+	if (pi) {
+		name_found = name;
+		it.ix = (int)(pi - it.set.table);
+		return true;
+	}
+
+	MACRO_DEF_ITEM * pdf = param_default_lookup(name);
+	if (pdf) {
+		name_found = name;
+		it.is_def = true;
+		it.pdef = pdf;
+		it.id = param_default_get_id(name);
+		return true;
+	}
+
+	name_found.clear();
+	it.id = it.set.defaults ? it.set.defaults->size : 0;
+	it.ix = it.set.size;
+	it.is_def = false;
+	return false;
+}
+
+const char * hash_iter_info(
+	HASHITER& it,
+	int& use_count,
+	int& ref_count,
+	MyString &source_name,
+	int &line_number)
+{
+	MACRO_META * pmet = hash_iter_meta(it);
+	if ( ! pmet) {
+		use_count = ref_count = -1;
+		line_number = -2;
+		source_name.clear();
+	} else {
+		source_name = config_source_by_id(pmet->source_id);
+		line_number = pmet->source_line;
+		use_count = pmet->use_count;
+		ref_count = pmet->ref_count;
+	}
+	return hash_iter_value(it);
+}
+
+const char * hash_iter_def_value(HASHITER& it)
+{
+	if (it.is_def)
+		return hash_iter_value(it);
+	const char * name =  hash_iter_key(it);
+	if ( ! name)
+		return NULL;
+	return param_exact_default_string(name);
+}
+
+#endif
+
+#if 1
+const char * param_get_info(
+	const char * name,
+	const char * subsys,
+	const char * local,
+	const char ** pdef_val,
+	MyString &name_used,
+	int & use_count,
+	int & ref_count,
+	MyString &filename,
+	int &line_number)
+{
+	const char * val = NULL;
+	if (pdef_val) { pdef_val = NULL; }
+
+	HASHITER it(ConfigMacroSet, 0);
+	if (param_find_item(name, subsys, local, name_used, it)) {
+		val = hash_iter_info(it, use_count, ref_count, filename, line_number);
+		if (pdef_val) {
+			*pdef_val = hash_iter_def_value(it);
+		}
+	}
+	return val;
+}
+#else
+
 const char * param_get_info(
 	const char * name,
 	const char * subsys,
@@ -2676,7 +2811,6 @@ const char * param_get_info(
 {
 	const char * val = NULL;
 #if 1
-	PRAGMA_REMIND("TJ: rewrite this")
 	bool is_default = false;
 	filename = "";
 	line_number = -1;
@@ -2743,6 +2877,7 @@ const char * param_get_info(
 	return NULL;
 #endif
 }
+#endif
 
 void
 reinsert_specials( const char* host )

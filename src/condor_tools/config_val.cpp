@@ -55,6 +55,8 @@
 #ifdef WIN32
  #include "exception_handling.WINDOWS.h"
 #endif
+#include "param_info.h" // access to default params
+#include "condor_version.h"
 
 #include <sstream>
 #include <algorithm> // for std::sort
@@ -100,6 +102,56 @@ my_exit( int status )
 void
 usage(int retval = 1)
 {
+#if 1
+	fprintf(stderr, "Usage: %s <edit> | <var> [<view>] [<location>] [<help>]\n"
+		"\n    where <edit> is one set/unset operation with one or more <var>'s\n"
+		"\t-set \"<var> = <value>\"\tSet persistent <var> to <value>\n"
+		"\t-unset <var>\t\tRevert persistent <var> to previous value\n"
+		"\t-rset \"<var> = <value>\"\tSet runtime <var> to <value>\n"
+		"\t-runset <var>\t\tRevert runtime <var> to previous value\n"
+		//"\t-writeconfig <file>\tWrite non-default configuration to <file>\n"
+		"\n    <var> [<var>...]\tPrint the value of <var>. The value is\n"
+		"\texpanded unless -raw, -evaluate, or -default is specified.\n"
+		"\tWhen used with -dump, <var> is treated as a regular expression\n"
+		"\n    where <view> is one or more of\n"
+		"\t-dump\t\tPrint values of all variables that match <var>\n"
+		"\t\t\tPrint all variables if no <var>. The value is raw\n"
+		"\t\t\tunless -expand, -default or -evaluate is specified\n"
+		"\t-default\tPrint default value\n"
+		"\t-expand\t\tPrint expanded value\n"
+		"\t-raw\t\tPrint raw (unexpanded) value as it appears in the file\n"
+		//"\t-stats\t\tPrint statistics of the configuration system\n"
+		"\t-verbose\tPrint location, raw, expanded, and default values\n"
+		"      these options apply when querying a daemon\n"
+		"\t-evaluate\tevaluate with respect the <daemon> classad\n"
+		"\t-used\t\tPrint only variables used the the daemon\n"
+		"\t-unused\t\tPrint only variables not used the the daemon\n"
+		"      these options apply when reading configuration files\n"
+		"\t-config\t\tPrint the locations of configuration files\n"
+		//"\t-reconfig <file>\tReload config and append <file>\n"
+		"\t-mixedcase\tPrint variable names as originally specified\n"
+		"\t-local-name <name>  Local name for querying and expanding\n"
+		"\t-subsystem <daemon> Subsystem/Daemon name for querying and expanding\n"
+		"\t\t\tThe default subsystem for condor_config_val is TOOL\n"
+		//"\t-tilde\t\tReturn the path to the Condor home directory\n"
+		//"\t-owner\t\tReturn the owner of the condor_config_val process\n"
+		"\n    where <location> is one or more of\n"
+		"\t-address <ip:port>\tConnect to the given ip/port\n"
+		"\t-pool <hostname>\tUse the given central manager to find daemons\n"
+		"\t-name <daemon_name>\tQuery the specified daemon\n"
+		"\t-master\t\t\tQuery the master\n"
+		"\t-schedd\t\t\tQuery the schedd\n"
+		"\t-startd\t\t\tQuery the startd\n"
+		"\t-collector\t\tQuery the collector\n"
+		"\t-negotiator\t\tQuery the negotiator\n"
+		"\n    where <help> is one of\n"
+		"\t-help\t\tPrint this screen and exit\n"
+		"\t-version\tPrint HTCondor version and exit\n"
+		"\t-debug[:<opts>] dprintf to stderr, optionally overiding TOOL_DEBUG\n"
+		//"\t-diagnostic\t\tPrint diagnostic information about condor_config_val operation\n"
+
+		, MyName );
+#else
 	fprintf( stderr, "Usage: %s [options] variable [variable] ...\n", MyName );
 	fprintf( stderr,
 			 "   or: %s [options] -set string [string] ...\n",
@@ -138,6 +190,7 @@ usage(int retval = 1)
 	fprintf( stderr, "   -evaluate\t\t(when querying <daemon>, evaluate param with respect to classad from <daemon>)\n" );
 	fprintf( stderr, "   -config\t\t(print the locations of found config files)\n" );
 	fprintf( stderr, "   -debug[:<flags>]\t\t(dprintf to stderr, optionally overiding the TOOL_DEBUG flags)\n" );
+#endif
 	my_exit(retval);
 }
 
@@ -506,8 +559,11 @@ main( int argc, const char* argv[] )
 				debug_flags = ++pcolon;
 				if (*debug_flags == '"') ++debug_flags;
 			}
-		} else if (is_arg_prefix(arg, "help", 2)) {
+		} else if (is_dash_arg_prefix(argv[i], "help", 2)) {
 			usage();
+		} else if (is_dash_arg_prefix(argv[i], "version", 3)) {
+			printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
+			my_exit(0);
 		} else {
 			fprintf(stderr, "%s is not valid argument\n", argv[i]);
 			usage();
@@ -760,10 +816,11 @@ main( int argc, const char* argv[] )
 						for (int ii = 0; ii < (int)names.size(); ++ii) {
 
 							const char * name = names[ii].c_str();
-							MyString name_used, filename, def_value;
+							MyString name_used, filename;
 							int line_number, use_count, ref_count;
+							const char * def_val = NULL;
 							const char * rawval = param_get_info(name, subsys, local_name,
-															name_used, use_count, ref_count,
+															&def_val, name_used, use_count, ref_count,
 															filename, line_number);
 							if ( ! rawval)
 								continue;
@@ -793,7 +850,6 @@ main( int argc, const char* argv[] )
 								} else {
 									fprintf(stdout, " # expanded: %s\n", param(name));
 								}
-								const char * def_val = param_default_string(name, subsys);
 								if (def_val) { fprintf(stdout, " # default: %s\n", def_val); }
 								if (dash_usage) {
 									if (ref_count) fprintf(stdout, " # use_count: %d / %d\n", use_count, ref_count);
@@ -1024,8 +1080,9 @@ main( int argc, const char* argv[] )
 				if (dash_raw || verbose) {
 					MyString name_used;
 					int line_number, use_count, ref_count;
+					const char * def_val;
 					const char * val = param_get_info(tmp, subsys, local_name,
-											name_used, use_count, ref_count,
+											&def_val, name_used, use_count, ref_count,
 											file_and_line, line_number);
 					if (val) {
 						raw_supported = true;
@@ -1039,8 +1096,6 @@ main( int argc, const char* argv[] )
 							raw_value += val;
 							if (line_number >= 0)
 								file_and_line.formatstr_cat(", line %d", line_number);
-							if (line_number != -2)
-								def_value = param_exact_default_string(name_used.Value());
 							if (ref_count) {
 								usage_report.formatstr("%d / %d", use_count, ref_count);
 							} else {

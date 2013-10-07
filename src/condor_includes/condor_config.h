@@ -37,7 +37,7 @@ typedef void* MACRO_SOURCES; // placeholder for use in C
 #endif
 
 #include "pool_allocator.h"
-#include "param_info.h"
+//#include "param_info.h"
 
 #define PARAM_USE_COUNTING
 #define CALL_VIA_MACRO_SET
@@ -59,6 +59,10 @@ typedef struct bucket {
 
 #ifdef MACRO_SET_KNOWS_DEFAULT
 
+// forward ref to structure declarations in param_info_tables.h
+namespace condor_params { typedef struct key_value_pair key_value_pair; }
+typedef const struct condor_params::key_value_pair MACRO_DEF_ITEM;
+
 // structures for param/submit macro storage
 // These structures are carefully tuned to allow for minimal private memory
 // use when param metadata is disabled.
@@ -67,10 +71,12 @@ typedef struct macro_item {
 	const char * key;
 	const char * raw_value;
 } MACRO_ITEM;
+/*
 typedef struct macro_def_item {
 	const char * key;
 	const void * def_value;
 } MACRO_DEF_ITEM;
+*/
 typedef struct macro_meta {
 	short int    param_id;
 	short int    index;
@@ -82,7 +88,7 @@ typedef struct macro_meta {
 } MACRO_META;
 typedef struct macro_defaults {
 	int size;
-	const MACRO_DEF_ITEM * table; // points to const table[size] key/default-value pairs
+	MACRO_DEF_ITEM * table; // points to const table[size] key/default-value pairs
 	struct META {
 		int use_count;
 		int ref_count;
@@ -222,6 +228,7 @@ class ParamValue {
 	const char * param_get_info(const char * name,
 								const char * subsys,
 								const char * local,
+								const char ** pdef_value,
 								MyString &name_used,
 								int &use_count,	int & ref_count,
 								MyString &filename,
@@ -322,8 +329,10 @@ extern "C" {
 	public:
 		int opts;
 		int ix; int id; int is_def;
+		MACRO_DEF_ITEM * pdef; // for use when default comes from per-daemon override table.
 		MACRO_SET & set;
-		HASHITER(MACRO_SET & setIn, int options=0) : opts(options), ix(0), id(0), is_def(0), set(setIn) {}
+		HASHITER(MACRO_SET & setIn, int options=0) : opts(options), ix(0), id(0), is_def(0), pdef(NULL), set(setIn) {}
+		HASHITER& operator=(const HASHITER& rhs) { if (this != &rhs) { memcpy(this, &rhs, sizeof(this)); } return *this; }
 	};
 	enum { HASHITER_NO_DEFAULTS=1, HASHITER_USED_DEFAULTS=2, HASHITER_USED=4, HASHITER_SHOW_DUPS=8 };
 	inline HASHITER hash_iter_begin(MACRO_SET & set, int options=0) { return HASHITER(set,options); }
@@ -344,6 +353,9 @@ extern "C" {
 	const char * hash_iter_value(HASHITER& it);
 	int hash_iter_used_value(HASHITER& it);
 	MACRO_META * hash_iter_meta(HASHITER& it);
+	const char * hash_iter_info(HASHITER& it, int& use_count, int& ref_count, MyString& source_name, int& line_number);
+	const char * hash_iter_def_value(HASHITER& it);
+	bool param_find_item (const char * name, const char * subsys, const char * local, MyString& name_found, HASHITER& it);
 	void foreach_param(int options, bool (*fn)(void* user, HASHITER& it), void* user);
 	void foreach_param_matching(Regex & re, int options, bool (*fn)(void* user, HASHITER& it), void* user);
 extern "C" {
@@ -523,6 +535,7 @@ BEGIN_C_DECLS
 	int write_config_file( const char* pathname );
 	// Helper function, of form to iterate over the hash table of parameter
 	// information.  Returns 0 to continue, -1 to stop (i.e. on an error).
+	typedef struct param_info_t_s param_info_t;
 	int write_config_variable(const param_info_t* value, void* file_desc);
 
 /* This function initialize GSI (maybe other) authentication related

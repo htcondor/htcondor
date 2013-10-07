@@ -91,6 +91,13 @@ class MyString
 	/** Returns a strdup()ed C string. */
 	char *StrDup() const { return strdup( Value() );         }
 
+	/** alternate names that match std::string method names */
+	int length() const { return Len; }
+	int size() const { return Len; }
+	void clear() { assign_str(NULL, 0); }
+	bool empty() const { return (0 == Len); }
+	const char * c_str() const { return Value(); }
+
 	/** Returns string. 
 		Note that it never returns NULL, but will return an 
 	    empty string instead. */

@@ -23,6 +23,8 @@
 #include "condor_debug.h"
 #include "pool_allocator.h"
 #include "condor_config.h"
+#include "param_info.h"
+#include "param_info_tables.h"
 #include "condor_string.h"
 #include "extra_param_info.h"
 #include "condor_random_num.h"
@@ -1186,12 +1188,15 @@ bool hash_iter_next(HASHITER& it) {
 }
 const char * hash_iter_key(HASHITER& it) {
 	if (hash_iter_done(it)) return NULL;
-	return it.is_def ? it.set.defaults->table[it.id].key : it.set.table[it.ix].key;
+	if (it.is_def) {
+		return it.pdef ? it.pdef->key : it.set.defaults->table[it.id].key;
+	}
+	return it.set.table[it.ix].key;
 }
 const char * hash_iter_value(HASHITER& it) {
 	if (hash_iter_done(it)) return NULL;
 	if (it.is_def) {
-		const struct nodef_value { const char * psz; } * pdef = (const struct nodef_value *)it.set.defaults->table[it.id].def_value;
+		const condor_params::nodef_value * pdef = it.pdef ? it.pdef->def : it.set.defaults->table[it.id].def;
 		if ( ! pdef)
 			return NULL;
 		return pdef->psz;
@@ -1210,7 +1215,7 @@ MACRO_META * hash_iter_meta(HASHITER& it) {
 		meta.source_line = -2;
 		if (it.set.defaults && it.set.defaults->metat) {
 			meta.ref_count = it.set.defaults->metat[it.id].ref_count;
-			meta.use_count = it.set.defaults->metat[it.id].ref_count;
+			meta.use_count = it.set.defaults->metat[it.id].use_count;
 		} else {
 			meta.ref_count = -1;
 			meta.use_count = -1;
@@ -1223,7 +1228,7 @@ int hash_iter_used_value(HASHITER& it) {
 	if (hash_iter_done(it)) return -1;
 	if (it.is_def) {
 		if (it.set.defaults && it.set.defaults->metat) {
-			return it.set.defaults->metat[it.id].ref_count + it.set.defaults->metat[it.id].ref_count;
+			return it.set.defaults->metat[it.id].use_count + it.set.defaults->metat[it.id].ref_count;
 		}
 		return -1;
 	}

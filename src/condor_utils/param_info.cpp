@@ -106,25 +106,26 @@ int ComparePrefixBeforeDot(const char * p1, const char * p2)
 // is used for the lookup in the subsystems table. this allows one to pass in "MASTER.ATTRIBUTE"
 // as the subsys value in order to locate the master table.
 //
-typedef const struct condor_params::key_table_pair param_table_map_entry_t;
-const param_table_entry_t * param_subsys_default_lookup(const char * subsys, const char * param)
+typedef const struct condor_params::key_value_pair MACRO_DEF_ITEM;
+typedef const struct condor_params::key_table_pair MACRO_TABLE_PAIR;
+MACRO_DEF_ITEM * param_subsys_default_lookup(const char * subsys, const char * param)
 {
-	const param_table_map_entry_t* subtab = NULL;
-	subtab = BinaryLookup<param_table_map_entry_t>(
+	MACRO_TABLE_PAIR* subtab = NULL;
+	subtab = BinaryLookup<MACRO_TABLE_PAIR>(
 		condor_params::subsystems,
 		condor_params::subsystems_count,
 		subsys, ComparePrefixBeforeDot);
 
 	if (subtab) {
-		return BinaryLookup<param_table_entry_t>(subtab->aTable, subtab->cElms, param, strcasecmp);
+		return BinaryLookup<MACRO_DEF_ITEM>(subtab->aTable, subtab->cElms, param, strcasecmp);
 	}
 	return NULL;
 }
 
-const param_table_entry_t * param_default_lookup(const char * param, const char * subsys)
+MACRO_DEF_ITEM * param_default_lookup(const char * param, const char * subsys)
 {
 	if (subsys) {
-		const param_table_entry_t * p = param_subsys_default_lookup(subsys, param);
+		MACRO_DEF_ITEM * p = param_subsys_default_lookup(subsys, param);
 		if (p) return p;
 		// fall through to do generic lookup.
 	}

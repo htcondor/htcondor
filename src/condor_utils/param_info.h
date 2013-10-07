@@ -118,6 +118,9 @@ typedef union param_info_storage_u {
 extern "C" {
 #endif
 
+	namespace condor_params { typedef struct key_value_pair key_value_pair; }
+	typedef const struct condor_params::key_value_pair MACRO_DEF_ITEM;
+
 	int param_info_init(const void ** pvdefaults);
 
 	int param_default_integer(const char* param, const char * subsys, int* valid, int* is_long);
@@ -132,6 +135,8 @@ extern "C" {
 	const char* param_default_name_by_id(int ix);
 	const char* param_default_rawval_by_id(int ix);
 	param_info_t_type_t param_default_type_by_id(int ix);
+	MACRO_DEF_ITEM *param_subsys_default_lookup(const char *subsys, const char *name);
+	MACRO_DEF_ITEM *param_default_lookup(const char *name);
 
 	// Returns -1 if param is not of the specified type.
 	// Otherwise, returns 0 and sets min and max to the minimum and maximum
