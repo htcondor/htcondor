@@ -115,7 +115,6 @@ bool writeShortFile( const std::string & fileName, const std::string & contents 
 
 //
 // Utility function; inefficient.
-// FIXME: GT #3924.  Also, broken for binary data with embedded NULs.
 //
 bool readShortFile( const std::string & fileName, std::string & contents ) {
     int fd = safe_open_wrapper_follow( fileName.c_str(), O_RDONLY, 0600 );
@@ -138,8 +137,7 @@ bool readShortFile( const std::string & fileName, std::string & contents ) {
         free( rawBuffer );
         return false;
     }
-    rawBuffer[ fileSize ] = '\0';
-    contents = rawBuffer;
+    contents.assign( rawBuffer, fileSize );
     free( rawBuffer );
 
     return true;
