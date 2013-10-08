@@ -199,18 +199,13 @@ char* UserNotesVal = NULL;
 char* StackSizeVal = NULL;
 List<const char> extraLines;  // lines passed in via -a argument
 
-#ifdef CALL_VIA_MACRO_SET
-  #ifdef MACRO_SET_KNOWS_DEFAULT
-	static MACRO_SET SubmitMacroSet = { 0, 0, 1, FALSE, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), NULL };
-  #else
-	static BUCKET * SubmitTable[113];
-	static MACRO_SET SubmitMacroSet = { sizeof(SubmitTable)/sizeof(SubmitTable[0]), SubmitTable, NULL };
-  #endif
-#else
- #define PROCVARSIZE	32
- BUCKET *ProcVars[ PROCVARSIZE ];
- #define SubmitMacroSet ProcVars, PROCVARSIZE
-#endif
+// the submit file is read into this macro table
+//
+static MACRO_SET SubmitMacroSet = { 0, 0, 1, FALSE, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), NULL };
+
+// these are used to keep track of the source of various macros in the table.
+const MACRO_SOURCE DefaultMacro = { true, 1, -2 };
+MACRO_SOURCE FileMacroSource = { false, 0, 0 };
 
 #define MEG	(1<<20)
 
@@ -561,11 +556,6 @@ char *myproxy_password = NULL;
 bool stream_std_file = false;
 
 extern DLL_IMPORT_MAGIC char **environ;
-
-#ifdef MACRO_SET_KNOWS_DEFAULT
-const MACRO_SOURCE DefaultMacro = { true, 1, -2 };
-MACRO_SOURCE FileMacroSource = { false, 0, 0 };
-#endif
 
 extern "C" {
 int SetSyscalls( int foo );
@@ -6367,11 +6357,7 @@ set_condor_param( const char *name, const char *value )
 void
 set_condor_param_used( const char *name ) 
 {
-#ifdef PARAM_USE_COUNTING
 	increment_macro_use_count(name, SubmitMacroSet);
-#else
-	set_macro_used(name, 1, SubmitMacroSet);
-#endif
 }
 
 int

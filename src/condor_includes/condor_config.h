@@ -32,8 +32,12 @@
 #include <string>
 
 typedef std::vector<const char *> MACRO_SOURCES;
+namespace condor_params { typedef struct key_value_pair key_value_pair; }
+typedef const struct condor_params::key_value_pair MACRO_DEF_ITEM;
 #else // ! __cplusplus
 typedef void* MACRO_SOURCES; // placeholder for use in C
+typedef struct key_value_pair { const char * key; const void * def} key_value_pair;
+typedef const struct key_value_pair MACRO_DEF_ITEM;
 #endif
 
 #include "pool_allocator.h"
@@ -43,31 +47,6 @@ typedef void* MACRO_SOURCES; // placeholder for use in C
 #define CALL_VIA_MACRO_SET
 #define MACRO_SET_KNOWS_DEFAULT
 
-typedef struct bucket {
-	char	*name;
-	char	*value;
-#ifdef PARAM_USE_COUNTING
-	int		use_count;
-	int		ref_count;
-#else
-	int		used;
-#endif
-	struct bucket	*next;
-} BUCKET;
-
-#ifdef CALL_VIA_MACRO_SET
-
-#ifdef MACRO_SET_KNOWS_DEFAULT
-
-// forward ref to structure declarations in param_info_tables.h
-#ifdef __cplusplus
-  namespace condor_params { typedef struct key_value_pair key_value_pair; }
-  typedef const struct condor_params::key_value_pair MACRO_DEF_ITEM;
-#else
-  typedef struct key_value_pair { const char * key; const void * def} key_value_pair;
-  typedef const struct key_value_pair MACRO_DEF_ITEM;
-#endif
-
 // structures for param/submit macro storage
 // These structures are carefully tuned to allow for minimal private memory
 // use when param metadata is disabled.
@@ -76,12 +55,6 @@ typedef struct macro_item {
 	const char * key;
 	const char * raw_value;
 } MACRO_ITEM;
-/*
-typedef struct macro_def_item {
-	const char * key;
-	const void * def_value;
-} MACRO_DEF_ITEM;
-*/
 typedef struct macro_meta {
 	short int    param_id;
 	short int    index;
@@ -112,76 +85,6 @@ typedef struct macro_set {
 	MACRO_DEFAULTS * defaults; // optional reference to const defaults table
 } MACRO_SET;
 
-#else // ! MACRO_SET_KNOWS_DEFAULT
-
-class ExtraParamTable;
-// this holds table and tablesize for use passing to the config functions.
-typedef struct macro_set {
-	int       table_size;
-	BUCKET ** table;
-	ExtraParamTable *extra;
-} MACRO_SET;
-
-#endif   //MACRO_SET_KNOWS_DEFAULT
-
-#define MACRO_SET_DECLARE_ARG    MACRO_SET& macro_set
-#define MACRO_SET_PASS_ARG       macro_set
-
-#else // ! CALL_VIA_MACRO_SET
-
-#define MACRO_SET_DECLARE_ARG    BUCKET** table, int table_size
-#define MACRO_SET_PASS_ARG       table, table_size
-
-
-#if defined(__cplusplus)
-// used by param_all();
-class ParamValue {
-	public:
-
-	// name of macro
-	MyString name;
-	// the expression that is the value of the macro
-	MyString value;
-	// Which file the macro is found in
-	MyString filename;
-	// on what line is the macro found in.
-	int lnum;
-	// where this configuration information came from (localhost, another
-	// machine, etc, etc, etc)
-	MyString source;
-
-	ParamValue() { 
-		name = "";
-		value = "";
-		filename = "";
-		lnum = -1;
-		source = "";
-	}
-
-	ParamValue(const ParamValue &old) {
-		name = old.name;
-		value = old.value;
-		filename = old.filename;
-		lnum = old.lnum;
-		source = old.source;
-	}
-
-	ParamValue& operator=(const ParamValue &rhs) {
-		if (this == &rhs) {
-			return *this;
-		}
-
-		name = rhs.name;
-		value = rhs.value;
-		filename = rhs.filename;
-		lnum = rhs.lnum;
-
-		return *this;
-	}
-};
-#endif
-
-#endif  // CALL_VIA_MACRO_SET
 
 /*
 **  Types of macro expansion
@@ -195,12 +98,8 @@ class ParamValue {
 	extern StringList local_config_sources;
 	class Regex;
 
-#ifdef CALL_VIA_MACRO_SET
-#else
-	ExtArray<ParamValue>* param_all(void);
-#endif  // CALL_VIA_MACRO_SET
 	int param_names_matching(Regex & re, ExtArray<const char *>& names);
-    int param_names_matching(Regex& re, std::vector<std::string>& names);
+	int param_names_matching(Regex& re, std::vector<std::string>& names);
 
     bool param_defined(const char* name);
 	char* param_or_except( const char *name );
@@ -247,29 +146,15 @@ class ParamValue {
 	table.  On success returns a pointer to the associated value.  The
 	value is owned by the table; do not free it.
 	*/
-#ifdef MACRO_SET_KNOWS_DEFAULT
 	MACRO_ITEM* find_macro_item (const char *name, MACRO_SET& set);
-	const char * lookup_macro (const char *name, const char *prefix, MACRO_SET& set);
-	const char * lookup_and_use_macro (const char *name, const char *prefix, MACRO_SET& set, int use);
-#else
-	char * lookup_macro ( const char *name, const char *prefix, MACRO_SET_DECLARE_ARG );
-	char * lookup_and_use_macro ( const char *name, const char *prefix, MACRO_SET_DECLARE_ARG, int use );
-#endif
+	const char * lookup_macro (const char *name, const char *prefix, MACRO_SET& set, int use=3);
+	//const char * lookup_and_use_macro (const char *name, const char *prefix, MACRO_SET& set, int use);
 
 	/*This is a faster version of lookup_macro that assumes the param name
-	  has already been converted to the canonical lowercase form.
-	  and prefixed with "prefix." if needed.*/
-#ifdef MACRO_SET_KNOWS_DEFAULT
-	const char * lookup_macro_lower( const char *name, MACRO_SET_DECLARE_ARG, int use );
-#else
-	char * lookup_macro_lower( const char *name, MACRO_SET_DECLARE_ARG, int use );
-#endif
+	  has already been prefixed with "prefix." if needed.*/
+	const char * lookup_macro_exact(const char *name, MACRO_SET& set, int use);
 
-	void optimize_macros(MACRO_SET_DECLARE_ARG);
-
-	/** Like lookup_macro_lower, but returns a BUCKET pointer and doesn't modify the use count
-	 */
-	BUCKET* lookup_macro_bucket (const char *name, MACRO_SET_DECLARE_ARG);
+	void optimize_macros(MACRO_SET& macro_set);
 
 	/* A convenience function that calls param() with a MyString buffer. */
 	bool param(MyString &buf,char const *param_name,char const *default_value=NULL);
@@ -321,15 +206,15 @@ extern "C" {
 
 	NOTE: Returns malloc()ed memory; caller is responsible for calling free().
 	*/
-	char * expand_macro ( const char *value, MACRO_SET_DECLARE_ARG,
-						  const char *self=NULL, bool use_default_param_table=false,
-						  const char *subsys=NULL, int use=2);
+	char * expand_macro (const char *value, MACRO_SET& macro_set,
+						 const char *self=NULL, bool use_default_param_table=false,
+						 const char *subsys=NULL, int use=2);
 	// Iterator for the hash array managed by insert() and expand_macro().  See
 	// hash_iter_begin(), hash_iter_next(), hash_iter_key(), hash_iter_value(),
 	// and hash_iter_delete() for details.
-#ifdef CALL_VIA_MACRO_SET
-	} // extern "C"
-#if 1
+} // end extern "C"
+
+// the HASHITER can only be defined with c++ linkage
 	class HASHITER {
 	public:
 		int opts;
@@ -341,16 +226,6 @@ extern "C" {
 	};
 	enum { HASHITER_NO_DEFAULTS=1, HASHITER_USED_DEFAULTS=2, HASHITER_USED=4, HASHITER_SHOW_DUPS=8 };
 	inline HASHITER hash_iter_begin(MACRO_SET & set, int options=0) { return HASHITER(set,options); }
-#else
-	class HASHITER {
-	public:
-		int index;
-		MACRO_SET & set;
-		MACRO_ITEM * current;
-		HASHITER(MACRO_SET & setIn) : index(0), set(setIn), current(setIn.table) {}
-	};
-	inline HASHITER hash_iter_begin(MACRO_SET & set) { return HASHITER(set); }
-#endif
 	inline void hash_iter_delete(HASHITER*) {}
 	bool hash_iter_done(HASHITER& it);
 	bool hash_iter_next(HASHITER& it);
@@ -363,70 +238,8 @@ extern "C" {
 	bool param_find_item (const char * name, const char * subsys, const char * local, MyString& name_found, HASHITER& it);
 	void foreach_param(int options, bool (*fn)(void* user, HASHITER& it), void* user);
 	void foreach_param_matching(Regex & re, int options, bool (*fn)(void* user, HASHITER& it), void* user);
+
 extern "C" {
-#else
-
-	struct hash_iter {
-		BUCKET ** table;
-		int table_size;
-		int index;
-		bucket * current;
-	};
-	typedef hash_iter * HASHITER;
-
-	/** Begin iteration over the table table with size table_size.
-
-	Returns an opaque object for iterating over all entries in a hash (of the
-	sort managed by insert() and expand_macro().  Use hash_iter_key() and
-	hash_iter_value() to retrieve keys (names) and values for the current item.
-	Use hash_iter_next() to move through the entries.  After hash_iter_begin()
-	the "current" entry is set to the first entry; it is not necessary to call
-	hash_iter_next() immediately.  When done be sure to call hash_iter_delete
-	to free any storage that has been allocated.
-
-	The iterator remains valid if entries are inserted into the hash, but the
-	iterator may overlook them.  The iterator becomes undefined if entries are
-	deleted from the hash.  If an entry is deleted, the only safe thing to
-	do is call hash_iter_delete.
-	*/
-	HASHITER hash_iter_begin(BUCKET ** table, int table_size);
-
-
-	/** Return true if we're out of entries in the hash table */
-	int hash_iter_done(HASHITER iter);
-
-	/** Move to the next entry in the hash table
-
-	Returns false when trying to advance from the last item in the
-	hash table.  Once this has returned false, the only safe things
-	you can do is call hash_iter_done or hash_iter_delete.
-	*/
-	int hash_iter_next(HASHITER iter);
-
-	/** Return key(name) for the current entry in the hash table
-
-	Do no modify or free the returned value.
-	*/
-	char * hash_iter_key(HASHITER iter);
-
-	/** Return value for the current entry in the hash table
-
-	Do no modify or free the returned value.
-	*/
-	char * hash_iter_value(HASHITER iter);
-
-	/** Returns 1 if the current entry in the hash table is used in 
-		an expression; otherwise, returns 0.
-	*/
-	int hash_iter_used_value(HASHITER iter);
-
-	/** Destroy iterator and reclaim memory.
-	You must pass in a pointer to the hash iterator.
-	After calling the HASHITER is no longer valid.
-	*/
-	void hash_iter_delete(HASHITER * iter);
-
-#endif
 
 
 	/** Find next $(MACRO) or $$(MACRO) in a string
@@ -481,30 +294,20 @@ BEGIN_C_DECLS
 	insert keeps copies of the name and value.
 	*/
 #ifdef __cplusplus
-#ifdef MACRO_SET_KNOWS_DEFAULT
 	typedef struct macro_source { int inside; int id; int line; } MACRO_SOURCE;
-	void insert_source(const char * filename, MACRO_SET_DECLARE_ARG, MACRO_SOURCE & source);
-	#define MACRO_SET_SOURCE_ARG const MACRO_SOURCE & source
+	void insert_source(const char * filename, MACRO_SET& macro_set, MACRO_SOURCE & source);
 	extern const MACRO_SOURCE EnvMacro;
 	extern const MACRO_SOURCE WireMacro;
 	extern const MACRO_SOURCE DetectedMacro;
-#else
-	enum { FileMacro=0, EnvMacro, WireMacro, DefaultMacro, DetectedMacro };
-	#define MACRO_SET_SOURCE_ARG int source
-	void insert_extra (const char *name, const char *value, MACRO_SET_DECLARE_ARG, int source, const char * filename, int line_num);
-#endif
-	void insert (const char *name, const char *value, MACRO_SET_DECLARE_ARG, MACRO_SET_SOURCE_ARG);
+
+	void insert (const char *name, const char *value, MACRO_SET& macro_set, const MACRO_SOURCE & source);
 	
 	/** Sets the whether or not a macro has actually been used
 	*/
-#ifdef PARAM_USE_COUNTING
-	int increment_macro_use_count ( const char *name, MACRO_SET_DECLARE_ARG );
-	void clear_macro_use_count ( const char *name, MACRO_SET_DECLARE_ARG );
-	int get_macro_use_count ( const char *name, MACRO_SET_DECLARE_ARG );
-	int get_macro_ref_count ( const char *name, MACRO_SET_DECLARE_ARG );
-#else
-	void set_macro_used ( const char *name, int used, MACRO_SET_DECLARE_ARG );
-#endif
+	int increment_macro_use_count (const char *name, MACRO_SET& macro_set);
+	void clear_macro_use_count (const char *name, MACRO_SET& macro_set);
+	int get_macro_use_count (const char *name, MACRO_SET& macro_set);
+	int get_macro_ref_count (const char *name, MACRO_SET& macro_set);
 #endif // __cplusplus
 
 	/*
