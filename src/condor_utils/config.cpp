@@ -31,17 +31,6 @@
 #include "condor_uid.h"
 #include "my_popen.h"
 
-#ifdef CALL_VIA_MACRO_SET
-  #ifdef MACRO_SET_KNOWS_DEFAULT
-  #else
-	#define MACRO_SET_DEFINE_LCL     BUCKET** table = macro_set.table; int table_size = macro_set.table_size;
-  #endif
-#else
-	#define MACRO_SET_DEFINE_LCL
-	extern ExtraParamTable ** ConfigExtraInfo;
-	extern void* ConfigIdent;
-#endif
-
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -164,17 +153,12 @@ is_valid_command(const char* cmdToExecute)
 
 
 int
-Read_config( const char* config_source, MACRO_SET_DECLARE_ARG,
-			 int expand_flag,
-			 bool check_runtime_security,
-#ifdef CALL_VIA_MACRO_SET
-			 const ExtraParamTable *, // unused dummy
-#else
-			 ExtraParamTable *extra_info,
-#endif
-			 const char * subsys)
+Read_config(const char* config_source, MACRO_SET& macro_set,
+			int expand_flag,
+			bool check_runtime_security,
+			const char * subsys)
 {
-  	FILE*	conf_fp = NULL;
+	FILE*	conf_fp = NULL;
 	char*	name = NULL;
 	char*	value = NULL;
 	char*	rhs = NULL;
@@ -187,10 +171,10 @@ Read_config( const char* config_source, MACRO_SET_DECLARE_ARG,
 	if (subsys && ! *subsys) subsys = NULL;
 
 	ConfigLineNo = 0;
-#ifdef MACRO_SET_KNOWS_DEFAULT
+	// initialize a MACRO_SOURCE for this file that we will use
+	// in subsequent macro insert calls.
 	MACRO_SOURCE FileMacro;
-	insert_source(config_source, MACRO_SET_PASS_ARG, FileMacro);
-#endif
+	insert_source(config_source, macro_set, FileMacro);
 
 	// Determine if the config file name specifies a file to open, or a
 	// pipe to suck on. Process each accordingly
@@ -348,7 +332,7 @@ Read_config( const char* config_source, MACRO_SET_DECLARE_ARG,
 
 		
 		/* Expand references to other parameters */
-		name = expand_macro( name, MACRO_SET_PASS_ARG );
+		name = expand_macro(name, macro_set);
 		if( name == NULL ) {
 			retval = -1;
 			goto cleanup;
@@ -365,7 +349,7 @@ Read_config( const char* config_source, MACRO_SET_DECLARE_ARG,
 		}
 
 		if( expand_flag == EXPAND_IMMEDIATE ) {
-			value = expand_macro( rhs, MACRO_SET_PASS_ARG );
+			value = expand_macro(rhs, macro_set);
 			if( value == NULL ) {
 				retval = -1;
 				goto cleanup;
@@ -373,7 +357,7 @@ Read_config( const char* config_source, MACRO_SET_DECLARE_ARG,
 		} else  {
 			/* expand self references only */
 			PRAGMA_REMIND("TJ: this handles only trivial self-refs, needs rethink.")
-			value = expand_macro( rhs, MACRO_SET_PASS_ARG, name, false, subsys );
+			value = expand_macro(rhs, macro_set, name, false, subsys);
 			if( value == NULL ) {
 				retval = -1;
 				goto cleanup;
@@ -387,16 +371,8 @@ Read_config( const char* config_source, MACRO_SET_DECLARE_ARG,
 				  table.  Everything now behaves like macros used to
 				  Derek Wright <wright@cs.wisc.edu> 4/11/00
 				*/
-#ifdef MACRO_SET_KNOWS_DEFAULT
 			FileMacro.line = ConfigLineNo;
-			insert(name, value, MACRO_SET_PASS_ARG, FileMacro);
-#else
-			/* Put the value in the Configuration Table */
-			insert_extra(name, value, MACRO_SET_PASS_ARG, FileMacro, config_source, ConfigLineNo);
-#endif
-			//if (extra_info != NULL) {
-			//	extra_info->AddFileParam(name, config_source, ConfigLineNo);
-			//}
+			insert(name, value, macro_set, FileMacro);
 		} else {
 			fprintf( stderr,
 				"Configuration Error File <%s>, Line %d: Syntax Error\n",
@@ -439,6 +415,7 @@ Read_config( const char* config_source, MACRO_SET_DECLARE_ARG,
 ** Just compute a hash value for the given string such that
 ** 0 <= value < size 
 */
+#if 0 // this is not currently used.
 int
 condor_hash( register const char *string, register int size )
 {
@@ -454,9 +431,11 @@ condor_hash( register const char *string, register int size )
 	answer %= size;
 	return answer;
 }
+#endif
 
 // case-insensitive hash, usable when the character set of name
 // is restricted to A-Za-Z0-9 and symbols except []{}\|^~
+#if 0 // this is not currently used
 int
 condor_hash_symbol_name(const char *name, int size)
 {
@@ -477,13 +456,12 @@ condor_hash_symbol_name(const char *name, int size)
 	answer %= size;
 	return answer;
 }
+#endif
 
 /*
 ** Insert the parameter name and value into the given hash table.
 */
 PRAGMA_REMIND("TJ: insert bug - self refs to default refs never expanded")
-
-#ifdef MACRO_SET_KNOWS_DEFAULT
 
 extern "C++" MACRO_ITEM* find_macro_item (const char *name, MACRO_SET& set)
 {
@@ -622,88 +600,10 @@ void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SO
 
 	}
 }
-#else  // !  MACRO_SET_KNOWS_DEFAULT
-void
-insert(const char *name, const char *value, MACRO_SET_DECLARE_ARG, int source)
-{
-	register BUCKET	*ptr;
-	int		loc;
-	BUCKET	*bucket;
-	char	tmp_name[ MAX_PARAM_LEN ],*tvalue;
-	MACRO_SET_DEFINE_LCL
-
-	// this is a hack to help transition to extra info being inside the macro set.
-	ExtraParamTable *extra_info = NULL;
-	#ifdef CALL_VIA_MACRO_SET
-	extra_info = macro_set.extra;
-	#else
-	if (ConfigIdent == table) { extra_info = *ConfigExtraInfo; }
-	#endif
-	if (extra_info && source >= 0) {
-		switch (source) {
-			case FileMacro: extra_info->AddFileParam(name, "", 0); break;
-			case EnvMacro: extra_info->AddEnvironmentParam(name); break;
-			default: extra_info->AddInternalParam(name); break;
-		}
-	}
-
-		/* Make sure not already in hash table */
-	snprintf( tmp_name, MAX_PARAM_LEN, "%s", name);
-	tmp_name[MAX_PARAM_LEN-1] = '\0';
-	strlwr( tmp_name );
-	loc = condor_hash( tmp_name, table_size );
-	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
-		if( strcmp(tmp_name,ptr->name) == 0 ) {
-			tvalue = expand_macro(value,MACRO_SET_PASS_ARG,name,true);
-			FREE( ptr->value );
-			ptr->value = tvalue;
-			return;
-		}
-	}
-
-		/* Insert it */
-	bucket = (BUCKET *)MALLOC( sizeof(BUCKET) );
-	ASSERT( bucket != NULL );
-	bucket->name = strdup( tmp_name );
-	bucket->value = strdup( value );
-#ifdef PARAM_USE_COUNTING
-	bucket->use_count = 0;
-	bucket->ref_count = 0;
-#else
-	bucket->used = 0;
-#endif
-	bucket->next = table[ loc ];
-	table[loc] = bucket;
-}
-
-void
-insert_extra(const char *name, const char *value, MACRO_SET_DECLARE_ARG, int source, const char * filename, int line_num)
-{
-	// this is a hack to help transition to extra info being inside the macro set.
-	ExtraParamTable *extra_info = NULL;
-	#ifdef CALL_VIA_MACRO_SET
-	extra_info = macro_set.extra;
-	#else
-	extern ExtraParamTable ** ConfigExtraInfo;
-	extern void* ConfigIdent;
-	if (ConfigIdent == table) { extra_info = *ConfigExtraInfo; }
-	#endif
-	if (extra_info) {
-		switch (source) {
-			case FileMacro: extra_info->AddFileParam(name, filename, line_num); break;
-			case EnvMacro: extra_info->AddEnvironmentParam(name); break;
-			default: extra_info->AddInternalParam(name); break;
-		}
-	}
-
-	insert(name, value, MACRO_SET_PASS_ARG, -1);
-}
-#endif  // !  MACRO_SET_KNOWS_DEFAULT
 
 /*
 ** Sets the given macro's state to used
 */
-#ifdef MACRO_SET_KNOWS_DEFAULT
 
 int increment_macro_use_count (const char *name, MACRO_SET & set)
 {
@@ -743,82 +643,6 @@ int get_macro_ref_count (const char *name, MACRO_SET & set)
 	}
 	return -1;
 }
-#else  // !  MACRO_SET_KNOWS_DEFAULT
-#ifdef PARAM_USE_COUNTING
-static BUCKET* find_bucket (const char *name, MACRO_SET_DECLARE_ARG)
-{
-	MACRO_SET_DEFINE_LCL
-	/* find the macro in the hash table */
-	int loc = condor_hash_symbol_name( name, table_size );
-	for (BUCKET * ptr = table[loc]; ptr; ptr = ptr->next ) {
-		if (MATCH == strcasecmp(name, ptr->name)) {
-			return ptr;
-		}
-	}
-	return 0;
-}
-
-int
-increment_macro_use_count ( const char *name, MACRO_SET_DECLARE_ARG )
-{
-	BUCKET	*ptr = find_bucket(name, MACRO_SET_PASS_ARG);
-	if (ptr) {
-		return ++(ptr->use_count);
-	}
-	return -1;
-}
-
-void
-clear_macro_use_count ( const char *name, MACRO_SET_DECLARE_ARG )
-{
-	BUCKET	*ptr = find_bucket(name, MACRO_SET_PASS_ARG);
-	if (ptr) {
-		ptr->use_count = 0;
-	}
-}
-
-int
-get_macro_use_count ( const char *name, MACRO_SET_DECLARE_ARG )
-{
-	BUCKET	*ptr = find_bucket(name, MACRO_SET_PASS_ARG);
-	if (ptr) {
-		return ptr->use_count;
-	}
-	return -1;
-}
-
-int
-get_macro_ref_count ( const char *name, MACRO_SET_DECLARE_ARG )
-{
-	BUCKET	*ptr = find_bucket(name, MACRO_SET_PASS_ARG);
-	if (ptr) {
-		return ptr->ref_count;
-	}
-	return -1;
-}
-#else
-void 
-set_macro_used ( const char *name, int used, MACRO_SET_DECLARE_ARG )
-{
-	MACRO_SET_DEFINE_LCL
-	register BUCKET	*ptr;
-	int		loc;
-	char	tmp_name[ MAX_PARAM_LEN ];
-	
-	/* find the macro in the hash table */
-	snprintf( tmp_name, MAX_PARAM_LEN, "%s", name);
-	tmp_name[MAX_PARAM_LEN-1] = '\0';
-	strlwr( tmp_name );
-	loc = condor_hash( tmp_name, table_size );
-	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
-		if( strcmp(tmp_name,ptr->name) == 0 ) {
-			ptr->used = used;
-			return;
-		}
-	}
-}
-#endif
-#endif  // !  MACRO_SET_KNOWS_DEFAULT
 
 /*
 ** Read one line and any continuation lines that go with it.  Lines ending
@@ -832,6 +656,7 @@ getline( FILE *fp )
 {
 	return getline_implementation(fp,_POSIX_ARG_MAX);
 }
+
 static char *
 getline_implementation( FILE *fp, int requested_bufsize )
 {
@@ -930,11 +755,13 @@ getline_implementation( FILE *fp, int requested_bufsize )
 	}
 }
 
+} // end of extern "C"
+
 /* 
 ** Utility function to get an integer from a string.
 ** Returns: -1 if input is NULL, -2 if input is invalid, 0 for success
 */
-int
+static int
 string_to_long( const char *s, long *valuep )
 {
 	// Verify that we have a valid pointer
@@ -964,13 +791,13 @@ string_to_long( const char *s, long *valuep )
 ** replacing $ENV(middle) with getenv(middle).
 ** Also expand references of the form "left$RANDOM_CHOICE(middle)right".
 */
-char *
-expand_macro( const char *value,
-			  MACRO_SET_DECLARE_ARG,
-			  const char *self,
-			  bool use_default_param_table,
-			  const char *subsys,
-			  int use)
+extern "C" char *
+expand_macro(const char *value,
+			 MACRO_SET& macro_set,
+			 const char *self,
+			 bool use_default_param_table,
+			 const char *subsys,
+			 int use)
 {
 	char *tmp = strdup( value );
 	char *left, *name, *right;
@@ -1093,9 +920,9 @@ expand_macro( const char *value,
 		if (find_config_macro(tmp, &left, &name, &right, self) ||
 			(selfless && find_config_macro(tmp, &left, &name, &right, selfless)) ) {
 			all_done = false;
-			tvalue = lookup_and_use_macro( name, subsys, MACRO_SET_PASS_ARG, use );
+			tvalue = lookup_macro(name, subsys, macro_set, use);
 			if (subsys && ! tvalue)
-				tvalue = lookup_and_use_macro( name, NULL, MACRO_SET_PASS_ARG, use );
+				tvalue = lookup_macro(name, NULL, macro_set, use);
 
 				// Note that if 'name' has been explicitly set to nothing,
 				// tvalue will _not_ be NULL so we will not call
@@ -1103,7 +930,7 @@ expand_macro( const char *value,
 			if( !self && use_default_param_table && tvalue == NULL ) {
 				tvalue = param_default_string(name, subsys);
 				PRAGMA_REMIND("TJ: need to increment default param ref count here.")
-				//if (use) { param_default_set_use(name, use, MACRO_SET_PASS_ARG); }
+				// if (use) { param_default_set_use(name, use, macro_set); }
 			}
 			if( tvalue == NULL ) {
 				tvalue = "";
@@ -1132,10 +959,7 @@ expand_macro( const char *value,
 	return( tmp );
 }
 
-#ifdef CALL_VIA_MACRO_SET
-} // end of extern "C"
-#ifdef MACRO_SET_KNOWS_DEFAULT
-#if 1
+
 bool hash_iter_done(HASHITER& it) {
 	// the first time this is called, so some setup
 	if (it.ix == 0 && it.id == 0) {
@@ -1237,187 +1061,10 @@ int hash_iter_used_value(HASHITER& it) {
 	return -1;
 };
 
-#else
-bool hash_iter_done(HASHITER& iter) {
-	if (iter.index >= iter.set.size)
-		return true;
-	iter.current = &iter.set.table[iter.index];
-	return false;
-}
-bool hash_iter_next(HASHITER& iter) {
-	if (hash_iter_done(iter)) return false;
-	++iter.index;
-	if (iter.index >= iter.set.size)
-		return false;
-	iter.current = &iter.set.table[iter.index];
-	return true;
-}
-
-const char * hash_iter_key(HASHITER& it) {
-	return it.current->key;
-}
-const char * hash_iter_value(HASHITER& it) {
-	return it.current->raw_value;
-}
-
-MACRO_META * hash_iter_meta(HASHITER& it) {
-	int ix = it.current - it.set.table;
-	if (it.set.metat && (ix >= 0 && ix < it.set.size))
-		return &it.set.metat[ix];
-	return NULL;
-}
-
-int hash_iter_used_value(HASHITER& it) {
-	int ix = it.current - it.set.table;
-	if (it.set.metat && (ix >= 0 && ix < it.set.size))
-		return it.set.metat[ix].use_count + it.set.metat[ix].ref_count;
-	return -1;
-};
-#endif
-
-
-#else  // !  MACRO_SET_KNOWS_DEFAULT
-HASHITER hash_iter_begin(MACRO_SET & set) {
-	return HASHITER(set);
-}
-bool hash_iter_done(HASHITER& iter) {
-	if (iter.index >= iter.set.table_size)
-		return true;
-	// if newly constructed iterator, advance to the first item first and prime current
-	if ( ! iter.index && ! iter.current) {
-		while ( ! (iter.current = iter.set.table[iter.index])) {
-			++iter.index;
-			if (iter.index >= iter.set.table_size)
-				return true;
-		}
-	}
-	return ! iter.current;
-}
-bool hash_iter_next(HASHITER& iter) {
-	if (hash_iter_done(iter)) return false;
-	iter.current = iter.current->next;
-	while ( ! iter.current) {
-		++iter.index;
-		if (iter.index >= iter.set.table_size)
-			return false;
-		iter.current = iter.set.table[iter.index];
-	}
-	return iter.current != NULL;
-}
-
-char * hash_iter_key(HASHITER& iter) { return iter.current->name; }
-char * hash_iter_value(HASHITER& iter) { return iter.current->value; }
-#ifdef PARAM_USE_COUNTING
-int hash_iter_used_value(HASHITER& iter) { return iter.current->use_count + iter.current->ref_count; }
-#else
-int hash_iter_used_value(HASHITER& iter) { return iter.current->used; }
-#endif
-void hash_iter_delete(HASHITER*) {}
-#endif  // !  MACRO_SET_KNOWS_DEFAULT
-extern "C" {
-#else
-
-// Local helper only.  If iter's current pointer is
-// null, move along to the beginning of the next non-empty 
-// bucket.  If there are no more non-empty buckets, leave
-// it set to null and advance iter's index past the end (to
-// make it clear we're done)
-static void
-hash_iter_scoot_to_next_bucket(HASHITER p)
-{
-	while(p->current == NULL) {
-		(p->index)++;
-		if(p->index >= p->table_size) {
-			// The hash table is empty
-			return;
-		}
-		p->current = p->table[p->index];
-	}
-}
-
-HASHITER 
-hash_iter_begin(BUCKET ** table, int table_size)
-{
-	ASSERT(table != NULL);
-	ASSERT(table_size > 0);
-	hash_iter * p = (hash_iter *)MALLOC(sizeof(hash_iter));
-	ASSERT( p != NULL );
-	p->table = table;
-	p->table_size = table_size;
-	p->index = 0;
-	p->current = p->table[p->index];
-	hash_iter_scoot_to_next_bucket(p);
-	return p;
-}
-
-int
-hash_iter_done(HASHITER iter)
-{
-	ASSERT(iter);
-	ASSERT(iter->table); // Probably trying to use a iter already hash_iter_delete()d
-	return iter->current == NULL;
-}
-
-int 
-hash_iter_next(HASHITER iter)
-{
-	ASSERT(iter);
-	ASSERT(iter->table); // Probably trying to use a iter already hash_iter_delete()d
-	if(hash_iter_done(iter)) {
-		return 0;
-	}
-	iter->current = iter->current->next;
-	hash_iter_scoot_to_next_bucket(iter);
-	return (iter->current) ? 1 : 0;
-}
-
-char * 
-hash_iter_key(HASHITER iter)
-{
-	ASSERT(iter);
-	ASSERT(iter->table); // Probably trying to use a iter already hash_iter_delete()d
-	ASSERT( ! hash_iter_done(iter) );
-	return iter->current->name;
-}
-
-char * 
-hash_iter_value(HASHITER iter)
-{
-	ASSERT(iter);
-	ASSERT(iter->table); // Probably trying to use a iter already hash_iter_delete()d
-	ASSERT( ! hash_iter_done(iter) );
-	return iter->current->value;
-}
-
-int
-hash_iter_used_value(HASHITER iter)
-{
-	ASSERT(iter);
-	ASSERT(iter->table); // Probably trying to use a iter already hash_iter_delete()d
-	ASSERT( ! hash_iter_done(iter) );
-#ifdef PARAM_USE_COUNTING
-	return iter->current->use_count;
-#else
-	return iter->current->used;
-#endif
-}
-
-void 
-hash_iter_delete(HASHITER * iter)
-{
-	ASSERT(iter);
-	ASSERT(iter[0]);
-	ASSERT(iter[0]->table); // Probably trying to use a iter already hash_iter_delete()d
-	iter[0]->table = NULL;
-	free(*iter);
-	*iter = 0;
-}
-#endif
-
 /*
 ** Same as find_config_macro() below, but finds special references like $ENV().
 */
-int
+extern "C" int
 find_special_config_macro( const char *prefix, bool only_id_chars, register char *value, 
 		register char **leftp, register char **namep, register char **rightp )
 {
@@ -1480,7 +1127,7 @@ tryagain:
 }
 
 /* Docs are in /src/condor_includes/condor_config.h */
-int
+extern "C" int
 find_config_macro( register char *value, register char **leftp, 
 		 register char **namep, register char **rightp,
 		 const char *self,
@@ -1623,15 +1270,11 @@ tryagain:
 	return( 1 );
 }
 
-#if defined(__cplusplus)
-}
-
 /*
 ** Return the value associated with the named parameter.  Return NULL
 ** if the given parameter is not defined.
 */
-#ifdef MACRO_SET_KNOWS_DEFAULT
-const char * lookup_macro_lower(const char *name, MACRO_SET & set, int use)
+const char * lookup_macro_exact(const char *name, MACRO_SET & set, int use)
 {
 	MACRO_ITEM* pitem = find_macro_item(name, set);
 	if (pitem) {
@@ -1644,7 +1287,8 @@ const char * lookup_macro_lower(const char *name, MACRO_SET & set, int use)
 	}
 	return NULL;
 }
-const char * lookup_macro(const char *name, const char *prefix, MACRO_SET & set)
+
+const char * lookup_macro(const char *name, const char *prefix, MACRO_SET & set, int use)
 {
 	MyString prefixed_name;
 	if (prefix) {
@@ -1652,87 +1296,6 @@ const char * lookup_macro(const char *name, const char *prefix, MACRO_SET & set)
 		prefixed_name.formatstr("%s.%s", prefix, name);
 		name = prefixed_name.Value();
 	}
-	return lookup_macro_lower(name, set, 3);
-}
-const char * lookup_and_use_macro(const char *name, const char *prefix, MACRO_SET & set, int use)
-{
-	MyString prefixed_name;
-	if (prefix) {
-		// snprintf(tmp_name, MAX_PARAM_LEN, "%s.%s", prefix, name);
-		prefixed_name.formatstr("%s.%s", prefix, name);
-		name = prefixed_name.Value();
-	}
-	return lookup_macro_lower(name, set, use);
-}
-#else  // !  MACRO_SET_KNOWS_DEFAULT
-BUCKET *
-lookup_macro_bucket(const char *name, MACRO_SET_DECLARE_ARG)
-{
-	MACRO_SET_DEFINE_LCL
-	int loc = condor_hash(name, table_size);
-	for (BUCKET* ptr = table[loc]; ptr; ptr = ptr->next) {
-		if ( ! strcmp(name,ptr->name)) {
-			return ptr;
-		}
-	}
-	return NULL;
+	return lookup_macro_exact(name, set, use);
 }
 
-char *
-lookup_macro_lower( const char *name, MACRO_SET_DECLARE_ARG, int use )
-{
-	MACRO_SET_DEFINE_LCL
-	int				loc;
-	register BUCKET	*ptr;
-
-	loc = condor_hash( name, table_size );
-	for( ptr=table[loc]; ptr; ptr=ptr->next ) {
-		if( !strcmp(name,ptr->name) ) {
-#ifdef PARAM_USE_COUNTING
-			ptr->use_count += (use&1);
-			ptr->ref_count += (use>>1)&1;
-#else
-			ptr->used |= use;
-#endif
-			return ptr->value;
-		}
-	}
-	return NULL;
-}
-
-char *
-lookup_macro( const char *name, const char *prefix, MACRO_SET_DECLARE_ARG )
-{
-	char			tmp_name[ MAX_PARAM_LEN ];
-
-	if (prefix) {
-		snprintf(tmp_name, MAX_PARAM_LEN, "%s.%s", prefix, name);
-	} else {
-		// snprintf() is faster than strncpy() for large target buffers,
-		// because strncpy() nulls out rest of buffer
-		snprintf(tmp_name, MAX_PARAM_LEN, "%s", name);
-	}
-	tmp_name[MAX_PARAM_LEN-1] = '\0';
-	strlwr( tmp_name );
-	return lookup_macro_lower(tmp_name, MACRO_SET_PASS_ARG, 3);
-}
-
-char *
-lookup_and_use_macro( const char *name, const char *prefix, MACRO_SET_DECLARE_ARG, int use )
-{
-	char	tmp_name[ MAX_PARAM_LEN ];
-
-	if (prefix) {
-		snprintf(tmp_name, MAX_PARAM_LEN, "%s.%s", prefix, name);
-	} else {
-		// snprintf() is faster than strncpy() for large target buffers,
-		// because strncpy() nulls out rest of buffer
-		snprintf(tmp_name, MAX_PARAM_LEN, "%s", name);
-	}
-	tmp_name[MAX_PARAM_LEN-1] = '\0';
-	strlwr( tmp_name );
-	return lookup_macro_lower(tmp_name, MACRO_SET_PASS_ARG, use);
-}
-#endif  // !  MACRO_SET_KNOWS_DEFAULT
-
-#endif

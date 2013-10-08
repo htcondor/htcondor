@@ -95,13 +95,7 @@ extern "C" {
 	
 // Function prototypes
 void real_config(const char* host, int wantsQuiet, bool wantExtraInfo);
-int Read_config(const char*, MACRO_SET_DECLARE_ARG, int, bool,
-#ifdef CALL_VIA_MACRO_SET
-				const ExtraParamTable* = NULL, 
-#else
-				ExtraParamTable* = NULL, 
-#endif
-				const char * subsys = NULL);
+int Read_config(const char*, MACRO_SET& macro_set, int, bool, const char * subsys);
 bool is_piped_command(const char* filename);
 bool is_valid_command(const char* cmdToExecute);
 int SetSyscalls(int);
@@ -124,29 +118,12 @@ extern int	ConfigLineNo;
 
 
 // Global variables
-#ifdef CALL_VIA_MACRO_SET
-  #ifdef MACRO_SET_KNOWS_DEFAULT
-	static MACRO_DEFAULTS ConfigMacroDefaults = { 0, NULL, NULL };
-	static MACRO_SET ConfigMacroSet = { 0, 0, 0, FALSE, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), &ConfigMacroDefaults };
-	#define extra_info (ExtraParamTable*)NULL
-	const MACRO_SOURCE DetectedMacro = { true,  0, -2 };
-	const MACRO_SOURCE DefaultMacro  = { true,  1, -2 };
-	const MACRO_SOURCE EnvMacro      = { false, 2, -2 };
-	const MACRO_SOURCE WireMacro     = { false, 3, -2 };
-  #else
-	static BUCKET * ConfigTable[113];
-	static MACRO_SET ConfigMacroSet = { sizeof(ConfigTable)/sizeof(ConfigTable[0]), ConfigTable, NULL };
-	#define extra_info ConfigMacroSet.extra
-  #endif
-#else
- #define TABLESIZE 113
- BUCKET	*ConfigTab[TABLESIZE];
- #define ConfigMacroSet ConfigTab, TABLESIZE
-
- static ExtraParamTable *extra_info = NULL;
- ExtraParamTable ** ConfigExtraInfo = &extra_info;
- void* ConfigIdent = (void*)ConfigTab;
-#endif
+static MACRO_DEFAULTS ConfigMacroDefaults = { 0, NULL, NULL };
+static MACRO_SET ConfigMacroSet = { 0, 0, 0, FALSE, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), &ConfigMacroDefaults };
+const MACRO_SOURCE DetectedMacro = { true,  0, -2 };
+const MACRO_SOURCE DefaultMacro  = { true,  1, -2 };
+const MACRO_SOURCE EnvMacro      = { false, 2, -2 };
+const MACRO_SOURCE WireMacro     = { false, 3, -2 };
 
 #ifdef _POOL_ALLOCATOR
 
@@ -518,10 +495,11 @@ static bool macro_set_default_sort(MACRO_ITEM const & a, MACRO_ITEM const & b)
 	return strcasecmp(a.key, b.key) < 0;
 }*/
 
-#define USE_SORT_CLASS
-//#define DO_COMPACT_STRING_POOL
+//#define OPTIMIZE_COMPACT_STRING_POOL
 
-#ifdef USE_SORT_CLASS
+// this is a helper class for sorting the param table and 
+// the associated metadata table
+//
 class MACRO_SORTER {
 public:
 	MACRO_SET & set;
@@ -538,92 +516,24 @@ public:
 		return strcasecmp(a.key, b.key) < 0;
 	};
 };
-#else
-struct _macro_opt_item { const char * key; int ix; };
-static bool macro_opt_default_sort(struct _macro_opt_item const & a, struct _macro_opt_item const & b)
-{
-	return strcasecmp(a.key, b.key) < 0;
-}
-#endif
 
 void optimize_macros(MACRO_SET & set)
 {
 	if (set.size <= 1)
 		return;
 
-#if 1
-	#ifdef USE_SORT_CLASS
+	// the metadata table has entries that give the index of the corresponding
+	// entry in the param table so that we can sort it. So we have to sort
+	// sort the metadata the metadata first, then the param table itself
+	// and finally then fixup the indexes in the metadata table.
+	//
 	MACRO_SORTER sorter(set);
 	if (set.metat) { std::sort(&set.metat[0], &set.metat[set.size], sorter); }
 	std::sort(&set.table[0], &set.table[set.size], sorter);
 	if (set.metat) { for (int ix = 0; ix < set.size; ++ix) { set.metat[ix].index = ix; } }
 	set.sorted = set.size;
-	#else
-	// we (may) have two parallel arrays to sort, only one of which
-	// contains the key, so we have to sort by building a temporary
-	// map between key and index, sort that, then move items in the
-	// other array by index into their new locations.
-	//
-	struct _macro_opt_item * ptmp = new struct _macro_opt_item[set.size+1];
-	if (ptmp) {
-		for (int ii = 0; ii < set.size; ++ii) {
-			ptmp[ii].key = set.table[ii].key;
-			ptmp[ii].ix = ii;
-		}
-		ptmp[set.size].key = "zzzzzzzz"; // to make valgrind happy(er)
-		std::sort(&ptmp[0], &ptmp[set.size], macro_opt_default_sort);
 
-		// shrink the macro table if it has more than 4 extra items.
-		//
-		const int extra_items = 4;
-		int cAlloc = MIN(set.size + extra_items, set.allocation_size);
-		MACRO_ITEM * ptab = new MACRO_ITEM[cAlloc];
-		if (ptab) {
-			for (int ii = 0; ii < set.size; ++ii) {
-				ptab[ii] = set.table[ptmp[ii].ix];
-			}
-			memset(set.table, 0, sizeof(set.table[0]) * set.size);
-			delete [] set.table;
-			set.table = ptab;
-			set.allocation_size = cAlloc;
-			set.sorted = set.size;
-
-			if (set.metat) {
-				MACRO_META * pmet = new MACRO_META[cAlloc];
-				if (pmet) {
-					for (int ii = 0; ii < set.size; ++ii) {
-						pmet[ii] = set.metat[ptmp[ii].ix];
-					}
-					memset(set.metat, 0, sizeof(set.metat[0]) * set.size);
-				}
-				delete [] set.metat;
-				set.metat = pmet;
-			}
-		}
-		delete [] ptmp;
-	}
-	#endif
-#else
-	// sort the macro table.
-	std::sort(&set.table[0], &set.table[set.size], macro_set_default_sort);
-	set.is_sorted = true;
-
-	// shrink the macro table.
-	const int extra_items = 4;
-	int cAlloc = MIN(set.size + extra_items, set.allocation_size);
-	if (cAlloc != set.size) {
-		MACRO_ITEM * ptab = new MACRO_ITEM[cAlloc];
-		if (set.size > 0) {
-			memcpy(ptab, set.table, sizeof(set.table[0]) * set.size);
-			memset(set.table, 0, sizeof(set.table[0]) * set.size);
-		}
-		free(set.table);
-		set.table = ptab;
-		set.allocation_size = cAlloc;
-	}
-#endif
-
-#ifdef DO_COMPACT_STRING_POOL
+#ifdef OPTIMIZE_COMPACT_STRING_POOL
 	// build a compact string pool.
 	int cbFree, cHunks, cb = set.apool.usage(cHunks, cbFree);
 	if (cbFree > 1024) {
@@ -644,7 +554,7 @@ void optimize_macros(MACRO_SET & set)
 		tmp.clear();
 		cb = set.apool.usage(cHunks, cbFree);
 	}
-#endif // DO_COMPACT_STRING_POOL
+#endif // OPTIMIZE_COMPACT_STRING_POOL
 }
 
 /*
@@ -684,88 +594,6 @@ validate_entries( bool ignore_invalid_entry ) {
 		}
 	}
 }
-
-#ifdef CALL_VIA_MACRO_SET
-#else
-static int ParamValueNameAscendingSort(const void *l, const void *r)
-{
-	const ParamValue *left = (const ParamValue*)l;
-	const ParamValue *right = (const ParamValue*)r;
-
-	if (left->name < right->name) {
-		return -1;
-	}
-
-	if (left->name > right->name) {
-		return 1;
-	}
-
-	return 0;
-}
-
-// return a list sorted by macro name of all of the macro values found in the
-// locally defined files.
-ExtArray<ParamValue>*
-param_all(void)
-{
-	ExtArray<ParamValue> *pvs = NULL;
-	MyString filename;
-	int line_number;
-	MyString str;
-	HASHITER it = hash_iter_begin(ConfigMacroSet);
-	char *name = NULL;
-	char *value = NULL;
-	int i;
-	ParamValue *sort_array = NULL;
-
-	pvs = new ExtArray<ParamValue>;
-	ASSERT(pvs);
-
-	// walk the config table and insert everything I found into the list.
-	i = 0;
-	while( ! hash_iter_done(it) ) {
-		name = hash_iter_key(it);
-		value = hash_iter_value(it);
-		param_get_location(name, filename, line_number);
-
-		(*pvs)[i].name = name;
-		(*pvs)[i].value = value;
-		(*pvs)[i].filename = filename;
-		(*pvs)[i].lnum = line_number;
-		(*pvs)[i].source = "Local Config File";
-
-		i++;
-
-		hash_iter_next(it);
-	}
-	hash_iter_delete(&it);
-
-	// Sort the list based upon name
-	// qsort and extArray don't play nice together...
-
-	// copy the data to a new POD array
-
-	sort_array = new ParamValue[pvs->getlast() + 1];
-	ASSERT(sort_array);
-
-	for (i = 0; i < pvs->getlast() + 1; i++) {
-		sort_array[i] = (*pvs)[i];
-	}
-
-	// sort it
-	qsort(sort_array, pvs->getlast() + 1, sizeof(ParamValue),
-		ParamValueNameAscendingSort);
-
-	// copy it back into the ExtArray
-	for (i = 0; i < pvs->getlast() + 1; i++) {
-		(*pvs)[i] = sort_array[i];
-	}
-	
-	delete [] sort_array;
-
-	return pvs;
-}
-#endif
 
 void foreach_param(int options, bool (*fn)(void* user, HASHITER& it), void* user)
 {
@@ -977,14 +805,6 @@ real_config(const char* host, int wantsQuiet, bool wantExtraInfo)
 			// Clear out everything in our config hash table so we can
 			// rebuild it from scratch.
 		clear_config();
-#ifdef MACRO_SET_KNOWS_DEFAULT
-#else
-		if (wantExtraInfo) {
-			extra_info = new ExtraParamTable();
-		} else {
-			extra_info = new DummyExtraParamTable();
-		}
-#endif
 	}
 
 	dprintf( D_CONFIG, "config: using subsystem '%s', local '%s'\n",
@@ -1003,7 +823,6 @@ real_config(const char* host, int wantsQuiet, bool wantExtraInfo)
 		// Insert an entry for "tilde", (~condor)
 	if( tilde ) {
 		insert("TILDE", tilde, ConfigMacroSet, DetectedMacro);
-		// extra_info->AddInternalParam("TILDE");
 
 	} else {
 			// What about tilde if there's no ~condor?
@@ -1083,18 +902,14 @@ real_config(const char* host, int wantsQuiet, bool wantExtraInfo)
 		// -Derek Wright <wright@cs.wisc.edu> 5/11/98
 	if( host ) {
 		insert("HOSTNAME", host, ConfigMacroSet, DetectedMacro);
-		// extra_info->AddInternalParam("HOSTNAME");
 	} else {
 		insert("HOSTNAME", get_local_hostname().Value(), ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("HOSTNAME");
 	}
 	insert("FULL_HOSTNAME", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro);
-	//extra_info->AddInternalParam("FULL_HOSTNAME");
 
 		// Also insert tilde since we don't want that over-written.
 	if( tilde ) {
 		insert("TILDE", tilde, ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("TILDE");
 	}
 
 		// Read in the LOCAL_CONFIG_FILE as a string list and process
@@ -1155,12 +970,10 @@ real_config(const char* host, int wantsQuiet, bool wantExtraInfo)
 			MyString ownerstr;
 			ownerstr.formatstr( "Owner == \"%s\"", varvalue );
 			insert("START", ownerstr.Value(), ConfigMacroSet, EnvMacro);
-			//extra_info->AddEnvironmentParam("START");
 		}
 		// ignore "_CONDOR_" without any macro name attached
 		else if( macro_name[0] != '\0' ) {
 			insert(macro_name, varvalue, ConfigMacroSet, EnvMacro);
-			//extra_info->AddEnvironmentParam(macro_name);
 		}
 
 		free( varname );
@@ -1211,9 +1024,7 @@ real_config(const char* host, int wantsQuiet, bool wantExtraInfo)
 		// once the config table is fully populated, we can optimize it.
 		// WARNING!! if you insert new params after this, the able *might*
 		// be de-optimized.
-#ifdef CALL_VIA_MACRO_SET
 	optimize_macros(ConfigMacroSet);
-#endif
 
 		// We have to do some platform-specific checking to make sure
 		// all the parameters we think are defined really are.
@@ -1253,7 +1064,7 @@ process_config_source( const char* file, const char* name,
 		}
 	} else {
 		rval = Read_config( file, ConfigMacroSet, EXPAND_LAZY,
-							false, extra_info, get_mySubSystem()->getName());
+							false, get_mySubSystem()->getName());
 		if( rval < 0 ) {
 			fprintf( stderr,
 					 "Configuration Error Line %d while reading %s %s\n",
@@ -1676,97 +1487,79 @@ fill_attributes()
 
 	if( (tmp = sysapi_condor_arch()) != NULL ) {
 		insert("ARCH", tmp, ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("ARCH");
 	}
 
 	if( (tmp = sysapi_uname_arch()) != NULL ) {
 		insert("UNAME_ARCH", tmp, ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("UNAME_ARCH");
 	}
 
 	if( (tmp = sysapi_opsys()) != NULL ) {
 		insert("OPSYS", tmp, ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("OPSYS");
 
 		int ver = sysapi_opsys_version();
 		if (ver > 0) {
 			val.formatstr("%d", ver);
 			insert("OPSYSVER", val.Value(), ConfigMacroSet, DetectedMacro);
-			//extra_info->AddInternalParam("OPSYSVER");
 		}
 	}
 
 	if( (tmp = sysapi_opsys_versioned()) != NULL ) {
 		insert("OPSYSANDVER", tmp, ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("OPSYSANDVER");
 	}
 
 	if( (tmp = sysapi_uname_opsys()) != NULL ) {
 		insert("UNAME_OPSYS", tmp, ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("UNAME_OPSYS");
 	}
 
 	int major_ver = sysapi_opsys_major_version();
 	if (major_ver > 0) {
 		val.formatstr("%d", major_ver);
 		insert("OPSYSMAJORVER", val.Value(), ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("OPSYSMAJORVER");
 	}
 
 	if( (tmp = sysapi_opsys_name()) != NULL ) {
 		insert("OPSYSNAME", tmp, ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("OPSYSNAME");
 	}
 	
 	if( (tmp = sysapi_opsys_long_name()) != NULL ) {
 		insert("OPSYSLONGNAME", tmp, ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("OPSYSLONGNAME");
 	}
 
 	if( (tmp = sysapi_opsys_short_name()) != NULL ) {
 		insert("OPSYSSHORTNAME", tmp, ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("OPSYSSHORTNAME");
 	}
 
 	if( (tmp = sysapi_opsys_legacy()) != NULL ) {
 		insert("OPSYSLEGACY", tmp, ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("OPSYSLEGACY");
 	}
 
 #if ! defined WIN32
         // temporary attributes for raw utsname info
 	if( (tmp = sysapi_utsname_sysname()) != NULL ) {
 		insert("UTSNAME_SYSNAME", tmp, ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("UTSNAME_SYSNAME");
 	}
 
 	if( (tmp = sysapi_utsname_nodename()) != NULL ) {
 		insert("UTSNAME_NODENAME", tmp, ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("UTSNAME_NODENAME");
 	}
 
 	if( (tmp = sysapi_utsname_release()) != NULL ) {
 		insert("UTSNAME_RELEASE", tmp, ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("UTSNAME_RELEASE");
 	}
 
 	if( (tmp = sysapi_utsname_version()) != NULL ) {
 		insert("UTSNAME_VERSION", tmp, ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("UTSNAME_VERSION");
 	}
 
 	if( (tmp = sysapi_utsname_machine()) != NULL ) {
 		insert("UTSNAME_MACHINE", tmp, ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("UTSNAME_MACHINE");
 	}
 #endif
 
 	insert("SUBSYSTEM", get_mySubSystem()->getName(), ConfigMacroSet, DetectedMacro);
-	//extra_info->AddInternalParam("SUBSYSTEM");
 
 	val.formatstr("%d",sysapi_phys_memory_raw_no_param());
 	insert("DETECTED_MEMORY", val.Value(), ConfigMacroSet, DetectedMacro);
-	//extra_info->AddInternalParam("DETECTED_MEMORY");
 
 		// Currently, num_hyperthread_cores is defined as everything
 		// in num_cores plus other junk, which on some systems may
@@ -1781,7 +1574,6 @@ fill_attributes()
 
 	val.formatstr("%d",num_hyperthread_cpus);
 	insert("DETECTED_CORES", val.Value(), ConfigMacroSet, DetectedMacro);
-	//extra_info->AddInternalParam("DETECTED_CORES");
 }
 
 
@@ -1799,7 +1591,6 @@ check_domain_attributes()
 	filesys_domain = param("FILESYSTEM_DOMAIN");
 	if( !filesys_domain ) {
 		insert("FILESYSTEM_DOMAIN", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("FILESYSTEM_DOMAIN");
 	} else {
 		free( filesys_domain );
 	}
@@ -1807,7 +1598,6 @@ check_domain_attributes()
 	uid_domain = param("UID_DOMAIN");
 	if( !uid_domain ) {
 		insert("UID_DOMAIN", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("UID_DOMAIN");
 	} else {
 		free( uid_domain );
 	}
@@ -1820,14 +1610,11 @@ void
 param_insert(const char * name, const char * value)
 {
 	insert(name, value, ConfigMacroSet, WireMacro);
-	// extra_info->AddInternalParam(name);
 }
 
 void
 init_config(bool wantExtraInfo  /* = true */)
 {
-#ifdef CALL_VIA_MACRO_SET
-#ifdef MACRO_SET_KNOWS_DEFAULT
 	ConfigMacroSet.size = 0;
 	ConfigMacroSet.sorted = 0;
 	#ifdef DISCARD_CONFIG_MATCHING_DEFAULT
@@ -1856,24 +1643,6 @@ init_config(bool wantExtraInfo  /* = true */)
 			memset(ConfigMacroSet.defaults->metat, 0, sizeof(ConfigMacroSet.defaults->metat[0]) * ConfigMacroSet.defaults->size);
 		}
 	}
-#else
-	memset((char *)ConfigTable, 0, sizeof(ConfigTable));
-	if (wantExtraInfo) {
-		extra_info = new ExtraParamTable();
-	}
-#endif
-#else
-	memset( (char *)ConfigTab, 0, (TABLESIZE * sizeof(BUCKET*)) );
-	if (wantExtraInfo) {
-		extra_info = new ExtraParamTable();
-	} else {
-		extra_info = new DummyExtraParamTable();
-	}
-
-	// Initialize the default table.
-	param_info_init();
-#endif
-
 
 	return;
 }
@@ -1881,8 +1650,6 @@ init_config(bool wantExtraInfo  /* = true */)
 void
 clear_config()
 {
-#ifdef CALL_VIA_MACRO_SET
-#ifdef MACRO_SET_KNOWS_DEFAULT
 	if (ConfigMacroSet.table) {
 		memset(ConfigMacroSet.table, 0, sizeof(ConfigMacroSet.table[0]) * ConfigMacroSet.allocation_size);
 	}
@@ -1902,51 +1669,6 @@ clear_config()
 	delete[] ConfigMacroSet.table; ConfigMacroSet.table = NULL;
 	delete[] ConfigMacroSet.metat; ConfigMacroSet.metat = NULL;
 	*/
-#else
-	for (int ii = 0; ii < ConfigMacroSet.table_size; ++ii) {
-		BUCKET * ptr = ConfigMacroSet.table[ii];
-		if (ptr) {
-			while (ptr->next) {
-				BUCKET * next = ptr->next;
-				ptr->next = next->next;
-				FREE(next->value); next->value = NULL;
-				FREE(next->name);  next->name = NULL;
-				FREE(next);
-			}
-			ConfigMacroSet.table[ii] = NULL;
-			FREE(ptr->value);
-			FREE(ptr->name);
-			FREE(ptr);
-		}
-	}
-	if (extra_info != NULL) {
-		delete extra_info;
-		extra_info = NULL;
-	}
-#endif
-#else
-	register 	int 	i;
-	register 	BUCKET	*ptr = NULL;
-	register 	BUCKET	*tmp = NULL;
-
-	for( i=0; i<TABLESIZE; i++ ) {
-		ptr = ConfigTab[i];
-		while( ptr ) {
-			tmp = ptr->next;
-			FREE( ptr->value );
-			ptr->value = NULL;
-			FREE( ptr->name );
-			ptr->name = NULL;
-			FREE( ptr );
-			ptr = tmp;
-		}
-		ConfigTab[i] = NULL;
-	}
-	if (extra_info != NULL) {
-		delete extra_info;
-		extra_info = NULL;
-	}
-#endif
 	global_config_source       = "";
 	local_config_sources.clearAll();
 	return;
@@ -2184,8 +1906,6 @@ param_with_default_abort(const char *name, int abort)
 			// Table to the Config Table. This could be adding an empty
 			// string. If a default found, the loop stops searching.
 			insert(next_param_name, def, ConfigMacroSet, DefaultMacro);
-			// also add it to the lame extra-info table
-			//if (extra_info != NULL) extra_info->AddInternalParam(next_param_name);
 			if (def[0] == '\0') {
 				// If indeed it was empty, then just bail since it was
 				// validly found in the Default Table, but empty.
@@ -2645,7 +2365,6 @@ bool param_get_location(
 {
 	bool found_it = false;
 
-#ifdef MACRO_SET_KNOWS_DEFAULT
 	MACRO_ITEM * pi = find_macro_item(parameter, ConfigMacroSet);
 	if (pi) {
 		found_it = true;
@@ -2657,17 +2376,8 @@ bool param_get_location(
 			}
 		}
 	}
-#else
-	if (parameter != NULL && extra_info != NULL) {
-		found_it = extra_info->GetParam(parameter, filename, line_number);
-	}
-#endif
 	return found_it;
 }
-
-#ifdef MACRO_SET_KNOWS_DEFAULT
-
-typedef struct condor_params::key_table_pair param_table_map_entry;
 
 // find an item and return a hash iterator that points to it.
 bool param_find_item (
@@ -2771,9 +2481,6 @@ const char * hash_iter_def_value(HASHITER& it)
 	return param_exact_default_string(name);
 }
 
-#endif
-
-#if 1
 const char * param_get_info(
 	const char * name,
 	const char * subsys,
@@ -2797,87 +2504,6 @@ const char * param_get_info(
 	}
 	return val;
 }
-#else
-
-const char * param_get_info(
-	const char * name,
-	const char * subsys,
-	const char * local,
-	MyString &name_used,
-	int & use_count,
-	int & ref_count,
-	MyString &filename,
-	int &line_number)
-{
-	const char * val = NULL;
-#if 1
-	bool is_default = false;
-	filename = "";
-	line_number = -1;
-	if (subsys && ! subsys[0]) subsys = NULL;
-	if (local && ! local[0]) local = NULL;
-	if (subsys && local) {
-		name_used.formatstr("%s.%s.%s", subsys, local, name);
-		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigMacroSet, 0);
-	}
-	if ( ! val && local) {
-		name_used.formatstr("%s.%s", local, name);
-		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigMacroSet, 0);
-	}
-	if ( ! val && subsys) {
-		name_used.formatstr("%s.%s", subsys, name);
-		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigMacroSet, 0);
-		if ( ! val) {
-			val = param_exact_default_string(name_used.Value());
-			if (val) { filename = "<Internal>"; line_number = -2; is_default = true; }
-		}
-	}
-	if ( ! val) {
-		name_used = name;
-		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigMacroSet, 0);
-		if ( ! val) {
-			val = param_exact_default_string(name);
-			if (val) { filename = "<Internal>"; line_number = -2; is_default = true; }
-		}
-	}
-#ifdef MACRO_SET_KNOWS_DEFAULT
-	if (val) {
-		MACRO_ITEM * pi = find_macro_item(name_used.Value(), ConfigMacroSet);
-		if (pi && ConfigMacroSet.metat) {
-			MACRO_META * pmi = &ConfigMacroSet.metat[pi - ConfigMacroSet.table];
-			use_count = pmi->use_count;
-			ref_count = pmi->ref_count;
-			if (pmi->source_id >= 0 && pmi->source_id < (int)ConfigMacroSet.sources.size()) {
-				filename = ConfigMacroSet.sources[pmi->source_id];
-				line_number = pmi->source_line;
-			}
-		}
-
-		if (is_default) {
-			MACRO_DEFAULTS * defs = ConfigMacroSet.defaults;
-			int ix = param_default_get_index(name_used.Value(), ConfigMacroSet);
-			if (ix >= 0 && defs->metat) {
-				use_count = defs->metat[ix].use_count;
-				ref_count = defs->metat[ix].ref_count;
-			}
-		}
-	}
-#else
-	if (val) {
-		use_count = get_macro_use_count(name_used.Value(), ConfigMacroSet);
-		ref_count = get_macro_ref_count(name_used.Value(), ConfigMacroSet);
-	}
-	if (val && extra_info && line_number != -2) {
-		extra_info->GetParam(name_used.Value(), filename, line_number);
-	}
-#endif
-	return val;
-#else
-	PRAGMA_REMIND("TJ: write this")
-	return NULL;
-#endif
-}
-#endif
 
 void
 reinsert_specials( const char* host )
@@ -2889,7 +2515,6 @@ reinsert_specials( const char* host )
 
 	if( tilde ) {
 		insert("TILDE", tilde, ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("TILDE");
 	}
 	if( host ) {
 		insert("HOSTNAME", host, ConfigMacroSet, DetectedMacro);
@@ -2898,9 +2523,6 @@ reinsert_specials( const char* host )
 	}
 	insert("FULL_HOSTNAME", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro);
 	insert("SUBSYSTEM", get_mySubSystem()->getName(), ConfigMacroSet, DetectedMacro);
-	//extra_info->AddInternalParam("HOSTNAME");
-	//extra_info->AddInternalParam("FULL_HOSTNAME");
-	//extra_info->AddInternalParam("SUBSYSTEM");
 
 	// Insert login-name for our real uid as "username".  At the time
 	// we're reading in the config source, the priv state code is not
@@ -2910,7 +2532,6 @@ reinsert_specials( const char* host )
 		insert( "USERNAME", myusernm, ConfigMacroSet, DetectedMacro);
 		free(myusernm);
 		myusernm = NULL;
-		//extra_info->AddInternalParam("USERNAME");
 	} else {
 		if( ! warned_no_user ) {
 			dprintf( D_ALWAYS, "ERROR: can't find username of current user! "
@@ -2937,10 +2558,8 @@ reinsert_specials( const char* host )
 #endif
 		snprintf(buf,40,"%u",myruid);
 		insert("REAL_UID", buf, ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("REAL_UID");
 		snprintf(buf,40,"%u",myrgid);
 		insert("REAL_GID", buf, ConfigMacroSet, DetectedMacro);
-		//extra_info->AddInternalParam("REAL_GID");
 	}
 		
 	// Insert values for "pid" and "ppid".  Use static values since
@@ -2957,7 +2576,6 @@ reinsert_specials( const char* host )
 	}
 	snprintf(buf,40,"%u",reinsert_pid);
 	insert("PID", buf, ConfigMacroSet, DetectedMacro);
-	//extra_info->AddInternalParam("PID");
 	if ( !reinsert_ppid ) {
 #ifdef WIN32
 		CSysinfo system_hackery;
@@ -2969,8 +2587,6 @@ reinsert_specials( const char* host )
 	snprintf(buf,40,"%u",reinsert_ppid);
 	insert("PPID", buf, ConfigMacroSet, DetectedMacro);
 	insert("IP_ADDRESS", my_ip_string(), ConfigMacroSet, DetectedMacro);
-	//extra_info->AddInternalParam("PPID");
-	//extra_info->AddInternalParam("IP_ADDRESS");
 }
 
 
@@ -3380,7 +2996,7 @@ process_persistent_configs()
 		processed = true;
 
 		rval = Read_config(toplevel_persistent_config.Value(), ConfigMacroSet,
-						EXPAND_LAZY, true, extra_info, get_mySubSystem()->getName());
+						EXPAND_LAZY, true, get_mySubSystem()->getName());
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d while reading "
 					 "top-level persistent config source: %s\n",
@@ -3402,7 +3018,7 @@ process_persistent_configs()
 		config_source.formatstr( "%s.%s", toplevel_persistent_config.Value(),
 							   tmp );
 		rval = Read_config(config_source.Value(), ConfigMacroSet,
-						EXPAND_LAZY, true, extra_info, get_mySubSystem()->getName());
+						EXPAND_LAZY, true, get_mySubSystem()->getName());
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
 					 "while reading persistent config source: %s\n",
@@ -3450,7 +3066,7 @@ process_runtime_configs()
 			exit(1);
 		}
 		rval = Read_config(tmp_file, ConfigMacroSet,
-						EXPAND_LAZY, false, extra_info, get_mySubSystem()->getName());
+						EXPAND_LAZY, false, get_mySubSystem()->getName());
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
 					 "while reading %s, runtime config: %s\n",
