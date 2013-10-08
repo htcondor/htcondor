@@ -34,10 +34,14 @@ using the syntax +netgroup\_name.  \Macro{QUEUE\_SUPER\_USERS} may now include
 user groups, using the syntax \%group\_name.
 \Ticket{3859}
 
-\item When terminating a job on a non-Amazon service,
-check (at the next polling interval) if the job has terminated,
-and if not, retry.  This means that HTCondor will not lose track of jobs
-on services with unreliable termination.
+\item To ensure that a grid universe job running at an EC2 service
+terminates, 
+HTCondor now checks after a fixed time interval 
+that the job actually has terminated,
+instead of relying on the service's potentially unreliable 
+job shut down indication.
+If the job has not terminated after a total of four checks,
+the job is placed on hold; it does not leave the queue marked as completed.
 \Ticket{3438}
 
 \item Email alerts about file transfers taking longer than
