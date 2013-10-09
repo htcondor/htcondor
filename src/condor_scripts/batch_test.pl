@@ -207,14 +207,14 @@ while( $_ = shift( @ARGV ) ) {
       if( /-h.*/ ) {
 	  print "the args:\n";
 	  print "-c[md] create a command prompt with the testing environment (windows only)\n";
-	  print "-d[irectory] <dir>: just test this directory\n";
-	  print "-f[ile] <filename>: use this file as the list of tests to run\n";
-	  print "-i[gnore] <filename>: use this file as the list of tests to skip\n";
-	  print "-t[estname] <test-name>: just run this test\n";
+	  print "-d[irectory] dir: just test this directory\n";
+	  print "-f[ile] filename: use this file as the list of tests to run\n";
+	  print "-i[gnore] filename: use this file as the list of tests to skip\n";
+	  print "-t[estname] test-name: just run this test\n";
 	  print "-q[uiet]: hush\n";
 	  print "-m[arktime]: time stamp\n";
 	  print "-k[ind]: be kind and submit slowly\n";
-	  print "-e[venly]: <group size>: run a group of tests\n";
+	  print "-e[venly]: group size: run a group of tests\n";
 	  print "-s[ort] sort before running tests\n";
 	  print "-b[buildandtest]: set up a personal condor and generic configs\n";
 	  print "-w[wrap]: test in personal condor enable core/ERROR detection\n";
@@ -223,8 +223,8 @@ while( $_ = shift( @ARGV ) ) {
 	  print "-a[again]: how many times do we run each test?\n";
 	  print "-p[pretest]: get are environment set but run no tests\n";
 	  print "-c[cleanup]: stop condor when test(s) finish.  Not used on windows atm.\n";
-	  print "--[no-]core: enable/disable core dumping <enabled>\n";
-	  print "--[no-]debug: enable/disable test debugging <disabled>\n";
+	  print "--[no-]core: enable/disable core dumping enabled\n";
+	  print "--[no-]debug: enable/disable test debugging disabled\n";
           print "--isolated: run tests in separate Condor instances\n";
           print "-v[erbose]: print debugging output\n";
 	  exit(0);
@@ -616,15 +616,15 @@ foreach my $compiler (@compilers) {
 									#$compiler, max_to_reap => $max_to_reap);
 				    		$reaped = wait_for_test_children(\%test, 
 									$compiler);
-				    		debug( "wait returned test<$currentgroup>\n",2);
+				    		debug( "wait returned test:$currentgroup\n",2);
 				    		$currentgroup -= $reaped;
-				    		debug( "wait returned test new size<$currentgroup>\n",2);
-				    		debug("currenttest<$currenttest> testspercompiler<$testspercompiler>\n",2);
+				    		debug( "wait returned test new size:$currentgroup\n",2);
+				    		debug("currenttest:$currenttest testspercompiler:$testspercompiler\n",2);
 			
 				    		#next;
 						} else {
 				    		# batch size not met yet
-				    		debug( "batch size not met yet: current group<$currentgroup>\n",2);
+				    		debug( "batch size not met yet: current group:$currentgroup\n",2);
 				    		sleep 1;
 				    		#next;
 						}
@@ -654,7 +654,7 @@ foreach my $compiler (@compilers) {
 
     # complete the tests when batching them up if some are left
     $hashsize = keys %test;
-    debug("At end of compiler dir hash size <<$hashsize>>\n",2);
+    debug("At end of compiler dir hash size:$hashsize\n",2);
     if(($kindwait == 0) && ($hashsize > 0)) {
 		debug("At end of compiler dir about to wait\n",2);
 		$reaped = wait_for_test_children(\%test, $compiler);
@@ -909,7 +909,7 @@ sub WhereIsInstallDir {
     my $master_name = "condor_master"; if ($iswindows) { $master_name = "condor_master.exe"; }
     my $tmp = CondorTest::Which($master_name);
     if ( ! ($tmp =~ /condor_master/ ) ) {
-	print STDERR "CondorTest::Which($master_name) returned <<$tmp>>\n";
+	print STDERR "CondorTest::Which($master_name) returned:$tmp\n";
 	print STDERR "Unable to find a $master_name in your \$PATH!\n";
 	exit(1);
     }
@@ -1006,7 +1006,7 @@ sub CreateConfig {
     while( <OLDFIG> ) {
 	CondorUtils::fullchomp($_);        
 	if(/^RELEASE_DIR\s*=/) {
-	    debug("Matching <<$_>>\n", 2);
+	    debug("Matching:$_\n", 2);
 	    if($iswindows == 1) {
 		print NEWFIG "RELEASE_DIR = $wininstalldir\n";
 	    }
@@ -1015,7 +1015,7 @@ sub CreateConfig {
 	    }
 	}
 	elsif(/^LOCAL_DIR\s*=/) {
-	    debug("Matching <<$_>>\n", 2);
+	    debug("Matching:$_\n", 2);
 	    if($iswindows == 1) {
 		print NEWFIG "LOCAL_DIR = $wintestpersonalcondorlocation/local\n";
 	    }
@@ -1024,7 +1024,7 @@ sub CreateConfig {
 	    }
 	}
 	elsif(/^LOCAL_CONFIG_FILE\s*=/) {
-	    debug( "Matching <<$_>>\n",2);
+	    debug( "Matching:$_\n",2);
 	    if($iswindows == 1) {
 		print NEWFIG "LOCAL_CONFIG_FILE = $wintestpersonalcondorlocation/condor_config.local\n";
 	    }
@@ -1033,19 +1033,19 @@ sub CreateConfig {
 	    }
 	}
 	elsif(/^CONDOR_HOST\s*=/) {
-	    debug( "Matching <<$_>>\n",2);
+	    debug( "Matching:$_\n",2);
 	    print NEWFIG "CONDOR_HOST = $currenthost\n";
 	}
 	elsif(/^ALLOW_WRITE\s*=/) {
-	    debug( "Matching <<$_>>\n",2);
+	    debug( "Matching:$_\n",2);
 	    print NEWFIG "ALLOW_WRITE = *\n";
 	}
 	elsif(/NOT_RESPONDING_WANT_CORE\s*=/ and $want_core_dumps ) {
-	    debug( "Matching <<$_>>\n",2);
+	    debug( "Matching:$_\n",2);
 	    print NEWFIG "NOT_RESPONDING_WANT_CORE = True\n";
 	}
 	elsif(/CREATE_CORE_FILES\s*=/ and $want_core_dumps ) {
-	    debug( "Matching <<$_>>\n",2);
+	    debug( "Matching:$_\n",2);
 	    print NEWFIG "CREATE_CORE_FILES = True\n";
 	}
 	else {
@@ -1175,7 +1175,7 @@ sub CreateLocalConfig {
 	    $jvm = `cygpath -m $whichtest`;
 	    CondorUtils::fullchomp($jvm);
 	}
-	CondorTest::debug("which java said<<$jvm>>\n",2);
+	CondorTest::debug("which java said: $jvm\n",2);
 
 	$java_libdir = "$wininstalldir/lib";
 
@@ -1198,7 +1198,7 @@ sub CreateLocalConfig {
 
 	# check some default locations for java and pick first valid one
 	foreach my $default_jvm_location (@default_jvm_locations) {
-	    CondorTest::debug("default_jvm_location is <<$default_jvm_location>>\n",2);
+	    CondorTest::debug("default_jvm_location is:$default_jvm_location\n",2);
 	    if ( -f $default_jvm_location && -x $default_jvm_location) {
 		$jvm = $default_jvm_location;
 		print "Set JAVA to $jvm\n";
@@ -1305,7 +1305,7 @@ sub StartTestOutput
     my $compiler = shift;
     my $test_program = shift;
 
-    debug("StartTestOutput passed compiler<<$compiler>>\n",2);
+    debug("StartTestOutput passed compiler: $compiler\n",2);
 
     if ($isXML){
 		print XML "<test_result>\n<name>$compiler.$test_program</name>\n<description></description>\n";
@@ -1388,9 +1388,9 @@ sub DoChild
 	my $id = 0;
 
 	if(defined $test_id) {
-		print "Starting batch id <$test_id> PID <$$>\n";
+		print "Starting batch id: $test_id PID: $$\n";
 		$id = $test_id;
-		print "ID = <$id>\n";
+		print "ID = $id\n";
 	}
     my $test_starttime = time();
     # with wrapping all test(most) in a personal condor
@@ -1605,7 +1605,7 @@ sub wait_for_test_children {
 	    	next;
 		} else {
 	    	debug($debug_message.". Test: $test->{$child}.\n", 2);
-			print "processing PID <$child>: ";
+			#print "processing PID $child: ";
 			#print "Test known: $test->{$child}\n";
 		}
 
@@ -1621,7 +1621,7 @@ sub wait_for_test_children {
 			$test_name = $1;
 			#print "Set Test Name as $test_name\n";
 		} else {
-			print "Name of the test not meeting test.run format<$hashnamefortest>\n";
+			print "Name of the test not meeting test.run format:$hashnamefortest\n";
 		}
 
 		debug( "Done waiting on test $test_name\n",3);
@@ -1640,7 +1640,7 @@ sub wait_for_test_children {
 		last if $hashsize == 0;
 
 		if((defined $max_to_reap) and ($max_to_reap != 0) and ($max_to_reap <= $tests_reaped)){
-			print "Leaving wait_for_test_children max_to_read <$max_to_reap> tests reaped <$tests_reaped>\n";
+			print "Leaving wait_for_test_children max_to_read:$max_to_reap tests reaped:$tests_reaped\n";
 			last;
 		}
 		#last if defined $max_to_reap 

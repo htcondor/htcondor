@@ -357,9 +357,9 @@ sub debug {
     #if($DEBUG) {
         if(!(defined $level) or ($level <= $DEBUGLEVEL)) {
 			if(defined $level) {
-            	print( "", timestamp(), ":<CondorPersonal>(L=$level) $string" );
+            	print( "", timestamp(), ": CondorPersonal(L=$level) $string" );
 			} else {
-            	print( "", timestamp(), ":<CondorPersonal>(L=?) $string" );
+            	print( "", timestamp(), ": CondorPersonal(L=?) $string" );
 			}
         }
     #}
@@ -369,7 +369,7 @@ sub debug_flush {
 	print "\nDEBUG_FLUSH:\n";
 	my $logdir = `condor_config_val log`;
 	chomp($logdir);
-	print "\nLog directory is <$logdir> and contains:\n";
+	print "\nLog directory: $logdir and contains:\n";
 	system("ls -lh $logdir");
 	print "\ncondor_who -verb says:\n";
 	system("condor_who -verb");
@@ -648,7 +648,7 @@ sub InstallPersonalCondor
 		}
 		else
 		{
-			print "which condor_q responded <<<$condorq>>>! CondorPersonal Failing now\n";
+			print "which condor_q responded: $condorq! CondorPersonal Failing now\n";
 			debug_flush();
 			die "Can not seem to find a Condor install!\n";
 		}
@@ -710,7 +710,7 @@ sub InstallPersonalCondor
 		}
 		else
 		{
-			print "which condor_q responded <<<$condorq>>>! CondorPersonal Failing now\n";
+			print "which condor_q responded: $condorq! CondorPersonal Failing now\n";
 			debug_flush();
 			die "Can not seem to find a Condor install!\n";
 		}
@@ -933,10 +933,10 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 		$minimalconfig += 1;
 	}
 
-	open(TEMPLATE,"<$personal_template")  || die "Can not open template<<$personal_template>>: $!\n";
+	open(TEMPLATE,"<$personal_template")  || die "Can not open template: $personal_template: $!\n";
 	debug( "want to open new config file as $topleveldir/$personal_config\n",$debuglevel);
-	open(NEW,">$topleveldir/$personal_config") || die "Can not open new config file<$topleveldir/$personal_config>: $!\n";
-	print NEW "# Editing requested config<$personal_template>\n";
+	open(NEW,">$topleveldir/$personal_config") || die "Can not open new config file: $topleveldir/$personal_config: $!\n";
+	print NEW "# Editing requested config: $personal_template\n";
 	if($minimalconfig == 1) {
 		# Have almost no config so w can examine internal value for knobs
 		print NEW "DAEMON_LIST = MASTER, SCHEDD, STARTD, COLLECTOR, NEGOTIATOR\n";
@@ -1022,7 +1022,7 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 			debug( "portchanges set to $portchanges\n",$debuglevel);
 		}
 
-	debug( "HMMMMMMMMMMM opening to write <$topleveldir/$personal_local>\n",$debuglevel);
+	debug( "HMMMMMMMMMMM opening to write: $topleveldir/$personal_local\n",$debuglevel);
 
 		# Dan: Jan 30, '08 added D_NETWORK in order to debug condor_rm timeout
 		print NEW "ALL_DEBUG = D_FULLDEBUG\n";
@@ -1153,10 +1153,10 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 
 		if($personal_local_src ne "")
 		{
-			print NEW "# Requested local config<$personal_local_src>\n";
+			print NEW "# Requested local config: $personal_local_src\n";
 			#print "******************** Must seed condor_config.local <<$personal_local_src>> ************************\n";
 
-	debug( "HMMMMMMMMMMM opening to read <$personal_local_src>\n",$debuglevel);
+	debug( "HMMMMMMMMMMM opening to read: $personal_local_src\n",$debuglevel);
 
 			open(LOCSRC,"<$personal_local_src") || die "Can not open local config template: $!\n";
 			while(<LOCSRC>)
@@ -1176,7 +1176,7 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 		if($personal_sec_prepost_src ne "")
 		{
 			debug( "Adding to local config file from $personal_sec_prepost_src\n",$debuglevel);
-			open(SECURITY,"<$personal_sec_prepost_src")  || die "Can not do local config additions: $! <<$personal_sec_prepost_src>>\n";
+			open(SECURITY,"<$personal_sec_prepost_src")  || die "Can not do local config additions: $personal_sec_prepost_src: $!\n";
 			print NEW "# Adding changes requested from $personal_sec_prepost_src\n";
 			while(<SECURITY>)
 			{
@@ -1190,7 +1190,7 @@ debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath
 		if($personal_local_post_src ne "")
 		{
 			debug("Adding to local config file from $personal_local_post_src\n",$debuglevel);
-			open(POST,"<$personal_local_post_src")  || die "Can not do local config additions: $! <<$personal_local_post_src>>\n";
+			open(POST,"<$personal_local_post_src")  || die "Can not do local config additions: $personal_local_post_src:$!\n";
 			print NEW "# Adding changes requested from $personal_local_post_src\n";
 			while(<POST>)
 			{
@@ -1303,7 +1303,7 @@ sub StartPersonalCondor
 
 	# set up to use the existing generated configfile
 	$ENV{CONDOR_CONFIG} = $fullconfig;
-	debug( "Is personal condor running config<$fullconfig>\n",$debuglevel);
+	debug( "Is personal condor running config: $fullconfig\n",$debuglevel);
 	my $condorstate = IsPersonalRunning($fullconfig);
 	debug( "Condor state is $condorstate\n",$debuglevel);
 	my $fig = $ENV{CONDOR_CONFIG};
@@ -1321,7 +1321,7 @@ sub StartPersonalCondor
 		#system("condor_config_val -v log");
 	} else {
 		debug_flush();
-		die "Bad state for a new personal condor configuration!<<running :-(>>\n";
+		die "Bad state for a new personal condor configuration! running :-(\n";
 	}
 
 	my $res = IsRunningYet();
@@ -1386,7 +1386,7 @@ sub IsPersonalRunning
             debug ("Matched! $pathtoconfig\n",$debuglevel);
             last;
         } else {
-			debug("hmmmm looking for <<$pathtoconfig>> got <<$line>> \n",$debuglevel);
+			debug("hmmmm looking for: $pathtoconfig got: $line \n",$debuglevel);
 		}
     }
     if ( close(CONFIG) && ($? != 13) ) {       # Ignore SIGPIPE
@@ -1499,7 +1499,7 @@ sub IsRunningYet {
 		my $masteradr = `condor_config_val MASTER_ADDRESS_FILE`;
 		$masteradr =~ s/\012+$//;
 		$masteradr =~ s/\015+$//;
-		debug( "MASTER_ADDRESS_FILE is <<<<<$masteradr>>>>>\n",$debuglevel);
+		debug( "MASTER_ADDRESS_FILE: $masteradr\n",$debuglevel);
     	debug( "We are waiting for the file to exist\n",$debuglevel);
     	# Where is the master address file? wait for it to exist
     	my $havemasteraddr = "no";
@@ -1530,7 +1530,7 @@ sub IsRunningYet {
 		my $collectoradr = `condor_config_val COLLECTOR_ADDRESS_FILE`;
 		$collectoradr =~ s/\012+$//;
 		$collectoradr =~ s/\015+$//;
-		debug( "COLLECTOR_ADDRESS_FILE is <<<<<$collectoradr>>>>>\n",$debuglevel);
+		debug( "COLLECTOR_ADDRESS_FILE: $collectoradr\n",$debuglevel);
     	debug( "We are waiting for the file to exist\n",$debuglevel);
     	# Where is the collector address file? wait for it to exist
     	my $havecollectoraddr = "no";
@@ -1561,7 +1561,7 @@ sub IsRunningYet {
 		my $negotiatoradr = `condor_config_val NEGOTIATOR_ADDRESS_FILE`;
 		$negotiatoradr =~ s/\012+$//;
 		$negotiatoradr =~ s/\015+$//;
-		debug( "NEGOTIATOR_ADDRESS_FILE is <<<<<$negotiatoradr>>>>>\n",$debuglevel);
+		debug( "NEGOTIATOR_ADDRESS_FILE: $negotiatoradr\n",$debuglevel);
     	debug( "We are waiting for the file to exist\n",$debuglevel);
     	# Where is the negotiator address file? wait for it to exist
     	my $havenegotiatoraddr = "no";
@@ -1592,7 +1592,7 @@ sub IsRunningYet {
 		my $startdadr = `condor_config_val STARTD_ADDRESS_FILE`;
 		$startdadr =~ s/\012+$//;
 		$startdadr =~ s/\015+$//;
-		debug( "STARTD_ADDRESS_FILE is <<<<<$startdadr>>>>>\n",$debuglevel);
+		debug( "STARTD_ADDRESS_FILE is: $startdadr\n",$debuglevel);
     	debug( "We are waiting for the file to exist\n",$debuglevel);
     	# Where is the startd address file? wait for it to exist
     	my $havestartdaddr = "no";
@@ -1625,7 +1625,7 @@ sub IsRunningYet {
 		my $scheddadr = `condor_config_val SCHEDD_ADDRESS_FILE`;
 		$scheddadr =~ s/\012+$//;
 		$scheddadr =~ s/\015+$//;
-		debug( "SCHEDD_ADDRESS_FILE is <<<<<$scheddadr>>>>>\n",$debuglevel);
+		debug( "SCHEDD_ADDRESS_FILE is: $scheddadr\n",$debuglevel);
     	debug( "We are waiting for the file to exist\n",$debuglevel);
     	# Where is the schedd address file? wait for it to exist
     	my $havescheddaddr = "no";
@@ -1684,7 +1684,7 @@ sub IsRunningYet {
 
 					foreach my $arg (@cmd) {
 						chomp($arg);
-						print "<$arg>\n";
+						print "$arg\n";
                     	if($arg =~ /$currenthost/) {
                         	#print "ok\n";
 							$done = "yes";
@@ -1740,7 +1740,7 @@ sub IsRunningYet {
 				sleep ($loopcount * $backoff);
 			}
 		}
-		print "Schedd in Collector now(<$output>) ";
+		print "Schedd in Collector now($output) ";
 	}
 
 
@@ -1777,7 +1777,7 @@ sub IsRunningYet {
 				sleep ($loopcount * $backoff);
 			}
 		}
-		print "Negotiator in Collector now(<$output>)\n";
+		print "Negotiator in Collector now($output)\n";
 	}
 
 	debug("In IsRunningYet calling CollectDaemonPids\n",$debuglevel);
@@ -1871,10 +1871,10 @@ sub KillDaemonPids
 
 	#print "logs are here:$logdir\n";
 	my $pidfile = $logdir . "/PIDS";
-	debug("Asked to kill <$oldconfig>\n",$debuglevel);
+	debug("Asked to kill: $oldconfig\n",$debuglevel);
 	my $thispid = 0;
 	# first find the master and use a kill 3(fast kill)
-	open(PD,"<$pidfile") or die "Can not open<$pidfile>:$!\n";
+	open(PD,"<$pidfile") or die "Can not open :$pidfile:$!\n";
 	while(<PD>) {
 		chomp();
 		$thispid = $_;
@@ -1886,7 +1886,7 @@ sub KillDaemonPids
 			} else {
 				$cnt = kill 3, $masterpid;
 			}
-			debug("Gentle kill for master <$masterpid><$thispid($cnt)>\n",$debuglevel);
+			debug("Gentle kill for master: $masterpid $thispid($cnt)\n",$debuglevel);
 			last;
 		}
 	}
@@ -1910,17 +1910,17 @@ sub KillDaemonPids
 	}
 
 	if($cnt == 0) {
-		debug("Gentle kill for master <$thispid> worked!\n",$debuglevel);
+		debug("Gentle kill for master: $thispid worked!\n",$debuglevel);
 	} else {
 		# hmm bullets are placed in heads here.
-		debug("Gentle kill for master <$thispid><$cnt> failed!\n",$debuglevel);
-		open(PD,"<$pidfile") or die "Can not open<$pidfile>:$!\n";
+		debug("Gentle kill for master: $thispid $cnt failed!\n",$debuglevel);
+		open(PD,"<$pidfile") or die "Can not open: $pidfile:$!\n";
 		while(<PD>) {
 			chomp();
 			$thispid = $_;
 			if($thispid =~ /^(\d+)\s+MASTER.*$/) {
 				$thispid = $1;
-				debug("Kill MASTER PID <$thispid:$1>\n",$debuglevel);
+				debug("Kill MASTER PID: $thispid:$1\n",$debuglevel);
 				if(CondorUtils::is_windows() == 1) {
 					$cmd = "/usr/bin/kill -f -s 15 $thispid";
 					system($cmd);
@@ -1928,7 +1928,7 @@ sub KillDaemonPids
 					$cnt = kill 15, $thispid;
 				}
 			} else {
-				debug("Kill non-MASTER PID <$thispid>\n",$debuglevel);
+				debug("Kill non-MASTER PID: $thispid\n",$debuglevel);
 				if(CondorUtils::is_windows() == 1) {
 					$cmd = "kill -f -s 15 $thispid";
 					system($cmd,{expect_result=>\&ANY});
@@ -1937,9 +1937,9 @@ sub KillDaemonPids
 				}
 			}
 			if($cnt == 0) {
-				debug("Failed to kill PID <$thispid>\n",$debuglevel);
+				debug("Failed to kill PID: $thispid\n",$debuglevel);
 			} else {
-				debug("Killed PID <$thispid>\n",$debuglevel);
+				debug("Killed PID: $thispid\n",$debuglevel);
 			}
 		}
 		close(PD);
@@ -2132,7 +2132,7 @@ sub PersonalDumpCondorLogs
 		next if $file =~ /^\.\.?$/; # skip . and ..
 		if(-f $file ) {
 			print "\n\n******************* DUMP $file ******************\n\n";
-			open(FF,"<$file") || die "Can not open logfile<$file>: $!\n";
+			open(FF,"<$file") || die "Can not open logfile: $file: $!\n";
 			while(<FF>){
 				print "$_";
 			}
@@ -2155,9 +2155,9 @@ sub DisplayPartialLocalConfig
 	if($logdir =~ /(.*\/)log/) {
 		#print "Config File Location <$1>\n";
 		$fullpathtolocalconfig = $1 . $personal_local;
-		print "\nlocal config file <$fullpathtolocalconfig>\n";
+		print "\nlocal config file: $fullpathtolocalconfig\n";
 		if( -f $fullpathtolocalconfig) {
-			print "\nDumping Adjustments to <$personal_local>\n\n";
+			print "\nDumping Adjustments to: $personal_local\n\n";
 			my $startdumping = 0;
 			open(LC,"<$fullpathtolocalconfig") or die "Can not open $fullpathtolocalconfig: $!\n";
 			while(<LC>) {
@@ -2177,7 +2177,7 @@ sub DisplayPartialLocalConfig
 				}
 			}
 			close(LC);
-			print "\nDONE Dumping Adjustments to <$personal_local>\n\n";
+			print "\nDONE Dumping Adjustments to: $personal_local\n\n";
 		}
 	}
 }
@@ -2186,7 +2186,7 @@ sub IsThisNightly
 {
 	my $mylocation = shift;
 
-	debug("IsThisNightly passed <$mylocation>\n",$debuglevel);
+	debug("IsThisNightly passed: $mylocation\n",$debuglevel);
 	if($mylocation =~ /^.*(\/execute\/).*$/) {
 		return(1);
 	} else {
