@@ -44,6 +44,7 @@ my $firstappend_condor_config = '
 	foo = 1
 	bar = $(foo) + 1
 	master.foo = 2
+	MY_LOG = $(LOG)/me
 	GOO = baz
 	master.GOO = $(GOO), bar
 	ALL_DEBUG = D_ALWAYS D_CMD D_DAEMONCORE
@@ -60,7 +61,7 @@ CondorTest::StartCondorWithParams(
 my $return = "";
 my $executecount = 0;
 my $result = 1;
-my $test_name = "job_basic_kill";
+my $test_name = "cmd_ccval_remote";
 
 my $on_execute = sub {
 	print "********************************** OnExecute *****************************\n";
@@ -87,64 +88,17 @@ $result = SimpleJob::RunCheck(); # jobid 1
 
 my @localarray = ();
 my @remotearray = ();
+my %locparams = ();
+my %remparams = ();
+my %onlyloc = ();
+my %onlyrem = ();
 
-my %mismatchOK = (
-	"TOOL_TIMEOUT_MULTIPLIER" => "1",
+my %hashcompareexceptions = 
+(
+	"PID" => "1",
+	"PPID" => "1",
+	"SUBSYSTEM" => "1",
 );
-
-my %ronly = (
-	"DEBUG_TIME_FORMAT" => "1",
-	"ALLOW_ADMIN_COMMANDS" => "1",
-	"BIND_ALL_INTERFACES" => "1",
-	"DNS_CACHE_REFRESH" => "1",
-	"ENABLE_SOAP" => "1",
-	"ENABLE_SOAP_SSL" => "1",
-	"ENABLE_WEB_SERVER" => "1",
-	"ENABLE_STDOUT_TESTING" => "1",
-	"FILE_LOCK_VIA_MUTEX" => "1",
-	"GLEXEC_JOB" => "1",
-	"LOCK_DEBUG_LOG_TO_APPEND" => "1",
-	"LOGS_USE_TIMESTAMP" => "1",
-	"MASTER.ENABLE_CLASSAD_CACHING" => "1",
-	"MASTER.PID_SNAPSHOT_INTERVAL" => "1",
-	"MASTER_BACKOFF_CEILING" => "1",
-	"MASTER_BACKOFF_CONSTANT" => "1",
-	"MASTER_BACKOFF_FACTOR" => "1",
-	"MASTER_CHECK_NEW_EXEC_INTERVAL" => "1",
-	"MASTER_DEBUG_WAIT" => "1",
-	"MASTER_NEW_BINARY_DELAY" => "1",
-	"MASTER_NEW_BINARY_RESTART" => "1",
-	"MASTER_RECOVER_FACTOR" => "1",
-	"MASTER_TIMEOUT_MULTIPLIER" => "1",
-	"MASTER_UPDATE_INTERVAL" => "1",
-	"MAX_PROCD_LOG" => "1",
-	"NETWORK_MAX_PENDING_CONNECTS" => "1",
-	"NONBLOCKING_COLLECTOR_UPDATE" => "1",
-	"OBITUARY_LOG_LENGTH" => "1",
-	"PREEN_INTERVAL" => "1",
-	"PRIVSEP_ENABLED" => "1",
-	"PROCD_DEBUG" => "1",
-	"QUILL_USE_SQL_LOG" => "1",
-	"SEC_INVALIDATE_SESSIONS_VIA_TCP" => "1",
-	"SEC_SESSION_DURATION_SLOP" => "1",
-	"SEC_TCP_SESSION_TIMEOUT" => "1",
-	"SHUTDOWN_FAST_TIMEOUT" => "1",
-	"STATISTICS_WINDOW_QUANTUM" => "1",
-	"STATISTICS_WINDOW_SECONDS" => "1",
-	"TOUCH_LOG_INTERVAL" => "1",
-	"USE_CLONE_TO_CREATE_PROCESSES" => "1",
-	"USE_GID_PROCESS_TRACKING" => "1",
-	"USE_PROCD" => "1",
-	"USE_PROCESS_GROUPS" => "1",
-	"USE_SHARED_PORT" => "1",
-	"TRUNC_MASTER_LOG_ON_OPEN" => "1",
-	"WANT_UDP_COMMAND_SOCKET" => "1",
-	"WANT_XML_LOG" => "1",
-);
-
-foreach my $rparam (sort keys %ronly) {
-	print "remote only: $rparam\n";
-}
 
 my $ccvstat = 1;
 
@@ -154,18 +108,91 @@ if(!$ccvstat) {
 	die "Test failure from failure to do local condor_config_val dump\n";
 }
 
-$ccvstat = runCondorTool("condor_config_val -master -dump",\@remotearray,2,{emit_output=>0});
+$ccvstat = runCondorTool("condor_config_val -negotiator -dump",\@remotearray,2,{emit_output=>0});
 if(!$ccvstat) {
 	die "Test failure from failure to do local condor_config_val remote dump of the master\n";
 }
 
-ShowNonMatches(\@localarray,\@remotearray);
+ClassifyParams(\@localarray,\@remotearray);
+
+# The above does 3 tests, first it checks for all but the exclused params as being equal.
+# Then it checks two particular params set to be different by the test.
+
+# Now we are going to use $(LOCAL_DIR) in two ways. Later we will check for the
+# value of MY_LOG being a concatenation of that and $(LOG) plus some. We will also 
+# verify that where verbose says it is, is exactly where it gets defined.
+
+my @localdir = ();
+$ccvstat = runCondorTool("condor_config_val local_dir",\@localdir,2,{emit_output=>0});
+if(!$ccvstat) {
+	die "Test failure from failure to do local condor_config_val local_dir\n";
+}
+my $localdirres = $localdir[0];
+chomp($localdirres);
+if($localdirres =~ /^.*$yest_name.*saveme.*$/) {
+	print "Good localdir defined and based on test name: $localdirres\n";
+	RegisterResult(1);
+} else {
+	print "Bad localdir NOT defined and based on test name: $localdirres\n";
+	RegisterResult(0);
+}
 
 
 
 CondorTest::EndTest();
 
-sub ShowNonMatches
+sub LoadHash
+{
+	my $arrayref = shift;
+	my $hashref = shift;
+
+	foreach my $params (@$arrayref) {
+		chomp($params);
+		#print "Parsing: $params\n";
+
+		if($params =~ /(.*?)\s+=\s*(.*)/) {
+			${$hashref}{$1} = $2;
+		} elsif($params =~ /#(.*)/) {
+			print "Comment: $1\n";
+		} else {
+			print "Why is this not param format: $params\n";
+		}
+	}
+
+	foreach my $key ( sort keys %{$hashref}) {
+		#print "dump: $key = ${$hashref}{$key}\n";
+	}
+}
+
+sub CompareParams
+{
+	my $srchashref = shift;
+	my $targethashref = shift;
+	my $strayhashref = shift;
+	my $label = shift;
+
+	foreach my $keys (sort keys %{$srchashref}) {
+		#print "consider: $label: $keys \n";
+		if(exists ${$targethashref}{$keys}) {
+			#print "In target: ${$targethashref}{$keys}\n";
+			if(${$srchashref}{$keys} ne ${$targethashref}{$keys}) {
+				print "$label key $keys ${$srchashref}{$keys} vs ${$targethashref}{$keys} ";
+				if(exists $hashcompareexceptions{$keys}) {
+					print "- ALLOWED\n";
+				} else { 
+					print "- EORROR\n";
+					$mismatch += 1;
+				}
+			}
+			#;
+		} else {
+			${$strayhashref}{$keys} = ${$srchashref}{$keys};
+			#print "NOT In $label target: ${$targethashref}{$keys}\n";
+		}
+	}
+}
+
+sub ClassifyParams
 {
 	my $larrayref = shift;
 	my $rarrayref = shift;
@@ -182,184 +209,71 @@ sub ShowNonMatches
 	my $localcount = @$larrayref;
 	my $remotecount = @$rarrayref;
 
-	print "Inspect Params local <$localcount> remote <$remotecount>\n";
-	while($done == 0) {
-		$rdone = $ldone = 0;
-		$ritem = shift @{$rarrayref};
-		$litem = shift @{$larrayref};
-		# test end condition of running out of params
-		if((!(defined $ritem)) || (!(defined $litem))) {
-			$done = 1;
-			print "===================== Ran Out Of Params ======================\n";
-			if($mismatch == 0) {
-				print "Local and Remote Params Matched As Expected\n";
-				RegisterResult(1);
-			} else {
-				print "No mismatches in params were expected after filtering known diffs\n";
-				#RegisterResult(0);
-				RegisterResult(1);
-			}
-			last;
-		}
-		# drop comments
-		while(($litem =~ /^#\s(.*)$/) || ($litem =~ /^\s(.*)$/)) {
-			#print "################# comment <$litem>\n";
-			$litem = shift @{$larrayref};
-			#print "################# replaced with <$litem>\n";
-		}
-		#print "LOOPING: L <$litem> R <$ritem>\n";
-		# look for and skip remote only params
-		while($rdone == 0) {
-			if($ritem =~ /^(.*?)\s=.*$/) {
-				#print "Param = <$1>\n";
-				if(exists $ronly{$1}) {
-					#print "EXISTS: skip <$ritem>\n";
-					$ritem = shift @{$rarrayref};
-				} else {
-					#print "NON unique\n";
-					$rdone = 1;
-				}
-			}
-		}
+	LoadHash($larrayref, \%locparams);
+	LoadHash($rarrayref, \%remparams);
 
+	CompareParams(\%locparams, \%remparams, \%onlyloc, "loc");
+	CompareParams(\%remparams, \%locparams, \%onlyrem, "rem");
 
-		chomp($ritem);
-		chomp($litem);
+	if($mismatch > 0) {
+		print "MISMATCHES caused failure\n";
+		RegisterResult(0);
+	} else {
+		print  "Params match both local and remote locations\n";
+		RegisterResult(1);
+	}
+	foreach my $keys (sort keys %onlyloc) {
+		print "Local only: $keys $onlyloc{$keys}\n";
+	}
+	
+	foreach my $keys (sort keys %onlyrem) {
+		print "remote only: $keys $onlyrem{$keys}\n";
+	}
+	
+	CompareLocRem("foo","1","2");
+	CompareLocRem("GOO","baz","baz, bar");
+	return(1);
 
-		# things we toss out
-		# MASTER.GOO sets up a test so ignore it
-		if($litem =~ /^MASTER.GOO\s+=\s+.*$/) {
-			next;
-		}
-		# FOOs should be different
-		if($litem =~ /^FOO\s+=\s+(\d+).*$/) {
-			$lppid = $1;
-			if($ritem =~ /^FOO\s+=\s+(\d+).*$/) {
-				$rppid = $1;
-				print "\n----------------------- FOO found $lppid =?= $rppid ----------------------- \n";
-				if($rppid eq $lppid) {
-					print "FOO should be different (L $lppid/ R $rppid)\n";
-					if(($lppid eq "1") && ($lppid eq "2")) {
-						RegisterResult(1);
-					} else {
-						print "FOO expected as 1 on local and 2 on remote/master\n";
-						RegisterResult(0);
-					}
-				} else {
-					RegisterResult(1);
-				}
-			} else {
-				print "FOO items should match up\n";
-				RegisterResult(0);
+}
+
+sub CompareLocRem
+{
+	my $key = shift;
+	my $locval = shift;
+	my $remval = shift;
+
+	@remotearray = ();
+	@localarray = ();
+
+	$ccvstat = runCondorTool("condor_config_val -master $key",\@remotearray,2,{emit_output=>0});
+	if(!$ccvstat) {
+		die "Test failure from failure to do local condor_config_val remote dump of the master\n";
+	}
+
+	$ccvstat = runCondorTool("condor_config_val $key",\@localarray,2,{emit_output=>0});
+	if(!$ccvstat) {
+		die "Test failure from failure to do local condor_config_val remote dump of the master\n";
+	}
+
+	my $gotloc = shift @localarray;
+	my $gotrem = shift @remotearray;
+	chomp($gotloc);
+	chomp($gotrem);
+
+	print "for $key local val is $gotloc and remote -master is $gotrem\n";
+	if($locval ne $remval) {
+		if(("$locval" ne "$gotloc") || ("$remval" ne "$gotrem")) {
+			if("$locval" ne "$gotloc") {
+				print "Local values differ\n";
 			}
-			next;
-		}
-		# GOOs should be different
-		if($litem =~ /^GOO\s+=\s+(.*)$/) {
-			$lppid = $1;
-			if($ritem =~ /^GOO\s+=\s+(.*)$/) {
-				$rppid = $1;
-				print "\n----------------------- GOO found $lppid =?= $rppid ----------------------- \n";
-				if($rppid eq $lppid) {
-					print "GOO should be different (L $lppid/ R $rppid)\n";
-					if(($lppid eq "baz") && ($lppid eq "baz, bar")) {
-						RegisterResult(1);
-					} else {
-						print "GOO expected as baz on local and baz, bar on remote/master\n";
-						RegisterResult(0);
-					}
-				} else {
-					RegisterResult(1);
-				}
-			} else {
-				print "GOO items should match up\n";
-				RegisterResult(0);
+			if("$remval" ne "$gotrem") {
+				print "Remote values differ\n";
 			}
-			next;
-		}
-		# PPIDs should be different
-		if($litem =~ /^PPID\s+=\s+(\d+).*$/) {
-			$lppid = $1;
-			if($ritem =~ /^PPID\s+=\s+(\d+).*$/) {
-				$rppid = $1;
-				print "\n----------------------- PPID found $lppid =?= $rppid ----------------------- \n";
-				if($rppid eq $lppid) {
-					print "PPIDs should be different (L $lppid/ R $rppid)\n";
-					RegisterResult(0);
-				} else {
-					RegisterResult(1);
-				}
-			} else {
-				print "PPID items should match up\n";
-				RegisterResult(0);
-			}
-			next;
-		}
-		# PIDs should be different
-		if($litem =~ /^PID\s+=\s+(\d+).*$/) {
-			$lpid = $1;
-			if($ritem =~ /^PID\s+=\s+(\d+).*$/) {
-				$rpid = $1;
-				print "\n----------------------- PID found $lpid =?= $rpid ----------------------- \n";
-				if($rpid eq $lpid) {
-					print "PIDs should be different (L $lpid/ R $rpid)\n";
-					RegisterResult(0);
-				} else {
-					RegisterResult(1);
-				}
-			} else {
-				print "PID items should match up\n";
-				RegisterResult(0);
-			}
-			next;
-		}
-		#  SUBSYSTEM should be different
-		if($litem =~ /^SUBSYSTEM\s+=\s+(.*)$/) {
-			$lpid = $1;
-			if($ritem =~ /^SUBSYSTEM\s+=\s+(.*)$/) {
-				$rpid = $1;
-				print "\n----------------------- SUBSYSTEM found $lpid =?= $rpid ----------------------- \n";
-				if($rpid eq $lpid) {
-					print "SUBSYSTEM should be different (L $lpid/ R $rpid)\n";
-					RegisterResult(0);
-				} else {
-					RegisterResult(1);
-				}
-			} else {
-				print "SUBSYSTEM items should match up\n";
-				RegisterResult(0);
-			}
-			next;
-		}
-		if($litem eq $ritem) {
-			#print "\n";
+			print "BAD expected local value of <$key> as <$locval> and -master value of <$remval>\n";
+			print "Got local value of <$key> as <$gotloc> and -master value of <$gotrem>\n";
+			RegisterResult(0);
 		} else {
-			print "MISMATCH *************** ";
-			print "L <$litem> R <$ritem>";
-			print " *************** \n";
-			my $lparam = "";
-			my $rparam = "";
-			if($litem =~ /^(.*?)\s=.*$/) {
-				$lparam = $1;
-			}
-			if($ritem =~ /^(.*?)\s=.*$/) {
-				$rparam = $1;
-			}
-			print "========================= MISMATCH REMOTE: ($lparam) ccv verbose follows ====================================================\n";
-			runToolNTimes("condor_config_val $lparam -verbose",1,1);
-			print "========================= MISMATCH REMOTE: ($rparam) ccv verbose follows ====================================================\n";
-			runToolNTimes("condor_config_val -master $rparam -verbose",1,1);
-			print "looking up $lparam and $rparam\n";
-			if($lparam eq $rparam) {
-				if(exists $mismatchOK{$lparam}) {
-					#don't flag error for this
-					print "Mismatch of $lparam not an error\n";
-				} else {
-					$mismatch += 1;
-				}
-			} else {
-				$mismatch += 1;
-			}
+			RegisterResult(1);
 		}
 	}
 }
