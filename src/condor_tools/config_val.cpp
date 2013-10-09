@@ -103,36 +103,41 @@ void
 usage(int retval = 1)
 {
 #if 1
-	fprintf(stderr, "Usage: %s <edit> | <var> [<view>] [<location>] [<help>]\n"
-		"\n    where <edit> is one set/unset operation with one or more <var>'s\n"
+	fprintf(stderr, "Usage: %s <help>\n\n", MyName);
+	fprintf(stderr, "       %s [<location>] <edit> \n\n", MyName);
+	fprintf(stderr, "       %s [<location>] [<view>] <vars>\n\n", MyName);
+	fprintf(stderr,
+		"    where <edit> is one set/unset operation with one or more arguments\n"
 		"\t-set \"<var> = <value>\"\tSet persistent <var> to <value>\n"
 		"\t-unset <var>\t\tRevert persistent <var> to previous value\n"
 		"\t-rset \"<var> = <value>\"\tSet runtime <var> to <value>\n"
 		"\t-runset <var>\t\tRevert runtime <var> to previous value\n"
 		//"\t-writeconfig <file>\tWrite non-default configuration to <file>\n"
-		"\n    <var> [<var>...]\tPrint the value of <var>. The value is\n"
-		"\texpanded unless -raw, -evaluate, or -default is specified.\n"
-		"\tWhen used with -dump, <var> is treated as a regular expression\n"
+		"\n    where <vars> is <var> [<var>...]\tPrint the value of <var>. The\n"
+		"\tvalue is expanded unless -raw, -evaluate, -default or -dump is\n"
+		"\tspecified. When used with -dump, <var> is regular expression.\n"
 		"\n    where <view> is one or more of\n"
 		"\t-dump\t\tPrint values of all variables that match <var>\n"
-		"\t\t\tPrint all variables if no <var>. The value is raw\n"
-		"\t\t\tunless -expand, -default or -evaluate is specified\n"
+		"\t\t\tThe value is raw unless -expand, -default, or -evaluate\n"
+		"\t\t\tis specified. If no <vars>, Print all variables\n"
 		"\t-default\tPrint default value\n"
 		"\t-expand\t\tPrint expanded value\n"
-		"\t-raw\t\tPrint raw (unexpanded) value as it appears in the file\n"
+		"\t-raw\t\tPrint raw value as it appears in the file\n"
 		//"\t-stats\t\tPrint statistics of the configuration system\n"
-		"\t-verbose\tPrint location, raw, expanded, and default values\n"
-		"      these options apply when querying a daemon\n"
-		"\t-evaluate\tevaluate with respect the <daemon> classad\n"
-		"\t-used\t\tPrint only variables used the the daemon\n"
-		"\t-unused\t\tPrint only variables not used the the daemon\n"
+		"\t-verbose\tPrint source, raw, expanded, and default values\n"
+		"\t-debug[:<opts>] dprintf to stderr, optionally overiding TOOL_DEBUG\n"
+		//"\t-diagnostic\t\tPrint diagnostic information about condor_config_val operation\n"
+		"      these options apply when querying a daemon with a <location> argument\n"
+		"\t-evaluate\tevaluate with respect to the <daemon> ClassAd\n"
+		"\t-used\t\tPrint only variables used by the specified daemon\n"
+		"\t-unused\t\tPrint only variables not used by the specified daemon\n"
 		"      these options apply when reading configuration files\n"
 		"\t-config\t\tPrint the locations of configuration files\n"
-		//"\t-reconfig <file>\tReload config and append <file>\n"
+		//"\t-reconfig <file>\tReload configuration files and append <file>\n"
 		"\t-mixedcase\tPrint variable names as originally specified\n"
-		"\t-local-name <name>  Local name for querying and expanding\n"
-		"\t-subsystem <daemon> Subsystem/Daemon name for querying and expanding\n"
-		"\t\t\tThe default subsystem for condor_config_val is TOOL\n"
+		"\t-local-name <name>  Use local name for querying and expanding\n"
+		"\t-subsystem <daemon> Subsystem/Daemon name for querying and\n"
+		"\t\t\texpanding. The default subsystem is TOOL\n"
 		//"\t-tilde\t\tReturn the path to the Condor home directory\n"
 		//"\t-owner\t\tReturn the owner of the condor_config_val process\n"
 		"\n    where <location> is one or more of\n"
@@ -147,10 +152,7 @@ usage(int retval = 1)
 		"\n    where <help> is one of\n"
 		"\t-help\t\tPrint this screen and exit\n"
 		"\t-version\tPrint HTCondor version and exit\n"
-		"\t-debug[:<opts>] dprintf to stderr, optionally overiding TOOL_DEBUG\n"
-		//"\t-diagnostic\t\tPrint diagnostic information about condor_config_val operation\n"
-
-		, MyName );
+		);
 #else
 	fprintf( stderr, "Usage: %s [options] variable [variable] ...\n", MyName );
 	fprintf( stderr,
@@ -412,10 +414,13 @@ main( int argc, const char* argv[] )
 	bool    show_by_usage_unused = false;
 	bool    evaluate_daemon_vars = false;
 	bool    print_config_sources = false;
-	bool	write_config = false;
+	const char * write_config = NULL;
+	int     write_config_flags = 0;
+	const int def_write_config_flags = 0;
 	bool    dash_debug = false;
 	bool    dash_raw = false;
 	bool    dash_default = false;
+	bool    stats_with_defaults = false;
 	const char * debug_flags = NULL;
 
 #ifdef WIN32
@@ -537,8 +542,11 @@ main( int argc, const char* argv[] )
 			}
 		} else if (is_arg_prefix(arg, "dump", 1)) {
 			dump_all_variables = true;
-		} else if (is_arg_prefix(arg, "stats", 4)) {
+		} else if (is_arg_colon_prefix(arg, "stats", &pcolon, 4)) {
 			dump_stats = true;
+			if (pcolon && is_arg_prefix(pcolon+1, "keep_defaults", 2)) {
+				stats_with_defaults = true;
+			}
 		} else if (is_arg_prefix(arg, "expanded", 2)) {
 			expand_dumped_variables = true;
 		} else if (is_arg_prefix(arg, "evaluate", 2)) {
@@ -550,8 +558,20 @@ main( int argc, const char* argv[] )
 			show_by_usage = true;
 			show_by_usage_unused = false;
 			//dash_usage = true;
-		} else if (is_arg_prefix(arg, "writeconfig", 2)) {
-			write_config = true;
+		} else if (is_arg_colon_prefix(arg, "writeconfig", &pcolon, 3)) {
+			write_config = use_next_arg("writeconfig", argv, i);
+			write_config_flags = def_write_config_flags;
+			if (pcolon) {
+				StringList opts(pcolon+1,":,");
+				opts.rewind();
+				while (NULL != (tmp = opts.next())) {
+					if (is_arg_prefix(tmp, "default", 3)) {
+						write_config_flags |= WRITE_MACRO_OPT_DEFAULT_VALUES;
+					} else if (is_arg_prefix(tmp, "source", 3)) {
+						write_config_flags |= WRITE_MACRO_OPT_SOURCE_COMMENT;
+					}
+				}
+			}
 		} else if (is_arg_colon_prefix(arg, "debug", &pcolon, 2)) {
 				// dprintf to console
 			dash_debug = true;
@@ -706,13 +726,14 @@ main( int argc, const char* argv[] )
 		// Want to do this before we try to find the address of a
 		// remote daemon, since if there's no -pool option, we need to
 		// param() for the COLLECTOR_HOST to contact.
-	if( host ) {
-		config_host( host );
-	} else {
-		config( 0, true );
-		if (print_config_sources) {
-			PrintConfigSources();
-		}
+	int config_options = CONFIG_OPT_WANT_META;
+	if (write_config || stats_with_defaults) {
+		config_options |= CONFIG_OPT_KEEP_DEFAULTS;
+	}
+	config_host(host, 0, config_options);
+	validate_config(false); // validate, but do not abort.
+	if (print_config_sources) {
+		PrintConfigSources();
 	}
 
 	if (reconfig_source) {
@@ -722,7 +743,7 @@ main( int argc, const char* argv[] )
 
 		extern const char * simulated_local_config;
 		simulated_local_config = reconfig_source;
-		config(0, true);
+		config_host(host, 0, config_options);
 		if (print_config_sources) {
 			fprintf(stdout, "Reconfig with %s appended\n", reconfig_source);
 			PrintConfigSources();
@@ -738,8 +759,8 @@ main( int argc, const char* argv[] )
 	// temporary, to get rid of build warning.
 	if (dash_default) { fprintf(stderr, "-default not (yet) supported\n"); }
 
-	if(write_config == true) {
-		write_config_file("static_condor_config");
+	if (write_config) {
+		write_config_file(write_config, write_config_flags);
 	}
 	
 	if( pool && ! name ) {
@@ -925,6 +946,8 @@ main( int argc, const char* argv[] )
 			params.append(strdup(""));
 			params.rewind();
 			//if (diagnostic) fprintf(stderr, "querying all\n");
+		} else if (write_config) {
+			my_exit(0);
 		} else {
 			usage();
 		}
