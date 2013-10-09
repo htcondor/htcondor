@@ -24,6 +24,7 @@ cmd_condor_submit_dashspool
 lib_bt_shared_port-check-ports_van
 cmd_drain
 defrag
+cmd_ccval_remote
 #cmd_status_shows-any
 #cmd_status_shows-submitters
 #cmd_status_shows-negotiator
