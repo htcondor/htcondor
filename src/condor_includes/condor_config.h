@@ -76,7 +76,7 @@ typedef struct macro_defaults {
 typedef struct macro_set {
 	int       size;
 	int       allocation_size;
-	int       options;
+	int       options; // use CONFIG_OPT_xxx flags OR'd together
 	int       sorted;  // number of items in table which are sorted
 	MACRO_ITEM *table;
 	MACRO_META *metat; // optional array of metadata, is parallel to table
@@ -84,7 +84,6 @@ typedef struct macro_set {
 	MACRO_SOURCES sources;
 	MACRO_DEFAULTS * defaults; // optional reference to const defaults table
 } MACRO_SET;
-
 
 /*
 **  Types of macro expansion
@@ -171,8 +170,12 @@ typedef struct macro_set {
 	odd since if a .c file includes this, these prototypes technically don't
 	exist.... */
 extern "C" {
-	void config( int wantsQuiet=0 , bool ignore_invalid_entry = false, bool wantsExtra = true );
-	void config_host( const char* host=NULL );
+	#define CONFIG_OPT_WANT_META      0x01   // also keep metdata about config
+	#define CONFIG_OPT_KEEP_DEFAULTS  0x02   // keep items that match defaults
+	void config();
+	void config_ex(int wantsQuiet, bool abort_if_invalid, int opt = CONFIG_OPT_WANT_META);
+	void config_host(const char* host, int wantsQuiet, int config_options);
+	void validate_config(bool abort_if_invalid);
 	void config_dump_string_pool(FILE * fh, const char * sep);
 	void config_dump_sources(FILE * fh, const char * sep);
 	const char * config_source_by_id(int source_id);
@@ -215,29 +218,40 @@ extern "C" {
 } // end extern "C"
 
 // the HASHITER can only be defined with c++ linkage
-	class HASHITER {
-	public:
-		int opts;
-		int ix; int id; int is_def;
-		MACRO_DEF_ITEM * pdef; // for use when default comes from per-daemon override table.
-		MACRO_SET & set;
-		HASHITER(MACRO_SET & setIn, int options=0) : opts(options), ix(0), id(0), is_def(0), pdef(NULL), set(setIn) {}
-		HASHITER& operator=(const HASHITER& rhs) { if (this != &rhs) { memcpy(this, &rhs, sizeof(this)); } return *this; }
-	};
-	enum { HASHITER_NO_DEFAULTS=1, HASHITER_USED_DEFAULTS=2, HASHITER_USED=4, HASHITER_SHOW_DUPS=8 };
-	inline HASHITER hash_iter_begin(MACRO_SET & set, int options=0) { return HASHITER(set,options); }
-	inline void hash_iter_delete(HASHITER*) {}
-	bool hash_iter_done(HASHITER& it);
-	bool hash_iter_next(HASHITER& it);
-	const char * hash_iter_key(HASHITER& it);
-	const char * hash_iter_value(HASHITER& it);
-	int hash_iter_used_value(HASHITER& it);
-	MACRO_META * hash_iter_meta(HASHITER& it);
-	const char * hash_iter_info(HASHITER& it, int& use_count, int& ref_count, MyString& source_name, int& line_number);
-	const char * hash_iter_def_value(HASHITER& it);
-	bool param_find_item (const char * name, const char * subsys, const char * local, MyString& name_found, HASHITER& it);
-	void foreach_param(int options, bool (*fn)(void* user, HASHITER& it), void* user);
-	void foreach_param_matching(Regex & re, int options, bool (*fn)(void* user, HASHITER& it), void* user);
+class HASHITER {
+public:
+	int opts;
+	int ix; int id; int is_def;
+	MACRO_DEF_ITEM * pdef; // for use when default comes from per-daemon override table.
+	MACRO_SET & set;
+	HASHITER(MACRO_SET & setIn, int options=0) : opts(options), ix(0), id(0), is_def(0), pdef(NULL), set(setIn) {}
+	HASHITER& operator=(const HASHITER& rhs) { if (this != &rhs) { memcpy(this, &rhs, sizeof(HASHITER)); } return *this; }
+};
+enum { HASHITER_NO_DEFAULTS=1, HASHITER_USED_DEFAULTS=2, HASHITER_USED=4, HASHITER_SHOW_DUPS=8 };
+inline HASHITER hash_iter_begin(MACRO_SET & set, int options=0) { return HASHITER(set,options); }
+inline void hash_iter_delete(HASHITER*) {}
+bool hash_iter_done(HASHITER& it);
+bool hash_iter_next(HASHITER& it);
+const char * hash_iter_key(HASHITER& it);
+const char * hash_iter_value(HASHITER& it);
+int hash_iter_used_value(HASHITER& it);
+MACRO_META * hash_iter_meta(HASHITER& it);
+const char * hash_iter_info(HASHITER& it, int& use_count, int& ref_count, MyString& source_name, int& line_number);
+const char * hash_iter_def_value(HASHITER& it);
+bool param_find_item (const char * name, const char * subsys, const char * local, MyString& name_found, HASHITER& it);
+void foreach_param(int options, bool (*fn)(void* user, HASHITER& it), void* user);
+void foreach_param_matching(Regex & re, int options, bool (*fn)(void* user, HASHITER& it), void* user);
+
+// Write out a config file of values from the param table.
+// Returns 0 on success and -1 on failure.
+#define WRITE_MACRO_OPT_DEFAULT_VALUES  0x01 // include default values
+#define WRITE_MACRO_OPT_SELDOM_VALUES   0x02 // include default values marked 'seldom'
+#define WRITE_MACRO_OPT_FUTURE_VALUES   0x04 // include default values marked 'future'
+#define WRITE_MACRO_OPT_DEVLOPER_VALUES 0x08 // include default values marked 'developer'
+#define WRITE_MACRO_OPT_EXPAND          0x10 // write expanded values
+#define WRITE_MACRO_OPT_SOURCE_COMMENT  0x20 // include comments showing source of values
+int write_macros_to_file(const char* pathname, MACRO_SET& macro_set, int options);
+int write_config_file(const char* pathname, int options);
 
 extern "C" {
 
@@ -276,7 +290,7 @@ extern "C" {
 		register char *value, register char **leftp,
 		register char **namep, register char **rightp);
 
-	void init_config ( bool );
+	void init_config (int options);
 }
 
 #endif // __cplusplus
@@ -308,6 +322,7 @@ BEGIN_C_DECLS
 	void clear_macro_use_count (const char *name, MACRO_SET& macro_set);
 	int get_macro_use_count (const char *name, MACRO_SET& macro_set);
 	int get_macro_ref_count (const char *name, MACRO_SET& macro_set);
+
 #endif // __cplusplus
 
 	/*
@@ -336,15 +351,7 @@ BEGIN_C_DECLS
 	int  param_boolean_int_without_default( const char* name, int default_value );
 	
 	// Process an additional chunk of file
-	void process_config_source(const char*, const char*, const char*, int);
-
-	// Write out a config file of non-default values.
-	// Returns 0 on success and -1 on failure.
-	int write_config_file( const char* pathname );
-	// Helper function, of form to iterate over the hash table of parameter
-	// information.  Returns 0 to continue, -1 to stop (i.e. on an error).
-	typedef struct param_info_t_s param_info_t;
-	int write_config_variable(const param_info_t* value, void* file_desc);
+	void process_config_source(const char* filename, const char* sourcename, const char* host, int required);
 
 /* This function initialize GSI (maybe other) authentication related
    stuff Daemons that should use the condor daemon credentials should

@@ -152,8 +152,7 @@ usage(int retval = 1)
 		"\n    where <help> is one of\n"
 		"\t-help\t\tPrint this screen and exit\n"
 		"\t-version\tPrint HTCondor version and exit\n"
-
-		, MyName );
+		);
 #else
 	fprintf( stderr, "Usage: %s [options] variable [variable] ...\n", MyName );
 	fprintf( stderr,
@@ -415,10 +414,13 @@ main( int argc, const char* argv[] )
 	bool    show_by_usage_unused = false;
 	bool    evaluate_daemon_vars = false;
 	bool    print_config_sources = false;
-	bool	write_config = false;
+	const char * write_config = NULL;
+	int     write_config_flags = 0;
+	const int def_write_config_flags = 0;
 	bool    dash_debug = false;
 	bool    dash_raw = false;
 	bool    dash_default = false;
+	bool    stats_with_defaults = false;
 	const char * debug_flags = NULL;
 
 #ifdef WIN32
@@ -540,8 +542,11 @@ main( int argc, const char* argv[] )
 			}
 		} else if (is_arg_prefix(arg, "dump", 1)) {
 			dump_all_variables = true;
-		} else if (is_arg_prefix(arg, "stats", 4)) {
+		} else if (is_arg_colon_prefix(arg, "stats", &pcolon, 4)) {
 			dump_stats = true;
+			if (pcolon && is_arg_prefix(pcolon+1, "keep_defaults", 2)) {
+				stats_with_defaults = true;
+			}
 		} else if (is_arg_prefix(arg, "expanded", 2)) {
 			expand_dumped_variables = true;
 		} else if (is_arg_prefix(arg, "evaluate", 2)) {
@@ -553,8 +558,20 @@ main( int argc, const char* argv[] )
 			show_by_usage = true;
 			show_by_usage_unused = false;
 			//dash_usage = true;
-		} else if (is_arg_prefix(arg, "writeconfig", 2)) {
-			write_config = true;
+		} else if (is_arg_colon_prefix(arg, "writeconfig", &pcolon, 3)) {
+			write_config = use_next_arg("writeconfig", argv, i);
+			write_config_flags = def_write_config_flags;
+			if (pcolon) {
+				StringList opts(pcolon+1,":,");
+				opts.rewind();
+				while (NULL != (tmp = opts.next())) {
+					if (is_arg_prefix(tmp, "default", 3)) {
+						write_config_flags |= WRITE_MACRO_OPT_DEFAULT_VALUES;
+					} else if (is_arg_prefix(tmp, "source", 3)) {
+						write_config_flags |= WRITE_MACRO_OPT_SOURCE_COMMENT;
+					}
+				}
+			}
 		} else if (is_arg_colon_prefix(arg, "debug", &pcolon, 2)) {
 				// dprintf to console
 			dash_debug = true;
@@ -709,13 +726,14 @@ main( int argc, const char* argv[] )
 		// Want to do this before we try to find the address of a
 		// remote daemon, since if there's no -pool option, we need to
 		// param() for the COLLECTOR_HOST to contact.
-	if( host ) {
-		config_host( host );
-	} else {
-		config( 0, true );
-		if (print_config_sources) {
-			PrintConfigSources();
-		}
+	int config_options = CONFIG_OPT_WANT_META;
+	if (write_config || stats_with_defaults) {
+		config_options |= CONFIG_OPT_KEEP_DEFAULTS;
+	}
+	config_host(host, 0, config_options);
+	validate_config(false); // validate, but do not abort.
+	if (print_config_sources) {
+		PrintConfigSources();
 	}
 
 	if (reconfig_source) {
@@ -725,7 +743,7 @@ main( int argc, const char* argv[] )
 
 		extern const char * simulated_local_config;
 		simulated_local_config = reconfig_source;
-		config(0, true);
+		config_host(host, 0, config_options);
 		if (print_config_sources) {
 			fprintf(stdout, "Reconfig with %s appended\n", reconfig_source);
 			PrintConfigSources();
@@ -741,8 +759,8 @@ main( int argc, const char* argv[] )
 	// temporary, to get rid of build warning.
 	if (dash_default) { fprintf(stderr, "-default not (yet) supported\n"); }
 
-	if(write_config == true) {
-		write_config_file("static_condor_config");
+	if (write_config) {
+		write_config_file(write_config, write_config_flags);
 	}
 	
 	if( pool && ! name ) {
@@ -928,6 +946,8 @@ main( int argc, const char* argv[] )
 			params.append(strdup(""));
 			params.rewind();
 			//if (diagnostic) fprintf(stderr, "querying all\n");
+		} else if (write_config) {
+			my_exit(0);
 		} else {
 			usage();
 		}

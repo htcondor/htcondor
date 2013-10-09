@@ -113,7 +113,7 @@ main( int argc, char* argv[] )
 		get_mySubSystem()->setName( "DAEMON-TOOL" );
 	}
 
-	config( 0, true );
+	config_ex( 0, false );
 
 	IpVerify ipverify;
 

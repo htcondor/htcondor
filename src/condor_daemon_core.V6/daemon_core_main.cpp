@@ -1604,7 +1604,7 @@ dc_reconfig()
 			as an extern "C" linkage with a default argument(WTF!?) while
 			being called in a C++ context, something goes wrong. So, we'll
 			just supply the errant argument. */
-	config(0);
+	config();
 
 		// See if we're supposed to be allowing core files or not
 	if ( doCoreInit ) {
@@ -2118,14 +2118,11 @@ int dc_main( int argc, char** argv )
 		Foreground = 1;
 	}
 
-		// call config so we can call param.  
-	if ( get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHADOW) ) {
-		// Try to minimize shadow footprint by not loading
-		// the "extra" info from the config file
-		config( wantsQuiet, false, false );
-	} else {
-		config( wantsQuiet, false, true );
-	}
+	// call config so we can call param.  
+	// Try to minimize shadow footprint by not loading the metadata from the config file
+	int config_options = get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHADOW) ? 0 : CONFIG_OPT_WANT_META;
+	const bool abort_if_invalid = true;
+	config_ex(wantsQuiet, abort_if_invalid, config_options);
 
 
     // call dc_config_GSI to set GSI related parameters so that all

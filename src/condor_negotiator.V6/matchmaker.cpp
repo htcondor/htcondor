@@ -1187,7 +1187,7 @@ negotiationTime ()
         // also blocking other daemons trying to talk to the collector, and so forth.  That seems
         // like it should be fixed as well.
         dprintf(D_ALWAYS, "Re-reading config.\n");
-        config(0);
+        config();
     }
 
 	dprintf( D_ALWAYS, "---------- Started Negotiation Cycle ----------\n" );

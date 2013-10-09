@@ -548,7 +548,7 @@ void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SO
 			delete [] set.table;
 		}
 		set.table = ptab;
-		if (set.metat || (set.options & 1) == 1) {
+		if (set.metat != NULL || (set.options & CONFIG_OPT_WANT_META) != 0) {
 			MACRO_META * pmet = new MACRO_META[cAlloc];
 			if (set.metat) {
 				// transfer existing metadata from old allocation to new one.
@@ -567,8 +567,8 @@ void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SO
 	const char * def_value = param_default_rawval_by_id(param_id);
 	if (def_value && MATCH == strcmp(value, def_value)) {
 		matches_default = true; // flag value as matching the default.
-		if (set.options & 2)
-			return; // don't put default-matching values into the config table.
+		if ( ! (set.options & CONFIG_OPT_KEEP_DEFAULTS))
+			return; // don't put default-matching values into the macro set
 	}
 
 	// for now just append the item.

@@ -201,7 +201,10 @@ List<const char> extraLines;  // lines passed in via -a argument
 
 // the submit file is read into this macro table
 //
-static MACRO_SET SubmitMacroSet = { 0, 0, 1, FALSE, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), NULL };
+static MACRO_SET SubmitMacroSet = {
+	0, 0,
+	CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS,
+	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), NULL };
 
 // these are used to keep track of the source of various macros in the table.
 const MACRO_SOURCE DefaultMacro = { true, 1, -2 };

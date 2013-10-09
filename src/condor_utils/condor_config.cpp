@@ -94,7 +94,7 @@
 extern "C" {
 	
 // Function prototypes
-void real_config(const char* host, int wantsQuiet, bool wantExtraInfo);
+void real_config(const char* host, int wantsQuiet, int config_options);
 int Read_config(const char*, MACRO_SET& macro_set, int, bool, const char * subsys);
 bool is_piped_command(const char* filename);
 bool is_valid_command(const char* cmdToExecute);
@@ -119,7 +119,10 @@ extern int	ConfigLineNo;
 
 // Global variables
 static MACRO_DEFAULTS ConfigMacroDefaults = { 0, NULL, NULL };
-static MACRO_SET ConfigMacroSet = { 0, 0, 0, FALSE, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), &ConfigMacroDefaults };
+static MACRO_SET ConfigMacroSet = {
+	0, 0,
+	/* CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULT | */ 0,
+	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), &ConfigMacroDefaults };
 const MACRO_SOURCE DetectedMacro = { true,  0, -2 };
 const MACRO_SOURCE DefaultMacro  = { true,  1, -2 };
 const MACRO_SOURCE EnvMacro      = { false, 2, -2 };
@@ -565,9 +568,8 @@ Output is via a giant EXCEPT string because the dprintf
 system probably isn't working yet.
 */
 const char * FORBIDDEN_CONFIG_VAL = "YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE";
-static void
-validate_entries( bool ignore_invalid_entry ) {
-
+void validate_config(bool abort_if_invalid)
+{
 	HASHITER it = hash_iter_begin(ConfigMacroSet, HASHITER_NO_DEFAULTS);
 	unsigned int invalid_entries = 0;
 	MyString tmp;
@@ -587,10 +589,10 @@ validate_entries( bool ignore_invalid_entry ) {
 	}
 	hash_iter_delete(&it);
 	if(invalid_entries > 0) {
-		if(ignore_invalid_entry) {
-			dprintf(D_ALWAYS, "%s", output.Value());
-		} else {
+		if (abort_if_invalid) {
 			EXCEPT("%s", output.Value());
+		} else {
+			dprintf(D_ALWAYS, "%s", output.Value());
 		}
 	}
 }
@@ -649,24 +651,29 @@ int param_names_matching(Regex& re, std::vector<std::string>& names) {
     return names.size() - s0;
 }
 
+// the generic config entry point for most call sites
+void config() 
+{
+	const bool abort_if_invalid = true;
+	return config_ex(0, abort_if_invalid, CONFIG_OPT_WANT_META);
+}
 
-void
-config( int wantsQuiet, bool ignore_invalid_entry, bool wantsExtraInfo )
+// the full-figured config entry point
+void config_ex(int wantsQuiet, bool abort_if_invalid, int config_options)
 {
 #ifdef WIN32
 	char *locale = setlocale( LC_ALL, "English" );
-	dprintf ( D_LOAD | D_VERBOSE, "Locale: %s\n", locale );
+	//dprintf ( D_LOAD | D_VERBOSE, "Locale: %s\n", locale );
 #endif
-	static bool allow_extra = true;
-	real_config( NULL, wantsQuiet, wantsExtraInfo && allow_extra);
-	validate_entries( ignore_invalid_entry );
+	real_config(NULL, wantsQuiet, config_options);
+	validate_config(abort_if_invalid);
 }
 
 
 void
-config_host( const char* host )
+config_host(const char* host, int wantsQuiet, int config_options)
 {
-	real_config( host, 0, true );
+	real_config(host, wantsQuiet, config_options);
 }
 
 /* This function initialize GSI (maybe other) authentication related
@@ -791,7 +798,7 @@ condor_auth_config(int is_daemon)
 }
 
 void
-real_config(const char* host, int wantsQuiet, bool wantExtraInfo)
+real_config(const char* host, int wantsQuiet, int config_options)
 {
 	char* config_source = NULL;
 	char* tmp = NULL;
@@ -800,7 +807,7 @@ real_config(const char* host, int wantsQuiet, bool wantExtraInfo)
 	static bool first_time = true;
 	if( first_time ) {
 		first_time = false;
-		init_config(wantExtraInfo);
+		init_config(config_options);
 	} else {
 			// Clear out everything in our config hash table so we can
 			// rebuild it from scratch.
@@ -1613,15 +1620,17 @@ param_insert(const char * name, const char * value)
 }
 
 void
-init_config(bool wantExtraInfo  /* = true */)
+init_config(int config_options)
 {
+	bool want_meta = (config_options & CONFIG_OPT_WANT_META) != 0;
+	bool keep_defs = (config_options & CONFIG_OPT_KEEP_DEFAULTS) != 0;
 	ConfigMacroSet.size = 0;
 	ConfigMacroSet.sorted = 0;
-	#ifdef DISCARD_CONFIG_MATCHING_DEFAULT
-	ConfigMacroSet.options = 2;
-	#else
-	ConfigMacroSet.options = 0;
-	#endif
+#ifdef DISCARD_CONFIG_MATCHING_DEFAULT
+	ConfigMacroSet.options = keep_defs ? CONFIG_OPT_KEEP_DEFAULTS : 0;
+#else
+	ConfigMacroSet.options = CONFIG_OPT_KEEP_DEFAULTS;
+#endif
 	if (ConfigMacroSet.table) delete [] ConfigMacroSet.table;
 	ConfigMacroSet.table = new MACRO_ITEM[512];
 	if (ConfigMacroSet.table) {
@@ -1634,10 +1643,10 @@ init_config(bool wantExtraInfo  /* = true */)
 		ConfigMacroSet.defaults->metat = NULL;
 		ConfigMacroSet.defaults->size = param_info_init((const void**)&ConfigMacroSet.defaults->table);
 	}
-	if (wantExtraInfo) {
+	if (want_meta) {
 		if (ConfigMacroSet.metat) delete [] ConfigMacroSet.metat;
 		ConfigMacroSet.metat = new MACRO_META[ConfigMacroSet.allocation_size];
-		ConfigMacroSet.options |= 1;
+		ConfigMacroSet.options |= CONFIG_OPT_WANT_META;
 		if (ConfigMacroSet.defaults && ConfigMacroSet.defaults->size) {
 			ConfigMacroSet.defaults->metat = new MACRO_DEFAULTS::META[ConfigMacroSet.defaults->size];
 			memset(ConfigMacroSet.defaults->metat, 0, sizeof(ConfigMacroSet.defaults->metat[0]) * ConfigMacroSet.defaults->size);
@@ -3111,21 +3120,52 @@ process_dynamic_configs()
 	return 0;
 }
 
-int
-write_config_file(const char* pathname) {
-	int config_fd = creat(pathname, O_WRONLY);
-	if(config_fd == -1) {
-		dprintf(D_ALWAYS, "Failed to create configuration file.\n");
-		return -1;
-	}
-	iterate_params(&write_config_variable, &config_fd);
-	if(close(config_fd) == -1) {
-		dprintf(D_ALWAYS, "Error closing new configuration file.\n");
-		return -1;
-	}
-	return 0;
-}
+} // end of extern "C"
 
+struct _write_macros_args {
+	FILE * fh;
+	int    options;
+	const char * pszLast;
+};
+
+#if 1
+bool write_macro_variable(void* user, HASHITER & it) {
+	struct _write_macros_args * pargs = (struct _write_macros_args *)user;
+	FILE * fh = pargs->fh;
+	const int options = pargs->options;
+
+	MACRO_META * pmeta = hash_iter_meta(it);
+	if (pmeta->flags & 3) { // if is default or matches default, skip it
+		if ( ! (options & WRITE_MACRO_OPT_DEFAULT_VALUES))
+			return true; // keep scanning
+	} else {
+	}
+	const char * name = hash_iter_key(it);
+	if (pargs->pszLast && (MATCH == strcasecmp(name, pargs->pszLast))) {
+		// don't write entries more than once.
+		return true;
+	}
+
+	const char * rawval = hash_iter_value(it);
+	fprintf(fh, "%s = %s\n", name, rawval ? rawval : "");
+
+	if (options & WRITE_MACRO_OPT_SOURCE_COMMENT) {
+		const char * filename = config_source_by_id(pmeta->source_id);
+		if (pmeta->source_line < 0) {
+			if (pmeta->source_id == 1) {
+				fprintf(fh, " # at: %s, item %d\n", filename, pmeta->param_id);
+			} else {
+				fprintf(fh, " # at: %s\n", filename);
+			}
+		} else {
+			fprintf(fh, " # at: %s, line %d\n", filename, pmeta->source_line);
+		}
+	}
+
+	pargs->pszLast = name;
+	return true;
+}
+#else
 int
 write_config_variable(const param_info_t* value, void* file_desc) {
 	int config_fd = *((int*) file_desc);
@@ -3145,8 +3185,40 @@ write_config_variable(const param_info_t* value, void* file_desc) {
 	}
 	return 0;
 }
+#endif
 
-} // end of extern "C"
+int write_macros_to_file(const char* pathname, MACRO_SET& macro_set, int options)
+{
+	FILE * fh = safe_fopen_wrapper_follow(pathname, "w");
+	if ( ! fh) {
+		dprintf(D_ALWAYS, "Failed to create configuration file %s.\n", pathname);
+		return -1;
+	}
+
+	struct _write_macros_args args;
+	memset(&args, 0, sizeof(args));
+	args.fh = fh;
+	args.options = options;
+
+	int iter_opts = HASHITER_SHOW_DUPS;
+	HASHITER it = hash_iter_begin(macro_set, iter_opts);
+	while ( ! hash_iter_done(it)) {
+		if ( ! write_macro_variable(&args, it))
+			break;
+		hash_iter_next(it);
+	}
+	hash_iter_delete(&it);
+
+	if (fclose(fh) == -1) {
+		dprintf(D_ALWAYS, "Error closing new configuration file %s.\n", pathname);
+		return -1;
+	}
+	return 0;
+}
+
+int write_config_file(const char* pathname, int options) {
+	return write_macros_to_file(pathname, ConfigMacroSet, options);
+}
 
 /* End code for runtime support for modifying a daemon's config source. */
 
