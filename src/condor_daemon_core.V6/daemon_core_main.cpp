@@ -1339,16 +1339,9 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 		if (subsys && !subsys[0]) subsys = NULL;
 		if (local_name && !local_name[0]) local_name = NULL;
 		const char * def_val = NULL;
-#if 1
 		const char * val = param_get_info(param_name, subsys, local_name,
 							&def_val, name_used, use_count, ref_count, filename, line_number);
 		if (val || ! filename.empty()) {
-#else
-		const char * val = param_get_info(param_name, subsys, local_name,
-								name_used, use_count, ref_count, filename, line_number);
-		if (val) {
-			const char * def_val = param_exact_default_string(name_used.Value());
-#endif
 			dprintf(D_ALWAYS, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.Value(), def_val ? def_val : "NULL");
 
 			tmp = expand_param(val, subsys, 0);

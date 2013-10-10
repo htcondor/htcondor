@@ -112,7 +112,6 @@ usage(int retval = 1)
 		"\t-unset <var>\t\tRevert persistent <var> to previous value\n"
 		"\t-rset \"<var> = <value>\"\tSet runtime <var> to <value>\n"
 		"\t-runset <var>\t\tRevert runtime <var> to previous value\n"
-		//"\t-writeconfig <file>\tWrite non-default configuration to <file>\n"
 		"\n    where <vars> is <var> [<var>...]\tPrint the value of <var>. The\n"
 		"\tvalue is expanded unless -raw, -evaluate, -default or -dump is\n"
 		"\tspecified. When used with -dump, <var> is regular expression.\n"
@@ -133,6 +132,7 @@ usage(int retval = 1)
 		"\t-unused\t\tPrint only variables not used by the specified daemon\n"
 		"      these options apply when reading configuration files\n"
 		"\t-config\t\tPrint the locations of configuration files\n"
+		"\t-writeconfig <file>\tWrite non-default configuration to <file>\n"
 		//"\t-reconfig <file>\tReload configuration files and append <file>\n"
 		"\t-mixedcase\tPrint variable names as originally specified\n"
 		"\t-local-name <name>  Use local name for querying and expanding\n"
@@ -196,6 +196,23 @@ usage(int retval = 1)
 	my_exit(retval);
 }
 
+typedef union _write_config_options {
+	unsigned int all;
+	struct {
+		unsigned int show_def          :1;
+		unsigned int show_def_match    :1;
+		unsigned int show_detected     :1;
+		unsigned int show_env          :1;
+		unsigned int show_only         :1; // show only items indicated by prior flags
+		unsigned int show_dup          :1; // show default items hidden by file items
+		unsigned int comment_def       :1;
+		unsigned int comment_def_match :1;
+		unsigned int comment_detected  :1;
+		unsigned int comment_env       :1;
+		unsigned int comment_source    :1;
+		unsigned int sort_name         :1;
+	};
+} WRITE_CONFIG_OPTIONS;
 
 char* GetRemoteParam( Daemon*, char* );
 char* GetRemoteParamRaw(Daemon*, const char* name, bool & raw_supported, MyString & raw_value, MyString & file_and_line, MyString & def_value, MyString & usage_report);
@@ -204,6 +221,7 @@ int   GetRemoteParamNamesMatching(Daemon*, const char* name, std::vector<std::st
 void  SetRemoteParam( Daemon*, char*, ModeType );
 static void PrintConfigSources(void);
 static void do_dump_config_stats(FILE * fh, bool dump_sources, bool dump_strings);
+static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts);
 
 static const char * param_type_names[] = {"STRING","INT","BOOL","DOUBLE","LONG"};
 
@@ -223,6 +241,19 @@ void print_as_type(const char * name, int as_type)
 		double dval = param_default_double(name, NULL, &dvalid);
 		fprintf(stdout, " # eval: %.16g (%s)\n", dval, dvalid ? "valid" : "invalid");
 	}
+}
+
+const char * report_config_source(MACRO_META * pmeta, MyString & source)
+{
+	source = config_source_by_id(pmeta->source_id);
+	if (pmeta->source_line < 0) {
+		if (pmeta->source_id == 1) {
+			source.formatstr_cat(", item %d", pmeta->param_id);
+		}
+	} else {
+		source.formatstr_cat(", line %d", pmeta->source_line);
+	}
+	return source.Value();
 }
 
 // increment the ref count of params referenced by default params
@@ -415,8 +446,7 @@ main( int argc, const char* argv[] )
 	bool    evaluate_daemon_vars = false;
 	bool    print_config_sources = false;
 	const char * write_config = NULL;
-	int     write_config_flags = 0;
-	const int def_write_config_flags = 0;
+	WRITE_CONFIG_OPTIONS write_config_flags = {0};
 	bool    dash_debug = false;
 	bool    dash_raw = false;
 	bool    dash_default = false;
@@ -560,17 +590,40 @@ main( int argc, const char* argv[] )
 			//dash_usage = true;
 		} else if (is_arg_colon_prefix(arg, "writeconfig", &pcolon, 3)) {
 			write_config = use_next_arg("writeconfig", argv, i);
-			write_config_flags = def_write_config_flags;
+			write_config_flags.all = 0;
 			if (pcolon) {
 				StringList opts(pcolon+1,":,");
 				opts.rewind();
+				bool comment = false;
 				while (NULL != (tmp = opts.next())) {
-					if (is_arg_prefix(tmp, "default", 3)) {
-						write_config_flags |= WRITE_MACRO_OPT_DEFAULT_VALUES;
+					if (is_arg_prefix(tmp, "comment", 3)) {
+						comment = true;
+					} else if (is_arg_prefix(tmp, "default", 3)) {
+						write_config_flags.show_def = 1;
+						write_config_flags.comment_def = comment;
+					} else if (is_arg_prefix(tmp, "matches_default", 5)) {
+						write_config_flags.show_def_match = 1;
+						write_config_flags.comment_def_match = comment;
+					} else if (is_arg_prefix(tmp, "detected", 3)) {
+						write_config_flags.show_detected = 1;
+						write_config_flags.comment_detected = comment;
+					} else if (is_arg_prefix(tmp, "environment", 3)) {
+						write_config_flags.show_env = 1;
+						write_config_flags.comment_env = comment;
+					} else if (is_arg_prefix(tmp, "only", -1)) {
+						write_config_flags.show_only = 1;
+					} else if (is_arg_prefix(tmp, "duplicate", 3)) {
+						write_config_flags.show_dup = 1;
 					} else if (is_arg_prefix(tmp, "source", 3)) {
-						write_config_flags |= WRITE_MACRO_OPT_SOURCE_COMMENT;
+						write_config_flags.comment_source = 1;
+					} else if (is_arg_prefix(tmp, "sort", 3)) {
+						write_config_flags.sort_name = 1;
 					}
 				}
+			} else {
+				write_config_flags.show_def_match = true;
+				write_config_flags.comment_def_match = true;
+				write_config_flags.sort_name = false;
 			}
 		} else if (is_arg_colon_prefix(arg, "debug", &pcolon, 2)) {
 				// dprintf to console
@@ -760,7 +813,10 @@ main( int argc, const char* argv[] )
 	if (dash_default) { fprintf(stderr, "-default not (yet) supported\n"); }
 
 	if (write_config) {
-		write_config_file(write_config, write_config_flags);
+		int ret = do_write_config(write_config, write_config_flags);
+		if (ret < 0) {
+			my_exit(2);
+		}
 	}
 	
 	if( pool && ! name ) {
@@ -1766,4 +1822,127 @@ static void do_dump_config_stats(FILE * fh, bool dump_sources, bool dump_strings
 		fprintf(fh, "\n");
 	}
 }
+
+struct _write_config_args {
+	FILE * fh;
+	WRITE_CONFIG_OPTIONS opt;
+	const char * pszLast;
+	std::map<unsigned long, std::string> output;
+};
+
+// iterator callback that writes a single entry
+bool write_config_callback(void* user, HASHITER & it) {
+	struct _write_config_args * pargs = (struct _write_config_args *)user;
+	FILE * fh = pargs->fh;
+
+	const char * comment_me = "";
+	MACRO_META * pmeta = hash_iter_meta(it);
+	if (pmeta->matches_default && ! (pmeta->inside)) {
+		if ( ! pargs->opt.show_def_match)
+			return true; // keep scanning
+		if (pargs->opt.comment_def_match)
+			comment_me = "#";
+	} else if (pmeta->source_id == DetectedMacro.id) {
+		if ( ! pargs->opt.show_detected && ! pargs->opt.show_def)
+			return true;
+		if (pargs->opt.comment_detected)
+			comment_me = "#detected#";
+		else if (pargs->opt.comment_def)
+			comment_me = "#def#";
+	} else if (pmeta->inside) {
+		if ( ! pargs->opt.show_def)
+			return true;
+		if (pargs->opt.comment_def)
+			comment_me = "#def#";
+	} else if (pmeta->source_id == EnvMacro.id) {
+		if (pargs->opt.show_only && ! pargs->opt.show_env)
+			return true;
+		if (pargs->opt.comment_env)
+			comment_me = "#env#";
+	} else if (pargs->opt.show_only) {
+		// we want to show only the params that matched one of the above conditions
+		return true;
+	}
+	const char * name = hash_iter_key(it);
+	const char * rawval = hash_iter_value(it);
+
+	bool is_dup = (pargs->pszLast && (MATCH == strcasecmp(name, pargs->pszLast)));
+	if (is_dup && ! pargs->opt.show_dup) {
+		return true;
+	}
+
+	MyString source;
+	if (pargs->opt.comment_source) {
+		report_config_source(pmeta, source);
+	}
+	if (pargs->opt.sort_name) {
+		// if sorting the output by name, we can just print it now.
+		fprintf(fh, "%s%s = %s\n", comment_me, name, rawval ? rawval : "");
+		if ( ! source.empty()) { fprintf(fh, " # at: %s\n", source.c_str()); }
+	} else {
+		MyString line;
+		line.formatstr("%s%s = %s", comment_me, name, rawval ? rawval : "");
+		if ( ! source.empty()) { line += "\n"; line += source; }
+		int sub = pmeta->source_line;
+		int id = pmeta->source_id;
+		if (id == EnvMacro.id) { id = 0xFE; sub = (int)pargs->output.size(); } 
+		else if (id == WireMacro.id) { id = 0xFF; sub = (int)pargs->output.size(); }
+		unsigned long key = sub + ((unsigned long)id * 0x01000000);
+		//if (diagnostic) fprintf(fh, "%d %s\n", key, line.c_str());
+		pargs->output[key] = line;
+	}
+
+	pargs->pszLast = name;
+	return true;
+}
+
+static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
+{
+	FILE * fh = NULL;
+	bool   close_file = false;
+	if (MATCH == strcmp("-", pathname)) {
+		fh = stdout;
+		close_file = false;
+	} else {
+		fh = safe_fopen_wrapper_follow(pathname, "w");
+		if ( ! fh) {
+			fprintf(stderr, "Failed to create configuration file %s.\n", pathname);
+			return -1;
+		}
+		close_file = true;
+	}
+
+	struct _write_config_args args;
+	args.fh = fh;
+	args.opt.all = opts.all;
+	args.pszLast = NULL;
+
+	int iter_opts = HASHITER_SHOW_DUPS;
+	foreach_param(iter_opts, write_config_callback, &args);
+	//fprintf(fh, "\n<all done>\n");
+	if ( ! args.output.empty()) {
+		//fprintf(fh, "<not empty>\n");
+		std::map<unsigned long, std::string>::iterator it;
+		long last_id = -1;
+		for (it = args.output.begin(); it != args.output.end(); it++) {
+			long source_id = it->first >> 24;
+			if (source_id == 0xfe) source_id = EnvMacro.id;
+			if (source_id == 0xff) source_id = WireMacro.id;
+			if (source_id != last_id) {
+				const char * source_name = config_source_by_id(source_id);
+				if (source_name) fprintf(fh, "\n#\n# from %s\n#\n", source_name);
+				last_id = source_id;
+			}
+			fprintf(fh, "%s\n", it->second.c_str());
+		}
+	}
+
+	if (close_file && fclose(fh)) {
+		fprintf(stderr, "Error closing new configuration file %s.\n", pathname);
+		return -1;
+	}
+	return 0;
+
+}
+
 

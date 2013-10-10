@@ -58,7 +58,14 @@ typedef struct macro_item {
 typedef struct macro_meta {
 	short int    param_id;
 	short int    index;
-	int          flags;
+	union {
+	  int        flags; // all of the below flags
+	  struct {
+	    unsigned matches_default :1;
+	    unsigned inside          :1;
+	    unsigned param_table     :1;
+	  };
+	};
 	int          use_count;
 	int          ref_count;
 	int          source_id;    // filename or
