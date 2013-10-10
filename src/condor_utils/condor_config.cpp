@@ -3128,14 +3128,14 @@ struct _write_macros_args {
 	const char * pszLast;
 };
 
-#if 1
 bool write_macro_variable(void* user, HASHITER & it) {
 	struct _write_macros_args * pargs = (struct _write_macros_args *)user;
 	FILE * fh = pargs->fh;
 	const int options = pargs->options;
 
 	MACRO_META * pmeta = hash_iter_meta(it);
-	if (pmeta->flags & 3) { // if is default or matches default, skip it
+	// if is default, detected, or matches default, skip it
+	if (pmeta->matches_default || pmeta->param_table || pmeta->inside) {
 		if ( ! (options & WRITE_MACRO_OPT_DEFAULT_VALUES))
 			return true; // keep scanning
 	} else {
@@ -3165,27 +3165,6 @@ bool write_macro_variable(void* user, HASHITER & it) {
 	pargs->pszLast = name;
 	return true;
 }
-#else
-int
-write_config_variable(const param_info_t* value, void* file_desc) {
-	int config_fd = *((int*) file_desc);
-	char* actual_value = param(value->name);
-	if(strcmp(actual_value, value->str_val) != 0) {
-		char output[512];
-		snprintf(output, 512, "# %s:  Default value = (%s)\n", value->name, value->str_val);
-		if(write(config_fd, &output, 512*sizeof(char)) == -1) {
-			dprintf(D_ALWAYS, "Failed to write to configuration file.\n");
-			return -1;
-		}
-		snprintf(output, 512, "%s = %s", value->name, actual_value);
-		if(write(config_fd, &output, 512*sizeof(char)) == -1) {
-			dprintf(D_ALWAYS, "Failed to write to configuration file.\n");
-			return -1;
-		}
-	}
-	return 0;
-}
-#endif
 
 int write_macros_to_file(const char* pathname, MACRO_SET& macro_set, int options)
 {

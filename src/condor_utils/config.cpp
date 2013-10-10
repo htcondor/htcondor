@@ -525,10 +525,15 @@ void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SO
 			MACRO_META * pmeta = &set.metat[pitem - set.table];
 			pmeta->source_id = source.id;
 			pmeta->source_line = source.line;
-			if (source.inside) {
-				pmeta->flags |= 2;  // flag value as internal
-			} else {
-				pmeta->flags &= ~2;
+			pmeta->inside = (source.inside != false);
+			pmeta->param_table = false;
+			int param_id = param_default_get_id(name);
+			const char * def_value = param_default_rawval_by_id(param_id);
+			pmeta->matches_default = (def_value == pitem->raw_value);
+			if ( ! pmeta->matches_default) {
+				if (pitem->raw_value && def_value && MATCH == strcmp(pitem->raw_value, def_value)) {
+					pmeta->matches_default = true;
+				}
 			}
 		}
 		if (tvalue) free(tvalue);
@@ -589,15 +594,15 @@ void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SO
 	}
 	if (set.metat) {
 		MACRO_META * pmeta = &set.metat[ixItem];
-		pmeta->flags = matches_default ? 1 : 0; // flag as matching the default
-		if (source.inside) { pmeta->flags |= 2; } // flag value as internal
+		pmeta->flags = 0; // clear all flags.
+		pmeta->matches_default = matches_default;
+		pmeta->inside = source.inside;
 		pmeta->source_id = source.id;
 		pmeta->source_line = source.line;
 		pmeta->use_count = 0;
 		pmeta->ref_count = 0;
 		pmeta->index = ixItem;
 		pmeta->param_id = param_id;
-
 	}
 }
 
@@ -1032,7 +1037,8 @@ MACRO_META * hash_iter_meta(HASHITER& it) {
 	if (it.is_def) {
 		static MACRO_META meta;
 		memset(&meta, 0, sizeof(meta));
-		meta.flags |= (2 | 4);
+		meta.inside = true;
+		meta.param_table = true;
 		meta.param_id = it.id;
 		meta.index = it.ix;
 		meta.source_id = 1;
