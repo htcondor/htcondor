@@ -1671,6 +1671,12 @@ class DaemonCore : public Service
 
 	MyString GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated);
 
+	// Returns first command socket in our list. In general, you
+	// probably want to spin over sockTable looking for it->command_sock==true,
+	// this is a transitional function for the old initial_command_sock 
+	// variable.  Returns index into sockTable, -1 if none available.
+	int initial_command_sock() const;
+
     struct CommandEnt
     {
         int             num;
@@ -1730,6 +1736,7 @@ class DaemonCore : public Service
 		bool			waiting_for_data;
 		int				servicing_tid;	// tid servicing this socket
 		bool			remove_asap;	// remove when being_serviced==false
+		bool            is_command_sock;
     };
     void              DumpSocketTable(int, const char* = NULL);
     int               maxSocket;  // number of socket handlers to start with
@@ -1737,7 +1744,6 @@ class DaemonCore : public Service
 	int				  nRegisteredSocks; // number of sockets registered, always < nSock
 	int               nPendingSockets; // number of sockets waiting on timers or any other callbacks
     ExtArray<SockEnt> *sockTable; // socket table; grows dynamically if needed
-    int               initial_command_sock;  
   	struct soap		  *soap;
 
 		// number of file descriptors in use past which we should start

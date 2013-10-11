@@ -343,7 +343,6 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	memset(&blankSockEnt,'\0',sizeof(SockEnt));
 	sockTable->fill(blankSockEnt);
 
-	initial_command_sock = -1;
 #ifdef HAVE_EXT_GSOAP
 	soap_ssl_sock = -1;
 #endif
@@ -1044,13 +1043,13 @@ int DaemonCore::Cancel_Command( int command )
 
 int DaemonCore::InfoCommandPort()
 {
-	if ( initial_command_sock == -1 ) {
+	if ( initial_command_sock() == -1 ) {
 		// there is no command sock!
 		return -1;
 	}
 
 	// this will return a -1 on error
-	return( ((Sock*)((*sockTable)[initial_command_sock].iosock))->get_port() );
+	return( ((Sock*)((*sockTable)[initial_command_sock()].iosock))->get_port() );
 }
 
 // NOTE: InfoCommandSinfulString always returns a pointer to a _static_ buffer!
@@ -1106,7 +1105,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		}
 	}
 
-	if ( initial_command_sock == -1 ) {
+	if ( initial_command_sock() == -1 ) {
 		// there is no command sock!
 		return NULL;
 	}
@@ -1116,7 +1115,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		free( sinful_public );
 		sinful_public = NULL;
 
-		char const *addr = ((Sock*)(*sockTable)[initial_command_sock].iosock)->get_sinful_public();
+		char const *addr = ((Sock*)(*sockTable)[initial_command_sock()].iosock)->get_sinful_public();
 		if( !addr ) {
 			EXCEPT("Failed to get public address of command socket!");
 		}
@@ -1131,7 +1130,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		MyString private_sinful_string;
 		char* tmp;
 		if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
-			int port = ((Sock*)(*sockTable)[initial_command_sock].iosock)->get_port();
+			int port = ((Sock*)(*sockTable)[initial_command_sock()].iosock)->get_port();
 			std::string private_ip;
 			bool ok = network_interface_to_ip("PRIVATE_NETWORK_INTERFACE",tmp,private_ip);
 			if( !ok ) {
@@ -1584,9 +1583,12 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 		nSock++;
 	}
 
-	// If this is the first command sock, set initial_command_sock
-	if ( initial_command_sock == -1 && handler == 0 && handlercpp == 0 && m_shared_port_endpoint == NULL )
-		initial_command_sock = i;
+	// Mark command socks (identified by lack of handlers, endpoint)
+	if ( handler == 0 && handlercpp == 0 && m_shared_port_endpoint == NULL ) {
+		(*sockTable)[i].is_command_sock = true;
+	} else {
+		(*sockTable)[i].is_command_sock = false;
+	}
 
 	// Update curr_regdataptr for SetDataPtr()
 	curr_regdataptr = &((*sockTable)[i].data_ptr);
@@ -4111,9 +4113,9 @@ int DaemonCore::ServiceCommandSocket()
 	}
 
 	// Just return if there is no command socket
-	if ( initial_command_sock == -1 )
+	if ( initial_command_sock() == -1 )
 		return 0;
-	if ( !( (*sockTable)[initial_command_sock].iosock) )
+	if ( !( (*sockTable)[initial_command_sock()].iosock) )
 		return 0;
 
 		// CallSocketHandler called inside the loop can change nSock 
@@ -4141,14 +4143,14 @@ int DaemonCore::ServiceCommandSocket()
 
 			// We start with i = -1 so that we always start with the initial command socket.
 		if( i == -1 ) {
-			selector.add_fd( (*sockTable)[initial_command_sock].iosock->get_file_desc(), Selector::IO_READ );
+			selector.add_fd( (*sockTable)[initial_command_sock()].iosock->get_file_desc(), Selector::IO_READ );
 		}
 			// If (*sockTable)[i].iosock is a valid socket
-			// and that we don't use the initial command socket (could substitute i != initial_command_socket)
+			// and that we don't use the initial command socket (could substitute i != initial_command_socket())
 			// and that the handler description is DaemonCommandProtocol::WaitForSocketData
 			// and that the socket is not waiting for an outgoing connection.
 		else if( ((*sockTable)[i].iosock) && 
-				 (i != initial_command_sock) && 
+				 (i != initial_command_sock()) && 
 				 ((*sockTable)[i].waiting_for_data) &&
 				 ((*sockTable)[i].servicing_tid==0) &&
 				 ((*sockTable)[i].remove_asap == false) &&
@@ -4681,6 +4683,16 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	else {
 		d->sendBlockingMsg( msg.get() );
 	}
+}
+
+int DaemonCore::initial_command_sock() const {
+	for(int j = 0; j < nSock; j++) {
+		if ( (*sockTable)[j].iosock != NULL &&
+			(*sockTable)[j].is_command_sock) {
+			return j;
+		}
+	}
+	return -1;
 }
 
 int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
