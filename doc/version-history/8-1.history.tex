@@ -72,6 +72,12 @@ which use EC2 resources.
 
 \begin{itemize}
 
+\item When USE\_PID\_NAMESPACES is set to true, the softkill
+signal is now successfully sent to the job.  Before, a \Condor{rm}
+command of such a job would not remove the job until the
+killing timeout had expired.
+\Ticket{3891}
+
 \item If a standard universe job exited without producing any
 checkpoints and no checkpoint server was used, 
 two spurious error messages would be logged to the \File{SchedLog},
