@@ -58,31 +58,36 @@ about undefined \MacroNI{PREEMPT\_VANILLA} expressions
 is no longer generated.
 \Ticket{3984}
 
-\item You may now specify binary user-data files for EC2 jobs.
+\item EC2 grid universe jobs may provide data in files.
+File contents of null-terminated strings worked correctly,
+but binary data did not.
+This bug fix makes sure that both kinds of data are read correctly.
 \Ticket{3924}
 
 \item Added support for more than 2KB of user data with OpenNebula.
 \Ticket{3923}
 
-\item Fixed a bug preventing http file transfers from following redirects.
-HTTP file transfers also now fail if the file does not exist (but the server
-does).
+\item Fixed a bug preventing HTTP file transfers from following redirects.
+HTTP file transfers also now fail if the file does not exist,
+but the server does exist.
 \Ticket{3904}
 
-\item Fixed a rare bug where the \Condor{schedd} would exit
-with an ERROR message pertaining to select when very
-runnign with a very heavy load and many \Condor{shadows}
-are timing out.
+\item Fixed a rare bug in which the \Condor{schedd} would exit
+with an ERROR message pertaining to \Procedure{select},
+when running with a very heavy load and many \Condor{shadow} daemons
+time out.
 \Ticket{3947}
 
 \item If cgroups were enabled, \Condor{ssh\_to\_job} would
 kill the job when the ssh session exited.  This bug has been fixed.
 \Ticket{3921}
 
-\item If a standard universe job exited and never used a checkpoint
-server, two spurious error messages would be logged to the 
-SchedLog, as it tried to remove the old checkpoint images from the
-non-existent checkpoint server.  This bug has been fixed.
+\item If a standard universe job exited without producing any checkpoints 
+and no checkpoint server was used, 
+two spurious error messages would be logged to the \File{SchedLog}, 
+as it tried to remove the old checkpoint images from the 
+non-existent checkpoint server. 
+These error messages are no longer logged.
 \Ticket{3919}
 
 \item The configuration file for Windows erroneously had two entries
