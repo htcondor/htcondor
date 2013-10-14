@@ -53,8 +53,9 @@ on the x86\_64 architecture.
 
 \begin{itemize}
 
-\item A spurious warning about undefined PREEMPT\_VANILLA expressions
-has been removed.
+\item A spurious warning in the log of the \Condor{startd} 
+about undefined \MacroNI{PREEMPT\_VANILLA} expressions
+is no longer generated.
 \Ticket{3984}
 
 \item You may now specify binary user-data files for EC2 jobs.
@@ -84,10 +85,12 @@ SchedLog, as it tried to remove the old checkpoint images from the
 non-existent checkpoint server.  This bug has been fixed.
 \Ticket{3919}
 
-\item The configuration file for Windows erronously had two entries
-for JAVA\_CLASSPATH\_SEPARATOR with the second entry specifying the
-separator for UNIX platforms and overriding the first entry. This bug
-has been fixed.
+\item The configuration file for Windows erroneously had two entries
+for configuration variable \Macro{JAVA\_CLASSPATH\_SEPARATOR},
+with the second entry specifying the
+separator used on Unix platforms, which overrode the first entry. 
+The Unix separator no longer affects this configuration file
+for Windows platforms.
 \Ticket{3957}
 
 \item The NorduGrid GAHP no longer consumes all of the CPU when run
