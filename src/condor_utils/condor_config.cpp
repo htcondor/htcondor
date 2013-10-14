@@ -2502,7 +2502,7 @@ const char * param_get_info(
 	int &line_number)
 {
 	const char * val = NULL;
-	if (pdef_val) { pdef_val = NULL; }
+	if (pdef_val) { *pdef_val = NULL; }
 
 	HASHITER it(ConfigMacroSet, 0);
 	if (param_find_item(name, subsys, local, name_used, it)) {
