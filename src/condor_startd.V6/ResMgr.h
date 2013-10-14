@@ -174,7 +174,7 @@ public:
 
 	// Manipulate the supplemental Class Ad list
 	int		adlist_register( StartdNamedClassAd *ad );
-	int		adlist_replace( const char *name, ClassAd *ad, 
+	int		adlist_replace( const char *name, const char *prefix, ClassAd *ad, 
 							bool report_diff = false );
 	int		adlist_delete( const char *name );
 	int		adlist_publish( unsigned r_id, ClassAd *resAd, amask_t mask );

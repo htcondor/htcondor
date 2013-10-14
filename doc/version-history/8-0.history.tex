@@ -53,6 +53,10 @@ on the x86\_64 architecture.
 
 \begin{itemize}
 
+\item A spurious warning about undefined PREEMPT\_VANILLA expressions
+has been removed.
+\Ticket{3984}
+
 \item You may now specify binary user-data files for EC2 jobs.
 \Ticket{3924}
 
@@ -94,6 +98,11 @@ with threaded Globus libraries.
 evaluate properly when its second argument is a list and ClassAd caching
 is enabled.
 \Ticket{3967}
+
+\item The configuration setting \Expr{STARTD\_CRON\_AUTOPUBLISH=If\_Changed}
+did not work correctly.  Updates were sent to the \Condor{collector}
+in many cases when no attribute values had changed.
+\Ticket{3983}
 
 \end{itemize}
 
