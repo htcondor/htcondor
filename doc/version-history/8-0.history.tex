@@ -82,10 +82,12 @@ time out.
 kill the job when the ssh session exited.  This bug has been fixed.
 \Ticket{3921}
 
-\item If a standard universe job exited and never used a checkpoint
-server, two spurious error messages would be logged to the 
-SchedLog, as it tried to remove the old checkpoint images from the
-non-existent checkpoint server.  This bug has been fixed.
+\item If a standard universe job exited without producing any checkpoints 
+and no checkpoint server was used, 
+two spurious error messages would be logged to the \File{SchedLog}, 
+as it tried to remove the old checkpoint images from the 
+non-existent checkpoint server. 
+These error messages are no longer logged.
 \Ticket{3919}
 
 \item The configuration file for Windows erroneously had two entries
