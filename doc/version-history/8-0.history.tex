@@ -72,10 +72,10 @@ HTTP file transfers also now fail if the file does not exist,
 but the server does exist.
 \Ticket{3904}
 
-\item Fixed a rare bug where the \Condor{schedd} would exit
-with an ERROR message pertaining to select when very
-runnign with a very heavy load and many \Condor{shadows}
-are timing out.
+\item Fixed a rare bug in which the \Condor{schedd} would exit
+with an ERROR message pertaining to \Procedure{select},
+when running with a very heavy load and many \Condor{shadow} daemons
+time out.
 \Ticket{3947}
 
 \item If cgroups were enabled, \Condor{ssh\_to\_job} would
