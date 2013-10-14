@@ -58,7 +58,10 @@ about undefined \MacroNI{PREEMPT\_VANILLA} expressions
 is no longer generated.
 \Ticket{3984}
 
-\item You may now specify binary user-data files for EC2 jobs.
+\item EC2 grid universe jobs may provide data in files.
+File contents of null-terminated strings worked correctly,
+but binary data did not.
+This bug fix makes sure that both kinds of data are read correctly.
 \Ticket{3924}
 
 \item Added support for more than 2KB of user data with OpenNebula.
