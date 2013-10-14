@@ -1610,7 +1610,13 @@ Resource::eval_expr( const char* expr_name, bool fatal, bool check_vanilla )
 	}
 	if( (r_classad->EvalBool(expr_name, r_cur ? r_cur->ad() : NULL , tmp) ) == 0 ) {
 		
-        dprintf( D_ALWAYS, "WARNING: EvalBool of %s resulted in ERROR or UNDEFINED\n", expr_name );
+		char *p = param(expr_name);
+
+			// Only issue warning if we are trying to define the expression
+		if (p) {
+        	dprintf( D_ALWAYS, "WARNING: EvalBool of %s resulted in ERROR or UNDEFINED\n", expr_name );
+			free(p);
+		}
         
         if( fatal ) {
 			dprintf(D_ALWAYS, "Can't evaluate %s in the context of following ads\n", expr_name );
