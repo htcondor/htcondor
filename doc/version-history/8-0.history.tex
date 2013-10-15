@@ -108,9 +108,10 @@ evaluate properly when its second argument was a list and ClassAd caching
 was enabled.
 \Ticket{3967}
 
-\item The configuration setting \Expr{STARTD\_CRON\_AUTOPUBLISH=If\_Changed}
-did not work correctly.  Updates were sent to the \Condor{collector}
-in many cases when no attribute values had changed.
+\item Fixed a bug that caused the configuration variable setting 
+\Expr{STARTD\_CRON\_AUTOPUBLISH = If\_Changed} to not work correctly.  
+Updates were incorrectly sent to the \Condor{collector}
+in many cases when no attribute value had changed.
 \Ticket{3983}
 
 \item Fixed a bug that could cause \Condor{q} \Opt{-analyze} or 
