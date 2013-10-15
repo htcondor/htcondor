@@ -1332,7 +1332,7 @@ void CollectorDaemon::Config()
         free(tmp);
         cvh.rewind();
         while (char* vhost = cvh.next()) {
-            Daemon* vhd = new DCCollector(vhost);
+            DCCollector* vhd = new DCCollector(vhost);
             Sinful view_addr( vhd->addr() );
             Sinful my_addr( daemonCore->publicNetworkIpAddr() );
 
@@ -1344,10 +1344,10 @@ void CollectorDaemon::Config()
             dprintf(D_ALWAYS, "Will forward ads on to View Server %s\n", vhost);
 
             Sock* vhsock = NULL;
-            if (vhd->hasUDPCommandPort()) {
-                vhsock = new SafeSock();
-            } else {
+            if (vhd->useTCPForUpdates()) {
                 vhsock = new ReliSock();
+            } else {
+                vhsock = new SafeSock();
             }
 
             vc_list.push_back(vc_entry());
@@ -1595,7 +1595,7 @@ void CollectorDaemon::send_classad_to_sock(int cmd, ClassAd* theAd) {
     }
 
     for (vector<vc_entry>::iterator e(vc_list.begin());  e != vc_list.end();  ++e) {
-        Daemon* view_coll = e->collector;
+        DCCollector* view_coll = e->collector;
         Sock* view_sock = e->sock;
         const char* view_name = e->name.c_str();
 
