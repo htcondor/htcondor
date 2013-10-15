@@ -250,6 +250,10 @@ class MyString
 	 */
 	bool formatstr(const char *format, ...) CHECK_PRINTF_FORMAT(2,3);
 
+#ifdef HAVE_EXT_POSTGRESQL
+	bool sprintf(const char *format, ...) CHECK_PRINTF_FORMAT(2,3);
+#endif
+
 	/** Fills a MyString with what you would have gotten from vsprintf.
 	 *  This is handy if you define your own printf-like functions.
 	 */

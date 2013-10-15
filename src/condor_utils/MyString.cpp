@@ -630,6 +630,22 @@ MyString::formatstr(const char *format,...)
 	return succeeded;
 }
 
+#ifdef HAVE_EXT_POSTGRESQL
+// An sprintf alias for formatstr, used by various PostgreSQL modules
+bool
+MyString::sprintf(const char *format,...)
+{
+	bool    succeeded;
+	va_list args;
+
+	va_start(args, format);
+	succeeded = vformatstr(format,args);
+	va_end(args);
+
+	return succeeded;
+}
+#endif // HAVE_EXT_POSTGRESQL
+
 void
 MyString::lower_case(void)
 {
