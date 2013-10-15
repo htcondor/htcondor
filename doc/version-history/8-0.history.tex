@@ -53,6 +53,13 @@ on the x86\_64 architecture.
 
 \begin{itemize}
 
+\item Added a retry to work around problems with slow
+DHCP servers.  The result of the problem was that daemons
+would not be able to determine their own host names,
+and, amount other problems, \Condor{startd} ads would appear
+in the output of \Condor{status} with blank hostnames.
+\Ticket{3956}
+
 \item A spurious warning in the log of the \Condor{startd} 
 about undefined \MacroNI{PREEMPT\_VANILLA} expressions
 is no longer generated.
