@@ -78,8 +78,9 @@ when running with a very heavy load and many \Condor{shadow} daemons
 time out.
 \Ticket{3947}
 
-\item If cgroups were enabled, \Condor{ssh\_to\_job} would
-kill the job when the ssh session exited.  This bug has been fixed.
+\item Fixed a bug in \Condor{ssh\_to\_job}
+that caused it to kill the job when the ssh session exited,
+if cgroups were enabled.
 \Ticket{3921}
 
 \item If a standard universe job exited without producing any checkpoints 
