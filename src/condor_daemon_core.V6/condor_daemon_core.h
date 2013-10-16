@@ -61,6 +61,7 @@
 #include "condor_sockaddr.h"
 #include "generic_stats.h"
 #include "filesystem_remap.h"
+#include <vector>
 
 #include "../condor_procd/proc_family_io.h"
 class ProcFamilyInterface;
@@ -1569,8 +1570,17 @@ class DaemonCore : public Service
 		// do we ourself want/have a udp comment socket?
 	bool m_wants_dc_udp_self;
 	bool m_invalidate_sessions_via_tcp;
-	ReliSock* dc_rsock;	// tcp command socket
-	SafeSock* dc_ssock;	// udp command socket
+
+	// This pairing should representing the "same" socket, just on
+	// UDP and TCP. It's okay for parts to be NULL.
+	struct SockPair {
+		SockPair() : rsock(NULL), ssock(NULL) {}
+		bool not_empty() const { return rsock || ssock; }
+		ReliSock* rsock;	// tcp command socket
+		SafeSock* ssock;	// udp command socket
+	};
+	typedef std::vector<SockPair> SockPairVec;
+	SockPairVec dc_socks;
     int m_iMaxAcceptsPerCycle; ///< maximum number of inbound connections to accept per loop
 
     void Inherit( void );  // called in main()
