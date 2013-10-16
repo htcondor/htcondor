@@ -98,6 +98,7 @@ my %hashcompareexceptions =
 	"PID" => "1",
 	"PPID" => "1",
 	"SUBSYSTEM" => "1",
+	"TOOL_TIMEOUT_MULTIPLIER" => "1",
 );
 
 my $ccvstat = 1;
