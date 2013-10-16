@@ -11,6 +11,62 @@
 This is the development release series of HTCondor.
 The details of each version are described below.
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-1-3}Version 8.1.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.1.3 not yet released.
+%\item HTCondor version 8.1.3 released on Month Date, 2013.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-1-2}Version 8.1.2}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -58,6 +114,10 @@ notation.
 which use EC2 resources.
 \Ticket{1548}
 
+\item \Attr{Disk} and \Attr{TotalDisk} are now published into the machine ClassAd as
+64-bit integers rather than being capped at the maximum value of a 32-bit integer.
+\Ticket{1784}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -71,6 +131,12 @@ which use EC2 resources.
 \noindent Bugs Fixed:
 
 \begin{itemize}
+
+\item When USE\_PID\_NAMESPACES is set to true, the softkill
+signal is now successfully sent to the job.  Before, a \Condor{rm}
+command of such a job would not remove the job until the
+killing timeout had expired.
+\Ticket{3891}
 
 \item If a standard universe job exited without producing any
 checkpoints and no checkpoint server was used, 
@@ -97,6 +163,9 @@ Previously, the executable file named in the submit description file
 would be copied to the remote server, 
 rather than the copy of the executable file stored in the spool directory.
 \Ticket{3589}
+
+\item \Condor{who} now prints an error message when passed an invalid argument.
+\Ticket{3987}
 
 \end{itemize}
 

@@ -82,6 +82,9 @@ const float AUTO_SHARE = 123;
 // for floats.
 #define IS_AUTO_SHARE(share) ((int)share == (int)AUTO_SHARE)
 
+const float UNSET_SHARE = -9999;
+#define IS_UNSET_SHARE(share) (int(share) == int(UNSET_SHARE))
+
 // This is used as a place-holder value when configuring memory share
 // for a slot.  It is later updated by dividing the remaining resources
 // evenly between slots using AUTO_MEM.

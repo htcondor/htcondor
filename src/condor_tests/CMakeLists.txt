@@ -590,6 +590,8 @@ if (BUILD_TESTING)
 	condor_pl_test(job_partitionable_basic_van "Test basic partitionable slot capability" "core;quick;full;quicknolink")
 	condor_pl_test(job_hgq_negfail_basic_van "Test basic Hierarchical Group Quota behavior" "core;quick;full;quicknolink")
 	condor_pl_test(job_hgq_autoregroup_basic_van "Test Hierarchical Group Quota autoregroup and group sort" "core;quick;full;quicknolink")
+	condor_pl_test(job_consumption_policies_basic_van "Test Consumption Policies and negotiator resource consumption" "core;quick;full;quicknolink")
+	condor_pl_test(job_cp_cclim_acctgrp_basic_van "Test Consumption Policies with cc-limits and acct-groups" "core;quick;full;quicknolink")
 	condor_pl_test(job_starter_script-A "Test starter pre and post scripts" "core;quick;full;quicknolink")
 
 	if ( NOT WITHOUT_SOAP_TEST AND HAVE_EXT_GSOAP )

@@ -697,8 +697,13 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 					 path, errno );
 			}
 			
-			// immediate failure, try again.
-			continue;
+			// if status is NOPID or PERM, just break out of the
+			// retry loop, as these errors are likely to persist. gt #3323
+			if ( status == PROCAPI_NOPID || status == PROCAPI_PERM ) {
+				break;
+			} else {
+				continue;
+			}
 		}
 
 			// fill the raw structure from the proc file

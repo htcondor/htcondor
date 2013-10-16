@@ -734,12 +734,12 @@ ResMgr::adlist_register( StartdNamedClassAd *ad )
 }
 
 int
-ResMgr::adlist_replace( const char *name, ClassAd *newAd, bool report_diff )
+ResMgr::adlist_replace( const char *name, const char *prefix, ClassAd *newAd, bool report_diff )
 {
 	if( report_diff ) {
 		StringList ignore_list;
-		MyString ignore = name;
-		ignore += "_LastUpdate";
+		MyString ignore = prefix;
+		ignore += "LastUpdate";
 		ignore_list.append( ignore.Value() );
 		return extra_ads.Replace( name, newAd, true, &ignore_list );
 	}
@@ -920,6 +920,17 @@ ResMgr::get_by_cur_id( char* id )
 		if( resources[i]->r_cur->idMatches(id) ) {
 			return resources[i];
 		}
+        if (resources[i]->r_has_cp) {
+            for (Resource::claims_t::iterator j(resources[i]->r_claims.begin());  j != resources[i]->r_claims.end();  ++j) {
+                if ((*j)->idMatches(id)) {
+                    delete resources[i]->r_cur;
+                    resources[i]->r_cur = *j;
+                    resources[i]->r_claims.erase(*j);
+                    resources[i]->r_claims.insert(new Claim(resources[i]));
+                    return resources[i];
+                }
+            }
+        }
 	}
 	return NULL;
 }
@@ -944,6 +955,17 @@ ResMgr::get_by_any_id( char* id )
 			resources[i]->r_pre_pre->idMatches(id) ) {
 			return resources[i];
 		}
+        if (resources[i]->r_has_cp) {
+            for (Resource::claims_t::iterator j(resources[i]->r_claims.begin());  j != resources[i]->r_claims.end();  ++j) {
+                if ((*j)->idMatches(id)) {
+                    delete resources[i]->r_cur;
+                    resources[i]->r_cur = *j;
+                    resources[i]->r_claims.erase(*j);
+                    resources[i]->r_claims.insert(new Claim(resources[i]));
+                    return resources[i];
+                }
+            }
+        }
 	}
 	return NULL;
 }

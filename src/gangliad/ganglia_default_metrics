@@ -14,7 +14,7 @@
 ]
 [
   Name   = strcat(MyType,"DaemonCoreDutyCycle");
-  Value  = DaemonCoreDutyCycle;
+  Value  = RecentDaemonCoreDutyCycle;
   Desc   = "Recent fraction of busy time in the daemon event loop";
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
