@@ -1342,18 +1342,18 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 		const char * val = param_get_info(param_name, subsys, local_name,
 							&def_val, name_used, use_count, ref_count, filename, line_number);
 		if (val || ! filename.empty()) {
-			dprintf(D_ALWAYS, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.Value(), def_val ? def_val : "NULL");
+			dprintf(D_CONFIG | D_FULLDEBUG, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.Value(), def_val ? def_val : "NULL");
 
-			tmp = expand_param(val, subsys, 0);
+			if (val) { tmp = expand_param(val, subsys, 0); } else { tmp = NULL; }
 			if( ! stream->code(tmp) ) {
 				dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
 				retval = FALSE;
 			}
-			free(tmp); tmp = NULL;
+			if (tmp) free(tmp); tmp = NULL;
 
 			name_used.upper_case();
 			name_used += " = ";
-			name_used += val;
+			if (val) name_used += val;
 			if ( ! stream->code(name_used)) {
 				dprintf( D_ALWAYS, "Can't send raw reply for DC_CONFIG_VAL\n" );
 			}
@@ -1371,8 +1371,8 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 				dprintf( D_ALWAYS, "Can't send use count reply for DC_CONFIG_VAL\n" );
 			}
 		} else {
-			dprintf( D_FULLDEBUG, 
-					 "Got DC_CONFIG_VAL request for unknown parameter (%s)\n", 
+			dprintf( D_FULLDEBUG,
+					 "Got DC_CONFIG_VAL request for unknown parameter (%s)\n",
 					 param_name );
 			// send a NULL to indicate undefined. (val is NULL here)
 			if( ! stream->code(const_cast<char*&>(val)) ) {
