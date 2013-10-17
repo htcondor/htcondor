@@ -352,7 +352,7 @@ sub debug {
     my $string = shift;
     my $level = shift;
 	my $time = `date`;
-	chomp($time);
+	fullchomp($time);
 	push @debugcollection, "$time: CondorPersonal - $string";
     #if($DEBUG) {
         if(!(defined $level) or ($level <= $DEBUGLEVEL)) {
@@ -368,7 +368,7 @@ sub debug {
 sub debug_flush {
 	print "\nDEBUG_FLUSH:\n";
 	my $logdir = `condor_config_val log`;
-	chomp($logdir);
+	fullchomp($logdir);
 	print "\nLog directory: $logdir and contains:\n";
 	system("ls -lh $logdir");
 	print "\ncondor_who -verb says:\n";
@@ -569,7 +569,7 @@ sub CondorConfigVal
 
     my $result = `condor_config_val $param_name`;
 
-    chomp $result;
+    fullchomp $result;
     $ENV{CONDOR_CONFIG} = $oldconfig;
     return $result;
 }
@@ -1473,7 +1473,7 @@ sub IsRunningYet {
 		$toolres = CondorTest::runCondorTool("$definedcontrollstr",\@toolarray,2,{expect_result=>\&ANY,emit_output=>0});
 		#while(<CCV>) {
 		foreach my $line (@toolarray) {
-			chomp($line);
+			fullchomp($line);
 			if( $line =~ /^.*Not defined.*$/) {
 				debug("Add $daemon to daemon list\n",$debuglevel);
 				if($first == 1) {
@@ -1683,7 +1683,7 @@ sub IsRunningYet {
 					}
 
 					foreach my $arg (@cmd) {
-						chomp($arg);
+						fullchomp($arg);
 						print "$arg\n";
                     	if($arg =~ /$currenthost/) {
                         	#print "ok\n";
@@ -1723,7 +1723,7 @@ sub IsRunningYet {
 
     			foreach my $line (@cmd)
     			{
-					chomp($line);
+					fullchomp($line);
         			if( $line =~ /^.*$currenthost.*/)
         			{
 						#print "ok\n";
@@ -1760,7 +1760,7 @@ sub IsRunningYet {
 
     			foreach my $line (@cmd)
     			{
-					chomp($line);
+					fullchomp($line);
         			if( $line =~ /^.*$currenthost.*/)
         			{
 						#print "ok\n";
@@ -1813,7 +1813,7 @@ sub CollectDaemonPids {
     my $master;
     my %pids = ();
     while(<TA>) {
-        chomp;
+        fullchomp;
         if(/PID\s+=\s+(\d+)/) {
             # Capture the master pid.  At kill time we will suggest with signal 3
             # that the master and friends go away before we get blunt.
@@ -1876,7 +1876,7 @@ sub KillDaemonPids
 	# first find the master and use a kill 3(fast kill)
 	open(PD,"<$pidfile") or die "Can not open :$pidfile:$!\n";
 	while(<PD>) {
-		chomp();
+		fullchomp();
 		$thispid = $_;
 		if($thispid =~ /^(\d+)\s+MASTER.*$/) {
 			$masterpid = $1;
@@ -1916,7 +1916,7 @@ sub KillDaemonPids
 		debug("Gentle kill for master: $thispid $cnt failed!\n",$debuglevel);
 		open(PD,"<$pidfile") or die "Can not open: $pidfile:$!\n";
 		while(<PD>) {
-			chomp();
+			fullchomp();
 			$thispid = $_;
 			if($thispid =~ /^(\d+)\s+MASTER.*$/) {
 				$thispid = $1;
@@ -2151,7 +2151,7 @@ sub DisplayPartialLocalConfig
 	my $logdir = `condor_config_val log`;
 	my $fullpathtolocalconfig = "";
 	my $line = "";
-	chomp($logdir);
+	fullchomp($logdir);
 	if($logdir =~ /(.*\/)log/) {
 		#print "Config File Location <$1>\n";
 		$fullpathtolocalconfig = $1 . $personal_local;
@@ -2161,7 +2161,7 @@ sub DisplayPartialLocalConfig
 			my $startdumping = 0;
 			open(LC,"<$fullpathtolocalconfig") or die "Can not open $fullpathtolocalconfig: $!\n";
 			while(<LC>) {
-				chomp($_);
+				fullchomp($_);
 				$line = $_;
 				if($line =~ /# Requested.*/) {
 					print "$line\n";
