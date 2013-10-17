@@ -1588,7 +1588,7 @@ sub runToolNTimes
 		@outarrray = ();
         @date = ();
         @date = `date`;
-        chomp $date[0];
+        fullchomp $date[0];
         #print "$date[0] $cmd $count\n";
         #@cmdout = `$cmd`;
 		$cmdstatus = runCondorTool($cmd, \@outarrray, 2);
@@ -1976,7 +1976,7 @@ sub SearchCondorLogMultiple
 		$found = 0;
    		open(LOG,"<$logloc") || die "Can not open logfile: $logloc: $!\n";
    		while(<LOG>) {
-			chomp($_);
+			fullchomp($_);
 			if(defined $findbetween) {
 				# start looking for between string after first pattern
 				# and stop when you find after string. call match callback
@@ -2528,14 +2528,14 @@ sub FindStackDump
 		$droplines = 0;
 		$done = 0;
 		$size = 0;
-		chomp($perp);
+		fullchomp($perp);
 		#print "Looking in $perp for a stack dump\n";
 		$droplines = 0;
 		open(PERP,"<$perp") or die "Can not open $perp:$!\n";
 		while(<PERP>) {
 			if($done == 0) {
 				#print "looking at $_";
-				chomp($_);
+				fullchomp($_);
 				$line = $_;
 				if($line =~ /^.*?Stack dump.*$/) {
 					$droplines = 1;
@@ -2996,7 +2996,7 @@ sub VerifyNoJobsInState
         $count += 1;
         @queue = `condor_q`;
         foreach my $line (@queue) {
-            chomp($line);
+            fullchomp($line);
             if($line =~ /^(\d+)\s+jobs;\s+(\d+)\s+completed,\s+(\d+)\s+removed,\s+(\d+)\s+idle,\s+(\d+)\s+running,\s+(\d+)\s+held,\s+(\d+)\s+suspended.*$/) {
 				#print "$line\n";
 				$jobsstatus{jobs} = $1;
