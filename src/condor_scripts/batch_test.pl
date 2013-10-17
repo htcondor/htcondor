@@ -1337,7 +1337,7 @@ sub CompleteTestOutput
 			}
 		} else {
 			if($groupsize == 0) {
-	    		print "succeeded\n";
+	    		print "$test_name: succeeded\n";
 			} else {
 				#print "Not Xml: group size <$groupsize> test <$test_name>\n";
 	    		print "$test_name succeeded\n";
@@ -1351,7 +1351,7 @@ sub CompleteTestOutput
 		$failure = `grep 'FAILURE' $testname`;
 		$failure =~ s/^.*FAILURE[: ]//;
 		CondorUtils::fullchomp($failure);
-		$failure = "failed" if $failure =~ /^\s*$/;
+		$failure = "$test_name: failed" if $failure =~ /^\s*$/;
 		
 		if ($isXML){
 	    	print XML "<status>FAILURE</status>\n";
