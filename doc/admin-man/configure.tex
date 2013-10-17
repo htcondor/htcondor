@@ -9327,17 +9327,16 @@ in section~\ref{sec:DAG-configuration}.
 
 \label{param:DAGManDefaultNodeLog}
 \item[\Macro{DAGMAN\_DEFAULT\_NODE\_LOG}]
-  The name of a file to be used as a job event log by all node jobs
-  of a DAG (by default, see \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG}
-  below).  Note
-  that even if \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is set to
-  false, the default log file will be used by any node jobs for which
-  a log file is not defined in the job's submit file.
+  The default name of a file to be used as a job event log by all node jobs
+  of a DAG.
+  Note that even if \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is set to
+  \Expr{False}, the default log file will be used by any node jobs for which
+  a log file is not defined in the job's submit description file.
   The default value if not defined is \File{<DagFile>.nodes.log},
   where \verb@<DagFile>@ is replaced by the command line argument
-  to \Condor{submit\_dag} that specifies the DAG input file.  (If
-  more than one DAG file is specified, the name of the first is
-  used to name the default log file.)
+  to \Condor{submit\_dag} that specifies the DAG input file.
+  If more than one DAG input file is specified, the name of the first is
+  used to name the default log file.
 
 \label{param:DAGManGenerateSubDagSubmits}
 \item[\Macro{DAGMAN\_GENERATE\_SUBDAG\_SUBMITS}]
@@ -9441,14 +9440,14 @@ in section~\ref{sec:DAG-configuration}.
 \label{param:DAGmanAlwaysUseNodeLog}
 \item[\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG}]
   A boolean value defining whether \Condor{dagman} reads events from
-  its default node log file (defined by
-  \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}), instead of from the log file(s)
-  defined in the node job submit files.
+  its default node log file, as defined by
+  \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}, instead of from the log file(s)
+  defined in the node job submit description files.
   If \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is \Expr{True},
   \Condor{dagman} will read events only from the default log
-  file.  Also, in that case, POST script terminated events will
+  file, and POST script terminated events will
   be written only to the default log file, and not to the
-  log file(s) defined in the node job submit files.
+  log file(s) defined in the node job submit description files.
   The default value is \Expr{True}.
   This variable must be \Expr{False} if \Condor{dagman} from Condor
   version 7.9.0 or later is submitting jobs to a \Condor{schedd} daemon
