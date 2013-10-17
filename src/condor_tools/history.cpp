@@ -130,6 +130,7 @@ main(int argc, char* argv[])
   char *quillName=NULL;
   AttrList *ad=0;
   int flag = 1;
+  char tmp[128];
 #endif /* HAVE_EXT_POSTGRESQL */
 
   void **parameters;
@@ -147,8 +148,6 @@ main(int argc, char* argv[])
 
   std::string constraint;
   ExprTree *constraintExpr=NULL;
-
-  std::string tmp;
 
   int i;
   parameters = (void **) malloc(NUM_PARAMETERS * sizeof(void *));
@@ -233,8 +232,8 @@ main(int argc, char* argv[])
 */
 		quillName = argv[i];
 
-		sprintf (tmp, "%s == \"%s\"", ATTR_SCHEDD_NAME, quillName);
-		quillQuery.addORConstraint (tmp.c_str());
+		snprintf (tmp, 128, "%s == \"%s\"", ATTR_SCHEDD_NAME, quillName);
+		quillQuery.addORConstraint (tmp);
 
 		remotequill = false;
 		readfromfile = false;

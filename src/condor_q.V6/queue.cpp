@@ -926,7 +926,7 @@ int main (int argc, char **argv)
 
 			/* If the quill information is available, try to use it first */
 			useDB = TRUE;
-	    	if (ad->LookupString(ATTR_SCHEDD_NAME, daemonAdName)) {
+	    	if (ad->LookupString(ATTR_SCHEDD_NAME, daemonAdName, 128)) {
 				Q.addSchedd(daemonAdName);
 			} else {
 				Q.addSchedd(scheddName);
@@ -3218,7 +3218,7 @@ show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_nam
 
 	if (better_analyze) {
 		print_full_header(source_label.c_str());
-		return print_jobs_analysis(jobs, NULL);
+		return print_jobs_analysis(jobs, NULL, NULL);
 	}
 
 	// at this point we either have a populated jobs list, or a populated dag_map
