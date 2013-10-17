@@ -38,7 +38,7 @@ use CondorPersonal;
 
 use base 'Exporter';
 
-our @EXPORT = qw(runCondorTool runToolNTimes RegisterResult is_windows);
+our @EXPORT = qw(runCondorTool runToolNTimes RegisterResult );
 
 my %securityoptions =
 (
