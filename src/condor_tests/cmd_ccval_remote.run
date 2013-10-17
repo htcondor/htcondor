@@ -129,7 +129,7 @@ if(!$ccvstat) {
 	die "Test failure from failure to do local condor_config_val local_dir\n";
 }
 my $localdirres = $localdir[0];
-chomp($localdirres);
+fullchomp($localdirres);
 if($localdirres =~ /^.*$yest_name.*saveme.*$/) {
 	print "Good localdir defined and based on test name: $localdirres\n";
 	RegisterResult(1);
@@ -148,7 +148,7 @@ sub LoadHash
 	my $hashref = shift;
 
 	foreach my $params (@$arrayref) {
-		chomp($params);
+		fullchomp($params);
 		#print "Parsing: $params\n";
 
 		if($params =~ /(.*?)\s+=\s*(.*)/) {
@@ -258,8 +258,8 @@ sub CompareLocRem
 
 	my $gotloc = shift @localarray;
 	my $gotrem = shift @remotearray;
-	chomp($gotloc);
-	chomp($gotrem);
+	fullchomp($gotloc);
+	fullchomp($gotrem);
 
 	print "for $key local val is $gotloc and remote -master is $gotrem\n";
 	if($locval ne $remval) {
