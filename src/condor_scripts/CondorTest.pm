@@ -217,7 +217,7 @@ sub RegisterResult
     my $checkname = GetCheckName($caller_file,%args);
 
     my $testname = $args{test_name} || GetDefaultTestName();
-	print "RegisterResult: test name: $testname\n";
+	#print "RegisterResult: test name: $testname\n";
 
     my $result_str = $result == 1 ? "PASSED" : "FAILED";
     debug( "\n$result_str check $checkname in test $testname\n\n", 1 );
@@ -1524,9 +1524,9 @@ sub runCondorTool
 		if(( $status != 0 ) && ($failconcerns == 1)){
 				#print "************* std out ***************\n";
 				#print "************* std err ***************\n";
-				print "************* GetQueue() ***************\n";
-				GetQueue();
-				print "************* GetQueue() DONE ***************\n";
+				#print "************* GetQueue() ***************\n";
+				#GetQueue();
+				#print "************* GetQueue() DONE ***************\n";
 		} else {
 
 			my $line = "";
@@ -1591,15 +1591,24 @@ sub runToolNTimes
         fullchomp $date[0];
         #print "$date[0] $cmd $count\n";
         #@cmdout = `$cmd`;
-		$cmdstatus = runCondorTool($cmd, \@outarrray, 2);
+        if(defined $wantoutput) {
+			if($wantoutput == 0) {
+				$cmdstatus = runCondorTool($cmd, \@outarrray, 2, {emit_output=>0});
+			}
+		} else {
+			# be verbose about it
+			$cmdstatus = runCondorTool($cmd, \@outarrray, 2);
+		}
 		if(!$cmdstatus) {
 			print "runCondorTool: $cmd attempt: $count SHOULD NOT fail!\n";
 		}
 
         if(defined $wantoutput) {
-            foreach my $line (@outarrray) {
-                print "$line\n";
-            }
+			if($wantoutput ne 0) {
+            	foreach my $line (@outarrray) {
+                	print "$line";
+            	}
+			}
         }
         $count += 1;
     }
@@ -1939,10 +1948,12 @@ sub SearchCondorLogMultiple
 	my $found = 0;
 	my $tried = 0;
 	my $goal = 0;
+	my $retryregexp = "";
 
     my $logloc = `condor_config_val ${daemon}_log`;
     CondorUtils::fullchomp($logloc);
-    CondorTest::debug("Search this log: $logloc for: $regexp instances = $instances\n",1);
+    CondorTest::debug("Search this log: $logloc for: $regexp instances = $instances\n",2);
+    CondorTest::debug("Timeout = $timeout\n",2);
 
 	# do we want to see X new events
 	if($findnew eq "true") {
@@ -1952,10 +1963,10 @@ sub SearchCondorLogMultiple
        		if( $_ =~ /$regexp/) {
            		CondorTest::debug("FOUND IT! $_\n",2);
 				$currentcount += 1;
-				print "FOUND IT! $_";
+				#print "FOUND IT! $_";
        		} else {
-           		CondorTest::debug(".",2);
-				print "Skipping: $_";
+           		#CondorTest::debug(".",2);
+				#print "Skipping: $_";
 			}
    		}
 		close(LOG);
@@ -1963,12 +1974,14 @@ sub SearchCondorLogMultiple
 		CondorTest::debug("Raised request to $goal since current count is $currentcount\n",2);
 	} else {
 		$goal = $instances;
+		#print "SearchCondorLogMultiple: goal: $goal\n";
 	}
 
 
 	my $count = 0;
 	my $begin = 0;
 	my $foundanything = 0;
+	my $showdots = 0;
 	#my $tolerance = 5;
 	my $done = 0;
 	while($found < $goal) {
@@ -2006,14 +2019,19 @@ sub SearchCondorLogMultiple
            		CondorTest::debug("FOUND IT! $_\n",2);
 				$found += 1;
 				$foundanything += 1;
-				#print "instances $instances found $found goal $goal\n";
+				if($showdots == 1) {
+					print "instances $instances found $found goal $goal: $_\n";
+				}
 				if((defined $findcallback) and (!(defined $findafter)) and 
 					 ($found == $goal)) {
+					 #print "Found after: $_\n";
 					&$findcallback($_);
 				}
 				if((defined $findcallback) and (defined $findafter) and 
-					 ($found == $goal)) {
-					#&$findcallback($_);
+					 ($found == $goal) and ($findafter eq $regexp)) {
+					&$findcallback($_);
+					#print "find calllback and exit\n";
+					return(1);
 				}
 				if((defined $findafter) and ($found == $goal)) {
 					# change the pattern we are looking for. really only
@@ -2021,23 +2039,40 @@ sub SearchCondorLogMultiple
 					# undef the second pattern so we get a crack at the callback
 					$found = 0;
 					$goal = 1;
+					#print "Found $regexp now looking for $findafter\n";
+					#$showdots = 1;
+					# if we retry we want to start looking for the after
+					# pattern when we get through the first search.
+					$retryregexp = $regexp;
 					$regexp = $findafter;
-					$findafter = undef;
+					#$findafter = undef;
 				}
        		} else {
-           		CondorTest::debug(".",2);
+           		#CondorTest::debug(".",2);
+					if($showdots == 1) {
+							print ".";
+				}
 			}
-   		}
+   		} # log done
 		close(LOG);
 		CondorTest::debug("Found: $found want: $goal\n",2);
 		if($found < $goal) {
+			if($retryregexp ne "") {
+				$regexp = $retryregexp;
+			}
 			sleep 1;
 		} else {
 			#Done
 			last;
 		}
 		$tried += 1;
-		#if($tried >= $timeout) {
+		if($tried >= $timeout) {
+				CondorTest::debug("SearchCondorLogMultiple: About to fail from timeout!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",1);
+				if(defined $findcallback) {
+					&$findcallback("HitRetryLimit");
+				}
+				last;
+		}
 			#if($tolerance == 0) {
 				#CondorTest::debug("SearchCondorLogMultiple: About to fail from timeout!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",1);
 				#if(defined $findcallback) {
