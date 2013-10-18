@@ -411,10 +411,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	m_invalidate_sessions_via_tcp = true;
 	dc_rsock = NULL;
 	dc_ssock = NULL;
-    m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 8);
-    if( m_iMaxAcceptsPerCycle != 1 ) {
-        dprintf(D_TEST | D_VERBOSE,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
-    }
+	m_iMaxReapsPerCycle = 1;
+    m_iMaxAcceptsPerCycle = 1;
 
 	inheritedSocks[0] = NULL;
 	inServiceCommandSocket_flag = FALSE;
@@ -2723,7 +2721,20 @@ DaemonCore::reconfig(void) {
     if( m_iMaxAcceptsPerCycle != 1 ) {
         dprintf(D_FULLDEBUG,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
     }
-
+	/*
+		Default value of MAX_REAPS_PER_CYCLE is 0 - a value of 0 means
+		call as many reapers as are waiting at the time we exit select.
+		We default to 0 because generally an exited child means completed
+		work that needs to be committed, or a worker that is ready for more
+		work once we reap.  So we have an incentive to prioritize reapers to
+		clean-out the system.  Note that we are assuming that a reaper will spawn
+		either zero or one new processes at most (usually zero).
+		In the words of BOC, "Don't fear the reapers!"
+	*/
+	m_iMaxReapsPerCycle = param_integer("MAX_REAPS_PER_CYCLE",0,0);
+    if( m_iMaxReapsPerCycle != 1 ) {
+        dprintf(D_FULLDEBUG,"Setting maximum reaps per cycle %d.\n", m_iMaxAcceptsPerCycle);
+    }
 		// Initialize the collector list for ClassAd updates
 	initCollectorList();
 
@@ -8556,14 +8567,21 @@ int
 DaemonCore::HandleDC_SERVICEWAITPIDS(int)
 {
 	WaitpidEntry wait_entry;
+    unsigned int iReapsCnt = ( m_iMaxReapsPerCycle > 0 ) ? m_iMaxReapsPerCycle: -1;
 
-	if ( WaitpidQueue.dequeue(wait_entry) < 0 ) {
-		// queue is empty, just return
-		return TRUE;
+    while ( iReapsCnt )
+    {
+		// pull an reap event off our queue
+		if ( WaitpidQueue.dequeue(wait_entry) < 0 ) {
+			// queue is empty, just return cuz nothing more to do
+			return TRUE;
+		}
+
+		// we pulled something off the queue, handle it
+		HandleProcessExit(wait_entry.child_pid, wait_entry.exit_status);
+
+		iReapsCnt--;
 	}
-
-	// we pulled something off the queue, handle it
-	HandleProcessExit(wait_entry.child_pid, wait_entry.exit_status);
 
 	// now check if the queue still has more entries.  if so,
 	// repost the DC_SERVICEWAITPIDS signal so we'll eventually
