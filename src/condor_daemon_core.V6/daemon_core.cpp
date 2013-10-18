@@ -553,14 +553,6 @@ DaemonCore::~DaemonCore()
 		delete tmp_cm;
 	}
 
-	for(SockPairVec::iterator it = dc_socks.begin();
-		it != dc_socks.end(); it++) {
-		delete it->rsock;
-		it->rsock = NULL;
-		delete it->ssock;
-		it->ssock = NULL;
-	}
-
 	if (reapTable != NULL)
 	{
 		for (i=0;i<maxReap;i++) {
@@ -1180,7 +1172,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			m_sinful.setNoUDP(true);
 		}
 		if( dc_socks.begin() == dc_socks.end() 
-			|| dc_socks.begin()->ssock == NULL ) {
+			|| !dc_socks.begin()->has_safesock() ) {
 			m_sinful.setNoUDP(true);
 		}
 
@@ -8282,9 +8274,9 @@ DaemonCore::Inherit( void )
 		}
 		if ( ptmp && (strcmp(ptmp,"0") != 0) ) {
 			dprintf(D_DAEMONCORE,"Inheriting Command Sockets\n");
-			socks.rsock = new ReliSock();
-			socks.rsock->serialize(ptmp);
-			socks.rsock->set_inheritable(FALSE);
+			socks.has_relisock(true);
+			socks.rsock()->serialize(ptmp);
+			socks.rsock()->set_inheritable(FALSE);
 			ptmp=inherit_list.next();
 		}
 		if ( ptmp && (strcmp(ptmp,"0") != 0) ) {
@@ -8295,9 +8287,9 @@ DaemonCore::Inherit( void )
 				dprintf(D_DAEMONCORE,"Removing inherited UDP command socket.\n");
 			}
 			else {
-				socks.ssock = new SafeSock();
-				socks.ssock->serialize(ptmp);
-				socks.ssock->set_inheritable(FALSE);
+				socks.has_safesock(true);
+				socks.ssock()->serialize(ptmp);
+				socks.ssock()->set_inheritable(FALSE);
 			}
 			ptmp=inherit_list.next();
 		}
@@ -8379,12 +8371,12 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		// own udp and tcp sockets, bind them, etc.
 	SockPair socks;
 	if( !m_shared_port_endpoint && dc_socks.empty()) {
-		socks.rsock = new ReliSock;
+		socks.has_relisock(true);
 		if (m_wants_dc_udp_self) {
-			socks.ssock = new SafeSock;
+			socks.has_safesock(true);
 		}
 			// Final bool indicates any error should be considered fatal.
-		InitCommandSockets(command_port, socks.rsock, socks.ssock, true);
+		InitCommandSockets(command_port, socks.rsock().get(), socks.ssock().get(), true);
 	} else {
 		if(dc_socks.begin() != dc_socks.end()) {
 			socks = *(dc_socks.begin());
@@ -8400,22 +8392,22 @@ DaemonCore::InitDCCommandSocket( int command_port )
 			// Dynamically construct the log message.
 		MyString msg;
 
-		if (socks.ssock) {
+		if ( socks.has_safesock()) {
 				// set the UDP (ssock) read size to be large, so we do
 				// not drop incoming updates.
 			desired_size = param_integer("COLLECTOR_SOCKET_BUFSIZE",
 										 10000 * 1024, 1024);
-			int final_udp = socks.ssock->set_os_buffers(desired_size);
+			int final_udp = socks.ssock()->set_os_buffers(desired_size);
 			msg += (int)(final_udp / 1024);
 			msg += "k (UDP), ";
 		}
 
 			// and also set the outgoing TCP write size to be large so the
 			// collector is not blocked on the network when answering queries
-		if( socks.rsock ) {
+		if( socks.has_relisock() ) {
 			desired_size = param_integer("COLLECTOR_TCP_SOCKET_BUFSIZE",
 										 128 * 1024, 1024 );
-			int final_tcp = socks.rsock->set_os_buffers( desired_size, true );
+			int final_tcp = socks.rsock()->set_os_buffers( desired_size, true );
 
 			msg += (int)(final_tcp / 1024);
 			msg += "k (TCP)";
@@ -8430,11 +8422,11 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		// Note: In other parts of the code, we assume that the
 		// first command socket registered is TCP, so we must
 		// register the rsock socket first.
-	if( socks.rsock ) {
-		Register_Command_Socket( socks.rsock );
+	if( socks.has_relisock() ) {
+		Register_Command_Socket( socks.rsock().get() );
 	}
-	if (socks.ssock) {
-		Register_Command_Socket( socks.ssock );
+	if( socks.has_safesock() ) {
+		Register_Command_Socket( socks.ssock().get() );
 	}
 	char const *addr = publicNetworkIpAddr();
 	if( addr ) {
@@ -8445,14 +8437,14 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		dprintf( D_ALWAYS,"DaemonCore: private command socket at %s\n", priv_addr );
 	}
 
-	if( socks.rsock && m_shared_port_endpoint ) {
+	if( socks.has_relisock() && m_shared_port_endpoint ) {
 			// SOAP-enabled daemons may have both a shared port and
 			// a fixed TCP port for receiving SOAP commands
 		dprintf( D_ALWAYS,"DaemonCore: non-shared command socket at %s\n",
-				 socks.rsock->get_sinful() );
+				 socks.rsock()->get_sinful() );
 	}
 
-	if (!socks.ssock) {
+	if ( ! socks.has_safesock()) {
 		dprintf( D_FULLDEBUG, "DaemonCore: UDP Command socket not created.\n");
 	}
 
@@ -8460,11 +8452,15 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		// warning if it is, since it probably means that /etc/hosts
 		// is misconfigured [to preempt RUST like rust-admin #2915]
 
-	if( socks.rsock ) {
-		if ( socks.rsock->my_addr().is_loopback() ) {
+	if( socks.has_relisock() ) {
+		if ( socks.rsock()->my_addr().is_loopback() ) {
 			dprintf( D_ALWAYS, "WARNING: Condor is running on the loopback address (127.0.0.1)\n" );
 			dprintf( D_ALWAYS, "         of this machine, and is not visible to other hosts!\n" );
 		}
+	}
+
+	if(socks.not_empty()) {
+		dc_socks.push_back(socks);
 	}
 
 		// Now, drop this sinful string into a file, if
@@ -10420,4 +10416,25 @@ void DaemonCore::send_invalidate_session ( const char* sinful, const char* sessi
 	}
 
 	daemon->sendMsg( msg.get() );
+}
+
+
+bool DaemonCore::SockPair::has_relisock(bool b) {
+	if(!b) {
+		EXCEPT("Internal error: DaemonCore::SockPair::has_relisock must never be called with false as an argument.");
+	}
+	if(m_rsock.is_null()) {
+		m_rsock = counted_ptr<ReliSock>(new ReliSock);
+	}
+	return true;
+}
+
+bool DaemonCore::SockPair::has_safesock(bool b) {
+	if(!b) {
+		EXCEPT("Internal error: DaemonCore::SockPair::has_safesock must never be called with false as an argument.");
+	}
+	if(m_ssock.is_null()) {
+		m_ssock = counted_ptr<SafeSock>(new SafeSock);
+	}
+	return true;
 }
