@@ -3402,6 +3402,13 @@ void DaemonCore::Driver()
 
         runtime = group_runtime = UtcTime::getTimeDouble();
 
+		// Call reaper handlers before we deal with incoming commands.
+		// The thinking here is incoming commands may very well spawn
+		// more child processes, so it makes sense to reap child processes
+		// who completed their work first before spawning yet more pids.
+		HandleDC_SERVICEWAITPIDS(0);
+
+		// Now, lets see what select told us
 		if ( selector.has_ready() ||
 			 ( selector.timed_out() && 
 			   min_deadline && min_deadline < time(NULL) ) )
