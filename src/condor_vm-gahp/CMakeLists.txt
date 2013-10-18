@@ -37,8 +37,12 @@ if(NOT WIN_EXEC_NODE_ONLY)
  	clone_install(condor_vm_vmware "${C_SBIN}" "condor_vm_vmware.pl" "${C_SBIN}")
     endif()
 
-    if (NOT WINDOWS)
+    if (WINDOWS)
+        install ( FILES condor_vm_vmware DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+        # use install with rename for condor_vm_vmware.pl since clone_install on windows tacks on ".exe" 
+        install ( FILES condor_vm_vmware DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} RENAME condor_vm_vmware.pl )
+    else ()
         install ( FILES libvirt_simple_script.awk DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-    endif()
+    endif(WINDOWS)
 
 endif(NOT WIN_EXEC_NODE_ONLY)

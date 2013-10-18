@@ -40,9 +40,14 @@ my $vmrun_prog;
 my $vmwarecmd_prog;
 
 if (lc($^O) eq "mswin32") {
-	# For MS Windows 
-	$vmrun_prog = 'C:\Program Files\VMware\VMware VIX\vmrun';
-	$vmwarecmd_prog = 'C:\Program Files\VMware\VMware VmPerl Scripting API\vmware-cmd';
+	# For MS Windows assume VMWare is in "C:\Program Files (x86)" if it exists
+	# otherwise assume it's in "C:\Program Files", we find these directories
+	# using environment variables.
+	my $pf86 = "ProgramFiles(x86)";
+	my $progfiles = $ENV{$pf86};
+	if ( ! $progfiles) { $progfiles = $ENV{ProgramFiles}; }
+	$vmrun_prog = $progfiles . '\VMware\VMware VIX\vmrun';
+	$vmwarecmd_prog = $progfiles . '\VMware\VMware VmPerl Scripting API\vmware-cmd';
 }else {
 	# For Linux
 	$vmrun_prog = 'vmrun';

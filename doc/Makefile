@@ -86,7 +86,7 @@ ref.html: clean $(TARGETDIR)
 	latex $(LATEXARGS)  ref.tex
 	makeindex ref
 	latex $(LATEXARGS)  ref.tex
-	latex2html -address htcondor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
+	latex2html -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
 	cd ref && perl -pi.bak -e 's,\<HEAD\>,<HEAD>\n<link rel="canonical" href="http://research.cs.wisc.edu/htcondor/manual/current/$$ARGV">\n,' condor_*.html
 	rm -f ref.dvi
 	mv ref condor-$(SUBVER)-Manual
@@ -120,7 +120,7 @@ local.html: $(wildcard *.tex) $(wildcard */*.tex)
 	latex $(LATEXARGS)  ref.tex
 	makeindex ref
 	latex $(LATEXARGS)  ref.tex
-	latex2html -address htcondor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
+	latex2html -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons ref.tex
 	rm -rf $(LOCALDIR)
 	mv    ref $(LOCALDIR)
 	touch local.html
@@ -170,7 +170,7 @@ just-man-pages:
 	ln -s symbol-html.tex symbol.tex
 	ln -s figuresizing-html.tex figuresizing.tex
 	cd makeman && make clean makeman
-	latex2html -address htcondor-admin@cs.wisc.edu -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons just-man-pages.tex
+	latex2html -split 4 -link 2 -show_section_numbers -antialias -tmp /tmp -long_titles 3 -toc_depth 2 -local_icons just-man-pages.tex
 	for html in $(MANPAGES); do \
 		thisfile=just-man-pages/$$html; \
 		makeman/makeman -v -i $$thisfile -s 1; \

@@ -19,4 +19,7 @@ print "GGT GGT GGT header is $header\n";
 	return $header;
 }
 
+$ADDRESS = "";
+
 1;
+
