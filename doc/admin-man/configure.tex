@@ -2324,12 +2324,19 @@ which use DaemonCore).
 \label{param:MaxAcceptsPerCycle}
 \item[\Macro{MAX\_ACCEPTS\_PER\_CYCLE}]
   An integer value that defaults to 8.
-  It is a limit on the number of accepts of new, incoming, 
+  It is a rarely changed performance tuning parameter to
+  limit on the number of accepts of new, incoming,
   socket connect requests per DaemonCore event cycle.
   A value of zero or less means no limit.
   It has the most noticeable effect on the \Condor{schedd},
   and would be given a higher integer value for tuning purposes when 
   there is a high number of jobs starting and exiting per second.
+
+\label{param:MaxReapsPerCycle}
+\item[\Macro{MAX\_REAPS\_PER\_CYCLE}]
+  An integer value that defaults to 0.  It is a rarely changed performance
+  tuning parameter that places a limit on the number of child process exits to
+  process per DaemonCore event cycle.  A value of zero or less means no limit.
 
 \end{description}
 
