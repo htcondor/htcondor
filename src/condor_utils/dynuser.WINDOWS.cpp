@@ -542,6 +542,7 @@ void dynuser::createaccount() {
 
 }
 
+
 ////
 //
 // dynuser::hide_user:  inhibit the user from being displayed in the
@@ -641,10 +642,18 @@ bool dynuser::add_users_group() {
 	LOCALGROUP_MEMBERS_INFO_0 lmi;
 	wchar_t UserGroupName[255];
 	char* tmp;
+	MyString friendly_group_name("Users");
 
-	tmp = getUserGroupName();
-	swprintf(UserGroupName, L"%S", tmp);
-	delete[] tmp;
+	tmp = param("DYNAMIC_RUN_ACCOUNT_LOCAL_GROUP");
+	if (tmp) {
+		friendly_group_name = tmp;
+		swprintf(UserGroupName, L"%S", tmp);
+		free(tmp);
+	} else {
+		tmp = getUserGroupName();
+		swprintf(UserGroupName, L"%S", tmp);
+		delete[] tmp;
+	}
 	tmp = NULL;
 
 	lmi.lgrmi0_sid = this->psid;
@@ -661,11 +670,13 @@ bool dynuser::add_users_group() {
 		return true;
 	}
 	else if ( nerr == ERROR_ACCESS_DENIED ) {
-		EXCEPT("User %s not added to \"Users\" group, access denied.",accountname);
+		EXCEPT("User %s not added to \"%s\" group, access denied.",
+			accountname, friendly_group_name.Value());
 	}
 
 	// Any other error...
-	EXCEPT("Cannot add %s to \"Users\" group, unknown error (err=%d).",accountname,nerr);
+	EXCEPT("Cannot add %s to \"%s\" group, unknown error (err=%d).",
+		accountname, friendly_group_name.Value(), nerr);
 	
 	return false;
 }
@@ -683,9 +694,15 @@ bool dynuser::del_users_group() {
 	wchar_t UserGroupName[255];
 	char* tmp;
 
-	tmp = getUserGroupName();
-	swprintf(UserGroupName, L"%S", tmp);
-	delete[] tmp;
+	tmp = param("DYNAMIC_RUN_ACCOUNT_LOCAL_GROUP");
+	if (tmp) {
+		swprintf(UserGroupName, L"%S", tmp);
+		free(tmp);
+	} else {
+		tmp = getUserGroupName();
+		swprintf(UserGroupName, L"%S", tmp);
+		delete[] tmp;
+	}
 	tmp = NULL;
 
 	lmi.lgrmi0_sid = this->psid;
