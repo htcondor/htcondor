@@ -671,12 +671,12 @@ bool dynuser::add_users_group() {
 	}
 	else if ( nerr == ERROR_ACCESS_DENIED ) {
 		EXCEPT("User %s not added to \"%s\" group, access denied.",
-			accountname, friendly_group_name.c_str());
+			accountname, friendly_group_name.Value());
 	}
 
 	// Any other error...
 	EXCEPT("Cannot add %s to \"%s\" group, unknown error (err=%d).",
-		accountname, friendly_group_name.c_str(), nerr);
+		accountname, friendly_group_name.Value(), nerr);
 	
 	return false;
 }
