@@ -167,8 +167,13 @@ void CollectorDaemon::Init()
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_CommandWithPayload(QUERY_LICENSE_ADS,"QUERY_LICENSE_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
-	daemonCore->Register_CommandWithPayload(QUERY_COLLECTOR_ADS,"QUERY_COLLECTOR_ADS",
-		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,ADMINISTRATOR);
+	if(param_boolean("PROTECT_COLLECTOR_ADS", false)) {
+		daemonCore->Register_CommandWithPayload(QUERY_COLLECTOR_ADS,"QUERY_COLLECTOR_ADS",
+			(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,ADMINISTRATOR);
+	} else {
+		daemonCore->Register_CommandWithPayload(QUERY_COLLECTOR_ADS,"QUERY_COLLECTOR_ADS",
+			(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
+	}
 	daemonCore->Register_CommandWithPayload(QUERY_STORAGE_ADS,"QUERY_STORAGE_ADS",
 		(CommandHandler)receive_query_cedar,"receive_query_cedar",NULL,READ);
 	daemonCore->Register_CommandWithPayload(QUERY_NEGOTIATOR_ADS,"QUERY_NEGOTIATOR_ADS",
@@ -955,6 +960,26 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 	if ( __filter__ == NULL ) {
 		dprintf (D_ALWAYS, "Query missing %s\n", ATTR_REQUIREMENTS );
 		return;
+	}
+
+	// See if we should exclude Collector Ads from generic queries.  Still
+	// give them out for specific collector queries, which is registered as
+	// ADMINISTRATOR when PROTECT_COLLECTOR_ADS is true.  This setting is
+	// designed only for use at the UW, and as such this knob is not present
+	// in the param table.
+	if ((whichAds != COLLECTOR_AD) && param_boolean("PROTECT_COLLECTOR_ADS", false)) {
+		dprintf(D_FULLDEBUG, "Received query with generic type; filtering collector ads\n");
+		MyString modified_filter;
+		modified_filter.formatstr("(%s) && (MyType =!= \"Collector\")",
+			ExprTreeToString(__filter__));
+		query->AssignExpr(ATTR_REQUIREMENTS,modified_filter.Value());
+		__filter__ = query->LookupExpr(ATTR_REQUIREMENTS);
+		if ( __filter__ == NULL ) {
+			dprintf (D_ALWAYS, "Failed to parse modified filter: %s\n", 
+				modified_filter.Value());
+			return;
+		}
+		dprintf(D_FULLDEBUG,"Query after modification: *%s*\n",modified_filter.Value());
 	}
 
 	// If ABSENT_REQUIREMENTS is defined, rewrite filter to filter-out absent ads 
