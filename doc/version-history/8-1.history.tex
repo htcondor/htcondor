@@ -30,9 +30,16 @@ This 8.1.2 release contains all bug fixes from HTCondor version 8.0.4.
 
 \begin{itemize}
 
-\item The \Macro{ALLOW\_*} and \Macro{DENY\_*} access lists may now include netgroups,
-using the syntax +netgroup\_name.  \Macro{QUEUE\_SUPER\_USERS} may now include 
-user groups, using the syntax \%group\_name.
+\item Definition syntax for the authorization configuration variables
+\Macro{ALLOW\_*} and \Macro{DENY\_*} has been expanded to permit
+the specification of Unix netgroups.
+See section~\ref{sec:Security-Authorization} for the syntax.
+\Ticket{3859}
+
+\item Definition syntax for the configuration variable
+\Macro{QUEUE\_SUPER\_USERS} has been expanded to accept a specification
+of Unix user groups.
+See section~\ref{param:QueueSuperUsers} for the syntax.
 \Ticket{3859}
 
 \item To ensure that a grid universe job running at an EC2 service
