@@ -59,8 +59,9 @@ notation.
 which use EC2 resources.
 \Ticket{1548}
 
-\item \Attr{Disk} and \Attr{TotalDisk} are now published into the machine ClassAd as
-64-bit integers rather than being capped at the maximum value of a 32-bit integer.
+\item Machine ClassAd attributes \Attr{Disk} and \Attr{TotalDisk} 
+are now published as 64-bit integers,
+rather than being capped at the maximum value of a 32-bit integer.
 \Ticket{1784}
 
 \item In an effort to improve scalability under heavy load, a new tuning
