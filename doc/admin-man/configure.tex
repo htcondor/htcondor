@@ -5632,6 +5632,12 @@ MAX_JOBS_RUNNING	= \
   By default, the Unix user \Login{root} and the Windows user 
   \Login{administrator} are given the ability to remove other user's jobs,
   in addition to user \Login{condor}.
+  In addition to a single user,
+  Unix user groups may be specified by using a special syntax
+  defined for this configuration variable;
+  the syntax is the percent character (\Expr{\%}) followed by the 
+  user group name.  
+  All members of the user group are given super-user access.
 
 \label{param:QueueSuperUserMayImpersonate}
 \item[\Macro{QUEUE\_SUPER\_USER\_MAY\_IMPERSONATE}]
