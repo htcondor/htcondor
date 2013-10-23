@@ -137,6 +137,13 @@ ClassAds to an HTCondorView server and setting \Macro{CONDOR\_VIEW\_HOST}.
 \item \Condor{who} now prints an error message when passed an invalid argument.
 \Ticket{3987}
 
+\item Changed the script that finds the VMware tools to use the standard
+environment variables to find \File{Program Files}, instead of using a
+hard coded path.
+This fixes installation for both 64-bit and non-English language Windows 
+platforms.
+\Ticket{272}
+
 \end{itemize}
 
 \noindent Known Bugs:
