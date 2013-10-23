@@ -1604,7 +1604,8 @@ DedicatedScheduler::sortResources( void )
             if (all_matches->lookup(HashKey(resname.Value()), dmrec) < 0) {
                 dprintf(D_FULLDEBUG, "New dynamic slot %s\n", resname.Value());
                 if (!(is_claimed(res) && is_idle(res))) {
-                    dprintf(D_ALWAYS, "WARNING: unexpected claim/activity state for new dynamic slot %s -- ignoring this resource\n", resname.Value());
+					// Not actually unexpected -- this is a claimed dynamic slot, claimed by a serial job
+                    //dprintf(D_ALWAYS, "WARNING: unexpected claim/activity state for new dynamic slot %s -- ignoring this resource\n", resname.Value());
                     continue;
                 }
                 MyString pub_claim_id;
