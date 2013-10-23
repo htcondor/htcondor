@@ -71,7 +71,9 @@ but binary data did not.
 This bug fix makes sure that both kinds of data are read correctly.
 \Ticket{3924}
 
-\item Added support for more than 2KB of user data with OpenNebula.
+\item EC2 grid universe jobs on OpenNebula work better for user data
+specified with \SubmitCmd{ec2\_user\_data},
+where the size of the data is larger than 2Kbytes.
 \Ticket{3923}
 
 \item Fixed a bug preventing HTTP file transfers from following redirects.
