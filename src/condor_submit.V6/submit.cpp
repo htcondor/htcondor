@@ -426,6 +426,15 @@ const char* EC2TagNames = "ec2_tag_names";
 const char* EC2SpotPrice = "ec2_spot_price";
 
 //
+// GCE Parameters
+//
+const char* GceImage = "gce_image";
+const char* GceAuthFile = "gce_auth_file";
+const char* GceMachineType = "gce_machine_type";
+const char* GceMetadata = "gce_metadata";
+const char* GceMetadataFile = "gce_metadata_file";
+
+//
 // Deltacloud Parameters
 //
 const char* DeltacloudUsername = "deltacloud_username";
@@ -1727,6 +1736,7 @@ SetExecutable()
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   JobGridType != NULL &&
 		   ( strcasecmp( JobGridType, "ec2" ) == MATCH ||
+			 strcasecmp( JobGridType, "gce" ) == MATCH ||
 		     strcasecmp( JobGridType, "deltacloud" ) == MATCH ) ) ) {
 		ignore_it = true;
 	}
@@ -2052,6 +2062,7 @@ SetUniverse()
 				(strcasecmp (JobGridType, "condor") == MATCH) ||
 				(strcasecmp (JobGridType, "nordugrid") == MATCH) ||
 				(strcasecmp (JobGridType, "ec2") == MATCH) ||
+				(strcasecmp (JobGridType, "gce") == MATCH) ||
 				(strcasecmp (JobGridType, "deltacloud") == MATCH) ||
 				(strcasecmp (JobGridType, "unicore") == MATCH) ||
 				(strcasecmp (JobGridType, "cream") == MATCH)){
@@ -2065,7 +2076,7 @@ SetUniverse()
 
 				fprintf( stderr, "\nERROR: Invalid value '%s' for grid type\n", JobGridType );
 				fprintf( stderr, "Must be one of: gt2, gt5, pbs, lsf, "
-						 "sge, nqs, condor, nordugrid, unicore, ec2, deltacloud, or cream\n" );
+						 "sge, nqs, condor, nordugrid, unicore, ec2, gce, deltacloud, or cream\n" );
 				exit( 1 );
 			}
 		}			
@@ -5689,6 +5700,80 @@ SetGridParams()
 		buffer.formatstr("%s = \"%s\"",
 					ATTR_EC2_TAG_NAMES, tagNames.print_to_delimed_string(","));
 		InsertJobExpr(buffer.Value());
+	}
+
+
+	//
+	// GCE grid-type submit attributes
+	//
+	if ( (tmp = condor_param( GceAuthFile, ATTR_GCE_AUTH_FILE )) ) {
+		// check auth file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open auth file %s (%s)\n", 
+						 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+
+			StatInfo si(full_path(tmp));
+			if (si.IsDirectory()) {
+				fprintf(stderr, "\nERROR: %s is a directory\n", full_path(tmp));
+				exit(1);
+			}
+		}
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_AUTH_FILE, full_path(tmp) );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "gce" ) == 0 ) {
+		fprintf(stderr, "\nERROR: GCE jobs require a \"%s\" parameter\n", GceAuthFile );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( GceImage, ATTR_GCE_IMAGE )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_IMAGE, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "gce" ) == 0 ) {
+		fprintf(stderr, "\nERROR: GCE jobs require a \"%s\" parameter\n", GceImage );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	if ( (tmp = condor_param( GceMachineType, ATTR_GCE_MACHINE_TYPE )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_MACHINE_TYPE, tmp );
+		InsertJobExpr( buffer.Value() );
+		free( tmp );
+	} else if ( JobGridType && strcasecmp( JobGridType, "gce" ) == 0 ) {
+		fprintf(stderr, "\nERROR: GCE jobs require a \"%s\" parameter\n", GceMachineType );
+		DoCleanup( 0, 0, NULL );
+		exit( 1 );
+	}
+
+	// GceMetadataata is not a necessary parameter
+	// TODO Verify this attribute like Environment
+	if( (tmp = condor_param( GceMetadata, ATTR_GCE_METADATA )) ) {
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_METADATA, tmp);
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
+	}
+
+	// GceMetadataFile is not a necessary parameter
+	if( (tmp = condor_param( GceMetadataFile, ATTR_GCE_METADATA_FILE )) ) {
+		// check metadata file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open metadata file %s (%s)\n", 
+								 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+		}
+		buffer.formatstr( "%s = \"%s\"", ATTR_GCE_METADATA_FILE, 
+				full_path(tmp) );
+		free( tmp );
+		InsertJobExpr( buffer.Value() );
 	}
 
 
