@@ -6647,6 +6647,13 @@ REM Run the actual job now
   A \Expr{True} value is useful when private file system mounts are
   permitted and \Prog{autofs} (for NFS) is not used.
 
+\label{param:DynamicRunAccountLocalGroup} 
+\item[\Macro{DYNAMIC\_RUN\_ACCOUNT\_LOCAL\_GROUP}]
+  For Windows platforms, a value that sets the local group to a group other 
+  than the default \Expr{Users} for the \Expr{condor-reuse-slot<X>} run account.
+  Do \emph{not} place the local group name within quotation marks.
+
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
