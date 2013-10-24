@@ -127,11 +127,10 @@ are now published as 64-bit integers,
 rather than being capped at the maximum value of a 32-bit integer.
 \Ticket{1784}
 
-\item In an effort to improve scalability under heavy load, a new tuning
-	parameter \Macro{MAX\_REAPS\_PER\_CYCLE} was exposed (see
-	section~\ref{param:MaxReapsPerCycle} on
-	page~\pageref{param:MaxReapsPerCycle}), and the default for this parameter
-	changed from 1 to 0.
+\item In an effort to improve scalability under heavy load, the tuning
+configuration variable \Macro{MAX\_REAPS\_PER\_CYCLE} is exposed,
+as defined at section~\ref{param:MaxReapsPerCycle}.
+The default for this variable changed from 1 to 0.
 \Ticket{3992}
 
 \end{itemize}
@@ -148,11 +147,12 @@ rather than being capped at the maximum value of a 32-bit integer.
 
 \begin{itemize}
 
-\item When USE\_PID\_NAMESPACES is set to true, the softkill
-signal is now successfully sent to the job.  Before, a \Condor{rm}
+\item When \Macro{USE\_PID\_NAMESPACES} is \Expr{True}, 
+the soft kill signal is now successfully sent to the job.
+Previously, a \Condor{rm}
 command of such a job would not remove the job until the
 killing timeout had expired.
-\Ticket{3891}
+\Ticket{3981}
 
 \item If a standard universe job exited without producing any
 checkpoints and no checkpoint server was used, 
