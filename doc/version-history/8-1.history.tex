@@ -71,11 +71,10 @@ are now published as 64-bit integers,
 rather than being capped at the maximum value of a 32-bit integer.
 \Ticket{1784}
 
-\item In an effort to improve scalability under heavy load, a new tuning
-	parameter \Macro{MAX\_REAPS\_PER\_CYCLE} was exposed (see
-	section~\ref{param:MaxReapsPerCycle} on
-	page~\pageref{param:MaxReapsPerCycle}), and the default for this parameter
-	changed from 1 to 0.
+\item In an effort to improve scalability under heavy load, the tuning
+configuration variable \Macro{MAX\_REAPS\_PER\_CYCLE} is exposed,
+as defined at section~\ref{param:MaxReapsPerCycle}.
+The default for this variable changed from 1 to 0.
 \Ticket{3992}
 
 \end{itemize}
