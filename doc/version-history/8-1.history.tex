@@ -91,11 +91,12 @@ The default for this variable changed from 1 to 0.
 
 \begin{itemize}
 
-\item When USE\_PID\_NAMESPACES is set to true, the softkill
-signal is now successfully sent to the job.  Before, a \Condor{rm}
+\item When \Macro{USE\_PID\_NAMESPACES} is \Expr{True}, 
+the soft kill signal is now successfully sent to the job.
+Previously, a \Condor{rm}
 command of such a job would not remove the job until the
 killing timeout had expired.
-\Ticket{3891}
+\Ticket{3981}
 
 \item If a standard universe job exited without producing any
 checkpoints and no checkpoint server was used, 
