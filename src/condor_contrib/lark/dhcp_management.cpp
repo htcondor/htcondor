@@ -338,7 +338,7 @@ recv_dhcp_offer(int fd, uint32_t txid, char mac_addr[IFHWADDRLEN], unsigned secs
 			// packet is too small to be valid.
 			continue;
 		}
-		if (memcmp(dhcp_recv_header, packet.m_header, 4) != 0) {
+		if (memcmp(dhcp_recv_header, packet.m_header, 3) != 0) {
 			dprintf(D_FULLDEBUG, "Invalid DHCP offer header.\n");
 			continue;
 		}
@@ -475,7 +475,7 @@ recv_dhcp_ack(int fd, uint32_t txid, const char mac_address[IFHWADDRLEN], unsign
 			// packet is too small to be valid.
 			continue;
 		}
-		if (memcmp(dhcp_recv_header, packet.m_header, 4) != 0) {
+		if (memcmp(dhcp_recv_header, packet.m_header, 3) != 0) {
 			dprintf(D_FULLDEBUG, "Invalid DHCP offer header.\n");
 			continue;
 		}
