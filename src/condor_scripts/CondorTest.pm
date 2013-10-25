@@ -1525,7 +1525,7 @@ sub runCondorTool
 				#print "************* std out ***************\n";
 				#print "************* std err ***************\n";
 				#print "************* GetQueue() ***************\n";
-				#GetQueue();
+				GetQueue();
 				#print "************* GetQueue() DONE ***************\n";
 		} else {
 
@@ -1593,7 +1593,11 @@ sub runToolNTimes
         #@cmdout = `$cmd`;
         if(defined $wantoutput) {
 			if($wantoutput == 0) {
+				#print "runToolNTimes quiet mode requested for: $cmd\n";
 				$cmdstatus = runCondorTool($cmd, \@outarrray, 2, {emit_output=>0});
+			} else {
+				# be verbose about it
+				$cmdstatus = runCondorTool($cmd, \@outarrray, 2);
 			}
 		} else {
 			# be verbose about it
