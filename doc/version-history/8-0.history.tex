@@ -78,8 +78,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.0.4 not yet released.
-%\item HTCondor version 8.0.4 released on Month Date, 2013.
+\item HTCondor version 8.0.4 released on October 24, 2013.
 
 \item A clipped version of HTCondor is now provided for Ubuntu 12.04 
 on the x86\_64 architecture.
@@ -100,7 +99,10 @@ on the x86\_64 architecture.
 
 \begin{itemize}
 
-\item None.
+\item The new configuration variable \Macro{DYNAMIC\_RUN\_ACCOUNT\_LOCAL\_GROUP}
+permits an administrator of a Windows machine to specify a local group other 
+than the default \Expr{Users} for the \Expr{condor-reuse-slot<X>} run account.
+\Ticket{3998}
 
 \end{itemize}
 
@@ -126,7 +128,9 @@ but binary data did not.
 This bug fix makes sure that both kinds of data are read correctly.
 \Ticket{3924}
 
-\item Added support for more than 2KB of user data with OpenNebula.
+\item EC2 grid universe jobs on OpenNebula work better for user data
+specified with \SubmitCmd{ec2\_user\_data},
+where the size of the data is larger than 2Kbytes.
 \Ticket{3923}
 
 \item Fixed a bug preventing HTTP file transfers from following redirects.
@@ -189,6 +193,13 @@ ClassAds to an HTCondorView server and setting \Macro{CONDOR\_VIEW\_HOST}.
 
 \item \Condor{who} now prints an error message when passed an invalid argument.
 \Ticket{3987}
+
+\item Changed the script that finds the VMware tools to use the standard
+environment variables to find \File{Program Files}, instead of using a
+hard coded path.
+This fixes installation for both 64-bit and non-English language Windows 
+platforms.
+\Ticket{272}
 
 \end{itemize}
 

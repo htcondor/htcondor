@@ -918,3 +918,21 @@
   Units  = "jobs";
   TargetType = "Machine_slot1";
 ]
+[
+  Aggregate = "SUM";
+  Name   = "Poolwide Preemptions";
+  Value  = TotalPreemptions;
+  Verbosity = 1;
+  Desc   = "Poolwide Preemptions";
+  Units  = "preemptions";
+  TargetType = "Machine_slot1";
+]
+[
+  Aggregate = "SUM";
+  Name   = "Poolwide Job Starts";
+  Value  = TotalJobStarts;
+  Verbosity = 1;
+  Desc   = "Poolwide Job Starts";
+  Units  = "jobs";
+  TargetType = "Machine_slot1";
+]
