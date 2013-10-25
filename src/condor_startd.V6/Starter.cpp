@@ -805,6 +805,7 @@ Starter::receiveJobClassAdUpdate( Stream *stream )
 		// from it.
 
 	stream->decode();
+	stream->timeout(10);
 	if( !stream->get( final_update) ||
 		!getClassAd( stream, update_ad ) ||
 		!stream->end_of_message() )
