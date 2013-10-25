@@ -1604,7 +1604,7 @@ sub runToolNTimes
 		}
 
         if(defined $wantoutput) {
-			if($wantoutput ne 0) {
+			if($wantoutput != 0) {
             	foreach my $line (@outarrray) {
                 	print "$line";
             	}
