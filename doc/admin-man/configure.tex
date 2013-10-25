@@ -6568,6 +6568,14 @@ REM Run the actual job now
   than the default \Expr{Users} for the \Expr{condor-reuse-slot<X>} run account.
   Do \emph{not} place the local group name within quotation marks.
 
+\label{param:JobExecdirPermissions}
+\item[\Macro{JOB\_EXECDIR\_PERMISSIONS}]
+  Control the permissions on the job's scratch directory. Defaults to
+  \Expr{user} which means permissions of \emph{0700}. Possible values are
+  \Expr{user}, \Expr{group}, and \Expr{world}. If set to \Expr{group} then the
+  directory is group-accessible, permissions of \emph{0750}; likewise if set
+  to \Expr{world} the directory is created with permissions \emph{0755}.
+
 
 \end{description}
 

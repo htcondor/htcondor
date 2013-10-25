@@ -10954,3 +10954,19 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter
 id=615
+
+[JOB_EXECDIR_PERMISSIONS]
+aliases=
+default=user
+version=8.1.3
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Permissions on the job's execute directory
+usage=
+url=http://cs.wisc.edu/condor/manual/v8.1/3_3Configuration.html#SECTION
+tags=starter
+id=621
