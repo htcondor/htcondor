@@ -91,7 +91,7 @@ my $idles = 0;
 					match_regexp => "Started Negotiation Cycle",
 					match_instances => 2,
 					match_callback => $on_match,
-					match_timeout => 30,
+					match_timeout => 80,
 					match_new => "true"
 				);
 				print "About to remove these jobs\n";
