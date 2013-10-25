@@ -107,7 +107,7 @@ my $on_submit = sub {
 		CondorLog::RunCheckMultiple(
 			daemon => "Negotiator",
 			match_new => "true",
-			match_timeout => 80,
+			match_timeout => 160,
 			match_regexp => "Started Negotiation Cycle",
 			match_callback => $on_match,
 		);
@@ -134,7 +134,7 @@ my $on_submit = sub {
 		CondorLog::RunCheckMultiple(
 			daemon => "Negotiator",
 			match_new => "false",
-			match_timeout => 80,
+			match_timeout => 160,
 			match_regexp => "$matchedbegin",
 			match_after_regexp => "Finished Negotiation Cycle",
 			match_callback => $on_match,
@@ -151,7 +151,7 @@ my $on_submit = sub {
 		CondorLog::RunCheckMultiple(
 			daemon => "Negotiator",
 			match_new => "false",
-			match_timeout => 80,
+			match_timeout => 160,
 			match_instances => 1,
 			match_regexp => "$matchedbegin",
 			match_between_regexp => "Return from HandleReq <GET_PRIORITY_commandHandler>",
@@ -171,7 +171,7 @@ my $on_submit = sub {
 		CondorLog::RunCheckMultiple(
 			daemon => "Negotiator",
 			match_new => "false",
-			match_timeout => 80,
+			match_timeout => 160,
 			match_instances => 1,
 			match_regexp => "$matchedbegin",
 			match_between_regexp => "Got SIGHUP.  Re-reading config files.",
@@ -194,7 +194,7 @@ my $on_submit = sub {
 		CondorLog::RunCheckMultiple(
 			daemon => "Negotiator",
 			match_new => "true",
-			match_timeout => 80,
+			match_timeout => 160,
 			match_regexp => "Started Negotiation Cycle",
 			match_callback => $on_match,
 		);
@@ -217,7 +217,7 @@ my $on_submit = sub {
 		CondorLog::RunCheckMultiple(
 			daemon => "Negotiator",
 			match_new => "true",
-			match_timeout => 80,
+			match_timeout => 160,
 			match_regexp => "Finished Negotiation Cycle",
 			match_callback => $on_match,
 		);
@@ -234,7 +234,7 @@ my $on_submit = sub {
 		CondorLog::RunCheckMultiple(
 			daemon => "Negotiator",
 			match_new => "false",
-			match_timeout => 80,
+			match_timeout => 160,
 			match_regexp => "$matchedfinalfinish",
 			match_after_regexp => "Got SIGQUIT.  Performing fast shutdown.",
 			match_callback => $on_match,
