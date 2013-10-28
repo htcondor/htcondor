@@ -144,7 +144,7 @@ COLLECTOR_NAME 		= My Pool - $(CONDOR_HOST)
 ##  FLOCK_FROM defines the machines where you would like to grant
 ##  people access to your pool via flocking. (i.e. you are granting
 ##  access to these machines to join your pool).
-FLOCK_FROM = 
+#FLOCK_FROM =
 ##  An example of this is:
 #FLOCK_FROM = somehost.friendly.domain, anotherhost.friendly.domain
 
@@ -152,7 +152,7 @@ FLOCK_FROM =
 ##  to flock to. (i.e. you are specifying the machines that you
 ##  want your jobs to be negotiated at -- thereby specifying the
 ##  pools they will run in.)
-FLOCK_TO = 
+#FLOCK_TO =
 ##  An example of this is:
 #FLOCK_TO = central_manager.friendly.domain, condor.cs.wisc.edu
 
@@ -1764,10 +1764,10 @@ VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, \
                           Accountant.log, Accountantnew.log, \
                           local_univ_execute, .quillwritepassword, \
 						  .pgpass, \
-			  .schedd_address, .schedd_classad
+						  .schedd_address, .schedd_classad, OfflineLog
 
 ##  What files should condor_preen remove from the log directory?
-INVALID_LOG_FILES	= core
+#INVALID_LOG_FILES	= core
 
 ##--------------------------------------------------------------------
 ##  Java parameters:
@@ -2433,16 +2433,16 @@ KBDD_ADDRESS_FILE = $(LOG)/.kbdd_address
 ## The host and port for hadoop's name node. If this machine is the
 ## name node (see HDFS_SERVICES) then the specified port will be used
 ## to run name node. 
-HDFS_NAMENODE = hdfs://example.com:9000
-HDFS_NAMENODE_WEB = example.com:8000
+#HDFS_NAMENODE = hdfs://example.com:9000
+#HDFS_NAMENODE_WEB = example.com:8000
 
-HDFS_BACKUPNODE = hdfs://example.com:50100
-HDFS_BACKUPNODE_WEB = example.com:50105
+#HDFS_BACKUPNODE = hdfs://example.com:50100
+#HDFS_BACKUPNODE_WEB = example.com:50105
 
 ## You need to pick one machine as name node by setting this parameter
 ## to HDFS_NAMENODE. The remaining machines in a storage cluster will
 ## act as data nodes (HDFS_DATANODE).
-HDFS_NODETYPE = HDFS_DATANODE
+#HDFS_NODETYPE = HDFS_DATANODE
 
 ## If machine is selected to be NameNode then by a role should defined.
 ## If it selected to be DataNode then this parameter is ignored.
@@ -2452,7 +2452,7 @@ HDFS_NODETYPE = HDFS_DATANODE
 ##         creating a backup of the namespace. Currently the NameNode
 ##         supports one Backup node at a time.
 ## CHECKPOINT: Periodically creates checkpoints of the namespace. 
-HDFS_NAMENODE_ROLE = ACTIVE
+#HDFS_NAMENODE_ROLE = ACTIVE
 
 ## The two set of directories that are required by HDFS are for name 
 ## node (HDFS_NAMENODE_DIR) and data node (HDFS_DATANODE_DIR). The 
@@ -2460,8 +2460,8 @@ HDFS_NAMENODE_ROLE = ACTIVE
 ## name node service and  is used to store critical meta data for 
 ## files. The data node needs its directory to store file blocks and 
 ## their replicas.
-HDFS_NAMENODE_DIR = /tmp/hadoop_name
-HDFS_DATANODE_DIR = /scratch/tmp/hadoop_data
+#HDFS_NAMENODE_DIR = /tmp/hadoop_name
+#HDFS_DATANODE_DIR = /scratch/tmp/hadoop_data
 
 ## Unlike name node address settings (HDFS_NAMENODE), that needs to be 
 ## well known across the storage cluster, data node can run on any 
