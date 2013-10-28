@@ -19,6 +19,12 @@ static size_t WriteCallback(char *contents, size_t size, size_t nmemb, void *use
     Downloaded_Data *downloaded_data = (Downloaded_Data*)userdata;
     size_t data_size = size * nmemb;
 
+    if(downloaded_data->text)
+    {
+        free(downloaded_data->text);
+        downloaded_data->text = NULL;
+    }
+
     if(size == 0) return 0;
 
     downloaded_data->text = (char*)malloc(data_size + 1);
@@ -44,9 +50,13 @@ bool print_cached_file(const char *cached_path)
     FILE *fp;
     int character;
 
-    fp = safe_fopen_wrapper_follow(cached_path, "r");
+    fp = safe_fopen_no_create_follow(cached_path, "r");
 
-    if(!fp) return false;
+    if(!fp)
+    {
+        printf("Error: Failed to open cache file for reading.\n");
+        return false;
+    }
 
     while((character = getc(fp)) != EOF)
     {
@@ -65,6 +75,7 @@ int main(int argc, char **argv) {
     char *cache_path = NULL;
     Downloaded_Data downloaded_data;
     FILE *fp = NULL;
+    long http_code;
 
     downloaded_data.text = NULL;
     downloaded_data.size = 0;
@@ -109,15 +120,29 @@ int main(int argc, char **argv) {
         goto Cleanup;
     }
 
-    if(downloaded_data.size == 1 && downloaded_data.text[0] == 10)
+    rval = curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &http_code);
+
+    if(rval)
     {
         print_cached_file(cache_path);
         goto Cleanup;
     }
 
+    if(http_code != 200)
+    {
+        print_cached_file(cache_path);
+        goto Cleanup;
+    }
+    /*
+    if(downloaded_data.size == 1 && downloaded_data.text[0] == 10)
+    {
+        print_cached_file(cache_path);
+        goto Cleanup;
+    }
+    */
     printf(downloaded_data.text);
 
-    fp = safe_fopen_wrapper_follow(cache_path, "w");
+    fp = safe_fcreate_replace_if_exists(cache_path, "w");
 
     if(!fp) goto Cleanup;
 
