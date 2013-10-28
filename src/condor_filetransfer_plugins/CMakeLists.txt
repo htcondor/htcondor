@@ -28,7 +28,6 @@ dprint( "(TSTCLAIR)-> Deal with Java deps and FT HOOK PLUGINS also what is up wi
 
 if (CURL_FOUND)
 	if (WINDOWS)
-		#  the pre-built curl library on windows doesn't link with the vs2008 c runtime. turn it off for now
 		condor_exe( curl_plugin "curl_plugin.c" ${C_LIBEXEC} "${CURL_FOUND};wldap32.lib;${CONDOR_TOOL_LIBS}" OFF )
 	else ()
 		condor_exe( curl_plugin "curl_plugin.c" ${C_LIBEXEC} "${CURL_FOUND}" OFF )
