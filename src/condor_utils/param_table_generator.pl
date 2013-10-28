@@ -20,39 +20,6 @@
 ##**************************************************************
 
 ##########################################################################
-# For information on command line options of this script, call it with -h 
-#
-# The logic in this code is divided into two functions. They are parse() 
-# and reconstitute(). 
-# parse() takes one string as an argument. It will parse the string into 
-# one giant associative array, and return a reference. 
-# reconstitute() takes 
-#
-# Because this deals a great deal with specifying meta-information on
-# parameters, comments and variable naming can be confusing. So I will 
-# try to use the term "property" to only refer to the meta-information,  
-# and the term "parameter" or "params" to refer to those parameters that 
-# are actually referenced in Condor code, and (will be) actually 
-# configured by users.
-
-
-# This main sub simply specifies a default, and calls parse.
-# NOTE: $option contains values of command line options. See configure() 
-# at the bottom of this script if you want more info.
-sub main {
-	# fetch contents of input file into string $input_contents
-	my $input_contents = file_get_contents($options{input});
-	# parse contents, and put into associative array $params
-	my $params = &parse($input_contents);
-	# set defaults
-	my $defaults = {
-		version => '7.1.0',
-	};
-	# call reconstitute on the params to do all of the outputting. 
-	reconstitute($params, $default)
-
-}
-##########################################################################
 use strict;
 use warnings;
 no warnings 'closure';
@@ -189,10 +156,8 @@ my $type_subs = {
 	    $param_var =~ s/\./_/g; 
 	    return $param_var;
 	},
-	'param_type' => sub { 
-		my $type = enum($_[0],'STRING','INT','BOOL', 'DOUBLE', 'LONG');
-		#return "PARAM_TYPE_".$type;
-		return $type;
+	'param_type' => sub {
+		return enum($_[0],'STRING','INT','BOOL', 'DOUBLE', 'LONG', 'PATH');
 	},
 	'is_macro_type' => sub {
 		my $is_macro = enum($_[0],'true','false');
@@ -203,7 +168,7 @@ my $type_subs = {
 		return ($reconfig =~ /true/) ? 1 : 0;
 	},
 	'customization_type' => sub {
-		my $customization = enum($_[0], 'NORMAL', 'SELDOM', 'EXPERT');
+		my $customization = enum($_[0], 'CONST', 'NORMAL', 'SELDOM', 'EXPERT', 'DEVEL');
 		return "CUSTOMIZATION_".$customization;
 	},
 };
@@ -316,6 +281,7 @@ sub reconstitute {
 	continue_output("\n"
 		. "const int PARAM_FLAGS_TYPE_MASK = 0x0F;\n"
 		. "const int PARAM_FLAGS_RANGED = 0x10;\n"
+		. "const int PARAM_FLAGS_PATH = 0x20;\n"
 		. "typedef struct nodef_value { const char * psz; } nodef_value;\n"
 		. "typedef struct string_value { const char * psz; int flags; } string_value;\n"
 		. "typedef struct bool_value { const char * psz; int flags; bool val; } bool_value;\n"
@@ -335,7 +301,7 @@ sub reconstitute {
 	my @var_names;
 	my %empty_vars=();
 	my %var_daemons=(); # hash of arrays of per-daemon/sybsystem parameters overrides.
-	
+
 	# Loop through each of the parameters in the structure passed as an argument
 	while(my ($param_name, $sub_structure) = each %{$structure}){
 
@@ -398,6 +364,8 @@ sub reconstitute {
 			# by do_one_property().
 			if (defined $sub_structure->{$name}) {
 				$replace{"%$name%"} = do_one_property($sub_structure,$info,$name);
+			} elsif (defined $default_structure->{$name}) {
+				$replace{"%$name%"} = $default_structure->{$name};
 			} else {
 				$replace{"%$name%"} = "";
 			}
@@ -499,8 +467,22 @@ sub reconstitute {
 								"a default!\n";
 					}
 				}
+
+				# Path parameters
+				if ($typeT eq "PATH")
+				{
+					$replace{"%type%"} = "STRING";
+					$typequal = "string";
+					if ( ! defined $win_default)
+					{
+						$win_valid   = $def_valid;
+						$win_default = $nix_default;
+						if (defined $win_default) { $win_default =~ s/\//\\/g; }
+					}
+					$range_valid = "|PARAM_FLAGS_PATH";
+				}
 			}
-			
+
 			# convert ranges from string to int or double if we can
 			# if range can be set a compile time, then we need to emit a xxx_ranged
 			# structure and two aditional data values. plus we set the 
@@ -585,11 +567,11 @@ sub reconstitute {
 	continue_output("\n/*==========================================\n"
 					. " * subsystem overrides of global defaults[]\n"
 					. " *==========================================*/\n");
-	foreach my $key (sort keys %var_daemons) {
+	foreach my $key (sort { lc($a) cmp lc($b) } keys %var_daemons) {
 		my $daemon_prefix = $key.'$';
 		continue_output("// '$key.param\'\n");
 		continue_output("const key_value_pair ${daemon_prefix}defaults[] = {\n");
-		foreach (@{$var_daemons{$key}}) {
+		foreach (sort { lc($a) cmp lc($b) } @{$var_daemons{$key}}) {
 			continue_output("\t{ \"$_\", (const nodef_value*)&def_${daemon_prefix}$_ },\n");
 		}
 		continue_output("}; // ${daemon_prefix}defaults[]\n");
@@ -600,13 +582,13 @@ sub reconstitute {
 					. " * map of subsystem override param tables.\n"
 					. " *==========================================*/\n");
 	continue_output("const key_table_pair subsystems[] = {\n");
-	foreach my $key (sort keys %var_daemons) {
+	foreach my $key (sort  { lc($a) cmp lc($b) } keys %var_daemons) {
 		my $daemon_prefix = $key.'$';
 		continue_output("\t{ \"$key\", ${daemon_prefix}defaults, ${daemon_prefix}defaults_count },\n");
 	}
 	continue_output("}; // subsystems[]\n");
 	continue_output("const int subsystems_count = sizeof(subsystems)/sizeof(key_table_pair);\n\n");
-	
+
 	# end of table declarations, everthing after this should be extern or type declarations.
 	#
 	continue_output("#endif // if PARAM_DECLARE_TABLES\n\n"
@@ -615,7 +597,7 @@ sub reconstitute {
 					. "extern const key_table_pair subsystems[];\n"
 					. "extern const int subsystems_count;\n"
 					);
-	
+
 	# output an enum of param indexs into the global defaults table
 	#
 	continue_output("\n/*==========================================\n"
@@ -626,7 +608,7 @@ sub reconstitute {
 		continue_output("\tix$_,\n");
 	}
 	continue_output("}; // param id's\n\n");
-	
+
 	# wrap things up. 
 	continue_output("} //namespace condor_params\n");
 	end_output();
@@ -896,3 +878,41 @@ configure();
 main();
 
 exit(0);
+
+
+##########################################################################
+# For information on command line options of this script, call it with -h
+#
+# The logic in this code is divided into two functions. They are parse()
+# and reconstitute().
+# parse() takes one string as an argument. It will parse the string into
+# one giant associative array, and return a reference.
+# reconstitute() takes
+#
+# Because this deals a great deal with specifying meta-information on
+# parameters, comments and variable naming can be confusing. So I will
+# try to use the term "property" to only refer to the meta-information,
+# and the term "parameter" or "params" to refer to those parameters that
+# are actually referenced in Condor code, and (will be) actually
+# configured by users.
+
+
+# This main sub simply specifies a default, and calls parse.
+# NOTE: $option contains values of command line options. See configure()
+# at the bottom of this script if you want more info.
+sub main {
+	# fetch contents of input file into string $input_contents
+	my $input_contents = file_get_contents($options{input});
+	# parse contents, and put into associative array $params
+	my $params = &parse($input_contents);
+	# set defaults
+	my $defaults = {
+		version => '7.1.0',
+		type => 'STRING',
+		param_type => 'STRING',
+	};
+	# call reconstitute on the params to do all of the outputting.
+	#$options{debug} = 1;
+	reconstitute($params, $defaults)
+
+}

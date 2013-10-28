@@ -330,7 +330,6 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 		rhs = ptr;
 		// rhs is now 'SunOS' in the above eg
 
-		
 		/* Expand references to other parameters */
 		name = expand_macro(name, macro_set);
 		if( name == NULL ) {
@@ -362,7 +361,7 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 				retval = -1;
 				goto cleanup;
 			}
-		}  
+		}
 
 		if( op == ':' || op == '=' ) {
 				/*
@@ -512,6 +511,45 @@ void insert_source(const char * filename, MACRO_SET & set, MACRO_SOURCE & source
 	set.sources.push_back(set.apool.insert(filename));
 }
 
+static bool same_param_value(
+	const char * a,
+	const char * b,
+#ifdef WIN32
+	bool is_path)
+#else
+	bool /*is_path*/) // to get rid of stupid g++ warning
+#endif
+{
+	if ( ! a || ! b)
+		return (a == b);
+
+	// exact matches are always matches.
+	if (MATCH == strcmp(a, b))
+		return true;
+
+	// some special cases tolerate case insensitive matches.
+	if (MATCH == strcasecmp(a, b)) {
+		if (MATCH == strcasecmp(a, "true") || MATCH == strcasecmp(a, "false"))
+			return true;
+		#ifdef WIN32
+		// paths are case-insensitive on windows.
+		if (is_path) { return true; }
+		#endif
+	}
+#ifdef WIN32
+	if (is_path) {
+		while (*a && *b) {
+			if (toupper(*a) != toupper(*b) && ((*a != '/' && *a != '\\') || (*b != '/' && *b != '\\')))
+				return false;
+			++a, ++b;
+		}
+		return true;
+	}
+#endif
+
+	return false;
+}
+
 void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SOURCE & source)
 {
 	// if already in the macro-set, we need to expand self-references and replace
@@ -527,13 +565,13 @@ void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SO
 			pmeta->source_line = source.line;
 			pmeta->inside = (source.inside != false);
 			pmeta->param_table = false;
+			// use the name here in case we have a compound name, i.e "master.value"
 			int param_id = param_default_get_id(name);
 			const char * def_value = param_default_rawval_by_id(param_id);
 			pmeta->matches_default = (def_value == pitem->raw_value);
 			if ( ! pmeta->matches_default) {
-				if (pitem->raw_value && def_value && MATCH == strcmp(pitem->raw_value, def_value)) {
-					pmeta->matches_default = true;
-				}
+				bool is_path = param_default_ispath_by_id(pmeta->param_id);
+				pmeta->matches_default = same_param_value(def_value, pitem->raw_value, is_path);
 			}
 		}
 		if (tvalue) free(tvalue);
@@ -570,7 +608,8 @@ void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SO
 	int matches_default = false;
 	int param_id = param_default_get_id(name);
 	const char * def_value = param_default_rawval_by_id(param_id);
-	if (def_value && MATCH == strcmp(value, def_value)) {
+	bool is_path = param_default_ispath_by_id(param_id);
+	if (same_param_value(def_value, value, is_path)) {
 		matches_default = true; // flag value as matching the default.
 		if ( ! (set.options & CONFIG_OPT_KEEP_DEFAULTS))
 			return; // don't put default-matching values into the macro set

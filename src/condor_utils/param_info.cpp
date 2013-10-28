@@ -213,6 +213,18 @@ param_info_t_type_t param_default_type_by_id(int ix)
 	return PARAM_TYPE_STRING;
 }
 
+bool param_default_ispath_by_id(int ix)
+{
+	if (ix >= 0 && ix < condor_params::defaults_count) {
+		const param_table_entry_t* p = &condor_params::defaults[ix];
+		if (p && p->def) {
+			int flags = reinterpret_cast<const condor_params::string_value *>(p->def)->flags;
+			return (flags & condor_params::PARAM_FLAGS_PATH) != 0;
+		}
+	}
+	return false;
+}
+
 #endif // PARAM_DEFAULTS_SORTED
 
 const char*
