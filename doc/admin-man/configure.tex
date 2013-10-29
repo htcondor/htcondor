@@ -4680,69 +4680,76 @@ search for the corresponding attribute names using \Expr{slot}, instead.
 \end{description}
 
 
-The following variables are for the configuration of Consumption Policies
-for slots advertised by the \Condor{startd} daemon.
+The following variables set consumption policies for partitionable slots.
+Section~\ref{sec:consumption-policy} details consumption policies.
 
 \begin{description}
 
 \label{param:ConsumptionPolicy}
 \item[\Macro{CONSUMPTION\_POLICY}]
-  A boolean configuration variable that defaults to \Expr{False}.
-  When \Expr{True}, enables consumption policies for partitionable
-  slots on the \Condor{startd} daemon.  May be overridden on a 
-  per-slot-type basis using SLOT\_TYPE\_<N>\_CONSUMPTION\_POLICY.
-
+  A boolean value that defaults to \Expr{False}.
+  When \Expr{True}, consumption policies are enabled for partitionable
+  slots within the \Condor{startd} daemon.  
+  Any definition of the form \MacroNI{SLOT\_TYPE\_<N>\_CONSUMPTION\_POLICY}
+  overrides this global definition for the given slot type.
+  
 \label{param:ConsumptionResource}
 \item[\Macro{CONSUMPTION\_<Resource>}]
-  Specifies a consumption policy for a particular resource partitionable
-  slot.  The following example configures a consumption policy that rounds
-  the requested memory up to the next multiple of 128 MB:
-\begin{verbatim}
-# 'target' refers to the job ad requesting resources:
-CONSUMPTION_MEMORY = quantize(target.RequestMemory, {128})
-\end{verbatim}
+  An expression that specifies a consumption policy for a particular 
+  resource within a partitionable slot.  
+  %The following example configures a consumption policy that rounds
+  %the requested memory up to the next multiple of 128 MB:
+%\begin{verbatim}
+%# 'target' refers to the job ad requesting resources:
+%CONSUMPTION_MEMORY = quantize(target.RequestMemory, {128})
+%\end{verbatim}
   To support a consumption policy, each resource advertised by the
-  slot must have such a policy configured, including any extensible
-  resources if they are configured.  Each resource consumption policy
-  may be overridden on a per-slot-type basis using
-  SLOT\_TYPE\_<N>\_CONSUMPTION\_<Resource>.  The following resources
-  are always advertised by \Condor{startd}, and therefore have
-  default values:
+  slot must have such a policy configured.
+  Custom resources may be specified, substituting the resource name
+  for \Expr{<Resource>}.
+  Any definition of the form \MacroNI{SLOT\_TYPE\_<N>\_CONSUMPTION\_<Resource>}
+  overrides this global definition for the given slot type.
+  CPUs, memory, and disk resources
+  are always advertised by \Condor{startd}, and have the default values:
 \begin{verbatim}
-# Consumption policies for resources with default values:
 CONSUMPTION_CPUS = quantize(target.RequestCpus,{1})
 CONSUMPTION_MEMORY = quantize(target.RequestMemory,{128})
 CONSUMPTION_DISK = quantize(target.RequestDisk,{1024})
 \end{verbatim}
-  Note that extensible resources have no default consumption policy.
+  Custom resources have no default consumption policy.
 
 \label{param:SlotWeight}
 \item[\Macro{SLOT\_WEIGHT}]
-  Specifies an expression that evaluates to a slot's weight, as used by
-  the \Condor{negotiator} daemon during matchmaking.
-  Defaults to \Expr{Cpus}.  In this example, a memory-centric slot
-  weight is configured that corresponds with the slot's memory consumption
-  policy:
-\begin{verbatim}
-# slot weight corresponds to the number of jobs that could be
-# matched, given the memory consumption policy:
-CONSUMPTION_MEMORY = quantize(target.RequestMemory, {512})
-SLOT_WEIGHT = floor(Memory / 512)
-\end{verbatim}
+  An expression that specifies a slot's weight, used as a multiplier
+  the \Condor{negotiator} daemon during matchmaking to asses user usage
+  of a slot, which affects user priority.
+  Defaults to \Attr{Cpus}.  
+  %In this example, a memory-centric slot
+  %weight is configured that corresponds with the slot's memory consumption
+  %policy:
+%\begin{verbatim}
+%# slot weight corresponds to the number of jobs that could be
+%# matched, given the memory consumption policy:
+%CONSUMPTION_MEMORY = quantize(target.RequestMemory, {512})
+%SLOT_WEIGHT = floor(Memory / 512)
+%\end{verbatim}
   In the case of slots with consumption policies, the cost of each match is
   is assessed as the difference in the slot weight expression before and after
   the resources consumed by the match are deducted from the slot.
-  Slot weights may be overridden on a per-slot-type basis using
-  SLOT\_TYPE\_<N>\_SLOT\_WEIGHT.
+  Any definition of the form \MacroNI{SLOT\_TYPE\_<N>\_SLOT\_WEIGHT}
+  overrides this global definition for the given slot type.
 
 \label{param:NumClaims}
 \item[\Macro{NUM\_CLAIMS}]
   Specifies the number of claims a partitionable slot will advertise for use
-  by the \Condor{negotiator} daemon.  In the case of slots advertising a
-  consumption policy, the negotiator may match more than one job to the slot
-  in a single negotiation cycle.  For partitionable slots with a consumption
-  policy, NUM\_CLAIMS defaults to the number of cpus owned by the slot.  Otherwise,
-  it defaults to 1.
+  by the \Condor{negotiator} daemon.  
+  In the case of slots with a defined
+  consumption policy, the \Condor{negotiator} may match more than one 
+  job to the slot in a single negotiation cycle.  
+  For partitionable slots with a consumption
+  policy, \MacroNI{NUM\_CLAIMS} defaults to the number of CPUs 
+  owned by the slot.  
+  Otherwise, it defaults to 1.
 
 \end{description}
 
