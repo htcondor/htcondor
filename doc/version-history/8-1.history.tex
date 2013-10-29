@@ -86,6 +86,14 @@ This 8.1.2 release contains all bug fixes from HTCondor version 8.0.4.
 
 \begin{itemize}
 
+\item Matchmaking in the \Condor{negotiator} may be made aware of resources
+available for partitionable slots.
+This permits multiple jobs to be matched against a partitionable slot
+during a single negotiation cycle.
+The new policies discussed in Section~\ref{sec:consumption-policy}
+are set using new configuration variables and are known as consumption policies.
+\Ticket{3435}
+
 \item Definition syntax for the authorization configuration variables
 \Macro{ALLOW\_*} and \Macro{DENY\_*} has been expanded to permit
 the specification of Unix netgroups.
