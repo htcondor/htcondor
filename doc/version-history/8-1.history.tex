@@ -124,6 +124,13 @@ would be copied to the remote server,
 rather than the copy of the executable file stored in the spool directory.
 \Ticket{3589}
 
+\item The example configuration provided within files 
+\File{condor\_config.generic} and \File{condor\_config.generic.redhat} 
+has been updated to fix an inadequate expression defining 
+\MacroNI{NEGOTIATOR\_POST\_JOB\_RANK} when the \Condor{startd} is 
+configured to not run benchmarks, as \Attr{Kflops} would not be defined.
+\Ticket{3589}
+
 \end{itemize}
 
 
