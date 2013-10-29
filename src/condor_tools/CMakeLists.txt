@@ -114,7 +114,7 @@ endif()
 if (WINDOWS)
   condor_exe( config_fetch "file_fetch.cpp" ${C_LIBEXEC} "${CURL_FOUND};wldap32.lib;${CONDOR_TOOL_LIBS}" OFF )
 else()
-  condor_exe( config_fetch "file_fetch.cpp" ${C_LIBEXEC} "${CURL_FOUND}" OFF )
+  #condor_exe( config_fetch "file_fetch.cpp" ${C_LIBEXEC} "${CURL_FOUND}" OFF )
 endif()
 
 ############################################################
