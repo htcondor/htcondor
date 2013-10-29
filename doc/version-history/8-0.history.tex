@@ -41,7 +41,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The \condor{starter} now writes to the log file
+\File{StarterLog.slotX} when running work fetch jobs, mirroring the
+behavior when running jobs that come from a \condor{schedd}.
+Previously, the log file \File{StarterLog} was used for all work fetch
+jobs.
+\Ticket{3091}
 
 \end{itemize}
 
