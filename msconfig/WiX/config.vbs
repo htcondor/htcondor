@@ -33,6 +33,8 @@ Function CreateConfig2()
   Configfile.Close
   
   configTxt = ReplaceConfig("RELEASE_DIR",strippedPath,configTxt)
+  
+  configTxt = ReplaceConfig("LOCAL_CONFIG_FILE",Session.Property("CONDORLOCALCONFIG"),configTxt)
 
   Select Case Session.Property("NEWPOOL")
   Case "Y"

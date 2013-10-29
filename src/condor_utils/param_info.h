@@ -135,6 +135,7 @@ extern "C" {
 	const char* param_default_name_by_id(int ix);
 	const char* param_default_rawval_by_id(int ix);
 	param_info_t_type_t param_default_type_by_id(int ix);
+	bool param_default_ispath_by_id(int ix);
 	MACRO_DEF_ITEM *param_subsys_default_lookup(const char *subsys, const char *name);
 	MACRO_DEF_ITEM *param_default_lookup(const char *name);
 
