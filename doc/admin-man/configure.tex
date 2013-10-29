@@ -6596,6 +6596,31 @@ REM Run the actual job now
   would set the value to \Expr{False} to disable Chirp remote file access 
   from execute machines. 
 
+\label{param:EnableChirpUpdates}
+\item[\Macro{ENABLE\_CHIRP\_UPDATES}]
+  A boolean value that defaults to \Expr{True}.  If ENABLE\_CHIRP
+is set to true, and ENABLE\_CHIRP\_UPDATES is set to false, then
+the user job can only read job attributes from the submit side,
+it cannot change them, or write to the job log.  If ENABLE\_CHIRP is false, the setting of
+ENABLE\_CHIRP\_UPDATES does not matter, no chirp updates are allowed in that case.
+
+\label{param:EnableChirpDelayed}
+\item[\Macro{ENABLE\_CHIRP\_DELAYED}]
+  A boolean value that defaults to true. If false, the delayed
+versions of get\_job\_attr and set\_job\_attr are prohibited.
+
+\label{param:EnableChirpIO}
+\item[\Macro{ENABLE\_CHIRP\_IO}]
+  A boolean value that defaults to true.  If false, the file i/o
+chirp operations are prohibited.
+
+\label{param:RemoteUpdatePrefix}
+\item[\Macro{REMOTE\_UPDATE\_PREFIX}]
+This string-valued parameter, which defaults to "Chirp" defines
+the prefix for attribute names which can be used with the
+set\_job\_attribute\_delayed and get\_job\_attribute\_delayed
+commands.
+
 \label{param:UsePSS} 
 \item[\Macro{USE\_PSS}]
   A boolean value, that when \Expr{True} causes the \Condor{starter} to
