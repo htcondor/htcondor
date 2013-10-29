@@ -19,9 +19,8 @@ int main(int argc, char **argv) {
 	if(argc != 3) {
 		return -1;
 	}
-#ifndef WIN32
+
 	curl_global_init(CURL_GLOBAL_NOTHING);
-#endif
 
 	if((handle = curl_easy_init())) {
 		if((file = fopen(argv[2], "w"))) {

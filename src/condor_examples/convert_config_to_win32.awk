@@ -72,7 +72,8 @@ BEGIN {
 	gsub(/\//, "\\", $0)
 	gsub(/_plugin,/, "_plugin.exe,", $0)
 	gsub(/_plugin$/, "_plugin.exe", $0)
-	printf "%s\n",$0
+	printf "#%s\n",$0
+	printf "FILETRANSFER_PLUGINS = $(LIBEXEC)\\data_plugin.exe\n";
 	next
 }
 
