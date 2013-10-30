@@ -86,6 +86,14 @@ This 8.1.2 release contains all bug fixes from HTCondor version 8.0.4.
 
 \begin{itemize}
 
+\item The \Condor{chirp} protocol and command line tool has been
+enhanced to support lower-cost, higher-latency updates to the job
+ad residing in the \Condor{schedd}.  These two new subcommands,
+set\_job\_attr\_delayed and get\_job\_attr\_delayed allow the job
+to send lightweight notification for events such as progress
+monitorings, which need not be durable.
+\Ticket{3353}
+
 \item Matchmaking in the \Condor{negotiator} may be made aware of resources
 available for partitionable slots.
 This permits multiple jobs to be matched against a partitionable slot
