@@ -461,6 +461,21 @@ ifthenelse(MemoryUsage isnt undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
 \end{verbatim}
 \normalsize
 
+The bindings can use a dictionary where a ClassAd is expected.
+Here is an example that uses the ClassAd:
+\footnotesize
+\begin{verbatim}
+htcondor.Schedd().submit(classad.ClassAd({"Cmd": "/bin/echo"}))
+\end{verbatim}
+\normalsize
+This same example, using a dictionary instead of constructing a ClassAd:
+\footnotesize
+\begin{verbatim}
+htcondor.Schedd().submit({"Cmd": "/bin/echo"})
+\end{verbatim}
+\normalsize
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{Python-ClassAd} ClassAd Module}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
