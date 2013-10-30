@@ -1,6 +1,8 @@
 #ifdef WIN32
 #include <windows.h>
 #define CURL_STATICLIB // this has to match the way the curl library was built.
+#else
+#include <stdlib.h>
 #endif
 
 #include <curl/curl.h>
@@ -32,7 +34,7 @@ static size_t WriteCallback(char *contents, size_t size, size_t nmemb, void *use
     if(!downloaded_data->text) return 0;
 
     downloaded_data->size = size;
-    downloaded_data->text[data_size] = NULL;
+    downloaded_data->text[data_size] = '\0';
     memcpy(downloaded_data->text, contents, data_size);
 
     return data_size;
@@ -69,10 +71,9 @@ bool print_cached_file(const char *cached_path)
 }
 
 int main(int argc, char **argv) {
-	CURL *handle = NULL;
-	int rval = -1;
-	FILE *file = NULL;
-    char *cache_path = NULL;
+    CURL *handle = NULL;
+    int rval = -1;
+    const char *cache_path;
     Downloaded_Data downloaded_data;
     FILE *fp = NULL;
     long http_code;
@@ -133,13 +134,7 @@ int main(int argc, char **argv) {
         print_cached_file(cache_path);
         goto Cleanup;
     }
-    /*
-    if(downloaded_data.size == 1 && downloaded_data.text[0] == 10)
-    {
-        print_cached_file(cache_path);
-        goto Cleanup;
-    }
-    */
+    
     printf(downloaded_data.text);
 
     fp = safe_fcreate_replace_if_exists(cache_path, "w");
