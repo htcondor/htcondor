@@ -259,6 +259,8 @@ BOOL ExceptionHandler::GetLogicalAddress(
 void ExceptionHandler::IntelStackWalk( PCONTEXT pContext ) {
     _tprintf( _T("\nCall stack:\n") );
     _tprintf( _T("Address   Frame     Logical addr  Module\n") );
+#ifdef _WIN64
+#else
     DWORD pc = pContext->Eip;    
 	PDWORD pFrame, pPrevFrame;    
     pFrame = (PDWORD)pContext->Ebp;    
@@ -279,6 +281,7 @@ void ExceptionHandler::IntelStackWalk( PCONTEXT pContext ) {
         if ( IsBadWritePtr(pFrame, sizeof(PVOID)*2) )            
 			break;
     } while ( 1 );
+#endif
 }
 
 // Note: this function was from MSDN:
@@ -321,7 +324,8 @@ void ExceptionHandler::ImagehlpStackWalk( PCONTEXT pContext ) {
     _tprintf( _T("\nCall stack:\n") );    
 //	_tprintf( _T(_SymGetLineFromAddr ? "(Line number api available)\n" : "(Line number api not available)\n"));
 	_tprintf( _T("Address   Frame\n") );
-
+#ifdef _WIN64
+#else
 	SymSetOptions(SYMOPT_LOAD_LINES);
 
     // Could use SymSetOptions here to add the SYMOPT_DEFERRED_LOADS flag
@@ -400,6 +404,7 @@ void ExceptionHandler::ImagehlpStackWalk( PCONTEXT pContext ) {
                       section, offset, szModule );        
 		} 
 	}
+#endif
 }
 //============================================================================
 // Helper function that writes to the report file, and allows the user to use 
