@@ -18,6 +18,7 @@
 
 condor_exe(condor_cod "cod_tool.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_preen "preen.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_testwritelog "testwritelog.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_drain "drain.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_advertise "advertise.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_ping "ping.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
