@@ -936,3 +936,9 @@
   Units  = "jobs";
   TargetType = "Machine_slot1";
 ]
+[
+  Name   = "AutoClusters";
+  Desc   = "Number of active AutoClusters in the schedd";
+  Units  = "autoclusters";
+  TargetType = "Scheduler";
+]

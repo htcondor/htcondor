@@ -109,6 +109,7 @@ void ScheddStatistics::Init(int fOtherPool)
    SCHEDD_STATS_ADD_RECENT(Pool, JobsStarted,          if_poolbasic);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsExited,           if_poolbasic);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsCompleted,        if_poolbasic);
+   SCHEDD_STATS_ADD_RECENT(Pool, Autoclusters,         if_poolbasic);
 
    SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumTimeToStart, if_poolbasic);
    SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumBadputTime,  if_poolbasic);
