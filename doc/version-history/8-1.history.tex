@@ -108,6 +108,14 @@ rather than constructing a ClassAd from the dictionary.
 methods to help create string literals. 
 \Ticket{3900}
 
+\item The ordering of adding attributes to the machine ClassAd has been
+changed, such that the attributes \Attr{Draining}, \Attr{DrainingRequestId},
+and \Attr{LastDrainStartTime} are now added before the job retirement
+is calculated.
+This allows a decision about preemption to be made based on if
+a machine is currently draining. 
+\Ticket{3901}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
