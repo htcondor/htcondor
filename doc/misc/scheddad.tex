@@ -648,6 +648,11 @@
   \SubmitCmd{scheduler} \SubmitCmd{ universe} jobs from this
   \Condor{schedd} daemon that are currently running.
 
+\index{ClassAd Scheduler attribute!TransferQueueUserExpr}
+\item[\AdAttr{TransferQueueUserExpr}]
+  A ClassAd expression that provides the name of the transfer queue
+  that the \Condor{schedd} will be using for job file transfer.
+
 \index{ClassAd Scheduler attribute!UpdateInterval}
 \item[\AdAttr{UpdateInterval}:] The interval, in seconds,
   between publication of this \Condor{schedd} ClassAd and

@@ -86,6 +86,14 @@ This 8.1.2 release contains all bug fixes from HTCondor version 8.0.4.
 
 \begin{itemize}
 
+\item Matchmaking in the \Condor{negotiator} may be made aware of resources
+available for partitionable slots.
+This permits multiple jobs to be matched against a partitionable slot
+during a single negotiation cycle.
+The new policies discussed in Section~\ref{sec:consumption-policy}
+are set using new configuration variables and are known as consumption policies.
+\Ticket{3435}
+
 \item Definition syntax for the authorization configuration variables
 \Macro{ALLOW\_*} and \Macro{DENY\_*} has been expanded to permit
 the specification of Unix netgroups.
@@ -170,6 +178,13 @@ and \Condor{gridmanager} about modifications to job ClassAds made using
 Previously, the executable file named in the submit description file 
 would be copied to the remote server, 
 rather than the copy of the executable file stored in the spool directory.
+\Ticket{3589}
+
+\item The example configuration provided within files 
+\File{condor\_config.generic} and \File{condor\_config.generic.redhat} 
+has been updated to fix an inadequate expression defining 
+\MacroNI{NEGOTIATOR\_POST\_JOB\_RANK} when the \Condor{startd} is 
+configured to not run benchmarks, as \Attr{Kflops} would not be defined.
 \Ticket{3589}
 
 \end{itemize}
