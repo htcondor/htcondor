@@ -110,6 +110,12 @@ rather than constructing a ClassAd from the dictionary.
 methods to help create string literals. 
 \Ticket{3900}
 
+\item The Python bindings \Code{ClassAd} module has new
+methods \Procedure{parseAds} and \Procedure{parseOldAds} 
+that implement an iterator over ClassAds, in the New ClassAd and 
+Old ClassAd format. 
+\Ticket{3918}
+
 \item The ordering of adding attributes to the machine ClassAd has been
 changed, such that the attributes \Attr{Draining}, \Attr{DrainingRequestId},
 and \Attr{LastDrainStartTime} are now added before the job retirement

@@ -639,6 +639,20 @@ Python string.
 
 Returns the Python string.
 \\ \hline
+\texttt{parseAds( input )}
+
+Given \Code{input} of a string or file, return an iterator of
+ClassAds where the ClassAds are in the New ClassAd format.
+
+Returns an iterator.
+\\ \hline
+\texttt{parseOldAds( input )}
+
+Given \Code{input} of a string or file, return an iterator of
+ClassAds where the ClassAds are in the Old ClassAd format.
+
+Returns an iterator.
+\\ \hline
 \end{tabular}
 \end{flushleft}
 
@@ -774,5 +788,19 @@ KeyError: 'foo'
 >>> ad
 [ foo = 1 ]
 
+\end{verbatim}
+\normalsize
+
+Here is an example that illustrates the use of the iterator
+\texttt{parseOldAds} method on a history log.
+\footnotesize
+\begin{verbatim}
+>>> import classad
+>>> import os
+>>> fd = os.popen("condor_history -l -match 4")
+>>> ads = classad.parseOldAds(fd)
+>>> print [ad["ClusterId"] for ad in ads]
+[23389L, 23388L, 23386L, 23387L]
+>>>
 \end{verbatim}
 \normalsize
