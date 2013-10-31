@@ -85,10 +85,8 @@ This 8.1.2 release contains all bug fixes from HTCondor version 8.0.4.
 
 \begin{itemize}
 
-\item The \Condor{config\_val} tool now supports the \Opt{dump} and \Opt{verbose}
-options when querying configuration values remotely from daemons via the
-\Opt{master}, \Opt{collector}, \Opt{startd}, \Opt{schedd}, and \Opt{negotiator}
-options.
+\item \Condor{config\_val} now supports \Opt{-dump} and \Opt{-verbose}
+options to query configuration remotely from daemons.
 \Ticket{3894}
 
 \item The \Condor{chirp} protocol and command line tool has been
@@ -101,8 +99,8 @@ to send lightweight notification for events such as progress
 monitoring, which need not be durable.
 \Ticket{3353}
 
-\item The \Condor{history} command line to has been enhanced to support
-remote history via the \Opt{pool} and \Opt{name} options.
+\item \Condor{history} has been enhanced to support
+remote history using new \Opt{-pool} and \Opt{-name} options.
 \Ticket{3897}
 
 \item Matchmaking in the \Condor{negotiator} may be made aware of resources
