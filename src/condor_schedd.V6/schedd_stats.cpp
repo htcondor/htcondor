@@ -100,6 +100,13 @@ void ScheddStatistics::Init(int fOtherPool)
    if ( ! this->RecentWindowQuantum) this->RecentWindowQuantum = 1;
    this->RecentWindowMax = this->RecentWindowQuantum;
 
+   // publish primary statistics (!fOtherPool) at BASIC (verbosity 1)
+   // but publish OtherPool (BY_nnn and FOR_xxx) sets at verbosity 2 or 3.
+   // Prior to 8.1.2 we didn't pay any attention to the fOtherPool
+   // flag when setting the verbosity of the stat, but this resulted in
+   // too many verbosity 1 stats and the schedd would take too long to
+   // update the collector. So for 8.1.2 we flattened the verbosity levels
+   // for the main stats so that the otherpool stats could all be at a higher level.
    int if_poolbasic = fOtherPool ? IF_VERBOSEPUB : IF_BASICPUB;
    int if_poolverbose = fOtherPool ? IF_NEVER : IF_BASICPUB;
 
