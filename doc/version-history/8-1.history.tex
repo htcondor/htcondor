@@ -151,6 +151,14 @@ as defined at section~\ref{param:MaxReapsPerCycle}.
 The default for this variable changed from 1 to 0.
 \Ticket{3992}
 
+\item To reduce the overwhelming quantity of per-user \Condor{schedd} 
+statistics that are generated when configuration variables 
+\MacroNI{SCHEDD\_COLLECT\_STATS\_FOR\_<Name>} or 
+\MacroNI{SCHEDD\_COLLECT\_STATS\_BY\_<Name>} are used, 
+the statistics are now published at verbosity level 2,
+instead of verbosity level 1.
+\Ticket{3980}
+
 \item The Python bindings now include the \Code{Negotiator} class to
 manage users and their priorities.
 \Ticket{3893}
