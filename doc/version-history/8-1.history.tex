@@ -164,6 +164,11 @@ has been updated to fix an inadequate expression defining
 configured to not run benchmarks, as \Attr{Kflops} would not be defined.
 \Ticket{3589}
 
+\item Fixed a Python binding crash due to a segmentation fault,
+when evaluating an expression tree with an undefined reference.
+The fix allows the user to define the \Code{ClassAd} scope 
+within which an expression tree is evaluated.
+\Ticket{3910}
 \end{itemize}
 
 
