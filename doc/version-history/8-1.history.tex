@@ -87,11 +87,13 @@ This 8.1.2 release contains all bug fixes from HTCondor version 8.0.4.
 \begin{itemize}
 
 \item The \Condor{chirp} protocol and command line tool has been
-enhanced to support lower-cost, higher-latency updates to the job
-ad residing in the \Condor{schedd}.  These two new subcommands,
-set\_job\_attr\_delayed and get\_job\_attr\_delayed allow the job
+enhanced to support lower-cost, delayed updates to the job
+ClassAd residing in the \Condor{schedd}; updates occur as other communications
+take place, eliminating the overhead of a separate update.
+These two new Chirp commands,
+\Opt{set\_job\_attr\_delayed} and \Opt{get\_job\_attr\_delayed} allow the job
 to send lightweight notification for events such as progress
-monitorings, which need not be durable.
+monitoring, which need not be durable.
 \Ticket{3353}
 
 \item Matchmaking in the \Condor{negotiator} may be made aware of resources
@@ -218,6 +220,11 @@ has been updated to fix an inadequate expression defining
 configured to not run benchmarks, as \Attr{Kflops} would not be defined.
 \Ticket{3589}
 
+\item Fixed a Python binding crash due to a segmentation fault,
+when evaluating an expression tree with an undefined reference.
+The fix allows the user to define the \Code{ClassAd} scope 
+within which an expression tree is evaluated.
+\Ticket{3910}
 \end{itemize}
 
 
