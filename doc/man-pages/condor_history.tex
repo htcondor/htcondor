@@ -5,6 +5,8 @@
 \oOpt{-help} 
 
 \SynProg{\Condor{history}}
+\oOptArg{-name}{name}
+\oOptArg{-pool}{centralmanagerhostname[:portnumber]}
 \oOpt{-backwards}
 \oOpt{-forwards}
 \oOptArg{-constraint}{expr}
@@ -50,6 +52,12 @@ file.
 
 \begin{Options}
   \OptItem{\Opt{-help}}{Display usage information and exit.}
+  \OptItem{\OptArg{-name}{name}}{Query the named \Condor{schedd} daemon. }
+  \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
+    {Use the \Argnm{centralmanagerhostname} as
+    the central manager to locate \Condor{schedd} daemons.
+    The default is the \MacroNI{COLLECTOR\_HOST},
+    as specified in the configuration.}
   \OptItem{\Opt{-backwards}}{List jobs in reverse chronological
     order. The job most recently added to the history file is first.
     This is the default ordering.}
