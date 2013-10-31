@@ -75,8 +75,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.1.2 not yet released.
-%\item HTCondor version 8.1.2 released on Month Date, 2013.
+\item HTCondor version 8.1.2 released on October 31, 2013.
 This 8.1.2 release contains all bug fixes from HTCondor version 8.0.4.
 
 \end{itemize}
@@ -85,6 +84,16 @@ This 8.1.2 release contains all bug fixes from HTCondor version 8.0.4.
 \noindent New Features:
 
 \begin{itemize}
+
+\item The \Condor{chirp} protocol and command line tool has been
+enhanced to support lower-cost, delayed updates to the job
+ClassAd residing in the \Condor{schedd}; updates occur as other communications
+take place, eliminating the overhead of a separate update.
+These two new Chirp commands,
+\Opt{set\_job\_attr\_delayed} and \Opt{get\_job\_attr\_delayed} allow the job
+to send lightweight notification for events such as progress
+monitoring, which need not be durable.
+\Ticket{3353}
 
 \item Matchmaking in the \Condor{negotiator} may be made aware of resources
 available for partitionable slots.
@@ -141,6 +150,43 @@ as defined at section~\ref{param:MaxReapsPerCycle}.
 The default for this variable changed from 1 to 0.
 \Ticket{3992}
 
+\item To reduce the overwhelming quantity of per-user \Condor{schedd} 
+statistics that are generated when configuration variables 
+\MacroNI{SCHEDD\_COLLECT\_STATS\_FOR\_<Name>} or 
+\MacroNI{SCHEDD\_COLLECT\_STATS\_BY\_<Name>} are used, 
+the statistics are now published at verbosity level 2,
+instead of verbosity level 1.
+\Ticket{3980}
+
+\item The Python bindings now include the \Code{Negotiator} class to
+manage users and their priorities.
+\Ticket{3893}
+
+\item The Python bindings now provide automatic conversions from 
+dictionaries to ClassAds,
+so they can accept a dictionary directly as an argument,
+rather than constructing a ClassAd from the dictionary.
+\Ticket{3892}
+
+\item The Python bindings \Code{ClassAd} module has 
+\Procedure{quote} and \Procedure{unquote} 
+methods to help create string literals. 
+\Ticket{3900}
+
+\item The Python bindings \Code{ClassAd} module has new
+methods \Procedure{parseAds} and \Procedure{parseOldAds} 
+that implement an iterator over ClassAds, in the New ClassAd and 
+Old ClassAd format. 
+\Ticket{3918}
+
+\item The ordering of adding attributes to the machine ClassAd has been
+changed, such that the attributes \Attr{Draining}, \Attr{DrainingRequestId},
+and \Attr{LastDrainStartTime} are now added before the job retirement
+is calculated.
+This allows a decision about preemption to be made based on if
+a machine is currently draining. 
+\Ticket{3901}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
@@ -186,6 +232,17 @@ has been updated to fix an inadequate expression defining
 \MacroNI{NEGOTIATOR\_POST\_JOB\_RANK} when the \Condor{startd} is 
 configured to not run benchmarks, as \Attr{Kflops} would not be defined.
 \Ticket{3589}
+
+\item Fixed a Python binding crash due to a segmentation fault,
+when evaluating an expression tree with an undefined reference.
+The fix allows the user to define the \Code{ClassAd} scope 
+within which an expression tree is evaluated.
+\Ticket{3910}
+
+\item The Python bindings now include a correct conversion of
+\Code{absTime} and \Code{relTime} ClassAd literals to the 
+corresponding Python types.
+\Ticket{3911}
 
 \end{itemize}
 

@@ -112,10 +112,12 @@ if ( LINUX AND NOT CONDOR_PACKAGE_BUILD )
 	install( CODE "execute_process(COMMAND chmod -R u+w ${CMAKE_INSTALL_PREFIX}/lib/condor/)" )
 endif()
 
-if (WINDOWS)
-  condor_exe( config_fetch "file_fetch.cpp" ${C_LIBEXEC} "${CURL_FOUND};wldap32.lib;${CONDOR_TOOL_LIBS}" OFF )
-else()
-  #condor_exe( config_fetch "file_fetch.cpp" ${C_LIBEXEC} "${CURL_FOUND}" OFF )
+if (CURL_FOUND)
+  if (WINDOWS)
+    condor_exe( config_fetch "file_fetch.cpp" ${C_LIBEXEC} "${CURL_FOUND};wldap32.lib;${CONDOR_TOOL_LIBS}" OFF )
+  else()
+    condor_exe( config_fetch "file_fetch.cpp" ${C_LIBEXEC} "${CURL_FOUND};${CONDOR_TOOL_LIBS}" OFF )
+  endif()
 endif()
 
 ############################################################
