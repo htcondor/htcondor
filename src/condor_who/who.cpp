@@ -1953,7 +1953,8 @@ static void scan_logs_for_info(LOG_INFO_MAP & info, MAP_STRING_TO_PID & job_to_p
 		LOG_INFO * pliDaemon = it->second;
 		if ( ! pliDaemon->pid.empty() && ! pliDaemon->addr.empty())
 			continue;
-
+		if (it->first == "Shadow") // shadows don't even have command ports...
+			continue;
 		if (it->first != "Schedd" && it->first != "Startd" && ! fAddressesOnly)
 			continue;
 
@@ -1982,6 +1983,7 @@ static void query_log_dir(const char * log_dir, LOG_INFO_MAP & info)
 			name.insert(0, file, pu-file);
 			if (name == "Sched") name = "Schedd"; // the schedd log is called SchedLog
 			if (name == "Start") name = "Startd"; // the startd log is called StartLog
+			if (name == "Match") name = "Negotiator"; // the Match log is a secondary Negotiator log
 			if (name == "Cred") name = "Credd"; // the credd log is called CredLog
 			if (name == "Kbd") name = "Kbdd"; // the kbdd log is called KbdLog
 			filetype = 2; // log
@@ -1989,6 +1991,7 @@ static void query_log_dir(const char * log_dir, LOG_INFO_MAP & info)
 			name.insert(0, file, pu-file);
 			if (name == "Sched") name = "Schedd"; // the schedd log is called SchedLog
 			if (name == "Start") name = "Startd"; // the startd log is called StartLog
+			if (name == "Match") name = "Negotiator"; // the Match log is a secondary Negotiator log
 			if (name == "Cred") name = "Credd";
 			if (name == "Kbd") name = "Kbdd";
 			filetype = 3; // previous.log
@@ -2046,15 +2049,16 @@ void print_log_info(LOG_INFO_MAP & info)
 void print_daemon_info(LOG_INFO_MAP & info)
 {
 	printf("\n");
-	printf("%-12s %-8s %-6s %-8s %s\n", "Daemon", "PID", "Exit", "LastPID", "Addr");
-	printf("%-12s %-8s %-6s %-8s %s\n", "------", "---", "----", "-------", "----");
+	printf("%-12s %-6s %-6s %-6s %-6s %-24s %s\n", "Daemon", "Alive", "PID", "PPID", "Exit", "Addr", "Executable");
+	printf("%-12s %-6s %-6s %-6s %-6s %-24s %s\n", "------", "-----", "---", "----", "----", "----", "----------");
 	for (LOG_INFO_MAP::const_iterator it = info.begin(); it != info.end(); ++it)
 	{
 		LOG_INFO * pli = it->second;
 		if (pli->pid.empty() && pli->exit_code.empty() && pli->addr.empty())
 			continue;
+		bool active = false;
 		const char * pid = "no";
-		const char * last_pid = "?";
+		const char * last_pid = "no";
 		const char * exit = pli->exit_code.c_str();
 		if ( ! exit || !exit[0]) {
 			exit = "no";
@@ -2064,13 +2068,27 @@ void print_daemon_info(LOG_INFO_MAP & info)
 			last_pid = pli->pid.c_str();
 			if ( ! last_pid || !last_pid[0]) last_pid = "?";
 		}
-		printf("%-12s %-8s %-6s %-8s %s\n",
+
+		char * pexe = NULL;
+		char * ppid = NULL;
+		if ( ! pli->addr.empty() && ! pli->pid.empty() && pli->exit_code.empty()) {
+			ppid = get_daemon_param(pli->addr.c_str(), "PPID");
+			if (ppid) {
+				active = true;
+				pexe = get_daemon_param(pli->addr.c_str(), it->first.c_str());
+			}
+		}
+
+		printf("%-12s %-6s %-6s %-6s %-6s %-24s %s\n",
 			it->first.c_str(),
-			pid,
-			exit,
-			last_pid,
-			pli->addr.c_str()
+			active ? "yes" : "no",
+			pid, ppid ? ppid : "no", exit,
+			pli->addr.c_str(),
+			pexe ? pexe : pli->exe_path.c_str()
 		);
+
+		if (pexe) free(pexe);
+		if (ppid) free(ppid);
 	}
 }
 
