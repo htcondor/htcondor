@@ -1032,6 +1032,9 @@ sub CreateConfig {
 		print NEWFIG "LOCAL_CONFIG_FILE = $testpersonalcondorlocation/condor_config.local\n";
 	    }
 	}
+	elsif(/^LOCAL_CONFIG_DIR\s*=/) {
+		# we don't want this
+	}
 	elsif(/^CONDOR_HOST\s*=/) {
 	    debug( "Matching:$_\n",2);
 	    print NEWFIG "CONDOR_HOST = $currenthost\n";
@@ -1096,7 +1099,8 @@ sub CreateLocalConfig {
 
     # ADD size for log files and debug level
     # default settings are in condor_config, set here to override 
-    print FIX "ALL_DEBUG               = D_FULLDEBUG D_SECURITY D_HOSTNAME\n";
+    #print FIX "ALL_DEBUG               = D_FULLDEBUG D_SECURITY D_HOSTNAME\n";
+    print FIX "DEFAULT_DEBUG               = D_FULLDEBUG D_SECURITY D_HOSTNAME\n";
 
     print FIX "MAX_COLLECTOR_LOG       = $logsize\n";
     print FIX "COLLECTOR_DEBUG         = \n";
@@ -1144,6 +1148,7 @@ sub CreateLocalConfig {
     # for ALLOW_WRITE which causes it to EXCEPT on submit
     # till set to some legal value. Old was most insecure..
     print FIX "ALLOW_WRITE 			= *\n";
+    print FIX "LOCAL_CONFIG_DIR 			= \n";
     print FIX "NUM_CPUS 			= 15\n";
 
     if($iswindows == 1) {
