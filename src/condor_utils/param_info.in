@@ -11559,6 +11559,11 @@ default=$(LOG)/.collector_address
 friendly_name=Location of the collector_address file
 type=path
 
+[COLLECTOR_SUPER_ADDRESS_FILE]
+default=$(LOG)/.collector_address.super
+friendly_name=Location of the collector super address file
+type=path
+
 [STARTD_ADDRESS_FILE]
 default=$(LOG)/.startd_address
 friendly_name=Location of the startd_address file
@@ -11567,7 +11572,12 @@ type=path
 [SCHEDD_ADDRESS_FILE]
 default=$(SPOOL)/.schedd_address
 friendly_name=Location of the schedd_address file
-type=string
+type=path
+
+[SCHEDD_SUPER_ADDRESS_FILE]
+default=$(SPOOL)/.schedd_address.super
+friendly_name=Location of the schedd super address file
+type=path
 
 [SCHEDD_DAEMON_AD_FILE]
 default=$(SPOOL)/.schedd_classad

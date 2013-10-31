@@ -411,6 +411,8 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	m_invalidate_sessions_via_tcp = true;
 	dc_rsock = NULL;
 	dc_ssock = NULL;
+	super_dc_rsock = NULL;
+	super_dc_ssock = NULL;
 	m_iMaxReapsPerCycle = 1;
     m_iMaxAcceptsPerCycle = 1;
 
@@ -559,6 +561,12 @@ DaemonCore::~DaemonCore()
 		delete dc_rsock;
 	}
 	if( dc_ssock ) {
+		delete dc_ssock;
+	}
+	if( super_dc_rsock ) {
+		delete dc_rsock;
+	}
+	if( super_dc_ssock ) {
 		delete dc_ssock;
 	}
 
@@ -1227,6 +1235,15 @@ DaemonCore::publicNetworkIpAddr(void) {
 const char*
 DaemonCore::privateNetworkIpAddr(void) {
 	return (const char*) InfoCommandSinfulStringMyself(true);
+}
+
+const char*
+DaemonCore::superUserNetworkIpAddr(void) {
+	if ( ! super_dc_rsock ) {
+		return NULL;
+	}
+
+	return super_dc_rsock->get_sinful();
 }
 
 
@@ -3424,6 +3441,24 @@ void DaemonCore::Driver()
 			bool recheck_status = false;
 			//bool call_soap_handler = false;
 
+			// If a command came in on the super-user command socket, then
+			// set a flag so in the loop below we only schedule command callbacks
+			// from this one socket for this daemoncore cycle.
+			bool superuser_command_arrived = false;
+			if (super_dc_rsock &&
+				selector.fd_ready(super_dc_rsock->get_file_desc(), Selector::IO_READ))
+			{
+				superuser_command_arrived = true;
+			}
+			if (super_dc_ssock &&
+				selector.fd_ready(super_dc_ssock->get_file_desc(), Selector::IO_READ))
+			{
+				superuser_command_arrived = true;
+			}
+			if ( superuser_command_arrived ) {
+				dprintf(D_ALWAYS,"Received a superuser command\n");
+			}
+
 			// scan through the socket table to find which ones select() set
 			for(i = 0; i < nSock; i++) {
 				if ( (*sockTable)[i].iosock && 
@@ -3437,7 +3472,15 @@ void DaemonCore::Driver()
 					time_t deadline = (*sockTable)[i].iosock->get_deadline();
 					bool sock_timed_out = ( deadline && deadline < now );
 
-					if ( (*sockTable)[i].is_reverse_connect_pending ) {
+					if ( superuser_command_arrived &&
+						 ((*sockTable)[i].iosock != super_dc_rsock &&
+						  (*sockTable)[i].iosock != super_dc_ssock) )
+					{
+						// do nothing for now, because we know there is a request pending
+						// on the suerperuser command socket, and this is not the
+						// superuser command socket.
+					}
+					else if ( (*sockTable)[i].is_reverse_connect_pending ) {
 						// nothing to do
 					}
 					else if ( (*sockTable)[i].is_connect_pending ) {
@@ -8477,6 +8520,32 @@ DaemonCore::InitDCCommandSocket( int command_port )
 			dprintf( D_ALWAYS, "WARNING: Condor is running on the loopback address (127.0.0.1)\n" );
 			dprintf( D_ALWAYS, "         of this machine, and is not visible to other hosts!\n" );
 		}
+	}
+
+
+	std::string super_addr_file;
+	formatstr( super_addr_file, "%s_SUPER_ADDRESS_FILE", get_mySubSystem()->getName() );
+	char* superAddrFN = param( super_addr_file.c_str() );
+	if ( superAddrFN && !super_dc_rsock ) {
+		super_dc_rsock = new ReliSock;
+		super_dc_ssock = new SafeSock;
+
+		if ( !super_dc_rsock || !super_dc_ssock ) {
+			EXCEPT("Failed to create SuperUser Command socket");
+		}
+		// Note: BindAnyCommandPort() is in daemon core
+		if ( !BindAnyCommandPort(super_dc_rsock,super_dc_ssock)) {
+			EXCEPT("Failed to bind SuperUser Command socket");
+		}
+		if ( !super_dc_rsock->listen() ) {
+			EXCEPT("Failed to post a listen on SuperUser Command socket");
+		}
+		daemonCore->Register_Command_Socket( (Stream*)super_dc_rsock );
+		daemonCore->Register_Command_Socket( (Stream*)super_dc_ssock );
+		super_dc_rsock->set_inheritable(FALSE);
+		super_dc_ssock->set_inheritable(FALSE);
+
+		free(superAddrFN);
 	}
 
 		// Now, drop this sinful string into a file, if
