@@ -5266,7 +5266,7 @@ static bool test_is_error_real() {
 	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() on an attribute with an incorrect "
 		"usage of real().");
-	const char* classad_string = "\tA1=isError(real(\"this is not an float\"))";
+	const char* classad_string = "\tA1=isError(real(\"this is not a float\"))";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
@@ -5292,7 +5292,7 @@ static bool test_is_error_floor() {
 	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() on an attribute with an incorrect "
 		"usage of floor().");
-	const char* classad_string = "\tA1=isError(floor(\"this is not an float\"))";
+	const char* classad_string = "\tA1=isError(floor(\"this is not a float\"))";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;

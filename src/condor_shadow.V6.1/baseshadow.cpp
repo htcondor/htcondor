@@ -103,11 +103,11 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 	}
 
 	if( !jobAd->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
-		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_CLUSTER_ID);
+		EXCEPT("Job ad doesn't contain a %s attribute.", ATTR_CLUSTER_ID);
 	}
 
 	if( !jobAd->LookupInteger(ATTR_PROC_ID, proc)) {
-		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_PROC_ID);
+		EXCEPT("Job ad doesn't contain a %s attribute.", ATTR_PROC_ID);
 	}
 
 

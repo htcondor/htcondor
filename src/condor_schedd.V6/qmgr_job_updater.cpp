@@ -54,11 +54,11 @@ QmgrJobUpdater::QmgrJobUpdater( ClassAd* job, const char* schedd_address,
 				schedd_address );
 	}
 	if( !job_ad->LookupInteger(ATTR_CLUSTER_ID, cluster)) {
-		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_CLUSTER_ID);
+		EXCEPT("Job ad doesn't contain a %s attribute.", ATTR_CLUSTER_ID);
 	}
 
 	if( !job_ad->LookupInteger(ATTR_PROC_ID, proc)) {
-		EXCEPT("Job ad doesn't contain an %s attribute.", ATTR_PROC_ID);
+		EXCEPT("Job ad doesn't contain a %s attribute.", ATTR_PROC_ID);
 	}
 
 	// It is safest to read this attribute now, before the ad is
