@@ -166,6 +166,12 @@ rather than constructing a ClassAd from the dictionary.
 methods to help create string literals. 
 \Ticket{3900}
 
+\item The Python bindings \Code{ClassAd} module has new
+methods \Procedure{parseAds} and \Procedure{parseOldAds} 
+that implement an iterator over ClassAds, in the New ClassAd and 
+Old ClassAd format. 
+\Ticket{3918}
+
 \item The ordering of adding attributes to the machine ClassAd has been
 changed, such that the attributes \Attr{Draining}, \Attr{DrainingRequestId},
 and \Attr{LastDrainStartTime} are now added before the job retirement
@@ -225,6 +231,12 @@ when evaluating an expression tree with an undefined reference.
 The fix allows the user to define the \Code{ClassAd} scope 
 within which an expression tree is evaluated.
 \Ticket{3910}
+
+\item The Python bindings now include a correct conversion of
+\Code{absTime} and \Code{relTime} ClassAd literals to the 
+corresponding Python types.
+\Ticket{3911}
+
 \end{itemize}
 
 
