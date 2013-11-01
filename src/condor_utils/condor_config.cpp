@@ -90,6 +90,8 @@
 
 // define this to keep param who's values match defaults from going into to runtime param table.
 #define DISCARD_CONFIG_MATCHING_DEFAULT
+// define this to parse for #opt:newcomment/#opt:oldcomment to decide commenting rules
+#define PARSE_CONFIG_TO_DECIDE_COMMENT_RULES
 
 extern "C" {
 	
@@ -1623,13 +1625,15 @@ void
 init_config(int config_options)
 {
 	bool want_meta = (config_options & CONFIG_OPT_WANT_META) != 0;
-	bool keep_defs = (config_options & CONFIG_OPT_KEEP_DEFAULTS) != 0;
 	ConfigMacroSet.size = 0;
 	ConfigMacroSet.sorted = 0;
+	ConfigMacroSet.options = (config_options & ~CONFIG_OPT_WANT_META);
+#ifdef PARSE_CONFIG_TO_DECIDE_COMMENT_RULES
+	ConfigMacroSet.options |= CONFIG_OPT_SMART_COM_IN_CONT;
+#endif
 #ifdef DISCARD_CONFIG_MATCHING_DEFAULT
-	ConfigMacroSet.options = keep_defs ? CONFIG_OPT_KEEP_DEFAULTS : 0;
 #else
-	ConfigMacroSet.options = CONFIG_OPT_KEEP_DEFAULTS;
+	ConfigMacroSet.options |= CONFIG_OPT_KEEP_DEFAULTS;
 #endif
 	if (ConfigMacroSet.table) delete [] ConfigMacroSet.table;
 	ConfigMacroSet.table = new MACRO_ITEM[512];

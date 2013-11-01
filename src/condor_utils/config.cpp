@@ -35,7 +35,9 @@
 extern "C" {
 #endif
 
-static char *getline_implementation( FILE *, int );
+#define CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE        1
+#define CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT  2
+static char *getline_implementation(FILE * fp, int buffer_size, int options);
 
 int		ConfigLineNo;
 
@@ -167,6 +169,11 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 	int		retval = 0;
 	bool	is_pipe_cmd = false;
 	bool	firstRead = true;
+	const int gl_opt_old = 0;
+	const int gl_opt_new = CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE | CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT;
+	int gl_opt = (macro_set.options & CONFIG_OPT_OLD_COM_IN_CONT) ? gl_opt_old : gl_opt_new;
+	bool gl_opt_smart = (macro_set.options & CONFIG_OPT_SMART_COM_IN_CONT) ? true : false;
+
 
 	if (subsys && ! *subsys) subsys = NULL;
 
@@ -259,7 +266,7 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 	} // if( check_runtime_security )
 
 	while(true) {
-		name = getline_implementation(conf_fp, 128);
+		name = getline_implementation(conf_fp, 128, gl_opt);
 		// If the file is empty the first time through, warn the user.
 		if (name == NULL) {
 			if (firstRead) {
@@ -271,8 +278,16 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 		firstRead = false;
 		
 		/* Skip over comments */
-		if( *name == '#' || blankline(name) )
+		if( *name == '#' || blankline(name) ) {
+			if (gl_opt_smart) {
+				if (MATCH == strcasecmp(name, "#opt:oldcomment")) {
+					gl_opt = gl_opt_old;
+				} else if (MATCH == strcasecmp(name, "#opt:newcomment")) {
+					gl_opt = gl_opt_new;
+				}
+			}
 			continue;
+		}
 
 		ptr = name;
 
@@ -698,16 +713,18 @@ int get_macro_ref_count (const char *name, MACRO_SET & set)
 char *
 getline( FILE *fp )
 {
-	return getline_implementation(fp,_POSIX_ARG_MAX);
+	return getline_implementation(fp,_POSIX_ARG_MAX, 0);
 }
 
 static char *
-getline_implementation( FILE *fp, int requested_bufsize )
+getline_implementation( FILE *fp, int requested_bufsize, int options )
 {
 	static char	*buf = NULL;
 	static unsigned int buflen = 0;
-	char	*end_ptr;		// Pointer to read into next read
-	char    *line_ptr;
+	char	*end_ptr;	// Pointer to read into next read
+	char    *line_ptr;	// Pointer to beginning of current line from input
+	int      in_comment = FALSE;
+	//int      in_continuation = FALSE;
 
 	if( feof(fp) ) {
 			// We're at the end of the file, clean up our buffers and
@@ -761,15 +778,17 @@ getline_implementation( FILE *fp, int requested_bufsize )
 			continue;
 		}
 
-		end_ptr += strlen(end_ptr);
-		if( end_ptr[-1] != '\n' ) {
+		int cch = strlen(end_ptr);
+		if (end_ptr[cch-1] != '\n') {
 			// if we made it here, fgets() ran out of buffer space.
 			// move our read_ptr pointer forward so we concatenate the
 			// rest on after we realloc our buffer above.
+			end_ptr += cch;
 			continue;	// since we are not finished reading this line
 		}
 
 		ConfigLineNo++;
+		end_ptr += cch;
 
 			// Instead of calling ltrim() below, we do it inline,
 			// taking advantage of end_ptr to avoid overhead.
@@ -784,6 +803,20 @@ getline_implementation( FILE *fp, int requested_bufsize )
 		while( isspace(*ptr) ) {
 			ptr++;
 		}
+		// special interactions between \ and #.
+		// if we have a # AFTER a continuation then we may want to treat everthing between the # and \n
+		// as if it were whitespace. conversely, if the entire line begins with # we may want to ignore
+		// \ at the end of that line.
+		in_comment = (*ptr == '#');
+		if (in_comment) {
+			if (line_ptr == buf) {
+				// we are the the start of the whole line.
+			} else if (options & CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT) {
+				// pretend this is whitespace to the end of the line
+				ptr = end_ptr-1;
+				in_comment = false;
+			}
+		}
 		if( ptr != line_ptr ) {
 			(void)memmove( line_ptr, ptr, end_ptr-ptr+1 );
 			end_ptr = (end_ptr - ptr) + line_ptr;
@@ -792,8 +825,16 @@ getline_implementation( FILE *fp, int requested_bufsize )
 		if( end_ptr > buf && end_ptr[-1] == '\\' ) {
 			/* Ok read the continuation and concatenate it on */
 			*(--end_ptr) = '\0';
-			line_ptr = end_ptr;
-			continue;
+
+			// special interactions between \ and #.
+			// if we have a \ at the end of a line that begins with #
+			// we want to pretend that the \ isn't there and NOT continue
+			// we do this on the theory that a comment that has continuation
+			// is likely to be an error.
+			if ( ! in_comment || ! (options & CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE)) {
+				line_ptr = end_ptr;
+				continue;
+			}
 		}
 		return buf;
 	}

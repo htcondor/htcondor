@@ -179,6 +179,8 @@ typedef struct macro_set {
 extern "C" {
 	#define CONFIG_OPT_WANT_META      0x01   // also keep metdata about config
 	#define CONFIG_OPT_KEEP_DEFAULTS  0x02   // keep items that match defaults
+	#define CONFIG_OPT_OLD_COM_IN_CONT 0x04  // ignore # after \ (i.e. pre 8.1.3 comment/continue behavior)
+	#define CONFIG_OPT_SMART_COM_IN_CONT 0x08 // parse #opt:oldcomment/newcomment to decide comment behavior
 	void config();
 	void config_ex(int wantsQuiet, bool abort_if_invalid, int opt = CONFIG_OPT_WANT_META);
 	void config_host(const char* host, int wantsQuiet, int config_options);
