@@ -41,6 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed bug with \Condor{submit} -interactive when
+cgroups where enabled.  With that combination, the shell would
+get terminated immediately after startup.
+\Ticket{4028}
+
 \item The \condor{starter} now writes to the log file
 \File{StarterLog.slotX} when running work fetch jobs, mirroring the
 behavior when running jobs that come from a \condor{schedd}.
