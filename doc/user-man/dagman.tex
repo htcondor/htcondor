@@ -1048,10 +1048,14 @@ enclosed in double quotes.
 To use a double quote inside \Arg{string},
 escape it with the backslash character (\verb@\@).
 To add the backslash character itself, use two backslashes (\verb@\\@).
-The string \$(JOB) maybe used in \Arg{string} and will expand to
+
+\Bold{Special variable values}
+\begin{itemize}
+\item \$(JOB) may be used in \Arg{string} and will expand to
 \Arg{JobName}. 
 If the \Arg{VARS} line appears in a DAG file used as a splice file, 
 then \$(JOB) will be the fully scoped name of the node.
+\end{itemize}
 
 \Bold{Note that the \Arg{macroname} itself cannot begin with the string
 \Expr{queue},
