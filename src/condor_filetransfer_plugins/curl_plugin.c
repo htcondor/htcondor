@@ -27,7 +27,6 @@ int main(int argc, char **argv) {
 	} else if(argc != 3) {
 		return -1;
 	}
-
 #ifndef WIN32
 	curl_global_init(CURL_GLOBAL_NOTHING);
 #endif

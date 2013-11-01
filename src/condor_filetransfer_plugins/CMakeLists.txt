@@ -26,12 +26,13 @@
 
 dprint( "(TSTCLAIR)-> Deal with Java deps and FT HOOK PLUGINS also what is up with this? it's not in packages...")
 
+#  Curl isn't linking properly on windows, turn it as a short term hackaround
 if (CURL_FOUND)
-	if (WINDOWS)
-		condor_exe( curl_plugin "curl_plugin.c" ${C_LIBEXEC} "${CURL_FOUND};wldap32.lib;${CONDOR_TOOL_LIBS}" OFF )
-	else ()
-		condor_exe( curl_plugin "curl_plugin.c" ${C_LIBEXEC} "${CURL_FOUND}" OFF )
-	endif ()
+  if (WINDOWS)
+    condor_exe( curl_plugin "curl_plugin.c" ${C_LIBEXEC} "${CURL_FOUND};wldap32.lib;${CONDOR_TOOL_LIBS}" OFF )
+  else ()
+    condor_exe( curl_plugin "curl_plugin.c" ${C_LIBEXEC} "${CURL_FOUND}" OFF )
+  endif ()
 endif()
 
 condor_exe( data_plugin "data_plugin.c" ${C_LIBEXEC} "" OFF)
