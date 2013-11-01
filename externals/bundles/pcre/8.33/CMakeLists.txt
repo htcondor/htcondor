@@ -29,7 +29,7 @@ if ( NOT PROPER AND NOT LINUX )
       if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
           set (PCRE_DOWNLOAD ${PCRE_VER}-VC11-Win64.tar.gz)
         else ()
-          set (PCRE_DOWNLOAD ${PCRE_VER}-VC11.tar.gz)
+          set (PCRE_DOWNLOAD ${PCRE_VER}-VC11-Win32.tar.gz)
         endif ()
     endif()
     

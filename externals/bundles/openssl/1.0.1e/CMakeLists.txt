@@ -38,11 +38,11 @@ if (WITH_OPENSSL)
         if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
           set (OPENSSL_DOWNLOAD ${OPENSSL_VER}-VC11-Win64.tar.gz)
         else ()
-          set (OPENSSL_DOWNLOAD ${OPENSSL_VER}-VC11.tar.gz)
+          set (OPENSSL_DOWNLOAD ${OPENSSL_VER}-VC11-Win32.tar.gz)
         endif ()
       endif ()
       
-      set (OPENSSL_CONFIGURE echo "No configuration needed")
+      set (OPENSSL_CONFIGURE echo "No configuration necessary")
       set (OPENSSL_MAKE echo "No make necessary")
       
 		else(WINDOWS)
