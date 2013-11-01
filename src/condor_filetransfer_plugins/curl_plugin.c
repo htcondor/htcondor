@@ -1,3 +1,8 @@
+#ifdef WIN32
+#include <windows.h>
+#define CURL_STATICLIB // this has to match the way the curl library was built.
+#endif
+
 #include <curl/curl.h>
 #include <string.h>
 
@@ -19,8 +24,9 @@ int main(int argc, char **argv) {
 	if(argc != 3) {
 		return -1;
 	}
-
+#ifndef WIN32
 	curl_global_init(CURL_GLOBAL_NOTHING);
+#endif
 
 	if((handle = curl_easy_init())) {
 		if((file = fopen(argv[2], "w"))) {

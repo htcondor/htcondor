@@ -56,6 +56,11 @@ jobs.
 \item Fixed a Python binding crash due to a segmentation fault, when evaluating an expression tree with an undefined reference.
 \Ticket{3910}
 
+\item Fixed curl file transfer plugin on Windows. Previously curl was
+not properly initializing Winsocks and thus all network operations
+would fail.
+\Ticket{3979}
+
 \end{itemize}
 
 
