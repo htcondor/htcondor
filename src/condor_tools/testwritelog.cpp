@@ -63,9 +63,14 @@ char		*DaemonSockDir;     // dir for daemon named sockets
 char		*PreenAdmin;		// who to send mail to in case of trouble
 char		*MyName;			// name this program was invoked by
 char		*LogName;			// name of requested log file
+char        *FillData;			// use this data to fill log
+int			DataCount;			// write data how many times
+int			SleepTime;			// sleep between writes
+time_t 		sleeptime;			// Cast to this for sleep
 char        *ValidSpoolFiles;   // well known files in the spool dir
 char        *InvalidLogFiles;   // files we know we want to delete from log
 BOOLEAN		LogFlag;			// true if we should set the log file name
+BOOLEAN		SleepFlag;			// true if we should sleep between  writes
 BOOLEAN		VerboseFlag;		// true if we should produce verbose output
 
 // prototypes of local interest
@@ -78,7 +83,7 @@ void init_params();
 void
 usage()
 {
-	fprintf( stderr, "Usage: %s [-log logname] [-verbose] [-debug]\n", MyName );
+	fprintf( stderr, "Usage: %s [-count count] [-sleep time] [-log logname] [-verbose] [-debug] [ textdata ]\n", MyName );
 	exit( 1 );
 }
 
@@ -101,6 +106,7 @@ main( int argc, char *argv[] )
 	get_mySubSystem()->setName( "WRITELOG");
 	config();
 	dprintf_config(get_mySubSystem()->getName());
+	DataCount = 0;
 
 	VerboseFlag = FALSE;
 
@@ -126,12 +132,28 @@ main( int argc, char *argv[] )
 				fprintf( stderr, "Logname requested: %s\n", LogName );
 				break;
 
+			  case 'c':
+				LogFlag = TRUE;
+				argv++;
+				DataCount = atoi(*argv);
+				fprintf( stderr, "Count requested: %d\n", DataCount );
+				break;
+
+			  case 's':
+				SleepFlag = TRUE;
+				argv++;
+				SleepTime = atoi(*argv);
+				sleeptime = (time_t)SleepTime;
+				fprintf( stderr, "sleep requested: %d\n", SleepTime );
+				break;
+
 			  default:
 				usage();
 
 			}
 		} else {
-			usage();
+			FillData = *argv;
+			fprintf( stderr, "FillData: %s\n", FillData);
 		}
 	}
 	
@@ -158,6 +180,13 @@ main( int argc, char *argv[] )
 	dprintf( D_ALWAYS, "STARTING: condor_testwritelog\n");
 	dprintf( D_ALWAYS, "********************************\n");
 	
+	while(DataCount > 0) {
+		if(SleepFlag) {
+			sleep(sleeptime);
+		}
+    	dprintf( D_ALWAYS, "%d,%s\n", DataCount, FillData);
+		DataCount--;
+	}
     //dprintf( D_ALWAYS, "WRITELOG_LOG = %s\n", param("WRITELOG_LOG"));
 	//dprintf( D_ALWAYS, "LOG = %s\n", param("LOG"));
 
