@@ -76,13 +76,15 @@ int handle_fetch_log_history_purge(ReliSock *s);
 
 // Globals
 int		Foreground = 0;		// run in background by default
-static const char*	myName;			// set to basename(argv[0])
 char *_condor_myServiceName;		// name of service on Win32 (argv[0] from SCM)
-static char*	myFullName;		// set to the full path to ourselves
 DaemonCore*	daemonCore;
-char*	logDir = NULL;
-char*	pidFile = NULL;
-char*	addrFile = NULL;
+
+// Statics (e.g. global only to this file)
+static	char*	myFullName;		// set to the full path to ourselves
+static const char*	myName;			// set to basename(argv[0])
+static	char*	logDir = NULL;
+static	char*	pidFile = NULL;
+static	char*	addrFile[2] = { NULL, NULL };
 static	char*	logAppend = NULL;
 
 static int Termlog = 0;	//Replacing the Termlog in dprintf for daemons that use it
@@ -206,19 +208,21 @@ void clean_files()
 		}
 	}
 
-	if( addrFile ) {
-		if( unlink(addrFile) < 0 ) {
-			dprintf( D_ALWAYS, 
-					 "DaemonCore: ERROR: Can't delete address file %s\n",
-					 addrFile );
-		} else {
-			if( IsDebugVerbose( D_DAEMONCORE ) ) {
-				dprintf( D_DAEMONCORE, "Removed address file %s\n", 
-						 addrFile );
+	for (int i=0; i<2; i++) {
+		if( addrFile[i] ) {
+			if( unlink(addrFile[i]) < 0 ) {
+				dprintf( D_ALWAYS,
+						 "DaemonCore: ERROR: Can't delete address file %s\n",
+						 addrFile[i] );
+			} else {
+				if( IsDebugVerbose( D_DAEMONCORE ) ) {
+					dprintf( D_DAEMONCORE, "Removed address file %s\n",
+							 addrFile[i] );
+				}
 			}
+				// Since we param()'ed for this, we need to free it now.
+			free( addrFile[i] );
 		}
-			// Since we param()'ed for this, we need to free it now.
-		free( addrFile );
 	}
 	
 	if(daemonCore) {
@@ -378,40 +382,51 @@ drop_addr_file()
 {
 	FILE	*ADDR_FILE;
 	char	addr_file[100];
+	const char* addr[2];
 
+	// Fill in addrFile[0] and addr[0] with info about regular command port
 	sprintf( addr_file, "%s_ADDRESS_FILE", get_mySubSystem()->getName() );
-
-	if( addrFile ) {
-		free( addrFile );
+	if( addrFile[0] ) {
+		free( addrFile[0] );
 	}
-	addrFile = param( addr_file );
+	addrFile[0] = param( addr_file );
+		// Always prefer the local, private address if possible.
+	addr[0] = daemonCore->privateNetworkIpAddr();
+	if (!addr[0]) {
+			// And if not, fall back to the public.
+		addr[0] = daemonCore->publicNetworkIpAddr();
+	}
 
-	if( addrFile ) {
-		MyString newAddrFile;
-		newAddrFile.formatstr("%s.new",addrFile);
-		if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.Value(), "w")) ) {
-			// Always prefer the local, private address if possible.
-			const char* addr = daemonCore->privateNetworkIpAddr();
-			if (!addr) {
-				// And if not, fall back to the public.
-				addr = daemonCore->publicNetworkIpAddr();
-			}
-			fprintf( ADDR_FILE, "%s\n", addr );
-			fprintf( ADDR_FILE, "%s\n", CondorVersion() );
-			fprintf( ADDR_FILE, "%s\n", CondorPlatform() );
-			fclose( ADDR_FILE );
-			if( rotate_file(newAddrFile.Value(),addrFile)!=0 ) {
+	// Fill in addrFile[1] and addr[1] with info about superuser command port
+	sprintf( addr_file, "%s_SUPER_ADDRESS_FILE", get_mySubSystem()->getName() );
+	if( addrFile[1] ) {
+		free( addrFile[1] );
+	}
+	addrFile[1] = param( addr_file );
+	addr[1] = daemonCore->superUserNetworkIpAddr();
+
+	for (int i=0; i<2; i++) {
+		if( addrFile[i] ) {
+			MyString newAddrFile;
+			newAddrFile.formatstr("%s.new",addrFile[i]);
+			if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.Value(), "w")) ) {
+				fprintf( ADDR_FILE, "%s\n", addr[i] );
+				fprintf( ADDR_FILE, "%s\n", CondorVersion() );
+				fprintf( ADDR_FILE, "%s\n", CondorPlatform() );
+				fclose( ADDR_FILE );
+				if( rotate_file(newAddrFile.Value(),addrFile[i])!=0 ) {
+					dprintf( D_ALWAYS,
+							 "DaemonCore: ERROR: failed to rotate %s to %s\n",
+							 newAddrFile.Value(),
+							 addrFile[i]);
+				}
+			} else {
 				dprintf( D_ALWAYS,
-						 "DaemonCore: ERROR: failed to rotate %s to %s\n",
-						 newAddrFile.Value(),
-						 addrFile);
+						 "DaemonCore: ERROR: Can't open address file %s\n",
+						 newAddrFile.Value() );
 			}
-		} else {
-			dprintf( D_ALWAYS,
-					 "DaemonCore: ERROR: Can't open address file %s\n",
-					 newAddrFile.Value() );
 		}
-	}
+	}	// end of for loop
 }
 
 void
