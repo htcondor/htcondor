@@ -46,6 +46,7 @@ typedef const struct key_value_pair MACRO_DEF_ITEM;
 #define PARAM_USE_COUNTING
 #define CALL_VIA_MACRO_SET
 #define MACRO_SET_KNOWS_DEFAULT
+#define COLON_DEFAULT_FOR_MACRO_EXPAND // enable $(FOO:default-value) and $(FOO:$(OTHER)) for config
 
 // structures for param/submit macro storage
 // These structures are carefully tuned to allow for minimal private memory
