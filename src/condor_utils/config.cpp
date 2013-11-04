@@ -38,6 +38,7 @@ extern "C" {
 #define CONFIG_GETLINE_OPT_COMMENT_DOESNT_CONTINUE        1
 #define CONFIG_GETLINE_OPT_CONTINUE_MAY_BE_COMMENTED_OUT  2
 static char *getline_implementation(FILE * fp, int buffer_size, int options);
+extern "C++" void param_default_set_use(const char * name, int use, MACRO_SET & set);
 
 int		ConfigLineNo;
 
@@ -888,7 +889,7 @@ expand_macro(const char *value,
 	char *left, *name, *right;
 	const char *tvalue;
 	char *rval;
-	const char *selfless = NULL;
+	const char *selfless = NULL; // if self=="master.foo" and subsys=="master", then this contains "foo"
 
 	// to avoid infinite recursive expansion, we have to look for both "subsys.self" and "self"
 	if (self && subsys) {
@@ -1005,6 +1006,10 @@ expand_macro(const char *value,
 		if (find_config_macro(tmp, &left, &name, &right, self) ||
 			(selfless && find_config_macro(tmp, &left, &name, &right, selfless)) ) {
 			all_done = false;
+		   #ifdef COLON_DEFAULT_FOR_MACRO_EXPAND
+			char * pcolon = strchr(name, ':');
+			if (pcolon) { *pcolon++ = 0; }
+		   #endif
 			tvalue = lookup_macro(name, subsys, macro_set, use);
 			if (subsys && ! tvalue)
 				tvalue = lookup_macro(name, NULL, macro_set, use);
@@ -1014,9 +1019,13 @@ expand_macro(const char *value,
 				// param_default_string().  See gittrack #1302
 			if( !self && use_default_param_table && tvalue == NULL ) {
 				tvalue = param_default_string(name, subsys);
-				PRAGMA_REMIND("TJ: need to increment default param ref count here.")
-				// if (use) { param_default_set_use(name, use, macro_set); }
+				if (use) { param_default_set_use(name, use, macro_set); }
 			}
+		   #ifdef COLON_DEFALT_FOR_MACRO_EXPAND
+			if (pcolon && ( ! tvalue || ! tvalue[0])) {
+				tvalue = pcolon;
+			}
+		   #endif
 			if( tvalue == NULL ) {
 				tvalue = "";
 			}
@@ -1221,6 +1230,9 @@ find_config_macro( register char *value, register char **leftp,
 {
 	char *left, *left_end, *name, *right;
 	char *tvalue;
+   #ifdef COLON_DEFAULT_FOR_MACRO_EXPAND
+	bool after_colon = false;
+   #endif
 
 	tvalue = value + search_pos;
 	left = value;
@@ -1293,6 +1305,25 @@ tryagain:
 				name = ++value;
 				while( *value && *value != ')' ) {
 					char c = *value++;
+				   #ifdef COLON_DEFAULT_FOR_MACRO_EXPAND
+					if ( ! after_colon && c == ':') {
+						after_colon = true;
+					} else if (after_colon) {
+						if (c == '(') {
+							// skip ahead past the close )
+							char * ptr = strchr(value, ')');
+							if (ptr) value = ptr+1;
+							continue;
+						} else if (strchr("$ ,\\", c)) {
+							// allow some characters after the : that we don't allow in param names
+							continue;
+						}
+					}
+					if( !ISDDCHAR(c) ) {
+						tvalue = name;
+						goto tryagain;
+					}
+				   #else
 					if( getdollardollar ) {
 						if( !ISDDCHAR(c) ) {
 							tvalue = name;
@@ -1304,6 +1335,7 @@ tryagain:
 							goto tryagain;
 						}
 					}
+				   #endif
 				}
 
 				if( *value == ')' ) {
