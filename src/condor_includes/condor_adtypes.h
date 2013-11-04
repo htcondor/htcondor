@@ -23,6 +23,7 @@
 #define QUILL_ADTYPE			"Database"
 #define DATABASE_ADTYPE			"Database"
 #define DBMSD_ADTYPE			"DbmsDaemon"
+#define DEFRAG_ADTYPE			"Defrag"
 #define TT_ADTYPE			"TTProcess"
 #define STARTD_ADTYPE			"Machine"
 #define STARTD_PVT_ADTYPE		"MachinePrivate"
@@ -79,6 +80,7 @@ enum AdTypes
 	GRID_AD,
 	XFER_SERVICE_AD,
 	LEASE_MANAGER_AD,
+	DEFRAG_AD,
 	// This should *ALWAYS* be at the end of this list
 	NUM_AD_TYPES,
 };
