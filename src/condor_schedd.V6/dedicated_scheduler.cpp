@@ -1430,7 +1430,7 @@ DedicatedScheduler::handleDedicatedJobs( void )
 
 	int delay_factor = param_integer( "DEDICATED_SCHEDULER_DELAY_FACTOR", 5 );
 	if ((time(0) - lastRun) < (delay_factor * startdQueryTime)) {
-		dprintf(D_ALWAYS, "Delaying scheduling of parallel jobs because startd query time is long (%d) seconds\n", startdQueryTime);
+		dprintf(D_ALWAYS, "Delaying scheduling of parallel jobs because startd query time is long (%ld) seconds\n", startdQueryTime);
 		return FALSE;
 	}
 
