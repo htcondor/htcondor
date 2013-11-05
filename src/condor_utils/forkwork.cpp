@@ -195,6 +195,7 @@ ForkWork::NewJob( void )
 
 	  // Ok, let's see what happenned..
 	  if ( FORK_PARENT == status ) {
+		  dprintf( D_ALWAYS, "Number of Active Workers %d\n", workerList.Number());
 		  workerList.Append( worker );
 	  } else if ( FORK_FAILED == status ) {
 		  delete worker;
@@ -204,7 +205,6 @@ ForkWork::NewJob( void )
 	  }
 	}
 	
-	dprintf( D_ALWAYS, "Number of Active Workers %d\n", workerList.Number());
 	
 	return status;
 }
