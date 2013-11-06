@@ -57,7 +57,7 @@ bool GceInstanceInsert::ioCheck(char **argv, int argc)
 		verify_string_name(argv[10]);
 }
 
-// Expecting:GCE_INSTACE_DELETE <req_id> <serviceurl> <authfile> <project> <zone> <instance_id>
+// Expecting:GCE_INSTACE_DELETE <req_id> <serviceurl> <authfile> <project> <zone> <instance_name>
 bool GceInstanceDelete::ioCheck(char **argv, int argc)
 {
 	return verify_number_args(argc, 7) &&

@@ -103,6 +103,79 @@ bool readShortFile( const std::string & fileName, std::string & contents ) {
 	return true;
 }
 
+// Utility function for parsing the response returned by the server.
+void ParseLine( const char *line, std::string &key, std::string &value,
+				int &nesting)
+{
+	bool in_key = false;
+	bool in_value = false;
+	key.clear();
+	value.clear();
+
+	for ( const char *ptr = line; *ptr; ptr++ ) {
+		if ( in_key ) {
+			if ( *ptr == '"' ) {
+				in_key = false;
+			} else {
+				key += *ptr;
+			}
+		} else if ( in_value ) {
+			if ( *ptr == '"' ) {
+				in_value = false;
+			} else {
+				value += *ptr;
+			}
+		} else if ( *ptr == '"' ) {
+			if ( key.empty() ) {
+				in_key = true;
+			} else if ( value.empty() ) {
+				in_value = true;
+			}
+		} else if ( *ptr == '{' || *ptr == '[' ) {
+			nesting++;
+		} else if ( *ptr == '}' || *ptr == ']' ) {
+			nesting--;
+		}
+	}
+}
+
+void ExtractErrorMessage( const std::string &response, std::string &err_msg )
+{
+	StringList lines( response.c_str(), "\n" );
+	std::string key;
+	std::string value;
+	int nesting = 0;
+	const char *line;
+
+	lines.rewind();
+	while ( (line = lines.next()) ) {
+		ParseLine( line, key, value, nesting );
+		if ( nesting == 2 && key == "message" ) {
+			err_msg = value;
+			return;
+		}
+	}
+}
+
+// Utility function meant for GceInstanceList
+void AddInstanceToResult( std::vector<std::string> &result, std::string &id,
+						  std::string &name, std::string &status,
+						  std::string &status_msg )
+{
+	result.push_back( id );
+	result.push_back( name );
+	result.push_back( status );
+	if ( status_msg.empty() ) {
+		result.push_back( std::string( "NULL" ) );
+	} else {
+		result.push_back( status_msg );
+	}
+	id.clear();
+	name.clear();
+	status.clear();
+	status_msg.clear();
+}
+
 //
 // "This function gets called by libcurl as soon as there is data received
 //  that needs to be saved. The size of the data pointed to by ptr is size
@@ -257,6 +330,14 @@ bool GceRequest::SendRequest()
 		goto error_return;
 	}
 
+	curl_headers = curl_slist_append( curl_headers, "Content-Type: application/json" );
+	if ( curl_headers == NULL ) {
+		this->errorCode = "E_CURL_LIB";
+		this->errorMessage = "curl_slist_append() failed.";
+		dprintf( D_ALWAYS, "curl_slist_append() failed, failing.\n" );
+		goto error_return;
+	}
+
 	rv = curl_easy_setopt( curl, CURLOPT_HTTPHEADER, curl_headers );
 	if( rv != CURLE_OK ) {
 		this->errorCode = "E_CURL_LIB";
@@ -396,9 +477,9 @@ bool GceRequest::SendRequest()
 	if( responseCode != 200 ) {
 		// this->errorCode = "E_HTTP_RESPONSE_NOT_200";
 		formatstr( this->errorCode, "E_HTTP_RESPONSE_NOT_200 (%lu)", responseCode );
-		this->errorMessage = resultString;
+		ExtractErrorMessage( resultString, this->errorMessage );
 		if( this->errorMessage.empty() ) {
-			formatstr( this->errorMessage, "HTTP response was %lu, not 200, and no body was returned.", responseCode );
+			formatstr( this->errorMessage, "HTTP response was %lu, not 200, and no error message was returned.", responseCode );
 		}
 		dprintf( D_ALWAYS, "Query did not return 200 (%lu), failing.\n",
 				 responseCode );
@@ -499,6 +580,24 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, std::string &resul
 	insert_request.requestMethod = "POST";
 
 	// TODO Construct insert_request.requestBody;
+	insert_request.requestBody = "{\n";
+	insert_request.requestBody += "\"machineType\": \"";
+	insert_request.requestBody += argv[7];
+	insert_request.requestBody += "\",\n";
+	insert_request.requestBody += "\"name\": \"";
+	insert_request.requestBody += argv[6];
+	insert_request.requestBody += "\",\n";
+	insert_request.requestBody += "\"image\": \"";
+	insert_request.requestBody += argv[8];
+	insert_request.requestBody += "\",\n";
+	insert_request.requestBody += "\"networkInterfaces\": [\n{\n";
+	insert_request.requestBody += "\"network\": \"https://www.googleapis.com/compute/v1beta16/projects/jfrey-condor/global/networks/default\",\n";
+	insert_request.requestBody += "\"accessConfigs\": [\n{\n";
+	insert_request.requestBody += "\"name\": \"External NAT\",\n";
+	insert_request.requestBody += "\"type\": \"ONE_TO_ONE_NAT\"\n";
+	insert_request.requestBody += "}\n]\n";
+	insert_request.requestBody += "}\n]\n";
+	insert_request.requestBody += "}\n";
 
 	// Send the request.
 	if( ! insert_request.SendRequest() ) {
@@ -508,7 +607,11 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, std::string &resul
 							insert_request.errorCode.c_str() );
 	} else {
 		// TODO Read insert_reqest.resultString for instance id
-		result_string = create_success_result( requestID, NULL );
+		//   Instance id isn't provided in response!
+		StringList reply;
+		reply.append( "dummy" );
+
+		result_string = create_success_result( requestID, &reply );
 	}
 
 	return true;
@@ -520,7 +623,7 @@ GceInstanceDelete::GceInstanceDelete() { }
 
 GceInstanceDelete::~GceInstanceDelete() { }
 
-// Expecting:GCE_INSTACE_DELETE <req_id> <serviceurl> <authfile> <project> <zone> <instance_id>
+// Expecting:GCE_INSTACE_DELETE <req_id> <serviceurl> <authfile> <project> <zone> <instance_name>
 bool GceInstanceDelete::workerFunction(char **argv, int argc, std::string &result_string) {
 	assert( strcasecmp( argv[0], "GCE_INSTANCE_DELETE" ) == 0 );
 
@@ -597,8 +700,64 @@ bool GceInstanceList::workerFunction(char **argv, int argc, std::string &result_
 							list_request.errorMessage.c_str(),
 							list_request.errorCode.c_str() );
 	} else {
-		// TODO Read list_request.resultString to build results line
-		result_string = create_success_result( requestID, NULL );
+		StringList response( list_request.resultString.c_str(), "\n" );
+		std::string next_id;
+		std::string next_name;
+		std::string next_status;
+		std::string next_status_msg;
+		std::vector<std::string> results;
+		std::string key;
+		std::string value;
+		int nesting = 0;
+
+		const char *line;
+		response.rewind();
+		while( (line = response.next()) ) {
+			ParseLine( line, key, value, nesting );
+			if ( nesting != 3 ) {
+				continue;
+			}
+			if ( key == "id" ) {
+				if ( !next_id.empty() ) {
+					AddInstanceToResult( results, next_id, next_name,
+										 next_status, next_status_msg );
+				}
+				next_id = value;
+			} else if ( key == "name" ) {
+				if ( !next_name.empty() ) {
+					AddInstanceToResult( results, next_id, next_name,
+										 next_status, next_status_msg );
+				}
+				next_name = value;
+			} else if ( key == "status" ) {
+				if ( !next_status.empty() ) {
+					AddInstanceToResult( results, next_id, next_name,
+										 next_status, next_status_msg );
+				}
+				next_status = value;
+			} else if ( key == "statusMessage" ) {
+				if ( !next_status_msg.empty() ) {
+					AddInstanceToResult( results, next_id, next_name,
+										 next_status, next_status_msg );
+				}
+				next_status_msg = value;
+			}
+		}
+		if ( !next_name.empty() ) {
+			AddInstanceToResult( results, next_id, next_name,
+								 next_status, next_status_msg );
+		}
+
+		char buff[16];
+		sprintf( buff, "%d", (int)(results.size() / 4) );
+
+		response.clearAll();
+		response.append( buff );
+		for ( std::vector<std::string>::iterator idx = results.begin(); idx != results.end(); idx++ ) {
+			response.append( idx->c_str() );
+		}
+
+		result_string = create_success_result( requestID, &response );
 	}
 
 	return true;
