@@ -29,8 +29,19 @@ use CondorTest;
 use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
+#use Time::ParseDate;
+use Time::Local;
+use Cwd;
 
 
+my $killconfig = $ARGV[0];
+
+if(defined $killconfig) {
+	print "Test running in found configuration.........\n";
+	system("condor_config_val -config");
+}
+
+my $top = getcwd();
 my $ClusterId = 0;
 my $expect_return = 0;
 
@@ -38,78 +49,384 @@ my $firstappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	WANT_SUSPEND = FALSE
 	NEGOTIATION_INTERVAL = 10
-	MAX_WRITELOG_LOG = 50000000
+	MAX_WRITELOG_LOG = 50 Kb
 	WRITELOG_LOG = $(log)/WriteLogLog
 	WRITELOG_DEBUG = D_ALWAYS
 ';
 
-$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"jobdropnegcore");
+if(!(defined $killconfig)) {
+	$configfile1 = CondorTest::CreateLocalConfig($firstappend_condor_config,"testlogrotation1");
 
-CondorTest::StartCondorWithParams(
-	condor_name => "dropnegcore",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
-
-my $on_abort = sub {
-	CondorTest::debug("Abort from removing trap signal job.\n",1);
-};
+	CondorTest::StartCondorWithParams(
+		condor_name => "testlogrotation1",
+		fresh_local => "TRUE",
+		condorlocalsrc => "$configfile1",
+	);
+	print "First test basic job\n";
+	$result = SimpleJob::RunCheck(); # jobid 1
+} else {
+	print "************ Size based test 50 kb, default log count: WriteLogLog\n";
+}
 
 my $return = "";
 my $executecount = 0;
 my $result = 1;
-my $test_name = "job_drop_neg_core";
-
-my $on_match = sub {
-	$match = shift;
-	print "Matched: $match\n";
-};
-
-my $on_execute = sub {
-	print "********************************** OnExecute *****************************\n";
-	print "waiting for size signal catching output to grow\n";
-};
-
-my $on_hold = sub {
-	print "Expected to be on hold\n Calling CheckForSigTermIgnore \n";
-};
-
+my $test_name = "job_test_log_rotaion";
 
 #Do a job before setting tesing exit codes
-print "First test basic job\n";
-$result = SimpleJob::RunCheck(); # jobid 1
-
-#system("rm -f $catchlog");
-
-#$expect_return = 0;
-#$result = SimpleJob::RunCheck(
-	#test_name => "$test_name",
-	#on_abort => $on_abort,
-	#on_hold => $on_hold,
-	#on_execute => $on_execute,
-	#timeout => 120,
-	#should_transfer_files => "YES",
-	#when_to_transfer_output => "ON_EXIT",
-	#queue_sz => 1,
-	#duration => 1,
-#);
-#print "******************** Test for KILL = TRUE\n";
-#if($result == 1) {
-	#print "ok\n\n\n";
-#} else {
-	#print "bad\n\n\n";
-#}
 
 my @adarray = ();
+my $LogLocation = "";
 
-runCondorTool("condor_testwritelog",\@adarray,2);
+runCondorTool("condor_config_val log", \@adarray, 2, {emit_output=>0});
 
-#CondorLog::RunCheckMultiple(
-	#daemon => "Negotiator",
-	#match_timeout => 80,
-	#match_regexp => "PID",
-	#match_callback => $on_match,
-#);
+$LogLocation = $adarray[0];
+chomp($LogLocation);
+
+chdir("$LogLocation");
+
+@adarray = ();
+# 75 long
+runCondorTool("condor_testwritelog -c 2000 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
+my $logsstring = GetLogsString($LogLocation,"WriteLog");
+# pass logs oldest to newest
+my $result = ValidateLogs($logsstring,51200, 0, 2000, $LogLocation);
+RegisterResult($result, "test_name", $test_name);
+chdir("$top");
+
+print "Test default log rotation with 50 Kb size constraint: ";
+if($result == 1) {
+	print "OK\n";
+} else {
+	print "BAD\n";
+}
+
+my $secondappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	WANT_SUSPEND = FALSE
+	NEGOTIATION_INTERVAL = 10
+	MAX_WRITELOG_LOG = 2 Mb
+	WRITELOG_LOG = $(log)/WriteLogLog
+	WRITELOG_DEBUG = D_ALWAYS
+	MAX_NUM_WRITELOG_LOG = 4
+';
+
+if(!(defined $killconfig)) {
+	$configfile2 = CondorTest::CreateLocalConfig($secondappend_condor_config,"testlogrotation2");
+
+	CondorTest::StartCondorWithParams(
+		condor_name => "testlogrotation2",
+		fresh_local => "TRUE",
+		condorlocalsrc => "$configfile2",
+	);
+
+	print "First test basic job\n";
+	$result = SimpleJob::RunCheck(); # jobid 1
+} else {
+	print "****************** Sized based testing with more then two files\n";
+}
+
+runCondorTool("condor_config_val log", \@adarray, 2, {emit_output=>0});
+
+$LogLocation = $adarray[0];
+chomp($LogLocation);
+chdir("$LogLocation");
+
+@adarray = ();
+runCondorTool("condor_testwritelog -c 112000 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
+$logsstring = GetLogsString($LogLocation,"WriteLog");
+# pass logs oldest to newest
+$result = ValidateLogs($logsstring, 51200, 0, 8000, $LogLocation);
+RegisterResult($result, "test_name", $test_name);
+chdir("$top");
+
+print "Test multifile log rotation with 50 Kb size constraint: ";
+if($result == 1) {
+	print "OK\n";
+} else {
+	print "Known Broken\n";
+}
+
+my $thirdappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	WANT_SUSPEND = FALSE
+	NEGOTIATION_INTERVAL = 10
+	MAX_WRITELOG_LOG = 60 Sec
+	WRITELOG_LOG = $(log)/WriteLogLog
+	WRITELOG_DEBUG = D_ALWAYS
+';
+
+if(!(defined $killconfig)) {
+	$configfile3 = CondorTest::CreateLocalConfig($thirdappend_condor_config,"testlogrotation3");
+
+	CondorTest::StartCondorWithParams(
+		condor_name => "testlogrotation3",
+		fresh_local => "TRUE",
+		condorlocalsrc => "$configfile3",
+	);
+
+	print "First test basic job\n";
+	$result = SimpleJob::RunCheck(); # jobid 1
+} else {
+	print "************ testing for 2 time based log files\n";
+}
+
+runCondorTool("condor_config_val log", \@adarray, 2, {emit_output=>0});
+
+$LogLocation = $adarray[0];
+chomp($LogLocation);
+chdir("$LogLocation");
+
+@adarray = ();
+runCondorTool("condor_testwritelog -s 1 -c 90  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
+$logsstring = GetLogsString($LogLocation,"WriteLog");
+# pass logs oldest to newest
+$result = ValidateLogs($logsstring, 0, 60, 8000, $LogLocation);
+RegisterResult($result, "test_name", $test_name);
+chdir("$top");
+
+print "Test time based log rotation with 60 Sec time constraint: ";
+if($result == 1) {
+	print "OK\n";
+} else {
+	print "BAD\n";
+}
+
+my $forthappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	WANT_SUSPEND = FALSE
+	NEGOTIATION_INTERVAL = 10
+	MAX_WRITELOG_LOG = 60 Sec
+	WRITELOG_LOG = $(log)/WriteLogLog
+	WRITELOG_DEBUG = D_ALWAYS
+	MAX_NUM_WRITELOG_LOG = 2
+';
+
+if(!(defined $killconfig)) {
+	$configfile4 = CondorTest::CreateLocalConfig($forthappend_condor_config,"testlogrotation4");
+
+	CondorTest::StartCondorWithParams(
+		condor_name => "testlogrotation4",
+		fresh_local => "TRUE",
+		condorlocalsrc => "$configfile4",
+	);
+
+	print "First test basic job\n";
+	$result = SimpleJob::RunCheck(); # jobid 1
+} else {
+	print "************ Testing for more then two time based log files\n";
+}
+
+runCondorTool("condor_config_val log", \@adarray, 2, {emit_output=>0});
+
+$LogLocation = $adarray[0];
+chomp($LogLocation);
+chdir("$LogLocation");
+
+@adarray = ();
+runCondorTool("condor_testwritelog -s 1 -c 200  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
+# pass logs oldest to newest
+my $logsstring = GetLogsString($LogLocation,"WriteLog");
+$result = ValidateLogs($logsstring, 0, 60, 200, $LogLocation);
+RegisterResult($result, "test_name", $test_name);
+chdir("$top");
+
+print "Test time based log rotation with 60 Sec time constraint and multiple files: ";
+if($result == 1) {
+	print "OK\n";
+} else {
+	print "BAD\n";
+}
 
 CondorTest::EndTest();
+
+sub GetLogsString
+{
+	my $loglocation = shift;
+	my $pattern = shift;
+	my @patterns = ();
+	my @sortedpatterns = ();
+	my @reversepatterns =  ();
+	my $reversedstring = "";
+
+	print "Check pattern: $pattern from here: ";
+	system("pwd;ls");
+	@patterns = `ls $pattern*`;
+	@sortedpatterns = sort @patterns;
+	@reversepatterns = reverse @sortedpatterns;
+
+	foreach my $logfile (@reversepatterns) {
+		chomp($logfile);
+		if($reversedstring eq "") {
+			$reversedstring = $logfile;
+		} else {
+			$reversedstring = $reversedstring . ",$logfile";
+		}
+	}
+
+	print "New log ordering: $reversedstring\n";
+	return($reversedstring);
+}
+
+sub ValidateLogs
+{
+	my $logs = shift;
+	my $size = shift;
+	my $times = shift;
+	my $iters = shift;
+	my $loglocation = shift;
+	my $result = 1; # defaults to good.
+	my $sizechk = 0;
+	my $timecheck = 0;
+	my $logcount = 0;
+
+	print "ValidateLogs: Log Location: $loglocation\n";
+
+	chdir("$loglocation");
+	print "here now:\n";
+	system("pwd;ls WriteLog*");
+	my @logs = split /,/, $logs;
+	$logcount = @logs;
+	print "Checking $logcount logs:$logs\n";
+
+	# first check existence of files
+	foreach my $logfile (@logs) {
+		if(!(-f $logfile)) {
+			print "Expected log file does not exist: $logfile\n";
+			chdir($top);
+			return(0);
+		}
+	}
+	# check approximate size or age of file
+	if($size != 0) {
+		$sizechk = 1;
+		$result = LogSizeCheck($logs, $size, $logcount);
+	}
+	if($times != 0) {
+		$timecheck = 1;
+		$result = LogTimeCheck($logs, $times, $logcount);
+	}
+	if($sizechk or $timecheck) {
+	} else {
+		print "Either a size or time test needs to be requested\n";
+		chdir($top);
+		return($result);
+	}
+	if($result != 1) {
+		chdir($top);
+		return($result);
+	}
+	# next check even flow of numbers as we travel through ordered list of log files
+	$result = LogSequenceCheck($logs);
+	#$result = 1;
+	chdir("$top");
+	return($result);
+}
+
+sub LogSequenceCheck
+{
+	my $logs = shift;
+	my @logs = split /,/, $logs;
+	my $res = 1;
+	my $lastseq = 0;
+	my $line = "";
+	foreach my $logfile (@logs) {
+		open(SC,"<$logfile") or die "Sequence check on validated log: $logfile failed:$!\n";
+		while (<SC>) {
+			chomp($_);
+			$line = $_;
+			if($line =~ /^.*?(\d+),.*$/) {
+				#print "$1\n";
+				if($lastseq == 0) {
+					$lastseq = $1;
+				} else {
+					if(($lastseq -1) != $1) {
+						print "comparing ($lastseq -1) to $1 in $line\n";
+						return(0);
+					} else {
+						$lastseq = $1;
+					}
+				}
+			}
+		}
+	}
+	return($res);
+}
+
+sub LogSizeCheck
+{
+	my $logs = shift;
+	my $size = shift;
+	my $logcount = shift;
+	my @logs = split /,/, $logs;
+	my $res = 1;
+	my $count = 0;
+	my $filesize = 0;
+	while($count < ($logcount - 1)) {
+		$filesize = -s $logs[$count];
+		# lets bracket the size
+		if($filesize < ($size + 1024)) {
+		} else {
+			print "Log: $logs[$count] size: $filesize > ($size + 1024)\n";
+			return(0);
+		}
+		if($filesize > ($size - 1024)) {
+		} else {
+			print "Log: $logs[$count] size: $filesize < ($size - 1024)\n";
+			return(0);
+		}
+		$count += 1;
+	}
+	return($res);
+}
+
+sub LogTimeCheck
+{
+	my $logs = shift;
+	my $time = shift;
+	my $logcount = shift;
+	my @logs = split /,/, $logs;
+	my $res = 1;
+	my $count = 0;
+	my $StartTime = 0;
+	my $EndTime = 0;
+	my $TimeDiff = 0;
+	my $line = "";
+	while($count < ($logcount - 1)) {
+		$StartTime = 0;
+		$EndTime = 0;
+		open(LL,"<@logs[$count]") or die "Failed to open @logs[$count]:$!\n";
+		while (<LL>) {
+			chomp();
+			$line = $_;
+			#if($line =~ /^(\d+\/\d+\/\d+\s+\d+:\d+:\d+\s+).*$/) {
+			if($line =~ /^(\d+)\/(\d+)\/(\d+)\s+(\d+):(\d+):(\d+)\s+.*$/) {
+				#print "$1\n";
+				#$StartTime = parsedate("$1");
+				if($StartTime == 0) {
+					$StartTime = timelocal($6,$5,$4,$3,$2,$1);
+				} else {
+					$EndTime = timelocal($6,$5,$4,$3,$2,$1);
+				}
+			}
+		}
+		close(LL);
+		$TimeDiff = $EndTime - $StartTime;
+		#print "---$StartTime---\n";
+		#print "---$EndTime---\n";
+		#print "Diff = $TimeDiff\n";
+		if($TimeDiff < ($time + 4)) {
+		} else {
+			print "Log: $logs[$count] time: $TimeDiff > ($time + 4)\n";
+			return(0);
+		}
+		if($TimeDiff > ($time - 4)) {
+		} else {
+			print "Log: $logs[$count] time: $TimeDiff < ($time - 4)\n";
+			return(0);
+		}
+		$count += 1;
+	}
+	return($res);
+}
 
