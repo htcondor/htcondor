@@ -63,7 +63,10 @@ sub RunCheckMultiple
     my $result;
     my $count = 0;
 	my $undead = undef;
+	my $testname = "RunCheckMultiple Tool";
+	system("date");
 
+	CondorTest::RegisterTimed( $testname, $timed_callback, $match_timeout);
 	if(defined $args{match_callback}) {
 		# we don't just want to look for it, we want to get it back
 		#print "Match Callback set\n";

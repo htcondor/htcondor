@@ -1753,122 +1753,148 @@ sub SearchCondorLogMultiple
 {
     my $daemon = shift;
     my $regexp = shift;
-	my $instances = shift;
-	my $timeout = shift;
-	my $findnew = shift;
-	my $findcallback = shift;
-	my $findafter = shift;
-	my $findbetween = shift;
-	my $currentcount = 0;
-	my $found = 0;
-	my $tried = 0;
-	my $goal = 0;
+    my $instances = shift;
+    my $timeout = shift;
+    my $findnew = shift;
+    my $findcallback = shift;
+    my $findafter = shift;
+    my $findbetween = shift;
+    my $currentcount = 0;
+    my $found = 0;
+    my $tried = 0;
+    my $goal = 0;
+    my $retryregexp = "";
 
     my $logloc = `condor_config_val ${daemon}_log`;
     CondorUtils::fullchomp($logloc);
-    CondorTest::debug("Search this log <$logloc> for <$regexp> instances = <$instances>\n",1);
+    CondorTest::debug("Search this log: $logloc for: $regexp instances = $instances\n",2);
+    CondorTest::debug("Timeout = $timeout\n",2);
 
-	# do we want to see X new events
-	if($findnew eq "true") {
-		# find current event count
-   		open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
-   		while(<LOG>) {
-       		if( $_ =~ /$regexp/) {
-           		CondorTest::debug("FOUND IT! $_\n",2);
-				$currentcount += 1;
-       		} else {
-           		CondorTest::debug(".",2);
-			}
-   		}
-		close(LOG);
-		$goal = $currentcount + $instances;
-		CondorTest::debug("Raised request to $goal since current count is $currentcount\n",2);
-	} else {
-		$goal = $instances;
-	}
-
+    # do we want to see X new events
+    if($findnew eq "true") {
+        # find current event count
+        open(LOG,"<$logloc") || die "Can not open logfile: $logloc: $!\n";
+        while(<LOG>) {
+            if( $_ =~ /$regexp/) {
+                CondorTest::debug("FOUND IT! $_\n",2);
+                $currentcount += 1;
+                #print "FOUND IT! $_";
+            } else {
+                #CondorTest::debug(".",2);
+                #print "Skipping: $_";
+            }
+        }
+        close(LOG);
+        $goal = $currentcount + $instances;
+        CondorTest::debug("Raised request to $goal since current count is $currentcount\n",2);
+    } else {
+        $goal = $instances;
+        #print "SearchCondorLogMultiple: goal: $goal\n";
+    }
 
 	my $count = 0;
-	my $begin = 0;
-	my $done = 0;
-	while($found < $goal) {
-       	CondorTest::debug("Searching Try $tried\n",2);
-		$found = 0;
-   		open(LOG,"<$logloc") || die "Can not open logfile<$logloc>: $!\n";
-   		while(<LOG>) {
-			chomp($_);
-			if(defined $findbetween) {
-				# start looking for between string after first pattern
-				# and stop when you find after string. call match callback
-				# with actual count.
-				if( $_ =~ /$regexp/) {
-					CondorTest::debug("Found start <$_>\n",2);
-					$begin = 1;
-					$goal = 100000;
-				} elsif( $_ =~ /$findafter/) {
-					CondorTest::debug("Found done <$_>\n",2);
-					$done = 1;
-					if(defined $findcallback) {
-						 &$findcallback($count);
-					}
-					$found = $goal;
-					last;
-				} elsif($_ =~ /$findbetween/) {
-					if($begin == 1) {
-						$count += 1;
+    my $begin = 0;
+    my $foundanything = 0;
+    my $showdots = 0;
+    #my $tolerance = 5;
+    my $done = 0;
+    while($found < $goal) {
+        CondorTest::debug("Searching Try $tried\n",2);
+        $found = 0;
+        open(LOG,"<$logloc") || die "Can not open logfile: $logloc: $!\n";
+        while(<LOG>) {
+            fullchomp($_);
+            if(defined $findbetween) {
+                # start looking for between string after first pattern
+                # and stop when you find after string. call match callback
+                # with actual count.
+                if( $_ =~ /$regexp/) {
+                    CondorTest::debug("Found start: $_\n",2);
+                    $begin = 1;
+                    $goal = 100000;
+                } elsif( $_ =~ /$findafter/) {
+                    CondorTest::debug("Found done: $_\n",2);
+                    $done = 1;
+                    if(defined $findcallback) {
+                         &$findcallback($count);
+                    }
+                    $found = $goal;
+                    last;
+                } elsif($_ =~ /$findbetween/) {
+                    if($begin == 1) {
+                        $count += 1;
 
-						CondorTest::debug("Found Match <$_>\n",2);
-					}
-				} else {
-					#print ".";
-				}
-       		} elsif( $_ =~ /$regexp/) {
-           		CondorTest::debug("FOUND IT! $_\n",2);
-				$found += 1;
-				#print "instances $instances found $found goal $goal\n";
-				if((defined $findcallback) and (!(defined $findafter)) and 
-					 ($found == $goal)) {
-					&$findcallback($_);
-				}
-				if((defined $findcallback) and (defined $findafter) and 
-					 ($found == $goal)) {
-					#&$findcallback($_);
-				}
-				if((defined $findafter) and ($found == $goal)) {
-					# change the pattern we are looking for. really only
-					# works well when looking for one particular item.
-					# undef the second pattern so we get a crack at the callback
-					$found = 0;
-					$goal = 1;
-					$regexp = $findafter;
-					$findafter = undef;
-				}
-       		} else {
-           		CondorTest::debug(".",2);
-			}
-   		}
+                        CondorTest::debug("Found Match: $_\n",2);
+                    }
+                } else {
+                    #print ".";
+                }
+            } elsif( $_ =~ /$regexp/) {
+                CondorTest::debug("FOUND IT! $_\n",2);
+                $found += 1;
+                $foundanything += 1;
+                if($showdots == 1) {
+                    print "instances $instances found $found goal $goal: $_\n";
+                }
+                if((defined $findcallback) and (!(defined $findafter)) and
+                     ($found == $goal)) {
+                     #print "Found after: $_\n";
+                    &$findcallback($_);
+                }
+                if((defined $findcallback) and (defined $findafter) and
+                     ($found == $goal) and ($findafter eq $regexp)) {
+                    &$findcallback($_);
+                    #print "find calllback and exit\n";
+                    return(1);
+                }
+                if((defined $findafter) and ($found == $goal)) {
+                    # change the pattern we are looking for. really only
+                    # works well when looking for one particular item.
+                    # undef the second pattern so we get a crack at the callback
+                    $found = 0;
+                    $goal = 1;
+                    #print "Found $regexp now looking for $findafter\n";
+                    #$showdots = 1;
+                    # if we retry we want to start looking for the after
+                    # pattern when we get through the first search.
+                    $retryregexp = $regexp;
+                    $regexp = $findafter;
+                    #$findafter = undef;
+                }
+            } else {
+                #CondorTest::debug(".",2);
+                    if($showdots == 1) {
+                            print ".";
+                }
+            }
+        } # log done
 		close(LOG);
-		CondorTest::debug("Found <$found> want <$goal>\n",2);
-		if($found < $goal) {
-			sleep 1;
-		} else {
-			#Done
-			last;
-		}
-		$tried += 1;
-		if($tried >= $timeout) {
-			if(defined $findcallback) {
-				&$findcallback("HitRetryLimit");
-			}
-			last;
-		}
-	}
-	if($found < $goal) {
-		return(0);
-	} else {
-		return(1);
-	}
+        CondorTest::debug("Found: $found want: $goal\n",2);
+        if($found < $goal) {
+            if($retryregexp ne "") {
+                $regexp = $retryregexp;
+            }
+            sleep 1;
+        } else {
+            #Done
+            last;
+        }
+        $tried += 1;
+        if($tried >= $timeout) {
+                CondorTest::debug("SearchCondorLogMultiple: About to fail from timeout!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n",1);
+                if(defined $findcallback) {
+                    &$findcallback("HitRetryLimit");
+                }
+                last;
+        }
+    }
+    if($found < $goal) {
+        return(0);
+    } else {
+        return(1);
+    }
 }
+
 
 ##############################################################################
 ##
