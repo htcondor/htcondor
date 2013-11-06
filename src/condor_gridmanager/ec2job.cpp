@@ -332,6 +332,7 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 		SetRequestID( m_spot_request_id.c_str() );
 	}
 
+	value.clear();
 	jobAd->LookupString( ATTR_GRID_JOB_ID, value );
 	if ( !value.empty() ) {
 		const char *token;

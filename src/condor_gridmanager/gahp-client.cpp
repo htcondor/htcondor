@@ -54,7 +54,7 @@ const int GahpServer::m_buffer_size = 4096;
 
 int GahpServer::m_reaperid = -1;
 
-const char *escapeGahpString(const std::string input);
+const char *escapeGahpString(const std::string &input);
 const char *escapeGahpString(const char * input);
 
 void GahpReconfig()
@@ -1361,9 +1361,9 @@ GahpServer::getPollInterval()
 }
 
 const char *
-escapeGahpString(const std::string input) 
+escapeGahpString(const std::string &input) 
 {
-	return escapeGahpString(input.empty() ? NULL : input.c_str());
+	return escapeGahpString(input.empty() ? "" : input.c_str());
 }
 
 const char *
@@ -7567,6 +7567,7 @@ int GahpClient::gce_instance_insert( const std::string &service_url,
 {
 	static const char* command = "GCE_INSTANCE_INSERT";
 
+dprintf(D_FULLDEBUG,"JEF: GCI building reqline\n");
 	// Generate request line
 	std::string reqline;
 	reqline += escapeGahpString( service_url );
@@ -7583,13 +7584,14 @@ int GahpClient::gce_instance_insert( const std::string &service_url,
 	reqline += " ";
 	reqline += escapeGahpString( image );
 	reqline += " ";
-	reqline += escapeGahpString( metadata );
+	reqline += metadata.empty() ? NULLSTRING : escapeGahpString( metadata );
 	reqline += " ";
-	reqline += escapeGahpString( metadata_file );
+	reqline += metadata_file.empty() ? NULLSTRING : escapeGahpString( metadata_file );
 
 	const char *buf = reqline.c_str();
 
 	// Check if this request is currently pending. If not, make it the pending request.
+dprintf(D_FULLDEBUG,"JEF: GCI is_pending()\n");
 	if ( !is_pending(command,buf) ) {
 		// Command is not pending, so go ahead and submit a new one if our command mode permits.
 		if ( m_mode == results_only ) {
@@ -7601,6 +7603,7 @@ int GahpClient::gce_instance_insert( const std::string &service_url,
 	// If we made it here, command is pending.
 
 	// Check first if command completed.
+dprintf(D_FULLDEBUG,"JEF: GCI get_pending_result()\n");
 	Gahp_Args* result = get_pending_result(command, buf);
 
 	if ( result ) {
@@ -7637,7 +7640,7 @@ int GahpClient::gce_instance_delete( std::string service_url,
 									 const std::string &auth_file,
 									 const std::string &project,
 									 const std::string &zone,
-									 const std::string &instance_id )
+									 const std::string &instance_name )
 {
 	static const char* command = "GCE_INSTANCE_DELETE";
 
@@ -7651,7 +7654,7 @@ int GahpClient::gce_instance_delete( std::string service_url,
 	reqline += " ";
 	reqline += escapeGahpString( zone );
 	reqline += " ";
-	reqline += escapeGahpString( instance_id );
+	reqline += escapeGahpString( instance_name );
 
 	const char *buf = reqline.c_str();
 

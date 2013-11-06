@@ -132,7 +132,6 @@ GCEJob::GCEJob( ClassAd *classad ) :
 	m_retry_times( 0 ),
 	probeNow( false )
 {
-dprintf( D_ALWAYS, "================================>  GCEJob::GCEJob 1 \n");
 	string error_string = "";
 	char *gahp_path = NULL;
 	char *gahp_log = NULL;
@@ -273,6 +272,7 @@ dprintf( D_ALWAYS, "================================>  GCEJob::GCEJob 1 \n");
 										   m_authFile.c_str() );
 	myResource->RegisterJob( this );
 
+	value.clear();
 	jobAd->LookupString( ATTR_GRID_JOB_ID, value );
 	if ( !value.empty() ) {
 		const char *token;
@@ -909,7 +909,7 @@ void GCEJob::doEvaluateState()
 													m_authFile,
 													m_project,
 													m_zone,
-													m_instanceId );
+													m_instanceName );
 
 					if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 						 rc == GAHPCLIENT_COMMAND_PENDING ) {
@@ -1154,7 +1154,9 @@ string GCEJob::build_instance_name()
 	StringFromGUID2(guid, wsz, COUNTOF(wsz));
 	char uuid_str[40];
 	WideCharToMultiByte(CP_ACP, 0, wsz, -1, uuid_str, COUNTOF(uuid_str), NULL, NULL);
-	return string(uuid_str);
+	string final_str = "condor-";
+	final_str += uuid_str;
+	return final_str;
 #else
 	char uuid_str[37];
 	uuid_t uuid;

@@ -737,7 +737,7 @@ class GahpClient : public Service {
 								 const std::string &auth_file,
 								 const std::string &project,
 								 const std::string &zone,
-								 const std::string &instance_id );
+								 const std::string &instance_name );
 
 		int gce_instance_list( const std::string &service_url,
 							   const std::string &auth_file,
