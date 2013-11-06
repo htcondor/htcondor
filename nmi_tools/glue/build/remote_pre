@@ -91,7 +91,7 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	# in the definition of $installcmakecmd to point to the correct
 	# thing.
 	$cmake = "cmake";
-	if (0 && ($ENV{VS110COMNTOOLS} =~ /common7/i)) {
+	if ($ENV{VS110COMNTOOLS} =~ /common7/i) {
 		$defines{visualstudio} = '-G "Visual Studio 11"';
 	} else {
 		$defines{visualstudio} = '-G "Visual Studio 9 2008"';

@@ -46,6 +46,7 @@ if (WITH_KRB5)
 
 			# Something is wrong with the default install (make install suck-o)
 			set (KRB5_INSTALL cp -r *.lib ${KRB5_INSTALL_LOC}/lib \r\n
+                cp -r *.dll ${KRB5_INSTALL_LOC}/lib \r\n
 							  cp -r include/* ${KRB5_INSTALL_LOC}/include \r\n)
 
 		else()
@@ -83,12 +84,21 @@ if (WITH_KRB5)
       endif ()
 
 			#this may become the common case.
-			#install ( FILES ${KRB5_INSTALL_LOC}/lib/comerr32.dll
-			#				${KRB5_INSTALL_LOC}/lib/gssapi32.dll
-			#				${KRB5_INSTALL_LOC}/lib/k5sprt32.dll
-			#				${KRB5_INSTALL_LOC}/lib/krb5_32.dll
-			#				${KRB5_INSTALL_LOC}/lib/xpprof32.dll
-			#		  DESTINATION ${C_LIB} )
+      if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
+        install ( FILES ${KRB5_INSTALL_LOC}/lib/comerr64.dll
+							${KRB5_INSTALL_LOC}/lib/gssapi64.dll
+							${KRB5_INSTALL_LOC}/lib/k5sprt64.dll
+							${KRB5_INSTALL_LOC}/lib/krb5_64.dll
+							${KRB5_INSTALL_LOC}/lib/xpprof64.dll
+              DESTINATION ${C_LIB} )
+      else ()
+        install ( FILES ${KRB5_INSTALL_LOC}/lib/comerr32.dll
+							${KRB5_INSTALL_LOC}/lib/gssapi32.dll
+							${KRB5_INSTALL_LOC}/lib/k5sprt32.dll
+							${KRB5_INSTALL_LOC}/lib/krb5_32.dll
+							${KRB5_INSTALL_LOC}/lib/xpprof32.dll
+              DESTINATION ${C_LIB} )
+      endif ()
 		else()
 			set(KRB5_FOUND "${KRB5_INSTALL_LOC}/lib/libkrb5.a;${KRB5_INSTALL_LOC}/lib/libk5crypto.a;${KRB5_INSTALL_LOC}/lib/libcom_err.a;${KRB5_INSTALL_LOC}/lib/libkrb5support.a")
 			if ( AIX )
