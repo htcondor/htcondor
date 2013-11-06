@@ -37,7 +37,7 @@ if (WITH_KRB5)
         if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
           set (KRB5_DOWNLOAD ${KRB5_VER}-VC11-Win64.tar.gz)
         else ()
-          set (KRB5_DOWNLOAD ${KRB5_VER}-VC11.tar.gz)
+          set (KRB5_DOWNLOAD ${KRB5_VER}-VC11-Win32.tar.gz)
         endif ()
       endif ()
       
@@ -77,9 +77,9 @@ if (WITH_KRB5)
 		# Set the target dependencies which the rest of condor depends on.
 		if (WINDOWS)
       if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
-        set(KRB5_FOUND "${KRB5_INSTALL_LOC}/lib/comerr64.lib;${KRB5_INSTALL_LOC}/lib/gssapi64.lib;${KRB5_INSTALL_LOC}/lib/k5sprt64.lib;${KRB5_INSTALL_LOC}/lib/krb5_64.lib;${KRB5_INSTALL_LOC}/lib/xpprof64.lib")
+        set(KRB5_FOUND "${KRB5_INSTALL_LOC}/lib/comerr64.lib;${KRB5_INSTALL_LOC}/lib/gssapi64.lib;${KRB5_INSTALL_LOC}/lib/krb5_64.lib;${KRB5_INSTALL_LOC}/lib/xpprof64.lib")
       else ()
-        set(KRB5_FOUND "${KRB5_INSTALL_LOC}/lib/comerr32.lib;${KRB5_INSTALL_LOC}/lib/gssapi32.lib;${KRB5_INSTALL_LOC}/lib/k5sprt32.lib;${KRB5_INSTALL_LOC}/lib/krb5_32.lib;${KRB5_INSTALL_LOC}/lib/xpprof32.lib")
+        set(KRB5_FOUND "${KRB5_INSTALL_LOC}/lib/comerr32.lib;${KRB5_INSTALL_LOC}/lib/gssapi32.lib;${KRB5_INSTALL_LOC}/lib/krb5_32.lib;${KRB5_INSTALL_LOC}/lib/xpprof32.lib")
       endif ()
 
 			#this may become the common case.
