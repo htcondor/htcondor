@@ -123,6 +123,12 @@ else {
 # copy all the bits in which are required to run batch_test (omg what a cf) 
 system("cp -r $SrcDir/condor_tests $pub_dir");
 system("cp -r $SrcDir/condor_examples $pub_dir");
+# copy src/condor_utils/param_info_tables.h to condor_tests for parsing in param completeness test
+# ticket #3877 for param system completeness test.
+# We take the latest of this file, parse with a c program which
+# drops the current into an easy format for testing for completeness
+# in our framework.
+system("cp  $SrcDir/condor_utils/param_info_tables.h $pub_dir/condor_tests");
 
 ######################################################################
 # tar up build results

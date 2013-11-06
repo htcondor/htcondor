@@ -41,20 +41,46 @@ use File::Basename;
 use File::Spec;
 
 my $dir = dirname($0);
+print " What is <$dir>\n";
 unshift @INC, $dir;
 require "TestGlue.pm";
 TestGlue::print_debug_header();
 
 my $extractdone = "RESULTEXTRACTIONDONE";
+my $HaveWorkspace = 0;
 
 # autoflush our STDOUT
 $| = 1;
 
 my $BaseDir = getcwd();
+print "BaseDir = <$BaseDir>\n";
 
 my $tarball_file = "CONDOR-TARBALL-NAME";
 
 my $results = "results.tar.gz";
+
+#maybe we are testing out of a workspace?
+if( -f $results) {
+	print "Cool, we have a tarfile\n";
+}
+
+# if we have the workspace, we want to run those non-compiled fresher
+# tests and also grab the latest perl modules from src/condor_scripts
+# and go with the freshest condor_examples files. Check to see if we
+# brought this stuff along.
+
+print "Checking to see if this is a workspace test source\n";
+my $testpath = "src";
+if(-d $testpath) {
+	print "We have a $testpath folder\n";
+}
+$testpath = $testpath . "/condor_tests";
+if(-d $testpath) {
+	print "We have a $testpath folder\n";
+	$HaveWorkspace = 1;
+}
+system("ls");
+system("ls public");
 die "$results does not exist!\n" unless(-f $results);
 
 ######################################################################
@@ -71,6 +97,24 @@ if( TestGlue::is_windows() ) {
     system("mv public/* $BaseDir");
     system("chmod a+r *.tar.gz");
 
+	# are we running tests from our workspace and NOT the ones from this build?
+	# NOTE: ANY COMPILED TESTS WILL RUN FROM WHERE THEY WERE BUILT DURING THIS
+	# BUILD. So what we want, we overwrite what is already staged including
+	# getting the fresh perlmodules from condor_scripts
+	#
+	if($HaveWorkspace == 1) {
+		print "Getting tests from workspace\n";
+		# doing recursive to make sure we get the Check folder of tools
+		system("cp -r src/condor_tests/* $BaseDir/condor_tests");
+		print "Getting config file examples from workspace\n";
+		system("cp src/condor_examples/* $BaseDir/condor_examples");
+		print "Getting fresh perl modules from workspace\n";
+		system("cp src/condor_scripts/*.pm $BaseDir/condor_tests");
+		print "Getting a fresh batch_test.pl from workspace\n";
+		system("cp src/condor_scripts/batch_test.pl $BaseDir/condor_tests");
+		print "Getting a fresh safe_append.pl from workspace\n";
+		system("cp src/condor_scripts/safe_append.pl $BaseDir/condor_tests");
+	}
     print "All steps completed successfully\n";
     print "Contents of '$BaseDir':\n";
     system("ls -l .");
@@ -83,12 +127,14 @@ print "Preparing input test job in $BaseDir\n";
 
 ######################################################################
 # 1) find the specific binary we care about
-######################################################################
+#####################################################################
 if(!-f $extractdone) {
     my $pattern = "public/condor-*-stripped.tar.gz";
     print "Extracting '$pattern', condor_examples, and condor_tests from results.tar.gz\n";
 
     my $ret = system("tar -xvzf $results '$pattern' public/condor_tests public/condor_examples");
+	print "After tar extraction, it looks like this\n";
+	system("ls");
 
     if($ret) {
     	die "Could not extract tarball or test dir from $results: $!\n";
@@ -129,6 +175,24 @@ if(!-f $extractdone) {
     	die "Could not move $example_dir into $BaseDir: $!\n";
     }
     
+	# are we running tests from our workspace and NOT the ones from this build?
+	# NOTE: ANY COMPILED TESTS WILL RUN FROM WHERE THEY WERE BUILT DURING THIS
+	# BUILD. So what we want, we overwrite what is already staged including
+	# getting the fresh perlmodules from condor_scripts
+	#
+	if($HaveWorkspace == 1) {
+		print "Getting tests from workspace\n";
+		# doing recursive to make sure we get the Check folder of tools
+		system("cp -r src/condor_tests/* $BaseDir/condor_tests");
+		print "Getting config file examples from workspace\n";
+		system("cp src/condor_examples/* $BaseDir/condor_examples");
+		print "Getting fresh perl modules from workspace\n";
+		system("cp src/condor_scripts/*.pm $BaseDir/condor_tests");
+		print "Getting a fresh batch_test.pl from workspace\n";
+		system("cp src/condor_scripts/batch_test.pl $BaseDir/condor_tests");
+		print "Getting a fresh safe_append.pl from workspace\n";
+		system("cp src/condor_scripts/safe_append.pl $BaseDir/condor_tests");
+	}
     print "Writing tarball filename to $tarball_file.\n";
     open(TARBALL_FILE, '>', $tarball_file ) || die "Can't open $tarball_file for writing: $!\n";
     print TARBALL_FILE "$tar_name\n";

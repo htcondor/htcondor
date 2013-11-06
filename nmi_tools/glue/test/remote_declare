@@ -49,6 +49,7 @@ my %RuncountChanges = load_custom_runcount_file();
 # file which contains the list of tests to run on Windows
 my $WinTestList = File::Spec->catfile($BaseDir, $testdir, "Windows_list");
 my $ShortWinTestList = File::Spec->catfile($BaseDir, $testdir, "Windows_shortlist");
+my $TestOverride = File::Spec->catfile($BaseDir, $testdir, "testoverride");
 
 # Figure out what testclasses we should declare based on our
 # command-line arguments.  If none are given, we declare the testclass
@@ -146,6 +147,22 @@ foreach my $task (sort keys %tasklist) {
 close( TASKFILE );
 close( USERTASKFILE );
 print "Wrote " . scalar(keys %tasklist) . " unique tests.\n";
+if( not TestGlue::is_windows() ) {
+	if(-f "testoverride") {
+		 system("cp testoverride ../tasklist.nmi");
+		system("cp testoverride tasklist.nmi");
+		print "But we are using your test list:\n";
+		system("cat ../tasklist.nmi");
+	}
+} else {
+	if(-f "$TestOverride") {
+		system("cp $TestOverride ../tasklist.nmi");
+		system("cp $TestOverride tasklist.nmi");
+		print "But we are using your test list:\n";
+		system("cat ../tasklist.nmi");
+	}
+}
+
 exit(0);
 
 sub findTests {

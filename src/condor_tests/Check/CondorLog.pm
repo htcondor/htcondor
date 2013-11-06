@@ -20,6 +20,16 @@
 package CondorLog;
 
 use CondorTest;
+my $timeout = 0;
+my $defaulttimeout = 60;
+$timeout = $defaulttimeout;
+
+$timed_callback = sub
+{
+print "LogCheck timeout expired!\n";
+CondorTest::RegisterResult( 0, %args );
+return $result;
+};
 
 sub RunCheck
 {

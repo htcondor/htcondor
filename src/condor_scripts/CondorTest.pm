@@ -1305,6 +1305,7 @@ sub getJobStatus
 # upon failure and return 0 on failure.
 #
 
+
 sub runCondorTool
 {
 	my $trymultiplier = 1;
@@ -1316,9 +1317,14 @@ sub runCondorTool
 	my $arrayref = shift;
 	# use unused third arg to skip the noise like the time
 	my $quiet = shift;
-	my $options = shift;
+	my $options = shift; #hash ref
 	my $count = 0;
 	my %altoptions = ();
+	my $failconcerns = 1;
+
+	if(exists ${$options}{expect_result}) {
+		$failconcerns = 0;
+	}
 
 	# provide an expect_result=>ANY as a hash reference options
 	$altoptions{expect_result} = \&ANY;
@@ -1328,6 +1334,7 @@ sub runCondorTool
 	} else {
 		$options = \%altoptions;
 	}
+	#Condor::DebugLevel(4);
 
 	# clean array before filling
 
@@ -1335,12 +1342,13 @@ sub runCondorTool
 	$count = 0;
 	my $hashref;
 	while( $count < $attempts) {
+		#print "runCondorTool: Attempt: <$count>\n";
 
 		# Add a message to runcmd output
-		${$options}{emit_string} = "runCondorTool: Attempt: <$count>";
+		${$options}{emit_string} = "runCondorTool: Attempt: $count";
 		@{$arrayref} = (); #empty return array...
 		my @tmparray;
-		debug( "Try command <$cmd>\n",4);
+		debug( "Try command: $cmd\n",4);
 		#open(PULL, "_condor_TOOL_TIMEOUT_MULTIPLIER=4 $cmd 2>$catch |");
 
 		$hashref = runcmd("_condor_TOOL_TIMEOUT_MULTIPLIER=10 $cmd", $options);
@@ -1348,13 +1356,14 @@ sub runCondorTool
 		my @error =  @{${$hashref}{"stderr"}};
 
 		$status = ${$hashref}{"exitcode"};
+		#print "runCondorTool: Status was <$status>\n";
 		debug("Status is $status after command\n",4);
-		if( $status != 0 ) {
+		if(( $status != 0 ) && ($failconcerns == 1)){
 				#print "************* std out ***************\n";
 				#print "************* std err ***************\n";
-				print "************* GetQueue() ***************\n";
+				#print "************* GetQueue() ***************\n";
 				GetQueue();
-				print "************* GetQueue() DONE ***************\n";
+				#print "************* GetQueue() DONE ***************\n";
 		} else {
 
 			my $line = "";
@@ -1380,20 +1389,26 @@ sub runCondorTool
 			my $current_time = time;
 			$delta_time = $current_time - $start_time;
 			debug("runCondorTool: its been $delta_time since call\n",4);
+			#Condor::DebugLevel(2);
 			return(1);
 		}
 		$count = $count + 1;
-		debug("runCondorTool: iteration<$count> failed sleep 10 * $count \n",1);
+		debug("runCondorTool: iteration: $count failed sleep 10 * $count \n",1);
+		my $delaynow = 10*$count;
+		if(!defined $quiet) {
+			print "runCondorTool: this delay: $delaynow\n";
+		}
 		sleep((10*$count));
 	}
 	debug( "runCondorTool: $cmd failed!\n",1);
+	#Condor::DebugLevel(2);
 
 	return(0);
 }
 
 sub runToolNTimes
 {
-    my $cmd = shift;
+	my $cmd = shift;
     my $goal = shift;
     my $wantoutput = shift;
 
@@ -1401,34 +1416,45 @@ sub runToolNTimes
     my $stop = 0;
     my @cmdout = ();
     my @date = ();
-    my @outarrray;
-    my $cmdstatus = 0;
+	my @outarrray;
+	my $cmdstatus = 0;
     $stop = $goal;
 
     while($count < $stop) {
         @cmdout = ();
-        @outarrray = ();
+		@outarrray = ();
         @date = ();
         @date = `date`;
-        chomp $date[0];
+        CondorUtils::fullchomp $date[0];
         #print "$date[0] $cmd $count\n";
-		#@cmdout = `$cmd`;
-		$cmdstatus = runCondorTool($cmd, \@outarrray, 2);
-		if(!$cmdstatus) {
-			print "runCondorTool<$cmd> attempt<$count> SHOULD NOT fail!\n";
-		}
-		 
-		if(defined $wantoutput) {
-			foreach my $line (@outarrray) {
-				print "$line\n";
+        #@cmdout = `$cmd`;
+        if(defined $wantoutput) {
+			if($wantoutput == 0) {
+				#print "runToolNTimes quiet mode requested for: $cmd\n";
+				$cmdstatus = runCondorTool($cmd, \@outarrray, 2, {emit_output=>0});
+			} else {
+				# be verbose about it
+				$cmdstatus = runCondorTool($cmd, \@outarrray, 2);
 			}
+		} else {
+			# be verbose about it
+			$cmdstatus = runCondorTool($cmd, \@outarrray, 2);
 		}
-		$count += 1;
-	}
+		if(!$cmdstatus) {
+			print "runCondorTool: $cmd attempt: $count SHOULD NOT fail!\n";
+		}
+
+        if(defined $wantoutput) {
+			if($wantoutput != 0) {
+            	foreach my $line (@outarrray) {
+                	print "$line";
+            	}
+			}
+        }
+        $count += 1;
+    }
 	return($cmdstatus);
 }
-        
-
 
 # Lets be able to drop some extra information if runCondorTool
 # can not do what it is supposed to do....... short and full
@@ -1803,7 +1829,7 @@ sub SearchCondorLogMultiple
         $found = 0;
         open(LOG,"<$logloc") || die "Can not open logfile: $logloc: $!\n";
         while(<LOG>) {
-            fullchomp($_);
+            CondorUtils::fullchomp($_);
             if(defined $findbetween) {
                 # start looking for between string after first pattern
                 # and stop when you find after string. call match callback
