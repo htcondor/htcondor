@@ -475,6 +475,8 @@ class DedicatedScheduler : public Service {
 	//int				checkReconnectQueue_tid;
 	
 	StringList scheduling_groups;
+
+	time_t startdQueryTime; // Time to get all the startds from collector
 };
 
 

@@ -103,6 +103,7 @@ getTypeStr ()
 {
 	switch (type)
 	{
+		case DEFRAG_AD:		return "DEFRAG";
 		case STARTD_AD:		return "STARTD";
 		case SCHEDD_AD:		return "SCHEDD";
 		case SUBMITTOR_AD:	return "SUBMITTOR";
@@ -154,6 +155,9 @@ setType (const char *dtype, int i, const char *argv)
         } else
 #endif /* HAVE_EXT_POSTGRESQL */
 
+        if (strcmp (dtype, "DEFRAG") == 0) {
+            type = DEFRAG_AD;
+        } else
         if (strcmp (dtype, "SCHEDD") == 0) {
             type = SCHEDD_AD;
         } else
@@ -208,6 +212,7 @@ getModeStr()
 	switch (mode)
 	{
 		case MODE_NOTSET:		return "Not set";
+		case MODE_DEFRAG_NORMAL:	return "Normal (Defrag)";
 		case MODE_STARTD_NORMAL:	return "Normal (Startd)";
 		case MODE_STARTD_AVAIL:		return "Available (Startd)";
 		case MODE_STARTD_RUN:		return "Run (Startd)";
@@ -248,6 +253,11 @@ setMode (Mode mod, int i, const char *argv)
     if (setBy == 0) {
         mode = mod;
         switch (mod) {
+          case MODE_DEFRAG_NORMAL:
+            setType ("DEFRAG", i, argv);
+            setPPstyle (PP_GENERIC_NORMAL, i, argv);
+            break;
+
           case MODE_STARTD_NORMAL:
             setType ("STARTD", i, argv);
             setPPstyle (PP_STARTD_NORMAL, i, argv);

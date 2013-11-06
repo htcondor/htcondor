@@ -564,10 +564,10 @@ DaemonCore::~DaemonCore()
 		delete dc_ssock;
 	}
 	if( super_dc_rsock ) {
-		delete dc_rsock;
+		delete super_dc_rsock;
 	}
 	if( super_dc_ssock ) {
-		delete dc_ssock;
+		delete super_dc_ssock;
 	}
 
 	if (reapTable != NULL)
