@@ -1021,7 +1021,7 @@ expand_macro(const char *value,
 				tvalue = param_default_string(name, subsys);
 				if (use) { param_default_set_use(name, use, macro_set); }
 			}
-		   #ifdef COLON_DEFALT_FOR_MACRO_EXPAND
+		   #ifdef COLON_DEFAULT_FOR_MACRO_EXPAND
 			if (pcolon && ( ! tvalue || ! tvalue[0])) {
 				tvalue = pcolon;
 			}
