@@ -26,10 +26,7 @@ This command eliminates the need to remotely log in to a
 machine in order to retrieve a daemon's log file.
 
 For security purposes of authentication and authorization, 
-this command requires an administrator's level of access.
-See section~\ref{sec:Config-Security} 
-on page~\pageref{sec:Config-Security} for more details about HTCondor's
-security mechanisms.
+this command requires \Expr{ADMINISTRATOR} level of access.
 
 The \Arg{subsystem[.extension]} argument is utilized to construct
 the log file's name.
@@ -41,8 +38,7 @@ When specified, the \Arg{.extension} is appended to this value.
 Typical strings for the argument \Arg{subsystem} are as given as
 possible values of the predefined configuration
 variable \MacroUNI{SUBSYSTEM}.
-See the definition in
-section~\ref{sec:HTCondor-Subsystem-Names}.  Note that access to any
+Note that access to any
 additional logs can be enabled by simply specifying the path to
 each log in the configuration file with a configuration parameter named
 \MacroNI{<NAME>\_LOG}, choosing an arbitrary unique name for each case.
