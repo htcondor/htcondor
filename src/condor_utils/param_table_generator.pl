@@ -50,8 +50,8 @@ use constant {
 	ASSIGNMENT => ['\:?\=?','assignment operator'],
 	ASSIGNMENT_EQUALS => ['\=?','assignment equals operator'],
 	ASSIGNMENT_COLON => ['\:?','assignment colon operator'],
-	ASSIGNMENT_HEREDOC => ['[A-Za-z]+', 'heredoc deliminator'],
-	PARAMETER_TITLE => ['[a-zA-Z0-9_\.]+','parameter title'],
+	ASSIGNMENT_HEREDOC => ['[@_A-Za-z]+', 'heredoc deliminator'],
+	PARAMETER_TITLE => ['[$a-zA-Z0-9_\.]+','parameter title'],
 	PROPERTY_NAME => ['[a-zA-Z0-9_-]+','property name'],
 	PROPERTY_VALUE => ['[^\n]+','property value'],
 	DATACLASS_NAME => ['[a-zA-Z0-9_-]+','dataclass name'],
@@ -301,7 +301,8 @@ sub reconstitute {
 	my @var_names;
 	my %empty_vars=();
 	my %var_daemons=(); # hash of arrays of per-daemon/sybsystem parameters overrides.
-
+	my %var_metas=(); # hash of arrays of metaknobs
+	
 	# Loop through each of the parameters in the structure passed as an argument
 	while(my ($param_name, $sub_structure) = each %{$structure}){
 
@@ -317,12 +318,25 @@ sub reconstitute {
 			my $subsys = uc($aaa[0]);
 			$daemon_prefix = $subsys.'$';
 			$param_name = $aaa[1];
-			if (defined $var_daemons{$subsys}) {
-				push @{$var_daemons{$subsys}}, $param_name;
+			if ($subsys =~ /^\$(.*)/) {
+				# subsystem names that start with $ are really meta knobs.
+				# keep track of them in a different hashtable.
+				my $meta = $1;
+				if (defined $var_metas{$meta}) {
+					push @{$var_metas{$meta}}, $param_name;
+				} else {
+					my @meta_var_names;
+					push @meta_var_names, $param_name;
+					$var_metas{$meta} = \@meta_var_names;
+				}
 			} else {
-				my @daemon_var_names;
-				push @daemon_var_names, $param_name;
-				$var_daemons{$subsys} = \@daemon_var_names;
+				if (defined $var_daemons{$subsys}) {
+					push @{$var_daemons{$subsys}}, $param_name;
+				} else {
+					my @daemon_var_names;
+					push @daemon_var_names, $param_name;
+					$var_daemons{$subsys} = \@daemon_var_names;
+				}
 			}
 		} else {
 			push @var_names, $param_name;
@@ -334,6 +348,7 @@ sub reconstitute {
 		# parameter, so that it can be treated just like any other property.
 		$sub_structure->{'parameter_name'} = $param_name;
 		$sub_structure->{'parameter_var'} = $var_name;
+		#if ( ! exists $sub_structure->{type}) { $sub_structure->{type} = $default_structure->{type}; }
 		
 		my $typequal = "nodef";
 		my $cooked_values = "";
@@ -561,7 +576,7 @@ sub reconstitute {
 	continue_output("}; // defaults[]\n");
 	continue_output("const int defaults_count = sizeof(defaults)/sizeof(key_value_pair);\n\n");
 
-	
+
 	# output per-daemon key/value table
 	#
 	continue_output("\n/*==========================================\n"
@@ -589,6 +604,45 @@ sub reconstitute {
 	continue_output("}; // subsystems[]\n");
 	continue_output("const int subsystems_count = sizeof(subsystems)/sizeof(key_table_pair);\n\n");
 
+	# output metaknob  key/value table
+	#
+	continue_output("\n/*==========================================\n"
+					. " * metaknob tables \n"
+					. " *==========================================*/\n");
+	foreach my $key (sort  { lc($a) cmp lc($b) } keys %var_metas) {
+		my $meta_prefix = $key.'$';
+		continue_output("// '$key.knobs\'\n");
+		continue_output("const key_value_pair ${meta_prefix}knobs[] = {\n");
+		foreach (sort { lc($a) cmp lc($b) } @{$var_metas{$key}}) {
+			continue_output("\t{ \"$_\", (const nodef_value*)&def_\$${meta_prefix}$_ },\n");
+		}
+		continue_output("}; // ${meta_prefix}knobs[]\n");
+		continue_output("const int ${meta_prefix}knobs_count = sizeof(${meta_prefix}knobs)/sizeof(key_value_pair);\n\n");
+	}
+	# output a map of meta knob tables
+	continue_output("\n/*==========================================\n"
+					. " * map of metaknob tables.\n"
+					. " *==========================================*/\n");
+	continue_output("const key_table_pair metaknobsets[] = {\n");
+	foreach my $key (sort  { lc($a) cmp lc($b) } keys %var_metas) {
+		my $meta_prefix = $key.'$';
+		continue_output("\t{ \"$key\", ${meta_prefix}knobs, ${meta_prefix}knobs_count },\n");
+	}
+	continue_output("}; // metaknobsets[]\n");
+	continue_output("const int metaknobsets_count = sizeof(metaknobsets)/sizeof(key_table_pair);\n\n");
+	# output metaknob  key.value source map
+	continue_output("\n/*==========================================\n"
+					. " * metaknob source table \n"
+					. " *==========================================*/\n");
+	continue_output("const key_value_pair metaknobsources[] = {\n");
+	foreach my $key (sort  { lc($a) cmp lc($b) } keys %var_metas) {
+		foreach (sort { lc($a) cmp lc($b) } @{$var_metas{$key}}) {
+			continue_output("\t{ \"\$${key}:$_\", (const nodef_value*)&def_\$${key}\$$_ },\n");
+		}
+	}
+	continue_output("}; // metaknobsources[]\n");
+	continue_output("const int metaknobsources_count = sizeof(metaknobsources)/sizeof(const char *);\n\n");
+
 	# end of table declarations, everthing after this should be extern or type declarations.
 	#
 	continue_output("#endif // if PARAM_DECLARE_TABLES\n\n"
@@ -596,6 +650,10 @@ sub reconstitute {
 					. "extern const int defaults_count;\n"
 					. "extern const key_table_pair subsystems[];\n"
 					. "extern const int subsystems_count;\n"
+					. "extern const key_table_pair metaknobsets[];\n"
+					. "extern const int metaknobsets_count;\n"
+					. "extern const key_value_pair metaknobsources[];\n"
+					. "extern const int metaknobsources_count;\n"
 					);
 
 	# output an enum of param indexs into the global defaults table

@@ -8282,6 +8282,12 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=503
 
+[SHADOW_STANDARD]
+default=$(SBIN)/condor_shadow
+win32_default=
+type=path
+tags=schedd,schedd
+
 [SHADOW_RENICE_INCREMENT]
 aliases=
 default=0
@@ -11891,3 +11897,199 @@ default=(RemoteOwner =?= UNDEFINED) * (ifthenElse(isUndefined(KFlops), 1000, Kfl
 default=((SubmitterGroup =?= RemoteGroup) && ($(StateTimer) > (1 * $(HOUR))) && (RemoteUserPrio > TARGET.SubmitterUserPrio * 1.2)) || (MY.NiceUser == True)
 [UWCS_PREEMPTION_RANK]
 default=(RemoteUserPrio * 1000000) - TARGET.ImageSize
+
+# obsolete config file knobs to discard on upgrade
+[$UPGRADE.DISCARD]
+friendly_name=Config file knobs that should be ignored on upgrade
+# can't put leading tabs in this table without breaking condor_config_val
+default : @end
+	LeaseManager
+	LeaseManger_ADDRESS_FILE
+	LeaseManager_LOG
+	LeaseManager_DEBUG
+	MAX_LeaseManager_LOG
+	LeaseManager.GETADS_INTERVAL
+	LeaseManager.PRUNE_INTERVAL
+	LeaseManager.DEBUG_ADS
+	LeaseManager.CLASSAD_LOG
+	QUILL_LOG
+	QUILL_ADDRESS_FILE
+	DBMSD_ARGS
+	DBMSD_LOG
+	STORK
+	STORK_ADDRESS_FILE
+	STORK_LOG_BASE
+	STORK_LOG
+	STORK_DEBUG
+	MAX_STORK_LOG
+	STORK_PORT
+	STORK_ARGS
+@end
+
+[$UPGRADE.DISCARDX]
+friendly_name=Platform specific file knobs that should be ignored on upgrade
+default=
+# can't put leading tabs in this table without breaking condor_config_val
+win32_default : @end
+	GT2_GAHP
+	UNICORE_GAHP
+	NORDUGRID_GAHP
+	CREAM_GAHP
+	DELTACLOUD_GAHP
+	LIBVIRT_XML_SCRIPT
+	STARTER_STANDARD
+	SHADOW_STANDARD
+	CKPT_PROBE
+@end
+
+[$UPGRADE.DISCARDIF]
+friendly_name=Platform specific knobs that should be ignored on upgrade if they match the given value
+default : @end
+	RESERVED_DISK=5
+@end
+win32_default : @end
+	EC2_GAHP_LOG=/tmp/EC2GahpLog.$(USERNAME)
+	RESERVED_DISK=5
+	MAIL_FROM=
+	VMWARE_SCRIPT=$(SBIN)\condor_vm_vmware.exe
+	JAVA_CLASSPATH_SEPARATOR=:
+	FILETRANSFER_PLUGINS=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
+	INVALID_LOG_FILES=core
+	HDFS_NAMENODE=hdfs://example.com:9000
+	HDFS_NAMENODE_WEB=example.com:8000
+	HDFS_BACKUPNODE=hdfs://example.com:50100
+	HDFS_BACKUPNODE_WEB=example.com:50105
+	HDFS_NODETYPE=HDFS_DATANODE
+	HDFS_NAMENODE_ROLE=ACTIVE
+	HDFS_NAMENODE_DIR=/tmp/hadoop_name
+	HDFS_DATANODE_DIR=/scratch/tmp/hadoop_data
+	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad
+	GLIDEIN_SERVER_URLS=http://www.cs.wisc.edu/condor/glidein/binaries
+@end
+
+[$UPGRADE.DISCARDIF_VMWARE]
+friendly_name=Platform specific file knobs that should be ignored on upgrade if they match the given value
+default=
+win32_default : @end
+	VM_MEMORY=128
+	VM_NETWORKING_DEFAULT_TYPE=nat
+	VM_NETWORKING_TYPE=nat
+	VM_MAX_NUMBER=$(NUM_CPUS)
+	VMWARE_PERL=perl
+	VMWARE_SCRIPT=$(SBIN)\condor_vm_vmware
+	VMWARE_SCRIPT=$(SBIN)/condor_vm_vmware.exe
+	VMWARE_SCRIPT=$(SBIN)/condor_vm_vmware.pl.exe
+	VMWARE_NAT_NETWORKING_TYPE=nat
+	VMWARE_BRIDGE_NETWORKING_TYPE=bridged
+	VMWARE_NETWORKING_TYPE=nat
+	VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)\condor_vmware_local_settings
+	VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)/condor_vmware_local_settings
+@end
+
+# use the UWCS desktop preemption policy
+[$POLICY.DESKTOP]
+friendly_name=Use the UWCS preemption policy
+default : @end
+	WANT_SUSPEND=($(SmallJob) || $(KeyboardNotBusy) || $(IsVanilla) ) && ( $(SUSPEND))
+	WANT_VACATE=$(ActivationTimer) > 600 || $(IsVanilla)
+	SUSPEND=($(KeyboardBusy) || ( (CpuBusyTime > 120) && $(ActivationTimer) > 90))
+	CONTINUE=($(CPUIdle) && ($(ActivityTimer) > 10) && (KeyboardIdle > $(ContinueIdleTime)))
+	PREEMPT=(((Activity == "Suspended") && ($(ActivityTimer) > $(MaxSuspendTime))) || (SUSPEND && (WANT_SUSPEND == False)))
+	KILL=false
+	PERIODIC_CHECKPOINT=$(LastCkpt) > (3 * 3600 + $RANDOM_INTEGER(-1800,1800,60))
+	MaxJobRetirementTime=0
+	CLAIM_WORKLIFE=
+@end
+
+# use the UWCS knobs 
+[$POLICY.ALWAYS_RUN]
+friendly_name=Use a no-preemption policy
+default : @end
+	WANT_SUSPEND=False
+	WANT_VACATE=False
+	SUSPEND=False
+	CONTINUE=True
+	PREEMPT=False
+	START=True
+	KILL=False
+	PERIODIC_CHECKPOINT=False
+	PREEMPTION_REQUIREMENTS=False
+	MaxJobRetirementTime=0
+	CLAIM_WORKLIFE=1200
+@end
+
+[$POLICY.UWCS_DESKTOP]
+friendly_name=Run jobs only when the user is away from their machine
+default : @end
+	SUSPEND=$(UWCS_SUSPEND)
+	WANT_SUSPEND=$(UWCS_WANT_SUSPEND)
+	WANT_VACATE=$(UWCS_WANT_VACATE)
+	CONTINUE=$(UWCS_CONTINUE)
+	PREEMPT=$(UWCS_PREEMPT)
+	KILL=$(UWCS_KILL)
+	PERIODIC_CHECKPOINT=$(UWCS_PERIODIC_CHECKPOINT)
+	MaxJobRetirementTime=$(UWCS_MaxJobRetirementTime)
+	CLAIM_WORKLIFE=$(UWCS_CLAIM_WORKLIFE)
+@end
+
+[$ROLE.Personal]
+friendly_name=Settings for Personal HTCondor
+default : @end
+	COLLECTOR_HOST=$(CONDOR_HOST):0
+	DAEMON_LIST=MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD
+	RunBenchmarks=0
+@end
+
+[$ROLE.ExecNode]
+friendly_name=Settings for HTCondor Execute node
+default : @end
+	DAEMON_LIST=$(DAEMON_LIST) STARTD
+@end
+
+[$ROLE.SubmitNode]
+friendly_name=Settings for HTCondor Execute node
+default : @end
+	DAEMON_LIST=$(DAEMON_LIST) SCHEDD
+@end
+
+[$ROLE.CentralManager]
+friendly_name=Settings for HTCondor Execute node
+default : @end
+	DAEMON_LIST=$(DAEMON_LIST) COLLECTOR NEGOTIATOR
+@end
+
+# default security policy
+[$AUTH.DEFAULT]
+friendly_name=Default Authorization policy based on IPs and DNS names
+default : @end
+	ALLOW_ADMINISTRATOR=$(CONDOR_HOST), $(IP_ADDRESS)
+	ALLOW_OWNER=$(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
+	ALLOW_READ=*
+	ALLOW_WRITE=$(FULL_HOSTNAME), $(IP_ADDRESS)
+	ALLOW_NEGOTIATOR=$(CONDOR_HOST), $(IP_ADDRESS)
+	ALLOW_NEGOTIATOR_SCHEDD=$(CONDOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS), $(IP_ADDRESS)
+	ALLOW_WRITE_COLLECTOR=$(ALLOW_WRITE), $(FLOCK_FROM)
+	ALLOW_WRITE_STARTD=$(ALLOW_WRITE), $(FLOCK_FROM)
+	ALLOW_READ_COLLECTOR=$(ALLOW_READ), $(FLOCK_FROM)
+	ALLOW_READ_STARTD=$(ALLOW_READ), $(FLOCK_FROM)
+@end
+
+
+# note vm_vmware script is perl so it doesn't get a .exe extension on Windows.
+[$USE.VMWARE]
+friendly_name=Settings for to use VMWARE with VM Universe
+default : @end
+	VM_TYPE=vmware
+	VM_MEMORY=$(DETECTED_MEMORY)/($(NUM_CPUS)+1)
+	VM_MAX_NUMBER=$(NUM_CPUS)
+	VM_NETWORKING_TYPE=nat
+	VM_NETWORKING_DEFAULT_TYPE=nat
+	VMWARE_PERL=perl
+	VMWARE_SCRIPT=$(SBIN)/condor_vm_vmware
+	VMWARE_NAT_NETWORKING_TYPE=nat
+	VMWARE_BRIDGE_NETWORKING_TYPE=bridged
+	VMWARE_NETWORKING_TYPE=nat
+	#VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)/condor_vmware_local_settings
+@end
+
+

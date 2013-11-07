@@ -67,17 +67,19 @@ typedef struct macro_meta {
 	    unsigned param_table     :1;
 	  };
 	};
-	int          use_count;
-	int          ref_count;
-	int          source_id;    // filename or
-	int          source_line;  // line number for files, param.in entry for internal
+	short int    source_id;    // index into MACRO_SOURCES table
+	short int    source_line;  // line number for files, param.in entry for internal
+	short int    source_meta_id;   // metaknob id
+	short int    source_meta_off;  // statement offset within metaknob   (i.e. 0 based line number)
+	short int    use_count;
+	short int    ref_count;
 } MACRO_META;
 typedef struct macro_defaults {
 	int size;
 	MACRO_DEF_ITEM * table; // points to const table[size] key/default-value pairs
 	struct META {
-		int use_count;
-		int ref_count;
+		short int use_count;
+		short int ref_count;
 	} * metat; // optional, points to metat[size] of use counts parallel to table[]
 } MACRO_DEFAULTS;
 // this holds table and tablesize for use passing to the config functions.
@@ -133,17 +135,27 @@ typedef struct macro_set {
 						ClassAd *me=NULL, ClassAd *target=NULL,
 						bool use_param_table = true );
 
+#if 1
+	const char * param_get_location(const MACRO_META * pmet, MyString & value);
+#else
 	bool param_get_location(const char *parameter, MyString &filename,
 							int &line_number);
+#endif
 
 	const char * param_get_info(const char * name,
 								const char * subsys,
 								const char * local,
+#if 1
+								MyString &name_used,
+								const char ** pdef_value,
+								const MACRO_META **ppmet);
+#else
 								const char ** pdef_value,
 								MyString &name_used,
 								int &use_count,	int & ref_count,
 								MyString &filename,
 								int &line_number);
+#endif
 
 	
 	/** Look up a value by the name 'name' from the table 'table' which is table_size big.
@@ -318,7 +330,7 @@ BEGIN_C_DECLS
 	insert keeps copies of the name and value.
 	*/
 #ifdef __cplusplus
-	typedef struct macro_source { int inside; int id; int line; } MACRO_SOURCE;
+	typedef struct macro_source { int inside; short int id; short int line; short int meta_id; short int meta_off; } MACRO_SOURCE;
 	void insert_source(const char * filename, MACRO_SET& macro_set, MACRO_SOURCE & source);
 	extern const MACRO_SOURCE EnvMacro;
 	extern const MACRO_SOURCE WireMacro;
