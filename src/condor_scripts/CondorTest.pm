@@ -1526,7 +1526,14 @@ sub runCondorTool
 				#print "************* std out ***************\n";
 				#print "************* std err ***************\n";
 				#print "************* GetQueue() ***************\n";
-				GetQueue();
+				if(exists ${$options}{emit_output}) {
+					if(${$options}{emit_output} == 0) {
+					} else {
+						GetQueue();
+					}
+				} else {
+					GetQueue();
+				}
 				#print "************* GetQueue() DONE ***************\n";
 		} else {
 
