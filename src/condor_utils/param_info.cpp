@@ -132,6 +132,61 @@ MACRO_DEF_ITEM * param_default_lookup(const char * param, const char * subsys)
 	return param_generic_default_lookup(param);
 }
 
+// lookup a knob by metaname and by knobname.
+//
+int param_default_get_source_meta_id(const char * meta, const char * param)
+{
+	std::string fullname("$");
+	fullname += meta;
+	fullname += ":";
+	fullname += param;
+
+	MACRO_DEF_ITEM * p = BinaryLookup<MACRO_DEF_ITEM>(
+		condor_params::metaknobsources,
+		condor_params::metaknobsources_count,
+		fullname.c_str(), strcasecmp);
+	if (p) {
+		return (int)(p - condor_params::metaknobsources);
+	}
+	return -1;
+}
+
+MACRO_DEF_ITEM * param_meta_source_by_id(int meta_id)
+{
+	if (meta_id < 0 || meta_id >= condor_params::metaknobsources_count)
+		return NULL;
+	return &condor_params::metaknobsources[meta_id];
+}
+
+// lookup a knob by metaname and by knobname.
+//
+MACRO_TABLE_PAIR* param_meta_table(const char * meta)
+{
+	return BinaryLookup<MACRO_TABLE_PAIR>(
+		condor_params::metaknobsets,
+		condor_params::metaknobsets_count,
+		meta, ComparePrefixBeforeDot);
+}
+
+// lookup a param in the metatable
+MACRO_DEF_ITEM * param_meta_table_lookup(MACRO_TABLE_PAIR* table, const char * param)
+{
+	if (table) {
+		return BinaryLookup<MACRO_DEF_ITEM>(table->aTable, table->cElms, param, strcasecmp);
+	}
+	return NULL;
+}
+
+const char * param_meta_table_string(MACRO_TABLE_PAIR * table, const char * param)
+{
+	if (table) {
+		MACRO_DEF_ITEM * p = BinaryLookup<MACRO_DEF_ITEM>(table->aTable, table->cElms, param, strcasecmp);
+		if (p && p->def)
+			return p->def->psz;
+	}
+	return NULL;
+}
+
 // this function can be passed either "ATTRIB" or "SUBSYS.ATTRIB"
 // it will search for the first "." and if there is one it will lookup the param
 // in the SUBSYS table, and in the generic table.  if not it will look only in the

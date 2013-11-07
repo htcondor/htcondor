@@ -139,6 +139,48 @@ is_piped_command(const char* filename)
 	return retVal;
 }
 
+bool is_meta_knob(const char * name)
+{
+	if ( ! name || name[0] != '$')
+		return false;
+	return param_meta_table(name+1) != NULL;
+}
+
+int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, MACRO_SET& macro_set, const char * subsys);
+
+int read_meta_config(MACRO_SOURCE & source, const char *name, const char * rhs, MACRO_SET& macro_set, const char * subsys)
+{
+	if ( ! name || name[0] != '$')
+		return -1;
+
+	MACRO_TABLE_PAIR* ptable = param_meta_table(name+1);
+	if ( ! ptable)
+		return -1;
+
+	StringList items(rhs);
+	items.rewind();
+	char * item;
+	while ((item = items.next()) != NULL) {
+		const char * value = param_meta_table_string(ptable, item);
+		if ( ! value) {
+			fprintf(stderr,
+					"Configuration Error: Meta %s does not have a value for %s\n",
+					name, item);
+			return -1;
+		}
+		source.meta_id = param_default_get_source_meta_id(name+1, item);
+		int ret = Parse_config(source, name, value, macro_set, subsys);
+		if (ret < 0) {
+			fprintf(stderr,
+					"Internal Configuration Error: Meta %s has a bad value for %s\n",
+					name, item);
+			return ret;
+		}
+	}
+
+	source.meta_id = -1;
+	return 0;
+}
 
 // Make sure the last character is the '|' char.  For now, that's our only criteria.
 bool 
@@ -154,6 +196,98 @@ is_valid_command(const char* cmdToExecute)
 	return retVal;
 }
 
+
+int Parse_config(MACRO_SOURCE & source, const char * self, const char * config, MACRO_SET& macro_set, const char * subsys)
+{
+	source.meta_off = -1;
+
+	StringList lines(config, "\n");
+	lines.rewind();
+	char * line;
+	while ((line = lines.next()) != NULL) {
+		++source.meta_off;
+		if( line[0] == '#' || blankline(line) )
+			continue;
+
+		const char * name = line;
+		char * ptr = line;
+		int op = 0;
+
+		// parse to the end of the name and null terminate it
+		while (*ptr) {
+			if (isspace(*ptr) || ISOP(*ptr)) {
+				op = *ptr;  // capture the operator
+				*ptr++ = 0; // null terminate the name
+				break;
+			}
+			++ptr;
+		}
+		// parse to the start of the value, it's ok to not have any value
+		while (*ptr) {
+			if (ISOP(*ptr)) {
+				if (ISOP(op)) {
+					op = 0; // more than one op is not allowed, so trigger a failure
+					break;
+				}
+				op = *ptr;
+			} else if ( ! isspace(*ptr)) {
+				break;
+			}
+			++ptr;
+		}
+
+		if ( ! *ptr && ! ISOP(op)) {
+			// Here we have determined this line has no operator, or too many
+			PRAGMA_REMIND("tj: should report parse error in meta knobs here.")
+			return -1;
+		}
+
+		// ptr now points to the first non-space character of the right hand side
+		const char * rhs = ptr;
+
+		// Expand the knob name - do we allow this??
+		/*
+		name = expand_macro(name, macro_set);
+		if (name == NULL) {
+			return -1;
+		}
+		*/
+
+		// if name begins with $ it might be a metaknob.
+		if (is_meta_knob(name)) {
+			if (MATCH == strcasecmp(self, name)) {
+				// self ref is invalid
+				return -1;
+			}
+			// for recursive metaknobs, we need to use a temp copy of the source info
+			// to avoid loosing the source id/offset info.
+			MACRO_SOURCE source2 = source;
+			int retval = read_meta_config(source2, name, rhs, macro_set, subsys);
+			if (retval < 0) {
+				return retval;
+			}
+		} else {
+
+			/* Check that "name" is a legal identifier : only
+			   alphanumeric characters and _ allowed*/
+			if ( ! is_valid_param_name(name) ) {
+				return -1;
+			}
+
+			/* expand self references only */
+			PRAGMA_REMIND("TJ: this handles only trivial self-refs, needs rethink.")
+			char * value = expand_macro(rhs, macro_set, name, false, subsys);
+			if (value == NULL) {
+				return -1;
+			}
+
+			insert(name, value, macro_set, source);
+			FREE(value);
+		}
+	}
+	source.meta_off = -2;
+	return 0;
+}
 
 int
 Read_config(const char* config_source, MACRO_SET& macro_set,
@@ -353,47 +487,60 @@ Read_config(const char* config_source, MACRO_SET& macro_set,
 			goto cleanup;
 		}
 
-		/* Check that "name" is a legal identifier : only
-		   alphanumeric characters and _ allowed*/
-		if( !is_valid_param_name(name) ) {
-			fprintf( stderr,
-					 "Configuration Error File <%s>, Line %d: Illegal Identifier: <%s>\n",
-					 config_source, ConfigLineNo, name );
-			retval = -1;
-			goto cleanup;
-		}
-
-		if( expand_flag == EXPAND_IMMEDIATE ) {
-			value = expand_macro(rhs, macro_set);
-			if( value == NULL ) {
-				retval = -1;
-				goto cleanup;
-			}
-		} else  {
-			/* expand self references only */
-			PRAGMA_REMIND("TJ: this handles only trivial self-refs, needs rethink.")
-			value = expand_macro(rhs, macro_set, name, false, subsys);
-			if( value == NULL ) {
-				retval = -1;
-				goto cleanup;
-			}
-		}
-
-		if( op == ':' || op == '=' ) {
-				/*
-				  Yee haw!!! We can treat "expressions" and "macros"
-				  the same way: just insert them into the config hash
-				  table.  Everything now behaves like macros used to
-				  Derek Wright <wright@cs.wisc.edu> 4/11/00
-				*/
+		// if name begins with $ it might be a metaknob.
+		if (is_meta_knob(name)) {
 			FileMacro.line = ConfigLineNo;
-			insert(name, value, macro_set, FileMacro);
+			retval = read_meta_config(FileMacro, name, rhs, macro_set, subsys);
+			if (retval < 0) {
+				fprintf( stderr,
+						 "Configuration Error File <%s>, Line %d: Meta <%s>\n",
+						 config_source, ConfigLineNo, name );
+				goto cleanup;
+			}
 		} else {
-			fprintf( stderr,
-				"Configuration Error File <%s>, Line %d: Syntax Error\n",
-				config_source, ConfigLineNo );
-			retval = -1;
-			goto cleanup;
+
+			/* Check that "name" is a legal identifier : only
+			   alphanumeric characters and _ allowed*/
+			if( !is_valid_param_name(name) ) {
+				fprintf( stderr,
+						 "Configuration Error File <%s>, Line %d: Illegal Identifier: <%s>\n",
+						 config_source, ConfigLineNo, name );
+				retval = -1;
+				goto cleanup;
+			}
+
+			if( expand_flag == EXPAND_IMMEDIATE ) {
+				value = expand_macro(rhs, macro_set);
+				if( value == NULL ) {
+					retval = -1;
+					goto cleanup;
+				}
+			} else  {
+				/* expand self references only */
+				PRAGMA_REMIND("TJ: this handles only trivial self-refs, needs rethink.")
+				value = expand_macro(rhs, macro_set, name, false, subsys);
+				if( value == NULL ) {
+					retval = -1;
+					goto cleanup;
+				}
+			}
+
+			if( op == ':' || op == '=' ) {
+					/*
+					  Yee haw!!! We can treat "expressions" and "macros"
+					  the same way: just insert them into the config hash
+					  table.  Everything now behaves like macros used to
+					  Derek Wright <wright@cs.wisc.edu> 4/11/00
+					*/
+				FileMacro.line = ConfigLineNo;
+				insert(name, value, macro_set, FileMacro);
+			} else {
+				fprintf( stderr,
+					"Configuration Error File <%s>, Line %d: Syntax Error\n",
+					config_source, ConfigLineNo );
+				retval = -1;
+				goto cleanup;
+			}
 		}
 
 		FREE( name );
@@ -579,6 +726,8 @@ void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SO
 			MACRO_META * pmeta = &set.metat[pitem - set.table];
 			pmeta->source_id = source.id;
 			pmeta->source_line = source.line;
+			pmeta->source_meta_id = source.meta_id;
+			pmeta->source_meta_off = source.meta_off;
 			pmeta->inside = (source.inside != false);
 			pmeta->param_table = false;
 			// use the name here in case we have a compound name, i.e "master.value"
@@ -654,6 +803,8 @@ void insert(const char *name, const char *value, MACRO_SET & set, const MACRO_SO
 		pmeta->inside = source.inside;
 		pmeta->source_id = source.id;
 		pmeta->source_line = source.line;
+		pmeta->source_meta_id = source.meta_id;
+		pmeta->source_meta_off = source.meta_off;
 		pmeta->use_count = 0;
 		pmeta->ref_count = 0;
 		pmeta->index = ixItem;

@@ -207,8 +207,8 @@ static MACRO_SET SubmitMacroSet = {
 	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), NULL };
 
 // these are used to keep track of the source of various macros in the table.
-const MACRO_SOURCE DefaultMacro = { true, 1, -2 };
-MACRO_SOURCE FileMacroSource = { false, 0, 0 };
+const MACRO_SOURCE DefaultMacro = { true, 1, -2, -1, -2 };
+MACRO_SOURCE FileMacroSource = { false, 0, 0, -1, -2 };
 
 #define MEG	(1<<20)
 
