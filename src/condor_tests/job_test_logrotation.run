@@ -35,26 +35,30 @@ use Cwd;
 
 
 my $killconfig = $ARGV[0];
+my $localconfig = "condor_config.local";
+my $localconfigsave = "condor_config.local.save";
+my $configlocation = "";
+my $top = getcwd();
 
 if(defined $killconfig) {
 	print "Test running in found configuration.........\n";
 	system("condor_config_val -config");
+	SaveLocalConfig();
 }
 
-my $top = getcwd();
 my $ClusterId = 0;
 my $expect_return = 0;
 
-my $firstappend_condor_config = '
-	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	WANT_SUSPEND = FALSE
-	NEGOTIATION_INTERVAL = 10
-	MAX_WRITELOG_LOG = 50 Kb
-	WRITELOG_LOG = $(log)/WriteLogLog
-	WRITELOG_DEBUG = D_ALWAYS
-';
-
 if(!(defined $killconfig)) {
+	my $firstappend_condor_config = '
+		DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+		WANT_SUSPEND = FALSE
+		NEGOTIATION_INTERVAL = 10
+		MAX_WRITELOG_LOG = 50 Kb
+		WRITELOG_LOG = $(log)/WriteLogLog
+		WRITELOG_DEBUG = D_ALWAYS
+	';
+
 	$configfile1 = CondorTest::CreateLocalConfig($firstappend_condor_config,"testlogrotation1");
 
 	CondorTest::StartCondorWithParams(
@@ -65,6 +69,13 @@ if(!(defined $killconfig)) {
 	print "First test basic job\n";
 	$result = SimpleJob::RunCheck(); # jobid 1
 } else {
+	my $test1 = '
+		MAX_WRITELOG_LOG = 50 Kb
+		WRITELOG_LOG = $(log)/WriteLogLog
+		WRITELOG_DEBUG = D_ALWAYS
+	';
+	AppendLocalConfig($test1);
+
 	print "************ Size based test 50 kb, default log count: WriteLogLog\n";
 }
 
@@ -88,7 +99,7 @@ chdir("$LogLocation");
 @adarray = ();
 # 75 long
 runCondorTool("condor_testwritelog -c 2000 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
-my $logsstring = GetLogsString($LogLocation,"WriteLog");
+my $logsstring = GetLogsString($LogLocation,"WriteLogLog");
 # pass logs oldest to newest
 my $result = ValidateLogs($logsstring,51200, 0, 2000, $LogLocation);
 RegisterResult($result, "test_name", $test_name);
@@ -97,21 +108,27 @@ chdir("$top");
 print "Test default log rotation with 50 Kb size constraint: ";
 if($result == 1) {
 	print "OK\n";
+	if(defined $killconfig) {
+		CleanLogs($LogLocation);
+	}
 } else {
 	print "BAD\n";
+	if(defined $killconfig) {
+		die "Stopping to allow log inspection here:$LogLocation\n";
+	}
 }
 
-my $secondappend_condor_config = '
-	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	WANT_SUSPEND = FALSE
-	NEGOTIATION_INTERVAL = 10
-	MAX_WRITELOG_LOG = 2 Mb
-	WRITELOG_LOG = $(log)/WriteLogLog
-	WRITELOG_DEBUG = D_ALWAYS
-	MAX_NUM_WRITELOG_LOG = 4
-';
-
 if(!(defined $killconfig)) {
+	my $secondappend_condor_config = '
+		DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+		WANT_SUSPEND = FALSE
+		NEGOTIATION_INTERVAL = 10
+		MAX_WRITELOG_LOG = 2 Mb
+		WRITELOG_LOG = $(log)/WriteLogLog
+		WRITELOG_DEBUG = D_ALWAYS
+		MAX_NUM_WRITELOG_LOG = 4
+	';
+
 	$configfile2 = CondorTest::CreateLocalConfig($secondappend_condor_config,"testlogrotation2");
 
 	CondorTest::StartCondorWithParams(
@@ -123,6 +140,15 @@ if(!(defined $killconfig)) {
 	print "First test basic job\n";
 	$result = SimpleJob::RunCheck(); # jobid 1
 } else {
+	my $test2 = '
+		MAX_WRITELOG_LOG = 2 Mb
+		WRITELOG_LOG = $(log)/WriteLogLog
+		WRITELOG_DEBUG = D_ALWAYS
+		MAX_NUM_WRITELOG_LOG = 4
+	';
+
+	AppendLocalConfig($test2);
+
 	print "****************** Sized based testing with more then two files\n";
 }
 
@@ -134,29 +160,35 @@ chdir("$LogLocation");
 
 @adarray = ();
 runCondorTool("condor_testwritelog -c 112000 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
-$logsstring = GetLogsString($LogLocation,"WriteLog");
+$logsstring = GetLogsString($LogLocation,"WriteLogLog");
 # pass logs oldest to newest
-$result = ValidateLogs($logsstring, 51200, 0, 8000, $LogLocation);
+$result = ValidateLogs($logsstring, 2097152, 0, 112000, $LogLocation);
 RegisterResult($result, "test_name", $test_name);
 chdir("$top");
 
 print "Test multifile log rotation with 50 Kb size constraint: ";
 if($result == 1) {
 	print "OK\n";
+	if(defined $killconfig) {
+		CleanLogs($LogLocation);
+	}
 } else {
 	print "Known Broken\n";
+	if(defined $killconfig) {
+		die "Stopping to allow log inspection here:$LogLocation\n";
+	}
 }
 
-my $thirdappend_condor_config = '
-	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	WANT_SUSPEND = FALSE
-	NEGOTIATION_INTERVAL = 10
-	MAX_WRITELOG_LOG = 60 Sec
-	WRITELOG_LOG = $(log)/WriteLogLog
-	WRITELOG_DEBUG = D_ALWAYS
-';
-
 if(!(defined $killconfig)) {
+	my $thirdappend_condor_config = '
+		DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+		WANT_SUSPEND = FALSE
+		NEGOTIATION_INTERVAL = 10
+		MAX_WRITELOG_LOG = 60 Sec
+		WRITELOG_LOG = $(log)/WriteLogLog
+		WRITELOG_DEBUG = D_ALWAYS
+	';
+
 	$configfile3 = CondorTest::CreateLocalConfig($thirdappend_condor_config,"testlogrotation3");
 
 	CondorTest::StartCondorWithParams(
@@ -168,6 +200,14 @@ if(!(defined $killconfig)) {
 	print "First test basic job\n";
 	$result = SimpleJob::RunCheck(); # jobid 1
 } else {
+	my $test3 = '
+		MAX_WRITELOG_LOG = 60 Sec
+		WRITELOG_LOG = $(log)/WriteLogLog
+		WRITELOG_DEBUG = D_ALWAYS
+	';
+
+	AppendLocalConfig($test3);
+
 	print "************ testing for 2 time based log files\n";
 }
 
@@ -178,31 +218,37 @@ chomp($LogLocation);
 chdir("$LogLocation");
 
 @adarray = ();
-runCondorTool("condor_testwritelog -s 1 -c 90  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
-$logsstring = GetLogsString($LogLocation,"WriteLog");
+runCondorTool("condor_testwritelog -s 1 -c 300  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
+$logsstring = GetLogsString($LogLocation,"WriteLogLog");
 # pass logs oldest to newest
-$result = ValidateLogs($logsstring, 0, 60, 8000, $LogLocation);
+$result = ValidateLogs($logsstring, 0, 60, 300, $LogLocation);
 RegisterResult($result, "test_name", $test_name);
 chdir("$top");
 
 print "Test time based log rotation with 60 Sec time constraint: ";
 if($result == 1) {
 	print "OK\n";
+	if(defined $killconfig) {
+		CleanLogs($LogLocation);
+	}
 } else {
 	print "BAD\n";
+	if(defined $killconfig) {
+		die "Stopping to allow log inspection here:$LogLocation\n";
+	}
 }
 
-my $forthappend_condor_config = '
-	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
-	WANT_SUSPEND = FALSE
-	NEGOTIATION_INTERVAL = 10
-	MAX_WRITELOG_LOG = 60 Sec
-	WRITELOG_LOG = $(log)/WriteLogLog
-	WRITELOG_DEBUG = D_ALWAYS
-	MAX_NUM_WRITELOG_LOG = 2
-';
-
 if(!(defined $killconfig)) {
+	my $forthappend_condor_config = '
+		DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+		WANT_SUSPEND = FALSE
+		NEGOTIATION_INTERVAL = 10
+		MAX_WRITELOG_LOG = 60 Sec
+		WRITELOG_LOG = $(log)/WriteLogLog
+		WRITELOG_DEBUG = D_ALWAYS
+		MAX_NUM_WRITELOG_LOG = 2
+	';
+
 	$configfile4 = CondorTest::CreateLocalConfig($forthappend_condor_config,"testlogrotation4");
 
 	CondorTest::StartCondorWithParams(
@@ -214,6 +260,15 @@ if(!(defined $killconfig)) {
 	print "First test basic job\n";
 	$result = SimpleJob::RunCheck(); # jobid 1
 } else {
+	my $test4 = '
+		MAX_WRITELOG_LOG = 60 Sec
+		WRITELOG_LOG = $(log)/WriteLogLog
+		WRITELOG_DEBUG = D_ALWAYS
+		MAX_NUM_WRITELOG_LOG = 2
+	';
+
+	AppendLocalConfig($test4);
+
 	print "************ Testing for more then two time based log files\n";
 }
 
@@ -224,21 +279,87 @@ chomp($LogLocation);
 chdir("$LogLocation");
 
 @adarray = ();
-runCondorTool("condor_testwritelog -s 1 -c 200  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
+runCondorTool("condor_testwritelog -s 1 -c 300  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
 # pass logs oldest to newest
-my $logsstring = GetLogsString($LogLocation,"WriteLog");
-$result = ValidateLogs($logsstring, 0, 60, 200, $LogLocation);
+my $logsstring = GetLogsString($LogLocation,"WriteLogLog");
+$result = ValidateLogs($logsstring, 0, 60, 300, $LogLocation);
 RegisterResult($result, "test_name", $test_name);
 chdir("$top");
 
 print "Test time based log rotation with 60 Sec time constraint and multiple files: ";
 if($result == 1) {
 	print "OK\n";
+	if(defined $killconfig) {
+		CleanLogs($LogLocation);
+	}
 } else {
 	print "BAD\n";
+	if(defined $killconfig) {
+		die "Stopping to allow log inspection here:$LogLocation\n";
+	}
 }
 
 CondorTest::EndTest();
+
+
+#my $localconfig = "condor_config.local";
+#my $localconfigsave = "condor_config.local.save";
+#my $configlocation = "";
+# $localconfig = SaveLocalConfig();
+
+sub SaveLocalConfig
+{
+	my @adarray = ();
+	runCondorTool("condor_config_val -config", \@adarray, 2, {emit_output=>1});
+
+	my $locfigloc = $adarray[1];
+	chomp($locfigloc);
+
+	if($locfigloc =~ /^\s*(.*?)condor_config\.local$/) {
+		$configlocation = $1;
+	} else {
+		print "Mismatch on $locfigloc\n";
+	}
+	chdir("$configlocation");
+	runcmd("cp $localconfig $localconfigsave",{emit_output=>0});
+	runcmd("ls",{emit_output=>0});
+
+	#print "Leaving SaveLocalConfig configlocation: $configlocation, top:$top\n";
+	#print "Configfile location is: $configlocation\n";
+	chdir("$top");
+}
+
+sub AppendLocalConfig
+{
+	my $newtext = shift;
+	my $tmpconfig = "condor_config.local.new";
+	#print "entering AppendLocalConfig configlocation: $configlocation\n";
+	chdir("$configlocation");
+	#print "AppendLocalConfig src:$localconfig dest:$tmpconfig\n";
+	open(CF, "<$localconfig") or die "Append Failed to $localconfig:$!\n";
+	open(CFN, ">$tmpconfig") or die "Append Failed to $tmpconfig:$!\n";
+	# copy contents of current config file
+	while (<CF>) {
+		print CFN "$_";
+	}
+	close(CF);
+	print CFN "$newtext";
+	close(CFN);
+	runcmd("mv $tmpconfig $localconfig",{emit_output=>0});
+	chdir("$top");
+}
+
+sub RestoreLocalConfig
+{
+	#print "entering RestoreLocalConfig configlocation: $configlocation\n";
+	chdir("$configlocation");
+	runcmd("cp $localconfig condor_config.test",{emit_output=>0});
+	runcmd("cp $localconfigsave $localconfig",{emit_output=>0});
+	runcmd("ls",{emit_output=>0});
+
+	print "Config restore complete\n";
+	chdir("$top");
+}
 
 sub GetLogsString
 {
@@ -247,25 +368,45 @@ sub GetLogsString
 	my @patterns = ();
 	my @sortedpatterns = ();
 	my @reversepatterns =  ();
-	my $reversedstring = "";
+	my $sorteddstring = "";
 
-	print "Check pattern: $pattern from here: ";
+	#print "Check pattern: $pattern from here: ";
 	system("pwd;ls");
-	@patterns = `ls $pattern*`;
+	@patterns = `ls $pattern.*`;
 	@sortedpatterns = sort @patterns;
-	@reversepatterns = reverse @sortedpatterns;
+	print "Sorted logs:\n";
+	foreach my $target (@sortedpatterns) {
+		print "$target ";
+	}
+	print "\n";
 
-	foreach my $logfile (@reversepatterns) {
+	#@reversepatterns = reverse @sortedpatterns;
+
+	foreach my $logfile (@sortedpatterns) {
 		chomp($logfile);
-		if($reversedstring eq "") {
-			$reversedstring = $logfile;
+		if($sorteddstring eq "") {
+			$sorteddstring = $logfile;
+		} elsif($logfile eq "WriteLogLog.old") {
+			$sorteddstring = "$logfile," . $sorteddstring;
 		} else {
-			$reversedstring = $reversedstring . ",$logfile";
+			$sorteddstring = $sorteddstring . ",$logfile";
 		}
 	}
 
-	print "New log ordering: $reversedstring\n";
-	return($reversedstring);
+	print "New log ordering: $sorteddstring\n";
+	return($sorteddstring);
+}
+
+sub CleanLogs
+{
+	my $loglocation = shift;
+	chdir("$loglocation");
+	#print "Cleaning, here now:\n";
+	#runcmd("pwd;ls WriteLog*");
+	runcmd("rm WriteLog*",{emit_output=>0});
+	#print "After cleaning\n";
+	#system("pwd;ls WriteLog*");
+	chdir("$top");
 }
 
 sub ValidateLogs
@@ -283,8 +424,8 @@ sub ValidateLogs
 	print "ValidateLogs: Log Location: $loglocation\n";
 
 	chdir("$loglocation");
-	print "here now:\n";
-	system("pwd;ls WriteLog*");
+	#print "here now:\n";
+	#system("pwd;ls WriteLog*");
 	my @logs = split /,/, $logs;
 	$logcount = @logs;
 	print "Checking $logcount logs:$logs\n";
