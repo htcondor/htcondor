@@ -20,31 +20,23 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_string.h"
 #include "string_list.h"
-#include "condor_arglist.h"
-#include "MyString.h"
-#include "util_lib_proto.h"
-#include "internet.h"
-#include "my_popen.h"
-#include "basename.h"
-#include "vm_univ_utils.h"
 #include "gcegahp_common.h"
 #include "gceCommands.h"
 
 #include "condor_base64.h"
 #include <sstream>
 #include "stat_wrapper.h"
-#include "Regex.h"
-#include <algorithm>
-#include <openssl/hmac.h>
 #include <curl/curl.h>
 #include "thread_control.h"
-#include <expat.h>
+
+using std::string;
+using std::map;
+using std::vector;
 
 #define NULLSTRING "NULL"
 
-const char * nullStringIfEmpty( const std::string & str ) {
+const char * nullStringIfEmpty( const string & str ) {
 	if( str.empty() ) { return NULLSTRING; }
 	else { return str.c_str(); }
 }
@@ -52,7 +44,7 @@ const char * nullStringIfEmpty( const std::string & str ) {
 //
 // Utility function.
 //
-bool writeShortFile( const std::string & fileName, const std::string & contents ) {
+bool writeShortFile( const string & fileName, const string & contents ) {
 	int fd = safe_open_wrapper_follow( fileName.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600 );
 
 	if( fd < 0 ) {
@@ -75,7 +67,7 @@ bool writeShortFile( const std::string & fileName, const std::string & contents 
 // Utility function; inefficient.
 // FIXME: GT #3924.  Also, broken for binary data with embedded NULs.
 //
-bool readShortFile( const std::string & fileName, std::string & contents ) {
+bool readShortFile( const string & fileName, string & contents ) {
 	int fd = safe_open_wrapper_follow( fileName.c_str(), O_RDONLY, 0600 );
 
 	if( fd < 0 ) {
@@ -104,8 +96,7 @@ bool readShortFile( const std::string & fileName, std::string & contents ) {
 }
 
 // Utility function for parsing the response returned by the server.
-void ParseLine( const char *line, std::string &key, std::string &value,
-				int &nesting)
+void ParseLine( const char *line, string &key, string &value, int &nesting)
 {
 	bool in_key = false;
 	bool in_value = false;
@@ -139,11 +130,13 @@ void ParseLine( const char *line, std::string &key, std::string &value,
 	}
 }
 
-void ExtractErrorMessage( const std::string &response, std::string &err_msg )
+// From the body of a failure reply from the server, extract the best
+// human-readable error message.
+void ExtractErrorMessage( const string &response, string &err_msg )
 {
 	StringList lines( response.c_str(), "\n" );
-	std::string key;
-	std::string value;
+	string key;
+	string value;
 	int nesting = 0;
 	const char *line;
 
@@ -158,15 +151,15 @@ void ExtractErrorMessage( const std::string &response, std::string &err_msg )
 }
 
 // Utility function meant for GceInstanceList
-void AddInstanceToResult( std::vector<std::string> &result, std::string &id,
-						  std::string &name, std::string &status,
-						  std::string &status_msg )
+void AddInstanceToResult( vector<string> &result, string &id,
+						  string &name, string &status,
+						  string &status_msg )
 {
 	result.push_back( id );
 	result.push_back( name );
 	result.push_back( status );
 	if ( status_msg.empty() ) {
-		result.push_back( std::string( "NULL" ) );
+		result.push_back( string( "NULL" ) );
 	} else {
 		result.push_back( status_msg );
 	}
@@ -190,8 +183,8 @@ void AddInstanceToResult( std::vector<std::string> &result, std::string &id,
 size_t appendToString( const void * ptr, size_t size, size_t nmemb, void * str ) {
 	if( size == 0 || nmemb == 0 ) { return 0; }
 
-	std::string source( (const char *)ptr, size * nmemb );
-	std::string * ssptr = (std::string *)str;
+	string source( (const char *)ptr, size * nmemb );
+	string * ssptr = (string *)str;
 	ssptr->append( source );
 
 	return (size * nmemb);
@@ -208,7 +201,7 @@ pthread_mutex_t globalCurlMutex = PTHREAD_MUTEX_INITIALIZER;
 bool GceRequest::SendRequest() 
 {
 	struct  curl_slist *curl_headers = NULL;
-	std::string buf;
+	string buf;
 	unsigned long responseCode = 0;
 	char *ca_dir = NULL;
 	char *ca_file = NULL;
@@ -226,7 +219,7 @@ bool GceRequest::SendRequest()
 
 	// Generate the final URI.
 	// TODO Eliminate this copy if we always use the serviceURL unmodified
-	std::string finalURI = this->serviceURL;
+	string finalURI = this->serviceURL;
 	dprintf( D_FULLDEBUG, "Request URI is '%s'\n", finalURI.c_str() );
 
 	// curl_global_init() is not thread-safe.  However, it's safe to call
@@ -509,7 +502,7 @@ GcePing::GcePing() { }
 GcePing::~GcePing() { }
 
 // Expecting:GCE_PING <req_id> <serviceurl> <authfile> <project> <zone>
-bool GcePing::workerFunction(char **argv, int argc, std::string &result_string) {
+bool GcePing::workerFunction(char **argv, int argc, string &result_string) {
 	assert( strcasecmp( argv[0], "GCE_PING" ) == 0 );
 
 	int requestID;
@@ -555,7 +548,7 @@ GceInstanceInsert::~GceInstanceInsert() { }
 
 // Expecting:GCE_INSTACE_INSERT <req_id> <serviceurl> <authfile> <project> <zone>
 //     <instance_name> <machine_type> <image> <metadata> <metadata_file>
-bool GceInstanceInsert::workerFunction(char **argv, int argc, std::string &result_string) {
+bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_string) {
 	assert( strcasecmp( argv[0], "GCE_INSTANCE_INSERT" ) == 0 );
 
 	int requestID;
@@ -579,7 +572,7 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, std::string &resul
 	insert_request.authFile = argv[3];
 	insert_request.requestMethod = "POST";
 
-	// TODO Construct insert_request.requestBody;
+	// TODO Add metadata to instance description
 	insert_request.requestBody = "{\n";
 	insert_request.requestBody += "\"machineType\": \"";
 	insert_request.requestBody += argv[7];
@@ -624,7 +617,7 @@ GceInstanceDelete::GceInstanceDelete() { }
 GceInstanceDelete::~GceInstanceDelete() { }
 
 // Expecting:GCE_INSTACE_DELETE <req_id> <serviceurl> <authfile> <project> <zone> <instance_name>
-bool GceInstanceDelete::workerFunction(char **argv, int argc, std::string &result_string) {
+bool GceInstanceDelete::workerFunction(char **argv, int argc, string &result_string) {
 	assert( strcasecmp( argv[0], "GCE_INSTANCE_DELETE" ) == 0 );
 
 	int requestID;
@@ -669,7 +662,7 @@ GceInstanceList::GceInstanceList() { }
 GceInstanceList::~GceInstanceList() { }
 
 // Expecting:GCE_INSTANCE_LIST <req_id> <serviceurl> <authfile> <project> <zone>
-bool GceInstanceList::workerFunction(char **argv, int argc, std::string &result_string) {
+bool GceInstanceList::workerFunction(char **argv, int argc, string &result_string) {
 	assert( strcasecmp( argv[0], "GCE_INSTANCE_LIST" ) == 0 );
 
 	int requestID;
@@ -701,13 +694,13 @@ bool GceInstanceList::workerFunction(char **argv, int argc, std::string &result_
 							list_request.errorCode.c_str() );
 	} else {
 		StringList response( list_request.resultString.c_str(), "\n" );
-		std::string next_id;
-		std::string next_name;
-		std::string next_status;
-		std::string next_status_msg;
-		std::vector<std::string> results;
-		std::string key;
-		std::string value;
+		string next_id;
+		string next_name;
+		string next_status;
+		string next_status_msg;
+		vector<string> results;
+		string key;
+		string value;
 		int nesting = 0;
 
 		const char *line;
@@ -753,7 +746,7 @@ bool GceInstanceList::workerFunction(char **argv, int argc, std::string &result_
 
 		response.clearAll();
 		response.append( buff );
-		for ( std::vector<std::string>::iterator idx = results.begin(); idx != results.end(); idx++ ) {
+		for ( vector<string>::iterator idx = results.begin(); idx != results.end(); idx++ ) {
 			response.append( idx->c_str() );
 		}
 

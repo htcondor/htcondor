@@ -25,7 +25,6 @@
 #include "gahp_common.h"
 #include "simplelist.h"
 #include "PipeBuffer.h"
-#include "request.h"
 
 #define GAHP_COMMAND_ASYNC_MODE_ON "ASYNC_MODE_ON"
 #define GAHP_COMMAND_ASYNC_MODE_OFF "ASYNC_MODE_OFF"
@@ -37,6 +36,21 @@
 #define GAHP_RESULT_SUCCESS "S"
 #define GAHP_RESULT_ERROR "E"
 #define GAHP_RESULT_FAILURE "F"
+
+// Forward declaration of Worker, referenced in Request.
+class Worker;
+
+class Request {
+ public:
+	Request(const char* cmd);
+
+	int m_reqid;
+	Worker* m_worker;
+
+	std::string m_raw_cmd;
+	Gahp_Args m_args;
+	std::string m_result;
+};
 
 class Worker {
  public:

@@ -20,12 +20,6 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_config.h"
-#include "condor_string.h"
-#include "string_list.h"
-#include "condor_arglist.h"
-#include "util_lib_proto.h"
-#include "internet.h"
-#include "basename.h"
 #include "gcegahp_common.h"
 #include "gceCommands.h"
 

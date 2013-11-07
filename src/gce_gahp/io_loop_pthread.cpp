@@ -23,6 +23,7 @@
 #include <signal.h>
 #include <time.h>
 
+#include "condor_config.h"
 #include "condor_debug.h"
 #include "string_list.h"
 #include "HashTable.h"
@@ -317,6 +318,18 @@ Worker::removeRequest(int req_id)
 //	pthread_mutex_unlock(&m_mutex);
 
 	return false;
+}
+
+
+Request::Request (const char *cmd)
+{
+	m_worker = NULL;
+	m_raw_cmd = cmd;
+
+	if ( parse_gahp_command(cmd, &m_args) )
+		m_reqid = (int)strtol(m_args.argv[1], (char **)NULL, 10);
+	else
+		m_reqid = -1;
 }
 
 
