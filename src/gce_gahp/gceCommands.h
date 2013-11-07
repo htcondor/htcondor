@@ -38,15 +38,15 @@ class GceRequest {
 
 	virtual bool SendRequest();
 
- protected:
 	std::string serviceURL;
 
 	std::string errorMessage;
 	std::string errorCode;
 
-	std::string authFile;
+	std::string accessToken;
 	std::string requestMethod;
 	std::string requestBody;
+	std::string contentType;
 
 	std::string resultString;
 

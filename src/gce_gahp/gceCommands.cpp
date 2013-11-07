@@ -99,7 +99,8 @@ bool readShortFile( const string & fileName, string & contents ) {
 void ParseLine( const char *line, string &key, string &value, int &nesting)
 {
 	bool in_key = false;
-	bool in_value = false;
+	bool in_value_str = false;
+	bool in_value_int = false;
 	key.clear();
 	value.clear();
 
@@ -110,17 +111,27 @@ void ParseLine( const char *line, string &key, string &value, int &nesting)
 			} else {
 				key += *ptr;
 			}
-		} else if ( in_value ) {
+		} else if ( in_value_str ) {
 			if ( *ptr == '"' ) {
-				in_value = false;
+				in_value_str = false;
 			} else {
 				value += *ptr;
+			}
+		} else if ( in_value_int ) {
+			if ( isdigit( *ptr ) ) {
+				value += *ptr;
+			} else {
+				in_value_int = false;
 			}
 		} else if ( *ptr == '"' ) {
 			if ( key.empty() ) {
 				in_key = true;
 			} else if ( value.empty() ) {
-				in_value = true;
+				in_value_str = true;
+			}
+		} else if ( isdigit( *ptr ) ) {
+			if ( value.empty() ) {
+				in_value_int = true;
 			}
 		} else if ( *ptr == '{' || *ptr == '[' ) {
 			nesting++;
@@ -169,6 +180,185 @@ void AddInstanceToResult( vector<string> &result, string &id,
 	status_msg.clear();
 }
 
+
+struct AuthInfo {
+	string m_auth_file;
+	string m_access_token;
+	time_t m_expiration;
+	time_t m_last_attempt;
+	pthread_cond_t m_cond;
+	string m_err_msg;
+	bool m_refreshing;
+
+	AuthInfo() : m_expiration(0), m_last_attempt(0), m_refreshing(false)
+	{ pthread_cond_init( &m_cond, NULL ); }
+
+	~AuthInfo() { pthread_cond_destroy( &m_cond ); }
+};
+
+// A table of Google OAuth 2.0 credentials, keyed on the filename the
+// credentials were read from.
+map<string, AuthInfo> authTable;
+
+// Obtain a refresh token from Google's OAuth 2.0 service using the
+// provided credentials.
+bool TryAuthRefresh( const string &client_id, const string &client_secret,
+					 const string &refresh_token, string &access_token,
+					 int &expires_in, string &err_msg )
+{
+	// Fill in required attributes & parameters.
+	GceRequest request;
+	request.serviceURL = "https://accounts.google.com/o/oauth2/token";
+	request.requestMethod = "POST";
+	request.contentType = "application/x-www-form-urlencoded";
+
+	// TODO Do we need any newlines in this body?
+	request.requestBody = "client_id=";
+	request.requestBody += client_id;
+	request.requestBody += "&client_secret=";
+	request.requestBody += client_secret;
+	request.requestBody += "&refresh_token=";
+	request.requestBody += refresh_token;
+	request.requestBody += "&grant_type=refresh_token";
+
+	// Send the request.
+	if( ! request.SendRequest() ) {
+		err_msg = request.errorMessage;
+		return false;
+	}
+
+	StringList response( request.resultString.c_str(), "\n" );
+	string key;
+	string value;
+	int nesting = 0;
+	string my_access_token;
+	int my_expires_in = 0;
+
+	const char *line;
+	response.rewind();
+	while( (line = response.next()) ) {
+		ParseLine( line, key, value, nesting );
+		if ( key == "access_token" ) {
+			my_access_token = value;
+		}
+		if ( key == "expires_in" ) {
+			my_expires_in = atoi( value.c_str() );
+		}
+	}
+
+	if ( my_access_token.empty() ) {
+		err_msg = "No access_token in server response";
+		return false;
+	}
+	if ( my_expires_in == 0 ) {
+		err_msg = "No expiration in server_response";
+		return false;
+	}
+
+	access_token = my_access_token;
+	expires_in = my_expires_in;
+
+	return true;
+}
+
+// Given a file containing OAuth 2.0 credentials, return an access
+// token that can be used to perform GCE requests.
+// If true is returned, then result contains the access token.
+// If false is returned, then result contains an error message.
+// The credentials file is expected to look like that written by
+// Google's gcutil command-line tool. Specifically, it should contain
+// JSON data that includes the refresh_token, client_id, and
+// client_secret values required to obtain an access token from
+// Google's OAuth 2.0 service.
+// The results are cached (in authTable map), so that the OAuth service
+// is only contacted when necessary (the first time we see a file and
+// when the access token is about to expire).
+bool GetAccessToken( const string &auth_file, string &access_token,
+					 string &err_msg)
+{
+	AuthInfo &auth_entry = authTable[auth_file];
+
+	while ( auth_entry.m_refreshing ) {
+		pthread_cond_wait( &auth_entry.m_cond, &global_big_mutex );
+	}
+
+	if ( !auth_entry.m_err_msg.empty() &&
+		 time(NULL) - auth_entry.m_last_attempt < (5 * 60) ) {
+		err_msg = auth_entry.m_err_msg;
+		return false;
+	}
+
+	if ( auth_entry.m_auth_file.empty() ) {
+		auth_entry.m_auth_file = auth_file;
+	}
+
+	if ( auth_entry.m_expiration < time(NULL) - (5 * 60) ) {
+		auth_entry.m_refreshing = true;
+		auth_entry.m_err_msg.clear();
+
+		string auth_file_contents;
+		string client_id;
+		string client_secret;
+		string refresh_token;
+		string key;
+		string value;
+		int nesting = 0;
+		int expires_in = 0;
+		StringList lines( NULL, "\n" );
+		const char *line;
+		if ( !readShortFile( auth_file, auth_file_contents ) ) {
+			auth_entry.m_err_msg = "Failed to read auth file";
+			goto done;
+		}
+
+		lines.initializeFromString( auth_file_contents.c_str() );
+		lines.rewind();
+		while ( (line = lines.next()) ) {
+			ParseLine( line, key, value, nesting );
+			if ( key == "refresh_token" ) {
+				refresh_token = value;
+			} else if ( key == "client_id" ) {
+				client_id = value;
+			} else if ( key == "client_secret" ) {
+				client_secret = value;
+			}
+		}
+		if ( refresh_token.empty() ) {
+			auth_entry.m_err_msg = "Failed to find refresh_token in auth file";
+			goto done;
+		}
+		if ( client_id.empty() ) {
+			auth_entry.m_err_msg = "Failed to find client_id in auth file";
+			goto done;
+		}
+		if ( client_secret.empty() ) {
+			auth_entry.m_err_msg = "Failed to find client_secret in auth file";
+			goto done;
+		}
+
+		if ( TryAuthRefresh( client_id, client_secret, refresh_token,
+							 auth_entry.m_access_token, expires_in,
+							 auth_entry.m_err_msg ) ) {
+			auth_entry.m_expiration = time(NULL) + expires_in;
+		}
+
+	done:
+		auth_entry.m_last_attempt = time(NULL);
+		auth_entry.m_refreshing = false;
+		pthread_cond_broadcast( &auth_entry.m_cond );
+	}
+
+	if ( !auth_entry.m_err_msg.empty() ) {
+		err_msg = auth_entry.m_err_msg;
+		return false;
+	} else {
+		ASSERT( !auth_entry.m_access_token.empty() );
+		access_token = auth_entry.m_access_token;
+		return true;
+	}
+}
+
+
 //
 // "This function gets called by libcurl as soon as there is data received
 //  that needs to be saved. The size of the data pointed to by ptr is size
@@ -193,6 +383,7 @@ size_t appendToString( const void * ptr, size_t size, size_t nmemb, void * str )
 GceRequest::GceRequest()
 {
 	includeResponseHeader = false;
+	contentType = "application/json";
 }
 
 GceRequest::~GceRequest() { }
@@ -205,17 +396,6 @@ bool GceRequest::SendRequest()
 	unsigned long responseCode = 0;
 	char *ca_dir = NULL;
 	char *ca_file = NULL;
-
-	std::string access_token;
-	if( ! readShortFile( this->authFile, access_token ) ) {
-		this->errorCode = "E_FILE_IO";
-		this->errorMessage = "Unable to read from secretkey file '" + this->authFile + "'.";
-		dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->authFile.c_str() );
-		return false;
-	}
-	if ( access_token[ access_token.length() - 1 ] == '\n' ) {
-		access_token.erase( access_token.length() - 1 );
-	}
 
 	// Generate the final URI.
 	// TODO Eliminate this copy if we always use the serviceURL unmodified
@@ -313,17 +493,21 @@ bool GceRequest::SendRequest()
 		}
 	}
 
-	buf = "Authorization: Bearer ";
-	buf += access_token;
-	curl_headers = curl_slist_append( curl_headers, buf.c_str() );
-	if ( curl_headers == NULL ) {
-		this->errorCode = "E_CURL_LIB";
-		this->errorMessage = "curl_slist_append() failed.";
-		dprintf( D_ALWAYS, "curl_slist_append() failed, failing.\n" );
-		goto error_return;
+	if ( !accessToken.empty() ) {
+		buf = "Authorization: Bearer ";
+		buf += accessToken;
+		curl_headers = curl_slist_append( curl_headers, buf.c_str() );
+		if ( curl_headers == NULL ) {
+			this->errorCode = "E_CURL_LIB";
+			this->errorMessage = "curl_slist_append() failed.";
+			dprintf( D_ALWAYS, "curl_slist_append() failed, failing.\n" );
+			goto error_return;
+		}
 	}
 
-	curl_headers = curl_slist_append( curl_headers, "Content-Type: application/json" );
+	buf = "Content-Type: ";
+	buf += contentType;
+	curl_headers = curl_slist_append( curl_headers, buf.c_str() );
 	if ( curl_headers == NULL ) {
 		this->errorCode = "E_CURL_LIB";
 		this->errorMessage = "curl_slist_append() failed.";
@@ -523,8 +707,15 @@ bool GcePing::workerFunction(char **argv, int argc, string &result_string) {
 	ping_request.serviceURL += "/zones/";
 	ping_request.serviceURL += argv[5];
 	ping_request.serviceURL += "/instances";
-	ping_request.authFile = argv[3];
 	ping_request.requestMethod = "GET";
+
+	string auth_file = argv[3];
+	if ( !GetAccessToken( auth_file, ping_request.accessToken,
+						  ping_request.errorMessage ) ) {
+		result_string = create_failure_result( requestID,
+											   ping_request.errorMessage.c_str() );
+		return true;
+	}
 
 	// Send the request.
 	if( ! ping_request.SendRequest() ) {
@@ -569,7 +760,6 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	insert_request.serviceURL += "/zones/";
 	insert_request.serviceURL += argv[5];
 	insert_request.serviceURL += "/instances";
-	insert_request.authFile = argv[3];
 	insert_request.requestMethod = "POST";
 
 	// TODO Add metadata to instance description
@@ -591,6 +781,14 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	insert_request.requestBody += "}\n]\n";
 	insert_request.requestBody += "}\n]\n";
 	insert_request.requestBody += "}\n";
+
+	string auth_file = argv[3];
+	if ( !GetAccessToken( auth_file, insert_request.accessToken,
+						  insert_request.errorMessage ) ) {
+		result_string = create_failure_result( requestID,
+											   insert_request.errorMessage.c_str() );
+		return true;
+	}
 
 	// Send the request.
 	if( ! insert_request.SendRequest() ) {
@@ -639,8 +837,15 @@ bool GceInstanceDelete::workerFunction(char **argv, int argc, string &result_str
 	delete_request.serviceURL += argv[5];
 	delete_request.serviceURL += "/instances/";
 	delete_request.serviceURL += argv[6];
-	delete_request.authFile = argv[3];
 	delete_request.requestMethod = "DELETE";
+
+	string auth_file = argv[3];
+	if ( !GetAccessToken( auth_file, delete_request.accessToken,
+						  delete_request.errorMessage ) ) {
+		result_string = create_failure_result( requestID,
+											   delete_request.errorMessage.c_str() );
+		return true;
+	}
 
 	// Send the request.
 	if( ! delete_request.SendRequest() ) {
@@ -683,8 +888,15 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 	list_request.serviceURL += "/zones/";
 	list_request.serviceURL += argv[5];
 	list_request.serviceURL += "/instances";
-	list_request.authFile = argv[3];
 	list_request.requestMethod = "GET";
+
+	string auth_file = argv[3];
+	if ( !GetAccessToken( auth_file, list_request.accessToken,
+						  list_request.errorMessage ) ) {
+		result_string = create_failure_result( requestID,
+											   list_request.errorMessage.c_str() );
+		return true;
+	}
 
 	// Send the request.
 	if( ! list_request.SendRequest() ) {
