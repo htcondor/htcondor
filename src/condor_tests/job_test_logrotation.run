@@ -114,7 +114,7 @@ if($result == 1) {
 } else {
 	print "BAD\n";
 	if(defined $killconfig) {
-		die "Stopping to allow log inspection here:$LogLocation\n";
+		leave( "Stopping to allow log inspection here:$LogLocation\n");
 	}
 }
 
@@ -141,9 +141,6 @@ if(!(defined $killconfig)) {
 	$result = SimpleJob::RunCheck(); # jobid 1
 } else {
 	my $test2 = '
-		MAX_WRITELOG_LOG = 2 Mb
-		WRITELOG_LOG = $(log)/WriteLogLog
-		WRITELOG_DEBUG = D_ALWAYS
 		MAX_NUM_WRITELOG_LOG = 4
 	';
 
@@ -175,7 +172,7 @@ if($result == 1) {
 } else {
 	print "Known Broken\n";
 	if(defined $killconfig) {
-		die "Stopping to allow log inspection here:$LogLocation\n";
+		leave( "Stopping to allow log inspection here:$LogLocation\n");
 	}
 }
 
@@ -202,8 +199,7 @@ if(!(defined $killconfig)) {
 } else {
 	my $test3 = '
 		MAX_WRITELOG_LOG = 60 Sec
-		WRITELOG_LOG = $(log)/WriteLogLog
-		WRITELOG_DEBUG = D_ALWAYS
+		MAX_NUM_WRITELOG_LOG = 1
 	';
 
 	AppendLocalConfig($test3);
@@ -234,7 +230,7 @@ if($result == 1) {
 } else {
 	print "BAD\n";
 	if(defined $killconfig) {
-		die "Stopping to allow log inspection here:$LogLocation\n";
+		leave( "Stopping to allow log inspection here:$LogLocation\n");
 	}
 }
 
@@ -261,9 +257,6 @@ if(!(defined $killconfig)) {
 	$result = SimpleJob::RunCheck(); # jobid 1
 } else {
 	my $test4 = '
-		MAX_WRITELOG_LOG = 60 Sec
-		WRITELOG_LOG = $(log)/WriteLogLog
-		WRITELOG_DEBUG = D_ALWAYS
 		MAX_NUM_WRITELOG_LOG = 2
 	';
 
@@ -295,11 +288,12 @@ if($result == 1) {
 } else {
 	print "BAD\n";
 	if(defined $killconfig) {
-		die "Stopping to allow log inspection here:$LogLocation\n";
+		leave( "Stopping to allow log inspection here:$LogLocation\n");
 	}
 }
 
 CondorTest::EndTest();
+RestoreLocalConfig(); # retore original condor_config.local file
 
 
 #my $localconfig = "condor_config.local";
@@ -336,8 +330,8 @@ sub AppendLocalConfig
 	#print "entering AppendLocalConfig configlocation: $configlocation\n";
 	chdir("$configlocation");
 	#print "AppendLocalConfig src:$localconfig dest:$tmpconfig\n";
-	open(CF, "<$localconfig") or die "Append Failed to $localconfig:$!\n";
-	open(CFN, ">$tmpconfig") or die "Append Failed to $tmpconfig:$!\n";
+	open(CF, "<$localconfig") or leave( "Append Failed to $localconfig:$!\n");
+	open(CFN, ">$tmpconfig") or leave("Append Failed to $tmpconfig:$!\n");
 	# copy contents of current config file
 	while (<CF>) {
 		print CFN "$_";
@@ -355,10 +349,17 @@ sub RestoreLocalConfig
 	chdir("$configlocation");
 	runcmd("cp $localconfig condor_config.test",{emit_output=>0});
 	runcmd("cp $localconfigsave $localconfig",{emit_output=>0});
-	runcmd("ls",{emit_output=>0});
+	runcmd("ls",{emit_output=>1});
 
 	print "Config restore complete\n";
 	chdir("$top");
+}
+
+sub leave 
+{
+	my $diemessage = shift;
+	RestoreLocalConfig();
+	die $diemessage;
 }
 
 sub GetLogsString
@@ -472,7 +473,7 @@ sub LogSequenceCheck
 	my $lastseq = 0;
 	my $line = "";
 	foreach my $logfile (@logs) {
-		open(SC,"<$logfile") or die "Sequence check on validated log: $logfile failed:$!\n";
+		open(SC,"<$logfile") or leave( "Sequence check on validated log: $logfile failed:$!\n");
 		while (<SC>) {
 			chomp($_);
 			$line = $_;
@@ -536,7 +537,7 @@ sub LogTimeCheck
 	while($count < ($logcount - 1)) {
 		$StartTime = 0;
 		$EndTime = 0;
-		open(LL,"<@logs[$count]") or die "Failed to open @logs[$count]:$!\n";
+		open(LL,"<@logs[$count]") or leave( "Failed to open @logs[$count]:$!\n");
 		while (<LL>) {
 			chomp();
 			$line = $_;
