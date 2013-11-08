@@ -472,11 +472,11 @@ bool GceRequest::SendRequest()
 			goto error_return;
 		}
 		
-		rv = curl_easy_setopt( curl, CURLOPT_COPYPOSTFIELDS, requestBody.c_str() );
+		rv = curl_easy_setopt( curl, CURLOPT_POSTFIELDS, requestBody.c_str() );
 		if( rv != CURLE_OK ) {
 			this->errorCode = "E_CURL_LIB";
-			this->errorMessage = "curl_easy_setopt( CURLOPT_COPYPOSTFIELDS ) failed.";
-			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_COPYPOSTFIELDS ) failed (%d): '%s', failing.\n",
+			this->errorMessage = "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed.";
+			dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed (%d): '%s', failing.\n",
 					 rv, curl_easy_strerror( rv ) );
 			goto error_return;
 		}
