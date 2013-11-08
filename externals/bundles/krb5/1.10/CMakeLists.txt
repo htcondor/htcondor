@@ -89,6 +89,9 @@ if (WITH_KRB5)
 							${KRB5_INSTALL_LOC}/lib/gssapi64.dll
 							${KRB5_INSTALL_LOC}/lib/k5sprt64.dll
 							${KRB5_INSTALL_LOC}/lib/krb5_64.dll
+              ${KRB5_INSTALL_LOC}/lib/krbcc64.dll
+              ${KRB5_INSTALL_LOC}/lib/leashw64.dll
+							${KRB5_INSTALL_LOC}/lib/wshelp64.dll
 							${KRB5_INSTALL_LOC}/lib/xpprof64.dll
               DESTINATION ${C_LIB} )
       else ()
@@ -96,7 +99,10 @@ if (WITH_KRB5)
 							${KRB5_INSTALL_LOC}/lib/gssapi32.dll
 							${KRB5_INSTALL_LOC}/lib/k5sprt32.dll
 							${KRB5_INSTALL_LOC}/lib/krb5_32.dll
-							${KRB5_INSTALL_LOC}/lib/xpprof32.dll
+              ${KRB5_INSTALL_LOC}/lib/krbcc32.dll
+              ${KRB5_INSTALL_LOC}/lib/leashw32.dll
+							${KRB5_INSTALL_LOC}/lib/wshelp32.dll
+              ${KRB5_INSTALL_LOC}/lib/xpprof32.dll
               DESTINATION ${C_LIB} )
       endif ()
 		else()
