@@ -125,10 +125,10 @@ static MACRO_SET ConfigMacroSet = {
 	0, 0,
 	/* CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULT | */ 0,
 	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), &ConfigMacroDefaults };
-const MACRO_SOURCE DetectedMacro = { true,  0, -2 };
-const MACRO_SOURCE DefaultMacro  = { true,  1, -2 };
-const MACRO_SOURCE EnvMacro      = { false, 2, -2 };
-const MACRO_SOURCE WireMacro     = { false, 3, -2 };
+const MACRO_SOURCE DetectedMacro = { true,  0, -2, -1, -2 };
+const MACRO_SOURCE DefaultMacro  = { true,  1, -2, -1, -2 };
+const MACRO_SOURCE EnvMacro      = { false, 2, -2, -1, -2 };
+const MACRO_SOURCE WireMacro     = { false, 3, -2, -1, -2 };
 
 #ifdef _POOL_ALLOCATOR
 
@@ -580,10 +580,16 @@ void validate_config(bool abort_if_invalid)
 		const char * val = hash_iter_value(it);
 		if (val && strstr(val, FORBIDDEN_CONFIG_VAL)) {
 			const char * name = hash_iter_key(it);
+#if 1
+			MyString filename;
+			param_get_location(hash_iter_meta(it), filename);
+			tmp.formatstr("   %s (found at %s)\n", name, filename.Value());
+#else
 			MyString filename;
 			int line_number;
 			param_get_location(name, filename, line_number);
 			tmp.formatstr("   %s (found on line %d of %s)\n", name, line_number, filename.Value());
+#endif
 			output += tmp;
 			invalid_entries++;
 		}
@@ -2369,6 +2375,23 @@ param_boolean_int( const char *name, int default_value ) {
     return param_boolean(name, default_bool) ? 1 : 0;
 }
 
+#if 1
+
+const char * param_get_location(const MACRO_META * pmet, MyString & value)
+{
+	value = config_source_by_id(pmet->source_id);
+	if (pmet->source_line >= 0) {
+		value.formatstr_cat(", line %d", pmet->source_line);
+		MACRO_DEF_ITEM * pmsi = param_meta_source_by_id(pmet->source_meta_id);
+		if (pmsi) {
+			value.formatstr_cat(", %s+%d", pmsi->key, pmet->source_meta_off);
+		}
+	}
+	return value.c_str();
+}
+
+#else
+
 // Note that the line_number can be -1 if the filename isn't a real
 // filename, but something like <Internal> or <Environment>
 bool param_get_location(
@@ -2391,6 +2414,7 @@ bool param_get_location(
 	}
 	return found_it;
 }
+#endif
 
 // find an item and return a hash iterator that points to it.
 bool param_find_item (
@@ -2412,6 +2436,7 @@ bool param_find_item (
 		name_found.formatstr("%s.%s.%s", subsys, local, name);
 		pi = find_macro_item(name_found.Value(), ConfigMacroSet);
 		if (pi) {
+			name_found = pi->key;
 			it.ix = (int)(pi - it.set.table);
 			return true;
 		}
@@ -2420,6 +2445,7 @@ bool param_find_item (
 		name_found.formatstr("%s.%s", local, name);
 		pi = find_macro_item(name_found.Value(), ConfigMacroSet);
 		if (pi) {
+			name_found = pi->key;
 			it.ix = (int)(pi - it.set.table);
 			return true;
 		}
@@ -2428,11 +2454,16 @@ bool param_find_item (
 		name_found.formatstr("%s.%s", subsys, name);
 		pi = find_macro_item(name_found.Value(), ConfigMacroSet);
 		if (pi) {
+			name_found = pi->key;
 			it.ix = (int)(pi - it.set.table);
 			return true;
 		}
 		const MACRO_DEF_ITEM* pdf = (const MACRO_DEF_ITEM*)param_subsys_default_lookup(subsys, name);
 		if (pdf) {
+			name_found = subsys;
+			name_found.upper_case();
+			name_found += ".";
+			name_found += pdf->key;
 			it.is_def = true;
 			it.pdef = pdf;
 			it.id = param_default_get_id(name);
@@ -2442,14 +2473,14 @@ bool param_find_item (
 
 	pi = find_macro_item(name, ConfigMacroSet);
 	if (pi) {
-		name_found = name;
+		name_found = pi->key;
 		it.ix = (int)(pi - it.set.table);
 		return true;
 	}
 
 	MACRO_DEF_ITEM * pdf = param_default_lookup(name);
 	if (pdf) {
-		name_found = name;
+		name_found = pdf->key;
 		it.is_def = true;
 		it.pdef = pdf;
 		it.id = param_default_get_id(name);
@@ -2494,6 +2525,32 @@ const char * hash_iter_def_value(HASHITER& it)
 	return param_exact_default_string(name);
 }
 
+#if 1
+
+const char * param_get_info(
+	const char * name,
+	const char * subsys,
+	const char * local,
+	MyString &name_used,
+	const char ** pdef_val,
+	const MACRO_META **ppmet)
+{
+	const char * val = NULL;
+	if (pdef_val) { *pdef_val = NULL; }
+	if (ppmet)    { *ppmet = NULL; }
+	name_used.clear();
+
+	HASHITER it(ConfigMacroSet, 0);
+	if (param_find_item(name, subsys, local, name_used, it)) {
+		val = hash_iter_value(it);
+		if (pdef_val) { *pdef_val = hash_iter_def_value(it); }
+		if (ppmet) { *ppmet = hash_iter_meta(it); }
+	}
+	return val;
+}
+
+#else
+
 const char * param_get_info(
 	const char * name,
 	const char * subsys,
@@ -2517,6 +2574,7 @@ const char * param_get_info(
 	}
 	return val;
 }
+#endif
 
 void
 reinsert_specials( const char* host )

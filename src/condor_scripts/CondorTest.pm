@@ -1469,6 +1469,7 @@ sub getJobStatus
 # upon failure and return 0 on failure.
 #
 
+
 sub runCondorTool
 {
 	my $trymultiplier = 1;
@@ -1525,7 +1526,14 @@ sub runCondorTool
 				#print "************* std out ***************\n";
 				#print "************* std err ***************\n";
 				#print "************* GetQueue() ***************\n";
-				GetQueue();
+				if(exists ${$options}{emit_output}) {
+					if(${$options}{emit_output} == 0) {
+					} else {
+						GetQueue();
+					}
+				} else {
+					GetQueue();
+				}
 				#print "************* GetQueue() DONE ***************\n";
 		} else {
 
@@ -1588,7 +1596,7 @@ sub runToolNTimes
 		@outarrray = ();
         @date = ();
         @date = `date`;
-        fullchomp $date[0];
+        CondorUtils::fullchomp $date[0];
         #print "$date[0] $cmd $count\n";
         #@cmdout = `$cmd`;
         if(defined $wantoutput) {
@@ -2101,6 +2109,7 @@ sub SearchCondorLogMultiple
 		return(1);
 	}
 }
+
 
 ##############################################################################
 ##
