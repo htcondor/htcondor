@@ -96,15 +96,16 @@ bool readShortFile( const string & fileName, string & contents ) {
 }
 
 // Utility function for parsing the response returned by the server.
-void ParseLine( const char *line, string &key, string &value, int &nesting)
+bool ParseLine( const char *&input, string &key, string &value, int &nesting)
 {
+	const char *ptr = NULL;
 	bool in_key = false;
 	bool in_value_str = false;
 	bool in_value_int = false;
 	key.clear();
 	value.clear();
 
-	for ( const char *ptr = line; *ptr; ptr++ ) {
+	for ( ptr = input; *ptr; ptr++ ) {
 		if ( in_key ) {
 			if ( *ptr == '"' ) {
 				in_key = false;
@@ -137,23 +138,27 @@ void ParseLine( const char *line, string &key, string &value, int &nesting)
 			nesting++;
 		} else if ( *ptr == '}' || *ptr == ']' ) {
 			nesting--;
+		} else if ( *ptr == '\n' ) {
+			ptr++;
+			input = ptr;
+			return true;
 		}
 	}
+
+	input = ptr;
+	return false;
 }
 
 // From the body of a failure reply from the server, extract the best
 // human-readable error message.
 void ExtractErrorMessage( const string &response, string &err_msg )
 {
-	StringList lines( response.c_str(), "\n" );
 	string key;
 	string value;
 	int nesting = 0;
-	const char *line;
 
-	lines.rewind();
-	while ( (line = lines.next()) ) {
-		ParseLine( line, key, value, nesting );
+	const char *pos = response.c_str();
+	while ( ParseLine( pos, key, value, nesting ) ) {
 		if ( nesting == 2 && key == "message" ) {
 			err_msg = value;
 			return;
@@ -227,17 +232,14 @@ bool TryAuthRefresh( const string &client_id, const string &client_secret,
 		return false;
 	}
 
-	StringList response( request.resultString.c_str(), "\n" );
 	string key;
 	string value;
 	int nesting = 0;
 	string my_access_token;
 	int my_expires_in = 0;
 
-	const char *line;
-	response.rewind();
-	while( (line = response.next()) ) {
-		ParseLine( line, key, value, nesting );
+	const char *pos = request.resultString.c_str();
+	while( ParseLine( pos, key, value, nesting ) ) {
 		if ( key == "access_token" ) {
 			my_access_token = value;
 		}
@@ -304,17 +306,14 @@ bool GetAccessToken( const string &auth_file, string &access_token,
 		string value;
 		int nesting = 0;
 		int expires_in = 0;
-		StringList lines( NULL, "\n" );
-		const char *line;
+		const char *pos;
 		if ( !readShortFile( auth_file, auth_file_contents ) ) {
 			auth_entry.m_err_msg = "Failed to read auth file";
 			goto done;
 		}
 
-		lines.initializeFromString( auth_file_contents.c_str() );
-		lines.rewind();
-		while ( (line = lines.next()) ) {
-			ParseLine( line, key, value, nesting );
+		pos = auth_file_contents.c_str();
+		while ( ParseLine( pos, key, value, nesting ) ) {
 			if ( key == "refresh_token" ) {
 				refresh_token = value;
 			} else if ( key == "client_id" ) {
@@ -905,7 +904,6 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 							list_request.errorMessage.c_str(),
 							list_request.errorCode.c_str() );
 	} else {
-		StringList response( list_request.resultString.c_str(), "\n" );
 		string next_id;
 		string next_name;
 		string next_status;
@@ -915,10 +913,8 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 		string value;
 		int nesting = 0;
 
-		const char *line;
-		response.rewind();
-		while( (line = response.next()) ) {
-			ParseLine( line, key, value, nesting );
+		const char *pos = list_request.resultString.c_str();
+		while( ParseLine( pos, key, value, nesting ) ) {
 			if ( nesting != 3 ) {
 				continue;
 			}
@@ -956,7 +952,7 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 		char buff[16];
 		sprintf( buff, "%d", (int)(results.size() / 4) );
 
-		response.clearAll();
+		StringList response;
 		response.append( buff );
 		for ( vector<string>::iterator idx = results.begin(); idx != results.end(); idx++ ) {
 			response.append( idx->c_str() );
