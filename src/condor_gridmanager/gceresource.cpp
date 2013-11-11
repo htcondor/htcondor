@@ -230,9 +230,6 @@ GCEResource::BatchStatusResult GCEResource::StartBatchStatus() {
 		std::string instance_name = instance_name_list.next();
 		std::string instance_status = instance_status_list.next();
 		std::string instance_status_msg = instance_status_msg_list.next();
-// This is the instance_id we assigned at startup, since the INSERT
-// command doesn't return the actual instance id.
-instance_id="dummy";
 
 		// First, lookup the job using both instace_id and instance_name
 		std::string remote_job_id;

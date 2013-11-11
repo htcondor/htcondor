@@ -795,14 +795,89 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 		result_string = create_failure_result( requestID,
 							insert_request.errorMessage.c_str(),
 							insert_request.errorCode.c_str() );
-	} else {
-		// TODO Read insert_reqest.resultString for instance id
-		//   Instance id isn't provided in response!
-		StringList reply;
-		reply.append( "dummy" );
-
-		result_string = create_success_result( requestID, &reply );
+		return true;
 	}
+
+	string op_name;
+	string key;
+	string value;
+	int nesting = 0;
+
+	const char *pos = insert_request.resultString.c_str();
+	while( ParseLine( pos, key, value, nesting ) ) {
+		if ( key == "name" ) {
+			op_name = value;
+			break;
+		}
+	}
+
+	string status;
+	string instance_id;
+	string err_msg;
+	bool in_err = false;
+	do {
+
+		// Give the operation some time to complete.
+		// TODO Is there a better way to do this?
+		gce_gahp_release_big_mutex();
+		sleep( 5 );
+		gce_gahp_grab_big_mutex();
+
+		GceRequest op_request;
+		op_request.serviceURL = argv[2];
+		op_request.serviceURL += "/projects/";
+		op_request.serviceURL += argv[4];
+		op_request.serviceURL += "/zones/";
+		op_request.serviceURL += argv[5];
+		op_request.serviceURL += "/operations/";
+		op_request.serviceURL += op_name;
+		op_request.requestMethod = "GET";
+
+		if ( !GetAccessToken( auth_file, op_request.accessToken,
+							  op_request.errorMessage ) ) {
+			result_string = create_failure_result( requestID,
+												   op_request.errorMessage.c_str() );
+			return true;
+		}
+
+		if ( !op_request.SendRequest() ) {
+			// TODO Fix construction of error message
+			result_string = create_failure_result( requestID,
+								op_request.errorMessage.c_str(),
+								op_request.errorCode.c_str() );
+			return true;
+		}
+
+		nesting = 0;
+		pos = op_request.resultString.c_str();
+		while ( ParseLine( pos, key, value, nesting ) ) {
+			if ( key == "status" ) {
+				status = value;
+			} else if ( key == "error" ) {
+				in_err = true;
+			} else if ( key == "warnings" ) {
+				in_err = false;
+			} else if ( key == "message" && in_err ) {
+				err_msg = value;
+			} else if ( key == "targetId" ) {
+				instance_id = value;
+			}
+		}
+	} while ( status != "DONE" );
+
+	if ( !err_msg.empty() ) {
+		result_string = create_failure_result( requestID, err_msg.c_str() );
+		return true;
+	}
+	if ( instance_id.empty() ) {
+		result_string = create_failure_result( requestID,
+								"Completed instance insert has no id" );
+		return true;
+	}
+
+	StringList reply;
+	reply.append( instance_id.c_str() );
+	result_string = create_success_result( requestID, &reply );
 
 	return true;
 }
@@ -852,9 +927,79 @@ bool GceInstanceDelete::workerFunction(char **argv, int argc, string &result_str
 		result_string = create_failure_result( requestID,
 							delete_request.errorMessage.c_str(),
 							delete_request.errorCode.c_str() );
-	} else {
-		result_string = create_success_result( requestID, NULL );
+		return true;
 	}
+
+	string op_name;
+	string key;
+	string value;
+	int nesting = 0;
+
+	const char *pos = delete_request.resultString.c_str();
+	while( ParseLine( pos, key, value, nesting ) ) {
+		if ( key == "name" ) {
+			op_name = value;
+			break;
+		}
+	}
+
+	string status;
+	string err_msg;
+	bool in_err = false;
+	do {
+
+		// Give the operation some time to complete.
+		// TODO Is there a better way to do this?
+		gce_gahp_release_big_mutex();
+		sleep( 5 );
+		gce_gahp_grab_big_mutex();
+
+		GceRequest op_request;
+		op_request.serviceURL = argv[2];
+		op_request.serviceURL += "/projects/";
+		op_request.serviceURL += argv[4];
+		op_request.serviceURL += "/zones/";
+		op_request.serviceURL += argv[5];
+		op_request.serviceURL += "/operations/";
+		op_request.serviceURL += op_name;
+		op_request.requestMethod = "GET";
+
+		if ( !GetAccessToken( auth_file, op_request.accessToken,
+							  op_request.errorMessage ) ) {
+			result_string = create_failure_result( requestID,
+												   op_request.errorMessage.c_str() );
+			return true;
+		}
+
+		if ( !op_request.SendRequest() ) {
+			// TODO Fix construction of error message
+			result_string = create_failure_result( requestID,
+								op_request.errorMessage.c_str(),
+								op_request.errorCode.c_str() );
+			return true;
+		}
+
+		nesting = 0;
+		pos = op_request.resultString.c_str();
+		while ( ParseLine( pos, key, value, nesting ) ) {
+			if ( key == "status" ) {
+				status = value;
+			} else if ( key == "error" ) {
+				in_err = true;
+			} else if ( key == "warnings" ) {
+				in_err = false;
+			} else if ( key == "message" && in_err ) {
+				err_msg = value;
+			}
+		}
+	} while ( status != "DONE" );
+
+	if ( !err_msg.empty() ) {
+		result_string = create_failure_result( requestID, err_msg.c_str() );
+		return true;
+	}
+
+	result_string = create_success_result( requestID, NULL );
 
 	return true;
 }
