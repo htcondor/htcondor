@@ -7567,7 +7567,6 @@ int GahpClient::gce_instance_insert( const std::string &service_url,
 {
 	static const char* command = "GCE_INSTANCE_INSERT";
 
-dprintf(D_FULLDEBUG,"JEF: GCI building reqline\n");
 	// Generate request line
 	std::string reqline;
 	reqline += escapeGahpString( service_url );
@@ -7591,7 +7590,6 @@ dprintf(D_FULLDEBUG,"JEF: GCI building reqline\n");
 	const char *buf = reqline.c_str();
 
 	// Check if this request is currently pending. If not, make it the pending request.
-dprintf(D_FULLDEBUG,"JEF: GCI is_pending()\n");
 	if ( !is_pending(command,buf) ) {
 		// Command is not pending, so go ahead and submit a new one if our command mode permits.
 		if ( m_mode == results_only ) {
@@ -7603,7 +7601,6 @@ dprintf(D_FULLDEBUG,"JEF: GCI is_pending()\n");
 	// If we made it here, command is pending.
 
 	// Check first if command completed.
-dprintf(D_FULLDEBUG,"JEF: GCI get_pending_result()\n");
 	Gahp_Args* result = get_pending_result(command, buf);
 
 	if ( result ) {
