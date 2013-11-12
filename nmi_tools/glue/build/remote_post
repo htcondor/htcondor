@@ -53,8 +53,10 @@ if( defined $ENV{_NMI_STEP_FAILED} ) {
     } else {
         print "A previous step failed but no .nmi_failed_tasks file was found.\n  _NMI_STEP_FAILED is: '$ENV{_NMI_STEP_FAILED}'\n";
     }
-    print "Exiting now with exit status $exit_status.\n";
-    exit $exit_status;
+    if ($exit_status) {
+        print "Exiting now with exit status $exit_status.\n";
+        exit $exit_status;
+    }
 }
 else {
     print "The _NMI_STEP_FAILED variable is not set\n";
