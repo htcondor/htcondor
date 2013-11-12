@@ -61,6 +61,11 @@ not properly initializing Winsocks and thus all network operations
 would fail.
 \Ticket{3979}
 
+\item Fixed a bug that caused grid-type cream jobs to fail if the submit
+description file contained the submit command \SubmitCmd{environment} or
+\SubmitCmd{cream\_attributes}.
+\Ticket{4037}
+
 \end{itemize}
 
 
