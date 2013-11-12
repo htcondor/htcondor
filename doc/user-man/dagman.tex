@@ -53,6 +53,10 @@ A limitation exists such that
 all jobs within the single cluster must use the same log file.
 Separate nodes within a DAG may use different log files.
 
+\emph{DAGMan enforces the dependencies within a DAG
+using the events recorded in a
+log file that is specified by the default configuration.}
+
 As DAGMan schedules and submits jobs within nodes to HTCondor,
 these jobs are defined to succeed or fail based on their
 return values.
@@ -549,7 +553,7 @@ produces four dependencies:
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Submit Description File Contents and Usage of Log Files}
+\subsection{Submit Description File Contents}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{DAGMan!submit description file with}
@@ -561,92 +565,85 @@ described by a single cluster number.
 At the present time DAGMan cannot deal with a submit file producing
 multiple job clusters.
 
-\emph{DAGMan enforces the dependencies within a DAG
-using the events recorded in the
-log file(s) produced by job submission to HTCondor.}
-At one time, DAGMan required that all jobs within all nodes
-specify the same, single log file.
-This is no longer the case.
-However, if the DAG utilizes a large number of
-separate log files, performance may suffer.
-Therefore, it is better to have
-fewer, or even only a single log file.
-%Unfortunately,
-%each Stork job currently requires a separate log file.
+%At one time, DAGMan required that all jobs within all nodes
+%specify the same, single log file.
+%This is no longer the case.
+%However, if the DAG utilizes a large number of
+%separate log files, performance may suffer.
+%Therefore, it is better to have
+%fewer, or even only a single log file.
+%
+%\index{DAGMan!lazy log file evaluation}
+%As of HTCondor version 7.3.2, DAGMan's handling of log files
+%significantly changed to improve resource usage and efficiency.  
+%Prior to HTCondor version 7.3.2, 
+%DAGMan assembled a list of all relevant log files at start up, 
+%by looking at all of the submit description files for all of the nodes.
+%It kept the log files open for the duration of the DAG.
+%Beginning with HTCondor version 7.3.2, DAGMan delays opening and using 
+%the submit description file until just before it is going to submit the job.
+%At that point, DAGMan reads the submit description file to discover 
+%the job's log file.
+%And, DAGMan monitors only the log files that are relevant
+%to the jobs currently queued, 
+%or associated with nodes for which a POST script is running.
+%
+%The advantages of the new "lazy log file evaluation" scheme are:
+%
+%\begin{itemize}
+%
+%\item The \Condor{dagman} executable uses fewer file descriptors.
+%In specific,
+%DAGMan must keep a file descriptor open for each unique log file,
+%and operating systems limit the number of open file descriptors;
+%HTCondor's most severe limit is 2048 on Windows platforms.
+%
+%\item It is much easier to have one node of a DAG produce the
+%submit description file for a descendant node in the DAG.
+%
+%\end{itemize}
+%
+%There is one known disadvantage of the lazy log file evaluation scheme:
+%
+%\begin{itemize}
+%
+%\item Because the log files are internally identified by inode
+%numbers, it is possible that errors may arise where log files for
+%a given DAG are spread across more than one device.
+%This permits two unique files to have the same inode number.
+%We hope to have this problem fixed soon.
+%
+%\end{itemize}
 
-\index{DAGMan!lazy log file evaluation}
-As of HTCondor version 7.3.2, DAGMan's handling of log files
-significantly changed to improve resource usage and efficiency.  
-Prior to HTCondor version 7.3.2, 
-DAGMan assembled a list of all relevant log files at start up, 
-by looking at all of the submit description files for all of the nodes.
-It kept the log files open for the duration of the DAG.
-Beginning with HTCondor version 7.3.2, DAGMan delays opening and using 
-the submit description file until just before it is going to submit the job.
-At that point, DAGMan reads the submit description file to discover 
-the job's log file.
-And, DAGMan monitors only the log files that are relevant
-to the jobs currently queued, 
-or associated with nodes for which a POST script is running.
+%\index{DAGMan!default log file specification}
+%%Another new feature in HTCondor version 7.3.2 was the use of 
+%DAGMan assigns 
+%default node job user logs,
+%if a log file is not specified within a job's submit description file.
+%In HTCondor versions earlier than 7.3.2, 
+%it was a fatal error if the submit description
+%file for a node job did not specify a log file.
+%The file used as the default node log is controlled by the
+%\MacroNI{DAGMAN\_DEFAULT\_NODE\_LOG} configuration variable.
+%A complete description is at section~\ref{param:DAGManDefaultNodeLog}.
+%Nodes specifying a log file and other nodes using the default log
+%file can be mixed in a single DAG.
+%Allowing DAGMan to specify a single log file for an entire DAG, 
+%especially a wide DAG,
+%reduces the number of concurrently open file descriptors.
 
-The advantages of the new "lazy log file evaluation" scheme are:
-
-\begin{itemize}
-
-\item The \Condor{dagman} executable uses fewer file descriptors.
-In specific,
-DAGMan must keep a file descriptor open for each unique log file,
-and operating systems limit the number of open file descriptors;
-HTCondor's most severe limit is 2048 on Windows platforms.
-
-\item It is much easier to have one node of a DAG produce the
-submit description file for a descendant node in the DAG.
-
-\end{itemize}
-
-There is one known disadvantage of the lazy log file evaluation scheme:
-
-\begin{itemize}
-
-\item Because the log files are internally identified by inode
-numbers, it is possible that errors may arise where log files for
-a given DAG are spread across more than one device.
-This permits two unique files to have the same inode number.
-We hope to have this problem fixed soon.
-
-\end{itemize}
-
-\index{DAGMan!default log file specification}
-%Another new feature in HTCondor version 7.3.2 was the use of 
-DAGMan assigns 
-default node job user logs,
-if a log file is not specified within a job's submit description file.
-In HTCondor versions earlier than 7.3.2, 
-it was a fatal error if the submit description
-file for a node job did not specify a log file.
-The file used as the default node log is controlled by the
-\MacroNI{DAGMAN\_DEFAULT\_NODE\_LOG} configuration variable.
-A complete description is at section~\ref{param:DAGManDefaultNodeLog}.
-Nodes specifying a log file and other nodes using the default log
-file can be mixed in a single DAG.
-Allowing DAGMan to specify a single log file for an entire DAG, 
-especially a wide DAG,
-reduces the number of concurrently open file descriptors.
-
-Log files for node jobs should not be placed on NFS, 
-unless both configuration variables
-\Macro{CREATE\_LOCKS\_ON\_LOCAL\_DISK} and \Macro{ENABLE\_USERLOG\_LOCKING}
-are \Expr{True}. 
-Without these settings, NFS file locking is not reliable,
-occasionally resulting in simultaneous acquisition of locks on a single
-log file by both the \Condor{schedd} daemon and the \Condor{dagman} job. 
-Partially written events by the \Condor{schedd} cause errors
-for \Condor{dagman}.
-
-Here is a modified version of the DAG input file
-for the diamond-shaped DAG. 
-The modification has each node use the same 
-submit description file.
+%Log files for node jobs should not be placed on NFS, 
+%unless both configuration variables
+%\Macro{CREATE\_LOCKS\_ON\_LOCAL\_DISK} and \Macro{ENABLE\_USERLOG\_LOCKING}
+%are \Expr{True}. 
+%Without these settings, NFS file locking is not reliable,
+%occasionally resulting in simultaneous acquisition of locks on a single
+%log file by both the \Condor{schedd} daemon and the \Condor{dagman} job. 
+%Partially written events by the \Condor{schedd} cause errors
+%for \Condor{dagman}.
+%
+Here is a DAG input file for the diamond-shaped DAG, 
+where each node uses the same submit description file.
 
 \begin{verbatim}
     # File name: diamond.dag
@@ -659,7 +656,7 @@ submit description file.
     PARENT B C CHILD D
 \end{verbatim}
 
-Here is the single HTCondor submit description file
+Here is a sample HTCondor submit description file
 for this DAG:
 
 \index{DAGMan!example submit description file}
@@ -671,24 +668,16 @@ for this DAG:
     error        = diamond.err.$(cluster)
     log          = diamond_condor.log
     universe     = vanilla
-    notification = NEVER
     queue
 \end{verbatim}
 
-This example uses the same HTCondor submit description file
-for all the jobs in the DAG.
-This implies that each node within the DAG runs the
+Since each node uses the same HTCondor submit description file,
+this implies that each node within the DAG runs the
 same job.
 The \MacroUNI{cluster} macro
 produces unique file names for each job's output.
 As the HTCondor job within each node
 causes a separate job submission, each has a unique cluster number.
-
-Notification is set to \verb@NEVER@ in this example.
-This tells HTCondor not to send e-mail about the completion of a job
-submitted to HTCondor.
-For DAGs with many nodes, this
-reduces or eliminates excessive numbers of e-mails.
 
 \index{ClassAd job attribute!DAGParentNodeNames}
 \index{DAGParentNodeNames!job ClassAd attribute}
