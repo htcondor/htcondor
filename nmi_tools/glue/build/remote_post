@@ -40,10 +40,23 @@ my $pub_testbin = "$pub_dir/testbin";
 
 if( defined $ENV{_NMI_STEP_FAILED} ) { 
     my $exit_status = 1;
-    my $nmi_task_failure = "$ENV{_NMI_STEP_FAILED}";
-    print "A previous step failed.  _NMI_STEP_FAILED is: '$ENV{_NMI_STEP_FAILED}'\n";
-    print "Exiting now with exit status $exit_status.\n";
-    exit $exit_status;
+    my $fd;
+    if( open( $fd, "<", ".nmi_failed_task_names" ) ) {
+        $exit_status = 0; # assume that only unit tests failed.
+        while( my $line = <$fd> ) {
+            print( "A task failed: $line" );
+            if( ! ($line =~ /run_unit_tests/) ) {
+                $exit_status = 1; # we have failures other than unit tests
+            }
+        }
+        close( $fd );
+    } else {
+        print "A previous step failed but no .nmi_failed_tasks file was found.\n  _NMI_STEP_FAILED is: '$ENV{_NMI_STEP_FAILED}'\n";
+    }
+    if ($exit_status) {
+        print "Exiting now with exit status $exit_status.\n";
+        exit $exit_status;
+    }
 }
 else {
     print "The _NMI_STEP_FAILED variable is not set\n";

@@ -5360,6 +5360,12 @@ MAX_JOBS_RUNNING	= \
   when the limit is hit, so some files may be fully transferred, some
   partially, and some not at all.
 
+\label{param:MaxTransferQueueAge}
+\item[\Macro{MAX\_TRANSFER\_QUEUE\_AGE}]
+  The number of seconds after which an aged and queued transfer may be
+  dequeued from the transfer queue, as it is presumably hung.
+  Defaults to 7200 seconds, which is 120 minutes.
+
 \label{param:TransferIoReportInterval}
 \item[\Macro{TRANSFER\_IO\_REPORT\_INTERVAL}]
   The sampling interval in seconds for collecting I/O statistics for
@@ -6687,6 +6693,14 @@ REM Run the actual job now
   For Windows platforms, a value that sets the local group to a group other 
   than the default \Expr{Users} for the \Expr{condor-reuse-slot<X>} run account.
   Do \emph{not} place the local group name within quotation marks.
+
+\label{param:JobExecdirPermissions}
+\item[\Macro{JOB\_EXECDIR\_PERMISSIONS}]
+  Control the permissions on the job's scratch directory. Defaults to
+  \Expr{user} which means permissions of \emph{0700}. Possible values are
+  \Expr{user}, \Expr{group}, and \Expr{world}. If set to \Expr{group} then the
+  directory is group-accessible, permissions of \emph{0750}; likewise if set
+  to \Expr{world} the directory is created with permissions \emph{0755}.
 
 
 \end{description}
