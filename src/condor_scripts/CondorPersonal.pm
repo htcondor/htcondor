@@ -1838,7 +1838,19 @@ sub CollectDaemonPids {
     print PIDS "$master MASTER\n";
     foreach my $daemon (keys %pids) {
         debug("\t$daemon pid: $pids{$daemon}\n", $debuglevel);
-        print PIDS "$pids{$daemon}\n";
+		if(CondorUtils::is_windows() == 1) {
+			if($daemon =~ /.*\\(\w+)/) {
+        		print PIDS "$pids{$daemon} $1\n";
+			} else {
+        		print PIDS "$pids{$daemon} $daemon\n";
+			}
+		} else {
+			if($daemon =~ /.*\/(\w+)/) {
+        		print PIDS "$pids{$daemon} $1\n";
+			} else {
+        		print PIDS "$pids{$daemon} $daemon\n";
+			}
+		}	
     }
     close(PIDS);
 }
@@ -1894,61 +1906,145 @@ sub KillDaemonPids
 	close(PD);
 	# give it a little time for a shutdown
 	sleep(10);
-	# did it work.... is process still around?
-	$cnt = kill 0, $masterpid;
-	# try a kill again on master and see if no such process
-	if(CondorUtils::is_windows() == 1) {
-		$cnt = 1;
-		open(KL,"/usr/bin/kill -f -s 15 $masterpid 2>&1 |") 
-			or die "can not grab kill output\n";
-		while(<KL>) {
-			#print "Testing soft kill<$_>\n";
-			if( $_ =~ /^.*couldn\'t\s+open\s+pid\s+.*/ ) {
-				debug("Windows soft kill worked\n",$debuglevel);
-				$cnt = 0;
-			}
-		}
+	my $res = CheckPids($pidfile);
+	if($res eq "all gone") {
+	} elsif($res eq "going away") {
+		sleep(20);
+		$res = CheckPids($pidfile);
+	} elsif($res eq "master gone") {
+		print "Master gone but daemons persist\n";
+	} elsif($res eq "stubborn") {
+		print "all daemons persist\n";
+		sleep(20);
+		$res = CheckPids($pidfile);
 	}
 
-	if($cnt == 0) {
-		debug("Gentle kill for master: $thispid worked!\n",$debuglevel);
-	} else {
-		# hmm bullets are placed in heads here.
-		debug("Gentle kill for master: $thispid $cnt failed!\n",$debuglevel);
-		open(PD,"<$pidfile") or die "Can not open: $pidfile:$!\n";
-		while(<PD>) {
-			fullchomp();
-			$thispid = $_;
-			if($thispid =~ /^(\d+)\s+MASTER.*$/) {
-				$thispid = $1;
-				debug("Kill MASTER PID: $thispid:$1\n",$debuglevel);
-				if(CondorUtils::is_windows() == 1) {
-					$cmd = "/usr/bin/kill -f -s 15 $thispid";
-					system($cmd);
-				} else {
-					$cnt = kill 15, $thispid;
-				}
-			} else {
-				debug("Kill non-MASTER PID: $thispid\n",$debuglevel);
-				if(CondorUtils::is_windows() == 1) {
-					$cmd = "kill -f -s 15 $thispid";
-					system($cmd,{expect_result=>\&ANY});
-				} else {
-					$cnt = kill 15, $thispid;
-				}
-			}
-			if($cnt == 0) {
-				debug("Failed to kill PID: $thispid\n",$debuglevel);
-			} else {
-				debug("Killed PID: $thispid\n",$debuglevel);
-			}
-		}
-		close(PD);
+	# after a bit more
+	if($res eq "all gone") {
+	} elsif($res eq "going away") {
+		sleep(20);
+		$res = CheckPids($pidfile);
+	} elsif($res eq "master gone") {
+		print "Master gone but daemons persist\n";
+	} elsif($res eq "stubborn") {
+		sleep(20);
+		$res = CheckPids($pidfile);
+		print "all daemons persist\n";
 	}
+
+	# did it work.... is process still around? after 3 tries, where are we?
+	print "Last result was: $res\n";
+	if($res eq "going away") {
+		while($res ne "all gone") {
+			sleep(10);
+			$res = CheckPids($pidfile);
+		}
+	} elsif(($res eq "stubborn") || ($res eq "master gone")) {
+			sleep(10);
+			$res = CheckPids($pidfile,"kill all");
+			print "imposed sudden death, where are we now?\n";
+			sleep(10);
+			$res = CheckPids($pidfile,);
+			print "After a bullet to the head: $res\n";
+	}
+
 
 	# reset config to whatever it was.
 	$ENV{CONDOR_CONFIG} = $oldconfig;
 	$debuglevel = $saveddebuglevel;
+	return(0);
+}
+
+#CheckPids($pidfile);
+#################################################################
+#
+# CheckPids is handed a list of pids which may or may not be
+# around still as we told master to go away. Check each pid
+# and give status.
+
+sub CheckPids
+{
+	my $pidfile = shift;
+	my $action = shift;
+	my $line = "";
+	my @grift = ();
+	my $linecount = 0;
+	my $masterlives = 0;
+	my $otherslive = 0;
+	my $howmanydeamons = 0;
+	open(PF, "<$pidfile") or die "Failed to find pid file:$pidfile:$1\n";
+	while(<PF>) {
+		chomp();
+		$line = $_;
+		if($line =~ /(\d+)\s+(\w+).*/) {
+			$howmanydeamons += 1;
+			@grift = ();
+			if(CondorUtils::is_windows() == 1) {
+				@grift = `tasklist | grep $1`;
+				$linecount = @grift;
+				if($linecount == 0) {
+					print "Daemon $2 PID $1 is gone\n";
+				} elsif($linecount == 1) {
+					print "Daemon $2 PID $1 is still alive\n";
+					if($2 eq "MASTER") {
+						$masterlives += 1;
+					} else {
+						$otherslive += 1;
+					}
+					if(defined $action) {
+						if($action eq "kill all") {
+							my $cmd = "taskkill /PID $1 /F";
+							system($cmd);
+						}
+					}
+				}
+			} else {
+				@grift = `ps $1`;
+				$linecount = @grift;
+				if($linecount == 1) {
+					#print "Daemon $2 PID $1 is gone\n";
+				} elsif($linecount == 2) {
+					#print "Daemon $2 PID $1 is still alive\n";
+					if($2 eq "MASTER") {
+						$masterlives += 1;
+					} else {
+						$otherslive += 1;
+					}
+					if(defined $action) {
+						if($action eq "kill all") {
+							kill 15, $1;
+						}
+					}
+				} else {
+					print "Should not have more the two ps lines unless windows: daemon $2\n";
+					foreach my $ps (@grift) {
+						print "$ps";
+					}
+				}
+			}
+		} else {
+			print "Mismatch: $line\n";
+		}
+	}
+	close(PF);
+	if(($masterlives == 0) && ($otherslive == 0)) {
+		# condor personal is off;
+		print "all gone\n";
+		return("all gone");
+	}
+	elsif(($masterlives == 0) && ($otherslive > 0)) { 
+		#master gone but some daemons persist
+		print "master gone\n";
+		return("master gone");
+	} else {
+		if( $howmanydeamons > ($masterlives + $otherslive)) {
+			print "going away\n";
+			return("going away");
+		} else {
+			print "stubborn\n";
+			return("stubborn");
+		}
+	}
 }
 
 #################################################################
