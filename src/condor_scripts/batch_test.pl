@@ -112,6 +112,8 @@ my @debugcollection = ();
 #select(STDERR); $| = 1;
 #select(STDOUT); $| = 1;
 
+my $starttime = time();
+
 my $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
 print "$time: batch_test.pl starting up ($^O perl)\n";
 
@@ -714,6 +716,16 @@ close SUMOUTF;
 
 if ( $cleanupcondor ) {
     stop_condor();
+}
+
+{
+	my $endtime = time();
+	my $deltatime = $endtime - $starttime;
+	my $hours = int($deltatime / (60*60));
+	my $minutes = int(($deltatime - $hours*60*60) / 60);
+	my $seconds = $deltatime - $hours*60*60 - $minutes*60;
+
+	printf("Tests took %d:%02d:%02d (%d seconds)\n", $hours, $minutes, $seconds, $deltatime);
 }
 
 exit $num_failed;
