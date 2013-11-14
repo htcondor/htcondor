@@ -297,6 +297,22 @@ class TestPythonBindings(WithDaemons):
         self.assertTrue("AuthorizationSucceeded" in authz_ad)
         self.assertTrue(authz_ad['AuthorizationSucceeded'])
 
+    def testEventLog(self):
+        events = list(htcondor.read_events(open("tests/test_log.txt")))
+        self.assertEquals(len(events), 4)
+        a = dict(events[0])
+        if 'CurrentTime' in a:
+            del a['CurrentTime']
+        b = {"LogNotes": "DAG Node: Job1",
+             "MyType": "SubmitEvent",
+             "EventTypeNumber": 0L,
+             "Subproc": 0L,
+             "Cluster": 236467L,
+             "Proc": 0L,
+             "EventTime": "2013-11-15T17:05:55",
+             "SubmitHost": "<169.228.38.38:9615?sock=18627_6227_3>",
+            }
+        self.assertEquals(a, b)
 
 if __name__ == '__main__':
     unittest.main()
