@@ -190,6 +190,7 @@ my $ignorefile = "";
 my @testlist;
 
 # -c[md] create a command prompt with the testing environment (windows only)\n
+# -c[cleanup]: stop condor when test(s) finish.  Not used on windows atm.
 # -d[irectory] <dir>: just test this directory
 # -f[ile] <filename>: use this file as the list of tests to run
 # -i[gnore] <filename>: use this file as the list of tests to skip
@@ -202,13 +203,13 @@ my @testlist;
 # -w[wrap]: test in personal condor enable core/ERROR detection
 # -a[again]: how many times do we run each test?
 # -p[pretest]: get are environment set but run no tests
-# -c[cleanup]: stop condor when test(s) finish.  Not used on windows atm.
 #
 while( $_ = shift( @ARGV ) ) {
 	SWITCH: {
 		if( /-h.*/ ) {
 			print "the args:\n";
 			print "-c[md] create a command prompt with the testing environment (windows only)\n";
+			print "-c[cleanup]: stop condor when test(s) finish.  Not used on windows atm.\n";
 			print "-d[irectory] dir: just test this directory\n";
 			print "-f[ile] filename: use this file as the list of tests to run\n";
 			print "-i[gnore] filename: use this file as the list of tests to skip\n";
@@ -224,7 +225,6 @@ while( $_ = shift( @ARGV ) ) {
 			print "-w[wrap]: test in personal condor enable core/ERROR detection\n";
 			print "-a[again]: how many times do we run each test?\n";
 			print "-p[pretest]: get are environment set but run no tests\n";
-			print "-c[cleanup]: stop condor when test(s) finish.  Not used on windows atm.\n";
 			print "--[no-]core: enable/disable core dumping enabled\n";
 			print "--[no-]debug: enable/disable test debugging disabled\n";
 			  print "--isolated: run tests in separate Condor instances\n";
@@ -250,7 +250,15 @@ while( $_ = shift( @ARGV ) ) {
 			next SWITCH;
 		}
 		if( /^-c.*/ ) {
-			$cmd_prompt = 1;
+			# This turns on two unrelated options. This is awful, but maintains
+			# backward compatibility.
+			if($iswindows) {
+				$cmd_prompt = 1;
+			} else {
+				$cleanupcondor = 1;
+				push (@extracondorargs, "-pidfile $condorpidfile");
+			}
+
 			next SWITCH;
 		}
 		if( /^-d.*/ ) {
@@ -311,11 +319,6 @@ while( $_ = shift( @ARGV ) ) {
 		}
 		if( /^-m.*/ ) {
 			$timestamp = 1;
-			next SWITCH;
-		}
-		if( /^-c.*/ ) {
-			$cleanupcondor = 1;
-			push (@extracondorargs, "-pidfile $condorpidfile");
 			next SWITCH;
 		}
 		if( /^--isolated/ ) {
