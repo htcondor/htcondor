@@ -6383,9 +6383,8 @@ int DaemonCore::Create_Process(
 	MyString inheritbuf;
 		// note that these are on the stack; they go away nicely
 		// upon return from this function.
-	ReliSock rsock;
+	SockPairVec socks;
 	SharedPortEndpoint shared_port_endpoint( daemon_sock );
-	SafeSock ssock;
 	PidEntry *pidtmp;
 
 	/* this will be the pidfamily ancestor identification information */
@@ -6535,36 +6534,41 @@ int DaemonCore::Create_Process(
 	}
 	else if ( want_command_port != FALSE ) {
 		inherit_handles = TRUE;
-		SafeSock* ssock_ptr = want_udp ? &ssock : NULL;
-		if (!InitCommandSockets(want_command_port, &rsock, ssock_ptr, false)) {
+		if (!InitCommandSockets(want_command_port, socks, want_udp, false)) {
 				// error messages already printed by InitCommandSockets()
 			goto wrapup;
 		}
 
-		// now duplicate the underlying SOCKET to make it inheritable
-		if ( (!rsock.set_inheritable(TRUE)) ||
-			 (m_wants_dc_udp && !ssock.set_inheritable(TRUE)) ) {
-			dprintf(D_ALWAYS,"Create_Process:Failed to set command "
-					"socks inheritable\n");
-			goto wrapup;
-		}
+		for(SockPairVec::iterator it = socks.begin(); it != socks.end(); it++) {
+			// now duplicate the underlying SOCKET to make it inheritable
+			ASSERT(it->has_relisock()); // No relisock(TCP)? We expected one.
+			if ( (!it->rsock()->set_inheritable(TRUE)) ||
+				 (want_udp && !it->ssock()->set_inheritable(TRUE)) ) {
+				dprintf(D_ALWAYS,"Create_Process:Failed to set command "
+						"socks inheritable\n");
+				goto wrapup;
+			}
 
-		// and now add these new command sockets to the inheritbuf
-		inheritbuf += " ";
-		ptmp = rsock.serialize();
-		inheritbuf += ptmp;
-		delete []ptmp;
-		if (want_udp) {
+#warning adesmet: Inheritbuf may now contain multiple! Ensure this is handled.
+			// and now add these new command sockets to the inheritbuf
 			inheritbuf += " ";
-			ptmp = ssock.serialize();
+			ptmp = it->rsock()->serialize();
 			inheritbuf += ptmp;
 			delete []ptmp;
-		}
+			if (it->has_safesock()) {
+				inheritbuf += " ";
+				ptmp = it->ssock()->serialize();
+				inheritbuf += ptmp;
+				delete []ptmp;
+			}
 
-            // now put the actual fds into the list of fds to inherit
-        inheritFds[numInheritFds++] = rsock.get_file_desc();
-		if (want_udp) {
-			inheritFds[numInheritFds++] = ssock.get_file_desc();
+				// now put the actual fds into the list of fds to inherit
+			if (it->has_relisock()) {
+				inheritFds[numInheritFds++] = it->rsock()->get_file_desc();
+			}
+			if (it->has_safesock()) {
+				inheritFds[numInheritFds++] = it->ssock()->get_file_desc();
+			}
 		}
 	}
 	inheritbuf += " 0";
@@ -7514,8 +7518,10 @@ int DaemonCore::Create_Process(
 					// trying to spawn using a fixed port, we won't
 					// still be holding the port open in this lower
 					// stack frame...
-				rsock.close();
-				ssock.close();
+				for(SockPairVec::iterator it = socks.begin(); it != socks.end(); it++) {
+					it->rsock()->close();
+					it->ssock()->close();
+				}
 				dprintf( D_ALWAYS, "Re-trying Create_Process() to avoid "
 						 "PID re-use\n" );
 				return Create_Process( executable, args, priv, reaper_id,
@@ -7623,11 +7629,14 @@ int DaemonCore::Create_Process(
 			pidtmp->shared_port_fname = shared_port_endpoint.GetSocketFileName();
 		}
 		else if ( want_command_port != FALSE ) {
-			Sinful sinful(sock_to_string(rsock._sock));
-			if( !want_udp ) {
-				sinful.setNoUDP(true);
+#warning adesmet: Assuming the first address is the one to use.
+			if(socks.begin() != socks.end()) {
+				Sinful sinful(sock_to_string(socks.begin()->rsock()->_sock));
+				if( !want_udp ) {
+					sinful.setNoUDP(true);
+				}
+				pidtmp->sinful_string = sinful.getSinful();
 			}
-			pidtmp->sinful_string = sinful.getSinful();
 		}
 	}
 
@@ -7742,7 +7751,7 @@ int DaemonCore::Create_Process(
 
 	// Now that child exists, we (the parent) should close up our copy of
 	// the childs command listen cedar sockets.  Since these are on
-	// the stack (rsock and ssock), they will get closed when we return.
+	// the stack (socks), they will get closed when we return.
 
  wrapup:
 
@@ -8369,99 +8378,92 @@ DaemonCore::InitDCCommandSocket( int command_port )
 
 		// If we don't have any command sockets yet, we need to create our
 		// own udp and tcp sockets, bind them, etc.
-	SockPair socks;
 	if( !m_shared_port_endpoint && dc_socks.empty()) {
-		socks.has_relisock(true);
-		if (m_wants_dc_udp_self) {
-			socks.has_safesock(true);
-		}
 			// Final bool indicates any error should be considered fatal.
-		InitCommandSockets(command_port, socks.rsock().get(), socks.ssock().get(), true);
-	} else {
-		if(dc_socks.begin() != dc_socks.end()) {
-			socks = *(dc_socks.begin());
+		InitCommandSockets(command_port, dc_socks, m_wants_dc_udp_self, true);
+	}
+
+	for(SockPairVec::iterator it = dc_socks.begin();
+		it != dc_socks.end(); it++) {
+
+			// If we are the collector, increase the socket buffer size.  This
+			// helps minimize the number of updates (UDP packets) the collector
+			// drops on the floor.
+		if( get_mySubSystem()->isType(SUBSYSTEM_TYPE_COLLECTOR) ) {
+			int desired_size;
+
+				// Dynamically construct the log message.
+			MyString msg;
+
+			if ( it->has_safesock()) {
+					// set the UDP (ssock) read size to be large, so we do
+					// not drop incoming updates.
+				desired_size = param_integer("COLLECTOR_SOCKET_BUFSIZE",
+											 10000 * 1024, 1024);
+				int final_udp = it->ssock()->set_os_buffers(desired_size);
+				msg += (int)(final_udp / 1024);
+				msg += "k (UDP), ";
+			}
+
+				// and also set the outgoing TCP write size to be large so the
+				// collector is not blocked on the network when answering queries
+			if( it->has_relisock() ) {
+				desired_size = param_integer("COLLECTOR_TCP_SOCKET_BUFSIZE",
+											 128 * 1024, 1024 );
+				int final_tcp = it->rsock()->set_os_buffers( desired_size, true );
+
+				msg += (int)(final_tcp / 1024);
+				msg += "k (TCP)";
+			}
+			if( !msg.IsEmpty() ) {
+				dprintf(D_FULLDEBUG,
+						"Reset OS socket buffer size to %s\n", msg.Value());
+			}
 		}
-	}
 
-		// If we are the collector, increase the socket buffer size.  This
-		// helps minimize the number of updates (UDP packets) the collector
-		// drops on the floor.
-	if( get_mySubSystem()->isType(SUBSYSTEM_TYPE_COLLECTOR) ) {
-		int desired_size;
-
-			// Dynamically construct the log message.
-		MyString msg;
-
-		if ( socks.has_safesock()) {
-				// set the UDP (ssock) read size to be large, so we do
-				// not drop incoming updates.
-			desired_size = param_integer("COLLECTOR_SOCKET_BUFSIZE",
-										 10000 * 1024, 1024);
-			int final_udp = socks.ssock()->set_os_buffers(desired_size);
-			msg += (int)(final_udp / 1024);
-			msg += "k (UDP), ";
+			// now register these new command sockets.
+			// Note: In other parts of the code, we assume that the
+			// first command socket registered is TCP, so we must
+			// register the rsock socket first.
+		if( it->has_relisock() ) {
+			Register_Command_Socket( it->rsock().get() );
+		}
+		if( it->has_safesock() ) {
+			Register_Command_Socket( it->ssock().get() );
+		}
+		char const *addr = publicNetworkIpAddr();
+		if( addr ) {
+			dprintf( D_ALWAYS,"DaemonCore: command socket at %s\n", addr );
+		}
+		char const *priv_addr = privateNetworkIpAddr();
+		if( priv_addr ) {
+			dprintf( D_ALWAYS,"DaemonCore: private command socket at %s\n", priv_addr );
 		}
 
-			// and also set the outgoing TCP write size to be large so the
-			// collector is not blocked on the network when answering queries
-		if( socks.has_relisock() ) {
-			desired_size = param_integer("COLLECTOR_TCP_SOCKET_BUFSIZE",
-										 128 * 1024, 1024 );
-			int final_tcp = socks.rsock()->set_os_buffers( desired_size, true );
-
-			msg += (int)(final_tcp / 1024);
-			msg += "k (TCP)";
+		if( it->has_relisock() && m_shared_port_endpoint ) {
+				// SOAP-enabled daemons may have both a shared port and
+				// a fixed TCP port for receiving SOAP commands
+			dprintf( D_ALWAYS,"DaemonCore: non-shared command socket at %s\n",
+					 it->rsock()->get_sinful() );
 		}
-		if( !msg.IsEmpty() ) {
-			dprintf(D_FULLDEBUG,
-					"Reset OS socket buffer size to %s\n", msg.Value());
+
+		if ( ! it->has_safesock()) {
+			dprintf( D_FULLDEBUG, "DaemonCore: UDP Command socket not created.\n");
 		}
-	}
 
-		// now register these new command sockets.
-		// Note: In other parts of the code, we assume that the
-		// first command socket registered is TCP, so we must
-		// register the rsock socket first.
-	if( socks.has_relisock() ) {
-		Register_Command_Socket( socks.rsock().get() );
-	}
-	if( socks.has_safesock() ) {
-		Register_Command_Socket( socks.ssock().get() );
-	}
-	char const *addr = publicNetworkIpAddr();
-	if( addr ) {
-		dprintf( D_ALWAYS,"DaemonCore: command socket at %s\n", addr );
-	}
-	char const *priv_addr = privateNetworkIpAddr();
-	if( priv_addr ) {
-		dprintf( D_ALWAYS,"DaemonCore: private command socket at %s\n", priv_addr );
-	}
+			// check if our command socket is on 127.0.0.1, and spit out a
+			// warning if it is, since it probably means that /etc/hosts
+			// is misconfigured [to preempt RUST like rust-admin #2915]
 
-	if( socks.has_relisock() && m_shared_port_endpoint ) {
-			// SOAP-enabled daemons may have both a shared port and
-			// a fixed TCP port for receiving SOAP commands
-		dprintf( D_ALWAYS,"DaemonCore: non-shared command socket at %s\n",
-				 socks.rsock()->get_sinful() );
-	}
-
-	if ( ! socks.has_safesock()) {
-		dprintf( D_FULLDEBUG, "DaemonCore: UDP Command socket not created.\n");
-	}
-
-		// check if our command socket is on 127.0.0.1, and spit out a
-		// warning if it is, since it probably means that /etc/hosts
-		// is misconfigured [to preempt RUST like rust-admin #2915]
-
-	if( socks.has_relisock() ) {
-		if ( socks.rsock()->my_addr().is_loopback() ) {
-			dprintf( D_ALWAYS, "WARNING: Condor is running on the loopback address (127.0.0.1)\n" );
-			dprintf( D_ALWAYS, "         of this machine, and is not visible to other hosts!\n" );
+		if( it->has_relisock() ) {
+			if ( it->rsock()->my_addr().is_loopback() ) {
+				dprintf( D_ALWAYS, "WARNING: Condor is running on the loopback address (127.0.0.1)\n" );
+				dprintf( D_ALWAYS, "         of this machine, and is not visible to other hosts!\n" );
+			}
 		}
+
 	}
 
-	if(socks.not_empty()) {
-		dc_socks.push_back(socks);
-	}
 
 		// Now, drop this sinful string into a file, if
 		// mySubSystem_ADDRESS_FILE is defined.
@@ -9489,8 +9491,8 @@ BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock)
 	return FALSE;
 }
 
-bool
-InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock, bool fatal)
+bool 
+InitCommandSockets(int port, DaemonCore::SockPairVec & socks, bool want_udp, bool fatal)
 {
 		/*
 		  DaemonCore::Create_Process has a rather stupid handling of
@@ -9505,6 +9507,14 @@ InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock, bool fatal)
 		  Derek Wright 2007-08-09
 		*/
 	ASSERT(port != 0);
+	DaemonCore::SockPair sock_pair;
+	sock_pair.has_relisock(true);
+	if(want_udp) {
+		sock_pair.has_safesock(true);
+	}
+	ReliSock * rsock = sock_pair.rsock().get();
+	SafeSock * ssock = sock_pair.ssock().get();
+
 	if (port <= 1) {
 			// Choose any old port (dynamic port)
 		if( !BindAnyCommandPort(rsock, ssock) ) {
@@ -9602,6 +9612,7 @@ InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock, bool fatal)
 			}
 		}
 	}
+	socks.push_back(sock_pair);
 	return true;
 }
 

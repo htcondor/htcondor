@@ -222,32 +222,6 @@ typedef void sigset_t;
     TCP and UDP command socket */
 int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock);
 
-/**
- * Helper function to initialize command ports.
- *
- * This function is call for both the initial command sockets and when
- * creating sockets to inherit before DC:Create_Process().  It calls
- * bind() or BindAnyCommandPort()  as needed, listen() and
- * setsockopt() (for SO_REUSEADDR and TCP_NODELAY).
- *
- * @param port
- *   What port you want to bind to, or -1 if you don't care.
- * @param rsock
- *   Pointer to a ReliSock object for the TCP command socket.
- * @param ssock
- *   Pointer to a SafeSock object for the UDP command socket.
- * @param fatal
- *   Should errors be considered fatal (EXCEPT) or not (dprintf).
- *
- * @return
- *   true if everything worked, false if there were any errors.
- *
- * @see BindAnyCommandPort()
- * @see DaemonCore::InitDCCommandSock
- * @see DaemonCore::Create_Process
- */
-bool InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock,
-						bool fatal);
 
 class DCSignalMsg: public DCMsg {
  public:
@@ -1577,10 +1551,18 @@ class DaemonCore : public Service
 	// copies will be sharing the same sockets.  
 	//
 
+  public:
 	class SockPair {
 	public:
 
 		SockPair() : m_rsock(NULL), m_ssock(NULL) {}
+		SockPair(const SockPair & src) : m_rsock(src.m_rsock), m_ssock(src.m_ssock) {}
+
+		SockPair & operator=(const SockPair & src) {
+			m_rsock = src.m_rsock;
+			m_ssock = src.m_ssock;
+			return *this;
+		}
 
 			// Strictly unnecessary, but proved helpful for debugging.
 		~SockPair() {
@@ -1607,6 +1589,8 @@ class DaemonCore : public Service
 		counted_ptr<SafeSock> m_ssock;	// udp command socket
 	};
 	typedef std::vector<SockPair> SockPairVec;
+
+  private:
 	SockPairVec dc_socks;
     int m_iMaxAcceptsPerCycle; ///< maximum number of inbound connections to accept per loop
 
@@ -2054,6 +2038,30 @@ class DaemonCore : public Service
 
 	void InitSharedPort(bool in_init_dc_command_socket=false);
 };
+
+/**
+ * Helper function to initialize command ports.
+ *
+ * This function is call for both the initial command sockets and when
+ * creating sockets to inherit before DC:Create_Process().  It calls
+ * bind() or BindAnyCommandPort()  as needed, listen() and
+ * setsockopt() (for SO_REUSEADDR and TCP_NODELAY).
+ *
+ * @param port
+ *   What port you want to bind to, or -1 if you don't care.
+ * @param socks
+ *   Created socks will be pushed onto this list.
+ * @param fatal
+ *   Should errors be considered fatal (EXCEPT) or not (dprintf).
+ *
+ * @return
+ *   true if everything worked, false if there were any errors.
+ *
+ * @see BindAnyCommandPort()
+ * @see DaemonCore::InitDCCommandSock
+ * @see DaemonCore::Create_Process
+ */
+bool InitCommandSockets(int port, DaemonCore::SockPairVec & socks, bool want_udp, bool fatal);
 
 // helper class that uses C++ constructor/destructor to automatically
 // time a function call. 
