@@ -400,6 +400,12 @@ convert_python_to_exprtree(boost::python::object value)
         PyErr_SetString(PyExc_ValueError, "Unknown ClassAd Value type.");
         boost::python::throw_error_already_set();
     }
+    if (PyBool_Check(value.ptr()))
+    {
+        bool cppvalue = boost::python::extract<bool>(value);
+        classad::Value val; val.SetBooleanValue(cppvalue);
+        return classad::Literal::MakeLiteral(val);
+    }
     if (PyString_Check(value.ptr()))
     {
         std::string cppvalue = boost::python::extract<std::string>(value);

@@ -1,40 +1,16 @@
 \begin{ManPage}{\label{man-condor-config-val}\Condor{config\_val}}{1}
 {Query or set a given HTCondor configuration variable}
 \Synopsis \SynProg{\Condor{config\_val}}
-\oOpt{options}
-\oOpt{-config}
-\oOpt{-verbose}
-\Arg{variable}
-\oArg{variable \Dots}
+\Arg{<help option>}
 
 \SynProg{\Condor{config\_val}}
-\oOpt{options}
-\OptArg{-set}{string}
-\oArg{string \Dots}
+\oOpt{<location options>}
+\Arg{<edit option>}
 
 \SynProg{\Condor{config\_val}}
-\oOpt{options}
-\OptArg{-rset}{string}
-\oArg{string \Dots}
-
-\SynProg{\Condor{config\_val}}
-\oOpt{options}
-\OptArg{-unset}{variable}
-\oArg{variable \Dots}
-
-\SynProg{\Condor{config\_val}}
-\oOpt{options}
-\OptArg{-runset}{variable}
-\oArg{variable \Dots}
-
-\SynProg{\Condor{config\_val}} \oOpt{options} \Opt{-tilde}
-
-\SynProg{\Condor{config\_val}} \oOpt{options} \Opt{-owner}
-
-\SynProg{\Condor{config\_val}} \oOpt{options} \Opt{-config}
-
-\SynProg{\Condor{config\_val}} \Opt{-dump} \oOpt{-expand}
-\oOpt{-verbose}
+\oOpt{<location options>}
+\oOpt{<view options>}
+\Arg{vars}
 
 \index{HTCondor commands!condor\_config\_val}
 \index{condor\_config\_val command}
@@ -42,19 +18,40 @@
 \Description
 
 \Condor{config\_val} can be used to quickly see what the current
-HTCondor configuration is on any given machine.  Given a list of
-variables, \Condor{config\_val} will report what each of these
+HTCondor configuration is on any given machine.  
+Given a space separated set of
+configuration variables with the \Arg{vars} argument,
+\Condor{config\_val} will report what each of these
 variables is currently set to.  If a given variable is not defined,
 \Condor{config\_val} will halt on that variable, and report that it is
 not defined.  By default, \Condor{config\_val} looks in the local
 machine's configuration files in order to evaluate the variables.
+Variables and values may instead be queried from a daemon specified
+using a \Opt{location option}.
 
-\Condor{config\_val} can also be used to quickly set configuration
-variables for a specific daemon on a given machine.  Each daemon
-remembers settings made by \Condor{config\_val}.  The configuration
-file is not modified by this command.  Persistent settings remain when
-the daemon is restarted.  Runtime settings are lost when the daemon is
-restarted.  In general, modifying a host's configuration with
+\Term{Raw} output of \Condor{config\_val} displays the string used to
+define the configuration variable.
+This is what is on the right hand side of the equals sign (\Expr{=})
+in a configuration file for a variable.
+The default output is an \Term{expanded} one.
+Expanded output recursively replaces any macros within the raw definition
+of a variable with the macro's raw definition.
+
+Each daemon remembers settings made by a successful invocation
+of \Condor{config\_val}.  
+The configuration \emph{file} is not modified.  
+
+\Condor{config\_val} can be used to persistently set or unset 
+configuration variables for a specific daemon on a given machine
+using a \Arg{-set} or \Arg{-unset} \Opt{edit option}.
+Persistent settings remain when the daemon is restarted.  
+Configuration variables for a specific daemon on a given machine
+may be set or unset for the time period that the daemon continues to run
+using a \Arg{-rset} or \Arg{-runset} \Opt{edit option}.
+These runtime settings are lost when the daemon is restarted.  
+Any changes made will not take effect until \Condor{reconfig} is invoked.
+
+In general, modifying a host's configuration with
 \Condor{config\_val}  
 requires the \DCPerm{CONFIG} access level, which is disabled on all
 hosts by default.
@@ -63,12 +60,12 @@ fine-grained control over which access levels can modify which
 settings.
 See section~\ref{sec:Config-Security} on
 page~\pageref{sec:Config-Security} for more details on security settings.
-
-The \Opt{-verbose} option displays the configuration
-file name and line number where a configuration variable is defined.
-
-Any changes made by \Condor{config\_val} will not take effect
-until \Condor{reconfig} is invoked.
+Further, security considerations require proper settings of
+configuration variables
+\Macro{SETTABLE\_ATTRS\Dots} (see \ref{param:SettableAttrs}),
+\Macro{ENABLE\_PERSISTENT\_CONFIG} (see \ref{param:EnablePersistentConfig}),
+and \Macro{HOSTALLOW\Dots} (see \ref{param:HostAllow})
+in order to use \Condor{config\_val} to change any configuration variable.
 
 It is generally wise to test a new configuration on a single
 machine to ensure that no syntax or other errors in the
@@ -77,63 +74,117 @@ Having bad syntax or invalid configuration settings is a fatal error
 for HTCondor daemons, and they will exit.
 It is far better to discover such a problem on a single machine than to
 cause all the HTCondor daemons in the pool to exit.
-
-The \Opt{-set} option sets one or more persistent configuration file entries.
-The \Arg{string} must be a single argument, so enclose it in double quote marks.
-A string must be of the form \Expr{"variable = value"}.
-Use of the \Opt{-set} option implies the use of configuration variables
-\Macro{SETTABLE\_ATTRS\Dots} (see \ref{param:SettableAttrs}),
-\Macro{ENABLE\_PERSISTENT\_CONFIG} (see \ref{param:EnablePersistentConfig}),
-and \Macro{HOSTALLOW\Dots} (see \ref{param:HostAllow}).
-
-The \Opt{-rset} option sets one or more runtime configuration file entries.
-The \Arg{string} must be a single argument, so enclose it in double quote marks.
-A string must be of the form \Expr{"variable = value"}.
-Use of the \Opt{-rset} option implies the use of configuration variables
-\Macro{SETTABLE\_ATTRS\Dots} (see \ref{param:SettableAttrs}),
-\Macro{ENABLE\_RUNTIME\_CONFIG} (see \ref{param:EnableRuntimeConfig}),
-and \Macro{HOSTALLOW\Dots} (see \ref{param:HostAllow}).
-
-The \Opt{-unset} option changes one or more persistent configuration file
-entries to their previous value.
-
-The \Opt{-runset} option changes one or more runtime configuration file
-entries to their previous value.
-
-The \Opt{-tilde} option displays the path to the HTCondor home directory.
-
-The \Opt{-owner} option displays the owner of the \Condor{config\_val} process.
-
-The \Opt{-config} option displays the current configuration files in use.
-
-The \Opt{-dump} option displays a list of all of the defined macros
-in the configuration files found by \Condor{config\_val}, along with
-their values. If the \Opt{-verbose} option is supplied as well,
-then the specific configuration file which defined each variable,
-along with the line number of its definition is also printed. 
-\Note The output of this argument is likely to change 
-in a future revision of HTCondor.
-If the \Opt{-expand} option is given in addition to the \Opt{-dump} option,
-then variable values in the configuration files are expanded before
-being printed out.
+\Condor{config\_val} can help with this type of testing.
 
 \begin{Options}
-  \OptItem{\OptArg{-name}{machine\_name}}{ Query the specified
+  \OptItem{\Opt{-help}} {(help option) 
+    Print usage information and exit.
+   }
+  \OptItem{\Opt{-version}} {(help option) 
+    Print the HTCondor version information and exit.
+   }
+  \OptItem{\OptArg{-set}{"var = value"}}{(edit option) 
+    Sets one or more persistent configuration file 
+    variables.  The new value remains if the daemon is restarted.
+    One or more variables can be set; the syntax requires double quote marks
+    to identify the pairing of variable name to value, and to permit spaces. 
+   }
+  \OptItem{\OptArg{-unset}{var}}{(edit option)
+    Each of the persistent configuration variables listed reverts to
+    its previous value.
+   }
+  \OptItem{\OptArg{-rset}{"var = value"}}{(edit option) 
+    Sets one or more configuration file variables.  
+    The new value remains as long as the daemon continues running.
+    One or more variables can be set; the syntax requires double quote marks
+    to identify the pairing of variable name to value, and to permit spaces. 
+   }
+  \OptItem{\OptArg{-runset}{var}}{(edit option) 
+    Each of the configuration variables listed reverts to
+    its previous value as long as the daemon continues running.
+   }
+  \OptItem{\Opt{-dump}} {(view option)
+    Display the raw value of all \Arg{vars} listed.  
+    If no \Arg{vars} are listed, then print all configuration variables and
+    their values.
+    The \Opt{-expand}, \Opt{-default}, and \Opt{-evaluate} options take
+    precedence over this \Opt{-dump} option, such that the output will 
+    not be raw.
+   }
+  \OptItem{\Opt{-default}} {(view option)
+    Default values are displayed.
+   }
+  \OptItem{\Opt{-expand}} {(view option)
+    Expanded values are displayed.  This is the default.
+   }
+  \OptItem{\Opt{-raw}} {(view option)
+    Raw values are displayed.
+   }
+  \OptItem{\Opt{-verbose}} {(view option)
+    Display configuration file name and line number where the variable is
+    set, along with the raw, expanded, and default values of the variable.
+   }
+  \OptItem{\Opt{-debug[:<opts>]}} {(view option)
+    Send output to \File{stderr},
+    overriding a set value of \MacroNI{TOOL\_DEBUG}. 
+   }
+  \OptItem{\Opt{-evaluate}} {(view option)
+    Applied only when a \Opt{location option} specifies a daemon.
+    The value of the requested parameter will be evaluated with 
+    respect to the ClassAd of that daemon.  
+   }
+  \OptItem{\Opt{-used}} {(view option)
+    Applied only when a \Opt{location option} specifies a daemon.
+    Modifies which variables are displayed to only those 
+    used by the specified daemon.
+   }
+  \OptItem{\Opt{-unused}} {(view option)
+    Applied only when a \Opt{location option} specifies a daemon.
+    Modifies which variables are displayed to only those \emph{not}
+    used by the specified daemon.
+   }
+  \OptItem{\Opt{-config}} {(view option)
+    Applied only when the configuration is read from files (the default),
+    and \emph{not} when applied to a specific daemon.
+    Display the current configuration file that set the variable.
+   }
+  \OptItem{\OptArg{-writeconfig}{filename}} {(view option)
+    For the configuration read from files (the default),
+    write to file \Arg{filename} all configuration variables that have
+    specified values which are different than their internal, compile-time
+    defaults.
+   }
+  \OptItem{\Opt{-mixedcase}} {(view option)
+    Applied only when the configuration is read from files (the default),
+    and \emph{not} when applied to a specific daemon.
+    Print variable names with the same letter case used in the 
+    variable's definition.
+   }
+  \OptItem{\OptArg{-local-name}{<name>}} {(view option) 
+    Applied only when the configuration is read from files (the default),
+    and \emph{not} when applied to a specific daemon.
+    Inspect the values of attributes that use local names,
+    which is useful to distinguish which daemon when there is more than
+    one of the particular daemon running.}
+  \OptItem{\OptArg{-subsystem}{<daemon>}} {(view option) 
+    Applied only when the configuration is read from files (the default),
+    and \emph{not} when applied to a specific daemon.
+    Specifies the subsystem or daemon name to query, 
+    with a default value of the \Expr{TOOL} subsystem.
+   }
+  \OptItem{\OptArg{-address}{\Sinful{ip:port}}} {(location option)
+    Connect to the given IP address and port number. }
+  \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
+    {(location option) Use the given central manager and an optional 
+    port number to find daemons. }
+  \OptItem{\OptArg{-name}{<machine\_name>}} { (location option)
+    Query the specified
     machine's \Condor{master} daemon for its configuration. 
     Does not function together with any of the options:
     \Opt{-dump}, \Opt{-config}, or \Opt{-verbose}. }
-  \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
-    { Use the given central manager and an optional port number
-    to find daemons. }
-  \OptItem{\OptArg{-address}{\Sinful{ip:port}}}
-    { Connect to the given IP address and port number. }
-  \OptItem{\Opt{-master \Bar -schedd \Bar -startd \Bar -collector \Bar -negotiator}}
-    {The specific daemon to query. }
-  \OptItem{\Opt{-local-name}}
-    {Inspect the values of attributes that use local names.}
-  \OptItem{\Opt{-evaluate}}
-    { The value of the requested parameter will be evaluated with 
-    respect to the ClassAd of that daemon.  }
+  \OptItem{\Opt{-master \Bar -schedd \Bar -startd \Bar -collector 
+           \Bar -negotiator}}
+    {(location option) The specific daemon to query. }
 \end{Options}
 
 \ExitStatus

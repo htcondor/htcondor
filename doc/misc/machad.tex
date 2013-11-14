@@ -61,12 +61,19 @@ where 0 = Sunday, 1 = Monday, \Dots, and 6 = Saturday.
 \item[\AdAttr{ClockMin}:] The number of minutes passed since midnight.
 %
 \index{ClassAd machine attribute!CondorLoadAvg}
-\item[\AdAttr{CondorLoadAvg}:] The portion of the load average generated 
+\item[\AdAttr{CondorLoadAvg}:] The load average contributed  
 by HTCondor, either from remote jobs or running benchmarks.
+%
+\index{ClassAd machine attribute!CondorVersion}
+\item[\AdAttr{CondorVersion}:] A string containing the HTCondor version
+number for the \Condor{startd} daemon, the release date, and the build
+identification number.
 %
 \index{ClassAd machine attribute!ConsoleIdle}
 \item[\AdAttr{ConsoleIdle}:] The number of seconds since activity on the system
 console keyboard or console mouse has last been detected.
+The value can be modified with \Macro{SLOTS\_CONNECTED\_TO\_CONSOLE}
+as defined at ~\ref{param:SlotsConnectedToConsole}.
 %
 \index{ClassAd machine attribute!Cpus}
 \item[\AdAttr{Cpus}:]  The number of CPUs in this slot.
@@ -214,9 +221,12 @@ in the virtual machine.
 keyboard or mouse associated with this machine has last been detected.
 Unlike \AdAttr{ConsoleIdle}, \AdAttr{KeyboardIdle} also takes activity 
 on pseudo-terminals into
-account (i.e. virtual ``keyboard'' activity from telnet and rlogin
-sessions as well).  Note that \AdAttr{KeyboardIdle} will always be equal to or
+account.
+Pseudo-terminals have virtual keyboard activity from telnet and rlogin
+sessions.  Note that \AdAttr{KeyboardIdle} will always be equal to or
 less than \AdAttr{ConsoleIdle}.
+The value can be modified with \Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD}
+as defined at ~\ref{param:SlotsConnectedToKeyboard}.
 %
 \index{ClassAd machine attribute!KFlops}
 \item[\AdAttr{KFlops}:] Relative floating point performance as determined via a
@@ -239,8 +249,8 @@ Therefore, you could not use this attribute in defining \Condor{startd}
 expressions (and you would not want to).
 %
 \index{ClassAd machine attribute!LoadAvg}
-\item[\AdAttr{LoadAvg}:] A floating point number with the machine's current load
-average.
+\item[\AdAttr{LoadAvg}:] A floating point number representing the 
+current load average.
 %
 \index{ClassAd machine attribute!Machine}
 \item[\AdAttr{Machine}:] A string with the machine's fully qualified host name.
@@ -315,6 +325,7 @@ definitions:
 	\begin{description}
 	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x,
 	LINUX 2.4.x, or LINUX 2.6.x kernel systems, as well as Scientific Linux 
+        and Ubuntu 12.04
 	\item[\AdStr{OSX}:] for Darwin
 	\item[\AdStr{FREEBSD7}:] for FreeBSD 7
 	\item[\AdStr{FREEBSD8}:] for FreeBSD 8
@@ -340,6 +351,7 @@ concatenated with the string version of the \Attr{OpSysMajorVersion} attribute:
 	\item[\AdStr{Fedora16}:] for Fedora Linux version 16
 	\item[\AdStr{Debian5}:] for Debian Linux version 5
 	\item[\AdStr{Debian6}:] for Debian Linux version 6
+	\item[\AdStr{Ubuntu12}:] for Ubuntu 12.04
 	\item[\AdStr{SL5}:] for Scientific Linux version 5
 	\item[\AdStr{SL6}:] for Scientific Linux version 6
 	\item[\AdStr{SLFermi5}:] for Fermi's Scientific Linux version 5
@@ -380,7 +392,7 @@ concatenated with the string version of the \Attr{OpSysMajorVersion} attribute:
 Currently supported operating systems have the following string
 definitions:
 	\begin{description}
-	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x, LINUX 2.4.x, or LINUX 2.6.x kernel systems, as well as Scientific Linux versions
+	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x, LINUX 2.4.x, or LINUX 2.6.x kernel systems, as well as Scientific Linux and  Ubuntu 12.04 versions
 	\item[\AdStr{OSX}:] for Darwin
 	\item[\AdStr{FREEBSD7}:] for FreeBSD version 7
 	\item[\AdStr{FREEBSD8}:] for FreeBSD version 8
@@ -397,6 +409,7 @@ with extra characters stripped off Debian versions.
 	\begin{description}
 	\item[\AdStr{Red Hat Enterprise Linux Server release 5.7 (Tikanga)}:] for RedHat Linux version 5
 	\item[\AdStr{Red Hat Enterprise Linux Server release 6.2 (Santiago)}:] for RedHat Linux version 6
+	\item[\AdStr{Ubuntu 12.04.3 LTS}:] for Ubuntu 12.04 point release 3 
 	\item[\AdStr{Fedora release 16 (Verne)}:] for Fedora Linux version 16
 	\item[\AdStr{MacOSX 6.5}:] for MacOS version 10.6.5 (Snow Leopard)
 	\item[\AdStr{MacOSX 7.3}:] for MacOS version 10.7.3 (Lion)
@@ -414,6 +427,7 @@ with extra characters stripped off Debian versions.
 and derived platforms such as Scientific Linux
 	\item[\Expr{6}:] for RedHat Linux version 6
 and derived platforms such as Scientific Linux
+	\item[\Expr{12}:] for Ubuntu 12.04
 	\item[\Expr{16}:] for Fedora Linux version 16
 	\item[\Expr{6}:] for MacOS version 10.6.5 (Snow Leopard)
 	\item[\Expr{7}:] for MacOS version 10.7.3 (Lion)
@@ -430,6 +444,7 @@ and derived platforms such as Scientific Linux
 	\begin{description}
 	\item[\AdStr{RedHat}:] for RedHat Linux version 6
 	\item[\AdStr{Fedora}:] for Fedora Linux version 16
+	\item[\AdStr{Ubuntu}:] for Ubuntu 12.04
 	\item[\AdStr{SnowLeopard}:] for MacOS version 10.6.5 (Snow Leopard)
 	\item[\AdStr{Lion}:] for MacOS version 10.7.3 (Lion)
 	\item[\AdStr{FREEBSD}:] for FreeBSD version 7 or 8
@@ -450,6 +465,7 @@ the operating system.
 	\item[\AdStr{RedHat}:] for RedHat Linux version 5 or 6
 	\item[\AdStr{Fedora}:] for Fedora Linux version 16
 	\item[\AdStr{Debian}:] for Debian Linux version 5 or 6
+	\item[\AdStr{Ubuntu}:] for Ubuntu 12.04
 	\item[\AdStr{MacOSX}:] for MacOS version 10.6.5 (Snow Leopard) or 
 for MacOS version 10.7.3 (Lion)
 	\item[\AdStr{FreeBSD}:] for FreeBSD version 7 or 8
@@ -469,6 +485,7 @@ version number.
 	\begin{description}
 	\item[\Expr{602}:] for RedHat Linux version 6.2
 	\item[\Expr{1600}:] for Fedora Linux version 16.0
+	\item[\Expr{1204}:] for Ubuntu 12.04
 	\item[\Expr{704}:] for FreeBSD version 7.4
 	\item[\Expr{802}:] for FreeBSD version 8.2
 	\item[\Expr{605}:] for MacOS version 10.6.5 (Snow Leopard)
@@ -574,6 +591,11 @@ because the machine is being drained.
 Always set to the string literal \AdStr{Job}, because machine ClassAds
 always want to be matched with jobs, and vice-versa.
 %
+\index{ClassAd machine attribute!TotalCondorLoadAvg}
+\item[\AdAttr{TotalCondorLoadAvg}:] The load average contributed  
+by HTCondor summed across all slots on the machine, 
+either from remote jobs or running benchmarks.
+%
 \index{ClassAd machine attribute!TotalCpus}
 \item[\AdAttr{TotalCpus}:] The number of CPUs that are on the machine.
 This is in contrast with \Attr{Cpus},
@@ -582,6 +604,10 @@ which is the number of CPUs in the slot.
 \index{ClassAd machine attribute!TotalJobStarts}
 \item[\AdAttr{TotalJobStarts}:] The total number of jobs which 
 have been started on this machine since the \Condor{startd} started running.
+%
+\index{ClassAd machine attribute!TotalLoadAvg}
+\item[\AdAttr{TotalLoadAvg}:] A floating point number representing the 
+current load average summed across all slots on the machine.
 %
 \index{ClassAd machine attribute!TotalMachineDrainingBadput}
 \item[\AdAttr{TotalMachineDrainingBadput}:] The

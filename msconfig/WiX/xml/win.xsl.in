@@ -233,6 +233,8 @@
         <SetProperty Id="HDFSNAMEDIR" Value="[HDFS_HOME]/hadoop_name" After="AppSearch">Not UPGRADEFOUND</SetProperty>
         <SetProperty Id="HDFSDATADIR" Value="[HDFS_HOME]/hadoop_data" After="AppSearch">Not UPGRADEFOUND</SetProperty>
         <SetDirectory Id="TARGETDIR" Value="[INSTALLDIR]" Sequence="execute" />
+        
+        <Property Id="CONDORLOCALCONFIG" Value="$$(LOCAL_DIR)\condor_config.local" />
 
         <SetProperty Id="INSTALLDIR" Value="[OLD_INSTALLDIR]" After="AppSearch">UPGRADEFOUND</SetProperty>
         <SetProperty Id="SUBMITJOBS" Value="[OLD_SUBMITJOBS]" After="AppSearch">UPGRADEFOUND</SetProperty>

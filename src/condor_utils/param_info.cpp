@@ -41,7 +41,11 @@
 
 #define PARAM_DECLARE_TABLES 1 // so param_info_table will give us the table declarations.
 #include "param_info_tables.h"
-void param_info_init() {} // should remove calls to this, it's dead.
+int param_info_init(const void ** pvdefaults)
+{
+	*pvdefaults = condor_params::defaults;
+	return condor_params::defaults_count;
+}
 
 #ifdef PARAM_DEFAULTS_SORTED
 
@@ -102,29 +106,85 @@ int ComparePrefixBeforeDot(const char * p1, const char * p2)
 // is used for the lookup in the subsystems table. this allows one to pass in "MASTER.ATTRIBUTE"
 // as the subsys value in order to locate the master table.
 //
-typedef const struct condor_params::key_table_pair param_table_map_entry_t;
-const param_table_entry_t * param_subsys_default_lookup(const char * subsys, const char * param)
+typedef const struct condor_params::key_value_pair MACRO_DEF_ITEM;
+typedef const struct condor_params::key_table_pair MACRO_TABLE_PAIR;
+MACRO_DEF_ITEM * param_subsys_default_lookup(const char * subsys, const char * param)
 {
-	const param_table_map_entry_t* subtab = NULL;
-	subtab = BinaryLookup<param_table_map_entry_t>(
+	MACRO_TABLE_PAIR* subtab = NULL;
+	subtab = BinaryLookup<MACRO_TABLE_PAIR>(
 		condor_params::subsystems,
 		condor_params::subsystems_count,
 		subsys, ComparePrefixBeforeDot);
 
 	if (subtab) {
-		return BinaryLookup<param_table_entry_t>(subtab->aTable, subtab->cElms, param, strcasecmp);
+		return BinaryLookup<MACRO_DEF_ITEM>(subtab->aTable, subtab->cElms, param, strcasecmp);
 	}
 	return NULL;
 }
 
-const param_table_entry_t * param_default_lookup(const char * param, const char * subsys)
+MACRO_DEF_ITEM * param_default_lookup(const char * param, const char * subsys)
 {
 	if (subsys) {
-		const param_table_entry_t * p = param_subsys_default_lookup(subsys, param);
+		MACRO_DEF_ITEM * p = param_subsys_default_lookup(subsys, param);
 		if (p) return p;
 		// fall through to do generic lookup.
 	}
 	return param_generic_default_lookup(param);
+}
+
+// lookup a knob by metaname and by knobname.
+//
+int param_default_get_source_meta_id(const char * meta, const char * param)
+{
+	std::string fullname("$");
+	fullname += meta;
+	fullname += ":";
+	fullname += param;
+
+	MACRO_DEF_ITEM * p = BinaryLookup<MACRO_DEF_ITEM>(
+		condor_params::metaknobsources,
+		condor_params::metaknobsources_count,
+		fullname.c_str(), strcasecmp);
+	if (p) {
+		return (int)(p - condor_params::metaknobsources);
+	}
+	return -1;
+}
+
+MACRO_DEF_ITEM * param_meta_source_by_id(int meta_id)
+{
+	if (meta_id < 0 || meta_id >= condor_params::metaknobsources_count)
+		return NULL;
+	return &condor_params::metaknobsources[meta_id];
+}
+
+// lookup a knob by metaname and by knobname.
+//
+MACRO_TABLE_PAIR* param_meta_table(const char * meta)
+{
+	return BinaryLookup<MACRO_TABLE_PAIR>(
+		condor_params::metaknobsets,
+		condor_params::metaknobsets_count,
+		meta, ComparePrefixBeforeDot);
+}
+
+// lookup a param in the metatable
+MACRO_DEF_ITEM * param_meta_table_lookup(MACRO_TABLE_PAIR* table, const char * param)
+{
+	if (table) {
+		return BinaryLookup<MACRO_DEF_ITEM>(table->aTable, table->cElms, param, strcasecmp);
+	}
+	return NULL;
+}
+
+const char * param_meta_table_string(MACRO_TABLE_PAIR * table, const char * param)
+{
+	if (table) {
+		MACRO_DEF_ITEM * p = BinaryLookup<MACRO_DEF_ITEM>(table->aTable, table->cElms, param, strcasecmp);
+		if (p && p->def)
+			return p->def->psz;
+	}
+	return NULL;
 }
 
 // this function can be passed either "ATTRIB" or "SUBSYS.ATTRIB"
@@ -162,6 +222,62 @@ int param_entry_get_type(const param_table_entry_t * p, bool & ranged) {
 	int flags = reinterpret_cast<const condor_params::string_value *>(p->def)->flags;
 	ranged = (flags & condor_params::PARAM_FLAGS_RANGED) != 0;
 	return (flags & condor_params::PARAM_FLAGS_TYPE_MASK);
+}
+
+int param_default_get_id(const char*param)
+{
+	int ix = -1;
+	const param_table_entry_t* found = param_generic_default_lookup(param);
+	if ( ! found) {
+		const char * pdot = strchr(param, '.');
+		if (pdot) {
+			found = param_generic_default_lookup(pdot+1);
+		}
+	}
+	if (found) ix = (int)(found - condor_params::defaults);
+	return ix;
+}
+
+const char* param_default_name_by_id(int ix)
+{
+	if (ix >= 0 && ix < condor_params::defaults_count) {
+		return condor_params::defaults[ix].key;
+	}
+	return NULL;
+}
+
+const char* param_default_rawval_by_id(int ix)
+{
+	if (ix >= 0 && ix < condor_params::defaults_count) {
+		const param_table_entry_t* p = &condor_params::defaults[ix];
+		if (p && p->def) {
+			return p->def->psz;
+		}
+	}
+	return NULL;
+}
+
+param_info_t_type_t param_default_type_by_id(int ix)
+{
+	if (ix >= 0 && ix < condor_params::defaults_count) {
+		const param_table_entry_t* p = &condor_params::defaults[ix];
+		if (p && p->def) {
+			return (param_info_t_type_t)param_entry_get_type(p);
+		}
+	}
+	return PARAM_TYPE_STRING;
+}
+
+bool param_default_ispath_by_id(int ix)
+{
+	if (ix >= 0 && ix < condor_params::defaults_count) {
+		const param_table_entry_t* p = &condor_params::defaults[ix];
+		if (p && p->def) {
+			int flags = reinterpret_cast<const condor_params::string_value *>(p->def)->flags;
+			return (flags & condor_params::PARAM_FLAGS_PATH) != 0;
+		}
+	}
+	return false;
 }
 
 #endif // PARAM_DEFAULTS_SORTED

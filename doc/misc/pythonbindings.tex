@@ -461,6 +461,21 @@ ifthenelse(MemoryUsage isnt undefined,MemoryUsage,( ImageSize + 1023 ) / 1024)
 \end{verbatim}
 \normalsize
 
+The bindings can use a dictionary where a ClassAd is expected.
+Here is an example that uses the ClassAd:
+\footnotesize
+\begin{verbatim}
+htcondor.Schedd().submit(classad.ClassAd({"Cmd": "/bin/echo"}))
+\end{verbatim}
+\normalsize
+This same example, using a dictionary instead of constructing a ClassAd:
+\footnotesize
+\begin{verbatim}
+htcondor.Schedd().submit({"Cmd": "/bin/echo"})
+\end{verbatim}
+\normalsize
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{Python-ClassAd} ClassAd Module}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -611,6 +626,33 @@ Print the ClassAd in the old ClassAd format.
 
 Returns a string.
 \\ \hline
+\texttt{quote( str )}
+
+Converts the Python string, \Code{str}, into a ClassAd string literal.
+
+Returns the string literal.
+\\ \hline
+\texttt{unquote( str )}
+
+Converts the Python string, \Code{str}, escaped as a ClassAd string back to a
+Python string.
+
+Returns the Python string.
+\\ \hline
+\texttt{parseAds( input )}
+
+Given \Code{input} of a string or file, return an iterator of
+ClassAds where the ClassAds are in the New ClassAd format.
+
+Returns an iterator.
+\\ \hline
+\texttt{parseOldAds( input )}
+
+Given \Code{input} of a string or file, return an iterator of
+ClassAds where the ClassAds are in the Old ClassAd format.
+
+Returns an iterator.
+\\ \hline
 \end{tabular}
 \end{flushleft}
 
@@ -746,5 +788,19 @@ KeyError: 'foo'
 >>> ad
 [ foo = 1 ]
 
+\end{verbatim}
+\normalsize
+
+Here is an example that illustrates the use of the iterator
+\texttt{parseOldAds} method on a history log.
+\footnotesize
+\begin{verbatim}
+>>> import classad
+>>> import os
+>>> fd = os.popen("condor_history -l -match 4")
+>>> ads = classad.parseOldAds(fd)
+>>> print [ad["ClusterId"] for ad in ads]
+[23389L, 23388L, 23386L, 23387L]
+>>>
 \end{verbatim}
 \normalsize

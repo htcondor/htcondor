@@ -76,13 +76,15 @@ int handle_fetch_log_history_purge(ReliSock *s);
 
 // Globals
 int		Foreground = 0;		// run in background by default
-static const char*	myName;			// set to basename(argv[0])
 char *_condor_myServiceName;		// name of service on Win32 (argv[0] from SCM)
-static char*	myFullName;		// set to the full path to ourselves
 DaemonCore*	daemonCore;
-char*	logDir = NULL;
-char*	pidFile = NULL;
-char*	addrFile = NULL;
+
+// Statics (e.g. global only to this file)
+static	char*	myFullName;		// set to the full path to ourselves
+static const char*	myName;			// set to basename(argv[0])
+static	char*	logDir = NULL;
+static	char*	pidFile = NULL;
+static	char*	addrFile[2] = { NULL, NULL };
 static	char*	logAppend = NULL;
 
 static int Termlog = 0;	//Replacing the Termlog in dprintf for daemons that use it
@@ -206,19 +208,21 @@ void clean_files()
 		}
 	}
 
-	if( addrFile ) {
-		if( unlink(addrFile) < 0 ) {
-			dprintf( D_ALWAYS, 
-					 "DaemonCore: ERROR: Can't delete address file %s\n",
-					 addrFile );
-		} else {
-			if( IsDebugVerbose( D_DAEMONCORE ) ) {
-				dprintf( D_DAEMONCORE, "Removed address file %s\n", 
-						 addrFile );
+	for (int i=0; i<2; i++) {
+		if( addrFile[i] ) {
+			if( unlink(addrFile[i]) < 0 ) {
+				dprintf( D_ALWAYS,
+						 "DaemonCore: ERROR: Can't delete address file %s\n",
+						 addrFile[i] );
+			} else {
+				if( IsDebugVerbose( D_DAEMONCORE ) ) {
+					dprintf( D_DAEMONCORE, "Removed address file %s\n",
+							 addrFile[i] );
+				}
 			}
+				// Since we param()'ed for this, we need to free it now.
+			free( addrFile[i] );
 		}
-			// Since we param()'ed for this, we need to free it now.
-		free( addrFile );
 	}
 	
 	if(daemonCore) {
@@ -378,40 +382,51 @@ drop_addr_file()
 {
 	FILE	*ADDR_FILE;
 	char	addr_file[100];
+	const char* addr[2];
 
+	// Fill in addrFile[0] and addr[0] with info about regular command port
 	sprintf( addr_file, "%s_ADDRESS_FILE", get_mySubSystem()->getName() );
-
-	if( addrFile ) {
-		free( addrFile );
+	if( addrFile[0] ) {
+		free( addrFile[0] );
 	}
-	addrFile = param( addr_file );
+	addrFile[0] = param( addr_file );
+		// Always prefer the local, private address if possible.
+	addr[0] = daemonCore->privateNetworkIpAddr();
+	if (!addr[0]) {
+			// And if not, fall back to the public.
+		addr[0] = daemonCore->publicNetworkIpAddr();
+	}
 
-	if( addrFile ) {
-		MyString newAddrFile;
-		newAddrFile.formatstr("%s.new",addrFile);
-		if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.Value(), "w")) ) {
-			// Always prefer the local, private address if possible.
-			const char* addr = daemonCore->privateNetworkIpAddr();
-			if (!addr) {
-				// And if not, fall back to the public.
-				addr = daemonCore->publicNetworkIpAddr();
-			}
-			fprintf( ADDR_FILE, "%s\n", addr );
-			fprintf( ADDR_FILE, "%s\n", CondorVersion() );
-			fprintf( ADDR_FILE, "%s\n", CondorPlatform() );
-			fclose( ADDR_FILE );
-			if( rotate_file(newAddrFile.Value(),addrFile)!=0 ) {
+	// Fill in addrFile[1] and addr[1] with info about superuser command port
+	sprintf( addr_file, "%s_SUPER_ADDRESS_FILE", get_mySubSystem()->getName() );
+	if( addrFile[1] ) {
+		free( addrFile[1] );
+	}
+	addrFile[1] = param( addr_file );
+	addr[1] = daemonCore->superUserNetworkIpAddr();
+
+	for (int i=0; i<2; i++) {
+		if( addrFile[i] ) {
+			MyString newAddrFile;
+			newAddrFile.formatstr("%s.new",addrFile[i]);
+			if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.Value(), "w")) ) {
+				fprintf( ADDR_FILE, "%s\n", addr[i] );
+				fprintf( ADDR_FILE, "%s\n", CondorVersion() );
+				fprintf( ADDR_FILE, "%s\n", CondorPlatform() );
+				fclose( ADDR_FILE );
+				if( rotate_file(newAddrFile.Value(),addrFile[i])!=0 ) {
+					dprintf( D_ALWAYS,
+							 "DaemonCore: ERROR: failed to rotate %s to %s\n",
+							 newAddrFile.Value(),
+							 addrFile[i]);
+				}
+			} else {
 				dprintf( D_ALWAYS,
-						 "DaemonCore: ERROR: failed to rotate %s to %s\n",
-						 newAddrFile.Value(),
-						 addrFile);
+						 "DaemonCore: ERROR: Can't open address file %s\n",
+						 newAddrFile.Value() );
 			}
-		} else {
-			dprintf( D_ALWAYS,
-					 "DaemonCore: ERROR: Can't open address file %s\n",
-					 newAddrFile.Value() );
 		}
-	}
+	}	// end of for loop
 }
 
 void
@@ -1282,6 +1297,34 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 				}
 				names.clear();
 			}
+		} else if (is_arg_prefix(param_name, "?stats", -1)) {
+
+			struct _macro_stats stats;
+			int cQueries = get_config_stats(&stats);
+			// for backward compatility, we have to put a single string on the wire
+			// before we can put the stats classad.
+			MyString queries;
+			queries.formatstr("%d", cQueries);
+			if ( ! stream->code(queries)) {
+				dprintf(D_ALWAYS, "Can't send param stats for DC_CONFIG_VAL\n");
+				retval = false;
+			} else {
+				ClassAd ad; ad.Clear(); // remove time()
+				ad.Assign("Macros", stats.cEntries);
+				ad.Assign("Used", stats.cUsed);
+				ad.Assign("Referenced", stats.cReferenced);
+				ad.Assign("Files", stats.cFiles);
+				ad.Assign("StringBytes", stats.cbStrings);
+				ad.Assign("TablesBytes", stats.cbTables);
+				ad.Assign("Sorted", stats.cSorted);
+				if ( ! putClassAd(stream, ad)) {
+					dprintf(D_ALWAYS, "Can't send param stats ad for DC_CONFIG_VAL\n");
+					retval = false;
+				}
+			}
+			if (retval && ! stream->end_of_message()) {
+				retval = false;
+			}
 
 		} else { // unrecognised ?command
 
@@ -1294,70 +1337,147 @@ handle_config_val( Service*, int idCmd, Stream* stream )
 		return retval;
 	}
 
+	// DC_CONFIG_VAL command has extended behavior not shared by CONFIG_VAL.
+	// in addition to returning. the param() value, it returns consecutive strings containing
+	//   <NAME_USED> = <raw_value>
+	//   <filename>[, line <num>]
+	//   <default_value>
+	//note: ", line <num>" is present only when the line number is meaningful
+	//and "<default_value>" may be NULL
+	if (idCmd == DC_CONFIG_VAL) {
+		int retval = TRUE; // assume success
+
+#if 1
+		MyString name_used, value;
+		const char * def_val = NULL;
+		const MACRO_META * pmet = NULL;
+		const char * subsys = get_mySubSystem()->getName();
+		const char * local_name  = get_mySubSystem()->getLocalName();
+		const char * val = param_get_info(param_name, subsys, local_name, name_used, &def_val, &pmet);
+		if (name_used.empty()) {
+			dprintf( D_FULLDEBUG,
+					 "Got DC_CONFIG_VAL request for unknown parameter (%s)\n",
+					 param_name );
+			// send a NULL to indicate undefined. (val is NULL here)
+			if( ! stream->code(const_cast<char*&>(val)) ) {
+				dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
+				retval = FALSE;
+			}
+		} else {
+
+			dprintf(D_CONFIG | D_FULLDEBUG, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.Value(), def_val ? def_val : "NULL");
+
+			if (val) { tmp = expand_param(val, subsys, 0); } else { tmp = NULL; }
+			if( ! stream->code(tmp) ) {
+				dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
+				retval = FALSE;
+			}
+			if (tmp) free(tmp); tmp = NULL;
+
+			name_used.upper_case();
+			name_used += " = ";
+			if (val) name_used += val;
+			if ( ! stream->code(name_used)) {
+				dprintf( D_ALWAYS, "Can't send raw reply for DC_CONFIG_VAL\n" );
+			}
+			param_get_location(pmet, value);
+			if ( ! stream->code(value)) {
+				dprintf( D_ALWAYS, "Can't send filename reply for DC_CONFIG_VAL\n" );
+			}
+			if ( ! stream->code(const_cast<char*&>(def_val))) {
+				dprintf( D_ALWAYS, "Can't send default reply for DC_CONFIG_VAL\n" );
+			}
+			if (pmet->ref_count) { value.formatstr("%d / %d", pmet->use_count, pmet->ref_count);
+			} else  { value.formatstr("%d", pmet->use_count); }
+			if ( ! stream->code(value)) {
+				dprintf( D_ALWAYS, "Can't send use count reply for DC_CONFIG_VAL\n" );
+			}
+		}
+#else
+		MyString value, name_used, filename;
+		int line_number, use_count, ref_count;
+		const char * subsys = get_mySubSystem()->getName();
+		const char * local_name  = get_mySubSystem()->getLocalName();
+		if (subsys && !subsys[0]) subsys = NULL;
+		if (local_name && !local_name[0]) local_name = NULL;
+		const char * def_val = NULL;
+		const char * val = param_get_info(param_name, subsys, local_name,
+							&def_val, name_used, use_count, ref_count, filename, line_number);
+		if (val || ! filename.empty()) {
+			dprintf(D_CONFIG | D_FULLDEBUG, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.Value(), def_val ? def_val : "NULL");
+
+			if (val) { tmp = expand_param(val, subsys, 0); } else { tmp = NULL; }
+			if( ! stream->code(tmp) ) {
+				dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
+				retval = FALSE;
+			}
+			if (tmp) free(tmp); tmp = NULL;
+
+			name_used.upper_case();
+			name_used += " = ";
+			if (val) name_used += val;
+			if ( ! stream->code(name_used)) {
+				dprintf( D_ALWAYS, "Can't send raw reply for DC_CONFIG_VAL\n" );
+			}
+			if (line_number >= 0)
+				filename.formatstr_cat(", line %d", line_number);
+			if ( ! stream->code(filename)) {
+				dprintf( D_ALWAYS, "Can't send filename reply for DC_CONFIG_VAL\n" );
+			}
+			if ( ! stream->code(const_cast<char*&>(def_val))) {
+				dprintf( D_ALWAYS, "Can't send default reply for DC_CONFIG_VAL\n" );
+			}
+			if (ref_count) { value.formatstr("%d / %d", use_count, ref_count);
+			} else  { value.formatstr("%d", use_count); }
+			if ( ! stream->code(value)) {
+				dprintf( D_ALWAYS, "Can't send use count reply for DC_CONFIG_VAL\n" );
+			}
+		} else {
+			dprintf( D_FULLDEBUG,
+					 "Got DC_CONFIG_VAL request for unknown parameter (%s)\n",
+					 param_name );
+			// send a NULL to indicate undefined. (val is NULL here)
+			if( ! stream->code(const_cast<char*&>(val)) ) {
+				dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
+				retval = FALSE;
+			}
+		}
+#endif
+		if( ! stream->end_of_message() ) {
+			dprintf( D_ALWAYS, "Can't send end of message for DC_CONFIG_VAL\n" );
+			retval = FALSE;
+		}
+		free (param_name);
+		return retval;
+	}
+
 	tmp = param( param_name );
 	if( ! tmp ) {
 		dprintf( D_FULLDEBUG, 
-				 "Got DC_CONFIG_VAL request for unknown parameter (%s)\n", 
+				 "Got CONFIG_VAL request for unknown parameter (%s)\n", 
 				 param_name );
 		free( param_name );
 		if( ! stream->put("Not defined") ) {
-			dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
+			dprintf( D_ALWAYS, "Can't send reply for CONFIG_VAL\n" );
 			return FALSE;
 		}
 		if( ! stream->end_of_message() ) {
-			dprintf( D_ALWAYS, "Can't send end of message for DC_CONFIG_VAL\n" );
+			dprintf( D_ALWAYS, "Can't send end of message for CONFIG_VAL\n" );
 			return FALSE;
 		}
 		return FALSE;
 	} else {
 		if( ! stream->code(tmp) ) {
-			dprintf( D_ALWAYS, "Can't send reply for DC_CONFIG_VAL\n" );
+			dprintf( D_ALWAYS, "Can't send reply for CONFIG_VAL\n" );
 			free( param_name );
 			free( tmp );
 			return FALSE;
 		}
 
-		// DC_CONFIG_VAL command has extended behavior not shared by CONFIG_VAL.
-		// in addition to returning. the param() value, it returns consecutive strings containing
-		//   <NAME_USED> = <raw_value>
-		//   <filename>[, line <num>]
-		//   <default_value>
-		//note: ", line <num>" is present only when the line number is meaningful
-		//and "<default_value>" may be NULL
-		if (idCmd == DC_CONFIG_VAL) {
-			MyString name_used, filename;
-			int line_number;
-			const char * subsys = get_mySubSystem()->getName();
-			const char * local_name  = get_mySubSystem()->getLocalName();
-			if (subsys && !subsys[0]) subsys = NULL;
-			if (local_name && !local_name[0]) local_name = NULL;
-
-			const char * val = param_get_info(param_name, subsys, local_name, name_used, filename, line_number);
-			if (val != NULL) {
-				const char * def_val = param_exact_default_string(name_used.Value());
-				dprintf(D_ALWAYS, "DC_CONFIG_VAL(%s) def: %s = %s\n", param_name, name_used.Value(), def_val ? def_val : "NULL");
-
-				name_used.upper_case();
-				name_used += " = ";
-				name_used += val;
-				if ( ! stream->code(name_used)) {
-					dprintf( D_ALWAYS, "Can't send raw reply for DC_CONFIG_VAL\n" );
-				}
-				if (line_number >= 0)
-					filename.formatstr_cat(", line %d", line_number);
-				if ( ! stream->code(filename)) {
-					dprintf( D_ALWAYS, "Can't send filename reply for DC_CONFIG_VAL\n" );
-				}
-				if ( ! stream->code(const_cast<char*&>(def_val))) {
-					dprintf( D_ALWAYS, "Can't send default reply for DC_CONFIG_VAL\n" );
-				}
-			}
-		}
-
 		free( param_name );
 		free( tmp );
 		if( ! stream->end_of_message() ) {
-			dprintf( D_ALWAYS, "Can't send end of message for DC_CONFIG_VAL\n" );
+			dprintf( D_ALWAYS, "Can't send end of message for CONFIG_VAL\n" );
 			return FALSE;
 		}
 	}
@@ -1539,7 +1659,7 @@ dc_reconfig()
 			as an extern "C" linkage with a default argument(WTF!?) while
 			being called in a C++ context, something goes wrong. So, we'll
 			just supply the errant argument. */
-	config(0);
+	config();
 
 		// See if we're supposed to be allowing core files or not
 	if ( doCoreInit ) {
@@ -2053,14 +2173,11 @@ int dc_main( int argc, char** argv )
 		Foreground = 1;
 	}
 
-		// call config so we can call param.  
-	if ( get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHADOW) ) {
-		// Try to minimize shadow footprint by not loading
-		// the "extra" info from the config file
-		config( wantsQuiet, false, false );
-	} else {
-		config( wantsQuiet, false, true );
-	}
+	// call config so we can call param.  
+	// Try to minimize shadow footprint by not loading the metadata from the config file
+	int config_options = get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHADOW) ? 0 : CONFIG_OPT_WANT_META;
+	const bool abort_if_invalid = true;
+	config_ex(wantsQuiet, abort_if_invalid, config_options);
 
 
     // call dc_config_GSI to set GSI related parameters so that all
@@ -2310,6 +2427,11 @@ int dc_main( int argc, char** argv )
 			dprintf(D_ALWAYS, "   %s\n", source );
 		}
 	}
+	_macro_stats stats;
+	get_config_stats(&stats);
+	dprintf(D_ALWAYS, "config Macros = %d, Sorted = %d, StringBytes = %d, TablesBytes = %d\n",
+				stats.cEntries, stats.cSorted, stats.cbStrings, stats.cbTables);
+
 
 	// TJ: Aug/2013 we are going to turn on classad caching by default in 8.1.1 we want to see in the log that its on.
 	dprintf (D_ALWAYS, "CLASSAD_CACHING is %s\n", param_boolean("ENABLE_CLASSAD_CACHING", false) ? "ENABLED" : "OFF");

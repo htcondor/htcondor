@@ -10,6 +10,10 @@
   so this value can be used to discover if a \Condor{schedd} 
   is currently flocking.
 
+\index{ClassAd Scheduler attribute!CondorVersion}
+\item[\AdAttr{CondorVersion}:] A string containing the HTCondor version
+number, the release date, and the build identification number.
+
 \index{ClassAd Scheduler attribute!DaemonCoreDutyCycle}
 \item[\AdAttr{DaemonCoreDutyCycle}:] A Statistics attribute defining
   the ratio of the time spent handling 
@@ -647,6 +651,11 @@
 \item[\AdAttr{TotalSchedulerRunningJobs}:] The total number of 
   \SubmitCmd{scheduler} \SubmitCmd{ universe} jobs from this
   \Condor{schedd} daemon that are currently running.
+
+\index{ClassAd Scheduler attribute!TransferQueueUserExpr}
+\item[\AdAttr{TransferQueueUserExpr}]
+  A ClassAd expression that provides the name of the transfer queue
+  that the \Condor{schedd} will be using for job file transfer.
 
 \index{ClassAd Scheduler attribute!UpdateInterval}
 \item[\AdAttr{UpdateInterval}:] The interval, in seconds,

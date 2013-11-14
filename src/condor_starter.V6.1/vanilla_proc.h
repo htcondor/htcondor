@@ -68,6 +68,8 @@ public:
 
 	virtual bool SupportsPIDNamespace() { return true;}
 
+	virtual std::string CgroupSuffix() { return "";}
+
 	bool finishShutdownFast();
 
 private:
@@ -84,6 +86,8 @@ private:
 	int setupOOMScore(int new_score);
 	int outOfMemoryEvent(int fd);
 	int setupOOMEvent(const std::string & cgroup_string);
+
+	std::string m_pid_ns_init_filename;
 
 };
 

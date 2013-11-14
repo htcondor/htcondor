@@ -721,7 +721,7 @@ void
 CCBClient::DeadlineExpired()
 {
 	dprintf(D_ALWAYS,
-			"CCBClient: deadline expired for reverse connection to %s.\n ",
+			"CCBClient: deadline expired for reverse connection to %s.\n",
 			m_target_peer_description.Value());
 
 	m_deadline_timer = -1;

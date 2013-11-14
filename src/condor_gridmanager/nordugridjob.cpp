@@ -928,7 +928,7 @@ std::string *NordugridJob::buildSubmitRSL()
 	attr_value = NULL;
 
 	//We're assuming all job clasads have a command attribute
-	jobAd->LookupString( ATTR_JOB_CMD, executable );
+	GetJobExecutable( jobAd, executable );
 	jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer_exec );
 
 	*rsl += "(executable=";
@@ -1093,7 +1093,7 @@ StringList *NordugridJob::buildStageInList()
 
 	jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer );
 	if ( transfer ) {
-		jobAd->LookupString( ATTR_JOB_CMD, buf );
+		GetJobExecutable( jobAd, buf );
 		if ( !tmp_list->file_contains( buf.c_str() ) ) {
 			tmp_list->append( buf.c_str() );
 		}

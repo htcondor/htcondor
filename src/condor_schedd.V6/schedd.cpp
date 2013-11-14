@@ -550,7 +550,8 @@ Scheduler::Scheduler() :
 	stop_job_queue( "stop_job_queue" ),
 	act_on_job_myself_queue( "act_on_job_myself_queue" ),
 	job_is_finished_queue( "job_is_finished_queue", 1 ),
-	m_local_startd_pid(-1)
+	m_local_startd_pid(-1),
+	m_history_helper_count(0)
 {
 	MyShadowSockName = NULL;
 	shadowCommandrsock = NULL;
@@ -1225,6 +1226,7 @@ Scheduler::count_jobs()
 	// TJ: get daemon-core message-time here and pass into stats.Tick()
 	stats.Tick();
 	stats.JobsSubmitted = GetJobQueuedCount();
+	stats.Autoclusters = autocluster.getNumAutoclusters();
 
 	OtherPoolStats.Tick();
 	// because cad is really m_adSchedd which is persistent, we have to 
@@ -1523,6 +1525,7 @@ int Scheduler::make_ad_list(
    stats.Tick(now);
    stats.JobsSubmitted = GetJobQueuedCount();
    stats.ShadowsRunning = numShadows;
+   stats.Autoclusters = autocluster.getNumAutoclusters();
 
    OtherPoolStats.Tick(now);
    // because cad is a copy of m_adSchedd which is persistent, we have to 
@@ -1631,6 +1634,129 @@ int Scheduler::command_query_ads(int, Stream* stream)
 	return TRUE;
 }
 
+static bool
+sendHistoryErrorAd(Stream *stream, int errorCode, std::string errorString)
+{
+	classad::ClassAd ad;
+	ad.InsertAttr(ATTR_OWNER, 0);
+	ad.InsertAttr(ATTR_ERROR_STRING, errorString);
+	ad.InsertAttr(ATTR_ERROR_CODE, errorCode);
+
+	stream->encode();
+	if (!putClassAd(stream, ad) || !stream->end_of_message())
+	{
+		dprintf(D_ALWAYS, "Failed to send error ad for remote history query\n");
+	}
+	return false;
+}
+
+int Scheduler::command_history(int, Stream* stream)
+{
+	ClassAd queryAd;
+
+	stream->decode();
+	stream->timeout(15);
+	if( !getClassAd(stream, queryAd) || !stream->end_of_message()) {
+		dprintf( D_ALWAYS, "Failed to receive query on TCP: aborting\n" );
+		return FALSE;
+	}
+
+	if ((param_integer("HISTORY_HELPER_MAX_HISTORY", 10000) == 0) || param_integer("HISTORY_HELPER_MAX_CONCURRENCY") == 0) {
+		return sendHistoryErrorAd(stream, 10, "Remote history has been disabled on this schedd");
+	}
+
+	classad::ExprTree *requirements = queryAd.Lookup(ATTR_REQUIREMENTS);
+	if (!requirements)
+	{
+		classad::Value val; val.SetBooleanValue(true);
+		requirements = classad::Literal::MakeLiteral(val);
+		if (!requirements) return sendHistoryErrorAd(stream, 1, "Failed to create default requirements");
+	}
+	classad::ClassAdUnParser unparser;
+	std::string requirements_str;
+	unparser.Unparse(requirements_str, requirements);
+
+	classad::Value value;
+	classad::ExprList *list = NULL;
+	if ((queryAd.find(ATTR_PROJECTION) != queryAd.end()) &&
+		(!queryAd.EvaluateAttr(ATTR_PROJECTION, value) || !value.IsListValue(list)))
+	{
+		return sendHistoryErrorAd(stream, 2, "Unable to evaluate projection list");
+	}
+	std::stringstream ss;
+	bool multiple = false;
+	if (list) for (classad::ExprList::const_iterator it = list->begin(); it != list->end(); it++)
+	{
+		std::string attr;
+		if (!(*it)->Evaluate(value) || !value.IsStringValue(attr))
+		{
+			return sendHistoryErrorAd(stream, 3, "Unable to convert projection list to string");
+		}
+		if (multiple) ss << ",";
+		multiple = true;
+		ss << attr;
+	}
+
+	int matchCount;
+	if (!queryAd.EvaluateAttr(ATTR_NUM_MATCHES, value) || !value.IsIntegerValue(matchCount))
+	{
+		matchCount = -1;
+	}
+	std::stringstream ss2;
+	ss2 << matchCount;
+
+	if (m_history_helper_count >= m_history_helper_max) {
+		if (m_history_helper_queue.size() > 1000) {
+			return sendHistoryErrorAd(stream, 9, "Cowardly refusing to queue more than 1000 requests.");
+		}
+		classad_shared_ptr<Stream> stream_shared(stream);
+		HistoryHelperState state(stream_shared, requirements_str, ss.str(), ss2.str());
+		m_history_helper_queue.push_back(state);
+		return KEEP_STREAM;
+	} else {
+		HistoryHelperState state(*stream, requirements_str, ss.str(), ss2.str());
+		return history_helper_launcher(state);
+	}
+}
+
+int Scheduler::history_helper_reaper(int, int) {
+	m_history_helper_count--;
+	while ((m_history_helper_count < m_history_helper_max) && m_history_helper_queue.size()) {
+		std::vector<HistoryHelperState>::iterator it = m_history_helper_queue.begin();
+		history_helper_launcher(*it);
+		m_history_helper_queue.erase(it);
+	}
+	return TRUE;
+}
+
+int Scheduler::history_helper_launcher(const HistoryHelperState &state) {
+
+	std::string history_helper;
+	param(history_helper, "HISTORY_HELPER", "$(LIBEXEC)/condor_history_helper");
+        history_helper = macro_expand(history_helper.c_str());
+	ArgList args;
+	args.AppendArg("condor_history_helper");
+	args.AppendArg("-f");
+	args.AppendArg("-t");
+	args.AppendArg(state.Requirements());
+	args.AppendArg(state.Projection());
+	args.AppendArg(state.MatchCount());
+	std::stringstream ss;
+	ss << param_integer("HISTORY_HELPER_MAX_HISTORY", 10000);
+	args.AppendArg(ss.str());
+
+	Stream *inherit_list[] = {state.GetStream(), NULL};
+
+	FamilyInfo fi;
+	pid_t pid = daemonCore->Create_Process(history_helper.c_str(), args, PRIV_ROOT, m_history_helper_rid,
+		false, NULL, NULL, NULL, inherit_list);
+	if (!pid)
+	{
+		return sendHistoryErrorAd(state.GetStream(), 4, "Failed to launch history helper process");
+	}
+	m_history_helper_count++;
+	return true;
+}
 
 int 
 clear_autocluster_id( ClassAd *job )
@@ -9655,6 +9781,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	time_t updateTime = time(NULL);
 	stats.Tick(updateTime);
 	stats.JobsSubmitted = GetJobQueuedCount();
+	stats.Autoclusters = autocluster.getNumAutoclusters();
 
 	MyString other;
 	ScheddOtherStats * other_stats = NULL;
@@ -10356,6 +10483,7 @@ Scheduler::Init()
 
     stats.Reconfig();
 
+	PRAGMA_REMIND("TJ: These should be moved into the default config table")
 		// set defaults for rounding attributes for autoclustering
 		// only set these values if nothing is specified in condor_config.
 	MyString tmpstr;
@@ -11095,6 +11223,8 @@ Scheduler::Init()
 
 	m_job_machine_attrs_history_length = param_integer("SYSTEM_JOB_MACHINE_ATTRS_HISTORY_LENGTH",1,0);
 
+	m_history_helper_max = param_integer("HISTORY_HELPER_MAX_CONCURRENCY", 2);
+
 	first_time_in_init = false;
 }
 
@@ -11193,6 +11323,12 @@ Scheduler::Register()
                                 (CommandHandlercpp)&Scheduler::command_query_ads,
                                  "command_query_ads", this, READ);
 
+	// Command handler for remote history	
+	daemonCore->Register_CommandWithPayload(QUERY_SCHEDD_HISTORY,"QUERY_SCHEDD_HISTORY",
+				(CommandHandlercpp)&Scheduler::command_history,
+				"command_history", this, READ);
+
+
 	// Note: The QMGMT READ/WRITE commands have the same command handler.
 	// This is ok, because authorization to do write operations is verified
 	// internally in the command handler.
@@ -11244,6 +11380,11 @@ Scheduler::Register()
 		"reaper",
 		(ReaperHandlercpp)&Scheduler::child_exit,
 		"child_exit", this );
+
+	m_history_helper_rid = daemonCore->Register_Reaper(
+		"history_reaper",
+		(ReaperHandlercpp)&Scheduler::history_helper_reaper,
+		"history_helper_exit", this );
 
 	// register all the timers
 	RegisterTimers();

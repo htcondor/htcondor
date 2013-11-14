@@ -16,6 +16,210 @@ New features will be added in the 8.1.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-0-5}Version 8.0.5}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.0.5 not yet released.
+%\item HTCondor version 8.0.5 released on Month Date, 2013.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Fixed bug with \Condor{submit} -interactive when
+cgroups where enabled.  With that combination, the shell would
+get terminated immediately after startup.
+\Ticket{4028}
+
+\item The \condor{starter} now writes to the log file
+\File{StarterLog.slotX} when running work fetch jobs, mirroring the
+behavior when running jobs that come from a \condor{schedd}.
+Previously, the log file \File{StarterLog} was used for all work fetch
+jobs.
+\Ticket{3091}
+
+\item Fixed a Python binding crash due to a segmentation fault, when evaluating an expression tree with an undefined reference.
+\Ticket{3910}
+
+\item Fixed curl file transfer plugin on Windows. Previously curl was
+not properly initializing Winsocks and thus all network operations
+would fail.
+\Ticket{3979}
+
+\item Fixed a bug that caused grid-type cream jobs to fail if the submit
+description file contained the submit command \SubmitCmd{environment} or
+\SubmitCmd{cream\_attributes}.
+\Ticket{4037}
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-0-4}Version 8.0.4}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.0.4 released on October 24, 2013.
+
+\item A clipped version of HTCondor is now provided for Ubuntu 12.04 
+on the x86\_64 architecture.
+\Ticket{3972}
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item The new configuration variable \Macro{DYNAMIC\_RUN\_ACCOUNT\_LOCAL\_GROUP}
+permits an administrator of a Windows machine to specify a local group other 
+than the default \Expr{Users} for the \Expr{condor-reuse-slot<X>} run account.
+\Ticket{3998}
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item Added a retry to work around problems with slow
+DHCP servers.  The result of the problem was that daemons
+would not be able to determine their own host names,
+and, among other problems, machine ClassAds would appear
+in the output of \Condor{status} with blank host names.
+\Ticket{3956}
+
+\item A spurious warning in the log of the \Condor{startd} 
+about undefined \MacroNI{PREEMPT\_VANILLA} expressions
+is no longer generated.
+\Ticket{3984}
+
+\item EC2 grid universe jobs may provide data in files.
+File contents of null-terminated strings worked correctly,
+but binary data did not.
+This bug fix makes sure that both kinds of data are read correctly.
+\Ticket{3924}
+
+\item EC2 grid universe jobs on OpenNebula work better for user data
+specified with \SubmitCmd{ec2\_user\_data},
+where the size of the data is larger than 2Kbytes.
+\Ticket{3923}
+
+\item Fixed a bug preventing HTTP file transfers from following redirects.
+HTTP file transfers also now fail if the file does not exist,
+but the server does exist.
+\Ticket{3904}
+
+\item Fixed a rare bug in which the \Condor{schedd} would exit
+with an ERROR message pertaining to \Procedure{select},
+when running with a very heavy load and many \Condor{shadow} daemons
+time out.
+\Ticket{3947}
+
+\item Fixed a bug in \Condor{ssh\_to\_job}
+that caused it to kill the job when the ssh session exited,
+if cgroups were enabled.
+\Ticket{3921}
+
+\item If a standard universe job exited without producing any checkpoints 
+and no checkpoint server was used, 
+two spurious error messages would be logged to the \File{SchedLog}, 
+as it tried to remove the old checkpoint images from the 
+non-existent checkpoint server. 
+These error messages are no longer logged.
+\Ticket{3919}
+
+\item The configuration file for Windows erroneously had two entries
+for configuration variable \Macro{JAVA\_CLASSPATH\_SEPARATOR},
+with the second entry specifying the
+separator used on Unix platforms, which overrode the first entry. 
+The Unix separator no longer affects this configuration file
+for Windows platforms.
+\Ticket{3957}
+
+\item The NorduGrid GAHP no longer consumes all of the CPU when run
+with threaded Globus libraries.
+\Ticket{3958}
+
+\item Fixed a bug that could cause ClassAd function \Procedure{quantize} to not
+evaluate properly when its second argument was a list and ClassAd caching
+was enabled.
+\Ticket{3967}
+
+\item Fixed a bug that caused the configuration variable setting 
+\Expr{STARTD\_CRON\_AUTOPUBLISH = If\_Changed} to not work correctly.  
+Updates were incorrectly sent to the \Condor{collector}
+in many cases when no attribute value had changed.
+\Ticket{3983}
+
+\item Fixed a bug that could cause \Condor{q} \Opt{-analyze} or 
+\Opt{-better-analyze}
+to sometimes crash on an Illegal Instruction, 
+when the \Attr{Requirements} expression contained a function.
+\Ticket{3985}
+
+\item The configuration variables \Macro{UPDATE\_COLLECTOR\_WITH\_TCP}
+and \Macro{TCP\_UPDATE\_COLLECTORS} are now respected when forwarding
+ClassAds to an HTCondorView server and setting \Macro{CONDOR\_VIEW\_HOST}.
+\Ticket{3986}
+
+\item \Condor{who} now prints an error message when passed an invalid argument.
+\Ticket{3987}
+
+\item Changed the script that finds the VMware tools to use the standard
+environment variables to find \File{Program Files}, instead of using a
+hard coded path.
+This fixes installation for both 64-bit and non-English language Windows 
+platforms.
+\Ticket{272}
+
+\end{itemize}
+
+\noindent Known Bugs:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Additions and Changes to the Manual:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-0-3}Version 8.0.3}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -23,8 +227,7 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item HTCondor version 8.0.3 not yet released.
-%\item HTCondor version 8.0.3 released on Month Date, 2013.
+\item HTCondor version 8.0.3 released on September 23, 2013.
 
 \end{itemize}
 
@@ -49,24 +252,44 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug that prevented the use of simple hostnames to identify
-machines when using the command-line tools. For example, 
-\Expr{condor\_status bar.foo.org} would show machine ads, but
+\item When expressions for \Macro{SUSPEND},
+\Macro{CONTINUE}, \Macro{PREEMPT}, and \Macro{KILL}
+were evaluated by the \Condor{startd},
+a resulting value of
+\Expr{UNDEFINED} or \Expr{ERROR} caused an exception in the \Condor{startd}.
+These values are now treated as \Expr{False},
+eliminating the exception.
+\Ticket{3869}
+
+\item Fixed a bug that prevented the use of simple host names to identify
+machines when using the command-line tools. Before the fix,
+\Expr{condor\_status bar.foo.org} would show machine ClassAds, but
 \Expr{condor\_status bar} would not.
+Both now show machine ClassAds.
 \Ticket{3694}
 
-\item Fixed a bug with \Condor{ssh\_to\_job} and USE\_PID\_NAMESPACES.  If the latter option was enabled, a user running the \Condor{ssh\_to\_job} tool would run in a private pid namespace, and not be able to see their job with ps or gdb.  \Condor{ssh\_to\_job} now runs in the global namespace, so that it can see the processes in the user's job.
+\item Fixed a bug with \Condor{ssh\_to\_job} that occurs when
+\Macro{USE\_PID\_NAMESPACES} is enabled.
+The bug presented itself as \Condor{ssh\_to\_job}
+running in a private pid namespace, 
+and the user running \Condor{ssh\_to\_job} not being able to see 
+their job with \Prog{ps} or \Prog{gdb}.
+As a fix, \Condor{ssh\_to\_job} now runs in the global namespace, 
+so that it can see the processes in the user's job.
 \Ticket{3872}
 
-\item Fixed a performance problem with the \Condor{qedit} command that would cause the \Condor{schedd} to run very slowly when \Condor{qedit} is run on a large number of jobs.  \Condor{qedit} will no longer write an event to the job log. 
+\item Fixed a performance problem with the \Condor{qedit} command 
+that would cause the \Condor{schedd} to run very slowly when 
+\Condor{qedit} is run on a large number of jobs.  
+\Condor{qedit} no longer writes an event to the job event log. 
 \Ticket{3827}
 
 \item Fixed a problem where the \Code{classad} python module would return
 incorrect results when ClassAd caching is enabled.
 \Ticket{3879}
 
-\item DAGMan's updating of its job ad with DAG status attributes no
-longer causes extra events to be written to the user job log and event log.
+\item DAGMan's updating of its job ClassAd with DAG status attributes no
+longer causes extra events to be written to the job event log and event log.
 \Ticket{3863}
 
 \item Fixed a bug that caused the command
@@ -80,13 +303,17 @@ such that it will still work with other versions of HTCondor containing
 the bug.
 \Ticket{3902}
 
-\item The value of the JobOutOfResource hold code was changed to 34 so that
-it would not conflict with the MaxTransferInputSizeExceeded hold code.
+\item Value 032 of the job ClassAd attribute \Attr{HoldReasonCode}
+was being used for two different reasons.
+Now, value 032 identifies that the maximum total input file 
+transfer size was exceeded. 
+Value 034 identifies that memory usage exceeds a memory limit.
 \Ticket{3858}
 
-\item The values of the job ClassAd attributes RemoteSysCpu and RemoteUserCpu
-are sometimes impossibly large. The problem is rare and not well understood,
-but Changes have been made to the code in an attempt to fix this problem.
+\item The values of the job ClassAd attributes \Attr{RemoteSysCpu} 
+and \Attr{RemoteUserCpu} are sometimes impossibly large.
+This bug rarely occurs and is not well understood.
+Code changes attempt to fix this problem.
 \Ticket{3814}
 
 \item Fixed a bug that caused DAG recovery mode to fail on

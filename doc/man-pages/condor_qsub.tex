@@ -50,7 +50,7 @@ that contains all of the commands.
 
 \Condor{qsub} does the opposite of job submission within the 
 \SubmitCmd{grid} universe 
-\SubmitCmd{batch} grid type (section~\ref{sec:batch}),
+\SubmitCmd{batch} grid type,
 which takes HTCondor jobs submitted with HTCondor
 syntax and submits them to PBS, SGE, or LSF.
 
@@ -65,7 +65,7 @@ syntax and submits them to PBS, SGE, or LSF.
   For PBS, \Arg{MM} and \Arg{DD} are optional. 
   \Condor{qsub} follows the PBS style. }
 \OptItem{\OptArg{-A}{account\_string}}{(Status option)
-  Uses group accounting (see section~\ref{sec:group-accounting})
+  Uses group accounting
   where the string \Arg{account\_string} 
   is the accounting group associated with this job. 
   Unlike SGE, there is no default group of \texttt{"sge"}. }
@@ -212,8 +212,7 @@ procs & integer  & Number of CPUs requested. \\ \hline
 \OptItem{\OptArg{-p}{integer}}{(Status option)
   Sets the \SubmitCmd{priority} submit command for the job,
   with 0 being the default. Jobs with higher numerical priority will
-  run before jobs with lower numerical priority.
-  See section~\ref{man-condor-submit-priority} for details. }
+  run before jobs with lower numerical priority. }
 \OptItem{\Opt{---print}}{(Specific option) 
   Send to \File{stdout} the contents of the HTCondor submit description
   file that \Condor{qsub} generates.}
@@ -247,15 +246,12 @@ procs & integer  & Number of CPUs requested. \\ \hline
   Produces, but then removes the HTCondor submit description file.
   Never submits the job, even if no errors are encountered. }
 \OptItem{\OptArg{-v}{variable list}}{(Environmental option)
-  Used to set the \SubmitCmd{environment} submit command for the job.
-  \Arg{variable list} is as defined for the submit command at
-  section~\ref{man-condor-submit-environment}.
+  Used to set the submit command \SubmitCmd{environment} for the job.
+  \Arg{variable list} is as that defined for the submit command.
   Note that the syntax needed is specialized to deal with quote marks and 
   white space characters.  }
 \OptItem{\Opt{-V}}{(Environmental option)
-  Set \Expr{getenv = True} in the submit description file.
-  See section~\ref{man-condor-submit-getenv} for a description of 
-  \SubmitCmd{getenv}.  }
+  Sets \Expr{getenv = True} in the submit description file. }
 \OptItem{\OptArg{-W}{attr\_name=attr\_value[,attr\_name=attr\_value\ldots]}}{
 (File option)
   PBS/Torque supports a number of attributes. 

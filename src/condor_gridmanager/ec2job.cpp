@@ -1265,9 +1265,8 @@ void EC2Job::doEvaluateState()
 					if( m_retry_times++ < maxRetryTimes ) {
 						gmState = GM_CANCEL;
 					} else {
-						errorString = gahp->getErrorString();
-						dprintf( D_ALWAYS, "(%d.%d) job cancel did not succeed after %d tries, giving up.\n",
-								 procID.cluster, procID.proc, maxRetryTimes );
+						formatstr( errorString, "Job cancel did not succeed after %d tries, giving up.", maxRetryTimes );
+						dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 						gmState = GM_HOLD;
 						break;
 					}
@@ -2213,9 +2212,12 @@ void EC2Job::StatusUpdate( const char * instanceID,
 	}
 
 	// SetRemoteJobStatus() sets the last-update timestamp, but
-	// only returns true if the status has changed.
+	// only returns true if the status has changed.  SetRemoteJobStatus()
+	// can handle NULL statuses, but remoteJobState's assignment operator
+	// can't.  One way to get a status update with a NULL status is if
+	// a spot instance was purged (e.g., recovery after a long downtime).
 	if( SetRemoteJobStatus( status ) ) {
-		remoteJobState = status;
+		if( status != NULL ) { remoteJobState = status; }
 		probeNow = true;
 		SetEvaluateState();
 	}

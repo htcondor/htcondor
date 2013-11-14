@@ -17,3 +17,4 @@
  ############################################################### 
 
 condor_unit_test ( _ring_buffer_tester ring_buffer_tests.cpp "" ON )
+condor_unit_test ( _consumption_policy_tester consumption_policy_tests.cpp "condor_utils" ON )

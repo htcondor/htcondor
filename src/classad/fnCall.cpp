@@ -2212,7 +2212,7 @@ doMath2( const char* name,const ArgumentList &argList,EvalState &state,
 				base.SetRealValue(0.0), rbase = 0.0; // treat an empty list as 'don't quantize'
 				for (ExprListIterator itr(list); !itr.IsAfterLast(); itr.NextExpr()) {
 					const ExprTree *expr = itr.CurrentExpr();
-					if ( ! expr->Evaluate(base)) {
+					if ( ! expr->Evaluate(state, base)) {
 						result.SetErrorValue();
 						return false; // eval should not fail
 					}

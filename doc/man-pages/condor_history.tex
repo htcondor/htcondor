@@ -5,6 +5,8 @@
 \oOpt{-help} 
 
 \SynProg{\Condor{history}}
+\oOptArg{-name}{name}
+\oOptArg{-pool}{centralmanagerhostname[:portnumber]}
 \oOpt{-backwards}
 \oOpt{-forwards}
 \oOptArg{-constraint}{expr}
@@ -31,8 +33,8 @@ each job on a single line, and  contains the following items:
 \item[ID] The cluster/process id of the job. 
 \item[OWNER] The owner of the job. 
 \item[SUBMITTED] The month, day, hour, and minute the job was submitted to the queue. 
-\item[RUN\_TIME] Remote wall clock time accumulated by the job to date in days, hours, minutes, and seconds.  See the definition of
-\AdAttr{RemoteWallClockTime} on page~\pageref{RemoteWallClockTime}.
+\item[RUN\_TIME] Remote wall clock time accumulated by the job to date in days, hours, minutes, and seconds,  given as the job ClassAd attribute
+\AdAttr{RemoteWallClockTime}.
 \item[ST] Completion status of the job (C = completed and X = removed).
 \item[COMPLETED] The time the job was completed.
 \item[CMD] The name of the executable. 
@@ -50,6 +52,12 @@ file.
 
 \begin{Options}
   \OptItem{\Opt{-help}}{Display usage information and exit.}
+  \OptItem{\OptArg{-name}{name}}{Query the named \Condor{schedd} daemon. }
+  \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
+    {Use the \Argnm{centralmanagerhostname} as
+    the central manager to locate \Condor{schedd} daemons.
+    The default is the \MacroNI{COLLECTOR\_HOST},
+    as specified in the configuration.}
   \OptItem{\Opt{-backwards}}{List jobs in reverse chronological
     order. The job most recently added to the history file is first.
     This is the default ordering.}

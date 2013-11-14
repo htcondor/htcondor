@@ -33,7 +33,7 @@
 
 int
 main( int, char** ) {
-	config(0);
+	config();
   
 		// Get the JAVA location
 	char * java = param ( "JAVA" );

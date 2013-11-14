@@ -634,7 +634,7 @@ static bool is_empty_initialized() {
 }
 
 static bool is_empty_after_change() {
-	emit_test("IsEmpty() of an MyString that is changed to an empty "
+	emit_test("IsEmpty() of a MyString that is changed to an empty "
 		"MyString");
 	MyString will_be_empty("notEmpty");
 	will_be_empty = "";
@@ -2291,7 +2291,7 @@ static bool find_empty() {
 //in test_mystring.cpp 607
 static bool find_non_empty() {
 	emit_test("Does find() return 0 when looking for the empty string within "
-		"an non-empty MyString?");
+		"a non-empty MyString?");
 	MyString a("Alberto Contador");
 	int loc = a.find("");
 	emit_input_header();

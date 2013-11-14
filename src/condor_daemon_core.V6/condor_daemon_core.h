@@ -437,6 +437,13 @@ class DaemonCore : public Service
 	const char* privateNetworkIpAddr(void);
 
 		/**
+		   @return Pointer to a static buffer containing the daemon's
+		   superuser local IP address and port (aka sinful string),
+		   otherwise NULL.
+		*/
+	const char* superUserNetworkIpAddr(void);
+
+		/**
 		   @return The daemon's private network name, or NULL if there
 		   is none (i.e., it's on the public internet).
 		*/
@@ -1549,8 +1556,6 @@ class DaemonCore : public Service
 	// This pairing should representing the "same" socket, just on UDP and TCP.
 	// It's okay for parts to be NULL.  Safe to copy, although all of the
 	// copies will be sharing the same sockets.  
-	//
-
   public:
 	class SockPair {
 	public:
@@ -1592,7 +1597,10 @@ class DaemonCore : public Service
 
   private:
 	SockPairVec dc_socks;
+	ReliSock* super_dc_rsock;	// super user tcp command socket
+	SafeSock* super_dc_ssock;	// super user udp command socket
     int m_iMaxAcceptsPerCycle; ///< maximum number of inbound connections to accept per loop
+	int m_iMaxReapsPerCycle; // maximum number reapers to invoke per event loop
 
     void Inherit( void );  // called in main()
 	void InitDCCommandSocket( int command_port );  // called in main()

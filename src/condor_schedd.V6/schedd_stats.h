@@ -41,6 +41,8 @@ typedef struct ScheddStatistics {
    stats_entry_recent<int> JobsExited;           // jobs exited (success or failure) over schedd lifetime
    stats_entry_recent<int> JobsCompleted;        // jobs successfully completed over schedd lifetime
 
+   stats_entry_recent<int> Autoclusters;		 // number of active autoclusters
+
    stats_entry_recent<time_t> JobsAccumTimeToStart; // sum of all time jobs spent waiting to start
    stats_entry_recent<time_t> JobsAccumRunningTime; // sum of all time jobs spent running.
    stats_entry_recent<time_t> JobsAccumBadputTime;  // sum of all time jobs spent running badput

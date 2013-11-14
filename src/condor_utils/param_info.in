@@ -15,6 +15,12 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=
 id=572
 
+[MASTER]
+default=$(SBIN)/condor_master
+win32_default=$(SBIN)\condor_master.exe
+type=path
+customization=seldom
+friendly_name=full path of the Master binary
 
 [MASTER_ENVIRONMENT]
 # XXX follows pattern of %s_ENVIRONMENT
@@ -722,13 +728,17 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vmware_type
 id=2
 
+[LIBVIRT_XML_SCRIPT]
+default=$(LIBEXEC)/libvirt_simple_script.awk
+
 [VM_GAHP_SERVER]
 aliases=
-default=
+default=$(SBIN)/condor_vm-gahp
+win32_default=$(SBIN)\condor_vm-gahp.exe
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -741,10 +751,12 @@ id=3
 [VM_GAHP_LOG]
 aliases=
 default=/tmp/VMGAHPLog.$(USERNAME)
+# daemons that run as user can't write to $(LOG) and there is no /tmp on windows
+win32_default=NUL
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -753,6 +765,10 @@ usage=VM_GAHP_LOG	= $(LOG)/VMGahpLogs/VMGahpLog.$(USERNAME)
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=vm-gahp,vmgahp_main
 id=4
+
+[MAX_VM_GAHP_LOG]
+default=1000000
+type=int
 
 [XEN_BRIDGE_SCRIPT]
 aliases=
@@ -949,6 +965,7 @@ id=25
 [PROCD_ADDRESS]
 aliases=
 default=$(LOCK)/procd_pipe
+win32_default=\\.\pipe\condor_procd_pipe
 version=0.0.0
 range=.*
 state=default
@@ -984,7 +1001,7 @@ default=$(LOCAL_DIR)/execute
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -1112,7 +1129,7 @@ default=$(LOG)/StarterLog
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -1921,24 +1938,24 @@ customization=seldom
 friendly_name=Libexec
 usage=Pathnames
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=dap_server
+tags=
 id=90
 
 [LOG]
-aliases=
 default=$(LOCAL_DIR)/log
-version=0.0.0
-range=.*
-state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
-friendly_name=Log
+friendly_name=Location of Log directory
 usage=Pathnames
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
-tags=dap_server
+tags=
 id=91
+
+[INCLUDE]
+default=$(RELEASE_DIR)/include
+type=path
 
 [XAUTHORITY_USERS]
 aliases=
@@ -2074,7 +2091,7 @@ default=$(LOCAL_DIR)/spool
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -2619,7 +2636,7 @@ default=$(LIBEXEC)/condor_ckpt_probe
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -2632,6 +2649,7 @@ id=136
 [RELEASE_DIR]
 aliases=
 default=/tmp/condorinstall0
+win32_default=c:\condor
 version=0.0.0
 range=.*
 state=default
@@ -3388,11 +3406,12 @@ id=182
 
 [WINDOWS_SOFTKILL]
 aliases=
-default=$(SBIN)/condor_softkill
+default=
+win32_default=$(SBIN)\condor_softkill.exe
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -3401,6 +3420,12 @@ usage=is not enabled) to help when sending soft kills.
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=daemon_core,daemon_core
 id=183
+
+[WINDOWS_RMDIR]
+default=
+win32_default=$(SBIN)\condor_rmdir.exe
+friendly_name=Agressive directory removal for Windows
+type=path
 
 [USE_PROCESS_GROUPS]
 aliases=
@@ -3420,7 +3445,7 @@ id=184
 
 [USE_VISIBLE_DESKTOP]
 aliases=
-default=
+default=false
 version=0.0.0
 range=.*
 state=default
@@ -3485,10 +3510,11 @@ id=188
 [BIN]
 aliases=
 default=$(RELEASE_DIR)/bin
+win32_default=$(RELEASE_DIR)\bin
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -3564,7 +3590,7 @@ id=194
 
 [COLLECTOR_NAME]
 aliases=
-default=An adorable little test pool
+default=My Pool - $(CONDOR_HOST)
 version=0.0.0
 range=.*
 state=default
@@ -3741,13 +3767,14 @@ id=204
 [LOCAL_DIR]
 aliases=
 default=$(RELEASE_DIR)/hosts/$(HOSTNAME)
+win32_default=$(RELEASE_DIR)
 version=0.0.0
 range=.*
 state=default
 type=string
 is_macro=false
 reconfig=true
-customization=seldom
+customization=NORMAL
 friendly_name=Local Dir
 usage=LOCAL_DIR		= $(TILDE)
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
@@ -3930,6 +3957,10 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager,gahp-client
 id=216
 
+[GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_EC2]
+default=20
+type=int
+
 [GAHP]
 aliases=
 default=
@@ -3997,10 +4028,11 @@ id=220
 [REMOTE_GAHP]
 aliases=
 default=$(SBIN)/remote_gahp
+win32_default=$(SBIN)\remote_gahp.exe
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -4013,10 +4045,11 @@ id=220
 [NORDUGRID_GAHP]
 aliases=
 default=$(SBIN)/nordugrid_gahp
+win32_default=$(SBIN)\nordugrid_gahp.exe
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -4093,10 +4126,11 @@ id=224
 [CONDOR_GAHP]
 aliases=
 default=$(SBIN)/condor_c-gahp
+win32_default=$(SBIN)\condor_c-gahp.exe
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -4362,13 +4396,21 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=gridmanager
 id=252
 
+# The STARTD_ATTRS entry allows you to have the startd advertise arbitrary attributes from the config file into it's ClassAd
+[STARTD_ATTRS]
+default=COLLECTOR_HOST_STRING
+# support the "$$(COLLECTOR_HOST)" syntax in the submit file
+[COLLECTOR_HOST_STRING]
+default="$(COLLECTOR_HOST)"
+
 [UNICORE_GAHP]
 aliases=
 default=$(SBIN)/unicore_gahp
+win32_default=$(SBIN)\unicore_gahp.exe
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -4429,10 +4471,11 @@ id=256
 [GRID_MONITOR]
 aliases=
 default=$(SBIN)/grid_monitor
+win32_default=$(SBIN)\grid_monitor.exe
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -4605,10 +4648,11 @@ id=268
 [MAIL]
 aliases=
 default=/usr/bin/mail
+win32_default=$(BIN)\condor_mail.exe
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -4685,6 +4729,7 @@ id=273
 [STARTER_LIST]
 aliases=
 default=STARTER, STARTER_STANDARD
+win32_default=STARTER
 version=0.0.0
 range=.*
 state=default
@@ -4693,7 +4738,7 @@ is_macro=false
 reconfig=true
 customization=seldom
 friendly_name=Starter List
-usage=Where are the various condor_starter binaries installed?
+usage=Which starters are available
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd,starter_mgr
 id=274
@@ -5784,7 +5829,7 @@ default=1900000000
 version=0.0.0
 range=.*
 state=default
-type=int
+type=long
 is_macro=false
 reconfig=true
 customization=seldom
@@ -5860,11 +5905,11 @@ id=363
 
 [PROCD_LOG]
 aliases=
-default=
+default=$(LOG)/ProcLog
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -5877,10 +5922,11 @@ id=364
 [PROCD]
 aliases=
 default=$(SBIN)/condor_procd
+win32_default=$(SBIN)\condor_procd.exe
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -6021,6 +6067,7 @@ id=376
 [REQUIRE_LOCAL_CONFIG_FILE]
 aliases=
 default=true
+win32_default=false
 version=0.0.0
 range=.*
 state=default
@@ -6044,7 +6091,7 @@ type=string
 is_macro=false
 reconfig=true
 customization=seldom
-friendly_name=Require Local Config File
+friendly_name=Location of Local Config File
 usage=The location of the local config file(s) to use, comma or space delimited
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=c++_util,condor_config
@@ -6166,6 +6213,7 @@ id=383
 [JAVA]
 aliases=
 default=/usr/bin/java
+win32_default=java
 version=0.0.0
 range=.*
 state=default
@@ -6214,6 +6262,7 @@ id=386
 [JAVA_CLASSPATH_SEPARATOR]
 aliases=
 default=:
+win32_default=;
 version=0.0.0
 range=.*
 state=default
@@ -6230,6 +6279,7 @@ id=387
 [JAVA_CLASSPATH_DEFAULT]
 aliases=
 default=$(LIB) $(LIB)/scimark2lib.jar .
+win32_default=$(BIN) $(BIN)/scimark2lib.jar .
 version=0.0.0
 range=.*
 state=default
@@ -6425,7 +6475,7 @@ default=1000000
 version=0.0.0
 range=.*
 state=default
-type=int
+type=long
 is_macro=false
 reconfig=true
 customization=seldom
@@ -6854,6 +6904,7 @@ id=426
 [JOB_RENICE_INCREMENT]
 aliases=
 default=
+win32_default=10
 version=0.0.0
 range=.*
 state=default
@@ -6949,7 +7000,7 @@ id=432
 
 [JAVA_BENCHMARK_TIME]
 aliases=
-default=0
+default=2
 version=0.0.0
 range=.*
 state=default
@@ -7030,10 +7081,11 @@ id=438
 [CONDOR_GAHP_WORKER]
 aliases=
 default=$(SBIN)/condor_c-gahp_worker_thread
+win32_default=$(SBIN)\condor_c-gahp_worker_thread.exe
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -7625,7 +7677,7 @@ default=$(RELEASE_DIR)/lib
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -8006,6 +8058,7 @@ id=490
 [QUEUE_SUPER_USERS]
 aliases=
 default=root, condor
+win32_default=condor, SYSTEM
 version=0.0.0
 range=.*
 state=default
@@ -8182,6 +8235,7 @@ id=500
 [SHADOW_LIST]
 aliases=
 default=SHADOW, SHADOW_STANDARD
+win32_default=SHADOW
 version=0.0.0
 range=.*
 state=default
@@ -8214,10 +8268,11 @@ id=502
 [SHADOW]
 aliases=
 default=$(SBIN)/condor_shadow
+win32_default=$(SBIN)\condor_shadow.exe
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -8226,6 +8281,12 @@ usage=Where are the various shadow binaries installed?
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=schedd,schedd
 id=503
+
+[SHADOW_STANDARD]
+default=$(SBIN)/condor_shadow
+win32_default=
+type=path
+tags=schedd,schedd
 
 [SHADOW_RENICE_INCREMENT]
 aliases=
@@ -8246,10 +8307,11 @@ id=504
 [STARTER_LOCAL]
 aliases=
 default=$(SBIN)/condor_starter
+win32_default=$(SBIN)\condor_starter.exe
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -8583,10 +8645,11 @@ id=526
 [GRIDMANAGER]
 aliases=
 default=$(SBIN)/condor_gridmanager
+win32_default=$(SBIN)\condor_gridmanager.exe
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -8807,10 +8870,11 @@ id=540
 [PREEN]
 aliases=
 default=$(SBIN)/condor_preen
+win32_default=$(SBIN)\condor_preen.exe
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -8890,7 +8954,7 @@ default=$(LOG)/CollectorLog
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -8906,7 +8970,7 @@ default=$(LOG)/KbdLog
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -8922,7 +8986,7 @@ default=$(LOG)/MasterLog
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -8938,7 +9002,7 @@ default=$(LOG)/NegotiatorLog
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -8948,13 +9012,19 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,log
 id=550
 
+[NEGOTIATOR_MATCH_LOG]
+default=$(LOG)/MatchLog
+type=path
+friendly_name=Negotiator Log of Matches
+tags=negotiator,log
+
 [SCHEDD_LOG]
 aliases=
 default=$(LOG)/SchedLog
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -8970,7 +9040,7 @@ default=$(LOG)/ShadowLog
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -8986,7 +9056,7 @@ default=$(LOG)/StartLog
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -9002,7 +9072,7 @@ default=$(LOG)/JobRouterLog
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -9018,7 +9088,7 @@ default=$(LOG)/RoosterLog
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -9034,7 +9104,7 @@ default=$(LOG)/SharedPortLog
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -9050,7 +9120,7 @@ default=$(LOG)/HADLog
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -9066,7 +9136,7 @@ default=$(LOG)/ReplicationLog
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -9082,7 +9152,7 @@ default=$(LOG)/TransfererLog
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -9092,13 +9162,19 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=transferer,log
 id=550
 
+[HDFS]
+default=$(SBIN)/condor_hdfs
+win32_default=$(SBIN)\condor_hdfs.exe
+type=path
+friendly_name=location of condor_hdfs binary
+
 [HDFS_LOG]
 aliases=
 default=$(LOG)/HDFSLog
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -9127,10 +9203,11 @@ id=551
 [SCHEDD]
 aliases=
 default=$(SBIN)/condor_schedd
+win32_default=$(SBIN)\condor_schedd.exe
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -9143,10 +9220,11 @@ id=552
 [STARTD]
 aliases=
 default=$(SBIN)/condor_startd
+win32_default=$(SBIN)\condor_startd.exe
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -9159,10 +9237,11 @@ id=553
 [QUILL]
 aliases=
 default=$(SBIN)/condor_quill
+win32_default=$(SBIN)\condor_quill.exe
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -9175,10 +9254,11 @@ id=554
 [DBMSD]
 aliases=
 default=$(SBIN)/condor_dbmsd
+win32_default=$(SBIN)\condor_dbmsd.exe
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -9803,7 +9883,7 @@ default=10000000
 version=0.0.0
 range=.*
 state=default
-type=int
+type=long
 is_macro=false
 reconfig=true
 customization=seldom
@@ -10169,9 +10249,6 @@ id=602
 aliases=
 default=true
 win32_default=false
-version=0.0.0
-range=.*
-state=default
 type=bool
 is_macro=false
 reconfig=true
@@ -10268,7 +10345,7 @@ default=$(LOG)/DefragLog
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -10428,7 +10505,7 @@ default=$(NEGOTIATOR_USE_SLOT_WEIGHTS)
 version=7.7.5
 range=.*
 state=default
-type=bool
+type=string
 is_macro=false
 reconfig=true
 customization=seldom
@@ -10613,6 +10690,86 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=startd
 id=610
+
+[CONSUMPTION_POLICY]
+aliases=
+default=false
+version=7.7.6
+range=.*
+state=default
+type=bool
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Does a slot ad support a consumption policy?
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd
+id=607
+
+[CONSUMPTION_CPUS]
+aliases=
+default=quantize(target.RequestCpus,{1})
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Consumption policy for cpu resource assets
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd,negotiator
+id=608
+
+[CONSUMPTION_MEMORY]
+aliases=
+default=quantize(target.RequestMemory,{128})
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Consumption policy for memory resource assets
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd,negotiator
+id=609
+
+[CONSUMPTION_DISK]
+aliases=
+default=quantize(target.RequestDisk,{1024})
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Consumption policy for disk resource assets
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=startd,negotiator
+id=610
+
+[SLOT_WEIGHT]
+aliases=
+default=Cpus
+version=7.7.6
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Slot weight expression, resides on SlotWeight attribute
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=negotiator
+id=608
 
 [ENABLE_DEPRECATION_WARNINGS]
 aliases=
@@ -10902,6 +11059,70 @@ url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=starter
 id=615
 
+[CHIRP_DELAYED_UPDATE_PREFIX]
+aliases=
+default=Chirp*
+version=8.1.0
+range=.*
+state=default
+type=string
+is_macro=true
+reconfig=true
+customization=seldom
+friendly_name=Determines the required prefix for remote updates from the running job
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=starter,shadow
+id=616
+
+[ENABLE_CHIRP_IO]
+aliases=
+default=true
+version=8.1.0
+range=.*
+state=default
+type=bool
+is_macro=true
+reconfig=true
+customization=seldom
+friendly_name=Enables IO from the running job back to the submitter machine
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=starter
+id=617
+
+[ENABLE_CHIRP_UPDATES]
+aliases=
+default=true
+version=8.1.0
+range=.*
+state=default
+type=bool
+is_macro=true
+reconfig=true
+customization=seldom
+friendly_name=Enables job updates (inserting values into the job log or qedits) from the running job back to the submitter machine
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=starter
+id=618
+
+[ENABLE_CHIRP_DELAYED]
+aliases=
+default=true
+version=8.1.0
+range=.*
+state=default
+type=bool
+is_macro=true
+reconfig=true
+customization=seldom
+friendly_name=Enables delayed job updates (inserting qedits) with a required prefix at little resource cost from the running job back to the submitter machine.  The safest of the ENABLE_CHIRP_* settings
+usage=
+url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
+tags=starter
+id=619
+
 [GANGLIA_GMETRIC]
 aliases=
 default=
@@ -11036,7 +11257,7 @@ default=$(LOG)/GangliadLog
 version=0.0.0
 range=.*
 state=default
-type=string
+type=path
 is_macro=false
 reconfig=true
 customization=seldom
@@ -11052,7 +11273,7 @@ default=10000000
 version=0.0.0
 range=.*
 state=default
-type=int
+type=long
 is_macro=false
 reconfig=true
 customization=seldom
@@ -11205,3 +11426,686 @@ usage=
 url=http://cs.wisc.edu/condor/manual/v7.3/3_3Configuration.html#SECTION
 tags=negotiator,matchmaker
 id=618
+
+[HISTORY_HELPER_MAX_HISTORY]
+aliases=
+default=10000
+version=0.0.0
+range=.*
+state=default
+type=int
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=History Helper max number of history ads
+usage=Set the limit on the number of history ads remote history will consider
+url=http://cs.wisc.edu/condor/manual/v8.1/3_3Configuration.html#SECTION
+tags=
+id=619
+
+[HISTORY_HELPER_MAX_CONCURRENCY]
+aliases=
+default=10000
+version=0.0.0
+range=0,
+state=default
+type=int
+is_macro=false
+reconfig=false
+customization=seldom
+friendly_name=History Helper max number of helper sub-processes
+usage=Set the limit on the number of condor_history_helper sub-processes
+url=http://cs.wisc.edu/condor/manual/v8.1/3_3Configuration.html#SECTION
+tags=
+id=620
+
+[JOB_EXECDIR_PERMISSIONS]
+aliases=
+default=user
+version=8.1.3
+range=.*
+state=default
+type=string
+is_macro=false
+reconfig=true
+customization=seldom
+friendly_name=Permissions on the job's execute directory
+usage=
+url=http://cs.wisc.edu/condor/manual/v8.1/3_3Configuration.html#SECTION
+tags=starter
+id=621
+
+[CONDOR_ADMIN]
+default=root@$(FULL_HOSTNAME)
+
+# daemons that run as user can't write to $(LOG) and there is no /tmp on windows
+[C_GAHP_LOG]
+default=/tmp/CGAHPLog.$(USERNAME)
+win32_default=NUL
+[C_GAHP_LOCK]
+default=/tmp/CGAHPLock.$(USERNAME)
+win32_default=NUL
+[C_GAHP_WORKER_THREAD_LOG]
+default=/tmp/CGAHPWorkerLog.$(USERNAME)
+win32_default=NUL
+[C_GAHP_WORKER_THREAD_LOCK]
+default=/tmp/CGAHPWorkerLock.$(USERNAME)
+win32_default=NUL
+
+[KBDD]
+default=$(SBIN)/condor_kbdd
+win32_default=$(SBIN)\condor_kbdd.exe
+friendly_name=Location of keyboard daemon binary
+type=path
+[KBDD_ADDRESS_FILE]
+default=$(LOG)/.kbdd_address
+type=path
+
+[NEGOTIATOR]
+default=$(SBIN)/condor_negotiator
+win32_default=$(SBIN)\condor_negotiator.exe
+friendly_name=Location of Negotiator daemon binary
+type=path
+
+[COLLECTOR]
+default=$(SBIN)/condor_collector
+win32_default=$(SBIN)\condor_collector.exe
+friendly_name=Location of Collector daemon binary
+type=path
+
+[CKPT_SERVER]
+default=$(SBIN)/condor_ckpt_server
+win32_default=$(SBIN)\condor_ckpt_server.exe
+friendly_name=Location of Checkpoint server binary
+type=path
+
+[CKPT_PROBE]
+default=$(LIBEXEC)/condor_ckpt_probe
+win32_default=$(LIBEXEC)\condor_ckpt_probe.exe
+
+[JOB_ROUTER]
+default=$(LIBEXEC)/condor_job_router
+win32_default=$(LIBEXEC)\condor_job_router.exe
+friendly_name=Location of Job Router binary
+type=path
+
+[ROOSTER]
+default=$(LIBEXEC)/condor_rooster
+win32_default=$(LIBEXEC)\condor_rooster.exe
+friendly_name=Location of the Machine Hybernation/Wake daemon
+type=path
+
+[SHARED_PORT]
+default=$(LIBEXEC)/condor_shared_port
+win32_default=$(LIBEXEC)\condor_shared_port.exe
+friendly_name=Location of the Shared Port daemon
+type=path
+
+[TRANSFERER]
+default=$(LIBEXEC)/condor_transferer
+win32_default=$(LIBEXEC)\condor_transferer.exe
+friendly_name=Location of the Transfer daemon
+type=path
+
+[DEFRAG]
+default=$(LIBEXEC)/condor_defrag
+win32_default=$(LIBEXEC)\condor_defrag.exe
+friendly_name=Location of the Machine Slot Defrag daemon
+type=path
+
+[GANGLIAD]
+default=$(LIBEXEC)/condor_gangliad
+win32_default=$(LIBEXEC)\condor_gangliad.exe
+friendly_name=Location of the Gangila daemon
+type=path
+
+[STARTER]
+default=$(SBIN)/condor_starter
+win32_default=$(SBIN)\condor_starter.exe
+friendly_name=Location of the Vanilla Starter
+type=path
+
+[STARTER_STANDARD]
+default=$(SBIN)/condor_starter.std
+win32_default=
+friendly_name=Location of the Standard Universe Starter
+type=path
+
+[MASTER_ADDRESS_FILE]
+default=$(LOG)/.master_address
+friendly_name=Location of the master_address file
+type=path
+
+[COLLECTOR_ADDRESS_FILE]
+default=$(LOG)/.collector_address
+friendly_name=Location of the collector_address file
+type=path
+
+[COLLECTOR_SUPER_ADDRESS_FILE]
+default=$(LOG)/.collector_address.super
+friendly_name=Location of the collector super address file
+type=path
+
+[STARTD_ADDRESS_FILE]
+default=$(LOG)/.startd_address
+friendly_name=Location of the startd_address file
+type=path
+
+[SCHEDD_ADDRESS_FILE]
+default=$(SPOOL)/.schedd_address
+friendly_name=Location of the schedd_address file
+type=path
+
+[SCHEDD_SUPER_ADDRESS_FILE]
+default=$(SPOOL)/.schedd_address.super
+friendly_name=Location of the schedd super address file
+type=path
+
+[SCHEDD_DAEMON_AD_FILE]
+default=$(SPOOL)/.schedd_classad
+friendly_name=Location of the schedd_classad file
+type=string
+
+# defaults for debug logs
+[COLLECTOR_DEBUG]
+default=
+[MAX_COLLECTOR_LOG]
+default=1000000
+type=long
+
+[KBDD_DEBUG]
+default=
+[MAX_KBDD_LOG]
+default=1000000
+type=long
+
+[NEGOTIATOR_DEBUG]
+default=D_MATCH
+[MAX_NEGOTIATOR_LOG]
+default=1000000
+type=long
+
+[MAX_NEGOTIATOR_MATCH_LOG]
+default=1000000
+type=long
+
+[SCHEDD_DEBUG]
+default=D_PID
+[MAX_SCHEDD_LOG]
+default=1000000
+type=long
+
+[SHADOW_DEBUG]
+default=
+[MAX_SHADOW_LOG]
+default=1000000
+type=long
+
+[STARTD_DEBUG]
+default=
+[MAX_STARTD_LOG]
+default=1000000
+type=long
+
+[MAX_STARTER_LOG]
+default=1000000
+type=long
+
+[MASTER_DEBUG]
+default=
+[MAX_MASTER_LOG]
+default=1000000
+type=long
+
+[JOB_ROUTER_DEBUG]
+default=
+[MAX_JOB_ROUTER_LOG]
+default=1000000
+type=long
+
+[ROOSTER_DEBUG]
+default=
+[MAX_ROOSTER_LOG]
+default=1000000
+type=long
+
+[SHARED_PORT_DEBUG]
+default=
+[MAX_SHARED_PORT_LOG]
+default=1000000
+type=long
+
+[HDFS_DEBUG]
+default=
+[MAX_HDFS_LOG]
+default=1000000
+type=long
+
+[HAD_DEBUG]
+default=
+[MAX_HAD_LOG]
+default=1000000
+type=long
+
+[REPLICATION_DEBUG]
+default=
+[MAX_REPLICATION_LOG]
+default=1000000
+type=long
+
+[TRANSFERER_DEBUG]
+default=
+[MAX_TRANSFERER_LOG]
+default=1000000
+type=long
+
+[GRIDMANAGER_DEBUG]
+default=
+[MAX_GRIDMANAGER_LOG]
+default=1000000
+type=long
+
+[GRIDMANAGER_LOG]
+default=$(LOG)/GridmanagerLog.$(USERNAME)
+type=path
+
+[GRIDMANAGER_LOCK]
+default=$(LOCK)/GridmanagerLock.$(USERNAME)
+type=string
+
+[MAX_C_GAHP_LOG]
+default=1000000
+type=long
+
+[EC2_GAHP_LOG]
+default=/tmp/EC2GahpLog.$(USERNAME)
+win32_default=NUL
+
+[GT2_GAHP]
+default=$(SBIN)/gahp_server
+[GRID_MONITOR]
+default=$(SBIN)/grid_monitor
+[UNICORE_GAHP]
+default=$(SBIN)/unicore_gahp
+[NORDUGRID_GAHP]
+default=$(SBIN)/nordugrid_gahp
+[CREAM_GAHP]
+default=$(SBIN)/cream_gahp
+[DELTACLOUD_GAHP]
+default=$(SBIN)/deltacloud_gahp
+[EC2_GAHP]
+default=$(SBIN)/ec2_gahp
+
+
+[CREDD]
+default=$(SBIN)/condor_credd
+win32_default=$(SBIN)\condor_credd.exe
+type=path
+
+[CREDD_ADDRESS_FILE]
+default=$(LOG)/.credd_address
+type=path
+
+[CREDD_PORT]
+default=9620
+
+[CRED_STORE_DIR]
+default=$(LOCAL_DIR)/cred_dir
+type=path
+[CREDD_ARGS]
+default=-p $(CREDD_PORT) -f
+[CREDD_LOG]
+default=$(LOG)/CredLog
+type=path
+[CREDD_DEBUG]
+default=D_FULLDEBUG
+[MAX_CREDD_LOG]
+default=4000000
+type=long
+
+# benchmarking knobs
+[BenchmarkTimer]
+default=(time() - LastBenchmark)
+[RunBenchmarks]
+default=(LastBenchmark == 0 ) || ($(BenchmarkTimer) >= (4 * $(HOUR)))
+[BENCHMARKS_JOBLIST]
+default=mips kflops
+[BENCHMARKS_MAX_JOB_LOAD]
+default=1.0
+[BENCHMARKS_MIPS_EXECUTABLE]
+default=$(LIBEXEC)/condor_mips
+win32_default=$(LIBEXEC)\condor_mips.exe
+type=path
+[BENCHMARKS_MIPS_JOB_LOAD]
+default=1.0
+[BENCHMARKS_KFLOPS_EXECUTABLE]
+default=$(LIBEXEC)/condor_kflops
+win32_default=$(LIBEXEC)\condor_kflops.exe
+type=path
+[BENCHMARKS_KFLOPS_JOB_LOAD]
+default=1.0
+
+# Useful constants
+[MINUTE]
+default=60
+customization=const
+[HOUR]
+default=(60 * $(MINUTE))
+customization=const
+
+[STANDARD]
+default=1
+customization=const
+[IsStandard]
+default=(TARGET.JobUniverse == $(STANDARD))
+
+[VANILLA]
+default=5
+customization=const
+[IsVanilla]
+default=(TARGET.JobUniverse == $(VANILLA))
+
+[MPI]
+default=8
+customization=const
+[IsMPI]
+default=(TARGET.JobUniverse == $(MPI))
+
+[VM]
+default=13
+customization=const
+[IsVM]
+default=(TARGET.JobUniverse == $(VM))
+
+[TESTINGMODE_WANT_SUSPEND]
+default=False
+[TESTINGMODE_WANT_VACATE]
+default=False
+[TESTINGMODE_START]
+default=True
+[TESTINGMODE_SUSPEND]
+default=False
+[TESTINGMODE_CONTINUE]
+default=True
+[TESTINGMODE_PREEMPT]
+default=False
+[TESTINGMODE_KILL]
+default=False
+[TESTINGMODE_PERIODIC_CHECKPOINT]
+default=False
+[TESTINGMODE_PREEMPTION_REQUIREMENTS]
+default=False
+[TESTINGMODE_PREEMPTION_RANK]
+default=0
+[TESTINGMODE_CLAIM_WORKLIFE]
+default=1200
+
+# simple policy expressions useful in creating the desktop preemption policy
+[StateTimer]
+default=(time() - EnteredCurrentState)
+[ActivityTimer]
+default=(time() - EnteredCurrentActivity)
+[ActivationTimer]
+default=ifThenElse(JobStart =!= UNDEFINED, (time() - JobStart), 0)
+[LastCkpt]
+default=(time() - LastPeriodicCheckpoint)
+[NonCondorLoadAvg]
+default=(LoadAvg - CondorLoadAvg)
+[BackgroundLoad]
+default=0.3
+[HighLoad]
+default=0.5
+[StartIdleTime]
+default=15 * $(MINUTE)
+[ContinueIdleTime]
+default=5 * $(MINUTE)
+[MaxSuspendTime]
+default=10 * $(MINUTE)
+[MaxVacateTime]
+default=10 * $(MINUTE)
+[KeyboardBusy]
+default=(KeyboardIdle < $(MINUTE))
+[ConsoleBusy]
+default=(ConsoleIdle  < $(MINUTE))
+[CPUIdle]
+default=($(NonCondorLoadAvg) <= $(BackgroundLoad))
+[CPUBusy]
+default=($(NonCondorLoadAvg) >= $(HighLoad))
+[KeyboardNotBusy]
+default=($(KeyboardBusy) == False)
+[BigJob]
+default=(TARGET.ImageSize >= (50 * 1024))
+[MediumJob]
+default=(TARGET.ImageSize >= (15 * 1024) && TARGET.ImageSize < (50 * 1024))
+[SmallJob]
+default=(TARGET.ImageSize <  (15 * 1024))
+[JustCPU]
+default=($(CPUBusy) && ($(KeyboardBusy) == False))
+[MachineBusy]
+default=($(CPUBusy) || $(KeyboardBusy))
+
+# define UWCS_xxx desktop preemption policy that can be referenced in START, PREEMPT, etc
+[UWCS_WANT_SUSPEND]
+default=( $(SmallJob) || $(KeyboardNotBusy) || $(IsVanilla) ) && ( $(SUSPEND) )
+[UWCS_WANT_VACATE]
+default=( $(ActivationTimer) > 10 * $(MINUTE) || $(IsVanilla) )
+[UWCS_START]
+default=( (KeyboardIdle > $(StartIdleTime)) && ( $(CPUIdle) || (State != "Unclaimed" && State != "Owner")) )
+[UWCS_SUSPEND]
+default=( $(KeyboardBusy) || ( (CpuBusyTime > 2 * $(MINUTE)) && $(ActivationTimer) > 90 ) )
+[UWCS_CONTINUE]
+default=( $(CPUIdle) && ($(ActivityTimer) > 10) && (KeyboardIdle > $(ContinueIdleTime)) )
+[UWCS_PREEMPT]
+default=( ((Activity == "Suspended") && ($(ActivityTimer) > $(MaxSuspendTime))) || (SUSPEND && (WANT_SUSPEND == False)) )
+[UWCS_MaxJobRetirementTime]
+default=0
+[MachineMaxVacateTime]
+default=$(MaxVacateTime)
+[UWCS_KILL]
+default=false
+[UWCS_PERIODIC_CHECKPOINT]
+default=$(LastCkpt) > (3 * $(HOUR) + $RANDOM_INTEGER(-30,30,1) * $(MINUTE) )
+[UWCS_NEGOTIATOR_PRE_JOB_RANK]
+default=RemoteOwner =?= UNDEFINED
+[UWCS_NEGOTIATOR_POST_JOB_RANK]
+default=(RemoteOwner =?= UNDEFINED) * (ifthenElse(isUndefined(KFlops), 1000, Kflops) - SlotID - 1.0e10*(Offline=?=True))
+[UWCS_PREEMPTION_REQUIREMENTS]
+default=((SubmitterGroup =?= RemoteGroup) && ($(StateTimer) > (1 * $(HOUR))) && (RemoteUserPrio > TARGET.SubmitterUserPrio * 1.2)) || (MY.NiceUser == True)
+[UWCS_PREEMPTION_RANK]
+default=(RemoteUserPrio * 1000000) - TARGET.ImageSize
+
+# obsolete config file knobs to discard on upgrade
+[$UPGRADE.DISCARD]
+friendly_name=Config file knobs that should be ignored on upgrade
+# can't put leading tabs in this table without breaking condor_config_val
+default : @end
+	LeaseManager
+	LeaseManger_ADDRESS_FILE
+	LeaseManager_LOG
+	LeaseManager_DEBUG
+	MAX_LeaseManager_LOG
+	LeaseManager.GETADS_INTERVAL
+	LeaseManager.PRUNE_INTERVAL
+	LeaseManager.DEBUG_ADS
+	LeaseManager.CLASSAD_LOG
+	QUILL_LOG
+	QUILL_ADDRESS_FILE
+	DBMSD_ARGS
+	DBMSD_LOG
+	STORK
+	STORK_ADDRESS_FILE
+	STORK_LOG_BASE
+	STORK_LOG
+	STORK_DEBUG
+	MAX_STORK_LOG
+	STORK_PORT
+	STORK_ARGS
+@end
+
+[$UPGRADE.DISCARDX]
+friendly_name=Platform specific file knobs that should be ignored on upgrade
+default=
+# can't put leading tabs in this table without breaking condor_config_val
+win32_default : @end
+	GT2_GAHP
+	UNICORE_GAHP
+	NORDUGRID_GAHP
+	CREAM_GAHP
+	DELTACLOUD_GAHP
+	LIBVIRT_XML_SCRIPT
+	STARTER_STANDARD
+	SHADOW_STANDARD
+	CKPT_PROBE
+@end
+
+[$UPGRADE.DISCARDIF]
+friendly_name=Platform specific knobs that should be ignored on upgrade if they match the given value
+default : @end
+	RESERVED_DISK=5
+@end
+win32_default : @end
+	EC2_GAHP_LOG=/tmp/EC2GahpLog.$(USERNAME)
+	RESERVED_DISK=5
+	MAIL_FROM=
+	VMWARE_SCRIPT=$(SBIN)\condor_vm_vmware.exe
+	JAVA_CLASSPATH_SEPARATOR=:
+	FILETRANSFER_PLUGINS=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
+	INVALID_LOG_FILES=core
+	HDFS_NAMENODE=hdfs://example.com:9000
+	HDFS_NAMENODE_WEB=example.com:8000
+	HDFS_BACKUPNODE=hdfs://example.com:50100
+	HDFS_BACKUPNODE_WEB=example.com:50105
+	HDFS_NODETYPE=HDFS_DATANODE
+	HDFS_NAMENODE_ROLE=ACTIVE
+	HDFS_NAMENODE_DIR=/tmp/hadoop_name
+	HDFS_DATANODE_DIR=/scratch/tmp/hadoop_data
+	VALID_SPOOL_FILES=job_queue.log, job_queue.log.tmp, history, Accountant.log, Accountantnew.log, local_univ_execute, .quillwritepassword, .pgpass, .schedd_address, .schedd_classad
+	GLIDEIN_SERVER_URLS=http://www.cs.wisc.edu/condor/glidein/binaries
+@end
+
+[$UPGRADE.DISCARDIF_VMWARE]
+friendly_name=Platform specific file knobs that should be ignored on upgrade if they match the given value
+default=
+win32_default : @end
+	VM_MEMORY=128
+	VM_NETWORKING_DEFAULT_TYPE=nat
+	VM_NETWORKING_TYPE=nat
+	VM_MAX_NUMBER=$(NUM_CPUS)
+	VMWARE_PERL=perl
+	VMWARE_SCRIPT=$(SBIN)\condor_vm_vmware
+	VMWARE_SCRIPT=$(SBIN)/condor_vm_vmware.exe
+	VMWARE_SCRIPT=$(SBIN)/condor_vm_vmware.pl.exe
+	VMWARE_NAT_NETWORKING_TYPE=nat
+	VMWARE_BRIDGE_NETWORKING_TYPE=bridged
+	VMWARE_NETWORKING_TYPE=nat
+	VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)\condor_vmware_local_settings
+	VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)/condor_vmware_local_settings
+@end
+
+# use the UWCS desktop preemption policy
+[$POLICY.DESKTOP]
+friendly_name=Use the UWCS preemption policy
+default : @end
+	WANT_SUSPEND=($(SmallJob) || $(KeyboardNotBusy) || $(IsVanilla) ) && ( $(SUSPEND))
+	WANT_VACATE=$(ActivationTimer) > 600 || $(IsVanilla)
+	SUSPEND=($(KeyboardBusy) || ( (CpuBusyTime > 120) && $(ActivationTimer) > 90))
+	CONTINUE=($(CPUIdle) && ($(ActivityTimer) > 10) && (KeyboardIdle > $(ContinueIdleTime)))
+	PREEMPT=(((Activity == "Suspended") && ($(ActivityTimer) > $(MaxSuspendTime))) || (SUSPEND && (WANT_SUSPEND == False)))
+	KILL=false
+	PERIODIC_CHECKPOINT=$(LastCkpt) > (3 * 3600 + $RANDOM_INTEGER(-1800,1800,60))
+	MaxJobRetirementTime=0
+	CLAIM_WORKLIFE=
+@end
+
+# use the UWCS knobs 
+[$POLICY.ALWAYS_RUN]
+friendly_name=Use a no-preemption policy
+default : @end
+	WANT_SUSPEND=False
+	WANT_VACATE=False
+	SUSPEND=False
+	CONTINUE=True
+	PREEMPT=False
+	START=True
+	KILL=False
+	PERIODIC_CHECKPOINT=False
+	PREEMPTION_REQUIREMENTS=False
+	MaxJobRetirementTime=0
+	CLAIM_WORKLIFE=1200
+@end
+
+[$POLICY.UWCS_DESKTOP]
+friendly_name=Run jobs only when the user is away from their machine
+default : @end
+	SUSPEND=$(UWCS_SUSPEND)
+	WANT_SUSPEND=$(UWCS_WANT_SUSPEND)
+	WANT_VACATE=$(UWCS_WANT_VACATE)
+	CONTINUE=$(UWCS_CONTINUE)
+	PREEMPT=$(UWCS_PREEMPT)
+	KILL=$(UWCS_KILL)
+	PERIODIC_CHECKPOINT=$(UWCS_PERIODIC_CHECKPOINT)
+	MaxJobRetirementTime=$(UWCS_MaxJobRetirementTime)
+	CLAIM_WORKLIFE=$(UWCS_CLAIM_WORKLIFE)
+@end
+
+[$ROLE.Personal]
+friendly_name=Settings for Personal HTCondor
+default : @end
+	COLLECTOR_HOST=$(CONDOR_HOST):0
+	DAEMON_LIST=MASTER COLLECTOR NEGOTIATOR STARTD SCHEDD
+	RunBenchmarks=0
+@end
+
+[$ROLE.ExecNode]
+friendly_name=Settings for HTCondor Execute node
+default : @end
+	DAEMON_LIST=$(DAEMON_LIST) STARTD
+@end
+
+[$ROLE.SubmitNode]
+friendly_name=Settings for HTCondor Execute node
+default : @end
+	DAEMON_LIST=$(DAEMON_LIST) SCHEDD
+@end
+
+[$ROLE.CentralManager]
+friendly_name=Settings for HTCondor Execute node
+default : @end
+	DAEMON_LIST=$(DAEMON_LIST) COLLECTOR NEGOTIATOR
+@end
+
+# default security policy
+[$AUTH.DEFAULT]
+friendly_name=Default Authorization policy based on IPs and DNS names
+default : @end
+	ALLOW_ADMINISTRATOR=$(CONDOR_HOST), $(IP_ADDRESS)
+	ALLOW_OWNER=$(FULL_HOSTNAME), $(ALLOW_ADMINISTRATOR)
+	ALLOW_READ=*
+	ALLOW_WRITE=$(FULL_HOSTNAME), $(IP_ADDRESS)
+	ALLOW_NEGOTIATOR=$(CONDOR_HOST), $(IP_ADDRESS)
+	ALLOW_NEGOTIATOR_SCHEDD=$(CONDOR_HOST), $(FLOCK_NEGOTIATOR_HOSTS), $(IP_ADDRESS)
+	ALLOW_WRITE_COLLECTOR=$(ALLOW_WRITE), $(FLOCK_FROM)
+	ALLOW_WRITE_STARTD=$(ALLOW_WRITE), $(FLOCK_FROM)
+	ALLOW_READ_COLLECTOR=$(ALLOW_READ), $(FLOCK_FROM)
+	ALLOW_READ_STARTD=$(ALLOW_READ), $(FLOCK_FROM)
+@end
+
+
+# note vm_vmware script is perl so it doesn't get a .exe extension on Windows.
+[$USE.VMWARE]
+friendly_name=Settings for to use VMWARE with VM Universe
+default : @end
+	VM_TYPE=vmware
+	VM_MEMORY=$(DETECTED_MEMORY)/($(NUM_CPUS)+1)
+	VM_MAX_NUMBER=$(NUM_CPUS)
+	VM_NETWORKING_TYPE=nat
+	VM_NETWORKING_DEFAULT_TYPE=nat
+	VMWARE_PERL=perl
+	VMWARE_SCRIPT=$(SBIN)/condor_vm_vmware
+	VMWARE_NAT_NETWORKING_TYPE=nat
+	VMWARE_BRIDGE_NETWORKING_TYPE=bridged
+	VMWARE_NETWORKING_TYPE=nat
+	#VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)/condor_vmware_local_settings
+@end
+
+

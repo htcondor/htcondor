@@ -672,6 +672,8 @@
 #define ATTR_WANT_CHECKPOINT  "WantCheckpoint"
 #define ATTR_WANT_CLAIMING  "WantClaiming"
 #define ATTR_WANT_IO_PROXY  "WantIOProxy"
+#define ATTR_WANT_REMOTE_UPDATES "WantRemoteUpdates"
+#define ATTR_WANT_DELAYED_UPDATES "WantDelayedUpdates"
 #define ATTR_WANT_MATCH_DIAGNOSTICS  "WantMatchDiagnostics"
 #define ATTR_WANT_PARALLEL_SCHEDULING_GROUPS  "WantParallelSchedulingGroups"
 #define ATTR_WANT_REMOTE_SYSCALLS  "WantRemoteSyscalls"
@@ -905,6 +907,11 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_TOTAL_PREFIX  "Total"
 #define ATTR_TOTAL_SLOT_PREFIX  "TotalSlot"
 #define ATTR_MACHINE_RESOURCES  "MachineResources"
+
+// multiclaim / negside resource consumption
+#define ATTR_NUM_CLAIMS "NumClaims"
+#define ATTR_CLAIM_ID_LIST "ClaimIdList"
+#define ATTR_CONSUMPTION_PREFIX "Consumption"
 
 // This is a record of the job exit status from a standard universe job exit
 // via waitpid. It is in the job ad to implement the terminate_pending

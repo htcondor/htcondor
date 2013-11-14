@@ -36,6 +36,13 @@ my $basefile = "submit_filetrans_output" . "$pid";
 my $oute = "$basefile"."e.txt";
 my $outf = "$basefile"."f.txt";
 my $outg = "$basefile"."g.txt";
+
+my @basefiles = ();
+push @basefiles, $oute;
+push @basefiles, $outf;
+push @basefiles, $outg;
+
+
 runcmd("rm -f $basefile*");
 
 my $spool = "";
@@ -44,6 +51,7 @@ CondorTest::debug("Spool is in --$spool--\n", 1);
 my $baseoutfile;
 my $haveseenevict = 0;
 my $haveseenrun = 0;
+my @baseoutfiles = ();
 
 my $execute = sub {
     my %args = @_;
@@ -65,6 +73,11 @@ my $execute = sub {
     $oute = "$baseoutfile"."e.txt";
     $outf = "$baseoutfile"."f.txt";
     $outg = "$baseoutfile"."g.txt";
+
+	push @baseoutfiles, $oute;
+	push @baseoutfiles, $outf;
+	push @baseoutfiles, $outg;
+
     
     runcmd("rm -f $baseoutfile*");
     
@@ -89,9 +102,20 @@ my $aborted = sub {
     CondorTest::debug("Aborted job expected from condor_rm, ok.\n", 1);
 };
 
+sub CheckOutFiles
+{
+	foreach my $outfile (@baseoutfiles) {
+		if(-f "$outfile") {
+		} else {
+			print "$outfile not here yet\n";
+		}
+	}
+};
+
 my $evicted = sub {
     my %args = @_;
     my $cluster = $args{"cluster"};
+	my @adarray = ();
     
     print "Job was evicted\n";
     if($haveseenevict == 0) {
@@ -102,10 +126,13 @@ my $evicted = sub {
     }
     print "++++++++++++++++++++++++++++++++++++\n";
     print "++++++++++++++++++++++++++++++++++++\n";
-    runcmd("ls $baseoutfile*");
+    #runCondorTool("ls $baseoutfile*",\@adarray, 2);
+	CheckOutFiles();
     print "++++++++++++++++++++++++++++++++++++\n";
     sleep(15);
-    runcmd("ls $baseoutfile*");
+    #runcmd("ls $baseoutfile*");
+    #runCondorTool("ls $baseoutfile*",\@adarray, 2);
+	CheckOutFiles();
     print "++++++++++++++++++++++++++++++++++++\n";
     
     my $errors = 0;
@@ -125,7 +152,7 @@ my $evicted = sub {
         $errors++;
     }
 
-    my @adarray;
+    @adarray = ();
     my $cmd = "condor_rm $cluster";
     my $status = CondorTest::runCondorTool($cmd, \@adarray, 2);
     if(!$status) {
