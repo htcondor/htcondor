@@ -781,47 +781,41 @@ sub start_condor {
 		}
 		$ENV{CONDOR_CONFIG} = $tmp;
 		print "setting CONDOR_CONFIG=$tmp\n";
-# need to know if there is already a personal condor running 
-# at CONDOR_CONFIG so we know if we have to uniqify ports & pipes
+	# need to know if there is already a personal condor running 
+	# at CONDOR_CONFIG so we know if we have to uniqify ports & pipes
 	}
 	else {
 		$ENV{CONDOR_CONFIG} = $targetconfig;
 	}
 
-	$res = 0;
-	if(!$isolated) {
-		$res = CondorPersonal::IsRunningYet($targetconfig);
-	}
-
 	chdir("$BaseDir");
 
-	if($res == 0) {
-		debug("Starting Personal Condor\n",2);
-		unlink("$testpersonalcondorlocation/local/log/.master_address");
-		unlink("$testpersonalcondorlocation/local/log/.collector_address");
-		unlink("$testpersonalcondorlocation/local/log/.negotiator_address");
-		unlink("$testpersonalcondorlocation/local/log/.startd_address");
-		unlink("$testpersonalcondorlocation/local/log/.schedd_address");
+	debug("Starting Personal Condor\n",2);
+	unlink("$testpersonalcondorlocation/local/log/.master_address");
+	unlink("$testpersonalcondorlocation/local/log/.collector_address");
+	unlink("$testpersonalcondorlocation/local/log/.negotiator_address");
+	unlink("$testpersonalcondorlocation/local/log/.startd_address");
+	unlink("$testpersonalcondorlocation/local/log/.schedd_address");
 
-		if($iswindows == 1) {
-			my $mcmd = "$wininstalldir/bin/condor_master.exe -f &";
-			if ($iscygwin) {
-				$mcmd =~ s|\\|/|g;
-			}
-			else {
-				my $keep = ($cmd_prompt) ? "/k" : "/c";
-#$mcmd = "$ENV[COMSPEC] /c \"$wininstalldir\\bin\\condor_master.exe\" -f"; 
-				$mcmd = "cmd /s $keep start /b $wininstalldir\\bin\\condor_master.exe -f"; 
-			}
-#debug( "Starting master like this:\n",2);
-#debug( "\"$mcmd\"\n",2);
-			CondorTest::verbose_system("$mcmd",{emit_output=>0,use_system=>1});
+	if($iswindows == 1) {
+		my $mcmd = "$wininstalldir/bin/condor_master.exe -f &";
+		if ($iscygwin) {
+			$mcmd =~ s|\\|/|g;
 		}
 		else {
-			CondorTest::verbose_system("$installdir/sbin/condor_master @extracondorargs -f &",{emit_output=>0,use_system=>1});
+			my $keep = ($cmd_prompt) ? "/k" : "/c";
+			#$mcmd = "$ENV[COMSPEC] /c \"$wininstalldir\\bin\\condor_master.exe\" -f"; 
+			$mcmd = "cmd /s $keep start /b $wininstalldir\\bin\\condor_master.exe -f"; 
 		}
-#debug("Done Starting Personal Condor\n",2);
+		#debug( "Starting master like this:\n",2);
+		#debug( "\"$mcmd\"\n",2);
+		CondorTest::verbose_system("$mcmd",{emit_output=>0,use_system=>1});
 	}
+	else {
+		CondorTest::verbose_system("$installdir/sbin/condor_master @extracondorargs -f &",{emit_output=>0,use_system=>1});
+	}
+	#debug("Done Starting Personal Condor\n",2);
+
 	CondorPersonal::IsRunningYet() || die "Failed to start Condor";
 }
 
