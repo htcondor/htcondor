@@ -570,6 +570,16 @@ endif()
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
 
 if (WINDOWS)
+
+  if (MSVC11)
+    if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
+      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32.tar.gz)
+    else()
+      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32.tar.gz)
+    endif()
+  endif()
+  
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.54.0)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1e)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/8.33)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.10)
