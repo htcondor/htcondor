@@ -48,6 +48,11 @@ if(BOOST_DOWNLOAD_WIN)
   condor_post_external( boost "boost" "lib" )
 endif()
 
+if (PYTHONINTERP_FOUND AND PYTHONLIBS_FOUND)
+  message(STATUS "Bootstrapping python for boost")
+  set(Boost_PYTHON_LIBRARY "external" PARENT_SCOPE)
+endif()
+
 # update configure information
 if (BOOST_VER)
 	message (STATUS "external configured (BOOST_INCLUDE=${BOOST_INCLUDE}) version:(${BOOST_VER}) link directories (${BOOST_LD})")

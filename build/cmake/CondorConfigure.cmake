@@ -72,10 +72,7 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 ##################################################
 ##################################################
 
-# disable python on windows until we can get the rest of cmake changes worked out.
-if(NOT WINDOWS) 
 include (FindPythonLibs)
-endif(NOT WINDOWS)
 include (FindPythonInterp)
 include (FindThreads)
 include (GlibcDetect)

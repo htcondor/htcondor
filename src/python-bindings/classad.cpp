@@ -15,13 +15,17 @@
 #include "exprtree_wrapper.h"
 #include "old_boost.h"
 
+#ifdef WIN32
+#include <Windows.h>
+#endif
+
 void
 ExprTreeHolder::init()
 {
     PyDateTime_IMPORT;
 }
 
-ExprTreeHolder::ExprTreeHolder(const std::string &str)
+ExprTreeHolder::ExprTreeHolder(const std::string &str)     
     : m_expr(NULL), m_owns(true)
 {
     classad::ClassAdParser parser;
@@ -438,7 +442,13 @@ convert_python_to_exprtree(boost::python::object value)
         std::time_t current_time;
         std::time(&current_time);
         struct std::tm *timeinfo = std::localtime(&current_time);
+#ifdef WIN32
+        TIME_ZONE_INFORMATION timeZoneInfo;
+        GetTimeZoneInformation(&timeZoneInfo);
+        long offset = timeZoneInfo.Bias;
+#else
         long offset = timeinfo->tm_gmtoff;
+#endif
         atime.secs = boost::python::extract<time_t>(timestamp) - offset;
         atime.offset = 0;
         classad::Value val; val.SetAbsoluteTimeValue(atime);

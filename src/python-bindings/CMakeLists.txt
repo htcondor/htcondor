@@ -30,8 +30,9 @@ if ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND AND Boost_PYTHON_LIBRARY AND NOT 
   target_link_libraries( classad_module pyclassad -lboost_python ${PYTHON_LIBRARIES} )
   set_target_properties(classad_module PROPERTIES PREFIX "" OUTPUT_NAME classad )
   set_target_properties(classad_module PROPERTIES SUFFIX ".so" )
-
+if(NOT WINDOWS)
   set_source_files_properties(config.cpp collector.cpp negotiator.cpp secman.cpp dc_tool.cpp schedd.cpp classad.cpp classad_module.cpp classad_parsers.cpp PROPERTIES COMPILE_FLAGS "-Wno-strict-aliasing -Wno-cast-qual -Wno-deprecated -Wno-write-strings")
+endif()
   add_library( htcondor SHARED htcondor.cpp collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp )
   target_link_libraries( htcondor pyclassad condor_utils -lboost_python ${PYTHON_LIBRARIES} )
   set_target_properties( htcondor PROPERTIES PREFIX "" )
@@ -65,8 +66,9 @@ if ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND AND Boost_PYTHON_LIBRARY AND NOT 
     endif()
     add_custom_target ( python_bindings_tests ALL DEPENDS tests/classad_tests.py tests/htcondor_tests.py tests/delayed_update_tests.py tests/test.ad tests/test_multiple.ad tests/test.old.ad tests/test_multiple.old.ad tests/submit.ad tests/delayed_submit.ad tests/delayed_update.py ${CMAKE_CURRENT_BINARY_DIR}/test_driver )
     enable_testing()
+    add_test(python_classad_test test_driver tests/classad_tests.py)
     if ( LINUX )
-      add_test(python_classad_test test_driver tests/classad_tests.py)
+      
       # add_test(python_htcondor_test test_driver tests/htcondor_tests.py TestConfig TestVersion)
       add_test(python_htcondor_test test_driver tests/htcondor_tests.py TestVersion)
     endif ( LINUX )
