@@ -6608,14 +6608,13 @@ int DaemonCore::Create_Process(
 				goto wrapup;
 			}
 
-PRAGMA_REMIND("adesmet: Inheritbuf may now contain multiple! Ensure this is handled.")
 			// and now add these new command sockets to the inheritbuf
-			inheritbuf += " ";
+			inheritbuf += " 1 ";
 			ptmp = it->rsock()->serialize();
 			inheritbuf += ptmp;
 			delete []ptmp;
 			if (it->has_safesock()) {
-				inheritbuf += " ";
+				inheritbuf += " 2 ";
 				ptmp = it->ssock()->serialize();
 				inheritbuf += ptmp;
 				delete []ptmp;
@@ -8330,7 +8329,6 @@ DaemonCore::Inherit( void )
 		// inherit our "command" cedar socks.  they are sent
 		// relisock, then safesock, then a "0".
 		// we then register rsock and ssock as command sockets below...
-		SockPair socks;
 		ptmp=inherit_list.next();
 		if( ptmp && strncmp(ptmp,"SharedPort:",11)==0 ) {
 			ptmp += 11;
@@ -8340,30 +8338,52 @@ DaemonCore::Inherit( void )
 			m_shared_port_endpoint->deserialize(ptmp);
 			ptmp=inherit_list.next();
 		}
-		if ( ptmp && (strcmp(ptmp,"0") != 0) ) {
-			dprintf(D_DAEMONCORE,"Inheriting Command Sockets\n");
-			socks.has_relisock(true);
-			socks.rsock()->serialize(ptmp);
-			socks.rsock()->set_inheritable(FALSE);
+
+		dprintf(D_DAEMONCORE,"Inheriting Command Sockets\n");
+		while ( ptmp && (*ptmp != '0') ) {
+			switch ( *ptmp ) {
+				case '0': {
+					EXCEPT("Daemoncore: Launched by a pre-8.2 HTCondor process; this is not supported. Please upgrade all HTCondor executables on this computer.");
+					break;
+				}
+				case '1': {
+					ptmp=inherit_list.next();
+					if(dc_socks.empty() || dc_socks.back().has_relisock()) {
+						dc_socks.push_back(SockPair());
+					}
+					dc_socks.back().has_relisock(true);
+					dc_socks.back().rsock()->serialize(ptmp);
+					dc_socks.back().rsock()->set_inheritable(FALSE);
+					break;
+				}
+
+				case '2': {
+					ptmp=inherit_list.next();
+					if( !m_wants_dc_udp_self ) {
+							// we don't want a UDP command socket, but our parent
+							// made one for us, because it didn't know any better
+						Sock::close_serialized_socket(ptmp);
+						dprintf(D_DAEMONCORE,"Removing inherited UDP command socket.\n");
+					}
+					else {
+						if(dc_socks.empty() || dc_socks.back().has_safesock()) {
+							dc_socks.push_back(SockPair());
+						}
+						dc_socks.back().has_safesock(true);
+						dc_socks.back().ssock()->serialize(ptmp);
+						dc_socks.back().ssock()->set_inheritable(FALSE);
+					}
+					break;
+				}
+
+				default:
+					EXCEPT("Daemoncore: Can only inherit SafeSock or ReliSock command sockets, not %c (%d)", *ptmp, (int)*ptmp);
+					break;
+			}
+
 			ptmp=inherit_list.next();
 		}
-		if ( ptmp && (strcmp(ptmp,"0") != 0) ) {
-			if( !m_wants_dc_udp_self ) {
-					// we don't want a UDP command socket, but our parent
-					// made one for us, because it didn't know any better
-				Sock::close_serialized_socket(ptmp);
-				dprintf(D_DAEMONCORE,"Removing inherited UDP command socket.\n");
-			}
-			else {
-				socks.has_safesock(true);
-				socks.ssock()->serialize(ptmp);
-				socks.ssock()->set_inheritable(FALSE);
-			}
-			ptmp=inherit_list.next();
-		}
-		if(socks.not_empty()) {
-			dc_socks.push_back(socks);
-		}
+
 	}	// end of if we read out CONDOR_INHERIT ok
 	/*
 	This environment variable is never set on Solaris so
