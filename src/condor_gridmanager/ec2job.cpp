@@ -151,7 +151,6 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	m_retry_times( 0 ),
 	probeNow( false )
 {
-dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	string error_string = "";
 	char *gahp_path = NULL;
 	char *gahp_log = NULL;
@@ -332,6 +331,7 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 		SetRequestID( m_spot_request_id.c_str() );
 	}
 
+	value.clear();
 	jobAd->LookupString( ATTR_GRID_JOB_ID, value );
 	if ( !value.empty() ) {
 		const char *token;
