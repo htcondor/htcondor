@@ -144,15 +144,20 @@ my $testname = "lib_shared_port-check-ports_van";
 CondorTest::RegisterExecute($testname, $execute);
 CondorTest::RegisterExitedSuccess ($testname, $success);
 
+my $logfile = "$testname.log";
+unlink($logfile);
+
 # submit file
 my $submit_fname = CondorTest::TempFileName("$testname.submit");
 open( SUBMIT, ">$submit_fname" ) || die "error writing to $submit_fname: $!\n";
-print SUBMIT "universe = vanilla\n";
-print SUBMIT "executable = x_sleep.pl\n";
-print SUBMIT "log = $testname.log\n";
-print SUBMIT "arguments = 10\n";
-print SUBMIT "notification = never\n";
-print SUBMIT "queue\n";
+print SUBMIT <<END;
+universe = vanilla
+executable = x_sleep.pl
+log = $logfile
+arguments = 10
+notification = never
+queue
+END
 close( SUBMIT );
 
 # run test
