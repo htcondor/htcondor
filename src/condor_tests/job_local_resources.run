@@ -84,7 +84,7 @@ my $idles = 0;
 			daemon => "Negotiator",
 			match_regexp => "Started Negotiation Cycle",
 			match_instances => 4,
-			match_timeout => 90,
+			match_timeout => 180,
 			match_new => "true"
 				);
 	} else {
