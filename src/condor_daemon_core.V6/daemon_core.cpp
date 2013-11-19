@@ -9705,8 +9705,7 @@ InitCommandSockets(int port, DaemonCore::SockPairVec & socks, bool want_udp, boo
 			dprintf(D_ALWAYS, "Warning: setsockopt() TCP_NODELAY failed\n");
 		}
 
-PRAGMA_REMIND("adesmet TODO: proto")
-		if (!rsock->listen(port)) {
+		if (!rsock->listen(proto, port)) {
 			if (fatal) {
 				EXCEPT("Failed to listen(%d) on TCP command socket.", port);
 			}
