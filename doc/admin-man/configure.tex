@@ -7932,16 +7932,11 @@ The following configuration macros affect negotiation for group users.
 
 \label{param:GroupSortExpr}
 \item[\Macro{GROUP\_SORT\_EXPR}]
-  \fbox{This definition is not complete.}
-  A ClassAd expression that controls the order in which the 
+  A floating point ClassAd expression that controls the order in which the 
   \Condor{negotiator} considers groups when allocating resources.
+  The largest magnitude positive value goes first.
   The default value is set such that group \Expr{<none>} always
   goes last when considering hierarchical group quotas.
-%  The default value uses the expression
-%\footnotesize
-%\begin{verbatim}
-%\end{verbatim}
-%\normalsize
 
 \label{param:NegotiatorAllowQuotaOversubscription}
 \item[\Macro{NEGOTIATOR\_ALLOW\_QUOTA\_OVERSUBSCRIPTION}]
