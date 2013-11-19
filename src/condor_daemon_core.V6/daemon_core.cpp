@@ -9601,34 +9601,17 @@ BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock, condor_protocol proto)
 	return FALSE;
 }
 
-bool 
-InitCommandSockets(int port, DaemonCore::SockPairVec & socks, bool want_udp, bool fatal)
+static bool 
+InitCommandSocket(condor_protocol proto, int port, DaemonCore::SockPair & sock_pair, bool want_udp, bool fatal)
 {
-		/*
-		  DaemonCore::Create_Process has a rather stupid handling of
-		  the want_command_port argument.  If it's set to FALSE (0),
-		  it means no port.  If it's -1, or 1, it means "we want one,
-		  and we don't care about the port".  If it's > 1, it means
-		  "we want one on this specific port".  However, we can assume
-		  this function is never called if port is 0, so we just have
-		  to see if the port is <= 1 (which handles both -1 or 1) to
-		  grab any old port, and if it's bigger than 1, we do
-		  everything for a specifically requested port. *sigh*
-		  Derek Wright 2007-08-09
-		*/
+	// For historic reasons, port==0 is invalid, while port==-1 or port==1 means "any port." 
 	ASSERT(port != 0);
-	DaemonCore::SockPair sock_pair;
 	sock_pair.has_relisock(true);
 	if(want_udp) {
 		sock_pair.has_safesock(true);
 	}
 	ReliSock * rsock = sock_pair.rsock().get();
 	SafeSock * ssock = sock_pair.ssock().get();
-
-	condor_protocol proto = CP_IPV4;
-	if(_condor_is_ipv6_mode()) {
-		proto = CP_IPV6;
-	}
 
 	if (port <= 1) {
 			// Choose any old port (dynamic port)
@@ -9727,7 +9710,39 @@ InitCommandSockets(int port, DaemonCore::SockPairVec & socks, bool want_udp, boo
 			}
 		}
 	}
-	socks.push_back(sock_pair);
+	return true;
+}
+
+bool 
+InitCommandSockets(int port, DaemonCore::SockPairVec & socks, bool want_udp, bool fatal)
+{
+	// For historic reasons, port==0 is invalid, while port==-1 or port==1 means "any port." 
+	ASSERT(port != 0);
+
+	DaemonCore::SockPairVec new_socks;
+
+	if(param_boolean("ENABLE_IPV4", true)) {
+		DaemonCore::SockPair sock_pair;
+		if( ! InitCommandSocket(CP_IPV4, port, sock_pair, want_udp, fatal)) {
+			dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv4 command socket.");
+			return false;
+		}
+		new_socks.push_back(sock_pair);
+	}
+
+	if(param_boolean("ENABLE_IPV6", true)) {
+		DaemonCore::SockPair sock_pair;
+		if( ! InitCommandSocket(CP_IPV6, port, sock_pair, want_udp, fatal)) {
+			dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv6 command socket.");
+			return false;
+		}
+		new_socks.push_back(sock_pair);
+	}
+
+	// Delay inserting new socks until the end so that if we fail and
+	// return false, we're certain that socks is unchanged.
+	socks.insert(socks.end(), new_socks.begin(), new_socks.end());
+
 	return true;
 }
 
