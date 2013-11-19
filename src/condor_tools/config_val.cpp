@@ -857,21 +857,7 @@ main( int argc, const char* argv[] )
 			hostname = strdup("<unknown hostname>");
 		}
 
-		fprintf(stdout,
-			"# Configuration from machine: %s\n",
-			hostname);
-
-		fprintf(stdout, 
-			"# Contributing configuration file(s):\n");
-
-		// dump all the files I found.
-		if (global_config_source.Length() > 0) {
-			fprintf( stdout, "#\t%s\n", global_config_source.Value() );
-		}
-		local_config_sources.rewind();
-		while ( (source = local_config_sources.next()) != NULL ) {
-			fprintf( stdout, "#\t%s\n", source );
-		}
+		fprintf(stdout, "# Configuration from machine: %s\n", hostname);
 
 		// if no param qualifiers were sent, print all.
 		params.rewind();
@@ -950,46 +936,19 @@ main( int argc, const char* argv[] )
 				}
 			}
 		}
-		#if 0 // use obsolete param_all method.
-		else {
 
-			fprintf( stdout, "\n");
-
-			ExtArray<ParamValue> *pvs = NULL;
-			ParamValue pv;
-			MyString upname;
-			int j;
-			pvs = param_all();
-
-			// dump the configuration file attributes.
-			for (j = 0; j < pvs->getlast() + 1; j++) {
-				pv = (*pvs)[j];
-				upname = pv.name;
-				upname.upper_case();
-
-				if (expand_dumped_variables) {
-					fprintf(stdout, "%s = %s\n", upname.Value(), param(upname.Value()));
-				} else {
-					fprintf(stdout, "%s = %s\n", upname.Value(), pv.value.Value());
-				}
-				if (verbose) {
-					if (pv.lnum < 0) {
-						fprintf(stdout, " # %s\n", pv.filename.Value());
-					} else {
-						fprintf(stdout, " # at: %s, Line %d\n", pv.filename.Value(), pv.lnum);
-						const char * def_val = param_default_string(pv.name.Value(), subsys);
-						if (def_val) { fprintf(stdout, " # default: %s\n", def_val); }
-					}
-					if (expand_dumped_variables) {
-						fprintf(stdout, " # raw: %s\n", pv.value.Value());
-					} else {
-						fprintf(stdout, " # expanded: %s\n", param(upname.Value()));
-					}
-				}
+		// if we didn't already print out source locations for each item
+		// print the set of all config sources.
+		if ( ! verbose) {
+			fprintf(stdout, "# Contributing configuration file(s):\n");
+			if (global_config_source.Length() > 0) {
+				fprintf(stdout, "#\t%s\n", global_config_source.Value());
 			}
-			delete pvs;
+			local_config_sources.rewind();
+			while ((source = local_config_sources.next()) != NULL) {
+				fprintf( stdout, "#\t%s\n", source);
+			}
 		}
-		#endif
 
 		if (dump_stats) {
 			do_dump_config_stats(stdout, verbose, dump_strings);
@@ -1074,6 +1033,10 @@ main( int argc, const char* argv[] )
                 daemonString(target->type()), target->name());
     }
 
+	if (target && dump_all_variables) {
+		fprintf(stdout, "# Configuration from %s on %s %s\n", daemonString(dt), target->name(), target->addr());
+	}
+
 	while( (tmp = params.next()) ) {
 		if( mt == CONDOR_SET || mt == CONDOR_RUNTIME_SET ||
 			mt == CONDOR_UNSET || mt == CONDOR_RUNTIME_UNSET ) {
@@ -1104,6 +1067,7 @@ main( int argc, const char* argv[] )
 				}
 				//fprintf(stderr, "dump = %d\n", dump_all_variables);
 				if (dump_all_variables) {
+					if (tmp && tmp[0]) { fprintf(stdout, "\n# Parameters with names that match %s:\n", tmp); }
 					value = NULL;
 					std::vector<std::string> names;
 					int iret = GetRemoteParamNamesMatching(target, tmp, names);
@@ -1112,10 +1076,8 @@ main( int argc, const char* argv[] )
 						my_exit(1);
 					}
 
-					fprintf(stdout, "# Configuration from %s on %s %s\n", daemonString(dt), target->name(), target->addr());
-					// fprintf(stdout,  "# Contributing configuration file(s):\n");
-
 					if (iret > 0) {
+						std::map<std::string, int> sources;
 						for (int ii = 0; ii < (int)names.size(); ++ii) {
 							if (value) free(value);
 							value = GetRemoteParamRaw(target, names[ii].c_str(), raw_supported, raw_value, file_and_line, def_value, usage_report);
@@ -1152,10 +1114,26 @@ main( int argc, const char* argv[] )
 								if (dash_usage && ! usage_report.IsEmpty()) {
 									printf(" # use_count: %s\n", usage_report.Value());
 								}
+							} else if ( ! file_and_line.empty()) {
+								std::string source(file_and_line.c_str());
+								size_t ix = source.find(", line");
+								if (ix != std::string::npos) { 
+									sources[source.substr(0,ix)] = 1; 
+								} else {
+									sources[source] = 1;
+								}
 							}
 						}
 						if (value) free(value);
 						value = NULL;
+
+						if ( ! verbose && ! sources.empty()) {
+							fprintf(stdout, "# Contributing configuration file(s):\n");
+							std::map<std::string, int>::iterator it;
+							for (it = sources.begin(); it != sources.end(); it++) {
+								fprintf(stdout, "#\t%s\n", it->first.c_str());
+							}
+						}
 					}
 					continue;
 				} else if (dash_raw || verbose) {
@@ -1947,11 +1925,12 @@ bool write_config_callback(void* user, HASHITER & it) {
 		if ( ! source.empty()) { fprintf(fh, " # at: %s\n", source.c_str()); }
 	} else {
 		MyString line;
-		//visualize the difference between NULL and ""
+		//the next line makes the difference between NULL and "" visible
 		//if (rawval && !rawval[0]) rawval = "\"\"";
 		line.formatstr("%s%s = %s", comment_me, name, rawval ? rawval : "");
 		if ( ! source.empty()) { line += "\n"; line += source; }
-#if 1
+		// generate a unique source sort key so that we end up sorting by
+		// source file id, line, & meta-knob line in that order.
 		source_sort_key key;
 		key.all = 0;
 		key.sub  = (pargs->iter++) & ((1<<24)-1);
@@ -1962,17 +1941,8 @@ bool write_config_callback(void* user, HASHITER & it) {
 		else if (id == WireMacro.id) { id = 0xFFFF; }
 		key.file = id;
 
+		// save the output line(s) into the output map, this will implicitly sort them by source
 		pargs->output[key.all] = line;
-#else
-		static int iter = 0;
-		int sub = (pmeta->source_line * 256) + (iter %256); ++iter;
-		int id = pmeta->source_id;
-		if (id == EnvMacro.id) { id = 0xFE; sub = (int)pargs->output.size(); } 
-		else if (id == WireMacro.id) { id = 0xFF; sub = (int)pargs->output.size(); }
-		long long key = sub + ((unsigned long)id * 0x01000000);
-		//if (diagnostic) fprintf(fh, "%d %s\n", key, line.c_str());
-		pargs->output[key] = line;
-#endif
 	}
 
 	pargs->pszLast = name;
@@ -1986,30 +1956,52 @@ void PrintMetaParam(const char * name)
 
 	char * use = tmp;
 	char * parm = tmp;
+	char * pdot = NULL;
 	while (*parm) {
 		if (*parm == '=' || *parm == ':') {
 			*parm++ = 0; // null terminate the name
 			break;
 		}
+		// remember if we saw any dots so we can handle the common typo.
+		if (!pdot && *parm == '.') pdot = parm;
 		++parm;
+	}
+	// if the input has a '.' but no ':' or '=', assume that they intended to use :
+	if ( ! *parm && pdot) {
+		parm = pdot;
+		*parm = ':';
+		fprintf(stderr, "%s is not valid, assuming %s was intended\n", name, tmp);
+		*parm++ = 0;
 	}
 
 	MACRO_TABLE_PAIR* ptable = param_meta_table(use+1);
 	MACRO_DEF_ITEM * pdef = NULL;
 	if (ptable) {
+		// if only a metaknob category was passed, print out all of the 
+		// knob names in that category.
+		if ( ! *parm) {
+			if (ptable->cElms > 0) {
+				printf("$%s accepts\n", ptable->key);
+				for (int ii = 0; ii < ptable->cElms; ++ii) {
+					printf("  %s\n", ptable->aTable[ii].key);
+				}
+			}
+			return;
+		}
+		// lookup the given metaknob name in that category
 		pdef = param_meta_table_lookup(ptable, parm);
 	}
 	if (pdef) {
 		printf("$%s:%s is\n%s\n", ptable->key, pdef->key, pdef->def->psz);
 	} else {
 		MyString name_used(use);
-		if (ptable) { name_used.formatstr("$%s:%s", use, parm); }
+		if (ptable) { name_used.formatstr("%s:%s", use, parm); }
 		name_used.upper_case();
 		printf("Not defined: %s\n", name_used.c_str());
 	}
 }
 
-#if 0
+#if 0 // code not yet ready for prime time.
 
 void DumpRemoteParams(Daemon* target, const char * tmp)
 {
@@ -2251,17 +2243,11 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 		std::map<unsigned long long, std::string>::iterator it;
 		long last_id = -1;
 		for (it = args.output.begin(); it != args.output.end(); it++) {
-#if 1
 			source_sort_key key;
 			key.all = it->first;
 			long source_id = key.file;
 			if (source_id == 0xFFFE) source_id = EnvMacro.id;
 			if (source_id == 0xFFFF) source_id = WireMacro.id;
-#else
-			long source_id = it->first >> 24;
-			if (source_id == 0xfe) source_id = EnvMacro.id;
-			if (source_id == 0xff) source_id = WireMacro.id;
-#endif
 			if (source_id != last_id) {
 				const char * source_name = config_source_by_id(source_id);
 				if (source_name) fprintf(fh, "\n#\n# from %s\n#\n", source_name);
