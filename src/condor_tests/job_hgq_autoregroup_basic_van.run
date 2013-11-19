@@ -173,12 +173,13 @@ CondorTest::StartCondorWithParams(
     append_condor_config => $append_condor_config
 );
 
+my $job_log = "$testname.log";
 
 # submit jobs
 my $submit_body = "
 universe = vanilla
 executable = x_sleep.pl
-log = $testname.log
+log = $job_log
 output = $testname.out
 error = $testname.err
 notification = never
@@ -197,6 +198,9 @@ close(SUBMIT);
 CondorTest::RegisterTimed($testname, \&timed_callback, 15);
 CondorTest::RegisterExecute($testname, \&execute_callback);
 CondorTest::RegisterExitedSuccess($testname, \&exit_callback);
+
+# Ensure earlier output doesn't confuse us.
+unlink $job_log;
 
 if (CondorTest::RunTest($testname, $submit_filename, 0)) {
     CondorTest::debug("$testname: SUCCESS\n",1);
