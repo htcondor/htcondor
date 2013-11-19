@@ -221,6 +221,7 @@ typedef void sigset_t;
 /** helper function for finding available port for both 
     TCP and UDP command socket */
 int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock);
+int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock, condor_protocol proto);
 
 
 class DCSignalMsg: public DCMsg {

@@ -3,6 +3,7 @@
 #include "condor_sockaddr.h"
 #include "condor_netaddr.h"
 #include "ipv6_hostname.h"
+#include "condor_debug.h"
 
 typedef union sockaddr_storage_ptr_u {
         const struct sockaddr     *raw;
@@ -460,6 +461,14 @@ bool condor_sockaddr::is_private_network() const
 
 	}
 	return false;
+}
+
+void condor_sockaddr::set_protocol(condor_protocol proto) {
+	switch(proto) {
+		case CP_IPV4: set_ipv4(); break;
+		case CP_IPV6: set_ipv6(); break;
+		default: ASSERT(0); break;
+	}
 }
 
 void condor_sockaddr::set_ipv4() {

@@ -491,10 +491,9 @@ int Sock::assign(SOCKET sockd)
 
 
 int
-Sock::bindWithin(const int low_port, const int high_port, bool outbound)
+Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port, bool outbound)
 {
 	bool bind_all = (bool)_condor_bind_all_interfaces();
-	bool ipv6_mode = _condor_is_ipv6_mode();
 
 	// Use hash function with pid to get the starting point
     struct timeval curTime;
@@ -517,16 +516,13 @@ Sock::bindWithin(const int low_port, const int high_port, bool outbound)
 
 		addr.clear();
 		if( bind_all ) {
-			if (ipv6_mode)
-				addr.set_ipv6();
-			else
-				addr.set_ipv4();
+			addr.set_protocol(proto);
 			addr.set_addr_any();
 		} else {
 			addr = get_local_ipaddr();
 			// what if the socket type does not match?
 			// e.g. addr is ipv6 but ipv6 mode is not turned on?
-			if (addr.is_ipv4() && ipv6_mode)
+			if (addr.is_ipv4() && proto==CP_IPV6)
 				addr.convert_to_ipv6();
 		}
 		addr.set_port((unsigned short)this_trial++);
@@ -573,8 +569,17 @@ Sock::bindWithin(const int low_port, const int high_port, bool outbound)
 	return FALSE;
 }
 
-
+PRAGMA_REMIND("adesmet TODO: This function is a temporary measure and should be removed.")
 int Sock::bind(bool outbound, int port, bool loopback)
+{
+	condor_protocol proto = CP_IPV4;
+	if(_condor_is_ipv6_mode()) {
+		proto = CP_IPV6;
+	}
+	return bind(proto, outbound, port, loopback);
+}
+
+int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
 {
 	condor_sockaddr addr;
 	int bind_return_value;
@@ -627,23 +632,20 @@ int Sock::bind(bool outbound, int port, bool loopback)
 	int lowPort, highPort;
 	if ( port == 0 && !loopback && get_port_range((int)outbound, &lowPort, &highPort) == TRUE ) {
 			// Bind in a specific port range.
-		if ( bindWithin(lowPort, highPort, outbound) != TRUE ) {
+		if ( bindWithin(proto, lowPort, highPort, outbound) != TRUE ) {
 			return FALSE;
 		}
 	} else {
 			// Bind to a dynamic port.
 
-		if (_condor_is_ipv6_mode())
-			addr.set_ipv6();
-		else
-			addr.set_ipv4();
+		addr.set_protocol(proto);
 		if( loopback ) {
 			addr.set_loopback();
 		} else if( (bool)_condor_bind_all_interfaces() ) {
 			addr.set_addr_any();
 		} else {
 			addr = get_local_ipaddr();
-			if (addr.is_ipv4() && _condor_is_ipv6_mode())
+			if (addr.is_ipv4() && proto==CP_IPV6)
 				addr.convert_to_ipv6();
 		}
 		addr.set_port((unsigned short)port);

@@ -105,10 +105,10 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #include "authentication.h"
 #include "condor_claimid_parser.h"
 #include "condor_email.h"
-
 #include "valgrind.h"
 #include "ipv6_hostname.h"
 #include "daemon_command.h"
+#include "condor_ipv6.h"
 
 #if defined ( HAVE_SCHED_SETAFFINITY ) && !defined ( WIN32 )
 #include <sched.h>
@@ -9560,12 +9560,23 @@ char **DaemonCore::ParseArgsString(const char *str)
 }
 #endif
 
+PRAGMA_REMIND("adesmet TODO: deprecated function")
 int
 BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock)
 {
+	condor_protocol proto = CP_IPV4;
+	if(_condor_is_ipv6_mode()) {
+		proto = CP_IPV6;
+	}
+	return BindAnyCommandPort(rsock, ssock, proto);
+}
+
+int
+BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock, condor_protocol proto)
+{
 	for(int i = 0; i < 1000; i++) {
 		/* bind(FALSE,...) means this is an incoming connection */
-		if ( !rsock->bind(FALSE) ) {
+		if ( !rsock->bind(proto, false, 0, false) ) {
 			dprintf(D_ALWAYS, "Failed to bind to command ReliSock\n");
 
 #ifndef WIN32
@@ -9580,7 +9591,7 @@ BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock)
 		// Now open a SafeSock _on the same port_ chosen above,
 		// assuming the caller wants a SafeSock (UDP) at all.
 		// bind(FALSE,...) means this is an incoming connection.
-		if (ssock && !ssock->bind(FALSE, rsock->get_port())) {
+		if (ssock && !ssock->bind(proto, false, rsock->get_port(), false)) {
 			rsock->close();
 			continue;
 		}
@@ -9614,9 +9625,14 @@ InitCommandSockets(int port, DaemonCore::SockPairVec & socks, bool want_udp, boo
 	ReliSock * rsock = sock_pair.rsock().get();
 	SafeSock * ssock = sock_pair.ssock().get();
 
+	condor_protocol proto = CP_IPV4;
+	if(_condor_is_ipv6_mode()) {
+		proto = CP_IPV6;
+	}
+
 	if (port <= 1) {
 			// Choose any old port (dynamic port)
-		if( !BindAnyCommandPort(rsock, ssock) ) {
+		if( !BindAnyCommandPort(rsock, ssock, proto) ) {
 			if (fatal) {
 				EXCEPT("BindAnyCommandPort() failed");
 			}
@@ -9689,6 +9705,7 @@ InitCommandSockets(int port, DaemonCore::SockPairVec & socks, bool want_udp, boo
 			dprintf(D_ALWAYS, "Warning: setsockopt() TCP_NODELAY failed\n");
 		}
 
+PRAGMA_REMIND("adesmet TODO: proto")
 		if (!rsock->listen(port)) {
 			if (fatal) {
 				EXCEPT("Failed to listen(%d) on TCP command socket.", port);
@@ -9700,7 +9717,7 @@ InitCommandSockets(int port, DaemonCore::SockPairVec & socks, bool want_udp, boo
 			}
 		}
 			/* bind(FALSE,...) means this is an incoming connection */
-		if (ssock && !ssock->bind(FALSE, port)) {
+		if (ssock && !ssock->bind(proto, false, port, false)) {
 			if (fatal) {
 				EXCEPT("Failed to bind(%d) on UDP command socket.", port);
 			}

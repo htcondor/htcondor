@@ -23,6 +23,8 @@
 
 #include "MyString.h"
 
+enum condor_protocol { CP_INVALID_MIN, CP_IPV4, CP_IPV6, CP_INVALID_MAX };
+
 class condor_sockaddr 
 {
 	union {
@@ -71,6 +73,7 @@ public:
 	bool is_link_local() const;
 
 	// set ip version when you want to bind the address to a socket
+	void set_protocol(condor_protocol proto);
 	void set_ipv4();
 	void set_ipv6();
 
