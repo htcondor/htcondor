@@ -140,6 +140,7 @@ public:
 	int assign(LPWSAPROTOCOL_INFO);		// to inherit sockets from other processes
 #endif
 
+PRAGMA_REMIND("adesmet: deprecated")
 	int bind(bool outbound, int port=0, bool loopback=false);
 
 	int bind(condor_protocol proto, bool outbound, int port, bool loopback);
@@ -159,6 +160,7 @@ public:
 	*/
 	int set_os_buffers(int desired_size, bool set_write_buf = false);
 
+PRAGMA_REMIND("adesmet: deprecated")
 	inline int bind(bool outbound, char *s) { return bind(outbound, getportbyserv(s)); }
 
 	int close();
