@@ -39,7 +39,7 @@ $dagman_args = "-verbose";
 	"<NodeB> <NodeA> <Greg\"_LeMond> <\\Laurent_Fignon> <Pedro_Delgado> <> ",
 	"<NodeC> <NodeA> <Andreas_Kloden> <Carlos_Sastre> ",
 	"<NodeD> <NodeB,NodeC> <Lance_Armstrong> <Andreas\"_Kloden> <\\Ivan_Basso> <!@#\$%^&*()_-=+=[]{}?> ",
-	"<NodeE> <NodeD> <bob> ",
+	"<NodeE> <NodeD> <bob> <0> ",
 	"<NodeF> <3> <3> ");
 
 # truly const variables in perl

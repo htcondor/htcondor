@@ -398,11 +398,16 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	ListIterator<Job::NodeVar> varsIter(*vars);
 	Job::NodeVar nodeVar;
 	while ( varsIter.Next(nodeVar) ) {
-		args.AppendArg( "-a" );
+
+			// Substitute the node retry count if necessary.  Note that
+			// we can't do this in Job::ResolveVarsInterpolations()
+			// because that's only called at parse time.
 		MyString value = nodeVar._value;
 		MyString retryStr( retry );
 		value.replaceString( "$(RETRY)", retryStr.Value() );
 		MyString varStr = nodeVar._name + " = " + value;
+
+		args.AppendArg( "-a" );
 		args.AppendArg( varStr.Value() );
 	}
 

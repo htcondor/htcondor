@@ -414,7 +414,7 @@ defined for \Arg{JobName}.
 \item \index{DAGMan!RETRY@\verb^$RETRY^ value}
 \Env{\$RETRY} evaluates to an 
 integer value set to 0 the first time a node is run,
-and is  incremented each time the node is retried. 
+and is incremented each time the node is retried. 
 See section~\ref{dagman:retry} for the description of how to cause
 nodes to be retried. 
 
@@ -949,7 +949,7 @@ on the node.
 
 The variable \Env{\$RETRY} evaluates to an 
 integer value set to 0 first time a node is run,
-and is  incremented each time for each time the node is retried. 
+and is incremented each time for each time the node is retried. 
 The variable \Env{\$MAX\_RETRIES} is the value set for
 \Arg{NumberOfRetries}.
 
@@ -1047,17 +1047,11 @@ To use a double quote inside \Arg{string},
 escape it with the backslash character (\verb@\@).
 To add the backslash character itself, use two backslashes (\verb@\\@).
 
-\Bold{Special variable macros}
-\begin{itemize}
-\item \$(JOB) may be used in \Arg{string} and will expand to
-\Arg{JobName}. 
-If the \Arg{VARS} line appears in a DAG file used as a splice file, 
-then \$(JOB) will be the fully scoped name of the node.
-\end{itemize}
-
 \Bold{Note that the \Arg{macroname} itself cannot begin with the string
 \Expr{queue},
 in any combination of upper or lower case.}
+
+\Bold{Examples}
 
 If the DAG input file contains
 \footnotesize
@@ -1245,6 +1239,27 @@ The resulting values passed to the NodeB executable are
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
 \begin{description}
+\item[Special macros]
+\end{description}
+
+\begin{itemize}
+\item \Env{\$(JOB)} may be used in \Arg{string} and will expand to
+\Arg{JobName}. 
+If the \Arg{VARS} line appears in a DAG file used as a splice file, 
+then \Env{\$(JOB)} will be the fully scoped name of the node.
+\item \Env{\$(RETRY)} may be used in \Arg{string} and will expand to
+0 the first time a node is run; the value is incremented each time the node
+is retried.  For example:
+\end{itemize}
+\begin{verbatim}
+      Vars F noderetry="$(RETRY)"
+\end{verbatim}
+
+Note that the special macro values can be inserted into a job's ClassAd,
+as noted below.
+
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
 \item[Using VARS to define ClassAd attributes]
 \end{description}
 
@@ -1258,6 +1273,11 @@ the following line:
 \begin{verbatim}
   arguments = "$$([A])"
 \end{verbatim}
+
+Note that ClassAd string values must be quoted, hence there are escaped
+quotes in the example above.  The outer quotes are consumed in the parsing of
+the DAG input file, so the escaped inner quotes remain in the definition
+of the attribute value.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Setting Priorities for Nodes}
