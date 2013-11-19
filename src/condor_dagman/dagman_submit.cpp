@@ -243,7 +243,7 @@ do_submit( ArgList &args, CondorID &condorID, Job::job_type_t jobType,
 bool
 condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, MyString &DAGParentNodeNames,
-			   List<Job::NodeVar> *vars,
+			   List<Job::NodeVar> *vars, int retry,
 			   const char* directory, const char *defaultLog, bool appendDefaultLog,
 			   const char *logFile, bool prohibitMultiJobs, bool hold_claim )
 {
@@ -399,7 +399,10 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	Job::NodeVar nodeVar;
 	while ( varsIter.Next(nodeVar) ) {
 		args.AppendArg( "-a" );
-		MyString varStr = nodeVar._name + " = " + nodeVar._value;
+		MyString value = nodeVar._value;
+		MyString retryStr( retry );
+		value.replaceString( "$(RETRY)", retryStr.Value() );
+		MyString varStr = nodeVar._name + " = " + value;
 		args.AppendArg( varStr.Value() );
 	}
 
