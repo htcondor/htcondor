@@ -135,11 +135,13 @@ CondorTest::StartCondorWithParams(
 );
 
 
+my $job_log = "$testname.log";
+
 # submit jobs
 my $submit_body = "
 universe = vanilla
 executable = x_sleep.pl
-log = $testname.log
+log = $job_log
 output = $testname.out
 error = $testname.err
 notification = never
@@ -178,6 +180,9 @@ CondorTest::RegisterExecute($testname, \&execute_callback);
 CondorTest::RegisterExited($testname, \&exit_callback);
 CondorTest::RegisterExitedSuccess($testname, \&exit_callback);
 CondorTest::RegisterAbort($testname, \&exit_callback);
+
+# Ensure previous runs leftovers don't cause us grief.
+unlink($job_log);
 
 if (CondorTest::RunTest($testname, $submit_filename, 0)) {
     CondorTest::debug("$testname: SUCCESS\n",1);

@@ -1,6 +1,6 @@
-executable   = ./job_dagman_vars-node.pl
-arguments    = $(nodename) $$([DAGParentNodeNames]) $$([A]) $(noderetry)
-# Note: this needs to be vanilla universe for the $$([DAGParentNodeNames])
+executable   = ./job_dagman_vars-retry.pl
+arguments    = $(nodename) $(noderetry) $$([DagNodeRetry])
+# Note: this needs to be vanilla universe for the $$([DagNodeRetry])
 # expansion to work above.
 universe     = vanilla
 output       = job_dagman_vars-$(nodename).out

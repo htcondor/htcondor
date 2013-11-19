@@ -27,7 +27,16 @@ Vars NodeD misc="!@#$%^&*()_-=+=[]{}?"
 Job NodeE job_dagman_vars-attribute.cmd
 Vars NodeE nodename="$(JOB)"
 Vars NodeE +A="\"bob\""
+Vars NodeE noderetry="$(RETRY)"
+
+Job NodeF job_dagman_vars-retry.cmd
+Abort-dag-on NodeF 2
+Retry NodeF 3
+Vars NodeF nodename="$(JOB)"
+Vars NodeF noderetry="$(RETRY)"
+Vars NodeF +DagNodeRetry="$(RETRY)"
 
 Parent NodeA Child NodeB NodeC
 Parent NodeB NodeC Child NodeD
 Parent NodeD Child NodeE 
+Parent NodeE Child NodeF
