@@ -273,100 +273,9 @@ sock_peer_to_string( SOCKET fd, char *buf, size_t buflen, char const *unknown )
 //	return unknown;
 }
 
-//char *
-//sin_to_hostname( const struct sockaddr_in *from, char ***aliases)
-//{
-//    struct hostent  *hp;
-//    struct sockaddr_in caddr;
-//
-//	if( !from ) {
-//		// make certain from is not NULL before derefencing it
-//		return NULL;
-//	}
-//    memcpy(&caddr, from, sizeof(caddr));
-//
-//    // If 'from' is INADDR_ANY, then we use the canonical IP address
-//    // instead of "0.0.0.0" as the input to name query
-//    if (caddr.sin_addr.s_addr == INADDR_ANY) {
-//        caddr.sin_addr.s_addr = my_ip_addr();
-//    }
-//
-//    if( (hp=condor_gethostbyaddr((char *)&caddr.sin_addr,
-//                sizeof(struct in_addr), AF_INET)) == NULL ) {
-//		// could not find a name for this address
-//        return NULL;
-//    } else {
-//		// CAREFULL: we are returning a staic buffer from gethostbyaddr.
-//		// The caller had better use the result immediately or copy it.
-//		// Also note this is not thread safe.  (as are lots of things in internet.c).
-//		if( aliases ) {
-//			*aliases = hp->h_aliases;
-//		}
-//		return hp->h_name;
-//    }
-//}
 
 
-//void
-//display_from( struct sockaddr_in *from )
-//{
-//    struct hostent  *hp;
-//    struct sockaddr_in caddr;
-//
-//	if( !from ) {
-//		dprintf( D_ALWAYS, "from NULL source\n" );
-//		return;
-//	}
-//    memcpy(&caddr, from, sizeof(caddr));
-//
-//    // If 'from' is INADDR_ANY, then we use the canonical IP address
-//    // instead of "0.0.0.0"
-//    if (caddr.sin_addr.s_addr == INADDR_ANY) {
-//        caddr.sin_addr.s_addr = my_ip_addr();
-//    }
-//
-//    if( (hp=condor_gethostbyaddr((char *)&caddr.sin_addr,
-//                sizeof(struct in_addr), AF_INET)) == NULL ) {
-//        dprintf( D_ALWAYS, "from (%s), port %d\n",
-//            inet_ntoa(caddr.sin_addr), ntohs(caddr.sin_port) );
-//    } else {
-//        dprintf( D_ALWAYS, "from %s, port %d\n",
-//                                        hp->h_name, ntohs(caddr.sin_port) );
-//    }
-//}
 
-#if 0
-char *
-calc_subnet_name(void)
-{
-//	char			subnetname[MAXHOSTNAMELEN];
-//	char			*subnet_ptr;
-//	char			*host_addr_string;
-//	int				subnet_length;
-//	struct			in_addr	in;
-//	unsigned int	host_ordered_addr;
-//	unsigned int		net_ordered_addr;
-//
-//	if ( !(host_ordered_addr = my_ip_addr()) ) {
-//		return strdup("");
-//	}
-//
-//	net_ordered_addr = htonl(host_ordered_addr);
-//	memcpy((char *) &in,(char *)&net_ordered_addr, sizeof(host_ordered_addr));
-//	host_addr_string = inet_ntoa( in );
-//	if( host_addr_string ) {
-//		subnet_ptr = (char *) strrchr(host_addr_string, '.');
-//		if(subnet_ptr == NULL) {
-//			return strdup("");
-//		}
-//		subnet_length = subnet_ptr - host_addr_string;
-//		strncpy(subnetname, host_addr_string, subnet_length);
-//		subnetname[subnet_length] = '\0';
-//		return (strdup(subnetname));
-//	}
-//	return strdup("");
-}
-#endif
 
 int
 same_host(const char *h1, const char *h2)
@@ -1157,12 +1066,11 @@ getSockAddr(int sockfd)
         dprintf(D_ALWAYS, "failed getsockname(%d): %s\n", sockfd, strerror(errno));
         return NULL;
     }
-    // if getsockname returns INADDR_ANY, we rely upon my_ip_addr() since returning
+    // if getsockname returns INADDR_ANY, we rely upon get_local_addr() since returning
     // 0.0.0.0 is not a good idea.
     if (sa_in.sin_addr.s_addr == ntohl(INADDR_ANY)) {
     	condor_sockaddr myaddr = get_local_ipaddr();
     	sa_in.sin_addr = myaddr.to_sin().sin_addr;
-        //sa_in.sin_addr.s_addr = htonl(my_ip_addr());
     }
     return &sa_in;
 }
