@@ -65,15 +65,6 @@ int condor_inet_pton(const char* src, condor_sockaddr& dest)
 	return ret;
 }
 
-//int condor_socket(int socket_type, int protocol)
-//{
-//#ifdef CONDOR_IPV6
-//	return socket(AF_INET6, socket_type, protocol);
-//#else
-//	return socket(AF_INET, socket_type, protocol);
-//#endif
-//}
-
 int condor_sendto(int sockfd, const void* buf, size_t len, int flags,
 				  const condor_sockaddr& addr)
 {
