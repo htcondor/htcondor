@@ -298,6 +298,7 @@ void
 Selector::execute()
 {
 	int		nfds;
+	struct timeval timeout_copy;
 	struct timeval	*tp;
 
 	memcpy( read_fds, save_read_fds, fd_set_size * sizeof(fd_set) );
@@ -305,7 +306,8 @@ Selector::execute()
 	memcpy( except_fds, save_except_fds, fd_set_size * sizeof(fd_set) );
 
 	if( timeout_wanted ) {
-		tp = &timeout;
+		timeout_copy = timeout;
+		tp = &timeout_copy;
 	} else {
 		tp = NULL;
 	}
