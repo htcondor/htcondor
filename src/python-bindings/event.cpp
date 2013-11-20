@@ -3,7 +3,10 @@
 // re-definition warnings.
 # include <pyconfig.h>
 
+#include "condor_common.h"
 #include "read_user_log.h"
+
+#include <classad/operators.h>
 
 #include <memory>
 #include <boost/python.hpp>
@@ -30,9 +33,6 @@ EventIterator::next()
     classad::ClassAd *tmp_ad;
 
     // Bug workaround: the last event generates ULOG_RD_ERROR on line 0.
-    ReadUserLog::ErrorType error;
-    const char *error_str = NULL;
-    unsigned line_num;
     switch (retval) {
         case ULOG_OK:
             tmp_ad = reinterpret_cast<classad::ClassAd*>(new_event->toClassAd());
