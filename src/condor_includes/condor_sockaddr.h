@@ -24,6 +24,9 @@
 #include "MyString.h"
 
 enum condor_protocol { CP_INVALID_MIN, CP_IPV4, CP_IPV6, CP_INVALID_MAX };
+// Return a human friendly(ish) name for a protocol. Suitable for
+// use in log messages.
+MyString condor_protocol_to_str(condor_protocol p);
 
 class condor_sockaddr 
 {

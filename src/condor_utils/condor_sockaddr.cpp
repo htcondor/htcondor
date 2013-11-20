@@ -5,6 +5,18 @@
 #include "ipv6_hostname.h"
 #include "condor_debug.h"
 
+
+MyString condor_protocol_to_str(condor_protocol p) {
+	switch(p) {
+		case CP_IPV4: return "IPv4";
+		case CP_IPV6: return "IPv6";
+		default: break; // Silence warnings
+	}
+	MyString ret;
+	ret.formatstr("Invalid protocol %d\n", int(p));
+	return ret;
+}
+
 typedef union sockaddr_storage_ptr_u {
         const struct sockaddr     *raw;
         struct sockaddr_in  *in;
