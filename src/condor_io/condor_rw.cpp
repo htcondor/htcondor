@@ -154,7 +154,17 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 		}
 		
 		start_thread_safe("recv");
+
 		nro = recv(fd, &buf[nr], sz - nr, flags);
+		// Save the error value before stop_thread_safe(), as that may
+		// overwrite it.
+		int the_error;
+#ifdef WIN32
+		the_error = WSAGetLastError();
+#else
+		the_error = errno;
+#endif
+
 		stop_thread_safe("recv");
 
 		if( nro <= 0 ) {
@@ -176,13 +186,10 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 				return -2;
 			}
 
-			int the_error;
             char const *the_errorstr;
 #ifdef WIN32
-			the_error = WSAGetLastError();
             the_errorstr = "";
 #else
-			the_error = errno;
             the_errorstr = strerror(the_error);
 #endif
 			if ( errno_is_temporary(the_error) ) {
@@ -371,17 +378,24 @@ condor_write( char const *peer_description, SOCKET fd, const char *buf, int sz, 
 			}
 		}
 		start_thread_safe("send");
+
 		nwo = send(fd, &buf[nw], sz - nw, flags);
+		// Save the error value before stop_thread_safe(), as that may
+		// overwrite it.
+		int the_error;
+#ifdef WIN32
+		the_error = WSAGetLastError();
+#else
+		the_error = errno;
+#endif
+
 		stop_thread_safe("send");		
 
 		if( nwo <= 0 ) {
-			int the_error;
             char const *the_errorstr;
 #ifdef WIN32
-			the_error = WSAGetLastError();
             the_errorstr = "";
 #else
-			the_error = errno;
             the_errorstr = strerror(the_error);
 #endif
 			if ( errno_is_temporary(the_error) ) {
