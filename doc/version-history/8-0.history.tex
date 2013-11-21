@@ -56,6 +56,12 @@ cgroups where enabled.  With that combination, the shell would
 get terminated immediately after startup.
 \Ticket{4028}
 
+\item Prevent illegal values from being written into the job queue
+or accounting recovery logs, in order to minimize the chance of errors when
+the \Condor{schedd} or \Condor{negotiator} are restarted. Also
+have \Condor{qedit} validate attribute names and values.
+\Ticket{3616}
+
 \item The \Condor{starter} now writes to the log file
 \File{StarterLog.slotX} when running work fetch jobs, mirroring the
 behavior when running jobs that come from a \Condor{schedd}.
