@@ -46,11 +46,11 @@ public:
 	void execute();
 	int select_retval();
 	int select_errno();
-	BOOLEAN	has_ready();
-	BOOLEAN	timed_out();
-	BOOLEAN	signalled();
-	BOOLEAN failed();
-	BOOLEAN fd_ready( int fd, IO_FUNC interest );
+	bool has_ready();
+	bool timed_out();
+	bool signalled();
+	bool failed();
+	bool fd_ready( int fd, IO_FUNC interest );
 	void display();
 
 private:
@@ -60,7 +60,7 @@ private:
 	fd_set	*except_fds, *save_except_fds;
 	int		fd_set_size;
 	int		max_fd;
-	BOOLEAN			timeout_wanted;
+	bool	timeout_wanted;
 	struct timeval	timeout;
 	SELECTOR_STATE	state;
 	int		_select_retval;

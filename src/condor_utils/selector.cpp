@@ -63,7 +63,7 @@ Selector::reset()
 	_select_retval = -2;
 	_select_errno = 0;
 	state = VIRGIN;
-	timeout_wanted = FALSE;
+	timeout_wanted = false;
 	timeout.tv_sec = timeout.tv_usec = 0;
 
 	max_fd = -1;
@@ -233,7 +233,7 @@ Selector::delete_fd( int fd, IO_FUNC interest )
 void
 Selector::set_timeout( time_t sec, long usec )
 {
-	timeout_wanted = TRUE;
+	timeout_wanted = true;
 
 	timeout.tv_sec = sec;
 	timeout.tv_usec = usec;
@@ -242,7 +242,7 @@ Selector::set_timeout( time_t sec, long usec )
 void
 Selector::set_timeout( timeval tv )
 {
-	timeout_wanted = TRUE;
+	timeout_wanted = true;
 
 	timeout = tv;
 }
@@ -250,7 +250,7 @@ Selector::set_timeout( timeval tv )
 void
 Selector::unset_timeout()
 {
-	timeout_wanted = FALSE;
+	timeout_wanted = false;
 }
 
 void
@@ -313,7 +313,7 @@ Selector::select_errno()
 	return _select_errno;
 }
 
-BOOLEAN
+bool
 Selector::fd_ready( int fd, IO_FUNC interest )
 {
 	if( state != FDS_READY && state != TIMED_OUT ) {
@@ -326,7 +326,7 @@ Selector::fd_ready( int fd, IO_FUNC interest )
 	// on UNIX, make sure the value of fd makes sense
 	//
 	if ( fd < 0 || fd >= fd_select_size() ) {
-		return FALSE;
+		return false;
 	}
 #endif
 
@@ -347,28 +347,28 @@ Selector::fd_ready( int fd, IO_FUNC interest )
 	}
 
 		// Can never get here
-	return FALSE;
+	return false;
 }
 
-BOOLEAN
+bool
 Selector::timed_out()
 {
 	return state == TIMED_OUT;
 }
 
-BOOLEAN
+bool
 Selector::signalled()
 {
 	return state == SIGNALLED;
 }
 
-BOOLEAN
+bool
 Selector::failed()
 {
 	return state == FAILED;
 }
 
-BOOLEAN
+bool
 Selector::has_ready()
 {
 	return state == FDS_READY;
