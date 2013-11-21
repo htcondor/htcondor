@@ -134,14 +134,19 @@ int main(int argc, char **argv) {
         print_cached_file(cache_path);
         goto Cleanup;
     }
-    
-    printf(downloaded_data.text);
+
+    int cb = fwrite(downloaded_data.text, 1, downloaded_data.size, stdout);
+    if (cb != downloaded_data.size) {
+		fprintf(stderr, "error: could not write entire config to stdout\n");
+    }
 
     fp = safe_fcreate_replace_if_exists(cache_path, "wb");
-
     if(!fp) goto Cleanup;
 
-    fwrite(downloaded_data.text, 1, downloaded_data.size, fp);
+    cb = fwrite(downloaded_data.text, 1, downloaded_data.size, fp);
+    if (cb != downloaded_data.size) {
+		fprintf(stderr, "error: could not write entire config to cache file!\n");
+    }
 
     fclose(fp);
 
