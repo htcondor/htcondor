@@ -21,6 +21,7 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "string_list.h"
+#include "env.h"
 #include "gcegahp_common.h"
 #include "gceCommands.h"
 
@@ -95,8 +96,8 @@ bool readShortFile( const string & fileName, string & contents ) {
 	return true;
 }
 
-// Utility function for parsing the response returned by the server.
-bool ParseLine( const char *&input, string &key, string &value, int &nesting)
+// Utility function for parsing the JSON response returned by the server.
+bool ParseJSONLine( const char *&input, string &key, string &value, int &nesting )
 {
 	const char *ptr = NULL;
 	bool in_key = false;
@@ -149,6 +150,52 @@ bool ParseLine( const char *&input, string &key, string &value, int &nesting)
 	return false;
 }
 
+const char *escapeJSONString( const char *value )
+{
+	static string result;
+	result.clear();
+
+	while( *value ) {
+		if ( *value == '"' || *value == '\\' ) {
+			result += '\\';
+		}
+		result += *value;
+		value++;
+	}
+
+	return result.c_str();
+}
+
+// Utility function for parsing the metadata file given by the user.
+// We expect to see one key/value pair per line, key and value separated
+// by '=' or ':', and no extraneous whitespace.
+bool ParseMetadataLine( const char *&input, string &key, string &value )
+{
+	const char *ptr = NULL;
+	bool in_key = true;
+	key.clear();
+	value.clear();
+
+	for ( ptr = input; *ptr; ptr++ ) {
+		if ( in_key ) {
+			if ( *ptr == '=' || *ptr == ':' ) {
+				in_key = false;
+			} else {
+				key += *ptr;
+			}
+		} else if ( *ptr == '\n' ) {
+			ptr++;
+			input = ptr;
+			return true;
+		} else {
+			value += *ptr;
+		}
+	}
+
+	input = ptr;
+	return false;
+}
+
 // From the body of a failure reply from the server, extract the best
 // human-readable error message.
 void ExtractErrorMessage( const string &response, string &err_msg )
@@ -158,7 +205,7 @@ void ExtractErrorMessage( const string &response, string &err_msg )
 	int nesting = 0;
 
 	const char *pos = response.c_str();
-	while ( ParseLine( pos, key, value, nesting ) ) {
+	while ( ParseJSONLine( pos, key, value, nesting ) ) {
 		if ( nesting == 2 && key == "message" ) {
 			err_msg = value;
 			return;
@@ -239,7 +286,7 @@ bool TryAuthRefresh( const string &client_id, const string &client_secret,
 	int my_expires_in = 0;
 
 	const char *pos = request.resultString.c_str();
-	while( ParseLine( pos, key, value, nesting ) ) {
+	while( ParseJSONLine( pos, key, value, nesting ) ) {
 		if ( key == "access_token" ) {
 			my_access_token = value;
 		}
@@ -313,7 +360,7 @@ bool GetAccessToken( const string &auth_file, string &access_token,
 		}
 
 		pos = auth_file_contents.c_str();
-		while ( ParseLine( pos, key, value, nesting ) ) {
+		while ( ParseJSONLine( pos, key, value, nesting ) ) {
 			if ( key == "refresh_token" ) {
 				refresh_token = value;
 			} else if ( key == "client_id" ) {
@@ -761,7 +808,28 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	insert_request.serviceURL += "/instances";
 	insert_request.requestMethod = "POST";
 
-	// TODO Add metadata to instance description
+	Env env;
+	if ( strcasecmp( argv[9], NULLSTRING ) ) {
+		MyString err_msg;
+		if ( !env.MergeFromV2Raw( argv[9], &err_msg ) ) {
+			result_string = create_failure_result( requestID, "Bad metadata argument" );
+			return true;
+		}
+	}
+	if ( strcasecmp( argv[10], NULLSTRING ) ) {
+		string file_contents;
+		if ( !readShortFile( argv[10], file_contents ) ) {
+			result_string = create_failure_result( requestID, "Failed to open metadata file" );
+			return true;
+		}
+		string key;
+		string value;
+		const char *pos = file_contents.c_str();
+		while( ParseMetadataLine( pos, key, value ) ) {
+			env.SetEnv( key.c_str(), value.c_str() );
+		}
+	}
+
 	insert_request.requestBody = "{\n";
 	insert_request.requestBody += "\"machineType\": \"";
 	insert_request.requestBody += argv[7];
@@ -772,6 +840,33 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	insert_request.requestBody += "\"image\": \"";
 	insert_request.requestBody += argv[8];
 	insert_request.requestBody += "\",\n";
+	if ( env.Count() ) {
+		insert_request.requestBody += "\"metadata\": {\n";
+		insert_request.requestBody += "\"items\": [\n";
+
+		char **vars = env.getStringArray();
+		for ( char **ptr = vars; *ptr; ptr++ ) {
+			char *equals = strchr( *ptr, '=' );
+			if ( equals == NULL ) {
+				continue;
+			}
+			*equals = '\0';
+			equals++;
+			if ( ptr != vars ) {
+				insert_request.requestBody += ", ";
+			}
+			insert_request.requestBody += "{\n\"key\": \"";
+			insert_request.requestBody += *ptr;
+			insert_request.requestBody += "\",\n";
+			insert_request.requestBody += "\"value\": \"";
+			insert_request.requestBody += escapeJSONString( equals );
+			insert_request.requestBody += "\"\n}\n";
+		}
+		deleteStringArray( vars );
+
+		insert_request.requestBody += "]\n";
+		insert_request.requestBody += "},\n";
+	}
 	insert_request.requestBody += "\"networkInterfaces\": [\n{\n";
 	insert_request.requestBody += "\"network\": \"https://www.googleapis.com/compute/v1beta16/projects/jfrey-condor/global/networks/default\",\n";
 	insert_request.requestBody += "\"accessConfigs\": [\n{\n";
@@ -804,7 +899,7 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	int nesting = 0;
 
 	const char *pos = insert_request.resultString.c_str();
-	while( ParseLine( pos, key, value, nesting ) ) {
+	while( ParseJSONLine( pos, key, value, nesting ) ) {
 		if ( key == "name" ) {
 			op_name = value;
 			break;
@@ -850,7 +945,7 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 
 		nesting = 0;
 		pos = op_request.resultString.c_str();
-		while ( ParseLine( pos, key, value, nesting ) ) {
+		while ( ParseJSONLine( pos, key, value, nesting ) ) {
 			if ( key == "status" ) {
 				status = value;
 			} else if ( key == "error" ) {
@@ -936,7 +1031,7 @@ bool GceInstanceDelete::workerFunction(char **argv, int argc, string &result_str
 	int nesting = 0;
 
 	const char *pos = delete_request.resultString.c_str();
-	while( ParseLine( pos, key, value, nesting ) ) {
+	while( ParseJSONLine( pos, key, value, nesting ) ) {
 		if ( key == "name" ) {
 			op_name = value;
 			break;
@@ -981,7 +1076,7 @@ bool GceInstanceDelete::workerFunction(char **argv, int argc, string &result_str
 
 		nesting = 0;
 		pos = op_request.resultString.c_str();
-		while ( ParseLine( pos, key, value, nesting ) ) {
+		while ( ParseJSONLine( pos, key, value, nesting ) ) {
 			if ( key == "status" ) {
 				status = value;
 			} else if ( key == "error" ) {
@@ -1059,7 +1154,7 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 		int nesting = 0;
 
 		const char *pos = list_request.resultString.c_str();
-		while( ParseLine( pos, key, value, nesting ) ) {
+		while( ParseJSONLine( pos, key, value, nesting ) ) {
 			if ( nesting != 3 ) {
 				continue;
 			}
