@@ -961,22 +961,21 @@ code.  The syntax for \Arg{ABORT-DAG-ON} is
 \Opt{ABORT-DAG-ON} \Arg{JobName} \Arg{AbortExitValue}
 \oOptArg{RETURN}{DAGReturnValue}
 
-If the node (or the PRE script of the node) specified by \Arg{JobName}
-returns the specified
-\Arg{AbortExitValue}, the
-DAG is immediately aborted.
+If the return value of the node specified by \Arg{JobName}
+matches \Arg{AbortExitValue},
+the DAG is immediately aborted.
 A DAG abort differs from a node failure,
 in that a DAG abort causes all nodes within the DAG to be stopped immediately.
 This includes removing the jobs in nodes that are currently running.
 A node failure allows the DAG to continue running,
 until no more progress can be made due to dependencies.
 
-Note:  The implementation of this feature is somewhat inconsistent
-with other aspects of DAGMan.  If a PRE script returns the
-\Arg{AbortExitValue} value, the DAG is immediately aborted.  If the
-actual HTCondor job for a node returns the \Arg{AbortExitValue} value,
-the DAG is not aborted unless the node has no POST script.  If the
-POST script returns the \Arg{AbortExitValue} value, the DAG is aborted.
+The behavior differs based on the existence of PRE and/or POST scripts.
+If a PRE script returns the \Arg{AbortExitValue} value,
+the DAG is immediately aborted.
+If the HTCondor job within a node returns the \Arg{AbortExitValue} value,
+the DAG is aborted if the node has no POST script.
+If the POST script returns the \Arg{AbortExitValue} value, the DAG is aborted.
 
 An abort overrides node retries. 
 If a node returns the abort exit value,
@@ -991,10 +990,10 @@ The DAG abort return value
 can be used for DAGs within DAGs,
 allowing an inner DAG to cause an abort of an outer DAG.
 
-Note that a DAG return value other than 0, 1, or 2 will cause the
-actual \Condor{dagman} job to stay in the queue after it exits
+A DAG return value other than 0, 1, or 2 will cause the
+\Condor{dagman} job to stay in the queue after it exits
 and get retried, unless the \AdAttr{on\_exit\_remove} expression in the
-\File{.condor.sub file} is manually modified.
+\File{.condor.sub} file is manually modified.
 
 Adding \Arg{ABORT-DAG-ON} for node C in the diamond-shaped
 DAG
