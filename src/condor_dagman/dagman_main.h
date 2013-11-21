@@ -58,6 +58,9 @@ class Dagman {
 		// the submit files instead).
 	void DisableDefaultLog();
 
+		//TEMPTEMP -- document
+	void GetDefaultLog();
+
     Dag * dag;
     int maxIdle;  // Maximum number of idle DAG nodes
     int maxJobs;  // Maximum number of Jobs to run at once
@@ -192,7 +195,7 @@ class Dagman {
 
 		// The default log file for node jobs that don't specify a
 		// log file.
-	char * _defaultNodeLog;
+	MyString _defaultNodeLog;
 
 		// Whether to generate the .condor.sub files for sub-DAGs
 		// at run time (just before the node is submitted).

@@ -129,7 +129,7 @@ Dagman::Dagman() :
 	rescueFileToRun(""),
 	dumpRescueDag(false),
 	_writePartialRescueDag(true),
-	_defaultNodeLog(NULL),
+	_defaultNodeLog(""),
 	_generateSubdagSubmits(true),
 	_maxJobHolds(100),
 	_runPost(true),
@@ -401,10 +401,12 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_WRITE_PARTIAL_RESCUE setting: %s\n",
 				_writePartialRescueDag ? "True" : "False" );
 
-	free( _defaultNodeLog );
 	_defaultNodeLog = param( "DAGMAN_DEFAULT_NODE_LOG" );
+	if ( _defaultNodeLog == "" ) {
+		_defaultNodeLog = "$(DAG_DIR)/$(DAG_FILE).nodes.log";
+	}
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_NODE_LOG setting: %s\n",
-				_defaultNodeLog ? _defaultNodeLog : "null" );
+				_defaultNodeLog.Value() );
 
 	_generateSubdagSubmits = 
 		param_boolean( "DAGMAN_GENERATE_SUBDAG_SUBMITS",
@@ -433,12 +435,12 @@ Dagman::Config()
 		free( debugSetting );
 	}
 
+		// TEMPTEMP -- do we have to do this after substitution?
 		// Check for the default/node/workflow log being in /tmp
-	if ( _defaultNodeLog &&
-				strstr( _defaultNodeLog, "/tmp" ) == _defaultNodeLog ) {
+	if ( _defaultNodeLog.find( "/tmp" ) == 0 ) {
 		debug_printf( DEBUG_QUIET, "Warning: "
 					"DAGMAN_DEFAULT_NODE_LOG file %s is in /tmp\n",
-					_defaultNodeLog );
+					_defaultNodeLog.Value() );
 		check_warning_strictness( _submitDagDeepOpts.always_use_node_log ?
 					DAG_STRICT_1 : DAG_STRICT_2 );
 	}
@@ -822,27 +824,7 @@ void main_init (int argc, char ** const argv) {
 	dagman.primaryDagFile = dagman.dagFiles.next();
 	dagman.multiDags = (dagman.dagFiles.number() > 1);
 
-	MyString tmpDefaultLog;
-	if ( dagman._defaultNodeLog != NULL ) {
-		tmpDefaultLog = dagman._defaultNodeLog;
-		free( dagman._defaultNodeLog );
-	} else {
-		tmpDefaultLog = dagman.primaryDagFile + ".nodes.log";
-	}
-
-		// Force default log file path to be absolute so it works
-		// with -usedagdir and DIR nodes.
-	CondorError errstack;
-	if ( !MultiLogFiles::makePathAbsolute( tmpDefaultLog, errstack) ) {
-       	debug_printf( DEBUG_QUIET, "Unable to convert default log "
-					"file name to absolute path: %s\n",
-					errstack.getFullText().c_str() );
-		dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_ERROR );
-		DC_Exit( EXIT_ERROR );
-	}
-	dagman._defaultNodeLog = strdup( tmpDefaultLog.Value() );
-	debug_printf( DEBUG_NORMAL, "Default node log file is: <%s>\n",
-				dagman._defaultNodeLog);
+	dagman.GetDefaultLog();
 
     //
     // Check the arguments
@@ -1020,7 +1002,7 @@ void main_init (int argc, char ** const argv) {
 						  dagman.retryNodeFirst, dagman.condorRmExe,
 						  dagman.storkRmExe, &dagman.DAGManJobId,
 						  dagman.prohibitMultiJobs, dagman.submitDepthFirst,
-						  dagman._defaultNodeLog,
+						  dagman._defaultNodeLog.Value(),
 						  dagman._generateSubdagSubmits,
 						  &dagman._submitDagDeepOpts,
 						  false ); /* toplevel dag! */
@@ -1277,7 +1259,8 @@ Dagman::CheckLogFileMode( const CondorVersionInfo &submitFileVersion )
 			// a Pegasus-generated sub-DAG.
 
 			// Check for existence of the default log file
-		bool has_new_default_log = access( dagman._defaultNodeLog, F_OK ) == 0;
+		bool has_new_default_log = access( dagman._defaultNodeLog.Value(),
+					F_OK ) == 0;
 
 			// Note:  we can run into trouble here -- the default log
 			// file can exist if a pre 7.9 DAGMan had a node job
@@ -1306,6 +1289,37 @@ Dagman::DisableDefaultLog()
 		// referenced in the Dag constructor, so just
 		// changing that here won't do us any good.
 	dagman.dag->UseDefaultNodeLog(false);
+}
+
+//---------------------------------------------------------------------------
+//TEMPTEMP -- check w/ valgrind...
+void
+Dagman::GetDefaultLog()
+{
+	char *dagDir = condor_dirname( primaryDagFile.Value() );
+	const char *dagFile = condor_basename( primaryDagFile.Value() );
+
+	_defaultNodeLog.replaceString( "@(DAG_DIR)", dagDir );
+	_defaultNodeLog.replaceString( "@(DAG_FILE)", dagFile );
+	MyString cluster( DAGManJobId._cluster );
+	_defaultNodeLog.replaceString( "@(CLUSTER)", cluster.Value() );
+	free( dagDir );
+
+	//TEMPTEMP -- check for remaining '@' -- warning or error if there are any
+
+		// Force default log file path to be absolute so it works
+		// with -usedagdir and DIR nodes.
+	CondorError errstack;
+	if ( !MultiLogFiles::makePathAbsolute( _defaultNodeLog, errstack) ) {
+       	debug_printf( DEBUG_QUIET, "Unable to convert default log "
+					"file name to absolute path: %s\n",
+					errstack.getFullText().c_str() );
+		dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_ERROR );
+		DC_Exit( EXIT_ERROR );
+	}
+
+	debug_printf( DEBUG_NORMAL, "Default node log file is: <%s>\n",
+				_defaultNodeLog.Value() );
 }
 
 void
