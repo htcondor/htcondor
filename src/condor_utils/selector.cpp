@@ -257,6 +257,7 @@ void
 Selector::execute()
 {
 	int		nfds;
+	struct timeval timeout_copy;
 	struct timeval	*tp;
 
 	memcpy( read_fds, save_read_fds, fd_set_size * sizeof(fd_set) );
@@ -264,7 +265,8 @@ Selector::execute()
 	memcpy( except_fds, save_except_fds, fd_set_size * sizeof(fd_set) );
 
 	if( timeout_wanted ) {
-		tp = &timeout;
+		timeout_copy = timeout;
+		tp = &timeout_copy;
 	} else {
 		tp = NULL;
 	}
@@ -277,13 +279,13 @@ Selector::execute()
 				  (SELECT_FDSET_PTR) write_fds, 
 				  (SELECT_FDSET_PTR) except_fds, 
 				  tp );
+	_select_errno = errno;
 	stop_thread_safe("select");
 	_select_retval = nfds;
 
 	if( nfds < 0 ) {
-		_select_errno = errno;
 #if !defined(WIN32)
-		if( errno == EINTR ) {
+		if( _select_errno == EINTR ) {
 			state = SIGNALLED;
 			return;
 		}
