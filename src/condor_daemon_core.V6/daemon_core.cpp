@@ -9601,6 +9601,32 @@ BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock, condor_protocol proto)
 	return FALSE;
 }
 
+static bool assign_sock(condor_protocol proto, Sock * sock, bool fatal)
+{
+	ASSERT(sock);
+	if( sock->assign(proto) ) return true;
+
+	char * type;
+	switch(sock->type()) {
+		case Stream::reli_sock: type = "TCP"; break;
+		case Stream::safe_sock: type = "UDP"; break;
+		default: type = "unknown"; break;
+	}
+
+	MyString protoname = condor_protocol_to_str(proto);
+	MyString msg;
+	msg.formatstr( "Failed to create a %s/%s socket.  Does this computer have %s support?",
+		type,
+		protoname.Value(),
+		protoname.Value());
+	if(fatal) {
+		EXCEPT(msg.Value());
+	}
+
+	dprintf(D_ALWAYS | D_FAILURE, "%s\n", msg.Value());
+	return false;
+}
+
 static bool 
 InitCommandSocket(condor_protocol proto, int port, DaemonCore::SockPair & sock_pair, bool want_udp, bool fatal)
 {
@@ -9616,11 +9642,13 @@ InitCommandSocket(condor_protocol proto, int port, DaemonCore::SockPair & sock_p
 	if (port <= 1) {
 			// Choose any old port (dynamic port)
 		if( !BindAnyCommandPort(rsock, ssock, proto) ) {
+			MyString msg;
+			msg.formatstr("BindAnyCommandPort() failed. Does this computer have %s support?", condor_protocol_to_str(proto).Value());
 			if (fatal) {
-				EXCEPT("BindAnyCommandPort() failed");
+				EXCEPT(msg.Value());
 			}
 			else {
-				dprintf(D_ALWAYS | D_FAILURE, "BindAnyCommandPort() failed\n");
+				dprintf(D_ALWAYS | D_FAILURE, "%s\n", msg.Value());
 				return false;
 			}
 
@@ -9642,8 +9670,12 @@ InitCommandSocket(condor_protocol proto, int port, DaemonCore::SockPair & sock_p
 		int so_option = SO_REUSEADDR;
 
 		// Ensure we have a socket, setsockopt doesn't work otherwise.
-		if(rsock) rsock->assign(proto);
-		if(ssock) ssock->assign(proto);
+		if(rsock) {
+			if(!assign_sock(proto, rsock, fatal)) { return false; }
+		}
+		if(ssock) {
+			if(!assign_sock(proto, ssock, fatal)) { return false; }
+		}
 
 #if defined ( WIN32 )
 		/** To better match the *nix semantics of SO_REUSEADDR we
@@ -9693,12 +9725,17 @@ InitCommandSocket(condor_protocol proto, int port, DaemonCore::SockPair & sock_p
 		}
 
 		if (!rsock->listen(proto, port)) {
+			MyString msg;
+			msg.formatstr("Failed to listen(%d) on TCP/%s command socket. Does this computer have %s support?", 
+				port,
+				condor_protocol_to_str(proto).Value(),
+				condor_protocol_to_str(proto).Value()
+				);
 			if (fatal) {
-				EXCEPT("Failed to listen(%d) on TCP command socket.", port);
+				EXCEPT(msg.Value());
 			}
 			else {
-				dprintf(D_ALWAYS | D_FAILURE,
-						"Failed to listen(%d) on TCP command socket.\n", port);
+				dprintf(D_ALWAYS | D_FAILURE, "%s\n", msg.Value());
 				return false;
 			}
 		}
