@@ -9641,6 +9641,10 @@ InitCommandSocket(condor_protocol proto, int port, DaemonCore::SockPair & sock_p
 		int on = 1;
 		int so_option = SO_REUSEADDR;
 
+		// Ensure we have a socket, setsockopt doesn't work otherwise.
+		if(rsock) rsock->assign(proto);
+		if(ssock) ssock->assign(proto);
+
 #if defined ( WIN32 )
 		/** To better match the *nix semantics of SO_REUSEADDR we
 			enable MSs SO_EXCLUSIVEADDRUSE option, which prohibits
@@ -9710,6 +9714,14 @@ InitCommandSocket(condor_protocol proto, int port, DaemonCore::SockPair & sock_p
 			}
 		}
 	}
+
+	dprintf(D_NETWORK, "InitCommandSocket(%s, %d, %s, %s) created %s\n", 
+		condor_protocol_to_str(proto).Value(),
+		port,
+		want_udp ? "want UDP" : "no UDP",
+		fatal ? "fatal errors" : "non-fatal errors",
+		sock_to_string(rsock->get_file_desc()));
+
 	return true;
 }
 

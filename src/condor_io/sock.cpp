@@ -410,6 +410,14 @@ int Sock::move_descriptor_up()
 
 int Sock::assign(SOCKET sockd)
 {
+	condor_protocol proto = CP_IPV4;
+	if (_condor_is_ipv6_mode())
+		proto = CP_IPV6;
+	return assign(proto, sockd);
+}
+
+int Sock::assign(condor_protocol proto, SOCKET sockd)
+{
 	int		my_type = SOCK_DGRAM;
 
 	if (_state != sock_virgin) return FALSE;
@@ -429,10 +437,11 @@ int Sock::assign(SOCKET sockd)
 	}
 
 	int af_type;
-	if (_condor_is_ipv6_mode())
-		af_type = AF_INET6;
-	else
-		af_type = AF_INET;
+	switch(proto) {
+		case CP_IPV4: af_type = AF_INET; break;
+		case CP_IPV6: af_type = AF_INET6; break;
+		default: ASSERT(false);
+	}
 
 	switch(type()){
 		case safe_sock:
@@ -593,7 +602,7 @@ int Sock::bind(condor_protocol proto, bool outbound, int port, bool loopback)
     }
 
 	// if stream not assigned to a sock, do it now	*/
-	if (_state == sock_virgin) assign();
+	if (_state == sock_virgin) assign(proto);
 
 	if (_state != sock_assigned) {
 		dprintf(D_ALWAYS, "Sock::bind - _state is not correct\n");
@@ -714,8 +723,8 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 	int command;
 	SOCKET_LENGTH_TYPE temp;
 
-	if (_state == sock_virgin) assign();
-	
+	ASSERT(_state != sock_virgin); 
+
 	if ( set_write_buf ) {
 		command = SO_SNDBUF;
 	} else {
@@ -762,8 +771,7 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 
 int Sock::setsockopt(int level, int optname, const char* optval, int optlen)
 {
-	/* if stream not assigned to a sock, do it now	*/
-	if (_state == sock_virgin) assign();
+	ASSERT(_state != sock_virgin); 
 
 	if(::setsockopt(_sock, level, optname, optval, optlen) < 0)
 	{
@@ -1396,9 +1404,9 @@ Sock::bytes_available_to_read()
 #ifndef FIONREAD
 #error FIONREAD is not defined!  Fix me by seeing code comment.
 #endif
+	dprintf(D_ALWAYS, "Internal error: \n");
+	if(_state == sock_virgin) return -1;
 
-		/* if stream not assigned to a sock, do it now	*/
-	if (_state == sock_virgin) assign();
 	if ( (_state != sock_assigned) &&  
 				(_state != sock_connect) &&
 				(_state != sock_bound) )  {

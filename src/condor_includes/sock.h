@@ -135,7 +135,10 @@ public:
 	//	Socket services
 	//
 
+PRAGMA_REMIND("adesmet: DEPRECATED")
 	int assign(SOCKET =INVALID_SOCKET);
+
+	int assign(condor_protocol proto, SOCKET =INVALID_SOCKET);
 #if defined(WIN32) && defined(_WINSOCK2API_)
 	int assign(LPWSAPROTOCOL_INFO);		// to inherit sockets from other processes
 #endif
