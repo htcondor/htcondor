@@ -41,15 +41,25 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Fixed a bug that caused incorrect information in the
+\Macro{RemoteGroupQuota} and \Macro{SubmitterGroupQuota} attributes
+commonly used in the \Condor{negotiator} PREEMPTION\_REQUIREMENTS
+setting.
+\Ticket{4093}
+
+\item Fixed a permissions bug that prevented Java universe jobs
+from running.
+\Ticket{4087}
+
 \item Fixed bug with \Condor{submit} -interactive when
 cgroups where enabled.  With that combination, the shell would
 get terminated immediately after startup.
 \Ticket{4028}
 
-\item The \condor{starter} now writes to the log file
+\item The \Condor{starter} now writes to the log file
 \File{StarterLog.slotX} when running work fetch jobs, mirroring the
-behavior when running jobs that come from a \condor{schedd}.
-Previously, the log file \File{StarterLog} was used for all work fetch
+behavior when running jobs that come from a \Condor{schedd}.
+Previously, log file \File{StarterLog} was used for all work fetch
 jobs.
 \Ticket{3091}
 
@@ -65,6 +75,15 @@ would fail.
 description file contained the submit command \SubmitCmd{environment} or
 \SubmitCmd{cream\_attributes}.
 \Ticket{4037}
+
+\item Fixed a bug that could cause the \Condor{schedd} to crash when
+starting a local universe job.
+\Ticket{4088}
+
+\item Fixed a bug that caused the stdout and stderr of grid-type
+nordugrid jobs to be lost when the remote NorduGrid ARC server was
+using HTCondor as its local batch scheduler.
+\Ticket{4017}
 
 \end{itemize}
 

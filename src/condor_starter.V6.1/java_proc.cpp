@@ -242,6 +242,7 @@ java_exit_mode_t JavaProc::ClassifyExit( int status )
 		dprintf(D_ALWAYS,
 		        "JavaProc: JVM exited normally with code %d\n",
 		        exit_code);
+		TemporaryPrivSentry sentry(PRIV_USER);
 		file = safe_fopen_wrapper_follow(startfile.Value(),"r");
 		if(file) {
 			dprintf(D_ALWAYS,
