@@ -55,9 +55,6 @@ public:
 
 private:
 	static int _fd_select_size;
-	static fd_set *cached_read_fds, *cached_save_read_fds;
-	static fd_set *cached_write_fds, *cached_save_write_fds;
-	static fd_set *cached_except_fds, *cached_save_except_fds;
 	fd_set	*read_fds, *save_read_fds;
 	fd_set	*write_fds, *save_write_fds;
 	fd_set	*except_fds, *save_except_fds;
