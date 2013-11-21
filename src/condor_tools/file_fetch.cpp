@@ -33,9 +33,9 @@ static size_t WriteCallback(char *contents, size_t size, size_t nmemb, void *use
     
     if(!downloaded_data->text) return 0;
 
-    downloaded_data->size = size;
-    downloaded_data->text[data_size] = '\0';
+    downloaded_data->size = data_size;
     memcpy(downloaded_data->text, contents, data_size);
+    downloaded_data->text[data_size] = 0;
 
     return data_size;
 }
@@ -52,7 +52,7 @@ bool print_cached_file(const char *cached_path)
     FILE *fp;
     int character;
 
-    fp = safe_fopen_no_create_follow(cached_path, "r");
+    fp = safe_fopen_no_create_follow(cached_path, "rb");
 
     if(!fp)
     {
@@ -137,11 +137,11 @@ int main(int argc, char **argv) {
     
     printf(downloaded_data.text);
 
-    fp = safe_fcreate_replace_if_exists(cache_path, "w");
+    fp = safe_fcreate_replace_if_exists(cache_path, "wb");
 
     if(!fp) goto Cleanup;
 
-    fputs(downloaded_data.text, fp);
+    fwrite(downloaded_data.text, 1, downloaded_data.size, fp);
 
     fclose(fp);
 
