@@ -36,7 +36,7 @@ public:
         SharedPortState(ReliSock *sock, const char *shared_port_id, const char *requested_by, bool non_blocking)
          : m_sock(sock),
 	   m_shared_port_id(shared_port_id),
-	   m_requested_by(requested_by),
+	   m_requested_by(requested_by ? requested_by : ""),
 	   m_sock_name("UNKNOWN"),
 	   m_state(UNBOUND),
 	   m_non_blocking(non_blocking)
@@ -279,7 +279,7 @@ int
 SharedPortState::Handle(Stream *s)
 {
 	HandlerResult result = CONTINUE;
-	while (result == CONTINUE || (m_non_blocking && (result == WAIT))) {
+	while (result == CONTINUE || (!m_non_blocking && (result == WAIT))) {
 		switch (m_state)
 		{
 		case UNBOUND:
