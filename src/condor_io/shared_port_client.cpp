@@ -29,6 +29,38 @@
 #include "shared_port_scm_rights.h"
 #endif
 
+class SharedPortState: Service{
+
+public:
+
+        SharedPortState(ReliSock *sock, const char *shared_port_id, const char *requested_by, bool non_blocking)
+         : m_sock(sock),
+	   m_shared_port_id(shared_port_id),
+	   m_requested_by(requested_by ? requested_by : ""),
+	   m_sock_name("UNKNOWN"),
+	   m_state(UNBOUND),
+	   m_non_blocking(non_blocking)
+        {}
+
+        enum HandlerResult {FAILED, DONE, CONTINUE, WAIT};
+
+        int Handle(Stream *s=NULL);
+
+private:
+        enum SPState {INVALID, UNBOUND, SEND_HEADER, SEND_FD, RECV_RESP};
+        ReliSock *m_sock;
+        const char * m_shared_port_id;
+        std::string m_requested_by;
+	std::string m_sock_name;
+        SPState m_state;
+        bool m_non_blocking;
+
+        HandlerResult HandleUnbound(Stream *&s);
+        HandlerResult HandleHeader(Stream *&s);
+        HandlerResult HandleFD(Stream *&s);
+        HandlerResult HandleResp(Stream *&s);
+};
+
 bool
 SharedPortClient::sendSharedPortID(char const *shared_port_id,Sock *sock)
 {
@@ -109,7 +141,7 @@ SharedPortClient::SharedPortIdIsValid(char const *shared_port_id)
 }
 
 bool
-SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char const *requested_by)
+SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char const *requested_by, bool non_blocking)
 {
 #ifndef HAVE_SHARED_PORT
 	dprintf(D_ALWAYS,"SharedPortClient::PassSocket() not supported on this platform\n");
@@ -234,101 +266,176 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 
 	return true;
 #elif HAVE_SCM_RIGHTS_PASSFD
-	if( !SharedPortIdIsValid(shared_port_id) ) {
-		dprintf(D_ALWAYS,
-				"ERROR: SharedPortClient: refusing to connect to shared port"
-				"%s, because specified id is illegal! (%s)\n",
-				requested_by, shared_port_id );
-		return false;
+
+	SharedPortState * state = new SharedPortState(static_cast<ReliSock*>(sock_to_pass), shared_port_id, requested_by, non_blocking);
+	return (state->Handle() != SharedPortState::FAILED);
+
+#else
+#error HAVE_SHARED_PORT is defined, but no method for passing fds is enabled.
+#endif
+}
+
+int
+SharedPortState::Handle(Stream *s)
+{
+	HandlerResult result = CONTINUE;
+	while (result == CONTINUE || (!m_non_blocking && (result == WAIT))) {
+		switch (m_state)
+		{
+		case UNBOUND:
+			result = HandleUnbound(s);
+			break;
+		case SEND_HEADER:
+			result = HandleHeader(s);
+			break;
+		case SEND_FD:
+			result = HandleFD(s);
+			break;
+		case RECV_RESP:
+			result = HandleResp(s);
+			break;
+		default:
+			result = FAILED;
+		}
 	}
+	if (result == WAIT) {
+		int reg_rc = daemonCoreSockAdapter.Register_Socket(
+			s,
+			m_requested_by.c_str(),
+			(SocketHandlercpp)&SharedPortState::Handle,
+			"Shared Port state handler",
+			this,
+			ALLOW);
 
-	MyString sock_name;
-	MyString socket_dir;
-
-	SharedPortEndpoint::paramDaemonSocketDir(sock_name);
-	sock_name.formatstr_cat("%c%s",DIR_DELIM_CHAR,shared_port_id);
-
-	MyString requested_by_buf;
-	if( !requested_by ) {
-		requested_by_buf.formatstr(
-			" as requested by %s", sock_to_pass->peer_description());
-		requested_by = requested_by_buf.Value();
+		if(reg_rc < 0) {
+			dprintf(D_ALWAYS, "Socket passing to %s failed because "
+				"Register_Socket returned %d.",
+				m_requested_by.c_str(),
+				reg_rc);
+			result = FAILED;
+	        }
 	}
-
-	struct sockaddr_un named_sock_addr;
-	memset(&named_sock_addr, 0, sizeof(named_sock_addr));
-	named_sock_addr.sun_family = AF_UNIX;
-	strncpy(named_sock_addr.sun_path,sock_name.Value(),sizeof(named_sock_addr.sun_path)-1);
-	if( strcmp(named_sock_addr.sun_path,sock_name.Value()) ) {
-		dprintf(D_ALWAYS,"ERROR: SharedPortClient: full socket name%s is too long: %s\n",
-				requested_by,
-				sock_name.Value());
-		return false;
+	if (result == DONE || result == FAILED) {
+		if (s && (m_state != RECV_RESP)) {
+			delete s;
+		}
+		delete this;
 	}
+	if (result == WAIT)
+		return KEEP_STREAM;
+	return result;
+}
 
-	int named_sock_fd = socket(AF_UNIX,SOCK_STREAM,0);
-	if( named_sock_fd == -1 ) {
-		dprintf(D_ALWAYS,"ERROR: SharedPortClient: failed to created named socket%s to connect to %s: %s\n",
-				requested_by,
-				shared_port_id,
-				strerror(errno));
-		return false;
-	}
+SharedPortState::HandlerResult
+SharedPortState::HandleUnbound(Stream *&s)
+{
+        if( !SharedPortClient::SharedPortIdIsValid(m_shared_port_id) ) {
+                dprintf(D_ALWAYS,
+                                "ERROR: SharedPortClient: refusing to connect to shared port"
+                                "%s, because specified id is illegal! (%s)\n",
+                                m_requested_by.c_str(), m_shared_port_id );
+                return FAILED;
+        }
 
-	ReliSock named_sock;
-	named_sock.assign(named_sock_fd);
-	named_sock.set_deadline( sock_to_pass->get_deadline() );
+        MyString sock_name;
+        MyString socket_dir;
 
-	priv_state orig_priv = set_root_priv();
+        SharedPortEndpoint::paramDaemonSocketDir(sock_name);
+        sock_name.formatstr_cat("%c%s", DIR_DELIM_CHAR, m_shared_port_id);
+	m_sock_name = sock_name.Value();
 
-	int connect_rc = connect(named_sock_fd,(struct sockaddr *)&named_sock_addr, SUN_LEN(&named_sock_addr));
+        if( !m_requested_by.size() ) {
+                formatstr(m_requested_by,
+                        " as requested by %s", m_sock->peer_description());
+        }
 
-	set_priv( orig_priv );
+        struct sockaddr_un named_sock_addr;
+        memset(&named_sock_addr, 0, sizeof(named_sock_addr));
+        named_sock_addr.sun_family = AF_UNIX;
+        strncpy(named_sock_addr.sun_path, sock_name.Value(), sizeof(named_sock_addr.sun_path)-1);
+        if( strcmp(named_sock_addr.sun_path,sock_name.Value()) ) {
+                dprintf(D_ALWAYS,"ERROR: SharedPortClient: full socket name%s is too long: %s\n",
+                                m_requested_by.c_str(),
+                                sock_name.Value());
+                return FAILED;
+        }
 
-	if( connect_rc != 0 )
-	{
-		dprintf(D_ALWAYS,"SharedPortClient: failed to connect to %s%s: %s\n",
-				sock_name.Value(),
-				requested_by,
-				strerror(errno));
-		return false;
-	}
+        int named_sock_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+        if( named_sock_fd == -1 ) {
+                dprintf(D_ALWAYS,"ERROR: SharedPortClient: failed to created named socket%s to connect to %s: %s\n",
+                                m_requested_by.c_str(),
+                                m_shared_port_id,
+                                strerror(errno));
+                return FAILED;
+        }
 
-	// Make certain SO_LINGER is Off.  This will result in the default
-	// of closesocket returning immediately and the system attempts to 
-	// send any unsent data.
+		// Make certain SO_LINGER is Off.  This will result in the default
+		// of closesocket returning immediately and the system attempts to 
+		// send any unsent data.
 
 	struct linger linger = {0,0};
 	setsockopt(named_sock_fd, SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
 
+	ReliSock *named_sock = new ReliSock();
+	named_sock->assign(named_sock_fd);
+	named_sock->set_deadline( m_sock->get_deadline() );
 
-	// Now prepare to pass the file descriptor
-	// to the target process via named_sock.
-
-	// First tell the target daemon that we are about to send the fd.
-	named_sock.encode();
-	if( !named_sock.put((int)SHARED_PORT_PASS_SOCK) ||
-		!named_sock.end_of_message() )
+	int connect_rc;
 	{
-		dprintf(D_ALWAYS,"SharedPortClient: failed to send SHARED_PORT_PASS_FD to %s%s: %s\n",
-				sock_name.Value(),
-				requested_by,
-				strerror(errno));
-		return false;
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		connect_rc = connect(named_sock_fd,(struct sockaddr *)&named_sock_addr, SUN_LEN(&named_sock_addr));
 	}
 
+	if( connect_rc != 0 )
+	{
+		dprintf(D_ALWAYS,"SharedPortServer: failed to connect to %s%s: %s\n",
+			sock_name.Value(),
+			m_requested_by.c_str(),
+			strerror(errno));
+		delete named_sock;
+		return FAILED;
+        }
 
+	s = named_sock;
+        m_state = SEND_HEADER;
+	return CONTINUE;
+}
+
+SharedPortState::HandlerResult
+SharedPortState::HandleHeader(Stream *&s)
+{
+		// First tell the target daemon that we are about to send the fd.
+	ReliSock *sock = static_cast<ReliSock*>(s);
+	sock->encode();
+	if( !sock->put((int)SHARED_PORT_PASS_SOCK) ||
+		!sock->end_of_message() )
+	{
+		dprintf(D_ALWAYS,"SharedPortClient: failed to send SHARED_PORT_PASS_FD to %s%s: %s\n",
+			m_sock_name.c_str(),
+			m_requested_by.c_str(),
+			strerror(errno));
+			return FAILED;
+	}
+
+	m_state = SEND_FD;
+	return CONTINUE;
+}
+
+SharedPortState::HandlerResult
+SharedPortState::HandleFD(Stream *&s)
+{
 	// Now send the fd.
+	ReliSock *sock = static_cast<ReliSock *>(s);
 
-	// The documented way to initialize msghdr is to first set msg_controllen
-	// to the size of the cmsghdr buffer and then after initializing
-	// cmsghdr(s) to set it to the sum of CMSG_LEN() across all cmsghdrs.
+		// The documented way to initialize msghdr is to first set msg_controllen
+		// to the size of the cmsghdr buffer and then after initializing
+		// cmsghdr(s) to set it to the sum of CMSG_LEN() across all cmsghdrs.
 
 	struct msghdr msg;
-	char *buf = (char *) malloc(CMSG_SPACE(sizeof(int)));
+	std::vector<char> buf; buf.reserve(CMSG_SPACE(sizeof(int)));
 	msg.msg_name = NULL;
 	msg.msg_namelen = 0;
-	msg.msg_control = buf;
+	msg.msg_control = &buf[0];
 	msg.msg_controllen = CMSG_SPACE(sizeof(int));
 	msg.msg_flags = 0;
 
@@ -349,21 +456,26 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 	cmsg->cmsg_level = SOL_SOCKET;
 	cmsg->cmsg_type = SCM_RIGHTS;
 
-	int fd_to_pass = sock_to_pass->get_file_desc();
+	int fd_to_pass = m_sock->get_file_desc();
 	memcpy(cmsg_data,&fd_to_pass,sizeof(int));
 
 	msg.msg_controllen = cmsg->cmsg_len;
 
-	if( sendmsg(named_sock.get_file_desc(),&msg,0) != 1 ) {
+	if( sendmsg(sock->get_file_desc(),&msg,0) != 1 ) {
 		dprintf(D_ALWAYS,"SharedPortClient: failed to pass socket to %s%s: %s\n",
-				sock_name.Value(),
-				requested_by,
-				strerror(errno));
-		free(buf);
-		return false;
+			m_sock_name.c_str(),
+			m_requested_by.c_str(),
+			strerror(errno));
+		return FAILED;
 	}
 
+	m_state = RECV_RESP;
+	return WAIT;
+}
 
+SharedPortState::HandlerResult
+SharedPortState::HandleResp(Stream *&s)
+{
 		// The following final ACK appears to be necessary on Mac OS X
 		// 10.5.8 (not sure of others).  It does not appear to be
 		// necessary on any version of linux that I have tried.  The
@@ -379,33 +491,26 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 		// just local to the machine, so need to worry about keeping
 		// it compatible between different platforms.
 
-
-	named_sock.decode();
+	ReliSock *sock = static_cast<ReliSock*>(s);
+	sock->decode();
 	int status = 0;
-	if( !named_sock.get(status) || !named_sock.end_of_message() ) {
+	if( !sock->get(status) || !sock->end_of_message() ) {
 		dprintf(D_ALWAYS,"SharedPortClient: failed to receive result for SHARED_PORT_PASS_FD to %s%s: %s\n",
-				sock_name.Value(),
-				requested_by,
-				strerror(errno));
-
-		free(buf);
-		return false;
+			m_sock_name.c_str(),
+			m_requested_by.c_str(),
+			strerror(errno));
+		return FAILED;
 	}
 	if( status != 0 ) {
 		dprintf(D_ALWAYS,"SharedPortClient: received failure response for SHARED_PORT_PASS_FD to %s%s\n",
-				sock_name.Value(),
-				requested_by);
-		free(buf);
-		return false;
+			m_sock_name.c_str(),
+			m_requested_by.c_str());
+		return FAILED;
 	}
 
-
 	dprintf(D_FULLDEBUG,"SharedPortClient: passed socket to %s%s\n",
-			sock_name.Value(),
-			requested_by);
-	free(buf);
-	return true;
-#else
-#error HAVE_SHARED_PORT is defined, but no method for passing fds is enabled.
-#endif
+		m_sock_name.c_str(),
+		m_requested_by.c_str());
+	return DONE;
 }
+
