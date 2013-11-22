@@ -379,6 +379,10 @@ SharedPortState::HandleUnbound(Stream *&s)
 	ReliSock *named_sock = new ReliSock();
 	named_sock->assign(named_sock_fd);
 	named_sock->set_deadline( m_sock->get_deadline() );
+	if (m_non_blocking) {
+		int flags = fcntl(named_sock_fd, F_GETFL, 0);
+		fcntl(named_sock_fd, F_SETFL, flags | O_NONBLOCK);
+	}
 
 	int connect_rc;
 	{
@@ -395,6 +399,11 @@ SharedPortState::HandleUnbound(Stream *&s)
 		delete named_sock;
 		return FAILED;
         }
+
+	if (m_non_blocking) {
+		int flags = fcntl(named_sock_fd, F_GETFL, 0);
+		fcntl(named_sock_fd, F_SETFL, flags & ~O_NONBLOCK);
+	}
 
 	s = named_sock;
         m_state = SEND_HEADER;
