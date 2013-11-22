@@ -27,7 +27,6 @@
 
 #ifdef HAVE_SCM_RIGHTS_PASSFD
 #include "shared_port_scm_rights.h"
-#endif
 
 class SharedPortState: Service{
 
@@ -60,6 +59,7 @@ private:
         HandlerResult HandleFD(Stream *&s);
         HandlerResult HandleResp(Stream *&s);
 };
+#endif
 
 bool
 SharedPortClient::sendSharedPortID(char const *shared_port_id,Sock *sock)
@@ -275,6 +275,7 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 #endif
 }
 
+#ifdef HAVE_SCM_RIGHTS_PASSFD
 int
 SharedPortState::Handle(Stream *s)
 {
@@ -522,4 +523,5 @@ SharedPortState::HandleResp(Stream *&s)
 		m_requested_by.c_str());
 	return DONE;
 }
+#endif
 
