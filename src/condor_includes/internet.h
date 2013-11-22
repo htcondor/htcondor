@@ -101,16 +101,6 @@ int same_host(const char *h1, const char *h2);
 /* Returns TRUE if hostname belongs to the given domain, FALSE if not */
 int host_in_domain(const char *host, const char *domain);
 
-char* calc_subnet_name(void);
-
-//int is_ipaddr(const char *inbuf, struct in_addr *sin_addr);
-
-//int is_ipaddr_no_wildcard(const char *inbuf, struct in_addr *sin_addr);
-
-//int is_ipaddr_wildcard(const char *inbuf, struct in_addr *sin_addr, struct in_addr *mask_addr);
-
-//int is_valid_network( const char *network, struct in_addr *ip, struct in_addr *mask);
-
 int is_ipv4_addr_implementation(const char *inbuf, struct in_addr *sin_addr,
 			struct in_addr *mask_addr,int allow_wildcard);
 

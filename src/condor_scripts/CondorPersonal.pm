@@ -256,10 +256,10 @@ sub StartCondor
 sub StartCondorWithParams
 {
 	%personal_condor_params = @_;
-	#print "StartCondorWithParams: Hash <personal_condor_params > holds:\n";
-	#foreach my $key (sort keys %personal_condor_params) {
-		#print "StartCondorWithParams: $key $personal_condor_params{$key}\n";
-	#}
+	print "StartCondorWithParams: Hash <personal_condor_params > holds:\n";
+	foreach my $key (sort keys %personal_condor_params) {
+		print "StartCondorWithParams: $key $personal_condor_params{$key}\n";
+	}
 
 	my $testname = $personal_condor_params{"test_name"} || die "Missing test_name\n";
 	$version = $personal_condor_params{"condor_name"} || die "Missing condor_name!\n";
@@ -344,6 +344,7 @@ sub StartCondorWithParams
 	CondorPersonal::Reset();
 	debug( "StartCondor config_and_port is --$config_and_port--\n",$debuglevel);
 	debug( "Personal Condor Started\n",$debuglevel);
+	print  "Personal Condor Started\n";
 	print scalar localtime() . "\n";
 	return( $config_and_port );
 }
@@ -1262,6 +1263,7 @@ sub StartPersonalCondor
 	my %control = %personal_condor_params;
 	my $personalmaster = "";
 
+	print "Entered StartPersonalCondor\n";
 	# If we start a personal Condor as root (for testing the VM universe),
 	# we need to change the permissions/ownership on the directories we
 	# made so that the master (which runs as condor) can use them.
@@ -1326,6 +1328,7 @@ sub StartPersonalCondor
 	}
 
 	my $res = IsRunningYet();
+	print "Back from IsRunningYet in start personal condor\n";
 	if($res == 0) {
 		debug_flush();
 		die "Can not continue because condor is not running!!!!\n";
@@ -1337,11 +1340,13 @@ sub StartPersonalCondor
 	if( $portchanges eq "dynamic" )
 	{
 		debug("Looking for collector port!\n",$debuglevel);
+		print "left StartPersonalCondor\n";
 		return( FindCollectorPort() );
 	}
 	else
 	{
 		debug("NOT Looking for collector port!\n",$debuglevel);
+		print "left StartPersonalCondor\n";
 		return("0");
 	}
 }
@@ -1782,11 +1787,62 @@ sub IsRunningYet {
 	}
 
 	debug("In IsRunningYet calling CollectDaemonPids\n",$debuglevel);
+	print "In IsRunningYet calling CollectDaemonPids\n";
 	CollectDaemonPids();
+	print "In IsRunningYet back from calling CollectDaemonPids\n";
 	debug("Leaving IsRunningYet\n",$debuglevel);
+	print "Leaving IsRunningYet\n";
 	#$debuglevel = $old_debuglevel;
 
 	return(1);
+}
+
+#################################################################
+#
+# CollectWhoPids
+#
+# Ask condor_who about daemons, write file WHOPIDS to cross
+# check PIDS
+#
+#################################################################
+
+sub CollectWhoPids
+{
+	my $logdir = shift;
+	my $action = shift;
+
+	my @adarray = ();
+	print "Enter CollectWhoPids\n";
+	CondorTest::runCondorTool("condor_who -daemon -log $logdir",\@adarray,2);
+
+	if(defined $action) {
+		if($action eq "PIDFILE") {
+			open(WP,">$logdir/WHOPIDS") or die "Failed opening: $logdir/WHOPIDS:$!\n";
+		}
+	}
+	foreach my $wholine (@adarray) {
+		CondorUtils::fullchomp($wholine);
+		# 5th item in goes from no to the exit code when it is done
+		if($wholine =~ /(\w+)\s+(\w+)\s+(\d+)\s+(\d+)\s+(\w+)\s+<(.*)>\s+.*/) {
+			print "running: $1 PID $3 exit code $5 \@$6\n";
+			if(defined $action) {
+				if($action eq "PIDFILE") {
+					print WP "$3 $1\n";
+				}
+			}
+		} elsif($wholine =~ /(\w+)\s+(\w+)\s+(\d+)\s+(\d+)\s+(\d+)\s+<(.*)>\s+.*/) {
+			print "done: $1 PID $3 exit code $5\n";
+		} else {
+			#print "parse error: $wholine\n";
+		}
+	}
+	if(defined $action) {
+		if($action eq "PIDFILE") {
+			close(WP);
+		}
+	}
+	print "Leave CollectWhoPids\n";
+
 }
 
 #################################################################
@@ -1805,9 +1861,15 @@ sub CollectDaemonPids {
     my @daemons = split /,/, $daemonlist;
 
     my $logdir = `condor_config_val log`;
+	print "Log file from config: $logdir\n";
+	$_ = $logdir;
+	s/\\/\//g;
+	$logdir = $_;
+	print "CollectDaemonPids start Log file from config after edit: $logdir\n";
     CondorUtils::fullchomp($logdir);
 
     
+	CollectWhoPids($logdir,"PIDFILE");
     my $logfile = "$logdir/MasterLog";
     debug("In CollectDaemonPids(), examining log $logfile\n", $debuglevel);
     open(TA, '<', $logfile) or die "Can not read '$logfile': $!\n";
@@ -1853,6 +1915,7 @@ sub CollectDaemonPids {
 		}	
     }
     close(PIDS);
+	print "CollectDaemonPids done\n";
 }
 
 #################################################################
@@ -1878,12 +1941,16 @@ sub KillDaemonPids
 	my $saveddebuglevel = $debuglevel;
 	$debuglevel = 3;
 
+	print "Before the Kill of $desiredconfig\n";
+	CollectWhoPids($logdir);
+
 	if($isnightly) {
 		DisplayPartialLocalConfig($desiredconfig);
 	}
 
 	#print "logs are here:$logdir\n";
 	my $pidfile = $logdir . "/PIDS";
+	my $whopidfile = $logdir . "/WHOPIDS";
 	debug("Asked to kill: $oldconfig\n",$debuglevel);
 	my $thispid = 0;
 	# first find the master and use a kill 3(fast kill)
@@ -1891,10 +1958,12 @@ sub KillDaemonPids
 	while(<PD>) {
 		fullchomp();
 		$thispid = $_;
+		print "$thispid\n";
 		if($thispid =~ /^(\d+)\s+MASTER.*$/) {
+			print "fast kill on master $1\n";
 			$masterpid = $1;
 			if(CondorUtils::is_windows() == 1) {
-				$cmd = "/usr/bin/kill -f -s 3 $masterpid";
+				$cmd = "taskkill /PID $masterpid /T /F";
 				system($cmd);
 			} else {
 				$cnt = kill 3, $masterpid;
@@ -1947,6 +2016,11 @@ sub KillDaemonPids
 			$res = CheckPids($pidfile,);
 			print "After a bullet to the head: $res\n";
 	}
+
+	print "After the Kill of $desiredconfig\n";
+	#CollectWhoPids($logdir); condor_who fails with no daemons Just do the check againt
+	# daemoon pids it collected initially
+	CheckPids($whopidfile);
 
 
 	# reset config to whatever it was.

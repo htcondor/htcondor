@@ -29,7 +29,6 @@
 #include "baseshadow.h"
 #include "file_transfer.h"
 #include "condor_claimid_parser.h"
-#include "deprecated.h"
 
 /** The states that a remote resource can be in.  If you add anything
 	here you must A) put it before _RR_STATE_THRESHOLD and B) add a
@@ -203,7 +202,7 @@ class RemoteResource : public Service {
 			@param sinful The sinful string for the startd
 			@param claim_id The ClaimId string for the startd
 		*/
-	DEPRECATED(void setStartdInfo( const char *sinful, const char* claim_id ));
+	void setStartdInfo( const char *sinful, const char* claim_id );
 
 		/** Set all the info about the starter we can find in the
 			given ClassAd. 

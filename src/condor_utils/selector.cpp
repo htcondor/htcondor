@@ -27,14 +27,6 @@
 
 int Selector::_fd_select_size = -1;
 
-fd_set *Selector::cached_read_fds = NULL;
-fd_set *Selector::cached_write_fds = NULL;
-fd_set *Selector::cached_except_fds = NULL;
-
-fd_set *Selector::cached_save_read_fds = NULL;
-fd_set *Selector::cached_save_write_fds = NULL;
-fd_set *Selector::cached_save_except_fds = NULL;
-
 Selector::Selector()
 {
 #if defined(WIN32)
@@ -49,53 +41,20 @@ Selector::Selector()
 	fd_set_size = ( fd_select_size() + (nfdbits - 1) ) / nfdbits;
 #endif
 
-	if ( cached_read_fds ) {
-		read_fds = cached_read_fds;
-		write_fds = cached_write_fds;
-		except_fds = cached_except_fds;
+	read_fds = (fd_set *)malloc( 6 * fd_set_size * sizeof(fd_set) );
+	write_fds = read_fds + ( 1 * fd_set_size );
+	except_fds = read_fds + ( 2 * fd_set_size );
 
-		save_read_fds = cached_save_read_fds;
-		save_write_fds = cached_save_write_fds;
-		save_except_fds = cached_save_except_fds;
-
-		cached_read_fds = NULL;
-		cached_write_fds = NULL;
-		cached_except_fds = NULL;
-		cached_save_read_fds = NULL;
-		cached_save_write_fds = NULL;
-		cached_save_except_fds = NULL;
-	} else {
-		read_fds = (fd_set *)calloc( fd_set_size, sizeof(fd_set) );
-		write_fds = (fd_set *)calloc( fd_set_size, sizeof(fd_set) );
-		except_fds = (fd_set *)calloc( fd_set_size, sizeof(fd_set) );
-
-		save_read_fds = (fd_set *)calloc( fd_set_size, sizeof(fd_set) );
-		save_write_fds = (fd_set *)calloc( fd_set_size, sizeof(fd_set) );
-		save_except_fds = (fd_set *)calloc( fd_set_size, sizeof(fd_set) );
-	}
+	save_read_fds = read_fds + ( 3 * fd_set_size );
+	save_write_fds = read_fds + ( 4 * fd_set_size );
+	save_except_fds = read_fds + ( 5 * fd_set_size );
 
 	reset();
 }
 
 Selector::~Selector()
 {
-	if ( cached_read_fds == NULL ) {
-		cached_read_fds = read_fds;
-		cached_write_fds = write_fds;
-		cached_except_fds = except_fds;
-
-		cached_save_read_fds = save_read_fds;
-		cached_save_write_fds = save_write_fds;
-		cached_save_except_fds = save_except_fds;
-	} else {
-		free( read_fds );
-		free( write_fds );
-		free( except_fds );
-
-		free( save_read_fds );
-		free( save_write_fds );
-		free( save_except_fds );
-	}
+	free( read_fds );
 }
 
 void
@@ -104,7 +63,7 @@ Selector::reset()
 	_select_retval = -2;
 	_select_errno = 0;
 	state = VIRGIN;
-	timeout_wanted = FALSE;
+	timeout_wanted = false;
 	timeout.tv_sec = timeout.tv_usec = 0;
 
 	max_fd = -1;
@@ -274,7 +233,7 @@ Selector::delete_fd( int fd, IO_FUNC interest )
 void
 Selector::set_timeout( time_t sec, long usec )
 {
-	timeout_wanted = TRUE;
+	timeout_wanted = true;
 
 	timeout.tv_sec = sec;
 	timeout.tv_usec = usec;
@@ -283,7 +242,7 @@ Selector::set_timeout( time_t sec, long usec )
 void
 Selector::set_timeout( timeval tv )
 {
-	timeout_wanted = TRUE;
+	timeout_wanted = true;
 
 	timeout = tv;
 }
@@ -291,13 +250,14 @@ Selector::set_timeout( timeval tv )
 void
 Selector::unset_timeout()
 {
-	timeout_wanted = FALSE;
+	timeout_wanted = false;
 }
 
 void
 Selector::execute()
 {
 	int		nfds;
+	struct timeval timeout_copy;
 	struct timeval	*tp;
 
 	memcpy( read_fds, save_read_fds, fd_set_size * sizeof(fd_set) );
@@ -305,7 +265,8 @@ Selector::execute()
 	memcpy( except_fds, save_except_fds, fd_set_size * sizeof(fd_set) );
 
 	if( timeout_wanted ) {
-		tp = &timeout;
+		timeout_copy = timeout;
+		tp = &timeout_copy;
 	} else {
 		tp = NULL;
 	}
@@ -318,13 +279,13 @@ Selector::execute()
 				  (SELECT_FDSET_PTR) write_fds, 
 				  (SELECT_FDSET_PTR) except_fds, 
 				  tp );
+	_select_errno = errno;
 	stop_thread_safe("select");
 	_select_retval = nfds;
 
 	if( nfds < 0 ) {
-		_select_errno = errno;
 #if !defined(WIN32)
-		if( errno == EINTR ) {
+		if( _select_errno == EINTR ) {
 			state = SIGNALLED;
 			return;
 		}
@@ -354,7 +315,7 @@ Selector::select_errno()
 	return _select_errno;
 }
 
-BOOLEAN
+bool
 Selector::fd_ready( int fd, IO_FUNC interest )
 {
 	if( state != FDS_READY && state != TIMED_OUT ) {
@@ -367,7 +328,7 @@ Selector::fd_ready( int fd, IO_FUNC interest )
 	// on UNIX, make sure the value of fd makes sense
 	//
 	if ( fd < 0 || fd >= fd_select_size() ) {
-		return FALSE;
+		return false;
 	}
 #endif
 
@@ -388,28 +349,28 @@ Selector::fd_ready( int fd, IO_FUNC interest )
 	}
 
 		// Can never get here
-	return FALSE;
+	return false;
 }
 
-BOOLEAN
+bool
 Selector::timed_out()
 {
 	return state == TIMED_OUT;
 }
 
-BOOLEAN
+bool
 Selector::signalled()
 {
 	return state == SIGNALLED;
 }
 
-BOOLEAN
+bool
 Selector::failed()
 {
 	return state == FAILED;
 }
 
-BOOLEAN
+bool
 Selector::has_ready()
 {
 	return state == FDS_READY;

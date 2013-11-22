@@ -55,6 +55,7 @@
 #define GM_EXIT_INFO			15
 #define GM_RECOVER_QUERY		16
 #define GM_START				17
+#define GM_STAGE_OUT_OLD		18
 
 static const char *GMStateNames[] = {
 	"GM_INIT",
@@ -74,7 +75,8 @@ static const char *GMStateNames[] = {
 	"GM_STAGE_OUT",
 	"GM_EXIT_INFO",
 	"GM_RECOVER_QUERY",
-	"GM_START"
+	"GM_START",
+	"GM_STAGE_OUT_OLD",
 };
 
 #define REMOTE_STATE_ACCEPTING		"ACCEPTING"
@@ -646,6 +648,45 @@ void NordugridJob::doEvaluateState()
 				errorString = gahp->getErrorString();
 				dprintf( D_ALWAYS, "(%d.%d) file stage out failed: %s\n",
 						 procID.cluster, procID.proc, errorString.c_str() );
+				dprintf( D_ALWAYS, "(%d.%d) retrying with old stdout/err names\n",
+						 procID.cluster, procID.proc );
+				gmState = GM_STAGE_OUT_OLD;
+				//gmState = GM_CANCEL;
+			} else {
+				gmState = GM_DONE_SAVE;
+			}
+			} break;
+		case GM_STAGE_OUT_OLD: {
+			// CRUFT: Condor 8.0.5 introduced new names for the stdout and
+			//   stderr files on the nordugrid server. In case jobs were
+			//   queued during an upgrade from pre-8.0.5, trying using the
+			//   old names when transferring the output sandbox.
+			if ( stageList == NULL ) {
+				stageList = buildStageOutList( true );
+			}
+			if ( stageLocalList == NULL ) {
+				const char *file;
+				stageLocalList = buildStageOutLocalList( stageList, true );
+				stageList->rewind();
+				stageLocalList->rewind();
+				while ( (file = stageLocalList->next()) ) {
+					ASSERT( stageList->next() );
+					if ( IsUrl( file ) ) {
+						stageList->deleteCurrent();
+						stageLocalList->deleteCurrent();
+				}
+				}
+			}
+			rc = gahp->nordugrid_stage_out2( resourceManagerString,
+											 remoteJobId,
+											 *stageList, *stageLocalList );
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
+			} else if ( rc != 0 ) {
+				errorString = gahp->getErrorString();
+				dprintf( D_ALWAYS, "(%d.%d) file stage out failed: %s\n",
+						 procID.cluster, procID.proc, errorString.c_str() );
 				gmState = GM_CANCEL;
 			} else {
 				gmState = GM_DONE_SAVE;
@@ -908,6 +949,10 @@ std::string *NordugridJob::buildSubmitRSL()
 	std::string rsl_suffix;
 	std::string iwd;
 	std::string executable;
+	std::string remote_stdout_name;
+	std::string remote_stderr_name;
+
+	GetRemoteStdoutNames( remote_stdout_name, remote_stderr_name );
 
 	if ( jobAd->LookupString( ATTR_NORDUGRID_RSL, rsl_suffix ) &&
 						   rsl_suffix[0] == '&' ) {
@@ -1021,7 +1066,8 @@ std::string *NordugridJob::buildSubmitRSL()
 	if ( jobAd->LookupString( ATTR_JOB_OUTPUT, &attr_value ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value) ) {
-			*rsl += ")(stdout=" REMOTE_STDOUT_NAME;
+			*rsl += ")(stdout=";
+			*rsl += remote_stdout_name;
 		}
 		free( attr_value );
 		attr_value = NULL;
@@ -1030,7 +1076,8 @@ std::string *NordugridJob::buildSubmitRSL()
 	if ( jobAd->LookupString( ATTR_JOB_ERROR, &attr_value ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(attr_value) ) {
-			*rsl += ")(stderr=" REMOTE_STDERR_NAME;
+			*rsl += ")(stderr=";
+			*rsl += remote_stderr_name;
 		}
 		free( attr_value );
 	}
@@ -1127,11 +1174,15 @@ StringList *NordugridJob::buildStageInList()
 	return stage_list;
 }
 
-StringList *NordugridJob::buildStageOutList()
+StringList *NordugridJob::buildStageOutList( bool old_stdout )
 {
 	StringList *stage_list = NULL;
 	std::string buf;
 	bool transfer = TRUE;
+	std::string remote_stdout_name;
+	std::string remote_stderr_name;
+
+	GetRemoteStdoutNames( remote_stdout_name, remote_stderr_name, old_stdout );
 
 	jobAd->LookupString( ATTR_TRANSFER_OUTPUT_FILES, buf );
 	stage_list = new StringList( buf.c_str(), "," );
@@ -1140,8 +1191,8 @@ StringList *NordugridJob::buildStageOutList()
 	if ( transfer && jobAd->LookupString( ATTR_JOB_OUTPUT, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf.c_str()) ) {
-			if ( !stage_list->file_contains( REMOTE_STDOUT_NAME ) ) {
-				stage_list->append( REMOTE_STDOUT_NAME );
+			if ( !stage_list->file_contains( remote_stdout_name.c_str() ) ) {
+				stage_list->append( remote_stdout_name.c_str() );
 			}
 		}
 	}
@@ -1151,8 +1202,8 @@ StringList *NordugridJob::buildStageOutList()
 	if ( transfer && jobAd->LookupString( ATTR_JOB_ERROR, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf.c_str()) ) {
-			if ( !stage_list->file_contains( REMOTE_STDERR_NAME ) ) {
-				stage_list->append( REMOTE_STDERR_NAME );
+			if ( !stage_list->file_contains( remote_stderr_name.c_str() ) ) {
+				stage_list->append( remote_stderr_name.c_str() );
 			}
 		}
 	}
@@ -1160,7 +1211,8 @@ StringList *NordugridJob::buildStageOutList()
 	return stage_list;
 }
 
-StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list )
+StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list,
+												  bool old_stdout )
 {
 	StringList *stage_local_list;
 	char *remaps = NULL;
@@ -1170,6 +1222,10 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list )
 	std::string stderr_name = "";
 	std::string buff;
 	std::string iwd = "/";
+	std::string remote_stdout_name;
+	std::string remote_stderr_name;
+
+	GetRemoteStdoutNames( remote_stdout_name, remote_stderr_name, old_stdout );
 
 	if ( jobAd->LookupString( ATTR_JOB_IWD, iwd ) ) {
 		if ( iwd.length() > 1 && iwd[iwd.length() - 1] != '/' ) {
@@ -1188,9 +1244,9 @@ StringList *NordugridJob::buildStageOutLocalList( StringList *stage_list )
 	while ( (remote_name = stage_list->next()) ) {
 			// stdout and stderr don't get remapped, and their paths
 			// are evaluated locally
-		if ( strcmp( REMOTE_STDOUT_NAME, remote_name ) == 0 ) {
+		if ( strcmp( remote_stdout_name.c_str(), remote_name ) == 0 ) {
 			local_name = stdout_name.c_str();
-		} else if ( strcmp( REMOTE_STDERR_NAME, remote_name ) == 0 ) {
+		} else if ( strcmp( remote_stderr_name.c_str(), remote_name ) == 0 ) {
 			local_name = stderr_name.c_str();
 		} else if( remaps && filename_remap_find( remaps, remote_name,
 												  local_name ) ) {
@@ -1241,5 +1297,27 @@ void NordugridJob::NotifyNewRemoteStatus( const char *status )
 	}
 	if ( gmState == GM_RECOVER_QUERY ) {
 		SetEvaluateState();
+	}
+}
+
+void NordugridJob::GetRemoteStdoutNames( std::string &std_out, std::string &std_err, bool use_old_names )
+{
+	if ( use_old_names ) {
+		std_out = REMOTE_STDOUT_NAME;
+		std_err = REMOTE_STDERR_NAME;
+	} else {
+		std::string gjid;
+		jobAd->LookupString( ATTR_GLOBAL_JOB_ID, gjid );
+
+		size_t loc = 0;
+		#define FILENAME_FILTER "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-_"
+		while( (loc = gjid.find_first_not_of( FILENAME_FILTER, loc )) != std::string::npos ) {
+			gjid[loc] = '_';
+		}
+
+		std_out = REMOTE_STDOUT_NAME ".";
+		std_out += gjid;
+		std_err = REMOTE_STDERR_NAME ".";
+		std_err += gjid;
 	}
 }

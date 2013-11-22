@@ -48,6 +48,7 @@
 #include "protocol.h"
 #include "internet_obsolete.h"
 #include "condor_sockfunc.h"
+#include "selector.h"
 using namespace std;
 
 XferSummary	xfer_summary;
@@ -420,8 +421,7 @@ void Server::SetUpPeers()
 
 void Server::Execute()
 {
-	fd_set         req_sds;
-	int            num_sds_ready = 0;
+	Selector       selector;
 	time_t         current_time;
 	time_t         last_reclaim_time;
 	time_t		   last_clean_time;
@@ -452,6 +452,11 @@ void Server::Execute()
 	// take into account that I grab the time AFTER I removed the state files
 	// this ensures I don't count the time it took to remove them.
 	last_remove_stale_time = time(NULL);
+
+	selector.add_fd( store_req_sd, Selector::IO_READ );
+	selector.add_fd( restore_req_sd, Selector::IO_READ );
+	selector.add_fd( service_req_sd, Selector::IO_READ );
+	selector.add_fd( replicate_req_sd, Selector::IO_READ );
 
 	while (more) {                          // Continues until SIGUSR2 signal
 		poll.tv_sec = reclaim_interval - ((unsigned int)current_time -
@@ -484,49 +489,40 @@ void Server::Execute()
 			poll.tv_sec = remove_stale_ckptfile_interval;
 		}
 
-		errno = 0;
-		FD_ZERO(&req_sds);
-		FD_SET(store_req_sd, &req_sds);
-		FD_SET(restore_req_sd, &req_sds);
-		FD_SET(service_req_sd, &req_sds);
-		FD_SET(replicate_req_sd, &req_sds);
 		// Can reduce the number of calls to the reclaimer by blocking until a
 		//   request comes in (change the &poll argument to NULL).  The 
 		//   philosophy is that one does not need to reclaim a child process
 		//   until another is ready to start
 		UnblockSignals();
-		while( (more) && 
-			   ((num_sds_ready=select(max_req_sd_plus1,
-									  (SELECT_FDSET_PTR)&req_sds, 
-									  NULL, NULL, &poll)) > 0)) {
-		        BlockSignals();
+		selector.set_timeout(poll);
+		selector.execute();
+		while( (more) && selector.has_ready() ) {
+
+			BlockSignals();
 	   
-			if (FD_ISSET(service_req_sd, &req_sds))
+			if (selector.fd_ready(service_req_sd, Selector::IO_READ))
 				HandleRequest(service_req_sd, SERVICE_REQ);
-			if (FD_ISSET(store_req_sd, &req_sds))
+			if (selector.fd_ready(store_req_sd, Selector::IO_READ))
 				HandleRequest(store_req_sd, STORE_REQ);
-			if (FD_ISSET(restore_req_sd, &req_sds))
+			if (selector.fd_ready(restore_req_sd, Selector::IO_READ))
 				HandleRequest(restore_req_sd, RESTORE_REQ);
-			if (FD_ISSET(replicate_req_sd, &req_sds))
+			if (selector.fd_ready(replicate_req_sd, Selector::IO_READ))
 				HandleRequest(replicate_req_sd, REPLICATE_REQ);
-			FD_ZERO(&req_sds);
-			FD_SET(store_req_sd, &req_sds);
-			FD_SET(restore_req_sd, &req_sds);
-			FD_SET(service_req_sd, &req_sds);	  
-			FD_SET(replicate_req_sd, &req_sds);
 
 			UnblockSignals();
+			selector.execute();
 		}
 		BlockSignals();
-		if (num_sds_ready < 0) {
-			if (errno == ECHILD) {
+		if (selector.failed()) {
+			int select_errno = selector.select_errno();
+			if (select_errno == ECHILD) {
 				// Note: we shouldn't really get an ECHILD here, but
 				// we did (see condor-admin 14075).
 				dprintf(D_ALWAYS, "WARNING: got ECHILD from select()\n");
-			} else if (errno != EINTR) {
+			} else {
 				dprintf(D_ALWAYS, 
 						"ERROR: cannot select from request ports, errno = "
-						"%d (%s)\n", errno, strerror(errno));
+						"%d (%s)\n", select_errno, strerror(select_errno));
 				exit(SELECT_ERROR);
 			}
 		}

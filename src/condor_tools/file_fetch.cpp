@@ -33,9 +33,9 @@ static size_t WriteCallback(char *contents, size_t size, size_t nmemb, void *use
     
     if(!downloaded_data->text) return 0;
 
-    downloaded_data->size = size;
-    downloaded_data->text[data_size] = '\0';
+    downloaded_data->size = data_size;
     memcpy(downloaded_data->text, contents, data_size);
+    downloaded_data->text[data_size] = 0;
 
     return data_size;
 }
@@ -52,7 +52,7 @@ bool print_cached_file(const char *cached_path)
     FILE *fp;
     int character;
 
-    fp = safe_fopen_no_create_follow(cached_path, "r");
+    fp = safe_fopen_no_create_follow(cached_path, "rb");
 
     if(!fp)
     {
@@ -77,10 +77,11 @@ int main(int argc, char **argv) {
     Downloaded_Data downloaded_data;
     FILE *fp = NULL;
     long http_code;
+    int cb = 0;
 
     downloaded_data.text = NULL;
     downloaded_data.size = 0;
-	
+
     if(argc < 2 || argc > 3)
     {
         print_help();
@@ -112,7 +113,7 @@ int main(int argc, char **argv) {
     curl_easy_setopt(handle, CURLOPT_URL, argv[1]);
     curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, WriteCallback);
     curl_easy_setopt(handle, CURLOPT_WRITEDATA, &downloaded_data);
-	curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, -1);
+    curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, -1);
 
     rval = curl_easy_perform(handle);
     if(rval || !downloaded_data.text)
@@ -122,7 +123,6 @@ int main(int argc, char **argv) {
     }
 
     rval = curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &http_code);
-
     if(rval)
     {
         print_cached_file(cache_path);
@@ -134,14 +134,19 @@ int main(int argc, char **argv) {
         print_cached_file(cache_path);
         goto Cleanup;
     }
-    
-    printf(downloaded_data.text);
 
-    fp = safe_fcreate_replace_if_exists(cache_path, "w");
+    cb = fwrite(downloaded_data.text, 1, downloaded_data.size, stdout);
+    if (cb != downloaded_data.size) {
+        fprintf(stderr, "error: could not write entire config to stdout\n");
+    }
 
+    fp = safe_fcreate_replace_if_exists(cache_path, "wb");
     if(!fp) goto Cleanup;
 
-    fputs(downloaded_data.text, fp);
+    cb = fwrite(downloaded_data.text, 1, downloaded_data.size, fp);
+    if (cb != downloaded_data.size) {
+        fprintf(stderr, "error: could not write entire config to cache file!\n");
+    }
 
     fclose(fp);
 
