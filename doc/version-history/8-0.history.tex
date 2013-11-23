@@ -51,6 +51,10 @@ setting.
 from running.
 \Ticket{4087}
 
+\item Fixed a bug where job output files may not be properly truncated
+at startup on Windows platforms. 
+\Ticket{4097}
+
 \item Fixed bug with \Condor{submit} -interactive when
 cgroups where enabled.  With that combination, the shell would
 get terminated immediately after startup.
