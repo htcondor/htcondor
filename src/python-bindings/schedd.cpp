@@ -217,6 +217,36 @@ private:
     Schedd& m_schedd;
 };
 
+struct query_process_helper
+{
+    object callable;
+    list output_list;
+};
+
+bool
+query_process_callback(void * data, ClassAd *ad)
+{
+    if (PyErr_Occurred()) return true;
+
+    try
+    {
+        query_process_helper *helper = static_cast<query_process_helper *>(data);
+        boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
+        wrapper->CopyFrom(*ad);
+        object wrapper_obj = object(wrapper);
+        object result = (helper->callable == object()) ? wrapper_obj : helper->callable(wrapper);
+        if (result != object())
+        {
+            helper->output_list.append(wrapper);
+        }
+    }
+    catch (error_already_set)
+    {
+        // Suppress the C++ exception.  HTCondor sure can't deal with it.
+        // However, PyErr_Occurred will be set and we will no longer invoke the callback.
+    }
+    return true;
+}
 
 struct Schedd {
 
@@ -265,7 +295,7 @@ struct Schedd {
         if (m_connection) { m_connection->abort(); }
     }
 
-    object query(const std::string &constraint="", list attrs=list())
+    object query(const std::string &constraint="", list attrs=list(), object callback=object())
     {
         CondorQ q;
 
@@ -285,7 +315,19 @@ struct Schedd {
 
         ClassAdList jobs;
 
-        int fetchResult = q.fetchQueueFromHost(jobs, attrs_list, m_addr.c_str(), m_version.c_str(), NULL);
+        list retval;
+        query_process_helper helper;
+        helper.callable = callback;
+        helper.output_list = retval;
+        void *helper_ptr = static_cast<void *>(&helper);
+
+        int fetchResult = q.fetchQueueFromHostAndProcess(m_addr.c_str(), attrs_list, query_process_callback, helper_ptr, true, NULL);
+
+        if (PyErr_Occurred())
+        {
+            throw_error_already_set();
+        }
+
         switch (fetchResult)
         {
         case Q_OK:
@@ -301,15 +343,6 @@ struct Schedd {
             break;
         }
 
-        list retval;
-        ClassAd *job;
-        jobs.Open();
-        while ((job = jobs.Next()))
-        {
-            boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
-            wrapper->CopyFrom(*job);
-            retval.append(wrapper);
-        }
         return retval;
     }
 
@@ -837,7 +870,7 @@ ConnectionSentry::~ConnectionSentry()
     disconnect();
 }
 
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(query_overloads, query, 0, 2);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(query_overloads, query, 0, 3);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(submit_overloads, submit, 1, 4);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(transaction_overloads, transaction, 0, 2);
 
@@ -874,7 +907,8 @@ void export_schedd()
         .def("query", &Schedd::query, query_overloads("Query the HTCondor schedd for jobs.\n"
             ":param constraint: An optional constraint for filtering out jobs; defaults to 'true'\n"
             ":param attr_list: A list of attributes for the schedd to project along.  Defaults to having the schedd return all attributes.\n"
-            ":return: A list of matching jobs, containing the requested attributes.", (boost::python::arg("self"), boost::python::arg("constraint")=true, boost::python::arg("attr_list")=boost::python::list())))
+            ":param callback: A callback function to be invoked for each ad; the return value (if not None) is added to the list.\n"
+            ":return: A list of matching jobs, containing the requested attributes."))
         .def("act", &Schedd::actOnJobs2)
         .def("act", &Schedd::actOnJobs, "Change status of job(s) in the schedd.\n"
             ":param action: Action to perform; must be from enum JobAction.\n"
