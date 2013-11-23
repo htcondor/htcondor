@@ -1035,7 +1035,7 @@ secondPass (int argc, char *argv[])
 			}
 			continue;
 		}
-		if (matchPrefix (argv[i], "-target", 2)) {
+		if (matchPrefix (argv[i], "-target", 5)) {
 			i++;
 			continue;
 		}
