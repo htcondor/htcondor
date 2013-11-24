@@ -20,6 +20,7 @@
 #define _CONDOR_ALLOW_OPEN
 #include "condor_common.h"
 #include "stream.h"
+#include "reli_sock.h"
 #include "condor_classad.h"
 #include "condor_attributes.h"
 #include "my_hostname.h"
@@ -199,7 +200,7 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
  * It should also do encryption now.
  */
 
-bool putClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private, StringList *attr_whitelist )
+int putClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private, StringList *attr_whitelist )
 {
     bool completion;
     completion = _putClassAd(sock, ad, false, exclude_private, attr_whitelist);
@@ -209,13 +210,37 @@ bool putClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private, Stri
 	return completion;
 }
 
-bool
+/*
+ * Put the ClassAd onto the wire in a non-blocking manner.
+ * Return codes:
+ * - If the network would have blocked (meaning the socket is buffering the add internally),
+ *   then this returns 2.  Callers should stop sending ads, register the socket with DC for
+ *   write, and wait for a callback.
+ * - On success, this returns 1; this indicates that further ClassAds can be sent to this ReliSock.
+ * - On permanent failure, this returns 0.
+ */
+int putClassAdNonblocking(ReliSock *sock, classad::ClassAd& ad, bool exclude_private, StringList *attr_whitelist )
+{
+	int retval;
+	bool prior_state = sock->set_non_blocking(true);
+	retval = _putClassAd(sock, ad, false, exclude_private, attr_whitelist);
+	bool backlog = sock->clear_backlog_flag();
+	sock->set_non_blocking(prior_state);
+	if (!retval) {
+		return 0;
+	} else if (backlog) {
+		return 2;
+	}
+	return retval;
+}
+
+int
 putClassAdNoTypes ( Stream *sock, classad::ClassAd& ad, bool exclude_private )
 {
     return _putClassAd(sock, ad, true, exclude_private, NULL);
 }
 
-bool _putClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
+int _putClassAd( Stream *sock, classad::ClassAd& ad, bool excludeTypes,
 					 bool exclude_private, StringList *attr_whitelist )
 {
 	classad::ClassAdUnParser	unp;

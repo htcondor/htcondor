@@ -233,9 +233,8 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 
 
 int
-condor_write( char const *peer_description, SOCKET fd, const char *buf, int sz, int timeout, int flags )
+condor_write( char const *peer_description, SOCKET fd, const char *buf, int sz, int timeout, int flags, bool non_blocking )
 {
-	Selector selector;
 	int nw = 0, nwo = 0;
 	unsigned int start_time = 0, cur_time = 0;
 	char tmpbuf[1];
@@ -246,12 +245,13 @@ condor_write( char const *peer_description, SOCKET fd, const char *buf, int sz, 
 
 	if( IsDebugLevel( D_NETWORK ) ) {
 		dprintf(D_NETWORK,
-				"condor_write(fd=%d %s,,size=%d,timeout=%d,flags=%d)\n",
+				"condor_write(fd=%d %s,,size=%d,timeout=%d,flags=%d,non_blocking=%d)\n",
 				fd,
 				not_null_peer_description(peer_description,fd,sinbuf),
 				sz,
 				timeout,
-				flags);
+				flags,
+				non_blocking);
 	}
 
 	/* Pre-conditions. */
@@ -259,6 +259,59 @@ condor_write( char const *peer_description, SOCKET fd, const char *buf, int sz, 
 	ASSERT(fd >= 0);     /* Need valid file descriptor */
 	ASSERT(buf != NULL); /* Need valid buffer to write */
 
+	if (non_blocking) {
+#ifdef WIN32
+		unsigned long mode = 1; // nonblocking mode
+		if (ioctlsocket(fd, FIONBIO, &mode) < 0)
+			return -1;
+#else
+		int fcntl_flags;
+		if ( (fcntl_flags=fcntl(fd, F_GETFL)) < 0 )
+			return -1;
+		fcntl_flags |= O_NONBLOCK;      // set nonblocking mode
+		if ( fcntl(fd, F_SETFL, fcntl_flags) == -1 )
+			return -1;
+#endif
+		nw = -2;
+		while (nw == -2 || (nw == -1 && errno == EINTR)) {
+			nw = send(fd, &buf[nw], sz - nw, flags);
+		}
+
+		if ( nw <= 0 ) {
+			int the_error;
+			char const *the_errorstr;
+#ifdef WIN32
+			the_error = WSAGetLastError();
+			the_errorstr = "";
+#else
+			the_error = errno;
+			the_errorstr = strerror(the_error);
+#endif
+			if ( !errno_is_temporary(the_error) ) {
+				dprintf( D_ALWAYS, "condor_write() failed: send() %d bytes to %s "
+					"returned %d, "     
+					"timeout=%d, errno=%d %s.\n",
+					sz,                 
+					not_null_peer_description(peer_description,fd,sinbuf),
+					nwo, timeout, the_error, the_errorstr );
+			}
+		}       
+
+#ifdef WIN32
+		mode = 0; // reset blocking mode
+		if (ioctlsocket(fd, FIONBIO, &mode) < 0)
+			return -1;
+#else
+		if ( (fcntl_flags=fcntl(fd, F_GETFL)) < 0 )
+			return -1;
+		fcntl_flags &= ~O_NONBLOCK;     // reset blocking mode
+		if ( fcntl(fd, F_SETFL, fcntl_flags) == -1 )
+			return -1;
+#endif
+		return nw;
+	}
+
+	Selector selector;
 	selector.add_fd( fd, Selector::IO_READ );
 	selector.add_fd( fd, Selector::IO_WRITE );
 	selector.add_fd( fd, Selector::IO_EXCEPT );

@@ -242,6 +242,10 @@ public:
 
     const char * isIncomingDataMD5ed();
 
+	bool set_non_blocking(bool val) {bool state = m_non_blocking; m_non_blocking = val; return state;}
+	bool is_non_blocking() const {return m_non_blocking;}
+
+	int clear_backlog_flag() {bool state = m_has_backlog; m_has_backlog = false; return state;}
 
 //	PROTECTED INTERFACE TO RELIABLE SOCKS
 //
@@ -293,6 +297,10 @@ protected:
                 CONDOR_MD_MODE  mode_;
                 Condor_MD_MAC * mdChecker_;
 		ReliSock      * p_sock;
+		Buf		*m_out_buf;
+		int finish_packet(const char *peer_description, int sock, int timeout);
+		void stash_packet();
+
 	public:
 		SndMsg();
                 ~SndMsg();
@@ -322,6 +330,9 @@ protected:
 
 		// after connecting, request to be routed to this daemon
 	char *m_target_shared_port_id;
+
+	bool m_has_backlog;
+	bool m_non_blocking;
 
 	virtual void setTargetSharedPortID( char const *id );
 	virtual bool sendTargetSharedPortID();
