@@ -1073,6 +1073,7 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 				}
 				FreeJobAd(ad);
 			}
+			assert( syscall_sock->end_of_message() );
 		} while (rval >= 0);
 		assert( syscall_sock->end_of_message() );;
 

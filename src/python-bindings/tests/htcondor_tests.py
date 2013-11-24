@@ -246,6 +246,26 @@ class TestPythonBindings(WithDaemons):
             time.sleep(1)
         self.assertEquals(open(output_file).read(), "hello world\n");
 
+    def testScheddSubmitMany(self):
+        self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
+        output_file = os.path.join(testdir, "test.out")
+        if os.path.exists(output_file):
+            os.unlink(output_file)
+        schedd = htcondor.Schedd()
+        ad = classad.parse(open("tests/submit.ad"))
+        ads = []
+        cluster = schedd.submit(ad, 1000, False, ads)
+        #print ads[0]
+        for i in range(60):
+            ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
+            #print ads
+            if len(ads) == 0:
+                break
+            if i % 2 == 0:
+                schedd.reschedule()
+            time.sleep(1)
+        self.assertEquals(open(output_file).read(), "hello world\n");
+
     def testScheddSubmitSpool(self):
         self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
         output_file = os.path.join(testdir, "test.out")
