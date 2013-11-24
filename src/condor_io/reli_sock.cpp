@@ -451,13 +451,18 @@ ReliSock::handle_incoming_packet()
 	return TRUE;
 }
 
+int
+ReliSock::finish_end_of_message()
+{
+	return snd_msg.finish_packet(peer_description(), _sock, _timeout);
+}
 
 	// Ret values:
 	// - TRUE: successfully sent EOM; if set to ignore next EOM, we did nothing.
 	// - FALSE: failure occurred when sending EOM.
 	// - 2: When encoding mode and non-blocking is enabled, this indicates that
-	//   a subset of the data successfully went to the wire but end_of_message
-	//   needs to be called again.
+	//   a subset of the data successfully went to the wire but finish_end_of_message
+	//   needs to be called.
 	// If allow_empty_message is set and there are no bytes to send, return TRUE.
 	// Otherwise, an error occurs if there is no unbuffer bytes.
 int 
@@ -473,7 +478,11 @@ ReliSock::end_of_message()
 				return TRUE;
 			}
 			if (!snd_msg.buf.empty()) {
-				return snd_msg.snd_packet(peer_description(), _sock, TRUE, _timeout);
+				int retval = snd_msg.snd_packet(peer_description(), _sock, TRUE, _timeout);
+				if (retval == 2 || retval == 3) {
+					m_has_backlog = true;
+				}
+				return retval ? true : false;
 			}
 			if ( allow_empty_message_flag ) {
 				allow_empty_message_flag = FALSE;
@@ -560,7 +569,7 @@ ReliSock::put_bytes(const void *data, int sz)
 			int retval = snd_msg.snd_packet(peer_description(), _sock, FALSE, _timeout);
 			// This would block and the user asked us to work non-buffered - force the
 			// buffer to grow to hold the data for now.
-			if (retval == 2) {
+			if (retval == 3) {
 				nw = snd_msg.buf.put_force(&((char *)dta)[nw], sz-nw);
 				m_has_backlog = true;
 				nw += tw;
@@ -781,7 +790,7 @@ int ReliSock::SndMsg::finish_packet(const char *peer_description, int sock, int 
 		return true;
 	}
 	int retval = true;
-	int result = m_out_buf->write(peer_description, sock, timeout, p_sock->is_non_blocking());
+	int result = m_out_buf->write(peer_description, sock, -1, timeout, p_sock->is_non_blocking());
 	if (result < 0) {
 		retval = false;
 	} else if (!m_out_buf->consumed()) {
@@ -800,6 +809,7 @@ void ReliSock::SndMsg::stash_packet()
 {
 	m_out_buf = new Buf();
 	m_out_buf->swap(buf);
+	buf.reset();
 }
 
 	// Send the current buffer in a single CEDAR packet.
@@ -817,7 +827,7 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 		// First, see if we have an incomplete packet.
 	int retval = finish_packet(peer_description, _sock, _timeout);
 	if (retval == 2) {
-		return 2;
+		return 3;
 	} else if (!retval) {
 		return false;
 	}

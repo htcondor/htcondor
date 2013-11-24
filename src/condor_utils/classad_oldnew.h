@@ -31,6 +31,8 @@
 #include "classad/value.h"
 #include "classad/matchClassad.h"
 
+// Forward dec'l
+class ReliSock;
 
 void AttrList_setPublishServerTimeMangled( bool publish);
 
@@ -45,6 +47,15 @@ bool getClassAdNoTypes( Stream *sock, classad::ClassAd& ad );
  * @param attr_whitelist list of attributes to send (default is to send all)
  */
 int putClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private = false, StringList *attr_whitelist=NULL );
+
+/** Send the ClassAd on the CEDAR stream.  This will not block even if the send socket is full.
+ *  Returns 2 if this would have blocked; the ClassAd will be buffered in memory.
+ * @param sock the stream
+ * @param ad the ClassAd to be sent
+ * @param exclude_private whether to exclude private attributes
+ * @param attr_whitelist list of attributes to send (default is to send all)
+ */
+int putClassAdNonblocking(ReliSock *sock, classad::ClassAd& ad, bool exclude_private, StringList *attr_whitelist=NULL );
 
 /** Send the ClassAd on the CEDAR stream, excluding the special handling
  *  for MyType and TargetType. You will rarely want this function.
