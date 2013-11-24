@@ -1069,10 +1069,23 @@ do_Q_request(ReliSock *syscall_sock,bool &may_fork)
 
 					assert( putClassAd(syscall_sock, *ad, true, &internals) );
 				} else {
-					assert( putClassAd(syscall_sock, *ad, true) );
+					//dprintf(D_FULLDEBUG, "About to put ClassAd onto wire\n");
+					int retval = putClassAdNonblocking(syscall_sock, *ad, true);
+					if (retval == 2) {
+						dprintf(D_FULLDEBUG, "We have a network backlog!\n");
+					}
+					assert( retval );
 				}
 				FreeJobAd(ad);
 			}
+			bool prior_state = syscall_sock->set_non_blocking(true);
+			assert( syscall_sock->end_of_message() );
+			if (syscall_sock->clear_backlog_flag()) {
+				dprintf(D_FULLDEBUG, "Network backlog - EOM would have blocked!\n");
+				syscall_sock->set_non_blocking(false);
+				assert( syscall_sock->finish_end_of_message() );
+			}
+			syscall_sock->set_non_blocking(prior_state);
 		} while (rval >= 0);
 		assert( syscall_sock->end_of_message() );;
 

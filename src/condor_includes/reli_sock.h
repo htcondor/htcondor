@@ -71,6 +71,12 @@ public:
     ///
 	virtual int end_of_message();
 
+		// If in non-blocking mode and EOM returns 2,
+		// then this must be called until it finishes
+		// successfully (1) or fails (0); if this returns
+		// 2, then try again in the future.
+	int finish_end_of_message();
+
 	virtual bool peek_end_of_message();
 
 	/**	@return true if a complete message is ready to be read
@@ -298,7 +304,6 @@ protected:
                 Condor_MD_MAC * mdChecker_;
 		ReliSock      * p_sock;
 		Buf		*m_out_buf;
-		int finish_packet(const char *peer_description, int sock, int timeout);
 		void stash_packet();
 
 	public:
@@ -306,6 +311,10 @@ protected:
                 ~SndMsg();
 		Buf			buf;
 		int snd_packet(char const *peer_description, int, int, int);
+
+			// If there is a packet not flushed to the network, try to
+			// send it again.
+		int finish_packet(const char *peer_description, int sock, int timeout);
 
 		//function to support the use of condor_read /write
 		
