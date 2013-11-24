@@ -274,7 +274,7 @@ condor_write( char const *peer_description, SOCKET fd, const char *buf, int sz, 
 #endif
 		nw = -2;
 		while (nw == -2 || (nw == -1 && errno == EINTR)) {
-			nw = send(fd, &buf[nw], sz - nw, flags);
+			nw = send(fd, buf, sz, flags);
 		}
 
 		if ( nw <= 0 ) {
@@ -294,6 +294,10 @@ condor_write( char const *peer_description, SOCKET fd, const char *buf, int sz, 
 					sz,                 
 					not_null_peer_description(peer_description,fd,sinbuf),
 					nwo, timeout, the_error, the_errorstr );
+			}
+			else
+			{
+				nw = 0;
 			}
 		}       
 

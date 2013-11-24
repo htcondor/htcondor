@@ -104,7 +104,7 @@ int Buf::write(
 		sz = num_untouched();
 	}
 
-	nw = condor_write(peer_description,sockd, &_dta[num_touched()], sz , timeout, non_blocking);
+	nw = condor_write(peer_description,sockd, &_dta[num_touched()], sz , timeout, 0, non_blocking);
 	if (nw < 0) {
 		dprintf( D_ALWAYS, "Buf::write(): condor_write() failed\n" );
 		return -1;
@@ -152,12 +152,12 @@ int Buf::flush(
 */
 
 
-	int retval = write(peer_description,sockd, -1, timeout, non_blocking);
-	if (!non_blocking || (retval == sz)) {
+	sz = write(peer_description,sockd, -1, timeout, non_blocking);
+	if (!non_blocking || consumed()) {
 		reset();
 	}
 
-	return retval;
+	return sz;
 }
 
 
