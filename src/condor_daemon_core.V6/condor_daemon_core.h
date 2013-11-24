@@ -692,7 +692,8 @@ class DaemonCore : public Service
                          SocketHandler     handler,
                          const char *      handler_descrip,
                          Service *         s                = NULL,
-                         DCpermission      perm             = ALLOW);
+                         DCpermission      perm             = ALLOW,
+			 HandlerType          handler_type = HANDLE_READ);
 
     /** Not_Yet_Documented
         @param iosock           Not_Yet_Documented
@@ -708,7 +709,8 @@ class DaemonCore : public Service
                          SocketHandlercpp     handlercpp,
                          const char *         handler_descrip,
                          Service*             s,
-                         DCpermission         perm = ALLOW);
+                         DCpermission         perm = ALLOW,
+			 HandlerType          handler_type = HANDLE_READ);
 
     /** Not_Yet_Documented
         @param iosock           Not_Yet_Documented
@@ -724,6 +726,7 @@ class DaemonCore : public Service
                                 "DC Command Handler",
                                 NULL,
                                 ALLOW,
+				HANDLE_READ,
                                 0); 
     }
 
@@ -1631,6 +1634,7 @@ class DaemonCore : public Service
                         const char *handler_descrip,
                         Service* s, 
                         DCpermission perm,
+			HandlerType handler_type,
                         int is_cpp);
 
 		// This function is called in order to have
@@ -1740,6 +1744,8 @@ class DaemonCore : public Service
 		bool			call_handler;
 		bool			waiting_for_data;
 		bool			remove_asap;	// remove when being_serviced==false
+		HandlerType		handler_type;
+		int				servicing_tid;	// tid servicing this socket
     };
     void              DumpSocketTable(int, const char* = NULL);
     int               maxSocket;  // number of socket handlers to start with

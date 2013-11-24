@@ -786,19 +786,19 @@ bool DaemonCore::TooManyRegisteredSockets(int fd,MyString *msg,int num_fds)
 
 int	DaemonCore::Register_Socket(Stream* iosock, const char* iosock_descrip,
 				SocketHandler handler, const char* handler_descrip,
-				Service* s, DCpermission perm)
+				Service* s, DCpermission perm, HandlerType handler_type)
 {
 	return( Register_Socket(iosock, iosock_descrip, handler,
 							(SocketHandlercpp)NULL, handler_descrip, s,
-							perm, FALSE) );
+							perm, handler_type, FALSE) );
 }
 
 int	DaemonCore::Register_Socket(Stream* iosock, const char* iosock_descrip,
 				SocketHandlercpp handlercpp, const char* handler_descrip,
-				Service* s, DCpermission perm)
+				Service* s, DCpermission perm, HandlerType handler_type)
 {
 	return( Register_Socket(iosock, iosock_descrip, NULL, handlercpp,
-							handler_descrip, s, perm, TRUE) );
+							handler_descrip, s, perm, handler_type, TRUE) );
 }
 
 int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
@@ -1392,6 +1392,7 @@ int DaemonCore::Cancel_Signal( int sig )
 int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 				SocketHandler handler, SocketHandlercpp handlercpp,
 				const char *handler_descrip, Service* s, DCpermission perm,
+				HandlerType handler_type,
 				int is_cpp)
 {
     int     i;
@@ -1522,6 +1523,7 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	(*sockTable)[i].handlercpp = handlercpp;
 	(*sockTable)[i].is_cpp = (bool)is_cpp;
 	(*sockTable)[i].perm = perm;
+	(*sockTable)[i].handler_type = handler_type;
 	(*sockTable)[i].service = s;
 	(*sockTable)[i].data_ptr = NULL;
 	free((*sockTable)[i].iosock_descrip);
@@ -3205,9 +3207,19 @@ void DaemonCore::Driver()
 					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_WRITE );
 					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_EXCEPT );
 				} else {
-						// we want to be woken when there is something
-						// to read.
-					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
+					int sockfd = (*sockTable)[i].iosock->get_file_desc();
+					switch( (*sockTable)[i].handler_type ) {
+					case HANDLE_READ:
+						selector.add_fd( sockfd, Selector::IO_READ );
+						break;
+					case HANDLE_WRITE:
+						selector.add_fd( sockfd, Selector::IO_WRITE );
+						break;
+					case HANDLE_READ_WRITE:
+						selector.add_fd( sockfd, Selector::IO_READ );
+						selector.add_fd( sockfd, Selector::IO_WRITE );
+						break;
+					}
 				}
 
 					// If this socket times out sooner than
