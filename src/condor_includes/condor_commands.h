@@ -168,6 +168,7 @@
 #define CANCEL_DRAIN_JOBS (SCHED_VERS+113)
 #define GET_PRIORITY_ROLLUP (SCHED_VERS+114) // negotiator
 #define QUERY_SCHEDD_HISTORY (SCHED_VERS+115)
+#define QUERY_JOB_ADS (SCHED_VERS+116)
 
 // values used for "HowFast" in the draining request
 #define DRAIN_GRACEFUL 0

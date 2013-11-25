@@ -55,7 +55,7 @@ int putClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private = fals
  * @param exclude_private whether to exclude private attributes
  * @param attr_whitelist list of attributes to send (default is to send all)
  */
-int putClassAdNonblocking(ReliSock *sock, classad::ClassAd& ad, bool exclude_private, StringList *attr_whitelist=NULL );
+int putClassAdNonblocking(ReliSock *sock, classad::ClassAd& ad, bool exclude_private = false, StringList *attr_whitelist=NULL );
 
 /** Send the ClassAd on the CEDAR stream, excluding the special handling
  *  for MyType and TargetType. You will rarely want this function.

@@ -49,9 +49,14 @@ typedef HashTable<int,BaseCollection*> CollectionHashTable;
     @author Adiel Yoaz
 */
 
+class ClassAdLogProjectionFilterIterator;
+
 class ClassAdCollection : private ClassAdLog {
 
 public:
+
+  friend ClassAdLogProjectionFilterIterator BeginIterator(const classad::ExprTree &requirements, StringList &projection, int timeslice_ms);
+  friend ClassAdLogProjectionFilterIterator EndIterator();
 
   //------------------------------------------------------------------------
   /**@name Constructor and Destructor

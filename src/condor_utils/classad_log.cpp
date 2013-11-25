@@ -54,6 +54,91 @@ ptr = NULL;
 
 const char *EMPTY_CLASSAD_TYPE_NAME = "(empty)";
 
+ClassAdLogProjectionFilterIterator::ClassAdLogProjectionFilterIterator(ClassAdHashTable *table, const classad::ExprTree *requirements, StringList *projection, int timeslice_ms)
+	: m_table(table),
+	  m_cur(table->begin()),
+	  m_requirements(requirements),
+	  m_projection(projection),
+	  m_timeslice_ms(timeslice_ms),
+	  m_done(false)
+	{}
+
+ClassAdLogProjectionFilterIterator::ClassAdLogProjectionFilterIterator(const ClassAdLogProjectionFilterIterator &other)
+	: m_table(other.m_table),
+	  m_cur(other.m_cur),
+	  m_requirements(other.m_requirements),
+	  m_projection(other.m_projection),
+	  m_timeslice_ms(other.m_timeslice_ms),
+	  m_done(other.m_done)
+{
+}
+
+ClassAd* ClassAdLogProjectionFilterIterator::operator *() const {
+	if (!m_cur_ad || m_done) return NULL;
+
+	if (m_projection && m_projection->number() != 0) { 
+		m_projection->rewind();                            
+		StringList internals;                   
+		StringList externals; // shouldn't have any
+		while (char *attr = m_projection->next()) {        
+
+			if( !m_cur_ad->GetExprReferences(attr, internals, externals) ) {
+				dprintf(D_FULLDEBUG,                                    
+				"GetAllJobsByConstraint failed to parse "                               
+				"requested ClassAd expression: %s\n",attr);                             
+			}                                               
+		}
+		// TODO: Create a temporary ad and track it.
+		return NULL;
+	}
+	return m_cur_ad;
+}
+
+ClassAdLogProjectionFilterIterator
+ClassAdLogProjectionFilterIterator::operator++(int)
+{
+	// TODO: time-limit the advance.
+	ClassAdLogProjectionFilterIterator cur = *this;
+	if (m_done) return cur;
+
+	HashIterator<HashKey, ClassAd*> end = m_table->end();
+	bool boolVal;
+	int intVal;
+	while (!(m_cur == end))
+	{
+		ClassAd *tmp_ad = (*m_cur).second;
+		if (m_requirements) {
+			classad::ExprTree &requirements = *const_cast<classad::ExprTree*>(m_requirements);
+			const classad::ClassAd *old_scope = requirements.GetParentScope();
+			requirements.SetParentScope( tmp_ad );
+				classad::Value result;
+			int retval = tmp_ad->Evaluate(result);
+			requirements.SetParentScope(old_scope);
+			if (!retval) continue;
+
+			if (!(result.IsBooleanValue(boolVal) && boolVal) &&
+					!(result.IsIntegerValue(intVal) && intVal)) {
+				continue;
+			}
+		}
+		m_cur_ad = tmp_ad;
+		break;
+	}
+	if (m_cur == end) {
+		m_done = true;
+	}
+	return cur;
+}
+
+bool
+ClassAdLogProjectionFilterIterator::operator==(const ClassAdLogProjectionFilterIterator &other)
+{
+	if (m_table != other.m_table) return false;
+	if (m_done && other.m_done) return true;
+	if (!(m_cur == other.m_cur) ) return false;
+	return true;
+}
+
 ClassAdLog::ClassAdLog() : table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction)
 {
 	active_transaction = NULL;
