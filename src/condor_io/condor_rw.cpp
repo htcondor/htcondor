@@ -299,6 +299,9 @@ condor_write( char const *peer_description, SOCKET fd, const char *buf, int sz, 
 			{
 				nw = 0;
 			}
+		}
+		if (nw < 0) {
+			dprintf(D_NETWORK, "condor_write (non-blocking) wrote %d bytes.\n", nw);
 		}       
 
 #ifdef WIN32

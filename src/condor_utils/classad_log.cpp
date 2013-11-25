@@ -28,6 +28,7 @@
 #include "util_lib_proto.h"
 #include "classad_merge.h"
 #include "condor_fsync.h"
+#include "condor_attributes.h"
 
 #if defined(HAVE_DLOPEN)
 #include "ClassAdLogPlugin.h"
@@ -53,6 +54,114 @@ ptr = NULL;
 #define CLASSAD_LOG_HASHTABLE_SIZE 20000
 
 const char *EMPTY_CLASSAD_TYPE_NAME = "(empty)";
+
+ClassAdLogProjectionFilterIterator::ClassAdLogProjectionFilterIterator(ClassAdHashTable *table, const classad::ExprTree *requirements, StringList *projection, int timeslice_ms)
+	: m_table(table),
+	  m_cur(table->begin()),
+	  m_cur_ad(NULL),
+	  m_requirements(requirements),
+	  m_projection(projection),
+	  m_timeslice_ms(timeslice_ms),
+	  m_done(projection == NULL ? true : false)
+	{}
+
+ClassAdLogProjectionFilterIterator::ClassAdLogProjectionFilterIterator(const ClassAdLogProjectionFilterIterator &other)
+	: m_table(other.m_table),
+	  m_cur(other.m_cur),
+	  m_cur_ad(other.m_cur_ad),
+	  m_requirements(other.m_requirements),
+	  m_projection(other.m_projection),
+	  m_timeslice_ms(other.m_timeslice_ms),
+	  m_done(other.m_done)
+{
+}
+
+classad_shared_ptr<ClassAd> ClassAdLogProjectionFilterIterator::operator *() const {
+	if (!m_cur_ad || m_done) return classad_shared_ptr<ClassAd>();
+
+	if (m_projection && m_projection->number() != 0) { 
+		m_projection->rewind();                            
+		StringList internals;                   
+		StringList externals; // shouldn't have any
+		while (char *attr = m_projection->next()) {        
+
+			if( !m_cur_ad->GetExprReferences(attr, internals, externals) ) {
+				dprintf(D_FULLDEBUG,                                    
+				"GetAllJobsByConstraint failed to parse "                               
+				"requested ClassAd expression: %s\n",attr);                             
+			}                                               
+		}
+		// TODO: Create a temporary ad and track it.
+		classad_shared_ptr<ClassAd> tmp_ad(new ClassAd());
+		internals.rewind();
+		while (char *attr = internals.next()) {
+			classad::ExprTree *info = m_cur_ad->Lookup(attr);
+			if (!info) continue;
+			classad::ExprTree *info2 = info->Copy();
+			tmp_ad->Insert(attr, info2);
+		}
+		return tmp_ad;
+	}
+	classad_shared_ptr<ClassAd> result(new ClassAd());
+	result->CopyFrom(*m_cur_ad);
+	return result;
+}
+
+ClassAdLogProjectionFilterIterator
+ClassAdLogProjectionFilterIterator::operator++(int)
+{
+	// TODO: time-limit the advance.
+	ClassAdLogProjectionFilterIterator cur = *this;
+	if (m_done) return cur;
+
+	HashIterator<HashKey, ClassAd*> end = m_table->end();
+	bool boolVal;
+	int intVal;
+	while (!(m_cur == end))
+	{
+		ClassAd *tmp_ad = (*m_cur++).second;
+		if (!tmp_ad) continue;
+		if (m_requirements) {
+			classad::ExprTree &requirements = *const_cast<classad::ExprTree*>(m_requirements);
+			const classad::ClassAd *old_scope = requirements.GetParentScope();
+			requirements.SetParentScope( tmp_ad );
+				classad::Value result;
+			int retval = requirements.Evaluate(result);
+			requirements.SetParentScope(old_scope);
+			if (!retval) {
+				dprintf(D_FULLDEBUG, "Unable to evaluate ad.\n");
+				continue;
+			}
+
+			if (!(result.IsBooleanValue(boolVal) && boolVal) &&
+					!(result.IsIntegerValue(intVal) && intVal)) {
+				dprintf(D_FULLDEBUG, "Requirements evaluated to false.\n");
+				continue;
+			}
+		}
+		int tmp_int;
+		if (!tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, tmp_int) || !tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, tmp_int)) {
+			continue;
+		}
+		m_cur_ad = tmp_ad;
+		break;
+	}
+	if (m_cur == end) {
+		m_done = true;
+		m_cur_ad = NULL;
+	}
+	return cur;
+}
+
+bool
+ClassAdLogProjectionFilterIterator::operator==(const ClassAdLogProjectionFilterIterator &other)
+{
+	if (m_table != other.m_table) return false;
+	if (m_done && other.m_done) return true;
+	if (m_done != other.m_done) return false;
+	if (!(m_cur == other.m_cur) ) return false;
+	return true;
+}
 
 ClassAdLog::ClassAdLog() : table(CLASSAD_LOG_HASHTABLE_SIZE, hashFunction)
 {
