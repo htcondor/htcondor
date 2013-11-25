@@ -51,6 +51,10 @@ setting.
 from running.
 \Ticket{4087}
 
+\item Fixed a bug where job output files may not be properly truncated
+at startup on Windows platforms. 
+\Ticket{4097}
+
 \item Fixed bug with \Condor{submit} -interactive when
 cgroups where enabled.  With that combination, the shell would
 get terminated immediately after startup.
@@ -72,10 +76,10 @@ jobs.
 \item Fixed a Python binding crash due to a segmentation fault, when evaluating an expression tree with an undefined reference.
 \Ticket{3910}
 
-\item Fixed curl file transfer plugin on Windows. Previously curl was
-not properly initializing Winsocks and thus all network operations
-would fail.
+\item Fixed the cURL file transfer plugin such that it now works
+on Windows platforms.
 \Ticket{3979}
+\Ticket{4012}
 
 \item Fixed a bug that caused grid-type cream jobs to fail if the submit
 description file contained the submit command \SubmitCmd{environment} or
@@ -90,6 +94,9 @@ starting a local universe job.
 nordugrid jobs to be lost when the remote NorduGrid ARC server was
 using HTCondor as its local batch scheduler.
 \Ticket{4017}
+
+\item -t (for -total) now works consistently in \Condor{status}.
+\Ticket{4096}
 
 \end{itemize}
 
