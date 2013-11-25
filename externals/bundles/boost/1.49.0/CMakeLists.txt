@@ -109,7 +109,11 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 	condor_pre_external( BOOST ${BOOST_FILENAME}-p2 "lib;${INCLUDE_LOC}" "done")
 
 	set(BOOST_MIN_BUILD_DEP --with-thread --with-test --with-python)
-	if( "${CONDOR_PLATFORM}" STREQUAL "x86_64_Fedora18" )
+	#if( "${CONDOR_PLATFORM}" STREQUAL "x86_64_Fedora18" )
+	# boost 1.49.0 defines TIME_UTC which conflicts with system headers starting with fedora18
+	# the boost patch below changes it to TIME_UTC_ in boost, so it should be safe for all *nix
+	# when we update to a newer boost we should be able to remove this patch
+	if (LINUX)
 		set(BOOST_PATCH patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/boost.patch)
 	else ()
 		set(BOOST_PATCH echo "nothing")
