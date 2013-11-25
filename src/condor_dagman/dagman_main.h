@@ -58,8 +58,9 @@ class Dagman {
 		// the submit files instead).
 	void DisableDefaultLog();
 
-		//TEMPTEMP -- document
-	void GetDefaultLog();
+		// Resolve macro substitutions in _defaultNodeLog.  Also check
+		// for some errors/warnings.
+	void ResolveDefaultLog();
 
     Dag * dag;
     int maxIdle;  // Maximum number of idle DAG nodes
