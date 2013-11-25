@@ -178,6 +178,9 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 			"SharedPortServer: request from %s to connect to %s%s.\n",
 			sock->peer_description(), shared_port_id, deadline_desc.Value());
 
+#if HAVE_SCM_RIGHTS_PASSFD
+	m_shared_port_client.PassSocket((Sock *)sock, shared_port_id, NULL, true);
+#else
 		// Because of an ACK in the PassSocket protocol, this may block
 		// while waiting for the requested endpoint to respond.
 		// Therefore, we fork to try to stay responsive.  It is likely
@@ -200,6 +203,7 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 			forker.WorkerDone();
 		}
 	}
+#endif
 
 	return TRUE;
 }

@@ -21,15 +21,20 @@
 #define __SHARED_PORT_CLIENT_H__
 
 #include "MyString.h"
+#include "reli_sock.h"
+
+class SharedPortState;
 
 class SharedPortClient {
+
+friend class SharedPortState;
+
  public:
 	bool sendSharedPortID(char const *shared_port_id,Sock *sock);
-	bool PassSocket(Sock *sock_to_pass,char const *shared_port_id,char const *requested_by=NULL);
+	bool PassSocket(Sock *sock_to_pass,char const *shared_port_id,char const *requested_by=NULL, bool non_blocking = false);
  private:
 	MyString myName();
-	bool SharedPortIdIsValid(char const *name);
-
+	bool static SharedPortIdIsValid(char const *name);
 };
 
 #endif

@@ -1758,6 +1758,142 @@ int Scheduler::history_helper_launcher(const HistoryHelperState &state) {
 	return true;
 }
 
+static bool
+sendJobErrorAd(Stream *stream, int errorCode, std::string errorString)
+{
+	classad::ClassAd ad;
+	ad.InsertAttr(ATTR_OWNER, 0);
+	ad.InsertAttr(ATTR_ERROR_STRING, errorString);
+	ad.InsertAttr(ATTR_ERROR_CODE, errorCode);
+
+	stream->encode();
+	if (!putClassAd(stream, ad) || !stream->end_of_message())
+	{
+		dprintf(D_ALWAYS, "Failed to send error ad for job ads query\n");
+	}
+	return false;
+}
+
+static bool
+sendDone(Stream *stream)
+{
+	classad::ClassAd ad;
+	ad.InsertAttr(ATTR_OWNER, 0);
+	ad.InsertAttr(ATTR_ERROR_CODE, 0);
+	stream->encode();
+	if (!putClassAd(stream, ad) || !stream->end_of_message())
+	{
+		dprintf(D_ALWAYS, "Failed to send done message to job query.\n");
+		return false;
+	}
+	return true;
+}
+
+struct QueryJobAdsContinuation : Service {
+
+	classad_shared_ptr<classad::ExprTree> requirements;
+	StringList projection;
+	ClassAdLog::projection_filter_iterator it;
+	bool unfinished_eom;
+
+	QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int timeslice_ms=0);
+	int finish(Stream *);
+	int dc_callback(int, Stream *stream) {return finish(stream);}
+};
+
+QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int timeslice_ms)
+	: requirements(requirements_),
+	  it(BeginIterator(*requirements, projection, timeslice_ms)),
+	  unfinished_eom(false)
+{
+}
+
+int
+QueryJobAdsContinuation::finish(Stream *stream) {
+        ReliSock *sock = static_cast<ReliSock*>(stream);
+        ClassAdLog::projection_filter_iterator end = EndIterator();
+        bool has_backlog = false;
+
+	if (unfinished_eom) {
+		bool state = sock->set_non_blocking(true);
+		int retval = sock->end_of_message();
+		sock->set_non_blocking(state);
+		if (retval == 2) {
+			return KEEP_STREAM;
+		} else if (retval == 1) {
+			unfinished_eom = false;
+		} else if (!retval) {
+			return sendHistoryErrorAd(sock, 5, "Failed to write EOM to wire");
+		}
+	}
+        while (!(it == end) && !has_backlog) {
+                int retval = putClassAdNonblocking(sock, **it++);
+                if (retval == 2) {
+                        has_backlog = true;
+                } else if (!retval) {
+                        return sendHistoryErrorAd(sock, 4, "Failed to write ClassAd to wire");
+                }
+                bool state = sock->set_non_blocking(true);
+                retval = sock->end_of_message();
+                sock->set_non_blocking(state);
+                if (retval == 2) {
+                        unfinished_eom = true;
+                }
+        }
+        if (has_backlog) {
+		int retval = daemonCore->Register_Socket(sock, "Client Response",
+			(SocketHandlercpp)&QueryJobAdsContinuation::dc_callback,
+			"Query Job Ads Continuation", this, ALLOW, HANDLE_WRITE);
+		if (retval < 0) {
+			return sendHistoryErrorAd(sock, 4, "Failed to write ClassAd to wire");
+		}
+        } else {
+		delete this;
+		return sendDone(sock);
+	}
+	return KEEP_STREAM;
+}
+
+int Scheduler::command_query_job_ads(int, Stream* stream)
+{
+	ClassAd queryAd;
+
+	stream->decode();
+	stream->timeout(15);
+	if( !getClassAd(stream, queryAd) || !stream->end_of_message()) {
+		dprintf( D_ALWAYS, "Failed to receive query on TCP: aborting\n" );
+		return FALSE;
+	}
+
+	classad::ExprTree *requirements = queryAd.Lookup(ATTR_REQUIREMENTS);
+	if (!requirements) {
+		classad::Value val; val.SetBooleanValue(true);
+		requirements = classad::Literal::MakeLiteral(val);
+		if (!requirements) return sendJobErrorAd(stream, 1, "Failed to create default requirements");
+	}
+	classad_shared_ptr<classad::ExprTree> requirements_ptr(requirements);
+
+	classad::Value value;
+	classad::ExprList *list = NULL;
+	if ((queryAd.find(ATTR_PROJECTION) != queryAd.end()) &&
+		(!queryAd.EvaluateAttr(ATTR_PROJECTION, value) || !value.IsListValue(list)))
+	{
+		return sendJobErrorAd(stream, 2, "Unable to evaluate projection list");
+	}
+	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, 0);
+	StringList &projection = continuation->projection;
+	if (list) for (classad::ExprList::const_iterator it = list->begin(); it != list->end(); it++) {
+		std::string attr;
+		if (!(*it)->Evaluate(value) || !value.IsStringValue(attr))
+		{
+			return sendHistoryErrorAd(stream, 3, "Unable to convert projection list to string list");
+		}
+		projection.insert(attr.c_str());
+	}
+
+	return continuation->finish(stream);
+}
+
 int 
 clear_autocluster_id( ClassAd *job )
 {
@@ -11328,6 +11464,12 @@ Scheduler::Register()
 				(CommandHandlercpp)&Scheduler::command_history,
 				"command_history", this, READ);
 
+	// Command handler for 'condor_q' queries.  Broken out from QMGMT for the 8.1.4 series.
+	// QMGMT is a massive hulk of global variables - we want to make this non-blocking and have
+	// multiple queries active in-process at once.
+	daemonCore->Register_CommandWithPayload(QUERY_JOB_ADS, "QUERY_JOB_ADS",
+				(CommandHandlercpp)&Scheduler::command_query_job_ads,
+				"command_query_job_ads", this, READ);
 
 	// Note: The QMGMT READ/WRITE commands have the same command handler.
 	// This is ok, because authorization to do write operations is verified
