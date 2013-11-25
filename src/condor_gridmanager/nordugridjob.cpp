@@ -1300,11 +1300,11 @@ void NordugridJob::NotifyNewRemoteStatus( const char *status )
 	}
 }
 
-void NordugridJob::GetRemoteStdoutNames( std::string &stdout, std::string &stderr, bool use_old_names )
+void NordugridJob::GetRemoteStdoutNames( std::string &std_out, std::string &std_err, bool use_old_names )
 {
 	if ( use_old_names ) {
-		stdout = REMOTE_STDOUT_NAME;
-		stderr = REMOTE_STDERR_NAME;
+		std_out = REMOTE_STDOUT_NAME;
+		std_err = REMOTE_STDERR_NAME;
 	} else {
 		std::string gjid;
 		jobAd->LookupString( ATTR_GLOBAL_JOB_ID, gjid );
@@ -1315,9 +1315,9 @@ void NordugridJob::GetRemoteStdoutNames( std::string &stdout, std::string &stder
 			gjid[loc] = '_';
 		}
 
-		stdout = REMOTE_STDOUT_NAME ".";
-		stdout += gjid;
-		stderr = REMOTE_STDERR_NAME ".";
-		stderr += gjid;
+		std_out = REMOTE_STDOUT_NAME ".";
+		std_out += gjid;
+		std_err = REMOTE_STDERR_NAME ".";
+		std_err += gjid;
 	}
 }
