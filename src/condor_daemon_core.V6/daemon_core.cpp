@@ -8554,7 +8554,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 			EXCEPT("Failed to create SuperUser Command socket");
 		}
 		// Note: BindAnyCommandPort() is in daemon core
-		if ( !BindAnyCommandPort(super_dc_rsock,super_dc_ssock)) {
+		if ( !BindAnyLocalCommandPort(super_dc_rsock,super_dc_ssock)) {
 			EXCEPT("Failed to bind SuperUser Command socket");
 		}
 		if ( !super_dc_rsock->listen() ) {
@@ -9560,13 +9560,15 @@ char **DaemonCore::ParseArgsString(const char *str)
 }
 #endif
 
-PRAGMA_REMIND("adesmet TODO: deprecated function")
 int
-BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock)
+BindAnyLocalCommandPort(ReliSock *rsock, SafeSock *ssock)
 {
-	condor_protocol proto = CP_IPV4;
-	if(_condor_is_ipv6_mode()) {
-		proto = CP_IPV6;
+	condor_protocol proto;
+	if(param_boolean("ENABLE_IPV4", true)) { proto = CP_IPV4; }
+	else if(param_boolean("ENABLE_IPV6", true)) { proto = CP_IPV6; }
+	else {
+		dprintf(D_ALWAYS, "Error: No protocols are enabled, unable to BindAnyLocalCommandPort!\n");
+		return FALSE;
 	}
 	return BindAnyCommandPort(rsock, ssock, proto);
 }

@@ -219,8 +219,13 @@ typedef void sigset_t;
 #endif
 
 /** helper function for finding available port for both 
+    TCP and UDP command socket.  Only promised to be meaningful
+	for the local host.  No promises are made about what 
+	protocol will be used.
+	*/
+int BindAnyLocalCommandPort(ReliSock *rsock, SafeSock *ssock);
+/** helper function for finding available port for both 
     TCP and UDP command socket */
-int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock);
 int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock, condor_protocol proto);
 
 
