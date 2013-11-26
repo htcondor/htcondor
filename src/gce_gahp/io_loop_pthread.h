@@ -62,18 +62,16 @@ class Worker {
 
 	int m_id;
 
-	bool m_can_use;
 	bool m_is_doing;
-	bool m_must_be_alive;
-
-//	pthread_mutex_t m_mutex;
-	pthread_cond_t m_cond;
 	bool m_is_waiting;
+
+	pthread_cond_t m_cond;
 
 	SimpleList<Request*> m_request_list;
 };
 
 #define MIN_NUMBER_WORKERS 2
+#define MAX_NUMBER_WORKERS 50
 #define WORKER_MANAGER_TIMER_INTERVAL	15
 
 class IOProcess {
@@ -87,11 +85,8 @@ class IOProcess {
 
 	Worker* createNewWorker(void);
 	Worker* findFreeWorker(void);
-	Worker* findFirstAvailWorker(void);
 	Worker* findWorker(int id);
 	bool removeWorkerFromWorkerList(int id);
-	void LockWorkerList(void);
-	void UnlockWorkerList(void);
 
 	Request* addNewRequest(const char* cmd);
 	void addResult(const char* result);
@@ -119,13 +114,10 @@ class IOProcess {
 
 	PipeBuffer m_stdin_buffer;
 
-//	pthread_mutex_t m_result_mutex;
 	StringList m_result_list; // The list of results ready to be output to IO
 
-//	pthread_mutex_t m_worker_list_mutex;
 	HashTable<int, Worker*> m_workers_list;
 
-//	pthread_mutex_t m_pending_req_list_mutex;
 	SimpleList<Request*> m_pending_req_list;
 };
 

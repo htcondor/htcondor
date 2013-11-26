@@ -34,15 +34,14 @@
 #include "gceCommands.h"
 #include "subsystem_info.h"
 
-#define MIN_WORKER_NUM 1
 #define GCE_GAHP_VERSION	"0.1"
 
 int RESULT_OUTBOX = 1;	// stdout
 int REQUEST_INBOX = 0; // stdin
 
-const char * version = "$GahpVersion " GCE_GAHP_VERSION " Oct 101 2013 Condor\\ GCE\\ GAHP $";
+const char * version = "$GahpVersion " GCE_GAHP_VERSION " Nov 26 2013 Condor\\ GCE\\ GAHP $";
 
-static IOProcess *ioprocess = NULL;
+static IOProcess ioprocess;
 
 // forwarding declaration
 static void gahp_output_return_error();
@@ -70,6 +69,7 @@ void
 usage()
 {
 	dprintf( D_ALWAYS, "Usage: gce_gahp -d debuglevel -w min_worker_nums -m max_worker_nums\n");
+	fprintf( stderr, "Usage: gce_gahp -d debuglevel -w min_worker_nums -m max_worker_nums\n");
 	exit(1);
 }
 
@@ -142,7 +142,7 @@ main( int argc, char ** const argv )
 	}
 
 	int min_workers = MIN_NUMBER_WORKERS;
-	int max_workers = -1;
+	int max_workers = MAX_NUMBER_WORKERS;
 
 	int c = 0;
 	while ( (c = my_getopt(argc, argv, "f:d:w:m:" )) != -1 ) {
@@ -191,13 +191,8 @@ main( int argc, char ** const argv )
 		exit(1);
 	}
 
-	// Create IOProcess class
-	ioprocess = new IOProcess;
-	ASSERT(ioprocess);
-
-	if( ioprocess->startUp(REQUEST_INBOX, min_workers, max_workers) == false ) {
+	if( ioprocess.startUp(REQUEST_INBOX, min_workers, max_workers) == false ) {
 		dprintf(D_ALWAYS, "Failed to start IO Process\n");
-		delete ioprocess;
 		exit(1);
 	}
 
@@ -215,7 +210,7 @@ main( int argc, char ** const argv )
 	gce_gahp_grab_big_mutex();
 
 	for(;;) {
-		ioprocess->stdinPipeHandler();
+		ioprocess.stdinPipeHandler();
 	}
 
 	return 0;
@@ -241,8 +236,6 @@ verify_gahp_command(char ** argv, int argc) {
 
 void
 gahp_output_return (const char ** results, const int count) {
-//	gce_gahp_io_lock();
-
 	int i=0;
 	for (i=0; i<count; i++) {
 		printf ("%s", results[i]);
@@ -253,8 +246,6 @@ gahp_output_return (const char ** results, const int count) {
 
 	printf ("\n");
 	fflush(stdout);
-
-//	gce_gahp_io_unlock();
 }
 
 static void
@@ -272,12 +263,9 @@ gahp_output_return_error() {
 Worker::Worker(int worker_id)
 {
 	m_id = worker_id;
-	m_can_use = false;
 	m_is_doing = false;
 	m_is_waiting = false;
-	m_must_be_alive = false;
 
-//	pthread_mutex_init(&m_mutex, NULL);
 	pthread_cond_init(&m_cond, NULL);
 }
 
@@ -285,17 +273,13 @@ Worker::~Worker()
 {
 	Request *request = NULL;
 
-//	pthread_mutex_lock(&m_mutex);
 	m_request_list.Rewind();
 	while( m_request_list.Next(request) ) {
 		m_request_list.DeleteCurrent();
 		delete request;
 	}
 
-//	pthread_mutex_unlock(&m_mutex);
-
 	pthread_cond_destroy(&m_cond);
-//	pthread_mutex_destroy(&m_mutex);
 }
 
 bool
@@ -303,7 +287,6 @@ Worker::removeRequest(int req_id)
 {
 	Request *request = NULL;
 
-//	pthread_mutex_lock(&m_mutex);
 	m_request_list.Rewind();
 	while( m_request_list.Next(request) ) {
 
@@ -311,11 +294,9 @@ Worker::removeRequest(int req_id)
 			// remove this request from worker request queue
 			m_request_list.DeleteCurrent();
 			delete request;
-//			pthread_mutex_unlock(&m_mutex);
 			return true;
 		}
 	}
-//	pthread_mutex_unlock(&m_mutex);
 
 	return false;
 }
@@ -341,23 +322,17 @@ IOProcess::IOProcess()
 	m_new_results_signaled = false;
 
 	m_min_workers = MIN_NUMBER_WORKERS;
-	m_max_workers = -1;
+	m_max_workers = MAX_NUMBER_WORKERS;
 
 	m_next_worker_id = 0;
 	m_rotated_worker_ids = false;
 
 	m_avail_workers_num = 0;
 
-//	pthread_mutex_init(&m_result_mutex, NULL);
-//	pthread_mutex_init(&m_worker_list_mutex, NULL);
-//	pthread_mutex_init(&m_pending_req_list_mutex, NULL);
 }
 
 IOProcess::~IOProcess()
 {
-//	pthread_mutex_destroy(&m_result_mutex);
-//	pthread_mutex_destroy(&m_worker_list_mutex);
-//	pthread_mutex_destroy(&m_pending_req_list_mutex);
 }
 
 bool
@@ -399,9 +374,6 @@ IOProcess::stdinPipeHandler()
 			if (strcasecmp (args.argv[0], GAHP_COMMAND_RESULTS) == 0) {
 				// Print each result line
 
-//				gce_gahp_io_lock();
-//				pthread_mutex_lock(&m_result_mutex);
-
 				// Print number of results
 				printf("%s %d\n", GAHP_RESULT_SUCCESS, numOfResult());
 				fflush(stdout);
@@ -416,15 +388,10 @@ IOProcess::stdinPipeHandler()
 				}
 				m_new_results_signaled = false;
 
-//				pthread_mutex_unlock(&ioprocess->m_result_mutex);
-//				gce_gahp_io_unlock();
-
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_VERSION) == 0) {
 
-//				gce_gahp_io_lock();
 				printf ("S %s\n", version);
 				fflush (stdout);
-//				gce_gahp_io_unlock();
 
 			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_QUIT) == 0) {
 				gahp_output_return_success();
@@ -494,9 +461,6 @@ IOProcess::createNewWorker(void)
 
 	dprintf (D_FULLDEBUG, "About to start a new thread\n");
 
-	// Set this worker is available
-	new_worker->m_can_use = true;
-
 	// Create pthread
 	pthread_t thread;
 	if( pthread_create(&thread, NULL,
@@ -511,10 +475,8 @@ IOProcess::createNewWorker(void)
 	pthread_detach(thread);
 
 	// Insert a new worker to HashTable
-//	pthread_mutex_lock(&m_worker_list_mutex);
 	m_workers_list.insert(new_worker->m_id, new_worker);
 	m_avail_workers_num++;
-//	pthread_mutex_unlock(&m_worker_list_mutex);
 
 	dprintf(D_FULLDEBUG, "New Worker[id=%d] is created!\n", new_worker->m_id);
 	return new_worker;
@@ -526,55 +488,18 @@ IOProcess::findFreeWorker(void)
 	int currentkey = 0;
 	Worker *worker = NULL;
 
-//	pthread_mutex_lock(&m_worker_list_mutex);
 	m_workers_list.startIterations();
 	while( m_workers_list.iterate(currentkey, worker) != 0 ) {
 
-//		pthread_mutex_lock(&worker->m_mutex);
 
-		if( !worker->m_is_doing && worker->m_can_use ) {
-			worker->m_must_be_alive = true;
-
-//			pthread_mutex_unlock(&worker->m_mutex);
-//			pthread_mutex_unlock(&m_worker_list_mutex);
+		if( !worker->m_is_doing ) {
 
 			return worker;
 		}
 
-//		pthread_mutex_unlock(&worker->m_mutex);
 	}
-//	pthread_mutex_unlock(&m_worker_list_mutex);
 	return NULL;
 }
-
-Worker*
-IOProcess::findFirstAvailWorker(void)
-{
-	int currentkey = 0;
-	Worker *worker = NULL;
-
-//	pthread_mutex_lock(&m_worker_list_mutex);
-
-	m_workers_list.startIterations();
-	while( m_workers_list.iterate(currentkey, worker) != 0 ) {
-
-//		pthread_mutex_lock(&worker->m_mutex);
-
-		if( worker->m_can_use ) {
-			worker->m_must_be_alive = true;
-
-//			pthread_mutex_unlock(&worker->m_mutex);
-//			pthread_mutex_unlock(&m_worker_list_mutex);
-			return worker;
-		}
-
-//		pthread_mutex_unlock(&worker->m_mutex);
-	}
-//	pthread_mutex_unlock(&m_worker_list_mutex);
-
-	return NULL;
-}
-
 
 Worker*
 IOProcess::findWorker(int id)
@@ -597,18 +522,6 @@ IOProcess::removeWorkerFromWorkerList(int id)
 	}
 
 	return false;
-}
-
-void
-IOProcess::LockWorkerList(void)
-{
-//	pthread_mutex_lock(&m_worker_list_mutex);
-}
-
-void
-IOProcess::UnlockWorkerList(void)
-{
-//	pthread_mutex_unlock(&m_worker_list_mutex);
 }
 
 Request*
@@ -643,9 +556,6 @@ IOProcess::addResult(const char *result)
 		return;
 	}
 
-//	gce_gahp_io_lock();
-//	pthread_mutex_lock(&m_result_mutex);
-
 	// Put this result into result buffer
 	m_result_list.append(result);
 
@@ -656,9 +566,6 @@ IOProcess::addResult(const char *result)
 		}
 		m_new_results_signaled = true;	// So that we only do it once
 	}
-
-//	pthread_mutex_unlock(&m_result_mutex);
-//	gce_gahp_io_unlock();
 }
 
 int
@@ -677,14 +584,11 @@ IOProcess::newWorkerId(void)
 			return m_next_worker_id;
 		}
 
-//		pthread_mutex_lock(&m_worker_list_mutex);
 		// Make certain this worker_id is not already in use
 		if( m_workers_list.lookup(m_next_worker_id, unused) == -1 ) {
 			// not in use, we are done
-//			pthread_mutex_unlock(&m_worker_list_mutex);
 			return m_next_worker_id;
 		}
-//		pthread_mutex_unlock(&m_worker_list_mutex);
 
 		m_next_worker_id++;
 	}
@@ -705,8 +609,6 @@ IOProcess::addRequestToWorker(Request* request, Worker* worker)
 		dprintf (D_FULLDEBUG, "Sending %s to worker %d\n",
 				request->m_raw_cmd.c_str(), worker->m_id);
 
-//		pthread_mutex_lock(&worker->m_mutex);
-
 		request->m_worker = worker;
 		worker->m_request_list.Append(request);
 		worker->m_is_doing = true;
@@ -715,16 +617,13 @@ IOProcess::addRequestToWorker(Request* request, Worker* worker)
 			pthread_cond_signal(&worker->m_cond);
 		}
 
-//		pthread_mutex_unlock(&worker->m_mutex);
 	}else {
 		// There is no available worker.
 		// So we will insert this request to global pending request list
 		dprintf (D_FULLDEBUG, "Appending %s to global pending request list\n",
 				request->m_raw_cmd.c_str());
 
-//		pthread_mutex_lock(&m_pending_req_list_mutex);
 		m_pending_req_list.Append(request);
-//		pthread_mutex_unlock(&m_pending_req_list_mutex);
 	}
 }
 
@@ -732,9 +631,7 @@ int
 IOProcess::numOfPendingRequest(void)
 {
 	int num = 0;
-//	pthread_mutex_lock(&m_pending_req_list_mutex);
 	num = m_pending_req_list.Number();
-//	pthread_mutex_unlock(&m_pending_req_list_mutex);
 
 	return num;
 }
@@ -744,13 +641,11 @@ IOProcess::popPendingRequest(void)
 {
 	Request *new_request = NULL;
 
-//	pthread_mutex_lock(&m_pending_req_list_mutex);
 	m_pending_req_list.Rewind();
 	m_pending_req_list.Next(new_request);
 	if( new_request ) {
 		m_pending_req_list.DeleteCurrent();
 	}
-//	pthread_mutex_unlock(&m_pending_req_list_mutex);
 
 	return new_request;
 }
@@ -769,15 +664,13 @@ Request* popRequest(Worker* worker)
 		// Remove this request from worker request queue
 		worker->m_request_list.DeleteCurrent();
 	}else {
-		if( ioprocess ) {
-			new_request = ioprocess->popPendingRequest();
+		new_request = ioprocess.popPendingRequest();
 
-			if( new_request ) {
-				new_request->m_worker = worker;
+		if( new_request ) {
+			new_request->m_worker = worker;
 
-				dprintf (D_FULLDEBUG, "Assigning %s to worker %d\n",
-						new_request->m_raw_cmd.c_str(), worker->m_id);
-			}
+			dprintf (D_FULLDEBUG, "Assigning %s to worker %d\n",
+					 new_request->m_raw_cmd.c_str(), worker->m_id);
 		}
 	}
 
@@ -787,12 +680,11 @@ Request* popRequest(Worker* worker)
 static void
 enqueue_result(Request* request)
 {
-	if( !request || request->m_result.empty()
-			|| !ioprocess ) {
+	if( !request || request->m_result.empty() ) {
 		return;
 	}
 
-	ioprocess->addResult(request->m_result.c_str());
+	ioprocess.addResult(request->m_result.c_str());
 }
 
 static bool
@@ -833,26 +725,19 @@ static void worker_exit(Worker *worker, bool force)
 	int worker_id = worker->m_id;
 
 	bool need_remove = force;
-	if( ioprocess ) {
-		ioprocess->LockWorkerList();
 
-		if( need_remove == false ) {
-			if( ioprocess->m_avail_workers_num > ioprocess->m_min_workers ) {
-				need_remove = true;
-			}
+	if( need_remove == false ) {
+		if( ioprocess.m_avail_workers_num > ioprocess.m_min_workers ) {
+			need_remove = true;
 		}
-
-		if( need_remove ) {
-			// worker will be deleted inside removeWorkerFromWorkerList
-			ioprocess->removeWorkerFromWorkerList(worker->m_id);
-			worker = NULL;
-			ioprocess->m_avail_workers_num--;
-
-		}
-		ioprocess->UnlockWorkerList();
 	}
 
 	if( need_remove ) {
+		// worker will be deleted inside removeWorkerFromWorkerList
+		ioprocess.removeWorkerFromWorkerList(worker->m_id);
+		worker = NULL;
+		ioprocess.m_avail_workers_num--;
+
 		dprintf(D_FULLDEBUG, "Thread(%d) is exiting...\n", worker_id);
 
 		int retval = 0;
@@ -863,15 +748,8 @@ static void worker_exit(Worker *worker, bool force)
 		//		worker_id);
 
 		// We need to keep this thread running
-//		pthread_mutex_lock(&worker->m_mutex);
-
-		worker->m_can_use = true;
-
 		worker->m_is_doing = false;
 		worker->m_is_waiting = false;
-		worker->m_must_be_alive = false;
-
-//		pthread_mutex_unlock(&worker->m_mutex);
 	}
 }
 
@@ -899,16 +777,8 @@ static void *worker_function( void *ptr )
 
 	while(1) {
 
-//		pthread_mutex_lock(&worker->m_mutex);
-
 		worker->m_is_doing = false;
 		worker->m_is_waiting = false;
-
-		if( worker->m_can_use == false ) {
-			// Need to die
-//			pthread_mutex_unlock(&worker->m_mutex);
-			worker_exit(worker, true);
-		}
 
 		while( (new_request = popRequest(worker)) == NULL ) {
 
@@ -922,62 +792,31 @@ static void *worker_function( void *ptr )
 			ts.tv_nsec = tp.tv_usec * 1000;
 			ts.tv_sec += WORKER_MANAGER_TIMER_INTERVAL;
 
-			if( ioprocess ) {
-				if( ioprocess->numOfPendingRequest() > 0 ) {
-					continue;
-				}
-			}
-
 			//dprintf(D_FULLDEBUG, "Thread(%d) is calling cond_wait\n",
 			//		worker->m_id);
 
 			// The pthread_cond_timedwait will block until signalled
 			// with more work from our main thread; so we MUST release
 			// the big fat mutex here or we will deadlock.
-//			gce_gahp_release_big_mutex();
 			int retval = pthread_cond_timedwait(&worker->m_cond,
 					&global_big_mutex, &ts);
-//			gce_gahp_grab_big_mutex();
 
-			if( worker->m_can_use == false ) {
-				// Need to die
-				worker->m_is_waiting = false;
+			worker->m_is_waiting = false;
 
-//				pthread_mutex_unlock(&worker->m_mutex);
-				worker_exit(worker, true);
-			}else {
-				// If timeout happends, need to check m_must_be_alive
-				if( retval == ETIMEDOUT ) {
-					//dprintf(D_FULLDEBUG, "Thread(%d) Wait timed out !\n",
-					//		worker->m_id);
+			if( retval == ETIMEDOUT ) {
+				//dprintf(D_FULLDEBUG, "Thread(%d) Wait timed out !\n",
+				//		worker->m_id);
 
-					if( ioprocess ) {
-						if( ioprocess->numOfPendingRequest() > 0 ) {
-							continue;
-						}
-					}
-
-					if( !worker->m_must_be_alive ) {
-						// Need to die according to the min number of workers
-
-						worker->m_is_waiting = false;
-						worker->m_can_use = false;
-
-//						pthread_mutex_unlock(&worker->m_mutex);
-						worker_exit(worker, false);
-					}else {
-						dprintf(D_FULLDEBUG, "Thread(%d) must be alive for "
-								"another request\n", worker->m_id);
-					}
+				if( ioprocess.numOfPendingRequest() > 0 ) {
+					continue;
 				}
+
+				worker_exit(worker, false);
 			}
 		}
 
 		worker->m_is_doing = true;
 		worker->m_is_waiting = false;
-		worker->m_must_be_alive = false;
-
-//		pthread_mutex_unlock(&worker->m_mutex);
 
 		if(!handle_gahp_command(new_request) ) {
 			dprintf(D_ALWAYS, "ERROR (io_loop) processing %s\n",
