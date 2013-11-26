@@ -1818,6 +1818,8 @@ sub CollectWhoPids
 	if(defined $action) {
 		if($action eq "PIDFILE") {
 			open(WP,">$logdir/WHOPIDS") or die "Failed opening: $logdir/WHOPIDS:$!\n";
+		} elsif($action eq "ALLPIDFILE") {
+			open(WP,">$logdir/ALLPIDS") or die "Failed opening: $logdir/ALLPIDS:$!\n";
 		}
 	}
 	foreach my $wholine (@adarray) {
@@ -1826,18 +1828,31 @@ sub CollectWhoPids
 		if($wholine =~ /(\w+)\s+(\w+)\s+(\d+)\s+(\d+)\s+(\w+)\s+<(.*)>\s+.*/) {
 			print "running: $1 PID $3 exit code $5 \@$6\n";
 			if(defined $action) {
-				if($action eq "PIDFILE") {
+				if(($action eq "PIDFILE") or ($action eq "ALLPIDFILE")) {
 					print WP "$3 $1\n";
 				}
 			}
 		} elsif($wholine =~ /(\w+)\s+(\w+)\s+(\d+)\s+(\d+)\s+(\d+)\s+<(.*)>\s+.*/) {
 			print "done: $1 PID $3 exit code $5\n";
+			if(defined $action) {
+				if($action eq "ALLPIDFILE") {
+					print WP "$3 $1\n";
+				}
+			}
+		} elsif($wholine =~ /(\w+)\s+(\w+)\s+(\d+)\s+(\w+).*/) {
+		# even get funky master pid
+			if(defined $action) {
+				if($action eq "ALLPIDFILE") {
+					print WP "$3 $1\n";
+				}
+			}
+		# Master     no       10124       no     no .*
 		} else {
 			#print "parse error: $wholine\n";
 		}
 	}
 	if(defined $action) {
-		if($action eq "PIDFILE") {
+		if(($action eq "PIDFILE") or ($action eq "ALLPIDFILE")) {
 			close(WP);
 		}
 	}
