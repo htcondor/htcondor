@@ -147,7 +147,7 @@ fi
 /sbin/chkconfig --add condor
 /sbin/ldconfig
 if /usr/sbin/selinuxenabled; then
-   if $(/usr/bin/seinfo -t 2>/dev/null | grep -q unconfined_execmem_exec_t); then
+   if /usr/bin/seinfo -t 2>/dev/null | grep -q unconfined_execmem_exec_t; then
       /usr/sbin/semanage fcontext -a -t unconfined_execmem_exec_t $USR/sbin/condor_startd 2>&1| grep -v "already defined"
       /sbin/restorecon  $USR/sbin/condor_startd
    fi
