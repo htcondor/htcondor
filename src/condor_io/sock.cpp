@@ -578,7 +578,6 @@ Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port,
 	return FALSE;
 }
 
-PRAGMA_REMIND("adesmet TODO: This function is a temporary measure and should be removed.")
 int Sock::bind(bool outbound, int port, bool loopback)
 {
 	condor_protocol proto = CP_IPV4;

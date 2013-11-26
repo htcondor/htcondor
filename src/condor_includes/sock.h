@@ -143,7 +143,7 @@ PRAGMA_REMIND("adesmet: DEPRECATED")
 	int assign(LPWSAPROTOCOL_INFO);		// to inherit sockets from other processes
 #endif
 
-PRAGMA_REMIND("adesmet: deprecated")
+PRAGMA_REMIND("adesmet: DEPRECATED")
 	int bind(bool outbound, int port=0, bool loopback=false);
 
 	int bind(condor_protocol proto, bool outbound, int port, bool loopback);
