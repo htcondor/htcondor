@@ -55,9 +55,9 @@ from running.
 at startup on Windows platforms. 
 \Ticket{4097}
 
-\item Fixed bug with \Condor{submit} -interactive when
-cgroups where enabled.  With that combination, the shell would
-get terminated immediately after startup.
+\item Fixed bug with \Condor{submit} 
+when invoked with the \Opt{-interactive} option and cgroups where enabled.
+The shell was terminated immediately after it started.
 \Ticket{4028}
 
 \item Prevent illegal values from being written into the job queue
