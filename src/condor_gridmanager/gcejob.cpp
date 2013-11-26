@@ -917,6 +917,15 @@ void GCEJob::doEvaluateState()
 					}
 
 					if( rc != 0 ) {
+						if ( strstr( gahp->getErrorString(), "was not found" ) ) {
+							// The instance is gone. Don't wait in
+							// GM_CANCEL_CHECK for a bulk status update.
+							SetRemoteJobStatus( GCE_INSTANCE_TERMINATED );
+							remoteJobState = GCE_INSTANCE_TERMINATED;
+							probeNow = true;
+							gmState = GM_CANCEL_CHECK;
+							break;
+						}
 						errorString = gahp->getErrorString();
 						dprintf( D_ALWAYS, "(%d.%d) job cancel failed: %s: %s\n",
 								 procID.cluster, procID.proc,
@@ -926,10 +935,6 @@ void GCEJob::doEvaluateState()
 						break;
 					}
 
-					// We could save some time here for Amazon users by
-					// changing the EC2 GAHP to return the (new) state of
-					// the job.  If it's SHUTTINGDOWN, set probeNow.  We
-					// can't do this for OpenStack because we know they lie.
 				}
 
 				gmState = GM_CANCEL_CHECK;
