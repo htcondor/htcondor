@@ -1989,6 +1989,14 @@ friendly_name=Create Core Files
 review=?
 tags=daemon_core,daemon_core_main
 
+[CORE_FILE_NAME]
+default=core.$(SUBSYSTEM)
+win32_default=core.$(SUBSYSTEM).WIN32
+type=string
+usage=filename (not path) for daemon core files
+review=?
+tags=daemon_core
+
 [DROP_CORE_ON_RECONFIG]
 default=
 type=string
