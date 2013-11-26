@@ -9398,25 +9398,53 @@ in section~\ref{sec:DAG-configuration}.
 \item[\Macro{DAGMAN\_DEFAULT\_NODE\_LOG}]
   The default name of a file to be used as a job event log by all node jobs
   of a DAG.
-  Note that even if \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is set to
+  Note that even if \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is set to
   \Expr{False}, the default log file will be used by any node jobs for which
   a log file is not defined in the job's submit description file.
 
   As of version 8.1.3, three special macros are available for use in
-  the \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} specification:
-  %TEMPTEMP -- change File to Macro here (needs something special for @ to work)
+  the \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} specification (
+  \Bold{note the "@" instead of "\$"}):
   \begin{itemize}
-  \item \File{@(DAG\_DIR)}: The directory in which the primary DAG file
+  \item \Expr{@(DAG\_DIR)}: The directory in which the primary DAG file
   resides.
-  \item \File{@(DAG\_FILE)}: The name of the primarly DAG file (not
+  \item \Expr{@(DAG\_FILE)}: The name of the primary DAG file (not
   including any directory information).
-  \item \File{@(CLUSTER)}: The cluster of this DAGMan process.
+  \item \Expr{@(CLUSTER)}: The cluster of this DAGMan process.
   \end{itemize}
   Note that if more than one DAG file is specified to \Condor{submit\_dag},
   the primary DAG file is whichever one comes first on the command line.
 
-  The default value if not defined is
-  \File{@(DAG\_DIR)/@(DAG\_FILE).nodes.log}.
+  If not defined, \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} defaults
+  to \Expr{@(DAG\_DIR)/@(DAG\_FILE).nodes.log}.
+
+  A few more notes:
+  \begin{itemize}
+  \item The expression \Expr{\$(LOG)} will not have the expected effect
+  if used in the \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} specification,
+  because for \Condor{dagman} \Expr{\$(LOG)} is defined as \File{"."}.
+  So if you want to put your default log file into the log directory
+  you need to use something like \Expr{\$(LOCAL\_DIR)/log} instead of
+  \Expr{\$(LOG)}.
+  \item If you put your default log file into the spool directory,
+  you will have to modify \MacroNI{VALID\_SPOOL\_FILES}
+  (see ~\ref{param:ValidSpoolFiles}) to prevent \Condor{preen} from
+  removing the default log file.  If the default log file is removed
+  during a run, severe problems will ensue...
+  \item The \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} specification must
+  ensure that the default node log files are named uniquely for each DAG.
+  Therefore, the \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} value should
+  always include \File{@(DAG\_FILE)}.  For example,
+  \begin{verbatim}
+  DAGMAN_DEFAULT_NODE_LOG = $(LOCAL_DIR)/log/@(DAG_FILE).nodes.log
+  \end{verbatim}
+  is okay, but
+  \begin{verbatim}
+  DAGMAN_DEFAULT_NODE_LOG = $(LOCAL_DIR)/log/dag.nodes.log
+  \end{verbatim}
+  will cause a failure if more than one DAG is run at a time on a
+  given submit machine.
+  \end{itemize}
 
 \label{param:DAGManGenerateSubDagSubmits}
 \item[\Macro{DAGMAN\_GENERATE\_SUBDAG\_SUBMITS}]
