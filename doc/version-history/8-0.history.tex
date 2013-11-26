@@ -55,9 +55,9 @@ from running.
 at startup on Windows platforms. 
 \Ticket{4097}
 
-\item Fixed bug with \Condor{submit} -interactive when
-cgroups where enabled.  With that combination, the shell would
-get terminated immediately after startup.
+\item Fixed bug with \Condor{submit} 
+when invoked with the \Opt{-interactive} option and cgroups where enabled.
+The shell was terminated immediately after it started.
 \Ticket{4028}
 
 \item Prevent illegal values from being written into the job queue
@@ -76,14 +76,14 @@ jobs.
 \item Fixed a Python binding crash due to a segmentation fault, when evaluating an expression tree with an undefined reference.
 \Ticket{3910}
 
-\item Fixed curl file transfer plugin on Windows. Previously curl was
-not properly initializing Winsocks and thus all network operations
-would fail.
+\item Fixed the cURL file transfer plugin such that it now works
+on Windows platforms.
 \Ticket{3979}
+\Ticket{4012}
 
-\item Fixed a bug that caused grid-type cream jobs to fail if the submit
-description file contained the submit command \SubmitCmd{environment} or
-\SubmitCmd{cream\_attributes}.
+\item Fixed a bug that caused cream grid universe jobs to fail, 
+if the submit description file contained 
+submit commands of \SubmitCmd{environment} or \SubmitCmd{cream\_attributes}.
 \Ticket{4037}
 
 \item Fixed a bug that could cause the \Condor{schedd} to crash when
@@ -97,6 +97,19 @@ using HTCondor as its local batch scheduler.
 
 \item -t (for -total) now works consistently in \Condor{status}.
 \Ticket{4096}
+
+\item Restored the omitted HTCondor Perl module.
+\Ticket{4098}
+
+\item In the RPM post-install script, check to make sure that the
+SELinux unconfined\_execmem\_exec\_t type exists, before trying to
+add it to the /usr/sbin/condor\_startd file context.
+\Ticket{4034}
+
+\item Fix a crash in both daemons and tools that happens when a
+hostname in \Macro{COLLECTOR\_HOST} can't be resolved to an IP
+address.
+\Ticket{3946}
 
 \end{itemize}
 
