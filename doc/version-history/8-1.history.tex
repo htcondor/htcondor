@@ -62,6 +62,13 @@ The default value for this configuration variable appends the daemon name,
 so \Condor{schedd} will create a core file core.SCHEDD.
 \Ticket{4100}
 
+\item Four recently added machine ClassAd attributes have been renamed.
+\Attr{TotalJobStarts} has been renamed to \Attr{JobStarts}
+\Attr{RecentTotalJobStarts} has been renamed to \Attr{RecentJobStarts}
+\Attr{TotalPreemptions} has been renamed to \Attr{JobPreemptions}
+\Attr{RecentTotalPreemptions} has been renamed to \Attr{RecentJobPreemptions}
+\Ticket{3712}
+
 \end{itemize}
 
 \noindent Bugs Fixed:
