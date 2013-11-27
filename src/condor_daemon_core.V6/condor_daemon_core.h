@@ -1737,7 +1737,6 @@ class DaemonCore : public Service
         char*           handler_descrip;
         void*           data_ptr;
         DCpermission    perm;
-		int				servicing_tid;	// tid servicing this socket
         bool            is_cpp;
 		bool			is_connect_pending;
 		bool			is_reverse_connect_pending;

@@ -217,6 +217,46 @@ private:
     Schedd& m_schedd;
 };
 
+struct QueryIterator
+{
+    QueryIterator(boost::shared_ptr<Sock> sock)
+      : m_count(0), m_sock(sock)
+    {}
+
+    inline static boost::python::object pass_through(boost::python::object const& o) { return o; };
+
+    boost::shared_ptr<ClassAdWrapper> next()
+    {
+        if (m_count < 0) THROW_EX(StopIteration, "All ads processed");
+
+        boost::shared_ptr<ClassAdWrapper> ad(new ClassAdWrapper());
+        if (!getClassAd(m_sock.get(), *ad.get())) THROW_EX(RuntimeError, "Failed to recieve remote ad.");
+        if (!m_sock->end_of_message()) THROW_EX(RuntimeError, "Failed to get EOM after ad.");
+        long long intVal;
+        if (ad->EvaluateAttrInt(ATTR_OWNER, intVal) && (intVal == 0))
+        { // Last ad.
+            m_sock->close();
+            std::string errorMsg;
+            if (ad->EvaluateAttrInt(ATTR_ERROR_CODE, intVal) && intVal && ad->EvaluateAttrString(ATTR_ERROR_STRING, errorMsg))
+            {
+                THROW_EX(RuntimeError, errorMsg.c_str());
+            }
+            if (ad->EvaluateAttrInt("MalformedAds", intVal) && intVal) THROW_EX(ValueError, "Remote side had parse errors on history file")
+            //if (!ad->EvaluateAttrInt(ATTR_NUM_MATCHES, intVal) || (intVal != m_count)) THROW_EX(ValueError, "Incorrect number of ads returned");
+
+            // Everything checks out!
+            m_count = -1;
+            THROW_EX(StopIteration, "All ads processed");
+        }
+        m_count++;
+        return ad;
+    }
+
+private:
+    int m_count;
+    boost::shared_ptr<Sock> m_sock;
+};
+
 struct query_process_helper
 {
     object callable;
@@ -762,6 +802,63 @@ struct Schedd {
         return sentry_ptr;
     }
 
+    boost::shared_ptr<QueryIterator> query2(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1)
+    {
+        std::string val_str;
+        extract<ExprTreeHolder &> exprtree_extract(requirement);
+        extract<std::string> string_extract(requirement);
+        classad::ExprTree *expr = NULL;
+        boost::shared_ptr<classad::ExprTree> expr_ref;
+        if (string_extract.check())
+        {
+            classad::ClassAdParser parser;
+            std::string val_str = string_extract();
+            if (!parser.ParseExpression(val_str, expr))
+            {
+                THROW_EX(ValueError, "Unable to parse requirements expression");
+            }
+            expr_ref.reset(expr);
+        }
+        else if (exprtree_extract.check())
+        {
+            expr = exprtree_extract().get();
+        }
+        else
+        {
+            THROW_EX(ValueError, "Unable to parse requirements expression");
+        }
+        classad::ExprTree *expr_copy = expr->Copy();
+        if (!expr_copy) THROW_EX(ValueError, "Unable to create copy of requirements expression");
+
+        classad::ExprList *projList(new classad::ExprList());
+        unsigned len_attrs = py_len(projection);
+        for (unsigned idx = 0; idx < len_attrs; idx++)
+        {
+                classad::Value value; value.SetStringValue(boost::python::extract<std::string>(projection[idx]));
+                classad::ExprTree *entry = classad::Literal::MakeLiteral(value);
+                if (!entry) THROW_EX(ValueError, "Unable to create copy of list entry.")
+                projList->push_back(entry);
+        }
+
+        classad::ClassAd ad;
+        ad.Insert(ATTR_REQUIREMENTS, expr_copy);
+        ad.InsertAttr(ATTR_NUM_MATCHES, match);
+
+        classad::ExprTree *projTree = static_cast<classad::ExprTree*>(projList);
+        ad.Insert(ATTR_PROJECTION, projTree);
+
+        DCSchedd schedd(m_addr.c_str());
+        Sock* sock;
+        if (!(sock = schedd.startCommand(QUERY_JOB_ADS, Stream::reli_sock, 0))) {
+                THROW_EX(RuntimeError, "Unable to connect to schedd");
+        }
+        boost::shared_ptr<Sock> sock_sentry(sock);
+
+        if (!putClassAd(sock, ad) || !sock->end_of_message()) THROW_EX(RuntimeError, "Unable to send request classad to schedd");
+
+        boost::shared_ptr<QueryIterator> iter(new QueryIterator(sock_sentry));
+        return iter;
+    }
 
 private:
 
@@ -871,6 +968,7 @@ ConnectionSentry::~ConnectionSentry()
 }
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(query_overloads, query, 0, 3);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(query2_overloads, query2, 0, 3);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(submit_overloads, submit, 1, 4);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(transaction_overloads, transaction, 0, 2);
 
@@ -947,6 +1045,11 @@ void export_schedd()
             " NOTE: depending on the lifetime of the proxy in `filename`, the resulting lifetime may be shorter"
             " than the desired lifetime.\n"
             ":return: Lifetime of the resulting job proxy in seconds.")
+        .def("query2", &Schedd::query2, "Alternate implementation of HTCondor schedd query\n"
+            ":param requirements: Either a ExprTree or a string that can be parsed as an expression; requirements all returned jobs should match.\n"
+            ":param projection: The attributes to return; an empty list signifies all attributes.\n"
+            ":param match: Number of matches to return.\n"
+            ":return: An iterator for the matching job ads");
         ;
 
     class_<HistoryIterator>("HistoryIterator", no_init)
@@ -954,6 +1057,12 @@ void export_schedd()
         .def("__iter__", &HistoryIterator::pass_through)
         ;
 
+    class_<QueryIterator>("QueryIterator", no_init)
+        .def("next", &QueryIterator::next)
+        .def("__iter__", &QueryIterator::pass_through)
+        ;
+
     register_ptr_to_python< boost::shared_ptr<HistoryIterator> >();
+    register_ptr_to_python< boost::shared_ptr<QueryIterator> >();
 
 }

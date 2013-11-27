@@ -1837,10 +1837,10 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 		int proc, cluster;
                 tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, cluster);
                 tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, proc);
-                dprintf(D_FULLDEBUG, "Writing job %d.%d to wire\n", cluster,proc);
+                //dprintf(D_FULLDEBUG, "Writing job %d.%d to wire\n", cluster,proc);
                 int retval = putClassAdNonblocking(sock, *tmp_ad);
                 if (retval == 2) {
-			dprintf(D_FULLDEBUG, "Detecting backlog.\n");
+			//dprintf(D_FULLDEBUG, "Detecting backlog.\n");
                         has_backlog = true;
                 } else if (!retval) {
 			delete this;
@@ -1850,7 +1850,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
                 retval = sock->end_of_message();
                 sock->set_non_blocking(state);
                 if (sock->clear_backlog_flag()) {
-			dprintf(D_FULLDEBUG, "Socket EOM will block.\n");
+			//dprintf(D_FULLDEBUG, "Socket EOM will block.\n");
                         unfinished_eom = true;
 			has_backlog = true;
                 }
@@ -1865,7 +1865,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 		}
 		registered_socket = true;
         } else if (!has_backlog) {
-		dprintf(D_FULLDEBUG, "Finishing condor_q.\n");
+		//dprintf(D_FULLDEBUG, "Finishing condor_q.\n");
 		delete this;
 		return sendDone(sock);
 	}
