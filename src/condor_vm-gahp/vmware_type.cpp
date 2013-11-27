@@ -803,6 +803,7 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 			}
 		}
 		if( is_cdrom ) {
+			PRAGMA_REMIND("FIX: cdrom disk images should not be stripped #4002")
 			continue;
 		}
 
@@ -903,6 +904,12 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 
 			m_configVars.append(line);
 		} else if( !strncasecmp(line, "ethernet0.virtualDev", strlen("ethernet0.virtualDev")) ) {
+			m_configVars.append(line);
+		} else if( !strncasecmp(line, "floppy", strlen("floppy")) ) {
+			m_configVars.append(line);
+		} else if( !strncasecmp(line, "parallel", strlen("parallel")) ) {
+			m_configVars.append(line);
+		} else if( !strncasecmp(line, "serial", strlen("serial")) ) {
 			m_configVars.append(line);
 		}
 	}
