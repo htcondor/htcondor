@@ -454,7 +454,8 @@ ReliSock::handle_incoming_packet()
 int
 ReliSock::finish_end_of_message()
 {
-	return snd_msg.finish_packet(peer_description(), _sock, _timeout);
+	int retval = snd_msg.finish_packet(peer_description(), _sock, _timeout);
+	if (retval == 2) m_has_backlog = true;
 }
 
 	// Ret values:
@@ -789,6 +790,7 @@ int ReliSock::SndMsg::finish_packet(const char *peer_description, int sock, int 
 	if (m_out_buf == NULL) {
 		return true;
 	}
+	dprintf(D_NETWORK, "Finishing packet with non-blocking %d.\n", p_sock->is_non_blocking());
 	int retval = true;
 	int result = m_out_buf->write(peer_description, sock, -1, timeout, p_sock->is_non_blocking());
 	if (result < 0) {

@@ -61,8 +61,8 @@ public:
 		return std::pair<Index, Value&>(m_cur->index, m_cur->value);
 	}
 
-	HashIterator operator++() {
-		HashIterator result = *this;
+	HashIterator operator++(int) {
+		HashIterator<Index,Value> result = *this;
 		if (m_cur) m_cur = m_cur->next;
 		while (!m_cur) {
 			if (m_idx == m_parent->tableSize-1) {
@@ -92,8 +92,18 @@ private:
 	friend class HashTable<Index, Value>;
 
 	HashIterator(HashTable<Index, Value> *parent, int idx)
-	  : m_parent(parent), m_idx(idx)
-	{}
+	  : m_parent(parent), m_idx(idx), m_cur(NULL)
+	{
+		if (idx == -1) return;
+		while (!m_cur) {
+			if (m_idx == m_parent->tableSize-1) {
+				m_idx = -1;
+				break;
+			} else {
+				m_cur = m_parent->ht[++m_idx];
+			}
+		}
+	}
 
 	HashTable<Index, Value> *m_parent;
 	int m_idx;
@@ -284,14 +294,14 @@ HashTable<Index,Value>::register_iterator(HashTable<Index,Value>::iterator* it) 
 
 template <class Index, class Value>
 void
-HashTable<Index,Value>::remove_iterator(HashTable<Index,Value>::iterator* it) {
-	typename std::vector<iterator*>::reverse_iterator rit;
-	for (rit = activeIterators.rbegin();
-		rit != activeIterators.rend();
-		++rit)
+HashTable<Index,Value>::remove_iterator(HashTable<Index,Value>::iterator* dead_it) {
+	typename std::vector<iterator*>::iterator it;
+	for (it = activeIterators.begin();
+		it != activeIterators.end();
+		++it)
 	{
-		if (it == *rit) {
-			activeIterators.erase(rit.base());
+		if (dead_it == *it) {
+			activeIterators.erase(it);
 			break;
 		}
 	}

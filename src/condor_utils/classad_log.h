@@ -58,14 +58,14 @@ class ClassAdLogProjectionFilterIterator;
 ClassAdLogProjectionFilterIterator BeginIterator(const classad::ExprTree &requirements, StringList &projection, int timeslice_ms);
 ClassAdLogProjectionFilterIterator EndIterator();
 
-class ClassAdLogProjectionFilterIterator : std::iterator<std::input_iterator_tag, ClassAd* >
+class ClassAdLogProjectionFilterIterator : std::iterator<std::input_iterator_tag, classad_shared_ptr<ClassAd> >
 {
 public:
 	ClassAdLogProjectionFilterIterator(const ClassAdLogProjectionFilterIterator &other);
 
 	~ClassAdLogProjectionFilterIterator() {}
 
-	ClassAd* operator *() const;
+	classad_shared_ptr<ClassAd> operator *() const;
 
 	ClassAd* operator ->() const;
 
@@ -86,7 +86,7 @@ private:
 	const classad::ExprTree *m_requirements;
 	StringList *m_projection;
 	int m_timeslice_ms;
-	int m_done = false;
+	int m_done;
 };
 
 class ClassAdLog {

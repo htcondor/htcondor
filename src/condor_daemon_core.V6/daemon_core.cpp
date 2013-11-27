@@ -3514,9 +3514,14 @@ void DaemonCore::Driver()
 								(*sockTable)[i].call_handler = true;
 							}
 						}
-					} else {
-						if ( selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(),
-												Selector::IO_READ ) ||
+					} else if ((*sockTable)[i].handler_type == HANDLE_READ || (*sockTable)[i].handler_type == HANDLE_READ_WRITE) {
+						if ( (selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ ) ) ||
+							 sock_timed_out )
+						{
+							(*sockTable)[i].call_handler = true;
+						}
+					} else if ((*sockTable)[i].handler_type == HANDLE_WRITE || (*sockTable)[i].handler_type == HANDLE_READ_WRITE) {
+						if ( (selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_WRITE ) ) ||
 							 sock_timed_out )
 						{
 							(*sockTable)[i].call_handler = true;

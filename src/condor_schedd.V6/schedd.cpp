@@ -1795,16 +1795,17 @@ struct QueryJobAdsContinuation : Service {
 	StringList projection;
 	ClassAdLog::projection_filter_iterator it;
 	bool unfinished_eom;
+	bool registered_socket;
 
 	QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int timeslice_ms=0);
 	int finish(Stream *);
-	int dc_callback(int, Stream *stream) {return finish(stream);}
 };
 
 QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int timeslice_ms)
 	: requirements(requirements_),
 	  it(BeginIterator(*requirements, projection, timeslice_ms)),
-	  unfinished_eom(false)
+	  unfinished_eom(false),
+	  registered_socket(false)
 {
 }
 
@@ -1816,38 +1817,52 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 
 	if (unfinished_eom) {
 		bool state = sock->set_non_blocking(true);
-		int retval = sock->end_of_message();
+		int retval = sock->finish_end_of_message();
 		sock->set_non_blocking(state);
-		if (retval == 2) {
+		if (sock->clear_backlog_flag()) {
 			return KEEP_STREAM;
 		} else if (retval == 1) {
 			unfinished_eom = false;
 		} else if (!retval) {
-			return sendHistoryErrorAd(sock, 5, "Failed to write EOM to wire");
+			delete this;
+			return sendJobErrorAd(sock, 5, "Failed to write EOM to wire");
 		}
 	}
         while (!(it == end) && !has_backlog) {
-                int retval = putClassAdNonblocking(sock, **it++);
+		classad_shared_ptr<ClassAd> tmp_ad = *it++;
+		if (!tmp_ad.get()) continue;
+		int proc, cluster;
+                tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, cluster);
+                tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, proc);
+                dprintf(D_FULLDEBUG, "Writing job %d.%d to wire\n", cluster,proc);
+                int retval = putClassAdNonblocking(sock, *tmp_ad);
                 if (retval == 2) {
+			dprintf(D_FULLDEBUG, "Detecting backlog.\n");
                         has_backlog = true;
                 } else if (!retval) {
-                        return sendHistoryErrorAd(sock, 4, "Failed to write ClassAd to wire");
+			delete this;
+                        return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
                 }
                 bool state = sock->set_non_blocking(true);
                 retval = sock->end_of_message();
                 sock->set_non_blocking(state);
-                if (retval == 2) {
+                if (sock->clear_backlog_flag()) {
+			dprintf(D_FULLDEBUG, "Socket EOM will block.\n");
                         unfinished_eom = true;
+			has_backlog = true;
                 }
         }
-        if (has_backlog) {
-		int retval = daemonCore->Register_Socket(sock, "Client Response",
-			(SocketHandlercpp)&QueryJobAdsContinuation::dc_callback,
+        if (has_backlog && !registered_socket) {
+		int retval = daemonCore->Register_Socket(stream, "Client Response",
+			(SocketHandlercpp)&QueryJobAdsContinuation::finish,
 			"Query Job Ads Continuation", this, ALLOW, HANDLE_WRITE);
 		if (retval < 0) {
-			return sendHistoryErrorAd(sock, 4, "Failed to write ClassAd to wire");
+			delete this;
+			return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
 		}
-        } else {
+		registered_socket = true;
+        } else if (!has_backlog) {
+		dprintf(D_FULLDEBUG, "Finishing condor_q.\n");
 		delete this;
 		return sendDone(sock);
 	}
@@ -1871,7 +1886,7 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 		requirements = classad::Literal::MakeLiteral(val);
 		if (!requirements) return sendJobErrorAd(stream, 1, "Failed to create default requirements");
 	}
-	classad_shared_ptr<classad::ExprTree> requirements_ptr(requirements);
+	classad_shared_ptr<classad::ExprTree> requirements_ptr(requirements->Copy());
 
 	classad::Value value;
 	classad::ExprList *list = NULL;
@@ -1886,7 +1901,8 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 		std::string attr;
 		if (!(*it)->Evaluate(value) || !value.IsStringValue(attr))
 		{
-			return sendHistoryErrorAd(stream, 3, "Unable to convert projection list to string list");
+			delete continuation;
+			return sendJobErrorAd(stream, 3, "Unable to convert projection list to string list");
 		}
 		projection.insert(attr.c_str());
 	}
