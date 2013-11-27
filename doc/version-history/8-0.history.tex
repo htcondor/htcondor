@@ -95,7 +95,10 @@ nordugrid grid universe jobs to be lost when the remote
 NorduGrid ARC server was using HTCondor as its local batch scheduler.
 \Ticket{4017}
 
-\item -t (for -total) now works consistently in \Condor{status}.
+\item \Condor{status} with the \Opt{-t} option now consistently 
+specifies the \Opt{-total} option. 
+The \Opt{-target} option will now be distinguished, as it requires
+at least \Opt{-targ} in its specification.
 \Ticket{4096}
 
 \item Restored the omitted HTCondor Perl module.
