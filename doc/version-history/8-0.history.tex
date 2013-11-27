@@ -51,8 +51,8 @@ setting.
 from running.
 \Ticket{4087}
 
-\item Fixed a bug where job output files may not be properly truncated
-at startup on Windows platforms. 
+\item Fixed a bug in which job output files may not have been properly truncated
+at start up on Windows platforms. 
 \Ticket{4097}
 
 \item Fixed bug with \Condor{submit} 
@@ -90,12 +90,15 @@ submit commands of \SubmitCmd{environment} or \SubmitCmd{cream\_attributes}.
 starting a local universe job.
 \Ticket{4088}
 
-\item Fixed a bug that caused the stdout and stderr of grid-type
-nordugrid jobs to be lost when the remote NorduGrid ARC server was
-using HTCondor as its local batch scheduler.
+\item Fixed a bug that caused \File{stdout} and \File{stderr} of
+nordugrid grid universe jobs to be lost when the remote 
+NorduGrid ARC server was using HTCondor as its local batch scheduler.
 \Ticket{4017}
 
-\item -t (for -total) now works consistently in \Condor{status}.
+\item \Condor{status} with the \Opt{-t} option now consistently 
+specifies the \Opt{-total} option. 
+The \Opt{-target} option will now be distinguished, as it requires
+at least \Opt{-targ} in its specification.
 \Ticket{4096}
 
 \item Restored the omitted HTCondor Perl module.
@@ -110,6 +113,11 @@ add it to the /usr/sbin/condor\_startd file context.
 hostname in \Macro{COLLECTOR\_HOST} can't be resolved to an IP
 address.
 \Ticket{3946}
+
+\item Changed the algorithm for calculating the value of attribute
+\Attr{RecentDaemonCoreDutyCycle} such
+that the published value will never be negative.
+\Ticket{4052}
 
 \end{itemize}
 
