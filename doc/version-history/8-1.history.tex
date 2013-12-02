@@ -49,7 +49,25 @@ which have arrived during the runtime of this \Condor{defrag} daemon.
 
 \begin{itemize}
 
-\item None.
+\item The configuration variable \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}
+has been made more powerful so that it can be usefully specified in
+the overall HTCondor configuration files, as opposed to being useful
+only in a per-DAG configuration file.  See
+section~\ref{param:DAGManDefaultNodeLog} for details.
+\Ticket{3930}
+
+\item A new configuration variable \Macro{CORE\_FILE\_NAME} can be used to set
+the name that daemon core uses to create a core file in the event of a daemon crash.
+The default value for this configuration variable appends the daemon name,
+so \Condor{schedd} will create a core file core.SCHEDD.
+\Ticket{4100}
+
+\item Four recently added machine ClassAd attributes have been renamed.
+\Attr{TotalJobStarts} has been renamed to \Attr{JobStarts}
+\Attr{RecentTotalJobStarts} has been renamed to \Attr{RecentJobStarts}
+\Attr{TotalPreemptions} has been renamed to \Attr{JobPreemptions}
+\Attr{RecentTotalPreemptions} has been renamed to \Attr{RecentJobPreemptions}
+\Ticket{3712}
 
 \end{itemize}
 

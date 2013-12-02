@@ -1473,7 +1473,7 @@ negotiationTime ()
                 GroupEntry* group = *j;
                 dprintf(D_FULLDEBUG, "group quotas: group= %s  quota= %g  requested= %g  allocated= %g  unallocated= %g\n",
                         group->name.c_str(), group->quota, group->requested+group->allocated, group->allocated, group->requested);
-                groupQuotasHash->insert(MyString(group->name.c_str()), group->allocated);
+                groupQuotasHash->insert(MyString(group->name.c_str()), group->quota);
                 requested_total += group->requested;
                 allocated_total += group->allocated;
                 if (group->allocated > 0) served_groups += 1;

@@ -92,8 +92,9 @@ class NordugridJob : public BaseJob
 
 	std::string *buildSubmitRSL();
 	StringList *buildStageInList();
-	StringList *buildStageOutList();
-	StringList *buildStageOutLocalList( StringList *stage_list );
+	StringList *buildStageOutList( bool old_stdout = false );
+	StringList *buildStageOutLocalList( StringList *stage_list, bool old_stdout = false );
+	void GetRemoteStdoutNames( std::string &std_out, std::string &std_err, bool use_old_names = false );
 
  protected:
 };
