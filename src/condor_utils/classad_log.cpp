@@ -135,7 +135,7 @@ ClassAdLogProjectionFilterIterator::operator++(int)
 
 			if (!(result.IsBooleanValue(boolVal) && boolVal) &&
 					!(result.IsIntegerValue(intVal) && intVal)) {
-				dprintf(D_FULLDEBUG, "Requirements evaluated to false.\n");
+				//dprintf(D_FULLDEBUG, "Requirements evaluated to false.\n");
 				continue;
 			}
 		}
@@ -143,6 +143,10 @@ ClassAdLogProjectionFilterIterator::operator++(int)
 		if (!tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, tmp_int) || !tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, tmp_int)) {
 			continue;
 		}
+                int proc, cluster;
+                tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, cluster);
+                tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, proc);
+                //dprintf(D_FULLDEBUG, "Returning job %d.%d\n", cluster,proc);
 		m_cur_ad = tmp_ad;
 		break;
 	}
