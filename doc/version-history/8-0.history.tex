@@ -41,10 +41,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug that caused incorrect information in the
-\Macro{RemoteGroupQuota} and \Macro{SubmitterGroupQuota} attributes
-commonly used in the \Condor{negotiator} PREEMPTION\_REQUIREMENTS
-setting.
+\item Fixed a bug that resulted in incorrect values for ClassAd attributes
+\Attr{RemoteGroupQuota} and \Attr{SubmitterGroupQuota}.
+These attributes are commonly used in an expression that defines
+\Macro{PREEMPTION\_REQUIREMENTS}.
 \Ticket{4093}
 
 \item Fixed a permissions bug that prevented Java universe jobs
