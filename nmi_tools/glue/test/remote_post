@@ -40,7 +40,6 @@ my $exit_status = 0;
 # going on in case of failures...
 if( defined $ENV{_NMI_STEP_FAILED} ) { 
     print "The value of _NMI_STEP_FAILED is: '$ENV{_NMI_STEP_FAILED}'\n";
-    $exit_status = 1;
 }
 else {
     print "The _NMI_STEP_FAILED variable is not set\n";
