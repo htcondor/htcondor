@@ -71,10 +71,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug that caused incorrect information in the
-\Macro{RemoteGroupQuota} and \Macro{SubmitterGroupQuota} attributes
-commonly used in the \Condor{negotiator} PREEMPTION\_REQUIREMENTS
-setting.
+\item Fixed a bug that resulted in incorrect values for ClassAd attributes
+\Attr{RemoteGroupQuota} and \Attr{SubmitterGroupQuota}.
+These attributes are commonly used in an expression that defines
+\Macro{PREEMPTION\_REQUIREMENTS}.
 \Ticket{4093}
 
 \item Fixed a permissions bug that prevented Java universe jobs
@@ -134,20 +134,28 @@ at least \Opt{-targ} in its specification.
 \item Restored the omitted HTCondor Perl module.
 \Ticket{4098}
 
-\item In the RPM post-install script, check to make sure that the
-SELinux unconfined\_execmem\_exec\_t type exists, before trying to
-add it to the /usr/sbin/condor\_startd file context.
+\item For RPM installations, the post-install script now
+checks to make sure that the
+SELinux \Code{unconfined\_execmem\_exec\_t type} exists before trying to
+add it to the \File{/usr/sbin/condor\_startd} file context.
 \Ticket{4034}
 
-\item Fix a crash in both daemons and tools that happens when a
-hostname in \Macro{COLLECTOR\_HOST} can't be resolved to an IP
-address.
+\item Fixed a bug in which both daemons and tools may have crashed due to
+the inability to resolve a host name defined by 
+configuration variable \Macro{COLLECTOR\_HOST} to an IP address.
 \Ticket{3946}
 
 \item Changed the algorithm for calculating the value of attribute
 \Attr{RecentDaemonCoreDutyCycle} such
 that the published value will never be negative.
 \Ticket{4052}
+
+\item For VMware vm universe jobs,
+the \Condor{vm-gahp} removed from the vm description file any cdrom, 
+floppy drive, serial or parallel devices that referred to image files.  
+It no longer removes these devices, 
+as they may be useful to the virtual machine. 
+\Ticket{4002}
 
 \end{itemize}
 
