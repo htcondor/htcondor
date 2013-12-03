@@ -9398,7 +9398,7 @@ in section~\ref{sec:DAG-configuration}.
   a log file is not defined in the job's submit description file.
 
   As of version 8.1.3, three special macros are available for use in
-  the \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} specification (
+  the \MacroNI{DAGMAN\_DEFAULT\_NODE\_LOG} specification (
   \Bold{note the "@" instead of "\$"}):
   \begin{itemize}
   \item \Expr{@(DAG\_DIR)}: The directory in which the primary DAG file
@@ -9410,13 +9410,13 @@ in section~\ref{sec:DAG-configuration}.
   Note that if more than one DAG file is specified to \Condor{submit\_dag},
   the primary DAG file is whichever one comes first on the command line.
 
-  If not defined, \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} defaults
+  If not defined, \MacroNI{DAGMAN\_DEFAULT\_NODE\_LOG} defaults
   to \Expr{@(DAG\_DIR)/@(DAG\_FILE).nodes.log}.
 
   A few more notes:
   \begin{itemize}
   \item The expression \Expr{\$(LOG)} will not have the expected effect
-  if used in the \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} specification,
+  if used in the \MacroNI{DAGMAN\_DEFAULT\_NODE\_LOG} specification,
   because for \Condor{dagman} \Expr{\$(LOG)} is defined as \File{"."}.
   So if you want to put your default log file into the log directory
   you need to use something like \Expr{\$(LOCAL\_DIR)/log} instead of
@@ -9426,9 +9426,9 @@ in section~\ref{sec:DAG-configuration}.
   (see ~\ref{param:ValidSpoolFiles}) to prevent \Condor{preen} from
   removing the default log file.  If the default log file is removed
   during a run, severe problems will ensue...
-  \item The \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} specification must
+  \item The \Macro{DAGMAN\_DEFAULT\_NODE\_LOG} specification must
   ensure that the default node log files are named uniquely for each DAG.
-  Therefore, the \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} value should
+  Therefore, the \Macro{DAGMAN\_DEFAULT\_NODE\_LOG} value should
   always include \File{@(DAG\_FILE)}.  For example,
   \begin{verbatim}
   DAGMAN_DEFAULT_NODE_LOG = $(LOCAL_DIR)/log/@(DAG_FILE).nodes.log
