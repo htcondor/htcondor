@@ -120,6 +120,13 @@ configuration variable \Macro{COLLECTOR\_HOST} to an IP address.
 that the published value will never be negative.
 \Ticket{4052}
 
+\item For VMware vm universe jobs,
+the \Condor{vm-gahp} removed from the vm description file any cdrom, 
+floppy drive, serial or parallel devices that referred to image files.  
+It no longer removes these devices, 
+as they may be useful to the virtual machine. 
+\Ticket{4002}
+
 \end{itemize}
 
 
