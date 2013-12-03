@@ -122,9 +122,9 @@ that the published value will never be negative.
 
 \item For VMware vm universe jobs,
 the \Condor{vm-gahp} removed from the vm description file any cdrom, 
-floppy drive, serial or parallel devices that referred to image files.  
-It no longer removes these devices, 
-as they may be useful to the virtual machine. 
+floppy drive, serial or parallel devices.
+Now, only devices that do not refer to image files are removed,
+as the devices may be useful to the virtual machine.
 \Ticket{4002}
 
 \end{itemize}
