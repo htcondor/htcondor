@@ -147,8 +147,8 @@ my $pid = $$;
 my $version = ""; # remote, middle, ....... for naming schedd "schedd . pid . version"
 my $mastername = ""; # master_$verison
 my $DEBUG = 1;
-my $DEBUGLEVEL = 2; # nothing higher shows up
-my $debuglevel = 3; # take all the ones we don't want to see
+my $DEBUGLEVEL = 3; # nothing higher shows up
+my $debuglevel = 4; # take all the ones we don't want to see
 					# and allowed easy changing and remove hard
 					# coded value
 my @debugcollection = ();
@@ -267,6 +267,7 @@ sub StartCondorWithParams
 	my $config_and_port = "";
 	my $winpath = "";
 
+print "######################### StartCondorWithParams: toplevedir: $topleveldir ###########################\n";
         $topleveldir = "$topleveldir/$testname.saveme/$mpid/$mpid$version";
 	system("mkdir -p $topleveldir/$testname.saveme/$mpid/$mpid$version");
 
@@ -928,6 +929,7 @@ sub TunePersonalCondor
 
 
 debug( "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath",$debuglevel);
+print "HMMMMMMMMMMM personal local is $personal_local , mytoppath is $mytoppath";
 
 	my $line;
 	#system("ls;pwd");
