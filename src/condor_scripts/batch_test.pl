@@ -735,8 +735,12 @@ exit $num_failed;
 sub start_condor {
 	my $alive = 0;
 	if($isolated) {
-		$testpersonalcondorlocation = "$BaseDir/$_[0]";
+		#$testpersonalcondorlocation = "$BaseDir/$_[0]";
+		$testpersonalcondorlocation = "$_[0]";
 		$alive = TestCondorHereAlive($testpersonalcondorlocation);
+		print "############### Test Location:$testpersonalcondorlocation\n";
+		print "-----------------BaseDir:$BaseDir\n";
+		print "************First Param: $_[0]\n";
 		if($alive == 1) {
 			print "Don't need to start condor\n";
 			# nothing to do
