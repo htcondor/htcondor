@@ -16,6 +16,36 @@ New features will be added in the 8.1.x development series.
 The details of each version are described below.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-0-6}Version 8.0.6}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.0.6 not yet released.
+%\item HTCondor version 8.0.6 released on Month Date, 2013.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item None.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection*{\label{sec:New-8-0-5}Version 8.0.5}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -41,30 +71,91 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed bug with \Condor{submit} -interactive when
-cgroups where enabled.  With that combination, the shell would
-get terminated immediately after startup.
+\item Fixed a bug that resulted in incorrect values for ClassAd attributes
+\Attr{RemoteGroupQuota} and \Attr{SubmitterGroupQuota}.
+These attributes are commonly used in an expression that defines
+\Macro{PREEMPTION\_REQUIREMENTS}.
+\Ticket{4093}
+
+\item Fixed a permissions bug that prevented Java universe jobs
+from running.
+\Ticket{4087}
+
+\item Fixed a bug in which job output files may not have been properly truncated
+at start up on Windows platforms. 
+\Ticket{4097}
+
+\item Fixed bug with \Condor{submit} 
+when invoked with the \Opt{-interactive} option and cgroups where enabled.
+The shell was terminated immediately after it started.
 \Ticket{4028}
 
-\item The \condor{starter} now writes to the log file
+\item Prevent illegal values from being written into the job queue
+or accounting recovery logs, in order to minimize the chance of errors when
+the \Condor{schedd} or \Condor{negotiator} are restarted. Also
+have \Condor{qedit} validate attribute names and values.
+\Ticket{3616}
+
+\item The \Condor{starter} now writes to the log file
 \File{StarterLog.slotX} when running work fetch jobs, mirroring the
-behavior when running jobs that come from a \condor{schedd}.
-Previously, the log file \File{StarterLog} was used for all work fetch
+behavior when running jobs that come from a \Condor{schedd}.
+Previously, log file \File{StarterLog} was used for all work fetch
 jobs.
 \Ticket{3091}
 
 \item Fixed a Python binding crash due to a segmentation fault, when evaluating an expression tree with an undefined reference.
 \Ticket{3910}
 
-\item Fixed curl file transfer plugin on Windows. Previously curl was
-not properly initializing Winsocks and thus all network operations
-would fail.
+\item Fixed the cURL file transfer plugin such that it now works
+on Windows platforms.
 \Ticket{3979}
+\Ticket{4012}
 
-\item Fixed a bug that caused grid-type cream jobs to fail if the submit
-description file contained the submit command \SubmitCmd{environment} or
-\SubmitCmd{cream\_attributes}.
+\item Fixed a bug that caused cream grid universe jobs to fail, 
+if the submit description file contained 
+submit commands of \SubmitCmd{environment} or \SubmitCmd{cream\_attributes}.
 \Ticket{4037}
+
+\item Fixed a bug that could cause the \Condor{schedd} to crash when
+starting a local universe job.
+\Ticket{4088}
+
+\item Fixed a bug that caused \File{stdout} and \File{stderr} of
+nordugrid grid universe jobs to be lost when the remote 
+NorduGrid ARC server was using HTCondor as its local batch scheduler.
+\Ticket{4017}
+
+\item \Condor{status} with the \Opt{-t} option now consistently 
+specifies the \Opt{-total} option. 
+The \Opt{-target} option will now be distinguished, as it requires
+at least \Opt{-targ} in its specification.
+\Ticket{4096}
+
+\item Restored the omitted HTCondor Perl module.
+\Ticket{4098}
+
+\item For RPM installations, the post-install script now
+checks to make sure that the
+SELinux \Code{unconfined\_execmem\_exec\_t type} exists before trying to
+add it to the \File{/usr/sbin/condor\_startd} file context.
+\Ticket{4034}
+
+\item Fixed a bug in which both daemons and tools may have crashed due to
+the inability to resolve a host name defined by 
+configuration variable \Macro{COLLECTOR\_HOST} to an IP address.
+\Ticket{3946}
+
+\item Changed the algorithm for calculating the value of attribute
+\Attr{RecentDaemonCoreDutyCycle} such
+that the published value will never be negative.
+\Ticket{4052}
+
+\item For VMware vm universe jobs,
+the \Condor{vm-gahp} removed from the vm description file any cdrom, 
+floppy drive, serial or parallel devices that referred to image files.  
+It no longer removes these devices, 
+as they may be useful to the virtual machine. 
+\Ticket{4002}
 
 \end{itemize}
 

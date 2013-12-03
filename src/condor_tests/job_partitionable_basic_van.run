@@ -119,11 +119,14 @@ CondorTest::StartCondorWithParams(
 );
 
 
+my $job_log = "$testname.log";
+unlink $job_log;
+
 # submit 10 jobs
 my $submit_body = "
 universe = vanilla
 executable = x_sleep.pl
-log = $testname.log
+log = $job_log
 output = $testname.out
 error = $testname.err
 notification = never

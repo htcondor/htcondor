@@ -684,7 +684,7 @@ sub RunDagTest
 sub DoTest
 {
     $handle              = shift || croak "missing handle argument";
-    $submit_file      = shift || croak "missing submit file argument";
+    $submit_file      = shift ;
     my $wants_checkpoint = shift;
 	my $clusterIDcallback = shift;
 	my $dagman_args = 	shift;
@@ -694,6 +694,18 @@ sub DoTest
 	my $waitpid = 0;
 	my $monitorret = 0;
 	my $retval = 0;
+
+	# Many of our tests want to use RegisterResult and EndTest
+	# but don't actually rely on RunTest to do the work. So
+	# I am enabling a mode where we can call RunTest just to register
+	# the test.
+	
+	if(!(defined $submit_file)) {
+    	Condor::SetHandle($handle);
+		print "No submit file passedin. Only registering test\n";
+		return($retval);
+	}
+	
 
 	$failed_coreERROR = "";
 	if( !(defined $wants_checkpoint)) {

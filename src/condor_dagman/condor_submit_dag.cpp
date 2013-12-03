@@ -679,7 +679,7 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 #if !defined ( WIN32 )
     fprintf(pSubFile, "remove_kill_sig\t= SIGUSR1\n" );
 #endif
-    fprintf(pSubFile, "+%s\t= \"%s == $(cluster)\"\n",
+    fprintf(pSubFile, "+%s\t= \"%s =?= $(cluster)\"\n",
 				ATTR_OTHER_JOB_REMOVE_REQUIREMENTS, ATTR_DAGMAN_JOB_ID );
 
 		// ensure DAGMan is automatically requeued by the schedd if it

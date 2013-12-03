@@ -161,11 +161,11 @@ class TestClassad(unittest.TestCase):
         self.assertEquals("baz", expr.eval())
 
     def test_abstime(self):
-        expr = classad.ExprTree('absTime("2013-09-12T07:50:23")')
+        expr = classad.ExprTree('absTime("2013-11-12T07:50:23")')
         dt = expr.eval()
         self.assertTrue(isinstance(dt, datetime.datetime))
         self.assertEquals(dt.year, 2013)
-        self.assertEquals(dt.month, 9)
+        self.assertEquals(dt.month, 11)
         self.assertEquals(dt.day, 12)
         self.assertEquals(dt.hour, 7)
         self.assertEquals(dt.minute, 50)

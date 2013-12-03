@@ -871,7 +871,7 @@ Dag::RemoveBatchJob(Job *node) {
 			// Adding this DAGMan's cluster ID as a constraint to
 			// be extra-careful to avoid removing someone else's
 			// job.
-		constraint.formatstr( "%s == %d && %s == %d",
+		constraint.formatstr( "%s =?= %d && %s =?= %d",
 					ATTR_DAGMAN_JOB_ID, _DAGManJobId->_cluster,
 					ATTR_CLUSTER_ID, node->GetCluster() );
 		args.AppendArg( constraint.Value() );
@@ -2062,7 +2062,7 @@ void Dag::RemoveRunningJobs ( const Dagman &dm, bool bForce) const {
 		args.AppendArg( _condorRmExe );
 		args.AppendArg( "-const" );
 
-		constraint.formatstr( "%s == %d", ATTR_DAGMAN_JOB_ID,
+		constraint.formatstr( "%s =?= %d", ATTR_DAGMAN_JOB_ID,
 					dm.DAGManJobId._cluster );
 		args.AppendArg( constraint.Value() );
 		if ( util_popen( args ) != 0 ) {
@@ -3969,7 +3969,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 				MyString parents = ParentListString( node );
       			submit_success = condor_submit( dm, cmd_file.Value(), condorID,
 							node->GetJobName(), parents,
-							node->varsFromDag,
+							node->varsFromDag, node->GetRetries(),
 							node->GetDirectory(), DefaultNodeLog(),
 							_use_default_node_log && node->UseDefaultLog(),
 							logFile, ProhibitMultiJobs(),

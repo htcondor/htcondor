@@ -29,12 +29,6 @@ extern	const char*	my_full_hostname( void );
 // use get_local_ipaddr().to_ip_string() instead
 extern	const char*	my_ip_string( void );
 
-// following functions are deprecated
-//extern	unsigned int	my_ip_addr( void );
-//extern	struct in_addr*	my_sin_addr( void );
-//extern  void	init_full_hostname( void );
-//extern  void	init_ipaddr( int config_done );
-
 #include "stream.h"
 #include <string>
 #include <set>

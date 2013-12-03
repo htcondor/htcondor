@@ -276,12 +276,12 @@ The \Arg{PRE} or \Arg{POST} key word
 specifies the relative timing of when the script is to be run.
 The \Arg{JobName} specifies the node to which the script is attached.
 The \Arg{ExecutableName}
-specifies the script to be executed, and it
-may be followed by any command line arguments to that script.
-The \Arg{ExecutableName} and optional \Arg{arguments} are
-case sensitive; they have their case preserved.  \Bold{Note that neither
-the \Arg{ExecutableName} nor the individual arguments within the
-\Arg{arguments} string can contain spaces.}
+specifies the script to be executed, 
+and it may not contain spaces.
+The Optional \Arg{arguments} are command line arguments to the script,
+and spaces delimit the arguments.
+Both \Arg{ExecutableName} and optional \Arg{arguments} are
+case sensitive; they have their case preserved.
 
 Scripts are optional for each job, and
 any scripts are executed on the machine
@@ -384,52 +384,67 @@ PRE script of the node specified by \Arg{JobName}.
 If the PRE script terminates with the exit code \Arg{non-zero-exit-code},
 then the remainder of the node is skipped entirely.  
 Both the job associated with the node and
-any \Arg{POST} script will not be executed,
+any POST script will not be executed,
 and the node will be marked as successful.
 
 \Bold{Special script argument macros}
 
-Five variables (\Env{\$JOB}, \Env{\$RETRY},
-\Env{\$MAX\_RETRIES}, 
-\Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT}) can be used within the
-DAG input file as arguments passed to a PRE or POST script; three more
-(\Env{\$JOBID}, \Env{\$RETURN}, and \Env{\$PRE\_SCRIPT\_RETURN}) can
-be used as arguments to POST scripts only.
-The use of these variables must be as an individual argument,
-and thus will be separated from other arguments by white space character(s).
-An example which will \emph{not} cause the substitution of 
-the \Env{\$RETURN} value is
+The five macros \Expr{\$JOB}, \Expr{\$RETRY}, \Expr{\$MAX\_RETRIES}, 
+\Expr{\$DAG\_STATUS} and \Expr{\$FAILED\_COUNT} can be used within the
+DAG input file as arguments passed to a PRE or POST script. 
+The three macros \Expr{\$JOBID}, \Expr{\$RETURN}, 
+and \Expr{\$PRE\_SCRIPT\_RETURN} can
+be used as arguments to POST scripts.
+The use of these variables must be as an individual command
+line \Arg{argument} to the script,
+surrounded by spaces, in order to cause the substitution of the
+variable's value.
+The example POST script specification
 \begin{verbatim}
-  job_status=$RETURN 
+  SCRIPT POST A stage-out job_status $RETURN 
 \end{verbatim}
-The argument will be this entire string as shown.
+where the node job returned a value of -1
+invokes the POST script with
+\begin{verbatim}
+  stage-out job_status -1
+\end{verbatim}
+The slightly different example POST script specification
+\begin{verbatim}
+  SCRIPT POST A stage-out job_status=$RETURN 
+\end{verbatim}
+invokes the POST script with
+\begin{verbatim}
+  stage-out job_status=$RETURN
+\end{verbatim}
+There is no space between the \Expr{=} sign and the variable \Expr{\$RETURN},
+so there is no substitution of the variable's value.
 
 The special macros are as follows:
 
 \begin{itemize}
 \item \index{DAGMan!JOB@\verb^$JOB^ value}
-\Env{\$JOB} evaluates to the (case sensitive) string
+\Expr{\$JOB} evaluates to the (case sensitive) string
 defined for \Arg{JobName}.
 
 \item \index{DAGMan!RETRY@\verb^$RETRY^ value}
-\Env{\$RETRY} evaluates to an 
+\Expr{\$RETRY} evaluates to an 
 integer value set to 0 the first time a node is run,
-and is  incremented each time the node is retried. 
+and is incremented each time the node is retried. 
 See section~\ref{dagman:retry} for the description of how to cause
 nodes to be retried. 
 
 \item \index{DAGMan!MAX_RETRIES@\verb^$MAX_RETRIES^ value}
-\Env{\$MAX\_RETRIES} evaluates to an integer value set 
+\Expr{\$MAX\_RETRIES} evaluates to an integer value set 
 to the maximum number of retries for the node.
 See section~\ref{dagman:retry} for the description of how to cause
 nodes to be retried.  
 If no retries are set for the node,
-\Env{\$MAX\_RETRIES} will be set to 0.
+\Expr{\$MAX\_RETRIES} will be set to 0.
 
 \item \index{DAGMan!JOBID@\verb^$JOBID^ value}
 \index{job ID!defined for a DAGMan node job}
 \index{job!job ID!defined for a DAGMan node job}
-\Env{\$JOBID} (for POST scripts only)
+\Expr{\$JOBID} (for POST scripts only)
 evaluates to a representation of the HTCondor job ID of the node job.
 It is the value of the job ClassAd attribute \Attr{ClusterId},
 followed by a period,
@@ -439,22 +454,22 @@ For nodes with multiple jobs in the same cluster,
 the \Attr{ProcId} value is the one of the last job within the cluster.
 
 \item \index{DAGMan!Return@\verb^$RETURN^ value}
-\Env{\$RETURN} (for POST scripts only) variable evaluates to
+\Expr{\$RETURN} (for POST scripts only) variable evaluates to
 the return value of the 
 HTCondor or Stork job, if there is a single job within a cluster.
 With multiple jobs within the same cluster,
 there are two cases to consider.
 In the first case, all jobs within the cluster are successful;
-the value of \Env{\$RETURN} will be 0, indicating success.
+the value of \Expr{\$RETURN} will be 0, indicating success.
 In the second case,
 one or more jobs from the cluster fail.
 When \Condor{dagman} sees the first terminated event for a job that failed,
-it assigns that job's return value as the value
-of \Env{\$RETURN}, and attempts to remove all remaining jobs within the cluster.
+it assigns that job's return value as the value of \Expr{\$RETURN},
+and it attempts to remove all remaining jobs within the cluster.
 Therefore, if multiple jobs in the cluster fail with different exit codes,
-a race condition determines which exit code gets assigned to \Env{\$RETURN}.
+a race condition determines which exit code gets assigned to \Expr{\$RETURN}.
 
-A job that dies due to a signal is reported with a \Env{\$RETURN} value
+A job that dies due to a signal is reported with a \Expr{\$RETURN} value
 representing the additive inverse of the signal number.
 For example, SIGKILL (signal 9) is reported as -9.
 A job whose batch system submission fails is reported as -1001.
@@ -462,19 +477,19 @@ A job that is externally removed from the batch system queue
 (by something other than \Condor{dagman}) is reported as -1002.
 
 \item \index{DAGMan!PRE_SCRIPT_RETURN@\verb^$PRE_SCRIPT_RETURN^ value}
-\Env{\$PRE\_SCRIPT\_RETURN} (for POST scripts only)
+\Expr{\$PRE\_SCRIPT\_RETURN} (for POST scripts only)
 variable evaluates to the return value of the PRE script of a node, 
 if there is one.
-If there is no PRE script, this value will be $-1$.
+If there is no PRE script, this value will be -1.
 If the node job was skipped because of failure of the PRE script,
-the value of \Env{\$RETURN} will be $-1004$
-and the value of \Env{\$PRE\_SCRIPT\_RETURN} will be the exit value
+the value of \Expr{\$RETURN} will be -1004
+and the value of \Expr{\$PRE\_SCRIPT\_RETURN} will be the exit value
 of the PRE script;
 the POST script can use this to see if the PRE script exited
 with an error condition, and assign success or failure to the node, as
 appropriate.
 
-\item \Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT} are documented in
+\item \Expr{\$DAG\_STATUS} and \Expr{\$FAILED\_COUNT} are documented in
 section ~\ref{sec:DAGFinalNode} below.
 \end{itemize}
 
@@ -949,7 +964,7 @@ on the node.
 
 The variable \Env{\$RETRY} evaluates to an 
 integer value set to 0 first time a node is run,
-and is  incremented each time for each time the node is retried. 
+and is incremented each time for each time the node is retried. 
 The variable \Env{\$MAX\_RETRIES} is the value set for
 \Arg{NumberOfRetries}.
 
@@ -961,22 +976,21 @@ code.  The syntax for \Arg{ABORT-DAG-ON} is
 \Opt{ABORT-DAG-ON} \Arg{JobName} \Arg{AbortExitValue}
 \oOptArg{RETURN}{DAGReturnValue}
 
-If the node (or the PRE script of the node) specified by \Arg{JobName}
-returns the specified
-\Arg{AbortExitValue}, the
-DAG is immediately aborted.
+If the return value of the node specified by \Arg{JobName}
+matches \Arg{AbortExitValue},
+the DAG is immediately aborted.
 A DAG abort differs from a node failure,
 in that a DAG abort causes all nodes within the DAG to be stopped immediately.
 This includes removing the jobs in nodes that are currently running.
 A node failure allows the DAG to continue running,
 until no more progress can be made due to dependencies.
 
-Note:  The implementation of this feature is somewhat inconsistent
-with other aspects of DAGMan.  If a PRE script returns the
-\Arg{AbortExitValue} value, the DAG is immediately aborted.  If the
-actual HTCondor job for a node returns the \Arg{AbortExitValue} value,
-the DAG is not aborted unless the node has no POST script.  If the
-POST script returns the \Arg{AbortExitValue} value, the DAG is aborted.
+The behavior differs based on the existence of PRE and/or POST scripts.
+If a PRE script returns the \Arg{AbortExitValue} value,
+the DAG is immediately aborted.
+If the HTCondor job within a node returns the \Arg{AbortExitValue} value,
+the DAG is aborted if the node has no POST script.
+If the POST script returns the \Arg{AbortExitValue} value, the DAG is aborted.
 
 An abort overrides node retries. 
 If a node returns the abort exit value,
@@ -991,10 +1005,10 @@ The DAG abort return value
 can be used for DAGs within DAGs,
 allowing an inner DAG to cause an abort of an outer DAG.
 
-Note that a DAG return value other than 0, 1, or 2 will cause the
-actual \Condor{dagman} job to stay in the queue after it exits
+A DAG return value other than 0, 1, or 2 will cause the
+\Condor{dagman} job to stay in the queue after it exits
 and get retried, unless the \AdAttr{on\_exit\_remove} expression in the
-\File{.condor.sub file} is manually modified.
+\File{.condor.sub} file is manually modified.
 
 Adding \Arg{ABORT-DAG-ON} for node C in the diamond-shaped
 DAG
@@ -1047,17 +1061,11 @@ To use a double quote inside \Arg{string},
 escape it with the backslash character (\verb@\@).
 To add the backslash character itself, use two backslashes (\verb@\\@).
 
-\Bold{Special variable macros}
-\begin{itemize}
-\item \$(JOB) may be used in \Arg{string} and will expand to
-\Arg{JobName}. 
-If the \Arg{VARS} line appears in a DAG file used as a splice file, 
-then \$(JOB) will be the fully scoped name of the node.
-\end{itemize}
-
 \Bold{Note that the \Arg{macroname} itself cannot begin with the string
 \Expr{queue},
 in any combination of upper or lower case.}
+
+\Bold{Examples}
 
 If the DAG input file contains
 \footnotesize
@@ -1245,6 +1253,27 @@ The resulting values passed to the NodeB executable are
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
 \begin{description}
+\item[Special macros]
+\end{description}
+
+\begin{itemize}
+\item \Env{\$(JOB)} may be used in \Arg{string} and will expand to
+\Arg{JobName}. 
+If the \Arg{VARS} line appears in a DAG file used as a splice file, 
+then \Env{\$(JOB)} will be the fully scoped name of the node.
+\item \Env{\$(RETRY)} may be used in \Arg{string} and will expand to
+0 the first time a node is run; the value is incremented each time the node
+is retried.  For example:
+\end{itemize}
+\begin{verbatim}
+      Vars F noderetry="$(RETRY)"
+\end{verbatim}
+
+Note that the special macro values can be inserted into a job's ClassAd,
+as noted below.
+
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
 \item[Using VARS to define ClassAd attributes]
 \end{description}
 
@@ -1258,6 +1287,11 @@ the following line:
 \begin{verbatim}
   arguments = "$$([A])"
 \end{verbatim}
+
+Note that ClassAd string values must be quoted, hence there are escaped
+quotes in the example above.  The outer quotes are consumed in the parsing of
+the DAG input file, so the escaped inner quotes remain in the definition
+of the attribute value.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Setting Priorities for Nodes}

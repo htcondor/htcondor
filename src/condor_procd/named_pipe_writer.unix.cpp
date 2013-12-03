@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "selector.h"
 #include "named_pipe_writer.unix.h"
 #include "named_pipe_watchdog.unix.h"
 
@@ -101,23 +102,19 @@ NamedPipeWriter::write_data(void* buffer, int len)
 	// crashes
 	//
 	if (m_watchdog != NULL) {
-		fd_set write_fd_set;
-		FD_ZERO(&write_fd_set);
-		FD_SET(m_pipe, &write_fd_set);
 		int watchdog_pipe = m_watchdog->get_file_descriptor();
-		fd_set read_fd_set;
-		FD_ZERO(&read_fd_set);
-		FD_SET(watchdog_pipe, &read_fd_set);
-		int max_fd = (m_pipe > watchdog_pipe) ? m_pipe : watchdog_pipe;
-		int ret = select(max_fd + 1, &read_fd_set, &write_fd_set, NULL, NULL);
-		if (ret == -1) {
+		Selector selector;
+		selector.add_fd( m_pipe, Selector::IO_WRITE );
+		selector.add_fd( watchdog_pipe, Selector::IO_READ );
+		selector.execute();
+		if ( selector.failed() || selector.signalled() ) {
 			dprintf(D_ALWAYS,
 			        "select error: %s (%d)\n",
-			        strerror(errno),
-			        errno);
+			        strerror(selector.select_errno()),
+			        selector.select_errno());
 			return false;
 		}
-		if (FD_ISSET(watchdog_pipe, &read_fd_set)) {
+		if ( selector.fd_ready( watchdog_pipe, Selector::IO_READ ) ) {
 			dprintf(D_ALWAYS,
 			        "error writing to named pipe: "
 			            "watchdog pipe has closed\n");

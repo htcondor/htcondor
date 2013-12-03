@@ -7,37 +7,16 @@
 
 #include <curl/curl.h>
 #include <string.h>
+#include <string>
 
 #include "safe_fopen.h"
 
-struct Downloaded_Data
-{
-    char* text;
-    int size;
-};
-
 static size_t WriteCallback(char *contents, size_t size, size_t nmemb, void *userdata)
 {
-    Downloaded_Data *downloaded_data = (Downloaded_Data*)userdata;
-    size_t data_size = size * nmemb;
-
-    if(downloaded_data->text)
-    {
-        free(downloaded_data->text);
-        downloaded_data->text = NULL;
-    }
-
-    if(size == 0) return 0;
-
-    downloaded_data->text = (char*)malloc(data_size + 1);
-    
-    if(!downloaded_data->text) return 0;
-
-    downloaded_data->size = size;
-    downloaded_data->text[data_size] = '\0';
-    memcpy(downloaded_data->text, contents, data_size);
-
-    return data_size;
+	std::string * ptext = (std::string *)userdata;
+	size_t data_size = size * nmemb;
+	ptext->append(contents, size * nmemb);
+	return data_size;
 }
 
 void print_help()
@@ -52,8 +31,7 @@ bool print_cached_file(const char *cached_path)
     FILE *fp;
     int character;
 
-    fp = safe_fopen_no_create_follow(cached_path, "r");
-
+    fp = safe_fopen_no_create_follow(cached_path, "rb");
     if(!fp)
     {
         printf("Error: Failed to open cache file for reading.\n");
@@ -74,13 +52,11 @@ int main(int argc, char **argv) {
     CURL *handle = NULL;
     int rval = -1;
     const char *cache_path;
-    Downloaded_Data downloaded_data;
+    std::string downloaded_data;
     FILE *fp = NULL;
     long http_code;
+    int cb = 0;
 
-    downloaded_data.text = NULL;
-    downloaded_data.size = 0;
-	
     if(argc < 2 || argc > 3)
     {
         print_help();
@@ -102,7 +78,6 @@ int main(int argc, char **argv) {
 	curl_global_init(CURL_GLOBAL_NOTHING);
 #endif
     handle = curl_easy_init();
-
     if(!handle)
     {
         fprintf(stderr, "Error attempting to initialize CURL library.\n");
@@ -112,17 +87,16 @@ int main(int argc, char **argv) {
     curl_easy_setopt(handle, CURLOPT_URL, argv[1]);
     curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, WriteCallback);
     curl_easy_setopt(handle, CURLOPT_WRITEDATA, &downloaded_data);
-	curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, -1);
+    curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, -1);
 
     rval = curl_easy_perform(handle);
-    if(rval || !downloaded_data.text)
+    if(rval || downloaded_data.empty())
     {
         print_cached_file(cache_path);
         goto Cleanup;
     }
 
     rval = curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &http_code);
-
     if(rval)
     {
         print_cached_file(cache_path);
@@ -134,19 +108,26 @@ int main(int argc, char **argv) {
         print_cached_file(cache_path);
         goto Cleanup;
     }
-    
-    printf(downloaded_data.text);
 
-    fp = safe_fcreate_replace_if_exists(cache_path, "w");
+    cb = fwrite(downloaded_data.c_str(), 1, downloaded_data.size(), stdout);
+    if (cb != (int)downloaded_data.size())
+    {
+        fprintf(stderr, "error: could not write entire config to stdout\n");
+    }
 
+    fp = safe_fcreate_replace_if_exists(cache_path, "wb");
     if(!fp) goto Cleanup;
 
-    fputs(downloaded_data.text, fp);
+    cb = fwrite(downloaded_data.c_str(), 1, downloaded_data.size(), fp);
+    if (cb != (int)downloaded_data.size())
+    {
+        fprintf(stderr, "error: could not write entire config to cache file!\n");
+    }
 
     fclose(fp);
 
 Cleanup:
-    if(downloaded_data.text) free(downloaded_data.text);
+    // if(downloaded_data.text) free(downloaded_data.text);
     curl_easy_cleanup(handle);
     curl_global_cleanup();
 

@@ -20,6 +20,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "selector.h"
 #include "named_pipe_reader.unix.h"
 #include "named_pipe_watchdog.unix.h"
 #include "named_pipe_util.unix.h"
@@ -100,22 +101,20 @@ NamedPipeReader::read_data(void* buffer, int len)
 	// something for us to read and then exited
 	//
 	if (m_watchdog != NULL) {
-		fd_set read_fd_set;
-		FD_ZERO(&read_fd_set);
-		FD_SET(m_pipe, &read_fd_set);
 		int watchdog_pipe = m_watchdog->get_file_descriptor();
-		FD_SET(watchdog_pipe, &read_fd_set);
-		int max_fd = (m_pipe > watchdog_pipe) ? m_pipe : watchdog_pipe;
-		int ret = select(max_fd + 1, &read_fd_set, NULL, NULL, NULL);
-		if (ret == -1) {
+		Selector selector;
+		selector.add_fd( m_pipe, Selector::IO_READ );
+		selector.add_fd( watchdog_pipe, Selector::IO_READ );
+		selector.execute();
+		if ( selector.failed() || selector.signalled() ) {
 			dprintf(D_ALWAYS,
 			        "select error: %s (%d)\n",
-			        strerror(errno),
-			        errno);
+			        strerror(selector.select_errno()),
+			        selector.select_errno());
 			return false;
 		}
-		if (FD_ISSET(watchdog_pipe, &read_fd_set) &&
-		    !FD_ISSET(m_pipe, &read_fd_set)
+		if ( selector.fd_ready( watchdog_pipe, Selector::IO_READ ) &&
+		     !selector.fd_ready( m_pipe, Selector::IO_READ )
 		) {
 			dprintf(D_ALWAYS,
 			        "error reading from named pipe: "
@@ -155,36 +154,31 @@ NamedPipeReader::poll(int timeout, bool& ready)
 
 	assert(timeout >= -1);
 
-	fd_set read_fd_set;
-	FD_ZERO(&read_fd_set);
-	FD_SET(m_pipe, &read_fd_set);
+	Selector selector;
+	selector.add_fd( m_pipe, Selector::IO_READ );
 
-	struct timeval* tv_ptr = NULL;
-	struct timeval tv;
 	if (timeout != -1) {
-		tv.tv_sec = timeout;
-		tv.tv_usec = 0;
-		tv_ptr = &tv;
+		selector.set_timeout( timeout );
 	}
 
-	int ret = select(m_pipe + 1, &read_fd_set, NULL, NULL, tv_ptr);
-	if (ret == -1) {
-		if( errno == EINTR ) {
-				// We could keep looping until all of the time has passed,
-				// but currently nothing depends on this, so just return
-				// true here to avoid having the whole procd die when
-				// somebody attaches with a debugger.
-			ready = false;
-			return true;
-		}
+	selector.execute();
+	if ( selector.signalled() ) {
+			// We could keep looping until all of the time has passed,
+			// but currently nothing depends on this, so just return
+			// true here to avoid having the whole procd die when
+			// somebody attaches with a debugger.
+		ready = false;
+		return true;
+	}
+	if ( selector.failed() ) {
 		dprintf(D_ALWAYS,
 		        "select error: %s (%d)\n",
-		        strerror(errno),
-		        errno);
+		        strerror(selector.select_errno()),
+		        selector.select_errno());
 		return false;
 	}
 
-	ready = FD_ISSET(m_pipe, &read_fd_set);
+	ready = selector.fd_ready( m_pipe, Selector::IO_READ );
 
 	return true;
 }

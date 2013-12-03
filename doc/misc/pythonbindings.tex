@@ -51,6 +51,18 @@ to send to a daemon.   Some commands require additional arguments;
 for example, sending \texttt{DaemonOff} to a \Condor{master} requires 
 one to specify which subsystem to turn off. 
 \\ \hline
+\texttt{read\_events( file\_obj, is\_xml = True ) }
+
+Read and parse a HTCondor event log file.
+
+Parameter \texttt{file\_obj} is a file object corresponding to a HTCondor
+event log.
+
+The optional parameter \texttt{is\_xml} specifies whether the event log is
+XML-formatted.
+
+Returns a python iterator of ClassAds.
+\\ \hline
 
 \end{tabular}
 \end{flushleft}
