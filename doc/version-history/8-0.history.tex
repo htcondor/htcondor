@@ -104,9 +104,10 @@ at least \Opt{-targ} in its specification.
 \item Restored the omitted HTCondor Perl module.
 \Ticket{4098}
 
-\item In the RPM post-install script, check to make sure that the
-SELinux unconfined\_execmem\_exec\_t type exists, before trying to
-add it to the /usr/sbin/condor\_startd file context.
+\item For RPM installations, the post-install script now
+checks to make sure that the
+SELinux \Code{unconfined\_execmem\_exec\_t type} exists before trying to
+add it to the \File{/usr/sbin/condor\_startd} file context.
 \Ticket{4034}
 
 \item Fix a crash in both daemons and tools that happens when a
