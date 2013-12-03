@@ -110,9 +110,9 @@ SELinux \Code{unconfined\_execmem\_exec\_t type} exists before trying to
 add it to the \File{/usr/sbin/condor\_startd} file context.
 \Ticket{4034}
 
-\item Fix a crash in both daemons and tools that happens when a
-hostname in \Macro{COLLECTOR\_HOST} can't be resolved to an IP
-address.
+\item Fixed a bug in which both daemons and tools may have crashed due to
+the inability to resolve a host name defined by 
+configuration variable \Macro{COLLECTOR\_HOST} to an IP address.
 \Ticket{3946}
 
 \item Changed the algorithm for calculating the value of attribute
