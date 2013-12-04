@@ -491,7 +491,7 @@ sub RegisterTimed
 	# Prior to this change timed callbacks were only regsitered
 	# when we call "runTest" and similar calls at the start.
 
-	CheckTimedRegistrations();
+	CheckTimedRegistrations($handle);
 }
 
 sub RemoveTimed
@@ -955,6 +955,7 @@ sub DoTest
 
 sub CheckTimedRegistrations
 {
+	my $handle = shift;
 	# this one event should be possible from ANY state
 	# that the monitor reports to us. In this case which
 	# initiated the change I wished to start a timer from
