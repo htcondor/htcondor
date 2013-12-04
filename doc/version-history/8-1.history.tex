@@ -66,7 +66,8 @@ and DrainedMachines, which measures the total numbers of fully drained machines
 which have arrived during the runtime of this \Condor{defrag} daemon.
 \Ticket{4055}
 
-\item Added support for the defrag option for the \Condor{status} command.
+\item The new \Opt{-defrag} option for \Condor{status} queries ClassAds
+of the \Condor{defrag} daemon.
 \Ticket{4039}
 
 \item In a DAG, the node retry number is now available as VARS macro
@@ -98,6 +99,10 @@ so \Condor{schedd} will create a core file core.SCHEDD.
 \Attr{TotalPreemptions} has been renamed to \Attr{JobPreemptions}
 \Attr{RecentTotalPreemptions} has been renamed to \Attr{RecentJobPreemptions}
 \Ticket{3712}
+
+\item The new \Condor{schedd} statistics ClassAd attribute
+\Attr{Autoclusters} gives the number of active autoclusters.
+\Ticket{4020}
 
 \end{itemize}
 
