@@ -272,6 +272,7 @@ my $on_submit = sub {
 
 $result = SimpleJob::RunCheck(
 	test_name => "$test_name",
+	timeout => 1800,
 	on_abort => $on_abort,
 	on_submit => $on_submit,
 	on_execute => $on_execute,
