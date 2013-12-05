@@ -777,6 +777,7 @@ drop_core_in_log( void )
 			if (MATCH == strcmpi(get_mySubSystem()->getName(), "KBDD")) {
 				dprintf (D_FULLDEBUG, "chdir() to LOG directory failed for KBDD, "
 					     "cannot drop core in LOG dir\n");
+				free(ptmp);
 				return;
 			}
 #endif
