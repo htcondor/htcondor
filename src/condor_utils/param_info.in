@@ -1789,8 +1789,6 @@ tags=daemon_core,daemon_core
 
 [USE_CLONE_TO_CREATE_PROCESSES]
 default=true
-# TJ 26-Nov-2013 v8.1.3 - Fedora19 crashes if we use clone, so disable clone until we get this fixed.
-Fedora19_default=false
 type=bool
 reconfig=true
 customization=seldom
