@@ -222,10 +222,12 @@ int putClassAd ( Stream *sock, classad::ClassAd& ad, bool exclude_private, Strin
 int putClassAdNonblocking(ReliSock *sock, classad::ClassAd& ad, bool exclude_private, StringList *attr_whitelist )
 {
 	int retval;
-	bool prior_state = sock->set_non_blocking(true);
-	retval = _putClassAd(sock, ad, false, exclude_private, attr_whitelist);
-	bool backlog = sock->clear_backlog_flag();
-	sock->set_non_blocking(prior_state);
+	bool backlog;
+	{
+		BlockingModeGuard guard(sock, true);
+		retval = _putClassAd(sock, ad, false, exclude_private, attr_whitelist);
+		backlog = sock->clear_backlog_flag();
+	}
 	if (!retval) {
 		return 0;
 	} else if (backlog) {

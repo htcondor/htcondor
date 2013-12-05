@@ -49,8 +49,11 @@ class Condor_MD_MAC;
 #define PUT_FILE_MAX_BYTES_EXCEEDED -5
 #define GET_FILE_MAX_BYTES_EXCEEDED -5
 
+class BlockingModeGuard;
+
 class ReliSock : public Sock {
 	friend class Authentication;
+	friend class BlockingModeGuard;
 
 //	PUBLIC INTERFACE TO RELIABLE SOCKS
 //
@@ -70,11 +73,13 @@ public:
 
     ///
 	virtual int end_of_message();
+	int end_of_message_internal();
 
-		// If in non-blocking mode and EOM returns 2,
+		// If in non-blocking mode and EOM_nb returns 2,
 		// then this must be called until it finishes
 		// successfully (1) or fails (0); if this returns
 		// 2, then try again in the future.
+	int end_of_message_nonblocking();
 	int finish_end_of_message();
 
 	virtual bool peek_end_of_message();
@@ -248,14 +253,14 @@ public:
 
     const char * isIncomingDataMD5ed();
 
-	bool set_non_blocking(bool val) {bool state = m_non_blocking; m_non_blocking = val; return state;}
-	bool is_non_blocking() const {return m_non_blocking;}
-
 	int clear_backlog_flag() {bool state = m_has_backlog; m_has_backlog = false; return state;}
 
 //	PROTECTED INTERFACE TO RELIABLE SOCKS
 //
 protected:
+
+	bool set_non_blocking(bool val) {bool state = m_non_blocking; m_non_blocking = val; return state;}
+	bool is_non_blocking() const {return m_non_blocking;}
 
         virtual bool init_MD(CONDOR_MD_MODE mode, KeyInfo * key, const char * keyId);
         virtual bool set_encryption_id(const char * keyId);
@@ -346,6 +351,24 @@ protected:
 	virtual void setTargetSharedPortID( char const *id );
 	virtual bool sendTargetSharedPortID();
 	char const *getTargetSharedPortID() { return m_target_shared_port_id; }
+};
+
+class BlockingModeGuard {
+
+public:
+	BlockingModeGuard(ReliSock *parent, bool non_blocking)
+	 : m_parent(parent), m_mode(m_parent->set_non_blocking(non_blocking))
+	{
+	}
+
+	~BlockingModeGuard()
+	{
+		m_parent->set_non_blocking(m_mode);
+	}
+
+private:
+	ReliSock *m_parent;
+	bool m_mode;
 };
 
 #endif

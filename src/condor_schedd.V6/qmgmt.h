@@ -105,8 +105,8 @@ bool rewriteSpooledJobAd(ClassAd *job_ad, int cluster, int proc, bool modify_ad)
 ClassAd* GetJobAd(int cluster_id, int proc_id, bool expStartdAd, bool persist_expansions);
 ClassAd* GetNextJobByCluster( int, int );
 
-ClassAdLog::projection_filter_iterator BeginIterator(const classad::ExprTree &requirements, StringList &projection, int timeslice_ms);
-ClassAdLog::projection_filter_iterator EndIterator();
+ClassAdLog::filter_iterator BeginIterator(const classad::ExprTree &requirements, int timeslice_ms);
+ClassAdLog::filter_iterator EndIterator();
 
 int get_myproxy_password_handler(Service *, int, Stream *sock);
 
