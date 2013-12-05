@@ -132,15 +132,18 @@ integer seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 %
 \index{ClassAd machine attribute!ExpectedMachineGracefulDrainingBadput}
 \item[\AdAttr{ExpectedMachineGracefulDrainingBadput}:] The
-job runtime in cpu-seconds that would be lost if graceful draining
-were initiated at the time this ad was published.  This calculation assumes
+job run time in cpu-seconds that would be lost if graceful draining
+were initiated at the time this ClassAd was published.  
+This calculation assumes
 that jobs will run for the full retirement time and then be evicted
 without saving a checkpoint.
 %
 \index{ClassAd machine attribute!ExpectedMachineGracefulDrainingCompletion}
-\item[\AdAttr{ExpectedMachineGracefulDrainingCompletion}:] Time at
+\item[\AdAttr{ExpectedMachineGracefulDrainingCompletion}:] The
+estimated time at
 which graceful draining of the machine could complete if it were
-initiated at the time this ad was published.  This is measured in the
+initiated at the time this ClassAd was published
+and there are no active claims.  This is measured in the
 number of integer seconds since the Unix epoch (00:00:00 UTC, Jan 1,
 1970).  This value is computed with the assumption that the machine
 policy will not suspend jobs during draining while the machine is
@@ -152,14 +155,15 @@ attention to the \AdAttr{Draining} attribute.
 %
 \index{ClassAd machine attribute!ExpectedMachineQuickDrainingBadput}
 \item[\AdAttr{ExpectedMachineGracefulQuickBadput}:] The
-job runtime in cpu-seconds that would be lost if quick draining
-were initiated at the time this ad was published.  This calculation assumes
+job run time in cpu-seconds that would be lost if quick or fast draining
+were initiated at the time this ClassAd was published.  This calculation assumes
 that all evicted jobs will not save a checkpoint.
 %
 \index{ClassAd machine attribute!ExpectedMachineQuickDrainingCompletion}
 \item[\AdAttr{ExpectedMachineQuickDrainingCompletion}:] Time at
-which quick draining of the machine could complete if it were
-initiated at the time this ad was published.  This is measured in the
+which quick or fast draining of the machine could complete if it were
+initiated at the time this ClassAd was published 
+and there are no active claims.  This is measured in the
 number of integer seconds since the Unix epoch (00:00:00 UTC, Jan 1,
 1970).
 %

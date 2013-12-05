@@ -42,6 +42,13 @@ which have arrived during the run time of this \Condor{defrag} daemon.
 of the \Condor{defrag} daemon.
 \Ticket{4039}
 
+\item Machine ClassAd attributes \Attr{ExpectedMachineQuickDrainingCompletion}
+and \Attr{ExpectedMachineGracefulDrainingCompletion} are updated with their
+completion times if there are no active claims,
+making these attributes more useful in setting policy for
+partitionable slots. 
+\Ticket{3481}
+
 \item In a DAG, the node retry number is now available as VARS macro
 (see section~\ref{dagman:VARS}).
 \Ticket{4032}
