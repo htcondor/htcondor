@@ -116,9 +116,10 @@ The macro definition is a string literal that may utilize macro substitution.
 
 Macro invocations are of the form: 
 \begin{verbatim}
-$(macro_name)
+$(macro_name:default if macro_name not defined)
 \end{verbatim}
 
+The colon and default are optional in a macro invocation.
 Macro definitions may contain references to other macros, even ones
 that are not yet defined, as long as they are eventually defined in
 the configuration files.
@@ -170,6 +171,38 @@ B = $(A)
 \end{verbatim}
 are \emph{not} allowed.
 They create definitions that HTCondor refuses to parse. 
+
+A macro invocation where the macro name is not defined results
+in a substitution of the empty string.
+Consider the example
+\begin{verbatim}
+MAX_ALLOC_CPUS = $(NUMCPUS)-1
+\end{verbatim}
+If \MacroNI{NUMCPUS} is not defined, then this macro substitution
+becomes
+\begin{verbatim}
+MAX_ALLOC_CPUS = -1
+\end{verbatim}
+The default value may help to avoid this situation.
+The default value may be a literal
+\begin{verbatim}
+MAX_ALLOC_CPUS = $(NUMCPUS:4)-1
+\end{verbatim}
+such that if \MacroNI{NUMCPUS} is not defined, the result of macro
+substitution becomes
+\begin{verbatim}
+MAX_ALLOC_CPUS = 4-1
+\end{verbatim}
+The default may be another macro invocation:
+\begin{verbatim}
+MAX_ALLOC_CPUS = $(NUMCPUS:$(DETECTED_CPUS))-1
+\end{verbatim}
+These default specifications are restricted such that 
+a macro invocation with a default can not be nested inside of another default.  
+An alternative way of stating this restriction is that there can
+only be one colon character per line. 
+The effect of nested defaults can be achieved by placing the
+macro definitions on separate lines of the configuration.
 
 All entries in a configuration file must have an operator,
 which will be an equals sign (\verb@=@).
