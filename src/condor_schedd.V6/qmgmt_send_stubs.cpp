@@ -877,7 +877,6 @@ GetAllJobsByConstraint_Next( ClassAd &ad )
 		errno = ETIMEDOUT;
 		return -1;
 	}
-	neg_on_error( qmgmt_sock->end_of_message() );
 
 	return 0;
 }
