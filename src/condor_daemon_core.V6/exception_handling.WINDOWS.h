@@ -26,7 +26,7 @@ class ExceptionHandler {
 	public:            
 		ExceptionHandler( );      
 		~ExceptionHandler( );
-		void SetLogFileName( PTSTR pszLogFileName );  
+		void SetLogFileName( const TCHAR * pszLogFileName );
 		void SetPID( pid_t pid );  
 		void TurnOff( );
 		void TurnOn( );

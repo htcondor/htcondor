@@ -84,7 +84,7 @@ use constant { RECONSTITUTE_TEMPLATE =>
 
 use constant { RECONSTITUTE_TEMPLATE_IFDEF => 
 'static const %typequal%_value def_%parameter_var% = {
-	#ifdef WIN32
+	#if %win32_ifdef%
 	 %win32_default%, PARAM_TYPE_%type%%range_valid%%win_cooked_values%
 	#else
 	 %default%, PARAM_TYPE_%type%%range_valid%%cooked_values%
@@ -184,6 +184,8 @@ sub reconstitute {
 	my $structure = shift;
 	my $default_structure = shift; 
 	my $output_filename = $options{output};
+	my $platform = $options{platform};
+	print "generating param_info for platform=[$platform]\n";
 	###########################################################################
 	## All of the actual file output is contained in this section.           ##
 	###########################################################################
@@ -350,6 +352,18 @@ sub reconstitute {
 		$sub_structure->{'parameter_var'} = $var_name;
 		#if ( ! exists $sub_structure->{type}) { $sub_structure->{type} = $default_structure->{type}; }
 		
+		# check for platform specific default, right now we support only one of these.
+		my $plat = "win32";
+		foreach my $key (keys %{$sub_structure}) {
+			if ($key =~ /^([a-zA-Z_]+[a-zA-Z0-9_]*)_default/) {
+				$plat = $1;
+				my $isplat = 0; if ($platform =~ $plat) { $isplat = 1; }
+				if ($plat !~ /win32/) {
+					print "found platform default key=[$key] plat=[$plat] $isplat def=$sub_structure->{$key}\n";
+				}
+			}
+		}
+
 		my $typequal = "nodef";
 		my $cooked_values = "";
 		my $win_cooked_values = "";
@@ -357,13 +371,13 @@ sub reconstitute {
 		my $cooked_range = "";
 		my $range_max = "";
 		my $nix_default = $sub_structure->{'default'};
-		my $win_default = $sub_structure->{'win32_default'};
+		my $win_default = $sub_structure->{"${plat}_default"};
 		my $def_valid = (defined $nix_default && $nix_default ne "") ? "1" : "0";
 		my $win_valid = (defined $win_default && $win_default ne "") ? "1" : "0";
 		my $range_valid = "";
 		
 		
-		# print "$var_name has win32_default=$win_default\n" if $win_valid eq "1";
+		# print "$var_name has ${plat}_default=$win_default\n" if $win_valid eq "1";
 		
 		print Dumper($sub_structure) if $options{debug};
 		
@@ -548,6 +562,15 @@ sub reconstitute {
 		    $replace{"%win32_default%"} = '"'.escape($win_default).'"';
 			#$replace{"%win_valid%"} = $win_valid;
 			$replace{"%win_cooked_values%"} = "";
+			if ($plat =~ /^win32$/i) {
+				$replace{"%win32_ifdef%"} = "defined WIN32";
+			} else {
+				if ($platform =~ $plat) {
+					$replace{"%win32_ifdef%"} = "1 // PLATFORM =~ \"${plat}\"";
+				} else {
+					$replace{"%win32_ifdef%"} = "0 // PLATFORM =~ \"${plat}\"";
+				}
+			}
 			$cooked = $win_cooked_values.$cooked_range;
 			if (length $cooked) { $replace{"%win_cooked_values%"} = ", ".$cooked; }
 			continue_output(replace_by_hash(\%replace, RECONSTITUTE_TEMPLATE_IFDEF));
@@ -897,6 +920,7 @@ sub configure  {
 		['a',	0,   'append',     0,                       "append: don't clobber output file"],
 		['e',	0,   'errors',     0,                       'do not die on some errors'],
 		['d',	0,   'debug',	   0,                       0], # 0 makes it hidden on -h
+		['p',	1,   'platform',   'generic',               'platform'],
 	);
 	sub usage {
 		my $switches;

@@ -33,7 +33,7 @@ use Check::CondorLog;
 use Time::Local;
 use Cwd;
 
-my $test_name = "job_test_log_rotaion";
+my $test_name = "job_test_log_rotaion_multiwriters";
 CondorTest::RunTest($test_name);
 
 my $killconfig = $ARGV[0];
@@ -51,14 +51,19 @@ if(defined $killconfig) {
 my $ClusterId = 0;
 my $expect_return = 0;
 
+$ENV{_CONDOR_MAX_WRITELOG_LOG} = "4 Kb";
+$ENV{_CONDOR_WRITELOG_LOG} = "$(log)/WriteLogLog";
+$ENV{_CONDOR_WRITELOG_DEBUG} = "D_ALWAYS";
+$ENV{_CONDOR_MAX_NUM_WRITELOG_LOG} = 1;
+
 if(!(defined $killconfig)) {
 	my $firstappend_condor_config = '
 		DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 		WANT_SUSPEND = FALSE
 		NEGOTIATION_INTERVAL = 10
-		MAX_WRITELOG_LOG = 50 Kb
-		WRITELOG_LOG = $(log)/WriteLogLog
-		WRITELOG_DEBUG = D_ALWAYS
+		#MAX_WRITELOG_LOG = 4 Kb
+		#WRITELOG_LOG = $(log)/WriteLogLog
+		#WRITELOG_DEBUG = D_ALWAYS
 	';
 
 	$configfile1 = CondorTest::CreateLocalConfig($firstappend_condor_config,"testlogrotation1");
@@ -69,17 +74,18 @@ if(!(defined $killconfig)) {
 		condorlocalsrc => "$configfile1",
 	);
 	print "First test basic job\n";
-	$result = SimpleJob::RunCheck(); # jobid 1
+	#$result = SimpleJob::RunCheck(); # jobid 1
 } else {
 	my $test1 = '
-		MAX_WRITELOG_LOG = 50 Kb
-		WRITELOG_LOG = $(log)/WriteLogLog
-		WRITELOG_DEBUG = D_ALWAYS
+		#MAX_WRITELOG_LOG = 4 Kb
+		#WRITELOG_LOG = $(log)/WriteLogLog
+		#WRITELOG_DEBUG = D_ALWAYS
 	';
-	AppendLocalConfig($test1);
+	#AppendLocalConfig($test1);
 
-	print "************ Size based test 50 kb, default log count: WriteLogLog\n";
 }
+
+print "************ Size based test 4 kb, default log count: WriteLogLog\n";
 
 my $return = "";
 my $executecount = 0;
@@ -90,6 +96,7 @@ my $result = 1;
 my @adarray = ();
 my $LogLocation = "";
 
+#system("condor_config_val -dump | grep MAX");
 runCondorTool("condor_config_val log", \@adarray, 2, {emit_output=>0});
 
 $LogLocation = $adarray[0];
@@ -99,18 +106,36 @@ chdir("$LogLocation");
 
 @adarray = ();
 # 75 long
-runCondorTool("condor_testwritelog -c 2000 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
+my $writers = "writerAAA,writerBBB";
+LaunchWritersAndWait($writers,"1-4","-c 60  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 my $logsstring = GetLogsString($LogLocation,"WriteLogLog");
 # pass logs oldest to newest
-my $result = ValidateLogs($logsstring,51200, 0, 2000, $LogLocation);
+
+#check writers present all log files first
+my $writershere = LogWritersCheck($logsstring, $writers);
+RegisterResult($writershere, "test_name", $test_name);
+
+print "Checking these logs: $logsstring for these writers: $writers: ";
+if($writershere == 1) {
+	print "OK\n";
+} else {
+	print "BAD\n";
+}
+
+my $result = ValidateLogs($logsstring,20480, 0, 60, $LogLocation,"writerAAA");
+#RegisterResult($result, "test_name", $test_name);
+$result = ValidateLogs($logsstring,20480, 0, 60, $LogLocation,"writerBBB");
 RegisterResult($result, "test_name", $test_name);
 chdir("$top");
 
-print "Test default log rotation with 50 Kb size constraint: ";
+# We only look at opne of the validate results since it is a size or time based
+# check. But within we have a sequence validation per writer.
+
+print "Test default log rotation with 4 Kb size constraint: ";
 if($result == 1) {
 	print "OK\n";
 	if(defined $killconfig) {
-		CleanLogs($LogLocation);
+		#CleanLogs($LogLocation);
 	}
 } else {
 	print "BAD\n";
@@ -119,6 +144,8 @@ if($result == 1) {
 	}
 }
 
+
+exit(0);
 if(!(defined $killconfig)) {
 	my $secondappend_condor_config = '
 		DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
@@ -139,7 +166,7 @@ if(!(defined $killconfig)) {
 	);
 
 	print "First test basic job\n";
-	$result = SimpleJob::RunCheck(); # jobid 1
+	#$result = SimpleJob::RunCheck(); # jobid 1
 } else {
 	my $test2 = '
 		MAX_NUM_WRITELOG_LOG = 4
@@ -147,8 +174,9 @@ if(!(defined $killconfig)) {
 
 	AppendLocalConfig($test2);
 
-	print "****************** Sized based testing with more then two files\n";
 }
+
+print "****************** Sized based testing with more then two files\n";
 
 runCondorTool("condor_config_val log", \@adarray, 2, {emit_output=>0});
 
@@ -157,14 +185,30 @@ chomp($LogLocation);
 chdir("$LogLocation");
 
 @adarray = ();
-runCondorTool("condor_testwritelog -c 112000 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", \@adarray, 2 ,{emit_output=>0});
-$logsstring = GetLogsString($LogLocation,"WriteLogLog");
+$writers = "writerAAA,writerBBB";
+LaunchWritersAndWait($writers,"1-3","-c 60  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+my $logsstring = GetLogsString($LogLocation,"WriteLogLog");
 # pass logs oldest to newest
-$result = ValidateLogs($logsstring, 2097152, 0, 112000, $LogLocation);
+
+#check writers present all log files first
+my $writershere = LogWritersCheck($logsstring, $writers);
+RegisterResult($writershere, "test_name", $test_name);
+
+print "Checking these logs: $logsstring for these writers: $writers: ";
+if($writershere == 1) {
+	print "OK\n";
+} else {
+	print "BAD\n";
+}
+
+my $result = ValidateLogs($logsstring,20480, 0, 60, $LogLocation,"writerAAA");
+#RegisterResult($result, "test_name", $test_name);
+$result = ValidateLogs($logsstring,20480, 0, 60, $LogLocation,"writerBBB");
 RegisterResult($result, "test_name", $test_name);
+
 chdir("$top");
 
-print "Test multifile log rotation with 50 Kb size constraint: ";
+print "Test multifile log rotation with 4 Kb size constraint: ";
 if($result == 1) {
 	print "OK\n";
 	if(defined $killconfig) {
@@ -173,9 +217,13 @@ if($result == 1) {
 } else {
 	print "Known Broken\n";
 	if(defined $killconfig) {
-		#leave( "Stopping to allow log inspection here:$LogLocation\n");
+		leave( "Stopping to allow log inspection here:$LogLocation\n");
 	}
 }
+
+CondorTest::EndTest();
+RestoreLocalConfig(); # retore original condor_config.local file
+exit(0);
 
 if(!(defined $killconfig)) {
 	my $thirdappend_condor_config = '
@@ -196,7 +244,7 @@ if(!(defined $killconfig)) {
 	);
 
 	print "First test basic job\n";
-	$result = SimpleJob::RunCheck(); # jobid 1
+	#$result = SimpleJob::RunCheck(); # jobid 1
 } else {
 	my $test3 = '
 		MAX_WRITELOG_LOG = 60 Sec
@@ -255,7 +303,7 @@ if(!(defined $killconfig)) {
 	);
 
 	print "First test basic job\n";
-	$result = SimpleJob::RunCheck(); # jobid 1
+	#$result = SimpleJob::RunCheck(); # jobid 1
 } else {
 	my $test4 = '
 		MAX_NUM_WRITELOG_LOG = 2
@@ -419,6 +467,7 @@ sub ValidateLogs
 	my $times = shift;
 	my $iters = shift;
 	my $loglocation = shift;
+	my $pattern = shift;
 	my $result = 1; # defaults to good.
 	my $sizechk = 0;
 	my $timecheck = 0;
@@ -431,26 +480,29 @@ sub ValidateLogs
 	#system("pwd;ls WriteLog*");
 	my @logs = split /,/, $logs;
 	$logcount = @logs;
+	my $seqresult = 0;
 	#print "Checking $logcount logs:$logs\n";
 
 	# first check existence of files
+	my $missingfile = 0;
 	foreach my $logfile (@logs) {
 		if(!(-f $logfile)) {
-			print "Expected log file does not exist: $logfile\n";
+			print "Expected log file does not exist: $logfile: BAD\n";
+			RegisterResult($missingfile, "test_name", $test_name);
 			chdir($top);
-			return(0);
 		}
 	}
+
+	# next do sequence validation
 	# next check even flow of numbers as we travel through ordered list of log files
-	$seqresult = LogSequenceCheck($logs);
+	$seqresult = LogSequenceCheck($logs,$pattern);
+	RegisterResult($seqresult, "test_name", $test_name);
 
-	CondorTest::RegisterResult($seqresult, "test_name", $test_name);
-
-	print "Sequene validation of:$logs: ";
-	if($seqresult == 1) {
-		print "OK\n";
-	} else {
+	print "Sequence validation of: $logs and pattern: $pattern: ";
+	if($seqresult == 0) {
 		print "BAD\n";
+	} else {
+		print "OK\n";
 	}
 
 	# check approximate size or age of file
@@ -472,8 +524,58 @@ sub ValidateLogs
 		chdir($top);
 		return($result);
 	}
+	#$result = 1;
 	chdir("$top");
 	return($result);
+}
+
+sub LogWritersCheck
+{
+	my $logfiles = shift;
+	my @logs = split /,/, $logfiles;
+	my $logcount = @logs;
+	my $writers = shift;
+	my @testwriters = split /,/, $writers;
+	my $writecount = @testwriters;
+	my $expectedhits = $logcount * $writecount;
+	print "$logcount logs and $writecount writers: expect $expectedhits positive hits\n";
+
+	my $results = 0;
+
+	foreach my $logfile (@logs) {
+		foreach my $pat (@testwriters) {
+			$results += FindPatternInFile($logfile,$pat);
+		}
+	}
+
+	print "positive score:$results of $expectedhits\n";
+	if($results != $expectedhits) {
+		return(0);
+	} else {
+		return(1);
+	}
+
+
+}
+
+sub FindPatternInFile
+{
+	my $file = shift;
+	my $pattern = shift;
+	my $foundit = 0;
+
+	open(PP, "<$file") or die "Failed to open $file:$!\n";
+	while(<PP>) {
+		if($_ =~ /$pattern/) {
+			$foundit++;
+		}
+	}
+	close(PP);
+	if($foundit == 0) {
+		print "LOG: $file Missing: $pattern\n";
+		return($foundit);
+	}
+	return(1);
 }
 
 sub LogSequenceCheck
@@ -484,14 +586,29 @@ sub LogSequenceCheck
 	my $res = 1;
 	my $lastseq = 0;
 	my $line = "";
+
+	# if we are going this route with a pushed pattern, we expect multiple
+	# writer patterns. We not only want to see sequences per writer be 
+	# conserved, we expect to see more then one writer entries.
+	my %writers = ();
+	my @writerpatterns = ();
+	my $writercount = 0;
+	my $foundpattern = 0;
+	print "Pattern: $wpattern\n";
 	foreach my $logfile (@logs) {
+		%writers = ();
+		@writerpatterns = ();
+		$writercount = 0;
+		$foundpattern = 0;
+
 		open(SC,"<$logfile") or leave( "Sequence check on validated log: $logfile failed:$!\n");
 		while (<SC>) {
 			chomp($_);
 			$line = $_;
 			if(defined $wpattern) {
 				if($line =~ /^.*?$wpattern,(\d+),.*$/) {
-					#print "$1\n";
+					$foundpattern = 1;
+					#print "$line\n";
 					if($lastseq == 0) {
 						$lastseq = $1;
 					} else {
@@ -517,6 +634,13 @@ sub LogSequenceCheck
 						}
 					}
 				}
+			}
+		}
+		close(SC);
+		if(defined $wpattern) {
+			if($foundpattern == 0) {
+				RegisterResult(0, "test_name", $test_name);
+				print "Failed to find $wpattern in $logfile: BAD\n";
 			}
 		}
 	}
@@ -547,6 +671,7 @@ sub LogSizeCheck
 		}
 		$count += 1;
 	}
+	print "Log size check is fine\n";
 	return($res);
 }
 
@@ -597,5 +722,66 @@ sub LogTimeCheck
 		}
 		$count += 1;
 	}
+	print "Log time check is fine\n";
 	return($res);
 }
+
+# send writers requested as unique pattern they will enter
+# send time range for randomized sleep between writer events
+# and send the count and pattern
+#sub LaunchWritersAndWait(writers,"1-5","-c 300  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+sub LaunchWritersAndWait
+{
+	my $writerstring = shift;
+	my @writers = split /,/, $writerstring;
+	my $rangestring = shift;
+	my @rangeparts = split /\-/, $rangestring;
+	my $rangecontrol = " -r $rangeparts[0] $rangeparts[1]";
+	my $remaingargs = shift;
+	my $program = "condor_testwritelog";
+	my %writerpids = ();
+	my $harvestpid = "";
+	my @seeds = (
+		41,
+		87,
+		3,
+		29,
+	);
+
+	#submit the writers
+	foreach my $wr (@writers) {
+		my $seed = shift(@seeds);
+		my $cmd = "$program -w $wr -S $seed $rangecontrol $remaingargs";
+		print "$cmd\n";
+		my $pid = fork();
+		if($pid == -1) {
+			die "Fork error:$!\n";
+		} elsif($pid == 0) {
+			exec $cmd or die "exec of $cmd failed: $!\n";
+		} else {
+			# parent gets pid of child fork
+			$writepids{$pid} = $wr;
+		}
+	}
+	# harvest writers then explore results
+	while ( my $child = wait()) {
+		if($child == -1) {
+			last;
+		} else {
+			print "Writer: $writepids{$child} done\n";
+		}
+	}
+	print "Leaviing LaunchWritersAndWait\n";
+}
+
+#my @a = (1, 2, 3);
+#for my $p (@a) {
+	#my $pid = fork();
+	#if ($pid == -1) {
+		#die;
+	#} elsif ($pid == 0) {
+		#exec '/bin/sleep', $p or die;
+	#}
+#}
+#while (wait() != -1) {}
+#print "Done\n";

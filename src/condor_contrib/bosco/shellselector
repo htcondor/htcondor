@@ -5,8 +5,8 @@
 # source setup.`./shellselector -q`
 # Without "-q" it prints informations about the shell detected
 #
-# Test show that $SHELL is unreliable
-# Current shell is preferrable to the login shell
+# Tests show that $SHELL is unreliable
+# Current shell is needed, not the login shell
 #
 if [ "X${1}X" == "X-hX" ]
 then
@@ -18,12 +18,36 @@ then
 fi
 
 MYSHELL="`ps -o ppid= -p $$ | xargs ps -o comm= -p `"
+MYSHELL_ORIG=$MYSHELL
+
+# If ps fails, fall back to $SHELL
+# There could be euristics (all in the environment of the parent process ps -wwwE -p PPID):
+# 1. $version is set on tcsh
+# 2. $BASH is set on bash
+# 3. $shell (lowercase) is set to actual shell name in csh or tcsh
+# 4. $ZSH_NAME is set on zsh
+# 5. ksh has $PS3 and $PS4
+
+# It seems for a bug, csh login shell is called "-sh" (at least on OS X)
+if [ "X$MYSHELL" == "X-sh" ]; then
+ MYSHELL="csh"
+fi
+
+if [[ "X$MYSHELL" == "Xlogin" && ! -z $SHELL ]]; then
+ MYSHELL="`basename $SHELL`"
+fi
+
+# Remove the leading dash for login shells
+# and the directory (/bin, /usr/bin or none)
+MYSHELL="`basename ${MYSHELL#-}`"
+
 # change the case statement below to have different setup files for ksh or zsh
+# Fail-safe to sh when unknown (if -q option)
 case "$MYSHELL" in
- bash|sh|-bash|-sh) SHELLFAM="sh";;
- ksh|-ksh) SHELLFAM="sh";;
- zsh|-zsh) SHELLFAM="sh";;
- tcsh|csh|-tcsh|-csh) SHELLFAM="csh";;
+ bash|sh) SHELLFAM="sh";;
+ ksh) SHELLFAM="sh";;
+ zsh) SHELLFAM="sh";;
+ tcsh|csh) SHELLFAM="csh";;
  *) if [ "X${1}X" == "X-qX" ]
     then SHELLFAM="sh"
     else echo "Unknown shell $MYSHELL"; exit 1
@@ -31,5 +55,5 @@ case "$MYSHELL" in
 esac
 if [ "X${1}X" == "X-qX" ]
 then echo "$SHELLFAM"
-else echo "Your shell is $MYSHELL, of type $SHELLFAM"
+else echo "Your shell is $MYSHELL ($MYSHELL_ORIG), of type $SHELLFAM"
 fi

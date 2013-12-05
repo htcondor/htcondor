@@ -1,7 +1,7 @@
 #!/bin/bash
 
-BOSCO_ENV_DIR="~/.bosco"
-BOSCO_SSH_KEY_FILES="~/.ssh/bosco_key.*"
+BOSCO_ENV_DIR=$HOME/.bosco
+BOSCO_SSH_KEY_FILES=$HOME/.ssh/bosco_key.*
 
 IS_BOSCO=`condor_config_val IS_BOSCO`
 echo "$IS_BOSCO" | grep -q -i true 
@@ -29,7 +29,7 @@ if [ "x$1" == "x--all" ]; then
     fi
     rm -rf $BOSCO_ENV_DIR  
     # keys may not be there if no cluster has been installed
-    rm $BOSCO_SSH_KEY_FILES >& /dev/null
+    rm -f $BOSCO_SSH_KEY_FILES >& /dev/null
 fi
 
 
