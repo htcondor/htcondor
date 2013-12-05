@@ -60,15 +60,24 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added attributes to the \Condor{defrag} daemons MeanDrainedArrived,
-which measures the mean time between arrivals of fully drained machines,
-and DrainedMachines, which measures the total numbers of fully drained machines
-which have arrived during the runtime of this \Condor{defrag} daemon.
+\item The new \Condor{defrag} daemon ClassAd attribute 
+\Attr{MeanDrainedArrived}
+measures the mean time between arrivals of fully drained machines,
+and the new attribute \Attr{DrainedMachines} 
+measures the total numbers of fully drained machines
+which have arrived during the run time of this \Condor{defrag} daemon.
 \Ticket{4055}
 
 \item The new \Opt{-defrag} option for \Condor{status} queries ClassAds
 of the \Condor{defrag} daemon.
 \Ticket{4039}
+
+\item Machine ClassAd attributes \Attr{ExpectedMachineQuickDrainingCompletion}
+and \Attr{ExpectedMachineGracefulDrainingCompletion} are updated with their
+completion times if there are no active claims,
+making these attributes more useful in setting policy for
+partitionable slots. 
+\Ticket{3481}
 
 \item In a DAG, the node retry number is now available as VARS macro
 (see section~\ref{dagman:VARS}).
