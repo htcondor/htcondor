@@ -55,7 +55,6 @@ int main(int argc, char *argv[])
 
     CURL *curl;
     FILE *tempFile;
-    FILE *ptrFile;
     CURLcode res;
     char *url = argv[lastLoc - 1];
     char *tempName;
