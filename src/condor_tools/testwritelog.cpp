@@ -50,28 +50,38 @@
 #include "filename_tools.h"
 #include "ipv6_hostname.h"
 #include "subsystem_info.h"
+#include <stdlib.h>
 
 
 extern void		_condor_set_debug_flags( const char *strflags, int flags );
 
 // Define this to check for memory leaks
 
-char		*Spool;				// dir for condor job queue
-StringList   ExecuteDirs;		// dirs for execution of condor jobs
-char		*Log;				// dir for condor program logs
-char		*DaemonSockDir;     // dir for daemon named sockets
-char		*PreenAdmin;		// who to send mail to in case of trouble
-char		*MyName;			// name this program was invoked by
-char		*LogName;			// name of requested log file
-char        *FillData;			// use this data to fill log
-int			DataCount;			// write data how many times
-int			SleepTime;			// sleep between writes
-time_t 		sleeptime;			// Cast to this for sleep
-char        *ValidSpoolFiles;   // well known files in the spool dir
-char        *InvalidLogFiles;   // files we know we want to delete from log
-BOOLEAN		LogFlag;			// true if we should set the log file name
-BOOLEAN		SleepFlag;			// true if we should sleep between  writes
-BOOLEAN		VerboseFlag;		// true if we should produce verbose output
+char			*Spool;				// dir for condor job queue
+StringList   	ExecuteDirs;		// dirs for execution of condor jobs
+char			*Log;				// dir for condor program logs
+char			*DaemonSockDir;     // dir for daemon named sockets
+char			*PreenAdmin;		// who to send mail to in case of trouble
+char			*MyName;			// name this program was invoked by
+char			*LogName;			// name of requested log file
+char        	*FillData;			// use this data to fill log
+int				DataCount;			// write data how many times
+char 			*WriterMark;		// brand logs a writer WriterMark
+int				SleepTime;			// sleep between writes
+int 			Min;				// low end of random sleep range
+int				Max;				// high end of random sleep range
+int 			Range;				// are Min and Max different
+unsigned int 	Seed;				// srand seed
+int    			rtime;
+int				rsleep;
+time_t 			sleeptime;			// Cast to this for sleep
+char        	*ValidSpoolFiles;   // well known files in the spool dir
+char        	*InvalidLogFiles;   // files we know we want to delete from log
+BOOLEAN			LogFlag;			// true if we should set the log file name
+BOOLEAN			SleepFlag;			// true if we should sleep between  writes
+BOOLEAN			VerboseFlag;		// true if we should produce verbose output
+BOOLEAN			WriterFlag;			// true if we expect multiple writers
+BOOLEAN			RandomRangeFlag;	// want to randomize sleeps
 
 // prototypes of local interest
 void usage();
@@ -83,7 +93,7 @@ void init_params();
 void
 usage()
 {
-	fprintf( stderr, "Usage: %s [-count count] [-sleep time] [-log logname] [-verbose] [-debug] [ textdata ]\n", MyName );
+	fprintf( stderr, "Usage: %s [-count count] [-sleep time] [-write mark] [-r min max] [-Seed seed] [-log logname] [-verbose] [-debug] [ textdata ]\n", MyName );
 	exit( 1 );
 }
 
@@ -109,6 +119,17 @@ main( int argc, char *argv[] )
 	DataCount = 0;
 
 	VerboseFlag = FALSE;
+	SleepFlag = FALSE;
+	LogFlag = FALSE;
+	WriterFlag = FALSE;
+	RandomRangeFlag = FALSE;
+	rtime = 0;
+	rsleep = 0;
+	Seed = 42;
+
+	Range = 0;
+	Min = 0;
+	Max = 0;
 
 		// Parse command line arguments
 	for( argv++; *argv; argv++ ) {
@@ -129,14 +150,20 @@ main( int argc, char *argv[] )
 				LogFlag = TRUE;
 				argv++;
 				LogName = *argv;
-				fprintf( stderr, "Logname requested: %s\n", LogName );
+				//fprintf( stderr, "Logname requested: %s\n", LogName );
 				break;
 
 			  case 'c':
 				LogFlag = TRUE;
 				argv++;
 				DataCount = atoi(*argv);
-				fprintf( stderr, "Count requested: %d\n", DataCount );
+				//fprintf( stderr, "Count requested: %d\n", DataCount );
+				break;
+
+			  case 'S':
+				argv++;
+				Seed = atoi(*argv);
+				//fprintf( stderr, "Seed requested: %d\n", Seed );
 				break;
 
 			  case 's':
@@ -144,7 +171,24 @@ main( int argc, char *argv[] )
 				argv++;
 				SleepTime = atoi(*argv);
 				sleeptime = (time_t)SleepTime;
-				fprintf( stderr, "sleep requested: %d\n", SleepTime );
+				//fprintf( stderr, "sleep requested: %d\n", SleepTime );
+				break;
+
+			  case 'r':
+				RandomRangeFlag = TRUE;
+				argv++;
+				Min = atoi(*argv);
+				argv++;
+				Max = atoi(*argv);
+				Range = (Max - Min);
+				//fprintf( stderr, "random sleep range requested: %d - %d\n", Min, Max );
+				break;
+
+			  case 'w':
+				WriterFlag = TRUE;
+				argv++;
+				WriterMark = *argv;
+				//fprintf( stderr, "different writer requested: %s\n", WriterMark );
 				break;
 
 			  default:
@@ -180,11 +224,27 @@ main( int argc, char *argv[] )
 	dprintf( D_ALWAYS, "STARTING: condor_testwritelog\n");
 	dprintf( D_ALWAYS, "********************************\n");
 	
+	srand(Seed);
 	while(DataCount > 0) {
 		if(SleepFlag) {
 			sleep(sleeptime);
 		}
-    	dprintf( D_ALWAYS, "%d,%s\n", DataCount, FillData);
+		if(RandomRangeFlag) {
+			rtime = rand();
+			//fprintf(stderr,"rand returned %d\n",rtime);
+			rtime = (rtime % Range);
+			//fprintf(stderr,"Mod %d yielded %d\n",Range,rtime);
+			rsleep = Min + rtime;
+			//fprintf(stderr,"Min:%d and rtime:%d yields:%d\n",Min, rtime, rsleep);
+			sleeptime = rsleep;
+			//fprintf(stderr,"Random sleep time %d\n", rsleep);
+			sleep(sleeptime);
+		}
+		if(WriterFlag) {
+    		dprintf( D_ALWAYS, "%s,%d,%s\n", WriterMark, DataCount, FillData);
+		} else {
+    		dprintf( D_ALWAYS, "%d,%s\n", DataCount, FillData);
+		}
 		DataCount--;
 	}
     //dprintf( D_ALWAYS, "WRITELOG_LOG = %s\n", param("WRITELOG_LOG"));

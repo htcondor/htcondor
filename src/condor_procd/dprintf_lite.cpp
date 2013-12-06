@@ -215,3 +215,15 @@ preserve_log_file()
 		}
 	}
 }
+
+/* Some additional symbols referenced by ../condor_utils/selector.cpp.
+ */
+DebugOutputChoice AnyDebugBasicListener;
+
+BEGIN_C_DECLS
+void _mark_thread_safe(int /* start_or_stop */, int /* dologging */,
+					   const char* /* descrip */, const char* /* func */,
+					   const char* /* file */, int /* line */)
+{
+}
+END_C_DECLS

@@ -30,7 +30,7 @@
 extern "C" {
 #endif
 
-int blankline ( char *str );
+int blankline ( const char *str );
 
 char * getline ( FILE *fp );
 

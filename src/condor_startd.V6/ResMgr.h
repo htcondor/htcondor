@@ -85,10 +85,10 @@ public:
 		const int recent_window = 60 * 20;
 		const int window_quantum = 60 * 4;
 
-		pool.AddProbe("TotalPreemptions", &total_preemptions);
-		pool.AddProbe("TotalRankPreemptions", &total_rank_preemptions);
-		pool.AddProbe("TotalUserPrioPreemptions", &total_user_prio_preemptions);
-		pool.AddProbe("TotalJobStarts", &total_job_starts);
+		pool.AddProbe("JobPreemptions", &total_preemptions);
+		pool.AddProbe("JobRankPreemptions", &total_rank_preemptions);
+		pool.AddProbe("JobUserPrioPreemptions", &total_user_prio_preemptions);
+		pool.AddProbe("JobStarts", &total_job_starts);
 
 		pool.SetRecentMax(recent_window, window_quantum);
 	}

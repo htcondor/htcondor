@@ -306,7 +306,7 @@ bool AmazonRequest::SendRequest() {
     canonicalizedQueryString.erase( canonicalizedQueryString.end() - 1 );
 
     // Step 2: Create the string to sign.
-    std::string stringToSign = "GET\n"
+    std::string stringToSign = "POST\n"
                              + valueOfHostHeaderInLowercase + "\n"
                              + httpRequestURI + "\n"
                              + canonicalizedQueryString;
@@ -350,17 +350,17 @@ bool AmazonRequest::SendRequest() {
 
     // Generate the final URI.
     canonicalizedQueryString += "&Signature=" + amazonURLEncode( signatureInBase64 );
-    std::string finalURI;
+    std::string postURI;
     if( protocol == "x509" ) {
-        finalURI = "https://" + hostAndPath + "?" + canonicalizedQueryString;
+        postURI = "https://" + hostAndPath;
     } else if( protocol == "euca3" ) {
-        finalURI = "http://" + hostAndPath + "?" + canonicalizedQueryString;
+        postURI = "http://" + hostAndPath;
     } else if( protocol == "euca3s" ) {
-        finalURI = "https://" + hostAndPath + "?" + canonicalizedQueryString;
+        postURI = "https://" + hostAndPath;
     } else {
-        finalURI = this->serviceURL + "?" + canonicalizedQueryString;
+        postURI = this->serviceURL;
     }
-    dprintf( D_FULLDEBUG, "Request URI is '%s'\n", finalURI.c_str() );
+    std::string finalURI = postURI + "?" + canonicalizedQueryString;
 
     // curl_global_init() is not thread-safe.  However, it's safe to call
     // multiple times.  Therefore, we'll just call it before we drop the
@@ -405,13 +405,37 @@ bool AmazonRequest::SendRequest() {
     }
 */
 
-    rv = curl_easy_setopt( curl, CURLOPT_URL, finalURI.c_str() );
+    dprintf( D_FULLDEBUG, "Request URI is '%s'\n", postURI.c_str() );
+    rv = curl_easy_setopt( curl, CURLOPT_URL, postURI.c_str() );
+
     if( rv != CURLE_OK ) {
         this->errorCode = "E_CURL_LIB";
         this->errorMessage = "curl_easy_setopt( CURLOPT_URL ) failed.";
         dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_URL ) failed (%d): '%s', failing.\n",
             rv, curl_easy_strerror( rv ) );
         curl_easy_cleanup( curl );
+        return false;
+    }
+
+    rv = curl_easy_setopt( curl, CURLOPT_POST, 1 );
+    if( rv != CURLE_OK ) {
+        this->errorCode = "E_CURL_LIB";
+        this->errorMessage = "curl_easy_setopt( CURLOPT_POST ) failed.";
+        dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_POST ) failed (%d): '%s', failing.\n",
+            rv, curl_easy_strerror( rv ) );
+        return false;
+    }
+
+    // We may, technically, need to replace '%20' in the canonicalized
+    // query string with '+' to be compliant.
+    dprintf( D_FULLDEBUG, "Post body is '%s'\n", canonicalizedQueryString.c_str() );
+
+    rv = curl_easy_setopt( curl, CURLOPT_POSTFIELDS, canonicalizedQueryString.c_str() );
+    if( rv != CURLE_OK ) {
+        this->errorCode = "E_CURL_LIB";
+        this->errorMessage = "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed.";
+        dprintf( D_ALWAYS, "curl_easy_setopt( CURLOPT_POSTFIELDS ) failed (%d): '%s', failing.\n",
+            rv, curl_easy_strerror( rv ) );
         return false;
     }
 
