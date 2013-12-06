@@ -454,8 +454,10 @@ ReliSock::handle_incoming_packet()
 int
 ReliSock::finish_end_of_message()
 {
+	BlockingModeGuard guard(this, true);
 	int retval = snd_msg.finish_packet(peer_description(), _sock, _timeout);
 	if (retval == 2) m_has_backlog = true;
+	return retval;
 }
 
 	// Ret values:
@@ -466,8 +468,22 @@ ReliSock::finish_end_of_message()
 	//   needs to be called.
 	// If allow_empty_message is set and there are no bytes to send, return TRUE.
 	// Otherwise, an error occurs if there is no unbuffer bytes.
-int 
+int
+ReliSock::end_of_message_nonblocking()
+{
+	BlockingModeGuard guard(this, true);
+	return end_of_message_internal();
+}
+
+int
 ReliSock::end_of_message()
+{
+	BlockingModeGuard guard(this, false);
+	return end_of_message_internal();
+}
+
+int 
+ReliSock::end_of_message_internal()
 {
 	int ret_val = FALSE;
 

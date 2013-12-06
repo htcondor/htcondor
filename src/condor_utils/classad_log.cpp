@@ -55,70 +55,50 @@ ptr = NULL;
 
 const char *EMPTY_CLASSAD_TYPE_NAME = "(empty)";
 
-ClassAdLogProjectionFilterIterator::ClassAdLogProjectionFilterIterator(ClassAdHashTable *table, const classad::ExprTree *requirements, StringList *projection, int timeslice_ms)
+ClassAdLogFilterIterator::ClassAdLogFilterIterator(ClassAdHashTable *table, const classad::ExprTree *requirements, int timeslice_ms, bool invalid)
 	: m_table(table),
 	  m_cur(table->begin()),
 	  m_cur_ad(NULL),
 	  m_requirements(requirements),
-	  m_projection(projection),
 	  m_timeslice_ms(timeslice_ms),
-	  m_done(projection == NULL ? true : false)
+	  m_done(invalid)
 	{}
 
-ClassAdLogProjectionFilterIterator::ClassAdLogProjectionFilterIterator(const ClassAdLogProjectionFilterIterator &other)
+ClassAdLogFilterIterator::ClassAdLogFilterIterator(const ClassAdLogFilterIterator &other)
 	: m_table(other.m_table),
 	  m_cur(other.m_cur),
 	  m_cur_ad(other.m_cur_ad),
 	  m_requirements(other.m_requirements),
-	  m_projection(other.m_projection),
 	  m_timeslice_ms(other.m_timeslice_ms),
 	  m_done(other.m_done)
 {
 }
 
-classad_shared_ptr<ClassAd> ClassAdLogProjectionFilterIterator::operator *() const {
-	if (!m_cur_ad || m_done) return classad_shared_ptr<ClassAd>();
+ClassAd* ClassAdLogFilterIterator::operator *() const {
+	if (!m_cur_ad || m_done) return NULL;
 
-	if (m_projection && m_projection->number() != 0) { 
-		m_projection->rewind();                            
-		StringList internals;                   
-		StringList externals; // shouldn't have any
-		while (char *attr = m_projection->next()) {        
-
-			if( !m_cur_ad->GetExprReferences(attr, internals, externals) ) {
-				dprintf(D_FULLDEBUG,                                    
-				"GetAllJobsByConstraint failed to parse "                               
-				"requested ClassAd expression: %s\n",attr);                             
-			}                                               
-		}
-		// TODO: Create a temporary ad and track it.
-		classad_shared_ptr<ClassAd> tmp_ad(new ClassAd());
-		internals.rewind();
-		while (char *attr = internals.next()) {
-			classad::ExprTree *info = m_cur_ad->Lookup(attr);
-			if (!info) continue;
-			classad::ExprTree *info2 = info->Copy();
-			tmp_ad->Insert(attr, info2);
-		}
-		return tmp_ad;
-	}
-	classad_shared_ptr<ClassAd> result(new ClassAd());
-	result->CopyFrom(*m_cur_ad);
-	return result;
+	return m_cur_ad;
 }
 
-ClassAdLogProjectionFilterIterator
-ClassAdLogProjectionFilterIterator::operator++(int)
+ClassAdLogFilterIterator
+ClassAdLogFilterIterator::operator++(int)
 {
 	// TODO: time-limit the advance.
-	ClassAdLogProjectionFilterIterator cur = *this;
+	ClassAdLogFilterIterator cur = *this;
 	if (m_done) return cur;
 
 	HashIterator<HashKey, ClassAd*> end = m_table->end();
 	bool boolVal;
 	int intVal;
+	int miss_count = 0;
 	while (!(m_cur == end))
 	{
+		miss_count++;
+		if (miss_count == m_timeslice_ms)
+		{
+			m_cur_ad = NULL;
+			break;
+		}
 		ClassAd *tmp_ad = (*m_cur++).second;
 		if (!tmp_ad) continue;
 		if (m_requirements) {
@@ -158,7 +138,7 @@ ClassAdLogProjectionFilterIterator::operator++(int)
 }
 
 bool
-ClassAdLogProjectionFilterIterator::operator==(const ClassAdLogProjectionFilterIterator &other)
+ClassAdLogFilterIterator::operator==(const ClassAdLogFilterIterator &other)
 {
 	if (m_table != other.m_table) return false;
 	if (m_done && other.m_done) return true;

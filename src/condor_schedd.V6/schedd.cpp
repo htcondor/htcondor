@@ -1793,7 +1793,7 @@ struct QueryJobAdsContinuation : Service {
 
 	classad_shared_ptr<classad::ExprTree> requirements;
 	StringList projection;
-	ClassAdLog::projection_filter_iterator it;
+	ClassAdLog::filter_iterator it;
 	bool unfinished_eom;
 	bool registered_socket;
 
@@ -1803,7 +1803,7 @@ struct QueryJobAdsContinuation : Service {
 
 QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::ExprTree> requirements_, int timeslice_ms)
 	: requirements(requirements_),
-	  it(BeginIterator(*requirements, projection, timeslice_ms)),
+	  it(BeginIterator(*requirements, timeslice_ms)),
 	  unfinished_eom(false),
 	  registered_socket(false)
 {
@@ -1812,13 +1812,11 @@ QueryJobAdsContinuation::QueryJobAdsContinuation(classad_shared_ptr<classad::Exp
 int
 QueryJobAdsContinuation::finish(Stream *stream) {
         ReliSock *sock = static_cast<ReliSock*>(stream);
-        ClassAdLog::projection_filter_iterator end = EndIterator();
+        ClassAdLog::filter_iterator end = EndIterator();
         bool has_backlog = false;
 
 	if (unfinished_eom) {
-		bool state = sock->set_non_blocking(true);
 		int retval = sock->finish_end_of_message();
-		sock->set_non_blocking(state);
 		if (sock->clear_backlog_flag()) {
 			return KEEP_STREAM;
 		} else if (retval == 1) {
@@ -1829,8 +1827,12 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 		}
 	}
         while (!(it == end) && !has_backlog) {
-		classad_shared_ptr<ClassAd> tmp_ad = *it++;
-		if (!tmp_ad.get()) continue;
+		ClassAd* tmp_ad = *it++;
+		if (!tmp_ad) {
+			// Return to DC in case if our time ran out.
+			has_backlog = true;
+			break;
+		}
 		int proc, cluster;
                 tmp_ad->EvaluateAttrInt(ATTR_CLUSTER_ID, cluster);
                 tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, proc);
@@ -1843,9 +1845,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 			delete this;
                         return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
                 }
-                bool state = sock->set_non_blocking(true);
-                retval = sock->end_of_message();
-                sock->set_non_blocking(state);
+                retval = sock->end_of_message_nonblocking();
                 if (sock->clear_backlog_flag()) {
 			//dprintf(D_FULLDEBUG, "Socket EOM will block.\n");
                         unfinished_eom = true;
@@ -1895,7 +1895,7 @@ int Scheduler::command_query_job_ads(int, Stream* stream)
 	{
 		return sendJobErrorAd(stream, 2, "Unable to evaluate projection list");
 	}
-	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, 0);
+	QueryJobAdsContinuation *continuation = new QueryJobAdsContinuation(requirements_ptr, 1000);
 	StringList &projection = continuation->projection;
 	if (list) for (classad::ExprList::const_iterator it = list->begin(); it != list->end(); it++) {
 		std::string attr;

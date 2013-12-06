@@ -254,12 +254,42 @@ class TestPythonBindings(WithDaemons):
         schedd = htcondor.Schedd()
         ad = classad.parse(open("tests/submit.ad"))
         ads = []
-        cluster = schedd.submit(ad, 1000, False, ads)
+        cluster = schedd.submit(ad, 10, False, ads)
         #print ads[0]
         for i in range(60):
-            ads = schedd.query("ClusterId == %d" % cluster, ["JobStatus"])
+            ads = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus"])
+            ads = list(ads)
             #print ads
             if len(ads) == 0:
+                break
+            if i % 2 == 0:
+                schedd.reschedule()
+            time.sleep(1)
+        self.assertEquals(open(output_file).read(), "hello world\n");
+
+    def testScheddNonblockingQuery(self):
+        self.launch_daemons(["SCHEDD", "COLLECTOR", "STARTD", "NEGOTIATOR"])
+        output_file = os.path.join(testdir, "test.out")
+        if os.path.exists(output_file):
+            os.unlink(output_file)
+        schedd = htcondor.Schedd()
+        ad = classad.parse(open("tests/submit.ad"))
+        ads = []
+        cluster = schedd.submit(ad, 10, False, ads)
+        for i in range(60):
+            ads = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus"])
+            ads2 = schedd.xquery("ClusterId == %d" % cluster, ["JobStatus"])
+            ctrs = [0, 0]
+            iters = [(ads, 0), (ads2, 1)]
+            while iters:
+                for it, pos in iters:
+                    try:
+                        it.next()
+                        ctrs[pos] += 1
+                    except StopIteration:
+                        iters.remove((it, pos))
+            print ctrs
+            if ctrs[0] == 0:
                 break
             if i % 2 == 0:
                 schedd.reschedule()

@@ -729,13 +729,21 @@ struct Schedd {
         return iter;
     }
 
-    boost::shared_ptr<QueryIterator> query2(boost::python::object requirement, boost::python::list projection=boost::python::list(), int match=-1)
+    boost::shared_ptr<QueryIterator> xquery(boost::python::object requirement=boost::python::object(), boost::python::list projection=boost::python::list(), int match=-1)
     {
+
         std::string val_str;
+
         extract<ExprTreeHolder &> exprtree_extract(requirement);
         extract<std::string> string_extract(requirement);
         classad::ExprTree *expr = NULL;
         boost::shared_ptr<classad::ExprTree> expr_ref;
+        if (requirement == boost::python::object())
+        {
+            classad::ClassAdParser parser;
+            parser.ParseExpression("true", expr);
+            expr_ref.reset(expr);
+        }
         if (string_extract.check())
         {
             classad::ClassAdParser parser;
@@ -824,7 +832,7 @@ private:
 };
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(query_overloads, query, 0, 3);
-BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(query2_overloads, query2, 0, 3);
+BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(xquery_overloads, xquery, 0, 3);
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(submit_overloads, submit, 1, 4);
 
 void export_schedd()
@@ -872,11 +880,11 @@ void export_schedd()
             ":param projection: The attributes to return; an empty list signifies all attributes.\n"
             ":param match: Number of matches to return.\n"
             ":return: An iterator for the matching job ads")
-        .def("query2", &Schedd::query2, "Alternate implementation of HTCondor schedd query\n"
+        .def("xquery", &Schedd::xquery, xquery_overloads("Query HTCondor schedd, returning an iterator.\n"
             ":param requirements: Either a ExprTree or a string that can be parsed as an expression; requirements all returned jobs should match.\n"
             ":param projection: The attributes to return; an empty list signifies all attributes.\n"
             ":param match: Number of matches to return.\n"
-            ":return: An iterator for the matching job ads");
+            ":return: An iterator for the matching job ads"))
         ;
 
     class_<HistoryIterator>("HistoryIterator", no_init)

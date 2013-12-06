@@ -54,45 +54,43 @@ typedef HashTable <HashKey, ClassAd *> ClassAdHashTable;
 
 extern const char *EMPTY_CLASSAD_TYPE_NAME;
 
-class ClassAdLogProjectionFilterIterator;
-ClassAdLogProjectionFilterIterator BeginIterator(const classad::ExprTree &requirements, StringList &projection, int timeslice_ms);
-ClassAdLogProjectionFilterIterator EndIterator();
+class ClassAdLogFilterIterator;
+ClassAdLogFilterIterator BeginIterator(const classad::ExprTree &requirements, int timeslice_ms);
+ClassAdLogFilterIterator EndIterator();
 
-class ClassAdLogProjectionFilterIterator : std::iterator<std::input_iterator_tag, classad_shared_ptr<ClassAd> >
+class ClassAdLogFilterIterator : std::iterator<std::input_iterator_tag, ClassAd* >
 {
 public:
-	ClassAdLogProjectionFilterIterator(const ClassAdLogProjectionFilterIterator &other);
+	ClassAdLogFilterIterator(const ClassAdLogFilterIterator &other);
 
-	~ClassAdLogProjectionFilterIterator() {}
+	~ClassAdLogFilterIterator() {}
 
-	classad_shared_ptr<ClassAd> operator *() const;
+	ClassAd* operator *() const;
 
 	ClassAd* operator ->() const;
 
-	ClassAdLogProjectionFilterIterator operator++();
-	ClassAdLogProjectionFilterIterator operator++(int);
+	ClassAdLogFilterIterator operator++();
+	ClassAdLogFilterIterator operator++(int);
 
-	bool operator==(const ClassAdLogProjectionFilterIterator &rhs);
+	bool operator==(const ClassAdLogFilterIterator &rhs);
 
 private:
-	friend ClassAdLogProjectionFilterIterator BeginIterator(const classad::ExprTree &requirements, StringList &projection, int timeslice_ms);
-	friend ClassAdLogProjectionFilterIterator EndIterator();
+	friend ClassAdLogFilterIterator BeginIterator(const classad::ExprTree &requirements, int timeslice_ms);
+	friend ClassAdLogFilterIterator EndIterator();
 
-	ClassAdLogProjectionFilterIterator(ClassAdHashTable *table, const classad::ExprTree *requirements, StringList *projection, int timeslice_ms);
+	ClassAdLogFilterIterator(ClassAdHashTable *table, const classad::ExprTree *requirements, int timeslice_ms, bool invalid=false);
 
 	ClassAdHashTable *m_table;
 	HashIterator<HashKey, ClassAd *> m_cur;
 	ClassAd *m_cur_ad;
 	const classad::ExprTree *m_requirements;
-	StringList *m_projection;
 	int m_timeslice_ms;
 	int m_done;
 };
 
 class ClassAdLog {
 public:
-	//typedef ClassAdLogFullIterator iterator;
-	typedef ClassAdLogProjectionFilterIterator projection_filter_iterator;
+	typedef ClassAdLogFilterIterator filter_iterator;
 
 	ClassAdLog();
 	ClassAdLog(const char *filename,int max_historical_logs=0);
