@@ -3,7 +3,9 @@
 #include <stdio.h>
 #include <errno.h>
 #include <sys/types.h>
+#ifndef WIN32
 #include <unistd.h>
+#endif
 #include <limits.h>
 #include <float.h>
 

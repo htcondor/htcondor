@@ -567,21 +567,35 @@ endif()
 
 ###########################################
 #if (NOT MSVC11) 
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.49.0)
 #endif()
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p1)
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
-add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1 )
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/postgresql/8.2.3-p1)
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
-add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
 
-if (NOT WINDOWS)
+if (WINDOWS)
 
+  if (MSVC11)
+    if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
+      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32.tar.gz)
+    else()
+      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32.tar.gz)
+    endif()
+  endif()
+  
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.54.0)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1e)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/8.33)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.10)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.33.0)
+else ()
+
+  # DRMAA currently punted on Windows until we can figure out correct build
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.49.0)
+  
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1 )
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p1)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/2011.05.24-r31)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
@@ -633,7 +647,10 @@ if (NOT WINDOWS)
 		message( STATUS "** Standard Universe Disabled **")
 	endif()
 
-endif(NOT WINDOWS)
+endif(WINDOWS)
+
+add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
+add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
 
 ### addition of a single externals target which allows you to
 if (CONDOR_EXTERNALS)

@@ -48,7 +48,7 @@ my $COVERITY_ANALYSIS     = "remote_task.coverity_analysis";
 
 my $taskname = "";
 my $execstr = "";
-my $VCVER = "VC9";
+my $VCVER = "VC11";
 
 # autoflush our STDOUT
 $| = 1;
