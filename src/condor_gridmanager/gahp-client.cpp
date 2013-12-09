@@ -8340,7 +8340,7 @@ int GahpClient::boinc_submit( const char *batch_name,
 	reqline = escapeGahpString( batch_name );
 	formatstr_cat( reqline, " %s %d", escapeGahpString( (*jobs.begin())->GetAppName() ),
 				   job_cnt );
-	for ( set<BoincJob*>::iterator itr = jobs.begin(); itr != jobs.end();
+	for ( set<BoincJob*>::const_iterator itr = jobs.begin(); itr != jobs.end();
 		  itr++ ) {
 		ArgList *args_list = (*itr)->GetArgs();
 		char **args = args_list->GetStringArray();
@@ -8491,7 +8491,7 @@ int GahpClient::boinc_query_batches( StringList &batch_names,
 
 int GahpClient::boinc_fetch_output( const char *job_name,
 									const char *iwd,
-									const char *stderr,
+									const char *std_err,
 									bool transfer_all,
 									const GahpClient::BoincOutputFiles &output_files,
 									int &exit_status,
@@ -8508,11 +8508,11 @@ int GahpClient::boinc_fetch_output( const char *job_name,
 		// Generate request line
 	if (!job_name) job_name=NULLSTRING;
 	if (!iwd) iwd=NULLSTRING;
-	if (!stderr) stderr=NULLSTRING;
+	if (!std_err) std_err=NULLSTRING;
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString( job_name ) );
 	char *esc2 = strdup( escapeGahpString( iwd ) );
-	char *esc3 = strdup( escapeGahpString( stderr ) );
+	char *esc3 = strdup( escapeGahpString( std_err ) );
 	formatstr( reqline, "%s %s %s ", esc1, esc2, esc3 );
 	free( esc1 );
 	free( esc2 );

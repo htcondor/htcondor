@@ -479,11 +479,11 @@ void BoincJob::doEvaluateState()
 				double cpu_time = 0;
 				double wallclock_time = 0;
 				std::string iwd;
-				std::string stderr;
+				std::string std_err;
 				bool transfer_all;
 				GahpClient::BoincOutputFiles outputs;
-				BuildOutputInfo( iwd, stderr, transfer_all, outputs );
-				rc = gahp->boinc_fetch_output( remoteJobName, iwd.c_str(), stderr.c_str(),
+				BuildOutputInfo( iwd, std_err, transfer_all, outputs );
+				rc = gahp->boinc_fetch_output( remoteJobName, iwd.c_str(), std_err.c_str(),
 											   transfer_all, outputs, exit_status,
 											   cpu_time, wallclock_time );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -873,7 +873,7 @@ void BoincJob::NewBoincState( const char *new_state )
 	}
 }
 
-void BoincJob::BuildOutputInfo( std::string &iwd, std::string &stderr,
+void BoincJob::BuildOutputInfo( std::string &iwd, std::string &std_err,
 								bool &transfer_all,
 								GahpClient::BoincOutputFiles &outputs )
 {
@@ -882,8 +882,8 @@ void BoincJob::BuildOutputInfo( std::string &iwd, std::string &stderr,
 	iwd = "/";
 	jobAd->LookupString( ATTR_JOB_IWD, iwd );
 
-	stderr = NULL_FILE;
-	jobAd->LookupString( ATTR_JOB_ERROR, stderr );
+	std_err = NULL_FILE;
+	jobAd->LookupString( ATTR_JOB_ERROR, std_err );
 
 	// TODO Handle remaps when ATTR_TRANSFER_OUTPUT_FILES isn't given
 	if ( jobAd->LookupString( ATTR_TRANSFER_OUTPUT_FILES, tmp_str ) ) {
@@ -912,8 +912,8 @@ void BoincJob::BuildOutputInfo( std::string &iwd, std::string &stderr,
 			// TODO should we check ATTR_TRANSFER_OUTPUT/ERROR?
 			outputs.push_back( pair<std::string,std::string>( condor_basename( tmp_str.c_str() ), tmp_str ) );
 
-			if ( stderr != tmp_str ) {
-				outputs.push_back( pair<std::string,std::string>( condor_basename( stderr.c_str() ), stderr ) );
+			if ( std_err != tmp_str ) {
+				outputs.push_back( pair<std::string,std::string>( condor_basename( std_err.c_str() ), std_err ) );
 			}
 		}
 	} else {

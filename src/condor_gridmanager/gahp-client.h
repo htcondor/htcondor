@@ -798,7 +798,7 @@ class GahpClient : public Service {
 		typedef std::vector< std::pair< std::string, std::string> > BoincOutputFiles;
 		int boinc_fetch_output( const char *job_name,
 								const char *iwd,
-								const char *stderr,
+								const char *std_err,
 								bool transfer_all,
 								const BoincOutputFiles &output_files,
 								int &exit_status,

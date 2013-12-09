@@ -51,7 +51,7 @@ class BoincJob : public BaseJob
 	BaseResource *GetResource();
 	void SetRemoteBatchName( const char *batch_name );
 
-	void BuildOutputInfo( std::string &iwd, std::string &stderr,
+	void BuildOutputInfo( std::string &iwd, std::string &std_err,
 						  bool &transfer_all,
 						  GahpClient::BoincOutputFiles &outputs );
 	std::string GetAppName();
