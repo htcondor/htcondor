@@ -1362,7 +1362,7 @@ GahpServer::useBoincResource( BoincResource *resource )
 }
 
 bool
-GahpServer::command_boinc_select_project( const char *url, const char *auth )
+GahpServer::command_boinc_select_project( const char *url, const char *auth_file )
 {
 	static const char *command = "BOINC_SELECT_PROJECT";
 
@@ -1371,7 +1371,25 @@ GahpServer::command_boinc_select_project( const char *url, const char *auth )
 		return false;
 	}
 
-	if ( url == NULL || auth == NULL ) {
+	if ( url == NULL || auth_file == NULL ) {
+		return false;
+	}
+
+	char auth[80] = "";
+
+	FILE *fp = safe_fopen_wrapper_follow( auth_file, "r" );
+
+	if( fp == NULL ) {
+		dprintf( D_ALWAYS, "Failed to open file '%s' for reading: '%s' (%d).\n",
+				 auth_file, strerror( errno ), errno );
+		return false;
+	}
+
+	int rc = fscanf( fp, " %79s", auth );
+	fclose( fp );
+	if ( rc < 1 || auth[0] == '\0' ) {
+		dprintf( D_ALWAYS, "Failed to read authenticator from file '%s'.\n",
+				 auth_file );
 		return false;
 	}
 
@@ -1379,8 +1397,15 @@ GahpServer::command_boinc_select_project( const char *url, const char *auth )
 	buf += " ";
 	buf += escapeGahpString( url );
 	buf += " ";
-	buf += escapeGahpString( auth );
-	write_line( buf.c_str() );
+	if ( param_boolean( "GAHP_DEBUG_HIDE_SENSITIVE_DATA", true ) ) {
+		std::string debug_buf = buf;
+		buf += escapeGahpString( auth );
+		debug_buf += "XXXXXXXX";
+		write_line( buf.c_str(), debug_buf.c_str() );
+	} else {
+		buf += escapeGahpString( auth );
+		write_line( buf.c_str() );
+	}
 
 	Gahp_Args result;
 	read_argv( result );

@@ -417,7 +417,7 @@ const char* EC2VpcIP = "ec2_vpc_ip";
 const char* EC2TagNames = "ec2_tag_names";
 const char* EC2SpotPrice = "ec2_spot_price";
 
-const char* BoincAuthenticator = "boinc_authenticator";
+const char* BoincAuthenticatorFile = "boinc_authenticator_file";
 
 //
 // Deltacloud Parameters
@@ -5686,12 +5686,23 @@ SetGridParams()
 		InsertJobExpr(buffer.Value());
 	}
 
-	if ( (tmp = condor_param( BoincAuthenticator, ATTR_BOINC_AUTHENTICATOR )) ) {
-		buffer.formatstr( "%s = \"%s\"", ATTR_BOINC_AUTHENTICATOR, tmp );
+	if ( (tmp = condor_param( BoincAuthenticatorFile,
+							  ATTR_BOINC_AUTHENTICATOR_FILE )) ) {
+		// check authenticator file can be opened
+		if ( !DisableFileChecks ) {
+			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
+				fprintf( stderr, "\nERROR: Failed to open authenticator file %s (%s)\n", 
+								 full_path(tmp), strerror(errno));
+				exit(1);
+			}
+			fclose(fp);
+		}
+		buffer.formatstr( "%s = \"%s\"", ATTR_BOINC_AUTHENTICATOR_FILE,
+						  full_path(tmp) );
 		InsertJobExpr( buffer.Value() );
 		free( tmp );
 	} else if ( JobGridType && strcasecmp( JobGridType, "boinc" ) == 0 ) {
-		fprintf(stderr, "\nERROR: BOINC jobs require a \"%s\" parameter\n", BoincAuthenticator );
+		fprintf(stderr, "\nERROR: BOINC jobs require a \"%s\" parameter\n", BoincAuthenticatorFile );
 		DoCleanup( 0, 0, NULL );
 		exit( 1 );
 	}

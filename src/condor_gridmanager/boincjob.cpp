@@ -237,12 +237,19 @@ BoincJob::BoincJob( ClassAd *classad )
 		job_already_submitted = true;
 	}
 
-	jobAd->LookupString( ATTR_BOINC_AUTHENTICATOR, authenticator );
+	jobAd->LookupString( ATTR_BOINC_AUTHENTICATOR_FILE, authenticator );
 	if ( authenticator.empty() ) {
-		formatstr( error_string, "No %s in job ad", ATTR_BOINC_AUTHENTICATOR );
+		formatstr( error_string, "No %s in job ad", ATTR_BOINC_AUTHENTICATOR_FILE );
 		goto error_exit;
 	}
-	
+
+	FILE *fp;
+	if( ( fp = safe_fopen_wrapper_follow( authenticator.c_str(), "r" ) ) == NULL ) {
+		error_string = "Failed to open authenticator file";
+		goto error_exit;
+	}
+	fclose( fp );
+
 		// Find/create an appropriate BoincResource for this job
 	myResource = BoincResource::FindOrCreateResource( m_serviceUrl,
 													  authenticator.c_str() );

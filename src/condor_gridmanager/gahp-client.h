@@ -144,7 +144,7 @@ class GahpServer : public Service {
 	void poll_real_soon();
 
 	bool useBoincResource( BoincResource *resource );
-	bool command_boinc_select_project( const char *url, const char *auth );
+	bool command_boinc_select_project( const char *url, const char *auth_file );
 
 	bool cacheProxyFromFile( GahpProxyInfo *new_proxy );
 	bool uncacheProxy( GahpProxyInfo *gahp_proxy );
