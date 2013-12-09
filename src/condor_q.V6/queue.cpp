@@ -141,7 +141,7 @@ static 	char * bufferJobShort (ClassAd *);
 // functions to fetch job ads and print them out
 //
 static bool show_file_queue(const char* jobads, const char* userlog);
-static bool show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, bool useFastPath);
+static bool show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath);
 #ifdef HAVE_EXT_POSTGRESQL
 static bool show_db_queue( const char* quill_name, const char* db_ipAddr, const char* db_name, const char* query_password);
 #endif
@@ -598,7 +598,7 @@ int main (int argc, char **argv)
 	bool		first;
 	char		*scheddName=NULL;
 	char		scheddMachine[64];
-	bool        useFastScheddQuery = false;
+	int		useFastScheddQuery = 0;
 	char		*tmp;
 	bool        useDB; /* Is there a database to query for a schedd */
 	int         retval = 0;
@@ -672,7 +672,10 @@ int main (int argc, char **argv)
 			}
 			if (schedd.version()) {
 				CondorVersionInfo v(schedd.version());
-				useFastScheddQuery = v.built_since_version(6,9,3);
+				useFastScheddQuery = v.built_since_version(6,9,3) ? 1 : 0;
+				if (v.built_since_version(8, 1, 4)) {
+					useFastScheddQuery = 2;
+				}
 			}
 			
 			if ( directDBquery ) {
@@ -1036,7 +1039,7 @@ int main (int argc, char **argv)
 						didn't have a quill ad by that name. */
 
 					if((result2 == Q_OK) && quillAddr &&
-					   (retval = show_schedd_queue(quillAddr, quillName, quillMachine, false))
+					   (retval = show_schedd_queue(quillAddr, quillName, quillMachine, 0))
 					   )
 					{
 						/* processed correctly, so do the next ad */
@@ -1097,7 +1100,7 @@ int main (int argc, char **argv)
 				MyString scheddVersion;
 				ad->LookupString(ATTR_VERSION, scheddVersion);
 				CondorVersionInfo v(scheddVersion.Value());
-				useFastScheddQuery = v.built_since_version(6,9,3);
+				useFastScheddQuery = v.built_since_version(6,9,3) ? (v.built_since_version(8, 1, 4) ? 2 : 1) : 0;
 				retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine, useFastScheddQuery);
 				}
 
@@ -3848,8 +3851,12 @@ process_job_and_render_to_dag_map(void *,  ClassAd *job)
 // the old code didn't try.
 //
 static bool
-show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, bool useFastPath)
+show_schedd_queue(const char* scheddAddress, const char* scheddName, const char* scheddMachine, int useFastPath)
 {
+	bool use_v3 = param_boolean("CONDOR_Q_USE_V3_PROTOCOL", true);
+	if ((useFastPath == 2) && !use_v3) {
+		useFastPath = 1;
+	}
 	// initialize counters
 	malformed = idle = running = held = completed = suspended = 0;
 
