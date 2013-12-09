@@ -585,13 +585,15 @@ if (WINDOWS)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/8.33)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.10)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.33.0)
+  add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 else ()
 
   # DRMAA currently punted on Windows until we can figure out correct build
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.49.0)
-  
+  add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
+
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1 )
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
@@ -649,7 +651,6 @@ else ()
 
 endif(WINDOWS)
 
-add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
 
 ### addition of a single externals target which allows you to
