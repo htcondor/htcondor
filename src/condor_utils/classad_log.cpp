@@ -83,14 +83,16 @@ ClassAd* ClassAdLogFilterIterator::operator *() const {
 ClassAdLogFilterIterator
 ClassAdLogFilterIterator::operator++(int)
 {
-	// TODO: time-limit the advance.
 	ClassAdLogFilterIterator cur = *this;
-	if (m_done) return cur;
+	if (m_done) {
+		return cur;
+	}
 
 	HashIterator<HashKey, ClassAd*> end = m_table->end();
 	bool boolVal;
 	int intVal;
 	int miss_count = 0;
+	bool found_ad = false;
 	while (!(m_cur == end))
 	{
 		miss_count++;
@@ -115,7 +117,6 @@ ClassAdLogFilterIterator::operator++(int)
 
 			if (!(result.IsBooleanValue(boolVal) && boolVal) &&
 					!(result.IsIntegerValue(intVal) && intVal)) {
-				//dprintf(D_FULLDEBUG, "Requirements evaluated to false.\n");
 				continue;
 			}
 		}
@@ -128,11 +129,11 @@ ClassAdLogFilterIterator::operator++(int)
                 tmp_ad->EvaluateAttrInt(ATTR_PROC_ID, proc);
                 //dprintf(D_FULLDEBUG, "Returning job %d.%d\n", cluster,proc);
 		m_cur_ad = tmp_ad;
+		found_ad = true;
 		break;
 	}
-	if (m_cur == end) {
+	if ((m_cur == end) && (!found_ad)) {
 		m_done = true;
-		m_cur_ad = NULL;
 	}
 	return cur;
 }

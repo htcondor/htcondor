@@ -95,6 +95,7 @@ private:
 	  : m_parent(parent), m_idx(idx), m_cur(NULL)
 	{
 		if (idx == -1) return;
+		m_cur = m_parent->ht[m_idx];
 		while (!m_cur) {
 			if (m_idx == m_parent->tableSize-1) {
 				m_idx = -1;
