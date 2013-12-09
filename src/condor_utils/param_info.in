@@ -6553,6 +6553,14 @@ friendly_name=History Helper max number of helper sub-processes
 usage=Set the limit on the number of condor_history_helper sub-processes
 review=?
 
+[CONDOR_Q_USE_V3_PROTOCOL]
+default=true
+type=bool
+reconfig=false
+customization=devel
+friendly_name=Control use of V3 query protocol for condor_q
+usage=Set to false to disable V3 query protocol for condor_q.
+
 [JOB_EXECDIR_PERMISSIONS]
 default=user
 version=8.1.3
