@@ -73,6 +73,7 @@ public:
 	ClassAdLogFilterIterator operator++(int);
 
 	bool operator==(const ClassAdLogFilterIterator &rhs);
+	bool operator!=(const ClassAdLogFilterIterator &rhs) {return !(*this == rhs);}
 
 private:
 	friend ClassAdLogFilterIterator BeginIterator(const classad::ExprTree &requirements, int timeslice_ms);

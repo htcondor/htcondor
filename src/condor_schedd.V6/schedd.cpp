@@ -1829,7 +1829,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 			return sendJobErrorAd(sock, 5, "Failed to write EOM to wire");
 		}
 	}
-        while (!(it == end) && !has_backlog) {
+        while ((it != end) && !has_backlog) {
 		ClassAd* tmp_ad = *it++;
 		if (!tmp_ad) {
 			// Return to DC in case if our time ran out.
