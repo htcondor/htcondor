@@ -30,7 +30,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The protocol between \Condor{q} and the schedd was rewritten.  The new
+protocol does not require the schedd to fork a child process and does
+not cause blocking; the result is that the schedd should be able to handle
+many concurrent \Condor{q} requests with minimal resource usage.
+\Ticket{4111}
 
 \end{itemize}
 
