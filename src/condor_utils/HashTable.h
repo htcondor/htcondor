@@ -39,7 +39,7 @@ class HashBucket {
 template <class Index, class Value> class HashTable;
 
 template< class Index, class Value >
-class HashIterator : std::iterator<std::input_iterator_tag, std::pair<Index, Value&> >
+class HashIterator : std::iterator<std::input_iterator_tag, std::pair<Index, Value> >
 {
 public:
 	HashIterator(const HashIterator &original) {
@@ -53,12 +53,12 @@ public:
 		m_parent->remove_iterator(this);
 	}
 
-	std::pair<Index, Value&> operator *() const {
-		return std::pair<Index, Value&>(m_cur->index, m_cur->value);
+	std::pair<Index, Value> operator *() const {
+		return std::pair<Index, Value>(m_cur->index, m_cur->value);
 	}
 
-	std::pair<Index, Value&> operator ->() const {
-		return std::pair<Index, Value&>(m_cur->index, m_cur->value);
+	std::pair<Index, Value> operator ->() const {
+		return std::pair<Index, Value>(m_cur->index, m_cur->value);
 	}
 
 	HashIterator operator++(int) {
@@ -289,13 +289,13 @@ const HashTable<Index,Value>& HashTable<Index,Value>::operator=( const HashTable
 // Register an iterator
 template <class Index, class Value>
 void
-HashTable<Index,Value>::register_iterator(HashTable<Index,Value>::iterator* it) {
+HashTable<Index,Value>::register_iterator(typename HashTable<Index,Value>::iterator* it) {
 	activeIterators.push_back(it);
 }
 
 template <class Index, class Value>
 void
-HashTable<Index,Value>::remove_iterator(HashTable<Index,Value>::iterator* dead_it) {
+HashTable<Index,Value>::remove_iterator(typename HashTable<Index,Value>::iterator* dead_it) {
 	typename std::vector<iterator*>::iterator it;
 	for (it = activeIterators.begin();
 		it != activeIterators.end();

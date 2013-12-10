@@ -128,9 +128,10 @@ extern  void short_print(int,int,const char*,int,int,int,int,int,const char *);
 static  void processCommandLineArguments(int, char *[]);
 
 //static  bool process_buffer_line_old(void*, ClassAd *);
-static  bool process_job_and_render_to_dag_map(void*, ClassAd *);
-static  bool process_and_print_job(void*, ClassAd *);
-typedef bool (* buffer_line_processor)(void*, ClassAd*);
+static  void process_job_and_render_to_dag_map(void*, classad_shared_ptr<ClassAd>);
+static  void process_and_print_job(void*, classad_shared_ptr<ClassAd>);
+static  void process_and_print_job(void*, ClassAd*);
+typedef void (* buffer_line_processor)(void*, classad_shared_ptr<ClassAd>);
 
 static 	void short_header (void);
 static 	void usage (const char *, int other=0);
@@ -3534,13 +3535,11 @@ print_jobs_analysis(ClassAdList & jobs, const char * source_label, Daemon * psch
 
 // callback function for processing a job from the Q query that just adds the 
 // job into a ClassAdList.
-static bool
-AddToClassAdList(void * pv, ClassAd *ad) {
+static void
+AddToClassAdList(void * pv, classad_shared_ptr<ClassAd> ad) {
 	ClassAdList * plist = (ClassAdList*)pv;
-	plist->Insert(ad);
-	// return false to indicate we took ownership of the ad 
-	// and it should NOT be deleted by the caller.
-	return false;
+	ClassAd *new_ad = static_cast<ClassAd*>(ad->Copy());
+	plist->Insert(new_ad);
 }
 
 #ifdef HAVE_EXT_POSTGRESQL
@@ -3708,19 +3707,26 @@ static const char * render_job_text(ClassAd *job, std::string & result_text)
 	return result_text.c_str();
 }
 
-static bool
+static void
+process_and_print_job(void *, classad_shared_ptr<ClassAd> job)
+{
+	count_job(job.get());
+
+	std::string result_text;
+	render_job_text(job.get(), result_text);
+	printf("%s", result_text.c_str());
+}
+
+static void
 process_and_print_job(void *, ClassAd *job)
 {
 	count_job(job);
 
 	std::string result_text;
-	if (render_job_text(job, result_text)) {
-		printf("%s", result_text.c_str());
-	}
-
-	// return true to free the job ad, since we didn't take ownership of it.
-	return true;
+	render_job_text(job, result_text);
+	printf("%s", result_text.c_str());
 }
+
 
 // insert a line of formatted output into the dag_map, so we can print out
 // sorted results.
@@ -3828,20 +3834,16 @@ insert_job_output_into_dag_map(ClassAd * job, const char * job_output)
 	return true;
 }
 
-static bool
-process_job_and_render_to_dag_map(void *,  ClassAd *job)
+static void
+process_job_and_render_to_dag_map(void *,  classad_shared_ptr<ClassAd> job)
 {
-	count_job(job);
+	count_job(job.get());
 
 	ASSERT( ! g_stream_results);
 
 	std::string result_text;
-	render_job_text(job, result_text);
-	insert_job_output_into_dag_map(job, result_text.c_str());
-
-	// process_buffer_line returns 1 so that the ad that is passed
-	// to it should be deleted.
-	return true;
+	render_job_text(job.get(), result_text);
+	insert_job_output_into_dag_map(job.get(), result_text.c_str());
 }
 
 // query SCHEDD or QUILLD daemon for jobs. and then print out the desired job info.

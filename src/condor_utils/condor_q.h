@@ -28,7 +28,7 @@
 #define MAXSCHEDDLEN 255
 
 // This is for the getFilterAndProcess function
-typedef bool    (*condor_q_process_func)(void*, ClassAd *);
+typedef void (*condor_q_process_func)(void*, classad_shared_ptr<ClassAd>);
 
 /* a list of all types of direct DB query defined here */
 enum CondorQQueryType
