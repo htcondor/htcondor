@@ -192,7 +192,7 @@ BEGIN {
 	next
 }
 /^#VMWARE_LOCAL_SETTINGS_FILE/ {
-	print "VMWARE_LOCAL_SETTINGS_FILE = $(RELEASE_DIR)/condor_vmware_local_settings"
+	print "#VMWARE_LOCAL_SETTINGS_FILE = $(RELEASE_DIR)/condor_vmware_local_settings"
 	next
 }
 

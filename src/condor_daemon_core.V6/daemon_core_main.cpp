@@ -777,6 +777,7 @@ drop_core_in_log( void )
 			if (MATCH == strcmpi(get_mySubSystem()->getName(), "KBDD")) {
 				dprintf (D_FULLDEBUG, "chdir() to LOG directory failed for KBDD, "
 					     "cannot drop core in LOG dir\n");
+				free(ptmp);
 				return;
 			}
 #endif
@@ -813,7 +814,7 @@ drop_core_in_log( void )
 	{
 		// give our Win32 exception handler a filename for the core file
 		MyString pseudoCoreFileName;
-		formatstr(pseudoCoreFileName,"%s\\", ptmp, core_name ? core_name : "core.WIN32");
+		formatstr(pseudoCoreFileName,"%s\\%s", ptmp, core_name ? core_name : "core.WIN32");
 		g_ExceptionHandler.SetLogFileName(pseudoCoreFileName.c_str());
 
 		// set the path where our Win32 exception handler can find
