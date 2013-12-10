@@ -6233,6 +6233,38 @@ SYSTEM_PERIODIC_REMOVE = \
   the sets of jobs considered as a unit (an auto cluster) in negotiation,
   when auto clustering is enabled.
 
+\label{param:ScheddAuditLog}
+\item[\Macro{SCHEDD\_AUDIT\_LOG}]
+  The path and file name of the \Condor{schedd} log that records
+  user-initiated commands that modify the job queue.
+  If not defined, there will be no \Condor{schedd} audit log.
+
+\label{param:MaxScheddAuditLog}
+\item[\Macro{MAX\_SCHEDD\_AUDIT\_LOG}]
+  Controls the maximum amount of time that a log will be allowed to grow. 
+  When it is time to rotate a log file, 
+  it will be saved to a file with an ISO timestamp suffix. 
+  The oldest rotated file receives the file name suffix \Expr{.old}. 
+  The \Expr{.old} files are overwritten each time the maximum number of 
+  rotated files 
+  (determined by the value of \MacroNI{MAX\_NUM\_SCHEDD\_AUDIT\_LOG})
+  is exceeded. 
+  A value of 0 specifies that the file may grow without bounds.
+  The following suffixes may be used to qualify the integer: 
+\begin{description}
+  \item{\Expr{Sec} for seconds}
+  \item{\Expr{Min} for minutes}
+  \item{\Expr{Hr} for hours}
+  \item{\Expr{Day} for days}
+  \item{\Expr{Wk} for weeks}
+\end{description}
+
+\label{param:MaxNumScheddAuditLog}
+\item[\Macro{MAX\_NUM\_SCHEDD\_AUDIT\_LOG}]
+  The integer that controls the maximum number of rotations that
+  the \Condor{schedd} audit log is allowed to perform,
+  before the oldest one will be rotated away. The default value is 1. 
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
