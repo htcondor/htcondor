@@ -456,12 +456,7 @@ CondorQ::fetchQueueFromHostAndProcessV2(const char *host,
 			}
 			break;
 		}
-		bool retval = (*process_func) (process_func_data, ad.get());
-		if (retval) {
-			ad->Clear();
-		} else {
-			ad.reset();
-		}
+		(*process_func) (process_func_data, ad);
 	} while (true);
 
 	return 0;
@@ -621,7 +616,7 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 								 void * process_func_data,
 								 bool useAll )
 {
-	ClassAd *ad;
+	classad_shared_ptr<ClassAd> ad;
 
 	if (useAll) {
 			// The fast case with the new protocol
@@ -630,32 +625,26 @@ CondorQ::getFilterAndProcessAds( const char *constraint,
 		free(attrs_str);
 
 		while( true ) {
-			ad = new ClassAd;
-			if( GetAllJobsByConstraint_Next( *ad ) != 0 ) {
-				delete ad;
+			ad.reset(new ClassAd());
+			if( GetAllJobsByConstraint_Next( *ad.get() ) != 0 ) {
 				break;
 			}
-			if ( ( *process_func )( process_func_data, ad ) ) {
-				delete(ad);
-			}
+			( *process_func )( process_func_data, ad );
 		}
 	} else {
 
-	// slow case, using old protocol
-	if ((ad = GetNextJobByConstraint(constraint, 1)) != NULL) {
-		// Process the data and insert it into the list
-		if ( ( *process_func )( process_func_data, ad ) ) {
-			delete(ad);
-		}
-
-		while((ad = GetNextJobByConstraint(constraint, 0)) != NULL) {
+		// slow case, using old protocol
+		ad.reset(GetNextJobByConstraint(constraint, 1));
+		if (ad.get() != NULL) {
 			// Process the data and insert it into the list
-			if ( ( *process_func )( process_func_data, ad ) ) {
-				delete(ad);
+			( *process_func )( process_func_data, ad );
+
+			ad.reset(GetNextJobByConstraint(constraint, 0));
+			while(ad.get() != NULL) {
+				// Process the data and insert it into the list
+				( *process_func )( process_func_data, ad );
 			}
 		}
-	}
-
 	}
 
 	// here GetNextJobByConstraint returned NULL.  check if it was
@@ -676,18 +665,18 @@ CondorQ::getAndFilterAds (const char *constraint,
 						  int useAllJobs)
 {
 	if (useAllJobs == 1) {
-	char *attrs_str = attrs.print_to_delimed_string();
-	GetAllJobsByConstraint(constraint, attrs_str, list);
-	free(attrs_str);
+		char *attrs_str = attrs.print_to_delimed_string();
+		GetAllJobsByConstraint(constraint, attrs_str, list);
+		free(attrs_str);
 
 	} else {
-	ClassAd		*ad;
-	if ((ad = GetNextJobByConstraint(constraint, 1)) != NULL) {
-		list.Insert(ad);
-		while((ad = GetNextJobByConstraint(constraint, 0)) != NULL) {
+		ClassAd		*ad;
+		if ((ad = GetNextJobByConstraint(constraint, 1)) != NULL) {
 			list.Insert(ad);
+			while((ad = GetNextJobByConstraint(constraint, 0)) != NULL) {
+				list.Insert(ad);
+			}
 		}
-	}
 	}
 
 	// here GetNextJobByConstraint returned NULL.  check if it was

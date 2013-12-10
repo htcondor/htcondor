@@ -240,16 +240,16 @@ struct query_process_helper
     list output_list;
 };
 
-bool
-query_process_callback(void * data, ClassAd *ad)
+void
+query_process_callback(void * data, classad_shared_ptr<ClassAd> ad)
 {
-    if (PyErr_Occurred()) return true;
+    if (PyErr_Occurred()) return;
 
     try
     {
         query_process_helper *helper = static_cast<query_process_helper *>(data);
         boost::shared_ptr<ClassAdWrapper> wrapper(new ClassAdWrapper());
-        wrapper->CopyFrom(*ad);
+        wrapper->CopyFrom(*ad.get());
         object wrapper_obj = object(wrapper);
         object result = (helper->callable == object()) ? wrapper_obj : helper->callable(wrapper);
         if (result != object())
@@ -262,7 +262,6 @@ query_process_callback(void * data, ClassAd *ad)
         // Suppress the C++ exception.  HTCondor sure can't deal with it.
         // However, PyErr_Occurred will be set and we will no longer invoke the callback.
     }
-    return true;
 }
 
 struct Schedd {
