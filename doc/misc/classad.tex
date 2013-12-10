@@ -714,7 +714,8 @@ Optional parameters are given within square brackets.
      This function evaluates its argument, and it returns the result.
      Thus, it is a no-operation.
      However, a side-effect of the function is that information about
-     the evaluation is logged to the evaluating program's log file.
+     the evaluation is logged to the evaluating program's log file,
+	 at the D\_FULLDEBUG debug level.
      This is useful for determining why a given ClassAd expression
      is evaluating the way it does.  
      For example, if a \Condor{startd} \MacroNI{START} expression
