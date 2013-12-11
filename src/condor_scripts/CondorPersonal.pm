@@ -147,7 +147,6 @@ my $condorlocaldir;
 my $pid = $$;
 my $version = ""; # remote, middle, ....... for naming schedd "schedd . pid . version"
 my $mastername = ""; # master_$verison
-my $DEBUG = 1;
 my $DEBUGLEVEL = 3; # nothing higher shows up
 my $debuglevel = 4; # take all the ones we don't want to see
 					# and allowed easy changing and remove hard
@@ -366,7 +365,6 @@ sub debug {
 	my $time = `date`;
 	fullchomp($time);
 	push @debugcollection, "$time: CondorPersonal - $string";
-    #if($DEBUG) {
         if(!(defined $level) or ($level <= $DEBUGLEVEL)) {
 			if(defined $level) {
             	print( "", timestamp(), ": CondorPersonal(L=$level) $string" );
@@ -374,7 +372,6 @@ sub debug {
             	print( "", timestamp(), ": CondorPersonal(L=?) $string" );
 			}
         }
-    #}
 }
 
 sub debug_flush {
@@ -397,17 +394,9 @@ sub debug_flush {
 sub DebugLevel
 {
     my $newlevel = shift;
+	my $oldlevel = $DEBUGLEVEL;
     $DEBUGLEVEL = $newlevel;
-}
-
-sub DebugOn
-{
-	$DEBUG = 1;
-}
-
-sub DebugOff
-{
-	$DEBUG = 0;
+	return($oldlevel);
 }
 
 sub timestamp {
