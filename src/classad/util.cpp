@@ -424,20 +424,6 @@ int classad_isinf(double x)
 		return 0;
 	}
 }
-#elif (defined (__SVR4) && defined (__sun)) || defined(__APPLE_CC__)
-#ifndef __APPLE_CC__
-#include <ieeefp.h>
-#endif
-int classad_isinf(double x) 
-{ 
-    if (finite(x) || x != x) {
-        return 0;
-    } else if (x > 0) {
-        return 1;
-    } else {
-        return -1;
-    }
-}
 #else
 int classad_isinf(double x)
 {

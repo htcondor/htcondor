@@ -179,7 +179,7 @@ int main(int argc, char **argv)
 #if (__GNUC__<3) 
 		input_file.flags(0);
 #else
-		input_file.flags((std::_Ios_Fmtflags)0);
+		input_file.flags((std::ios_base::fmtflags)0);
 #endif
 		process_file(input_file, output_file, parameters);
 	}
