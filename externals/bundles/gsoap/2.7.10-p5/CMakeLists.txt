@@ -43,7 +43,8 @@ if (WITH_GSOAP)
 			set (GSOAP_PATCH  patch -N --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/install_soapcpp2_wsdl2h_aux-2.7.10-Makefile.in.patch &&
 							  patch -N --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/fix_xlocale_insanity.patch &&
 							  patch -N --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/nmi_prereq_hack.patch &&
-							  patch -N --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/openssl_1_0.patch)
+							  patch -N --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/openssl_1_0.patch &&
+							  patch -N --binary -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/version.patch)
 			if(DARWIN AND cxx_11)
 				set (GSOAP_CONFIGURE ./configure --prefix=${GSOAP_INSTALL_LOC} --disable-dependency-tracking "CPPFLAGS=-I${OPENSSL_INSTALL_LOC}/include/ -DWITH_IPV6" "CXXFLAGS=-std=c++11 -stdlib=libc++ -DWITH_IPV6" "CFLAGS=-DWITH_IPV6" )
 			else()

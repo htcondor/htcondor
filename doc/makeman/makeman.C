@@ -139,7 +139,7 @@ public:
 // And we want to ignore everything in between. That is what these 
 // comment_markers are for
 #define NUMBER_OF_COMMENT_MARKERS (sizeof(comment_markers) / sizeof(char *))
-char *comment_markers[] = 
+const char *comment_markers[] = 
 {
 	"Navigation Panel",
 	"Child-Links"
@@ -179,7 +179,7 @@ int main(int argc, char **argv)
 #if (__GNUC__<3) 
 		input_file.flags(0);
 #else
-		input_file.flags((std::_Ios_Fmtflags)0);
+		input_file.flags((std::ios_base::fmtflags)0);
 #endif
 		process_file(input_file, output_file, parameters);
 	}
@@ -554,6 +554,9 @@ static string html_to_nroff(
 			case tagType_Unknown:
 				cout << "Ignoring unknown tag: " << token->text << endl;
 				break;
+			case tagType_NotATag:
+				// Ignore things that aren't tags.
+				break;
 			} // end of switch on tag type
 		}
 		if (token->tag_type != tagType_Preformatted) {
@@ -842,7 +845,7 @@ static void add_fixed_characters(string &source, string &dest, bool in_pre_text)
 			in_spaces = false;
 		} else if (source[offset] == '\\') {
 			dest += "\\\\";  // replace backslash with double backslash.
-		} else if (!in_pre_text && source[offset] == ' ' || source[offset] == '\t') {
+		} else if ((!in_pre_text && source[offset] == ' ') || source[offset] == '\t') {
 			if (!in_spaces) {
 				dest += ' '; // tabs become spaces.
 			} 
