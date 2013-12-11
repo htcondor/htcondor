@@ -1323,8 +1323,11 @@ sub CheckTimedCallback
 	{
 		#call timed callback
 		debug("Called timed callback!!!!!!-- $cluster --\n",5);
-		&$TimedCallback( %info )
-			if defined $TimedCallback;
+		if(defined $TimedCallback) {
+			my $tempcallback = $TimedCallback; # save and removed callback request
+			RemoveTimed();
+			&$tempcallback(%info);
+		}
 	}
 }
 
