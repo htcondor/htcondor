@@ -248,10 +248,10 @@ sub GetCheckName
     my $arg_str = "";
     for my $name ( keys %args ) {
         my $value = $args{$name};
-	if( $arg_str ne "" ) {
-	    $arg_str = $arg_str . ",";
-	}
-	$arg_str = $arg_str . "$name=$value";
+		if( $arg_str ne "" ) {
+	    	$arg_str = $arg_str . ",";
+		}
+		$arg_str = $arg_str . "$name=$value";
     }
     if( $arg_str ne "" ) {
 	$check_name = $check_name . "($arg_str)";
@@ -1522,7 +1522,7 @@ sub runCondorTool
 		#print "runCondorTool: Attempt: <$count>\n";
 
 		# Add a message to runcmd output
-		${$options}{emit_string} = "runCondorTool: Attempt: $count";
+		${$options}{emit_string} = "runCondorTool: Cmd: $cmd Attempt: $count";
 		@{$arrayref} = (); #empty return array...
 		my @tmparray;
 		debug( "Try command: $cmd\n",4);
@@ -1577,7 +1577,7 @@ sub runCondorTool
 			return(1);
 		}
 		$count = $count + 1;
-		debug("runCondorTool: iteration: $count failed sleep 10 * $count \n",1);
+		debug("runCondorTool: iteration: $count cmd $cmd failed sleep 10 * $count \n",1);
 		my $delaynow = 10*$count;
 		if(!defined $quiet) {
 			print "runCondorTool: this delay: $delaynow\n";
