@@ -2318,7 +2318,7 @@ sub DebugLevel {
 	my $oldlevel = $DEBUGLEVEL;
     $DEBUGLEVEL = $newlevel;
 	if($newlevel != $oldlevel) {
-		debug("Test debug level moved from: $oldlevel to: $newlevel\n";
+		debug("Test debug level moved from: $oldlevel to: $newlevel\n");
 	}
 	return($oldlevel);
 }
