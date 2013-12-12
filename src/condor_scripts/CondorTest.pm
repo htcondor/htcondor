@@ -75,7 +75,7 @@ my $BaseDir = getcwd();
 my $isnightly = IsThisNightly($BaseDir);
 
 #set inital test debug level
-DebugLevel(2);
+DebugLevel(1);
 
 # we want to process and track the collection of cores
 my $coredir = "$BaseDir/Cores";
@@ -2305,6 +2305,7 @@ sub debug {
     	print timestamp() . " Test: $msg";
     }
     elsif($level <= $DEBUGLEVEL) {
+		print "Debug: requested level: $level <= DEBUGLEVEL: $DEBUGLEVEL\n";
     	print timestamp() . " Test: $msg";
     }
 }
