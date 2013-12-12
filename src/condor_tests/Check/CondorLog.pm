@@ -69,7 +69,7 @@ sub RunCheckMultiple
 	my $match_new = $args{match_new} || "false";
     my $match_after_regexp = $args{match_after_regexp} || undef;
     my $match_between = $args{match_between_regexp} || undef;
-	my $no_result = $args{no_result} || umdef;
+	my $no_result = $args{no_result} || undef;
 
     my $result;
     my $count = 0;
