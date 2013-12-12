@@ -2305,7 +2305,6 @@ sub debug {
     	print timestamp() . " Test: $msg";
     }
     elsif($level <= $DEBUGLEVEL) {
-		print "Debug: requested level: $level <= DEBUGLEVEL: $DEBUGLEVEL\n";
     	print timestamp() . " Test: $msg";
     }
 }
@@ -2318,6 +2317,9 @@ sub DebugLevel {
 	my $newlevel = shift;
 	my $oldlevel = $DEBUGLEVEL;
     $DEBUGLEVEL = $newlevel;
+	if($newlevel != $oldlevel) {
+		debug("Test debug level moved from: $oldlevel to: $newlevel\n";
+	}
 	return($oldlevel);
 }
 
