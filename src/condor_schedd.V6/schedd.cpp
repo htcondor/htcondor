@@ -1082,6 +1082,8 @@ Scheduler::count_jobs()
 		Owners[i].OldFlockLevel = 0;
 		Owners[i].NegotiationTimestamp = current_time;
 		Owners[i].PrioSet.clear();
+		Owners[i].WeightedJobsRunning = 0;
+		Owners[i].WeightedJobsIdle = 0;
 	}
 
 	GridJobOwners.clear();
