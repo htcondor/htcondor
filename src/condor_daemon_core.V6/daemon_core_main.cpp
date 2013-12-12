@@ -2222,6 +2222,9 @@ int dc_main( int argc, char** argv )
 		// where it goes.  We also do some NT-specific stuff in here.
 	drop_core_in_log();
 
+	// write dprintf's contribution to the daemon header.
+	dprintf_print_daemon_header();
+
 #ifdef WIN32
 		// On NT, we need to make certain we have a console allocated,
 		// since many standard mechanisms do not work without a console
