@@ -543,12 +543,11 @@ void EC2Job::doEvaluateState()
 							gmState = GM_SPOT_CANCEL;
 						}
 					} else {
-						// Because we have the client token, we know that
-						// we still have the SSH keypair from the previous
-						// execution of GM_SAVE_CLIENT_TOKEN.  We can therefore
-						// jump directly to GM_START_VM, where (using the
-						// client token), we will call RunInstances()
-						// idempotently.
+						// Our starting assumption is that we still have
+						// to start the instance, but if it already exists,
+						// the ClientToken will prevent us from creating
+						// a second one.
+						// We may change our mind based on the checks below.
 						gmState = GM_START_VM;
 
 						// As an optimization, if we already have the instance
@@ -579,6 +578,9 @@ void EC2Job::doEvaluateState()
 							// the real benefit is that invalid jobs won't
 							// stay on hold when the user removes them
 							// (because we won't try to start them).
+							// Additionally, if the ClientToken can't be
+							// used for idempotent submission, we have to
+							// check for existence of the instance.
 							gmState = GM_SEEK_INSTANCE_ID;
 						}
 					}
@@ -680,9 +682,9 @@ void EC2Job::doEvaluateState()
 					// success. We do this instead of checking whether
 					// the keypair exists during recovery.
 					// Each server type uses a different error message.
-					// Amazon: "InvalidKeyPair.Duplicate"
+					// Amazon, OpenSatck(Havana): "InvalidKeyPair.Duplicate"
 					// Eucalyptus: "Keypair already exists"
-					// OpenStack: "KeyPairExists"
+					// OpenStack(pre-Havana): "KeyPairExists"
 					// Nimbus: No error
 					if ( rc == 0 ||
 						 strstr( gahp->getErrorString(), "KeyPairExists" ) ||
