@@ -3795,6 +3795,12 @@ show_file_queue(const char* jobads, const char* userlog)
 		return print_jobs_analysis(jobs, source_label.c_str(), NULL);
 	}
 
+	// TJ: copied this from the top of init_output_mask
+	if ( dash_run || dash_goodput || dash_globus || dash_grid )
+		summarize = false;
+	else if (customFormat && ! show_held)
+		summarize = false;
+
 		// display the jobs from this submittor
 	if( jobs.MyLength() != 0 || !global ) {
 		print_full_header(source_label.c_str());
