@@ -52,7 +52,7 @@ my %securityoptions =
 my $RunningFile = "RunningTests";
 my $teststrt = 0;
 my $teststop = 0;
-my $DEBUGLEVEL = 0;
+my $DEBUGLEVEL = 1;
 my $debuglevel = 2;
 
 
@@ -2318,7 +2318,7 @@ sub DebugLevel {
 	my $oldlevel = $DEBUGLEVEL;
     $DEBUGLEVEL = $newlevel;
 	if($newlevel != $oldlevel) {
-		debug("Test debug level moved from: $oldlevel to: $newlevel\n");
+		debug("Test debug level moved from: $oldlevel to: $newlevel\n",2);
 	}
 	return($oldlevel);
 }
