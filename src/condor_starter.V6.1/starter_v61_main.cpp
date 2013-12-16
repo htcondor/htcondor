@@ -202,7 +202,7 @@ main_pre_dc_init( int argc, char* argv[] )
 		// up calling functions that rely on it being defined...  
 	if( argc == 2 && strncasecmp(argv[1],"-cla",4) == MATCH ) {
 			// needed for Java stuff
-		config(true);
+		config_ex(true, true, 0);
 
 			// Would like to log errors to stderr if stderr is not
 			// /dev/null to make it easier for users to debug, but not

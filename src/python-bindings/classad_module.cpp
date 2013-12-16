@@ -1,9 +1,8 @@
-#include <boost/python.hpp>
+#include "old_boost.h"
 #include <classad/source.h>
 #include <classad/sink.h>
 #include <classad/literals.h>
 
-#include "old_boost.h"
 #include "classad_parsers.h"
 #include "classad_wrapper.h"
 #include "exprtree_wrapper.h"
@@ -43,9 +42,17 @@ std::string unquote(std::string input)
     return result;
 }
 
+#if PY_MAJOR_VERSION >= 3
+void *convert_to_FILEptr(PyObject* /*obj*/) {
+	// http://docs.python.org/3.3/c-api/file.html
+	// python file objects are fundamentally changed, this call can't be implemented?
+	return NULL;
+}
+#else
 void *convert_to_FILEptr(PyObject* obj) {
     return PyFile_Check(obj) ? PyFile_AsFile(obj) : 0;
 }
+#endif
 
 struct classad_from_python_dict {
 

@@ -46,6 +46,6 @@ StartdBenchJob::Initialize( void )
 int
 StartdBenchJob::Publish( const char *ad_name, ClassAd *ad )
 {
-	resmgr->adlist_replace( ad_name, ad, false );
+	resmgr->adlist_replace( ad_name, GetPrefix(), ad, false );
 	return 0;
 }

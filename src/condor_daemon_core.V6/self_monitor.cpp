@@ -266,7 +266,12 @@ void DaemonCore::Stats::Publish(ClassAd & ad, int flags) const
    ad.Assign("DaemonCoreDutyCycle", dDutyCycle);
    dDutyCycle = 0.0;
    if (this->PumpCycle.recent.Count) {
-      dDutyCycle = 1.0 - (this->SelectWaittime.recent / this->PumpCycle.recent.Sum);
+      // sometimes select-wait-time can be < pump-cycle-time because of recent window
+      // jitter and accumulated errors adding doubles together. when that happens
+      // the calculated duty cycle can be negative.  we don't want to publish negative
+      // numbers so we suppress the actual value and publish 0 instead.
+      double dd = 1.0 - (this->SelectWaittime.recent / this->PumpCycle.recent.Sum);
+      if (dd > 0.0) dDutyCycle = dd;
    }
    ad.Assign("RecentDaemonCoreDutyCycle", dDutyCycle);
 

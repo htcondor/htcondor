@@ -47,7 +47,12 @@ public:
 
 	void Reconfig();
 	void doEvaluateState();
+	void NotifyResourceDown();
+	void NotifyResourceUp();
 	BaseResource *GetResource();
+
+	void ResourceLeaseExpired();
+
 	void SetKeypairId( const char *keypair_id );
 	void SetInstanceId( const char *instance_id );
 	void SetClientToken( const char *client_token );
@@ -136,7 +141,9 @@ private:
 	// print out error codes returned from grid_manager
 	void print_error_code( const char* error_code, const char* function_name );
 
-    bool probeNow;
+	bool probeNow;
+
+	int resourceLeaseTID;
 };
 
 #endif

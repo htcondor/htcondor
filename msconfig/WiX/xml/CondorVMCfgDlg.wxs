@@ -7,7 +7,7 @@
         <Control Id="RadioVM" Type="RadioButtonGroup" X="160" Y="60" Width="290" Height="26" TabSkip="no" Property="USEVMUNIVERSE">
           <RadioButtonGroup Property="USEVMUNIVERSE">
             <RadioButton Value="N" X="0" Y="0" Width="290" Height="13" Text="&amp;No"/>
-            <RadioButton Value="Y" X="0" Y="13" Width="290" Height="13" Text="&amp;Yes (Requires VMware Server and Perl)"/>
+            <RadioButton Value="Y" X="0" Y="13" Width="290" Height="13" Text="&amp;Yes (Requires VMware and Perl)"/>
           </RadioButtonGroup>
           <Property Id="USEVMUNIVERSE" Value="N"/>
         </Control>
@@ -42,8 +42,7 @@
           <Publish Event="NewDialog" Value="CondorUpHostDlg">UPGRADEFOUND And SEVENFIVEFIVEFOUND</Publish>
         </Control>
         <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Next">
-          <Publish Event="NewDialog" Value="CondorHDFSCfgDlg">Not UPGRADEFOUND</Publish>
-          <Publish Event="NewDialog" Value="VerifyReadyDlg">UPGRADEFOUND And SEVENFIVEFIVEFOUND</Publish>
+          <Publish Event="NewDialog" Value="InstallDirDlg">1</Publish>
         </Control>
         <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="Cancel">
           <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>

@@ -544,7 +544,7 @@ VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, \
                           Accountant.log, Accountantnew.log, \
                           local_univ_execute, .quillwritepassword, \
 						  .pgpass, \
-			  .schedd_address, .schedd_classad
+			  .schedd_address, .schedd_address.super, .schedd_classad
 
 ##  What files should condor_preen remove from the log directory?
 INVALID_LOG_FILES	= core

@@ -32,7 +32,9 @@
 #include "util_lib_proto.h"
 #include "dc_startd.h"
 #include "get_daemon_name.h"
+#include <algorithm>
 #include "defrag.h"
+
 
 static char const * const ATTR_LAST_POLL = "LastPoll";
 static char const * const DRAINING_CONSTRAINT = "Draining && Offline=!=True";
@@ -49,7 +51,12 @@ Defrag::Defrag():
 	m_draining_schedule(DRAIN_GRACEFUL),
 	m_last_poll(0),
 	m_public_ad_update_interval(-1),
-	m_public_ad_update_timer(-1)
+	m_public_ad_update_timer(-1),
+	m_whole_machines_arrived(0),
+	m_last_whole_machine_arrival(0),
+	m_whole_machine_arrival_sum(0),
+	m_whole_machine_arrival_mean_squared(0)
+	
 {
 }
 
@@ -73,7 +80,7 @@ void Defrag::config()
 	}
 
 	int old_polling_interval = m_polling_interval;
-	m_polling_interval = param_integer("DEFRAG_INTERVAL",600);
+	m_polling_interval = param_integer("DEFRAG_INTERVAL",60);
 	if( m_polling_interval <= 0 ) {
 		dprintf(D_ALWAYS,
 				"DEFRAG_INTERVAL=%d, so no pool defragmentation "
@@ -514,6 +521,20 @@ void Defrag::poll_cancel(MachineSet &cancelled_machines)
 	dprintf(D_ALWAYS, "Cancelled draining of %u whole machines.\n", cancel_count);
 }
 
+void
+Defrag::dprintf_set(const char *message, Defrag::MachineSet *m) const {
+	dprintf(D_ALWAYS, "%s\n", message);
+
+	for (Defrag::MachineSet::iterator it = m->begin(); it != m->end(); it++) {
+		dprintf(D_ALWAYS, "\t %s\n", (*it).c_str());
+	}
+	
+	if (m->size() == 0) {
+		dprintf(D_ALWAYS, "(no machines)\n");
+	}	
+	
+}
+
 void Defrag::poll()
 {
 	dprintf(D_FULLDEBUG,"Evaluating defragmentation policy.\n");
@@ -545,7 +566,8 @@ void Defrag::poll()
 		num_to_drain += prorate(m_draining_per_poll_day,now-current_day,3600*24,m_polling_interval);
 	}
 
-	int num_draining = countMachines(DRAINING_CONSTRAINT,"<InternalDrainingConstraint>");
+	MachineSet draining_machines;
+	int num_draining = countMachines(DRAINING_CONSTRAINT,"<InternalDrainingConstraint>", &draining_machines);
 	m_stats.MachinesDraining = num_draining;
 
 	MachineSet whole_machines;
@@ -554,6 +576,73 @@ void Defrag::poll()
 
 	dprintf(D_ALWAYS,"There are currently %d draining and %d whole machines.\n",
 			num_draining,num_whole_machines);
+
+	// Calculate arrival rate of fully drained machines.  This is a bit tricky because we poll.
+
+	// We count by finding the newly-arrived
+	// fully drained machines, and add to that count machines which are no-longer draining.
+	// This allows us to find machines that have fully drained, but were then claimed between
+	// polling cycles.
+	
+	MachineSet new_machines;
+	MachineSet no_longer_whole_machines;
+
+	// Find newly-arrived machines
+	std::set_difference(whole_machines.begin(), whole_machines.end(), 
+						m_prev_whole_machines.begin(), m_prev_whole_machines.end(),
+						std::inserter(new_machines, new_machines.begin()));
+	
+	// Now, newly-departed machines
+	std::set_difference(m_prev_draining_machines.begin(), m_prev_draining_machines.end(),
+					    draining_machines.begin(), draining_machines.end(),
+						std::inserter(no_longer_whole_machines, no_longer_whole_machines.begin()));
+
+	dprintf_set("Set of current whole machines is ", &whole_machines);
+	dprintf_set("Set of current draining machine is ", &draining_machines);
+	dprintf_set("Newly Arrived new machines is ", &new_machines);
+	dprintf_set("Newly departed draining machines is ", &no_longer_whole_machines);
+
+	m_prev_draining_machines = draining_machines;
+	m_prev_whole_machines   = whole_machines;
+
+	int newly_drained = new_machines.size() + no_longer_whole_machines.size();
+	double arrival_rate = 0.0;
+
+	// If there is an arrival...
+	if (newly_drained > 0) {
+		time_t current = time(0);
+
+		// And it isn't the first one since defrag boot...
+		if (m_last_whole_machine_arrival > 0) {
+			m_whole_machines_arrived += newly_drained;
+
+			time_t arrival_time = current - m_last_whole_machine_arrival;
+			if (arrival_time < 1) arrival_time = 1; // very unlikely, but just in case
+
+			m_whole_machine_arrival_sum += newly_drained * arrival_time;
+
+			arrival_rate = newly_drained / ((double)arrival_time);
+			dprintf(D_ALWAYS, "Arrival rate is %g machines/hour\n", arrival_rate * 3600.0);
+		}
+		m_last_whole_machine_arrival = current;
+	}
+
+	dprintf(D_ALWAYS, "Lifetime new machines arrived: %d\n", m_whole_machines_arrived);
+	if (m_whole_machine_arrival_sum > 0) {
+		double lifetime_mean = m_whole_machines_arrived / m_whole_machine_arrival_sum;
+		dprintf(D_ALWAYS, "Lifetime mean arrival rate: %g machines / hour\n", 3600.0 * lifetime_mean);
+
+		if (newly_drained > 0) {
+			double diff = arrival_rate - lifetime_mean;
+			m_whole_machine_arrival_mean_squared += diff * diff;
+		}
+		double sd = sqrt(m_whole_machine_arrival_mean_squared / m_whole_machines_arrived);
+		dprintf(D_ALWAYS, "Lifetime mean arrival rate sd: %g\n", sd * 3600);
+
+		m_stats.MeanDrainedArrival = lifetime_mean;
+		m_stats.MeanDrainedArrivalSD = sd;
+		m_stats.DrainedMachines = m_whole_machines_arrived;
+	}
 
 	queryDrainingCost();
 

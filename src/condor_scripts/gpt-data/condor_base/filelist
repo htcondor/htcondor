@@ -7,4 +7,5 @@ bin/condor_config_val
 bin/condor_userlog
 bin/condor_version
 sbin/condor_preen
+sbin/condor_testwritelog
 CONDOR_LICENSE

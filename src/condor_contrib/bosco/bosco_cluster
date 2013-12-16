@@ -15,6 +15,18 @@ PASSPHRASE_LOCATION=$HOME/.bosco/.pass
 # Bosco cluster list location
 CLUSTERLIST_LOCATION=$HOME/.bosco/.clusterlist
 
+# Check if invoked by a regular user on a BOSCO Multi User installation
+# if PRIVATE_ON_MU is defined will be unable to use glideins and to set the system rouitng
+condor_id=`condor_config_val condor_ids 2>/dev/null`
+if [ "x$condor_id" == "x" ]; then
+    condor_id=`id -u condor 2> /dev/null`
+else
+    condor_id=${condor_id%.*}
+fi 
+if [ ! "x$condor_id" == "x`id -u`" ]; then
+    PRIVATE_ON_MU=yes
+fi
+
 # SSH Control Path
 ssh_control_path="/tmp/bosco_ssh_control.%r@%h:%p"
 
@@ -119,6 +131,9 @@ list()
 set_bosco_routing () {
     # $1 file to write the routing info into
     #  default to  LOCAL_CONFIG_DIR`/condor_config.bosco_routing
+    if [ -n PRIVATE_ON_MU ]; then
+        return
+    fi
     if [ "x$1" != "x" ]; then
         dest_file=$1
     else
@@ -630,10 +645,12 @@ End_of_Submit
     echo -n "Waiting for job to exit... this could take a while (waiting 60 seconds)..."
     check_condor_q_classad "(ClusterId == $condor_jobid) && (GridJobStatus==\"COMPLETED\") " 60
     if [ $? -eq 0 ]; then
-        echo "Failed"
-        echo "The job did not end in 60 seconds.  This is not always a bad thing..."
-        echo "Maybe condor is waiting longer to poll for job completion?"
-        echo "Here is the current status of the job:"
+        cat << Error_message_end
+Failed
+The job did not end in 60 seconds.  This is not always a bad thing...
+Maybe condor is waiting longer to poll for job completion?
+Here is the current status of the job:"
+Error_message_end
         condor_q $condor_jobid
         # returning zero anyway, test considered successful 
         exit 0
@@ -850,16 +867,17 @@ if [ "x$max_queued" == "x" ]; then
 fi
 
 
-# First, find the blahp
-glite_location=`condor_config_val GLITE_LOCATION`
-release_dir=`condor_config_val RELEASE_DIR`
-
-if [ "x$glite_location" == "x" -o "x$release_dir" == "x" ]; then
-    echo "Unable to determine condor locations using condor_config_val."
-    echo "There could be a problem in one of your condor config files."
-    echo "Exiting..."
-    exit 1
-fi
+# BOSCO is downloaded for the appropriate platform, not copied from the installation, this is not needed
+## First, find the blahp
+#glite_location=`condor_config_val GLITE_LOCATION`
+#release_dir=`condor_config_val RELEASE_DIR`
+#
+#if [ "x$glite_location" == "x" -o "x$release_dir" == "x" ]; then
+#    echo "Unable to determine condor locations using condor_config_val."
+#    echo "There could be a problem in one of your condor config files."
+#    echo "Exiting..."
+#    exit 1
+#fi
 
 
 # Find remote platform
@@ -945,11 +963,14 @@ show_progress "Sending libraries to $remote_host" rsync -aq  $archive_dir/$libdi
 rsync -aq  $archive_dir/sbin/condor_ft-gahp $remote_glite_dir/bin 2>/dev/null
 
 # create the glidein
-export PYTHONPATH=`condor_config_val LIBEXEC`/campus_factory/python-lib
-export _campusfactory_GLIDEIN_DIRECTORY=`condor_config_val LIBEXEC`/campus_factory/share/glidein_jobs
-show_progress "Creating BOSCO for the WN's" glidein_creation $remote_host $archive_dir --outputtar=$tmp_dir/glideinExec.tar.gz
-rsync -aq  $tmp_dir/glideinExec.tar.gz $local_install_dir/campus_factory/ 2>/dev/null
-
+if [ -n PRIVATE_ON_MU ]; then
+    echo "You are not running as the factory user. BOSCO Glideins disabled."
+else
+    export PYTHONPATH=`condor_config_val LIBEXEC`/campus_factory/python-lib
+    export _campusfactory_GLIDEIN_DIRECTORY=`condor_config_val LIBEXEC`/campus_factory/share/glidein_jobs
+    show_progress "Creating BOSCO for the WN's" glidein_creation $remote_host $archive_dir --outputtar=$tmp_dir/glideinExec.tar.gz
+    rsync -aq  $tmp_dir/glideinExec.tar.gz $local_install_dir/campus_factory/ 2>/dev/null
+fi
 
 cat >$remote_glite_dir/etc/condor_config.ft-gahp 2>/dev/null <<EOF
 BOSCO_SANDBOX_DIR=\$ENV(HOME)/$remote_sandbox_dir
@@ -959,20 +980,32 @@ SEC_CLIENT_AUTHENTICATION_METHODS = FS, PASSWORD
 SEC_PASSWORD_FILE = \$ENV(HOME)/$remote_base_dir_host/glite/etc/passwdfile
 EOF
 
-# Generate the password file, if it doesn't already exist 
-bosco_passwd_file=`condor_config_val SEC_PASSWORD_FILE` 
-if [ "x$bosco_passwd_file" == "x" ]; then
-    echo "The BOSCO password file is not defined."
-    echo "Aborting installation to $remote_host."
-    rm -r $tmp_dir
-    exit 1
+# A regular user cannot write on system files
+# and will not need the password for grid universe jobs
+if [ ! -n PRIVATE_ON_MU ]; then
+    # Generate the password file, if it doesn't already exist 
+    bosco_passwd_file=`condor_config_val SEC_PASSWORD_FILE` 
+    if [ "x$bosco_passwd_file" == "x" ]; then
+        echo "The BOSCO password file is not defined."
+        echo "Aborting installation to $remote_host."
+        rm -r $tmp_dir
+        exit 1
+    fi
+
+    if [ ! -e $bosco_passwd_file ]; then  
+        random_string=`echo $RANDOM | $MD5SUM | awk '{print $1}'` 
+        condor_store_cred -p $random_string -f $bosco_passwd_file 
+    fi
+
+    if [ ! -r  $bosco_passwd_file ]; then  
+        echo "Cannot read the BOSCO password file, check permissions of $bosco_passwd_file."
+        echo "Aborting installation to $remote_host."
+        rm -r $tmp_dir
+        exit 1
+    fi 
+    rsync -aq $bosco_passwd_file $local_install_dir/campus_factory/share/glidein_jobs 2>/dev/null
+    rsync -aq $bosco_passwd_file $remote_glite_dir/etc 2>/dev/null
 fi
-if [ ! -e $bosco_passwd_file ]; then  
-    random_string=`echo $RANDOM | $MD5SUM | awk '{print $1}'` 
-    condor_store_cred -p $random_string -f $bosco_passwd_file 
-fi
-rsync -aq $bosco_passwd_file $local_install_dir/campus_factory/share/glidein_jobs 2>/dev/null
-rsync -aq $bosco_passwd_file $remote_glite_dir/etc 2>/dev/null
 
 # Do the actual rsync
 show_progress "Installing on cluster $remote_host" rsync -aqK -e "ssh -o ControlMaster=auto -o ControlPath=$ssh_control_path" $local_install_dir $remote_host:
@@ -1000,14 +1033,17 @@ echo "Installation complete"
 
 
 # Configure condor
-min_queue_size=`get_min_queue`
-tmpfile=`mktemp -t tmpconfigfile.XXXXX`
-condor_config_file=`condor_config_val LOCAL_CONFIG_FILE`
-sed "/GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE.*/d" $condor_config_file > $tmpfile
-echo "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE=$min_queue_size" >> $tmpfile
-mv $tmpfile $condor_config_file
-chmod 644 $condor_config_file
-condor_reconfig 2>/dev/null 1>&2
+# Not if private user on BOSCO MU
+if [ ! -n PRIVATE_ON_MU ]; then
+    min_queue_size=`get_min_queue`
+    tmpfile=`mktemp -t tmpconfigfile.XXXXX`
+    condor_config_file=`condor_config_val LOCAL_CONFIG_FILE`
+    sed "/GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE.*/d" $condor_config_file > $tmpfile
+    echo "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE=$min_queue_size" >> $tmpfile
+    mv $tmpfile $condor_config_file
+    chmod 644 $condor_config_file
+    condor_reconfig 2>/dev/null 1>&2
+fi
 
 # Submission instructions
 cat << EOM

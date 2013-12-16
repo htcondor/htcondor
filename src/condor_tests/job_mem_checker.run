@@ -164,6 +164,7 @@ system("rm -rf mem_checker.out mem_checker.err mem_checker.log mem_checker.pid")
 	$result = SimpleJob::RunCheck(
 	runthis => "x_job_mem_checker.exe",
 	test_name => $testname,
+	timeout => 1200,
 	on_abort => $on_abort,
 	on_imageupdated => $on_imageupdated,
 	GetClusterId => $GetClusterId,

@@ -48,6 +48,8 @@ if( $pid == 0 ) {
     die( "Failed to exec { $binary } ( $binary ): '$!'\n" );
 }
 
+my $testname = "job_ec2_basic";
+
 # Wait, arbitrarily, ten seconds to acquire a port.
 my $port = undef;
 for( my $i = 0; $i < 10; ++$i ) {
@@ -109,6 +111,8 @@ if( -e "job_ec2_basic.log" ) {
     }
 }
 SimpleJob::RunCheck(
+	test_name 				=> "$testname",
+	timeout					=> 600,
     user_log                => "job_ec2_basic.log",
     universe                => "grid",
     grid_resource           => "ec2 http://localhost:$port",
@@ -119,6 +123,7 @@ SimpleJob::RunCheck(
 # Verify that the gahp's logs are OK.
 #
 CondorLog::RunCheck(
+	test_name 				=> "$testname",
     daemon                  => "EC2_GAHP",
     match_regexp            => "([Ff]ail(ed|ing))|([Uu]nable)|(Wrong number of arguments)",
     fail_if_found           => 1

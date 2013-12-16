@@ -149,9 +149,9 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	BaseJob( classad ),
 	m_was_job_completion( false ),
 	m_retry_times( 0 ),
-	probeNow( false )
+	probeNow( false ),
+	resourceLeaseTID( -1 )
 {
-dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 	string error_string = "";
 	char *gahp_path = NULL;
 	char *gahp_log = NULL;
@@ -332,6 +332,7 @@ dprintf( D_ALWAYS, "================================>  EC2Job::EC2Job 1 \n");
 		SetRequestID( m_spot_request_id.c_str() );
 	}
 
+	value.clear();
 	jobAd->LookupString( ATTR_GRID_JOB_ID, value );
 	if ( !value.empty() ) {
 		const char *token;
@@ -402,6 +403,12 @@ EC2Job::~EC2Job()
 			myResource->jobsByInstanceID.remove( HashKey( m_remoteJobId.c_str() ) );
 		}
 	}
+
+	if( resourceLeaseTID != -1 ) {
+		daemonCore->Cancel_Timer( resourceLeaseTID );
+		resourceLeaseTID = -1;
+	}
+
 	delete gahp;
 	delete m_group_names;
 }
@@ -790,7 +797,7 @@ void EC2Job::doEvaluateState()
 						myResource->CancelSubmit( this );
 						daemonCore->Reset_Timer( evaluateStateTid,
 												 submitInterval );
-					 } else {
+					} else {
 						errorString = gahp->getErrorString();
 						dprintf(D_ALWAYS,"(%d.%d) job submit failed: %s: %s\n",
 								procID.cluster, procID.proc,
@@ -1265,9 +1272,8 @@ void EC2Job::doEvaluateState()
 					if( m_retry_times++ < maxRetryTimes ) {
 						gmState = GM_CANCEL;
 					} else {
-						errorString = gahp->getErrorString();
-						dprintf( D_ALWAYS, "(%d.%d) job cancel did not succeed after %d tries, giving up.\n",
-								 procID.cluster, procID.proc, maxRetryTimes );
+						formatstr( errorString, "Job cancel did not succeed after %d tries, giving up.", maxRetryTimes );
+						dprintf( D_ALWAYS, "(%d.%d) %s\n", procID.cluster, procID.proc, errorString.c_str() );
 						gmState = GM_HOLD;
 						break;
 					}
@@ -2213,9 +2219,12 @@ void EC2Job::StatusUpdate( const char * instanceID,
 	}
 
 	// SetRemoteJobStatus() sets the last-update timestamp, but
-	// only returns true if the status has changed.
+	// only returns true if the status has changed.  SetRemoteJobStatus()
+	// can handle NULL statuses, but remoteJobState's assignment operator
+	// can't.  One way to get a status update with a NULL status is if
+	// a spot instance was purged (e.g., recovery after a long downtime).
 	if( SetRemoteJobStatus( status ) ) {
-		remoteJobState = status;
+		if( status != NULL ) { remoteJobState = status; }
 		probeNow = true;
 		SetEvaluateState();
 	}
@@ -2238,5 +2247,74 @@ void EC2Job::SetRequestID( const char * requestID ) {
 		jobAd->Assign( ATTR_EC2_SPOT_REQUEST_ID, requestID );
 		myResource->spotJobsByRequestID.insert( HashKey( requestID ), this );
 		m_spot_request_id = requestID;
+	}
+}
+
+//
+// Don't wait forever for resources to come back up.  Particularly useful
+// for the test suite (if the simulator breaks).
+//
+// JaimeF recalls no wisdom as to why the Globus job type implements this
+// as a per-job timer, instead of a per-resource timer.
+//
+// This function executes asynchronously with respect to doEvaluateState(),
+// but since we're putting the job on hold, we know we're not losing any
+// information.  If the job goes on hold with a GAHP command pending, it's
+// no different than if that command had timed out.  (The only cases where
+// doEvaluateState() doesn't immediately put the job on hold when a GAHP
+// command fails are ec2_vm_destroy_keypair() and ec2_vm_start(). For
+// the former, if the job is removed or completed, it will be removed or
+// completed when released; if we have no job ID, then we'll restart it
+// from scratch.  This can happen if, forex, we put the job on hold before
+// it starts.  However, in this case, restarting the job is the right thing
+// to do.  More generally, the keypair ID we generate is entirely determined
+// by invariant information about the job, so we'll try to delete it again
+// later if we do resubmit.  For the latter, we won't execute any retries
+// (delayed or not), but since the resource is down, that's OK.  (We'll
+// start trying again when the job is released.))
+//
+
+void EC2Job::ResourceLeaseExpired() {
+	errorString = "Resource was down for too long.";
+	dprintf( D_ALWAYS, "(%d.%d) Putting job on hold: resource was down for too long.\n", procID.cluster, procID.proc );
+	gmState = GM_HOLD;
+	resourceLeaseTID = -1;
+	SetEvaluateState();
+}
+
+void EC2Job::NotifyResourceDown() {
+	BaseJob::NotifyResourceDown();
+
+	if( resourceLeaseTID != -1 ) { return; }
+
+	time_t now = time( NULL );
+	int leaseDuration = param_integer( "EC2_RESOURCE_TIMEOUT", -1 );
+	if( leaseDuration == -1 ) {
+		return;
+	}
+
+	// We don't need to update/maintain ATTR_GRID_RESOURCE_UNAVAILABLE_TIME;
+	// BaseJob::NotifyResource[Down|Up] does that for us.
+	int leaseBegan = 0;
+	jobAd->LookupInteger( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME, leaseBegan );
+	if( leaseBegan != 0 ) {
+		leaseDuration = leaseDuration - (now - leaseBegan);
+	}
+
+	if( leaseDuration > 0 ) {
+		resourceLeaseTID = daemonCore->Register_Timer( leaseDuration,
+			(TimerHandlercpp) & EC2Job::ResourceLeaseExpired,
+			"ResourceLeaseExpired", (Service *) this );
+	} else {
+		ResourceLeaseExpired();
+	}
+}
+
+void EC2Job::NotifyResourceUp() {
+	BaseJob::NotifyResourceUp();
+
+	if( resourceLeaseTID != -1 ) {
+		daemonCore->Cancel_Timer( resourceLeaseTID );
+		resourceLeaseTID = -1;
 	}
 }

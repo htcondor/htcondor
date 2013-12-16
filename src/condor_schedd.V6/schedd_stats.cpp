@@ -100,46 +100,57 @@ void ScheddStatistics::Init(int fOtherPool)
    if ( ! this->RecentWindowQuantum) this->RecentWindowQuantum = 1;
    this->RecentWindowMax = this->RecentWindowQuantum;
 
+   // publish primary statistics (!fOtherPool) at BASIC (verbosity 1)
+   // but publish OtherPool (BY_nnn and FOR_xxx) sets at verbosity 2 or 3.
+   // Prior to 8.1.2 we didn't pay any attention to the fOtherPool
+   // flag when setting the verbosity of the stat, but this resulted in
+   // too many verbosity 1 stats and the schedd would take too long to
+   // update the collector. So for 8.1.2 we flattened the verbosity levels
+   // for the main stats so that the otherpool stats could all be at a higher level.
+   int if_poolbasic = fOtherPool ? IF_VERBOSEPUB : IF_BASICPUB;
+   int if_poolverbose = fOtherPool ? IF_NEVER : IF_BASICPUB;
+
    // insert static items into the stats pool so we can use the pool 
    // to Advance and Clear.  these items also publish the overall value
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsSubmitted,        IF_BASICPUB);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsStarted,          IF_BASICPUB);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsExited,           IF_BASICPUB);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsCompleted,        IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsSubmitted,        if_poolbasic);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsStarted,          if_poolbasic);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsExited,           if_poolbasic);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsCompleted,        if_poolbasic);
+   SCHEDD_STATS_ADD_RECENT(Pool, Autoclusters,         if_poolbasic);
 
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumTimeToStart, IF_BASICPUB);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumBadputTime,  IF_BASICPUB);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumRunningTime, IF_BASICPUB);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumExecuteTime, IF_BASICPUB);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumPreExecuteTime,  IF_BASICPUB);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumPostExecuteTime,  IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumTimeToStart, if_poolbasic);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumBadputTime,  if_poolbasic);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumRunningTime, if_poolbasic);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumExecuteTime, if_poolbasic);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumPreExecuteTime,  if_poolbasic);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumPostExecuteTime,  if_poolbasic);
 
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumChurnTime,      IF_VERBOSEPUB);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumExecuteAltTime, IF_VERBOSEPUB);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsWierdTimestamps,     IF_VERBOSEPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumChurnTime,      if_poolverbose);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsAccumExecuteAltTime, if_poolverbose);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsWierdTimestamps,     if_poolverbose);
 
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsExitedNormally,        IF_BASICPUB);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsKilled,                IF_BASICPUB);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsExitException,         IF_BASICPUB);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsExecFailed,            IF_BASICPUB);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsCheckpointed,          IF_BASICPUB | IF_NONZERO);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsShadowNoMemory,        IF_BASICPUB | IF_NONZERO);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsShouldRequeue,         IF_BASICPUB | IF_NONZERO);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsNotStarted,            IF_BASICPUB | IF_NONZERO);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsShouldHold,            IF_BASICPUB | IF_NONZERO);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsShouldRemove,          IF_BASICPUB | IF_NONZERO);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsCoredumped,            IF_BASICPUB | IF_NONZERO);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsMissedDeferralTime,    IF_BASICPUB | IF_NONZERO);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsExitedAndClaimClosing, IF_BASICPUB | IF_NONZERO);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsDebugLogError,         IF_BASICPUB | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsExitedNormally,        if_poolbasic);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsKilled,                if_poolbasic);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsExitException,         if_poolbasic);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsExecFailed,            if_poolbasic);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsCheckpointed,          if_poolbasic | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsShadowNoMemory,        if_poolbasic | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsShouldRequeue,         if_poolbasic | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsNotStarted,            if_poolbasic | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsShouldHold,            if_poolbasic | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsShouldRemove,          if_poolbasic | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsCoredumped,            if_poolbasic | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsMissedDeferralTime,    if_poolbasic | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsExitedAndClaimClosing, if_poolbasic | IF_NONZERO);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsDebugLogError,         if_poolbasic | IF_NONZERO);
 
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsCompletedSizes,        IF_BASICPUB);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsBadputSizes,           IF_BASICPUB);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsCompletedRuntimes,     IF_BASICPUB);
-   SCHEDD_STATS_ADD_RECENT(Pool, JobsBadputRuntimes,        IF_BASICPUB);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsCompletedSizes,        if_poolbasic);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsBadputSizes,           if_poolbasic);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsCompletedRuntimes,     if_poolbasic);
+   SCHEDD_STATS_ADD_RECENT(Pool, JobsBadputRuntimes,        if_poolbasic);
 
-   SCHEDD_STATS_ADD_VAL(Pool, JobsRunningSizes,             IF_BASICPUB);
-   SCHEDD_STATS_ADD_VAL(Pool, JobsRunningRuntimes,          IF_BASICPUB);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRunningSizes,             if_poolbasic);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsRunningRuntimes,          if_poolbasic);
 
    if ( ! fOtherPool){
       SCHEDD_STATS_ADD_RECENT(Pool, ShadowsStarted,            IF_BASICPUB);

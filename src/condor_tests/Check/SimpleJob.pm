@@ -21,14 +21,14 @@ package SimpleJob;
 
 use CondorTest;
 my $timeout = 0;
-my $defaulttimeout = 60;
+my $defaulttimeout = 180;
 $timeout = $defaulttimeout;
 
 $timed_callback = sub
 {
 	print "SimpleJob timeout expired!\n";
 	CondorTest::RegisterResult( 0, %args );
-    return $result;
+    die "Test failed from timeout expiring\n";
 };
 
 $submitted = sub
@@ -83,8 +83,9 @@ sub RunCheck
 	}
 
 	if(exists $args{timeout}){
+		# either way we have to set a timeout
+		# overwrite default timer value here
 		$timeout = $args{timeout};
-		print "Test getting requested timeout of <$timeout> seconds\n";
 	}
 	 
 	#print "Checking duration being passsed to RunCheck <$args{duration}>\n";
@@ -106,9 +107,12 @@ sub RunCheck
 	my $donewithsuccess_fn = $args{on_success} || $ExitSuccess;
 
 
-	if(exists $args{timeout}){
+	if(defined $args{alt_timed}) {
+		CondorTest::RegisterTimed( $testname, $args{alt_timed}, $timeout);
+	} else {
 		CondorTest::RegisterTimed( $testname, $timed_callback, $timeout);
 	}
+
     CondorTest::RegisterAbort( $testname, $abort_fn );
     CondorTest::RegisterExitedSuccess( $testname, $donewithsuccess_fn );
     CondorTest::RegisterExecute($testname, $execute_fn);

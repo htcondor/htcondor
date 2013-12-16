@@ -61,12 +61,19 @@ where 0 = Sunday, 1 = Monday, \Dots, and 6 = Saturday.
 \item[\AdAttr{ClockMin}:] The number of minutes passed since midnight.
 %
 \index{ClassAd machine attribute!CondorLoadAvg}
-\item[\AdAttr{CondorLoadAvg}:] The portion of the load average generated 
+\item[\AdAttr{CondorLoadAvg}:] The load average contributed  
 by HTCondor, either from remote jobs or running benchmarks.
+%
+\index{ClassAd machine attribute!CondorVersion}
+\item[\AdAttr{CondorVersion}:] A string containing the HTCondor version
+number for the \Condor{startd} daemon, the release date, and the build
+identification number.
 %
 \index{ClassAd machine attribute!ConsoleIdle}
 \item[\AdAttr{ConsoleIdle}:] The number of seconds since activity on the system
 console keyboard or console mouse has last been detected.
+The value can be modified with \Macro{SLOTS\_CONNECTED\_TO\_CONSOLE}
+as defined at ~\ref{param:SlotsConnectedToConsole}.
 %
 \index{ClassAd machine attribute!Cpus}
 \item[\AdAttr{Cpus}:]  The number of CPUs in this slot.
@@ -125,15 +132,18 @@ integer seconds since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 %
 \index{ClassAd machine attribute!ExpectedMachineGracefulDrainingBadput}
 \item[\AdAttr{ExpectedMachineGracefulDrainingBadput}:] The
-job runtime in cpu-seconds that would be lost if graceful draining
-were initiated at the time this ad was published.  This calculation assumes
+job run time in cpu-seconds that would be lost if graceful draining
+were initiated at the time this ClassAd was published.  
+This calculation assumes
 that jobs will run for the full retirement time and then be evicted
 without saving a checkpoint.
 %
 \index{ClassAd machine attribute!ExpectedMachineGracefulDrainingCompletion}
-\item[\AdAttr{ExpectedMachineGracefulDrainingCompletion}:] Time at
+\item[\AdAttr{ExpectedMachineGracefulDrainingCompletion}:] The
+estimated time at
 which graceful draining of the machine could complete if it were
-initiated at the time this ad was published.  This is measured in the
+initiated at the time this ClassAd was published
+and there are no active claims.  This is measured in the
 number of integer seconds since the Unix epoch (00:00:00 UTC, Jan 1,
 1970).  This value is computed with the assumption that the machine
 policy will not suspend jobs during draining while the machine is
@@ -145,14 +155,15 @@ attention to the \AdAttr{Draining} attribute.
 %
 \index{ClassAd machine attribute!ExpectedMachineQuickDrainingBadput}
 \item[\AdAttr{ExpectedMachineGracefulQuickBadput}:] The
-job runtime in cpu-seconds that would be lost if quick draining
-were initiated at the time this ad was published.  This calculation assumes
+job run time in cpu-seconds that would be lost if quick or fast draining
+were initiated at the time this ClassAd was published.  This calculation assumes
 that all evicted jobs will not save a checkpoint.
 %
 \index{ClassAd machine attribute!ExpectedMachineQuickDrainingCompletion}
 \item[\AdAttr{ExpectedMachineQuickDrainingCompletion}:] Time at
-which quick draining of the machine could complete if it were
-initiated at the time this ad was published.  This is measured in the
+which quick or fast draining of the machine could complete if it were
+initiated at the time this ClassAd was published 
+and there are no active claims.  This is measured in the
 number of integer seconds since the Unix epoch (00:00:00 UTC, Jan 1,
 1970).
 %
@@ -214,9 +225,12 @@ in the virtual machine.
 keyboard or mouse associated with this machine has last been detected.
 Unlike \AdAttr{ConsoleIdle}, \AdAttr{KeyboardIdle} also takes activity 
 on pseudo-terminals into
-account (i.e. virtual ``keyboard'' activity from telnet and rlogin
-sessions as well).  Note that \AdAttr{KeyboardIdle} will always be equal to or
+account.
+Pseudo-terminals have virtual keyboard activity from telnet and rlogin
+sessions.  Note that \AdAttr{KeyboardIdle} will always be equal to or
 less than \AdAttr{ConsoleIdle}.
+The value can be modified with \Macro{SLOTS\_CONNECTED\_TO\_KEYBOARD}
+as defined at ~\ref{param:SlotsConnectedToKeyboard}.
 %
 \index{ClassAd machine attribute!KFlops}
 \item[\AdAttr{KFlops}:] Relative floating point performance as determined via a
@@ -239,8 +253,8 @@ Therefore, you could not use this attribute in defining \Condor{startd}
 expressions (and you would not want to).
 %
 \index{ClassAd machine attribute!LoadAvg}
-\item[\AdAttr{LoadAvg}:] A floating point number with the machine's current load
-average.
+\item[\AdAttr{LoadAvg}:] A floating point number representing the 
+current load average.
 %
 \index{ClassAd machine attribute!Machine}
 \item[\AdAttr{Machine}:] A string with the machine's fully qualified host name.
@@ -315,6 +329,7 @@ definitions:
 	\begin{description}
 	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x,
 	LINUX 2.4.x, or LINUX 2.6.x kernel systems, as well as Scientific Linux 
+        and Ubuntu 12.04
 	\item[\AdStr{OSX}:] for Darwin
 	\item[\AdStr{FREEBSD7}:] for FreeBSD 7
 	\item[\AdStr{FREEBSD8}:] for FreeBSD 8
@@ -340,6 +355,7 @@ concatenated with the string version of the \Attr{OpSysMajorVersion} attribute:
 	\item[\AdStr{Fedora16}:] for Fedora Linux version 16
 	\item[\AdStr{Debian5}:] for Debian Linux version 5
 	\item[\AdStr{Debian6}:] for Debian Linux version 6
+	\item[\AdStr{Ubuntu12}:] for Ubuntu 12.04
 	\item[\AdStr{SL5}:] for Scientific Linux version 5
 	\item[\AdStr{SL6}:] for Scientific Linux version 6
 	\item[\AdStr{SLFermi5}:] for Fermi's Scientific Linux version 5
@@ -380,7 +396,7 @@ concatenated with the string version of the \Attr{OpSysMajorVersion} attribute:
 Currently supported operating systems have the following string
 definitions:
 	\begin{description}
-	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x, LINUX 2.4.x, or LINUX 2.6.x kernel systems, as well as Scientific Linux versions
+	\item[\AdStr{LINUX}:] for LINUX 2.0.x, LINUX 2.2.x, LINUX 2.4.x, or LINUX 2.6.x kernel systems, as well as Scientific Linux and  Ubuntu 12.04 versions
 	\item[\AdStr{OSX}:] for Darwin
 	\item[\AdStr{FREEBSD7}:] for FreeBSD version 7
 	\item[\AdStr{FREEBSD8}:] for FreeBSD version 8
@@ -397,6 +413,7 @@ with extra characters stripped off Debian versions.
 	\begin{description}
 	\item[\AdStr{Red Hat Enterprise Linux Server release 5.7 (Tikanga)}:] for RedHat Linux version 5
 	\item[\AdStr{Red Hat Enterprise Linux Server release 6.2 (Santiago)}:] for RedHat Linux version 6
+	\item[\AdStr{Ubuntu 12.04.3 LTS}:] for Ubuntu 12.04 point release 3 
 	\item[\AdStr{Fedora release 16 (Verne)}:] for Fedora Linux version 16
 	\item[\AdStr{MacOSX 6.5}:] for MacOS version 10.6.5 (Snow Leopard)
 	\item[\AdStr{MacOSX 7.3}:] for MacOS version 10.7.3 (Lion)
@@ -414,6 +431,7 @@ with extra characters stripped off Debian versions.
 and derived platforms such as Scientific Linux
 	\item[\Expr{6}:] for RedHat Linux version 6
 and derived platforms such as Scientific Linux
+	\item[\Expr{12}:] for Ubuntu 12.04
 	\item[\Expr{16}:] for Fedora Linux version 16
 	\item[\Expr{6}:] for MacOS version 10.6.5 (Snow Leopard)
 	\item[\Expr{7}:] for MacOS version 10.7.3 (Lion)
@@ -430,6 +448,7 @@ and derived platforms such as Scientific Linux
 	\begin{description}
 	\item[\AdStr{RedHat}:] for RedHat Linux version 6
 	\item[\AdStr{Fedora}:] for Fedora Linux version 16
+	\item[\AdStr{Ubuntu}:] for Ubuntu 12.04
 	\item[\AdStr{SnowLeopard}:] for MacOS version 10.6.5 (Snow Leopard)
 	\item[\AdStr{Lion}:] for MacOS version 10.7.3 (Lion)
 	\item[\AdStr{FREEBSD}:] for FreeBSD version 7 or 8
@@ -450,6 +469,7 @@ the operating system.
 	\item[\AdStr{RedHat}:] for RedHat Linux version 5 or 6
 	\item[\AdStr{Fedora}:] for Fedora Linux version 16
 	\item[\AdStr{Debian}:] for Debian Linux version 5 or 6
+	\item[\AdStr{Ubuntu}:] for Ubuntu 12.04
 	\item[\AdStr{MacOSX}:] for MacOS version 10.6.5 (Snow Leopard) or 
 for MacOS version 10.7.3 (Lion)
 	\item[\AdStr{FreeBSD}:] for FreeBSD version 7 or 8
@@ -469,6 +489,7 @@ version number.
 	\begin{description}
 	\item[\Expr{602}:] for RedHat Linux version 6.2
 	\item[\Expr{1600}:] for Fedora Linux version 16.0
+	\item[\Expr{1204}:] for Ubuntu 12.04
 	\item[\Expr{704}:] for FreeBSD version 7.4
 	\item[\Expr{802}:] for FreeBSD version 8.2
 	\item[\Expr{605}:] for MacOS version 10.6.5 (Snow Leopard)
@@ -480,12 +501,12 @@ version number.
 	\item[\Expr{601}:] for Windows 7 or Windows Server 2008
 	\end{description}
 %
-\index{ClassAd machine attribute!RecentPreemptions}
-\item[\AdAttr{RecentPreemptions}:] The total number of jobs which 
+\index{ClassAd machine attribute!RecentJobPreemptions}
+\item[\AdAttr{RecentJobPreemptions}:] The total number of jobs which
 have been preempted from this machine in the last twenty minutes.
 %
-\index{ClassAd machine attribute!RecentTotalJobStarts}
-\item[\AdAttr{RecentTotalJobStarts}:] The total number of jobs which 
+\index{ClassAd machine attribute!RecentJobStarts}
+\item[\AdAttr{RecentJobStarts}:] The total number of jobs which
 have been started on this machine in the last twenty minutes.
 %
 \index{ClassAd machine attribute!Requirements}
@@ -574,14 +595,23 @@ because the machine is being drained.
 Always set to the string literal \AdStr{Job}, because machine ClassAds
 always want to be matched with jobs, and vice-versa.
 %
+\index{ClassAd machine attribute!TotalCondorLoadAvg}
+\item[\AdAttr{TotalCondorLoadAvg}:] The load average contributed  
+by HTCondor summed across all slots on the machine, 
+either from remote jobs or running benchmarks.
+%
 \index{ClassAd machine attribute!TotalCpus}
 \item[\AdAttr{TotalCpus}:] The number of CPUs that are on the machine.
 This is in contrast with \Attr{Cpus},
 which is the number of CPUs in the slot.
 %
-\index{ClassAd machine attribute!TotalJobStarts}
-\item[\AdAttr{TotalJobStarts}:] The total number of jobs which 
+\index{ClassAd machine attribute!JobStarts}
+\item[\AdAttr{JobStarts}:] The total number of jobs which
 have been started on this machine since the \Condor{startd} started running.
+%
+\index{ClassAd machine attribute!TotalLoadAvg}
+\item[\AdAttr{TotalLoadAvg}:] A floating point number representing the 
+current load average summed across all slots on the machine.
 %
 \index{ClassAd machine attribute!TotalMachineDrainingBadput}
 \item[\AdAttr{TotalMachineDrainingBadput}:] The
@@ -596,8 +626,8 @@ total machine-wide time in cpu-seconds that has not been used
 (i.e. not matched to a job submitter) due to draining since this
 \Condor{startd} began executing.
 %
-\index{ClassAd machine attribute!TotalPreemptions}
-\item[\AdAttr{TotalPreemptions}:] The total number of times
+\index{ClassAd machine attribute!JobPreemptions}
+\item[\AdAttr{JobPreemptions}:] The total number of times
 a running job has been preempted on this machine.  
 %
 \index{ClassAd machine attribute!TotalTimeBackfillBusy}

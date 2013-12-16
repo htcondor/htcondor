@@ -186,6 +186,13 @@ CondorQuery (AdTypes qType)
 		command = QUERY_CKPT_SRVR_ADS;
 		break;
 
+	  case DEFRAG_AD:
+		query.setNumStringCats (0);
+		query.setNumIntegerCats(0);
+		query.setNumFloatCats  (0);
+		command = QUERY_ANY_ADS;
+		break;
+
 	  case COLLECTOR_AD:
 		query.setNumStringCats (0);
 		query.setNumIntegerCats(0);
@@ -484,6 +491,9 @@ getQueryAd (ClassAd &queryAd)
 		break;
 #endif /* HAVE_EXT_POSTGRESQL */
 
+	  case DEFRAG_AD:
+		SetTargetTypeName(queryAd, DEFRAG_ADTYPE);
+		break;
 	  case STARTD_AD:
 	  case STARTD_PVT_AD:
 		SetTargetTypeName (queryAd, STARTD_ADTYPE);

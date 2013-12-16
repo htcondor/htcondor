@@ -23,8 +23,7 @@ which will only be
 updated if the \Condor{restart} command is used.  
 Other configuration variables that can only be changed
 if the HTCondor daemons are restarted are listed in
-section~\ref{sec:Macros-Requiring-Restart}
-on page~\pageref{sec:Macros-Requiring-Restart}.
+the HTCondor manual in the section on configuration.
 In general, \Condor{reconfig} should be used when making changes to
 the configuration files, since it is faster and more efficient than
 restarting the daemons.
@@ -35,11 +34,8 @@ with no arguments or with the \OptArg{-daemon}{master} option
 will cause the reconfiguration of the \Condor{master}
 daemon and all the child processes of the \Condor{master}.
 
-For security purposes (authentication and authorization),
-this command requires an administrator's level of access.
-See
-section~\ref{sec:Config-Security} on page~\pageref{sec:Config-Security}
-for further explanation.
+For security reasons of authentication and authorization,
+this command requires ADMINISTRATOR level of access.
 
 \begin{Options}
     \ToolArgsBaseDesc

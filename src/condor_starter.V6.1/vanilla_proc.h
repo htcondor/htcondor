@@ -88,6 +88,8 @@ private:
 	int outOfMemoryEvent(int fd);
 	int setupOOMEvent(const std::string & cgroup_string);
 
+	std::string m_pid_ns_init_filename;
+
 };
 
 #endif

@@ -6,6 +6,12 @@
 
 #include "classad_parsers.h"
 
+// http://docs.python.org/3/c-api/apiabiversion.html#apiabiversion
+#if PY_MAJOR_VERSION >= 3
+   #define PyInt_Check(op)  PyNumber_Check(op)
+   #define PyString_Check(op)  PyBytes_Check(op)
+#endif
+
 ClassAdWrapper *parseString(const std::string &str)
 {
     classad::ClassAdParser parser;

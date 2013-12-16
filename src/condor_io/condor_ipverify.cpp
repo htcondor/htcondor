@@ -35,6 +35,10 @@
 
 const char TotallyWild[] = "*";
 
+#if defined(HAVE_INNETGR)
+#include <netdb.h>
+const std::string netgroup_detected = "***";
+#endif
 
 // Hash function for Permission hash table
 static unsigned int
@@ -513,6 +517,19 @@ IpVerify::fill_table(PermTypeEntry * pentry, char * list, bool allow)
 		ASSERT( host );
 		ASSERT( user );
 
+#if defined(HAVE_INNETGR)
+        if (netgroup_detected == user) {
+            if (allow) {
+                pentry->allow_netgroups.push_back(host);
+            } else {
+                pentry->deny_netgroups.push_back(host);
+            }
+            free(host);
+            free(user);
+            continue;
+        }
+#endif
+
 			// If this is a hostname, get all IP addresses for it and
 			// add them to the list.  This ensures that if we are given
 			// a cname, we do the right thing later when trying to match
@@ -577,6 +594,18 @@ void IpVerify :: split_entry(const char * perm_entry, char ** host, char** user)
 	// make a local copy
 	permbuf = strdup( perm_entry );
 	ASSERT( permbuf );
+
+#if defined(HAVE_INNETGR)
+    // detect a netgroup entry
+    // netgroup entries are of the form '+<groupname>', and may embody
+    // information about both hosts and users
+    if (permbuf[0] == '+') {
+        *user = strdup(netgroup_detected.c_str());
+        *host = strdup(1+permbuf);
+        free(permbuf);
+        return;
+    }
+#endif
 
     slash0 = strchr(permbuf, '/');
 	if (!slash0) {
@@ -935,32 +964,32 @@ bool
 IpVerify::lookup_user_ip_allow(DCpermission perm, char const *user, char const *ip)
 {
 	PermTypeEntry *permentry = PermTypeArray[perm];
-	return lookup_user(permentry->allow_hosts,permentry->allow_users,user,ip,NULL,true);
+	return lookup_user(permentry->allow_hosts,permentry->allow_users,permentry->allow_netgroups,user,ip,NULL,true);
 }
 
 bool
 IpVerify::lookup_user_ip_deny(DCpermission perm, char const *user, char const *ip)
 {
 	PermTypeEntry *permentry = PermTypeArray[perm];
-	return lookup_user(permentry->deny_hosts,permentry->deny_users,user,ip,NULL,false);
+	return lookup_user(permentry->deny_hosts,permentry->deny_users,permentry->deny_netgroups,user,ip,NULL,false);
 }
 
 bool
 IpVerify::lookup_user_host_allow(DCpermission perm, char const *user, char const *hostname)
 {
 	PermTypeEntry *permentry = PermTypeArray[perm];
-	return lookup_user(permentry->allow_hosts,permentry->allow_users,user,NULL,hostname,true);
+	return lookup_user(permentry->allow_hosts,permentry->allow_users,permentry->allow_netgroups,user,NULL,hostname,true);
 }
 
 bool
 IpVerify::lookup_user_host_deny(DCpermission perm, char const *user, char const *hostname)
 {
 	PermTypeEntry *permentry = PermTypeArray[perm];
-	return lookup_user(permentry->deny_hosts,permentry->deny_users,user,NULL,hostname,false);
+	return lookup_user(permentry->deny_hosts,permentry->deny_users,permentry->deny_netgroups,user,NULL,hostname,false);
 }
 
 bool
-IpVerify::lookup_user(NetStringList *hosts, UserHash_t *users, char const *user, char const *ip, char const *hostname, bool is_allow_list)
+IpVerify::lookup_user(NetStringList *hosts, UserHash_t *users, netgroup_list_t& netgroups, char const *user, char const *ip, char const *hostname, bool is_allow_list)
 {
 	if( !hosts || !users ) {
 		return false;
@@ -991,6 +1020,22 @@ IpVerify::lookup_user(NetStringList *hosts, UserHash_t *users, char const *user,
 			return true;
 		}
 	}
+
+#if defined(HAVE_INNETGR)
+    std::string canonical(user);
+    std::string::size_type atpos = canonical.find_first_of('@');
+    std::string username = canonical.substr(0, atpos);
+    std::string domain = canonical.substr(1+atpos);
+    std::string host = hostname?hostname:ip;
+
+    for (netgroup_list_t::iterator grp(netgroups.begin());  grp != netgroups.end();  ++grp) {
+        if (innetgr(grp->c_str(), host.c_str(), username.c_str(), domain.c_str())) {
+            dprintf(D_SECURITY, "IPVERIFY: matched canonical user %s@%s/%s to netgroup %s on %s list\n",
+                    username.c_str(), domain.c_str(), host.c_str(), grp->c_str(), is_allow_list ? "allow" : "deny");
+            return true;
+        }
+    }
+#endif
 
 	return false;
 }

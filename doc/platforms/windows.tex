@@ -425,7 +425,10 @@ creates:
 
 \item a run account on the machine with a login name of
 \Login{condor-reuse-slot<X>}, where \Expr{<X>} is the slot number of the
-\Condor{starter}.  This account is added to group Users.  This step is
+\Condor{starter}.  This account is added to group \Expr{Users} by default.
+The default group may be changed by setting configuration variable
+\Macro{DYNAMIC\_RUN\_ACCOUNT\_LOCAL\_GROUP}.
+This step is
 skipped if the job is to be run using the submitting user's account,
 as specified in section \ref{sec:windows-run-as-owner}.
 

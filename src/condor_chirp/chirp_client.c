@@ -230,12 +230,17 @@ chirp_client_connect_default()
 	int fields;
 	int save_errno;
 	struct chirp_client *client;
+	char *default_filename;
 	char host[CHIRP_LINE_MAX];
 	char cookie[CHIRP_LINE_MAX];
 	int port;
 	int result;
 
-	file = fopen("chirp.config","r");
+	if (!(default_filename = getenv("_CONDOR_CHIRP_CONFIG"))) {
+		default_filename = ".chirp.config";
+	}
+
+	file = fopen(default_filename,"r");
 	if(!file) return 0;
 
 	fields = fscanf(file,"%s %d %s",host,&port,cookie);
@@ -397,9 +402,35 @@ chirp_client_get_job_attr( struct chirp_client *c, const char *name, char **expr
 }
 
 DLLEXPORT int
+chirp_client_get_job_attr_delayed( struct chirp_client *c, const char *name, char **expr )
+{
+	int result;
+	int actual;
+
+	result = simple_command(c,"get_job_attr_delayed %s\n",name);
+	if(result>0) {
+		*expr = (char*)malloc(result);
+		if(*expr) {
+			actual = fread(*expr,1,result,c->rstream);
+			if(actual!=result) chirp_fatal_request("get_job_attr");
+		} else {
+			chirp_fatal_request("get_job_attr");
+		}
+	}
+	
+	return result;
+}
+
+DLLEXPORT int
 chirp_client_set_job_attr( struct chirp_client *c, const char *name, const char *expr )
 {
 	return simple_command(c,"set_job_attr %s %s\n",name,expr);
+}
+
+DLLEXPORT int
+chirp_client_set_job_attr_delayed( struct chirp_client *c, const char *name, const char *expr )
+{
+	return simple_command(c,"set_job_attr_delayed %s %s\n",name,expr);
 }
 
 DLLEXPORT int

@@ -165,6 +165,11 @@ main (int argc, char *argv[])
 		break;
 #endif /* HAVE_EXT_POSTGRESQL */
 
+
+	  case DEFRAG_AD:
+		setPPstyle(PP_GENERIC_NORMAL, 0, DEFAULT);
+		break;
+
 	  case STARTD_AD:
 		setPPstyle(PP_STARTD_NORMAL, 0, DEFAULT);
 		break;
@@ -215,6 +220,7 @@ main (int argc, char *argv[])
 	  case MODE_QUILL_NORMAL:
 #endif /* HAVE_EXT_POSTGRESQL */
 
+	  case MODE_DEFRAG_NORMAL:
 	  case MODE_STARTD_NORMAL:
 	  case MODE_MASTER_NORMAL:
 	  case MODE_CKPT_SRVR_NORMAL:
@@ -529,7 +535,8 @@ usage ()
 	fprintf (stderr,"Usage: %s [help-opt] [query-opt] [display-opt] "
 		"[custom-opts ...] [name ...]\n"
 		"    where [help-opt] is one of\n"
-		"\t-help\t\t\tThis screen\n"
+		"\t-help\t\t\tPrint this screen and exit\n"
+		"\t-version\t\tPrint HTCondor version and exit\n"
 		"\t-diagnose\t\tPrint out query ad without performing query\n"
 		"    and [query-opt] is one of\n"
 		"\t-avail\t\t\tPrint information about available resources\n"
@@ -538,6 +545,7 @@ usage ()
 		"\t-cod\t\t\tDisplay Computing On Demand (COD) jobs\n"
 		"\t-collector\t\tDisplay collector daemon attributes\n"
 		"\t-debug\t\t\tDisplay debugging info to console\n"
+		"\t-defrag\t\t\tDisplay status of defrag daemon\n"
 		"\t-direct <host>\t\tGet attributes directly from the given daemon\n"
 		"\t-java\t\t\tDisplay Java-capable hosts\n"
 		"\t-vm\t\t\tDisplay VM-capable hosts\n"
@@ -715,6 +723,9 @@ firstPass (int argc, char *argv[])
 		if (matchPrefix (argv[i], "-debug", 3)) {
 			// dprintf to console
 			dprintf_set_tool_debug("TOOL", 0);
+		} else
+		if (matchPrefix (argv[i], "-defrag", 4)) {
+			setMode (MODE_DEFRAG_NORMAL, i, argv[i]);
 		} else
 		if (matchPrefix (argv[i], "-help", 2)) {
 			usage ();
@@ -1040,7 +1051,7 @@ secondPass (int argc, char *argv[])
 			}
 			continue;
 		}
-		if (matchPrefix (argv[i], "-target", 2)) {
+		if (matchPrefix (argv[i], "-target", 5)) {
 			i++;
 			continue;
 		}
@@ -1100,6 +1111,7 @@ secondPass (int argc, char *argv[])
 			}
 
 			switch (mode) {
+			  case MODE_DEFRAG_NORMAL:
 			  case MODE_STARTD_NORMAL:
 			  case MODE_STARTD_COD:
 #ifdef HAVE_EXT_POSTGRESQL

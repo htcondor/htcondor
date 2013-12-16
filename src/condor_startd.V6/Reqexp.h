@@ -41,7 +41,7 @@ public:
 
 	void 	publish( ClassAd*, amask_t );
 	void	compute( amask_t );
-	void	dprintf( int, char* ... );
+	void	dprintf( int, const char* ... );
 
 private:
 	Resource*		rip;

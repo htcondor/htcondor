@@ -1,0 +1,119 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+##
+## This test check availability and usage contol of the new
+## local, resources in both a static configuration and in psolts.
+## It is model after what we did to test concurrency limits
+## as we are checking the same sorts of things. bt
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+
+my $ClusterId = 0;
+my $expect_return = 0;
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	WANT_SUSPEND = FALSE
+	KILLING_TIMEOUT = 1
+	MachineMaxVacateTime = 5
+	NEGOTIATION_INTERVAL = 10
+	KILL = TRUE
+	ALL_DEBUG = D_ALWAYS D_CMD D_DAEMONCORE
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"jobdropnegcore");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "dropnegcore",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+my $on_abort = sub {
+	CondorTest::debug("Abort from removing trap signal job.\n",1);
+};
+
+my $return = "";
+my $executecount = 0;
+my $result = 1;
+my $test_name = "job_drop_neg_core";
+
+my $on_match = sub {
+	$match = shift;
+	print "Matched: $match\n";
+	if($match =~ /^.*?PID\s=\s(\d+).*$/) {
+		print "PID to kill with -SIGSEGV is $1\n";
+		my $cmd ="kill -SIGSEGV $1";
+		print "Core producing command: $cmd\n";
+		system("$cmd");
+	}
+	sleep(20);
+};
+
+my $on_execute = sub {
+	print "********************************** OnExecute *****************************\n";
+	print "waiting for size signal catching output to grow\n";
+};
+
+my $on_hold = sub {
+	print "Expected to be on hold\n Calling CheckForSigTermIgnore \n";
+};
+
+
+#Do a job before setting tesing exit codes
+print "First test basic job\n";
+$result = SimpleJob::RunCheck(); # jobid 1
+
+#system("rm -f $catchlog");
+
+#$expect_return = 0;
+#$result = SimpleJob::RunCheck(
+	#test_name => "$test_name",
+	#on_abort => $on_abort,
+	#on_hold => $on_hold,
+	#on_execute => $on_execute,
+	#timeout => 120,
+	#should_transfer_files => "YES",
+	#when_to_transfer_output => "ON_EXIT",
+	#queue_sz => 1,
+	#duration => 1,
+#);
+#print "******************** Test for KILL = TRUE\n";
+#if($result == 1) {
+	#print "ok\n\n\n";
+#} else {
+	#print "bad\n\n\n";
+#}
+
+CondorLog::RunCheckMultiple(
+	daemon => "Negotiator",
+	match_timeout => 80,
+	match_regexp => "PID",
+	match_callback => $on_match,
+);
+
+CondorTest::EndTest();
+

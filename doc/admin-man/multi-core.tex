@@ -403,6 +403,10 @@ desired expressions for each slot.
 Load Average for Multi-core Machines}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\index{ClassAd machine attribute!CondorLoadAvg}
+\index{ClassAd machine attribute!LoadAvg}
+\index{ClassAd machine attribute!TotalCondorLoadAvg}
+\index{ClassAd machine attribute!TotalLoadAvg}
 Most operating systems define the load average for a multi-core machine as
 the total load on all cores.
 For example, a 4-core machine with 3 CPU-bound processes
@@ -750,6 +754,89 @@ and their defaults are
   \item{\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTMEMORY} = \Expr{quantize(RequestMemory, \{TotalSlotMem / TotalSlotCpus / 4\}) }}
   \item{\Macro{MODIFY\_REQUEST\_EXPR\_REQUESTDISK} = \Expr{quantize(RequestDisk, \{1024\}) }}
 \end{description}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:consumption-policy}
+condor\_negotiator-Side Resource Consumption Policies}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{consumption policy}
+\index{partitionable slots!negotiator-side resource consumption policy}
+For partitionable slots, 
+the specification of a consumption policy permits matchmaking
+at the negotiator.
+A dynamic slot carved from the partitionable slot acquires the
+required quantities of resources, leaving the partitionable
+slot with the remainder. 
+This differs from scheduler matchmaking in that multiple
+jobs can match with the partitionable slot during a single
+negotiation cycle.
+
+All specification of the resources available is done by configuration 
+of the partitionable slot.  The machine is identified
+as having a resource consumption policy enabled with
+\begin{verbatim}
+  CONSUMPTION_POLICY = True
+\end{verbatim}
+A defined slot type that is partitionable may override the
+machine value with
+\begin{verbatim}
+  SLOT_TYPE_<N>_CONSUMPTION_POLICY = True
+\end{verbatim}
+
+A job seeking a match may always request a specific number of cores,
+amount of memory, and amount of disk space.
+Availability of these three resources on a machine and
+within the partitionable slot
+is always defined and have these default values:
+\begin{verbatim}
+  CONSUMPTION_CPUS = quantize(target.RequestCpus,{1})
+  CONSUMPTION_MEMORY = quantize(target.RequestMemory,{128})
+  CONSUMPTION_DISK = quantize(target.RequestDisk,{1024})
+\end{verbatim}
+
+Here is an example-driven definition of a consumption policy.
+Assume a single partitionable slot type on a multi-core machine with
+8 cores,
+and that the resource this policy cares about allocating are the cores.
+Configuration for the machine includes the definition of the slot type 
+and that it is partitionable.
+\begin{verbatim}
+  SLOT_TYPE_1 = cpus=8
+  SLOT_TYPE_1_PARTITIONABLE = True
+  NUM_SLOTS_TYPE_1 = 1
+\end{verbatim}
+
+Enable use of the \Condor{negotiator}-side resource consumption
+policy, allocating the job-requested number of cores to the
+dynamic slot, and use \Macro{SLOT\_WEIGHT} to assess the user usage that 
+will affect user priority by the number of cores allocated.
+\begin{verbatim}
+  SLOT_TYPE_1_CONSUMPTION_POLICY = True
+  SLOT_TYPE_1_CONSUMPTION_CPUS = TARGET.RequestCpus
+  SLOT_WEIGHT = Cpus
+\end{verbatim}
+
+If custom resources are available within the partitionable slot,
+they may be used in a consumption policy, by specifying the 
+resource.
+Using a machine with 4 GPUs as an example custom resource,
+define the resource and include it in the definition of the partitionable
+slot:
+\begin{verbatim}
+  MACHINE_RESOURCE_NAMES = gpus
+  MACHINE_RESOURCE_gpus = 4
+  SLOT_TYPE_2 = cpus=8, gpus=4
+  SLOT_TYPE_2_PARTITIONABLE = True
+  NUM_SLOTS_TYPE_2 = 1
+\end{verbatim}
+
+Add the consumption policy to incorporate availability of the GPUs:
+\begin{verbatim}
+  SLOT_TYPE_2_CONSUMPTION_POLICY = True
+  SLOT_TYPE_2_CONSUMPTION_gpus = TARGET.RequestGpu
+  SLOT_WEIGHT = Cpus
+\end{verbatim}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:SMP-defrag}

@@ -1339,7 +1339,7 @@ static bool test_expr_tree_to_string_long2() {
 	classad.initFromString(classad_string, NULL);
 	const char* attribute_name = "Requirements";
 	ExprTree* expr = classad.LookupExpr(attribute_name);
-    const char* expect = "( a > 3 ) && ( b >= 1.300000000000000E+00 ) && "
+    const char* expect = "( a > 3 ) && ( b >= 1.3 ) && "
 		"( c < MY.rank ) && ( ( d <= TARGET.RANK ) || ( g == \"alain\" ) || "
 		"( g != \"roy\" ) || ( h =?= 5 ) || ( i =!= 6 ) ) && "
 		"( ( a + b ) < ( c - d ) ) && ( ( e * false ) > ( g / h ) ) && "
@@ -5266,7 +5266,7 @@ static bool test_is_error_real() {
 	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() on an attribute with an incorrect "
 		"usage of real().");
-	const char* classad_string = "\tA1=isError(real(\"this is not an float\"))";
+	const char* classad_string = "\tA1=isError(real(\"this is not a float\"))";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;
@@ -5292,7 +5292,7 @@ static bool test_is_error_floor() {
 	emit_test("Test that EvalBool() returns 1 and sets the correct actual "
 		"for an attribute using isError() on an attribute with an incorrect "
 		"usage of floor().");
-	const char* classad_string = "\tA1=isError(floor(\"this is not an float\"))";
+	const char* classad_string = "\tA1=isError(floor(\"this is not a float\"))";
 	compat_classad::ClassAd classad;
 	classad.initFromString(classad_string, NULL);
 	int actual = -1, expect = 1;

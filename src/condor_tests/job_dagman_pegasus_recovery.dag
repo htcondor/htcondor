@@ -1,0 +1,7 @@
+Job A job_dagman_pegasus_recovery-nodeA.cmd
+
+Job B job_dagman_pegasus_recovery-nodeB.cmd
+Parent A Child B
+
+Job C job_dagman_pegasus_recovery-nodeC.cmd
+Parent B Child C

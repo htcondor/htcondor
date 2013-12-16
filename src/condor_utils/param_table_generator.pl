@@ -20,39 +20,6 @@
 ##**************************************************************
 
 ##########################################################################
-# For information on command line options of this script, call it with -h 
-#
-# The logic in this code is divided into two functions. They are parse() 
-# and reconstitute(). 
-# parse() takes one string as an argument. It will parse the string into 
-# one giant associative array, and return a reference. 
-# reconstitute() takes 
-#
-# Because this deals a great deal with specifying meta-information on
-# parameters, comments and variable naming can be confusing. So I will 
-# try to use the term "property" to only refer to the meta-information,  
-# and the term "parameter" or "params" to refer to those parameters that 
-# are actually referenced in Condor code, and (will be) actually 
-# configured by users.
-
-
-# This main sub simply specifies a default, and calls parse.
-# NOTE: $option contains values of command line options. See configure() 
-# at the bottom of this script if you want more info.
-sub main {
-	# fetch contents of input file into string $input_contents
-	my $input_contents = file_get_contents($options{input});
-	# parse contents, and put into associative array $params
-	my $params = &parse($input_contents);
-	# set defaults
-	my $defaults = {
-		version => '7.1.0',
-	};
-	# call reconstitute on the params to do all of the outputting. 
-	reconstitute($params, $default)
-
-}
-##########################################################################
 use strict;
 use warnings;
 no warnings 'closure';
@@ -83,8 +50,8 @@ use constant {
 	ASSIGNMENT => ['\:?\=?','assignment operator'],
 	ASSIGNMENT_EQUALS => ['\=?','assignment equals operator'],
 	ASSIGNMENT_COLON => ['\:?','assignment colon operator'],
-	ASSIGNMENT_HEREDOC => ['[A-Za-z]+', 'heredoc deliminator'],
-	PARAMETER_TITLE => ['[a-zA-Z0-9_\.]+','parameter title'],
+	ASSIGNMENT_HEREDOC => ['[@_A-Za-z]+', 'heredoc deliminator'],
+	PARAMETER_TITLE => ['[$a-zA-Z0-9_\.]+','parameter title'],
 	PROPERTY_NAME => ['[a-zA-Z0-9_-]+','property name'],
 	PROPERTY_VALUE => ['[^\n]+','property value'],
 	DATACLASS_NAME => ['[a-zA-Z0-9_-]+','dataclass name'],
@@ -117,7 +84,7 @@ use constant { RECONSTITUTE_TEMPLATE =>
 
 use constant { RECONSTITUTE_TEMPLATE_IFDEF => 
 'static const %typequal%_value def_%parameter_var% = {
-	#ifdef WIN32
+	#if %win32_ifdef%
 	 %win32_default%, PARAM_TYPE_%type%%range_valid%%win_cooked_values%
 	#else
 	 %default%, PARAM_TYPE_%type%%range_valid%%cooked_values%
@@ -189,10 +156,8 @@ my $type_subs = {
 	    $param_var =~ s/\./_/g; 
 	    return $param_var;
 	},
-	'param_type' => sub { 
-		my $type = enum($_[0],'STRING','INT','BOOL', 'DOUBLE', 'LONG');
-		#return "PARAM_TYPE_".$type;
-		return $type;
+	'param_type' => sub {
+		return enum($_[0],'STRING','INT','BOOL', 'DOUBLE', 'LONG', 'PATH');
 	},
 	'is_macro_type' => sub {
 		my $is_macro = enum($_[0],'true','false');
@@ -203,7 +168,7 @@ my $type_subs = {
 		return ($reconfig =~ /true/) ? 1 : 0;
 	},
 	'customization_type' => sub {
-		my $customization = enum($_[0], 'NORMAL', 'SELDOM', 'EXPERT');
+		my $customization = enum($_[0], 'CONST', 'NORMAL', 'SELDOM', 'EXPERT', 'DEVEL');
 		return "CUSTOMIZATION_".$customization;
 	},
 };
@@ -219,6 +184,8 @@ sub reconstitute {
 	my $structure = shift;
 	my $default_structure = shift; 
 	my $output_filename = $options{output};
+	my $platform = $options{platform};
+	print "generating param_info for platform=[$platform]\n";
 	###########################################################################
 	## All of the actual file output is contained in this section.           ##
 	###########################################################################
@@ -316,6 +283,7 @@ sub reconstitute {
 	continue_output("\n"
 		. "const int PARAM_FLAGS_TYPE_MASK = 0x0F;\n"
 		. "const int PARAM_FLAGS_RANGED = 0x10;\n"
+		. "const int PARAM_FLAGS_PATH = 0x20;\n"
 		. "typedef struct nodef_value { const char * psz; } nodef_value;\n"
 		. "typedef struct string_value { const char * psz; int flags; } string_value;\n"
 		. "typedef struct bool_value { const char * psz; int flags; bool val; } bool_value;\n"
@@ -335,6 +303,7 @@ sub reconstitute {
 	my @var_names;
 	my %empty_vars=();
 	my %var_daemons=(); # hash of arrays of per-daemon/sybsystem parameters overrides.
+	my %var_metas=(); # hash of arrays of metaknobs
 	
 	# Loop through each of the parameters in the structure passed as an argument
 	while(my ($param_name, $sub_structure) = each %{$structure}){
@@ -351,12 +320,25 @@ sub reconstitute {
 			my $subsys = uc($aaa[0]);
 			$daemon_prefix = $subsys.'$';
 			$param_name = $aaa[1];
-			if (defined $var_daemons{$subsys}) {
-				push @{$var_daemons{$subsys}}, $param_name;
+			if ($subsys =~ /^\$(.*)/) {
+				# subsystem names that start with $ are really meta knobs.
+				# keep track of them in a different hashtable.
+				my $meta = $1;
+				if (defined $var_metas{$meta}) {
+					push @{$var_metas{$meta}}, $param_name;
+				} else {
+					my @meta_var_names;
+					push @meta_var_names, $param_name;
+					$var_metas{$meta} = \@meta_var_names;
+				}
 			} else {
-				my @daemon_var_names;
-				push @daemon_var_names, $param_name;
-				$var_daemons{$subsys} = \@daemon_var_names;
+				if (defined $var_daemons{$subsys}) {
+					push @{$var_daemons{$subsys}}, $param_name;
+				} else {
+					my @daemon_var_names;
+					push @daemon_var_names, $param_name;
+					$var_daemons{$subsys} = \@daemon_var_names;
+				}
 			}
 		} else {
 			push @var_names, $param_name;
@@ -368,7 +350,20 @@ sub reconstitute {
 		# parameter, so that it can be treated just like any other property.
 		$sub_structure->{'parameter_name'} = $param_name;
 		$sub_structure->{'parameter_var'} = $var_name;
+		#if ( ! exists $sub_structure->{type}) { $sub_structure->{type} = $default_structure->{type}; }
 		
+		# check for platform specific default, right now we support only one of these.
+		my $plat = "win32";
+		foreach my $key (keys %{$sub_structure}) {
+			if ($key =~ /^([a-zA-Z_]+[a-zA-Z0-9_]*)_default/) {
+				$plat = $1;
+				my $isplat = 0; if ($platform =~ $plat) { $isplat = 1; }
+				if ($plat !~ /win32/) {
+					print "found platform default key=[$key] plat=[$plat] $isplat def=$sub_structure->{$key}\n";
+				}
+			}
+		}
+
 		my $typequal = "nodef";
 		my $cooked_values = "";
 		my $win_cooked_values = "";
@@ -376,13 +371,13 @@ sub reconstitute {
 		my $cooked_range = "";
 		my $range_max = "";
 		my $nix_default = $sub_structure->{'default'};
-		my $win_default = $sub_structure->{'win32_default'};
+		my $win_default = $sub_structure->{"${plat}_default"};
 		my $def_valid = (defined $nix_default && $nix_default ne "") ? "1" : "0";
 		my $win_valid = (defined $win_default && $win_default ne "") ? "1" : "0";
 		my $range_valid = "";
 		
 		
-		# print "$var_name has win32_default=$win_default\n" if $win_valid eq "1";
+		# print "$var_name has ${plat}_default=$win_default\n" if $win_valid eq "1";
 		
 		print Dumper($sub_structure) if $options{debug};
 		
@@ -398,6 +393,8 @@ sub reconstitute {
 			# by do_one_property().
 			if (defined $sub_structure->{$name}) {
 				$replace{"%$name%"} = do_one_property($sub_structure,$info,$name);
+			} elsif (defined $default_structure->{$name}) {
+				$replace{"%$name%"} = $default_structure->{$name};
 			} else {
 				$replace{"%$name%"} = "";
 			}
@@ -499,8 +496,22 @@ sub reconstitute {
 								"a default!\n";
 					}
 				}
+
+				# Path parameters
+				if ($typeT eq "PATH")
+				{
+					$replace{"%type%"} = "STRING";
+					$typequal = "string";
+					if ( ! defined $win_default)
+					{
+						$win_valid   = $def_valid;
+						$win_default = $nix_default;
+						if (defined $win_default) { $win_default =~ s/\//\\/g; }
+					}
+					$range_valid = "|PARAM_FLAGS_PATH";
+				}
 			}
-			
+
 			# convert ranges from string to int or double if we can
 			# if range can be set a compile time, then we need to emit a xxx_ranged
 			# structure and two aditional data values. plus we set the 
@@ -551,6 +562,15 @@ sub reconstitute {
 		    $replace{"%win32_default%"} = '"'.escape($win_default).'"';
 			#$replace{"%win_valid%"} = $win_valid;
 			$replace{"%win_cooked_values%"} = "";
+			if ($plat =~ /^win32$/i) {
+				$replace{"%win32_ifdef%"} = "defined WIN32";
+			} else {
+				if ($platform =~ $plat) {
+					$replace{"%win32_ifdef%"} = "1 // PLATFORM =~ \"${plat}\"";
+				} else {
+					$replace{"%win32_ifdef%"} = "0 // PLATFORM =~ \"${plat}\"";
+				}
+			}
 			$cooked = $win_cooked_values.$cooked_range;
 			if (length $cooked) { $replace{"%win_cooked_values%"} = ", ".$cooked; }
 			continue_output(replace_by_hash(\%replace, RECONSTITUTE_TEMPLATE_IFDEF));
@@ -579,17 +599,17 @@ sub reconstitute {
 	continue_output("}; // defaults[]\n");
 	continue_output("const int defaults_count = sizeof(defaults)/sizeof(key_value_pair);\n\n");
 
-	
+
 	# output per-daemon key/value table
 	#
 	continue_output("\n/*==========================================\n"
 					. " * subsystem overrides of global defaults[]\n"
 					. " *==========================================*/\n");
-	foreach my $key (sort keys %var_daemons) {
+	foreach my $key (sort { lc($a) cmp lc($b) } keys %var_daemons) {
 		my $daemon_prefix = $key.'$';
 		continue_output("// '$key.param\'\n");
 		continue_output("const key_value_pair ${daemon_prefix}defaults[] = {\n");
-		foreach (@{$var_daemons{$key}}) {
+		foreach (sort { lc($a) cmp lc($b) } @{$var_daemons{$key}}) {
 			continue_output("\t{ \"$_\", (const nodef_value*)&def_${daemon_prefix}$_ },\n");
 		}
 		continue_output("}; // ${daemon_prefix}defaults[]\n");
@@ -600,13 +620,52 @@ sub reconstitute {
 					. " * map of subsystem override param tables.\n"
 					. " *==========================================*/\n");
 	continue_output("const key_table_pair subsystems[] = {\n");
-	foreach my $key (sort keys %var_daemons) {
+	foreach my $key (sort  { lc($a) cmp lc($b) } keys %var_daemons) {
 		my $daemon_prefix = $key.'$';
 		continue_output("\t{ \"$key\", ${daemon_prefix}defaults, ${daemon_prefix}defaults_count },\n");
 	}
 	continue_output("}; // subsystems[]\n");
 	continue_output("const int subsystems_count = sizeof(subsystems)/sizeof(key_table_pair);\n\n");
-	
+
+	# output metaknob  key/value table
+	#
+	continue_output("\n/*==========================================\n"
+					. " * metaknob tables \n"
+					. " *==========================================*/\n");
+	foreach my $key (sort  { lc($a) cmp lc($b) } keys %var_metas) {
+		my $meta_prefix = $key.'$';
+		continue_output("// '$key.knobs\'\n");
+		continue_output("const key_value_pair ${meta_prefix}knobs[] = {\n");
+		foreach (sort { lc($a) cmp lc($b) } @{$var_metas{$key}}) {
+			continue_output("\t{ \"$_\", (const nodef_value*)&def_\$${meta_prefix}$_ },\n");
+		}
+		continue_output("}; // ${meta_prefix}knobs[]\n");
+		continue_output("const int ${meta_prefix}knobs_count = sizeof(${meta_prefix}knobs)/sizeof(key_value_pair);\n\n");
+	}
+	# output a map of meta knob tables
+	continue_output("\n/*==========================================\n"
+					. " * map of metaknob tables.\n"
+					. " *==========================================*/\n");
+	continue_output("const key_table_pair metaknobsets[] = {\n");
+	foreach my $key (sort  { lc($a) cmp lc($b) } keys %var_metas) {
+		my $meta_prefix = $key.'$';
+		continue_output("\t{ \"$key\", ${meta_prefix}knobs, ${meta_prefix}knobs_count },\n");
+	}
+	continue_output("}; // metaknobsets[]\n");
+	continue_output("const int metaknobsets_count = sizeof(metaknobsets)/sizeof(key_table_pair);\n\n");
+	# output metaknob  key.value source map
+	continue_output("\n/*==========================================\n"
+					. " * metaknob source table \n"
+					. " *==========================================*/\n");
+	continue_output("const key_value_pair metaknobsources[] = {\n");
+	foreach my $key (sort  { lc($a) cmp lc($b) } keys %var_metas) {
+		foreach (sort { lc($a) cmp lc($b) } @{$var_metas{$key}}) {
+			continue_output("\t{ \"\$${key}:$_\", (const nodef_value*)&def_\$${key}\$$_ },\n");
+		}
+	}
+	continue_output("}; // metaknobsources[]\n");
+	continue_output("const int metaknobsources_count = sizeof(metaknobsources)/sizeof(const char *);\n\n");
+
 	# end of table declarations, everthing after this should be extern or type declarations.
 	#
 	continue_output("#endif // if PARAM_DECLARE_TABLES\n\n"
@@ -614,8 +673,12 @@ sub reconstitute {
 					. "extern const int defaults_count;\n"
 					. "extern const key_table_pair subsystems[];\n"
 					. "extern const int subsystems_count;\n"
+					. "extern const key_table_pair metaknobsets[];\n"
+					. "extern const int metaknobsets_count;\n"
+					. "extern const key_value_pair metaknobsources[];\n"
+					. "extern const int metaknobsources_count;\n"
 					);
-	
+
 	# output an enum of param indexs into the global defaults table
 	#
 	continue_output("\n/*==========================================\n"
@@ -626,7 +689,7 @@ sub reconstitute {
 		continue_output("\tix$_,\n");
 	}
 	continue_output("}; // param id's\n\n");
-	
+
 	# wrap things up. 
 	continue_output("} //namespace condor_params\n");
 	end_output();
@@ -857,6 +920,7 @@ sub configure  {
 		['a',	0,   'append',     0,                       "append: don't clobber output file"],
 		['e',	0,   'errors',     0,                       'do not die on some errors'],
 		['d',	0,   'debug',	   0,                       0], # 0 makes it hidden on -h
+		['p',	1,   'platform',   'generic',               'platform'],
 	);
 	sub usage {
 		my $switches;
@@ -896,3 +960,41 @@ configure();
 main();
 
 exit(0);
+
+
+##########################################################################
+# For information on command line options of this script, call it with -h
+#
+# The logic in this code is divided into two functions. They are parse()
+# and reconstitute().
+# parse() takes one string as an argument. It will parse the string into
+# one giant associative array, and return a reference.
+# reconstitute() takes
+#
+# Because this deals a great deal with specifying meta-information on
+# parameters, comments and variable naming can be confusing. So I will
+# try to use the term "property" to only refer to the meta-information,
+# and the term "parameter" or "params" to refer to those parameters that
+# are actually referenced in Condor code, and (will be) actually
+# configured by users.
+
+
+# This main sub simply specifies a default, and calls parse.
+# NOTE: $option contains values of command line options. See configure()
+# at the bottom of this script if you want more info.
+sub main {
+	# fetch contents of input file into string $input_contents
+	my $input_contents = file_get_contents($options{input});
+	# parse contents, and put into associative array $params
+	my $params = &parse($input_contents);
+	# set defaults
+	my $defaults = {
+		version => '7.1.0',
+		type => 'STRING',
+		param_type => 'STRING',
+	};
+	# call reconstitute on the params to do all of the outputting.
+	#$options{debug} = 1;
+	reconstitute($params, $defaults)
+
+}

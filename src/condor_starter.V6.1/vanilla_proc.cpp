@@ -34,6 +34,7 @@
 #include "classad_helpers.h"
 #include "filesystem_remap.h"
 #include "directory.h"
+#include "env.h"
 #include "subsystem_info.h"
 #include "cgroup_limits.h"
 #include "NetworkPluginManager.h"
@@ -567,10 +568,52 @@ VanillaProc::StartJob()
 		}
 		fi.want_pid_namespace = this->SupportsPIDNamespace();
 		if (fi.want_pid_namespace) {
-		if (!fs_remap) {
-			fs_remap = new FilesystemRemap();
+			if (!fs_remap) {
+				fs_remap = new FilesystemRemap();
+			}
+			fs_remap->RemapProc();
 		}
-		fs_remap->RemapProc();
+
+		// When PID Namespaces are enabled, need to run the job
+		// under the condor_pid_ns_init program, so that signals
+		// propagate through to the child.  
+
+		// First tell the program where to log output status
+		// via an environment variable
+		if (param_boolean("USE_PID_NAMESPACE_INIT", true)) {
+			Env env;
+			MyString env_errors;
+			MyString arg_errors;
+			std::string filename;
+
+			filename = Starter->GetWorkingDir();
+			filename += "/.condor_pid_ns_status";
+		
+			env.MergeFrom(JobAd, &env_errors);
+			env.SetEnv("_CONDOR_PID_NS_INIT_STATUS_FILENAME", filename);
+			env.InsertEnvIntoClassAd(JobAd, &env_errors);
+
+			Starter->jic->removeFromOutputFiles(filename.c_str());
+			this->m_pid_ns_init_filename = filename;
+			
+			// Now, set the job's CMD to the wrapper, and shift
+			// over the arguments by one
+
+			ArgList args;
+			std::string cmd;
+
+			JobAd->LookupString(ATTR_JOB_CMD, cmd);
+			args.AppendArg(cmd);
+			args.AppendArgsFromClassAd(JobAd, &arg_errors);
+			args.InsertArgsIntoClassAd(JobAd, NULL, & arg_errors);
+	
+			std::string libexec;
+			if( !param(libexec,"LIBEXEC") ) {
+				dprintf(D_ALWAYS, "Cannot find LIBEXEC so can not run condor_pid_ns_init\n");
+				return 0;
+			}
+			std::string c_p_n_i = libexec + "/condor_pid_ns_init";
+			JobAd->Assign(ATTR_JOB_CMD, c_p_n_i);
 		}
 	}
 	dprintf(D_FULLDEBUG, "PID namespace option: %s\n", fi.want_pid_namespace ? "true" : "false");
@@ -703,6 +746,7 @@ VanillaProc::JobReaper(int pid, int status)
 			// HOWEVER, iff we are tracking process families via a
 			// dedicated execute account, we want to delay killing until
 			// there is only one job under the starter.  We do this to
+		
 			// prevent the starter from killing the SSH daemon early, and
 			// therefore effectively killing any ssh_to_job session as soon
 			// as the job exits on machine configured with a dedicated
@@ -736,6 +780,27 @@ VanillaProc::JobReaper(int pid, int status)
 				dprintf(D_FULLDEBUG, "Cleaned up network namespace %s.\n", m_network_name.c_str());
 			}
 		}
+	}
+
+	if (m_pid_ns_init_filename.length() > 0) {
+		// We ran a job with a pid_ns_init wrapper.  This file contains
+		// true status
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		FILE *f = safe_fopen_wrapper_follow(m_pid_ns_init_filename.c_str(), "r");
+		if (f == NULL) {
+			// Probably couldn't exec the wrapper.  Badness
+			dprintf(D_ALWAYS, "JobReaper: condor_pid_ns_init didn't drop filename %s (%d)\n", m_pid_ns_init_filename.c_str(), errno);
+			EXCEPT("Starter configured to use PID NAMESPACES, but libexec/condor_pid_ns_init did not run properly");
+		}
+		if (fscanf(f, "ExecFailed") > 0) {
+			EXCEPT("Starter configured to use PID NAMESPACES, but execing the job failed");
+		}
+		
+		fseek(f, 0, SEEK_SET);
+		if (fscanf(f, "Exited: %d", &status) > 0) {
+			dprintf(D_FULLDEBUG, "Real job exit code of %d read from wrapper output file\n", status);
+		}
+		fclose(f);
 	}
 
 	if (fs_remap != NULL) {

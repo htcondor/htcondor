@@ -205,7 +205,7 @@ our %submit_info = (
 			  '-DCMAKE_SUPPRESS_REGENERATION:BOOL' => 'TRUE', # because the windows VM doesn't keep time very well.
             },
 			'prereqs'	=> undef,
-			'xtests'	=> [],
+			'xtests'	=> undef,
 		},
 
 		'test' => {
@@ -533,7 +533,7 @@ our %submit_info = (
 	
 	'x86_64_Ubuntu12' => {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},

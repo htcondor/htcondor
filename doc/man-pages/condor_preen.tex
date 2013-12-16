@@ -4,6 +4,7 @@
 \oOpt{-mail}
 \oOpt{-remove}
 \oOpt{-verbose}
+\oOpt{-debug}
 
 \index{HTCondor commands!condor\_preen}
 \index{condor\_preen command}
@@ -37,15 +38,18 @@ than those that are not to be removed.
 
 \begin{Options}
 
-	\OptItem{\Opt{-mail}}{Send mail to the user defined in the
-	\Macro{PREEN\_ADMIN} configuration variable,
-	instead of writing to the standard output.}
+  \OptItem{\Opt{-mail}}{Send mail to the user defined in the
+    \Macro{PREEN\_ADMIN} configuration variable,
+    instead of writing to the standard output.}
 
-	\OptItem{\Opt{-remove}}{Remove the offending files and directories
-	rather than reporting on them.}
+  \OptItem{\Opt{-remove}}{Remove the offending files and directories
+    rather than reporting on them.}
 
-	\OptItem{\Opt{-verbose}}{List all files found in the Condor
-	directories, even those which are not considered extraneous.}
+  \OptItem{\Opt{-verbose}}{List all files found in the Condor
+    directories, even those which are not considered extraneous.}
+
+  \OptItem{\Opt{-debug}}{Print extra debugging information as the command
+    executes.}
 
 \end{Options}
 
