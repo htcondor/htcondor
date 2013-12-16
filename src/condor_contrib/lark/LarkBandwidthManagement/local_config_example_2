@@ -1,0 +1,36 @@
+
+CONDOR_HOST = hcc-lark01.unl.edu
+COLLECTOR_NAME = Nebraska Lark Testbed
+
+ALLOW_WRITE = hcc-lark01.unl.edu, hcc-lark02.unl.edu, hcc-lark03.unl.edu, hcc-lark04.unl.edu, hcc-lark05.unl.edu, lark00.chtc.wisc.edu, lark01.chtc.wisc.edu,129.93.241.0/26
+
+#USE_PID_NAMESPACE = true
+USE_NETWORK_NAMESPACES = true
+LARK_NETWORK_ACCOUNTING = true
+STARTER_DEBUG = D_FULLDEBUG
+STARTD_DEBUG = D_FULLDEBUG
+
+# Test purpose, use latest build
+RELEASE_DIR = /usr/local/personal_condor
+STARTER.PLUGINS = /home/bockelman/zzhang/htcondor/src/condor_contrib/lark/lark-plugin.so
+
+
+MACHINE_RESOURCE_INVENTORY_BANDWIDTH = /etc/condor/ethtooltest
+
+SLOT_TYPE_1 = cpus=100%,auto
+SLOT_TYPE_1_PARTITIONABLE = true
+NUM_SLOTS_TYPE_1 = 1
+
+STARTER_INITIAL_UPDATE_INTERVAL = 5
+STARTER_UPDATE_INTERVAL = 2
+
+STARTD_ATTRS = LarkNetworkType, LarkBridgeDevice, LarkAddressType
+LarkNetworkType = "ovs_bridge"
+LarkBridgeDevice = "eth0"
+LarkAddressType = "dhcp"
+
+
+#ENABLE_NETWORK_NAMESPACE_FOR_FILETRANSFER = false
+Requirements = (SlotType =?= "Partitionable") || (TARGET.RequestBandwidth =?= MY.Bandwidth)
+START = $(START) && $(Requirements)
+CLAIM_PARTITIONABLE_LEFTOVERS = false
