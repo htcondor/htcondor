@@ -299,14 +299,15 @@ BridgeConfiguration::SetupPostForkParent()
     // If ovs bridge is used, we add the ovs QoS configuration according
     // to the submitted job request.
     std::string bandwidth_attr("Bandwidth");
-    int bandwidth;
-    if(!m_ad->EvaluateAttrInt(bandwidth_attr, bandwidth)){
+    int bandwidth = 0;
+    if(!m_ad->EvaluateAttrInt(bandwidth_attr, bandwidth) && bandwidth != 0){
         dprintf(D_ALWAYS, "Submitted job does not request for bandwidth resource. Bandwith rate limiting is skipped.\n");
     }
     else {
         // we utilize openvswitch QoS rate limiting, thus we need to make sure configuration type is "ovs_bridge"
         if (configuration_type == "ovs_bridge") {
             // The unit of "bandwidth is in Mbps, need to convert it to bps"
+            dprintf(D_FULLDEBUG, "Requested bandwidth is %d Mbps.\n", bandwidth);
             int request_rate = bandwidth * 1000 * 1000;
             std::stringstream request_rate_value;
             request_rate_value << request_rate;
