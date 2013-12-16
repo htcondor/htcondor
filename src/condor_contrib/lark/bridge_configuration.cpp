@@ -300,7 +300,7 @@ BridgeConfiguration::SetupPostForkParent()
     // to the submitted job request.
     std::string bandwidth_attr("Bandwidth");
     int bandwidth = 0;
-    if(!m_ad->EvaluateAttrInt(bandwidth_attr, bandwidth) && bandwidth != 0){
+    if(!m_ad->EvaluateAttrInt(bandwidth_attr, bandwidth) || bandwidth == 0){
         dprintf(D_ALWAYS, "Submitted job does not request for bandwidth resource. Bandwith rate limiting is skipped.\n");
     }
     else {
