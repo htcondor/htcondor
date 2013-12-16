@@ -9775,7 +9775,7 @@ InitCommandSockets(int port, DaemonCore::SockPairVec & socks, bool want_udp, boo
 	if(param_boolean("ENABLE_IPV4", true)) {
 		DaemonCore::SockPair sock_pair;
 		if( ! InitCommandSocket(CP_IPV4, port, sock_pair, want_udp, fatal)) {
-			dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv4 command socket.");
+			dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv4 command socket.\n");
 			return false;
 		}
 		new_socks.push_back(sock_pair);
@@ -9784,7 +9784,7 @@ InitCommandSockets(int port, DaemonCore::SockPairVec & socks, bool want_udp, boo
 	if(param_boolean("ENABLE_IPV6", true)) {
 		DaemonCore::SockPair sock_pair;
 		if( ! InitCommandSocket(CP_IPV6, port, sock_pair, want_udp, fatal)) {
-			dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv6 command socket.");
+			dprintf(D_ALWAYS | D_FAILURE, "Warning: Failed to create IPv6 command socket.\n");
 			return false;
 		}
 		new_socks.push_back(sock_pair);
