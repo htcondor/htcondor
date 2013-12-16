@@ -71,6 +71,14 @@ class Defrag: public Service {
 	ClassAd m_public_ad;
 	DefragStats m_stats;
 
+	MachineSet m_prev_whole_machines;
+	MachineSet m_prev_draining_machines;
+
+	int m_whole_machines_arrived;
+	time_t m_last_whole_machine_arrival;
+	double m_whole_machine_arrival_sum;
+	double m_whole_machine_arrival_mean_squared;
+
 	void poll_cancel(MachineSet &); // Cancel any machines that match DEFRAG_CANCEL_REQUIREMENTS
 
 	bool drain(const ClassAd &startd_ad);
@@ -92,6 +100,8 @@ class Defrag: public Service {
 	void updateCollector();
 	void invalidatePublicAd();
 	void queryDrainingCost();
+
+	void dprintf_set(const char *, MachineSet *) const;
 };
 
 #endif

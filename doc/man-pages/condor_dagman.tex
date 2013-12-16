@@ -43,9 +43,7 @@ and then submits \Condor{dagman} as an HTCondor job.
 \Condor{dagman} uses log files to coordinate the further 
 submission of the jobs within the DAG.
 
-As part of \Prog{daemoncore}, the set of command-line arguments
-given in
-section~\ref{sec:DaemonCore-Arguments}
+All command line arguments to the \Prog{DaemonCore} library functions
 work for \Condor{dagman}.
 
 Arguments to \Condor{dagman} are either automatically set
@@ -126,8 +124,7 @@ output DAG input file lines as they are parsed
        the default number of POST scripts is unlimited.}
     \OptItem{\Opt{-noeventchecks}}{This argument is no longer used;
        it is now ignored.  Its functionality is now implemented by
-       the \MacroNI{DAGMAN\_ALLOW\_EVENTS} configuration macro
-       (see section~\ref{param:DAGManAllowEvents}).}
+       the \MacroNI{DAGMAN\_ALLOW\_EVENTS} configuration variable.  }
     \OptItem{\Opt{-allowlogerror}}{This optional argument has 
        \Condor{dagman} try to run the specified DAG, even in the case
        of detected errors in the job event log specification.
@@ -190,17 +187,15 @@ output DAG input file lines as they are parsed
        DAGs exist, the \Opt{-force} flag will cause them to be renamed,
        and the original DAG will be run.  If old-style rescue DAG mode
        is in effect, any existing old-style rescue DAGs will be deleted,
-       and the original DAG will be run. Section~\ref{sec:DAGMan-rescue}
-       details rescue DAGs.}
-    \OptItem{\OptArg{-notification}{value}}{(This argument is only
+       and the original DAG will be run. See the HTCondor manual section
+       on Rescue DAGs for more information.}
+    \OptItem{\OptArg{-notification}{value}}{This argument is only
        included to be passed to \Condor{submit\_dag} if lazy submit file
-       generation is used for nested DAGs.)  Sets the e-mail notification
+       generation is used for nested DAGs.  Sets the e-mail notification
        for DAGMan itself. This information will be used within the HTCondor
        submit description file for DAGMan. This file is produced by
-       \Condor{submit\_dag}. See \Opt{notification}
-       within the section of submit description file commands in the
-       \Condor{submit} manual page on page~\pageref{man-condor-submit}
-       for specification of \Arg{value}.}
+       \Condor{submit\_dag}. The \Opt{notification} option is described
+       in the \Condor{submit} manual page. }
     \OptItem{\OptArg{-dagman}{DagmanExecutable}}{(This argument is
        included only to be passed to \Condor{submit\_dag} if lazy submit
        file generation is used for nested DAGs.)  Allows the

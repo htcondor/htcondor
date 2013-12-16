@@ -54,7 +54,7 @@ sub timed_callback {
     # 5 partitionable slots unclaimed/idle with 2 slots left
     # 10 dynamic slots claimed/busy with 1 slot
     # and there should be no other slots
-	print "expected_pslots <$expected_pslots> expected_dslots <$expected_dslots> unexpected <$unexpected>\n";
+	print "expected_pslots(5) <$expected_pslots> expected_dslots(10) <$expected_dslots> unexpected(0) <$unexpected>\n";
     if ($expected_pslots==5  &&  $expected_dslots==10  &&  $unexpected==0) {
         $test_passed = 1;
 		print "SUCCESS!  Saw the correct breakdown of slots.\n";
@@ -77,6 +77,9 @@ sub timed_callback {
 		print $stat;
 		print "condor_status shows\n";
 		runToolNTimes("condor_status",1);
+		# Timed call backs only fire once now.
+		CondorTest::debug("Registering another callback to recheck in 15 seconds\n",1);
+		CondorTest::RegisterTimed($testname, \&timed_callback, 15);
     }
 }
 
@@ -119,11 +122,14 @@ CondorTest::StartCondorWithParams(
 );
 
 
+my $job_log = "$testname.log";
+unlink $job_log;
+
 # submit 10 jobs
 my $submit_body = "
 universe = vanilla
 executable = x_sleep.pl
-log = $testname.log
+log = $job_log
 output = $testname.out
 error = $testname.err
 notification = never

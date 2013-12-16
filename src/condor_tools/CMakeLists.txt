@@ -16,16 +16,29 @@
  # 
  ############################################################### 
 
+
 condor_exe(condor_cod "cod_tool.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_preen "preen.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_testwritelog "testwritelog.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_drain "drain.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_advertise "advertise.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_ping "ping.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_fetchlog "fetch_log.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
+condor_exe(condor_sos "sos.cpp" ${C_SBIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_config_val "config_val.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_userprio "user_prio.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_findhost "give_interactive.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_qedit "qedit.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+#condor_exe(condor_curlplugin "condor_curlplugin.c" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+
+if (CURL_FOUND)
+	if (WINDOWS)
+		condor_exe( condor_urlfetch "condor_urlfetch.cpp" ${C_LIBEXEC} "${CURL_FOUND};wldap32.lib;${CONDOR_TOOL_LIBS}" OFF )
+	else ()
+		condor_exe( condor_urlfetch "condor_urlfetch.cpp" ${C_LIBEXEC} "${CURL_FOUND}" OFF )
+	endif ()
+endif()
+
 
 if (HAVE_SSH_TO_JOB)
 	condor_exe(condor_ssh_to_job "ssh_to_job.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
@@ -33,6 +46,8 @@ endif(HAVE_SSH_TO_JOB)
 
 include_directories(${BOOST_INCLUDE})
 condor_exe(condor_tail "peek.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
+
+
 
 condor_exe(condor_transfer_data "transfer_data.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
 condor_exe(condor_version "version.cpp" ${C_BIN} "${CONDOR_TOOL_LIBS}" OFF)
@@ -75,6 +90,7 @@ if (NOT WINDOWS)
 			message( FATAL_ERROR "Can't find libdl.a, needed for condor_ckpt_probe" )
 		endif()
 		add_executable( condor_ckpt_probe probe_process.cpp ../condor_ckpt/maps.c ../condor_utils/condor_pers.cpp ../safefile/safe_open.cpp )
+		install( TARGETS condor_ckpt_probe DESTINATION "${C_LIBEXEC}" )
         set_property( TARGET condor_ckpt_probe PROPERTY COMPILE_FLAGS -static )
         set_property( TARGET condor_ckpt_probe PROPERTY LINK_FLAGS -static )
 	endif(STD_UNIVERSE)
@@ -109,6 +125,14 @@ if ( LINUX AND NOT CONDOR_PACKAGE_BUILD )
 	# This is required for opensuse, where the system's libssl and
 	# libcrypto files don't have owner write permission.
 	install( CODE "execute_process(COMMAND chmod -R u+w ${CMAKE_INSTALL_PREFIX}/lib/condor/)" )
+endif()
+
+if (CURL_FOUND)
+  if (WINDOWS)
+    condor_exe( config_fetch "file_fetch.cpp" ${C_LIBEXEC} "${CURL_FOUND};wldap32.lib;${CONDOR_TOOL_LIBS}" OFF )
+  else()
+    condor_exe( config_fetch "file_fetch.cpp" ${C_LIBEXEC} "${CURL_FOUND};${CONDOR_TOOL_LIBS}" OFF )
+  endif()
 endif()
 
 ############################################################

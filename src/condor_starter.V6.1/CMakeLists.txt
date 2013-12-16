@@ -17,7 +17,11 @@
  ############################################################### 
 
 
-file( GLOB starterRmvElements condor_rsh.cpp glexec_job_wrapper* )
+file( GLOB starterRmvElements condor_pid_ns_init.cpp condor_rsh.cpp glexec_job_wrapper* )
+
+if (UNIX)
+set_source_files_properties(jic_shadow.cpp PROPERTIES COMPILE_FLAGS "-Wno-deprecated-declarations")
+endif(UNIX)
 
 condor_daemon( starter "${starterRmvElements}" "${CONDOR_LIBS};${LIBCGROUP_FOUND}" "${C_SBIN}" OFF)
 
@@ -38,3 +42,7 @@ if (HAVE_SSH_TO_JOB)
 	configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/condor_ssh_to_job_sshd_config_template.in ${CMAKE_CURRENT_BINARY_DIR}/condor_ssh_to_job_sshd_config_template @ONLY )
 	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/condor_ssh_to_job_sshd_config_template DESTINATION ${C_LIB} )
 endif(HAVE_SSH_TO_JOB)
+
+if (LINUX)
+	condor_exe(condor_pid_ns_init "condor_pid_ns_init.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF)
+endif()

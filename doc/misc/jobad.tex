@@ -645,22 +645,22 @@ reason that a job was put on hold.
 4 & The credentials for the job are invalid. \\ \hline
 5 & A job policy expression evaluated to \Expr{Undefined}. \\ \hline
 6 & The \Condor{starter} failed to start the executable. &
-  The Unix  error number. \\ \hline
+  The Unix  errno number. \\ \hline
 7 & The standard output file for the job could not be opened. &
-  The Unix  error number. \\ \hline
+  The Unix  errno number. \\ \hline
 8 & The standard input file for the job could not be opened. &
-  The Unix  error number. \\ \hline
+  The Unix  errno number. \\ \hline
 9 & The standard output stream for the job could not be opened. &
-  The Unix  error number. \\ \hline
+  The Unix  errno number. \\ \hline
 10 & The standard input stream for the job could not be opened. &
-  The Unix  error number. \\ \hline
+  The Unix  errno number. \\ \hline
 11 & An internal HTCondor protocol error was encountered when transferring files. \\ \hline
-12 & The \Condor{starter} failed to download input files. &
-  The Unix  error number. \\ \hline
-13 & The \Condor{starter} failed to upload output files. &
-  The Unix  error number. \\ \hline
+12 & The \Condor{starter} or \Condor{shadow} failed to receive or write job files. &
+  The Unix  errno number. \\ \hline
+13 & The \Condor{starter} or \Condor{shadow} failed to read or send job files. &
+  The Unix  errno number. \\ \hline
 14 & The initial working directory of the job cannot be accessed. &
-  The Unix  error number. \\ \hline
+  The Unix  errno number. \\ \hline
 15 & The user requested the job be submitted on hold. \\ \hline
 16 & Input files are being spooled. \\ \hline
 17 & A standard universe job is not compatible with the

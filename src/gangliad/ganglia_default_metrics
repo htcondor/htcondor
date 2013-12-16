@@ -14,7 +14,7 @@
 ]
 [
   Name   = strcat(MyType,"DaemonCoreDutyCycle");
-  Value  = DaemonCoreDutyCycle;
+  Value  = RecentDaemonCoreDutyCycle;
   Desc   = "Recent fraction of busy time in the daemon event loop";
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
@@ -903,4 +903,42 @@
   Desc   = "Addressable memory (RAM plus swap)";
   Units  = "KB";
   TargetType = "Machine_slot1";
+]
+[
+  Name   = "TotalPreemptions";
+  Verbosity = 1;
+  Desc   = "Total number of preempted jobs on this startd";
+  Units  = "preemptions";
+  TargetType = "Machine_slot1";
+]
+[
+  Name   = "TotalJobStarts";
+  Verbosity = 1;
+  Desc   = "Total number of jobs started on this startd since boot";
+  Units  = "jobs";
+  TargetType = "Machine_slot1";
+]
+[
+  Aggregate = "SUM";
+  Name   = "Poolwide Preemptions";
+  Value  = TotalPreemptions;
+  Verbosity = 1;
+  Desc   = "Poolwide Preemptions";
+  Units  = "preemptions";
+  TargetType = "Machine_slot1";
+]
+[
+  Aggregate = "SUM";
+  Name   = "Poolwide Job Starts";
+  Value  = TotalJobStarts;
+  Verbosity = 1;
+  Desc   = "Poolwide Job Starts";
+  Units  = "jobs";
+  TargetType = "Machine_slot1";
+]
+[
+  Name   = "AutoClusters";
+  Desc   = "Number of active AutoClusters in the schedd";
+  Units  = "autoclusters";
+  TargetType = "Scheduler";
 ]

@@ -19,7 +19,7 @@
 # OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
   exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
-  if(${TEST_VER} MATCHES "10.[678]" AND ${SYS_ARCH} MATCHES "I386")
+  if(${TEST_VER} MATCHES "10.[6789]" AND ${SYS_ARCH} MATCHES "I386")
 	set (SYS_ARCH "X86_64")
   endif()
 elseif(${OS_NAME} MATCHES "WIN")
@@ -73,7 +73,8 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 ##################################################
 
 # disable python on windows until we can get the rest of cmake changes worked out.
-if(NOT WINDOWS) 
+if(NOT WINDOWS)
+#if(NOT WINDOWS AND NOT CONDOR_PLATFORM MATCHES "Fedora19")
 include (FindPythonLibs)
 endif(NOT WINDOWS)
 include (FindPythonInterp)
@@ -183,6 +184,8 @@ if( NOT WINDOWS)
 	check_function_exists("snprintf" HAVE_SNPRINTF)
 	check_function_exists("snprintf" HAVE_WORKING_SNPRINTF)
 	check_include_files("sys/eventfd.h" HAVE_EVENTFD)
+        check_function_exists("innetgr" HAVE_INNETGR)
+        check_function_exists("getgrnam" HAVE_GETGRNAM)
 
 	check_function_exists("stat64" HAVE_STAT64)
 	check_function_exists("_stati64" HAVE__STATI64)
@@ -270,13 +273,10 @@ if( NOT WINDOWS)
 	check_cxx_compiler_flag(-std=c++11 cxx_11)
 	if (cxx_11)
 
-		# Clang requires some additional C++11 flags, as the default stdlib
+		# Some versions of Clang require an additional C++11 flag, as the default stdlib
 		# is from an old GCC version.
 		if ( ${OS_NAME} STREQUAL "DARWIN" AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -lc++")
-			set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -lc++")
-			set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} -lc++")
-			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lc++")
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 		endif()
 
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
@@ -290,13 +290,6 @@ if( NOT WINDOWS)
 			return 0;
 		}
 		" PREFER_CPP11 )
-
-		# Note - without adding -lc++ to the CXX flags, the linking of the test
-		# above will fail for clang.  It doesn't seem strictly necessary though,
-		# so we remove this afterward.
-		if ( ${OS_NAME} STREQUAL "DARWIN" AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
-			string(REPLACE "-lc++" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-		endif()
 
 	endif (cxx_11)
 
@@ -839,6 +832,22 @@ else(MSVC)
 	if (cxx_Wvolatile_register_var)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wvolatile-register-var")
 	endif(cxx_Wvolatile_register_var)
+
+	check_cxx_compiler_flag(-Wunused-local-typedefs cxx_Wunused_local_typedefs)
+	if (cxx_Wunused_local_typedefs)
+		# we don't ever want the 'unused local typedefs' warning treated as an error.
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=unused-local-typedefs")
+	endif(cxx_Wunused_local_typedefs)
+
+	# check compiler flag not working for this flag.  
+	if (NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.8")
+	check_cxx_compiler_flag(-Wdeprecated-declarations cxx_Wdeprecated_declarations)
+	if (cxx_Wdeprecated_declarations)
+		# we use deprecated declarations ourselves during refactoring,
+		# so we always want them treated as warnings and not errors
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wdeprecated-declarations -Wno-error=deprecated-declarations")
+	endif(cxx_Wdeprecated_declarations)
+	endif()
 
 	# gcc on our AIX machines recognizes -fstack-protector, but lacks
 	# the requisite library.

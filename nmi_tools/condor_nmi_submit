@@ -1275,6 +1275,7 @@ sub writeCommonInfo
 	}
     print $fh "notify = $notify\n";
     print $fh "priority = 1\n";
+    if ($runtype eq "build") { print $fh "use_remote_post_rval = true\n"; }
 
 	if (defined $notify_fail_only) {
     	print $fh "notify_fail_only = true\n";

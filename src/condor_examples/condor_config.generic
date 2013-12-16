@@ -144,7 +144,7 @@ COLLECTOR_NAME 		= My Pool - $(CONDOR_HOST)
 ##  FLOCK_FROM defines the machines where you would like to grant
 ##  people access to your pool via flocking. (i.e. you are granting
 ##  access to these machines to join your pool).
-FLOCK_FROM = 
+#FLOCK_FROM =
 ##  An example of this is:
 #FLOCK_FROM = somehost.friendly.domain, anotherhost.friendly.domain
 
@@ -152,7 +152,7 @@ FLOCK_FROM =
 ##  to flock to. (i.e. you are specifying the machines that you
 ##  want your jobs to be negotiated at -- thereby specifying the
 ##  pools they will run in.)
-FLOCK_TO = 
+#FLOCK_TO =
 ##  An example of this is:
 #FLOCK_TO = central_manager.friendly.domain, condor.cs.wisc.edu
 
@@ -845,7 +845,7 @@ UWCS_NEGOTIATOR_PRE_JOB_RANK = RemoteOwner =?= UNDEFINED
 ##  would take place, allowing control to pass on to
 ##  PREEMPTION_RANK.
 UWCS_NEGOTIATOR_POST_JOB_RANK = \
- (RemoteOwner =?= UNDEFINED) * (KFlops - SlotID - 1.0e10*(Offline=?=True))
+ (RemoteOwner =?= UNDEFINED) * (ifthenElse(isUndefined(KFlops), 1000, Kflops) - SlotID - 1.0e10*(Offline=?=True))
 
 ##  The negotiator will not preempt a job running on a given machine
 ##  unless the PREEMPTION_REQUIREMENTS expression evaluates to true
@@ -1764,10 +1764,10 @@ VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, \
                           Accountant.log, Accountantnew.log, \
                           local_univ_execute, .quillwritepassword, \
 						  .pgpass, \
-			  .schedd_address, .schedd_classad
+						  .schedd_address, .schedd_address.super, .schedd_classad, OfflineLog
 
 ##  What files should condor_preen remove from the log directory?
-INVALID_LOG_FILES	= core
+#INVALID_LOG_FILES	= core
 
 ##--------------------------------------------------------------------
 ##  Java parameters:
@@ -2019,132 +2019,6 @@ CRED_STORE_DIR = $(LOCAL_DIR)/cred_dir
 ## credentials, at this interval.
 #CRED_CHECK_INTERVAL = 60
 
-##
-##--------------------------------------------------------------------
-##  Quill Job Queue Mirroring Server
-##--------------------------------------------------------------------
-##  Where is the Quill binary installed and what arguments should be passed?
-QUILL = $(SBIN)/condor_quill
-#QUILL_ARGS =
-
-# Where is the log file for the quill daemon?
-QUILL_LOG = $(LOG)/QuillLog
-
-# The identification and location of the quill daemon for local clients.
-QUILL_ADDRESS_FILE = $(LOG)/.quill_address
-
-# If this is set to true, then the rest of the QUILL arguments must be defined
-# for quill to function. If it is False or left undefined, then quill will not
-# be consulted by either the scheduler or the tools, but in the case of a 
-# remote quill query where the local client has quill turned off, but the
-# remote client has quill turned on, things will still function normally.
-#QUILL_ENABLED = TRUE
-
-# 
-# If Quill is enabled, by default it will only mirror the current job
-# queue into the database. For historical jobs, and classads from other 
-# sources, the SQL Log must be enabled.
-#QUILL_USE_SQL_LOG=FALSE
-
-#
-# The SQL Log can be enabled on a per-daemon basis. For example, to collect
-# historical job information, but store no information about execute machines,
-# uncomment these two lines
-#QUILL_USE_SQL_LOG = FALSE 
-#SCHEDD.QUILL_USE_SQL_LOG = TRUE
-
-# This will be the name of a quill daemon using this config file. This name
-# should not conflict with any other quill name--or schedd name. 
-#QUILL_NAME = quill@postgresql-server.machine.com
-
-# The Postgreql server requires usernames that can manipulate tables. This will
-# be the username associated with this instance of the quill daemon mirroring
-# a schedd's job queue. Each quill daemon must have a unique username 
-# associated with it otherwise multiple quill daemons will corrupt the data
-# held under an identical user name.
-#QUILL_DB_NAME = name_of_db
-
-# The required password for the DB user which quill will use to read 
-# information from the database about the queue.
-#QUILL_DB_QUERY_PASSWORD = foobar
-
-# What kind of database server is this?
-# For now, only PGSQL is supported
-#QUILL_DB_TYPE = PGSQL
-
-# The machine and port of the postgres server.
-# Although this says IP Addr, it can be a DNS name. 
-# It must match whatever format you used for the .pgpass file, however
-#QUILL_DB_IP_ADDR = machine.domain.com:5432
-
-# The login to use to attach to the database for updating information.
-# There should be an entry in file $SPOOL/.pgpass that gives the password 
-# for this login id.
-#QUILL_DB_USER = quillwriter
-
-# Polling period, in seconds, for when quill reads transactions out of the
-# schedd's job queue log file and puts them into the database.
-#QUILL_POLLING_PERIOD = 10
-
-# Allows or disallows a remote query to the quill daemon and database
-# which is reading this log file. Defaults to true.
-#QUILL_IS_REMOTELY_QUERYABLE = TRUE
-
-# Add debugging flags to here if you need to debug quill for some reason.
-#QUILL_DEBUG = D_FULLDEBUG
-
-# Number of seconds the master should wait for the Quill daemon to respond 
-# before killing it. This number might need to be increased for very 
-# large logfiles.
-# The default is 3600 (one hour), but kicking it up to a few hours won't hurt
-#QUILL_NOT_RESPONDING_TIMEOUT = 3600
-
-# Should Quill hold open a database connection to the DBMSD? 
-# Each open connection consumes resources at the server, so large pools
-# (100 or more machines) should set this variable to FALSE. Note the
-# default is TRUE.
-#QUILL_MAINTAIN_DB_CONN = TRUE
-
-##
-##--------------------------------------------------------------------
-##  Database Management Daemon settings
-##--------------------------------------------------------------------
-##  Where is the DBMSd binary installed and what arguments should be passed?
-DBMSD = $(SBIN)/condor_dbmsd
-DBMSD_ARGS = -f
-
-# Where is the log file for the quill daemon?
-DBMSD_LOG = $(LOG)/DbmsdLog
-
-# Interval between consecutive purging calls (in seconds)
-#DATABASE_PURGE_INTERVAL = 86400
-
-# Interval between consecutive database reindexing operations
-# This is only used when dbtype = PGSQL
-#DATABASE_REINDEX_INTERVAL = 86400
-
-# Number of days before purging resource classad history
-# This includes things like machine ads, daemon ads, submitters
-#QUILL_RESOURCE_HISTORY_DURATION = 7
-
-# Number of days before purging job run information 
-# This includes job events, file transfers, matchmaker matches, etc
-# This does NOT include the final job ad. condor_history does not need
-# any of this information to work.
-#QUILL_RUN_HISTORY_DURATION = 7
-
-# Number of days before purging job classad history
-# This is the information needed to run condor_history
-#QUILL_JOB_HISTORY_DURATION = 3650
-
-# DB size threshold for warning the condor administrator. This is checked
-# after every purge. The size is given in gigabytes.
-#QUILL_DBSIZE_LIMIT = 20
-
-# Number of seconds the master should wait for the DBMSD to respond before 
-# killing it. This number might need to be increased for very large databases
-# The default is 3600 (one hour). 
-#DBMSD_NOT_RESPONDING_TIMEOUT = 3600
 
 ##
 ##--------------------------------------------------------------------
@@ -2312,37 +2186,6 @@ LIBVIRT_XML_SCRIPT = $(LIBEXEC)/libvirt_simple_script.awk
 ##  a disk image
 #XEN_BOOTLOADER = /usr/bin/pygrub
 
-##
-##--------------------------------------------------------------------
-##  condor_lease_manager lease manager daemon
-##--------------------------------------------------------------------
-##  Where is the LeaseManager binary installed?
-LeaseManager			= $(SBIN)/condor_lease_manager
-
-# Turn on the lease manager
-#DAEMON_LIST			= $(DAEMON_LIST), LeaseManager
-
-# The identification and location of the lease manager for local clients.
-LeaseManger_ADDRESS_FILE	= $(LOG)/.lease_manager_address
-
-## LeaseManager startup arguments
-#LeaseManager_ARGS		= -local-name generic
-
-## LeaseManager daemon debugging log
-LeaseManager_LOG		= $(LOG)/LeaseManagerLog
-LeaseManager_DEBUG		= D_FULLDEBUG
-MAX_LeaseManager_LOG		= 1000000
-
-# Basic parameters
-LeaseManager.GETADS_INTERVAL	= 60
-LeaseManager.UPDATE_INTERVAL	= 300
-LeaseManager.PRUNE_INTERVAL	= 60
-LeaseManager.DEBUG_ADS		= False
-
-LeaseManager.CLASSAD_LOG	= $(SPOOL)/LeaseManagerState
-#LeaseManager.QUERY_ADTYPE	= Any
-#LeaseManager.QUERY_CONSTRAINTS	= MyType == "SomeType"
-#LeaseManager.QUERY_CONSTRAINTS	= TargetType == "SomeType"
 
 ##
 ##--------------------------------------------------------------------
@@ -2433,16 +2276,16 @@ KBDD_ADDRESS_FILE = $(LOG)/.kbdd_address
 ## The host and port for hadoop's name node. If this machine is the
 ## name node (see HDFS_SERVICES) then the specified port will be used
 ## to run name node. 
-HDFS_NAMENODE = hdfs://example.com:9000
-HDFS_NAMENODE_WEB = example.com:8000
+#HDFS_NAMENODE = hdfs://example.com:9000
+#HDFS_NAMENODE_WEB = example.com:8000
 
-HDFS_BACKUPNODE = hdfs://example.com:50100
-HDFS_BACKUPNODE_WEB = example.com:50105
+#HDFS_BACKUPNODE = hdfs://example.com:50100
+#HDFS_BACKUPNODE_WEB = example.com:50105
 
 ## You need to pick one machine as name node by setting this parameter
 ## to HDFS_NAMENODE. The remaining machines in a storage cluster will
 ## act as data nodes (HDFS_DATANODE).
-HDFS_NODETYPE = HDFS_DATANODE
+#HDFS_NODETYPE = HDFS_DATANODE
 
 ## If machine is selected to be NameNode then by a role should defined.
 ## If it selected to be DataNode then this parameter is ignored.
@@ -2452,7 +2295,7 @@ HDFS_NODETYPE = HDFS_DATANODE
 ##         creating a backup of the namespace. Currently the NameNode
 ##         supports one Backup node at a time.
 ## CHECKPOINT: Periodically creates checkpoints of the namespace. 
-HDFS_NAMENODE_ROLE = ACTIVE
+#HDFS_NAMENODE_ROLE = ACTIVE
 
 ## The two set of directories that are required by HDFS are for name 
 ## node (HDFS_NAMENODE_DIR) and data node (HDFS_DATANODE_DIR). The 
@@ -2460,8 +2303,8 @@ HDFS_NAMENODE_ROLE = ACTIVE
 ## name node service and  is used to store critical meta data for 
 ## files. The data node needs its directory to store file blocks and 
 ## their replicas.
-HDFS_NAMENODE_DIR = /tmp/hadoop_name
-HDFS_DATANODE_DIR = /scratch/tmp/hadoop_data
+#HDFS_NAMENODE_DIR = /tmp/hadoop_name
+#HDFS_DATANODE_DIR = /scratch/tmp/hadoop_data
 
 ## Unlike name node address settings (HDFS_NAMENODE), that needs to be 
 ## well known across the storage cluster, data node can run on any 

@@ -85,7 +85,11 @@ ExprToMultiProfile( classad::ExprTree *expr, MultiProfile *&mp )
 																right, junk );
 
 		while( op == classad::Operation::PARENTHESES_OP ) {
+#if 1
+			if( left->GetKind( ) != classad::ExprTree::OP_NODE ) {
+#else
 			if( left->GetKind( ) == classad::ExprTree::ATTRREF_NODE ) {
+#endif
 				atLeftMostProfile = true;
 				break;
 			}
@@ -194,7 +198,11 @@ ExprToProfile( classad::ExprTree *expr, Profile *&p )
 																right, junk );
 
 		while( op == classad::Operation::PARENTHESES_OP ) {
+#if 1
+			if( left->GetKind( ) != classad::ExprTree::OP_NODE ) {
+#else
 			if( left->GetKind( ) == classad::ExprTree::ATTRREF_NODE ) {
+#endif
 				atLeftMostCondition = true;
 				break;
 			}
@@ -301,7 +309,10 @@ ExprToCondition( classad::ExprTree *expr, Condition *&c )
   				return false;
 			}
 			return true;
-		}	
+		}
+		else if (left->GetKind() != classad::ExprTree::OP_NODE) {
+			break;
+		}
 		( ( classad::Operation * )left )->GetComponents( op, left, right,
 														 junk );
 	}

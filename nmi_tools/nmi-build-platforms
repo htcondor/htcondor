@@ -19,7 +19,7 @@ x86_RedHat6
 # We want to build all branches on Fedora because it is our "warning check" platform
 x86_64_Fedora17
 x86_64_Fedora18
-#x86_64_Fedora19
+x86_64_Fedora19
 
 # We might as well build on SL
 x86_64_SL6

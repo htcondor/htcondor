@@ -2011,7 +2011,16 @@ User \verb@joesmith@ within the
 when originating from machines that match their leftmost
 17 bits of the IP address.
 
-This flexible set of configuration macros could used to define
+\index{authorization!of Unix netgroups}
+For Unix platforms where netgroups are implemented,
+a netgroup may specify a set of fully qualified users by using an
+extension to the syntax for all configuration variables of the form
+\MacroNI{ALLOW\_*} and \MacroNI{DENY\_*}.
+The syntax is the plus sign character (\Expr{+}) followed by the 
+netgroup name.
+Permissions are applied to all members of the netgroup.
+
+This flexible set of configuration macros could be used to define
 conflicting authorization.
 Therefore, the following protocol defines the precedence of the
 configuration macros.

@@ -27,6 +27,7 @@
 #include "condor_network.h"
 #include "condor_sockfunc.h"
 #include "ipv6_hostname.h"
+#include "selector.h"
 
 /*
  * FYI: This code is used by the old shadow/starter and by the syscall lib
@@ -253,10 +254,6 @@ mk_config_name( const char *service_name )
 int tcp_connect_timeout( int sockfd, const condor_sockaddr& serv_addr,
 						int timeout )
 {
-	struct timeval  timer;
-	fd_set			writefds;
-	int				nfound;
-	int				nfds;
 	socklen_t		sz;
 	int				val = 0;
 	int				save_errno;
@@ -294,44 +291,29 @@ int tcp_connect_timeout( int sockfd, const condor_sockaddr& serv_addr,
 	/* set up the wait for the timeout. yeah, I know, dueling select loops
 		and all, it sucks a lot when it is the schedd doing it. :(
 	*/
-	timer.tv_sec = timeout;
-	timer.tv_usec = 0;
-	nfds = sockfd + 1;
-	FD_ZERO( &writefds );
-	FD_SET( sockfd, &writefds );
+	Selector selector;
+	selector.add_fd( sockfd, Selector::IO_WRITE );
+	selector.set_timeout( timeout );
 
-	DO_AGAIN:
-	nfound = select( nfds,
-					(fd_set*) 0,
-					(fd_set*) &writefds,
-					(fd_set*) 0,
-					(struct timeval *)&timer );
+	/* Keep retrying if we get a signal. Under the right frequency of
+	 * signals this may never end. This is improbable...
+	 */
+	do {
+		selector.execute();
+	} while ( selector.signalled() );
 
-	if (nfound < 0) {
-		if (errno == EINTR) {
-
-			/* Got a signal, try again. Under the right frequency of signals
-				this may never end. This is improbable... */
-			timer.tv_sec = timeout;
-			timer.tv_usec = 0;
-			nfds = sockfd + 1;
-			FD_ZERO( &writefds );
-			FD_SET( sockfd, &writefds );
-			goto DO_AGAIN;
-		}
-
+	if ( selector.failed() ) {
 		/* wasn't a signal, so select failed with some other error */
-		save_errno = errno;
 		if (set_fd_blocking(sockfd) < 0) {
 			return -1;
 		}
-		errno = save_errno;
+		errno = selector.select_errno();
 		/* The errno I'm returning here isn't right, since it is the
 			one from select(), not the one from connect(), but there really
 			isn't a good option at this point. */
 		return -1;
 
-	} else if (nfound == 0) {
+	} else if ( selector.timed_out() ) {
 		/* connection timed out */
 
 		if (set_fd_blocking(sockfd) < 0) {
@@ -428,41 +410,29 @@ int set_fd_blocking(int fd)
 int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sinful, int *len,
                        int timeout)
 {
-	int             count;
-	fd_set  		readfds;
-	struct timeval 	timer;
 	int				newsock;
 	SOCKET_LENGTH_TYPE slt_len;
 
 	slt_len = *len;
 
-    timer.tv_sec = timeout;
-    timer.tv_usec = 0;
-    FD_ZERO( &readfds );
-    FD_SET( ConnectionSock, &readfds );
-#if defined(AIX31) || defined(AIX32)
-	errno = EINTR;  /* Shouldn't have to do this... */
-#endif
-    count = select(ConnectionSock+1,
-				   (SELECT_FDSET_PTR) &readfds,
-				   (SELECT_FDSET_PTR) 0,
-				   (SELECT_FDSET_PTR) 0,
-                   (struct timeval *)&timer );
-    if( count < 0 ) {
-		if( errno == EINTR ) {
-			dprintf( D_ALWAYS, "select() interrupted, restarting...\n");
-			return -3;
-		} else {
-			EXCEPT( "select() returns %d, errno = %d", count, errno );
-		}
+	Selector selector;
+	selector.add_fd( ConnectionSock, Selector::IO_READ );
+	selector.set_timeout( timeout );
+	selector.execute();
+	if ( selector.signalled() ) {
+		dprintf( D_ALWAYS, "select() interrupted, restarting...\n");
+		return -3;
+	}
+	if ( selector.failed() ) {
+		EXCEPT( "select() returns %d, errno = %d", selector.select_retval(), selector.select_errno() );
     }
 	/*
 	 ** dprintf( D_FULLDEBUG, "Select returned %d\n", NFDS(count) );
 	 */
 
-    if( count == 0 ) {
+    if( selector.timed_out() ) {
 		return -2;
-    } else if( FD_ISSET(ConnectionSock,&readfds) ) {
+    } else if ( selector.fd_ready( ConnectionSock, Selector::IO_READ ) ) {
 		newsock =  accept( ConnectionSock, (struct sockaddr *)sinful, (socklen_t*)&slt_len);
 		if ( newsock > -1 ) {
 			int on = 1;
@@ -471,7 +441,7 @@ int tcp_accept_timeout(int ConnectionSock, struct sockaddr *sinful, int *len,
 		}
 		return (newsock);
     } else {
-		EXCEPT( "select: unknown connection, count = %d", count );
+		EXCEPT( "select: unknown connection, count = %d", selector.select_retval() );
     }
 
     return -1;

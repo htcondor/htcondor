@@ -691,6 +691,12 @@ protected:
 		*/
 	bool readAddressFile( const char* subsys );
 
+		/** Should we try to access the daemon via the super port?
+		    @return true if we are a client tool running as root or
+			via the condor_super tool, false if not
+		*/
+	bool useSuperPort();
+
 		/** Code for parsing a locally-written classad, which should
 			contain everything about the daemon
 			@return true if we found everthing in the ad, false if not

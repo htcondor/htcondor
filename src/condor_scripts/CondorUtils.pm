@@ -17,7 +17,7 @@ our $VERSION = '1.00';
 
 use base 'Exporter';
 
-our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE);
+our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE is_cygwin_perl is_windows_native_perl fullchomp);
 
 sub TRUE{1};
 sub FALSE{0};

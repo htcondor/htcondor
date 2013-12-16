@@ -126,11 +126,21 @@ $success = sub {
 		CondorTest::debug("Received: $_\n",1);
 	}
 	if( $#received != $#expected_output ) {
-		die "Received unexpected number $#received of lines\n";	
+		my $expected = scalar @expected_output;
+		my $received = scalar @received;
+		print STDERR "Expected:\n";
+		foreach my $line (@expected_output) { print "    $line\n"; }
+		print STDERR "Actual:\n";
+		foreach my $line (@received) { print "    $line\n"; }
+		die "Expected $expected lines of output, found $received\n";
 	}
 	# First loop: See that we got the expected patterns
 	foreach my $i (0..$#expected_output) {
 		if($received[$i] !~ /$expected_output[$i]/) {
+			print STDERR "Expected:\n";
+			foreach my $line (@expected_output) { print "    $line\n"; }
+			print STDERR "Actual:\n";
+			foreach my $line (@received) { print "    $line\n"; }
 			die "Expected $received[$i], but got \"$expected_output[$i]\"\n";
 		}
 	}

@@ -56,6 +56,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_syscall_mode.h"
+#include "pool_allocator.h"
 #include "condor_config.h"
 #include "condor_string.h"
 #include "string_list.h"
@@ -83,14 +84,20 @@
 #include "extArray.h"
 #include "subsystem_info.h"
 #include "param_info.h"
+#include "param_info_tables.h"
 #include "Regex.h"
+#include <algorithm> // for std::sort
+
+// define this to keep param who's values match defaults from going into to runtime param table.
+#define DISCARD_CONFIG_MATCHING_DEFAULT
+// define this to parse for #opt:newcomment/#opt:oldcomment to decide commenting rules
+#define PARSE_CONFIG_TO_DECIDE_COMMENT_RULES
 
 extern "C" {
 	
 // Function prototypes
-void real_config(const char* host, int wantsQuiet, bool wantExtraInfo);
-int Read_config(const char*, BUCKET**, int, int, bool,
-				ExtraParamTable* = NULL, const char * subsys = NULL);
+void real_config(const char* host, int wantsQuiet, int config_options);
+int Read_config(const char*, MACRO_SET& macro_set, int, bool, const char * subsys);
 bool is_piped_command(const char* filename);
 bool is_valid_command(const char* cmdToExecute);
 int SetSyscalls(int);
@@ -111,9 +118,247 @@ void check_params();
 extern int	ConfigLineNo;
 }  /* End extern "C" */
 
+
 // Global variables
-BUCKET	*ConfigTab[TABLESIZE];
-static ExtraParamTable *extra_info = NULL;
+static MACRO_DEFAULTS ConfigMacroDefaults = { 0, NULL, NULL };
+static MACRO_SET ConfigMacroSet = {
+	0, 0,
+	/* CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULT | */ 0,
+	0, NULL, NULL, ALLOCATION_POOL(), std::vector<const char*>(), &ConfigMacroDefaults };
+const MACRO_SOURCE DetectedMacro = { true,  0, -2, -1, -2 };
+const MACRO_SOURCE DefaultMacro  = { true,  1, -2, -1, -2 };
+const MACRO_SOURCE EnvMacro      = { false, 2, -2, -1, -2 };
+const MACRO_SOURCE WireMacro     = { false, 3, -2, -1, -2 };
+
+#ifdef _POOL_ALLOCATOR
+
+void _allocation_hunk::reserve(int cb)
+{
+	if (this->pb != NULL && cb <= (this->cbAlloc - this->ixFree))
+		return;
+
+	if ( ! this->pb) {
+#if 0 //def WIN32
+		this->pb = (char*)VirtualAlloc(NULL, cb, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+#else
+		this->pb = (char*)malloc(cb);
+#endif
+		this->cbAlloc = cb;
+	} else {
+		// can't reserve memory if the hunk already has an allocation
+	}
+}
+
+void
+_allocation_pool::clear()
+{
+	for (int ii = 0; ii < this->cMaxHunks; ++ii) {
+		if (ii > this->nHunk) break;
+#if 0 //def WIN32
+		if (this->phunks[ii].pb) { VirtualFree(this->phunks[ii].pb, this->phunks[ii].cbAlloc, MEM_RELEASE); }
+#else
+		if (this->phunks[ii].pb) { free(this->phunks[ii].pb); }
+#endif
+		this->phunks[ii].pb = NULL;
+		this->phunks[ii].cbAlloc = 0;
+		this->phunks[ii].ixFree = 0;
+	}
+	delete [] this->phunks;
+	this->phunks = NULL;
+	this->cMaxHunks = 0;
+	this->nHunk = 0;
+}
+
+void _allocation_pool::swap(struct _allocation_pool & other)
+{
+	int tmp_cMaxHunks =  this->cMaxHunks;
+	int tmp_nHunk = this->nHunk;
+	ALLOC_HUNK * tmp_phunks = this->phunks;
+	this->cMaxHunks = other.cMaxHunks;
+	this->nHunk = other.nHunk;
+	this->phunks = other.phunks;
+	other.cMaxHunks = tmp_cMaxHunks;
+	other.nHunk = tmp_nHunk;
+	other.phunks = tmp_phunks;
+}
+
+int  _allocation_pool::usage(int & cHunks, int & cbFree)
+{
+	int cb = 0;
+	cHunks = 0;
+	cbFree = 0;
+	for (int ii = 0; ii < this->cMaxHunks; ++ii) {
+		if (ii > this->nHunk) break;
+		ALLOC_HUNK * ph = &this->phunks[ii];
+		if ( ! ph->cbAlloc || ! ph->pb)
+			continue;
+		++cHunks;
+		cb += ph->ixFree;
+		cbFree += (ph->cbAlloc - ph->ixFree) & ~(this->alignment()-1);
+	}
+	return cb;
+}
+
+
+char * _allocation_pool::consume(int cb, int cbAlign)
+{
+	if ( ! cb) return NULL;
+	cbAlign = MAX(cbAlign, this->alignment());
+	int cbConsume = (cb + cbAlign-1) & ~(cbAlign-1);
+
+	// if this is a virgin pool, give it a default reserve of 4 Kb
+	if ( ! this->cMaxHunks || ! this->phunks) {
+		this->cMaxHunks = 1;
+		this->nHunk = 0;
+		this->phunks = new ALLOC_HUNK[this->cMaxHunks];
+		int cbAlloc = MAX(this->def_first_alloc(), cbConsume); // default first allocation is 4k
+		this->phunks[0].reserve(cbAlloc);
+	}
+
+	ALLOC_HUNK * ph = NULL;
+	int cbFree = 0;
+	if (this->nHunk < this->cMaxHunks) {
+		ph = &this->phunks[this->nHunk];
+		cbFree = ph->cbAlloc - ph->ixFree;
+	}
+
+	// do we need to allocate more hunks to service this request?
+	//
+	if (cbConsume > cbFree) {
+
+		// if the current hunk has no allocation, give it a default allocation
+		// equal to the previous hunk allocation * 2
+		if (ph && ! ph->pb) {
+			int cbAlloc = (this->nHunk > 0) ? (this->phunks[this->nHunk-1].cbAlloc * 2) : (16 * 1024);
+			cbAlloc = MAX(cbAlloc, cbConsume);
+			ph->reserve(cbAlloc);
+		} else if (this->nHunk+1 >= this->cMaxHunks) {
+			// if the hunk vector is fully populated, double it's size and transfer
+			// the existing hunks into the new vector.
+			ASSERT(this->nHunk+1 == this->cMaxHunks);
+			ALLOC_HUNK * pnew = new ALLOC_HUNK[this->cMaxHunks*2];
+			if ( ! pnew)
+				return NULL;
+
+			// transfer ownership of the existing hunks to the new hunkyness.
+			for (int ii = 0; ii < this->cMaxHunks; ++ii) {
+				pnew[ii] = this->phunks[ii];
+				this->phunks[ii].pb = NULL;
+			}
+			delete [] this->phunks;
+			this->phunks = pnew;
+			this->cMaxHunks *= 2;
+		}
+
+		// if the current hunk has no allocation, give it a default allocation
+		// equal to the previous hunk allocation * 2
+		ph = &this->phunks[this->nHunk];
+		if ( ! ph->pb) {
+			int cbAlloc = (this->nHunk > 0) ? (this->phunks[this->nHunk-1].cbAlloc * 2) : (16 * 1024);
+			cbAlloc = MAX(cbAlloc, cbConsume);
+			ph->reserve(cbAlloc);
+		}
+
+		PRAGMA_REMIND("TJ: fix to account for extra size needed to align start ptr")
+		if (ph->ixFree + cbConsume > ph->cbAlloc) {
+			int cbAlloc = MAX(ph->cbAlloc * 2, cbConsume);
+			ph = &this->phunks[++this->nHunk];
+			ph->reserve(cbAlloc);
+		}
+	}
+
+	char * pb = ph->pb + ph->ixFree;
+	if (cbConsume > cb) memset(pb+cb, 0, cbConsume - cb);
+	ph->ixFree += cbConsume;
+	return pb;
+}
+
+const char *
+_allocation_pool::insert(const char * pbInsert, int cbInsert)
+{
+	if ( ! pbInsert || ! cbInsert) return NULL;
+	char * pb = this->consume(cbInsert, 1);
+	if (pb) memcpy(pb, pbInsert, cbInsert);
+	return pb;
+}
+
+const char *
+_allocation_pool::insert(const char * psz)
+{
+	if ( ! psz) return NULL;
+	int cb = (int)strlen(psz);
+	if ( ! cb) return "";
+	return this->insert(psz, cb+1);
+}
+
+bool
+_allocation_pool::contains(const char * pb)
+{
+	if ( ! pb || ! this->phunks || ! this->cMaxHunks)
+		return false;
+	for (int ii = 0; ii < this->cMaxHunks; ++ii) {
+		if (ii > this->nHunk) break;
+
+		ALLOC_HUNK * ph = &this->phunks[ii];
+		if ( ! ph->cbAlloc || ! ph->pb || ! ph->ixFree)
+			continue;
+
+		// if this address is within the allocation of this hunk, then
+		// the pool contains this pointer.
+		if (pb >= ph->pb && (int)(pb - ph->pb) < ph->ixFree)
+			return true;
+	}
+	return false;
+}
+
+void
+_allocation_pool::reserve(int cbReserve)
+{
+	// for now, just consume some memory, and then free it back to the pool
+	this->free(this->consume(cbReserve, 1));
+}
+
+void
+_allocation_pool::compact(int cbLeaveFree)
+{
+	if ( ! this->phunks || ! this->cMaxHunks)
+		return;
+
+	const int dont_bother_size = MAX(this->alignment(), 32); // don't bother freeing if savings < this.
+	for (int ii = 0; ii < this->cMaxHunks; ++ii) {
+		if (ii > this->nHunk) break;
+		ALLOC_HUNK * ph = &this->phunks[ii];
+		if (ph->pb && (ph->cbAlloc - ph->ixFree) > dont_bother_size) {
+			int cbToFree = (ph->cbAlloc - ph->ixFree) & ~(this->alignment()-1);
+			cbLeaveFree -= cbToFree;
+			if (cbLeaveFree >= 0) {
+				cbToFree = 0;
+			} else {
+				cbToFree = -cbLeaveFree & ~(this->alignment()-1);
+				cbLeaveFree = 0;
+			}
+			if (cbToFree > dont_bother_size) {
+				void * pb = realloc(ph->pb, ph->ixFree);
+				ASSERT(pb == ph->pb);
+				ph->cbAlloc = ph->ixFree;
+			}
+		}
+	}
+}
+
+void
+_allocation_pool::free(const char * pb)
+{
+	if ( ! pb || ! this->phunks || this->nHunk >= this->cMaxHunks) return;
+	ALLOC_HUNK * ph = &this->phunks[this->nHunk];
+	size_t cbUnwind = (ph->pb + ph->ixFree) - pb;
+	if (cbUnwind > 0 && cbUnwind <= (size_t)ph->ixFree)
+		ph->ixFree -= (int)cbUnwind;
+}
+
+
+#endif // _POOL_ALLOCATOR
+
 static char* tilde = NULL;
 static bool have_config_source = true;
 static bool continue_if_no_config = false; // so condor_who won't exit if no config found.
@@ -124,14 +369,52 @@ StringList local_config_sources;
 
 param_functions config_p_funcs;
 
-static int ParamValueNameAscendingSort(const void *l, const void *r);
-
 
 bool config_continue_if_no_config(bool contin)
 {
 	bool old_contin = continue_if_no_config;
 	continue_if_no_config = contin;
 	return old_contin;
+}
+
+void config_dump_sources(FILE * fh, const char * sep)
+{
+	for (int ii = 0; ii < (int)ConfigMacroSet.sources.size(); ++ii) {
+		fprintf(fh, "%s%s", ConfigMacroSet.sources[ii], sep);
+	}
+}
+
+const char* config_source_by_id(int source_id)
+{
+	if (source_id >= 0 && source_id < (int)ConfigMacroSet.sources.size())
+		return ConfigMacroSet.sources[source_id];
+	return NULL;
+}
+
+void config_dump_string_pool(FILE * fh, const char * sep)
+{
+	int cEmptyStrings = 0;
+	ALLOCATION_POOL * ap = &ConfigMacroSet.apool;
+	for (int ii = 0; ii < ap->cMaxHunks; ++ii) {
+		if (ii > ap->nHunk) break;
+		ALLOC_HUNK * ph = &ap->phunks[ii];
+		if ( ! ph->cbAlloc || ! ph->pb)
+			continue;
+		const char * psz = ph->pb;
+		const char * pszEnd = ph->pb + ph->ixFree;
+		while (psz < pszEnd) {
+			int cch = strlen(psz);
+			if (cch > 0) {
+				fprintf(fh, "%s%s", psz, sep);
+			} else {
+				++cEmptyStrings;
+			}
+			psz += cch+1;
+		}
+	}
+	if (cEmptyStrings > 0) {
+		fprintf(fh, "! %d empty strings found\n", cEmptyStrings);
+	}
 }
 
 // Function implementations
@@ -211,6 +494,73 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 	ad->Assign( ATTR_PLATFORM, CondorPlatform() );
 }
 
+/*
+static bool macro_set_default_sort(MACRO_ITEM const & a, MACRO_ITEM const & b)
+{
+	return strcasecmp(a.key, b.key) < 0;
+}*/
+
+//#define OPTIMIZE_COMPACT_STRING_POOL
+
+// this is a helper class for sorting the param table and 
+// the associated metadata table
+//
+class MACRO_SORTER {
+public:
+	MACRO_SET & set;
+	MACRO_SORTER(MACRO_SET & setIn) : set(setIn) {}
+	bool operator()(MACRO_META const & a, MACRO_META const & b) {
+		int ixa = a.index;
+		int ixb = b.index;
+		if  ( !  ((ixa >= 0 && ixa < set.size) && (ixb >= 0 && ixb < set.size)) ) {
+			return false;
+		}
+		return strcasecmp(set.table[ixa].key, set.table[ixb].key) < 0;
+	};
+	bool operator()(MACRO_ITEM const & a, MACRO_ITEM const & b) {
+		return strcasecmp(a.key, b.key) < 0;
+	};
+};
+
+void optimize_macros(MACRO_SET & set)
+{
+	if (set.size <= 1)
+		return;
+
+	// the metadata table has entries that give the index of the corresponding
+	// entry in the param table so that we can sort it. So we have to sort
+	// sort the metadata the metadata first, then the param table itself
+	// and finally then fixup the indexes in the metadata table.
+	//
+	MACRO_SORTER sorter(set);
+	if (set.metat) { std::sort(&set.metat[0], &set.metat[set.size], sorter); }
+	std::sort(&set.table[0], &set.table[set.size], sorter);
+	if (set.metat) { for (int ix = 0; ix < set.size; ++ix) { set.metat[ix].index = ix; } }
+	set.sorted = set.size;
+
+#ifdef OPTIMIZE_COMPACT_STRING_POOL
+	// build a compact string pool.
+	int cbFree, cHunks, cb = set.apool.usage(cHunks, cbFree);
+	if (cbFree > 1024) {
+		ALLOCATION_POOL tmp;
+		tmp.reserve(cb);
+		set.apool.swap(tmp);
+
+		for (int ii = 0; ii < set.size; ++ii) {
+			MACRO_ITEM * pi = &set.table[ii];
+			if (tmp.contains(pi->key)) pi->key = set.apool.insert(pi->key);
+			if (tmp.contains(pi->raw_value)) pi->raw_value = set.apool.insert(pi->raw_value);
+		}
+
+		for (int ii = 0; ii < (int)set.sources.size(); ++ii) {
+			if (tmp.contains(set.sources[ii])) set.sources[ii] = set.apool.insert(set.sources[ii]);
+		}
+
+		tmp.clear();
+		cb = set.apool.usage(cHunks, cbFree);
+	}
+#endif // OPTIMIZE_COMPACT_STRING_POOL
+}
 
 /*
 Walks all found configuration entries looking for the
@@ -220,20 +570,26 @@ Output is via a giant EXCEPT string because the dprintf
 system probably isn't working yet.
 */
 const char * FORBIDDEN_CONFIG_VAL = "YOU_MUST_CHANGE_THIS_INVALID_CONDOR_CONFIGURATION_VALUE";
-static void
-validate_entries( bool ignore_invalid_entry ) {
-	HASHITER it = hash_iter_begin( ConfigTab, TABLESIZE );
+void validate_config(bool abort_if_invalid)
+{
+	HASHITER it = hash_iter_begin(ConfigMacroSet, HASHITER_NO_DEFAULTS);
 	unsigned int invalid_entries = 0;
 	MyString tmp;
 	MyString output = "The following configuration macros appear to contain default values that must be changed before Condor will run.  These macros are:\n";
 	while( ! hash_iter_done(it) ) {
-		char * val = hash_iter_value(it);
-		if( strstr(val, FORBIDDEN_CONFIG_VAL) ) {
-			char * name = hash_iter_key(it);
+		const char * val = hash_iter_value(it);
+		if (val && strstr(val, FORBIDDEN_CONFIG_VAL)) {
+			const char * name = hash_iter_key(it);
+#if 1
+			MyString filename;
+			param_get_location(hash_iter_meta(it), filename);
+			tmp.formatstr("   %s (found at %s)\n", name, filename.Value());
+#else
 			MyString filename;
 			int line_number;
 			param_get_location(name, filename, line_number);
 			tmp.formatstr("   %s (found on line %d of %s)\n", name, line_number, filename.Value());
+#endif
 			output += tmp;
 			invalid_entries++;
 		}
@@ -241,98 +597,60 @@ validate_entries( bool ignore_invalid_entry ) {
 	}
 	hash_iter_delete(&it);
 	if(invalid_entries > 0) {
-		if(ignore_invalid_entry) {
-			dprintf(D_ALWAYS, "%s", output.Value());
-		} else {
+		if (abort_if_invalid) {
 			EXCEPT("%s", output.Value());
+		} else {
+			dprintf(D_ALWAYS, "%s", output.Value());
 		}
 	}
 }
 
-// return a list sorted by macro name of all of the macro values found in the
-// locally defined files.
-ExtArray<ParamValue>*
-param_all(void)
+void foreach_param(int options, bool (*fn)(void* user, HASHITER& it), void* user)
 {
-	ExtArray<ParamValue> *pvs = NULL;
-	MyString filename;
-	int line_number;
-	MyString str;
-	HASHITER it = hash_iter_begin( ConfigTab, TABLESIZE );
-	char *name = NULL;
-	char *value = NULL;
-	int i;
-	ParamValue *sort_array = NULL;
+	HASHITER it = hash_iter_begin(ConfigMacroSet, options);
+	while ( ! hash_iter_done(it)) {
+		if ( ! fn(user, it))
+			break;
+		hash_iter_next(it);
+	}
+	hash_iter_delete(&it);
+}
 
-	pvs = new ExtArray<ParamValue>;
-	ASSERT(pvs);
+void foreach_param_matching(Regex & re, int options, bool (*fn)(void* user, HASHITER& it), void* user)
+{
+	HASHITER it = hash_iter_begin(ConfigMacroSet, options);
+	while ( ! hash_iter_done(it)) {
+		const char *name = hash_iter_key(it);
+		if (re.match(name)) {
+			if ( ! fn(user, it))
+				break;
+		}
+		hash_iter_next(it);
+	}
+	hash_iter_delete(&it);
+}
 
-	// walk the config table and insert everything I found into the list.
-	i = 0;
-	while( ! hash_iter_done(it) ) {
-		name = hash_iter_key(it);
-		value = hash_iter_value(it);
-		param_get_location(name, filename, line_number);
-
-		(*pvs)[i].name = name;
-		(*pvs)[i].value = value;
-		(*pvs)[i].filename = filename;
-		(*pvs)[i].lnum = line_number;
-		(*pvs)[i].source = "Local Config File";
-
-		i++;
-
+// return a list of param names that match the given regex, this list is in hashtable order (i.e. no order)	
+int param_names_matching(Regex & re, ExtArray<const char *>& names)
+{	
+	int cAdded = 0;
+	HASHITER it = hash_iter_begin(ConfigMacroSet);
+	while( ! hash_iter_done(it)) {
+		const char *name = hash_iter_key(it);
+		if (re.match(name)) {
+			names.add(name);
+			++cAdded;
+		}
 		hash_iter_next(it);
 	}
 	hash_iter_delete(&it);
 
-	// Sort the list based upon name
-	// qsort and extArray don't play nice together...
-
-	// copy the data to a new POD array
-
-	sort_array = new ParamValue[pvs->getlast() + 1];
-	ASSERT(sort_array);
-
-	for (i = 0; i < pvs->getlast() + 1; i++) {
-		sort_array[i] = (*pvs)[i];
-	}
-
-	// sort it
-	qsort(sort_array, pvs->getlast() + 1, sizeof(ParamValue),
-		ParamValueNameAscendingSort);
-
-	// copy it back into the ExtArray
-	for (i = 0; i < pvs->getlast() + 1; i++) {
-		(*pvs)[i] = sort_array[i];
-	}
-	
-	delete [] sort_array;
-
-	return pvs;
-}
-
-// return a list of param names that match the given regex, this list is in hashtable order (i.e. no order)	
-int param_names_matching(Regex & re, ExtArray<const char *>& names)	
-{	
-	int cAdded = 0;	
-	HASHITER it = hash_iter_begin(ConfigTab, TABLESIZE);	
-	while( ! hash_iter_done(it)) {	
-		const char *name = hash_iter_key(it);	
-		if (re.match(name)) {	
-			names.add(name);	
-			++cAdded;	
-		}	
-		hash_iter_next(it);	
-	}	
-	hash_iter_delete(&it);	
-
-	return cAdded;	
+	return cAdded;
 }
 
 int param_names_matching(Regex& re, std::vector<std::string>& names) {
     const int s0 = names.size();
-    HASHITER it = hash_iter_begin(ConfigTab, TABLESIZE);
+    HASHITER it = hash_iter_begin(ConfigMacroSet);
     for (;  !hash_iter_done(it);  hash_iter_next(it)) {
 		const char *name = hash_iter_key(it);
 		if (re.match(name)) names.push_back(name);
@@ -341,40 +659,29 @@ int param_names_matching(Regex& re, std::vector<std::string>& names) {
     return names.size() - s0;
 }
 
-
-static int ParamValueNameAscendingSort(const void *l, const void *r)
+// the generic config entry point for most call sites
+void config() 
 {
-	const ParamValue *left = (const ParamValue*)l;
-	const ParamValue *right = (const ParamValue*)r;
-
-	if (left->name < right->name) {
-		return -1;
-	}
-
-	if (left->name > right->name) {
-		return 1;
-	}
-
-	return 0;
+	const bool abort_if_invalid = true;
+	return config_ex(0, abort_if_invalid, CONFIG_OPT_WANT_META);
 }
 
-
-void
-config( int wantsQuiet, bool ignore_invalid_entry, bool wantsExtraInfo )
+// the full-figured config entry point
+void config_ex(int wantsQuiet, bool abort_if_invalid, int config_options)
 {
 #ifdef WIN32
 	char *locale = setlocale( LC_ALL, "English" );
-	dprintf ( D_LOAD | D_VERBOSE, "Locale: %s\n", locale );
+	//dprintf ( D_LOAD | D_VERBOSE, "Locale: %s\n", locale );
 #endif
-	real_config( NULL, wantsQuiet, wantsExtraInfo );
-	validate_entries( ignore_invalid_entry );
+	real_config(NULL, wantsQuiet, config_options);
+	validate_config(abort_if_invalid);
 }
 
 
 void
-config_host( const char* host )
+config_host(const char* host, int wantsQuiet, int config_options)
 {
-	real_config( host, 0, true );
+	real_config(host, wantsQuiet, config_options);
 }
 
 /* This function initialize GSI (maybe other) authentication related
@@ -499,7 +806,7 @@ condor_auth_config(int is_daemon)
 }
 
 void
-real_config(const char* host, int wantsQuiet, bool wantExtraInfo)
+real_config(const char* host, int wantsQuiet, int config_options)
 {
 	char* config_source = NULL;
 	char* tmp = NULL;
@@ -508,16 +815,11 @@ real_config(const char* host, int wantsQuiet, bool wantExtraInfo)
 	static bool first_time = true;
 	if( first_time ) {
 		first_time = false;
-		init_config(wantExtraInfo);
+		init_config(config_options);
 	} else {
 			// Clear out everything in our config hash table so we can
 			// rebuild it from scratch.
 		clear_config();
-		if (wantExtraInfo) {
-			extra_info = new ExtraParamTable();
-		} else {
-			extra_info = new DummyExtraParamTable();
-		}
 	}
 
 	dprintf( D_CONFIG, "config: using subsystem '%s', local '%s'\n",
@@ -535,8 +837,7 @@ real_config(const char* host, int wantsQuiet, bool wantExtraInfo)
 
 		// Insert an entry for "tilde", (~condor)
 	if( tilde ) {
-		insert( "TILDE", tilde, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("TILDE");
+		insert("TILDE", tilde, ConfigMacroSet, DetectedMacro);
 
 	} else {
 			// What about tilde if there's no ~condor?
@@ -615,20 +916,15 @@ real_config(const char* host, int wantsQuiet, bool wantExtraInfo)
 		// DEFAULT_DOMAIN_NAME parameter somewhere if they need it.
 		// -Derek Wright <wright@cs.wisc.edu> 5/11/98
 	if( host ) {
-		insert( "HOSTNAME", host, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("HOSTNAME");
+		insert("HOSTNAME", host, ConfigMacroSet, DetectedMacro);
 	} else {
-		insert( "HOSTNAME", get_local_hostname().Value(), ConfigTab,
-				TABLESIZE );
-		extra_info->AddInternalParam("HOSTNAME");
+		insert("HOSTNAME", get_local_hostname().Value(), ConfigMacroSet, DetectedMacro);
 	}
-	insert( "FULL_HOSTNAME", get_local_fqdn().Value(), ConfigTab, TABLESIZE );
-	extra_info->AddInternalParam("FULL_HOSTNAME");
+	insert("FULL_HOSTNAME", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro);
 
 		// Also insert tilde since we don't want that over-written.
 	if( tilde ) {
-		insert( "TILDE", tilde, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("TILDE");
+		insert("TILDE", tilde, ConfigMacroSet, DetectedMacro);
 	}
 
 		// Read in the LOCAL_CONFIG_FILE as a string list and process
@@ -688,13 +984,11 @@ real_config(const char* host, int wantsQuiet, bool wantExtraInfo)
 		if( !strcmp( macro_name, "START_owner" ) ) {
 			MyString ownerstr;
 			ownerstr.formatstr( "Owner == \"%s\"", varvalue );
-			insert( "START", ownerstr.Value(), ConfigTab, TABLESIZE );
-			extra_info->AddEnvironmentParam("START");
+			insert("START", ownerstr.Value(), ConfigMacroSet, EnvMacro);
 		}
 		// ignore "_CONDOR_" without any macro name attached
 		else if( macro_name[0] != '\0' ) {
-			insert( macro_name, varvalue, ConfigTab, TABLESIZE );
-			extra_info->AddEnvironmentParam(macro_name);
+			insert(macro_name, varvalue, ConfigMacroSet, EnvMacro);
 		}
 
 		free( varname );
@@ -742,6 +1036,11 @@ real_config(const char* host, int wantsQuiet, bool wantExtraInfo)
 		// correct.
 	check_domain_attributes();
 
+		// once the config table is fully populated, we can optimize it.
+		// WARNING!! if you insert new params after this, the able *might*
+		// be de-optimized.
+	optimize_macros(ConfigMacroSet);
+
 		// We have to do some platform-specific checking to make sure
 		// all the parameters we think are defined really are.
 	check_params();
@@ -779,8 +1078,8 @@ process_config_source( const char* file, const char* name,
 			exit( 1 );
 		}
 	} else {
-		rval = Read_config( file, ConfigTab, TABLESIZE, EXPAND_LAZY,
-							false, extra_info, get_mySubSystem()->getName());
+		rval = Read_config( file, ConfigMacroSet, EXPAND_LAZY,
+							false, get_mySubSystem()->getName());
 		if( rval < 0 ) {
 			fprintf( stderr,
 					 "Configuration Error Line %d while reading %s %s\n",
@@ -790,6 +1089,7 @@ process_config_source( const char* file, const char* name,
 	}
 }
 
+const char * simulated_local_config = NULL;
 
 // Param for given name, read it in as a string list, and process each
 // config source listed there.  If the value is actually a cmd whose
@@ -810,6 +1110,7 @@ process_locals( const char* param_name, const char* host )
 		} else {
 			sources_to_process.initializeFromString( sources_value );
 		}
+		if (simulated_local_config) sources_to_process.append(simulated_local_config);
 		sources_to_process.rewind();
 		while( (source = sources_to_process.next()) ) {
 			process_config_source( source, "config source", host,
@@ -1200,98 +1501,80 @@ fill_attributes()
 	MyString val;
 
 	if( (tmp = sysapi_condor_arch()) != NULL ) {
-		insert( "ARCH", tmp, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("ARCH");
+		insert("ARCH", tmp, ConfigMacroSet, DetectedMacro);
 	}
 
 	if( (tmp = sysapi_uname_arch()) != NULL ) {
-		insert( "UNAME_ARCH", tmp, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("UNAME_ARCH");
+		insert("UNAME_ARCH", tmp, ConfigMacroSet, DetectedMacro);
 	}
 
 	if( (tmp = sysapi_opsys()) != NULL ) {
-		insert( "OPSYS", tmp, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("OPSYS");
+		insert("OPSYS", tmp, ConfigMacroSet, DetectedMacro);
 
 		int ver = sysapi_opsys_version();
 		if (ver > 0) {
 			val.formatstr("%d", ver);
-			insert( "OPSYSVER", val.Value(), ConfigTab, TABLESIZE );
-			extra_info->AddInternalParam("OPSYSVER");
+			insert("OPSYSVER", val.Value(), ConfigMacroSet, DetectedMacro);
 		}
 	}
 
 	if( (tmp = sysapi_opsys_versioned()) != NULL ) {
-		insert( "OPSYSANDVER", tmp, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("OPSYSANDVER");
+		insert("OPSYSANDVER", tmp, ConfigMacroSet, DetectedMacro);
 	}
 
 	if( (tmp = sysapi_uname_opsys()) != NULL ) {
-		insert( "UNAME_OPSYS", tmp, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("UNAME_OPSYS");
+		insert("UNAME_OPSYS", tmp, ConfigMacroSet, DetectedMacro);
 	}
 
 	int major_ver = sysapi_opsys_major_version();
 	if (major_ver > 0) {
 		val.formatstr("%d", major_ver);
-		insert( "OPSYSMAJORVER", val.Value(), ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("OPSYSMAJORVER");
+		insert("OPSYSMAJORVER", val.Value(), ConfigMacroSet, DetectedMacro);
 	}
 
 	if( (tmp = sysapi_opsys_name()) != NULL ) {
-		insert( "OPSYSNAME", tmp, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("OPSYSNAME");
+		insert("OPSYSNAME", tmp, ConfigMacroSet, DetectedMacro);
 	}
 	
 	if( (tmp = sysapi_opsys_long_name()) != NULL ) {
-		insert( "OPSYSLONGNAME", tmp, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("OPSYSLONGNAME");
+		insert("OPSYSLONGNAME", tmp, ConfigMacroSet, DetectedMacro);
 	}
 
 	if( (tmp = sysapi_opsys_short_name()) != NULL ) {
-		insert( "OPSYSSHORTNAME", tmp, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("OPSYSSHORTNAME");
+		insert("OPSYSSHORTNAME", tmp, ConfigMacroSet, DetectedMacro);
 	}
 
 	if( (tmp = sysapi_opsys_legacy()) != NULL ) {
-		insert( "OPSYSLEGACY", tmp, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("OPSYSLEGACY");
+		insert("OPSYSLEGACY", tmp, ConfigMacroSet, DetectedMacro);
 	}
 
 #if ! defined WIN32
         // temporary attributes for raw utsname info
 	if( (tmp = sysapi_utsname_sysname()) != NULL ) {
-		insert( "UTSNAME_SYSNAME", tmp, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("UTSNAME_SYSNAME");
+		insert("UTSNAME_SYSNAME", tmp, ConfigMacroSet, DetectedMacro);
 	}
 
 	if( (tmp = sysapi_utsname_nodename()) != NULL ) {
-		insert( "UTSNAME_NODENAME", tmp, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("UTSNAME_NODENAME");
+		insert("UTSNAME_NODENAME", tmp, ConfigMacroSet, DetectedMacro);
 	}
 
 	if( (tmp = sysapi_utsname_release()) != NULL ) {
-		insert( "UTSNAME_RELEASE", tmp, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("UTSNAME_RELEASE");
+		insert("UTSNAME_RELEASE", tmp, ConfigMacroSet, DetectedMacro);
 	}
 
 	if( (tmp = sysapi_utsname_version()) != NULL ) {
-		insert( "UTSNAME_VERSION", tmp, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("UTSNAME_VERSION");
+		insert("UTSNAME_VERSION", tmp, ConfigMacroSet, DetectedMacro);
 	}
 
 	if( (tmp = sysapi_utsname_machine()) != NULL ) {
-		insert( "UTSNAME_MACHINE", tmp, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("UTSNAME_MACHINE");
+		insert("UTSNAME_MACHINE", tmp, ConfigMacroSet, DetectedMacro);
 	}
 #endif
 
-	insert( "SUBSYSTEM", get_mySubSystem()->getName(), ConfigTab, TABLESIZE );
-	extra_info->AddInternalParam("SUBSYSTEM");
+	insert("SUBSYSTEM", get_mySubSystem()->getName(), ConfigMacroSet, DetectedMacro);
 
 	val.formatstr("%d",sysapi_phys_memory_raw_no_param());
-	insert( "DETECTED_MEMORY", val.Value(), ConfigTab, TABLESIZE );
-	extra_info->AddInternalParam("DETECTED_MEMORY");
+	insert("DETECTED_MEMORY", val.Value(), ConfigMacroSet, DetectedMacro);
 
 		// Currently, num_hyperthread_cores is defined as everything
 		// in num_cores plus other junk, which on some systems may
@@ -1305,8 +1588,7 @@ fill_attributes()
 	sysapi_ncpus_raw_no_param(&num_cpus,&num_hyperthread_cpus);
 
 	val.formatstr("%d",num_hyperthread_cpus);
-	insert( "DETECTED_CORES", val.Value(), ConfigTab, TABLESIZE );
-	extra_info->AddInternalParam("DETECTED_CORES");
+	insert("DETECTED_CORES", val.Value(), ConfigMacroSet, DetectedMacro);
 }
 
 
@@ -1323,18 +1605,14 @@ check_domain_attributes()
 
 	filesys_domain = param("FILESYSTEM_DOMAIN");
 	if( !filesys_domain ) {
-		insert( "FILESYSTEM_DOMAIN", get_local_fqdn().Value(), 
-				ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("FILESYSTEM_DOMAIN");
+		insert("FILESYSTEM_DOMAIN", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro);
 	} else {
 		free( filesys_domain );
 	}
 
 	uid_domain = param("UID_DOMAIN");
 	if( !uid_domain ) {
-		insert( "UID_DOMAIN", get_local_fqdn().Value(), 
-				ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("UID_DOMAIN");
+		insert("UID_DOMAIN", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro);
 	} else {
 		free( uid_domain );
 	}
@@ -1346,22 +1624,44 @@ check_domain_attributes()
 void 
 param_insert(const char * name, const char * value)
 {
-	insert( name, value, ConfigTab, TABLESIZE );
-	extra_info->AddInternalParam(name);
+	insert(name, value, ConfigMacroSet, WireMacro);
 }
 
 void
-init_config(bool wantExtraInfo  /* = true */)
+init_config(int config_options)
 {
-	memset( (char *)ConfigTab, 0, (TABLESIZE * sizeof(BUCKET*)) );
-	if (wantExtraInfo) {
-		extra_info = new ExtraParamTable();
-	} else {
-		extra_info = new DummyExtraParamTable();
+	bool want_meta = (config_options & CONFIG_OPT_WANT_META) != 0;
+	ConfigMacroSet.size = 0;
+	ConfigMacroSet.sorted = 0;
+	ConfigMacroSet.options = (config_options & ~CONFIG_OPT_WANT_META);
+#ifdef PARSE_CONFIG_TO_DECIDE_COMMENT_RULES
+	ConfigMacroSet.options |= CONFIG_OPT_SMART_COM_IN_CONT;
+#endif
+#ifdef DISCARD_CONFIG_MATCHING_DEFAULT
+#else
+	ConfigMacroSet.options |= CONFIG_OPT_KEEP_DEFAULTS;
+#endif
+	if (ConfigMacroSet.table) delete [] ConfigMacroSet.table;
+	ConfigMacroSet.table = new MACRO_ITEM[512];
+	if (ConfigMacroSet.table) {
+		ConfigMacroSet.allocation_size = 512;
+		clear_config(); // to zero-init the table.
 	}
-
-	// Initialize the default table.
-	param_info_init();
+	if (ConfigMacroSet.defaults) {
+		// Initialize the default table.
+		if (ConfigMacroSet.defaults->metat) delete [] ConfigMacroSet.defaults->metat;
+		ConfigMacroSet.defaults->metat = NULL;
+		ConfigMacroSet.defaults->size = param_info_init((const void**)&ConfigMacroSet.defaults->table);
+	}
+	if (want_meta) {
+		if (ConfigMacroSet.metat) delete [] ConfigMacroSet.metat;
+		ConfigMacroSet.metat = new MACRO_META[ConfigMacroSet.allocation_size];
+		ConfigMacroSet.options |= CONFIG_OPT_WANT_META;
+		if (ConfigMacroSet.defaults && ConfigMacroSet.defaults->size) {
+			ConfigMacroSet.defaults->metat = new MACRO_DEFAULTS::META[ConfigMacroSet.defaults->size];
+			memset(ConfigMacroSet.defaults->metat, 0, sizeof(ConfigMacroSet.defaults->metat[0]) * ConfigMacroSet.defaults->size);
+		}
+	}
 
 	return;
 }
@@ -1369,32 +1669,73 @@ init_config(bool wantExtraInfo  /* = true */)
 void
 clear_config()
 {
-	register 	int 	i;
-	register 	BUCKET	*ptr = NULL;
-	register 	BUCKET	*tmp = NULL;
+	if (ConfigMacroSet.table) {
+		memset(ConfigMacroSet.table, 0, sizeof(ConfigMacroSet.table[0]) * ConfigMacroSet.allocation_size);
+	}
+	if (ConfigMacroSet.metat) {
+		memset(ConfigMacroSet.metat, 0, sizeof(ConfigMacroSet.metat[0]) * ConfigMacroSet.allocation_size);
+	}
+	ConfigMacroSet.size = 0;
+	ConfigMacroSet.sorted = 0;
+	ConfigMacroSet.apool.clear();
+	ConfigMacroSet.sources.clear();
+	if (ConfigMacroSet.defaults && ConfigMacroSet.defaults->metat) {
+		memset(ConfigMacroSet.defaults->metat, 0, sizeof(ConfigMacroSet.defaults->metat[0]) * ConfigMacroSet.defaults->size);
+	}
 
-	for( i=0; i<TABLESIZE; i++ ) {
-		ptr = ConfigTab[i];
-		while( ptr ) {
-			tmp = ptr->next;
-			FREE( ptr->value );
-			ptr->value = NULL;
-			FREE( ptr->name );
-			ptr->name = NULL;
-			FREE( ptr );
-			ptr = tmp;
-		}
-		ConfigTab[i] = NULL;
-	}
-	if (extra_info != NULL) {
-		delete extra_info;
-		extra_info = NULL;
-	}
+	/* don't want to do this here because of reconfig.
+	ConfigMacroSet.allocation_size = 0;
+	delete[] ConfigMacroSet.table; ConfigMacroSet.table = NULL;
+	delete[] ConfigMacroSet.metat; ConfigMacroSet.metat = NULL;
+	*/
 	global_config_source       = "";
 	local_config_sources.clearAll();
 	return;
 }
 
+template <typename T>
+int BinaryLookupIndex (const T aTable[], int cElms, const char * key, int (*fncmp)(const char *, const char *))
+{
+	if (cElms <= 0)
+		return -1;
+
+	int ixLower = 0;
+	int ixUpper = cElms-1;
+	for (;;) {
+		if (ixLower > ixUpper)
+			return -1; // -1 for not found
+
+		int ix = (ixLower + ixUpper) / 2;
+		int iMatch = fncmp(aTable[ix].key, key);
+		if (iMatch < 0)
+			ixLower = ix+1;
+		else if (iMatch > 0)
+			ixUpper = ix-1;
+		else
+			return ix;
+	}
+}
+
+static int param_default_get_index(const char * name, MACRO_SET & set)
+{
+	MACRO_DEFAULTS * defs = set.defaults;
+	if ( ! defs || ! defs->table)
+		return -1;
+
+	return BinaryLookupIndex<const MACRO_DEF_ITEM>(defs->table, defs->size, name, strcasecmp);
+}
+
+void param_default_set_use(const char * name, int use, MACRO_SET & set)
+{
+	MACRO_DEFAULTS * defs = set.defaults;
+	if ( ! defs || ! defs->metat)
+		return;
+	int ix = param_default_get_index(name, set);
+	if (ix >= 0) {
+		defs->metat[ix].use_count += (use&1);
+		defs->metat[ix].ref_count += (use>>1)&1;
+	}
+}
 
 /*
 ** Return the value associated with the named parameter.  Return NULL
@@ -1403,7 +1744,8 @@ clear_config()
 char *
 param_without_default( const char *name )
 {
-	char		*val = NULL;
+	const char *val = NULL;
+	char * expanded_val = NULL;
 
 	// Try in order to find the parameter
 	// As we walk through, any value (including empty string) will
@@ -1420,23 +1762,24 @@ param_without_default( const char *name )
 		std::string local_name;
 		formatstr(local_name, "%s.%s", local, name);
 		fLocalMatch = true; fSubsysMatch = subsys != NULL;
-		val = lookup_macro(local_name.c_str(), subsys, ConfigTab, TABLESIZE);
+		val = lookup_macro(local_name.c_str(), subsys, ConfigMacroSet);
 		if (subsys && ! val) {
-			val = lookup_macro(local_name.c_str(), NULL, ConfigTab, TABLESIZE);
+			val = lookup_macro(local_name.c_str(), NULL, ConfigMacroSet);
 			fSubsysMatch = false;
 		}
 	}
 	if ( ! val) {
 		// lookup "subsys.name" and "name"
 		fLocalMatch = false; fSubsysMatch = subsys != NULL;
-		val = lookup_macro(name, subsys, ConfigTab, TABLESIZE);
+		val = lookup_macro(name, subsys, ConfigMacroSet);
 		if (subsys && ! val) {
-			val = lookup_macro(name, NULL, ConfigTab, TABLESIZE);
+			val = lookup_macro(name, NULL, ConfigMacroSet);
 			fSubsysMatch = false;
 		}
 	}
 	// Still nothing (or empty)?  Give up.
 	if ( ! val || ! val[0] ) {
+		//dprintf(D_STATUS, "param_without_default(%s) returns NULL\n", name);
 		return NULL;
 	}
 
@@ -1455,25 +1798,32 @@ param_without_default( const char *name )
 	}
 
 	// Ok, now expand it out...
-	val = expand_macro( val, ConfigTab, TABLESIZE, NULL, false, subsys );
+	expanded_val = expand_macro(val, ConfigMacroSet, NULL, false, subsys);
 
 	// If it returned an empty string, free it before returning NULL
-	if( val == NULL ) {
+	if( expanded_val == NULL ) {
+		//dprintf(D_STATUS, "param_without_default(%s) returns NULL\n", name);
 		return NULL;
-	} else if ( val[0] == '\0' ) {
-		free( val );
+	} else if ( expanded_val[0] == '\0' ) {
+		free( expanded_val );
+		//dprintf(D_STATUS, "param_without_default(%s) returns NULL\n", name);
 		return( NULL );
 	} else {
-		return val;
+		//dprintf(D_STATUS, "param_without_default(%s) returns %s\n", name, expanded_val);
+		return expanded_val;
 	}
 }
 
-
+PRAGMA_REMIND("TJ: this gives incorrect result if the param is defined in defaults table.")
 bool param_defined(const char* name) {
+    bool retval = false;
     char* v = param_without_default(name);
-    if (NULL == v) return false;
-    free(v);
-    return true;
+    if (v) {
+        free(v);
+        retval = true;
+    }
+    //dprintf(D_STATUS, "param_defined(%s) returns %s\n", name, retval ? "true" : "false");
+    return retval;
 }
 
 
@@ -1481,14 +1831,16 @@ char*
 param(const char* name) 
 {
 		/* The zero means return NULL on not found instead of EXCEPT */
-	return param_with_default_abort(name, 0);
+	char * psz = param_with_default_abort(name, 0);
+	//dprintf(D_STATUS, "param(%s) returns %s\n", name, psz ? psz : "NULL");
+	return psz;
 }
 
 char *
 param_with_default_abort(const char *name, int abort) 
 {
 	const char *val = NULL;
-#ifdef NEW_PARAM_GENERATOR	// don't copy params from default table to ConfigTab
+#ifdef DISCARD_CONFIG_MATCHING_DEFAULT // don't copy params from default table to ConfigTab
 	const char* subsys = get_mySubSystem()->getName();
 	if (subsys && ! subsys[0]) subsys = NULL;
 
@@ -1498,40 +1850,48 @@ param_with_default_abort(const char *name, int abort)
 	if (local && local[0]) {
 		std::string local_name(local);
 		local_name += "."; local_name += name;
-		val = lookup_macro(local_name.c_str(), subsys, ConfigTab, TABLESIZE);
+		val = lookup_macro(local_name.c_str(), subsys, ConfigMacroSet);
 		if (subsys && ! val) {
-			val = lookup_macro(local_name.c_str(), NULL, ConfigTab, TABLESIZE);
+			val = lookup_macro(local_name.c_str(), NULL, ConfigMacroSet);
 		}
 	}
 	// if not found in the local namespace, search the sybsystem and generic namespaces
 	if ( ! val) {
-		val = lookup_macro(name, subsys, ConfigTab, TABLESIZE);
+		val = lookup_macro(name, subsys, ConfigMacroSet);
 		if (subsys && ! val) {
-			val = lookup_macro(name, NULL, ConfigTab, TABLESIZE);
+			val = lookup_macro(name, NULL, ConfigMacroSet);
 		}
 		if ( ! val) {
 			val = param_default_string(name, subsys);
+			if (val) {
+				param_default_set_use(name, 3, ConfigMacroSet);
+				if (val[0] == '\0') {
+					// If indeed it was empty, then just bail since it was
+					// validly found in the Default Table, but empty.
+					return NULL;
+				}
+			}
 		}
 	}
 #else
-	MyString subsys = get_mySubSystem()->getName();
-	MyString local = get_mySubSystem()->getLocalName();
-	MyString subsys_local_name;
-	MyString local_name;
+	const char * subsys = get_mySubSystem()->getName();
+	const char * local = get_mySubSystem()->getLocalName();
 	MyString subsys_name;
 
 	// Set up the namespace search for the param name.
 	// WARNING: The order of appending matters. We search more specific 
 	// to less specific in the namespace.
 	StringList sl;
-	if (local != "") {
-		subsys_local_name = (((subsys + ".") + local) + ".") + name;
+	if (local && local[0]) {
+		MyString subsys_local_name;
+		subsys_local_name.formatstr("%s.%s.%s", subsys, local, name);
 		sl.append(subsys_local_name.Value());
 
-		local_name = (local + ".") + name;
+		MyString local_name;
+		local_name.formatstr("%s.%s", local, name);
 		sl.append(local_name.Value());
 	}
-	subsys_name = (subsys + ".") + name;
+	subsys_name.formatstr("%s.%s", subsys, name);
 	sl.append(subsys_name.Value());
 	sl.append(name);
 
@@ -1541,7 +1901,7 @@ param_with_default_abort(const char *name, int abort)
 	char *next_param_name = NULL;
 	while(val == NULL && (next_param_name = sl.next())) {
 		// See if the candidate is in the Config Table
-		val = lookup_macro(next_param_name, NULL, ConfigTab, TABLESIZE);
+		val = lookup_macro(next_param_name, NULL, ConfigMacroSet);
 
 		if (val != NULL && val[0] == '\0') {
 			// The config table specifically wanted the value to be empty, 
@@ -1564,11 +1924,7 @@ param_with_default_abort(const char *name, int abort)
 			// Yay! Found something! Add the entry found in the Default 
 			// Table to the Config Table. This could be adding an empty
 			// string. If a default found, the loop stops searching.
-			insert(next_param_name, def, ConfigTab, TABLESIZE);
-			// also add it to the lame extra-info table
-			if (extra_info != NULL) {
-				extra_info->AddInternalParam(next_param_name);
-			}
+			insert(next_param_name, def, ConfigMacroSet, DefaultMacro);
 			if (def[0] == '\0') {
 				// If indeed it was empty, then just bail since it was
 				// validly found in the Default Table, but empty.
@@ -1595,7 +1951,7 @@ param_with_default_abort(const char *name, int abort)
 	// if we get here, it means that we found a val of note, so expand it and
 	// return the canonical value of it. expand_macro returns allocated memory.
 	// note that expand_macro will first try and expand
-	char * expanded_val = expand_macro(val, ConfigTab, TABLESIZE, NULL, true, subsys.Value());
+	char * expanded_val = expand_macro(val, ConfigMacroSet, NULL, true, subsys);
 	if (expanded_val == NULL) {
 		return NULL;
 	}
@@ -1996,13 +2352,13 @@ param_boolean( const char *name, bool default_value, bool do_log,
 char *
 macro_expand( const char *str )
 {
-	return( expand_macro(str, ConfigTab, TABLESIZE) );
+	return expand_macro(str, ConfigMacroSet);
 }
 
 char *
-expand_param( const char *str, const char *subsys, int use)
+expand_param(const char *str, const char *subsys, int use)
 {
-	return expand_macro(str, ConfigTab, TABLESIZE, NULL, true, subsys, use);
+	return expand_macro(str, ConfigMacroSet, NULL, true, subsys, use);
 }
 
 /*
@@ -2019,6 +2375,23 @@ param_boolean_int( const char *name, int default_value ) {
     return param_boolean(name, default_bool) ? 1 : 0;
 }
 
+#if 1
+
+const char * param_get_location(const MACRO_META * pmet, MyString & value)
+{
+	value = config_source_by_id(pmet->source_id);
+	if (pmet->source_line >= 0) {
+		value.formatstr_cat(", line %d", pmet->source_line);
+		MACRO_DEF_ITEM * pmsi = param_meta_source_by_id(pmet->source_meta_id);
+		if (pmsi) {
+			value.formatstr_cat(", %s+%d", pmsi->key, pmet->source_meta_off);
+		}
+	}
+	return value.c_str();
+}
+
+#else
+
 // Note that the line_number can be -1 if the filename isn't a real
 // filename, but something like <Internal> or <Environment>
 bool param_get_location(
@@ -2026,20 +2399,163 @@ bool param_get_location(
 	MyString  &filename,
 	int       &line_number)
 {
-	bool found_it;
+	bool found_it = false;
 
-	if (parameter != NULL && extra_info != NULL) {
-		found_it = extra_info->GetParam(parameter, filename, line_number);
-	} else {
-		found_it = false;
+	MACRO_ITEM * pi = find_macro_item(parameter, ConfigMacroSet);
+	if (pi) {
+		found_it = true;
+		if (ConfigMacroSet.metat) {
+			MACRO_META * pmi = &ConfigMacroSet.metat[pi - ConfigMacroSet.table];
+			if (pmi->source_id >= 0 && pmi->source_id < (int)ConfigMacroSet.sources.size()) {
+				filename = ConfigMacroSet.sources[pmi->source_id];
+				line_number = pmi->source_line;
+			}
+		}
 	}
 	return found_it;
 }
+#endif
+
+// find an item and return a hash iterator that points to it.
+bool param_find_item (
+	const char * name,
+	const char * subsys,
+	const char * local,
+	MyString & name_found, // out
+	HASHITER& it)          //
+{
+	it = HASHITER(ConfigMacroSet, 0);
+	if (subsys && ! subsys[0]) subsys = NULL;
+	if (local && ! local[0]) local = NULL;
+	it.id = it.set.defaults ? it.set.defaults->size : 0;
+	it.ix = it.set.size;
+	it.is_def = false;
+
+	MACRO_ITEM * pi = NULL;
+	if (subsys && local) {
+		name_found.formatstr("%s.%s.%s", subsys, local, name);
+		pi = find_macro_item(name_found.Value(), ConfigMacroSet);
+		if (pi) {
+			name_found = pi->key;
+			it.ix = (int)(pi - it.set.table);
+			return true;
+		}
+	}
+	if (local) {
+		name_found.formatstr("%s.%s", local, name);
+		pi = find_macro_item(name_found.Value(), ConfigMacroSet);
+		if (pi) {
+			name_found = pi->key;
+			it.ix = (int)(pi - it.set.table);
+			return true;
+		}
+	}
+	if (subsys) {
+		name_found.formatstr("%s.%s", subsys, name);
+		pi = find_macro_item(name_found.Value(), ConfigMacroSet);
+		if (pi) {
+			name_found = pi->key;
+			it.ix = (int)(pi - it.set.table);
+			return true;
+		}
+		const MACRO_DEF_ITEM* pdf = (const MACRO_DEF_ITEM*)param_subsys_default_lookup(subsys, name);
+		if (pdf) {
+			name_found = subsys;
+			name_found.upper_case();
+			name_found += ".";
+			name_found += pdf->key;
+			it.is_def = true;
+			it.pdef = pdf;
+			it.id = param_default_get_id(name);
+			return true;
+		}
+	}
+
+	pi = find_macro_item(name, ConfigMacroSet);
+	if (pi) {
+		name_found = pi->key;
+		it.ix = (int)(pi - it.set.table);
+		return true;
+	}
+
+	MACRO_DEF_ITEM * pdf = param_default_lookup(name);
+	if (pdf) {
+		name_found = pdf->key;
+		it.is_def = true;
+		it.pdef = pdf;
+		it.id = param_default_get_id(name);
+		return true;
+	}
+
+	name_found.clear();
+	it.id = it.set.defaults ? it.set.defaults->size : 0;
+	it.ix = it.set.size;
+	it.is_def = false;
+	return false;
+}
+
+const char * hash_iter_info(
+	HASHITER& it,
+	int& use_count,
+	int& ref_count,
+	MyString &source_name,
+	int &line_number)
+{
+	MACRO_META * pmet = hash_iter_meta(it);
+	if ( ! pmet) {
+		use_count = ref_count = -1;
+		line_number = -2;
+		source_name.clear();
+	} else {
+		source_name = config_source_by_id(pmet->source_id);
+		line_number = pmet->source_line;
+		use_count = pmet->use_count;
+		ref_count = pmet->ref_count;
+	}
+	return hash_iter_value(it);
+}
+
+const char * hash_iter_def_value(HASHITER& it)
+{
+	if (it.is_def)
+		return hash_iter_value(it);
+	const char * name =  hash_iter_key(it);
+	if ( ! name)
+		return NULL;
+	return param_exact_default_string(name);
+}
+
+#if 1
 
 const char * param_get_info(
 	const char * name,
 	const char * subsys,
 	const char * local,
+	MyString &name_used,
+	const char ** pdef_val,
+	const MACRO_META **ppmet)
+{
+	const char * val = NULL;
+	if (pdef_val) { *pdef_val = NULL; }
+	if (ppmet)    { *ppmet = NULL; }
+	name_used.clear();
+
+	HASHITER it(ConfigMacroSet, 0);
+	if (param_find_item(name, subsys, local, name_used, it)) {
+		val = hash_iter_value(it);
+		if (pdef_val) { *pdef_val = hash_iter_def_value(it); }
+		if (ppmet) { *ppmet = hash_iter_meta(it); }
+	}
+	return val;
+}
+
+#else
+
+const char * param_get_info(
+	const char * name,
+	const char * subsys,
+	const char * local,
+	const char ** pdef_val,
 	MyString &name_used,
 	int & use_count,
 	int & ref_count,
@@ -2047,48 +2563,18 @@ const char * param_get_info(
 	int &line_number)
 {
 	const char * val = NULL;
-#if 1 //def NEW_PARAM_GENERATOR
-	filename = "";
-	line_number = -1;
-	if (subsys && ! subsys[0]) subsys = NULL;
-	if (local && ! local[0]) local = NULL;
-	if (subsys && local) {
-		name_used.formatstr("%s.%s.%s", subsys, local, name);
-		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigTab, TABLESIZE, 0);
-	}
-	if ( ! val && local) {
-		name_used.formatstr("%s.%s", local, name);
-		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigTab, TABLESIZE, 0);
-	}
-	if ( ! val && subsys) {
-		name_used.formatstr("%s.%s", subsys, name);
-		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigTab, TABLESIZE, 0);
-		if ( ! val) {
-			val = param_exact_default_string(name_used.Value());
-			if (val) { filename = "<Internal>"; line_number = -2; }
+	if (pdef_val) { *pdef_val = NULL; }
+
+	HASHITER it(ConfigMacroSet, 0);
+	if (param_find_item(name, subsys, local, name_used, it)) {
+		val = hash_iter_info(it, use_count, ref_count, filename, line_number);
+		if (pdef_val) {
+			*pdef_val = hash_iter_def_value(it);
 		}
-	}
-	if ( ! val) {
-		name_used = name;
-		val = lookup_and_use_macro(name_used.Value(), NULL, ConfigTab, TABLESIZE, 0);
-		if ( ! val) {
-			val = param_exact_default_string(name);
-			if (val) { filename = "<Internal>"; line_number = -2; }
-		}
-	}
-	if (val) {
-		use_count = get_macro_use_count(name_used.Value(), ConfigTab, TABLESIZE);
-		ref_count = get_macro_ref_count(name_used.Value(), ConfigTab, TABLESIZE);
-	}
-	if (val && extra_info && line_number != -2) {
-		extra_info->GetParam(name_used.Value(), filename, line_number);
 	}
 	return val;
-#else
-	PRAGMA_REMIND("TJ: write this")
-	return NULL;
-#endif
 }
+#endif
 
 void
 reinsert_specials( const char* host )
@@ -2099,30 +2585,24 @@ reinsert_specials( const char* host )
 	char buf[40];
 
 	if( tilde ) {
-		insert( "TILDE", tilde, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("TILDE");
+		insert("TILDE", tilde, ConfigMacroSet, DetectedMacro);
 	}
 	if( host ) {
-		insert( "HOSTNAME", host, ConfigTab, TABLESIZE );
+		insert("HOSTNAME", host, ConfigMacroSet, DetectedMacro);
 	} else {
-		insert( "HOSTNAME", get_local_hostname().Value(), ConfigTab, 
-				TABLESIZE );
+		insert("HOSTNAME", get_local_hostname().Value(), ConfigMacroSet, DetectedMacro);
 	}
-	insert( "FULL_HOSTNAME", get_local_fqdn().Value(), ConfigTab, TABLESIZE );
-	insert( "SUBSYSTEM", get_mySubSystem()->getName(), ConfigTab, TABLESIZE );
-	extra_info->AddInternalParam("HOSTNAME");
-	extra_info->AddInternalParam("FULL_HOSTNAME");
-	extra_info->AddInternalParam("SUBSYSTEM");
+	insert("FULL_HOSTNAME", get_local_fqdn().Value(), ConfigMacroSet, DetectedMacro);
+	insert("SUBSYSTEM", get_mySubSystem()->getName(), ConfigMacroSet, DetectedMacro);
 
 	// Insert login-name for our real uid as "username".  At the time
 	// we're reading in the config source, the priv state code is not
 	// initialized, so our euid will always be the same as our ruid.
 	char *myusernm = my_username();
 	if( myusernm ) {
-		insert( "USERNAME", myusernm, ConfigTab, TABLESIZE );
+		insert( "USERNAME", myusernm, ConfigMacroSet, DetectedMacro);
 		free(myusernm);
 		myusernm = NULL;
-		extra_info->AddInternalParam("USERNAME");
 	} else {
 		if( ! warned_no_user ) {
 			dprintf( D_ALWAYS, "ERROR: can't find username of current user! "
@@ -2148,11 +2628,9 @@ reinsert_specials( const char* host )
 		myrgid = getgid();
 #endif
 		snprintf(buf,40,"%u",myruid);
-		insert( "REAL_UID", buf, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("REAL_UID");
+		insert("REAL_UID", buf, ConfigMacroSet, DetectedMacro);
 		snprintf(buf,40,"%u",myrgid);
-		insert( "REAL_GID", buf, ConfigTab, TABLESIZE );
-		extra_info->AddInternalParam("REAL_GID");
+		insert("REAL_GID", buf, ConfigMacroSet, DetectedMacro);
 	}
 		
 	// Insert values for "pid" and "ppid".  Use static values since
@@ -2168,8 +2646,7 @@ reinsert_specials( const char* host )
 #endif
 	}
 	snprintf(buf,40,"%u",reinsert_pid);
-	insert( "PID", buf, ConfigTab, TABLESIZE );
-	extra_info->AddInternalParam("PID");
+	insert("PID", buf, ConfigMacroSet, DetectedMacro);
 	if ( !reinsert_ppid ) {
 #ifdef WIN32
 		CSysinfo system_hackery;
@@ -2179,10 +2656,8 @@ reinsert_specials( const char* host )
 #endif
 	}
 	snprintf(buf,40,"%u",reinsert_ppid);
-	insert( "PPID", buf, ConfigTab, TABLESIZE );
-	insert( "IP_ADDRESS", my_ip_string(), ConfigTab, TABLESIZE );
-	extra_info->AddInternalParam("PPID");
-	extra_info->AddInternalParam("IP_ADDRESS");
+	insert("PPID", buf, ConfigMacroSet, DetectedMacro);
+	insert("IP_ADDRESS", my_ip_string(), ConfigMacroSet, DetectedMacro);
 }
 
 
@@ -2192,7 +2667,43 @@ config_insert( const char* attrName, const char* attrValue )
 	if( ! (attrName && attrValue) ) {
 		return;
 	}
-	insert( attrName, attrValue, ConfigTab, TABLESIZE );
+	insert(attrName, attrValue, ConfigMacroSet, WireMacro);
+}
+
+int macro_stats(MACRO_SET& set, struct _macro_stats &stats)
+{
+	int cHunks, cQueries = 0;
+	memset((void*)&stats, 0, sizeof(stats));
+	stats.cSorted = set.sorted;
+	stats.cFiles = (int)set.sources.size();
+	stats.cEntries = set.size;
+	stats.cbStrings = set.apool.usage(cHunks, stats.cbFree);
+	int cbPer = sizeof(MACRO_ITEM) + (set.metat ? sizeof(MACRO_META) : 0);
+	stats.cbTables = (set.size * cbPer) + (int)set.sources.size() * sizeof(char*);
+	stats.cbFree += (set.allocation_size - set.size) * cbPer;
+	if ( ! set.metat) {
+		cQueries = stats.cReferenced = stats.cUsed = -1;
+	} else {
+		for (int ii = 0; ii < set.size; ++ii) {
+			if (set.metat[ii].use_count) ++stats.cUsed;
+			if (set.metat[ii].ref_count) ++stats.cReferenced;
+			if (set.metat[ii].use_count > 0) cQueries += set.metat[ii].use_count;
+		}
+		if (set.defaults && set.defaults->metat) {
+			MACRO_DEFAULTS * defs = set.defaults;
+			for (int ii = 0; ii < defs->size; ++ii) {
+				if (defs->metat[ii].use_count) ++stats.cUsed;
+				if (defs->metat[ii].ref_count) ++stats.cReferenced;
+				if (defs->metat[ii].use_count > 0) cQueries += defs->metat[ii].use_count;
+			}
+		}
+	}
+	return cQueries;
+}
+
+int  get_config_stats(struct _macro_stats *pstats)
+{
+	return macro_stats(ConfigMacroSet, *pstats);
 }
 
 
@@ -2555,8 +3066,8 @@ process_persistent_configs()
 	{
 		processed = true;
 
-		rval = Read_config( toplevel_persistent_config.Value(), ConfigTab,
-							TABLESIZE, EXPAND_LAZY, true, extra_info, get_mySubSystem()->getName() );
+		rval = Read_config(toplevel_persistent_config.Value(), ConfigMacroSet,
+						EXPAND_LAZY, true, get_mySubSystem()->getName());
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d while reading "
 					 "top-level persistent config source: %s\n",
@@ -2577,8 +3088,8 @@ process_persistent_configs()
 		MyString config_source;
 		config_source.formatstr( "%s.%s", toplevel_persistent_config.Value(),
 							   tmp );
-		rval = Read_config( config_source.Value(), ConfigTab, TABLESIZE,
-							 EXPAND_LAZY, true, extra_info, get_mySubSystem()->getName() );
+		rval = Read_config(config_source.Value(), ConfigMacroSet,
+						EXPAND_LAZY, true, get_mySubSystem()->getName());
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
 					 "while reading persistent config source: %s\n",
@@ -2625,8 +3136,8 @@ process_runtime_configs()
 					 "process_dynamic_configs\n", errno );
 			exit(1);
 		}
-		rval = Read_config( tmp_file, ConfigTab, TABLESIZE,
-							EXPAND_LAZY, false, extra_info, get_mySubSystem()->getName() );
+		rval = Read_config(tmp_file, ConfigMacroSet,
+						EXPAND_LAZY, false, get_mySubSystem()->getName());
 		if (rval < 0) {
 			dprintf( D_ALWAYS, "Configuration Error Line %d "
 					 "while reading %s, runtime config: %s\n",
@@ -2671,42 +3182,84 @@ process_dynamic_configs()
 	return 0;
 }
 
-int
-write_config_file(const char* pathname) {
-	int config_fd = creat(pathname, O_WRONLY);
-	if(config_fd == -1) {
-		dprintf(D_ALWAYS, "Failed to create configuration file.\n");
-		return -1;
-	}
-	iterate_params(&write_config_variable, &config_fd);
-	if(close(config_fd) == -1) {
-		dprintf(D_ALWAYS, "Error closing new configuration file.\n");
-		return -1;
-	}
-	return 0;
-}
-
-int
-write_config_variable(const param_info_t* value, void* file_desc) {
-	int config_fd = *((int*) file_desc);
-	char* actual_value = param(value->name);
-	if(strcmp(actual_value, value->str_val) != 0) {
-		char output[512];
-		snprintf(output, 512, "# %s:  Default value = (%s)\n", value->name, value->str_val);
-		if(write(config_fd, &output, 512*sizeof(char)) == -1) {
-			dprintf(D_ALWAYS, "Failed to write to configuration file.\n");
-			return -1;
-		}
-		snprintf(output, 512, "%s = %s", value->name, actual_value);
-		if(write(config_fd, &output, 512*sizeof(char)) == -1) {
-			dprintf(D_ALWAYS, "Failed to write to configuration file.\n");
-			return -1;
-		}
-	}
-	return 0;
-}
-
 } // end of extern "C"
+
+struct _write_macros_args {
+	FILE * fh;
+	int    options;
+	const char * pszLast;
+};
+
+bool write_macro_variable(void* user, HASHITER & it) {
+	struct _write_macros_args * pargs = (struct _write_macros_args *)user;
+	FILE * fh = pargs->fh;
+	const int options = pargs->options;
+
+	MACRO_META * pmeta = hash_iter_meta(it);
+	// if is default, detected, or matches default, skip it
+	if (pmeta->matches_default || pmeta->param_table || pmeta->inside) {
+		if ( ! (options & WRITE_MACRO_OPT_DEFAULT_VALUES))
+			return true; // keep scanning
+	} else {
+	}
+	const char * name = hash_iter_key(it);
+	if (pargs->pszLast && (MATCH == strcasecmp(name, pargs->pszLast))) {
+		// don't write entries more than once.
+		return true;
+	}
+
+	const char * rawval = hash_iter_value(it);
+	fprintf(fh, "%s = %s\n", name, rawval ? rawval : "");
+
+	if (options & WRITE_MACRO_OPT_SOURCE_COMMENT) {
+		const char * filename = config_source_by_id(pmeta->source_id);
+		if (pmeta->source_line < 0) {
+			if (pmeta->source_id == 1) {
+				fprintf(fh, " # at: %s, item %d\n", filename, pmeta->param_id);
+			} else {
+				fprintf(fh, " # at: %s\n", filename);
+			}
+		} else {
+			fprintf(fh, " # at: %s, line %d\n", filename, pmeta->source_line);
+		}
+	}
+
+	pargs->pszLast = name;
+	return true;
+}
+
+int write_macros_to_file(const char* pathname, MACRO_SET& macro_set, int options)
+{
+	FILE * fh = safe_fopen_wrapper_follow(pathname, "w");
+	if ( ! fh) {
+		dprintf(D_ALWAYS, "Failed to create configuration file %s.\n", pathname);
+		return -1;
+	}
+
+	struct _write_macros_args args;
+	memset(&args, 0, sizeof(args));
+	args.fh = fh;
+	args.options = options;
+
+	int iter_opts = HASHITER_SHOW_DUPS;
+	HASHITER it = hash_iter_begin(macro_set, iter_opts);
+	while ( ! hash_iter_done(it)) {
+		if ( ! write_macro_variable(&args, it))
+			break;
+		hash_iter_next(it);
+	}
+	hash_iter_delete(&it);
+
+	if (fclose(fh) == -1) {
+		dprintf(D_ALWAYS, "Error closing new configuration file %s.\n", pathname);
+		return -1;
+	}
+	return 0;
+}
+
+int write_config_file(const char* pathname, int options) {
+	return write_macros_to_file(pathname, ConfigMacroSet, options);
+}
 
 /* End code for runtime support for modifying a daemon's config source. */
 

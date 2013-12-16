@@ -2617,6 +2617,7 @@ void GlobusJob::CommunicationTimeout()
 	globusStateErrorCode = GLOBUS_GRAM_PROTOCOL_ERROR_CONNECTION_FAILED;
 	gmState = GM_HOLD;
 	communicationTimeoutTid = -1;
+	SetEvaluateState();
 }
 
 void GlobusJob::NotifyResourceDown()

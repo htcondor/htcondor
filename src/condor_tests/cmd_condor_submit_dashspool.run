@@ -253,7 +253,7 @@ if($numberinstate != 1) {
 	print " Passed\n\n";
 }
 #system(" condor_q");
-runToolNTimes("condor_rm $plain",1,1);
+runToolNTimes("condor_rm $plain",1,0);
 CondorTest::RegisterResult($result);
 dashspoolreset();
 
@@ -293,7 +293,7 @@ if($gooddata != 1) {
 	print " Passed\n\n";
 }
 #system(" condor_q");
-runToolNTimes("condor_rm $plain",1,1);
+runToolNTimes("condor_rm $plain",1,0);
 CondorTest::RegisterResult($result);
 
 # this test is just like last except we are going to copy
@@ -331,7 +331,7 @@ if($gooddata != 1) {
 	print " Passed\n\n";
 }
 #system(" condor_q");
-runToolNTimes("condor_rm $plain",1,1);
+runToolNTimes("condor_rm $plain",1,0);
 CondorTest::RegisterResult($result);
 dashspoolreset();
 

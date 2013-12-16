@@ -852,13 +852,17 @@ LogSetAttribute::LogSetAttribute(const char *k, const char *n, const char *val, 
 	op_type = CondorLogOp_SetAttribute;
 	key = strdup(k);
 	name = strdup(n);
-	if (val && strlen(val)) {
+	value_expr = NULL;
+	if (val && strlen(val) && !blankline(val) &&
+		!ParseClassAdRvalExpr(val, value_expr))
+	{
 		value = strdup(val);
 	} else {
+		if (value_expr) delete value_expr;
+		value_expr = NULL;
 		value = strdup("UNDEFINED");
 	}
 	is_dirty = dirty;
-    value_expr = NULL;
 }
 
 
@@ -880,6 +884,12 @@ LogSetAttribute::Play(void *data_structure)
 	if (table->lookup(HashKey(key), ad) < 0)
 		return -1;
     if (value_expr) {
+		// Such a shame, do we really need to make a
+		// copy of value_expr here?  Seems like we could just
+		// assign it and then set value_expr to NULL and avoid
+		// copying a parse tree, since after we Play it I doubt
+		// this class does anything more with value_expr beyond
+		// deallocating it.  - Todd 11/13 <tannenba@cs.wisc.edu>
         ExprTree * pTree = value_expr->Copy();
         rval = ad->Insert(name, pTree, false);
     } else {

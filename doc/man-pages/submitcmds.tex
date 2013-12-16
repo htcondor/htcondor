@@ -391,9 +391,7 @@ if the job terminates abnormally,
 or if the job is placed on hold because of a failure, and not by user request.
 If defined by \Arg{Never} (the default), the owner will not receive e-mail,
 regardless to what happens to the job.
-The statistics included in the e-mail are documented in
-section~\ref{sec:job-completion} on
-page~\pageref{sec:job-completion}.
+The HTCondor User's manual documents statistics included in the e-mail.
 
 %%%%%%%%%%%%%%%%%%%
 %% notify_user
@@ -495,23 +493,36 @@ one submit description file.
 \label{man-condor-submit-universe}
 \item[universe = $<$vanilla \Bar\ standard \Bar\ scheduler
 \Bar\ local \Bar\ grid \Bar\ java \Bar\ vm$>$]
-Specifies which HTCondor Universe to use when running this job.  The HTCondor
-Universe specifies an HTCondor execution environment.
-The \SubmitCmd{standard} Universe tells HTCondor that this job has been
-re-linked via \Condor{compile} with the HTCondor libraries and therefore
-supports checkpointing and remote system calls.
-The \SubmitCmd{vanilla} Universe is the default (except where the
+Specifies which HTCondor universe to use when running this job.  The HTCondor
+universe specifies an HTCondor execution environment.
+
+The \SubmitCmd{vanilla} universe is the default (except where the
 configuration variable \Macro{DEFAULT\_UNIVERSE} defines it
-otherwise), and is an execution environment for jobs which have not
-been linked with the HTCondor libraries.  \emph{Note:} Use the
-\SubmitCmd{vanilla} Universe to submit shell scripts to HTCondor.
-The \SubmitCmd{scheduler} is for a job that
-should act as a metascheduler.
+otherwise), and is an execution environment for jobs which do not
+use HTCondor's mechanisms for taking checkpoints;
+these are ones that have not been linked with the HTCondor libraries.  
+Use the \SubmitCmd{vanilla} universe to submit shell scripts to HTCondor.
+
+The \SubmitCmd{standard} universe tells HTCondor that this job has been
+re-linked via \Condor{compile} with the HTCondor libraries and therefore
+supports taking checkpoints and remote system calls.
+
+The \SubmitCmd{scheduler} universe is for a job that is to run on the
+machine where the job is submitted.
+This universe is intended for a job that acts as a metascheduler
+and will not be preempted.
+
+The \SubmitCmd{local} universe is for a job that is to run on the
+machine where the job is submitted.
+This universe runs the job immediately and will not be preempt the job.
+
 The \SubmitCmd{grid} universe forwards the job to an external job
 management system.
 Further specification of the \SubmitCmd{grid} universe is done with the
 \SubmitCmd{grid\_resource} command.
+
 The \SubmitCmd{java} universe is for programs written to the Java Virtual Machine.
+
 The \SubmitCmd{vm} universe facilitates the execution of a virtual
 machine.
 
@@ -541,9 +552,8 @@ highest rank.  For example,
 \end{verbatim}
 asks HTCondor to find all available machines with more than 60 megabytes of memory
 and give to the job the machine with the most amount of memory.
-See section~\ref{sec:user-man-req-and-rank} 
-within the HTCondor Users
-Manual for complete information on the syntax and available attributes
+The HTCondor User's
+Manual contains complete information on the syntax and available attributes
 that can be used in the ClassAd expression.
 
 %%%%%%%%%%%%%%%%%%%
@@ -563,8 +573,7 @@ the expression
 is appended to the \SubmitCmd{requirements} expression for the job.
 
 For pools that enable
-dynamic \Condor{startd} provisioning
-(see section~\ref{sec:SMP-dynamicprovisioning}),
+dynamic \Condor{startd} provisioning,
 specifies the minimum number of CPUs requested for this job,
 resulting in a dynamic slot being created with this many cores.
 
@@ -585,8 +594,7 @@ The expression
 is appended to the \SubmitCmd{requirements} expression for the job.
 
 For pools that enable
-dynamic \Condor{startd} provisioning
-(see section~\ref{sec:SMP-dynamicprovisioning}),
+dynamic \Condor{startd} provisioning,
 a dynamic slot will be created with at least this much disk space.
 
 Characters may be appended to a numerical value to indicate units. 
@@ -614,8 +622,7 @@ The actual amount of memory used by a job is represented by the
 job ClassAd attribute \Attr{MemoryUsage}.
 
 For pools that enable
-dynamic \Condor{startd} provisioning
-(see section~\ref{sec:SMP-dynamicprovisioning}),
+dynamic \Condor{startd} provisioning,
 a dynamic slot will be created with at least this much RAM.
 
 The expression
@@ -843,8 +850,7 @@ a subset of output files as specified by the submit command
 \SubmitCmd{transfer\_output\_files}.
 The plug-in does the transfer of files, 
 and no files are sent back to the submit machine.
-See both section~\ref{sec:URL-transfer} and
-section~\ref{sec:file-transfer-by-URL} for details. 
+The HTCondor Administrator's manual has full details.
 
 %%%%%%%%%%%%%%%%%%%
 %% should_transfer_files
@@ -872,8 +878,8 @@ If the job is matched with a remote resource in a different
 \Attr{FileSystemDomain}, HTCondor will transfer the necessary files. 
 
 For more information about this and other settings related to
-transferring files, see section~\ref{sec:file-transfer} on
-page~\pageref{sec:file-transfer}.
+transferring files, see the HTCondor User's manual section
+on the file transfer mechanism. 
 
 Note that \SubmitCmd{should\_transfer\_files} is not supported
 for jobs submitted to the grid universe.
@@ -1009,12 +1015,8 @@ Transfer of symbolic links to directories is not currently supported.
 For vanilla and vm universe jobs only,
 a file may be specified by giving a URL, instead of a file name.
 The implementation for URL transfers requires both configuration
-and available plug-in.  See section~\ref{sec:URL-transfer} for details. 
+and available plug-in. 
  
-For more information about this and other settings related to
-transferring files, see section~\ref{sec:file-transfer} on
-page~\pageref{sec:file-transfer}.
-
 %%%%%%%%%%%%%%%%%%%
 %% transfer_output_files
 %%%%%%%%%%%%%%%%%%%
@@ -1079,10 +1081,6 @@ directories is not currently supported.
 Symbolic links to files are transferred as the files they point to.
 Transfer of symbolic links to directories is not currently supported.
 
-For more information about this and other settings related to
-transferring files, see section~\ref{sec:file-transfer} on
-page~\pageref{sec:file-transfer}.
-
 %%%%%%%%%%%%%%%%%%%
 %% transfer_output_remaps
 %%%%%%%%%%%%%%%%%%%
@@ -1127,10 +1125,6 @@ The files spooled back are placed in a directory defined by
 the value of the \MacroNI{SPOOL} configuration variable.
 Any output files transferred back to the submit machine are
 automatically sent back out again as input files if the job restarts.
-
-For more information about this and other settings related to
-transferring files, see section~\ref{sec:file-transfer} on
-page~\pageref{sec:file-transfer}.
 
 \end{description} 
 
@@ -1447,8 +1441,7 @@ the configuration variable \MacroNI{PERIODIC\_EXPR\_INTERVAL}.
 If it becomes \Expr{True}, the job is removed from the queue.
 If unspecified, the default value is \Expr{False}.
 
-See section~\ref{condor-submit-examples},
-the Examples section of the \Condor{submit} manual page,
+See the Examples section of this manual page
 for an example of a \SubmitCmd{periodic\_remove} expression.
 
 \AdAttr{periodic\_*} expressions take
@@ -2179,20 +2172,18 @@ Allowable \SubmitCmd{grid-type-string} values are
 \SubmitCmd{lsf}, \SubmitCmd{nordugrid}, \SubmitCmd{pbs},
 \SubmitCmd{sge},
 and \SubmitCmd{unicore}.
-See section~\ref{sec:GridUniverse} for details on the variety of 
+The HTCondor manual chapter on Grid Computing details the variety of 
 grid types.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{batch},
 the single parameter is the name of the local batch system,
 and will be one of \Expr{pbs}, \Expr{lsf}, or \Expr{sge}.
-See section~\ref{sec:batch} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{condor},
 the first parameter is the name of the remote \Condor{schedd}
 daemon.
 The second parameter is the name of the pool to which the remote
 \Condor{schedd} daemon belongs.
-See section~\ref{sec:HTCondor-C-Submit} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{cream},
 there are three parameters.
@@ -2201,45 +2192,35 @@ The second parameter is the
 name of the batch system that sits behind the CREAM server.
 The third parameter identifies a site-specific queue
 within the batch system.
-See section~\ref{sec:CREAM} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{deltacloud},
 the single parameter is the URL of the deltacloud service requested.
-See section~\ref{sec:Deltacloud} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{ec2},
 one additional parameter specifies the EC2 URL. 
-See section~\ref{sec:Amazon}  for details. 
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{gt2},
 the single parameter is the name of the pre-WS GRAM resource to be used.
-See section~\ref{sec:Using-gt2} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{gt5},
 the single parameter is the name of the pre-WS GRAM resource to be used,
 which is the same as for the \SubmitCmd{grid-type-string} of \SubmitCmd{gt2}.
-See section~\ref{sec:Using-gt5} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{lsf}, no additional
 parameters are used.
-See section~\ref{sec:LSF} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{nordugrid},
 the single parameter is the name of the NorduGrid resource to be used.
-See section~\ref{sec:NorduGrid} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{pbs}, no additional
 parameters are used.
-See section~\ref{sec:PBS} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{sge}, no additional
 parameters are used.
-See section~\ref{sec:SGE} for details.
 
 For a \SubmitCmd{grid-type-string} of \SubmitCmd{unicore},
 the first parameter is the name of the Unicore Usite to be used.
 The second parameter is the name of the Unicore Vsite to be used.
-See section~\ref{sec:Unicore} for details.
 
 
 %%%%%%%%%%%%%%%%%%%
@@ -2466,8 +2447,6 @@ or \SubmitCmd{nordugrid}.
 Defining a value causes the proxy to be delegated to the execute machine.
 Further, VOMS attributes defined in the proxy will appear in
 the job ClassAd.
-See the unnumbered subsection labeled Job ClassAd Attributes
-on page~\pageref{sec:Job-ClassAd-Attributes} for all job attribute descriptions.
 
 \end{description} 
 
@@ -2764,7 +2743,7 @@ submission.
 \item[accounting\_group = $<$accounting-group-name$>$] 
 Causes jobs to negotiate under the given accounting group.  
 This value is advertised in the job ClassAd as \AdAttr{AcctGroup}.
-See section~\ref{sec:group-accounting} for more information about 
+The HTCondor Administrator's manual  contains more information about 
 accounting groups.
 
 %%%%%%%%%%%%%%%%%%%
@@ -2798,7 +2777,7 @@ Each item in the list may specify a numerical value identifying the integer
 number of resources required for the job.
 The syntax follows the resource name by a colon character (\verb@:@)
 and the numerical value.
-See section~\ref{sec:Concurrency-Limits} for details on concurrency limits.
+Details on concurrency limits are in the HTCondor Administrator's manual.
 
 %%%%%%%%%%%%%%%%%%%
 %% copy_to_spool 
@@ -2839,7 +2818,8 @@ A value of -1 results in no limits being applied to the core file size.
 \label{condor-submit-cron-day-of-month}
 \item[cron\_day\_of\_month = $<$Cron-evaluated Day$>$]
 The set of days of the month for which a deferral time applies.
-See section~\ref{sec:CronTab} for further details and examples.
+The HTCondor User's manual section on Time Scheduling for Job Execution
+has further details.
 
 %%%%%%%%%%%%%%%%%%
 % cron_day_of_week
@@ -2848,7 +2828,8 @@ See section~\ref{sec:CronTab} for further details and examples.
 \label{condor-submit-cron-day-of-week}
 \item[cron\_day\_of\_week = $<$Cron-evaluated Day$>$]
 The set of days of the week for which a deferral time applies.
-See section~\ref{sec:CronTab} for details, semantics, and examples.
+The HTCondor User's manual section on Time Scheduling for Job Execution
+has further details.
 
 %%%%%%%%%%%%%%%%%%
 % cron_hour
@@ -2857,7 +2838,8 @@ See section~\ref{sec:CronTab} for details, semantics, and examples.
 \label{condor-submit-cron-hour}
 \item[cron\_hour = $<$Cron-evaluated Hour$>$]
 The set of hours of the day for which a deferral time applies.
-See section~\ref{sec:CronTab} for details, semantics, and examples.
+The HTCondor User's manual section on Time Scheduling for Job Execution
+has further details.
 
 %%%%%%%%%%%%%%%%%%
 % cron_minute
@@ -2866,7 +2848,8 @@ See section~\ref{sec:CronTab} for details, semantics, and examples.
 \label{condor-submit-cron-minute}
 \item[cron\_minute = $<$Cron-evaluated Minute$>$]
 The set of minutes within an hour for which a deferral time applies.
-See section~\ref{sec:CronTab} for details, semantics, and examples.
+The HTCondor User's manual section on Time Scheduling for Job Execution
+has further details.
 
 %%%%%%%%%%%%%%%%%%
 % cron_month
@@ -2875,7 +2858,8 @@ See section~\ref{sec:CronTab} for details, semantics, and examples.
 \label{condor-submit-cron-month}
 \item[cron\_month = $<$Cron-evaluated Month$>$]
 The set of months within a year for which a deferral time applies.
-See section~\ref{sec:CronTab} for details, semantics, and examples.
+The HTCondor User's manual section on Time Scheduling for Job Execution
+has further details.
 
 %%%%%%%%%%%%%%%%%%
 % cron_prep_time
@@ -2898,7 +2882,8 @@ Analogous to the submit command \SubmitCmd{deferral\_window}.
 It allows cron jobs that
 miss their deferral time to begin execution.
 
-See section~\ref{sec:JobDeferral} for further details and examples.
+The HTCondor User's manual section on Time Scheduling for Job Execution
+has further details.
 
 %%%%%%%%%%%%%%%%%%%
 %% dagman_log
@@ -2921,7 +2906,8 @@ submit file, DAGMan uses the \SubmitCmd{log} command to specify the event log.
 The number of seconds prior to a job's deferral time that
 the job may be matched and sent to an execution machine.
 
-See section~\ref{sec:JobDeferral} for further details.
+The HTCondor User's manual section on Time Scheduling for Job Execution
+has further details.
 
 %%%%%%%%%%%%%%%%%%%
 %% deferral_time
@@ -2946,7 +2932,8 @@ execution at the deferral time, it has missed its deferral time.
 A job that misses its deferral time will be put on hold
 in the queue. 
 
-See section~\ref{sec:JobDeferral} for further details and examples.
+The HTCondor User's manual section on Time Scheduling for Job Execution
+has further details.
 
 Due to implementation details,
 a deferral time may not be used for scheduler universe jobs.
@@ -2962,7 +2949,8 @@ The deferral window is used in conjunction with the
 \SubmitCmd{deferral\_time} command to allow jobs that
 miss their deferral time to begin execution.
 
-See section~\ref{sec:JobDeferral} for further details and examples.
+The HTCondor User's manual section on Time Scheduling for Job Execution
+has further details.
 
 %%%%%%%%%%%%%%%%%%%
 %% description
@@ -3072,7 +3060,8 @@ job lease.
 The default value is twenty minutes for universes that support it.
 If a job lease is not desired, the value can be explicitly set to 0 to
 disable the job lease semantics.
-See section~\ref{sec:Job-Lease} for details of job leases.
+The HTCondor User's manual section on Special Environment Considerations
+has further details.
 
 %%%%%%%%%%%%%%%%%%%
 %% job_machine_attrs
@@ -3224,8 +3213,7 @@ expressions.
 \item[max\_job\_retirement\_time = $<$integer expression$>$]
 An integer-valued expression (in seconds) that
 does nothing unless the machine that runs the job has been configured
-to provide retirement time
-(see section~\ref{sec:State-Expression-Summary}).
+to provide retirement time.
 Retirement time is a
 grace period given to a job to finish
 when a resource claim is about to be preempted.
@@ -3362,11 +3350,9 @@ if supported by the joint configuration of the submit and execute machines.
 On Unix platforms, this defaults to \Expr{True},
 and on Windows platforms, it defaults to \Expr{False}.
 May not be used with \SubmitCmd{load\_profile}.
-See section~\ref{sec:windows-run-as-owner} for administrative details on
-configuring Windows to support this option, as well as 
-section~\ref{param:StarterAllowRunAsOwner}
-on page~\pageref{param:StarterAllowRunAsOwner} for a definition of
-\MacroNI{STARTER\_ALLOW\_RUNAS\_OWNER}.
+See the HTCondor manual Platform-Specific Information chapter
+for administrative details on
+configuring Windows to support this option.
 
 %%%%%%%%%%%%%%%%%%%
 %% stack_size
@@ -3438,7 +3424,7 @@ when file transfer is enabled.
 \index{submit commands!+PreArgs}
 \item[+PreArgs = \texttt{"}$<$argument\_list$>$\texttt{"}]
 Defines command line arguments for the prescript, 
-presuming the old syntax, as defined at ~\ref{man-condor-submit-arguments}.
+presuming the Old argument syntax.
 
 %%%%%%%%%%%%%%%%%%%
 %% +PreArguments
@@ -3447,7 +3433,7 @@ presuming the old syntax, as defined at ~\ref{man-condor-submit-arguments}.
 \index{submit commands!+PreArguments}
 \item[+PreArguments = \texttt{"}$<$argument\_list$>$\texttt{"}]
 Defines command line arguments for the prescript, 
-presuming the new syntax as defined at ~\ref{man-condor-submit-arguments}.
+presuming the New argument syntax.
 An exception to the syntax is that double
 quotes must be escaped with a backslash instead of another double
 quote. 
@@ -3481,7 +3467,7 @@ when file transfer is enabled.
 \index{submit commands!+PostArgs}
 \item[+PostArgs = \texttt{"}$<$argument\_list$>$\texttt{"}]
 Defines command line arguments for the postscript, 
-presuming the old syntax as defined at ~\ref{man-condor-submit-arguments}.
+presuming the Old argument syntax.
 
 %%%%%%%%%%%%%%%%%%%
 %% +PostArguments
@@ -3490,8 +3476,7 @@ presuming the old syntax as defined at ~\ref{man-condor-submit-arguments}.
 \index{submit commands!+PostArguments}
 \item[+PostArguments = \texttt{"}$<$argument\_list$>$\texttt{"}]
 Defines command line arguments for the postscript, 
-presuming the new syntax as defined at
-(~\ref{man-condor-submit-arguments}.
+presuming the New argument syntax.
 An exception to the syntax is that double
 quotes must be escaped with a backslash instead of another double
 quote mark.
@@ -3525,13 +3510,15 @@ For this example \Attr{PreArgs} generates a first argument of
 \label{macro-in-submit-description-file}
 \index{macro!in submit description file}
 In addition to commands, the submit description file can contain macros
-and comments:
+and comments.
 
 \begin{description}
 
-\item[Macros] Parameterless macros in the form of \MacroUNI{macro\_name}
-may be inserted anywhere in HTCondor submit description files. Macros can be
-defined by lines in the form of 
+\item[Macros] Parameterless macros in the form of 
+\MacroUNI{macro\_name:default initial value}
+may be used anywhere in HTCondor submit description files
+to provide textual substitution at submit time.
+Macros can be defined by lines in the form of 
 \begin{verbatim} 
         <macro_name> = <string> 
 \end{verbatim} 
@@ -3588,6 +3575,24 @@ B = $(C) boo
 \end{verbatim}
 will \emph{not} work, and will fill memory with expansions.
 
+A default value may be specified, for use if the macro has no definition.
+Consider the example
+\begin{verbatim}
+D = $(E:24)
+\end{verbatim}
+Where \MacroNI{E} is not defined within the submit description
+file, the default value 24 is used, resulting in 
+\begin{verbatim}
+D = 24
+\end{verbatim}
+This is of limited value, as the scope of macro substitution is
+the submit description file.
+Thus, either the macro is or is not defined within the submit description
+file.
+If the macro is defined, then the default value is useless.
+If the macro is not defined, then there is no point in using it in a 
+submit command.
+
 \index{\$!as a literal character in a submit description file}
 To use the dollar sign character (\verb@$@) as a literal,
 without macro expansion, use
@@ -3642,8 +3647,7 @@ defined, then the path \File{/usr/foo} is used instead.
 A further extension to the syntax of the substitution macro allows the
 evaluation of a ClassAd expression to define the value.
 In this form, the expression may refer to machine attributes
-by prefacing them with the scope resolution prefix \Attr{TARGET.},
-as specified in section~\ref{ClassAd:evaluation}.
+by prefacing them with the \Attr{TARGET.} scope resolution prefix.
 To place a ClassAd expression into the substitution macro,
 square brackets are added to delimit the expression.
 The syntax appears as:

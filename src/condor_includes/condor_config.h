@@ -31,79 +31,75 @@
 #include <vector>
 #include <string>
 
+typedef std::vector<const char *> MACRO_SOURCES;
+namespace condor_params { typedef struct key_value_pair key_value_pair; }
+typedef const struct condor_params::key_value_pair MACRO_DEF_ITEM;
+#else // ! __cplusplus
+typedef void* MACRO_SOURCES; // placeholder for use in C
+typedef struct key_value_pair { const char * key; const void * def} key_value_pair;
+typedef const struct key_value_pair MACRO_DEF_ITEM;
 #endif
 
-#include "param_info.h"
+#include "pool_allocator.h"
+//#include "param_info.h"
 
 #define PARAM_USE_COUNTING
+#define CALL_VIA_MACRO_SET
+#define MACRO_SET_KNOWS_DEFAULT
+#define COLON_DEFAULT_FOR_MACRO_EXPAND // enable $(FOO:default-value) and $(FOO:$(OTHER)) for config
 
-typedef struct bucket {
-	char	*name;
-	char	*value;
-#ifdef PARAM_USE_COUNTING
-	int		use_count;
-	int		ref_count;
-#else
-	int		used;
-#endif
-	struct bucket	*next;
-} BUCKET;
-
-#if defined(__cplusplus)
-// used by param_all();
-class ParamValue {
-	public:
-
-	// name of macro
-	MyString name;
-	// the expression that is the value of the macro
-	MyString value;
-	// Which file the macro is found in
-	MyString filename;
-	// on what line is the macro found in.
-	int lnum;
-	// where this configuration information came from (localhost, another
-	// machine, etc, etc, etc)
-	MyString source;
-
-	ParamValue() { 
-		name = "";
-		value = "";
-		filename = "";
-		lnum = -1;
-		source = "";
-	}
-
-	ParamValue(const ParamValue &old) {
-		name = old.name;
-		value = old.value;
-		filename = old.filename;
-		lnum = old.lnum;
-		source = old.source;
-	}
-
-	ParamValue& operator=(const ParamValue &rhs) {
-		if (this == &rhs) {
-			return *this;
-		}
-
-		name = rhs.name;
-		value = rhs.value;
-		filename = rhs.filename;
-		lnum = rhs.lnum;
-
-		return *this;
-	}
-};
-#endif
-
+// structures for param/submit macro storage
+// These structures are carefully tuned to allow for minimal private memory
+// use when param metadata is disabled.
+//
+typedef struct macro_item {
+	const char * key;
+	const char * raw_value;
+} MACRO_ITEM;
+typedef struct macro_meta {
+	short int    param_id;
+	short int    index;
+	union {
+	  int        flags; // all of the below flags
+	  struct {
+	    unsigned matches_default :1;
+	    unsigned inside          :1;
+	    unsigned param_table     :1;
+	  };
+	};
+	short int    source_id;    // index into MACRO_SOURCES table
+	short int    source_line;  // line number for files, param.in entry for internal
+	short int    source_meta_id;   // metaknob id
+	short int    source_meta_off;  // statement offset within metaknob   (i.e. 0 based line number)
+	short int    use_count;
+	short int    ref_count;
+} MACRO_META;
+typedef struct macro_defaults {
+	int size;
+	MACRO_DEF_ITEM * table; // points to const table[size] key/default-value pairs
+	struct META {
+		short int use_count;
+		short int ref_count;
+	} * metat; // optional, points to metat[size] of use counts parallel to table[]
+} MACRO_DEFAULTS;
+// this holds table and tablesize for use passing to the config functions.
+typedef struct macro_set {
+	int       size;
+	int       allocation_size;
+	int       options; // use CONFIG_OPT_xxx flags OR'd together
+	int       sorted;  // number of items in table which are sorted
+	MACRO_ITEM *table;
+	MACRO_META *metat; // optional array of metadata, is parallel to table
+	ALLOCATION_POOL apool;
+	MACRO_SOURCES sources;
+	MACRO_DEFAULTS * defaults; // optional reference to const defaults table
+} MACRO_SET;
 
 /*
 **  Types of macro expansion
 */
 #define EXPAND_LAZY         1
 #define EXPAND_IMMEDIATE    2
-#define TABLESIZE 113
 
 #if defined(__cplusplus)
 	extern MyString global_config_source;
@@ -111,9 +107,8 @@ class ParamValue {
 	extern StringList local_config_sources;
 	class Regex;
 
-	ExtArray<ParamValue>* param_all(void);
 	int param_names_matching(Regex & re, ExtArray<const char *>& names);
-    int param_names_matching(Regex& re, std::vector<std::string>& names);
+	int param_names_matching(Regex& re, std::vector<std::string>& names);
 
     bool param_defined(const char* name);
 	char* param_or_except( const char *name );
@@ -140,16 +135,27 @@ class ParamValue {
 						ClassAd *me=NULL, ClassAd *target=NULL,
 						bool use_param_table = true );
 
+#if 1
+	const char * param_get_location(const MACRO_META * pmet, MyString & value);
+#else
 	bool param_get_location(const char *parameter, MyString &filename,
 							int &line_number);
+#endif
 
 	const char * param_get_info(const char * name,
 								const char * subsys,
 								const char * local,
+#if 1
+								MyString &name_used,
+								const char ** pdef_value,
+								const MACRO_META **ppmet);
+#else
+								const char ** pdef_value,
 								MyString &name_used,
 								int &use_count,	int & ref_count,
 								MyString &filename,
 								int &line_number);
+#endif
 
 	
 	/** Look up a value by the name 'name' from the table 'table' which is table_size big.
@@ -159,17 +165,15 @@ class ParamValue {
 	table.  On success returns a pointer to the associated value.  The
 	value is owned by the table; do not free it.
 	*/
-	char * lookup_macro ( const char *name, const char *prefix, BUCKET *table[], int table_size );
-	char * lookup_and_use_macro ( const char *name, const char *prefix, BUCKET *table[], int table_size, int use );
+	MACRO_ITEM* find_macro_item (const char *name, MACRO_SET& set);
+	const char * lookup_macro (const char *name, const char *prefix, MACRO_SET& set, int use=3);
+	//const char * lookup_and_use_macro (const char *name, const char *prefix, MACRO_SET& set, int use);
 
 	/*This is a faster version of lookup_macro that assumes the param name
-	  has already been converted to the canonical lowercase form.
-	  and prefixed with "prefix." if needed.*/
-	char * lookup_macro_lower( const char *name, BUCKET **table, int table_size, int use );
+	  has already been prefixed with "prefix." if needed.*/
+	const char * lookup_macro_exact(const char *name, MACRO_SET& set, int use);
 
-	/** Like lookup_macro_lower, but returns a BUCKET pointer and doesn't modify the use count
-	 */
-	BUCKET* lookup_macro_bucket (const char *name, BUCKET *table[], int table_size);
+	void optimize_macros(MACRO_SET& macro_set);
 
 	/* A convenience function that calls param() with a MyString buffer. */
 	bool param(MyString &buf,char const *param_name,char const *default_value=NULL);
@@ -186,8 +190,17 @@ class ParamValue {
 	odd since if a .c file includes this, these prototypes technically don't
 	exist.... */
 extern "C" {
-	void config( int wantsQuiet=0 , bool ignore_invalid_entry = false, bool wantsExtra = true );
-	void config_host( const char* host=NULL );
+	#define CONFIG_OPT_WANT_META      0x01   // also keep metdata about config
+	#define CONFIG_OPT_KEEP_DEFAULTS  0x02   // keep items that match defaults
+	#define CONFIG_OPT_OLD_COM_IN_CONT 0x04  // ignore # after \ (i.e. pre 8.1.3 comment/continue behavior)
+	#define CONFIG_OPT_SMART_COM_IN_CONT 0x08 // parse #opt:oldcomment/newcomment to decide comment behavior
+	void config();
+	void config_ex(int wantsQuiet, bool abort_if_invalid, int opt = CONFIG_OPT_WANT_META);
+	void config_host(const char* host, int wantsQuiet, int config_options);
+	void validate_config(bool abort_if_invalid);
+	void config_dump_string_pool(FILE * fh, const char * sep);
+	void config_dump_sources(FILE * fh, const char * sep);
+	const char * config_source_by_id(int source_id);
 	bool config_continue_if_no_config(bool contin);
 	void config_fill_ad( ClassAd*, const char *prefix = NULL );
 	void condor_net_remap_config( bool force_param=false );
@@ -218,74 +231,51 @@ extern "C" {
 
 	NOTE: Returns malloc()ed memory; caller is responsible for calling free().
 	*/
-	char * expand_macro ( const char *value, BUCKET *table[], int table_size,
-						  const char *self=NULL, bool use_default_param_table=false,
-						  const char *subsys=NULL, int use=2);
-
+	char * expand_macro (const char *value, MACRO_SET& macro_set,
+						 const char *self=NULL, bool use_default_param_table=false,
+						 const char *subsys=NULL, int use=2);
 	// Iterator for the hash array managed by insert() and expand_macro().  See
 	// hash_iter_begin(), hash_iter_next(), hash_iter_key(), hash_iter_value(),
 	// and hash_iter_delete() for details.
-	struct hash_iter {
-		BUCKET ** table;
-		int table_size;
-		int index;
-		bucket * current;
-	};
-	typedef hash_iter * HASHITER;
+} // end extern "C"
 
-	/** Begin iteration over the table table with size table_size.
+// the HASHITER can only be defined with c++ linkage
+class HASHITER {
+public:
+	int opts;
+	int ix; int id; int is_def;
+	MACRO_DEF_ITEM * pdef; // for use when default comes from per-daemon override table.
+	MACRO_SET & set;
+	HASHITER(MACRO_SET & setIn, int options=0) : opts(options), ix(0), id(0), is_def(0), pdef(NULL), set(setIn) {}
+	HASHITER& operator=(const HASHITER& rhs) { if (this != &rhs) { memcpy(this, &rhs, sizeof(HASHITER)); } return *this; }
+};
+enum { HASHITER_NO_DEFAULTS=1, HASHITER_USED_DEFAULTS=2, HASHITER_USED=4, HASHITER_SHOW_DUPS=8 };
+inline HASHITER hash_iter_begin(MACRO_SET & set, int options=0) { return HASHITER(set,options); }
+inline void hash_iter_delete(HASHITER*) {}
+bool hash_iter_done(HASHITER& it);
+bool hash_iter_next(HASHITER& it);
+const char * hash_iter_key(HASHITER& it);
+const char * hash_iter_value(HASHITER& it);
+int hash_iter_used_value(HASHITER& it);
+MACRO_META * hash_iter_meta(HASHITER& it);
+const char * hash_iter_info(HASHITER& it, int& use_count, int& ref_count, MyString& source_name, int& line_number);
+const char * hash_iter_def_value(HASHITER& it);
+bool param_find_item (const char * name, const char * subsys, const char * local, MyString& name_found, HASHITER& it);
+void foreach_param(int options, bool (*fn)(void* user, HASHITER& it), void* user);
+void foreach_param_matching(Regex & re, int options, bool (*fn)(void* user, HASHITER& it), void* user);
 
-	Returns an opaque object for iterating over all entries in a hash (of the
-	sort managed by insert() and expand_macro().  Use hash_iter_key() and
-	hash_iter_value() to retrieve keys (names) and values for the current item.
-	Use hash_iter_next() to move through the entries.  After hash_iter_begin()
-	the "current" entry is set to the first entry; it is not necessary to call
-	hash_iter_next() immediately.  When done be sure to call hash_iter_delete
-	to free any storage that has been allocated.
+// Write out a config file of values from the param table.
+// Returns 0 on success and -1 on failure.
+#define WRITE_MACRO_OPT_DEFAULT_VALUES  0x01 // include default values
+#define WRITE_MACRO_OPT_SELDOM_VALUES   0x02 // include default values marked 'seldom'
+#define WRITE_MACRO_OPT_FUTURE_VALUES   0x04 // include default values marked 'future'
+#define WRITE_MACRO_OPT_DEVLOPER_VALUES 0x08 // include default values marked 'developer'
+#define WRITE_MACRO_OPT_EXPAND          0x10 // write expanded values
+#define WRITE_MACRO_OPT_SOURCE_COMMENT  0x20 // include comments showing source of values
+int write_macros_to_file(const char* pathname, MACRO_SET& macro_set, int options);
+int write_config_file(const char* pathname, int options);
 
-	The iterator remains valid if entries are inserted into the hash, but the
-	iterator may overlook them.  The iterator becomes undefined if entries are
-	deleted from the hash.  If an entry is deleted, the only safe thing to
-	do is call hash_iter_delete.
-	*/
-	HASHITER hash_iter_begin(BUCKET ** table, int table_size);
-
-
-	/** Return true if we're out of entries in the hash table */
-	int hash_iter_done(HASHITER iter);
-
-	/** Move to the next entry in the hash table
-
-	Returns false when trying to advance from the last item in the
-	hash table.  Once this has returned false, the only safe things
-	you can do is call hash_iter_done or hash_iter_delete.
-	*/
-	int hash_iter_next(HASHITER iter);
-
-	/** Return key(name) for the current entry in the hash table
-
-	Do no modify or free the returned value.
-	*/
-	char * hash_iter_key(HASHITER iter);
-
-	/** Return value for the current entry in the hash table
-
-	Do no modify or free the returned value.
-	*/
-	char * hash_iter_value(HASHITER iter);
-
-	/** Returns 1 if the current entry in the hash table is used in 
-		an expression; otherwise, returns 0.
-	*/
-	int hash_iter_used_value(HASHITER iter);
-
-	/** Destroy iterator and reclaim memory.
-	You must pass in a pointer to the hash iterator.
-	After calling the HASHITER is no longer valid.
-	*/
-	void hash_iter_delete(HASHITER * iter);
-
-
+extern "C" {
 
 
 	/** Find next $(MACRO) or $$(MACRO) in a string
@@ -322,10 +312,10 @@ extern "C" {
 		register char *value, register char **leftp,
 		register char **namep, register char **rightp);
 
-	void init_config ( bool );
+	void init_config (int options);
 }
 
-#endif
+#endif // __cplusplus
 
 BEGIN_C_DECLS
 
@@ -339,18 +329,23 @@ BEGIN_C_DECLS
 	inserted into the table 'table' which is 'table_size' big.
 	insert keeps copies of the name and value.
 	*/
-	void insert ( const char *name, const char *value, BUCKET *table[], int table_size );
+#ifdef __cplusplus
+	typedef struct macro_source { int inside; short int id; short int line; short int meta_id; short int meta_off; } MACRO_SOURCE;
+	void insert_source(const char * filename, MACRO_SET& macro_set, MACRO_SOURCE & source);
+	extern const MACRO_SOURCE EnvMacro;
+	extern const MACRO_SOURCE WireMacro;
+	extern const MACRO_SOURCE DetectedMacro;
+
+	void insert (const char *name, const char *value, MACRO_SET& macro_set, const MACRO_SOURCE & source);
 	
 	/** Sets the whether or not a macro has actually been used
 	*/
-#ifdef PARAM_USE_COUNTING
-	int increment_macro_use_count ( const char *name, BUCKET *table[], int table_size );
-	void clear_macro_use_count ( const char *name, BUCKET *table[], int table_size );
-	int get_macro_use_count ( const char *name, BUCKET *table[], int table_size );
-	int get_macro_ref_count ( const char *name, BUCKET *table[], int table_size );
-#else
-	void set_macro_used ( const char *name, int used, BUCKET *table[], int table_size );
-#endif
+	int increment_macro_use_count (const char *name, MACRO_SET& macro_set);
+	void clear_macro_use_count (const char *name, MACRO_SET& macro_set);
+	int get_macro_use_count (const char *name, MACRO_SET& macro_set);
+	int get_macro_ref_count (const char *name, MACRO_SET& macro_set);
+
+#endif // __cplusplus
 
 	/*
 	As expand_macro() (above), but assumes the table 'ConfigTab' which is
@@ -359,6 +354,17 @@ BEGIN_C_DECLS
 	char * macro_expand ( const char *name );
 	char * expand_param (const char *str, const char *subsys, int use);
 
+	struct _macro_stats {
+		int cbStrings;
+		int cbTables;
+		int cbFree;
+		int cEntries;
+		int cSorted;
+		int cFiles;
+		int cUsed;
+		int cReferenced;
+	};
+	int  get_config_stats(struct _macro_stats *pstats);
 	void clear_config ( void );
 	void set_debug_flags( const char * strFlags, int flags );
 	void config_insert( const char* attrName, const char* attrValue);
@@ -367,14 +373,7 @@ BEGIN_C_DECLS
 	int  param_boolean_int_without_default( const char* name, int default_value );
 	
 	// Process an additional chunk of file
-	void process_config_source(const char*, const char*, const char*, int);
-
-	// Write out a config file of non-default values.
-	// Returns 0 on success and -1 on failure.
-	int write_config_file( const char* pathname );
-	// Helper function, of form to iterate over the hash table of parameter
-	// information.  Returns 0 to continue, -1 to stop (i.e. on an error).
-	int write_config_variable(const param_info_t* value, void* file_desc);
+	void process_config_source(const char* filename, const char* sourcename, const char* host, int required);
 
 /* This function initialize GSI (maybe other) authentication related
    stuff Daemons that should use the condor daemon credentials should

@@ -467,6 +467,8 @@ DedicatedScheduler::DedicatedScheduler()
 	ds_owner = NULL;
 	ds_name = NULL;
 	shadow_obj = NULL;
+
+	startdQueryTime = 0;
 }
 
 
@@ -1423,6 +1425,15 @@ DedicatedScheduler::handleDedicatedJobs( void )
 	dprintf( D_FULLDEBUG, "Starting "
 			 "DedicatedScheduler::handleDedicatedJobs\n" );
 
+	static time_t lastRun = 0;
+
+
+	int delay_factor = param_integer( "DEDICATED_SCHEDULER_DELAY_FACTOR", 5 );
+	if ((time(0) - lastRun) < (delay_factor * startdQueryTime)) {
+		dprintf(D_ALWAYS, "Delaying scheduling of parallel jobs because startd query time is long (%ld) seconds\n", startdQueryTime);
+		return FALSE;
+	}
+
 // 	now = (int)time(0);
 		// Just for debugging, set now to 0 to make everything easier
 		// to parse when looking at log files.
@@ -1459,6 +1470,8 @@ DedicatedScheduler::handleDedicatedJobs( void )
 
 		// Sort them, so we know if we can use them or not.
 	sortResources();
+
+	lastRun = time(0);
 
 		// Figure out what we want to do, based on what we have now.  
 	if( ! computeSchedule() ) { 
@@ -1530,6 +1543,7 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 	StringList config_list;
 	CondorQuery	query(STARTD_AD);
 
+	time_t b4 = time(0);
 	MyString constraint;
 
 		// Now, clear out any old list we might have for the resources
@@ -1546,8 +1560,9 @@ DedicatedScheduler::getDedicatedResourceInfo( void )
 		// about
 	CollectorList *collectors = daemonCore->getCollectorList();
 	if (collectors->query (query, *resources) == Q_OK) {
-		dprintf( D_FULLDEBUG, "Found %d potential dedicated resources\n",
-				 resources->Length() );
+		startdQueryTime = time(0) - b4;
+		dprintf( D_ALWAYS, "Found %d potential dedicated resources in %ld seconds\n",
+				 resources->Length(),startdQueryTime);
 		return true;
 	}
 
@@ -1604,7 +1619,8 @@ DedicatedScheduler::sortResources( void )
             if (all_matches->lookup(HashKey(resname.Value()), dmrec) < 0) {
                 dprintf(D_FULLDEBUG, "New dynamic slot %s\n", resname.Value());
                 if (!(is_claimed(res) && is_idle(res))) {
-                    dprintf(D_ALWAYS, "WARNING: unexpected claim/activity state for new dynamic slot %s -- ignoring this resource\n", resname.Value());
+					// Not actually unexpected -- this is a claimed dynamic slot, claimed by a serial job
+                    //dprintf(D_ALWAYS, "WARNING: unexpected claim/activity state for new dynamic slot %s -- ignoring this resource\n", resname.Value());
                     continue;
                 }
                 MyString pub_claim_id;

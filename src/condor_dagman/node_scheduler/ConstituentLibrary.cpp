@@ -213,7 +213,7 @@ retnull:
  *	dag g
  *
  *	Output:
- *	NULL,			if not an C-dag
+ *	NULL,			if not a C-dag
  *	ICO schedule,	if C-dag
  */
 int * ConstituentLibrary::checkC(const Dag& g)
@@ -854,7 +854,7 @@ void ConstituentLibrary_test_checkC(void)
 		printf("\n");
 	}
 	else {
-		printf("not an C-dag\n");
+		printf("not a C-dag\n");
 	};
 }
 

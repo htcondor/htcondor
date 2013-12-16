@@ -63,6 +63,13 @@ vanilla, parallel and java universes.
     {Prints the named job ClassAd attribute to standard output.}
   \OptItem{\OptArg{set\_job\_attr}{JobAttributeName AttributeValue}}
     {Sets the named job ClassAd attribute with the given attribute value.}
+  \OptItem{\OptArg{get\_job\_attr\_delayed}{JobAttributeName}}
+    {Prints the named job ClassAd attribute to standard output, 
+    potentially reading the cached value from a recent set\_job\_attr\_delayed.}
+  \OptItem{\OptArg{set\_job\_attr\_delayed}{JobAttributeName AttributeValue}}
+    {Sets the named job ClassAd attribute with the given attribute value, 
+    but does not immediately synchronize the value with the submit side. 
+    This has much less overhead than the non delayed version.}
   \OptItem{\OptArg{ulog}{Message}}
     {Appends \Arg{Message} to the job event log.}
   \OptItem{\Opt{read} \oOptArg{-offset}{offset} \oOptArg{-stride}{length skip} \Arg{RemoteFileName} \Arg{Length}}

@@ -61,6 +61,9 @@ void DefragStats::Init()
    STATS_POOL_PUB_PEAK(Pool, "", WholeMachines, IF_BASICPUB);
    STATS_POOL_ADD_VAL(Pool, "", AvgDrainingBadput, IF_BASICPUB);
    STATS_POOL_ADD_VAL(Pool, "", AvgDrainingUnclaimed, IF_BASICPUB);
+   STATS_POOL_ADD_VAL(Pool, "", MeanDrainedArrival, IF_BASICPUB);
+   STATS_POOL_ADD_VAL(Pool, "", MeanDrainedArrivalSD, IF_BASICPUB);
+   STATS_POOL_ADD_VAL(Pool, "", DrainedMachines, IF_BASICPUB);
 }
 
 void DefragStats::Clear()

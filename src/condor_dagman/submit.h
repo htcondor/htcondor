@@ -40,6 +40,7 @@
 	@param DAGNodeName the name of the job's DAG node
 	@param DAGParentNodeNames a delimited string listing the node's parents
 	@param vars list of any variables for this node
+	@param retry the retry number (0 the first time the job is run)
 	@param directory the directory in which to run this job
 	@param default log file name
 	@param whether to use the default log
@@ -53,7 +54,7 @@
 
 bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 					const char* DAGNodeName, MyString &DAGParentNodeNames,
-					List<Job::NodeVar> *vars,
+					List<Job::NodeVar> *vars, int retry,
 					const char* directory, const char *defLog, bool useDefLog,
 					const char *logFile, bool prohibitMultiJobs,
 					bool hold_claim );

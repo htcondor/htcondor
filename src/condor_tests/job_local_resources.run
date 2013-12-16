@@ -70,6 +70,7 @@ my $running_now = 0;
 my $expect_idle = 0;
 my $expect_run = 0;
 my $checkpslot = "no";
+my @adarray = ();
 
 my $on_execute = sub {
 my $idles = 0;
@@ -83,7 +84,7 @@ my $idles = 0;
 			daemon => "Negotiator",
 			match_regexp => "Started Negotiation Cycle",
 			match_instances => 4,
-			match_timeout => 60,
+			match_timeout => 180,
 			match_new => "true"
 				);
 	} else {
@@ -94,10 +95,6 @@ my $idles = 0;
 		die "Running jobs <$running_now> exceeded concurrency lints <$expect_run>\n";
 	}
 
-	#runcmd("condor_status -l",{emit_output=>1});
-
-	#my $szadarray = 0;
-	#my @StaticClassadsLong = `condor_status -l | grep Gpu`;
 	my $partial = "";
 	my $count = 0;
 	if($checkpslot eq "yes") {
@@ -105,37 +102,40 @@ my $idles = 0;
 	} else {
 		$partial = "slot1_1" . "@" . "$host";
 	}
-	my $statusline = "condor_status -l \"$partial\" | grep Gpu | ";
+
+	@adarray = ();
+	my $cmd = "condor_status -l \"$partial\"";
+	runCondorTool($cmd, \@adarray, 2, {emit_output=>0});
 	my $AdType = "Gpu";
-	print "About to do <$statusline>\n";
+	print "About to: $cmd \n";
 
 	my $longad = "";
-	open(CSTATUS,"$statusline") or die "<$statusline> failed:$!\n";
-	print "did <$statusline>\n";
-	while(<CSTATUS>) {
-		chomp();
-		$longad = $_;
-		$count += 1;
-		if($longad =~ /^TotalGpu\s*=\s*(\d+)\s*$/) {
-			CondorTest::debug("Total$AdType = $1\n",1);;
-			CheckExpectations("Total$AdType", $1, 2);
-		} elsif($longad =~ /^Gpu\s*=\s*(\d+)\s*$/) {
-			CondorTest::debug("$AdType = $1\n",1);;
-			CheckExpectations("$AdType", $1, 1);
-		} elsif($longad =~ /^DetectedGpu\s*=\s*(\d+)\s*$/) {
-			CondorTest::debug("Detected$AdType = $1\n",1);;
-			CheckExpectations("Detected$AdType", $1, 2);
-		} 
+	foreach my $line (@adarray) {
+		chomp($line);
+		if($line =~ /Gpu/) {
+			$longad = $line;
+			$count += 1;
+			if($longad =~ /^TotalGpu\s*=\s*(\d+)\s*$/) {
+				CondorTest::debug("Total$AdType = $1\n",1);;
+				CheckExpectations("Total$AdType", $1, 2);
+			} elsif($longad =~ /^Gpu\s*=\s*(\d+)\s*$/) {
+				CondorTest::debug("$AdType = $1\n",1);;
+				CheckExpectations("$AdType", $1, 1);
+			} elsif($longad =~ /^DetectedGpu\s*=\s*(\d+)\s*$/) {
+				CondorTest::debug("Detected$AdType = $1\n",1);;
+				CheckExpectations("Detected$AdType", $1, 2);
+			} 
+		}
 	}
-	print "After looking at <$statusline>\n";
+	print "After: $cmd\n";
 
 	if($count != 4){
-		die "There are expected to be 4 resource uniqu ads. There were $szadarray for Gpu\n";
+		die "There are expected to be 4 resource uniqu ads. There were $count for Gpu\n";
 	}
 
 
-	runcmd("condor_rm -all");
-	runcmd("condor_q ",{emit_output=>1});
+	runToolNTimes("condor_rm -all",1,0);
+	runToolNTimes("condor_q ",1,1);
 
 };
 
@@ -143,81 +143,98 @@ my $idles = 0;
 print "First test basic job\n";
 $result = SimpleJob::RunCheck();
 
-my $szadarray = 0;
-my @StaticClassadsLong = `condor_status -l | grep Gpu`;
+$adarray = ();
+$cmd = "condor_status -l";
+runCondorTool($cmd, \@adarray, 2, {emit_output=>0});
 my $AdType = "Gpu";
-$szadarray = @StaticClassadsLong;
-if($szadarray != 4){
-	die "There are expected to be 4 resource uniqu ads. There were $szadarray for Gpu\n";
-}
-foreach my $longad (@StaticClassadsLong) {
+$count = 0;
+
+foreach my $longad (@adarray) {
 	chomp($longad);
-	CondorTest::debug("ad: $longad\n",2);
-	if($longad =~ /^TotalGpu\s*=\s*(\d+)\s*$/) {
-		CondorTest::debug("Total$AdType = $1\n",2);;
-		CheckExpectations("Total$AdType", $1, 2);
-	} elsif($longad =~ /^Gpu\s*=\s*(\d+)\s*$/) {
-		CondorTest::debug("$AdType = $1\n",2);;
-		CheckExpectations("$AdType", $1, 1);
-	} elsif($longad =~ /^DetectedGpu\s*=\s*(\d+)\s*$/) {
-		CondorTest::debug("Detected$AdType = $1\n",2);;
-		CheckExpectations("Detected$AdType", $1, 2);
-	} 
+	if($longad =~ /Gpu/) {
+		$count += 1;
+		CondorTest::debug("ad: $longad\n",2);
+		if($longad =~ /^TotalGpu\s*=\s*(\d+)\s*$/) {
+			CondorTest::debug("Total$AdType = $1\n",2);;
+			CheckExpectations("Total$AdType", $1, 2);
+		} elsif($longad =~ /^Gpu\s*=\s*(\d+)\s*$/) {
+			CondorTest::debug("$AdType = $1\n",2);;
+			CheckExpectations("$AdType", $1, 1);
+		} elsif($longad =~ /^DetectedGpu\s*=\s*(\d+)\s*$/) {
+			CondorTest::debug("Detected$AdType = $1\n",2);;
+			CheckExpectations("Detected$AdType", $1, 2);
+		} 
+	}
 }
 
-@StaticClassadsLong = `condor_status -l | grep Sails`;
-$szadarray = @StaticClassadsLong;
+if($count != 4){
+	die "There are expected to be 4 resource uniqu ads. There were $count for Gpu\n";
+}
+
+$adarray = ();
+$cmd = "condor_status -l";
+runCondorTool($cmd, \@adarray, 2, {emit_output=>0});
+$count = 0;
 my $AdType = "Sails";
-if($szadarray != 4){
-	die "There are expected to be 4 resource uniqu ads. There were $szadarray for Sails\n";
-}
-foreach my $longad (@StaticClassadsLong) {
+foreach my $longad (@adarray) {
 	chomp($longad);
-	CondorTest::debug("ad: $longad\n",2);
-	if($longad =~ /^TotalSails\s*=\s*(\d+)\s*$/) {
-		CondorTest::debug("Total$AdType = $1\n",2);;
-		CheckExpectations("Total$AdType", $1, 2);
-	} elsif($longad =~ /^TotalSlotSails\s*=\s*(\d+)\s*$/) {
-		CondorTest::debug("TotalSlot$AdType = $1\n",2);;
-		CheckExpectations("TotalSlot$AdType", $1, 1);
-	} elsif($longad =~ /^Sails\s*=\s*(\d+)\s*$/) {
-		CondorTest::debug("$AdType = $1\n",2);;
-		CheckExpectations("$AdType", $1, 1);
-	} elsif($longad =~ /^DetectedSails\s*=\s*(\d+)\s*$/) {
-		CondorTest::debug("Detected$AdType = $1\n",2);;
-		CheckExpectations("Detected$AdType", $1, 2);
-	} else {
-		die "Failed to match this line<$longad>\n";
+	if($longad =~ /Sails/) {
+		$count += 1;
+		CondorTest::debug("ad: $longad\n",2);
+		if($longad =~ /^TotalSails\s*=\s*(\d+)\s*$/) {
+			CondorTest::debug("Total$AdType = $1\n",2);;
+			CheckExpectations("Total$AdType", $1, 2);
+		} elsif($longad =~ /^TotalSlotSails\s*=\s*(\d+)\s*$/) {
+			CondorTest::debug("TotalSlot$AdType = $1\n",2);;
+			CheckExpectations("TotalSlot$AdType", $1, 1);
+		} elsif($longad =~ /^Sails\s*=\s*(\d+)\s*$/) {
+			CondorTest::debug("$AdType = $1\n",2);;
+			CheckExpectations("$AdType", $1, 1);
+		} elsif($longad =~ /^DetectedSails\s*=\s*(\d+)\s*$/) {
+			CondorTest::debug("Detected$AdType = $1\n",2);;
+			CheckExpectations("Detected$AdType", $1, 2);
+		} else {
+			die "Failed to match this line<$longad>\n";
+		}
 	}
 }
 
-@StaticClassadsLong = `condor_status -l | grep Boats`;
-$szadarray = @StaticClassadsLong;
+if($count != 4){
+	die "There are expected to be 4 resource uniqu ads. There were $count for Sails\n";
+}
+
+$adarray = ();
+$cmd = "condor_status -l";
+runCondorTool($cmd, \@adarray, 2, {emit_output=>0});
+$count = 0;
 my $AdType = "Boats";
-if($szadarray != 4){
-	die "There are expected to be 4 resource uniqu ads. There were $szadarray for Boats\n";
-}
 
-foreach my $longad (@StaticClassadsLong) {
+foreach my $longad (@adarray) {
 	chomp($longad);
-	CondorTest::debug("ad: $longad\n",2);
-	if($longad =~ /^TotalBoats\s*=\s*(\d+)\s*$/) {
-		CondorTest::debug("Total$AdType = $1\n",2);;
-		CheckExpectations("Total$AdType", $1, 2);
-	} elsif($longad =~ /^TotalSlotBoats\s*=\s*(\d+)\s*$/) {
-		CondorTest::debug("TotalSlot$AdType = $1\n",2);;
-		CheckExpectations("TotalSlot$AdType", $1, 1);
-	} elsif($longad =~ /^Boats\s*=\s*(\d+)\s*$/) {
-		CondorTest::debug("$AdType = $1\n",2);;
-		CheckExpectations("$AdType", $1, 1);
-	} elsif($longad =~ /^DetectedBoats\s*=\s*(\d+)\s*$/) {
-		CondorTest::debug("Detected$AdType = $1\n",2);;
-		CheckExpectations("Detected$AdType", $1, 2);
-	} else {
-		die "Failed to match this line<$longad>\n";
+	if($longad =~ /Boats/) {
+		$count += 1;
+		CondorTest::debug("ad: $longad\n",2);
+		if($longad =~ /^TotalBoats\s*=\s*(\d+)\s*$/) {
+			CondorTest::debug("Total$AdType = $1\n",2);;
+			CheckExpectations("Total$AdType", $1, 2);
+		} elsif($longad =~ /^TotalSlotBoats\s*=\s*(\d+)\s*$/) {
+			CondorTest::debug("TotalSlot$AdType = $1\n",2);;
+			CheckExpectations("TotalSlot$AdType", $1, 1);
+		} elsif($longad =~ /^Boats\s*=\s*(\d+)\s*$/) {
+			CondorTest::debug("$AdType = $1\n",2);;
+			CheckExpectations("$AdType", $1, 1);
+		} elsif($longad =~ /^DetectedBoats\s*=\s*(\d+)\s*$/) {
+			CondorTest::debug("Detected$AdType = $1\n",2);;
+			CheckExpectations("Detected$AdType", $1, 2);
+		} else {
+			die "Failed to match this line<$longad>\n";
+		}
 	}
 }
 
+if($count != 4){
+	die "There are expected to be 4 resource uniqu ads. There were $count for Boats\n";
+}
 
 print "\n\n*************** Testing Slot Ads for local resources:\n";
 print "ok\n\n\n";
@@ -312,8 +329,9 @@ sub CountIdle
 	my $idlecount = 0;
 	my $line = "";
 
-	#runcmd("condor_q");
-	my @jobs = `condor_q`;
+	my @jobs = ();
+	my $cmd = "condor_q";
+	runCondorTool($cmd, \@jobs, 2, {emit_output=>0});
 	foreach my $job (@jobs) {
 		chomp($job);
 		$line = $job;

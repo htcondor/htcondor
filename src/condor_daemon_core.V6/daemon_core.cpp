@@ -412,10 +412,10 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	m_invalidate_sessions_via_tcp = true;
 	dc_rsock = NULL;
 	dc_ssock = NULL;
-    m_iMaxAcceptsPerCycle = param_integer("MAX_ACCEPTS_PER_CYCLE", 8);
-    if( m_iMaxAcceptsPerCycle != 1 ) {
-        dprintf(D_TEST | D_VERBOSE,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
-    }
+	super_dc_rsock = NULL;
+	super_dc_ssock = NULL;
+	m_iMaxReapsPerCycle = 1;
+    m_iMaxAcceptsPerCycle = 1;
 
 	inheritedSocks[0] = NULL;
 	inServiceCommandSocket_flag = FALSE;
@@ -563,6 +563,12 @@ DaemonCore::~DaemonCore()
 	}
 	if( dc_ssock ) {
 		delete dc_ssock;
+	}
+	if( super_dc_rsock ) {
+		delete super_dc_rsock;
+	}
+	if( super_dc_ssock ) {
+		delete super_dc_ssock;
 	}
 
 	if (reapTable != NULL)
@@ -1230,6 +1236,15 @@ DaemonCore::publicNetworkIpAddr(void) {
 const char*
 DaemonCore::privateNetworkIpAddr(void) {
 	return (const char*) InfoCommandSinfulStringMyself(true);
+}
+
+const char*
+DaemonCore::superUserNetworkIpAddr(void) {
+	if ( ! super_dc_rsock ) {
+		return NULL;
+	}
+
+	return super_dc_rsock->get_sinful();
 }
 
 
@@ -2724,7 +2739,20 @@ DaemonCore::reconfig(void) {
     if( m_iMaxAcceptsPerCycle != 1 ) {
         dprintf(D_FULLDEBUG,"Setting maximum accepts per cycle %d.\n", m_iMaxAcceptsPerCycle);
     }
-
+	/*
+		Default value of MAX_REAPS_PER_CYCLE is 0 - a value of 0 means
+		call as many reapers as are waiting at the time we exit select.
+		We default to 0 because generally an exited child means completed
+		work that needs to be committed, or a worker that is ready for more
+		work once we reap.  So we have an incentive to prioritize reapers to
+		clean-out the system.  Note that we are assuming that a reaper will spawn
+		either zero or one new processes at most (usually zero).
+		In the words of BOC, "Don't fear the reapers!"
+	*/
+	m_iMaxReapsPerCycle = param_integer("MAX_REAPS_PER_CYCLE",0,0);
+    if( m_iMaxReapsPerCycle != 1 ) {
+        dprintf(D_FULLDEBUG,"Setting maximum reaps per cycle %d.\n", m_iMaxAcceptsPerCycle);
+    }
 		// Initialize the collector list for ClassAd updates
 	initCollectorList();
 
@@ -3392,6 +3420,13 @@ void DaemonCore::Driver()
 
         runtime = group_runtime = UtcTime::getTimeDouble();
 
+		// Call reaper handlers before we deal with incoming commands.
+		// The thinking here is incoming commands may very well spawn
+		// more child processes, so it makes sense to reap child processes
+		// who completed their work first before spawning yet more pids.
+		HandleDC_SERVICEWAITPIDS(0);
+
+		// Now, lets see what select told us
 		if ( selector.has_ready() ||
 			 ( selector.timed_out() && 
 			   min_deadline && min_deadline < time(NULL) ) )
@@ -3407,6 +3442,24 @@ void DaemonCore::Driver()
 			bool recheck_status = false;
 			//bool call_soap_handler = false;
 
+			// If a command came in on the super-user command socket, then
+			// set a flag so in the loop below we only schedule command callbacks
+			// from this one socket for this daemoncore cycle.
+			bool superuser_command_arrived = false;
+			if (super_dc_rsock &&
+				selector.fd_ready(super_dc_rsock->get_file_desc(), Selector::IO_READ))
+			{
+				superuser_command_arrived = true;
+			}
+			if (super_dc_ssock &&
+				selector.fd_ready(super_dc_ssock->get_file_desc(), Selector::IO_READ))
+			{
+				superuser_command_arrived = true;
+			}
+			if ( superuser_command_arrived ) {
+				dprintf(D_ALWAYS,"Received a superuser command\n");
+			}
+
 			// scan through the socket table to find which ones select() set
 			for(i = 0; i < nSock; i++) {
 				if ( (*sockTable)[i].iosock && 
@@ -3420,7 +3473,15 @@ void DaemonCore::Driver()
 					time_t deadline = (*sockTable)[i].iosock->get_deadline();
 					bool sock_timed_out = ( deadline && deadline < now );
 
-					if ( (*sockTable)[i].is_reverse_connect_pending ) {
+					if ( superuser_command_arrived &&
+						 ((*sockTable)[i].iosock != super_dc_rsock &&
+						  (*sockTable)[i].iosock != super_dc_ssock) )
+					{
+						// do nothing for now, because we know there is a request pending
+						// on the suerperuser command socket, and this is not the
+						// superuser command socket.
+					}
+					else if ( (*sockTable)[i].is_reverse_connect_pending ) {
 						// nothing to do
 					}
 					else if ( (*sockTable)[i].is_connect_pending ) {
@@ -4194,7 +4255,7 @@ int DaemonCore::ServiceCommandSocket()
 						break;
 					}
 				} 
-			} while ( selector.has_ready() ); // loop ​until ​no ​more ​commands ​waiting ​on socket
+			} while ( selector.has_ready() ); // loop until no more commands waiting on socket
 			
 			selector.reset();  // Reset selector for next socket
 		} // if(use_loop)
@@ -5411,12 +5472,13 @@ enum {
 };
 
 #if HAVE_CLONE
-static int stack_direction(volatile int *ptr=NULL) {
-    volatile int location;
-    if(!ptr) return stack_direction(&location);
-    if (ptr < &location) {
-        return STACK_GROWS_UP;
-    }
+static int stack_direction() {
+
+// We used to try to be clever about figuring this out
+// but compiler optimizations kept tripping up this code
+// The clone(2) man page says "stack grown down on all
+// Linux supported architectures except HP-PA.
+// So just hardcode STACK_GROWS_DOWN...
 
     return STACK_GROWS_DOWN;
 }
@@ -8496,6 +8558,32 @@ DaemonCore::InitDCCommandSocket( int command_port )
 		}
 	}
 
+
+	std::string super_addr_file;
+	formatstr( super_addr_file, "%s_SUPER_ADDRESS_FILE", get_mySubSystem()->getName() );
+	char* superAddrFN = param( super_addr_file.c_str() );
+	if ( superAddrFN && !super_dc_rsock ) {
+		super_dc_rsock = new ReliSock;
+		super_dc_ssock = new SafeSock;
+
+		if ( !super_dc_rsock || !super_dc_ssock ) {
+			EXCEPT("Failed to create SuperUser Command socket");
+		}
+		// Note: BindAnyCommandPort() is in daemon core
+		if ( !BindAnyCommandPort(super_dc_rsock,super_dc_ssock)) {
+			EXCEPT("Failed to bind SuperUser Command socket");
+		}
+		if ( !super_dc_rsock->listen() ) {
+			EXCEPT("Failed to post a listen on SuperUser Command socket");
+		}
+		daemonCore->Register_Command_Socket( (Stream*)super_dc_rsock );
+		daemonCore->Register_Command_Socket( (Stream*)super_dc_ssock );
+		super_dc_rsock->set_inheritable(FALSE);
+		super_dc_ssock->set_inheritable(FALSE);
+
+		free(superAddrFN);
+	}
+
 		// Now, drop this sinful string into a file, if
 		// mySubSystem_ADDRESS_FILE is defined.
 	drop_addr_file();
@@ -8591,14 +8679,21 @@ int
 DaemonCore::HandleDC_SERVICEWAITPIDS(int)
 {
 	WaitpidEntry wait_entry;
+    unsigned int iReapsCnt = ( m_iMaxReapsPerCycle > 0 ) ? m_iMaxReapsPerCycle: -1;
 
-	if ( WaitpidQueue.dequeue(wait_entry) < 0 ) {
-		// queue is empty, just return
-		return TRUE;
+    while ( iReapsCnt )
+    {
+		// pull an reap event off our queue
+		if ( WaitpidQueue.dequeue(wait_entry) < 0 ) {
+			// queue is empty, just return cuz nothing more to do
+			return TRUE;
+		}
+
+		// we pulled something off the queue, handle it
+		HandleProcessExit(wait_entry.child_pid, wait_entry.exit_status);
+
+		iReapsCnt--;
 	}
-
-	// we pulled something off the queue, handle it
-	HandleProcessExit(wait_entry.child_pid, wait_entry.exit_status);
 
 	// now check if the queue still has more entries.  if so,
 	// repost the DC_SERVICEWAITPIDS signal so we'll eventually
@@ -9250,17 +9345,6 @@ int DaemonCore::HungChildTimeout()
 	else {
 	pidentry->was_not_responding = TRUE;
 	}
-
-	// now we give the child one last chance to save itself.  we do this by
-	// servicing any waiting commands, since there could be a child_alive
-	// command sitting there in our receive buffer.  the reason we do this
-	// is to handle the case where both the child _and_ the parent have been
-	// hung for a period of time (e.g. perhaps the log files are on a hard
-	// mounted NFS volume, and everyone was blocked until the NFS server
-	// returned).  in this situation we should try to avoid killing the child.
-	// so service the buffered commands and check if the was_not_responding
-	// flag flips back to false.
-	ServiceCommandSocket();
 
 	// Now make certain that this pid did not exit by verifying we still
 	// exist in the pid table.  We must do this because ServiceCommandSocket

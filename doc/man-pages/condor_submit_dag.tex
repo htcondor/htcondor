@@ -54,8 +54,8 @@ in one or more \Arg{DAGInputFile}s.
 Each \Arg{DAGInputFile} contains commands
 to direct the submission of jobs implied by the nodes
 of a DAG to HTCondor.
-See the HTCondor User Manual, section~\ref{sec:DAGMan} for a complete
-description.
+Extensive documentation is in the HTCondor User Manual
+section on DAGMan.
 
 \begin{Options}
   \OptItem{\Opt{-help}}{Display usage information.}
@@ -72,8 +72,7 @@ description.
      will cause them to be renamed, and the original DAG will be run.
      If old-style rescue DAG mode
      is in effect, any existing old-style rescue DAGs will be deleted,
-     and the original DAG will be run. Section~\ref{sec:DAGMan-rescue}
-     details rescue DAGs.}
+     and the original DAG will be run. }
   \OptItem{\OptArg{-maxidle}{NumberOfJobs}}{Sets the maximum number of idle
      jobs allowed before \Condor{dagman} stops submitting more jobs.  Once
      idle jobs start to run, \Condor{dagman} will resume submitting jobs.
@@ -107,15 +106,12 @@ description.
   \OptItem{\OptArg{-notification}{value}}{Sets the e-mail notification
      for DAGMan itself. This information will be used within the HTCondor
      submit description file for DAGMan. This file is produced by
-     \Condor{submit\_dag}. See \Opt{notification}
-     within the section of submit description file commands in the
-     \Condor{submit} manual page on page~\pageref{man-condor-submit}
-     for specification of \Arg{value}.
+     \Condor{submit\_dag}. See the description of \SubmitCmd{notification}
+     within \Condor{submit} manual page for a specification of \Arg{value}.
      }
   \OptItem{\Opt{-noeventchecks}}{This argument is no longer used; it
      is now ignored.  Its functionality is now implemented by
-     the \MacroNI{DAGMAN\_ALLOW\_EVENTS} configuration macro
-     (see section~\ref{param:DAGManAllowEvents}).}
+     the \MacroNI{DAGMAN\_ALLOW\_EVENTS} configuration variable. }
   \OptItem{\Opt{-allowlogerror}}{This optional argument has
      \Condor{dagman} try to run the specified DAG, even in the case
      of detected errors in the job event log specification.
@@ -146,8 +142,7 @@ description.
      Passes the the \Arg{level} of debugging output desired to
      \Condor{dagman}.  \Arg{level} is an integer, with values of
      0-7 inclusive, where 7 is the most verbose output.
-     See the 
-     \Condor{dagman} manual page on page~\pageref{man-condor-dagman}
+     See the \Condor{dagman} manual page
      for detailed descriptions of these values.
      If not specified, no \OptArg{-debug} value is passed to
      \Condor{dagman}.
@@ -157,7 +152,7 @@ description.
      had been run in the directory containing that DAG file.  This option
      is most useful when running multiple DAGs in a single \Condor{dagman}.
      Note that the \Opt{-usedagdir} flag must not be used when running
-     an old-style rescue DAG (see section~\ref{sec:DAGMan-rescue}).
+     an old-style Rescue DAG.
      }
   \OptItem{\OptArg{-outfile\_dir}{directory}}{
      Specifies the directory in which the \File{.dagman.out} file will
@@ -173,9 +168,7 @@ description.
      DAGs if multiple DAGs are specified.  Further note that it is a
      fatal error if the configuration file specified by this option
      conflicts with a configuration file specified in any of the DAG
-     files, if they specify one.  For more information about how
-     \Condor{dagman} configuration files work, see
-     section~\ref{sec:DAG-configuration}.
+     files, if they specify one.
      }
   \OptItem{\OptArg{-insert\_sub\_file}{FileName}}{
     Specifies a file to insert into the \File{.condor.sub} file created
@@ -229,16 +222,14 @@ description.
      mainly for backwards compatibility).
   }
   \OptItem{\Opt{-do\_recurse}}{This optional argument causes
-     \Condor{submit\_dag} to run itself recursively on nested DAGs
-     (the default is now that it does \emph{not} run itself recursively;
+     \Condor{submit\_dag} to run itself recursively on nested DAGs.
+     The default is now that it does \emph{not} run itself recursively;
      instead the \File{.condor.sub} files for nested DAGs are generated
-     "lazily" by \Condor{dagman} itself).  (DAG nodes specified with
-     the \MacroNI{SUBDAG EXTERNAL} keyword or with submit file names
-     ending in \File{.condor.sub} are considered nested DAGs.)
-     (See also the
-     \MacroNI{DAGMAN\_GENERATE\_SUBDAG\_SUBMITS} configuration
-     variable in section~\ref{param:DAGManGenerateSubDagSubmits} for
-     more information.)
+     "lazily" by \Condor{dagman} itself.  DAG nodes specified with
+     the \Opt{SUBDAG EXTERNAL} keyword or with submit file names
+     ending in \File{.condor.sub} are considered nested DAGs.
+     The \MacroNI{DAGMAN\_GENERATE\_SUBDAG\_SUBMITS} configuration
+     variable may be relevant.
   }
   \OptItem{\Opt{-update\_submit}}{This optional argument causes an existing
      \File{.condor.sub} file to not be treated as an error; rather, the

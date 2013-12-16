@@ -7,9 +7,9 @@ from campus_factory.util.DaemonWrangler import DaemonWrangler
 from campus_factory.ClusterStatus import CondorConfig
 from optparse import OptionParser
 import os, sys, pwd
+import logging
 
-import warnings
-warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 
 def add_options(parser):
 
@@ -37,17 +37,21 @@ def main():
         print "Error parsing options, exactly 2 arguments needed"
         print str(args)
         sys.exit(1)
-       
+     
+    logging.getLogger().setLevel(logging.ERROR)
+    
     clusterhost = args[0] 
     condor_dir = args[1]
     
     condor_config = CondorConfig()
-    (factory_uid, factory_gid) = condor_config.get("CONDOR_IDS").split(".")
-    if int(factory_uid) != os.getuid():
-        print "factory_uid = %i, getuid = %i" % ( int(factory_uid), os.getuid() )
-        print "glidein_creation is not running as the factory user."
-        print "Not packaging glideins for %s" % clusterhost
-        sys.exit(0)
+    IDS = condor_config.get("CONDOR_IDS")
+    if IDS != "":
+        (factory_uid, factory_gid) = IDS.split(".")
+        if int(factory_uid) != os.getuid():
+            print "factory_uid = %i, getuid = %i" % ( int(factory_uid), os.getuid() )
+            print "glidein_creation is not running as the factory user."
+            print "Not packaging glideins for %s" % clusterhost
+            sys.exit(0)
     
     dw = DaemonWrangler(base_condor_dir = condor_dir, dumb_package = True)
     
