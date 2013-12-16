@@ -1407,7 +1407,7 @@ FileTransfer::Reaper(Service *, int pid, int exit_status)
 	transobject->ActiveTransferTid = -1;
 	TransThreadTable->remove(pid);
 
-	if (NetworkPluginManager::HasPlugins() && transobject->m_network_name.size())
+	if (param_boolean("ENABLE_NETWORK_NAMESPACE_FOR_FILETRANSFER", true) && NetworkPluginManager::HasPlugins() && transobject->m_network_name.size())
 	{
         const std::string job_phase = "stage_in";
 		NetworkPluginManager::PerformJobAccounting(NULL, job_phase);
@@ -1699,7 +1699,7 @@ FileTransfer::Download(ReliSock *sock, bool blocking)
 		info->myobj = this;
 
 		classad_shared_ptr<classad::ClassAd> machineAdPtr;
-		if (param_boolean("USE_NETWORK_NAMESPACES", false) && GetJobAd() && GetMachineInfo(machineAdPtr, m_network_name))
+		if (param_boolean("ENABLE_NETWORK_NAMESPACE_FOR_FILETRANSFER", true) && param_boolean("USE_NETWORK_NAMESPACES", false) && GetJobAd() && GetMachineInfo(machineAdPtr, m_network_name))
 		{
 			ClassAd fakeMachineAd;
 			int rc = NetworkPluginManager::PrepareNetwork(m_network_name, *GetJobAd(), machineAdPtr);
@@ -1729,7 +1729,7 @@ FileTransfer::Download(ReliSock *sock, bool blocking)
 			return FALSE;
 		}
 
-		if (NetworkPluginManager::HasPlugins())
+		if (param_boolean("ENABLE_NETWORK_NAMESPACE_FOR_FILETRANSFER", true) && NetworkPluginManager::HasPlugins())
 		{
 			if (NetworkPluginManager::PostForkParent(ActiveTransferTid))
 			{
@@ -1761,7 +1761,7 @@ FileTransfer::DownloadThread(void *arg, Stream *sock)
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DownloadThread\n");
 
 	int net_rc;
-	if (NetworkPluginManager::HasPlugins())
+	if (param_boolean("ENABLE_NETWORK_NAMESPACE_FOR_FILETRANSFER", true) && NetworkPluginManager::HasPlugins())
 	{
 		if ((net_rc = NetworkPluginManager::PostForkChild()))
 		{
