@@ -1403,7 +1403,6 @@ Sock::bytes_available_to_read()
 #ifndef FIONREAD
 #error FIONREAD is not defined!  Fix me by seeing code comment.
 #endif
-	dprintf(D_ALWAYS, "Internal error: \n");
 	if(_state == sock_virgin) return -1;
 
 	if ( (_state != sock_assigned) &&  
