@@ -53,15 +53,15 @@ one to specify which subsystem to turn off.
 \\ \hline
 \texttt{read\_events( file\_obj, is\_xml = True ) }
 
-Read and parse a HTCondor event log file.
+Read and parse an HTCondor event log file.
+Returns a python iterator of ClassAds.
 
-Parameter \texttt{file\_obj} is a file object corresponding to a HTCondor
+Parameter \texttt{file\_obj} is a file object corresponding to an HTCondor
 event log.
 
 The optional parameter \texttt{is\_xml} specifies whether the event log is
 XML-formatted.
 
-Returns a python iterator of ClassAds.
 \\ \hline
 
 \texttt{enable\_debug( )}
