@@ -2200,6 +2200,27 @@ which use DaemonCore).
   The macro is named by substituting \MacroNI{<SUBSYS>}
   with the appropriate subsystem string as defined in
   section~\ref{sec:HTCondor-Subsystem-Names}.
+
+\label{param:SubsysSuperAddressFile}
+\item[\MacroB{<SUBSYS>\_SUPER\_ADDRESS\_FILE}]
+  \index{SUBSYS\_SUPER\_ADDRESS\_FILE macro@\texttt{<SUBSYS>\_SUPER\_ADDRESS\_FILE} macro}
+  \index{SCHEDD\_SUPER\_ADDRESS\_FILE macro@\texttt{SCHEDD\_SUPER\_ADDRESS\_FILE} macro}
+  \index{configuration macro!\texttt{SCHEDD\_SUPER\_ADDRESS\_FILE}}
+  \index{COLLECTOR\_SUPER\_ADDRESS\_FILE macro@\texttt{COLLECTOR\_SUPER\_ADDRESS\_FILE} macro}
+  \index{configuration macro!\texttt{COLLECTOR\_SUPER\_ADDRESS\_FILE}}
+  A complete path to a file that is to contain an IP address and port number 
+  for a command port that is serviced with priority for a daemon. 
+  Every HTCondor daemon that uses
+  DaemonCore may have a higher priority command port where commands are sent.
+  Any command that goes through \Condor{sos}, and any command issued by
+  the super user (root or local system) for a daemon on the local machine
+  will have the command sent to this port.
+  Default values are provided for the \Condor{schedd} daemon at
+  \File{\$(SPOOL)/.schedd\_address.super}
+  and the \Condor{collector} daemon at
+  \File{\$(LOG)/.collector\_address.super}.
+  When not defined for other DaemonCore daemons,
+  there will be no higher priority command port.
   
 \label{param:SubsysDaemonAdFile}
 \item[\MacroB{<SUBSYS>\_DAEMON\_AD\_FILE}]
