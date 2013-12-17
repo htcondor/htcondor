@@ -64,6 +64,20 @@ XML-formatted.
 Returns a python iterator of ClassAds.
 \\ \hline
 
+\texttt{enable\_debug( )}
+
+Enable debugging output from HTCondor (output is sent to stdout).
+
+The log level is controlled by TOOL\_DEBUG.
+
+\\ \hline
+\texttt{enable\_log( )}
+
+Enable debugging output from HTCondor (output is sent to a logfile).
+
+The log level is controlled by TOOL\_DEBUG; the logfile used is controlled
+by TOOL\_LOG.
+
 \end{tabular}
 \end{flushleft}
 
@@ -169,6 +183,18 @@ Retrieve the output sandbox from one or more jobs.
 
 Parameter \texttt{job\_spec} is an expression string matching 
 the list of job output sandboxes to retrieve.
+\\ \hline
+\texttt{refreshGSIProxy(cluster, proc, filename, lifetime)}
+
+Refresh the GSI proxy of a job (identified by \texttt{cluster} and \texttt{proc} IDs).
+
+This will refresh the remote proxy with the contents of the file identified
+by \texttt{filename}.  The parameter \texttt{lifetime} indicates the desired
+lifetime (in seconds) of delegated proxy; 0 indicates to not shorten
+the proxy lifetime.  -1 indicates to use the value of parameter
+DELEGATE\_JOB\_GSI\_CREDENTIALS\_LIFETIME.  Note that, depending on the lifetime
+of the proxy in \texttt{filename}, the resulting lifetime may be shorter
+than the desired lifetime.
 
 \end{tabular}
 \end{flushleft}

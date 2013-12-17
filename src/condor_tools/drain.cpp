@@ -51,6 +51,9 @@ bool resume_on_completion = false;
 char *cancel_request_id = NULL;
 char *draining_check_expr = NULL;
 
+// pass the exit code through dprintf_SetExitCode so that it knows
+// whether to print out the on-error buffer or not.
+#define exit(n) (exit)((dprintf_SetExitCode(n==1), n))
 
 // protoypes of interest
 void usage( const char* );
@@ -71,6 +74,8 @@ main( int argc, char *argv[] )
 	myDistro->Init( argc, argv );
 
 	config();
+	dprintf_config_tool_on_error(0);
+	dprintf_OnExitDumpOnErrorBuffer(stderr);
 
 	parseArgv( argc, argv );
 
@@ -103,6 +108,7 @@ main( int argc, char *argv[] )
 		return 1;
 	}
 
+	dprintf_SetExitCode(0);
 	return 0;
 }
 

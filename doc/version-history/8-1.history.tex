@@ -30,7 +30,9 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item The python bindings now can refresh a remote job's GSI proxy
+ as a part of the \texttt{Schedd} object.
+\Ticket{4116}
 
 \end{itemize}
 
@@ -38,7 +40,8 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item None.
+\item HTCondor now interacts with EC2 services using POST instead of GET,
+which permits more services to accept user data greater than 8KB.
 
 \end{itemize}
 
@@ -59,6 +62,20 @@ The details of each version are described below.
 \noindent New Features:
 
 \begin{itemize}
+
+\index{SUBSYS\_SUPER\_ADDRESS\_FILE macro@\texttt{<SUBSYS>\_SUPER\_ADDRESS\_FILE} macro}
+\index{configuration macro!\texttt{SUBSYS\_SUPER\_ADDRESS\_FILE}}
+\item When the super user issues a command 
+or when the new \Condor{sos} tool invokes another tool,
+the command can be serviced with a higher priority. 
+This should be useful when attempting to get information from an
+overloaded daemon, in order to diagnose or fix a problem.
+Commands directed at the \Condor{schedd} or \Condor{collector} daemons 
+have this ability by default.
+Other DaemonCore daemons require configuration using the new 
+configuration variable
+\MacroB{<SUBSYS>\_SUPER\_ADDRESS\_FILE}.
+\Ticket{4029}
 
 \item The new \Condor{defrag} daemon ClassAd attribute 
 \Attr{MeanDrainedArrived}
@@ -95,11 +112,11 @@ Section~\ref{sec:Config-File-Macros} has details for configuration.
 
 \begin{itemize}
 
-\item The configuration variable \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}
-has been made more powerful so that it can be usefully specified in
-the overall HTCondor configuration files, as opposed to being useful
-only in a per-DAG configuration file.  See
-section~\ref{param:DAGManDefaultNodeLog} for details.
+\item Configuration variable \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}
+has been made more powerful,
+so that it can be defined in HTCondor configuration files, 
+instead of being useful only when defined in a per-DAG configuration file.
+See section~\ref{param:DAGManDefaultNodeLog} for details.
 \Ticket{3930}
 
 \item A new configuration variable \Macro{CORE\_FILE\_NAME} can be used to set
