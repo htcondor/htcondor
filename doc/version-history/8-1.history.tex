@@ -63,6 +63,20 @@ which permits more services to accept user data greater than 8KB.
 
 \begin{itemize}
 
+\index{SUBSYS\_SUPER\_ADDRESS\_FILE macro@\texttt{<SUBSYS>\_SUPER\_ADDRESS\_FILE} macro}
+\index{configuration macro!\texttt{SUBSYS\_SUPER\_ADDRESS\_FILE}}
+\item When the super user issues a command 
+or when the new \Condor{sos} tool invokes another tool,
+the command can be serviced with a higher priority. 
+This should be useful when attempting to get information from an
+overloaded daemon, in order to diagnose or fix a problem.
+Commands directed at the \Condor{schedd} or \Condor{collector} daemons 
+have this ability by default.
+Other DaemonCore daemons require configuration using the new 
+configuration variable
+\MacroB{<SUBSYS>\_SUPER\_ADDRESS\_FILE}.
+\Ticket{4029}
+
 \item The new \Condor{defrag} daemon ClassAd attribute 
 \Attr{MeanDrainedArrived}
 measures the mean time between arrivals of fully drained machines,
