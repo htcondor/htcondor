@@ -97,12 +97,18 @@ The default value for this configuration variable appends the daemon name,
 so \Condor{schedd} will create a core file core.SCHEDD.
 \Ticket{4100}
 
-\item Four recently added machine ClassAd attributes have been renamed.
-\Attr{TotalJobStarts} has been renamed to \Attr{JobStarts}
-\Attr{RecentTotalJobStarts} has been renamed to \Attr{RecentJobStarts}
-\Attr{TotalPreemptions} has been renamed to \Attr{JobPreemptions}
-\Attr{RecentTotalPreemptions} has been renamed to \Attr{RecentJobPreemptions}
-\Ticket{3712}
+\item The following recently added machine ClassAd attributes have been renamed.
+\begin{description}
+\item \Attr{TotalJobStarts} became \Attr{JobStarts}.
+\item \Attr{RecentTotalJobStarts} became \Attr{RecentJobStarts}.
+\item \Attr{TotalPreemptions} became \Attr{JobPreemptions}.
+\item \Attr{RecentPreemptions} became \Attr{RecentJobPreemptions}.
+\item \Attr{TotalRankPreemptions} became \Attr{JobRankPreemptions}.
+\item \Attr{RecentTotalRankPreemptions} became \Attr{RecentJobRankPreemptions}.
+\item \Attr{TotalUserPrioPreemptions} became \Attr{JobUserPrioPreemptions}.
+\item \Attr{RecentTotalUserPrioPreemptions} became \Attr{RecentJobUserPrioPreemptions}.
+\end{description}
+\Ticket{4101}
 
 \item The new \Condor{schedd} statistics ClassAd attribute
 \Attr{Autoclusters} gives the number of active autoclusters.
