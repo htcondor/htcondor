@@ -6116,6 +6116,14 @@ SYSTEM_PERIODIC_REMOVE = \
   be scheduled to run until all earlier jobs have finished spooling in
   their input files and have been scheduled.
 
+\label{param:DedicatedSchedulerDelayFactor}
+\item[\Macro{DEDICATED\_SCHEDULER\_DELAY\_FACTOR}]
+  Limits the cpu usage of the dedicated scheduler within the \Condor{schedd}.
+  The default value of 5 is the ratio of time spent not in 
+  the dedicated scheduler to the time scheduling parallel jobs.
+  Therefore, the default caps the time spent in the dedicated scheduler
+  to 20\%.
+
 \label{param:ScheddSendVacateViaTcp}
 \item[\Macro{SCHEDD\_SEND\_VACATE\_VIA\_TCP}]
   A boolean value that defaults to \Expr{False}.

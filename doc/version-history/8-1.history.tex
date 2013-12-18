@@ -50,13 +50,15 @@ configuration variable
 \MacroB{<SUBSYS>\_SUPER\_ADDRESS\_FILE}.
 \Ticket{4029}
 
-The dedicated scheduler cpu usage within the \Condor{schedd} is now
-throttled, so that it cannot consume all of the cpu, starving the vanilla
-scheduler.  This throttle can be adjusted by the new knob
-\Macro{DEDICATED\_SCHEDULER\_DELAY\_FACTOR}.  This knob, which defaults to five,
-sets the ratio of time spent not in the dedicated scheduler to the ratio
-of time scheduling parallel jobs.  That is, with the default of five, 
-a max of 20 percent of the schedulers time will go to scheduling
+\item The dedicated scheduler cpu usage within the \Condor{schedd} is now
+throttled, so that it cannot consume all of the cpu, while starving the vanilla
+scheduler.  This throttle can be adjusted by the new configuration variable
+\Macro{DEDICATED\_SCHEDULER\_DELAY\_FACTOR}.  
+This variable, which defaults to five,
+sets the ratio of time spent not in the dedicated scheduler to the 
+time scheduling parallel jobs.  
+With this default of five, 
+a maximum of 20\% of the scheduler's time will go to scheduling
 parallel jobs.
 \Ticket{4048}
 
