@@ -371,14 +371,27 @@ and
   HOSTALLOW_ADMINISTRATOR = $(ADMIN_MACHINES)
 \end{verbatim}
 
-Note that a line continuation character may currently be used within
-a comment, so the following example does \emph{not} set the
-configuration variable \MacroNI{FOO}:
+Where a line continuation character directly precedes a comment,
+the entire comment line is ignored,
+and the following line is used in the continuation. 
+Line continuation characters within comments are ignored.
+
+Both this example
 \begin{verbatim}
-  # This comment includes the following line, so FOO is NOT set \
-  FOO = BAR
+  A = $(B) \
+  # $(C)
+  $(D)
 \end{verbatim}
-It is a poor idea to use this functionality.
+and this example
+\begin{verbatim}
+  A = $(B) \
+  # $(C) \
+  $(D)
+\end{verbatim}
+result in the same value for \verb@A@:
+\begin{verbatim}
+  A = $(B) $(D)
+\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Program-Defined-Macros}Executing a Program to Produce Configuration Macros}

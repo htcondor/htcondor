@@ -30,6 +30,12 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item The parsing of configuration has changed with respect to how
+line continuation characters and comments interact.
+The line continuation character no longer takes precedence over the
+comment character.
+\Ticket{4027}
+
 \index{SUBSYS\_SUPER\_ADDRESS\_FILE macro@\texttt{<SUBSYS>\_SUPER\_ADDRESS\_FILE} macro}
 \index{configuration macro!\texttt{SUBSYS\_SUPER\_ADDRESS\_FILE}}
 \item When the super user issues a command 
