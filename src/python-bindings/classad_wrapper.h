@@ -19,7 +19,7 @@ struct AttrPairToFirst :
 
 typedef boost::transform_iterator<AttrPairToFirst, classad::AttrList::iterator> AttrKeyIter;
 
-class ExprTreeHolder;
+struct ExprTreeHolder;
 
 struct AttrPairToSecond :
   public std::unary_function<std::pair<std::string, classad::ExprTree*> const&, boost::python::object>
