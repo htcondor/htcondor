@@ -63,6 +63,12 @@ which permits more services to accept user data greater than 8KB.
 
 \begin{itemize}
 
+\item The parsing of configuration has changed with respect to how
+line continuation characters and comments interact.
+The line continuation character no longer takes precedence over the
+comment character.
+\Ticket{4027}
+
 \index{SUBSYS\_SUPER\_ADDRESS\_FILE macro@\texttt{<SUBSYS>\_SUPER\_ADDRESS\_FILE} macro}
 \index{configuration macro!\texttt{SUBSYS\_SUPER\_ADDRESS\_FILE}}
 \item When the super user issues a command 
@@ -76,6 +82,18 @@ Other DaemonCore daemons require configuration using the new
 configuration variable
 \MacroB{<SUBSYS>\_SUPER\_ADDRESS\_FILE}.
 \Ticket{4029}
+
+\item The dedicated scheduler cpu usage within the \Condor{schedd} is now
+throttled, so that it cannot consume all of the cpu, while starving the vanilla
+scheduler.  This throttle can be adjusted by the new configuration variable
+\Macro{DEDICATED\_SCHEDULER\_DELAY\_FACTOR}.  
+This variable, which defaults to five,
+sets the ratio of time spent not in the dedicated scheduler to the 
+time scheduling parallel jobs.  
+With this default of five, 
+a maximum of 20\% of the scheduler's time will go to scheduling
+parallel jobs.
+\Ticket{4048}
 
 \item The new \Condor{defrag} daemon ClassAd attribute 
 \Attr{MeanDrainedArrived}
@@ -106,6 +124,11 @@ an optional default value if a value is not defined.
 Section~\ref{sec:Config-File-Macros} has details for configuration.
 \Ticket{4033}
 
+\item The Python bindings \Code{htcondor} module has 
+a new \Procedure{read\_events} method to acquire an iterator of
+an HTCondor event log file.
+\Ticket{4071}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -125,12 +148,18 @@ The default value for this configuration variable appends the daemon name,
 so \Condor{schedd} will create a core file core.SCHEDD.
 \Ticket{4100}
 
-\item Four recently added machine ClassAd attributes have been renamed.
-\Attr{TotalJobStarts} has been renamed to \Attr{JobStarts}
-\Attr{RecentTotalJobStarts} has been renamed to \Attr{RecentJobStarts}
-\Attr{TotalPreemptions} has been renamed to \Attr{JobPreemptions}
-\Attr{RecentTotalPreemptions} has been renamed to \Attr{RecentJobPreemptions}
-\Ticket{3712}
+\item The following recently added machine ClassAd attributes have been renamed.
+\begin{description}
+\item \Attr{TotalJobStarts} became \Attr{JobStarts}.
+\item \Attr{RecentTotalJobStarts} became \Attr{RecentJobStarts}.
+\item \Attr{TotalPreemptions} became \Attr{JobPreemptions}.
+\item \Attr{RecentPreemptions} became \Attr{RecentJobPreemptions}.
+\item \Attr{TotalRankPreemptions} became \Attr{JobRankPreemptions}.
+\item \Attr{RecentTotalRankPreemptions} became \Attr{RecentJobRankPreemptions}.
+\item \Attr{TotalUserPrioPreemptions} became \Attr{JobUserPrioPreemptions}.
+\item \Attr{RecentTotalUserPrioPreemptions} became \Attr{RecentJobUserPrioPreemptions}.
+\end{description}
+\Ticket{4101}
 
 \item The new \Condor{schedd} statistics ClassAd attribute
 \Attr{Autoclusters} gives the number of active autoclusters.

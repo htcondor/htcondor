@@ -102,7 +102,6 @@ class Condor_MD_MAC {
     
     void init();       // initialize/reinitialize MD5
 
-    bool             isMAC_;       // is a MAC or a MD
     MD_Context *     context_;
     KeyInfo      *   key_;
 };
