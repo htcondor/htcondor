@@ -172,7 +172,6 @@ class FileLock : public FileLockBase
 	// Private Data Members
 	//
 	
-	unsigned int m_id;		// the ID number for this object
 	int			 m_fd;		// File descriptor to deal with
 	FILE		*m_fp;
 	char		*m_path;	// Path to the file being locked, must use

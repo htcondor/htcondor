@@ -110,7 +110,6 @@ private:
 
 	enum { HistoryLevels=3 };
 	enum { SubmittorData, StartdData, GroupsData, SubmittorGroupsData, CkptData, DataSetCount };
-	const int MaxGroups;
 
 	// State variables - data set information
 

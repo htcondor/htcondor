@@ -131,10 +131,6 @@ class passwd_cache {
 		/* helper for get_user_* methods that handles shared code */
 		bool lookup_uid_entry( const char* user, uid_entry *&uce );
 
-		/* maximum number of groups allowed for a 
-		 * give user */
-		long groups_max;
-
 		/* number of seconds a cache entry will be considered valid */
 		time_t Entry_lifetime;
 
