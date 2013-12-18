@@ -162,3 +162,4 @@ job_check_exitcode_in_classad
 job_services_during_neg_cycle
 basic_startd_slot_attrs
 job_basic_start_test
+collector_unit_test
