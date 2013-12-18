@@ -140,6 +140,13 @@ if( NOT WINDOWS)
 	find_path(HAVE_OPENSSL_SSL_H "openssl/ssl.h")
 	find_path(HAVE_PCRE_H "pcre.h")
 	find_path(HAVE_PCRE_PCRE_H "pcre/pcre.h" )
+	if ( ${OS_NAME} STREQUAL "DARWIN" AND NOT HAVE_PCRE_H AND NOT HAVE_PCRE_PCRE_H )
+		# Mac OS X includes the pcre libraries but not the header
+		# files. Try supplying the appropriate headers.
+		include_directories( ${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6/include-darwin )
+		find_path(HAVE_PCRE_H "pcre.h"
+			PATHS "${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6/include-darwin")
+	endif()
 
     find_multiple( "z" ZLIB_FOUND)
 	find_multiple( "expat" EXPAT_FOUND )
