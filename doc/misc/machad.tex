@@ -215,6 +215,25 @@ this feature can still be disabled via the BIOS or software.
 If BIOS or the operating system have disabled this feature, 
 the \Condor{startd} sets this boolean attribute to \Expr{False}.
 %
+\index{ClassAd machine attribute!JobPreemptions}
+\item[\AdAttr{JobPreemptions}:] The total number of times
+a running job has been preempted on this machine.  
+%
+\index{ClassAd machine attribute!JobRankPreemptions}
+\item[\AdAttr{JobRankPreemptions}:] The total number of times
+a running job has been preempted on this machine due to the machine's
+rank of jobs since the \Condor{startd} started running.  
+%
+\index{ClassAd machine attribute!JobStarts}
+\item[\AdAttr{JobStarts}:] The total number of jobs which
+have been started on this machine since the \Condor{startd} started running.
+%
+\index{ClassAd machine attribute!JobUserPrioPreemptions}
+\item[\AdAttr{JobUserPrioPreemptions}:] The total number of times
+a running job has been preempted on this machine based on a fair share
+allocation of the pool 
+since the \Condor{startd} started running.  
+%
 \index{ClassAd machine attribute!JobVM\_VCPUS}
 \item[\AdAttr{JobVM\_VCPUS}:] An attribute defined if a vm universe job
 is running on this slot.  Defined by the number of virtualized CPUs
@@ -263,6 +282,19 @@ current load average.
 \item[\AdAttr{MachineMaxVacateTime}:] An integer expression that specifies
 the time in seconds the machine will allow the job to gracefully shut
 down.
+%
+\index{ClassAd machine attribute!MaxJobRetirementTime}
+\item[\AdAttr{MaxJobRetirementTime}:] When the \Condor{startd} wants
+to kick the job off, a job which has run for less than this number
+of seconds will not be hard-killed.  The \Condor{startd} will wait
+for the job to finish or to exceed this amount of time, whichever
+comes sooner.  If the job vacating policy grants the job X seconds
+of vacating time, a preempted job will be soft-killed X seconds
+before the end of its retirement time, so that hard-killing of the
+job will not happen until the end of the retirement time if the job
+does not finish shutting down before then.  This is an expression
+evaluated in the context of the job ClassAd, so it may refer to job
+attributes as well as machine attributes.
 %
 \index{ClassAd machine attribute!Memory}
 \item[\AdAttr{Memory}:] The amount of RAM in megabytes.
@@ -505,27 +537,25 @@ version number.
 \item[\AdAttr{RecentJobPreemptions}:] The total number of jobs which
 have been preempted from this machine in the last twenty minutes.
 %
+\index{ClassAd machine attribute!RecentJobRankPreemptions}
+\item[\AdAttr{RecentJobRankPreemptions}:] The total number of times
+a running job has been preempted on this machine due to the machine's
+rank of jobs in the last twenty minutes.  
+%
 \index{ClassAd machine attribute!RecentJobStarts}
 \item[\AdAttr{RecentJobStarts}:] The total number of jobs which
 have been started on this machine in the last twenty minutes.
+%
+\index{ClassAd machine attribute!RecentJobUserPrioPreemptions}
+\item[\AdAttr{RecentJobUserPrio}:] The total number of times
+a running job has been preempted on this machine based on a fair share
+allocation of the pool 
+in the last twenty minutes.
 %
 \index{ClassAd machine attribute!Requirements}
 \item[\AdAttr{Requirements}:] A boolean, which when evaluated within the context
 of the machine ClassAd and a job ClassAd, must evaluate to
 TRUE before HTCondor will allow the job to use this machine.
-%
-\index{ClassAd machine attribute!MaxJobRetirementTime}
-\item[\AdAttr{MaxJobRetirementTime}:] When the \Condor{startd} wants
-to kick the job off, a job which has run for less than this number
-of seconds will not be hard-killed.  The \Condor{startd} will wait
-for the job to finish or to exceed this amount of time, whichever
-comes sooner.  If the job vacating policy grants the job X seconds
-of vacating time, a preempted job will be soft-killed X seconds
-before the end of its retirement time, so that hard-killing of the
-job will not happen until the end of the retirement time if the job
-does not finish shutting down before then.  This is an expression
-evaluated in the context of the job ClassAd, so it may refer to job
-attributes as well as machine attributes.
 %
 \index{ClassAd machine attribute!RetirementTimeRemaining}
 \item[\AdAttr{RetirementTimeRemaining}:] An integer number of seconds
@@ -605,10 +635,6 @@ either from remote jobs or running benchmarks.
 This is in contrast with \Attr{Cpus},
 which is the number of CPUs in the slot.
 %
-\index{ClassAd machine attribute!JobStarts}
-\item[\AdAttr{JobStarts}:] The total number of jobs which
-have been started on this machine since the \Condor{startd} started running.
-%
 \index{ClassAd machine attribute!TotalLoadAvg}
 \item[\AdAttr{TotalLoadAvg}:] A floating point number representing the 
 current load average summed across all slots on the machine.
@@ -625,10 +651,6 @@ checkpointing.
 total machine-wide time in cpu-seconds that has not been used
 (i.e. not matched to a job submitter) due to draining since this
 \Condor{startd} began executing.
-%
-\index{ClassAd machine attribute!JobPreemptions}
-\item[\AdAttr{JobPreemptions}:] The total number of times
-a running job has been preempted on this machine.  
 %
 \index{ClassAd machine attribute!TotalTimeBackfillBusy}
 \item[\AdAttr{TotalTimeBackfillBusy}:] The number of seconds

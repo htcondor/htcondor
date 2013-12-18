@@ -371,14 +371,27 @@ and
   HOSTALLOW_ADMINISTRATOR = $(ADMIN_MACHINES)
 \end{verbatim}
 
-Note that a line continuation character may currently be used within
-a comment, so the following example does \emph{not} set the
-configuration variable \MacroNI{FOO}:
+Where a line continuation character directly precedes a comment,
+the entire comment line is ignored,
+and the following line is used in the continuation. 
+Line continuation characters within comments are ignored.
+
+Both this example
 \begin{verbatim}
-  # This comment includes the following line, so FOO is NOT set \
-  FOO = BAR
+  A = $(B) \
+  # $(C)
+  $(D)
 \end{verbatim}
-It is a poor idea to use this functionality.
+and this example
+\begin{verbatim}
+  A = $(B) \
+  # $(C) \
+  $(D)
+\end{verbatim}
+result in the same value for \verb@A@:
+\begin{verbatim}
+  A = $(B) $(D)
+\end{verbatim}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:Program-Defined-Macros}Executing a Program to Produce Configuration Macros}
@@ -6102,6 +6115,14 @@ SYSTEM_PERIODIC_REMOVE = \
   jobs with larger cluster IDs, but that are in the Idle state will not
   be scheduled to run until all earlier jobs have finished spooling in
   their input files and have been scheduled.
+
+\label{param:DedicatedSchedulerDelayFactor}
+\item[\Macro{DEDICATED\_SCHEDULER\_DELAY\_FACTOR}]
+  Limits the cpu usage of the dedicated scheduler within the \Condor{schedd}.
+  The default value of 5 is the ratio of time spent not in 
+  the dedicated scheduler to the time scheduling parallel jobs.
+  Therefore, the default caps the time spent in the dedicated scheduler
+  to 20\%.
 
 \label{param:ScheddSendVacateViaTcp}
 \item[\Macro{SCHEDD\_SEND\_VACATE\_VIA\_TCP}]
