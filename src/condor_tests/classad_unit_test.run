@@ -24,9 +24,9 @@ use CondorTest;
 #  $cmd = '_collector_tester.exe';
 #} else {
 #}
-$cmd = '_collector_tester.exe';
-$testdesc =  'collector unit test';
-$testname = "collector_unit_test";
+$cmd = 'classad_unit_tester.exe';
+$testdesc =  'classad unit test';
+$testname = "classad_unit_test";
 
 
 my @expected_output =

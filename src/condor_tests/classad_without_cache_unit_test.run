@@ -24,9 +24,9 @@ use CondorTest;
 #  $cmd = '_collector_tester.exe';
 #} else {
 #}
-$cmd = '_collector_tester.exe';
-$testdesc =  'collector unit test';
-$testname = "collector_unit_test";
+$cmd = 'without_cache.exe';
+$testdesc =  'classad without cache unit test';
+$testname = "classad_without_cache_unit_test";
 
 
 my @expected_output =

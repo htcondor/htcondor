@@ -163,3 +163,8 @@ job_services_during_neg_cycle
 basic_startd_slot_attrs
 job_basic_start_test
 collector_unit_test
+classad_unit_test
+classad_with_cache_unit_test
+classad_without_cache_unit_test
+consumption_policy_unit_test
+ring_buffer_unit_test

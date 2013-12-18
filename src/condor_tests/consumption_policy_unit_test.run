@@ -24,9 +24,9 @@ use CondorTest;
 #  $cmd = '_collector_tester.exe';
 #} else {
 #}
-$cmd = '_collector_tester.exe';
-$testdesc =  'collector unit test';
-$testname = "collector_unit_test";
+$cmd = '_consumption_policy_tester.exe';
+$testdesc =  'consumption policy unit test';
+$testname = "consumption_policy_unit_test";
 
 
 my @expected_output =
