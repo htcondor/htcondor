@@ -416,6 +416,7 @@ class Job {
 		@return the last event time.
 	*/
 	time_t GetLastEventTime() { return _lastEventTime; }
+	//TEMPTEMP -- document what this does...
 	void FixPriority(Dag& dag);
 
 	bool HasPreSkip() const { return _preskip != PRE_SKIP_INVALID; }
@@ -484,10 +485,13 @@ public:
 	int _queuedNodeJobProcs;
 
 		// Whether the _nodePriority value is meaningful.
+		// TEMPTEMP -- do we need this?  isn't 0 the same as not having a prio?
 	bool _hasNodePriority;
 
 		// Node priority.  Higher number is better priority (submit first).
-	int _nodePriority;
+	//TEMPTEMP int _nodePriority;
+	int _explicitPriority;
+	int _adjustedPriority;
 
 		// The number of times this job has been held.  (Note: the current
 		// implementation counts holds for all procs in a multi-proc cluster

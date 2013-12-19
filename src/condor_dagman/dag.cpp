@@ -1403,20 +1403,22 @@ Dag::StartNode( Job *node, bool isRetry )
 		return true;
     }
 	// no PRE script exists or is done, so add job to the queue of ready jobs
+	//TEMPTEMP -- shouldn't this be done *before* StartNode??
 	node->FixPriority(*this);
 	if ( isRetry && m_retryNodeFirst ) {
-		_readyQ->Prepend( node, -node->_nodePriority );
+		_readyQ->Prepend( node, -node->_adjustedPriority );
 	} else {
-		if(node->_hasNodePriority){
+		//TEMPTEMP -- I think I had some note about not wanting to do this via VARS... (yeah -- in gittrac #4024)
+		if ( node->_hasNodePriority ) {
 			Job::NodeVar *var = new Job::NodeVar();
 			var->_name = "priority";
-			var->_value = node->_nodePriority;
+			var->_value = node->_adjustedPriority;
 			node->varsFromDag->Append( var );
 		}
 		if ( _submitDepthFirst ) {
-			_readyQ->Prepend( node, -node->_nodePriority );
+			_readyQ->Prepend( node, -node->_adjustedPriority );
 		} else {
-			_readyQ->Append( node, -node->_nodePriority );
+			_readyQ->Append( node, -node->_adjustedPriority );
 		}
 	}
 	return TRUE;
@@ -1554,7 +1556,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 						"Node %s deferred by category throttle (%s, %d)\n",
 						job->GetJobName(), catThrottle->_category->Value(),
 						catThrottle->_maxJobs );
-			deferredJobs.Prepend( job, -job->_nodePriority );
+			deferredJobs.Prepend( job, -job->_adjustedPriority );
 			_catThrottleDeferredCount++;
 		} else {
 				// The problem here is that we wouldn't need to sleep if
@@ -1613,7 +1615,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		debug_printf( DEBUG_DEBUG_1,
 					"Returning deferred node %s to the ready queue\n",
 					job->GetJobName() );
-		_readyQ->Prepend( job, -job->_nodePriority );
+		_readyQ->Prepend( job, -job->_adjustedPriority );
 	}
 
 	return numSubmitsThisCycle;
@@ -1736,9 +1738,9 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 		job->retval = 0; // for safety on retries
 		job->SetStatus( Job::STATUS_READY );
 		if ( _submitDepthFirst ) {
-			_readyQ->Prepend( job, -job->_nodePriority );
+			_readyQ->Prepend( job, -job->_adjustedPriority );
 		} else {
-			_readyQ->Append( job, -job->_nodePriority );
+			_readyQ->Append( job, -job->_adjustedPriority );
 		}
 	}
 
@@ -2340,7 +2342,7 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 			// wenger/nwp 2011-08-24
 		if ( node->_hasNodePriority ) {
 			fprintf( fp, "PRIORITY %s %d\n", node->GetJobName(),
-						node->_nodePriority );
+						node->_explicitPriority );
 		}
 
 			// Print the CATEGORY line, if any.
@@ -3858,7 +3860,8 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
    	if ( node->JobType() == Job::TYPE_CONDOR && !node->GetNoop() &&
 				node->GetDagFile() != NULL && _generateSubdagSubmits ) {
 		bool isRetry = node->GetRetries() > 0;
-		priority_swapper ps( node->_hasNodePriority, node->_nodePriority, _submitDagDeepOpts->priority);
+		// TEMPTEMP -- I don't understand what this is for
+		priority_swapper ps( node->_hasNodePriority, node->_adjustedPriority, _submitDagDeepOpts->priority);
 		if ( runSubmitDag( *_submitDagDeepOpts, node->GetDagFile(),
 					node->GetDirectory(), isRetry ) != 0 ) {
 			++node->_submitTries;
@@ -4054,9 +4057,9 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 				thisSubmitDelay == 1 ? "" : "s" );
 
 		if ( m_retrySubmitFirst ) {
-			_readyQ->Prepend(node, -node->_nodePriority);
+			_readyQ->Prepend(node, -node->_adjustedPriority);
 		} else {
-			_readyQ->Append(node, -node->_nodePriority);
+			_readyQ->Append(node, -node->_adjustedPriority);
 		}
 	}
 }
@@ -4426,9 +4429,12 @@ Dag::ResolveVarsInterpolations(void)
 
 //---------------------------------------------------------------------------
 // Iterate over the jobs and set the default priority
+// TEMPTEMP -- I don't understand what this is for; how does it relate to Job::FixPriority?
+//TEMPTEMP -- change name to something like ApplyDefaultPriority
 void Dag::SetDefaultPriorities()
 {
-	if(GetDefaultPriority() != 0) {
+	//TEMPTEMP -- what is GetDefaultPriority?
+	if ( GetDefaultPriority() != 0 ) {
 		Job* job;
 		_jobs.Rewind();
 		while( (job = _jobs.Next()) != NULL ) {
@@ -4436,9 +4442,9 @@ void Dag::SetDefaultPriorities()
 			// Leave this job alone for now
 			if( !job->_hasNodePriority ) {
 				job->_hasNodePriority = true;
-				job->_nodePriority = GetDefaultPriority();
-			} else if( GetDefaultPriority() > job->_nodePriority ) {
-				job->_nodePriority = GetDefaultPriority();
+				job->_adjustedPriority = GetDefaultPriority();
+			} else if( GetDefaultPriority() > job->_adjustedPriority ) {
+				job->_adjustedPriority = GetDefaultPriority();
 			}
 		}
 	}

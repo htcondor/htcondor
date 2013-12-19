@@ -1026,6 +1026,7 @@ void main_init (int argc, char ** const argv) {
 	dagman.dag->SetConfigFile( dagman._dagmanConfigFile );
 	dagman.dag->SetMaxJobHolds( dagman._maxJobHolds );
 	dagman.dag->SetPostRun(dagman._runPost);
+	//TEMPTEMP -- need to understand this better
 	if( dagman._submitDagDeepOpts.priority != 0 ) { // From command line
 		dagman.dag->SetDefaultPriority(dagman._submitDagDeepOpts.priority);
 	} else if( dagman._defaultPriority != 0 ) { // From config file

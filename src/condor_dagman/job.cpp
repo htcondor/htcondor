@@ -137,7 +137,9 @@ Job::Job( const job_type_t jobType, const char* jobName,
 	_queuedNodeJobProcs = 0;
 
 	_hasNodePriority = false;
-	_nodePriority = 0;
+	//TEMPTEMP _nodePriority = 0;
+	_explicitPriority = 0;
+	_adjustedPriority = 0;
 
 	_logFile = NULL;
 	_logFileIsXml = false;
@@ -1027,10 +1029,17 @@ Job::FixPriority(Dag& dag)
 		Job* parent = dag.FindNodeByNodeID(*p);
 		if( parent->_hasNodePriority ) {
 			// Nothing to do if parent priority is small
+#if 0 //TEMPTEMP
 			if( parent->_nodePriority > _nodePriority ) {
 				_nodePriority = parent->_nodePriority;
 				_hasNodePriority = true;
 			}
+#else //TEMPTEMP
+			if( parent->_adjustedPriority > _adjustedPriority ) {
+				_adjustedPriority = parent->_adjustedPriority;
+				_hasNodePriority = true;
+			}
+#endif //TEMPTEMP
 		}
 	}
 }
