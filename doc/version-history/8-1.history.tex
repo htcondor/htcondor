@@ -117,6 +117,11 @@ so a crash of the \Condor{schedd} would create a core file named
 \File{core.SCHEDD}.
 \Ticket{4100}
 
+\item The new configuration variable \Macro{JOB\_EXECDIR\_PERMISSIONS}
+defines the permissions on a job's scratch directory. 
+It defaults to setting permissions as \emph{0700}.
+\Ticket{4016}
+
 \item The following recently added machine ClassAd attributes have been renamed.
 \begin{description}
 \item \Attr{TotalJobStarts} became \Attr{JobStarts}.

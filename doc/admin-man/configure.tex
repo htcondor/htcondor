@@ -6810,10 +6810,12 @@ REM Run the actual job now
 \label{param:JobExecdirPermissions}
 \item[\Macro{JOB\_EXECDIR\_PERMISSIONS}]
   Control the permissions on the job's scratch directory. Defaults to
-  \Expr{user} which means permissions of \emph{0700}. Possible values are
-  \Expr{user}, \Expr{group}, and \Expr{world}. If set to \Expr{group} then the
-  directory is group-accessible, permissions of \emph{0750}; likewise if set
-  to \Expr{world} the directory is created with permissions \emph{0755}.
+  \Expr{user} which sets permissions to \emph{0700}. Possible values are
+  \Expr{user}, \Expr{group}, and \Expr{world}. 
+  If set to \Expr{group}, then the directory is group-accessible, 
+  with permissions set to \emph{0750}.
+  If set to \Expr{world},
+  then the directory is created with permissions set to \emph{0755}.
 
 
 \end{description}
