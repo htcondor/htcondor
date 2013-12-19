@@ -2405,6 +2405,12 @@ which use DaemonCore).
   tuning parameter that places a limit on the number of child process exits to
   process per DaemonCore event cycle.  A value of zero or less means no limit.
 
+\label{param:CoreFileName}
+\item[\Macro{CORE\_FILE\_NAME}]
+  Defines the name of the core file created.
+  Defaults to \Expr{core.\$(SUBSYSTEM)} on Unix platforms,
+  and \Expr{core.\$(SUBSYSTEM).WIN32} on Windows platforms.   
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -6804,10 +6810,12 @@ REM Run the actual job now
 \label{param:JobExecdirPermissions}
 \item[\Macro{JOB\_EXECDIR\_PERMISSIONS}]
   Control the permissions on the job's scratch directory. Defaults to
-  \Expr{user} which means permissions of \emph{0700}. Possible values are
-  \Expr{user}, \Expr{group}, and \Expr{world}. If set to \Expr{group} then the
-  directory is group-accessible, permissions of \emph{0750}; likewise if set
-  to \Expr{world} the directory is created with permissions \emph{0755}.
+  \Expr{user} which sets permissions to \emph{0700}. Possible values are
+  \Expr{user}, \Expr{group}, and \Expr{world}. 
+  If set to \Expr{group}, then the directory is group-accessible, 
+  with permissions set to \emph{0750}.
+  If set to \Expr{world},
+  then the directory is created with permissions set to \emph{0755}.
 
 
 \end{description}
