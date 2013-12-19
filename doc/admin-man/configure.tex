@@ -2405,6 +2405,12 @@ which use DaemonCore).
   tuning parameter that places a limit on the number of child process exits to
   process per DaemonCore event cycle.  A value of zero or less means no limit.
 
+\label{param:CoreFileName}
+\item[\Macro{CORE\_FILE\_NAME}]
+  Defines the name of the core file created.
+  Defaults to \Expr{core.\$(SUBSYSTEM)} on Unix platforms,
+  and \Expr{core.\$(SUBSYSTEM).WIN32} on Windows platforms.   
+
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

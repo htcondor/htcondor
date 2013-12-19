@@ -109,10 +109,12 @@ instead of being useful only when defined in a per-DAG configuration file.
 See section~\ref{param:DAGManDefaultNodeLog} for details.
 \Ticket{3930}
 
-\item A new configuration variable \Macro{CORE\_FILE\_NAME} can be used to set
-the name that daemon core uses to create a core file in the event of a daemon crash.
+\item The new configuration variable \Macro{CORE\_FILE\_NAME} is used to set
+the name that DaemonCore uses to create a core file,
+in the event of a daemon crash.
 The default value for this configuration variable appends the daemon name,
-so \Condor{schedd} will create a core file core.SCHEDD.
+so a crash of the \Condor{schedd} would create a core file named
+\File{core.SCHEDD}.
 \Ticket{4100}
 
 \item The following recently added machine ClassAd attributes have been renamed.
