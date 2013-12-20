@@ -142,7 +142,7 @@ $failure = sub
 				$outindex++;
 				if ($outindex > $#outlines) {
 					$passed = 1;
-					break;
+					last;
 				}
 			}
 		}

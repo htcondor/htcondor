@@ -1,4 +1,7 @@
 # Test gittrac #4102: Complete rescue DAGs have incorrect node priorities
+
+Config job_dagman_prio_in_rescue.config
+
 Job nodeA job_dagman_prio_in_rescue-node.cmd
 Priority nodeA 50
 
