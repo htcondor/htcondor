@@ -688,7 +688,38 @@ int Sock::bind(bool outbound, int port, bool loopback)
 		struct linger linger = {0,0};
 		int on = 1;
 		setsockopt(SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
-		setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on));
+
+		int val = param_integer("TCP_KEEPALIVE_INTERVAL");
+		if (val >= 0) {
+			// NOTE: Log failures to FULLDEBUG as we may be doing a lot of accepts...
+			if (setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)(&on), sizeof(on)) < 0) {
+				dprintf(D_FULLDEBUG, "ReliSock::accept - Failed to enable TCP keepalive (errno=%d, %s)", errno, strerror(errno));
+			}
+		}
+		if (val > 0) {
+#if !defined(WIN32) && (defined(HAVE_TCP_KEEPALIVE) || defined(HAVE_TCP_KEEPIDLE))
+
+// Mac OS X calls it TCP_KEEPALIVE; Linux calls it TCP_KEEPIDLE.
+#if defined(HAVE_TCP_KEEPALIVE)
+			if (setsockopt(SOL_SOCKET, TCP_KEEPALIVE, (char*)(&val), sizeof(val)) < 0)
+#else
+			if (setsockopt(SOL_TCP, TCP_KEEPIDLE, (char*)(&val), sizeof(val)) < 0)
+#endif
+			{
+				dprintf(D_FULLDEBUG, "ReliSock::accept - Failed to set TCP keepalive idle time to 5 minutes (errno=%d, %s)", errno, strerror(errno));
+			}
+			val = 5;
+			if (setsockopt(SOL_TCP, TCP_KEEPCNT, (char*)(&val), sizeof(val)) < 0) {
+				dprintf(D_FULLDEBUG, "ReliSock::accept - Failed to set TCP keepalive probe count to 5 (errno=%d, %s)", errno, strerror(errno));
+			}
+			if (setsockopt(SOL_TCP, TCP_KEEPINTVL, (char*)(&val), sizeof(val)) < 0) {
+				dprintf(D_FULLDEBUG, "ReliSock::accept - Failed to set TCP keepalive interval to 5 seconds (errno=%d, %s)", errno, strerror(errno));
+			}
+
+		// TODO: there are equivalent Win32 API calls for the above setsockopt
+#endif
+		}
+
                /* Set no delay to disable Nagle, since we buffer all our
 			      relisock output and it degrades performance of our
 			      various chatty protocols. -Todd T, 9/05

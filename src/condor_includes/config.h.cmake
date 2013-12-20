@@ -591,4 +591,10 @@
 /* Define to 1 if the compiler does not support C++11 but does support TR1 */
 #cmakedefine PREFER_TR1
 
+/* Define to 1 if the OS has support for the TCP_KEEPALIVE setsockopt (Mac) */
+#cmakedefine HAVE_TCP_KEEPALIVE
+
+/* Define to 1 if the OS has support for the TCP_KEEPIDLE setsockopt (Linux) */
+#cmakedefine HAVE_TCP_KEEPIDLE
+
 #endif

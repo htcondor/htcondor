@@ -5544,15 +5544,15 @@ friendly_name=Auto Include Shared Port In Daemon List
 review=?
 
 [CCB_HEARTBEAT_INTERVAL]
-default=1200
+default=300
 version=7.5.0
 range=0,
 type=int
 reconfig=true
 customization=seldom
-friendly_name=Schedd Job Queue Log Flush Delay
+friendly_name=Interval between CCB protocol heartbeats
 review=?
-tags=schedd
+tags=ccb
 
 [ROOSTER_INTERVAL]
 default=300
@@ -5780,6 +5780,14 @@ customization=seldom
 friendly_name=Size of Recent Statistics Window for DaemonCore Stats
 review=?
 tags=scheduler
+
+[TCP_KEEPALIVE_INTERVAL]
+default=360
+range=-1,
+type=int
+reconfig=true
+customization=expert
+friendly_name=Setting for TCP keepalive probe interval
 
 [SHADOW_CHECKPROXY_INTERVAL]
 default=600
