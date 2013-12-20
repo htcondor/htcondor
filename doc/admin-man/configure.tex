@@ -1531,6 +1531,17 @@ File System Configuration File Entries''.
   Collection names currently implemented are \Expr{DC} or \Expr{DAEMONCORE}
   and \Expr{SCHEDD} or \Expr{SCHEDULER}.
 
+\label{param:TcpKeepaliveInterval}
+\item[\Macro{TCP\_KEEPALIVE\_INTERVAL}]
+  The keepalive interval (in seconds) to use for any HTCondor TCP connection.
+  The default keepalive interval is 360 (6 minutes); this value was chosen
+  to minimize the likelihood that keepalive packets are sent while still
+  detecting dead TCP connections before job leases expire.  A smaller value
+  will consume more OS and network resources; a larger value may cause jobs
+  to fail unnecessarily due to network disconnects.  Most users will not need
+  to tune this configuration.  Setting this to 0 will use the OS default;
+  setting this to -1 will disable HTCondor's use of TCP keepalive.
+
 \end{description}
 
 
@@ -2456,11 +2467,13 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
 \item[\Macro{CCB\_HEARTBEAT\_INTERVAL}] This is the maximum
   number of seconds of silence on a daemon's connection to the CCB server
   after which it will ping the server to verify that the connection still
-  works.  The default is 20 minutes.  This feature serves to both speed
+  works.  The default is 5 minutes.  This feature serves to both speed
   up detection of dead connections and to generate a guaranteed minimum
   frequency of activity to attempt to prevent the connection from being
   dropped.  The special value 0 disables the heartbeat.  The heartbeat
-  is automatically disabled if the CCB server is older than 7.5.0.
+  is automatically disabled if the CCB server is older than 7.5.0.  Having
+  the heartbeat interval greater than the JobLeaseDuration may cause
+  unnecessary job disconnects in pools with network issues.
 
 \label{param:UseSharedPort}
 \item[\Macro{USE\_SHARED\_PORT}] A boolean value that

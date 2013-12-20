@@ -30,9 +30,21 @@ The details of each version are described below.
 
 \begin{itemize}
 
+
 \item The python bindings now can refresh a remote job's GSI proxy
  as a part of the \texttt{Schedd} object.
 \Ticket{4116}
+
+\item By default, the TCP keepalive interval is automatically tuned to 5
+minutes.  This causes at least one packet to be sent on established but
+idle TCP connections once every 5 minutes and speeds up the detection
+of connections that were silently dropped by NAT or firewall devices.
+Without this, the \Condor{shadow} may not reliably recover from transient
+network failures.  This behavior is controlled by the new TCP\_KEEPALIVE\_INTERVAL
+parameter; setting this to 0 restores the prior behavior.
+The parameter CCB\_HEARTBEAT\_INTERVAL default has been reduced to 5 minutes.
+\Ticket{4122}
+
 
 \end{itemize}
 
