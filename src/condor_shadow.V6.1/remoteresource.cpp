@@ -139,6 +139,9 @@ RemoteResource::~RemoteResource()
 		daemonCore->Cancel_Timer(m_attempt_shutdown_tid);
 		m_attempt_shutdown_tid = -1;
 	}
+	if ( next_reconnect_tid != -1 ) {
+		daemonCore->Cancel_Timer( next_reconnect_tid );
+	}
 }
 
 
