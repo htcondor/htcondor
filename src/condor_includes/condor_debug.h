@@ -194,10 +194,10 @@ bool dprintf_to_term_check();
 #endif
 void _condor_dprintf_va ( int flags, DPF_IDENT ident, const char* fmt, va_list args );
 int _condor_open_lock_file(const char *filename,int flags, mode_t perm);
-void PREFAST_NORETURN _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2);
+void PREFAST_NORETURN _EXCEPT_ ( const char *fmt, ... ) CHECK_PRINTF_FORMAT(1,2) GCC_NORETURN;
 void Suicide(void);
 void set_debug_flags( const char *strflags, int cat_and_flags );
-void PREFAST_NORETURN _condor_dprintf_exit( int error_code, const char* msg );
+void PREFAST_NORETURN _condor_dprintf_exit( int error_code, const char* msg ) GCC_NORETURN;
 void _condor_fd_panic( int line, const char *file );
 void _condor_set_debug_flags( const char *strflags, int cat_and_flags );
 int  _condor_dprintf_is_initialized();
@@ -277,7 +277,7 @@ extern int	_EXCEPT_Line;			/* Line number of the exception    */
 extern const char	*_EXCEPT_File;		/* File name of the exception      */
 extern int	_EXCEPT_Errno;			/* errno from most recent system call */
 extern int (*_EXCEPT_Cleanup)(int,int,const char*);	/* Function to call to clean up (or NULL) */
-extern PREFAST_NORETURN void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2);
+extern PREFAST_NORETURN void _EXCEPT_(const char*, ...) CHECK_PRINTF_FORMAT(1,2) GCC_NORETURN;
 
 #if defined(__cplusplus)
 }
