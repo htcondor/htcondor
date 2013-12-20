@@ -138,14 +138,15 @@ if( NOT WINDOWS)
 	set(HAVE_PTHREAD_H ${CMAKE_HAVE_PTHREAD_H})
 
 	find_path(HAVE_OPENSSL_SSL_H "openssl/ssl.h")
-	find_path(HAVE_PCRE_H "pcre.h")
-	find_path(HAVE_PCRE_PCRE_H "pcre/pcre.h" )
-	if ( ${OS_NAME} STREQUAL "DARWIN" AND NOT HAVE_PCRE_H AND NOT HAVE_PCRE_PCRE_H )
-		# Mac OS X includes the pcre libraries but not the header
-		# files. Try supplying the appropriate headers.
+
+	if ( ${OS_NAME} STREQUAL "DARWIN" )
+		# Mac OS X includes the pcre library but not the header
+		# file. Supply a copy ourselves.
 		include_directories( ${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6/include-darwin )
-		find_path(HAVE_PCRE_H "pcre.h"
-			PATHS "${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6/include-darwin")
+		set( HAVE_PCRE_H "${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6/include-darwin" CACHE PATH "Path to pcre header." )
+	else()
+		find_path(HAVE_PCRE_H "pcre.h")
+		find_path(HAVE_PCRE_PCRE_H "pcre/pcre.h" )
 	endif()
 
     find_multiple( "z" ZLIB_FOUND)
@@ -911,7 +912,7 @@ else(MSVC)
 
 	if (HAVE_PTHREADS AND NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
-	endif(HAVE_PTHREADS)
+	endif(HAVE_PTHREADS AND NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 
 	check_cxx_compiler_flag(-shared HAVE_CC_SHARED)
 

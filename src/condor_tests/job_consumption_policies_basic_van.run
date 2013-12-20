@@ -139,6 +139,13 @@ sub timed_callback {
             sleep(5);
         }
     }
+	if($execute_test_passed == 1) { 
+		runToolNTimes("condor_rm -all",1,0);
+		CondorTest::RegisterResult($execute_test_passed,test_name,$testname);
+		CondorTest::EndTest();
+	} else {
+		CondorTest::RegisterTimed($testname, \&timed_callback, 15);
+	}
 }
 
 
@@ -159,6 +166,13 @@ sub exit_callback {
     #}
 }
 
+sub on_evictednocheckpoint {
+	print "Eviction from remove?\n";
+}
+
+sub on_imageupdated {
+	# messages not wanted
+}
 
 
 my $append_condor_config = '
@@ -286,6 +300,8 @@ print SUBMIT $submit_body;
 close(SUBMIT);
 
 
+CondorTest::RegisterEvictedWithoutCheckpoint($testname, \&on_evictednocheckpoint);
+CondorTest::RegisterImageUpdated($testname, \&on_imageupdated);
 CondorTest::RegisterTimed($testname, \&timed_callback, 15);
 CondorTest::RegisterExecute($testname, \&execute_callback);
 CondorTest::RegisterExitedSuccess($testname, \&exit_callback);

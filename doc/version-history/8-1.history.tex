@@ -53,8 +53,8 @@ which permits more services to accept user data greater than 8KB.
 
 \begin{itemize}
 
-\item HTCondor version 8.1.3 not yet released.
-%\item HTCondor version 8.1.3 released on Month Date, 2013.
+\item HTCondor version 8.1.3 released on December 23, 2013.
+This developer release contains all bug fixes from HTCondor version 8.0.5.
 
 \end{itemize}
 
@@ -129,6 +129,11 @@ a new \Procedure{read\_events} method to acquire an iterator of
 an HTCondor event log file.
 \Ticket{4071}
 
+\item The new \Opt{-daemons} option to \Condor{who} prints information
+about the HTCondor daemons running on the specified machine,
+including the daemon's PID, IP address and command port.
+\Ticket{4007}
+
 \end{itemize}
 
 \noindent Configuration Variable and ClassAd Attribute Additions and Changes:
@@ -142,11 +147,18 @@ instead of being useful only when defined in a per-DAG configuration file.
 See section~\ref{param:DAGManDefaultNodeLog} for details.
 \Ticket{3930}
 
-\item A new configuration variable \Macro{CORE\_FILE\_NAME} can be used to set
-the name that daemon core uses to create a core file in the event of a daemon crash.
+\item The new configuration variable \Macro{CORE\_FILE\_NAME} is used to set
+the name that DaemonCore uses to create a core file,
+in the event of a daemon crash.
 The default value for this configuration variable appends the daemon name,
-so \Condor{schedd} will create a core file core.SCHEDD.
+so a crash of the \Condor{schedd} would create a core file named
+\File{core.SCHEDD}.
 \Ticket{4100}
+
+\item The new configuration variable \Macro{JOB\_EXECDIR\_PERMISSIONS}
+defines the permissions on a job's scratch directory. 
+It defaults to setting permissions as \emph{0700}.
+\Ticket{4016}
 
 \item The following recently added machine ClassAd attributes have been renamed.
 \begin{description}
