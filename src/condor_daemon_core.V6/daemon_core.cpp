@@ -7179,7 +7179,6 @@ int DaemonCore::Create_Process(
 	//
 	newpid = piProcess.dwProcessId;
 	
-#ifdef HAVE_SCHED_SETAFFINITY
 	/* if we have an affinity array mask then: */
 	if ( affinity_mask ) {
 		
@@ -7211,7 +7210,6 @@ int DaemonCore::Create_Process(
 		}
 
 	}
-#endif
 
 	// if requested, register a process family with the procd and unsuspend
 	// the process
