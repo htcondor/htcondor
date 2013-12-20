@@ -597,4 +597,10 @@
 /* Define to 1 if the OS has support for the TCP_KEEPIDLE setsockopt (Linux) */
 #cmakedefine HAVE_TCP_KEEPIDLE
 
+/* Define to 1 if the OS has support for the TCP_KEEPCNT setsockopt */
+#cmakedefine HAVE_TCP_KEEPCNT
+
+/* Define to 1 if the OS has support for the TCP_KEEPINTVL setsockopt */
+#cmakedefine HAVE_TCP_KEEPINTVL
+
 #endif

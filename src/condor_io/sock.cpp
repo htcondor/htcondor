@@ -701,21 +701,24 @@ int Sock::bind(bool outbound, int port, bool loopback)
 
 // Mac OS X calls it TCP_KEEPALIVE; Linux calls it TCP_KEEPIDLE.
 #if defined(HAVE_TCP_KEEPALIVE)
-			if (setsockopt(SOL_SOCKET, TCP_KEEPALIVE, (char*)(&val), sizeof(val)) < 0)
+			if (setsockopt(IPPROTO_TCP, TCP_KEEPALIVE, (char*)(&val), sizeof(val)) < 0)
 #else
-			if (setsockopt(SOL_TCP, TCP_KEEPIDLE, (char*)(&val), sizeof(val)) < 0)
+			if (setsockopt(IPPROTO_TCP, TCP_KEEPIDLE, (char*)(&val), sizeof(val)) < 0)
 #endif
 			{
 				dprintf(D_FULLDEBUG, "ReliSock::accept - Failed to set TCP keepalive idle time to 5 minutes (errno=%d, %s)", errno, strerror(errno));
 			}
 			val = 5;
-			if (setsockopt(SOL_TCP, TCP_KEEPCNT, (char*)(&val), sizeof(val)) < 0) {
+#if defined(HAVE_TCP_KEEPCNT)
+			if (setsockopt(IPPROTO_TCP, TCP_KEEPCNT, (char*)(&val), sizeof(val)) < 0) {
 				dprintf(D_FULLDEBUG, "ReliSock::accept - Failed to set TCP keepalive probe count to 5 (errno=%d, %s)", errno, strerror(errno));
 			}
-			if (setsockopt(SOL_TCP, TCP_KEEPINTVL, (char*)(&val), sizeof(val)) < 0) {
+#endif
+#if defined(HAVE_TCP_KEEPINTVL)
+			if (setsockopt(IPPROTO_TCP, TCP_KEEPINTVL, (char*)(&val), sizeof(val)) < 0) {
 				dprintf(D_FULLDEBUG, "ReliSock::accept - Failed to set TCP keepalive interval to 5 seconds (errno=%d, %s)", errno, strerror(errno));
 			}
-
+#endif
 		// TODO: there are equivalent Win32 API calls for the above setsockopt
 #endif
 		}
