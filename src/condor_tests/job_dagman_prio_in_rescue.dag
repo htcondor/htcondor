@@ -1,0 +1,19 @@
+# Test gittrac #4102: Complete rescue DAGs have incorrect node priorities
+Job nodeA job_dagman_prio_in_rescue-node.cmd
+Priority nodeA 50
+
+Job nodeB job_dagman_prio_in_rescue-node.cmd
+Priority nodeB 40
+Parent nodeA Child nodeB
+
+Job nodeC job_dagman_prio_in_rescue-node.cmd
+Priority nodeC 30
+Parent nodeB Child nodeC
+
+Job nodeD job_dagman_prio_in_rescue-node.cmd
+Priority nodeD 60
+Parent nodeC Child nodeD
+
+Job nodeE job_dagman_prio_in_rescue-nodeE.cmd
+Priority nodeE 10
+Parent nodeD Child nodeE
