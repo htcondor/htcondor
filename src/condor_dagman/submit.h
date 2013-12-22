@@ -53,7 +53,7 @@
 
 bool condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 					const char* DAGNodeName, MyString &DAGParentNodeNames,
-					List<Job::NodeVar> *vars,
+					List<Job::NodeVar> *vars, int priority,
 					const char* directory, const char *defLog, bool useDefLog,
 					const char *logFile, bool prohibitMultiJobs,
 					bool hold_claim );

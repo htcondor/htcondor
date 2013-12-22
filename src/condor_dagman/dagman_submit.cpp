@@ -243,7 +243,7 @@ do_submit( ArgList &args, CondorID &condorID, Job::job_type_t jobType,
 bool
 condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, MyString &DAGParentNodeNames,
-			   List<Job::NodeVar> *vars,
+			   List<Job::NodeVar> *vars, int priority,
 			   const char* directory, const char *defaultLog, bool appendDefaultLog,
 			   const char *logFile, bool prohibitMultiJobs, bool hold_claim )
 {
@@ -401,6 +401,15 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		args.AppendArg( "-a" );
 		MyString varStr = nodeVar._name + " = " + nodeVar._value;
 		args.AppendArg( varStr.Value() );
+	}
+
+		// Set the node priority.
+	if ( priority != 0 ) {//TEMPTEMP -- parameterize 0?
+		args.AppendArg( "-a" );
+		MyString prioVal( priority );
+		//TEMPTEMP -- parameterize "priority" string?
+		MyString prioStr = "priority = " + prioVal;
+		args.AppendArg( prioStr.Value() );
 	}
 
 		// Set the special DAG_STATUS variable (mainly for use by

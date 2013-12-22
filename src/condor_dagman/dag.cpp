@@ -1409,12 +1409,8 @@ Dag::StartNode( Job *node, bool isRetry )
 		_readyQ->Prepend( node, -node->_adjustedPriority );
 	} else {
 		//TEMPTEMP -- I think I had some note about not wanting to do this via VARS... (yeah -- in gittrac #4024)
-		if ( node->_hasNodePriority ) {
-			Job::NodeVar *var = new Job::NodeVar();
-			var->_name = "priority";
-			var->_value = node->_adjustedPriority;
-			node->varsFromDag->Append( var );
-		}
+		//TEMPTEMP -- ah, nuts -- this makes the VARS setting show up in the rescue DAG, too!
+		//TEMPTEMP -- what if the user explicitly sets a VARS macro named priority?
 		if ( _submitDepthFirst ) {
 			_readyQ->Prepend( node, -node->_adjustedPriority );
 		} else {
@@ -3929,7 +3925,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 				MyString parents = ParentListString( node );
       			submit_success = condor_submit( dm, cmd_file.Value(), condorID,
 							node->GetJobName(), parents,
-							node->varsFromDag,
+							node->varsFromDag, node->_adjustedPriority,
 							node->GetDirectory(), DefaultNodeLog(),
 							_use_default_node_log && node->UseDefaultLog(),
 							logFile, ProhibitMultiJobs(),
