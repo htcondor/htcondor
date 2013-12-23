@@ -250,6 +250,6 @@ sub c_die {
 
 sub out {
     my ($msg) = @_;
-    my $time = strftime("%Y/%m/%d %H:%M:%S", localtime);
+    my $time = strftime("%H:%M:%S", localtime);
     print "$time: $msg\n";
 }

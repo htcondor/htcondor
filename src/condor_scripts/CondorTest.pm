@@ -2310,7 +2310,7 @@ sub debug {
 }
 
 sub timestamp {
-    return strftime("%Y/%m/%d %H:%M:%S", localtime);
+    return strftime("%H:%M:%S", localtime);
 }
 
 sub DebugLevel {
