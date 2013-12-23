@@ -8,6 +8,14 @@ SUBDAG EXTERNAL subdagD job_dagman_propogate_priorities.subdag
 PARENT nodeA CHILD nodeB
 PARENT nodeC CHILD subdagD
 PRIORITY nodeA 60
+#TEMPTEMP
+#VARS nodeA priority="1000"
+#TEMPTEMP
+#VARS nodeA dag_node_name="foobar"
+#TEMPTEMP
+#VARS nodeA +DAGManJobId="barfoo"
+#TEMPTEMP
+#VARS nodeA queuefoo="awesadf"
 PRIORITY nodeB 0
 PRIORITY nodeC 5
 PRIORITY subdagD 100

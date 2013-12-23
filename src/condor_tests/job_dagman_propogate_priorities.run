@@ -32,7 +32,8 @@ $testdesc =  'Condor submit dag - basic propogate_priorities test - scheduler U'
 $testname = "job_dagman_propogate_priorities";
 $dagman_args = "-verbose";
 
-$logfile = "job_dagman_propogate_priorities-A.dag.dagman.out";
+@logfiles = ("job_dagman_propogate_priorities.dag.dagman.out",
+	"job_dagman_propogate_priorities.subdag.dagman.out");
 @outfiles = (
 	'job_dagman_propogate_priorities-A.out',
 	'job_dagman_propogate_priorities-B.out',
@@ -45,7 +46,9 @@ sub HELD{5};
 sub RUNNING{2};
 
 # Get rid of any existing log and output files
-runcmd("rm -f $logfile") if (-e $logfile);
+foreach (@logfiles) {
+	runcmd("rm -f $_") if (-e $_);
+}
 
 foreach (@outfiles) {
 	runcmd("rm -f $_") if (-e $_);

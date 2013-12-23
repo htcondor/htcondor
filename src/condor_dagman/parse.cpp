@@ -76,6 +76,7 @@ static bool parse_dot(Dag *dag,
 static bool parse_vars(Dag *dag,
 		const char *filename, int lineNumber,
 		std::list<std::string>* varq);
+static bool check_var_name( const MyString &varName );
 static bool parse_priority(Dag *dag, 
 		const char *filename, int lineNumber);
 static bool parse_category(Dag *dag, const char *filename, int lineNumber);
@@ -1293,13 +1294,10 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 		str++;
 
 			// Check for illegal variable name.
-		MyString tmpName(varName);
-		tmpName.lower_case();
-		if ( tmpName.find( "queue" ) == 0 ) {
-			debug_printf(DEBUG_QUIET, "Illegal variable name: %s; variable "
-						"names cannot begin with \"queue\"\n", varName.Value() );
+		if ( !check_var_name( varName ) ) {
 			return false;
 		}
+		
 		// This will be inefficient for jobs with lots of variables
 		// As in O(N^2)
 		job->varsFromDag->Rewind();
@@ -1330,6 +1328,46 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 	if(numPairs == 0) {
 		debug_printf(DEBUG_QUIET, "%s (line %d): No valid name-value pairs\n", filename, lineNumber);
 		return false;
+	}
+
+	return true;
+}
+
+//TEMPTEMP -- document
+static bool
+check_var_name(
+	const MyString &varName )
+{
+	MyString tmpName( varName );
+	tmpName.lower_case();
+
+	if ( tmpName.find( "queue" ) == 0 ) {
+		debug_printf(DEBUG_QUIET, "Illegal variable name: %s; variable "
+					"names cannot begin with \"queue\"\n", varName.Value() );
+		return false;
+	}
+
+	static std::vector<MyString> illegalVars;
+	if ( illegalVars.empty() ) {
+		illegalVars.push_back( "priority" );
+
+		MyString tmp1( ATTR_DAG_NODE_NAME_ALT );
+		tmp1.lower_case();
+		illegalVars.push_back( tmp1 );
+
+		MyString tmp2( "+" );
+		tmp2 += ATTR_DAGMAN_JOB_ID;
+		tmp2.lower_case();
+		illegalVars.push_back( tmp2 );
+	}
+
+	//TEMPTEMP -- use iterator?
+	for ( unsigned int index = 0; index < illegalVars.size(); index++ ) {
+		if ( tmpName == illegalVars[index] ) {
+			debug_printf(DEBUG_QUIET, "Illegal variable name: %s\n",
+						varName.Value() );
+			return false;
+		}
 	}
 
 	return true;
