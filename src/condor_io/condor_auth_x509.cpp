@@ -113,7 +113,7 @@ Condor_Auth_X509 ::  ~Condor_Auth_X509()
 	}
 }
 
-int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError* errstack)
+int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError* errstack, bool /*non_blocking*/)
 {
     int status = 1;
     int reply = 0;
