@@ -154,8 +154,13 @@ if "%BUILDID:~1,1%"=="." (
 if NOT "%BUILD_VERSION%"=="" (
   if NOT "%BUILDID%"=="" set BUILD_VERSION=%BUILD_VERSION%-%BUILDID%
 )
+:: the BUILD_WIN_TAG is used to indicate the Windows version in the .zip and .msi names
+:: 7 indicates that XP is no longer supported, which is currently the case when we build with VC11
+set BUILD_WIN_TAG=
+if "%2"=="VC11" set BUILD_WIN_TAG=7
 @echo BUILDID=%BUILDID%
 @echo BUILD_VERSION=%BUILD_VERSION%
+@echo BUILD_WIN_TAG==%BUILD_WIN_TAG%
 
 @echo ----  build.win.bat ENVIRONMENT --------------------------------
 set
@@ -195,7 +200,7 @@ goto finis
 izip -r build_products.zip * -i *.cmake -i *.txt -i *.htm -i *.map -i *.vcproj -i *.sln -i *.log -i *.stamp* -i param_info* 
 @echo ZIPPING up release directory %BUILD_ROOT%\release_dir
 pushd %BUILD_ROOT%\release_dir
-izip -r ..\condor-%BUILD_VERSION%-Windows-x86.zip *
+izip -r ..\condor-%BUILD_VERSION%-Windows%BUILD_WIN_TAG%-x86.zip *
 dir .
 popd
 goto finis   
@@ -218,14 +223,14 @@ goto finis
 :MSI
 :MAKE_MSI
 :NATIVE
-@echo %BUILD_ROOT%\release_dir\etc\WiX\do_wix %BUILD_ROOT%\release_dir %BUILD_ROOT%\condor-%BUILD_VERSION%-Windows-x86.msi
+@echo %BUILD_ROOT%\release_dir\etc\WiX\do_wix %BUILD_ROOT%\release_dir %BUILD_ROOT%\condor-%BUILD_VERSION%-Windows%BUILD_WIN_TAG%-x86.msi
 ::@echo on
 ::dir %BUILD_ROOT%\release_dir
 ::dir %BUILD_ROOT%
 ::@echo off
 :: verify forces ERRORLEVEL to 0
 verify >NUL
-call %BUILD_ROOT%\release_dir\etc\WiX\do_wix.bat %BUILD_ROOT%\release_dir %BUILD_ROOT%\condor-%BUILD_VERSION%-Windows-x86.msi
+call %BUILD_ROOT%\release_dir\etc\WiX\do_wix.bat %BUILD_ROOT%\release_dir %BUILD_ROOT%\condor-%BUILD_VERSION%-Windows%BUILD_WIN_TAG%-x86.msi
 @echo ERRORLEVEL=%ERRORLEVEL%
 :: verify forces ERORLEVEL to 0
 verify >NUL
