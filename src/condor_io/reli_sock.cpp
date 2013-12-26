@@ -44,6 +44,7 @@ void
 ReliSock::init()
 {
 	m_has_backlog = false;
+	m_read_would_block = false;
 	m_non_blocking = false;
 	ignore_next_encode_eom = FALSE;
 	ignore_next_decode_eom = FALSE;
@@ -444,11 +445,7 @@ ReliSock::handle_incoming_packet()
 		return TRUE;
 	}
 
-	if (!rcv_msg.rcv_packet(peer_description(), _sock, _timeout)) {
-		return FALSE;
-	}
-
-	return TRUE;
+	return rcv_msg.rcv_packet(peer_description(), _sock, _timeout);
 }
 
 int
@@ -638,8 +635,13 @@ ReliSock::get_bytes(void *dta, int max_sz)
 
 	ignore_next_decode_eom = FALSE;
 
+	m_read_would_block = false;
 	while (!rcv_msg.ready) {
-		if (!handle_incoming_packet()){
+		int retval = handle_incoming_packet();
+		if (retval == 2) {
+			m_read_would_block = true;
+			return false;
+		} else if (!retval) {
 			return FALSE;
 		}
 	}
@@ -703,7 +705,11 @@ ReliSock::RcvMsg :: RcvMsg() :
     mode_(MD_OFF),
     mdChecker_(0), 
 	p_sock(0),
-    ready(0)
+	m_partial_packet(false),
+	m_remaining_read_length(0),
+	m_end(0),
+	m_tmp(NULL),
+	ready(0)
 {
 }
 
@@ -716,13 +722,31 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 {
 	Buf		*tmp;
 	char	        hdr[MAX_HEADER_SIZE];
-	int		end;
 	int		len, len_t, header_size;
 	int		tmp_len;
+	int		retval;
+
+	// We read the partial packet in a previous read; try to finish it and
+	// then skip down to packet verification.
+	if (m_partial_packet) {
+		m_partial_packet = false;
+		len = m_remaining_read_length;
+		goto read_packet;
+	}
 
 	header_size = (mode_ != MD_OFF) ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
 
-	int retval = condor_read(peer_description,_sock,hdr,header_size,_timeout);
+	retval = condor_read(peer_description,_sock,hdr,header_size,_timeout, p_sock->is_non_blocking());
+        if ( retval == -3 ) {   // -3 means that the read would have blocked; 0 bytes were read
+		return 2;
+        }
+	// Block on short reads for the header.  Since the header is very short (typically, 5 bytes),
+	// we don't care to gracefully handle the case where it has been fragmented over multiple
+	// TCP packets.
+	if ( (retval > 0) && (retval != header_size) ) {
+		retval = condor_read(peer_description, _sock, hdr+retval, header_size-retval, _timeout);
+	}
+
 	if ( retval < 0 && 
 		 retval != -2 ) // -2 means peer just closed the socket
 	{
@@ -733,43 +757,60 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 		dprintf(D_FULLDEBUG,"IO: EOF reading packet header\n");
 		return FALSE;
 	}
-	end = (int) ((char *)hdr)[0];
+
+	m_end = (int) ((char *)hdr)[0];
 	memcpy(&len_t,  &hdr[1], 4);
 	len = (int) ntohl(len_t);
 
-	if (end < 0 || end > 10) {
+	if (m_end < 0 || m_end > 10) {
 		dprintf(D_ALWAYS,"IO: Incoming packet header unrecognized\n");
 		return FALSE;
 	}
         
-	if (!(tmp = new Buf)){
+	if (!(m_tmp = new Buf)){
 		dprintf(D_ALWAYS, "IO: Out of memory\n");
 		return FALSE;
 	}
-	if (len > tmp->max_size()){
+	if (len > m_tmp->max_size()){
 		delete tmp;
 		dprintf(D_ALWAYS, "IO: Incoming packet is too big\n");
 		return FALSE;
 	}
 	if (len <= 0)
 	{
-		delete tmp;
+		delete m_tmp;
+		m_tmp = NULL;
 		dprintf(D_ALWAYS, 
 			"IO: Incoming packet improperly sized (len=%d,end=%d)\n",
-			len,end);
+			len, m_end);
 		return FALSE;
 	}
-	if ((tmp_len = tmp->read(peer_description, _sock, len, _timeout)) != len){
-		delete tmp;
-		dprintf(D_ALWAYS, "IO: Packet read failed: read %d of %d\n",
-				tmp_len, len);
-		return FALSE;
+
+read_packet:
+	tmp_len = m_tmp->read(peer_description, _sock, len, _timeout, p_sock->is_non_blocking());
+	if (tmp_len != len) {
+		if (p_sock->is_non_blocking() && (tmp_len == -3 || tmp_len >= 0)) {
+			m_partial_packet = true;
+			if (tmp_len >= 0) {
+				m_remaining_read_length = len - tmp_len;
+			} else {
+				m_remaining_read_length = len;
+			}
+			return 2;
+		} else {
+			delete m_tmp;
+			m_tmp = NULL;
+			dprintf(D_ALWAYS, "IO: Packet read failed: read %d of %d\n",
+					tmp_len, len);
+			return FALSE;
+		}
 	}
 
         // Now, check MD
         if (mode_ != MD_OFF) {
             if (!tmp->verifyMD(&hdr[5], mdChecker_)) {
                 delete tmp;
+		m_tmp = NULL;
                 dprintf(D_ALWAYS, "IO: Message Digest/MAC verification failed!\n");
                 return FALSE;  // or something other than this
             }
@@ -777,11 +818,12 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
         
 	if (!buf.put(tmp)) {
 		delete tmp;
+		m_tmp = NULL;
 		dprintf(D_ALWAYS, "IO: Packet storing failed\n");
 		return FALSE;
 	}
 		
-	if (end) {
+	if (m_end) {
 		ready = TRUE;
 	}
 	return TRUE;

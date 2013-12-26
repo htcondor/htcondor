@@ -254,6 +254,7 @@ public:
     const char * isIncomingDataMD5ed();
 
 	int clear_backlog_flag() {bool state = m_has_backlog; m_has_backlog = false; return state;}
+	int clear_read_block_flag() {bool state = m_read_would_block; m_read_would_block = false; return state;}
 
 //	PROTECTED INTERFACE TO RELIABLE SOCKS
 //
@@ -292,7 +293,10 @@ protected:
                 CONDOR_MD_MODE  mode_;
                 Condor_MD_MAC * mdChecker_;
 		ReliSock      * p_sock; //preserve parent pointer to use for condor_read/write
-		
+		bool		m_partial_packet; // A partial packet is stored.
+		size_t		m_remaining_read_length; // Length remaining on a partial packet
+		int		m_end; // The end status of the partial packet.
+		Buf		*m_tmp;
 	public:
 		RcvMsg();
                 ~RcvMsg();
@@ -346,6 +350,7 @@ protected:
 	char *m_target_shared_port_id;
 
 	bool m_has_backlog;
+	bool m_read_would_block;
 	bool m_non_blocking;
 
 	virtual void setTargetSharedPortID( char const *id );
