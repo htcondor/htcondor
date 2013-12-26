@@ -53,7 +53,7 @@ class Authentication {
 
     int authenticate( char *hostAddr, KeyInfo *& key, const char* auth_methods, CondorError* errstack, int timeout, bool non_blocking );
     int authenticate_continue( CondorError* errstack, bool non_blocking );
-    int authenticate_finish();
+    int authenticate_finish( CondorError* errstack );
 
     //------------------------------------------
     // PURPOSE: To send the secret key over. this method
@@ -197,6 +197,7 @@ class Authentication {
 	std::string	m_methods_to_try;
 	std::string	m_host_addr;
 	Condor_Auth_Base *m_auth;
+	KeyInfo		**m_key;
 	time_t		m_auth_timeout_time;
 	bool		m_continue_handshake;
 	bool		m_continue_auth;

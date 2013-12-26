@@ -27,6 +27,7 @@
 #include "condor_system.h"
 #include "condor_ipverify.h"
 
+#include <memory>
 
 /*
 **	R E L I A B L E    S O C K

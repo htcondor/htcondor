@@ -1014,7 +1014,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 	m_sock->setAuthenticationMethodsTried(auth_methods);
 
 	char *method_used = NULL;
-	int auth_success = m_sock->authenticate(m_key, auth_methods, m_errstack.get(), auth_timeout, false, &method_used);
+	int auth_success = m_sock->authenticate(m_key, auth_methods, m_errstack.get(), auth_timeout, true, &method_used);
 	free( auth_methods );
 
 	if (auth_success == 2) {

@@ -89,27 +89,14 @@ Authentication::~Authentication()
 int Authentication::authenticate( char *hostAddr, KeyInfo *& key, 
 								  const char* auth_methods, CondorError* errstack, int timeout, bool non_blocking)
 {
-    int retval = authenticate(hostAddr, auth_methods, errstack, timeout, non_blocking);
-    
-#if !defined(SKIP_AUTHENTICATION)
-    if (retval) {        // will always try to exchange key!
-        // This is a hack for now, when we have only one authenticate method
-        // this will be gone
-        mySock->allow_empty_message_flag = FALSE;
-        retval = exchangeKey(key);
-		if ( !retval ) {
-			errstack->push("AUTHENTICATE",AUTHENTICATE_ERR_KEYEXCHANGE_FAILED,
-				"Failed to securely exchange session key");
-		}
-        mySock->allow_one_empty_message();
-    }
-#endif
-    return retval;
+	m_key = &key;
+	return authenticate(hostAddr, auth_methods, errstack, timeout, non_blocking);
 }
 
 int Authentication::authenticate( char *hostAddr, const char* auth_methods,
 		CondorError* errstack, int timeout, bool non_blocking)
 {
+	m_key = NULL;
 	int retval;
 	int old_timeout=0;
 	if (timeout>=0) {
@@ -136,8 +123,13 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 	*/
 	return 0;
 #else
-	m_host_addr = hostAddr ? hostAddr : "";
-	m_auth_timeout_time = time(0) + timeout;
+	m_host_addr = hostAddr ? hostAddr : "(unknown)";
+	if (timeout > 0) {
+		dprintf( D_SECURITY, "AUTHENTICATE: setting timeout for %s to %d.\n", m_host_addr.c_str(), timeout);
+		m_auth_timeout_time = time(0) + timeout;
+	} else {
+		m_auth_timeout_time = 0;
+	}
 
 	if (IsDebugVerbose(D_SECURITY)) {
 		if (m_host_addr.size()) {
@@ -164,7 +156,7 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 int Authentication::authenticate_continue( CondorError* errstack, bool non_blocking )
 {
 	// Check for continuations;
-	int firm;
+	int firm = -1;
 	bool do_handshake = true;
 	if (m_continue_handshake) {
 		firm = handshake_continue(m_methods_to_try, non_blocking);
@@ -176,7 +168,7 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 		do_handshake = false;
 	}
 
-	int auth_rc;
+	int auth_rc = 0;
 	bool do_authenticate = true;
 	if (m_continue_auth) {
 		auth_rc = m_auth->authenticate_continue(errstack, non_blocking);
@@ -373,10 +365,10 @@ authenticate:
 			}
 		}
 	}
-	return authenticate_finish();
+	return authenticate_finish(errstack);
 }
 
-int Authentication::authenticate_finish()
+int Authentication::authenticate_finish(CondorError *errstack)
 {
 	//if none of the methods succeeded, we fall thru to default "none" from above
 	int retval = ( auth_status != CAUTH_NONE );
@@ -450,6 +442,21 @@ int Authentication::authenticate_finish()
 	}
 
 	mySock->allow_one_empty_message();
+
+#if !defined(SKIP_AUTHENTICATION)
+	if (retval && retval != 2 && m_key != NULL) {        // will always try to exchange key!
+		// This is a hack for now, when we have only one authenticate method
+		// this will be gone
+		mySock->allow_empty_message_flag = FALSE;
+		retval = exchangeKey(*m_key);
+		if ( !retval ) {
+			errstack->push("AUTHENTICATE",AUTHENTICATE_ERR_KEYEXCHANGE_FAILED,
+			"Failed to securely exchange session key");
+		}
+		mySock->allow_one_empty_message();
+	}
+#endif
+
 	return ( retval );
 }
 
