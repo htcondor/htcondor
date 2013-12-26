@@ -31,6 +31,8 @@
 #undef IOV_MAX 
 #include "globus_gss_assist.h"
 
+#include "classad/classad_stl.h"
+
 const char STR_GSI_DAEMON_DIRECTORY[] = "GSI_DAEMON_DIRECTORY";
 const char STR_GSI_DAEMON_PROXY[]     = "GSI_DAEMON_PROXY";
 const char STR_GSI_DAEMON_CERT[]      = "GSI_DAEMON_CERT";
@@ -152,6 +154,15 @@ class Condor_Auth_X509 : public Condor_Auth_Base {
     static Grid_Map_t * GridMap;
 #endif
 	static bool m_globusActivated;
+
+	typedef struct globus_mapping_entry_s {
+		std::string name;
+		time_t expiry_time;
+	} globus_mapping_entry_t;
+	typedef classad_shared_ptr<globus_mapping_entry_t> globus_mapping_entry_ptr;
+	typedef HashTable<std::string, globus_mapping_entry_ptr> GlobusMappingTable;
+	static GlobusMappingTable *m_mapping;
+
 };
 
 #endif
