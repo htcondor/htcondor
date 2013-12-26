@@ -44,6 +44,7 @@ class CollectorEngine : public Service
 	// perform the collect operation of the given command
 	ClassAd *collect (int, Sock *, const condor_sockaddr&, int &);
 	ClassAd *collect (int, ClassAd *, const condor_sockaddr&, int &, Sock* = NULL);
+	int collect_nonblocking (int command, ReliSock *sock, const condor_sockaddr& from, int &insert, ClassAd *&out);
 
 	// lookup classad in the specified table with the given hashkey
 	ClassAd *lookup (AdTypes, AdNameHashKey &);
@@ -80,6 +81,8 @@ class CollectorEngine : public Service
 
   private:
 	typedef bool (*HashFunc) (AdNameHashKey &, ClassAd *);
+
+	ClassAd *collect_finish (int command, Sock *sock, const condor_sockaddr& from, int &insert, ClassAd *clientAd);
 
 	bool LookupByAdType(AdTypes, CollectorHashTable *&, HashFunc &);
  

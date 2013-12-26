@@ -694,8 +694,34 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	// get endpoint
 	condor_sockaddr from = ((Sock*)sock)->peer_addr();
 
+	if (sock->type() == Stream::reli_sock) {
+		int retval = collector.collect_nonblocking(command, (ReliSock*)sock, from, insert, cad);
+		if (retval == 2) {
+			return stashInProgressCommand( static_cast<ReliSock*>(sock), command, true );
+		} else if (retval == 0) {
+			if (insert == -3)
+			{
+				dprintf (D_ALWAYS,
+					"Received malformed ad from command (%d). Ignoring.\n",
+					command);
+			}
+
+			return false;
+		}
+		if (daemonCore->SocketIsRegistered(sock)) {
+			daemonCore->Cancel_Socket(sock);
+		}
+	} else {
+		cad = collector.collect(command, (Sock*)sock, from,insert);
+	}
+
+	return receive_update_finish(command, sock, cad, insert);
+}
+
+int CollectorDaemon::receive_update_finish(int command, Stream* sock, ClassAd *cad, int insert)
+{
     // process the given command
-	if (!(cad = collector.collect (command,(Sock*)sock,from,insert)))
+	if (!cad)
 	{
 		if (insert == -2)
 		{
@@ -872,6 +898,59 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
 
 	// let daemon core clean up the socket
 	return TRUE;
+}
+
+typedef struct command_in_progress_s : Service {
+	bool m_is_update;
+	int m_command;
+
+	int finish(Stream *);
+
+} command_in_progress;
+
+int
+command_in_progress::finish(Stream *stream) {
+	bool is_update = m_is_update;
+	int command = m_command;
+	delete this;
+	if (is_update) {
+		return CollectorDaemon::receive_update(NULL, command, stream);
+	} else {
+		// TODO: We don't actually have non-blocking invalidation implemented now.
+		// All the daemons send a fairly minimal ad; assuming nothing is fragmenting
+		// TCP, we should always get the invalidation command in a single packet.
+		// Comparatively, the "real ad" is quite large and would normally span
+		// several packets.
+		return CollectorDaemon::receive_invalidation(NULL, command, stream);
+	}
+}
+
+int
+CollectorDaemon::stashInProgressCommand( ReliSock* sock, int command, bool is_update )
+{
+	if( daemonCore->SocketIsRegistered( sock ) ) {
+		return KEEP_STREAM;
+	}
+
+	command_in_progress *com = new command_in_progress();
+	com->m_command = command;
+	com->m_is_update = is_update;
+
+	int rc = daemonCore->Register_Socket(sock, "In-progress command handler",
+		(SocketHandlercpp)&command_in_progress::finish,
+		"Command handler continuation", com, ALLOW, HANDLE_READ);
+	if( rc < 0 ) {
+		dprintf(D_ALWAYS,
+			"Failed to register in-progress command socket for completion from %s: error %d.\n",
+			sock->peer_description(), rc);
+		return FALSE;
+	}
+
+	dprintf( D_FULLDEBUG,
+		"Registered TCP socket from %s for in-progress command.\n",
+		sock->peer_description() );
+
+	return KEEP_STREAM;
 }
 
 

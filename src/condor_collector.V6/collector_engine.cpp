@@ -333,11 +333,38 @@ CollectorHashTable *CollectorEngine::findOrCreateTable(MyString &type)
 	return table;
 }
 
+int
+CollectorEngine::collect_nonblocking (int command, ReliSock *sock, const condor_sockaddr& from, int &insert, ClassAd *&out)
+{
+	ClassAd *clientAd;
+
+	sock->timeout(1);
+	clientAd = new ClassAd;
+	if (!clientAd) return 0;
+
+	int retval = getClassAdNonblocking(sock, *clientAd);
+	if (retval == 2)
+	{
+		delete clientAd;
+		return 2;
+	}
+	else if (!retval)
+	{
+		dprintf (D_ALWAYS, "Command %d on Sock not followed by ClassAd\n",
+			command);
+		delete clientAd;
+		sock->end_of_message();
+		return 0;
+	}
+	out = collect_finish(command, sock, from, insert, clientAd);
+
+	return out != NULL;
+}
+
 ClassAd *CollectorEngine::
 collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 {
 	ClassAd	*clientAd;
-	ClassAd	*rval;
 
 		// Avoid lengthy blocking on communication with our peer.
 		// This command-handler should not get called until data
@@ -365,8 +392,13 @@ collect (int command, Sock *sock, const condor_sockaddr& from, int &insert)
 		// remove it from the ad if it's not authenticated.
 		clientAd->Delete("AuthenticatedIdentity");
 	}
+	return collect_finish(command, sock, from, insert, clientAd);
+}
 
-	rval = collect(command, clientAd, from, insert, sock);
+ClassAd *
+CollectorEngine::collect_finish(int command, Sock *sock, const condor_sockaddr& from, int &insert, ClassAd* clientAd)
+{
+	ClassAd *rval = collect(command, clientAd, from, insert, sock);
 
 	// Don't leak the ad on error!
 	if ( ! rval ) {

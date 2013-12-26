@@ -100,6 +100,7 @@ public:
 	static AdTypes receive_query_public( int );
 	static int receive_invalidation(Service*, int, Stream*);
 	static int receive_update(Service*, int, Stream*);
+	static int receive_update_finish(int, Stream*, ClassAd*, int);
     static int receive_update_expect_ack(Service*, int, Stream*);
 
 	static void process_query_public(AdTypes, ClassAd*, List<ClassAd>*);
@@ -175,6 +176,7 @@ protected:
 	static ForkWork forkQuery;
 
 	static int stashSocket( ReliSock* sock );
+	static int stashInProgressCommand( ReliSock* sock, int command, bool is_update );
 
 	static class CCBServer *m_ccb_server;
 
