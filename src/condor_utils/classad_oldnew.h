@@ -38,6 +38,15 @@ void AttrList_setPublishServerTimeMangled( bool publish);
 
 classad::ClassAd* getClassAd( Stream *sock );
 bool getClassAd( Stream *sock, classad::ClassAd& ad );
+
+/** Get the ClassAd from the CEDAR stream.  This will not block.
+ *  Returns 2 if this would have blocked; the resulting ClassAd is not yet valid in this case
+ * @param sock
+ * @param ad the ClassAd to be received
+ * @returns 0 for error; 1 for success; 2 if this would have blocked.
+ */
+int getClassAdNonblocking(ReliSock *sock, classad::ClassAd& ad);
+
 bool getClassAdNoTypes( Stream *sock, classad::ClassAd& ad );
 
 /** Send the ClassAd on the CEDAR stream

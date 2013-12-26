@@ -55,8 +55,7 @@ getClassAd( Stream *sock )
 	return ad;	
 }
 
-bool
-getClassAd( Stream *sock, classad::ClassAd& ad )
+bool getClassAd( Stream *sock, classad::ClassAd& ad )
 {
 	int 					numExprs;
 	MyString				inputLine;
@@ -128,6 +127,23 @@ getClassAd( Stream *sock, classad::ClassAd& ad )
 	}
 
 	return true;
+}
+
+int getClassAdNonblocking( ReliSock *sock, classad::ClassAd& ad )
+{
+	int retval;
+	bool read_would_block;
+	{
+		BlockingModeGuard guard(sock, true);
+		retval = getClassAd(sock, ad);
+		read_would_block = sock->clear_read_block_flag();
+	}
+	if (!retval) {
+		return 0;
+	} else if (read_would_block) {
+		return 2;
+	}
+	return retval;
 }
 
 bool

@@ -61,10 +61,10 @@ static char const *not_null_peer_description(char const *peer_description,SOCKET
 /* Generic read/write wrappers for condor.  These function emulate the 
  * read/write system calls under unix except that they are portable, use
  * a timeout, and make sure that all data is read or written.
- * Returns < 0 on failure.  -1 = general error, -2 = peer closed socket.
+ * Returns < 0 on failure.  -1 = general error, -2 = peer closed socket, -3 = read would block.
  */
 int
-condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int timeout, int flags )
+condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int timeout, int flags, bool non_blocking )
 {
 	Selector selector;
 	int nr = 0, nro;
@@ -73,18 +73,78 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 
 	if( IsDebugLevel(D_NETWORK) ) {
 		dprintf(D_NETWORK,
-				"condor_read(fd=%d %s,,size=%d,timeout=%d,flags=%d)\n",
+				"condor_read(fd=%d %s,,size=%d,timeout=%d,flags=%d,non_blocking=%d)\n",
 				fd,
 				not_null_peer_description(peer_description,fd,sinbuf),
 				sz,
 				timeout,
-				flags);
+				flags,
+				non_blocking);
 	}
 
 	/* PRE Conditions. */
 	ASSERT(fd >= 0);     /* Need valid file descriptor */
 	ASSERT(buf != NULL); /* Need real memory to put data into */
 	ASSERT(sz > 0);      /* Need legit size on buffer */
+
+	if (non_blocking) {
+#ifdef WIN32
+		unsigned long mode = 1; // nonblocking mode
+		if (ioctlsocket(fd, FIONBIO, &mode) < 0)
+			return -1;
+#else
+		int fcntl_flags;
+		if ( (fcntl_flags=fcntl(fd, F_GETFL)) < 0 )
+			return -1;
+		fcntl_flags |= O_NONBLOCK;      // set nonblocking mode
+		if ( fcntl(fd, F_SETFL, fcntl_flags) == -1 )
+			return -1;
+#endif
+		nr = -2;
+		while (nr == -2 || (nr == -1 && errno == EINTR)) {
+			nr = recv(fd, buf, sz, flags);
+		}
+
+		if ( nr <= 0 ) {
+			int the_error;
+			char const *the_errorstr;
+#ifdef WIN32
+			the_error = WSAGetLastError();
+			the_errorstr = "";
+#else
+			the_error = errno;
+			the_errorstr = strerror(the_error);
+#endif
+			if ( !errno_is_temporary(the_error) ) {
+				dprintf( D_ALWAYS, "condor_read() failed: recv() %d bytes from %s "
+					"returned %d, "     
+					"timeout=%d, errno=%d %s.\n",
+					sz,                 
+					not_null_peer_description(peer_description,fd,sinbuf),
+					nr, timeout, the_error, the_errorstr );
+			}
+			else
+			{
+				nr = 0;
+			}
+		}
+		if (nr < 0) {
+			dprintf(D_NETWORK, "condor_read (non-blocking) read %d of %d request bytes.\n", nr, sz);
+		}       
+
+#ifdef WIN32
+		mode = 0; // reset blocking mode
+		if (ioctlsocket(fd, FIONBIO, &mode) < 0)
+			return -1;
+#else
+		if ( (fcntl_flags=fcntl(fd, F_GETFL)) < 0 )
+			return -1;
+		fcntl_flags &= ~O_NONBLOCK;     // reset blocking mode
+		if ( fcntl(fd, F_SETFL, fcntl_flags) == -1 )
+			return -1;
+#endif
+		return nr;
+	}
 
 	selector.add_fd( fd, Selector::IO_READ );
 	
@@ -293,7 +353,7 @@ condor_write( char const *peer_description, SOCKET fd, const char *buf, int sz, 
 					"timeout=%d, errno=%d %s.\n",
 					sz,                 
 					not_null_peer_description(peer_description,fd,sinbuf),
-					nwo, timeout, the_error, the_errorstr );
+					nw, timeout, the_error, the_errorstr );
 			}
 			else
 			{
