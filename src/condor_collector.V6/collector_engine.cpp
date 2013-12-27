@@ -567,6 +567,10 @@ collect (int command,ClassAd *clientAd,const condor_sockaddr& from,int &insert,S
 			{
 				EXCEPT ("Memory error!");
 			}
+				// Note this call cannot block; the prior call to getClassAd or
+				// getClassAdNonblocking will read all bytes off the network socket
+				// until it gets an EOM; thus, any bytes for this ClassAd must already
+				// be buffered in memory.
 			if( !getClassAd(sock, *pvtAd) )
 			{
 				dprintf(D_FULLDEBUG,"\t(Could not get startd's private ad)\n");

@@ -639,6 +639,7 @@ ReliSock::get_bytes(void *dta, int max_sz)
 	while (!rcv_msg.ready) {
 		int retval = handle_incoming_packet();
 		if (retval == 2) {
+			dprintf(D_NETWORK, "get_bytes would have blocked - failing call.\n");
 			m_read_would_block = true;
 			return false;
 		} else if (!retval) {
@@ -720,7 +721,6 @@ ReliSock::RcvMsg::~RcvMsg()
 
 int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, int _timeout)
 {
-	Buf		*tmp;
 	char	        hdr[MAX_HEADER_SIZE];
 	int		len, len_t, header_size;
 	int		tmp_len;
@@ -736,14 +736,16 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 
 	header_size = (mode_ != MD_OFF) ? MAX_HEADER_SIZE : NORMAL_HEADER_SIZE;
 
-	retval = condor_read(peer_description,_sock,hdr,header_size,_timeout, p_sock->is_non_blocking());
-        if ( retval == -3 ) {   // -3 means that the read would have blocked; 0 bytes were read
+	retval = condor_read(peer_description,_sock,hdr,header_size,_timeout, 0, p_sock->is_non_blocking());
+        if ( retval == 0 ) {   // -3 means that the read would have blocked; 0 bytes were read
+		dprintf(D_NETWORK, "Reading header would have blocked.\n");
 		return 2;
         }
 	// Block on short reads for the header.  Since the header is very short (typically, 5 bytes),
 	// we don't care to gracefully handle the case where it has been fragmented over multiple
 	// TCP packets.
 	if ( (retval > 0) && (retval != header_size) ) {
+		dprintf(D_NETWORK, "Force-reading remainder of header.\n");
 		retval = condor_read(peer_description, _sock, hdr+retval, header_size-retval, _timeout);
 	}
 
@@ -772,7 +774,7 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 		return FALSE;
 	}
 	if (len > m_tmp->max_size()){
-		delete tmp;
+		delete m_tmp;
 		dprintf(D_ALWAYS, "IO: Incoming packet is too big\n");
 		return FALSE;
 	}
@@ -808,16 +810,16 @@ read_packet:
 
         // Now, check MD
         if (mode_ != MD_OFF) {
-            if (!tmp->verifyMD(&hdr[5], mdChecker_)) {
-                delete tmp;
+            if (!m_tmp->verifyMD(&hdr[5], mdChecker_)) {
+                delete m_tmp;
 		m_tmp = NULL;
                 dprintf(D_ALWAYS, "IO: Message Digest/MAC verification failed!\n");
                 return FALSE;  // or something other than this
             }
         }
         
-	if (!buf.put(tmp)) {
-		delete tmp;
+	if (!buf.put(m_tmp)) {
+		delete m_tmp;
 		m_tmp = NULL;
 		dprintf(D_ALWAYS, "IO: Packet storing failed\n");
 		return FALSE;

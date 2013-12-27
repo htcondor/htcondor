@@ -180,10 +180,8 @@ int Buf::read(
 	}
 
 	nr = condor_read(peer_description,sockd,&_dta[num_used()],sz,timeout, 0, non_blocking);
-	if (nr < 0 && (!non_blocking || nr != -3)) {
-		if (!non_blocking || nr != -3) {
-			dprintf( D_ALWAYS, "Buf::read(): condor_read() failed\n" );
-		}
+	if (nr < 0) {
+		dprintf( D_ALWAYS, "Buf::read(): condor_read() failed\n" );
 		return nr;
 	}
 

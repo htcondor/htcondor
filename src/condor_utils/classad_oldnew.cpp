@@ -139,9 +139,7 @@ int getClassAdNonblocking( ReliSock *sock, classad::ClassAd& ad )
 		read_would_block = sock->clear_read_block_flag();
 	}
 	if (!retval) {
-		return 0;
-	} else if (read_would_block) {
-		return 2;
+		return (read_would_block) ? 2 : 0;
 	}
 	return retval;
 }
