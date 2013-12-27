@@ -695,6 +695,9 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 	condor_sockaddr from = ((Sock*)sock)->peer_addr();
 
 	if (sock->type() == Stream::reli_sock) {
+		if (daemonCore->SocketIsRegistered(sock)) {
+			daemonCore->Cancel_Socket(sock);
+		}
 		int retval = collector.collect_nonblocking(command, (ReliSock*)sock, from, insert, cad);
 		if (retval == 2) {
 			return stashInProgressCommand( static_cast<ReliSock*>(sock), command, true );
@@ -707,9 +710,6 @@ int CollectorDaemon::receive_update(Service* /*s*/, int command, Stream* sock)
 			}
 
 			return false;
-		}
-		if (daemonCore->SocketIsRegistered(sock)) {
-			daemonCore->Cancel_Socket(sock);
 		}
 	} else {
 		cad = collector.collect(command, (Sock*)sock, from,insert);
@@ -900,19 +900,23 @@ int CollectorDaemon::receive_update_expect_ack( Service* /*s*/,
 	return TRUE;
 }
 
-typedef struct command_in_progress_s : Service {
+class command_in_progress : public Service {
+
+public:
 	bool m_is_update;
 	int m_command;
 
-	int finish(Stream *);
+	static int finish(Service*, Stream *);
+	virtual ~command_in_progress() {}
 
-} command_in_progress;
+};
 
 int
-command_in_progress::finish(Stream *stream) {
-	bool is_update = m_is_update;
-	int command = m_command;
-	delete this;
+command_in_progress::finish(Service* service, Stream *stream) {
+	command_in_progress *com = static_cast<command_in_progress*>(service);
+	bool is_update = com->m_is_update;
+	int command = com->m_command;
+	delete com;
 	if (is_update) {
 		return CollectorDaemon::receive_update(NULL, command, stream);
 	} else {
@@ -921,8 +925,9 @@ command_in_progress::finish(Stream *stream) {
 		// TCP, we should always get the invalidation command in a single packet.
 		// Comparatively, the "real ad" is quite large and would normally span
 		// several packets.
-		return CollectorDaemon::receive_invalidation(NULL, command, stream);
+		// return CollectorDaemon::receive_invalidation(NULL, command, stream);
 	}
+	return false;
 }
 
 int
@@ -937,7 +942,7 @@ CollectorDaemon::stashInProgressCommand( ReliSock* sock, int command, bool is_up
 	com->m_is_update = is_update;
 
 	int rc = daemonCore->Register_Socket(sock, "In-progress command handler",
-		(SocketHandlercpp)&command_in_progress::finish,
+		&command_in_progress::finish,
 		"Command handler continuation", com, ALLOW, HANDLE_READ);
 	if( rc < 0 ) {
 		dprintf(D_ALWAYS,
