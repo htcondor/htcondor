@@ -49,7 +49,7 @@ ExtArray< ExtOffArray* >* ViewServer::OffsetsArray;
 //-----------------------
 // Constructor
 //------------------------
-ViewServer::ViewServer() : MaxGroups(20) {}
+ViewServer::ViewServer() {}
 
 
 

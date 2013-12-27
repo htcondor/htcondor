@@ -25,6 +25,7 @@ use Check::JobIsEvicted;
 use Check::CondorLog;
 
 my $hostname = `condor_config_val full_hostname`;
+CondorUtils::fullchomp($hostname);
 
 my $append_condor_config = '
   DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD

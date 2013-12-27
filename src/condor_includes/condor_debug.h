@@ -223,6 +223,8 @@ void dprintf_dump_stack(void);
 
 time_t dprintf_last_modification(void);
 void dprintf_touch_log(void);
+/* write dprintf contribution to the daemon header */
+void dprintf_print_daemon_header(void);
 
 /* reset statistics about delays acquiring the debug file lock */
 void dprintf_reset_lock_delay(void);

@@ -393,7 +393,7 @@ if (BUILD_TESTING)
 		condor_pl_test(job_cpu_affinity_check "ensure Matlog has only matches" "core;quick;full")
 	endif ( LINUX )
 
-	condor_pl_test(job_concurrency_limits "ensure Matlog has only matches" "core;quick;full")
+	#condor_pl_test(job_concurrency_limits "Check concurrency" "core;quick;full")
 	condor_pl_test(job_basic_preempt "preempt and nopreempt tests" "core;quick;full")
 	condor_pl_test(job_schedd_restart-check_reconnect "test reconnects" "core;quick;full")
 	condor_pl_test(job_local_resources "test local resources" "core;quick;full")

@@ -3510,13 +3510,15 @@ For this example \Attr{PreArgs} generates a first argument of
 \label{macro-in-submit-description-file}
 \index{macro!in submit description file}
 In addition to commands, the submit description file can contain macros
-and comments:
+and comments.
 
 \begin{description}
 
-\item[Macros] Parameterless macros in the form of \MacroUNI{macro\_name}
-may be inserted anywhere in HTCondor submit description files. Macros can be
-defined by lines in the form of 
+\item[Macros] Parameterless macros in the form of 
+\MacroUNI{macro\_name:default initial value}
+may be used anywhere in HTCondor submit description files
+to provide textual substitution at submit time.
+Macros can be defined by lines in the form of 
 \begin{verbatim} 
         <macro_name> = <string> 
 \end{verbatim} 
@@ -3572,6 +3574,24 @@ C = $(B)
 B = $(C) boo
 \end{verbatim}
 will \emph{not} work, and will fill memory with expansions.
+
+A default value may be specified, for use if the macro has no definition.
+Consider the example
+\begin{verbatim}
+D = $(E:24)
+\end{verbatim}
+Where \MacroNI{E} is not defined within the submit description
+file, the default value 24 is used, resulting in 
+\begin{verbatim}
+D = 24
+\end{verbatim}
+This is of limited value, as the scope of macro substitution is
+the submit description file.
+Thus, either the macro is or is not defined within the submit description
+file.
+If the macro is defined, then the default value is useless.
+If the macro is not defined, then there is no point in using it in a 
+submit command.
 
 \index{\$!as a literal character in a submit description file}
 To use the dollar sign character (\verb@$@) as a literal,
