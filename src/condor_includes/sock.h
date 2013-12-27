@@ -157,6 +157,12 @@ public:
 	*/
 	int set_os_buffers(int desired_size, bool set_write_buf = false);
 
+	/** Enable keepalive options for this socket as dictacted by config knob
+		TCP_KEEPALIVE_INTERVAL.  Currently a no-op on anything but relisocks.
+		@return false if any system call errors, true otherwise.
+	*/
+	bool set_keepalive();
+
 	inline int bind(bool outbound, char *s) { return bind(outbound, getportbyserv(s)); }
 
 	int close();
