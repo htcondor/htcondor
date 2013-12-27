@@ -126,7 +126,11 @@ int Condor_Auth_X509 :: authenticate(const char * /* remoteHost */, CondorError*
     int status = 1;
     int reply = 0;
 	token_status = 0;
-	m_input_token_desc = GSS_C_EMPTY_BUFFER;
+	// Can't use GSS_C_EMPTY_BUFFER because C++03 doesn't
+	// support initializer lists, even if C99 does.
+	//m_input_token_desc = GSS_C_EMPTY_BUFFER;
+	m_input_token_desc.length = 0;
+	m_input_token_desc.value = NULL;
 	m_input_token = &m_input_token_desc;
         m_input_chan_bindings = GSS_C_NO_CHANNEL_BINDINGS;
         m_mech_type = GSS_C_NO_OID;
