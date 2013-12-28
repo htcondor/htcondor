@@ -62,8 +62,8 @@ char const *CONDOR_CHILD_FQU = "condor@child";
 char const *CONDOR_PARENT_FQU = "condor@parent";
 
 Authentication::Authentication( ReliSock *sock )
-	: m_auth_timeout_time(0),
-	  m_key(NULL)
+	: m_key(NULL),
+	  m_auth_timeout_time(0)
 {
 // Do this regardless of the state of SKIP_AUTHENTICATION)
 // even if SKIP_AUTHENTICATION is true, we call sock->Timeout later
