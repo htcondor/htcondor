@@ -833,6 +833,7 @@ int thread_cream_job_start( Request **reqlist )
 		if ( results[jobid] != "" ) {
 			char *msg = escape_spaces( results[jobid].c_str() );
 			enqueue_result( reqid + " CREAM_Job_Start\\ Error:\\ " + msg );
+			free( msg );
 		} else {
 			enqueue_result( reqid + " NULL" );
 		}
@@ -931,6 +932,7 @@ int thread_cream_job_purge( Request **reqlist )
 		if ( results[jobid] != "" ) {
 			char *msg = escape_spaces( results[jobid].c_str() );
 			enqueue_result( reqid + " CREAM_Job_Purge\\ Error:\\ " + msg );
+			free( msg );
 		} else {
 			enqueue_result( reqid + " NULL" );
 		}
@@ -1028,6 +1030,7 @@ int thread_cream_job_cancel( Request **reqlist )
 		if ( results[jobid] != "" ) {
 			char *msg = escape_spaces( results[jobid].c_str() );
 			enqueue_result( reqid + " CREAM_Job_Cancel\\ Error:\\ " + msg );
+			free( msg );
 		} else {
 			enqueue_result( reqid + " NULL" );
 		}

@@ -1789,21 +1789,13 @@ static void do_dump_config_stats(FILE * fh, bool dump_sources, bool dump_strings
 {
 	struct _macro_stats stats;
 	get_config_stats(&stats);
-	MyString line;
-	line.formatstr("Macros = %d\n", stats.cEntries);
-	fprintf(fh, line.Value());
-	line.formatstr("Used = %d\n", stats.cUsed);
-	fprintf(fh, line.Value());
-	line.formatstr("Referenced = %d\n", stats.cReferenced);
-	fprintf(fh, line.Value());
-	line.formatstr("Files = %d\n", stats.cFiles);
-	fprintf(fh, line.Value());
-	line.formatstr("StringBytes = %d\n", stats.cbStrings);
-	fprintf(fh, line.Value());
-	line.formatstr("TablesBytes = %d\n", stats.cbTables);
-	fprintf(fh, line.Value());
-	line.formatstr("IsSorted = %d\n", stats.cSorted);
-	fprintf(fh, line.Value());
+	fprintf(fh, "Macros = %d\n", stats.cEntries);
+	fprintf(fh, "Used = %d\n", stats.cUsed);
+	fprintf(fh, "Referenced = %d\n", stats.cReferenced);
+	fprintf(fh, "Files = %d\n", stats.cFiles);
+	fprintf(fh, "StringBytes = %d\n", stats.cbStrings);
+	fprintf(fh, "TablesBytes = %d\n", stats.cbTables);
+	fprintf(fh, "IsSorted = %d\n", stats.cSorted);
 
 	if (dump_sources) {
 		fprintf(fh, "\nSources -----\n");

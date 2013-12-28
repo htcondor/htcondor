@@ -99,6 +99,8 @@ $success = sub {
 		}
 		close OUT;
 	}
+
+	# Check node priorities...
 	foreach ('nodeA','nodeB','nodeC','nodeD') {
 		if(! defined $priority{$_}){
 			CondorTest::debug("Did not see priority for $_\n");
@@ -106,16 +108,23 @@ $success = sub {
 			die;
 		}
 	}
-# nodeB is a child of nodeA
-	if($priority{'nodeB'} < $priority{'nodeA'}){
+	if ($priority{'nodeA'} != 60) {
 		$diditpass = 0;
-		CondorTest::debug("nodeB priority should be at least that of nodeA\n");
+		CondorTest::debug("nodeA priority was $priority{'nodeA'}; should be 60\n");
 	}
-# nodeD is a child of nodeC
-	if($priority{'nodeD'} < $priority{'nodeC'}){
+	if ($priority{'nodeB'} != 60) {
 		$diditpass = 0;
-		CondorTest::debug("nodeD priority should be at least that of nodeC\n");
+		CondorTest::debug("nodeB priority was $priority{'nodeB'}; should be 60\n");
 	}
+	if ($priority{'nodeC'} != 5) {
+		$diditpass = 0;
+		CondorTest::debug("nodeC priority was $priority{'nodeC'}; should be 5\n");
+	}
+	if ($priority{'nodeD'} != 100) {
+		$diditpass = 0;
+		CondorTest::debug("nodeD priority was $priority{'nodeD'}; should be 100\n");
+	}
+
 	if($diditpass == 0) {
 		die "All expected files and correct output failed\n";
 	}

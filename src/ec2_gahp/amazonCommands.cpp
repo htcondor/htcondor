@@ -2215,6 +2215,7 @@ bool AmazonAttachVolume::workerFunction(char **argv, int argc, std::string &resu
 // * Amazon's header includes "Server: AmazonEC2"
 // * Nimbus's header includes "Server: Jetty"
 // * Eucalyptus's body doesn't include an "<?xml ...?>" tag
+//   Neither does OpenStack's starting with version Havana
 // * Amazon and Nimbus's <?xml?> tag includes version="1.0" and
 //   encoding="UTF-8" properties
 // * Nimbus and Eucalyptus's response doesn't include a <requestId> tag
@@ -2267,6 +2268,11 @@ bool AmazonVMServerType::SendRequest() {
 			serverType = "Amazon";
 		} else if ( !server_amazon && !server_jetty && xml_tag &&
 					!xml_encoding && request_id && !euca_tag ) {
+			serverType = "OpenStack";
+		} else if ( !server_amazon && !server_jetty && !xml_tag &&
+					!xml_encoding && request_id && !euca_tag ) {
+			// OpenStack Havana altered formatting from previous versions,
+			// but we don't want to treat it differently for now.
 			serverType = "OpenStack";
 		} else if ( !server_amazon && server_jetty && xml_tag &&
 					xml_encoding && !request_id && !euca_tag ) {

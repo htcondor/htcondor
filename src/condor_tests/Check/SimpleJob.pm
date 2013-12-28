@@ -107,7 +107,11 @@ sub RunCheck
 	my $donewithsuccess_fn = $args{on_success} || $ExitSuccess;
 
 
-	CondorTest::RegisterTimed( $testname, $timed_callback, $timeout);
+	if(defined $args{alt_timed}) {
+		CondorTest::RegisterTimed( $testname, $args{alt_timed}, $timeout);
+	} else {
+		CondorTest::RegisterTimed( $testname, $timed_callback, $timeout);
+	}
 
     CondorTest::RegisterAbort( $testname, $abort_fn );
     CondorTest::RegisterExitedSuccess( $testname, $donewithsuccess_fn );

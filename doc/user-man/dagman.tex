@@ -793,6 +793,73 @@ In this case, no further jobs will be submitted by \Condor{dagman}
 until the number of idle jobs falls below 250. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:DAGPaths}File Paths in DAGs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!File Paths in DAGs}
+
+\Condor{dagman} assumes that all relative paths in a
+DAG input file and the associated HTCondor submit description files
+are relative to the current
+working directory when \Condor{submit\_dag} is run.  
+
+Note that 
+relative paths in submit description files can be modified by the submit command
+\SubmitCmd{initialdir}; 
+see the \Condor{submit} manual page at ~\ref{man-condor-submit} 
+for more details on this command.
+The remainder of this discussion ignores \SubmitCmd{initialdir}.
+
+For example, assume that a directory called \File{parent}
+contains two subdirectories called \File{dag1} and
+\File{dag2}, and that \File{dag1} contains the DAG input file \File{one.dag}
+and \File{dag2} contains the DAG input file \File{two.dag}.
+Assume that each DAG is set up to be run
+from its own directory, resulting in correct behavior for the DAG
+in \File{dag1} with the command
+\begin{verbatim}
+cd dag1; condor_submit_dag one.dag
+\end{verbatim}
+
+In most cases, path names relative to the current working directory 
+is the desired behavior.
+However, if running
+multiple DAGs with a single \Condor{dagman} command, 
+and each set of DAG input files is in its own directory, 
+the paths will not be correct. 
+In this case,
+the \Arg{-usedagdir} command line argument to \Condor{submit\_dag}
+will run each DAG as if \Condor{submit\_dag} had been run 
+in the directory in which the relevant DAG file exists.
+With the current working directory
+is \File{parent}, run 
+\begin{verbatim}
+condor_submit_dag -usedagdir dag1/one.dag dag2/two.dag
+\end{verbatim}
+The directory will be correct for each of the two DAGs,
+and output files will be placed in the correct directory.
+The File{.dagman.out} file will also be in the correct directory.
+
+If all paths in the DAG input file(s) and the relevant submit
+description files are absolute,
+the \Arg{-usedagdir} argument is not needed;
+however, using absolute paths is NOT generally a good idea.
+
+For a DAG that \emph{does not} use \Arg{-usedagdir}, 
+relative paths can still work for multiple DAGs, 
+if all file paths are given relative to
+the current working directory as \Condor{submit\_dag} is executed.
+This implies that DAGs in separate directories
+cannot be submitted from their own directories;
+submission only works from the parent directory the paths are set up for.
+
+With the \Arg{-usedagdir} argument, any created 
+Rescue DAG file will be written to
+the current working directory.
+The Rescue DAG should be run from that directory.
+The Rescue DAG includes all the path information necessary to
+run each node job in the proper directory.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Job Monitoring, Job Failure, and Job Removal}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1202,15 +1269,15 @@ As an example, here are only the relevant parts of a DAG input file.
 Note that the NodeA value for \Expr{second} contains a tab.
 \footnotesize
 \begin{verbatim}
-    Vars NodeA first="Alberto Contador"
-    Vars NodeA second="\"\"Andy	Schleck\"\""
-    Vars NodeA third="Lance\\ Armstrong"
-    Vars NodeA misc="!@#$%^&*()_-=+=[]{}?/"
+    VARS NodeA first="Alberto Contador"
+    VARS NodeA second="\"\"Andy	Schleck\"\""
+    VARS NodeA third="Lance\\ Armstrong"
+    VARS NodeA misc="!@#$%^&*()_-=+=[]{}?/"
     
-    Vars NodeB first="Lance_Armstrong"
-    Vars NodeB second="\\\"Andreas_Kloden\\\""
-    Vars NodeB third="Ivan\\_Basso"
-    Vars NodeB misc="!@#$%^&*()_-=+=[]{}?/"
+    VARS NodeB first="Lance_Armstrong"
+    VARS NodeB second="\\\"Andreas_Kloden\\\""
+    VARS NodeB third="Ivan\\_Basso"
+    VARS NodeB misc="!@#$%^&*()_-=+=[]{}?/"
 \end{verbatim}
 \normalsize
 
@@ -1266,11 +1333,8 @@ then \Env{\$(JOB)} will be the fully scoped name of the node.
 is retried.  For example:
 \end{itemize}
 \begin{verbatim}
-      Vars F noderetry="$(RETRY)"
+      Vars NodeC noderetry="$(RETRY)"
 \end{verbatim}
-
-Note that the special macro values can be inserted into a job's ClassAd,
-as noted below.
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
 \begin{description}
@@ -1278,20 +1342,37 @@ as noted below.
 \end{description}
 
 The \Arg{macroname} may also begin with a \Expr{+} character, in which case it
-names a ClassAd attribute. For example, the following VARS specification
+names a ClassAd attribute. For example, the VARS specification
 \begin{verbatim}
-  Vars NodeE +A="\"bob\""
+  VARS NodeD +A="\"bob\""
 \end{verbatim}
-would allow the HTCondor submit description file for NodeE to use
+results in the job ClassAd attribute
+\begin{verbatim}
+  A = "bob"
+\end{verbatim}
+Note that ClassAd string values must be quoted, hence there are escaped
+quotes in the example above.  The outer quotes are consumed in the parsing of
+the DAG input file, so the escaped inner quotes remain in the definition
+of the attribute value.
+
+Continuing this example,
+it allows the HTCondor submit description file for NodeD to use
 the following line:
 \begin{verbatim}
   arguments = "$$([A])"
 \end{verbatim}
 
-Note that ClassAd string values must be quoted, hence there are escaped
-quotes in the example above.  The outer quotes are consumed in the parsing of
-the DAG input file, so the escaped inner quotes remain in the definition
-of the attribute value.
+The special macros may also be used.
+For example
+\begin{verbatim}
+  VARS NodeE +B="$(RETRY)"
+\end{verbatim}
+places the numerical attribute
+\begin{verbatim}
+  B = 1
+\end{verbatim}
+into the ClassAd when the NodeE job is run for a second time,
+which is the first retry and the value 1. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Setting Priorities for Nodes}
@@ -2622,70 +2703,6 @@ To run this Rescue DAG, the submission command is
 \end{verbatim}
 If this Rescue DAG also failed, a new Rescue DAG named
 \File{my.dag.rescue.rescue} would be created.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:DAGPaths}File Paths in DAGs}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{DAGMan!File Paths in DAGs}
-
-By default, \Condor{dagman} assumes that all relative paths in a
-DAG input file and the associated HTCondor submit description files
-are relative to the current
-working directory when \Condor{submit\_dag} is run.  
-Note that 
-relative paths in submit description files can be modified by the submit command
-\SubmitCmd{initialdir}; see the \Condor{submit} manual page within Chapter
-~\ref{man-condor-submit} for more details.  The rest of this discussion
-ignores \SubmitCmd{initialdir}.
-
-In most cases, path names relative to the current working directory 
-is the desired behavior.
-However, if running
-multiple DAGs with a single \Condor{dagman}, and each DAG is in its
-own directory, this will cause problems.  In this case,
-use the \Arg{-usedagdir} command-line argument to
-\Condor{submit\_dag} (see the \Condor{submit\_dag} manual page within Chapter
-~\ref{man-condor-submit-dag} for more details).
-This tells \Condor{dagman} to run each DAG
-as if \Condor{submit\_dag} had been run in the directory in which
-the relevant DAG file exists.
-
-For example, assume that a directory called \File{parent}
-contains two subdirectories called \File{dag1} and
-\File{dag2}, and that \File{dag1} contains the DAG input file \File{one.dag}
-and \File{dag2} contains the DAG input file \File{two.dag}.
-Further, assume that each DAG is set up to be run
-from its own directory with the following command:
-\begin{verbatim}
-cd dag1; condor_submit_dag one.dag
-\end{verbatim}
-This will correctly run \File{one.dag}.
-
-The goal is to run the two, independent DAGs located within
-\File{dag1} and \File{dag2} while the current working directory
-is \File{parent}.  To do so, run the following command:
-\begin{verbatim}
-condor_submit_dag -usedagdir dag1/one.dag dag2/two.dag
-\end{verbatim}
-
-Of course, if all paths in the DAG input file(s) and the relevant submit
-description files are absolute,
-the \Arg{-usedagdir} argument is not needed;
-however, using absolute paths is NOT generally a good idea.
-
-If you \emph{do not} use \Arg{-usedagdir}, relative paths can still work
-for multiple DAGs, if
-all file paths are given relative to
-the current working directory as \Condor{submit\_dag} is executed.
-However, this means that, if the DAGs are in separate directories, they
-cannot be submitted from their own directories, only from the parent
-directory the paths are set up for.
-
-Note that if you use the \Arg{-usedagdir} argument, and your run
-results in a rescue DAG, the rescue DAG file will be written to
-the current working directory, and should be run from that directory.
-The rescue DAG includes all the path information necessary to
-run each node job in the proper directory.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
