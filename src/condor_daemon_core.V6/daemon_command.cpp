@@ -122,6 +122,7 @@ int DaemonCommandProtocol::doProtocol()
 			what_next = CommandProtocolFinished;
 		}
 		else if( m_nonblocking && m_sock->is_connect_pending() ) {
+			dprintf(D_SECURITY, "DaemonCommandProtocol: Waiting for connect.\n");
 			what_next = WaitForSocketData();
 		}
 		else if( m_is_tcp && !m_sock->is_connected()) {
@@ -236,6 +237,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::AcceptTCPReq
 		// available yet to read on this socket, we don't want to
 		// block when reading the command, so register it
 	if ( m_nonblocking && ((ReliSock *)m_sock)->bytes_available_to_read() < 4 ) {
+		dprintf(D_SECURITY, "DaemonCommandProtocol: Not enough bytes are ready for read.\n");
 		return WaitForSocketData();
 	}
 
@@ -983,6 +985,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 	m_errstack.reset(new CondorError());
 
 	if( m_nonblocking && !m_sock->readReady() ) {
+		dprintf(D_SECURITY, "Returning to DC while we wait for socket to authenticate.\n");
 		return WaitForSocketData();
 	}
 
@@ -1019,6 +1022,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 
 	if (auth_success == 2) {
 		m_state = CommandProtocolAuthenticateContinue;
+		dprintf(D_SECURITY, "Will return to DC because authentication is incomplete.\n");
 		return WaitForSocketData();
 	}
         return AuthenticateFinish(auth_success, method_used);
@@ -1029,6 +1033,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::Authenticate
 	char *method_used = NULL;
 	int auth_result = m_sock->authenticate_continue(m_errstack.get(), false, &method_used);
 	if (auth_result == 2) {
+		dprintf(D_SECURITY, "Will return to DC to continue authentication..\n");
 		return WaitForSocketData();
 	}
 	return AuthenticateFinish(auth_result, method_used);
