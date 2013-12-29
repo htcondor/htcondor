@@ -1135,8 +1135,10 @@ int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key,
 			}
 		}
 
-		authenticate_continue(errstack, non_blocking, method_used);
-
+		if (!m_auth_in_progress) {
+			int result2 = authenticate_continue(errstack, non_blocking, method_used);
+			return result ? result2 : 0;
+		}
 		return result;
     }
     else {
@@ -1147,7 +1149,8 @@ int ReliSock::perform_authenticate(bool with_key, KeyInfo *& key,
 int ReliSock::authenticate_continue(CondorError* errstack, bool non_blocking, char **method_used)
 {
 	int result = 1;
-	if( m_auth_in_progress ) {
+	if( m_auth_in_progress )
+	{
 		result = m_authob->authenticate_continue(errstack, non_blocking);
 		if (result == 2) {
 			return result;

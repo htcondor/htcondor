@@ -453,6 +453,7 @@ int Authentication::authenticate_finish(CondorError *errstack)
 			errstack->push("AUTHENTICATE",AUTHENTICATE_ERR_KEYEXCHANGE_FAILED,
 			"Failed to securely exchange session key");
 		}
+		dprintf(D_SECURITY, "AUTHENTICATE: Result of end of authenticate is %d.\n", retval);
 		mySock->allow_one_empty_message();
 	}
 #endif
@@ -882,6 +883,7 @@ int Authentication :: unwrap(char*  input,
 
 int Authentication::exchangeKey(KeyInfo *& key)
 {
+	dprintf(D_SECURITY, "AUTHENTICATE: Exchanging keys with remote side.\n");
     int retval = 1;
     int hasKey, keyLength, protocol, duration;
     int outputLen, inputLen;
