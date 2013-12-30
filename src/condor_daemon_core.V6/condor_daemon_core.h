@@ -381,6 +381,13 @@ class DaemonCore : public Service
                           bool               force_authentication = false,
 						  int                wait_for_payload = 0);
 
+    int Register_UnregisteredCommandHandler (
+		CommandHandlercpp handlercpp,
+		const char       *handler_descrip,
+		Service          *s,
+		bool              include_auth);
+    bool HandleUnregisteredDCAuth() const {return m_unregisteredCommand.num && m_unregisteredCommand.is_cpp;}
+
 	/** Register_CommandWithPayload is the same as Register_Command
 		but with a different default for wait_for_payload.  By
 		default, a non-blocking read will be performed before calling
@@ -747,6 +754,7 @@ class DaemonCore : public Service
 		// if delete_stream is true and the command handler does not return
 		// KEEP_STREAM, the stream is deleted
 	int CallCommandHandler(int req,Stream *stream,bool delete_stream=true,bool check_payload=true,float time_spent_on_sec=0,float time_spent_waiting_for_payload=0);
+	int CallUnregisteredCommandHandler(int req, Stream *stream);
 
 
 	/**
@@ -1701,6 +1709,7 @@ class DaemonCore : public Service
     int                 maxCommand;     // max number of command handlers
     int                 nCommand;       // number of command handlers used
     CommandEnt*         comTable;       // command table
+    CommandEnt          m_unregisteredCommand;
 
     struct SignalEnt 
     {

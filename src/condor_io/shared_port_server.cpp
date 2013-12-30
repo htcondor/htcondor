@@ -55,7 +55,16 @@ SharedPortServer::InitAndReconfig() {
 			this,
 			ALLOW );
 		ASSERT( rc >= 0 );
+
+		rc = daemonCore->Register_UnregisteredCommandHandler(
+			(CommandHandlercpp)&SharedPortServer::HandleDefaultRequest,
+			"SharedPortServer::HandleDefaultRequest",
+			this,
+			true);
+		ASSERT( rc >= 0 );
 	}
+
+	m_default_id = param("SHARED_PORT_DEFAULT_ID");
 
 	PublishAddress();
 
@@ -178,6 +187,12 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 			"SharedPortServer: request from %s to connect to %s%s.\n",
 			sock->peer_description(), shared_port_id, deadline_desc.Value());
 
+	return PassRequest(static_cast<Sock*>(sock), shared_port_id);
+}
+
+int
+SharedPortServer::PassRequest(Sock *sock, const char *shared_port_id)
+{
 #if HAVE_SCM_RIGHTS_PASSFD
 	m_shared_port_client.PassSocket((Sock *)sock, shared_port_id, NULL, true);
 #else
@@ -206,4 +221,17 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 #endif
 
 	return TRUE;
+}
+
+int
+SharedPortServer::HandleDefaultRequest(int cmd,Stream *sock)
+{
+	if (!m_default_id.size()) {
+		dprintf(D_FULLDEBUG, "SharedPortServer: Got request for command %d from %s, but no default client specified.\n",
+			cmd, sock->peer_description());
+		return 0;
+	}
+	dprintf(D_FULLDEBUG, "SharedPortServer: Passing a request from %s for command %d to ID %s.\n",
+		sock->peer_description(), cmd, m_default_id.c_str()); 
+	return PassRequest(static_cast<Sock*>(sock), m_default_id.c_str());
 }

@@ -948,6 +948,26 @@ bool DaemonCore::GetTimerTimeslice( int id, Timeslice &timeslice )
 /************************************************************************/
 
 
+int DaemonCore::Register_UnregisteredCommandHandler(
+	CommandHandlercpp handlercpp,
+	const char* handler_descrip,
+	Service* s,
+	bool include_auth)
+{
+	if (handlercpp == 0) {
+		dprintf(D_ALWAYS, "Can't register NULL unregistered command handler\n");
+		return -1;
+	}
+	if (m_unregisteredCommand.num) { EXCEPT("DaemonCore: Two unregistered command handlers registered"); }
+	m_unregisteredCommand.handlercpp = handlercpp;
+	m_unregisteredCommand.command_descrip = strdup("UNREGISTERED COMMAND");
+	m_unregisteredCommand.handler_descrip = strdup(handler_descrip ? handler_descrip : EMPTY_DESCRIP);
+	m_unregisteredCommand.service = s;
+	m_unregisteredCommand.num = 1;
+	m_unregisteredCommand.is_cpp = include_auth;
+	return 1;
+}
+
 int DaemonCore::Register_Command(int command, const char* command_descrip,
 				CommandHandler handler, CommandHandlercpp handlercpp,
 				const char *handler_descrip, Service* s, DCpermission perm,
@@ -4028,6 +4048,46 @@ DaemonCore::HandleReqPayloadReady(Stream *stream)
 		result = KEEP_STREAM;
 	}
 	return result;
+}
+
+int
+DaemonCore::CallUnregisteredCommandHandler(int req, Stream *stream)
+{
+	if (!m_unregisteredCommand.num) {
+		dprintf(D_ALWAYS,
+			"Received %s command (%d) (%s) from %s %s\n",
+			(stream->type() == Stream::reli_sock) ? "TCP" : "UDP",
+			req,
+			"UNREGISTERED COMMAND!",
+			"UNKNOWN USER",
+			stream->peer_description());
+		return FALSE;
+	}
+	dprintf(D_COMMAND, "Calling HandleUnregisteredReq <%s> (%d) for command %d from %s\n",
+			m_unregisteredCommand.handler_descrip,
+			inServiceCommandSocket_flag,
+			req,
+			stream->peer_description());
+
+	UtcTime handler_start_time;
+	handler_start_time.getTime();
+
+	// call the handler function; first curr_dataptr for GetDataPtr()
+	curr_dataptr = &(m_unregisteredCommand.data_ptr);
+
+	int result = FALSE;
+	if ( m_unregisteredCommand.handlercpp )
+		result = (m_unregisteredCommand.service->*(m_unregisteredCommand.handlercpp))(req,stream);
+
+	curr_dataptr = NULL;
+
+	UtcTime handler_stop_time;
+	handler_stop_time.getTime();
+	float handler_time = handler_stop_time.difference(&handler_start_time);
+
+	dprintf(D_COMMAND, "Return from HandleUnregisteredReq <%s, %d> (handler: %.3fs)\n", m_unregisteredCommand.handler_descrip, req, handler_time);
+
+        return result;
 }
 
 int

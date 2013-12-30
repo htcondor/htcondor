@@ -483,7 +483,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 		// a daemoncore command int!  [not ever likely, since CEDAR ints are
 		// exapanded out to 8 bytes]  Still, in a perfect world we would replace
 		// with a more foolproof method.
-	char tmpbuf[5];
+	char tmpbuf[6];
 	memset(tmpbuf,0,sizeof(tmpbuf));
 	if ( m_is_tcp ) {
 			// TODO Should we be ignoring the return value of condor_read?
@@ -544,6 +544,21 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 		return CommandProtocolFinished;
 	}
 #endif // HAVE_EXT_GSOAP
+
+	int tmp_req; memcpy(static_cast<void*>(&tmp_req), tmpbuf+1, sizeof(int));
+	tmp_req *= (tmpbuf[0] == '\1') ? 1 : -1;
+	int tmp_cmd_index;
+	if (!daemonCore->CommandNumToTableIndex(tmp_req,&tmp_cmd_index) && (daemonCore->HandleUnregisteredDCAuth() || (tmp_req != DC_AUTHENTICATE))) {
+		ScopedEnableParallel(false);
+
+		if( m_sock_had_no_deadline ) {
+				// unset the deadline we assigned in WaitForSocketData
+			m_sock->set_deadline(0);
+		}
+
+		m_result = daemonCore->CallUnregisteredCommandHandler(m_req,m_sock);
+		return CommandProtocolFinished;
+	}
 
 	// read in the command from the sock with a timeout value of just 1 second,
 	// since we know there is already some data waiting for us.
