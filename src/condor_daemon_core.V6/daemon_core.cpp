@@ -8921,6 +8921,7 @@ DaemonCore::WatchPid(PidEntry *pidentry)
 			pidentry->watcherEvent = entry->event;
 			(entry->nEntries)++;
 			if ( !::SetEvent(entry->event) ) {
+				::LeaveCriticalSection(&(entry->crit_section));
 				EXCEPT("SetEvent failed");
 			}
 			alldone = TRUE;
