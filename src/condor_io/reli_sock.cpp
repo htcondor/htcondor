@@ -22,6 +22,7 @@
 #include "condor_constants.h"
 #include "authentication.h"
 #include "condor_debug.h"
+#include "condor_config.h"
 #include "internet.h"
 #include "condor_rw.h"
 #include "condor_socket_types.h"
@@ -183,9 +184,40 @@ ReliSock::accept( ReliSock	&c )
 	c.enter_connected_state("ACCEPT");
 	c.decode();
 
+	int val = param_integer("TCP_KEEPALIVE_INTERVAL");
 	int on = 1;
-	c.setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)&on, sizeof(on));
+	if (val >= 0) {
+		// NOTE: Log failures to FULLDEBUG as we may be doing a lot of accepts...
+		if (c.setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)(&on), sizeof(on)) < 0) {
+			dprintf(D_FULLDEBUG, "ReliSock::accept - Failed to enable TCP keepalive (errno=%d, %s)", errno, strerror(errno));
+		}
+	}
+	if (val > 0) {
+#if !defined(WIN32) && (defined(HAVE_TCP_KEEPALIVE) || defined(HAVE_TCP_KEEPIDLE))
 
+// Mac OS X calls it TCP_KEEPALIVE; Linux calls it TCP_KEEPIDLE.
+#if defined(HAVE_TCP_KEEPALIVE)
+		if (c.setsockopt(IPPROTO_TCP, TCP_KEEPALIVE, (char*)(&val), sizeof(val)) < 0)
+#else
+		if (c.setsockopt(IPPROTO_TCP, TCP_KEEPIDLE, (char*)(&val), sizeof(val)) < 0)
+#endif
+		{
+			dprintf(D_FULLDEBUG, "ReliSock::accept - Failed to set TCP keepalive idle time to 5 minutes (errno=%d, %s)", errno, strerror(errno));
+		}
+		val = 5;
+#if defined(HAVE_TCP_KEEPCNT)
+		if (c.setsockopt(IPPROTO_TCP, TCP_KEEPCNT, (char*)(&val), sizeof(val)) < 0) {
+			dprintf(D_FULLDEBUG, "ReliSock::accept - Failed to set TCP keepalive probe count to 5 (errno=%d, %s)", errno, strerror(errno));
+		}
+#endif
+#if defined(HAVE_TCP_KEEPINTVL)
+		if (c.setsockopt(IPPROTO_TCP, TCP_KEEPINTVL, (char*)(&val), sizeof(val)) < 0) {
+			dprintf(D_FULLDEBUG, "ReliSock::accept - Failed to set TCP keepalive interval to 5 seconds (errno=%d, %s)", errno, strerror(errno));
+		}
+#endif
+		// TODO: there are equivalent Win32 API calls for the above setsockopt
+#endif
+	}
 
 		/* Set no delay to disable Nagle, since we buffer all our
 		   relisock output and it degrades performance of our

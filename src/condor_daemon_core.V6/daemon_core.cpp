@@ -5471,12 +5471,13 @@ enum {
 };
 
 #if HAVE_CLONE
-static int stack_direction(volatile int *ptr=NULL) {
-    volatile int location;
-    if(!ptr) return stack_direction(&location);
-    if (ptr < &location) {
-        return STACK_GROWS_UP;
-    }
+static int stack_direction() {
+
+// We used to try to be clever about figuring this out
+// but compiler optimizations kept tripping up this code
+// The clone(2) man page says "stack grown down on all
+// Linux supported architectures except HP-PA.
+// So just hardcode STACK_GROWS_DOWN...
 
     return STACK_GROWS_DOWN;
 }
@@ -7242,7 +7243,6 @@ int DaemonCore::Create_Process(
 	//
 	newpid = piProcess.dwProcessId;
 	
-#ifdef HAVE_SCHED_SETAFFINITY
 	/* if we have an affinity array mask then: */
 	if ( affinity_mask ) {
 		
@@ -7274,7 +7274,6 @@ int DaemonCore::Create_Process(
 		}
 
 	}
-#endif
 
 	// if requested, register a process family with the procd and unsuspend
 	// the process

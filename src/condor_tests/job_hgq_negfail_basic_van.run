@@ -37,23 +37,36 @@ my $pre_execution = 1;
 
 
 sub timed_callback {
-    if ($test_passed || $pre_execution) {
-        # if we already detected that the test passed, or if 
+    if ($test_passed) {
+        # if we already detected that the test passed, we are 
+		# no longer wanting a call back
         # jobs aren't running yet, we can skip this callback.
         return;
     }
+    if ($pre_execution) {
+        #  propogate the call backs till done
+		# hmm no running events
+		#runToolNTimes("condor_status",1,1);
+		#runToolNTimes("condor_q",1,1);
+		CondorTest::debug("Re fire callback - in pre_execution\n",2);
+		CondorTest::RegisterTimed($testname, \&timed_callback, 15);
+        return;
+    }
 
-    my $stat = `condor_q -format "%s\n" AccountingGroup -constraint "JobStatus == 2" | sort | uniq -c`;
-    my @slines = split /\n/, $stat;
+    #my $stat = `condor_q -format "%s\n" AccountingGroup -constraint "JobStatus == 2" | sort | uniq -c`;
+	my @slines = ();
+    my $stat = runCondorTool("condor_q -format \"%s\n\" AccountingGroup -constraint \"JobStatus == 2\" | sort | uniq -c",\@slines,2,{emit_output=>0});
 
     my $tst = "";
     foreach my $line (@slines) {
+		CondorUtils::fullchomp($line);
         my $t = trimws($line);
         $tst = $tst." ".$t;
     }
 
+	CondorTest::debug("Have: $tst Looking for: - 20 a.a.user 5 b.a.user 5 b.b.user-\n",2);
     if ($tst == " 20 a.a.user 5 b.a.user 5 b.b.user") {
-        # we detected the expected pattern of running jobs
+		CondorTest::debug("we detected the expected pattern of running jobs: $tst\n",1);
         $test_passed = 1;
         # we found what we were looking for: now we want to clear the que
         # so the test can finish, because some of the submitted jobs will
@@ -61,6 +74,9 @@ sub timed_callback {
         runcmd("condor_rm -all");
     } else {
         print "Haven't seen expected output yet.  What I saw was:\n";
+		# Call backs only fire once now
+		CondorTest::debug("Re fire callback - end of this call back\n",2);
+		CondorTest::RegisterTimed($testname, \&timed_callback, 15);
         print $stat;
         # if this check failed, wait a little:
         sleep(5);
@@ -68,12 +84,15 @@ sub timed_callback {
 }
 
 sub execute_callback {
+	CondorTest::debug("Got to execute_callback\n",2);
     if ($pre_execution) {
         # only do this once, to let all jobs have a chance to spin up
+		CondorTest::debug("sleeping once\n",2);
         sleep(10);
     }
     # flag that jobs have started
     $pre_execution = 0;
+	CondorTest::debug("pre_execution: $pre_execution\n",2);
 }
 
 sub exit_callback {
@@ -92,6 +111,7 @@ my $append_condor_config = '
 #COLLECTOR_HOST = $(CONDOR_HOST):0
 #COLLECTOR_ADDRESS_FILE = $(LOG)/.collector_address
 
+DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 SCHEDD_INTERVAL	= 30
 NEGOTIATOR_INTERVAL = 20
 
@@ -131,6 +151,7 @@ GROUP_ACCEPT_SURPLUS_b = FALSE
 ';
 
 CondorTest::StartCondorWithParams(
+	local_fresh => "TRUE",
     append_condor_config => $append_condor_config
 );
 
@@ -145,7 +166,7 @@ log = $job_log
 output = $testname.out
 error = $testname.err
 notification = never
-arguments = 60
+arguments = 0
 # group 'a.a' should be able to use slots unused by 'a.b'
 # set up requirements to stay out of lower slots (used by b.a and b.b)
 Requirements = (SlotID > 10)
@@ -170,7 +191,7 @@ close(SUBMIT);
 
 
 my $on_evictedwithoutcheckpoint = sub {
-	CondorTest::debug("Evicted Without Checkpoint from removing jobs.\n",1);
+	CondorTest::debug("Evicted Without Checkpoint from removing jobs.\n",2);
 };
 
 CondorTest::RegisterEvictedWithoutCheckpoint($testname, $on_evictedwithoutcheckpoint);
@@ -186,7 +207,9 @@ unlink($job_log);
 
 if (CondorTest::RunTest($testname, $submit_filename, 0)) {
     CondorTest::debug("$testname: SUCCESS\n",1);
-    exit(0);
+	CondorTest::RegisterResult(1, test_name, $testname);
+	CondorTest::EndTest();
 } else {
-    die "$testname: CondorTest::RunTest() failed\n";
+	CondorTest::RegisterResult(0, test_name, $testname);
+	CondorTest::EndTest();
 }

@@ -73,17 +73,13 @@ use CondorUtils;
 # level 5 - debug statements from Condor.pm
 #
 # There is no reason not to have debug always on the the level
-# pretty completely controls it. All DebugOff calls
-# have been removed.
 #
 # CondorPersonal.pm has a similar but separate mechanism.
 #
 #################################################################
 
-Condor::DebugOff();
-Condor::DebugLevel(2);
-CondorPersonal::DebugLevel(2);
-CondorPersonal::DebugOff();
+Condor::DebugLevel(1);
+CondorPersonal::DebugLevel(1);
 my @debugcollection = ();
 
 #################################################################

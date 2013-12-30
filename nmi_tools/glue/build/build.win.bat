@@ -249,6 +249,16 @@ goto finis
 devenv CONDOR.sln /Build RelWithDebInfo /project BLD_TESTS
 move src\condor_tests\RelWithDebInfo\*.exe src\condor_tests
 move src\condor_tests\RelWithDebInfo\*.pdb src\condor_tests
+move src\classad\RelWithDebInfo\*.exe src\condor_tests
+move src\classad\RelWithDebInfo\*.pdb src\condor_tests
+move src\classad\tests\RelWithDebInfo\*.exe src\condor_tests
+move src\classad\tests\RelWithDebInfo\*.pdb src\condor_tests
+move src\condor_utils\tests\RelWithDebInfo\*.exe src\condor_tests
+move src\condor_utils\tests\RelWithDebInfo\*.pdb src\condor_tests
+move src\condor_collector.V6\tests\RelWithDebInfo\*.exe src\condor_tests
+move src\condor_collector.V6\tests\RelWithDebInfo\*.pdb src\condor_tests
+copy bld_external\pcre-8.33\install\lib\pcre.dll src\condor_tests
+copy src\classad\tests\testdata.txt src\condor_tests
 goto finis
 
 REM common exit

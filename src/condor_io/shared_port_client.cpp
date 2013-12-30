@@ -27,7 +27,6 @@
 
 #ifdef HAVE_SCM_RIGHTS_PASSFD
 #include "shared_port_scm_rights.h"
-#endif
 
 class SharedPortState: Service{
 
@@ -36,7 +35,7 @@ public:
         SharedPortState(ReliSock *sock, const char *shared_port_id, const char *requested_by, bool non_blocking)
          : m_sock(sock),
 	   m_shared_port_id(shared_port_id),
-	   m_requested_by(requested_by),
+	   m_requested_by(requested_by ? requested_by : ""),
 	   m_sock_name("UNKNOWN"),
 	   m_state(UNBOUND),
 	   m_non_blocking(non_blocking)
@@ -60,6 +59,7 @@ private:
         HandlerResult HandleFD(Stream *&s);
         HandlerResult HandleResp(Stream *&s);
 };
+#endif
 
 bool
 SharedPortClient::sendSharedPortID(char const *shared_port_id,Sock *sock)
@@ -275,11 +275,12 @@ SharedPortClient::PassSocket(Sock *sock_to_pass,char const *shared_port_id,char 
 #endif
 }
 
+#ifdef HAVE_SCM_RIGHTS_PASSFD
 int
 SharedPortState::Handle(Stream *s)
 {
 	HandlerResult result = CONTINUE;
-	while (result == CONTINUE || (m_non_blocking && (result == WAIT))) {
+	while (result == CONTINUE || (!m_non_blocking && (result == WAIT))) {
 		switch (m_state)
 		{
 		case UNBOUND:
@@ -379,6 +380,10 @@ SharedPortState::HandleUnbound(Stream *&s)
 	ReliSock *named_sock = new ReliSock();
 	named_sock->assign(named_sock_fd);
 	named_sock->set_deadline( m_sock->get_deadline() );
+	if (m_non_blocking) {
+		int flags = fcntl(named_sock_fd, F_GETFL, 0);
+		fcntl(named_sock_fd, F_SETFL, flags | O_NONBLOCK);
+	}
 
 	int connect_rc;
 	{
@@ -395,6 +400,11 @@ SharedPortState::HandleUnbound(Stream *&s)
 		delete named_sock;
 		return FAILED;
         }
+
+	if (m_non_blocking) {
+		int flags = fcntl(named_sock_fd, F_GETFL, 0);
+		fcntl(named_sock_fd, F_SETFL, flags & ~O_NONBLOCK);
+	}
 
 	s = named_sock;
         m_state = SEND_HEADER;
@@ -513,4 +523,5 @@ SharedPortState::HandleResp(Stream *&s)
 		m_requested_by.c_str());
 	return DONE;
 }
+#endif
 

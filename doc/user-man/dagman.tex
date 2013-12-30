@@ -1202,15 +1202,15 @@ As an example, here are only the relevant parts of a DAG input file.
 Note that the NodeA value for \Expr{second} contains a tab.
 \footnotesize
 \begin{verbatim}
-    Vars NodeA first="Alberto Contador"
-    Vars NodeA second="\"\"Andy	Schleck\"\""
-    Vars NodeA third="Lance\\ Armstrong"
-    Vars NodeA misc="!@#$%^&*()_-=+=[]{}?/"
+    VARS NodeA first="Alberto Contador"
+    VARS NodeA second="\"\"Andy	Schleck\"\""
+    VARS NodeA third="Lance\\ Armstrong"
+    VARS NodeA misc="!@#$%^&*()_-=+=[]{}?/"
     
-    Vars NodeB first="Lance_Armstrong"
-    Vars NodeB second="\\\"Andreas_Kloden\\\""
-    Vars NodeB third="Ivan\\_Basso"
-    Vars NodeB misc="!@#$%^&*()_-=+=[]{}?/"
+    VARS NodeB first="Lance_Armstrong"
+    VARS NodeB second="\\\"Andreas_Kloden\\\""
+    VARS NodeB third="Ivan\\_Basso"
+    VARS NodeB misc="!@#$%^&*()_-=+=[]{}?/"
 \end{verbatim}
 \normalsize
 
@@ -1266,11 +1266,8 @@ then \Env{\$(JOB)} will be the fully scoped name of the node.
 is retried.  For example:
 \end{itemize}
 \begin{verbatim}
-      Vars F noderetry="$(RETRY)"
+      Vars NodeC noderetry="$(RETRY)"
 \end{verbatim}
-
-Note that the special macro values can be inserted into a job's ClassAd,
-as noted below.
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
 \begin{description}
@@ -1278,20 +1275,37 @@ as noted below.
 \end{description}
 
 The \Arg{macroname} may also begin with a \Expr{+} character, in which case it
-names a ClassAd attribute. For example, the following VARS specification
+names a ClassAd attribute. For example, the VARS specification
 \begin{verbatim}
-  Vars NodeE +A="\"bob\""
+  VARS NodeD +A="\"bob\""
 \end{verbatim}
-would allow the HTCondor submit description file for NodeE to use
+results in the job ClassAd attribute
+\begin{verbatim}
+  A = "bob"
+\end{verbatim}
+Note that ClassAd string values must be quoted, hence there are escaped
+quotes in the example above.  The outer quotes are consumed in the parsing of
+the DAG input file, so the escaped inner quotes remain in the definition
+of the attribute value.
+
+Continuing this example,
+it allows the HTCondor submit description file for NodeD to use
 the following line:
 \begin{verbatim}
   arguments = "$$([A])"
 \end{verbatim}
 
-Note that ClassAd string values must be quoted, hence there are escaped
-quotes in the example above.  The outer quotes are consumed in the parsing of
-the DAG input file, so the escaped inner quotes remain in the definition
-of the attribute value.
+The special macros may also be used.
+For example
+\begin{verbatim}
+  VARS NodeE +B="$(RETRY)"
+\end{verbatim}
+places the numerical attribute
+\begin{verbatim}
+  B = 1
+\end{verbatim}
+into the ClassAd when the NodeE job is run for a second time,
+which is the first retry and the value 1. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Setting Priorities for Nodes}

@@ -83,7 +83,7 @@ my $failure = "HitRetryLimit";
 
 my $on_match = sub {
 	$match = shift;
-	print "Matched: $match\n";
+	print "Matched: $match\n\n";
 	if($matchonbegin == 1) {
 		$matchedbegin = $match;
 	} elsif($matchonnextend == 1) {

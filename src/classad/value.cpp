@@ -499,12 +499,6 @@ bool convertValueToRealValue(const Value value, Value &realValue)
 			rvalue = strtod(start, &end_tmp);
 			end = end_tmp;
 
-				// On HPUX11, an input value of "INF" fails in
-				// a strange way: end points beyond the null.
-			if( classad_isinf(rvalue) && end > start+strlen(start) ) {
-				end = start+strlen(start);
-			}
-
 			if (end == start && rvalue == 0.0) {
 				// strtod() returned an error
 				realValue.SetErrorValue();
