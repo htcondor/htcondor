@@ -654,11 +654,6 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 			if (choice && !(choice & basic_flag) && !(choice & verbose_flag))
 				continue;
 
-			// for log files other than the first one, dont panic if we
-			// fail to write to the file.
-			PRAGMA_REMIND("TJ: move dont_panic flag into debug output vector")
-			//bool dont_panic = (ixOutput > 0) || DebugContinueOnOpenFailure;
-
 			/* Open and lock the log file */
 			bool   funlock_it = false;
 			switch ((*it).outputTarget) {
