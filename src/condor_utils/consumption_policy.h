@@ -25,26 +25,28 @@
 using std::string;
 using std::map;
 
+typedef std::map<string, double, classad::CaseIgnLTStr> consumption_map_t;
+
 // returns true if resource ad supports consumption policy feature
 bool cp_supports_policy(ClassAd& resource, bool strict = true);
 
 // override legacy RequestXxx with CP values
 // saves originals for restoration after requirements matching
-void cp_override_requested(ClassAd& job, ClassAd& resource, map<string, double>& consumption);
+void cp_override_requested(ClassAd& job, ClassAd& resource, consumption_map_t& consumption);
 
 // restore original RequestXxx values
-void cp_restore_requested(ClassAd& job, const map<string, double>& consumption);
+void cp_restore_requested(ClassAd& job, const consumption_map_t& consumption);
 
 // returns true if resource has sufficient assets to service the job
 bool cp_sufficient_assets(ClassAd& job, ClassAd& resource);
-bool cp_sufficient_assets(ClassAd& resource, const map<string, double>& consumption);
+bool cp_sufficient_assets(ClassAd& resource, const consumption_map_t& consumption);
 
 // deduct assets and return the cost.  if 'test' is given as true, do
 // not deduct, just return the cost of such a deduction
 double cp_deduct_assets(ClassAd& job, ClassAd& resource, bool test=false);
 
 // compute the consumption values and store in the consumption map
-void cp_compute_consumption(ClassAd& job, ClassAd& resource, map<string, double>& consumption);
+void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& consumption);
 
 
 #endif // CONSUMPTION_POLICY_H

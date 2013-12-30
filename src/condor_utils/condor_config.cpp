@@ -969,11 +969,13 @@ real_config(const char* host, int wantsQuiet, int config_options)
 			EXCEPT( "Out of memory in %s:%d\n", __FILE__, __LINE__ );
 		}
 
-		// isolate variable name by finding & nulling the '='
+		// isolate variable name by finding & nulling the '=', and trimming spaces before and after 
 		int equals_offset = strchr( varname, '=' ) - varname;
 		varname[equals_offset] = '\0';
+		for (int ii = equals_offset-1; ii > 1; --ii) { if (isspace(varname[ii])) { varname[ii] = 0; } }
 		// isolate value by pointing to everything after the '='
 		char *varvalue = varname + equals_offset + 1;
+		while (isspace(*varvalue)) ++varvalue;
 //		assert( !strcmp( varvalue, getenv( varname ) ) );
 		// isolate Condor macro_name by skipping magic prefix
 		char *macro_name = varname + prefix_len;

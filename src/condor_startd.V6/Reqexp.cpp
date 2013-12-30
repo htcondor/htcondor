@@ -139,7 +139,7 @@ Reqexp::compute( amask_t how_much )
 			// the schedd; if they are not set, go with the RequestX that derived from
 			// the user's original submission.
             if (rip->r_has_cp || (rip->get_parent() && rip->get_parent()->r_has_cp)) {
-                dprintf(D_FULLDEBUG, const_cast<char*>("Using CP variant of WithinResourceLimits\n"));
+                dprintf(D_FULLDEBUG, "Using CP variant of WithinResourceLimits\n");
                 // a CP-supporting p-slot, or a d-slot derived from one, gets variation
                 // that supports zeroed resource assets, and refers to consumption
                 // policy attributes.
@@ -147,27 +147,29 @@ Reqexp::compute( amask_t how_much )
                 // reconstructing this isn't a big deal, but I'm doing it because I'm 
                 // afraid to randomly perterb the order of the resource initialization 
                 // spaghetti, which makes kittens cry.
-                set<string> assets;
-                assets.insert("cpus");
-                assets.insert("memory");
-                assets.insert("disk");
+                std::set<std::string,  classad::CaseIgnLTStr> assets;
+                assets.insert("Cpus");
+                assets.insert("Memory");
+                assets.insert("Disk");
                 for (CpuAttributes::slotres_map_t::const_iterator j(rip->r_attr->get_slotres_map().begin());  j != rip->r_attr->get_slotres_map().end();  ++j) {
+                    if (MATCH == strcasecmp(j->first.c_str(),"swap")) continue;
                     assets.insert(j->first);
                 }
 
                 // first subexpression does not need && operator:
                 bool need_and = false;
                 string estr = "(";
-                for (set<string>::iterator j(assets.begin());  j != assets.end();  ++j) {
-                    string rname(*j);
-                    if (rname == "swap") continue;
-                    *(rname.begin()) = toupper(*(rname.begin()));
+                for (set<std::string, classad::CaseIgnLTStr>::iterator j(assets.begin());  j != assets.end();  ++j) {
+                    //string rname(*j);
+                    //*(rname.begin()) = toupper(*(rname.begin()));
                     string te;
                     // The logic here is that if the target job ad is in a mode where its RequestXxx have
                     // already been temporarily overridden with the consumption policy values, then we want
                     // to use RequestXxx (note, this will include any overrides by _condor_RequestXxx).
                     // Otherwise, we want to refer to ConsumptionXxx.
-                    formatstr(te, "ifThenElse(target._cp_orig_%s%s isnt undefined, target.%s%s <= my.%s, my.%s%s <= my.%s)", ATTR_REQUEST_PREFIX, rname.c_str(), ATTR_REQUEST_PREFIX, rname.c_str(), rname.c_str(), ATTR_CONSUMPTION_PREFIX, rname.c_str(), rname.c_str());
+                    formatstr(te, "ifThenElse(TARGET._cp_orig_Request%s isnt UNDEFINED, TARGET.Request%s <= MY.%s, MY.Consumption%s <= MY.%s)", 
+                        /*Request*/j->c_str(), /*Request*/j->c_str(), /*MY.*/j->c_str(),
+                        /*Consumption*/j->c_str(), /*MY.*/j->c_str());
                     if (need_and) estr += " && ";
                     estr += te;
                     need_and = true;
@@ -177,6 +179,21 @@ Reqexp::compute( amask_t how_much )
                 m_within_resource_limits_expr = strdup(estr.c_str());
 		} else {
 			static const char * climit =
+			#if 0 // tj tries to express the above with a simpler expression.
+				"("
+				"MY.Cpus > 0 && MY.Cpus >= ifThenElse(TARGET._condor_RequestCpus is UNDEFINED,"
+					"IfThenElse(TARGET.RequestCpus is UNDEFINED, 1, TARGET.RequestCpus),"
+					"TARGET._condor_RequestCpus)"
+				" && "
+				"MY.Memory > 0 && MY.Memory >= ifThenElse(TARGET._condor_RequestMemory is UNDEFINED,"
+					"TARGET.RequestMemory,"
+					"TARGET._condor_RequestMemory)"
+				" && "
+				"MY.Disk > 0 && MY.Disk >= ifThenElse(TARGET._condor_RequestDisk is UNDEFINED,"
+					"TARGET.RequestDisk,"
+					"TARGET._condor_RequestDisk)"
+				")";
+			#else
 				"("
 				 "ifThenElse(TARGET._condor_RequestCpus =!= UNDEFINED,"
 					"MY.Cpus > 0 && TARGET._condor_RequestCpus <= MY.Cpus,"
@@ -196,6 +213,7 @@ Reqexp::compute( amask_t how_much )
 						"MY.Disk > 0 && TARGET.RequestDisk <= MY.Disk,"
 						"FALSE))"
 				")";
+			#endif
 			const CpuAttributes::slotres_map_t& resmap = rip->r_attr->get_slotres_map();
 			if (resmap.empty()) {
 				m_within_resource_limits_expr = strdup(climit);

@@ -50,7 +50,7 @@ bool cp_supports_policy(ClassAd& resource, bool strict) {
     StringList alist(mrv.c_str());
     alist.rewind();
     while (char* asset = alist.next()) {
-        if (0 == strcmp(asset, "swap")) continue;
+        if (MATCH == strcasecmp(asset, "swap")) continue;
         string ca;
         formatstr(ca, "%s%s", ATTR_CONSUMPTION_PREFIX, asset);
         ClassAd::iterator f(resource.find(ca));
@@ -61,7 +61,7 @@ bool cp_supports_policy(ClassAd& resource, bool strict) {
 }
 
 
-void cp_compute_consumption(ClassAd& job, ClassAd& resource, map<string, double>& consumption) {
+void cp_compute_consumption(ClassAd& job, ClassAd& resource, consumption_map_t& consumption) {
     consumption.clear();
 
     string mrv;
@@ -72,7 +72,7 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, map<string, double>
     StringList alist(mrv.c_str());
     alist.rewind();
     while (char* asset = alist.next()) {
-        if (0 == strcmp(asset, "swap")) continue;
+        if (MATCH == strcasecmp(asset, "swap")) continue;
 
         string ra;
         string coa;
@@ -131,15 +131,15 @@ void cp_compute_consumption(ClassAd& job, ClassAd& resource, map<string, double>
 
 
 bool cp_sufficient_assets(ClassAd& job, ClassAd& resource) {
-    map<string, double> consumption;
+    consumption_map_t consumption;
     cp_compute_consumption(job, resource, consumption);
     return cp_sufficient_assets(resource, consumption);
 }
 
 
-bool cp_sufficient_assets(ClassAd& resource, const map<string, double>& consumption) {
+bool cp_sufficient_assets(ClassAd& resource, const consumption_map_t& consumption) {
     int npos = 0;
-    for (map<string, double>::const_iterator j(consumption.begin());  j != consumption.end();  ++j) {
+    for (consumption_map_t::const_iterator j(consumption.begin());  j != consumption.end();  ++j) {
         const char* asset = j->first.c_str();
         double av=0;
         if (!resource.LookupFloat(asset, av)) {
@@ -169,7 +169,7 @@ bool cp_sufficient_assets(ClassAd& resource, const map<string, double>& consumpt
 
 
 double cp_deduct_assets(ClassAd& job, ClassAd& resource, bool test) {
-    map<string, double> consumption;
+    consumption_map_t consumption;
     cp_compute_consumption(job, resource, consumption);
 
     // slot weight before asset deductions
@@ -179,7 +179,7 @@ double cp_deduct_assets(ClassAd& job, ClassAd& resource, bool test) {
     }
 
     // deduct consumption from the resource assets
-    for (map<string, double>::iterator j(consumption.begin());  j != consumption.end();  ++j) {
+    for (consumption_map_t::iterator j(consumption.begin());  j != consumption.end();  ++j) {
         const char* asset = j->first.c_str();
         double av=0;
         if (!resource.LookupFloat(asset, av)) {
@@ -201,7 +201,7 @@ double cp_deduct_assets(ClassAd& job, ClassAd& resource, bool test) {
     if (!test) return cost;
 
     // The Dude just wants his assets back
-    for (map<string, double>::iterator j(consumption.begin());  j != consumption.end();  ++j) {
+    for (consumption_map_t::iterator j(consumption.begin());  j != consumption.end();  ++j) {
         const char* asset = j->first.c_str();
         double av=0;
         resource.LookupFloat(asset, av);
@@ -212,10 +212,10 @@ double cp_deduct_assets(ClassAd& job, ClassAd& resource, bool test) {
 }
 
 
-void cp_override_requested(ClassAd& job, ClassAd& resource, map<string, double>& consumption) {
+void cp_override_requested(ClassAd& job, ClassAd& resource, consumption_map_t& consumption) {
     cp_compute_consumption(job, resource, consumption);
 
-    for (map<string, double>::iterator j(consumption.begin());  j != consumption.end();  ++j) {
+    for (consumption_map_t::iterator j(consumption.begin());  j != consumption.end();  ++j) {
         const char* asset = j->first.c_str();
 
         string ra;
@@ -233,8 +233,8 @@ void cp_override_requested(ClassAd& job, ClassAd& resource, map<string, double>&
 }
 
 
-void cp_restore_requested(ClassAd& job, const map<string, double>& consumption) {
-    for (map<string, double>::const_iterator j(consumption.begin());  j != consumption.end();  ++j) {
+void cp_restore_requested(ClassAd& job, const consumption_map_t& consumption) {
+    for (consumption_map_t::const_iterator j(consumption.begin());  j != consumption.end();  ++j) {
         const char* asset = j->first.c_str();
         string ra;
         string oa;

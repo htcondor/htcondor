@@ -85,6 +85,10 @@ Resource::Resource( CpuAttributes* cap, int rid, bool multiple_slots, Resource* 
 		// This must happen before creating the Reqexp
 	set_parent( _parent );
 
+		// can't bind until after we get a r_sub_id, which happens inside set_parent above
+		// but must happend before createing the Reqexp
+	if (_parent) { r_attr->bind_DevIds(r_id, r_sub_id); }
+
 	prevLHF = 0;
 	r_classad = NULL;
 	r_state = new ResState( this );
@@ -211,6 +215,7 @@ Resource::~Resource()
 
 		// If we have a parent, return our resources to it
 	if( m_parent && !m_currently_fetching ) {
+		r_attr->unbind_DevIds(r_id, r_sub_id);
 		*(m_parent->r_attr) += *(r_attr);
 		m_parent->m_id_dispenser->insert( r_sub_id );
 		m_parent->update();
@@ -1876,8 +1881,8 @@ Resource::publish( ClassAd* cap, amask_t mask )
 			cap->Assign(ATTR_VIRTUAL_MACHINE_ID, r_id);
 		}
 
-        // include any attributes set via local resource inventory
-        cap->Update(r_attr->get_mach_attr()->machattr());
+		// include any attributes set via local resource inventory
+		cap->Update(r_attr->get_mach_attr()->machres_attrs());
 
         // advertise the slot type id number, as in SLOT_TYPE_<N>
         cap->Assign(ATTR_SLOT_TYPE_ID, int(r_attr->type()));
@@ -2074,23 +2079,21 @@ Resource::publish( ClassAd* cap, amask_t mask )
             StringList alist(mrv.c_str());
             alist.rewind();
             while (char* asset = alist.next()) {
-                string rname(asset);
-                if (rname == "swap") continue;
+                if (MATCH == strcasecmp(asset, "swap")) continue;
 
-                *(rname.begin()) = toupper(*(rname.begin()));
-                formatstr(pname, "SLOT_TYPE_%d_CONSUMPTION_%s", slot_type, rname.c_str());
+                formatstr(pname, "SLOT_TYPE_%d_CONSUMPTION_%s", slot_type, asset);
                 if (param_defined(pname.c_str())) {
                     param(expr, pname.c_str());
                 } else {
                     string cpdefault;
-                    formatstr(cpdefault, "ifthenelse(target.%s%s =?= undefined, 0, target.%s%s)", ATTR_REQUEST_PREFIX, rname.c_str(), ATTR_REQUEST_PREFIX, rname.c_str());
+                    formatstr(cpdefault, "ifthenelse(target.%s%s =?= undefined, 0, target.%s%s)", ATTR_REQUEST_PREFIX, asset, ATTR_REQUEST_PREFIX, asset);
                     // cpus, memory and disk will pick up default values from param_info:
-                    formatstr(pname, "CONSUMPTION_%s", rname.c_str());
+                    formatstr(pname, "CONSUMPTION_%s", asset);
                     param(expr, pname.c_str(), cpdefault.c_str());
                 }
 
                 string rattr;
-                formatstr(rattr, "%s%s", ATTR_CONSUMPTION_PREFIX, rname.c_str());
+                formatstr(rattr, "%s%s", ATTR_CONSUMPTION_PREFIX, asset);
                 if (!cap->AssignExpr(rattr.c_str(), expr.c_str())) {
                     EXCEPT("Bad consumption policy expression: '%s'", expr.c_str());
                 }
@@ -2904,7 +2907,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 		}
 
 			// Now make the modifications.
-		const char* resources[] = {ATTR_REQUEST_CPUS, ATTR_REQUEST_DISK, ATTR_REQUEST_MEMORY, NULL};
+		static const char* resources[] = {ATTR_REQUEST_CPUS, ATTR_REQUEST_DISK, ATTR_REQUEST_MEMORY, NULL};
 		for (int i=0; resources[i]; i++) {
 			MyString knob("MODIFY_REQUEST_EXPR_");
 			knob += resources[i];
@@ -2975,13 +2978,13 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 
         if (cp_supports_policy(*mach_classad)) {
             // apply consumption policy
-            std::map<string, double> consumption;
+            consumption_map_t consumption;
             cp_compute_consumption(*req_classad, *mach_classad, consumption);
 
             // generate the type string used by standard code path
-            for (std::map<string, double>::iterator j(consumption.begin());  j != consumption.end();  ++j) {
+            for (consumption_map_t::iterator j(consumption.begin());  j != consumption.end();  ++j) {
                 if (j != consumption.begin()) type += " ";
-                if (j->first == "disk") {
+                if (MATCH == strcasecmp(j->first.c_str(),"disk")) {
                     // if it weren't for special cases, we'd have no cases at all
                     type.formatstr_cat("disk=%d%%", max(0, (int)ceil(100 * j->second / (double)rip->r_attr->get_total_disk())));
                 } else {
@@ -3057,6 +3060,7 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 						  "Failed to build new resource for request, aborting\n" );
 			return NULL;
 		}
+
 
 			// Initialize the rest of the Resource
 		new_rip->compute( A_ALL );
