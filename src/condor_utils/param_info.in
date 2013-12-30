@@ -7298,4 +7298,13 @@ default : @end
 @end
 review=?
 
+[$USE_SHARED_PORT.TRUE]
+friendly_name=Settings for enabling the shared port daemon
+default : @end
+	USE_SHARED_PORT=true
+	SHARED_PORT_DEFAULT_ID=collector
+	COLLECTOR_ARGS = -sock collector
+	SHARED_PORT_ARGS = -p 9618
+	DAEMON_LIST = $(DAEMON_LIST) SHARED_PORT
+@end
 

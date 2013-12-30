@@ -244,7 +244,7 @@ int BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock);
  * @see DaemonCore::InitDCCommandSock
  * @see DaemonCore::Create_Process
  */
-bool InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock,
+bool InitCommandSockets(int port, int udp_port, ReliSock *rsock, SafeSock *ssock,
 						bool fatal);
 
 class DCSignalMsg: public DCMsg {
@@ -386,7 +386,8 @@ class DaemonCore : public Service
 		const char       *handler_descrip,
 		Service          *s,
 		bool              include_auth);
-    bool HandleUnregisteredDCAuth() const {return m_unregisteredCommand.num && m_unregisteredCommand.is_cpp;}
+    bool HandleUnregistered() const {return m_unregisteredCommand.num;}
+    bool HandleUnregisteredDCAuth() const {return HandleUnregistered() && m_unregisteredCommand.is_cpp;}
 
 	/** Register_CommandWithPayload is the same as Register_Command
 		but with a different default for wait_for_payload.  By
@@ -1150,6 +1151,7 @@ class DaemonCore : public Service
         priv_state      priv                 = PRIV_UNKNOWN,
         int             reaper_id            = 1,
         int             want_commanand_port  = TRUE,
+        int             want_udp_comm_port   = TRUE,
         Env const       *env                 = NULL,
         const char      *cwd                 = NULL,
         FamilyInfo      *family_info         = NULL,

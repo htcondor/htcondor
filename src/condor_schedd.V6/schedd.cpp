@@ -1751,7 +1751,7 @@ int Scheduler::history_helper_launcher(const HistoryHelperState &state) {
 
 	FamilyInfo fi;
 	pid_t pid = daemonCore->Create_Process(history_helper.c_str(), args, PRIV_ROOT, m_history_helper_rid,
-		false, NULL, NULL, NULL, inherit_list);
+		false, false, NULL, NULL, NULL, inherit_list);
 	if (!pid)
 	{
 		return sendHistoryErrorAd(state.GetStream(), 4, "Failed to launch history helper process");
@@ -7495,7 +7495,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	   Someday, hopefully soon, we'll fix this and spawn the
 	   shadow/handler with PRIV_USER_FINAL... */
 	pid = daemonCore->Create_Process( path, args, PRIV_ROOT, rid, 
-	                                  is_dc, env, NULL, fip, NULL, 
+	                                  is_dc, is_dc, env, NULL, fip, NULL, 
 	                                  std_fds_p, NULL, niceness,
 									  NULL, create_process_opts);
 	if( pid == FALSE ) {
@@ -8222,7 +8222,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	}
 	
 	pid = daemonCore->Create_Process( a_out_name.Value(), args, PRIV_USER_FINAL, 
-	                                  shadowReaperId, FALSE,
+	                                  shadowReaperId, FALSE, FALSE,
 	                                  &envobject, iwd.Value(), NULL, NULL, inouterr,
 	                                  NULL, niceness, NULL,
 	                                  DCJOBOPT_NO_ENV_INHERIT,
@@ -14499,6 +14499,7 @@ Scheduler::launch_local_startd() {
 										args,
 										PRIV_ROOT,
 										rid, 
+	                                  	1, /* is_dc */
 	                                  	1, /* is_dc */
 										&env, 
 										NULL, 

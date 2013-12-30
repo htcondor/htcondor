@@ -333,6 +333,7 @@ AbstractReplicatorStateMachine::download( const char* daemonSinfulString )
         privilege,                    // priv
         m_downloadReaperId,           // reaper id
         FALSE,                        // command port needed?
+        FALSE,                        // command port needed?
         NULL,                         // env
         NULL,                         // cwd
         NULL                          // process family info

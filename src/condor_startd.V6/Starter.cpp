@@ -964,7 +964,7 @@ Starter::execDCStarter( ArgList const &args, Env const *env,
 
 	s_pid = daemonCore->
 		Create_Process( final_path, *final_args, PRIV_ROOT, reaper_id,
-		                TRUE, env, NULL, &fi, inherit_list, std_fds );
+		                TRUE, TRUE, env, NULL, &fi, inherit_list, std_fds );
 	if( s_pid == FALSE ) {
 		dprintf( D_ALWAYS, "ERROR: exec_starter failed!\n");
 		s_pid = 0;
@@ -1078,6 +1078,7 @@ Starter::execOldStarter( void )
 	                                         args,         // arguments
 	                                         PRIV_ROOT,    // start as root
 	                                         main_reaper,  // reaper
+	                                         FALSE,        // no command port
 	                                         FALSE,        // no command port
 	                                         &env,
 	                                         NULL,         // inherit out cwd

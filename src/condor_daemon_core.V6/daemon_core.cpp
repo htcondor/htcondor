@@ -314,6 +314,7 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 	}
 	nCommand = 0;
 	memset(comTable,'\0',maxCommand*sizeof(CommandEnt));
+	m_unregisteredCommand.num = 0;
 
 	if(maxSig == 0)
 		maxSig = DEFAULT_MAXSIGNALS;
@@ -408,6 +409,9 @@ DaemonCore::DaemonCore(int PidSize, int ComSize,int SigSize,
 		m_wants_dc_udp_self = false;
 	}
 #endif
+	if( get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHARED_PORT) ) {
+		m_wants_dc_udp_self = false;
+	}
 	m_invalidate_sessions_via_tcp = true;
 	dc_rsock = NULL;
 	dc_ssock = NULL;
@@ -6463,6 +6467,7 @@ int DaemonCore::Create_Process(
 			priv_state    priv,
 			int           reaper_id,
 			int           want_command_port,
+			int           want_udp_command_port,
 			Env const     *env,
 			const char    *cwd,
 			FamilyInfo    *family_info,
@@ -6547,6 +6552,7 @@ int DaemonCore::Create_Process(
 #endif
 
 	bool want_udp = !HAS_DCJOBOPT_NO_UDP(job_opt_mask) && m_wants_dc_udp;
+	bool enabled_shared_endpoint = false;
 
 	double runtime = UtcTime::getTimeDouble();
     double create_process_begin_time = runtime;
@@ -6651,11 +6657,12 @@ int DaemonCore::Create_Process(
 		shared_port_endpoint.serialize(inheritbuf,fd);
         inheritFds[numInheritFds++] = fd;
 		inherit_handles = true;
+		enabled_shared_endpoint = true;
 	}
-	else if ( want_command_port != FALSE ) {
+	if ( (!enabled_shared_endpoint && want_command_port != FALSE) || (want_command_port > 1 || want_udp_command_port > 1) ) {
 		inherit_handles = TRUE;
 		SafeSock* ssock_ptr = want_udp ? &ssock : NULL;
-		if (!InitCommandSockets(want_command_port, &rsock, ssock_ptr, false)) {
+		if (!InitCommandSockets(want_command_port, want_udp_command_port, &rsock, ssock_ptr, false)) {
 				// error messages already printed by InitCommandSockets()
 			goto wrapup;
 		}
@@ -7636,7 +7643,7 @@ int DaemonCore::Create_Process(
 				dprintf( D_ALWAYS, "Re-trying Create_Process() to avoid "
 						 "PID re-use\n" );
 				return Create_Process( executable, args, priv, reaper_id,
-				                       want_command_port, env, cwd,
+				                       want_command_port, want_udp_command_port, env, cwd,
 				                       family_info,
 				                       sock_inherit_list, std, fd_inherit_list,
 				                       nice_inc, sigmask, job_opt_mask );
@@ -8502,7 +8509,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 			ASSERT(dc_ssock == NULL);
 		}
 			// Final bool indicates any error should be considered fatal.
-		InitCommandSockets(command_port, dc_rsock, dc_ssock, true);
+		InitCommandSockets(command_port, command_port, dc_rsock, dc_ssock, true);
 	}
 
 		// If we are the collector, increase the socket buffer size.  This
@@ -9630,7 +9637,7 @@ BindAnyCommandPort(ReliSock *rsock, SafeSock *ssock)
 }
 
 bool
-InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock, bool fatal)
+InitCommandSockets(int port, int udp_port, ReliSock *rsock, SafeSock *ssock, bool fatal)
 {
 		/*
 		  DaemonCore::Create_Process has a rather stupid handling of
@@ -9645,9 +9652,13 @@ InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock, bool fatal)
 		  Derek Wright 2007-08-09
 		*/
 	ASSERT(port != 0);
+	if ((port > 1) && (udp_port<= 1)) {
+		dprintf(D_ALWAYS | D_FAILURE, "If TCP port is well-known, then UDP port must also be well-known\n");
+		return false;
+	}
 	if (port <= 1) {
 			// Choose any old port (dynamic port)
-		if( !BindAnyCommandPort(rsock, ssock) ) {
+		if( !BindAnyCommandPort(rsock, (udp_port <= 1) ? ssock : NULL) ) {
 			if (fatal) {
 				EXCEPT("BindAnyCommandPort() failed");
 			}
@@ -9656,6 +9667,18 @@ InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock, bool fatal)
 				return false;
 			}
 
+		}
+		if( udp_port > 1) {
+			if (ssock && !ssock->bind(FALSE, udp_port)) {
+				if (fatal) {
+					EXCEPT("Failed to bind(%d) on UDP command socket.", port);
+				}
+				else {
+					dprintf(D_ALWAYS | D_FAILURE,
+							"Failed to bind(%d) on UDP command socket.\n", port);
+					return false;
+				}
+			}
 		}
 		if( !rsock->listen() ) {
 			if (fatal) {
@@ -9731,7 +9754,7 @@ InitCommandSockets(int port, ReliSock *rsock, SafeSock *ssock, bool fatal)
 			}
 		}
 			/* bind(FALSE,...) means this is an incoming connection */
-		if (ssock && !ssock->bind(FALSE, port)) {
+		if (ssock && !ssock->bind(FALSE, udp_port)) {
 			if (fatal) {
 				EXCEPT("Failed to bind(%d) on UDP command socket.", port);
 			}

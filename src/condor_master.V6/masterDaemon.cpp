@@ -756,6 +756,8 @@ int daemon::RealStart( )
     // take command port from arguments( buf )
     // Don't mess with buf or tmp (they are not our variables) -
     // allocate them again
+    int udp_command_port = command_port;
+    bool set_port_via_cli = false;
     if ( isDC ) {
 		int i;
 		for(i=0;i<args.Count();i++) {
@@ -763,6 +765,7 @@ int daemon::RealStart( )
 			if(strcmp( cur_arg, "-p" ) == 0 ) {
 				if(i+1<args.Count()) {
 					char const *port_arg = args.GetArg(i+1);
+					set_port_via_cli = true;
 					command_port = atoi(port_arg);
 				}
 			}
@@ -775,6 +778,14 @@ int daemon::RealStart( )
 		}
     }
 
+	if( daemon_sock ) {
+		dprintf (D_FULLDEBUG,"Starting daemon with shared port id %s\n",
+			daemon_sock);
+	}
+	else {
+		dprintf (D_FULLDEBUG, "Starting daemon on port %d\n", command_port);
+	}
+
 	// set up a FamilyInfo structure so Daemon Core registers a process family
 	// for this daemon with the procd
 	//
@@ -785,6 +796,29 @@ int daemon::RealStart( )
 	if( m_never_use_shared_port ) {
 		jobopts |= DCJOBOPT_NEVER_USE_SHARED_PORT;
 	}
+	if( !strcmp(name_in_config_file,"SHARED_PORT") ) {
+		jobopts |= DCJOBOPT_NO_UDP | DCJOBOPT_NEVER_USE_SHARED_PORT;
+	}
+	// If we are starting a collector and passed a "-sock" command in the command line,
+	// but didn't set the COLLECTOR_HOST to use shared port, have the collector listen on
+	// the UDP socket and not the TCP socket.  We assume that the TCP socket will be taken
+	// by the shared port daemon.
+	if( !strcmp(name_in_config_file,"COLLECTOR") && daemon_sock && command_port > 1 && !set_port_via_cli ) {
+		udp_command_port = command_port;
+		command_port = 1;
+	} else {
+		udp_command_port = command_port;
+	}
+	if( daemon_sock ) {
+		dprintf (D_FULLDEBUG,"Starting daemon with shared port id %s\n",
+			daemon_sock);
+	}
+	if( command_port > 1 ) {
+		dprintf (D_FULLDEBUG, "Starting daemon on TCP port %d\n", command_port);
+		if( udp_command_port != command_port ) {
+			dprintf (D_FULLDEBUG, "Starting daemon on UDP port %d\n", command_port);
+		}
+	}
 
 	pid = daemonCore->Create_Process(
 				process_name,	// program to exec
@@ -792,6 +826,7 @@ int daemon::RealStart( )
 				priv_mode,		// privledge level
 				1,				// which reaper ID to use; use default reaper
 				command_port,	// port to use for command port; TRUE=choose one dynamically
+				udp_command_port,	// port to use for command port; TRUE=choose one dynamically
 				&env,			// environment
 				NULL,			// current working directory
 				&fi,

@@ -579,6 +579,7 @@ void Hadoop::startService( NodeType type ) {
                         PRIV_CONDOR_FINAL, 
                         m_reaper,
                         FALSE,
+                        FALSE,
                         NULL,
                         NULL,
                         NULL,

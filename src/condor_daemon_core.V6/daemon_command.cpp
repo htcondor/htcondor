@@ -546,18 +546,28 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 #endif // HAVE_EXT_GSOAP
 
 	int tmp_req; memcpy(static_cast<void*>(&tmp_req), tmpbuf+1, sizeof(int));
-	tmp_req *= (tmpbuf[0] == '\1') ? 1 : -1;
-	int tmp_cmd_index;
-	if (!daemonCore->CommandNumToTableIndex(tmp_req,&tmp_cmd_index) && (daemonCore->HandleUnregisteredDCAuth() || (tmp_req != DC_AUTHENTICATE))) {
-		ScopedEnableParallel(false);
+	tmp_req = ntohl(tmp_req);
+	if (daemonCore->HandleUnregistered() && (tmp_req >= 8)) {
+		char tmpbuf2[8+5]; memset(tmpbuf2, 0, sizeof(tmpbuf2));
+		condor_read(m_sock->peer_description(), m_sock->get_file_desc(),
+			tmpbuf2, 8+5, 1, MSG_PEEK);
+		char *tmpbuf3 = tmpbuf2 + 5;
+		if (8-sizeof(int) > 0) { tmpbuf3 += 8-sizeof(int); } // Skip padding
+		memcpy(static_cast<void*>(&tmp_req), tmpbuf3, sizeof(int));
+		tmp_req = ntohl(tmp_req);
+		
+		int tmp_cmd_index;
+		if (!daemonCore->CommandNumToTableIndex(tmp_req, &tmp_cmd_index) && (daemonCore->HandleUnregisteredDCAuth() || (tmp_req != DC_AUTHENTICATE))) {
+			ScopedEnableParallel(false);
 
-		if( m_sock_had_no_deadline ) {
-				// unset the deadline we assigned in WaitForSocketData
-			m_sock->set_deadline(0);
+			if( m_sock_had_no_deadline ) {
+					// unset the deadline we assigned in WaitForSocketData
+				m_sock->set_deadline(0);
+			}
+
+			m_result = daemonCore->CallUnregisteredCommandHandler(tmp_req, m_sock);
+			return CommandProtocolFinished;
 		}
-
-		m_result = daemonCore->CallUnregisteredCommandHandler(m_req,m_sock);
-		return CommandProtocolFinished;
 	}
 
 	// read in the command from the sock with a timeout value of just 1 second,

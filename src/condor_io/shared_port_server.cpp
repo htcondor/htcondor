@@ -64,7 +64,7 @@ SharedPortServer::InitAndReconfig() {
 		ASSERT( rc >= 0 );
 	}
 
-	m_default_id = param("SHARED_PORT_DEFAULT_ID");
+	param(m_default_id, "SHARED_PORT_DEFAULT_ID");
 
 	PublishAddress();
 

@@ -550,6 +550,7 @@ ProcFamilyProxy::start_procd()
 		                                         PRIV_ROOT,
 		                                         m_reaper_id,
 		                                         FALSE,
+		                                         FALSE,
 		                                         &env,
 		                                         NULL,
 		                                         NULL,
