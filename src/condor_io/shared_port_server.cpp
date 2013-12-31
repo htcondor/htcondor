@@ -65,6 +65,9 @@ SharedPortServer::InitAndReconfig() {
 	}
 
 	param(m_default_id, "SHARED_PORT_DEFAULT_ID");
+	if (param_boolean("USE_SHARED_PORT", false) && param_boolean("COLLECTOR_USES_SHARED_PORT", true) && !m_default_id.size()) {
+		m_default_id = "collector";
+	}
 
 	PublishAddress();
 

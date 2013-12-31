@@ -549,8 +549,11 @@ int daemon::RealStart( )
 	int 	command_port = isDC ? TRUE : FALSE;
 	char const *daemon_sock = NULL;
 	MyString daemon_sock_buf;
+	std::string default_id;
 	char	buf[512];
 	ArgList args;
+
+	param(default_id, "SHARED_PORT_DEFAULT_ID");
 
 	// Copy a couple of checks from Start
 	dprintf( D_FULLDEBUG, "::RealStart; %s on_hold=%d\n", name_in_config_file, on_hold );
@@ -598,8 +601,9 @@ int daemon::RealStart( )
 		// evil in the security code where we're looking up host certs
 		// in the keytab file, we still need root afterall. :(
 	bool wants_condor_priv = false;
+	bool collector_uses_shared_port = param_boolean("COLLECTOR_USES_SHARED_PORT", true) && param_boolean("USE_SHARED_PORT", false);
 		// Collector needs to listen on a well known port.
-	if ( strcmp(name_in_config_file,"COLLECTOR") == 0 ) {
+	if ( strcmp(name_in_config_file,"COLLECTOR") == 0 || (!strcmp(name_in_config_file, "SHARED_PORT") && collector_uses_shared_port) ) {
 
 			// Go through all of the
 			// collectors until we find the one for THIS machine. Then
@@ -660,6 +664,10 @@ int daemon::RealStart( )
 				// strange....
 			command_port = COLLECTOR_PORT;
 			dprintf (D_ALWAYS, "Collector port not defined, will use default: %d\n", COLLECTOR_PORT);
+		}
+
+		if (collector_uses_shared_port && !strcmp(name_in_config_file,"COLLECTOR")) {
+			daemon_sock = default_id.size() ? default_id.c_str() : "collector";
 		}
 
 		if( daemon_sock ) {
@@ -757,7 +765,6 @@ int daemon::RealStart( )
     // Don't mess with buf or tmp (they are not our variables) -
     // allocate them again
     int udp_command_port = command_port;
-    bool set_port_via_cli = false;
     if ( isDC ) {
 		int i;
 		for(i=0;i<args.Count();i++) {
@@ -765,7 +772,6 @@ int daemon::RealStart( )
 			if(strcmp( cur_arg, "-p" ) == 0 ) {
 				if(i+1<args.Count()) {
 					char const *port_arg = args.GetArg(i+1);
-					set_port_via_cli = true;
 					command_port = atoi(port_arg);
 				}
 			}
@@ -777,14 +783,6 @@ int daemon::RealStart( )
 			}
 		}
     }
-
-	if( daemon_sock ) {
-		dprintf (D_FULLDEBUG,"Starting daemon with shared port id %s\n",
-			daemon_sock);
-	}
-	else {
-		dprintf (D_FULLDEBUG, "Starting daemon on port %d\n", command_port);
-	}
 
 	// set up a FamilyInfo structure so Daemon Core registers a process family
 	// for this daemon with the procd
@@ -803,7 +801,7 @@ int daemon::RealStart( )
 	// but didn't set the COLLECTOR_HOST to use shared port, have the collector listen on
 	// the UDP socket and not the TCP socket.  We assume that the TCP socket will be taken
 	// by the shared port daemon.
-	if( !strcmp(name_in_config_file,"COLLECTOR") && daemon_sock && command_port > 1 && !set_port_via_cli ) {
+	if( !strcmp(name_in_config_file,"COLLECTOR") && daemon_sock && command_port > 1 && collector_uses_shared_port ) {
 		udp_command_port = command_port;
 		command_port = 1;
 	} else {

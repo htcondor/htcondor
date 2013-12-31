@@ -5543,6 +5543,20 @@ customization=expert
 friendly_name=Auto Include Shared Port In Daemon List
 review=?
 
+[COLLECTOR_USES_SHARED_PORT]
+default=true
+version=8.1.4
+type=bool
+reconfig=true
+customization=expert
+
+[SHARED_PORT_DEFAULT_ID]
+default=
+version=8.1.4
+type=string
+reconfig=true
+customization=expert
+
 [CCB_HEARTBEAT_INTERVAL]
 default=300
 version=7.5.0
