@@ -1186,6 +1186,10 @@ void EC2Job::doEvaluateState()
 					// Bypasses the polling delay in GM_CANCEL_CHECK.
 					probeNow = true;
 				} else {
+					// Force us to wait a polling delay before checking
+					// to see if this worked.
+					probeNow = false;
+
 					rc = gahp->ec2_vm_stop( m_serviceUrl,
 											m_public_key_file,
 											m_private_key_file,
@@ -1197,20 +1201,35 @@ void EC2Job::doEvaluateState()
 						break;
 					}
 
+					//
+					// If the instance has already been purged, consider
+					// the cancel a success.
+					//
+					// Amazon: "InvalidInstanceID.NotFound"
+					// Eucalyptus: no HTTP error; false return with empty termination set
+					// OpenStack (Havana): "InvalidInstanceID.NotFound"
+					// OpenStack (Essex): "InstanceNotFound"
+					// Nimbus: no HTTP error; empty termination set
+					//
 					if( rc != 0 ) {
 						errorString = gahp->getErrorString();
-						dprintf( D_ALWAYS, "(%d.%d) job cancel failed: %s: %s\n",
-								 procID.cluster, procID.proc,
-								 gahp_error_code.c_str(),
-							 	errorString.c_str() );
-						gmState = GM_HOLD;
-						break;
-					}
+						if( strstr( errorString.c_str(), "InstanceNotFound" ) ||
+							strstr( errorString.c_str(), "InvalidInstanceID.NotFound" ) ) {
+							remoteJobState = EC2_VM_STATE_PURGED;
+						} else {
+							dprintf( D_ALWAYS, "(%d.%d) job cancel failed: %s: %s\n",
+									 procID.cluster, procID.proc,
+									 gahp_error_code.c_str(),
+									 errorString.c_str() );
+							gmState = GM_HOLD;
+							break;
+						}
 
 					// We could save some time here for Amazon users by
 					// changing the EC2 GAHP to return the (new) state of
 					// the job.  If it's SHUTTINGDOWN, set probeNow.  We
 					// can't do this for OpenStack because we know they lie.
+					}
 				}
 
 				gmState = GM_CANCEL_CHECK;
