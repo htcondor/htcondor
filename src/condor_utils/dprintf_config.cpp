@@ -333,6 +333,11 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 	}
 
 	/*
+	 * Allow the configuration to override all logs to syslog.
+	 */
+	bool to_syslog = param_boolean("LOG_TO_SYSLOG", false);
+
+	/*
 	**	pick up the name of the log file, maximum log size, and the name of the
 	**	lock file (if it is specified).
 	*/
@@ -360,7 +365,9 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 		{
 
 			logPathParam = param(pname);//dprintf_param_funcs->param(pname);
-			if (logPathParam) {
+			if (to_syslog) {
+				logPath.insert(0, "SYSLOG");
+			} else if (logPathParam) {
 				logPath.insert(0, logPathParam);
 			} else {
 				// No default value found, so use $(LOG)/$(SUBSYSTEM)Log
@@ -391,8 +398,11 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 			// param_without_default.
 			// tristan 5/29/09
 			logPathParam = param(pname);
-			if(logPathParam)
+			if(logPathParam && to_syslog) {
+				logPath.insert(0, "SYSLOG");
+			} else if(logPathParam) {
 				logPath.insert(0, logPathParam);
+			}
 
 			if(!DebugParams.empty())
 			{

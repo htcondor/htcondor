@@ -664,6 +664,7 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 			switch ((*it).outputTarget) {
 				case STD_ERR: it->debugFP = stderr; break;
 				case STD_OUT: it->debugFP = stdout; break;
+				case SYSLOG: break;
 				default:
 				case FILE_OUT:
 					debug_lock_it(&(*it), NULL, 0, it->dont_panic);

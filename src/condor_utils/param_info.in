@@ -5712,6 +5712,13 @@ customization=seldom
 friendly_name=
 review=?
 
+[LOG_TO_SYSLOG]
+default=false
+type=bool
+reconfig=true
+customization=seldom
+friendly_name=Send all logs to syslog instead of files
+
 [LOCAL_CONFIG_DIR_EXCLUDE_REGEXP]
 default=^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
 type=string
