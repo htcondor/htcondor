@@ -19,7 +19,13 @@
 
 file( GLOB MasterRmvElements Example* )
 
-condor_daemon(master "${MasterRmvElements}" "${CONDOR_LIBS};${CONDOR_QMF}" "${C_SBIN}" OFF)
+if (HAVE_SD_DAEMON)
+  set(SD_LIBS systemd-daemon)
+else(HAVE_SD_DAEMON)
+  set(SD_LIBS )
+endif(HAVE_SD_DAEMON)
+
+condor_daemon(master "${MasterRmvElements}" "${CONDOR_LIBS};${CONDOR_QMF};${SD_LIBS}" "${C_SBIN}" OFF)
 # We cannot make a proper static master as we don't have the static globus
 # libraries available
 if (NOT PROPER AND (LINUX OR DARWIN))

@@ -54,6 +54,11 @@ extern int load_master_mgmt(void);
 #endif
 #endif
 
+#if defined(HAVE_SD_DAEMON_H)
+#include "systemd/sd-daemon.h"
+#include <sstream>
+#endif
+
 #ifdef WIN32
 
 #include "firewall.WINDOWS.h"
@@ -143,6 +148,77 @@ char	default_dc_daemon_list[] =
 
 // create an object of class daemons.
 class Daemons daemons;
+
+#if defined(HAVE_SD_DAEMON_H)
+class SystemdNotifier : public Service {
+
+public:
+	SystemdNotifier() : m_watchdog_timer(-1) {}
+
+	void
+	config()
+	{
+		/* I would like to use sd_watchdog_enabled, but it appears to not yet be in Fedora. */
+		double watchdog_secs = param_integer("SYSTEMD_UPDATE_INTERVAL", 1);
+		Timeslice ts;
+		ts.setDefaultInterval(watchdog_secs);
+		m_watchdog_timer = daemonCore->Register_Timer(ts, static_cast<TimerHandlercpp>(&SystemdNotifier::status_handler),
+				"systemd status updater", this);
+		if (m_watchdog_timer < 0)
+		{
+			dprintf(D_ALWAYS, "Failed to register systemd update timer.\n");
+		} else {
+			dprintf(D_FULLDEBUG, "Set systemd to be notified once every %.0f seconds.\n", watchdog_secs);
+		}
+	}
+
+	void status_handler()
+	{
+		char *name;
+		class daemon *daemon;
+
+		daemons.ordered_daemon_names.rewind();
+		std::stringstream ss;
+		ss << "Problems: ";
+		bool had_prior = false;
+		bool missing_daemons = false;
+		while( (name = daemons.ordered_daemon_names.next()) ) {
+			daemon = daemons.FindDaemon( name );
+			if (!daemon->pid)
+			{
+				if (had_prior) { ss << ", "; }
+				else { had_prior = true; }
+				missing_daemons = true;
+				time_t starttime = daemon->GetNextRestart();
+				if (starttime)
+				{
+					time_t secs_to_start = starttime-time(NULL);
+					if (secs_to_start > 0)
+					{ ss << name << "=RESTART in " << secs_to_start << "s"; }
+					else
+					{ ss << name << "=RESTARTNG"; }
+				}
+				else
+				{ ss << name << "=STOPPED"; }
+			}
+		}
+		std::string status = ss.str();
+
+		const char * format_string = "STATUS=%s\nWATCHDOG=1";
+		if (!missing_daemons)
+		{
+			format_string = "READY=1\nSTATUS=%s\nWATCHDOG=1";
+			status = "OK";
+		}
+
+		sd_notifyf(0, format_string, status.c_str());
+	}
+
+private:
+	int m_watchdog_timer;
+};
+SystemdNotifier g_systemd_notifier;
+#endif
 
 // called at exit to deallocate stuff so that memory checking tools are
 // happy and don't think we leaked any of this...
@@ -290,6 +366,10 @@ main_init( int argc, char* argv[] )
 	load_master_mgmt();
 #endif
 	MasterPluginManager::Initialize();
+#endif
+
+#if defined(HAVE_SD_DAEMON_H)
+	g_systemd_notifier.config();
 #endif
 
 		// Register admin commands
@@ -1010,6 +1090,10 @@ main_config()
 	} else {
 		daemons.DaemonsOff();
 	}
+#if defined(HAVE_SD_DAEMON_H)
+	g_systemd_notifier.config();
+#endif
+
     // Invalide session if necessary
     daemonCore->invalidateSessionCache();
 		// Re-register our timers, since their intervals might have

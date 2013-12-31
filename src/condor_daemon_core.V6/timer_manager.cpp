@@ -178,6 +178,13 @@ bool TimerManager::GetTimerTimeslice(int id, Timeslice &timeslice)
 	return true;
 }
 
+time_t TimerManager::GetNextRuntime(int id)
+{
+	Timer *timer_ptr = GetTimer( id, NULL );
+	if (!timer_ptr) { return false; }
+
+	return timer_ptr->when;
+}
 int TimerManager::ResetTimer(int id, unsigned when, unsigned period,
 							 bool recompute_when,
 							 Timeslice const *new_timeslice)

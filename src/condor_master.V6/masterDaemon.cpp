@@ -1330,6 +1330,14 @@ daemon::CancelRestartTimers()
 	}
 }
 
+time_t
+daemon::GetNextRestart()
+{
+	if( start_tid != -1 ) {
+		return daemonCore->GetNextRuntime(start_tid);
+	}
+	return 0;
+}
 
 void
 daemon::Kill( int sig )

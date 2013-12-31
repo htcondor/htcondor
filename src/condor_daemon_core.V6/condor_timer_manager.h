@@ -201,6 +201,13 @@ class TimerManager
 	 */
 	bool GetTimerTimeslice(int id, Timeslice &timeslice);
 
+	/**
+	 * Get the time_t of when the given timer ID will fire.
+	 * @param tid The ID of the timer
+	 * @return Timestamp of when this will fire; 0 if there is no such timer.
+	 */
+	time_t GetNextRuntime(int id);
+
     /// Not_Yet_Documented.
     void CancelAllTimers();
 

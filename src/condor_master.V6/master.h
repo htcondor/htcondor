@@ -64,6 +64,7 @@ public:
 	char*	config_info_file;				// for config server
 #endif
 
+	time_t		GetNextRestart();
 	int		NextStart();
 	int		Start( bool never_forward = false );
 	int		RealStart();

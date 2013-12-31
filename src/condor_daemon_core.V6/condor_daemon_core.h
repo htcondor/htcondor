@@ -1029,6 +1029,11 @@ class DaemonCore : public Service
     */
     bool GetTimerTimeslice ( int id, Timeslice &timeslice );
 
+    /** Get the timestamp of when the timer is expected to fire
+     *  @param id The timer's ID
+     *  @return timestamp; 0 if the timer does not exist.
+     */
+    time_t GetNextRuntime(int id) {return t.GetNextRuntime(id);}
 	//@}
 
     /** Not_Yet_Documented
