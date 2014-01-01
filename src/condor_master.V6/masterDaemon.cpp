@@ -52,7 +52,6 @@
 #include "systemd/sd-daemon.h"
 int g_systemd_count = -2;
 bool g_usable_unixsock = true;
-bool g_usable_relisock = true;
 #endif
 
 // these are defined in master.C
@@ -824,13 +823,12 @@ int daemon::RealStart( )
 		}
 		bool usable_relisock = false;
 		for (int fd=SD_LISTEN_FDS_START; fd<SD_LISTEN_FDS_START+fds; fd++) {
-			if (sd_is_socket(fd, 0, SOCK_STREAM, 1)) { usable_relisock = g_usable_relisock; }
+			if (sd_is_socket(fd, 0, SOCK_STREAM, 1)) { usable_relisock = true; }
 		}
 		if (usable_relisock)
 		{
 			dprintf(D_ALWAYS, "Using passed TCP socket from systemd.\n");
 		}
-		g_usable_relisock = false;
 		jobopts |= usable_relisock ? DCJOBOPT_USE_SYSTEMD_INET_SOCKET : 0;
 	}
 	if (!strcmp(name_in_config_file, "COLLECTOR") && collector_uses_shared_port)
@@ -857,6 +855,8 @@ int daemon::RealStart( )
 		{
 			dprintf(D_ALWAYS, "Using passed Unix socket from systemd.\n");
 		}
+		// Don't reuse the unix socket from systemd -- the collector has a tendency to
+		// delete it and make a new one on top, causing reuse to fail.
 		g_usable_unixsock = false;
 		jobopts |= usable_unixsock ? DCJOBOPT_USE_SYSTEMD_UNIX_SOCKET : 0;
 	}

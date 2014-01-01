@@ -6581,7 +6581,17 @@ int DaemonCore::Create_Process(
 			if (sd_is_socket(fd, 0, SOCK_STREAM, 1) >= 0)
 			{
 				found_socket = true;
-				if (!rsock.attach_to_file_desc(fd))
+				// Create a duplicate socket - we give the duplicate FD to the relisock
+				// which will close it automatically.  We have to keep the copy from systemd
+				// in case if we need to respawn the daemon.  If we don't, we'll get an
+				// "Address already in use" error when we respawn.
+				int new_fd = dup(fd);
+				if (new_fd == -1)
+				{
+					dprintf(D_ALWAYS, "Failed to duplicate systemd TCP socket (errno=%d, %s).\n", errno, strerror(errno));
+					goto wrapup;
+				}
+				if (!rsock.attach_to_file_desc(new_fd))
 				{
 					dprintf(D_ALWAYS, "Failed to attach systemd socket to ReliSock.\n");
 					goto wrapup;
