@@ -48,6 +48,13 @@
 #endif
 #endif
 
+#if defined(HAVE_SD_DAEMON_H)
+#include "systemd/sd-daemon.h"
+int g_systemd_count = -2;
+bool g_usable_unixsock = true;
+bool g_usable_relisock = true;
+#endif
+
 // these are defined in master.C
 extern int 		MasterLockFD;
 extern FileLock*	MasterLock;
@@ -797,6 +804,64 @@ int daemon::RealStart( )
 	if( !strcmp(name_in_config_file,"SHARED_PORT") ) {
 		jobopts |= DCJOBOPT_NO_UDP | DCJOBOPT_NEVER_USE_SHARED_PORT;
 	}
+
+#if defined(HAVE_SD_DAEMON_H)
+	if (!strcmp(name_in_config_file,"SHARED_PORT"))
+	{
+		int fds = g_systemd_count == -2 ? sd_listen_fds(0) : g_systemd_count;
+		g_systemd_count = fds;
+		if (fds < 0)
+		{
+			EXCEPT("Failed to retrieve sockets from systemd");
+		}
+		if (fds == 0)
+		{
+			dprintf(D_FULLDEBUG, "No sockets passed from systemd\n");
+		}
+		else
+		{
+			dprintf(D_FULLDEBUG, "systemd passed %d sockets.\n", fds);
+		}
+		bool usable_relisock = false;
+		for (int fd=SD_LISTEN_FDS_START; fd<SD_LISTEN_FDS_START+fds; fd++) {
+			if (sd_is_socket(fd, 0, SOCK_STREAM, 1)) { usable_relisock = g_usable_relisock; }
+		}
+		if (usable_relisock)
+		{
+			dprintf(D_ALWAYS, "Using passed TCP socket from systemd.\n");
+		}
+		g_usable_relisock = false;
+		jobopts |= usable_relisock ? DCJOBOPT_USE_SYSTEMD_INET_SOCKET : 0;
+	}
+	if (!strcmp(name_in_config_file, "COLLECTOR") && collector_uses_shared_port)
+	{
+		int fds = g_systemd_count == -2 ? sd_listen_fds(0) : g_systemd_count;
+		g_systemd_count = fds;
+		if (fds < 0)
+		{
+			EXCEPT("Failed to retrieve sockets from systemd");
+		}
+		if (fds == 0)
+		{
+			dprintf(D_FULLDEBUG, "No sockets passed from systemd\n");
+		}
+		else
+		{
+			dprintf(D_FULLDEBUG, "systemd passed %d sockets.\n", fds);
+		}
+		bool usable_unixsock = false;
+		for (int fd=SD_LISTEN_FDS_START; fd<SD_LISTEN_FDS_START+fds; fd++) {
+			if (sd_is_socket_unix(fd, SOCK_STREAM, 1, 0, 0)) { usable_unixsock = g_usable_unixsock; }
+		}
+		if (usable_unixsock)
+		{
+			dprintf(D_ALWAYS, "Using passed Unix socket from systemd.\n");
+		}
+		g_usable_unixsock = false;
+		jobopts |= usable_unixsock ? DCJOBOPT_USE_SYSTEMD_UNIX_SOCKET : 0;
+	}
+#endif // HAVE_SD_DAEMON_H
+
 	// If we are starting a collector and passed a "-sock" command in the command line,
 	// but didn't set the COLLECTOR_HOST to use shared port, have the collector listen on
 	// the UDP socket and not the TCP socket.  We assume that the TCP socket will be taken

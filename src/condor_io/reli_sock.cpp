@@ -847,6 +847,19 @@ ReliSock::attach_to_file_desc( int fd )
 
 	_sock = fd;
 	_state = sock_connect;
+
+	int accepting = 0;
+	socklen_t l = sizeof(accepting);
+
+	if ((getsockopt(fd, SOL_SOCKET, SO_ACCEPTCONN, &accepting, &l) == 0) && (l == sizeof(accepting)))
+	{
+		if (accepting == 1)
+		{
+			_state = sock_special;
+			_special_state = relisock_listen;
+		}
+	}
+
 	timeout(0);	// make certain in blocking mode
 	return TRUE;
 }

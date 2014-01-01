@@ -118,6 +118,11 @@ CRITICAL_SECTION Big_fat_mutex; // coarse grained mutex for debugging purposes
 #define CLONE_NEWPID 0x20000000
 #endif
 
+#if defined(HAVE_SD_DAEMON_H)
+#include <systemd/sd-daemon.h>
+int g_systemd_count = -2;
+#endif
+
 static const char* EMPTY_DESCRIP = "<NULL>";
 
 // special errno values that may be returned from Create_Process
@@ -6508,7 +6513,7 @@ int DaemonCore::Create_Process(
 		// note that these are on the stack; they go away nicely
 		// upon return from this function.
 	ReliSock rsock;
-	SharedPortEndpoint shared_port_endpoint( daemon_sock );
+	classad_shared_ptr<SharedPortEndpoint> shared_port_endpoint;
 	SafeSock ssock;
 	PidEntry *pidtmp;
 
@@ -6559,6 +6564,94 @@ int DaemonCore::Create_Process(
     double delta_runtime = 0;
 	dprintf(D_DAEMONCORE,"In DaemonCore::Create_Process(%s,...)\n",executable ? executable : "NULL");
 
+#if defined(HAVE_SD_DAEMON_H)
+	if (HAS_DCJOBOPT_USE_SYSTEMD_INET_SOCKET(job_opt_mask))
+	{
+		bool found_socket = false;
+		int fd;
+		int fds = g_systemd_count == -2 ? sd_listen_fds(0) : g_systemd_count;
+		g_systemd_count = fds;
+		if (fds <= 0)
+		{
+			dprintf(D_ALWAYS, "Create_Process: requested to use systemd INET socket, but none passed.\n");
+			goto wrapup;
+		}
+		for (fd=SD_LISTEN_FDS_START; fd<SD_LISTEN_FDS_START+fds; fd++)
+		{
+			if (sd_is_socket(fd, 0, SOCK_STREAM, 1) >= 0)
+			{
+				found_socket = true;
+				if (!rsock.attach_to_file_desc(fd))
+				{
+					dprintf(D_ALWAYS, "Failed to attach systemd socket to ReliSock.\n");
+					goto wrapup;
+				}
+				break;
+			}
+		}
+		if (!found_socket)
+		{
+			dprintf(D_FULLDEBUG, "Create_Process: unable to find systemd TCP socket\n");
+			goto wrapup;
+		}
+		int flags = fcntl(fd, F_GETFD);
+		if (flags == -1)
+		{
+			dprintf(D_ALWAYS, "Create_Process: Unable to get flags on systemd TCP socket.\n");
+			goto wrapup;
+		}
+		flags &= ~FD_CLOEXEC;
+		if (fcntl(fd, F_SETFD, flags) == -1)
+		{
+			dprintf(D_ALWAYS, "Create_Process: Unable to set flags on systemd TCP socket.\n");
+			goto wrapup;
+		}
+		dprintf(D_FULLDEBUG, "Create_Process: Passing systemd TCP socket to child process.\n");
+	}
+	if (HAS_DCJOBOPT_USE_SYSTEMD_UNIX_SOCKET(job_opt_mask))
+	{
+		bool found_socket = false;
+		int fd;
+		int fds = g_systemd_count == -2 ? sd_listen_fds(0) : g_systemd_count;
+		g_systemd_count = fds;
+		if (fds <= 0)
+		{
+			dprintf(D_ALWAYS, "Create_Process: requested to use systemd Unix socket, but none passed.\n");
+			goto wrapup;
+		}
+		for (fd=SD_LISTEN_FDS_START; fd<SD_LISTEN_FDS_START+fds; fd++)
+		{
+			if (sd_is_socket_unix(fd, SOCK_STREAM, 1, 0, 0) >= 0)
+			{
+				found_socket = true;
+				shared_port_endpoint.reset(new SharedPortEndpoint(fd));
+				break;
+			}
+		}
+		if (!found_socket)
+		{
+			dprintf(D_FULLDEBUG, "Create_Process: unable to find systemd socket\n");
+			goto wrapup;
+		}
+		int flags = fcntl(fd, F_GETFD);
+		if (flags == -1)
+		{
+			dprintf(D_ALWAYS, "Create_Process: Unable to get flags on systemd Unix socket %d (errno=%d, %s).\n", fd, errno, strerror(errno));
+			goto wrapup;
+		}
+		flags &= ~FD_CLOEXEC;
+		if (fcntl(fd, F_SETFD, flags) == -1)
+		{
+			dprintf(D_ALWAYS, "Create_Process: Unable to set flags on systemd Unix socket %d (errno=%d, %s).\n", fd, errno, strerror(errno));
+			goto wrapup;
+		}
+		dprintf(D_FULLDEBUG, "Create_Process: Passing systemd Unix socket to child process.\n");
+	}
+#endif
+	if (!shared_port_endpoint.get())
+	{
+		shared_port_endpoint.reset(new SharedPortEndpoint(daemon_sock));
+	}
 	// First do whatever error checking we can that is not platform specific
 
 	// check reaper_id validity.  note: reaper id of 0 means no reaper wanted.
@@ -6640,21 +6733,21 @@ int DaemonCore::Create_Process(
 		 !HAS_DCJOBOPT_NEVER_USE_SHARED_PORT(job_opt_mask) &&
 		 SharedPortEndpoint::UseSharedPort() )
 	{
-		shared_port_endpoint.InitAndReconfig();
-		if( !shared_port_endpoint.CreateListener() ) {
+		shared_port_endpoint->InitAndReconfig();
+		if( !shared_port_endpoint->CreateListener() ) {
 			goto wrapup;
 		}
 
-		if( !shared_port_endpoint.ChownSocket(priv) ) {
+		if( !shared_port_endpoint->ChownSocket(priv) ) {
 				// The child process will probably not be able to remove the
 				// named socket.  That's ok.  We'll try to clean up for
 				// it.
 		}
 
-		dprintf(D_FULLDEBUG|D_NETWORK,"Created shared port endpoint for child process (%s)\n",shared_port_endpoint.GetSharedPortID());
+		dprintf(D_FULLDEBUG|D_NETWORK,"Created shared port endpoint for child process (%s)\n",shared_port_endpoint->GetSharedPortID());
 		inheritbuf += " SharedPort:";
 		int fd = -1;
-		shared_port_endpoint.serialize(inheritbuf,fd);
+		shared_port_endpoint->serialize(inheritbuf,fd);
         inheritFds[numInheritFds++] = fd;
 		inherit_handles = true;
 		enabled_shared_endpoint = true;
@@ -7736,15 +7829,15 @@ int DaemonCore::Create_Process(
 	pidtmp->new_process_group = (family_info != NULL);
 
 	{
-		char const *shared_port_addr = shared_port_endpoint.GetMyRemoteAddress();
+		char const *shared_port_addr = shared_port_endpoint->GetMyRemoteAddress();
 		if( !shared_port_addr ) {
-			shared_port_addr = shared_port_endpoint.GetMyLocalAddress();
+			shared_port_addr = shared_port_endpoint->GetMyLocalAddress();
 		}
 
 		if( shared_port_addr ) {
 			pidtmp->sinful_string = shared_port_addr;
 				// we will clean up the socket if the child doesn't
-			pidtmp->shared_port_fname = shared_port_endpoint.GetSocketFileName();
+			pidtmp->shared_port_fname = shared_port_endpoint->GetSocketFileName();
 		}
 		else if ( want_command_port != FALSE ) {
 			Sinful sinful(sock_to_string(rsock._sock));
@@ -7775,7 +7868,7 @@ int DaemonCore::Create_Process(
 #endif 
 
 		// Leave named socket in place so child can continue to use it.
-	shared_port_endpoint.Detach();
+	shared_port_endpoint->Detach();
 
 		// Now, handle the DC-managed std pipes, if any.
 	for (i=0; i<=2; i++) {
@@ -9743,7 +9836,7 @@ InitCommandSockets(int port, int udp_port, ReliSock *rsock, SafeSock *ssock, boo
 			dprintf(D_ALWAYS, "Warning: setsockopt() TCP_NODELAY failed\n");
 		}
 
-		if (!rsock->listen(port)) {
+		if (!rsock->isListenSock() && !rsock->listen(port)) {
 			if (fatal) {
 				EXCEPT("Failed to listen(%d) on TCP command socket.", port);
 			}
@@ -9755,7 +9848,7 @@ InitCommandSockets(int port, int udp_port, ReliSock *rsock, SafeSock *ssock, boo
 		}
 			/* bind(FALSE,...) means this is an incoming connection */
 		if (ssock && !ssock->bind(FALSE, udp_port)) {
-			if (fatal) {
+		if (fatal) {
 				EXCEPT("Failed to bind(%d) on UDP command socket.", port);
 			}
 			else {
