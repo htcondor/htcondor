@@ -429,10 +429,13 @@ int Sock::assign(SOCKET sockd)
 	}
 
 	int af_type;
-	if (_condor_is_ipv6_mode())
+	if (_who.is_valid()) {
+		af_type = _who.get_aftype();
+	} else if (_condor_is_ipv6_mode()) {
 		af_type = AF_INET6;
-	else
+	} else {
 		af_type = AF_INET;
+	}
 
 	switch(type()){
 		case safe_sock:
@@ -632,11 +635,17 @@ int Sock::bind(bool outbound, int port, bool loopback)
 		}
 	} else {
 			// Bind to a dynamic port.
-
-		if (_condor_is_ipv6_mode())
-			addr.set_ipv6();
+		if (_who.is_valid()) {
+			if (_who.is_ipv6()) { addr.set_ipv6(); }
+			else { addr.set_ipv4(); }
+		}
 		else
-			addr.set_ipv4();
+		{
+			if (_condor_is_ipv6_mode())
+				addr.set_ipv6();
+			else
+				addr.set_ipv4();
+		}
 		if( loopback ) {
 			addr.set_loopback();
 		} else if( (bool)_condor_bind_all_interfaces() ) {
