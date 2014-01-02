@@ -413,7 +413,7 @@ convert_python_to_exprtree(boost::python::object value)
         classad::Value val; val.SetBooleanValue(cppvalue);
         return classad::Literal::MakeLiteral(val);
     }
-    if (PyString_Check(value.ptr()))
+    if (PyString_Check(value.ptr()) || PyUnicode_Check(value.ptr()))
     {
         std::string cppvalue = boost::python::extract<std::string>(value);
         classad::Value val; val.SetStringValue(cppvalue);
@@ -425,12 +425,14 @@ convert_python_to_exprtree(boost::python::object value)
         classad::Value val; val.SetIntegerValue(cppvalue);
         return classad::Literal::MakeLiteral(val);
     }
+#if PY_VERSION_HEX < 0x03000000
     if (PyInt_Check(value.ptr()))
     {
         long int cppvalue = boost::python::extract<long int>(value);
         classad::Value val; val.SetIntegerValue(cppvalue);
         return classad::Literal::MakeLiteral(val);
     }
+#endif
     if (PyFloat_Check(value.ptr()))
     {
         double cppvalue = boost::python::extract<double>(value);

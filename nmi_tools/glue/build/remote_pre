@@ -201,7 +201,7 @@ if ( defined( $opt_use_externals_cache ) ) {
 	$defines{externals} = "-DCACHED_EXTERNALS:BOOL=FALSE";
 }
 
-if($platform =~ /Fedora1[78]$/) {
+if($platform =~ /Fedora1[789]$/) {
 	$defines{python_version} = "-DPythonLibs_FIND_VERSION:STRING=2.7";
 }
 

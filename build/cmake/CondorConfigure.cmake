@@ -77,6 +77,13 @@ if(NOT WINDOWS)
 #if(NOT WINDOWS AND NOT CONDOR_PLATFORM MATCHES "Fedora19")
 include (FindPythonLibs)
 endif(NOT WINDOWS)
+# As of cmake 2.8.8, the variable below is defined by FindPythonLibs.
+# This helps ensure we get the same version of the libraries and python
+# on systems with both python2 and python3.
+if (DEFINED PYTHONLIBS_VERSION_STRING)
+  set(PythonInterp_FIND_VERSION "${PYTHONLIBS_VERSION_STRING}")
+  set(PythonInterp_FIND_VERSION_EXACT ON)
+endif()
 include (FindPythonInterp)
 include (FindThreads)
 include (GlibcDetect)
