@@ -108,7 +108,7 @@ typedef __int32 int32_t;
 #define strlwr _strlwr
 #define chdir _chdir
 #define fsync _commit
-DLL_IMPORT_MAGIC int access(const char *, int);
+DLL_IMPORT_MAGIC int __cdecl access(const char *, int);
 #define execl _execl  
 #define execv _execv
 #define putenv _putenv
