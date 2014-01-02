@@ -410,6 +410,7 @@ elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
 	set( EXTERNALS_LIB "${C_LIB}" )
 	set( CONDOR_RPATH "/${C_LIB}" )
+	set( PYTHON_RPATH "/${C_LIB}" )
 
 	# Generate empty folder to ship with package
 	# Local dir
