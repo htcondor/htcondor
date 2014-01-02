@@ -30,12 +30,18 @@ if ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND AND Boost_PYTHON_LIBRARY AND NOT 
   target_link_libraries( classad_module pyclassad -lboost_python ${PYTHON_LIBRARIES} )
   set_target_properties(classad_module PROPERTIES PREFIX "" OUTPUT_NAME classad )
   set_target_properties(classad_module PROPERTIES SUFFIX ".so" )
+  if ( NOT CMAKE_SKIP_RPATH )
+    set_target_properties(classad_module PROPERTIES INSTALL_RPATH ${PYTHON_RPATH})
+  endif()
 
   set_source_files_properties(config.cpp collector.cpp negotiator.cpp secman.cpp dc_tool.cpp schedd.cpp classad.cpp classad_module.cpp classad_parsers.cpp event.cpp PROPERTIES COMPILE_FLAGS "-Wno-strict-aliasing -Wno-cast-qual -Wno-deprecated -Wno-write-strings")
   add_library( htcondor SHARED htcondor.cpp collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp event.cpp )
   target_link_libraries( htcondor pyclassad condor_utils -lboost_python ${PYTHON_LIBRARIES} )
   set_target_properties( htcondor PROPERTIES PREFIX "" )
   set_target_properties( htcondor PROPERTIES SUFFIX ".so" )
+  if ( NOT CMAKE_SKIP_RPATH )
+    set_target_properties(htcondor PROPERTIES INSTALL_RPATH ${PYTHON_RPATH})
+  endif()
 
   install ( TARGETS pyclassad DESTINATION ${C_LIB} )
   install ( TARGETS htcondor classad_module DESTINATION ${C_PYTHONARCHLIB} )
