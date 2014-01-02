@@ -8496,6 +8496,13 @@ These macros affect the \Condor{gridmanager}.
   universe job fails to ping the gatekeeper, the job will be put on hold.
   Defaults to 5 days (in seconds).
 
+\label{param:EC2ResourceTimeout}
+\item[\Macro{EC2\_RESOURCE\_TIMEOUT}]
+  The number of seconds after which if an EC2 grid universe job fails to
+  ping the EC2 service, the job will be put on hold.  Defaults to -1,
+  which means infinite (failure to ping the service will never put the
+  job on hold).
+
 \label{param:GramVersionDetection}
 \item[\Macro{GRAM\_VERSION\_DETECTION}]
   A boolean value that defaults to \Expr{True}.

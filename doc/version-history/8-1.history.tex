@@ -30,6 +30,10 @@ The details of each version are described below.
 
 \begin{itemize}
 
+\item Added \Macro{EC2\_RESOURCE\_TIMEOUT}, which controls how long HTCondor
+will wait for an unresponsive EC2 service before putting the corresponding
+jobs on hold.
+\Ticket{4113}
 
 \item The python bindings now can refresh a remote job's GSI proxy
  as a part of the \texttt{Schedd} object.
