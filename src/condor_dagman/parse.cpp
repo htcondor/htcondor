@@ -76,7 +76,8 @@ static bool parse_dot(Dag *dag,
 static bool parse_vars(Dag *dag,
 		const char *filename, int lineNumber,
 		std::list<std::string>* varq);
-static bool check_var_name( const MyString &varName );
+static bool check_var_name( const MyString &varName, const char *filename,
+		int lineNumber );
 static bool parse_priority(Dag *dag, 
 		const char *filename, int lineNumber);
 static bool parse_category(Dag *dag, const char *filename, int lineNumber);
@@ -1294,7 +1295,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 		str++;
 
 			// Check for illegal variable name.
-		if ( !check_var_name( varName ) ) {
+		if ( !check_var_name( varName, filename, lineNumber ) ) {
 			return false;
 		}
 		
@@ -1333,39 +1334,60 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber, std::list
 	return true;
 }
 
-//TEMPTEMP -- document
+//-----------------------------------------------------------------------------
+// 
+// Function: check_var_name
+// Purpose:  check whether a DAG VARS name is legal (certain names cause
+//           problems as documented in the code below).
+//
+//-----------------------------------------------------------------------------
+//TEMPTEMP -- make a test for this?
 static bool
 check_var_name(
-	const MyString &varName )
+	const MyString &varName, const char *filename, int lineNumber )
 {
 	MyString tmpName( varName );
 	tmpName.lower_case();
 
+		// A VARS name beginning with "queue" causes condor_submit to
+		// queue the job at that point...
 	if ( tmpName.find( "queue" ) == 0 ) {
-		debug_printf(DEBUG_QUIET, "Illegal variable name: %s; variable "
-					"names cannot begin with \"queue\"\n", varName.Value() );
+		debug_printf(DEBUG_QUIET, 
+					"ERROR: %s (line %d): Illegal variable name: %s; "
+					"variable names cannot begin with \"queue\"\n",
+					filename, lineNumber, varName.Value() );
 		return false;
 	}
 
+		// Static list of illegal variable names (in all lower case).
 	static std::vector<MyString> illegalVars;
 	if ( illegalVars.empty() ) {
+			// A VARS name of "priority" goofs up the DAG priority
+			// scheme.
 		illegalVars.push_back( "priority" );
 
+			// A VARS name of "dag_node_name" overrides the real
+			// DAG node name in the submit event.
 		MyString tmp1( ATTR_DAG_NODE_NAME_ALT );
 		tmp1.lower_case();
 		illegalVars.push_back( tmp1 );
 
+			// A VARS name of +DAGManJobId overrides the real
+			// DAGMan job ID in the job's classad.
 		MyString tmp2( "+" );
 		tmp2 += ATTR_DAGMAN_JOB_ID;
 		tmp2.lower_case();
 		illegalVars.push_back( tmp2 );
 	}
 
-	//TEMPTEMP -- use iterator?
-	for ( unsigned int index = 0; index < illegalVars.size(); index++ ) {
-		if ( tmpName == illegalVars[index] ) {
-			debug_printf(DEBUG_QUIET, "Illegal variable name: %s\n",
-						varName.Value() );
+		// Check our current variable name (lower cased) against
+		// everything in the list.
+	std::vector<MyString>::iterator it;
+	for ( it = illegalVars.begin(); it < illegalVars.end(); it++ ) {
+		if ( tmpName == *it ) {
+			debug_printf(DEBUG_QUIET,
+						"ERROR: %s (line %d): Illegal variable name: %s\n",
+						filename, lineNumber, varName.Value() );
 			return false;
 		}
 	}
