@@ -56,8 +56,14 @@ The parameter CCB\_HEARTBEAT\_INTERVAL default has been reduced to 5 minutes.
 
 \begin{itemize}
 
+\item HTCondor now treats a failure to terminate an EC2 instance
+because the instance no longer exists as a success.  This will allow EC2
+jobs to exit the queue if the service purges termination records quickly.
+\Ticket{4133}
+
 \item HTCondor now interacts with EC2 services using POST instead of GET,
 which permits more services to accept user data greater than 8KB.
+\Ticket{4004}
 
 \end{itemize}
 
