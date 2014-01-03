@@ -142,6 +142,7 @@ DLL_IMPORT_MAGIC int __cdecl access(const char *, int);
 #include <math.h>
 #include <float.h>   // for DBL_MAX and other constants
 #include <errno.h>
+#include <Mstcpip.h> // for Winsock SIO_KEEPALIVE_VALS support
 #include "file_lock.h"
 #include "condor_fix_assert.h"
 

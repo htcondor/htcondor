@@ -754,8 +754,8 @@ bool Sock::set_keepalive()
 #endif
 	{
 		dprintf(D_FULLDEBUG,
-			"Failed to set TCP keepalive idle time to 5 minutes (errno=%d, %s)",
-			errno, strerror(errno));
+			"Failed to set TCP keepalive idle time to %d minutes (errno=%d, %s)",
+			val / 60, errno, strerror(errno));
 		result = false;
 	}
 
@@ -784,8 +784,41 @@ bool Sock::set_keepalive()
 
 	// Handle KEEPALIVE interval settings for Windows platforms.
 #ifdef WIN32
-	// TODO
-#endif
+	struct tcp_keepalive alive; // Winsock struct for keep alive settings
+
+	// Edit alive settings. Note that TCP_KEEPCNT on Windows Vista and
+	// later is set to 10 and cannot be changed. Also note units are milliseconds.
+	alive.onoff = 1;
+	alive.keepalivetime = val * 1000;
+	alive.keepaliveinterval = 5 * 1000;
+
+	// if stream not assigned to a sock, do it now before WSAIoctl calls.
+	if (_state == sock_virgin) assign();
+
+	DWORD BytesReturned = 0;  // useless pointer needed for winsock call
+
+	// Set keepalive idle time as specificed in config (defaults to 6 minutes).
+	int rc = ::WSAIoctl(
+	  _sock,				// descriptor identifying a socket
+	  SIO_KEEPALIVE_VALS,	// dwIoControlCode
+	  (LPVOID) &alive,		// pointer to tcp_keepalive struct
+	  (DWORD)sizeof(alive),	// length of input buffer
+	  NULL,					// output buffer
+	  0,					// size of output buffer
+	  (LPDWORD) &BytesReturned,	// number of bytes returned
+	  (LPWSAOVERLAPPED) NULL,	// OVERLAPPED structure
+	  (LPWSAOVERLAPPED_COMPLETION_ROUTINE) NULL  // completion routine
+	);
+
+	if (rc == SOCKET_ERROR)
+	{
+		int err = WSAGetLastError();
+		dprintf(D_FULLDEBUG,
+			"Failed to set TCP keepalive idle time to 5 minutes (err=%d, %s)",
+			err, GetLastErrorString(err) );
+		result = false;
+	}
+#endif  // of #ifdef WIN32
 
 	return result;
 }
