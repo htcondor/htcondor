@@ -494,6 +494,20 @@ int Sock::assign(condor_protocol proto, SOCKET sockd)
 	if ( _timeout > 0 )
 		timeout_no_timeout_multiplier( _timeout );
 
+	if(proto == CP_IPV6) {
+		// We always use two sockets for mixed mode IPv4/IPv6 for consistency.
+		// Ensure the IPv6 socket doesn't claim the IPv4 port as well.
+#if defined(SOL_IPV6)
+		int level = SOL_IPV6;
+#elif defined(IPPROTO_IPV6)
+		int level = IPPROTO_IPV6;
+#else
+#	error "Unable to determine correct level to pass to setsockopt for IPv6 control"
+#endif
+		int value = 1;
+		setsockopt(level, IPV6_V6ONLY, (char*)&value, sizeof(value));
+	}
+
     addr_changed();
 	return TRUE;
 }
