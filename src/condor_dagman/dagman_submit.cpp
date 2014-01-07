@@ -243,7 +243,7 @@ do_submit( ArgList &args, CondorID &condorID, Job::job_type_t jobType,
 bool
 condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			   const char* DAGNodeName, MyString &DAGParentNodeNames,
-			   List<Job::NodeVar> *vars, int priority,
+			   List<Job::NodeVar> *vars, bool setPriority, int priority,
 			   const char* directory, const char *defaultLog, bool appendDefaultLog,
 			   const char *logFile, bool prohibitMultiJobs, bool hold_claim )
 {
@@ -333,6 +333,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 			args.AppendArg(dlog.c_str());
 			debug_printf( DEBUG_VERBOSE, "Adding a DAGMan auxiliary log %s\n", defaultLog );
 				// Now append the mask
+				// TEMPTEMP -- set up the mask string once...
 			args.AppendArg( "-a" );
 			std::string dmask("+");
 			dmask += ATTR_DAGMAN_WORKFLOW_MASK;
@@ -404,7 +405,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	}
 
 		// Set the node priority.
-	if ( priority != 0 ) {//TEMPTEMP -- parameterize 0?
+	if ( setPriority ) {
 		args.AppendArg( "-a" );
 		MyString prioVal( priority );
 		//TEMPTEMP -- parameterize "priority" string?

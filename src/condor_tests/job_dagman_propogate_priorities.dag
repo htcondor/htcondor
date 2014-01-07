@@ -1,21 +1,27 @@
-JOB nodeA job_dagman_propogate_priorities-A.cmd
+JOB nodeA job_dagman_propogate_priorities-ABC.cmd
 VARS nodeA jobname="job_dagman_propogate_priorities-A"
-JOB nodeB job_dagman_propogate_priorities-B.cmd
+PRIORITY nodeA 60
+
+JOB nodeB job_dagman_propogate_priorities-ABC.cmd
 VARS nodeB jobname="job_dagman_propogate_priorities-B"
-JOB nodeC job_dagman_propogate_priorities-C.cmd
+PRIORITY nodeB 0
+
+JOB nodeC job_dagman_propogate_priorities-ABC.cmd
 VARS nodeC jobname="job_dagman_propogate_priorities-C"
+PRIORITY nodeC 5
+
 SUBDAG EXTERNAL subdagD job_dagman_propogate_priorities.subdag
+PRIORITY subdagD 100
+
+# Make sure node w/o explicit priority doesn't override priority
+# in submit file.
+JOB nodeE job_dagman_propogate_priorities-EF.cmd
+VARS nodeE jobname="job_dagman_propogate_priorities-E"
+
+# Explicit priority of 0 *should* override the submit file...
+JOB nodeF job_dagman_propogate_priorities-EF.cmd
+VARS nodeF jobname="job_dagman_propogate_priorities-F"
+PRIORITY nodeF 0
+
 PARENT nodeA CHILD nodeB
 PARENT nodeC CHILD subdagD
-PRIORITY nodeA 60
-#TEMPTEMP
-#VARS nodeA priority="1000"
-#TEMPTEMP
-#VARS nodeA dag_node_name="foobar"
-#TEMPTEMP
-#VARS nodeA +DAGManJobId="barfoo"
-#TEMPTEMP
-#VARS nodeA queuefoo="awesadf"
-PRIORITY nodeB 0
-PRIORITY nodeC 5
-PRIORITY subdagD 100

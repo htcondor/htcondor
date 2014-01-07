@@ -1,3 +1,4 @@
+//TEMPTEMP -- how does the DAG's overall priority get propagated down to the children?
 /***************************************************************
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -1402,15 +1403,17 @@ Dag::StartNode( Job *node, bool isRetry )
 		_preScriptQ->Run( node->_scriptPre );
 		return true;
     }
+
 	// no PRE script exists or is done, so add job to the queue of ready jobs
-	//TEMPTEMP -- shouldn't this be done *before* StartNode??
-	node->FixPriority(*this);
+
+		// Note:  I *think* it's okay to wait until this point to adjust
+		// the node priority, but I'm not 100% sure -- this is the way
+		// panike did it.  wenger 2014-01-04
+	node->AdjustPriority(*this);
+
 	if ( isRetry && m_retryNodeFirst ) {
 		_readyQ->Prepend( node, -node->_adjustedPriority );
 	} else {
-		//TEMPTEMP -- I think I had some note about not wanting to do this via VARS... (yeah -- in gittrac #4024)
-		//TEMPTEMP -- ah, nuts -- this makes the VARS setting show up in the rescue DAG, too!
-		//TEMPTEMP -- what if the user explicitly sets a VARS macro named priority?
 		if ( _submitDepthFirst ) {
 			_readyQ->Prepend( node, -node->_adjustedPriority );
 		} else {
@@ -2336,9 +2339,10 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 			// Note: when gittrac #2167 gets merged, we need to think
 			// about how this code will interact with that code.
 			// wenger/nwp 2011-08-24
-		if ( node->_hasNodePriority ) {
+			// TEMPTEMP -- this might not do what we want if we inherited a priority from a parent...
+		if ( node->_hasExplicitPriority ) {
 			fprintf( fp, "PRIORITY %s %d\n", node->GetJobName(),
-						node->_explicitPriority );
+						node->_originalPriority );
 		}
 
 			// Print the CATEGORY line, if any.
@@ -2440,7 +2444,7 @@ Dag::TerminateJob( Job* job, bool recovery, bool bootstrap )
 								_nfsLogIsError, recovery, _defaultNodeLog, _use_default_node_log);
 				} else {
 						// If child has no more parents in its waiting queue,
-						// submit it.
+						// put it into the ready queue.
 					StartNode( child, false );
 				}
 			}
@@ -3324,6 +3328,9 @@ Dag::ChooseDotFileName(MyString &dot_file_name)
 	return;
 }
 
+// NOTE: dag addnode/removenode/adddep/removedep methods don't
+// necessarily insure internal consistency...that's currently up to
+// the higher level calling them to get right...
 //---------------------------------------------------------------------------
 bool Dag::Add( Job& job )
 {
@@ -3793,9 +3800,6 @@ Dag::GetEventIDHash(bool isNoop, int jobType) const
 	return NULL;
 }
 
-// NOTE: dag addnode/removenode/adddep/removedep methods don't
-// necessarily insure internal consistency...that's currently up to
-// the higher level calling them to get right...
 //---------------------------------------------------------------------------
 
 // A RAII class to swap out the priorities below, then restore them
@@ -3857,7 +3861,8 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 				node->GetDagFile() != NULL && _generateSubdagSubmits ) {
 		bool isRetry = node->GetRetries() > 0;
 		// TEMPTEMP -- I don't understand what this is for
-		priority_swapper ps( node->_hasNodePriority, node->_adjustedPriority, _submitDagDeepOpts->priority);
+		// TEMPTEMP -- okay, this temporarily puts the node's priority into _subitDagDeepOpts, if the node priority is higher than the existing value
+		priority_swapper ps( node->_hasExplicitPriority, node->_adjustedPriority, _submitDagDeepOpts->priority );
 		if ( runSubmitDag( *_submitDagDeepOpts, node->GetDagFile(),
 					node->GetDirectory(), isRetry ) != 0 ) {
 			++node->_submitTries;
@@ -3924,8 +3929,8 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 					// wenger 2008-12-18
 				MyString parents = ParentListString( node );
       			submit_success = condor_submit( dm, cmd_file.Value(), condorID,
-							node->GetJobName(), parents,
-							node->varsFromDag, node->_adjustedPriority,
+							node->GetJobName(), parents, node->varsFromDag,
+							node->_hasExplicitPriority, node->_adjustedPriority,
 							node->GetDirectory(), DefaultNodeLog(),
 							_use_default_node_log && node->UseDefaultLog(),
 							logFile, ProhibitMultiJobs(),
@@ -4427,6 +4432,7 @@ Dag::ResolveVarsInterpolations(void)
 // Iterate over the jobs and set the default priority
 // TEMPTEMP -- I don't understand what this is for; how does it relate to Job::FixPriority?
 //TEMPTEMP -- change name to something like ApplyDefaultPriority
+//TEMPTEMP -- ah -- is this pushing the overall dag priority down to the nodes????
 void Dag::SetDefaultPriorities()
 {
 	//TEMPTEMP -- what is GetDefaultPriority?
@@ -4436,8 +4442,8 @@ void Dag::SetDefaultPriorities()
 		while( (job = _jobs.Next()) != NULL ) {
 			// If the DAG file has already assigned a priority
 			// Leave this job alone for now
-			if( !job->_hasNodePriority ) {
-				job->_hasNodePriority = true;
+			if( !job->_hasExplicitPriority ) {
+				job->_hasExplicitPriority = true;
 				job->_adjustedPriority = GetDefaultPriority();
 			} else if( GetDefaultPriority() > job->_adjustedPriority ) {
 				job->_adjustedPriority = GetDefaultPriority();

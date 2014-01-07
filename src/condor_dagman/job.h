@@ -416,8 +416,12 @@ class Job {
 		@return the last event time.
 	*/
 	time_t GetLastEventTime() { return _lastEventTime; }
+
+	//TEMPTEMP -- document
+	void SetPriorities( int priority );
+
 	//TEMPTEMP -- document what this does...
-	void FixPriority(Dag& dag);
+	void AdjustPriority( Dag& dag );
 
 	bool HasPreSkip() const { return _preskip != PRE_SKIP_INVALID; }
 	int GetPreSkip() const;
@@ -484,13 +488,16 @@ public:
 		// queue for this node.
 	int _queuedNodeJobProcs;
 
-		// Whether the _nodePriority value is meaningful.
 		// TEMPTEMP -- do we need this?  isn't 0 the same as not having a prio?
-	bool _hasNodePriority;
+		// Whether priority has been explicitly set for this node (or
+		// inherited from a parent).  If this node's priority has been
+		// explicitly set, it will override any priority in its submit
+		// file, and also affect the prioriities of its child nodes.
+		// TEMPTEMP -- hmm -- is "Explicit" the right word here, since you can hinherit it from a parent?  Do we need _hasExplicitPriority and _doPriorityOverride or something?  Ugh...
+	bool _hasExplicitPriority;
 
 		// Node priority.  Higher number is better priority (submit first).
-	//TEMPTEMP int _nodePriority;
-	int _explicitPriority;
+	int _originalPriority;
 	int _adjustedPriority;
 
 		// The number of times this job has been held.  (Note: the current

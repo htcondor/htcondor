@@ -136,9 +136,8 @@ Job::Job( const job_type_t jobType, const char* jobName,
 
 	_queuedNodeJobProcs = 0;
 
-	_hasNodePriority = false;
-	//TEMPTEMP _nodePriority = 0;
-	_explicitPriority = 0;
+	_hasExplicitPriority = false;
+	_originalPriority = 0;
 	_adjustedPriority = 0;
 
 	_logFile = NULL;
@@ -1009,6 +1008,15 @@ Job::GetPreSkip() const
 }
 
 //---------------------------------------------------------------------------
+void
+Job::SetPriorities( int priority )
+{
+	_hasExplicitPriority = true;
+	_originalPriority = priority;
+	_adjustedPriority = priority;
+}
+
+//---------------------------------------------------------------------------
 // If there is a cycle, could this enter an infinite loop?
 // No: If there is a cycle, there will be equality, and recursion will stop
 // It makes no sense to insert job priorities on linear DAGs;
@@ -1020,26 +1028,22 @@ Job::GetPreSkip() const
 // priorities set in the submit file.
 
 // DAGman fixes the default priorities in Dag::SetDefaultPriorities
-
+//TEMPTEMP -- hmm -- should we also reference the overall DAG priority in here??
 void
-Job::FixPriority(Dag& dag)
+Job::AdjustPriority(Dag& dag)
 {
 	std::set<JobID_t> parents = GetQueueRef(Q_PARENTS);
 	for(std::set<JobID_t>::iterator p = parents.begin(); p != parents.end(); ++p){
 		Job* parent = dag.FindNodeByNodeID(*p);
-		if( parent->_hasNodePriority ) {
+		//TEMPTEMP -- this means that explicitly setting the parent node to priority 0 is different than the parent having 0 priority by default
+//TEMPTEMP -- maybe a parent node's priority should override the child even if it isn't explicitly set; but it probably shouldn't be passed to condor_submit if it's not explicitly set...
+		if ( parent->_hasExplicitPriority ) {
 			// Nothing to do if parent priority is small
-#if 0 //TEMPTEMP
-			if( parent->_nodePriority > _nodePriority ) {
-				_nodePriority = parent->_nodePriority;
-				_hasNodePriority = true;
-			}
-#else //TEMPTEMP
-			if( parent->_adjustedPriority > _adjustedPriority ) {
+			if ( parent->_adjustedPriority > _adjustedPriority ) {
 				_adjustedPriority = parent->_adjustedPriority;
-				_hasNodePriority = true;
+				_hasExplicitPriority = true;
+				debug_printf( DEBUG_NORMAL, "Adjusted node %s priority to %d\n", 							GetJobName(), _adjustedPriority );
 			}
-#endif //TEMPTEMP
 		}
 	}
 }

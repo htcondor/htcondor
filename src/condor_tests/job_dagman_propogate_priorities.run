@@ -38,7 +38,9 @@ $dagman_args = "-verbose";
 	'job_dagman_propogate_priorities-A.out',
 	'job_dagman_propogate_priorities-B.out',
 	'job_dagman_propogate_priorities-C.out',
-	'job_dagman_propogate_priorities-D.out');
+	'job_dagman_propogate_priorities-D.out',
+	'job_dagman_propogate_priorities-E.out',
+	'job_dagman_propogate_priorities-F.out');
 
 # truly const variables in perl
 sub IDLE{1};
@@ -95,7 +97,7 @@ $success = sub {
 		open OUT, "<$file" || die "Cannot open $file for reading\n";
 		while(<OUT>){
 			chomp;
-			if(/DAG node (.+) has priority (\d+)/){
+			if(/DAG node (.+) has priority (-?\d+)/){
 				$priority{$1} = $2;
 				CondorTest::debug("Good. Saw output: $_\n",1);
 			}
@@ -104,7 +106,7 @@ $success = sub {
 	}
 
 	# Check node priorities...
-	foreach ('nodeA','nodeB','nodeC','nodeD') {
+	foreach ('nodeA','nodeB','nodeC','nodeD', 'nodeE', 'nodeF') {
 		if(! defined $priority{$_}){
 			CondorTest::debug("Did not see priority for $_\n");
 			$diditpass = 0;
@@ -126,6 +128,14 @@ $success = sub {
 	if ($priority{'nodeD'} != 100) {
 		$diditpass = 0;
 		CondorTest::debug("nodeD priority was $priority{'nodeD'}; should be 100\n");
+	}
+	if ($priority{'nodeE'} != -10) {
+		$diditpass = 0;
+		CondorTest::debug("nodeE priority was $priority{'nodeE'}; should be -10\n");
+	}
+	if ($priority{'nodeF'} != 0) {
+		$diditpass = 0;
+		CondorTest::debug("nodeF priority was $priority{'nodeF'}; should be 0\n");
 	}
 
 	if($diditpass == 0) {

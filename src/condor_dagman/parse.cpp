@@ -1483,16 +1483,13 @@ parse_priority(
 		return false;
 	}
 
-	if ( job->_hasNodePriority && job->_explicitPriority != priorityVal ) {
+	if ( job->_hasExplicitPriority && job->_originalPriority != priorityVal ) {
 		debug_printf( DEBUG_NORMAL, "Warning: new priority %d for node %s "
 					"overrides old value %d\n", priorityVal,
-					job->GetJobName(), job->_explicitPriority );
+					job->GetJobName(), job->_originalPriority );
 		check_warning_strictness( DAG_STRICT_2 );
 	}
-	job->_hasNodePriority = true;
-	//TEMPTEMP -- make a method to do this?
-	job->_explicitPriority = priorityVal;
-	job->_adjustedPriority = priorityVal;
+	job->SetPriorities( priorityVal );
 
 	return true;
 }
