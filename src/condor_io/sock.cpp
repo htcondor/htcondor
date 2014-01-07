@@ -19,6 +19,11 @@
 
 
 #include "condor_common.h"
+
+#if (HAVE_LINUX_TCP_H) && (HAVE_TCP_USER_TIMEOUT)
+#  include <linux/tcp.h>	// get definition for TCP_USER_TIMEOUT
+#endif
+
 #include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_uid.h"
@@ -758,6 +763,22 @@ bool Sock::set_keepalive()
 			val / 60, errno, strerror(errno));
 		result = false;
 	}
+
+	// Also set TCP_USER_TIMEOUT to make sure the connections fails in a reasonable
+	// amount of time even if there is traffic on it. This controls how long
+	// TCP is willing to wait for data to be ACKed.
+	// Note it is in ms, not seconds
+#if defined(HAVE_TCP_USER_TIMEOUT)
+	int user_timeout = (val + (5 * 5)) * 1000; // idle_secs + (interval * count) * 1000
+	if (setsockopt(IPPROTO_TCP, TCP_USER_TIMEOUT, (char*)(&user_timeout),
+				sizeof(user_timeout)) < 0)
+	{
+		dprintf(D_FULLDEBUG,
+			"Failed to set TCP keepalive interval to 5 seconds (errno=%d, %s)",
+			errno, strerror(errno));
+		result = false;
+	}
+#endif
 
 	// Set keepalive probe count to 5.
 	val = 5;
