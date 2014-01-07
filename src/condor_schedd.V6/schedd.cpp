@@ -12712,6 +12712,10 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 							  jobid.cluster,jobid.proc);
 		}
 		else {
+			reply.Assign( ATTR_JOB_STATUS, job_status );
+			if( job_status == HELD ) {
+				reply.CopyAttribute( ATTR_HOLD_REASON, jobad );
+			}
 			error_msg.formatstr("Job %d.%d is not running.",
 							  jobid.cluster,jobid.proc);
 		}
