@@ -144,7 +144,7 @@ public:
 
 	bool bind_to_loopback(bool outbound=false, int port=0);
 
-    int setsockopt(int, int, const char*, int); 
+    int setsockopt(int, int, const void*, int); 
 
 	/**  Set the size of the operating system buffers (in the IP stack) for
 		 this socket.

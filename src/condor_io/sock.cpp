@@ -731,7 +731,7 @@ bool Sock::set_keepalive()
 
 	// Set KEEPALIVE on socket using system defaults (likely 2hrs)
 	int on = 1;
-	if (setsockopt(SOL_SOCKET, SO_KEEPALIVE, (char*)(&on), sizeof(on)) < 0) {
+	if (setsockopt(SOL_SOCKET, SO_KEEPALIVE, static_cast<void*>(&on), sizeof(on)) < 0) {
 		dprintf(D_FULLDEBUG,
 			"ReliSock::accept - Failed to enable TCP keepalive (errno=%d, %s)",
 			errno, strerror(errno));
@@ -753,9 +753,9 @@ bool Sock::set_keepalive()
 	// Set keepalive idle time as specificed in config (defaults to 6 minutes).
 	// Note Mac OS X calls it TCP_KEEPALIVE; Unix/Linux calls it TCP_KEEPIDLE.
 #if defined(HAVE_TCP_KEEPALIVE)
-	if (setsockopt(IPPROTO_TCP, TCP_KEEPALIVE, (char*)(&val), sizeof(val)) < 0)
+	if (setsockopt(IPPROTO_TCP, TCP_KEEPALIVE, static_cast<void*>(&val), sizeof(val)) < 0)
 #else
-	if (setsockopt(IPPROTO_TCP, TCP_KEEPIDLE, (char*)(&val), sizeof(val)) < 0)
+	if (setsockopt(IPPROTO_TCP, TCP_KEEPIDLE, static_cast<void*>(&val), sizeof(val)) < 0)
 #endif
 	{
 		dprintf(D_FULLDEBUG,
@@ -770,7 +770,7 @@ bool Sock::set_keepalive()
 	// Note it is in ms, not seconds
 #if defined(HAVE_TCP_USER_TIMEOUT)
 	int user_timeout = (val + (5 * 5)) * 1000; // idle_secs + (interval * count) * 1000
-	if (setsockopt(IPPROTO_TCP, TCP_USER_TIMEOUT, (char*)(&user_timeout),
+	if (setsockopt(IPPROTO_TCP, TCP_USER_TIMEOUT, static_cast<void*>(&user_timeout),
 				sizeof(user_timeout)) < 0)
 	{
 		dprintf(D_FULLDEBUG,
@@ -783,7 +783,7 @@ bool Sock::set_keepalive()
 	// Set keepalive probe count to 5.
 	val = 5;
 #if defined(HAVE_TCP_KEEPCNT)
-	if (setsockopt(IPPROTO_TCP, TCP_KEEPCNT, (char*)(&val), sizeof(val)) < 0) {
+	if (setsockopt(IPPROTO_TCP, TCP_KEEPCNT, static_cast<void*>(&val), sizeof(val)) < 0) {
 		dprintf(D_FULLDEBUG,
 			"Failed to set TCP keepalive probe count to 5 (errno=%d, %s)",
 			errno, strerror(errno));
@@ -793,7 +793,7 @@ bool Sock::set_keepalive()
 
 	// Set keepalive interval to 5 seconds.
 #if defined(HAVE_TCP_KEEPINTVL)
-	if (setsockopt(IPPROTO_TCP, TCP_KEEPINTVL, (char*)(&val), sizeof(val)) < 0) {
+	if (setsockopt(IPPROTO_TCP, TCP_KEEPINTVL, static_cast<void*>(&val), sizeof(val)) < 0) {
 		dprintf(D_FULLDEBUG,
 			"Failed to set TCP keepalive interval to 5 seconds (errno=%d, %s)",
 			errno, strerror(errno));
@@ -899,7 +899,7 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 }
 
 
-int Sock::setsockopt(int level, int optname, const char* optval, int optlen)
+int Sock::setsockopt(int level, int optname, const void* optval, int optlen)
 {
 	/* if stream not assigned to a sock, do it now	*/
 	if (_state == sock_virgin) assign();
