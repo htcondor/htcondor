@@ -774,8 +774,8 @@ bool Sock::set_keepalive()
 				sizeof(user_timeout)) < 0)
 	{
 		dprintf(D_FULLDEBUG,
-			"Failed to set TCP keepalive interval to 5 seconds (errno=%d, %s)",
-			errno, strerror(errno));
+			"Failed to set TCP user timeout to %d seconds (errno=%d, %s)",
+			user_timeout / 1000, errno, strerror(errno));
 		result = false;
 	}
 #endif
