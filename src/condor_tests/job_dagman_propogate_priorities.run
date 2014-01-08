@@ -40,7 +40,8 @@ $dagman_args = "-verbose";
 	'job_dagman_propogate_priorities-C.out',
 	'job_dagman_propogate_priorities-D.out',
 	'job_dagman_propogate_priorities-E.out',
-	'job_dagman_propogate_priorities-F.out');
+	'job_dagman_propogate_priorities-F.out',
+	'job_dagman_propogate_priorities-G.out');
 
 # truly const variables in perl
 sub IDLE{1};
@@ -106,7 +107,7 @@ $success = sub {
 	}
 
 	# Check node priorities...
-	foreach ('nodeA','nodeB','nodeC','nodeD', 'nodeE', 'nodeF') {
+	foreach ('nodeA','nodeB','nodeC','nodeD', 'nodeE', 'nodeF', 'nodeG') {
 		if(! defined $priority{$_}){
 			CondorTest::debug("Did not see priority for $_\n");
 			$diditpass = 0;
@@ -136,6 +137,10 @@ $success = sub {
 	if ($priority{'nodeF'} != 0) {
 		$diditpass = 0;
 		CondorTest::debug("nodeF priority was $priority{'nodeF'}; should be 0\n");
+	}
+	if ($priority{'nodeG'} != 100) {
+		$diditpass = 0;
+		CondorTest::debug("nodeG priority was $priority{'nodeG'}; should be 100\n");
 	}
 
 	if($diditpass == 0) {

@@ -1,3 +1,8 @@
 JOB nodeD job_dagman_propogate_priorities-D.cmd
 VARS nodeD jobname="job_dagman_propogate_priorities-D"
 PRIORITY nodeD 10
+
+# Make sure node w/o explicit priority overrides submit file
+# priority when set by DAG priority.
+JOB nodeG job_dagman_propogate_priorities-D.cmd
+VARS nodeG jobname="job_dagman_propogate_priorities-G"
