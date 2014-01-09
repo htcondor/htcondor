@@ -821,6 +821,22 @@ else(MSVC)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wvolatile-register-var")
 	endif(cxx_Wvolatile_register_var)
 
+	check_cxx_compiler_flag(-Wunused-local-typedefs cxx_Wunused_local_typedefs)
+	if (cxx_Wunused_local_typedefs)
+		# we don't ever want the 'unused local typedefs' warning treated as an error.
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=unused-local-typedefs")
+	endif(cxx_Wunused_local_typedefs)
+
+	# check compiler flag not working for this flag.  
+	if (NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.8")
+	check_cxx_compiler_flag(-Wdeprecated-declarations cxx_Wdeprecated_declarations)
+	if (cxx_Wdeprecated_declarations)
+		# we use deprecated declarations ourselves during refactoring,
+		# so we always want them treated as warnings and not errors
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wdeprecated-declarations -Wno-error=deprecated-declarations")
+	endif(cxx_Wdeprecated_declarations)
+	endif()
+
 	# gcc on our AIX machines recognizes -fstack-protector, but lacks
 	# the requisite library.
 	if (NOT AIX)

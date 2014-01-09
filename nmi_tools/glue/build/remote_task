@@ -94,7 +94,7 @@ if( $taskname eq $EXTERNALS_TASK ) {
 elsif ($taskname eq $UNSTRIPPED_TASK) {
     $execstr = get_cmake_args();
     
-	if ($ENV{NMI_PLATFORM} =~ /_fedora(_)?1[6789]/i) {
+    if ($ENV{NMI_PLATFORM} =~ /_fedora(_)?[12][0-9]/i) {
 	 	$execstr .= " -DCONDOR_CXX_FLAGS:STRING=-Werror"
 	}
 
