@@ -898,13 +898,13 @@ int Sock::set_os_buffers(int desired_size, bool set_write_buf)
 	return current_size;
 }
 
-
 int Sock::setsockopt(int level, int optname, const void* optval, int optlen)
 {
 	/* if stream not assigned to a sock, do it now	*/
 	if (_state == sock_virgin) assign();
 
-	if(::setsockopt(_sock, level, optname, optval, optlen) < 0)
+	/* cast optval from void* to char*, as some platforms (Windows!) require this */
+	if(::setsockopt(_sock, level, optname, static_cast<const char*>(optval), optlen) < 0)
 	{
 		return FALSE;
 	}
