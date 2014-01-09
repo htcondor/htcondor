@@ -489,7 +489,7 @@ ReliSock::put_file( filesize_t *size, int fd, filesize_t offset, filesize_t max_
 			}
 
 			// Be very careful about where the cast to size_t happens; see gt#4150
-			nrd = ::read(fd, buf, (size_t)((bytes_to_send-total) < sizeof(buf) ? bytes_to_send-total : sizeof(buf)));
+			nrd = ::read(fd, buf, (size_t)((bytes_to_send-total) < (int)sizeof(buf) ? bytes_to_send-total : sizeof(buf)));
 
 			if( xfer_q ) {
 				t2.getTime();
