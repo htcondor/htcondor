@@ -41,11 +41,13 @@
 #define ATTR_AGGREGATE "Aggregate"
 #define ATTR_AGGREGATE_GROUP "AggregateGroup"
 #define ATTR_IP "IP"
+#define ATTR_SCALE "Scale"
 
 Metric::Metric():
 	derivative(false),
 	verbosity(0),
-	type(DOUBLE),
+    scale(1.0),
+	type(AUTO),
 	aggregate(NO_AGGREGATE),
 	sum(0),
 	count(0),
@@ -84,6 +86,13 @@ Metric::evaluate(char const *attr_name,classad::Value &result,classad::ClassAd &
 	if( !ad->EvaluateExpr(expr,result) ||
 		(type == STRING && !result.IsStringValue()) ||
 		(type == DOUBLE && !result.IsNumber()) ||
+        (type == FLOAT && !result.IsNumber()) ||
+        (type == INT8 && !result.IsIntegerValue()) ||
+        (type == UINT8 && !result.IsIntegerValue()) ||
+        (type == INT16 && !result.IsIntegerValue()) ||
+        (type == UINT16 && !result.IsIntegerValue()) ||
+        (type == INT32 && !result.IsIntegerValue()) ||
+        (type == UINT32 && !result.IsIntegerValue()) ||
 		(type == BOOLEAN && !result.IsBooleanValue()) )
 	{
 		retval = false;
@@ -283,16 +292,41 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	if( !evaluateOptionalString(ATTR_CLUSTER,cluster,metric_ad,daemon_ad,regex_groups) ) return false;
 
 	metric_ad.EvaluateAttrBool(ATTR_DERIVATIVE,derivative);
+    metric_ad.EvaluateAttrNumber(ATTR_SCALE,scale);
 
 	std::string type_str;
 	if( !evaluateOptionalString(ATTR_TYPE,type_str,metric_ad,daemon_ad,regex_groups) ) return false;
-	if( strcasecmp(type_str.c_str(),"double")==0 || type_str.empty() ) {
-		type = DOUBLE;
+	if( type_str.empty() ) {
+		type = AUTO;
 	}
-	else if( strcasecmp(type_str.c_str(),"string")==0 || type_str.empty() ) {
+	else if( strcasecmp(type_str.c_str(),"string")==0 ) {
 		type = STRING;
 	}
-	else if( strcasecmp(type_str.c_str(),"boolean")==0 || type_str.empty() ) {
+    else if( strcasecmp(type_str.c_str(),"int8")==0 ) {
+		type = INT8;
+	}
+    else if( strcasecmp(type_str.c_str(),"uint8")==0 ) {
+		type = UINT8;
+	}
+    else if( strcasecmp(type_str.c_str(),"int16")==0 ) {
+		type = INT16;
+	}
+    else if( strcasecmp(type_str.c_str(),"uint16")==0 ) {
+		type = UINT16;
+	}
+    else if( strcasecmp(type_str.c_str(),"int32")==0 ) {
+		type = INT32;
+	}
+    else if( strcasecmp(type_str.c_str(),"uint32")==0 ) {
+		type = UINT32;
+	}
+    else if( strcasecmp(type_str.c_str(),"float")==0 ) {
+		type = FLOAT;
+	}
+    else if( strcasecmp(type_str.c_str(),"double")==0 ) {
+		type = DOUBLE;
+	}
+	else if( strcasecmp(type_str.c_str(),"boolean")==0 ) {
 		type = BOOLEAN;
 	}
 	else {
@@ -315,6 +349,17 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 	if( value.IsUndefinedValue() ) {
 		return false;
 	}
+    if ( type == AUTO ) {
+        if (value.IsBooleanValue() ) {
+            type = BOOLEAN;
+        } else if ( value.IsIntegerValue() )  {
+            type = INT32;
+        } else if ( value.IsNumber() ) {
+            type = FLOAT;
+        } else if ( value.IsStringValue() ) {
+            type = STRING;
+        }
+    }
 
 	if( isAggregateMetric() ) {
 		machine = statsd->getDefaultAggregateHost();
@@ -350,10 +395,12 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 bool
 Metric::getValueString(std::string &result) const {
 	switch( type ) {
+        case FLOAT:
 		case DOUBLE: {
 			double dbl = 0.0;
 			if( value.IsNumber(dbl) ) {
-				formatstr(result,"%f",dbl);
+                dbl *= scale;
+				formatstr(result,"%g",dbl);
 				return true;
 			}
 			break;
@@ -364,12 +411,30 @@ Metric::getValueString(std::string &result) const {
 			}
 			break;
 		}
+        case INT8:
+        case UINT8:
+        case INT16:
+        case UINT16:
+        case INT32:
+        case UINT32: {
+            int i = 0;
+            if( value.IsIntegerValue(i) ) {
+                i *= scale;
+                formatstr(result,"%d",i);
+                return true;
+            }
+            break;
+        }
 		case BOOLEAN: {
 			bool v = false;
 			if( value.IsBooleanValue(v) ) {
 				formatstr(result,"%d",v==true);
 				return true;
 			}
+			break;
+		}
+		case AUTO: {
+			// Shouldn't happen
 			break;
 		}
 	}
@@ -433,12 +498,20 @@ Metric::convertToNonAggregateValue() {
 		case MIN:
 		case MAX:
 		case SUM: {
-			value.SetRealValue(sum);
+            if (type == FLOAT || type == DOUBLE) {
+                value.SetRealValue(sum);
+            } else {
+                value.SetIntegerValue((int)sum);
+            }
 			break;
 		}
 		case AVG: {
 			if( count != 0 ) {
-				value.SetRealValue(sum/count);
+                if (type == FLOAT || type == DOUBLE) {
+                    value.SetRealValue(sum/count);
+                } else {
+                    value.SetIntegerValue((int)(sum/count));
+                }
 			}
 			else {
 				value.SetErrorValue();

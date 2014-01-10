@@ -26,9 +26,17 @@
 char const *
 GangliaMetric::gangliaMetricType() const {
 	switch( type ) {
+    case AUTO: return "auto";
+    case FLOAT: return "float";
 	case DOUBLE: return "double";
 	case STRING: return "string";
-	case BOOLEAN: return "double";
+	case BOOLEAN: return "int8";
+    case INT8: return "int8";
+    case UINT8: return "uint8";
+    case INT16: return "int16";
+    case UINT16: return "uint16";
+    case INT32: return "int32";
+    case UINT32: return "uint32";
 	}
 	EXCEPT("Unexpected metric type: %d",type);
 	return NULL;
@@ -36,7 +44,7 @@ GangliaMetric::gangliaMetricType() const {
 
 int
 GangliaMetric::gangliaSlope() const {
-	return derivative ? GANGLIA_SLOPE_DERIVATIVE : GANGLIA_SLOPE_UNSPECIFIED;
+	return derivative ? GANGLIA_SLOPE_DERIVATIVE : GANGLIA_SLOPE_BOTH;
 }
 
 GangliaD::GangliaD():
