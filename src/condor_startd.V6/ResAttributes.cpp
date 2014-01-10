@@ -1362,7 +1362,7 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 				attr = "Assigned";
 				attr += j->first;
 				string ids;
-				join(k->second, ", ", ids);
+				join(k->second, ",", ids);
 				cp->Assign(attr.c_str(), ids.c_str());
 			}
 		}

@@ -3081,6 +3081,38 @@ CStarter::PublishToEnv( Env* proc_env )
  
 	MyString env_name;
 
+		// if there are non-fungible assigned resources (i.e. GPUs) pass those assignments down in the environment
+		// we look through all machine resource names looking for an attribute Assigned*, if we find one
+		// then we publish it's value in the environment as _CONDOR_Assigned*,  so for instance, if there is
+		// an AssignedGPU attribute in the machine add, there will be a _CONDOR_AssignedGPU environment
+		// variable with the same value.
+	ClassAd * mad = jic->machClassAd();
+	if (mad) {
+		MyString restags;
+		if (mad->LookupString(ATTR_MACHINE_RESOURCES, restags)) {
+			StringList tags(restags.c_str());
+			tags.rewind();
+			const char *tag;
+			while ((tag = tags.next())) {
+				MyString attr("Assigned"); attr += tag;
+				MyString assigned;
+				if (mad->LookupString(attr.c_str(), assigned)) {
+					env_name = base;
+					env_name += attr;
+					proc_env->SetEnv( env_name.Value(), assigned.c_str() );
+
+					// also allow a configured alternate environment name
+					MyString param_name("ENVIRONMENT_NAME_FOR_"); param_name += attr;
+					if (param(env_name, param_name.c_str())) {
+						if ( ! env_name.empty()) {
+							proc_env->SetEnv( env_name.Value(), assigned.c_str() );
+						}
+					}
+				}
+			}
+		}
+	}
+
 		// path to the output ad, if any
 	const char* output_ad = jic->getOutputAdFile();
 	if( output_ad && !(output_ad[0] == '-' && output_ad[1] == '\0') ) {
