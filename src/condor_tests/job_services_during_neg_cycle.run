@@ -107,7 +107,7 @@ my $on_submit = sub {
 		CondorLog::RunCheckMultiple(
 			daemon => "Negotiator",
 			match_new => "true",
-			match_timeout => 80,
+			match_timeout => 600,
 			match_regexp => "Started Negotiation Cycle",
 			match_callback => $on_match,
 		);
@@ -120,73 +120,45 @@ my $on_submit = sub {
 		}
 
 		# do my condor_userprios
-		my @prioutput = `condor_userprio`;
-		my @condorreconfig = `condor_reconfig`;
-		RunNTimes("condor_reconfig",1);
-		RunNTimes("condor_userprio",5);
+		#my @prioutput = `condor_userprio`;
+		#my @condorreconfig = `condor_reconfig`;
+		runToolNTimes("condor_userprio",1,0);
+		runToolNTimes("condor_reconfig",1,0);
 
-		# find the next end of a negotiation cycle
-		$matchonnextend = 1;
-		CondorLog::RunCheckMultiple(
-			daemon => "Negotiator",
-			match_new => "true",
-			match_timeout => 80,
-			match_regexp => "Finished Negotiation Cycle",
-			match_callback => $on_match,
-		);
-		$matchonnextend = 0;
-		print "Looking for new - Finished Negotiation Cycle - ";
-		if($matchednextend eq $failure) {
-			print "$failure\n";
-		} else {
-			print "OK\n";
-		}
-
+		runToolNTimes("condor_reconfig",1,0);
+		runToolNTimes("condor_userprio",5,0);
 
 		# find the one  finish after our begin
+		print "RunCheckMultiple find Finished Negotiation Cycle after $matchedbegin\n";
 		$matchonendafterbegin = 1;
 		CondorLog::RunCheckMultiple(
 			daemon => "Negotiator",
 			match_new => "false",
-			match_timeout => 80,
+			match_timeout => 600,
 			match_regexp => "$matchedbegin",
 			match_after_regexp => "Finished Negotiation Cycle",
 			match_callback => $on_match,
 		);
 		$matchonendafterbegin = 0;
-		print "Looking for the Finish which follows my Bigin - Finished Negotiation Cycle - ";
+		print "Looking for the Finish which follows my Begin - Finished Negotiation Cycle - ";
 		if($matchedendafterbegin eq $failure) {
 			print "$failure\n";
 		} else {
 			print "OK\n";
 		}
 
-
-		# are they the same?
-
-		if($matchednextend eq $matchedendafterbegin) {
-			print "Good. Got End of Negotiation Cyle we expected\n";
-		} else {
-			print "Expected the next Finish Negotiator Cycle to be this one:\n";
-			print "$matchedendafterbegin\n";
-			print "But got this one:\n";
-			print "$matchednextend\n";
-			die "All bets are off as we did not find the cycle end we expected\n";
-		}
-
-
 		# Were all the condor_userprios done within the cycle?
 		CondorLog::RunCheckMultiple(
 			daemon => "Negotiator",
 			match_new => "false",
-			match_timeout => 80,
+			match_timeout => 600,
 			match_instances => 1,
 			match_regexp => "$matchedbegin",
 			match_between_regexp => "Return from HandleReq <GET_PRIORITY_commandHandler>",
 			match_after_regexp => "$matchedendafterbegin",
 			match_callback => $on_match,
 		);
-		print "Looking for how many Return from HandleReq <GET_PRIORITY... come betweem <$matchedbegin> and <$matchedendafterbegin> - ";
+		print "Looking for how many Return from HandleReq: GET_PRIORITY... come between: $matchedbegin and $matchedendafterbegin - ";
 		if($match eq $failure) {
 			print "$failure\n";
 		} else {
@@ -199,7 +171,7 @@ my $on_submit = sub {
 		CondorLog::RunCheckMultiple(
 			daemon => "Negotiator",
 			match_new => "false",
-			match_timeout => 80,
+			match_timeout => 600,
 			match_instances => 1,
 			match_regexp => "$matchedbegin",
 			match_between_regexp => "Got SIGHUP.  Re-reading config files.",
@@ -222,7 +194,7 @@ my $on_submit = sub {
 		CondorLog::RunCheckMultiple(
 			daemon => "Negotiator",
 			match_new => "true",
-			match_timeout => 80,
+			match_timeout => 600,
 			match_regexp => "Started Negotiation Cycle",
 			match_callback => $on_match,
 		);
@@ -236,16 +208,16 @@ my $on_submit = sub {
 		}
 
 
-		RunNTimes("condor_userprio",1);
-		RunNTimes("condor_off -fast -daemon negotiator",1);
-		RunNTimes("condor_userprio",5);
+		runToolNTimes("condor_userprio",1,0);
+		runToolNTimes("condor_off -fast -daemon negotiator",1,0);
+		runToolNTimes("condor_userprio",5,0);
 
 		# find the last negotiator end and store the match
 		$matchonfinalfinish = 1;
 		CondorLog::RunCheckMultiple(
 			daemon => "Negotiator",
 			match_new => "true",
-			match_timeout => 80,
+			match_timeout => 600,
 			match_regexp => "Finished Negotiation Cycle",
 			match_callback => $on_match,
 		);
@@ -262,7 +234,7 @@ my $on_submit = sub {
 		CondorLog::RunCheckMultiple(
 			daemon => "Negotiator",
 			match_new => "false",
-			match_timeout => 80,
+			match_timeout => 600,
 			match_regexp => "$matchedfinalfinish",
 			match_after_regexp => "Got SIGQUIT.  Performing fast shutdown.",
 			match_callback => $on_match,
@@ -282,8 +254,8 @@ my $on_submit = sub {
 			# die "condor_off -fast -daemon negotiator happened After Negotiation Cycle Finished\n";
 		}
 
-		system("condor_rm -all");
-		system("condor_rm -forcex -all");
+		runToolNTimes("condor_rm -all",1,0);
+		runToolNTimes("condor_rm -forcex -all",1,0);
 		CondorTest::EndTest();
 	}
 };
@@ -330,31 +302,31 @@ sub CheckExpectations
 	} 
 }
 
-sub RunNTimes
-{
-	my $cmd = shift;
-	my $goal = shift;
-	my $wantoutput = shift;
+# sub RunNTimes
+# {
+# 	my $cmd = shift;
+# 	my $goal = shift;
+# 	my $wantoutput = shift;
 
-	my $count = 0;
-	my $stop = 0;
-	my @cmdout = ();
-	my @date = ();
-	$stop = $goal;
+# 	my $count = 0;
+# 	my $stop = 0;
+# 	my @cmdout = ();
+# 	my @date = ();
+# 	$stop = $goal;
 
-	while($count < $stop) {
-		@cmdout = ();
-		@date = ();
-		@date = `date`;
-		chomp $date[0];
-		print "$date[0] $cmd $count\n";
-		@cmdout = `$cmd`;
+# 	while($count < $stop) {
+# 		@cmdout = ();
+# 		@date = ();
+# 		@date = `date`;
+# 		chomp $date[0];
+# 		print "$date[0] $cmd $count\n";
+# 		@cmdout = `$cmd`;
 
-		if(defined $wantoutput) {
-			foreach my $line (@cmdout) {
-				print "$line\n";
-			}
-		}
-		$count += 1;
-	}
-}
+# 		if(defined $wantoutput) {
+# 			foreach my $line (@cmdout) {
+# 				print "$line\n";
+# 			}
+# 		}
+# 		$count += 1;
+# 	}
+# }

@@ -1528,7 +1528,7 @@ static void test_functions(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -1720,7 +1720,7 @@ static void test_function_int(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -1848,7 +1848,7 @@ static void test_function_ifthenelse(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -2056,7 +2056,7 @@ static void test_function_stringlists(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -2522,7 +2522,7 @@ static void test_function_real(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -2642,7 +2642,7 @@ static void test_function_string(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -2691,7 +2691,7 @@ static void test_function_strcat(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -2745,7 +2745,7 @@ static void test_function_floor(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -2829,7 +2829,7 @@ static void test_function_ceiling(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -2913,7 +2913,7 @@ static void test_function_round(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -3002,7 +3002,7 @@ static void test_function_random(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -3065,7 +3065,7 @@ static void test_function_isstring(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -3118,7 +3118,7 @@ static void test_function_isundefined(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -3172,7 +3172,7 @@ static void test_function_iserror(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -3251,7 +3251,7 @@ static void test_function_isinteger(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -3358,7 +3358,7 @@ static void test_function_isreal(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -3467,7 +3467,7 @@ static void test_function_isboolean(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -3516,7 +3516,7 @@ static void test_function_formattime(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -3639,7 +3639,7 @@ static void test_function_substr(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -3752,7 +3752,7 @@ static void test_function_strcmp(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -3884,7 +3884,7 @@ static void test_function_attrnm(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -3935,7 +3935,7 @@ static void test_function_regexp(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -4121,7 +4121,7 @@ static void test_function_stringlists_regexpmember(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);
@@ -4280,7 +4280,7 @@ static void test_function_XXX(
 
 	ClassAd  *classad;
 
-	config(0);
+	config();
 
 	classad = new ClassAd;
 	classad->initFromString(classad_string, NULL);

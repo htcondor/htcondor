@@ -131,7 +131,7 @@ on page~\pageref{man-condor-userprio}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Priorities in Negotiation and Preemption}
+\subsection{\label{sec:Priorities-in-Negotiation-and-Preemption}Priorities in Negotiation and Preemption}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{negotiation!priority}
 \index{matchmaking!priority}
@@ -539,199 +539,278 @@ issues.
 \index{negotiation!by group}
 \index{groups!quotas}
 \index{quotas!hierarchical quotas for a group}
-An upper limit on the number of slots/machines allocated for a group
-of users can be specified with group quotas.
-The use of these group quotas modifies the negotiation for 
-available resources (machines) within an HTCondor pool.
-When accounting groups together with group quotas are specified,
-the priorities and usage information are calculated per user.
-Numbers of slots/machines can be negotiated for preferentially
-by group.
-This may be useful when
-different groups (of varying size) own computers,
-and the groups choose to combine their computers to
-form an HTCondor pool.
-Consider an imaginary HTCondor pool example with thirty computers;
-twenty computers are owned by the physics group and ten
-computers are owned by the chemistry group.
-One notion of fair allocation could be implemented 
-by configuring the twenty machines owned by the physics group
-to prefer (using the \MacroNI{RANK} configuration macro)
-jobs submitted by the users identified as associated
-with the physics group.
-Likewise, the ten machines owned by the chemistry group are
-configured to prefer jobs from users associated with the
-the chemistry group.
-This routes jobs to execute on specific machines,
-perhaps causing more preemption than necessary.
-The (fair allocation) policy desired is likely somewhat different,
-if these thirty machines have been pooled.
-The desired policy does not tie users to specific sets of machines,
-but caps the maximum number of slots/machines (a quota).
-Given thirty similar machines,
-the desired policy allows users within the physics group to have
-preference on up to twenty of the machines within the pool,
-and the machines can be any of the machines that are available.
+An upper limit on the number of slots allocated to a group
+of users can be specified with group quotas.  
+This policy may be desired when different groups provide their computers
+to create one large HTCondor pool, and want to restrict the number
+of jobs running from one group to the number of machines the group
+has provided.
 
-The implementation of quotas is hierarchical,
-such that quotas may be described for groups, subgroups,
-sub subgroups, etc.  
-The hierarchy is described by adherence to a naming scheme
-set up in advance.
-Configuration defines the quotas in terms of limiting the number of
-cores allocated for a group or subgroup.  
-And, the jobs state which group or subgroup they are part of.
+Consider an example pool with thirty slots:
+twenty slots are owned by the physics group and ten
+are owned by the chemistry group.  The desired
+policy is that no more than twenty concurrent jobs are ever running
+from the physicists, and only ten from the chemists.
+These machines are otherwise identical, so it does not matter
+which machines run which group's jobs.
+It only matters that the proportions of allocated slots are correct.
 
-A quota for a set of users requires an identification of
-the set; members are called group users.
-Group users' jobs identify themselves as desiring negotiation
-under the group by setting the \SubmitCmd{accounting\_group}
-command in the submit description file,
-as specified in section~\ref{sec:group-accounting}.
+Instead of quotas, this could be implemented by configuring 
+the \MacroNI{RANK} expression such that the twenty machines owned by 
+the physics group prefer jobs submitted by the physics users.
+Likewise, the ten machines owned by the chemistry group are configured 
+to prefer jobs submitted by the chemistry group. 
+However, this steers jobs to execute on specific machines, 
+instead of the desired policy which allocates numbers of machines,
+where these machines can be any of the pool's machines that are available.
 
-The hierarchy is identified by using the period ('.') character
-to separate a group name from a subgroup name from a sub subgroup
-name, etc.
+Group quotas may implement this policy.
+Define the groups and set their quotas in the 
+configuration of the central manager:
+
+\begin{verbatim}
+  GROUP_NAMES = group_physics, group_chemistry
+  GROUP_QUOTA_group_physics =   20
+  GROUP_QUOTA_group_chemistry = 10
+\end{verbatim}
+
+The implementation of quotas is hierarchical, 
+such that quotas may be described for the tree of groups, subgroups, 
+sub subgroups, etc.
+Group names identify the groups,  
+such that the configuration can define the quotas in terms of 
+limiting the number of cores allocated for a group or subgroup. 
+Group names do not need to begin with \AdStr{group\_}, 
+but that is the convention, 
+which helps to avoid naming conflicts between groups and subgroups.  
+The hierarchy is identified by using the period ('.') character to 
+separate a group name from a subgroup name from a sub subgroup name, etc.
 Group names are case-insensitive for negotiation.
-The topmost level group name is not required to begin with the
-string \AdStr{group\_},
-as in the examples
-\AdStr{group\_physics.experiment1} and \AdStr{group\_chemistry.organic},
-but it is a useful convention,
-because group names must not conflict with subgroup names.
-
-Configuration controls the order of negotiation for
-groups, subgroups within the hierarchy defined, and individual users,
-as well as sets quotas.
 
 \index{<none> group}
 \index{group accounting!<none> group}
-When at least one group quota is defined,
-HTCondor must still do negotiation for jobs that are not party
-to the groups.
-Any job that is \emph{not} part of any group is considered part of the
-invented \AdStr{<none>} group that is the top or root of the
-hierarchical tree of groups.
-This string will appear in the output of \Condor{status}.
+At the root of the tree that defines the hierarchical groups is the
+invented "<none>" group. 
+The implied quota of the "<none>" group will be all available slots.
+This string will appear in the output of \Condor{status}. 
 
-Quotas are categorized as either static or dynamic.
-A static quota specifies an integral numbers of machines (slots),
-independent of the size of the pool.
-A dynamic quota specifies a percentage of machines (slots) calculated
-based on the current number of machines in the pool.
-It is intended that only one of static or a dynamic quotas are defined 
-for a specified group and for the pool.
-If both are defined for a group, then the static quota is implemented, 
-and the dynamic quota is ignored.
-The behavior is not defined and not documented
-for pools with both static and dynamic quotas defined.
+If the sum of the child quotas exceeds the parent, 
+then the child quotas are scaled down in proportion to their relative sizes.
+For the given example, 
+there were 30 original slots at the root of the tree.
+If a power failure removed half of the original 30,
+leaving fifteen slots,
+physics would be scaled back to a quota of ten, 
+and chemistry to five.  
+This scaling can be disabled by setting the \Condor{negotiator}
+configuration variable \Macro{NEGOTIATOR\_ALLOW\_QUOTA\_OVERSUBSCRIPTION}
+to \Expr{True}.
+If the sum of the child quotas is less than that of the parent, 
+the child quotas remain intact; they are not scaled up.
+That is, if somehow the number of slots doubled from thirty to sixty, 
+physics would still be limited to 20 slots, 
+and chemistry would be limited to 10.
+This example in which the quota is defined by absolute
+values is called a static quota.
 
-\begin{description}
-\item[Static Quotas]
-In the hierarchical implementation,
-there are two cases defined here,
-to specify for the allocation of machines where
-there is both a group and a subgroup.
-In the first case, the sum for the numbers of machines
-within all of a group's subgroups totals to fewer than the specification for
-the group's static quota.
+Each job must state which group it belongs to.  
+Currently this is opt-in, 
+and the system trusts each user to put the correct group 
+in the submit description file.
+Jobs that do not identify themselves as a group member are 
+negotiated for as part of the  "<none>" group.
+Note that this requirement is per job, not per user.  
+A given user may be a member of many groups.
+Jobs identify which group they are in by setting the 
+\SubmitCmd{accounting\_group}
+and \SubmitCmd{accounting\_group\_user} commands within
+the submit description file, 
+as specified in section~\ref{sec:group-accounting}.
+For example:
+
+\begin{verbatim}
+accounting_group = group_physics
+accounting_group_user = einstein
+\end{verbatim}
+
+The size of the quotas may instead be expressed as a proportion.
+This is then referred to as a dynamic group quota, 
+because the size of the quota is dynamically recalculated every
+negotiation cycle, 
+based on the total available size of the pool.
+Instead of using static quotas,
+this example can be recast using dynamic quotas, 
+with one-third of the pool allocated to chemistry and two-thirds to physics.
+The quotas maintain this ratio even as the size of the pool changes,
+perhaps because of machine failures, 
+because of the arrival of new machines within the pool,
+or because of other reasons.  
+The job submit description files remain the same. 
+Configuration on the central manager becomes:
+
+\begin{verbatim}
+  GROUP_NAMES = group_physics, group_chemistry
+  GROUP_QUOTA_DYNAMIC_group_chemistry = 0.33
+  GROUP_QUOTA_DYNAMIC_group_physics =   0.66
+\end{verbatim}
+
+The values of the quotas must be less than 1.0, indicating fractions
+of the pool's machines.
+As with static quota specification, 
+if the sum of the children exceeds one, 
+they are scaled down proportionally so that their sum does equal 1.0.
+If their sum is less than one, they are not changed.
+
+Extending this example to incorporate subgroups,
+assume that the physics group consists of high-energy (hep) 
+and low-energy (lep) subgroups.
+The high-energy sub-group owns fifteen of the twenty physics slots, 
+and the low-energy group owns the remainder.
+Groups are distinguished from subgroups by an intervening 
+period character (\verb@.@) in the group's name.
+Static quotas for these subgroups extend the example configuration:
+
+\footnotesize
+\begin{verbatim}
+  GROUP_NAMES = group_physics, group_physics.hep, group_physics.lep, group_chemistry
+  GROUP_QUOTA_group_physics     =   20
+  GROUP_QUOTA_group_physics.hep =   15
+  GROUP_QUOTA_group_physics.lep =    5
+  GROUP_QUOTA_group_chemistry   =   10
+\end{verbatim}
+\normalsize
+
+This hierarchy may be more useful when dynamic quotas are used.
+Here is the example, using dynamic quotas:
+
+\footnotesize
+\begin{verbatim}
+  GROUP_NAMES = group_physics, group_physics.hep, group_physics.lep, group_chemistry
+  GROUP_QUOTA_DYNAMIC_group_chemistry   =   0.33334
+  GROUP_QUOTA_DYNAMIC_group_physics     =   0.66667
+  GROUP_QUOTA_DYNAMIC_group_physics.hep =   0.75
+  GROUP_QUOTA_DYNAMIC_group_physics.lep =   0.25
+\end{verbatim}
+\normalsize
+
+The fraction of a subgroup's quota is expressed with respect to
+its parent group's quota.
+That is, 
+the high-energy physics subgroup is allocated 75\% of the 66\% that 
+physics gets of the entire pool, however many that might be.
+If there are 30 machines in the pool, that
+would be the same 15 machines as specified in the static quota example.
+
+High-energy physics users indicate which group their jobs 
+should go in with the submit description file identification:
+
+\begin{verbatim}
+accounting_group = group_physics.hep
+accounting_group_user = higgs
+\end{verbatim}
+
+In all these examples so far,
+the hierarchy is merely a notational convenience.
+Each of the examples could be implemented with a flat structure, 
+although it might be more confusing for the administrator.
+Surplus is the concept that creates a true hierarchy.
+
+If a given group or sub-group accepts surplus, 
+then that given group is allowed to exceed its configured quota, 
+by using the leftover, unused quota of other groups.
+Surplus is disabled for all groups by default.  
+Accepting surplus may be enabled for all groups by setting
+\Macro{GROUP\_ACCEPT\_SURPLUS} to \Expr{True}.
+Surplus may be enabled for individual groups
+by setting \Macro{GROUP\_ACCEPT\_SURPLUS\_<groupname>} to \Expr{True}.
+Consider the following example:
+
+\footnotesize
+\begin{verbatim}
+  GROUP_NAMES = group_physics, group_physics.hep, group_physics.lep, group_chemistry
+  GROUP_QUOTA_group_physics     =   20
+  GROUP_QUOTA_group_physics.hep =   15
+  GROUP_QUOTA_group_physics.lep =    5
+  GROUP_QUOTA_group_chemistry   =   10
+  GROUP_ACCEPT_SURPLUS = false
+  GROUP_ACCEPT_SURPLUS_group_physics = false
+  GROUP_ACCEPT_SURPLUS_group_physics.lep = true
+  GROUP_ACCEPT_SURPLUS_group_physics.hep = true
+\end{verbatim}
+\normalsize
+
+This configuration is the same as above for the chemistry users.
+However, \MacroNI{GROUP\_ACCEPT\_SURPLUS} is set to \Expr{False} globally, 
+\Expr{False} for the physics parent group, 
+and \Expr{True} for the subgroups group\_physics.lep and group\_physics.lep.
+This means that group\_physics.lep and group\_physics.hep
+are allowed to exceed their quota of 15 and 5, 
+but their sum cannot exceed 20, for that is their parent's quota.
+If the group\_physics had \MacroNI{GROUP\_ACCEPT\_SURPLUS} set to \Expr{True},
+then either group\_physics.lep and group\_physics.hep would not 
+be limited by quota.  
+
+Surplus slots are distributed bottom-up from within the quota tree.
+That is, any leaf nodes of this tree with 
+excess quota will share it with any peers which accept surplus. 
+Any subsequent excess will then be 
+passed up to the parent node and over to all of its children, recursively.
+Any node that does not accept surplus implements a hard cap on the 
+number of slots that the sum of it's children use.
+
+After the \Condor{negotiator} calculates the quota assigned to each group, 
+possibly adding in surplus, 
+it then negotiates with the \Condor{schedd} daemons in the system to 
+try to match jobs to each group.
+It does this one group at a time.  
+By default, it goes in "starvation group order." 
+That is, the group whose current usage is farthest under its quota goes first,
+then the next, and so on.  
+The "<none>" group implicitly at the root of the tree goes last.
+This ordering can be replaced by defining configuration variable
+\Macro{GROUP\_SORT\_EXPR}.
+The \Condor{negotiator} evaluates this ClassAd expression for each group 
+ClassAd, 
+sorts the group by the floating point result, 
+and then negotiates with the largest positive value going first.
+Useful attributes to use are documented
+in section~\ref{sec:Priorities-in-Negotiation-and-Preemption}.
+
+One possible group quota policy is strict priority.
+For example, a site prefers physics users to match as many slots as they can,
+and only when all the physics jobs are running, 
+and idle slots remain,
+are chemistry jobs allowed to run.  
+The default "starvation group order" can be used to implement this.  
+By setting configuration variable 
+\Macro{NEGOTIATOR\_ALLOW\_QUOTA\_OVERSUBSCRIPTION} to \Expr{True},
+and setting the physics quota to a number so large that it cannot ever be met,
+such as one million, 
+the physics group will always be the "most starving" group,
+will always negotiate first, 
+and will always be unable to meet the quota.  
+Only when all the physics jobs are running
+will the chemistry jobs then run.  If the chemistry quota is set to a value smaller than physics, but still larger than the
+pool, this policy can support a third, even lower priority group, and so on.
+
+The \Condor{userprio} command can show the current quotas in effect, 
+and the current usage by group.
 For example:
 \begin{verbatim}
-  GROUP_QUOTA_group_physics = 100
-  GROUP_QUOTA_group_physics.experiment1 = 20
-  GROUP_QUOTA_group_physics.experiment2 = 70
+$ condor_userprio -quotas
+Last Priority Update: 11/12 15:18
+Group                          Effective  Config     Use    Subtree  Requested 
+Name                             Quota     Quota   Surplus   Quota   Resources 
+------------------------------ --------- --------- ------- --------- ----------
+group_physics.hep                  15.00     15.00 no          15.00         60
+group_physics.lep                   5.00      5.00 no           5.00         60
+------------------------------ --------- --------- ------- --------- ----------
+Number of users: 2                                 ByQuota                     
 \end{verbatim}
-In this case, the unused quota of 10 machines is assigned to
-the \Expr{group\_physics} submitters.  
 
-In the second case, the specification for the numbers of machines
-of a set of subgroups totals to more than the specification for
-the group's quota.
-For example:
-\begin{verbatim}
-  GROUP_QUOTA_group_chemistry = 100
-  GROUP_QUOTA_group_chemistry.lab1 = 40
-  GROUP_QUOTA_group_chemistry.lab2 = 80
-\end{verbatim}
-In this case, 
-a warning is written to the log for the \Condor{negotiator} daemon,
-and each of the subgroups will have their static quota scaled.
-In this example, the ratio 100/120 scales each subgroup.
-\Expr{lab1} will have a revised (floating point) quota of 33.333 machines,
-and \Expr{lab2} will have a revised (floating point) quota of 66.667 machines.
-As numbers of machines are always integer values,
-the floating point values are truncated for quota allocation.
-Fractional remainders resulting from the truncation are summed
-and assigned to the next higher level within the group hierarchy.
-
-\item[Dynamic Quotas]
-A dynamic quota specifies a percentage of machines (slots) calculated
-based on the quota of the next higher level group within the hierarchy.
-For groups at the top level, a dynamic quota specifies a percentage of
-machines (slots) that currently exist in the pool.
-The quota is specified for a group (subgroup, etc.) by a floating point
-value in range 0.0 to 1.0 (inclusive).
-
-Like static quota specification, there are two cases defined:
-when the dynamic quotas of all sub groups of a specific group
-sum to a fraction less than 1.0,
-and when the dynamic quotas of all sub groups of a specific group
-sum to greater than 1.0.
-
-Here is an example configuration in which dynamic group quotas are assigned for
-a single group and its subgroups.
-\begin{verbatim}
-  GROUP_QUOTA_DYNAMIC_group_econ = .6
-  GROUP_QUOTA_DYNAMIC_group_econ.project1 = .2
-  GROUP_QUOTA_DYNAMIC_group_econ.project2 = .15
-  GROUP_QUOTA_DYNAMIC_group_econ.project3 = .2
-\end{verbatim}
-The sum of dynamic quotas for the subgroups is .55, 
-which is less than 1.0.
-If the pool has 100 slots, 
-then the \Expr{project1} subgroup is assigned a quota that
-equals (100)(.6)(.2) = 12 machines. 
-The \Expr{project2} subgroup is assigned a quota that
-equals (100)(.6)(.15) = 9 machines. 
-The \Expr{project3} subgroup is assigned a quota that
-equals (100)(.6)(.2) = 12 machines. 
-The 60-33=27 machines unused by the subgroups are assigned
-for use by job submitters in the parent \Expr{group\_econ} group.
-
-If the calculated dynamic quota of the subgroups resulted in non integer
-numbers of machines,
-integer numbers of machines are assigned based on the truncation of the
-non integer dynamic group quota.
-The unused, surplus quota of machines resulting from
-fractional remainders resulting from the truncation are summed
-and assigned to the next higher level within the group hierarchy.
-
-Here is another example configuration in which dynamic group quotas 
-are assigned for a single group and its subgroups.
-\begin{verbatim}
-  GROUP_QUOTA_DYNAMIC_group_stat = .5
-  GROUP_QUOTA_DYNAMIC_group_stat.project1 = .4
-  GROUP_QUOTA_DYNAMIC_group_stat.project2 = .3
-  GROUP_QUOTA_DYNAMIC_group_stat.project3 = .4
-\end{verbatim}
-In this case, the sum of dynamic quotas for the subgroups is 1.1, 
-which is greater than 1.0 .
-A warning is written to the log for the \Condor{negotiator} daemon,
-and each of the subgroups will have their dynamic group quota scaled
-for this example.
-.4 becomes .4/1.1=.3636,
-and .3 becomes .3/1.1=.2727 .
-If the pool has 100 slots, 
-then each of the \Expr{project1} and \Expr{project3} subgroups 
-is assigned a dynamic quota of
-(100)(.5)(.3636), which is 18.1818 machines. 
-The \Expr{project2} subgroup is assigned a dynamic quota of
-(100)(.5)(.2727), which is 13.6364 machines. 
-The quota for each of \Expr{project1} and \Expr{project3} results 
-in the truncated amount of 18 machines,
-and \Expr{project2} results in the truncated amount of 13 machines,
-with the 0.1818 + .6364 + .1818 = 1.0 remaining machine assigned to
-job submitters in the parent group, \Expr{group\_stat}. 
-
-\end{description}
+This shows that there are two groups, each with 60 jobs in the queue.  
+group\_physics.hep has a quota of 15 machines, 
+and group\_physics.lep has 5 machines.  
+Other options to \Condor{userprio},
+such as \Opt{-most} will also show the number of resources in use.
 

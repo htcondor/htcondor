@@ -57,6 +57,7 @@ Any number of \Arg{custom options} and \Arg{host options} may be specified.
       of the COD claim.}
     \OptItem{\Opt{-collector}}{(Query option) Query \Condor{collector} ClassAds
       and display attributes}
+    \OptItem{\Opt{-defrag}}{(Query option) Query \Condor{defrag} ClassAds} 
     \OptItem{\OptArg{-direct}{hostname}}{(Query option) Go directly to
       the given host name to get the ClassAds to display.  
       By default, returns the \Condor{startd} ClassAd.  
@@ -86,8 +87,8 @@ Any number of \Arg{custom options} and \Arg{host options} may be specified.
       used if the \Opt{-direct} option has been specified.
       Identifies which Statistics attributes to include in the ClassAd.
       \Arg{WhichStatistics} is specified using the same syntax as defined 
-      for \MacroNI{STATISTICS\_TO\_PUBLISH}.  See the definition at
-      ~\ref{param:StatisticsToPublish} for details.}
+      for \MacroNI{STATISTICS\_TO\_PUBLISH}.  A definition is in the
+      HTCondor Administrator's manual section on configuration.}
     \OptItem{\Opt{-storage}}{(Query option) Display attributes of machines
       with network storage resources.}
     \OptItem{\Opt{-submitters}}{(Query option) Query ClassAds sent by submitters and
@@ -141,9 +142,7 @@ Any number of \Arg{custom options} and \Arg{host options} may be specified.
       obtained from the ClassAds web page, with a link at
       \URL{http://research.cs.wisc.edu/htcondor/research.html}.}
     \OptItem{\OptArg{-constraint}{const}}{(Custom option) Add constraint 
-      expression.  See section~\ref{sec:classad-reference} and
-      section~\ref{sec:classad-query-examples} for
-      details on ClassAds and on writing expressions.}
+      expression.  }
     \OptItem{\OptArg{-format}{fmt attr}}{(Custom option) Display attribute
       or expression \Arg{attr} in format \Arg{fmt}.
       To display the attribute or expression the format must contain a single
@@ -203,6 +202,9 @@ Any number of \Arg{custom options} and \Arg{host options} may be specified.
 
       The newline and comma characters may \emph{not} be used together.
       }
+    \OptItem{\OptArg{-target}{filename}}{(Custom option) Where evaluation
+      requires a target ClassAd to evaluate against, file \Arg{filename}
+      contains the target ClassAd.  }
 \end{Options}
 
 \GenRem
@@ -316,8 +318,6 @@ slot3@vulture.cs.w LINUX      INTEL  Unclaimed Idle     0.070   512  1+11:10:32
 \normalsize
 
 \underline{Constraint option examples}
-
-Further explanation and examples are in section~\ref{classad-query-examples}.
 
 The Unix command
 to use the constraint option to see all machines with the \Attr{OpSys}

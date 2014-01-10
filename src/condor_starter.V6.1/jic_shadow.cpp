@@ -43,11 +43,13 @@
 #include "condor_mkstemp.h"
 #include "globus_utils.h"
 
+#include <algorithm>
 
 extern CStarter *Starter;
 ReliSock *syscall_sock = NULL;
 extern const char* JOB_AD_FILENAME;
 extern const char* MACHINE_AD_FILENAME;
+const char* CHIRP_CONFIG_FILENAME = ".chirp_config";
 
 // Filenames are case insensitive on Win32, but case sensitive on Unix
 #ifdef WIN32
@@ -58,7 +60,8 @@ extern const char* MACHINE_AD_FILENAME;
 #	define file_remove remove
 #endif
 
-JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator()
+JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
+	m_wrote_chirp_config(false)
 {
 	if( ! shadow_name ) {
 		EXCEPT( "Trying to instantiate JICShadow with no shadow name!" );
@@ -424,6 +427,9 @@ JICShadow::transferOutput( bool &transient_failure )
 		// ft list
 		filetrans->addFileToExeptionList(JOB_AD_FILENAME);
 		filetrans->addFileToExeptionList(MACHINE_AD_FILENAME);
+		if (m_wrote_chirp_config) {
+			filetrans->addFileToExeptionList(CHIRP_CONFIG_FILENAME);
+		}
 	
 			// true if job exited on its own
 		bool final_transfer = (requested_exit == false);	
@@ -1826,8 +1832,65 @@ JICShadow::setX509ProxyExpirationTimer()
 
 
 bool
+JICShadow::recordDelayedUpdate( const std::string &name, const classad::ExprTree &expr )
+{
+	std::string prefix;
+	param(prefix, "CHIRP_DELAYED_UPDATE_PREFIX", "CHIRP*");
+	if (!prefix.size())
+	{
+		dprintf(D_ALWAYS, "Got an invalid prefix for updates: %s\n", name.c_str());
+	}
+	StringList sl(prefix.c_str());
+	if (sl.contains_anycase_withwildcard(name.c_str()))
+	{
+		std::vector<std::string>::const_iterator it = std::find(m_delayed_update_attrs.begin(),
+			m_delayed_update_attrs.end(), name);
+		if (it == m_delayed_update_attrs.end())
+		{
+			m_delayed_update_attrs.push_back(name);
+		}
+		if (m_delayed_update_attrs.size() > 50)
+		{
+			dprintf(D_ALWAYS, "Ignoring update for %s because 50 attributes have already been set.\n", name.c_str());
+			return false;
+		}
+		// Note that the ClassAd takes ownership of the copy.
+		dprintf(D_FULLDEBUG, "Got a delayed update for attribute %s.\n", name.c_str());
+		classad::ExprTree *expr_copy = expr.Copy();
+		m_delayed_updates.Insert(name, expr_copy);
+		return true;
+	}
+	else
+	{
+		dprintf(D_ALWAYS, "Got an invalid prefix for updates: %s\n", name.c_str());
+		return false;
+	}
+}
+
+
+
+std::auto_ptr<classad::ExprTree>
+JICShadow::getDelayedUpdate( const std::string &name )
+{
+	std::auto_ptr<classad::ExprTree> expr;
+	classad::ExprTree *borrowed_expr = NULL;
+	ClassAd *ad = jobClassAd();
+	dprintf(D_FULLDEBUG, "Looking up delayed attribute named %s.\n", name.c_str());
+	if (!(borrowed_expr = m_delayed_updates.Lookup(name)) && (!ad || !(borrowed_expr = ad->Lookup(name))))
+	{
+		return expr;
+	}
+	expr.reset(borrowed_expr->Copy());
+	return expr;
+}
+
+bool
 JICShadow::publishUpdateAd( ClassAd* ad )
 {
+	// These are updates taken from Chirp
+	ad->Update(m_delayed_updates);
+	m_delayed_updates.Clear();
+
 	filesize_t execsz = 0;
 
 	// if we are using PrivSep, we need to use that mechanism to calculate
@@ -1872,7 +1935,14 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 		// walk through all the UserProcs and have those publish, as
 		// well.  It returns true if there was anything published,
 		// false if not.
-	return Starter->publishUpdateAd( ad );
+	bool retval = Starter->publishUpdateAd( ad );
+
+	// These are updates taken from Chirp
+	// Note they should not go to the starter!
+	ad->Update(m_delayed_updates);
+	m_delayed_updates.Clear();
+
+	return retval;
 }
 
 
@@ -2129,32 +2199,81 @@ JICShadow::initShadowInfo( ClassAd* ad )
 bool
 JICShadow::initIOProxy( void )
 {
-	int want_io_proxy = 0;
+	bool want_io_proxy = false;
 	MyString io_proxy_config_file;
 
 		// the admin should have the final say over whether
 		// chirp is enabled
     bool enableIOProxy = true;
 	enableIOProxy = param_boolean("ENABLE_CHIRP", true);
-	
-	if (!enableIOProxy) {
+
+	bool enableUpdates = false;
+	enableUpdates = param_boolean("ENABLE_CHIRP_UPDATES", true);
+
+	bool enableFiles = false;
+	enableFiles = param_boolean("ENABLE_CHIRP_IO", true);
+
+	bool enableDelayed = false;
+	enableDelayed = param_boolean("ENABLE_CHIRP_DELAYED", true);
+
+	if (!enableIOProxy || (!enableUpdates && !enableFiles && !enableDelayed)) {
 		dprintf(D_ALWAYS, "ENABLE_CHIRP is false in config file, not enabling chirp\n");
 		return false;
 	}
 
-	if( job_ad->LookupBool( ATTR_WANT_IO_PROXY, want_io_proxy ) < 1 ) {
+	if( ! job_ad->EvaluateAttrBool( ATTR_WANT_IO_PROXY, want_io_proxy ) ) {
+		want_io_proxy = false;
 		dprintf( D_FULLDEBUG, "JICShadow::initIOProxy(): "
-				 "Job does not define %s\n", ATTR_WANT_IO_PROXY );
-		want_io_proxy = 0;
+				 "Job does not define %s; setting to %s\n",
+				 ATTR_WANT_IO_PROXY, want_io_proxy ? "true" : "false" );
 	} else {
 		dprintf( D_ALWAYS, "Job has %s=%s\n", ATTR_WANT_IO_PROXY,
 				 want_io_proxy ? "true" : "false" );
 	}
-
-	if( want_io_proxy || job_universe==CONDOR_UNIVERSE_JAVA ) {
-		io_proxy_config_file.formatstr( "%s%cchirp.config",
-				 Starter->GetWorkingDir(), DIR_DELIM_CHAR );
-		if( !io_proxy.init(io_proxy_config_file.Value()) ) {
+	if (!enableFiles && want_io_proxy)
+	{
+		dprintf(D_ALWAYS, "Starter config prevents us from enabling IO proxy.\n");
+		want_io_proxy = false;
+	}
+	bool want_updates = want_io_proxy;
+	if ( ! job_ad->EvaluateAttrBool(ATTR_WANT_REMOTE_UPDATES, want_updates) ) {
+		want_updates = want_io_proxy;
+		dprintf(D_FULLDEBUG, "JICShadow::initIOProxy(): "
+				"Job does not define %s; setting to %s.\n",
+				ATTR_WANT_REMOTE_UPDATES, want_updates ? "true" : "false" );
+	} else {
+		dprintf(D_ALWAYS, "Job has %s=%s\n", ATTR_WANT_REMOTE_UPDATES,
+				want_updates ? "true" : "false");
+	}
+	if (!enableUpdates && want_updates)
+	{
+		dprintf(D_ALWAYS, "Starter config prevents us from enabling remote updates.\n");
+		want_updates = false;
+	}
+	bool want_delayed = true;
+	if ( ! job_ad->EvaluateAttrBool(ATTR_WANT_DELAYED_UPDATES, want_delayed) ) {
+		want_delayed = true;
+		dprintf(D_FULLDEBUG, "JICShadow::initIOProxy(): "
+				"Job does not define %s; enabling delayed updates.\n", ATTR_WANT_DELAYED_UPDATES);
+	} else {
+		dprintf(D_ALWAYS, "Job has %s=%s\n", ATTR_WANT_DELAYED_UPDATES,
+				want_delayed ? "true" : "false");
+	}
+	if (!enableDelayed && want_delayed)
+	{
+		dprintf(D_ALWAYS, "Starter config prevents us from enabling delayed updates.\n");
+		want_delayed = false;
+	}
+	dprintf(D_ALWAYS, "Chirp config summary: IO %s, Updates %s, Delayed updates %s.\n",
+		want_io_proxy ? "true" : "false", want_updates ? "true" : "false",
+		want_delayed ? "true" : "false");
+	if( want_io_proxy || want_updates || want_delayed || job_universe==CONDOR_UNIVERSE_JAVA ) {
+		m_wrote_chirp_config = true;
+		io_proxy_config_file.formatstr( "%s%c%s" ,
+				 Starter->GetWorkingDir(), DIR_DELIM_CHAR, CHIRP_CONFIG_FILENAME );
+		m_chirp_config_filename = io_proxy_config_file;
+		dprintf(D_FULLDEBUG, "Initializing IO proxy with config file at %s.\n", io_proxy_config_file.Value());
+		if( !io_proxy.init(this, io_proxy_config_file.Value(), want_io_proxy, want_updates, want_delayed) ) {
 			dprintf( D_FAILURE|D_ALWAYS, 
 					 "Couldn't initialize IO Proxy.\n" );
 			return false;

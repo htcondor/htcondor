@@ -128,6 +128,8 @@ private:
 
     typedef HashTable <MyString, int> HolePunchTable_t;
 
+    typedef std::vector<std::string> netgroup_list_t;
+
 	class PermTypeEntry {
 	public:
 		int behavior;
@@ -136,6 +138,11 @@ private:
 		UserHash_t* allow_users;
 		UserHash_t* deny_users;
 		HolePunchTable_t* hole_punch_table;
+
+        // used if netgroups are supported
+        netgroup_list_t allow_netgroups;
+        netgroup_list_t deny_netgroups;
+
 		PermTypeEntry() {
 			allow_hosts = NULL;
 			deny_hosts  = NULL;
@@ -174,7 +181,7 @@ private:
 	bool lookup_user_host_deny(DCpermission perm, char const *user, char const *hostname);
 
 		// This is the low-level function called by the other lookup_user functions.
-	bool lookup_user(NetStringList *hosts, UserHash_t *users, char const *user, char const *ip, char const *hostname, bool is_allow_list);
+	bool lookup_user(NetStringList *hosts, UserHash_t *users, netgroup_list_t& netgroups, char const *user, char const *ip, char const *hostname, bool is_allow_list);
 
 	char * merge(char * newPerm, char * oldPerm);
 	bool did_init;

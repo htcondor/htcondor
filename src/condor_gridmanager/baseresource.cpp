@@ -469,7 +469,7 @@ void BaseResource::Ping()
 
 	daemonCore->Reset_Timer( pingTimerId, TIMER_NEVER );
 
-	time_t ping_delay;
+	unsigned ping_delay;
 	bool ping_complete;
 	bool ping_succeeded;
 	DoPing( ping_delay, ping_complete, ping_succeeded );
@@ -531,7 +531,7 @@ void BaseResource::Ping()
 	}
 }
 
-void BaseResource::DoPing( time_t& ping_delay, bool& ping_complete,
+void BaseResource::DoPing( unsigned& ping_delay, bool& ping_complete,
 						   bool& ping_succeeded )
 {
 	ping_delay = 0;
@@ -651,7 +651,7 @@ else dprintf(D_FULLDEBUG,"    UpdateLeases: leases synched\n");
 
 	leaseAttrsSynched = true;
 
-	time_t update_delay;
+	unsigned update_delay = 0;
 	bool update_complete;
 	SimpleList<PROC_ID> update_succeeded;
 	bool update_success;
@@ -664,7 +664,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: calling DoUpdateLeases\n");
 
 	if ( update_delay ) {
 		daemonCore->Reset_Timer( updateLeasesTimerId, update_delay );
-dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases wants delay of %ld secs\n",update_delay);
+dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases wants delay of %uld secs\n",update_delay);
 		return;
 	}
 
@@ -738,7 +738,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: lease update complete, resetting timer fo
 	daemonCore->Reset_Timer( updateLeasesTimerId, UPDATE_LEASE_DELAY );
 }
 
-void BaseResource::DoUpdateLeases( time_t& update_delay,
+void BaseResource::DoUpdateLeases( unsigned& update_delay,
 								   bool& update_complete,
 								   SimpleList<PROC_ID>& /* update_succeeded */ )
 {
@@ -747,7 +747,7 @@ dprintf(D_FULLDEBUG,"*** BaseResource::DoUpdateLeases called\n");
 	update_complete = true;
 }
 
-void BaseResource::DoUpdateSharedLease( time_t& update_delay,
+void BaseResource::DoUpdateSharedLease( unsigned& update_delay,
 										bool& update_complete,
 										bool& update_succeeded )
 {

@@ -390,7 +390,7 @@ dprintf_config( const char *subsys, struct dprintf_output_settings *p_info /* = 
 			// incorrect default value, I'm gonna use
 			// param_without_default.
 			// tristan 5/29/09
-			logPathParam = param_without_default(pname);//dprintf_param_funcs->param_without_default(pname);
+			logPathParam = param(pname);
 			if(logPathParam)
 				logPath.insert(0, logPathParam);
 

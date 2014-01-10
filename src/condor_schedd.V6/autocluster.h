@@ -93,6 +93,9 @@ public:
 	*/
 	void sweep();
 
+	/** Return number of active autoclusters
+	  */
+	int getNumAutoclusters() const;
 protected:
 
 	void clearArray();

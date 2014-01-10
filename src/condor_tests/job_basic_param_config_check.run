@@ -35,6 +35,8 @@ my $firstappend_condor_config = '
 	foo = 1
 	bar = $(foo) + 1
 	master.foo = 2
+	GOO = baz
+	master.GOO = $(GOO), bar
 	ALL_DEBUG = 
 ';
 
@@ -50,18 +52,23 @@ my $fooindex = 0;
 my @foos = (
 	"1 + 1",
 	"2 + 1",
+	"baz, bar",
 );
 
 my @foodata = ();
+my @goodata = ();
 my $on_submit = sub {
 	my $fdata = "";
 	@foodata = ();
 	if( $fooindex == 0 ) {
 		@foodata = `condor_config_val bar`;
 		system("condor_config_val bar");
-	} else {
+	} elsif($fooindex == 1 ) {
 		@foodata = `condor_config_val -master bar`;
 		system("condor_config_val -master bar");
+	} elsif($fooindex == 2 ) {
+		@foodata = `condor_config_val -master goo`;
+		system("condor_config_val -master goo");
 	}
 	$fdata = $foodata[0];
 	chomp($fdata);
@@ -72,6 +79,11 @@ my $on_submit = sub {
 		print "Got what we wanted <$fdata>\n";
 		$fooindex += 1;
 	}
+	print "FOOINDEX now <$fooindex> \n";
+	#@goodata = `condor_config_val -master goo`;
+	#foreach my $line (@goodata) {
+		#print "$line";
+	#}
 };
 
 print "We know this about the just started personal condor <$condorinfo>\n";
@@ -98,6 +110,19 @@ my $result = SimpleJob::RunCheck(
 );
 
 print "******************** Check for master specific value for param foo\n";
+if($result == 1) {
+print "ok\n\n\n";
+} else {
+print "bad\n\n\n";
+}
+
+my $result = SimpleJob::RunCheck(
+	test_name => "$test_name",
+	on_submit => $on_submit,
+	duration => 10,
+);
+
+print "******************** Check for master specific value for compound param goo\n";
 if($result == 1) {
 print "ok\n\n\n";
 } else {

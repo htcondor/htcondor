@@ -2914,19 +2914,8 @@ std::string *GlobusJob::buildSubmitRSL()
 	formatstr( *rsl, "&(rsl_substitution=(GRIDMANAGER_GASS_URL %s))",
 				  gassServerUrl );
 
-	//We're assuming all job clasads have a command attribute
-	//First look for executable in the spool area.
 	std::string executable_path;
-	char *spooldir = param("SPOOL");
-	if ( spooldir ) {
-		char *source = gen_ckpt_name(spooldir,procID.cluster,ICKPT,0);
-		free(spooldir);
-		if ( access(source,F_OK | X_OK) >= 0 ) {
-				// we can access an executable in the spool dir
-			executable_path = source;
-		}
-		free(source); source = NULL;
-	}
+	GetJobExecutable( jobAd, executable_path );
 	if ( executable_path.empty() ) {
 			// didn't find any executable in the spool directory,
 			// so use what is explicitly stated in the job ad

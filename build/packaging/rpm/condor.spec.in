@@ -10,7 +10,7 @@ URL:		@CPACK_RPM_PACKAGE_URL@
 
 Requires(pre): @CPACK_RPM_SHADOW_PACKAGE@
 Requires(post):/sbin/chkconfig
-Requires(post): /usr/sbin/selinuxenabled, /usr/sbin/semanage, /sbin/restorecon
+Requires(post): /usr/sbin/selinuxenabled, /usr/sbin/semanage, /sbin/restorecon, /usr/bin/seinfo
 Requires(preun):/sbin/chkconfig
 Requires(preun):/sbin/service
 
@@ -147,8 +147,10 @@ fi
 /sbin/chkconfig --add condor
 /sbin/ldconfig
 if /usr/sbin/selinuxenabled; then
-   /usr/sbin/semanage fcontext -a -t unconfined_execmem_exec_t $USR/sbin/condor_startd 2>&1| grep -v "already defined"
-   /sbin/restorecon  $USR/sbin/condor_startd
+   if /usr/bin/seinfo -t 2>/dev/null | grep -q unconfined_execmem_exec_t; then
+      /usr/sbin/semanage fcontext -a -t unconfined_execmem_exec_t $USR/sbin/condor_startd 2>&1| grep -v "already defined"
+      /sbin/restorecon  $USR/sbin/condor_startd
+   fi
 fi
 exit 0
 

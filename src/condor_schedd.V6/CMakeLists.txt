@@ -19,7 +19,7 @@
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-condor_selective_glob("qmgmt_send_stubs*;qmgr_lib_support*;qmgr_job_updater*" qmgmtElements )
+condor_selective_glob("qmgmt_send_stubs*;qmgr_lib_support*;qmgr_job_updater*;history_helper.cpp" qmgmtElements )
 file( GLOB scheddRmvElements Example* *.t.* ${qmgmtElements} )
 
 if (NOT WIN_EXEC_NODE_ONLY)
@@ -33,6 +33,7 @@ if (NOT WIN_EXEC_NODE_ONLY)
 		endif(UNIX)
 
 	endif(HAVE_EXT_GSOAP)
+	condor_exe(condor_history_helper "history_helper.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF)
 
 endif(NOT WIN_EXEC_NODE_ONLY)
 

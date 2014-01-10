@@ -17,7 +17,7 @@ our $VERSION = '1.00';
 
 use base 'Exporter';
 
-our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE);
+our @EXPORT = qw(runcmd FAIL PASS ANY SIGNALED SIGNAL async_read verbose_system Which TRUE FALSE is_cygwin_perl is_windows_native_perl fullchomp);
 
 sub TRUE{1};
 sub FALSE{0};
@@ -47,6 +47,7 @@ sub FAIL {
 # return 0 for false (expectation not met), 1 for true (expectation met)
 sub ANY {
 	# always true
+	#print "ANY called, return 1\n";
 	return 1;
 }
 
@@ -158,6 +159,7 @@ sub runcmd {
 		die_on_failed_expectation
 		emit_output
 		expect_result
+		emit_string
 		use_system
 		sh_wrap
 		);
@@ -189,7 +191,12 @@ sub runcmd {
 	my @errlines;
 
 	if(${$options}{emit_output} == TRUE) {
-		PrintHeader();
+		if(exists ${$options}{emit_string}) {
+			PrintAddComment(${$options}{emit_string});
+			PrintAltHeader();
+		} else {
+			PrintHeader();
+		}
 		PrintStart($date,$args);
 	}
 
@@ -337,10 +344,15 @@ sub runcmd {
 	$returnthings{"stdout"} = \@outlines;
 	$returnthings{"stderr"} = \@errlines;
 
+	#print "about to check expected result function signal <$signal> rc <$rc>\n";
 	my $expected = ${$options}{expect_result}($signal, $signal, $rc, \@outlines, \@errlines);
+	#my $expected = ${$options}{expect_result}();
+	#print "expected returnval was <$expected>\n";
 	$returnthings{"expectation"} = $expected;
 	if(!$expected && (${$options}{die_on_failed_expectation} == TRUE)) {
 		die "Expectation Failed on cmd <$args>\n";
+	} else {
+		#print "runcmd: Told Failure was OK\n";
 	}
 	return \%returnthings;
 }
@@ -431,6 +443,17 @@ sub PrintStdErr {
 	}
 }
 
+sub PrintAddComment
+{
+	my $message = shift;
+	print "\n+-------------------------------------------------------------------------------\n";
+	print "+ $message\n";
+}
+
+sub PrintAltHeader {
+	print "+-------------------------------------------------------------------------------\n";
+}
+
 sub PrintHeader {
 	print "\n+-------------------------------------------------------------------------------\n";
 }
@@ -490,7 +513,8 @@ sub Which {
     }
     foreach my $path (split /:/, $ENV{PATH}) {
         chomp $path;
-        if(-x "$path/$exe") {
+		#print "Checking <$path>\n";
+        if(-f "$path/$exe") {
             return "$path/$exe";
         }
     }

@@ -1667,7 +1667,7 @@ char *CreamJob::buildSubmitAd()
 	char **env_vec = envobj.getStringArray();
 
 	if ( env_vec[0] ) {
-		formatstr( buf, "%s = {", ATTR_JOB_ENVIRONMENT2 );
+		formatstr( buf, "; %s = {", ATTR_JOB_ENVIRONMENT2 );
 
 		for ( int i = 0; env_vec[i]; i++ ) {
 			if ( i == 0 ) {
@@ -1676,7 +1676,7 @@ char *CreamJob::buildSubmitAd()
 				formatstr_cat( buf, ",\"%s\"", env_vec[i] );
 			}
 		}
-		formatstr_cat( buf, "}; ]" );
+		formatstr_cat( buf, "} ]" );
 
 		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
 		ad_string.replaceString( "]", buf.c_str(), insert_pos );
@@ -1684,13 +1684,10 @@ char *CreamJob::buildSubmitAd()
 	deleteStringArray(env_vec);
 
 	if ( jobAd->LookupString( ATTR_CREAM_ATTRIBUTES, tmp_str ) ) {
-		if ( tmp_str[tmp_str.length()-1] != ';' ) {
-			tmp_str += ";";
-		}
-		tmp_str += " ]";
+		formatstr( buf, "; %s ]", tmp_str.c_str() );
 
 		int insert_pos = strrchr( ad_string.Value(), ']' ) - ad_string.Value();
-		ad_string.replaceString( "]", tmp_str.c_str(), insert_pos );
+		ad_string.replaceString( "]", buf.c_str(), insert_pos );
 	}
 
 /*
@@ -1742,8 +1739,7 @@ TransferRequest *CreamJob::MakeStageInRequest()
 	result = true;
 	jobAd->LookupBool(ATTR_TRANSFER_EXECUTABLE, result);
 	if (result) {
-			//here, JOB_CMD = full path to executable
-		jobAd->LookupString(ATTR_JOB_CMD, tmp_str);
+		GetJobExecutable( jobAd, tmp_str );
 		tmp_str2 = "file://" + tmp_str;
 		local_urls.insert(tmp_str2.c_str());
 

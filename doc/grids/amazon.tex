@@ -2,14 +2,15 @@
 \subsection{\label{sec:Amazon}The EC2 Grid Type }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \index{Amazon EC2 Query API}
+\index{EC2 grid jobs}
 \index{grid computing!submitting jobs using the EC2 Query API}
 \index{grid type!ec2}
 
 HTCondor jobs may be submitted to clouds supporting
 Amazon's Elastic Compute Cloud (EC2) interface.
-Amazon's EC2 is an on-line commercial service that allows 
+The EC2 interface permits on-line commercial services that provide
 the rental of computers by the hour to run computational applications.
-It runs virtual machine images that have been uploaded to Amazon's
+They run virtual machine images that have been uploaded to Amazon's
 online storage service (S3 or EBS).
 More information about Amazon's EC2 service is available at
 \URL{http://aws.amazon.com/ec2}.
@@ -21,8 +22,8 @@ also called the EC2 REST API.
 \subsubsection{\label{sec:Amazon-submit}EC2 Job Submission}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-HTCondor jobs are submitted to Amazon's EC2
-with the \SubmitCmd{grid} universe, and setting the
+HTCondor jobs are submitted to an EC2 service
+with the \SubmitCmd{grid} universe, setting the
 \SubmitCmd{grid\_resource} command to \SubmitCmd{ec2}, followed 
 by the service's URL. For example,
 partial contents of the submit description file may be
@@ -121,6 +122,30 @@ If both options are used, the two blocks of
 data are concatenated, with the data from \SubmitCmd{ec2\_user\_data} 
 occurring first.  HTCondor performs the base64 encoding that EC2 expects on 
 the data.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{\label{sec:EC2-termination}Termination of EC2 Jobs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+A protocol defines the shutdown procedure for jobs running as
+EC2 instances.
+The service is told to shut down the instance,
+and the service acknowledges.
+The service then advances the instance to a state in which
+the termination is imminent, but the job is given time to
+shut down gracefully.
+
+Once this state is reached, some services other than Amazon cannot be
+relied upon to actually terminate the job.
+Thus, HTCondor must check that the instance has terminated
+before removing the job from the queue.
+This avoids the possibility of HTCondor losing track of a job
+while it is still accumulating charges on the service.  
+
+HTCondor checks after a fixed time interval
+that the job actually has terminated.
+If the job has not terminated after a total of four checks,
+the job is placed on hold.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{\label{sec:spot-instances}Using Spot Instances}

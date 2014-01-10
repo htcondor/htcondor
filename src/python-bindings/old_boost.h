@@ -1,4 +1,11 @@
 
+#ifdef __GNUC__
+  #if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)
+    // boost is full of these, gcc 4.8 treats them as warnings.
+    #pragma GCC diagnostic ignored "-Wunused-local-typedefs"
+  #endif
+#endif
+
 #include <boost/python.hpp>
 
 /*
@@ -26,5 +33,5 @@ inline boost::python::object py_import(boost::python::str name)
 #define THROW_EX(exception, message) \
     { \
         PyErr_SetString(PyExc_ ##exception, message); \
-        throw_error_already_set(); \
+        boost::python::throw_error_already_set(); \
     }

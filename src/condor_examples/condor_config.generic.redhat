@@ -883,7 +883,7 @@ UWCS_NEGOTIATOR_PRE_JOB_RANK = RemoteOwner =?= UNDEFINED
 ##  would take place, allowing control to pass on to
 ##  PREEMPTION_RANK.
 UWCS_NEGOTIATOR_POST_JOB_RANK = \
- (RemoteOwner =?= UNDEFINED) * (KFlops - SlotID - 1.0e10*(Offline=?=True))
+ (RemoteOwner =?= UNDEFINED) * (ifthenElse(isUndefined(KFlops), 1000, Kflops) - SlotID - 1.0e10*(Offline=?=True))
 
 ##  The negotiator will not preempt a job running on a given machine
 ##  unless the PREEMPTION_REQUIREMENTS expression evaluates to true
@@ -1794,7 +1794,7 @@ VALID_SPOOL_FILES	= job_queue.log, job_queue.log.tmp, history, \
                           Accountant.log, Accountantnew.log, \
                           local_univ_execute, .quillwritepassword, \
 						  .pgpass, \
-			  .schedd_address, .schedd_classad
+			  .schedd_address, .schedd_address.super, .schedd_classad
 
 ##  What files should condor_preen remove from the log directory?
 INVALID_LOG_FILES	= core

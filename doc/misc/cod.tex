@@ -217,6 +217,25 @@ The following attributes are \emph{required}:
    It is a string attribute, and must therefore be enclosed in 
    quotation marks (\verb@"@).
 
+ \item[\Attr{RequestCpus}] Required when running on a \Condor{startd}
+\index{COD!required attributes!RequestCpus} 
+that uses partitionable slots.  
+It specifies the number of CPU cores from the partitionable slot
+allocated for this job.
+
+ \item[\Attr{RequestDisk}] Required when running on a \Condor{startd}
+\index{COD!required attributes!RequestDisk} 
+that uses partitionable slots.  
+It specifies the disk space, in Megabytes,
+from the partitionable slot allocated for this job.
+
+ \item[\Attr{RequestMemory}] Required when running on a \Condor{startd}
+\index{COD!required attributes!RequestMemory} 
+that uses partitionable slots.  
+It specifies the memory, in Megabytes,
+from the partitionable slot allocated for this job.
+
+
 \end{description}
 
 \index{COD!optional attributes} 

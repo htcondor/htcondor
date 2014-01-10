@@ -129,7 +129,7 @@ Dagman::Dagman() :
 	rescueFileToRun(""),
 	dumpRescueDag(false),
 	_writePartialRescueDag(true),
-	_defaultNodeLog(NULL),
+	_defaultNodeLog(""),
 	_generateSubdagSubmits(true),
 	_maxJobHolds(100),
 	_runPost(true),
@@ -401,10 +401,12 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_WRITE_PARTIAL_RESCUE setting: %s\n",
 				_writePartialRescueDag ? "True" : "False" );
 
-	free( _defaultNodeLog );
 	_defaultNodeLog = param( "DAGMAN_DEFAULT_NODE_LOG" );
+	if ( _defaultNodeLog == "" ) {
+		_defaultNodeLog = "@(DAG_DIR)/@(DAG_FILE).nodes.log";
+	}
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_NODE_LOG setting: %s\n",
-				_defaultNodeLog ? _defaultNodeLog : "null" );
+				_defaultNodeLog.Value() );
 
 	_generateSubdagSubmits = 
 		param_boolean( "DAGMAN_GENERATE_SUBDAG_SUBMITS",
@@ -431,16 +433,6 @@ Dagman::Config()
 				debugSetting ? debugSetting : "" );
 	if ( debugSetting ) {
 		free( debugSetting );
-	}
-
-		// Check for the default/node/workflow log being in /tmp
-	if ( _defaultNodeLog &&
-				strstr( _defaultNodeLog, "/tmp" ) == _defaultNodeLog ) {
-		debug_printf( DEBUG_QUIET, "Warning: "
-					"DAGMAN_DEFAULT_NODE_LOG file %s is in /tmp\n",
-					_defaultNodeLog );
-		check_warning_strictness( _submitDagDeepOpts.always_use_node_log ?
-					DAG_STRICT_1 : DAG_STRICT_2 );
 	}
 
 	// enable up the debug cache if needed
@@ -822,27 +814,7 @@ void main_init (int argc, char ** const argv) {
 	dagman.primaryDagFile = dagman.dagFiles.next();
 	dagman.multiDags = (dagman.dagFiles.number() > 1);
 
-	MyString tmpDefaultLog;
-	if ( dagman._defaultNodeLog != NULL ) {
-		tmpDefaultLog = dagman._defaultNodeLog;
-		free( dagman._defaultNodeLog );
-	} else {
-		tmpDefaultLog = dagman.primaryDagFile + ".nodes.log";
-	}
-
-		// Force default log file path to be absolute so it works
-		// with -usedagdir and DIR nodes.
-	CondorError errstack;
-	if ( !MultiLogFiles::makePathAbsolute( tmpDefaultLog, errstack) ) {
-       	debug_printf( DEBUG_QUIET, "Unable to convert default log "
-					"file name to absolute path: %s\n",
-					errstack.getFullText().c_str() );
-		dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_ERROR );
-		DC_Exit( EXIT_ERROR );
-	}
-	dagman._defaultNodeLog = strdup( tmpDefaultLog.Value() );
-	debug_printf( DEBUG_NORMAL, "Default node log file is: <%s>\n",
-				dagman._defaultNodeLog);
+	dagman.ResolveDefaultLog();
 
     //
     // Check the arguments
@@ -1020,7 +992,7 @@ void main_init (int argc, char ** const argv) {
 						  dagman.retryNodeFirst, dagman.condorRmExe,
 						  dagman.storkRmExe, &dagman.DAGManJobId,
 						  dagman.prohibitMultiJobs, dagman.submitDepthFirst,
-						  dagman._defaultNodeLog,
+						  dagman._defaultNodeLog.Value(),
 						  dagman._generateSubdagSubmits,
 						  &dagman._submitDagDeepOpts,
 						  false ); /* toplevel dag! */
@@ -1191,9 +1163,10 @@ void main_init (int argc, char ** const argv) {
   
     // If the Daglog is not present, then we do not run in recovery
     // mode
+	// I don't know what this comment means.  wenger 2013-09-11
   
     {
-      bool recovery = access(lockFileName,  F_OK) == 0;
+    	bool recovery = access(lockFileName,  F_OK) == 0;
       
         if (recovery) {
             debug_printf( DEBUG_VERBOSE, "Lock file %s detected, \n",
@@ -1213,34 +1186,12 @@ void main_init (int argc, char ** const argv) {
 				}
 			}
 
-				// Not using the node log is the backward compatible thing to do,
-				// so we do not need to check below.
-			if(dagman._submitDagDeepOpts.always_use_node_log) { 
-				bool has_new_default_log = access(dagman._defaultNodeLog, F_OK) == 0; // Check for existence of the default log file
-				if(!submitFileVersion.built_since_version(7,9,1)) {
-					debug_printf( DEBUG_QUIET, "Submit file version indicates submit is too old. "
-						"Falling back to 7.8 behavior of not using the default node log\n");
-					dagman._submitDagDeepOpts.always_use_node_log = false;
-						// Note:  we have to explicitly turn off the default
-						// log file here because
-						// _submitDagDeepOpts.always_use_node_log is
-						// referenced in the Dag constructor, so just
-						// changing that here won't do us any good.
-					dagman.dag->UseDefaultNodeLog(false);
-				} else {
-					if(!has_new_default_log) {
-							// We are in recovery, but the default log does not exist.
-							// Fall back to 7.8 behavior
-						debug_printf( DEBUG_QUIET, "Default node log does not exist. "
-							"Falling back to 7.8 behavior of not using the default node log\n");
-						dagman._submitDagDeepOpts.always_use_node_log = false;
-						dagman.dag->UseDefaultNodeLog(false);
-					} else if(submitFileVersion.compare_versions("$CondorVersion: 7.9.0 May 2 2012 $") == 0) {
-						debug_printf( DEBUG_QUIET, "WARNING: Submit file version 7.9.0 detected.  Bad behavior "
-							"may occur going forward.  Since you were using a development version of HTCondor, "
-							"you probably know what to do to resolve the problem...\n");
-					}
-				}
+				// Not using the default node log is the backward
+				// compatible thing to do, so if using the default
+				// log file is already disabled, we don't have to
+				// do any checking.
+			if ( dagman._submitDagDeepOpts.always_use_node_log ) { 
+				dagman.CheckLogFileMode( submitFileVersion );
 			}
         }
 
@@ -1264,6 +1215,115 @@ void main_init (int argc, char ** const argv) {
 
 	dagman.dag->SetPendingNodeReportInterval(
 				dagman.pendingReportInterval );
+}
+
+//---------------------------------------------------------------------------
+void
+Dagman::CheckLogFileMode( const CondorVersionInfo &submitFileVersion )
+{
+	if ( submitFileVersion.getMajorVer() > 0 ) {
+			// Version from submit file is valid.
+
+		if ( submitFileVersion.built_since_version( 7,9,1 ) ) {
+				// 7.9.1 and later defaulted to using the default node log,
+				// so don't do anything here.
+			debug_printf( DEBUG_QUIET, "Using default node job log file\n" );
+
+		} else if ( submitFileVersion.compare_versions(
+					"$CondorVersion: 7.9.0 May 2 2012 $" ) == 0 ) {
+				// Default log stuff had some issues in 7.9.0.
+			debug_printf( DEBUG_QUIET, "WARNING: Submit file version 7.9.0 detected.  Bad behavior "
+				"may occur going forward.  Since you were using a development version of HTCondor, "
+				"you probably know what to do to resolve the problem...\n");
+
+		} else {
+				// Pre-7.9.0 -- default log wasn't implemented yet, so
+				// we need to use individual logs from submit files.
+			debug_printf( DEBUG_QUIET, "Submit file version indicates submit is too old. "
+				"Falling back to 7.8 behavior of not using the default node log\n");
+			DisableDefaultLog();
+		}
+
+	} else {
+			// Version from submit file is invalid -- probably
+			// a Pegasus-generated sub-DAG.
+
+			// Check for existence of the default log file
+		bool has_new_default_log = access( dagman._defaultNodeLog.Value(),
+					F_OK ) == 0;
+
+			// Note:  we can run into trouble here -- the default log
+			// file can exist if a pre 7.9 DAGMan had a node job
+			// that didn't define a log file.  In that case, we used
+			// the default log file for that node, but not for
+			// other nodes.
+
+		if ( !has_new_default_log ) {
+				// We are in recovery, but the default log does not exist.
+				// Fall back to 7.8 behavior
+			debug_printf( DEBUG_QUIET, "Default node log does not exist. "
+						"Falling back to 7.8 behavior of not using the default node log\n");
+			DisableDefaultLog();
+		}
+	}
+}
+
+//---------------------------------------------------------------------------
+void
+Dagman::DisableDefaultLog()
+{
+	dagman._submitDagDeepOpts.always_use_node_log = false;
+		// Note:  we have to explicitly turn off the default
+		// log file here because
+		// _submitDagDeepOpts.always_use_node_log is
+		// referenced in the Dag constructor, so just
+		// changing that here won't do us any good.
+	dagman.dag->UseDefaultNodeLog(false);
+}
+
+//---------------------------------------------------------------------------
+void
+Dagman::ResolveDefaultLog()
+{
+	char *dagDir = condor_dirname( primaryDagFile.Value() );
+	const char *dagFile = condor_basename( primaryDagFile.Value() );
+
+	_defaultNodeLog.replaceString( "@(DAG_DIR)", dagDir );
+	_defaultNodeLog.replaceString( "@(DAG_FILE)", dagFile );
+	MyString cluster( DAGManJobId._cluster );
+	_defaultNodeLog.replaceString( "@(CLUSTER)", cluster.Value() );
+	free( dagDir );
+
+	if ( _defaultNodeLog.find( "@" ) >= 0 ) {
+		debug_printf( DEBUG_QUIET, "Warning: "
+					"default node log file %s contains an '@' character -- "
+					"unresolved macro substituion?\n",
+					_defaultNodeLog.Value() );
+		check_warning_strictness( _submitDagDeepOpts.always_use_node_log ?
+					DAG_STRICT_1 : DAG_STRICT_2 );
+	}
+
+		// Force default log file path to be absolute so it works
+		// with -usedagdir and DIR nodes.
+	CondorError errstack;
+	if ( !MultiLogFiles::makePathAbsolute( _defaultNodeLog, errstack) ) {
+       	debug_printf( DEBUG_QUIET, "Unable to convert default log "
+					"file name to absolute path: %s\n",
+					errstack.getFullText().c_str() );
+		dagman.dag->GetJobstateLog().WriteDagmanFinished( EXIT_ERROR );
+		DC_Exit( EXIT_ERROR );
+	}
+
+	if ( _defaultNodeLog.find( "/tmp" ) == 0 ) {
+		debug_printf( DEBUG_QUIET, "Warning: "
+					"default node log file %s is in /tmp\n",
+					_defaultNodeLog.Value() );
+		check_warning_strictness( _submitDagDeepOpts.always_use_node_log ?
+					DAG_STRICT_1 : DAG_STRICT_2 );
+	}
+
+	debug_printf( DEBUG_NORMAL, "Default node log file is: <%s>\n",
+				_defaultNodeLog.Value() );
 }
 
 void

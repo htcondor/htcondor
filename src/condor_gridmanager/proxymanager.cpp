@@ -743,6 +743,9 @@ void CheckProxies()
 
 	// next_check is the absolute time of the next check, convert it to
 	// a relative time (from now)
+	if ( next_check < now ) {
+		next_check = now;
+	}
 	daemonCore->Reset_Timer( CheckProxies_tid, next_check - now );
 }
 

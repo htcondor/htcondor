@@ -63,6 +63,9 @@ $OutputTest = sub
 CondorTest::RegisterExitedSuccess( "CheckpointServer", $OutputTest);
 CondorTest::RegisterEvictedWithCheckpoint("CheckpointServer", $on_evictedwithcheckpoint);
 
+# Ensure previous runs don't cause us grief: 
+unlink "job_ckpt_stack_with_ckpt_server_std.log";
+
 my $cmd = "job_ckpt_stack_with_ckpt_server_std.cmd";
 if( CondorTest::RunTest("CheckpointServer", $cmd, 1) ) {
     CondorTest::debug("CheckpointServer: SUCCESS\n",1);

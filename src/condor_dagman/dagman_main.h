@@ -40,6 +40,7 @@ class Dagman {
   public:
 	Dagman();
 	~Dagman();
+
     inline void CleanUp () { 
 		if ( dag != NULL ) {
 			delete dag; 
@@ -48,6 +49,19 @@ class Dagman {
 		delete _dagmanClassad;
 		_dagmanClassad = NULL;
 	}
+
+		// Check (based on the version from the .condor.sub file, etc.),
+		// whether we should fall back to non-default log mode.
+	void CheckLogFileMode( const CondorVersionInfo &submitFileVersion );
+
+		// Disable use of the default node log (use the log files from
+		// the submit files instead).
+	void DisableDefaultLog();
+
+		// Resolve macro substitutions in _defaultNodeLog.  Also check
+		// for some errors/warnings.
+	void ResolveDefaultLog();
+
     Dag * dag;
     int maxIdle;  // Maximum number of idle DAG nodes
     int maxJobs;  // Maximum number of Jobs to run at once
@@ -182,7 +196,7 @@ class Dagman {
 
 		// The default log file for node jobs that don't specify a
 		// log file.
-	char * _defaultNodeLog;
+	MyString _defaultNodeLog;
 
 		// Whether to generate the .condor.sub files for sub-DAGs
 		// at run time (just before the node is submitted).

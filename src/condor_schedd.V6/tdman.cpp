@@ -335,7 +335,7 @@ TransferDaemon::push_transfer_requests(void)
 				// abort the request.
 
 				EXCEPT("TransferDaemon::push_transfer_requests(): NOT "
-					"IMPLEMENTED: aborting an treq after the push to the "
+					"IMPLEMENTED: aborting a treq after the push to the "
 					"transferd. To implement this functionality, you must "
 					"contact the transferd here and have it also abort "
 					"the request.");
@@ -353,7 +353,7 @@ TransferDaemon::push_transfer_requests(void)
 				// abort the request.
 
 				EXCEPT("TransferDaemon::push_transfer_requests(): NOT "
-					"IMPLEMENTED: aborting an treq after the push to the "
+					"IMPLEMENTED: aborting a treq after the push to the "
 					"transferd. To implement this functionality, you must "
 					"contact the transferd here and have it also abort "
 					"the request.");

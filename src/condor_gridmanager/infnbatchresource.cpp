@@ -123,7 +123,7 @@ void INFNBatchResource::PublishResourceAd( ClassAd *resource_ad )
 }
 
 // we will use ec2 command "status_all" to do the Ping work
-void INFNBatchResource::DoPing( time_t& ping_delay, bool& ping_complete, bool& ping_succeeded )
+void INFNBatchResource::DoPing( unsigned& ping_delay, bool& ping_complete, bool& ping_succeeded )
 {
 	// Since blah doesn't need a proxy, we should use Startup() to replace isInitialized()
 	if ( gahp->isStarted() == false ) {

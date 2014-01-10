@@ -53,6 +53,10 @@ A limitation exists such that
 all jobs within the single cluster must use the same log file.
 Separate nodes within a DAG may use different log files.
 
+\emph{DAGMan enforces the dependencies within a DAG
+using the events recorded in a
+log file that is specified by the default configuration.}
+
 As DAGMan schedules and submits jobs within nodes to HTCondor,
 these jobs are defined to succeed or fail based on their
 return values.
@@ -272,12 +276,12 @@ The \Arg{PRE} or \Arg{POST} key word
 specifies the relative timing of when the script is to be run.
 The \Arg{JobName} specifies the node to which the script is attached.
 The \Arg{ExecutableName}
-specifies the script to be executed, and it
-may be followed by any command line arguments to that script.
-The \Arg{ExecutableName} and optional \Arg{arguments} are
-case sensitive; they have their case preserved.  \Bold{Note that neither
-the \Arg{ExecutableName} nor the individual arguments within the
-\Arg{arguments} string can contain spaces.}
+specifies the script to be executed, 
+and it may not contain spaces.
+The Optional \Arg{arguments} are command line arguments to the script,
+and spaces delimit the arguments.
+Both \Arg{ExecutableName} and optional \Arg{arguments} are
+case sensitive; they have their case preserved.
 
 Scripts are optional for each job, and
 any scripts are executed on the machine
@@ -380,45 +384,67 @@ PRE script of the node specified by \Arg{JobName}.
 If the PRE script terminates with the exit code \Arg{non-zero-exit-code},
 then the remainder of the node is skipped entirely.  
 Both the job associated with the node and
-any \Arg{POST} script will not be executed,
+any POST script will not be executed,
 and the node will be marked as successful.
 
-Eight variables (\Env{\$JOB}, \Env{\$JOBID}, \Env{\$RETRY},
-\Env{\$MAX\_RETRIES}, \Env{\$RETURN}, \Env{\$PRE\_SCRIPT\_RETURN},
-\Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT}) can be used within the DAG input
-file as arguments passed to a PRE or POST script. 
-The use of these variables must be as an individual argument,
-and thus will be separated from other arguments by white space character(s).
-An example which will \emph{not} cause the substitution of 
-the \Env{\$RETURN} value is
-\begin{verbatim}
-  job_status=$RETURN 
-\end{verbatim}
-The argument will be this entire string as shown.
+\Bold{Special script argument macros}
 
-\index{DAGMan!JOB@\verb^$JOB^ value}
-The variable \Env{\$JOB} evaluates to the (case sensitive) string
+The five macros \Expr{\$JOB}, \Expr{\$RETRY}, \Expr{\$MAX\_RETRIES}, 
+\Expr{\$DAG\_STATUS} and \Expr{\$FAILED\_COUNT} can be used within the
+DAG input file as arguments passed to a PRE or POST script. 
+The three macros \Expr{\$JOBID}, \Expr{\$RETURN}, 
+and \Expr{\$PRE\_SCRIPT\_RETURN} can
+be used as arguments to POST scripts.
+The use of these variables must be as an individual command
+line \Arg{argument} to the script,
+surrounded by spaces, in order to cause the substitution of the
+variable's value.
+The example POST script specification
+\begin{verbatim}
+  SCRIPT POST A stage-out job_status $RETURN 
+\end{verbatim}
+where the node job returned a value of -1
+invokes the POST script with
+\begin{verbatim}
+  stage-out job_status -1
+\end{verbatim}
+The slightly different example POST script specification
+\begin{verbatim}
+  SCRIPT POST A stage-out job_status=$RETURN 
+\end{verbatim}
+invokes the POST script with
+\begin{verbatim}
+  stage-out job_status=$RETURN
+\end{verbatim}
+There is no space between the \Expr{=} sign and the variable \Expr{\$RETURN},
+so there is no substitution of the variable's value.
+
+The special macros are as follows:
+
+\begin{itemize}
+\item \index{DAGMan!JOB@\verb^$JOB^ value}
+\Expr{\$JOB} evaluates to the (case sensitive) string
 defined for \Arg{JobName}.
 
-\index{DAGMan!RETRY@\verb^$RETRY^ value}
-The variable \Env{\$RETRY} evaluates to an 
+\item \index{DAGMan!RETRY@\verb^$RETRY^ value}
+\Expr{\$RETRY} evaluates to an 
 integer value set to 0 the first time a node is run,
-and is  incremented each time the node is retried. 
+and is incremented each time the node is retried. 
 See section~\ref{dagman:retry} for the description of how to cause
 nodes to be retried. 
 
-\index{DAGMan!MAX_RETRIES@\verb^$MAX_RETRIES^ value}
-The variable \Env{\$MAX\_RETRIES} evaluates to an integer value set 
+\item \index{DAGMan!MAX_RETRIES@\verb^$MAX_RETRIES^ value}
+\Expr{\$MAX\_RETRIES} evaluates to an integer value set 
 to the maximum number of retries for the node.
 See section~\ref{dagman:retry} for the description of how to cause
 nodes to be retried.  
 If no retries are set for the node,
-\Env{\$MAX\_RETRIES} will be set to 0.
+\Expr{\$MAX\_RETRIES} will be set to 0.
 
-\index{DAGMan!JOBID@\verb^$JOBID^ value}
+\item \index{DAGMan!JOBID@\verb^$JOBID^ value}
 \index{job ID!defined for a DAGMan node job}
 \index{job!job ID!defined for a DAGMan node job}
-For use as an argument to POST scripts only, the variable \Env{\$JOBID}
+\Expr{\$JOBID} (for POST scripts only)
 evaluates to a representation of the HTCondor job ID of the node job.
 It is the value of the job ClassAd attribute \Attr{ClusterId},
 followed by a period,
@@ -427,45 +453,47 @@ An example of a job ID might be 1234.0.
 For nodes with multiple jobs in the same cluster,
 the \Attr{ProcId} value is the one of the last job within the cluster.
 
-\index{DAGMan!Return@\verb^$RETURN^ value}
-For use as an argument to POST scripts only,
-the \Env{\$RETURN} variable evaluates to the return value of the 
+\item \index{DAGMan!Return@\verb^$RETURN^ value}
+\Expr{\$RETURN} (for POST scripts only) variable evaluates to
+the return value of the 
 HTCondor or Stork job, if there is a single job within a cluster.
 With multiple jobs within the same cluster,
 there are two cases to consider.
 In the first case, all jobs within the cluster are successful;
-the value of \Env{\$RETURN} will be 0, indicating success.
+the value of \Expr{\$RETURN} will be 0, indicating success.
 In the second case,
 one or more jobs from the cluster fail.
 When \Condor{dagman} sees the first terminated event for a job that failed,
-it assigns that job's return value as the value
-of \Env{\$RETURN}, and attempts to remove all remaining jobs within the cluster.
+it assigns that job's return value as the value of \Expr{\$RETURN},
+and it attempts to remove all remaining jobs within the cluster.
 Therefore, if multiple jobs in the cluster fail with different exit codes,
-a race condition determines which exit code gets assigned to \Env{\$RETURN}.
+a race condition determines which exit code gets assigned to \Expr{\$RETURN}.
 
-A job that dies due to a signal is reported with a \Env{\$RETURN} value
+A job that dies due to a signal is reported with a \Expr{\$RETURN} value
 representing the additive inverse of the signal number.
 For example, SIGKILL (signal 9) is reported as -9.
 A job whose batch system submission fails is reported as -1001.
 A job that is externally removed from the batch system queue
 (by something other than \Condor{dagman}) is reported as -1002.
 
-\index{DAGMan!PRE_SCRIPT_RETURN@\verb^$PRE_SCRIPT_RETURN^ value}
-For use as an argument to POST scripts only, 
-the \Env{\$PRE\_SCRIPT\_RETURN}
+\item \index{DAGMan!PRE_SCRIPT_RETURN@\verb^$PRE_SCRIPT_RETURN^ value}
+\Expr{\$PRE\_SCRIPT\_RETURN} (for POST scripts only)
 variable evaluates to the return value of the PRE script of a node, 
 if there is one.
-If there is no PRE script, this value will be $-1$.
+If there is no PRE script, this value will be -1.
 If the node job was skipped because of failure of the PRE script,
-the value of \Env{\$RETURN} will be $-1004$
-and the value of \Env{\$PRE\_SCRIPT\_RETURN} will be the exit value
+the value of \Expr{\$RETURN} will be -1004
+and the value of \Expr{\$PRE\_SCRIPT\_RETURN} will be the exit value
 of the PRE script;
 the POST script can use this to see if the PRE script exited
 with an error condition, and assign success or failure to the node, as
 appropriate.
 
-\Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT} are documented in
+\item \Expr{\$DAG\_STATUS} and \Expr{\$FAILED\_COUNT} are documented in
 section ~\ref{sec:DAGFinalNode} below.
+\end{itemize}
+
+\Bold{Example}
 
 As an example, consider the diamond-shaped DAG example.
 Suppose the PRE script expands a compressed file 
@@ -540,7 +568,7 @@ produces four dependencies:
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{Submit Description File Contents and Usage of Log Files}
+\subsection{Submit Description File Contents}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \index{DAGMan!submit description file with}
@@ -552,92 +580,85 @@ described by a single cluster number.
 At the present time DAGMan cannot deal with a submit file producing
 multiple job clusters.
 
-\emph{DAGMan enforces the dependencies within a DAG
-using the events recorded in the
-log file(s) produced by job submission to HTCondor.}
-At one time, DAGMan required that all jobs within all nodes
-specify the same, single log file.
-This is no longer the case.
-However, if the DAG utilizes a large number of
-separate log files, performance may suffer.
-Therefore, it is better to have
-fewer, or even only a single log file.
-%Unfortunately,
-%each Stork job currently requires a separate log file.
+%At one time, DAGMan required that all jobs within all nodes
+%specify the same, single log file.
+%This is no longer the case.
+%However, if the DAG utilizes a large number of
+%separate log files, performance may suffer.
+%Therefore, it is better to have
+%fewer, or even only a single log file.
+%
+%\index{DAGMan!lazy log file evaluation}
+%As of HTCondor version 7.3.2, DAGMan's handling of log files
+%significantly changed to improve resource usage and efficiency.  
+%Prior to HTCondor version 7.3.2, 
+%DAGMan assembled a list of all relevant log files at start up, 
+%by looking at all of the submit description files for all of the nodes.
+%It kept the log files open for the duration of the DAG.
+%Beginning with HTCondor version 7.3.2, DAGMan delays opening and using 
+%the submit description file until just before it is going to submit the job.
+%At that point, DAGMan reads the submit description file to discover 
+%the job's log file.
+%And, DAGMan monitors only the log files that are relevant
+%to the jobs currently queued, 
+%or associated with nodes for which a POST script is running.
+%
+%The advantages of the new "lazy log file evaluation" scheme are:
+%
+%\begin{itemize}
+%
+%\item The \Condor{dagman} executable uses fewer file descriptors.
+%In specific,
+%DAGMan must keep a file descriptor open for each unique log file,
+%and operating systems limit the number of open file descriptors;
+%HTCondor's most severe limit is 2048 on Windows platforms.
+%
+%\item It is much easier to have one node of a DAG produce the
+%submit description file for a descendant node in the DAG.
+%
+%\end{itemize}
+%
+%There is one known disadvantage of the lazy log file evaluation scheme:
+%
+%\begin{itemize}
+%
+%\item Because the log files are internally identified by inode
+%numbers, it is possible that errors may arise where log files for
+%a given DAG are spread across more than one device.
+%This permits two unique files to have the same inode number.
+%We hope to have this problem fixed soon.
+%
+%\end{itemize}
 
-\index{DAGMan!lazy log file evaluation}
-As of HTCondor version 7.3.2, DAGMan's handling of log files
-significantly changed to improve resource usage and efficiency.  
-Prior to HTCondor version 7.3.2, 
-DAGMan assembled a list of all relevant log files at start up, 
-by looking at all of the submit description files for all of the nodes.
-It kept the log files open for the duration of the DAG.
-Beginning with HTCondor version 7.3.2, DAGMan delays opening and using 
-the submit description file until just before it is going to submit the job.
-At that point, DAGMan reads the submit description file to discover 
-the job's log file.
-And, DAGMan monitors only the log files that are relevant
-to the jobs currently queued, 
-or associated with nodes for which a POST script is running.
+%\index{DAGMan!default log file specification}
+%%Another new feature in HTCondor version 7.3.2 was the use of 
+%DAGMan assigns 
+%default node job user logs,
+%if a log file is not specified within a job's submit description file.
+%In HTCondor versions earlier than 7.3.2, 
+%it was a fatal error if the submit description
+%file for a node job did not specify a log file.
+%The file used as the default node log is controlled by the
+%\MacroNI{DAGMAN\_DEFAULT\_NODE\_LOG} configuration variable.
+%A complete description is at section~\ref{param:DAGManDefaultNodeLog}.
+%Nodes specifying a log file and other nodes using the default log
+%file can be mixed in a single DAG.
+%Allowing DAGMan to specify a single log file for an entire DAG, 
+%especially a wide DAG,
+%reduces the number of concurrently open file descriptors.
 
-The advantages of the new "lazy log file evaluation" scheme are:
-
-\begin{itemize}
-
-\item The \Condor{dagman} executable uses fewer file descriptors.
-In specific,
-DAGMan must keep a file descriptor open for each unique log file,
-and operating systems limit the number of open file descriptors;
-HTCondor's most severe limit is 2048 on Windows platforms.
-
-\item It is much easier to have one node of a DAG produce the
-submit description file for a descendant node in the DAG.
-
-\end{itemize}
-
-There is one known disadvantage of the lazy log file evaluation scheme:
-
-\begin{itemize}
-
-\item Because the log files are internally identified by inode
-numbers, it is possible that errors may arise where log files for
-a given DAG are spread across more than one device.
-This permits two unique files to have the same inode number.
-We hope to have this problem fixed soon.
-
-\end{itemize}
-
-\index{DAGMan!default log file specification}
-%Another new feature in HTCondor version 7.3.2 was the use of 
-DAGMan assigns 
-default node job user logs,
-if a log file is not specified within a job's submit description file.
-In HTCondor versions earlier than 7.3.2, 
-it was a fatal error if the submit description
-file for a node job did not specify a log file.
-The file used as the default node log is controlled by the
-\MacroNI{DAGMAN\_DEFAULT\_NODE\_LOG} configuration variable.
-A complete description is at section~\ref{param:DAGManDefaultNodeLog}.
-Nodes specifying a log file and other nodes using the default log
-file can be mixed in a single DAG.
-Allowing DAGMan to specify a single log file for an entire DAG, 
-especially a wide DAG,
-reduces the number of concurrently open file descriptors.
-
-Log files for node jobs should not be placed on NFS, 
-unless both configuration variables
-\Macro{CREATE\_LOCKS\_ON\_LOCAL\_DISK} and \Macro{ENABLE\_USERLOG\_LOCKING}
-are \Expr{True}. 
-Without these settings, NFS file locking is not reliable,
-occasionally resulting in simultaneous acquisition of locks on a single
-log file by both the \Condor{schedd} daemon and the \Condor{dagman} job. 
-Partially written events by the \Condor{schedd} cause errors
-for \Condor{dagman}.
-
-Here is a modified version of the DAG input file
-for the diamond-shaped DAG. 
-The modification has each node use the same 
-submit description file.
+%Log files for node jobs should not be placed on NFS, 
+%unless both configuration variables
+%\Macro{CREATE\_LOCKS\_ON\_LOCAL\_DISK} and \Macro{ENABLE\_USERLOG\_LOCKING}
+%are \Expr{True}. 
+%Without these settings, NFS file locking is not reliable,
+%occasionally resulting in simultaneous acquisition of locks on a single
+%log file by both the \Condor{schedd} daemon and the \Condor{dagman} job. 
+%Partially written events by the \Condor{schedd} cause errors
+%for \Condor{dagman}.
+%
+Here is a DAG input file for the diamond-shaped DAG, 
+where each node uses the same submit description file.
 
 \begin{verbatim}
     # File name: diamond.dag
@@ -650,7 +671,7 @@ submit description file.
     PARENT B C CHILD D
 \end{verbatim}
 
-Here is the single HTCondor submit description file
+Here is a sample HTCondor submit description file
 for this DAG:
 
 \index{DAGMan!example submit description file}
@@ -662,24 +683,16 @@ for this DAG:
     error        = diamond.err.$(cluster)
     log          = diamond_condor.log
     universe     = vanilla
-    notification = NEVER
     queue
 \end{verbatim}
 
-This example uses the same HTCondor submit description file
-for all the jobs in the DAG.
-This implies that each node within the DAG runs the
+Since each node uses the same HTCondor submit description file,
+this implies that each node within the DAG runs the
 same job.
 The \MacroUNI{cluster} macro
 produces unique file names for each job's output.
 As the HTCondor job within each node
 causes a separate job submission, each has a unique cluster number.
-
-Notification is set to \verb@NEVER@ in this example.
-This tells HTCondor not to send e-mail about the completion of a job
-submitted to HTCondor.
-For DAGs with many nodes, this
-reduces or eliminates excessive numbers of e-mails.
 
 \index{ClassAd job attribute!DAGParentNodeNames}
 \index{DAGParentNodeNames!job ClassAd attribute}
@@ -951,7 +964,7 @@ on the node.
 
 The variable \Env{\$RETRY} evaluates to an 
 integer value set to 0 first time a node is run,
-and is  incremented each time for each time the node is retried. 
+and is incremented each time for each time the node is retried. 
 The variable \Env{\$MAX\_RETRIES} is the value set for
 \Arg{NumberOfRetries}.
 
@@ -963,14 +976,21 @@ code.  The syntax for \Arg{ABORT-DAG-ON} is
 \Opt{ABORT-DAG-ON} \Arg{JobName} \Arg{AbortExitValue}
 \oOptArg{RETURN}{DAGReturnValue}
 
-If the node specified by \Arg{JobName} returns the specified
-\Arg{AbortExitValue}, the
-DAG is immediately aborted.
+If the return value of the node specified by \Arg{JobName}
+matches \Arg{AbortExitValue},
+the DAG is immediately aborted.
 A DAG abort differs from a node failure,
 in that a DAG abort causes all nodes within the DAG to be stopped immediately.
 This includes removing the jobs in nodes that are currently running.
 A node failure allows the DAG to continue running,
 until no more progress can be made due to dependencies.
+
+The behavior differs based on the existence of PRE and/or POST scripts.
+If a PRE script returns the \Arg{AbortExitValue} value,
+the DAG is immediately aborted.
+If the HTCondor job within a node returns the \Arg{AbortExitValue} value,
+the DAG is aborted if the node has no POST script.
+If the POST script returns the \Arg{AbortExitValue} value, the DAG is aborted.
 
 An abort overrides node retries. 
 If a node returns the abort exit value,
@@ -984,6 +1004,11 @@ with specifying the desired \Arg{DAGReturnValue}.
 The DAG abort return value
 can be used for DAGs within DAGs,
 allowing an inner DAG to cause an abort of an outer DAG.
+
+A DAG return value other than 0, 1, or 2 will cause the
+\Condor{dagman} job to stay in the queue after it exits
+and get retried, unless the \AdAttr{on\_exit\_remove} expression in the
+\File{.condor.sub} file is manually modified.
 
 Adding \Arg{ABORT-DAG-ON} for node C in the diamond-shaped
 DAG
@@ -1035,14 +1060,12 @@ enclosed in double quotes.
 To use a double quote inside \Arg{string},
 escape it with the backslash character (\verb@\@).
 To add the backslash character itself, use two backslashes (\verb@\\@).
-The string \$(JOB) maybe used in \Arg{string} and will expand to
-\Arg{JobName}. 
-If the \Arg{VARS} line appears in a DAG file used as a splice file, 
-then \$(JOB) will be the fully scoped name of the node.
 
 \Bold{Note that the \Arg{macroname} itself cannot begin with the string
 \Expr{queue},
 in any combination of upper or lower case.}
+
+\Bold{Examples}
 
 If the DAG input file contains
 \footnotesize
@@ -1179,15 +1202,15 @@ As an example, here are only the relevant parts of a DAG input file.
 Note that the NodeA value for \Expr{second} contains a tab.
 \footnotesize
 \begin{verbatim}
-    Vars NodeA first="Alberto Contador"
-    Vars NodeA second="\"\"Andy	Schleck\"\""
-    Vars NodeA third="Lance\\ Armstrong"
-    Vars NodeA misc="!@#$%^&*()_-=+=[]{}?/"
+    VARS NodeA first="Alberto Contador"
+    VARS NodeA second="\"\"Andy	Schleck\"\""
+    VARS NodeA third="Lance\\ Armstrong"
+    VARS NodeA misc="!@#$%^&*()_-=+=[]{}?/"
     
-    Vars NodeB first="Lance_Armstrong"
-    Vars NodeB second="\\\"Andreas_Kloden\\\""
-    Vars NodeB third="Ivan\\_Basso"
-    Vars NodeB misc="!@#$%^&*()_-=+=[]{}?/"
+    VARS NodeB first="Lance_Armstrong"
+    VARS NodeB second="\\\"Andreas_Kloden\\\""
+    VARS NodeB third="Ivan\\_Basso"
+    VARS NodeB misc="!@#$%^&*()_-=+=[]{}?/"
 \end{verbatim}
 \normalsize
 
@@ -1230,19 +1253,59 @@ The resulting values passed to the NodeB executable are
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
 \begin{description}
+\item[Special macros]
+\end{description}
+
+\begin{itemize}
+\item \Env{\$(JOB)} may be used in \Arg{string} and will expand to
+\Arg{JobName}. 
+If the \Arg{VARS} line appears in a DAG file used as a splice file, 
+then \Env{\$(JOB)} will be the fully scoped name of the node.
+\item \Env{\$(RETRY)} may be used in \Arg{string} and will expand to
+0 the first time a node is run; the value is incremented each time the node
+is retried.  For example:
+\end{itemize}
+\begin{verbatim}
+      Vars NodeC noderetry="$(RETRY)"
+\end{verbatim}
+
+% Note: this is an alternative to subsubsubsection, which we don't have.
+\begin{description}
 \item[Using VARS to define ClassAd attributes]
 \end{description}
 
 The \Arg{macroname} may also begin with a \Expr{+} character, in which case it
-names a ClassAd attribute. For example, the following VARS specification
+names a ClassAd attribute. For example, the VARS specification
 \begin{verbatim}
-  Vars NodeE +A="\"bob\""
+  VARS NodeD +A="\"bob\""
 \end{verbatim}
-would allow the HTCondor submit description file for NodeE to use
+results in the job ClassAd attribute
+\begin{verbatim}
+  A = "bob"
+\end{verbatim}
+Note that ClassAd string values must be quoted, hence there are escaped
+quotes in the example above.  The outer quotes are consumed in the parsing of
+the DAG input file, so the escaped inner quotes remain in the definition
+of the attribute value.
+
+Continuing this example,
+it allows the HTCondor submit description file for NodeD to use
 the following line:
 \begin{verbatim}
   arguments = "$$([A])"
 \end{verbatim}
+
+The special macros may also be used.
+For example
+\begin{verbatim}
+  VARS NodeE +B="$(RETRY)"
+\end{verbatim}
+places the numerical attribute
+\begin{verbatim}
+  B = 1
+\end{verbatim}
+into the ClassAd when the NodeE job is run for a second time,
+which is the first retry and the value 1. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Setting Priorities for Nodes}
@@ -2267,8 +2330,9 @@ Two special macros have been introduced for use by FINAL nodes:
 \Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT}.
 These macros may also be used by other nodes.
 
+\begin{itemize}
 \index{DAGMan!DAG_STATUS@\verb^$DAG_STATUS^ value}
-\Env{\$DAG\_STATUS} is the status of the DAG,
+\item \Env{\$DAG\_STATUS} is the status of the DAG,
 defined with the following values:
 \begin{itemize}
 \item 0: OK
@@ -2281,8 +2345,9 @@ defined with the following values:
 \end{itemize}
 
 \index{DAGMan!FAILED_COUNT@\verb^$FAILED_COUNT^ value}
-\Env{\$FAILED\_COUNT} is defined by the number of nodes that have failed in the
+\item \Env{\$FAILED\_COUNT} is defined by the number of nodes that have failed in the
 DAG.
+\end{itemize}
 
 The \Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT} macros can be used both
 as PRE and POST script arguments, and in node job submit description files.

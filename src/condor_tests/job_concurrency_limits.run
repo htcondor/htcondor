@@ -91,10 +91,11 @@ my $idles = 0;
 					match_regexp => "Started Negotiation Cycle",
 					match_instances => 2,
 					match_callback => $on_match,
-					match_timeout => 30,
+					match_timeout => 80,
 					match_new => "true"
 				);
 				print "About to remove these jobs\n";
+				$expect_run = 1000; # remove will let a job start, bump count way up now.
 				system("condor_q");
 				runcmd("condor_rm -all");
 			}
@@ -223,7 +224,7 @@ $result = SimpleJob::RunCheck(
 	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
-print "Test class default\n";
+print "Test class default: large.license\n";
 if($result == 1) {
 	print "ok\n";
 } else {
@@ -252,7 +253,7 @@ $result = SimpleJob::RunCheck(
 	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
-print "Test class default\n";
+print "Test class default: small.license\n";
 if($result == 1) {
 	print "ok\n";
 } else {

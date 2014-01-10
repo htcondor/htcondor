@@ -65,7 +65,7 @@ if( ! $fulltestname ) {
 my $perl_exe = "perl";
 if ($ENV{NMI_PLATFORM} =~ /_win/i) {
     my $perlver = `$perl_exe -version`;
-    print $perlver;
+    #print $perlver;
     if ( !$force_cygwin ) {
         print "attempting to run tests using current perl\n";
 	if ($ENV{PATH} =~ /[a-z]:\\condor\\bin;/i) {
@@ -89,7 +89,7 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 		#$perl_exe = "c:\\cygwin\\bin\\perl";
 		#print "Invoking cygwin perl by explicit path ($perl_exe)\n";
         $perlver = `$perl_exe -version`;
-        print $perlver;
+        #print $perlver;
         if (!($perlver =~ /cygwin/i)) {
             die "cygwin perl not found!\n";
         }

@@ -60,8 +60,8 @@ int safe_open_no_create(const char *fn, int flags)
     int want_trunc = (flags & O_TRUNC);
 #ifndef WIN32
     struct stat	lstat_buf;
-    struct stat	fstat_buf;
 #endif
+    struct stat	fstat_buf;
     int num_tries = 0;
 
     /* check for invalid argument values */
@@ -117,8 +117,10 @@ int safe_open_no_create(const char *fn, int flags)
      * will appear to match and not be a symbolic link.
      */
 #endif
+
     f = open(fn, flags);
     open_errno = errno;
+
 #ifndef WIN32
     r = lstat(fn, &lstat_buf);
 
@@ -178,6 +180,16 @@ int safe_open_no_create(const char *fn, int flags)
     /* At this point, we know that both the open and lstat worked, and that we
      * do not have a symbolic link.
      */
+#else
+	/* Handle Windows case - here we just check for an error calling open, no
+	 * need to call lstat or retry because there are no symlinks.
+	 */
+    if (f == -1)  {
+	    /* open failed */
+	    errno = open_errno;
+	    return -1;
+	}
+#endif
 
     /* Get the properties of the opened file descriptor */
     r = fstat(f, &fstat_buf);
@@ -191,7 +203,8 @@ int safe_open_no_create(const char *fn, int flags)
 	errno = fstat_errno;
 	return -1;
     }
-	
+
+#ifndef WIN32	
     /* Check if the immutable properties (device, inode and type) of the file
      * system object opened match (fstat_buf) those of the directory entry
      * (lstat_buf).
@@ -208,6 +221,7 @@ int safe_open_no_create(const char *fn, int flags)
 
 	goto TRY_AGAIN;
     }
+#endif
 
     /* At this point, we have successfully opened the file, and are sure it is
      * the correct file and that the last component is not a symbolic link.
@@ -224,9 +238,18 @@ int safe_open_no_create(const char *fn, int flags)
      * platforms O_CREAT|O_WRONLY|O_TRUNC works properly on /dev/null, but
      * O_WRONLY|O_TRUNC fails.
      */
+#ifndef WIN32
     if (want_trunc && !isatty(f) && !S_ISFIFO(fstat_buf.st_mode)
 						&& fstat_buf.st_size != 0)  {
 	r = ftruncate(f, 0);
+#else
+	/* On Windows, do not check for ttys etc because
+	 * they do not exist.  Use _chsize() as a replacement
+	 * for ftruncate().
+	 */
+    if (want_trunc && fstat_buf.st_size != 0)  {
+	r = _chsize(f, 0);
+#endif
 	if (r == -1)  {
 	    /* truncate failed, so fail with the errno from ftruncate */
 	    int ftruncate_errno = errno;
@@ -236,7 +259,7 @@ int safe_open_no_create(const char *fn, int flags)
 	}
     }
 	errno = saved_errno;
-#endif
+
     /* Success, restore the errno incase we had recoverable failures */
     
 
@@ -449,6 +472,14 @@ int safe_open_no_create_follow(const char *fn, int flags)
 	if (!isatty(f) && !S_ISFIFO(fstat_buf.st_mode)
 						&& fstat_buf.st_size != 0)  {
 	    r = ftruncate(f, 0);
+#else
+	/* On Windows, do not check for ttys etc because
+	 * they do not exist.  Use _chsize() as a replacement
+	 * for ftruncate().
+	 */
+	if ( fstat_buf.st_size != 0)  {
+	    r = _chsize(f, 0);
+#endif
 	    if (r == -1)  {
 		/* fail if the ftruncate failed */
 		int ftruncate_errno = errno;
@@ -457,7 +488,6 @@ int safe_open_no_create_follow(const char *fn, int flags)
 		return -1;
 	    }
 	}
-#endif
     }
 
     return f;

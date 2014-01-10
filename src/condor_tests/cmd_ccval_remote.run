@@ -1,0 +1,280 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+##
+## This test check availability and usage contol of the new
+## local, resources in both a static configuration and in psolts.
+## It is model after what we did to test concurrency limits
+## as we are checking the same sorts of things. bt
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use Check::CondorLog;
+
+
+my $ClusterId = 0;
+my $mismatch = 0;
+
+my $firstappend_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	WANT_SUSPEND = FALSE
+	KILLING_TIMEOUT = 1
+	MachineMaxVacateTime = 5
+	NEGOTIATION_INTERVAL = 10
+	KILL = TRUE
+	foo = 1
+	bar = $(foo) + 1
+	master.foo = 2
+	MY_LOG = $(LOG)/me
+	GOO = baz
+	master.GOO = $(GOO), bar
+	ALL_DEBUG = D_ALWAYS D_CMD D_DAEMONCORE
+';
+
+$configfile = CondorTest::CreateLocalConfig($firstappend_condor_config,"ccvremote");
+
+CondorTest::StartCondorWithParams(
+	condor_name => "remotecccv",
+	fresh_local => "TRUE",
+	condorlocalsrc => "$configfile",
+);
+
+my $return = "";
+my $executecount = 0;
+my $result = 1;
+my $test_name = "cmd_ccval_remote";
+
+my $on_execute = sub {
+	print "********************************** OnExecute *****************************\n";
+};
+
+
+my $GetClusterId = sub {
+	my $cid = shift;
+	$ClusterId = $cid;
+	print "Resquestd Cluster Got $ClusterId\n";
+	##########################
+	#
+	# Convoluted: This function is paased to RunCheck which uses it in RunTest in the fourth
+	# position which is always an undefined variable EXCEPT when it is a call back routine 
+	# to pass out the cluster Id.
+	#
+	##########################
+	#runcmd("condor_q",{emit_output => 1});
+};
+
+#Do a job before setting tesing exit codes
+print "First test basic job\n";
+$result = SimpleJob::RunCheck(); # jobid 1
+
+my @localarray = ();
+my @remotearray = ();
+my %locparams = ();
+my %remparams = ();
+my %onlyloc = ();
+my %onlyrem = ();
+
+my %hashcompareexceptions = 
+(
+	"PID" => "1",
+	"PPID" => "1",
+	"SUBSYSTEM" => "1",
+	"TOOL_TIMEOUT_MULTIPLIER" => "1",
+);
+
+my $ccvstat = 1;
+
+print "Compare local config dump to remote of master\n";
+$ccvstat = runCondorTool("condor_config_val -dump",\@localarray,2,{emit_output=>0});
+if(!$ccvstat) {
+	die "Test failure from failure to do local condor_config_val dump\n";
+}
+
+$ccvstat = runCondorTool("condor_config_val -negotiator -dump",\@remotearray,2,{emit_output=>0});
+if(!$ccvstat) {
+	die "Test failure from failure to do local condor_config_val remote dump of the master\n";
+}
+
+ClassifyParams(\@localarray,\@remotearray);
+
+# The above does 3 tests, first it checks for all but the exclused params as being equal.
+# Then it checks two particular params set to be different by the test.
+
+# Now we are going to use $(LOCAL_DIR) in two ways. Later we will check for the
+# value of MY_LOG being a concatenation of that and $(LOG) plus some. We will also 
+# verify that where verbose says it is, is exactly where it gets defined.
+
+my @localdir = ();
+$ccvstat = runCondorTool("condor_config_val local_dir",\@localdir,2,{emit_output=>0});
+if(!$ccvstat) {
+	die "Test failure from failure to do local condor_config_val local_dir\n";
+}
+my $localdirres = $localdir[0];
+fullchomp($localdirres);
+if($localdirres =~ /^.*$yest_name.*saveme.*$/) {
+	print "Good localdir defined and based on test name: $localdirres\n";
+	RegisterResult(1);
+} else {
+	print "Bad localdir NOT defined and based on test name: $localdirres\n";
+	RegisterResult(0);
+}
+
+
+
+CondorTest::EndTest();
+
+sub LoadHash
+{
+	my $arrayref = shift;
+	my $hashref = shift;
+
+	foreach my $params (@$arrayref) {
+		fullchomp($params);
+		#print "Parsing: $params\n";
+
+		if($params =~ /(.*?)\s+=\s*(.*)/) {
+			${$hashref}{$1} = $2;
+		} elsif($params =~ /#(.*)/) {
+			print "Comment: $1\n";
+		} else {
+			print "Why is this not param format: $params\n";
+		}
+	}
+
+	foreach my $key ( sort keys %{$hashref}) {
+		#print "dump: $key = ${$hashref}{$key}\n";
+	}
+}
+
+sub CompareParams
+{
+	my $srchashref = shift;
+	my $targethashref = shift;
+	my $strayhashref = shift;
+	my $label = shift;
+
+	foreach my $keys (sort keys %{$srchashref}) {
+		#print "consider: $label: $keys \n";
+		if(exists ${$targethashref}{$keys}) {
+			#print "In target: ${$targethashref}{$keys}\n";
+			if(${$srchashref}{$keys} ne ${$targethashref}{$keys}) {
+				print "$label key $keys ${$srchashref}{$keys} vs ${$targethashref}{$keys} ";
+				if(exists $hashcompareexceptions{$keys}) {
+					print "- ALLOWED\n";
+				} else { 
+					print "- EORROR\n";
+					$mismatch += 1;
+				}
+			}
+			#;
+		} else {
+			${$strayhashref}{$keys} = ${$srchashref}{$keys};
+			#print "NOT In $label target: ${$targethashref}{$keys}\n";
+		}
+	}
+}
+
+sub ClassifyParams
+{
+	my $larrayref = shift;
+	my $rarrayref = shift;
+	my $done = 0;
+	my $ritem = "";
+	my $litem = "";
+	my $rdone = 0;
+	my $ldone = 0;
+	my $rpid = 0;
+	my $lpid = 0;
+	my $rppid = 0;
+	my $lppid = 0;
+
+	my $localcount = @$larrayref;
+	my $remotecount = @$rarrayref;
+
+	LoadHash($larrayref, \%locparams);
+	LoadHash($rarrayref, \%remparams);
+
+	CompareParams(\%locparams, \%remparams, \%onlyloc, "loc");
+	CompareParams(\%remparams, \%locparams, \%onlyrem, "rem");
+
+	if($mismatch > 0) {
+		print "MISMATCHES caused failure\n";
+		RegisterResult(0);
+	} else {
+		print  "Params match both local and remote locations\n";
+		RegisterResult(1);
+	}
+	foreach my $keys (sort keys %onlyloc) {
+		print "Local only: $keys $onlyloc{$keys}\n";
+	}
+	
+	foreach my $keys (sort keys %onlyrem) {
+		print "remote only: $keys $onlyrem{$keys}\n";
+	}
+	
+	CompareLocRem("foo","1","2");
+	CompareLocRem("GOO","baz","baz, bar");
+	return(1);
+
+}
+
+sub CompareLocRem
+{
+	my $key = shift;
+	my $locval = shift;
+	my $remval = shift;
+
+	@remotearray = ();
+	@localarray = ();
+
+	$ccvstat = runCondorTool("condor_config_val -master $key",\@remotearray,2,{emit_output=>0});
+	if(!$ccvstat) {
+		die "Test failure from failure to do local condor_config_val remote dump of the master\n";
+	}
+
+	$ccvstat = runCondorTool("condor_config_val $key",\@localarray,2,{emit_output=>0});
+	if(!$ccvstat) {
+		die "Test failure from failure to do local condor_config_val remote dump of the master\n";
+	}
+
+	my $gotloc = shift @localarray;
+	my $gotrem = shift @remotearray;
+	fullchomp($gotloc);
+	fullchomp($gotrem);
+
+	print "for $key local val is $gotloc and remote -master is $gotrem\n";
+	if($locval ne $remval) {
+		if(("$locval" ne "$gotloc") || ("$remval" ne "$gotrem")) {
+			if("$locval" ne "$gotloc") {
+				print "Local values differ\n";
+			}
+			if("$remval" ne "$gotrem") {
+				print "Remote values differ\n";
+			}
+			print "BAD expected local value of <$key> as <$locval> and -master value of <$remval>\n";
+			print "Got local value of <$key> as <$gotloc> and -master value of <$gotrem>\n";
+			RegisterResult(0);
+		} else {
+			RegisterResult(1);
+		}
+	}
+}

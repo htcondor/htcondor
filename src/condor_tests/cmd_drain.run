@@ -25,6 +25,7 @@ use Check::JobIsEvicted;
 use Check::CondorLog;
 
 my $hostname = `condor_config_val full_hostname`;
+CondorUtils::fullchomp($hostname);
 
 my $append_condor_config = '
   DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
@@ -43,13 +44,13 @@ CondorTest::StartCondorWithParams(
 SimpleJob::RunCheck();
 
 # drain the startd
-CondorTest::runcmd("condor_drain $hostname");
+CondorTest::runCondorTool("condor_drain $hostname");
 
 # verify that the job does not run while startd is drained
 JobDoesNotRun::RunCheck();
 
 # turn off draining
-CondorTest::runcmd("condor_drain -cancel $hostname");
+CondorTest::runCondorTool("condor_drain -cancel $hostname");
 
 # verify that a job runs
 SimpleJob::RunCheck();
@@ -57,7 +58,7 @@ SimpleJob::RunCheck();
 
 my $graceful_drain_on_execute = sub {
   CondorTest::debug("Draining -graceful while job is running.",1);
-  CondorTest::runcmd("condor_drain -graceful $hostname");
+  CondorTest::runCondorTool("condor_drain -graceful $hostname");
 };
 
 # verify that a 20s job runs to completion during graceful draining
@@ -68,11 +69,11 @@ SimpleJob::RunCheck(
 
 
 # turn off draining
-CondorTest::runcmd("condor_drain -cancel $hostname");
+CondorTest::runCondorTool("condor_drain -cancel $hostname");
 
 my $quick_drain_on_execute = sub {
   CondorTest::debug("Draining -quick while job is running.",1);
-  CondorTest::runcmd("condor_drain -quick $hostname");
+  CondorTest::runCondorTool("condor_drain -quick $hostname");
 };
 
 # verify that a 20s job gets evicted during quick draining

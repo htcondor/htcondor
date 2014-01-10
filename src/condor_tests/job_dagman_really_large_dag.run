@@ -62,6 +62,10 @@ $aborted = sub
 	die "Abort event NOT expected\n";
 };
 
+my $evicted = sub {
+	CondorTest::debug("Evicted without checkpoint from removing jobs.\n",1);
+};
+
 $held = sub 
 {
 	CondorTest::debug("DAGMan was held -- good!\n");
@@ -161,6 +165,7 @@ $success = sub
 CondorTest::RegisterExitedSuccess( $testname, $success);
 CondorTest::RegisterExecute($testname, $executed);
 CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterEvictedWithoutCheckpoint($testname, $evicted);
 CondorTest::RegisterAbort( $testname, $aborted );
 CondorTest::RegisterHold( $testname, $held );
 CondorTest::RegisterRelease( $testname, $released );

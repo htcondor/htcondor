@@ -27,6 +27,9 @@
 
 #include "condor_common.h"
 #include "startd.h"
+#include "consumption_policy.h"
+#include <set>
+using std::set;
 
 Reqexp::Reqexp( Resource* res_ip )
 {
@@ -129,13 +132,51 @@ Reqexp::compute( amask_t how_much )
 
 		char *tmp = param( ATTR_WITHIN_RESOURCE_LIMITS );
 		if( tmp != NULL ) {
-			m_within_resource_limits_expr = strdup( tmp );
-			free(tmp);
-		} else {
+			m_within_resource_limits_expr = tmp;
+		}
+		else
 			// In the below, _condor_RequestX attributes may be explicitly set by
 			// the schedd; if they are not set, go with the RequestX that derived from
 			// the user's original submission.
-			tmp = const_cast<char*>(
+            if (rip->r_has_cp || (rip->get_parent() && rip->get_parent()->r_has_cp)) {
+                dprintf(D_FULLDEBUG, const_cast<char*>("Using CP variant of WithinResourceLimits\n"));
+                // a CP-supporting p-slot, or a d-slot derived from one, gets variation
+                // that supports zeroed resource assets, and refers to consumption
+                // policy attributes.
+
+                // reconstructing this isn't a big deal, but I'm doing it because I'm 
+                // afraid to randomly perterb the order of the resource initialization 
+                // spaghetti, which makes kittens cry.
+                set<string> assets;
+                assets.insert("cpus");
+                assets.insert("memory");
+                assets.insert("disk");
+                for (CpuAttributes::slotres_map_t::const_iterator j(rip->r_attr->get_slotres_map().begin());  j != rip->r_attr->get_slotres_map().end();  ++j) {
+                    assets.insert(j->first);
+                }
+
+                // first subexpression does not need && operator:
+                bool need_and = false;
+                string estr = "(";
+                for (set<string>::iterator j(assets.begin());  j != assets.end();  ++j) {
+                    string rname(*j);
+                    if (rname == "swap") continue;
+                    *(rname.begin()) = toupper(*(rname.begin()));
+                    string te;
+                    // The logic here is that if the target job ad is in a mode where its RequestXxx have
+                    // already been temporarily overridden with the consumption policy values, then we want
+                    // to use RequestXxx (note, this will include any overrides by _condor_RequestXxx).
+                    // Otherwise, we want to refer to ConsumptionXxx.
+                    formatstr(te, "ifThenElse(target._cp_orig_%s%s isnt undefined, target.%s%s <= my.%s, my.%s%s <= my.%s)", ATTR_REQUEST_PREFIX, rname.c_str(), ATTR_REQUEST_PREFIX, rname.c_str(), rname.c_str(), ATTR_CONSUMPTION_PREFIX, rname.c_str(), rname.c_str());
+                    if (need_and) estr += " && ";
+                    estr += te;
+                    need_and = true;
+                }
+                estr += ")";
+
+                m_within_resource_limits_expr = strdup(estr.c_str());
+		} else {
+			static const char * climit =
 				"("
 				 "ifThenElse(TARGET._condor_RequestCpus =!= UNDEFINED,"
 					"MY.Cpus > 0 && TARGET._condor_RequestCpus <= MY.Cpus,"
@@ -154,9 +195,32 @@ Reqexp::compute( amask_t how_much )
 					"ifThenElse(TARGET.RequestDisk =!= UNDEFINED,"
 						"MY.Disk > 0 && TARGET.RequestDisk <= MY.Disk,"
 						"FALSE))"
-				")");
-			m_within_resource_limits_expr = strdup( tmp );
+				")";
+			const CpuAttributes::slotres_map_t& resmap = rip->r_attr->get_slotres_map();
+			if (resmap.empty()) {
+				m_within_resource_limits_expr = strdup(climit);
+			} else {
+				// start by copying all but the last ) of the pre-defined resources expression
+				std::string wrlimit(climit,strlen(climit)-1);
+				// then append the expressions for the user defined resource types
+				CpuAttributes::slotres_map_t::const_iterator it(resmap.begin());
+				for ( ; it != resmap.end();  ++it) {
+					const char * rn = it->first.c_str();
+					formatstr_cat(wrlimit,
+						" && "
+						 "(TARGET.Request%s is UNDEFINED ||"
+							"MY.%s >= ifThenElse(TARGET._condor_Request%s is UNDEFINED,"
+								"TARGET.Request%s,"
+								"TARGET._condor_Request%s)"
+						 ")",
+						rn, rn, rn, rn, rn);
+				}
+				// then append the final closing )
+				wrlimit += ")";
+				m_within_resource_limits_expr = strdup(wrlimit.c_str());
+			}
 		}
+		dprintf(D_FULLDEBUG, "%s = %s\n", ATTR_WITHIN_RESOURCE_LIMITS, m_within_resource_limits_expr);
 	}
 }
 
@@ -251,7 +315,7 @@ Reqexp::publish( ClassAd* ca, amask_t /*how_much*/ /*UNUSED*/ )
 
 
 void
-Reqexp::dprintf( int flags, char* fmt, ... )
+Reqexp::dprintf( int flags, const char* fmt, ... )
 {
 	va_list args;
 	va_start( args, fmt );

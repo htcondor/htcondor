@@ -64,6 +64,11 @@
 #endif
 #endif
 
+#if defined(HAVE_GETGRNAM)
+#include <sys/types.h>
+#include <grp.h>
+#endif
+
 #include "file_sql.h"
 extern FILESQL *FILEObj;
 
@@ -92,6 +97,7 @@ void	FindPrioJob(PROC_ID &);
 static bool qmgmt_was_initialized = false;
 static ClassAdCollection *JobQueue = 0;
 static StringList DirtyJobIDs;
+static std::set<int> DirtyPidsSignaled;
 static int next_cluster_num = -1;
 static int next_proc_num = 0;
 int active_cluster_num = -1;	// client is restricted to only insert jobs to the active cluster
@@ -1263,6 +1269,20 @@ isQueueSuperUser( const char* user )
 		return false;
 	}
 	for( i=0; i<num_super_users; i++ ) {
+#if defined(HAVE_GETGRNAM)
+        if (super_users[i][0] == '%') {
+            // this is a user group, so check user against the group membership
+            struct group* gr = getgrnam(1+super_users[i]);
+            if (gr) {
+                for (char** gmem=gr->gr_mem;  *gmem != NULL;  ++gmem) {
+                    if (strcmp(user, *gmem) == 0) return true;
+                }
+            } else {
+                dprintf(D_SECURITY, "Group name \"%s\" was not found in defined user groups\n", 1+super_users[i]);
+            }
+            continue;
+        }
+#endif
 		if( strcmp( user, super_users[i] ) == 0 ) {
 			return true;
 		}
@@ -1403,14 +1423,6 @@ OwnerCheck2(ClassAd *ad, const char *test_owner, const char *job_owner)
 		return false;
 	}
 
-	// The super users are always allowed to do updates.  They are
-	// specified with the "QUEUE_SUPER_USERS" string list in the
-	// config file.  Defaults to root and condor.
-	if( isQueueSuperUser(test_owner) ) {
-		dprintf( D_FULLDEBUG, "OwnerCheck retval 1 (success), super_user\n" );
-		return true;
-	}
-
 #if !defined(WIN32) 
 		// If we're not root or condor, only allow qmgmt writes from
 		// the UID we're running as.
@@ -1420,7 +1432,10 @@ OwnerCheck2(ClassAd *ad, const char *test_owner, const char *job_owner)
 			dprintf(D_FULLDEBUG, "OwnerCheck success: owner (%s) matches "
 					"my username\n", test_owner );
 			return true;
-		} else {
+		} else if (isQueueSuperUser(test_owner)) {
+            dprintf(D_FULLDEBUG, "OwnerCheck retval 1 (success), super_user\n");
+            return true;
+        } else {
 			errno = EACCES;
 			dprintf( D_FULLDEBUG, "OwnerCheck: reject owner: %s non-super\n",
 					 test_owner );
@@ -1449,18 +1464,21 @@ OwnerCheck2(ClassAd *ad, const char *test_owner, const char *job_owner)
 		// to connect to the queue.
 #if defined(WIN32)
 	// WIN32: user names are case-insensitive
-	if (strcasecmp(job_owner, test_owner) != 0) {
+	if (strcasecmp(job_owner, test_owner) == 0) {
 #else
-	if (strcmp(job_owner, test_owner) != 0) {
+	if (strcmp(job_owner, test_owner) == 0) {
 #endif
-		errno = EACCES;
-		dprintf( D_FULLDEBUG, "ad owner: %s, queue submit owner: %s\n",
-				job_owner, test_owner );
-		return false;
-	} 
-	else {
-		return true;
-	}
+        return true;
+    }
+
+    if (isQueueSuperUser(test_owner)) {
+        dprintf(D_FULLDEBUG, "OwnerCheck retval 1 (success), super_user\n");
+        return true;
+    }
+
+    errno = EACCES;
+    dprintf(D_FULLDEBUG, "ad owner: %s, queue submit owner: %s\n", job_owner, test_owner );
+    return false;
 }
 
 
@@ -2530,30 +2548,33 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	}
 
 	// Get the job's status and only mark dirty if it is running
+	// Note: Dirty attribute notification could work for local and
+	// standard universe, but is currently not supported for them.
 	int universe;
 	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_STATUS, &status );
 	GetAttributeInt( cluster_id, proc_id, ATTR_JOB_UNIVERSE, &universe );
-	if( (universe != CONDOR_UNIVERSE_SCHEDULER) &&
+	if( ( universe != CONDOR_UNIVERSE_SCHEDULER &&
+		  universe != CONDOR_UNIVERSE_LOCAL &&
+		  universe != CONDOR_UNIVERSE_STANDARD ) &&
 		( flags & SETDIRTY ) && 
 		( status == RUNNING || (( universe == CONDOR_UNIVERSE_GRID ) && jobExternallyManaged( ad ) ) ) ) {
 
 		// Add the key to list of dirty classads
-		DirtyJobIDs.rewind();
-		if( ! DirtyJobIDs.contains( key ) ) {
+		if( ! DirtyJobIDs.contains( key ) &&
+			SendDirtyJobAdNotification( key ) ) {
+
 			DirtyJobIDs.append( key );
-		}
 
-		// Start timer to ensure notice is confirmed
-		if( dirty_notice_timer_id <= 0 ) {
-			dprintf(D_FULLDEBUG, "Starting dirty attribute notification timer\n");
-			dirty_notice_timer_id = daemonCore->Register_Timer(
-				dirty_notice_interval,
-				dirty_notice_interval,
-				PeriodicDirtyAttributeNotification,
-				"PeriodicDirtyAttributeNotification");
+			// Start timer to ensure notice is confirmed
+			if( dirty_notice_timer_id <= 0 ) {
+				dprintf(D_FULLDEBUG, "Starting dirty attribute notification timer\n");
+				dirty_notice_timer_id = daemonCore->Register_Timer(
+									dirty_notice_interval,
+									dirty_notice_interval,
+									PeriodicDirtyAttributeNotification,
+									"PeriodicDirtyAttributeNotification");
+			}
 		}
-
-		SendDirtyJobAdNotification(key);
 	}
 
 	JobQueueDirty = true;
@@ -2561,7 +2582,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	return 0;
 }
 
-void
+bool
 SendDirtyJobAdNotification(char *job_id_str)
 {
 	PROC_ID job_id;
@@ -2576,15 +2597,17 @@ SendDirtyJobAdNotification(char *job_id_str)
 		pid = scheduler.FindGManagerPid(job_id);
 	}
 
-	if( pid > 0 ) {
+	if ( pid <= 0 ) {
+		dprintf(D_ALWAYS, "Failed to send signal %s, no job manager found\n", getCommandString(UPDATE_JOBAD));
+		return false;
+	} else if ( DirtyPidsSignaled.find(pid) == DirtyPidsSignaled.end() ) {
 		dprintf(D_FULLDEBUG, "Sending signal %s, to pid %d\n", getCommandString(UPDATE_JOBAD), pid);
 		classy_counted_ptr<DCSignalMsg> msg = new DCSignalMsg(pid, UPDATE_JOBAD);
 		daemonCore->Send_Signal_nonblocking(msg.get());
-//		daemonCore->Send_Signal(srec->pid, UPDATE_JOBAD);
+		DirtyPidsSignaled.insert(pid);
 	}
-	else {
-		dprintf(D_ALWAYS, "Failed to send signal %s, no job manager found\n", getCommandString(UPDATE_JOBAD));
-	}
+
+	return true;
 }
 
 void
@@ -2592,10 +2615,28 @@ PeriodicDirtyAttributeNotification()
 {
 	char	*job_id;
 
+	DirtyPidsSignaled.clear();
+
 	DirtyJobIDs.rewind();
 	while( (job_id = DirtyJobIDs.next()) != NULL ) {
-		SendDirtyJobAdNotification(job_id);
+		if ( SendDirtyJobAdNotification(job_id) == false ) {
+			// There's no shadow/gridmanager for this job.
+			// Mark it clean and remove it from the dirty list.
+			// We can't call MarkJobClean() here, as that would
+			// disrupt our traversal of DirtyJobIDs.
+			JobQueue->ClearClassAdDirtyBits(job_id);
+			DirtyJobIDs.deleteCurrent();
+		}
 	}
+
+	if( DirtyJobIDs.isEmpty() && dirty_notice_timer_id > 0 )
+	{
+		dprintf(D_FULLDEBUG, "Cancelling dirty attribute notification timer\n");
+		daemonCore->Cancel_Timer(dirty_notice_timer_id);
+		dirty_notice_timer_id = -1;
+	}
+
+	DirtyPidsSignaled.clear();
 }
 
 void
@@ -3293,15 +3334,11 @@ MarkJobClean(int cluster_id, int proc_id)
 void
 MarkJobClean(const char* job_id_str)
 {
-	int cluster;
-	int proc;
-
 	if(JobQueue->ClearClassAdDirtyBits(job_id_str))
 	{
 		dprintf(D_FULLDEBUG, "Cleared dirty attributes for job %s\n", job_id_str);
 	}
 
-	DirtyJobIDs.rewind();
 	DirtyJobIDs.remove(job_id_str);
 
 	if( DirtyJobIDs.isEmpty() && dirty_notice_timer_id > 0 )
@@ -3310,7 +3347,6 @@ MarkJobClean(const char* job_id_str)
 		daemonCore->Cancel_Timer(dirty_notice_timer_id);
 		dirty_notice_timer_id = -1;
 	}
-	StrToId(job_id_str, cluster, proc);
 }
 
 ClassAd *

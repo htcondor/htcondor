@@ -1800,7 +1800,22 @@ CStarter::createTempExecuteDir( void )
 		// might be using glexec.  glexec relies on being able to read the
 		// contents of the execute directory as a non-condor user, so in that
 		// case, use 0755.  for all other cases, use the more-restrictive 0700.
+
 		int dir_perms = 0700;
+
+		// Parameter JOB_EXECDIR_PERMISSIONS can be user / group / world and
+		// defines permissions on execute directory (subject to umask)
+		char *who = param("JOB_EXECDIR_PERMISSIONS");
+		if(who != NULL)	{
+			if(!strcasecmp(who, "user"))
+				dir_perms = 0700;
+			else if(!strcasecmp(who, "group"))
+				dir_perms = 0750;
+			else if(!strcasecmp(who, "world"))
+				dir_perms = 0755;
+			free(who);
+		}
+
 #if defined(LINUX)
 		if(glexecPrivSepHelper()) {
 			dir_perms = 0755;

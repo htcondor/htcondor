@@ -142,7 +142,7 @@ bool EvalBool(compat_classad::ClassAd *ad, const char *constraint)
 	} else if( result.IsRealValue( doubleVal ) ) {
 		return IS_DOUBLE_TRUE(doubleVal);
 	}
-	dprintf( D_ALWAYS, "constraint (%s) does not evaluate to bool\n",
+	dprintf( D_FULLDEBUG, "constraint (%s) does not evaluate to bool\n",
 		constraint );
 	return false;
 }

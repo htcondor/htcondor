@@ -41,6 +41,8 @@
 #include "MyString.h"
 #include "condor_daemon_core.h"
 
+#include "consumption_policy.h"
+
 #include <vector>
 #include <string>
 #include <deque>
@@ -292,6 +294,8 @@ Matchmaker ()
     accept_surplus = false;
     autoregroup = false;
     allow_quota_oversub = false;
+
+    cp_resources = false;
 
 	rejForNetwork = 0;
 	rejForNetworkShare = 0;
@@ -1155,7 +1159,8 @@ negotiationTime ()
 {
 	ClassAdList allAds; //contains ads from collector
 	ClassAdListDoesNotDeleteAds startdAds; // ptrs to startd ads in allAds
-	ClaimIdHash claimIds(MyStringHash);
+        //ClaimIdHash claimIds(MyStringHash);
+    ClaimIdHash claimIds;
 	ClassAdListDoesNotDeleteAds scheddAds; // ptrs to schedd ads in allAds
 
 	/**
@@ -1187,7 +1192,7 @@ negotiationTime ()
         // also blocking other daemons trying to talk to the collector, and so forth.  That seems
         // like it should be fixed as well.
         dprintf(D_ALWAYS, "Re-reading config.\n");
-        config(0);
+        config();
     }
 
 	dprintf( D_ALWAYS, "---------- Started Negotiation Cycle ----------\n" );
@@ -1468,7 +1473,7 @@ negotiationTime ()
                 GroupEntry* group = *j;
                 dprintf(D_FULLDEBUG, "group quotas: group= %s  quota= %g  requested= %g  allocated= %g  unallocated= %g\n",
                         group->name.c_str(), group->quota, group->requested+group->allocated, group->allocated, group->requested);
-                groupQuotasHash->insert(MyString(group->name.c_str()), group->allocated);
+                groupQuotasHash->insert(MyString(group->name.c_str()), group->quota);
                 requested_total += group->requested;
                 allocated_total += group->allocated;
                 if (group->allocated > 0) served_groups += 1;
@@ -1910,7 +1915,7 @@ void Matchmaker::hgq_assign_quotas(GroupEntry* group, double quota) {
 
         if (child->static_quota && (q < child->config_quota)) {
             dprintf(D_ALWAYS, "group quotas: WARNING: static quota for group %s rescaled from %g to %g\n", child->name.c_str(), child->config_quota, q);
-        } else if (Zd > 1) {
+        } else if (Zd - 1 > 0.0001) {
             dprintf(D_ALWAYS, "group quotas: WARNING: dynamic quota for group %s rescaled from %g to %g\n", child->name.c_str(), child->config_quota, child->config_quota / Zd);
         }
 
@@ -2930,6 +2935,8 @@ obtainAdsFromCollector (
 	MyString buffer;
 	CollectorList* collects = daemonCore->getCollectorList();
 
+    cp_resources = false;
+
     // build a query for Scheduler, Submitter and (constrained) machine ads
     //
 	CondorQuery publicQuery(ANY_AD);
@@ -3124,6 +3131,12 @@ obtainAdsFromCollector (
 				}
 			}
 
+            if (!cp_resources && cp_supports_policy(*ad)) {
+                // we need to know if we will be encountering resource ads that
+                // advertise a consumption policy
+                cp_resources = true;
+            }
+
 			OptimizeMachineAdForMatchmaking( ad );
 
 			startdAds.Insert(ad);
@@ -3211,8 +3224,8 @@ obtainAdsFromCollector (
 
 	MakeClaimIdHash(startdPvtAdList,claimIds);
 
-	dprintf(D_ALWAYS, "Got ads: %d public and %d private\n",
-	        allAds.MyLength(),claimIds.getNumElements());
+	dprintf(D_ALWAYS, "Got ads: %d public and %lu private\n",
+	        allAds.MyLength(),claimIds.size());
 
 	dprintf(D_ALWAYS, "Public ads include %d submitter, %d startd\n",
 		scheddAds.MyLength(), startdAds.MyLength() );
@@ -3264,7 +3277,8 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 	while( (ad = startdPvtAdList.Next()) ) {
 		MyString name;
 		MyString ip_addr;
-		MyString claim_id;
+		string claim_id;
+        string claimlist;
 
 		if( !ad->LookupString(ATTR_NAME, name) ) {
 			continue;
@@ -3276,18 +3290,34 @@ Matchmaker::MakeClaimIdHash(ClassAdList &startdPvtAdList, ClaimIdHash &claimIds)
 			// As of 7.1.3, we look up CLAIM_ID first and CAPABILITY
 			// second.  Someday CAPABILITY can be phased out.
 		if( !ad->LookupString(ATTR_CLAIM_ID, claim_id) &&
-			!ad->LookupString(ATTR_CAPABILITY, claim_id) )
+			!ad->LookupString(ATTR_CAPABILITY, claim_id) &&
+            !ad->LookupString(ATTR_CLAIM_ID_LIST, claimlist))
 		{
 			continue;
 		}
 
 			// hash key is name + ip_addr
-		name += ip_addr;
-		if( claimIds.insert(name,claim_id)!=0 ) {
-			dprintf(D_ALWAYS,
-					"WARNING: failed to insert claim id hash table entry "
-					"for '%s'\n",name.Value());
-		}
+        string key = name;
+        key += ip_addr;
+        ClaimIdHash::iterator f(claimIds.find(key));
+        if (f == claimIds.end()) {
+            claimIds[key];
+            f = claimIds.find(key);
+        } else {
+            dprintf(D_ALWAYS, "Warning: duplicate key %s detected while loading private claim table, overwriting previous entry\n", key.c_str());
+            f->second.clear();
+        }
+
+        // Use the new claim-list if it is present, otherwise use traditional claim id (not both)
+        if (ad->LookupString(ATTR_CLAIM_ID_LIST, claimlist)) {
+            StringList idlist(claimlist.c_str());
+            idlist.rewind();
+            while (char* id = idlist.next()) {
+                f->second.insert(id);
+            }
+        } else {
+            f->second.insert(claim_id);
+        }
 	}
 	startdPvtAdList.Close();
 }
@@ -3608,7 +3638,13 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 			request.Assign(ATTR_SUBMITTER_GROUP_QUOTA,temp_groupQuota);
 		}
 
-		OptimizeJobAdForMatchmaking( &request );
+        // when resource ads with consumption policies are in play, optimizing 
+        // the Requirements attribute can break the augmented consumption policy logic
+        // that overrides RequestXXX attributes with corresponding values supplied by
+        // the consumption policy 
+        if (!cp_resources) {
+            OptimizeJobAdForMatchmaking( &request );
+        }
 
 		if( IsDebugLevel( D_JOB ) ) {
 			dprintf(D_JOB,"Searching for a matching machine for the following job ad:\n");
@@ -3754,25 +3790,41 @@ negotiate(char const* groupName, char const *scheddName, const ClassAd *scheddAd
 			continue;
 		}
 
-		// 2g.  Delete ad from list so that it will not be considered again in 
-		//		this negotiation cycle
-		int reevaluate_ad = false;
-		offer->LookupBool(ATTR_WANT_AD_REVAULATE, reevaluate_ad);
-		if( reevaluate_ad ) {
-			reeval(offer);
-			// Shuffle this resource to the end of the list.  This way, if
-			// two resources with the same RANK match, we'll hand them out
-			// in a round-robin way
-			startdAds.Remove (offer);
-			startdAds.Insert (offer);
-		} else  {
-			startdAds.Remove (offer);
-		}	
+        double match_cost = 0;
+        if (offer->LookupFloat(CP_MATCH_COST, match_cost)) {
+            // If CP_MATCH_COST attribute is present, this match involved a consumption policy.
+            offer->Delete(CP_MATCH_COST);
 
-		double SlotWeight = accountant.GetSlotWeight(offer);
-		limitUsed += SlotWeight;
-        if (remoteUser == "") limitUsedUnclaimed += SlotWeight;
-		pieLeft -= SlotWeight;
+            // In this mode we don't remove offers, because the goal is to allow
+            // other jobs/requests to match against them and consume resources, if possible
+            //
+            // A potential future RFE here would be to support an option for choosing "breadth-first"
+            // or "depth-first" slot utilization.  If breadth-first was chosen, then the slot
+            // could be shuffled to the back.  It might even be possible to allow a slot-specific
+            // policy choice for this behavior.
+        } else {
+    		int reevaluate_ad = false;
+    		offer->LookupBool(ATTR_WANT_AD_REVAULATE, reevaluate_ad);
+    		if (reevaluate_ad) {
+    			reeval(offer);
+        		// Shuffle this resource to the end of the list.  This way, if
+        		// two resources with the same RANK match, we'll hand them out
+        		// in a round-robin way
+        		startdAds.Remove(offer);
+        		startdAds.Insert(offer);
+    		} else  {
+                // 2g.  Delete ad from list so that it will not be considered again in 
+		        // this negotiation cycle
+    			startdAds.Remove(offer);
+    		}
+            // traditional match cost is just slot weight expression
+            match_cost = accountant.GetSlotWeight(offer);
+        }
+        dprintf(D_FULLDEBUG, "Match completed, match cost= %g\n", match_cost);
+
+		limitUsed += match_cost;
+        if (remoteUser == "") limitUsedUnclaimed += match_cost;
+		pieLeft -= match_cost;
 		negotiation_cycle_stats[0]->matches++;
 	}
 
@@ -3825,13 +3877,20 @@ EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 }
 
 bool Matchmaker::
-SubmitterLimitPermits(ClassAd *candidate, double used, double allowed, double pieLeft) 
-{
-    double SlotWeight = accountant.GetSlotWeight(candidate);
-    if ((used + SlotWeight) <= allowed) {
+SubmitterLimitPermits(ClassAd* request, ClassAd* candidate, double used, double allowed, double pieLeft) {
+    double match_cost = 0;
+
+    if (cp_supports_policy(*candidate)) {
+        // deduct assets in test-mode only, for purpose of getting match cost
+        match_cost = cp_deduct_assets(*request, *candidate, true);
+    } else {
+        match_cost = accountant.GetSlotWeight(candidate);
+    }
+
+    if ((used + match_cost) <= allowed) {
         return true;
     }
-    if ((used <= 0) && (allowed > 0) && (pieLeft >= 0.99*SlotWeight)) {
+    if ((used <= 0) && (allowed > 0) && (pieLeft >= 0.99*match_cost)) {
 
 		// Allow user to round up once per pie spin in order to avoid
 		// "crumbs" being left behind that couldn't be taken by anyone
@@ -3955,9 +4014,9 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
             int t = 0;
             cached_bestSoFar->LookupInteger(ATTR_PREEMPT_STATE_, t);
             PreemptState pstate = PreemptState(t);
-			if ((pstate != NO_PREEMPTION) && SubmitterLimitPermits(cached_bestSoFar, limitUsed, submitterLimit, pieLeft)) {
+			if ((pstate != NO_PREEMPTION) && SubmitterLimitPermits(&request, cached_bestSoFar, limitUsed, submitterLimit, pieLeft)) {
 				break;
-			} else if (SubmitterLimitPermits(cached_bestSoFar, limitUsedUnclaimed, submitterLimitUnclaimed, pieLeft)) {
+			} else if (SubmitterLimitPermits(&request, cached_bestSoFar, limitUsedUnclaimed, submitterLimitUnclaimed, pieLeft)) {
 				break;
             }
 			MatchList->increment_rejForSubmitterLimit();
@@ -4024,8 +4083,27 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			dPrintAd(D_MACHINE, *candidate);
 		}
 
-			// the candidate offer and request must match
-		bool is_a_match = IsAMatch(&request, candidate);
+        map<string, double> consumption;
+        bool has_cp = cp_supports_policy(*candidate);
+        bool cp_sufficient = true;
+        if (has_cp) {
+            // replace RequestXxx attributes (temporarily) with values derived from
+            // the consumption policy, so that Requirements expressions evaluate in a
+            // manner consistent with the check on CP resources 
+            cp_override_requested(request, *candidate, consumption);
+            cp_sufficient = cp_sufficient_assets(*candidate, consumption);
+        }
+
+		// The candidate offer and request must match.
+        // When candidate supports a consumption policy, then resources
+        // requested via consumption policy must also be available from
+        // the resource
+		bool is_a_match = cp_sufficient && IsAMatch(&request, candidate);
+
+        if (has_cp) {
+            // put original values back for RequestXxx attributes
+            cp_restore_requested(request, consumption);
+        }
 
 		int cluster_id=-1,proc_id=-1;
 		MyString machine_name;
@@ -4150,10 +4228,10 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 		   check if we are negotiating only for startd rank, since startd rank
 		   preemptions should be allowed regardless of user priorities. 
 	    */
-        if ((candidatePreemptState == PRIO_PREEMPTION) && !SubmitterLimitPermits(candidate, limitUsed, submitterLimit, pieLeft)) {
+        if ((candidatePreemptState == PRIO_PREEMPTION) && !SubmitterLimitPermits(&request, candidate, limitUsed, submitterLimit, pieLeft)) {
             rejForSubmitterLimit++;
             continue;
-        } else if ((candidatePreemptState == NO_PREEMPTION) && !SubmitterLimitPermits(candidate, limitUsedUnclaimed, submitterLimitUnclaimed, pieLeft)) {
+        } else if ((candidatePreemptState == NO_PREEMPTION) && !SubmitterLimitPermits(&request, candidate, limitUsedUnclaimed, submitterLimitUnclaimed, pieLeft)) {
             rejForSubmitterLimit++;
             continue;
         }
@@ -4409,7 +4487,6 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	char accountingGroup[256];
 	char remoteOwner[256];
     MyString startdName;
-	char const *claim_id;
 	SafeSock startdSock;
 	bool send_failed;
 	int want_claiming = -1;
@@ -4449,14 +4526,20 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		}
 	}
 
-	// find the startd's claim id from the private ad
-	MyString claim_id_buf;
-	if ( want_claiming ) {
-		if (!(claim_id = getClaimId (startdName.Value(), startdAddr.Value(), claimIds, claim_id_buf)))
-		{
-			dprintf(D_ALWAYS,"      %s has no claim id\n", startdName.Value());
-			return MM_BAD_MATCH;
-		}
+	// find the startd's claim id from the private a
+	char const *claim_id = NULL;
+    string claim_id_buf;
+    ClaimIdHash::iterator claimset = claimIds.end();
+	if (want_claiming) {
+        string key = startdName.Value();
+        key += startdAddr.Value();
+        claimset = claimIds.find(key);
+        if ((claimIds.end() == claimset) || (claimset->second.size() < 1)) {
+            dprintf(D_ALWAYS,"      %s has no claim id\n", startdName.Value());
+            return MM_BAD_MATCH;
+        }
+        claim_id_buf = *(claimset->second.begin());
+        claim_id = claim_id_buf.c_str();
 	} else {
 		// Claiming is *not* desired
 		claim_id = "null";
@@ -4475,7 +4558,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		const char *savedReqStr = ExprTreeToString(savedRequirements);
 		offer->AssignExpr( ATTR_REQUIREMENTS, savedReqStr );
 		dprintf( D_ALWAYS, "Inserting %s = %s into the ad\n",
-				 ATTR_REQUIREMENTS, savedReqStr );
+				ATTR_REQUIREMENTS, savedReqStr ? savedReqStr : "" );
 	}	
 
 		// Stash the Concurrency Limits in the offer, they are part of
@@ -4563,8 +4646,22 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 			startdAddr.Value(), startdName.Value(),
 			offline ? " (offline)" : "");
 
+    // At this point we're offering this match as good.
+    // We don't offer a claim more than once per cycle, so remove it
+    // from the set of available claims.
+    if (claimset != claimIds.end()) {
+        claimset->second.erase(claim_id_buf);
+    }
+
 	/* CONDORDB Insert into matches table */
 	insert_into_matches(scheddName, request, *offer);
+
+    if (cp_supports_policy(*offer)) {
+        // Stash match cost here for the accountant.
+        // At this point the match is fully vetted so we can also deduct
+        // the resource assets.
+        offer->Assign(CP_MATCH_COST, cp_deduct_assets(request, *offer));
+    }
 
     // 4. notifiy the accountant
 	dprintf(D_FULLDEBUG,"      Notifying the accountant\n");
@@ -4731,17 +4828,6 @@ calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &scheddAds,
 	scheddAds.Close();
 }
 
-
-char const *
-Matchmaker::getClaimId (const char *startdName, const char *startdAddr, ClaimIdHash &claimIds, MyString &claim_id_buf)
-{
-	MyString key = startdName;
-	key += startdAddr;
-	if( claimIds.lookup(key,claim_id_buf)!=0 ) {
-		return NULL;
-	}
-	return claim_id_buf.Value();
-}
 
 void Matchmaker::
 addRemoteUserPrios( ClassAdListDoesNotDeleteAds &cal )

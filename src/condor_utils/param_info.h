@@ -118,7 +118,14 @@ typedef union param_info_storage_u {
 extern "C" {
 #endif
 
-	void param_info_init(void);
+	namespace condor_params {
+		typedef struct key_value_pair key_value_pair;
+		typedef struct key_table_pair key_table_pair;
+	}
+	typedef const struct condor_params::key_value_pair MACRO_DEF_ITEM;
+	typedef const struct condor_params::key_table_pair MACRO_TABLE_PAIR;
+
+	int param_info_init(const void ** pvdefaults);
 
 	int param_default_integer(const char* param, const char * subsys, int* valid, int* is_long);
 	int param_default_boolean(const char* param, const char * subsys, int* valid);
@@ -128,6 +135,20 @@ extern "C" {
 	const char* param_default_string(const char* param, const char * subsys);
 	// param may be param or subsys.param, will return non-null only on exact name match
 	const char* param_exact_default_string(const char* param);
+	int param_default_get_id(const char*param);
+	const char* param_default_name_by_id(int ix);
+	const char* param_default_rawval_by_id(int ix);
+	param_info_t_type_t param_default_type_by_id(int ix);
+	bool param_default_ispath_by_id(int ix);
+	MACRO_DEF_ITEM *param_subsys_default_lookup(const char *subsys, const char *name);
+	MACRO_DEF_ITEM *param_default_lookup(const char *name);
+
+	MACRO_TABLE_PAIR * param_meta_table(const char * meta);
+	MACRO_DEF_ITEM * param_meta_table_lookup(MACRO_TABLE_PAIR *, const char * param);
+	const char * param_meta_table_string(MACRO_TABLE_PAIR *, const char * param);
+	int param_default_get_source_meta_id(const char * meta, const char * param);
+	MACRO_DEF_ITEM * param_meta_source_by_id(int meta_id);
+
 
 	// Returns -1 if param is not of the specified type.
 	// Otherwise, returns 0 and sets min and max to the minimum and maximum

@@ -29,9 +29,11 @@ back to the shadow.
 
 #include "condor_daemon_core.h"
 
+class JICShadow;
+
 class IOProxyHandler : public Service {
 public:
-	IOProxyHandler();
+	IOProxyHandler(JICShadow *shadow, bool enable_file, bool enable_updates, bool enable_delayed);
 	~IOProxyHandler();
 
 	bool init( Stream *stream, const char *cookie );
@@ -43,8 +45,12 @@ private:
 	int convert( int result, int unix_errno );
 	void fix_chirp_path( char *path );
 
+	JICShadow *m_shadow;
 	char *cookie;
 	int got_cookie;
+	bool m_enable_files;
+	bool m_enable_updates;
+	bool m_enable_delayed;
 };
 
 #endif
