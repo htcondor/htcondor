@@ -284,6 +284,11 @@ section on DAGMan.
 % Any version prior to 7.9.0 will need this flag defined
      and submitting to a \Condor{schedd} daemon that is earlier than 7.9.0,
      including any in the 7.8 series of HTCondor releases.
+     \Bold{Note:  As of version 8.1.4, it is no longer recommended to use
+     this option and doing so will produce a warning.  This option will
+     probably be disabled entirely in a future version.  To run a DAG with
+     the \Opt{-dont\_use\_default\_node\_log} option, you will also have to
+     set the configuration macro \Macro{DAGMAN\_USE\_STRICT} to 0.}
   }
   \OptItem{\OptArg{-schedd-daemon-ad-file}{FileName}}{
     Specifies a full path to a daemon ad file dropped by a \Condor{schedd}.

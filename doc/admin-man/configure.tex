@@ -9694,6 +9694,11 @@ in section~\ref{sec:DAG-configuration}.
   This variable must be \Expr{False} if \Condor{dagman} from Condor
   version 7.9.0 or later is submitting jobs to a \Condor{schedd} daemon
   or using a \Condor{submit} executable that is older than Condor version 7.9.0.
+  \Bold{Note:  As of version 8.1.4, it is no longer recommended to set this
+  macro to \Expr{False}, and doing so will produce a warning.  This
+  option will probably be disabled entirely in a future version.  To
+  run a DAG with \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} set to \Expr{False},
+  you will also have to set \Macro{DAGMAN\_USE\_STRICT} to 0.}
 
 \label{param:DAGmanSuppressNotification}
 \item[\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION}]
