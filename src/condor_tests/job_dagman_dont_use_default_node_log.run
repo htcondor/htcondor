@@ -77,6 +77,39 @@ $success = sub
 {
 	CondorTest::debug("executed successfully\n",1);
 	die "$dontwatchlog should not have been created\n" if ( -e $dontwatchlog );
+
+	CondorTest::debug("Verifying output\n",1);
+	$diditpass = 1;
+
+	# Check the dagman.out file for successful completion.
+	$name = "job_dagman_dont_use_default_node_log.dag.dagman.out";
+	$passed = 0;
+	$canopen = open(OUT,"<$name");
+	if( ! (defined $canopen)) {
+		CondorTest::debug("Can not open logfile<$name>:$!\n",1);
+		$diditpass = 0;
+	}
+	while(<OUT>) {
+		chomp();
+		$line = $_;
+
+		if( $line =~ /Warning: setting DAGMAN_ALWAYS_USE_NODE_LOG to false is no longer recommended and will probably be disabled in a future version/ ) {
+			CondorTest::debug("$name: $line\n",1);
+			$passed = 1;
+		}
+	}
+	close(OUT);
+	if($passed == 1 ) {
+		;
+	} else {
+		CondorTest::debug("FAILED $name: $line\n",1);
+		$diditpass = 0;
+	}
+
+	if($diditpass == 0) {
+		die "All expected files and correct output FAILED\n";
+	}
+
 };
 
 CondorTest::RegisterExitedSuccess( $testname, $success);

@@ -49,6 +49,19 @@ parameter; setting this to 0 restores the prior behavior.
 The parameter CCB\_HEARTBEAT\_INTERVAL default has been reduced to 5 minutes.
 \Ticket{4122}
 
+\end{itemize}
+
+\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
+
+\begin{itemize}
+
+\item Setting \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} set to \Expr{False}
+or using the corresponding \Opt{-dont\_use\_default\_node\_log} option
+to \Condor{submit\_dag}
+(in other words, having \Condor{dagman} read the log files specified
+in the node job submit files) is no longer recommended.
+See section~\ref{param:DAGmanAlwaysUseNodeLog} for more details.
+\Ticket{4091}
 
 \end{itemize}
 
@@ -558,8 +571,8 @@ the bug.
 \noindent Known Bugs:
 
 \begin{itemize}
-\item DAGMan recovery mode does not work for Pegasus-generated SUBDAGs.
-For SUBDAGs, doing \Condor{hold} or \Condor{release} on
+\item DAGMan recovery mode does not work for Pegasus-generated sub-DAGs.
+For sub-DAGs, doing \Condor{hold} or \Condor{release} on
 the \Condor{dagman} job, or stopping and re-starting the
 \Condor{schedd} with the DAGMan
 job in the queue will result in failure of the DAG.  This can be
