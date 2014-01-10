@@ -1,4 +1,10 @@
 [
+  Name   = strcat(MyType,"CondorVersion");
+  Value  = CondorVersion;
+  Desc   = "Version String";
+  TargetType = "Scheduler,Negotiator,Machine_slot1";
+]
+[
   Name   = strcat(MyType,"UpdatesLost");
   Value  = UpdatesLost;
   Verbosity = 1;
@@ -16,6 +22,8 @@
   Name   = strcat(MyType,"DaemonCoreDutyCycle");
   Value  = RecentDaemonCoreDutyCycle;
   Desc   = "Recent fraction of busy time in the daemon event loop";
+  Scale  = 100;
+  Units  = "%";
   TargetType = "Scheduler,Negotiator,Machine_slot1";
 ]
 [
