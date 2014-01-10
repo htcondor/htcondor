@@ -105,7 +105,7 @@ DHCPAddressSelection::Cleanup()
 		{
 			std::string contents;
 			classad::PrettyPrint unparser;
-			unparser.Unparse(contents, m_ad.get());
+			unparser.Unparse(contents, &ad);
 			if (full_write(fd, contents.c_str(), contents.size()) != static_cast<int>(contents.size()))
 			{
 				dprintf(D_ALWAYS, "Error writing out DHCP lease (errno=%d, %s).\n", errno, strerror(errno));
