@@ -141,7 +141,7 @@ sub runcmd {
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
 	my @abbr = qw( Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec );
         use POSIX qw/strftime/; # putting this at the top of the script doesn't work oddly
-        my $date = strftime("%Y/%m/%d %H:%M:%S", localtime);
+        my $date = strftime("%H:%M:%S", localtime);
 	my $childpid;
 	my $local_expectation = FALSE;
 	my %altoptions;

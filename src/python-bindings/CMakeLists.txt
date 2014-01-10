@@ -10,6 +10,12 @@ if ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND AND Boost_PYTHON_LIBRARY AND NOT 
   set ( CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /usr/lib64 )
   set ( CMAKE_LIBRARY_PATH CMAKE_LIBRARY_PATH_ORIG)
 
+  if (PROPER AND "${PYTHON_VERSION_MAJOR}" MATCHES "3")
+    set ( PYTHON_BOOST_LIB boost_python3 )
+  else()
+    set ( PYTHON_BOOST_LIB boost_python )
+  endif()
+
   include_directories(${PYTHON_INCLUDE_DIRS} ${BOOST_INCLUDE})
   link_directories(${BOOST_LD})
 
@@ -21,21 +27,27 @@ if ( WITH_PYTHON_BINDINGS AND PYTHONLIBS_FOUND AND Boost_PYTHON_LIBRARY AND NOT 
     message(FATAL_ERROR "Can't determine HTCondor version!")
   endif()
   condor_shared_lib( pyclassad classad.cpp classad_wrapper.h exprtree_wrapper.h )
-  target_link_libraries( pyclassad ${CLASSADS_FOUND} ${PYTHON_LIBRARIES} -lboost_python )
+  target_link_libraries( pyclassad ${CLASSADS_FOUND} ${PYTHON_LIBRARIES} -l${PYTHON_BOOST_LIB} )
   set_target_properties( pyclassad PROPERTIES OUTPUT_NAME "${PYCLASSAD_LIB_NAME}" )
   set_target_properties( pyclassad PROPERTIES COMPILE_FLAGS "-fPIC")
 
   # Note we do not use condor_shared_lib below because we want a separate install target.
   add_library( classad_module SHARED classad_module.cpp classad_parsers.cpp )
-  target_link_libraries( classad_module pyclassad -lboost_python ${PYTHON_LIBRARIES} )
+  target_link_libraries( classad_module pyclassad -l${PYTHON_BOOST_LIB} ${PYTHON_LIBRARIES} )
   set_target_properties(classad_module PROPERTIES PREFIX "" OUTPUT_NAME classad )
   set_target_properties(classad_module PROPERTIES SUFFIX ".so" )
+  if ( NOT CMAKE_SKIP_RPATH )
+    set_target_properties(classad_module PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
+  endif()
 
   set_source_files_properties(config.cpp collector.cpp negotiator.cpp secman.cpp dc_tool.cpp schedd.cpp classad.cpp classad_module.cpp classad_parsers.cpp event.cpp PROPERTIES COMPILE_FLAGS "-Wno-strict-aliasing -Wno-cast-qual -Wno-deprecated -Wno-write-strings")
   add_library( htcondor SHARED htcondor.cpp collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp secman.cpp event.cpp )
-  target_link_libraries( htcondor pyclassad condor_utils -lboost_python ${PYTHON_LIBRARIES} )
+  target_link_libraries( htcondor pyclassad condor_utils -l${PYTHON_BOOST_LIB} ${PYTHON_LIBRARIES} )
   set_target_properties( htcondor PROPERTIES PREFIX "" )
   set_target_properties( htcondor PROPERTIES SUFFIX ".so" )
+  if ( NOT CMAKE_SKIP_RPATH )
+    set_target_properties(htcondor PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
+  endif()
 
   install ( TARGETS pyclassad DESTINATION ${C_LIB} )
   install ( TARGETS htcondor classad_module DESTINATION ${C_PYTHONARCHLIB} )

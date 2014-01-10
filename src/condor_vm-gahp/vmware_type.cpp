@@ -719,12 +719,49 @@ VMwareType::adjustCkptConfig(const char* vmconfig)
 	return true;
 }
 
+static bool starts_with(const char * str, const char * pre)
+{
+	size_t cp = strlen(pre);
+	if (cp <= 0)
+		return false;
+
+	size_t cs = strlen(str);
+	if (cs < cp)
+		return false;
+
+	for (size_t ix = 0; ix < cp; ++ix) {
+		if (str[ix] != pre[ix]) {
+			return false;
+		}
+	}
+	return true;
+}
+
+static bool starts_with_ignore_case(const char * str, const char * pre)
+{
+	size_t cp = strlen(pre);
+	if (cp <= 0)
+		return false;
+
+	size_t cs = strlen(str);
+	if (cs < cp)
+		return false;
+
+	for (size_t ix = 0; ix < cp; ++ix) {
+		if (str[ix] != pre[ix]) {
+			if (_tolower(str[ix]) != _tolower(pre[ix]))
+				return false;
+		}
+	}
+	return true;
+}
+
 bool
 VMwareType::readVMXfile(const char *filename, const char *dirpath)
 {
 	FILE *fp = NULL;
 	char linebuf[2048];
-	StringList cdrom_devices;
+	StringList strip_devices;
 	StringList config_lines;
 	StringList working_files;
 	MyString tmp_line;
@@ -767,42 +804,69 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 		MyString tmp_name = name;
 		tmp_name.lower_case();
 		if( tmp_name.find( ".devicetype", 0 ) > 0 ) {
-			// find cdrom device
+			// find cdrom & floppy devices that are not image files
 #define CDROM_TYPE1		"atapi-cdrom"
 #define CDROM_TYPE2		"cdrom-raw"
-#define CDROM_TYPE3		"cdrom-image"
+//#define CDROM_TYPE3		"cdrom-image" // TJ: 11/27/2013 no need to strip cdrom-images
+#define FLOPPY_DEVICE	"device"
 			if( (strcasecmp(value.Value(), CDROM_TYPE1) == 0 ) ||
 				(strcasecmp(value.Value(), CDROM_TYPE2) == 0 ) ||
-				(strcasecmp(value.Value(), CDROM_TYPE3) == 0 )) {
+				(starts_with(tmp_name.Value(), "floppy")
+				 && (MATCH == strcasecmp(value.Value(), FLOPPY_DEVICE)))) {
 				pos = name.FindChar('.', 0);
 				if( pos > 0 ) {
 					name.setChar(pos, '\0');
-					cdrom_devices.append(name.Value());
+					strip_devices.append(name.Value());
 					continue;
 				}
 			}
 		}
+		// parallel and serial references to physical devices
+		// have either autodetect == true, or filename is the name of a phys device.
+		if (starts_with_ignore_case(name.Value(), "serial") ||
+			starts_with_ignore_case(name.Value(), "parallel")) {
+			bool strip = false;
+			pos = name.FindChar('.', 0);
+			if (pos > 0) {
+				const char * field = name.Value()+pos+1;
+				name.setChar(pos, '\0');
+				if (MATCH == strcasecmp(field, "autodetect")) {
+					strip = (MATCH == strcasecmp(value.Value(), "true"));
+				} else if (MATCH == strcasecmp(field, "filename")) {
+					#ifdef WIN32
+					strip = starts_with_ignore_case(value.Value(), "com") || starts_with_ignore_case(value.Value(), "lpt");
+					#else
+					strip = starts_with(value.Value(), "/dev/");
+					#endif
+				}
+			}
+			if (strip) {
+				strip_devices.append(name.Value());
+				continue;
+			}
+		}
+
 		config_lines.append(one_line.Value());
 	}
 	fclose(fp);
 
 	char *line = NULL;
-	char *cdrom = NULL;
-	bool is_cdrom = false;
+	char *devn = NULL;
+	bool is_strip_dev = false;
 	config_lines.rewind();
 	while( (line = config_lines.next()) != NULL ) {
 	
-		is_cdrom = false;
-		// delete all lines for cdrom device
-		cdrom_devices.rewind();
-		while( (cdrom = cdrom_devices.next()) != NULL ) {
-			if( strncasecmp(line, cdrom, strlen(cdrom)) == 0 ) {
-				// This is a line for cdrom
-				is_cdrom = true;
+		is_strip_dev = false;
+		// delete all lines for stripped device
+		strip_devices.rewind();
+		while( (devn = strip_devices.next()) != NULL ) {
+			if( strncasecmp(line, devn, strlen(devn)) == 0 ) {
+				// This is a line for device we want to strip.
+				is_strip_dev = true;
 				break;
 			}
 		}
-		if( is_cdrom ) {
+		if (is_strip_dev) {
 			continue;
 		}
 
@@ -903,6 +967,12 @@ VMwareType::readVMXfile(const char *filename, const char *dirpath)
 
 			m_configVars.append(line);
 		} else if( !strncasecmp(line, "ethernet0.virtualDev", strlen("ethernet0.virtualDev")) ) {
+			m_configVars.append(line);
+		} else if( !strncasecmp(line, "floppy", strlen("floppy")) ) {
+			m_configVars.append(line);
+		} else if( !strncasecmp(line, "parallel", strlen("parallel")) ) {
+			m_configVars.append(line);
+		} else if( !strncasecmp(line, "serial", strlen("serial")) ) {
 			m_configVars.append(line);
 		}
 	}

@@ -298,10 +298,7 @@ private:
 	IdDispenser* m_id_dispenser;
 
 	int			update_tid;	// DaemonCore timer id for update delay
-	unsigned	update_sequence;	// Update sequence number
 
-	int		fast_shutdown;	// Flag set if we're in fast shutdown mode.
-	bool    peaceful_shutdown;
 	int		r_cpu_busy;
 	time_t	r_cpu_busy_start_time;
 	time_t	r_last_compute_condor_load;

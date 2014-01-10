@@ -90,6 +90,7 @@ static	char*	logAppend = NULL;
 static int Termlog = 0;	//Replacing the Termlog in dprintf for daemons that use it
 
 static char *core_dir = NULL;
+static char *core_name = NULL;
 
 int condor_main_argc;
 char **condor_main_argv;
@@ -303,6 +304,11 @@ DC_Exit( int status, const char *shutdown_program )
 	if ( core_dir ) {
 		free( core_dir );
 		core_dir = NULL;
+	}
+
+	if (core_name) {
+		free(core_name);
+		core_name = NULL;
 	}
 
 		/*
@@ -720,7 +726,7 @@ linux_sig_coredump(int signum)
 		}
 	}
 
-	WriteCoreDump("core");
+	WriteCoreDump(core_name ? core_name : "core");
 
 	// It would be a good idea to actually terminate for the same reason.
 	sa.sa_handler = SIG_DFL;
@@ -771,6 +777,7 @@ drop_core_in_log( void )
 			if (MATCH == strcmpi(get_mySubSystem()->getName(), "KBDD")) {
 				dprintf (D_FULLDEBUG, "chdir() to LOG directory failed for KBDD, "
 					     "cannot drop core in LOG dir\n");
+				free(ptmp);
 				return;
 			}
 #endif
@@ -789,6 +796,16 @@ drop_core_in_log( void )
 	}
 	core_dir = strdup(ptmp);
 
+	// get the name for core files, we need to access this pointer
+	// later in the exception handlers, so keep it around in a module static
+	// the core dump handler is expected to deal with the case of core_name == NULL
+	// by using a default name.
+	if (core_name) {
+		free(core_name);
+		core_name = NULL;
+	}
+	core_name = param("CORE_FILE_NAME");
+
 	// in some case we need to hook up our own handler to generate
 	// core files.
 	install_core_dump_handler();
@@ -796,10 +813,9 @@ drop_core_in_log( void )
 #ifdef WIN32
 	{
 		// give our Win32 exception handler a filename for the core file
-		char pseudoCoreFileName[MAX_PATH];
-		sprintf(pseudoCoreFileName,"%s\\core.%s.WIN32",ptmp,
-				get_mySubSystem()->getName() );
-		g_ExceptionHandler.SetLogFileName(pseudoCoreFileName);
+		MyString pseudoCoreFileName;
+		formatstr(pseudoCoreFileName,"%s\\%s", ptmp, core_name ? core_name : "core.WIN32");
+		g_ExceptionHandler.SetLogFileName(pseudoCoreFileName.c_str());
 
 		// set the path where our Win32 exception handler can find
 		// debug symbols
@@ -2439,6 +2455,9 @@ int dc_main( int argc, char** argv )
 		// chdir() into our log directory so if we drop core, that's
 		// where it goes.  We also do some NT-specific stuff in here.
 	drop_core_in_log();
+
+	// write dprintf's contribution to the daemon header.
+	dprintf_print_daemon_header();
 
 #ifdef WIN32
 		// On NT, we need to make certain we have a console allocated,

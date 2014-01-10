@@ -33,6 +33,7 @@
 
 #include <map>
 #include <string>
+#include <stack>
 using std::string;
 
 class Resource;
@@ -184,11 +185,24 @@ typedef struct _AttribValue {
 
 } AttribValue;
 
+//
+class FullSlotId
+{
+public: 
+	int id;   // static or partitionable id
+	int dyn_id; // dynamic id
+	FullSlotId(int i, int j=0) : id(i), dyn_id(j) {};
+};
+
 // Machine-wide attributes.  
 class MachAttributes
 {
 public:
-    typedef std::map<string, double> slotres_map_t;
+	typedef std::map<string, double, classad::CaseIgnLTStr> slotres_map_t;
+	typedef std::vector<std::string> slotres_assigned_ids_t;
+	typedef std::vector<FullSlotId> slotres_assigned_id_owners_t;
+	typedef std::map<string, slotres_assigned_ids_t, classad::CaseIgnLTStr> slotres_devIds_map_t;
+	typedef std::map<string, slotres_assigned_id_owners_t, classad::CaseIgnLTStr> slotres_devIdOwners_map_t;
 
 	MachAttributes();
 	~MachAttributes();
@@ -225,8 +239,12 @@ public:
 	float		condor_load()	{ return m_condor_load; };
 	time_t		keyboard_idle() { return m_idle; };
 	time_t		console_idle()	{ return m_console_idle; };
-    const slotres_map_t& machres() const { return m_machres_map; }
-    const ClassAd& machattr() const { return m_machres_attr; }
+	const slotres_map_t& machres() const { return m_machres_map; }
+	const slotres_devIds_map_t& machres_devIds() const { return m_machres_devIds_map; }
+	const ClassAd& machres_attrs() const { return m_machres_attr; }
+	const char * AllocateDevId(const std::string & tag, int assign_to, int assign_to_sub);
+	bool         ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assign_to, int was_assign_to_sub);
+	//bool ReAssignDevId(const std::string & tag, const char * id, void * was_assigned_to, void * assign_to);
 
 private:
 
@@ -253,8 +271,12 @@ private:
 	int				m_num_cpus;
 	int				m_num_real_cpus;
 	int				m_phys_mem;
-    slotres_map_t   m_machres_map;
-    ClassAd         m_machres_attr;
+	slotres_map_t   m_machres_map;
+	slotres_devIds_map_t m_machres_devIds_map;
+	slotres_devIdOwners_map_t m_machres_devIdOwners_map;
+	static bool init_machine_resource(MachAttributes * pme, HASHITER & it);
+	int init_machine_resource_from_script(const char * tag, const char * script_cmd);
+	ClassAd         m_machres_attr;
 
 	char*			m_arch;
 	char*			m_opsys;
@@ -302,17 +324,20 @@ class CpuAttributes
 {
 public:
     typedef MachAttributes::slotres_map_t slotres_map_t;
+	typedef MachAttributes::slotres_devIds_map_t slotres_devIds_map_t;
+	typedef MachAttributes::slotres_assigned_ids_t slotres_assigned_ids_t;
 
 	friend class AvailAttributes;
 
 	CpuAttributes( MachAttributes*, int slot_type, int num_cpus, 
 				   int num_phys_mem, float virt_mem_fraction,
 				   float disk_fraction,
-                   const slotres_map_t& slotres_map,
+				   const slotres_map_t& slotres_map,
 				   MyString &execute_dir, MyString &execute_partition_id );
 
 	void attach( Resource* );	// Attach to the given Resource
-									   
+	void bind_DevIds(int slot_id, int slot_sub_id);   // bind non-fungable resource ids to a slot
+	void unbind_DevIds(int slot_id, int slot_sub_id); // release non-fungable resource ids
 
 	void publish( ClassAd*, amask_t );  // Publish desired info to given CA
 	void compute( amask_t );			  // Actually recompute desired stats
@@ -370,6 +395,7 @@ private:
     // custom slot resources
     slotres_map_t c_slotres_map;
     slotres_map_t c_slottot_map;
+	slotres_devIds_map_t c_slotres_ids_map;
 
     // totals
 	int			  c_num_slot_cpus;

@@ -257,9 +257,10 @@ const char	*MemoryUsage	= "memory_usage";
 const char	*RequestCpus	= "request_cpus";
 const char	*RequestMemory	= "request_memory";
 const char	*RequestDisk	= "request_disk";
-const std::string  RequestPrefix  = "request_";
-std::set<std::string> fixedReqRes;
-std::set<std::string> stringReqRes;
+const char	*RequestPrefix  = "request_";
+typedef std::set<std::string,  classad::CaseIgnLTStr> ResSet;
+ResSet fixedReqRes;	 // a case-insenstive set
+ResSet stringReqRes;
 
 const char	*Universe		= "universe";
 const char	*MachineCount	= "machine_count";
@@ -2595,22 +2596,19 @@ void SetFileOptions()
 void SetRequestResources() {
     HASHITER it = hash_iter_begin(SubmitMacroSet);
     for (;  !hash_iter_done(it);  hash_iter_next(it)) {
-        std::string key = hash_iter_key(it);
-        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+        const char * key = hash_iter_key(it);
         // if key is not of form "request_xxx", ignore it:
-        if (key.compare(0, RequestPrefix.length(), RequestPrefix) != 0) continue;
+        if ( ! starts_with_ignore_case(key, RequestPrefix)) continue;
         // if key is one of the predefined request_cpus, request_memory, etc, also ignore it,
         // those have their own special handling:
         if (fixedReqRes.count(key) > 0) continue;
-        std::string rname = key.substr(RequestPrefix.length());
+        const char * rname = key + strlen(RequestPrefix);
         // resource name should be nonempty
-        if (rname.size() <= 0) continue;
-        // CamelCase it!
-        *(rname.begin()) = toupper(*(rname.begin()));
+        if ( ! *rname) continue;
         // could get this from 'it', but this prevents unused-line warnings:
-        std::string val = condor_param(key.c_str());
+        char * val = condor_param(key);
         std::string assign;
-        formatstr(assign, "%s%s = %s", ATTR_REQUEST_PREFIX, rname.c_str(), val.c_str());
+        formatstr(assign, "%s%s = %s", ATTR_REQUEST_PREFIX, rname, val);
         
         if (val[0]=='\"')
         {
@@ -6959,23 +6957,20 @@ check_requirements( char const *orig, MyString &answer )
     // identify any custom pslot resource reqs and add them in:
     HASHITER it = hash_iter_begin(SubmitMacroSet);
     for (;  !hash_iter_done(it);  hash_iter_next(it)) {
-        std::string key = hash_iter_key(it);
-        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+        const char * key = hash_iter_key(it);
         // if key is not of form "request_xxx", ignore it:
-        if (key.compare(0, RequestPrefix.length(), RequestPrefix) != 0) continue;
+        if ( ! starts_with_ignore_case(key, RequestPrefix)) continue;
         // if key is one of the predefined request_cpus, request_memory, etc, also ignore it,
         // those have their own special handling:
         if (fixedReqRes.count(key) > 0) continue;
-        std::string rname = key.substr(RequestPrefix.length());
+        const char * rname = key + strlen(RequestPrefix);
         // resource name should be nonempty
-        if (rname.size() <= 0) continue;
-        // CamelCase it!
-        *(rname.begin()) = toupper(*(rname.begin()));
+        if ( ! *rname) continue;
         std::string clause;
         if (stringReqRes.count(rname) > 0)
-            formatstr(clause, " && regexp(%s%s, TARGET.%s)", ATTR_REQUEST_PREFIX, rname.c_str(), rname.c_str());
+            formatstr(clause, " && regexp(%s%s, TARGET.%s)", ATTR_REQUEST_PREFIX, rname, rname);
         else
-            formatstr(clause, " && (TARGET.%s%s >= %s%s)", "", rname.c_str(), ATTR_REQUEST_PREFIX, rname.c_str());
+            formatstr(clause, " && (TARGET.%s%s >= %s%s)", "", rname, ATTR_REQUEST_PREFIX, rname);
         answer += clause;
     }
     hash_iter_delete(&it);

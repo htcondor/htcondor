@@ -355,9 +355,9 @@ const char *GetNextToken(const char *delim, bool skipBlankTokens)
 	return result;
 }
 
-void join(std::vector< std::string > &v, char const *delim, std::string &result)
+void join(const std::vector< std::string > &v, char const *delim, std::string &result)
 {
-	std::vector<std::string>::iterator it;
+	std::vector<std::string>::const_iterator it;
 	for(it = v.begin();
 		it != v.end();
 		it++)

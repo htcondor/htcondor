@@ -180,6 +180,15 @@ int safe_open_no_create(const char *fn, int flags)
     /* At this point, we know that both the open and lstat worked, and that we
      * do not have a symbolic link.
      */
+#else
+	/* Handle Windows case - here we just check for an error calling open, no
+	 * need to call lstat or retry because there are no symlinks.
+	 */
+    if (f == -1)  {
+	    /* open failed */
+	    errno = open_errno;
+	    return -1;
+	}
 #endif
 
     /* Get the properties of the opened file descriptor */

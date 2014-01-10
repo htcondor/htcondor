@@ -13,15 +13,15 @@ The details of each version are described below.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection*{\label{sec:New-8-1-3}Version 8.1.3}
+\subsection*{\label{sec:New-8-1-4}Version 8.1.4}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \noindent Release Notes:
 
 \begin{itemize}
 
-\item HTCondor version 8.1.3 not yet released.
-%\item HTCondor version 8.1.3 released on Month Date, 2013.
+\item HTCondor version 8.1.4 not yet released.
+%\item HTCondor version 8.1.4 released on Month Date, 2013.
 
 \end{itemize}
 
@@ -30,18 +30,131 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Added attributes to the \Condor{defrag} daemons MeanDrainedArrived,
-which measures the mean time between arrivals of fully drained machines,
-and DrainedMachines, which measures the total numbers of fully drained machines
-which have arrived during the runtime of this \Condor{defrag} daemon.
+\item The new configuration variable \Macro{EC2\_RESOURCE\_TIMEOUT} sets
+the amount of time that HTCondor will wait for an unresponsive EC2 service 
+before placing the corresponding jobs on hold.
+\Ticket{4113}
+
+\item The new python binding \Procedure{refreshGSIProxy}
+can refresh a remote job's GSI proxy as a part of the \texttt{Schedd} object.
+\Ticket{4116}
+
+\item By default, the TCP keepalive interval is automatically tuned to 5
+minutes.  This causes at least one packet to be sent on established but
+idle TCP connections once every 5 minutes and speeds up the detection
+of connections that were silently dropped by NAT or firewall devices.
+Without this, the \Condor{shadow} may not reliably recover from transient
+network failures.  This behavior is controlled by the new TCP\_KEEPALIVE\_INTERVAL
+parameter; setting this to 0 restores the prior behavior.
+The parameter CCB\_HEARTBEAT\_INTERVAL default has been reduced to 5 minutes.
+\Ticket{4122}
+
+
+\end{itemize}
+
+\noindent Bugs Fixed:
+
+\begin{itemize}
+
+\item HTCondor now treats a failure to terminate an EC2 instance
+because the instance no longer exists as a success.  This will allow EC2
+jobs to exit the queue if the service purges termination records quickly.
+\Ticket{4133}
+
+\item HTCondor now interacts with EC2 services using POST instead of GET,
+which permits more services to accept user data greater than 8KB.
+\Ticket{4004}
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection*{\label{sec:New-8-1-3}Version 8.1.3}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\noindent Release Notes:
+
+\begin{itemize}
+
+\item HTCondor version 8.1.3 released on December 23, 2013.
+This developer release contains all bug fixes from HTCondor version 8.0.5.
+
+\end{itemize}
+
+
+\noindent New Features:
+
+\begin{itemize}
+
+\item The parsing of configuration has changed with respect to how
+line continuation characters and comments interact.
+The line continuation character no longer takes precedence over the
+comment character.
+\Ticket{4027}
+
+\index{SUBSYS\_SUPER\_ADDRESS\_FILE macro@\texttt{<SUBSYS>\_SUPER\_ADDRESS\_FILE} macro}
+\index{configuration macro!\texttt{SUBSYS\_SUPER\_ADDRESS\_FILE}}
+\item When the super user issues a command 
+or when the new \Condor{sos} tool invokes another tool,
+the command can be serviced with a higher priority. 
+This should be useful when attempting to get information from an
+overloaded daemon, in order to diagnose or fix a problem.
+Commands directed at the \Condor{schedd} or \Condor{collector} daemons 
+have this ability by default.
+Other DaemonCore daemons require configuration using the new 
+configuration variable
+\MacroB{<SUBSYS>\_SUPER\_ADDRESS\_FILE}.
+\Ticket{4029}
+
+\item The dedicated scheduler cpu usage within the \Condor{schedd} is now
+throttled, so that it cannot consume all of the cpu, while starving the vanilla
+scheduler.  This throttle can be adjusted by the new configuration variable
+\Macro{DEDICATED\_SCHEDULER\_DELAY\_FACTOR}.  
+This variable, which defaults to five,
+sets the ratio of time spent not in the dedicated scheduler to the 
+time scheduling parallel jobs.  
+With this default of five, 
+a maximum of 20\% of the scheduler's time will go to scheduling
+parallel jobs.
+\Ticket{4048}
+
+\item The new \Condor{defrag} daemon ClassAd attribute 
+\Attr{MeanDrainedArrived}
+measures the mean time between arrivals of fully drained machines,
+and the new attribute \Attr{DrainedMachines} 
+measures the total numbers of fully drained machines
+which have arrived during the run time of this \Condor{defrag} daemon.
 \Ticket{4055}
 
-\item Added support for the defrag option for the \Condor{status} command.
+\item The new \Opt{-defrag} option for \Condor{status} queries ClassAds
+of the \Condor{defrag} daemon.
 \Ticket{4039}
+
+\item Machine ClassAd attributes \Attr{ExpectedMachineQuickDrainingCompletion}
+and \Attr{ExpectedMachineGracefulDrainingCompletion} are updated with their
+completion times if there are no active claims,
+making these attributes more useful in setting policy for
+partitionable slots. 
+\Ticket{3481}
 
 \item In a DAG, the node retry number is now available as VARS macro
 (see section~\ref{dagman:VARS}).
 \Ticket{4032}
+
+\item Macro substitution both within configuration and within submit
+description files has been extended to specify and use  
+an optional default value if a value is not defined.
+Section~\ref{sec:Config-File-Macros} has details for configuration.
+\Ticket{4033}
+
+\item The Python bindings \Code{htcondor} module has 
+a new \Procedure{read\_events} method to acquire an iterator of
+an HTCondor event log file.
+\Ticket{4071}
+
+\item The new \Opt{-daemons} option to \Condor{who} prints information
+about the HTCondor daemons running on the specified machine,
+including the daemon's PID, IP address and command port.
+\Ticket{4007}
 
 \end{itemize}
 
@@ -49,12 +162,42 @@ which have arrived during the runtime of this \Condor{defrag} daemon.
 
 \begin{itemize}
 
-\item The configuration variable \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}
-has been made more powerful so that it can be usefully specified in
-the overall HTCondor configuration files, as opposed to being useful
-only in a per-DAG configuration file.  See
-section~\ref{param:DAGManDefaultNodeLog} for details.
+\item Configuration variable \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}
+has been made more powerful,
+so that it can be defined in HTCondor configuration files, 
+instead of being useful only when defined in a per-DAG configuration file.
+See section~\ref{param:DAGManDefaultNodeLog} for details.
 \Ticket{3930}
+
+\item The new configuration variable \Macro{CORE\_FILE\_NAME} is used to set
+the name that DaemonCore uses to create a core file,
+in the event of a daemon crash.
+The default value for this configuration variable appends the daemon name,
+so a crash of the \Condor{schedd} would create a core file named
+\File{core.SCHEDD}.
+\Ticket{4100}
+
+\item The new configuration variable \Macro{JOB\_EXECDIR\_PERMISSIONS}
+defines the permissions on a job's scratch directory. 
+It defaults to setting permissions as \emph{0700}.
+\Ticket{4016}
+
+\item The following recently added machine ClassAd attributes have been renamed.
+\begin{description}
+\item \Attr{TotalJobStarts} became \Attr{JobStarts}.
+\item \Attr{RecentTotalJobStarts} became \Attr{RecentJobStarts}.
+\item \Attr{TotalPreemptions} became \Attr{JobPreemptions}.
+\item \Attr{RecentPreemptions} became \Attr{RecentJobPreemptions}.
+\item \Attr{TotalRankPreemptions} became \Attr{JobRankPreemptions}.
+\item \Attr{RecentTotalRankPreemptions} became \Attr{RecentJobRankPreemptions}.
+\item \Attr{TotalUserPrioPreemptions} became \Attr{JobUserPrioPreemptions}.
+\item \Attr{RecentTotalUserPrioPreemptions} became \Attr{RecentJobUserPrioPreemptions}.
+\end{description}
+\Ticket{4101}
+
+\item The new \Condor{schedd} statistics ClassAd attribute
+\Attr{Autoclusters} gives the number of active autoclusters.
+\Ticket{4020}
 
 \end{itemize}
 

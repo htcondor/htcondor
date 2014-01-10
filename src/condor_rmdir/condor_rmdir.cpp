@@ -1102,7 +1102,7 @@ int DeletePath(LPCTSTR pszPathIn,
       if ( ! err || (fdwFlags & TDT_CONTINUE))
          {
          bprint_EndLine(bp);
-         if ( ! (fdwTraverse & TDT_NODIRS) && (pszPattern || !pszPattern[0]))
+         if ( ! (fdwTraverse & TDT_NODIRS) && (!pszPattern || !pszPattern[0]))
             {
             if ( ! fQuiet)
                {

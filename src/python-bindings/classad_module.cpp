@@ -8,6 +8,8 @@
 #include "exprtree_wrapper.h"
 #include "classad_expr_return_policy.h"
 
+#include <fcntl.h>
+
 using namespace boost::python;
 
 
@@ -43,10 +45,23 @@ std::string unquote(std::string input)
 }
 
 #if PY_MAJOR_VERSION >= 3
-void *convert_to_FILEptr(PyObject* /*obj*/) {
-	// http://docs.python.org/3.3/c-api/file.html
-	// python file objects are fundamentally changed, this call can't be implemented?
-	return NULL;
+void *convert_to_FILEptr(PyObject* obj) {
+    // http://docs.python.org/3.3/c-api/file.html
+    // python file objects are fundamentally changed, this call can't be implemented?
+    int fd = PyObject_AsFileDescriptor(obj);
+    if (fd == -1)
+    {
+        PyErr_Clear();
+        return nullptr;
+    }
+    int flags = fcntl(fd, F_GETFL);
+    if (flags == -1)
+    {
+        THROW_ERRNO(IOError);
+    }
+    const char * file_flags = (flags&O_RDWR) ? "w+" : ( (flags&O_WRONLY) ? "w" : "r" );
+    FILE* fp = fdopen(fd, file_flags);
+    return fp;
 }
 #else
 void *convert_to_FILEptr(PyObject* obj) {
@@ -154,10 +169,10 @@ BOOST_PYTHON_MODULE(classad)
 
     class_<ClassAdStringIterator>("ClassAdStringIterator", no_init)
         .def("next", &ClassAdStringIterator::next)
-        .def("__iter__", &ClassAdStringIterator::pass_through)
+        .def("__iter__", &OldClassAdIterator::pass_through)
         ;
 
-    class_<ClassAdFileIterator>("ClassAdFileIterator", no_init)
+    class_<ClassAdFileIterator>("ClassAdFileIterator")
         .def("next", &ClassAdFileIterator::next)
         .def("__iter__", &OldClassAdIterator::pass_through)
         ;

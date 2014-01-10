@@ -23,6 +23,8 @@ use CondorUtils;
 use Check::SimpleJob;
 use Check::CondorLog;
 
+my $testname = "job_concurrency_limits.run";
+
 my $firstappend_condor_config = '
 	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
 	NUM_CPUS = 12
@@ -35,33 +37,55 @@ my $nextappend_condor_config = '
 	ALL_DEBUG = 
 	XSW_LIMIT = 2
 	CONCURRENCY_LIMIT_DEFAULT = 2
-	CONCURRENCY_LIMIT_DEFAULT_SMALL = 5
+	CONCURRENCY_LIMIT_DEFAULT_SMALL = 3
 	CONCURRENCY_LIMIT_DEFAULT_LARGE = 2
 	NEGOTIATOR_INTERVAL = 5
 	NUM_CPUS = 12
 ';
 
+
+# OK First personal has no concurrency limits
 CondorTest::StartCondorWithParams(
-    append_condor_config => $firstappend_condor_config
+    append_condor_config => $firstappend_condor_config,
+	local_fresh => "TRUE",
 );
 
-my $append_submit_commands = '
-concurrency_limits = XSW;
-';
-
 my $on_abort = sub {
-	CondorTest::debug("Abort from removing sleep 0 jobs.\n",1);
 };
 
-my $on_evictedwitoutcheckpoint = sub {
-	CondorTest::debug("Evicted Without Checkpoint from removing sleep 0 jobs.\n",1);
+sub multi_timeout_callback
+{
+	print "LogCheck timeout expired!\n";
+	CondorTest::RegisterResult( 0, test_name, $testname );
+	system("date");
+	die "Log check timed out ?\n";
 };
 
-my $testname = "job_concurrency_limits.run";
+sub evictedwithoutcheckpoint 
+{
+};
+
+my $Calledcheck_expectations = 0;
+
+my $expectation_timeout = 10;
+
+sub on_submit {
+	if($Calledcheck_expectations == 0) {
+  		CondorTest::RegisterTimed( "checkexpectations", \&check_expectations, $expectation_timeout);
+		$Calledcheck_expectations = 1;
+	}
+};
+
 my $result = 0;
 my $running_now = 0;
+my $done = 0;
+$Calledcheck_expectations = 0;
+my $checkexpectationfailed = 0;
 my $expect_idle = 0;
 my $expect_run = 0;
+my $expect_checks = 0;
+my $total_checks = 3;
+my $allow_too_few_idle_once = 0;
 
 my $on_match = sub {
 	my $response = shift;
@@ -70,47 +94,116 @@ my $on_match = sub {
 	}
 };
 
+sub check_expectations {
+	#system("date");
+	CondorTest::RemoveTimed( "checkexpectations");
+	# things have gone on since we looked for clear wins
+	# so check now
+	if($done == 1) {
+		print "Saw done\n";
+		$expect_run = 1000; # remove will let a job start, bump count way up now.
+		return(1);
+	}
+	$expect_checks += 1;
+
+	#print "In expectation_timeout: expect_checks:$expect_checks \n";
+	if($expect_checks >= $total_checks) {
+		if($running_now < $expect_run) {
+			runToolNTimes("condor_q",1,0);
+			runToolNTimes("condor_rm -all",1,0);
+			print "Failure: Not getting enough jobs to run!\n";
+			CondorTest::RegisterResult(0, "test_name", $testname);
+			$checkexpectationfailed = 1;
+			$done = 1;
+			return(0);
+		}
+		if(($running_now == $expect_run)&&($expect_run == 0)) {
+			runToolNTimes("condor_q",1,0);
+			runToolNTimes("condor_rm -all",1,0);
+			#print "Success - Zero jobs was expected!\n";
+			CondorTest::RegisterResult(1, "test_name", $testname);
+			$checkexpectationfailed = 0;
+			$done = 1;
+			return(1);
+		}
+	}
+
+	#print "Watching for another job to start up\n";
+	# Started Negotiation Cycle A wait of about 10 seconds is caused here
+	# leading the next one to occur in about 20 seconds
+	#print "before multicheck\n";
+	#system("date");
+	CondorLog::RunCheckMultiple(
+		daemon => "Negotiator",
+		match_regexp => "Started Negotiation Cycle",
+		match_instances => 1,
+		match_callback => $on_match,
+		alt_timed => \&multi_timeout_callback,
+		match_timeout => 80,
+		match_new => "true",
+		no_result => "true",
+	);
+	#print "After multicheck\n";
+	#system("date");
+
+	if($expect_checks < $total_checks) {
+  		CondorTest::RegisterTimed( "checkexpectations", \&check_expectations, $expectation_timeout);
+	} else {
+	}
+
+
+};
+
 my $on_execute = sub {
 my $idles = 0;
-	print "Running now has value <$running_now>\n";
+	#print "Running now has value <$running_now>\n";
 	$running_now += 1;
+	if($running_now == 1) {
+		$allow_too_few_idle_once = 1;
+	}
 	CondorTest::debug("Job started running.\n",1);
+
+	if($running_now > $expect_run) {
+		# clearly unhappy
+		$checkexpectationfailed = 1; #we'll print bad and not ok
+		print "Running jobs <$running_now> exceeded concurrency limits <$expect_run>\n";
+		$expect_run = 1000; # remove will let a job start, bump count way up now.
+		runToolNTimes("condor_rm -all",1,0);
+		$done = 1;
+		CondorTest::RegisterResult(0, "test_name", $testname);
+	}
+
 	# compare current running to expected total
 	if($running_now == $expect_run) {
 		# if we expect no idle jobs, don't check.
 		# remove jobs and return
 		if($expect_idle == 0) {
+			$done = 1;
+			#print "Expected idle 0 and run number met, remove jobs\n";
 			runcmd("condor_rm -all");
+			#clearly done and happy
 		} else {
 			$idles = CountIdle($expect_idle);
 			if($idles == $expect_idle) {
-				print "Will another job start up? Better not.\n";
-				# Started Negotiation Cycle
-				CondorLog::RunCheckMultiple(
-					daemon => "Negotiator",
-					match_regexp => "Started Negotiation Cycle",
-					match_instances => 2,
-					match_callback => $on_match,
-					match_timeout => 80,
-					match_new => "true"
-				);
-				print "About to remove these jobs\n";
+				$done = 1;
+				#print "Runs met andexpected idle, About to remove these jobs\n";
 				$expect_run = 1000; # remove will let a job start, bump count way up now.
-				system("condor_q");
-				runcmd("condor_rm -all");
+				runToolNTimes("condor_q",1,0);
+				runToolNTimes("condor_rm -all",1,0);
+			} else {
+				#print "Not expected idle yet: Staging checkexpectations callback\n";
+  				#CondorTest::RegisterTimed( "checkexpectations", \&check_expectations, $expectation_timeout);
 			}
 		}
 	} else {
-		print "running $running_now expecting $expect_run: not removing jobs\n";
-	}
-
-	if($running_now > $expect_run) {
-		die "Running jobs <$running_now> exceeded concurrency lints <$expect_run>\n";
+		#print "running $running_now expecting $expect_run: not removing jobs\n";
+		#print "Staging checkexpectations callback\n";
+  		#CondorTest::RegisterTimed( "checkexpectations", \&check_expectations, $expectation_timeout);
 	}
 };
 
 # enter most slots needed. We will verify
-my $neededslots = 7;
+my $neededslots = 5;
 my $haveslots = ExamineSlots($neededslots);
 
 if($haveslots < $neededslots) {
@@ -124,15 +217,25 @@ if($haveslots < $neededslots) {
 print "First test basic job\n";
 $result = SimpleJob::RunCheck();
 
+my $append_submit_commands = '
+concurrency_limits = XSW;
+';
+
 # then test behaviour of non cuncurrency jobs first
 # all from each batch should run. Remove and do next set.
 my $count = 0;
 $running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
 $expect_run = 3;
 $expect_idle = 0;
 $result = SimpleJob::RunCheck(
 	on_abort => $on_abort,
-	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
 	on_execute => $on_execute,
 	queue_sz => 3,
 	duration => 0,
@@ -140,15 +243,13 @@ $result = SimpleJob::RunCheck(
 	append_submit_commands => $append_submit_commands
 );
 print "First test basic job. 3 jobs no concurrency settings\n";
-if($result == 1) {
-	print "ok\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
 } else {
-	print "bad\n";
+	print "bad\n\n";
 }
 
 # clean queue bwtween all checks
-
-ExamineQueue();
 
 # OK turn it on with concurrency limits
 CondorTest::StartCondorWithParams(
@@ -156,41 +257,55 @@ CondorTest::StartCondorWithParams(
 	local_fresh => "TRUE",
 );
 
-print "Test specified concurrency\n";
+$append_submit_commands = '
+concurrency_limits = XSW;
+';
+
+print "Test specified concurrency-XSW\n";
 $running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
 $expect_run = 2;
 $expect_idle = 1;
 $result = SimpleJob::RunCheck(
 	on_abort => $on_abort,
-	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
 	on_execute => $on_execute,
 	queue_sz => 3,
 	duration => 0,
 	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
-print "Test specified concurrency\n";
-if($result == 1) {
-	print "ok\n";
+print "Test specified concurrency-XSW\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
 } else {
-	print "bad\n";
+	print "bad\n\n";
 }
 
 # clean queue bwtween all checks
 
-ExamineQueue();
-
-my $append_submit_commands = '
+$append_submit_commands = '
 concurrency_limits = UNDEFINED:2;
 ';
 
 print "Test default concurrency and colon usage spec\n";
 $running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
 $expect_run = 1;
 $expect_idle = 1;
 $result = SimpleJob::RunCheck(
 	on_abort => $on_abort,
-	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
 	on_execute => $on_execute,
 	queue_sz => 2,
 	duration => 0,
@@ -198,26 +313,31 @@ $result = SimpleJob::RunCheck(
 	append_submit_commands => $append_submit_commands
 );
 print "Test default concurrency and colon usage spec\n";
-if($result == 1) {
-	print "ok\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
 } else {
-	print "bad\n";
+	print "bad\n\n";
 }
 
 # clean queue bwtween all checks
 
-ExamineQueue();
-
-my $append_submit_commands = '
+$append_submit_commands = '
 concurrency_limits = large.license;
 ';
 
 $running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
 $expect_run = 2;
 $expect_idle = 1;
+print "Test class default: large.license\n";
 $result = SimpleJob::RunCheck(
 	on_abort => $on_abort,
-	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
 	on_execute => $on_execute,
 	queue_sz => 3,
 	duration => 0,
@@ -226,43 +346,770 @@ $result = SimpleJob::RunCheck(
 );
 print "Test class default: large.license\n";
 if($result == 1) {
-	print "ok\n";
+	print "ok\n\n";
 } else {
-	print "bad\n";
+	print "bad\n\n";
 }
 
 # clean queue bwtween all checks
 
-
-
-ExamineQueue();
-
-my $append_submit_commands = '
+$append_submit_commands = '
 concurrency_limits = small.license;
 ';
 
 $running_now = 0;
-$expect_run = 5;
-$expect_idle = 2;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 3;
+$expect_idle = 1;
+print "Test class default: small.license\n";
 $result = SimpleJob::RunCheck(
 	on_abort => $on_abort,
-	on_evictedwithoutcheckpoint => $on_evictedwithoutcheckpoint,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
 	on_execute => $on_execute,
-	queue_sz => 7,
+	queue_sz => 4,
 	duration => 0,
 	timeout => 600,
 	append_submit_commands => $append_submit_commands
 );
 print "Test class default: small.license\n";
-if($result == 1) {
-	print "ok\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
 } else {
-	print "bad\n";
+	print "bad\n\n";
+}
+
+#
+# lets tests again against a parttionable slot.
+#
+
+my $partitionable_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	ALL_DEBUG = 
+	NUM_CPUS = 12
+	# slot type 1: a traditional cpu-centric policy
+	SLOT_TYPE_1 = cpus=100%,memory=100%,disk=100%
+	SLOT_TYPE_1_PARTITIONABLE = True
+	NUM_SLOTS_TYPE_1 = 1
+	XSW_LIMIT = 2
+	CONCURRENCY_LIMIT_DEFAULT = 2
+	CONCURRENCY_LIMIT_DEFAULT_SMALL = 3
+	CONCURRENCY_LIMIT_DEFAULT_LARGE = 2
+	NEGOTIATOR_INTERVAL = 5
+';
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $partitionable_condor_config,
+	local_fresh => "TRUE",
+);
+
+# clean queue bwtween all checks
+
+$append_submit_commands = '
+concurrency_limits = XSW;
+';
+
+print "Partitionable: Test specified concurrency-XSW\n";
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 2;
+$expect_idle = 1;
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_execute => $on_execute,
+	queue_sz => 3,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "Partitionable: Test specified concurrency-XSW \n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	print "bad\n\n";
 }
 
 # clean queue bwtween all checks
 
-ExamineQueue();
+$append_submit_commands = '
+concurrency_limits = UNDEFINED:2;
+';
+
+print "Partitionable: Test default concurrency and colon usage spec\n";
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 1;
+$expect_idle = 1;
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_execute => $on_execute,
+	queue_sz => 2,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "Partitionable: Test default concurrency and colon usage spec\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	print "bad\n\n";
+}
+
+# clean queue bwtween all checks
+
+$append_submit_commands = '
+concurrency_limits = large.license;
+';
+
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 2;
+$expect_idle = 1;
+print "Partitionable: Test class default: large.license\n";
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_execute => $on_execute,
+	queue_sz => 3,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "Partitionable: Test class default: large.license\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	print "bad\n\n";
+}
+
+# clean queue bwtween all checks
+
+$append_submit_commands = '
+concurrency_limits = small.license;
+';
+
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 3;
+$expect_idle = 1;
+print "Partitionable: Test class default: small.license\n";
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_execute => $on_execute,
+	queue_sz => 4,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "Partitionable: Test class default: small.license\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	print "bad\n\n";
+}
+
+my $nextappend_0_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	ALL_DEBUG = 
+	XSW_LIMIT = 0
+	CONCURRENCY_LIMIT_DEFAULT = 0
+	CONCURRENCY_LIMIT_DEFAULT_SMALL = 0
+	CONCURRENCY_LIMIT_DEFAULT_LARGE = 0
+	NEGOTIATOR_INTERVAL = 5
+	NUM_CPUS = 12
+';
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $nextappend_0_condor_config,
+	local_fresh => "TRUE",
+);
+
+$append_submit_commands = '
+concurrency_limits = XSW;
+';
+
+print "Static and zero: Test specified concurrency -xsw\n";
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 0;
+$expect_idle = 3;
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_execute => $on_execute,
+	queue_sz => 3,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "Static and zero: Test specified concurrency -xsw\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	print "bad\n\n";
+}
+
+# clean queue bwtween all checks
+
+$append_submit_commands = '
+concurrency_limits = UNDEFINED:2;
+';
+
+print "Static and zero: Test default concurrency and colon usage spec\n";
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 0;
+$expect_idle = 0;
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_execute => $on_execute,
+	queue_sz => 2,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "Static and zero: Test default concurrency and colon usage spec\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	print "bad\n\n";
+}
+
+# clean queue bwtween all checks
+
+$append_submit_commands = '
+concurrency_limits = large.license;
+';
+
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 0;
+$expect_idle = 3;
+print "Static and zero: Test class default: large.license\n";
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_execute => $on_execute,
+	queue_sz => 3,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "Static and zero: Test class default: large.license\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	print "bad\n\n";
+}
+
+# clean queue bwtween all checks
+
+$append_submit_commands = '
+concurrency_limits = small.license;
+';
+
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 0;
+$expect_idle = 4;
+print "Static and zero: Test class default: small.license\n";
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_execute => $on_execute,
+	queue_sz => 4,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "Static and zero: Test class default: small.license\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	print "bad\n\n";
+}
+
+my $nextappend_1_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	ALL_DEBUG = 
+	XSW_LIMIT = 1
+	CONCURRENCY_LIMIT_DEFAULT = 2
+	CONCURRENCY_LIMIT_DEFAULT_SMALL = 1
+	CONCURRENCY_LIMIT_DEFAULT_LARGE = 1
+	NEGOTIATOR_INTERVAL = 5
+	NUM_CPUS = 12
+';
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $nextappend_1_condor_config,
+	local_fresh => "TRUE",
+);
+
+$append_submit_commands = '
+concurrency_limits = XSW;
+';
+
+print "Static and one: Test specified concurrency-XSW\n";
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 1;
+$expect_idle = 2;
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_execute => $on_execute,
+	queue_sz => 3,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "Static and one: Test specified concurrency-XSW\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	print "bad\n\n";
+}
+
+# clean queue bwtween all checks
+
+$append_submit_commands = '
+concurrency_limits = UNDEFINED:2;
+';
+
+print "Static and one: Test default concurrency and colon usage spec\n";
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 1;
+$expect_idle = 0;
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_execute => $on_execute,
+	queue_sz => 2,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "Static and one: Test default concurrency and colon usage spec\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	print "bad\n\n";
+}
+
+# clean queue bwtween all checks
+
+$append_submit_commands = '
+concurrency_limits = large.license;
+';
+
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 1;
+$expect_idle = 2;
+print "Static and one: Test class default: large.license\n";
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_execute => $on_execute,
+	queue_sz => 3,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "Static and one: Test class default: large.license\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	print "bad\n\n";
+}
+
+# clean queue bwtween all checks
+
+$append_submit_commands = '
+concurrency_limits = small.license;
+';
+
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 1;
+$expect_idle = 3;
+print "Static and one: Test class default: small.license\n";
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_execute => $on_execute,
+	queue_sz => 4,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "Static and one: Test class default: small.license\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	print "bad\n\n";
+}
+
+my $partitionable_0_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	ALL_DEBUG = 
+	NUM_CPUS = 12
+	# slot type 1: a traditional cpu-centric policy
+	SLOT_TYPE_1 = cpus=100%,memory=100%,disk=100%
+	SLOT_TYPE_1_PARTITIONABLE = True
+	NUM_SLOTS_TYPE_1 = 1
+	XSW_LIMIT = 0
+	CONCURRENCY_LIMIT_DEFAULT = 0
+	CONCURRENCY_LIMIT_DEFAULT_SMALL = 0
+	CONCURRENCY_LIMIT_DEFAULT_LARGE = 0
+	NEGOTIATOR_INTERVAL = 5
+';
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $partitionable_0_condor_config,
+	local_fresh => "TRUE",
+);
+
+$append_submit_commands = '
+concurrency_limits = XSW;
+';
+
+print "Partitionable and zero: Test specified concurrency - XSW\n";
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 0;
+$expect_idle = 3;
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_execute => $on_execute,
+	queue_sz => 3,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "Partitionable and zero: Test default specified - XSW\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	print "bad\n\n";
+}
+
+# clean queue bwtween all checks
+
+$append_submit_commands = '
+concurrency_limits = UNDEFINED:2;
+';
+
+print "Partitionable and zero: Test default concurrency and colon usage spec\n";
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 0;
+$expect_idle = 2;
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_execute => $on_execute,
+	queue_sz => 2,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "Partitionable and zero: Test default concurrency and colon usage spec\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	print "bad\n\n";
+}
+
+# clean queue bwtween all checks
+
+$append_submit_commands = '
+concurrency_limits = large.license;
+';
+
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 0;
+$expect_idle = 3;
+print "Partitionable and zero: Test class default: large.license\n";
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_execute => $on_execute,
+	queue_sz => 3,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "Partitionable and zero: Test class default: large.license\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	print "bad\n\n";
+}
+
+# clean queue bwtween all checks
+
+$append_submit_commands = '
+concurrency_limits = small.license;
+';
+
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 0;
+$expect_idle = 4;
+print "Partitionable and zero: Test class default: small.license\n";
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_execute => $on_execute,
+	queue_sz => 4,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "Partitionable and zero: Test class default: small.license\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	print "bad\n\n";
+}
+
+my $partitionable_1_condor_config = '
+	DAEMON_LIST = MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD
+	ALL_DEBUG = 
+	NUM_CPUS = 12
+	# slot type 1: a traditional cpu-centric policy
+	SLOT_TYPE_1 = cpus=100%,memory=100%,disk=100%
+	SLOT_TYPE_1_PARTITIONABLE = True
+	NUM_SLOTS_TYPE_1 = 1
+	XSW_LIMIT = 1
+	CONCURRENCY_LIMIT_DEFAULT = 2
+	CONCURRENCY_LIMIT_DEFAULT_SMALL = 1
+	CONCURRENCY_LIMIT_DEFAULT_LARGE = 1
+	NEGOTIATOR_INTERVAL = 5
+';
+
+CondorTest::StartCondorWithParams(
+    append_condor_config => $partitionable_1_condor_config,
+	local_fresh => "TRUE",
+);
+
+$append_submit_commands = '
+concurrency_limits = XSW;
+';
+
+print "Partitionable and one: Test specified concurrency\n";
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 1;
+$expect_idle = 2;
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_execute => $on_execute,
+	queue_sz => 3,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "Partitionable and one: Test default concurrency, partitionable\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	print "bad\n\n";
+}
+
+# clean queue bwtween all checks
+
+$append_submit_commands = '
+concurrency_limits = UNDEFINED:2;
+';
+
+print "Partitionable and one: Test default concurrency and colon usage spec\n";
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 1;
+$expect_idle = 2;
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_execute => $on_execute,
+	queue_sz => 3,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "Partitionable and one: Test default concurrency and colon usage spec\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	print "bad\n\n";
+}
+
+# clean queue bwtween all checks
+
+$append_submit_commands = '
+concurrency_limits = large.license;
+';
+
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 1;
+$expect_idle = 2;
+print "Partitionable and one: Test class default: large.license\n";
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_execute => $on_execute,
+	queue_sz => 3,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "Partitionable and one: Test class default: large.license\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	print "bad\n\n";
+}
+
+# clean queue bwtween all checks
+
+$append_submit_commands = '
+concurrency_limits = small.license;
+';
+
+$running_now = 0;
+$done = 0;
+$Calledcheck_expectations = 0;
+$checkexpectationfailed = 0;
+$expect_checks = 0;
+$expect_run = 1;
+$expect_idle = 3;
+print "Partitionable and one: Test class default: small.license\n";
+$result = SimpleJob::RunCheck(
+	on_abort => $on_abort,
+	test_name => $testname,
+	on_evictedwithoutcheckpoint => \&evictedwithoutcheckpoint,
+	on_submit => \&on_submit,
+	on_execute => $on_execute,
+	queue_sz => 4,
+	duration => 0,
+	timeout => 600,
+	append_submit_commands => $append_submit_commands
+);
+print "Partitionable and one: Test class default: small.license\n";
+if(($result == 1)&&($checkexpectationfailed == 0)) {
+	print "ok\n\n";
+} else {
+	print "bad\n\n";
+}
 
 CondorTest::EndTest();
 
@@ -272,20 +1119,30 @@ sub CountIdle
 	my $expectidle = shift;
 	my $idlecount = 0;
 	my $line = "";
+	my @goods = ();
 
 	#runcmd("condor_q");
-	my @jobs = `condor_q`;
-	foreach my $job (@jobs) {
+	runCondorTool("condor_q",\@goods,2,{emit_output => 0});
+	foreach my $job (@goods) {
 		chomp($job);
 		$line = $job;
-		print "JOB: $line\n";
+		#print "JOB: $line\n";
 		if($line =~ /^.*?\sI\s.*$/) {
 			$idlecount += 1;
-			print "Idle count now <$idlecount>, expecting <$expectidle>\n";
+			#print "Idle count now <$idlecount>, expecting <$expectidle>\n";
 		}
 	}
-	if($idlecount != $expectidle) {
-		die "Expected $expectidle idle but found $idlecount - die\n";
+	if($allow_too_few_idle_once == 1) {
+		# Case in point is a concurrency limit of one but two jobs
+		# start. Triggering a fail on too few idle, could be failing
+		# on a slow submit of the jobs. I'd rather fail on too many running
+		# so the fist check gets a pass.
+		$allow_too_few_idle_once = 0;
+	} else {
+		if($idlecount != $expectidle) {
+			runToolNTimes("condor_q", 1, 1);
+			die "Expected $expectidle idle but found $idlecount - die\n";
+		}
 	}
 
 	return($idlecount);
@@ -296,22 +1153,21 @@ sub ExamineSlots
 	my $waitforit = shift;
 	my $line = "";
 
-	my @jobs = ();
 	my $available = 0;
 	my $looplimit = 24;
 	my $count = 24; # go just once
+	my @goods = ();
 	if(defined $waitforit) {
 		$count = 0; #enable looping with 10 second sleep
 	}
 	while($count <= $looplimit) {
 		$count += 1;
-		@jobs = ();
-		@jobs = `condor_status`;
-		foreach my $job (@jobs) {
+		runCondorTool("condor_status",\@goods,2,{emit_output => 0});
+		foreach my $job (@goods) {
 			chomp($job);
 			$line = $job;
 			if($line =~ /^\s*Total\s+(\d+)\s*(\d+)\s*(\d+)\s*(\d+).*/) {
-				print "<$4> unclaimed <$1> Total slots\n";
+				#print "<$4> unclaimed <$1> Total slots\n";
 				$available = $4;
 			}
 		}
@@ -332,9 +1188,9 @@ sub ExamineQueue
 	my $line = "";
 
 	print "\nExpecting all jobs to be gone. Lets See.\n";
-	runcmd("condor_q");
-	my @jobs = `condor_q`;
-	foreach my $job (@jobs) {
+	my @goods = ();
+	runCondorTool("condor_q",\@goods,2);
+	foreach my $job (@goods) {
 		chomp($job);
 		$line = $job;
 		print "JOB: $line\n";

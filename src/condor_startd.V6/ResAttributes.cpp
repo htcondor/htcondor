@@ -516,10 +516,219 @@ MachAttributes::compute( amask_t how_much )
 
 }
 
+#if 1 // tj's new code for machine resources that handles non-fungable resources also
 
+const char * MachAttributes::AllocateDevId(const std::string & tag, int assign_to, int assign_to_sub)
+{
+	if ( ! assign_to) return NULL;
+
+	slotres_devIds_map_t::const_iterator f(m_machres_devIds_map.find(tag));
+	if (f !=  m_machres_devIds_map.end()) {
+		const slotres_assigned_ids_t & ids(f->second);
+		slotres_assigned_id_owners_t & owners = m_machres_devIdOwners_map[tag];
+		while (owners.size() < ids.size()) { owners.push_back(0); }
+
+		// when the sub-id is positive, that means we are binding a dynamic slot
+		// in that case we want to use only dev-ids that are already owned by the partitionable slot.
+		// but not yet assigned to any of  it's dynamic children.
+		//
+		if (assign_to_sub > 0) {
+			for (int ii = 0; ii < (int)ids.size(); ++ii) {
+				if (owners[ii].id == assign_to && owners[ii].dyn_id == 0) {
+					owners[ii].dyn_id = assign_to_sub;
+					return ids[ii].c_str();
+				}
+			}
+		} else {
+			for (int ii = 0; ii < (int)ids.size(); ++ii) {
+				if ( ! owners[ii].id) {
+					owners[ii] = FullSlotId(assign_to, assign_to_sub);
+					return ids[ii].c_str();
+				}
+			}
+		}
+	}
+	return NULL;
+}
+
+bool MachAttributes::ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assigned_to, int was_assign_to_sub)
+{
+	slotres_devIds_map_t::const_iterator f(m_machres_devIds_map.find(tag));
+	if (f !=  m_machres_devIds_map.end()) {
+		const slotres_assigned_ids_t & ids(f->second);
+		slotres_assigned_id_owners_t & owners = m_machres_devIdOwners_map[tag];
+		while (owners.size() < ids.size()) { owners.push_back(0); }
+
+		for (int ii = 0; ii < (int)ids.size(); ++ii) {
+			if (id == ids[ii]) {
+				if (owners[ii].id == was_assigned_to && owners[ii].dyn_id == was_assign_to_sub) {
+					owners[ii].dyn_id = 0;
+					return true;
+				}
+				break;
+			}
+		}
+	}
+	return false;
+}
+
+int MachAttributes::init_machine_resource_from_script(const char * tag, const char * script_cmd) {
+
+	ArgList args;
+	MyString errors;
+	if(!args.AppendArgsV1RawOrV2Quoted(script_cmd, &errors)) {
+		printf("Can't append cmd %s(%s)\n", script_cmd, errors.Value());
+		return -1;
+	}
+
+	int quantity = 0;
+
+	FILE * fp = my_popen(args, "r", FALSE);
+	if ( ! fp) {
+		PRAGMA_REMIND("tj: should failure to run a res inventory script really bring down the startd?")
+		EXCEPT("Failed to execute local resource '%s' inventory script \"%s\"\n", tag, script_cmd);
+	} else {
+		int error = 0;
+		bool is_eof = false;
+		ClassAd ad;
+		int cAttrs = ad.InsertFromFile(fp, is_eof, error);
+		if (cAttrs <= 0) {
+			if (error) dprintf(D_ALWAYS, "Could not parse ClassAd for local resource '%s' (error %d) assuming quantity of 0\n", tag, error);
+		} else {
+			MyString attr;
+			attr.formatstr(ATTR_DETECTED_PREFIX "%s", tag);
+			ad.LookupInteger(attr.c_str(), quantity);
+			PRAGMA_REMIND("tj: change here to handle enumerated resources.")
+
+			// make sure that the inventory ad doesn't have an attribute for the tag name
+			// i.e. if the inventory is GPUS, then DetectedGPUs=N is required, but it cant have GPUs=N
+			ad.Delete(tag);
+			m_machres_attr.Update(ad);
+		}
+		my_pclose(fp);
+	}
+
+	return quantity;
+}
+
+// res_value is a string that contains either a number, which is the count of a 
+// fungable resource, or a list of ids of non-fungable resources.
+// if res_value contains a list, then ids is set on exit from this function
+// otherwise, ids empty.
+static double parse_user_resource_config(const char * tag, const char * res_value, StringList & ids)
+{
+	ids.clearAll();
+	double num = 0;
+	char * pend = NULL;
+	num = strtod(res_value, &pend);
+	if (pend != res_value) { while(isspace(*pend)) { ++pend; } }
+	bool is_simple_double = (pend && pend != res_value && !*pend);
+	if ( ! is_simple_double) {
+		// ok not a simple double, try evaluating it as a classad expression.
+		ClassAd ad;
+		if (ad.AssignExpr(tag,res_value) && ad.EvalFloat(tag, NULL, num)) {
+			// it was an expression that evaluated to a double, so it's a simple double after all
+			is_simple_double = true;
+		} else {
+			// not a simple double, so treat it as a list of id's, the number of resources is the number of ids
+			ids.initializeFromString(res_value);
+			num = ids.number();
+		}
+	}
+
+	return num;
+}
+
+// this static callback for the param param iteration using foreach_param_*
+// is called once for each param matching MACHINE_RESOURCE_*
+// it extracts the resource tag from the param name, then fetches the resource quantity
+// and initializes the m_machres_map 
+bool MachAttributes::init_machine_resource(MachAttributes * pme, HASHITER & it) {
+	const char * name = hash_iter_key(it);
+	const char * rawval = hash_iter_value(it);
+	if ( ! rawval || ! rawval[0])
+		return true; // keep iterating
+
+	char * res_value = param(name);
+	if ( ! res_value)
+		return true; // keep iterating
+
+	double num = 0;
+	const char * tag = name + sizeof("MACHINE_RESOURCE_")-1;
+
+	// MACHINE_RESOURCE_INVENTORY_* is a special case that runs a script that generates a classad.
+	if (starts_with_ignore_case(tag, "INVENTORY_")) {
+		tag += sizeof("INVENTORY_")-1;
+		if (res_value) {
+			num = pme->init_machine_resource_from_script(tag, res_value);
+		}
+	} else {
+		// if the param value parses as a double, then we can handle it simply
+		StringList ids;
+		num = parse_user_resource_config(tag, res_value, ids);
+		if ( ! ids.isEmpty()) {
+			ids.rewind();
+			while (const char* id = ids.next()) {
+				pme->m_machres_devIds_map[tag].push_back(id);
+			}
+		}
+	}
+
+	if (num < 0) num = 0;
+	pme->m_machres_map[tag] = num;
+	free(res_value);
+
+	return true; // keep iterating
+}
+
+
+void MachAttributes::init_machine_resources() {
+	// defines the space of local machine resources, and their quantity
+	m_machres_map.clear();
+	// defines which local machine resource device IDs are in use
+	m_machres_devIds_map.clear();
+
+	// this may be filled from resource inventory scripts
+	m_machres_attr.Clear();
+
+	Regex re;
+	int err = 0;
+	const char* pszMsg = 0;
+	ASSERT(re.compile("MACHINE_RESOURCE_[a-zA-Z0-9_]+", &pszMsg, &err, PCRE_CASELESS));
+	const int iter_options = HASHITER_NO_DEFAULTS; // we can speed up iteration if there are no machine resources in the defaults table.
+	foreach_param_matching(re, iter_options, (bool(*)(void*,HASHITER&))MachAttributes::init_machine_resource, this);
+
+	StringList allowed;
+	char* allowed_names = param("MACHINE_RESOURCE_NAMES");
+	if (allowed_names && allowed_names[0]) {
+		// if admin defined MACHINE_RESOURCE_NAMES, then use this list
+		// as the source of expected custom machine resources
+		allowed.initializeFromString(allowed_names);
+		free(allowed_names);
+	}
+
+	StringList disallowed("CPU CPUS DISK SWAP MEM MEMORY RAM");
+
+	for (slotres_map_t::iterator it(m_machres_map.begin());  it != m_machres_map.end();  ++it) {
+		const char * tag = it->first.c_str();
+		if ( ! allowed.isEmpty() && ! allowed.contains_anycase(tag)) {
+			dprintf(D_ALWAYS, "Local machine resource %s is not in MACHINE_RESOURCE_NAMES so it will have no effect\n", tag);
+			m_machres_map.erase(tag);
+			continue;
+		}
+		if ( ! disallowed.isEmpty() && disallowed.contains_anycase(tag)) {
+			EXCEPT("fatal error - MACHINE_RESOURCE_%s is invalid, '%s' is a reserved resource name\n", tag, tag);
+			continue;
+		}
+		dprintf(D_ALWAYS, "Local machine resource %s = %g\n", tag, it->second);
+	}
+}
+#else
 void MachAttributes::init_machine_resources() {
     // defines the space of local machine resources, and their quantity
     m_machres_map.clear();
+    // defines which local machine resource device IDs are in use
+    m_machres_devIds_map.clear();
 
     // this may be filled from resource inventory scripts
     m_machres_attr.Clear();
@@ -553,7 +762,7 @@ void MachAttributes::init_machine_resources() {
         const string invprefix = "INVENTORY_";
         const string restr = prefix + "(.+)";
         ASSERT(re.compile(restr.c_str(), &pszMsg, &err, PCRE_CASELESS));
-	std::vector<std::string> resdef;
+        std::vector<std::string> resdef;
         const int n = param_names_matching(re, resdef);
         for (int j = 0;  j < n;  ++j) {
             string rname = resdef[j].substr(prefix.length());
@@ -588,12 +797,16 @@ void MachAttributes::init_machine_resources() {
         if (machresp) {
             int v = param_integer(pname.c_str(), 0, 0, INT_MAX);
             m_machres_map[rname] = v;
+            if ( v > 0 && v < 100 ) {
+                for (int i=0; i<v; i++) {
+                    m_machres_devIds_map[rname].push( i );
+                }
+            }
             free(machresp);
             continue;
         }
 
-        // current definition of REMIND macro is not working with gcc
-        #pragma message("MACHINE_RESOURCE_INVENTORY_<rname> is deprecated, and will be removed when a solution using '|' in config files is fleshed out")
+        // TODO: replace MACHINE_RESOURCE_INVENTORY_<rname> when a solution using '|' in config files is fleshed out...
         // if we didn't find MACHINE_RESOURCE_<rname>, then try MACHINE_RESOURCE_INVENTORY_<rname>
         formatstr(pname, "MACHINE_RESOURCE_INVENTORY_%s", rname.c_str());
         char* invscriptp = param(pname.c_str());
@@ -646,7 +859,7 @@ void MachAttributes::init_machine_resources() {
         dprintf(D_ALWAYS, "Local machine resource %s = %d\n", j->first.c_str(), int(j->second));
     }
 }
-
+#endif
 
 void
 MachAttributes::final_idle_dprintf()
@@ -822,20 +1035,27 @@ MachAttributes::publish( ClassAd* cp, amask_t how_much)
 		}
 #endif
 
-        string machine_resources = "cpus memory disk swap";
-        // publish any local resources
-        for (slotres_map_t::iterator j(m_machres_map.begin());  j != m_machres_map.end();  ++j) {
-            string rname(j->first.c_str());
-            *(rname.begin()) = toupper(*(rname.begin()));
-            string attr;
-            formatstr(attr, "%s%s", ATTR_DETECTED_PREFIX, rname.c_str());
-            cp->Assign(attr.c_str(), int(j->second));
-            formatstr(attr, "%s%s", ATTR_TOTAL_PREFIX, rname.c_str());
-            cp->Assign(attr.c_str(), int(j->second));
-            machine_resources += " ";
-            machine_resources += j->first;
-        }
-        cp->Assign(ATTR_MACHINE_RESOURCES, machine_resources.c_str());
+		string machine_resources = "Cpus Memory Disk Swap";
+		// publish any local resources
+		for (slotres_map_t::iterator j(m_machres_map.begin());  j != m_machres_map.end();  ++j) {
+			const char * rname = j->first.c_str();
+			string attr(ATTR_DETECTED_PREFIX); attr += rname;
+			double ipart, fpart = modf(j->second, &ipart);
+			if (fpart >= 0.0 && fpart <= 0.0) {
+				cp->Assign(attr.c_str(), (long long)ipart);
+			} else {
+				cp->Assign(attr.c_str(), j->second);
+			}
+			attr = ATTR_TOTAL_PREFIX; attr += rname;
+			if (fpart >= 0.0 && fpart <= 0.0) {
+				cp->Assign(attr.c_str(), (long long)ipart);
+			} else {
+				cp->Assign(attr.c_str(), j->second);
+			}
+			machine_resources += " ";
+			machine_resources += j->first;
+			}
+		cp->Assign(ATTR_MACHINE_RESOURCES, machine_resources.c_str());
 	}
 
 		// We don't want this inserted into the public ad automatically
@@ -1012,7 +1232,7 @@ CpuAttributes::CpuAttributes( MachAttributes* map_arg,
 							  int num_phys_mem,
 							  float virt_mem_fraction,
 							  float disk_fraction,
-                              const slotres_map_t& slotres_map,
+							  const slotres_map_t& slotres_map,
 							  MyString &execute_dir,
 							  MyString &execute_partition_id )
 {
@@ -1037,13 +1257,60 @@ CpuAttributes::CpuAttributes( MachAttributes* map_arg,
 	rip = NULL;
 }
 
-
 void
 CpuAttributes::attach( Resource* res_ip )
 {
 	this->rip = res_ip;
 }
 
+
+void
+CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id) // bind non-fungable resource ids to a slot
+{
+	if ( ! map)
+		return;
+
+	for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
+		int cAssigned = int(j->second);
+
+		// if this resource already has bound ids, don't bind again.
+		slotres_devIds_map_t::const_iterator m(c_slotres_ids_map.find(j->first));
+		if (m != c_slotres_ids_map.end() && cAssigned == (int)m->second.size())
+			continue;
+
+		slotres_devIds_map_t::const_iterator k(map->machres_devIds().find(j->first));
+		if (k != map->machres_devIds().end()) {
+			for (int ii = 0; ii < cAssigned; ++ii) {
+				const char * id = map->AllocateDevId(j->first, slot_id, slot_sub_id);
+				if ( ! id) {
+					PRAGMA_REMIND("TJ: what to do if I run out of ids to assign here?")
+					EXCEPT("Failed to bind local resource '%s' \n", j->first.c_str());
+				} else {
+					c_slotres_ids_map[j->first].push_back(id);
+				}
+			}
+		}
+	}
+
+}
+
+void
+CpuAttributes::unbind_DevIds(int slot_id, int slot_sub_id) // release non-fungable resource ids
+{
+	if ( ! map) return;
+	if ( ! slot_sub_id) return;
+
+	for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
+		slotres_devIds_map_t::const_iterator k(c_slotres_ids_map.find(j->first));
+		if (k != c_slotres_ids_map.end()) {
+			slotres_assigned_ids_t & ids = c_slotres_ids_map[j->first];
+			while ( ! ids.empty()) {
+				map->ReleaseDynamicDevId(j->first, ids.back().c_str(), slot_id, slot_sub_id);
+				ids.pop_back();
+			}
+		}
+	}
+}
 
 void
 CpuAttributes::publish( ClassAd* cp, amask_t how_much )
@@ -1085,16 +1352,20 @@ CpuAttributes::publish( ClassAd* cp, amask_t how_much )
 
 		cp->Assign( ATTR_TOTAL_SLOT_CPUS, c_num_slot_cpus );
 		
-        // publish local resource quantities for this slot
-        for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
-            string rname(j->first.c_str());
-            *(rname.begin()) = toupper(*(rname.begin()));
-            string attr;
-            formatstr(attr, "%s%s", "", rname.c_str());
-            cp->Assign(attr.c_str(), int(j->second));
-            formatstr(attr, "%s%s", ATTR_TOTAL_SLOT_PREFIX, rname.c_str());
-            cp->Assign(attr.c_str(), int(c_slottot_map[j->first]));
-        }
+		// publish local resource quantities for this slot
+		for (slotres_map_t::iterator j(c_slotres_map.begin());  j != c_slotres_map.end();  ++j) {
+			cp->Assign(j->first.c_str(), int(j->second));
+			string attr = ATTR_TOTAL_SLOT_PREFIX; attr += j->first;
+			cp->Assign(attr.c_str(), int(c_slottot_map[j->first]));
+			slotres_devIds_map_t::const_iterator k(c_slotres_ids_map.find(j->first));
+			if (k != c_slotres_ids_map.end()) {
+				attr = "Assigned";
+				attr += j->first;
+				string ids;
+				join(k->second, ", ", ids);
+				cp->Assign(attr.c_str(), ids.c_str());
+			}
+		}
 	}
 }
 
@@ -1339,6 +1610,7 @@ AvailAttributes::decrement( CpuAttributes* cap )
     slotres_map_t new_res(a_slotres_map);
     for (slotres_map_t::iterator j(new_res.begin());  j != new_res.end();  ++j) {
         if (!IS_AUTO_SHARE(cap->c_slotres_map[j->first])) {
+            PRAGMA_REMIND("tj split slot resource id's here?")
             j->second -= cap->c_slotres_map[j->first];
         }
         if (j->second < floor) { 
@@ -1371,6 +1643,7 @@ AvailAttributes::decrement( CpuAttributes* cap )
     for (slotres_map_t::iterator j(a_slotres_map.begin());  j != a_slotres_map.end();  ++j) {
         j->second = new_res[j->first];
         if (IS_AUTO_SHARE(cap->c_slotres_map[j->first])) {
+            PRAGMA_REMIND("tj coalesce slot resource id's here?")
             a_autocnt_map[j->first] += 1;
         }
     }
@@ -1419,6 +1692,7 @@ AvailAttributes::computeAutoShares( CpuAttributes* cap )
         }
         // save off slot resource totals once we have final value:
         cap->c_slottot_map[j->first] = cap->c_slotres_map[j->first];
+        PRAGMA_REMIND("tj assign remaining slot resource id's here?")
     }
 
 	return true;

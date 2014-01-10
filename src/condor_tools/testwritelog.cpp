@@ -93,7 +93,7 @@ void init_params();
 void
 usage()
 {
-	fprintf( stderr, "Usage: %s [-count count] [-sleep time] [-write mark] [-r min max] [-log logname] [-verbose] [-debug] [ textdata ]\n", MyName );
+	fprintf( stderr, "Usage: %s [-count count] [-sleep time] [-write mark] [-r min max] [-Seed seed] [-log logname] [-verbose] [-debug] [ textdata ]\n", MyName );
 	exit( 1 );
 }
 
@@ -150,14 +150,20 @@ main( int argc, char *argv[] )
 				LogFlag = TRUE;
 				argv++;
 				LogName = *argv;
-				fprintf( stderr, "Logname requested: %s\n", LogName );
+				//fprintf( stderr, "Logname requested: %s\n", LogName );
 				break;
 
 			  case 'c':
 				LogFlag = TRUE;
 				argv++;
 				DataCount = atoi(*argv);
-				fprintf( stderr, "Count requested: %d\n", DataCount );
+				//fprintf( stderr, "Count requested: %d\n", DataCount );
+				break;
+
+			  case 'S':
+				argv++;
+				Seed = atoi(*argv);
+				//fprintf( stderr, "Seed requested: %d\n", Seed );
 				break;
 
 			  case 's':
@@ -165,7 +171,7 @@ main( int argc, char *argv[] )
 				argv++;
 				SleepTime = atoi(*argv);
 				sleeptime = (time_t)SleepTime;
-				fprintf( stderr, "sleep requested: %d\n", SleepTime );
+				//fprintf( stderr, "sleep requested: %d\n", SleepTime );
 				break;
 
 			  case 'r':
@@ -175,14 +181,14 @@ main( int argc, char *argv[] )
 				argv++;
 				Max = atoi(*argv);
 				Range = (Max - Min);
-				fprintf( stderr, "random sleep range requested: %d - %d\n", Min, Max );
+				//fprintf( stderr, "random sleep range requested: %d - %d\n", Min, Max );
 				break;
 
 			  case 'w':
 				WriterFlag = TRUE;
 				argv++;
 				WriterMark = *argv;
-				fprintf( stderr, "different writer requested: %s\n", WriterMark );
+				//fprintf( stderr, "different writer requested: %s\n", WriterMark );
 				break;
 
 			  default:
@@ -231,7 +237,7 @@ main( int argc, char *argv[] )
 			rsleep = Min + rtime;
 			//fprintf(stderr,"Min:%d and rtime:%d yields:%d\n",Min, rtime, rsleep);
 			sleeptime = rsleep;
-			fprintf(stderr,"Random sleep time %d\n", rsleep);
+			//fprintf(stderr,"Random sleep time %d\n", rsleep);
 			sleep(sleeptime);
 		}
 		if(WriterFlag) {

@@ -87,6 +87,13 @@ if ($ENV{NMI_PLATFORM} =~ /macos/i) {
     $ENV{MACOSX_DEPLOYMENT_TARGET} = "10.6";
 }
 
+# enable use of VisualStudio 2012 (vs11) on the Windows8 platform
+my $enable_vs11 = 0;
+if ($ENV{NMI_PLATFORM} =~ /Windows7/i) { $enable_vs11 = 1; }
+if ($enable_vs11 && $ENV{VS110COMNTOOLS} =~ /common7/i) {
+	$VCVER = "VC11";
+}
+
 # Checking task type
 if( $taskname eq $EXTERNALS_TASK ) {
     # Since we do not declare the externals task on Windows, we don't have
@@ -171,11 +178,14 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
         exit 0;
     }
 } elsif ($taskname eq $RUN_UNIT_TESTS) {
-    $execstr = "ctest --output-on-failure";
+    if ($ENV{NMI_PLATFORM} =~ /_win/i) {
+    } else {
+        $execstr = "ctest --output-on-failure";
+    }
 } elsif ($taskname eq $COVERITY_ANALYSIS) {
 	print "Running Coverity analysis\n";
 	$ENV{PATH} = "$ENV{PATH}:/home/condorauto/cov-sa-linux64-5.5.3/bin";
-	$execstr = "cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --enable-constraint-fpp --dir ../public/cov-data";
+	$execstr = "cd src && make clean && mkdir -p ../public/cov-data && cov-build --dir ../public/cov-data make -k ; cov-analyze --enable-constraint-fpp --dir ../public/cov-data && cov-commit-defects --dir ../public/cov-data --stream htcondor --host submit-2.batlab.org --user admin --password `cat /home/condorauto/coverity/.p`";
 }
 
 

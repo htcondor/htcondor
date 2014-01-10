@@ -59,7 +59,7 @@ std::string xmlTag( const char * tagName, const std::string & tagValue ) {
 
 typedef struct Group_t {
     std::string groupID;
-    
+
     Group_t() { }
     Group_t( const std::string & gID ) : groupID( gID ) { }
 } Group;
@@ -69,7 +69,7 @@ typedef struct Keypair_t {
     std::string keyName;
     std::string fingerprint;
     std::string privateKey;
-    
+
     Keypair_t() { }
     Keypair_t( const std::string & kn,
                const std::string & fp,
@@ -81,7 +81,7 @@ typedef ext::hash_map< std::string, Keypair > NameToKeypairMap;
 std::ostream & operator << ( std::ostream & os, const Keypair & kp ) {
     os << "<item>" << std::endl;
     os << xmlTag( "keyName", kp.keyName ) << std::endl;
-    os << xmlTag( "keyFingerprint", kp.fingerprint ) << std::endl;    
+    os << xmlTag( "keyFingerprint", kp.fingerprint ) << std::endl;
     os << "</item" << std::endl;
     return os;
 }
@@ -109,7 +109,7 @@ class InstanceState {
             else if( state == "stopped" ) { this->statusCode = STOPPED; }
             else { this->statusCode = INVALID; }
         }
-        
+
         void progress() {
             if( rand() % 2 ) {
                 switch( this->statusCode ) {
@@ -126,20 +126,20 @@ class InstanceState {
                         this->statusCode = TERMINATED;
                         break;
                     case STOPPING:
-                        this->statusCode = STOPPED;                    
+                        this->statusCode = STOPPED;
                         break;
                     case STOPPED:
-                        this->statusCode = STOPPED;                    
+                        this->statusCode = STOPPED;
                         break;
                     case INVALID:
                         fprintf( stderr, "Attempting to progress the INVALID state implies a bug.\n" );
                         break;
                 }
-            }                
+            }
         }
-        
+
         InstanceStatus code() const { return this->statusCode; }
-        
+
         std::string name() const {
             switch( this->statusCode ) {
                 case PENDING:
@@ -159,7 +159,7 @@ class InstanceState {
                     return "invalid";
             }
         }
-        
+
     private:
         InstanceStatus statusCode;
 };
@@ -212,7 +212,7 @@ std::ostream & operator << ( std::ostream & os, const Instance & i ) {
 typedef struct {
     NameToKeypairMap keypairs;
     NameToGroupMap groups;
-    InstanceIDToInstanceMap instances;    
+    InstanceIDToInstanceMap instances;
 } User;
 typedef ext::hash_map< std::string, User > AccessKeyIDToUserMap;
 
@@ -225,10 +225,10 @@ void registerTestUsers() {
     users[ "1" ].groups[ "sg-name-1" ] = Group( "sg-name-1" );
     users[ "1" ].groups[ "sg-name-2" ] = Group( "sg-name-2" );
     users[ "1" ].groups[ "sg-name-3" ] = Group( "sg-name-3" );
-    
+
     // The Amazon EC2 ID we actually use for testing.
     users[ "1681MPTCV7E5BF6TWE02" ] = User();
-    
+
     // The Magellan (Eucalyptus) ID we actually use for testing.
     users[ "HOq1jQmeoswWXoJTq44DbTuD8jchkWfXmbsEg" ] = User();
 }
@@ -260,7 +260,7 @@ template< class V, class T, class K > V & getReference( T & map, const K & key, 
 
 User & validateAndAcquireUser( AttributeValueMap & avm, std::string & userID, std::string & reply, bool & found ) {
     static User dummyUser = User();
-        
+
     userID = getObject< std::string >( avm, "AWSAccessKeyId", found );
     if( (! found) || userID.empty() ) {
         fprintf( stderr, "Failed to find userID in query.\n" );
@@ -268,7 +268,7 @@ User & validateAndAcquireUser( AttributeValueMap & avm, std::string & userID, st
         found = false;
         return dummyUser;
     }
-    
+
     User & user = getReference< User >( users, userID, found );
     if( ! found ) {
         std::ostringstream os;
@@ -278,7 +278,7 @@ User & validateAndAcquireUser( AttributeValueMap & avm, std::string & userID, st
         found = false;
         return dummyUser;
     }
-    
+
     found = true;
     return user;
 }
@@ -290,11 +290,11 @@ bool handleRunInstances( AttributeValueMap & avm, std::string & reply, unsigned 
     std::string userID;
     User & user = validateAndAcquireUser( avm, userID, reply, found );
     if( ! found ) { return false; }
-    
+
     // Validate the ImageId, MinCount, and MaxCount parameters, as well
     // as the optional parameters KeyName, InstanceType, SecurityGroup*,
     // and UserData.
-    
+
     // We presently assume all imageIDs are valid.
     std::string imageID = getObject< std::string >( avm, "ImageId", found );
     if( (! found) || imageID.empty() ) {
@@ -309,19 +309,19 @@ bool handleRunInstances( AttributeValueMap & avm, std::string & reply, unsigned 
         reply = "Required parameter MinCount missing or empty.\n";
         return false;
     }
-    
+
     std::string maxCount = getObject< std::string >( avm, "MaxCount", found );
     if( (! found) || maxCount.empty() ) {
         fprintf( stderr, "Failed to find maxCount in query.\n" );
         reply = "Required parameter MaxCount missing or empty.\n";
         return false;
     }
-    
+
     if( minCount != "1" || maxCount != "1" ) {
         fprintf( stderr, "The simulator presently only supports starting one instance at a time.\n" );
         reply = "Counts must be '1' at present.\n";
         return false;
-    }   
+    }
 
     std::string keyName = getObject< std::string >( avm, "KeyName", found );
     if( ! keyName.empty() ) {
@@ -359,7 +359,7 @@ bool handleRunInstances( AttributeValueMap & avm, std::string & reply, unsigned 
             fprintf( stderr, "%s", reply.c_str() );
             return false;
         }
-        
+
         NameToGroupMap::const_iterator ci = user.groups.find( sgName );
         if( ci != user.groups.end() ) {
             groupNames.push_back( sgName );
@@ -371,7 +371,7 @@ bool handleRunInstances( AttributeValueMap & avm, std::string & reply, unsigned 
             return false;
         }
     }
-    
+
     if( groupNames.empty() ) {
         groupNames.push_back( "default" );
     }
@@ -379,14 +379,14 @@ bool handleRunInstances( AttributeValueMap & avm, std::string & reply, unsigned 
     // Create the (unique) corresponding Instance.
     char edh[] = "12345678";
     snprintf( edh, sizeof( edh ), "%.8x", (unsigned)user.instances.size() );
-    
+
     std::string instanceID = "i-"; instanceID += edh;
     std::string privateDNSName = "private.dns."; privateDNSName += edh;
     std::string publicDNSName = "public.dns."; publicDNSName += edh;
     std::string instanceState = "pending";
     user.instances[ instanceID ] = Instance( instanceID, imageID, privateDNSName, publicDNSName, instanceType, instanceState, keyName, groupNames );
     std::string reservationID = "r-"; reservationID += edh;
-    
+
     // Construct the XML reply.
     std::ostringstream xml;
     xml << "<RunInstancesResponse xmlns=\"http://ec2.amazonaws.com/doc/2010-11-15/\">" << std::endl;
@@ -394,11 +394,11 @@ bool handleRunInstances( AttributeValueMap & avm, std::string & reply, unsigned 
     char rID[] = "1234";
     snprintf( rID, sizeof( rID ), "%.4x", requestNumber );
     std::string requestID = rID;
-    
+
     xml << "<requestId>" << requestID << "</requestId>" << std::endl;
     xml << "<reservationId>" << reservationID << "</reservationId>" << std::endl;
     xml << "<ownerId>" << userID << "</ownerId>" << std::endl;
-    
+
     xml << "<groupSet>" << std::endl;
         for( unsigned i = 0; i < groupNames.size(); ++i ) {
             xml << xmlTag( "item", xmlTag( "groupId", groupNames[i] ) ) << std::endl;
@@ -422,7 +422,7 @@ bool handleTerminateInstances( AttributeValueMap & avm, std::string & reply, uns
     std::string userID;
     User & user = validateAndAcquireUser( avm, userID, reply, found );
     if( ! found ) { return false; }
-    
+
     // The ec2_gahp will never request more than one.
     std::string instanceID = getObject< std::string >( avm, "InstanceId.1", found );
     if( (! found) || instanceID.empty() ) {
@@ -430,7 +430,7 @@ bool handleTerminateInstances( AttributeValueMap & avm, std::string & reply, uns
         reply = "Required parameter InstanceId.1 missing or empty.\n";
         return false;
     }
-    
+
     Instance instance = getObject< Instance >( user.instances, instanceID, found );
     if( ! found ) {
         std::ostringstream error;
@@ -438,7 +438,7 @@ bool handleTerminateInstances( AttributeValueMap & avm, std::string & reply, uns
         reply = error.str();
         fprintf( stderr, "%s", reply.c_str() );
         return false;
-    }        
+    }
 
     // Change the state of the instance.
     InstanceState oldInstanceState = instance.instanceState;
@@ -464,7 +464,7 @@ bool handleTerminateInstances( AttributeValueMap & avm, std::string & reply, uns
         xml << "</previousState>" << std::endl;
     xml << "</instancesSet>" << std::endl;
     xml << "</TerminateInstancesResponse>" << std::endl;
-    
+
     reply = xml.str();
     return true;
 }
@@ -493,16 +493,16 @@ bool handleDescribeInstances( AttributeValueMap & avm, std::string & reply, unsi
     // maintain reservation records; instead, each VM is in its own.
     xml << xmlTag( "requestID", rID ) << std::endl;
     xml << "<reservationSet>" << std::endl;
-    
+
     for( InstanceIDToInstanceMap::iterator i = user.instances.begin(); i != user.instances.end(); ++i ) {
         Instance currentInstance = i->second;
         std::string reservationID = "r-" + currentInstance.instanceID.substr( 2, 8 );
 
         xml << "<item>" << std::endl;
-        
+
             xml << "<reservationId>" << reservationID << "</reservationId>" << std::endl;
             xml << "<ownerId>" << userID << "</ownerId>" << std::endl;
-            
+
             xml << "<groupSet>" << std::endl;
                 for( unsigned j = 0; j < currentInstance.groupNames.size(); ++j ) {
                     xml << xmlTag( "item", xmlTag( "groupId", currentInstance.groupNames[j] ) ) << std::endl;
@@ -512,13 +512,13 @@ bool handleDescribeInstances( AttributeValueMap & avm, std::string & reply, unsi
             xml << "<instancesSet>" << std::endl;
                 xml << currentInstance;
             xml << "</instancesSet>" << std::endl;
-        
+
         xml << "</item>" << std::endl;
-    }        
-            
+    }
+
     xml << "</reservationSet>" << std::endl;
     xml << "</DescribeInstancesResponse>" << std::endl;
-    
+
     reply = xml.str();
     return true;
 }
@@ -536,14 +536,14 @@ bool handleCreateTags( AttributeValueMap & avm, std::string & reply, unsigned re
         reply = "Required parameter TagName missing or empty.\n";
         return false;
     }
-    
+
     std::string tagValue = getObject< std::string >( avm, "Tag.0.Value", found );
     if( (! found) || tagValue.empty() ) {
         fprintf( stderr, "Failed to find tagValue in query.\n" );
         reply = "Required parameter tagValue missing or empty.\n";
         return false;
     }
-    
+
     char rID[] = "1234";
     snprintf( rID, sizeof( rID ), "%.4x", requestNumber );
     std::string requestID = rID;
@@ -554,7 +554,7 @@ bool handleCreateTags( AttributeValueMap & avm, std::string & reply, unsigned re
     xml << xmlTag( "tagName", tagName ) << std::endl;
     xml << xmlTag( "tagValue", tagValue ) << std::endl;
     xml << "/<CreateTagsResponse>" << std::endl;
-    
+
     reply = xml.str();
     return true;
 }
@@ -573,10 +573,10 @@ bool handleCreateKeyPair( AttributeValueMap & avm, std::string & reply, unsigned
         reply = "Required parameter KeyName missing or empty.\n";
         return false;
     }
-    
+
     Keypair kp( keyName, "key-fingerprint", "private-key" );
     user.keypairs[ keyName ] = kp;
-    
+
     char rID[] = "1234";
     snprintf( rID, sizeof( rID ), "%.4x", requestNumber );
     std::string requestID = rID;
@@ -588,7 +588,7 @@ bool handleCreateKeyPair( AttributeValueMap & avm, std::string & reply, unsigned
     xml << xmlTag( "keyFingerprint", kp.fingerprint ) << std::endl;
     xml << xmlTag( "keyMaterial", kp.privateKey ) << std::endl;
     xml << "/<CreateKeyPairResponse>" << std::endl;
-    
+
     reply = xml.str();
     return true;
 }
@@ -607,7 +607,7 @@ bool handleDeleteKeyPair( AttributeValueMap & avm, std::string & reply, unsigned
         reply = "Required parameter KeyName missing or empty.\n";
         return false;
     }
-    
+
     Keypair kp = getObject< Keypair >( user.keypairs, keyName, found );
     if( found ) {
         user.keypairs.erase( keyName );
@@ -618,18 +618,18 @@ bool handleDeleteKeyPair( AttributeValueMap & avm, std::string & reply, unsigned
         error << "Keypair named '" << keyName << "' does not exist." << std::endl;
         reply = error.str();
         fprintf( stderr, "%s", reply.c_str() );
-    }        
-    
+    }
+
     char rID[] = "1234";
     snprintf( rID, sizeof( rID ), "%.4x", requestNumber );
-    std::string requestID = rID;    
-    
+    std::string requestID = rID;
+
     std::ostringstream xml;
     xml << "<DeleteKeyPairsResponse xmlns=\"http://ec2.amazonaws.com/doc/2010-11-15/\">" << std::endl;
     xml << xmlTag( "requestId", requestID ) << std::endl;
     xml << xmlTag( "return", "true" ) << std::endl;
     xml << "</DeleteKeyPairsResponse>" << std::endl;
-    
+
     reply = xml.str();
     return true;
 }
@@ -644,10 +644,10 @@ bool handleDescribeKeyPairs( AttributeValueMap & avm, std::string & reply, unsig
 
     char rID[] = "1234";
     snprintf( rID, sizeof( rID ), "%.4x", requestNumber );
-    std::string requestID = rID;    
-    
+    std::string requestID = rID;
+
     std::ostringstream xml;
-    
+
     xml << "<DescribeKeyPairsResponse xmlns=\"http://ec2.amazonaws.com/doc/2010-11-15/\">" << std::endl;
     xml << "<keySet>" << std::endl;
         for( NameToKeypairMap::const_iterator i = user.keypairs.begin(); i != user.keypairs.end(); ++i ) {
@@ -655,7 +655,7 @@ bool handleDescribeKeyPairs( AttributeValueMap & avm, std::string & reply, unsig
         }
     xml << "</keySet>" << std::endl;
     xml << "</DescribeKeyPairsResponse>" << std::endl;
-    
+
     reply = xml.str();
     return true;
 }
@@ -691,13 +691,41 @@ bool extractHost( const std::string & request, std::string & host ) {
     return true;
 }
 
+// m/^Content-Length: \d+/
+bool extractContentLength( const std::string & header, long int & contentLength ) {
+	std::string::size_type i = header.find( "\r\nContent-Length: " );
+	if( std::string::npos != i ) {
+		std::string clString = header.substr( i + 18 );
+		// fprintf( stderr, "clString = '%s'\n", clString.c_str() );
+
+		std::string::size_type j = clString.find( "\r\n" );
+		if( std::string::npos == j ) {
+			fprintf( stderr, "Malformed request '%s': no newline after Content-Length; failing.\n", header.c_str() );
+			return false;
+		}
+
+		char * endptr = NULL;
+		clString = clString.substr( 0, j );
+		// fprintf( stderr, "clString = '%s'\n", clString.c_str() );
+		long int candidateLength = strtol( clString.c_str(), & endptr, 10 );
+		if( * endptr == '\0' ) { contentLength = candidateLength; return true; }
+
+		fprintf( stderr, "Failed to convert '%s' into a number.\n", clString.c_str() );
+		return false;
+	} else {
+		// Could be a GET request.
+		return false;
+	}
+}
+
 // m/^GET <URL> HTTP/
+// m/^POST <URL> HTTP/
 bool extractURL( const std::string & request, std::string & URL ) {
-    if( request.find( "GET " ) != 0 ) {
-        fprintf( stderr, "Malformed request '%s': did not begin with 'GET '; failing.\n", request.c_str() );
+    if( request.find( "POST " ) != 0 ) {
+        fprintf( stderr, "Malformed request '%s': did not begin with 'POST '; failing.\n", request.c_str() );
         return false;
     }
-    
+
     URL = request.substr( 4, request.find( "HTTP" ) - 5 );
     return true;
 }
@@ -716,7 +744,7 @@ bool extractURL( const std::string & request, std::string & URL ) {
  *      SignatureMethod
  *      Timestamp
  *      Version
- * 
+ *
  */
 bool validateSignature( std::string & /* method */,
                         const std::string & /* host */,
@@ -738,22 +766,38 @@ std::string constructReply( const std::string & statusLine, const std::string & 
     return reply.str();
 }
 
-std::string handleRequest( const std::string & request ) {
+std::string handleRequest( const std::string & header, std::string & request ) {
     static unsigned requestCount = -1; ++requestCount;
 
+	std::string content;
+	long int contentLength = 0;
+	// fprintf( stderr, "Handling header '%s'\n", header.c_str() );
+	if( extractContentLength( header, contentLength ) ) {
+		// fprintf( stderr, "content = '%s'\n", content.c_str() );
+		content = request.substr( 0, contentLength );
+		request = request.substr( contentLength );
+		// fprintf( stderr, "content = '%s', request = '%s'\n", content.c_str(), request.c_str() );
+	}
+
     std::string URL;
-    if( ! extractURL( request, URL ) ) {
+    if( ! extractURL( header, URL ) ) {
         return constructReply( "HTTP/1.1 400 Bad Request", "" );
     }
-    
+
     std::string host;
-    if( ! extractHost( request, host ) ) {
+    if( ! extractHost( header, host ) ) {
         return constructReply( "HTTP/1.1 400 Bad Request", "" );
     }
     std::transform( host.begin(), host.end(), host.begin(), & tolower );
-    
+
     // fprintf( stderr, "DEBUG: found 'http://%s%s'\n", host.c_str(), URL.c_str() );
-    
+
+    //
+    // Rather than rewrite the parser, just change URL to the appropriate
+    // string from the body of the PUT.
+    //
+    URL = "?" + content;
+
     AttributeValueMap queryParameters;
     std::string::size_type i = URL.find( "?" );
     while( i < URL.size() ) {
@@ -765,7 +809,7 @@ std::string handleRequest( const std::string & request ) {
             error << "Malformed URL '" << URL << "': attribute without value; failing" << std::endl;
             fprintf( stderr, "%s", error.str().c_str() );
             return constructReply( "HTTP/1.1 400 Bad Request", error.str() );
-        }        
+        }
         std::string::size_type ampersandIdx = URL.find( "&", i + 1 );
         if( std::string::npos == ampersandIdx ) {
             ampersandIdx = URL.size();
@@ -775,11 +819,11 @@ std::string handleRequest( const std::string & request ) {
         std::string value = URL.substr( equalsIdx + 1, ampersandIdx - (equalsIdx + 1 ) );
         // fprintf( stderr, "DEBUG: key = '%s', value = '%s'\n", key.c_str(), value.c_str() );
         queryParameters[ key ] = value;
-        
+
         i = ampersandIdx;
     }
 
-    std::string method = "GET";
+    std::string method = "POST";
     if( ! validateSignature( method, host, URL, queryParameters ) ) {
         return constructReply( "HTTP/1.1 401 Unauthorized", "Failed signature validation." );
     }
@@ -788,7 +832,7 @@ std::string handleRequest( const std::string & request ) {
     if( action.empty() ) {
         return constructReply( "HTTP/1.1 400 Bad Request", "No action specified." );
     }
-    
+
     std::string response;
     ActionToHandlerMap::const_iterator ci = simulatorActions.find( action );
     if( simulatorActions.end() == ci ) {
@@ -797,7 +841,7 @@ std::string handleRequest( const std::string & request ) {
         fprintf( stderr, "%s", error.str().c_str() );
         return constructReply( "HTTP/1.1 404 Not Found", error.str() );
     }
-    
+
     if( (*(ci->second))( queryParameters, response, requestCount ) ) {
         return constructReply( "HTTP/1.1 200 OK", response );
     } else {
@@ -812,7 +856,7 @@ void handleConnection( int sockfd ) {
 
     while( 1 ) {
         bytesRead = read( sockfd, (void *) buffer, 1024 );
-        
+
         if( bytesRead == -1 ) {
             if( errno == EINTR ) {
                 // fprintf( stdout, "read() interrupted, retrying.\n" );
@@ -821,25 +865,25 @@ void handleConnection( int sockfd ) {
             fprintf( stderr, "read() failed (%d): '%s'\n", errno, strerror( errno ) );
             return;
         }
-        
+
         if( bytesRead == 0 ) {
             close( sockfd );
             return;
         }
-        
+
         buffer[bytesRead] = '\0';
         request += buffer;
         // fprintf( stderr, "DEBUG: request is now '%s'.\n", request.c_str() );
-        
-        // A given HTTP request is terminated by a blank line.
+
+        // A given HTTP header is terminated by a blank line.
         std::string::size_type index = request.find( "\r\n\r\n" );
         while( index != std::string::npos ) {
-            std::string firstRequest = request.substr( 0, index + 4 );
+            std::string header = request.substr( 0, index + 4 );
             request = request.substr( index + 4 );
             // if( ! request.empty() ) { fprintf( stderr, "DEBUG: request remainder '%s'\n", request.c_str() ); }
-            
+
             // fprintf( stderr, "DEBUG: handling request '%s'\n", firstRequest.c_str() );
-            std::string reply = handleRequest( firstRequest );
+            std::string reply = handleRequest( header, request );
             if( ! reply.empty() ) {
                 // fprintf( stderr, "DEBUG: writing reply '%s'\n", reply.c_str() );
                 ssize_t totalBytesWritten = 0;
@@ -857,15 +901,15 @@ void handleConnection( int sockfd ) {
                     totalBytesWritten += bytesWritten;
                 }
             }
-            
-            index = request.find( "\r\n\r\n" );            
+
+            index = request.find( "\r\n\r\n" );
         }
     }
 }
 
 int printLeakSummary() {
     int rv = 0;
-    
+
     AccessKeyIDToUserMap::const_iterator u = users.begin();
     for( ; u != users.end(); ++u ) {
         // You can leak keys...
@@ -873,9 +917,9 @@ int printLeakSummary() {
             fprintf( stdout, "User '%s' leaked keys.\n", u->first.c_str() );
             rv = 6;
         }
-        
+
         // But since the ec2_gahp doesn't manage groups, you can't leak them.
-        
+
         // We never garbage-collect terminated instances (since EC2 leaves
         // them around for some time as well), but we should verify that
         // they're all terminated.
@@ -971,9 +1015,9 @@ int main( int /* argc */, char ** /* argv */ ) {
             fprintf( stderr, "accept() failed(%d): '%s'; aborting.\n", errno, strerror( errno ) );
             exit( 4 );
         }
-        
+
         handleConnection( remoteSocket );
     }
-    
+
     return 0;
 } // end main()

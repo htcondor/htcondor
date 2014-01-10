@@ -19,7 +19,7 @@
 # OS pre mods
 if(${OS_NAME} STREQUAL "DARWIN")
   exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
-  if(${TEST_VER} MATCHES "10.[678]" AND ${SYS_ARCH} MATCHES "I386")
+  if(${TEST_VER} MATCHES "10.[6789]" AND ${SYS_ARCH} MATCHES "I386")
 	set (SYS_ARCH "X86_64")
   endif()
 elseif(${OS_NAME} MATCHES "WIN")
@@ -77,6 +77,13 @@ if(NOT WINDOWS)
 #if(NOT WINDOWS AND NOT CONDOR_PLATFORM MATCHES "Fedora19")
 include (FindPythonLibs)
 endif(NOT WINDOWS)
+# As of cmake 2.8.8, the variable below is defined by FindPythonLibs.
+# This helps ensure we get the same version of the libraries and python
+# on systems with both python2 and python3.
+if (DEFINED PYTHONLIBS_VERSION_STRING)
+  set(PythonInterp_FIND_VERSION "${PYTHONLIBS_VERSION_STRING}")
+  set(PythonInterp_FIND_VERSION_EXACT ON)
+endif()
 include (FindPythonInterp)
 include (FindThreads)
 include (GlibcDetect)
@@ -138,8 +145,16 @@ if( NOT WINDOWS)
 	set(HAVE_PTHREAD_H ${CMAKE_HAVE_PTHREAD_H})
 
 	find_path(HAVE_OPENSSL_SSL_H "openssl/ssl.h")
-	find_path(HAVE_PCRE_H "pcre.h")
-	find_path(HAVE_PCRE_PCRE_H "pcre/pcre.h" )
+
+	if ( ${OS_NAME} STREQUAL "DARWIN" )
+		# Mac OS X includes the pcre library but not the header
+		# file. Supply a copy ourselves.
+		include_directories( ${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6/include-darwin )
+		set( HAVE_PCRE_H "${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6/include-darwin" CACHE PATH "Path to pcre header." )
+	else()
+		find_path(HAVE_PCRE_H "pcre.h")
+		find_path(HAVE_PCRE_PCRE_H "pcre/pcre.h" )
+	endif()
 
     find_multiple( "z" ZLIB_FOUND)
 	find_multiple( "expat" EXPAT_FOUND )
@@ -157,6 +172,18 @@ if( NOT WINDOWS)
 
 	check_library_exists(dl dlopen "" HAVE_DLOPEN)
 	check_symbol_exists(res_init "sys/types.h;netinet/in.h;arpa/nameser.h;resolv.h" HAVE_DECL_RES_INIT)
+	check_symbol_exists(TCP_KEEPIDLE "sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_KEEPIDLE)
+	check_symbol_exists(TCP_KEEPALIVE "sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_KEEPALIVE)
+	check_symbol_exists(TCP_KEEPCNT "sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_KEEPCNT)
+	check_symbol_exists(TCP_KEEPINTVL, "sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_KEEPINTVL)
+	if(${OS_NAME} STREQUAL "LINUX")
+		check_include_files("linux/tcp.h" HAVE_LINUX_TCP_H)
+	endif()
+	if( HAVE_LINUX_TCP_H )
+		check_symbol_exists(TCP_USER_TIMEOUT, "linux/tcp.h;sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_USER_TIMEOUT)
+	else()
+		check_symbol_exists(TCP_USER_TIMEOUT, "sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_USER_TIMEOUT)
+	endif()
 	check_symbol_exists(MS_PRIVATE "sys/mount.h" HAVE_MS_PRIVATE)
 	check_symbol_exists(MS_SHARED  "sys/mount.h" HAVE_MS_SHARED)
 	check_symbol_exists(MS_SLAVE  "sys/mount.h" HAVE_MS_SLAVE)
@@ -273,13 +300,10 @@ if( NOT WINDOWS)
 	check_cxx_compiler_flag(-std=c++11 cxx_11)
 	if (cxx_11)
 
-		# Clang requires some additional C++11 flags, as the default stdlib
+		# Some versions of Clang require an additional C++11 flag, as the default stdlib
 		# is from an old GCC version.
 		if ( ${OS_NAME} STREQUAL "DARWIN" AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
-			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -lc++")
-			set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -lc++")
-			set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} -lc++")
-			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lc++")
+			set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 		endif()
 
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
@@ -293,13 +317,6 @@ if( NOT WINDOWS)
 			return 0;
 		}
 		" PREFER_CPP11 )
-
-		# Note - without adding -lc++ to the CXX flags, the linking of the test
-		# above will fail for clang.  It doesn't seem strictly necessary though,
-		# so we remove this afterward.
-		if ( ${OS_NAME} STREQUAL "DARWIN" AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
-			string(REPLACE "-lc++" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-		endif()
 
 	endif (cxx_11)
 
@@ -567,21 +584,44 @@ endif()
 
 ###########################################
 #if (NOT MSVC11) 
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.49.0)
 #endif()
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p1)
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
 add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/gsoap/2.7.10-p5)
-add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1 )
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/postgresql/8.2.3-p1)
-add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
-add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
 
-if (NOT WINDOWS)
+if (WINDOWS)
 
+  if (MSVC11)
+    if (CMAKE_SIZEOF_VOID_P EQUAL 8 )
+      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32.tar.gz)
+    else()
+      set(BOOST_DOWNLOAD_WIN boost-1.54.0-VC11-Win32.tar.gz)
+    endif()
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.54.0)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1e)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/8.33)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.10)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.33.0)
+  else()
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.49.0)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p1)
+    add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1)
+  endif()
+  
+  # DRMAA currently punted on Windows until we can figure out correct build
+  #add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
+  add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
+else ()
+
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/drmaa/1.6)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.49.0)
+
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1 )
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/0.9.8h-p2)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre/7.6)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.4.3-p1)
+  add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/coredumper/2011.05.24-r31)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/unicoregahp/1.2.0)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libxml2/2.7.3)
@@ -633,7 +673,9 @@ if (NOT WINDOWS)
 		message( STATUS "** Standard Universe Disabled **")
 	endif()
 
-endif(NOT WINDOWS)
+endif(WINDOWS)
+
+add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
 
 ### addition of a single externals target which allows you to
 if (CONDOR_EXTERNALS)
@@ -894,9 +936,9 @@ else(MSVC)
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lresolv")
 	endif()
 
-	if (HAVE_PTHREADS)
+	if (HAVE_PTHREADS AND NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
-	endif(HAVE_PTHREADS)
+	endif(HAVE_PTHREADS AND NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 
 	check_cxx_compiler_flag(-shared HAVE_CC_SHARED)
 

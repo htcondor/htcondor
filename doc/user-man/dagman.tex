@@ -276,12 +276,12 @@ The \Arg{PRE} or \Arg{POST} key word
 specifies the relative timing of when the script is to be run.
 The \Arg{JobName} specifies the node to which the script is attached.
 The \Arg{ExecutableName}
-specifies the script to be executed, and it
-may be followed by any command line arguments to that script.
-The \Arg{ExecutableName} and optional \Arg{arguments} are
-case sensitive; they have their case preserved.  \Bold{Note that neither
-the \Arg{ExecutableName} nor the individual arguments within the
-\Arg{arguments} string can contain spaces.}
+specifies the script to be executed, 
+and it may not contain spaces.
+The Optional \Arg{arguments} are command line arguments to the script,
+and spaces delimit the arguments.
+Both \Arg{ExecutableName} and optional \Arg{arguments} are
+case sensitive; they have their case preserved.
 
 Scripts are optional for each job, and
 any scripts are executed on the machine
@@ -384,52 +384,67 @@ PRE script of the node specified by \Arg{JobName}.
 If the PRE script terminates with the exit code \Arg{non-zero-exit-code},
 then the remainder of the node is skipped entirely.  
 Both the job associated with the node and
-any \Arg{POST} script will not be executed,
+any POST script will not be executed,
 and the node will be marked as successful.
 
 \Bold{Special script argument macros}
 
-Five variables (\Env{\$JOB}, \Env{\$RETRY},
-\Env{\$MAX\_RETRIES}, 
-\Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT}) can be used within the
-DAG input file as arguments passed to a PRE or POST script; three more
-(\Env{\$JOBID}, \Env{\$RETURN}, and \Env{\$PRE\_SCRIPT\_RETURN}) can
-be used as arguments to POST scripts only.
-The use of these variables must be as an individual argument,
-and thus will be separated from other arguments by white space character(s).
-An example which will \emph{not} cause the substitution of 
-the \Env{\$RETURN} value is
+The five macros \Expr{\$JOB}, \Expr{\$RETRY}, \Expr{\$MAX\_RETRIES}, 
+\Expr{\$DAG\_STATUS} and \Expr{\$FAILED\_COUNT} can be used within the
+DAG input file as arguments passed to a PRE or POST script. 
+The three macros \Expr{\$JOBID}, \Expr{\$RETURN}, 
+and \Expr{\$PRE\_SCRIPT\_RETURN} can
+be used as arguments to POST scripts.
+The use of these variables must be as an individual command
+line \Arg{argument} to the script,
+surrounded by spaces, in order to cause the substitution of the
+variable's value.
+The example POST script specification
 \begin{verbatim}
-  job_status=$RETURN 
+  SCRIPT POST A stage-out job_status $RETURN 
 \end{verbatim}
-The argument will be this entire string as shown.
+where the node job returned a value of -1
+invokes the POST script with
+\begin{verbatim}
+  stage-out job_status -1
+\end{verbatim}
+The slightly different example POST script specification
+\begin{verbatim}
+  SCRIPT POST A stage-out job_status=$RETURN 
+\end{verbatim}
+invokes the POST script with
+\begin{verbatim}
+  stage-out job_status=$RETURN
+\end{verbatim}
+There is no space between the \Expr{=} sign and the variable \Expr{\$RETURN},
+so there is no substitution of the variable's value.
 
 The special macros are as follows:
 
 \begin{itemize}
 \item \index{DAGMan!JOB@\verb^$JOB^ value}
-\Env{\$JOB} evaluates to the (case sensitive) string
+\Expr{\$JOB} evaluates to the (case sensitive) string
 defined for \Arg{JobName}.
 
 \item \index{DAGMan!RETRY@\verb^$RETRY^ value}
-\Env{\$RETRY} evaluates to an 
+\Expr{\$RETRY} evaluates to an 
 integer value set to 0 the first time a node is run,
 and is incremented each time the node is retried. 
 See section~\ref{dagman:retry} for the description of how to cause
 nodes to be retried. 
 
 \item \index{DAGMan!MAX_RETRIES@\verb^$MAX_RETRIES^ value}
-\Env{\$MAX\_RETRIES} evaluates to an integer value set 
+\Expr{\$MAX\_RETRIES} evaluates to an integer value set 
 to the maximum number of retries for the node.
 See section~\ref{dagman:retry} for the description of how to cause
 nodes to be retried.  
 If no retries are set for the node,
-\Env{\$MAX\_RETRIES} will be set to 0.
+\Expr{\$MAX\_RETRIES} will be set to 0.
 
 \item \index{DAGMan!JOBID@\verb^$JOBID^ value}
 \index{job ID!defined for a DAGMan node job}
 \index{job!job ID!defined for a DAGMan node job}
-\Env{\$JOBID} (for POST scripts only)
+\Expr{\$JOBID} (for POST scripts only)
 evaluates to a representation of the HTCondor job ID of the node job.
 It is the value of the job ClassAd attribute \Attr{ClusterId},
 followed by a period,
@@ -439,22 +454,22 @@ For nodes with multiple jobs in the same cluster,
 the \Attr{ProcId} value is the one of the last job within the cluster.
 
 \item \index{DAGMan!Return@\verb^$RETURN^ value}
-\Env{\$RETURN} (for POST scripts only) variable evaluates to
+\Expr{\$RETURN} (for POST scripts only) variable evaluates to
 the return value of the 
 HTCondor or Stork job, if there is a single job within a cluster.
 With multiple jobs within the same cluster,
 there are two cases to consider.
 In the first case, all jobs within the cluster are successful;
-the value of \Env{\$RETURN} will be 0, indicating success.
+the value of \Expr{\$RETURN} will be 0, indicating success.
 In the second case,
 one or more jobs from the cluster fail.
 When \Condor{dagman} sees the first terminated event for a job that failed,
-it assigns that job's return value as the value
-of \Env{\$RETURN}, and attempts to remove all remaining jobs within the cluster.
+it assigns that job's return value as the value of \Expr{\$RETURN},
+and it attempts to remove all remaining jobs within the cluster.
 Therefore, if multiple jobs in the cluster fail with different exit codes,
-a race condition determines which exit code gets assigned to \Env{\$RETURN}.
+a race condition determines which exit code gets assigned to \Expr{\$RETURN}.
 
-A job that dies due to a signal is reported with a \Env{\$RETURN} value
+A job that dies due to a signal is reported with a \Expr{\$RETURN} value
 representing the additive inverse of the signal number.
 For example, SIGKILL (signal 9) is reported as -9.
 A job whose batch system submission fails is reported as -1001.
@@ -462,19 +477,19 @@ A job that is externally removed from the batch system queue
 (by something other than \Condor{dagman}) is reported as -1002.
 
 \item \index{DAGMan!PRE_SCRIPT_RETURN@\verb^$PRE_SCRIPT_RETURN^ value}
-\Env{\$PRE\_SCRIPT\_RETURN} (for POST scripts only)
+\Expr{\$PRE\_SCRIPT\_RETURN} (for POST scripts only)
 variable evaluates to the return value of the PRE script of a node, 
 if there is one.
-If there is no PRE script, this value will be $-1$.
+If there is no PRE script, this value will be -1.
 If the node job was skipped because of failure of the PRE script,
-the value of \Env{\$RETURN} will be $-1004$
-and the value of \Env{\$PRE\_SCRIPT\_RETURN} will be the exit value
+the value of \Expr{\$RETURN} will be -1004
+and the value of \Expr{\$PRE\_SCRIPT\_RETURN} will be the exit value
 of the PRE script;
 the POST script can use this to see if the PRE script exited
 with an error condition, and assign success or failure to the node, as
 appropriate.
 
-\item \Env{\$DAG\_STATUS} and \Env{\$FAILED\_COUNT} are documented in
+\item \Expr{\$DAG\_STATUS} and \Expr{\$FAILED\_COUNT} are documented in
 section ~\ref{sec:DAGFinalNode} below.
 \end{itemize}
 
@@ -776,6 +791,73 @@ argument of 250,
 and a new cluster of 5000 jobs will be submitted to the \Condor{schedd}.
 In this case, no further jobs will be submitted by \Condor{dagman}
 until the number of idle jobs falls below 250. 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{\label{sec:DAGPaths}File Paths in DAGs}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\index{DAGMan!File Paths in DAGs}
+
+\Condor{dagman} assumes that all relative paths in a
+DAG input file and the associated HTCondor submit description files
+are relative to the current
+working directory when \Condor{submit\_dag} is run.  
+
+Note that 
+relative paths in submit description files can be modified by the submit command
+\SubmitCmd{initialdir}; 
+see the \Condor{submit} manual page at ~\ref{man-condor-submit} 
+for more details on this command.
+The remainder of this discussion ignores \SubmitCmd{initialdir}.
+
+For example, assume that a directory called \File{parent}
+contains two subdirectories called \File{dag1} and
+\File{dag2}, and that \File{dag1} contains the DAG input file \File{one.dag}
+and \File{dag2} contains the DAG input file \File{two.dag}.
+Assume that each DAG is set up to be run
+from its own directory, resulting in correct behavior for the DAG
+in \File{dag1} with the command
+\begin{verbatim}
+cd dag1; condor_submit_dag one.dag
+\end{verbatim}
+
+In most cases, path names relative to the current working directory 
+is the desired behavior.
+However, if running
+multiple DAGs with a single \Condor{dagman} command, 
+and each set of DAG input files is in its own directory, 
+the paths will not be correct. 
+In this case,
+the \Arg{-usedagdir} command line argument to \Condor{submit\_dag}
+will run each DAG as if \Condor{submit\_dag} had been run 
+in the directory in which the relevant DAG file exists.
+With the current working directory
+is \File{parent}, run 
+\begin{verbatim}
+condor_submit_dag -usedagdir dag1/one.dag dag2/two.dag
+\end{verbatim}
+The directory will be correct for each of the two DAGs,
+and output files will be placed in the correct directory.
+The File{.dagman.out} file will also be in the correct directory.
+
+If all paths in the DAG input file(s) and the relevant submit
+description files are absolute,
+the \Arg{-usedagdir} argument is not needed;
+however, using absolute paths is NOT generally a good idea.
+
+For a DAG that \emph{does not} use \Arg{-usedagdir}, 
+relative paths can still work for multiple DAGs, 
+if all file paths are given relative to
+the current working directory as \Condor{submit\_dag} is executed.
+This implies that DAGs in separate directories
+cannot be submitted from their own directories;
+submission only works from the parent directory the paths are set up for.
+
+With the \Arg{-usedagdir} argument, any created 
+Rescue DAG file will be written to
+the current working directory.
+The Rescue DAG should be run from that directory.
+The Rescue DAG includes all the path information necessary to
+run each node job in the proper directory.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{Job Monitoring, Job Failure, and Job Removal}
@@ -1187,15 +1269,15 @@ As an example, here are only the relevant parts of a DAG input file.
 Note that the NodeA value for \Expr{second} contains a tab.
 \footnotesize
 \begin{verbatim}
-    Vars NodeA first="Alberto Contador"
-    Vars NodeA second="\"\"Andy	Schleck\"\""
-    Vars NodeA third="Lance\\ Armstrong"
-    Vars NodeA misc="!@#$%^&*()_-=+=[]{}?/"
+    VARS NodeA first="Alberto Contador"
+    VARS NodeA second="\"\"Andy	Schleck\"\""
+    VARS NodeA third="Lance\\ Armstrong"
+    VARS NodeA misc="!@#$%^&*()_-=+=[]{}?/"
     
-    Vars NodeB first="Lance_Armstrong"
-    Vars NodeB second="\\\"Andreas_Kloden\\\""
-    Vars NodeB third="Ivan\\_Basso"
-    Vars NodeB misc="!@#$%^&*()_-=+=[]{}?/"
+    VARS NodeB first="Lance_Armstrong"
+    VARS NodeB second="\\\"Andreas_Kloden\\\""
+    VARS NodeB third="Ivan\\_Basso"
+    VARS NodeB misc="!@#$%^&*()_-=+=[]{}?/"
 \end{verbatim}
 \normalsize
 
@@ -1251,11 +1333,8 @@ then \Env{\$(JOB)} will be the fully scoped name of the node.
 is retried.  For example:
 \end{itemize}
 \begin{verbatim}
-      Vars F noderetry="$(RETRY)"
+      Vars NodeC noderetry="$(RETRY)"
 \end{verbatim}
-
-Note that the special macro values can be inserted into a job's ClassAd,
-as noted below.
 
 % Note: this is an alternative to subsubsubsection, which we don't have.
 \begin{description}
@@ -1263,20 +1342,37 @@ as noted below.
 \end{description}
 
 The \Arg{macroname} may also begin with a \Expr{+} character, in which case it
-names a ClassAd attribute. For example, the following VARS specification
+names a ClassAd attribute. For example, the VARS specification
 \begin{verbatim}
-  Vars NodeE +A="\"bob\""
+  VARS NodeD +A="\"bob\""
 \end{verbatim}
-would allow the HTCondor submit description file for NodeE to use
+results in the job ClassAd attribute
+\begin{verbatim}
+  A = "bob"
+\end{verbatim}
+Note that ClassAd string values must be quoted, hence there are escaped
+quotes in the example above.  The outer quotes are consumed in the parsing of
+the DAG input file, so the escaped inner quotes remain in the definition
+of the attribute value.
+
+Continuing this example,
+it allows the HTCondor submit description file for NodeD to use
 the following line:
 \begin{verbatim}
   arguments = "$$([A])"
 \end{verbatim}
 
-Note that ClassAd string values must be quoted, hence there are escaped
-quotes in the example above.  The outer quotes are consumed in the parsing of
-the DAG input file, so the escaped inner quotes remain in the definition
-of the attribute value.
+The special macros may also be used.
+For example
+\begin{verbatim}
+  VARS NodeE +B="$(RETRY)"
+\end{verbatim}
+places the numerical attribute
+\begin{verbatim}
+  B = 1
+\end{verbatim}
+into the ClassAd when the NodeE job is run for a second time,
+which is the first retry and the value 1. 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Setting Priorities for Nodes}
@@ -2607,70 +2703,6 @@ To run this Rescue DAG, the submission command is
 \end{verbatim}
 If this Rescue DAG also failed, a new Rescue DAG named
 \File{my.dag.rescue.rescue} would be created.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:DAGPaths}File Paths in DAGs}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{DAGMan!File Paths in DAGs}
-
-By default, \Condor{dagman} assumes that all relative paths in a
-DAG input file and the associated HTCondor submit description files
-are relative to the current
-working directory when \Condor{submit\_dag} is run.  
-Note that 
-relative paths in submit description files can be modified by the submit command
-\SubmitCmd{initialdir}; see the \Condor{submit} manual page within Chapter
-~\ref{man-condor-submit} for more details.  The rest of this discussion
-ignores \SubmitCmd{initialdir}.
-
-In most cases, path names relative to the current working directory 
-is the desired behavior.
-However, if running
-multiple DAGs with a single \Condor{dagman}, and each DAG is in its
-own directory, this will cause problems.  In this case,
-use the \Arg{-usedagdir} command-line argument to
-\Condor{submit\_dag} (see the \Condor{submit\_dag} manual page within Chapter
-~\ref{man-condor-submit-dag} for more details).
-This tells \Condor{dagman} to run each DAG
-as if \Condor{submit\_dag} had been run in the directory in which
-the relevant DAG file exists.
-
-For example, assume that a directory called \File{parent}
-contains two subdirectories called \File{dag1} and
-\File{dag2}, and that \File{dag1} contains the DAG input file \File{one.dag}
-and \File{dag2} contains the DAG input file \File{two.dag}.
-Further, assume that each DAG is set up to be run
-from its own directory with the following command:
-\begin{verbatim}
-cd dag1; condor_submit_dag one.dag
-\end{verbatim}
-This will correctly run \File{one.dag}.
-
-The goal is to run the two, independent DAGs located within
-\File{dag1} and \File{dag2} while the current working directory
-is \File{parent}.  To do so, run the following command:
-\begin{verbatim}
-condor_submit_dag -usedagdir dag1/one.dag dag2/two.dag
-\end{verbatim}
-
-Of course, if all paths in the DAG input file(s) and the relevant submit
-description files are absolute,
-the \Arg{-usedagdir} argument is not needed;
-however, using absolute paths is NOT generally a good idea.
-
-If you \emph{do not} use \Arg{-usedagdir}, relative paths can still work
-for multiple DAGs, if
-all file paths are given relative to
-the current working directory as \Condor{submit\_dag} is executed.
-However, this means that, if the DAGs are in separate directories, they
-cannot be submitted from their own directories, only from the parent
-directory the paths are set up for.
-
-Note that if you use the \Arg{-usedagdir} argument, and your run
-results in a rescue DAG, the rescue DAG file will be written to
-the current working directory, and should be run from that directory.
-The rescue DAG includes all the path information necessary to
-run each node job in the proper directory.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -321,6 +321,8 @@ public:
 			@param slot_name Example: slot1@somehost.edu
 			@param error_msg Message for user describing why it failed
 			@param retry_is_sensible True if failed and sensible to retry
+			@param job_status Set iff return is false; the status of the job.
+			@param hold_reason Set iff job is held; the job's hold reason.
 			@return true on success; false on failure
 		*/
 	bool getJobConnectInfo( PROC_ID jobid,
@@ -333,7 +335,9 @@ public:
 							MyString &starter_version,
 							MyString &slot_name,
 							MyString &error_msg,
-							bool &retry_is_sensible);
+							bool &retry_is_sensible,
+							int &job_status,
+							MyString &hold_reason);
 
 
 		/** Request the schedd to initiate a negoitation cycle.

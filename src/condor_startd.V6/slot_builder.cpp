@@ -162,6 +162,9 @@ CpuAttributes** buildCpuAttrs( MachAttributes *m_attr, int max_types, StringList
         cap->show_totals(D_ALWAYS);
 	}
 
+	for (int i=0; i<num; i++) {
+		cap_array[i]->bind_DevIds(i+1, 0);
+	}
 	return cap_array;
 }
 
@@ -381,6 +384,7 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 	  swap = default_share;
 	  disk = default_share;
 
+	  PRAGMA_REMIND("tj: only pre-defined resources should automatically get a default share")
       for (slotres_map_t::const_iterator j(m_attr->machres().begin());  j != m_attr->machres().end();  ++j) {
           slotres[j->first] = default_share;
       }
@@ -409,16 +413,13 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
 				// it as a percentage and use that for everything.
 			default_share = parse_value(attr_expr.c_str(), type, except);
 			if( default_share <= 0 && !IS_AUTO_SHARE(default_share) ) {
-				dprintf( D_ALWAYS, "ERROR: Bad description of slot type %d: ",
-						 type );
-				dprintf( D_ALWAYS | D_NOHEADER,  "\"%s\" is invalid.\n", attr_expr.c_str() );
-				dprintf( D_ALWAYS | D_NOHEADER,
-						 "\tYou must specify a percentage (like \"25%%\"), " );
-				dprintf( D_ALWAYS | D_NOHEADER, "a fraction (like \"1/4\"),\n" );
-				dprintf( D_ALWAYS | D_NOHEADER,
-						 "\tor list all attributes (like \"c=1, r=25%%, s=25%%, d=25%%\").\n" );
-				dprintf( D_ALWAYS | D_NOHEADER,
-						 "\tSee the manual for details.\n" );
+				dprintf( D_ALWAYS, "ERROR: Bad description of slot type %d: "
+						"\"%s\" is invalid.\n"
+						"\tYou must specify a percentage (like \"25%%\"), "
+						"a fraction (like \"1/4\"),\n"
+						"\tor list all attributes (like \"c=1, r=25%%, s=25%%, d=25%%\").\n"
+						"\tSee the manual for details.\n",
+						 type, attr_expr.c_str());
 				if( except ) {
 					DC_Exit( 4 );
 				} else {
@@ -450,7 +451,8 @@ CpuAttributes* buildSlot( MachAttributes *m_attr, int slot_id, StringList* list,
         string attr = attr_expr.substr(0, eqpos);
         slotres_map_t::const_iterator f(m_attr->machres().find(attr));
         if (f != m_attr->machres().end()) {
-            slotres[f->first] = compute_local_resource(share, attr, m_attr->machres());
+			double num = compute_local_resource(share, f->first, m_attr->machres());
+			slotres[f->first] = num;
             continue;
         }
 		switch( tolower(attr[0]) ) {

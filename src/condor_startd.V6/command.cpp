@@ -1136,7 +1136,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		ABORT;
 	}
 
-    map<string, double> consumption;
+    consumption_map_t consumption;
     bool has_cp = cp_supports_policy(*rip->r_classad);
     if (has_cp) {
         cp_override_requested(*req_classad, *rip->r_classad, consumption);
@@ -1566,7 +1566,7 @@ activate_claim( Resource* rip, Stream* stream )
 		// See if machine and job meet each other's requirements, if
 		// so start the job and tell shadow, otherwise refuse and
 		// clean up.  
-    map<string, double> consumption;
+    consumption_map_t consumption;
     bool has_cp = cp_supports_policy(*mach_classad, false);
     bool cp_sufficient = true;
     if (has_cp) {

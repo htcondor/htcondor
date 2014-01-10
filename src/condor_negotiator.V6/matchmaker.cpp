@@ -4083,7 +4083,7 @@ matchmakingAlgorithm(const char *scheddName, const char *scheddAddr, ClassAd &re
 			dPrintAd(D_MACHINE, *candidate);
 		}
 
-        map<string, double> consumption;
+        consumption_map_t consumption;
         bool has_cp = cp_supports_policy(*candidate);
         bool cp_sufficient = true;
         if (has_cp) {
