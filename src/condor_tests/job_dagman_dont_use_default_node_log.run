@@ -93,7 +93,7 @@ $success = sub
 		chomp();
 		$line = $_;
 
-		if( $line =~ /Warning: non-default log file mode is now deprecated/ ) {
+		if( $line =~ /Warning: setting DAGMAN_ALWAYS_USE_NODE_LOG to false is no longer recommended and will probably be disabled in a future version/ ) {
 			CondorTest::debug("$name: $line\n",1);
 			$passed = 1;
 		}

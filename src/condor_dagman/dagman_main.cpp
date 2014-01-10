@@ -912,7 +912,7 @@ void main_init (int argc, char ** const argv) {
     }
 
 	if ( !dagman._submitDagDeepOpts.always_use_node_log ) {
-        debug_printf( DEBUG_QUIET, "Warning: non-default log file mode is now deprecated\n" );
+        debug_printf( DEBUG_QUIET, "Warning: setting DAGMAN_ALWAYS_USE_NODE_LOG to false is no longer recommended and will probably be disabled in a future version\n" );
 		check_warning_strictness( DAG_STRICT_1 );
 	}
 
