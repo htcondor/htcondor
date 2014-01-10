@@ -40,6 +40,7 @@
 #include "exit.h"
 #include "param_functions.h"
 #include "match_prefix.h"
+#include "historyFileFinder.h"
 
 #include "file_sql.h"
 #include "file_xml.h"
@@ -1110,19 +1111,14 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 	}
 
 	free(name);
-	char *history_file = param(history_file_param);
 
-	if (!history_file) {
+	int numHistoryFiles = 0;
+	char **historyFiles;
+
+	historyFiles = findHistoryFiles(history_file_param, &numHistoryFiles);
+
+	if (!historyFiles) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: no parameter named %s\n", history_file_param);
-		stream->code(result);
-		stream->end_of_message();
-		return FALSE;
-	}
-	int fd = safe_open_wrapper_follow(history_file,O_RDONLY);
-	free(history_file);
-	if(fd<0) {
-		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: can't open history file\n");
-		result = DC_FETCH_LOG_RESULT_CANT_OPEN;
 		stream->code(result);
 		stream->end_of_message();
 		return FALSE;
@@ -1131,16 +1127,13 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 	result = DC_FETCH_LOG_RESULT_SUCCESS;
 	stream->code(result);
 
-	filesize_t size;
-	stream->put_file(&size, fd);
+	for (int f = 0; f < numHistoryFiles; f++) {
+		filesize_t size;
+		stream->put_file(&size, historyFiles[f]);
+	}
 
 	stream->end_of_message();
 
-	if(size<0) {
-		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: couldn't send all data!\n");
-	}
-
-	close(fd);
 	return TRUE;
 }
 
