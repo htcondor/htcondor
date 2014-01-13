@@ -1,4 +1,5 @@
 #include "old_boost.h"
+#include <boost/python/raw_function.hpp>
 #include <classad/source.h>
 #include <classad/sink.h>
 #include <classad/literals.h>
@@ -94,6 +95,12 @@ BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(init_overloads, init, 0, 1);
 
 BOOST_PYTHON_MEMBER_FUNCTION_OVERLOADS(evaluate_overloads, Evaluate, 0, 1);
 
+#define PYTHON_OPERATOR(op) \
+.def("__" #op "__", &ExprTreeHolder:: __ ##op ##__)
+
+#define PYTHON_ROPERATOR(op) \
+.def("__" #op "__", &ExprTreeHolder:: __ ##op ##__).def("__r" #op "__", &ExprTreeHolder:: __r ##op ##__)
+
 BOOST_PYTHON_MODULE(classad)
 {
     using namespace boost::python;
@@ -123,6 +130,10 @@ BOOST_PYTHON_MODULE(classad)
     def("quote", quote, "Convert a python string into a string corresponding ClassAd string literal");
     def("unquote", unquote, "Convert a python string escaped as a ClassAd string back to python");
 
+    def("Literal", literal, "Convert a python object to a ClassAd literal.");
+    def("Function", boost::python::raw_function(function, 1));
+    def("Attribute", attribute, "Convert a string to a ClassAd reference.");
+
     class_<ClassAdWrapper, boost::noncopyable>("ClassAd", "A classified advertisement.")
         .def(init<std::string>())
         .def(init<boost::python::dict>())
@@ -145,6 +156,9 @@ BOOST_PYTHON_MODULE(classad)
         .def("get", &ClassAdWrapper::get, get_overloads("Retrieve a value from the ClassAd"))
         .def("setdefault", &ClassAdWrapper::setdefault, setdefault_overloads("Set a default value for a ClassAd"))
         .def("update", &ClassAdWrapper::update, "Copy the contents of a given ClassAd into the current object")
+        .def("flatten", &ClassAdWrapper::Flatten, "Partially evaluate a given expression.")
+        .def("matches", &ClassAdWrapper::matches, "Returns true if this ad matches the given ClassAd")
+        .def("symmetricMatch", &ClassAdWrapper::symmetricMatch, "Returns true if this ad and the given ad match each other")
         ;
 
     class_<ExprTreeHolder>("ExprTree", "An expression in the ClassAd language", init<std::string>())
@@ -152,6 +166,28 @@ BOOST_PYTHON_MODULE(classad)
         .def("__repr__", &ExprTreeHolder::toRepr)
         .def("__getitem__", &ExprTreeHolder::getItem, condor::classad_expr_return_policy<>())
         .def("eval", &ExprTreeHolder::Evaluate, evaluate_overloads("Evalaute the expression, possibly within context of a ClassAd"))
+        .def("__nonzero__", &ExprTreeHolder::__nonzero__)
+        .def("sameAs", &ExprTreeHolder::SameAs, "Returns true if given ExprTree is same as this one.")
+        .def("and_", &ExprTreeHolder::__land__)
+        .def("or_", &ExprTreeHolder::__lor__)
+        .def("is_", &ExprTreeHolder::__is__)
+        .def("isnt_", &ExprTreeHolder::__isnt__)
+        PYTHON_OPERATOR(ge)
+        PYTHON_OPERATOR(gt)
+        PYTHON_OPERATOR(le)
+        PYTHON_OPERATOR(lt)
+        PYTHON_OPERATOR(ne)
+        PYTHON_OPERATOR(eq)
+        PYTHON_ROPERATOR(and)
+        PYTHON_ROPERATOR(or)
+        PYTHON_ROPERATOR(sub)
+        PYTHON_ROPERATOR(add)
+        PYTHON_ROPERATOR(mul)
+        PYTHON_ROPERATOR(div)
+        PYTHON_ROPERATOR(xor)
+        PYTHON_ROPERATOR(mod)
+        PYTHON_ROPERATOR(lshift)
+        PYTHON_ROPERATOR(rshift)
         ;
     ExprTreeHolder::init();
 
