@@ -36,21 +36,21 @@ CondorTest::StartCondorWithParams(
 );
 
 my %memory_data = (
-	"x86_64_Ubuntu10" => "824", 
-	"x86_64_Fedora17" => "700", 
-	"x86_64_Fedora18" => "944", 
-	"x86_64_Fedora19" => "900",
-	"x86_64_Fedora20" => "900",
-	"x86_64_SL6" => "848", 
-	"x86_64_RedHat6" => "848", 
-	"x86_64_Debian6" => "1012", 
-	"x86_64_Debian7" => "1080", 
-	"x86_Debian6" => "568", 
-	"x86_64_RedHat5" => "772", 
+	"x86_64_Ubuntu10" => "740", 
+	"x86_64_Fedora17" => "620", 
+	"x86_64_Fedora18" => "868", 
+	"x86_64_Fedora19" => "876",
+	"x86_64_Fedora20" => "876",
+	"x86_64_SL6" => "728", 
+	"x86_64_RedHat6" => "752", 
+	"x86_64_Debian6" => "920", 
+	"x86_64_Debian7" => "1004", 
+	"x86_Debian6" => "512", 
+	"x86_64_RedHat5" => "680", 
 	"x86_64_Ubuntu12" => "1032", 
-	"x86_RedHat6" => "652", 
-	"x86_SL5" => "580", 
-	"x86_RedHat5" => "576", 
+	"x86_RedHat6" => "588", 
+	"x86_SL5" => "528", 
+	"x86_RedHat5" => "528", 
 );
 
 my $tolerance = 1.05;
