@@ -1113,7 +1113,7 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 	free(name);
 
 	int numHistoryFiles = 0;
-	char **historyFiles;
+	char **historyFiles = 0;
 
 	historyFiles = findHistoryFiles(history_file_param, &numHistoryFiles);
 
@@ -1130,7 +1130,9 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 	for (int f = 0; f < numHistoryFiles; f++) {
 		filesize_t size;
 		stream->put_file(&size, historyFiles[f]);
+		free(historyFiles[f]);
 	}
+	free(historyFiles);
 
 	stream->end_of_message();
 
