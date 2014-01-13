@@ -1,4 +1,4 @@
-%define tarball_version 8.1.2
+%define tarball_version 8.1.3
 
 # optionally define any of these, here or externally
 # % define fedora   16
@@ -105,7 +105,7 @@ Version: %{tarball_version}
 %global version_ %(tr . _ <<< %{version})
 
 # Only edit the %condor_base_release to bump the rev number
-%define condor_git_base_release 0.3
+%define condor_git_base_release 0.1
 %define condor_base_release 1
 %if %git_build
         %define condor_release %condor_git_base_release.%{git_rev}.git
@@ -1108,7 +1108,10 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_chirp
 %_libexecdir/condor/condor_ssh
 %_libexecdir/condor/sshd.sh
+%_libexecdir/condor/condor_history_helper
 %_libexecdir/condor/condor_job_router
+%_libexecdir/condor/condor_pid_ns_init
+%_libexecdir/condor/config_fetch
 %if %glexec
 %_libexecdir/condor/condor_glexec_setup
 %_libexecdir/condor/condor_glexec_run
@@ -1255,9 +1258,11 @@ rm -rf %{buildroot}
 %attr(6755, root, root) %_sbindir/condor_root_switchboard
 %_sbindir/condor_schedd
 %_sbindir/condor_shadow
+%_sbindir/condor_sos
 %_sbindir/condor_startd
 %_sbindir/condor_starter
 %_sbindir/condor_store_cred
+%_sbindir/condor_testwritelog
 %_sbindir/condor_transferd
 %_sbindir/condor_updates_stats
 %_sbindir/ec2_gahp
@@ -1559,6 +1564,7 @@ rm -rf %{buildroot}
 %_libdir/condor/libcondor_resolv.a
 %_libdir/condor/libcondor_z.a
 %_libdir/condor/libcondorsyscall.a
+%_libexecdir/condor/condor_ckpt_probe
 %ifarch %{ix86}
 %if 0%{?rhel} == 5
 %_libdir/condor/libcondorzsyscall.a
