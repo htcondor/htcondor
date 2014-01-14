@@ -143,6 +143,15 @@ system("cp -r $SrcDir/condor_examples $pub_dir");
 # in our framework.
 system("cp  $SrcDir/condor_utils/param_info_tables.h $pub_dir/condor_tests");
 
+# Define an override test list of one test for the Macs.
+# Do this until we figure out why 8.1.x daemons start chewing up
+# all of the cpu.
+#    - jfrey, Jan 14, 2014
+if ( `uname` =~ "Darwin" ) {
+	print "Disabling all but one test on Darwin\n";
+	system("echo job_core_input_van-1 >$pub_dir/condor_tests/testoverride");
+}
+
 ######################################################################
 # tar up build results
 ######################################################################
