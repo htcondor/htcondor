@@ -436,7 +436,7 @@ int Sock::assign(condor_protocol proto, SOCKET sockd)
 		return TRUE;
 	}
 
-	int af_type;
+	int af_type = 0;
 	switch(proto) {
 		case CP_IPV4: af_type = AF_INET; break;
 		case CP_IPV6: af_type = AF_INET6; break;
