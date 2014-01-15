@@ -73,9 +73,11 @@ See section~\ref{param:DAGmanAlwaysUseNodeLog} for more details.
 
 \begin{itemize}
 
-\item HTCondor now treats a failure to terminate an EC2 instance
-because the instance no longer exists as a success.  This will allow EC2
-jobs to exit the queue if the service purges termination records quickly.
+\item The failure to terminate an EC2 grid universe job instance,
+because the instance no longer exists at the service, 
+is now considered a successful termination.  
+This allows EC2 grid universe jobs to exit the queue, 
+if the service purges termination records quickly.
 \Ticket{4133}
 
 \item HTCondor now interacts with EC2 services by using \Code{POST}
