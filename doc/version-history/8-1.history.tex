@@ -78,8 +78,9 @@ because the instance no longer exists as a success.  This will allow EC2
 jobs to exit the queue if the service purges termination records quickly.
 \Ticket{4133}
 
-\item HTCondor now interacts with EC2 services using POST instead of GET,
-which permits more services to accept user data greater than 8KB.
+\item HTCondor now interacts with EC2 services by using \Code{POST}
+instead of \Code{GET},
+which permits more services to accept user data with size greater than 8Kbytes.
 \Ticket{4004}
 
 \item Improve handling of the \Attr{coresize} submit file command.
