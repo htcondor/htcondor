@@ -693,7 +693,15 @@ int Sock::bind(bool outbound, int port, bool loopback)
 		struct linger linger = {0,0};
 		setsockopt(SOL_SOCKET, SO_LINGER, (char*)&linger, sizeof(linger));
 
-		set_keepalive();
+		// Note: Setting TCP keepalive values on a listen socket seems
+		// pointless, but it's not harmless. On Mac OS X, once the
+		// TCP_KEEPALIVE time passes, the socket becomes closed, the fd
+		// is always ready for read in select(), and accept() fails with
+		// errno ETIMEDOUT. This sends daemons into a tight loop of
+		// failing to accept non-existent incoming connections.
+		if ( outbound ) {
+			set_keepalive();
+		}
 
                /* Set no delay to disable Nagle, since we buffer all our
 			      relisock output and it degrades performance of our

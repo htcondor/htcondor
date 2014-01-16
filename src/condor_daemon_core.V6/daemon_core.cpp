@@ -3817,7 +3817,7 @@ DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 		    args->accepted_sock = (Stream *) ((ReliSock *)insock)->accept();
 
 		    if ( !(args->accepted_sock) ) {
-		        dprintf(D_ALWAYS, "DaemonCore: accept() failed!");
+		        dprintf(D_ALWAYS, "DaemonCore: accept() failed!\n");
 		        // no need to add to work pool if we fail to accept
 		        delete args;
 		        return;

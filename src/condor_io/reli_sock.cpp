@@ -228,7 +228,7 @@ ReliSock::accept()
 		return (ReliSock *)0;
 	}
 
-	if ((c_sock = accept(*c_rs)) < 0) {
+	if ((c_sock = accept(*c_rs)) == FALSE) {
 		delete c_rs;
 		return (ReliSock *)0;
 	}
