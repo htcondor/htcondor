@@ -140,4 +140,8 @@ endif()
 ############################################################
 if ( LINUX AND HAVE_LIBDL AND HAVE_DLFCN_H AND HAVE_DLOPEN )
 	condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${HAVE_LIBDL}" OFF )
+else ()
+	if (WINDOWS)
+		condor_exe( condor_gpu_discovery "condor_gpu_discovery.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF )
+	endif ()
 endif()
