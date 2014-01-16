@@ -664,10 +664,8 @@ _condor_dprintf_va( int cat_and_flags, DPF_IDENT ident, const char* fmt, va_list
 					debug_lock_it(&(*it), NULL, 0, it->dont_panic);
 					funlock_it = true;
 					break;
-			   #ifdef WIN32
-				case OUTPUT_DEBUG_STR:
+				case OUTPUT_DEBUG_STR: // recognise this on linux, it's part of the >BUFFER special case
 					break;
-			   #endif
 			}
 			
 			it->dprintfFunc(cat_and_flags, DebugHeaderOptions, info, message_buffer, &(*it));
