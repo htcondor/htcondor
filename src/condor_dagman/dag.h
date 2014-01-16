@@ -692,10 +692,11 @@ class Dag {
 	void SetMaxJobHolds(int maxJobHolds) { _maxJobHolds = maxJobHolds; }
 
 	JobstateLog &GetJobstateLog() { return _jobstateLog; }
+
 	bool GetPostRun() const { return _alwaysRunPost; }
 	void SetPostRun(bool postRun) { _alwaysRunPost = postRun; }	
-	void SetDefaultPriorities();
-	void SetDefaultPriority(const int prio) { _defaultPriority = prio; }
+
+	void SetDefaultPriority( const int prio ) { _defaultPriority = prio; }
 	int GetDefaultPriority() const { return _defaultPriority; }
 
 	/** Determine whether the DAG is currently halted (waiting for

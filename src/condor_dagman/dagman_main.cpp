@@ -132,7 +132,7 @@ Dagman::Dagman() :
 	_generateSubdagSubmits(true),
 	_maxJobHolds(100),
 	_runPost(true),
-	_defaultPriority(0),
+	_priority(0),
 	_claim_hold_time(20),
 	_dagmanClassad(NULL)
 {
@@ -228,10 +228,10 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_USER_LOG_SCAN_INTERVAL setting: %d\n",
 				m_user_log_scan_interval );
 
-	_defaultPriority = param_integer("DAGMAN_DEFAULT_PRIORITY", 0, INT_MIN,
+	_priority = param_integer("DAGMAN_DEFAULT_PRIORITY", 0, INT_MIN,
 		INT_MAX, false);
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_PRIORITY setting: %d\n",
-				_defaultPriority );
+				_priority );
 
 	_submitDagDeepOpts.always_use_node_log = param_boolean( "DAGMAN_ALWAYS_USE_NODE_LOG", true);
 	debug_printf( DEBUG_NORMAL, "DAGMAN_ALWAYS_USE_NODE_LOG setting: %s\n",
@@ -795,14 +795,16 @@ void main_init (int argc, char ** const argv) {
 			dagman._submitDagDeepOpts.importEnv = true;
 
         } else if( !strcasecmp( "-priority", argv[i] ) ) {
-		++i;
-		if( i >= argc || strcmp( argv[i], "" ) == 0 ) {
-			debug_printf( DEBUG_NORMAL, "No priority value specified\n");
-			Usage();
-		}
-		dagman._submitDagDeepOpts.priority = atoi(argv[i]);
+			++i;
+			if( i >= argc || strcmp( argv[i], "" ) == 0 ) {
+				debug_printf( DEBUG_NORMAL, "No priority value specified\n");
+				Usage();
+			}
+			dagman._priority = atoi(argv[i]);
+
 		} else if( !strcasecmp( "-dont_use_default_node_log", argv[i] ) ) {
 			dagman._submitDagDeepOpts.always_use_node_log = false;
+
         } else {
     		debug_printf( DEBUG_SILENT, "\nUnrecognized argument: %s\n",
 						argv[i] );
@@ -1026,12 +1028,8 @@ void main_init (int argc, char ** const argv) {
 	dagman.dag->SetConfigFile( dagman._dagmanConfigFile );
 	dagman.dag->SetMaxJobHolds( dagman._maxJobHolds );
 	dagman.dag->SetPostRun(dagman._runPost);
-	//TEMPTEMP -- need to understand this better
-	if( dagman._submitDagDeepOpts.priority != 0 ) { // From command line
-		dagman.dag->SetDefaultPriority(dagman._submitDagDeepOpts.priority);
-	} else if( dagman._defaultPriority != 0 ) { // From config file
-		dagman.dag->SetDefaultPriority(dagman._defaultPriority);
-		dagman._submitDagDeepOpts.priority = dagman._defaultPriority;
+	if ( dagman._priority != 0 ) {
+		dagman.dag->SetDefaultPriority( dagman._priority );
 	}
 
     //
@@ -1073,9 +1071,7 @@ void main_init (int argc, char ** const argv) {
 					 	dagFile );
     	}
 	}
-	if( dagman.dag->GetDefaultPriority() != 0 ) {
-		dagman.dag->SetDefaultPriorities(); // Applies to the nodes of the dag
-	}
+
 	dagman.dag->GetJobstateLog().WriteDagmanStarted( dagman.DAGManJobId );
 	if ( rescueDagNum > 0 ) {
 			// Get our Pegasus sequence numbers set correctly.

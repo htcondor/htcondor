@@ -35,7 +35,8 @@
 */
 int
 runSubmitDag( const SubmitDagDeepOptions &deepOpts,
-			const char *dagFile, const char *directory, bool isRetry )
+			const char *dagFile, const char *directory, bool isRetry,
+			int priority )
 {
 	int result = 0;
 
@@ -67,6 +68,7 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 		args.AppendArg( "-verbose" );
 	}
 
+	//TEMPTEMP -- why do we not want to do force on a retry??  If we run w/o force, I don't think the command will actually do anything...
 	if ( deepOpts.bForce && !isRetry ) {
 		args.AppendArg( "-force" );
 	}
@@ -122,16 +124,16 @@ runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 		args.AppendArg( "-update_submit" );
 	}
 
-	if( deepOpts.priority != 0) {
+	if ( priority != 0 ) {
 		args.AppendArg( "-Priority" );
-		args.AppendArg( deepOpts.priority );
+		args.AppendArg( priority );
 	}
 
-	if( !deepOpts.always_use_node_log ) {
+	if ( !deepOpts.always_use_node_log ) {
 		args.AppendArg( "-dont_use_default_node_log" );
 	}
 
-	if( deepOpts.suppress_notification ) {
+	if ( deepOpts.suppress_notification ) {
 		args.AppendArg( "-suppress_notification" );
 	} else {
 		args.AppendArg( "-dont_suppress_notification" );

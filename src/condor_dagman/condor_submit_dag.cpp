@@ -826,9 +826,9 @@ void writeSubmitFile(/* const */ SubmitDagDeepOptions &deepOpts,
 		args.AppendArg("-Import_env");
 	}
 
-	if( deepOpts.priority != 0 ) {
-		args.AppendArg("-Priority");
-		args.AppendArg(deepOpts.priority);
+	if( shallowOpts.priority != 0 ) {
+		args.AppendArg( "-Priority" );
+		args.AppendArg( shallowOpts.priority );
 	}
 
 	MyString arg_str,args_error;
@@ -1145,7 +1145,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 					fprintf(stderr, "-priority argument needs a value\n");
 					printUsage();
 				}
-				deepOpts.priority = atoi(argv[++iArg]);
+				shallowOpts.priority = atoi( argv[++iArg] );
 			}
 			else
 			{

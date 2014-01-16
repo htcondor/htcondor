@@ -1,3 +1,4 @@
+//TEMPTEMP -- should there be a difference between whether a DAG's priority is explicitly set or not?  Right now, a non-explicity priority of 0 overrides a negative priority for a sub-DAG but not for a "normal" node
 //TEMPTEMP -- how does the DAG's overall priority get propagated down to the children?
 /***************************************************************
  *
@@ -1409,7 +1410,7 @@ Dag::StartNode( Job *node, bool isRetry )
 		// Note:  I *think* it's okay to wait until this point to adjust
 		// the node priority, but I'm not 100% sure -- this is the way
 		// panike did it.  wenger 2014-01-04
-	node->AdjustPriority(*this);
+	node->AdjustPriority( *this );
 
 	if ( isRetry && m_retryNodeFirst ) {
 		_readyQ->Prepend( node, -node->_adjustedPriority );
@@ -3801,36 +3802,6 @@ Dag::GetEventIDHash(bool isNoop, int jobType) const
 }
 
 //---------------------------------------------------------------------------
-
-// A RAII class to swap out the priorities below, then restore them
-// when we are done.
-class priority_swapper {
-public:
-	priority_swapper(bool nodepriority, int newprio, int& oldprio);
-	~priority_swapper();
-private:
-	priority_swapper(); // Not implemented
-	bool swapped;
-	int& oldp;
-	int oldp_value;
-};
-
-priority_swapper::priority_swapper(bool nodepriority, int newprio, int& oldprio) :
-	swapped(false), oldp(oldprio), oldp_value(oldprio)
-{
-	if( nodepriority && newprio > oldprio ) {
-		swapped = true;
-		oldp = newprio;
-	}
-}
-
-priority_swapper::~priority_swapper()
-{
-	if( swapped ) {
-		oldp = oldp_value;
-	}
-}
-
 Dag::submit_result_t
 Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 {
@@ -3860,11 +3831,9 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
    	if ( node->JobType() == Job::TYPE_CONDOR && !node->GetNoop() &&
 				node->GetDagFile() != NULL && _generateSubdagSubmits ) {
 		bool isRetry = node->GetRetries() > 0;
-		// TEMPTEMP -- I don't understand what this is for
-		// TEMPTEMP -- okay, this temporarily puts the node's priority into _subitDagDeepOpts, if the node priority is higher than the existing value
-		priority_swapper ps( node->_hasExplicitPriority, node->_adjustedPriority, _submitDagDeepOpts->priority );
+		int subdagPriority = node->_adjustedPriority;//TEMPTEMP?
 		if ( runSubmitDag( *_submitDagDeepOpts, node->GetDagFile(),
-					node->GetDirectory(), isRetry ) != 0 ) {
+					node->GetDirectory(), isRetry, subdagPriority ) != 0 ) {
 			++node->_submitTries;
 			debug_printf( DEBUG_QUIET,
 						"ERROR: condor_submit_dag -no_submit failed "
@@ -4425,29 +4394,5 @@ Dag::ResolveVarsInterpolations(void)
 	_jobs.Rewind();
 	while((job = _jobs.Next())) {
 		job->ResolveVarsInterpolations();
-	}
-}
-
-//---------------------------------------------------------------------------
-// Iterate over the jobs and set the default priority
-// TEMPTEMP -- I don't understand what this is for; how does it relate to Job::FixPriority?
-//TEMPTEMP -- change name to something like ApplyDefaultPriority
-//TEMPTEMP -- ah -- is this pushing the overall dag priority down to the nodes????
-void Dag::SetDefaultPriorities()
-{
-	//TEMPTEMP -- what is GetDefaultPriority?
-	if ( GetDefaultPriority() != 0 ) {
-		Job* job;
-		_jobs.Rewind();
-		while( (job = _jobs.Next()) != NULL ) {
-			// If the DAG file has already assigned a priority
-			// Leave this job alone for now
-			if( !job->_hasExplicitPriority ) {
-				job->_hasExplicitPriority = true;
-				job->_adjustedPriority = GetDefaultPriority();
-			} else if( GetDefaultPriority() > job->_adjustedPriority ) {
-				job->_adjustedPriority = GetDefaultPriority();
-			}
-		}
 	}
 }

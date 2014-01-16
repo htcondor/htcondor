@@ -420,7 +420,10 @@ class Job {
 	//TEMPTEMP -- document
 	void SetPriorities( int priority );
 
-	//TEMPTEMP -- document what this does...
+	/** Adjust this node's priority based on the overall DAG priority and
+	  * the priority of its parent node(s).
+	  * @param dag:  The DAG that "owns" this node
+	  */
 	void AdjustPriority( Dag& dag );
 
 	bool HasPreSkip() const { return _preskip != PRE_SKIP_INVALID; }

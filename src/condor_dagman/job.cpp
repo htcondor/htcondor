@@ -1024,25 +1024,38 @@ Job::SetPriorities( int priority )
 // The scheme here is to copy the priority from parent nodes, if a parent node
 // has priority higher than the job priority currently assigned to the node, or
 // use the default priority of the DAG; otherwise, we use the priority from the
-// DAG file. Priorities calculated by DAGman will ignore and override job
+// DAG file. Priorities calculated by DAGMan will ignore and override job
 // priorities set in the submit file.
 
 // DAGman fixes the default priorities in Dag::SetDefaultPriorities
-//TEMPTEMP -- hmm -- should we also reference the overall DAG priority in here??
 void
 Job::AdjustPriority(Dag& dag)
 {
+	if ( dag.GetDefaultPriority() != 0 ) {
+		if ( !_hasExplicitPriority ) {
+			_hasExplicitPriority = true;
+			_adjustedPriority = dag.GetDefaultPriority();
+			debug_printf( DEBUG_NORMAL,
+						"Adjusted node %s priority to %d because of overall DAG priority\n",
+						GetJobName(), _adjustedPriority );
+		} else if ( dag.GetDefaultPriority() > _adjustedPriority ) {
+			_adjustedPriority = dag.GetDefaultPriority();
+			debug_printf( DEBUG_NORMAL,
+						"Adjusted node %s priority to %d because of overall DAG priority\n",
+						GetJobName(), _adjustedPriority );
+		}
+	}
+
 	std::set<JobID_t> parents = GetQueueRef(Q_PARENTS);
 	for(std::set<JobID_t>::iterator p = parents.begin(); p != parents.end(); ++p){
 		Job* parent = dag.FindNodeByNodeID(*p);
-		//TEMPTEMP -- this means that explicitly setting the parent node to priority 0 is different than the parent having 0 priority by default
-//TEMPTEMP -- maybe a parent node's priority should override the child even if it isn't explicitly set; but it probably shouldn't be passed to condor_submit if it's not explicitly set...
 		if ( parent->_hasExplicitPriority ) {
 			// Nothing to do if parent priority is small
 			if ( parent->_adjustedPriority > _adjustedPriority ) {
 				_adjustedPriority = parent->_adjustedPriority;
 				_hasExplicitPriority = true;
-				debug_printf( DEBUG_NORMAL, "Adjusted node %s priority to %d\n", 							GetJobName(), _adjustedPriority );
+				debug_printf( DEBUG_NORMAL, "Adjusted node %s priority to %d\n",
+							GetJobName(), _adjustedPriority );
 			}
 		}
 	}

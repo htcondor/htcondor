@@ -52,6 +52,9 @@ struct SubmitDagShallowOptions
 	bool runValgrind;
 	MyString primaryDagFile;
 	StringList	dagFiles;
+	int iDebugLevel;
+	bool bPostRun;
+	int priority; // Priority of parent of DAG node
 
 	// non-command line options
 	MyString strLibOut;
@@ -62,13 +65,10 @@ struct SubmitDagShallowOptions
 	MyString strRescueFile;
 	MyString strLockFile;
 	bool copyToSpool;
-	int iDebugLevel;
-	bool bPostRun;
 
 	SubmitDagShallowOptions() 
 	{ 
 		bSubmit = true;
-		bPostRun = true;
 		strRemoteSchedd = "";
 		strScheddDaemonAdFile = "";
 		strScheddAddressFile = "";
@@ -82,8 +82,10 @@ struct SubmitDagShallowOptions
 		dumpRescueDag = false;
 		runValgrind = false;
 		primaryDagFile = "";
-		copyToSpool = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
 		iDebugLevel = DEBUG_UNSET;
+		bPostRun = true;
+		priority = 0;
+		copyToSpool = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
 	}
 };
 
@@ -108,7 +110,6 @@ struct SubmitDagDeepOptions
 	bool recurse; // whether to recursively run condor_submit_dag on nested DAGs
 	bool updateSubmit; // allow updating submit file w/o -force
 	bool importEnv; // explicitly import environment into .condor.sub file
-	int priority; // Priority of parent of DAG node
 
 		// Use the default node log (<DAGfile>.nodes.log) for events
 		// Defaults to true
@@ -130,22 +131,22 @@ struct SubmitDagDeepOptions
 		recurse = false;
 		updateSubmit = false;
 		importEnv = false;
-		priority = 0;
 		always_use_node_log = true;
 		suppress_notification = true;
 	}
 };
 
-extern "C" {
 /** Run condor_submit_dag on the given DAG file.
 	@param opts: the condor_submit_dag options
 	@param dagFile: the DAG file to process
 	@param directory: the directory from which the DAG file should
 		be processed (ignored if NULL)
+	@param isRetry: whether this is a retry of the node
+	@priority: the priority at which this DAG should be submitted
 	@return 0 if successful, 1 if failed
 */
 int runSubmitDag( const SubmitDagDeepOptions &deepOpts,
-			const char *dagFile, const char *directory, bool isRetry );
-}
+			const char *dagFile, const char *directory, bool isRetry,
+			int priority = 0 );
 
 #endif	// ifndef DAGMAN_RECURSIVE_SUBMIT_H
