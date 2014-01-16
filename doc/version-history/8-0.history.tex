@@ -41,11 +41,11 @@ The details of each version are described below.
 
 \begin{itemize}
 
-\item Fixed a bug with concurrency limits and partitionable slots
-where the partitionable slot would consume a concurrency token,
-even though it never runs jobs.  This would cause fewer jobs
+\item Fixed a bug with concurrency limits and partitionable slots,
+in which the partitionable slot would consume a concurrency token,
+even though the slot never runs jobs.  This would cause fewer jobs
 than desired to run.
-\Ticket{4154}
+\Ticket{4145}
 
 \item When the Windows installer was told to use VMware,
 it configured a requirement for a 
