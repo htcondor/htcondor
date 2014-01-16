@@ -59,6 +59,15 @@ This configuration has been removed, so that the file is no longer required.
 from the \Condor{starter} occurs just as the job terminates.
 \Ticket{4127}
 
+\item Modified the output of \Condor{q},
+such that when invoked with options \Opt{-userlog} and \Opt{-af},
+a blank line and a totals summary line are not displayed.
+\Ticket{4045}
+
+\item For hierarchical group quotas, 
+fixed an incorrect count of the number of jobs when applying a quota.
+\Ticket{4117}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
