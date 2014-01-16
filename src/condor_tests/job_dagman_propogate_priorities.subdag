@@ -6,3 +6,8 @@ PRIORITY nodeD 10
 # priority when set by DAG priority.
 JOB nodeG job_dagman_propogate_priorities-D.cmd
 VARS nodeG jobname="job_dagman_propogate_priorities-G"
+
+# Higher node priority should override overall DAG priority.
+JOB nodeH job_dagman_propogate_priorities-D.cmd
+VARS nodeH jobname="job_dagman_propogate_priorities-H"
+PRIORITY nodeH 120

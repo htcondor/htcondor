@@ -2,15 +2,31 @@ JOB nodeA job_dagman_propogate_priorities-ABC.cmd
 VARS nodeA jobname="job_dagman_propogate_priorities-A"
 PRIORITY nodeA 60
 
+# Priority of 60 from nodeA should override nodeB explicit priority.
 JOB nodeB job_dagman_propogate_priorities-ABC.cmd
+PARENT nodeA CHILD nodeB
 VARS nodeB jobname="job_dagman_propogate_priorities-B"
-PRIORITY nodeB 0
+PRIORITY nodeB 11
 
 JOB nodeC job_dagman_propogate_priorities-ABC.cmd
 VARS nodeC jobname="job_dagman_propogate_priorities-C"
 PRIORITY nodeC 5
 
+# Make sure negative node priority works.
+JOB nodeC2 job_dagman_propogate_priorities-ABC.cmd
+VARS nodeC2 jobname="job_dagman_propogate_priorities-C2"
+PRIORITY nodeC2 -7
+
+# Negative priority from parent should not override higher
+# default priority of child.
+JOB nodeC3 job_dagman_propogate_priorities-ABC.cmd
+PARENT nodeC2 CHILD nodeC3
+VARS nodeC3 jobname="job_dagman_propogate_priorities-C3"
+
+# Priority set here should override lower priorities in the sub-DAG's
+# nodes.
 SUBDAG EXTERNAL subdagD job_dagman_propogate_priorities.subdag
+PARENT nodeC CHILD subdagD
 PRIORITY subdagD 100
 
 # Make sure node w/o explicit priority doesn't override priority
@@ -23,5 +39,3 @@ JOB nodeF job_dagman_propogate_priorities-EF.cmd
 VARS nodeF jobname="job_dagman_propogate_priorities-F"
 PRIORITY nodeF 0
 
-PARENT nodeA CHILD nodeB
-PARENT nodeC CHILD subdagD

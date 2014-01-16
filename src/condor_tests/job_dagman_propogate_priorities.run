@@ -38,6 +38,8 @@ $dagman_args = "-verbose";
 	'job_dagman_propogate_priorities-A.out',
 	'job_dagman_propogate_priorities-B.out',
 	'job_dagman_propogate_priorities-C.out',
+	'job_dagman_propogate_priorities-C2.out',
+	'job_dagman_propogate_priorities-C3.out',
 	'job_dagman_propogate_priorities-D.out',
 	'job_dagman_propogate_priorities-E.out',
 	'job_dagman_propogate_priorities-F.out',
@@ -107,7 +109,8 @@ $success = sub {
 	}
 
 	# Check node priorities...
-	foreach ('nodeA','nodeB','nodeC','nodeD', 'nodeE', 'nodeF', 'nodeG') {
+	foreach ('nodeA','nodeB','nodeC', 'nodeC2', 'nodeC3', 'nodeD',
+			'nodeE', 'nodeF', 'nodeG') {
 		if(! defined $priority{$_}){
 			CondorTest::debug("Did not see priority for $_\n");
 			$diditpass = 0;
@@ -125,6 +128,14 @@ $success = sub {
 	if ($priority{'nodeC'} != 5) {
 		$diditpass = 0;
 		CondorTest::debug("nodeC priority was $priority{'nodeC'}; should be 5\n");
+	}
+	if ($priority{'nodeC2'} != -7) {
+		$diditpass = 0;
+		CondorTest::debug("nodeC2 priority was $priority{'nodeC2'}; should be -7\n");
+	}
+	if ($priority{'nodeC3'} != 0) {
+		$diditpass = 0;
+		CondorTest::debug("nodeC3 priority was $priority{'nodeC3'}; should be 0\n");
 	}
 	if ($priority{'nodeD'} != 100) {
 		$diditpass = 0;
