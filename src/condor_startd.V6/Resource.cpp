@@ -2986,9 +2986,6 @@ Resource * initialize_resource(Resource * rip, ClassAd * req_classad, Claim* &le
 			 param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true) ) 
 		{
 			leftover_claim = rip->r_cur;
-			leftover_claim->setad(new ClassAd(*req_classad));
-			leftover_claim->loadRequestInfo();
-			leftover_claim->setad(0);
 			ASSERT(leftover_claim);
 		}
 
