@@ -39,3 +39,15 @@ JOB nodeF job_dagman_propogate_priorities-EF.cmd
 VARS nodeF jobname="job_dagman_propogate_priorities-F"
 PRIORITY nodeF 0
 
+JOB nodeI job_dagman_propogate_priorities-ABC.cmd
+VARS nodeI jobname="job_dagman_propogate_priorities-I"
+PRIORITY nodeI 40
+
+SPLICE spliceJ job_dagman_propogate_priorities.splice
+PARENT nodeI CHILD spliceJ
+# Priorities not allowed on splices...
+# PRIORITY spliceJ 70
+
+JOB nodeK job_dagman_propogate_priorities-ABC.cmd
+PARENT spliceJ CHILD nodeK
+VARS nodeK jobname="job_dagman_propogate_priorities-K"

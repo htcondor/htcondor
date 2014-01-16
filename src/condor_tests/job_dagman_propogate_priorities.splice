@@ -1,0 +1,8 @@
+JOB nodeL job_dagman_propogate_priorities-ABC.cmd
+VARS nodeL jobname="job_dagman_propogate_priorities-L"
+PRIORITY nodeL 30
+
+JOB nodeM job_dagman_propogate_priorities-ABC.cmd
+PARENT nodeL CHILD nodeM
+VARS nodeM jobname="job_dagman_propogate_priorities-M"
+PRIORITY nodeM 50
