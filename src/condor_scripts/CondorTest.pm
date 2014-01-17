@@ -1609,6 +1609,7 @@ sub runToolNTimes
 	my $cmd = shift;
     my $goal = shift;
     my $wantoutput = shift;
+	my $haveoptions = shift;
 
     my $count = 0;
     my $stop = 0;
@@ -1626,7 +1627,9 @@ sub runToolNTimes
         CondorUtils::fullchomp $date[0];
         #print "$date[0] $cmd $count\n";
         #@cmdout = `$cmd`;
-        if(defined $wantoutput) {
+		if(defined $haveoptions) {
+			$cmdstatus = runCondorTool($cmd, \@outarrray, 2, $haveoptions);
+        } elsif(defined $wantoutput) {
 			if($wantoutput == 0) {
 				#print "runToolNTimes quiet mode requested for: $cmd\n";
 				$cmdstatus = runCondorTool($cmd, \@outarrray, 2, {emit_output=>0});

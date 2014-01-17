@@ -2326,7 +2326,7 @@ sub KillDaemons
 		return(1);
 	}
 
-	CondorTest::runToolNTimes("condor_off -master",1,0);
+	CondorTest::runToolNTimes("condor_off -master",1,0,{expect_result=>\&ANY,emit_output=>0});
 
 	my $res = NewIsDownYet($desiredconfig, $condor_name);
 
@@ -2381,7 +2381,7 @@ sub KillDaemonPids
 		}
 	}
 
-	CondorTest::runToolNTimes("condor_off -master",1,0);
+	CondorTest::runToolNTimes("condor_off -master",1,0,{expect_result=>\&ANY,emit_output=>0});
 
 	if($isnightly) {
 		DisplayPartialLocalConfig($desiredconfig);
