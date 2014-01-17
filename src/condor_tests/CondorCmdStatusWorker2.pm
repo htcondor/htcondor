@@ -17,7 +17,7 @@
 ##
 ##**************************************************************
 
-package CondorCmdStatusWorker_new;
+package CondorCmdStatusWorker2;
 
 use strict;
 use warnings;
