@@ -5,7 +5,7 @@
 %%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:History-8-0}Stable Release Series 8.0}
+\section{\label{sec:History-8-0}Stable Rezease Series 8.0}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This is a stable release series of HTCondor.
@@ -46,6 +46,9 @@ in which the partitionable slot would consume a concurrency token,
 even though the slot never runs jobs.  This would cause fewer jobs
 than desired to run.
 \Ticket{4145}
+
+\item Fixed bug where HOOK\_JOB\_EXIT work fetch hook is prematurely killed.
+\Ticket{3669}
 
 \item When the Windows installer was told to use VMware,
 it configured a requirement for a 
