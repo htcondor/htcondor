@@ -93,9 +93,8 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
     }
     if (target.size())
     {
-        std::vector<unsigned char> target_cstr; target_cstr.reserve(target.size()+1);
-        memcpy(&target_cstr[0], target.c_str(), target.size()+1);
-        if (!sock.code(&target_cstr[0]))
+        std::string target_to_send = target;
+        if (!sock.code(target_to_send))
         {
             PyErr_SetString(PyExc_RuntimeError, "Failed to send target.");
             throw_error_already_set();
