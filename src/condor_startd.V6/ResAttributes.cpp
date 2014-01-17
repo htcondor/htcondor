@@ -572,45 +572,6 @@ bool MachAttributes::ReleaseDynamicDevId(const std::string & tag, const char * i
 	return false;
 }
 
-int MachAttributes::init_machine_resource_from_script(const char * tag, const char * script_cmd) {
-
-	ArgList args;
-	MyString errors;
-	if(!args.AppendArgsV1RawOrV2Quoted(script_cmd, &errors)) {
-		printf("Can't append cmd %s(%s)\n", script_cmd, errors.Value());
-		return -1;
-	}
-
-	int quantity = 0;
-
-	FILE * fp = my_popen(args, "r", FALSE);
-	if ( ! fp) {
-		PRAGMA_REMIND("tj: should failure to run a res inventory script really bring down the startd?")
-		EXCEPT("Failed to execute local resource '%s' inventory script \"%s\"\n", tag, script_cmd);
-	} else {
-		int error = 0;
-		bool is_eof = false;
-		ClassAd ad;
-		int cAttrs = ad.InsertFromFile(fp, is_eof, error);
-		if (cAttrs <= 0) {
-			if (error) dprintf(D_ALWAYS, "Could not parse ClassAd for local resource '%s' (error %d) assuming quantity of 0\n", tag, error);
-		} else {
-			MyString attr;
-			attr.formatstr(ATTR_DETECTED_PREFIX "%s", tag);
-			ad.LookupInteger(attr.c_str(), quantity);
-			PRAGMA_REMIND("tj: change here to handle enumerated resources.")
-
-			// make sure that the inventory ad doesn't have an attribute for the tag name
-			// i.e. if the inventory is GPUS, then DetectedGPUs=N is required, but it cant have GPUs=N
-			ad.Delete(tag);
-			m_machres_attr.Update(ad);
-		}
-		my_pclose(fp);
-	}
-
-	return quantity;
-}
-
 // res_value is a string that contains either a number, which is the count of a 
 // fungable resource, or a list of ids of non-fungable resources.
 // if res_value contains a list, then ids is set on exit from this function
@@ -637,6 +598,56 @@ static double parse_user_resource_config(const char * tag, const char * res_valu
 	}
 
 	return num;
+}
+
+// run a script, and take use its output to configure a custom resource of type tag
+//
+int MachAttributes::init_machine_resource_from_script(const char * tag, const char * script_cmd) {
+
+	ArgList args;
+	MyString errors;
+	if(!args.AppendArgsV1RawOrV2Quoted(script_cmd, &errors)) {
+		printf("Can't append cmd %s(%s)\n", script_cmd, errors.Value());
+		return -1;
+	}
+
+	int quantity = 0;
+
+	FILE * fp = my_popen(args, "r", FALSE);
+	if ( ! fp) {
+		PRAGMA_REMIND("tj: should failure to run a res inventory script really bring down the startd?")
+		EXCEPT("Failed to execute local resource '%s' inventory script \"%s\"\n", tag, script_cmd);
+	} else {
+		int error = 0;
+		bool is_eof = false;
+		ClassAd ad;
+		int cAttrs = ad.InsertFromFile(fp, is_eof, error);
+		if (cAttrs <= 0) {
+			if (error) dprintf(D_ALWAYS, "Could not parse ClassAd for local resource '%s' (error %d) assuming quantity of 0\n", tag, error);
+		} else {
+			MyString attr;
+			attr.formatstr(ATTR_DETECTED_PREFIX "%s", tag);
+			MyString res_value;
+			if (ad.LookupString(attr.c_str(),res_value)) {
+				StringList ids;
+				quantity = parse_user_resource_config(tag, res_value.c_str(), ids);
+				if ( ! ids.isEmpty()) {
+					ids.rewind();
+					while (const char* id = ids.next()) {
+						this->m_machres_devIds_map[tag].push_back(id);
+					}
+				}
+			}
+
+			// make sure that the inventory ad doesn't have an attribute for the tag name
+			// i.e. if the inventory is GPUS, then DetectedGPUs=N is required, but it cant have GPUs=N
+			ad.Delete(tag);
+			m_machres_attr.Update(ad);
+		}
+		my_pclose(fp);
+	}
+
+	return quantity;
 }
 
 // this static callback for the param param iteration using foreach_param_*
