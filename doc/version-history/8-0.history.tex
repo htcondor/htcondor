@@ -47,6 +47,9 @@ even though the slot never runs jobs.  This would cause fewer jobs
 than desired to run.
 \Ticket{4145}
 
+\item Fixed a bug in which the Job Exit work fetch hook was prematurely killed.
+\Ticket{3669}
+
 \item When the Windows installer was told to use VMware,
 it configured a requirement for a 
 \File{condor\_vmware\_local\_settings} file that it did not provide.
@@ -68,9 +71,11 @@ a blank line and a totals summary line are not displayed.
 fixed an incorrect count of the number of jobs when applying a quota.
 \Ticket{4117}
 
-\item Fix the python binding's ability to turn off specific daemons
-in the master; the 'target' argument of htcondor.send\_command now
-works.
+\item Fixed the HTCondor module \Procedure{send\_command} python binding;
+an incorrect argument was only the first character of the daemon's name,
+instead of the full name. 
+This affected the ability to turn off specific daemons,
+as sent to the \Condor{master}.
 \Ticket{4160}
 
 \end{itemize}
