@@ -1154,7 +1154,7 @@ processCommandLineArguments (int argc, char *argv[])
 	bool custom_attributes = false;
 	attrs.initializeFromString(
 		"ClusterId\nProcId\nQDate\nRemoteUserCPU\nJobStatus\nServerTime\nShadowBday\n"
-		"RemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs\n"
+		"RemoteWallClockTime\nJobPrio\nImageSize\nOwner\nCmd\nArgs\nArguments\n"
 		"JobDescription\nMATCH_EXP_JobDescription\nTransferringInput\nTransferringOutput");
 
 	for (i = 1; i < argc; i++)
