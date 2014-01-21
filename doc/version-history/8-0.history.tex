@@ -5,7 +5,7 @@
 %%%      PLEASE RUN A SPELL CHECKER BEFORE COMMITTING YOUR CHANGES!
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{\label{sec:History-8-0}Stable Rezease Series 8.0}
+\section{\label{sec:History-8-0}Stable Release Series 8.0}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 This is a stable release series of HTCondor.
@@ -71,9 +71,11 @@ a blank line and a totals summary line are not displayed.
 fixed an incorrect count of the number of jobs when applying a quota.
 \Ticket{4117}
 
-\item Fix the python binding's ability to turn off specific daemons
-in the master; the 'target' argument of htcondor.send\_command now
-works.
+\item Fixed the HTCondor module \Procedure{send\_command} python binding;
+an incorrect argument was only the first character of the daemon's name,
+instead of the full name. 
+This affected the ability to turn off specific daemons,
+as sent to the \Condor{master}.
 \Ticket{4160}
 
 \end{itemize}
