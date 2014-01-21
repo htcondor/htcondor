@@ -1322,7 +1322,7 @@ x509_receive_delegation( const char *destination_file,
 	}
 
 	// see if we'd like the default number of bits or something custom
-	int bits = param_integer("GSI_DELEGATION_KEYBITS", 0);
+	int bits = param_integer("GSI_DELEGATION_KEYBITS", 1024);
 
 	// default for clock skew is currently (2013-03-27) 5 minutes, but allow
 	// that to be changed
@@ -1342,8 +1342,11 @@ x509_receive_delegation( const char *destination_file,
 		// maximum, although setting it above 4096 could take a really long
 		// time to compute.  i would bet that in 20 years this comment is
 		// hilarious.
-		if (bits < 512) {
-			bits = 512;
+		// as of 2014-01-16, many various pieces of the OSG software stack no
+		// longer work with proxies less than 1024 bits, so make sure we go at
+		// least that large regardless of what the user may have configured.
+		if (bits < 1024) {
+			bits = 1024;
 		}
 
 		result = globus_gsi_proxy_handle_attrs_set_keybits( handle_attrs, bits );
