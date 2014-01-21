@@ -97,7 +97,7 @@ convertHistoryFile(const char *oldHistoryFileName)
 			// This line contains delimiter
 			found = 1;
 
-			Delimbuf.sprintf("%s Offset = %d ClusterId = %s ProcId = %s Owner = %s CompletionDate = %s\n", HISTORY_DELIM, entrysum, ClusterId.Value(), ProcId.Value(), Owner.Value(), CompletionDate.Value());
+			Delimbuf.formatstr("%s Offset = %d ClusterId = %s ProcId = %s Owner = %s CompletionDate = %s\n", HISTORY_DELIM, entrysum, ClusterId.Value(), ProcId.Value(), Owner.Value(), CompletionDate.Value());
 			fprintf(NewLogFile, "%s", Delimbuf.Value());
 
 			entrysum = totalsum;
