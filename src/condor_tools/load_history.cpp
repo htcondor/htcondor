@@ -251,7 +251,7 @@ static void doDBconfig() {
 
 		// get the password from the .pgpass file
 	MyString writePasswordFile; 
-	writePasswordFile.sprintf("%s/.pgpass", spool);
+	writePasswordFile.formatstr("%s/.pgpass", spool);
 
 	MyString writePassword = getWritePassword(writePasswordFile.Value(), 
 										   host?host:"", port?port:"", 
@@ -259,7 +259,7 @@ static void doDBconfig() {
 										   DBUser);
 	MyString DBConn;
 
-	DBConn.sprintf("host=%s port=%s user=%s password=%s dbname=%s", 
+	DBConn.formatstr("host=%s port=%s user=%s password=%s dbname=%s",
 				   host?host:"", port?port:"", 
 				   DBUser?DBUser:"", 
 				   writePassword.Value(), 
@@ -341,7 +341,7 @@ static MyString getWritePassword(const char *write_passwd_fname,
 		// it is in the format of the following:
 		// host:port:db:user:password
 
-	prefix.sprintf("%s:%s:%s:%s:", host, port, db, dbuser);
+	prefix.formatstr("%s:%s:%s:%s:", host, port, db, dbuser);
 
 	len = prefix.Length();
 
@@ -463,8 +463,8 @@ static void readHistoryFromFile(char *JobHistoryFileName)
   ad->EvalInteger (ATTR_CLUSTER_ID, NULL, cid);
   ad->EvalInteger (ATTR_PROC_ID, NULL, pid);
 
-  sql_stmt.sprintf("DELETE FROM History_Horizontal WHERE scheddname = '%s' AND cluster_id = %d AND proc = %d", scheddname, cid, pid);
-  sql_stmt2.sprintf("INSERT INTO History_Horizontal(scheddname, cluster_id, proc, enteredhistorytable) VALUES('%s', %d, %d, current_timestamp)", scheddname, cid, pid);
+  sql_stmt.formatstr("DELETE FROM History_Horizontal WHERE scheddname = '%s' AND cluster_id = %d AND proc = %d", scheddname, cid, pid);
+  sql_stmt2.formatstr("INSERT INTO History_Horizontal(scheddname, cluster_id, proc, enteredhistorytable) VALUES('%s', %d, %d, current_timestamp)", scheddname, cid, pid);
 
   if (DBObj->execCommand(sql_stmt.Value()) == QUILL_FAILURE) {
 	  fprintf(stderr, "Executing Statement --- Error\n");
@@ -542,11 +542,11 @@ static void readHistoryFromFile(char *JobHistoryFileName)
 			  
 			  ts_expr = condor_ttdb_buildts(&clock, dt);	
 				  
-			  sql_stmt.sprintf("UPDATE History_Horizontal SET %s = (%s) WHERE scheddname = '%s' and cluster_id = %d and proc = %d", name.Value(), ts_expr.Value(), scheddname, cid, pid);
+			  sql_stmt.formatstr("UPDATE History_Horizontal SET %s = (%s) WHERE scheddname = '%s' and cluster_id = %d and proc = %d", name.Value(), ts_expr.Value(), scheddname, cid, pid);
 
 		  }	else {
 			  newvalue = condor_ttdb_fillEscapeCharacters(value.Value(), dt);
-			  sql_stmt.sprintf("UPDATE History_Horizontal SET %s = '%s' WHERE scheddname = '%s' and cluster_id = %d and proc = %d", name.Value(), newvalue.Value(), 
+			  sql_stmt.formatstr("UPDATE History_Horizontal SET %s = '%s' WHERE scheddname = '%s' and cluster_id = %d and proc = %d", name.Value(), newvalue.Value(), 
 							   scheddname, cid, pid);			  
 		  }
 	  } else {
@@ -555,9 +555,9 @@ static void readHistoryFromFile(char *JobHistoryFileName)
 		  sql_stmt = ""; 
 		  sql_stmt2 = ""; 
 
-		  sql_stmt.sprintf("DELETE FROM History_Vertical WHERE scheddname = '%s' AND cluster_id = %d AND proc = %d AND attr = '%s'", scheddname, cid, pid, name.Value());
+		  sql_stmt.formatstr("DELETE FROM History_Vertical WHERE scheddname = '%s' AND cluster_id = %d AND proc = %d AND attr = '%s'", scheddname, cid, pid, name.Value());
 			  
-		  sql_stmt2.sprintf("INSERT INTO History_Vertical(scheddname, cluster_id, proc, attr, val) VALUES('%s', %d, %d, '%s', '%s')", scheddname, cid, pid, 
+		  sql_stmt2.formatstr("INSERT INTO History_Vertical(scheddname, cluster_id, proc, attr, val) VALUES('%s', %d, %d, '%s', '%s')", scheddname, cid, pid, 
 							name.Value(), newvalue.Value());
 
 	  }	  
