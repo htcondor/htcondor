@@ -81,6 +81,14 @@ See section~\ref{param:DAGmanAlwaysUseNodeLog} for more details.
 
 \begin{itemize}
 
+\item In the \Condor{startd}, changed the way cpus are allocated to
+slots in configurations where there are more slots than cpus.
+Cpus are now distributed equally between slots that aren't configured
+to receive a specific number (via parameter \Macro{SLOT\_TYPE\_<N>}).
+Before, these slots received 1 cpu each.
+The new behavior matches how other slot resources are distributed.
+\Ticket{3249}
+
 \item The failure to terminate an EC2 grid universe job instance,
 because the instance no longer exists at the service, 
 is now considered a successful termination.  
