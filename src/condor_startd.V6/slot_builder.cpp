@@ -317,8 +317,9 @@ int compute_cpus( int num_cpus, float share )
 {
 	int cpus;
 	if( IS_AUTO_SHARE(share) ) {
-			// Currently, "auto" for cpus just means 1 cpu per slot.
-		return 1;
+			// This will be replaced later with an even share of whatever
+			// cpus are left over.
+		return AUTO_CPU;
 	}
 	if( share > 0 ) {
 		cpus = (int)floor( share * num_cpus );

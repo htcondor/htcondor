@@ -1599,7 +1599,10 @@ AvailAttributes::decrement( CpuAttributes* cap )
 	int new_cpus, new_phys_mem;
 	float new_virt_mem, new_disk, floor = -0.000001f;
 	
-	new_cpus = a_num_cpus - cap->c_num_cpus;
+	new_cpus = a_num_cpus;
+	if( cap->c_num_cpus != AUTO_CPU ) {
+		new_cpus -= cap->c_num_cpus;
+	}
 
 	new_phys_mem = a_phys_mem;
 	if( cap->c_phys_mem != AUTO_MEM ) {
@@ -1635,6 +1638,9 @@ AvailAttributes::decrement( CpuAttributes* cap )
     }
 
     a_num_cpus = new_cpus;
+    if( cap->c_num_cpus == AUTO_CPU ) {
+        a_num_cpus_auto_count += 1;
+    }
 
     a_phys_mem = new_phys_mem;
     if( cap->c_phys_mem == AUTO_MEM ) {
@@ -1665,6 +1671,15 @@ AvailAttributes::decrement( CpuAttributes* cap )
 bool
 AvailAttributes::computeAutoShares( CpuAttributes* cap )
 {
+	if( cap->c_num_cpus == AUTO_CPU ) {
+		ASSERT( a_num_cpus_auto_count > 0 );
+		int new_value = a_num_cpus / a_num_cpus_auto_count;
+		if( new_value < 1 ) {
+			return false;
+		}
+		cap->c_num_slot_cpus = cap->c_num_cpus = new_value;
+	}
+
 	if( cap->c_phys_mem == AUTO_MEM ) {
 		ASSERT( a_phys_mem_auto_count > 0 );
 		int new_value = a_phys_mem / a_phys_mem_auto_count;
