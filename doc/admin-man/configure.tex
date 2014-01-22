@@ -8157,10 +8157,11 @@ Configuration File Macros}
   managing process families. If the \Condor{procd} is not used, each
   daemon will run the process family tracking logic on its own. Use of
   the \Condor{procd} results in improved scalability because only one
-  instance of this logic is required. The \Condor{procd} is required
-  when using privilege separation (see Section~\ref{sec:PrivSep}) or
+  instance of this logic is required. 
+  The \Condor{procd} is required when using 
+  %privilege separation (see Section~\ref{sec:PrivSep}) or
   group ID-based process tracking (see
-  Section~\ref{sec:GroupTracking}). In either of these cases, the
+  Section~\ref{sec:GroupTracking}). In this case, the
   \MacroNI{USE\_PROCD} setting will be ignored and a \Condor{procd} will
   always be used. 
   By default, the \Condor{master} will start a
@@ -8180,9 +8181,11 @@ Configuration File Macros}
   Specifies a log file for the \Condor{procd} to use.
   Note that by design, the \Condor{procd} does not
   include most of the other logic that is shared amongst the various
-  HTCondor daemons. This is because the \Condor{procd} is a component of
-  the PrivSep Kernel (see Section~\ref{sec:PrivSep} for more information
-  regarding privilege separation). This means that the \Condor{procd}
+  HTCondor daemons. 
+  %This is because the \Condor{procd} is a component of
+  %the PrivSep Kernel (see Section~\ref{sec:PrivSep} for more information
+  %regarding privilege separation). 
+  This means that the \Condor{procd}
   does not include the normal HTCondor logging subsystem, and thus 
   multiple debug levels are not supported.
   \MacroNI{PROCD\_LOG} defaults to \File{\$(LOG)/ProcLog}.
@@ -10204,26 +10207,26 @@ COLLECTOR.SEC_DEFAULT_SESSION_DURATION = 50000
 \end{description}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\subsection{\label{sec:Config-PrivSep}Configuration File Entries
-Relating to PrivSep}
+%\subsection{\label{sec:Config-PrivSep}Configuration File Entries
+%Relating to PrivSep}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\index{configuration!PrivSep configuration variables}
-\begin{description}
-\label{param:PrivSepEnabled}
-\item[\Macro{PRIVSEP\_ENABLED}]
-  A boolean variable that, when \Expr{True}, enables PrivSep.
-  When \Expr{True}, the \Condor{procd} is used,
-  ignoring the definition of the configuration variable \Macro{USE\_PROCD}.
-  The default value when this configuration variable is not defined
-  is \Expr{False}.
-
-\label{param:PrivSepSwitchboard}
-\item[\Macro{PRIVSEP\_SWITCHBOARD}]
-  The full (trusted) path and file name of the \Condor{root\_switchboard}
-  executable.
-
-\end{description}
-
+%\index{configuration!PrivSep configuration variables}
+%\begin{description}
+%\label{param:PrivSepEnabled}
+%\item[\Macro{PRIVSEP\_ENABLED}]
+%  A boolean variable that, when \Expr{True}, enables PrivSep.
+%  When \Expr{True}, the \Condor{procd} is used,
+%  ignoring the definition of the configuration variable \Macro{USE\_PROCD}.
+%  The default value when this configuration variable is not defined
+%  is \Expr{False}.
+%
+%\label{param:PrivSepSwitchboard}
+%\item[\Macro{PRIVSEP\_SWITCHBOARD}]
+%  The full (trusted) path and file name of the \Condor{root\_switchboard}
+%  executable.
+%
+%\end{description}
+%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsection{\label{sec:Config-VMs}Configuration File Entries
 Relating to Virtual Machines}
