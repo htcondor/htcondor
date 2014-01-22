@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2014, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -131,6 +131,10 @@ public:
 		// the events that might otherwise hang around in the output buffer
 		// for a long time.
   void FlushLog() { ClassAdLog::FlushLog(); }
+
+  		// Force the log output buffer to non-volatile storage (disk).  
+		// This means doing both a flush and fsync.
+  void ForceLog() { ClassAdLog::ForceLog(); }
 
   ///
   Transaction* getActiveTransaction() { return ClassAdLog::getActiveTransaction(); }

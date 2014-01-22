@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2012, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2014, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -4591,11 +4591,11 @@ jobLeaseIsValid( ClassAd* job, int cluster, int proc )
 			 cluster, proc, (int)now, last_renewal, diff );
 
 	if( remaining <= 0 ) {
-		dprintf( D_ALWAYS, "%d.%d: %s remaining: EXPIRED!\n", 
+		dprintf( D_FULLDEBUG, "%d.%d: %s remaining: EXPIRED!\n", 
 				 cluster, proc, ATTR_JOB_LEASE_DURATION );
 		return false;
 	} 
-	dprintf( D_ALWAYS, "%d.%d: %s remaining: %d\n", cluster, proc,
+	dprintf( D_FULLDEBUG, "%d.%d: %s remaining: %d\n", cluster, proc,
 			 ATTR_JOB_LEASE_DURATION, remaining );
 	return true;
 }
@@ -4698,7 +4698,11 @@ int mark_idle(ClassAd *job)
 		SetAttributeFloat(cluster, proc,
 						  ATTR_CUMULATIVE_SLOT_TIME,slot_time);
 
-		CommitTransaction();
+		// Commit non-durable to speed up recovery; this is ok because a) after
+		// all jobs are marked idle in mark_jobs_idle() we force the log, and 
+		// b) in the worst case, we would just redo this work in the unfortuante evenent 
+		// we crash again before an fsync.
+		CommitTransaction( NONDURABLE );
 	}
 
 	return 1;
@@ -4743,6 +4747,12 @@ WalkJobQueue(scan_func func)
 void mark_jobs_idle()
 {
     WalkJobQueue( mark_idle );
+
+	// mark_idle() may have made a lot of commits in non-durable mode in 
+	// order to speed up recovery after a crash, so recovery does not incur
+	// the overhead of thousands of fsyncs.  Now do one fsync so that if
+	// we crash again, we do not have to redo all recovery work just performed.
+	JobQueue->ForceLog();
 }
 
 void DirtyPrioRecArray() {
