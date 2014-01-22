@@ -720,7 +720,6 @@ ReliSock::RcvMsg::~RcvMsg()
 
 int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, int _timeout)
 {
-	Buf		*tmp;
 	char	        hdr[MAX_HEADER_SIZE];
 	int		len, len_t, header_size;
 	int		tmp_len;
@@ -772,7 +771,7 @@ int ReliSock::RcvMsg::rcv_packet( char const *peer_description, SOCKET _sock, in
 		return FALSE;
 	}
 	if (len > m_tmp->max_size()){
-		delete tmp;
+		delete m_tmp;
 		dprintf(D_ALWAYS, "IO: Incoming packet is too big\n");
 		return FALSE;
 	}
@@ -808,16 +807,16 @@ read_packet:
 
         // Now, check MD
         if (mode_ != MD_OFF) {
-            if (!tmp->verifyMD(&hdr[5], mdChecker_)) {
-                delete tmp;
+            if (!m_tmp->verifyMD(&hdr[5], mdChecker_)) {
+                delete m_tmp;
 		m_tmp = NULL;
                 dprintf(D_ALWAYS, "IO: Message Digest/MAC verification failed!\n");
                 return FALSE;  // or something other than this
             }
         }
         
-	if (!buf.put(tmp)) {
-		delete tmp;
+	if (!buf.put(m_tmp)) {
+		delete m_tmp;
 		m_tmp = NULL;
 		dprintf(D_ALWAYS, "IO: Packet storing failed\n");
 		return FALSE;
