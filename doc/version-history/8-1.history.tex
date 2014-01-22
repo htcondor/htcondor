@@ -39,14 +39,19 @@ before placing the corresponding jobs on hold.
 can refresh a remote job's GSI proxy as a part of the \texttt{Schedd} object.
 \Ticket{4116}
 
-\item By default, the TCP keepalive interval is automatically tuned to 5
-minutes.  This causes at least one packet to be sent on established but
-idle TCP connections once every 5 minutes and speeds up the detection
-of connections that were silently dropped by NAT or firewall devices.
-Without this, the \Condor{shadow} may not reliably recover from transient
-network failures.  This behavior is controlled by the new TCP\_KEEPALIVE\_INTERVAL
-parameter; setting this to 0 restores the prior behavior.
-The parameter CCB\_HEARTBEAT\_INTERVAL default has been reduced to 5 minutes.
+\item By default, 
+the TCP keep alive interval is automatically tuned to 5 minutes.  
+This causes at least one packet to be sent on established,
+but idle, TCP connections once every 5 minutes, 
+and it speeds up the detection of connections that were silently dropped 
+by NAT or firewall devices.
+Without this, 
+the \Condor{shadow} may not reliably recover from transient network failures.
+This behavior is controlled by the new configuration variable
+\Macro{TCP\_KEEPALIVE\_INTERVAL}.
+Setting this variable to 0 restores the prior behavior.
+In addition, the configuration variable \Macro{CCB\_HEARTBEAT\_INTERVAL} 
+default value has been reduced to 5 minutes.
 \Ticket{4122}
 
 \item Several new python function calls were added to aid the composition of

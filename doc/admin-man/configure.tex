@@ -1533,14 +1533,19 @@ File System Configuration File Entries''.
 
 \label{param:TcpKeepaliveInterval}
 \item[\Macro{TCP\_KEEPALIVE\_INTERVAL}]
-  The keepalive interval (in seconds) to use for any HTCondor TCP connection.
-  The default keepalive interval is 360 (6 minutes); this value was chosen
-  to minimize the likelihood that keepalive packets are sent while still
-  detecting dead TCP connections before job leases expire.  A smaller value
-  will consume more OS and network resources; a larger value may cause jobs
-  to fail unnecessarily due to network disconnects.  Most users will not need
-  to tune this configuration.  Setting this to 0 will use the OS default;
-  setting this to -1 will disable HTCondor's use of TCP keepalive.
+  The number of seconds specifying a keep alive interval
+  to use for any HTCondor TCP connection.
+  The default keep alive interval is 360 (6 minutes); 
+  this value is chosen to minimize the likelihood that keep alive packets 
+  are sent,
+  while still detecting dead TCP connections before job leases expire.
+  A smaller value
+  will consume more operating system and network resources, 
+  while a larger value may cause jobs to fail unnecessarily due to 
+  network disconnects.  
+  Most users will not need to tune this configuration variable.
+  A value of 0 will use the operating system default,
+  and a value of -1 will disable HTCondor's use of a TCP keep alive.
 
 \end{description}
 
@@ -2471,8 +2476,10 @@ section~\ref{sec:Networking} on page~\pageref{sec:Networking}.
   up detection of dead connections and to generate a guaranteed minimum
   frequency of activity to attempt to prevent the connection from being
   dropped.  The special value 0 disables the heartbeat.  The heartbeat
-  is automatically disabled if the CCB server is older than 7.5.0.  Having
-  the heartbeat interval greater than the JobLeaseDuration may cause
+  is automatically disabled if the CCB server is older than 
+  HTCondor version 7.5.0.  
+  Having the heartbeat interval greater than the job ClassAd attribute
+  \Attr{JobLeaseDuration} may cause
   unnecessary job disconnects in pools with network issues.
 
 \label{param:UseSharedPort}
