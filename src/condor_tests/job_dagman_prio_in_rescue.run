@@ -40,6 +40,9 @@ $dagman_args = "-verbose";
 	'PRIORITY nodeD 60',
 	'PRIORITY nodeE 10');
 
+# We *don't* want to see this...
+$not_outline = 'PRIORITY nodeF';
+
 my $killedchosen = 0;
 
 # truly const variables in perl
@@ -136,14 +139,21 @@ $failure = sub
 		while(<OUT>) {
 			chomp();
 			$line = $_;
-			$target = $outlines[$outindex];
-			if( $line =~ /$target/ ) {
-				CondorTest::debug("$name: $line\n",1);
-				$outindex++;
-				if ($outindex > $#outlines) {
-					$passed = 1;
-					last;
+
+			if ($outindex <= $#outlines) {
+				$target = $outlines[$outindex];
+				if( $line =~ /$target/ ) {
+					CondorTest::debug("$name: $line\n",1);
+					$outindex++;
+					if ($outindex > $#outlines) {
+						$passed = 1;
+					}
 				}
+			}
+
+			if( $line =~ /$not_outline/ ) {
+				CondorTest::debug("failed: found unexpected line: $line\n",1);
+				$diditpass = 0;
 			}
 		}
 		close(OUT);

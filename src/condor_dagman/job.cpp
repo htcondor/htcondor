@@ -137,6 +137,7 @@ Job::Job( const job_type_t jobType, const char* jobName,
 	_queuedNodeJobProcs = 0;
 
 	_hasExplicitPriority = false;
+	_hasPriority = false;
 	_originalPriority = 0;
 	_adjustedPriority = 0;
 
@@ -265,6 +266,7 @@ void job_print (Job * job, bool condorID) {
 	}
 }
 
+//---------------------------------------------------------------------------
 const char*
 Job::GetPreScriptName() const
 {
@@ -274,6 +276,7 @@ Job::GetPreScriptName() const
 	return _scriptPre->GetCmd();
 }
 
+//---------------------------------------------------------------------------
 const char*
 Job::GetPostScriptName() const
 {
@@ -283,6 +286,7 @@ Job::GetPostScriptName() const
 	return _scriptPost->GetCmd();
 }
 
+//---------------------------------------------------------------------------
 bool
 Job::SanityCheck() const
 {
@@ -306,6 +310,7 @@ Job::SanityCheck() const
 	return result;
 }
 
+//---------------------------------------------------------------------------
 Job::status_t
 Job::GetStatus() const
 {
@@ -313,6 +318,7 @@ Job::GetStatus() const
 }
 
 
+//---------------------------------------------------------------------------
 bool
 Job::SetStatus( status_t newStatus )
 {
@@ -327,7 +333,7 @@ Job::SetStatus( status_t newStatus )
 	return true;
 }
 
-
+//---------------------------------------------------------------------------
 bool
 Job::AddParent( Job* parent )
 {
@@ -343,7 +349,7 @@ Job::AddParent( Job* parent )
 	return success;
 }
 
-
+//---------------------------------------------------------------------------
 bool
 Job::AddParent( Job* parent, MyString &whynot )
 {
@@ -376,7 +382,7 @@ Job::AddParent( Job* parent, MyString &whynot )
     return true;
 }
 
-
+//---------------------------------------------------------------------------
 bool
 Job::CanAddParent( Job* parent, MyString &whynot )
 {
@@ -404,7 +410,7 @@ Job::CanAddParent( Job* parent, MyString &whynot )
 	return true;
 }
 
-
+//---------------------------------------------------------------------------
 bool
 Job::AddChild( Job* child )
 {
@@ -420,7 +426,7 @@ Job::AddChild( Job* child )
 	return success;
 }
 
-
+//---------------------------------------------------------------------------
 bool
 Job::AddChild( Job* child, MyString &whynot )
 {
@@ -444,7 +450,7 @@ Job::AddChild( Job* child, MyString &whynot )
     return true;
 }
 
-
+//---------------------------------------------------------------------------
 bool
 Job::CanAddChild( Job* child, MyString &whynot )
 {
@@ -460,7 +466,7 @@ Job::CanAddChild( Job* child, MyString &whynot )
 	return true;
 }
 
-
+//---------------------------------------------------------------------------
 bool
 Job::TerminateSuccess()
 {
@@ -471,6 +477,7 @@ Job::TerminateSuccess()
 	return true;
 } 
 
+//---------------------------------------------------------------------------
 bool
 Job::TerminateFailure()
 {
@@ -480,6 +487,7 @@ Job::TerminateFailure()
 	return true;
 } 
 
+//---------------------------------------------------------------------------
 bool
 Job::Add( const queue_t queue, const JobID_t jobID )
 {
@@ -497,18 +505,21 @@ Job::Add( const queue_t queue, const JobID_t jobID )
 	return true;
 }
 
+//---------------------------------------------------------------------------
 bool
 Job::AddPreScript( const char *cmd, MyString &whynot )
 {
 	return AddScript( false, cmd, whynot );
 }
 
+//---------------------------------------------------------------------------
 bool
 Job::AddPostScript( const char *cmd, MyString &whynot )
 {
 	return AddScript( true, cmd, whynot );
 }
 
+//---------------------------------------------------------------------------
 bool
 Job::AddScript( bool post, const char *cmd, MyString &whynot )
 {
@@ -539,6 +550,7 @@ Job::AddScript( bool post, const char *cmd, MyString &whynot )
 	return true;
 }
 
+//---------------------------------------------------------------------------
 bool
 Job::AddPreSkip( int exitCode, MyString &whynot )
 {
@@ -563,6 +575,7 @@ Job::AddPreSkip( int exitCode, MyString &whynot )
 	return true;
 }
 
+//---------------------------------------------------------------------------
 bool
 Job::IsActive() const
 {
@@ -570,6 +583,7 @@ Job::IsActive() const
 		_Status == STATUS_POSTRUN;
 }
 
+//---------------------------------------------------------------------------
 const char*
 Job::GetStatusName() const
 {
@@ -578,6 +592,7 @@ Job::GetStatusName() const
 }
 
 
+//---------------------------------------------------------------------------
 bool
 Job::HasChild( Job* child ) {
 	JobID_t cid;
@@ -597,6 +612,7 @@ Job::HasChild( Job* child ) {
 	return true;
 }
 
+//---------------------------------------------------------------------------
 bool
 Job::HasParent( Job* parent ) {
 	JobID_t pid;
@@ -616,7 +632,7 @@ Job::HasParent( Job* parent ) {
 	return true;
 }
 
-
+//---------------------------------------------------------------------------
 bool
 Job::RemoveChild( Job* child )
 {
@@ -632,7 +648,7 @@ Job::RemoveChild( Job* child )
 	return success;
 }
 
-
+//---------------------------------------------------------------------------
 bool
 Job::RemoveChild( Job* child, MyString &whynot )
 {
@@ -643,7 +659,7 @@ Job::RemoveChild( Job* child, MyString &whynot )
 	return RemoveDependency( Q_CHILDREN, child->GetJobID(), whynot );
 }
 
-
+//---------------------------------------------------------------------------
 bool
 Job::RemoveParent( Job* parent, MyString &whynot )
 {
@@ -654,6 +670,7 @@ Job::RemoveParent( Job* parent, MyString &whynot )
 	return RemoveDependency( Q_PARENTS, parent->GetJobID(), whynot );
 }
 
+//---------------------------------------------------------------------------
 bool
 Job::RemoveDependency( queue_t queue, JobID_t job )
 {
@@ -661,6 +678,7 @@ Job::RemoveDependency( queue_t queue, JobID_t job )
 	return RemoveDependency( queue, job, whynot );
 }
 
+//---------------------------------------------------------------------------
 bool
 Job::RemoveDependency( queue_t queue, JobID_t job, MyString &whynot )
 {
@@ -674,14 +692,14 @@ Job::RemoveDependency( queue_t queue, JobID_t job, MyString &whynot )
 	return true;
 }
 
-
+//---------------------------------------------------------------------------
 Job::job_type_t
 Job::JobType() const
 {
     return _jobType;
 }
 
-
+//---------------------------------------------------------------------------
 const char*
 Job::JobTypeString() const
 {
@@ -690,25 +708,28 @@ Job::JobTypeString() const
 
 
 /*
+//---------------------------------------------------------------------------
 const char* Job::JobIdString() const
 {
 
 }
 */
 
-
+//---------------------------------------------------------------------------
 int
 Job::NumParents() const
 {
 	return _queues[Q_PARENTS].size();
 }
 
+//---------------------------------------------------------------------------
 int
 Job::NumChildren() const
 {
 	return _queues[Q_CHILDREN].size();
 }
 
+//---------------------------------------------------------------------------
 void
 Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 {
@@ -742,6 +763,7 @@ Job::SetCategory( const char *categoryName, ThrottleByCategory &catThrottles )
 	}
 }
 
+//---------------------------------------------------------------------------
 void
 Job::PrefixName(const MyString &prefix)
 {
@@ -754,7 +776,7 @@ Job::PrefixName(const MyString &prefix)
 	_jobName = strnewp(tmp.Value());
 }
 
-
+//---------------------------------------------------------------------------
 // iterate across the Job's var values, and for any which have $(JOB) in them, 
 // substitute it. This substitution is draconian and will always happen.
 void
@@ -1009,11 +1031,23 @@ Job::GetPreSkip() const
 
 //---------------------------------------------------------------------------
 void
-Job::SetPriorities( int priority )
+Job::InitializePriorities( int priority )
 {
 	_hasExplicitPriority = true;
+	_hasPriority = true;
 	_originalPriority = priority;
 	_adjustedPriority = priority;
+}
+
+//---------------------------------------------------------------------------
+void
+Job::SetPriority( int priority )
+{
+	_hasPriority = true;
+	_adjustedPriority = priority;
+	debug_printf( DEBUG_NORMAL, 
+				"Adjusted node %s priority to %d\n",
+				GetJobName(), _adjustedPriority );
 }
 
 //---------------------------------------------------------------------------
@@ -1021,46 +1055,39 @@ Job::SetPriorities( int priority )
 // No: If there is a cycle, there will be equality, and recursion will stop
 // It makes no sense to insert job priorities on linear DAGs;
 
+// TEMPTEMP -- modify this to include parent DAG prio
 // The scheme here is to copy the priority from parent nodes, if a parent node
 // has priority higher than the job priority currently assigned to the node, or
 // use the default priority of the DAG; otherwise, we use the priority from the
 // DAG file. Priorities calculated by DAGMan will ignore and override job
 // priorities set in the submit file.
-
-// DAGman fixes the default priorities in Dag::SetDefaultPriorities
 void
-Job::AdjustPriority(Dag& dag)
+Job::AdjustPriority( Dag& dag )
 {
 	if ( dag.GetDefaultPriority() != 0 ) {
-		if ( !_hasExplicitPriority ) {
-			_hasExplicitPriority = true;
-			_adjustedPriority = dag.GetDefaultPriority();
-			debug_printf( DEBUG_NORMAL,
-						"Adjusted node %s priority to %d because of overall DAG priority\n",
-						GetJobName(), _adjustedPriority );
-		} else if ( dag.GetDefaultPriority() > _adjustedPriority ) {
-			_adjustedPriority = dag.GetDefaultPriority();
-			debug_printf( DEBUG_NORMAL,
-						"Adjusted node %s priority to %d because of overall DAG priority\n",
-						GetJobName(), _adjustedPriority );
+		if ( !HasExplicitPriority() ||
+					( dag.GetDefaultPriority() > GetPriority() ) ) {
+			SetPriority( dag.GetDefaultPriority() );
 		}
 	}
 
 	std::set<JobID_t> parents = GetQueueRef(Q_PARENTS);
-	for(std::set<JobID_t>::iterator p = parents.begin(); p != parents.end(); ++p){
+	for ( std::set<JobID_t>::iterator p = parents.begin();
+				p != parents.end(); ++p ) {
 		Job* parent = dag.FindNodeByNodeID(*p);
-		if ( parent->_hasExplicitPriority ) {
+		//TEMPTEMP -- combine these two ifs?
+		if ( parent->HasPriority() ) {
 			// Nothing to do if parent priority is small
-			if ( parent->_adjustedPriority > _adjustedPriority ) {
-				_adjustedPriority = parent->_adjustedPriority;
-				_hasExplicitPriority = true;
-				debug_printf( DEBUG_NORMAL, "Adjusted node %s priority to %d\n",
-							GetJobName(), _adjustedPriority );
+			if ( parent->GetPriority() > GetPriority() ) {
+				SetPriority( parent->GetPriority() );
 			}
 		}
 	}
+
+	//TEMPTEMP -- only call SetPriority() once?
 }
 
+//---------------------------------------------------------------------------
 bool Job::SetCondorID(const CondorID& cid)
 {
 	bool ret = true;
@@ -1074,6 +1101,7 @@ bool Job::SetCondorID(const CondorID& cid)
 	return ret;	
 }
 
+//---------------------------------------------------------------------------
 bool Job::Hold(int proc) 
 {
 	if( proc >= static_cast<int>( _onHold.size() ) ) {
@@ -1091,6 +1119,7 @@ bool Job::Hold(int proc)
 	return false;
 }
 
+//---------------------------------------------------------------------------
 bool Job::Release(int proc)
 {
 	if( proc >= static_cast<int>( _onHold.size() ) ) {

@@ -20,3 +20,8 @@ Parent nodeC Child nodeD
 Job nodeE job_dagman_prio_in_rescue-nodeE.cmd
 Priority nodeE 10
 Parent nodeD Child nodeE
+
+# Note:  This node should *not* have a priority saved in the
+# rescue DAG.
+Job nodeF job_dagman_prio_in_rescue-node.cmd
+Parent nodeA Child nodeF

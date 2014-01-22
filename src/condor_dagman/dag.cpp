@@ -1413,12 +1413,12 @@ Dag::StartNode( Job *node, bool isRetry )
 	node->AdjustPriority( *this );
 
 	if ( isRetry && m_retryNodeFirst ) {
-		_readyQ->Prepend( node, -node->_adjustedPriority );
+		_readyQ->Prepend( node, -node->GetPriority() );
 	} else {
 		if ( _submitDepthFirst ) {
-			_readyQ->Prepend( node, -node->_adjustedPriority );
+			_readyQ->Prepend( node, -node->GetPriority() );
 		} else {
-			_readyQ->Append( node, -node->_adjustedPriority );
+			_readyQ->Append( node, -node->GetPriority() );
 		}
 	}
 	return TRUE;
@@ -1556,7 +1556,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 						"Node %s deferred by category throttle (%s, %d)\n",
 						job->GetJobName(), catThrottle->_category->Value(),
 						catThrottle->_maxJobs );
-			deferredJobs.Prepend( job, -job->_adjustedPriority );
+			deferredJobs.Prepend( job, -job->GetPriority() );
 			_catThrottleDeferredCount++;
 		} else {
 				// The problem here is that we wouldn't need to sleep if
@@ -1615,7 +1615,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		debug_printf( DEBUG_DEBUG_1,
 					"Returning deferred node %s to the ready queue\n",
 					job->GetJobName() );
-		_readyQ->Prepend( job, -job->_adjustedPriority );
+		_readyQ->Prepend( job, -job->GetPriority() );
 	}
 
 	return numSubmitsThisCycle;
@@ -1738,9 +1738,9 @@ Dag::PreScriptReaper( const char* nodeName, int status )
 		job->retval = 0; // for safety on retries
 		job->SetStatus( Job::STATUS_READY );
 		if ( _submitDepthFirst ) {
-			_readyQ->Prepend( job, -job->_adjustedPriority );
+			_readyQ->Prepend( job, -job->GetPriority() );
 		} else {
-			_readyQ->Append( job, -job->_adjustedPriority );
+			_readyQ->Append( job, -job->GetPriority() );
 		}
 	}
 
@@ -2340,10 +2340,9 @@ Dag::WriteNodeToRescue( FILE *fp, Job *node, bool reset_retries_upon_rescue,
 			// Note: when gittrac #2167 gets merged, we need to think
 			// about how this code will interact with that code.
 			// wenger/nwp 2011-08-24
-			// TEMPTEMP -- this might not do what we want if we inherited a priority from a parent...
-		if ( node->_hasExplicitPriority ) {
+		if ( node->HasExplicitPriority() ) {
 			fprintf( fp, "PRIORITY %s %d\n", node->GetJobName(),
-						node->_originalPriority );
+						node->GetExplicitPriority() );
 		}
 
 			// Print the CATEGORY line, if any.
@@ -3831,7 +3830,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
    	if ( node->JobType() == Job::TYPE_CONDOR && !node->GetNoop() &&
 				node->GetDagFile() != NULL && _generateSubdagSubmits ) {
 		bool isRetry = node->GetRetries() > 0;
-		int subdagPriority = node->_adjustedPriority;//TEMPTEMP?
+		int subdagPriority = node->GetPriority();
 		if ( runSubmitDag( *_submitDagDeepOpts, node->GetDagFile(),
 					node->GetDirectory(), isRetry, subdagPriority ) != 0 ) {
 			++node->_submitTries;
@@ -3899,7 +3898,7 @@ Dag::SubmitNodeJob( const Dagman &dm, Job *node, CondorID &condorID )
 				MyString parents = ParentListString( node );
       			submit_success = condor_submit( dm, cmd_file.Value(), condorID,
 							node->GetJobName(), parents, node->varsFromDag,
-							node->_hasExplicitPriority, node->_adjustedPriority,
+							node->HasPriority(), node->GetPriority(),
 							node->GetDirectory(), DefaultNodeLog(),
 							_use_default_node_log && node->UseDefaultLog(),
 							logFile, ProhibitMultiJobs(),
@@ -4027,9 +4026,9 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 				thisSubmitDelay == 1 ? "" : "s" );
 
 		if ( m_retrySubmitFirst ) {
-			_readyQ->Prepend(node, -node->_adjustedPriority);
+			_readyQ->Prepend(node, -node->GetPriority());
 		} else {
-			_readyQ->Append(node, -node->_adjustedPriority);
+			_readyQ->Append(node, -node->GetPriority());
 		}
 	}
 }

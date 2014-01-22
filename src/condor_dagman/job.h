@@ -417,8 +417,18 @@ class Job {
 	*/
 	time_t GetLastEventTime() { return _lastEventTime; }
 
-	//TEMPTEMP -- document
-	void SetPriorities( int priority );
+	/** Initialize the priority values for this node -- called when parsing
+		the DAG and we see a PRIORITY line.
+		@param priority:  The priority for this node.
+	*/
+	void InitializePriorities( int priority );
+	//TEMPTEMP -- document all of these...
+	//TEMPTEMP -- rename to be consistent
+	bool HasExplicitPriority() { return _hasExplicitPriority; }
+	bool HasPriority() { return _hasPriority; }
+	int GetExplicitPriority() { return _originalPriority; }
+	int GetPriority() { return _adjustedPriority; }
+	void SetPriority( int priority );
 
 	/** Adjust this node's priority based on the overall DAG priority and
 	  * the priority of its parent node(s).
@@ -490,18 +500,6 @@ public:
 		// Count of the number of job procs currently in the batch system
 		// queue for this node.
 	int _queuedNodeJobProcs;
-
-		// TEMPTEMP -- do we need this?  isn't 0 the same as not having a prio?
-		// Whether priority has been explicitly set for this node (or
-		// inherited from a parent).  If this node's priority has been
-		// explicitly set, it will override any priority in its submit
-		// file, and also affect the prioriities of its child nodes.
-		// TEMPTEMP -- hmm -- is "Explicit" the right word here, since you can hinherit it from a parent?  Do we need _hasExplicitPriority and _doPriorityOverride or something?  Ugh...
-	bool _hasExplicitPriority;
-
-		// Node priority.  Higher number is better priority (submit first).
-	int _originalPriority;
-	int _adjustedPriority;
 
 		// The number of times this job has been held.  (Note: the current
 		// implementation counts holds for all procs in a multi-proc cluster
@@ -641,6 +639,20 @@ private:
 	// whether this is a final job
 	bool _final;
 	bool append_default_log;
+
+		// Whether priority has been explicitly set for this node (or
+		// inherited from a parent).  If this node's priority has been
+		// explicitly set, it will override any priority in its submit
+		// file, and also affect the prioriities of its child nodes.
+		// TEMPTEMP -- hmm -- is "Explicit" the right word here, since you can hinherit it from a parent?  Do we need _hasExplicitPriority and _doPriorityOverride or something?  Ugh...
+	//TEMPTEMP -- maybe hasExplicitPriority and hasPriority?  put into bit encoding to save space?
+	bool _hasExplicitPriority;
+
+	bool _hasPriority;
+
+		// Node priority.  Higher number is better priority (submit first).
+	int _originalPriority;
+	int _adjustedPriority;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.
