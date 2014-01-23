@@ -54,9 +54,13 @@ In addition, the configuration variable \Macro{CCB\_HEARTBEAT\_INTERVAL}
 default value has been reduced to 5 minutes.
 \Ticket{4122}
 
-\item Several new python function calls were added to aid the composition of
-ClassAd expressions.  It should now be possible to build expressions directly
-in python without having to resort to string manipulation.  \Ticket{4154}
+\item New python \Code{ClassAd} module function calls 
+\Procedure{Attribute}, \Procedure{Function}, \Procedure{Literal},
+\Procedure{flatten}, \Procedure{matches}, and \Procedure{symmetricMatch}
+aid the composition of ClassAd expressions.
+It should now be possible to build expressions directly
+in python, without having to resort to string manipulation.
+\Ticket{4154}
 
 \end{itemize}
 

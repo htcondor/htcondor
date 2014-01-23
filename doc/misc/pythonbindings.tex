@@ -548,23 +548,27 @@ Return the version of the linked ClassAd library.
 \\ \hline
 \texttt{Attribute( name )}
 
-Given a string, \Code{name}, return an ExprTree obect which is a
-reference to an attribute of that name.  The ClassAd expression
-\Code{foo == 1} can be constructed by the python \Code{Attribute("foo") == 1}
+Given the string \texttt{name}, 
+return an \texttt{ExprTree} obect which is a
+reference to an attribute of that name.
+The ClassAd expression \Expr{foo == 1} can be constructed 
+by the python \Expr{Attribute("foo") == 1}.
 
 \\ \hline
 \texttt{Function( name, arg1, arg2, ... )}
 
-Given a function name, \Code{name}, and zero-or-more arguments, construct
-an ExprTree which is a function call expression.  The function is not
-evalauted.  The ClassAd expression \Code{strcat("hello ", "world")} can be
-constructed by the python \Code{Function("strcat", "hello ", "world")}
+Given function name \texttt{name}, and zero-or-more arguments, 
+construct an \texttt{ExprTree} which is a function call expression.  
+The function is not evaluated.
+The ClassAd expression \Expr{strcat("hello ", "world")} 
+can be constructed by the python 
+\Expr{Function("strcat", "hello ", "world")}.
 
 \\ \hline
 \texttt{Literal( obj )}
 
-Given a python object, \Code{obj}, convert to a ClassAd literal.  Python
-strings, floats, integers, and booleans have equivalent literals.
+Given python object \texttt{obj}, convert it to a ClassAd literal.
+Python strings, floats, integers, and booleans have equivalent literals.
 
 \\ \hline
 
@@ -716,25 +720,26 @@ Returns an iterator.
 \\ \hline
 \texttt{flatten( expression )}
 
-Given \Code{expression}, an \texttt{ExprTree} object, perform
-a partial evaluation.  All the attributes in expression and
-defined in this add are evaluated and expanded.  Any constant
-expressions (such as \Code{1 + 2}) are evaluated.  Returns
-a new \texttt{ExprTree} object.
+Given \texttt{ExprTree} object \texttt{expression}, 
+perform a partial evaluation.  
+All the attributes in \texttt{expression} and
+defined in this object are evaluated and expanded.  Any constant
+expressions, such as \Expr{1 + 2}, are evaluated.  
 
+Returns a new \texttt{ExprTree} object.
 \\ \hline
 \texttt{matches( ad )}
 
-Given \Code{ad}, a \texttt{ClassAd} object, check to see if this
-object matches the \Code{Requirements} attribute of \Code{ad}.
-Returns \Code{true} if it does.
+Given \texttt{ClassAd} object \texttt{ad}, 
+check to see if this object matches the \Code{Requirements} attribute 
+of \texttt{ad}.
+Returns \texttt{true} if it does.
 
 \\ \hline
 \texttt{symmetricMatch( ad )}
 
-Returns true if the given \Code{ad} matches this and this matches
-\Code{ad}.  Equivalent to \Code{self.matches(ad) and ad.matches(self)}.
-
+Returns \texttt{true} if the given \texttt{ad} matches this and this matches
+\Code{ad}.  Equivalent to \texttt{self.matches(ad) and ad.matches(self)}.
 \\ \hline
 
 \end{tabular}
