@@ -138,6 +138,20 @@ public:
 	static MyString fileNameToLogicalLines(const MyString &filename,
 				StringList &logicalLines);
 
+	class FileReader
+	{
+	public:
+		//TEMPTEMP -- document methods
+		FileReader();
+		~FileReader();
+		MyString Open( const MyString &filename );
+		bool NextLogicalLine( MyString &line );
+		void Close();
+
+	private:
+		FILE *_fp;
+	};
+
 private:
 	    /** Read the entire contents of the given file into a MyString.
 		 * @param The name of the file.
@@ -186,6 +200,7 @@ private:
 		 * @param output buffer
 		 * @return "" if okay, or else an error message.
 		 */
+	//TEMPTEMP -- doesn't this pretty much duplicate readFileToString?
 	static MyString readFile(char const *filename,std::string& buf);
 
 };

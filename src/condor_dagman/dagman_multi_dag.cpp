@@ -73,10 +73,10 @@ GetConfigFile(/* const */ StringList &dagFiles, bool useDagDir,
 			//
 		StringList		configFiles;
 		MyString msg = MultiLogFiles::getValuesFromFile( newDagFile, "config",
-					configFiles);
+					configFiles );
 		if ( msg != "" ) {
 			AppendError( errMsg,
-					MyString("Failed to locate Condor job log files: ") +
+					MyString( "Error getting DAGMan config file: ") +
 					msg );
 			result = false;
 		}

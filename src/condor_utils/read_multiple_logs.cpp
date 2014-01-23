@@ -276,6 +276,7 @@ ReadMultipleUserLogs::readEventFromLog( LogFileMonitor *monitor )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+//TEMPTEMP -- eliminate this method!!
 MyString
 MultiLogFiles::fileNameToLogicalLines(const MyString &filename,
 			StringList &logicalLines)
@@ -307,11 +308,77 @@ MultiLogFiles::fileNameToLogicalLines(const MyString &filename,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+MultiLogFiles::FileReader::FileReader()
+{
+	_fp = NULL;
+}
 
+MultiLogFiles::FileReader::~FileReader()
+{
+	Close();
+}
+
+MyString
+MultiLogFiles::FileReader::Open( const MyString &filename )
+{
+	MyString result( "" );
+
+	_fp = safe_fopen_wrapper_follow( filename.Value(), "r" );
+	if ( !_fp ) {
+		result.formatstr( "MultiLogFiles::FileReader::Open(): "
+				"safe_fopen_wrapper_follow(%s) failed with errno %d (%s)\n",
+				filename.Value(), errno, strerror(errno) );
+		dprintf( D_ALWAYS, "%s", result.Value() );
+	}
+
+	return result;
+}
+
+//TEMPTEMP -- if we're looking for a config file, should we stop reading the DAG file after we find one?
+
+bool //TEMPTEMP -- not EOF
+MultiLogFiles::FileReader::NextLogicalLine( MyString &line )
+{
+	bool foundData = line.readLine( _fp, false );
+	line.chomp();
+	if ( !foundData ) {
+		return false; // EOF
+	}
+
+	while ( line[line.Length()-1] == '\\' ) {
+			// Remove the continuation character.
+		line.setChar( line.Length()-1, '\0' );
+
+		foundData = line.readLine( _fp, true );
+		line.chomp();
+		if ( !foundData ) {
+			//TEMPTEMP -- test this...
+			dprintf( D_ALWAYS, "Improper file syntax: continuation character with no trailing line! (%s) in file %s",
+						line.Value(), "TEMPTEMP" );
+			return false;//TEMPTEMP?
+		}
+	}
+
+	return true;
+}
+
+void
+MultiLogFiles::FileReader::Close()
+{
+	if ( !_fp ) {
+		fclose( _fp );
+		_fp = NULL;
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+//TEMPTEMP -- should this also be eliminated?
 MyString
 MultiLogFiles::readFileToString(const MyString &strFilename)
 {
-	dprintf( D_FULLDEBUG, "MultiLogFiles::readFileToString(%s)\n",
+	//TEMPTEMP dprintf( D_FULLDEBUG, "MultiLogFiles::readFileToString(%s)\n",
+	dprintf( D_ALWAYS, "MultiLogFiles::readFileToString(%s)############################\n",//TEMPTEMP
 				strFilename.Value() );
 
 	FILE *pFile = safe_fopen_wrapper_follow(strFilename.Value(), "r");
@@ -374,7 +441,8 @@ MyString
 MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 		const MyString &directory, bool &isXml, bool usingDefaultNode)
 {
-	dprintf( D_FULLDEBUG, "MultiLogFiles::loadLogFileNameFromSubFile(%s, %s)\n",
+	//TEMPTEMP dprintf( D_FULLDEBUG, "MultiLogFiles::loadLogFileNameFromSubFile(%s, %s)\n",
+	dprintf( D_ALWAYS, "MultiLogFiles::loadLogFileNameFromSubFile(%s, %s)\n",//TEMPTEMP
 				strSubFilename.Value(), directory.Value() );
 
 	TmpDir		td;
@@ -386,6 +454,7 @@ MultiLogFiles::loadLogFileNameFromSubFile(const MyString &strSubFilename,
 		}
 	}
 
+	//TEMPTEMP -- change this to use getValuesFromFile
 	StringList	logicalLines;
 	if ( fileNameToLogicalLines( strSubFilename, logicalLines ) != "" ) {
 		return "";
@@ -477,9 +546,11 @@ MyString
 MultiLogFiles::loadValueFromSubFile(const MyString &strSubFilename,
 		const MyString &directory, const char *keyword)
 {
-	dprintf( D_FULLDEBUG, "MultiLogFiles::loadValueFromSubFile(%s, %s, %s)\n",
+	//TEMPTEMP dprintf( D_FULLDEBUG, "MultiLogFiles::loadValueFromSubFile(%s, %s, %s)\n",
+	dprintf( D_ALWAYS, "MultiLogFiles::loadValueFromSubFile(%s, %s, %s)\n",//TEMPTEMP
 				strSubFilename.Value(), directory.Value(), keyword );
 
+	//TEMPTEMP -- change this to use getValuesFromFile
 	TmpDir		td;
 	if ( directory != "" ) {
 		MyString	errMsg;
@@ -564,6 +635,8 @@ MultiLogFiles::skip_whitespace(std::string const &s,int &offset) {
 MyString
 MultiLogFiles::readFile(char const *filename,std::string& buf)
 {
+	dprintf( D_ALWAYS, "MultiLogFiles::readFile(%s)#########################################\n",//TEMPTEMP
+				filename );//TEMPTEMP
     char chunk[4000];
 	MyString rtnVal;
 
@@ -707,10 +780,12 @@ int
 MultiLogFiles::getQueueCountFromSubmitFile(const MyString &strSubFilename,
 			const MyString &directory, MyString &errorMsg)
 {
-	dprintf( D_FULLDEBUG,
+	//TEMPTEMP dprintf( D_FULLDEBUG,
+	dprintf( D_ALWAYS,//TEMPTEMP
 				"MultiLogFiles::getQueueCountFromSubmitFile(%s, %s)\n",
 				strSubFilename.Value(), directory.Value() );
 
+	//TEMPTEMP -- change this to use getValuesFromFile
 	int queueCount = 0;
 	errorMsg = "";
 
@@ -760,29 +835,27 @@ MyString
 MultiLogFiles::getValuesFromFile(const MyString &fileName, 
 			const MyString &keyword, StringList &values, int skipTokens)
 {
-
 	MyString	errorMsg;
-	StringList	logicalLines;
-	if ( (errorMsg = fileNameToLogicalLines( fileName,
-				logicalLines )) != "" ) {
+
+	FileReader reader;
+	errorMsg = reader.Open( fileName );
+	if ( errorMsg != "" ) {
 		return errorMsg;
 	}
 
-	const char *	logicalLine;
-	while ( (logicalLine = logicalLines.next()) ) {
-
-		if ( strcmp(logicalLine, "") ) {
-
+	MyString logicalLine;
+	while ( reader.NextLogicalLine( logicalLine ) ) {
+		if ( logicalLine != "" ) {
 				// Note: StringList constructor removes leading
 				// whitespace from lines.
-			StringList	tokens(logicalLine, " \t");
+			StringList tokens( logicalLine.Value(), " \t" );
 			tokens.rewind();
 
 			if ( !strcasecmp(tokens.next(), keyword.Value()) ) {
 					// Skip over unwanted tokens.
 				for ( int skipped = 0; skipped < skipTokens; skipped++ ) {
 					if ( !tokens.next() ) {
-						MyString result = MyString( "Improperly-formatted DAG "
+						MyString result = MyString( "Improperly-formatted "
 									"file: value missing after keyword <" ) +
 									keyword + ">";
 			    		return result;
@@ -791,8 +864,8 @@ MultiLogFiles::getValuesFromFile(const MyString &fileName,
 
 					// Get the value.
 				const char *newValue = tokens.next();
-				if ( !newValue || !strcmp( newValue, "") ) {
-					MyString result = MyString( "Improperly-formatted DAG "
+				if ( !newValue || !strcmp( newValue, "" ) ) {
+					MyString result = MyString( "Improperly-formatted "
 								"file: value missing after keyword <" ) +
 								keyword + ">";
 			    	return result;
@@ -810,13 +883,15 @@ MultiLogFiles::getValuesFromFile(const MyString &fileName,
 					}
 				}
 
-				if (!alreadyInList) {
+				if ( !alreadyInList ) {
 						// Note: append copies the string here.
 					values.append(newValue);
 				}
 			}
 		}
-	}	
+	}
+
+	reader.Close();
 
 	return "";
 }
@@ -850,6 +925,7 @@ MultiLogFiles::getParamFromSubmitLine(MyString &submitLine,
 
 ///////////////////////////////////////////////////////////////////////////////
 
+//TEMPTEMP -- eliminate this method!!
 MyString
 MultiLogFiles::CombineLines(StringList &listIn, char continuation,
 		const MyString &filename, StringList &listOut)

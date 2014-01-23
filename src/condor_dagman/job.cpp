@@ -785,8 +785,10 @@ Job::MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
 			bool recovery, const char *defaultNodeLog, bool usingDefault )
 {
 	debug_printf( DEBUG_DEBUG_2,
-				"Attempting to monitor log file for node %s\n",
-				GetJobName() );
+				"Attempting to monitor log file for node %s; using default?: %d\n",
+				GetJobName(), usingDefault );
+//TEMPTEMP -- if usingDefault is false, does that mean we're using the workflow log, or does it mean something different? -- check...
+//TEMPTEMP -- and, if usingDefault is true, should we even look at the submit file? (see gittrac #3843)
 
 	if ( _logIsMonitored ) {
 		debug_printf( DEBUG_DEBUG_1, "Warning: log file for node "

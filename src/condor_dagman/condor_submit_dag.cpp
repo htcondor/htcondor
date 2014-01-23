@@ -348,6 +348,7 @@ setUpOptions( SubmitDagDeepOptions &deepOpts,
 		fprintf( stderr, "ERROR: %s\n", msg.Value() );
 		return 1;
 	}
+	printf( "DIAG: config file: <%s>\n", shallowOpts.strConfigFile.Value() );//TEMPTEMP
 
 	return 0;
 }
@@ -547,6 +548,7 @@ getOldSubmitFlags(SubmitDagShallowOptions &shallowOpts)
 {
 		// It's not an error for the submit file to not exist.
 	if ( fileExists( shallowOpts.strSubFile ) ) {
+		//TEMPTEMP -- change this to not use fileNameToLogicalLines
 		StringList logicalLines;
 		MyString error = MultiLogFiles::fileNameToLogicalLines(
 					shallowOpts.strSubFile, logicalLines );
