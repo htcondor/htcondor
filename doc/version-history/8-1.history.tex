@@ -85,6 +85,10 @@ See section~\ref{param:DAGmanAlwaysUseNodeLog} for more details.
 
 \begin{itemize}
 
+\item Fixed a bug that would leak one socket in each daemon when
+the \Macro{NO\_DNS} option is set.
+\Ticket{4140}
+
 \item In the \Condor{startd}, changed the way cpus are allocated to
 slots in configurations where there are more slots than cpus.
 Cpus are now distributed equally between slots that aren't configured
