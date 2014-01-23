@@ -791,8 +791,8 @@ handle_gass_server_init(void * user_arg)
 	// versions may change how the structures are layed out, since they're
 	// supposed to be private. So if we see a version we don't recgonize,
 	// disable our optimization.
-	if ( !version_in_range( GLOBUS_XIO_MODULE, 2, 8, 3, 3 ) ||
-		 !version_in_range( GLOBUS_IO_MODULE, 6, 3, 9, 3 ) ||
+	if ( !version_in_range( GLOBUS_XIO_MODULE, 2, 8, 3, 6 ) ||
+		 !version_in_range( GLOBUS_IO_MODULE, 6, 3, 9, 5 ) ||
 		 !version_in_range( GLOBUS_GASS_TRANSFER_MODULE, 4, 3, 7, 2 ) ) {
 		fprintf( stderr, "Unexpected module version, using low-performance GASS server!\n" );
 		num_listeners = 1;
