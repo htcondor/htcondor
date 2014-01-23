@@ -7073,7 +7073,7 @@ int GahpClient::ec2_attach_volume(std::string service_url,
                               StringList & returnStatus,
                               std::string & error_code )
 {
-    static const char* command = "EC_VM_ATTACH_VOLUME";
+    static const char* command = "EC2_VM_ATTACH_VOLUME";
 
     int rc=0;
     

@@ -117,7 +117,7 @@ bool AmazonAssociateAddress::ioCheck(char **argv, int argc)
         verify_string_name(argv[6]);
 }
 
-// Expecting:EC_VM_ATTACH_VOLUME <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <volume-id> <instance-id> <device-id>
+// Expecting:EC2_VM_ATTACH_VOLUME <req_id> <serviceurl> <accesskeyfile> <secretkeyfile> <volume-id> <instance-id> <device-id>
 bool AmazonAttachVolume::ioCheck(char **argv, int argc)
 {
     return verify_number_args(argc, 8) &&

@@ -2168,7 +2168,7 @@ AmazonAttachVolume::~AmazonAttachVolume() { }
 
 bool AmazonAttachVolume::workerFunction(char **argv, int argc, std::string &result_string) 
 {
-	assert( strcasecmp( argv[0], "EC_VM_ATTACH_VOLUME" ) == 0 );
+	assert( strcasecmp( argv[0], "EC2_VM_ATTACH_VOLUME" ) == 0 );
 	
 	int requestID;
     get_int( argv[1], & requestID );
