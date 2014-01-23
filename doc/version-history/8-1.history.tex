@@ -79,12 +79,12 @@ specified in the node job submit description files.
 
 \begin{itemize}
 
-\item Fixed small memory leak that was triggered by failed
+\item Fixed a small memory leak that was triggered by failed
 file transfer attempts.
 \Ticket{4134}
 
-\item Fixed a bug that would leak one socket in each daemon when
-the \Macro{NO\_DNS} option is set.
+\item Fixed a bug that would leak one socket in each daemon,
+when \Expr{NO\_DNS = True}.
 \Ticket{4140}
 
 \item In the \Condor{startd}, changed the way cpus are allocated to
