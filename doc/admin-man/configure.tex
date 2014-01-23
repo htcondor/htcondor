@@ -9695,20 +9695,22 @@ in section~\ref{sec:DAG-configuration}.
   its default node log file, as defined by
   \Macro{DAGMAN\_DEFAULT\_NODE\_LOG}, instead of from the log file(s)
   defined in the node job submit description files.
-  If \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is \Expr{True},
+  If \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} is \Expr{True},
   \Condor{dagman} will read events only from the default log
   file, and POST script terminated events will
   be written only to the default log file, and not to the
   log file(s) defined in the node job submit description files.
   The default value is \Expr{True}.
-  This variable must be \Expr{False} if \Condor{dagman} from Condor
+  This variable must be \Expr{False} if \Condor{dagman} from HTCondor
   version 7.9.0 or later is submitting jobs to a \Condor{schedd} daemon
-  or using a \Condor{submit} executable that is older than Condor version 7.9.0.
-  \Bold{Note:  As of version 8.1.4, it is no longer recommended to set this
-  macro to \Expr{False}, and doing so will produce a warning.  This
-  option will probably be disabled entirely in a future version.  To
-  run a DAG with \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} set to \Expr{False},
-  you will also have to set \Macro{DAGMAN\_USE\_STRICT} to 0.}
+  or using a \Condor{submit} executable that is older than 
+  HTCondor version 7.9.0.
+  As of HTCondor version 8.1.4, a value of \Expr{False} is no longer 
+  recommended, and doing so will produce a warning.  This
+  option will probably be entirely disabled in the future.
+  To run a DAG with \MacroNI{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} 
+  set to \Expr{False},
+  also set \Macro{DAGMAN\_USE\_STRICT} to 0.
 
 \label{param:DAGmanSuppressNotification}
 \item[\Macro{DAGMAN\_SUPPRESS\_NOTIFICATION}]

@@ -65,18 +65,12 @@ It should now be possible to build expressions directly
 in python, without having to resort to string manipulation.
 \Ticket{4154}
 
-\end{itemize}
-
-\noindent Configuration Variable and ClassAd Attribute Additions and Changes:
-
-\begin{itemize}
-
-\item Setting \Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} set to \Expr{False}
+\item Setting configuration variable
+\Macro{DAGMAN\_ALWAYS\_USE\_NODE\_LOG} to \Expr{False}
 or using the corresponding \Opt{-dont\_use\_default\_node\_log} option
-to \Condor{submit\_dag}
-(in other words, having \Condor{dagman} read the log files specified
-in the node job submit files) is no longer recommended.
-See section~\ref{param:DAGmanAlwaysUseNodeLog} for more details.
+to \Condor{submit\_dag} is no longer recommended.
+It is no longer recommended to have \Condor{dagman} read the log files 
+specified in the node job submit description files.
 \Ticket{4091}
 
 \end{itemize}
