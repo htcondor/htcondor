@@ -73,6 +73,11 @@ It is no longer recommended to have \Condor{dagman} read the log files
 specified in the node job submit description files.
 \Ticket{4091}
 
+\item Invoking \Condor{fetchlog} with the \Arg{STARTD\_HISTORY} argument
+now fetches all \Condor{startd} history by concatenating all instances 
+of log files resulting from rotation to the current history log.
+\Ticket{4152}
+
 \end{itemize}
 
 \noindent Bugs Fixed:

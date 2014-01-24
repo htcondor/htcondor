@@ -42,13 +42,11 @@ if (WITH_GLOBUS)
 
 		if(${SYS_ARCH} MATCHES "IA64|X86_64")
 			set( GLOBUS_FLAVOR gcc64dbg )
-		elseif(AIX)
-			set( GLOBUS_FLAVOR vendorcc32dbg )
 		else ()
 			set( GLOBUS_FLAVOR gcc32dbg )
 		endif()
 
-		condor_pre_external( GLOBUS globus-5.2.1-p1 "lib;include" "done")
+		condor_pre_external( GLOBUS globus-5.2.5 "lib;include" "done")
 
 		# GNU libtool isn't included in Mac OS 10.8, but Globus
 		# needs libltdl. Build it and install it in the Globus
@@ -102,8 +100,7 @@ if (WITH_GLOBUS)
 		if(DARWIN)
 			set ( GLOBUS_PATCH ${GLOBUS_PATCH} &&
 				cd ../../../../ &&
-				patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins-2.patch -p1 &&
-				patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/mac_environ.patch -p1 )
+				patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins-2.patch -p1 )
 		endif()
 
 		# honestly the build of globus is one of the strangest things I have ever seen and it makes no sense to me.
@@ -111,7 +108,7 @@ if (WITH_GLOBUS)
 							DEPENDS ${GLOBUS_DEPENDS}
 							#-- Download Step ----------
 							DOWNLOAD_DIR ${GLOBUS_STAGE}/dl
-							URL ${EXTERNALS_SOURCE_URL}/globus-5.2.1.tar.gz
+							URL ${EXTERNALS_SOURCE_URL}/gt5.2.5-all-source-installer.tar.gz
 							#--Patch step ----------
 							PATCH_COMMAND ${GLOBUS_PATCH}
 							#--Configure step ----------

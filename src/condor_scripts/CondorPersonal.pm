@@ -189,7 +189,7 @@ my %daemon_logs =
 );
 
 
-my $UseNewRunning = 0;
+my $UseNewRunning = 1;
 my $RunningTimeStamp = 0;
 
 my $topleveldir = getcwd();
@@ -492,7 +492,6 @@ sub Reset
 	$personal_universe = "";
 	$personal_startup_wait = "true";
 
-	$UseNewRunning = 0;
 	$RunningTimeStamp = 0;
 
 	$topleveldir = getcwd();
@@ -1426,6 +1425,7 @@ sub StartPersonalCondor
 
 	# is test opting into new condor personal status yet?
 	my $res = 1;
+	sleep(5);
 	if($UseNewRunning == 0) {
 		$res = IsRunningYet();
 	} else {
@@ -2318,6 +2318,7 @@ sub KillDaemons
 {
 	my $desiredconfig = shift;
 	my $oldconfig = $ENV{CONDOR_CONFIG};
+	$ENV{CONDOR_CONFIG} = $desiredconfig;
 	my $condor_name = $personal_condor_params{"condor_name"};
 	my $condor_instance = CondorTest::GetPersonalCondorWithConfig($desiredconfig);
 	my $alive = $condor_instance->GetCondorAlive();

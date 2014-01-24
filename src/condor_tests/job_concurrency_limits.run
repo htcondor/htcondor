@@ -84,7 +84,7 @@ my $checkexpectationfailed = 0;
 my $expect_idle = 0;
 my $expect_run = 0;
 my $expect_checks = 0;
-my $total_checks = 3;
+my $total_checks = 8;
 my $allow_too_few_idle_once = 0;
 
 my $on_match = sub {
@@ -218,7 +218,7 @@ print "First test basic job\n";
 $result = SimpleJob::RunCheck();
 
 my $append_submit_commands = '
-concurrency_limits = XSW;
+concurrency_limits = XSW
 ';
 
 # then test behaviour of non cuncurrency jobs first
@@ -258,7 +258,7 @@ CondorTest::StartCondorWithParams(
 );
 
 $append_submit_commands = '
-concurrency_limits = XSW;
+concurrency_limits = XSW
 ';
 
 print "Test specified concurrency-XSW\n";
@@ -290,7 +290,7 @@ if(($result == 1)&&($checkexpectationfailed == 0)) {
 # clean queue bwtween all checks
 
 $append_submit_commands = '
-concurrency_limits = UNDEFINED:2;
+concurrency_limits = UNDEFINED:2
 ';
 
 print "Test default concurrency and colon usage spec\n";
@@ -322,7 +322,7 @@ if(($result == 1)&&($checkexpectationfailed == 0)) {
 # clean queue bwtween all checks
 
 $append_submit_commands = '
-concurrency_limits = large.license;
+concurrency_limits = large.license
 ';
 
 $running_now = 0;
@@ -354,7 +354,7 @@ if($result == 1) {
 # clean queue bwtween all checks
 
 $append_submit_commands = '
-concurrency_limits = small.license;
+concurrency_limits = small.license
 ';
 
 $running_now = 0;
@@ -410,7 +410,7 @@ CondorTest::StartCondorWithParams(
 # clean queue bwtween all checks
 
 $append_submit_commands = '
-concurrency_limits = XSW;
+concurrency_limits = XSW
 ';
 
 print "Partitionable: Test specified concurrency-XSW\n";
@@ -442,7 +442,7 @@ if(($result == 1)&&($checkexpectationfailed == 0)) {
 # clean queue bwtween all checks
 
 $append_submit_commands = '
-concurrency_limits = UNDEFINED:2;
+concurrency_limits = UNDEFINED:2
 ';
 
 print "Partitionable: Test default concurrency and colon usage spec\n";
@@ -474,7 +474,7 @@ if(($result == 1)&&($checkexpectationfailed == 0)) {
 # clean queue bwtween all checks
 
 $append_submit_commands = '
-concurrency_limits = large.license;
+concurrency_limits = large.license
 ';
 
 $running_now = 0;
@@ -506,7 +506,7 @@ if(($result == 1)&&($checkexpectationfailed == 0)) {
 # clean queue bwtween all checks
 
 $append_submit_commands = '
-concurrency_limits = small.license;
+concurrency_limits = small.license
 ';
 
 $running_now = 0;
@@ -552,7 +552,7 @@ CondorTest::StartCondorWithParams(
 );
 
 $append_submit_commands = '
-concurrency_limits = XSW;
+concurrency_limits = XSW
 ';
 
 print "Static and zero: Test specified concurrency -xsw\n";
@@ -584,7 +584,7 @@ if(($result == 1)&&($checkexpectationfailed == 0)) {
 # clean queue bwtween all checks
 
 $append_submit_commands = '
-concurrency_limits = UNDEFINED:2;
+concurrency_limits = UNDEFINED:2
 ';
 
 print "Static and zero: Test default concurrency and colon usage spec\n";
@@ -616,7 +616,7 @@ if(($result == 1)&&($checkexpectationfailed == 0)) {
 # clean queue bwtween all checks
 
 $append_submit_commands = '
-concurrency_limits = large.license;
+concurrency_limits = large.license
 ';
 
 $running_now = 0;
@@ -648,7 +648,7 @@ if(($result == 1)&&($checkexpectationfailed == 0)) {
 # clean queue bwtween all checks
 
 $append_submit_commands = '
-concurrency_limits = small.license;
+concurrency_limits = small.license
 ';
 
 $running_now = 0;
@@ -694,7 +694,7 @@ CondorTest::StartCondorWithParams(
 );
 
 $append_submit_commands = '
-concurrency_limits = XSW;
+concurrency_limits = XSW
 ';
 
 print "Static and one: Test specified concurrency-XSW\n";
@@ -726,7 +726,7 @@ if(($result == 1)&&($checkexpectationfailed == 0)) {
 # clean queue bwtween all checks
 
 $append_submit_commands = '
-concurrency_limits = UNDEFINED:2;
+concurrency_limits = UNDEFINED:2
 ';
 
 print "Static and one: Test default concurrency and colon usage spec\n";
@@ -758,7 +758,7 @@ if(($result == 1)&&($checkexpectationfailed == 0)) {
 # clean queue bwtween all checks
 
 $append_submit_commands = '
-concurrency_limits = large.license;
+concurrency_limits = large.license
 ';
 
 $running_now = 0;
@@ -790,7 +790,7 @@ if(($result == 1)&&($checkexpectationfailed == 0)) {
 # clean queue bwtween all checks
 
 $append_submit_commands = '
-concurrency_limits = small.license;
+concurrency_limits = small.license
 ';
 
 $running_now = 0;
@@ -840,7 +840,7 @@ CondorTest::StartCondorWithParams(
 );
 
 $append_submit_commands = '
-concurrency_limits = XSW;
+concurrency_limits = XSW
 ';
 
 print "Partitionable and zero: Test specified concurrency - XSW\n";
@@ -872,7 +872,7 @@ if(($result == 1)&&($checkexpectationfailed == 0)) {
 # clean queue bwtween all checks
 
 $append_submit_commands = '
-concurrency_limits = UNDEFINED:2;
+concurrency_limits = UNDEFINED:2
 ';
 
 print "Partitionable and zero: Test default concurrency and colon usage spec\n";
@@ -904,7 +904,7 @@ if(($result == 1)&&($checkexpectationfailed == 0)) {
 # clean queue bwtween all checks
 
 $append_submit_commands = '
-concurrency_limits = large.license;
+concurrency_limits = large.license
 ';
 
 $running_now = 0;
@@ -936,7 +936,7 @@ if(($result == 1)&&($checkexpectationfailed == 0)) {
 # clean queue bwtween all checks
 
 $append_submit_commands = '
-concurrency_limits = small.license;
+concurrency_limits = small.license
 ';
 
 $running_now = 0;
@@ -986,7 +986,7 @@ CondorTest::StartCondorWithParams(
 );
 
 $append_submit_commands = '
-concurrency_limits = XSW;
+concurrency_limits = XSW
 ';
 
 print "Partitionable and one: Test specified concurrency\n";
@@ -1018,7 +1018,7 @@ if(($result == 1)&&($checkexpectationfailed == 0)) {
 # clean queue bwtween all checks
 
 $append_submit_commands = '
-concurrency_limits = UNDEFINED:2;
+concurrency_limits = UNDEFINED:2
 ';
 
 print "Partitionable and one: Test default concurrency and colon usage spec\n";
@@ -1050,7 +1050,7 @@ if(($result == 1)&&($checkexpectationfailed == 0)) {
 # clean queue bwtween all checks
 
 $append_submit_commands = '
-concurrency_limits = large.license;
+concurrency_limits = large.license
 ';
 
 $running_now = 0;
@@ -1082,7 +1082,7 @@ if(($result == 1)&&($checkexpectationfailed == 0)) {
 # clean queue bwtween all checks
 
 $append_submit_commands = '
-concurrency_limits = small.license;
+concurrency_limits = small.license
 ';
 
 $running_now = 0;

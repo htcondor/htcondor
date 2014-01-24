@@ -81,6 +81,7 @@ use CondorUtils;
 Condor::DebugLevel(1);
 CondorPersonal::DebugLevel(1);
 my @debugcollection = ();
+my $UseNewRunning = 1;
 
 #################################################################
 #
@@ -336,7 +337,7 @@ my %test_suite = ();
 if(!($wantcurrentdaemons)) {
 	# ...unless isolation was requested.  Then we do one before running each test
 	if(!$isolated) {
-		start_condor();
+		start_condor($testpersonalcondorlocation);
 	}
 }
 
@@ -728,15 +729,42 @@ if ( $cleanupcondor ) {
 exit $num_failed;
 
 
+sub IsAlive
+{
+	my $config = shift;
+	my $condor_config = "";
+	my $alive = 0;
+	if($iswindows == 1) {
+		if ($iscygwin) {
+			$condor_config = `cygpath -m $config`;
+			CondorUtils::fullchomp($condor_config);
+		} else {
+			($condor_config = $config) =~ s|/|\\|g;
+		}
+	} else {
+		$condor_config = $config;
+	}
+	print "IsAlive testing this config:$condor_config\n";
+	my $condor_instance = CondorTest::GetPersonalCondorWithConfig($targetconfig);
+	if($condor_instance != 0) { 
+		$alive = $condor_instance->GetCondorAlive();
+	} else {
+		$alive = 0;
+	}
+	return($alive);
+}
+
 sub start_condor {
 	my $alive = 0;
 	if($isolated) {
 		$testpersonalcondorlocation = "$_[0]";
-		$alive = TestCondorHereAlive($testpersonalcondorlocation);
-		if($alive == 1) {
-			print "Don't need to start condor\n";
-			# nothing to do
-			return;
+		if($UseNewRunning == 0) {
+			$alive = CondorPersonal::TestCondorHereAlive($testpersonalcondorlocation);
+			if($alive == 1) {
+				print "Don't need to start condor\n";
+				# nothing to do
+				return;
+			}
 		}
 		if($iswindows == 1) {
 			if ($iscygwin) {
@@ -745,16 +773,37 @@ sub start_condor {
 			} else {
 				($wintestpersonalcondorlocation = $testpersonalcondorlocation) =~ s|/|\\|g;
 			}
+			$testpersonalcondorlocation = $wintestpersonalcondorlocation;
 		}
 		$targetconfig      = "$testpersonalcondorlocation/condor_config";
+
+		if($UseNewRunning == 1) {
+			$alive = IsAlive($targetconfig);
+			if($alive == 1) {
+				print "Don't need to start condor\n";
+				# nothing to do
+				return;
+			}
+		}
+
 		$targetconfiglocal = "$testpersonalcondorlocation/condor_config.local";
 		$localdir          = "$testpersonalcondorlocation/local";
 
 		$condorpidfile     = "$testpersonalcondorlocation/.pidfile";
 		push(@extracondorargs, "-pidfile $condorpidfile");
-	}
-	else { 
-		$alive = TestCondorHereAlive($testpersonalcondorlocation);
+	} else { 
+		#$alive = CondorPersonal::TestCondorHereAlive($testpersonalcondorlocation);
+		if($UseNewRunning == 0) {
+		my $condor_instance = CondorTest::GetPersonalCondorWithConfig($targetconfig);
+		if($condor_instance != 0) { 
+			$alive = $condor_instance->GetCondorAlive();
+		} else {
+			$alive = 0;
+		}
+		} else {
+		# UseNewRunning == 1
+			$alive = IsAlive($targetconfig);
+		}
 		if($alive == 1) {
 			# nothing to do
 			print "Don't need to start condor\n";
@@ -789,6 +838,8 @@ sub start_condor {
 		if ($iscygwin) {
 			$tmp = `cygpath -m $targetconfig`;
 			CondorUtils::fullchomp($tmp);
+			# save corrected config path
+			$targetconfig = $tmp
 		}
 		$ENV{CONDOR_CONFIG} = $tmp;
 		print "setting CONDOR_CONFIG=$tmp\n";
@@ -825,9 +876,32 @@ sub start_condor {
 	else {
 		CondorTest::verbose_system("$installdir/sbin/condor_master @extracondorargs -f &",{emit_output=>0,use_system=>1});
 	}
+	#create personal condor instance
+	#
+	#sub CreateAndStoreCondorInstance
+	#{
+		#my $version = shift;
+		#my $condorconfig = shift;
+		#my $collectoraddr = shift;
+		#my $amalive = shift;
+		#$personal_condors{$version} = new PersonalCondorInstance( $version, $condorconfig, $collectoraddr, $amalive );
+		#return($personal_condors{$version});
+	#}
 	#debug("Done Starting Personal Condor\n",2);
-
-	CondorPersonal::IsRunningYet() || die "Failed to start Condor";
+	my $namedcondor = "";
+	my $personalinstance = 0;
+	my $upyet = 0;
+	sleep(5);
+	if($UseNewRunning == 1) {
+		$namedcondor = "batchtestcondor" . "$$";
+		$personalinstance = CondorTest::CreateAndStoreCondorInstance("TestingPersonalCondor",$ENV{CONDOR_CONFIG},0,0);
+		$upyet = CondorPersonal::NewIsRunningYet($targetconfig,$namedcondor);
+	} else {
+		$upyet = CondorPersonal::IsRunningYet();
+	}
+	if($upyet ==  0) {
+		print "start_condor:IsRunningYet says NOT!!!!!!! for testing personal condor\n";
+	}
 }
 
 
@@ -1673,81 +1747,6 @@ sub wait_for_test_children {
 
 	#print "Tests Reaped = <$tests_reaped>\n";
 	return $tests_reaped;
-}
-
-sub TestCondorHereAlive
-{
-	my $location = shift;
-	$location = $location . "/local/log";
-	my $whopids = $location . "/ALLPIDS";
-	my @logreplies = ();
-	my $backupdaemonlist = "MASTER,SCHEDD,COLLECTOR,NEGOTIATOR,STARTD";
-	my $daemonlist = "";
-	my @daemonreplies = ();
-	my %cwpids = ();
-	my @configeddaemons = ();
-	return(0);
-	
-	print "TestCondorHereAlive: log location is $location\n";
-	# leave file with pids of running daemons here $location/WHOPIDS
-	#CondorPersonal::CollectWhoPids($location,"ALLPIDFILE");
-
-	#We want to compare the current daemon_list if log dirs match
-	runCondorTool("condor_config_val log",\@logreplies,2);
-	my $chompedlog = $logreplies[0];
-	CondorUtils::fullchomp($chompedlog);
-	print "TestCondorHereAlive location passed in is: $location\n";
-	print "TestCondorHereAlive ccv log is $chompedlog\n";
-
-	#can we rely on ccv daemon_list to know who we expect alive?
-	if($chompedlog eq $location) {
-		print "Log location being checked is current ccv log value\n";
-		runCondorTool("condor_config_val daemon_list",\@daemonreplies,2);
-		$daemonlist = $daemonreplies[0];
-		CondorUtils::fullchomp($daemonlist);
-	} else {
-		print "Log location being checked is NOT current ccv log value\n";
-		$daemonlist = $backupdaemonlist;
-	}
-	print "Cecking condor against this daemon list:$daemonlist\n";
-
-	#Create hash from running daemons condor_who saw
-	open(WP,"<$whopids") or die "failed to open:$whopids :$!\n";
-	my $line = "";
-	while(<WP>) {
-		CondorUtils::fullchomp($_);
-		print "Process: $_\n";
-		$line = $_;
-		if($line =~ /(\d+)\s+(\w+)/) {
-			print "valid daemon: $2 valid pid: $1\n";
-			$cwpids{uc $2} = $1;
-		}
-	}
-	close(WP);
-	foreach my $keys (sort keys %cwpids) {
-		print "$keys\n";
-	}
-
-	#what daemons do we expect? Check daemon_list
-	$_ = $daemonlist;
-	s/\s//g;
-	print "Unpadded daemonlist is:$_\n";
-	$daemonlist = $_;
-	@configeddaemons = split /,/, $daemonlist;
-
-	#OK , if master gone, kill all, report dead
-	#if all exists report alive
-
-	my $res = "";
-	if(!(exists $cwpids{MASTER})) {
-		$res = CondorPersonal::CheckPids($whopids,"kill all");
-		print "imposed sudden death, where are we now?\n";
-		sleep(10);
-		$res = CondorPersonal::CheckPids($whopids);
-		print "After a bullet to the head: $res\n";
-		return(0); # not pool alive at momment
-	}
-	return(1);
 }
 
 1;
