@@ -109,9 +109,6 @@ registerAllAmazonCommands(void)
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_STATUS_ALL, 
 			AmazonVMStatusAll::ioCheck, AmazonVMStatusAll::workerFunction);
 
-	registerAmazonGahpCommand(AMAZON_COMMAND_VM_RUNNING_KEYPAIR, 
-			AmazonVMRunningKeypair::ioCheck, AmazonVMRunningKeypair::workerFunction);
-
 	/*
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_CREATE_GROUP, 
 			AmazonVMCreateGroup::ioCheck, AmazonVMCreateGroup::workerFunction);
@@ -139,12 +136,9 @@ registerAllAmazonCommands(void)
 	registerAmazonGahpCommand(AMAZON_COMMAND_VM_DESTROY_KEYPAIR, 
 			AmazonVMDestroyKeypair::ioCheck, AmazonVMDestroyKeypair::workerFunction);
 
-	registerAmazonGahpCommand(AMAZON_COMMAND_VM_KEYPAIR_NAMES, 
-			AmazonVMKeypairNames::ioCheck, AmazonVMKeypairNames::workerFunction);
-    
     registerAmazonGahpCommand(AMAZON_COMMAND_VM_ASSOCIATE_ADDRESS, 
             AmazonAssociateAddress::ioCheck, AmazonAssociateAddress::workerFunction);
-	
+
 	 registerAmazonGahpCommand(AMAZON_COMMAND_VM_ATTACH_VOLUME, 
             AmazonAttachVolume::ioCheck, AmazonAttachVolume::workerFunction);
 

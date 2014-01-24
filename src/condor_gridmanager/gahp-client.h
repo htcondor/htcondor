@@ -630,12 +630,6 @@ class GahpClient : public Service {
 									std::string keyname,
 									std::string & error_code );
 
-		int ec2_vm_vm_keypair_all( std::string service_url,
-								   std::string publickeyfile,
-								   std::string privatekeyfile,
-								   StringList & returnStatus,
-								   std::string & error_code );
-
         /**
          * Used to associate an elastic ip with a running instance
          */
