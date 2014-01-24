@@ -35,16 +35,17 @@ the value of the configuration variable named \Arg{subsystem}\_LOG
 defines the log file's name.
 When specified, the \Arg{.extension} is appended to this value.
 
-Typical strings for the argument \Arg{subsystem} are as given as
-possible values of the predefined configuration
-variable \MacroUNI{SUBSYSTEM}.
-Note that access to any
-additional logs can be enabled by simply specifying the path to
-each log in the configuration file with a configuration parameter named
-\MacroNI{<NAME>\_LOG}, choosing an arbitrary unique name for each case.
+The \Arg{subsystem} argument is any value \MacroUNI{SUBSYSTEM}
+that has a defined configuration variable of
+\Expr{\$(SUBSYSTEM)\_LOG}, or any of
+\begin{itemize}
+\item \Expr{NEGOTIATOR\_MATCH}
+\item \Expr{HISTORY}
+\item \Expr{STARTD\_HISTORY}
+\end{itemize}
 
-A value for the optional \Arg{.extension} argument is typically one of
-the three strings:
+A value for the optional \Arg{.extension} to the \Arg{subsystem} argument
+is typically one of the three strings:
 \begin{enumerate}
 \item{\File{.old}}
 \item{\File{.slot<X>}}
@@ -52,6 +53,10 @@ the three strings:
 \end{enumerate}
 Within these strings, \verb@<X>@ is substituted with the slot number.
  
+A \Arg{subsystem} argument of \Expr{STARTD\_HISTORY} fetches all 
+\Condor{startd} history by concatenating all instances of log files
+resulting from rotation.
+
 \begin{Options}
     \ToolArgsBaseDesc
     \OptItem{\OptArg{-pool}{centralmanagerhostname[:portnumber]}}
