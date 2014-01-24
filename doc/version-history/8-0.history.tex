@@ -78,6 +78,12 @@ This affected the ability to turn off specific daemons,
 as sent to the \Condor{master}.
 \Ticket{4160}
 
+\item Fixed the transfer of files larger than 4Gbytes,
+such that they no longer stop before the transfer is completed.
+This bug presented itself on all Windows systems and on all
+platforms running on a 32-bit architecture.
+\Ticket{4150}
+
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
