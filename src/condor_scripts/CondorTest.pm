@@ -55,7 +55,7 @@ my $teststop = 0;
 my $DEBUGLEVEL = 1;
 my $debuglevel = 2;
 
-my $UseNewRunning = 0;
+my $UseNewRunning = 1;
 
 my $MAX_CHECKPOINTS = 2;
 my $MAX_VACATES = 3;
@@ -700,6 +700,7 @@ sub DoTest
 	my $monitorret = 0;
 	my $retval = 0;
 
+	#print "DoTest:$handle\n";
 	# Many of our tests want to use RegisterResult and EndTest
 	# but don't actually rely on RunTest to do the work. So
 	# I am enabling a mode where we can call RunTest just to register
@@ -761,8 +762,8 @@ sub DoTest
 			print "PersonalCondorTest returned this config file: $config\n";
 			print "Saving last config file: $lastconfig\n";
 			$ENV{CONDOR_CONFIG} = $config;
-			print "CONDOR_CONFIG now: $ENV{CONDOR_CONFIG}\n";
-			runcmd("condor_config_val -config");
+			#print "CONDOR_CONFIG now: $ENV{CONDOR_CONFIG}\n";
+			#runcmd("condor_config_val -config");
 		}
 	}
 
@@ -2509,7 +2510,9 @@ sub LoadWhoData
 	my $binary = shift;
 	my $condor = GetPersonalCondorWithConfig($ENV{CONDOR_CONFIG});
 	if($condor == 0) {
+		print "Looked for condor instance for:$ENV{CONDOR_CONFIG}\n";
 		print "LoadWhoData called before the condor instance exists\n";
+		ListAllPersonalCondors();
 		return(0);
 	}
 	#print "<$condor> condor instance\n";
@@ -2619,8 +2622,10 @@ sub LoadWhoData
 	  # get state of every current daemon into tracking hash
 	  foreach my $daemonkey (keys %{$self->{personal_who_data}}) {
 	  	  my $translateddaemon = uc $self->{personal_who_data}->{$daemonkey}->GetDaemonName();
-		  $daemon_tracking_all{$translateddaemon} = $self->{personal_who_data}->{$daemonkey}->GetAlive();
-		  #print "$translateddaemon is $daemon_tracking_all{$translateddaemon}\n";
+		  if(exists $daemon_tracking_all{$translateddaemon}) {
+		  	$daemon_tracking_all{$translateddaemon} = $self->{personal_who_data}->{$daemonkey}->GetAlive();
+		  	#print "$translateddaemon is $daemon_tracking_all{$translateddaemon}\n";
+		  }
 	  }
 	  # look for any still no
 	  my $return = "yes";
@@ -2628,13 +2633,17 @@ sub LoadWhoData
 	  foreach my $key (sort keys %daemon_tracking_all) {
 	      next if $key =~ /^JOB_ROUTER$/;
 	      next if $key =~ /^SHARED_PORT$/;
+	      next if $key =~ /^VIEW_COLLECTOR$/;
+	      next if $key =~ /^CKPT_SERVER$/;
 	  	  if($daemon_tracking_all{$key} eq "no") {
 		  	$noticethis = $noticethis . " $key";
 		  	$return = "no";
 		  }
 	  }
 	  $noticethis = $noticethis . "\n";
-	  #print "$noticethis";
+	  if($return eq "no") {
+	  	#print "$noticethis";
+	  }
 	  return($return);
   }
   sub HasNoLiveDaemons
@@ -2647,13 +2656,15 @@ sub LoadWhoData
 	  # mark all desired daemons as off
 	  foreach my $dmember (@daemons) {
 	  	 $daemon_tracking_all{$dmember} = "yes";
-		 #print "Setting $dmember to no\n";
+		 #print "Setting $dmember to yes\n";
 	  }
 	  # get state of every current daemon into tracking hash
 	  foreach my $daemonkey (keys %{$self->{personal_who_data}}) {
 	  	  my $translateddaemon = uc $self->{personal_who_data}->{$daemonkey}->GetDaemonName();
-		  $daemon_tracking_all{$translateddaemon} = $self->{personal_who_data}->{$daemonkey}->GetAlive();
-		  #print "$translateddaemon is $daemon_tracking_all{$translateddaemon}\n";
+		  if(exists $daemon_tracking_all{$translateddaemon}) {
+		  	$daemon_tracking_all{$translateddaemon} = $self->{personal_who_data}->{$daemonkey}->GetAlive();
+		  	#print "$translateddaemon is $daemon_tracking_all{$translateddaemon}\n";
+		  }
 	  }
 	  # look for any still yes
 	  my $return = "yes";
@@ -2667,7 +2678,9 @@ sub LoadWhoData
 		  }
 	  }
 	  $noticethis = $noticethis . "\n";
-	  #print "$noticethis";
+	  if($return eq "no") {
+	  	#print "$noticethis";
+	  }
 	  return($return);
   }
   sub HasLiveMaster
@@ -2766,7 +2779,14 @@ sub GenUniqueCondorName
 
 sub GetPersonalCondorWithConfig
 {
-    my $condor_config  = shift;
+    my $tmp_config  = shift;
+	my $condor_config = "";
+    if(CondorUtils::is_windows() == 1) {
+	    $condor_config = `cygpath -m $tmp_config`;
+		CondorUtils::fullchomp($condor_config);
+	} else {
+		$condor_config = $tmp_config;
+	}
 	#print "Looking for condor instance matching:$condor_config\n";
     for my $name ( keys %personal_condors ) {
         my $condor = $personal_condors{$name};
@@ -2777,7 +2797,7 @@ sub GetPersonalCondorWithConfig
     }
     # look after verification that we have a unix type path
     if(CondorUtils::is_windows() == 1) {
-	    my $convertedpath = `cygpath $condor_config`;
+	    my $convertedpath = `cygpath -m $condor_config`;
 		CondorUtils::fullchomp($convertedpath);
 		print "RELooking for condor instance matching:$convertedpath\n";
     	for my $name ( keys %personal_condors ) {
