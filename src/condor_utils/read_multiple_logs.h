@@ -141,11 +141,28 @@ public:
 	class FileReader
 	{
 	public:
-		//TEMPTEMP -- document methods
+			/** Constructor -- doesn't really do anything -- open is
+				a separate method so errors can be returned.
+			 */
 		FileReader();
+
+			/** Destructor -- closes the file if it's open.
+			 */
 		~FileReader();
+
+			/** Open this file.
+				@param filename: the file to open
+			 */
 		MyString Open( const MyString &filename );
+
+			/** Real the next "logical" line from the file.  (This means
+				lines are combined if they end with a continuation character.)
+				@param line: a MyString to recieve the line string
+			 */
 		bool NextLogicalLine( MyString &line );
+
+			/** Close the file.
+			 */
 		void Close();
 
 	private:

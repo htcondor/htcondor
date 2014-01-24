@@ -339,27 +339,13 @@ MultiLogFiles::FileReader::Open( const MyString &filename )
 bool //TEMPTEMP -- not EOF
 MultiLogFiles::FileReader::NextLogicalLine( MyString &line )
 {
-	bool foundData = line.readLine( _fp, false );
-	line.chomp();
-	if ( !foundData ) {
-		return false; // EOF
+	char *tmpLine = getline( _fp );
+	if ( tmpLine != NULL ) {
+		line = tmpLine;
+		return true;
 	}
 
-	while ( line[line.Length()-1] == '\\' ) {
-			// Remove the continuation character.
-		line.setChar( line.Length()-1, '\0' );
-
-		foundData = line.readLine( _fp, true );
-		line.chomp();
-		if ( !foundData ) {
-			//TEMPTEMP -- test this...
-			dprintf( D_ALWAYS, "Improper file syntax: continuation character with no trailing line! (%s) in file %s",
-						line.Value(), "TEMPTEMP" );
-			return false;//TEMPTEMP?
-		}
-	}
-
-	return true;
+	return false; // EOF
 }
 
 void
