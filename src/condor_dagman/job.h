@@ -353,6 +353,8 @@ class Job {
 		@param recovery: whether we're in recovery mode
 		@param defaultNodeLog: the default log file to be used if the
 			node's submit file doesn't define a log file
+		@param usingDefault: whether we're using the default/workflow
+			log at the DAG level
 		@return true if successful, false if failed
 	*/
 	bool MonitorLogFile( ReadMultipleUserLogs &condorLogReader,
@@ -498,7 +500,6 @@ public:
 		// (Note: we may need to track the hold state of each proc in a
 		// cluster separately to correctly deal with multi-proc clusters.)
 	int _jobProcsOnHold;
-	bool UseDefaultLog() const { return append_default_log; }
 
 		/** Mark a job with ProcId == proc as being on hold
  			Returns false if the job is already on hold
@@ -510,7 +511,10 @@ public:
  		    Returns false if the job is not on hold
 		*/
 	bool Release(int proc);
+
 private:
+		//TEMPTEMP -- document
+	bool GetLogFile( bool usingWorkflowLog, MyString &logFile );
 
 		/** _onHold[proc] is nonzero if the condor job 
  			with ProcId == proc is on hold, and zero
@@ -626,7 +630,6 @@ private:
 
 	// whether this is a final job
 	bool _final;
-	bool append_default_log;
 };
 
 /** A wrapper function for Job::Print which allows a NULL job pointer.
